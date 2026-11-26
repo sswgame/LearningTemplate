@@ -19,7 +19,6 @@ namespace sw
         {
             static constexpr int64 kSecretLifetimeMs      = 24 * constant::time::kSecondsPerHour * constant::time::kMillisecondsPerSecond;
             static constexpr int64 kSecretRefreshMarginMs = constant::time::kSecondsPerHour * constant::time::kMillisecondsPerSecond;
-            static constexpr int32 kStatusBadRequest      = 400;
         };
     } // namespace
 } // namespace sw
@@ -46,14 +45,15 @@ namespace sw
         , _clientSecret{}
         , _tokenURL{ settings._tokenURL.empty() ? string( kDefaultTokenURL ) : settings._tokenURL }
         , _revokeURL{ settings._revokeURL.empty() ? string( kDefaultRevokeURL ) : settings._revokeURL }
-        , _listPending{}
+        , _innerVerifications{}
         , _verificationBuffer{}
         , _revocationBuffer{}
         , _listInnerScratch{}
-        , _mapRequestToRevocation{}
+        , _exchangeTable{}
         , _pSecurity{ pSecurity }
         , _pAppleHTTPClient{ pAppleHTTPClient }
         , _secretExpiresMs{ 0 }
+        , _nowMs{ 0 }
         , _verificationIDAllocator{}
         , _revocationIDAllocator{}
     {
@@ -140,44 +140,55 @@ namespace sw
         innerTicket.appendFormat( "%#", idToken );
         if ( nonce.empty() == false )
             innerTicket.appendFormat( "|%#", nonce );
-        PendingVerification& pending = _listPending.emplace_back();
-        pending._outerID             = _verificationIDAllocator.allocate();
-        pending._code                = std::move( code );
-        pending._innerID             = _oidc.submitVerification( StringUtil::toBytes( innerTicket.view() ), nowMs );
-        return pending._outerID;
+        const uint64 outerID = _verificationIDAllocator.allocate();
+        const uint64 innerID = _oidc.submitVerification( StringUtil::toBytes( innerTicket.view() ), nowMs );
+        (void)_innerVerifications.track( innerID, 0, [this, outerID, code = std::move( code )]( const PlatformLoginVerification& inner )
+        {
+            PlatformLoginVerification verified = inner;
+            verified._verificationID           = outerID;
+            onVerified( std::move( verified ), code );
+        } ); // 안쪽 번호는 겹치지 않는다
+        return outerID;
     }
 
-    void AppleLoginProvider::submitExchange( PendingVerification& pending, UnixMilliseconds nowMs )
+    void AppleLoginProvider::onVerified( PlatformLoginVerification verified, const string& code )
     {
-        const string clientSecret = makeClientSecret( nowMs );
+        if ( verified.isVerified() && code.empty() == false )
+            submitExchange( std::move( verified ), code );
+        else
+            _verificationBuffer.push( std::move( verified ) );
+    }
+
+    void AppleLoginProvider::submitExchange( PlatformLoginVerification verified, const string& code )
+    {
+        const string clientSecret = makeClientSecret( _nowMs );
         if ( clientSecret.empty() )
         {
-            _verificationBuffer.push( pending._verified ); // 연동 비밀 없이 끝낸다 — 로그인은 성공이다
-            pending._outerID = 0;
+            _verificationBuffer.push( std::move( verified ) ); // 연동 비밀 없이 끝낸다 — 로그인은 성공이다
             return;
         }
         vector<HTTPHeader> listForm;
         listForm.push_back( HTTPHeader{ "client_id", _settings._listClientID.front() } );
         listForm.push_back( HTTPHeader{ "client_secret", clientSecret } );
-        listForm.push_back( HTTPHeader{ "code", pending._code } );
+        listForm.push_back( HTTPHeader{ "code", code } );
         listForm.push_back( HTTPHeader{ "grant_type", "authorization_code" } );
-        pending._exchangeRequestID = submitForm( _tokenURL, listForm, nowMs );
+        (void)_exchangeTable.track( submitForm( _tokenURL, listForm, _nowMs ), 0, [this, verified = std::move( verified )]( const HTTPClientResponse& response )
+        { finishExchange( verified, response ); } ); // 요청 번호는 겹치지 않는다
     }
 
-    void AppleLoginProvider::finishExchange( PendingVerification& pending, const HTTPClientResponse& response )
+    void AppleLoginProvider::finishExchange( PlatformLoginVerification verified, const HTTPClientResponse& response )
     {
         JSONDocument document;
         if ( response.isSuccess() && document.tryParse( response.getBodyText() ) )
         {
             const JSONValue refreshToken = document.getRoot().get( "refresh_token" );
             if ( refreshToken.isString() )
-                pending._verified._linkSecret = refreshToken.asString();
+                verified._linkSecret = refreshToken.asString();
         }
-        if ( pending._verified._linkSecret.empty() )
+        if ( verified._linkSecret.empty() )
             SW_LOG_WARNING_ID( "AppleLoginProvider.LoginProviderCouldNot", "Login provider '%#' could not exchange the authorization code (status %#) - the account has no token to revoke later", _settings._name.c_str(),
-                               response._statusCode );
-        _verificationBuffer.push( std::move( pending._verified ) );
-        pending._outerID = 0;
+                               response.getStatusCode() );
+        _verificationBuffer.push( std::move( verified ) );
     }
 
     int32 AppleLoginProvider::pollVerifications( vector<PlatformLoginVerification>& outListVerification )
@@ -189,57 +200,20 @@ namespace sw
 
     void AppleLoginProvider::update( UnixMilliseconds nowMs )
     {
+        _nowMs = nowMs;
         _oidc.update( nowMs );
         _listInnerScratch.clear();
         (void)_oidc.pollVerifications( _listInnerScratch );
-        for ( PlatformLoginVerification& inner : _listInnerScratch )
+        for ( const PlatformLoginVerification& inner : _listInnerScratch )
         {
-            for ( PendingVerification& pending : _listPending )
-            {
-                const bool bAwaitingInner = pending._outerID != 0 && pending._exchangeRequestID == 0;
-                if ( bAwaitingInner == false || pending._innerID != inner._verificationID )
-                    continue;
-                inner._verificationID = pending._outerID;
-                pending._verified     = std::move( inner );
-                if ( pending._verified.isVerified() && pending._code.empty() == false )
-                    submitExchange( pending, nowMs );
-                else
-                {
-                    _verificationBuffer.push( std::move( pending._verified ) );
-                    pending._outerID = 0;
-                }
-                break;
-            }
+            (void)_innerVerifications.answer( inner._verificationID, inner );
         }
         _pAppleHTTPClient->update();
         vector<HTTPClientResponse> listResponse;
         (void)_pAppleHTTPClient->pollResponses( listResponse );
         for ( const HTTPClientResponse& response : listResponse )
         {
-            const auto revocationIt = _mapRequestToRevocation.find( response._requestID );
-            if ( revocationIt != _mapRequestToRevocation.end() )
-            {
-                const uint64 revocationID = revocationIt->second;
-                _mapRequestToRevocation.erase( revocationIt );
-                finishRevocation( revocationID, response );
-                continue;
-            }
-            for ( PendingVerification& pending : _listPending )
-            {
-                const bool bExchanging = pending._outerID != 0 && pending._exchangeRequestID != 0;
-                if ( bExchanging && pending._exchangeRequestID == response._requestID )
-                {
-                    finishExchange( pending, response );
-                    break;
-                }
-            }
-        }
-        for ( size_t index = 0; index < _listPending.size(); )
-        {
-            if ( _listPending[index]._outerID == 0 )
-                _listPending.erase( _listPending.begin() + static_cast<ptrdiff_t>( index ) );
-            else
-                ++index;
+            (void)_exchangeTable.answer( response._requestID, response );
         }
     }
 
@@ -260,24 +234,23 @@ namespace sw
         listForm.push_back( HTTPHeader{ "client_secret", clientSecret } );
         listForm.push_back( HTTPHeader{ "token", string( linkSecret ) } );
         listForm.push_back( HTTPHeader{ "token_type_hint", "refresh_token" } );
-        _mapRequestToRevocation[submitForm( _revokeURL, listForm, nowMs )] = revocationID;
+        (void)_exchangeTable.track( submitForm( _revokeURL, listForm, nowMs ), 0, [this, revocationID]( const HTTPClientResponse& response )
+        { finishRevocation( revocationID, response ); } ); // 요청 번호는 겹치지 않는다
         return revocationID;
     }
 
     void AppleLoginProvider::finishRevocation( uint64 revocationID, const HTTPClientResponse& response )
     {
-        using Internal = AppleLoginProviderInternal;
         _revocationBuffer.push( PlatformLoginRevocation{} );
         PlatformLoginRevocation& done = _revocationBuffer.getLast();
         done._revocationID            = revocationID;
         if ( response.isSuccess() )
             return; // 철회했다
-        const bool bInvalidGrant = response._bTransportFailed == SW_FALSE && response._statusCode == Internal::kStatusBadRequest &&
-                                   response.getBodyText().find( "invalid_grant" ) != string_view::npos;
-        if ( bInvalidGrant )
+        const HTTPResponseKind kind = response.getKind();
+        if ( kind == HTTPResponseKind::Refused && response.getBodyText().find( "invalid_grant" ) != string_view::npos )
             return; // 이미 무효인 토큰이다 — 더 철회할 것이 없다
-        if ( response._bTransportFailed == SW_FALSE && response._statusCode == Internal::kStatusBadRequest )
-            SW_LOG_ERROR_ID( "AppleLoginProvider.LoginProviderRejectedRevocation", "Login provider '%#' rejected the revocation (status %#) - check teamId, signingKeyId and the signing key", _settings._name.c_str(), response._statusCode );
+        if ( response.isTransientFailure() == false )
+            SW_LOG_ERROR_ID( "AppleLoginProvider.LoginProviderRejectedRevocation", "Login provider '%#' rejected the revocation (status %#) - check teamId, signingKeyId and the signing key", _settings._name.c_str(), response.getStatusCode() );
         done._bUnavailable = SW_TRUE;
     }
 

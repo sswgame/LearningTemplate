@@ -9,6 +9,7 @@
  *          기동이 중간에 실패해도 같은 길로 내린다(선 것만 내린다).
  */
 #pragma once
+#include "Core/Foundation/BuildInfo.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Subsystem/SubsystemCollection.h"
@@ -61,7 +62,7 @@ namespace sw
         [[nodiscard]] HostEngineStart initializeEngine( int32 argc, utf8* pArgv[], EngineHostRole role );
         /**
          * @brief 호스트 로더의 본체입니다 — 매니페스트를 @p targetMask 로 해석해 리로드 구동기를 세우고(개발 구성만), @p moduleManager 를 받아 타입 공급자 모듈의 라이브러리를 올립니다.
-         * @details 어느 형식의 관리자를 쓸지는 호스트가 정한다(App 은 `ClientModuleManager`). 호스트는 `getModuleManager` 를 자기가 만든 형식으로 읽는다.
+         * @details 어느 형식의 관리자를 쓸지는 호스트가 정한다(App 은 `GameModuleManager`, 에디터를 켠 개발 실행은 개발 계층이 만든 `EditorGameModuleManager`). 호스트는 `getModuleManager` 를 자기가 만든 형식으로 읽는다.
          */
         [[nodiscard]] bool loadModuleLibraries( uint8 targetMask, unique_ptr<GameModuleManager> moduleManager );
         /**
@@ -96,8 +97,16 @@ namespace sw
         SubsystemScope& getHostScope() { return _host; }
         Engine&         getEngine() { return _engine; }
         const Engine&   getEngine() const { return _engine; }
-        /** @brief 개발 계층입니다. 배포는 nullptr 입니다(`build::kShipping`). */
-        IHostDevLayer* getDevLayer() const { return _pDevLayer.get(); }
+        /**
+         * @brief 개발 계층입니다. 배포는 상수 nullptr 이다(`build::kShipping`) — 호스트의 `if ( pDevLayer != nullptr )` 갈래가 배포에서 버려져 개발 계층을 부르는 코드가 남지 않는다.
+         */
+        IHostDevLayer* getDevLayer() const
+        {
+            if constexpr ( build::kShipping )
+                return nullptr;
+            else
+                return _pDevLayer.get();
+        }
         /** @brief 개발 계층의 핫 리로드 매니저입니다. 배포는 nullptr 이다 — 모듈 관리자가 정적 링크로 받는다. */
 #if SW_WITH_DYNAMIC_MODULES
         ILiveReloadManager* getLiveReloadManager() const { return _pDevLayer != nullptr ? _pDevLayer->getLiveReloadManager() : nullptr; }

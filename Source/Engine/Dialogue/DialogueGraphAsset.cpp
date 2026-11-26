@@ -133,7 +133,7 @@ namespace sw
         return readText( text, path, ResourceContext::forType( *StaticType() ).withAsset( assetID ) );
     }
 
-    bool DialogueGraphAsset::loadFromDiskFile( const AbsolutePath& diskPath )
+    bool DialogueGraphAsset::loadFromDiskFile( const DiskPath& diskPath )
     {
         const ScopedMemoryTag memoryScope{ kMemoryTag };
         _listSpeaker.clear();

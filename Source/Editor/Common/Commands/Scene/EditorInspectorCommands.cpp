@@ -6,6 +6,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/String/StringBuilder.h"
 
+#include "Editor/Common/Asset/AssetWriter.h"
 #include "Editor/Common/EditorSceneIterationAccess.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -36,9 +37,9 @@ namespace sw::editor
         struct EditorInspectorCommandsInternal
         {
             /** @brief 프리팹 파일 글을 쓰고 캐시를 다시 읽습니다(되돌리기 데이터 단계 — "Write Prefab"). */
-            static void writePrefabFile( string prefabPath, string filePath, string text )
+            static void writePrefabFile( string prefabPath, string filePath, string expectedText, string text )
             {
-                if ( FileUtil::writeTextFile( FileUtil::toDiskPath( filePath ), text ) == false )
+                if ( AssetWriter::replaceText( FileUtil::toDiskPath( filePath ), expectedText, text ) == false )
                     SW_LOG_ERROR_ID( "EditorInspectorCommands.CouldNotWriteBack", "Could not write '%#' back", filePath.c_str() );
                 // 이 단계는 에셋 관리자가 있을 때만 기록된다(`applyToPrefab`) - 여기서는 필수다.
                 (void)editor::getSubsystem<AssetManager>().getAssetCache<PrefabCache>().reload( AssetID{ prefabPath } ); // 못 읽으면 캐시가 오류를 남기고 이전 판을 지킨다
@@ -125,6 +126,12 @@ namespace sw::editor
 
     bool EditorInspectorCommands::applyToPrefab( GameObject* pObj, const AssetID& assetID )
     {
+        AssetWriter writer; // 씬의 인스턴스에서 바로 적용한다 — 연 문서가 없어 읽은 때의 기준이 없다
+        return applyToPrefab( writer, pObj, assetID );
+    }
+
+    bool EditorInspectorCommands::applyToPrefab( AssetWriter& writer, GameObject* pObj, const AssetID& assetID )
+    {
         EditorTransaction transaction; // 씬을 바꾸는 기록은 거래 구간 안에서만 한다(`EditorTransaction` 의 기록 함수는 인스턴스 멤버다)
         const string_view prefabPath = assetID.view();
         if ( EditorPlaySession::refuseSceneEdit( "Apply to prefab" ) )
@@ -138,7 +145,7 @@ namespace sw::editor
         PrefabCache*   pPrefabCache = pResources != nullptr ? &pResources->getAssetCache<PrefabCache>() : nullptr;
 
         // 고치기 전의 원형과 파일 내용이다. 다른 인스턴스의 덮어쓴 값을 옛 원형과 비교해 뽑고, 되돌리기가 이것으로 파일을 되돌린다.
-        const optional<AbsolutePath> filePath = editor::getSubsystem<AssetPaths>().toDiskPath( prefabPath );
+        const optional<DiskPath> filePath = editor::getSubsystem<AssetPaths>().toDiskPath( prefabPath );
         if ( filePath.has_value() == false )
             return false; // 이유는 toDiskPath 가 남겼다
         string                              oldFileText;
@@ -154,7 +161,7 @@ namespace sw::editor
         // 변형은 변형으로 남는다 — 전체 상태로 쓰면 부모와의 연결이 끊긴다(유니티 Apply 도 Variant 를 Variant 로 저장한다).
         if ( bHadFile )
             asset.setBasePath( PrefabAsset::readBasePathFromSource( oldFileText ) );
-        if ( asset.saveToFile( *filePath ) == false )
+        if ( writer.saveAsset( *filePath, asset ) == false )
         {
             SW_LOG_ERROR_ID( "EditorInspectorCommands.ApplyPrefabRefusedCould", "Apply to prefab refused: could not write '%#'", string{ prefabPath }.c_str() );
             return false;
@@ -192,8 +199,8 @@ namespace sw::editor
         if ( bHadFile && bCanRedo )
         {
             const string savedPath{ prefabPath };
-            transaction.push( SW_UNDO_STEP( EditorInspectorCommandsInternal::writePrefabFile, savedPath, filePath->str(), string{ oldFileText } ),
-                              SW_UNDO_STEP( EditorInspectorCommandsInternal::writePrefabFile, savedPath, filePath->str(), string{ newFileText } ),
+            transaction.push( SW_UNDO_STEP( EditorInspectorCommandsInternal::writePrefabFile, savedPath, filePath->str(), newFileText, oldFileText ),
+                              SW_UNDO_STEP( EditorInspectorCommandsInternal::writePrefabFile, savedPath, filePath->str(), oldFileText, newFileText ),
                               "Write Prefab" );
         }
         uint32 updatedCount = 0;

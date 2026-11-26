@@ -25,6 +25,8 @@ namespace sw
 
 namespace sw::editor
 {
+    class AssetWriter;
+
     class EditorStateTextHistory;
 
     /**
@@ -63,17 +65,17 @@ namespace sw::editor
          */
         [[nodiscard]] bool savePreset( string_view presetName );
         /** @brief 프리셋 파일 @p presetFile 의 값을 지금 값으로 두고 되돌리기 한 단계로 기록합니다. 읽지 못하면 값이 그대로이고 로그에 남고 false 입니다. */
-        [[nodiscard]] bool loadPreset( const AbsolutePath& presetFile );
+        [[nodiscard]] bool loadPreset( const DiskPath& presetFile );
         /**
          * @brief 프리셋 목록 훑기 결과를 받고, 다시 훑어야 하면 훑기를 겁니다. 프리셋 팝업이 열린 동안 그리기마다 부릅니다.
          * @return 훑는 중이면 true 입니다(목록을 보이지 않는다).
          */
         bool pollPresetFiles();
         /** @brief `pollPresetFiles` 와 같되 훑을 폴더 @p presetFolder 를 받습니다(프리셋 폴더는 에디터 상태 폴더 아래라 테스트는 빈 폴더를 넘긴다). */
-        bool pollPresetFilesIn( const AbsolutePath& presetFolder );
+        bool pollPresetFilesIn( const DiskPath& presetFolder );
         /** @brief 다음 `pollPresetFiles` 가 목록을 다시 훑게 합니다. 지금 훑는 중이면 그 결과를 받은 뒤 한 번 더 훑는다. */
-        void                        markPresetListStale() { _bPresetListDirty = SW_TRUE; }
-        const vector<AbsolutePath>& getPresetFiles() const { return _listPresetFile; }
+        void                    markPresetListStale() { _bPresetListDirty = SW_TRUE; }
+        const vector<DiskPath>& getPresetFiles() const { return _listPresetFile; }
         /** @brief 등록된 전역 변수를 모두 기본값으로 되돌리고 되돌리기 한 단계로 기록합니다(Reset All). */
         void resetAllToDefault();
         /** @brief 문서 되돌리기 — 모두 기본값으로 두고 되돌리기 기록을 비웁니다. */
@@ -95,11 +97,11 @@ namespace sw::editor
         /** @brief 에디터 범위의 관리자에서 `refreshVariableList( gvm, filterText )` 를 부릅니다. 관리자는 Model 안에서만 찾는다(MVVM 계약). */
         const vector<GlobalVariableInfo*>& refreshVariableList( string_view filterText );
         /** @brief 지금 값을 세션 문서로 저장합니다(`EditorGlobalVariableCommands::saveSessionPreset`). 못 쓰면 false 이고 로그에 남는다. */
-        [[nodiscard]] static bool saveSessionPreset();
+        [[nodiscard]] static bool saveSessionPreset( AssetWriter& writer );
         /** @brief `saveSessionPreset` 가 쓸 세션 문서(디스크 경로)를 @p outListPath 에 더합니다(`EditorGlobalVariableCommands::getSessionPresetPath`). */
-        static void collectFilesToSave( vector<AbsolutePath>& outListPath );
+        static void collectFilesToSave( vector<DiskPath>& outListPath );
         /** @brief @p absolutePath 가 세션 문서면 true 입니다. */
-        [[nodiscard]] static bool isSessionFile( const AbsolutePath& absolutePath );
+        [[nodiscard]] static bool isSessionFile( const DiskPath& absolutePath );
         /** @brief 세션 문서 글입니다(자동 저장 사본 — 저장할 글과 같다). */
         [[nodiscard]] static string makeSessionText();
         /** @brief 세션 문서의 사본 글 @p text 를 지금 값으로 두고 되돌리기 단계를 비웁니다(갈아 끼운 값의 단계는 남지 않는다). 읽지 못하면 false 이고 값은 그대로입니다. */
@@ -124,7 +126,7 @@ namespace sw::editor
         unordered_set<string> _uniquePinnedVar;
         string                _pendingPinToggle; ///< 다음 목록 갱신에서 꽂거나 뽑을 변수 이름(비면 없음)
         EditorFileCollectJob  _presetJob;
-        vector<AbsolutePath>  _listPresetFile;
+        vector<DiskPath>      _listPresetFile;
         /** @brief 보일 변수입니다. 등록 세대(`GlobalVariableManager::getRegistrationGeneration`)나 검색 글이 바뀐 프레임에만 다시 채운다. */
         vector<GlobalVariableInfo*> _listFilteredVariable;
         string                      _listFilterText;     ///< 목록을 지은 때의 검색 글

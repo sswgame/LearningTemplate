@@ -10,6 +10,7 @@
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
 
+#include "Editor/Common/Asset/AssetWriter.h"
 #include "Editor/Common/Commands/Diagnostics/EditorGlobalVariableCommands.h"
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -116,7 +117,8 @@ namespace sw::editor
         formatstring( fileName.data(), fileName.capacity(), "%#%#", name, GlobalVariablesViewModelInternal::kPresetSuffix );
         const AbsolutePath presetPath = EditorGlobalVariableCommands::getPresetFolderPath().join( fileName );
         // 이름 붙인 프리셋 저장은 세션 문서의 저장이 아니다. 세션의 dirty 는 건드리지 않는다.
-        if ( EditorGlobalVariableCommands::savePreset( presetPath, name.c_str() ) == false )
+        AssetWriter writer; // 이름 붙인 프리셋은 연 문서가 아니다 — 읽기 전용만 본다
+        if ( EditorGlobalVariableCommands::savePreset( writer, presetPath, name.c_str() ) == false )
         {
             SW_LOG_ERROR_ID( "GlobalVariablesPanel.CouldNotSavePreset", "Could not save preset '%#'", presetPath.c_str() );
             return false;
@@ -125,7 +127,7 @@ namespace sw::editor
         return true;
     }
 
-    bool GlobalVariablesViewModel::loadPreset( const AbsolutePath& presetFile )
+    bool GlobalVariablesViewModel::loadPreset( const DiskPath& presetFile )
     {
         // 읽은 프리셋이 현재 값이 된다. 저장된 세션과 다르므로 dirty 다(패널이 둔다). 읽지 못하면 값이 그대로다.
         selectEdit( EditorGlobalVariableCommands::collectPresetVariables( presetFile ) );
@@ -143,9 +145,9 @@ namespace sw::editor
         return pollPresetFilesIn( EditorGlobalVariableCommands::getPresetFolderPath() );
     }
 
-    bool GlobalVariablesViewModel::pollPresetFilesIn( const AbsolutePath& presetFolder )
+    bool GlobalVariablesViewModel::pollPresetFilesIn( const DiskPath& presetFolder )
     {
-        vector<AbsolutePath> listNewPresetFile;
+        vector<DiskPath>     listNewPresetFile;
         const EditorTaskPoll presetPoll = _presetJob.take( listNewPresetFile );
         if ( presetPoll == EditorTaskPoll::Ready )
             _listPresetFile = std::move( listNewPresetFile );
@@ -263,17 +265,17 @@ namespace sw::editor
         return refreshVariableList( getVariableManager(), filterText );
     }
 
-    bool GlobalVariablesViewModel::saveSessionPreset()
+    bool GlobalVariablesViewModel::saveSessionPreset( AssetWriter& writer )
     {
-        return EditorGlobalVariableCommands::saveSessionPreset();
+        return EditorGlobalVariableCommands::saveSessionPreset( writer );
     }
 
-    void GlobalVariablesViewModel::collectFilesToSave( vector<AbsolutePath>& outListPath )
+    void GlobalVariablesViewModel::collectFilesToSave( vector<DiskPath>& outListPath )
     {
         outListPath.push_back( EditorGlobalVariableCommands::getSessionPresetPath() );
     }
 
-    bool GlobalVariablesViewModel::isSessionFile( const AbsolutePath& absolutePath )
+    bool GlobalVariablesViewModel::isSessionFile( const DiskPath& absolutePath )
     {
         return FileUtil::isSameDiskPath( EditorGlobalVariableCommands::getSessionPresetPath().str(), absolutePath.str() );
     }

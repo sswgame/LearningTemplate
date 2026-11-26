@@ -11,9 +11,26 @@
 #include "Engine/EngineMinimal.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Serializer/DataPath.h"
+#include "Engine/Serialization/Serializer/SecretValue.h"
 
 namespace sw
 {
+    /** @brief 비밀 값 샘플입니다 — 글로는 나가지 않고 바이너리로만 왕복한다. */
+    REFLECT()
+    struct SecretValueSample
+    {
+        REFLECT_BODY();
+
+        PROPERTY()
+        int32 _visible{ 0 };
+
+        PROPERTY()
+        Secret32 _digest{};
+
+        PROPERTY()
+        SecretText _password{};
+    };
+
     /** @brief 이름 · 강제 변환 샘플의 열거형입니다. */
     ENUM()
     enum class SerializerSampleMode : uint8

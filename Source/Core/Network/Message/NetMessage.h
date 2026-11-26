@@ -197,7 +197,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 받은 메시지 하나의 컨텍스트입니다. 보낸 연결(클라이언트에서는 서버가 0), 채널, 종류(첫 바이트), 메시지 전체(종류 포함, 그대로 중계할 때 씁니다)를 담습니다. */
+    /** @brief 받은 메시지 하나의 컨텍스트입니다. 보낸 연결(처리기에 닿는 것은 늘 유효하다 — 클라이언트에서는 서버가 0), 채널, 종류(첫 바이트), 메시지 전체(종류 포함, 그대로 중계할 때 씁니다)를 담습니다. */
     struct NetMessageContext
     {
         const uint8*   _pMessage{ nullptr }; ///< 처리기 호출 동안만 유효하다.
@@ -245,10 +245,14 @@ namespace sw
          */
         virtual NetMessageDirectionMask getMessageDirectionMask() const = 0;
         /**
-         * @brief 맡은 종류의 메시지 하나를 처리합니다. @p body 는 종류 바이트 다음부터입니다.
-         * @return 본문을 읽지 못했으면 Malformed 를 반환하며, 라우터가 세고 버립니다. 낡은 것을 버린 경우는 Handled 입니다.
+         * @brief 종류 @p kind 를 서버가 한 연결에게서 `poll` 한 번에 받는 상한입니다. 표 기반 처리기는 서술자(`NetLimitedMessageDef`)에서 저절로 낸다.
+         * @details 서버로 갈 수 있는 종류의 상한이 0 이면 라우터가 등록을 거절한다(상한 없는 서버 처리기는 없다).
          */
-        virtual NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body ) = 0;
+        virtual uint32 getMaxPerPoll( uint8 kind ) const
+        {
+            (void)kind;
+            return 0;
+        }
         /** @brief 연결이 열렸습니다(서버에서는 클라이언트, 클라이언트에서는 서버 = 0). 이 연결 ID의 상태를 새로 시작합니다. */
         virtual void onConnectionOpened( int32 connectionID ) { (void)connectionID; }
         /** @brief 연결이 닫혔습니다. 이 연결 ID의 상태를 버립니다(같은 ID는 다음 연결이 다시 씁니다). */
@@ -319,6 +323,16 @@ namespace sw
         {
             return handleMessage( connectionID, buffer.data(), static_cast<int32>( buffer.size() ) );
         }
+
+    protected:
+        friend class NetMessageRouter;
+
+        /**
+         * @brief 맡은 종류의 메시지 하나를 처리합니다. @p body 는 종류 바이트 다음부터입니다.
+         * @details 부르는 쪽은 라우터와 `handleMessage` 둘이고 둘 다 연결 번호가 없는 메시지를 거른다 — 처리기는 `context._connectionID` 가 유효한지 보지 않는다.
+         * @return 본문을 읽지 못했으면 Malformed 를 반환하며, 라우터가 세고 버립니다. 낡은 것을 버린 경우는 Handled 입니다.
+         */
+        virtual NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body ) = 0;
     };
 } // namespace sw
 
@@ -451,6 +465,8 @@ namespace sw
         const DevCounter& getMalformedCount() const { return _malformedCount; }
         /** @brief 다른 월드의 메시지라 처리기에 넘기지 않은 수입니다(월드가 바뀌는 사이 날아오던 것). */
         const DevCounter& getOtherWorldCount() const { return _otherWorldCount; }
+        /** @brief 서버 수신 상한(`NetLimitedMessageDef`)을 넘어 버린 비신뢰 메시지 수입니다. */
+        const DevCounter& getOverLimitCount() const { return _overLimitCount; }
         /** @brief 보류했다가 시한 · 상한 · 월드 바뀜으로 전하지 못한 메시지 수입니다. */
         const DevCounter& getDeliveryFailedCount() const { return _deliveryFailedCount; }
         /** @brief 그 종류를 보낸다고 등록한 처리기가 없어 버린 전달 통지 수입니다(첫 번째는 오류 로그도 남긴다 — 보낸 쪽이 처리기를 등록하지 않았다). */
@@ -530,6 +546,10 @@ namespace sw
         bool isInboundAllowed( uint8 kind, NetPeerRole role ) const;
         /** @brief 반대 방향 종류를 보낸 연결 @p connectionID 를 세고 끊습니다. 같은 `poll` 의 남은 메시지도 넘기지 않는다. */
         void refuseWrongDirection( INetPeers& peers, int32 connectionID, uint8 kind, NetPeerRole role );
+        /** @brief 서버 — 이번 `poll` 에 연결 @p connectionID 가 보낸 종류 @p kind 를 하나 세고, 상한을 넘었으면 true 입니다. 상한이 없는 종류(처리기가 없다)는 세지 않습니다. */
+        bool countOverLimit( int32 connectionID, uint8 kind );
+        /** @brief 상한을 넘은 메시지를 버립니다 — 비신뢰는 세고, 신뢰는 연결을 끊습니다. */
+        void refuseOverLimit( INetPeers& peers, int32 connectionID, uint8 kind, NetChannelKind channel );
         /** @brief 들고 있는 상대 판과 이 쪽 판을 견주어 다른 연결을 끊습니다. 다르면 true 입니다. */
         bool disconnectOnWireVersionMismatch( INetPeers& peers, int32 connectionID );
 
@@ -556,9 +576,14 @@ namespace sw
         INetMessageHandler*                           _arrKindHandler[kKindCount];
         INetMessageHandler*                           _arrNotificationHandler[kKindCount]; ///< 종류마다 그 종류를 전달 통지로 보내는 처리기(`getNotifiedKindMask`).
         uint8                                         _arrKindDirection[kKindCount];       ///< 종류마다 맡은 처리기가 적은 방향 비트(`kDirectionToServerBit` · `kDirectionToClientBit`).
+        uint16                                        _arrKindMaxPerPoll[kKindCount];      ///< 종류마다 서버 수신 상한(0 이면 세지 않는다)
+        uint8                                         _arrKindLimitIndex[kKindCount];      ///< 상한이 있는 종류의 셈 칸 번호
+        vector<uint16>                                _listPollCount;                      ///< 이번 `poll` 의 셈([연결 × `_limitedKindCount` + 칸 번호]). `poll` 마다 0 으로 채운다
+        int32                                         _limitedKindCount;                   ///< 상한이 있는 종류 수
         NetMessageKindStatsTable                      _kindStats;                          ///< `poll` 가 메시지마다 더한다(꺼내는 반복 안의 덧셈 둘 — 따로 훑지 않는다).
         NetInbound                                    _inbound;                            ///< `poll` 가 다시 쓰는 버퍼.
         DevCounter                                    _malformedCount;
+        DevCounter                                    _overLimitCount;      ///< 수신 상한을 넘어 버린 비신뢰 메시지 수
         DevCounter                                    _otherWorldCount;     ///< 앞 월드의 것이라 버린 메시지 수
         DevCounter                                    _deliveryFailedCount; ///< 보류했다가 전하지 못한 메시지 수
         uint64                                        _unclaimedNotificationCount;

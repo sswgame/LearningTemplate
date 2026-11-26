@@ -5,6 +5,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/String/formatString.h"
 
+#include "Editor/Common/Asset/AssetWriter.h"
 #include "Editor/Common/Commands/Scene/EditorViewportPreview.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/Undo/DocumentEditRecorder.h"
@@ -48,14 +49,14 @@ namespace sw::editor
         return ToolAssetLoadResult::Loaded;
     }
 
-    bool MaterialViewModel::saveDocument( string_view path )
+    bool MaterialViewModel::saveDocument( AssetWriter& writer, string_view path )
     {
         if ( path.empty() )
             return false;
         commitName();
         _material->setShaderPath( _shaderPath.c_str() );
-        const optional<AbsolutePath> materialFile = editor::getSubsystem<AssetPaths>().toDiskPath( path );
-        if ( materialFile.has_value() == false || _material->saveToFile( *materialFile ) == false )
+        const optional<DiskPath> materialFile = editor::getSubsystem<AssetPaths>().toDiskPath( path );
+        if ( materialFile.has_value() == false || writer.saveAsset( *materialFile, *_material ) == false )
         {
             _status = SW_LOCKEY( "EditorMaterial", "SaveFailedStatus" );
             return false;

@@ -9,7 +9,6 @@
 
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPreviewViewport.h"
-#include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
@@ -143,7 +142,7 @@ namespace sw::editor
             return;
         }
         _document.ensureKindTable();
-        _document.pollExternalChange( MonotonicClock::nowSeconds() );
+        _document.pollExternalChange();
         drawFileRow();
         drawHistoryRow();
         if ( _document.getStatus().empty() == false )
@@ -736,7 +735,7 @@ namespace sw::editor
         ImGui::SameLine();
         ImGui::BeginDisabled( _document.isBodyDataDirty() == false );
         if ( ImGui::SmallButton( SW_LOCKEY( "EdPlugin", "BodyDataSave" ) ) )
-            (void)_document.saveBodyData(); // 실패 까닭은 상태 줄에 남는다
+            (void)_document.saveBodyData( getAssetWriter() ); // 실패 까닭은 상태 줄에 남는다
         ImGui::EndDisabled();
         EditorSelfTestMarks::record( "charactereditor.body.dataSave" );
         if ( _document.isBodyDataDirty() )

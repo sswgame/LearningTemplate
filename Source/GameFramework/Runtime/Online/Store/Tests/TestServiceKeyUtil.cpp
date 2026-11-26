@@ -1,4 +1,4 @@
-// ServiceKeyUtilTest — 저장소 키 · 레코드 도우미: 고정폭 16 진 키의 순서 · 왕복과 거절(길이 · 대문자 · 글자), 연결 레코드 id 의 깨짐 = 0,
+// ServiceKeyUtilTest — 저장소 키 · 레코드 도우미: 고정폭 16 진 키의 순서 · 왕복과 거절(길이 · 대문자 · 글자),
 // 길이 붙은 문자열의 상한 그대로 · 상한 + 1 · 잘린 몸, 토큰 글 허용 목록(상한 · 부호 · 거절할 바이트).
 #include "pch.h"
 
@@ -35,20 +35,6 @@ SW_TEST_CASE( ServiceKeyUtilTest, HexKeysAreFixedWidthLowercaseAndOrdered )
     string key{ "sd/srv/" };
     ServiceKeyUtil::appendHex64( key, 0x2a );
     SW_EXPECT_EQUAL( string( "sd/srv/000000000000002a" ), key );
-}
-
-/** @brief [ServiceKeyUtilTest] 연결 레코드 id 는 왕복하고, 빈 · 잘린 바이트는 0("없음 · 깨짐")이다 */
-SW_TEST_CASE( ServiceKeyUtilTest, VarIDRoundTripsAndBrokenBytesReadAsZero )
-{
-    // 틀리면: 넘침을 보지 않으면 잘린 바이트가 0 이 아닌 값이 되어 해당 단언이 진다.
-    SW_EXPECT_EQUAL( uint64( 1 ), ServiceKeyUtil::decodeVarID( ServiceKeyUtil::encodeVarID( 1 ) ) );
-    SW_EXPECT_EQUAL( uint64( ~0ull ), ServiceKeyUtil::decodeVarID( ServiceKeyUtil::encodeVarID( ~0ull ) ) );
-    SW_EXPECT_EQUAL( uint64( 0 ), ServiceKeyUtil::decodeVarID( {} ) );
-
-    vector<uint8> truncated = ServiceKeyUtil::encodeVarID( ~0ull );
-    SW_REQUIRE_TRUE( truncated.size() > 1 );
-    truncated.pop_back();
-    SW_EXPECT_EQUAL( uint64( 0 ), ServiceKeyUtil::decodeVarID( truncated ) );
 }
 
 /** @brief [ServiceKeyUtilTest] 길이 붙은 문자열은 상한 그대로를 받고, 상한 + 1 과 길이보다 짧은 몸은 거절한다 */

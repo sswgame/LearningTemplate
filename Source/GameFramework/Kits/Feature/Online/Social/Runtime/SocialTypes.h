@@ -104,7 +104,7 @@ namespace sw
     /**
      * @brief 한 계정의 접속 상태입니다. 친구에게 보이는 값입니다.
      * @details 응답과 알림에는 고정 배치형(B)으로, 서버 버스(`SocialBus::kPresenceTopic`)에는 자기 기술형(A)으로 실립니다.
-     *          캐시 값(시한 있는 접속 상태)은 배포 중에 다른 빌드의 서버가 읽을 수 있으므로 자기 기술형(A, `SocialProtocol::encodePresenceRecord`)입니다.
+     *          캐시 값(시한 있는 접속 상태)은 배포 중에 다른 빌드의 서버가 읽을 수 있으므로 자기 기술형(A, `EphemeralRecordTable<SocialPresence>`)입니다.
      */
     REFLECT()
     struct SW_KIT_API SocialPresence

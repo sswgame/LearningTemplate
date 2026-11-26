@@ -105,7 +105,7 @@ namespace sw
 
     private:
         void onListReply( const EphemeralReply& reply );
-        void onRecordReply( const EphemeralReply& reply );
+        void onRecordReply( const string& recordName, const EphemeralReply& reply );
         /** @brief 명단의 계정을 @p expiresMs 까지 받습니다. 이미 더 늦게까지 받는 계정은 그대로 둡니다. */
         void acceptMatch( const MatchFormed& match, int64 expiresMs );
         /** @brief 받을 사람이 정원을 넘으면 가장 오래된 경기의 사람부터 받지 않습니다(경기 하나만 남으면 그만둔다). */
@@ -117,12 +117,11 @@ namespace sw
         mutable uint8 _bReadRequested                          SW_GUARDED_BY( _mutex ); ///< 명단에 없는 계정이 접속을 시도했다. 다음 `update` 가 목록을 바로 읽는다
         unordered_map<string, int64>                           _mapRecordToExpiresMs;   ///< 읽었거나 읽는 중인 기록 이름과 끝나는 시각이다. 같은 기록을 다시 읽지 않는다
         unordered_map<AccountID, MatchSeat>                    _mapAccountToSeat;       ///< 명단의 계정마다 경기 · 팀이다(서버 루프만 쓴다)
-        unordered_map<uint64, string>                          _mapRequestToRecord;     ///< 기다리는 기록 읽기이다
         EphemeralStoreRouter*                                  _pRouter;
         Subscription                                           _replyOwner; ///< 라우터 답의 주인 몫(`startReading` 이 열고 `shutdown` 이 놓는다)
         uint64                                                 _serverID;
-        MatchServerAgentPolicy                                 _policy;        ///< 운영 값(`initialize`)
-        uint64                                                 _listRequestID; ///< 기다리는 목록 읽기이다. 0 이면 없다
+        MatchServerAgentPolicy                                 _policy;       ///< 운영 값(`initialize`)
+        uint8                                                  _bListPending; ///< 목록 읽기를 기다린다
         int64                                                  _nextListReadMs;
         int64                                                  _nowMs;
         int32                                                  _seatCapacity; ///< 이 서버의 정원이다

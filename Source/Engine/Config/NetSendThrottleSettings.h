@@ -5,10 +5,12 @@
  *          `loadInto` 로 `NetEndpointConfig::_maxBytesPerSecond` 와 `_sendThrottle` 에 옮긴다. 파일이 없거나 틀리면 false 이고 부르는 쪽은 열지 않는다(기본값으로 대신하지 않는다).
  */
 #pragma once
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Network/Connection/NetSendThrottle.h"
 
+#include "Engine/Config/ConfigFileID.h"
 #include "Engine/Config/IConfig.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -26,7 +28,7 @@ namespace sw
         REFLECT_BODY();
 
         /** @brief 설정 파일의 위치입니다(프로젝트 폴더 기준). */
-        static constexpr const utf8* kConfigFile = "Config/Engine/NetSendThrottle.json";
+        static constexpr ConfigFileID<NetSendThrottleSettings> kConfigFile{ "Config/Engine/NetSendThrottle.json" };
 
         PROPERTY( Required, Tooltip = "Per-connection send rate ceiling in bytes per second (Unreal NetSpeed)" )
         int32 _maxBytesPerSecond{ 0 };
@@ -48,6 +50,9 @@ namespace sw
          * @return 없거나 틀리면 오류 로그(틀린 칸 이름)와 false 이고 @p inoutSettings 는 그대로입니다.
          */
         [[nodiscard]] static bool loadInto( NetEndpointConfig& inoutSettings );
+
+        /** @brief 상한 · 계수의 규칙을 봅니다(`NetSendThrottle::validate` — `ConfigManager::readConfig` 가 부른다). */
+        [[nodiscard]] expected<void> validate() const;
 
         /** @brief Core 계수로 옮깁니다(상한은 `_maxBytesPerSecond` 로 따로 쓴다). */
         NetSendThrottleConfig makeThrottleConfig() const

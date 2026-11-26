@@ -326,25 +326,24 @@ namespace
 SW_TEST_CASE( StoreReceiptValidatorTest, ClassifyResponse )
 {
     HTTPClientResponse response;
-    response._bTransportFailed = SW_TRUE;
+    response.setTransportFailed( "down" );
     SW_EXPECT_TRUE( StoreReceiptValidator::classifyResponse( response ) == ReceiptResponseKind::Unreachable );
-    response._bTransportFailed = SW_FALSE;
     for ( int32 status : { 429, 500, 503 } )
     {
-        response._statusCode = status;
+        response.setStatusCode( status );
         SW_EXPECT_TRUE( StoreReceiptValidator::classifyResponse( response ) == ReceiptResponseKind::Unreachable );
     }
     for ( int32 status : { 401, 403 } )
     {
-        response._statusCode = status;
+        response.setStatusCode( status );
         SW_EXPECT_TRUE( StoreReceiptValidator::classifyResponse( response ) == ReceiptResponseKind::CredentialRejected );
     }
     for ( int32 status : { 400, 404, 410 } )
     {
-        response._statusCode = status;
+        response.setStatusCode( status );
         SW_EXPECT_TRUE( StoreReceiptValidator::classifyResponse( response ) == ReceiptResponseKind::Refused );
     }
-    response._statusCode = 200;
+    response.setStatusCode( 200 );
     SW_EXPECT_TRUE( StoreReceiptValidator::classifyResponse( response ) == ReceiptResponseKind::Answered );
 }
 

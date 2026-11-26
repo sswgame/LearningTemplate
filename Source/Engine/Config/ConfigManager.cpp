@@ -145,6 +145,21 @@ namespace sw
         (void)applyRenderQuality( gv_renderQuality.get() );
     }
 
+    expected<string> ConfigManager::readProjectText( const utf8* pPath )
+    {
+        string text;
+        switch ( FileUtil::readOptionalTextFile( ProcessRoots::get()._project.join( pPath ), text ) )
+        {
+            case OptionalFileRead::Read:
+                return text;
+            case OptionalFileRead::Missing:
+                return unexpected( Error{ ErrorKind::NotFound, "the config file is missing", pPath } );
+            case OptionalFileRead::Failed:
+                break;
+        }
+        return unexpected( Error{ ErrorKind::ExternalFailure, "the config file could not be read", pPath } );
+    }
+
     bool ConfigManager::readConfigJSON( void* pInstance, const TypeInfo& typeInfo, string_view jsonStr, const utf8* pSourceLabel )
     {
         // 키는 대소문자까지 맞아야 한다(직렬화기는 키를 철자 그대로 찾는다 — `_Width` 오타는 모르는 키다).

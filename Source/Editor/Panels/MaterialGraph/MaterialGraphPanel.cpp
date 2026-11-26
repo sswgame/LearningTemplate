@@ -13,7 +13,6 @@
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/GUI/EditorCompactControls.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
-#include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorNodeGraphID.h"
 #include "Editor/Common/Widgets/EditorNodeGraphRules.h"
@@ -107,13 +106,10 @@ namespace sw::editor
         _nodeGraph.requestContentFit(); // 되돌린 위치를 캔버스에 다시 넣는다
     }
 
-    bool MaterialGraphPanel::saveDocument()
+    bool MaterialGraphPanel::saveDocument( AssetWriter& writer )
     {
-        const optional<AbsolutePath> diskPath = getDocumentDiskPath();
-        if ( diskPath.has_value() == false || _model.saveDocument( *diskPath ) == false )
-            return false;
-        syncDocumentUndoBaseline();
-        return true;
+        const optional<DiskPath> diskPath = getDocumentDiskPath();
+        return diskPath.has_value() && _model.saveDocument( writer, *diskPath );
     }
 
     void MaterialGraphPanel::populatePreviewScene( Scene& scene )

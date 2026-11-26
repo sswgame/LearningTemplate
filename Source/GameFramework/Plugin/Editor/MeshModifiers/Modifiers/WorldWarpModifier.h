@@ -10,6 +10,8 @@
 
 namespace sw::editor
 {
+    class AssetWriter;
+
     /**
      * @class WorldWarpModifier
      * @brief 워프 정의 파일(`.mfwarp`, 스택 저장 문서 글)의 스택을 워프 오브젝트의 공간에서 겁니다. 여러 메시가 같은 파일 · 같은 오브젝트를 가리키면 한 워프를 함께 받습니다.
@@ -28,7 +30,7 @@ namespace sw::editor
         WorldWarpModifier();
 
         /** @brief 스택 @p stack 을 워프 정의 파일 @p absPath 로 씁니다(스택 저장 문서 글). 묶음(`DeformableModifier`)의 하위 스택을 워프로 내보낼 때 씁니다. */
-        [[nodiscard]] static bool writeWarpFile( const MeshModifierStack& stack, const AbsolutePath& absPath );
+        [[nodiscard]] static bool writeWarpFile( AssetWriter& writer, const MeshModifierStack& stack, const DiskPath& path );
         /** @brief 워프 정의 리소스 @p assetID 를 @p outStack 으로 읽습니다(`AssetIO`). 못 읽거나 형식이 틀리면 false 입니다. */
         [[nodiscard]] static bool readWarpFile( string_view assetID, MeshModifierStack& outStack );
 

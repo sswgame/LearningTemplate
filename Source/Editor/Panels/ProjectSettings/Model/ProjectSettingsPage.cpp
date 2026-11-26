@@ -8,7 +8,7 @@
 
 #include "DevTools/AssetReload/ConfigReloadSubsystem.h"
 
-#include "Editor/Common/Commands/Asset/EditorContentWrite.h"
+#include "Editor/Common/Asset/AssetWriter.h"
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorStateStore.h"
@@ -21,11 +21,11 @@
 
 namespace sw::editor
 {
-    void ProjectSettingsPage::open()
+    void ProjectSettingsPage::open( AssetWriter& writer )
     {
         _bOpened = true;
         _bDirty  = false;
-        _diskBaseline.capture( span<const AbsolutePath>( &_absolutePath, 1 ) );
+        writer.capture( _absolutePath );
         if ( _entry.isTable() )
         {
             const expected<void> opened = _tableDocument.open( _absolutePath );
@@ -52,20 +52,13 @@ namespace sw::editor
             _bDirty = _entry.isTable() ? _tableDocument.isModified() : _document.isModified();
     }
 
-    bool ProjectSettingsPage::saveDocument( bool& outApplied )
+    bool ProjectSettingsPage::saveDocument( AssetWriter& writer, bool& outApplied )
     {
-        outApplied = false;
-        // 페이지별 Save 단추는 패널 저장(`saveDocumentAndClearDirty`)을 지나지 않는다 — 같은 확인을 여기서도 한다.
-        if ( EditorContentWrite::warnIfReadOnly( _absolutePath, EditorContentWriteKind::Save ) )
-            return false;
-        const span<const AbsolutePath> file( &_absolutePath, 1 );
-        if ( _diskBaseline.validateOverwrite( file ) == false )
-            return false;
-        const bool bSaved = _entry.isTable() ? _tableDocument.saveDocument() : _document.saveDocument();
+        outApplied        = false;
+        const bool bSaved = _entry.isTable() ? _tableDocument.saveDocument( writer ) : _document.saveDocument( writer );
         if ( bSaved == false )
             return false;
         _bDirty = false;
-        _diskBaseline.capture( file );
         // 호스트가 파일에서 읽은 설정(EngineConfig · GameConfig …)이면 제자리에서 다시 읽는다.
         // 방금 쓴 파일을 다시 읽지 못하면(Failed) 읽는 쪽이 오류를 남겼다 — 적용되지 않은 것이다.
         ConfigReloadSubsystem* pConfigReload = editor::findSubsystem<ConfigReloadSubsystem>();
@@ -83,18 +76,18 @@ namespace sw::editor
         return text;
     }
 
-    bool ProjectSettingsPage::restoreText( string_view text )
+    bool ProjectSettingsPage::restoreText( AssetWriter& writer, string_view text )
     {
         if ( _bOpened == false )
-            open();
+            open( writer );
         const bool bRestored = _entry.isTable() ? _tableDocument.restoreText( text ) : _document.restoreDifferenceText( text );
         refreshDirty();
         return bRestored;
     }
 
-    void ProjectSettingsPage::revert()
+    void ProjectSettingsPage::revert( AssetWriter& writer )
     {
-        _diskBaseline.capture( span<const AbsolutePath>( &_absolutePath, 1 ) ); // 디스크에서 다시 읽는다
+        writer.capture( _absolutePath ); // 디스크에서 다시 읽는다
         if ( _entry.isTable() )
         {
             const expected<void> reverted = _tableDocument.revert();
@@ -139,8 +132,8 @@ namespace sw::editor
 
         // 활성 팩의 `<Engine>` 요소(창 제목 · 렌더 파이프라인 · 스키마 · UI 규칙) — 게임의 엔진 설정은 프리셋이 아니라 팩 gamesettings.xml 에 있다.
         // 유니티 · 언리얼의 Project Settings 처럼 열린 프로젝트(활성 게임) 하나만 고친다.
-        const DataPath&    packRoot   = editor::getSubsystem<const GameConfig>()._packRoot;
-        const AbsolutePath packFolder = packRoot.isSet() ? EditorPaths::findContentFolder( packRoot.get() ) : AbsolutePath{};
+        const DataPath& packRoot   = editor::getSubsystem<const GameConfig>()._packRoot;
+        const DiskPath  packFolder = packRoot.isSet() ? EditorPaths::findContentFolder( packRoot.get() ) : DiskPath{};
         // 팩 폴더를 못 찾았는데 빈 루트에 이어 붙이면 상대 경로가 돼 작업 폴더의 파일을 열고 쓴다 — 페이지를 만들지 않고 알린다.
         if ( packRoot.isSet() && packFolder.empty() )
             SW_LOG_ERROR_ID( "ProjectSettingsPanel.ProjectSettingsActivePack", "Project settings: the active pack folder '%#' was not found - its <Engine> settings page is not listed", packRoot.get().c_str() );

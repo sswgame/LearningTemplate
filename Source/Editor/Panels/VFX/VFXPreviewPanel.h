@@ -29,7 +29,7 @@ namespace sw::editor
         const utf8* getPanelTitle() const override { return "VFX Preview"; }
         void        drawDocumentContent() override;
         /** @brief 고친 효과 원문을 씁니다. 저장한 파일을 공유 캐시가 다시 읽고(`onDocumentSaved`) 미리보기가 다음 그리기에 다시 건다. */
-        [[nodiscard]] bool saveDocument() override;
+        [[nodiscard]] bool saveDocument( AssetWriter& writer ) override;
         /** @brief 고른 방출기 번호입니다. 없으면 -1 입니다(감시 값 `Editor.VFXSelectedEmitter`). */
         int32 getSelectedEmitter() const;
         /** @brief 방출기 수입니다(편집 중인 원문, 감시 값 `Editor.VFXEmitterCount`). */

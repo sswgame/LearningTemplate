@@ -13,7 +13,9 @@
 #include "GameFramework/Runtime/Online/Bus/ServerBusTopic.h"
 #include "GameFramework/Runtime/Online/Report/Server/ServiceReportStore.h"
 #include "GameFramework/Runtime/Online/Sanction/Server/ServiceSanction.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceCommitRunner.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceRecordReader.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordTable.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStoreUtil.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
@@ -29,29 +31,29 @@ namespace sw
             static constexpr const utf8* kWhisperPrefix = "whisper.";
             static constexpr int64       kIndexDayMs    = constant::time::kSecondsPerDay * constant::time::kMillisecondsPerSecond; ///< TTL 색인 줄 하나가 맡는 날짜 폭
 
-            static const hashed_string& getHistoryTable()
+            static const ServiceRecordTable<ChatMessage>& getHistoryTable()
             {
-                static const hashed_string s_table{ "chat_history" };
+                static const ServiceRecordTable<ChatMessage> s_table{ "chat_history" };
                 return s_table;
             }
 
-            static const hashed_string& getHistoryIndexTable()
+            static const ServiceIndexTable& getHistoryIndexTable()
             {
-                static const hashed_string s_table{ "chat_history_expiry" };
+                static const ServiceIndexTable s_table{ "chat_history_expiry" };
                 return s_table;
             }
 
             /** @brief 보낸 사람 색인 `<보낸 계정 16진>/<보낸 시각 16진>/<기록 키>`(값 없음)입니다. 탈퇴 정리가 계정의 기록을 찾는다. 접두어 아래가 시각 순서다. */
-            static const hashed_string& getSenderTable()
+            static const ServiceIndexTable& getSenderTable()
             {
-                static const hashed_string s_table{ "chat_history_sender" };
+                static const ServiceIndexTable s_table{ "chat_history_sender" };
                 return s_table;
             }
 
             /** @brief 보낸 사람 색인의 TTL 색인 `<날짜 끝 16진>/<보낸 계정 16진>/`(보낸 사람 · 날짜마다 한 줄)입니다. */
-            static const hashed_string& getSenderIndexTable()
+            static const ServiceIndexTable& getSenderIndexTable()
             {
-                static const hashed_string s_table{ "chat_history_sender_expiry" };
+                static const ServiceIndexTable s_table{ "chat_history_sender_expiry" };
                 return s_table;
             }
 
@@ -173,29 +175,27 @@ namespace sw
                 vector<string>         listSenderIndexKey;
                 for ( const ChatMessage& message : listMessage )
                 {
-                    vector<uint8> bytes;
-                    if ( ChatProtocol::encodeRecord( message, bytes ) == false )
+                    const string historyKey = ChatServiceInternal::makeHistoryKey( message );
+                    if ( transaction.tryPut( ChatServiceInternal::getHistoryTable(), historyKey, message ) == false )
                     {
-                        ++write._rejectedCount; // 쓰기가 오류 로그를 남겼다. 이 기록만 빼고 나머지는 쓴다
+                        ++write._rejectedCount; // 표가 오류 로그를 남겼다. 이 기록만 빼고 나머지는 쓴다
                         continue;
                     }
-                    const string historyKey = ChatServiceInternal::makeHistoryKey( message );
-                    transaction.put( ChatServiceInternal::getHistoryTable(), historyKey, std::move( bytes ) );
                     if ( message._senderID == kInvalidAccountID )
                         continue; // 시스템 메시지다
-                    transaction.put( ChatServiceInternal::getSenderTable(), ChatServiceInternal::makeSenderKey( message._senderID, message._sentMs, historyKey ), vector<uint8>{} );
+                    transaction.put( ChatServiceInternal::getSenderTable(), ChatServiceInternal::makeSenderKey( message._senderID, message._sentMs, historyKey ) );
                     const string senderIndexKey = ChatServiceInternal::makeSenderIndexKey( message._senderID, message._sentMs );
                     VectorUtil::addUnique( listSenderIndexKey, senderIndexKey );
                 }
                 for ( const string& senderIndexKey : listSenderIndexKey )
                 {
-                    transaction.put( ChatServiceInternal::getSenderIndexTable(), senderIndexKey, vector<uint8>{}, ServiceRecord::kAnyVersion );
+                    transaction.put( ChatServiceInternal::getSenderIndexTable(), senderIndexKey, ServiceRecord::kAnyVersion );
                 }
                 for ( const string& indexKey : listIndexKey )
                 {
-                    transaction.put( ChatServiceInternal::getHistoryIndexTable(), indexKey, vector<uint8>{}, ServiceRecord::kAnyVersion );
+                    transaction.put( ChatServiceInternal::getHistoryIndexTable(), indexKey, ServiceRecord::kAnyVersion );
                 }
-                const bool bCommitted = transaction.isEmpty() || connection.commit( transaction ) == ServiceStoreResult::Ok;
+                const bool bCommitted = transaction.isEmpty() || ServiceCommitRunner::commitOnce( connection, transaction ) == ServiceStoreResult::Ok;
                 write._bCommitted     = bCommitted ? SW_TRUE : SW_FALSE;
                 return write;
             }
@@ -212,7 +212,7 @@ namespace sw
                 for ( const ServiceRecord& record : listRecord )
                 {
                     ChatMessage message;
-                    if ( ChatProtocol::decodeRecord( record._key, record._bytes, message ) == false )
+                    if ( ChatServiceInternal::getHistoryTable().decode( record, message ) == false )
                     {
                         read._listMessage.clear();
                         return read;
@@ -247,7 +247,7 @@ namespace sw
                 for ( auto recordIt = listRecord.rbegin(); recordIt != listRecord.rend(); ++recordIt )
                 {
                     ChatMessage message;
-                    if ( ChatProtocol::decodeRecord( recordIt->_key, recordIt->_bytes, message ) == false )
+                    if ( ChatServiceInternal::getHistoryTable().decode( *recordIt, message ) == false )
                         return ChatServiceResult::fail( OnlineError::kUnavailable ); // 손상된 영속 기록은 건너뛰지 않고 이 신고를 실패로 돌려준다
                     ServiceReportLine& line = report._listLine.emplace_back();
                     line._senderName        = std::move( message._senderName );
@@ -266,7 +266,7 @@ namespace sw
                 ServiceTransaction transaction;
                 if ( ServiceReportStore::stageOpen( transaction, report, uniqueID ) == false )
                     return ChatServiceResult::fail( OnlineError::kInvalidRequest );
-                if ( connection.commit( transaction ) == ServiceStoreResult::Ok )
+                if ( ServiceCommitRunner::commitOnce( connection, transaction ) == ServiceStoreResult::Ok )
                     return ChatResult::Ok;
                 return ChatServiceResult::fail( OnlineError::kUnavailable );
             }
@@ -894,7 +894,7 @@ namespace sw
                 if ( StringUtil::startsWith( channelID, Internal::kWhisperPrefix ) && VectorUtil::contains( listWhisperChannel, channelID ) == false )
                     listWhisperChannel.push_back( channelID );
             }
-            if ( const ServiceStoreResult committed = connection.commit( transaction ); committed != ServiceStoreResult::Ok )
+            if ( const ServiceStoreResult committed = ServiceCommitRunner::commitOnce( connection, transaction ); committed != ServiceStoreResult::Ok )
                 return committed;
         }
         // 귓속말 채널은 id 에 두 계정이 있다 — 상대가 보낸 기록까지 채널째 지운다. 그 채널의 TTL 색인 줄은 대상이 비어 TTL 쓸기가 지운다

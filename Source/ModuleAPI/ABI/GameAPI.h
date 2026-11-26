@@ -37,8 +37,8 @@ namespace sw
     //    IGame 구현은 SWGame 안에 두고, App 은 이 포인터만 부른다
     // ------------------------------------------------------------------------------
     /**
-     * @brief `GameAPI` 표의 항목 목록입니다 — `X( 반환형, 이름, ( 매개변수 ) )`. 구조체 멤버와 스탬프(`kGameModuleABIStamp`)가 둘 다 여기서 나옵니다.
-     * @details 항목을 더하거나 순서 · 시그니처를 바꾸면 스탬프가 저절로 바뀌어 옛 모듈 DLL 은 로드 때 거부됩니다(`ModuleABI.h`).
+     * @brief `GameAPI` 표의 항목 목록입니다 — `X( 반환형, 이름, ( 매개변수 ) )`. 구조체 멤버가 여기서 나옵니다.
+     * @details 항목을 더하거나 순서 · 시그니처를 바꾸면 헤더 지문(엔진 ABI 스탬프)이 바뀌어 옛 모듈 DLL 은 로드 때 거부됩니다(`ModuleABI.h`).
      *          줄 연결 매크로 안이라 설명은 블록 주석으로 씁니다(줄 주석은 다음 줄을 삼킨다).
      */
 #define SW_GAME_API_ENTRIES( X )                                                                    \
@@ -67,9 +67,6 @@ namespace sw
         SW_GAME_API_ENTRIES( SW_MODULE_ABI_ENTRY_MEMBER )
     };
 
-    /** @brief `GameAPI` 표의 스탬프입니다. 게임 모듈이 내보내고(`getGameModuleABIStamp`) 호스트가 로드 전에 자기 것과 대조합니다. */
-    inline constexpr uint64 kGameModuleABIStamp = ModuleABIUtil::computeStamp( SW_GAME_API_ENTRIES( SW_MODULE_ABI_ENTRY_TEXT ) );
-
     /** @brief 게임 모듈 경계의 할당 태그입니다 — 표 항목(`GameModuleForwardUtil`)과 모듈 매니저의 로드 · 리로드가 이 값 하나를 쓴다. */
     inline constexpr MemoryTag kGameModuleMemoryTag = MemoryTag::Game;
 
@@ -82,8 +79,6 @@ extern "C"
     // ------------------------------------------------------------------------------
     // 2) export — SWGame 이 채우는 진입점
     // ------------------------------------------------------------------------------
-    /** @brief 이 모듈이 빌드된 표 스탬프(`sw::kGameModuleABIStamp`)입니다. 호스트가 로드 전에 자기 것과 대조합니다. */
-    SW_MODULE_API uint64 getGameModuleABIStamp();
 
     /** @brief SWGame API 테이블을 내보냅니다. */
     SW_MODULE_API bool exportGameAPI( sw::GameAPI* pOutAPI );

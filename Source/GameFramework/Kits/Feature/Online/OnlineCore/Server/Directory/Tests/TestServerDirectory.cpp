@@ -9,6 +9,7 @@
 #include "GameFramework/Runtime/Online/Cache/Server/EphemeralStore.h"
 #include "GameFramework/Runtime/Online/Cache/Server/EphemeralStoreRouter.h"
 #include "GameFramework/Runtime/Online/Cache/Server/MemoryEphemeralStore.h"
+#include "GameFramework/Runtime/Online/Cache/Server/Tests/EphemeralStoreTestUtil.h"
 #include "GameFramework/Runtime/Online/Directory/Server/ServerRegistration.h"
 #include "GameFramework/Runtime/Online/Directory/ServerRecord.h"
 
@@ -99,18 +100,20 @@ SW_TEST_CASE( ServerDirectoryTest, RecordKeysAndNameRule )
 }
 
 /**
- * @brief [ServerDirectoryTest] 기록은 모든 칸을 되읽고, 다른 형식 판 · 포트 수 0 이나 상한 밖 · 모르는 상태 · 잘린 바이트는 거절한다
+ * @brief [ServerDirectoryTest] 기록은 모든 칸을 되읽고, 포트 수 0 이나 상한 밖은 짓지 않으며, 모르는 상태 · 잘린 바이트 · 빈 값은 읽지 않는다
  */
 SW_TEST_CASE( ServerDirectoryTest, RecordRoundTripsAndRejectsBadProperties )
 {
-    sw::ServerStatus status           = makeStatus( 0xBEEF, "kr", 12, 100 );
-    status._state                     = sw::ServerState::Maintenance;
-    const sw::vector<uint8> listBytes = sw::ServerRecord::encode( status );
+    SW_EXPECT_LOG( "ServiceRecordUtil.RecordVersionNotWritten" ); // 선언 범위 밖 포트 수는 짓지 않는다
+    sw::ServerStatus status = makeStatus( 0xBEEF, "kr", 12, 100 );
+    status._state           = sw::ServerState::Maintenance;
+    sw::EphemeralValue value;
+    SW_REQUIRE_TRUE( sw::ServerRecord::makeValue( status, value ) );
+    const sw::vector<uint8> listBytes = sw::EphemeralStoreTestAccess::getBytes( value );
     SW_REQUIRE_TRUE( listBytes.empty() == false );
-    SW_EXPECT_EQUAL( static_cast<uint8>( sw::ServerRecord::kFormat._version ), listBytes[0] );
 
     sw::ServerStatus read;
-    SW_REQUIRE_TRUE( sw::ServerRecord::decode( listBytes, read ) );
+    SW_REQUIRE_TRUE( sw::ServerRecord::decode( sw::EphemeralStoreTestAccess::makeReply( listBytes ), read ) );
     SW_EXPECT_EQUAL( uint64( 0xBEEF ), read._descriptor._serverID );
     SW_EXPECT_EQUAL( sw::string( "game" ), read._descriptor._kind );
     SW_EXPECT_EQUAL( sw::string( "kr" ), read._descriptor._region );
@@ -123,28 +126,28 @@ SW_TEST_CASE( ServerDirectoryTest, RecordRoundTripsAndRejectsBadProperties )
     SW_EXPECT_EQUAL( 12, read._load );
     SW_EXPECT_TRUE( read._state == sw::ServerState::Maintenance );
 
-    sw::vector<uint8> listOldVersion = listBytes;
-    listOldVersion[0]                = static_cast<uint8>( sw::ServerRecord::kFormat._version + 1 );
-    SW_EXPECT_FALSE( sw::ServerRecord::decode( listOldVersion, read ) );
-
-    sw::ServerStatus noPort       = status;
+    sw::EphemeralValue rejected;
+    sw::ServerStatus   noPort     = status;
     noPort._descriptor._portCount = 0;
-    SW_EXPECT_FALSE( sw::ServerRecord::decode( sw::ServerRecord::encode( noPort ), read ) );
+    SW_EXPECT_FALSE( sw::ServerRecord::makeValue( noPort, rejected ) );
     sw::ServerStatus tooManyPorts       = status;
     tooManyPorts._descriptor._portCount = static_cast<uint8>( sw::ServerDescriptor::kMaxPortCount + 1 );
-    SW_EXPECT_FALSE( sw::ServerRecord::decode( sw::ServerRecord::encode( tooManyPorts ), read ) );
+    SW_EXPECT_FALSE( sw::ServerRecord::makeValue( tooManyPorts, rejected ) );
     sw::ServerStatus maxPorts       = status;
     maxPorts._descriptor._portCount = static_cast<uint8>( sw::ServerDescriptor::kMaxPortCount );
-    SW_EXPECT_TRUE( sw::ServerRecord::decode( sw::ServerRecord::encode( maxPorts ), read ) );
+    SW_REQUIRE_TRUE( sw::ServerRecord::makeValue( maxPorts, value ) );
+    SW_EXPECT_TRUE( sw::ServerRecord::decode( sw::EphemeralStoreTestAccess::makeReply( sw::EphemeralStoreTestAccess::getBytes( value ) ), read ) );
 
     sw::ServerStatus unknownState = status;
     unknownState._state           = sw::ServerState::Count;
-    SW_EXPECT_FALSE( sw::ServerRecord::decode( sw::ServerRecord::encode( unknownState ), read ) );
+    if ( sw::ServerRecord::makeValue( unknownState, value ) ) // 열거 끝 값은 짓더라도 읽지 않는다
+        SW_EXPECT_FALSE( sw::ServerRecord::decode( sw::EphemeralStoreTestAccess::makeReply( sw::EphemeralStoreTestAccess::getBytes( value ) ), read ) );
 
     sw::vector<uint8> listTruncated = listBytes;
     listTruncated.resize( listTruncated.size() - 2 );
-    SW_EXPECT_FALSE( sw::ServerRecord::decode( listTruncated, read ) );
-    SW_EXPECT_FALSE( sw::ServerRecord::decode( {}, read ) );
+    SW_EXPECT_FALSE( sw::ServerRecord::decode( sw::EphemeralStoreTestAccess::makeReply( listTruncated ), read ) );
+    SW_EXPECT_FALSE( sw::ServerRecord::decode( sw::EphemeralStoreTestAccess::makeReply( {} ), read ) );
+    SW_EXPECT_FALSE( sw::ServerRecord::decode( sw::EphemeralReply{}, read ) );
 }
 
 /**
@@ -323,7 +326,7 @@ SW_TEST_CASE( ServerDirectoryTest, RegistrationWritesOnChangeAndHeartbeatOnly )
     (void)rig._store.pollReplies( listReply );
     SW_REQUIRE_EQUAL( size_t( 1 ), listReply.size() );
     sw::ServerStatus stored;
-    SW_REQUIRE_TRUE( sw::ServerRecord::decode( listReply[0]._value, stored ) );
+    SW_REQUIRE_TRUE( sw::ServerRecord::decode( listReply[0], stored ) );
     SW_EXPECT_EQUAL( 3, stored._load );
     SW_EXPECT_TRUE( stored._state == sw::ServerState::Open );
 }

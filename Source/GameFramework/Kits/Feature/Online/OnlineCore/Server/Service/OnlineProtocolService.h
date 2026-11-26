@@ -28,6 +28,7 @@
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Service/ServiceServerCallTableBase.h"
 #include "GameFramework/Runtime/Online/Service/OnlineProtocol.h"
 #include "GameFramework/Runtime/Online/Service/OnlineProtocolRegistry.h"
+#include "GameFramework/Runtime/Online/Service/PendingRequestTable.h"
 #include "GameFramework/Runtime/Online/Service/Server/OnlineServiceHost.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStoreTracker.h"
 
@@ -208,30 +209,24 @@ namespace sw
         uint64 open( const ReplyDelegate& onReply )
         {
             const uint64 callID = kLocalBit | ++_lastID;
-            _mapCall[callID]    = onReply;
+            (void)_calls.track( callID, 0, [onReply]( const TReply& reply )
+            {
+                if ( onReply.isBound() )
+                    onReply( reply );
+            } ); // 번호는 방금 냈다
             return callID;
         }
 
         /** @brief 호출을 표에서 빼고 @p reply 로 응답합니다. 모르는 번호면 false 입니다. */
-        bool finish( uint64 callID, const TReply& reply )
-        {
-            const auto callIt = _mapCall.find( callID );
-            if ( callIt == _mapCall.end() )
-                return false;
-            const ReplyDelegate onReply = callIt->second;
-            _mapCall.erase( callIt );
-            if ( onReply.isBound() )
-                onReply( reply );
-            return true;
-        }
+        bool finish( uint64 callID, const TReply& reply ) { return _calls.answer( callID, reply ); }
 
-        void  clear() { _mapCall.clear(); }
-        int32 getCount() const { return static_cast<int32>( _mapCall.size() ); }
-        bool  isEmpty() const { return _mapCall.empty(); }
+        void  clear() { _calls.discardAll(); }
+        int32 getCount() const { return _calls.getOpenCount(); }
+        bool  isEmpty() const { return _calls.isIdle(); }
 
     private:
-        unordered_map<uint64, ReplyDelegate> _mapCall{};
-        uint64                               _lastID{ 0 };
+        PendingRequestTable<uint64, TReply> _calls{};
+        uint64                              _lastID{ 0 };
     };
 } // namespace sw
 

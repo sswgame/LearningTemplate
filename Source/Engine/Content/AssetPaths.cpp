@@ -576,7 +576,7 @@ namespace sw
         return _pState->_bInitialized;
     }
 
-    optional<AbsolutePath> AssetPaths::findLooseFile( string_view resourceID ) const
+    optional<DiskPath> AssetPaths::findLooseFile( string_view resourceID ) const
     {
         // 리소스 id 만 받는다 - 디스크 경로를 받아 있으면 그대로 돌려주던 길은 "id 인가 디스크 경로인가" 를 추측하게 했다(디스크 경로는 `AbsolutePath::tryMake`).
         // 루트 밖으로 나가는 id 는 풀지 않는다(`readResourceCommon` 과 같은 규칙).
@@ -596,7 +596,7 @@ namespace sw
                 AssetPathsInternal::getPathStats().recordHit();
                 if ( cached.empty() )
                     AssetPathsInternal::getMissingStats().recordHit();
-                return cached.empty() ? nullopt : optional<AbsolutePath>{ std::move( cached ) };
+                return cached.empty() ? nullopt : optional<DiskPath>{ std::move( cached ) };
             }
         }
         AssetPathsInternal::getPathStats().recordMiss();
@@ -643,10 +643,10 @@ namespace sw
             AssetPathsInternal::getMissingStats().recordMiss();
         // 없음도 저장한다(음성 결과) — 같은 없는 파일을 묻는 호출(선택적 파일 · 팩에만 있는 에셋)이 매번 모든 검색 루트를 훑지 않게.
         AssetPathsInternal::storeResolved( state, std::move( cacheKey ), found, stamp );
-        return found.empty() ? nullopt : optional<AbsolutePath>{ std::move( found ) };
+        return found.empty() ? nullopt : optional<DiskPath>{ std::move( found ) };
     }
 
-    void AssetPaths::collectLooseFolders( string_view folderID, vector<AbsolutePath>& outListFolder ) const
+    void AssetPaths::collectLooseFolders( string_view folderID, vector<DiskPath>& outListFolder ) const
     {
         outListFolder.clear();
         if ( folderID.empty() || FileUtil::isAbsolutePath( folderID ) || hasParentDirectoryComponent( folderID ) )
@@ -656,7 +656,7 @@ namespace sw
         if ( AssetPathsInternal::mapGlobalIDToRoot( state, lowerFolder ).has_value() )
         {
             // 도메인이 정해진 id 는 폴더가 하나다 — 대소문자 처리까지 하는 `findLooseFile` 로 푼다.
-            const optional<AbsolutePath> found = findLooseFile( folderID );
+            const optional<DiskPath> found = findLooseFile( folderID );
             if ( found.has_value() && FileUtil::isDirectory( *found ) )
                 outListFolder.push_back( *found );
             return;
@@ -673,11 +673,11 @@ namespace sw
         }
     }
 
-    string AssetPaths::toAssetID( const AbsolutePath& diskPath ) const
+    string AssetPaths::toAssetID( const DiskPath& diskPath ) const
     {
         if ( diskPath.empty() )
             return {};
-        const optional<AbsolutePath> collapsed = AbsolutePath::tryResolve( diskPath.str(), diskPath ); // `..` 를 접는다 — 접지 않은 글은 루트 밖을 안으로 본다
+        const optional<AbsolutePath> collapsed = AbsolutePath::tryResolve( diskPath.str(), AbsolutePath{} ); // `..` 를 접는다 — 접지 않은 글은 루트 밖을 안으로 본다
         if ( collapsed.has_value() == false )
             return {};
         const AbsolutePath& absolutePath = *collapsed;
@@ -719,7 +719,7 @@ namespace sw
         return id;
     }
 
-    optional<AbsolutePath> AssetPaths::toDiskPath( string_view resourceID ) const
+    optional<DiskPath> AssetPaths::toDiskPath( string_view resourceID ) const
     {
         const string id = normalizeAssetID( resourceID );
         if ( id.empty() )
@@ -728,7 +728,7 @@ namespace sw
             return nullopt;
         }
         // 이미 있는 파일이면 그 디스크 경로가 답이다(덮어쓸 자리). 상대 키는 읽기가 검색 순서로 고른 그 파일이다.
-        optional<AbsolutePath> existing = findLooseFile( id );
+        optional<DiskPath> existing = findLooseFile( id );
         if ( existing.has_value() )
             return existing;
         const optional<DomainLocation> location = AssetPathsInternal::mapGlobalIDToRoot( *_pState, id );

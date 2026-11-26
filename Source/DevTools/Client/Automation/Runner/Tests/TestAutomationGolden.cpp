@@ -7,6 +7,7 @@
 #include "DevTools/Client/Automation/Runner/AutomationGoldenUtil.h"
 #include "DevTools/Client/Automation/Runner/AutomationImage.h"
 
+#include "Engine/Config/ConfigManager.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
 using namespace sw;
@@ -19,7 +20,7 @@ namespace
         static constexpr AutomationGoldenLimits   kLimits{ 0.01, 0.005, 16 };
         static constexpr float64                  kNearLimitRatio = 0.5;
         static constexpr string_view              kPolicyText =
-            R"({ "_differingMinDistance": 12, "_deepMinDistance": 96, "_maxDifferingFraction": 0.01, "_maxMeanDistance": 0.005, "_maxDeepRegionPixels": 16, "_nearLimitRatio": 0.5, "_advanceDrawnFrames": 16 })";
+            R"({ "_measure": { "_differingMinDistance": 12, "_deepMinDistance": 96 }, "_limits": { "_maxDifferingFraction": 0.01, "_maxMeanDistance": 0.005, "_maxDeepRegionPixels": 16 }, "_nearLimitRatio": 0.5, "_advanceDrawnFrames": 16 })";
 
         static AutomationImage makeImage( uint32 width, uint32 height, uint8 value )
         {
@@ -118,24 +119,26 @@ SW_TEST_CASE( AutomationGoldenTest, RecordMissingWritesOnlyMissing )
 /** @brief [AutomationGoldenTest] 정책은 칸 일곱이 모두 있어야 하고 범위 안이어야 한다 — 기본값으로 떨어지지 않는다 */
 SW_TEST_CASE( AutomationGoldenTest, PolicyNeedsEveryField )
 {
-    const expected<AutomationGoldenPolicy> policy = AutomationGoldenUtil::parsePolicy( Util::kPolicyText, "test" );
+    const expected<AutomationGoldenPolicy> policy = ConfigManager::parseConfig<AutomationGoldenPolicy>( Util::kPolicyText, "test" );
     SW_REQUIRE_TRUE( policy.has_value() );
     SW_EXPECT_EQUAL( 96u, policy->_measure._deepMinDistance );
     SW_EXPECT_EQUAL( 16u, policy->_limits._maxDeepRegionPixels );
     SW_EXPECT_NEAR( 0.5, policy->_nearLimitRatio, 0.0 );
     SW_EXPECT_EQUAL( 16u, policy->_advanceDrawnFrames );
 
-    SW_EXPECT_LOG( "JSON.MissingMember" );
-    SW_EXPECT_FALSE( AutomationGoldenUtil::parsePolicy( R"({ "_differingMinDistance": 12 })", "test" ).has_value() );
+    SW_EXPECT_LOG( "Config.KeyMissing" );
+    SW_EXPECT_FALSE( ConfigManager::parseConfig<AutomationGoldenPolicy>( R"({ "_measure": { "_differingMinDistance": 12 } })", "test" ).has_value() );
+    SW_EXPECT_LOG( "Config.KeyUnknown" );
+    SW_EXPECT_FALSE( ConfigManager::parseConfig<AutomationGoldenPolicy>( R"({ "_nearLimitRato": 0.5 })", "test" ).has_value() ); // 오타가 조용히 지나가지 않는다
     const string outOfRange =
-        R"({ "_differingMinDistance": 12, "_deepMinDistance": 8, "_maxDifferingFraction": 0.01, "_maxMeanDistance": 0.005, "_maxDeepRegionPixels": 16, "_nearLimitRatio": 0.5, "_advanceDrawnFrames": 16 })";
-    SW_EXPECT_FALSE( AutomationGoldenUtil::parsePolicy( outOfRange, "test" ).has_value() );
+        R"({ "_measure": { "_differingMinDistance": 12, "_deepMinDistance": 8 }, "_limits": { "_maxDifferingFraction": 0.01, "_maxMeanDistance": 0.005, "_maxDeepRegionPixels": 16 }, "_nearLimitRatio": 0.5, "_advanceDrawnFrames": 16 })";
+    SW_EXPECT_FALSE( ConfigManager::parseConfig<AutomationGoldenPolicy>( outOfRange, "test" ).has_value() );
 }
 
 /** @brief [AutomationGoldenTest] 저장소의 정책 파일이 읽힌다(시나리오의 이미지 단언이 모두 이것을 읽는다) */
 SW_TEST_CASE( AutomationGoldenTest, ProjectPolicyLoads )
 {
-    const expected<AutomationGoldenPolicy> policy = AutomationGoldenUtil::loadPolicy();
+    const expected<AutomationGoldenPolicy> policy = ConfigManager::readConfig( AutomationGoldenPolicy::kConfigFile );
     SW_EXPECT_TRUE_MSG( policy.has_value(), policy.has_value() ? "" : string( policy.error().message() ).c_str() );
 }
 

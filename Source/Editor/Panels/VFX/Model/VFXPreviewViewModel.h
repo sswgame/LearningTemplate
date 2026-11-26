@@ -28,6 +28,8 @@ namespace sw
 
 namespace sw::editor
 {
+    class AssetWriter;
+
     class DocumentEditRecorder;
     class ReflectedXMLDocument;
 
@@ -97,7 +99,7 @@ namespace sw::editor
          */
         [[nodiscard]] bool pollFileChanged();
         /** @brief @p diskPath 의 내용 해시가 @p inoutHash 와 다르면 true 이고 @p inoutHash 를 새 해시로 바꿉니다. 파일이 없으면 false 입니다(지운 파일은 다시 읽을 것이 없다). */
-        [[nodiscard]] static bool updateContentHash( const AbsolutePath& diskPath, uint64& inoutHash );
+        [[nodiscard]] static bool updateContentHash( const DiskPath& diskPath, uint64& inoutHash );
         /**
          * @brief 바뀐 효과 파일 @p assetPath 를 공유 캐시에서 먼저 새 글로 다시 읽습니다(`AssetHotReload::applySavedAsset` — 감시 사건이 뒤늦게 와도 같은 저장을 두 번 읽지 않게 도장을 남긴다).
          * @details 그래야 다시 연 문서와 다시 건 효과가 새 정의다. View 가 작업 공간 헤더를 보지 않게 여기를 지난다.
@@ -114,7 +116,7 @@ namespace sw::editor
         /** @brief 되돌리기 단계의 원문을 적용합니다. */
         void applyText( string_view text );
         /** @brief 원문을 읽은 자리에 씁니다. 쓰지 못하면 상태 줄에 까닭을 두고 false 입니다. */
-        [[nodiscard]] bool saveDocument();
+        [[nodiscard]] bool saveDocument( AssetWriter& writer );
         /** @brief 이 효과를 고칠 수 있으면 true 입니다. 물려받은 효과(`_base`)는 부모와 다른 칸만 쓴다. */
         [[nodiscard]] bool isEditable() const;
         /** @brief 물려받은 부모의 리소스 id 입니다. 부모가 없으면 빈 글입니다. */
@@ -176,7 +178,7 @@ namespace sw::editor
         string                           _previewEffectPath; ///< 미리보기 효과에 건 효과 경로(비면 다음 `syncEffect` 가 다시 건다)
         string                           _previewText;       ///< 미리보기에 건 편집 글(저장한 파일을 걸었으면 빈 글)
         string                           _status;
-        AbsolutePath                     _loadedDiskPath;      ///< 읽은 효과의 디스크 경로(자동 갱신이 내용 해시를 본다). 풀지 못했으면 비어 있다
+        DiskPath                         _loadedDiskPath;      ///< 읽은 효과의 디스크 경로(자동 갱신이 내용 해시를 본다). 풀지 못했으면 비어 있다
         string                           _targetPrefabPath;    ///< 입력란의 타깃 프리팹 경로(Spawn 을 눌러야 적용한다)
         string                           _activeTargetPath;    ///< Spawn 으로 확정한 타깃 경로(비면 타깃 없음)
         uint64                           _loadedContentHash;   ///< 읽을 때의 내용 해시(0 = 아직 없음)

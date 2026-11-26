@@ -750,7 +750,7 @@ namespace sw::editor
             if ( bSelf || bDead )
                 outListRecoveredFolder.push_back( sessionFolder );
         }
-        return FileUtil::ensureDirectoryExists( ownFolder ) && FileUtil::writeTextFile( ownFolder.join( kLockFileName ), lockBuilder.view() );
+        return FileUtil::writeTextFile( ownFolder.join( kLockFileName ), lockBuilder.view() );
     }
 
     void EditorAutosaveSession::removeOwned( const AbsolutePath& root, const int32 processID )
@@ -799,7 +799,7 @@ namespace sw::editor
 
     uint64 EditorAutosaveCommands::computeSourceHash( string_view sourceID )
     {
-        const optional<AbsolutePath> sourcePath = editor::getSubsystem<AssetPaths>().toDiskPath( sourceID );
+        const optional<DiskPath> sourcePath = editor::getSubsystem<AssetPaths>().toDiskPath( sourceID );
         return sourcePath.has_value() ? ContentHash::computeFile( *sourcePath ) : 0;
     }
 

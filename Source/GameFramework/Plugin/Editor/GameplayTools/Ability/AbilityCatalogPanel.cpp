@@ -9,7 +9,6 @@
 
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
-#include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
@@ -211,9 +210,9 @@ namespace sw::editor
         const string path = acceptDocumentToLoad();
         if ( path.empty() )
             return ToolAssetLoadResult::Missing; // 아직 연 파일이 없다 — 모델도 비어 있어 저장할 것이 없다
-        _pathInput                                = path.c_str();
-        const optional<AbsolutePath> absolutePath = getDocumentDiskPath();
-        string                       text;
+        _pathInput                            = path.c_str();
+        const optional<DiskPath> absolutePath = getDocumentDiskPath();
+        string                   text;
         // 읽지 못하면 저장을 막는다(`Malformed`) — 앞 파일의 글을 이 경로에 저장하지 않는다.
         if ( absolutePath.has_value() == false || FileUtil::readTextFile( *absolutePath, text ) == false )
         {
@@ -241,16 +240,16 @@ namespace sw::editor
         return ToolAssetLoadResult::Loaded;
     }
 
-    bool AbilityCatalogPanel::saveDocument()
+    bool AbilityCatalogPanel::saveDocument( AssetWriter& writer )
     {
-        const string&                openPath     = getLoadedAssetPath();
-        const optional<AbsolutePath> absolutePath = getDocumentDiskPath();
+        const string&            openPath     = getLoadedAssetPath();
+        const optional<DiskPath> absolutePath = getDocumentDiskPath();
         if ( openPath.empty() || absolutePath.has_value() == false || _model.getDocument().isParsed() == false )
         {
             _status = "Nothing to save - open a well-formed file first";
             return false;
         }
-        if ( FileUtil::writeTextFile( *absolutePath, _model.getDocument().getText() ) == false )
+        if ( writer.writeText( *absolutePath, _model.getDocument().getText() ) == false )
         {
             StringBuilder<constant::buffer::kMax256> statusBuilder;
             statusBuilder.appendFormat( "Could not write '%#'", openPath );

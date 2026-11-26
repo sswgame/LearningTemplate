@@ -54,17 +54,15 @@ namespace sw::editor
         CommandStack* findPanelCommandStack() override { return &_history.getStack(); }
 
     protected:
-        [[nodiscard]] bool saveDocument() override;
+        [[nodiscard]] bool saveDocument( AssetWriter& writer ) override;
         /** @brief 고친 설정 파일들(`ProjectSettingsPage::_absolutePath`)입니다 — `saveDocument` 가 고친 페이지만 쓴다. */
-        void collectFilesToSave( vector<AbsolutePath>& outListPath ) const override;
-        /** @brief 페이지마다 자기 파일의 기준을 들고 저장할 때 본다(`ProjectSettingsPage::saveDocument`) — 페이지별 Save 단추도 같은 길이다. */
-        [[nodiscard]] bool validateDiskBeforeSave( const vector<AbsolutePath>& /*listPath*/ ) override { return true; }
-        void               revertDocument() override;
+        void collectFilesToSave( vector<DiskPath>& outListPath ) const override;
+        void revertDocument() override;
         /** @brief 고친 설정 파일 하나의 저장 글입니다(`ProjectSettingsPage::tryMakeText`). */
-        [[nodiscard]] expected<string> tryMakeFileText( const AbsolutePath& absolutePath ) const override;
-        [[nodiscard]] bool             isEditingFile( const AbsolutePath& absolutePath ) override;
+        [[nodiscard]] expected<string> tryMakeFileText( const DiskPath& absolutePath ) const override;
+        [[nodiscard]] bool             isEditingFile( const DiskPath& absolutePath ) override;
         /** @brief 설정 파일 하나의 사본 글을 그 페이지에 입히고 고릅니다. 되돌리기 단계는 버립니다. */
-        [[nodiscard]] bool applyFileText( const AbsolutePath& absolutePath, const string& text ) override;
+        [[nodiscard]] bool applyFileText( const DiskPath& absolutePath, const string& text ) override;
 
     private:
         using Page = ProjectSettingsPage;
@@ -74,7 +72,7 @@ namespace sw::editor
         void onPropertyEdited( const PropertyInfo& prop );
         void refreshDirtyState();
         /** @brief 파일 @p absolutePath 의 페이지입니다. 목록에 없으면 nullptr 입니다. */
-        Page* findPage( const AbsolutePath& absolutePath ) const;
+        Page* findPage( const DiskPath& absolutePath ) const;
         void  drawPageList();
         void  drawPageDetail( Page& page );
         void  drawPageActions( Page& page );

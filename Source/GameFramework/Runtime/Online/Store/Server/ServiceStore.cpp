@@ -6,6 +6,7 @@
 
 #include "GameFramework/Runtime/Online/Service/OnlineLimit.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceReadSetConnection.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordTable.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
 namespace sw
@@ -21,7 +22,25 @@ namespace sw
     {
     }
 
-    void ServiceTransaction::put( const hashed_string& table, string_view key, vector<uint8> bytes, uint64 expectedVersion )
+    void ServiceTransaction::put( const ServiceIndexTable& table, string_view key, uint64 expectedVersion )
+    {
+        putBytes( table.getName(), key, vector<uint8>{}, expectedVersion );
+    }
+
+    void ServiceTransaction::put( const ServiceLinkTable& table, string_view key, uint64 linkedID, uint64 expectedVersion )
+    {
+        vector<uint8> bytes;
+        if ( table.encode( key, linkedID, bytes ) == false )
+            _bMalformed = SW_TRUE;
+        putBytes( table.getName(), key, std::move( bytes ), expectedVersion );
+    }
+
+    void ServiceTransaction::put( const ServiceOpaqueTable& table, string_view key, vector<uint8> bytes, uint64 expectedVersion )
+    {
+        putBytes( table.getName(), key, std::move( bytes ), expectedVersion );
+    }
+
+    void ServiceTransaction::putBytes( const hashed_string& table, string_view key, vector<uint8> bytes, uint64 expectedVersion )
     {
         ServiceWrite& write    = _listWrite.emplace_back();
         write._bytes           = std::move( bytes );
@@ -69,7 +88,7 @@ namespace sw
             conditionCount += write._kind == ServiceWrite::Kind::Require || write._kind == ServiceWrite::Kind::RequireRange ? 1 : 0;
         }
         const int32 writeCount = static_cast<int32>( _listWrite.size() ) - conditionCount;
-        if ( _listWrite.empty() || writeCount > kMaxWriteCount || conditionCount > kMaxConditionCount )
+        if ( _bMalformed == SW_TRUE || _listWrite.empty() || writeCount > kMaxWriteCount || conditionCount > kMaxConditionCount )
             return false;
         for ( size_t writeIndex = 0; writeIndex < _listWrite.size(); ++writeIndex )
         {

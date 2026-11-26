@@ -3,6 +3,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "Editor/Common/Asset/AssetWriter.h"
 #include "Editor/Common/Workspace/Undo/DocumentEditRecorder.h"
 #include "Editor/Panels/TileMap/Model/TileMapPaintUtil.h"
 #include "Editor/Panels/TileMap/Model/TileMapViewModel.h"
@@ -649,7 +650,8 @@ SW_TEST_CASE( TileMapViewModelTest, SaveAndLoadRoundTripWithStatus )
         document.editPath()  = path.c_str();
         document.editErase() = true;
         (void)document.applyToolInput( Util::makeBrushInput( 1, 1 ) );
-        SW_REQUIRE_TRUE( document.saveDocument() );
+        AssetWriter writer;
+        SW_REQUIRE_TRUE( document.saveDocument( writer ) );
         SW_EXPECT_FALSE( document.getStatus().empty() );
     }
     const DocumentEditRecorder documentRecorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다

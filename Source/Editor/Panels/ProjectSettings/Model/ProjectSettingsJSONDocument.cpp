@@ -8,6 +8,8 @@
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
 
+#include "Editor/Common/Asset/AssetWriter.h"
+
 #include "Engine/Serialization/JSON/JSONWriter.h"
 
 namespace sw::editor
@@ -166,9 +168,13 @@ namespace sw::editor
         , _readOnlyReason{ ProjectSettingsReadOnlyReason::None }
         , _bTrailingNewLine{ 0 }
     {
+        _state.bind( SW_DELEGATE_LAMBDA( CaptureDelegate, [this]()
+        { return _listNode; } ),
+                     SW_DELEGATE_LAMBDA( ApplyDelegate, [this]( const vector<ProjectSettingsJSONNode>& snapshot )
+        { _listNode = snapshot; } ) );
     }
 
-    expected<void> ProjectSettingsJSONDocument::open( const AbsolutePath& absolutePath )
+    expected<void> ProjectSettingsJSONDocument::open( const DiskPath& absolutePath )
     {
         string text;
         if ( FileUtil::readTextFile( absolutePath, text ) == false )
@@ -179,7 +185,7 @@ namespace sw::editor
         return openText( absolutePath, text );
     }
 
-    expected<void> ProjectSettingsJSONDocument::openText( const AbsolutePath& absolutePath, string_view text )
+    expected<void> ProjectSettingsJSONDocument::openText( const DiskPath& absolutePath, string_view text )
     {
         using Internal = ProjectSettingsJSONDocumentInternal;
         _listNode.clear();
@@ -222,11 +228,11 @@ namespace sw::editor
 
     expected<void> ProjectSettingsJSONDocument::revert()
     {
-        const AbsolutePath path = _absolutePath;
+        const DiskPath path = _absolutePath;
         return open( path );
     }
 
-    bool ProjectSettingsJSONDocument::saveDocument()
+    bool ProjectSettingsJSONDocument::saveDocument( AssetWriter& writer )
     {
         if ( isOpen() == false || isReadOnly() )
         {
@@ -244,7 +250,7 @@ namespace sw::editor
             SW_LOG_ERROR_ID( "ProjectSettingsJSON.SaveTextInvalid", "Project settings: the text made for %# does not read back the same - not saved", _absolutePath.str() );
             return false;
         }
-        if ( FileUtil::writeTextFile( _absolutePath, text ) == false )
+        if ( writer.writeText( _absolutePath, text ) == false )
         {
             SW_LOG_ERROR_ID( "ProjectSettingsJSON.SaveWriteFailed", "Project settings: %# could not be written", _absolutePath.str() );
             return false;

@@ -3,7 +3,6 @@
 #include "Engine/CoreServices/MemoryBudgetSubsystem.h"
 
 #include "Core/File/FileUtil.h"
-#include "Core/File/ProcessRoots.h"
 
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/CoreServices/ContentRootSubsystem.h"
@@ -25,7 +24,7 @@ namespace sw
         {
             _bBudgetFileRead = SW_TRUE;
             if ( _crashHandler.isCrashReporterRun() == false )
-                (void)_monitor.loadBudgetFile( ProcessRoots::get()._project.join( MemoryBudgetMonitor::kBudgetFile ) ); // 틀린 표는 오류를 남기고 예산 없이 간다
+                (void)_monitor.loadBudgetFile(); // 틀린 표는 오류를 남기고 예산 없이 간다
         }
         _monitor.onFrameEnd();
     }

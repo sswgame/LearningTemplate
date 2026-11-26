@@ -62,7 +62,7 @@ namespace sw
         /** @brief 글을 읽습니다. 틀리면 그 까닭(대상 앞에 원본 이름)이고 내용은 그대로입니다. */
         [[nodiscard]] expected<void> loadFromXMLText( string_view xmlText, string_view sourceName );
         /** @brief 파일을 읽습니다. 못 읽거나 틀리면 그 까닭입니다. */
-        [[nodiscard]] expected<void> loadFromFile( const AbsolutePath& absolutePath );
+        [[nodiscard]] expected<void> loadFromFile( const DiskPath& absolutePath );
         string                       saveToXMLText() const;
         [[nodiscard]] bool           saveToFile( const AbsolutePath& absPath ) const;
 
@@ -165,7 +165,7 @@ namespace sw
         /** @brief 글을 읽습니다. 틀리면 그 까닭(대상 앞에 원본 이름)이고 내용은 그대로입니다. */
         [[nodiscard]] expected<void> loadFromXMLText( string_view xmlText, string_view sourceName );
         /** @brief 파일을 읽습니다. 못 읽거나 틀리면 그 까닭입니다. */
-        [[nodiscard]] expected<void> loadFromFile( const AbsolutePath& absolutePath );
+        [[nodiscard]] expected<void> loadFromFile( const DiskPath& absolutePath );
         string                       saveToXMLText() const;
         [[nodiscard]] bool           saveToFile( const AbsolutePath& absPath ) const;
 
@@ -245,16 +245,16 @@ namespace sw
         /** @brief 글을 읽습니다. 틀리면 그 까닭(대상 앞에 원본 이름)이고 내용은 그대로입니다. */
         [[nodiscard]] expected<void> loadFromXMLText( string_view xmlText, string_view sourceName );
         /** @brief 파일을 읽습니다. 못 읽거나 틀리면 그 까닭입니다. */
-        [[nodiscard]] expected<void> loadFromFile( const AbsolutePath& absolutePath );
+        [[nodiscard]] expected<void> loadFromFile( const DiskPath& absolutePath );
 
         /** @brief 프로젝트 파일 옆 @p fileName 의 경로입니다. */
         static string makeSiblingPath( string_view projectPath, string_view fileName );
         /** @brief `makeSiblingPath` 의 디스크 경로 판입니다. */
-        static AbsolutePath makeSiblingPath( const AbsolutePath& projectPath, string_view fileName );
+        static DiskPath makeSiblingPath( const DiskPath& projectPath, string_view fileName );
         /** @brief 문화권 번역 테이블 경로(`<폴더>/<culture>.translation.xml`)입니다. */
         static string makeTranslationPath( string_view projectPath, string_view culture );
         /** @brief `makeTranslationPath` 의 디스크 경로 판입니다. */
-        static AbsolutePath makeTranslationPath( const AbsolutePath& projectPath, string_view culture );
+        static DiskPath makeTranslationPath( const DiskPath& projectPath, string_view culture );
         /** @brief @p culture 가 출시 문화권(`stagedCultures`)이면 true 입니다. */
         bool isStagedCulture( string_view culture ) const;
         /** @brief 쿠킹이 이진 번역 표(`.locres`)로 굽는 문화권입니다 — 원문 문화권 다음에 출시 문화권(정규화, 겹침 없음). */

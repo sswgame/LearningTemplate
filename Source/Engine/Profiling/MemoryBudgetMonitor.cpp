@@ -38,55 +38,65 @@ namespace sw
         _arrTagCounterSlot.fill( FrameProfiler::kInvalidSlot );
     }
 
-    expected<void> MemoryBudgetMonitor::applyBudgetJSON( string_view jsonText, MemoryProfiler& profiler )
+    expected<void> MemoryBudgetFile::validate() const
     {
-        // 키는 대소문자까지 맞아야 하고, 모르는 키 · 읽지 못한 값 · 범위 밖 숫자는 오류다(`readConfigJSON` 이 어느 키인지 로그로 알린다).
-        MemoryBudgetFile file;
-        if ( ConfigManager::readConfigJSON( file, jsonText, "MemoryBudget" ) == false )
-            return unexpected( Error{ ErrorKind::InvalidArgument, "the budget file is not a JSON object, has an unknown key or an unreadable value (the log names the key)" } );
-
-        // 먼저 모두 검사하고, 틀린 곳이 없을 때만 건다 — 반쯤 걸린 예산 표를 남기지 않는다.
-        array<uint64, kMemoryTagCount> arrBudgetBytes{};
-        for ( size_t index = 0; index < file._listBudget.size(); ++index )
+        array<uint8, kMemoryTagCount> arrListed{};
+        for ( size_t index = 0; index < _listBudget.size(); ++index )
         {
-            const MemoryBudgetEntry&                 entry = file._listBudget[index];
+            const MemoryBudgetEntry&                 entry = _listBudget[index];
             MemoryTag                                tag{ MemoryTag::Unknown };
             StringBuilder<constant::buffer::kMax128> detailBuilder;
             detailBuilder.appendFormat( "entry %# '%#'", index, entry._tag );
             if ( MemoryProfiler::findMemoryTagByName( entry._tag, tag ) == false )
-                return unexpected( Error{ ErrorKind::NotFound, "a budget entry names an unknown memory tag", detailBuilder.view() } );
+                return unexpected( Error{ ErrorKind::InvalidArgument, "a budget entry names an unknown memory tag", detailBuilder.view() } );
             if ( entry._megabytes <= 0.0 )
                 return unexpected( Error{ ErrorKind::InvalidArgument, "a budget entry's _megabytes must be a positive number", detailBuilder.view() } );
-            const uint32 tagIndex = static_cast<uint32>( tag );
-            if ( arrBudgetBytes[tagIndex] != 0 )
+            uint8& listed = arrListed[static_cast<uint32>( tag )];
+            if ( listed == SW_TRUE )
                 return unexpected( Error{ ErrorKind::AlreadyExists, "a budget entry lists its tag twice", detailBuilder.view() } );
-            arrBudgetBytes[tagIndex] = static_cast<uint64>( entry._megabytes * static_cast<float64>( constant::memory::kBytesPerMegabyte ) );
-        }
-
-        for ( uint32 tagIndex = 0; tagIndex < kMemoryTagCount; ++tagIndex )
-        {
-            profiler.setBudget( static_cast<MemoryTag>( tagIndex ), arrBudgetBytes[tagIndex] );
+            listed = SW_TRUE;
         }
         return {};
     }
 
-    bool MemoryBudgetMonitor::loadBudgetFile( const AbsolutePath& absolutePath )
+    expected<void> MemoryBudgetMonitor::applyBudgetJSON( string_view jsonText, MemoryProfiler& profiler )
+    {
+        const expected<MemoryBudgetFile> file = ConfigManager::parseConfig<MemoryBudgetFile>( jsonText, "MemoryBudget" );
+        if ( file.has_value() == false )
+            return unexpected( file.error() );
+        applyBudget( *file, profiler );
+        return {};
+    }
+
+    void MemoryBudgetMonitor::applyBudget( const MemoryBudgetFile& file, MemoryProfiler& profiler )
+    {
+        array<uint64, kMemoryTagCount> arrBudgetBytes{};
+        for ( const MemoryBudgetEntry& entry : file._listBudget )
+        {
+            MemoryTag tag{ MemoryTag::Unknown };
+            if ( MemoryProfiler::findMemoryTagByName( entry._tag, tag ) )
+                arrBudgetBytes[static_cast<uint32>( tag )] = static_cast<uint64>( entry._megabytes * static_cast<float64>( constant::memory::kBytesPerMegabyte ) );
+        }
+        for ( uint32 tagIndex = 0; tagIndex < kMemoryTagCount; ++tagIndex )
+        {
+            profiler.setBudget( static_cast<MemoryTag>( tagIndex ), arrBudgetBytes[tagIndex] );
+        }
+    }
+
+    bool MemoryBudgetMonitor::loadBudgetFile()
     {
         MemoryProfiler* pProfiler = MemoryProfiler::getActive();
-        if ( pProfiler == nullptr || FileUtil::exists( absolutePath ) == false )
+        if ( pProfiler == nullptr )
             return true;
-
-        string text;
-        if ( FileUtil::readTextFile( absolutePath, text ) == false )
+        const expected<MemoryBudgetFile> file = ConfigManager::readConfig( MemoryBudgetFile::kConfigFile );
+        if ( file.has_value() == false )
         {
-            SW_LOG_ERROR_ID( "MemoryBudget.CannotReadMemoryBudget", "Cannot read the memory budget file '%#'", absolutePath.str() );
+            if ( file.error().kind() == ErrorKind::NotFound )
+                return true; // 파일이 없으면 예산이 없다
+            SW_LOG_ERROR_ID( "MemoryBudget.InvalidMemoryBudgetFile", "Invalid memory budget file: %# (%#)", file.error().message(), file.error().detail() );
             return false;
         }
-        if ( const expected<void> applied = applyBudgetJSON( text, *pProfiler ); applied.has_value() == false )
-        {
-            SW_LOG_ERROR_ID( "MemoryBudget.InvalidMemoryBudgetFile", "Invalid memory budget file '%#': %# (%#)", absolutePath.str(), applied.error().message(), applied.error().detail() );
-            return false;
-        }
+        applyBudget( *file, *pProfiler );
         return true;
     }
 

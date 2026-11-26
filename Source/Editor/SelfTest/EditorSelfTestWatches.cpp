@@ -1,6 +1,6 @@
 /**
  * @file EditorSelfTestWatches.cpp
- * @brief 입력 흉내 진입점(`EditorClick` · `EditorDrag` …)로 만든 결과를 시나리오가 읽을 에디터 감시 값 몇 개입니다 — 열거형 프로퍼티 값, 오브젝트의 부모 깊이, 저장하지 않은 문서 수.
+ * @brief 입력 흉내 진입점(`EditorClick` · `EditorDrag` …)로 만든 결과를 시나리오가 읽을 에디터 감시 값 몇 개입니다 — 열거형 프로퍼티 값, 오브젝트의 부모 깊이, 저장하지 않은 문서 수 — 그리고 자체 테스트 통과 수(`Editor.TestRunnerPassCount`).
  * @details 값을 고르는 쪽(인스펙터 콤보, Hierarchy 끌어 놓기, 문서 패널 저장)이 바뀐 결과가 화면이 아니라 데이터에서 읽히게 한다. 대상은 `gv_editorWatchProperty` · `gv_editorWatchObject`
  *          (`EditorWatchSupport.h` 가 선언하는 시나리오용 전역 변수)가 정한다.
  */
@@ -13,6 +13,7 @@
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/SelfTest/EditorSelfTest.h"
 #include "Editor/SelfTest/EditorWatchSupport.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
@@ -114,6 +115,19 @@ namespace sw::editor
                 outValue = static_cast<float64>( pContext->getSubsystem<EditorPanelManager>().countDirtyDocuments() );
                 return true;
             }
+
+            /** @brief 마지막(또는 현재) 자체 테스트 실행에서 통과한 테스트 수입니다. Test Runner 창과 명령줄 실행 모두 해당합니다. */
+            [[nodiscard]] static bool readTestRunnerPassCount( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                uint32 passedCount{ 0 };
+                for ( const EditorSelfTestResult& result : EditorSelfTestRunner::getResults() )
+                {
+                    if ( result._bPassed )
+                        ++passedCount;
+                }
+                outValue = static_cast<float64>( passedCount );
+                return true;
+            }
         };
     } // namespace
 
@@ -127,4 +141,6 @@ namespace sw::editor
                          "Digit widths (content width / width of '0') the panel named by gv_editorWatchPanel fit in its content area in the last draw",
                          &EditorSelfTestWatchesInternal::readPanelContentColumns );
     SW_AUTOMATION_WATCH( editorDirtyDocumentCount, "Editor.DirtyDocumentCount", "Document panels that hold edits not yet saved", &EditorSelfTestWatchesInternal::readDirtyDocumentCount );
+    SW_AUTOMATION_WATCH( editorTestRunnerPassCount, "Editor.TestRunnerPassCount", "Editor self tests that passed in the last (or current) self test run",
+                         &EditorSelfTestWatchesInternal::readTestRunnerPassCount );
 } // namespace sw::editor

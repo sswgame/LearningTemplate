@@ -2,6 +2,7 @@
 
 #include "Core/Testing/TestFramework.h"
 
+#include "Editor/Common/Asset/AssetWriter.h"
 #include "Editor/Common/Workspace/Undo/DocumentEditRecorder.h"
 #include "Editor/Panels/TileSet/Model/TileSetEditModel.h"
 
@@ -123,7 +124,8 @@ SW_TEST_CASE( TileSetEditModelTest, ViolationsAreShownNotSaved )
     restored.bindDocumentEditRecorder( restoredRecorder );
     restored.applyText( model.captureText() );
     SW_EXPECT_EQUAL( 2, restored.getContent()._columnCount );
-    SW_EXPECT_FALSE( model.saveDocument( "never/written.tileset.xml" ) );
+    AssetWriter writer;
+    SW_EXPECT_FALSE( model.saveDocument( writer, "never/written.tileset.xml" ) );
     SW_EXPECT_FALSE( model.getStatus().empty() );
 }
 

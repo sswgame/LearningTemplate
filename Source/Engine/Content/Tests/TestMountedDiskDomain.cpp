@@ -32,7 +32,7 @@ namespace
         ScopedContentSource& operator=( const ScopedContentSource& ) = delete;
     };
 
-    optional<AbsolutePath> findLoose( string_view id )
+    optional<DiskPath> findLoose( string_view id )
     {
         return engine::getSubsystem<AssetPaths>().findLooseFile( id );
     }
@@ -57,8 +57,8 @@ SW_TEST_CASE( MountedDiskDomainTest, WritePathKeepsTheDiskSpellingOfExistingFold
     SW_REQUIRE_TRUE( diskID.empty() == false );
 
     // 소문자 id: 있는 폴더 둘은 디스크 표기이고 아직 없는 파일 이름은 id 의 표기다.
-    const string                 lowerID   = FileUtil::normalizePath( diskID ).str();
-    const optional<AbsolutePath> writePath = paths.toDiskPath( lowerID );
+    const string             lowerID   = FileUtil::normalizePath( diskID ).str();
+    const optional<DiskPath> writePath = paths.toDiskPath( lowerID );
     SW_REQUIRE_TRUE( writePath.has_value() );
     // 기대 경로는 대소문자를 구분하는 표기로 적는다 — isSameDiskPath 는 Linux 에서 정확히 같아야, Windows 에서는 같은 파일이면 참이다.
     StringBuilder<constant::buffer::kMax512> expectedWritePath;
@@ -66,15 +66,15 @@ SW_TEST_CASE( MountedDiskDomainTest, WritePathKeepsTheDiskSpellingOfExistingFold
     SW_EXPECT_TRUE( FileUtil::isSameDiskPath( expectedWritePath.view(), writePath->str() ) );
 
     // 없는 폴더부터는 id 의 표기를 쓴다 — 리소스 id 는 소문자로 접히므로(`normalizeAssetID`) 새 성분은 소문자다. Windows 는 대소문자를 가리지 않아 같은 폴더다.
-    const optional<AbsolutePath> freshPath = paths.toDiskPath( ScopedScratchDomain::makeID( "Saved/Fresh/Deep/New.txt" ).str() );
+    const optional<DiskPath> freshPath = paths.toDiskPath( ScopedScratchDomain::makeID( "Saved/Fresh/Deep/New.txt" ).str() );
     SW_REQUIRE_TRUE( freshPath.has_value() );
     StringBuilder<constant::buffer::kMax512> expectedFreshPath;
     expectedFreshPath.appendFormat( "%#/Saved/fresh/deep/new.txt", directory.str() );
     SW_EXPECT_TRUE( FileUtil::isSameDiskPath( expectedFreshPath.view(), freshPath->str() ) );
 
     // 쓴 뒤에는 같은 id 를 대소문자만 다르게 물어도 같은 파일이다(둘째 쓰기가 옆 폴더를 만들지 않는다).
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( *writePath, "first" ) );
-    const optional<AbsolutePath> again = paths.toDiskPath( diskID );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( writePath->str() ), "first" ) );
+    const optional<DiskPath> again = paths.toDiskPath( diskID );
     SW_REQUIRE_TRUE( again.has_value() );
     SW_EXPECT_TRUE( FileUtil::isSameDiskPath( writePath->str(), again->str() ) );
 }

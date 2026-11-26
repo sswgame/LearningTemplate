@@ -11,6 +11,7 @@
 #include "GameFramework/Runtime/Online/Cache/Server/EphemeralStore.h"
 #include "GameFramework/Runtime/Online/Cache/Server/EphemeralStoreRouter.h"
 #include "GameFramework/Runtime/Online/Cache/Server/MemoryEphemeralStore.h"
+#include "GameFramework/Runtime/Online/Cache/Server/Tests/EphemeralStoreTestUtil.h"
 #include "GameFramework/Runtime/Online/Sanction/Server/ServiceSanction.h"
 
 // ServerBusTest — 서버 간 버스: 주제 규칙, 프로세스 안 허브(LocalServerBus)의 구독 · 배달 · 순번, 주제 정의(ServerBusTopic · ServerBusTopicFamily)의
@@ -256,10 +257,10 @@ SW_TEST_CASE( ServerBusTest, EphemeralBusCarriesEnvelopeAcrossServers )
     SW_EXPECT_EQUAL( uint64( 77 ), read._accountID );
 
     // 같은 채널에 봉투가 아닌 바이트(짧다, 봉투 판이 다르다)가 오면 버린다
-    (void)storeA.submit( sw::EphemeralRequest::makePublish( "bus:test.cache", { 1, 2, 3 } ) );
+    (void)storeA.submit( sw::EphemeralStoreTestAccess::makePublish( "bus:test.cache", { 1, 2, 3 } ) );
     sw::vector<uint8> listWrongVersion( 17, 0 );
     listWrongVersion[0] = 2;
-    (void)storeA.submit( sw::EphemeralRequest::makePublish( "bus:test.cache", listWrongVersion ) );
+    (void)storeA.submit( sw::EphemeralStoreTestAccess::makePublish( "bus:test.cache", listWrongVersion ) );
     (void)routerB.poll();
     SW_EXPECT_EQUAL( uint64( 2 ), busB.getDroppedCount() );
     sw::vector<sw::ServerBusMessage> listAfterDrop;

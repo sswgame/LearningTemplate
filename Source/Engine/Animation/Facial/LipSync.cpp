@@ -422,8 +422,6 @@ namespace sw
 
     bool VisemeTrack::saveToFile( const AbsolutePath& absPath ) const
     {
-        if ( FileUtil::ensureParentDirectoryExists( absPath ) == false )
-            return false;
         return ResourceComposer::saveText( absPath, ResourceSaveText::makeComplete( toXML() ) ); // 칸을 빼지 않고 쓴다
     }
 

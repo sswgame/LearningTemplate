@@ -38,12 +38,44 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Name/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/ServiceRecordUnknownFields.h"
 
 namespace sw
 {
     struct ServiceTTLSweepReport;
+    template <typename TRecord>
+    class ServiceRecordTable;
+
+    /** @brief 색인 백필의 상태입니다. */
+    ENUM()
+    enum class ServiceTTLBackfillState : uint8
+    {
+        Running = 0, ///< 이 바퀴가 도는 중이다
+        Done         ///< 이 판은 끝났다 — 판이 오르기 전에는 다시 훑지 않는다
+    };
+
+    /** @brief 백필 진행 한 줄입니다(`ServiceTTLRule::getBackfillTable` — 키 `<표>/<접두어>`). */
+    REFLECT()
+    struct ServiceTTLBackfillRecord
+    {
+        REFLECT_BODY();
+        PROPERTY( MaxCount = 256 )
+        string _cursor{};
+        PROPERTY()
+        int64 _activatedMs{ 0 }; ///< 이 판을 처음 본 시각 — 배포 창을 잰다
+        PROPERTY()
+        int64 _passStartMs{ 0 }; ///< 이 바퀴를 시작한 시각
+        PROPERTY()
+        uint32 _version{ 0 }; ///< 색인 줄 모양의 판(`ServiceTTLRule::_backfillVersion`)
+        PROPERTY()
+        ServiceTTLBackfillState _state{ ServiceTTLBackfillState::Running };
+
+        ServiceRecordUnknownFields _unknownProperties{};
+    };
 
     /** @brief 레코드에서 기록 시각(UTC 밀리초)을 읽습니다. 읽지 못하면 false 이고 그 레코드는 지우지 않습니다. */
     using ServiceTTLTimeFn = bool ( * )( const ServiceRecord& record, int64& outTimeMs );
@@ -78,7 +110,7 @@ namespace sw
     struct SW_GF_API ServiceTTLRule
     {
         hashed_string                               _table{};
-        hashed_string                               _ttlIndexTable{}; ///< 비우면 `_table` 을 커서로 훑는다. 값이 있으면 이 TTL 색인을 시각 순으로 범위 읽기한다
+        ServiceIndexTable                           _ttlIndexTable{}; ///< 비우면 `_table` 을 커서로 훑는다. 값이 있으면 이 TTL 색인을 시각 순으로 범위 읽기한다
         string                                      _keyPrefix{};     ///< 비우면 테이블 전체. 값이 있으면 이 접두어의 레코드만 훑는다(색인 규칙은 백필이 훑을 범위다)
         int64                                       _expireAfterMs{ 0 };
         ServiceTTLTimeFn                            _pfnReadTime{ nullptr };   ///< 색인 규칙은 비워도 된다(색인의 시각을 믿는다). 커서 규칙은 필수다
@@ -111,8 +143,8 @@ namespace sw
         static string makeTTLIndexKey( int64 timeMs, string_view target );
         /** @brief TTL 색인 키를 기준 시각과 대상으로 나눕니다. 형식이 틀리면 false 입니다. */
         [[nodiscard]] static bool parseTTLIndexKey( string_view indexKey, int64& outTimeMs, string_view& outTarget );
-        /** @brief 백필 진행 표("service_ttl_backfill")입니다. 키는 `<표>/<접두어>`, 값은 [판][상태][판을 처음 본 시각][이 바퀴 시작][커서] 이다. */
-        static const hashed_string& getBackfillTable();
+        /** @brief 백필 진행 표("service_ttl_backfill")입니다. 키는 `<표>/<접두어>` 이다. */
+        static const ServiceRecordTable<ServiceTTLBackfillRecord>& getBackfillTable();
 
         /** @brief `ServiceTTLRecordBackfillSource<TReadTime>` 하나를 만듭니다. 줄의 시각이 레코드에서 나오지 않는 표(시즌 끝으로 재는 결과)는 자기 출처를 쓴다. */
         template <ServiceTTLTimeFn TReadTime>

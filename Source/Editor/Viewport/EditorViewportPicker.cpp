@@ -7,7 +7,6 @@
 #include "Core/Math/Ray.h"
 #include "Core/Time/MonotonicClock.h"
 
-#include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Viewport/EditorViewportProjection.h"

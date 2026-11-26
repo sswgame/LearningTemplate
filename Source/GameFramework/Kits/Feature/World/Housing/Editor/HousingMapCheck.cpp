@@ -43,7 +43,7 @@ namespace sw::editor
                     {
                         if ( part._prefabPath.empty() )
                             continue; // 필수 칸이 비면 카탈로그 읽기가 거절한다
-                        const optional<AbsolutePath> prefab = paths.toDiskPath( part._prefabPath.path() );
+                        const optional<DiskPath> prefab = paths.toDiskPath( part._prefabPath.path() );
                         if ( prefab.has_value() && FileUtil::isRegularFile( *prefab ) )
                             continue;
                         StringBuilder<constant::buffer::kMax256> message;

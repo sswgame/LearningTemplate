@@ -24,7 +24,7 @@ namespace
         static void write( const AbsolutePath& root, string_view assetID, string_view text )
         {
             const AbsolutePath absPath = root.join( assetID );
-            SW_EXPECT_TRUE( FileUtil::ensureParentDirectoryExists( absPath ) && FileUtil::writeTextFile( absPath, text ) ); // 도우미라 REQUIRE(케이스 본문 전용)를 쓰지 않는다
+            SW_EXPECT_TRUE( FileUtil::writeTextFile( absPath, text ) ); // 도우미라 REQUIRE(케이스 본문 전용)를 쓰지 않는다
         }
 
         static void remove( const AbsolutePath& root, string_view assetID ) { SW_EXPECT_TRUE( FileUtil::removeFile( root.join( assetID ) ) ); }

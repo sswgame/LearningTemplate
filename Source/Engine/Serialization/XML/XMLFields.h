@@ -59,6 +59,14 @@ namespace sw
         {
             return readProperties( node, &outDef, *TDef::StaticType(), sourceName, listHandRead, pfnHandRead );
         }
+        /** @brief `readProperties` 와 같고, 로그 대신 첫 문제를 오류 값으로 돌려줍니다(대상 글이 그 문제다) — 까닭을 돌려주는 표 읽기(현지화 · 문화권)가 쓴다. */
+        [[nodiscard]] static expected<void> tryReadProperties( const XMLNode& node, void* pInstance, const TypeInfo& typeInfo, string_view sourceName );
+        /** @brief `tryReadProperties` 의 타입 지정 버전입니다. */
+        template <typename TDef>
+        [[nodiscard]] static expected<void> tryReadProperties( const XMLNode& node, TDef& outDef, string_view sourceName )
+        {
+            return tryReadProperties( node, &outDef, *TDef::StaticType(), sourceName );
+        }
         /**
          * @brief `readProperties` 의 짝입니다 — @p pInstance 의 칸을 같은 이름 규칙(앞의 `_` · 불리언 `b` 를 뗀다)의 속성으로 @p node 에 씁니다.
          * @details 필수 칸(`Required`)은 늘 쓰고, 나머지는 @p pDefaults(같은 타입의 기본 인스턴스)와 글이 다를 때만 쓴다 — 손으로 쓴 파일처럼 기본값을 생략한다.

@@ -207,7 +207,7 @@ SW_TEST_CASE( FileTest, ReadWritePreservesPathCase )
 
 /**
  * @brief [FileTest] ensureParentDirectoryExists 는 없는 상위 폴더를 여러 단 만들고, 폴더가 없는 파일 이름에는 아무것도 하지 않는다
- * @details 에셋 셋(애니메이션 그래프 · 대화 그래프 · 시퀀스) · 전역 변수 프리셋 · 셰이더 디스크 캐시가 저장 전에 이것을 부른다.
+ * @details `FileUtil` 의 쓰기 입구가 모두 이것을 지난다.
  *          구분자가 섞여 있어도(`\\` · `/`) 만든다 — `ensureDirectoryExists` 와 같은 정규화를 거친다.
  */
 SW_TEST_CASE( FileTest, CreateParentDirectoryMakesNestedFolders )
@@ -221,6 +221,23 @@ SW_TEST_CASE( FileTest, CreateParentDirectoryMakesNestedFolders )
     SW_EXPECT_TRUE( sw::FileUtil::isDirectory( sw::FileUtil::toDiskPath( leafFolder.view() ) ) );
     SW_EXPECT_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::toDiskPath( filePath.view() ), "leaf" ) );
 
+    SW_EXPECT_TRUE( sw::FileUtil::removeDirectory( root ) );
+}
+
+/** @brief [FileTest] 쓰기 입구는 없는 부모 폴더를 스스로 만든다 — 덮어쓰기 · 덧붙이기 · 스트리밍 쓰기 */
+SW_TEST_CASE( FileTest, WritesMakeTheirParentFolder )
+{
+    const sw::AbsolutePath root = sw::test::makeScratchPath( "SwWriteParentTest" );
+    SW_EXPECT_TRUE( sw::FileUtil::writeTextFile( root.join( "text/a/leaf.txt" ), "x" ) );
+    const uint8 byte = 1;
+    SW_EXPECT_TRUE( sw::FileUtil::writeFile( root.join( "bytes/a/leaf.bin" ), &byte, 1 ) );
+    SW_EXPECT_TRUE( sw::FileUtil::appendTextFile( root.join( "append/a/leaf.txt" ), "x" ) );
+    sw::AtomicFileWriter writer;
+    SW_REQUIRE_TRUE( writer.open( root.join( "stream/a/leaf.bin" ) ).has_value() );
+    SW_EXPECT_TRUE( writer.append( &byte, 1 ).has_value() );
+    SW_EXPECT_TRUE( writer.commit().has_value() );
+    for ( const utf8* pPath : { "text/a/leaf.txt", "bytes/a/leaf.bin", "append/a/leaf.txt", "stream/a/leaf.bin" } )
+        SW_EXPECT_TRUE( sw::FileUtil::isRegularFile( root.join( pPath ) ) );
     SW_EXPECT_TRUE( sw::FileUtil::removeDirectory( root ) );
 }
 
@@ -496,8 +513,10 @@ SW_TEST_CASE( FileTest, FailedWriteReportsFalseAndKeepsOriginal )
     SW_EXPECT_TRUE( sw::FileUtil::collectFiles( dir, "", listFile, false ) );
     SW_EXPECT_EQUAL( 0u, static_cast<uint32>( listFile.size() ) );
 
-    // 없는 폴더에 쓰기도 false 다.
-    SW_EXPECT_FALSE( sw::FileUtil::writeTextFile( dir.join( "missing/leaf.txt" ), "x" ) );
+    // 길을 파일이 막아 부모 폴더를 만들 수 없으면 false 다.
+    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( dir.join( "blocker" ), "a file" ) );
+    SW_EXPECT_LOG( "File.CreateDirectoryFailed" );
+    SW_EXPECT_FALSE( sw::FileUtil::writeTextFile( dir.join( "blocker/leaf.txt" ), "x" ) );
 
     SW_EXPECT_TRUE( sw::FileUtil::removeDirectory( dir ) );
 }
@@ -560,7 +579,6 @@ SW_TEST_CASE( FileTest, ReadOnlyFileIsReported )
 {
     const sw::AbsolutePath root     = sw::test::makeScratchPath( "SwReadOnlyTest" );
     const sw::AbsolutePath filePath = root.join( "locked.txt" );
-    SW_REQUIRE_TRUE( sw::FileUtil::ensureParentDirectoryExists( filePath ) );
     SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( filePath, "locked" ) );
     SW_EXPECT_FALSE( sw::FileUtil::isReadOnlyFile( filePath ) );
 
@@ -582,7 +600,6 @@ SW_TEST_CASE( FileTest, WriteRefusesAReadOnlyFile )
 {
     SW_EXPECT_LOG( "File.WriteReadOnly" );
     const sw::AbsolutePath filePath = sw::test::makeScratchPath( "locked.txt" );
-    SW_REQUIRE_TRUE( sw::FileUtil::ensureParentDirectoryExists( filePath ) );
     SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( filePath, "kept" ) );
     SW_REQUIRE_TRUE( sw::FileUtil::setWritable( filePath, false ) );
 
@@ -606,8 +623,6 @@ SW_TEST_CASE( FileTest, CheckedInReadOnlyFileIsNotRemovedOrMoved )
     const sw::AbsolutePath controlled = sw::test::makeScratchPath( "controlled" );
     const sw::AbsolutePath locked     = controlled.join( "deep/locked.txt" );
     const sw::AbsolutePath loose      = sw::test::makeScratchPath( "loose_copy.txt" );
-    SW_REQUIRE_TRUE( sw::FileUtil::ensureParentDirectoryExists( locked ) );
-    SW_REQUIRE_TRUE( sw::FileUtil::ensureParentDirectoryExists( loose ) );
     SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( locked, "kept" ) );
     SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( loose, "copy" ) );
     SW_REQUIRE_TRUE( sw::FileUtil::setWritable( locked, false ) );
@@ -884,7 +899,6 @@ SW_TEST_CASE( FileTest, TryWriteFileReportsTheResult )
     using namespace sw;
     const sw::AbsolutePath path = test::makeScratchPath( "TryWrite" ).join( "entry.bin" );
     const vector<uint8>    bytes{ 1, 2, 3 };
-    SW_REQUIRE_TRUE( FileUtil::ensureParentDirectoryExists( path ) );
     SW_EXPECT_TRUE( FileUtil::tryWriteFile( path, bytes.data(), bytes.size() ) == FileWriteResult::Written );
     vector<uint8> read;
     SW_REQUIRE_TRUE( FileUtil::readFile( path, read ) );
@@ -905,7 +919,7 @@ SW_TEST_CASE( FileTest, TryWriteFileReportsTheResult )
 SW_TEST_CASE( FileTest, OpenFileSizeRewindsToTheStart )
 {
     const sw::AbsolutePath path = sw::test::makeScratchPath( "SwOpenFileSizeTest" ).join( "five.bin" );
-    SW_REQUIRE_TRUE( sw::FileUtil::ensureParentDirectoryExists( path ) && sw::FileUtil::writeTextFile( path, "12345" ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( path, "12345" ) );
 
     FILE* pFile = sw::PlatformFileUtil::openFile( path.c_str(), "rb" );
     SW_REQUIRE_NOT_NULL( pFile );

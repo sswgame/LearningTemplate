@@ -36,7 +36,7 @@ namespace sw
              */
             [[nodiscard]] static string describeReadFailure( string_view path )
             {
-                const optional<AbsolutePath>             looseFile = engine::getSubsystem<AssetPaths>().findLooseFile( path );
+                const optional<DiskPath>                 looseFile = engine::getSubsystem<AssetPaths>().findLooseFile( path );
                 const string                             loosePath = looseFile.has_value() ? looseFile->str() : string{};
                 const bool                               bPackOnly = engine::areEngineServicesBound() && engine::getSubsystem<AssetManager>().getPackManager().isAllowLooseFiles() == false;
                 StringBuilder<constant::buffer::kMax512> reason;

@@ -66,7 +66,7 @@ namespace sw
         /** @brief 넘긴 객체는 모두 빌려 씁니다. @p serverID 는 이 서버 프로세스의 id 이며 0이 아니어야 합니다. 재시작 복구 인덱스에 씁니다. */
         void initialize( ServiceStore* pStore, const ITradePolicy* pPolicy, const ILedgerPolicy* pLedgerPolicy, uint64 serverID, const TradeServiceConfig& settings );
         void shutdown();
-        /** @brief 이 서버가 연 열린 거래를 모두 닫습니다. 기동할 때 한 번 부르며 닫힌 거래는 `pollUpdates` 로 회수합니다. */
+        /** @brief 이 서버가 연 열린 거래를 모두 닫습니다. 기동할 때 한 번 부르며 닫힌 거래는 `pollUpdates` 로 회수합니다. 저장소 실패 · 충돌로 다 닫지 못하면 `update` 가 다시 합니다. */
         void recoverOwnedTrades( UnixMilliseconds nowMs );
 
         void invite( AccountID fromID, AccountID toID, UnixMilliseconds nowMs, uint64 requestTag );
@@ -109,6 +109,7 @@ namespace sw
         const ILedgerPolicy*         _pLedgerPolicy;
         uint64                       _serverID;
         uint64                       _nextSeed;
-        ServiceStoreTracker          _store; ///< 저장소에 맡긴 일의 앞이다
+        int64                        _recoverAtMs; ///< 다 하지 못한 기동 복구를 다시 할 시각이다(0 이면 없다)
+        ServiceStoreTracker          _store;       ///< 저장소에 맡긴 일의 앞이다
     };
 } // namespace sw

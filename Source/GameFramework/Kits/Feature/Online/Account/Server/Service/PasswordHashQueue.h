@@ -50,7 +50,7 @@ namespace sw
     {
         static constexpr int32 kMaxSpecCount = 2;
 
-        string           _password{}; ///< 워커가 해시를 끝내면 지운다
+        SecretText       _password{}; ///< 워커가 해시를 끝내면 지운다
         PasswordHashSpec _arrSpec[kMaxSpecCount]{};
         int32            _specCount{ 0 };
     };

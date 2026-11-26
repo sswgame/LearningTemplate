@@ -61,7 +61,7 @@ namespace sw
                     vector<uint8> bytes;
                     if ( cookCulture( AssetID{ projectID }, culture, bytes ) == false )
                         return CookStep::Failed;
-                    const bool bWritten = FileUtil::ensureDirectoryExists( outputPath.getParent() ) && FileUtil::writeFile( outputPath, bytes.data(), bytes.size() );
+                    const bool bWritten = FileUtil::writeFile( outputPath, bytes.data(), bytes.size() );
                     if ( bWritten == false )
                     {
                         SW_LOG_ERROR_ID( "LocalizationCooker.CouldNotWrite", "Localization cook could not write '%#'", outputPath.str() );

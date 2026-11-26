@@ -41,7 +41,7 @@ namespace sw::editor
         const utf8*      getPanelTitle() const override { return "Audio Graph"; }
         EditorTextExtent getInitialPanelSize() const override { return EditorTextExtent::ofText( 147.0f, 34.0f ); }
         /** @brief 검사를 통과하면 연 문서에 씁니다. 실패하면 쓰지 않고 false 입니다(사본은 남는다). */
-        [[nodiscard]] bool saveDocument() override;
+        [[nodiscard]] bool saveDocument( AssetWriter& writer ) override;
 
     protected:
         void drawDocumentContent() override;

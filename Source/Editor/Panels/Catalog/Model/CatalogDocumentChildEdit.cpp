@@ -264,8 +264,7 @@ namespace sw::editor
         if ( bHadError || _inheritance.getError().empty() )
             return true;
         const string reason = _inheritance.getError();
-        undo();
-        _state.discardLastRedo();
+        _state.cancelLast();
         _error = reason;
         return false;
     }

@@ -16,14 +16,14 @@
  */
 SW_TEST_CASE( AutomationScratchTest, ScratchDomainLivesUnderTheRunRoot )
 {
-    const sw::AssetPaths&                paths = sw::engine::getSubsystem<sw::AssetPaths>();
-    const sw::optional<sw::AbsolutePath> file  = paths.toDiskPath( "scratch/assetmanage/probe.material" );
+    const sw::AssetPaths&            paths = sw::engine::getSubsystem<sw::AssetPaths>();
+    const sw::optional<sw::DiskPath> file  = paths.toDiskPath( "scratch/assetmanage/probe.material" );
     SW_REQUIRE_TRUE( file.has_value() );
     SW_EXPECT_TRUE( sw::FileUtil::isPathUnderRoot( sw::ProcessRoots::get()._run.str(), file->str() ) );
     SW_EXPECT_FALSE( sw::FileUtil::isPathAtOrUnderRoot( sw::ProcessRoots::get()._content.str(), file->str() ) );
     SW_EXPECT_EQUAL( sw::string( "scratch/assetmanage/probe.material" ), paths.toAssetID( *file ) );
     // 가져오기 그릇 아래 토막 이름도 그대로다(예전 pid 꼬리는 `scratch/import/<이름>_p<pid>` 였다)
-    const sw::optional<sw::AbsolutePath> imported = paths.toDiskPath( "scratch/import/editor.flowimport/a.prefab.xml" );
+    const sw::optional<sw::DiskPath> imported = paths.toDiskPath( "scratch/import/editor.flowimport/a.prefab.xml" );
     SW_REQUIRE_TRUE( imported.has_value() );
     SW_EXPECT_EQUAL( sw::string( "scratch/import/editor.flowimport/a.prefab.xml" ), paths.toAssetID( *imported ) );
 }

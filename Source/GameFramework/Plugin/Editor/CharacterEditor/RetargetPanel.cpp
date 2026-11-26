@@ -8,7 +8,6 @@
 
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
-#include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
@@ -184,7 +183,7 @@ namespace sw::editor
         EditorWidgets::drawPanelStatus( _status.c_str() );
     }
 
-    bool RetargetPanel::saveDocument()
+    bool RetargetPanel::saveDocument( AssetWriter& writer )
     {
         // 묶이지 않는 프로필은 런타임이 쓸 수 없다 — 저장하지 않는다.
         const expected<void> inspected = RetargetProfileInspection::inspect( _model.getProfile(), _inspection );
@@ -196,14 +195,13 @@ namespace sw::editor
             _status = string( status.view() );
             return false;
         }
-        const auto writePath = getDocumentDiskPath();                                                  // 읽은 그 자리
-        if ( writePath.has_value() == false || _model.getProfile().saveToFile( *writePath ) == false ) // 변형(`_base`)은 부모와의 차이로 쓴다
+        const auto writePath = getDocumentDiskPath();                                                         // 읽은 그 자리
+        if ( writePath.has_value() == false || writer.saveAsset( *writePath, _model.getProfile() ) == false ) // 변형(`_base`)은 부모와의 차이로 쓴다
         {
             _status = writePath.has_value() == false ? string( "No write path for this asset" ) : string( "The profile could not be written (see the log)" );
             return false;
         }
         SW_LOG_INFO_ID( "RetargetPanel.RetargetProfileSaved", "Retarget profile saved to %#", writePath->c_str() );
-        syncDocumentUndoBaseline(); // 저장한 글이 새 기준이다 — 안 그러면 앞 글로 되돌렸을 때 디스크와 달라도 "저장됨" 으로 보인다
         _status = "Saved";
         return true;
     }

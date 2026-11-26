@@ -55,9 +55,9 @@ namespace sw::editor
         /** @brief 지금 ImGui 컨텍스트에 건 구성입니다. `apply` 전이면 단언한다. */
         static const EditorFontSetup& getActive();
         /** @brief 후보 이름 가운데 에디터 글꼴 폴더 · OS 글꼴 폴더에 처음 있는 파일의 절대 경로입니다. 없으면 빈 글입니다(ImGui 없음 — `Model/EditorFontSetupFiles.cpp`). */
-        static AbsolutePath findFontFile( const vector<string>& listFileName );
+        static DiskPath findFontFile( const vector<string>& listFileName );
         /** @brief 글꼴 파일의 (어센더 - 디센더) / em 입니다 — ImGui FreeType 로더가 크기를 맞추는 높이다. 읽지 못하면 오류를 남기고 false 다(`Model/EditorFontSetupFiles.cpp`). */
-        [[nodiscard]] static bool readEmRatio( const AbsolutePath& path, float32& outRatio );
+        [[nodiscard]] static bool readEmRatio( const DiskPath& path, float32& outRatio );
 
     private:
         uint32  _monoFontIndex; ///< 고정폭 글꼴의 아틀라스 번호(`ImFontAtlas::Fonts` — 글꼴은 아틀라스가 소유한다)

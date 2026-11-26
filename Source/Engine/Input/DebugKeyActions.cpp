@@ -140,8 +140,6 @@ namespace sw
         // 바꾼 것이 없으면 파일을 두지 않는다 — 기본 키로 되돌린 플레이어에게 낡은 파일이 남지 않게 한다.
         if ( changedCount == 0 )
             return FileUtil::exists( filePath ) == false || FileUtil::removeFile( filePath );
-        if ( FileUtil::ensureParentDirectoryExists( filePath ) == false )
-            return false;
         return doc.saveCompleteToFile( filePath );
     }
 

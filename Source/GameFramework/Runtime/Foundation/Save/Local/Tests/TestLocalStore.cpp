@@ -165,7 +165,6 @@ namespace
     {
         OpenSSLNetSecurityProvider provider;
         const AbsolutePath         keyPath = test::makeScratchPath( caseName ).join( LocalDeviceKeyProvider::kKeyFileName );
-        SW_REQUIRE_TRUE( FileUtil::ensureParentDirectoryExists( keyPath ) );
         SW_REQUIRE_TRUE( FileUtil::writeTextFile( keyPath, keyBytes ) );
 
         uint8 arrKey[ILocalStoreKeyProvider::kKeySize]{};

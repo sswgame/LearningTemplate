@@ -22,15 +22,22 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Online/Ledger/LedgerTypes.h"
 #include "GameFramework/Runtime/Online/Mail/ServiceMailTypes.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceTTLRule.h"
+#include "GameFramework/Runtime/Online/Store/ServiceRecordUnknownFields.h"
 
 namespace sw
 {
+    template <typename TRecord>
+    class ServiceRecordTable;
+
     /** @brief 만료 때 첨부를 어떻게 할지 정합니다. 저장 값이라 순서를 바꾸면 안 됩니다. */
+    ENUM()
     enum class ServiceMailExpiryAction : uint8
     {
         Discard = 0,    ///< 버린다(운영, 보상 우편). 발행한 것은 아무것도 움직이지 않고, 에스크로에 맡긴 것은 소각으로 보낸다
@@ -41,22 +48,72 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 보낼 우편 하나입니다. */
+    /** @brief 보낼 우편 하나입니다. 저장 레코드(`ServiceMailStoreRecord`)에 그대로 실린다. */
+    REFLECT()
     struct ServiceMailMessage
     {
+        REFLECT_BODY();
+        PROPERTY( MaxCount = ServiceMailConstant::kMaxAttachmentCount )
         vector<ServiceMailAttachment> _listAttachment{};
-        string                        _titleKey{}; ///< 로컬라이제이션 키(`_bLiteralText` 면 GM 이 쓴 글)
-        string                        _body{};
-        string                        _senderName{};
-        string                        _idempotencyKey{}; ///< 필수. 보내는 쪽이 정한다("trade.<id>.return", "admin.<GM>.<요청>", "reward.<퀘스트>.<계정>")
-        LedgerHolder                  _fundingHolder{};  ///< 기본 발행
-        uint64                        _recipientAccountID{ 0 };
-        uint64                        _actorID{ 0 };
-        int64                         _createdMs{ 0 };
-        int64                         _expiresMs{ 0 }; ///< 0 = 만료 없음
-        LedgerActorKind               _actorKind{ LedgerActorKind::System };
-        ServiceMailExpiryAction       _expiryAction{ ServiceMailExpiryAction::Discard };
-        uint8                         _bLiteralText{ SW_FALSE };
+        PROPERTY( MaxCount = ServiceMailConstant::kMaxTitleSize )
+        string _titleKey{}; ///< 로컬라이제이션 키(`_bLiteralText` 면 GM 이 쓴 글)
+        PROPERTY( MaxCount = ServiceMailConstant::kMaxBodySize )
+        string _body{};
+        PROPERTY( MaxCount = ServiceMailConstant::kMaxSenderNameSize )
+        string _senderName{};
+        PROPERTY( MaxCount = ServiceMailConstant::kMaxIdempotencyKeySize )
+        string _idempotencyKey{}; ///< 필수. 보내는 쪽이 정한다("trade.<id>.return", "admin.<GM>.<요청>", "reward.<퀘스트>.<계정>")
+        PROPERTY()
+        LedgerHolder _fundingHolder{}; ///< 기본 발행
+        PROPERTY()
+        uint64 _recipientAccountID{ 0 };
+        PROPERTY()
+        uint64 _actorID{ 0 };
+        PROPERTY()
+        int64 _createdMs{ 0 };
+        PROPERTY()
+        int64 _expiresMs{ 0 }; ///< 0 = 만료 없음
+        PROPERTY()
+        LedgerActorKind _actorKind{ LedgerActorKind::System };
+        PROPERTY()
+        ServiceMailExpiryAction _expiryAction{ ServiceMailExpiryAction::Discard };
+        PROPERTY( Min = 0, Max = 1 )
+        uint8 _bLiteralText{ SW_FALSE };
+    };
+
+    /** @brief 우편 표(`mail_item`)의 레코드입니다. */
+    REFLECT()
+    struct ServiceMailStoreRecord
+    {
+        REFLECT_BODY();
+        PROPERTY()
+        ServiceMailMessage _message{};
+        PROPERTY()
+        ServiceMailState _state{ ServiceMailState::Unread };
+
+        ServiceRecordUnknownFields _unknownProperties{};
+    };
+
+    /** @brief 보낸 기록(`mail_sent`, 키 `<받는 계정>/<멱등 키>`) — 그 우편의 키입니다. */
+    REFLECT()
+    struct ServiceMailSentRecord
+    {
+        REFLECT_BODY();
+        PROPERTY( MaxCount = 256 )
+        string _mailKey{};
+
+        ServiceRecordUnknownFields _unknownProperties{};
+    };
+
+    /** @brief 보낼 차례인 새 우편 알림(`mail_notice`, 키 `<만든 시각>/<우편 키>`) — 알림 제목 키입니다. */
+    REFLECT()
+    struct ServiceMailNotificationRecord
+    {
+        REFLECT_BODY();
+        PROPERTY( MaxCount = ServiceMailConstant::kMaxTitleSize )
+        string _titleKey{};
+
+        ServiceRecordUnknownFields _unknownProperties{};
     };
 } // namespace sw
 
@@ -88,11 +145,11 @@ namespace sw
     /** @brief 우편 넣기와 레코드 형식 함수 모음입니다. 저장소 스레드에서 부릅니다. */
     struct SW_GF_API ServiceMail
     {
-        static const hashed_string& getMailTable();
-        static const hashed_string& getSentTable();
-        static const hashed_string& getExpiryTable();
-        static const hashed_string& getNotificationTable(); ///< "mail_notice"
-        static const hashed_string& getSentExpiryTable();   ///< "mail_sent_expiry" — 보낸 기록의 TTL 색인(`<만든 시각>/<보낸 키>`)
+        static const ServiceRecordTable<ServiceMailStoreRecord>&        getMailTable();
+        static const ServiceRecordTable<ServiceMailSentRecord>&         getSentTable();
+        static const ServiceIndexTable&                                 getExpiryTable();
+        static const ServiceRecordTable<ServiceMailNotificationRecord>& getNotificationTable(); ///< "mail_notice"
+        static const ServiceIndexTable&                                 getSentExpiryTable();   ///< "mail_sent_expiry" — 보낸 기록의 TTL 색인(`<만든 시각>/<보낸 키>`)
         /** @brief 보낸 기록의 TTL 규칙입니다(TTL 색인 + 색인 없는 옛 기록의 백필). 기간은 운영 설정 `_mailSentTTL` 이 정한다. */
         static ServiceTTLRule makeSentTTLRule( int64 expireAfterMs );
 
@@ -119,9 +176,9 @@ namespace sw
         /** @brief 우편 키 앞의 받는 계정을 구합니다. 형식이 틀리면 false 입니다. */
         [[nodiscard]] static bool parseRecipient( string_view mailKey, uint64& outAccountID );
 
-        static vector<uint8> encodeRecord( const ServiceMailRecord& record );
-        /** @brief 레코드 바이트를 읽습니다. @p outRecord 의 `_mailKey` 와 `_version` 은 부르는 쪽이 채웁니다. */
-        [[nodiscard]] static bool decodeRecord( const vector<uint8>& bytes, ServiceMailRecord& outRecord );
+        static ServiceMailStoreRecord encodeRecord( const ServiceMailRecord& record );
+        /** @brief 받은 레코드를 읽습니다. 깨졌거나 보유자 · 열거가 규칙 밖이면 false 입니다. @p outRecord 의 `_mailKey` 와 `_version` 은 부르는 쪽이 채웁니다. */
+        [[nodiscard]] static bool decodeRecord( const ServiceRecord& raw, ServiceMailRecord& outRecord );
         /** @brief 보낼 수 있는 우편이면 true 입니다. 글자, 개수, 길이, 재원 규칙을 봅니다. */
         static bool isValidMessage( const ServiceMailMessage& message );
     };

@@ -2,6 +2,7 @@
 
 #include "Core/Diagnostics/ScopedTimer.h"
 #include "Core/Testing/TestFramework.h"
+#include "Core/Time/CalendarDate.h"
 #include "Core/Time/Clock.h"
 #include "Core/Time/ExponentialBackoff.h"
 #include "Core/Time/GameTimer.h"
@@ -216,4 +217,23 @@ SW_TEST_CASE( ExponentialBackoffTest, DifferentSeedsSpreadTheRetries )
         differentCount += first.takeDelayMs( 30000 ) != second.takeDelayMs( 30000 ) ? 1 : 0;
     }
     SW_EXPECT_TRUE( differentCount >= 5 );
+}
+
+/** @brief [CalendarDateTest] 유닉스 일 수와 날짜가 서로 되돌아온다(윤년 · 1970 앞 · 400 년 주기 경계) — 그 달에 없는 날은 isValid 가 거른다 */
+SW_TEST_CASE( CalendarDateTest, UnixDaysRoundTrip )
+{
+    SW_EXPECT_EQUAL( int64( 0 ), ( sw::CalendarDate{ 1970, 1, 1 }.toUnixDays() ) );
+    SW_EXPECT_EQUAL( int64( -1 ), ( sw::CalendarDate{ 1969, 12, 31 }.toUnixDays() ) );
+    SW_EXPECT_EQUAL( int64( 11016 ), ( sw::CalendarDate{ 2000, 2, 29 }.toUnixDays() ) );
+    for ( int64 days = -719468 - 400; days < 146097 * 2; days += 37 )
+    {
+        const sw::CalendarDate date = sw::CalendarDate::fromUnixDays( days );
+        SW_REQUIRE_EQUAL( days, date.toUnixDays() );
+        SW_REQUIRE_TRUE( date.isValid() );
+    }
+    SW_EXPECT_TRUE( ( sw::CalendarDate{ 2024, 2, 29 }.isValid() ) );
+    SW_EXPECT_FALSE( ( sw::CalendarDate{ 2023, 2, 29 }.isValid() ) );
+    SW_EXPECT_FALSE( ( sw::CalendarDate{ 1900, 2, 29 }.isValid() ) );
+    SW_EXPECT_FALSE( ( sw::CalendarDate{ 2024, 13, 1 }.isValid() ) );
+    SW_EXPECT_FALSE( ( sw::CalendarDate{ 2024, 4, 31 }.isValid() ) );
 }

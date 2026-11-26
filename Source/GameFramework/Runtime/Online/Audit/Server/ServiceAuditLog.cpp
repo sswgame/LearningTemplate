@@ -4,10 +4,19 @@
 
 #include "Core/Serialization/BitStream.h"
 
-#include "Engine/Serialization/Format/FormatDef.h"
-
+#include "GameFramework/Runtime/Online/Store/Server/ServiceCommitRunner.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceRecordReader.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordTable.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
+
+namespace sw
+{
+    template <>
+    struct ServiceConflictAnswer<ServiceAuditedWriteResult>
+    {
+        [[nodiscard]] static ServiceAuditedWriteResult make() { return ServiceAuditedWriteResult::Busy; }
+    };
+} // namespace sw
 
 namespace sw
 {
@@ -15,50 +24,18 @@ namespace sw
     {
         struct ServiceAuditLogInternal
         {
-            static constexpr FormatDef kFormat{ "AUDT" };
-            static constexpr int32     kMaxActorSize   = 128;
-            static constexpr int32     kMaxActionSize  = 64;
-            static constexpr int32     kMaxSubjectSize = 128;
-
-            static vector<uint8> encode( const ServiceAuditEntry& entry )
-            {
-                BitWriter writer;
-                kFormat.writeVersion( writer );
-                ServiceKeyUtil::writeString( writer, entry._actor );
-                ServiceKeyUtil::writeString( writer, entry._action );
-                ServiceKeyUtil::writeString( writer, entry._subject );
-                ServiceKeyUtil::writeString( writer, entry._before );
-                ServiceKeyUtil::writeString( writer, entry._after );
-                ServiceKeyUtil::writeString( writer, entry._memo );
-                writer.writeVarInt( entry._timeMs );
-                return writer.releaseBytes();
-            }
-
-            [[nodiscard]] static bool decode( const vector<uint8>& bytes, ServiceAuditEntry& outEntry )
-            {
-                BitReader reader( bytes.data(), static_cast<int32>( bytes.size() ) );
-                if ( kFormat.readVersion( reader ) == false )
-                    return false;
-                bool bRead = ServiceKeyUtil::readString( reader, kMaxActorSize, outEntry._actor );
-                bRead      = bRead && ServiceKeyUtil::readString( reader, kMaxActionSize, outEntry._action );
-                bRead      = bRead && ServiceKeyUtil::readString( reader, kMaxSubjectSize, outEntry._subject );
-                bRead      = bRead && ServiceKeyUtil::readString( reader, ServiceAuditEntry::kMaxStateSize, outEntry._before );
-                bRead      = bRead && ServiceKeyUtil::readString( reader, ServiceAuditEntry::kMaxStateSize, outEntry._after );
-                bRead      = bRead && ServiceKeyUtil::readString( reader, ServiceAuditEntry::kMaxMemoSize, outEntry._memo );
-                if ( bRead == false )
-                    return false;
-                outEntry._timeMs = reader.readVarInt();
-                return reader.hasOverflowed() == false;
-            }
+            static constexpr int32 kMaxActorSize   = 128;
+            static constexpr int32 kMaxActionSize  = 64;
+            static constexpr int32 kMaxSubjectSize = 128;
         };
     } // namespace
 } // namespace sw
 
 namespace sw
 {
-    const hashed_string& ServiceAuditLog::getTable()
+    const ServiceRecordTable<ServiceAuditEntry>& ServiceAuditLog::getTable()
     {
-        static const hashed_string s_table{ "service_audit" };
+        static const ServiceRecordTable<ServiceAuditEntry> s_table{ "service_audit" };
         return s_table;
     }
 
@@ -77,9 +54,9 @@ namespace sw
         return true;
     }
 
-    const hashed_string& ServiceAuditLog::getExpiryTable()
+    const ServiceIndexTable& ServiceAuditLog::getExpiryTable()
     {
-        static const hashed_string s_table{ "service_audit_expiry" };
+        static const ServiceIndexTable s_table{ "service_audit_expiry" };
         return s_table;
     }
 
@@ -141,18 +118,18 @@ namespace sw
     {
         if ( isValidEntry( entry ) == false )
         {
-            inoutTransaction.put( getTable(), string_view{}, vector<uint8>{}, ServiceRecord::kAbsentVersion ); // 빈 키 — 트랜잭션 전체가 Invalid
+            inoutTransaction.markMalformed(); // 트랜잭션 전체가 Invalid
             return;
         }
         const string key      = makeKey( entry, uniqueHigh, uniqueLow );
         const string indexKey = ServiceTTLRule::makeTTLIndexKey( entry._timeMs, key );
         if ( ServiceTransaction::isValidKey( indexKey ) == false )
         {
-            inoutTransaction.put( getTable(), string_view{}, vector<uint8>{}, ServiceRecord::kAbsentVersion ); // 색인에 들지 않는 긴 대상이다 — 쓸기가 못 지우는 줄을 남기지 않는다
+            inoutTransaction.markMalformed(); // 색인에 들지 않는 긴 대상이다 — 쓸기가 못 지우는 줄을 남기지 않는다
             return;
         }
-        inoutTransaction.put( getTable(), key, ServiceAuditLogInternal::encode( entry ), ServiceRecord::kAbsentVersion );
-        inoutTransaction.put( getExpiryTable(), indexKey, vector<uint8>{}, ServiceRecord::kAnyVersion );
+        inoutTransaction.put( getTable(), key, entry, ServiceRecord::kAbsentVersion );
+        inoutTransaction.put( getExpiryTable(), indexKey, ServiceRecord::kAnyVersion );
     }
 
     void ServiceAuditLog::commitRejection( IServiceStoreConnection& connection, const ServiceAuditEntry& requestedEntry )
@@ -162,7 +139,7 @@ namespace sw
         const NetIdempotencyKey unique = NetIdempotencyKey::makeRandom();
         ServiceTransaction      transaction;
         stageEntry( transaction, rejected, unique._high, unique._low );
-        const ServiceStoreResult committed = connection.commit( transaction );
+        const ServiceStoreResult committed = ServiceCommitRunner::commitOnce( connection, transaction );
         if ( committed != ServiceStoreResult::Ok )
             SW_LOG_WARNING_ID( "ServiceAuditLog.RejectionNotRecorded", "Denied operator request '%#' on '%#' could not be audited (result %#)", rejected._action, rejected._subject,
                                static_cast<int32>( committed ) );
@@ -179,7 +156,7 @@ namespace sw
         for ( const ServiceRecord& record : listRecord )
         {
             ServiceAuditEntry& entry = outListEntry.emplace_back();
-            if ( ServiceAuditLogInternal::decode( record._bytes, entry ) == false )
+            if ( getTable().decode( record, entry ) == false )
                 return ServiceStoreResult::Invalid;
         }
         if ( listRecord.empty() == false && static_cast<int32>( listRecord.size() ) == maxCount )
@@ -202,32 +179,45 @@ namespace sw
 
     ServiceAuditedWriteResult ServiceAuditedWrite::commit( IServiceStoreConnection& connection ) const
     {
+        const bool bOneWrite = _change.getWrites().size() == 1 && _change.isWellFormed();
+        if ( bOneWrite == false )
+        {
+            SW_LOG_ERROR_ID( "ServiceAuditLog.WriteNotStaged", "Operator write '%#' does not hold exactly one well-formed write - refused", _auditEntry._action );
+            return ServiceAuditedWriteResult::Unavailable;
+        }
+        const ServiceWrite& change = _change.getWrites()[0];
         if ( _pGuard == nullptr )
         {
-            SW_LOG_ERROR_ID( "ServiceAuditLog.WriteWithoutGuard", "Operator write to '%#/%#' has no guard - refused", _table.c_str(), _key.c_str() );
+            SW_LOG_ERROR_ID( "ServiceAuditLog.WriteWithoutGuard", "Operator write to '%#/%#' has no guard - refused", change._table.c_str(), change._key.c_str() );
             ServiceAuditLog::commitRejection( connection, _auditEntry );
             return ServiceAuditedWriteResult::Forbidden;
         }
-        const ServiceStoreResult allowed = _pGuard->validateAllowed( connection );
-        if ( allowed == ServiceStoreResult::NotFound )
+        return ServiceCommitRunner::run<ServiceAuditedWriteResult>( connection, "Service.AuditedWrite", [this, &change]( ServiceCommitAttempt& attempt ) -> optional<ServiceAuditedWriteResult>
         {
-            ServiceAuditLog::commitRejection( connection, _auditEntry );
-            return ServiceAuditedWriteResult::Forbidden;
-        }
-        if ( allowed != ServiceStoreResult::Ok )
-            return ServiceAuditedWriteResult::Unavailable;
-        ServiceRecord            current;
-        const ServiceStoreResult readResult = connection.readRecord( _table, _key, current );
-        if ( readResult == ServiceStoreResult::Unavailable || readResult == ServiceStoreResult::Invalid )
-            return ServiceAuditedWriteResult::Unavailable;
-        if ( _bytes.empty() && readResult == ServiceStoreResult::NotFound )
-            return ServiceAuditedWriteResult::NotFound;
-        ServiceTransaction transaction;
-        if ( _bytes.empty() )
-            transaction.erase( _table, _key, current._version );
-        else
-            transaction.put( _table, _key, _bytes, current._version );
-        ServiceAuditLog::stageEntry( transaction, _auditEntry, _auditUnique._high, _auditUnique._low );
-        return connection.commit( transaction ) == ServiceStoreResult::Ok ? ServiceAuditedWriteResult::Ok : ServiceAuditedWriteResult::Unavailable;
+            const ServiceStoreResult allowed = _pGuard->validateAllowed( attempt );
+            if ( allowed == ServiceStoreResult::NotFound )
+            {
+                ServiceAuditLog::commitRejection( attempt, _auditEntry );
+                return ServiceAuditedWriteResult::Forbidden;
+            }
+            if ( allowed != ServiceStoreResult::Ok )
+                return ServiceAuditedWriteResult::Unavailable;
+            ServiceRecord            current;
+            const ServiceStoreResult readResult = attempt.readRecord( change._table, change._key, current );
+            if ( readResult == ServiceStoreResult::Unavailable || readResult == ServiceStoreResult::Invalid )
+                return ServiceAuditedWriteResult::Unavailable;
+            const bool bErase = change._kind == ServiceWrite::Kind::Erase;
+            if ( bErase && readResult == ServiceStoreResult::NotFound )
+                return ServiceAuditedWriteResult::NotFound;
+            ServiceWrite guarded     = change;
+            guarded._expectedVersion = current._version; // 읽은 판을 조건으로 — 그사이 바뀌었으면 다시 한다
+            ServiceTransaction transaction;
+            transaction.addWrite( guarded );
+            ServiceAuditLog::stageEntry( transaction, _auditEntry, _auditUnique._high, _auditUnique._low );
+            const ServiceStoreResult committed = attempt.commit( transaction );
+            if ( committed == ServiceStoreResult::Conflict )
+                return nullopt;
+            return committed == ServiceStoreResult::Ok ? ServiceAuditedWriteResult::Ok : ServiceAuditedWriteResult::Unavailable;
+        } );
     }
 } // namespace sw

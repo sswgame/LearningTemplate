@@ -25,10 +25,16 @@
 
 namespace sw
 {
+    template <typename TRecord>
+    class ServiceRecordTable;
+} // namespace sw
+
+namespace sw
+{
     /** @brief 감사 줄을 쓰고 읽습니다. 쓰기는 트랜잭션에 넣기만 하고, 읽기는 저장소 스레드(`ServiceStoreJob::run` 안)에서 합니다. */
     struct SW_GF_API ServiceAuditLog
     {
-        static const hashed_string& getTable(); ///< "service_audit"
+        static const ServiceRecordTable<ServiceAuditEntry>& getTable(); ///< "service_audit"
         /** @brief 행위자가 시스템(예약 작업 · 주기 리로드)일 때의 이름입니다. */
         static constexpr const utf8* kSystemActor = "system";
         /** @brief 계정 행위자 이름 `acct.<16 진>` 입니다. */
@@ -37,8 +43,8 @@ namespace sw
         static string makeOperatorActor( uint64 operatorID );
         static string makeKey( const ServiceAuditEntry& entry, uint64 uniqueHigh, uint64 uniqueLow );
         /** @brief 줄의 키 `<대상>/<시각 16 진 16>/<고유 16 진 32>` 에서 기록 시각을 읽습니다(보존 기간 쓸기 `ServiceTTLRule` 용). 형식이 틀리면 false 입니다. */
-        [[nodiscard]] static bool   readTimeMs( const ServiceRecord& record, int64& outTimeMs );
-        static const hashed_string& getExpiryTable(); ///< "service_audit_expiry" — TTL 색인
+        [[nodiscard]] static bool       readTimeMs( const ServiceRecord& record, int64& outTimeMs );
+        static const ServiceIndexTable& getExpiryTable(); ///< "service_audit_expiry" — TTL 색인
         /** @brief 감사 표의 TTL 규칙입니다(TTL 색인 + 색인 없는 옛 줄의 백필). 기간은 운영 설정 `_auditRetention` 이 정한다. */
         static ServiceTTLRule makeTTLRule( int64 expireAfterMs );
         /** @brief 상한, 키 규칙, 동작 코드 문자를 지키는지입니다. */
@@ -104,16 +110,15 @@ namespace sw
         Ok = 0,
         NotFound,   ///< 지울 레코드가 없다
         Forbidden,  ///< 가드가 허락하지 않았다(그사이 강등 등) — 가드가 없는 쓰기도 여기다. 거절 감사 줄(`<동작>.denied`)을 남긴다
-        Unavailable ///< 닿지 못했거나 그사이 바뀌었다(다시 하면 된다)
+        Busy,       ///< 다른 쓰기와 거듭 부딪혔다(쓰지 않았다 — 다시 하면 된다)
+        Unavailable ///< 저장소에 닿지 못했다(적용됐는지 모른다)
     };
 
     struct SW_GF_API ServiceAuditedWrite
     {
         shared_ptr<const IServiceWriteGuard> _pGuard{}; ///< 필수. 같은 일 안에서 허락을 본다(`ServiceOperator::_pGuard`)
         ServiceAuditEntry                    _auditEntry{};
-        vector<uint8>                        _bytes{}; ///< 비어 있으면 지우기이다
-        string                               _key{};
-        hashed_string                        _table{};
+        ServiceTransaction                   _change{}; ///< 쓰기 하나(표 형식 `put` 또는 `erase`). 커밋이 그 레코드를 읽은 버전을 조건으로 건다
         NetIdempotencyKey                    _auditUnique{ NetIdempotencyKey::makeRandom() };
 
         /**
@@ -123,7 +128,7 @@ namespace sw
         void setOperatorAudit( const ServiceOperator& actor, string_view action, string_view subject, UnixMilliseconds nowMs, string_view memo = {} );
         /**
          * @brief 가드로 허락을 본 뒤 읽은 버전을 조건으로 쓰거나 지우고 감사 줄을 넣어 커밋합니다. 가드가 읽은 레코드(등급)도 같은 커밋의 조건이다.
-         * @return Ok · NotFound · Forbidden · Unavailable(닿지 못했거나 그사이 바뀌었다 — Conflict 도 "다시 하라" 는 뜻이라 여기로 모은다)
+         *        그사이 바뀌었으면 등급부터 다시 읽어 다시 한다(`ServiceCommitRunner`).
          */
         [[nodiscard]] ServiceAuditedWriteResult commit( IServiceStoreConnection& connection ) const;
     };

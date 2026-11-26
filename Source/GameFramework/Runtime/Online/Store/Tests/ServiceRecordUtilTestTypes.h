@@ -32,4 +32,16 @@ namespace sw
 
         ServiceRecordUnknownFields _unknownProperties{};
     };
+
+    /** @brief 범위가 선언된 레코드입니다(`ServiceRecordTableTest` — 범위 밖 값은 쓰지 않는다). */
+    REFLECT()
+    struct ServiceRecordTestRanged
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Min = 0, Max = 10 )
+        int32 _count = 0;
+
+        ServiceRecordUnknownFields _unknownProperties{};
+    };
 } // namespace sw

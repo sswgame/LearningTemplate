@@ -7,6 +7,7 @@
 #include "Core/String/formatString.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "Editor/Common/Asset/AssetWriter.h"
 #include "Editor/Panels/ProjectSettings/Model/ProjectSettingsEntry.h"
 #include "Editor/Panels/ProjectSettings/Model/ProjectSettingsJSONDocument.h"
 
@@ -90,7 +91,8 @@ SW_TEST_CASE( ProjectSettingsJSONDocumentTest, GeneratedFileIsReadOnly )
     SW_EXPECT_FALSE( document.setLeafText( value, "2" ) );
     SW_EXPECT_FALSE( document.removeChild( ProjectSettingsJSONDocument::kRootNode, 0 ) );
     SW_EXPECT_LOG( "ProjectSettingsJSON.SaveRefused" );
-    SW_EXPECT_FALSE( document.saveDocument() );
+    AssetWriter writer;
+    SW_EXPECT_FALSE( document.saveDocument( writer ) );
 }
 
 /**
@@ -158,7 +160,8 @@ SW_TEST_CASE( ProjectSettingsJSONDocumentTest, InvalidJSONDoesNotOpen )
     SW_EXPECT_FALSE( document.openText( ProcessRoots::get()._project.join( "Config/Broken.json" ), "{ \"a\": }" ).has_value() );
     SW_EXPECT_FALSE( document.isOpen() );
     SW_EXPECT_LOG( "ProjectSettingsJSON.SaveRefused" );
-    SW_EXPECT_FALSE( document.saveDocument() );
+    AssetWriter writer;
+    SW_EXPECT_FALSE( document.saveDocument( writer ) );
 }
 
 /**

@@ -152,8 +152,7 @@ namespace sw::editor
                 if ( RenderTargetImageFile::unpackRGBA8( write._bytes, write._layout, write._format, rgbaBytes ) )
                 {
                     const float64 magentaFraction = computeMagentaFraction( rgbaBytes );
-                    (void)FileUtil::ensureParentDirectoryExists( path ); // 만들지 못하면 아래 쓰기가 경로와 함께 실패를 남긴다
-                    bWritten = RenderTargetImageFile::writeRGBA8File( rgbaBytes, write._layout._width, write._layout._height, path );
+                    bWritten                      = RenderTargetImageFile::writeRGBA8File( rgbaBytes, write._layout._width, write._layout._height, path );
                     if ( bWritten )
                     {
                         SW_LOG_INFO_ID( "EditorUICapture.EditorUICaptureX", "Editor UI capture -> %# (%#x%#, windows %#, clipped %# [%#], magenta %#)", path.c_str(), write._layout._width, write._layout._height,

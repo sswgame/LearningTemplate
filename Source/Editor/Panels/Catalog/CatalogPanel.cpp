@@ -13,7 +13,6 @@
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
-#include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Panels/Catalog/Model/CatalogValidation.h"
@@ -344,8 +343,8 @@ namespace sw::editor
             // 아직 고른 파일이 없다 — 세션도 비어 있어 저장할 것이 없다
             return ToolAssetLoadResult::Missing;
         }
-        const optional<AbsolutePath> absolutePath = EditorPaths::getAssetPaths().findLooseFile( assetID ); // 붙인 도메인과 게임 폴더를 거치므로 루트에 직접 붙이지 않는다
-        string                       text;
+        const optional<DiskPath> absolutePath = EditorPaths::getAssetPaths().findLooseFile( assetID ); // 붙인 도메인과 게임 폴더를 거치므로 루트에 직접 붙이지 않는다
+        string                   text;
         // 읽지 못하면 고르지 않는다 — 앞 파일의 글을 가진 채 고르면 저장할 때 앞 파일의 내용을 이 파일에 쓴다.
         if ( absolutePath.has_value() == false || FileUtil::readTextFile( *absolutePath, text ) == false )
         {
@@ -362,7 +361,7 @@ namespace sw::editor
         return ToolAssetLoadResult::Loaded;
     }
 
-    bool CatalogPanel::writeCurrentFile()
+    bool CatalogPanel::writeCurrentFile( AssetWriter& writer )
     {
         if ( _session.hasFile() == false )
             return false;
@@ -371,32 +370,32 @@ namespace sw::editor
             _session.setStatus( "Fix the XML before saving" );
             return false;
         }
-        const string&                assetID      = _session.getAssetID();
-        const optional<AbsolutePath> absolutePath = EditorPaths::getAssetPaths().toDiskPath( assetID );
+        const string&            assetID      = _session.getAssetID();
+        const optional<DiskPath> absolutePath = EditorPaths::getAssetPaths().toDiskPath( assetID );
         if ( absolutePath.has_value() == false )
         {
             SW_LOG_ERROR_ID( "CatalogPanel.CouldNotWriteCatalog", "Could not write catalog file '%#'", assetID.c_str() );
             _session.setStatus( "Could not write the file" );
             return false;
         }
-        // 연 뒤 밖에서 바뀐 파일을 말없이 덮어쓰지 않는다. 지워진 파일(읽지 못함)은 다시 만든다.
-        string diskText;
-        if ( FileUtil::readTextFile( *absolutePath, diskText ) && _session.validateDiskBeforeSave( diskText ) == false )
-            return false;
-        if ( FileUtil::writeTextFile( *absolutePath, _session.getDocument().getText() ) == false )
+        // 덮기 전 디스크의 글을 "이전 파일" 로 남긴다 — 밖에서 바뀐 글을 알고 덮어도 되쓸 수 있다.
+        string replacedText;
+        if ( FileUtil::readOptionalTextFile( *absolutePath, replacedText ) != OptionalFileRead::Read )
+            replacedText = _session.getDocument().getSavedText(); // 지워진 파일은 다시 만든다
+        if ( writer.writeText( *absolutePath, _session.getDocument().getText() ) == false )
         {
             SW_LOG_ERROR_ID( "CatalogPanel.CouldNotWriteCatalog", "Could not write catalog file '%#'", assetID.c_str() );
             _session.setStatus( "Could not write the file" );
             return false;
         }
-        _session.onSaved();
+        _session.onSaved( std::move( replacedText ) );
         SW_LOG_INFO_ID( "CatalogPanel.CatalogSaved", "Catalog saved %#", assetID.c_str() );
         return true;
     }
 
-    bool CatalogPanel::saveDocument()
+    bool CatalogPanel::saveDocument( AssetWriter& writer )
     {
-        if ( writeCurrentFile() == false )
+        if ( writeCurrentFile( writer ) == false )
             return false;
         validateCurrentFile();
         syncDirty();
@@ -435,8 +434,8 @@ namespace sw::editor
     {
         if ( _session.hasFile() == false )
             return;
-        const optional<AbsolutePath> absolutePath = EditorPaths::getAssetPaths().toDiskPath( _session.getAssetID() );
-        if ( absolutePath.has_value() == false || FileUtil::writeTextFile( *absolutePath, _session.getPreviousText() ) == false )
+        const optional<DiskPath> absolutePath = EditorPaths::getAssetPaths().toDiskPath( _session.getAssetID() );
+        if ( absolutePath.has_value() == false || getAssetWriter().writeText( *absolutePath, _session.getPreviousText() ) == false )
         {
             SW_LOG_ERROR_ID( "CatalogPanel.CouldNotRestoreCatalog", "Could not restore catalog file '%#'", _session.getAssetID().c_str() );
             _session.setStatus( "Could not restore the file" );

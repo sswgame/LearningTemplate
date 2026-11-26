@@ -16,6 +16,7 @@
 #include "DevTools/Profiling/Memory/MemorySnapshotExport.h"
 #include "DevTools/Profiling/Memory/MemorySnapshotSources.h"
 
+#include "Engine/Config/ConfigManager.h"
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Foundation/EngineServices.h"
 
@@ -28,7 +29,7 @@ namespace sw
             /** @brief 정책을 읽어 이 프로세스의 스냅숏을 찍습니다. 정책이 없으면 이유를 @p outReply 에 담고 false 입니다. */
             [[nodiscard]] static bool captureLocal( MemorySnapshotPolicy& outPolicy, MemorySnapshot& outSnapshot, string& outReply )
             {
-                expected<MemorySnapshotPolicy> policy = MemorySnapshotPolicy::load();
+                expected<MemorySnapshotPolicy> policy = ConfigManager::readConfig( MemorySnapshotPolicy::kConfigFile );
                 if ( policy.has_value() == false )
                 {
                     outReply = "memory: ";
@@ -97,7 +98,7 @@ namespace sw
                 if ( listArgument.size() > 1 )
                     return false;
                 const string                   sheetName = listArgument.empty() ? string{ getMemorySheetSchema( MemorySheetKind::Tags )._pName } : listArgument[0];
-                expected<MemorySnapshotPolicy> policy    = MemorySnapshotPolicy::load();
+                expected<MemorySnapshotPolicy> policy    = ConfigManager::readConfig( MemorySnapshotPolicy::kConfigFile );
                 if ( policy.has_value() == false )
                 {
                     outReply = "memory.exportinfo: no policy";

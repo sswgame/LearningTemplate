@@ -10,6 +10,7 @@
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
 
+#include "Editor/Common/Asset/AssetWriter.h"
 #include "Editor/Common/Commands/Scene/EditorInspectorCommands.h"
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/Widgets/Model/EditorDisplayNameUtil.h"
@@ -82,15 +83,15 @@ namespace sw::editor
              * @details 예전에는 리소스로 못 찾으면 받은 글을 그대로 디스크 경로로 썼다(리소스 id 가 작업 폴더 상대 경로로 열렸다). 읽기에 쓰기 해석을 쓰면
              *          아직 없는 문서(새 문서)를 열 때마다 "만들 도메인을 모른다" 오류가 남았다.
              */
-            static AbsolutePath resolveToolDocumentPath( string_view path, const DocumentUse use )
+            static DiskPath resolveToolDocumentPath( string_view path, const DocumentUse use )
             {
                 if ( path.empty() )
                     return {};
                 if ( AbsolutePath::isStrictAbsolute( path ) )
                     return FileUtil::toDiskPath( FileUtil::normalizeSeparators( path ) );
-                const AssetPaths&            paths    = editor::getSubsystem<AssetPaths>();
-                const optional<AbsolutePath> diskPath = use == DocumentUse::Read ? paths.findLooseFile( path ) : paths.toDiskPath( path );
-                return diskPath.has_value() ? *diskPath : AbsolutePath{};
+                const AssetPaths&        paths    = editor::getSubsystem<AssetPaths>();
+                const optional<DiskPath> diskPath = use == DocumentUse::Read ? paths.findLooseFile( path ) : paths.toDiskPath( path );
+                return diskPath.has_value() ? *diskPath : DiskPath{};
             }
 
             /**
@@ -98,7 +99,7 @@ namespace sw::editor
              * @details 빈 경로를 파일 계층까지 넘기면 `File not found: ` 처럼 이름이 빈 오류가 남는다. 그래서 부르는 쪽(`loadToolDocument`,
              *          `saveToolDocument`)이 빈 경로를 먼저 거른다.
              */
-            static AbsolutePath resolveDocumentPath( const ToolDocumentDef& desc, string_view path, const DocumentUse use )
+            static DiskPath resolveDocumentPath( const ToolDocumentDef& desc, string_view path, const DocumentUse use )
             {
                 if ( path.empty() == false )
                     return resolveToolDocumentPath( path, use );
@@ -109,7 +110,7 @@ namespace sw::editor
 
             // 도구 문서는 디스크 파일이다(받은 리소스 id 를 낱개 파일로 풀었거나 `Saved/Editor` 기본 문서) — 디스크 입구로 읽는다. 저장(`writeDocument`)도 디스크다.
             template <typename TAsset>
-            [[nodiscard]] static bool readDocument( TAsset& outData, const AbsolutePath& resolved )
+            [[nodiscard]] static bool readDocument( TAsset& outData, const DiskPath& resolved )
             {
                 return outData.loadFromDiskFile( resolved );
             }
@@ -121,7 +122,7 @@ namespace sw::editor
             }
 
             /** @brief 타일셋은 런타임 읽기 그대로 읽는다(규칙 위반은 그 읽기가 로그로 남긴다). */
-            [[nodiscard]] static bool readDocument( TileSetContent& outData, const AbsolutePath& resolved )
+            [[nodiscard]] static bool readDocument( TileSetContent& outData, const DiskPath& resolved )
             {
                 string       text;
                 TileSetAsset asset;
@@ -152,7 +153,7 @@ namespace sw::editor
             template <typename TAsset>
             static ToolAssetLoadResult loadToolDocument( const ToolDocumentDef& desc, TAsset& outData, string_view path, string* pOutStatus )
             {
-                const AbsolutePath resolved = resolveDocumentPath( desc, path, DocumentUse::Read );
+                const DiskPath resolved = resolveDocumentPath( desc, path, DocumentUse::Read );
                 if ( resolved.empty() || FileUtil::isRegularFile( resolved ) == false )
                 {
                     if ( pOutStatus != nullptr )
@@ -188,27 +189,32 @@ namespace sw::editor
 
             /** @brief 도구 문서를 씁니다. 경로 없음과 쓰기 실패를 모두 오류 한 줄로 알리므로, 호출부가 반환값을 버려도 조용히 넘어가지 않습니다. */
             template <typename TAsset>
-            [[nodiscard]] static bool saveToolDocument( const ToolDocumentDef& desc, const TAsset& data, string_view path )
+            [[nodiscard]] static bool saveToolDocument( AssetWriter& writer, const ToolDocumentDef& desc, const TAsset& data, string_view path )
             {
-                const AbsolutePath resolved = resolveDocumentPath( desc, path, DocumentUse::Write );
+                const DiskPath resolved = resolveDocumentPath( desc, path, DocumentUse::Write );
                 if ( resolved.empty() )
                 {
                     SW_LOG_ERROR_ID( "EditorToolAssetCommands.FailedSaveNoFile", "Failed to save the %# - no file path and no default file", desc._pLabel );
                     return false;
                 }
                 // 다시 읽지 못할 문서가 멀쩡한 파일을 덮지 않게, 옆에 써서 읽어 본 뒤에 덮는다(쓰기는 값을 검사하지 않고 읽기가 검사한다).
-                const AbsolutePath probePath = resolved.appendSuffix( kProbeFileSuffix );
-                TAsset             readBack;
-                const bool         bProbeWritten = writeDocument( data, probePath );
-                const bool         bReadsBack    = bProbeWritten && readDocument( readBack, probePath );
-                if ( bProbeWritten )
-                    (void)FileUtil::removeFile( probePath );
-                if ( bProbeWritten && bReadsBack == false )
+                bool       bReadsBack = true;
+                const bool bSaved     = writer.save( resolved, [&data, &bReadsBack]( const AbsolutePath& writable )
+                    {
+                    const AbsolutePath probePath = writable.appendSuffix( kProbeFileSuffix );
+                    TAsset             readBack;
+                    const bool         bProbeWritten = writeDocument( data, probePath );
+                    bReadsBack                       = bProbeWritten == false || readDocument( readBack, probePath );
+                    if ( bProbeWritten )
+                        (void)FileUtil::removeFile( probePath );
+                    return bProbeWritten && bReadsBack && writeDocument( data, writable );
+                } );
+                if ( bReadsBack == false )
                 {
                     SW_LOG_ERROR_ID( "EditorToolAssetCommands.WouldNotReadBack", "The %# was not saved to '%#' - the file could not be read back (see the log above), so the saved file is kept", desc._pLabel, resolved.str() );
                     return false;
                 }
-                if ( bProbeWritten == false || writeDocument( data, resolved ) == false )
+                if ( bSaved == false )
                 {
                     SW_LOG_ERROR_ID( "EditorToolAssetCommands.FailedSave", "Failed to save the %# to '%#'", desc._pLabel, resolved.str() );
                     return false;
@@ -234,9 +240,9 @@ namespace sw::editor
         return EditorToolAssetInternal::loadToolDocument( kAnimationGraphDocument, outData, path, nullptr );
     }
 
-    bool EditorToolAssetCommands::saveAnimationGraph( const AnimationGraphAsset& data, string_view path )
+    bool EditorToolAssetCommands::saveAnimationGraph( AssetWriter& writer, const AnimationGraphAsset& data, string_view path )
     {
-        return EditorToolAssetInternal::saveToolDocument( kAnimationGraphDocument, data, path );
+        return EditorToolAssetInternal::saveToolDocument( writer, kAnimationGraphDocument, data, path );
     }
 
     ToolAssetLoadResult EditorToolAssetCommands::loadDialogueGraph( DialogueGraphAsset& outData, string_view path )
@@ -244,9 +250,9 @@ namespace sw::editor
         return EditorToolAssetInternal::loadToolDocument( kDialogueGraphDocument, outData, path, nullptr );
     }
 
-    bool EditorToolAssetCommands::saveDialogueGraph( const DialogueGraphAsset& data, string_view path )
+    bool EditorToolAssetCommands::saveDialogueGraph( AssetWriter& writer, const DialogueGraphAsset& data, string_view path )
     {
-        return EditorToolAssetInternal::saveToolDocument( kDialogueGraphDocument, data, path );
+        return EditorToolAssetInternal::saveToolDocument( writer, kDialogueGraphDocument, data, path );
     }
 
     ToolAssetLoadResult EditorToolAssetCommands::loadTileMap( string_view assetRelativePath, TileMapXMLData& outData, string& outStatus )
@@ -254,9 +260,9 @@ namespace sw::editor
         return EditorToolAssetInternal::loadToolDocument( kTileMapDocument, outData, assetRelativePath, &outStatus );
     }
 
-    bool EditorToolAssetCommands::saveTileMap( string_view assetRelativePath, const TileMapXMLData& data )
+    bool EditorToolAssetCommands::saveTileMap( AssetWriter& writer, string_view assetRelativePath, const TileMapXMLData& data )
     {
-        return EditorToolAssetInternal::saveToolDocument( kTileMapDocument, data, assetRelativePath );
+        return EditorToolAssetInternal::saveToolDocument( writer, kTileMapDocument, data, assetRelativePath );
     }
 
     ToolAssetLoadResult EditorToolAssetCommands::loadTileSet( string_view path, TileSetContent& outData, string& outStatus )
@@ -264,14 +270,14 @@ namespace sw::editor
         return EditorToolAssetInternal::loadToolDocument( kTileSetDocument, outData, path, &outStatus );
     }
 
-    bool EditorToolAssetCommands::saveTileSet( string_view path, const TileSetContent& data )
+    bool EditorToolAssetCommands::saveTileSet( AssetWriter& writer, string_view path, const TileSetContent& data )
     {
-        return EditorToolAssetInternal::saveToolDocument( kTileSetDocument, data, path );
+        return EditorToolAssetInternal::saveToolDocument( writer, kTileSetDocument, data, path );
     }
 
     bool EditorToolAssetCommands::hasToolDocument( string_view path )
     {
-        const AbsolutePath resolved = EditorToolAssetInternal::resolveToolDocumentPath( path, EditorToolAssetInternal::DocumentUse::Read );
+        const DiskPath resolved = EditorToolAssetInternal::resolveToolDocumentPath( path, EditorToolAssetInternal::DocumentUse::Read );
         return resolved.empty() == false && FileUtil::isRegularFile( resolved );
     }
 
@@ -288,9 +294,9 @@ namespace sw::editor
         return EditorToolAssetInternal::loadToolDocument( kSpriteClipDocument, outData, path, &outStatus );
     }
 
-    bool EditorToolAssetCommands::saveSpriteClip( const SpriteClipAsset& data, string_view path )
+    bool EditorToolAssetCommands::saveSpriteClip( AssetWriter& writer, const SpriteClipAsset& data, string_view path )
     {
-        return EditorToolAssetInternal::saveToolDocument( kSpriteClipDocument, data, path );
+        return EditorToolAssetInternal::saveToolDocument( writer, kSpriteClipDocument, data, path );
     }
 
     ToolAssetLoadResult EditorToolAssetCommands::loadSequence( SequenceAsset& outAsset, string_view path )
@@ -298,9 +304,9 @@ namespace sw::editor
         return EditorToolAssetInternal::loadToolDocument( kSequenceDocument, outAsset, path, nullptr );
     }
 
-    bool EditorToolAssetCommands::saveSequence( const SequenceAsset& asset, string_view path )
+    bool EditorToolAssetCommands::saveSequence( AssetWriter& writer, const SequenceAsset& asset, string_view path )
     {
-        return EditorToolAssetInternal::saveToolDocument( kSequenceDocument, asset, path );
+        return EditorToolAssetInternal::saveToolDocument( writer, kSequenceDocument, asset, path );
     }
 
     string EditorToolAssetCommands::findInstancePrefabPath( const GameObject* pObject )

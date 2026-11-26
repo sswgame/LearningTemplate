@@ -4,6 +4,7 @@
 
 #include "Core/Math/SecureRandom.h"
 
+#include "GameFramework/Runtime/Online/Cache/Server/EphemeralRecordTable.h"
 #include "GameFramework/Runtime/Online/Cache/Server/EphemeralStore.h"
 #include "GameFramework/Runtime/Online/Cache/Server/EphemeralStoreRouter.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
@@ -82,7 +83,7 @@ namespace sw
         {
         }
 
-        MatchmakingServiceResult mutate( bool bExists, const vector<uint8>& oldBytes, vector<uint8>& outNewBytes, bool& outbErase ) override
+        MatchmakingServiceResult mutate( bool bExists, const EphemeralValue& oldValue, EphemeralValue& outNewValue, bool& outbErase ) override
         {
             PartySnapshot party;
             _removedID      = kInvalidAccountID;
@@ -95,9 +96,9 @@ namespace sw
                 party._maxMemberCount = _pService->getMaxPartySize();
                 party._listMemberID.push_back( _request._actorID );
                 _snapshot = party;
-                return MatchmakingProtocol::encodeParty( party, outNewBytes ) ? MatchmakingResult::Ok : MatchmakingServiceResult::fail( OnlineError::kInvalidRequest );
+                return EphemeralRecordTable<PartySnapshot>{}.makeValue( party, outNewValue ) ? MatchmakingResult::Ok : MatchmakingServiceResult::fail( OnlineError::kInvalidRequest );
             }
-            if ( bExists == false || MatchmakingProtocol::decodeParty( oldBytes, party ) == false )
+            if ( bExists == false || EphemeralRecordTable<PartySnapshot>{}.decode( oldValue, party ) == false )
             {
                 _snapshot          = PartySnapshot{};
                 _snapshot._partyID = _request._partyID;
@@ -114,7 +115,7 @@ namespace sw
                         return MatchmakingResult::AlreadyInParty;
                     if ( static_cast<int32>( party._listMemberID.size() ) >= party._maxMemberCount )
                         return MatchmakingResult::PartyFull;
-                    outNewBytes = oldBytes; // 같은 값으로 비교 후 쓰기를 한다. 만료를 연장하고 그사이 해산되지 않았음을 확인하는 것이다
+                    outNewValue = oldValue; // 같은 값으로 비교 후 쓰기를 한다. 만료를 연장하고 그사이 해산되지 않았음을 확인하는 것이다
                     return MatchmakingResult::Ok;
                 }
                 case PartyLobbyOperation::PartyAccept:
@@ -168,14 +169,14 @@ namespace sw
                 }
             }
             _snapshot = party;
-            return MatchmakingProtocol::encodeParty( party, outNewBytes ) ? MatchmakingResult::Ok : MatchmakingServiceResult::fail( OnlineError::kInvalidRequest );
+            return EphemeralRecordTable<PartySnapshot>{}.makeValue( party, outNewValue ) ? MatchmakingResult::Ok : MatchmakingServiceResult::fail( OnlineError::kInvalidRequest );
         }
 
-        void onFinished( MatchmakingServiceResult result, const vector<uint8>& finalBytes ) override
+        void onFinished( MatchmakingServiceResult result, const EphemeralValue& finalValue ) override
         {
             PartySnapshot party = _snapshot;
-            if ( result == MatchmakingResult::Ok && finalBytes.empty() == false )
-                (void)MatchmakingProtocol::decodeParty( finalBytes, party );
+            if ( result == MatchmakingResult::Ok && finalValue.empty() == false )
+                (void)EphemeralRecordTable<PartySnapshot>{}.decode( finalValue, party );
             const bool bApplied = result == MatchmakingResult::Ok;
             _pService->finishParty( _request, result, party, bApplied ? _removedID : kInvalidAccountID, bApplied ? _brokenTicketID : 0 );
         }
@@ -204,7 +205,7 @@ namespace sw
         {
         }
 
-        MatchmakingServiceResult mutate( bool bExists, const vector<uint8>& oldBytes, vector<uint8>& outNewBytes, bool& outbErase ) override
+        MatchmakingServiceResult mutate( bool bExists, const EphemeralValue& oldValue, EphemeralValue& outNewValue, bool& outbErase ) override
         {
             LobbySnapshot lobby;
             _removedID = kInvalidAccountID;
@@ -219,9 +220,9 @@ namespace sw
                 lobby._listMember.clear();
                 lobby._listMember.push_back( LobbyMember{ _request._actorID, 0, SW_FALSE } );
                 _snapshot = lobby;
-                return MatchmakingProtocol::encodeLobby( lobby, outNewBytes ) ? MatchmakingResult::Ok : MatchmakingServiceResult::fail( OnlineError::kInvalidRequest );
+                return EphemeralRecordTable<LobbySnapshot>{}.makeValue( lobby, outNewValue ) ? MatchmakingResult::Ok : MatchmakingServiceResult::fail( OnlineError::kInvalidRequest );
             }
-            if ( bExists == false || MatchmakingProtocol::decodeLobby( oldBytes, lobby ) == false )
+            if ( bExists == false || EphemeralRecordTable<LobbySnapshot>{}.decode( oldValue, lobby ) == false )
             {
                 _snapshot          = LobbySnapshot{};
                 _snapshot._lobbyID = _request._lobbyID;
@@ -234,7 +235,7 @@ namespace sw
                 {
                     if ( lobby.hasMember( _request._actorID ) )
                     {
-                        outNewBytes = oldBytes; // 이미 들어 있으므로 같은 값으로 쓴다. 만료를 연장하는 효과가 있다
+                        outNewValue = oldValue; // 이미 들어 있으므로 같은 값으로 쓴다. 만료를 연장하는 효과가 있다
                         return MatchmakingResult::Ok;
                     }
                     if ( lobby._state != LobbyState::Open )
@@ -300,14 +301,14 @@ namespace sw
                 }
             }
             _snapshot = lobby;
-            return MatchmakingProtocol::encodeLobby( lobby, outNewBytes ) ? MatchmakingResult::Ok : MatchmakingServiceResult::fail( OnlineError::kInvalidRequest );
+            return EphemeralRecordTable<LobbySnapshot>{}.makeValue( lobby, outNewValue ) ? MatchmakingResult::Ok : MatchmakingServiceResult::fail( OnlineError::kInvalidRequest );
         }
 
-        void onFinished( MatchmakingServiceResult result, const vector<uint8>& finalBytes ) override
+        void onFinished( MatchmakingServiceResult result, const EphemeralValue& finalValue ) override
         {
             LobbySnapshot lobby = _snapshot;
-            if ( result == MatchmakingResult::Ok && finalBytes.empty() == false )
-                (void)MatchmakingProtocol::decodeLobby( finalBytes, lobby );
+            if ( result == MatchmakingResult::Ok && finalValue.empty() == false )
+                (void)EphemeralRecordTable<LobbySnapshot>{}.decode( finalValue, lobby );
             const bool bApplied = result == MatchmakingResult::Ok;
             _pService->finishLobby( _request, result, lobby, bApplied ? _removedID : kInvalidAccountID, bApplied && _bErased != SW_FALSE );
         }
@@ -325,7 +326,6 @@ namespace sw
 {
     PartyLobbyService::PartyLobbyService()
         : _updater{}
-        , _mapRequestToStep{}
         , _mapListIDToList{}
         , _mapAccountToLobby{}
         , _completionBuffer{}
@@ -370,9 +370,13 @@ namespace sw
     {
         _updater.shutdown();
         _replyOwner.reset(); // 기다리던 캐시 답이 이 객체를 부르지 않게 지운다
-        _mapRequestToStep.clear();
         _mapListIDToList.clear();
         _pRouter = nullptr;
+    }
+
+    int32 PartyLobbyService::getPendingCount() const
+    {
+        return _updater.getPendingCount() + ( _pRouter != nullptr ? _pRouter->getPendingCount( _replyOwner ) : 0 );
     }
 
     string PartyLobbyService::makePartyKey( uint64 partyID )
@@ -414,12 +418,13 @@ namespace sw
     {
         if ( _pRouter == nullptr )
             return;
-        const uint64 requestID = _pRouter->submit( cacheRequest, SW_DELEGATE_METHOD( EphemeralStoreRouter::ReplyDelegate, &PartyLobbyService::onStepReply, this ), _replyOwner );
-        PendingStep& step      = _mapRequestToStep[requestID];
-        step._request          = request;
-        step._kind             = kind;
-        step._listID           = listID;
-        step._slot             = slot;
+        PendingStep step;
+        step._request = request;
+        step._kind    = kind;
+        step._listID  = listID;
+        step._slot    = slot;
+        _pRouter->submit( cacheRequest, _replyOwner, [this, step = std::move( step )]( const EphemeralReply& reply )
+        { onStepReply( step, reply ); } );
     }
 
     void PartyLobbyService::submitFireAndForget( const EphemeralRequest& cacheRequest )
@@ -435,7 +440,7 @@ namespace sw
         request._actorID    = accountID;
         request._partyID    = allocateID();
         request._requestTag = requestTag;
-        submitStep( EphemeralRequest::makeSet( makeAccountPartyKey( accountID ), MatchmakingProtocol::encodeID( request._partyID ), _policy._partyTTLMs,
+        submitStep( EphemeralRequest::makeSet( makeAccountPartyKey( accountID ), EphemeralValueUtil::makeID( request._partyID ), _policy._partyTTLMs,
                                                EphemeralCondition::IfAbsent ),
                     StepKind::IndexReserve, request );
     }
@@ -619,13 +624,8 @@ namespace sw
         _updater.update( makeLobbyKey( request._lobbyID ), _policy._lobbyTTLMs, make_unique<LobbyMutation>( this, request ) );
     }
 
-    void PartyLobbyService::onStepReply( const EphemeralReply& reply )
+    void PartyLobbyService::onStepReply( const PendingStep& step, const EphemeralReply& reply )
     {
-        const auto stepIt = _mapRequestToStep.find( reply._requestID );
-        if ( stepIt == _mapRequestToStep.end() )
-            return;
-        const PendingStep step = std::move( stepIt->second );
-        _mapRequestToStep.erase( stepIt );
         const bool bUnavailable = reply._result != EphemeralResult::Ok && reply._result != EphemeralResult::NotFound && reply._result != EphemeralResult::Conflict;
         switch ( step._kind )
         {
@@ -656,7 +656,7 @@ namespace sw
                     completeParty( step._request, MatchmakingResult::InviteMissing, PartySnapshot{} );
                     break;
                 }
-                submitStep( EphemeralRequest::makeSet( makeAccountPartyKey( step._request._actorID ), MatchmakingProtocol::encodeID( step._request._partyID ),
+                submitStep( EphemeralRequest::makeSet( makeAccountPartyKey( step._request._actorID ), EphemeralValueUtil::makeID( step._request._partyID ),
                                                        _policy._partyTTLMs, EphemeralCondition::IfAbsent ),
                             StepKind::IndexReserve, step._request );
                 break;
@@ -671,7 +671,7 @@ namespace sw
                 }
                 else
                 {
-                    const bool bNotInParty = reply._result != EphemeralResult::Ok || MatchmakingProtocol::decodeParty( reply._value, party ) == false ||
+                    const bool bNotInParty = reply._result != EphemeralResult::Ok || EphemeralRecordTable<PartySnapshot>{}.decode( reply, party ) == false ||
                                              party.hasMember( step._request._actorID ) == false;
                     if ( bNotInParty )
                         result = MatchmakingResult::NotInParty; // 인덱스만 남았다. 파티가 만료됐다
@@ -706,10 +706,15 @@ namespace sw
                         lobbyID = 0;
                     list._listLobby[index]._lobbyID = lobbyID;
                 }
-                for ( size_t index = 0; index < reply._listMember.size(); ++index )
+                vector<uint64> listLobbyID;
+                for ( const LobbySnapshot& lobby : list._listLobby )
+                {
+                    listLobbyID.push_back( lobby._lobbyID );
+                }
+                for ( size_t index = 0; index < listLobbyID.size(); ++index ) // 맡기지 못한 요청은 그 자리에서 끝나 목록을 지울 수 있다 — 목록을 다시 보지 않는다
                 {
                     Request getRequest  = step._request;
-                    getRequest._lobbyID = list._listLobby[index]._lobbyID;
+                    getRequest._lobbyID = listLobbyID[index];
                     submitStep( EphemeralRequest::makeGet( makeLobbyKey( getRequest._lobbyID ) ), StepKind::ListGet, getRequest, listID, static_cast<int32>( index ) );
                 }
                 break;
@@ -731,7 +736,7 @@ namespace sw
             result = MatchmakingResult::NotInParty;
         else if ( reply._result != EphemeralResult::Ok )
             result = MatchmakingServiceResult::fail( OnlineError::kUnavailable );
-        else if ( MatchmakingProtocol::decodeID( reply._value, partyID ) == false )
+        else if ( EphemeralValueUtil::readID( reply, partyID ) == false )
             result = MatchmakingResult::NotInParty;
         if ( result != MatchmakingResult::Ok )
         {
@@ -765,7 +770,7 @@ namespace sw
         const size_t  index   = static_cast<size_t>( slot );
         const uint64  lobbyID = list._listLobby[index]._lobbyID;
         LobbySnapshot lobby;
-        if ( reply._result == EphemeralResult::Ok && MatchmakingProtocol::decodeLobby( reply._value, lobby ) )
+        if ( reply._result == EphemeralResult::Ok && EphemeralRecordTable<LobbySnapshot>{}.decode( reply, lobby ) )
         {
             list._listLobby[index] = std::move( lobby );
             list._listFound[index] = SW_TRUE;
@@ -791,7 +796,7 @@ namespace sw
 
     void PartyLobbyService::finishParty( const Request& request, MatchmakingServiceResult result, const PartySnapshot& party, AccountID removedID, uint64 brokenTicketID )
     {
-        const vector<uint8> indexValue = MatchmakingProtocol::encodeID( request._partyID );
+        const EphemeralValue indexValue = EphemeralValueUtil::makeID( request._partyID );
         if ( result == MatchmakingResult::Ok )
             refreshIndexTTL( party ); // 바꾸기는 모두 파티 기록의 수명을 늘린다 — 인덱스를 따로 두면 먼저 사라져 멤버가 파티에 든 채 찾지도 떠나지도 못한다
         switch ( request._operation )
@@ -813,7 +818,7 @@ namespace sw
             {
                 if ( result != MatchmakingResult::Ok )
                     break;
-                submitFireAndForget( EphemeralRequest::makeSet( makeInviteKey( request._targetID, request._partyID ), MatchmakingProtocol::encodeID( request._actorID ),
+                submitFireAndForget( EphemeralRequest::makeSet( makeInviteKey( request._targetID, request._partyID ), EphemeralValueUtil::makeID( request._actorID ),
                                                                 _policy._inviteTTLMs ) );
                 PartyLobbyNotification notification;
                 notification._recipientID       = request._targetID;

@@ -75,7 +75,7 @@ namespace sw
 
     ServiceStoreResult MemoryServiceDatabase::readRecord( const hashed_string& table, string_view key, ServiceRecord& outRecord )
     {
-        outRecord._bytes.clear();
+        accessBytes( outRecord ).clear();
         outRecord._key.clear();
         outRecord._version = ServiceRecord::kAbsentVersion;
         if ( table.empty() || ServiceTransaction::isValidKey( key ) == false )
@@ -86,8 +86,8 @@ namespace sw
         const Entry* pEntry = findEntry( table, key );
         if ( pEntry == nullptr )
             return ServiceStoreResult::NotFound;
-        outRecord._bytes   = pEntry->_bytes;
-        outRecord._version = pEntry->_version;
+        accessBytes( outRecord ) = pEntry->_bytes;
+        outRecord._version       = pEntry->_version;
         return ServiceStoreResult::Ok;
     }
 
@@ -120,7 +120,7 @@ namespace sw
                     break;
                 ServiceRecord& record = outListRecord.emplace_back();
                 record._key           = it->first;
-                record._bytes         = it->second._bytes;
+                accessBytes( record ) = it->second._bytes;
                 record._version       = it->second._version;
                 ++addedCount;
             }
@@ -137,7 +137,7 @@ namespace sw
                 break; // 범위 끝 아래에서 접두어가 아니면 접두어보다 작다
             ServiceRecord& record = outListRecord.emplace_back();
             record._key           = it->first;
-            record._bytes         = it->second._bytes;
+            accessBytes( record ) = it->second._bytes;
             record._version       = it->second._version;
             ++addedCount;
         }
@@ -165,7 +165,7 @@ namespace sw
                 case ServiceWrite::Kind::Put:
                 {
                     Entry& entry   = _mapTable[write._table][write._key];
-                    entry._bytes   = write._bytes;
+                    entry._bytes   = accessBytes( write );
                     entry._version = _commitVersion;
                     break;
                 }

@@ -50,7 +50,7 @@ namespace
             _text = _diskText;
             return ToolAssetLoadResult::Loaded;
         }
-        [[nodiscard]] bool saveDocument() override { return true; }
+        [[nodiscard]] bool saveDocument( AssetWriter& /*writer*/ ) override { return true; }
         string             captureDocumentText() const override { return _text; }
         void               applyDocumentText( string_view text ) override { _text = string{ _bLossyApply == SW_TRUE && text.empty() == false ? text.substr( 0, text.size() - 1 ) : text }; }
 

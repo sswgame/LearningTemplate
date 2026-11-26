@@ -4,6 +4,7 @@
 
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceRecordReader.h"
+#include "GameFramework/Runtime/Online/Store/Server/Tests/ServiceStoreEntryTestUtil.h"
 
 // ServiceRecordReaderTest — 목록 읽기의 유일한 입구(감사 O-18): 한 쪽 읽기는 가득 찬 쪽의 다음 커서를 싣고, 다 읽기는 쪽을 넘겨 끝까지 읽거나 상한에서 잘림을 싣는다.
 
@@ -20,7 +21,7 @@ namespace
         {
             StringBuilder<constant::buffer::kMax32> key;
             key.appendFormat( "row/%#", 1000 + index );
-            transaction.put( kTable, string( key.view() ), vector<uint8>{ 1 } );
+            ServiceStoreTestAccess::putBytes( transaction, kTable, string( key.view() ), vector<uint8>{ 1 } );
         }
         SW_REQUIRE_TRUE( database.commit( transaction ) == ServiceStoreResult::Ok );
     }

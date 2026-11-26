@@ -10,10 +10,10 @@
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Math/Color.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/String/fixed_string.h"
 
-#include "Editor/Common/EditorColor.h"
 #include "Editor/Common/EditorExports.h"
 #include "Editor/Common/Widgets/EditorNodeGraphRules.h"
 

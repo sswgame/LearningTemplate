@@ -15,8 +15,10 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Time/TimePoint.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -56,10 +58,13 @@ namespace sw
         static constexpr int32 kStatusUnauthorized           = 401;
         static constexpr int32 kStatusForbidden              = 403;
         static constexpr int32 kStatusNotFound               = 404;
+        static constexpr int32 kStatusGone                   = 410;
+        static constexpr int32 kStatusMultipleChoices        = 300; ///< 이 값 앞까지(2xx)가 성공이다
         static constexpr int32 kStatusTooManyRequests        = 429;
-        static constexpr int32 kStatusServerError            = 500; ///< 이 값과 그 위(5xx)
-        static constexpr int32 kDefaultMaxConcurrentRequests = 32;  ///< HTTP/1.1 클라이언트 — 요청마다 연결이다
-        static constexpr int32 kHTTP2MaxConcurrentRequests   = 256; ///< HTTP/2 클라이언트 — 연결 하나에 스트림을 겹친다
+        static constexpr int32 kStatusServerError            = 500;          ///< 이 값과 그 위(5xx)
+        static constexpr int64 kMaxRetryAfterSeconds         = 24 * 60 * 60; ///< `Retry-After` 를 믿는 상한(하루)
+        static constexpr int32 kDefaultMaxConcurrentRequests = 32;           ///< HTTP/1.1 클라이언트 — 요청마다 연결이다
+        static constexpr int32 kHTTP2MaxConcurrentRequests   = 256;          ///< HTTP/2 클라이언트 — 연결 하나에 스트림을 겹친다
     };
 
     /** @brief HTTP 클라이언트 설정입니다(HTTP/1.1 · HTTP/2 클라이언트가 함께 쓴다). */
@@ -89,27 +94,57 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 받은 응답 하나입니다. 전송이 실패하면(연결, TLS, 시한, 상한) `_bTransportFailed` 가 켜지고 상태 코드는 0 입니다. */
+    /** @brief 응답의 갈래입니다(`HTTPClientResponse::getKind`). 공급자는 이 위에 자기 뜻만 얹는다 — 상태 코드의 범위를 다시 가르지 않는다. */
+    enum class HTTPResponseKind : uint8
+    {
+        TransportFailed = 0, ///< 응답을 받지 못했다(연결 · TLS · 시한 · 상한)
+        Success,             ///< 2xx
+        Denied,              ///< 401 · 403 — 우리 자격이 거절됐다
+        NotFound,            ///< 404
+        Gone,                ///< 410
+        RateLimited,         ///< 429
+        ServerError,         ///< 5xx
+        Refused              ///< 그 밖(1xx · 3xx · 나머지 4xx) — 다시 보내도 같다
+    };
+
+    /** @brief 받은 응답 하나입니다. 전송이 실패하면(연결, TLS, 시한, 상한) 갈래가 `TransportFailed` 이고 상태 코드는 0 입니다. */
     struct SW_GF_API HTTPClientResponse
     {
         vector<HTTPHeader> _listHeader{};
         vector<uint8>      _bodyBytes{};
-        string             _failureText{};
         uint64             _requestID{ 0 };
-        int32              _statusCode{ 0 };
-        uint8              _bTransportFailed{ SW_FALSE };
 
-        bool isSuccess() const { return _bTransportFailed == SW_FALSE && 200 <= _statusCode && _statusCode <= 299; }
-        /**
-         * @brief 나중에 다시 보내면 될 수 있는 실패입니다 — 전송 실패 · 429(너무 많은 요청) · 5xx. 외부 공급자 연동이 같은 바닥을 쓰고, 공급자마다 더하는 코드(인증 만료 401 등)만 제 자리에 둔다.
-         * @details 영수증 검증기 셋 · 푸시 공급자 둘이 같은 셋을 손으로 적었다.
-         */
-        bool isTransientFailure() const
+        /** @brief 상태 줄을 받았습니다(HTTP 클라이언트가 부른다). */
+        void setStatusCode( int32 statusCode ) { _statusCode = statusCode; }
+        /** @brief 응답 없이 끝났습니다(HTTP 클라이언트가 부른다). */
+        void setTransportFailed( string_view failureText )
         {
-            return _bTransportFailed == SW_TRUE || _statusCode == HTTPConstant::kStatusTooManyRequests || _statusCode >= HTTPConstant::kStatusServerError;
+            _failureText = string( failureText );
+            _statusCode  = 0;
         }
+
+        HTTPResponseKind getKind() const;
+        bool             isSuccess() const { return getKind() == HTTPResponseKind::Success; }
+        /** @brief 나중에 다시 보내면 될 수 있는 실패입니다 — 전송 실패 · 429 · 5xx. 공급자마다 이 셋을 손으로 적지 않는다. */
+        bool isTransientFailure() const;
+        /**
+         * @brief 서버가 기다리라고 한 시간(`Retry-After`, 밀리초)입니다. 없거나 읽지 못하면 0 이고, 지난 날짜도 0 이다.
+         * @details 초(`120`)와 HTTP 날짜(`Fri, 31 Dec 1999 23:59:59 GMT`) 두 꼴을 모두 읽는다(RFC 9110 10.2.3) — 초만 읽으면 날짜로 답하는 서버(CDN)를 곧바로 다시 친다.
+         */
+        int64 getRetryAfterMs( UnixMilliseconds nowMs ) const;
+        /** @brief 로그에 적을 상태 코드입니다(0 이면 응답이 없다). 가르는 데는 `getKind` 를 쓴다. */
+        int32         getStatusCode() const { return _statusCode; }
+        const string& getFailureText() const { return _failureText; }
+
         const HTTPHeader* findHeader( string_view name ) const;
         string_view       getBodyText() const { return string_view( reinterpret_cast<const utf8*>( _bodyBytes.data() ), _bodyBytes.size() ); }
+
+        /** @brief HTTP 날짜(IMF-fixdate, `Sun, 06 Nov 1994 08:49:37 GMT`)를 유닉스 시각(밀리초)으로 읽습니다. 꼴이 다르면 비어 있습니다. */
+        [[nodiscard]] static optional<int64> parseDate( string_view text );
+
+    private:
+        string _failureText{};
+        int32  _statusCode{ 0 };
     };
 } // namespace sw
 

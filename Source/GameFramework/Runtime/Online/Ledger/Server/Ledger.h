@@ -31,9 +31,11 @@
 #include "GameFramework/Runtime/Online/Ledger/LedgerTypes.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceTTLRule.h"
+#include "GameFramework/Runtime/Online/Store/ServiceRecordUnknownFields.h"
 
 namespace sw
 {
+    class ServiceCommitAttempt;
     /** @brief 자산 하나의 공급 합입니다. 분개 하나 이상 또는 이월 레코드에서 셉니다. */
     struct LedgerSupplyStats
     {
@@ -45,15 +47,98 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 잔액 하나(`ledger_balance`, 키 `<보유자 키>/<자산>`)입니다. 0 이 되면 레코드를 지운다. */
+    REFLECT()
+    struct LedgerBalanceRecord
+    {
+        REFLECT_BODY();
+        PROPERTY()
+        int64 _amount{ 0 };
+
+        ServiceRecordUnknownFields _unknownProperties{};
+    };
+
+    /** @brief 분개가 남긴 이동 뒤 잔액 하나입니다(같은 키의 다시 보내기가 같은 답을 내도록). */
+    REFLECT()
+    struct LedgerJournalBalance
+    {
+        REFLECT_BODY();
+        PROPERTY()
+        LedgerHolder _holder{};
+        PROPERTY( MaxCount = LedgerConstant::kMaxAssetIDSize )
+        string _assetID{};
+        PROPERTY()
+        int64 _amount{ 0 };
+    };
+
+    /**
+     * @brief 분개 하나(`ledger_journal`, 키는 분개 키)입니다.
+     * @details 다른 레코드와 같은 자기 기술형(A)이다 — 고정 배치형은 같은 빌드끼리만 읽으므로(`FixedLayout.h`) 순차 배포 중 다른 빌드가 쓴 분개를 손상으로 볼 수 있어 쓰지 않는다.
+     *          내용 해시(`_contentHash`)는 저장 배치가 아니라 멱등 키의 뜻이라 원장의 손 해시(`LedgerPosting::write`)를 그대로 쓴다.
+     */
+    REFLECT()
+    struct LedgerJournalRecord
+    {
+        REFLECT_BODY();
+        PROPERTY( MaxCount = LedgerConstant::kMaxPostingCount )
+        vector<LedgerPosting> _listPosting{};
+        PROPERTY( MaxCount = LedgerConstant::kMaxPostingCount * 2 )
+        vector<LedgerJournalBalance> _listHolderBalance{};
+        PROPERTY( MaxCount = LedgerConstant::kMaxReasonSize )
+        string _reason{};
+        PROPERTY( MaxCount = LedgerConstant::kMaxStoredTextSize )
+        string _memo{};
+        PROPERTY()
+        int64 _timeMs{ 0 };
+        PROPERTY()
+        uint64 _actorID{ 0 };
+        PROPERTY()
+        uint64 _contentHash{ 0 };
+        PROPERTY()
+        LedgerActorKind _actorKind{ LedgerActorKind::System };
+
+        ServiceRecordUnknownFields _unknownProperties{};
+    };
+
+    /** @brief 지운 분개의 발행 · 소각 이월(`ledger_carry`, 키는 자산)입니다. */
+    REFLECT()
+    struct LedgerCarryRecord
+    {
+        REFLECT_BODY();
+        PROPERTY()
+        int64 _issued{ 0 };
+        PROPERTY()
+        int64 _burned{ 0 };
+
+        ServiceRecordUnknownFields _unknownProperties{};
+    };
+
+    /** @brief 지운 계정의 묘비(`ledger_tombstone`, 키는 계정 보유자 키)입니다. 있으면 그 계정의 다리는 `AccountDeleted` 다. */
+    REFLECT()
+    struct LedgerTombstoneRecord
+    {
+        REFLECT_BODY();
+        PROPERTY()
+        int64 _deletedMs{ 0 };
+
+        ServiceRecordUnknownFields _unknownProperties{};
+    };
+
+    template <typename TRecord>
+    class ServiceRecordTable;
+} // namespace sw
+
+namespace sw
+{
     /** @brief 원장 함수 모음입니다. 저장소 스레드에서 부릅니다. */
     struct SW_GF_API Ledger
     {
-        static const hashed_string& getBalanceTable();
-        static const hashed_string& getJournalTable();
-        static const hashed_string& getHistoryTable();
-        static const hashed_string& getCarryTable();         ///< "ledger_carry" — 키 `<자산>`, 값 `[판][발행 합][소각 합]`. 지운 분개의 공급 합이며 지우지 않는다
-        static const hashed_string& getTombstoneTable();     ///< "ledger_tombstone" — 키 `acct/<16 진>`, 값 `[판][삭제 시각]`. 지운 계정이며 지우지 않는다
-        static const hashed_string& getDeletionQueueTable(); ///< "ledger_deletion_queue" — 키 `acct/<16 진>`, 값 없음. 잔액을 아직 다 소각하지 않은 지운 계정
+        static const ServiceRecordTable<LedgerBalanceRecord>&   getBalanceTable();
+        static const ServiceRecordTable<LedgerJournalRecord>&   getJournalTable();
+        static const ServiceIndexTable&                         getHistoryTable();
+        static const ServiceRecordTable<LedgerCarryRecord>&     getCarryTable();         ///< "ledger_carry" — 키 `<자산>`, 지운 분개의 공급 합이며 지우지 않는다
+        static const ServiceRecordTable<LedgerTombstoneRecord>& getTombstoneTable();     ///< "ledger_tombstone" — 키 `acct/<16 진>`, 지운 계정이며 지우지 않는다
+        static const ServiceIndexTable&                         getDeletionQueueTable(); ///< "ledger_deletion_queue" — 키 `acct/<16 진>`, 값 없음. 잔액을 아직 다 소각하지 않은 지운 계정
         /**
          * @brief 계정 @p accountID 를 지우는 쓰기(묘비와 소각 대기)를 @p inoutTransaction 에 붙입니다. 탈퇴 정리가 계정 레코드를 지우는 트랜잭션에 넣습니다.
          * @details 함께 커밋되므로 탈퇴가 취소돼 계정 커밋이 지면 묘비도 서지 않는다. 잔액은 커밋 뒤 `burnDeletedAccounts` 가 소각한다.
@@ -91,14 +176,20 @@ namespace sw
          *          붙이는 쓰기 수는 바뀐 잔액 수에 분개 1, 분개의 TTL 색인 1 과 계정, 맡김 보유자 수(내역)와 계정 보유자 수(묘비가 없어야 한다는 조건)를 더한 값이다.
          *          다리의 계정에 묘비가 서 있으면(탈퇴로 지움) `AccountDeleted` 이다.
          *          부르는 쪽 쓰기와 합쳐 `ServiceTransaction::kMaxWriteCount` 를 넘으면 `Invalid` 이다.
-         *          커밋이 `Conflict` 나 `Unavailable` 이면 `resolveConflict` 로 가린다.
+         *          커밋은 `commitTransfer` 로 한다.
          */
         [[nodiscard]] static LedgerResult stageTransfer( IServiceStoreConnection& connection, const LedgerTransferRequest& request, ServiceTransaction& inoutTransaction,
                                                          LedgerTransferResult& outResult );
         /** @brief 붙인 트랜잭션의 커밋이 실패했을 때 결과를 가립니다. 분개가 이제 있으면 `Ok` 와 `_bReplayed` 이며(다른 서버가 먼저 했거나 응답만 잃은 경우), 없으면 `Conflict` 이고, 읽지 못하면 `Unavailable` 입니다. */
         [[nodiscard]] static LedgerResult resolveConflict( IServiceStoreConnection& connection, const LedgerTransferRequest& request, LedgerTransferResult& outResult );
         /**
-         * @brief 이동 하나를 혼자 커밋합니다. 붙이고, 커밋하고, 버전 충돌이면 다시 읽어 다시 합니다(`kMaxRetryCount`).
+         * @brief 붙인 이동이 든 트랜잭션을 커밋하고 결과를 가립니다(멱등 규칙 하나 — 분개가 적용 여부를 안다).
+         * @return `Ok`(이번에 썼으면 새 버전, 이미 쓰였으면 `_bReplayed`), `Invalid`, `Conflict`(시도 함수는 빈 값으로 다시 한다), `Unavailable`(적용됐는지 모르고 분개도 없다 — 같은 키로 나중에), 또는 분개가 말하는 실패입니다.
+         */
+        [[nodiscard]] static LedgerResult commitTransfer( ServiceCommitAttempt& attempt, const ServiceTransaction& transaction, const LedgerTransferRequest& request,
+                                                          LedgerTransferResult& outResult );
+        /**
+         * @brief 이동 하나를 혼자 커밋합니다. 붙이고, 커밋하고, 버전 충돌이면 다시 읽어 다시 합니다(`ServiceCommitRunner`).
          * @details 커밋이 `Unavailable` 이고 분개가 없으면 `Unavailable` 이다. 적용 여부를 모르는 상태이며, 같은 키로 나중에 다시 하면 가려진다.
          */
         [[nodiscard]] static LedgerResult executeTransfer( IServiceStoreConnection& connection, const LedgerTransferRequest& request, LedgerTransferResult& outResult );
@@ -120,6 +211,6 @@ namespace sw
         /** @brief @p source 의 쓰기를 @p inoutTarget 뒤에 그대로 붙입니다. 부분을 따로 만들어 상한을 본 뒤 합칠 때 쓰며, 우편 넣기와 구매 한도가 그 예입니다. */
         static void appendWrites( const ServiceTransaction& source, ServiceTransaction& inoutTarget );
         /** @brief 잔액 레코드 바이트를 읽습니다. 검사와 테스트가 씁니다. */
-        [[nodiscard]] static bool decodeBalanceRecord( const vector<uint8>& bytes, int64& outAmount );
+        [[nodiscard]] static bool decodeBalanceRecord( const ServiceRecord& raw, int64& outAmount );
     };
 } // namespace sw

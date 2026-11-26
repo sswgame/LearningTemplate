@@ -46,7 +46,7 @@ namespace sw::editor
         const utf8* getPanelTitle() const override { return "Camera Presets"; }
         void        drawDocumentContent() override;
         /** @brief 보기 전용이라 저장하지 않습니다(프리셋은 카탈로그 편집기가 고친다). */
-        [[nodiscard]] bool saveDocument() override { return false; }
+        [[nodiscard]] bool saveDocument( AssetWriter& /*writer*/ ) override { return false; }
         bool               canSaveDocument() const override { return false; }
 
         /** @brief 지금 고른 프리셋 번호입니다(감시 값 `Editor.CameraPresetSelected`). 없으면 -1 입니다. */

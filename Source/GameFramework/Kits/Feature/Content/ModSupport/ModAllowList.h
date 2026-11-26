@@ -12,12 +12,28 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Content/ModSupport/ModSetDigest.h"
 
 namespace sw
 {
     class XMLNode;
+
+    /** @struct ModAllowEntryDef @brief `<Mod>` 한 줄의 스키마입니다. */
+    REFLECT()
+    struct SW_KIT_API ModAllowEntryDef
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        string _id;
+        PROPERTY( Required )
+        string _version; ///< `major.minor.patch`
+        PROPERTY( Required )
+        string _contentHash; ///< 16 진수 16 자리
+    };
 
     /**
      * @struct ModAllowList

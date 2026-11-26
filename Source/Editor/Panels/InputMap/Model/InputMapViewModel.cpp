@@ -2,11 +2,13 @@
 
 #include "Editor/Panels/InputMap/Model/InputMapViewModel.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
+#include "Editor/Common/Asset/AssetWriter.h"
 #include "Editor/Common/Config/EditorToolDefaults.h"
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -20,6 +22,7 @@
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/KeyCodeUtil.h"
 #include "Engine/Input/Map/InputGlyphResolver.h"
+#include "Engine/Input/Map/InputMap.h"
 #include "Engine/Input/Map/InputMapBundle.h"
 #include "Engine/Input/Map/InputRemapSerializer.h"
 
@@ -172,21 +175,23 @@ namespace sw::editor
         return true;
     }
 
-    bool InputMapViewModel::saveDocument()
+    bool InputMapViewModel::saveDocument( AssetWriter& writer )
     {
         // 패널은 리소스의 기본 바인딩(`<InputMap>`)을 편집한다. 다시 읽기(`reload`)와 같은 형식, 같은 위치에 쓴다.
         // 플레이어 리매핑은 UserSettings 의 `keyBinding` 설정이 사용자 파일에 보관한다.
         if ( isBundlePath() )
         {
-            if ( saveBundle() == false )
+            if ( saveBundle( writer ) == false )
             {
                 SW_LOG_WARNING_ID( "InputMapViewModel.FailedSaveInputMap", "Failed to save InputMap to %#", _inputMapPath.c_str() );
                 return false;
             }
             return true;
         }
-        const optional<AbsolutePath> inputMapFile = editor::getSubsystem<AssetPaths>().toDiskPath( _inputMapPath.get() );
-        if ( inputMapFile.has_value() == false || _inputMap.saveToAsset( *inputMapFile ) == false )
+        const optional<DiskPath> inputMapFile = editor::getSubsystem<AssetPaths>().toDiskPath( _inputMapPath.get() );
+        const bool               bSaved       = inputMapFile.has_value() && writer.save( *inputMapFile, [this]( const AbsolutePath& writable )
+                            { return _inputMap.saveToAsset( writable ); } );
+        if ( bSaved == false )
         {
             SW_LOG_WARNING_ID( "InputMapViewModel.FailedSaveInputMap", "Failed to save InputMap to %#", _inputMapPath.c_str() );
             return false;
@@ -200,7 +205,7 @@ namespace sw::editor
         return InputMapBundle::isSettingsFile( string_view{ _inputMapPath.c_str() } );
     }
 
-    bool InputMapViewModel::saveBundle() const
+    bool InputMapViewModel::saveBundle( AssetWriter& writer ) const
     {
         // 파일마다 원래 몫을 돌려보낸다. 편집이 건드리지 않은 파일은 쓰지 않는다 — 다른 게임과 함께 쓰는 공통 파일의 주석과 차례를 지키고, 함께 쓰는 파일을 말없이 바꾸지 않는다.
         vector<AssetID> listAsset;
@@ -214,9 +219,11 @@ namespace sw::editor
                 return false;
             if ( bHasDisk && onDisk.writeSourceText( sourceIndex, diskText ) && editedText == diskText )
                 continue;
-            const string&                assetPath = _inputMap.getSourceAssetPath( sourceIndex );
-            const optional<AbsolutePath> filePath  = editor::getSubsystem<AssetPaths>().toDiskPath( assetPath );
-            if ( filePath.has_value() == false || _inputMap.saveSourceToAsset( sourceIndex, *filePath ) == false )
+            const string&            assetPath = _inputMap.getSourceAssetPath( sourceIndex );
+            const optional<DiskPath> filePath  = editor::getSubsystem<AssetPaths>().toDiskPath( assetPath );
+            const bool               bSaved    = filePath.has_value() && writer.save( *filePath, [this, sourceIndex]( const AbsolutePath& writable )
+                             { return _inputMap.saveSourceToAsset( sourceIndex, writable ); } );
+            if ( bSaved == false )
                 return false;
             SW_LOG_INFO_ID( "InputMapViewModel.SavedInputMap", "Saved InputMap to %#", assetPath.c_str() );
         }
@@ -646,8 +653,9 @@ namespace sw::editor
 
     void InputMapViewModel::saveReplay() const
     {
-        const optional<AbsolutePath> diskPath = editor::getSubsystem<AssetPaths>().toDiskPath( _replayFilePath.get() );
-        if ( diskPath.has_value() == false || _replay.saveToFile( *diskPath ) == false )
+        const optional<DiskPath> diskPath = editor::getSubsystem<AssetPaths>().toDiskPath( _replayFilePath.get() );
+        AssetWriter              writer;
+        if ( diskPath.has_value() == false || writer.saveAsset( *diskPath, _replay ) == false )
             SW_LOG_ERROR_ID( "InputMapViewModel.CouldNotSaveInput", "Could not save input replay '%#'", _replayFilePath.c_str() );
     }
 
@@ -655,7 +663,7 @@ namespace sw::editor
     {
         _replayPlayback.reset();
         _replay.stopRecording(); // 녹화 중이면 읽은 프레임 뒤에 이어 적는다
-        const optional<AbsolutePath> diskPath = editor::getSubsystem<AssetPaths>().findLooseFile( _replayFilePath.get() );
+        const optional<DiskPath> diskPath = editor::getSubsystem<AssetPaths>().findLooseFile( _replayFilePath.get() );
         if ( diskPath.has_value() == false )
             SW_LOG_ERROR_ID( "InputMapViewModel.CouldNotLoadInput", "Could not load input replay '%#': no such file on disk", _replayFilePath.c_str() );
         else if ( _replay.loadFromFile( *diskPath ) == false )
@@ -732,5 +740,125 @@ namespace sw::editor
     ViewportInputOverlay& InputMapViewModel::editViewportOverlay()
     {
         return editor::getSubsystem<ViewportInputOverlaySettings>()._overlay;
+    }
+} // namespace sw::editor
+
+namespace sw::editor
+{
+    namespace
+    {
+        struct InputMapConflictsInternal
+        {
+            /** @brief 키가 비어 있는 슬롯이면 true 입니다. 빈 슬롯 둘은 같은 값이지만 같은 입력이 아니다. */
+            static bool isEmptySlot( const InputSlot& slot )
+            {
+                return slot == InputSlot::fromKey( Key::Unknown );
+            }
+
+            /**
+             * @brief 두 바인딩이 같은 입력에 발화하는지입니다. Chord(수식 키 + 방아쇠)와 Shortcut(수식 키 마스크 + 키)은 **조합 전체**와 발화 규칙이 같아야 한다 —
+             *        Ctrl+F7 과 Ctrl+F8 은 수식 키 슬롯이 같아도 겹치지 않는다. 단일 키끼리는 슬롯과 발화 규칙이 같아야 하고, 합성 축은 누르는 동안 값을 읽으므로 슬롯 하나만 같아도 겹친다.
+             * @param pOutSlot 겹친 슬롯(조합이면 방아쇠)
+             */
+            static bool overlaps( const ActionBinding& left, const ActionBinding& right, InputSlot* pOutSlot )
+            {
+                const bool bLeftCombo  = left._kind == BindingKind::Chord || left._kind == BindingKind::Shortcut;
+                const bool bRightCombo = right._kind == BindingKind::Chord || right._kind == BindingKind::Shortcut;
+                if ( bLeftCombo || bRightCombo )
+                {
+                    if ( left._kind != right._kind || left._trigger != right._trigger )
+                        return false;
+                    const bool bSame = left._kind == BindingKind::Chord ? ( left._arrSlot[0] == right._arrSlot[0] && left._arrSlot[1] == right._arrSlot[1] )
+                                                                        : ( left._modifierMask == right._modifierMask && left._arrSlot[0] == right._arrSlot[0] );
+                    if ( bSame )
+                        *pOutSlot = left._kind == BindingKind::Chord ? left._arrSlot[1] : left._arrSlot[0];
+                    return bSame;
+                }
+                if ( left._kind == BindingKind::SingleSlot && right._kind == BindingKind::SingleSlot && left._trigger != right._trigger )
+                    return false;
+                const uint32 leftCount  = BindingKinds::getConflictSlotCount( left._kind );
+                const uint32 rightCount = BindingKinds::getConflictSlotCount( right._kind );
+                for ( uint32 leftSlot = 0; leftSlot < leftCount; ++leftSlot )
+                {
+                    for ( uint32 rightSlot = 0; rightSlot < rightCount; ++rightSlot )
+                    {
+                        if ( left._arrSlot[leftSlot] == right._arrSlot[rightSlot] && isEmptySlot( left._arrSlot[leftSlot] ) == false )
+                        {
+                            *pOutSlot = left._arrSlot[leftSlot];
+                            return true;
+                        }
+                    }
+                }
+                return false;
+            }
+        };
+    } // namespace
+
+    void InputMapConflict::collect( const InputMap& inputMap, vector<InputMapConflict>& outListConflict )
+    {
+        outListConflict.clear();
+        const vector<hashed_string>& listAction = inputMap.getActionNames();
+        for ( size_t indexA = 0; indexA < listAction.size(); ++indexA )
+        {
+            const hashed_string& actionA = listAction[indexA];
+            for ( uint32 bindA = 0; bindA < inputMap.getBindingCount( actionA ); ++bindA )
+            {
+                const ActionBinding* pBindingA = inputMap.getBinding( actionA, bindA );
+                if ( pBindingA == nullptr )
+                    continue;
+                const hashed_string layerA = inputMap.findBindingLayer( actionA, bindA );
+                for ( size_t indexB = indexA + 1; indexB < listAction.size(); ++indexB )
+                {
+                    const hashed_string& actionB = listAction[indexB];
+                    for ( uint32 bindB = 0; bindB < inputMap.getBindingCount( actionB ); ++bindB )
+                    {
+                        const ActionBinding* pBindingB = inputMap.getBinding( actionB, bindB );
+                        InputSlot            slot{};
+                        const bool           bNoBindingOverlap = pBindingB == nullptr || inputMap.findBindingLayer( actionB, bindB ) != layerA ||
+                                                       InputMapConflictsInternal::overlaps( *pBindingA, *pBindingB, &slot ) == false;
+                        if ( bNoBindingOverlap )
+                            continue;
+                        InputMapConflict conflict;
+                        conflict._actionA    = actionA;
+                        conflict._actionB    = actionB;
+                        conflict._layer      = layerA;
+                        conflict._slot       = slot;
+                        conflict._bindIndexA = bindA;
+                        conflict._bindIndexB = bindB;
+                        outListConflict.push_back( conflict );
+                    }
+                }
+            }
+        }
+    }
+
+    bool InputMapConflict::isInvolved( const vector<InputMapConflict>& listConflict, const hashed_string& action )
+    {
+        return VectorUtil::containsIf( listConflict, [&]( const InputMapConflict& conflict )
+        { return conflict._actionA == action || conflict._actionB == action; } );
+    }
+
+    bool InputMapConflict::isInvolved( const vector<InputMapConflict>& listConflict, const hashed_string& action, uint32 bindIndex )
+    {
+        return VectorUtil::containsIf( listConflict, [&]( const InputMapConflict& conflict )
+        { return ( conflict._actionA == action && conflict._bindIndexA == bindIndex ) || ( conflict._actionB == action && conflict._bindIndexB == bindIndex ); } );
+    }
+
+    void InputMapConflict::collectFor( const vector<InputMapConflict>& listConflict, const hashed_string& action, vector<InputMapConflictView>& outListView )
+    {
+        outListView.clear();
+        for ( const InputMapConflict& conflict : listConflict )
+        {
+            const bool bIsA = conflict._actionA == action;
+            if ( bIsA == false && conflict._actionB != action )
+                continue;
+            InputMapConflictView view;
+            view._otherAction    = bIsA ? conflict._actionB : conflict._actionA;
+            view._layer          = conflict._layer;
+            view._slot           = conflict._slot;
+            view._bindIndex      = bIsA ? conflict._bindIndexA : conflict._bindIndexB;
+            view._otherBindIndex = bIsA ? conflict._bindIndexB : conflict._bindIndexA;
+            outListView.push_back( view );
+        }
     }
 } // namespace sw::editor

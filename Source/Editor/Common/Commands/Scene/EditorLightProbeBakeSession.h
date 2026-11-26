@@ -1,7 +1,7 @@
 /**
  * @file EditorLightProbeBakeSession.h
  * @brief 라이트 프로브 베이크를 에디터 프레임에 나눠 진행하는 세션입니다. 커맨드 `lighting.bakeProbes` 가 시작합니다.
- * @details 세션은 프레임마다 정해진 시간(`EditorBakeRunState::kFrameBudgetMilliseconds`) 안에서 프로브를 베이크하고(`LightProbeBakeJob::step`), 상태줄 항목(`EditorLightProbeBakeStatus.cpp`)이
+ * @details 세션은 프레임마다 정해진 시간(`EditorBakeRunState::kFrameBudgetMilliseconds`) 안에서 프로브를 베이크하고(`LightProbeBakeJob::step`), 상태줄 항목(`EditorStatusBarItems.cpp`)이
  *          진행과 Cancel 단추를 보인다. 에디터는 베이크하는 동안 멈추지 않는다.
  *          레이는 볼륨마다 씬의 정적 콜라이더로 새로 세운 가림 씬(`_pOccluders`, `LightProbeBakeInput::collectInput`)에 쏜다 — 편집 중에는 플레이 물리 씬이 없다.
  *          베이크하는 동안 씬 편집을 막는다(`EditorPlaySession::holdSceneEdits` — 인스펙터 · 기즈모 · Undo 가 잠긴다). 베이크하는 볼륨과 결과를 받을 오브젝트가 그대로여야 하고,

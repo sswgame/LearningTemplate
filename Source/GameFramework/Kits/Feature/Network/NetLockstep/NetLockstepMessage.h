@@ -71,10 +71,10 @@ namespace sw
     /** @brief 락스텝 키트의 메시지 표입니다. 종류 · 마스크 · 와이어 버전은 표에서 나온다(`NetMessageTable`). */
     struct NetLockstepMessage
     {
-        using Input         = NetMessageBodyDef<0, NetMessageDirection::Both, NetChannelKind::ReliableOrdered, LockstepInputBody>;
-        using Checksum      = NetMessageBodyDef<1, NetMessageDirection::Both, NetChannelKind::ReliableOrdered, LockstepChecksumBody>;
-        using RollbackInput = NetMessageDef<2, NetMessageDirection::Both, NetChannelKind::Unreliable>;                                 ///< 판 번호(`RollbackConfig::_matchID`)를 앞에 싣는다
-        using Leave         = NetMessageBodyDef<3, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, LockstepLeaveBody>; ///< 서버 → 모두
+        using Input         = NetLimitedMessageDef<NetMessageBodyDef<0, NetMessageDirection::Both, NetChannelKind::ReliableOrdered, LockstepInputBody>, NetRequestLimit::kBurst>;
+        using Checksum      = NetLimitedMessageDef<NetMessageBodyDef<1, NetMessageDirection::Both, NetChannelKind::ReliableOrdered, LockstepChecksumBody>, NetRequestLimit::kBurst>;
+        using RollbackInput = NetLimitedMessageDef<NetMessageDef<2, NetMessageDirection::Both, NetChannelKind::Unreliable>, NetRequestLimit::kBurst>; ///< 판 번호(`RollbackConfig::_matchID`)를 앞에 싣는다
+        using Leave         = NetMessageBodyDef<3, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, LockstepLeaveBody>;                ///< 서버 → 모두
         using Table         = NetMessageTable<NetKitMessageRange::kLockstep, Input, Checksum, RollbackInput, Leave>;
 
         static constexpr uint8 kInput         = Table::getKindOf<Input>();

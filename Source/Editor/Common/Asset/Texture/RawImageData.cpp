@@ -46,7 +46,7 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    bool RawImageData::loadImage( const AbsolutePath& filePath, RawImageData& outImage )
+    bool RawImageData::loadImage( const DiskPath& filePath, RawImageData& outImage )
     {
         vector<uint8> bytes;
         if ( AssetSourceLocator::readBytes( filePath, bytes ) == false )

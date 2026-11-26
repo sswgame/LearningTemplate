@@ -149,15 +149,16 @@ namespace sw
         return text.size() == 0 ? string( "none" ) : string( text.view() );
     }
 
-    expected<void> AutomationStepRegistry::configureConditions( const JSONValue& conditions )
+    expected<void> AutomationStepRegistry::configureConditions( const map<string, float64>& mapThreshold )
     {
         for ( const AutomationBlocker* pBlocker : AutomationStepRegistryInternal::getBlockers().getItems() )
         {
             if ( pBlocker->_pConfigure == nullptr )
                 continue;
-            if ( conditions.isValid() == false || conditions.has( pBlocker->_pName ) == false )
-                return unexpected( Error{ ErrorKind::NotFound, "ScenarioRun.json _conditions needs an entry for the registered condition", pBlocker->_pName } );
-            if ( expected<void> configured = pBlocker->_pConfigure( conditions.get( pBlocker->_pName ) ); configured.has_value() == false )
+            const auto thresholdIt = mapThreshold.find( string( pBlocker->_pName ) );
+            if ( thresholdIt == mapThreshold.end() )
+                return unexpected( Error{ ErrorKind::NotFound, "ScenarioRun.json _mapConditionThreshold needs an entry for the registered condition", pBlocker->_pName } );
+            if ( expected<void> configured = pBlocker->_pConfigure( thresholdIt->second ); configured.has_value() == false )
                 return configured;
         }
         return {};

@@ -14,6 +14,7 @@
 #include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/Common/Workspace/NetPlay/EditorRemoteInspector.h"
 
+#include "Engine/Config/ConfigManager.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
 
@@ -410,7 +411,7 @@ namespace sw::editor
 
     void MemoryViewModel::captureLocal()
     {
-        const expected<MemorySnapshotPolicy> policy = MemorySnapshotPolicy::load();
+        const expected<MemorySnapshotPolicy> policy = ConfigManager::readConfig( MemorySnapshotPolicy::kConfigFile );
         if ( policy.has_value() == false )
         {
             _statusLine = SW_LOCKEYFORMAT( "EditorMemory", "NoPolicyStatus", TextArgumentList().addText( "reason", string{ policy.error().detail() } ) );
@@ -494,7 +495,7 @@ namespace sw::editor
 
     AbsolutePath MemoryViewModel::reserveExportFolder()
     {
-        const expected<MemorySnapshotPolicy> policy = MemorySnapshotPolicy::load();
+        const expected<MemorySnapshotPolicy> policy = ConfigManager::readConfig( MemorySnapshotPolicy::kConfigFile );
         if ( policy.has_value() == false )
         {
             _statusLine = SW_LOCKEYFORMAT( "EditorMemory", "NoPolicyStatus", TextArgumentList().addText( "reason", string{ policy.error().detail() } ) );

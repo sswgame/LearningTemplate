@@ -4,7 +4,6 @@
 
 #include "Core/Container/vector.h"
 
-#include "Editor/Common/Commands/Asset/EditorContentWrite.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 
@@ -18,16 +17,13 @@ namespace sw::editor
         if ( canSaveDocument() == false )
             return false;
         // 저장이 쓸 파일을 패널이 내놓고 여기서 하나씩 본다 — 문서 하나가 여러 파일을 쓰거나(데이터 테이블) 연 경로가 없는 문서(프로젝트 설정)도 같은 확인을 지난다.
-        vector<AbsolutePath> listPath;
+        vector<DiskPath> listPath;
         collectFilesToSave( listPath );
-        for ( const AbsolutePath& path : listPath )
-        {
-            if ( EditorContentWrite::warnIfReadOnly( path, EditorContentWriteKind::Save ) )
-                return false;
-        }
-        if ( validateDiskBeforeSave( listPath ) == false || saveDocument() == false )
+        AssetWriter& writer = getAssetWriter();
+        if ( writer.validateSave( listPath ) == false || saveDocument( writer ) == false )
             return false;
-        _diskBaseline.capture( listPath );
+        for ( const DiskPath& path : listPath )
+            writer.capture( path );
         clearDocumentDirty();
         onDocumentSaved();
         return true;
@@ -35,14 +31,10 @@ namespace sw::editor
 
     void EditorDocumentPanelBase::captureDiskBaseline()
     {
-        vector<AbsolutePath> listPath;
+        vector<DiskPath> listPath;
         collectFilesToSave( listPath );
-        _diskBaseline.capture( listPath );
-    }
-
-    bool EditorDocumentPanelBase::validateDiskBeforeSave( const vector<AbsolutePath>& listPath )
-    {
-        return _diskBaseline.validateOverwrite( listPath );
+        for ( const DiskPath& path : listPath )
+            getAssetWriter().capture( path );
     }
 
     void EditorDocumentPanelBase::applyCloseChoice( EditorUnsavedChoice choice )

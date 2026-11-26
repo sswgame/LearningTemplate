@@ -302,11 +302,6 @@ namespace sw
     {
         if ( filePath.empty() )
             return false;
-        if ( FileUtil::ensureParentDirectoryExists( filePath ) == false )
-        {
-            SW_LOG_WARNING_ID( "UserSettings.CannotCreateFolderUser", "Cannot create the folder for user settings '%#'", filePath.str() );
-            return false;
-        }
         // 글을 못 만들면(잘못된 UTF-8 값) 있던 파일을 덮지 않는다.
         const expected<string> text = makeUserJSON();
         if ( text.has_value() == false )

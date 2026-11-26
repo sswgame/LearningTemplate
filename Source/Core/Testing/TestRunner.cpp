@@ -520,7 +520,7 @@ namespace sw::test
         const bool bWrite = recording == SnapshotWriteMode::All || ( recording == SnapshotWriteMode::Missing && bHasSnapshot == false );
         if ( bWrite )
         {
-            const bool bWritten = FileUtil::ensureDirectoryExists( path.getParent() ) && FileUtil::writeTextFile( path, normalized );
+            const bool bWritten = FileUtil::writeTextFile( path, normalized );
             if ( bWritten == false )
             {
                 StringBuilder<constant::buffer::kMax1024> message;
@@ -1233,7 +1233,7 @@ namespace sw::test
             report.append( "],\n  \"cases\": [" );
             report.append( caseReport.view() );
             report.append( "\n  ]\n}\n" );
-            if ( FileUtil::ensureDirectoryExists( reportPath.getParent() ) == false || FileUtil::writeTextFile( reportPath, report.view() ) == false )
+            if ( FileUtil::writeTextFile( reportPath, report.view() ) == false )
             {
                 formatstring( arrBuffer, constant::buffer::kMax1024, "[  FAILED  ] could not write the test report %#", reportPath.str() );
                 Internal::writeLine( arrBuffer );

@@ -101,24 +101,24 @@ SW_TEST_CASE( DomainRoundTripTest, OnlyTheOpenedDomainFileChanges )
     SW_EXPECT_EQUAL( game, text );
 
     // 도메인을 비운 편집은 읽은 그 파일(승자)에 쓴다 — 다른 도메인 파일은 그대로다.
-    const optional<AbsolutePath> relativeTarget = paths.toDiskPath( Internal::kRelative );
+    const optional<DiskPath> relativeTarget = paths.toDiskPath( Internal::kRelative );
     SW_REQUIRE_TRUE( relativeTarget.has_value() );
     SW_EXPECT_EQUAL( Internal::makeID( winner ), paths.toAssetID( *relativeTarget ) );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( *relativeTarget, "edited-relative" ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( relativeTarget->str() ), "edited-relative" ) );
     SW_EXPECT_EQUAL( string( "edited-relative" ), Internal::readDisk( winner ) );
     SW_EXPECT_EQUAL( loser, Internal::readDisk( loser ) );
 
     // 도메인을 정한 편집은 그 도메인 파일만 바꾼다(승자가 아니어도).
     for ( const string& domain : { common, game } )
     {
-        const optional<AbsolutePath> target = paths.toDiskPath( Internal::makeID( domain ) );
+        const optional<DiskPath> target = paths.toDiskPath( Internal::makeID( domain ) );
         SW_REQUIRE_TRUE( target.has_value() );
         const string                            other  = domain == game ? common : game;
         const string                            before = Internal::readDisk( other );
         StringBuilder<constant::buffer::kMax64> editedBuilder;
         editedBuilder.appendFormat( "edited-%#", domain );
         const string edited = string( editedBuilder.view() );
-        SW_REQUIRE_TRUE( FileUtil::writeTextFile( *target, edited ) );
+        SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( target->str() ), edited ) );
         SW_EXPECT_EQUAL( edited, Internal::readDisk( domain ) );
         SW_EXPECT_EQUAL( before, Internal::readDisk( other ) );
         SW_REQUIRE_TRUE( AssetIO::readTextAsset( AssetID{ Internal::makeID( domain ) }, text ) );

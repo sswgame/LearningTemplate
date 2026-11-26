@@ -31,9 +31,9 @@ namespace sw
 
     FileWatchService::~FileWatchService() = default; // 감시자의 소멸자가 워커를 멈추고 합류한다
 
-    Subscription FileWatchService::watch( const AbsolutePath& folder, FileWatchDepth depth, const vector<string>& listExtension, const FileChangeDelegate& onMatch )
+    Subscription FileWatchService::watch( const DiskPath& folder, FileWatchDepth depth, const vector<string>& listExtension, const FileChangeDelegate& onMatch )
     {
-        const AbsolutePath normalizedFolder = folder.join( {} );
+        const DiskPath normalizedFolder = folder.join( {} );
         if ( normalizedFolder.empty() )
         {
             SW_LOG_WARNING_ID( "FileWatchService.EmptyFolder", "File watch: the folder is empty (no content root folder) - hot reload is off" );
@@ -56,7 +56,7 @@ namespace sw
         return _subscriptions.issue( id );
     }
 
-    optional<uint64> FileWatchService::acquireRoot( const AbsolutePath& folder, FileWatchDepth depth )
+    optional<uint64> FileWatchService::acquireRoot( const DiskPath& folder, FileWatchDepth depth )
     {
         const ComparableDiskPath comparableFolder = FileUtil::makeComparableDiskPath( folder.str() );
         for ( const Root& root : _listRoot )
@@ -213,10 +213,10 @@ namespace sw
             if ( FileUtil::isDirectory( entry._folder ) == false )
                 continue;
 
-            vector<AbsolutePath> listFile;
+            vector<DiskPath> listFile;
             if ( FileUtil::collectFiles( entry._folder, {}, listFile, entry._depth == FileWatchDepth::Tree ) == false )
                 SW_LOG_WARNING_ID( "FileWatchService.WatchTreeCouldNot", "Watch tree '%#' could not be listed completely - changes in the part left out are not recovered", entry._folder.str() );
-            for ( const AbsolutePath& filePath : listFile )
+            for ( const DiskPath& filePath : listFile )
             {
                 if ( isExtensionAllowed( entry, filePath.str() ) == false )
                     continue;

@@ -9,7 +9,6 @@
  */
 #pragma once
 #include "Core/Container/string.h"
-#include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Types.h"
@@ -17,11 +16,10 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Runtime/MatchmakingTypes.h"
+#include "GameFramework/Runtime/Online/Cache/Server/EphemeralStore.h"
 
 namespace sw
 {
-    struct EphemeralReply;
-
     class EphemeralStoreRouter;
 
     /**
@@ -37,9 +35,9 @@ namespace sw
          * @param bExists 기록이 있었는지 나타냅니다.
          * @param outbErase 참이면 기록을 지웁니다. 비교 후 지우기로 처리합니다.
          */
-        virtual MatchmakingServiceResult mutate( bool bExists, const vector<uint8>& oldBytes, vector<uint8>& outNewBytes, bool& outbErase ) = 0;
+        virtual MatchmakingServiceResult mutate( bool bExists, const EphemeralValue& oldValue, EphemeralValue& outNewValue, bool& outbErase ) = 0;
         /** @brief 끝났을 때 불립니다. 결과와 마지막에 쓴 값을 받으며, 지웠으면 빈 값이고 규칙이 실패했으면 읽은 값입니다. */
-        virtual void onFinished( MatchmakingServiceResult result, const vector<uint8>& finalBytes ) = 0;
+        virtual void onFinished( MatchmakingServiceResult result, const EphemeralValue& finalValue ) = 0;
     };
 } // namespace sw
 
@@ -67,14 +65,14 @@ namespace sw
         /** @brief @p key 의 기록을 @p mutation 으로 바꿉니다. 새로 쓰는 값의 만료 시간은 @p ttlMs 입니다. */
         void update( string_view key, int64 ttlMs, unique_ptr<ICacheRecordMutation> mutation );
 
-        int32 getPendingCount() const { return static_cast<int32>( _mapRequestToOperation.size() ); }
+        int32 getPendingCount() const;
 
     private:
         struct Operation
         {
             unique_ptr<ICacheRecordMutation> _mutation{};
-            vector<uint8>                    _oldBytes{};
-            vector<uint8>                    _newBytes{};
+            EphemeralValue                   _oldValue{};
+            EphemeralValue                   _newValue{};
             string                           _key{};
             int64                            _ttlMs{ 0 };
             int32                            _attempt{ 0 };
@@ -83,12 +81,11 @@ namespace sw
         };
 
         void startRead( unique_ptr<Operation> operation );
-        void onReadReply( const EphemeralReply& reply );
-        void onWriteReply( const EphemeralReply& reply );
+        void onReadReply( unique_ptr<Operation> operation, const EphemeralReply& reply );
+        void onWriteReply( unique_ptr<Operation> operation, const EphemeralReply& reply );
 
     private:
-        unordered_map<uint64, unique_ptr<Operation>> _mapRequestToOperation;
-        EphemeralStoreRouter*                        _pRouter;
-        Subscription                                 _replyOwner; ///< 라우터 답의 주인 몫(`initialize` 가 열고 `shutdown` 이 놓는다)
+        EphemeralStoreRouter* _pRouter;
+        Subscription          _replyOwner; ///< 라우터 답의 주인 몫(`initialize` 가 열고 `shutdown` 이 놓는다)
     };
 } // namespace sw

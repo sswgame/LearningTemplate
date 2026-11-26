@@ -82,8 +82,8 @@ namespace sw
                         return ServiceStoreResult::Unavailable; // 읽기에 Conflict 는 없다(계약) - 직렬화 실패 · 교착이 그대로 올라가 호출한 쪽이 커밋이 어긋난 것으로 읽었다
                     if ( _rowSet._listRow.empty() )
                         return ServiceStoreResult::NotFound;
-                    outRecord._bytes   = std::move( _rowSet._listRow[0][0]._bytes );
-                    outRecord._version = static_cast<uint64>( _rowSet._listRow[0][1]._integer );
+                    accessBytes( outRecord ) = std::move( _rowSet._listRow[0][0]._bytes );
+                    outRecord._version       = static_cast<uint64>( _rowSet._listRow[0][1]._integer );
                     return ServiceStoreResult::Ok;
                 }
 
@@ -164,7 +164,7 @@ namespace sw
                     {
                         ServiceRecord& record = outListRecord.emplace_back();
                         record._key           = string( row[0].getText() );
-                        record._bytes         = std::move( row[1]._bytes );
+                        accessBytes( record ) = std::move( row[1]._bytes );
                         record._version       = static_cast<uint64>( row[2]._integer );
                     }
                     return SQLResult::Ok;
@@ -222,13 +222,13 @@ namespace sw
                         bool           bMatched = true;
                         if ( write._kind == ServiceWrite::Kind::Put && ( bAny || bAbsent ) )
                         {
-                            const SQLValue arrParam[] = { table, key, makeBytesValue( write._bytes ), SQLValue::makeInt64( commitVersion ) };
+                            const SQLValue arrParam[] = { table, key, makeBytesValue( accessBytes( write ) ), SQLValue::makeInt64( commitVersion ) };
                             result                    = _connection.execute( bAny ? kUpsertSQL : kInsertAbsentSQL, arrParam, 4, &_rowSet );
                             bMatched                  = bAny || _rowSet._affectedRowCount == 1;
                         }
                         else if ( write._kind == ServiceWrite::Kind::Put )
                         {
-                            const SQLValue arrParam[] = { makeBytesValue( write._bytes ), SQLValue::makeInt64( commitVersion ), table, key,
+                            const SQLValue arrParam[] = { makeBytesValue( accessBytes( write ) ), SQLValue::makeInt64( commitVersion ), table, key,
                                                           SQLValue::makeInt64( static_cast<int64>( write._expectedVersion ) ) };
                             result                    = _connection.execute( kUpdateVersionedSQL, arrParam, 5, &_rowSet );
                             bMatched                  = _rowSet._affectedRowCount == 1;

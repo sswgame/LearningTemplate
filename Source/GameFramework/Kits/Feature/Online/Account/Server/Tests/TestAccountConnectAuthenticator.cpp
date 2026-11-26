@@ -118,7 +118,7 @@ SW_TEST_CASE( AccountConnectAuthenticatorTest, IssuedTicketFindsSecretAndAccount
     SW_EXPECT_EQUAL( kAccount, principalID );
     for ( int32 index = 0; index < NetGameTicket::kSecretSize; ++index )
     {
-        SW_EXPECT_EQUAL( rig._ticket._arrSecret[index], secret._arrByte[index] );
+        SW_EXPECT_EQUAL( rig._ticket._secret.reveal()[index], secret._arrByte[index] );
     }
 }
 

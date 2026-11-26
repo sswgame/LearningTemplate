@@ -3,7 +3,7 @@
  * @brief 게임 모듈의 수명 주기를 관리합니다. 라이브러리 로드, 게임 API 바인딩, 게임 업데이트, 게임 쪽 핫 리로드를 맡으며 App 과 Server 가 함께 씁니다.
  *
  * @note 호스트와 모듈 사이 계약(ModuleAPI)의 수명 주기를 실행 파일 쪽에서 맡습니다. 에디터 인스턴스, 에디터 리로드, 에디터 UI, RHI 교체 뒤의
- *       재초기화의 호스트 몫은 App 전용 `ClientModuleManager`(Source/App)가 이 클래스 위에 구현합니다(장치 교체의 순서는 이 클래스 — `applyPendingDeviceChange`). 의존은 그쪽에서 여기로 한 방향입니다.
+ *       재초기화의 호스트 몫은 개발 전용 `EditorGameModuleManager`(DevTools/Host — 배포는 짓지 않는다)가 이 클래스 위에 구현합니다(장치 교체의 순서는 이 클래스 — `applyPendingDeviceChange`). 의존은 그쪽에서 여기로 한 방향입니다.
  * @note 모듈을 잇는 방식(개발은 동적 라이브러리 · 리로드 매니저, 배포는 정적 링크)에 따라 다른 함수는 `GameModuleManager.cpp` 의 `SW_WITH_DYNAMIC_MODULES` 구역 한 파일이
  *       `SW_WITH_DYNAMIC_MODULES` 로 가른다. 나머지는 `GameModuleManager.cpp` 하나다.
  */
@@ -14,6 +14,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Subsystem/SubsystemScope.h"
 
+#include "Engine/Graphics/View/FrameViewports.h"
 #include "Engine/Module/HostInterfaces.h"
 
 #include "ModuleAPI/ABI/GameAPI.h"
@@ -27,6 +28,9 @@ namespace sw
 {
     struct ModuleAPISymbols;
     struct ModuleResolution;
+    struct NativeWindowEvent;
+
+    class CameraComponent;
 
     class IEngineRenderDriver;
     class GenericWindow;
@@ -58,7 +62,7 @@ namespace sw
      * @brief 한 프레임 동안 고정되는 호스트 ↔ 모듈 상태입니다.
      * @details 에디터 상태는 DLL 경계를 넘는 함수 포인터 호출로만 알 수 있다. 고정 스텝마다 다시 묻지 않고 한 번 고정해,
      *          프레임 안의 모든 단계가 같은 답을 보게 한다. 필드는 값이 만들어지는 곳에서 채운다. 게임플레이 활성 여부는
-     *          beginFrame(게임 업데이트 전)에서, 씬 틱 여부는 updateEditorUI(에디터가 이번 프레임 입력을 처리한 뒤)에서
+     *          beginFrame(게임 업데이트 전)에서, 씬 틱 여부는 updateHostModuleUI(에디터가 이번 프레임 입력을 처리한 뒤)에서
      *          채운다. 순서를 바꾸면 에디터의 Step 한 번이 틱 없이 소비된다.
      */
     struct ModuleFrameState
@@ -92,7 +96,7 @@ namespace sw
      * @brief 게임 모듈의 수명 주기와 게임 API 바인딩을 감쌉니다(App 과 Server 공통).
      *
      * @details
-     *   실행 파일이 unique_ptr 로 소유합니다. 전용 서버는 이 클래스를 그대로(`initializeDedicatedServer`), App 은 파생 클래스 `ClientModuleManager` 를 씁니다.
+     *   실행 파일이 unique_ptr 로 소유합니다. 전용 서버는 이 클래스를 그대로(`initializeDedicatedServer`), App 은 이 클래스를, 에디터를 켠 개발 실행(`-EnableEditor`)은 개발 계층이 만든 파생 클래스 `EditorGameModuleManager` 를 씁니다.
      *   - 핫 리로드 때 onBefore/onAfter 콜백이 자동으로 불립니다.
      *   - 모듈을 언로드하는 경로는 `suspendModules` 하나입니다. 호스트 모듈(에디터)이 끼어드는 지점은 아래 보호 가상 함수들입니다.
      *
@@ -118,7 +122,7 @@ namespace sw
         /**
          * @brief 타입 공급자 모듈(GameFramework, 키트, SWGame)의 라이브러리를 로드해 그 타입을 등록합니다. 인스턴스는 만들지 않습니다.
          * @details 기동 단계 `ModuleLoadStage` 의 호스트 로더(`App`, `Server`)가 부릅니다. 이것이 끝나야 엔진이 씬을 읽습니다. 게임 인스턴스는
-         *          그 뒤 기동 함수(`initializeDedicatedServer`, `ClientModuleManager::initialize`)가 만듭니다. Shipping 은 모듈이 정적 링크라 로드할 것이 없습니다.
+         *          그 뒤 기동 함수(`initializeDedicatedServer`, `initializeClient`)가 만듭니다. Shipping 은 모듈이 정적 링크라 로드할 것이 없습니다.
          *          무엇을 어떤 순서로 로드할지는 모듈 매니페스트의 해석 결과(@p resolution)가 정합니다. 켜진 GameFramework, 키트, SWGame 을 로드 순서대로
          *          (의존이 먼저) 로드합니다. 키트의 리로드 의존은 매니페스트의 `_listDependency` 입니다.
          * @param pLiveReloadManager Dev 모드 전용 모듈 매니저(Shipping 에서는 nullptr)
@@ -163,6 +167,29 @@ namespace sw
 
         /** @brief 이번 프레임의 모듈 상태를 반환합니다. beginFrame 뒤에만 유효합니다. */
         const ModuleFrameState& getFrameState() const { return _frameState; }
+        /** @brief 호스트 모듈(에디터)이 이번 프레임에 그려 달라고 요청한 게임 뷰와 씬 뷰 RT 입니다(`updateHostModuleUI` 가 샘플한다). 둘 다 비면 백버퍼에 바로 그립니다. */
+        const FrameViewports& getViews() const { return _views; }
+        /**
+         * @brief 클라이언트 호스트(App)의 기동입니다 — 콜백을 등록하고 게임 인스턴스를 만듭니다(게임 모듈 라이브러리는 `loadModuleLibraries` 가 이미 로드했습니다).
+         * @details 에디터 구성(`DevTools/Host/EditorGameModuleManager` — 개발 계층이 만든다)은 게임 다음에 에디터를 세운다. 전용 서버는 `initializeDedicatedServer` 다.
+         */
+        [[nodiscard]] virtual bool initializeClient( ILiveReloadManager* pLiveReloadManager, RHI* pRHI, GenericWindow* pWindow, IEngineRenderDriver* pRenderDriver )
+        {
+            return initializeGame( pLiveReloadManager, pRHI, pWindow, pRenderDriver );
+        }
+        // 호스트 모듈(에디터)의 프레임 지점 — App 이 프레임마다 부른다. 이 클래스(배포 App · 전용 서버)는 아무것도 하지 않는다.
+        /** @brief 호스트 모듈의 UI 프레임을 돌리고 그 결과(뷰 RT, 씬 틱 여부, 다시 그릴 까닭)를 프레임 상태에 확정합니다. 게임 업데이트 뒤 · 페이싱 앞에 부릅니다. */
+        virtual void updateHostModuleUI() {}
+        /** @brief 월드 틱 뒤에 호스트 모듈의 프레임을 닫습니다(에디터의 Step 소비). */
+        virtual void endHostModuleFrame() {}
+        /** @brief 네이티브 창 이벤트를 호스트 모듈에 먼저 보냅니다. @return 호스트 모듈이 가로챘으면 true 입니다(게임 입력에 넘기지 않는다). */
+        [[nodiscard]] virtual bool processHostModuleEvent( const NativeWindowEvent& event )
+        {
+            (void)event;
+            return false;
+        }
+        /** @brief 이번 프레임에 씬 뷰를 그리는 호스트 모듈의 카메라입니다. 호스트 모듈이 없으면 nullptr 입니다. */
+        virtual CameraComponent* getSceneViewCamera() const { return nullptr; }
         /** @brief 모듈 컴파일러입니다(개발 잇기만 만든다 — 배포는 nullptr). 에디터 모듈의 서비스 범위에 `IModuleCompiler` 로 건다(`fillModuleServiceScope`). */
         IModuleCompiler* getModuleCompiler() const { return _moduleCompiler.get(); }
 
@@ -247,7 +274,9 @@ namespace sw
         void rebindModuleService( void ( *bindService )( const ISubsystemLocator* pService ), unique_ptr<SubsystemScope>& inoutServices, bool bGameModule ) const;
 
         /** @brief 이번 프레임 상태를 호스트 모듈이 채웁니다(뷰 RT, 씬 틱 여부). */
-        ModuleFrameState&   getMutableFrameState() { return _frameState; }
+        ModuleFrameState& getMutableFrameState() { return _frameState; }
+        /** @brief 이번 프레임의 뷰 요청을 호스트 모듈이 채웁니다(인스턴스를 없앨 때는 비운다). */
+        FrameViewports&     getMutableViews() { return _views; }
         ILiveReloadManager* getLiveReloadManager() const { return _pLiveReloadManager; }
         /** @brief 리로드 매니저에 건 콜백의 구독을 이 객체의 수명에 묶습니다(`shutdown` 이 놓는다). */
         void holdReloadSubscription( Subscription subscription ) { _listReloadSubscription.push_back( std::move( subscription ) ); }
@@ -389,6 +418,8 @@ namespace sw
 
         /** @brief 이번 프레임에 고정한 모듈 상태입니다. */
         ModuleFrameState _frameState;
+        /** @brief 이번 프레임에 호스트 모듈이 요청한 뷰입니다(호스트 모듈이 없으면 늘 비어 있다). */
+        FrameViewports _views;
         /**
          * @brief 리로드 매니저에 건 이 객체의 콜백(모듈마다의 칸 · 배치 직전 · 워커 비우기)입니다. `shutdown` 이 놓고, 놓지 않았어도 이 객체와 함께 풀립니다.
          * @details 파생 클래스(에디터 모듈 호스트)도 자기 모듈의 칸을 여기에 담습니다(`holdReloadSubscription`).

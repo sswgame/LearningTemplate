@@ -9,11 +9,13 @@
 #include "Core/Concurrency/thread.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Subsystem/Subsystem.h"
 
 #include "DevTools/DevToolsAPI.h"
 
+#include "Engine/Config/ConfigFileID.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
@@ -59,16 +61,19 @@ namespace sw
         {
             REFLECT_BODY();
 
+            static constexpr ConfigFileID<RetentionSettings> kConfigFile{ "Config/Dev/SavedCleanup.json" };
+
             PROPERTY( Required )
             int64 _minAgeSeconds{ 0 }; ///< 이보다 최근에 바뀐 것은 지우지 않는다 — 나란히 도는 프로세스의 것일 수 있다
             PROPERTY( Required )
             string _trashFolder; ///< 버릴 것을 먼저 옮기는 자리 — 지우기는 뒤에서, 다음 기동이 남은 것을 이어 지운다
             PROPERTY( Required )
             vector<RetentionRule> _listRule;
+
+            /** @brief 폴더 이름이 비지 않았는지 봅니다(`ConfigManager::readConfig` 가 부른다). */
+            [[nodiscard]] expected<void> validate() const;
         };
 
-        /** @brief 규칙 파일을 읽습니다. 없거나 칸이 빠졌거나 틀리면 오류를 남기고 false 입니다(기본값으로 지우지 않는다). */
-        [[nodiscard]] static bool readSettings( RetentionSettings& outSettings );
         /** @brief 규칙대로 오래된 산출물을 버릴 자리로 옮기고 그 자리를 비웁니다(일꾼 스레드 본문). */
         static void run( const StopToken& stopToken );
 

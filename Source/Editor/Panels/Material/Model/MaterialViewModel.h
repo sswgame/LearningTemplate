@@ -25,6 +25,8 @@ namespace sw
 
 namespace sw::editor
 {
+    class AssetWriter;
+
     class DocumentEditRecorder;
     /**
      * @class MaterialViewModel
@@ -43,7 +45,7 @@ namespace sw::editor
         /** @brief @p path 의 머티리얼을 읽고 입력란을 맞춥니다. 읽지 못하면 상태 줄에 알리고 Malformed 입니다. */
         ToolAssetLoadResult loadDocument( string_view path );
         /** @brief 입력란을 사본에 옮겨 @p path 에 쓰고, 엔진 캐시를 다시 읽혀 바로 보이게 합니다. 성공하면 true 입니다(dirty 해제 · 되돌리기 기준은 패널이 한다). */
-        [[nodiscard]] bool saveDocument( string_view path );
+        [[nodiscard]] bool saveDocument( AssetWriter& writer, string_view path );
         string             captureText() const;
         /** @brief 되돌리기 기록 글로 사본을 되돌리고 @p path 의 캐시 사본에 보입니다. 읽지 못하면 사본을 그대로 둡니다. */
         void applyText( string_view text, string_view path );

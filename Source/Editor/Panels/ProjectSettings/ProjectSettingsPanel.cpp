@@ -4,6 +4,7 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/Log/LogOnce.h"
+#include "Core/Math/Color.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
@@ -13,7 +14,6 @@
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
 #include "Editor/Common/Config/EditorPaths.h"
-#include "Editor/Common/EditorColor.h"
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
@@ -126,7 +126,7 @@ namespace sw::editor
             clearDocumentDirty();
     }
 
-    bool ProjectSettingsPanel::saveDocument()
+    bool ProjectSettingsPanel::saveDocument( AssetWriter& writer )
     {
         bool bAllSaved = true;
         for ( const unique_ptr<Page>& pPage : _listPage )
@@ -134,12 +134,12 @@ namespace sw::editor
             if ( pPage->_bDirty == false )
                 continue;
             bool bApplied = false;
-            bAllSaved     = pPage->saveDocument( bApplied ) && bAllSaved;
+            bAllSaved     = pPage->saveDocument( writer, bApplied ) && bAllSaved;
         }
         return bAllSaved;
     }
 
-    void ProjectSettingsPanel::collectFilesToSave( vector<AbsolutePath>& outListPath ) const
+    void ProjectSettingsPanel::collectFilesToSave( vector<DiskPath>& outListPath ) const
     {
         for ( const unique_ptr<Page>& pPage : _listPage )
         {
@@ -148,7 +148,7 @@ namespace sw::editor
         }
     }
 
-    ProjectSettingsPage* ProjectSettingsPanel::findPage( const AbsolutePath& absolutePath ) const
+    ProjectSettingsPage* ProjectSettingsPanel::findPage( const DiskPath& absolutePath ) const
     {
         for ( const unique_ptr<Page>& pPage : _listPage )
         {
@@ -158,7 +158,7 @@ namespace sw::editor
         return nullptr;
     }
 
-    expected<string> ProjectSettingsPanel::tryMakeFileText( const AbsolutePath& absolutePath ) const
+    expected<string> ProjectSettingsPanel::tryMakeFileText( const DiskPath& absolutePath ) const
     {
         const Page* pPage = findPage( absolutePath );
         if ( pPage == nullptr )
@@ -166,17 +166,17 @@ namespace sw::editor
         return pPage->tryMakeText();
     }
 
-    bool ProjectSettingsPanel::isEditingFile( const AbsolutePath& absolutePath )
+    bool ProjectSettingsPanel::isEditingFile( const DiskPath& absolutePath )
     {
         if ( _bCatalogLoaded == false )
             reloadCatalog(); // 복원이 이 창을 막 열었다 — 목록은 그리기가 처음 만든다
         return findPage( absolutePath ) != nullptr;
     }
 
-    bool ProjectSettingsPanel::applyFileText( const AbsolutePath& absolutePath, const string& text )
+    bool ProjectSettingsPanel::applyFileText( const DiskPath& absolutePath, const string& text )
     {
         Page* pPage = findPage( absolutePath );
-        if ( pPage == nullptr || pPage->restoreText( text ) == false )
+        if ( pPage == nullptr || pPage->restoreText( getAssetWriter(), text ) == false )
             return false;
         selectPage( *pPage );
         resetHistory(); // 갈아 끼운 문서의 단계는 남지 않는다
@@ -190,7 +190,7 @@ namespace sw::editor
         {
             if ( pPage->_bDirty == false )
                 continue;
-            pPage->revert();
+            pPage->revert( getAssetWriter() );
         }
         resetHistory(); // 되돌린 문서는 기록을 비웠다
     }
@@ -236,7 +236,7 @@ namespace sw::editor
         _pSelected = &page;
         _tableView.resetDraft();
         if ( page._bOpened == false )
-            page.open();
+            page.open( getAssetWriter() );
         _history.selectPage( page, SW_DELEGATE_METHOD( ProjectSettingsMovedDelegate, &ProjectSettingsPanel::onUndoMoved, this ) );
     }
 
@@ -309,7 +309,7 @@ namespace sw::editor
         if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Save" ), SW_LOCKEY( "EdVerb", "Save" ), "Save" ) ) )
         {
             bool bApplied = false;
-            if ( page.saveDocument( bApplied ) )
+            if ( page.saveDocument( getAssetWriter(), bApplied ) )
             {
                 _statusText = bApplied ? "Saved - the running host reloaded the file" : ( bTable ? "Saved - read again by its tool or on the next start" : "Saved - applies on the next start" );
                 refreshDirtyState();
@@ -326,7 +326,7 @@ namespace sw::editor
         if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Undo" ), SW_LOCKEY( "EdVerb", "Revert" ), "Revert" ) ) )
         {
             _tableView.resetDraft();
-            page.revert();
+            page.revert( getAssetWriter() );
             resetHistory(); // 다시 읽은 문서는 기록을 비웠다 — 다른 페이지의 단계도 함께 버린다
             refreshDirtyState();
             _statusText = "Reverted to the file";

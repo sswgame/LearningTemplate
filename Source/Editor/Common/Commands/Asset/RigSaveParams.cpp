@@ -7,6 +7,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 
+#include "Editor/Common/Asset/AssetWriter.h"
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
 
@@ -26,9 +27,9 @@ namespace sw::editor
         struct RigFileRewriteInternal
         {
             /** @brief 디스크의 글을 쓰는 되돌리기 절차 하나입니다(되돌리기 · 다시 하기가 그 글을 다시 쓴다 — 파일 감시가 리그를 다시 읽는다). */
-            static void writeRigText( const string& writePath, const string& text )
+            static void writeRigText( const string& writePath, const string& expectedText, const string& text )
             {
-                if ( FileUtil::writeTextFile( FileUtil::toDiskPath( writePath ), text ) == false )
+                if ( AssetWriter::replaceText( FileUtil::toDiskPath( writePath ), expectedText, text ) == false )
                     SW_LOG_ERROR_ID( "RigDebugPanel.RigFileCouldNot", "Rig file '%#' could not be written", writePath.c_str() );
             }
 
@@ -140,25 +141,23 @@ namespace sw::editor
 
     string RigSaveParams::writeToRigFile( const PoseModifierComponent& modifier, const RigSaveParams& params, const utf8* pUndoLabel )
     {
-        EditorTransaction            transaction; // 씬을 바꾸는 기록은 거래 구간 안에서만 한다(`EditorTransaction` 의 기록 함수는 인스턴스 멤버다)
-        const string_view            rigPath  = modifier.getRigPath();
-        const optional<AbsolutePath> readPath = EditorPaths::getAssetPaths().findLooseFile( rigPath );
-        string                       text;
-        if ( readPath.has_value() == false || FileUtil::readTextFile( *readPath, text ) == false )
+        EditorTransaction        transaction; // 씬을 바꾸는 기록은 거래 구간 안에서만 한다(`EditorTransaction` 의 기록 함수는 인스턴스 멤버다)
+        const string_view        rigPath  = modifier.getRigPath();
+        const optional<DiskPath> readPath = EditorPaths::getAssetPaths().findLooseFile( rigPath );
+        AssetWriter              writer;
+        string                   text;
+        if ( readPath.has_value() == false || writer.readText( *readPath, text ) == false )
             return string( "The rig file could not be read" );
         string rewritten;
         if ( rewriteSettings( text, rigPath, params, rewritten ) == false )
             return string( "The rig was not saved - see the log" );
-        const optional<AbsolutePath> rigFile = EditorPaths::getAssetPaths().toDiskPath( rigPath );
-        if ( rigFile.has_value() == false )
-            return string( "The rig file could not be written" );
-        const AbsolutePath writePath = *rigFile;
-        if ( FileUtil::writeTextFile( writePath, rewritten ) == false )
+        const DiskPath& writePath = *readPath;
+        if ( writer.writeText( writePath, rewritten ) == false )
             return string( "The rig file could not be written" );
         if ( pUndoLabel != nullptr )
         {
-            transaction.push( SW_UNDO_STEP( RigFileRewriteInternal::writeRigText, writePath.str(), text ),
-                              SW_UNDO_STEP( RigFileRewriteInternal::writeRigText, writePath.str(), rewritten ), pUndoLabel );
+            transaction.push( SW_UNDO_STEP( RigFileRewriteInternal::writeRigText, writePath.str(), rewritten, text ),
+                              SW_UNDO_STEP( RigFileRewriteInternal::writeRigText, writePath.str(), text, rewritten ), pUndoLabel );
         }
         SW_LOG_INFO_ID( "RigDebugPanel.RigSettingsSaved", "Rig settings saved to %#", writePath.c_str() );
         return string( kSavedStatus );

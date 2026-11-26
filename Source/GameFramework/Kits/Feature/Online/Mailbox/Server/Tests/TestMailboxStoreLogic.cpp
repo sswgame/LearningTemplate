@@ -8,6 +8,7 @@
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
 #include "GameFramework/Runtime/Online/Mail/Server/ServiceMail.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordTable.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
 using namespace sw;
@@ -329,7 +330,7 @@ namespace
             {
                 ++_cutCount;
                 ServiceTransaction ending;
-                ending.put( ServiceMailCampaign::getCampaignTable(), ServiceKeyUtil::makeHex64( kCampaignID ), ServiceMailCampaign::encode( makeCampaign( kNowMs + 500 ) ) );
+                ending.put( ServiceMailCampaign::getCampaignTable(), ServiceKeyUtil::makeHex64( kCampaignID ), makeCampaign( kNowMs + 500 ) );
                 SW_EXPECT_TRUE( _database.commit( ending ) == ServiceStoreResult::Ok );
             }
             return _database.commit( transaction, pOutInfo );

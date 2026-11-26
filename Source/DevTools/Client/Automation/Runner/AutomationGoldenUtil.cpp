@@ -3,7 +3,6 @@
 #include "DevTools/Client/Automation/Runner/AutomationGoldenUtil.h"
 
 #include "Core/CommandLine/CommandLineManager.h"
-#include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
 #include "Core/Process/Process.h"
 #include "Core/String/StringBuilder.h"
@@ -11,7 +10,6 @@
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/RHIBackendInfo.h"
-#include "Engine/Serialization/JSON/JSONDocument.h"
 #include "Engine/Serialization/JSON/JSONWriter.h"
 
 namespace sw
@@ -23,8 +21,6 @@ namespace sw
             static constexpr string_view kImageExtension = ".ppm";
             static constexpr string_view kMetaExtension  = ".golden.json";
             static constexpr int32       kMetaIndent     = 4;
-
-            static bool isFraction( float64 value ) { return value >= 0.0 && value <= 1.0; }
 
             static void writeDifference( JSONWriter& writer, const AutomationImageDifference& difference )
             {
@@ -43,51 +39,6 @@ namespace sw
 
 namespace sw
 {
-    expected<AutomationGoldenPolicy> AutomationGoldenUtil::parsePolicy( string_view jsonText, string_view sourceName )
-    {
-        using Internal = AutomationGoldenInternal;
-        JSONDocument document;
-        if ( document.parse( jsonText, sourceName ) == false )
-            return unexpected( Error{ ErrorKind::InvalidArgument, "the golden policy is not JSON", sourceName } );
-        const JSONValue         root           = document.getRoot();
-        const optional<uint32>  differing      = root.readRequired<uint32>( "_differingMinDistance" );
-        const optional<uint32>  deep           = root.readRequired<uint32>( "_deepMinDistance" );
-        const optional<float64> maxFraction    = root.readRequired<float64>( "_maxDifferingFraction" );
-        const optional<float64> maxMean        = root.readRequired<float64>( "_maxMeanDistance" );
-        const optional<uint32>  maxRegion      = root.readRequired<uint32>( "_maxDeepRegionPixels" );
-        const optional<float64> nearLimitRatio = root.readRequired<float64>( "_nearLimitRatio" );
-        const optional<uint32>  advanceDrawn   = root.readRequired<uint32>( "_advanceDrawnFrames" );
-        const bool              bAllRead       = differing.has_value() && deep.has_value() && maxFraction.has_value() && maxMean.has_value() && maxRegion.has_value() && nearLimitRatio.has_value() &&
-                              advanceDrawn.has_value();
-        if ( bAllRead == false )
-            return unexpected( Error{ ErrorKind::InvalidArgument,
-                                      "the golden policy needs _differingMinDistance, _deepMinDistance, _maxDifferingFraction, _maxMeanDistance, _maxDeepRegionPixels, _nearLimitRatio, _advanceDrawnFrames",
-                                      sourceName } );
-        const bool bDistancesInRange = *differing >= 1 && *differing <= AutomationImage::kMaxColorDistance && *deep >= *differing && *deep <= AutomationImage::kMaxColorDistance;
-        const bool bLimitsInRange    = Internal::isFraction( *maxFraction ) && Internal::isFraction( *maxMean ) && *nearLimitRatio > 0.0 && *nearLimitRatio < 1.0;
-        if ( bDistancesInRange == false || bLimitsInRange == false )
-            return unexpected( Error{ ErrorKind::InvalidArgument,
-                                      "the golden policy is out of range (distances 1..765 with deep >= differing, fractions 0..1, _nearLimitRatio between 0 and 1)", sourceName } );
-        AutomationGoldenPolicy policy;
-        policy._measure._differingMinDistance = *differing;
-        policy._measure._deepMinDistance      = *deep;
-        policy._limits._maxDifferingFraction  = *maxFraction;
-        policy._limits._maxMeanDistance       = *maxMean;
-        policy._limits._maxDeepRegionPixels   = *maxRegion;
-        policy._nearLimitRatio                = *nearLimitRatio;
-        policy._advanceDrawnFrames            = *advanceDrawn;
-        return policy;
-    }
-
-    expected<AutomationGoldenPolicy> AutomationGoldenUtil::loadPolicy()
-    {
-        const AbsolutePath path = ProcessRoots::get()._project.join( kPolicyFile );
-        string             text;
-        if ( FileUtil::readTextFile( path, text ) == false )
-            return unexpected( Error{ ErrorKind::NotFound, "could not read the golden policy", path.str() } );
-        return parsePolicy( text, path.str() );
-    }
-
     GoldenResult AutomationGoldenUtil::evaluate( const AutomationImageDifference& difference, const AutomationGoldenLimits& limits, float64 nearLimitRatio )
     {
         const float64 region    = static_cast<float64>( difference._largestDeepRegionPixels );

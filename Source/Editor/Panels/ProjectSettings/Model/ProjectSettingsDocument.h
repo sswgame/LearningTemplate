@@ -20,6 +20,8 @@ namespace sw
 
 namespace sw::editor
 {
+    class AssetWriter;
+
     /**
      * @class ProjectSettingsDocument
      * @brief 설정 타입 하나의 현재 값과 기본값 인스턴스를 만들어 두고, 파일과 주고받습니다.
@@ -42,7 +44,7 @@ namespace sw::editor
          * @return `Loaded` 면 파일 값을 입혔고, `Missing` 이면 파일(요소 모드는 요소)이 없어 기본값입니다. `Invalid` 면 파일이 틀렸거나 타입에 기본 생성자가 없어 열지 못했습니다.
          *         `Invalid` 일 때도 가능하면 기본값 인스턴스를 보관하고 있어, 창이 오류를 보이며 Reset 으로 고칠 수 있습니다.
          */
-        [[nodiscard]] ConfigReadResult open( const TypeInfo& type, const AbsolutePath& absolutePath, string_view elementName = {} );
+        [[nodiscard]] ConfigReadResult open( const TypeInfo& type, const DiskPath& absolutePath, string_view elementName = {} );
         /** @brief 인스턴스를 해제합니다. */
         void shutdown();
 
@@ -55,7 +57,7 @@ namespace sw::editor
          * @details 저장하면 마지막으로 저장한 글을 바꿔 `isModified` 가 false 가 된다. 요소 모드는 그 요소만 바꾸고(없으면 루트 맨 앞에 넣는다),
          *          파일이 없거나 쓴 글을 다시 읽어 같은 값이 아니거나 필수 필드가 빠졌으면 쓰지 않고 false 다.
          */
-        [[nodiscard]] bool saveDocument();
+        [[nodiscard]] bool saveDocument( AssetWriter& writer );
 
         /** @brief 열려 있으면 true 입니다(인스턴스가 있다). */
         [[nodiscard]] bool isOpen() const { return _current.isValid(); }
@@ -102,13 +104,13 @@ namespace sw::editor
         [[nodiscard]] expected<string> makeDifferenceJSON() const;
         [[nodiscard]] expected<string> makeDifferenceElement() const;
         /** @brief 요소 모드의 저장 — 파일에서 그 요소의 글만 @p elementText 로 바꿔 씁니다. */
-        [[nodiscard]] bool saveElement( const string& elementText ) const;
+        [[nodiscard]] bool saveElement( AssetWriter& writer, const string& elementText ) const;
 
     private:
         const TypeInfo*   _pType;
         ReflectedInstance _current; ///< 편집할 현재 값(타입의 기본 생성자로 만든다)
         ReflectedInstance _default; ///< 기본값
-        AbsolutePath      _path;
+        DiskPath          _path;
         string            _elementName; ///< 비면 파일 전체(JSON), 있으면 XML 파일 안의 그 요소
 
         EditorDocumentState<string> _state; ///< 마지막으로 읽거나 저장한 차이 글

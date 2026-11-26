@@ -28,6 +28,7 @@
 #include "Core/Foundation/Types.h"
 
 #include "GameFramework/Kits/Feature/Online/Account/Server/LoginTypes.h"
+#include "GameFramework/Kits/Feature/Online/Account/Server/Rule/LoginStoreRecords.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Service/LoginTicketAuthority.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceReadSetConnection.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceTTLRule.h"
@@ -193,7 +194,7 @@ namespace sw
         [[nodiscard]] static ServiceStoreResult readIdentityByDisplayName( IServiceStoreConnection& connection, string_view displayName, AccountIdentity& outIdentity );
 
     private:
-        LoginServiceResult recordFailure( string_view nameKey, const vector<uint8>& accountBytes, uint64 accountVersion, int64 nowMs, int64& outRetryAfterMs );
+        LoginServiceResult recordFailure( string_view nameKey, const LoginAccountRecord& readAccount, uint64 accountVersion, int64 nowMs, int64& outRetryAfterMs );
         /** @brief 로그인을 막는 제재(정지, 영구 정지)가 있으면 `AccountSuspended` 와 종료 시각, 사유를 @p outGrant 에 채웁니다. 읽지 못하면 `StoreUnavailable` 입니다. */
         LoginServiceResult evaluateSanction( uint64 accountID, int64 nowMs, LoginGrant& outGrant );
         /** @brief 이전 세션을 정책대로 거절하거나 묘비로 바꾸고, 새 세션과 계정에서 세션으로 가는 연결을 @p inoutTransaction 에 붙입니다. */

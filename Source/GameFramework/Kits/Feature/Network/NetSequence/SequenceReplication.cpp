@@ -75,8 +75,6 @@ namespace sw
 
     NetHandleResult SequenceReplicationServer::receive( NetSequenceMessage::SkipRequest, const NetMessageContext& context, const SequenceNetSkipRequestBody& body )
     {
-        if ( context._connectionID < 0 )
-            return NetHandleResult::Malformed;
         // 클라이언트가 보낸 값은 믿지 않는다: 살아 있는 재생 · 그 플레이어만의 재생 · 요청한 연결이 그 폰을 가진 연결일 때만 서버 재생을 끝낸다.
         // 위조 · 늦은 요청(이미 끝난 재생)은 셈만 한다 — 연결마다 로그를 남기면 요청으로 로그를 채울 수 있다.
         const Play*              pPlay   = findPlay( body._playID );

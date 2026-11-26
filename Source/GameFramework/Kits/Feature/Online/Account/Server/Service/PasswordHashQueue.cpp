@@ -50,7 +50,7 @@ namespace sw
     {
         // 해시 구현은 스레드 안전하다(`IPasswordHasher` 계약). 비밀번호 상한을 넘는 입력은 빈 글로 해시한다 — 느린 해시에 거대한 입력을 넣지 않는다(시간은 같다).
         const bool        bWithinLimit = _request._password.size() <= static_cast<size_t>( LoginConstant::kMaxPasswordSize );
-        const string_view password     = bWithinLimit ? string_view( _request._password ) : string_view{};
+        const string_view password     = bWithinLimit ? _request._password.reveal() : string_view{};
         bool              bComputed    = _request._specCount > 0;
         for ( int32 index = 0; index < _request._specCount && bComputed; ++index )
         {
@@ -59,7 +59,7 @@ namespace sw
                                                                                    LoginConstant::kPasswordHashSize );
         }
         _completion._bComputed = bComputed ? SW_TRUE : SW_FALSE;
-        StringUtil::wipeSecret( _request._password ); // 해시가 끝난 워커에서 비밀번호를 지운다
+        _request._password.wipe(); // 해시가 끝난 워커에서 비밀번호를 지운다
         _pOwner->markFinished( this );
     }
 
@@ -199,7 +199,7 @@ namespace sw
         (void)pollCompletions( outListCompletion );
         for ( unique_ptr<HashJob>& pWaiting : listWaiting )
         {
-            StringUtil::wipeSecret( pWaiting->_request._password );
+            pWaiting->_request._password.wipe();
             pWaiting->_completion._bCancelled = SW_TRUE;
             outListCompletion.push_back( pWaiting->_completion );
             returnSeat();

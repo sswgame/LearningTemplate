@@ -270,7 +270,7 @@ namespace sw
     {
         Archive archive;
         writeState( archive );
-        return FileUtil::ensureParentDirectoryExists( absPath ) && FileUtil::writeFile( absPath, archive.getData(), archive.getSize() );
+        return FileUtil::writeFile( absPath, archive.getData(), archive.getSize() );
     }
 
     bool PlayerStats::loadFromFile( const AbsolutePath& path )

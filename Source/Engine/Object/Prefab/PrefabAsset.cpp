@@ -1020,7 +1020,7 @@ namespace sw
                                  variantText.error().detail(), absPath.str() );
                 return false;
             }
-            if ( FileUtil::ensureParentDirectoryExists( absPath ) == false || FileUtil::writeFile( absPath, reinterpret_cast<const uint8*>( variantText->data() ), variantText->size() ) == false )
+            if ( FileUtil::writeFile( absPath, reinterpret_cast<const uint8*>( variantText->data() ), variantText->size() ) == false )
             {
                 SW_LOG_ERROR_ID( "PrefabAsset.FailedWritePrefabJSON2", "Failed to write prefab JSON: %#", absPath.str() );
                 return false;
@@ -1055,8 +1055,7 @@ namespace sw
             jsonStr = *nestedText;
         }
 
-        const bool writeOk = FileUtil::ensureParentDirectoryExists( absPath ) &&
-                             FileUtil::writeFile( absPath, reinterpret_cast<const uint8*>( jsonStr.data() ), jsonStr.size() );
+        const bool writeOk = FileUtil::writeFile( absPath, reinterpret_cast<const uint8*>( jsonStr.data() ), jsonStr.size() );
         if ( writeOk == false )
         {
             SW_LOG_ERROR_ID( "PrefabAsset.FailedWritePrefabJSON", "Failed to write prefab JSON: %#", absPath.str() );
@@ -1091,7 +1090,7 @@ namespace sw
             arch << node._name << node._prefabPath << node._attachKey << node._overrideXML << node._resolvedStateXML << node._partPath << node._parentIndex << node._localID;
         }
 
-        if ( FileUtil::ensureParentDirectoryExists( absPath ) == false || arch.saveToFile( absPath ) == false )
+        if ( arch.saveToFile( absPath ) == false )
         {
             SW_LOG_ERROR_ID( "PrefabAsset.FailedWritePrefabBinary", "Failed to write prefab binary: %#", absPath.str() );
             return false;

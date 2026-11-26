@@ -30,7 +30,7 @@ namespace
         {
             LoginSessionToken token;
             token._sessionID = kSessionID;
-            for ( uint8& byte : token._arrSecret )
+            for ( uint8& byte : token._secret.reveal() )
             {
                 byte = secretByte;
             }
@@ -398,7 +398,7 @@ SW_TEST_CASE( AccountClientTest, ResumeReplacesTheSecret )
     rig._service.setBody( AccountMethod::Resume::kID, AccountClientTestUtil::makeGrantBody( LoginResult::Ok, 9 ) );
     (void)rig._account.resume();
     SW_EXPECT_TRUE( rig.take()._result == LoginResult::Ok );
-    SW_EXPECT_EQUAL( uint8( 9 ), rig._account.getToken()._arrSecret[0] );
+    SW_EXPECT_EQUAL( uint8( 9 ), rig._account.getToken()._secret.reveal()[0] );
 }
 
 /** @brief [AccountClientTest] Hello 뒤 자동 재접속: 세션 요청을 보류해 모았다가, 성공하면 순서대로 보내고 보류를 푼다. 다른 키트의 요청도 그때 나간다 */
@@ -527,7 +527,7 @@ SW_TEST_CASE( AccountClientTest, LinkUpdatesIdentityOnly )
     (void)rig._account.linkCredential( "renamed", "password123" );
     SW_EXPECT_TRUE( rig.take()._result == LoginResult::Ok );
     SW_EXPECT_EQUAL( string( "renamed" ), rig._account.getIdentity()._displayName );
-    SW_EXPECT_EQUAL( uint8( 5 ), rig._account.getToken()._arrSecret[0] );
+    SW_EXPECT_EQUAL( uint8( 5 ), rig._account.getToken()._secret.reveal()[0] );
 }
 
 /** @brief [AccountClientTest] 밀려남 알림: 토큰을 버리고 이유 · 사유 코드를 이벤트로 낸다. 깨진 몸 · 모르는 종류는 무시하고 세션을 지킨다 */
@@ -592,10 +592,10 @@ SW_TEST_CASE( AccountClientTest, OutOfRangeRequestIsNotSent )
 SW_TEST_CASE( AccountClientTest, ConnectCredentialsCopyTheTicket )
 {
     NetGameTicket ticket;
-    ticket._arrToken[0]                               = 11;
-    ticket._arrToken[NetGameTicket::kTokenSize - 1]   = 12;
-    ticket._arrSecret[0]                              = 21;
-    ticket._arrSecret[NetGameTicket::kSecretSize - 1] = 22;
+    ticket._arrToken[0]                                     = 11;
+    ticket._arrToken[NetGameTicket::kTokenSize - 1]         = 12;
+    ticket._secret.reveal()[0]                              = 21;
+    ticket._secret.reveal()[NetGameTicket::kSecretSize - 1] = 22;
     NetConnectCredentials credentials;
     AccountClient::makeConnectCredentials( ticket, credentials );
     SW_EXPECT_EQUAL( NetGameTicket::kTokenSize, credentials._tokenSize );

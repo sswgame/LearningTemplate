@@ -6,7 +6,7 @@
  *          - `readRecord` 가 돌려준 버전(없으면 `kAbsentVersion`)을 표 · 키마다 기억한다. 같은 키를 다시 읽으면 새 버전으로 바꾼다.
  *          - `commit` 은 트랜잭션 뒤에 기억한 키마다 `requireVersion` 을 붙인다. 트랜잭션이 이미 그 키를 쓰면 조건을 덧붙이지 않고, 그 쓰기가 조건 없음(`kAnyVersion`)이면
  *            읽은 버전으로 바꾼다(읽고 덮어쓰는 갱신이 남의 커밋을 지우지 않게). 어긋나면 저장소가 `Conflict` 를 돌려주고 부르는 쪽이 다시 읽는다.
- *          - 커밋 뒤에는(결과와 상관없이) 읽은 것(키 · 범위)을 비운다. 그래서 한 시도(읽기 → 커밋 한 번)마다 새 포장을 두거나, 다시 시도할 때 판단에 쓴 레코드를 다시 읽는다.
+ *          - 커밋 뒤에는(결과와 상관없이) 읽은 것(키 · 범위)을 비운다. 시도마다 새 포장을 두는 것은 `ServiceCommitRunner` 다.
  *          - `listRecords` 도 인자(표 · 접두어 · 커서 · 개수 · 방향)와 결과 지문(키 · 버전 순서열)을 기억해 커밋에 범위 조건(`requireRange`)으로 건다. 저장소는 같은 트랜잭션 안에서
  *            범위를 다시 읽어 견주므로, 그사이 범위에 레코드가 들거나(팬텀) 빠지거나 바뀌면 Conflict 다 — 목록 · 개수로 판단하는 저장 함수(신청 수 · 허용 수 · 친구 수)가 부모 레코드를
  *            손으로 다시 쓰지 않아도 막힌다. 직렬화 가능 격리의 술어 잠금 자리이고, DB 의 next-key(간격) 잠금과 달리 잠그지 않고 커밋 때 다시 훑어 견준다(Hekaton 의 스캔 재검증).
@@ -37,9 +37,9 @@ namespace sw
         explicit ServiceReadSetConnection( IServiceStoreConnection& inner, ServiceStoreCommitStats* pStats = nullptr );
 
         [[nodiscard]] ServiceStoreResult readRecord( const hashed_string& table, string_view key, ServiceRecord& outRecord ) override;
-        [[nodiscard]] ServiceStoreResult commit( const ServiceTransaction& transaction, ServiceCommitInfo* pOutInfo = nullptr ) override;
 
     private:
+        [[nodiscard]] ServiceStoreResult commit( const ServiceTransaction& transaction, ServiceCommitInfo* pOutInfo = nullptr ) override;
         // 목록 읽기는 기반의 보호 입구(`ServiceRecordReader`)로만 온다 — 공개로 겹쳐 쓰면 저장 함수가 이 포장에서 한 쪽 읽기를 직접 부를 수 있다(감사 O-18).
         // 읽은 쪽(인자 · 결과 지문)을 기억해 다음 커밋에 범위 조건(`requireRange`)으로 건다
         [[nodiscard]] ServiceStoreResult listRecords( const hashed_string& table, string_view keyPrefix, string_view cursorKey, int32 maxCount, bool bDescending,

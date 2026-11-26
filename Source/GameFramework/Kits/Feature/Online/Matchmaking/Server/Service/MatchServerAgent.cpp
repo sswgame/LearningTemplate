@@ -9,6 +9,7 @@
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Runtime/MatchmakingProtocol.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Service/MatchQueueService.h"
 #include "GameFramework/Runtime/Online/Bus/MixedBuildCodec.h"
+#include "GameFramework/Runtime/Online/Cache/Server/EphemeralRecordTable.h"
 #include "GameFramework/Runtime/Online/Cache/Server/EphemeralStore.h"
 #include "GameFramework/Runtime/Online/Cache/Server/EphemeralStoreRouter.h"
 
@@ -20,11 +21,10 @@ namespace sw
         , _bReadRequested{ SW_FALSE }
         , _mapRecordToExpiresMs{}
         , _mapAccountToSeat{}
-        , _mapRequestToRecord{}
         , _pRouter{ nullptr }
         , _replyOwner{}
         , _serverID{ 0 }
-        , _listRequestID{ 0 }
+        , _bListPending{ SW_FALSE }
         , _nextListReadMs{ 0 }
         , _nowMs{ 0 }
         , _seatCapacity{ 0 }
@@ -59,11 +59,10 @@ namespace sw
     void MatchServerAgent::shutdown()
     {
         _replyOwner.reset(); // 기다리던 답이 이 객체를 부르지 않게 지운다
-        _mapRequestToRecord.clear();
         _mapRecordToExpiresMs.clear();
         _mapAccountToSeat.clear();
-        _listRequestID = 0;
-        _pRouter       = nullptr;
+        _bListPending = SW_FALSE;
+        _pRouter      = nullptr;
     }
 
     string MatchServerAgent::getAssignTopic() const
@@ -210,22 +209,21 @@ namespace sw
             else
                 ++recordIt;
         }
-        if ( _pRouter == nullptr || _listRequestID != 0 || ( _nowMs < _nextListReadMs && bReadRequested == false ) )
+        if ( _pRouter == nullptr || _bListPending != SW_FALSE || ( _nowMs < _nextListReadMs && bReadRequested == false ) )
             return;
         {
             ScopedLock<mutex> lock{ _mutex };
             _bReadRequested = SW_FALSE; // 이 읽기가 지금까지의 요청을 덮는다
         }
         _nextListReadMs = _nowMs + _policy._recordRefreshMs;
-        _listRequestID  = _pRouter->submit( EphemeralRequest::makeScoreRange( MatchQueueService::makeMatchListKey( _serverID ), 0, _policy._maxRecordCount ),
-                                            SW_DELEGATE_METHOD( EphemeralStoreRouter::ReplyDelegate, &MatchServerAgent::onListReply, this ), _replyOwner );
+        _bListPending   = SW_TRUE;
+        _pRouter->submit( EphemeralRequest::makeScoreRange( MatchQueueService::makeMatchListKey( _serverID ), 0, _policy._maxRecordCount ), _replyOwner, [this]( const EphemeralReply& reply )
+        { onListReply( reply ); } );
     }
 
     void MatchServerAgent::onListReply( const EphemeralReply& reply )
     {
-        if ( reply._requestID != _listRequestID )
-            return;
-        _listRequestID = 0;
+        _bListPending = SW_FALSE;
         if ( reply._result != EphemeralResult::Ok )
             return; // 목록이 없거나(배정이 없다) 캐시에 닿지 못했다. 다음 주기에 다시 읽는다
         const string listKey = MatchQueueService::makeMatchListKey( _serverID );
@@ -239,19 +237,13 @@ namespace sw
             if ( _mapRecordToExpiresMs.count( member._member ) != 0 )
                 continue;
             _mapRecordToExpiresMs[member._member] = member._score;
-            const uint64 requestID                = _pRouter->submit( EphemeralRequest::makeGet( MatchQueueService::makeMatchRecordKey( _serverID, member._member ) ),
-                                                                      SW_DELEGATE_METHOD( EphemeralStoreRouter::ReplyDelegate, &MatchServerAgent::onRecordReply, this ), _replyOwner );
-            _mapRequestToRecord[requestID]        = member._member;
+            _pRouter->submit( EphemeralRequest::makeGet( MatchQueueService::makeMatchRecordKey( _serverID, member._member ) ), _replyOwner, [this, recordName = member._member]( const EphemeralReply& recordReply )
+            { onRecordReply( recordName, recordReply ); } );
         }
     }
 
-    void MatchServerAgent::onRecordReply( const EphemeralReply& reply )
+    void MatchServerAgent::onRecordReply( const string& recordName, const EphemeralReply& reply )
     {
-        const auto requestIt = _mapRequestToRecord.find( reply._requestID );
-        if ( requestIt == _mapRequestToRecord.end() )
-            return;
-        const string recordName = requestIt->second;
-        _mapRequestToRecord.erase( requestIt );
         const auto recordIt = _mapRecordToExpiresMs.find( recordName );
         if ( recordIt == _mapRecordToExpiresMs.end() )
             return; // 읽는 사이에 시한이 지났다
@@ -262,11 +254,10 @@ namespace sw
         }
         if ( reply._result != EphemeralResult::Ok )
             return; // 수명이 다한 기록이다. 끝나는 시각까지 다시 읽지 않는다
-        MatchFormed          match;
-        const MixedBuildRead read = MixedBuildCodec::decode( reply._value.data(), reply._value.size(), MatchFormed::kBusVersion, match );
-        if ( read._result != MixedBuildReadResult::Read )
+        MatchFormed match;
+        if ( EphemeralRecordTable<MatchFormed>{}.decode( reply, match ) == false )
         {
-            SW_LOG_WARNING_ID( "MatchServerAgent.MatchRecordUnreadable", "MatchServerAgent: match record '%#' (version %#) could not be read - its players are refused", recordName, read._readVersion );
+            SW_LOG_WARNING_ID( "MatchServerAgent.MatchRecordUnreadable", "MatchServerAgent: match record '%#' could not be read (other build or corrupt) - its players are refused", recordName );
             return;
         }
         acceptMatch( match, recordIt->second );

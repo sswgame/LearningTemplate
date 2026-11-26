@@ -2,13 +2,14 @@
 
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Store/ServiceIdempotency.h"
 
+#include "GameFramework/Runtime/Online/Store/Server/ServiceCommitRunner.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
 namespace sw
 {
-    const hashed_string& ServiceIdempotency::getTable()
+    const ServiceOpaqueTable& ServiceIdempotency::getTable()
     {
-        static const hashed_string s_table{ "service_idempotency" };
+        static const ServiceOpaqueTable s_table{ "service_idempotency" };
         return s_table;
     }
 
@@ -26,12 +27,18 @@ namespace sw
         ServiceRecord            record;
         const ServiceStoreResult result = connection.readRecord( getTable(), makeKey( scope, keyHigh, keyLow ), record );
         if ( result == ServiceStoreResult::Ok )
-            outReplyBytes = std::move( record._bytes );
+            outReplyBytes = ServiceOpaqueTable::takeBytes( record ); // 답 바이트는 그 키트의 응답 형식이다 — 여기서는 뜻을 읽지 않는다
         return result;
     }
 
-    void ServiceIdempotency::addReply( ServiceTransaction& transaction, string_view scope, uint64 keyHigh, uint64 keyLow, vector<uint8> replyBytes )
+    ServiceStoreResult ServiceIdempotency::commit( ServiceCommitAttempt& attempt, ServiceTransaction& inoutTransaction, string_view scope, uint64 keyHigh, uint64 keyLow,
+                                                   vector<uint8> replyBytes )
     {
-        transaction.put( getTable(), makeKey( scope, keyHigh, keyLow ), std::move( replyBytes ), ServiceRecord::kAbsentVersion );
+        inoutTransaction.put( getTable(), makeKey( scope, keyHigh, keyLow ), std::move( replyBytes ), ServiceRecord::kAbsentVersion );
+        const ServiceStoreResult committed = attempt.commit( inoutTransaction );
+        if ( committed != ServiceStoreResult::Unavailable )
+            return committed;
+        vector<uint8> storedBytes;
+        return findReply( attempt, scope, keyHigh, keyLow, storedBytes ) == ServiceStoreResult::Ok ? ServiceStoreResult::Ok : ServiceStoreResult::Unavailable;
     }
 } // namespace sw

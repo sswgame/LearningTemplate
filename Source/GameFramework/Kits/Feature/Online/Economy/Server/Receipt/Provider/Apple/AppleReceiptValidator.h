@@ -50,7 +50,7 @@ namespace sw
         string           _baseURL{ kProductionBaseURL };
         string           _trustedRootsPem{}; ///< 애플 루트 인증서(Apple Root CA - G3) PEM
         ReceiptBuyerRule _buyerRule{};       ///< 설정의 `buyerBinding`(`ReceiptProviderManager`). 애플은 `AccountToken` 이나 명시적 `None` 이다
-        int64            _requestTimeoutMs{ 10000 };
+        int64            _requestTimeoutMs{ HTTPConstant::kDefaultTimeoutMs };
         int64            _historyPollIntervalMs{ 3600000 };
         int64            _historyLookbackMs{ 172800000 };  ///< 알림 기록을 지난 성공 조회 시각보다 이만큼 앞에서부터 읽는다(2 일)
         uint8            _bRequireAppleMarkers{ SW_TRUE }; ///< 리프와 발급 인증서의 애플 확장 표지를 요구한다. 끄는 것은 표지를 만들지 않는 가짜 사슬(테스트)뿐이다

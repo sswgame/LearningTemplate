@@ -11,6 +11,7 @@
 
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
+#include "Engine/Config/ConfigManager.h"
 #include "Engine/Foundation/EngineServices.h"
 
 namespace sw
@@ -95,7 +96,7 @@ namespace sw
         AbsolutePath              root;
         if ( pCommandLine == nullptr || pCommandLine->getArgument( CommandLineArgument::MEMORY_EXPORT, root ) == false )
             return;
-        const expected<MemorySnapshotPolicy> policy = MemorySnapshotPolicy::load();
+        const expected<MemorySnapshotPolicy> policy = ConfigManager::readConfig( MemorySnapshotPolicy::kConfigFile );
         if ( policy.has_value() == false )
         {
             SW_LOG_ERROR_ID( "MemoryExport.NoPolicy", "-memory-export: %# (%#)", policy.error().message(), policy.error().detail() );

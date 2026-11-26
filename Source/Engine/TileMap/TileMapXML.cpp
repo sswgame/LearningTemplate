@@ -449,7 +449,7 @@ namespace sw
         return true;
     }
 
-    bool TileMapXMLData::loadFromDiskFile( const AbsolutePath& diskPath )
+    bool TileMapXMLData::loadFromDiskFile( const DiskPath& diskPath )
     {
         if ( diskPath.empty() )
             return false;

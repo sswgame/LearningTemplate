@@ -50,7 +50,7 @@ namespace
                     return CookStep::Failed;
                 StringBuilder<constant::buffer::kMax256> text;
                 text.appendFormat( "baked:%#", string_view( reinterpret_cast<const char*>( bytes.data() ), bytes.size() ) );
-                return FileUtil::ensureParentDirectoryExists( outputPath ) && FileUtil::writeTextFile( outputPath, text.view() ) ? CookStep::Written : CookStep::Failed;
+                return FileUtil::writeTextFile( outputPath, text.view() ) ? CookStep::Written : CookStep::Failed;
             } );
         }
 
@@ -71,7 +71,7 @@ namespace
 SW_TEST_CASE( CookStoreTest, ReusesWhileInputsAreUnchanged )
 {
     CookFixture fixture;
-    SW_REQUIRE_TRUE( FileUtil::ensureParentDirectoryExists( fixture._inputPath ) && FileUtil::writeTextFile( fixture._inputPath, "one" ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( fixture._inputPath, "one" ) );
 
     SW_EXPECT_EQUAL( CookResult::Cooked, fixture.cook( fixture._store, kDesc, "x.bin" ) );
     SW_EXPECT_EQUAL( string( "baked:one" ), fixture.readOutput( "x.bin" ) );
@@ -93,7 +93,7 @@ SW_TEST_CASE( CookStoreTest, ReusesWhileInputsAreUnchanged )
 SW_TEST_CASE( CookStoreTest, OutputsOfTheSameInputsKeepTheirOwnEntry )
 {
     CookFixture fixture;
-    SW_REQUIRE_TRUE( FileUtil::ensureParentDirectoryExists( fixture._inputPath ) && FileUtil::writeTextFile( fixture._inputPath, "one" ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( fixture._inputPath, "one" ) );
     int32      bakeCount  = 0;
     const auto cookOutput = [&]( const CookStore& store, string_view outputID )
     {
@@ -104,7 +104,7 @@ SW_TEST_CASE( CookStoreTest, OutputsOfTheSameInputsKeepTheirOwnEntry )
             vector<uint8> bytes;
             if ( AssetIO::readBinaryFile( fixture._inputPath, bytes ) == false )
                 return CookStep::Failed;
-            return FileUtil::ensureParentDirectoryExists( outputPath ) && FileUtil::writeTextFile( outputPath, outputID ) ? CookStep::Written : CookStep::Failed;
+            return FileUtil::writeTextFile( outputPath, outputID ) ? CookStep::Written : CookStep::Failed;
         } );
     };
     for ( const string_view outputID : { string_view( "text.ko.locres" ), string_view( "text.en.locres" ) } )
@@ -127,7 +127,7 @@ SW_TEST_CASE( CookStoreTest, OutputsOfTheSameInputsKeepTheirOwnEntry )
 SW_TEST_CASE( CookStoreTest, CooksAgainWhenInputOrVersionChanges )
 {
     CookFixture fixture;
-    SW_REQUIRE_TRUE( FileUtil::ensureParentDirectoryExists( fixture._inputPath ) && FileUtil::writeTextFile( fixture._inputPath, "one" ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( fixture._inputPath, "one" ) );
     SW_EXPECT_EQUAL( CookResult::Cooked, fixture.cook( fixture._store, kDesc, "x.bin" ) );
 
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( fixture._inputPath, "two" ) );
@@ -150,7 +150,7 @@ SW_TEST_CASE( CookStoreTest, RejectsJobsWithoutInputs )
     const AbsolutePath outputPath = fixture.makeOutputPath( "none.bin" );
     SW_EXPECT_LOG( "Cook.NoInputRecorded" );
     const CookResult result = fixture._store.cookFile( kDesc, "none.bin", outputPath, [&]
-    { return FileUtil::ensureParentDirectoryExists( outputPath ) && FileUtil::writeTextFile( outputPath, "x" ) ? CookStep::Written : CookStep::Failed; } );
+    { return FileUtil::writeTextFile( outputPath, "x" ) ? CookStep::Written : CookStep::Failed; } );
     SW_EXPECT_EQUAL( CookResult::Failed, result );
     SW_EXPECT_FALSE( FileUtil::exists( fixture._store.makeRecordPath( "none.bin" ) ) );
 
@@ -166,7 +166,7 @@ SW_TEST_CASE( CookStoreTest, RejectsJobsWithoutInputs )
 SW_TEST_CASE( CookStoreTest, RemovesOnlyUnrequestedRecordedOutputs )
 {
     CookFixture fixture;
-    SW_REQUIRE_TRUE( FileUtil::ensureParentDirectoryExists( fixture._inputPath ) && FileUtil::writeTextFile( fixture._inputPath, "one" ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( fixture._inputPath, "one" ) );
     SW_EXPECT_EQUAL( CookResult::Cooked, fixture.cook( fixture._store, kDesc, "keep.bin" ) );
     SW_EXPECT_EQUAL( CookResult::Cooked, fixture.cook( fixture._store, kDesc, "sub/gone.bin" ) );
     SW_EXPECT_EQUAL( CookResult::Cooked, fixture.cook( fixture._store, kDesc, "skipped.bin" ) );
@@ -229,7 +229,7 @@ SW_TEST_CASE( CookRecordTest, RoundTripsAndRejectsBrokenRecords )
 SW_TEST_CASE( CookStoreTest, CookAxisTagsAreInTheJobKey )
 {
     CookFixture fixture;
-    SW_REQUIRE_TRUE( FileUtil::ensureParentDirectoryExists( fixture._inputPath ) && FileUtil::writeTextFile( fixture._inputPath, "one" ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( fixture._inputPath, "one" ) );
     ResourceTags&        tags     = engine::getSubsystem<ResourceTags>();
     const ResourceTagSet previous = tags.exchange( tags.capture() );
     SW_EXPECT_TRUE( tags.setAxisValue( "platform", "windows" ) );

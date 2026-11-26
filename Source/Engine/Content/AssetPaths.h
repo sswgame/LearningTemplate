@@ -101,17 +101,17 @@ namespace sw
          *         없는 파일의 자리(만들 곳)는 `toDiskPath` 다.
          * @note 소문자 키로 먼저 찾고, 못 찾으면 원래 표기로 한 번 더 찾습니다(대소문자를 가리는 파일시스템).
          */
-        [[nodiscard]] optional<AbsolutePath> findLooseFile( string_view resourceID ) const;
+        [[nodiscard]] optional<DiskPath> findLooseFile( string_view resourceID ) const;
 
         /**
          * @brief 리소스 폴더 id 에 맞는 **디스크 폴더 전부**를 검색 순서로 모읍니다(폴더 나열 `AssetIO::collectAssets` 용).
          * @details 도메인이 붙은 id 는 그 도메인 폴더 하나, 도메인 없는 키는 검색 순서의 모든 리소스 폴더 아래 같은 하위 폴더다 — 팩 나열(우선순위 순 합집합)과 같은 규칙.
          *          `findLooseFile` 은 이긴 하나만 돌려줘, 나열에 쓰면 소스 구성에서만 다른 도메인의 파일이 빠졌다.
          */
-        void collectLooseFolders( string_view folderID, vector<AbsolutePath>& outListFolder ) const;
+        void collectLooseFolders( string_view folderID, vector<DiskPath>& outListFolder ) const;
 
         /**
-         * @brief 리소스 id 를 디스크 경로로 풉니다(`toAssetID` 의 짝) — 낱개 파일 · 폴더의 자리를 정하는 입구 하나다(엔진의 `save*` 는 이 결과 `AbsolutePath` 만 받는다).
+         * @brief 리소스 id 를 디스크 경로로 풉니다(`toAssetID` 의 짝) — 낱개 파일 · 폴더의 자리를 정하는 입구 하나다. 결과는 읽기 경로다 — 쓰는 자리는 문을 지난다(에디터 `AssetWriter`, 나머지는 `AssetWriteAccess` 의 친구).
          *        에디터 · 쿠커 · 도구가 디스크 자리를 알 때 쓴다. 런타임 내용 읽기는 팩까지 보는 `AssetIO` 다.
          * @param resourceID 전역 id(`engine/`/`common/`/`game/<pack>/`/`editor/`/`dlc/<이름>/`… · 붙인 디스크 도메인)는 그 도메인 루트 아래(파일이 아직 없어도),
          *        상대 키는 검색 순서로 이긴 **있는** 파일이다(읽은 그 파일에 쓴다).
@@ -120,7 +120,7 @@ namespace sw
          *          **대소문자.** 리소스 id 는 소문자인데 붙인 디스크 도메인의 폴더는 대소문자가 섞일 수 있다. 대소문자를 구분하는 파일 시스템(Linux)에서는 이미 있는 폴더
          *          성분은 디스크 표기를 쓰고, 없는 성분부터는 id 의 표기를 씁니다. 리소스 트리의 도메인은 소문자 규칙이라 모든 플랫폼에서 소문자로 잇습니다.
          */
-        [[nodiscard]] optional<AbsolutePath> toDiskPath( string_view resourceID ) const;
+        [[nodiscard]] optional<DiskPath> toDiskPath( string_view resourceID ) const;
         /**
          * @brief 새로 만드는 디스크 자리 @p diskPath 가 리소스 트리(`Content/`) 아래면 그 아래 부분이 소문자인지 봅니다(`FileUtil::setCreateRule` — `initialize` 가 건다).
          * @return 대문자가 있으면 그 상대 경로가 대상인 오류입니다. 리소스 트리 밖은 늘 통과합니다.
@@ -140,7 +140,7 @@ namespace sw
          *          경로(`Saved/…`)가 id 로 읽혀 쿠킹 기록 · 버그 리포트 저장이 다른 파일을 가리켰다. 이제 글 정규화는 `normalizeAssetID` 이고, 둘 다 받는 입구는 없다
          *          (언리얼 `FPackageName::TryConvertFilenameToLongPackageName` 과 이름 검사가 따로인 것과 같다).
          */
-        string toAssetID( const AbsolutePath& diskPath ) const;
+        string toAssetID( const DiskPath& diskPath ) const;
         /**
          * @brief 리소스 id 글을 맞춥니다(소문자 · `/` · 앞의 `./` 를 뗀다). 디스크를 보지 않는 순수 글 변환입니다.
          * @return 맞춘 id 입니다. 비었거나 `..` 로 올라가거나 디스크 경로(절대)면 빈 문자열입니다.

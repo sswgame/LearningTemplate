@@ -4,9 +4,8 @@
 
 #include "Core/Serialization/BitStream.h"
 
-#include "Engine/Serialization/Format/FormatDef.h"
-
 #include "GameFramework/Runtime/Online/Store/Server/ServiceRecordReader.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordTable.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
 namespace sw
@@ -15,8 +14,7 @@ namespace sw
     {
         struct ServiceMailCampaignInternal
         {
-            static constexpr FormatDef kFormat{ "MCMP" };
-            static constexpr int32     kPageSize = 64;
+            static constexpr int32 kPageSize = 64;
         };
 
         /**
@@ -48,34 +46,34 @@ namespace sw
 
 namespace sw
 {
-    const hashed_string& ServiceMailCampaign::getCampaignTable()
+    const ServiceRecordTable<ServiceMailCampaign>& ServiceMailCampaign::getCampaignTable()
     {
-        static const hashed_string s_table{ "mail_campaign" };
+        static const ServiceRecordTable<ServiceMailCampaign> s_table{ "mail_campaign" };
         return s_table;
     }
 
-    const hashed_string& ServiceMailCampaign::getClaimTable()
+    const ServiceIndexTable& ServiceMailCampaign::getClaimTable()
     {
-        static const hashed_string s_table{ "mail_campaign_claim" };
+        static const ServiceIndexTable s_table{ "mail_campaign_claim" };
         return s_table;
     }
 
-    const hashed_string& ServiceMailCampaign::getCampaignExpiryTable()
+    const ServiceIndexTable& ServiceMailCampaign::getCampaignExpiryTable()
     {
-        static const hashed_string s_table{ "mail_campaign_expiry" };
+        static const ServiceIndexTable s_table{ "mail_campaign_expiry" };
         return s_table;
     }
 
-    const hashed_string& ServiceMailCampaign::getClaimExpiryTable()
+    const ServiceIndexTable& ServiceMailCampaign::getClaimExpiryTable()
     {
-        static const hashed_string s_table{ "mail_campaign_claim_expiry" };
+        static const ServiceIndexTable s_table{ "mail_campaign_claim_expiry" };
         return s_table;
     }
 
     bool ServiceMailCampaign::readEndTimeMs( const ServiceRecord& record, int64& outTimeMs )
     {
         ServiceMailCampaign campaign;
-        if ( decode( record._bytes, campaign ) == false )
+        if ( decode( record, campaign ) == false )
             return false;
         outTimeMs = campaign._endMs;
         return true;
@@ -121,12 +119,12 @@ namespace sw
                 return false;
         }
         const string campaignKey = ServiceKeyUtil::makeHex64( campaign._campaignID );
-        inoutTransaction.put( getCampaignTable(), campaignKey, encode( campaign ), ServiceRecord::kAbsentVersion );
+        inoutTransaction.put( getCampaignTable(), campaignKey, campaign, ServiceRecord::kAbsentVersion );
         // 끝난 캠페인은 받을 수 없다 - 레코드와 계정마다의 수령 표식(접두어 `<id>/` 묶음)을 끝난 뒤 TTL 쓸기가 지운다. 표식이 수십만이어도 줄은 하나다
-        inoutTransaction.put( getCampaignExpiryTable(), ServiceTTLRule::makeTTLIndexKey( campaign._endMs, campaignKey ), vector<uint8>{}, ServiceRecord::kAnyVersion );
+        inoutTransaction.put( getCampaignExpiryTable(), ServiceTTLRule::makeTTLIndexKey( campaign._endMs, campaignKey ), ServiceRecord::kAnyVersion );
         StringBuilder<constant::buffer::kMax128> claimPrefix;
         claimPrefix.appendFormat( "%#/", campaignKey );
-        inoutTransaction.put( getClaimExpiryTable(), ServiceTTLRule::makeTTLIndexKey( campaign._endMs, claimPrefix.view() ), vector<uint8>{}, ServiceRecord::kAnyVersion );
+        inoutTransaction.put( getClaimExpiryTable(), ServiceTTLRule::makeTTLIndexKey( campaign._endMs, claimPrefix.view() ), ServiceRecord::kAnyVersion );
         return true;
     }
 
@@ -142,10 +140,8 @@ namespace sw
             for ( const ServiceRecord& record : listRecord )
             {
                 ServiceMailCampaign campaign;
-                if ( decode( record._bytes, campaign ) )
+                if ( decode( record, campaign ) ) // 읽지 못한 레코드는 표가 오류 로그를 남기고 건너뛴다
                     outListCampaign.push_back( std::move( campaign ) );
-                else
-                    SW_LOG_ERROR_ID( "ServiceMailCampaign.MailCampaignUnreadable", "Mail campaign '%#' is unreadable", record._key );
             }
             if ( static_cast<int32>( listRecord.size() ) < ServiceMailCampaignInternal::kPageSize )
                 return ServiceStoreResult::Ok;
@@ -161,50 +157,8 @@ namespace sw
         return key;
     }
 
-    vector<uint8> ServiceMailCampaign::encode( const ServiceMailCampaign& campaign )
+    bool ServiceMailCampaign::decode( const ServiceRecord& raw, ServiceMailCampaign& outCampaign )
     {
-        BitWriter writer;
-        ServiceMailCampaignInternal::kFormat.writeVersion( writer );
-        writer.writeVarUint( campaign._campaignID );
-        writer.writeVarUint( campaign._actorID );
-        writer.writeVarInt( campaign._startMs );
-        writer.writeVarInt( campaign._endMs );
-        writer.writeBool( campaign._bLiteralText == SW_TRUE );
-        ServiceKeyUtil::writeString( writer, campaign._titleKey );
-        ServiceKeyUtil::writeString( writer, campaign._body );
-        ServiceKeyUtil::writeString( writer, campaign._senderName );
-        writer.writeVarUint( campaign._listAttachment.size() );
-        for ( const ServiceMailAttachment& attachment : campaign._listAttachment )
-        {
-            ServiceKeyUtil::writeString( writer, attachment._assetID );
-            writer.writeVarInt( attachment._amount );
-        }
-        return writer.getBytes();
-    }
-
-    bool ServiceMailCampaign::decode( const vector<uint8>& bytes, ServiceMailCampaign& outCampaign )
-    {
-        BitReader reader( bytes.data(), static_cast<int32>( bytes.size() ) );
-        if ( ServiceMailCampaignInternal::kFormat.readVersion( reader ) == false )
-            return false;
-        outCampaign._campaignID   = reader.readVarUint();
-        outCampaign._actorID      = reader.readVarUint();
-        outCampaign._startMs      = reader.readVarInt();
-        outCampaign._endMs        = reader.readVarInt();
-        outCampaign._bLiteralText = reader.readBool() ? SW_TRUE : SW_FALSE;
-        const bool bTextOk        = ServiceKeyUtil::readString( reader, ServiceMailConstant::kMaxTitleSize, outCampaign._titleKey ) &&
-                             ServiceKeyUtil::readString( reader, ServiceMailConstant::kMaxBodySize, outCampaign._body ) &&
-                             ServiceKeyUtil::readString( reader, ServiceMailConstant::kMaxSenderNameSize, outCampaign._senderName );
-        const uint64 attachmentCount = reader.readVarUint();
-        if ( bTextOk == false || attachmentCount > static_cast<uint64>( ServiceMailConstant::kMaxAttachmentCount ) )
-            return false;
-        outCampaign._listAttachment.resize( static_cast<size_t>( attachmentCount ) );
-        for ( ServiceMailAttachment& attachment : outCampaign._listAttachment )
-        {
-            if ( ServiceKeyUtil::readString( reader, LedgerConstant::kMaxAssetIDSize, attachment._assetID ) == false )
-                return false;
-            attachment._amount = reader.readVarInt();
-        }
-        return reader.hasOverflowed() == false;
+        return getCampaignTable().decode( raw, outCampaign );
     }
 } // namespace sw

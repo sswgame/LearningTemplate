@@ -189,7 +189,7 @@ namespace sw::editor
         return true;
     }
 
-    PrefabFrameExit PrefabEditorViewModel::exitFrame( Scene* pScene, EditorSelection& selection, bool bSaveToPrefab )
+    PrefabFrameExit PrefabEditorViewModel::exitFrame( AssetWriter& writer, Scene* pScene, EditorSelection& selection, bool bSaveToPrefab )
     {
         GameObjectManager*          pManager = PrefabEditorViewModelInternal::findManager( pScene );
         const PrefabIsolationFrame* pFrame   = _pIsolation->getFrame();
@@ -200,7 +200,7 @@ namespace sw::editor
         GameObject*                pRoot = pManager->findGameObjectByID( frame._rootObjectID );
 
         // 저장하지 못하면 나가지 않는다. 나가면 편집한 프리팹 내용이 저장 없이 사라진다.
-        const bool bSaveFailed = bSaveToPrefab && pRoot != nullptr && EditorInspectorCommands::applyToPrefab( pRoot, AssetID{ frame._prefabPath } ) == false;
+        const bool bSaveFailed = bSaveToPrefab && pRoot != nullptr && EditorInspectorCommands::applyToPrefab( writer, pRoot, AssetID{ frame._prefabPath } ) == false;
         if ( bSaveFailed )
         {
             SW_LOG_ERROR_ID( "PrefabEditorPanel.PrefabWindowCouldNot", "Prefab window could not save '%#' - still editing it", frame._prefabPath.c_str() );
@@ -222,12 +222,12 @@ namespace sw::editor
         return PrefabFrameExit::PoppedNested;
     }
 
-    bool PrefabEditorViewModel::saveFrame( Scene* pScene )
+    bool PrefabEditorViewModel::saveFrame( AssetWriter& writer, Scene* pScene )
     {
         GameObjectManager*          pManager = PrefabEditorViewModelInternal::findManager( pScene );
         const PrefabIsolationFrame* pFrame   = _pIsolation->getFrame();
         GameObject*                 pRoot    = ( pManager != nullptr && pFrame != nullptr ) ? pManager->findGameObjectByID( pFrame->_rootObjectID ) : nullptr;
-        if ( pRoot == nullptr || EditorInspectorCommands::applyToPrefab( pRoot, AssetID{ pFrame->_prefabPath } ) == false )
+        if ( pRoot == nullptr || EditorInspectorCommands::applyToPrefab( writer, pRoot, AssetID{ pFrame->_prefabPath } ) == false )
         {
             _status = "Could not save the prefab";
             return false;

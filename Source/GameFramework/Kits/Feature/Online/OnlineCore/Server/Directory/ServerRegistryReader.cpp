@@ -5,6 +5,7 @@
 #include "Core/Foundation/Constants.h"
 #include "Core/String/StringUtil.h"
 
+#include "GameFramework/Runtime/Online/Cache/Server/EphemeralRecordTable.h"
 #include "GameFramework/Runtime/Online/Cache/Server/EphemeralStore.h"
 #include "GameFramework/Runtime/Online/Cache/Server/EphemeralStoreRouter.h"
 
@@ -13,12 +14,9 @@ namespace sw
     ServerRegistryReader::ServerRegistryReader()
         : _listSnapshot{}
         , _listBuilding{}
-        , _mapRequestToServer{}
-        , _mapRequestToSeat{}
         , _mapServerToReserved{}
         , _kind{}
         , _pRouter{ nullptr }
-        , _indexRequestID{ 0 }
         , _refreshPeriodMs{ 2000 }
         , _seatReservationTTLMs{ 0 }
         , _lastRefreshStartMs{ 0 }
@@ -48,12 +46,9 @@ namespace sw
     {
         _replyOwner.reset(); // 라우터가 이 객체보다 오래 산다 — 기다리던 답이 사라진 객체를 부르지 않게 지운다
         _pRouter          = nullptr;
-        _indexRequestID   = 0;
         _outstandingCount = 0;
         _listSnapshot.clear();
         _listBuilding.clear();
-        _mapRequestToServer.clear();
-        _mapRequestToSeat.clear();
         _mapServerToReserved.clear();
     }
 
@@ -76,18 +71,15 @@ namespace sw
         _bRefreshRequested  = SW_FALSE;
         _lastRefreshStartMs = nowMs;
         _listBuilding.clear();
-        _mapRequestToServer.clear();
-        _mapRequestToSeat.clear();
         _mapServerToReserved.clear();
         _outstandingCount = 1;
-        _indexRequestID   = _pRouter->submit( EphemeralRequest::makeScoreRange( ServerRecord::makeIndexKey( _kind ), 0, kMaxServerCount ),
-                                              SW_DELEGATE_METHOD( EphemeralStoreRouter::ReplyDelegate, &ServerRegistryReader::onIndexReply, this ), _replyOwner );
+        _pRouter->submit( EphemeralRequest::makeScoreRange( ServerRecord::makeIndexKey( _kind ), 0, kMaxServerCount ), _replyOwner, [this]( const EphemeralReply& reply )
+        { onIndexReply( reply ); } );
     }
 
     void ServerRegistryReader::onIndexReply( const EphemeralReply& reply )
     {
         --_outstandingCount;
-        _indexRequestID = 0;
         if ( reply._result != EphemeralResult::Ok || _pRouter == nullptr )
         {
             // 색인을 못 읽었다(캐시가 아프다) — 옛 스냅숏을 그대로 두고 다음 주기에 다시.
@@ -95,35 +87,34 @@ namespace sw
             _refreshCount.add();
             return;
         }
+        vector<uint64> listServerID;
         for ( const EphemeralScoredMember& member : reply._listMember )
         {
             uint64 serverID = 0;
             if ( ServerRecord::parseMember( member._member, serverID ) == false )
                 continue;
-            const uint64 requestID           = _pRouter->submit( EphemeralRequest::makeGet( ServerRecord::makeRecordKey( serverID ) ),
-                                                                 SW_DELEGATE_METHOD( EphemeralStoreRouter::ReplyDelegate, &ServerRegistryReader::onRecordReply, this ), _replyOwner );
-            _mapRequestToServer[requestID]   = serverID;
-            const uint64 seatRequestID       = _pRouter->submit( EphemeralRequest::makeGet( ServerRecord::makeSeatKey( serverID ) ),
-                                                                 SW_DELEGATE_METHOD( EphemeralStoreRouter::ReplyDelegate, &ServerRegistryReader::onSeatReply, this ), _replyOwner );
-            _mapRequestToSeat[seatRequestID] = serverID;
-            _outstandingCount += 2;
+            listServerID.push_back( serverID );
         }
-        if ( _outstandingCount == 0 )
+        _outstandingCount += static_cast<int32>( listServerID.size() ) * 2; // 먼저 다 세 둔다 — 맡기지 못한 요청은 그 자리에서 끝난다
+        for ( const uint64 serverID : listServerID )
+        {
+            _pRouter->submit( EphemeralRequest::makeGet( ServerRecord::makeRecordKey( serverID ) ), _replyOwner, [this, serverID]( const EphemeralReply& recordReply )
+            { onRecordReply( serverID, recordReply ); } );
+            _pRouter->submit( EphemeralRequest::makeGet( ServerRecord::makeSeatKey( serverID ) ), _replyOwner, [this, serverID]( const EphemeralReply& seatReply )
+            { onSeatReply( serverID, seatReply ); } );
+        }
+        if ( listServerID.empty() )
             finishRefresh();
     }
 
-    void ServerRegistryReader::onRecordReply( const EphemeralReply& reply )
+    void ServerRegistryReader::onRecordReply( uint64 serverID, const EphemeralReply& reply )
     {
         --_outstandingCount;
-        const auto   serverIt = _mapRequestToServer.find( reply._requestID );
-        const uint64 serverID = serverIt != _mapRequestToServer.end() ? serverIt->second : 0;
-        if ( serverIt != _mapRequestToServer.end() )
-            _mapRequestToServer.erase( serverIt );
         const bool bServerRecordExpired = reply._result == EphemeralResult::NotFound && serverID != 0 && _pRouter != nullptr;
         if ( reply._result == EphemeralResult::Ok )
         {
             ServerStatus status;
-            if ( ServerRecord::decode( reply._value, status ) && status._descriptor._serverID == serverID )
+            if ( ServerRecord::decode( reply, status ) && status._descriptor._serverID == serverID )
                 _listBuilding.push_back( std::move( status ) );
         }
         else if ( bServerRecordExpired )
@@ -135,19 +126,13 @@ namespace sw
             finishRefresh();
     }
 
-    void ServerRegistryReader::onSeatReply( const EphemeralReply& reply )
+    void ServerRegistryReader::onSeatReply( uint64 serverID, const EphemeralReply& reply )
     {
         --_outstandingCount;
-        const auto seatIt = _mapRequestToSeat.find( reply._requestID );
-        if ( seatIt != _mapRequestToSeat.end() )
-        {
-            int64      reserved = 0;
-            const bool bRead    = reply._result == EphemeralResult::Ok &&
-                               StringUtil::parseInt64( string_view( reinterpret_cast<const utf8*>( reply._value.data() ), reply._value.size() ), reserved );
-            if ( bRead && reserved > 0 ) // 확정이 창을 넘겨 음수가 될 수 있다 — 0 으로 본다
-                _mapServerToReserved[seatIt->second] = static_cast<int32>( reserved );
-            _mapRequestToSeat.erase( seatIt );
-        }
+        int64      reserved = 0;
+        const bool bRead    = EphemeralValueUtil::readCounter( reply, reserved );
+        if ( bRead && reserved > 0 ) // 확정이 창을 넘겨 음수가 될 수 있다 — 0 으로 본다
+            _mapServerToReserved[serverID] = static_cast<int32>( reserved );
         if ( _outstandingCount == 0 )
             finishRefresh();
     }
@@ -162,8 +147,6 @@ namespace sw
         }
         _listSnapshot.swap( _listBuilding ); // 색인을 읽었으면 빈 목록도 맞다(서버가 모두 죽었다)
         _listBuilding.clear();
-        _mapRequestToServer.clear();
-        _mapRequestToSeat.clear();
         _mapServerToReserved.clear();
         _refreshCount.add();
     }

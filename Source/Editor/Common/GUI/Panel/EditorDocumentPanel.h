@@ -113,9 +113,9 @@ namespace sw::editor
          * @brief 열린 문서(리소스 id)의 디스크 자리입니다 - 읽기와 쓰기가 같은 해석이다(R7, `AssetPaths::toDiskPath`: 전역 id 는 아직 없어도 그 도메인 아래, 상대 키는 이긴 있는 파일).
          * @details 예전에는 패널마다 읽기는 `findLooseFile`, 쓰기는 다른 해석(못 찾으면 받은 글 그대로 · 쓸 자리 해석)을 따로 불렀다. 문서가 없거나 풀 수 없으면 빈 값이다(이유는 로그).
          */
-        [[nodiscard]] optional<AbsolutePath> getDocumentDiskPath() const;
-        bool                                 isDocumentLoaded() const;
-        bool                                 isDocumentLoadFailed() const { return _bLoadFailed == SW_TRUE; }
+        [[nodiscard]] optional<DiskPath> getDocumentDiskPath() const;
+        bool                             isDocumentLoaded() const;
+        bool                             isDocumentLoadFailed() const { return _bLoadFailed == SW_TRUE; }
         /** @brief 다른 문서로 바꾸려는데 미저장 편집이 있어 "그래도 바꿀까요?" 확인을 기다리는 중이면 true 입니다. 이 동안 새 문서는 열리지 않습니다(자동화 감시 값이 읽는다). */
         bool isSwitchConfirmPending() const { return _bConfirmSwitch == SW_TRUE; }
         bool canSaveDocument() const override { return _bLoadFailed == SW_FALSE; }
@@ -132,11 +132,11 @@ namespace sw::editor
         void ensureDocumentLoaded();
 
         /**
-         * @brief 현재 문서를 디스크에 저장합니다. 성공하면 true 입니다.
-         * @details 기반(EditorPanel)에는 "문서 없음" 기본 구현이 있지만, 문서 패널은 반드시 구현해야 하므로 여기서 다시 순수
-         *          가상으로 선언한다. 구현을 잊으면 컴파일이 실패한다.
+         * @brief 문서 글(`captureDocumentText`)을 연 문서의 파일에 씁니다. 문서 글이 곧 파일 글인 패널은 이것을 쓴다.
+         * @details 차이로 쓰는 문서(`_base`) · 여러 파일 · 다른 파일에 쓰는 패널만 재정의한다. 글이 없는 문서(읽기 전용 패널)는 쓰지 않고 false 다.
+         *          저장에 성공하면 기반이 되돌리기 기준 · 미저장 · 자동 저장 사본 · 핫 리로드를 맞춘다(`onDocumentSaved`) — 파생은 쓰기만 한다.
          */
-        [[nodiscard]] bool saveDocument() override = 0;
+        [[nodiscard]] bool saveDocument( AssetWriter& writer ) override;
         /**
          * @brief 저장하지 않고 닫거나 장면을 바꿀 때 편집을 버립니다. 기본은 디스크에서 문서를 다시 읽습니다(`reloadDocument`).
          * @details 기본이 있어야 한다. 구현이 없으면 "저장 안 함" 뒤에도 편집한 메모리 상태가 남아, 다시 열면 미저장 표시 없이 편집본이 보인다.
@@ -146,7 +146,7 @@ namespace sw::editor
         /** @brief 저장한 문서(`getLoadedAssetPath`)를 그 자리에서 캐시 · 씬 · 그것을 펼쳐 넣은 에셋에 반영합니다(`AssetHotReload::applySavedAsset`). 파일 감시의 늦은 사건을 기다리지 않는다. */
         void onDocumentSaved() override;
         /** @brief 연 문서의 디스크 자리(`getDocumentDiskPath`)입니다. 다른 파일을 쓰거나 더 쓰는 패널(스프라이트 클립 · 타일맵 · 캐릭터 · 데이터 테이블)이 재정의한다. 풀지 못하면 더하지 않는다 — 저장 자신이 이유를 남기고 진다. */
-        void collectFilesToSave( vector<AbsolutePath>& outListPath ) const override;
+        void collectFilesToSave( vector<DiskPath>& outListPath ) const override;
         /** @brief 문서 글(`captureDocumentText`)입니다 — 저장하지 않은 편집까지 담는다. */
         string captureUnsavedText() const override { return captureDocumentText(); }
         /** @brief 저장할 문서가 새 자리에서 아직 다시 읽히지 않았으면 먼저 읽습니다(옮긴 뒤 그려지지 않은 창) — 모델이 옛 경로를 든 채 쓰지 않는다. */
@@ -157,13 +157,13 @@ namespace sw::editor
          */
         virtual void onAssetMoved( string_view /*oldPath*/, string_view /*newPath*/ ) {}
         /** @brief @p path(리소스 id 또는 절대 경로)의 쓸 자리를 @p outListPath 에 더합니다 — 쓰기와 같은 해석(`AssetPaths::toDiskPath`)이다. 비었거나 풀지 못하면 더하지 않는다. */
-        static void appendFileToSave( string_view path, vector<AbsolutePath>& outListPath ); /**
-                                                                                              * @brief 이 문서의 되돌리기 스택입니다 — 문서 패널마다 하나(감사 E-3). 문서 글 편집 · 미리보기 씬 편집 · 패널 모델의 명령이 모두 여기 간다.
-                                                                                              * @details 예전에는 미리보기 없는 문서 패널(시퀀서 · 타일맵 · 대화 · UI 미리보기 …)이 씬과 전역 스택 하나를 써서, 플레이 경계(`suspendHistory`)가 그 기록을
-                                                                                              *          함께 버렸다 — 플레이 중 고친 뒤 Stop 하면 문서는 dirty 인데 되돌릴 수 없었다. 이제 플레이 경계는 메인(씬) 스택만 맡는다.
-                                                                                              *          언리얼은 전역 트랜잭션 버퍼 하나(에셋 편집도 같은 버퍼), 유니티 Undo 도 전역 하나, Godot 은 씬 · 리소스마다 history 를 두고 편집한 대상이 고른다 —
-                                                                                              *          에셋 문서를 씬과 따로 되돌리는 Godot 쪽을 따르고, 포커스 창이 스택을 고른다(`findPanelCommandStack`).
-                                                                                              */
+        static void appendFileToSave( string_view path, vector<DiskPath>& outListPath ); /**
+                                                                                          * @brief 이 문서의 되돌리기 스택입니다 — 문서 패널마다 하나(감사 E-3). 문서 글 편집 · 미리보기 씬 편집 · 패널 모델의 명령이 모두 여기 간다.
+                                                                                          * @details 예전에는 미리보기 없는 문서 패널(시퀀서 · 타일맵 · 대화 · UI 미리보기 …)이 씬과 전역 스택 하나를 써서, 플레이 경계(`suspendHistory`)가 그 기록을
+                                                                                          *          함께 버렸다 — 플레이 중 고친 뒤 Stop 하면 문서는 dirty 인데 되돌릴 수 없었다. 이제 플레이 경계는 메인(씬) 스택만 맡는다.
+                                                                                          *          언리얼은 전역 트랜잭션 버퍼 하나(에셋 편집도 같은 버퍼), 유니티 Undo 도 전역 하나, Godot 은 씬 · 리소스마다 history 를 두고 편집한 대상이 고른다 —
+                                                                                          *          에셋 문서를 씬과 따로 되돌리는 Godot 쪽을 따르고, 포커스 창이 스택을 고른다(`findPanelCommandStack`).
+                                                                                          */
         CommandStack& getDocumentCommandStack() { return *_pDocumentStack; }
         /**
          * @brief 이 문서의 편집 알림 창구입니다 — 패널이 만들 때 자기 Model 에 넘기고, Model 이 문서를 바꾼 뒤 알린다(`DocumentEditRecorder::notifyEdited`, 감사 E-16).

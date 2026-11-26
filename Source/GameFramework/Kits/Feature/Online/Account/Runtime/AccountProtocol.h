@@ -13,6 +13,7 @@
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Serializer/SecretValue.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Account/Runtime/AccountTypes.h"
@@ -53,15 +54,15 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 가입(`Register`)과 이름 연동(`LinkCredential`)의 요청입니다. 이름 상한은 `LoginConstant::kMaxLoginNameSize` 의 네 배(UTF-8 바이트), 비밀번호 상한은 `kMaxPasswordSize` 와 같습니다. */
+    /** @brief 가입(`Register`)과 이름 연동(`LinkCredential`)의 요청입니다. 이름 상한은 `LoginConstant::kMaxLoginNameSize` 의 네 배(UTF-8 바이트), 비밀번호 상한은 `SecretText::kMaxWireSize` 입니다(`kMaxPasswordSize` 와 같다). */
     REFLECT()
     struct AccountCredentialRequest
     {
         REFLECT_BODY();
         PROPERTY( MaxCount = LoginConstant::kMaxLoginNameWireSize )
         string _loginName{};
-        PROPERTY( MaxCount = LoginConstant::kMaxPasswordSize )
-        string _password{};
+        PROPERTY()
+        SecretText _password{};
     };
 } // namespace sw
 
@@ -74,8 +75,8 @@ namespace sw
         REFLECT_BODY();
         PROPERTY( MaxCount = LoginConstant::kMaxLoginNameWireSize )
         string _loginName{};
-        PROPERTY( MaxCount = LoginConstant::kMaxPasswordSize )
-        string _password{};
+        PROPERTY()
+        SecretText _password{};
         PROPERTY()
         AccountClientInfo _clientInfo{};
     };
@@ -88,8 +89,8 @@ namespace sw
     struct AccountGuestLoginRequest
     {
         REFLECT_BODY();
-        PROPERTY( Min = 0, Max = 255 )
-        uint8 _arrDeviceSecret[LoginConstant::kDeviceSecretSize]{};
+        PROPERTY()
+        Secret32 _deviceSecret{};
         PROPERTY()
         AccountClientInfo _clientInfo{};
     };

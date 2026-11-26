@@ -8,8 +8,7 @@
 namespace sw
 {
     CacheRecordUpdater::CacheRecordUpdater()
-        : _mapRequestToOperation{}
-        , _pRouter{ nullptr }
+        : _pRouter{ nullptr }
     {
     }
 
@@ -27,15 +26,19 @@ namespace sw
     void CacheRecordUpdater::shutdown()
     {
         _replyOwner.reset(); // 기다리던 캐시 답이 이 객체를 부르지 않게 지운다
-        _mapRequestToOperation.clear();
         _pRouter = nullptr;
+    }
+
+    int32 CacheRecordUpdater::getPendingCount() const
+    {
+        return _pRouter != nullptr ? _pRouter->getPendingCount( _replyOwner ) : 0;
     }
 
     void CacheRecordUpdater::update( string_view key, int64 ttlMs, unique_ptr<ICacheRecordMutation> mutation )
     {
         if ( _pRouter == nullptr )
         {
-            mutation->onFinished( MatchmakingServiceResult::fail( OnlineError::kUnavailable ), {} );
+            mutation->onFinished( MatchmakingServiceResult::fail( OnlineError::kUnavailable ), EphemeralValue{} );
             return;
         }
         unique_ptr<Operation> operation = make_unique<Operation>();
@@ -47,60 +50,50 @@ namespace sw
 
     void CacheRecordUpdater::startRead( unique_ptr<Operation> operation )
     {
-        const uint64 requestID = _pRouter->submit( EphemeralRequest::makeGet( operation->_key ),
-                                                   SW_DELEGATE_METHOD( EphemeralStoreRouter::ReplyDelegate, &CacheRecordUpdater::onReadReply, this ), _replyOwner );
-        _mapRequestToOperation.emplace( requestID, std::move( operation ) );
+        const EphemeralRequest read = EphemeralRequest::makeGet( operation->_key );
+        _pRouter->submit( read, _replyOwner, [this, operation = std::move( operation )]( const EphemeralReply& reply ) mutable
+        { onReadReply( std::move( operation ), reply ); } );
     }
 
-    void CacheRecordUpdater::onReadReply( const EphemeralReply& reply )
+    void CacheRecordUpdater::onReadReply( unique_ptr<Operation> operation, const EphemeralReply& reply )
     {
-        const auto operationIt = _mapRequestToOperation.find( reply._requestID );
-        if ( operationIt == _mapRequestToOperation.end() )
-            return;
-        unique_ptr<Operation> operation = std::move( operationIt->second );
-        _mapRequestToOperation.erase( operationIt );
         if ( reply._result != EphemeralResult::Ok && reply._result != EphemeralResult::NotFound )
         {
-            operation->_mutation->onFinished( MatchmakingServiceResult::fail( OnlineError::kUnavailable ), {} );
+            operation->_mutation->onFinished( MatchmakingServiceResult::fail( OnlineError::kUnavailable ), EphemeralValue{} );
             return;
         }
-        operation->_bExists  = reply._result == EphemeralResult::Ok ? SW_TRUE : SW_FALSE;
-        operation->_oldBytes = reply._value;
-        operation->_newBytes.clear();
+        operation->_bExists                   = reply._result == EphemeralResult::Ok ? SW_TRUE : SW_FALSE;
+        operation->_oldValue                  = EphemeralValue::of( reply );
+        operation->_newValue                  = EphemeralValue{};
         bool                           bErase = false;
-        const MatchmakingServiceResult result = operation->_mutation->mutate( operation->_bExists != SW_FALSE, operation->_oldBytes, operation->_newBytes, bErase );
+        const MatchmakingServiceResult result = operation->_mutation->mutate( operation->_bExists != SW_FALSE, operation->_oldValue, operation->_newValue, bErase );
         if ( result != MatchmakingResult::Ok )
         {
-            operation->_mutation->onFinished( result, operation->_oldBytes );
+            operation->_mutation->onFinished( result, operation->_oldValue );
             return;
         }
         if ( bErase && operation->_bExists == SW_FALSE )
         {
-            operation->_mutation->onFinished( MatchmakingResult::Ok, {} ); // 이미 없는 기록이다
+            operation->_mutation->onFinished( MatchmakingResult::Ok, EphemeralValue{} ); // 이미 없는 기록이다
             return;
         }
         operation->_bErase = bErase ? SW_TRUE : SW_FALSE;
         EphemeralRequest write;
         if ( bErase )
-            write = EphemeralRequest::makeCompareAndErase( operation->_key, operation->_oldBytes );
+            write = EphemeralRequest::makeCompareAndErase( operation->_key, operation->_oldValue );
         else if ( operation->_bExists != SW_FALSE )
-            write = EphemeralRequest::makeCompareAndSet( operation->_key, operation->_oldBytes, operation->_newBytes, operation->_ttlMs );
+            write = EphemeralRequest::makeCompareAndSet( operation->_key, operation->_oldValue, operation->_newValue, operation->_ttlMs );
         else
-            write = EphemeralRequest::makeSet( operation->_key, operation->_newBytes, operation->_ttlMs, EphemeralCondition::IfAbsent );
-        const uint64 requestID = _pRouter->submit( write, SW_DELEGATE_METHOD( EphemeralStoreRouter::ReplyDelegate, &CacheRecordUpdater::onWriteReply, this ), _replyOwner );
-        _mapRequestToOperation.emplace( requestID, std::move( operation ) );
+            write = EphemeralRequest::makeSet( operation->_key, operation->_newValue, operation->_ttlMs, EphemeralCondition::IfAbsent );
+        _pRouter->submit( write, _replyOwner, [this, operation = std::move( operation )]( const EphemeralReply& writeReply ) mutable
+        { onWriteReply( std::move( operation ), writeReply ); } );
     }
 
-    void CacheRecordUpdater::onWriteReply( const EphemeralReply& reply )
+    void CacheRecordUpdater::onWriteReply( unique_ptr<Operation> operation, const EphemeralReply& reply )
     {
-        const auto operationIt = _mapRequestToOperation.find( reply._requestID );
-        if ( operationIt == _mapRequestToOperation.end() )
-            return;
-        unique_ptr<Operation> operation = std::move( operationIt->second );
-        _mapRequestToOperation.erase( operationIt );
         if ( reply._result == EphemeralResult::Ok )
         {
-            operation->_mutation->onFinished( MatchmakingResult::Ok, operation->_bErase != SW_FALSE ? vector<uint8>{} : operation->_newBytes );
+            operation->_mutation->onFinished( MatchmakingResult::Ok, operation->_bErase != SW_FALSE ? EphemeralValue{} : operation->_newValue );
             return;
         }
         // 다른 곳이 먼저 바꿨다. CAS 가 Conflict 이거나 비교 대상이 사라져 NotFound 이면 다시 읽고 다시 시도한다

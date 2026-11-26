@@ -17,6 +17,9 @@
 #include "DevTools/DevToolsAPI.h"
 #include "DevTools/Profiling/Memory/MemorySnapshot.h"
 
+#include "Engine/Config/ConfigFileID.h"
+#include "Engine/Reflection/ReflectionMacros.h"
+
 namespace sw
 {
     /**
@@ -40,18 +43,20 @@ namespace sw
     };
 
     /** @brief `Config/Dev/MemorySnapshot.json` 의 칸입니다. 칸이 하나라도 없거나 범위 밖이면 읽기가 오류다(기본값이 없다). */
+    REFLECT()
     struct SW_DEVTOOLS_API MemorySnapshotPolicy
     {
-        /** @brief 정책 파일(프로젝트 루트 기준)입니다. */
-        static constexpr const utf8* kPolicyFile = "Config/Dev/MemorySnapshot.json";
+        REFLECT_BODY();
 
-        string _exportFolder{};           ///< 저장 폴더(`ProcessRoots` 의 저장 · 실행 뿌리) 아래 내보내기 폴더 이름(비지 않는다, 구분자 없음)
+        static constexpr ConfigFileID<MemorySnapshotPolicy> kConfigFile{ "Config/Dev/MemorySnapshot.json" };
+
+        PROPERTY( Required )
+        string _exportFolder{}; ///< 저장 폴더(`ProcessRoots` 의 저장 · 실행 뿌리) 아래 내보내기 폴더 이름(비지 않는다, 구분자 없음)
+        PROPERTY( Required, Min = 1 )
         uint32 _allocationSiteLimit{ 0 }; ///< 할당 사이트 시트의 줄 상한(1 이상 — 기호 풀기 비용)
 
-        /** @brief 정책 JSON 글을 읽습니다. */
-        [[nodiscard]] static expected<MemorySnapshotPolicy> parse( string_view jsonText, string_view sourceName );
-        /** @brief 프로젝트의 정책 파일을 읽습니다. */
-        [[nodiscard]] static expected<MemorySnapshotPolicy> load();
+        /** @brief 내보내기 폴더가 폴더 이름 하나인지 봅니다(`ConfigManager::readConfig` 가 부른다). */
+        [[nodiscard]] expected<void> validate() const;
     };
 
     /** @brief 내보낸 파일 하나의 결과입니다(로그 · 개발 명령 답 · 패널 알림). */

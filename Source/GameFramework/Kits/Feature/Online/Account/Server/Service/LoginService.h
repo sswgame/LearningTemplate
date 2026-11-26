@@ -186,7 +186,7 @@ namespace sw
         bool               isAccountOnline( AccountID accountID ) const override { return _mapAccountToSession.find( accountID ) != _mapAccountToSession.end(); }
 
         /** @brief 맡겨 두고 아직 끝나지 않은 요청 수입니다. 외부 확인 대기 · 캐시 요청 · 해시 줄의 자리도 포함합니다. */
-        int32                       getPendingCount() const { return _store.getOpenCount() + _verifications.getOpenCount() + _cacheRequests.getOpenCount() + _hashQueue.getOpenCount(); }
+        int32                       getPendingCount() const;
         const LoginTicketAuthority& getTicketAuthority() const { return _ticketAuthority; }
         const LoginServiceConfig&   getSettings() const { return _settings; }
         int32                       getOnlineCount() const { return static_cast<int32>( _mapAccountToSession.size() ); }
@@ -223,7 +223,6 @@ namespace sw
          */
         template <typename TContinue>
         void validateSharedAttempt( uint64 clientKey, LoginOperation operation, uint64 requestTag, const LoginGrant& grant, TContinue&& onAllowed );
-        void onCacheReply( const EphemeralReply& reply );
         /** @brief 제공자를 찾아 확인을 맡깁니다. 서버 nonce 를 쓰는 제공자면 그 앞에서 nonce 를 소비합니다(`beginVerification`). */
         void startVerification( LoginOperation operation, string_view provider, const vector<uint8>& ticketBytes, const LoginSessionToken& token, const LoginGrant& buildGrant,
                                 UnixMilliseconds nowMs, uint64 requestTag );
@@ -280,7 +279,6 @@ namespace sw
         size_t                                                             _refreshCursor;
         ServicePeriodicJob                                                 _revocationScanJob;      ///< 철회 대기열 읽기이다(`_revocationScanMs` 주기)
         ServiceStoreTracker                                                _store;                  ///< 저장소에 맡긴 일의 앞이다
-        PendingRequestTable<uint64, EphemeralReply>                        _cacheRequests;          ///< 휘발 저장소 답을 기다리는 일(시도 창 · nonce)이다
         Subscription                                                       _cacheReplyOwner;        ///< 라우터 답의 주인 몫(`attachCache` 가 열고 `shutdown` 이 놓는다)
         EphemeralStoreRouter*                                              _pRouter{ nullptr };     ///< 서버 사이에 나누는 휘발 저장소이다(빌려 쓴다, `attachCache`)
         vector<const IAfterDeleteAccount*>                                 _listAfterDeleteAccount; ///< 탈퇴 뒤 키트 정리 훅(`setAfterDeleteAccount`)

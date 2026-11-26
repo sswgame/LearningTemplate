@@ -2,7 +2,7 @@
 <?asset guid="a6334fbd2cfb9e00ff6fe4b83548f6e0"?>
 <!--
   에디터 시나리오 — 잠그지 않은(읽기 전용) 파일 앞에서 문서 패널 저장이 거절되는지(감사 E-11). 버전 관리가 잠그지 않은 파일(git LFS lockable = 읽기 전용)을 흉내 낸다.
-  패널 셋이 저장 확인 하나(EditorDocumentPanelBase::saveDocumentAndClearDirty → collectFilesToSave → EditorContentWrite::warnIfReadOnly)를 지나는지 본다:
+  패널 셋이 저장 확인 하나(EditorDocumentPanelBase::saveDocumentAndClearDirty → collectFilesToSave → AssetWriter::validateSave)를 지나는지 본다:
   ① 에셋 문서 하나(머티리얼 — 연 파일), ② 여러 파일을 쓰는 패널(데이터 테이블 — 게임 데이터 표, 고친 현지화 표가 있으면 그것도), ③ 연 경로가 없는 상태 문서(프로젝트 설정 — 고친 페이지 파일).
   패널마다 panel.lockSaveFiles(패널이 내놓는 쓸 파일의 글을 붙잡고 읽기 전용으로) → panel.expectSaveRefused(저장이 false) → 알림이 떴는지 → panel.unlockSaveFiles(쓰기를 풀고 글이 그대로인지 견준다).
   ①② 는 실행마다 새 사본(<Scratch>)이다. ③ 은 저장소의 설정 파일을 잠갔다가 푼다 — 프로젝트 설정 페이지는 설정 색인이 정한 원본 파일만 가리켜 사본으로 돌릴 수 없다.
@@ -68,7 +68,7 @@
 	<WaitUntil watch="Editor.ProjectSettingsDirtyPageCount" equals="0" timeoutFrames="60"/>
 	<EditorWaitStable/>
 	<!-- 거절 셋(패널마다 하나): ExpectLog 는 그 자리까지 쌓인 로그를 세므로 끝에 둔다 -->
-	<ExpectLog id="EditorContentWrite.ReadOnly" count="3"/>
+	<ExpectLog id="AssetWriter.ReadOnly" count="3"/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

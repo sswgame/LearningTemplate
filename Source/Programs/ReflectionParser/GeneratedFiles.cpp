@@ -156,7 +156,7 @@ namespace sw
         if ( bContentUnchanged )
             return true;
 
-        if ( FileUtil::ensureParentDirectoryExists( path ) == false || FileUtil::writeTextFile( path, content ) == false )
+        if ( FileUtil::writeTextFile( path, content ) == false )
         {
             SW_LOG_ERROR_ID( "GeneratedFiles.FailedWrite", "Failed to write %#", path.str() );
             return false;

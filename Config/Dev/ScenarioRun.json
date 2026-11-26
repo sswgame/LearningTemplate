@@ -2,15 +2,9 @@
     "_stallFrames": 600,
     "_stallWallSeconds": 60,
     "_repeatedFailureLimit": 3,
-    "_conditions": {
-        "RenderTemporalAccumulation": {
-            "_minStillFrames": 16
-        },
-        "RenderAutoExposure": {
-            "_maxExposureErrorEv": 0.05
-        },
-        "RenderRealtimeGI": {
-            "_maxGIError": 0.0002
-        }
+    "_mapConditionThreshold": {
+        "RenderTemporalAccumulation": 16,
+        "RenderAutoExposure": 0.05,
+        "RenderRealtimeGI": 0.0002
     }
 }

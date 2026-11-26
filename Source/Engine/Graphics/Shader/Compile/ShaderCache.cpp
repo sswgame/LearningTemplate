@@ -432,7 +432,7 @@ namespace sw
             text        = _requestLog.makeText();
             _requestLog = ShaderRequestLog{};
         }
-        if ( FileUtil::ensureParentDirectoryExists( _requestLogPath ) == false || FileUtil::writeTextFile( _requestLogPath, text ) == false )
+        if ( FileUtil::writeTextFile( _requestLogPath, text ) == false )
             SW_LOG_WARNING_ID( "ShaderCache.RequestLogNotWritten", "Could not write the shader request log '%#' - the next warm-up compiles nothing for this run", _requestLogPath.str() );
     }
 } // namespace sw

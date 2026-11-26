@@ -320,9 +320,9 @@ namespace sw
                 // 같은 이름의 헤더가 엔진 헤더를 가리면 어느 쪽이 쓰였는지 알 수 없다 — 실제로 컴파일하기 전에 오류로 멈춘다. DDC 적중 뒤에 본다: 폴더를 재귀로 훑는 검사라
                 // 요청마다 하면 적중도 느려지고, 맞은 항목의 기록은 없던 후보 자리까지 적어 가리는 헤더가 새로 생기면 이미 낡음이다(`CookRecord::isFresh`).
                 // 언리얼도 셰이더 맵 DDC 조회가 컴파일 준비(include 검사)보다 먼저다.
-                vector<string>      listShadowed;
-                const AbsolutePath& shadersFolder = setup._call._input._shadersFolder;
-                const bool          bClean        = pSession != nullptr ? pSession->findShadowedHeaders( shadersFolder, listShadowed ) : setup._call._pIncludeResolver->findShadowedHeaders( shadersFolder, listShadowed );
+                vector<string>  listShadowed;
+                const DiskPath& shadersFolder = setup._call._input._shadersFolder;
+                const bool      bClean        = pSession != nullptr ? pSession->findShadowedHeaders( shadersFolder, listShadowed ) : setup._call._pIncludeResolver->findShadowedHeaders( shadersFolder, listShadowed );
                 if ( bClean == false )
                 {
                     for ( const string& problem : listShadowed )

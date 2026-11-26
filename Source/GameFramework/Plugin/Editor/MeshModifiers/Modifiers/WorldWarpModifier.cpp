@@ -9,6 +9,8 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 
+#include "Editor/Common/Asset/AssetWriter.h"
+
 #include "Engine/Content/AssetIO.h"
 
 #include "GameFramework/Plugin/Editor/MeshModifiers/Stack/MeshModifierRegistry.h"
@@ -28,15 +30,15 @@ namespace sw::editor
         setWorldSpace( true );
     }
 
-    bool WorldWarpModifier::writeWarpFile( const MeshModifierStack& stack, const AbsolutePath& absPath )
+    bool WorldWarpModifier::writeWarpFile( AssetWriter& writer, const MeshModifierStack& stack, const DiskPath& path )
     {
         const expected<string> text = stack.makeJSONText();
         if ( text.has_value() == false )
         {
-            SW_LOG_ERROR_ID( "WorldWarpModifier.NotWritable", "Warp file could not be written as JSON: %# (%#) - %# was not written", text.error().message(), text.error().detail(), absPath.str() );
+            SW_LOG_ERROR_ID( "WorldWarpModifier.NotWritable", "Warp file could not be written as JSON: %# (%#) - %# was not written", text.error().message(), text.error().detail(), path.str() );
             return false;
         }
-        return FileUtil::writeTextFile( absPath, *text );
+        return writer.writeText( path, *text );
     }
 
     bool WorldWarpModifier::readWarpFile( string_view assetID, MeshModifierStack& outStack )

@@ -49,7 +49,7 @@ namespace sw::editor
 
     bool ImportedAssetStore::writeResultText( const AbsolutePath& diskPath, string_view text )
     {
-        return FileUtil::ensureParentDirectoryExists( diskPath ) && FileUtil::writeTextFile( diskPath, text );
+        return FileUtil::writeTextFile( diskPath, text );
     }
 
     AbsolutePath ImportedAssetStore::findDomainFolder( const AbsolutePath& sourcePath )
@@ -79,7 +79,7 @@ namespace sw::editor
                 SW_LOG_ERROR_ID( "ImportedAssetStore.ContentMismatch", "Shared import result '%#' exists with other bytes (a hash collision or a hand edit) - delete it and import again", path.c_str() );
             return bSame;
         }
-        if ( FileUtil::ensureParentDirectoryExists( path ) == false || FileUtil::writeFile( path, static_cast<const uint8*>( pBytes ), byteCount ) == false )
+        if ( FileUtil::writeFile( path, static_cast<const uint8*>( pBytes ), byteCount ) == false )
         {
             SW_LOG_ERROR_ID( "ImportedAssetStore.WriteFailed", "Failed to write shared import result '%#'", path.c_str() );
             return false;
@@ -95,10 +95,7 @@ namespace sw::editor
         const AbsolutePath metaPath = AssetMeta::makePath( sourcePath );
         if ( assetID.empty() || FileUtil::isRegularFile( metaPath ) )
             return true;
-        if ( FileUtil::writeTextFile( metaPath, AssetMeta::makeText( assetID, AssetGUID::fromName( assetID ) ) ) )
-            return true;
-        SW_LOG_ERROR_ID( "ImportedAssetStore.MetaWriteFailed", "Failed to write the asset identity beside '%#'", sourcePath.str() );
-        return false;
+        return AssetMeta::saveBeside( sourcePath, AssetGUID::fromName( assetID ) );
     }
 
     void ImportedAssetStore::collectReferences( string_view text, vector<string>& outListPath )

@@ -126,7 +126,7 @@ namespace sw
     {
         AtomicFileWriter   writer;
         const AbsolutePath mirrorDiskPath = mirrorPath;
-        if ( FileUtil::ensureParentDirectoryExists( mirrorDiskPath ) == false || writer.open( mirrorDiskPath ).has_value() == false )
+        if ( writer.open( mirrorDiskPath ).has_value() == false )
             return false;
         vector<uint8> chunk;
         for ( uint64 offset = 0; offset < sizeBytes; offset += kChunkBytes )

@@ -13,6 +13,52 @@
 
 #include "Engine/Serialization/Inherit/DataInheritance.h"
 
+// 카탈로그 창 왼쪽 목록입니다 — 파일을 종류 · 리소스 id 순으로 두고, 거르개에 맞는 파일을 종류별로 묶습니다(ImGui 없음).
+namespace sw::editor
+{
+    /** @brief 목록의 파일 하나입니다. */
+    struct CatalogFileRow
+    {
+        string _assetID{};
+        string _kindLabel{};
+
+        /** @brief 종류 이름, 같으면 리소스 id 순입니다. */
+        static bool isBefore( const CatalogFileRow& lhs, const CatalogFileRow& rhs );
+    };
+} // namespace sw::editor
+
+namespace sw::editor
+{
+    /** @brief 거르개에 맞는 파일이 있는 종류 하나입니다. */
+    struct CatalogFileGroup
+    {
+        string         _kindLabel{};
+        vector<uint32> _listRow{}; ///< 맞는 파일의 번호(`CatalogFileList::getRows`)
+    };
+} // namespace sw::editor
+
+namespace sw::editor
+{
+    /** @class CatalogFileList @brief 파일 머리말을 참고하세요. */
+    class CatalogFileList
+    {
+    public:
+        CatalogFileList();
+
+        /** @brief 목록을 통째로 바꿉니다. 종류 · 리소스 id 순으로 세웁니다. */
+        void                          setRows( vector<CatalogFileRow>&& listRow );
+        const vector<CatalogFileRow>& getRows() const { return _listRow; }
+        /**
+         * @brief 거르개(리소스 id · 종류 이름, 대소문자 무시)에 맞는 파일을 종류별로 모읍니다. 맞는 파일이 없는 종류는 넣지 않습니다. 먼저 출력 목록을 비웁니다.
+         * @return 맞는 파일 수입니다.
+         */
+        uint32 collectGroups( string_view filter, vector<CatalogFileGroup>& outListGroup ) const;
+
+    private:
+        vector<CatalogFileRow> _listRow;
+    };
+} // namespace sw::editor
+
 namespace sw::editor
 {
     /** @class CatalogFileSession @brief 파일 머리말을 참고하세요. */
@@ -46,13 +92,8 @@ namespace sw::editor
         ValidationState        getValidationState() const { return _validationState; }
         const vector<string>&  getWarnings() const { return _listWarning; }
 
-        /**
-         * @brief 저장 직전에 부릅니다. 지금 디스크의 글을 넘깁니다.
-         * @return 써도 되면 true 입니다. 파일이 연 뒤 밖에서 바뀌었으면 첫 번에는 false 이고 상태 줄이 알립니다. 같은 글로 다시 부르면 true 입니다.
-         */
-        [[nodiscard]] bool validateDiskBeforeSave( string_view diskText );
-        /** @brief 쓰기에 성공한 뒤 부릅니다. 저장 직전 디스크의 글을 "이전 파일" 로 남깁니다. */
-        void onSaved();
+        /** @brief 쓰기에 성공한 뒤 부릅니다. 저장 직전 디스크의 글 @p replacedText 를 "이전 파일" 로 남깁니다. */
+        void onSaved( string replacedText );
         /** @brief 저장 직전 글이 지금 디스크와 달라 되돌릴 것이 있으면 true 입니다. */
         bool          canRestorePrevious() const { return _previousText != _document.getSavedText(); }
         const string& getPreviousText() const { return _previousText; }
@@ -70,9 +111,7 @@ namespace sw::editor
         string          _assetID;
         string          _kindLabel;
         string          _previousText;
-        string          _conflictDiskText;
         string          _status;
         ValidationState _validationState;
-        uint8           _bConflictPending : 1; ///< 밖에서 바뀐 글(`_conflictDiskText`)을 알렸다 — 같은 글이면 다음 저장은 덮어쓴다
     };
 } // namespace sw::editor

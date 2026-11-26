@@ -331,7 +331,7 @@ namespace sw::editor
         , _listSourcePosition{}
         , _history{}
         , _savedStackText{ string{} }
-        , _sidecarBaseline{}
+        , _sidecarWriter{}
         , _meshPath{}
         , _sourceBounds{}
         , _target{}
@@ -344,6 +344,10 @@ namespace sw::editor
         , _selectedControlPoint{ -1 }
         , _mirrorAxis{ 0 }
     {
+        _history.bind( SW_DELEGATE_LAMBDA( Delegate<string()>, [this]()
+        { return _stack.makeJSONText( -1 ).value_or( string{} ); } ),
+                       SW_DELEGATE_LAMBDA( Delegate<void( const string& )>, [this]( const string& text )
+        { applyStackText( text ); } ) );
     }
 
     expected<void> MeshModifierSession::setTarget( GameObject* pObject )
@@ -494,32 +498,21 @@ namespace sw::editor
         _history.record( *text );
     }
 
-    bool MeshModifierSession::undo()
+    void MeshModifierSession::applyStackText( const string& text )
     {
-        expected<string> current = _stack.makeJSONText( -1 );
-        if ( current.has_value() == false )
-            return false; // 지금 상태를 되돌리기 목록에 담을 수 없다(잘못된 UTF-8)
-        string text = std::move( *current );
-        if ( _history.undo( text ) == false )
-            return false;
         (void)_stack.readJSONText( text ); // 스스로 만든 글이라 실패하지 않는다. 실패해도 빈 스택이다
         _selectedIndex = MathUtil::min( _selectedIndex, _stack.getModifierCount() - 1 );
         markDirty();
-        return true;
+    }
+
+    bool MeshModifierSession::undo()
+    {
+        return _history.undo();
     }
 
     bool MeshModifierSession::redo()
     {
-        expected<string> current = _stack.makeJSONText( -1 );
-        if ( current.has_value() == false )
-            return false; // 지금 상태를 다시 하기 목록에 담을 수 없다(잘못된 UTF-8)
-        string text = std::move( *current );
-        if ( _history.redo( text ) == false )
-            return false;
-        (void)_stack.readJSONText( text ); // 스스로 만든 글이라 실패하지 않는다
-        _selectedIndex = MathUtil::min( _selectedIndex, _stack.getModifierCount() - 1 );
-        markDirty();
-        return true;
+        return _history.redo();
     }
 
     void MeshModifierSession::refreshPreview()
@@ -739,7 +732,7 @@ namespace sw::editor
         return pMesh != nullptr ? pMesh->getWorldMatrix() : float4x4{};
     }
 
-    optional<AbsolutePath> MeshModifierSession::findSidecarPath() const
+    optional<DiskPath> MeshModifierSession::findSidecarPath() const
     {
         if ( hasTarget() == false )
             return nullopt;
@@ -750,17 +743,16 @@ namespace sw::editor
         return FileUtil::toDiskPath( MeshModifierStack::makeSidecarPath( meshPath->str() ) );
     }
 
-    bool MeshModifierSession::saveSidecar()
+    bool MeshModifierSession::saveSidecar( AssetWriter& writer )
     {
-        const optional<AbsolutePath> path = findSidecarPath();
-        if ( path.has_value() == false || _sidecarBaseline.validateOverwrite( span<const AbsolutePath>( &*path, 1 ) ) == false )
+        const optional<DiskPath> path = findSidecarPath();
+        if ( path.has_value() == false )
             return false;
-        if ( _stack.saveToFile( *path ) == false )
+        if ( writer.saveAsset( *path, _stack ) == false )
         {
             SW_LOG_ERROR_ID( "MeshModifierSession.FailedWriteMeshModifier", "Failed to write mesh modifier stack %#", path->c_str() );
             return false;
         }
-        _sidecarBaseline.capture( span<const AbsolutePath>( &*path, 1 ) );
         _savedStackText = _stack.makeJSONText( -1 );
         _bUnsavedStale  = SW_TRUE;
         SW_LOG_INFO_ID( "MeshModifierSession.MeshModifierStackSaved", "Mesh modifier stack saved to %#", path->c_str() );
@@ -774,7 +766,7 @@ namespace sw::editor
         const auto path = editor::getSubsystem<AssetPaths>().findLooseFile( MeshModifierStack::makeSidecarPath( _meshPath ) );
         if ( path.has_value() == false )
             return false;
-        _sidecarBaseline.capture( span<const AbsolutePath>( &*path, 1 ) );
+        _sidecarWriter.capture( *path );
         if ( _stack.loadFromFile( *path ) == false )
         {
             SW_LOG_WARNING_ID( "MeshModifierSession.MeshModifierStackCould2", "Mesh modifier stack %# could not be read", path->c_str() );
@@ -808,9 +800,12 @@ namespace sw::editor
             SW_LOG_WARNING_ID( "MeshModifierSession.MeshMorphTargetsThey", "Mesh '%#' has %# morph targets - they are dropped from the baked mesh", _meshPath.c_str(), _sourceData._listMorphTarget.size() );
 
         // 구운 메시도 원본 메시 파일 곁이다
-        const auto                   meshPath = editor::getSubsystem<AssetPaths>().toDiskPath( _meshPath );
-        const optional<AbsolutePath> path     = meshPath.has_value() ? AbsolutePath::tryMake( MeshModifierStack::makeBakedMeshPath( meshPath->str() ) ) : nullopt;
-        if ( path.has_value() == false || MeshAssetFormat::saveToFile( *path, baked ) == false )
+        const auto               meshPath = editor::getSubsystem<AssetPaths>().toDiskPath( _meshPath );
+        const optional<DiskPath> path     = meshPath.has_value() ? optional<DiskPath>{ FileUtil::toDiskPath( MeshModifierStack::makeBakedMeshPath( meshPath->str() ) ) } : nullopt;
+        AssetWriter              writer; // 구운 메시는 연 문서가 아니다 — 읽기 전용만 본다
+        const bool               bSaved = path.has_value() && writer.save( *path, [&baked]( const AbsolutePath& writable )
+                      { return MeshAssetFormat::saveToFile( writable, baked ); } );
+        if ( bSaved == false )
         {
             SW_LOG_ERROR_ID( "MeshModifierSession.FailedWriteBakedMesh", "Failed to write the baked mesh of '%#'", _meshPath.c_str() );
             return false;

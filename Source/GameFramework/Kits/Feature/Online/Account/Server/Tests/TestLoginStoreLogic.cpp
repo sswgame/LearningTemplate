@@ -9,6 +9,7 @@
 #include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/Server/Tests/ServiceStoreEntryTestUtil.h"
 
 using namespace sw;
 
@@ -489,4 +490,80 @@ SW_TEST_CASE( LoginStoreLogicTest, RacingFailuresAreAllCounted )
     bool                     bHashStale = false;
     SW_EXPECT_TRUE( logic.commitLogin( challenge, hashResult, kNowMs, grant, bHashStale ) == LoginResult::AccountLocked ); // 커밋 단계의 실패 셈이 겹친 쓰기를 다시 읽어 센다
     SW_EXPECT_TRUE( fixture.login( "Erin_06", "correct horse", grant ) == LoginResult::AccountLocked );
+}
+
+/** @brief [LoginStoreLogicTest] 재접속이 충돌에 거듭 지면 kBusy 다 — InvalidToken 이면 클라이언트가 멀쩡한 세션을 죽은 것으로 보고 로그아웃한다. 충돌이 풀리면 같은 토큰으로 들어온다 */
+SW_TEST_CASE( LoginStoreLogicTest, ResumeUnderConflictsIsBusyAndKeepsTheToken )
+{
+    SW_EXPECT_LOG( "ServiceStore.ConflictRetriesExhausted" );
+    Fixture fixture;
+    SW_REQUIRE_TRUE( fixture.registerAccount( "Frank_07", "correct horse" ) == LoginResult::Ok );
+    LoginGrant grant;
+    SW_REQUIRE_TRUE( fixture.login( "Frank_07", "correct horse", grant ) == LoginResult::Ok );
+    const LoginSessionToken token = grant._token;
+
+    UnreliableStoreConnection unreliable( fixture.database );
+    LoginStoreResult          storeResult;
+    LoginStoreLogic           logic( unreliable, fixture.crypto, fixture.settings, fixture.ticketAuthority, storeResult );
+    unreliable._conflictCount = 1000;
+    SW_EXPECT_TRUE( logic.resumeSession( token, kNowMs, grant ).hasError( OnlineError::kBusy ) );
+    unreliable._conflictCount = 2; // 이만큼은 시도 안에서 풀린다
+    SW_EXPECT_TRUE( logic.resumeSession( token, kNowMs, grant ) == LoginResult::Ok );
+    SW_EXPECT_TRUE( logic.resumeSession( token, kNowMs, grant ) == LoginResult::InvalidToken ); // 비밀이 바뀌었다 — 이제야 죽은 토큰이다
+}
+
+/** @brief [LoginStoreLogicTest] 끊김 표시가 충돌에 거듭 지면 알리고, 몇 번의 충돌은 이겨 유예를 시작한다 — 예전에는 말없이 넘어가 유예가 시작되지 않았다 */
+SW_TEST_CASE( LoginStoreLogicTest, DisconnectGraceSurvivesConflictsOrIsReported )
+{
+    SW_EXPECT_LOG( "ServiceStore.ConflictRetriesExhausted" );
+    SW_EXPECT_LOG( "LoginStoreLogic.SessionCouldNotStart" );
+    Fixture fixture;
+    SW_REQUIRE_TRUE( fixture.registerAccount( "Grace_08", "correct horse" ) == LoginResult::Ok );
+    LoginGrant grant;
+    SW_REQUIRE_TRUE( fixture.login( "Grace_08", "correct horse", grant ) == LoginResult::Ok );
+
+    UnreliableStoreConnection unreliable( fixture.database );
+    LoginStoreResult          storeResult;
+    LoginStoreLogic           logic( unreliable, fixture.crypto, fixture.settings, fixture.ticketAuthority, storeResult );
+    unreliable._conflictCount = 1000;
+    logic.markDisconnected( grant._token._sessionID, kNowMs );
+    SW_EXPECT_EQUAL( size_t{ 1 }, storeResult._listDisconnected.size() ); // 거듭 시도해도 한 번만 알린다
+    const int64     afterGraceMs = kNowMs + fixture.settings._reconnectGraceMs;
+    AccountIdentity identity;
+    unreliable._conflictCount = 0;
+    SW_EXPECT_TRUE( logic.validateSession( grant._token, afterGraceMs, identity ) == LoginResult::Ok ); // 유예가 시작되지 않았다
+    unreliable._conflictCount = 2;
+    logic.markDisconnected( grant._token._sessionID, kNowMs );
+    SW_EXPECT_TRUE( logic.validateSession( grant._token, afterGraceMs, identity ) == LoginResult::Expired );
+}
+
+/** @brief [LoginStoreLogicTest] 로그아웃이 충돌하면 다시 지운다 — 지우지 않고 Ok 로 답하면 로그아웃한 토큰이 살아 있다 */
+SW_TEST_CASE( LoginStoreLogicTest, LogoutUnderConflictErasesTheSession )
+{
+    Fixture fixture;
+    SW_REQUIRE_TRUE( fixture.registerAccount( "Heidi_09", "correct horse" ) == LoginResult::Ok );
+    LoginGrant grant;
+    SW_REQUIRE_TRUE( fixture.login( "Heidi_09", "correct horse", grant ) == LoginResult::Ok );
+    UnreliableStoreConnection unreliable( fixture.database );
+    LoginStoreResult          storeResult;
+    LoginStoreLogic           logic( unreliable, fixture.crypto, fixture.settings, fixture.ticketAuthority, storeResult );
+    unreliable._conflictCount = 1;
+    SW_EXPECT_TRUE( logic.logout( grant._token, kNowMs ) == LoginResult::Ok );
+    AccountIdentity identity;
+    SW_EXPECT_TRUE( logic.validateSession( grant._token, kNowMs, identity ) == LoginResult::InvalidToken );
+}
+
+/** @brief [LoginStoreLogicTest] 로그인이 충돌에 거듭 지면 kBusy 다 — 쓰지 않았으므로 멱등 키 없이도 클라이언트가 다시 보낸다(kUnavailable 이면 다시 보내지 않는다) */
+SW_TEST_CASE( LoginStoreLogicTest, LoginUnderConflictsIsBusy )
+{
+    SW_EXPECT_LOG( "ServiceStore.ConflictRetriesExhausted" );
+    Fixture                   fixture;
+    UnreliableStoreConnection unreliable( fixture.database );
+    unreliable._conflictCount = 1000;
+    LoginStoreResult storeResult;
+    LoginStoreLogic  logic( unreliable, fixture.crypto, fixture.settings, fixture.ticketAuthority, storeResult );
+    const uint8      arrDeviceSecret[LoginConstant::kDeviceSecretSize]{ 9, 9, 9 };
+    LoginGrant       grant;
+    SW_EXPECT_TRUE( logic.guestLogin( arrDeviceSecret, kNowMs, grant ).hasError( OnlineError::kBusy ) );
+    SW_EXPECT_TRUE( grant._token.isEmpty() );
 }

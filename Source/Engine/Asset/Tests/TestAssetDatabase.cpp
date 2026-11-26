@@ -177,8 +177,8 @@ SW_TEST_CASE( AssetDatabaseTest, OutputOnDiskReadsTheIdentityOfItsSource )
     const AssetGUID          source     = AssetGUID::create();
     const AbsolutePath       sourceMeta = sw::test::makeScratchPath( "common/models_raw/rock.glb.meta" );
     const AbsolutePath       mesh       = sw::test::makeScratchPath( "common/models/rock.mesh" );
-    SW_REQUIRE_TRUE( FileUtil::ensureParentDirectoryExists( sourceMeta ) && FileUtil::writeTextFile( sourceMeta, AssetMeta::makeText( "common/models_raw/rock.glb", source ) ) );
-    SW_REQUIRE_TRUE( FileUtil::ensureParentDirectoryExists( mesh ) && FileUtil::writeTextFile( mesh, "mesh" ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( sourceMeta, AssetMeta::makeText( "common/models_raw/rock.glb", source ) ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( mesh, "mesh" ) );
     const optional<AssetGUID> guid = rules.readIdentity( mesh, "common/models/rock.mesh" );
     SW_REQUIRE_TRUE( guid.has_value() );
     SW_EXPECT_TRUE( *guid == AssetGUID::fromName( source, ".mesh" ) );
@@ -384,7 +384,7 @@ SW_TEST_CASE( AssetDatabaseTest, ScanCacheReopensOnlyChangedFiles )
     const int64              stable     = FileUtil::getCurrentFileWriteTime() - 3600 * FileUtil::kFileTimeTicksPerSecond;
     const auto               write      = []( const AbsolutePath& path, const AssetGUID& guid, int64 ticks )
     {
-        SW_REQUIRE_TRUE( FileUtil::ensureParentDirectoryExists( path ) && FileUtil::writeTextFile( path, AssetDatabaseTestUtil::makeHeaderText( guid ) ) );
+        SW_REQUIRE_TRUE( FileUtil::writeTextFile( path, AssetDatabaseTestUtil::makeHeaderText( guid ) ) );
         SW_REQUIRE_TRUE( FileUtil::setFileWriteTime( path, ticks ) );
     };
     const auto scan = [&rules, &root, &cachePath]()

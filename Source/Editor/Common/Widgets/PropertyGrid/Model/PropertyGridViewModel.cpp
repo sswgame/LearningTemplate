@@ -22,7 +22,6 @@
 #include "Editor/Common/Widgets/PropertyGrid/Model/InspectorFavorites.h"
 #include "Editor/Common/Widgets/PropertyGrid/Model/InspectorObjectEdit.h"
 #include "Editor/Common/Widgets/PropertyGrid/Model/PropertyEditConditionExpr.h"
-#include "Editor/Common/Widgets/PropertyGrid/Model/PropertyEditStep.h"
 #include "Editor/Common/Widgets/PropertyGrid/PropertyDrawerRegistry.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorDefaultObjects.h"

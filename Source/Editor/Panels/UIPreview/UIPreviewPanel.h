@@ -71,7 +71,7 @@ namespace sw::editor
 
     protected:
         /** @brief 고친 문서를 `UIDocumentWriter` 로 파일에 씁니다. 입력 흉내나 애니메이션으로 트리 값이 바뀐 상태면 `canSaveDocument` 가 막습니다. */
-        [[nodiscard]] bool saveDocument() override;
+        [[nodiscard]] bool saveDocument( AssetWriter& writer ) override;
         /** @brief 문서를 읽었고(기반) 미리보기 트리가 문서 값 그대로일 때만(모델) 저장합니다. */
         [[nodiscard]] bool canSaveDocument() const override;
         /** @brief 받아들인 문서(없으면 처음 문서)를 미리볼 문서로 정하고 미리보기를 닫습니다 — 다음 그리기의 `syncPreview` 가 디스크에서 다시 짓는다. 고친 값은 버린다. */

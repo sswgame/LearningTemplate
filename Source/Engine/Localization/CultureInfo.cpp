@@ -16,6 +16,7 @@
 #include "Engine/Serialization/Format/XMLSerializer.h"
 #include "Engine/Serialization/Serializer/SchemaMigrate.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLFields.h"
 
 namespace sw
 {
@@ -173,10 +174,12 @@ namespace sw
                 vector<string> listFileID;
                 for ( XMLNode system = systems.findChild(); system.isValid(); system = system.findNextSibling() )
                 {
-                    const string id{ system.getAttributeText( "id" ) };
-                    const string digits{ system.getAttributeText( "digits" ) };
-                    if ( string_view{ system.getName() } != "numberingSystem" || id.empty() )
-                        return unexpected( Error{ ErrorKind::InvalidArgument, "<numberingSystems> holds only <numberingSystem id=\"…\" digits=\"…\"> elements", system.getName() } );
+                    CultureNumberingSystemDef def;
+                    const expected<void>      read = XMLFields::tryReadProperties( system, def, "<numberingSystems>" );
+                    if ( string_view{ system.getName() } != "numberingSystem" || read.has_value() == false || def._id.empty() )
+                        return unexpected( Error{ ErrorKind::InvalidArgument, "<numberingSystems> holds only <numberingSystem id=\"…\" digits=\"…\"> elements", system.getName() }.appendDetail( ": " ).appendDetail( read.has_value() ? string_view{} : read.error().detail() ) );
+                    const string& id     = def._id;
+                    const string& digits = def._digits;
                     if ( VectorUtil::contains( listFileID, id ) )
                         return unexpected( Error{ ErrorKind::AlreadyExists, "a numbering system is written twice", id } );
                     listFileID.push_back( id );
@@ -203,18 +206,17 @@ namespace sw
                 vector<string> listFileCode;
                 for ( XMLNode entry = currencies.findChild(); entry.isValid(); entry = entry.findNextSibling() )
                 {
+                    CultureCurrencyDef   def;
+                    const expected<void> read = XMLFields::tryReadProperties( entry, def, "<currencies>" );
+                    if ( string_view{ entry.getName() } != "currency" || read.has_value() == false || def._code.empty() || def._symbol.empty() )
+                        return unexpected( Error{ ErrorKind::InvalidArgument, "<currencies> holds only <currency code=\"…\" symbol=\"…\" digits=\"0..4\"> elements", def._code }.appendDetail( ": " ).appendDetail( read.has_value() ? string_view{} : read.error().detail() ) );
                     CurrencyInfo currency;
-                    currency._code   = string{ entry.getAttributeText( "code" ) };
-                    currency._symbol = string{ entry.getAttributeText( "symbol" ) };
-                    optional<int32> digits;
-                    const bool      bShape = string_view{ entry.getName() } == "currency" && currency._code.empty() == false && currency._symbol.empty() == false &&
-                                        entry.readOptionalAttribute( "digits", digits ) && digits.has_value() && 0 <= *digits && *digits <= 4;
-                    if ( bShape == false )
-                        return unexpected( Error{ ErrorKind::InvalidArgument, "<currencies> holds only <currency code=\"…\" symbol=\"…\" digits=\"0..4\"> elements", currency._code } );
+                    currency._code   = def._code;
+                    currency._symbol = def._symbol;
                     if ( VectorUtil::contains( listFileCode, currency._code ) )
                         return unexpected( Error{ ErrorKind::AlreadyExists, "a currency is written twice", currency._code } );
                     listFileCode.push_back( currency._code );
-                    currency._minorDigitCount = static_cast<uint8>( *digits );
+                    currency._minorDigitCount = static_cast<uint8>( def._digits );
                     bool bReplaced            = false;
                     for ( CurrencyInfo& existing : inoutList )
                     {

@@ -123,8 +123,9 @@ namespace
  */
 SW_TEST_CASE( PackEntryIDPropertiesTest, EveryFieldHoldingAnEntryIDIsListed )
 {
-    PackConfig config;
-    SW_REQUIRE_TRUE( ConfigManager::readConfigFile( config, ProcessRoots::get()._project.join( PackConfig::kConfigPath ) ) == ConfigReadResult::Loaded );
+    const expected<PackConfig> loadedConfig = ConfigManager::readConfig( PackConfig::kConfigFile );
+    SW_REQUIRE_TRUE( loadedConfig.has_value() );
+    PackConfig config = *loadedConfig;
     // 쿠커와 같이 모든 게임 프리셋의 규칙을 엔진 규칙 뒤에 합친다 — 게임만 쓰는 칸(`_listVillagerPreset`)은 그 게임 설정에 있다.
     const AbsolutePath   gameConfigFolder = ProcessRoots::get()._project.join( GameConfig::kConfigFolder );
     vector<AbsolutePath> listGameConfig;

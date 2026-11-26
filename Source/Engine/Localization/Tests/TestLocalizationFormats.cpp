@@ -300,6 +300,9 @@ SW_TEST_CASE( CultureDataTest, MalformedDataIsALoadError )
     rejectsCulture( "thai", "<_pluralRules></_pluralRules>", "thai" );
     rejects( R"(<CultureTable formatVersion="0"><numberingSystems><numberingSystem id="short" digits="012" /></numberingSystems></CultureTable>)", "10 digits" );
     rejects( R"(<CultureTable formatVersion="0"><currencies><currency code="KRW" symbol="₩" /></currencies></CultureTable>)", "currency" );
+    rejects( R"(<CultureTable formatVersion="0"><currencies><currency code="KRW" symbol="₩" digits="0" digit="1" /></currencies></CultureTable>)", "digit" ); // 모르는 속성(오타)이 조용히 지나가지 않는다
+    rejects( R"(<CultureTable formatVersion="0"><currencies><currency code="KRW" symbol="₩" digits="5" /></currencies></CultureTable>)", "0..4" );
+    rejects( R"(<CultureTable formatVersion="0"><numberingSystems><numberingSystem id="latn" digits="0123456789" order="1" /></numberingSystems></CultureTable>)", "order" );
     rejects( R"(<CultureTable formatVersion="0"><calendars /></CultureTable>)", "calendars" );
     // 판 칸이 없는 글은 첫 판(0)이 아니다
     SW_EXPECT_LOG( "AssetFormat.AssetFormatVersionMissing" );

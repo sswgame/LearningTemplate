@@ -5,6 +5,8 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Editor/Common/Asset/AssetWriter.h"
+
 #include "Engine/Serialization/Inherit/ResourceComposer.h"
 
 namespace sw::editor
@@ -39,6 +41,10 @@ namespace sw::editor
         , _state{ PairedAnimationDef::makeXMLText( PairedAnimationContentDef{}, ResourceFieldWrite::OmitDefaults ) }
         , _scrubTime{ 0.0f }
     {
+        _state.bind( SW_DELEGATE_LAMBDA( CaptureDelegate, [this]()
+        { return _content; } ),
+                     SW_DELEGATE_LAMBDA( ApplyDelegate, [this]( const PairedAnimationContentDef& snapshot )
+        { _content = snapshot; } ) );
     }
 
     bool PairedAnimationEditModel::loadFromXMLText( string_view xmlText, string_view sourceName )
@@ -52,7 +58,7 @@ namespace sw::editor
         return true;
     }
 
-    bool PairedAnimationEditModel::loadFromFile( const AbsolutePath& absolutePath )
+    bool PairedAnimationEditModel::loadFromFile( const DiskPath& absolutePath )
     {
         string text;
         if ( FileUtil::readTextFile( absolutePath, text ) == false )
@@ -63,14 +69,16 @@ namespace sw::editor
         return loadFromXMLText( text, absolutePath.str() );
     }
 
-    expected<void> PairedAnimationEditModel::saveDocument( const AbsolutePath& absPath )
+    expected<void> PairedAnimationEditModel::saveDocument( AssetWriter& writer, const DiskPath& path )
     {
         if ( isValid() == false )
             return unexpected( Error{ ErrorKind::InvalidArgument, "The paired animation breaks a rule (see the log) - fix it before saving" } );
         const string text         = saveToXMLText();
         const string completeText = PairedAnimationDef::makeXMLText( _content, ResourceFieldWrite::WriteAll );
-        if ( ResourceComposer::saveText( absPath, ResourceSaveText::makeWithComplete( text, completeText ) ) == false )
-            return unexpected( Error{ ErrorKind::ExternalFailure, "The file could not be written", absPath.str() } );
+        const bool   bSaved       = writer.save( path, [&text, &completeText]( const AbsolutePath& writable )
+                { return ResourceComposer::saveText( writable, ResourceSaveText::makeWithComplete( text, completeText ) ); } );
+        if ( bSaved == false )
+            return unexpected( Error{ ErrorKind::ExternalFailure, "The file could not be written", path.str() } );
         _state.markSaved( text );
         return {};
     }
@@ -220,12 +228,12 @@ namespace sw::editor
 
     bool PairedAnimationEditModel::undo()
     {
-        return _state.undo( _content );
+        return _state.undo();
     }
 
     bool PairedAnimationEditModel::redo()
     {
-        return _state.redo( _content );
+        return _state.redo();
     }
 
     void PairedAnimationEditModel::setScrubTime( float32 seconds )

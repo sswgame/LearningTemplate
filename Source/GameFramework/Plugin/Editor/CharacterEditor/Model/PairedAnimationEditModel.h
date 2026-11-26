@@ -23,6 +23,8 @@
 
 namespace sw::editor
 {
+    class AssetWriter;
+
     /** @brief 미리보기 시각에서 역할 하나의 단계입니다. */
     enum class PairedAnimationPreviewStage : uint8
     {
@@ -58,11 +60,11 @@ namespace sw::editor
         /** @brief XML 텍스트에서 읽어 현재 내용을 바꿉니다. 규칙에 어긋나면 현재 내용을 그대로 두고 false 입니다(이유는 로그). 성공하면 기록을 지우고 "저장된 상태" 로 맞춥니다. */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName );
         /** @brief 파일을 읽습니다. 파일이 없거나 읽지 못하면 false 입니다. */
-        [[nodiscard]] bool loadFromFile( const AbsolutePath& absolutePath );
+        [[nodiscard]] bool loadFromFile( const DiskPath& absolutePath );
         /** @brief 현재 내용을 파일 형식으로 씁니다. */
         string saveToXMLText() const { return PairedAnimationDef::makeXMLText( _content, ResourceFieldWrite::OmitDefaults ); }
         /** @brief 규칙을 본 뒤 파일에 씁니다. 규칙에 어긋나거나 쓰지 못하면 쓰지 않고 이유(`Error`)를 돌려줍니다. 성공하면 "저장된 상태" 로 맞춥니다. */
-        [[nodiscard]] expected<void> saveDocument( const AbsolutePath& absPath );
+        [[nodiscard]] expected<void> saveDocument( AssetWriter& writer, const DiskPath& path );
 
         // --- 조회 ----------------------------------------------------------------------------------------------------
 
@@ -125,6 +127,10 @@ namespace sw::editor
         /** @brief 역할 인덱스가 범위 밖이면 오류입니다. */
         [[nodiscard]] expected<void> validateRoleIndex( uint32 roleIndex ) const;
         [[nodiscard]] expected<void> validateNotifyIndex( uint32 notifyIndex ) const;
+
+    private:
+        using CaptureDelegate = EditorDocumentState<PairedAnimationContentDef>::CaptureDelegate;
+        using ApplyDelegate   = EditorDocumentState<PairedAnimationContentDef>::ApplyDelegate;
 
     private:
         PairedAnimationContentDef                      _content;

@@ -17,9 +17,12 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStoreTracker.h"
+#include "GameFramework/Runtime/Online/Store/ServiceRecordUnknownFields.h"
 
 namespace sw
 {
@@ -30,7 +33,11 @@ namespace sw
     class MetricRegistry;
     class RemoteConfig;
 
+    template <typename TRecord>
+    class ServiceRecordTable;
+
     /** @brief 값 종류입니다. */
+    ENUM()
     enum class RemoteConfigValueKind : uint8
     {
         Integer = 0,
@@ -50,18 +57,28 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 값 하나입니다. */
+    /** @brief 값 하나입니다. 원격 설정 표(`remote_config`)의 레코드 형식이기도 하다. */
+    REFLECT()
     struct RemoteConfigValue
     {
+        REFLECT_BODY();
         static constexpr int32 kMaxTextSize       = 4096;
         static constexpr int32 kFullRolloutPoints = 10000;
 
-        string                _text{};
-        int64                 _integer{ 0 };
-        float64               _real{ 0.0 };
-        int32                 _rolloutBasisPoints{ kFullRolloutPoints }; ///< Flag 에서 켜진 계정 비율(만분율)
+        PROPERTY( MaxCount = RemoteConfigValue::kMaxTextSize )
+        string _text{};
+        PROPERTY()
+        int64 _integer{ 0 };
+        PROPERTY()
+        float64 _real{ 0.0 };
+        PROPERTY( Min = 0, Max = RemoteConfigValue::kFullRolloutPoints )
+        int32 _rolloutBasisPoints{ kFullRolloutPoints }; ///< Flag 에서 켜진 계정 비율(만분율)
+        PROPERTY()
         RemoteConfigValueKind _type{ RemoteConfigValueKind::Integer };
-        uint8                 _bClientVisible{ SW_FALSE };
+        PROPERTY( Min = 0, Max = 1 )
+        uint8 _bClientVisible{ SW_FALSE };
+
+        ServiceRecordUnknownFields _unknownProperties{};
     };
 } // namespace sw
 
@@ -132,8 +149,8 @@ namespace sw
         ServiceStoreResult getLastSetResult() const { return _lastSetResult; }
         int32              getValueCount() const { return static_cast<int32>( _mapEntry.size() ); }
 
-        static const hashed_string& getTable(); ///< "remote_config"
-        static bool                 isValidKey( string_view key );
+        static const ServiceRecordTable<RemoteConfigValue>& getTable(); ///< "remote_config"
+        static bool                                         isValidKey( string_view key );
         /** @brief 실험 값 `이름:비중;이름:비중` 을 읽습니다. 이름 규칙, 비중(1 이상), 합 10000, 같은 이름 두 번이 틀리면 false 입니다. */
         [[nodiscard]] static bool parseVariants( string_view text, vector<RemoteConfigVariant>& outListVariant );
         /** @brief 계정의 출시 버킷(0..9999)입니다. `isFeatureEnabled` 가 비율과 비교합니다. */

@@ -7,7 +7,9 @@
 #include "GameFramework/Runtime/Online/Schedule/Server/ServiceScheduler.h"
 #include "GameFramework/Runtime/Online/Schedule/Server/ServiceTTLMonitor.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordTable.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceTTLRule.h"
+#include "GameFramework/Runtime/Online/Store/Server/Tests/ServiceStoreEntryTestUtil.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
 namespace sw
@@ -84,9 +86,9 @@ namespace
 
     bool readLeadingTime( const ServiceRecord& record, int64& outTimeMs )
     {
-        if ( record._bytes.size() < sizeof( int64 ) )
+        if ( ServiceStoreTestAccess::getBytes( record ).size() < sizeof( int64 ) )
             return false;
-        Memory::copy( &outTimeMs, record._bytes.data(), sizeof( int64 ) );
+        Memory::copy( &outTimeMs, ServiceStoreTestAccess::getBytes( record ).data(), sizeof( int64 ) );
         return true;
     }
 
@@ -94,14 +96,14 @@ namespace
     {
         MemoryServiceDatabase _database;
         hashed_string         _table{ "ttl_test" };
-        hashed_string         _ttlIndexTable{ "ttl_test_index" }; ///< TTL 색인 규칙용이다
+        ServiceIndexTable     _ttlIndexTable{ "ttl_test_index" }; ///< TTL 색인 규칙용이다
 
         void put( string_view key, int64 timeMs )
         {
             vector<uint8> bytes( sizeof( int64 ) );
             Memory::copy( bytes.data(), &timeMs, sizeof( int64 ) );
             ServiceTransaction transaction;
-            transaction.put( _table, key, bytes, ServiceRecord::kAbsentVersion );
+            ServiceStoreTestAccess::putBytes( transaction, _table, key, bytes, ServiceRecord::kAbsentVersion );
             SW_REQUIRE_TRUE( _database.commit( transaction ) == ServiceStoreResult::Ok );
         }
 
@@ -121,7 +123,7 @@ namespace
         void putIndex( int64 timeMs, string_view target )
         {
             ServiceTransaction transaction;
-            transaction.put( _ttlIndexTable, ServiceTTLRule::makeTTLIndexKey( timeMs, target ), vector<uint8>{}, ServiceRecord::kAnyVersion );
+            transaction.put( _ttlIndexTable, ServiceTTLRule::makeTTLIndexKey( timeMs, target ), ServiceRecord::kAnyVersion );
             SW_REQUIRE_TRUE( _database.commit( transaction ) == ServiceStoreResult::Ok );
         }
 
@@ -280,19 +282,26 @@ SW_TEST_CASE( ServiceSchedulerTest, MissedOccurrencesRunOnce )
     SW_EXPECT_EQUAL( size_t( 1 ), rig._firstSink._listRun.size() );
 }
 
-/** @brief [ServiceSchedulerTest] 저장소가 실패하면 처리기를 부르지 않고, 재시도 시각 전에는 다시 묻지 않으며, 그 뒤에 돈다 */
+/** @brief [ServiceSchedulerTest] 저장소가 실패하면 처리기를 부르지 않고, 백오프 전에는 다시 묻지 않으며, 그 뒤에 돈다 */
 SW_TEST_CASE( ServiceSchedulerTest, StoreFailureRetriesLater )
 {
+    constexpr int64  kFirstDelayMs = 5000; // 첫 대기는 [0, 5 초], 둘째는 [2.5 초, 5 초]
     SchedulerFixture rig;
     rig._database.armFault( ServiceStoreFault::RejectCommit );
     rig._first.update( UnixMilliseconds{ kNowMs } );
     rig.poll();
     SW_EXPECT_TRUE( rig._firstSink._listRun.empty() );
 
-    rig._first.update( UnixMilliseconds{ kNowMs + 4999 } );
+    rig._database.armFault( ServiceStoreFault::RejectCommit );
+    rig._first.update( UnixMilliseconds{ kNowMs + kFirstDelayMs } );
+    SW_EXPECT_EQUAL( 1, rig._first.getPendingJobCount() );
+    rig.poll();
+    SW_EXPECT_TRUE( rig._firstSink._listRun.empty() );
+
+    rig._first.update( UnixMilliseconds{ kNowMs + kFirstDelayMs + kFirstDelayMs / 2 - 1 } );
     SW_EXPECT_EQUAL( 0, rig._first.getPendingJobCount() );
 
-    rig._first.update( UnixMilliseconds{ kNowMs + 5000 } );
+    rig._first.update( UnixMilliseconds{ kNowMs + kFirstDelayMs * 2 } );
     rig.poll();
     SW_EXPECT_EQUAL( size_t( 1 ), rig._firstSink._listRun.size() );
 }
@@ -356,7 +365,7 @@ SW_TEST_CASE( ServiceTTLTest, DeletesOnlyExpired )
     rig.put( "b.edge", kNowMs - 1000 );
     rig.put( "c.new", kNowMs - 999 );
     ServiceTransaction unreadable;
-    unreadable.put( rig._table, "d.bad", vector<uint8>{ 1 }, ServiceRecord::kAbsentVersion );
+    ServiceStoreTestAccess::putBytes( unreadable, rig._table, "d.bad", vector<uint8>{ 1 }, ServiceRecord::kAbsentVersion );
     SW_REQUIRE_TRUE( rig._database.commit( unreadable ) == ServiceStoreResult::Ok );
 
     ServiceTTLRule        rule = rig.makeRule();

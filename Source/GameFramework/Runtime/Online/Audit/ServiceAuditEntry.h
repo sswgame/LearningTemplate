@@ -9,12 +9,14 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
+#include "GameFramework/Runtime/Online/Store/ServiceRecordUnknownFields.h"
+
 namespace sw
 {
     /**
      * @brief 감사 줄 하나입니다.
      * @details 관리자 감사 목록 응답에 고정 배치형으로 실립니다. 앞의 셋은 관리자 프로토콜의 문구 상한(256)이고, 뒤의 셋은 아래 상수와 같은 값입니다.
-     *          저장소 레코드는 이와 따로 `ServiceAuditLog` 의 버전 있는 형식으로 씁니다.
+     *          감사 표(`ServiceAuditLog::getTable`)의 레코드 형식이기도 하다(판은 이 형식의 `REFLECT( Version )`).
      */
     REFLECT()
     struct ServiceAuditEntry
@@ -38,5 +40,7 @@ namespace sw
         string _memo{};
         PROPERTY()
         int64 _timeMs{ 0 }; ///< UTC 벽시계 밀리초(0 이상)
+
+        ServiceRecordUnknownFields _unknownProperties{}; ///< 감사 표(`service_audit`) 레코드가 이 빌드가 모르는 칸을 든다
     };
 } // namespace sw

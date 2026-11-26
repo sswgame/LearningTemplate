@@ -10,6 +10,7 @@
 #include "Core/Name/hashed_string.h"
 #include "Core/String/StringBuilder.h"
 
+#include "Editor/Common/Asset/AssetWriter.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Panels/Catalog/Model/ReflectedXMLDocument.h"
 #include "Editor/Viewport/Model/EditorColliderHandleMath.h"
@@ -110,9 +111,9 @@ namespace sw::editor
         refreshBodyRows();
     }
 
-    bool RagdollPreviewViewModel::saveDocument()
+    bool RagdollPreviewViewModel::saveDocument( AssetWriter& writer )
     {
-        if ( _loadedDiskPath.empty() || FileUtil::writeTextFile( _loadedDiskPath, _pDocument->getText() ) == false )
+        if ( _loadedDiskPath.empty() || writer.writeText( _loadedDiskPath, _pDocument->getText() ) == false )
         {
             _status = "The physics asset could not be saved - see the log";
             return false;
@@ -251,9 +252,9 @@ namespace sw::editor
         }
         RagdollPreviewViewModelInternal::fillRows( *pAsset, _listBodyRow );
         // 편집 사본 — 읽지 못하면 공유 캐시가 이미 거절했다.
-        const optional<AbsolutePath> diskPath = AbsolutePath::isStrictAbsolute( assetPath ) ? AbsolutePath::tryMake( assetPath )
-                                                                                            : optional<AbsolutePath>{ editor::getSubsystem<AssetPaths>().toDiskPath( assetPath ) };
-        _loadedDiskPath                       = diskPath.has_value() ? *diskPath : AbsolutePath{};
+        const optional<DiskPath> diskPath = AbsolutePath::isStrictAbsolute( assetPath ) ? optional<DiskPath>{ FileUtil::toDiskPath( assetPath ) }
+                                                                                        : editor::getSubsystem<AssetPaths>().toDiskPath( assetPath );
+        _loadedDiskPath                   = diskPath.has_value() ? *diskPath : DiskPath{};
         _pDocument->clear();
         string text;
         if ( diskPath.has_value() && FileUtil::readTextFile( *diskPath, text ) )

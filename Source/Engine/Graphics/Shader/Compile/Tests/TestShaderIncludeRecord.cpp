@@ -41,7 +41,7 @@ namespace
             };
         }
         ShaderCompileInput makeInput() const { return ShaderCompileInput{
-            _ownShaders.join( "a.hlsl" ), _ownShaders, vector<AbsolutePath>{ _ownShaders, _engineShaders, _commonShaders }
+            _ownShaders.join( "a.hlsl" ), _ownShaders, vector<DiskPath>{ _ownShaders, _engineShaders, _commonShaders }
  }; }
     };
 } // namespace

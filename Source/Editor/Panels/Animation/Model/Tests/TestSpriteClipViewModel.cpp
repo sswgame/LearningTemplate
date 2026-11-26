@@ -3,6 +3,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "Editor/Common/Asset/AssetWriter.h"
 #include "Editor/Common/Workspace/Undo/DocumentEditRecorder.h"
 #include "Editor/Panels/Animation/Model/SpriteClipViewModel.h"
 
@@ -153,7 +154,8 @@ SW_TEST_CASE( SpriteClipViewModelTest, SaveAndLoadRoundTrip )
         SW_REQUIRE_TRUE( model.addAnimation() );
         model.editAtlasPixelSize() = float2{ 64.0f, 64.0f };
         SW_REQUIRE_TRUE( model.commitAtlasPixelSize() );
-        SW_REQUIRE_TRUE( model.saveDocument( path.str() ) );
+        AssetWriter writer;
+        SW_REQUIRE_TRUE( model.saveDocument( writer, path.str() ) );
         SW_EXPECT_FALSE( model.getStatus().empty() );
     }
     const DocumentEditRecorder modelRecorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) }; // 편집 연산은 알린다 — 문서 패널 대신 받는다
@@ -178,7 +180,8 @@ SW_TEST_CASE( SpriteClipViewModelTest, SavingNeverOverwritesAnImage )
     SpriteClipViewModel model;
 
     model.bindDocumentEditRecorder( modelRecorder );
-    SW_EXPECT_FALSE( model.saveDocument( "art/hero.dds" ) );
+    AssetWriter writer;
+    SW_EXPECT_FALSE( model.saveDocument( writer, "art/hero.dds" ) );
     SW_EXPECT_FALSE( model.getStatus().empty() );
 }
 

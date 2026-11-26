@@ -41,10 +41,10 @@ namespace sw::editor
     /** @brief 프로젝트 하나를 테이블로 펼친 것입니다. */
     struct LocalizationSheet
     {
-        AbsolutePath               _projectPath;
+        DiskPath                   _projectPath;
         string                     _sourceCulture;
         vector<string>             _listCulture;
-        vector<AbsolutePath>       _listTablePath;
+        vector<DiskPath>           _listTablePath;
         vector<LocalizationRecord> _listRecord;
         vector<string>             _listRemovedKey; ///< 테이블에서 지운 키. 저장할 때 원문 테이블과 번역 테이블에서 지운다
     };
@@ -55,7 +55,7 @@ namespace sw::editor
     /** @brief 게임 데이터 XML 파일 항목 */
     struct GameDataFileEntry
     {
-        string       _fileName;
-        AbsolutePath _absolutePath;
+        string   _fileName;
+        DiskPath _absolutePath;
     };
 } // namespace sw::editor

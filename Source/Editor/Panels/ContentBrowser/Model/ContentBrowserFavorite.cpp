@@ -32,7 +32,7 @@ namespace sw::editor
     AbsolutePath ContentBrowserFavorite::findFolder() const
     {
         const string packRoot = _pack == ContentBrowserFavoritePack::Engine ? string( constant::path::kEnginePack ) : ContentBrowserViewModel::getGamePackRoot();
-        return EditorPaths::findContentFolder( FileUtil::joinPath( packRoot, _folder ) );
+        return ContentBrowserViewModel::findAssetFile( FileUtil::joinPath( packRoot, _folder ) );
     }
 
     const vector<ContentBrowserFavorite>& ContentBrowserFavorite::getFavorites()

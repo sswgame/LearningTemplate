@@ -7,8 +7,7 @@
 namespace sw
 {
     StorePurchaseFlow::StorePurchaseFlow( IStoreBillingBridge& bridge, EconomyClient& client, const ReportDelegate& onReport )
-        : _listPending{}
-        , _onReport{ onReport }
+        : _onReport{ onReport }
         , _bridge{ bridge }
         , _client{ client }
     {
@@ -56,34 +55,29 @@ namespace sw
 
     void StorePurchaseFlow::redeem( const EconomyRedeemRequest& request, const NetIdempotencyKey& key )
     {
-        _listPending.push_back( PendingRedeem{ request, key } ); // 응답이 요청 함수 안에서 올 수 있다(보내지 못한 요청) — 먼저 적어 둔다
-        (void)_client.call<EconomyMethod::RedeemReceipt>( request, SW_DELEGATE_METHOD( OnlineReplyDelegate<EconomyMethod::RedeemReceipt>, &StorePurchaseFlow::onRedeemReply, this ), key );
+        // 콜백은 정확히 한 번(보내지 못하면 이 안에서 바로) 온다.
+        (void)_client.call<EconomyMethod::RedeemReceipt>( request, SW_DELEGATE_LAMBDA( OnlineReplyDelegate<EconomyMethod::RedeemReceipt>, [this, request]( const OnlineResult<EconomyRedeemReply>& reply )
+        { onRedeemReply( request, reply ); } ),
+                                                          key );
     }
 
-    void StorePurchaseFlow::onRedeemReply( const OnlineResult<EconomyRedeemReply>& reply )
+    void StorePurchaseFlow::onRedeemReply( const EconomyRedeemRequest& request, const OnlineResult<EconomyRedeemReply>& reply )
     {
-        for ( size_t index = 0; index < _listPending.size(); ++index )
-        {
-            if ( ( _listPending[index]._key == reply._idempotencyKey ) == false )
-                continue;
-            StorePurchaseReport finished;
-            finished._redeem  = std::move( _listPending[index]._request );
-            finished._key     = reply._idempotencyKey;
-            finished._billing = StoreBillingStatus::Purchased;
-            finished._result  = reply._errorCode != OnlineError::kOk ? EconomyServiceResult::fail( reply._errorCode ) : EconomyServiceResult{ reply._reply._result };
-            _listPending.erase( _listPending.begin() + static_cast<ptrdiff_t>( index ) );
+        StorePurchaseReport finished;
+        finished._redeem  = request;
+        finished._key     = reply._idempotencyKey;
+        finished._billing = StoreBillingStatus::Purchased;
+        finished._result  = reply._errorCode != OnlineError::kOk ? EconomyServiceResult::fail( reply._errorCode ) : EconomyServiceResult{ reply._reply._result };
 
-            const EconomyServiceResult result = finished._result;
-            // 공통 범주의 재시도(장애 · 충돌 · 도배 제한)와 업무 결과의 재시도(스토어 대기)를 함께 본다
-            const bool bRetryable = reply.isRetryable() || ( reply._errorCode == OnlineError::kOk && reply._reply.isRetryable() );
-            finished._bRetryable  = bRetryable ? SW_TRUE : SW_FALSE;
-            if ( result == EconomyResult::BuyerTokenMissing )
-                SW_LOG_WARNING_ID( "StorePurchaseFlow.BuyerTokenMissing", "The store answer has no account token - the '%#' billing bridge must pass StoreBillingRequest::_buyerToken to the purchase (obfuscatedAccountId / appAccountToken)", _bridge.getStoreName() );
-            if ( result == EconomyResult::Ok || result == EconomyResult::ReceiptRefunded ) // 지급됐거나 돌려줄 것이 없다. 그 밖의 거절은 마치지 않아 맞는 계정이 다시 낼 수 있다
-                _bridge.finishPurchase( finished._redeem._payload );
-            notifyReport( finished );
-            return;
-        }
+        const EconomyServiceResult result = finished._result;
+        // 공통 범주의 재시도(장애 · 충돌 · 도배 제한)와 업무 결과의 재시도(스토어 대기)를 함께 본다
+        const bool bRetryable = reply.isRetryable() || ( reply._errorCode == OnlineError::kOk && reply._reply.isRetryable() );
+        finished._bRetryable  = bRetryable ? SW_TRUE : SW_FALSE;
+        if ( result == EconomyResult::BuyerTokenMissing )
+            SW_LOG_WARNING_ID( "StorePurchaseFlow.BuyerTokenMissing", "The store answer has no account token - the '%#' billing bridge must pass StoreBillingRequest::_buyerToken to the purchase (obfuscatedAccountId / appAccountToken)", _bridge.getStoreName() );
+        if ( result == EconomyResult::Ok || result == EconomyResult::ReceiptRefunded ) // 지급됐거나 돌려줄 것이 없다. 그 밖의 거절은 마치지 않아 맞는 계정이 다시 낼 수 있다
+            _bridge.finishPurchase( finished._redeem._payload );
+        notifyReport( finished );
     }
 
     void StorePurchaseFlow::notifyReport( const StorePurchaseReport& finished )

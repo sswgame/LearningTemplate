@@ -4,6 +4,8 @@
 
 #include "GameFramework/Runtime/Online/Audit/Server/ServiceAuditLog.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordTable.h"
+#include "GameFramework/Runtime/Online/Store/Server/Tests/ServiceStoreEntryTestUtil.h"
 
 // ServiceAuditLogTest — 감사 로그: 효과와 같은 트랜잭션(효과가 지면 줄도 없다), 같은 고유 값은 한 줄, 최근 것부터 · 커서, 상한을 넘는 줄은 효과까지 Invalid,
 // 키의 시각 읽기(형식이 틀리면 거절)(nogpu).
@@ -36,23 +38,23 @@ SW_TEST_CASE( ServiceAuditLogTest, EntryCommitsOnlyWithItsEffect )
 {
     MemoryServiceDatabase database;
     ServiceTransaction    seed;
-    seed.put( getEffectTable(), "balance", vector<uint8>{ 1 } );
+    ServiceStoreTestAccess::putBytes( seed, getEffectTable(), "balance", vector<uint8>{ 1 } );
     SW_REQUIRE_TRUE( database.commit( seed ) == ServiceStoreResult::Ok );
 
     ServiceTransaction lost; // 효과가 Conflict 면 감사 줄도 없다
-    lost.put( getEffectTable(), "balance", vector<uint8>{ 2 }, ServiceRecord::kAbsentVersion );
+    ServiceStoreTestAccess::putBytes( lost, getEffectTable(), "balance", vector<uint8>{ 2 }, ServiceRecord::kAbsentVersion );
     ServiceAuditLog::stageEntry( lost, makeEntry( "acct.01", 10 ), 1, 1 );
     SW_EXPECT_TRUE( database.commit( lost ) == ServiceStoreResult::Conflict );
     SW_EXPECT_EQUAL( 0, database.countRecords( ServiceAuditLog::getTable() ) );
 
     ServiceTransaction applied;
-    applied.put( getEffectTable(), "balance", vector<uint8>{ 3 } );
+    ServiceStoreTestAccess::putBytes( applied, getEffectTable(), "balance", vector<uint8>{ 3 } );
     ServiceAuditLog::stageEntry( applied, makeEntry( "acct.01", 10 ), 1, 1 );
     SW_EXPECT_TRUE( database.commit( applied ) == ServiceStoreResult::Ok );
     SW_EXPECT_EQUAL( 1, database.countRecords( ServiceAuditLog::getTable() ) );
 
     ServiceTransaction retried; // 같은 고유 값(멱등 키)의 재시도는 줄을 둘 만들지 않는다
-    retried.put( getEffectTable(), "balance", vector<uint8>{ 4 } );
+    ServiceStoreTestAccess::putBytes( retried, getEffectTable(), "balance", vector<uint8>{ 4 } );
     ServiceAuditLog::stageEntry( retried, makeEntry( "acct.01", 10 ), 1, 1 );
     SW_EXPECT_TRUE( database.commit( retried ) == ServiceStoreResult::Conflict );
     SW_EXPECT_EQUAL( 1, database.countRecords( ServiceAuditLog::getTable() ) );
@@ -68,7 +70,7 @@ SW_TEST_CASE( ServiceAuditLogTest, ExpiresByTTLIndexAndBackfillsLegacyLines )
     SW_EXPECT_EQUAL( 1, database.countRecords( ServiceAuditLog::getExpiryTable() ) );
 
     ServiceTransaction legacy; // 색인보다 먼저 쓴 줄이다
-    legacy.put( ServiceAuditLog::getTable(), ServiceAuditLog::makeKey( makeEntry( "acct.02", 500 ), 0, 2 ), vector<uint8>{ 1 }, ServiceRecord::kAbsentVersion );
+    legacy.put( ServiceAuditLog::getTable(), ServiceAuditLog::makeKey( makeEntry( "acct.02", 500 ), 0, 2 ), makeEntry( "acct.02", 500 ), ServiceRecord::kAbsentVersion );
     SW_REQUIRE_TRUE( database.commit( legacy ) == ServiceStoreResult::Ok );
     ServiceTransaction fresh;
     ServiceAuditLog::stageEntry( fresh, makeEntry( "acct.03", 5000 ), 0, 3 );
@@ -131,7 +133,7 @@ SW_TEST_CASE( ServiceAuditLogTest, OversizedEntryMakesTheWholeCommitInvalid )
     entry._memo.assign( static_cast<size_t>( ServiceAuditEntry::kMaxMemoSize ) + 1, 'x' );
     SW_EXPECT_FALSE( ServiceAuditLog::isValidEntry( entry ) );
     ServiceTransaction transaction;
-    transaction.put( getEffectTable(), "balance", vector<uint8>{ 1 } );
+    ServiceStoreTestAccess::putBytes( transaction, getEffectTable(), "balance", vector<uint8>{ 1 } );
     ServiceAuditLog::stageEntry( transaction, entry, 0, 1 );
     SW_EXPECT_TRUE( database.commit( transaction ) == ServiceStoreResult::Invalid ); // 자르지 않고 효과까지 막는다
     SW_EXPECT_EQUAL( 0, database.countRecords( getEffectTable() ) );

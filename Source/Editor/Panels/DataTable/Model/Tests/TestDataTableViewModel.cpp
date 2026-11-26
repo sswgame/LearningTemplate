@@ -4,6 +4,7 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "Editor/Common/Asset/AssetWriter.h"
 #include "Editor/Common/Commands/Asset/EditorDataTableCommands.h"
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
 #include "Editor/Common/Workspace/Undo/CommandStack.h"
@@ -27,14 +28,14 @@ namespace
             _first._absolutePath  = test::makeScratchPath( _first._fileName );
             _second._fileName     = "SwDataTableSecond.xml";
             _second._absolutePath = test::makeScratchPath( _second._fileName );
-            SW_REQUIRE_TRUE( FileUtil::writeTextFile( _first._absolutePath, "<First a=\"1\"/>" ) );
-            SW_REQUIRE_TRUE( FileUtil::writeTextFile( _second._absolutePath, "<Second b=\"2\"/>" ) );
+            SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( _first._absolutePath.str() ), "<First a=\"1\"/>" ) );
+            SW_REQUIRE_TRUE( FileUtil::writeTextFile( FileUtil::toDiskPath( _second._absolutePath.str() ), "<Second b=\"2\"/>" ) );
         }
 
         ~DataTableTestFiles()
         {
-            (void)FileUtil::removeFile( _first._absolutePath );
-            (void)FileUtil::removeFile( _second._absolutePath );
+            (void)FileUtil::removeFile( FileUtil::toDiskPath( _first._absolutePath.str() ) );
+            (void)FileUtil::removeFile( FileUtil::toDiskPath( _second._absolutePath.str() ) );
         }
 
         static string read( const GameDataFileEntry& entry )
@@ -84,6 +85,7 @@ SW_TEST_CASE( DataTableViewModelTest, OpeningLoadsTheFile )
 // 연 파일은 경로로 연 그 파일이다 — 목록이 늘거나 줄거나 순서가 바뀌어도 저장은 그 파일에 쓴다(옛 번호를 들면 다른 파일을 덮어썼다).
 SW_TEST_CASE( DataTableViewModelTest, ReloadedListKeepsTheOpenFile )
 {
+    AssetWriter                writer;
     const DataTableTestFiles   files;
     const DocumentEditRecorder recorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) };
     DataTableViewModel         model{ recorder };
@@ -94,7 +96,7 @@ SW_TEST_CASE( DataTableViewModelTest, ReloadedListKeepsTheOpenFile )
     model.setGameDataFiles( { files._first } ); // 연 파일이 목록에서 빠졌다
     SW_EXPECT_TRUE( model.getGameDataPath() == files._second._absolutePath.str() );
     SW_EXPECT_TRUE( model.isGameDataDirty() );
-    SW_EXPECT_TRUE( model.saveDocument() );
+    SW_EXPECT_TRUE( model.saveDocument( writer ) );
     SW_EXPECT_TRUE( DataTableTestFiles::read( files._second ) == "<Second b=\"9\"/>" );
     SW_EXPECT_TRUE( DataTableTestFiles::read( files._first ) == "<First a=\"1\"/>" );
 }
@@ -102,6 +104,7 @@ SW_TEST_CASE( DataTableViewModelTest, ReloadedListKeepsTheOpenFile )
 // 다시 열기(문서 패널의 다시 읽기 · "저장 안 함")는 디스크의 글로 간다. 저장은 dirty 와 무관하게 연 파일을 쓴다(저장 왕복).
 SW_TEST_CASE( DataTableViewModelTest, SaveWritesAndReopenRestores )
 {
+    AssetWriter                writer;
     const DataTableTestFiles   files;
     const DocumentEditRecorder recorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) };
     DataTableViewModel         model{ recorder };
@@ -116,12 +119,12 @@ SW_TEST_CASE( DataTableViewModelTest, SaveWritesAndReopenRestores )
     SW_EXPECT_TRUE( model.getGameDataLoadCount() > loadCount ); // 패널이 표를 다시 읽는다
 
     model.replaceGameDataRawText( "<First a=\"6\"/>" );
-    SW_EXPECT_TRUE( model.saveDocument() );
+    SW_EXPECT_TRUE( model.saveDocument( writer ) );
     SW_EXPECT_FALSE( model.isAnyDirty() );
     SW_EXPECT_FALSE( model.getGameDataDocument().isDirty() );
     SW_EXPECT_TRUE( DataTableTestFiles::read( files._first ) == "<First a=\"6\"/>" );
 
-    SW_EXPECT_TRUE( model.saveDocument() ); // 고친 것이 없어도 쓴다 — 같은 글이다
+    SW_EXPECT_TRUE( model.saveDocument( writer ) ); // 고친 것이 없어도 쓴다 — 같은 글이다
     SW_EXPECT_TRUE( DataTableTestFiles::read( files._first ) == "<First a=\"6\"/>" );
 }
 
@@ -140,6 +143,7 @@ SW_TEST_CASE( DataTableViewModelTest, TableEditUpdatesTheRawText )
 // 읽지 못한 파일은 열지 않는다. 앞 파일의 글을 든 채 열면 저장이 앞 파일의 내용을 이 파일에 쓴다.
 SW_TEST_CASE( DataTableViewModelTest, UnreadableFileIsNotOpened )
 {
+    AssetWriter writer;
     SW_EXPECT_LOG( "File.NotFound" );
     SW_EXPECT_LOG( "DataTablePanel.CouldNotReadGame" );
     const DataTableTestFiles   files;
@@ -150,7 +154,7 @@ SW_TEST_CASE( DataTableViewModelTest, UnreadableFileIsNotOpened )
     SW_EXPECT_FALSE( model.openGameDataFile( missingPath ) );
     SW_EXPECT_TRUE( model.getGameDataPath().empty() );
     SW_EXPECT_TRUE( model.getGameDataRawText().empty() );
-    SW_EXPECT_FALSE( model.saveGameDataFile() ); // 쓸 곳이 없다
+    SW_EXPECT_FALSE( model.saveGameDataFile( writer ) ); // 쓸 곳이 없다
     SW_EXPECT_FALSE( FileUtil::exists( missingPath ) );
     SW_EXPECT_TRUE( DataTableTestFiles::read( files._first ) == "<First a=\"1\"/>" );
 }
@@ -260,6 +264,7 @@ SW_TEST_CASE( DataTableViewModelTest, FilterLooksAtKeySourceAndTranslations )
 // 결함: 깨진 XML 도 그대로 저장되어 게임이 다음에 그 파일을 읽지 못했다.
 SW_TEST_CASE( DataTableViewModelTest, BrokenXMLIsNotSaved )
 {
+    AssetWriter writer;
     SW_EXPECT_LOG( "DataTablePanel.GameDataNotValidXML" );
     const DataTableTestFiles   files;
     const DocumentEditRecorder recorder{ SW_DELEGATE_LAMBDA( DocumentEditRecorder::RecordDelegate, []( string_view ) {} ) };
@@ -267,11 +272,11 @@ SW_TEST_CASE( DataTableViewModelTest, BrokenXMLIsNotSaved )
     SW_REQUIRE_TRUE( model.openGameDataFile( files._first._absolutePath ) );
     model.replaceGameDataRawText( "<First a=" );
     SW_EXPECT_FALSE( model.getGameDataDocument().isParsed() );
-    SW_EXPECT_FALSE( model.saveDocument() );
+    SW_EXPECT_FALSE( model.saveDocument( writer ) );
     SW_EXPECT_TRUE( model.isGameDataDirty() ); // 고친 글은 남는다 — 글 상자에서 고쳐 다시 저장한다
     SW_EXPECT_TRUE( DataTableTestFiles::read( files._first ) == "<First a=\"1\"/>" );
     model.replaceGameDataRawText( "<First a=\"2\"/>" );
-    SW_EXPECT_TRUE( model.saveDocument() );
+    SW_EXPECT_TRUE( model.saveDocument( writer ) );
     SW_EXPECT_TRUE( DataTableTestFiles::read( files._first ) == "<First a=\"2\"/>" );
 }
 
@@ -337,6 +342,7 @@ SW_TEST_CASE( DataTableViewModelTest, ConfirmOnlyTouchesStaleAndReview )
 // 결함: 원문이 바뀐 뒤 번역이 그대로 맞아도 낡음 표시를 걷을 길이 없었다(글이 같으면 저장이 해시를 건드리지 않았다).
 SW_TEST_CASE( DataTableViewModelTest, ConfirmedTranslationIsSavedAsCurrent )
 {
+    AssetWriter        writer;
     const AbsolutePath folder      = test::makeScratchPath( "SwDataTableConfirm" );
     const AbsolutePath projectPath = folder.join( "t.locproject.xml" );
     const string       oldHash     = SourceTextEntry::formatSourceHash( SourceTextEntry::computeSourceHash( "Older" ) );
@@ -355,7 +361,7 @@ SW_TEST_CASE( DataTableViewModelTest, ConfirmedTranslationIsSavedAsCurrent )
 
     model.confirmTranslation( model.editSheet()._listRecord[0], 0 );
     SW_EXPECT_TRUE( model.isLocalizationDirty() );
-    model.saveLocalization();
+    model.saveLocalization( writer );
     SW_EXPECT_FALSE( model.isLocalizationDirty() );
 
     LocalizationSheet saved;

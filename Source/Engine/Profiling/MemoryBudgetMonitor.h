@@ -15,6 +15,7 @@
 #include "Core/Memory/MemoryTag.h"
 #include "Core/Path/AbsolutePath.h"
 
+#include "Engine/Config/ConfigFileID.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
@@ -42,6 +43,12 @@ namespace sw
 
         PROPERTY( Tooltip = "One budget line per tag - tags without a line have no budget (no warning)" )
         vector<MemoryBudgetEntry> _listBudget;
+
+        /** @brief 예산 파일입니다(프로젝트 루트 기준, 없어도 된다). */
+        static constexpr ConfigFileID<MemoryBudgetFile> kConfigFile{ "Config/Engine/MemoryBudget.json" };
+
+        /** @brief 모르는 태그 이름 · 같은 태그 두 번 · 0 이하 크기를 거절합니다(`ConfigManager::readConfig` 가 부른다). 까닭의 대상은 항목이다. */
+        [[nodiscard]] expected<void> validate() const;
     };
 } // namespace sw
 
@@ -58,8 +65,6 @@ namespace sw
     public:
         /** @brief 프레임 카운터 이름을 처음 등록할 때(이름 풀이 자란다)의 할당 태그입니다 — 메인 루프에는 태그가 없다. */
         static constexpr MemoryTag kMemoryTag = MemoryTag::EngineMisc;
-        /** @brief 예산 파일의 기본 위치입니다(프로젝트 폴더 기준). */
-        static constexpr const utf8* kBudgetFile = "Config/Engine/MemoryBudget.json";
 
         MemoryBudgetMonitor();
 
@@ -69,10 +74,10 @@ namespace sw
          * @param outError 실패 이유(어느 항목이 왜)
          */
         [[nodiscard]] static expected<void> applyBudgetJSON( string_view jsonText, MemoryProfiler& profiler );
-        /**
-         * @brief 예산 파일을 읽어 활성 프로파일러에 겁니다. 파일이 없으면 예산 없이 true 입니다. 형식이 틀리면 오류를 남기고 false 입니다.
-         */
-        [[nodiscard]] bool loadBudgetFile( const AbsolutePath& absolutePath );
+        /** @brief 예산 파일(`MemoryBudgetFile::kConfigFile`)을 읽어 활성 프로파일러에 겁니다. 파일이 없으면 예산 없이 true 입니다. 형식이 틀리면 오류를 남기고 false 입니다. */
+        [[nodiscard]] bool loadBudgetFile();
+        /** @brief 검사한 예산 표를 @p profiler 에 겁니다. */
+        static void applyBudget( const MemoryBudgetFile& file, MemoryProfiler& profiler );
 
         /**
          * @brief 프레임 끝에 한 번 부릅니다 — 예산 검사(새로 넘은 태그 경고), FrameProfiler 카운터.

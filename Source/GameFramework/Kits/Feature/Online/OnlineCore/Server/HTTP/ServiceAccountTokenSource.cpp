@@ -147,7 +147,7 @@ namespace sw
             _expiresMs   = now.count() + expiresInSec * constant::time::kMillisecondsPerSecond;
             return ResponseResult::Granted;
         }
-        SW_LOG_WARNING_ID( "ServiceAccountTokenSource.AccessTokenRequestService", "The access token request of service account '%#' failed (status %#)", _credentials._clientEmail.c_str(), response._statusCode );
+        SW_LOG_WARNING_ID( "ServiceAccountTokenSource.AccessTokenRequestService", "The access token request of service account '%#' failed (status %#)", _credentials._clientEmail.c_str(), response.getStatusCode() );
         // 서버 오류 · 한도 · 전송 실패(그리고 읽을 수 없는 성공 응답)는 곧 나아질 수 있고, 그 밖의 4xx 는 키나 범위가 틀린 것이라 다시 해도 같다.
         const bool bRetryable = response.isSuccess() || response.isTransientFailure();
         return bRetryable ? ResponseResult::Retryable : ResponseResult::Rejected;

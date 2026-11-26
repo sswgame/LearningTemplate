@@ -11,22 +11,6 @@
 
 namespace sw
 {
-    // ------------------------------------------------------------------------------
-    // HubProfile
-    // ------------------------------------------------------------------------------
-    bool HubProfile::write( BitWriter& writer ) const
-    {
-        kFormat.writeVersion( writer );
-        return ReplicatedLayout::writeFull( *this, writer );
-    }
-
-    bool HubProfile::read( BitReader& reader )
-    {
-        if ( kFormat.readVersion( reader ) == false )
-            return false;
-        return ReplicatedLayout::readFull( reader, *this, nullptr ) == FixedReadResult::Ok; // `Ok` 일 때만 값을 바꾼다
-    }
-
     AbsolutePosition HubRules::clampInside( const AbsolutePosition& position ) const
     {
         const float3& value = position._value;
