@@ -3,9 +3,10 @@
 #include "Core/Hash/HashUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/ValueNoise.h"
+#include "Core/Math/VectorMath.h"
 #include "Core/TestFramework/TestFramework.h"
 
-// ValueNoiseTest: 좌표 해시(`HashUtil::hashCoord`. 상태 없음, 좌표 · 씨앗에 민감, constexpr)와 값 노이즈(격자점 = 해시, 0..1, 연속, 옥타브 1 미만은 1). nogpu.
+// ValueNoiseTest: 좌표 해시(`HashUtil::hashCoord`. 상태 없음, 좌표 · 씨앗에 민감, constexpr)와 값 노이즈(격자점 = 해시, 0..1, 연속, 옥타브 1 미만은 1), 1D · 3D 값 노이즈와 1D 펄린(-1..1, 연속). nogpu.
 
 /**
  * @brief [ValueNoiseTest] 좌표 해시는 상태 없이 같은 입력에 같은 값이고, 좌표 · 씨앗 · 차원이 바뀌면 다른 값이며, 단위 실수는 [0, 1] 이다
@@ -51,4 +52,36 @@ SW_TEST_CASE( ValueNoiseTest, ValueNoiseHitsLatticeAndStaysContinuous )
     const float32 fractal = sw::ValueNoise::sampleFractal( 1.3f, 2.7f, kSeed, 5 );
     SW_EXPECT_TRUE( 0.0f <= fractal && fractal <= 1.0f );
     SW_EXPECT_NOT_EQUAL( sw::ValueNoise::sampleValue( 1.3f, 2.7f, kSeed ), sw::ValueNoise::sampleValue( 1.3f, 2.7f, kSeed + 1 ) );
+}
+
+/**
+ * @brief [ValueNoiseTest] 1D · 3D 값 노이즈와 1D 펄린은 -1..1 안이고 연속이며, 펄린은 정수 격자점에서 0 이고, 씨앗이 바뀌면 다른 값이다
+ */
+SW_TEST_CASE( ValueNoiseTest, SignedNoiseStaysInRangeAndContinuous )
+{
+    constexpr uint32 kSeed = 42u;
+    SW_EXPECT_EQUAL( 0.0f, sw::ValueNoise::samplePerlin1D( 3.0f, kSeed ) );
+    SW_EXPECT_EQUAL( 0.0f, sw::ValueNoise::samplePerlin1D( -2.0f, kSeed ) );
+
+    float32 previous1D     = sw::ValueNoise::sampleValue1D( 0.0f, kSeed );
+    float32 previous3D     = sw::ValueNoise::sampleValue3D( sw::float3{ 0.0f, 0.5f, 0.25f }, kSeed );
+    float32 previousPerlin = sw::ValueNoise::samplePerlin1D( 0.0f, kSeed );
+    for ( int32 step = 1; step <= 400; ++step )
+    {
+        const float32 x       = static_cast<float32>( step ) * 0.01f;
+        const float32 value1D = sw::ValueNoise::sampleValue1D( x, kSeed );
+        const float32 value3D = sw::ValueNoise::sampleValue3D( sw::float3{ x, 0.5f, 0.25f }, kSeed );
+        const float32 perlin  = sw::ValueNoise::samplePerlin1D( x, kSeed );
+        SW_REQUIRE_TRUE( -1.0f <= value1D && value1D <= 1.0f );
+        SW_REQUIRE_TRUE( -1.0f <= value3D && value3D <= 1.0f );
+        SW_REQUIRE_TRUE( -1.0f <= perlin && perlin <= 1.0f );
+        SW_REQUIRE_TRUE( sw::MathUtil::abs( value1D - previous1D ) < 0.1f );
+        SW_REQUIRE_TRUE( sw::MathUtil::abs( value3D - previous3D ) < 0.1f );
+        SW_REQUIRE_TRUE( sw::MathUtil::abs( perlin - previousPerlin ) < 0.1f );
+        previous1D     = value1D;
+        previous3D     = value3D;
+        previousPerlin = perlin;
+    }
+    SW_EXPECT_NOT_EQUAL( sw::ValueNoise::sampleValue1D( 1.3f, kSeed ), sw::ValueNoise::sampleValue1D( 1.3f, kSeed + 1 ) );
+    SW_EXPECT_NOT_EQUAL( sw::ValueNoise::sampleValue3D( sw::float3{ 1.3f, 2.7f, 0.4f }, kSeed ), sw::ValueNoise::sampleValue3D( sw::float3{ 1.3f, 2.7f, 0.4f }, kSeed + 1 ) );
 }
