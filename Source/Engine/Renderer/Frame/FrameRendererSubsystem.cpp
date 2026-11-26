@@ -8,6 +8,7 @@
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Asset/PackEngineSettingsSubsystem.h"
 #include "Engine/Config/ConfigManager.h"
+#include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/OcclusionCullingConfig.h"
 #include "Engine/Config/PackEngineSettings.h"
@@ -30,6 +31,7 @@
 #include "Engine/Renderer/Frame/OffscreenSceneRenderers.h"
 #include "Engine/Renderer/Frame/Packet/RenderFrameSettings.h"
 #include "Engine/Renderer/Frame/Packet/RenderPacketBuilder.h"
+#include "Engine/Renderer/Pipeline/RenderPipelineAsset.h"
 #include "Engine/Renderer/RHISubsystem.h"
 #include "Engine/Renderer/RenderThread.h"
 #include "Engine/Renderer/RenderThreadSubsystem.h"
@@ -60,8 +62,8 @@ namespace sw
 
         struct FrameRendererSubsystemInternal
         {
-            /** @brief 파이프라인을 골라 읽습니다(게임 스레드). 렌더러는 읽은 것을 받는다. 디퍼드 경로(와 그 위의 조명)를 측정하거나 검증하려면 `-gv_deferredShading=1` 을 준다. */
-            static RenderPipelineRequest loadChosenPipeline()
+            /** @brief 그릴 파이프라인 경로를 고릅니다(게임 스레드, 파일을 열지 않는다). 디퍼드 경로(와 그 위의 조명)를 측정하거나 검증하려면 `-gv_deferredShading=1` 을 준다. */
+            static string choosePipelinePath()
             {
                 const EngineDefaultAssets&        engineDefaultAssets = engine::getSubsystem<EngineDefaultAssets>();
                 const DataPath&                   packPipeline        = engine::getSubsystem<PackEngineSettings>()._renderPipeline;
@@ -70,10 +72,12 @@ namespace sw
                 choice._commandLinePath = commandLinePath;
                 choice._deferredPath    = engineDefaultAssets._defaultDeferredPipeline.get();
                 choice._gamePath        = packPipeline.isSet() ? string_view( packPipeline.get() ) : string_view{};
-                choice._forwardPath     = engineDefaultAssets._defaultForwardPipeline.get();
+                choice._qualityPath     = engine::getSubsystem<EngineConfig>()._render._renderPipeline.get();
                 choice._bDeferred       = gv_deferredShading;
-                return RenderPipelineRequest::load( FrameRendererUtil::computePipelinePath( choice ) );
+                return string( FrameRendererUtil::computePipelinePath( choice ) );
             }
+            /** @brief 파이프라인을 골라 읽습니다(게임 스레드). 렌더러는 읽은 것을 받는다. */
+            static RenderPipelineRequest loadChosenPipeline() { return RenderPipelineRequest::load( choosePipelinePath() ); }
         };
     } // namespace
 
@@ -124,7 +128,11 @@ namespace sw
             SW_LOG_ERROR_ID( "FrameRenderer.OcclusionConfigInvalid", "The occlusion culling settings have no default: %# (%#)", occlusionConfig.error().message(), occlusionConfig.error().detail() );
             return SubsystemInitResult::Failed;
         }
-        if ( _frameRenderer->initialize( &device, &engine::getSubsystem<TaskManager>(), RenderFrameSettings::capture(), FrameRendererSubsystemInternal::loadChosenPipeline(), *occlusionConfig ) == false )
+        // 다시 읽기 횟수는 읽기 앞에 적는다 — 읽는 도중의 다시 읽기를 놓치지 않는다(`AssetReloadWatch::markSeen`).
+        _pipelineReload.markSeen();
+        const RenderPipelineRequest firstPipeline = FrameRendererSubsystemInternal::loadChosenPipeline();
+        _chosenPipelinePath                       = firstPipeline._path;
+        if ( _frameRenderer->initialize( &device, &engine::getSubsystem<TaskManager>(), RenderFrameSettings::capture(), firstPipeline, *occlusionConfig ) == false )
         {
             SW_LOG_ERROR_ID( "FrameRenderer.FailedInitializeFrameRenderer", "Failed to initialize FrameRenderer!" );
             return SubsystemInitResult::Failed;
@@ -144,19 +152,49 @@ namespace sw
             }
             _arrPipelineVariableSubscription[index] = pVariable->bindOnValueChanged( SW_DELEGATE_METHOD( GlobalVariableChangedDelegate, &FrameRendererSubsystem::onPipelineVariableChanged, this ) );
         }
+        // 품질 단계 · 플랫폼 층이 바뀌면(`ConfigManager::applyRenderQuality`) 엔진 렌더 설정의 파이프라인이 바뀔 수 있다 — 고른 결과가 달라졌을 때만 바꾼다.
+        ConfigManager* const pConfigManager = engine::findSubsystem<ConfigManager>();
+        if ( pConfigManager == nullptr )
+        {
+            SW_LOG_ERROR_ID( "FrameRenderer.NoConfigManager", "FrameRenderer needs the Config subsystem - the render quality tier chooses the pipeline" );
+            return SubsystemInitResult::Failed;
+        }
+        _configReloadedSubscription = pConfigManager->onConfigReloaded().add( SW_DELEGATE_METHOD( Delegate<void( const hashed_string& )>, &FrameRendererSubsystem::onConfigReloaded, this ) );
         return SubsystemInitResult::Succeeded;
     }
 
     void FrameRendererSubsystem::onPipelineVariableChanged( GlobalVariableInfo* pVariable )
     {
-        // 렌더 쪽 객체(렌더러 · PSO 캐시)는 렌더 스레드가 다음 프레임 기록 전에 고친다 — 렌더 스레드와 GPU 를 세우지 않는다(셰이더 리로드 `LiveShaderSubsystem` 과 같은 길).
-        // 옛 패스 자원은 디바이스가 그것을 쓴 프레임의 GPU 완료 뒤로 미뤄 놓는다(백엔드 해제 큐).
         StringBuilder<constant::buffer::kMax256> changeBuilder;
         changeBuilder.appendFormat( "%#=%#", pVariable->_name, pVariable->getValueAsString() );
-        const string                change         = string( changeBuilder.view() );
-        const RenderPipelineRequest pipeline       = FrameRendererSubsystemInternal::loadChosenPipeline(); // 렌더 스레드는 변수도 파일도 읽지 않는다 — 여기(게임 스레드)서 읽어 넘긴다
-        RenderThreadSubsystem*      pRenderThreads = engine::findSubsystem<RenderThreadSubsystem>();
-        RenderThread* const         pRenderThread  = pRenderThreads != nullptr ? pRenderThreads->findRenderThread() : nullptr;
+        requestPipelineChange( string( changeBuilder.view() ), FrameRendererSubsystemInternal::loadChosenPipeline() );
+    }
+
+    void FrameRendererSubsystem::onConfigReloaded( const hashed_string& configTypeName )
+    {
+        if ( ( configTypeName == EngineConfig::StaticType()->_fullyQualifiedName ) == false )
+            return;
+        const string path = FrameRendererSubsystemInternal::choosePipelinePath();
+        if ( path == _chosenPipelinePath )
+            return; // 품질 단계가 바뀌어도 고른 파이프라인이 같다(게임이 골랐거나 단계가 같은 값을 적었다)
+        requestPipelineChange( "render quality", RenderPipelineRequest::load( path ) );
+    }
+
+    void FrameRendererSubsystem::refreshReloadedPipeline()
+    {
+        // 파이프라인 XML(또는 그 `_base` 부모)을 다시 읽었다(에디터 핫 리로드 — 공유 캐시 `SharedAssetCache<RenderPipelineAsset>`). 지금 고른 경로를 새 판으로 다시 받는다.
+        if ( _pipelineReload.takeChanged() == false )
+            return;
+        requestPipelineChange( "pipeline reloaded", FrameRendererSubsystemInternal::loadChosenPipeline() );
+    }
+
+    void FrameRendererSubsystem::requestPipelineChange( const string& change, RenderPipelineRequest pipeline )
+    {
+        // 렌더 쪽 객체(렌더러 · PSO 캐시)는 렌더 스레드가 다음 프레임 기록 전에 고친다 — 렌더 스레드와 GPU 를 세우지 않는다(셰이더 리로드 `LiveShaderSubsystem` 과 같은 길).
+        // 옛 패스 자원은 디바이스가 그것을 쓴 프레임의 GPU 완료 뒤로 미뤄 놓는다(백엔드 해제 큐). 렌더 스레드는 변수도 파일도 읽지 않는다 — 부르는 쪽(게임 스레드)이 읽어 넘긴다.
+        _chosenPipelinePath                   = pipeline._path;
+        RenderThreadSubsystem* pRenderThreads = engine::findSubsystem<RenderThreadSubsystem>();
+        RenderThread* const    pRenderThread  = pRenderThreads != nullptr ? pRenderThreads->findRenderThread() : nullptr;
         if ( pRenderThread == nullptr )
         {
             applyPipelineChange( change, pipeline ); // 패킷을 실행하는 쪽이 없다 — 렌더러를 만지는 스레드가 이 스레드 하나다
@@ -180,6 +218,7 @@ namespace sw
     {
         for ( Subscription& subscription : _arrPipelineVariableSubscription )
             subscription.reset();
+        _configReloadedSubscription.reset();
         _packetBuilder->shutdown();
         _offscreenRenderers->shutdown(); // 주 렌더러의 PSO 캐시를 빌려 쓴다 — 먼저 내린다
         _frameRenderer->shutdown();

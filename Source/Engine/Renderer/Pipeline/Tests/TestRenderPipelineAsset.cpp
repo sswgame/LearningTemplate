@@ -6,8 +6,11 @@
 #include "Core/File/FileUtil.h"
 #include "Core/TestFramework/TestFramework.h"
 
+#include "Engine/Asset/Cache/SharedAssetRef.h"
+#include "Engine/Config/EngineConfig.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetPaths.h"
+#include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/RHI/RHIDescriptors.h"
 #include "Engine/Graphics/RHI/RHIPipelineStateDesc.h"
@@ -566,6 +569,34 @@ SW_TEST_CASE( RenderPipelineAssetTest, UniquePassLookupRejectsRepeatableTypes )
     SW_EXPECT_TRUE( pTonemap->_type == RenderPassKind::Present ); // 후처리 체인이 톤맵한다
     SW_EXPECT_TRUE( forward.findUniquePass<RenderPassKind::Transparent>() != nullptr );
     SW_EXPECT_TRUE( forward.findUniquePass<RenderPassKind::Lighting>() == nullptr ); // 포워드에는 없다
+}
+
+/**
+ * @brief [RenderPipelineAssetTest] 파이프라인 고르기는 명령줄 → 디퍼드 스위치 → 팩 설정 → 엔진 렌더 설정(플랫폼 · 품질 단계) 차례다. 엔진 렌더 설정은 비지 않는다(필수)
+ * @details 변이: 마지막 단계를 코드 기본값으로 되돌리면 품질 단계의 경로가 나오지 않아 셋째 단언이 진다. 파이프라인 폴더의 XML 이 공유 캐시 종류가 아니면 마지막 묶음이 진다(핫 리로드가 다시 읽을 캐시가 없다).
+ */
+SW_TEST_CASE( RenderPipelineAssetTest, PipelineChoiceEndsAtTheQualityTier )
+{
+    FrameRendererUtil::PipelineChoice choice{};
+    choice._qualityPath = "quality.xml";
+    choice._gamePath    = "game.xml";
+    SW_EXPECT_EQUAL( string_view( "game.xml" ), FrameRendererUtil::computePipelinePath( choice ) );
+    choice._gamePath = {};
+    SW_EXPECT_EQUAL( string_view( "quality.xml" ), FrameRendererUtil::computePipelinePath( choice ) );
+    choice._deferredPath = "deferred.xml";
+    choice._bDeferred    = true;
+    SW_EXPECT_EQUAL( string_view( "deferred.xml" ), FrameRendererUtil::computePipelinePath( choice ) );
+    choice._commandLinePath = "command.xml";
+    SW_EXPECT_EQUAL( string_view( "command.xml" ), FrameRendererUtil::computePipelinePath( choice ) );
+    SW_EXPECT_TRUE( engine::getSubsystem<EngineConfig>()._render._renderPipeline.isSet() );
+
+    vector<const AssetTypeDef*> listType;
+    AssetTypeRegistry::collectPathMatches( "engine/pipeline/forwardpipeline.xml", listType );
+    SW_REQUIRE_EQUAL( size_t( 1 ), listType.size() );
+    SW_EXPECT_EQUAL( RenderPipelineAsset::kAssetType._name, listType[0]->_name );
+    const shared_ptr<const RenderPipelineAsset> pCached = SharedAssetCache<RenderPipelineAsset>::acquire( "engine/pipeline/forwardpipeline.xml" ).snapshot();
+    SW_REQUIRE_TRUE( pCached != nullptr );
+    SW_EXPECT_EQUAL( string( "ForwardPipeline" ), pCached->getDesc()._name );
 }
 
 /** @brief [RenderPipelineAssetTest] 쿠킹이 펼친 글은 원본을 합쳐 읽은 것과 같은 값이고, 부모를 가리키지 않는다(팩 쿠커의 펼치기와 같은 함수) */

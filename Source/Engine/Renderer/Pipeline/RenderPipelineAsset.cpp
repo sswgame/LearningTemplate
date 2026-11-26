@@ -7,6 +7,7 @@
 
 #include "Engine/Asset/AssetFormat.h"
 #include "Engine/Asset/AssetManager.h"
+#include "Engine/Asset/Cache/SharedAssetCacheDefinition.h"
 #include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/Material/RenderBlendPreset.h"
 #include "Engine/Graphics/RHI/RHIFormatInfo.h"
@@ -1484,6 +1485,20 @@ namespace sw
         return issueCount;
     }
 
+} // namespace sw
+
+namespace sw
+{
+    namespace
+    {
+        /** @brief 공유 캐시의 로더입니다 — 리소스 id 로 읽고 검증한다(`RenderPipelineAsset::loadFromXMLFile`). */
+        bool loadPipelineAsset( const AssetID& assetID, RenderPipelineAsset& outAsset )
+        {
+            return outAsset.loadFromXMLFile( assetID );
+        }
+    } // namespace
+
+    SW_SHARED_ASSET_CACHE( RenderPipeline, RenderPipelineAsset, RenderPipelineAsset::kAssetType.withLoader( AssetTypeLoader::with<RenderPipelineAsset, &loadPipelineAsset>( MemoryTag::RenderCPU ) ) );
 } // namespace sw
 
 // ------------------------------------------------------------------------------

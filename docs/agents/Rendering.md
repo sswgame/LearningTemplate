@@ -13,6 +13,7 @@
 | `engine/renderstate/blendpresets.xml` | 블렌드 프리셋 — 줄을 더하면 코드 없이 새 프리셋 |
 | `*.material` (`MaterialDef`) | 렌더 상태 칸은 패스와 같은 형식(머티리얼 XML 은 앞 `_` 와 불리언 `b` 를 뗀 이름) |
 
+- 파이프라인 고르기는 `-gv_renderPipeline` → `-gv_deferredShading` → 팩 설정 `_renderPipeline` → 엔진 렌더 설정 `_render._renderPipeline`(필수, 플랫폼 층 · `RenderQuality.json` 이 덮는다)이다. 품질 단계가 바뀌어 고른 경로가 달라지거나 파이프라인 XML 이 다시 읽히면(공유 캐시 `SharedAssetCache<RenderPipelineAsset>`) 렌더러가 다시 고른다.
 - 비슷한 파이프라인은 `_base` 로 부모를 가리키고 차이만 적는다([DataInheritance](DataInheritance.md)). 이름이 겹치는 첨부는 오류다. `_listPermutation` · `_listRenderPassRef` 는 글이 열쇠라 하나씩 더하고 `<item _op="Remove">` 로 지운다(한 퍼뮤테이션 이름은 한 번).
 - 패스 칸은 리플렉션 enum 이다 — 철자 오타는 읽기 오류. 메시 · 증폭 스테이지는 없다.
 - 뷰 패스 종류는 파이프라인에 한 번이다. `isRepeatablePassType` 종류(그림자 · Compute · 후처리 머티리얼)만 여럿 둔다. 그래픽스 패스 PSO 는 패스 이름이 열쇠라(`FramePSOManager::getPassPSO`) 같은 종류의 패스마다 제 서술로 그린다. 종류 하나의 패스는 `RenderPipelineAsset::findUniquePass<종류>()` 로만 찾는다(여러 번 두는 종류는 컴파일 오류 — 서술로 고른다).

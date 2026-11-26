@@ -11,7 +11,9 @@
 #include "Core/Container/vector.h"
 
 #include "Engine/Asset/AssetRef.h"
+#include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Content/AssetID.h"
+#include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Foundation/Foundation.h"
 #include "Engine/Graphics/Shader/ShaderSourceAssetKind.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -82,6 +84,13 @@ namespace sw
     class SW_API RenderPipelineAsset
     {
     public:
+        /**
+         * @brief 이 에셋 종류입니다 — `pipeline/` 폴더의 XML(접미사로 가르지 않는 데이터 파일). 공유 캐시(`SharedAssetCache<RenderPipelineAsset>`)가 경로마다 한 벌을 나눈다.
+         * @details 캐시에 있으므로 에디터 핫 리로드(데이터 XML 의 "쥔 캐시가 다시 읽기" 길)가 고친 파일과 `_base` 자식을 다시 읽고, 렌더러는 다시 읽기 횟수를 보고 다시 고른다
+         *          (`FrameRendererSubsystem::refreshReloadedPipeline`). 유니티 Render Pipeline Asset 이 에디터에서 바로 반영되는 자리다.
+         */
+        static constexpr AssetTypeDef kAssetType = AssetTypeDef::makeDataFile( "RenderPipeline", AssetPathRule{ {}, "/pipeline/", ".xml" }, {} );
+
         /** @brief 빈 파이프라인 서술로 만듭니다. */
         RenderPipelineAsset() = default;
         /** @brief 가상 소멸자입니다. */
@@ -165,6 +174,8 @@ namespace sw
     private:
         RenderPipelineDesc _desc;
     };
+
+    SW_DECLARE_SHARED_ASSET_CACHE( SW_API_EXTERN_TEMPLATE, RenderPipelineAsset );
 } // namespace sw
 
 // ------------------------------------------------------------------------------

@@ -542,6 +542,14 @@ namespace sw
         PROPERTY()
         SkyCloudConfig _skyClouds{};
 
+        /**
+         * @brief 게임이 파이프라인을 고르지 않았을 때(`PackEngineSettings::_renderPipeline`) 그리는 렌더 파이프라인 XML 입니다. 플랫폼 층(Config/Platform)과 품질 단계(RenderQuality.json)가 덮는다.
+         * @details 유니티 Quality 설정마다의 Render Pipeline Asset 자리다. 고르는 차례는 `-gv_renderPipeline` → `-gv_deferredShading` → 팩 설정 → 이 값이다(`FrameRendererUtil::computePipelinePath`) —
+         *          게임이 고른 파이프라인은 엔진 품질 단계가 바꾸지 않는다. 품질 단계가 바뀌어 고른 결과가 달라지면 렌더러가 다시 고른다(`FrameRendererSubsystem`). 대신할 기본값이 없다(필수).
+         */
+        PROPERTY( Required )
+        DataPath _renderPipeline;
+
         /** @brief 프로브 GI 의 빛샘 막기 계수입니다(바이어스 · 뒷면 가중 · 체비쇼프 지수 — `ProbeVisibilityConfig`). */
         PROPERTY()
         ProbeVisibilityConfig _probeVisibility{};

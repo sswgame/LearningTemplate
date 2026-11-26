@@ -98,12 +98,13 @@ namespace sw
             string_view _commandLinePath; ///< `-gv_renderPipeline`
             string_view _deferredPath;    ///< 엔진 기본 디퍼드(`-gv_deferredShading` 일 때만)
             string_view _gamePath;        ///< 팩 설정(`PackEngineSettings::_renderPipeline`)
-            string_view _forwardPath;     ///< 엔진 기본 포워드
+            string_view _qualityPath;     ///< 엔진 렌더 설정(`RenderConfig::_renderPipeline` — 바탕 · 플랫폼 · 품질 단계 층을 얹은 값)
             bool        _bDeferred{ false };
         };
         /**
-         * @brief 그릴 파이프라인을 고릅니다. `-gv_renderPipeline` → `-gv_deferredShading` → 팩 설정 → 엔진 기본 포워드 순서입니다.
+         * @brief 그릴 파이프라인을 고릅니다. `-gv_renderPipeline` → `-gv_deferredShading` → 팩 설정 → 엔진 렌더 설정(플랫폼 · 품질 단계) 순서입니다.
          * @details 명령줄은 측정 · 검증 스위치라 게임 데이터보다 앞선다(유니티 Graphics 설정의 Render Pipeline Asset 을 실행 인자가 덮는 것과 같다).
+         *          엔진 렌더 설정은 필수 칸이라 비지 않는다 — 마지막 단계에 코드 기본값이 없다.
          */
         static string_view computePipelinePath( const PipelineChoice& choice )
         {
@@ -113,7 +114,7 @@ namespace sw
                 return choice._deferredPath;
             if ( choice._gamePath.empty() == false )
                 return choice._gamePath;
-            return choice._forwardPath;
+            return choice._qualityPath;
         }
 
         /**
