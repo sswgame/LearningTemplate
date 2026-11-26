@@ -16,6 +16,7 @@
 #include "Engine/Content/AssetID.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
+#include "Engine/Reflection/EnumName.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDocument.h"
 
@@ -67,7 +68,7 @@ namespace sw
 
             /**
              * @brief 이 월드의 열린 하우징 부지(월드에 하나) 값입니다. `PlacementCount` · `ViewCount` · `Funds` · `Owned`(이 월드의 플레이어가 주인이면 1) · `PendingRequests` ·
-             *        `LastResult`(`HousingPlaceResult` 의 수 — 열린 부지가 없으면 값이 없다).
+             *        `LastResult` 는 글 값(`readText`)이다. 열린 부지가 없으면 값이 없다.
              */
             bool readValue( string_view key, float64& outValue ) const override
             {
@@ -84,10 +85,18 @@ namespace sw
                     outValue = pPlot->isOwnedLocally() ? 1.0 : 0.0;
                 else if ( key == "PendingRequests" )
                     outValue = static_cast<float64>( pPlot->getPendingRequestCount() );
-                else if ( key == "LastResult" )
-                    outValue = static_cast<float64>( static_cast<uint8>( pPlot->getLastResult() ) );
                 else
                     return false;
+                return true;
+            }
+
+            /** @brief `LastResult`(`HousingPlaceResult` 의 이름)입니다. */
+            bool readText( string_view key, string& outText ) const override
+            {
+                const HousingPlotComponent* pPlot = findPlot();
+                if ( pPlot == nullptr || key != "LastResult" )
+                    return false;
+                outText = getEnumName( pPlot->getLastResult() );
                 return true;
             }
 

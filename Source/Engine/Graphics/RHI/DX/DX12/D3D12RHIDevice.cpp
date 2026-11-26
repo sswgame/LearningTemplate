@@ -2266,16 +2266,12 @@ namespace sw
                 [[maybe_unused]] const HRESULT removed = _device->GetDeviceRemovedReason();
                 // Present 가 장치 제거 · 리셋으로 실패하면(DXGI_ERROR_DEVICE_REMOVED / DEVICE_RESET) 전송 손실로 표시한다. 디버그 전용인 flushDebugMessages 에 맡기지 않는다.
                 const bool bPresentLostDevice = presentHr == DXGI_ERROR_DEVICE_REMOVED || presentHr == DXGI_ERROR_DEVICE_RESET || FAILED( removed );
+                // 장치 손실은 reportDeviceLost 한 입구(RHI.DeviceLost)로만 알린다. 손실을 Present 가 먼저 보든 앞 호출이 먼저 보든 같은 로그가 남는다.
                 if ( bPresentLostDevice )
                     reportDeviceLost( "Present" );
-                // 디바이스 제거는 자동 복구가 없어서 한 번 일어나면 이후 매 프레임 여기로 들어온다.
-                // 첫 발견 때만 로그를 남기고 그 뒤로는 조용히 건너뛰어 로그 폭주를 막는다.
-                if ( _bDeviceRemovedLogged.load( std::memory_order_relaxed ) == SW_FALSE )
-                {
-                    // %# 는 10진 출력이다. DXGI_ERROR_DEVICE_HUNG == 0x887A0005 == 2289696773
-                    SW_LOG_ERROR_ONCE_ID( "D3D12.PresentFailedHrX887A0005", "Present failed hr=%# (0x887A0005=DEVICE_HUNG), DeviceRemovedReason=%#",
-                                          static_cast<uint32>( presentHr ), static_cast<uint32>( removed ) );
-                }
+                else // %# 는 10진 출력이다(DXGI_ERROR_DEVICE_REMOVED 0x887A0005 = 2289696773, DEVICE_HUNG 0x887A0006)
+                    SW_LOG_ERROR_ONCE_ID( "D3D12.PresentFailedHr", "Present failed hr=%#, DeviceRemovedReason=%#", static_cast<uint32>( presentHr ),
+                                          static_cast<uint32>( removed ) );
                 flushDebugMessages( "after Present" );
             }
         }

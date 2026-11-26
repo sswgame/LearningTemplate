@@ -5,7 +5,7 @@
   ① 차지: 클라이언트 1 의 집 디렉터(자동 플레이)가 부지를 차지해 달라고 요청하고 서버가 주인으로 적는다(Owned).
   ② 배치: 디렉터의 놓기 아홉은 요청이고, 서버가 자기 레이아웃 · 지갑으로 판정해 적용한 부지 상태가 클라이언트에 방송된다(두 월드의 배치 수 · 잔액이 같다).
   ③ 늦은 참가: 클라이언트 2 가 붙으면(netsim.addclient) 다음 서버 틱에 같은 부지 상태를 받는다.
-  ④ 남의 부지: 클라이언트 2 의 디렉터가 부지를 차지하려 하면 서버가 NotOwner(HousingPlaceResult 14)로 거절하고 아무것도 바뀌지 않는다.
+  ④ 남의 부지: 클라이언트 2 의 디렉터가 부지를 차지하려 하면 서버가 NotOwner 로 거절하고 아무것도 바뀌지 않는다.
   값은 감시 값 Editor.NetSimValue(target = 월드, key = MeadowNetSimGame 의 값 이름)다.
   실행: App -EnableEditor -scenario=game/playground/automation/editor/meadowvillage_nethousing.scenario.xml -unattended (체인: Scenario.playground.editor)
 -->
@@ -43,7 +43,7 @@
 	<Expect watch="Editor.NetSimValue" target="2" key="Funds" equals="110"/>
 	<WaitUntil watch="Editor.NetSimValue" target="2" key="ViewCount" equals="9" timeoutFrames="60"/>
 	<!-- ④ 남의 부지의 차지는 거절된다 -->
-	<WaitUntil watch="Editor.NetSimValue" target="2" key="LastResult" equals="14" timeoutFrames="600"/>
+	<WaitUntil watch="Editor.NetSimValue" target="2" key="LastResult" is="NotOwner" timeoutFrames="600"/>
 	<Expect watch="Editor.NetSimValue" target="2" key="Owned" equals="0"/>
 	<Expect watch="Editor.NetSimValue" target="1" key="Owned" equals="1"/>
 	<Expect watch="Editor.NetSimValue" target="0" key="PlacementCount" equals="9"/>

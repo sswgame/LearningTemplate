@@ -211,6 +211,16 @@ namespace sw
             (void)outValue;
             return false;
         }
+        /**
+         * @brief `readValue` 의 글 값입니다(열거 결과는 수 대신 이름 — 열거 값이 빠지거나 끼면 수가 밀린다). 감시 값은 이것을 먼저 묻고 시나리오는 `is="<이름>"` 로 비교한다.
+         * @return 모르는 이름이면 false 입니다.
+         */
+        virtual bool readText( string_view key, string& outText ) const
+        {
+            (void)key;
+            (void)outText;
+            return false;
+        }
     };
 } // namespace sw
 
