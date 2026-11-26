@@ -215,7 +215,7 @@ namespace
                 settings._pBalanceNotification = &_balances;
                 settings._pLiveEventControl    = &_liveControl;
             }
-            SW_EXPECT_TRUE( _service.initialize( &_store, settings ) );
+            SW_EXPECT_TRUE( _service.initialize( _store, settings ) );
         }
 
         ~AdminFixture() { _service.shutdown(); }
@@ -274,7 +274,6 @@ namespace
 /** @brief [AdminServiceTest] 입구: 로그인 전은 NotSignedIn, 모르는 명령은 Forbidden, 저장소 없이 시작하면 서지 않고 Unavailable 이다 */
 SW_TEST_CASE( AdminServiceTest, EntryRules )
 {
-    SW_EXPECT_LOG( "AdminService.AdminServiceNeedsStore" );
     AdminFixture rig;
     SW_EXPECT_TRUE( rig.call( kInvalidAccountID, AdminMethod::LookupAccount::kID, makeRequest() )._serviceResult.hasError( OnlineError::kUnauthenticated ) );
     SW_EXPECT_TRUE( rig.call( kSuper, 9999, makeRequest() )._serviceResult.hasError( OnlineError::kForbidden ) );
@@ -282,7 +281,6 @@ SW_TEST_CASE( AdminServiceTest, EntryRules )
 
     AdminService   unstarted;
     AdminReplySink sink;
-    SW_EXPECT_FALSE( unstarted.initialize( nullptr, AdminServiceConfig{} ) );
     unstarted.submitCall( kSuper, AdminMethod::LookupAccount::kID, makeRequest(), NetIdempotencyKey{ 1, 1 }, UnixMilliseconds{ kNowMs }, SW_DELEGATE_METHOD( AdminService::ReplyDelegate, &AdminReplySink::onReply, &sink ) );
     SW_REQUIRE_EQUAL( size_t( 1 ), sink._listReply.size() );
     SW_EXPECT_EQUAL( OnlineError::kUnavailable, sink._listReply[0]._errorCode );
@@ -560,5 +558,5 @@ SW_TEST_CASE( AdminServiceTest, InitializeNeedsSanctionLimits )
     MemoryServiceDatabase database;
     MemoryServiceStore    store{ &database };
     AdminService          service;
-    SW_EXPECT_FALSE( service.initialize( &store, AdminServiceConfig{} ) );
+    SW_EXPECT_FALSE( service.initialize( store, AdminServiceConfig{} ) );
 }

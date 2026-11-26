@@ -103,7 +103,7 @@ namespace sw
         _pReputation    = &reputation;
         _pClock         = &clock;
         _stock.initialize( pantry );
-        _crafter.initialize( &recipeCatalog );
+        _crafter.initialize( recipeCatalog );
         _market.initialize( shopCatalog, itemCatalog );
         _random.setSeed( settings._randomSeed );
         _stepTimer = FixedStepTimer( kStepMinutes, 24.0f * 60.0f );

@@ -44,7 +44,7 @@ namespace sw
          * @brief 카탈로그 · 통계 · 플랫폼(모두 빌림, 이 객체보다 오래 산다)을 잇고 통계 변화를 듣습니다. 푼 업적은 비웁니다.
          * @return 업적이 카탈로그에 없는 통계를 보면 오류를 남기고 false 입니다(그 업적은 풀 수 없다 — 대신 쓸 값이 없다).
          */
-        [[nodiscard]] bool initialize( const StatCatalog* pCatalog, PlayerStats* pStats, IPlatformServices* pPlatform );
+        [[nodiscard]] bool initialize( const StatCatalog& catalog, PlayerStats& stats, IPlatformServices& platform );
         void               shutdown();
 
         bool   isUnlocked( const hashed_string& achievementID ) const;

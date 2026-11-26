@@ -42,13 +42,13 @@ SW_TEST_CASE( AudioCommandQueueTest, WorkerRequestEntersAtFlush )
 {
     using Util = AudioCommandQueueTestUtil;
     sw::test::OfflineAudioEngine offline;
-    sw::AudioEngine&             engine    = offline.getEngine();
-    sw::AudioPlayingID           playingID = 0;
+    sw::AudioEngine&             engine = offline.getEngine();
+    sw::AudioPlayingID           playingID;
     {
         sw::thread worker( sw::ThreadTestAccess::getKey(), &Util::postFromWorker, &engine, &playingID );
         worker.join();
     }
-    SW_REQUIRE_TRUE( playingID != 0 );
+    SW_REQUIRE_TRUE( playingID.isValid() );
 
     offline.renderBlocks( 1 );
     SW_EXPECT_EQUAL( 0u, offline.getInstanceCount() );
@@ -70,7 +70,7 @@ SW_TEST_CASE( AudioCommandQueueTest, AppliedCommandObjectsAreReleasedOnTheGameTh
     sw::test::OfflineAudioEngine                  offline;
     sw::AudioEngine&                              engine = offline.getEngine();
     const sw::shared_ptr<const sw::AudioMusicDef> pMusic = Util::makeOneLayerMusic();
-    SW_REQUIRE_TRUE( engine.startMusic( pMusic, 0.0f ) != 0 );
+    SW_REQUIRE_TRUE( engine.startMusic( pMusic, 0.0f ).isValid() );
 
     offline.renderBlocks( 1 );
     SW_EXPECT_EQUAL( 3, static_cast<int32>( pMusic.use_count() ) );

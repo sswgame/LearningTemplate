@@ -190,7 +190,7 @@ namespace sw
         } );
         if ( bBlocksKnown == false )
             return false;
-        if ( _world.initialize( _chunkCountX, _chunkCountZ, _pCatalog.get() ) == false )
+        if ( _world.initialize( _chunkCountX, _chunkCountZ, *_pCatalog ) == false )
             return false;
         // 지형은 청크를 올릴 때 생성한다(생성 훅). 처음에는 스폰 자리를 찾는 월드 가운데 둘레를 한 번에 올린다 — 몸을 놓기 전이다.
         _world.setChunkGenerator( VoxelTerrainSettings::makeChunkGenerator( _terrain ) );

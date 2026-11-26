@@ -523,8 +523,8 @@ namespace sw
     const SkeletalAnimatorComponent* FacialAnimationComponent::findAnimator( const SkeletalMeshComponent* pSkeletalMesh ) const
     {
         const GameObject* pOwner      = ( pSkeletalMesh != nullptr ) ? pSkeletalMesh->getOwner() : nullptr;
-        const bool        bResolvable = _animator.isValid() && pOwner != nullptr && pOwner->getMutableManager() != nullptr;
-        return bResolvable ? pOwner->getMutableManager()->resolveComponent( _animator ) : nullptr;
+        const bool        bResolvable = _animator.isValid() && pOwner != nullptr && pOwner->getManager() != nullptr;
+        return bResolvable ? pOwner->getManager()->resolveComponent( _animator ) : nullptr;
     }
 
     float32 FacialAnimationComponent::computeExpressionWeight( size_t poseIndex, const SkeletalAnimatorComponent* pAnimator ) const

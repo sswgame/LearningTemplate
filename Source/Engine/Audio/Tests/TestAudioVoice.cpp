@@ -671,7 +671,7 @@ SW_TEST_CASE( AudioVoiceTest, HighPriorityStealsWhenPoolIsFull )
         AudioVoiceSlot* pSlot = pool.allocate( arrPriority[index], 0 );
         SW_REQUIRE_NOT_NULL( pSlot );
         pSlot->_priority   = arrPriority[index];
-        pSlot->_playingID  = index + 1;
+        pSlot->_playingID  = AudioPlayingID{ index + 1 };
         pSlot->_audibility = 1.0f;
     }
     pool.begin()[1]._bVirtual = true; // 둘째(우선순위 10)는 들리지 않는다
@@ -683,10 +683,10 @@ SW_TEST_CASE( AudioVoiceTest, HighPriorityStealsWhenPoolIsFull )
     SW_REQUIRE_NOT_NULL( pStolen );
     SW_EXPECT_TRUE( pStolen == pool.begin() + 1 ); // 가장 낮은 우선순위 중 가상 보이스
     SW_EXPECT_TRUE( pStolen->_bInUse );
-    SW_EXPECT_EQUAL( 0u, static_cast<uint32>( pStolen->_playingID ) ); // 비운 채로 준다
+    SW_EXPECT_EQUAL( 0u, static_cast<uint32>( pStolen->_playingID.getValue() ) ); // 비운 채로 준다
     SW_EXPECT_EQUAL( uint64{ 1 }, pool.getStolenCount() );
-    SW_EXPECT_EQUAL( 1u, static_cast<uint32>( pool.begin()[0]._playingID ) ); // 다른 보이스는 그대로다
-    SW_EXPECT_EQUAL( 3u, static_cast<uint32>( pool.begin()[2]._playingID ) );
+    SW_EXPECT_EQUAL( 1u, static_cast<uint32>( pool.begin()[0]._playingID.getValue() ) ); // 다른 보이스는 그대로다
+    SW_EXPECT_EQUAL( 3u, static_cast<uint32>( pool.begin()[2]._playingID.getValue() ) );
 }
 
 /**
@@ -704,7 +704,7 @@ SW_TEST_CASE( AudioVoiceTest, StolenAudibleVoiceFadesOutInItsSlot )
         AudioVoiceSlot* pSlot = pool.allocate( 10, kFadeFrames );
         SW_REQUIRE_NOT_NULL( pSlot );
         pSlot->_priority        = 10;
-        pSlot->_playingID       = index + 1;
+        pSlot->_playingID       = AudioPlayingID{ index + 1 };
         pSlot->_bMixedLastBlock = true; // 지난 블록에 들렸다
         pSlot->_voice.start( Util::makeConstantStereo( 4800, 0.5f ), true, 0, false, 0 );
     }
@@ -716,7 +716,7 @@ SW_TEST_CASE( AudioVoiceTest, StolenAudibleVoiceFadesOutInItsSlot )
     SW_EXPECT_TRUE( stolen._bStolen );
     SW_EXPECT_TRUE( stolen._bInUse );
     SW_EXPECT_NEAR( 0.0f, stolen._voice.getFadeTarget(), 0.0f ); // 0 으로 줄이고 멈춘다
-    SW_EXPECT_EQUAL( 2u, static_cast<uint32>( stolen._playingID ) );
+    SW_EXPECT_EQUAL( 2u, static_cast<uint32>( stolen._playingID.getValue() ) );
     SW_EXPECT_EQUAL( uint64{ 0 }, pool.getHardStolenCount() );
 
     // 줄어드는 보이스는 다시 뺏지 않는다 — 남은 산 보이스(1)를 뺏는데 여분이 없어 바로 끊는다.
@@ -740,7 +740,7 @@ SW_TEST_CASE( AudioVoiceTest, BudgetDemotionSilencesOneBlockFirst )
         AudioVoiceSlot* pSlot = pool.allocate( 50, 0 );
         SW_REQUIRE_NOT_NULL( pSlot );
         pSlot->_priority        = index == 0 ? 80 : 10;
-        pSlot->_playingID       = index + 1;
+        pSlot->_playingID       = AudioPlayingID{ index + 1 };
         pSlot->_audibility      = 1.0f;
         pSlot->_bMixedLastBlock = true;
     }

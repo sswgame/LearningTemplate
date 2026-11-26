@@ -201,7 +201,7 @@ namespace sw
         _pPlatform->update();
         _unlockSubscription.reset();
         _achievements.shutdown();
-        _stats.initialize( nullptr );
+        _stats.shutdown();
         _pLocalPlatform = nullptr;
         _pPlatform.reset();
         _pBoundCatalog.reset();
@@ -228,8 +228,8 @@ namespace sw
     bool PlayerStatsSubsystem::openCatalog()
     {
         _pBoundCatalog = _pCatalog.snapshot();
-        _stats.initialize( _pBoundCatalog.get() );
-        return _achievements.initialize( _pBoundCatalog.get(), &_stats, _pPlatform.get() );
+        _stats.initialize( *_pBoundCatalog );
+        return _achievements.initialize( *_pBoundCatalog, _stats, *_pPlatform );
     }
 
     bool PlayerStatsSubsystem::save()

@@ -50,18 +50,17 @@ namespace sw
     {
     }
 
-    bool ElementGrid::initialize( int32 width, int32 height, const ElementRuleCatalog* pTable )
+    bool ElementGrid::initialize( int32 width, int32 height, const ElementRuleCatalog& table )
     {
-        const bool bValid = 1 <= width && 1 <= height && pTable != nullptr && pTable->getMaterials().empty() == false && 0.0f < pTable->getStepTime();
+        const bool bValid = 1 <= width && 1 <= height && table.getMaterials().empty() == false && 0.0f < table.getStepTime();
         if ( bValid == false )
         {
-            SW_LOG_ERROR_ID( "ElementGrid.ElementGridRefusedSizeX", "ElementGrid: refused - size %#x%# (both need 1 or more), table %# (needs a table with a material and a step time above 0)", width, height,
-                             pTable != nullptr ? "given" : "missing" );
+            SW_LOG_ERROR_ID( "ElementGrid.ElementGridRefusedSizeX", "ElementGrid: refused - size %#x%# (both need 1 or more), table (needs a material and a step time above 0)", width, height );
             return false;
         }
-        _pTable   = pTable;
+        _pTable   = &table;
         _topology = GridTopology( width, height );
-        _timer    = FixedStepTimer( pTable->getStepTime(), 1.0f );
+        _timer    = FixedStepTimer( table.getStepTime(), 1.0f );
         _listCell.clear();
         _listCell.resize( static_cast<size_t>( _topology.getCellCount() ) );
         _eventBuffer.clear();

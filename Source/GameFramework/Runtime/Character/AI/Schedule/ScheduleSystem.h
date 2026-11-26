@@ -224,7 +224,7 @@ namespace sw
      * @brief 카탈로그의 NPC 모두의 하루 일정을 돌립니다.
      * @code
      *     ScheduleSystem schedules;
-     *     if ( schedules.initialize( &catalog, settings, clock.getDay() * kScheduleMinutesPerDay + clockMinute ) == false )
+     *     if ( schedules.initialize( catalog, settings, clock.getDay() * kScheduleMinutesPerDay + clockMinute ) == false )
      *         return false; // 범위 밖 설정은 오류로 남았다
      *     schedules.setPathing( &areaPathing, &navPathing );           // 굵은 계획 경로 · 화면 안 고운 경로
      *     schedules.setFlags( &flags );
@@ -247,7 +247,7 @@ namespace sw
          * @brief 카탈로그의 NPC 를 모두 집에 두고 @p absoluteMinute(0 일 0:00 부터 센 분)의 계획을 세웁니다.
          * @return 설정이 선언된 범위 밖이거나 @p absoluteMinute 가 음수이면 오류를 남기고 false 입니다. 시스템은 그대로입니다.
          */
-        [[nodiscard]] bool initialize( const ScheduleCatalog* pCatalog, const ScheduleSystemSettings& settings, int32 absoluteMinute );
+        [[nodiscard]] bool initialize( const ScheduleCatalog& catalog, const ScheduleSystemSettings& settings, int32 absoluteMinute );
         void               shutdown();
 
         /** @brief 시계의 지금까지 시간을 흘립니다. */

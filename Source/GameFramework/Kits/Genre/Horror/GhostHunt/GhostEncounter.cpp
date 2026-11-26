@@ -48,14 +48,14 @@ namespace sw
     {
     }
 
-    bool GhostEncounter::initialize( const GhostCatalog* pCatalog, uint32 seed )
+    bool GhostEncounter::initialize( const GhostCatalog& catalog, uint32 seed )
     {
-        if ( pCatalog == nullptr || seed == 0 )
+        if ( seed == 0 )
         {
-            SW_LOG_ERROR_ID( "GhostEncounter.RefusedInitialize", "GhostEncounter: refused - it needs a catalog and a non-zero seed" );
+            SW_LOG_ERROR_ID( "GhostEncounter.RefusedInitialize", "GhostEncounter: refused - it needs a non-zero seed" );
             return false;
         }
-        _pCatalog = pCatalog;
+        _pCatalog = &catalog;
         _random.setSeed( seed );
         _vacuumStage = 0;
         clear();

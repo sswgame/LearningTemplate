@@ -80,7 +80,7 @@ namespace sw
                 const vector<uint8>* pBytes = rasterizer.findFaceBytes( face );
                 if ( pBytes == nullptr || pBytes->empty() )
                 {
-                    SW_LOG_ERROR_ID( "HarfBuzzTextShaper.TextFaceNoFont", "Text face %# has no font bytes to shape with", static_cast<uint32>( face ) );
+                    SW_LOG_ERROR_ID( "HarfBuzzTextShaper.TextFaceNoFont", "Text face %# has no font bytes to shape with", face.getValue() );
                     return nullptr;
                 }
                 const auto it         = _mapFont.find( face );
@@ -103,7 +103,7 @@ namespace sw
                 hb_face_destroy( pFace );
                 if ( entry._upem == 0 )
                 {
-                    SW_LOG_ERROR_ID( "HarfBuzzTextShaper.TextFaceNoUnits", "Text face %# has no units per em - it cannot be shaped", static_cast<uint32>( face ) );
+                    SW_LOG_ERROR_ID( "HarfBuzzTextShaper.TextFaceNoUnits", "Text face %# has no units per em - it cannot be shaped", face.getValue() );
                     hb_font_destroy( entry._pFont );
                     return nullptr;
                 }

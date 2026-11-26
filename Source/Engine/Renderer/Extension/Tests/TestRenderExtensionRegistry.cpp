@@ -156,7 +156,7 @@ SW_TEST_CASE( RenderExtensionRegistryTest, UnregisterRemovesOnlyThatExtension )
 SW_TEST_CASE( RenderExtensionRegistryTest, CopiesReplaceTheOutput )
 {
     RenderExtensionRegistry registry;
-    SW_EXPECT_TRUE( registry.addProxy( sw::make_unique<FakeSceneProxy>() ) != 0u );
+    SW_EXPECT_TRUE( registry.addProxy( sw::make_unique<FakeSceneProxy>() ).isValid() );
     vector<IExtensionSceneProxy*> listProxy;
     registry.copyProxies( listProxy );
     registry.copyProxies( listProxy );
@@ -167,11 +167,11 @@ SW_TEST_CASE( RenderExtensionRegistryTest, CopiesReplaceTheOutput )
 SW_TEST_CASE( RenderExtensionRegistryTest, ProxyIdsAreNeverReused )
 {
     RenderExtensionRegistry registry;
-    SW_EXPECT_EQUAL( 0u, registry.addProxy( unique_ptr<IExtensionSceneProxy>{} ) );
+    SW_EXPECT_FALSE( registry.addProxy( unique_ptr<IExtensionSceneProxy>{} ).isValid() );
 
     const ExtensionSceneProxyID first  = registry.addProxy( sw::make_unique<FakeSceneProxy>() );
     const ExtensionSceneProxyID second = registry.addProxy( sw::make_unique<FakeSceneProxy>() );
-    SW_EXPECT_TRUE( first != 0u );
+    SW_EXPECT_TRUE( first.isValid() );
     SW_EXPECT_TRUE( first < second );
     registry.removeProxy( second );
     const ExtensionSceneProxyID third = registry.addProxy( sw::make_unique<FakeSceneProxy>() );
@@ -190,7 +190,7 @@ SW_TEST_CASE( RenderExtensionRegistryTest, RegistryOwnsTheProxies )
         RenderExtensionRegistry     registry;
         const ExtensionSceneProxyID first = registry.addProxy( sw::make_unique<FakeSceneProxy>( &destroyCount ) );
         (void)registry.addProxy( sw::make_unique<FakeSceneProxy>( &destroyCount ) );
-        registry.removeProxy( first + 100u );
+        registry.removeProxy( ExtensionSceneProxyID{ first.getValue() + 100u } );
         SW_EXPECT_EQUAL( 0, destroyCount );
         registry.removeProxy( first );
         SW_EXPECT_EQUAL( 1, destroyCount );
@@ -233,8 +233,8 @@ SW_TEST_CASE( RenderExtensionRegistryTest, BadUpdatesAreRejected )
 {
     RenderExtensionRegistry     registry;
     const ExtensionSceneProxyID id = registry.addProxy( sw::make_unique<FakeSceneProxy>() );
-    SW_EXPECT_FALSE( registry.enqueueProxyUpdate( id + 1u, Util::makeUpdate( 1 ) ) );
-    SW_EXPECT_FALSE( registry.enqueueProxyUpdate( 0, Util::makeUpdate( 1 ) ) );
+    SW_EXPECT_FALSE( registry.enqueueProxyUpdate( ExtensionSceneProxyID{ id.getValue() + 1u }, Util::makeUpdate( 1 ) ) );
+    SW_EXPECT_FALSE( registry.enqueueProxyUpdate( ExtensionSceneProxyID{}, Util::makeUpdate( 1 ) ) );
     SW_EXPECT_FALSE( registry.enqueueProxyUpdate( id, ExtensionProxyUpdateFn{} ) );
     registry.removeProxy( id );
     SW_EXPECT_FALSE( registry.enqueueProxyUpdate( id, Util::makeUpdate( 1 ) ) );
@@ -359,7 +359,7 @@ SW_TEST_CASE( RenderExtensionRegistryTest, ProxyRegistrationWithoutProxyIsInert 
     int32                       destroyCount{ 0 };
     RenderExtensionRegistry     registry;
     const ExtensionSceneProxyID otherID = registry.addProxy( sw::make_unique<FakeSceneProxy>( &destroyCount ) );
-    SW_EXPECT_TRUE( otherID != 0u );
+    SW_EXPECT_TRUE( otherID.isValid() );
     {
         ExtensionSceneProxyRegistration registration{ registry, unique_ptr<IExtensionSceneProxy>{} };
         SW_EXPECT_FALSE( registration.isRegistered() );

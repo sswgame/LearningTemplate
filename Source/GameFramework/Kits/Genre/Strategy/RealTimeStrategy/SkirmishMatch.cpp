@@ -42,7 +42,7 @@ namespace sw
     bool SkirmishMatch::initialize( const RTSCatalog* pCatalog, const SkirmishMap& map, const TileMapXMLData& tileMap, uint8 humanMask, const SkirmishMatchSettings& matchSettings,
                                     int32 startMinerals, const BehaviorTreeAsset* pCommanderTree )
     {
-        if ( _world.initialize( pCatalog, tileMap._width, tileMap._height ) == false )
+        if ( pCatalog == nullptr || _world.initialize( *pCatalog, tileMap._width, tileMap._height ) == false )
             return false;
         if ( _world.claimEvents( _eventLease ) == false )
             return false; // 이 매치의 표뿐이라 일어날 수 없다 — 둘째 소비자가 생기면 게이트가 어서션을 남긴다

@@ -430,8 +430,7 @@ namespace sw
         _outgoingEditBuffer.clear();
         _pendingRequestCount = 0;
         _replicatedOwner     = HousingPlotOwner::None;
-        _layout.initialize( _settings, *_pCatalog );
-        _layout.bindWallet( &_wallet );
+        _layout.initialize( _settings, *_pCatalog, _wallet );
         // 판 상태(같은 오브젝트의 GameStateComponent)가 있으면 그 공유 땅에서 부지를 차지한다 — 밭 · 도시 · 전장 키트와 한 맵의 칸을 나눈다.
         // 판 상태가 없는 씬은 단독 부지다(땅이 없는 게임 — 선택 연동이지 빠진 필수 값이 아니다).
         GameStateComponent* pState = GameStateComponent::findOnOwner( *this );
@@ -450,7 +449,7 @@ namespace sw
                                  land.getCellSize(), _pCatalog->getRoot()._cellSize );
                 return false;
             }
-            if ( _layout.bindLand( &land, land.computeCell( AbsolutePosition{ getOwner()->getManager()->getWorldOrigin().toAbsolute( getPlotOrigin() ) } ) ) == false )
+            if ( _layout.bindLand( land, land.computeCell( AbsolutePosition{ getOwner()->getManager()->getWorldOrigin().toAbsolute( getPlotOrigin() ) } ) ) == false )
                 return false;
         }
         _wallet.clear();
@@ -477,8 +476,7 @@ namespace sw
         if ( io.isWriting() || io.isOk() == false )
             return;
         // 세션 주체(계정 없는 연결)는 그 세션에만 뜻이 있다 — 지금 주인이 아니면 잇지 않는다(불러온 판에서 아무도 열지 못하는 부지가 된다).
-        _ownerID = HousingOwnerID::isPersistent( owner ) || owner == _ownerID ? owner : HousingOwnerID::kNone;
-        _layout.bindWallet( &_wallet );
+        _ownerID = HousingOwnerID::isPersistent( owner ) || owner == _ownerID ? owner : HousingOwnerID::kNone; // 레이아웃이 빌린 지갑의 주소는 그대로다
     }
 
     void HousingPlotComponent::onStateRestored( bool bRestored )

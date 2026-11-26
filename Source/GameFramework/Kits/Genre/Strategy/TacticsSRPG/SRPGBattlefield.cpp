@@ -135,13 +135,13 @@ namespace sw
             pUnit->_bCommander = bCommander ? SW_TRUE : SW_FALSE;
     }
 
-    bool SRPGBattlefield::bindLand( LandRegistry* pLand, const int2& origin )
+    bool SRPGBattlefield::bindLand( LandRegistry& land, const int2& origin )
     {
-        LandBinding land;
-        land.bind( pLand, origin, hashed_string( "TacticsSRPG" ) );
-        if ( _topology.getCellCount() > 0 && land.claimRect( 0, 0, _topology._width - 1, _topology._height - 1, false ) == false )
+        LandBinding binding;
+        binding.bind( land, origin, hashed_string( "TacticsSRPG" ) );
+        if ( _topology.getCellCount() > 0 && binding.claimRect( 0, 0, _topology._width - 1, _topology._height - 1, false ) == false )
             return false;
-        _land = land;
+        _land = binding;
         return true;
     }
 

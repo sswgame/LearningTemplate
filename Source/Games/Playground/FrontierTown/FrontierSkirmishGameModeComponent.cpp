@@ -66,9 +66,9 @@ namespace sw
             SW_LOG_ERROR_ID( "FrontierSkirmish.PlayerStartOffLand", "[Frontier] _playerStart (%#, %#) is not on the %#x%# land - the skirmish cannot start", _playerStart._x, _playerStart._z, land._width, land._height );
             return false;
         }
-        if ( findCatalog() == nullptr || outWorld.initialize( findCatalog(), land._width, land._height ) == false )
+        if ( findCatalog() == nullptr || outWorld.initialize( *findCatalog(), land._width, land._height ) == false )
             return false;
-        outWorld.bindLand( &state.getLand(), int2{ 0, 0 } );
+        outWorld.bindLand( state.getLand(), int2{ 0, 0 } );
         (void)outWorld.addPlayer( 0, wallet.getWallet(), _playerStart ); // 플레이어 0 이 플레이어 지갑을 쓴다
         return true;
     }

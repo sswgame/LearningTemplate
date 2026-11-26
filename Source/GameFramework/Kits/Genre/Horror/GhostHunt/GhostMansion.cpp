@@ -43,7 +43,7 @@ namespace sw
 
     bool GhostMansion::initialize( const GhostCatalog& catalog, const LootCatalog& loot, AreaGraph& areaGraph, GameFlags& flags, Inventory& inventory, Wallet& wallet, uint32 seed )
     {
-        if ( _encounter.initialize( &catalog, seed ) == false )
+        if ( _encounter.initialize( catalog, seed ) == false )
             return false;
         _pCatalog   = &catalog;
         _pLoot      = &loot;

@@ -80,8 +80,7 @@ namespace sw
         _pWallet        = &wallet;
         _pClock         = &clock;
         _pWeather       = &weather;
-        _facility.bindFlags( flags );
-        _facility.bindCatalog( &catalog );
+        _facility.initialize( catalog, flags );
         _shop.initialize( data._shopCatalog, data._itemCatalog );
         _pShipStorage = &shipStorage;
         _listCrew.clear();

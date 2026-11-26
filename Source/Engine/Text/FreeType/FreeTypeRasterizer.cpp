@@ -167,10 +167,10 @@ namespace sw
                 FT_Done_Face( pFace );
                 return kInvalidFontFaceID;
             }
-            entry._pFace            = pFace;
-            entry._unitsPerEm       = static_cast<float32>( pFace->units_per_EM );
-            const FontFaceID faceID = _faceIDAllocator.allocate();
-            _mapFace[faceID]        = std::move( entry );
+            entry._pFace      = pFace;
+            entry._unitsPerEm = static_cast<float32>( pFace->units_per_EM );
+            const FontFaceID faceID{ _faceIDAllocator.allocate() };
+            _mapFace[faceID] = std::move( entry );
             return faceID;
         }
 
@@ -372,7 +372,7 @@ namespace sw
     private:
         unordered_map<FontFaceID, FaceEntry> _mapFace;
         FT_Library                           _pLibrary;
-        IDAllocator<FontFaceID>              _faceIDAllocator;
+        IDAllocator<uint32>                  _faceIDAllocator;
     };
 } // namespace sw
 

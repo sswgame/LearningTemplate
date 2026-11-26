@@ -615,7 +615,7 @@ namespace sw
 
     SkeletalMeshComponent* SkeletalMeshComponent::findLeaderPose() const
     {
-        const bool bNoLeader = _leader.isValid() == false || getOwner() == nullptr || getOwner()->getMutableManager() == nullptr;
+        const bool bNoLeader = _leader.isValid() == false || getOwner() == nullptr || getOwner()->getManager() == nullptr;
         if ( bNoLeader )
             return nullptr;
         return getOwner()->getMutableManager()->resolveComponent( _leader );

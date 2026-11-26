@@ -307,16 +307,16 @@ namespace sw
     {
     }
 
-    bool MonsterStorage::initialize( const MonsterCollectorCatalog* pCatalog, int32 boxCapacity )
+    bool MonsterStorage::initialize( const MonsterCollectorCatalog& catalog, int32 boxCapacity )
     {
-        if ( pCatalog == nullptr || boxCapacity < 0 )
+        if ( boxCapacity < 0 )
         {
-            SW_LOG_ERROR_ID( "MonsterInstance.MonsterStorageRefusedBoxCapacity", "MonsterStorage: refused box capacity %# - it must not be negative and needs a catalog", boxCapacity );
+            SW_LOG_ERROR_ID( "MonsterInstance.MonsterStorageRefusedBoxCapacity", "MonsterStorage: refused box capacity %# - it must not be negative", boxCapacity );
             return false;
         }
         _listParty.clear();
         _listBox.clear();
-        _pCatalog    = pCatalog;
+        _pCatalog    = &catalog;
         _boxCapacity = boxCapacity;
         return true;
     }

@@ -23,14 +23,9 @@ namespace sw
     {
     }
 
-    bool MonsterHuntCombat::initialize( const MonsterHuntCatalog* pCatalog, uint32 seed )
+    bool MonsterHuntCombat::initialize( const MonsterHuntCatalog& catalog, uint32 seed )
     {
-        if ( pCatalog == nullptr )
-        {
-            SW_LOG_ERROR_ID( "MonsterHuntCombat.MonsterHuntCombatRefusedNoCatalog", "MonsterHuntCombat: refused - no catalog (the combat numbers come from the catalog, there is no default set)" );
-            return false;
-        }
-        const MonsterHuntCombatDef& combat = pCatalog->getCombat();
+        const MonsterHuntCombatDef& combat = catalog.getCombat();
         ResourceGaugeSettings       staminaSettings;
         staminaSettings._max        = combat._stamina;
         staminaSettings._regenRate  = combat._staminaRegen;
@@ -38,7 +33,7 @@ namespace sw
         ResourceGauge stamina;
         if ( stamina.initialize( staminaSettings ) == false )
             return false;
-        _pCatalog = pCatalog;
+        _pCatalog = &catalog;
         _stamina  = stamina;
         _random.setSeed( seed );
         _adrenaline = 0.0f;

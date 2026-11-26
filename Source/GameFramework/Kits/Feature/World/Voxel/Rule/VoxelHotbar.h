@@ -44,8 +44,10 @@ namespace sw
         static constexpr int32     kMaxStack  = 64;
         static constexpr FormatDef kStateFormat{ "VXHB" };
 
-        /** @brief 세이브의 블록 id ↔ 번호에 @p pCatalog 를 씁니다. 저장하지 않는 핫바(테스트)는 nullptr 이어도 됩니다 — 읽기는 카탈로그 없이 거절합니다. */
-        explicit VoxelHotbar( const VoxelBlockCatalog* pCatalog );
+        VoxelHotbar();
+
+        /** @brief 핫바를 비우고 세이브의 블록 id ↔ 번호에 쓸 카탈로그를 빌립니다(핫바보다 오래 산다). */
+        void initialize( const VoxelBlockCatalog& catalog );
 
         /** @brief 블록을 넣습니다. 넣지 못한 개수를 반환하며, 가득 찼을 때 0보다 큽니다. */
         int32 addBlock( VoxelBlockIndex block, int32 count );

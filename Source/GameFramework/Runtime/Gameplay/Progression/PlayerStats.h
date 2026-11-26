@@ -152,7 +152,9 @@ namespace sw
         PlayerStats();
 
         /** @brief 카탈로그를 설정합니다. 소유하지 않고 참조만 하므로 이 객체보다 오래 살아 있어야 합니다. 값은 비웁니다. */
-        void initialize( const StatCatalog* pCatalog );
+        void initialize( const StatCatalog& catalog );
+        /** @brief 값과 빌린 카탈로그를 놓습니다(정의가 내려가기 전에). */
+        void shutdown();
 
         /** @brief 카운터에 @p amount 를 더합니다. 0 이상이어야 하며, 값이 바뀌었으면 true 입니다. */
         bool increment( const hashed_string& id, int64 amount = 1 );
