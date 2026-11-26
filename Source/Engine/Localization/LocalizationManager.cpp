@@ -3,7 +3,7 @@
 #include "Engine/Localization/LocalizationManager.h"
 
 #include "Core/Algorithm/VectorUtil.h"
-#include "Core/CommandLine/CommandLineManager.h"
+#include "Core/CommandLine/CommandLine.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/BuildInfo.h"
@@ -685,7 +685,7 @@ namespace sw
 
         string preferredLanguage;
         if ( engine::areEngineSubsystemsBound() )
-            engine::getSubsystem<CommandLineManager>().getArgument( CommandLineArgument::LANGUAGE, preferredLanguage );
+            engine::getSubsystem<CommandLine>().getArgument( CommandLineArgument::LANGUAGE, preferredLanguage );
         if ( preferredLanguage.empty() || hasLanguage( preferredLanguage ) == false )
             preferredLanguage = string( defaultLanguage );
         if ( hasLanguage( preferredLanguage ) == false )

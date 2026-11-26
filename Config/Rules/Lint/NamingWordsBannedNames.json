@@ -427,7 +427,7 @@
     "pathsEqualNormalized": "isSameDiskPath — 디스크 경로 같음은 OS 대소문자 규칙이다(소문자로 접으면 리눅스에서 다른 파일이 같아진다, 2026-11-10)",
     "readServer": "loadFromChannel — 무엇을 어디서 읽는지 말하지 않았다(짝 loadFile, 2026-11-10)",
     "toLookup": "classifyLookupError — 오류를 조회 결과 종류로 가른다(2026-11-10)",
-    "getProviderBusyClock": "getCompileBusyClock — 셰이더 공급자 로드만이 아니라 PSO 생성까지 센다(2026-11-10)",
+    "getProviderBusyClock": "getCompileBusyTimeAccumulator — 셰이더 공급자 로드만이 아니라 PSO 생성까지 센다(2026-11-10)",
     "beginLeakWindow": "MemoryLeakWindow::open — 누수 창은 프로파일러가 든 형식이다(2026-11-10)",
     "endLeakWindow": "MemoryLeakWindow::close(2026-11-10)",
     "judgeLeakCurve": "LeakCurveCriteria::judge — 기준의 멤버(2026-11-10)",
@@ -1679,7 +1679,7 @@
     "attachmentFormatName": "RHIFormatUtil::getName — 포맷 이름은 렌더러 도우미가 아니라 RHI 포맷 정보(RHIFormatInfo.h)의 것이다(2026-11-19)",
     "PortraitBatchUtil": "PortraitStudio::renderPrefabList — 한 장을 그리는 형식 곁의 정적 묶음을 그 형식의 정적 멤버로 접었다(2026-11-19)",
     "readNowSeconds": "MonotonicClock::nowSeconds — 단조 시계의 초 읽기는 시계 형식의 멤버 하나다(자동화 실행기 · 캐릭터 에디터의 사본, 2026-11-19)",
-    "getArgumentKey": "CommandLineManager::getArgumentName — 인자 이름 규칙은 파서의 것 하나다(AutomationPerBackend 의 사본, 2026-11-19)",
+    "getArgumentKey": "CommandLine::getArgumentName — 인자 이름 규칙은 파서의 것 하나다(AutomationPerBackend 의 사본, 2026-11-19)",
     "getBindingDevice": "ActionBinding::getDeviceKind — 바인딩의 장치 종류는 바인딩의 멤버다(AutomationActionSteps · ScenarioRecorder 의 사본, 2026-11-19)",
     "CommandType": "CommandKind — 값의 갈래를 고르는 열거형은 …Kind — …Type 은 C++ · 리플렉션 형식과 외부 API 의 자기 용어만(NamingCpp)(2026-11-19)",
     "PacketType": "PacketKind — 값의 갈래를 고르는 열거형은 …Kind — …Type 은 C++ · 리플렉션 형식과 외부 API 의 자기 용어만(NamingCpp)(2026-11-19)",
@@ -2534,6 +2534,11 @@
     "getGlobalSink": "getGlobalBackend — 전역 로그 뒷단(ILogBackend) 읽기(2026-11-27)",
     "registerGlobalSink": "registerGlobalBackend — 전역 로그 뒷단(ILogBackend) 등록(2026-11-27)",
     "unregisterGlobalSink": "unregisterGlobalBackend — 전역 로그 뒷단(ILogBackend) 해제(2026-11-27)",
-    "s_globalSink": "s_globalBackend — 전역 로그 뒷단(ILogBackend) 칸(2026-11-27)"
+    "s_globalSink": "s_globalBackend — 전역 로그 뒷단(ILogBackend) 칸(2026-11-27)",
+    "BusyClock": "BusyTimeAccumulator — 시각을 내지 않고 바쁜 구간의 합집합 길이를 센다 — Clock 은 시간원(IClock · MonotonicClock) 뜻이다(RateAccumulator 와 끝낱말을 맞춘다)(2026-11-27)",
+    "getCompileBusyClock": "getCompileBusyTimeAccumulator — BusyTimeAccumulator 를 돌려준다(2026-11-27)",
+    "CommandLineManager": "CommandLine — 인자를 파싱 · 보관하는 형식 하나다 — Manager 는 집합의 수명 정책 뜻(언리얼 FCommandLine)(2026-11-27)",
+    "getCommandLineManager": "getCommandLine — CommandLine 을 돌려준다(2026-11-27)",
+    "_pCommandLineManager": "_pCommandLine — CommandLine 칸(2026-11-27)"
   }
 }

@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Core/CommandLine/CommandLineManager.h"
+#include "Core/CommandLine/CommandLine.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/File/FileUtil.h"
@@ -52,7 +52,7 @@ namespace sw
         struct CookCommandletsInternal
         {
             /** @brief bool 인자 @p argument 가 켜져 주어졌으면 true 입니다. */
-            static bool isFlagGiven( const CommandLineManager& commandLine, CommandLineArgument argument )
+            static bool isFlagGiven( const CommandLine& commandLine, CommandLineArgument argument )
             {
                 bool bGiven = false;
                 return commandLine.getArgument( argument, bGiven ) && bGiven;
@@ -111,7 +111,7 @@ namespace sw
             }
 
             /** @brief 팩에 담을 셰이더 바이너리 포맷입니다 — 명령줄 백엔드(`-dx12` …), 없으면 엔진 설정의 `_defaultRHI` 입니다. */
-            static ShaderTargetFormat resolveShaderTarget( const CommandLineManager& commandLine )
+            static ShaderTargetFormat resolveShaderTarget( const CommandLine& commandLine )
             {
                 RHIBackend backend = engine::getSubsystem<EngineConfig>()._window._defaultRHI;
                 RHIBackend commandLineBackend{};
@@ -135,7 +135,7 @@ namespace sw
              *          빌드 타깃은 쿠킹하는 호스트다(`Engine::initialize` 의 `setHostTarget` 과 같은 규칙) — 전용 서버(`Server`)가 굽은 팩은 서버가 읽지 않는 종류를 뺀다.
              *          `-game=` 을 주면 그 게임 팩만 베이크한다(배포 패키지).
              */
-            static PackCookParams makePackCookParams( const CommandLineManager& commandLine, bool bDedicatedServer, const AbsolutePath& cookedDir )
+            static PackCookParams makePackCookParams( const CommandLine& commandLine, bool bDedicatedServer, const AbsolutePath& cookedDir )
             {
                 PackCookParams params;
                 params._projectRoot  = ProcessRoots::get()._project; // 참조 칸 표(`Config/Dev/AssetReferenceFields*.json`) — 쓰는 것만 담는 고르기가 읽는다
@@ -165,7 +165,7 @@ namespace sw
              *          팩이 담을 원본(@p packConfig · @p params 의 리치)을 먼저 모아 출처가 하나도 닿지 않은 변형은 굽지 않는다(팩 단계의 `isStrippedShaderVariant` 와 같은 판정).
              *          쿠킹 요청이 만드는 바이너리와 그 출처도 같은 까닭으로 여기서 모아 @p outMapRequestedBinary 로 돌려준다(팩 단계는 받기만 한다).
              */
-            [[nodiscard]] static bool cookShadersForPack( const CommandLineManager& commandLine, const PackConfig& packConfig, const PackCookParams& params, const AbsolutePath& cookedDir,
+            [[nodiscard]] static bool cookShadersForPack( const CommandLine& commandLine, const PackConfig& packConfig, const PackCookParams& params, const AbsolutePath& cookedDir,
                                                           unordered_map<string, vector<vector<string>>>& outMapRequestedBinary )
             {
                 // 셰이더 쿠커는 렌더러에 있다 — 렌더러를 짓지 않는 구성(전용 서버)의 팩에는 셰이더 바이너리가 없어 할 일이 없다.
@@ -194,7 +194,7 @@ namespace sw
             /**
              * @brief 팩을 베이크합니다. 셰이더 굽기 · 판정은 세션 앞의 `cookShadersForPack` 이 끝냈고, @p params 는 그때와 같은 값에 요청 바이너리 · 저장 방식을 채운 것이다.
              */
-            [[nodiscard]] static bool cookPackStage( const CommandLineManager& commandLine, const PackConfig& packConfig, const PackCookParams& params, const CookStore& cookStore )
+            [[nodiscard]] static bool cookPackStage( const CommandLine& commandLine, const PackConfig& packConfig, const PackCookParams& params, const CookStore& cookStore )
             {
                 uint32 packCount = 0;
                 if ( PackCooker::cookAllPacks( packConfig, params, cookStore, packCount ) == false )
@@ -211,7 +211,7 @@ namespace sw
             /**
              * @brief 새 빌드의 팩(`-pack-dir`)과 이전 빌드의 내용 목록(`-patch-base`)으로 패치를 `-patch-dir` 에 만듭니다. 패치 팩의 압축은 팩 쿠킹 설정과 같습니다.
              */
-            [[nodiscard]] static bool makePatchStage( const CommandLineManager& commandLine )
+            [[nodiscard]] static bool makePatchStage( const CommandLine& commandLine )
             {
                 PackPatchBuildParams params;
                 (void)commandLine.getArgument( CommandLineArgument::PACK_DIR, params._packsDirectory ); // 비면 makePatch 가 오류로 멈춘다
@@ -249,13 +249,13 @@ namespace sw
                 return PackPatchBuilder::makePatch( params );
             }
 
-            static bool isCookShadersRequested( const CommandLineManager& commandLine ) { return isFlagGiven( commandLine, CommandLineArgument::COOK_SHADERS ); }
+            static bool isCookShadersRequested( const CommandLine& commandLine ) { return isFlagGiven( commandLine, CommandLineArgument::COOK_SHADERS ); }
 
             /** @brief 셰이더 쿠킹은 렌더러의 일이다(`IShaderCookService`) — 렌더러를 짓지 않는 구성은 쿠커가 없다는 오류로 멈춘다. */
             static bool runCookShadersTask( CommandletContext& context )
             {
-                const CommandLineManager& commandLine = context._commandLine;
-                AbsolutePath              cookedDir;
+                const CommandLine& commandLine = context._commandLine;
+                AbsolutePath       cookedDir;
                 commandLine.getArgument( CommandLineArgument::COOKED_DIR, cookedDir );
                 // `-shader-request-dir` 는 모든 퍼뮤테이션 대신 지난 실행의 요청 기록만 컴파일해 셰이더 DDC 를 채운다 — 쿠킹본(스테이징 · 매니페스트 · 스탬프)은 쓰지 않는다.
                 AbsolutePath requestDir;
@@ -276,14 +276,14 @@ namespace sw
             }
 
             /** @brief 쿠킹 인자(씬 · 팩 · 전부) 중 하나라도 주어졌는지입니다. */
-            static bool isCookRequested( const CommandLineManager& commandLine )
+            static bool isCookRequested( const CommandLine& commandLine )
             {
                 return isFlagGiven( commandLine, CommandLineArgument::COOK_SCENES ) || isFlagGiven( commandLine, CommandLineArgument::COOK_PACKS ) ||
                        isFlagGiven( commandLine, CommandLineArgument::COOK_ALL );
             }
 
             /** @brief 셰이더 판정만이다 — 쿠킹과 함께 주어지면 쿠킹이 판정을 포함하므로 청하지 않은 것으로 본다. */
-            static bool isVerifyShadersRequested( const CommandLineManager& commandLine )
+            static bool isVerifyShadersRequested( const CommandLine& commandLine )
             {
                 return isFlagGiven( commandLine, CommandLineArgument::VERIFY_SHADERS ) && isCookRequested( commandLine ) == false;
             }
@@ -291,8 +291,8 @@ namespace sw
             /** @brief 셰이더 판정 — 쿠킹 스테이징(`-cooked-dir`)의 쿠킹 표 모든 백엔드를 본다. 고치지 않는다. */
             static bool runVerifyShadersTask( CommandletContext& context )
             {
-                const CommandLineManager& commandLine = context._commandLine;
-                AbsolutePath              cookedDir;
+                const CommandLine& commandLine = context._commandLine;
+                AbsolutePath       cookedDir;
                 commandLine.getArgument( CommandLineArgument::COOKED_DIR, cookedDir );
                 // 굽기와 같은 규칙 — 명령줄 백엔드(`-dx12` …)를 주면 그 형식만, 주지 않으면 네 형식 모두를 본다(그 형식만 구운 폴더를 다른 형식으로 판정하지 않는다).
                 RHIBackend                commandLineBackend{};
@@ -310,7 +310,7 @@ namespace sw
                 return bAllCurrent;
             }
 
-            static bool isMakePatchRequested( const CommandLineManager& commandLine ) { return isFlagGiven( commandLine, CommandLineArgument::MAKE_PATCH ); }
+            static bool isMakePatchRequested( const CommandLine& commandLine ) { return isFlagGiven( commandLine, CommandLineArgument::MAKE_PATCH ); }
 
             /** @brief 패치 만들기(`-make-patch`) — 베이크한 팩끼리만 보므로 씬 쿠킹도 에셋 로드도 필요 없다. 로그와 명령줄이 있는 이 단계에서 한다. */
             static bool runMakePatchTask( CommandletContext& context )
@@ -322,11 +322,11 @@ namespace sw
             /** @brief 씬 · 팩 쿠킹도 같은 자리다. 엔티티 상태를 바이너리로 구우려면 리플렉션이 필요하고 그것은 엔진 안에만 있다. 팩은 그 산출물을 함께 담는다. */
             static bool runCookTask( CommandletContext& context )
             {
-                const CommandLineManager& commandLine = context._commandLine;
-                const bool                bCookPacks  = isFlagGiven( commandLine, CommandLineArgument::COOK_PACKS );
-                const bool                bCookAll    = isFlagGiven( commandLine, CommandLineArgument::COOK_ALL );
-                const bool                bCookScenes = isFlagGiven( commandLine, CommandLineArgument::COOK_SCENES );
-                AbsolutePath              cookedDir;
+                const CommandLine& commandLine = context._commandLine;
+                const bool         bCookPacks  = isFlagGiven( commandLine, CommandLineArgument::COOK_PACKS );
+                const bool         bCookAll    = isFlagGiven( commandLine, CommandLineArgument::COOK_ALL );
+                const bool         bCookScenes = isFlagGiven( commandLine, CommandLineArgument::COOK_SCENES );
+                AbsolutePath       cookedDir;
                 commandLine.getArgument( CommandLineArgument::COOKED_DIR, cookedDir );
                 if ( cookedDir.empty() )
                 {

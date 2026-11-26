@@ -1,7 +1,7 @@
 // CommandletTest — 헤드리스 작업 고르기(`CommandletRegistration::selectAndRun`): 우선순위가 앞선 하나만 돌고, 이 호스트에서 돌지 않는 작업이 청해지면 아무것도 돌리지 않는다(nogpu).
 #include "pch.h"
 
-#include "Core/CommandLine/CommandLineManager.h"
+#include "Core/CommandLine/CommandLine.h"
 #include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Foundation/Commandlet.h"
@@ -26,8 +26,8 @@ namespace
             s_secondRunCount   = 0;
         }
 
-        static bool isFirstRequested( const CommandLineManager& /*commandLine*/ ) { return s_bFirstRequested; }
-        static bool isSecondRequested( const CommandLineManager& /*commandLine*/ ) { return s_bSecondRequested; }
+        static bool isFirstRequested( const CommandLine& /*commandLine*/ ) { return s_bFirstRequested; }
+        static bool isSecondRequested( const CommandLine& /*commandLine*/ ) { return s_bSecondRequested; }
         static bool runFirst( CommandletContext& /*context*/ )
         {
             ++s_firstRunCount;
@@ -50,7 +50,7 @@ SW_TEST_CASE( CommandletTest, OnlyTheFirstRequestedTaskRuns )
     const CommandletRegistration        first{ "First", 10, CommandletHost::Any, &Util::isFirstRequested, &Util::runFirst };
     const CommandletRegistration        second{ "Second", 20, CommandletHost::Any, &Util::isSecondRequested, &Util::runSecondAndFail };
     const CommandletRegistration* const arrTask[] = { &first, &second };
-    CommandLineManager                  commandLine;
+    CommandLine                         commandLine;
 
     Util::reset( true, true );
     CommandletState   bothState;
@@ -85,7 +85,7 @@ SW_TEST_CASE( CommandletTest, WrongHostTaskRejectsTheWholeRequest )
     const CommandletRegistration        first{ "First", 10, CommandletHost::Any, &Util::isFirstRequested, &Util::runFirst };
     const CommandletRegistration        clientOnly{ "ClientOnly", 20, CommandletHost::Client, &Util::isSecondRequested, &Util::runSecondAndFail };
     const CommandletRegistration* const arrTask[] = { &first, &clientOnly };
-    CommandLineManager                  commandLine;
+    CommandLine                         commandLine;
 
     Util::reset( true, true );
     CommandletState   serverState;

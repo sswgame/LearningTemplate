@@ -1,6 +1,6 @@
 /**
- * @file CommandLineManager.h
- * @brief 실행할 때 받은 커맨드라인 인자를 파싱하고 보관하는 매니저입니다.
+ * @file CommandLine.h
+ * @brief 실행할 때 받은 커맨드라인 인자를 파싱하고 보관합니다(언리얼 FCommandLine).
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -36,7 +36,7 @@ namespace sw
     /**
      * @enum CommandLineArgumentUsage
      * @brief 인자를 쓰는 구성입니다 — `ArgumentList.xxx` 줄마다의 둘째 칸입니다.
-     * @details 받지 않는 구성은 철자를 등록하지 않는다(`CommandLineManager::initialize`) — 주면 "알 수 없는 인자" 로 기동이 멈추고, 열거값은 남아 읽으면 "주지 않음" 이다.
+     * @details 받지 않는 구성은 철자를 등록하지 않는다(`CommandLine::initialize`) — 주면 "알 수 없는 인자" 로 기동이 멈추고, 열거값은 남아 읽으면 "주지 않음" 이다.
      *          언리얼은 배포 구성에서 개발 명령줄 · 콘솔 변수를 `#if !UE_BUILD_SHIPPING` 으로 빼고, 유니티는 Development Build 에서만 듣는 인자를 둔다 — 여기는 빼는 대신 거절한다.
      */
     enum class CommandLineArgumentUsage : uint8
@@ -131,13 +131,13 @@ namespace sw
     }
 
     // ------------------------------------------------------------------------------
-    // 2) CommandLineManager — initialize(등록) → parse → getArgument
+    // 2) CommandLine — initialize(등록) → parse → getArgument
     // ------------------------------------------------------------------------------
     /**
-     * @class CommandLineManager
-     * @brief 커맨드라인 인자를 파싱해 타입별(variant) 값으로 보관하는 매니저입니다.
+     * @class CommandLine
+     * @brief 커맨드라인 인자를 파싱해 타입별(variant) 값으로 보관합니다.
      */
-    class SW_API CommandLineManager final
+    class SW_API CommandLine final
     {
         /** @brief 인자 하나의 현재 값 · 저장 타입 견본 · 파싱 여부입니다. */
         struct ArgumentInfo
@@ -172,17 +172,17 @@ namespace sw
 
     public:
         /** @brief 빈 인자 맵으로 둡니다. */
-        CommandLineManager() = default;
+        CommandLine() = default;
         /** @brief 인자 맵을 해제합니다. */
-        ~CommandLineManager() = default;
+        ~CommandLine() = default;
         /** @brief 복사를 금지합니다. */
-        CommandLineManager( const CommandLineManager& ) = delete;
+        CommandLine( const CommandLine& ) = delete;
         /** @brief 복사 대입을 금지합니다. */
-        CommandLineManager& operator=( const CommandLineManager& ) = delete;
+        CommandLine& operator=( const CommandLine& ) = delete;
         /** @brief 이동 생성을 금지합니다. */
-        CommandLineManager( CommandLineManager&& ) = delete;
+        CommandLine( CommandLine&& ) = delete;
         /** @brief 이동 대입을 금지합니다. */
-        CommandLineManager& operator=( CommandLineManager&& ) = delete;
+        CommandLine& operator=( CommandLine&& ) = delete;
 
         /**
          * @brief ArgumentList.xxx 를 읽어 허용하는 커맨드라인 인자를 등록합니다.
@@ -358,11 +358,11 @@ namespace sw
         /** @brief `initialize` 가 받은 정책입니다 — 도움말(`makeUsageText`)이 받지 않는 줄을 뺀다. */
         CommandLineBuildPolicy _buildPolicy{};
 
-        SW_SUBSYSTEM_SLOT( CommandLineManager, Required );
+        SW_SUBSYSTEM_SLOT( CommandLine, Required );
     };
 
     template <typename T>
-    bool CommandLineManager::readValue( const ArgumentInfo& argument, T& outValue )
+    bool CommandLine::readValue( const ArgumentInfo& argument, T& outValue )
     {
         static_assert( std::is_same_v<T, bool> || std::is_integral_v<T> || std::is_floating_point_v<T> || std::is_same_v<T, string> || std::is_same_v<T, string_view> || std::is_same_v<T, AbsolutePath>,
                        "커맨드라인 값은 bool·정수·부동소수·string·string_view·AbsolutePath(디스크 경로 인자) 로만 꺼낼 수 있습니다" );
@@ -414,7 +414,7 @@ namespace sw
     }
 
     template <typename T>
-    bool CommandLineManager::getArgument( string_view key, T& outValue ) const
+    bool CommandLine::getArgument( string_view key, T& outValue ) const
     {
         const ArgumentInfo* pArgument = findArgument( key );
         if ( pArgument == nullptr )
@@ -424,7 +424,7 @@ namespace sw
     }
 
     template <typename T>
-    bool CommandLineManager::getArgument( const CommandLineArgument argument, T& outValue ) const
+    bool CommandLine::getArgument( const CommandLineArgument argument, T& outValue ) const
     {
         const ArgumentInfo* pArgument = findArgument( argument );
         if ( pArgument == nullptr )
@@ -434,7 +434,7 @@ namespace sw
     }
 
     template <typename T>
-    void CommandLineManager::addArgument( const std::initializer_list<string_view>& listAlias, T valueSample )
+    void CommandLine::addArgument( const std::initializer_list<string_view>& listAlias, T valueSample )
     {
         // 먼저 모두 검사한다. 겹치는 이름을 만난 즉시 돌아가면 그 앞에서 이미 넣은 별칭들이 끝내 만들어지지
         // 않는 인덱스를 가리킨 채 남고, 그 별칭으로 조회하면 _listArgument 범위 밖을 읽는다.

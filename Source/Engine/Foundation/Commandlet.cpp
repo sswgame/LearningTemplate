@@ -79,7 +79,7 @@ namespace sw
         return CommandletResult::Ran;
     }
 
-    bool CommandletRegistration::isAnyRequested( const CommandLineManager& commandLine )
+    bool CommandletRegistration::isAnyRequested( const CommandLine& commandLine )
     {
         const RegistrationList<const CommandletRegistration>& registrations = CommandletInternal::getRegistrations();
         for ( uint32 index = 0; index < registrations.getCount(); ++index )

@@ -2,7 +2,7 @@
 
 #include "DevTools/Diagnostics/UnitTestRun.h"
 
-#include "Core/CommandLine/CommandLineManager.h"
+#include "Core/CommandLine/CommandLine.h"
 #include "Core/Diagnostics/CrashHandler.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/StringBuilder.h"
@@ -14,7 +14,7 @@
 
 namespace sw
 {
-    bool UnitTestRun::run( const CommandLineManager& commandLine, string_view defaultSourceFolder, string_view excludedTag )
+    bool UnitTestRun::run( const CommandLine& commandLine, string_view defaultSourceFolder, string_view excludedTag )
     {
         test::TestRunOptions options;
         int32                seed        = 0;

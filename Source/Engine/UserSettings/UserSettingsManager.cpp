@@ -3,7 +3,7 @@
 #include "Engine/UserSettings/UserSettingsManager.h"
 
 #include "Core/Algorithm/VectorUtil.h"
-#include "Core/CommandLine/CommandLineManager.h"
+#include "Core/CommandLine/CommandLine.h"
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
 #include "Core/File/UserDataPath.h"
@@ -986,8 +986,8 @@ namespace sw
                     return false;
                 // 기동이나 다시 만들 때의 적용은 명령줄로 준 변수를 덮지 않는다. 실행 한 번의 값(명령줄)이 저장된 값(사용자 설정)을 이긴다(화면 설정과 같은 순서).
                 // 메뉴에서 바꾼 값(bStartup 이 false)은 덮는다. 플레이어가 지금 고른 값이기 때문이다.
-                const CommandLineManager* pCommandLineManager   = getTargets()._pCommandLineManager;
-                const bool                bKeepCommandLineValue = bStartup && pCommandLineManager != nullptr && pCommandLineManager->isGlobalVariableProvided( def._targetName.view() );
+                const CommandLine* pCommandLine          = getTargets()._pCommandLine;
+                const bool         bKeepCommandLineValue = bStartup && pCommandLine != nullptr && pCommandLine->isGlobalVariableProvided( def._targetName.view() );
                 if ( bKeepCommandLineValue )
                     return true;
                 if ( def._type != UserSettingKind::Enum )
@@ -1184,7 +1184,7 @@ namespace sw
     {
         UserSettingsTargets targets;
         targets._pGlobalVariableManager = &engine::getSubsystem<GlobalVariableManager>();
-        targets._pCommandLineManager    = &engine::getSubsystem<CommandLineManager>();
+        targets._pCommandLine           = &engine::getSubsystem<CommandLine>();
         targets._pInputMap              = &engine::getSubsystem<InputManager>().getInputMap();
         targets._pLocalizationManager   = &engine::getSubsystem<LocalizationManager>();
         initialize( targets );
@@ -1210,8 +1210,8 @@ namespace sw
         // 사양으로 품질 프리셋을 고르는 것은 사람이 처음 켠 실행만이다. 무인 실행(-unattended · -scenario)은 기계마다 다른 프리셋을 고르면 같은 시나리오의
         // 그림 · 시야 거리가 기계에 따라 달라진다(약한 GPU 의 low 가 지형 원경을 잘라 칠하기 비교가 0 이 됐다). 스키마 기본값 그대로 둔다 — 시나리오가
         // 품질을 보려면 <Launch> 로 정한다.
-        const CommandLineManager& commandLine   = *targets._pCommandLineManager;
-        const bool                bAutomatedRun = commandLine.isAutomatedRun();
+        const CommandLine& commandLine   = *targets._pCommandLine;
+        const bool         bAutomatedRun = commandLine.isAutomatedRun();
         // 사용자 폴더의 파일이다(세이브 게임과 별개). 무인 실행은 그 PC 사용자의 파일을 읽지도 쓰지도 않는다 — 실행마다 빈 파일 자리(프로세스별)를 쓴다.
         // 예전에는 띄우는 쪽이 파일 자리를 빠뜨리면 사람의 설정이 그림을 바꾸고, 시나리오가 바꾼 값이 사람의 파일에 남았다.
         // 기동 확장이 자리를 이미 정했으면(개발 도구의 `-gv_userSettingsFile` — 실행 짝 · 순서 시나리오가 파일을 이어 쓴다) 그 자리다.

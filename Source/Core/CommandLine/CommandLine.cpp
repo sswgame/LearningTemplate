@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Core/CommandLine/CommandLineManager.h"
+#include "Core/CommandLine/CommandLine.h"
 
 #include "Core/Foundation/BuildInfo.h"
 #include "Core/Foundation/Constants.h"
@@ -33,7 +33,7 @@ namespace sw
     //
     // 정책이 받지 않는 줄(배포의 Dev · Test 인자)은 자리만 두고 철자를 넣지 않는다 — 열거값 = 인덱스가 구성마다 같고, 그 철자를 주면 parse 가 모르는 인자로 거절한다.
     // ============================================================================
-    void CommandLineManager::initialize( const CommandLineBuildPolicy& policy )
+    void CommandLine::initialize( const CommandLineBuildPolicy& policy )
     {
         _buildPolicy = policy;
         _listArgument.clear();
@@ -53,12 +53,12 @@ namespace sw
 #undef SW_REGISTER_ARGUMENT
     }
 
-    void CommandLineManager::assertRegistrationOrder( const CommandLineArgument expected, const utf8* pName ) const
+    void CommandLine::assertRegistrationOrder( const CommandLineArgument expected, const utf8* pName ) const
     {
         SW_LOG_ASSERT( _listArgument.size() == static_cast<size_t>( expected ), "Argument registration order does not match the CommandLineArgument enum: %#", pName );
     }
 
-    string CommandLineManager::makeUsageText() const
+    string CommandLine::makeUsageText() const
     {
         string text{ "Usage: <executable> [-argument | -argument=value] ...\n" };
 #define SW_REGISTER_ARGUMENT( name, usage, valueSample, ... )              \
@@ -71,7 +71,7 @@ namespace sw
         return text;
     }
 
-    void CommandLineManager::appendUsageLine( string& inoutText, const std::initializer_list<string_view>& listAlias, const ArgumentInfo& argument )
+    void CommandLine::appendUsageLine( string& inoutText, const std::initializer_list<string_view>& listAlias, const ArgumentInfo& argument )
     {
         const utf8* pValueShape = "";
         if ( std::holds_alternative<int32>( argument._valueSample ) )
@@ -98,7 +98,7 @@ namespace sw
     // 인자들을 커다란 문자열 하나로 합쳤다가 다시 나누지 않고, argv 원소마다 바로 string_view 로 잘라 파싱하므로
     // 할당이 없다.
     // ============================================================================
-    void CommandLineManager::parse( const int32 argc, utf8* pPpArgv[], const AbsolutePath& baseDirectory )
+    void CommandLine::parse( const int32 argc, utf8* pPpArgv[], const AbsolutePath& baseDirectory )
     {
         if ( argc < 2 || pPpArgv == nullptr )
             return;
@@ -113,7 +113,7 @@ namespace sw
         }
     }
 
-    optional<string_view> CommandLineManager::findLineBeforeParse( const int32 argc, utf8* pPpArgv[], const CommandLineArgument argument )
+    optional<string_view> CommandLine::findLineBeforeParse( const int32 argc, utf8* pPpArgv[], const CommandLineArgument argument )
     {
         if ( CommandLineBuildPolicy::current().isUsageAccepted( getCommandLineArgumentUsage( argument ) ) == false )
             return nullopt; // 이 빌드가 받지 않는 인자다 — parse 가 그 줄을 모르는 인자로 거절한다
@@ -129,7 +129,7 @@ namespace sw
         return nullopt;
     }
 
-    bool CommandLineManager::isFlagGivenBeforeParse( const int32 argc, utf8* pPpArgv[], const CommandLineArgument argument )
+    bool CommandLine::isFlagGivenBeforeParse( const int32 argc, utf8* pPpArgv[], const CommandLineArgument argument )
     {
         const optional<string_view> line = findLineBeforeParse( argc, pPpArgv, argument );
         if ( line.has_value() == false )
@@ -141,7 +141,7 @@ namespace sw
         return bHasValue == false || ( StringUtil::tryParseBool( value, bValue ) && bValue );
     }
 
-    bool CommandLineManager::findValueBeforeParse( const int32 argc, utf8* pPpArgv[], const CommandLineArgument argument, string& outValue )
+    bool CommandLine::findValueBeforeParse( const int32 argc, utf8* pPpArgv[], const CommandLineArgument argument, string& outValue )
     {
         const optional<string_view> line = findLineBeforeParse( argc, pPpArgv, argument );
         if ( line.has_value() == false )
@@ -154,7 +154,7 @@ namespace sw
         return true;
     }
 
-    string_view CommandLineManager::getArgumentName( string_view argumentLine )
+    string_view CommandLine::getArgumentName( string_view argumentLine )
     {
         string_view name = StringUtil::trim( argumentLine );
         string_view value;
@@ -170,7 +170,7 @@ namespace sw
     // parse (UTF-16, Windows)
     // Windows(WinMain · wmain)의 UTF-16 argv 를 UTF-8 로 바꾼 뒤 파싱한다.
     // ============================================================================
-    void CommandLineManager::parse( const int32 argc, utf16* pPpArgv[], const AbsolutePath& baseDirectory )
+    void CommandLine::parse( const int32 argc, utf16* pPpArgv[], const AbsolutePath& baseDirectory )
     {
         if ( argc < 2 || pPpArgv == nullptr )
             return;
@@ -197,7 +197,7 @@ namespace sw
     // 4. 이종 조회로 _mapArgument 에서 인자 인덱스를 O(1) 로 찾는다
     // 5. 찾은 ArgumentInfo 에 타입에 맞게 값을 넣는다
     // ============================================================================
-    void CommandLineManager::parseArgumentLine( string_view argumentLine, const AbsolutePath& baseDirectory )
+    void CommandLine::parseArgumentLine( string_view argumentLine, const AbsolutePath& baseDirectory )
     {
         // 1단계: 앞뒤 공백 자르기
         const string_view line = StringUtil::trim( argumentLine );
@@ -271,7 +271,7 @@ namespace sw
         argument._bParsed = SW_TRUE;
     }
 
-    const CommandLineManager::ArgumentInfo* CommandLineManager::findArgument( string_view key ) const
+    const CommandLine::ArgumentInfo* CommandLine::findArgument( string_view key ) const
     {
         SW_LOG_ASSERT( key.empty() == false, "The given value must not be empty" );
 
@@ -282,7 +282,7 @@ namespace sw
         return &_listArgument[iter->second];
     }
 
-    const CommandLineManager::ArgumentInfo* CommandLineManager::findArgument( const CommandLineArgument argument ) const
+    const CommandLine::ArgumentInfo* CommandLine::findArgument( const CommandLineArgument argument ) const
     {
         // ArgumentList.xxx 한 줄이 열거 멤버 하나와 _listArgument 원소 하나를 같은 순서로 만든다(initialize 가 줄마다
         // 그 일치를 assert 한다). 그래서 이름을 만들어 해시할 필요가 없다. Count 나 initialize 이전의 조회는 여기서
@@ -294,24 +294,24 @@ namespace sw
         return &_listArgument[argumentIndex];
     }
 
-    bool CommandLineManager::isArgumentProvided( string_view key ) const
+    bool CommandLine::isArgumentProvided( string_view key ) const
     {
         const ArgumentInfo* pArgument = findArgument( key );
         return pArgument != nullptr && pArgument->_bParsed != SW_FALSE;
     }
 
-    bool CommandLineManager::isArgumentProvided( const CommandLineArgument argument ) const
+    bool CommandLine::isArgumentProvided( const CommandLineArgument argument ) const
     {
         const ArgumentInfo* pArgument = findArgument( argument );
         return pArgument != nullptr && pArgument->_bParsed != SW_FALSE;
     }
 
-    bool CommandLineManager::isAutomatedRun() const
+    bool CommandLine::isAutomatedRun() const
     {
         return isArgumentProvided( CommandLineArgument::UNATTENDED ) || isArgumentProvided( CommandLineArgument::SCENARIO );
     }
 
-    bool CommandLineManager::findPendingGlobalValue( string_view name, string& outValue ) const
+    bool CommandLine::findPendingGlobalValue( string_view name, string& outValue ) const
     {
         const auto iter = _mapPendingGlobal.find( name );
         if ( iter == _mapPendingGlobal.end() )
@@ -321,7 +321,7 @@ namespace sw
         return true;
     }
 
-    bool CommandLineManager::isGlobalVariableProvided( string_view name ) const
+    bool CommandLine::isGlobalVariableProvided( string_view name ) const
     {
         // 등록된 변수(Engine 전역 변수 — registerToCommandLine 이 인자로 넣었다)는 표에서, 아직 없는 변수(모듈 것)는 보류표에서 찾는다.
         if ( name.empty() )
@@ -331,7 +331,7 @@ namespace sw
         return _mapPendingGlobal.find( name ) != _mapPendingGlobal.end() || isArgumentProvided( name );
     }
 
-    vector<string> CommandLineManager::collectPendingGlobalNames() const
+    vector<string> CommandLine::collectPendingGlobalNames() const
     {
         vector<string> listName;
         listName.reserve( _mapPendingGlobal.size() );
@@ -348,7 +348,7 @@ namespace sw
      * StringUtil::parse* 로 임시 문자열을 할당하지 않고 바로 변환합니다. 변환에 실패하면 0 이 조용히 들어가지 않도록
      * 경고를 남깁니다. `-W=abc` 가 아무 말 없이 폭 0 이 되면 창이 왜 뜨지 않는지 알 길이 없기 때문입니다.
      */
-    expected<void> CommandLineManager::trySetValue( ArgumentInfo& argument, string_view newValue, const AbsolutePath& baseDirectory )
+    expected<void> CommandLine::trySetValue( ArgumentInfo& argument, string_view newValue, const AbsolutePath& baseDirectory )
     {
         if ( std::holds_alternative<bool>( argument._valueSample ) )
         {

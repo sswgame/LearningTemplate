@@ -15,7 +15,7 @@ namespace sw
 {
     enum class ShaderTargetFormat : uint8;
 
-    class CommandLineManager;
+    class CommandLine;
     class IRHIDevice;
 } // namespace sw
 
@@ -44,11 +44,11 @@ namespace sw
          *          기본값으로 덮습니다), `RHI::initialize` 는 "무엇인가"를 묻습니다. 이를 통해 쓸 수 없을 때
          *          조용히 폴백해도 되는지도 정합니다. 두 곳이 이 함수 하나로 답해야 `-vk` 와 `-gv_rhiBackend` 가
          *          같은 백엔드를 고를 때 같은 결과(쓸 수 없으면 에러)가 납니다.
-         * @param commandLineManager 파싱이 끝난 커맨드라인
+         * @param commandLine 파싱이 끝난 커맨드라인
          * @param outBackend 명시했을 때만 채워집니다
          * @return 커맨드라인이 백엔드를 명시했으면 true
          */
-        [[nodiscard]] static bool findCommandLineBackend( const CommandLineManager& commandLineManager, RHIBackend& outBackend );
+        [[nodiscard]] static bool findCommandLineBackend( const CommandLine& commandLine, RHIBackend& outBackend );
 
         // ------------------------------------------------------------------------------
         // 1) 수명: 복사/이동 금지, initialize/shutdown, 소프트 재생성

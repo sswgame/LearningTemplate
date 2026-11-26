@@ -2,7 +2,7 @@
 
 #include "Engine/HeadlessSubsystem.h"
 
-#include "Core/CommandLine/CommandLineManager.h"
+#include "Core/CommandLine/CommandLine.h"
 #include "Core/Log/Logger.h"
 #include "Core/Process/Process.h"
 #include "Core/Subsystem/SubsystemCollection.h"
@@ -27,13 +27,13 @@ namespace sw
         struct HeadlessSubsystemInternal
         {
             /** @brief bool 인자 @p argument 가 켜져 주어졌으면 true 입니다. */
-            static bool isFlagGiven( const CommandLineManager& commandLine, CommandLineArgument argument )
+            static bool isFlagGiven( const CommandLine& commandLine, CommandLineArgument argument )
             {
                 bool bGiven = false;
                 return commandLine.getArgument( argument, bGiven ) && bGiven;
             }
 
-            static bool isHelpRequested( const CommandLineManager& commandLine ) { return isFlagGiven( commandLine, CommandLineArgument::HELP ); }
+            static bool isHelpRequested( const CommandLine& commandLine ) { return isFlagGiven( commandLine, CommandLineArgument::HELP ); }
 
             /** @brief `-help` — 받는 인자 목록을 표준 출력에 찍고 끝낸다(창 · 렌더러를 세우지 않는다). */
             static bool runHelpTask( CommandletContext& context )
@@ -68,7 +68,7 @@ namespace sw
         // 작업(테스트 · 쿠킹 · 도구)의 조회는 이 서브시스템의 의존이 아니다 — 초기화 조회 검사에서 뺀다(`SubsystemCollection::HostedCommandletScope`).
         const SubsystemCollection::HostedCommandletScope hostedTask;
         // 작업 하나가 돌았거나 거절됐으면 이 단계에 기대는 단계(창 · RHI · 렌더러)를 건너뛴다. 고르는 규칙은 `CommandletRegistration::selectAndRun`.
-        CommandletContext      context{ engine::getSubsystem<CommandLineManager>(), _state, _bDedicatedServer == SW_TRUE };
+        CommandletContext      context{ engine::getSubsystem<CommandLine>(), _state, _bDedicatedServer == SW_TRUE };
         const CommandletResult result = CommandletRegistration::runRequested( context );
         return result == CommandletResult::NotRequested ? SubsystemInitResult::Succeeded : SubsystemInitResult::SkipDependents;
     }

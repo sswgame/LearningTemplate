@@ -2,7 +2,7 @@
 
 #include "Engine/CoreSubsystems/CrashHandlerSubsystem.h"
 
-#include "Core/CommandLine/CommandLineManager.h"
+#include "Core/CommandLine/CommandLine.h"
 #include "Core/Diagnostics/CrashHandler.h"
 #include "Core/Foundation/BuildInfo.h"
 #include "Core/Log/Logger.h"

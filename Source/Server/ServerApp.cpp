@@ -21,7 +21,7 @@
  */
 #include "pch.h"
 
-#include "Core/CommandLine/CommandLineManager.h"
+#include "Core/CommandLine/CommandLine.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Subscription.h"
@@ -595,9 +595,9 @@ namespace sw
 
     bool ServerApp::loadServerConfig()
     {
-        ConfigManager*            pConfigManager = _launch.getEngine().getConfigManager();
-        const CommandLineManager* pCommandLine   = _launch.getEngine().getCommandLineManager();
-        string                    path           = GameSelection::getServerConfigPath();
+        ConfigManager*     pConfigManager = _launch.getEngine().getConfigManager();
+        const CommandLine* pCommandLine   = _launch.getEngine().getCommandLine();
+        string             path           = GameSelection::getServerConfigPath();
         if ( pCommandLine != nullptr )
         {
             string overridePath;

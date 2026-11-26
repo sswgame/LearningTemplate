@@ -3,7 +3,7 @@
 #include "DevTools/Client/Capture/BugReport.h"
 
 #include "Core/Algorithm/VectorUtil.h"
-#include "Core/CommandLine/CommandLineManager.h"
+#include "Core/CommandLine/CommandLine.h"
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
 #include "Core/Foundation/BuildInfo.h"
@@ -440,7 +440,7 @@ namespace sw
             inputs._report._inputFrameCount = recording.getFrameCount();
             inputs._report._inputSeconds    = recording.getTotalDuration();
         }
-        (void)engine::getSubsystem<CommandLineManager>().getArgument( CommandLineArgument::ENABLE_EDITOR, inputs._bEditor ); // 없으면 false 그대로
+        (void)engine::getSubsystem<CommandLine>().getArgument( CommandLineArgument::ENABLE_EDITOR, inputs._bEditor ); // 없으면 false 그대로
         return inputs;
     }
 

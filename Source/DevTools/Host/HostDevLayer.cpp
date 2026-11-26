@@ -2,7 +2,7 @@
 
 #include "ModuleManager/Host/HostDevLayer.h"
 
-#include "Core/CommandLine/CommandLineManager.h"
+#include "Core/CommandLine/CommandLine.h"
 #include "Core/Diagnostics/PhaseTimings.h"
 #include "Core/File/PlatformFileUtil.h"
 #include "Core/Foundation/Constants.h"
@@ -120,7 +120,7 @@ namespace sw
             void updateModuleReload() override {}
 #endif
 
-            bool runEditorModuleCommandlets( const CommandLineManager& commandLine ) override { return EditorModuleCommandlet::runRequested( commandLine ); }
+            bool runEditorModuleCommandlets( const CommandLine& commandLine ) override { return EditorModuleCommandlet::runRequested( commandLine ); }
             void attachFrameHooks( Engine& engine ) override { _devTools.attachFrameHooks( engine ); }
             void addConsoleHostService( HostLaunch& launch, const utf8* pGameServiceName, bool bEnableEditor ) override
             {
@@ -139,7 +139,7 @@ namespace sw
                 return pClientPart != nullptr ? pClientPart->makeEditorModuleManager( *_pEngine ) : nullptr;
             }
 
-            bool startAutomation( const CommandLineManager& commandLine ) override
+            bool startAutomation( const CommandLine& commandLine ) override
             {
                 _pAutomation = engine::findSubsystem<IAutomationRuntime>();
                 if ( _pAutomation != nullptr )
@@ -153,7 +153,7 @@ namespace sw
             bool                                 isAutomationBusy() const override { return _pAutomation != nullptr && _pAutomation->isBusy(); }
             unique_ptr<IAutomationShutdownWatch> watchAutomationShutdown() override { return _pAutomation != nullptr ? _pAutomation->watchShutdown() : nullptr; }
 
-            HostTaskResult runAfterHostSubsystems( const CommandLineManager& commandLine ) override
+            HostTaskResult runAfterHostSubsystems( const CommandLine& commandLine ) override
             {
                 // 지금은 초상화 굽기 하나다. 렌더러가 없는 전용 서버에는 클라이언트 부분이 없다.
                 IDevToolsClientPart* const pClientPart = IDevToolsClientPart::find();

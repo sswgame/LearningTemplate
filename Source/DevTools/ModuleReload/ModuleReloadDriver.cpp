@@ -2,7 +2,7 @@
 
 #include "DevTools/ModuleReload/ModuleReloadDriver.h"
 
-#include "Core/CommandLine/CommandLineManager.h"
+#include "Core/CommandLine/CommandLine.h"
 #include "Core/String/formatString.h"
 #include "Core/Subsystem/SubsystemScope.h"
 
@@ -157,7 +157,7 @@ namespace sw
         // 무엇을 로드할지는 모듈 매니페스트가 정한다(App 은 빌드가 담은 모든 대상, 전용 서버는 Server 대상).
         if ( ModuleCatalogLoader::loadAndResolve( targetMask, outCatalog, outResolution ) == false )
             return false;
-        const CommandLineManager& commandLine = engine::getSubsystem<CommandLineManager>();
+        const CommandLine& commandLine = engine::getSubsystem<CommandLine>();
         // 테스트 자식(자식 역할 · 격리 케이스)은 그 케이스가 등록된 모듈과 그 의존만 연다 — 엔진 · 개발 도구의 케이스면 하나도 열지 않는다.
         string childModule;
         if ( commandLine.getArgument( CommandLineArgument::TEST_CHILD_MODULE, childModule ) && childModule.empty() == false )

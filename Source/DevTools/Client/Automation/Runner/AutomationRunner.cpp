@@ -12,7 +12,7 @@
 #include "Core/Process/Process.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
-#include "Core/Time/BusyClock.h"
+#include "Core/Time/BusyTimeAccumulator.h"
 #include "Core/Time/MonotonicClock.h"
 #include "Core/Time/WallClock.h"
 
@@ -621,7 +621,7 @@ namespace sw
         _run._lastFrameEndSeconds = _run._wallStartSeconds;
         // 셰이더 컴파일(빈 캐시의 첫 실행)은 일하는 시간이다 — 시한에 세지 않는다(언리얼 자동화도 셰이더 컴파일을 기다린다). 행 감시도 같은 값을 뺀다.
         const ShaderCache* const pShaderCache = engine::findSubsystem<ShaderCache>();
-        _run._pCompileBusy                    = pShaderCache != nullptr ? &pShaderCache->getCompileBusyClock() : nullptr;
+        _run._pCompileBusy                    = pShaderCache != nullptr ? &pShaderCache->getCompileBusyTimeAccumulator() : nullptr;
         _run._compileBusyAtStartNanoseconds   = _run._pCompileBusy != nullptr ? _run._pCompileBusy->getBusyNanoseconds( MonotonicClock::nowNanoseconds() ) : 0;
         _startedUnixMs                        = WallClock::nowUnixMilliseconds().count();
         LocalCalendarTime calendar{};

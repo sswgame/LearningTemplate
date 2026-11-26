@@ -31,7 +31,7 @@
 
 namespace sw
 {
-    class BusyClock;
+    class BusyTimeAccumulator;
     /**
      * @class AutomationStepTimeline
      * @brief 실행기가 "지금 몇 번째 프레임 · 단계이고 무엇을 기다리는가" 를 적어 두는 칸입니다. 판정(`AutomationEvaluator`)은 이 값을 직접 읽지 않고 단계 문맥으로만 받는다.
@@ -42,29 +42,29 @@ namespace sw
     class SW_DEVTOOLS_API AutomationStepTimeline
     {
     public:
-        vector<AbsolutePath>   _listPendingScreenshot;         ///< 아직 렌더 패킷에 싣지 않은 스크린샷 경로입니다.
-        string                 _currentStepKind;               ///< 마지막으로 시작한 실행 단계(입력 단계는 제외)
-        string                 _clockHolderName;               ///< 시계를 붙잡은 조건의 이름(로그)
-        string                 _waitingFor;                    ///< 지금 붙잡은 단계가 기다리는 것(`holdUntilReady` 의 까닭). 놓이면 비운다
-        float64                _exitDeadlineSeconds;           ///< `ExpectExitWithin` 이 정한 벽시계 시한입니다(단조 시계 초). 0 이면 기다리지 않습니다.
-        int32                  _expectedExitCode;              ///< `ExpectExitWithin exitCode` — 엔진이 끝낼 때 요청했어야 할 종료 코드입니다(`QuitRequest`, 창 닫기는 0)
-        float64                _wallStartSeconds;              ///< 시나리오를 읽기 시작한 단조 시계 초(벽시계 감시의 기준)
-        const BusyClock*       _pCompileBusy;                  ///< 셰이더 공급자의 바쁜 시계(`ShaderCache::getCompileBusyClock`: 셰이더 로드 · PSO 생성). 그 시간은 벽시계 시한에 세지 않는다. 셰이더 캐시가 없는 호스트는 nullptr
-        int64                  _compileBusyAtStartNanoseconds; ///< 시작 때 `_pCompileBusy` 의 값
-        float64                _wallEndSeconds;                ///< 끝맺은 단조 시계 초(끝나기 전에는 0)
-        float64                _lastFrameEndSeconds;           ///< 앞 프레임의 `onFrameEnd` 가 닿은 단조 시계 초(프레임 시간을 더하는 기준 — 처음엔 `_wallStartSeconds`)
-        float64                _clockHoldStartSeconds;         ///< 시계 잡기가 시작된 컴파일을 뺀 시계 초(`readNowSecondsWithoutCompile`)
-        size_t                 _nextStepIndex;                 ///< 다음에 돌 단계의 순번
-        uint32                 _frameIndex;                    ///< 지금 시나리오 프레임(시작 전이면 0) — 단계 시점과 시한(`timeoutFrames`)의 축. 단계가 시계를 붙잡는 동안은 서 있다
-        uint32                 _currentStepNumber;             ///< `_currentStepKind` 의 파일 순번
-        uint32                 _waitFrameCount;                ///< 시작 조건을 기다린 프레임 수입니다.
-        uint32                 _screenshotRequestedCount;
-        uint32                 _screenshotCompletedCount;
-        uint32                 _advanceSimulationFrameCount; ///< `<AdvanceSimulation>` 으로 그리지 않게 맡긴 프레임 수(그리는 끝 프레임은 빼고 — `AutomationRunner::advanceSimulation`)
-        uint8                  _bFinishWaiting : 1;          ///< 이 프레임에 `<Pass/>` 가 뒤의 일을 기다린다 - 시나리오 시한에 세지 않는다(그 대기는 `kMaxFinishWaitFrames` 가 따로 묶는다)
-        uint8                  _bClockHeld     : 1;          ///< 이 프레임을 시계 잡기 조건이 붙잡았다(`onFrameBegin` 이 정하고 `onFrameEnd` 가 단계를 건너뛴다)
-        [[maybe_unused]] uint8 _reserved       : 7;
-        uint32                 _assetStableFrameCount; ///< `<Screenshot>` 앞에서 에셋 일이 0 인 채로 지난 프레임 수입니다
+        vector<AbsolutePath>       _listPendingScreenshot;         ///< 아직 렌더 패킷에 싣지 않은 스크린샷 경로입니다.
+        string                     _currentStepKind;               ///< 마지막으로 시작한 실행 단계(입력 단계는 제외)
+        string                     _clockHolderName;               ///< 시계를 붙잡은 조건의 이름(로그)
+        string                     _waitingFor;                    ///< 지금 붙잡은 단계가 기다리는 것(`holdUntilReady` 의 까닭). 놓이면 비운다
+        float64                    _exitDeadlineSeconds;           ///< `ExpectExitWithin` 이 정한 벽시계 시한입니다(단조 시계 초). 0 이면 기다리지 않습니다.
+        int32                      _expectedExitCode;              ///< `ExpectExitWithin exitCode` — 엔진이 끝낼 때 요청했어야 할 종료 코드입니다(`QuitRequest`, 창 닫기는 0)
+        float64                    _wallStartSeconds;              ///< 시나리오를 읽기 시작한 단조 시계 초(벽시계 감시의 기준)
+        const BusyTimeAccumulator* _pCompileBusy;                  ///< 셰이더 공급자의 바쁜 시간(`ShaderCache::getCompileBusyTimeAccumulator`: 셰이더 로드 · PSO 생성). 그 시간은 벽시계 시한에 세지 않는다. 셰이더 캐시가 없는 호스트는 nullptr
+        int64                      _compileBusyAtStartNanoseconds; ///< 시작 때 `_pCompileBusy` 의 값
+        float64                    _wallEndSeconds;                ///< 끝맺은 단조 시계 초(끝나기 전에는 0)
+        float64                    _lastFrameEndSeconds;           ///< 앞 프레임의 `onFrameEnd` 가 닿은 단조 시계 초(프레임 시간을 더하는 기준 — 처음엔 `_wallStartSeconds`)
+        float64                    _clockHoldStartSeconds;         ///< 시계 잡기가 시작된 컴파일을 뺀 시계 초(`readNowSecondsWithoutCompile`)
+        size_t                     _nextStepIndex;                 ///< 다음에 돌 단계의 순번
+        uint32                     _frameIndex;                    ///< 지금 시나리오 프레임(시작 전이면 0) — 단계 시점과 시한(`timeoutFrames`)의 축. 단계가 시계를 붙잡는 동안은 서 있다
+        uint32                     _currentStepNumber;             ///< `_currentStepKind` 의 파일 순번
+        uint32                     _waitFrameCount;                ///< 시작 조건을 기다린 프레임 수입니다.
+        uint32                     _screenshotRequestedCount;
+        uint32                     _screenshotCompletedCount;
+        uint32                     _advanceSimulationFrameCount; ///< `<AdvanceSimulation>` 으로 그리지 않게 맡긴 프레임 수(그리는 끝 프레임은 빼고 — `AutomationRunner::advanceSimulation`)
+        uint8                      _bFinishWaiting : 1;          ///< 이 프레임에 `<Pass/>` 가 뒤의 일을 기다린다 - 시나리오 시한에 세지 않는다(그 대기는 `kMaxFinishWaitFrames` 가 따로 묶는다)
+        uint8                      _bClockHeld     : 1;          ///< 이 프레임을 시계 잡기 조건이 붙잡았다(`onFrameBegin` 이 정하고 `onFrameEnd` 가 단계를 건너뛴다)
+        [[maybe_unused]] uint8     _reserved       : 7;
+        uint32                     _assetStableFrameCount; ///< `<Screenshot>` 앞에서 에셋 일이 0 인 채로 지난 프레임 수입니다
         /// `<Screenshot stability="Render">` 의 렌더 정착(에셋 일 + 정착 조건)이 선 때의 `_holdFrameCount`(서지 않았으면 `kNotStable`) — 그다음 프레임부터 화면 덮개 · 뒤 프레임을 센다
         uint32                           _stableHoldFrame;
         AutomationStallClock             _stabilityStallClock;      ///< 렌더 정착 조건의 진척이 그대로인 그린 프레임 수(`ScenarioRun.json` 의 `_stallFrames` 와 견준다)

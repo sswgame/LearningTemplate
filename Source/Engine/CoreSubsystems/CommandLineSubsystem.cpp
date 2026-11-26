@@ -2,7 +2,7 @@
 
 #include "Engine/CoreSubsystems/CommandLineSubsystem.h"
 
-#include "Core/CommandLine/CommandLineManager.h"
+#include "Core/CommandLine/CommandLine.h"
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 
@@ -12,7 +12,7 @@
 namespace sw
 {
     CommandLineSubsystem::CommandLineSubsystem( int32 argc, utf8* pArgv[] )
-        : _commandLine{ make_unique<CommandLineManager>() }
+        : _commandLine{ make_unique<CommandLine>() }
         , _globalVariables{ make_unique<GlobalVariableManager>() }
         , _argc{ argc }
         , _ppArgv{ pArgv }
@@ -75,6 +75,6 @@ namespace sw
 namespace sw
 {
     // 이 서브시스템이 든 명령줄 · 전역 변수 표의 서브시스템 칸 — 엔진 범위의 코어 범위에 건다(`Engine::initialize`). 게임은 전역 변수만 본다.
-    SW_ENGINE_SUBSYSTEM_SLOT( CommandLineManager, HostOnly );
+    SW_ENGINE_SUBSYSTEM_SLOT( CommandLine, HostOnly );
     SW_ENGINE_SUBSYSTEM_SLOT( GlobalVariableManager, GameVisible );
 } // namespace sw

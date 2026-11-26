@@ -12,7 +12,7 @@
 
 namespace sw
 {
-    class CommandLineManager;
+    class CommandLine;
     class GlobalVariableManager;
 
     /** @class CommandLineSubsystem @brief 명령줄 · 전역 변수 서브시스템입니다. */
@@ -39,12 +39,12 @@ namespace sw
          * @brief 명령줄입니다(빈 표로 만들어 두고 초기화가 채운다 — 호스트가 범위에 `exposeMember` 로 건다).
          * @details 둘 다 생성자가 만들고 소멸자만 놓는다 — 없는 때가 없어 참조로 준다(예전 `find*` 는 nullptr 를 돌려줄 일이 없는데 부르는 쪽마다 역참조했다).
          */
-        CommandLineManager& getCommandLine() const { return *_commandLine; }
+        CommandLine& getCommandLine() const { return *_commandLine; }
         /** @brief 전역 변수 표입니다(만들 때 생기고 초기화가 채운다). */
         GlobalVariableManager& getGlobalVariables() const { return *_globalVariables; }
 
     private:
-        unique_ptr<CommandLineManager>    _commandLine;
+        unique_ptr<CommandLine>           _commandLine;
         unique_ptr<GlobalVariableManager> _globalVariables;
         int32                             _argc;   ///< 만들 때 받은 인자 수(초기화 동안만 읽는다)
         utf8**                            _ppArgv; ///< 만들 때 받은 인자(초기화 동안만 읽는다)

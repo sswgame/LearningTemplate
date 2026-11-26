@@ -2,7 +2,7 @@
 
 #include "Editor/SelfTest/Model/EditorTestOutputParser.h"
 
-#include "Core/CommandLine/CommandLineManager.h"
+#include "Core/CommandLine/CommandLine.h"
 #include "Core/Log/ParsedLogLine.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"

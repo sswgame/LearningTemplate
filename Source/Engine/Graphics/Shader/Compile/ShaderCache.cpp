@@ -2,7 +2,7 @@
 
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 
-#include "Core/CommandLine/CommandLineManager.h"
+#include "Core/CommandLine/CommandLine.h"
 #include "Core/Concurrency/DiskIOScope.h"
 #include "Core/Concurrency/Futex.h"
 #include "Core/Concurrency/mutex.h"
@@ -139,7 +139,7 @@ namespace sw
         _configReloadedSubscription = pConfigManager->onConfigReloaded().add( SW_DELEGATE_METHOD( Delegate<void( const hashed_string& )>, &ShaderCache::onConfigReloaded, this ) );
         // 요청 기록은 명시 인자로만 켠다(묶음 검증의 시나리오 체인 — IntegrationTests/Scenario/CMakeLists.txt). 다음 검증이 시간을 재기 전에 이 목록만 컴파일해 DDC 를 데운다(`ShaderRequestLog`).
         _requestLogPath = {};
-        (void)engine::getSubsystem<CommandLineManager>().getArgument( CommandLineArgument::SHADER_REQUEST_LOG, _requestLogPath ); // 없으면 기록하지 않는다
+        (void)engine::getSubsystem<CommandLine>().getArgument( CommandLineArgument::SHADER_REQUEST_LOG, _requestLogPath ); // 없으면 기록하지 않는다
         return true;
     }
 

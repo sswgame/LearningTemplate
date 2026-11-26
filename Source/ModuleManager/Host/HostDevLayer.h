@@ -20,7 +20,7 @@
 namespace sw
 {
     struct ModuleResolution;
-    class CommandLineManager;
+    class CommandLine;
     class Engine;
     class GameModuleManager;
     class HostLaunch;
@@ -75,7 +75,7 @@ namespace sw
          * @brief 헤드리스로 선 호스트가 명령줄이 청한 에디터 모듈 작업(현지화 도구 · 원본 임포트 · 대조 · 에셋 참조 검사)을 차례로 돌립니다. 엔진이 선 뒤에 부릅니다.
          * @return 실패한 작업이 없으면(청한 것이 없어도) true 입니다.
          */
-        [[nodiscard]] virtual bool runEditorModuleCommandlets( const CommandLineManager& commandLine ) = 0;
+        [[nodiscard]] virtual bool runEditorModuleCommandlets( const CommandLine& commandLine ) = 0;
         /** @brief 엔진이 선 뒤 개발 도구의 프레임 훅을 붙입니다. */
         virtual void attachFrameHooks( Engine& engine ) = 0;
         /**
@@ -91,7 +91,7 @@ namespace sw
          * @brief 엔진이 선 뒤 자동화 실행기(`IAutomationRuntime`)를 찾아 시작합니다. 모듈을 올리기 전에 부릅니다.
          * @return 실행기가 없는 구성이 `-scenario` · `-scenario-record` 를 받았으면 false(기동 오류)입니다 — 시나리오 없이 돌면 결과를 낼 수 없다.
          */
-        [[nodiscard]] virtual bool startAutomation( const CommandLineManager& commandLine ) = 0;
+        [[nodiscard]] virtual bool startAutomation( const CommandLine& commandLine ) = 0;
         /** @brief 무인 시나리오를 돌리는 중인가입니다(프레임 페이싱의 자동화 상태). */
         [[nodiscard]] virtual bool isAutomationBusy() const = 0;
         /** @brief 시나리오를 돌린 실행이면 프로세스 종료 감시를 돌려줍니다(호스트가 엔진을 다 내린 뒤 놓는다). 아니면 nullptr 입니다. */
@@ -100,7 +100,7 @@ namespace sw
          * @brief 호스트 서비스(게임 · 에디터 인스턴스)가 선 뒤 한 번 하고 끝나는 작업(초상화 굽기 `--render-portraits`)을 실행합니다.
          * @return 실행한 작업이 없으면 `NotRequested` 입니다. 그 밖이면 호스트는 메인 루프에 들어가지 않고 끝낸다.
          */
-        [[nodiscard]] virtual HostTaskResult runAfterHostSubsystems( const CommandLineManager& commandLine ) = 0;
+        [[nodiscard]] virtual HostTaskResult runAfterHostSubsystems( const CommandLine& commandLine ) = 0;
 
         // ---- 기동 측정 — 단계표(`PhaseTimings`)는 개발 계층을 만든 때부터 잰다 ----
         /** @brief 앞 단계 끝부터 지금까지를 @p pPhaseName 단계로 적습니다(프로그램 내내 사는 글). */

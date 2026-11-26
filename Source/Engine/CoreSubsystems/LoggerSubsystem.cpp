@@ -2,7 +2,7 @@
 
 #include "Engine/CoreSubsystems/LoggerSubsystem.h"
 
-#include "Core/CommandLine/CommandLineManager.h"
+#include "Core/CommandLine/CommandLine.h"
 #include "Core/Log/Backend/AsyncLogBackend.h"
 
 #include "Engine/CoreSubsystems/CommandLineSubsystem.h"

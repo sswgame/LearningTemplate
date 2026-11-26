@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Core/CommandLine/CommandLineManager.h"
+#include "Core/CommandLine/CommandLine.h"
 #include "Core/TestFramework/TestFramework.h"
 
 #include "DevTools/Host/EditorModuleCommandlets.h"
@@ -17,13 +17,13 @@ namespace
         static void reset() { s_runCount = 0; }
 
         template <bool kRequested>
-        static bool isRequested( const CommandLineManager& /*commandLine*/ )
+        static bool isRequested( const CommandLine& /*commandLine*/ )
         {
             return kRequested;
         }
 
         template <bool kSucceeded>
-        static bool countAndReturn( const CommandLineManager& /*commandLine*/, EditorModuleHeadlessSession& /*editorModule*/ )
+        static bool countAndReturn( const CommandLine& /*commandLine*/, EditorModuleHeadlessSession& /*editorModule*/ )
         {
             ++s_runCount;
             return kSucceeded;
@@ -41,7 +41,7 @@ SW_TEST_CASE( EditorModuleCommandletsTest, FailureRunsTheRestAndFails )
     };
 
     Util::reset();
-    CommandLineManager          commandLine;
+    CommandLine                 commandLine;
     EditorModuleHeadlessSession editorModule; // 모듈을 찾는 작업이 없으면 아무것도 올리지 않는다
     SW_EXPECT_FALSE( EditorModuleCommandlet::runTable( kArrTask, commandLine, editorModule ) );
     SW_EXPECT_EQUAL( 2u, Util::s_runCount );
@@ -58,7 +58,7 @@ SW_TEST_CASE( EditorModuleCommandletsTest, RunsOnlyRequestedRows )
     };
 
     Util::reset();
-    CommandLineManager          commandLine;
+    CommandLine                 commandLine;
     EditorModuleHeadlessSession editorModule;
     SW_EXPECT_TRUE( EditorModuleCommandlet::runTable( kArrTask, commandLine, editorModule ) );
     SW_EXPECT_EQUAL( 1u, Util::s_runCount );
@@ -67,7 +67,7 @@ SW_TEST_CASE( EditorModuleCommandletsTest, RunsOnlyRequestedRows )
 /** @brief [EditorModuleCommandletsTest] 빈 표는 아무것도 부르지 않고 성공이다 */
 SW_TEST_CASE( EditorModuleCommandletsTest, EmptyTableSucceeds )
 {
-    CommandLineManager          commandLine;
+    CommandLine                 commandLine;
     EditorModuleHeadlessSession editorModule;
     SW_EXPECT_TRUE( EditorModuleCommandlet::runTable( {}, commandLine, editorModule ) );
 }

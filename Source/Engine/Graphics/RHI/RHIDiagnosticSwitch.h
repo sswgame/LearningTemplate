@@ -4,7 +4,7 @@
  * @details 장치를 만들 때(`IRHIDevice::initialize`) 진단마다 한 번만 부른다. 실행 중에 바꾸는 개발 변수가 아니다 — 이 진단들은 장치를 만들기 전에만 걸 수 있다.
  */
 #pragma once
-#include "Core/CommandLine/CommandLineManager.h"
+#include "Core/CommandLine/CommandLine.h"
 #include "Core/Foundation/BuildConfig.h"
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
@@ -42,7 +42,7 @@ namespace sw
      * @param build 지금 구성
      * @return 켤지. @p configValue 가 `None`(파일에 값이 없다)이거나 모르는 값이면 오류다(대상은 인자 철자) — 기본값을 짐작하지 않는다.
      */
-    [[nodiscard]] SW_API expected<bool> resolveRHIDiagnosticSwitch( RHIDiagnosticSwitch configValue, CommandLineArgument argument, const CommandLineManager* pCommandLine,
+    [[nodiscard]] SW_API expected<bool> resolveRHIDiagnosticSwitch( RHIDiagnosticSwitch configValue, CommandLineArgument argument, const CommandLine* pCommandLine,
                                                                     RHIDiagnosticBuild build );
 
     /**
@@ -50,5 +50,5 @@ namespace sw
      * @param build 지금 구성. 장치는 `kCurrentRHIDiagnosticBuild` 를 넘기고 테스트는 다른 구성을 넘긴다
      * @return 값이 없는 칸이 있으면 그 칸의 오류(대상은 인자 철자)
      */
-    [[nodiscard]] SW_API expected<RHIDiagnosticSwitches> resolveRHIDiagnosticSwitches( const RHIConfig& config, const CommandLineManager* pCommandLine, RHIDiagnosticBuild build );
+    [[nodiscard]] SW_API expected<RHIDiagnosticSwitches> resolveRHIDiagnosticSwitches( const RHIConfig& config, const CommandLine* pCommandLine, RHIDiagnosticBuild build );
 } // namespace sw

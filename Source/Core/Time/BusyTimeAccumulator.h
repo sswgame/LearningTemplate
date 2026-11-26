@@ -1,6 +1,6 @@
 /**
- * @file BusyClock.h
- * @brief 일이 하나라도 진행 중이던 벽시계 시간을 세는 시계입니다.
+ * @file BusyTimeAccumulator.h
+ * @brief 일이 하나라도 진행 중이던 벽시계 시간을 쌓아 셉니다.
  * @details 여러 스레드가 겹쳐 일해도 겹친 구간은 한 번만 센다(구간의 합집합). 일의 시간 합을 세면 병렬 컴파일 넷이 1 초를 4 초로 센다.
  *          자동화의 시나리오 시한이 셰이더 컴파일 시간을 빼는 데 쓴다 — 빈 캐시의 첫 실행이 일하는 중에 시한으로 지지 않게
  *          (언리얼 자동화도 셰이더 컴파일을 기다리는 동안을 테스트 시간으로 보지 않는다: `FShaderCompilingManager::FinishAllCompilation`).
@@ -16,13 +16,13 @@
 namespace sw
 {
     /**
-     * @class BusyClock
+     * @class BusyTimeAccumulator
      * @brief `begin` ~ `end` 구간의 합집합 길이를 셉니다(스레드 안전). 파일 머리말 참고.
      */
-    class BusyClock
+    class BusyTimeAccumulator
     {
     public:
-        BusyClock()
+        BusyTimeAccumulator()
             : _mutex{}
             , _activeCount{ 0 }
             , _busySinceNanoseconds{ 0 }
@@ -69,12 +69,12 @@ namespace sw
 
     /**
      * @class BusyScope
-     * @brief 범위 동안 일 하나를 `BusyClock` 에 셉니다(지금 시각은 `MonotonicClock`). 끝을 잊는 길이 없게 begin · end 를 짝짓는다.
+     * @brief 범위 동안 일 하나를 `BusyTimeAccumulator` 에 셉니다(지금 시각은 `MonotonicClock`). 끝을 잊는 길이 없게 begin · end 를 짝짓는다.
      */
     class BusyScope
     {
     public:
-        explicit BusyScope( BusyClock& clock )
+        explicit BusyScope( BusyTimeAccumulator& clock )
             : _clock{ clock }
         {
             _clock.begin( MonotonicClock::nowNanoseconds() );
@@ -84,6 +84,6 @@ namespace sw
         BusyScope& operator=( const BusyScope& ) = delete;
 
     private:
-        BusyClock& _clock;
+        BusyTimeAccumulator& _clock;
     };
 } // namespace sw

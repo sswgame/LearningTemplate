@@ -2,7 +2,7 @@
 
 #include "Server/Windows/WindowsServiceHost.h"
 
-#include "Core/CommandLine/CommandLineManager.h"
+#include "Core/CommandLine/CommandLine.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/PlatformOSHeaders.h"
 #include "Core/Process/ShutdownSignal.h"
@@ -78,7 +78,7 @@ namespace sw
 
     int32 WindowsServiceHost::runIfRequested( int32 argc, utf8* pArgv[] )
     {
-        if ( CommandLineManager::isFlagGivenBeforeParse( argc, pArgv, CommandLineArgument::SERVICE ) == false )
+        if ( CommandLine::isFlagGivenBeforeParse( argc, pArgv, CommandLineArgument::SERVICE ) == false )
             return -1;
         WindowsServiceHostInternal::enterExecutableDirectory();
         WindowsServiceHostInternal::s_argc   = argc;

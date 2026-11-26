@@ -17,7 +17,7 @@
 #include "Core/Path/AbsolutePath.h"
 #include "Core/Subsystem/Subsystem.h"
 #include "Core/Subsystem/SubsystemSlot.h"
-#include "Core/Time/BusyClock.h"
+#include "Core/Time/BusyTimeAccumulator.h"
 
 #include "Engine/Asset/AssetHandle.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
@@ -179,8 +179,8 @@ namespace sw
          * @details 자동화의 모든 벽시계 시한(전체 · `WaitUntil timeoutWallSeconds`)과 행 감시가 이만큼을 뺀다 — 빈 캐시의 첫 실행이 컴파일하는 동안 시한에 지지 않게.
          *          파이프라인 생성은 `IRHIResourceFactory::createPipelineState` 한 입구가 센다(GL 은 링크가 프레임 하나에 수십 초 걸렸다). 시계가 스스로 잠근다.
          */
-        [[nodiscard]] BusyClock&       getCompileBusyClock() { return _compileBusy; }
-        [[nodiscard]] const BusyClock& getCompileBusyClock() const { return _compileBusy; }
+        [[nodiscard]] BusyTimeAccumulator&       getCompileBusyTimeAccumulator() { return _compileBusy; }
+        [[nodiscard]] const BusyTimeAccumulator& getCompileBusyTimeAccumulator() const { return _compileBusy; }
 
         /** @brief 읽은 리플렉션 매니페스트입니다. `ShaderReflectionLibrary` 의 조회 · 비우기가 서브시스템 칸으로 찾아 씁니다. */
         ShaderReflectionManifestCache& getReflectionManifests() { return _reflectionManifests; }
@@ -224,7 +224,7 @@ namespace sw
         Subscription                                                     _configReloadedSubscription;  ///< 설정 다시 읽기 알림 구독(`onConfigReloaded`)
         DevCounter                                                       _memoryHitCount;              ///< `getMemoryHitCount` — 로드 워커가 함께 센다
         DevCounter                                                       _providerLoadCount;           ///< `getProviderLoadCount` — 로드 워커가 함께 센다
-        BusyClock                                                        _compileBusy;                 ///< `getCompileBusyClock` — 로드 워커 · PSO 워커가 함께 센다
+        BusyTimeAccumulator                                              _compileBusy;                 ///< `getCompileBusyTimeAccumulator` — 로드 워커 · PSO 워커가 함께 센다
         unique_ptr<LoadThread>                                           _pLoadThread;                 ///< `runOnLoadThread` 의 스레드 — 처음 쓸 때 띄우고 `shutdown` 이 합류한다
         uint8                                                            _bLiveDebugCodegen;           ///< `isLiveDebugCodegen` — 기동에서만 쓴다(그때는 로드가 없다)
 

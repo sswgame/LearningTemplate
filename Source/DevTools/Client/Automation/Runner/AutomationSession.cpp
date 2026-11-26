@@ -2,7 +2,7 @@
 
 #include "DevTools/Client/Automation/Runner/AutomationSession.h"
 
-#include "Core/CommandLine/CommandLineManager.h"
+#include "Core/CommandLine/CommandLine.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/BuildInfo.h"
 #include "Core/Foundation/Constants.h"
@@ -250,7 +250,7 @@ namespace sw
         _reproduceInput._bKeepGoing       = bKeepGoing;
         if ( engine::areEngineSubsystemsBound() )
         {
-            const CommandLineManager& commandLine = engine::getSubsystem<CommandLineManager>();
+            const CommandLine& commandLine = engine::getSubsystem<CommandLine>();
             (void)commandLine.getArgument( CommandLineArgument::ENABLE_EDITOR, _reproduceInput._bEditor ); // 적지 않았으면 false 그대로
             _reproduceInput._listOriginalArgument = commandLine.getOriginalArguments();
         }
@@ -346,7 +346,7 @@ namespace sw
             vector<string> listStageGlobal;
             for ( const AutomationAttribute& variable : _pRunner->getScenario().getTestOptions()._listLaunchVariable )
                 listStageGlobal.push_back( variable._name );
-            engine::getSubsystem<CommandLineManager>().setStageGlobalVariables( std::move( listStageGlobal ) );
+            engine::getSubsystem<CommandLine>().setStageGlobalVariables( std::move( listStageGlobal ) );
             for ( const AutomationAttribute& variable : _pRunner->getScenario().getTestOptions()._listLaunchVariable )
             {
                 GlobalVariableInfo* const pVariable = globalVariables.findVariable( variable._name );
@@ -538,7 +538,7 @@ namespace sw
         const RHI* const           pRHI        = _pRenderDriver != nullptr ? _pRenderDriver->findRHI() : nullptr;
         const utf8* const          pBackend    = pRHI != nullptr && pRHI->hasDevice() ? RHI::getBackendTypeName( pRHI->getCommittedBackend() ) : "";
         const bool                 bRunning    = _pRunner != nullptr && _pRunner->isActive();
-        _runTitle.onFrameEnd( pWindowHost != nullptr ? pWindowHost->getTitleTarget() : nullptr, engine::findSubsystem<CommandLineManager>(), pBackend,
+        _runTitle.onFrameEnd( pWindowHost != nullptr ? pWindowHost->getTitleTarget() : nullptr, engine::findSubsystem<CommandLine>(), pBackend,
                               bRunning ? &_runStatus : nullptr );
     }
 
@@ -632,7 +632,7 @@ namespace sw
     // 실행기는 스스로 엔진 범위에 선다 — 개발 도구 이미지의 등록도 호스트 라이브러리 걷기(`engine::registerHostLibraryTypes`)가 "Engine" 이름으로 걷는다. 이 폴더를 짓지 않는 구성(배포 · 전용 서버)은 등록이 없어 호스트가 찾지 못한다(`IAutomationRuntime`).
     SW_MODULE_SUBSYSTEM( Engine, Process, AutomationSession, IAutomationRuntime );
 
-    bool AutomationSession::Runtime::start( Engine& engine, SubsystemScope& host, const CommandLineManager& commandLine )
+    bool AutomationSession::Runtime::start( Engine& engine, SubsystemScope& host, const CommandLine& commandLine )
     {
         string recordPath;
         string recordProbes;
@@ -699,7 +699,7 @@ namespace sw
         _frameSubscription.reset();
     }
 
-    void AutomationSession::Runtime::runPerBackend( string_view backends, CommandLineManager& commandLine, CommandletState& inoutState )
+    void AutomationSession::Runtime::runPerBackend( string_view backends, CommandLine& commandLine, CommandletState& inoutState )
     {
         // 창 · RHI 를 세우기 전에 가로챈다 — 이 프로세스는 기다리기만 한다.
         inoutState.enterHeadless();

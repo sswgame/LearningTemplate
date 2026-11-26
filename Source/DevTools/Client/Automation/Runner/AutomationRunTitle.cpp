@@ -3,7 +3,7 @@
 #include "DevTools/Client/Automation/Runner/AutomationRunTitle.h"
 
 #include "Core/Algorithm/VectorUtil.h"
-#include "Core/CommandLine/CommandLineManager.h"
+#include "Core/CommandLine/CommandLine.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
@@ -89,7 +89,7 @@ namespace sw
             /** @brief 인자 하나에 규칙을 적용합니다. 버리면 false 이고, 비밀 값은 가려서 @p outArgument 에 씁니다. */
             [[nodiscard]] static bool apply( string_view argument, string& outArgument )
             {
-                const string_view name = CommandLineManager::getArgumentName( argument );
+                const string_view name = CommandLine::getArgumentName( argument );
                 if ( isDropped( name ) )
                     return false;
                 const size_t equalPos = argument.find( '=' );
@@ -108,7 +108,7 @@ namespace sw
             {
                 for ( const string& argument : listArgument )
                 {
-                    if ( CommandLineManager::getArgumentName( argument ) == name )
+                    if ( CommandLine::getArgumentName( argument ) == name )
                         return true;
                 }
                 return false;
@@ -170,7 +170,7 @@ namespace sw
         for ( const string& extra : input._listExtraArgument )
         {
             string argument;
-            if ( hasInOriginal( CommandLineManager::getArgumentName( extra ) ) == false && Rules::apply( extra, argument ) )
+            if ( hasInOriginal( CommandLine::getArgumentName( extra ) ) == false && Rules::apply( extra, argument ) )
                 appendArgument( command, argument );
         }
         return command;
@@ -220,7 +220,7 @@ namespace sw
         _bRunShown      = SW_FALSE;
     }
 
-    void AutomationRunTitleTracker::onFrameEnd( IWindowTitleTarget* pTitleTarget, const CommandLineManager* pCommandLine, string_view backendName,
+    void AutomationRunTitleTracker::onFrameEnd( IWindowTitleTarget* pTitleTarget, const CommandLine* pCommandLine, string_view backendName,
                                                 const AutomationRunStatus* pRunStatus )
     {
         if ( _bInitialized == false )

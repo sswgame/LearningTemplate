@@ -4,7 +4,7 @@
 
 #include "Core/Diagnostics/CallStackCapture.h"
 #include "Core/Foundation/EnumUtil.h"
-#include "Core/Time/BusyClock.h"
+#include "Core/Time/BusyTimeAccumulator.h"
 
 #include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIContractValidator.h"
@@ -416,7 +416,7 @@ namespace sw
             SW_LOG_ERROR_ID( "RHI.PipelineFrontUnbound", "createPipelineState before the device bound the factory (IRHIDevice::initialize) - '%#'", desc._vertexShaderPath );
             return 0;
         }
-        BusyScope                 busy{ engine::getSubsystem<ShaderCache>().getCompileBusyClock() };
+        BusyScope                 busy{ engine::getSubsystem<ShaderCache>().getCompileBusyTimeAccumulator() };
         RHICompiledGraphicsStages stages;
         if ( RHIShaderRequest::buildGraphicsStages( desc, _shaderTargetFormat, *_pStartupCapabilities, stages ) == false )
             return 0;
@@ -435,7 +435,7 @@ namespace sw
         }
         if ( shaderPath.empty() ) // 빈 레코드를 등록하지 않는다(예전 다섯 백엔드와 같은 답)
             return 0;
-        BusyScope              busy{ engine::getSubsystem<ShaderCache>().getCompileBusyClock() };
+        BusyScope              busy{ engine::getSubsystem<ShaderCache>().getCompileBusyTimeAccumulator() };
         RHICompiledShaderStage computeStage;
         if ( RHIShaderRequest::buildComputeStage( shaderPath, entryPoint, listDefine, _shaderTargetFormat, computeStage ) == false )
             return 0;

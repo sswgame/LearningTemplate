@@ -1,15 +1,15 @@
-// BusyClock — 겹친 일의 구간을 한 번만 세는지(합집합), 진행 중인 구간을 지금까지 세는지.
+// BusyTimeAccumulator — 겹친 일의 구간을 한 번만 세는지(합집합), 진행 중인 구간을 지금까지 세는지.
 #include "pch.h"
 
 #include "Core/TestFramework/TestFramework.h"
-#include "Core/Time/BusyClock.h"
+#include "Core/Time/BusyTimeAccumulator.h"
 
 using namespace sw;
 
-/** @brief [BusyClockTest] 겹친 두 일(0~10, 5~20)과 떨어진 일(30~35)은 20 + 5 를 센다 — 일의 합(30)이 아니다. */
-SW_TEST_CASE( BusyClockTest, OverlappingJobsCountOnce )
+/** @brief [BusyTimeAccumulatorTest] 겹친 두 일(0~10, 5~20)과 떨어진 일(30~35)은 20 + 5 를 센다 — 일의 합(30)이 아니다. */
+SW_TEST_CASE( BusyTimeAccumulatorTest, OverlappingJobsCountOnce )
 {
-    BusyClock clock;
+    BusyTimeAccumulator clock;
     clock.begin( 0 );
     clock.begin( 5 );
     clock.end( 10 );
