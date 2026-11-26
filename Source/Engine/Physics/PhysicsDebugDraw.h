@@ -11,7 +11,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
-#include "Engine/Graphics/DebugDraw/DebugDrawQueue.h"
+#include "Engine/Graphics/DebugDraw/IDebugDrawQueue.h"
 #include "Engine/Physics/Collision/PhysicsShape.h"
 
 namespace sw
@@ -85,7 +85,7 @@ namespace sw
     {
     public:
         /** @brief @p category 는 선의 분류(범주 이름)입니다 — 에디터의 디버그 드로우 분류 토글이 먹는다. */
-        PhysicsDebugQueueRenderer( DebugDrawQueue& queue, const hashed_string& category )
+        PhysicsDebugQueueRenderer( IDebugDrawQueue& queue, const hashed_string& category )
             : _queue{ queue }
             , _category{ category }
         {
@@ -94,7 +94,7 @@ namespace sw
         void drawLine( const float3& from, const float3& to, const float4& color ) override { _queue.drawLine( from, to, color, 0.0f, _category ); }
 
     private:
-        DebugDrawQueue& _queue;
-        hashed_string   _category;
+        IDebugDrawQueue& _queue;
+        hashed_string    _category;
     };
 } // namespace sw

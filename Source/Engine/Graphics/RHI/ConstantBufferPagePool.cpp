@@ -5,6 +5,7 @@
 #include "Core/Log/LogOnce.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Graphics/RHI/Diagnostics/RHIContractValidator.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 
@@ -71,11 +72,7 @@ namespace sw
         if ( bOpened == false )
             return false;
         written._pDevice = &device;
-        if constexpr ( build::kShipping == false )
-        {
-            if ( device.getConstantBufferWriteLog().recordWrite( written._range._buffer, written._range._offset ) == false )
-                device.getDrawDiagnostics().reportConstantBufferRewrite( written._range._buffer, written._range._offset );
-        }
+        device.getContractValidator().recordConstantBufferWrite( written._range._buffer, written._range._offset, device.getDrawDiagnostics() );
         device.getResourceFactory()->writeConstantBufferSlice( RHIResourceCreateKey{}, written._range, pData, size );
         inoutSlice = std::move( written ); // 옛 구간은 준 디바이스의 풀로 돌아간다 — 이번 프레임이 이미 기록한 드로우가 읽으므로 칸 · 디스크립터는 나중에 다시 쓴다
         return true;

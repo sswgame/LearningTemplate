@@ -13,7 +13,8 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Renderer/Debug/OcclusionDebugStats.h"
+#include "DevTools/Client/Render/OcclusionDebugStats.h"
+
 #include "Engine/Renderer/Debug/RenderDebugRegistry.h"
 #include "Engine/Renderer/Graph/RenderGraphSnapshot.h"
 

@@ -24,8 +24,7 @@
     #include "Engine/Config/EngineDefaultAssets.h"
     #include "Engine/Foundation/EnginePlatformHeaders.h"
     #include "Engine/Foundation/EngineSubsystems.h"
-    #include "Engine/Graphics/RHI/Backend/RHIAllocationLeakUtil.h"
-    #include "Engine/Graphics/RHI/Backend/RHILiveCommandListUtil.h"
+    #include "Engine/Graphics/RHI/Backend/RHILiveCommandListSet.h"
     #include "Engine/Graphics/RHI/DX/DXGIAdapter.h"
     #include "Engine/Graphics/RHI/DX/DXGIFormat.h"
     #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
@@ -445,7 +444,7 @@ namespace sw
         _allocator->BuildStatsString( &pStats, TRUE );
         const string stats = StringUtil::utf16ToUTF8( pStats );
         _allocator->FreeStatsString( pStats );
-        RHIAllocationLeakUtil::report( getBackendName(), statistics.Total.Stats.AllocationCount, stats.c_str() );
+        RHIMemoryTracker::reportAllocatorLeaks( getBackendName(), statistics.Total.Stats.AllocationCount, stats.c_str() );
         (void)_allocator.Detach(); // 남은 자원이 나중에 놓일 때 부서진 할당기를 만지지 않게 할당기를 놓지 않는다(위에서 오류로 알렸다)
     }
 
@@ -1011,7 +1010,7 @@ namespace sw
     void D3D12RHIDevice::detachCommandRecordingInternal()
     {
         _frameStreamContext.reset();
-        RHILiveCommandListUtil::detachAll( _liveCmdListMutex, _listLiveCmd );
+        _liveCommandLists.detachAll();
     }
 
     void D3D12RHIDevice::createBreadcrumbBuffer()
@@ -1469,14 +1468,12 @@ namespace sw
 
     void D3D12RHIDevice::registerCommandList( D3D12RHICommandList* pCmdList )
     {
-        ScopedLock<mutex> lock{ _liveCmdListMutex };
-        _listLiveCmd.push_back( pCmdList );
+        _liveCommandLists.add( pCmdList );
     }
 
     void D3D12RHIDevice::unregisterCommandList( D3D12RHICommandList* pCmdList )
     {
-        ScopedLock<mutex> lock{ _liveCmdListMutex };
-        (void)VectorUtil::removeSingleSwap( _listLiveCmd, pCmdList ); // 등록되지 않은 리스트면 뺄 것이 없다
+        _liveCommandLists.remove( pCmdList );
     }
 
     ID3D12GraphicsCommandList* D3D12RHIDevice::beginNextFrameSegment()

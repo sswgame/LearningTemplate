@@ -6,8 +6,6 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 
-#include "Engine/Automation/Watch/AutomationWatch.h"
-#include "Engine/Automation/Watch/AutomationWatchComponent.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Environment/Terrain/TerrainComponent.h"
 #include "Engine/Foundation/DeterministicRun.h"
@@ -627,25 +625,4 @@ namespace sw
         }
         return nullptr;
     }
-} // namespace sw
-
-namespace sw
-{
-    namespace
-    {
-        struct WaterBodyWatchesInternal
-        {
-            /** @brief 감시 값 `Water.RiverPointCount` 입니다. 대상 물의 강 경로 점 수입니다(스플라인 어댑터가 몰면 곡선을 샘플한 수). */
-            [[nodiscard]] static bool readRiverPointCount( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
-            {
-                const WaterBodyComponent* pWater = query.findTargetComponent<WaterBodyComponent>( "water body", outValue );
-                if ( pWater == nullptr )
-                    return false;
-                outValue.setNumber( static_cast<float64>( pWater->getRiverPoints().size() ) );
-                return true;
-            }
-        };
-    } // namespace
-
-    SW_AUTOMATION_QUERY_WATCH( waterRiverPointCount, "Water.RiverPointCount", "River path points of the target's water body", &WaterBodyWatchesInternal::readRiverPointCount, true, false );
 } // namespace sw

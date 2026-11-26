@@ -4,34 +4,9 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
-
-namespace sw
-{
-    namespace
-    {
-        struct WindWatchesInternal
-        {
-            /** @brief 감시 값 `Wind.Speed` 입니다. 씬의 바람 풍속(m/s, 적은 풍속 × 날씨 배율)입니다. */
-            [[nodiscard]] static bool readSpeed( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
-            {
-                WindSettings wind;
-                if ( query._pManager == nullptr || WindComponent::findWind( *query._pManager, wind ) == false )
-                {
-                    outValue.setText( "no wind in the scene" );
-                    return false;
-                }
-                outValue.setNumber( static_cast<float64>( wind._speed ) );
-                return true;
-            }
-        };
-    } // namespace
-
-    SW_AUTOMATION_QUERY_WATCH( windSpeed, "Wind.Speed", "Wind speed of the scene (m/s, authored speed x weather scale, without gusts)", &WindWatchesInternal::readSpeed, false, false );
-} // namespace sw
 
 namespace sw
 {

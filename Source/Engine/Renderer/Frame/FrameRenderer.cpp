@@ -1116,82 +1116,17 @@ namespace sw
     void FrameRenderer::publishRenderTargets() const
     {
         RenderTargetRegistry* const pRegistry = _host._pRenderTargets; // 목록은 주 렌더러의 것이다(화면 밖 렌더러는 호스트가 없다)
-        if ( pRegistry == nullptr )
+        IRenderDebugChecks* const   pChecks   = _passExecutor.findDebugChecks();
+        if ( pRegistry == nullptr || pChecks == nullptr )
             return;
 
-        // 화면에 나가는 것이 무엇인지 함께 실어 준다. 패널이 열리자마자 지금 보이는 그림을
-        // 고를 수 있어야 쓸모가 있다(이름순 첫 번째는 AOColor 라 아무 의미가 없다).
-        // 꺼진 효과의 출력이면 그것이 가리키는 원본이 화면에 나간다(`TransientAttachmentPool::forward`).
+        // 화면에 나가는 것이 무엇인지 함께 실어 준다. 꺼진 효과의 출력이면 그것이 가리키는 원본이 화면에 나간다(`TransientAttachmentPool::forward`).
         const hashed_string presented = _state.getMainView()._transientPool.resolveName( hashed_string::findInterned( getPresentedAttachmentName() ) );
-
-        vector<RenderTargetInfo> listTarget;
-        listTarget.reserve( _state.getMainView()._transientPool.getAll().size() );
-        for ( const auto& [name, attachment] : _state.getMainView()._transientPool.getAll() )
-        {
-            if ( attachment._texture == 0 )
-                continue;
-            RenderTargetInfo info{};
-            info._name       = name.c_str();
-            info._bPresented = ( presented.empty() == false && name == presented ) ? SW_TRUE : SW_FALSE;
-            info._texture    = attachment._texture;
-            info._width      = attachment._width;
-            info._height     = attachment._height;
-            info._format     = attachment._format;
-            info._bDepth     = FrameRendererUtil::isDepthFormat( info._format ) ? SW_TRUE : SW_FALSE;
-            listTarget.push_back( std::move( info ) );
-        }
-
-        // 생산자 · 소비자 · 수명 — 패스의 입출력 이름을 실제 첨부로 풀어(꺼진 효과의 출력은 원본으로) 붙인다. 순서는 파이프라인 선언 순서다.
-        const vector<RenderGraphPassDesc>& listPass   = _pipelineResource.getDesc()._listPass;
-        const auto                         findTarget = [&]( const string& attachmentName ) -> RenderTargetInfo*
-        {
-            const hashed_string resolved = _state.getMainView()._transientPool.resolveName( hashed_string::findInterned( attachmentName ) );
-            for ( RenderTargetInfo& info : listTarget )
-            {
-                if ( resolved.empty() == false && info._name == resolved.c_str() )
-                    return &info;
-            }
-            return nullptr;
-        };
-        const auto markUse = []( RenderTargetInfo& info, int32 passIndex )
-        {
-            info._firstPass = info._firstPass.has_value() ? *info._firstPass : passIndex;
-            info._lastPass  = passIndex;
-        };
-        for ( int32 passIndex = 0; passIndex < static_cast<int32>( listPass.size() ); ++passIndex )
-        {
-            const RenderGraphPassDesc& pass = listPass[static_cast<size_t>( passIndex )];
-            for ( const string& input : pass._listInput )
-            {
-                if ( RenderTargetInfo* pInfo = findTarget( input ); pInfo != nullptr )
-                {
-                    pInfo->_listConsumer.push_back( pass._name );
-                    markUse( *pInfo, passIndex );
-                }
-            }
-            for ( const string& output : pass._listOutput )
-            {
-                if ( RenderTargetInfo* pInfo = findTarget( output ); pInfo != nullptr )
-                {
-                    pInfo->_listProducer.push_back( pass._name );
-                    markUse( *pInfo, passIndex );
-                }
-            }
-            if ( pass._depthAttachment.empty() == false )
-            {
-                if ( RenderTargetInfo* pInfo = findTarget( pass._depthAttachment ); pInfo != nullptr )
-                {
-                    StringBuilder<constant::buffer::kMax128> producer;
-                    producer.appendFormat( "%# (depth)", pass._name );
-                    pInfo->_listProducer.emplace_back( producer.view() );
-                    markUse( *pInfo, passIndex );
-                }
-            }
-        }
 
         // HDR 출력의 장면 출력 RT(디스플레이 기준 선형 [0,1] 신호)와 SDR UI RT 도 싣는다 — 인코딩 앞의 두 그림이라 HDR 이 깨질 때 먼저 보는 곳이다.
         // 패스가 아니라 그래프 밖 출력(`FrameDisplayEncode`)이 쓰고 읽어 생산자 · 소비자 대신 그 이름을 적는다.
-        const auto appendDisplayTarget = [&]( const utf8* pName, RHITextureHandle texture, RHIFormat format )
+        vector<RenderTargetInfo> listExtraTarget;
+        const auto               appendDisplayTarget = [&]( const utf8* pName, RHITextureHandle texture, RHIFormat format )
         {
             if ( texture == 0 )
                 return;
@@ -1203,19 +1138,13 @@ namespace sw
             info._format  = format;
             info._listProducer.push_back( "DisplayEncode" );
             info._listConsumer.push_back( "DisplayEncode" );
-            listTarget.push_back( std::move( info ) );
+            listExtraTarget.push_back( std::move( info ) );
         };
         appendDisplayTarget( "DisplaySceneTarget", _displayEncode.getSceneTarget(), FrameDisplayEncode::getSceneFormat() );
         // UI RT 는 장치가 고른 포맷으로 선다(`FrameDisplayEncode::prepare`) — RT 가 있으면 장치도 있다.
         if ( _pDevice != nullptr )
             appendDisplayTarget( "DisplayUITarget", _displayEncode.getUITarget(), _pDevice->getUITargetFormat() );
-
-        // 이름순으로 정렬해 둔다. 해시맵 순서는 실행마다 달라서, 정렬하지 않으면 목록이 프레임마다
-        // 흔들리는 것처럼 보이고 "어디 있었더라" 를 매번 다시 찾게 된다.
-        VectorUtil::sort( listTarget, []( const RenderTargetInfo& lhs, const RenderTargetInfo& rhs )
-        { return lhs._name < rhs._name; } );
-
-        pRegistry->publish( std::move( listTarget ) );
+        pChecks->publishRenderTargets( *pRegistry, _state.getMainView()._transientPool, _pipelineResource.getDesc()._listPass, presented, std::move( listExtraTarget ) );
     }
 
     string_view FrameRenderer::getPresentedAttachmentName() const

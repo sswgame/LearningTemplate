@@ -8,16 +8,15 @@
  *          삽입과 조회는 기록 시작 전에만 일어납니다 — 드로우는 기록 전에 푼 표(`FramePSOManager::buildBatchPSOTable`)를 잠금 없이 읽습니다.
  */
 #pragma once
-#include "Core/Concurrency/mutex.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Memory/Memory.h"
 
 #include "Engine/EngineMinimal.h"
 #include "Engine/Graphics/Mesh/MeshVertex.h"
 #include "Engine/Graphics/RHI/RHIPipelineState.h"
 #include "Engine/Graphics/RHI/RHIPipelineStateDesc.h"
 #include "Engine/Graphics/Shader/Binding/ComputeShaderParameters.h"
-#include "Engine/Graphics/Shader/Binding/ShaderBindingLayoutCache.h"
 #include "Engine/Graphics/View/RenderViewMode.h"
 #include "Engine/Renderer/Frame/Resource/MaterialPSOBuilder.h"
 #include "Engine/Renderer/Pipeline/RenderGraphPassDesc.h"
@@ -25,6 +24,7 @@
 namespace sw
 {
     class IRHIDevice;
+    enum class ShaderTargetFormat : uint8;
     class ShaderBindingLayout;
     struct ShaderBindingSlot;
 
@@ -96,7 +96,7 @@ namespace sw
         };
 
         RenderPSOCache();
-        ~RenderPSOCache() = default;
+        ~RenderPSOCache();
 
         RenderPSOCache( const RenderPSOCache& )            = delete;
         RenderPSOCache& operator=( const RenderPSOCache& ) = delete;
@@ -138,7 +138,7 @@ namespace sw
         /** @brief 패스 타입의 엔진 컴퓨트 PSO 와 풀어 둔 매개변수 표입니다. 없으면 빈 값(`isValid` 거짓)입니다. */
         ComputePipeline findEngineComputePSO( RenderPassKind passType ) const;
         /** @brief 엔진 PSO 모두입니다. 머티리얼 변형을 만들 때 씬 메시 패스를 고르려고 훑습니다(기록 전). */
-        const unordered_map<RenderPassKind, PassPSOEntry>& getEnginePSOs() const { return _mapEnginePSO; }
+        const unordered_map<RenderPassKind, PassPSOEntry>& getEnginePSOs() const;
         /**
          * @brief 렌더 파이프라인 그래픽스 패스의 PSO 를 패스 이름으로 둡니다. 실패(0)도 기록합니다. 덮어쓴 옛 핸들은 `setEnginePSO` 와 같이 해제한다.
          * @details 같은 종류의 패스가 여럿(그림자 둘)이어도 패스마다 제 서술의 PSO 다 — 종류가 열쇠면 둘째 패스의 셰이더 · 상태가 조용히 버려진다(언리얼 RDG · 유니티 Render Graph 도 패스는 인스턴스 단위다).
@@ -224,39 +224,7 @@ namespace sw
         uint32 releasePSOsUsingShader( IRHIDevice* pDevice, string_view shaderPath );
 
     private:
-        friend struct RenderPSOCacheTestAccess; ///< 테스트만 안을 본다 — 배포 공개 API 에 진단 조회를 두지 않는다
-        /**
-         * @brief 덮어쓸 엔진 · 출력 · 모듈 PSO 를 놓습니다 — 비지 않았으면 장치로 해제하고, 그 핸들의 레이아웃 · desc 와 그 핸들을 그대로 가리키던 머티리얼 항목을 잊는다.
-         * @details 예전에는 덮어쓰기가 옛 핸들을 잊기만 해 PSO 가 샜다(해제 경로는 `releasePSOsUsingShader` · 장치 종료뿐이었다).
-         */
-        void releaseReplacedPSO( IRHIDevice* pDevice, RHIPipelineState& previous );
-        /** @brief (패스 << 32 | 대상 포맷) 키입니다. */
-        static uint64 makeOutputPSOKey( RenderPassKind passType, RHIFormat targetFormat )
-        {
-            return ( static_cast<uint64>( passType ) << 32 ) | static_cast<uint64>( targetFormat );
-        }
-
-    private:
-        ShaderBindingLayoutCache                                                        _bindingLayoutCache;
-        unordered_map<RHIPipelineStateHandle, const ShaderBindingLayout*> _mapPSOLayout SW_GUARDED_BY( _layoutMutex );
-        unordered_map<RHIPipelineStateHandle, RHIPipelineStateDesc> _mapPSODesc         SW_GUARDED_BY( _layoutMutex );
-        uint64 _layoutSerial                                                            SW_GUARDED_BY( _layoutMutex ){ 0 }; ///< 레이아웃 등록 번호(`getLayoutSerial`)
-        mutable shared_mutex                                                            _layoutMutex;                       ///< 기록 워커들이 배치마다 조회만 한다 — 공유 잠금(언리얼 PSO 캐시의 `FRWLock`)
-        /// @brief 엔진이 만들어 둔 패스별 PSO 입니다. 키가 enum 이라 조회에 문자열을 만들지 않습니다.
-        unordered_map<RenderPassKind, PassPSOEntry> _mapEnginePSO;
-        /// @brief 주 출력에 그리는 패스의 PSO 를 대상 렌더 타깃 포맷별로 둡니다(키 = makeOutputPSOKey). 백버퍼와 에디터 뷰 RT 는 포맷이 다를 수 있습니다.
-        unordered_map<uint64, RHIPipelineState> _mapOutputPSO;
-        /// @brief 코드가 짓는 PSO 입니다(키 = 서술체 지문 `RHIPipelineStateDesc::computeHash`).
-        unordered_map<uint64, RHIPipelineState> _mapGlobalPSO;
-        /// @brief 렌더 파이프라인 그래픽스 패스의 PSO 입니다(키 = 패스 이름). 머티리얼 변형의 패스 PSO 이기도 하다.
-        unordered_map<hashed_string, RHIPipelineState> _mapPipelinePassPSO;
-        /// @brief 렌더 파이프라인 컴퓨트 패스의 PSO 입니다(키 = 패스 이름).
-        unordered_map<hashed_string, PassPSOEntry>                                          _mapPipelineComputePSO;
-        unordered_map<MaterialPSOKey, MaterialPSOEntry, MaterialPSOKeyHash> _mapMaterialPSO SW_GUARDED_BY( _materialPSOMutex );
-        mutable shared_mutex                                                                _materialPSOMutex; ///< `_layoutMutex` 와 같은 까닭의 공유 잠금
-        /// @brief 머티리얼 변형의 생성 줄과 전용 스레드입니다. 캐시가 소유해 미리보기 렌더러와 함께 씁니다(해제는 `releaseAll` 이 스레드부터 합류합니다).
-        MaterialPSOBuilder _materialPSOBuilder;
-        uint64             _pollFrameNumber{ ~uint64{ 0 } }; ///< `_buildBudgetNanoseconds` 를 연 장치 프레임(렌더 스레드)
-        int64              _buildBudgetNanoseconds{ 0 };     ///< 그 프레임에 남은 생성 예산
+        struct Impl;
+        unique_ptr<Impl> _impl; ///< 저장소 표 · 잠금 · 레이아웃 캐시 · 변형 빌더(이 파일만 안다 — 언리얼 `TPimplPtr`)
     };
 } // namespace sw

@@ -193,6 +193,13 @@ namespace sw
          * @return 포맷의 크기를 모르면 `kRHIMemoryUnknownBytes` 입니다.
          */
         static uint64 computeTextureLogicalBytes( const RHITextureDesc& desc );
+        /**
+         * @brief 장치 종료 때 할당기(VMA · D3D12MA)에 남은 할당 @p liveCount 개를 오류로 남깁니다. 이름은 할당기 통계 JSON @p pStatsJSON 에서 모은다.
+         * @details 두 라이브러리의 자세한 통계 JSON(`vmaBuildStatsString` · `D3D12MA::Allocator::BuildStatsString`)은 할당마다 `"Name": "..."` 을 같은 모양으로 적는다.
+         */
+        static void reportAllocatorLeaks( const utf8* pBackendName, uint32 liveCount, const utf8* pStatsJSON );
+        /** @brief 할당기 통계 JSON @p pStatsJSON(nullptr 이면 빈 것)의 할당 이름을 나온 차례로 모읍니다(이름 없는 할당은 들지 않는다). */
+        static vector<string> collectAllocatorStatsNames( const utf8* pStatsJSON );
         /** @brief 빈 추적기를 만듭니다. 기준은 Allocation 이고 드라이버 값은 "모름" 입니다. */
         RHIMemoryTracker();
         /** @brief 복사를 금지합니다. */

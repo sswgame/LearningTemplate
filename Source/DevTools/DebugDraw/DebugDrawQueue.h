@@ -1,0 +1,223 @@
+/**
+ * @file DebugDrawQueue.h
+ * @brief CPU 디버그 프리미티브 큐(선, 구, 상자, 화살표, 글자)입니다. GPU 즉시 드로우가 아닙니다.
+ */
+#pragma once
+#include "Core/Concurrency/mutex.h"
+#include "Core/Container/string.h"
+#include "Core/Container/unordered_map.h"
+#include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
+#include "Core/Math/VectorMath.h"
+#include "Core/String/Name/hashed_string.h"
+#include "Core/Subsystem/Subsystem.h"
+#include "Core/Subsystem/SubsystemSlot.h"
+
+#include "DevTools/DevToolsAPI.h"
+
+#include "Engine/Graphics/DebugDraw/IDebugDrawQueue.h"
+
+namespace sw
+{
+    struct AbsolutePosition;
+    struct WorldOrigin;
+    struct quaternion;
+
+    /// @brief 디버그 선입니다(시작, 끝, 색, 남은 시간, 카테고리). 상자와 화살표도 넣을 때 선으로 펼쳐집니다.
+    struct DebugLine
+    {
+        float3        _from{};
+        float3        _to{};
+        float4        _color{ 1.0f, 1.0f, 1.0f, 1.0f };
+        hashed_string _category{};
+        float32       _remainingSeconds{ 0.0f };
+    };
+} // namespace sw
+
+namespace sw
+{
+    /// @brief 디버그 구입니다(중심, 반지름, 색, 남은 시간, 카테고리).
+    struct DebugSphere
+    {
+        float3        _center{};
+        float32       _radius{ 1.0f };
+        float4        _color{ 1.0f, 1.0f, 1.0f, 1.0f };
+        hashed_string _category{};
+        float32       _remainingSeconds{ 0.0f };
+    };
+} // namespace sw
+
+namespace sw
+{
+    /// @brief 월드 위치에 붙는 디버그 글자입니다.
+    struct DebugText
+    {
+        float3        _position{};
+        float4        _color{ 1.0f, 1.0f, 1.0f, 1.0f };
+        string        _text{};
+        hashed_string _category{};
+        float32       _remainingSeconds{ 0.0f };
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @class DebugDrawQueue
+     * @brief 디버그 지오메트리 큐입니다. 게임 코드가 채우고 에디터 씬 뷰(`debug_draw` 시각화)가, `-gv_debugDrawGameView=1`(게임 뷰 툴바 단추)이면 게임 화면 위에도 캔버스로 그립니다(`DebugDrawCanvasUtil`).
+     * @details - 보이는 목록은 프레임 끝에 확정됩니다(`endFrame`). 그 프레임에 넣은 것은 게임 업데이트와 씬 틱 어디서 넣었든 다음 에디터
+     *            프레임에 모두 보입니다. 그리는 쪽은 `getVisible*` 만 읽습니다.
+     *          - 지속 시간: 0 이면 한 프레임, 그보다 크면 그 시간(초) 동안 남습니다. 흐르는 시간은 `endFrame` 의 델타입니다.
+     *            씬을 틱하지 않은 프레임(에디터 일시정지)은 델타가 0 이라 보이던 것이 그대로 남습니다.
+     *          - 카테고리: 비우면 `Default` 입니다. 끈 카테고리는 보이는 목록에서 빠집니다(남은 시간은 그대로 흐릅니다).
+     *          - 넣기는 어느 스레드에서 해도 됩니다(병렬 onTick). `endFrame` 과 `getVisible*` 는 게임 스레드에서만 부릅니다.
+     *          - 자리: `float3` 는 씬 자리(월드 원점 기준 로컬)다. 시뮬레이션 · 격자 · 서버 · 기록의 절대 자리는 `AbsolutePosition` 과 원점을 받는 오버로드로 넣는다 —
+     *            큐가 그 자리에서 옮긴다(절대 자리는 `float3` 로 바뀌지 않으므로 원점을 빼는 것을 잊을 수 없다). 남은 도형은 원점이 옮겨질 때 함께 옮긴다(`shiftOrigin`).
+     *          - 2D 는 Z 가 같은 평면의 도형입니다. 반 크기 중 0 인 축이 있는 상자는 사각형 하나(선 넷)로 펼칩니다.
+     */
+    class SW_DEVTOOLS_API DebugDrawQueue : public Subsystem
+    {
+    public:
+        /** @brief 서브시스템 이름입니다. 초기화하거나 종료할 것이 없고, 수명만 컬렉션이 정합니다. 서비스 범위는 엔진 범위보다 먼저 생성되고 나중에 사라집니다. */
+        static constexpr const utf8* kSubsystemName = "DebugDraw";
+
+        SubsystemInitResult        initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
+        void                       shutdownSubsystem() override {}
+        const utf8*                getSubsystemName() const override { return kSubsystemName; }
+        void                       resetGameInstanceState( GameInstanceBoundary boundary ) override;
+        const utf8*                findGameInstanceState() const override;
+        static constexpr MemoryTag kSubsystemMemoryTag = MemoryTag::RenderCPU;
+
+        /** @brief 카테고리를 주지 않은 도형의 카테고리 이름입니다. */
+        static constexpr const utf8* kDefaultCategoryName = "Default";
+        /** @brief 화살표 머리 길이가 화살표 길이에서 차지하는 비율입니다. */
+        static constexpr float32 kArrowHeadRatio = 0.2f;
+        /** @brief 구 하나를 그리는 원(XY, XZ, YZ 대원) 하나의 선분 수입니다. */
+        static constexpr uint32 kSphereCircleSegmentCount = 24;
+
+        /** @brief 빈 디버그 드로우 큐로 만듭니다. */
+        DebugDrawQueue();
+
+        /** @brief 남은 것과 보이는 것을 모두 비웁니다(카테고리 켜짐은 그대로). */
+        void clear();
+        /**
+         * @brief 이번 프레임에 넣은 것과 아직 남은 것을 보이는 목록으로 확정하고, 시간을 흘려 끝난 것을 뺍니다. 프레임마다 한 번 부릅니다.
+         * @param deltaSeconds 흐른 시간(초). 0 이면(일시정지) 아무것도 빼지 않습니다.
+         */
+        void endFrame( float32 deltaSeconds );
+
+        /** @brief 선을 예약합니다. */
+        void drawLine( const float3& from, const float3& to, const float4& color, float32 durationSeconds = 0.0f, const hashed_string& category = {} );
+        /** @brief 구를 예약합니다. 2D 뷰에서는 XY 평면의 원 하나로 그려집니다. */
+        void drawSphere( const float3& center, float32 radius, const float4& color, float32 durationSeconds = 0.0f, const hashed_string& category = {} );
+        /** @brief 축 정렬 상자를 선 열두 개로 예약합니다. 반 크기 중 0 인 축이 있으면 사각형(선 넷)입니다. */
+        void drawBox( const float3& center, const float3& halfExtent, const float4& color, float32 durationSeconds = 0.0f, const hashed_string& category = {} );
+        /** @brief 회전한 상자를 예약합니다. */
+        void drawOrientedBox( const float3& center, const float3& halfExtent, const quaternion& rotation, const float4& color, float32 durationSeconds = 0.0f,
+                              const hashed_string& category = {} );
+        /**
+         * @brief 화살표(몸통 선과 머리 선 넷)를 예약합니다.
+         * @details 머리의 한 쌍은 XY 평면 안에 있어 2D 뷰에서도 화살촉으로 보입니다. 길이가 0 이면 아무것도 넣지 않습니다.
+         */
+        void drawArrow( const float3& from, const float3& to, const float4& color, float32 durationSeconds = 0.0f, const hashed_string& category = {} );
+        /** @brief 월드 위치에 글자를 예약합니다. */
+        void drawText( const float3& position, string_view text, const float4& color, float32 durationSeconds = 0.0f, const hashed_string& category = {} );
+
+        /** @brief 절대 자리의 선을 @p origin 으로 옮겨 예약합니다. */
+        void drawLine( const WorldOrigin& origin, const AbsolutePosition& from, const AbsolutePosition& to, const float4& color, float32 durationSeconds = 0.0f, const hashed_string& category = {} );
+        /** @brief 절대 자리의 구를 @p origin 으로 옮겨 예약합니다. */
+        void drawSphere( const WorldOrigin& origin, const AbsolutePosition& center, float32 radius, const float4& color, float32 durationSeconds = 0.0f, const hashed_string& category = {} );
+        /** @brief 절대 자리의 축 정렬 상자를 @p origin 으로 옮겨 예약합니다. */
+        void drawBox( const WorldOrigin& origin, const AbsolutePosition& center, const float3& halfExtent, const float4& color, float32 durationSeconds = 0.0f, const hashed_string& category = {} );
+        /** @brief 절대 자리의 회전한 상자를 @p origin 으로 옮겨 예약합니다. */
+        void drawOrientedBox( const WorldOrigin& origin, const AbsolutePosition& center, const float3& halfExtent, const quaternion& rotation, const float4& color, float32 durationSeconds = 0.0f,
+                              const hashed_string& category = {} );
+        /** @brief 절대 자리의 화살표를 @p origin 으로 옮겨 예약합니다. */
+        void drawArrow( const WorldOrigin& origin, const AbsolutePosition& from, const AbsolutePosition& to, const float4& color, float32 durationSeconds = 0.0f, const hashed_string& category = {} );
+        /** @brief 절대 자리의 글자를 @p origin 으로 옮겨 예약합니다. */
+        void drawText( const WorldOrigin& origin, const AbsolutePosition& position, string_view text, const float4& color, float32 durationSeconds = 0.0f, const hashed_string& category = {} );
+        /** @brief 남은 도형과 보이는 도형을 @p delta 만큼 옮깁니다(월드 원점이 옮겨졌을 때 — 게임 스레드). 지속 시간이 긴 도형이 옛 자리에 남지 않게 한다. */
+        void shiftOrigin( const float3& delta );
+
+        /** @brief 카테고리를 켜거나 끕니다. 처음 보는 이름이면 목록에 더합니다. */
+        void setCategoryEnabled( const hashed_string& category, bool bEnabled );
+        /** @brief 카테고리가 켜져 있으면 true 입니다(처음 보는 이름은 켜짐). */
+        bool isCategoryEnabled( const hashed_string& category ) const;
+        /** @brief 지금까지 본 카테고리 이름을 사전순으로 채웁니다(토글 UI 용). */
+        void collectCategories( vector<hashed_string>& outListCategory ) const;
+
+        /** @brief 지난 `endFrame` 이 확정한 선 목록입니다(상자와 화살표가 펼친 선 포함). */
+        const vector<DebugLine>& getVisibleLines() const { return _listVisibleLine; }
+        /** @brief 지난 `endFrame` 이 확정한 구 목록입니다. */
+        const vector<DebugSphere>& getVisibleSpheres() const { return _listVisibleSphere; }
+        /** @brief 지난 `endFrame` 이 확정한 글자 목록입니다. */
+        const vector<DebugText>& getVisibleTexts() const { return _listVisibleText; }
+        /**
+         * @brief 보이는 선과 구를 선분으로 이어 붙입니다. 구는 축마다 대원 하나(`kSphereCircleSegmentCount` 개의 선분), 2D 뷰(@p bFlat2D)면 XY 원 하나입니다.
+         * @details 에디터 씬 뷰(`debug_draw` 시각화)와 게임 뷰 겹치기(`DebugDrawCanvasUtil`)가 이 한 규칙으로 그린다. @p outListLine 을 비우지 않고 뒤에 붙인다.
+         */
+        void appendVisibleSegments( bool bFlat2D, vector<DebugLine>& outListLine ) const;
+        /** @brief 엔진 창구(`IDebugDrawQueue` — 엔진 루프 · 원점 이동 · HUD 범주 · 물리 · 내비 선이 넣는다)로 이 큐를 봅니다. 등록이 이것을 그 칸에 건다. */
+        IDebugDrawQueue& getEngineView() { return _engineView; }
+
+    private:
+        /** @brief 엔진 창구 구현입니다 — 이 큐로 넘겨 주기만 한다(다중 상속 대신 멤버로 건다, `GameAutoplaySubsystem` 과 같은 꼴). */
+        class EngineView final : public IDebugDrawQueue
+        {
+        public:
+            explicit EngineView( DebugDrawQueue& owner )
+                : _owner{ owner }
+            {
+            }
+
+        protected:
+            void drawLineInternal( const float3& from, const float3& to, const float4& color, float32 durationSeconds, const hashed_string& category ) override
+            {
+                _owner.drawLine( from, to, color, durationSeconds, category );
+            }
+            void drawSphereInternal( const float3& center, float32 radius, const float4& color, float32 durationSeconds, const hashed_string& category ) override
+            {
+                _owner.drawSphere( center, radius, color, durationSeconds, category );
+            }
+            void drawBoxInternal( const float3& center, const float3& halfExtent, const float4& color, float32 durationSeconds, const hashed_string& category ) override
+            {
+                _owner.drawBox( center, halfExtent, color, durationSeconds, category );
+            }
+            void drawArrowInternal( const float3& from, const float3& to, const float4& color, float32 durationSeconds, const hashed_string& category ) override
+            {
+                _owner.drawArrow( from, to, color, durationSeconds, category );
+            }
+            void drawTextInternal( const float3& position, string_view text, const float4& color, float32 durationSeconds, const hashed_string& category ) override
+            {
+                _owner.drawText( position, text, color, durationSeconds, category );
+            }
+            void endFrameInternal( float32 deltaSeconds ) override { _owner.endFrame( deltaSeconds ); }
+            void shiftOriginInternal( const float3& delta ) override { _owner.shiftOrigin( delta ); }
+
+        private:
+            DebugDrawQueue& _owner;
+        };
+
+    private:
+        /** @brief 빈 카테고리를 기본 이름으로 바꾸고 목록에 등록합니다. 잠근 채 부릅니다. */
+        hashed_string registerCategoryLocked( const hashed_string& category ) SW_REQUIRES_LOCK( _mutex );
+        /** @brief 선 하나를 잠근 채 넣습니다. 길이가 0 인 선은 넣지 않습니다. */
+        void pushLineLocked( const float3& from, const float3& to, const float4& color, float32 durationSeconds, const hashed_string& category ) SW_REQUIRES_LOCK( _mutex );
+        /** @brief 잠근 채 카테고리 켜짐을 읽습니다. */
+        bool isCategoryEnabledLocked( const hashed_string& category ) const SW_REQUIRES_LOCK( _mutex );
+
+    private:
+        mutable mutex                                           _mutex;
+        vector<DebugLine> _listLine                             SW_GUARDED_BY( _mutex );
+        vector<DebugSphere> _listSphere                         SW_GUARDED_BY( _mutex );
+        vector<DebugText> _listText                             SW_GUARDED_BY( _mutex );
+        vector<DebugLine>                                       _listVisibleLine;
+        vector<DebugSphere>                                     _listVisibleSphere;
+        vector<DebugText>                                       _listVisibleText;
+        unordered_map<hashed_string, uint8> _mapCategoryEnabled SW_GUARDED_BY( _mutex ); ///< 본 카테고리 → 켜짐(1) 또는 꺼짐(0)
+        EngineView                                              _engineView{ *this };
+
+        SW_SUBSYSTEM_SLOT( DebugDrawQueue, Required );
+    };
+} // namespace sw

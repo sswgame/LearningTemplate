@@ -13,6 +13,7 @@
 #include "Core/String/formatString.h"
 
 #include "DevTools/Console/DevConsole.h"
+#include "DevTools/DebugDraw/DebugDrawQueue.h"
 
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Commands/Scene/EditorSceneCommands.h"
@@ -45,7 +46,6 @@
 #include "Engine/Config/GameAutoplay.h"
 #include "Engine/Config/GameTimeScale.h"
 #include "Engine/Console/DevCommandRegistry.h"
-#include "Engine/Graphics/DebugDraw/DebugDrawQueue.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"

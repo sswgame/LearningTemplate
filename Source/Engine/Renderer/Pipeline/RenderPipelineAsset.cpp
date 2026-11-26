@@ -1115,7 +1115,7 @@ namespace sw
 
             /**
              * @brief 3-0b) 해상도 공간(렌더 · 출력 — `RenderPassAttachment::_resolutionSpace`). 한 패스의 출력은 한 공간이고, 원본(SourceColor)을 읽는 패스는 원본과 같은 공간에 쓴다.
-             * @details 렌더 공간 색을 출력 공간으로 넘기는 것은 시간 업스케일(TAA — `isTemporalUpscalePass`)만이다(언리얼 TAAU · TSR 이 1 차 · 2 차 화면 배율의 경계인 것과 같다).
+             * @details 렌더 공간 색을 출력 공간으로 넘기는 것은 시간 누적의 기준 패스(`_bTemporalJitter` — TAA)만이다. 지터한 표본을 모아야 출력 픽셀을 채운다(언리얼 TAAU · TSR 이 1 차 · 2 차 화면 배율의 경계인 것과 같다).
              *          그 밖의 패스가 공간을 넘기면 UV 로 늘린 그림이 TAAU 의 몫을 대신해 조용히 흐려진다. 깊이 · 속도 같은 원본 아닌 입력은 공간이 달라도 된다(UV 로 읽는다).
              */
             static uint32 validateResolutionSpaces( const RenderPipelineDesc& desc, string_view sourcePath )
@@ -1146,7 +1146,7 @@ namespace sw
                     }
                     if ( pass._depthAttachment.empty() == false )
                         validateSameSpace( pass._depthAttachment );
-                    if ( pFirst == nullptr || isTemporalUpscalePass( pass._type ) )
+                    if ( pFirst == nullptr || pass._bTemporalJitter != SW_FALSE )
                         continue;
                     for ( const RenderGraphPassDesc::ResolvedAttachment& input : pass._listResolvedInput )
                     {
@@ -1155,7 +1155,7 @@ namespace sw
                         const RenderPassAttachment* pSource = findAttachment( desc, input._attachment.view() );
                         if ( pSource == nullptr || pSource->_resolutionSpace == pFirst->_resolutionSpace )
                             continue;
-                        SW_LOG_ERROR_ID( "RenderPipelineAsset.PassSourceResolutionSpace", "[%#] pass '%#' (%#): source '%#' is in the %# space but the output '%#' is in the %# space - only the TAA pass moves colour from the render to the output space",
+                        SW_LOG_ERROR_ID( "RenderPipelineAsset.PassSourceResolutionSpace", "[%#] pass '%#' (%#): source '%#' is in the %# space but the output '%#' is in the %# space - only the temporal jitter pass (_bTemporalJitter, TAA) moves colour from the render to the output space",
                                          sourcePath, pass._name, getEnumName( pass._type ), pSource->_name, getEnumName( pSource->_resolutionSpace ), pFirst->_name, getEnumName( pFirst->_resolutionSpace ) );
                         ++issueCount;
                     }

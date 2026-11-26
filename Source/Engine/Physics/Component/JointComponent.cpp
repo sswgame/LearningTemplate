@@ -165,8 +165,3 @@ namespace sw
         _jointBodyB = PhysicsBodyHandle{};
     }
 } // namespace sw
-
-namespace sw
-{
-    SW_AUTOMATION_GETTER_WATCH( jointPosition, "Joint.Position", "Hinge angle (rad), slider distance or distance length of the first joint", JointComponent, &JointComponent::getJointPosition );
-} // namespace sw

@@ -9,7 +9,6 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Foundation/EngineSubsystems.h"
-#include "Engine/Graphics/RHI/Backend/RHIBufferSizeUtil.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
 #include "Engine/Graphics/RHI/RHICompiledShaderStages.h"
 #include "Engine/Graphics/RHI/RHIFormatInfo.h"

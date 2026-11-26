@@ -288,6 +288,8 @@ namespace sw
          *          매 프레임 부를 필요는 없다.
          */
         void publishRenderTargets() const;
+        /** @brief 개발 검사 셋입니다(렌더 스레드 프레임 끝 `IRenderDebugChecks::serviceAfterFrameEnd`). 개발 도구가 없는 구성은 nullptr 입니다. */
+        [[nodiscard]] IRenderDebugChecks* findDebugChecks() const { return _passExecutor.findDebugChecks(); }
         /** @brief 주 시점 첨부마다의 크기(KB)를 Info 로그(`[RenderTargets]`)로 남깁니다. GPU 메모리가 늘었을 때 어느 첨부인지 나눈다. 풀을 다시 만들거나 첨부를 더 만들 때만 부릅니다. */
         void reportRenderTargetMemory() const;
 

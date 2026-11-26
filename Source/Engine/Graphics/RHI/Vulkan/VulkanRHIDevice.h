@@ -14,6 +14,7 @@
 #include "Engine/Graphics/RHI/Backend/RHIDescriptorRingMirror.h"
 #include "Engine/Graphics/RHI/Backend/RHIFrameFenceRing.h"
 #include "Engine/Graphics/RHI/Backend/RHIHandleTable.h"
+#include "Engine/Graphics/RHI/Backend/RHILiveCommandListSet.h"
 #include "Engine/Graphics/RHI/Backend/RHIPipelineCacheFile.h"
 #include "Engine/Graphics/RHI/Backend/RHIReleaseQueue.h"
 #include "Engine/Graphics/RHI/Backend/RHISwapChainSet.h"
@@ -951,8 +952,7 @@ namespace sw
          *          리스트 소멸자가 종료된 디바이스에 쌍을 반납하려 하고, 쌍의 풀이 누수되어 검증 레이어가 잡는다.
          *          DX12 와 DX11 도 같은 보호를 둔다.
          */
-        mutex                         _liveCmdListMutex;
-        vector<VulkanRHICommandList*> _listLiveCmd;
+        RHILiveCommandListSet<VulkanRHICommandList> _liveCommandLists;
         /// @brief 이번 프레임에 큐에 넣을 커맨드 버퍼들입니다. 기록 순서가 곧 실행 순서입니다.
         vector<VkCommandBuffer> _listPendingSubmit;
         /// @brief 프레임 스트림을 리스트 제출 지점마다 잘라 쓰는 추가 세그먼트 버퍼입니다(프레임 슬롯별로 재사용합니다).

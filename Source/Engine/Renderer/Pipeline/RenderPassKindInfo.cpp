@@ -5,7 +5,7 @@
 #include "Core/Algorithm/VectorUtil.h"
 
 #include "Engine/Graphics/Debug/GPUMessage.h"
-#include "Engine/Graphics/Debug/GPUNanCheck.h"
+#include "Engine/Graphics/Debug/RenderDiagnostics.h"
 #include "Engine/Graphics/Material/MaterialPermutation.h"
 #include "Engine/Graphics/Shader/Binding/EngineComputeShaders.h"
 #include "Engine/Renderer/Pipeline/GBufferLayout.h"
@@ -698,13 +698,7 @@ namespace sw
                     // 일반 풀스크린 실행은 선언한 입력을 계약대로 건다.
                     if ( row.hasFlag( Flag::kGenericFullscreen ) && row.hasFlag( Flag::kHasInputContract ) == false )
                         return false;
-                    // 꺼진 패스를 기록하지 않는 것은 실행이 출력 이름의 연결(`isForwarded`)을 볼 때만 된다 — 일반 풀스크린 실행과 TAA 실행(executeTAAPass)이 본다.
-                    // TAA 는 출력이 원본을 가리키는 길만 있다(출력이 없으면 셋업이 읽는 기록 형식이 사라진다).
-                    // 후처리 머티리얼 실행(executePostProcessMaterialPass)도 출력 이름의 연결을 본다.
-                    const bool bExecutorHonorsSelection = row.hasFlag( Flag::kGenericFullscreen ) || ( row._type == RenderPassKind::TAA && row.hasFlag( Flag::kBypassesToSource ) ) ||
-                                                          row._type == RenderPassKind::PostProcessMaterial;
-                    if ( row.hasFlag( Flag::kSkipsWithoutPostProcess ) && bExecutorHonorsSelection == false )
-                        return false;
+                    // 꺼진 패스는 실행 계획에서 빠진다(`FramePassExecutor::selectGraphPlan` — 실행 콜백이 단언한다). 실행 종류가 출력 이름의 연결을 볼 필요가 없어 종류로 가르는 조건을 두지 않는다.
                     // 건너뛸 수 있는 효과는 빠지는 방법(원본을 가리킴 · 출력 없음)이 정확히 하나다. 그 방법이 있는 패스는 건너뛸 수 있는 효과다(`_minPostQuality` 를 받는다).
                     const bool bBypasses = row.hasFlag( Flag::kBypassesToSource );
                     const bool bOmitted  = row.hasFlag( Flag::kOmittedWhenOff );
@@ -827,7 +821,7 @@ namespace sw
         switch ( type )
         {
             case RenderPassKind::NanCheck:
-                return GPUNanCheck::isRequested();
+                return RenderDiagnostics::get()._bNanCheck != SW_FALSE; // 배포본은 정책 기본값(끔)이라 PSO 도 디스패치도 없다
             default:
                 return false;
         }

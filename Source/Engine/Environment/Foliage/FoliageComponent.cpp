@@ -171,7 +171,6 @@ namespace sw
 
 namespace sw
 {
-    SW_AUTOMATION_GETTER_WATCH( foliageCutCount, "Foliage.CutCount", "Instances of the first foliage component hidden by cuts now", FoliageComponent, &FoliageComponent::getCutInstanceCount );
 
     FoliageComponent::FoliageComponent()
         : _listLayer{}

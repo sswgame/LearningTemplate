@@ -5,6 +5,8 @@
 #include "Core/Delegate/Delegate.h"
 #include "Core/String/StringBuilder.h"
 
+#include "DevTools/DebugDraw/DebugDrawQueue.h"
+
 #include "Editor/Common/Commands/Asset/RigSaveParams.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorSubsystems.h"
@@ -19,7 +21,6 @@
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Character/PoseModifier/PoseModifierComponent.h"
-#include "Engine/Graphics/DebugDraw/DebugDrawQueue.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 

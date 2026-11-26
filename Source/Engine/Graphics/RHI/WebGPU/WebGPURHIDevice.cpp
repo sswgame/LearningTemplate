@@ -11,7 +11,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Time/MonotonicClock.h"
 
-#include "Engine/Graphics/RHI/Backend/RHILiveCommandListUtil.h"
+#include "Engine/Graphics/RHI/Backend/RHILiveCommandListSet.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
 #include "Engine/Graphics/RHI/WebGPU/WebGPURHICommandContext.h"
 #include "Engine/Graphics/RHI/WebGPU/WebGPURHIResourceFactory.h"
@@ -454,8 +454,7 @@ namespace sw
         , _transferQueue{ _transferSerials }
         , _readbackTable{}
         , _listQueuedReadbackBuffer{}
-        , _liveCommandListMutex{}
-        , _listLiveCommandList{}
+        , _liveCommandLists{}
         , _arrFrameFence{}
         , _bInitialized{ SW_FALSE }
         , _bTextureFormatsTier1{ SW_FALSE }
@@ -1020,19 +1019,17 @@ namespace sw
     void WebGPURHIDevice::detachCommandRecordingInternal()
     {
         _frameStreamContext.reset();
-        RHILiveCommandListUtil::detachAll( _liveCommandListMutex, _listLiveCommandList );
+        _liveCommandLists.detachAll();
     }
 
     void WebGPURHIDevice::registerCommandList( WebGPURHICommandList* pList )
     {
-        ScopedLock<mutex> lock{ _liveCommandListMutex };
-        _listLiveCommandList.push_back( pList );
+        _liveCommandLists.add( pList );
     }
 
     void WebGPURHIDevice::unregisterCommandList( WebGPURHICommandList* pList )
     {
-        ScopedLock<mutex> lock{ _liveCommandListMutex };
-        (void)VectorUtil::removeValue( _listLiveCommandList, pList );
+        _liveCommandLists.remove( pList );
     }
 
     void WebGPURHIDevice::resizeInternal( uint32 width, uint32 height )

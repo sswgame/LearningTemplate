@@ -20,6 +20,7 @@
 #include "Engine/Graphics/RHI/Backend/RHIConstantBufferMirror.h"
 #include "Engine/Graphics/RHI/Backend/RHIDescriptorRingMirror.h"
 #include "Engine/Graphics/RHI/Backend/RHIHandleTable.h"
+#include "Engine/Graphics/RHI/Backend/RHILiveCommandListSet.h"
 #include "Engine/Graphics/RHI/Backend/RHIPipelineCacheFile.h"
 #include "Engine/Graphics/RHI/Backend/RHIReleaseQueue.h"
 #include "Engine/Graphics/RHI/Backend/RHISwapChainSet.h"
@@ -873,8 +874,7 @@ namespace sw
         vector<D3D12CommandListEntry> _listFreeComputeCmdListEntry SW_GUARDED_BY( _cmdListPoolMutex );
 
         /** @brief 살아 있는 커맨드 리스트입니다(소유하지 않습니다). 종료할 때 연결을 끊어 줍니다. */
-        mutex                        _liveCmdListMutex;
-        vector<D3D12RHICommandList*> _listLiveCmd;
+        RHILiveCommandListSet<D3D12RHICommandList> _liveCommandLists;
         /// @brief 온라인 힙 블록 프리리스트입니다. 컨텍스트가 빌려 슬롯 테이블을 확정하고, 리스트가 닫히면 펜스 뒤에 돌아옵니다.
         mutex                                                     _onlineBlockMutex;
         IndexFreeList _freeOnlineBlock                            SW_GUARDED_BY( _onlineBlockMutex );

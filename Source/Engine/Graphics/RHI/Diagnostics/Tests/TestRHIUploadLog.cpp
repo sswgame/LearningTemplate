@@ -6,6 +6,7 @@
 
 #include "Core/TestFramework/TestFramework.h"
 
+#include "Engine/Graphics/RHI/Diagnostics/RHIContractValidator.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIUploadLog.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHICapabilities.h"
@@ -81,7 +82,7 @@ SW_TEST_CASE( RHIUploadLogTest, CommonEntryPointsFeedTheLog )
     device._pResourceFactory = &factory;
     const RHICapabilities capabilities{};
     factory.bindDevice( device, ShaderTargetFormat{}, capabilities );
-    RHIUploadLog<RHIBufferHandle>& log = device.getBufferUploadLog();
+    RHIUploadLog<RHIBufferHandle>& log = device.getContractValidator().getBufferUploadLog();
 
     const RHIBufferHandle     updated    = factory.makeBuffer();
     const RHIBufferHandle     geometry   = factory.makeBuffer();
@@ -119,7 +120,7 @@ SW_TEST_CASE( RHIUploadLogTest, TextureEntryPointsFeedTheLog )
     device._pResourceFactory = &factory;
     const RHICapabilities capabilities{};
     factory.bindDevice( device, ShaderTargetFormat{}, capabilities );
-    RHIUploadLog<RHITextureHandle>& log = device.getTextureUploadLog();
+    RHIUploadLog<RHITextureHandle>& log = device.getContractValidator().getTextureUploadLog();
 
     constexpr RHITextureHandle kUploaded{ 0x100000001ull };
     constexpr RHITextureHandle kRead{ 0x100000002ull };

@@ -114,6 +114,13 @@ namespace sw
         /** @brief @p assetID 가 임포트 산출물 폴더(`_listImportedFolder`) 아래면 true 입니다. */
         bool isUnderDerivedFolder( string_view assetID ) const;
         /**
+         * @brief 에셋 @p assetID 를 가리키는 참조 글입니다 — 정체성 @p guid 가 있으면 GUID 참조(`guid:<32자>`), 없고 산출물 폴더 아래면 경로 글이다.
+         * @details 팩 색인(`AssetPackIndex`)이 같은 규칙으로 싣는다 — 원본 없는 산출물(내용 주소 공유 결과 `_shared/`)은 GUID 줄이 없고 산출물끼리 경로로 가리킨다.
+         *          에셋을 가리키는 색인(머티리얼 태그 색인)은 이 글을 열쇠로 써서 팩과 같은 키를 쓴다.
+         * @return 정체성이 없는데 산출물도 아니면 `NotFound` 입니다(경로로 대신하지 않는다 — `py -3 -m Scripts asset-ids --fix`).
+         */
+        [[nodiscard]] expected<string> makeIdentityReference( string_view assetID, const optional<AssetGUID>& guid ) const;
+        /**
          * @brief 손으로 적는 우리 형식 글(`_listHeaderSuffix`)을 임포트 산출물 폴더에 두려는 자리면 true 입니다(`_listKeptDerived` 는 허락). 에디터 새로 만들기 · 복제 · 옮기기가 묻고 거절합니다.
          * @details 산출물 폴더는 커밋하지 않고 통째로 지웠다 다시 뽑는다 — 그 안의 손 글은 git 이 무시해 저장소에 들지 않거나, 산출물로 오인되어 함께 지워진다. 추적된 파일은 `asset-ids`(`kept-in-derived`)가 막는다.
          */

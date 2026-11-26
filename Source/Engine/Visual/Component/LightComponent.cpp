@@ -9,41 +9,12 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/OrientationUtil.h"
 
-#include "Engine/Automation/Watch/AutomationWatch.h"
-#include "Engine/Automation/Watch/AutomationWatchComponent.h"
 #include "Engine/Graphics/Lighting/LensFlareAsset.h"
 #include "Engine/Graphics/Shader/Binding/GPULight.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
-
-namespace sw
-{
-    // 게임 코드의 빛 종류(`LightKind`)와 셰이더의 종류 값(`shaderslot::kLightType*`)은 한 값이다 — 레지스트리 칸 번호를 둘이 함께 쓴다.
-    static_assert( static_cast<uint32>( LightKind::Directional ) == shaderslot::kLightTypeDirectional && static_cast<uint32>( LightKind::Point ) == shaderslot::kLightTypePoint &&
-                       static_cast<uint32>( LightKind::Spot ) == shaderslot::kLightTypeSpot && static_cast<uint32>( LightKind::Point2D ) == shaderslot::kLightTypePoint2D &&
-                       static_cast<uint32>( LightKind::Global2D ) == shaderslot::kLightTypeGlobal2D && static_cast<uint32>( LightKind::Freeform2D ) == shaderslot::kLightTypeFreeform2D,
-                   "LightKind 는 셰이더의 빛 종류 값과 같아야 한다" );
-
-    namespace
-    {
-        struct LightWatchesInternal
-        {
-            /** @brief 감시 값 `Light.Intensity` 입니다. 대상 빛의 지금 세기(적은 세기 × 날씨 배율)입니다. */
-            [[nodiscard]] static bool readIntensity( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
-            {
-                const LightComponent* pLight = query.findTargetComponent<LightComponent>( "Light", outValue );
-                if ( pLight == nullptr )
-                    return false;
-                outValue.setNumber( static_cast<float64>( pLight->getIntensity() ) );
-                return true;
-            }
-        };
-    } // namespace
-
-    SW_AUTOMATION_QUERY_WATCH( lightIntensity, "Light.Intensity", "Current intensity of the target's light (authored intensity x weather scale)", &LightWatchesInternal::readIntensity, true, false );
-} // namespace sw
 
 namespace sw
 {

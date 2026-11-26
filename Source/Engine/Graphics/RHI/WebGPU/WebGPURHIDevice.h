@@ -25,6 +25,7 @@
 #include "Engine/Graphics/RHI/Backend/RHIBindlessRegistry.h"
 #include "Engine/Graphics/RHI/Backend/RHIFrameFenceRing.h"
 #include "Engine/Graphics/RHI/Backend/RHIHandleTable.h"
+#include "Engine/Graphics/RHI/Backend/RHILiveCommandListSet.h"
 #include "Engine/Graphics/RHI/Backend/RHIReleaseQueue.h"
 #include "Engine/Graphics/RHI/Backend/RHISwapChainSet.h"
 #include "Engine/Graphics/RHI/Backend/RHITimestampRing.h"
@@ -514,8 +515,7 @@ namespace sw
         RHIPendingReadbackTable<WebGPUTextureReadback>         _readbackTable;
         vector<RHIBufferHandle>                                _listQueuedReadbackBuffer;
 
-        mutex                         _liveCommandListMutex;
-        vector<WebGPURHICommandList*> _listLiveCommandList;
+        RHILiveCommandListSet<WebGPURHICommandList> _liveCommandLists;
 
         /// @brief 칸마다의 프레임 완료(`RHIFrameFenceRing::getSlot`). 콜백 userdata 라 자리가 움직이지 않는 고정 배열이다.
         WebGPUFrameFence _arrFrameFence[RHIFrameFenceRing::kSlotCount];

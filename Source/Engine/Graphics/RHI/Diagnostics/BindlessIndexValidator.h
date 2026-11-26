@@ -7,6 +7,7 @@
  *          Engine 의 전역 변수를 읽지 못한다. 수준은 진단 정책(`RenderDiagnosticsPolicy::_bindlessIndexCheck`)이 정한다 — 개발 도구의 `-gv_validateBindlessIndex`(Off · DeadIndex(Debug 기본) · TraceAbsent).
  */
 #pragma once
+#include "Core/Foundation/BuildConfig.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/Name/hashed_string.h"
@@ -92,10 +93,20 @@ namespace sw
         bool recordAbsent( const hashed_string& passName, const hashed_string& fieldName, uint32 element );
         /** @brief 구조 버퍼 원소 크기 어긋남 하나를 보고합니다(`BindlessIndexValidator::validateStride`). 같은 자리(패스, 필드)를 처음 볼 때만 오류 로그를 남기고 true 입니다. */
         bool reportStride( const hashed_string& passName, const hashed_string& fieldName, uint32 shaderStride, uint32 bufferStride );
-        /** @brief 구조 버퍼 SRV @p buffer 의 원소 바이트 수를 적습니다. 구조 버퍼를 만드는 한 곳(`RHIStructuredBuffer`)만 부른다. */
-        void recordBufferStride( RHIBufferSRVIndex buffer, uint32 stride );
-        /** @brief 구조 버퍼 SRV @p buffer 를 놓았습니다 — 번호가 다른 버퍼에 다시 쓰이기 전에 원소 크기를 잊는다. */
-        void removeBufferStride( RHIBufferSRVIndex buffer );
+        /** @brief 원소 크기를 적는 구성인가. 크기 대조(`validateStride`)가 배포에서 접히므로 배포 구성은 적지도 않는다. */
+        static constexpr bool kRecordsBufferStride = build::kShipping == false;
+        /** @brief 구조 버퍼 SRV @p buffer 의 원소 바이트 수를 적습니다. 구조 버퍼를 만드는 한 곳(`RHIStructuredBuffer`)만 부른다. 배포 구성은 빈 인라인 함수다. */
+        void recordBufferStride( RHIBufferSRVIndex buffer, uint32 stride )
+        {
+            if constexpr ( kRecordsBufferStride )
+                recordBufferStrideInternal( buffer, stride );
+        }
+        /** @brief 구조 버퍼 SRV @p buffer 를 놓았습니다 — 번호가 다른 버퍼에 다시 쓰이기 전에 원소 크기를 잊는다. 배포 구성은 빈 인라인 함수다. */
+        void removeBufferStride( RHIBufferSRVIndex buffer )
+        {
+            if constexpr ( kRecordsBufferStride )
+                removeBufferStrideInternal( buffer );
+        }
         /** @brief 적어 둔 원소 바이트 수입니다. 적지 않은 번호(상수 버퍼 · 구조 버퍼가 아닌 것)면 0 입니다. */
         uint32 getBufferStride( RHIBufferSRVIndex buffer ) const;
         /** @brief 지금까지 원소 크기 어긋남을 남긴 자리 수입니다(테스트와 진단용). */
@@ -109,6 +120,10 @@ namespace sw
 
         /** @brief 기록의 저장소입니다(.cpp 에 정의 — 잠금 · 해시 집합이 헤더로 새지 않게). */
         struct State;
+
+    private:
+        void recordBufferStrideInternal( RHIBufferSRVIndex buffer, uint32 stride );
+        void removeBufferStrideInternal( RHIBufferSRVIndex buffer );
 
     private:
         unique_ptr<State> _pState;

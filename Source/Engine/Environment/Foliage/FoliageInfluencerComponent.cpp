@@ -2,7 +2,6 @@
 
 #include "Engine/Environment/Foliage/FoliageInfluencerComponent.h"
 
-#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
@@ -48,30 +47,4 @@ namespace sw
         }
         return count;
     }
-} // namespace sw
-
-namespace sw
-{
-    namespace
-    {
-        struct FoliageInfluencerWatchesInternal
-        {
-            /** @brief 감시 값 `Foliage.InfluencerCount` 입니다. 씬의 켜진 풀 휘게 하는 구 수입니다(셰이더는 카메라에 가까운 넷을 싣는다). */
-            [[nodiscard]] static bool readInfluencerCount( const GameObjectManager* pManager, float64& outValue )
-            {
-                if ( pManager == nullptr )
-                    return false;
-                uint32 count = 0;
-                for ( const FoliageInfluencerComponent* pInfluencer : pManager->getComponentRegistry().getAll<FoliageInfluencerComponent>() )
-                {
-                    if ( pInfluencer->isActive() && pInfluencer->getRadius() > 0.0f )
-                        ++count;
-                }
-                outValue = static_cast<float64>( count );
-                return true;
-            }
-        };
-    } // namespace
-
-    SW_AUTOMATION_WATCH( foliageInfluencerCount, "Foliage.InfluencerCount", "Active foliage influencer spheres in the scene (grass bends around them)", &FoliageInfluencerWatchesInternal::readInfluencerCount );
 } // namespace sw

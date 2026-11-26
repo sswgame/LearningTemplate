@@ -7,6 +7,8 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/String/StringBuilder.h"
 
+#include "DevTools/DebugDraw/DebugDrawQueue.h"
+
 #include "Editor/Common/Workspace/EditorCamera.h"
 #include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/Common/Workspace/EditorSubsystems.h"
@@ -16,7 +18,6 @@
 
 #include "Engine/Console/DebugOverlayState.h"
 #include "Engine/Console/DevCommandRegistry.h"
-#include "Engine/Graphics/DebugDraw/DebugDrawQueue.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Object/Component/CameraComponent.h"
 

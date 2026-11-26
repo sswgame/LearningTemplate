@@ -43,6 +43,13 @@ namespace sw
         [[nodiscard]] static RenderStabilitySample readPublished();
         /** @brief (렌더 스레드) 실시간 GI 조건의 문턱입니다 — 갱신기가 "이미 정착했다" 를 조건과 같은 값으로 본다. 시나리오가 문턱을 싣지 않았으면 0 이다(정착을 보는 쪽이 없다). */
         [[nodiscard]] static float32 readMaxGIError();
+        /** @brief (게임 스레드) 정착 조건의 문턱을 싣습니다 — 시나리오 시작 때 `ScenarioRun.json` 의 `_mapConditionThreshold` 에서(개발 도구의 조건 설정). */
+        static void setMinStillFramesThreshold( uint32 minStillFrames );
+        static void setMaxExposureErrorThreshold( float32 maxErrorEv );
+        static void setMaxGIErrorThreshold( float32 maxError );
+        /** @brief (게임 스레드) 실은 문턱입니다. 싣지 않았으면 비어 있다(기본값이 없다). */
+        [[nodiscard]] static optional<uint32>  getMinStillFramesThreshold();
+        [[nodiscard]] static optional<float32> getMaxExposureErrorThreshold();
         /**
          * @brief TAA 정착 조건(`RenderTemporalAccumulation`)입니다 — TAA 를 돌리지 않으면 해당 없음, 카메라 정지 프레임이 @p minStillFrames 이상이면 준비됨, 아니면 진행 중(진척은 정지 프레임 수).
          * @details 카메라가 계속 움직이면 진척이 0 에 머물러 정지 시한(`_stallFrames`)에 진다 — 움직이는 카메라는 `stability="Assets"` 로 찍는다.

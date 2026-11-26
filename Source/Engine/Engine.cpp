@@ -49,10 +49,10 @@
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Foundation/QuitRequest.h"
+#include "Engine/Graphics/Debug/IVisualLogger.h"
 #include "Engine/Graphics/Debug/RenderDiagnostics.h"
 #include "Engine/Graphics/Debug/RenderTargetRegistry.h"
-#include "Engine/Graphics/Debug/VisualLogger.h"
-#include "Engine/Graphics/DebugDraw/DebugDrawQueue.h"
+#include "Engine/Graphics/DebugDraw/IDebugDrawQueue.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
@@ -646,12 +646,22 @@ namespace sw
         if ( _pInputManager != nullptr )
             _pInputManager->endFrame();
         // 이번 프레임에 넣은 디버그 도형을 보이는 목록으로 확정하고, 씬이 흘린 시간만큼 지속 시간을 줄인다(일시정지면 그대로 남는다).
-        engine::getSubsystem<DebugDrawQueue>().endFrame( _sceneDeltaSeconds );
-        engine::getSubsystem<VisualLogger>().endFrame();
+        // 큐 · 기록은 개발 도구가 건다 — 배포 구성은 칸이 비어 아무것도 하지 않는다.
+        if ( IDebugDrawQueue* const pDebugDraw = engine::findSubsystem<IDebugDrawQueue>() )
+            pDebugDraw->endFrame( _sceneDeltaSeconds );
+        if ( IVisualLogger* const pVisualLogger = engine::findSubsystem<IVisualLogger>() )
+            pVisualLogger->endFrame();
     }
 
     RenderThread* Engine::getRenderThread() const
     {
         return _pRenderDriver != nullptr ? _pRenderDriver->findRenderThread() : nullptr;
     }
+} // namespace sw
+
+namespace sw
+{
+    // 개발 도구가 구현을 거는 엔진 창구 칸 — 정의는 엔진에 있어 개발 도구를 짓지 않는 구성(배포)에서도 읽는 쪽이 링크되고 칸은 빈다.
+    SW_ENGINE_SUBSYSTEM_SLOT( IDebugDrawQueue, GameVisible );
+    SW_ENGINE_SUBSYSTEM_SLOT( IVisualLogger, GameVisible );
 } // namespace sw

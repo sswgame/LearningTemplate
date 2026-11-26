@@ -11,6 +11,8 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/String/StringBuilder.h"
 
+#include "DevTools/Client/Render/OcclusionDebugStats.h"
+
 #include "Engine/Console/DebugHUDRegistry.h"
 #include "Engine/Console/DebugHUDSectionFormat.h"
 #include "Engine/Foundation/EngineSubsystems.h"
@@ -19,7 +21,6 @@
 #include "Engine/Object/GameObject/Registry/PrimitiveComponent.h"
 #include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
 #include "Engine/Profiling/FrameProfiler.h"
-#include "Engine/Renderer/Debug/OcclusionDebugStats.h"
 #include "Engine/Renderer/Debug/RenderDebugRegistry.h"
 #include "Engine/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Renderer/Frame/FrameRendererSubsystem.h"

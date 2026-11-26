@@ -56,6 +56,11 @@ namespace sw::build
     inline constexpr bool kMemoryDiagnostics = kDebug;
     /** @brief 교착 탐지(`-deadlock-detection`, `sw::mutex` 잠금 추적)를 받는 구성이면 true 입니다. 배포는 잠금 추적을 짓지 않는다. */
     inline constexpr bool kDeadlockDetection = kShipping == false;
+    /**
+     * @brief 그래픽 API 의 개발 진단 확장(Vulkan `VK_EXT_device_fault` — 장치 소실 때 결함 주소 · 공급사 코드)을 켜는 구성이면 true 입니다. 배포는 확장을 켜지 않는다.
+     * @details 장치 소실 브레드크럼(DRED · GPU 표지)은 배포에서도 시작 인자로 켜는 런타임 스위치라(`RHIDiagnosticSwitch`) 여기 들지 않는다.
+     */
+    inline constexpr bool kGraphicsDeviceFaultReport = kShipping == false;
     /** @brief 비싼 프로파일 카운터(`SW_PROFILE_COUNT_VERBOSE`, 항목마다 세는 값)를 세는 구성이면 true 입니다. 언리얼 stat 의 verbose 단계 자리다. */
     inline constexpr bool kVerboseProfileCounters = kDebug;
 } // namespace sw::build

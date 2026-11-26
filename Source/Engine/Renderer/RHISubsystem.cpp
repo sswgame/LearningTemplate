@@ -8,7 +8,6 @@
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Asset/PackEngineSettingsSubsystem.h"
-#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/PackEngineSettings.h"
@@ -114,89 +113,8 @@ namespace sw
     {
         struct RHISubsystemInternal
         {
-            /** @brief 감시 값 `RHI.GPUIdleWaits` 입니다. 장치가 없으면(전용 서버 · 헤드리스) 읽지 못합니다. */
-            [[nodiscard]] static bool readGPUIdleWaits( const GameObjectManager* /*pManager*/, float64& outValue )
-            {
-                const RHISubsystem* const pSubsystem = engine::findSubsystem<RHISubsystem>();
-                const RHI* const          pRHI       = pSubsystem != nullptr ? pSubsystem->findRHI() : nullptr;
-                if ( pRHI == nullptr || pRHI->hasDevice() == false )
-                    return false;
-                outValue = static_cast<float64>( pRHI->getDevice().getGPUIdleWaitCount().get() );
-                return true;
-            }
-
-            /** @brief 감시 값 `RHI.SupportsBC7` 입니다. 네 데스크톱 백엔드가 모두 1 이어야 합니다(`IRHIDevice::supportsTextureFormat` 의 실제 장치 답). */
-            [[nodiscard]] static bool readSupportsBC7( const GameObjectManager* /*pManager*/, float64& outValue )
-            {
-                const RHISubsystem* const pSubsystem = engine::findSubsystem<RHISubsystem>();
-                const RHI* const          pRHI       = pSubsystem != nullptr ? pSubsystem->findRHI() : nullptr;
-                if ( pRHI == nullptr || pRHI->hasDevice() == false )
-                    return false;
-                outValue = pRHI->getDevice().supportsTextureFormat( RHIFormat::BC7_UNORM ) ? 1.0 : 0.0;
-                return true;
-            }
-
-            /** @brief 감시 값 `RHI.MaterialTessellation` 입니다. 변위 머티리얼을 그리는 장치면 1 입니다(`RHICapabilities::_bMaterialTessellation` — OpenGL · WebGPU 는 0). */
-            [[nodiscard]] static bool readMaterialTessellation( const GameObjectManager* /*pManager*/, float64& outValue )
-            {
-                const RHISubsystem* const pSubsystem = engine::findSubsystem<RHISubsystem>();
-                const RHI* const          pRHI       = pSubsystem != nullptr ? pSubsystem->findRHI() : nullptr;
-                if ( pRHI == nullptr || pRHI->hasDevice() == false )
-                    return false;
-                outValue = pRHI->getDevice().getCapabilities()._bMaterialTessellation != SW_FALSE ? 1.0 : 0.0;
-                return true;
-            }
-
-            /** @brief 감시 값 `RHI.GeometryStage` · `RHI.TessellationStages` 입니다. 패스 XML 의 선택 스테이지를 붙일 수 있는 장치면 1 입니다(`RHICapabilities` 의 같은 이름 칸). */
-            [[nodiscard]] static bool readCapability( uint8 RHICapabilities::* pField, float64& outValue )
-            {
-                const RHISubsystem* const pSubsystem = engine::findSubsystem<RHISubsystem>();
-                const RHI* const          pRHI       = pSubsystem != nullptr ? pSubsystem->findRHI() : nullptr;
-                if ( pRHI == nullptr || pRHI->hasDevice() == false )
-                    return false;
-                outValue = pRHI->getDevice().getCapabilities().*pField != SW_FALSE ? 1.0 : 0.0;
-                return true;
-            }
-            /** @brief 감시 값 `RHI.GPUCulling` 입니다. 컴퓨트 컬링이 간접 인자를 만드는 장치면 1 입니다(DX11 은 0 — 간접 인자를 구조 버퍼로 쓸 수 없어 CPU 개수로 그린다). */
-            [[nodiscard]] static bool readGPUCulling( const GameObjectManager* /*pManager*/, float64& outValue ) { return readCapability( &RHICapabilities::_bGPUCulling, outValue ); }
-            /** @brief 감시 값 `RHI.NativeBindless` 입니다. 셰이더가 bindless 번호로 텍스처를 읽는 장치(DX12 · Vulkan)면 1 입니다 — 이름 바인딩 패스가 도는 판정과 같은 함수다. */
-            [[nodiscard]] static bool readNativeBindless( const GameObjectManager* /*pManager*/, float64& outValue )
-            {
-                const RHISubsystem* const pSubsystem = engine::findSubsystem<RHISubsystem>();
-                const RHI* const          pRHI       = pSubsystem != nullptr ? pSubsystem->findRHI() : nullptr;
-                if ( pRHI == nullptr || pRHI->hasDevice() == false )
-                    return false;
-                outValue = pRHI->getDevice().supportsNativeBindlessSampling() ? 1.0 : 0.0;
-                return true;
-            }
-            [[nodiscard]] static bool readGeometryStage( const GameObjectManager* /*pManager*/, float64& outValue ) { return readCapability( &RHICapabilities::_bGeometryStage, outValue ); }
-            [[nodiscard]] static bool readTessellationStages( const GameObjectManager* /*pManager*/, float64& outValue )
-            {
-                return readCapability( &RHICapabilities::_bTessellationStages, outValue );
-            }
-
-            /** @brief 감시 값 `Texture.FormatVariantActive` 입니다. 이 장치가 임포트한 DDS 가 아닌 쿠킹 변형을 읽으면 1 입니다(데스크톱 대상은 0 — 그림이 바뀌지 않는다는 뜻이다). */
-            [[nodiscard]] static bool readFormatVariantActive( const GameObjectManager* /*pManager*/, float64& outValue )
-            {
-                if ( engine::areEngineSubsystemsBound() == false )
-                    return false;
-                outValue = engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>().getFormatVariantSuffix().empty() ? 0.0 : 1.0;
-                return true;
-            }
         };
     } // namespace
-
-    SW_AUTOMATION_WATCH( rhiGPUIdleWaits, "RHI.GPUIdleWaits", "Times waitIdle stalled for the whole GPU (cumulative) - scene activation and asset hot reload must not raise it", &RHISubsystemInternal::readGPUIdleWaits );
-    SW_AUTOMATION_WATCH( rhiSupportsBC7, "RHI.SupportsBC7", "1 when this device can sample BC7 textures", &RHISubsystemInternal::readSupportsBC7 );
-    SW_AUTOMATION_WATCH( rhiMaterialTessellation, "RHI.MaterialTessellation", "1 when this device draws displaced materials (hull and domain stages on material shaders) - 0 on OpenGL and WebGPU",
-                         &RHISubsystemInternal::readMaterialTessellation );
-    SW_AUTOMATION_WATCH( rhiGPUCulling, "RHI.GPUCulling", "1 when compute culling writes the indirect draw counts on this device - 0 on DirectX 11 (CPU counts)", &RHISubsystemInternal::readGPUCulling );
-    SW_AUTOMATION_WATCH( rhiNativeBindless, "RHI.NativeBindless", "1 when shaders read textures by bindless index (DX12, Vulkan) - name-bound Fullscreen and Compute passes run only here", &RHISubsystemInternal::readNativeBindless );
-    SW_AUTOMATION_WATCH( rhiGeometryStage, "RHI.GeometryStage", "1 when pipeline passes can add a geometry stage - 0 on WebGPU and on Vulkan devices without geometryShader",
-                         &RHISubsystemInternal::readGeometryStage );
-    SW_AUTOMATION_WATCH( rhiTessellationStages, "RHI.TessellationStages", "1 when pipeline passes can add hull and domain stages - 0 on WebGPU and on Vulkan devices without tessellationShader (dzn)",
-                         &RHISubsystemInternal::readTessellationStages );
-    SW_AUTOMATION_WATCH( textureFormatVariantActive, "Texture.FormatVariantActive", "1 when textures read a cooked format variant instead of the imported DDS (0 on the desktop target)", &RHISubsystemInternal::readFormatVariantActive );
 } // namespace sw
 
 namespace sw

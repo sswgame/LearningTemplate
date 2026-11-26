@@ -4,6 +4,7 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Registry/RegistrationSlot.h"
 #include "Core/String/StringBuilder.h"
 
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
@@ -16,8 +17,11 @@ namespace sw
     {
         struct RenderDebugRegistryInternal
         {
-            /** @brief 바인딩 종류의 HLSL 레지스터 글자입니다(b 상수 · t 읽기 · u 읽고 쓰기 · s 샘플러). */
-            static const utf8* getRegisterLetter( ShaderBindingKind kind )
+            /** @brief 걸린 개발 검사 만들기 함수입니다(이미지에 하나 — 둘째는 거절). 함수 정적이라 등록자의 정적 초기화 순서와 무관하다. */
+            static SW_DEFINE_REGISTRATION_SLOT( getDebugChecksSlot, const IRenderDebugChecks::Factory, "RenderDebugChecks" )
+
+                /** @brief 바인딩 종류의 HLSL 레지스터 글자입니다(b 상수 · t 읽기 · u 읽고 쓰기 · s 샘플러). */
+                static const utf8* getRegisterLetter( ShaderBindingKind kind )
             {
                 switch ( kind )
                 {
@@ -309,5 +313,21 @@ namespace sw
 
 namespace sw
 {
+    unique_ptr<IRenderDebugChecks> IRenderDebugChecks::create()
+    {
+        const Factory* const pFactory = RenderDebugRegistryInternal::getDebugChecksSlot().get();
+        return pFactory != nullptr ? pFactory->_pCreate() : nullptr;
+    }
+
+    bool IRenderDebugChecks::attach( const Factory* pFactory )
+    {
+        return RenderDebugRegistryInternal::getDebugChecksSlot().setLogged( pFactory, "Render debug checks", "RenderDebugChecks" ) == RegistrationResult::Added;
+    }
+
+    void IRenderDebugChecks::detach( const Factory* pFactory )
+    {
+        (void)RenderDebugRegistryInternal::getDebugChecksSlot().reset( pFactory );
+    }
+
     SW_ENGINE_SUBSYSTEM_WITH_SLOT( RenderDebugRegistry, HostOnly, Process, Shared, (), SW_ENGINE_DEFAULT_FACTORY( RenderDebugRegistry ) );
 } // namespace sw

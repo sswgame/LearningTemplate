@@ -34,7 +34,6 @@ namespace sw
     class CommandLineSubsystem;
     class CompressionCodecRegistry;
     class ConfigManager;
-    class DebugDrawQueue;
     class DebugKeyActions;
     class EventDispatcher;
     class FontSubsystem;

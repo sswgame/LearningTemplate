@@ -114,9 +114,3 @@ namespace sw
         _submergedPontoonCount = 0;
     }
 } // namespace sw
-
-namespace sw
-{
-    SW_AUTOMATION_GETTER_WATCH( buoyancySubmergedPontoons, "Buoyancy.SubmergedPontoons", "Pontoons of the first buoyancy component that touched water in the last step", BuoyancyComponent,
-                                &BuoyancyComponent::getSubmergedPontoonCount );
-} // namespace sw

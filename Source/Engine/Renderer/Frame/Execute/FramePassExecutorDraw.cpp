@@ -48,6 +48,7 @@
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Renderer/Capture/FrameCapture.h"
+#include "Engine/Renderer/Debug/RenderDebugRegistry.h"
 #include "Engine/Renderer/Extension/RenderExtensionRegistry.h"
 #include "Engine/Renderer/Frame/Execute/FramePassExecutor.h"
 #include "Engine/Renderer/Frame/Execute/ViewGraphResource.h"
