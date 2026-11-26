@@ -41,7 +41,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/Bin$<0:>")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/Lib$<0:>")
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/Lib$<0:>")
 # 링크 PDB 는 실행 파일 · DLL 옆에 두지 않는다. Shipping 은 배포 폴더(Bin) 밖 `Symbols/`,
-# Dev(Release 포함)는 `Bin/Symbols/` 다 — 디버거는 이미지에 박힌 PDB 절대 경로로 찾고, 핫 리로드는 `ModuleLibraryUtil::findBuiltDebugSymbolPath` 로
+# Dev(Release 포함)는 `Bin/Symbols/` 다 — 디버거는 이미지에 박힌 PDB 절대 경로로 찾고, 핫 리로드는 `ModuleShadowCopy::findBuiltDebugSymbolPath` 로
 # 찾아 섀도 복사본 옆에 복사한다. 테스트 실행 파일은 TestBin 옆에 둔다(크래시 스택이 이름을 낸다).
 # 모듈 DLL(GF_* · RHI_* · EditorModule · SWGame)은 `Bin/Modules/`(`sw_set_module_bin_output`), Engine · GameFramework · 서드파티 DLL 은 `Bin/` 이다.
 if(SW_SHIPPING_BUILD)
@@ -315,7 +315,7 @@ endfunction()
 # sw_remove_stale_binary_outputs — Dev `Bin` 의 옛 산출물을 configure 때 지운다(ninja 는 지어 놓은 파일을 치우지 않는다).
 #   1) `Bin/Modules` 의 모듈 산출물(GF_* · RHI_* · EditorModule · SWGame*) 가운데 이 구성에서 꺼진 모듈의 것 — 켜진 모듈 것은 건드리지 않는다.
 #      서드파티 DLL · PDB(모듈 이름 꼴이 아닌 것 — 서드파티는 `Bin` 에 한 벌, `sw_stage_module_runtime_dlls`)와 옛 자리의 섀도 복사본(`<모듈>_temp_…` 파일 · Windows 폴더 —
-#      지금 복사본은 실행 뿌리 아래 `ModuleShadow` 에 둔다, `ShadowCopyName`). 아직 도는 옛 App 이 쓰는 것은 잠겨 있어 지워지지 않는다 — 아래 경고로 남는다.
+#      지금 복사본은 실행 뿌리 아래 `ModuleShadow` 에 둔다, `ModuleShadowCopy`). 아직 도는 옛 App 이 쓰는 것은 잠겨 있어 지워지지 않는다 — 아래 경고로 남는다.
 #   2) `Bin` 바로 아래의 옛 자리 산출물 — 모듈 DLL · PDB · 매니페스트(지금은 `Bin/Modules`), 테스트 실행 파일(지금은 `TestBin`),
 #      `Bin/Symbols` 에 같은 이름이 생긴 PDB(옛 자리).
 #   실행 중인 App · 테스트가 DLL 을 쥐고 있으면 지우지 못한다 — 경고만 하고 넘어간다(다음 configure 가 다시 지운다).

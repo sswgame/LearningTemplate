@@ -6,7 +6,6 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Animation/Component/SkeletalMeshComponent.h"
-#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -1014,27 +1013,4 @@ namespace sw
                         _director.getIntensity(), _killCount, static_cast<int32>( pPlayer->getHealth() ), weapon.getDef()._name.c_str(), weapon.getMagazineAmmo(),
                         weapon.getReserveAmmo(), static_cast<uint32>( _listEnemyView.size() ), percent );
     }
-} // namespace sw
-
-namespace sw
-{
-    namespace
-    {
-        struct ShooterEffectWatchInternal
-        {
-            /** @brief 감시 값 `Shooter.EffectCreatedCount` 입니다. 판의 효과 풀이 지금까지 새로 만든 인스턴스 수입니다. */
-            [[nodiscard]] static bool readEffectCreatedCount( const GameObjectManager* pManager, float64& outValue )
-            {
-                // 게임 모드는 씬에 하나다 — 둘이면 오류로 값이 없다(등록 순서로 고르지 않는다).
-                const ShooterGameModeComponent* pGameMode = pManager != nullptr ? pManager->getComponentRegistry().findUnique<ShooterGameModeComponent>() : nullptr;
-                if ( pGameMode == nullptr )
-                    return false;
-                outValue = static_cast<float64>( pGameMode->getEffectCreatedCount() );
-                return true;
-            }
-        };
-    } // namespace
-
-    SW_AUTOMATION_WATCH( shooterEffectCreatedCount, "Shooter.EffectCreatedCount", "Instances the effect pools of the shooter game mode created so far (reuse does not count)",
-                         &ShooterEffectWatchInternal::readEffectCreatedCount );
 } // namespace sw

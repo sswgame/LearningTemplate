@@ -691,7 +691,7 @@ namespace sw
 
         /**
          * @brief 이 패스가 그리는 배치의 머티리얼에 있어야 하는 define 입니다(유니티 Pass Tag `LightMode` 자리 — 예: 외곽선 패스의 `MATERIAL_OUTLINE`). 씬 메시 패스만 적는다(검증).
-         * @details 비면 패스 종류 표의 기본값이다(`RenderPassKindInfo::getDefaultMaterialFilter`). 표 기본값을 지우는 표기는 없다(shortcut: 빈 칸 = 기본값, 지울 패스가 생기면 `None` 같은 표기를 더한다).
+         * @details 비면 패스 종류 표의 기본값이다(`RenderPassKindInfo::getDefaultMaterialFilter`). 표 기본값을 지우는 표기는 두지 않는다. 유니티도 `LightMode` 가 없는 패스를 기본 태그로 그리고, 모든 배치를 그릴 패스는 그 종류의 표 기본값을 비운다.
          */
         PROPERTY( SkipIfEmpty )
         string _requiredMaterialDefine;

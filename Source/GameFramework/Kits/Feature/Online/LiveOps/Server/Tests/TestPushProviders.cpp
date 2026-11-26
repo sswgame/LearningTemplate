@@ -287,7 +287,7 @@ SW_TEST_CASE( APNSPushProviderTest, RetryAfter )
 SW_TEST_CASE( APNSPushProviderTest, Payload )
 {
     const PushNotificationMessage alert = PushTestUtil::makeAlert();
-    SW_EXPECT_TRUE( PushPayloadUtil::hasAlert( alert ) );
+    SW_EXPECT_TRUE( alert.hasAlert() );
     JSONDocument document;
     SW_REQUIRE_TRUE( document.tryParse( APNSPushProvider::makePayloadJSON( alert ) ) );
     SW_EXPECT_EQUAL( string( "title.key" ), PushTestUtil::readText( document, "aps.alert.title-loc-key" ) );
@@ -297,7 +297,7 @@ SW_TEST_CASE( APNSPushProviderTest, Payload )
 
     PushNotificationMessage silent;
     silent._deepLink = "event/x";
-    SW_EXPECT_FALSE( PushPayloadUtil::hasAlert( silent ) );
+    SW_EXPECT_FALSE( silent.hasAlert() );
     JSONDocument silentDocument;
     SW_REQUIRE_TRUE( silentDocument.tryParse( APNSPushProvider::makePayloadJSON( silent ) ) );
     SW_EXPECT_TRUE( PushTestUtil::readText( silentDocument, "aps.alert.loc-key" ).empty() );

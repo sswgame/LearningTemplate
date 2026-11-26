@@ -133,6 +133,19 @@ namespace sw
         string _deepLink{};                    ///< 앱이 열 화면이다(예: "mailbox", "event/halloween")
         string _arrArgument[kArgumentCount]{}; ///< 본문에 들어갈 인자이다
         int32  _badgeCount{ -1 };              ///< -1이면 배지를 건드리지 않는다
+
+        /** @brief 문구(제목 · 본문 키)가 있어 보이는 알림이면 true 입니다. 없으면 조용한 알림(데이터만)입니다. */
+        bool hasAlert() const { return _titleKey.empty() == false || _bodyKey.empty() == false; }
+        /** @brief 앞쪽에서 비지 않은 인자 수입니다(첫 빈 인자에서 멈춘다). */
+        int32 countArguments() const
+        {
+            int32 count = 0;
+            while ( count < kArgumentCount && _arrArgument[count].empty() == false )
+            {
+                ++count;
+            }
+            return count;
+        }
     };
 } // namespace sw
 

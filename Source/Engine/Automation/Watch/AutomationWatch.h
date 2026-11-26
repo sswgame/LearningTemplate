@@ -207,7 +207,7 @@ namespace sw
 
     /**
      * @brief 감시 값을 등록합니다(.cpp 의 파일 범위, `namespace sw` 안). @p id 는 정적 이름을 만드는 식별자, @p pName 은 시나리오가 쓰는 이름입니다.
-     * @details Shipping 은 Engine · GameFramework · 키트 · 게임을 통째로 링크하므로(`sw_link_whole_archive`) 어느 .cpp 에 두어도 등록자가 링크에서 빠지지 않는다.
+     * @details 개발 전용 소스(DevFolders.json 의 `Dev/` · DevTools · GameFrameworkDev)에 둔다. 배포 구성에서 이 매크로는 컴파일 오류다(배포가 짓는 TU 에 감시 값 본문을 둘 수 없다).
      */
     #define SW_AUTOMATION_WATCH( id, pName, pTooltip, pFunction ) SW_STATIC_REGISTRATION( automationWatch, ::sw::AutomationWatchRegistration, ::sw::AutomationWatchRegistrar, id, pName, pTooltip, pFunction, nullptr, false, false, false, nullptr )
 
@@ -234,12 +234,10 @@ namespace sw
 
 #else
 
-// 자동화를 뺀 배포본(`SW_SHIPPING`): 등록하지 않고 본문 함수만 붙잡는다.
-    #define SW_AUTOMATION_WATCH( id, pName, pTooltip, pFunction ) [[maybe_unused]] static constexpr auto sw_automationWatchUnused_##id = pFunction
-    #define SW_AUTOMATION_WALL_WATCH( id, pName, pTooltip, pFunction, pActivity )                 \
-        [[maybe_unused]] static constexpr auto sw_automationWatchUnused_##id         = pFunction; \
-        [[maybe_unused]] static constexpr auto sw_automationWatchActivityUnused_##id = pActivity
-    #define SW_AUTOMATION_SCENE_WATCH( id, pName, pTooltip, pSceneFunction )                          [[maybe_unused]] static constexpr auto sw_automationWatchUnused_##id = pSceneFunction
-    #define SW_AUTOMATION_QUERY_WATCH( id, pName, pTooltip, pQueryFunction, bNeedsTarget, bNeedsKey ) [[maybe_unused]] static constexpr auto sw_automationWatchUnused_##id = pQueryFunction
+// 자동화를 뺀 배포본(`SW_SHIPPING`): 감시 값은 개발 전용 소스에만 둔다 — 배포가 짓는 TU 에 두면 컴파일되지 않는다.
+    #define SW_AUTOMATION_WATCH( id, pName, pTooltip, pFunction )                                     static_assert( false, "SW_AUTOMATION_WATCH is a development registration: move it to a development-only source (a Dev/ folder of DevFolders.json, Tests/, DevTools or GameFrameworkDev) - shipping does not build those" )
+    #define SW_AUTOMATION_WALL_WATCH( id, pName, pTooltip, pFunction, pActivity )                     static_assert( false, "SW_AUTOMATION_WALL_WATCH is a development registration: move it to a development-only source (a Dev/ folder of DevFolders.json, Tests/, DevTools or GameFrameworkDev) - shipping does not build those" )
+    #define SW_AUTOMATION_SCENE_WATCH( id, pName, pTooltip, pSceneFunction )                          static_assert( false, "SW_AUTOMATION_SCENE_WATCH is a development registration: move it to a development-only source (a Dev/ folder of DevFolders.json, Tests/, DevTools or GameFrameworkDev) - shipping does not build those" )
+    #define SW_AUTOMATION_QUERY_WATCH( id, pName, pTooltip, pQueryFunction, bNeedsTarget, bNeedsKey ) static_assert( false, "SW_AUTOMATION_QUERY_WATCH is a development registration: move it to a development-only source (a Dev/ folder of DevFolders.json, Tests/, DevTools or GameFrameworkDev) - shipping does not build those" )
 
 #endif // !SW_SHIPPING

@@ -45,6 +45,7 @@
 #include "Engine/Environment/Terrain/TerrainMeshBuilder.h"
 #include "Engine/Environment/Water/BoatComponent.h"
 #include "Engine/Environment/Water/BuoyancyComponent.h"
+#include "Engine/Environment/Water/BuoyancyVolumeComponent.h"
 #include "Engine/Environment/Water/WaterBodyComponent.h"
 #include "Engine/Environment/Wind/WindComponent.h"
 #include "Engine/Foundation/DeterministicRun.h"
@@ -644,4 +645,10 @@ namespace sw
 namespace sw
 {
     SW_AUTOMATION_GETTER_WATCH( foliageCutCount, "Foliage.CutCount", "Instances of the first foliage component hidden by cuts now", FoliageComponent, &FoliageComponent::getCutInstanceCount );
+} // namespace sw
+
+namespace sw
+{
+    SW_AUTOMATION_GETTER_WATCH( buoyancyVolumeSubmergedBodies, "BuoyancyVolume.SubmergedBodies", "Bodies the first water box floated in the last fixed step", BuoyancyVolumeComponent,
+                                &BuoyancyVolumeComponent::getSubmergedBodyCount );
 } // namespace sw

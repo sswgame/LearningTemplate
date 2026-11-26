@@ -183,7 +183,7 @@ SW_TEST_CASE_F( SRPGRulesTest, StrikeFormula )
     const int32 heavyT = place( "heavy", sw::SRPGTeam::Enemy, sw::int2{ 5, 0 } ).value();
     const int32 keen   = place( "striker", sw::SRPGTeam::Player, sw::int2{ 6, 6 } ).value();
     const auto  strike = [this]( int32 attacker, int32 weapon, int32 defender, int32 percent = 100 )
-    { return sw::SRPGCombat::computeStrike( _field, attacker, unit( attacker )._cell, weapon, defender, unit( defender )._cell, percent ); };
+    { return _field.computeStrike( attacker, unit( attacker )._cell, weapon, defender, unit( defender )._cell, percent ); };
 
     const sw::SRPGStrikePreview base = strike( rookie, 0, plainT ); // 소총: 2000 - 500, 명중 70 + 10 - 운동성 10, 크리티컬 5 + 5
     SW_EXPECT_EQUAL( 1500, base._damage );
@@ -227,7 +227,7 @@ SW_TEST_CASE_F( SRPGRulesTest, StrikeFormula )
     SW_EXPECT_EQUAL( 0, strike( keen, 0, plainT )._crit );
     SW_EXPECT_EQUAL( 100, strike( keen, 1, plainT )._crit );
 
-    SW_EXPECT_FALSE( sw::SRPGCombat::computeStrike( _field, -1, sw::int2{}, 0, plainT, unit( plainT )._cell ).isValid() );
+    SW_EXPECT_FALSE( _field.computeStrike( -1, sw::int2{}, 0, plainT, unit( plainT )._cell ).isValid() );
     SW_EXPECT_FALSE( strike( rookie, 9, plainT ).isValid() );
 }
 
@@ -260,16 +260,16 @@ SW_TEST_CASE_F( SRPGRulesTest, WeaponStatusAndForecastRefusals )
 
     shooter._en = 100;
     sw::SRPGForecast forecast;
-    SW_EXPECT_EQUAL( sw::SRPGWeaponStatus::InvalidTarget, sw::SRPGCombat::computeForecast( _field, attacker, 0, ally, forecast ) ); // 아군
-    SW_EXPECT_EQUAL( sw::SRPGWeaponStatus::InvalidTarget, sw::SRPGCombat::computeForecast( _field, attacker, 0, 99, forecast ) );
-    SW_EXPECT_EQUAL( sw::SRPGWeaponStatus::InvalidTarget, sw::SRPGCombat::computeForecast( _field, 99, 0, closeFoe, forecast ) );
-    SW_EXPECT_EQUAL( sw::SRPGWeaponStatus::OutOfRange, sw::SRPGCombat::computeForecast( _field, attacker, 0, distantFoe, forecast ) );
-    SW_EXPECT_EQUAL( sw::SRPGWeaponStatus::OutOfRange, sw::SRPGCombat::computeForecast( _field, attacker, 2, closeFoe, forecast ) );    // 최소 사거리 2
-    SW_EXPECT_EQUAL( sw::SRPGWeaponStatus::InvalidWeapon, sw::SRPGCombat::computeForecast( _field, attacker, 3, closeFoe, forecast ) ); // MAP 병기
-    SW_EXPECT_EQUAL( sw::SRPGWeaponStatus::Ok, sw::SRPGCombat::computeForecast( _field, attacker, 0, closeFoe, forecast ) );
+    SW_EXPECT_EQUAL( sw::SRPGWeaponStatus::InvalidTarget, _field.computeForecast( attacker, 0, ally, forecast ) ); // 아군
+    SW_EXPECT_EQUAL( sw::SRPGWeaponStatus::InvalidTarget, _field.computeForecast( attacker, 0, 99, forecast ) );
+    SW_EXPECT_EQUAL( sw::SRPGWeaponStatus::InvalidTarget, _field.computeForecast( 99, 0, closeFoe, forecast ) );
+    SW_EXPECT_EQUAL( sw::SRPGWeaponStatus::OutOfRange, _field.computeForecast( attacker, 0, distantFoe, forecast ) );
+    SW_EXPECT_EQUAL( sw::SRPGWeaponStatus::OutOfRange, _field.computeForecast( attacker, 2, closeFoe, forecast ) );    // 최소 사거리 2
+    SW_EXPECT_EQUAL( sw::SRPGWeaponStatus::InvalidWeapon, _field.computeForecast( attacker, 3, closeFoe, forecast ) ); // MAP 병기
+    SW_EXPECT_EQUAL( sw::SRPGWeaponStatus::Ok, _field.computeForecast( attacker, 0, closeFoe, forecast ) );
 
     unit( closeFoe )._bAlive = SW_FALSE;
-    SW_EXPECT_EQUAL( sw::SRPGWeaponStatus::InvalidTarget, sw::SRPGCombat::computeForecast( _field, attacker, 0, closeFoe, forecast ) );
+    SW_EXPECT_EQUAL( sw::SRPGWeaponStatus::InvalidTarget, _field.computeForecast( attacker, 0, closeFoe, forecast ) );
 }
 
 /**
@@ -284,9 +284,9 @@ SW_TEST_CASE_F( SRPGRulesTest, ExecuteAttackAppliesEverything )
     _field.beginBattle();
 
     sw::SRPGCombatResult result;
-    SW_EXPECT_EQUAL( sw::SRPGWeaponStatus::CannotAct, sw::SRPGCombat::executeAttack( _field, target, 0, attacker, result ) ); // 적 차례가 아니다
+    SW_EXPECT_EQUAL( sw::SRPGWeaponStatus::CannotAct, _field.executeAttack( target, 0, attacker, result ) ); // 적 차례가 아니다
 
-    SW_REQUIRE_EQUAL( sw::SRPGWeaponStatus::Ok, sw::SRPGCombat::executeAttack( _field, attacker, 0, target, result ) );
+    SW_REQUIRE_EQUAL( sw::SRPGWeaponStatus::Ok, _field.executeAttack( attacker, 0, target, result ) );
     SW_REQUIRE_EQUAL( size_t( 1 ), result._listStrike.size() ); // 표적은 무기가 없어 반격이 없다
     SW_EXPECT_EQUAL( sw::SRPGStrikeRole::Main, result._listStrike[0]._role );
     SW_EXPECT_TRUE( result._listStrike[0]._bHit == SW_TRUE );
@@ -300,11 +300,11 @@ SW_TEST_CASE_F( SRPGRulesTest, ExecuteAttackAppliesEverything )
     SW_EXPECT_EQUAL( 1, countEvents( sw::SRPGEvent::Kind::UnitLevelUp ) );
     SW_EXPECT_EQUAL( 1, countEvents( sw::SRPGEvent::Kind::Hit ) );
 
-    SW_EXPECT_EQUAL( sw::SRPGWeaponStatus::CannotAct, sw::SRPGCombat::executeAttack( _field, attacker, 0, target, result ) );
+    SW_EXPECT_EQUAL( sw::SRPGWeaponStatus::CannotAct, _field.executeAttack( attacker, 0, target, result ) );
     SW_EXPECT_TRUE( result._listStrike.empty() );
     SW_EXPECT_EQUAL( 1500, unit( target )._hp );
 
-    SW_REQUIRE_EQUAL( sw::SRPGWeaponStatus::Ok, sw::SRPGCombat::executeAttack( _field, rifleman, 0, target, result ) );
+    SW_REQUIRE_EQUAL( sw::SRPGWeaponStatus::Ok, _field.executeAttack( rifleman, 0, target, result ) );
     SW_EXPECT_EQUAL( 90, unit( rifleman )._en );
     SW_EXPECT_EQUAL( 1, unit( rifleman )._listAmmo[0] );
 }
@@ -321,7 +321,7 @@ SW_TEST_CASE_F( SRPGRulesTest, CritAndKill )
     unit( tough )._hp = 2000;
 
     sw::SRPGCombatResult result;
-    SW_REQUIRE_EQUAL( sw::SRPGWeaponStatus::Ok, sw::SRPGCombat::executeAttack( _field, attacker, 1, tough, result ) );
+    SW_REQUIRE_EQUAL( sw::SRPGWeaponStatus::Ok, _field.executeAttack( attacker, 1, tough, result ) );
     SW_REQUIRE_EQUAL( size_t( 1 ), result._listStrike.size() ); // 격파되어 반격이 없다
     SW_EXPECT_TRUE( result._listStrike[0]._bCrit == SW_TRUE );
     SW_EXPECT_EQUAL( 2250, result._listStrike[0]._damage );
@@ -350,7 +350,7 @@ SW_TEST_CASE_F( SRPGRulesTest, XPMoraleAndDamageBounds )
     _field.beginBattle();
 
     sw::SRPGCombatResult result;
-    SW_REQUIRE_EQUAL( sw::SRPGWeaponStatus::Ok, sw::SRPGCombat::executeAttack( _field, attacker, 0, senior, result ) );
+    SW_REQUIRE_EQUAL( sw::SRPGWeaponStatus::Ok, _field.executeAttack( attacker, 0, senior, result ) );
     SW_EXPECT_EQUAL( int64( 14 ), unit( attacker )._pilotLevel.getTotalXP() ); // 10 + 2 × 2
 
     sw::SRPGSettings stingy = _settings;
@@ -362,7 +362,7 @@ SW_TEST_CASE_F( SRPGRulesTest, XPMoraleAndDamageBounds )
     const int32 kid   = poor.addUnit( "dummy", "rookie", sw::SRPGTeam::Enemy, sw::int2{ 1, 0 }, 1 ).value();
     poor.beginBattle();
     const int64 before = poor.findUnit( elder )->_pilotLevel.getTotalXP();
-    SW_REQUIRE_EQUAL( sw::SRPGWeaponStatus::Ok, sw::SRPGCombat::executeAttack( poor, elder, 0, kid, result ) );
+    SW_REQUIRE_EQUAL( sw::SRPGWeaponStatus::Ok, poor.executeAttack( elder, 0, kid, result ) );
     SW_EXPECT_EQUAL( before + 1, poor.findUnit( elder )->_pilotLevel.getTotalXP() ); // 음수가 아니라 1
 
     _field.addMorale( junior, 1000 );
@@ -388,19 +388,19 @@ SW_TEST_CASE_F( SRPGRulesTest, CounterAttack )
     const int32 distant  = place( "weak", sw::SRPGTeam::Enemy, sw::int2{ 5, 0 } ).value();
     const int32 unarmed  = place( "dummy", sw::SRPGTeam::Enemy, sw::int2{ 0, 2 } ).value();
     _field.beginBattle();
-    SW_EXPECT_TRUE( sw::SRPGCombat::findCounterWeapon( _field, fighter, attacker, unit( attacker )._cell ) == 1 ); // pea 보다 sure
-    SW_EXPECT_FALSE( sw::SRPGCombat::findCounterWeapon( _field, distant, attacker, unit( attacker )._cell ).has_value() );
-    SW_EXPECT_FALSE( sw::SRPGCombat::findCounterWeapon( _field, unarmed, attacker, unit( attacker )._cell ).has_value() );
-    SW_EXPECT_FALSE( sw::SRPGCombat::findCounterWeapon( _field, 99, attacker, unit( attacker )._cell ).has_value() );
+    SW_EXPECT_TRUE( _field.findCounterWeapon( fighter, attacker, unit( attacker )._cell ) == 1 ); // pea 보다 sure
+    SW_EXPECT_FALSE( _field.findCounterWeapon( distant, attacker, unit( attacker )._cell ).has_value() );
+    SW_EXPECT_FALSE( _field.findCounterWeapon( unarmed, attacker, unit( attacker )._cell ).has_value() );
+    SW_EXPECT_FALSE( _field.findCounterWeapon( 99, attacker, unit( attacker )._cell ).has_value() );
 
     sw::SRPGCombatResult result;
-    SW_REQUIRE_EQUAL( sw::SRPGWeaponStatus::Ok, sw::SRPGCombat::executeAttack( _field, attacker, 0, fighter, result ) );
+    SW_REQUIRE_EQUAL( sw::SRPGWeaponStatus::Ok, _field.executeAttack( attacker, 0, fighter, result ) );
     SW_REQUIRE_EQUAL( size_t( 2 ), result._listStrike.size() );
     SW_EXPECT_EQUAL( sw::SRPGStrikeRole::Counter, result._listStrike[1]._role );
     SW_EXPECT_EQUAL( 1500, unit( attacker )._hp );
 
     sw::SRPGForecast forecast;
-    (void)sw::SRPGCombat::computeForecast( _field, attacker, 2, distant, forecast ); // long: 사거리 안, 상대의 무기는 닿지 않는다
+    (void)_field.computeForecast( attacker, 2, distant, forecast ); // long: 사거리 안, 상대의 무기는 닿지 않는다
     SW_EXPECT_FALSE( forecast._counter.isValid() );
 }
 
@@ -421,18 +421,18 @@ SW_TEST_CASE_F( SRPGRulesTest, SupportDefense )
     unit( guard )._hp   = 2500;
 
     sw::SRPGForecast forecast;
-    SW_REQUIRE_EQUAL( sw::SRPGWeaponStatus::Ok, sw::SRPGCombat::computeForecast( _field, first, 0, target, forecast ) );
+    SW_REQUIRE_EQUAL( sw::SRPGWeaponStatus::Ok, _field.computeForecast( first, 0, target, forecast ) );
     SW_EXPECT_TRUE( forecast._supportDefender == guard );
     SW_EXPECT_EQUAL( guard, forecast._attack._defender );
     SW_EXPECT_EQUAL( 750, forecast._attack._damage );
 
     sw::SRPGCombatResult result;
-    SW_REQUIRE_EQUAL( sw::SRPGWeaponStatus::Ok, sw::SRPGCombat::executeAttack( _field, first, 0, target, result ) );
+    SW_REQUIRE_EQUAL( sw::SRPGWeaponStatus::Ok, _field.executeAttack( first, 0, target, result ) );
     SW_EXPECT_EQUAL( 3000, unit( target )._hp );
     SW_EXPECT_EQUAL( 1750, unit( guard )._hp );
     SW_EXPECT_TRUE( unit( guard )._bSupportUsed == SW_TRUE );
 
-    SW_REQUIRE_EQUAL( sw::SRPGWeaponStatus::Ok, sw::SRPGCombat::executeAttack( _field, second, 0, target, result ) );
+    SW_REQUIRE_EQUAL( sw::SRPGWeaponStatus::Ok, _field.executeAttack( second, 0, target, result ) );
     SW_EXPECT_EQUAL( 1500, unit( target )._hp ); // 지킬 이가 없다
     SW_EXPECT_EQUAL( 1125, unit( fragile )._hp );
 }
@@ -453,13 +453,13 @@ SW_TEST_CASE_F( SRPGRulesTest, SupportAttack )
     unit( frail )._hp = 1;
 
     sw::SRPGCombatResult result;
-    SW_REQUIRE_EQUAL( sw::SRPGWeaponStatus::Ok, sw::SRPGCombat::executeAttack( _field, attacker, 0, frail, result ) );
+    SW_REQUIRE_EQUAL( sw::SRPGWeaponStatus::Ok, _field.executeAttack( attacker, 0, frail, result ) );
     SW_EXPECT_EQUAL( size_t( 1 ), result._listStrike.size() );
     SW_EXPECT_TRUE( unit( helper )._bSupportUsed == SW_FALSE );
     SW_EXPECT_EQUAL( 100, unit( helper )._en );
 
     unit( attacker )._bAttacked = SW_FALSE; // 같은 판에서 한 번 더 친다
-    SW_REQUIRE_EQUAL( sw::SRPGWeaponStatus::Ok, sw::SRPGCombat::executeAttack( _field, attacker, 0, tall, result ) );
+    SW_REQUIRE_EQUAL( sw::SRPGWeaponStatus::Ok, _field.executeAttack( attacker, 0, tall, result ) );
     SW_REQUIRE_EQUAL( size_t( 2 ), result._listStrike.size() );
     SW_EXPECT_EQUAL( sw::SRPGStrikeRole::Support, result._listStrike[1]._role );
     SW_EXPECT_EQUAL( helper, result._listStrike[1]._preview._attacker );
@@ -485,12 +485,12 @@ SW_TEST_CASE_F( SRPGRulesTest, SyncAttack )
     unit( partner )._listAmmo[0] = 1;
 
     sw::SRPGForecast forecast;
-    SW_REQUIRE_EQUAL( sw::SRPGWeaponStatus::Ok, sw::SRPGCombat::computeForecast( _field, attacker, 0, target, forecast ) );
+    SW_REQUIRE_EQUAL( sw::SRPGWeaponStatus::Ok, _field.computeForecast( attacker, 0, target, forecast ) );
     SW_REQUIRE_EQUAL( size_t( 1 ), forecast._listSync.size() );
     SW_EXPECT_EQUAL( partner, forecast._listSync[0]._attacker );
 
     sw::SRPGCombatResult result;
-    SW_REQUIRE_EQUAL( sw::SRPGWeaponStatus::Ok, sw::SRPGCombat::executeAttack( _field, attacker, 0, target, result ) );
+    SW_REQUIRE_EQUAL( sw::SRPGWeaponStatus::Ok, _field.executeAttack( attacker, 0, target, result ) );
     SW_REQUIRE_EQUAL( size_t( 2 ), result._listStrike.size() );
     SW_EXPECT_EQUAL( sw::SRPGStrikeRole::Sync, result._listStrike[1]._role );
     SW_EXPECT_EQUAL( forecast._listSync[0]._damage, result._listStrike[1]._preview._damage );
@@ -504,7 +504,7 @@ SW_TEST_CASE_F( SRPGRulesTest, SyncAttack )
     const int32 victim = second.addUnit( "dummy", "rookie", sw::SRPGTeam::Enemy, sw::int2{ 1, 0 } ).value();
     second.beginBattle();
     second.findUnit( victim )->_hp = 1;
-    SW_REQUIRE_EQUAL( sw::SRPGWeaponStatus::Ok, sw::SRPGCombat::executeAttack( second, killer, 0, victim, result ) );
+    SW_REQUIRE_EQUAL( sw::SRPGWeaponStatus::Ok, second.executeAttack( killer, 0, victim, result ) );
     SW_EXPECT_EQUAL( size_t( 1 ), result._listStrike.size() );
 }
 
@@ -555,20 +555,20 @@ SW_TEST_CASE_F( SRPGRulesTest, MapAttack )
     _field.beginBattle();
 
     sw::SRPGCombatResult result;
-    SW_EXPECT_EQUAL( sw::SRPGWeaponStatus::CannotAct, sw::SRPGCombat::executeMapAttack( _field, closeFoe, 0, sw::int2{ 0, 0 }, result ) );
-    SW_EXPECT_EQUAL( sw::SRPGWeaponStatus::InvalidWeapon, sw::SRPGCombat::executeMapAttack( _field, gm, 0, sw::int2{ 3, 2 }, result ) ); // 일반 무기
-    SW_EXPECT_EQUAL( sw::SRPGWeaponStatus::InvalidTarget, sw::SRPGCombat::executeMapAttack( _field, gm, 3, sw::int2{ 2, 7 }, result ) ); // 아군만 있다
-    SW_EXPECT_EQUAL( 100, unit( gm )._en );                                                                                              // 쏘지 않았다
+    SW_EXPECT_EQUAL( sw::SRPGWeaponStatus::CannotAct, _field.executeMapAttack( closeFoe, 0, sw::int2{ 0, 0 }, result ) );
+    SW_EXPECT_EQUAL( sw::SRPGWeaponStatus::InvalidWeapon, _field.executeMapAttack( gm, 0, sw::int2{ 3, 2 }, result ) ); // 일반 무기
+    SW_EXPECT_EQUAL( sw::SRPGWeaponStatus::InvalidTarget, _field.executeMapAttack( gm, 3, sw::int2{ 2, 7 }, result ) ); // 아군만 있다
+    SW_EXPECT_EQUAL( 100, unit( gm )._en );                                                                             // 쏘지 않았다
     SW_EXPECT_TRUE( unit( gm )._bAttacked == SW_FALSE );
 
-    SW_REQUIRE_EQUAL( sw::SRPGWeaponStatus::Ok, sw::SRPGCombat::executeMapAttack( _field, gm, 3, sw::int2{ 7, 2 }, result ) );
+    SW_REQUIRE_EQUAL( sw::SRPGWeaponStatus::Ok, _field.executeMapAttack( gm, 3, sw::int2{ 7, 2 }, result ) );
     SW_REQUIRE_EQUAL( size_t( 2 ), result._listStrike.size() );
     SW_EXPECT_EQUAL( sw::SRPGStrikeRole::Map, result._listStrike[0]._role );
     SW_EXPECT_EQUAL( 1500, unit( closeFoe )._hp );
     SW_EXPECT_EQUAL( 1500, unit( next )._hp );
     SW_EXPECT_EQUAL( 80, unit( gm )._en );
     SW_EXPECT_EQUAL( 3000, unit( gm )._hp ); // 반격이 없다
-    SW_EXPECT_EQUAL( sw::SRPGWeaponStatus::CannotAct, sw::SRPGCombat::executeMapAttack( _field, gm, 3, sw::int2{ 7, 2 }, result ) );
+    SW_EXPECT_EQUAL( sw::SRPGWeaponStatus::CannotAct, _field.executeMapAttack( gm, 3, sw::int2{ 7, 2 }, result ) );
 
     _settings._bMapFriendlyFire = true;
     sw::SRPGBattlefield friendly;
@@ -576,7 +576,7 @@ SW_TEST_CASE_F( SRPGRulesTest, MapAttack )
     const int32 shooter = friendly.addUnit( "gm", "rookie", sw::SRPGTeam::Player, sw::int2{ 2, 2 } ).value();
     const int32 buddy   = friendly.addUnit( "dummy", "rookie", sw::SRPGTeam::Player, sw::int2{ 2, 3 } ).value();
     friendly.beginBattle();
-    SW_REQUIRE_EQUAL( sw::SRPGWeaponStatus::Ok, sw::SRPGCombat::executeMapAttack( friendly, shooter, 3, sw::int2{ 2, 7 }, result ) );
+    SW_REQUIRE_EQUAL( sw::SRPGWeaponStatus::Ok, friendly.executeMapAttack( shooter, 3, sw::int2{ 2, 7 }, result ) );
     SW_EXPECT_EQUAL( 1500, friendly.findUnit( buddy )->_hp );
     SW_EXPECT_EQUAL( 3000, friendly.findUnit( shooter )->_hp );
 }
@@ -603,8 +603,8 @@ SW_TEST_CASE_F( SRPGRulesTest, CombatIsDeterministic )
     {
         sw::SRPGCombatResult       left;
         sw::SRPGCombatResult       right;
-        const sw::SRPGWeaponStatus status = sw::SRPGCombat::executeAttack( _field, attacker, 0, target, left );
-        SW_EXPECT_EQUAL( status, sw::SRPGCombat::executeAttack( twin, attacker, 0, target, right ) );
+        const sw::SRPGWeaponStatus status = _field.executeAttack( attacker, 0, target, left );
+        SW_EXPECT_EQUAL( status, twin.executeAttack( attacker, 0, target, right ) );
         SW_REQUIRE_EQUAL( left._listStrike.size(), right._listStrike.size() );
         for ( size_t index = 0; index < left._listStrike.size(); ++index )
         {
@@ -913,7 +913,7 @@ SW_TEST_CASE_F( SRPGRulesTest, StateRoundTrip )
     const int32 target   = place( "heavy", sw::SRPGTeam::Enemy, sw::int2{ 1, 0 } ).value();
     _field.beginBattle();
     sw::SRPGCombatResult result;
-    (void)sw::SRPGCombat::executeAttack( _field, attacker, 0, target, result );
+    (void)_field.executeAttack( attacker, 0, target, result );
 
     sw::Archive written;
     _field.writeState( written );

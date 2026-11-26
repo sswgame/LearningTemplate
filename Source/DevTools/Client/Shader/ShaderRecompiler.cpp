@@ -39,7 +39,7 @@ namespace sw
                 return pLiveShader != nullptr ? pLiveShader->findShaderRecompiler() : nullptr;
             }
 
-            /** @brief 감시 값 `Shader.LiveRecompile`: 이 실행에 셰이더 재컴파일기(Ctrl+F8)가 섰으면 1 입니다(Debug 클라이언트만 세운다, `LiveShaderSubsystem`). 셰이더 리로드 시나리오의 `<SkipUnless>` 가 본다. */
+            /** @brief 감시 값 `Shader.LiveRecompile`: 이 실행에 셰이더 재컴파일기(Ctrl+F8)가 섰으면 1 입니다(`gv_liveShaderRecompile`, `LiveShaderSubsystem`). 셰이더 리로드 시나리오가 켰는지 확인한다. */
             [[nodiscard]] static bool readLiveCompiler( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 outValue = findRecompiler() != nullptr ? 1.0 : 0.0;
@@ -58,7 +58,7 @@ namespace sw
         };
     } // namespace
 
-    SW_AUTOMATION_WATCH( shaderLiveRecompile, "Shader.LiveRecompile", "1 when this run has the live shader recompiler (Ctrl+F8 - Debug clients only), else 0",
+    SW_AUTOMATION_WATCH( shaderLiveRecompile, "Shader.LiveRecompile", "1 when this run has the live shader recompiler (Ctrl+F8 - gv_liveShaderRecompile), else 0",
                          &ShaderRecompilerInternal::readLiveCompiler );
     SW_AUTOMATION_WATCH( shaderRecompilePassCount, "Shader.RecompilePassCount", "Shader recompile passes (Ctrl+F8) that finished in this run",
                          &ShaderRecompilerInternal::readCompilePassCount );

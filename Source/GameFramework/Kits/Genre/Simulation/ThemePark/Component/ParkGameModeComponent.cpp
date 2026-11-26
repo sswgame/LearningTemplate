@@ -6,7 +6,6 @@
 #include "Core/Math/OrientationUtil.h"
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
-#include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -35,13 +34,6 @@ namespace sw
             static constexpr float32 kEntranceSideDistance   = 5.0f;  ///< 스테이션에서 줄 입구까지 바깥쪽 거리(m)
             static constexpr int32   kCoasterBaseRunningCost = 8;     ///< 코스터의 분당 운영비 바탕
             static constexpr float32 kTrackPerRunningCost    = 60.0f; ///< 트랙 이만큼(m)마다 분당 운영비가 1 오른다
-
-            /** @brief 시나리오 프로브입니다. 첫 공원 디렉터의 손님 수를 반환하며, 그림자 장면이 비어 있지 않다는 전제를 확인합니다. */
-            [[nodiscard]] static bool readGuestCount( const ParkGameModeComponent& gameMode, float64& outValue )
-            {
-                outValue = static_cast<float64>( gameMode.getSimulation().getGuestCount() );
-                return true;
-            }
         };
     } // namespace
 } // namespace sw
@@ -462,9 +454,4 @@ namespace sw
                             static_cast<uint32>( ride._listQueue.size() ), static_cast<uint32>( ride._listRider.size() ), ride._totalRiders, ride._totalIncome, ride._price );
         }
     }
-} // namespace sw
-
-namespace sw
-{
-    SW_AUTOMATION_COMPONENT_WATCH( parkGuestCount, "ThemePark.GuestCount", "Guests in the park of the first park game mode", ParkGameModeComponent, &ParkGameModeComponentInternal::readGuestCount );
 } // namespace sw

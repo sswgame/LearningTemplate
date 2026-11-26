@@ -2,7 +2,8 @@
 
 #include "DevTools/Client/Shader/LiveShaderSubsystem.h"
 
-#include "Core/Foundation/BuildInfo.h"
+#include "Core/Foundation/BuildConfig.h"
+#include "Core/GlobalVariable/GlobalVariableManager.h"
 
 #include "DevTools/Client/Shader/ShaderRecompiler.h"
 
@@ -15,6 +16,12 @@
 
 namespace sw
 {
+    /**
+     * @brief `-gv_liveShaderRecompile=1` — 재컴파일기(Ctrl+F8)를 세웁니다. 기본은 Debug 만 켠다(파일 감시 · 재컴파일 큐를 측정 빌드에 두지 않는다).
+     * @details 개발 빌드(Release)는 셰이더 리로드 시나리오가 `<Launch>` 로 켠다. 언리얼 `r.ShaderDevelopmentMode` 자리.
+     */
+    SW_TEST_GLOBAL_VARIABLE( bool, gv_liveShaderRecompile, build::kDebug, "Build the live shader recompiler (Ctrl+F8). On by default in Debug only; scenarios turn it on in Release" );
+
     LiveShaderSubsystem::LiveShaderSubsystem( const FrameRendererSubsystem& frameRendererSubsystem, const RenderThreadSubsystem& renderThreadSubsystem )
         : _shaderRecompiler{ nullptr }
         , _recompiledSubscription{}
@@ -28,8 +35,7 @@ namespace sw
 
     SubsystemInitResult LiveShaderSubsystem::initializeSubsystem()
     {
-        // 라이브 리로드는 Debug 클라이언트만 — 파일 감시 · 재컴파일기를 Release(측정 빌드)에 세우지 않는다. 갈래는 모든 구성에서 컴파일된다.
-        if constexpr ( build::kDebug )
+        if ( gv_liveShaderRecompile )
         {
             _bReady = SW_FALSE;
             if ( _shaderRecompiler == nullptr )

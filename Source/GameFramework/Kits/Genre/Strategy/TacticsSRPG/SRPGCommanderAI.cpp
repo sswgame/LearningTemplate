@@ -83,7 +83,7 @@ namespace sw
                     continue;
                 for ( int32 targetIndex = 0; targetIndex < static_cast<int32>( field.getUnits().size() ); ++targetIndex )
                 {
-                    const SRPGWeaponStatus status = SRPGCombat::computeForecastFrom( field, unitIndex, stand, weaponIndex, targetIndex, bAfterMove, forecast );
+                    const SRPGWeaponStatus status = field.computeForecastFrom( unitIndex, stand, weaponIndex, targetIndex, bAfterMove, forecast );
                     if ( status != SRPGWeaponStatus::Ok )
                         continue;
                     const int32 score   = SRPGCommanderAIInternal::scoreForecast( field, _settings, unit, forecast );
@@ -128,7 +128,7 @@ namespace sw
         if ( ( bInPlace || field.moveUnit( unitIndex, plan._moveCell ) ) && plan._attack.has_value() )
         {
             SRPGCombatResult result;
-            (void)SRPGCombat::executeAttack( field, unitIndex, plan._attack->_weapon, plan._attack->_target, result ); // 결과는 result 로 넘긴다
+            (void)field.executeAttack( unitIndex, plan._attack->_weapon, plan._attack->_target, result ); // 결과는 result 로 넘긴다
             if ( pOutResult != nullptr )
                 *pOutResult = result;
         }

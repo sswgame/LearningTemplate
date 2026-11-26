@@ -94,7 +94,7 @@ C++ 를 쓸 때의 규칙. 린트 · 컴파일이 강제하는 줄은 "강제" �
 
 ## Includes and layers
 
-- Headers prefer forward declarations (`ObjectFwd.h` · `ReflectionFwd.h`), never include ThirdParty headers. Diet headers have a fan-in ceiling (린트 `header-include-limits` 강제); a diet commit adds the ceiling.
+- Headers prefer forward declarations (`ObjectFwd.h` · `ReflectionFwd.h`), never include ThirdParty headers. Exception: a backend folder's own headers (`Physics/Jolt`, `Graphics/RHI/<backend>`) that only that folder includes may include its SDK, like Unreal's module `Private/` headers; pimpl there only adds an indirection. Diet headers have a fan-in ceiling (린트 `header-include-limits` 강제); a diet commit adds the ceiling.
 - `.cpp` include order (clang-format 강제). Includes are full paths from a root or bare same-folder names.
 - Prefer `StdHeaders.h` · `PlatformOSHeaders.h`; heavy rarely-used standard headers are included by their user. Platform includes go in **one** `#if SW_PLATFORM_…` chain after the others.
 - **Layers:** a lower layer never includes an upper one (`#error` 껍데기 · 린트 `layer-includes` 강제). Fix the dependency, not the table; reach up through an interface or function pointer. Below `Log` report with `SW_LOW_LEVEL_*`.

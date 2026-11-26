@@ -5,10 +5,10 @@
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
@@ -24,14 +24,6 @@ namespace sw
     {
         constexpr FormatDef kGameModeStateFormat{ "TOWN" }; // 게임에서 키트로 옮기기 전 태그 그대로(바꿀 까닭이 없다)
     } // namespace
-
-    SW_AUTOMATION_GETTER_WATCH( overworldHeroTileX, "Overworld.HeroTileX", "Tile column of the hero", OverworldGameModeComponent, &OverworldGameModeComponent::getHeroTileX );
-    SW_AUTOMATION_GETTER_WATCH( overworldHeroTileY, "Overworld.HeroTileY", "Tile row of the hero (rows grow down)", OverworldGameModeComponent, &OverworldGameModeComponent::getHeroTileY );
-    SW_AUTOMATION_GETTER_WATCH( overworldHeroWalking, "Overworld.HeroWalking", "1 while the hero walks between tiles (0 once it stands on a tile)", OverworldGameModeComponent, &OverworldGameModeComponent::isHeroWalking );
-    SW_AUTOMATION_GETTER_WATCH( overworldHeroFacing, "Overworld.HeroFacing", "Hero facing (0 down, 1 left, 2 right, 3 up)", OverworldGameModeComponent, &OverworldGameModeComponent::getHeroFacing );
-    SW_AUTOMATION_GETTER_WATCH( overworldTalking, "Overworld.Talking", "1 while a talk with a villager is open", OverworldGameModeComponent, &OverworldGameModeComponent::isTalking );
-    SW_AUTOMATION_GETTER_WATCH( overworldShownLines, "Overworld.ShownLines", "Dialogue lines shown this session", OverworldGameModeComponent, &OverworldGameModeComponent::getShownLineCount );
-    SW_AUTOMATION_GETTER_WATCH( overworldFinishedTalks, "Overworld.FinishedTalks", "Talks finished this session", OverworldGameModeComponent, &OverworldGameModeComponent::getFinishedTalkCount );
 } // namespace sw
 
 namespace sw

@@ -7,10 +7,10 @@
  *       리로드 구동기(`ModuleReloadDriver`)입니다. 배포는 DevTools 를 짓지 않아 함께 빠집니다(언리얼 HotReload 가 Developer 모듈인 자리).
  *
  *       이 클래스는 리로드 순서(prepare → 배치 콜백 → commit, 언로드 구간, 정적 등록 헤드, `RegistrationReloadScope`)를 정하고, 그 밖의 일은
- *       값 멤버나 도우미에 맡깁니다. 연쇄 교체 대상과 순서를 계산하는 `ModuleDependencyGraph`, 섀도 복사본 파일을 쓰고 지우는 `ModuleShadowCopy`,
+ *       값 멤버나 도우미에 맡깁니다. 연쇄 교체 대상과 순서를 계산하는 `ModuleDependencyGraph`, 섀도 복사본 파일을 쓰고 지우고 이름을 짓고 남은 것을 치우는 `ModuleShadowCopy`,
  *       교체된 옛 라이브러리를 배치 단위로 남겨 두는 `DeferredLibraryUnloadQueue` 입니다.
- *       핫 리로드만 쓰는 도우미는 그 밖에 셋이 더 있습니다. 섀도 복사본의 파일 바이트를 읽고 고치는 `ModuleLibraryPatch`, 새 모듈 코드를
- *       처음 호출하는 지점을 보호하는 `ModuleCallGuard`, 복사본 파일 이름을 만들고 남은 것을 정리하는 `ShadowCopyName` 입니다. 모두 Shipping 에서 함께 빠집니다.
+ *       핫 리로드만 쓰는 도우미는 그 밖에 둘이 더 있습니다. 섀도 복사본의 파일 바이트를 읽고 고치는 `ModuleLibraryPatch`, 새 모듈 코드를
+ *       처음 호출하는 지점을 보호하는 `ModuleCallGuard` 입니다. 모두 Shipping 에서 함께 빠집니다.
  */
 #pragma once
 #include "Core/Concurrency/atomic.h"
