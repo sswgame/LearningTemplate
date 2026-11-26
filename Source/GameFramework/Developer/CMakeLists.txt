@@ -25,5 +25,4 @@ sw_add_module_library(GameFrameworkDev
 	FOLDER "Source/GameFramework"
 	SOURCES ${list_game_framework_dev_source}
 	LINK_PUBLIC GameFramework
-	NO_REFLECTION
 )

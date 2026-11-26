@@ -169,7 +169,18 @@ function(sw_add_module_library TARGET_NAME)
 
 	sw_set_unity_build(${TARGET_NAME})
 
-	if(NOT ARG_NO_REFLECTION)
+	if(ARG_NO_REFLECTION)
+		# 리플렉션 단계가 없는 타깃의 소스에 REFLECT · ENUM 이 있으면 `.gen.inl` 을 찾지 못해 빌드 중간에야 진다. 구성에서 멈춘다.
+		sw_get_reflection_input_regex(reflection_input_regex)
+		set(list_reflection_candidate ${ARG_SOURCES})
+		list(FILTER list_reflection_candidate INCLUDE REGEX "${reflection_input_regex}")
+		foreach(candidate_path IN LISTS list_reflection_candidate)
+			sw_has_reflection_macro(b_has_macro "${candidate_path}")
+			if(b_has_macro)
+				message(FATAL_ERROR "sw_add_module_library(${TARGET_NAME}): NO_REFLECTION 타깃의 소스에 리플렉션 매크로가 있다 — NO_REFLECTION 을 빼거나 매크로를 옮긴다: ${candidate_path}")
+			endif()
+		endforeach()
+	else()
 		# 게임 모듈의 타입은 다른 모듈이 링크하지 않는다. 타입을 내보내는 매크로도 없다(`GameModuleExports.h` 는 C-ABI 진입점만 만든다).
 		set(list_reflection_option "")
 		if(ARG_KIND STREQUAL "game")

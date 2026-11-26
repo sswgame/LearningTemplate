@@ -327,6 +327,8 @@ namespace sw
 
 #include "Core/TestFramework/TestFramework.h"
 
+#include "GameFramework/Kits/Feature/Online/{name}/Runtime/{name}Protocol.h"
+#include "GameFramework/Runtime/Online/Service/OnlineProtocol.h"
 
 /**
  * @brief [{name}ProtocolTest] 메서드 번호가 키트 영역 안에 있다

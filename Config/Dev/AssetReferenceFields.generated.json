@@ -236,6 +236,7 @@
         "defaultForwardPipeline",
         "defaultMaterial",
         "defaultSocketKinds",
+        "dependencies",
         "detailTexturePath",
         "document",
         "documentPath",

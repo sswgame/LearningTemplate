@@ -1146,7 +1146,8 @@ namespace sw
                     }
                     if ( pass._depthAttachment.empty() == false )
                         validateSameSpace( pass._depthAttachment );
-                    if ( pFirst == nullptr || pass._bTemporalJitter != SW_FALSE )
+                    // 지터를 빠뜨린 TAA 는 PassTemporalJitterMissing 이 이미 냈다 — 같은 결함을 두 번 세지 않는다.
+                    if ( pFirst == nullptr || pass._bTemporalJitter != SW_FALSE || pass._type == RenderPassKind::TAA )
                         continue;
                     for ( const RenderGraphPassDesc::ResolvedAttachment& input : pass._listResolvedInput )
                     {
