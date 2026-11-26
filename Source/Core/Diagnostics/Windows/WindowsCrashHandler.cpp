@@ -197,7 +197,7 @@ namespace sw
              */
             static void writeReport( const PendingCrash& crash, HANDLE hFaultThread )
             {
-                // 덤프와 컨텍스트를 먼저 쓴다. 이 순서는 취향이 아니라 안전장치다.
+                // 덤프와 컨텍스트를 먼저 쓴다. 이 순서가 안전장치다.
                 //
                 // 크래시 지점에서 안전한 것과 그렇지 않은 것:
                 //  - formatstring : 호출하는 쪽의 버퍼에 쓰고 할당하지 않는다(noexcept). 안전하다.
