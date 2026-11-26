@@ -428,8 +428,9 @@ function(sw_add_reflection_step TARGET_NAME)
 	set(reflect_target_file "${ARG_OUTPUT_DIR}/ReflectionParser.target.rsp")
 	set(target_definitions "$<FILTER:$<TARGET_PROPERTY:${TARGET_NAME},COMPILE_DEFINITIONS>,EXCLUDE,^$>")
 	set(target_includes "$<FILTER:$<TARGET_PROPERTY:${TARGET_NAME},INCLUDE_DIRECTORIES>,EXCLUDE,^$>")
-	file(GENERATE OUTPUT "${reflect_target_file}" TARGET ${TARGET_NAME}
-		CONTENT "$<$<BOOL:${target_definitions}>:--target-arg\n-D$<JOIN:${target_definitions},\n--target-arg\n-D>\n>$<$<BOOL:${target_includes}>:--include\n$<JOIN:${target_includes},\n--include\n>\n>")
+	file(GENERATE OUTPUT "${reflect_target_file}"
+		CONTENT "$<$<BOOL:${target_definitions}>:--target-arg\n-D$<JOIN:${target_definitions},\n--target-arg\n-D>\n>$<$<BOOL:${target_includes}>:--include\n$<JOIN:${target_includes},\n--include\n>\n>"
+		TARGET ${TARGET_NAME})
 
 	add_custom_command(
 		OUTPUT ${generated_files}
