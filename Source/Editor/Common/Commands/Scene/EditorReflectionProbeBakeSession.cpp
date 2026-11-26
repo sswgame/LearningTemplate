@@ -166,7 +166,7 @@ namespace sw::editor
                 result._error      = "the baker produced no reflection data";
             }
             AssetWriter writer;
-            if ( result._bSucceeded && ( input._dataPath.has_value() == false || writer.saveAsset( *input._dataPath, result._data ) == false ) )
+            if ( result._bSucceeded && ( input._dataPath.has_value() == false || writer.saveAsset( *input._dataPath, result._data ) != AssetWriteResult::Written ) )
             {
                 result._bSucceeded = false;
                 result._error      = EditorReflectionProbeBakeSessionInternal::makeWriteError( input._assetPath );

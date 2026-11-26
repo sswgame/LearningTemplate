@@ -39,7 +39,7 @@ namespace sw::editor
             /** @brief 프리팹 파일 글을 쓰고 캐시를 다시 읽습니다(되돌리기 데이터 단계 — "Write Prefab"). */
             static void writePrefabFile( string prefabPath, string filePath, string expectedText, string text )
             {
-                if ( AssetWriter::replaceText( FileUtil::toDiskPath( filePath ), expectedText, text ) == false )
+                if ( AssetWriter::replaceText( FileUtil::toDiskPath( filePath ), expectedText, text ) == AssetWriteResult::Failed ) // 거절은 문이 이미 알렸다
                     SW_LOG_ERROR_ID( "EditorInspectorCommands.CouldNotWriteBack", "Could not write '%#' back", filePath.c_str() );
                 // 이 단계는 에셋 관리자가 있을 때만 기록된다(`applyToPrefab`) - 여기서는 필수다.
                 (void)editor::getSubsystem<AssetManager>().getAssetCache<PrefabCache>().reload( AssetID{ prefabPath } ); // 못 읽으면 캐시가 오류를 남기고 이전 판을 지킨다
@@ -161,7 +161,10 @@ namespace sw::editor
         // 변형은 변형으로 남는다 — 전체 상태로 쓰면 부모와의 연결이 끊긴다(유니티 Apply 도 Variant 를 Variant 로 저장한다).
         if ( bHadFile )
             asset.setBasePath( PrefabAsset::readBasePathFromSource( oldFileText ) );
-        if ( writer.saveAsset( *filePath, asset ) == false )
+        const AssetWriteResult written = writer.saveAsset( *filePath, asset );
+        if ( written == AssetWriteResult::Refused )
+            return false; // 문이 이미 알렸다
+        if ( written == AssetWriteResult::Failed )
         {
             SW_LOG_ERROR_ID( "EditorInspectorCommands.ApplyPrefabRefusedCould", "Apply to prefab refused: could not write '%#'", string{ prefabPath }.c_str() );
             return false;

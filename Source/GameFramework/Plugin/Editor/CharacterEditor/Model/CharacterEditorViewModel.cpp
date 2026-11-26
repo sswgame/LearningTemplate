@@ -605,7 +605,7 @@ namespace sw::editor
         const auto   writePath = editor::getSubsystem<AssetPaths>().toDiskPath( assetID );
         AssetWriter  writer; // 내보내기는 연 문서가 아니다 — 읽기 전용만 본다
         const bool   bWritten = writePath.has_value() && writer.save( *writePath, [&doc]( const AbsolutePath& writable )
-          { return doc.saveCompleteToFile( writable ); } );
+          { return doc.saveCompleteToFile( writable ); } ) == AssetWriteResult::Written;
         if ( bWritten == false )
         {
             StringBuilder<constant::buffer::kMax512> status;

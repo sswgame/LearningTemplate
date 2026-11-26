@@ -209,7 +209,7 @@ namespace sw::editor
                     if ( identity._state == AssetGUIDHeaderState::Found )
                         text = AssetGUIDHeader::write( text, *identity._guid );
                 }
-                if ( writer.writeText( *targetPath, text ) == false )
+                if ( writer.writeText( *targetPath, text ) != AssetWriteResult::Written )
                 {
                     StringBuilder<constant::buffer::kMax256> replyBuilder;
                     replyBuilder.appendFormat( "could not write '%#'", targetPath->str() );

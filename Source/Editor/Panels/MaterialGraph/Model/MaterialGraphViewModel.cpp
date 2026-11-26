@@ -109,7 +109,7 @@ namespace sw::editor
             }
         }
         return writer.save( diskPath, [this]( const AbsolutePath& writable )
-        { return _graph.saveToFile( writable, AssetID{ _basePath } ); } );
+        { return _graph.saveToFile( writable, AssetID{ _basePath } ); } ) == AssetWriteResult::Written;
     }
 
     void MaterialGraphViewModel::publishEdit()

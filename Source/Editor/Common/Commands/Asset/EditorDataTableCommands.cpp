@@ -113,11 +113,10 @@ namespace sw::editor
                 bool bAllWritten{ true };
                 for ( size_t tableIndex = 0; tableIndex < listTable.size(); ++tableIndex )
                 {
-                    if ( writer.saveAsset( sheet._listTablePath[tableIndex], listTable[tableIndex] ) == false )
-                    {
+                    const AssetWriteResult written = writer.saveAsset( sheet._listTablePath[tableIndex], listTable[tableIndex] );
+                    if ( written == AssetWriteResult::Failed ) // 거절은 문이 이미 알렸다
                         SW_LOG_ERROR_ID( "EditorDataTableCommands.StringTableCouldNot", "String table '%#' could not be written", sheet._listTablePath[tableIndex].c_str() );
-                        bAllWritten = false;
-                    }
+                    bAllWritten = bAllWritten && written == AssetWriteResult::Written;
                 }
                 for ( size_t cultureIndex = 0; cultureIndex < listTranslation.size(); ++cultureIndex )
                 {
@@ -126,11 +125,10 @@ namespace sw::editor
                     const DiskPath path = LocalizationProject::makeTranslationPath( sheet._projectPath, sheet._listCulture[cultureIndex] );
                     if ( listTranslation[cultureIndex].getEntries().empty() && FileUtil::exists( path ) == false )
                         continue; // 번역이 하나도 없는 문화권의 빈 파일은 만들지 않는다
-                    if ( writer.saveAsset( path, listTranslation[cultureIndex] ) == false )
-                    {
+                    const AssetWriteResult written = writer.saveAsset( path, listTranslation[cultureIndex] );
+                    if ( written == AssetWriteResult::Failed ) // 거절은 문이 이미 알렸다
                         SW_LOG_ERROR_ID( "EditorDataTableCommands.TranslationTableCouldNot", "Translation table '%#' could not be written", path.c_str() );
-                        bAllWritten = false;
-                    }
+                    bAllWritten = bAllWritten && written == AssetWriteResult::Written;
                 }
                 return bAllWritten;
             }

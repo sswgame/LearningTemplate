@@ -462,42 +462,42 @@ namespace sw::editor
         return _current.isValid() && _state.isDirty( makeDifferenceText() );
     }
 
-    bool ProjectSettingsDocument::saveElement( AssetWriter& writer, const string& elementText ) const
+    AssetWriteResult ProjectSettingsDocument::saveElement( AssetWriter& writer, const string& elementText ) const
     {
         // 요소는 남의 파일(팩 gamesettings.xml) 안에 산다 — 파일을 만들지 않는다.
         string fileText;
         if ( FileUtil::readOptionalTextFile( _path, fileText ) != OptionalFileRead::Read )
         {
             SW_LOG_WARNING_ID( "ProjectSettings.ProjectSettingsMissingElement", "Project settings: %# is missing - the <%#> element lives in that file", _path.c_str(), _elementName.c_str() );
-            return false;
+            return AssetWriteResult::Failed;
         }
         // 쓸 요소가 다음 기동에서 읽히는지 먼저 본다 — 필수 필드가 빠진 요소(Reset to Default 뒤)는 쓰지 않는다.
         const ReflectedInstance check = ReflectedInstance::create( *_pType );
         if ( check.isValid() == false )
-            return false;
+            return AssetWriteResult::Failed;
         XMLDocument elementDocument;
         const bool  bParsed   = elementDocument.parse( elementText, _path.str() );
         const bool  bReadable = bParsed && ConfigManager::readConfigXMLElement( check.get(), *_pType, elementDocument.getRoot( _elementName.c_str() ), _path.c_str() );
         if ( bReadable == false )
         {
             SW_LOG_WARNING_ID( "ProjectSettings.ProjectSettingsEditedWould", "Project settings: the edited <%#> would not load - not saved", _elementName.c_str() );
-            return false;
+            return AssetWriteResult::Failed;
         }
         string newText;
         if ( ProjectSettingsDocumentInternal::spliceElement( fileText, _elementName, elementText, newText ) == false )
         {
             SW_LOG_WARNING_ID( "ProjectSettings.ProjectSettingsCouldNot", "Project settings: <%#> could not be placed in %# - not saved", _elementName.c_str(), _path.c_str() );
-            return false;
+            return AssetWriteResult::Failed;
         }
         // 바꾼 글을 다시 읽어 같은 요소인지 본다 — 원문에서 위치를 잘못 잡았으면(속성 값 안의 `>` 등) 파일을 쓰지 않는다.
         const ReflectedInstance reread = ReflectedInstance::create( *_pType );
         if ( reread.isValid() == false )
-            return false;
+            return AssetWriteResult::Failed;
         const bool bSame = readInto( reread.get(), newText ) == ConfigReadResult::Loaded && XMLSerializer::serialize( reread.get(), *_pType ) == XMLSerializer::serialize( _current.get(), *_pType );
         if ( bSame == false )
         {
             SW_LOG_WARNING_ID( "ProjectSettings.ProjectSettingsRewritingDid", "Project settings: rewriting <%#> in %# did not round-trip - not saved", _elementName.c_str(), _path.c_str() );
-            return false;
+            return AssetWriteResult::Failed;
         }
         return writer.writeText( _path, newText );
     }
@@ -513,13 +513,11 @@ namespace sw::editor
             SW_LOG_ERROR_ID( "ProjectSettings.ProjectSettingsNotSaved", "Project settings were not saved to %#: %#", _path.c_str(), difference.error().message() );
             return false;
         }
-        const string& text   = *difference;
-        bool          bSaved = false;
-        if ( isElementMode() )
-            bSaved = saveElement( writer, text );
-        else
-            bSaved = writer.writeText( _path, text );
-        if ( bSaved == false )
+        const string&          text  = *difference;
+        const AssetWriteResult saved = isElementMode() ? saveElement( writer, text ) : writer.writeText( _path, text );
+        if ( saved == AssetWriteResult::Refused )
+            return false; // 문이 이미 알렸다
+        if ( saved == AssetWriteResult::Failed )
         {
             SW_LOG_WARNING_ID( "ProjectSettings.ProjectSettingsCouldNot2", "Project settings could not be saved to %#", _path.c_str() );
             return false;

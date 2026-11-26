@@ -233,8 +233,12 @@ namespace sw::editor
             SW_LOG_WARNING_ID( "ModulesPanel.ModulesProjectManifestCould", "Modules: the project manifest %# could not be read", path.c_str() );
             return false;
         }
-        if ( EditorModuleOverrideUtil::setOverride( text, _pendingModule, _bPendingEnabled, pManifest->_bEnabledByDefault, rewritten ) == false ||
-             writer.writeText( path, rewritten ) == false )
+        const AssetWriteResult written = EditorModuleOverrideUtil::setOverride( text, _pendingModule, _bPendingEnabled, pManifest->_bEnabledByDefault, rewritten )
+                                           ? writer.writeText( path, rewritten )
+                                           : AssetWriteResult::Failed;
+        if ( written == AssetWriteResult::Refused )
+            return false; // 문이 이미 알렸다
+        if ( written == AssetWriteResult::Failed )
         {
             SW_LOG_WARNING_ID( "ModulesPanel.ModulesProjectManifestCould2", "Modules: the project manifest %# could not be rewritten", path.c_str() );
             return false;

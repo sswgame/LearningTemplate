@@ -59,7 +59,7 @@ namespace sw::editor
     {
         if ( isOpen() == false || _diskPath.empty() )
             return false;
-        if ( writer.writeText( _diskPath, _text ) == false )
+        if ( writer.writeText( _diskPath, _text ) != AssetWriteResult::Written )
         {
             StringBuilder<constant::buffer::kMax512> error;
             error.appendFormat( "%#: cannot write the file", _diskPath.str() );

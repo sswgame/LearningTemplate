@@ -140,7 +140,7 @@ namespace sw::editor
     {
         const optional<DiskPath> diskPath = getDocumentDiskPath();
         const string             text     = captureDocumentText();
-        return diskPath.has_value() && text.empty() == false && writer.writeText( *diskPath, text );
+        return diskPath.has_value() && text.empty() == false && writer.writeText( *diskPath, text ) == AssetWriteResult::Written;
     }
 
     void EditorDocumentPanel::onDocumentSaved()

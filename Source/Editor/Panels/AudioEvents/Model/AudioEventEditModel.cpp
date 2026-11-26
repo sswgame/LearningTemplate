@@ -68,7 +68,7 @@ namespace sw::editor
         // 고치지 않았어도 쓴다 — 언제 저장할지는 문서 패널이 정한다(Ctrl+S 는 dirty 일 때만, 저장 왕복 시나리오는 고치지 않고 저장해 정규 꼴을 만든다).
         const optional<DiskPath> libraryFile = getSubsystem<AssetPaths>().toDiskPath( _libraryName.view() );
         return libraryFile.has_value() && writer.save( *libraryFile, [this]( const AbsolutePath& writable )
-        { return _library.saveToAsset( writable ); } );
+        { return _library.saveToAsset( writable ); } ) == AssetWriteResult::Written;
     }
 
     void AudioEventEditModel::duplicateEvent()

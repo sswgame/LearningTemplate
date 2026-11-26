@@ -189,9 +189,12 @@ namespace sw::editor
             return true;
         }
         const optional<DiskPath> inputMapFile = editor::getSubsystem<AssetPaths>().toDiskPath( _inputMapPath.get() );
-        const bool               bSaved       = inputMapFile.has_value() && writer.save( *inputMapFile, [this]( const AbsolutePath& writable )
-                            { return _inputMap.saveToAsset( writable ); } );
-        if ( bSaved == false )
+        const AssetWriteResult   saved        = inputMapFile.has_value() ? writer.save( *inputMapFile, [this]( const AbsolutePath& writable )
+                 { return _inputMap.saveToAsset( writable ); } )
+                                                                         : AssetWriteResult::Failed;
+        if ( saved == AssetWriteResult::Refused )
+            return false; // 문이 이미 알렸다
+        if ( saved == AssetWriteResult::Failed )
         {
             SW_LOG_WARNING_ID( "InputMapViewModel.FailedSaveInputMap", "Failed to save InputMap to %#", _inputMapPath.c_str() );
             return false;
@@ -222,7 +225,7 @@ namespace sw::editor
             const string&            assetPath = _inputMap.getSourceAssetPath( sourceIndex );
             const optional<DiskPath> filePath  = editor::getSubsystem<AssetPaths>().toDiskPath( assetPath );
             const bool               bSaved    = filePath.has_value() && writer.save( *filePath, [this, sourceIndex]( const AbsolutePath& writable )
-                             { return _inputMap.saveSourceToAsset( sourceIndex, writable ); } );
+                             { return _inputMap.saveSourceToAsset( sourceIndex, writable ); } ) == AssetWriteResult::Written;
             if ( bSaved == false )
                 return false;
             SW_LOG_INFO_ID( "InputMapViewModel.SavedInputMap", "Saved InputMap to %#", assetPath.c_str() );
@@ -655,7 +658,8 @@ namespace sw::editor
     {
         const optional<DiskPath> diskPath = editor::getSubsystem<AssetPaths>().toDiskPath( _replayFilePath.get() );
         AssetWriter              writer;
-        if ( diskPath.has_value() == false || writer.saveAsset( *diskPath, _replay ) == false )
+        const AssetWriteResult   written = diskPath.has_value() ? writer.saveAsset( *diskPath, _replay ) : AssetWriteResult::Failed;
+        if ( written == AssetWriteResult::Failed ) // 거절은 문이 이미 알렸다
             SW_LOG_ERROR_ID( "InputMapViewModel.CouldNotSaveInput", "Could not save input replay '%#'", _replayFilePath.c_str() );
     }
 

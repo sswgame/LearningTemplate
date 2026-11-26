@@ -51,8 +51,11 @@ namespace sw::editor
             /** @brief 서술 글이 @p expectedText 그대로면 @p text 로 쓰고 그 원본을 다시 임포트합니다(원본 해시에 해석한 규칙이 들어 예외가 바뀐 원본만 다시 임포트된다). */
             static bool writeMetaText( string_view assetID, string_view expectedText, string_view text )
             {
-                const DiskPath metaPath = findMetaPath( assetID );
-                if ( metaPath.empty() || AssetWriter::replaceText( metaPath, expectedText, text ) == false )
+                const DiskPath         metaPath = findMetaPath( assetID );
+                const AssetWriteResult written  = metaPath.empty() ? AssetWriteResult::Failed : AssetWriter::replaceText( metaPath, expectedText, text );
+                if ( written == AssetWriteResult::Refused )
+                    return false; // 문이 이미 알렸다
+                if ( written == AssetWriteResult::Failed )
                 {
                     SW_LOG_ERROR_ID( "InspectorImportSettings.WriteFailed", "Import settings: could not write the .meta of '%#'", string{ assetID }.c_str() );
                     return false;

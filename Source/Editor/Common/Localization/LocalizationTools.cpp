@@ -283,9 +283,9 @@ namespace sw
                 }
                 const bool          bHasTranslations = translation.getEntries().empty() == false || FileUtil::exists( path );
                 editor::AssetWriter writer;
-                if ( bHasTranslations && writer.saveAsset( path, translation ) == false )
+                if ( bHasTranslations && writer.saveAsset( path, translation ) != editor::AssetWriteResult::Written )
                     inoutResult._report._listIssue.push_back( { path.str(), "translation table could not be written", true } );
-                if ( bMemoryChanged && writer.saveAsset( memoryPath, memory ) == false )
+                if ( bMemoryChanged && writer.saveAsset( memoryPath, memory ) != editor::AssetWriteResult::Written )
                     inoutResult._report._listIssue.push_back( { memoryPath.str(), "translation memory could not be written", true } );
             }
 
@@ -597,7 +597,7 @@ namespace sw
             if ( bWrite )
             {
                 editor::AssetWriter writer;
-                outResult._bWritten = writer.saveAsset( outResult._gatherTablePath, gatherTable );
+                outResult._bWritten = writer.saveAsset( outResult._gatherTablePath, gatherTable ) == editor::AssetWriteResult::Written;
             }
             else
                 outResult._bOutOfDate = true;
@@ -749,11 +749,12 @@ namespace sw
             string                   existing;
             const bool               bSame = FileUtil::readOptionalTextFile( result._path, existing ) == OptionalFileRead::Read && existing == text;
             editor::AssetWriter      writer;
-            if ( bSame == false && writer.writeText( result._path, text ) == false )
-            {
+            if ( bSame )
+                continue;
+            const editor::AssetWriteResult written = writer.writeText( result._path, text );
+            if ( written == editor::AssetWriteResult::Failed ) // 거절은 문이 이미 알렸다
                 SW_LOG_ERROR_ID( "LocalizationTools.CouldNotWritten", "[ExportPo] '%#' could not be written", result._path.c_str() );
-                bAllWritten = false;
-            }
+            bAllWritten = bAllWritten && written == editor::AssetWriteResult::Written;
         }
         return bAllWritten;
     }
@@ -843,13 +844,13 @@ namespace sw
             if ( bStale == false && poEntry._bFuzzy == false )
                 (void)memory.addPair( poEntry._source, poEntry._translation );
         }
-        editor::AssetWriter writer;
-        if ( writer.saveAsset( translationPath, translation ) == false || writer.saveAsset( memoryPath, memory ) == false )
-        {
+        editor::AssetWriter      writer;
+        editor::AssetWriteResult written = writer.saveAsset( translationPath, translation );
+        if ( written == editor::AssetWriteResult::Written )
+            written = writer.saveAsset( memoryPath, memory );
+        if ( written == editor::AssetWriteResult::Failed ) // 거절은 문이 이미 알렸다
             SW_LOG_ERROR_ID( "LocalizationTools.TranslationTableCouldNot", "[ImportPo] translation table '%#' could not be written", translationPath.c_str() );
-            return false;
-        }
-        return true;
+        return written == editor::AssetWriteResult::Written;
     }
 
     bool LocalizationTools::runExportCommand( string_view projectArgument )

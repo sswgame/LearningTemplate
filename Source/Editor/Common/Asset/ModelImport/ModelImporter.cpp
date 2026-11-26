@@ -1141,7 +1141,7 @@ namespace sw::editor
                 }
                 AssetWriter writer;
                 const bool  bBaked = writer.save( *outFile, [&entry]( const AbsolutePath& writable )
-                 { return PoseRetargeter::bakeClipFile( AssetID{ entry._retargetProfile }, AssetID{ entry._retargetSourceClip }, writable.str() ); } );
+                 { return PoseRetargeter::bakeClipFile( AssetID{ entry._retargetProfile }, AssetID{ entry._retargetSourceClip }, writable.str() ); } ) == AssetWriteResult::Written;
                 if ( bBaked == false )
                 {
                     StringBuilder<constant::buffer::kMax512> problemBuilder;

@@ -29,7 +29,7 @@ namespace sw::editor
             /** @brief 디스크의 글을 쓰는 되돌리기 절차 하나입니다(되돌리기 · 다시 하기가 그 글을 다시 쓴다 — 파일 감시가 리그를 다시 읽는다). */
             static void writeRigText( const string& writePath, const string& expectedText, const string& text )
             {
-                if ( AssetWriter::replaceText( FileUtil::toDiskPath( writePath ), expectedText, text ) == false )
+                if ( AssetWriter::replaceText( FileUtil::toDiskPath( writePath ), expectedText, text ) == AssetWriteResult::Failed ) // 거절은 문이 이미 알렸다
                     SW_LOG_ERROR_ID( "RigDebugPanel.RigFileCouldNot", "Rig file '%#' could not be written", writePath.c_str() );
             }
 
@@ -152,7 +152,7 @@ namespace sw::editor
         if ( rewriteSettings( text, rigPath, params, rewritten ) == false )
             return string( "The rig was not saved - see the log" );
         const DiskPath& writePath = *readPath;
-        if ( writer.writeText( writePath, rewritten ) == false )
+        if ( writer.writeText( writePath, rewritten ) != AssetWriteResult::Written )
             return string( "The rig file could not be written" );
         if ( pUndoLabel != nullptr )
         {

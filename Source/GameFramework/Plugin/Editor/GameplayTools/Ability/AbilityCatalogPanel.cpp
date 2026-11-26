@@ -249,7 +249,7 @@ namespace sw::editor
             _status = "Nothing to save - open a well-formed file first";
             return false;
         }
-        if ( writer.writeText( *absolutePath, _model.getDocument().getText() ) == false )
+        if ( writer.writeText( *absolutePath, _model.getDocument().getText() ) != AssetWriteResult::Written )
         {
             StringBuilder<constant::buffer::kMax256> statusBuilder;
             statusBuilder.appendFormat( "Could not write '%#'", openPath );

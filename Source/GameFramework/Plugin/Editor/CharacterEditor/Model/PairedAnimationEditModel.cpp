@@ -76,7 +76,7 @@ namespace sw::editor
         const string text         = saveToXMLText();
         const string completeText = PairedAnimationDef::makeXMLText( _content, ResourceFieldWrite::WriteAll );
         const bool   bSaved       = writer.save( path, [&text, &completeText]( const AbsolutePath& writable )
-                { return ResourceComposer::saveText( writable, ResourceSaveText::makeWithComplete( text, completeText ) ); } );
+                { return ResourceComposer::saveText( writable, ResourceSaveText::makeWithComplete( text, completeText ) ); } ) == AssetWriteResult::Written;
         if ( bSaved == false )
             return unexpected( Error{ ErrorKind::ExternalFailure, "The file could not be written", path.str() } );
         _state.markSaved( text );

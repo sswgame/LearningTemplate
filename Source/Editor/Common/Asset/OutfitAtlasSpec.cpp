@@ -263,9 +263,12 @@ namespace sw::editor
                 for ( size_t mapIndex = 0; mapIndex < spec._listMap.size(); ++mapIndex )
                 {
                     const optional<DiskPath> imageFile = editor::getSubsystem<AssetPaths>().toDiskPath( spec._listMap[mapIndex]._output );
-                    const bool               bWritten  = imageFile.has_value() && writer.save( *imageFile, [&]( const AbsolutePath& writable )
-                                   { return ImageFileWriter::writePNGRGBA8( writable, listAtlas[mapIndex], atlasSize, atlasSize ); } );
-                    if ( bWritten == false )
+                    const AssetWriteResult   written   = imageFile.has_value() ? writer.save( *imageFile, [&]( const AbsolutePath& writable )
+                        { return ImageFileWriter::writePNGRGBA8( writable, listAtlas[mapIndex], atlasSize, atlasSize ); } )
+                                                                               : AssetWriteResult::Failed;
+                    if ( written == AssetWriteResult::Refused )
+                        return false; // 문이 이미 알렸다
+                    if ( written == AssetWriteResult::Failed )
                     {
                         SW_LOG_ERROR_ID( "OutfitAtlasBaker.OutfitAtlasImageCould", "Outfit atlas image '%#' could not be written", spec._listMap[mapIndex]._output.c_str() );
                         return false;
@@ -273,9 +276,12 @@ namespace sw::editor
                     outResult._listTexturePath.push_back( spec._listMap[mapIndex]._output );
                 }
                 const optional<DiskPath> meshFile = editor::getSubsystem<AssetPaths>().toDiskPath( spec._outputMesh );
-                const bool               bWritten = meshFile.has_value() && writer.save( *meshFile, [&]( const AbsolutePath& writable )
-                              { return MeshAssetFormat::saveToFile( writable, makeAssetData( *merged._mesh ) ); } );
-                if ( bWritten == false )
+                const AssetWriteResult   written  = meshFile.has_value() ? writer.save( *meshFile, [&]( const AbsolutePath& writable )
+                   { return MeshAssetFormat::saveToFile( writable, makeAssetData( *merged._mesh ) ); } )
+                                                                         : AssetWriteResult::Failed;
+                if ( written == AssetWriteResult::Refused )
+                    return false; // 문이 이미 알렸다
+                if ( written == AssetWriteResult::Failed )
                 {
                     SW_LOG_ERROR_ID( "OutfitAtlasBaker.OutfitAtlasMeshCould", "Outfit atlas mesh '%#' could not be written", spec._outputMesh.c_str() );
                     return false;

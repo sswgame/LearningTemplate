@@ -228,7 +228,7 @@ namespace sw::editor
         // 저장 입구(`saveToFile`)가 빈 직렬화 결과를 거절하고 이유를 남긴다.
         AssetWriter writer;
         return writer.save( fullPath, [pComp]( const AbsolutePath& writable )
-        { return XMLSerializer::saveToFile( writable, pComp, *pComp->getTypeInfo() ); } );
+        { return XMLSerializer::saveToFile( writable, pComp, *pComp->getTypeInfo() ); } ) == AssetWriteResult::Written;
     }
 
     bool EditorTransformCommands::loadComponentPreset( EditorTransaction& /*transaction*/, Component* pComp, const DiskPath& presetFilePath )

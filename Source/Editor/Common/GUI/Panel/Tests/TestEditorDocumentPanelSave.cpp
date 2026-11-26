@@ -51,7 +51,7 @@ namespace
         [[nodiscard]] bool  saveDocument( AssetWriter& writer ) override
         {
             return writer.save( _file, [this]( const AbsolutePath& writable )
-            { return _bFailsToWrite == SW_FALSE && FileUtil::writeTextFile( writable, _text ); } );
+            { return _bFailsToWrite == SW_FALSE && FileUtil::writeTextFile( writable, _text ); } ) == AssetWriteResult::Written;
         }
         void collectFilesToSave( vector<DiskPath>& outListPath ) const override { outListPath.push_back( _file ); }
         void onDocumentSaved() override
@@ -87,7 +87,7 @@ namespace
 
     protected:
         void                           drawContent() override {}
-        [[nodiscard]] bool             saveDocument( AssetWriter& writer ) override { return writer.writeText( _file, _text ); }
+        [[nodiscard]] bool             saveDocument( AssetWriter& writer ) override { return writer.writeText( _file, _text ) == AssetWriteResult::Written; }
         void                           revertDocument() override {}
         void                           collectFilesToSave( vector<DiskPath>& outListPath ) const override { outListPath.push_back( _file ); }
         [[nodiscard]] expected<string> tryMakeFileText( const DiskPath& /*absolutePath*/ ) const override { return _text; }

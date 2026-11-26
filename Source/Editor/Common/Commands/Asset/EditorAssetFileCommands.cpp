@@ -481,11 +481,14 @@ namespace sw::editor
             (void)replaceReference( text, assetTemplate._pNameAttribute, nameAttribute ); // 이름 속성이 없으면 템플릿 이름 그대로다
         }
         // 틀은 그 자신의 정체성(머리 GUID)을 든 에셋이다 — 새 에셋은 새 GUID 를 받는다.
-        if ( AssetWriter{}.writeText( outAssetAbs, text ) && EditorAssetFileCommandsInternal::assignNewIdentity( outAssetAbs ) )
+        const AssetWriteResult written = AssetWriter{}.writeText( outAssetAbs, text );
+        if ( written == AssetWriteResult::Written && EditorAssetFileCommandsInternal::assignNewIdentity( outAssetAbs ) )
         {
             SW_LOG_INFO_ID( "Asset.Created", "Created '%#'", editor::getSubsystem<AssetPaths>().toAssetID( outAssetAbs ) );
             return true;
         }
+        if ( written == AssetWriteResult::Refused )
+            return false; // 문이 이미 알렸다
         SW_LOG_ERROR_ID( "EditorAssetFileCommands.CouldNotWriteNew", "Could not write the new asset '%#'", outAssetAbs.str() );
         return false;
     }
@@ -714,7 +717,7 @@ namespace sw::editor
             for ( ; writtenCount < listRewrite.size(); ++writtenCount )
             {
                 const EditorAssetFileCommandsInternal::PreparedRewrite& rewrite = listRewrite[writtenCount];
-                if ( writer.writeText( rewrite._referrerAbs, rewrite._rewrittenText ) == false )
+                if ( writer.writeText( rewrite._referrerAbs, rewrite._rewrittenText ) != AssetWriteResult::Written )
                 {
                     bFailed = true;
                     StringBuilder<constant::buffer::kMax256> failureBuilder;
@@ -732,7 +735,7 @@ namespace sw::editor
             for ( size_t index = 0; index < writtenCount; ++index )
             {
                 const EditorAssetFileCommandsInternal::PreparedRewrite& rewrite = listRewrite[index];
-                if ( writer.writeText( rewrite._referrerAbs, rewrite._originalText ) == false ) // 방금 쓴 글이 그대로일 때만 되돌린다
+                if ( writer.writeText( rewrite._referrerAbs, rewrite._originalText ) != AssetWriteResult::Written ) // 방금 쓴 글이 그대로일 때만 되돌린다
                     listStuck.push_back( rewrite._referrerID );
             }
             for ( size_t index = movedCount; index > 0; --index )

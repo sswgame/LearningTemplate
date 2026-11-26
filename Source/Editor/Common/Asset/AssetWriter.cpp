@@ -129,7 +129,7 @@ namespace sw::editor
         return hash != 0 && hash != pEntry->_hash;
     }
 
-    bool AssetWriter::replaceText( const DiskPath& path, string_view expected, string_view text )
+    AssetWriteResult AssetWriter::replaceText( const DiskPath& path, string_view expected, string_view text )
     {
         AssetWriter writer;
         writer.setBaseline( path, ContentHash::computeBytes( reinterpret_cast<const uint8*>( expected.data() ), expected.size() ) );
@@ -172,21 +172,21 @@ namespace sw::editor
         return bAllowed;
     }
 
-    optional<AbsolutePath> AssetWriter::beginWrite( const DiskPath& path )
+    AssetWriteResult AssetWriter::beginWrite( const DiskPath& path, AbsolutePath& outWritable )
     {
         if ( validateSave( path ) == false )
-            return nullopt;
-        const AbsolutePath writable = AssetWriteAccess::toWritablePath( path );
-        return FileUtil::ensureParentDirectoryExists( writable ) ? optional<AbsolutePath>{ writable } : nullopt;
+            return AssetWriteResult::Refused;
+        outWritable = AssetWriteAccess::toWritablePath( path );
+        return FileUtil::ensureParentDirectoryExists( outWritable ) ? AssetWriteResult::Written : AssetWriteResult::Failed;
     }
 
-    bool AssetWriter::writeText( const DiskPath& path, string_view text )
+    AssetWriteResult AssetWriter::writeText( const DiskPath& path, string_view text )
     {
         return save( path, [text]( const AbsolutePath& writable )
         { return FileUtil::writeTextFile( writable, text ); } );
     }
 
-    bool AssetWriter::writeBytes( const DiskPath& path, span<const uint8> bytes )
+    AssetWriteResult AssetWriter::writeBytes( const DiskPath& path, span<const uint8> bytes )
     {
         return save( path, [bytes]( const AbsolutePath& writable )
         { return FileUtil::writeFile( writable, bytes.data(), bytes.size() ); } );

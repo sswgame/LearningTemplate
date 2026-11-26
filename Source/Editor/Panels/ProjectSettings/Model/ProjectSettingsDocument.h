@@ -21,6 +21,7 @@ namespace sw
 namespace sw::editor
 {
     class AssetWriter;
+    enum class AssetWriteResult : uint8;
 
     /**
      * @class ProjectSettingsDocument
@@ -104,7 +105,7 @@ namespace sw::editor
         [[nodiscard]] expected<string> makeDifferenceJSON() const;
         [[nodiscard]] expected<string> makeDifferenceElement() const;
         /** @brief 요소 모드의 저장 — 파일에서 그 요소의 글만 @p elementText 로 바꿔 씁니다. */
-        [[nodiscard]] bool saveElement( AssetWriter& writer, const string& elementText ) const;
+        [[nodiscard]] AssetWriteResult saveElement( AssetWriter& writer, const string& elementText ) const;
 
     private:
         const TypeInfo*   _pType;

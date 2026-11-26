@@ -82,7 +82,7 @@ namespace sw::editor
                 const ScenarioRecordOutput output   = getState()._recorder.stop( settings );
                 const AbsolutePath         diskPath = ScenarioRecorder::makeOutputDiskPath( getState()._outputPath );
                 AssetWriter                writer;
-                if ( writer.writeText( diskPath, output._xmlText ) == false )
+                if ( writer.writeText( diskPath, output._xmlText ) != AssetWriteResult::Written )
                 {
                     StringBuilder<constant::buffer::kMax256> replyBuilder;
                     replyBuilder.appendFormat( "could not write '%#'", getState()._outputPath );

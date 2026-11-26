@@ -248,7 +248,7 @@ namespace sw::editor
         }
         const optional<DiskPath> gridPath = editor::getSubsystem<AssetPaths>().toDiskPath( assetPath );
         AssetWriter              writer;
-        if ( gridPath.has_value() == false || writer.saveAsset( *gridPath, grid ) == false )
+        if ( gridPath.has_value() == false || writer.saveAsset( *gridPath, grid ) != AssetWriteResult::Written )
         {
             StringBuilder<constant::buffer::kMax512> failureBuilder;
             failureBuilder.appendFormat( "could not write %#", assetPath );

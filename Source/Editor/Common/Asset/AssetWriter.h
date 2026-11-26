@@ -23,6 +23,17 @@ namespace sw::editor
     };
 
     /**
+     * @brief 쓰기 하나의 결과입니다. 거절(`Refused`)은 문이 이미 경고 로그와 알림으로 알렸으므로 부르는 쪽은 `Failed` 에서만 오류를 남긴다.
+     * @details bool 하나로 돌려주던 때는 거절과 쓰기 실패를 가르지 못해 부르는 자리마다 거절에도 오류를 한 번 더 찍었다. 언리얼 `ESavePackageResult`(Success · Canceled · Error)와 같은 세 갈래다.
+     */
+    enum class [[nodiscard]] AssetWriteResult : uint8
+    {
+        Written, ///< 썼고 쓴 내용이 새 기준이다
+        Refused, ///< 확인(읽기 전용 · 밖에서 바뀜)이 막았다. 파일은 그대로이고 경고는 이미 남았다
+        Failed,  ///< 확인은 지났는데 폴더를 만들거나 쓰지 못했다. 파일은 그대로이고 부르는 쪽이 오류를 남긴다
+    };
+
+    /**
      * @class AssetWriter
      * @brief 연(읽은) 파일의 디스크 내용을 기준으로 들고, 쓸 때 그 기준과 읽기 전용을 확인합니다. 문서 패널이 하나 쥐고(`EditorDocumentPanelBase`), 읽고 고쳐 쓰는 명령은 지역 값으로 쓴다.
      * @details 리소스 id 를 푼 경로(`DiskPath`)는 쓰는 함수(`FileUtil::write*` · `saveToFile`)에 들어가지 않고 이 문이 `AbsolutePath` 로 연다(`AssetWriteAccess`) — 확인을 빠뜨린 쓰기가 컴파일되지 않는다.
@@ -59,31 +70,34 @@ namespace sw::editor
          */
         [[nodiscard]] bool validateSave( span<const DiskPath> listPath );
 
-        /** @brief 확인을 지나면 부모 폴더를 만들고 @p text 를 원자적으로 쓴 뒤 그 내용을 새 기준으로 적습니다. 지면 파일은 그대로이고 false 입니다. */
-        [[nodiscard]] bool writeText( const DiskPath& path, string_view text );
+        /** @brief 확인을 지나면 부모 폴더를 만들고 @p text 를 원자적으로 쓴 뒤 그 내용을 새 기준으로 적습니다. 지면 파일은 그대로입니다. */
+        [[nodiscard]] AssetWriteResult writeText( const DiskPath& path, string_view text );
         /** @brief `writeText` 의 바이트 판입니다. */
-        [[nodiscard]] bool writeBytes( const DiskPath& path, span<const uint8> bytes );
+        [[nodiscard]] AssetWriteResult writeBytes( const DiskPath& path, span<const uint8> bytes );
         /** @brief 에셋 @p asset 을 `saveToFile( AbsolutePath )` 로 씁니다(`save`). */
         template <typename TAsset>
-        [[nodiscard]] bool saveAsset( const DiskPath& path, const TAsset& asset )
+        [[nodiscard]] AssetWriteResult saveAsset( const DiskPath& path, const TAsset& asset )
         {
             return save( path, [&asset]( const AbsolutePath& writable )
             { return asset.saveToFile( writable ); } );
         }
         /**
          * @brief 파일 글이 @p expected 그대로일 때만 @p text 로 바꿉니다 — 파일을 쓰는 되돌리기 · 다시 하기 단계가 부른다.
-         * @details 그 사이 다른 편집기 · 체크아웃이 고친 파일을 되돌리기가 말없이 옛 글로 덮던 자리다. 다르면 알리고 false 다(파일은 그대로).
+         * @details 그 사이 다른 편집기 · 체크아웃이 고친 파일을 되돌리기가 말없이 옛 글로 덮던 자리다. 다르면 알리고 `Refused` 다(파일은 그대로).
          */
-        [[nodiscard]] static bool replaceText( const DiskPath& path, string_view expected, string_view text );
+        [[nodiscard]] static AssetWriteResult replaceText( const DiskPath& path, string_view expected, string_view text );
         /** @brief `writeText` 와 같은 길로, 쓰기를 @p saveTo( AbsolutePath ) -> bool(에셋의 `saveToFile`)에 맡깁니다. 받은 경로를 들고 나가지 않는다. */
         template <typename Func>
-        [[nodiscard]] bool save( const DiskPath& path, Func&& saveTo )
+        [[nodiscard]] AssetWriteResult save( const DiskPath& path, Func&& saveTo )
         {
-            const optional<AbsolutePath> writable = beginWrite( path );
-            if ( writable.has_value() == false || saveTo( *writable ) == false )
-                return false;
+            AbsolutePath           writable;
+            const AssetWriteResult begun = beginWrite( path, writable );
+            if ( begun != AssetWriteResult::Written )
+                return begun;
+            if ( saveTo( writable ) == false )
+                return AssetWriteResult::Failed;
             capture( path );
-            return true;
+            return AssetWriteResult::Written;
         }
 
     private:
@@ -99,8 +113,8 @@ namespace sw::editor
         void         setBaseline( const DiskPath& path, uint64 hash );
         /** @brief 밖에서 바뀐 파일이면 알리고 false 입니다. */
         [[nodiscard]] bool validateUnchanged( const DiskPath& path );
-        /** @brief 확인을 지나고 부모 폴더를 만든 쓰는 경로입니다. */
-        [[nodiscard]] optional<AbsolutePath> beginWrite( const DiskPath& path );
+        /** @brief 확인을 지나고 부모 폴더를 만들면 `Written` 이고 @p outWritable 이 쓰는 경로입니다. */
+        [[nodiscard]] AssetWriteResult beginWrite( const DiskPath& path, AbsolutePath& outWritable );
 
     private:
         vector<Entry> _listEntry;

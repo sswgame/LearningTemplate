@@ -97,7 +97,7 @@ namespace sw::editor
     {
         const string text = makePresetText( presetName );
         return writer.save( filePath, [&text]( const AbsolutePath& writable )
-        { return ResourceComposer::saveText( writable, ResourceSaveText::makeComplete( text ) ); } );
+        { return ResourceComposer::saveText( writable, ResourceSaveText::makeComplete( text ) ); } ) == AssetWriteResult::Written;
     }
 
     bool EditorGlobalVariableCommands::loadPreset( const DiskPath& filePath )
