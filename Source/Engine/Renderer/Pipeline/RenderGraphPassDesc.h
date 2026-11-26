@@ -393,15 +393,6 @@ namespace sw
     }
 
     /**
-     * @brief 렌더 해상도 색을 출력 해상도로 넘기는(시간 업스케일) 패스 종류인지 반환합니다 — TAA 하나다(언리얼 TAAU · TSR 자리).
-     * @details 해상도 공간 검증(`RenderPipelineAsset::validate`)과 업스케일 상수(`FramePassExecutor::executeTAAPass`)가 같은 질문을 이 함수로 한다.
-     */
-    constexpr bool isTemporalUpscalePass( RenderPassKind type )
-    {
-        return type == RenderPassKind::TAA;
-    }
-
-    /**
      * @brief 프레임 그래프(`_listFramePass`)의 `_type` 으로 쓸 수 있는 값인지 확인합니다. 프레임에 한 번 모든 뷰의 몫을 기록하는 패스입니다(`FrameGraphExecutor`).
      * @details 이 목록이 곧 "그래프 앞에 C++ 가 박아 두던 일" 의 전부다. 파이프라인이 선언하지 않은 종류는 PSO 도 없고 돌지 않는다(`FramePSOManager::createPassPSOs`).
      *          InstanceSort · InstanceSortMultiPass · IndirectArgsReset 는 GPUCull 패스 안의 다른 디스패치라 따로 선언하지 않는다. 입자 정렬 · 메시 쓰기는 시뮬레이션과 읽는 상태가 달라
@@ -501,7 +492,7 @@ namespace sw
         /**
          * @brief 이 첨부가 사는 해상도 공간입니다(기본 렌더). TAA 출력과 그 뒤 후처리 색은 `Output` 으로 적는다 — 시간 업스케일이 켜지면 출력 해상도로 만들어진다.
          * @details 검증(`RenderPipelineAsset::validate`): 한 패스의 출력은 같은 공간이고, 원본(SourceColor)을 읽는 패스는 원본과 같은 공간에 쓴다 — 렌더 → 출력으로 넘기는 것은
-         *          TAA(`isTemporalUpscalePass`)만이다. 나눗수는 그 공간의 크기를 나눈다.
+         *          시간 누적의 기준 패스(`RenderGraphPassDesc::_bTemporalJitter` — TAA)만이다. 나눗수는 그 공간의 크기를 나눈다.
          */
         PROPERTY()
         RenderResolutionSpace _resolutionSpace{ RenderResolutionSpace::Render };

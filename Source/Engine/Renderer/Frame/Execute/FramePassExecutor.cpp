@@ -1001,7 +1001,8 @@ namespace sw
         }
 
         // 꺼진 효과는 출력 이름이 원본을 가리킨다(`kBypassesToSource`) — 그 출력을 읽는 패스가 원본을 읽으므로 원본의 수명이 출력의 끝까지 늘어난다. 둘을 한 구간으로 묶는다.
-        // TAA 출력은 셋업이 기록 형식으로 읽어 프레임 밖에서도 쓴다 — 나누지 않는다.
+        // 기록 첨부(`_bHistory`)는 셋업이 그 출력의 서술로 기록을 만들고 프레임을 넘겨 쓴다 — 패스 종류와 상관없이 나누지 않는다(언리얼 RDG 도 추출하는 텍스처는 앨리어싱하지 않는다).
+        // 후보에서는 빼지 않는다 — 꺼진 TAA 의 원본 수명을 늘리는 묶음(아래)이 그 출력을 본다.
         vector<uint8>                listExcluded( listCandidate.size(), 0 );
         vector<RenderGraphAliasJoin> listJoin;
         for ( const RenderGraphPassDesc& pass : listPass )
@@ -1012,7 +1013,7 @@ namespace sw
                 const auto outputIt = mapCandidateIndex.find( output._attachment );
                 if ( outputIt == mapCandidateIndex.end() )
                     continue;
-                if ( pass._type == RenderPassKind::TAA )
+                if ( output._historyResource.empty() == false )
                     listExcluded[outputIt->second] = 1;
                 if ( info.hasFlag( RenderPassTraitFlag::kBypassesToSource ) == false )
                     continue;
