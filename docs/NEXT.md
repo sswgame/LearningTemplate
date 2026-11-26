@@ -32,7 +32,6 @@
 
 ### 아직 아무도 맡지 않은 몫 [코드]
 
-- Core 층 열거 이름: `getEnumName` 은 Engine 리플렉션이라 Core 의 손 이름 표 7 곳(AsyncFileIO · NetConnection · ShutdownSignal · MemoryTag 등)이 남았다. Core 에서 쓸 열거 이름 장치를 둘지, 리플렉션 열거 메타를 Core 로 내릴지 정한다.
 - AssertDialog 합치기 — 사용자에게 물을 것.
 
 ## 1. 다음 순서
