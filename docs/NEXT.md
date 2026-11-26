@@ -29,7 +29,7 @@
 | w-pimpl · LT-wt/pimpl | P1 · P3 · P4(bf52a2d679 · 32ac84a437 · ac9a1f1bf7 끝), 렌더 R4 나머지(쿠킹 컴파일 스트리핑 · 패치 팩 색인 합치기 · 색인 첫 사용처) |
 | w-devtools-merge · LT-wt/devtoolsmerge | T1(605e855120 · 1eeddfc3ae 끝), PE 헤더 · 단일 헤더 43 개 · VulkanRHISamplerPreset(…7049625e66 · 68412caa1e~2a4f7ba666 끝), 남은 단일 헤더 7 개 |
 | w-server-subsystem · LT-wt/serversub | 6 절 서버 서비스를 모듈 서브시스템으로 |
-| w-shaderreload · LT-wt/shaderreload | 셰이더 리로드 · shortcut · 노이즈 대조(끝), 나머지 sw_* CMake 함수 구성 경로 테스트 |
+| w-shaderreload · LT-wt/shaderreload | 셰이더 리로드 · shortcut · 노이즈 대조 · 매니페스트 · 층 표 테스트(ece90ecaea 끝), 쿠킹 표 테스트 · target_layers 음성 사례 |
 | w-engine-owner · LT-wt/engineowner | 끝남(3c5d1c924a 까지) — 다음 묶음에 합친다 |
 
 ### 아직 아무도 맡지 않은 몫 [코드]
