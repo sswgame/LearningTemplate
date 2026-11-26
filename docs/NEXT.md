@@ -24,7 +24,7 @@
 | 갈래 · 워크트리 | 몫 |
 | --- | --- |
 | w-cpp-reflect · LT-wt/cppreflect | 파서 정의 · include 를 타깃 속성에서(671f8c8988 · fd2dac7d65 끝), 컴파일 옵션 · 옵션 표 엄격화 · 구성 경로 ctest(9d9872a619 · 4de5136b58 · 1f9504d287 끝), Core (c) 열거 이름 · (a) 23 건(9d545b213c · 8214df6dac · 7b6953c4d2 끝 — 바꿈 2 · 이미 됨 8 · 데이터 철자라 둠 13), 파싱 단계 앞부분 재사용 |
-| w-enum-meta · LT-wt/enummeta | ENUM 잎 헤더 · 열거형 둘(2898146f6c 끝), 키트별 현지화 표(모듈 단위 탑재 · 수집 대상 · 쿠킹 · 표 이전), AssetTypeDef 접미사 중복(AudioPlayableAsset) |
+| w-enum-meta · LT-wt/enummeta | 끝(…adc3996114) — 다음 묶음에 합친다. 합친 뒤 `App --gather-text` 로 키트 표 · 엔진 표를 수집기 출력으로 맞춘다 |
 | w-gf-dev · LT-wt/gfdev | 배포 매크로 오류 · 확장자 글 · 내비 베이크(1994afb762 · 300285e7e5 · d46c67287a 끝), 에디터 `.hlsl` · `.hlsli` 글 셋, 개발 구성에서도 등록 자리 막기 |
 | w-pimpl · LT-wt/pimpl | P1 · P3 · P4(bf52a2d679 · 32ac84a437 · ac9a1f1bf7 끝), 렌더 R4 나머지(쿠킹 컴파일 스트리핑 · 패치 팩 색인 합치기 · 색인 첫 사용처) |
 | w-devtools-merge · LT-wt/devtoolsmerge | T1(605e855120 · 1eeddfc3ae 끝), PE 헤더 · 단일 헤더 43 개 · VulkanRHISamplerPreset(…7049625e66 · 68412caa1e~2a4f7ba666 끝), 남은 단일 헤더 7 개 |
@@ -34,6 +34,7 @@
 
 ### 아직 아무도 맡지 않은 몫 [코드]
 
+- GameFramework(Runtime · Client · Plugin) 글도 글 주인 모듈의 현지화 표로(키트 표와 같은 길), 표에 올리지 않은 다른 참조 종류(AudioMusicAsset 등)의 접미사 사본을 합 종류로.
 - 보류(조사 먼저): ReflectionValidation → TypeInfo, PROPERTY 검증기를 개발 전용으로 빼도 배포 안전이 지켜지는가.
 - AssertDialog 합치기 — 사용자에게 물을 것.
 
