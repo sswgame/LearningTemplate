@@ -28,7 +28,6 @@
 #include "Core/Diagnostics/CrashHandler.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/BuildInfo.h"
-#include "Core/Foundation/DynamicModules.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Log/Logger.h"
 #include "Core/Log/Sink/ConsoleLogOutput.h"
@@ -604,11 +603,9 @@ namespace sw
         if ( _launch.loadModuleLibraries( static_cast<uint8>( ModuleTarget::Server ), make_unique<GameModuleManager>() ) == false )
             return false;
         // 서버 서비스 코드가 리로드될 모듈 안에 있으므로 서비스를 먼저 멈춘다. 모듈 호스트보다 나중에 더하므로 먼저 불린다(배치 콜백은 나중 것이 먼저). 배포는 빈 구독이다.
-#if SW_WITH_DYNAMIC_MODULES
         if ( _launch.getDevLayer() != nullptr )
             _reloadStopsServices = _launch.getDevLayer()->addOnBeforeReloadBatch(
                 SW_DELEGATE_METHOD( BeforeReloadBatchDelegate, &ServerApp::onBeforeModuleReload, this ) );
-#endif
         return true;
     }
 

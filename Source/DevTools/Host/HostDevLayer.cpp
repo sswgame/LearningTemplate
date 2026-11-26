@@ -6,6 +6,7 @@
 #include "Core/Diagnostics/PhaseTimings.h"
 #include "Core/File/PlatformFileUtil.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Foundation/DynamicModules.h"
 #include "Core/Log/Logger.h"
 #include "Core/Time/MonotonicClock.h"
 
@@ -65,7 +66,7 @@ namespace sw
         /**
          * @class HostDevLayer
          * @brief 개발 구성의 개발 계층입니다 — 개발 도구 연결(`HostDevTools`), 동적 모듈 구성이면 핫 리로드(`ModuleReloadDriver`), App 의 자동화 · 기동 측정을 듭니다.
-         * @details 정적 모듈 구성(웹 · Android 개발 — `SW_STATIC_MODULES`)은 리로드 구동기(`ModuleReload/`)를 짓지 않는다 — 리로드 창구가 형식에 없다.
+         * @details 정적 모듈 구성(웹 · Android 개발 — `SW_STATIC_MODULES`)은 리로드 구동기(`ModuleReload/`)를 짓지 않는다 — 리로드 창구는 리로드가 없다고 답한다.
          *          기동 단계표는 이 계층을 만든 때(호스트 `initialize` 의 첫 줄)부터 잰다.
          */
         class HostDevLayer final : public IHostDevLayer
@@ -107,6 +108,16 @@ namespace sw
             Subscription        addOnBeforeReloadBatch( BeforeReloadBatchDelegate onBeforeBatch ) override { return _moduleReload.addOnBeforeReloadBatch( onBeforeBatch ); }
             void                requestReload( const utf8* pModuleName ) override { _moduleReload.requestReload( pModuleName ); }
             void                updateModuleReload() override { _moduleReload.update(); }
+#else
+            // 정적 모듈 구성은 모듈을 한 실행 파일에 링크해 리로드할 것이 없다(`ModuleReload/` 를 짓지 않는다) — 모듈 관리자는 매니저 nullptr 로 정적 표를 쓴다.
+            bool                initializeModuleReload( uint8, SubsystemScope&, ModuleLoaderSubsystem&, ModuleCatalog&, ModuleResolution& ) override { return true; }
+            ILiveReloadManager* getLiveReloadManager() const override { return nullptr; }
+            Subscription        addOnBeforeReloadBatch( BeforeReloadBatchDelegate ) override { return Subscription{}; }
+            void                requestReload( const utf8* pModuleName ) override
+            {
+                SW_LOG_WARNING_ID( "HostDevLayer.ReloadStaticModules", "Module reload of %# is not available - this build links its modules statically", pModuleName != nullptr ? pModuleName : "" );
+            }
+            void updateModuleReload() override {}
 #endif
 
             bool runEditorModuleCommandlets( const CommandLineManager& commandLine ) override { return EditorModuleCommandlet::runRequested( commandLine ); }
