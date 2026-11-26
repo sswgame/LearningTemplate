@@ -10,9 +10,9 @@
 #include "Core/Container/vector.h"
 
 #include "Engine/EngineMinimal.h"
-#include "Engine/Graphics/Mesh/MeshVertex.h"
 #include "Engine/Graphics/RHI/RHIGeometryBuffer.h"
 #include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
+#include "Engine/Graphics/RHI/RHIVertex.h"
 #include "Engine/Presentation/InstanceHighlight.h"
 #include "Engine/Renderer/Frame/View/RenderView.h"
 #include "Engine/Renderer/Scene/GPUInstanceMotionHistory.h"
@@ -197,7 +197,7 @@ namespace sw
          */
         bool upload( IRHIDevice* pDevice, uint32 meshPoolMaxVertices );
         /**
-         * @brief 프레임 업로드 단계 — 정점 풀이 쌓은 GPU 복사(렌더 프록시 → 풀, 옛 풀 → 새 풀)를 @p cmd 에 기록합니다(R-15). 실행기가 파이프라인과 무관하게 첫 리스트 앞에서 부른다(`FramePassExecutor::submitGraph`).
+         * @brief 프레임 업로드 단계 — 정점 풀이 쌓은 GPU 복사(렌더 프록시 → 풀, 옛 풀 → 새 풀)를 @p cmd 에 기록합니다(R-15). 실행기가 파이프라인과 무관하게 첫 리스트 앞에서 부른다(`FrameRecorder::submitGraph`).
          */
         void recordFrameUploads( IRHICommandList& cmd, IRHIDevice& device );
         /** @brief 지금 스냅샷의 메시(동적 메시 밖)를 게임 스레드가 넘기기 전에 만들었는지입니다(`GPUSceneSnapshot::_bMeshesCreatedBeforeHandoff`) — 렌더 스레드는 다시 만들지 않는다. */
@@ -299,7 +299,7 @@ namespace sw
 
         /** @brief 인스턴스 버퍼 핸들을 반환합니다. */
         RHIBufferHandle getInstanceBuffer() const { return _instances._buffer; }
-        /** @brief 인스턴스 구조 버퍼(핸들 · 크기)입니다 — 프레임 그래프 표가 크기와 함께 등록한다(`FrameBufferTable::registerBuffer`). */
+        /** @brief 인스턴스 구조 버퍼(핸들 · 크기)입니다 — 프레임 그래프 표가 크기와 함께 등록한다(`RenderGraphImportedResourceTable::registerBuffer`). */
         const RHIStructuredBuffer& getInstanceStructuredBuffer() const { return _instances; }
         /** @brief 인스턴스 SRV 인덱스를 반환합니다. */
         RHIBufferSRVIndex getInstanceSRV() const { return _instances._srv; }

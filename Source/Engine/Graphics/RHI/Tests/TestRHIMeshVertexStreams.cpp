@@ -8,9 +8,9 @@
 #include "Core/Math/Half.h"
 #include "Core/TestFramework/TestFramework.h"
 
-#include "Engine/Graphics/Mesh/MeshVertex.h"
 #include "Engine/Graphics/RHI/RHIMeshVertexLayout.h"
 #include "Engine/Graphics/RHI/RHIMeshVertexStreams.h"
+#include "Engine/Graphics/RHI/RHIVertex.h"
 
 using namespace sw;
 

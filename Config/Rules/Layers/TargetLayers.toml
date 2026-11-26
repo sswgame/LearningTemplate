@@ -16,7 +16,7 @@ app = ["Editor", "Server", "GameFramework", "Games", "Programs"]
 server = ["App", "Editor", "GameFramework", "Games", "Programs"]
 # 게임 코드(GameFramework 공유 모듈 · 키트 · 게임)는 GPU 객체 · 셰이더 칸(`Engine/Graphics/RHI` · `Engine/Graphics/Shader`)을 전이로도 보지 않는다 — 게임 쪽 형식(`MeshBuildVertex` ·
 # `LightKind` · 머티리얼 · 메시의 렌더 프록시 분리 · `RenderState/` 의 렌더 상태 어휘)을 쓰고 GPU 칸으로 옮기는 일은 엔진 · 렌더러가 한다(언리얼 게임 모듈이 UMaterial · UStaticMesh 만 보는 자리).
-# 옛 린트 game-gpu-includes(직접 include 만 보던 글자 검사)를 이 게이트가 대신한다. 연 RHI 헤더는 아래 `[allow]` 의 값 열거 하나다.
+# 옛 린트 game-gpu-includes(직접 include 만 보던 글자 검사)를 이 게이트가 대신한다. 연 RHI 헤더는 아래 `[allow]` 의 값 열거와 메시 정점 값 형식이다.
 # 디버그 그리기(`Engine/Graphics/DebugDraw`)도 보지 않는다 — 모습을 디버그 선으로 내면 그리기가 없는 배포에서 판이 사라진다. 모습은 프리팹(`PrefabViewBatch` · `PrefabPool`)으로 보이고,
 # 게임의 개발 전용 `Dev/` 만 아래 `[devopen]` 이 연다(언리얼 `ENABLE_DRAW_DEBUG` 가 배포에서 그리기를 빼는 자리 — 여기는 include 자체를 막는다).
 gameframework = ["DevTools", "Editor", "ModuleManager", "App", "Server", "Games", "Programs", "GameFramework/Kits", "GameFramework/Plugin", "GameFramework/Developer", "Engine/Graphics/RHI", "Engine/Graphics/Shader", "Engine/Graphics/DebugDraw"]
@@ -76,8 +76,10 @@ reflectionparser = [
 	"Engine/Reflection/TypeLookupCache.h",
 ]
 # 렌더 확장 계약(`Engine/Renderer/Extension/RenderExtension.h` — 모듈이 패스 · 임시 텍스처를 선언한다)이 픽셀 형식(`RHIFormat`)을 받는다. 값 열거뿐인 헤더라 연다(언리얼 EPixelFormat 을 게임 모듈이 쓰는 자리).
-gameframework = ["Engine/Graphics/RHI/RHIEnums.h"]
-kit = ["Engine/Graphics/RHI/RHIEnums.h"]
-game = ["Engine/Graphics/RHI/RHIEnums.h"]
+# 메시 정점(`RHIVertex` — Core 만 include 하는 값 형식)은 메시 · 파괴 · 지형 헤더가 들고 다녀 게임 코드에 전이로 닿는다. 정점 형식이 RHI 정점 배치(`RHIMeshVertexLayout`) 곁에 있어야 해 RHI 폴더에 두고 연다
+# (언리얼 게임 모듈이 FStaticMeshBuildVertex 를 보는 자리).
+gameframework = ["Engine/Graphics/RHI/RHIEnums.h", "Engine/Graphics/RHI/RHIVertex.h"]
+kit = ["Engine/Graphics/RHI/RHIEnums.h", "Engine/Graphics/RHI/RHIVertex.h"]
+game = ["Engine/Graphics/RHI/RHIEnums.h", "Engine/Graphics/RHI/RHIVertex.h"]
 # 에디터 뷰 상태(`EditorRenderViews`)가 렌더 타깃 핸들을 든다 — 종류별 값 형식만 담은 헤더라 연다(RHIEnums 와 같은 까닭).
-editorextension = ["Engine/Graphics/RHI/RHIEnums.h", "Engine/Graphics/RHI/RHIHandles.h"]
+editorextension = ["Engine/Graphics/RHI/RHIEnums.h", "Engine/Graphics/RHI/RHIHandles.h", "Engine/Graphics/RHI/RHIVertex.h"]

@@ -9,7 +9,7 @@
 | 속성 | 자식이 적은 것만 덮는다(빈 값 `attr=""` 도 적은 것) |
 | 구조체 칸 | 안으로 들어가 같은 규칙. 두 번 적으면 오류(`FieldRepeated`) |
 | 열쇠 있는 목록 | 원소의 `InheritKey` 칸으로 합친다: 작업 없음 = 있으면 합치고 없으면 끝에 더함, `_op="Replace"` · `_op="Remove"`(없는 열쇠는 오류), `_before="X"` · `_after="X"`(둘 다 적으면 오류). 위에서 아래로 차례로 얹는다 |
-| 열쇠가 글인 목록(`kTextKey` — 머티리얼 `_alwaysDefines`. 리플렉션 글 목록은 `PROPERTY( InheritKey )` + 표 `key="#text"`, 파이프라인 `_listPermutation` · `_listRenderPassRef`) | 글 하나씩 더하고 `<item _op="Remove">글</item>` 로 지운다 |
+| 열쇠가 글인 목록(`kTextKey` — 머티리얼 `_alwaysDefines`. 리플렉션 글 목록은 `PROPERTY( InheritKey )` + 표 `key="#text"`, 파이프라인 `_listPermutation` · `_listRenderFeatureRef`) | 글 하나씩 더하고 `<item _op="Remove">글</item>` 로 지운다 |
 | 열쇠 없는 목록 · 글 값 | 자식이 적으면 통째로 바뀐다. 빈 원소(`<_listInput />`)는 비운다 |
 
 - 순환 · 없는 부모 · 형식이 다른 부모 · 깊이 초과(`_dataInheritanceMaxDepth`)는 로드 실패 — 로드 강제. 부모 없이 자식 칸만으로 읽지 않는다.
@@ -109,4 +109,4 @@
 
 ## 합치지 않은 것
 
-- `PrefabOverrides` 합치기(열쇠가 지역 id 키, 씬 인스턴스는 사라진 대상을 경고로 넘긴다), `_listRenderPassRef`(여러 파일 믹스인 — 이름이 겹치면 오류), JSON 설정(`ConfigManager` 층), 오디오 `_parentEvent`(래퍼 안 이벤트), `AudioEffectDef` 목록(열쇠가 비는 원소), 스케줄 `<Archetype>`, `SkeletonVariant` 칸(곱해지고 쌓인다 — `Skeleton::mergeVariantText`)은 위 구조에 올리지 않는다. 같은 일을 다시 하려면 이 줄의 까닭이 사라졌는지 먼저 본다.
+- `PrefabOverrides` 합치기(열쇠가 지역 id 키, 씬 인스턴스는 사라진 대상을 경고로 넘긴다), `_listRenderFeatureRef`(여러 파일 믹스인 — 이름이 겹치면 오류), JSON 설정(`ConfigManager` 층), 오디오 `_parentEvent`(래퍼 안 이벤트), `AudioEffectDef` 목록(열쇠가 비는 원소), 스케줄 `<Archetype>`, `SkeletonVariant` 칸(곱해지고 쌓인다 — `Skeleton::mergeVariantText`)은 위 구조에 올리지 않는다. 같은 일을 다시 하려면 이 줄의 까닭이 사라졌는지 먼저 본다.

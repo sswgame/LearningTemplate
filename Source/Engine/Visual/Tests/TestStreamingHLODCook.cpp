@@ -8,7 +8,7 @@
 
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
-#include "Engine/Graphics/Mesh/MeshUtil.h"
+#include "Engine/Graphics/Mesh/PrimitiveMeshBuilder.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Object/GameObject/Subsystem/SceneEngineSubsystems.h"
@@ -168,7 +168,7 @@ SW_TEST_CASE( StreamingHLODCookTest, RareMeshesMergeByMaterial )
 /** @brief [StreamingHLODCookTest] 부품 합치기 — 정점은 부품 자리로 옮고 노멀은 단위 길이로 남으며, 거울 스케일은 감김을 뒤집는다. 없는 구간은 더하지 않고 알린다 */
 SW_TEST_CASE( StreamingHLODCookTest, PartsAppendIntoOneMesh )
 {
-    const shared_ptr<Mesh> cube = MeshUtil::acquirePrimitive( "Cube" );
+    const shared_ptr<Mesh> cube = PrimitiveMeshBuilder::acquirePrimitive( "Cube" );
     SW_REQUIRE_NOT_NULL( cube );
     HLODMeshPart part;
     part._position = float3{ 10.0f, 0.0f, 0.0f };

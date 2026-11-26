@@ -20,12 +20,12 @@
 #include "Engine/Graphics/Material/MaterialPermutation.h"
 #include "Engine/Graphics/Material/MaterialTypes.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
-#include "Engine/Graphics/Mesh/MeshVertex.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/RHI/RHIPipelineStateDesc.h"
 #include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
+#include "Engine/Graphics/RHI/RHIVertex.h"
 #include "Engine/Graphics/Shader/Binding/EngineComputeShaders.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingLayout.h"
 #include "Engine/Graphics/Shader/Compile/RHIShaderRequest.h"
@@ -637,7 +637,7 @@ namespace sw
             }
             for ( const DeferredTilePSOJob& tileJob : listTileJob )
             {
-                // 못 만들면 그 이유를 남기고 조명은 풀스크린 한 장(모든 엽 — 같은 그림)으로 그린다(`FramePassExecutor::executeTiledLighting` 이 종류 하나라도 없으면 타일을 쓰지 않는다).
+                // 못 만들면 그 이유를 남기고 조명은 풀스크린 한 장(모든 엽 — 같은 그림)으로 그린다(`FrameRecorder::executeTiledLighting` 이 종류 하나라도 없으면 타일을 쓰지 않는다).
                 RHIPipelineState pso = createPipelineStateTimed( *_pDevice, tileJob._desc );
                 if ( pso.isValid() == false )
                     SW_LOG_ERROR_ID( "FramePSOManager.DeferredTilePSOCould", "Deferred lighting tile PSO could not be created (shader '%#') - lighting draws one fullscreen triangle with every lobe",

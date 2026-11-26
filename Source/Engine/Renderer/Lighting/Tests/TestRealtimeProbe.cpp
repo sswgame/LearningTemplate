@@ -8,10 +8,10 @@
 #include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Environment/Sky/SkyGradient.h"
-#include "Engine/Graphics/Lighting/SceneVoxelScene.h"
+#include "Engine/Graphics/Lighting/SceneVoxelizeInput.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
-#include "Engine/Graphics/Mesh/MeshUtil.h"
+#include "Engine/Graphics/Mesh/PrimitiveMeshBuilder.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -57,15 +57,15 @@ namespace
     }
 
     /** @brief 메시가 없는 복셀 장면입니다(격자 모양만 든다). */
-    sw::shared_ptr<sw::SceneVoxelScene> makeEmptyScene( const sw::SceneVoxelGrid& grid )
+    sw::shared_ptr<sw::SceneVoxelizeInput> makeEmptyScene( const sw::SceneVoxelGrid& grid )
     {
-        sw::shared_ptr<sw::SceneVoxelScene> scene = sw::make_shared<sw::SceneVoxelScene>();
-        scene->_grid                              = grid;
+        sw::shared_ptr<sw::SceneVoxelizeInput> scene = sw::make_shared<sw::SceneVoxelizeInput>();
+        scene->_grid                                 = grid;
         return scene;
     }
 
     /** @brief 장면 하나를 처음부터 칠한 결과입니다(칠할 일을 CPU 기준 구현으로 돌린다). */
-    sw::test::SceneVoxelReference paintWhole( const sw::SceneVoxelScene& scene )
+    sw::test::SceneVoxelReference paintWhole( const sw::SceneVoxelizeInput& scene )
     {
         sw::vector<uint32> words( scene._grid.getWordCount(), 0xFFFFFFFFu ); // 지우기가 먼저 돈다 — 앞 내용에 기대지 않는다
         words.back() = 0u;                                                   // 마지막 단어의 남는 비트는 칸이 아니다
@@ -102,7 +102,7 @@ namespace
         sw::MeshComponent* pMesh = pObject->addComponent<sw::MeshComponent>();
         if ( pMesh == nullptr )
             return nullptr;
-        pMesh->setMesh( sw::MeshUtil::createUnitCube() );
+        pMesh->setMesh( sw::PrimitiveMeshBuilder::createUnitCube() );
         pMesh->setLocalPosition( position );
         pMesh->setMaterial( pMaterial ); // nullptr 이면 씬 기본(불투명)
         pMesh->setVisible( bVisible );
@@ -278,11 +278,11 @@ SW_TEST_CASE( SceneVoxelizerTest, RepaintsOnlyChangedOccluders )
     };
     sw::MeshComponent* pWall = addCube( pObjects, "Wall", sw::float3{ -1.0f, 0.0f, 0.0f }, nullptr, true );
     SW_REQUIRE_NOT_NULL( pWall );
-    sw::SceneVoxelScene painted    = sw::SceneVoxelizer::makeScene( registry, sceneOpaque.get(), bounds, 0.25f );
-    sw::SceneVoxelScene current    = painted;
-    sw::vector<uint32>  words      = paintWhole( painted )._listWord;
-    uint64              generation = registry.getSetGeneration();
-    sw::vector<uint32>  listChanged;
+    sw::SceneVoxelizeInput painted    = sw::SceneVoxelizer::makeScene( registry, sceneOpaque.get(), bounds, 0.25f );
+    sw::SceneVoxelizeInput current    = painted;
+    sw::vector<uint32>     words      = paintWhole( painted )._listWord;
+    uint64                 generation = registry.getSetGeneration();
+    sw::vector<uint32>     listChanged;
 
     // 반투명 큐브와 격자 밖 큐브 — 가리개가 아니거나 닿지 않으니 칠할 것이 없다.
     SW_REQUIRE_NOT_NULL( addCube( pObjects, "Glass", sw::float3{ 0.0f, 0.0f, 0.0f }, glass.get(), true ) );
@@ -351,13 +351,13 @@ SW_TEST_CASE( SceneVoxelizerTest, MovedOccluderRepaintsOnlyItsLayer )
     sw::vector<uint32> listState;
     sw::vector<uint32> listTransform;
     registry.consumeDirty( listState, listTransform );
-    sw::SceneVoxelScene painted    = sw::SceneVoxelizer::makeScene( registry, sceneOpaque.get(), bounds, 0.25f );
-    uint64              generation = registry.getMeshChangeGeneration();
-    const uint32        wordCount  = painted._grid.getWordCount();
-    sw::vector<uint32>  words      = paintWhole( painted )._listWord;
-    words.resize( wordCount * 2u, 0u );            // 뒤 절반은 정적 사본 자리
-    const sw::SceneVoxelScene* pPainted = nullptr; // 정적 사본이 처음 생기는 프레임은 자리가 바뀌어 전체를 칠한다
-    sw::SceneVoxelScene        current  = painted;
+    sw::SceneVoxelizeInput painted    = sw::SceneVoxelizer::makeScene( registry, sceneOpaque.get(), bounds, 0.25f );
+    uint64                 generation = registry.getMeshChangeGeneration();
+    const uint32           wordCount  = painted._grid.getWordCount();
+    sw::vector<uint32>     words      = paintWhole( painted )._listWord;
+    words.resize( wordCount * 2u, 0u );               // 뒤 절반은 정적 사본 자리
+    const sw::SceneVoxelizeInput* pPainted = nullptr; // 정적 사본이 처음 생기는 프레임은 자리가 바뀌어 전체를 칠한다
+    sw::SceneVoxelizeInput        current  = painted;
 
     for ( const float32 x : { -0.5f, 0.0f, 0.5f } )
     {
@@ -408,7 +408,7 @@ SW_TEST_CASE( SceneVoxelizerTest, LateMaterialIsReadAgain )
     sw::vector<uint32> listState;
     sw::vector<uint32> listTransform;
     registry.consumeDirty( listState, listTransform );
-    sw::SceneVoxelScene voxelScene = sw::SceneVoxelizer::makeScene( registry, sceneOpaque.get(), bounds, 0.25f );
+    sw::SceneVoxelizeInput voxelScene = sw::SceneVoxelizer::makeScene( registry, sceneOpaque.get(), bounds, 0.25f );
     SW_REQUIRE_FALSE( voxelScene.getStaticSources().empty() ); // 첫 메시는 칸 0 이다
     SW_REQUIRE_TRUE( voxelScene.getStaticSources()[0].isPainted() );
     const uint64 generation = registry.getMeshChangeGeneration();
@@ -459,7 +459,7 @@ SW_TEST_CASE( SceneVoxelizerTest, DominantAxisPaintMatchesSeparatingAxis )
             }
             arrCorner[corner] = sw::float3{ listVertex[corner]._arrPosition[0], listVertex[corner]._arrPosition[1], listVertex[corner]._arrPosition[2] };
         }
-        sw::SceneVoxelScene scene;
+        sw::SceneVoxelizeInput scene;
         scene._grid = grid;
         sw::SceneVoxelSource source{};
         source._mesh = sw::Mesh::create( sw::MeshCPUAccess::Keep );
@@ -478,9 +478,9 @@ SW_TEST_CASE( SceneVoxelizerTest, DominantAxisPaintMatchesSeparatingAxis )
  */
 SW_TEST_CASE( SceneVoxelizerTest, EmissionKeepsTheBrightestRank )
 {
-    const uint32        dim    = sw::PackUtil::packRGB9E5( sw::float3{ 0.5f, 0.5f, 0.5f } );
-    const uint32        bright = sw::PackUtil::packRGB9E5( sw::float3{ 4.0f, 2.0f, 1.0f } );
-    sw::SceneVoxelScene scene;
+    const uint32           dim    = sw::PackUtil::packRGB9E5( sw::float3{ 0.5f, 0.5f, 0.5f } );
+    const uint32           bright = sw::PackUtil::packRGB9E5( sw::float3{ 4.0f, 2.0f, 1.0f } );
+    sw::SceneVoxelizeInput scene;
     scene._grid = makeFourMeterGrid(); // 64 칸 → 점유 단어 2 + 발광 단어 64
     sw::vector<sw::SceneVoxelSource> listSource;
     // 밝은 면을 먼저 · 어두운 면을 나중에 칠해도(원천 차례) 밝은 순위가 남는다. 셋째는 밝은 것과 같은 발광이다.
@@ -550,9 +550,9 @@ SW_TEST_CASE( SceneVoxelizerTest, SliceCountFollowsTriangleSize )
  */
 SW_TEST_CASE( SceneVoxelizerTest, PlanSharesMeshesAndRepaintsWholeOnShapeChange )
 {
-    sw::SceneVoxelScene scene;
+    sw::SceneVoxelizeInput scene;
     scene._grid                           = makeFourMeterGrid();
-    const sw::shared_ptr<sw::Mesh>   cube = sw::MeshUtil::createUnitCube();
+    const sw::shared_ptr<sw::Mesh>   cube = sw::PrimitiveMeshBuilder::createUnitCube();
     sw::vector<sw::SceneVoxelSource> listSource;
     for ( uint32 index = 0; index < 2u; ++index )
     {
@@ -577,7 +577,7 @@ SW_TEST_CASE( SceneVoxelizerTest, PlanSharesMeshesAndRepaintsWholeOnShapeChange 
     SW_EXPECT_EQUAL( scene._grid.getCellCount(), plan._clearThreadCount );
 
     sw::vector<sw::SceneVoxelGrid::CellRange> listRange;
-    sw::SceneVoxelScene                       painted = scene;
+    sw::SceneVoxelizeInput                    painted = scene;
     painted._listEmissionPalette.push_back( 1u ); // 순위의 뜻이 달라진다
     sw::SceneVoxelizer::collectDirtyRanges( painted, scene, listRange );
     SW_REQUIRE_EQUAL( size_t( 1 ), listRange.size() );
@@ -789,8 +789,8 @@ SW_TEST_CASE( SceneVoxelGridTest, EmissionPackRoundTrips )
  */
 SW_TEST_CASE( RealtimeProbeTest, EmissionWordsFollowOccupancy )
 {
-    const sw::shared_ptr<sw::SceneVoxelScene> emissive = makeEmptyScene( makeFourMeterGrid() ); // 64 칸 → 점유 단어 2 + 발광 단어 64
-    emissive->_listEmissionPalette                     = { 11u, 22u, 33u, 44u, 55u };           // 다섯 → 입력 행 둘
+    const sw::shared_ptr<sw::SceneVoxelizeInput> emissive = makeEmptyScene( makeFourMeterGrid() ); // 64 칸 → 점유 단어 2 + 발광 단어 64
+    emissive->_listEmissionPalette                        = { 11u, 22u, 33u, 44u, 55u };           // 다섯 → 입력 행 둘
     sw::vector<sw::RealtimeProbeRequest> listRequest( 2 );
     listRequest[0]._probeCount        = 1;
     listRequest[0]._emissiveIntensity = 2.5f;

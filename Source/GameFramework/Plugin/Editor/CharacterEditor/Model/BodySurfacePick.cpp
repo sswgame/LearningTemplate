@@ -6,7 +6,7 @@
 #include "Core/Math/Ray.h"
 
 #include "Engine/Graphics/Mesh/Mesh.h"
-#include "Engine/Graphics/Mesh/MeshVertex.h"
+#include "Engine/Graphics/RHI/RHIVertex.h"
 
 namespace sw::editor
 {

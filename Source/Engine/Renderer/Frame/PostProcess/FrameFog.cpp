@@ -1,6 +1,6 @@
 /**
  * @file FrameFog.cpp
- * @brief 안개 상수와 볼륨 안개(froxel) 컴퓨트의 준비 · 디스패치입니다. 안개 패스(`RenderPassKind::Fog`)는 렌더러의 패스 실행이 그린다(`FramePassExecutor::executeFogPass`).
+ * @brief 안개 상수와 볼륨 안개(froxel) 컴퓨트의 준비 · 디스패치입니다. 안개 패스(`RenderPassKind::Fog`)는 렌더러의 패스 실행이 그린다(`FrameRecorder::executeFogPass`).
  * @details 안개는 장면 깊이로 시선 위 광학 두께를 구해 이미 칠한 색 위에 블렌드한다(fog.hlsl). 볼륨 안개를 켜면 주 시점에서만 컴퓨트(volumetric_fog.hlsl)가 froxel 마다
  *          라이트 산란을 누적해 구조 버퍼에 쓰고, 안개 패스가 그 버퍼를 t11(`SW_SLOT_PASS_SRV`)로 읽는다. 컴퓨트는 라이트 그리드(`dispatchLightGrid`) 뒤에 돈다.
  *          버퍼를 만드는 준비(`prepareVolumetricFog`)는 기록 전에, 디스패치(`dispatchVolumetricFog`)는 프레임 그래프에서 한다.
@@ -253,7 +253,7 @@ namespace sw
         const RHIBufferSRVIndex    lights  = bLights ? lightBuffer.getBuffer()._srv : placeholderSRV;
         const RHIBufferSRVIndex    grid    = pGrid != nullptr ? pGrid->_srv : placeholderSRV;
 
-        // 쓰기 앞 UAV · 안개 패스(그래프, t11) 앞 셰이더 읽기는 프레임 그래프가 낸다(`VolumetricFogVolume` — `FrameGraphExecutor::beginFrame` 이 등록한다).
+        // 쓰기 앞 UAV · 안개 패스(그래프, t11) 앞 셰이더 읽기는 프레임 그래프가 낸다(`VolumetricFogVolume` — `FramePassRecorder::beginFrame` 이 등록한다).
         ComputeShaderParameters<VolumetricFogShader> parameters;
         parameters.set( VolumetricFogShader::Lights, lights );
         parameters.set( VolumetricFogShader::Params, _fogVolumeParamBuffer._srv );

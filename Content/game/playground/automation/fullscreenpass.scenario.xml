@@ -9,7 +9,7 @@
 	<Launch variable="gv_renderPipeline" value="game/playground/pipeline/fullscreenpasspipeline.xml"/>
 	<Launch variable="gv_renderScale" value="1"/>
 	<Launch variable="gv_viewDistanceScale" value="1"/>
-	<SkipUnless watch="RHI.NativeBindless" reason="name-bound passes read inputs by bindless index - DX11, OpenGL and WebGPU have no PSO for them (FramePassExecutor.FullscreenPassNotReady)"/>
+	<SkipUnless watch="RHI.NativeBindless" reason="name-bound passes read inputs by bindless index - DX11, OpenGL and WebGPU have no PSO for them (FrameRecorder.FullscreenPassNotReady)"/>
 	<Screenshot file="fullscreentrail.ppm"/>
 	<ExpectImage file="fullscreentrail.ppm" golden="fullscreentrail"/>
 	<Pass/>

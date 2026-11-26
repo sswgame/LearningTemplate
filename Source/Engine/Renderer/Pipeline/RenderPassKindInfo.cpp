@@ -171,7 +171,7 @@ namespace sw
                         // 일반 풀스크린 패스가 아니라 실행은 executeTAAPass 이고, 기록은 셋업이 출력 형식으로 만든다(FrameViewResources::updateOutputHistory).
                         info._pDefaultShader     = &EngineDefaultAssets::_shaderTAA;
                         info._inputContract      = makeContract( { Role::SourceColor, Role::SceneDepth, Role::Velocity }, {} );
-                        info._defaultHistoryRole = Role::GBufferAlbedo; // 기록(지난 출력)을 거는 칸. 실행의 공통 단계가 건다(FramePassExecutor::bindOutputHistory)
+                        info._defaultHistoryRole = Role::GBufferAlbedo; // 기록(지난 출력)을 거는 칸. 실행의 공통 단계가 건다(FrameRecorder::bindOutputHistory)
                         info._flags              = Flag::kHasInputContract | Flag::kDrawsDeclaredColor | Flag::kSkipsWithoutPostProcess | Flag::kBypassesToSource;
                         break;
                     }
@@ -344,7 +344,7 @@ namespace sw
                     }
                     case RenderPassKind::LensFlare:
                     {
-                        // 스프라이트 버퍼(패스 버퍼 슬롯)를 읽어 선언한 컬러 출력에 더한다 — 전용 실행(`FramePassExecutor::executeLensFlarePass`). 가림은 장면 깊이를 읽는다.
+                        // 스프라이트 버퍼(패스 버퍼 슬롯)를 읽어 선언한 컬러 출력에 더한다 — 전용 실행(`FrameRecorder::executeLensFlarePass`). 가림은 장면 깊이를 읽는다.
                         info._pDefaultShader = &EngineDefaultAssets::_shaderLensFlare;
                         info._inputContract  = makeContract( { Role::SceneDepth }, {} );
                         info._blend          = RenderPassBlend::Straight;
@@ -372,7 +372,7 @@ namespace sw
                     }
                     case RenderPassKind::VolumetricClouds:
                     {
-                        // 저해상도 레이마치 + 시간 누적. 기록은 실행의 공통 단계가 걸고(`FramePassExecutor::bindOutputHistory`) 패스 끝에 출력을 기록에 복사한다.
+                        // 저해상도 레이마치 + 시간 누적. 기록은 실행의 공통 단계가 걸고(`FrameRecorder::bindOutputHistory`) 패스 끝에 출력을 기록에 복사한다.
                         // 볼륨 구름이 없는 뷰는 기록하지 않고 출력이 없다(kCullWhenUnconsumed 고르기 — FrameViewResources 의 isPassEnabledInView).
                         info._pDefaultShader     = &EngineDefaultAssets::_shaderVolumetricClouds;
                         info._inputContract      = makeContract( { Role::SceneDepth }, {} );
@@ -382,19 +382,19 @@ namespace sw
                     }
                     case RenderPassKind::LateOcclusion:
                     {
-                        // 셰이더 없이 엔진 PSO(HZB 짓기 · 컬링)로 도는 전용 실행이다(`FrameGraphExecutor::recordLateOcclusion`). 입력 · 출력 선언은 종류가 한다(`ViewGraphResource`).
+                        // 셰이더 없이 엔진 PSO(HZB 짓기 · 컬링)로 도는 전용 실행이다(`FramePassRecorder::recordLateOcclusion`). 입력 · 출력 선언은 종류가 한다(`ViewGraphResource`).
                         info._flags = 0;
                         break;
                     }
                     case RenderPassKind::Compute:
                     {
-                        // 셰이더는 XML 이 고른다 — 표의 기본값이 없고, 첨부를 RW 텍스처로 묶는 전용 실행이다(`FramePassExecutor::executeComputePass`).
+                        // 셰이더는 XML 이 고른다 — 표의 기본값이 없고, 첨부를 RW 텍스처로 묶는 전용 실행이다(`FrameRecorder::executeComputePass`).
                         info._flags = Flag::kPipelineCompute | Flag::kDrawsDeclaredColor;
                         break;
                     }
                     case RenderPassKind::Fullscreen:
                     {
-                        // 셰이더는 XML 이 고르고 첨부는 이름으로 건다 — 입력 계약(역할)이 없는 전용 실행이다(`FramePassExecutor::executeFullscreenPass`). 입력을 번호로 읽어 에뮬 백엔드에는 PSO 가 없다.
+                        // 셰이더는 XML 이 고르고 첨부는 이름으로 건다 — 입력 계약(역할)이 없는 전용 실행이다(`FrameRecorder::executeFullscreenPass`). 입력을 번호로 읽어 에뮬 백엔드에는 PSO 가 없다.
                         info._flags = Flag::kDrawsDeclaredColor | Flag::kRequiresNativeBindless;
                         break;
                     }
@@ -698,7 +698,7 @@ namespace sw
                     // 일반 풀스크린 실행은 선언한 입력을 계약대로 건다.
                     if ( row.hasFlag( Flag::kGenericFullscreen ) && row.hasFlag( Flag::kHasInputContract ) == false )
                         return false;
-                    // 꺼진 패스는 실행 계획에서 빠진다(`FramePassExecutor::selectGraphPlan` — 실행 콜백이 단언한다). 실행 종류가 출력 이름의 연결을 볼 필요가 없어 종류로 가르는 조건을 두지 않는다.
+                    // 꺼진 패스는 실행 계획에서 빠진다(`FrameRecorder::selectGraphPlan` — 실행 콜백이 단언한다). 실행 종류가 출력 이름의 연결을 볼 필요가 없어 종류로 가르는 조건을 두지 않는다.
                     // 건너뛸 수 있는 효과는 빠지는 방법(원본을 가리킴 · 출력 없음)이 정확히 하나다. 그 방법이 있는 패스는 건너뛸 수 있는 효과다(`_minPostQuality` 를 받는다).
                     const bool bBypasses = row.hasFlag( Flag::kBypassesToSource );
                     const bool bOmitted  = row.hasFlag( Flag::kOmittedWhenOff );

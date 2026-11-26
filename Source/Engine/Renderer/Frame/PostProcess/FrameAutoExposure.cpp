@@ -30,7 +30,7 @@
 #include "Engine/Renderer/Frame/PostProcess/TemporalMath.h"
 #include "Engine/Renderer/Frame/Resource/FramePSOManager.h"
 #include "Engine/Renderer/Frame/View/FrameViewTarget.h"
-#include "Engine/Renderer/Frame/View/RenderStability.h"
+#include "Engine/Renderer/Frame/View/RenderConvergence.h"
 #include "Engine/Renderer/Pipeline/RenderPassKindInfo.h"
 #include "Engine/Renderer/Pipeline/RenderPipelineAsset.h"
 
@@ -168,8 +168,8 @@ namespace sw
         view._autoExposureHistory.markWritten();
         // 사진 앞 정착(조건 `RenderAutoExposure`) — 남은 노출 오차의 상한. 카메라가 움직인 프레임(카메라 정지 프레임 0)은 범위 끝까지 되돌린다.
         // 물체 움직임으로는 되돌리지 않는다 — 캐릭터가 늘 숨 쉬는 장면은 그러면 상한이 끝내 줄지 않았다(TAA 조건과 같은 카메라 기준).
-        view._exposureErrorEv = RenderStabilityUtil::advanceExposureError( view._exposureErrorEv, bReset, view._cameraStillFrameCount == 0, post._autoExposureMaxEv - post._autoExposureMinEv,
-                                                                           MathUtil::min( view._autoExposureParams._z, view._autoExposureParams._w ) );
+        view._exposureErrorEv = RenderConvergenceUtil::advanceExposureError( view._exposureErrorEv, bReset, view._cameraStillFrameCount == 0, post._autoExposureMaxEv - post._autoExposureMinEv,
+                                                                             MathUtil::min( view._autoExposureParams._z, view._autoExposureParams._w ) );
     }
 
     RHIPipelineStateHandle FrameAutoExposure::findHistogramPSO( const FrameViewTarget& view ) const

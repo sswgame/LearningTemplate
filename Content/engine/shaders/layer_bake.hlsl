@@ -1,4 +1,4 @@
-// layer_bake.hlsl — UV 공간 층 굽기(C++ TextureLayerBakeRequest · FramePassExecutor::drawTextureLayerBakes). 층 하나 = 전체 화면 한 번.
+// layer_bake.hlsl — UV 공간 층 굽기(C++ TextureLayerBakeRequest · FrameRecorder::drawTextureLayerBakes). 층 하나 = 전체 화면 한 번.
 // 아래 결과(밑 알베도 · 밑 표면 덮어쓰기)를 읽어 층 하나를 섞고 두 타깃(알베도 · 표면)에 쓴다 — 오버레이 섞기는 아래 색이 있어야 해서 고정 블렌드로 못 한다.
 // 층 값은 루트 상수 한 묶음이다(C++ TextureLayerBakeConstants 와 같은 배치 — TextureLayerBakeTest 가 맞춘다). 식은 skin_layer_composite.hlsli(C++ SkinSurfaceSample 과 같다).
 // 번짐 텍스처는 RG = 이동(0.5 가 0, 범위 kLayerBakeSmearRange), B = 묽음이다(C++ SkinLayerSmearState::makeTexturePixels).

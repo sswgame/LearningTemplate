@@ -2,7 +2,7 @@
  * @file FramePostProcessMaterials.h
  * @brief 후처리 머티리얼의 렌더 스레드 쪽 준비입니다 — 머티리얼마다의 원소 버퍼(g_SwMaterials 원소 하나)와 패스 자리마다의 PSO 를 셋업에서 만들어 뷰에 둡니다.
  * @details 흐름: 게임 스레드(`PostProcessMaterialSet`)가 블렌더블을 머티리얼 사본으로 풀어 뷰 설정에 싣고 → 셋업(`prepareView`, 뷰마다 프레임에 한 번)이 PSO 와 버퍼를 맞춰
- *          `FrameViewTarget::_listPostProcessMaterialPass` 에 두고 → PostProcessMaterial 패스(`FramePassExecutor::executePostProcessMaterialPass`)가 그린다.
+ *          `FrameViewTarget::_listPostProcessMaterialPass` 에 두고 → PostProcessMaterial 패스(`FrameRecorder::executePostProcessMaterialPass`)가 그린다.
  *          버퍼 생성 · bindless 등록은 기록 중에 할 수 없어(패스가 병렬로 기록된다) 셋업에서 한다. 언리얼 `AddPostProcessMaterialPass` 의 머티리얼 셰이더 · 파라미터 준비 자리다.
  */
 #pragma once

@@ -163,15 +163,15 @@ namespace sw
         vector<RenderPassAttachment>    listAttachment;
         vector<RenderGraphResourceDesc> listResource;
         vector<RenderGraphPassDesc>     listFramePass;
-        for ( const DataPath& passRef : _desc._listRenderPassRef )
+        for ( const DataPath& passRef : _desc._listRenderFeatureRef )
         {
-            RenderPassAsset renderPass;
+            RenderFeatureAsset renderPass;
             if ( renderPass.loadFromXMLFile( AssetID{ passRef.get() } ) == false )
             {
                 SW_LOG_ERROR_ID( "RenderPipelineAsset.RenderPassRefNotLoaded", "[%#] render pass '%#' could not be loaded", sourcePath, passRef.get() );
                 return false;
             }
-            const RenderPassDesc& refDesc = renderPass.getDesc();
+            const RenderFeatureDesc& refDesc = renderPass.getDesc();
             listAttachment.insert( listAttachment.end(), refDesc._listAttachment.begin(), refDesc._listAttachment.end() );
             listResource.insert( listResource.end(), refDesc._listResource.begin(), refDesc._listResource.end() );
             listFramePass.insert( listFramePass.end(), refDesc._listFramePass.begin(), refDesc._listFramePass.end() );
@@ -693,7 +693,7 @@ namespace sw
             /**
              * @brief 2-0d) 시간 누적 패스(기록 칸 `_historyRole` 이나 지터 `_bTemporalJitter` 를 가진 패스)의 첫 출력은 기록(`_bHistory`)을 적어야 하고, 기록 첨부는 쓰는 패스가 하나다.
              *        기록은 그 패스가 끝에 출력을 복사한 것이다.
-             * @details 기록 · 기록 칸 · 지터는 패스 종류가 아니라 서술 칸으로 붙는다(`FrameViewResources` · `FramePassExecutor` 의 공통 단계). XML 에 시간 누적 패스를 더해도 코드를 고치지 않는다.
+             * @details 기록 · 기록 칸 · 지터는 패스 종류가 아니라 서술 칸으로 붙는다(`FrameViewResources` · `FrameRecorder` 의 공통 단계). XML 에 시간 누적 패스를 더해도 코드를 고치지 않는다.
              *          기록 칸은 아는 역할이고 이 패스의 입력 역할과 겹치지 않으며, 레지스트리로 거는 그래픽스 패스(역할 바인딩)만 적는다. 지터 패스는 하나이고 TAA 는 지터를 적는다.
              */
             static uint32 validateAttachmentHistories( const RenderPipelineDesc& desc, string_view sourcePath )
@@ -1699,11 +1699,11 @@ namespace sw
 } // namespace sw
 
 // ------------------------------------------------------------------------------
-// RenderPassAsset
+// RenderFeatureAsset
 // ------------------------------------------------------------------------------
 namespace sw
 {
-    bool RenderPassAsset::loadFromXMLFile( const AssetID& assetID )
+    bool RenderFeatureAsset::loadFromXMLFile( const AssetID& assetID )
     {
         _desc = {};
         return ReflectedXMLFile::loadDesc( assetID, _desc );

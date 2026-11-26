@@ -144,7 +144,7 @@ SW_TEST_CASE( WaterTest, LakeQueriesAndUnderwater )
     SW_EXPECT_TRUE( pWater->isUnderwater( float3{ 12.0f, 1.0f, -4.0f }, depth ) );
     SW_EXPECT_NEAR( height - 1.0f, depth, 1.0e-5f );
     SW_EXPECT_FALSE( pWater->isUnderwater( float3{ 12.0f, 4.0f, -4.0f }, depth ) );
-    WaterUnderwaterFog fog;
+    UnderwaterFogValues fog;
     SW_EXPECT_TRUE( WaterBodyComponent::findUnderwaterFog( manager, float3{ 12.0f, 1.0f, -4.0f }, fog ) );
     SW_EXPECT_FALSE( WaterBodyComponent::findUnderwaterFog( manager, float3{ 50.0f, 1.0f, -4.0f }, fog ) );
     SW_EXPECT_TRUE( WaterBodyComponent::findWaterAt( manager, 12.0f, -4.0f ) == pWater );

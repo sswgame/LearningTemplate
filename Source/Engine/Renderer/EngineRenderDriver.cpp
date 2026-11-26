@@ -24,7 +24,7 @@
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
 #include "Engine/Graphics/View/ScreenshotRequestQueue.h"
-#include "Engine/Graphics/View/SimulationOnlyFrameQueue.h"
+#include "Engine/Graphics/View/SimulationOnlyFrameCounter.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Renderer/Capture/CaptureReadiness.h"
@@ -352,7 +352,7 @@ namespace sw
             packet._settings._displayOutput = applyDisplayOutput( packet._settings._displayOutput );
             // 그리지 않는 프레임도 패킷은 똑같이 짓는다 — 짓기가 게임 상태를 건드리는 몫(LOD 뷰 · 그려진 화면비 · 컷 소비)과 GPU 장면의 고친 구간이 그리는 실행과 같아야 한다.
             packet._drawMode = drawMode;
-            if ( const SimulationOnlyFrameQueue* const pSimulationOnly = engine::findSubsystem<SimulationOnlyFrameQueue>() )
+            if ( const SimulationOnlyFrameCounter* const pSimulationOnly = engine::findSubsystem<SimulationOnlyFrameCounter>() )
                 packet._simulationOnlySerial = pSimulationOnly->getLastSkippedSerial();
             // 이 프레임을 찍어 달라고 맡긴 것(`ScreenshotRequestQueue::putForNextPacket`)은 다음에 그리는 이 패킷에 싣는다. 그리지 않는 패킷은 싣지 않는다(다음에 그리는 패킷이 받는다).
             ScreenshotRequestQueue* const pMailbox = drawMode == FrameDrawMode::Draw ? engine::findSubsystem<ScreenshotRequestQueue>() : nullptr;

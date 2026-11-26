@@ -272,7 +272,7 @@ namespace sw
         // 되읽을 파일이 없는 메시가 정점을 놓으면 장치가 바뀔 때 되살릴 수 없다.
         SW_LOG_ASSERT( cpuAccess == MeshCPUAccess::Keep, "A mesh without a source file cannot release its CPU vertices - use Mesh::createForAsset" );
         // Material 과 MaterialInstance 와 같은 규칙이다. 제어 블록(소멸 코드)이 Engine.dll 에 있어야
-        // 게임 모듈이 만든 메시를 엔진이 마지막까지 보관할 수 있다. 도형을 채우는 것은 MeshUtil 의 일이다.
+        // 게임 모듈이 만든 메시를 엔진이 마지막까지 보관할 수 있다. 도형을 채우는 것은 PrimitiveMeshBuilder 의 일이다.
         return sw::make_shared<Mesh>( CreateKey{}, cpuAccess, AssetID{} );
     }
 

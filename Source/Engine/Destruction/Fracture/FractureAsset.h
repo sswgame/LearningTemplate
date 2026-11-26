@@ -20,7 +20,7 @@
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Destruction/Fracture/FractureGraph.h"
-#include "Engine/Graphics/Mesh/MeshVertex.h"
+#include "Engine/Graphics/RHI/RHIVertex.h"
 #include "Engine/Serialization/Format/FormatDef.h"
 
 namespace sw

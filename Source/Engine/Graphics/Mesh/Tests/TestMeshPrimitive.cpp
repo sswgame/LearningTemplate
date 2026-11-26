@@ -1,4 +1,4 @@
-// MeshPrimitiveTest — MeshUtil 이 만드는 기본 도형의 공유 · 경계 반지름 · 위상 · 노멀 · UV · 탄젠트 · 정점 색. 디바이스 없음(nogpu).
+// MeshPrimitiveTest — PrimitiveMeshBuilder 이 만드는 기본 도형의 공유 · 경계 반지름 · 위상 · 노멀 · UV · 탄젠트 · 정점 색. 디바이스 없음(nogpu).
 #include "pch.h"
 
 #include "Core/Math/MathUtil.h"
@@ -9,7 +9,7 @@
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
-#include "Engine/Graphics/Mesh/MeshUtil.h"
+#include "Engine/Graphics/Mesh/PrimitiveMeshBuilder.h"
 #include "Engine/Graphics/RHI/RHIDescriptors.h"
 
 namespace
@@ -40,23 +40,23 @@ namespace
 SW_TEST_CASE( MeshPrimitiveTest, AcquireSharesOneMeshPerIDWhileCreateMakesNew )
 {
     // 1. 같은 id -> 같은 객체.
-    sw::shared_ptr<sw::Mesh> sharedA = sw::MeshUtil::acquirePrimitive( "Cube" );
-    sw::shared_ptr<sw::Mesh> sharedB = sw::MeshUtil::acquirePrimitive( "Cube" );
+    sw::shared_ptr<sw::Mesh> sharedA = sw::PrimitiveMeshBuilder::acquirePrimitive( "Cube" );
+    sw::shared_ptr<sw::Mesh> sharedB = sw::PrimitiveMeshBuilder::acquirePrimitive( "Cube" );
     SW_REQUIRE_TRUE( sharedA != nullptr );
     SW_EXPECT_TRUE( sharedA.get() == sharedB.get() );
 
     // 2. 다른 도형은 다른 자리다.
-    sw::shared_ptr<sw::Mesh> quad = sw::MeshUtil::acquirePrimitive( "Quad" );
+    sw::shared_ptr<sw::Mesh> quad = sw::PrimitiveMeshBuilder::acquirePrimitive( "Quad" );
     SW_REQUIRE_TRUE( quad != nullptr );
     SW_EXPECT_TRUE( quad.get() != sharedA.get() );
 
     // 3. 이름은 철자 그대로만 받는다 — 별칭(`Rect`)과 대소문자가 다른 이름(`cube`)은 모르는 id 다(같은 기하를 여러 철자로 적지 않게).
-    SW_EXPECT_TRUE( sw::MeshUtil::acquirePrimitive( "Rect" ) == nullptr );
-    SW_EXPECT_TRUE( sw::MeshUtil::acquirePrimitive( "cube" ) == nullptr );
+    SW_EXPECT_TRUE( sw::PrimitiveMeshBuilder::acquirePrimitive( "Rect" ) == nullptr );
+    SW_EXPECT_TRUE( sw::PrimitiveMeshBuilder::acquirePrimitive( "cube" ) == nullptr );
 
     // 4. create 는 매번 새로 만든다 — 벤치가 이 성질로 배치를 나눈다.
-    sw::shared_ptr<sw::Mesh> freshA = sw::MeshUtil::createPrimitive( "Cube" );
-    sw::shared_ptr<sw::Mesh> freshB = sw::MeshUtil::createPrimitive( "Cube" );
+    sw::shared_ptr<sw::Mesh> freshA = sw::PrimitiveMeshBuilder::createPrimitive( "Cube" );
+    sw::shared_ptr<sw::Mesh> freshB = sw::PrimitiveMeshBuilder::createPrimitive( "Cube" );
     SW_REQUIRE_TRUE( freshA != nullptr && freshB != nullptr );
     SW_EXPECT_TRUE( freshA.get() != freshB.get() );
     SW_EXPECT_TRUE( freshA.get() != sharedA.get() );
@@ -65,7 +65,7 @@ SW_TEST_CASE( MeshPrimitiveTest, AcquireSharesOneMeshPerIDWhileCreateMakesNew )
     SW_EXPECT_EQUAL( freshA->getCPUView().getVertices().size(), sharedA->getCPUView().getVertices().size() );
 
     // 6. 모르는 id 는 둘 다 nullptr.
-    SW_EXPECT_TRUE( sw::MeshUtil::acquirePrimitive( "NoSuchShape" ) == nullptr );
+    SW_EXPECT_TRUE( sw::PrimitiveMeshBuilder::acquirePrimitive( "NoSuchShape" ) == nullptr );
 }
 
 /**
@@ -77,7 +77,7 @@ SW_TEST_CASE( MeshPrimitiveTest, MeshBoundsCoverEveryVertexOfEveryPrimitive )
 {
     for ( const utf8* pMeshID : { "Cube", "Sphere", "Cylinder", "Capsule", "Plane", "PlaneDense", "Quad", "Cone" } )
     {
-        const sw::shared_ptr<sw::Mesh> mesh = sw::MeshUtil::acquirePrimitive( pMeshID );
+        const sw::shared_ptr<sw::Mesh> mesh = sw::PrimitiveMeshBuilder::acquirePrimitive( pMeshID );
         SW_REQUIRE_NOT_NULL( mesh );
         float32 farthest = 0.0f;
         for ( const sw::RHIVertex& vertex : mesh->getCPUView().getVertices() )
@@ -113,7 +113,7 @@ SW_TEST_CASE( MeshPrimitiveTest, PrimitivesAreClosedAndOutwardFacing )
 
     for ( const PrimitiveCase& testCase : arrCase )
     {
-        sw::shared_ptr<sw::Mesh> mesh = sw::MeshUtil::createPrimitive( testCase._pID );
+        sw::shared_ptr<sw::Mesh> mesh = sw::PrimitiveMeshBuilder::createPrimitive( testCase._pID );
         SW_EXPECT_TRUE_MSG( mesh != nullptr, testCase._pID );
         SW_REQUIRE_TRUE( mesh != nullptr );
 
@@ -168,7 +168,7 @@ SW_TEST_CASE( MeshPrimitiveTest, PrimitiveNormalsAndUvsAreUsable )
 
     for ( const utf8* pID : arrPrimitiveID )
     {
-        sw::shared_ptr<sw::Mesh> mesh = sw::MeshUtil::createPrimitive( pID );
+        sw::shared_ptr<sw::Mesh> mesh = sw::PrimitiveMeshBuilder::createPrimitive( pID );
         SW_REQUIRE_TRUE( mesh != nullptr );
         const sw::vector<sw::RHIVertex>& listVertex = mesh->getCPUView().getVertices();
         SW_REQUIRE_TRUE( listVertex.size() >= 3 );
@@ -216,7 +216,7 @@ SW_TEST_CASE( MeshPrimitiveTest, PrimitiveNormalsAndUvsAreUsable )
 
     // 바닥 평면은 면이 원점을 지나므로 위 판정이 안 맞는다 — 노멀이 +Y 인지 직접 본다.
     // 이것이 틀리면 바닥이 옆을 보는 것처럼 칠해진다(정점 노멀이 없던 시절의 그 증상이다).
-    sw::shared_ptr<sw::Mesh> plane = sw::MeshUtil::createPrimitive( "Plane" );
+    sw::shared_ptr<sw::Mesh> plane = sw::PrimitiveMeshBuilder::createPrimitive( "Plane" );
     SW_REQUIRE_TRUE( plane != nullptr );
     const sw::vector<sw::RHIVertex>& listPlaneVertex = plane->getCPUView().getVertices();
     SW_REQUIRE_FALSE( listPlaneVertex.empty() );
@@ -239,7 +239,7 @@ SW_TEST_CASE( MeshPrimitiveTest, PrimitiveTangentsAreOrthonormalToNormals )
     const utf8* arrPrimitiveID[] = { "Cube", "Plane", "Sphere", "Cylinder", "Capsule", "Cone", "Sprite" };
     for ( const utf8* pID : arrPrimitiveID )
     {
-        sw::shared_ptr<sw::Mesh> mesh = sw::MeshUtil::createPrimitive( pID );
+        sw::shared_ptr<sw::Mesh> mesh = sw::PrimitiveMeshBuilder::createPrimitive( pID );
         SW_REQUIRE_TRUE( mesh != nullptr );
         uint32 badCount = 0;
         for ( const sw::RHIVertex& vertex : mesh->getCPUView().getVertices() )
@@ -257,10 +257,10 @@ SW_TEST_CASE( MeshPrimitiveTest, PrimitiveTangentsAreOrthonormalToNormals )
     }
 
     // 이음매 표시: 평면은 이음매가 없고, 면마다 노멀이 갈린 큐브의 정점은 모두 이음매다.
-    const sw::shared_ptr<sw::Mesh> flatPlane = sw::MeshUtil::createPrimitive( "Plane" ); // 도는 동안 메시가 산다(범위 for 의 임시 값은 첫 바퀴 전에 사라진다)
+    const sw::shared_ptr<sw::Mesh> flatPlane = sw::PrimitiveMeshBuilder::createPrimitive( "Plane" ); // 도는 동안 메시가 산다(범위 for 의 임시 값은 첫 바퀴 전에 사라진다)
     for ( const sw::RHIVertex& vertex : flatPlane->getCPUView().getVertices() )
         SW_EXPECT_FALSE( vertex.isOnSeam() );
-    const sw::shared_ptr<sw::Mesh>   cube           = sw::MeshUtil::createPrimitive( "Cube" );
+    const sw::shared_ptr<sw::Mesh>   cube           = sw::PrimitiveMeshBuilder::createPrimitive( "Cube" );
     const sw::vector<sw::RHIVertex>& listCubeVertex = cube->getCPUView().getVertices();
     const sw::vector<uint32>&        listCubeIndex  = cube->getIndices();
     for ( const sw::RHIVertex& vertex : listCubeVertex )
@@ -280,7 +280,7 @@ SW_TEST_CASE( MeshPrimitiveTest, PrimitiveTangentsAreOrthonormalToNormals )
     SW_EXPECT_EQUAL( 0u, wrongEdgeCount );
 
     // 평면(XZ, 노멀 +Y): 탄젠트가 위치의 u 기울기 방향이고, 바이탄젠트가 v 가 줄어드는 쪽이다.
-    sw::shared_ptr<sw::Mesh> plane = sw::MeshUtil::createPrimitive( "Plane" );
+    sw::shared_ptr<sw::Mesh> plane = sw::PrimitiveMeshBuilder::createPrimitive( "Plane" );
     SW_REQUIRE_TRUE( plane != nullptr );
     const sw::vector<sw::RHIVertex> listVertex = makeCornerVertices( *plane );
     SW_REQUIRE_TRUE( listVertex.size() >= 3 );
@@ -314,11 +314,11 @@ SW_TEST_CASE( MeshPrimitiveTest, PrimitiveTangentsAreOrthonormalToNormals )
  */
 SW_TEST_CASE( MeshPrimitiveTest, SpriteQuadReadsTheSameFromBothSides )
 {
-    sw::shared_ptr<sw::Mesh> sprite = sw::MeshUtil::createPrimitive( "Sprite" );
+    sw::shared_ptr<sw::Mesh> sprite = sw::PrimitiveMeshBuilder::createPrimitive( "Sprite" );
     SW_REQUIRE_NOT_NULL( sprite.get() );
-    sw::shared_ptr<sw::Mesh> sharedSprite = sw::MeshUtil::acquirePrimitive( "Sprite" );
-    SW_EXPECT_TRUE( sharedSprite != nullptr && sharedSprite == sw::MeshUtil::acquirePrimitive( "Sprite" ) );
-    SW_EXPECT_TRUE( sw::MeshUtil::acquirePrimitive( "sprite" ) == nullptr ); // 철자는 정확히 맞춘다 — 소문자는 다른 이름이다
+    sw::shared_ptr<sw::Mesh> sharedSprite = sw::PrimitiveMeshBuilder::acquirePrimitive( "Sprite" );
+    SW_EXPECT_TRUE( sharedSprite != nullptr && sharedSprite == sw::PrimitiveMeshBuilder::acquirePrimitive( "Sprite" ) );
+    SW_EXPECT_TRUE( sw::PrimitiveMeshBuilder::acquirePrimitive( "sprite" ) == nullptr ); // 철자는 정확히 맞춘다 — 소문자는 다른 이름이다
     const sw::vector<sw::RHIVertex> listVertex = makeCornerVertices( *sprite );
     SW_REQUIRE_EQUAL( 12u, static_cast<uint32>( listVertex.size() ) );
 
@@ -363,8 +363,8 @@ SW_TEST_CASE( MeshPrimitiveTest, NamedPrimitivesAreWhiteUnlessDiagnosticIsAsked 
     const utf8* const arrID[] = { "Cube", "Quad", "Sprite", "Plane", "PlaneDense", "Sphere", "Cylinder", "Capsule", "Cone" };
     for ( const utf8* pID : arrID )
     {
-        const sw::shared_ptr<sw::Mesh> acquired = sw::MeshUtil::acquirePrimitive( pID );
-        const sw::shared_ptr<sw::Mesh> created  = sw::MeshUtil::createPrimitive( pID );
+        const sw::shared_ptr<sw::Mesh> acquired = sw::PrimitiveMeshBuilder::acquirePrimitive( pID );
+        const sw::shared_ptr<sw::Mesh> created  = sw::PrimitiveMeshBuilder::createPrimitive( pID );
         SW_REQUIRE_NOT_NULL( acquired.get() );
         SW_REQUIRE_NOT_NULL( created.get() );
         for ( const sw::Mesh* pMesh : { acquired.get(), created.get() } )
@@ -381,7 +381,7 @@ SW_TEST_CASE( MeshPrimitiveTest, NamedPrimitivesAreWhiteUnlessDiagnosticIsAsked 
     }
 
     // 검증 색을 고르면 큐브의 면이 서로 다른 색이다(벤치 · 렌더 테스트가 면을 가려 본다).
-    const sw::shared_ptr<sw::Mesh> diagnostic = sw::MeshUtil::createPrimitive( "Cube", sw::PrimitiveVertexColor::Diagnostic );
+    const sw::shared_ptr<sw::Mesh> diagnostic = sw::PrimitiveMeshBuilder::createPrimitive( "Cube", sw::PrimitiveVertexColor::Diagnostic );
     SW_REQUIRE_NOT_NULL( diagnostic.get() );
     const sw::vector<sw::RHIVertex> listVertex = makeCornerVertices( *diagnostic ); // 모서리 0 · 6 은 다른 면이다
     SW_REQUIRE_TRUE( listVertex.size() >= 12u );
@@ -395,9 +395,9 @@ SW_TEST_CASE( MeshPrimitiveTest, NamedPrimitivesAreWhiteUnlessDiagnosticIsAsked 
  */
 SW_TEST_CASE( MeshPrimitiveTest, DensePlaneIsAFinelySplitFloor )
 {
-    const sw::shared_ptr<sw::Mesh> dense = sw::MeshUtil::createPrimitive( "PlaneDense" );
+    const sw::shared_ptr<sw::Mesh> dense = sw::PrimitiveMeshBuilder::createPrimitive( "PlaneDense" );
     SW_REQUIRE_NOT_NULL( dense.get() );
-    const float32 step    = 1.0f / static_cast<float32>( sw::MeshUtil::kDensePlaneSegmentCount );
+    const float32 step    = 1.0f / static_cast<float32>( sw::PrimitiveMeshBuilder::kDensePlaneSegmentCount );
     float32       minX    = 1.0f;
     float32       maxX    = -1.0f;
     uint32        notUp   = 0;
@@ -418,7 +418,7 @@ SW_TEST_CASE( MeshPrimitiveTest, DensePlaneIsAFinelySplitFloor )
 
 /**
  * @brief [MeshPrimitiveTest] 메시 칸(`AssetRef<MeshAssetFormat>`)은 메시 종류의 내장 이름을 받고 그 이름은 모두 만들 수 있는 도형이다 — 다른 철자 · 모르는 이름은 폴백 없이 로드 오류다
- * @details 내장 이름 표는 메시 종류(`MeshAssetFormat::kArrBuiltinName`) 한 벌이고 `MeshUtil` 이 같은 표로 만든다. 머티리얼 칸은 내장 이름이 없어, 빈 이름의 옛 철자 `None`
+ * @details 내장 이름 표는 메시 종류(`MeshAssetFormat::kArrBuiltinName`) 한 벌이고 `PrimitiveMeshBuilder` 이 같은 표로 만든다. 머티리얼 칸은 내장 이름이 없어, 빈 이름의 옛 철자 `None`
  *          (`hashed_string` 이 빈 이름을 그렇게 썼다)도 머티리얼이 아니라 로드 오류다.
  */
 SW_TEST_CASE( MeshPrimitiveTest, MeshReferenceTakesBuiltinShapesOnly )
@@ -431,7 +431,7 @@ SW_TEST_CASE( MeshPrimitiveTest, MeshReferenceTakesBuiltinShapesOnly )
         sw::formatstring( message.data(), message.capacity(), "built-in mesh name is not taken: %#", name );
         SW_EXPECT_TRUE_MSG( mesh == name && mesh.isBuiltin(), message );
         sw::formatstring( message.data(), message.capacity(), "built-in mesh name makes no shape: %#", name );
-        SW_EXPECT_TRUE_MSG( sw::MeshUtil::createPrimitive( name ) != nullptr, message );
+        SW_EXPECT_TRUE_MSG( sw::PrimitiveMeshBuilder::createPrimitive( name ) != nullptr, message );
     }
 
     sw::AssetRef<sw::MeshAssetFormat> mesh;

@@ -14,7 +14,7 @@
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Graphics/Mesh/MeshCache.h"
-#include "Engine/Graphics/Mesh/MeshUtil.h"
+#include "Engine/Graphics/Mesh/PrimitiveMeshBuilder.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Object/GameObject/Registry/CameraRegistry.h"
@@ -124,7 +124,7 @@ namespace sw
         if ( MeshAssetFormat::isMeshAssetPath( meshID ) == false )
         {
             _meshLoad.reset();
-            _mesh = MeshUtil::acquirePrimitive( meshID );
+            _mesh = PrimitiveMeshBuilder::acquirePrimitive( meshID );
             onMeshAssigned();
             notifyMeshFollowers();
             return;

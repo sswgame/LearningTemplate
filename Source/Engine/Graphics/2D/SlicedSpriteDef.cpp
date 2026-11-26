@@ -12,7 +12,7 @@
 #include "Engine/Asset/Cache/WeakInternCache.h"
 #include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
-#include "Engine/Graphics/Mesh/MeshUtil.h"
+#include "Engine/Graphics/Mesh/PrimitiveMeshBuilder.h"
 
 namespace sw
 {
@@ -222,7 +222,7 @@ namespace sw
 
     shared_ptr<Mesh> SlicedSpriteDef::acquireSlicedMesh( const SlicedSpriteDef& desc )
     {
-        const ScopedMemoryTag memoryScope{ MeshUtil::kMemoryTag };
+        const ScopedMemoryTag memoryScope{ PrimitiveMeshBuilder::kMemoryTag };
         return SpriteMeshBuilderInternal::getSlicedMeshCache().acquire( desc, &SpriteMeshBuilderInternal::createSlicedMesh );
     }
 } // namespace sw

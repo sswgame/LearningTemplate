@@ -7,7 +7,7 @@
 #include "Core/Math/MatrixMath.h"
 
 #include "Engine/Graphics/Mesh/Mesh.h"
-#include "Engine/Graphics/Mesh/MeshUtil.h"
+#include "Engine/Graphics/Mesh/PrimitiveMeshBuilder.h"
 
 namespace sw
 {
@@ -121,7 +121,7 @@ namespace sw
             const HLODMeshPart& part   = _listPart[partIndex];
             const MeshHandle&   load   = _listPartLoad[partIndex];
             const bool          bAsset = MeshAssetFormat::isMeshAssetPath( part._meshID.path() );
-            shared_ptr<Mesh>    mesh   = bAsset ? ( load.isValid() ? load.get() : nullptr ) : MeshUtil::acquirePrimitive( part._meshID.path() );
+            shared_ptr<Mesh>    mesh   = bAsset ? ( load.isValid() ? load.get() : nullptr ) : PrimitiveMeshBuilder::acquirePrimitive( part._meshID.path() );
             if ( mesh != nullptr && appendPart( part, *mesh, listVertex, listIndex ) )
                 ++mergedCount;
             else

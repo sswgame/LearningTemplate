@@ -13,7 +13,7 @@
 
 namespace sw
 {
-    /** @brief 파라미터 묶음(`*.matparams.xml`)의 값이 먹이는 전역 값입니다(`MaterialCollectionParameterDef::_global`). */
+    /** @brief 파라미터 묶음(`*.matparams.xml`)의 값이 먹이는 전역 값입니다(`MaterialParameterCollectionEntryDef::_global`). */
     ENUM()
     enum class MaterialGlobalSlot : uint8
     {

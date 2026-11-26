@@ -5,7 +5,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Environment/Terrain/TerrainHeightfield.h"
-#include "Engine/Graphics/Mesh/MeshVertex.h"
+#include "Engine/Graphics/RHI/RHIVertex.h"
 
 namespace sw
 {
@@ -207,7 +207,7 @@ namespace sw
                 const Internal::GridPoint p10 = Internal::collapse( x + step, z, cells, arrSideStep );
                 const Internal::GridPoint p01 = Internal::collapse( x, z + step, cells, arrSideStep );
                 const Internal::GridPoint p11 = Internal::collapse( x + step, z + step, cells, arrSideStep );
-                // 위에서 볼 때 앞면이 되는 감김(MeshUtil::createPlane 과 같다): (00, 01, 11), (00, 11, 10). 접혀 넓이가 0 이 된 것은 버린다.
+                // 위에서 볼 때 앞면이 되는 감김(PrimitiveMeshBuilder::createPlane 과 같다): (00, 01, 11), (00, 11, 10). 접혀 넓이가 0 이 된 것은 버린다.
                 const Internal::GridPoint arrTriangle[2][3] = {
                     {p00, p01, p11},
                     {p00, p11, p10}

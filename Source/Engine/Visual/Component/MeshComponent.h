@@ -283,7 +283,7 @@ namespace sw
         void onOwnerActiveInHierarchyChanged() override;
 
     protected:
-        /** @brief `_meshID` 가 비었을 때의 메시 id 입니다. 빈 문자열이면 단위 큐브입니다(`MeshUtil::acquirePrimitive`). */
+        /** @brief `_meshID` 가 비었을 때의 메시 id 입니다. 빈 문자열이면 단위 큐브입니다(`PrimitiveMeshBuilder::acquirePrimitive`). */
         virtual string_view getDefaultMeshID() const { return {}; }
         /** @brief `_materialPath` 가 비었을 때의 머티리얼 경로입니다. 비어 있으면 씬 기본 머티리얼이며, 렌더러가 고릅니다. */
         virtual hashed_string getDefaultMaterialPath() const { return {}; }

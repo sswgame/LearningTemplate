@@ -82,22 +82,22 @@ namespace sw
              * @details 움직인 칸은 GPUScene 빌더가 지난 프레임에 가져간 더티다(빛을 빌더보다 먼저 모은다). 격자는 한 프레임 늦게 따라간다. 가리개가 아니거나 격자 밖인 칸의 변화(움직이는 투사체 스폰 · 소멸, 반투명, 먼 곳)는 장면을 그대로 둔다 — 같은 포인터라 GPU 가 다시 칠하지도 않는다.
              *          모은 것이 바뀌면 사본을 고쳐 새 포인터로 넣는다(지난 장면은 렌더 스레드가 칠한 장면으로 들고 있다).
              */
-            static shared_ptr<const SceneVoxelScene> refreshVoxelScene( shared_ptr<const SceneVoxelScene> pCached, const PrimitiveRegistry& primitives, Material* pSceneDefault,
-                                                                        const LightProbeVolumeComponent& volume, uint64 cacheGeneration, uint64 cacheChangeGeneration )
+            static shared_ptr<const SceneVoxelizeInput> refreshVoxelScene( shared_ptr<const SceneVoxelizeInput> pCached, const PrimitiveRegistry& primitives, Material* pSceneDefault,
+                                                                           const LightProbeVolumeComponent& volume, uint64 cacheGeneration, uint64 cacheChangeGeneration )
             {
                 const uint64   generation       = primitives.getSetGeneration();
                 const uint64   changeGeneration = primitives.getMeshChangeGeneration();
                 vector<uint32> listChangedSlot;
                 if ( primitives.collectMeshSetChanges( cacheGeneration, listChangedSlot ) == false )
                 {
-                    shared_ptr<const SceneVoxelScene> pRebuilt = make_shared<SceneVoxelScene>( SceneVoxelizer::makeScene( primitives, pSceneDefault, volume.computeRealtimeVoxelBounds(), volume.getVoxelSize() ) );
+                    shared_ptr<const SceneVoxelizeInput> pRebuilt = make_shared<SceneVoxelizeInput>( SceneVoxelizer::makeScene( primitives, pSceneDefault, volume.computeRealtimeVoxelBounds(), volume.getVoxelSize() ) );
                     volume.setRealtimeVoxelScene( pRebuilt, generation, changeGeneration );
                     return pRebuilt;
                 }
                 primitives.appendMeshChanges( cacheChangeGeneration, listChangedSlot );
-                SceneVoxelScene updated = *pCached; // 정적 층은 나눠 든다 — 움직이는 목록만 베낀다
+                SceneVoxelizeInput updated = *pCached; // 정적 층은 나눠 든다 — 움직이는 목록만 베낀다
                 if ( SceneVoxelizer::updateScene( updated, primitives, pSceneDefault, listChangedSlot ) )
-                    pCached = make_shared<SceneVoxelScene>( std::move( updated ) );
+                    pCached = make_shared<SceneVoxelizeInput>( std::move( updated ) );
                 volume.setRealtimeVoxelScene( pCached, generation, changeGeneration );
                 return pCached;
             }
@@ -108,13 +108,13 @@ namespace sw
             static void appendRealtimeVolume( const Scene& scene, const GameObjectManager& manager, const LightProbeVolumeComponent& volume, vector<GPULight>& inoutList, LightProbeElementBuilder& inoutProbeElement,
                                               vector<RealtimeProbeRequest>& inoutListRequest )
             {
-                const PrimitiveRegistry&          primitives            = manager.getPrimitiveRegistry();
-                uint64                            cacheGeneration       = 0;
-                uint64                            cacheChangeGeneration = 0;
-                shared_ptr<const SceneVoxelScene> pVoxelScene           = volume.findRealtimeVoxelScene( cacheGeneration, cacheChangeGeneration );
+                const PrimitiveRegistry&             primitives            = manager.getPrimitiveRegistry();
+                uint64                               cacheGeneration       = 0;
+                uint64                               cacheChangeGeneration = 0;
+                shared_ptr<const SceneVoxelizeInput> pVoxelScene           = volume.findRealtimeVoxelScene( cacheGeneration, cacheChangeGeneration );
                 if ( pVoxelScene == nullptr )
                 {
-                    pVoxelScene = make_shared<SceneVoxelScene>( SceneVoxelizer::makeScene( primitives, scene.getMaterial(), volume.computeRealtimeVoxelBounds(), volume.getVoxelSize() ) );
+                    pVoxelScene = make_shared<SceneVoxelizeInput>( SceneVoxelizer::makeScene( primitives, scene.getMaterial(), volume.computeRealtimeVoxelBounds(), volume.getVoxelSize() ) );
                     volume.setRealtimeVoxelScene( pVoxelScene, primitives.getSetGeneration(), primitives.getMeshChangeGeneration() );
                 }
                 else if ( cacheGeneration != primitives.getSetGeneration() || cacheChangeGeneration != primitives.getMeshChangeGeneration() )

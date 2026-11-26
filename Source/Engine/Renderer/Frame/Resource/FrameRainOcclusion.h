@@ -1,7 +1,7 @@
 /**
  * @file FrameRainOcclusion.h
  * @brief 비 가림 맵의 GPU 자원과 이번 프레임의 상태입니다 — 위에서 내려다본 깊이 한 장, 그 컬링 입력, GPU 강수가 읽는 R32 사본.
- * @details 맵은 프레임에 한 번, 컬링 뒤 · 뷰 그래프 앞에 프리패스 리스트로 그린다(`FramePassExecutor::drawRainOcclusion` — 그림자 PSO 와 자기 컬링 슬롯). 그래서 이번 프레임의 모든 뷰가 같은 맵 · 같은 행렬을 읽는다.
+ * @details 맵은 프레임에 한 번, 컬링 뒤 · 뷰 그래프 앞에 프리패스 리스트로 그린다(`FrameRecorder::drawRainOcclusion` — 그림자 PSO 와 자기 컬링 슬롯). 그래서 이번 프레임의 모든 뷰가 같은 맵 · 같은 행렬을 읽는다.
  *          GPU 강수는 프레임 그래프 맨 앞(컬링 앞)에서 돌아 이번 맵이 아직 없다 — 지난 프레임의 맵을 깊이 히스토리 패스가 R32 로 옮겨 읽는다(장면 깊이 충돌과 같은 길, `DepthHistory` 의 뷰 다음 칸).
  */
 #pragma once

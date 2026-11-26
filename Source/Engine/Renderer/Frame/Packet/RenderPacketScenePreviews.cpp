@@ -4,7 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Graphics/Upload/GPUUploadQueue.h"
+#include "Engine/Graphics/RHI/Transfer/GPUUploadQueue.h"
 #include "Engine/Renderer/Frame/Packet/RenderFramePacket.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"

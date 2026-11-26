@@ -411,7 +411,7 @@ namespace sw
         hashed_string _skyCloudSun{ "g_SkyCloudSun" };
         hashed_string _skyCloudAmbient{ "g_SkyCloudAmbient" };
         hashed_string _skyCloudGround{ "g_SkyCloudGround" };
-        hashed_string _temporalSample{ "g_TemporalSample" }; ///< 기록 첨부를 쓰는 패스마다 그 기록의 시간 표본(`FramePassExecutor::bindOutputHistory`)
+        hashed_string _temporalSample{ "g_TemporalSample" }; ///< 기록 첨부를 쓰는 패스마다 그 기록의 시간 표본(`FrameRecorder::bindOutputHistory`)
         /// @brief 스카이 라이트의 프로브 버퍼 자리입니다(lighting.hlsli `SkyLight`). 배치는 `LightProbeElementBuilder::getSkyLight`.
         hashed_string _skyLight{ "g_SkyLight" };
         /// @brief 높이 · 거리 지수 안개입니다(안개 패스). 배치는 `FogSettings` 머리 주석 — 색 · 밀도 / 높이 감쇠 · 기준 높이 · 시작 거리 · 최대 불투명도 / 방향광 산란 / 볼륨 안개.
@@ -458,7 +458,7 @@ namespace sw
         /// @brief 컬러 그레이딩 화이트 밸런스 행 셋입니다(`PostGradeConstants::_arrWhiteBalance`, post_grade.hlsli).
         hashed_string _arrGradeWhiteBalance[3]{ hashed_string{ "g_GradeWhiteBalance0" }, hashed_string{ "g_GradeWhiteBalance1" }, hashed_string{ "g_GradeWhiteBalance2" } };
         /// @brief 컬러 그레이딩 범위 상수입니다 — 범위(그림자 · 중간 · 밝은 부분)마다 채도 · 대비 · 감마 · 게인 · 오프셋(`PostGradeConstants::_arrRange` 와 같은 차례).
-        /// @brief 컬러 그레이딩 범위 상수의 수입니다(`PostGradeConstants::kRangeCount * kRangeFieldCount`, FramePassExecutor 가 static_assert 로 맞춘다).
+        /// @brief 컬러 그레이딩 범위 상수의 수입니다(`PostGradeConstants::kRangeCount * kRangeFieldCount`, FrameRecorder 가 static_assert 로 맞춘다).
         static constexpr uint32 kGradeRangeConstantCount = 15;
         hashed_string           _arrGradeRange[kGradeRangeConstantCount]{ hashed_string{ "g_GradeShadowsSaturation" }, hashed_string{ "g_GradeShadowsContrast" }, hashed_string{ "g_GradeShadowsGamma" },
                                                                           hashed_string{ "g_GradeShadowsGain" }, hashed_string{ "g_GradeShadowsOffset" }, hashed_string{ "g_GradeMidtonesSaturation" },

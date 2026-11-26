@@ -53,7 +53,7 @@ namespace sw
         RenderPacketBuilder&     getPacketBuilder() const { return *_packetBuilder; }
         /**
          * @brief (게임 스레드, 프레임마다) 파이프라인 XML 이 다시 읽혔으면(에디터 핫 리로드 — 공유 캐시의 다시 읽기 횟수) 지금 고른 파이프라인을 새 판으로 다시 고릅니다.
-         * @details `_base` 부모를 고쳐도 자식이 함께 다시 읽힌다(에디터의 연쇄 리로드). 렌더 패스 묶음(`_listRenderPassRef`)만 고친 것은 파이프라인 파일을 다시 저장해야 따라온다.
+         * @details `_base` 부모를 고쳐도 자식이 함께 다시 읽힌다(에디터의 연쇄 리로드). 렌더 패스 묶음(`_listRenderFeatureRef`)만 고친 것은 파이프라인 파일을 다시 저장해야 따라온다.
          */
         void refreshReloadedPipeline();
 

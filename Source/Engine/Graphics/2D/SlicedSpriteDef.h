@@ -9,7 +9,7 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Graphics/Mesh/MeshVertex.h"
+#include "Engine/Graphics/RHI/RHIVertex.h"
 
 namespace sw
 {
@@ -31,7 +31,7 @@ namespace sw
         bool operator==( const SlicedSpriteDef& other ) const;
 
         // 9-슬라이스와 타일 스프라이트의 정점을 만듭니다. 유니티의 `SpriteRenderer.drawMode`(Sliced, Tiled), Godot 의 `NinePatchRect` 에 해당합니다.
-        // 정점 규약은 `MeshUtil::createSpriteQuad` 와 같습니다. XY 평면에 앞면(-Z 노멀)과 그것을 X 로 거울에 비친 뒷면(+Z 노멀)이 같은 UV 를 쓰므로
+        // 정점 규약은 `PrimitiveMeshBuilder::createSpriteQuad` 와 같습니다. XY 평면에 앞면(-Z 노멀)과 그것을 X 로 거울에 비친 뒷면(+Z 노멀)이 같은 UV 를 쓰므로
         /** @brief 한 축의 타일 수 상한입니다. 넘으면 타일을 더 만들지 않고 마지막 타일을 늘려 채웁니다. 정점 수를 제한하기 위해서입니다. */
         static constexpr uint32 kMaxTileCountPerAxis = 64;
 
@@ -40,7 +40,7 @@ namespace sw
 
         /**
          * @brief 같은 값의 메시를 공유합니다. 없으면 만듭니다. 여러 스레드에서 불러도 됩니다(내부에서 잠급니다).
-         * @details 캐시는 약한 참조입니다(`MeshUtil::acquirePrimitive` 와 같은 구조). 마지막 스프라이트가 놓으면 메시도 사라집니다.
+         * @details 캐시는 약한 참조입니다(`PrimitiveMeshBuilder::acquirePrimitive` 와 같은 구조). 마지막 스프라이트가 놓으면 메시도 사라집니다.
          *          같은 크기와 테두리의 패널은 메시가 하나이므로 한 배치로 묶입니다.
          */
         static shared_ptr<Mesh> acquireSlicedMesh( const SlicedSpriteDef& desc );

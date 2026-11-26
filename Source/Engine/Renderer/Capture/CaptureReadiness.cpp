@@ -5,7 +5,7 @@
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
-#include "Engine/Graphics/View/SimulationOnlyFrameQueue.h"
+#include "Engine/Graphics/View/SimulationOnlyFrameCounter.h"
 #include "Engine/Navigation/Scene/SceneNavigation.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -39,7 +39,7 @@ namespace sw
         if ( pRenderThread->findPendingMaterialPSOBatchCount( sceneKey, count ) == false )
             count = 1u;
         // 그리지 않고 진행한 프레임 뒤에 아직 따라잡는 중이면(GPU 입자의 밀린 단계 · 그린 프레임이 아직 없다) 주 화면은 덜 그려졌다 — 따라잡기 전 그림을 찍지 않는다.
-        const SimulationOnlyFrameQueue* const pSimulationOnly = engine::findSubsystem<SimulationOnlyFrameQueue>();
+        const SimulationOnlyFrameCounter* const pSimulationOnly = engine::findSubsystem<SimulationOnlyFrameCounter>();
         if ( sceneKey == 0 && pSimulationOnly != nullptr && pSimulationOnly->isCatchUpPending() )
             ++count;
         return count;

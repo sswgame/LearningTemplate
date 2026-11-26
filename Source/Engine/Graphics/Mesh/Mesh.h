@@ -18,7 +18,7 @@
 #include "Core/String/Name/hashed_string.h"
 
 #include "Engine/Content/AssetID.h"
-#include "Engine/Graphics/Mesh/MeshVertex.h"
+#include "Engine/Graphics/RHI/RHIVertex.h"
 
 // ------------------------------------------------------------------------------
 // MeshBuildVertex: 게임 코드가 메시를 지을 때 넘기는 정점(위치 · 노멀 · UV · 색)입니다. GPU 정점 칸(`RHIVertex`)의 배치를 모르고 메시를 짓습니다.
@@ -283,7 +283,7 @@ namespace sw
 
         /**
          * @brief 빈 메시를 Engine.dll 안에서 shared_ptr 로 만듭니다.
-         * @details 도형을 만드는 것은 이 클래스의 일이 아니다. `MeshUtil` 이 이 함수로 메시를 만들어 정점을 채운다.
+         * @details 도형을 만드는 것은 이 클래스의 일이 아니다. `PrimitiveMeshBuilder` 이 이 함수로 메시를 만들어 정점을 채운다.
          *          Mesh 가 책임지는 것은 정점 버퍼와 그 수명뿐이다.
          * @param cpuAccess CPU 정점을 업로드 뒤에도 쥐는가입니다. 되읽을 파일이 없는 메시라 `Keep` 만 된다(assert) — 놓을 수 있는 것은 `createForAsset` 의 파일 메시다
          */

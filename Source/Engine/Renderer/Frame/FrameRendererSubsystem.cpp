@@ -22,7 +22,7 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/View/RenderViewSettings.h"
-#include "Engine/Graphics/View/SimulationOnlyFrameQueue.h"
+#include "Engine/Graphics/View/SimulationOnlyFrameCounter.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Renderer/Debug/RenderDebugRegistry.h"
@@ -111,7 +111,7 @@ namespace sw
         host._pRenderTargets   = engine::findSubsystem<RenderTargetRegistry>();
         host._pRenderDebug     = engine::findSubsystem<RenderDebugRegistry>();
         host._pPixelInspector  = engine::findSubsystem<GPUPixelInspector>();
-        host._pSimulationOnly  = engine::findSubsystem<SimulationOnlyFrameQueue>();
+        host._pSimulationOnly  = engine::findSubsystem<SimulationOnlyFrameCounter>();
         host._pPinnedMaterials = &engine::getSubsystem<AssetManager>().getAssetCache<MaterialCache>();
         _frameRenderer->bindHost( host );
         // 커맨드라인이 주 출력의 보기 모드를 정했으면 여기서 받는다(에디터 씬 뷰는 툴바가 따로 정한다).

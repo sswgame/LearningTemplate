@@ -27,7 +27,7 @@
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshCache.h"
-#include "Engine/Graphics/Mesh/MeshUtil.h"
+#include "Engine/Graphics/Mesh/PrimitiveMeshBuilder.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -68,7 +68,7 @@ namespace sw
         /** @brief 래그돌 군중이 쓰러진 수를 로그로 남기는 프레임 간격입니다. 소수로 정했으므로 `-gv_stressTestRagdollPeriod` 의 배수와 겹치지 않아, 같은 상태만 기록되는 일이 없습니다. */
         constexpr uint32 kRagdollLogInterval = 97;
         /**
-         * @brief 벤치가 섞어 쓸 도형입니다. `MeshUtil::createPrimitive` 가 아는 이름입니다.
+         * @brief 벤치가 섞어 쓸 도형입니다. `PrimitiveMeshBuilder::createPrimitive` 가 아는 이름입니다.
          * @note 큐브가 첫 번째여야 합니다. `-gv_stressTestMeshShapes=1`(기본값)일 때 큐브만 그려야
          *       기존 측정과 스크린샷을 비교할 수 있습니다.
          */
@@ -566,7 +566,7 @@ namespace sw
         for ( uint32 variantIndex = 0; variantIndex < variantCount; ++variantIndex )
         {
             const utf8*      pShapeID = kArrBenchShape[variantIndex % shapeCount];
-            shared_ptr<Mesh> variant  = MeshUtil::createPrimitive( pShapeID, PrimitiveVertexColor::Diagnostic );
+            shared_ptr<Mesh> variant  = PrimitiveMeshBuilder::createPrimitive( pShapeID, PrimitiveVertexColor::Diagnostic );
             if ( variant == nullptr )
             {
                 SW_LOG_ERROR_ID( "StressTestScene.FailedCreateShape", "[Bench] Failed to create shape '%#'.", pShapeID );
@@ -1402,7 +1402,7 @@ namespace sw
 
         // 격자보다 넉넉히 크게 만듭니다. 그림자 볼륨 가장자리가 화면 안에 들어오면 "그림자가 잘렸다" 고 오해하기 때문입니다.
         const float32 size = halfExtent * _settings._groundSizeRatio;
-        pMesh->setMesh( MeshUtil::createPlane( _settings._groundSegmentCount ) );
+        pMesh->setMesh( PrimitiveMeshBuilder::createPlane( _settings._groundSegmentCount ) );
         pMesh->setLocalScale( float3{ size, 1.0f, size } );
         // 평면의 면은 로컬 y = 0 입니다. 큐브 아랫면(-0.5)보다 조금 더 아래로 내립니다.
         pMesh->setLocalPosition( float3{ 0.0f, _settings._groundHeight, 0.0f } );
@@ -1867,7 +1867,7 @@ namespace sw
         MeshComponent* pVisual = pSlope->addComponent<MeshComponent>();
         if ( pVisual != nullptr )
         {
-            pVisual->setMesh( MeshUtil::createPrimitive( "Cube" ) );
+            pVisual->setMesh( PrimitiveMeshBuilder::createPrimitive( "Cube" ) );
             pVisual->setMaterial( pScene->getMaterial() );
             pVisual->setLocalPosition( slopeCenter );
             pVisual->setLocalRotation( slopeRotation );
@@ -1885,7 +1885,7 @@ namespace sw
         MeshComponent* pBall = pLook->addComponent<MeshComponent>();
         if ( pBall == nullptr )
             return;
-        pBall->setMesh( MeshUtil::createPrimitive( "Sphere" ) );
+        pBall->setMesh( PrimitiveMeshBuilder::createPrimitive( "Sphere" ) );
         pBall->setMaterial( pScene->getMaterial() );
         pBall->setLocalScale( float3{ _settings._rigLookTargetScale } );
         pBall->setLocalPosition( _settings._rigLookTargetStart );

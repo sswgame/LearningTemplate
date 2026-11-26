@@ -9,9 +9,9 @@
 
 #include "DevTools/Client/Render/MeshVertexCheck.h"
 
-#include "Engine/Graphics/Mesh/MeshVertex.h"
 #include "Engine/Graphics/RHI/RHIMeshVertexLayout.h"
 #include "Engine/Graphics/RHI/RHIMeshVertexStreams.h"
+#include "Engine/Graphics/RHI/RHIVertex.h"
 
 using namespace sw;
 

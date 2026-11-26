@@ -19,7 +19,7 @@
 #include "Engine/Graphics/Mesh/IMeshDerivedCache.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
-#include "Engine/Graphics/Mesh/MeshUtil.h"
+#include "Engine/Graphics/Mesh/PrimitiveMeshBuilder.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Serialization/Serializer/ReloadResult.h"
 
@@ -321,7 +321,7 @@ namespace sw
 {
     shared_ptr<Mesh> AssetRefCache<MeshAssetFormat>::acquire( string_view path, MeshCPUAccess cpuAccess )
     {
-        return MeshAssetFormat::kAssetType.isBuiltinName( path ) ? MeshUtil::acquirePrimitive( path ) : MeshCache::acquire( path, cpuAccess );
+        return MeshAssetFormat::kAssetType.isBuiltinName( path ) ? PrimitiveMeshBuilder::acquirePrimitive( path ) : MeshCache::acquire( path, cpuAccess );
     }
 
     MeshHandle AssetRefCache<MeshAssetFormat>::request( string_view path, MeshCPUAccess cpuAccess )

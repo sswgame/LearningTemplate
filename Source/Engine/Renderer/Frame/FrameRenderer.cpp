@@ -31,7 +31,7 @@
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
-#include "Engine/Graphics/View/SimulationOnlyFrameQueue.h"
+#include "Engine/Graphics/View/SimulationOnlyFrameCounter.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Renderer/Debug/RenderDebugRegistry.h"
@@ -134,7 +134,7 @@ namespace sw
         // 패스별 GPU 시간을 보고할 프로파일러다 — 호스트가 건 렌더러 하나만 계측한다(타임스탬프 슬롯 · `GPU.<패스>` 구간이 하나다).
         _state._gpuPassTimeline.bindProfiler( _host._pProfiler );
 
-        if ( FrameGraphExecutor::isMeshMorphDiagValid( _state._settings._meshMorphDebugMode ) == false )
+        if ( FramePassRecorder::isMeshMorphDiagValid( _state._settings._meshMorphDebugMode ) == false )
         {
             _status        = FrameRendererStatus::Failed;
             _statusMessage = "the frame settings have no valid mesh morph diagnostic mode";
@@ -394,7 +394,7 @@ namespace sw
         _passExecutor.resetViewRecordState();
 
 #if !defined( SW_SHIPPING )
-        // 렌더링 런타임 디버그: 프레임 디버거 · 통계는 주 시점 씬 드로우를 센다(`FramePassExecutor::drawBatchGroup` 의 허용), 그래프 사본은 요청한 프레임에 컴파일 결과를 옮긴다.
+        // 렌더링 런타임 디버그: 프레임 디버거 · 통계는 주 시점 씬 드로우를 센다(`FrameRecorder::drawBatchGroup` 의 허용), 그래프 사본은 요청한 프레임에 컴파일 결과를 옮긴다.
         RenderDebugRegistry* const pRenderDebug = _state._pRenderDebug;
         if ( pRenderDebug != nullptr )
         {
@@ -421,7 +421,7 @@ namespace sw
 
     void FrameRenderer::executePacketWithoutDrawing( IRHIDevice* pDevice, RenderFramePacket& packet )
     {
-        // 그리지 않고 진행하는 프레임(`SimulationOnlyFrameQueue`) — 다음 패킷이 이어 쓸 상태만 받는다. 기록 · 제출하지 않는다.
+        // 그리지 않고 진행하는 프레임(`SimulationOnlyFrameCounter`) — 다음 패킷이 이어 쓸 상태만 받는다. 기록 · 제출하지 않는다.
         // 받는 것: GPU 장면의 CPU 사본과 고친 구간 업로드(빠뜨리면 다음에 그릴 때 인스턴스가 옛 값이다).
         // 받지 않는 것: 라이트 · 그림자 · 안개 · 캔버스 · 데칼 · 추가 뷰 · 입자 — 다음 패킷이 통째로 다시 싣는 값이다. GPU 입자는 누적 단계 요청이라 다음에 그릴 때 따라잡는다.
         if ( isReady() == false || pDevice == nullptr || packet._bValid == SW_FALSE )
@@ -443,9 +443,9 @@ namespace sw
     {
         // 컬링 컴퓨트가 개수를 만들지 업로드 전에 알려야 한다. 간접 인자의 초기값이 달라지기 때문이다.
         // 실제로 그렇게 되었는지는 upload 뒤에 areIndirectCountsGPUFilled() 가 알려 준다.
-        _state._gpuScene.setIndirectCountsFilledByGPU( _passExecutor.getFrameGraphExecutor().usesGPUGeneratedCommands() );
+        _state._gpuScene.setIndirectCountsFilledByGPU( _passExecutor.getFramePassRecorder().usesGPUGeneratedCommands() );
         // 모프 풀 오프셋은 배치 테이블에 실려 업로드 시점에 완성되어 있어야 한다.
-        _passExecutor.getFrameGraphExecutor().prepareMeshMorphPool();
+        _passExecutor.getFramePassRecorder().prepareMeshMorphPool();
         _state._gpuScene.setVertexPoolEnabled( _state._settings._bVertexPool != SW_FALSE );
         _state._gpuScene.upload( pDevice, engine::getSubsystem<EngineConfig>()._render._meshPoolMaxVertices );
     }
@@ -638,15 +638,15 @@ namespace sw
         _psoManager.ensureParticlePSO();
         _state._particleRenderer.prepareFrame( *pDevice, _state._gpuScene.getParticleBatches(), vector_reference<const uint32>( _state._gpuScene.getParticleOrder() ),
                                                _state._gpuScene.getVFXMeshEmitters(), vector_reference<const VFXGPUParticleSortJob>( _state._gpuScene.getGPUParticleSortJobs() ),
-                                               _state._gpuScene.getGPUParticleOrderCount(), _passExecutor.getFrameGraphExecutor().makeVFXSimulationInput() );
+                                               _state._gpuScene.getGPUParticleOrderCount(), _passExecutor.getFramePassRecorder().makeVFXSimulationInput() );
 
         if ( _passExecutor.prepareCommandList( pDevice, pCallerName ) == false )
             return false;
 
         const bool bOk = _passExecutor.submitGraph( pDevice );
         _publishedOcclusionTilesBuilt.store( _state.getMainView()._bOcclusionTilesThisFrame == SW_TRUE ? 1u : 0u );
-        _publishedOcclusionTwoPhase.store( _passExecutor.getFrameGraphExecutor().isTwoPhaseOcclusionEnabled() ? 1u : 0u );
-        _publishedOcclusionLatePhase.store( _passExecutor.getFrameGraphExecutor().hasLatePhaseRun() ? 1u : 0u );
+        _publishedOcclusionTwoPhase.store( _passExecutor.getFramePassRecorder().isTwoPhaseOcclusionEnabled() ? 1u : 0u );
+        _publishedOcclusionLatePhase.store( _passExecutor.getFramePassRecorder().hasLatePhaseRun() ? 1u : 0u );
         _lastPendingPSOBatchCount = _passExecutor.getPendingPSOBatchCount();
         // 타임스탬프 슬롯은 디바이스에 하나다 — 미리보기 렌더러가 읽고 켜고 끄면 주 렌더러의 GPU 시간이 흔들린다.
         // 시계가 스위치를 맞추고 끝난 프레임을 읽는다(자동 렌더 배율 표본). 읽은 프레임 한 벌을 프로파일러도 받는다.
@@ -663,7 +663,7 @@ namespace sw
     {
         const bool bPipelineReady = _psoManager.getEnginePSO( RenderPassKind::ProbeUpdate ) != 0 && _psoManager.getEnginePSO( RenderPassKind::SceneVoxelize ) != 0;
         _state._probeUpdater.prepare( pDevice, _state._listFrameRealtimeProbe, _state._lightBuffer, _state._frameSkySource, _state._bHasFrameSky == SW_TRUE, bPipelineReady,
-                                      _state._gpuScene.areMeshesCreatedBeforeHandoff() == false, RenderStabilitySample::readMaxGIError() );
+                                      _state._gpuScene.areMeshesCreatedBeforeHandoff() == false, RenderConvergenceSample::readMaxGIError() );
     }
 
     namespace
@@ -1161,7 +1161,7 @@ namespace sw
     {
         if ( _pDevice == nullptr )
             return;
-        // 주 시점은 늘 있다 — 컬링 상수 버퍼를 못 만들면 오류가 남고 GPU 컬링이 그 슬롯을 돌리지 않는다(`FrameGraphExecutor::isCullViewReady`).
+        // 주 시점은 늘 있다 — 컬링 상수 버퍼를 못 만들면 오류가 남고 GPU 컬링이 그 슬롯을 돌리지 않는다(`FramePassRecorder::isCullViewReady`).
         (void)ensureViewCullBuffers( _state.getMainView() );
         for ( unique_ptr<FrameViewTarget>& pView : _state._listView )
         {
@@ -1381,7 +1381,7 @@ namespace sw
         releaseViewTransparentOrder( mainView );
         releaseViewCullBuffers( mainView ); // 다음 프레임의 `prepareExtraViews` 가 다시 만든다
         mainView._commandList.reset();
-        // 같은 자리에 새로 만든다 — 협력 객체(캡처의 풀 참조 · `FramePassExecutor::_pActiveView`)가 이 주소를 쥐고, 풀은 뮤텍스를 들어 옮길 수 없다.
+        // 같은 자리에 새로 만든다 — 협력 객체(캡처의 풀 참조 · `FrameRecorder::_pActiveView`)가 이 주소를 쥐고, 풀은 뮤텍스를 들어 옮길 수 없다.
         // 멤버를 하나씩 되돌리지 않는다: 그 목록은 새 기록 멤버를 빠뜨린다(지터 순번이 그랬다 — 골든이 체인 위치에 따라 1.8 % 갈렸다).
         mainView.~FrameViewTarget();
         sw_placement_new( &mainView ) FrameViewTarget{};

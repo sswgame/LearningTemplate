@@ -40,7 +40,7 @@ namespace sw
 namespace sw
 {
     /** @brief 물속 안개 값입니다(`WaterBodyComponent::findUnderwaterFog`). 안개 패스는 이 값을 읽습니다. */
-    struct WaterUnderwaterFog
+    struct UnderwaterFogValues
     {
         float4  _color{ 0.05f, 0.2f, 0.25f, 1.0f };
         float32 _density{ 0.15f };
@@ -133,7 +133,7 @@ namespace sw
          * @brief @p manager 의 물 가운데 @p viewPosition 을 물속에 둔 첫 물의 안개를 구합니다. 물속 안개를 켠 물만 봅니다. 없으면 false 를 반환합니다.
          * @details `FogComponent::findFog` 가 이 값을 읽어 안개 패스(`RenderPassKind::Fog`)의 값을 덮는다 — 균일 안개, 볼륨 없음.
          */
-        [[nodiscard]] static bool findUnderwaterFog( const GameObjectManager& manager, const float3& viewPosition, WaterUnderwaterFog& outFog );
+        [[nodiscard]] static bool findUnderwaterFog( const GameObjectManager& manager, const float3& viewPosition, UnderwaterFogValues& outFog );
         /** @brief @p manager 의 물 가운데 월드 (x, z) 를 덮는 첫 물입니다. 빌린 포인터입니다. */
         static WaterBodyComponent* findWaterAt( const GameObjectManager& manager, float32 worldX, float32 worldZ );
 

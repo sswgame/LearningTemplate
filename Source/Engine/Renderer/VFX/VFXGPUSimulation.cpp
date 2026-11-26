@@ -14,7 +14,7 @@
 #include "Engine/Graphics/Shader/Binding/EngineComputeShaders.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Profiling/FrameProfiler.h"
-#include "Engine/Renderer/Graph/FrameBufferTable.h"
+#include "Engine/Renderer/Graph/RenderGraphImportedResourceTable.h"
 #include "Engine/Renderer/Lighting/GPULightBuffer.h"
 #include "Engine/Renderer/Scene/GPUSceneSnapshot.h"
 #include "Engine/VFX/VFXEffectDef.h"
@@ -26,7 +26,7 @@ namespace sw
     namespace
     {
         /**
-         * @brief 프레임 그래프 자원 이름(파이프라인 XML `framecomputerenderpass.xml` 의 `_listResource`)입니다. 한 번만 intern 한다(전역 문자열 표의 뮤텍스를 프레임마다 잡지 않는다).
+         * @brief 프레임 그래프 자원 이름(파이프라인 XML `framecomputerenderfeature.xml` 의 `_listResource`)입니다. 한 번만 intern 한다(전역 문자열 표의 뮤텍스를 프레임마다 잡지 않는다).
          * @details 시뮬레이션하는 방출기와 읽기만 하는 방출기는 쓰는 패스가 달라 이름을 나눈다(`VFXGPUSimulation::registerFrameResources`).
          */
         struct VFXFrameResource
@@ -720,7 +720,7 @@ namespace sw
         return bLightBufferReady && bAnyLights;
     }
 
-    void VFXGPUSimulation::registerFrameResources( FrameBufferTable& table ) const
+    void VFXGPUSimulation::registerFrameResources( RenderGraphImportedResourceTable& table ) const
     {
         // 등록 접근은 프레임 시작이자 끝의 상태다(그래프가 끝에 되돌린다): 상태는 다음 디스패치만 읽어 UAV, 렌더 입력은 투명 패스의 정점 셰이더(t11)가 읽어 셰이더 읽기,
         // 인자는 투명 패스의 간접 그리기 상태다(메시 되읽기 `VFXGPUMeshReadback` 도 그 상태로 되돌린다). 칸은 `appendSimulation` · `assignReadSlot` 이 정했다.
@@ -810,7 +810,7 @@ namespace sw
         SW_PROFILE_SCOPE( "RT.VFX.Simulate" );
         IRHIPassCommandList& cmd = *context.getCommandList();
         // 깊이 히스토리 — 지난 프레임 그 뷰가 남긴 깊이를 옮긴 R32 실수 텍스처. RW 텍스처로 읽는다(에뮬 백엔드의 컴퓨트는 샘플 텍스처를 읽지 못한다).
-        // 생산자(`FrameGraphExecutor::recordDepthHistory` — 입력을 채운 판정 `canCopyDepthHistory` 와 같다)가 RW 텍스처 상태로 넘겨 두었다.
+        // 생산자(`FramePassRecorder::recordDepthHistory` — 입력을 채운 판정 `canCopyDepthHistory` 와 같다)가 RW 텍스처 상태로 넘겨 두었다.
         // 비 가림 맵을 읽는 방출기는 그 맵의 사본을 같은 자리에 건다(`getCollisionDepth`).
         // 전이는 그래프 레벨 콜백이 냈다(`registerFrameResources` 가 등록한 칸). 라이트 버퍼는 쓰는 프레임에만 등록했다(`writesParticleLights` — 등록 조건이 곧 실행 조건).
         const bool bLightBufferReady = context.isRegistered( getLightBufferUAV() );

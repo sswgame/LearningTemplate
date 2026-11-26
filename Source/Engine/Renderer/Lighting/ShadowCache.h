@@ -3,7 +3,7 @@
  * @brief 서 있는 점광 · 스폿의 그림자 캐시입니다. 정적 메시의 깊이를 캐시 층(아틀라스 크기의 깊이 텍스처)에 한 번 그려 두고 프레임마다 다시 씁니다.
  * @details 언리얼의 캐시한 그림자 맵(`r.Shadow.CacheWholeSceneShadows` — 정적 프리미티브의 깊이를 캐시하고 움직이는 것만 매 프레임 그 위에 그린다)과 같은 자리다.
  *          방향광 캐스케이드는 캐시하지 않는다 — 카메라에 맞춘 볼륨이 카메라와 함께 움직여 텍셀 자리가 매 프레임 바뀐다(언리얼도 CSM 은 캐시하지 않고 가상 그림자 맵의 페이지로 캐시한다).
- *          무엇을 다시 그릴지는 데이터 규칙 하나(`update`)가 정하고 GPU 없이 테스트한다. 그리는 쪽은 `FramePassExecutor::drawLocalShadowTiles` 다.
+ *          무엇을 다시 그릴지는 데이터 규칙 하나(`update`)가 정하고 GPU 없이 테스트한다. 그리는 쪽은 `FrameRecorder::drawLocalShadowTiles` 다.
  */
 #pragma once
 #include "Core/Container/unordered_map.h"

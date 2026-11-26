@@ -83,7 +83,7 @@ namespace sw
                 return vertex;
             }
 
-            /** @brief 격자 사각형 하나를 위에서 앞면으로 넣습니다(MeshUtil::createPlane 과 같은 감김). */
+            /** @brief 격자 사각형 하나를 위에서 앞면으로 넣습니다(PrimitiveMeshBuilder::createPlane 과 같은 감김). */
             static void pushQuad( vector<RHIVertex>& outListVertex, const RHIVertex& v00, const RHIVertex& v10, const RHIVertex& v01, const RHIVertex& v11 )
             {
                 outListVertex.push_back( v00 );
@@ -600,7 +600,7 @@ namespace sw
         return outDepth > 0.0f;
     }
 
-    bool WaterBodyComponent::findUnderwaterFog( const GameObjectManager& manager, const float3& viewPosition, WaterUnderwaterFog& outFog )
+    bool WaterBodyComponent::findUnderwaterFog( const GameObjectManager& manager, const float3& viewPosition, UnderwaterFogValues& outFog )
     {
         for ( const WaterBodyComponent* pWater : manager.getComponentRegistry().getAll<WaterBodyComponent>() )
         {

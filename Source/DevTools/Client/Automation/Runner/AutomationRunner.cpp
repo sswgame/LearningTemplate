@@ -37,7 +37,7 @@
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 #include "Engine/Graphics/View/ScreenshotRequestQueue.h"
-#include "Engine/Graphics/View/SimulationOnlyFrameQueue.h"
+#include "Engine/Graphics/View/SimulationOnlyFrameCounter.h"
 #include "Engine/Input/IInputDevice.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/RawInputEvent.h"
@@ -637,8 +637,8 @@ namespace sw
         AutomationFrameKind kind = AutomationFrameKind::Start;
         if ( _bStarted == SW_TRUE )
         {
-            const bool                            bStepRan        = _run._nextStepIndex != stepIndexBefore;
-            const SimulationOnlyFrameQueue* const pSimulationOnly = engine::findSubsystem<SimulationOnlyFrameQueue>();
+            const bool                              bStepRan        = _run._nextStepIndex != stepIndexBefore;
+            const SimulationOnlyFrameCounter* const pSimulationOnly = engine::findSubsystem<SimulationOnlyFrameCounter>();
             // 그리지 않고 진행한 프레임은 따로 센다 — 고정 대기를 얼마나 줄였는지 보고(`timeline` 의 simulationOnly)에 남는다.
             if ( pSimulationOnly != nullptr && pSimulationOnly->wasLastFrameSimulationOnly() )
                 kind = AutomationFrameKind::SimulationOnly;
@@ -671,8 +671,8 @@ namespace sw
         if ( frameCount <= policy->_advanceDrawnFrames )
             return; // 모두 그린다
         frameCount -= policy->_advanceDrawnFrames;
-        const float32                   fixedFrameDelta = engine::getSubsystem<DeterministicRun>().getPolicy()._fixedFrameDelta;
-        SimulationOnlyFrameQueue* const pQueue          = engine::findSubsystem<SimulationOnlyFrameQueue>(); // 클라이언트 호스트 전용 서비스(HostOnly)다 — 없으면 이 단계를 받을 수 없다
+        const float32                     fixedFrameDelta = engine::getSubsystem<DeterministicRun>().getPolicy()._fixedFrameDelta;
+        SimulationOnlyFrameCounter* const pQueue          = engine::findSubsystem<SimulationOnlyFrameCounter>(); // 클라이언트 호스트 전용 서비스(HostOnly)다 — 없으면 이 단계를 받을 수 없다
         if ( pQueue == nullptr || pQueue->request( frameCount, fixedFrameDelta ) == false )
         {
             finish( AutomationRunResult::failed( AutomationFailureKind::Assertion, "<AdvanceSimulation> could not hand its frames to the simulation-only frame queue", {} ) );

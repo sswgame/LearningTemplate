@@ -73,7 +73,7 @@ namespace sw
         };
 
         /// @brief 이번 목록에서 VAT 가 있는 메시 하나입니다.
-        struct Wanted
+        struct VertexAnimationMeshRequest
         {
             const MeshVertexAnimation* _pAnimation{ nullptr };
             IdentityToken              _contentID{};
@@ -85,7 +85,7 @@ namespace sw
          * @brief @p listWanted 의 @p listIndex 번째들을 풀에 둡니다 — 이미 있는 테이블은 나누고, 없으면 구간을 받아 올립니다.
          * @return 구간이 모자라면 false 입니다(그때까지 둔 것은 남는다 — 부르는 쪽이 크게 다시 만든다). 상한을 넘는 테이블은 오류를 남기고 그 메시만 뺀다.
          */
-        [[nodiscard]] bool placeWanted( IRHIDevice* pDevice, const vector<Wanted>& listWanted, const vector<size_t>& listIndex );
+        [[nodiscard]] bool placeWanted( IRHIDevice* pDevice, const vector<VertexAnimationMeshRequest>& listWanted, const vector<size_t>& listIndex );
         /** @brief 메시 → 머리 단어 번호 표를 기록에서 다시 만든다. */
         void refreshBases();
         /** @brief 버퍼 · 구간 할당기를 @p capacity 단어로 다시 만들고 모든 기록을 비웁니다. 못 만들면 풀을 비우고 false 입니다. */

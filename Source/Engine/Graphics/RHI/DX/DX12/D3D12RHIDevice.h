@@ -14,7 +14,7 @@
 
 #include "Engine/Config/RHIBackendType.h"
 #include "Engine/Foundation/EnginePlatformHeaders.h"
-#include "Engine/Graphics/RHI/Backend/FrameResourceRing.h"
+#include "Engine/Graphics/RHI/Backend/FrameSlotFenceRing.h"
 #include "Engine/Graphics/RHI/Backend/RHIBindlessReadSlot.h"
 #include "Engine/Graphics/RHI/Backend/RHIBindlessRegistry.h"
 #include "Engine/Graphics/RHI/Backend/RHIConstantBufferMirror.h"
@@ -880,7 +880,7 @@ namespace sw
         IndexFreeList _freeOnlineBlock                            SW_GUARDED_BY( _onlineBlockMutex );
         vector<OnlineBlockRecycleBatch> _listPendingOnlineRecycle SW_GUARDED_BY( _onlineBlockMutex );
         vector<vector<uint32>> _listOnlineRecyclePool             SW_GUARDED_BY( _onlineBlockMutex ); ///< 돌아온 빈 벡터이며 용량을 남겨 둔다.
-        FrameResourceRing                                         _frameRing;
+        FrameSlotFenceRing                                        _frameRing;
 
         /**
          * @brief GPU 타임스탬프입니다. 링 슬롯마다 `constant::render::kMaxGPUTimestampSlot` 개의 슬롯을 씁니다.

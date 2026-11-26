@@ -399,10 +399,10 @@
 			<_listPermutation />
 		</RenderGraphPassDesc>
 	</_listPass>
-	<_listRenderPassRef>
+	<_listRenderFeatureRef>
 		<item>guid:57bd09488b11feda78cbced691b416fe</item>
 		<item>guid:772ca6339dfa39e6f45e06670e127c46</item>
 		<item>guid:85dda27761602296f8342aa3e0fda17e</item>
 		<item>guid:3bbe483ea09c587a0612ffacd7007d3d</item>
-	</_listRenderPassRef>
+	</_listRenderFeatureRef>
 </RenderPipelineDesc>

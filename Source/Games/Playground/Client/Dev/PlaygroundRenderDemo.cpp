@@ -18,7 +18,7 @@ namespace sw
         ExtensionDrawElement makeCube( float32 x, float32 y, float32 z, const float4& color, uint32 instanceCount )
         {
             ExtensionDrawElement element;
-            element._mesh           = hashed_string( "Cube" ); // 엔진 내장 큐브(`MeshUtil::acquirePrimitive`)
+            element._mesh           = hashed_string( "Cube" ); // 엔진 내장 큐브(`PrimitiveMeshBuilder::acquirePrimitive`)
             element._world          = float4x4::makeTranslation( x, y, z );
             element._instanceCount  = instanceCount;
             element._arrConstant[0] = ExtensionConstant{ hashed_string( kColorConstant ), color };

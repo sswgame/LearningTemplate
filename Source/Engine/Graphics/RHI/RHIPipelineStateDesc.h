@@ -9,8 +9,8 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
-#include "Engine/Graphics/Mesh/MeshVertex.h"
 #include "Engine/Graphics/RHI/RHIEnums.h"
+#include "Engine/Graphics/RHI/RHIVertex.h"
 #include "Engine/Graphics/RenderState/RenderState.h"
 
 namespace sw

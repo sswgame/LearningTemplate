@@ -37,8 +37,8 @@ namespace
     {
         static MaterialParameterCollectionDef makeDesc()
         {
-            MaterialParameterCollectionDef desc;
-            MaterialCollectionParameterDef tint;
+            MaterialParameterCollectionDef      desc;
+            MaterialParameterCollectionEntryDef tint;
             tint._name  = "Tint";
             tint._value = float4{ 1.0f, 0.5f, 0.25f, 1.0f };
             desc._listParameter.push_back( tint );
@@ -77,8 +77,8 @@ SW_TEST_CASE( MaterialParameterCollectionTest, ReplaceValuesFollowsTheReloadedFi
     SW_REQUIRE_TRUE( collection.setValue( tint, float4{ 0.0f, 0.0f, 0.0f, 1.0f } ) );
     const uint32 before = collection.getGeneration();
 
-    MaterialParameterCollectionDef reloaded;
-    MaterialCollectionParameterDef wind;
+    MaterialParameterCollectionDef      reloaded;
+    MaterialParameterCollectionEntryDef wind;
     wind._name  = "Wind";
     wind._value = float4{ 3.0f, 0.0f, 0.0f, 0.0f };
     reloaded._listParameter.push_back( wind );
@@ -148,12 +148,12 @@ SW_TEST_CASE( MaterialParameterCollectionTest, GlobalValuesGoToTheFrameConstants
 SW_TEST_CASE( MaterialParameterCollectionTest, VariantMergesByName )
 {
     CollectionParentSource source{ R"(<MaterialParameterCollectionDef><_listParameter>
-        <MaterialCollectionParameterDef _name="Tint" _value="1, 1, 1, 1" />
-        <MaterialCollectionParameterDef _name="Wind" _value="2, 0, 0, 0" />
+        <MaterialParameterCollectionEntryDef _name="Tint" _value="1, 1, 1, 1" />
+        <MaterialParameterCollectionEntryDef _name="Wind" _value="2, 0, 0, 0" />
     </_listParameter></MaterialParameterCollectionDef>)" };
     string                 flat;
     SW_REQUIRE_TRUE( DataInheritance::flatten( R"(<MaterialParameterCollectionDef _base="parent.matparams.xml"><_listParameter>
-        <MaterialCollectionParameterDef _name="Tint" _value="1, 0, 0, 1" />
+        <MaterialParameterCollectionEntryDef _name="Tint" _value="1, 0, 0, 1" />
     </_listParameter></MaterialParameterCollectionDef>)",
                                                "child", DataInheritanceSchema::makeFromType( *MaterialParameterCollectionDef::StaticType() ), source, flat ) );
     MaterialParameterCollectionDef desc;
