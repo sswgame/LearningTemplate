@@ -21,6 +21,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
+#include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Object/Prefab/PrefabInstanceRegistry.h"
 #include "Engine/Object/Prefab/PrefabOverrides.h"
 #include "Engine/Object/Prefab/PrefabPathStack.h"
@@ -198,12 +199,16 @@ namespace sw
         // 다른 철자 · GUID 참조 글도 한 칸이다(`AssetRegistry::toCacheKey` — 두 벌 올리지 않고, 순환 검사도 같은 키로 본다).
         string key = AssetRegistry::toCacheKey( assetRelativePath );
 
-        // 확장자 길이를 손으로 쓰지 않는다 — 숫자와 문자열이 떨어져 있으면 어긋난다.
-        for ( const string_view extension : { ".bin", ".xml", ".json" } )
+        // 원본 · 쿠킹본(`.prefab.xml` · `.prefab.json` · `.prefab.bin`)은 확장자 없는 이름(`.prefab`) 한 칸이다. 접미사는 종류의 표(`PrefabAssetKind::kArrAssetSuffix`)가 정한다.
+        const AssetSuffix* pSuffix = PrefabAsset::kAssetType.findSuffix( key );
+        if ( pSuffix == nullptr || pSuffix->_role == AssetSuffixRole::CookedAlias )
+            return key;
+        for ( const AssetSuffix& alias : PrefabAssetKind::kArrAssetSuffix )
         {
-            if ( FileUtil::hasExtension( key, extension ) )
+            if ( alias._role == AssetSuffixRole::CookedAlias )
             {
-                key.resize( key.size() - extension.size() );
+                key.resize( key.size() - pSuffix->_text.size() );
+                key.append( alias._text.data(), alias._text.size() );
                 break;
             }
         }

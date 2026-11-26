@@ -5,6 +5,7 @@
 // 옛 맨 접미사(`.seq` · `.sprite` · `.dialogue` · `.tilemap`)는 두지 않는다.
 #include "pch.h"
 
+#include "Editor/Common/Asset/EditorContentScan.h"
 #include "Editor/Common/Asset/Texture/HeightfieldImporter.h"
 #include "Editor/Common/Asset/Texture/TextureImporter.h"
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
@@ -114,9 +115,9 @@ namespace sw::editor
                                             EditorAssetMatchPriority::Suffix, { AssetReloadRoute::kAnyCacheHoldingPath, nullptr, nullptr, AssetReferenceUse::InlinedAtLoad } ),
             EditorAssetMatchRule::engineType( AudioMixerDef::kAssetType, { AssetReloadRoute::kAnyCacheHoldingPath } ),
             EditorAssetMatchRule::engineType( AudioEventLibrary::kAssetType, { AssetReloadRoute::kAnyCacheHoldingPath } ),
-            EditorAssetMatchRule::suffixes( EditorAssetMatchMode::Extension, EditorAssetTypeIDs::kArrDataXMLExtension, SW_COUNT_OF( EditorAssetTypeIDs::kArrDataXMLExtension ),
+            EditorAssetMatchRule::suffixes( EditorAssetMatchMode::Extension, EditorContentScan::kArrDataXMLExtension, SW_COUNT_OF( EditorContentScan::kArrDataXMLExtension ),
                                             EditorAssetMatchPriority::Catchall, { AssetReloadRoute::kAnyCacheHoldingPath, nullptr, nullptr, AssetReferenceUse::InlinedAtLoad } ),
-            EditorAssetMatchRule::suffixes( EditorAssetMatchMode::Extension, EditorAssetTypeIDs::kArrDataJSONExtension, SW_COUNT_OF( EditorAssetTypeIDs::kArrDataJSONExtension ),
+            EditorAssetMatchRule::suffixes( EditorAssetMatchMode::Extension, EditorContentScan::kArrDataJSONExtension, SW_COUNT_OF( EditorContentScan::kArrDataJSONExtension ),
                                             EditorAssetMatchPriority::Catchall ),
         };
     } // namespace

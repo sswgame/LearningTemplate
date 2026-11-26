@@ -157,16 +157,6 @@ namespace sw::editor
             static bool isReloadable( const EditorAssetMatchRule& rule ) { return rule._reload._pCacheKindName != nullptr || rule._reload._pfnImportSource != nullptr || rule._reload._pfnImportBatch != nullptr; }
         };
     } // namespace
-
-    bool EditorAssetTypeIDs::isDataXMLPath( string_view path )
-    {
-        for ( const string_view extension : kArrDataXMLExtension )
-        {
-            if ( FileUtil::hasExtension( path, extension ) )
-                return true;
-        }
-        return false;
-    }
 } // namespace sw::editor
 
 namespace sw::editor

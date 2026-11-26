@@ -17,9 +17,12 @@
 #include "Editor/Common/Asset/ModelImport/ModelImportUtil.h"
 #include "Editor/Common/Asset/ModelImport/ModelImporter.h"
 
+#include "Engine/Animation/AnimationSet.h"
 #include "Engine/Asset/AssetDatabase.h"
 #include "Engine/Content/AssetGUID.h"
 #include "Engine/Content/AssetPaths.h"
+#include "Engine/Graphics/Material/Material.h"
+#include "Engine/Object/Prefab/PrefabAsset.h"
 
 namespace sw::editor
 {
@@ -113,7 +116,8 @@ namespace sw::editor
 
     bool ImportedAssetStore::isReferrer( string_view path )
     {
-        return StringUtil::endsWith( path, ".material" ) || StringUtil::endsWith( path, ".animset.xml" ) || StringUtil::endsWith( path, ".prefab.xml" );
+        // 다른 임포트 결과를 이름으로 가리키는 저작 파일 — 머티리얼 · 애니메이션 셋 · 프리팹 원본(XML). 접미사는 각 종류의 표가 정한다
+        return Material::kAssetType.findSuffix( path ) != nullptr || AnimationSet::kAssetType.findSuffix( path ) != nullptr || PrefabAsset::findFileFormat( path ) == PrefabFileFormat::XML;
     }
 
     uint64 ImportedAssetStore::mixReferencedFiles( const AbsolutePath& importedPath, string_view text, uint64 hash )

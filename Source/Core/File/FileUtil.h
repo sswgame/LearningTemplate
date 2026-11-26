@@ -475,6 +475,15 @@ namespace sw
         [[nodiscard]] static bool collectFiles( const AbsolutePath& directory, string_view filterExtension, vector<AbsolutePath>& outListFilePath, bool bRecursive, const StopToken& stopToken = {} );
         /** @brief 읽기 경로 아래의 파일은 읽기 경로입니다(쓰는 경로로 바뀌지 않는다). */
         [[nodiscard]] static bool collectFiles( const DiskPath& directory, string_view filterExtension, vector<DiskPath>& outListFilePath, bool bRecursive, const StopToken& stopToken = {} );
+        /**
+         * @brief 확장자 표(@p pFilterExtension, @p filterCount 개) 가운데 하나에 맞는 파일을 모읍니다. 표가 비면 모두입니다. 나머지는 위와 같습니다.
+         * @details 열거하면서 거른다 — 모두 모은 뒤 거르면 맞지 않는 파일의 경로까지 만든다. 확장자 표는 종류 등록의 것을 넘긴다(글을 다시 적지 않는다).
+         */
+        [[nodiscard]] static bool collectFiles( const AbsolutePath& directory, const string_view* pFilterExtension, size_t filterCount, vector<AbsolutePath>& outListFilePath, bool bRecursive,
+                                                const StopToken& stopToken = {} );
+        /** @brief 읽기 경로 폴더의 판입니다. */
+        [[nodiscard]] static bool collectFiles( const DiskPath& directory, const string_view* pFilterExtension, size_t filterCount, vector<DiskPath>& outListFilePath, bool bRecursive,
+                                                const StopToken& stopToken = {} );
         /** @brief 디렉터리 아래의 폴더를 모읍니다(경로 규칙 · 반환은 collectFiles 와 같습니다). */
         [[nodiscard]] static bool collectFolders( const AbsolutePath& directory, vector<AbsolutePath>& outListFolder, bool bRecursive );
         /** @brief 읽기 경로 아래의 폴더는 읽기 경로입니다. */
@@ -482,7 +491,8 @@ namespace sw
 
     private:
         template <typename PathType>
-        [[nodiscard]] static bool collectFilesInto( const DiskPath& directory, string_view filterExtension, vector<PathType>& outListFilePath, bool bRecursive, const StopToken& stopToken );
+        [[nodiscard]] static bool collectFilesInto( const DiskPath& directory, const string_view* pFilterExtension, size_t filterCount, vector<PathType>& outListFilePath, bool bRecursive,
+                                                    const StopToken& stopToken );
         template <typename PathType>
         [[nodiscard]] static bool collectFoldersInto( const DiskPath& directory, vector<PathType>& outListFolder, bool bRecursive );
         /** @brief 글 @p path 가 @p component 자체이거나 `component/` 로 시작하는지 봅니다 — 형식 있는 `startsWithPathComponent` 둘이 함께 쓴다. */
