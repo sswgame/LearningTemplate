@@ -25,7 +25,7 @@
 		<EditorPanelTitles _title="Dialogue Graph" _label="Dialogue Graph" />
 		<EditorPanelTitles _title="GM Tool" _label="GM Tool" />
 		<EditorPanelTitles _title="Game" _label="Game" />
-		<EditorPanelTitles _title="Gimmick Graph" _label="Gimmick Graph" />
+		<EditorPanelTitles _title="Logic Circuit Graph" _label="Logic Circuit Graph" />
 		<EditorPanelTitles _title="Global Variables" _label="Global Variables" />
 		<EditorPanelTitles _title="Hierarchy" _label="Hierarchy" />
 		<EditorPanelTitles _title="Hierarchy / Skeleton View" _label="Hierarchy / Skeleton View" />

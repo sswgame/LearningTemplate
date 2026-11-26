@@ -10622,7 +10622,7 @@
 				<item>editor/panels/editor.panels.xml</item>
 			</origins>
 		</entry>
-		<entry key="Gimmick Graph" source="Gimmick Graph" context="Editor command name">
+		<entry key="Logic Circuit Graph" source="Logic Circuit Graph" context="Editor command name">
 			<origins>
 				<item>editor/commands/gameplaytools.commands.xml</item>
 				<item>editor/panels/editor.panels.xml</item>
@@ -10855,8 +10855,8 @@
 				<item>editor/commands/charactereditor.commands.xml</item>
 			</origins>
 		</entry>
-		<entry key="Open the gimmick graph panel"
-		       source="Open the gimmick graph panel"
+		<entry key="Open the logic circuit graph panel"
+		       source="Open the logic circuit graph panel"
 		       context="Editor command palette detail">
 			<origins>
 				<item>editor/commands/gameplaytools.commands.xml</item>
@@ -10935,8 +10935,8 @@
 				<item>editor/commands/editor.commands.xml</item>
 			</origins>
 		</entry>
-		<entry key="Opens the gimmick circuit graph window"
-		       source="Opens the gimmick circuit graph window"
+		<entry key="Opens the logic circuit graph window"
+		       source="Opens the logic circuit graph window"
 		       context="Editor command tooltip">
 			<origins>
 				<item>editor/commands/gameplaytools.commands.xml</item>

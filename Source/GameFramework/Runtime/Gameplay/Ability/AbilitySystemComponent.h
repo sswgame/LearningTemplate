@@ -156,7 +156,7 @@ namespace sw
         void onRegister( GameObjectManager& manager ) override;
         void onUnregister( GameObjectManager& manager ) override;
         /**
-         * @brief 무기 · 근접 · 기믹이 보낸 맞음(`GameObjectEvents::_hitReceived`)을 피해 이펙트로 받습니다(언리얼 GAS 의 TakeDamage → Damage 메타 어트리뷰트 자리).
+         * @brief 무기 · 근접 · 장치가 보낸 맞음(`GameObjectEvents::_hitReceived`)을 피해 이펙트로 받습니다(언리얼 GAS 의 TakeDamage → Damage 메타 어트리뷰트 자리).
          * @details 즉시 이펙트(피해 공식 `DamageExecution`, SetByCaller "Damage" = 피해 × 히트 존 배율)를 자기에게 걸어 메타 어트리뷰트 `IncomingDamage` 로 넣는다 —
          *          방어 · 무적 · 쓰러짐(`CombatAttributeSet::postGameplayEffectExecute`)과 치명 신호(맞힌 자리를 실은 `deliverFatalHit`)는 어빌리티 피해와 같은 길이다.
          *          치명 표시가 달린 맞음(쓰러짐을 정한 쪽이 다시 보낸 사본)과 체력이 없는 주인은 건너뛴다. 틱 중이면 틱 직후에 건다(`applyGameplayEffectSpecToTarget`).
@@ -332,7 +332,7 @@ namespace sw
         static constexpr uint32 kEffectLogCapacity = 16;
         /**
          * @brief 최근 이펙트 적용 · 거부(까닭) · 제거(원인)를 오래된 것부터 @p outListEntry 에 채웁니다(먼저 비운다). Ability 디버거가 읽는다.
-         * @details 기록은 그 일이 일어날 때만 한 줄이라 프레임 비용이 없다. 건 길(`AbilityEffectContext::_sourceName`)도 같이 적는다 — 영역 · 상호작용 · 기믹 가운데 어디서 왔나.
+         * @details 기록은 그 일이 일어날 때만 한 줄이라 프레임 비용이 없다. 건 길(`AbilityEffectContext::_sourceName`)도 같이 적는다 — 영역 · 상호작용 · 장치 가운데 어디서 왔나.
          */
         void collectEffectLog( vector<AbilityEffectLogEntry>& outListEntry ) const;
         /** @brief 적용된 이펙트의 남은 시간입니다. 무한 이펙트이거나 이펙트가 없으면 0 입니다. */

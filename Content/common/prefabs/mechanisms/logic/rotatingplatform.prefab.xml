@@ -1,0 +1,37 @@
+<?asset guid="5b7c19dc8ccd8cdc1b1b149f13186b4b"?>
+<Prefab formatVersion="0" name="RotatingPlatform">
+	<GameObject _schemaVersion="0" _name="RotatingPlatform" _bActive="true">
+		<_listComponent>
+			<SceneComponent _localID="12574257654564749349" _componentName="SceneComponent"
+			                _bActive="true"
+			                _localPosition="0,0,0"
+			                _localRotation="0,0,0"
+			                _localScale="1,1,1"
+			                _attachOwner="None"
+			                _attachOwnerID="0"
+			                _attachComponent="None" />
+			<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
+			               _bActive="true"
+			               _localPosition="0,0,0"
+			               _localRotation="0,0,0"
+			               _localScale="4,0.3,1"
+			               _attachOwner="None"
+			               _attachOwnerID="0"
+			               _attachComponent="#ae80bcb72e918025"
+			               _meshID="Cube"
+			               _materialPath="guid:0e23c2ee4018be638b51655cf03239d2"
+			               _boundsRadius="0.866"
+			               _gpuSpinSeed="0"
+			               _bVisible="true" />
+			<LogicCircuitComponent _localID="12667660158642495557" _componentName="LogicCircuitComponent" _bActive="true" _stepTime="0.016666668">
+				<_listNode>
+					<LogicCircuitNodeDesc _id="spin" _kind="Rotator" _params="speed=45; axis=0 1 0" />
+				</_listNode>
+				<_listNodeTarget>
+					<item>0</item>
+				</_listNodeTarget>
+				<_listWire />
+			</LogicCircuitComponent>
+		</_listComponent>
+	</GameObject>
+</Prefab>

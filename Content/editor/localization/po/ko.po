@@ -10239,9 +10239,9 @@ msgstr "게임"
 #. Context: Editor command name
 #: editor/commands/gameplaytools.commands.xml
 #: editor/panels/editor.panels.xml
-msgctxt "Gimmick Graph"
-msgid "Gimmick Graph"
-msgstr "기믹 그래프"
+msgctxt "Logic Circuit Graph"
+msgid "Logic Circuit Graph"
+msgstr "논리 회로 그래프"
 
 #. Context: EditorPanelTitles._label
 #: editor/panels/editor.panels.xml
@@ -10493,9 +10493,9 @@ msgstr "캐릭터 편집 패널을 엽니다"
 
 #. Context: Editor command palette detail
 #: editor/commands/gameplaytools.commands.xml
-msgctxt "Open the gimmick graph panel"
-msgid "Open the gimmick graph panel"
-msgstr "기믹 그래프 패널을 엽니다"
+msgctxt "Open the logic circuit graph panel"
+msgid "Open the logic circuit graph panel"
+msgstr "논리 회로 그래프 패널을 엽니다"
 
 #. Context: EditorCommandInfo._detail
 #: editor/commands/editor.commands.xml
@@ -10565,9 +10565,9 @@ msgstr "에디터 환경설정 창을 엽니다"
 
 #. Context: Editor command tooltip
 #: editor/commands/gameplaytools.commands.xml
-msgctxt "Opens the gimmick circuit graph window"
-msgid "Opens the gimmick circuit graph window"
-msgstr "기믹 회로 그래프 창을 엽니다"
+msgctxt "Opens the logic circuit graph window"
+msgid "Opens the logic circuit graph window"
+msgstr "논리 회로 그래프 창을 엽니다"
 
 #. Context: EditorCommandInfo._tooltip
 #: editor/commands/editor.commands.xml

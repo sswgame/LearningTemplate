@@ -16,8 +16,8 @@
 #include "GameFramework/Runtime/Foundation/Save/StatefulComponentRegistrar.h"
 #include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityEvents.h"
-#include "GameFramework/Runtime/Gameplay/Gimmick/GimmickEvents.h"
 #include "GameFramework/Runtime/Gameplay/Interaction/InteractionAuthority.h"
+#include "GameFramework/Runtime/Gameplay/Mechanism/MechanismEvents.h"
 #include "GameFramework/Runtime/Gameplay/Quest/QuestCatalog.h"
 
 namespace sw
@@ -84,7 +84,7 @@ namespace sw
                                                                                            SW_DELEGATE_METHOD( Delegate<void( const AbilityOwnerDiedEvent& )>, &QuestLogComponent::handleOwnerDied, this ) );
         _interactionCompletedSubscription = pDispatcher->subscribe<InteractionCompletedEvent>(
             gameEventChannel(), SW_DELEGATE_METHOD( Delegate<void( const InteractionCompletedEvent& )>, &QuestLogComponent::handleInteractionCompleted, this ) );
-        _cueSubscription = pDispatcher->subscribe<GimmickCueEvent>( gameEventChannel(), SW_DELEGATE_METHOD( Delegate<void( const GimmickCueEvent& )>, &QuestLogComponent::handleCue, this ) );
+        _cueSubscription = pDispatcher->subscribe<MechanismCueEvent>( gameEventChannel(), SW_DELEGATE_METHOD( Delegate<void( const MechanismCueEvent& )>, &QuestLogComponent::handleCue, this ) );
     }
 
     void QuestLogComponent::onUnregister( GameObjectManager& manager )
@@ -133,7 +133,7 @@ namespace sw
         (void)_questLog.notify( s_interactKind, event._request._interaction );
     }
 
-    void QuestLogComponent::handleCue( const GimmickCueEvent& event )
+    void QuestLogComponent::handleCue( const MechanismCueEvent& event )
     {
         if ( _restore.isOpen() == false || event._cue.empty() || isOwnedPawn( event._target ) == false )
             return;

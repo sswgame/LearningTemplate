@@ -1,7 +1,7 @@
 /**
  * @file WorldQuery.h
  * @brief 게임플레이가 월드에 묻는 기하 질의(광선과 시야)의 좁은 인터페이스를 정의합니다. 물리 백엔드를 몰라도 쓸 수 있습니다.
- * @details 상호작용 시야(line of sight), 기믹 레이저, 포탑 조준이 이것만 부른다.
+ * @details 상호작용 시야(line of sight), 장치 레이저, 포탑 조준이 이것만 부른다.
  *          게임이 `IWorldQuery` 를 게임 서비스로 걸면 그것을 쓴다.
  *          없으면 씬의 물리(`ScenePhysicsWorldQuery`)에 묻는다. Jolt 3D 와 Box2D 2D 씬에 광선을 쏘고 트리거는 제외한다.
  *          2D 콜라이더(`BoxCollider2DComponent`)도 2D 씬의 바디라 같은 광선이 맞히며, 2D 씬은 XY 평면이라 광선의 Z 와 상관없이 맞힌다.

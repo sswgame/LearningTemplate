@@ -88,10 +88,10 @@
 
 ## 행동 어휘와 행동 에셋 변형
 
-행동 트리 · 스케줄 · 대화 · 어빌리티 · 기믹 회로는 실행기를 합치지 않고 조건 · 동작 이름만 공유한다.
+행동 트리 · 스케줄 · 대화 · 어빌리티 · 논리 회로는 실행기를 합치지 않고 조건 · 동작 이름만 공유한다.
 
 - **조건** `ConditionExpr` — 등록 `SW_CONDITION( 이름, 칸 스키마, 함수 )`, 모르는 이름은 로드 오류. 세계는 형식 있는 문맥 칸(`GameplayContext`)으로 넘긴다. 매 프레임 값 비교(`AnimationConditionOp`) · 게임 문맥 없는 곳(`UserSettingConditionOperator`)에는 쓰지 않는다.
-- **동작** `ActionRegistry` — `SW_GAME_ACTION( OpenShop, "shop.open", OpenShopParams, &openShop )`, 칸은 리플렉션 구조체, 칸 이름은 `id` · `name` · `task` 와 겹치지 않게. 어빌리티 이펙트(복제 · 예측) · 기믹 회로 노드 · 에디터 명령에는 쓰지 않는다.
+- **동작** `ActionRegistry` — `SW_GAME_ACTION( OpenShop, "shop.open", OpenShopParams, &openShop )`, 칸은 리플렉션 구조체, 칸 이름은 `id` · `name` · `task` 와 겹치지 않게. 어빌리티 이펙트(복제 · 예측) · 논리 회로 노드 · 에디터 명령에는 쓰지 않는다.
 - 행동 트리 변형은 노드 `id` 가 열쇠. `<SubTree tree>` 는 읽을 때 펼치고 `<SubTree slot>` 은 러너가 채운다.
 
 ## 입력 맵 묶음(레이어 쌓기 — 상속의 예외)

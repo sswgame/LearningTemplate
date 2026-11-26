@@ -12,7 +12,7 @@
 #include "GameFramework/Runtime/Character/Control/Intent/ControlIntent.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Runtime/Gameplay/Ability/MovementConstraint.h"
-#include "GameFramework/Runtime/Gameplay/Gimmick/Traversal/ClimbZoneComponent.h"
+#include "GameFramework/Runtime/Gameplay/Mechanism/Traversal/ClimbZoneComponent.h"
 
 namespace sw
 {

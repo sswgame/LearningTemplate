@@ -1,0 +1,504 @@
+<?asset guid="2523a2cbcf96d75f2f7a966d5bcba9c4"?>
+<Scene formatVersion="0" name="MechanismShowcase">
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</SceneSettings>
+	<entities>
+		<entity id="1" name="ShowcaseCamera">
+			<GameObject _schemaVersion="0" _name="ShowcaseCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localID="17709685451340727998" _componentName="CameraComponent"
+					                 _bActive="true"
+					                 _localPosition="0,9,-16"
+					                 _localRotation="0.45,0,0"
+					                 _localScale="1,1,1"
+					                 _attachOwner="None"
+					                 _attachOwnerID="0"
+					                 _attachComponent="None"
+					                 _fovY="40.107045"
+					                 _nearZ="0.1"
+					                 _farZ="100"
+					                 _orthoHeight="10"
+					                 _priority="0"
+					                 _role="Game"
+					                 _bOrthographic="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="ShowcaseSun">
+			<GameObject _schemaVersion="0" _name="ShowcaseSun" _bActive="true">
+				<_listComponent>
+					<DirectionalLightComponent _localID="51927904365891271" _componentName="DirectionalLightComponent"
+					                           _bActive="true"
+					                           _localPosition="0,10,0"
+					                           _localRotation="0.356582,-2.138715,0"
+					                           _localScale="1,1,1"
+					                           _attachOwner="None"
+					                           _attachOwnerID="0"
+					                           _attachComponent="None"
+					                           _color="1,0.82,0.62"
+					                           _intensity="1.35"
+					                           _ambient="0.28"
+					                           _shadowExtent="2.2222223"
+					                           _shadowDistance="2"
+					                           _bCastShadow="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="Ground">
+			<GameObject _schemaVersion="0" _name="Ground" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="0,-0.6,0"
+					               _localRotation="0,0,0"
+					               _localScale="30,1,20"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="Cube"
+					               _materialPath="guid:0e23c2ee4018be638b51655cf03239d2"
+					               _boundsRadius="0.866"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="4" name="MovingPlatform">
+			<GameObject _schemaVersion="0" _name="MovingPlatform" _bActive="true">
+				<_listComponent>
+					<BoxCollider2DComponent _localID="17134987369502387536" _componentName="BoxCollider2DComponent"
+					                        _bActive="true"
+					                        _localPosition="-9,1,0"
+					                        _localRotation="0,0,0"
+					                        _localScale="1,1,1"
+					                        _attachOwner="None"
+					                        _attachOwnerID="0"
+					                        _attachComponent="None"
+					                        _offsetPos="0,0"
+					                        _offsetScale="3,0.5"
+					                        _layer="Default"
+					                        _bContinuous="false"
+					                        _bTrigger="false" />
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="0,0,0"
+					               _localRotation="0,0,0"
+					               _localScale="3,0.5,3"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="#edcbb43a3dfead50"
+					               _meshID="Cube"
+					               _materialPath="guid:0e23c2ee4018be638b51655cf03239d2"
+					               _boundsRadius="0.866"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<SplineComponent _localID="1299529188794216424" _componentName="SplineComponent"
+					                 _bActive="true"
+					                 _samplesPerSegment="16"
+					                 _type="Linear"
+					                 _bClosed="false">
+						<_listControlPoint>
+							<item>0,0,0</item>
+							<item>6,0,0</item>
+						</_listControlPoint>
+					</SplineComponent>
+					<LogicCircuitComponent _localID="12667660158642495557" _componentName="LogicCircuitComponent" _bActive="true" _stepTime="0.016666668">
+						<_listNode>
+							<LogicCircuitNodeDesc _id="move" _kind="Mover" _params="speed=2; mode=PingPong; pause=0.5" />
+						</_listNode>
+						<_listNodeTarget>
+							<item>0</item>
+						</_listNodeTarget>
+						<_listWire />
+					</LogicCircuitComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="5" name="RotatingPlatform">
+			<GameObject _schemaVersion="0" _name="RotatingPlatform" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localID="12574257654564749349" _componentName="SceneComponent"
+					                _bActive="true"
+					                _localPosition="0,0.5,5"
+					                _localRotation="0,0,0"
+					                _localScale="1,1,1"
+					                _attachOwner="None"
+					                _attachOwnerID="0"
+					                _attachComponent="None" />
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="0,0,0"
+					               _localRotation="0,0,0"
+					               _localScale="4,0.3,1"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="#ae80bcb72e918025"
+					               _meshID="Cube"
+					               _materialPath="guid:0e23c2ee4018be638b51655cf03239d2"
+					               _boundsRadius="0.866"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<LogicCircuitComponent _localID="12667660158642495557" _componentName="LogicCircuitComponent" _bActive="true" _stepTime="0.016666668">
+						<_listNode>
+							<LogicCircuitNodeDesc _id="spin" _kind="Rotator" _params="speed=45; axis=0 1 0" />
+						</_listNode>
+						<_listNodeTarget>
+							<item>0</item>
+						</_listNodeTarget>
+						<_listWire />
+					</LogicCircuitComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="6" name="LiftPlatform">
+			<GameObject _schemaVersion="0" _name="LiftPlatform" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localID="12574257654564749349" _componentName="SceneComponent"
+					                _bActive="true"
+					                _localPosition="8,0,3"
+					                _localRotation="0,0,0"
+					                _localScale="1,1,1"
+					                _attachOwner="None"
+					                _attachOwnerID="0"
+					                _attachComponent="None" />
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="0,0,0"
+					               _localRotation="0,0,0"
+					               _localScale="3,0.3,3"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="#ae80bcb72e918025"
+					               _meshID="Cube"
+					               _materialPath="guid:0e23c2ee4018be638b51655cf03239d2"
+					               _boundsRadius="0.866"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="7" name="TorchA">
+			<GameObject _schemaVersion="0" _name="TorchA" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localID="12574257654564749349" _componentName="SceneComponent"
+					                _bActive="true"
+					                _localPosition="-2,0,-3"
+					                _localRotation="0,0,0"
+					                _localScale="1,1,1"
+					                _attachOwner="None"
+					                _attachOwnerID="0"
+					                _attachComponent="None" />
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="0,0,0"
+					               _localRotation="0,0,0"
+					               _localScale="0.2,1.2,0.2"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="#ae80bcb72e918025"
+					               _meshID="Cube"
+					               _materialPath="guid:0e23c2ee4018be638b51655cf03239d2"
+					               _boundsRadius="0.866"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<LogicCircuitSensorComponent _localID="5906677949702648734" _componentName="LogicCircuitSensorComponent"
+					                        _bActive="true"
+					                        _defaultWeight="1"
+					                        _bCountTriggers="false">
+						<_requiredTags>
+							<_listTag />
+						</_requiredTags>
+						<_listOccupant />
+					</LogicCircuitSensorComponent>
+					<ElementStatusComponent _localID="11244445018458652199" _componentName="ElementStatusComponent"
+					                        _bActive="true"
+					                        _tablePath="guid:ac01140596a95e56bae3086435957f8a"
+					                        _elementMaterial="Torch"
+					                        _signalStatus="Burning"
+					                        _startStimulus="Fire" />
+					<PointLightComponent _localID="6048688584444471341" _componentName="PointLightComponent"
+					                     _bActive="true"
+					                     _localPosition="0,1.4,0"
+					                     _localRotation="0,0,0"
+					                     _localScale="1,1,1"
+					                     _attachOwner="None"
+					                     _attachOwnerID="0"
+					                     _attachComponent="#ae80bcb72e918025"
+					                     _color="0.55,0.75,1"
+					                     _intensity="2"
+					                     _radius="6" />
+					<LogicCircuitComponent _localID="12667660158642495557" _componentName="LogicCircuitComponent" _bActive="true" _stepTime="0.016666668">
+						<_listNode>
+							<LogicCircuitNodeDesc _id="flame" _kind="Signal" _params="" />
+							<LogicCircuitNodeDesc _id="light" _kind="Light" _params="intensity=1" />
+						</_listNode>
+						<_listNodeTarget>
+							<item>0</item>
+							<item>0</item>
+						</_listNodeTarget>
+						<_listWire>
+							<LogicCircuitWireDesc _from="flame.Active" _to="light.On" _bInvert="false" />
+						</_listWire>
+					</LogicCircuitComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="8" name="TorchB">
+			<GameObject _schemaVersion="0" _name="TorchB" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localID="12574257654564749349" _componentName="SceneComponent"
+					                _bActive="true"
+					                _localPosition="2,0,-3"
+					                _localRotation="0,0,0"
+					                _localScale="1,1,1"
+					                _attachOwner="None"
+					                _attachOwnerID="0"
+					                _attachComponent="None" />
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="0,0,0"
+					               _localRotation="0,0,0"
+					               _localScale="0.2,1.2,0.2"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="#ae80bcb72e918025"
+					               _meshID="Cube"
+					               _materialPath="guid:0e23c2ee4018be638b51655cf03239d2"
+					               _boundsRadius="0.866"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<LogicCircuitSensorComponent _localID="5906677949702648734" _componentName="LogicCircuitSensorComponent"
+					                        _bActive="true"
+					                        _defaultWeight="1"
+					                        _bCountTriggers="false">
+						<_requiredTags>
+							<_listTag />
+						</_requiredTags>
+						<_listOccupant />
+					</LogicCircuitSensorComponent>
+					<ElementStatusComponent _localID="11244445018458652199" _componentName="ElementStatusComponent"
+					                        _bActive="true"
+					                        _tablePath="guid:ac01140596a95e56bae3086435957f8a"
+					                        _elementMaterial="Torch"
+					                        _signalStatus="Burning"
+					                        _startStimulus="None" />
+					<PointLightComponent _localID="6048688584444471341" _componentName="PointLightComponent"
+					                     _bActive="true"
+					                     _localPosition="0,1.4,0"
+					                     _localRotation="0,0,0"
+					                     _localScale="1,1,1"
+					                     _attachOwner="None"
+					                     _attachOwnerID="0"
+					                     _attachComponent="#ae80bcb72e918025"
+					                     _color="0.55,0.75,1"
+					                     _intensity="2"
+					                     _radius="6" />
+					<LogicCircuitComponent _localID="12667660158642495557" _componentName="LogicCircuitComponent" _bActive="true" _stepTime="0.016666668">
+						<_listNode>
+							<LogicCircuitNodeDesc _id="flame" _kind="Signal" _params="" />
+							<LogicCircuitNodeDesc _id="light" _kind="Light" _params="intensity=1" />
+						</_listNode>
+						<_listNodeTarget>
+							<item>0</item>
+							<item>0</item>
+						</_listNodeTarget>
+						<_listWire>
+							<LogicCircuitWireDesc _from="flame.Active" _to="light.On" _bInvert="false" />
+						</_listWire>
+					</LogicCircuitComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="9" name="TorchGate">
+			<GameObject _schemaVersion="0" _name="TorchGate" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localID="12574257654564749349" _componentName="SceneComponent"
+					                _bActive="true"
+					                _localPosition="0,1.5,-6"
+					                _localRotation="0,0,0"
+					                _localScale="1,1,1"
+					                _attachOwner="None"
+					                _attachOwnerID="0"
+					                _attachComponent="None" />
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="0,0,0"
+					               _localRotation="0,0,0"
+					               _localScale="3,3,0.3"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="#ae80bcb72e918025"
+					               _meshID="Cube"
+					               _materialPath="guid:0e23c2ee4018be638b51655cf03239d2"
+					               _boundsRadius="0.866"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="10" name="Barrel">
+			<GameObject _schemaVersion="0" _name="Barrel" _bActive="true">
+				<_listComponent>
+					<BoxCollider2DComponent _localID="17134987369502387536" _componentName="BoxCollider2DComponent"
+					                        _bActive="true"
+					                        _localPosition="5,0,-4"
+					                        _localRotation="0,0,0"
+					                        _localScale="1,1,1"
+					                        _attachOwner="None"
+					                        _attachOwnerID="0"
+					                        _attachComponent="None"
+					                        _offsetPos="0,0"
+					                        _offsetScale="0.8,1.2"
+					                        _layer="Default"
+					                        _bContinuous="false"
+					                        _bTrigger="false" />
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="0,0,0"
+					               _localRotation="0,0,0"
+					               _localScale="0.8,1.2,0.8"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="#edcbb43a3dfead50"
+					               _meshID="Cube"
+					               _materialPath="guid:0e23c2ee4018be638b51655cf03239d2"
+					               _boundsRadius="0.866"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<LogicCircuitSensorComponent _localID="5906677949702648734" _componentName="LogicCircuitSensorComponent"
+					                        _bActive="true"
+					                        _defaultWeight="1"
+					                        _bCountTriggers="false">
+						<_requiredTags>
+							<_listTag />
+						</_requiredTags>
+						<_listOccupant />
+					</LogicCircuitSensorComponent>
+					<ExplosiveBarrelComponent _localID="2817874053379422564" _componentName="ExplosiveBarrelComponent"
+					                          _bActive="true"
+					                          _health="30"
+					                          _radius="4"
+					                          _damage="80" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="11" name="ItemBox">
+			<GameObject _schemaVersion="0" _name="ItemBox" _bActive="true">
+				<_listComponent>
+					<BoxCollider2DComponent _localID="17134987369502387536" _componentName="BoxCollider2DComponent"
+					                        _bActive="true"
+					                        _localPosition="-6,0.5,-4"
+					                        _localRotation="0,0,0"
+					                        _localScale="1,1,1"
+					                        _attachOwner="None"
+					                        _attachOwnerID="0"
+					                        _attachComponent="None"
+					                        _offsetPos="0,0"
+					                        _offsetScale="1,1"
+					                        _layer="Default"
+					                        _bContinuous="false"
+					                        _bTrigger="true" />
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="0,0,0"
+					               _localRotation="0,0,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="#edcbb43a3dfead50"
+					               _meshID="Cube"
+					               _materialPath="guid:0e23c2ee4018be638b51655cf03239d2"
+					               _boundsRadius="0.866"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<ItemBoxComponent _localID="811355330383306693" _componentName="ItemBoxComponent" _bActive="true" _respawnDelay="3" _seed="1">
+						<_listChoice>
+							<ItemBoxChoice _item="Banana" _weight="3" _count="1" />
+							<ItemBoxChoice _item="Shell" _weight="2" _count="1" />
+							<ItemBoxChoice _item="Mushroom" _weight="1" _count="1" />
+						</_listChoice>
+						<_requiredTags>
+							<_listTag />
+						</_requiredTags>
+					</ItemBoxComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="12" name="Spring">
+			<GameObject _schemaVersion="0" _name="Spring" _bActive="true">
+				<_listComponent>
+					<BoxCollider2DComponent _localID="17134987369502387536" _componentName="BoxCollider2DComponent"
+					                        _bActive="true"
+					                        _localPosition="-4,0,3"
+					                        _localRotation="0,0,0"
+					                        _localScale="1,1,1"
+					                        _attachOwner="None"
+					                        _attachOwnerID="0"
+					                        _attachComponent="None"
+					                        _offsetPos="0,0"
+					                        _offsetScale="1,0.5"
+					                        _layer="Default"
+					                        _bContinuous="false"
+					                        _bTrigger="true" />
+					<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="0,0,0"
+					               _localRotation="0,0,0"
+					               _localScale="1,0.3,1"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="#edcbb43a3dfead50"
+					               _meshID="Cube"
+					               _materialPath="guid:0e23c2ee4018be638b51655cf03239d2"
+					               _boundsRadius="0.866"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<LaunchPadComponent _localID="11362723681073614297" _componentName="LaunchPadComponent" _bActive="true" _launchVelocity="0,14,0">
+						<_requiredTags>
+							<_listTag />
+						</_requiredTags>
+					</LaunchPadComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="13" name="ShowcaseLogic">
+			<GameObject _schemaVersion="0" _name="ShowcaseLogic" _bActive="true">
+				<_listComponent>
+					<LogicCircuitComponent _localID="12667660158642495557" _componentName="LogicCircuitComponent" _bActive="true" _stepTime="0.016666668">
+						<_listNode>
+							<LogicCircuitNodeDesc _id="clock" _kind="Timer" _params="interval=2" />
+							<LogicCircuitNodeDesc _id="flip" _kind="Toggle" _params="" />
+							<LogicCircuitNodeDesc _id="torchA" _kind="Signal" _params="" />
+							<LogicCircuitNodeDesc _id="torchB" _kind="Signal" _params="" />
+							<LogicCircuitNodeDesc _id="bothLit" _kind="And" _params="" />
+							<LogicCircuitNodeDesc _id="openGate" _kind="Or" _params="" />
+							<LogicCircuitNodeDesc _id="gate" _kind="Door" _params="openTime=0.8; closeTime=0.8; openOffset=0 3 0" />
+							<LogicCircuitNodeDesc _id="lift" _kind="Elevator" _params="floors=0 4; speed=2" />
+						</_listNode>
+						<_listNodeTarget>
+							<item>0</item>
+							<item>0</item>
+							<item>7</item>
+							<item>8</item>
+							<item>0</item>
+							<item>0</item>
+							<item>9</item>
+							<item>6</item>
+						</_listNodeTarget>
+						<_listWire>
+							<LogicCircuitWireDesc _from="clock.OnTick" _to="flip.In" _bInvert="false" />
+							<LogicCircuitWireDesc _from="torchA.Active" _to="bothLit.A" _bInvert="false" />
+							<LogicCircuitWireDesc _from="torchB.Active" _to="bothLit.B" _bInvert="false" />
+							<LogicCircuitWireDesc _from="bothLit.Out" _to="openGate.A" _bInvert="false" />
+							<LogicCircuitWireDesc _from="flip.Out" _to="openGate.B" _bInvert="false" />
+							<LogicCircuitWireDesc _from="openGate.Out" _to="gate.Open" _bInvert="false" />
+							<LogicCircuitWireDesc _from="flip.Out" _to="lift.Call1" _bInvert="false" />
+							<LogicCircuitWireDesc _from="flip.Out" _to="lift.Call0" _bInvert="true" />
+						</_listWire>
+					</LogicCircuitComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

@@ -392,7 +392,7 @@ SW_TEST_CASE( MaterialRenderStateTest, SurfaceModelEmitsItsDefines )
 
 /**
  * @brief [MaterialRenderStateTest] 표면 모델이 없거나 모르는 이름, 포워드 전용 모델에 직접 적은 `MATERIAL_FORWARD_ONLY`(define · 스위치)는 읽기 오류다.
- *        G버퍼에 담길 수 있는 모델이 칸이 모자라 포워드 전용을 고르는 것(겹친 엽 — appearance_lit.hlsl · 기믹 표면)은 받는다.
+ *        G버퍼에 담길 수 있는 모델이 칸이 모자라 포워드 전용을 고르는 것(겹친 엽 — appearance_lit.hlsl · 장치 표면)은 받는다.
  */
 SW_TEST_CASE( MaterialRenderStateTest, SurfaceModelCombinationsAreLoadErrors )
 {

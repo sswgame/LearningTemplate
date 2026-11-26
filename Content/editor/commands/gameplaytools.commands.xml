@@ -2,6 +2,6 @@
 <!-- 에디터 명령의 표시 · 배치(gameplaytools) — 코드는 id 와 동작만 든다(SW_EDITOR_COMMAND · 명령 표). 칸은 모두 적는다, 빈 글은 "없음". -->
 <EditorCommandInfoTable>
 	<_listCommand>
-		<EditorCommandInfo _id="gimmick.openGraphPanel" _label="Gimmick Graph" _icon="Settings" _category="Gimmick" _tooltip="Opens the gimmick circuit graph window" _detail="Open the gimmick graph panel" _inputAction="" _menuPath="" _menuOrder="9300" _contextMenu="None" _contextMenuOrder="0" _bPaletteVisible="true" />
+		<EditorCommandInfo _id="logicCircuit.openGraphPanel" _label="Logic Circuit Graph" _icon="Settings" _category="Mechanism" _tooltip="Opens the logic circuit graph window" _detail="Open the logic circuit graph panel" _inputAction="" _menuPath="" _menuOrder="9300" _contextMenu="None" _contextMenuOrder="0" _bPaletteVisible="true" />
 	</_listCommand>
 </EditorCommandInfoTable>

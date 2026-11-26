@@ -16,7 +16,7 @@
 	JRPG* · MonsterCollector* · MonsterHunt* · Restaurant* 는 등불 길 · 풀밭 수집 · 늪지 사냥 · 항구 식당 미니게임의 디렉터가 규칙 알림에서 낸다 — 모두 2D 다.
 	 무기 · 주문 · 기술 · 표식의 소리(JRPGBlade · JRPGSpark · MonsterCollectorMove · MonsterHuntGust …)는 그 카탈로그(data/jrpg.xml · monstercollector.xml · monsterhunt.xml)와 사냥 씬이 고른다.
 	AsymmetricHorror* · Scavenger* · GhostHunt* · SurvivalHorror* 는 공포 미니게임 넷(asymmetrichorror · coopscavenger · ghosthunt · survivalhorror)의 디렉터가 규칙의 알림마다 낸다 — 위에서 내려다보는 판이라 모두 2D 다.
-	Gimmick* 는 기믹의 연출 신호(data/abilities.xml 의 AbilityPresentation — 폭발 · 파괴 단계 · 소리 내기)가 그 자리에서 3D 로 낸다.
+	Mechanism* 는 장치의 연출 신호(data/abilities.xml 의 AbilityPresentation — 폭발 · 파괴 단계 · 소리 내기)가 그 자리에서 3D 로 낸다.
 	Footstep.* 는 발걸음이다(표면 종류 표의 반응 — 덮어쓰기 층 shooter3d/layers/footsteps 가 종류마다 적는다).
 -->
 <AudioEventLibrary>
@@ -305,7 +305,7 @@
 				<AudioClipEntry _path="guid:62e3779c11884365aeb5dc4498710de9" />
 			</_listClip>
 		</AudioEventDef>
-		<AudioEventDef _name="GimmickExplosion"
+		<AudioEventDef _name="MechanismExplosion"
 		                _bus="sfx"
 		                _attenuation="Default"
 		                _container="Random"
@@ -321,7 +321,7 @@
 				<AudioClipEntry _path="guid:fb86704f31d11ef99904fbc7768e25c6" />
 			</_listClip>
 		</AudioEventDef>
-		<AudioEventDef _name="GimmickBreak"
+		<AudioEventDef _name="MechanismBreak"
 		                _bus="sfx"
 		                _attenuation="Default"
 		                _container="Random"
@@ -337,7 +337,7 @@
 				<AudioClipEntry _path="guid:dd4b7d2ad707d7fc5e3828f8b2f470f3" />
 			</_listClip>
 		</AudioEventDef>
-		<AudioEventDef _name="GimmickNoise"
+		<AudioEventDef _name="MechanismNoise"
 		                _bus="sfx"
 		                _attenuation="Default"
 		                _container="Random"

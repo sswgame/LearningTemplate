@@ -1,0 +1,64 @@
+<?asset guid="ed79f20662cd210f61981557805d97bf"?>
+<Prefab formatVersion="0" name="Elevator">
+	<GameObject _schemaVersion="0" _name="Elevator" _bActive="true">
+		<_listComponent>
+			<BoxCollider2DComponent _localID="17134987369502387536" _componentName="BoxCollider2DComponent"
+			                        _bActive="true"
+			                        _localPosition="0,0,0"
+			                        _localRotation="0,0,0"
+			                        _localScale="1,1,1"
+			                        _attachOwner="None"
+			                        _attachOwnerID="0"
+			                        _attachComponent="None"
+			                        _offsetPos="0,0"
+			                        _offsetScale="3,0.3"
+			                        _layer="Default"
+			                        _bContinuous="false"
+			                        _bTrigger="false" />
+			<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
+			               _bActive="true"
+			               _localPosition="0,0,0"
+			               _localRotation="0,0,0"
+			               _localScale="3,0.3,3"
+			               _attachOwner="None"
+			               _attachOwnerID="0"
+			               _attachComponent="#edcbb43a3dfead50"
+			               _meshID="Cube"
+			               _materialPath="guid:0e23c2ee4018be638b51655cf03239d2"
+			               _boundsRadius="0.866"
+			               _gpuSpinSeed="0"
+			               _bVisible="true" />
+			<InteractableComponent _localID="10644522701805113517" _componentName="InteractableComponent"
+			                       _bActive="true"
+			                       _interactionID="Use"
+			                       _catalogPath="guid:cdbf334b25664cdc5567e078412c810f"
+			                       _lastInteractor="0"
+			                       _cooldownRemaining="0"
+			                       _priority="0"
+			                       _bEnabled="true" />
+			<LogicCircuitSensorComponent _localID="5906677949702648734" _componentName="LogicCircuitSensorComponent"
+			                        _bActive="true"
+			                        _defaultWeight="1"
+			                        _bCountTriggers="false">
+				<_requiredTags>
+					<_listTag />
+				</_requiredTags>
+				<_listOccupant />
+			</LogicCircuitSensorComponent>
+			<LogicCircuitComponent _localID="12667660158642495557" _componentName="LogicCircuitComponent" _bActive="true" _stepTime="0.016666668">
+				<_listNode>
+					<LogicCircuitNodeDesc _id="call" _kind="Interaction" _params="" />
+					<LogicCircuitNodeDesc _id="lift" _kind="Elevator" _params="floors=0 6; speed=2" />
+				</_listNode>
+				<_listNodeTarget>
+					<item>0</item>
+					<item>0</item>
+				</_listNodeTarget>
+				<_listWire>
+					<LogicCircuitWireDesc _from="call.Toggled" _to="lift.Call1" _bInvert="false" />
+					<LogicCircuitWireDesc _from="call.Toggled" _to="lift.Call0" _bInvert="true" />
+				</_listWire>
+			</LogicCircuitComponent>
+		</_listComponent>
+	</GameObject>
+</Prefab>

@@ -21,7 +21,7 @@ Stop at the first yes.
    - Game-thread-only work (physics queries, camera registry, render state, ability event dispatch) goes through the queue only for an **event**. A type must not defer its whole tick every frame: the tick keeps own-object work and one place walks the components with `GameObjectManager::forEachActiveRegistered<T>` — Engine types a scene service (`SW_SCENE_SUBSYSTEM( Type, ApplyPrePhysics, access )`), GameFramework types a frame system whose `runMain` puts **one** job on the queue. An event-only deferral keeps a one-line reason at the call. A reader needing another type's result earlier makes the order explicit with a "once per frame" call (`GroundSurfaceComponent::sampleGroundOnce`).
 - 병렬 틱이 남을 읽어 단언에 걸리면 `readOther` · 틱 뒤 작업 · 그룹 옮기기로 고친다. 틱 비용 기반 분배는 기본 정책으로 두지 않는다.
 - 이미 안에서 나눠 도는 서비스(`MeshLODSystem` · `TextureStreamingSystem` · `SceneAudio` · `SceneVFXProvider` · `NetObjectTable` · `SceneNetLink`)는 서비스 파도에 넣지 않는다.
-- 근접 기믹 · 감지 · 넷 관심 격자는 `SceneSpatialGrid` 로 옮기지 않는다(다시 볼 조건: 근접 노드 × 태그 후보가 프레임당 1 만 초과 → 노드에 필수 `range` 칸 + 태그 층 격자, 자극 64 개 넘게 모으는 키트 → `PhysicsCharacter3D` 층 질의). 캐릭터 일괄 이동은 유지한다.
+- 근접 장치 · 감지 · 넷 관심 격자는 `SceneSpatialGrid` 로 옮기지 않는다(다시 볼 조건: 근접 노드 × 태그 후보가 프레임당 1 만 초과 → 노드에 필수 `range` 칸 + 태그 층 격자, 자극 64 개 넘게 모으는 키트 → `PhysicsCharacter3D` 층 질의). 캐릭터 일괄 이동은 유지한다.
 
 ## SceneIterationKey
 

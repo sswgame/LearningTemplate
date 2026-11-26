@@ -143,7 +143,7 @@ namespace sw
         uint8            _bHasHit{ SW_FALSE };         ///< 맞힌 자리가 있는지(근접 · 탄의 피해). 주기 피해 · 비용은 없다
         uint8            _bTransientOwner{ SW_FALSE }; ///< 건 쪽이 이어지지 않는 일(진행 중 상호작용)이고 끝날 때 스스로 지운다 — 상태 스냅샷에 싣지 않는다(실으면 지울 주인이 없다)
         uint8            _arrReserved[2]{};
-        /** @brief 건 길의 이름입니다(디버거 표시 — 효과 영역 `volume:<오브젝트>` · 상호작용 `interaction:<id>` · 기믹). 비면 어빌리티 · 코드가 건 것이다. 판정에 쓰지 않는다. */
+        /** @brief 건 길의 이름입니다(디버거 표시 — 효과 영역 `volume:<오브젝트>` · 상호작용 `interaction:<id>` · 장치). 비면 어빌리티 · 코드가 건 것이다. 판정에 쓰지 않는다. */
         hashed_string _sourceName{};
     };
 } // namespace sw

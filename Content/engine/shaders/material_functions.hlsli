@@ -1,7 +1,7 @@
 /**
  * material_functions.hlsli — 머티리얼 함수 묶음(언리얼 Material Function 라이브러리 · 유니티 Shader Graph 서브그래프 자리). 표면 훅(`computeMaterialSurface`)이 부르는 순수 함수다.
  *
- * 쓰는 곳: terrain.hlsl(3 축 · 높이 섞기 · 규칙 · 젖음 · 눈), environment_surface.hlsl(무늬 · 마모 · 녹 · 때 · 변색 · 날씨), gimmick_surface.hlsl(프레넬 · 녹아 사라짐 · 홀로그램 · 흐름),
+ * 쓰는 곳: terrain.hlsl(3 축 · 높이 섞기 · 규칙 · 젖음 · 눈), environment_surface.hlsl(무늬 · 마모 · 녹 · 때 · 변색 · 날씨), mechanism_surface.hlsl(프레넬 · 녹아 사라짐 · 홀로그램 · 흐름),
  * surface_lit.hlsl(몸의 젖음 · 흙 — 같은 값을 따로 두지 않는다).
  * 머티리얼 셰이더 뼈대의 `material_shader.hlsli` 뒤에 include 한다(MaterialTexture · View · 픽셀 미분을 쓴다). 상태가 없고 텍스처 슬롯을 새로 두지 않는다 — 텍스처는 머티리얼 번호로만 읽는다.
  *
@@ -141,7 +141,7 @@ struct SurfaceFunction
     // 헤어라인 결(하이라이트는 셰이딩 모델 — 파일 머리)
     static float computeBrushedRoughness( float roughness, float2 uv, float anisotropy, float frequency );
 
-    // 장치(기믹)
+    // 장치
     static float computeFresnel( float3 normal, float3 toView, float power );
     static float computeScanlines( float3 position, float density, float speed, float time );
     static float4 sampleFlow( uint textureIndex, float2 uv, float2 flow, float time );
@@ -689,7 +689,7 @@ static float SurfaceFunction::computeBrushedRoughness( float roughness, float2 u
 }
 
 // ------------------------------------------------------------------------------
-// 장치(기믹)
+// 장치
 // ------------------------------------------------------------------------------
 
 /** @brief 프레넬 테두리(0..1) — 시선과 노멀이 비스듬할수록 1. @p power 가 클수록 가장자리만. */

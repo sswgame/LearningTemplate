@@ -86,8 +86,8 @@
 		<entry source="Select a node to edit it. Right-click the canvas to add one."
 		       text="노드를 고르면 편집합니다. 캔버스를 오른쪽 클릭해 더합니다." />
 		<entry source="Select an NPC on the left" text="왼쪽에서 NPC 를 고르세요" />
-		<entry source="Select an object that has a Gimmick Circuit component"
-		       text="기믹 회로 컴포넌트가 있는 오브젝트를 고릅니다" />
+		<entry source="Select an object that has a Logic Circuit Circuit component"
+		       text="논리 회로 컴포넌트가 있는 오브젝트를 고릅니다" />
 		<entry source="Select an object with an AbilitySystemComponent, or pick one above."
 		       text="AbilitySystemComponent 가 있는 오브젝트를 선택하거나 위에서 고르세요." />
 		<entry source="Source" text="출처" />

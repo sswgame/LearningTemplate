@@ -1,0 +1,85 @@
+<?asset guid="01fb9f1317ef275b55da67f99cb507ff"?>
+<Prefab formatVersion="0" name="LockedDoor3D">
+	<GameObject _schemaVersion="0" _name="LockedDoor3D" _bActive="true">
+		<_listComponent>
+			<RigidBodyComponent _localID="7198733165449302788" _componentName="RigidBodyComponent"
+			                    _bActive="true"
+			                    _localPosition="0,0,0"
+			                    _localRotation="0,0,0"
+			                    _localScale="1,1,1"
+			                    _attachOwner="None"
+			                    _attachOwnerID="0"
+			                    _attachComponent="None"
+			                    _bodyType="Kinematic"
+			                    _layer="Default"
+			                    _material="None"
+			                    _mass="0"
+			                    _linearDamping="0.05"
+			                    _angularDamping="0.05"
+			                    _gravityFactor="1"
+			                    _bTrigger="false"
+			                    _bContinuous="false"
+			                    _bLockRotation="false"
+			                    _bInterpolate="true">
+				<_listShape>
+					<PhysicsShapeDesc3D _type="Box"
+					                    _halfExtents="1,1.5,0.15"
+					                    _radius="0.5"
+					                    _halfHeight="0.5"
+					                    _localPosition="0,0,0"
+					                    _localRotation="0,0,0"
+					                    _material="None">
+						<_listPoint />
+						<_listIndex />
+					</PhysicsShapeDesc3D>
+				</_listShape>
+			</RigidBodyComponent>
+			<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
+			               _bActive="true"
+			               _localPosition="0,0,0"
+			               _localRotation="0,0,0"
+			               _localScale="2,3,0.3"
+			               _attachOwner="None"
+			               _attachOwnerID="0"
+			               _attachComponent="#63e709ac676dd304"
+			               _meshID="Cube"
+			               _materialPath="guid:0e23c2ee4018be638b51655cf03239d2"
+			               _boundsRadius="0.866"
+			               _gpuSpinSeed="0"
+			               _bVisible="true" />
+			<InteractableComponent _localID="10644522701805113517" _componentName="InteractableComponent"
+			                       _bActive="true"
+			                       _interactionID="Unlock"
+			                       _catalogPath="guid:cdbf334b25664cdc5567e078412c810f"
+			                       _lastInteractor="0"
+			                       _cooldownRemaining="0"
+			                       _priority="0"
+			                       _bEnabled="true" />
+			<LogicCircuitSensorComponent _localID="5906677949702648734" _componentName="LogicCircuitSensorComponent"
+			                        _bActive="true"
+			                        _defaultWeight="1"
+			                        _bCountTriggers="false">
+				<_requiredTags>
+					<_listTag />
+				</_requiredTags>
+				<_listOccupant />
+			</LogicCircuitSensorComponent>
+			<LogicCircuitComponent _localID="12667660158642495557" _componentName="LogicCircuitComponent" _bActive="true" _stepTime="0.016666668">
+				<_listNode>
+					<LogicCircuitNodeDesc _id="use" _kind="Interaction" _params="" />
+					<LogicCircuitNodeDesc _id="unlocked" _kind="Latch" _params="" />
+					<LogicCircuitNodeDesc _id="door" _kind="Door" _params="openTime=1; openOffset=0 3 0" />
+				</_listNode>
+				<_listNodeTarget>
+					<item>0</item>
+					<item>0</item>
+					<item>0</item>
+				</_listNodeTarget>
+				<_listWire>
+					<LogicCircuitWireDesc _from="use.OnUsed" _to="unlocked.Set" _bInvert="false" />
+					<LogicCircuitWireDesc _from="unlocked.Out" _to="door.Open" _bInvert="false" />
+				</_listWire>
+			</LogicCircuitComponent>
+		</_listComponent>
+	</GameObject>
+</Prefab>

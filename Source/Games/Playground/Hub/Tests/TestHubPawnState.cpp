@@ -5,7 +5,7 @@
 
 #include "Engine/Foundation/WorldOrigin.h"
 
-#include "GameFramework/Runtime/Gameplay/Gimmick/Movement/TickedFloorStep.h"
+#include "GameFramework/Runtime/Gameplay/Mechanism/Movement/TickedFloorStep.h"
 
 #include "Games/Playground/Hub/HubPawnReplicationComponent.h"
 

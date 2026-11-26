@@ -65,7 +65,7 @@
 						</_listShape>
 					</RigidBodyComponent>
 					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0.2" _localRotation="0,0,0" _localScale="0.8,3.2,0.05" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="guid:386a9fa40afcc411ebf30ea39c8adf0b" _boundsRadius="2" />
-					<GimmickSensorComponent _localID="5906677949702648734" _defaultWeight="1" _bCountTriggers="false" />
+					<LogicCircuitSensorComponent _localID="5906677949702648734" _defaultWeight="1" _bCountTriggers="false" />
 					<ClimbZoneComponent _localID="9868195776723156160" _axis="0,1,0" _climbSpeed="3" _lateralSpeed="0" _bSwing="false" />
 				</_listComponent>
 			</GameObject>
@@ -97,7 +97,7 @@
 						</_listShape>
 					</RigidBodyComponent>
 					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0.22" _localRotation="0,0,0" _localScale="6,5.2,0.02" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="guid:386a9fa40afcc411ebf30ea39c8adf0b" _boundsRadius="4" />
-					<GimmickSensorComponent _localID="5906677949702648734" _defaultWeight="1" _bCountTriggers="false" />
+					<LogicCircuitSensorComponent _localID="5906677949702648734" _defaultWeight="1" _bCountTriggers="false" />
 					<ClimbZoneComponent _localID="9868195776723156160" _axis="0,1,0" _climbSpeed="2" _lateralSpeed="1.5" _bSwing="false" />
 				</_listComponent>
 			</GameObject>
@@ -114,7 +114,7 @@
 						</_listShape>
 					</RigidBodyComponent>
 					<MeshComponent _localID="163493842152903304" _localPosition="0,0,0" _localRotation="0,0,0" _localScale="0.1,6,0.1" _attachOwner="None" _attachComponent="#63e709ac676dd304" _meshID="Cube" _materialPath="guid:386a9fa40afcc411ebf30ea39c8adf0b" _boundsRadius="3" />
-					<GimmickSensorComponent _localID="5906677949702648734" _defaultWeight="1" _bCountTriggers="false" />
+					<LogicCircuitSensorComponent _localID="5906677949702648734" _defaultWeight="1" _bCountTriggers="false" />
 					<ClimbZoneComponent _localID="9868195776723156160" _axis="0,1,0" _climbSpeed="3" _lateralSpeed="0" _bSwing="true" />
 				</_listComponent>
 			</GameObject>

@@ -17,8 +17,8 @@
 #include "GameFramework/Runtime/Character/Control/Intent/ControlIntent.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Runtime/Character/Movement/CharacterMovementComponent.h"
-#include "GameFramework/Runtime/Gameplay/Gimmick/Movement/InterpToMovementComponent.h"
-#include "GameFramework/Runtime/Gameplay/Gimmick/Movement/TickedFloorStep.h"
+#include "GameFramework/Runtime/Gameplay/Mechanism/Movement/InterpToMovementComponent.h"
+#include "GameFramework/Runtime/Gameplay/Mechanism/Movement/TickedFloorStep.h"
 
 #include <utility>
 

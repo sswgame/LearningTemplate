@@ -280,7 +280,7 @@ SW_TEST_CASE( PackedValueSerializationTest, TextReadRejectsWrongCountOutOfRangeA
 
 /**
  * @brief [PackedValueSerializationTest] 인자 변환은 압축 타입을 글 · 숫자에서 받고, 성분이 하나면 숫자로 내보낸다
- * @details 콘솔 명령 · 기믹 배선은 값에 타입 이름을 붙여 인자 자리마다 바꾼다(`ReflectTypeOpsOf<T>::convert`). 범위를 넘는 값은 거절한다.
+ * @details 콘솔 명령 · 논리 회로 배선은 값에 타입 이름을 붙여 인자 자리마다 바꾼다(`ReflectTypeOpsOf<T>::convert`). 범위를 넘는 값은 거절한다.
  */
 SW_TEST_CASE( PackedValueSerializationTest, ArgumentConversionReadsAndWritesPackedValues )
 {

@@ -92,8 +92,8 @@
 		<entry key="EdPlugin.SelectANodeToEditItRightClick"
 		       text="ノードを選ぶと編集します。キャンバスを右クリックして追加します。"
 		       sourceHash="4609bfba81986750" />
-		<entry key="EdPlugin.SelectAnObjectThatHasAGimmickCircuit"
-		       text="ギミック回路コンポーネントを持つオブジェクトを選びます"
+		<entry key="EdPlugin.SelectAnObjectThatHasALogicCircuit"
+		       text="ロジック回路コンポーネントを持つオブジェクトを選びます"
 		       sourceHash="2b3af1b8adec3a10" />
 		<entry key="EdPlugin.TargetObject" text="対象オブジェクト" sourceHash="385e62428acaa50f" />
 		<entry key="EdPlugin.Task" text="タスク" sourceHash="03ee3cfb0919c62c" />

@@ -32,7 +32,7 @@
 #include "GameFramework/Runtime/Foundation/Minigame/MinigameFlow.h"
 #include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterAppearanceComponent.h"
-#include "GameFramework/Runtime/Gameplay/Gimmick/Movement/TickedFloorStep.h"
+#include "GameFramework/Runtime/Gameplay/Mechanism/Movement/TickedFloorStep.h"
 
 #include "Games/Playground/Shooter3D/ShooterAvatarComponent.h"
 #include "Games/Playground/Shooter3D/ShooterEnemyComponent.h"

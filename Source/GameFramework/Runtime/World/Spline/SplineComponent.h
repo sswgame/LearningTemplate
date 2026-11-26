@@ -21,7 +21,7 @@ namespace sw
      *        (`getWorldPath`). 곡선을 단 오브젝트가 그 곡선을 따라 움직여도(발판 하나짜리 프리팹) 길이 같이 움직이지 않습니다.
      * @details 틱하지 않습니다. 값을 바꾸면(`setControlPoints`, 에디터 편집) 로컬 곡선을 다시 만들고, 플레이 중이면 월드 곡선도 지금 변환으로 다시 고정합니다.
      */
-    REFLECT( Category = "Gimmick", DisplayName = "Spline", Tooltip = "Catmull-Rom / Bezier / linear path in owner space, arc-length parameterized" )
+    REFLECT( Category = "Mechanism", DisplayName = "Spline", Tooltip = "Catmull-Rom / Bezier / linear path in owner space, arc-length parameterized" )
     class SW_GF_API SplineComponent : public SceneComponent
     {
     public:

@@ -89,15 +89,15 @@
 							<item>40,0,0</item>
 						</_listControlPoint>
 					</SplineComponent>
-					<GimmickCircuitComponent _localID="12667660158642495557" _stepTime="0.016666668">
+					<LogicCircuitComponent _localID="12667660158642495557" _stepTime="0.016666668">
 						<_listNode>
-							<GimmickNodeDesc _id="move" _kind="Mover" _params="speed=6; mode=PingPong; pause=0" />
+							<LogicCircuitNodeDesc _id="move" _kind="Mover" _params="speed=6; mode=PingPong; pause=0" />
 						</_listNode>
 						<_listNodeTarget>
 							<item>0</item>
 						</_listNodeTarget>
 						<_listWire />
-					</GimmickCircuitComponent>
+					</LogicCircuitComponent>
 				</_listComponent>
 			</GameObject>
 		</entity>

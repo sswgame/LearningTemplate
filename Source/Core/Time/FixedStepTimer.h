@@ -68,7 +68,7 @@ namespace sw
             return stepCount;
         }
 
-        /** @brief 초를 이 타이머의 스텝 수로 바꿉니다. 반올림하며 최소 @p minSteps 입니다(기믹의 지연 · 간격). 스텝 크기를 타이머가 쥐므로 시계와 다른 스텝으로 셀 수 없습니다. */
+        /** @brief 초를 이 타이머의 스텝 수로 바꿉니다. 반올림하며 최소 @p minSteps 입니다(장치의 지연 · 간격). 스텝 크기를 타이머가 쥐므로 시계와 다른 스텝으로 셀 수 없습니다. */
         [[nodiscard]] int32 secondsToSteps( float32 seconds, int32 minSteps ) const
         {
             return MathUtil::max( minSteps, static_cast<int32>( MathUtil::round( seconds / _step ) ) );

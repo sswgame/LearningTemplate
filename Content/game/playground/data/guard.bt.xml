@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="c4ec5d660cde45fa815c340776bb39fa"?>
 <!--
-  경비(maps/gimmickeffects 의 GuardBrain — PerceptionAIControllerComponent)의 판단. 보이면 쫓고(Chase), 들었거나 놓친 자리를 기억하면 가서 살피고(Investigate), 아니면 선다(Idle).
+  경비(maps/mechanismeffects 의 GuardBrain — PerceptionAIControllerComponent)의 판단. 보이면 쫓고(Chase), 들었거나 놓친 자리를 기억하면 가서 살피고(Investigate), 아니면 선다(Idle).
 -->
 <BehaviorTree>
 	<Selector id="root" name="Guard">

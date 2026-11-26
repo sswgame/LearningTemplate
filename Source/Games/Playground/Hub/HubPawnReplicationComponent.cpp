@@ -31,8 +31,8 @@
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Runtime/Foundation/Minigame/MinigameFlow.h"
 #include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
-#include "GameFramework/Runtime/Gameplay/Gimmick/Movement/InterpToMovementComponent.h"
-#include "GameFramework/Runtime/Gameplay/Gimmick/Movement/TickedFloorStep.h"
+#include "GameFramework/Runtime/Gameplay/Mechanism/Movement/InterpToMovementComponent.h"
+#include "GameFramework/Runtime/Gameplay/Mechanism/Movement/TickedFloorStep.h"
 #include "GameFramework/Runtime/Gameplay/Vehicle/VehicleSeatComponent.h"
 
 #include "Games/Playground/Hub/HubSimulationComponent.h"

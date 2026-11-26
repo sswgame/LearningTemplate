@@ -10,7 +10,7 @@
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
-// ReflectionInvokeTest — 이름으로 부르기 · 인자 변환 · 기본 인자 · 이벤트. 타입을 모르는 쪽(콘솔 · 비주얼 스크립팅 · 기믹 배선)이 쓰는 길.
+// ReflectionInvokeTest — 이름으로 부르기 · 인자 변환 · 기본 인자 · 이벤트. 타입을 모르는 쪽(콘솔 · 비주얼 스크립팅 · 논리 회로 배선)이 쓰는 길.
 
 namespace
 {
@@ -212,7 +212,7 @@ SW_TEST_CASE( ReflectionInvokeTest, EventBindsBroadcastsAndUnbindsByName )
 }
 
 /**
- * @brief [ReflectionInvokeTest] 이벤트를 다른 오브젝트의 함수에 이름으로 묶는다(기믹 배선) — 넘길 수 없는 시그니처는 묶지 않고 오류를 남긴다
+ * @brief [ReflectionInvokeTest] 이벤트를 다른 오브젝트의 함수에 이름으로 묶는다(논리 회로 배선) — 넘길 수 없는 시그니처는 묶지 않고 오류를 남긴다
  */
 SW_TEST_CASE( ReflectionInvokeTest, EventBindsToFunctionByName )
 {

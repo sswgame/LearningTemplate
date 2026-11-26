@@ -77,7 +77,7 @@ namespace sw
     /**
      * @brief 리플렉션 이벤트입니다. `PROPERTY()` 를 붙인 멀티캐스트 델리게이트 필드(`MulticastDelegate<void( Args... )>`)가 이벤트가 됩니다.
      * @details 이벤트는 값이 아니라 구독 목록이라서 직렬화와 인스펙터의 값 편집 대상이 아니다. 이름으로 찾은 뒤(`TypeInfo::findEventInHierarchy`)
-     *          타입을 모른 채로 바인딩, 해제, 호출한다(`ReflectionInvoke::bindEvent`, `broadcastEvent`). 에디터, 비주얼 스크립팅, 기믹 배선이 이 방식을 쓴다.
+     *          타입을 모른 채로 바인딩, 해제, 호출한다(`ReflectionInvoke::bindEvent`, `broadcastEvent`). 에디터, 비주얼 스크립팅, 논리 회로 배선이 이 방식을 쓴다.
      */
     struct SW_API EventInfo
     {

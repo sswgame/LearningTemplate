@@ -327,8 +327,8 @@ SW_TEST_CASE( CombatAttributeSetTest, DirectHealthModifierToZeroRaisesDeath )
 }
 
 /**
- * @brief [CombatAttributeSetTest] 맞음 사건(무기 · 근접 · 기믹이 보내는 `CharacterRayHit::deliverHit` 길)이 피해 이펙트로 체력을 깎는다 — 피해 × 히트 존 배율, 방어 감쇠
- * @details 결함: 어빌리티 시스템이 체력 원천이면서 맞음 사건을 듣지 않아, 어빌리티 체력 캐릭터(허브 플레이어)는 무기 · 기믹에 다치지 않았다.
+ * @brief [CombatAttributeSetTest] 맞음 사건(무기 · 근접 · 장치가 보내는 `CharacterRayHit::deliverHit` 길)이 피해 이펙트로 체력을 깎는다 — 피해 × 히트 존 배율, 방어 감쇠
+ * @details 결함: 어빌리티 시스템이 체력 원천이면서 맞음 사건을 듣지 않아, 어빌리티 체력 캐릭터(허브 플레이어)는 무기 · 장치에 다치지 않았다.
  */
 SW_TEST_CASE( CombatAttributeSetTest, HitEventDamagesThroughTheDamageEffect )
 {
