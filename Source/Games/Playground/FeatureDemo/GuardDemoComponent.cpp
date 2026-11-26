@@ -5,7 +5,6 @@
 #include "Core/Log/Logger.h"
 #include "Core/String/StringUtil.h"
 
-#include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -14,8 +13,6 @@
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Character/AI/AIStimulusSourceComponent.h"
-
-#include "Games/Playground/FeatureDemo/FeatureDemoCommandUtil.h"
 
 #include <utility>
 
@@ -26,69 +23,8 @@ namespace sw
         struct GuardDemoComponentInternal
         {
             static constexpr FormatDef kStateFormat{ "FDGU" };
-
-            static bool runLock( const vector<string>& listArgument, string& outReply )
-            {
-                if ( listArgument.size() != 1 )
-                    return false;
-                GuardDemoComponent* pGuard = FeatureDemoCommandUtil::findStarted<GuardDemoComponent>( listArgument[0], outReply );
-                if ( pGuard == nullptr )
-                    return false;
-                (void)pGuard->lockBest(); // 잡을 것이 없으면 풀린 채다 — 답과 상태 칸이 알린다
-                FeatureDemoCommandUtil::reply( outReply, "locked %#", pGuard->getLockedTarget() );
-                return true;
-            }
-
-            static bool runCycle( const vector<string>& listArgument, string& outReply )
-            {
-                const bool bRight = listArgument.size() == 2 && StringUtil::equals( listArgument[1], "right", true );
-                const bool bLeft  = listArgument.size() == 2 && StringUtil::equals( listArgument[1], "left", true );
-                if ( bRight == false && bLeft == false )
-                    return false;
-                GuardDemoComponent* pGuard = FeatureDemoCommandUtil::findStarted<GuardDemoComponent>( listArgument[0], outReply );
-                if ( pGuard == nullptr )
-                    return false;
-                pGuard->cycleLock( bRight ? 1 : -1 );
-                FeatureDemoCommandUtil::reply( outReply, "locked %#", pGuard->getLockedTarget() );
-                return true;
-            }
-
-            static bool runRelease( const vector<string>& listArgument, string& outReply )
-            {
-                if ( listArgument.size() != 1 )
-                    return false;
-                GuardDemoComponent* pGuard = FeatureDemoCommandUtil::findStarted<GuardDemoComponent>( listArgument[0], outReply );
-                if ( pGuard == nullptr )
-                    return false;
-                pGuard->releaseLock();
-                outReply = "released";
-                return true;
-            }
-
-            /** @brief `noise.report <object> <radius>` — 자극 원천이 낸 소리 반경(m)을 겁니다. 0 이면 거둡니다. */
-            static bool runNoise( const vector<string>& listArgument, string& outReply )
-            {
-                float32 radius = 0.0f;
-                if ( listArgument.size() != 2 || StringUtil::parseFloat( listArgument[1], radius ) == false )
-                    return false;
-                GameObject*                pObject = engine::findActiveObject( hashed_string( listArgument[0] ) );
-                AIStimulusSourceComponent* pSource = pObject != nullptr ? pObject->getComponent<AIStimulusSourceComponent>() : nullptr;
-                if ( pSource == nullptr )
-                {
-                    FeatureDemoCommandUtil::reply( outReply, "no object named '%#' with an AIStimulusSourceComponent", listArgument[0] );
-                    return false;
-                }
-                pSource->reportNoise( radius );
-                FeatureDemoCommandUtil::reply( outReply, "%# makes noise of radius %#", listArgument[0], radius );
-                return true;
-            }
         };
     } // namespace
-
-    SW_DEV_COMMAND( GuardLock, "guard.lock", "guard.lock <guard object>", "Lock on to the best target the guard sees", &GuardDemoComponentInternal::runLock );
-    SW_DEV_COMMAND( GuardCycle, "guard.cycle", "guard.cycle <guard object> <left|right>", "Move the guard's lock to the next target on that side", &GuardDemoComponentInternal::runCycle );
-    SW_DEV_COMMAND( GuardRelease, "guard.release", "guard.release <guard object>", "Release the guard's lock", &GuardDemoComponentInternal::runRelease );
-    SW_DEV_COMMAND( NoiseReport, "noise.report", "noise.report <object> <radius>", "Set the noise radius of a stimulus source (0 clears it)", &GuardDemoComponentInternal::runNoise );
 
     GuardDemoComponent::GuardDemoComponent()
         : _team{ 1 }

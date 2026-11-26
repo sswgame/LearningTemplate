@@ -6,17 +6,15 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
-#include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/EnumName.h"
+#include "Engine/Scene/SceneManager.h"
 #include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterEquipmentComponent.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
-
-#include "Games/Playground/FeatureDemo/FeatureDemoCommandUtil.h"
 
 namespace sw
 {
@@ -25,68 +23,8 @@ namespace sw
         struct CraftingDemoComponentInternal
         {
             static constexpr FormatDef kStateFormat{ "FDCR" };
-
-            static bool runEnqueue( const vector<string>& listArgument, string& outReply )
-            {
-                int32      count     = 1;
-                const bool bBadCount = listArgument.size() == 3 && StringUtil::parseInt( listArgument[2], count ) == false;
-                if ( listArgument.size() < 2 || listArgument.size() > 3 || bBadCount )
-                    return false;
-                CraftingDemoComponent* pDemo = FeatureDemoCommandUtil::findStarted<CraftingDemoComponent>( listArgument[0], outReply );
-                if ( pDemo == nullptr )
-                    return false;
-                if ( pDemo->enqueue( hashed_string( listArgument[1] ), count ).has_value() == false )
-                {
-                    outReply = "the crafting demo has no character with a bag";
-                    return false;
-                }
-                FeatureDemoCommandUtil::reply( outReply, "craft %# x%#: %#", listArgument[1], count, pDemo->getLastResult().c_str() ); // 거절도 명령의 답이다
-                return true;
-            }
-
-            static bool runCancel( const vector<string>& listArgument, string& outReply )
-            {
-                int32 index = 0;
-                if ( listArgument.size() != 2 || StringUtil::parseInt( listArgument[1], index ) == false )
-                    return false;
-                CraftingDemoComponent* pDemo = FeatureDemoCommandUtil::findStarted<CraftingDemoComponent>( listArgument[0], outReply );
-                if ( pDemo == nullptr )
-                    return false;
-                outReply = pDemo->cancel( index ) ? "cancelled" : "not cancelled (no such job or no room for its inputs)";
-                return true;
-            }
-
-            static bool runLearn( const vector<string>& listArgument, string& outReply )
-            {
-                if ( listArgument.size() != 2 )
-                    return false;
-                CraftingDemoComponent* pDemo = FeatureDemoCommandUtil::findStarted<CraftingDemoComponent>( listArgument[0], outReply );
-                if ( pDemo == nullptr )
-                    return false;
-                pDemo->learn( hashed_string( listArgument[1] ) );
-                FeatureDemoCommandUtil::reply( outReply, "learned %#", listArgument[1] );
-                return true;
-            }
-
-            static bool runLevel( const vector<string>& listArgument, string& outReply )
-            {
-                int32 level = 0;
-                if ( listArgument.size() != 2 || StringUtil::parseInt( listArgument[1], level ) == false )
-                    return false;
-                CraftingDemoComponent* pDemo = FeatureDemoCommandUtil::findStarted<CraftingDemoComponent>( listArgument[0], outReply );
-                if ( pDemo == nullptr )
-                    return false;
-                pDemo->setLevel( level );
-                FeatureDemoCommandUtil::reply( outReply, "crafting level %#", level );
-                return true;
-            }
         };
     } // namespace
-
-    SW_DEV_COMMAND( CraftEnqueue, "craft.enqueue", "craft.enqueue <demo object> <recipe> [count]", "Queue a recipe at a crafting demo", &CraftingDemoComponentInternal::runEnqueue );
-    SW_DEV_COMMAND( CraftCancel, "craft.cancel", "craft.cancel <demo object> <job index>", "Cancel a queued job of a crafting demo and return its inputs", &CraftingDemoComponentInternal::runCancel );
-    SW_DEV_COMMAND( CraftLearn, "craft.learn", "craft.learn <demo object> <recipe>", "Learn a recipe at a crafting demo", &CraftingDemoComponentInternal::runLearn );
-    SW_DEV_COMMAND( CraftLevel, "craft.level", "craft.level <demo object> <level>", "Set the crafting level of a crafting demo", &CraftingDemoComponentInternal::runLevel );
 
     CraftingDemoComponent::CraftingDemoComponent()
         : _recipePath{}

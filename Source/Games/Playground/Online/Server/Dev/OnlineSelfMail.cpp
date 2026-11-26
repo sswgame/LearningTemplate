@@ -1,7 +1,7 @@
 /**
  * @file OnlineSelfMail.cpp
  * @brief 프로세스 안 서버의 저장소에 금화 우편을 넣는 개발 명령(`playground.online.sendmail`)과 그 저장소 작업입니다.
- * @details 우편 넣기(`ServiceMail`)와 저장소 작업(`ServiceStoreJob`)은 서버 코드라 이 폴더(`Server/`)에 둔다 — 클라이언트 구성은 짓지 않아 명령이 없고,
+ * @details 우편 넣기(`ServiceMail`)와 저장소 작업(`ServiceStoreJob`)은 서버 코드라 이 폴더(`Server/Dev/`)에 둔다 — 클라이언트 구성과 배포 구성은 짓지 않아 명령이 없고,
  *          공유 헤더(`PlaygroundOnlineFlow.h`)는 저장소 형식을 모른다(프로세스 안 서버도 없으니 쓸 데가 없다). 언리얼에서 서버 전용 치트를 `WITH_SERVER_CODE` 안에 두는 것과 같은 갈림이다.
  *          작업은 저장소가 들고 끝나면 지운다 — 종료 때 기다릴 일이 없는 개발 명령이라 추적기(`ServiceStoreTracker`)를 두지 않는다.
  */

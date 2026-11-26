@@ -1,7 +1,7 @@
 /**
  * @file ControlAutomationSteps.cpp
  * @brief 자동화 시나리오의 행동 층 단계 `<Intent>` · `<Possess>` — 입력 맵 없이 폰에 의도를 넣고 빙의를 옮깁니다.
- * @details 등록은 이 .cpp 의 정적 등록자가 한다(Shipping 은 GameFramework 를 통째로 링크한다 — `sw_link_whole_archive`).
+ * @details 등록은 이 .cpp 의 정적 등록자가 한다(개발 전용 모듈 GameFrameworkDev 라 배포에는 없다).
  */
 #include "pch.h"
 

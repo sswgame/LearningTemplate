@@ -115,7 +115,7 @@ namespace sw
     SW_AUTOMATION_QUERY_WATCH( weatherSoundPlaying, "Weather.SoundPlaying", "1 while the weather sound event named key plays", &GameStateWeatherWatchesInternal::readSoundPlaying, false, true );
     SW_AUTOMATION_QUERY_WATCH( weatherSkyOpenness, "Weather.SkyOpenness", "Share of the sky open above the listener while a weather sound plays (0 indoors, 1 open)", &GameStateWeatherWatchesInternal::readSkyOpenness,
                                false, false );
-    // 지갑 · 가방 명령(`cheat.money` · `cheat.give`)은 플레이어 상태 개발 도구(`PlayerStateDevTools.cpp`)에 있다.
+    // 지갑 · 가방 명령(`cheat.money` · `cheat.give`)은 플레이어 상태 개발 도구(GameFrameworkDev 의 `PlayerStateDevTools.cpp`)에 있다.
     SW_DEV_COMMAND( CheatWeather, "cheat.weather", "cheat.weather <weatherID> [duration]", "Switch the session state's weather now, without the transition (duration in game seconds; none picks from the definition)",
                     &GameStateDevCommandsInternal::runWeather );
 } // namespace sw

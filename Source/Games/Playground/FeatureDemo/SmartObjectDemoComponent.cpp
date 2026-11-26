@@ -6,7 +6,6 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
-#include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -18,8 +17,6 @@
 
 #include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 
-#include "Games/Playground/FeatureDemo/FeatureDemoCommandUtil.h"
-
 namespace sw
 {
     namespace
@@ -27,27 +24,8 @@ namespace sw
         struct SmartObjectDemoComponentInternal
         {
             static constexpr FormatDef kStateFormat{ "FDSO" };
-            static constexpr int32     kMinutesPerHour = 60;
-            static constexpr float32   kMaxHour        = 24.0f; ///< 첫날의 끝
-
-            /** @brief `schedule.advance <demo object> <hour>` — 첫날 그 시각(소수 시간)까지 일정을 흘립니다. */
-            static bool runAdvance( const vector<string>& listArgument, string& outReply )
-            {
-                float32 hour = 0.0f;
-                if ( listArgument.size() != 2 || StringUtil::parseFloat( listArgument[1], hour ) == false || hour < 0.0f || hour > kMaxHour )
-                    return false;
-                SmartObjectDemoComponent* pDemo = FeatureDemoCommandUtil::findStarted<SmartObjectDemoComponent>( listArgument[0], outReply );
-                if ( pDemo == nullptr )
-                    return false;
-                pDemo->advanceToMinute( static_cast<int32>( hour * static_cast<float32>( kMinutesPerHour ) ) );
-                FeatureDemoCommandUtil::reply( outReply, "schedule at hour %#", hour );
-                return true;
-            }
         };
     } // namespace
-
-    SW_DEV_COMMAND( ScheduleAdvance, "schedule.advance", "schedule.advance <demo object> <hour>", "Advance the schedule of a smart object demo to an hour of day 0",
-                    &SmartObjectDemoComponentInternal::runAdvance );
 
     SmartObjectDemoComponent::SmartObjectDemoComponent()
         : _scheduleDataPath{}
