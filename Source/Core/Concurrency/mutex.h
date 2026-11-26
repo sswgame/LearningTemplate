@@ -173,7 +173,7 @@ namespace sw
 {
     /**
      * @brief 이 범위에서 쓰는 로그를 잎 잠금 규칙(`mutex::getHeldLockDepth`)에서 뺍니다.
-     * @details 잠금 진단(교착 검출기)과 단언 · 아래 티어의 보고 · 크래시 경로는 잠금을 쥔 채 쓸 수밖에 없다. 다른 곳은 쓰지 않는다 — 로그를 잠금 밖으로 옮기거나 `ScopedDeferredLog` 로 미룬다.
+     * @details 잠금 진단(교착 검출기)과 단언 · 아래 층의 보고 · 크래시 경로는 잠금을 쥔 채 쓸 수밖에 없다. 다른 곳은 쓰지 않는다 — 로그를 잠금 밖으로 옮기거나 `ScopedDeferredLog` 로 미룬다.
      */
     class SW_API ScopedLeafLockExemption
     {

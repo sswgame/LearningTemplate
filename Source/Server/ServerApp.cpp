@@ -235,7 +235,7 @@ namespace sw
 
         /**
          * @brief 호스트 범위의 종료 신호 처리기(POSIX SIGTERM · SIGINT, Windows 콘솔 제어)입니다. 엔진보다 먼저 걸고 엔진 종료가 끝난 뒤 뗀다.
-         * @details 걸지 못해도 서버는 선다(표준 입력 `quit` 로 끝낸다) — 로거가 서기 전이라 로그 아래 티어(`SW_LOW_LEVEL_WARNING`)로 알린다. 떼기는 건 것이 없으면 아무것도 하지 않는다.
+         * @details 걸지 못해도 서버는 선다(표준 입력 `quit` 로 끝낸다) — 로거가 서기 전이라 로그 아래 층(`SW_LOW_LEVEL_WARNING`)로 알린다. 떼기는 건 것이 없으면 아무것도 하지 않는다.
          */
         class ShutdownSignalSubsystem final : public Subsystem
         {

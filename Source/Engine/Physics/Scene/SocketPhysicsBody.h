@@ -1,7 +1,7 @@
 /**
  * @file SocketPhysicsBody.h
  * @brief 소켓 부착(`SocketBindingComponent`)이 떼어 낸 단위를 물리에 맡기는 창구입니다. 강체 컴포넌트가 구현합니다(`RigidBodyComponent::getSocketPhysicsBody`).
- * @details 부착은 캐릭터 층(티어 7), 강체는 오브젝트 층(티어 6)이라 창구를 아래층에 둡니다 — 부착 쪽은 이 인터페이스만 압니다.
+ * @details 부착은 캐릭터 층(층 7), 강체는 오브젝트 층(층 6)이라 창구를 아래층에 둡니다 — 부착 쪽은 이 인터페이스만 압니다.
  */
 #pragma once
 #include "Core/Foundation/Macros.h"

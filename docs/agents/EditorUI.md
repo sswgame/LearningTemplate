@@ -11,7 +11,7 @@
 | ViewState | next to the ViewModel | Plain values: strings, numbers, enums, ids, vectors of row structs | Hold a pointer or reference into the scene |
 | View | `Panels/<Panel>/<Name>Panel.{h,cpp}` | ImGui calls, reading the ViewState, calling ViewModel commands | Include a model, scene or service header |
 
-**Build-enforced**: view files (`[panelViewBan] views` in `Config/Rules/Layers/EditorLayers.toml`, extension modules via `sw_add_editor_extension( <name> PANEL_VIEW_SOURCES … )`) compile with `#error` stubs for banned headers and for `Engine/` · `DevTools/` · `GameFramework/` outside `[panelViewAllowedFolders]`. `[panelViewAllowed]` lists allowed value headers, each with a reason. A file joins `views` once it includes no banned header.
+**Build-enforced**: view files (`[panelViewGuard] views` in `Config/Rules/Layers/EditorLayers.toml`, extension modules via `sw_add_editor_extension( <name> PANEL_VIEW_SOURCES … )`) compile with `#error` guards for the `patterns` headers and for `Engine/` · `DevTools/` · `GameFramework/` outside `[panelViewAllowedFolders]`. `[panelViewAllowed]` lists allowed value headers, each with a reason. A file joins `views` once it includes no guarded header.
 
 - **One `gather` per frame, at the top of `drawContent`, through `EditorPanel::gatherViewState( viewModel, args… )`.** Keep the state in a panel member so vectors reuse storage. A ViewModel whose state comes only from the model exposes `uint64 getGatherGeneration() const` so an unchanged frame skips the gather; one that takes per-frame view input (scroll, clip rect) does not.
 - **Commands are methods named for the intent** (`setLayerInitiallyActive( name, bOn )`), taking ids and values, never pointers — the only mutation path from the View. A command changing engine state the game thread owns (render target size, play session) posts an `EditorUICommand` to `EditorUICommandQueue` instead of calling the engine.
@@ -39,7 +39,7 @@
   - short labels with long text in a tooltip (`drawPropertyRowLabel` · `drawInlineLabel` · `drawTooltip` · `drawHelpMarker`); rare settings under `beginAdvancedSection`;
   - status `drawPanelStatus`, counts `drawCountLabel`, clamped names `drawClampedLabel`, widths `EditorChrome::setNextItemWidthColumns`;
   - labels go left: `drawTextField` · `drawTextFieldMultiline` · `beginCombo`; never `ImGui::BeginCombo` with a visible label.
-- Type-enforced: editor code cannot call ImGui input widgets (`EditorInputBan.h`); `EditorWidgets::inputInt` · `dragFloat` · `combo` … take an `EditorWidgetID` (`SW_WIDGET_ID( "##…" )`, checked at compile time, or `EditorWidgetID::fromString`).
+- Type-enforced: editor code cannot call ImGui input widgets (`EditorImGuiInputGuard.h`); `EditorWidgets::inputInt` · `dragFloat` · `combo` … take an `EditorWidgetID` (`SW_WIDGET_ID( "##…" )`, checked at compile time, or `EditorWidgetID::fromString`).
 
 ## App-screen rules for the editor
 
@@ -106,4 +106,4 @@ Panels declare *what* (commands for a target, payload kinds); *when* is decided 
 | R12 | A draggable list row selects on release under the drag threshold (`wasItemClickedWithoutDrag`), not on press |
 | R13 | Property Paste is enabled only when the clipboard parses as the field's type (`canPasteText`); Ctrl+C · Ctrl+V over a field are the row menu's Copy · Paste (`property.copyValue` · `property.pasteValue`); an asset field's menu adds Browse to Asset and Find References |
 
-Type-enforced: `Common/Input/EditorInputBan.h` re-declares ImGui input, popup, drag-drop and input-widget functions `[[deprecated]]` as errors in every editor target. Only adapter files marked by CMake source properties (`SW_EDITOR_INPUT_ADAPTER` · `SW_EDITOR_NODE_GRAPH_ADAPTER` · `SW_EDITOR_WIDGET_ADAPTER`) are exempt — an in-source `#define` is a redefinition error. Drag payloads are one POD `{kind, uint64 id}` (`EditorDragPayload`), accepted by kind, never by name. A command takes its target (`EditorCommandTarget`) and runs at the start of the next frame (`queueCommand`).
+Type-enforced: `Common/Input/EditorImGuiInputGuard.h` re-declares ImGui input, popup, drag-drop and input-widget functions `[[deprecated]]` as errors in every editor target. Only adapter files marked by CMake source properties (`SW_EDITOR_INPUT_ADAPTER` · `SW_EDITOR_NODE_GRAPH_ADAPTER` · `SW_EDITOR_WIDGET_ADAPTER`) are exempt — an in-source `#define` is a redefinition error. Drag payloads are one POD `{kind, uint64 id}` (`EditorDragPayload`), accepted by kind, never by name. A command takes its target (`EditorCommandTarget`) and runs at the start of the next frame (`queueCommand`).

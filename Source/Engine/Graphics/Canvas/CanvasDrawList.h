@@ -93,7 +93,7 @@ namespace sw
 {
     /**
      * @brief 캔버스 일괄의 가위 사각형입니다(렌더 타깃 픽셀, 원점 왼쪽 위). 렌더러가 `RHIScissorRect` 로 옮긴다(`CanvasRenderer`).
-     * @details 게임이 보는 캔버스 헤더가 RHI 헤더를 include 하지 않도록 주인 형식으로 둔다(타깃 게이트). 일괄을 합칠 때 바이트로 비교해 패딩이 없다.
+     * @details 게임이 보는 캔버스 헤더가 RHI 헤더를 include 하지 않도록 주인 형식으로 둔다(타깃 가드). 일괄을 합칠 때 바이트로 비교해 패딩이 없다.
      */
     struct CanvasScissorRect
     {

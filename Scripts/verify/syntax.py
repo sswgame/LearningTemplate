@@ -14,8 +14,8 @@ TU 마다 구문만 확인한다(clang-cl `-fsyntax-only`) — 빌드하지 않�
 
 컴파일 DB 는 본 트리 `build/<프리셋>/compile_commands.json` 을 읽기만 한다(`Scripts/lint/tidy.py` 와 같은 경로 바꾸기). 낮은 우선순위로 돌아 겹쳐 도는 빌드가 CPU 를 먼저 받는다.
 
-보지 못하는 것: 생성 코드(`.gen.cpp`)와 생성 헤더는 본 트리 것이다. 워크트리에서는 모듈 의존 문지기(`build/…/gates`, 본 트리의 모듈 그래프로 만든 금지 헤더)를 뺀다:
-이 트리가 더한 의존을 옛 문지기가 거절한다. 링크 · 다른 구성(서버 · Shipping · 웹)은 실제 빌드가 본다.
+보지 못하는 것: 생성 코드(`.gen.cpp`)와 생성 헤더는 본 트리 것이다. 워크트리에서는 모듈 의존 가드(`build/…/guards`, 본 트리의 모듈 그래프로 만든 금지 헤더)를 뺀다:
+이 트리가 더한 의존을 옛 가드가 거절한다. 링크 · 다른 구성(서버 · Shipping · 웹)은 실제 빌드가 본다.
 
 종료 코드: 오류가 난 TU 가 있으면 FAILURE.
 """
@@ -45,8 +45,8 @@ UNITY_INCLUDE_PATTERN = re.compile(r'^#include "([^"]+)"', re.MULTILINE)
 #: 명령 끝의 원본 파일(` -c -- X.cpp` · ` -c X.cpp`) — 떼고 이 트리의 파일을 붙인다.
 SOURCE_ARGUMENT_PATTERN = re.compile(r"\s-c(\s+--)?\s+\S+\s*$")
 OUTPUT_ARGUMENT_PATTERN = re.compile(r"\s/F[od]\S+")
-#: 모듈 의존 문지기 포함 폴더(`cmake/Modules` 가 만든 금지 헤더).
-MODULE_STUB_INCLUDE_PATTERN = re.compile(r"\s-I\S*[/\\]gates[/\\]\S+")
+#: 모듈 의존 가드 포함 폴더(`cmake/Modules` 가 만든 금지 헤더).
+MODULE_GUARD_INCLUDE_PATTERN = re.compile(r"\s-I\S*[/\\]guards[/\\]\S+")
 ERROR_PATTERN = re.compile(r"(?::| )(?:fatal )?error: ")
 MAX_ERRORS_PER_UNIT = 5
 
@@ -68,19 +68,19 @@ def expand_entry(entry: dict) -> list[str]:
     return [included.replace("\\", "/") for included in UNITY_INCLUDE_PATTERN.findall(text)]
 
 
-def strip_arguments(command: str, keep_module_stubs: bool) -> str:
-    """원본 · 산출물 자리와(@p keep_module_stubs 가 거짓이면) 문지기를 뺀 명령."""
+def strip_arguments(command: str, keep_module_guards: bool) -> str:
+    """원본 · 산출물 자리와(@p keep_module_guards 가 거짓이면) 가드를 뺀 명령."""
     command = OUTPUT_ARGUMENT_PATTERN.sub("", SOURCE_ARGUMENT_PATTERN.sub("", command))
-    return command if keep_module_stubs else MODULE_STUB_INCLUDE_PATTERN.sub("", command)
+    return command if keep_module_guards else MODULE_GUARD_INCLUDE_PATTERN.sub("", command)
 
 
 def make_units(database: list[dict], main_root: Path, tree_root: Path) -> dict[str, SyntaxUnit]:
     """컴파일 DB 의 Source TU 를 이 트리의 파일로 푼다(열쇠는 `Source/…` 소문자). 따로 짓는 항목이 묶음에 든 것보다 앞선다. 이 트리에 없는 파일은 뺀다."""
     source_prefix = main_root.as_posix().lower() + "/source/"
-    keep_module_stubs = main_root.resolve() == tree_root.resolve()
+    keep_module_guards = main_root.resolve() == tree_root.resolve()
     units: dict[str, SyntaxUnit] = {}
     for entry in sorted(database, key=lambda item: "/unity/" in item["file"].replace("\\", "/").lower()):
-        arguments = strip_arguments(rewrite_command(entry["command"], main_root, tree_root), keep_module_stubs)
+        arguments = strip_arguments(rewrite_command(entry["command"], main_root, tree_root), keep_module_guards)
         for file_path in expand_entry(entry):
             if not file_path.lower().startswith(source_prefix) or Path(file_path).suffix.lower() not in SOURCE_EXTENSIONS:
                 continue
@@ -92,7 +92,7 @@ def make_units(database: list[dict], main_root: Path, tree_root: Path) -> dict[s
 
 
 def borrow_unit(relative: str, units: dict[str, SyntaxUnit], tree_root: Path) -> SyntaxUnit | None:
-    """DB 에 없는 새 파일은 가장 가까운 폴더의 TU 명령을 빌린다(층 문지기가 폴더마다 다르다) — 같은 폴더 안에서는 테스트 · 서버 · 클라이언트 갈래가 같은 것이 앞선다. 없으면 None."""
+    """DB 에 없는 새 파일은 가장 가까운 폴더의 TU 명령을 빌린다(층 가드가 폴더마다 다르다) — 같은 폴더 안에서는 테스트 · 서버 · 클라이언트 갈래가 같은 것이 앞선다. 없으면 None."""
     def make_branch(path: str) -> tuple[bool, ...]:
         return tuple(f"/{name}/" in path.lower() for name in ("tests", "server", "client"))
 

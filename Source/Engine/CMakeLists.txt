@@ -45,7 +45,7 @@ list(REMOVE_ITEM ENGINE_SOURCES ${list_rhi_backend_source})
 # 등록 매크로는 `SW_SHIPPING` 에서 빈 선언이 된다(`AutomationStepRegistry.h` · `AutomationWatch.h` · `AutomationStageReset.h`).
 
 # 이 타깃이 짓지 않는 폴더(전용 서버의 `Renderer/` — 목록은 cmake/Modules/Build/OutputLayout.cmake 의 `SW_EXCLUDED_ENGINE_FOLDERS`).
-# 그 폴더의 헤더는 타깃 게이트 `serverbuild` 가 막는다(서버는 `IEngineRenderDriver` 만 본다). 리플렉션 헤더도 아래 8) 에서 뺀다.
+# 그 폴더의 헤더는 타깃 가드 `serverbuild` 가 막는다(서버는 `IEngineRenderDriver` 만 본다). 리플렉션 헤더도 아래 8) 에서 뺀다.
 set(excluded_folder_regex "")
 foreach(excluded_folder IN LISTS SW_EXCLUDED_ENGINE_FOLDERS)
 	sw_remove_excluded_sources(ENGINE_SOURCES "/Source/Engine/${excluded_folder}/.*\\.(c|cpp)$")
@@ -74,7 +74,7 @@ if(NOT SW_TARGET_TYPE STREQUAL "Server")
 	sw_remove_excluded_sources(ENGINE_SOURCES "/Source/Engine/(Window|Input)/Headless/.*\\.(c|cpp)$")
 endif()
 # 서버 전용 소스(`Server` — 운영 HTTP 끝점 · 관리 채널 · 서버 서비스 레지스트리, `Config/Server` — 서버 비밀)는 클라이언트 구성이, 클라이언트 전용 소스(`Client/`)는
-# 전용 서버가 짓지 않는다(헤더는 게이트 `clientbuild` · `serverbuild`). 소스를 트리째 모으는 다른 타깃과 같은 함수다.
+# 전용 서버가 짓지 않는다(헤더는 가드 `clientbuild` · `serverbuild`). 소스를 트리째 모으는 다른 타깃과 같은 함수다.
 # 렌더러에 기대는 감시 값 · 조건은 `Client/` 가 아니라 렌더러 폴더 안 주인 곁에 둔다(서버는 `Renderer` 를 통째로 짓지 않는다).
 sw_remove_other_target_sources(ENGINE_SOURCES)
 
@@ -92,16 +92,16 @@ endif()
 include("${CMAKE_BINARY_DIR}/generated/sw/config/EngineLayers.cmake")
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/Config/Rules/Layers/EngineLayers.toml")
 set(list_engine_layer_source "")
-foreach(tier IN LISTS SW_ENGINE_TIER_LIST)
+foreach(layer IN LISTS SW_ENGINE_LAYER_LIST)
 	# 이 구성이 짓는 것(ENGINE_SOURCES — 짓지 않는 폴더 · RHI 백엔드 · Jolt 를 뺀 것)만 남긴다.
-	list(TRANSFORM SW_ENGINE_TIER_${tier}_SOURCES PREPEND "${CMAKE_CURRENT_SOURCE_DIR}/" OUTPUT_VARIABLE list_tier_source)
-	set(list_tier_excluded ${list_tier_source})
-	list(REMOVE_ITEM list_tier_excluded ${ENGINE_SOURCES})
-	if(list_tier_excluded)
-		list(REMOVE_ITEM list_tier_source ${list_tier_excluded})
+	list(TRANSFORM SW_ENGINE_LAYER_${layer}_SOURCES PREPEND "${CMAKE_CURRENT_SOURCE_DIR}/" OUTPUT_VARIABLE list_layer_source)
+	set(list_layer_excluded ${list_layer_source})
+	list(REMOVE_ITEM list_layer_excluded ${ENGINE_SOURCES})
+	if(list_layer_excluded)
+		list(REMOVE_ITEM list_layer_source ${list_layer_excluded})
 	endif()
-	set(engine_tier_source_${tier} ${list_tier_source})
-	list(APPEND list_engine_layer_source ${list_tier_source})
+	set(engine_layer_source_${layer} ${list_layer_source})
+	list(APPEND list_engine_layer_source ${list_layer_source})
 endforeach()
 list(REMOVE_ITEM ENGINE_SOURCES ${list_engine_layer_source})
 
@@ -179,7 +179,7 @@ target_sources(Engine PRIVATE
 	"${CMAKE_CURRENT_SOURCE_DIR}/../sw.natvis"
 )
 
-# Core 의 OBJECT 들(티어 부분 `Core_tier<N>_objects`) — 목록은 Core 의 `SW_CORE_OBJECTS` 속성이다(Source/Core/CMakeLists.txt).
+# Core 의 OBJECT 들(층 부분 `Core_layer<N>_objects`) — 목록은 Core 의 `SW_CORE_OBJECTS` 속성이다(Source/Core/CMakeLists.txt).
 get_target_property(list_core_objects Core SW_CORE_OBJECTS)
 if(NOT list_core_objects)
 	message(FATAL_ERROR "[Engine] Core 의 SW_CORE_OBJECTS 속성이 비었다 — Source/Core 를 먼저 add_subdirectory 해야 한다")
@@ -332,7 +332,7 @@ sw_add_reflection_step(Engine
 sw_add_reflect_builtins_step(Engine)
 
 # ------------------------------------------------------------------------------
-# 9) Jolt 백엔드 소스 — 자기 PCH 를 가진 OBJECT 라이브러리(목적 파일은 Core 티어 부분처럼 Engine 에 들어간다)
+# 9) Jolt 백엔드 소스 — 자기 PCH 를 가진 OBJECT 라이브러리(목적 파일은 Core 층 부분처럼 Engine 에 들어간다)
 #
 # Jolt 백엔드 소스는 Jolt 의 대상 기능(-mavx2 ...)으로 컴파일되므로 Engine PCH 를 쓸 수 없다(대상 기능이 다른 PCH 는 clang 이 거부한다).
 # PCH 없이 지으면 TU 마다 엔진 `pch.h` 를 다시 파싱한다 — 그 파싱이 TU 시간의 절반이다. 그래서 이 소스만 따로 묶어 `pch.h` + Jolt
@@ -366,21 +366,21 @@ add_dependencies(Engine EngineJolt_objects)
 
 # ------------------------------------------------------------------------------
 # 10) 층 부분 — 층마다 OBJECT 라이브러리 `EngineLayer<N>`(오브젝트는 Engine 이미지 안, `sw_add_module_part`). 부분 N 은 N 보다 위 층의 헤더마다 같은 경로의
-#     `#error` 껍데기를 자기 include 자리 맨 앞에 둔다 — 아래 층이 위 층 헤더를 include 하면(전이 include 도) 컴파일이 멈춘다. 에디터 층과 같은 방식이다.
+#     `#error` 가드를 자기 include 자리 맨 앞에 둔다 — 아래 층이 위 층 헤더를 include 하면(전이 include 도) 컴파일이 멈춘다. 에디터 층과 같은 방식이다.
 #     부분은 Engine 의 정의 · 옵션 · include · 링크 목록을 이 파일이 끝날 때 받는다(`LINK_OWNER`, DEFER — 놓는 자리 순서에 기대지 않는다).
 # ------------------------------------------------------------------------------
-foreach(tier IN LISTS SW_ENGINE_TIER_LIST)
-	if(NOT engine_tier_source_${tier})
+foreach(layer IN LISTS SW_ENGINE_LAYER_LIST)
+	if(NOT engine_layer_source_${layer})
 		continue()   # 이 구성이 짓지 않는 층(전용 서버의 렌더러)
 	endif()
-	sw_add_module_part(EngineLayer${tier}
+	sw_add_module_part(EngineLayer${layer}
 		OWNER Engine
-		SOURCES ${engine_tier_source_${tier}}
+		SOURCES ${engine_layer_source_${layer}}
 		LINK_OWNER
 	)
-	sw_add_layer_stubs(EngineLayer${tier} ${tier} SW_ENGINE_TIER Engine)
-	target_include_directories(EngineLayer${tier} PRIVATE "${CMAKE_BINARY_DIR}/generated/engineabi")
-	add_dependencies(EngineLayer${tier} SwCookCodeDigest)
+	sw_add_layer_guards(EngineLayer${layer} ${layer} SW_ENGINE_LAYER Engine)
+	target_include_directories(EngineLayer${layer} PRIVATE "${CMAKE_BINARY_DIR}/generated/engineabi")
+	add_dependencies(EngineLayer${layer} SwCookCodeDigest)
 endforeach()
 
 # ------------------------------------------------------------------------------

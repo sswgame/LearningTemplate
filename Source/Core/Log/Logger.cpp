@@ -53,7 +53,7 @@ namespace sw
         constexpr uint64 kClockNumberMask = kClockFrameBit - 1;
 
         /**
-         * @brief 로그보다 아래 티어의 보고(`SW_LOW_LEVEL_*`)를 로그 줄로 넘깁니다. 백엔드가 아직 없으면 false 를 돌려주어 stderr 로 가게 합니다(`reportLowLevel`).
+         * @brief 로그보다 아래 층의 보고(`SW_LOW_LEVEL_*`)를 로그 줄로 넘깁니다. 백엔드가 아직 없으면 false 를 돌려주어 stderr 로 가게 합니다(`reportLowLevel`).
          * @details 태그(`SW_LOG_TAG`)는 이 파일(Core)의 것, 곧 Engine 입니다. 보고한 곳은 줄의 파일 · 줄 번호가 가리킨다.
          */
         bool forwardLowLevelReport( internal::LowLevelReportLevel level, const utf8* pFile, int32 line, const utf8* pMessage, const utf8* pID ) noexcept
@@ -61,7 +61,7 @@ namespace sw
             if ( s_globalBackend.load( std::memory_order_acquire ) == nullptr )
                 return false;
 
-            const ScopedLeafLockExemption exemption; // 아래 티어의 보고는 부른 쪽이 잠금을 쥐었는지 모른다
+            const ScopedLeafLockExemption exemption; // 아래 층의 보고는 부른 쪽이 잠금을 쥐었는지 모른다
             const LogLevel                logLevel = level == internal::LowLevelReportLevel::Warning ? LogLevel::Warning : LogLevel::Error;
             if ( Logger::shouldLog( logLevel ) )
                 Logger::writeLogGlobal( logLevel, SW_LOG_TAG, pMessage, pFile, line, pID );

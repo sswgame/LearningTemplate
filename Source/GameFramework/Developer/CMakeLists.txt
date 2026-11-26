@@ -5,7 +5,7 @@
 
 # ------------------------------------------------------------------------------
 # GF 창구(`IGameSettingsOverride` · `ISnapshotFaultHook` — `SW_GF_API`, `StaticRegistrar`)의 개발 구현과 GF 의 개발 명령 · 디버그 HUD 섹션 · 감시 값 · 시나리오 단계를 정적 등록한다(GF 공개 API 만 본다). DevTools 는 GF 를 볼 수 없어
-# (TargetLayers `devtools` 게이트) Runtime 안 `Dev/` 예외로 있던 것을 모듈 하나로 모았다(설계 2026-11-17 H1). 배포에서 빠지는 것은 폴더 패턴이 아니라 매니페스트다
+# (TargetLayers `devtools` 가드) Runtime 안 `Dev/` 예외로 있던 것을 모듈 하나로 모았다(설계 2026-11-17 H1). 배포에서 빠지는 것은 폴더 패턴이 아니라 매니페스트다
 # (`_listConfiguration: ["Dev"]` — `sw_skip_inactive_module` 이 짓지 않고 런타임 목록이 거른다). 종류는 GameFramework 라 개발 호스트가 GameFramework 다음에
 # 공유 모듈로 올린다(`GameModuleManager` 의 `loadSharedModule`, 의존 순서). Runtime · 키트 · 게임은 이 폴더를 include 하지 못한다(TargetLayers).
 # ------------------------------------------------------------------------------

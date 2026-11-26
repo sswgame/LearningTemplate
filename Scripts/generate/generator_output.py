@@ -71,7 +71,7 @@ def record_read_files(root: Path, output_dir: Path) -> Iterator[set[Path]]:
     files: set[Path] = set()
     active = [True]
 
-    # 훅은 열 때마다 불린다(출력 껍데기 6 만여 장을 읽어 견준다) — 여기서는 글자만 모으고 경로 풀이 · 파일 확인은 끝에 한 번씩.
+    # 훅은 열 때마다 불린다(출력 가드 6 만여 장을 읽어 견준다) — 여기서는 글자만 모으고 경로 풀이 · 파일 확인은 끝에 한 번씩.
     def _hook(event: str, args: tuple[Any, ...]) -> None:
         if event != "open" or not active[0] or not isinstance(args[0], (str, Path)):
             return

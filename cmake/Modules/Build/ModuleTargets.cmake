@@ -216,7 +216,7 @@ endfunction()
 #   LINK        부분이 쓰는 라이브러리(모듈의 LINK_PRIVATE 보다 좁게)
 #   LINK_OWNER  모듈의 링크 목록을 그대로 받는다(층 부분 — 좁힐 것이 없을 때). 다른 부분은 빼고 받는다. 정의 · 옵션 · 링크가 주인과 같으므로
 #               PCH 도 하나를 나눠 쓴다(`<OWNER>PartPch` — Engine 층 12 개가 각자 굽던 1.4 GB 를 하나로, 언리얼 UBT SharedPCH 자리). 주인의 PCH 를
-#               바로 쓰지 않는 까닭: REUSE_FROM 은 그 타깃에 빌드 의존을 거는데 주인은 부분을 링크해 순환이 된다. 층 껍데기 include 자리는 PCH 뒤 TU 에만
+#               바로 쓰지 않는 까닭: REUSE_FROM 은 그 타깃에 빌드 의존을 거는데 주인은 부분을 링크해 순환이 된다. 층 가드 include 자리는 PCH 뒤 TU 에만
 #               걸리지만 PCH 내용(pch.h)은 가장 낮은 층 부분에서도 지어지던 것이라 위 층 헤더를 끌어오지 않는다.
 #               부분만의 정의를 더하는 부분(에디터 MVVM View 의 SW_EDITOR_PANEL_VIEW)은 clang 이 PCH 를 거부하므로 쓰지 않는다.
 # ------------------------------------------------------------------------------
@@ -437,7 +437,7 @@ function(sw_add_game_module MODULE_NAME)
 	# 게임의 클라이언트 전용 소스(Client/ — 그리는 벤치 · UI 시연)는 전용 서버가 짓지 않는다(cmake/Modules/Build/ExcludedSources.cmake).
 	# 게임의 서버 전용 소스(Server/)는 클라이언트 구성이 짓지 않는다.
 	sw_remove_other_target_sources(list_game_source)
-	sw_open_dev_headers(game ${list_game_source}) # 디버그 그리기는 게임의 개발 전용 소스(Dev/)만 본다
+	sw_allow_dev_headers(game ${list_game_source}) # 디버그 그리기는 게임의 개발 전용 소스(Dev/)만 본다
 	sw_add_module_library(${target_name}
 		KIND game
 		DEV_TYPE MODULE
@@ -482,8 +482,8 @@ endfunction()
 # 매니페스트의 의존 가운데 키트 · GameFramework 를 링크한다(목록을 CMake 에 다시 적지 않는다 — 매니페스트가 원본). ImGui 결속 소스를 만들어 넣는다
 # (손으로 빠뜨릴 수 없게 — `cmake/Templates/EditorExtensionUIBinder.cpp.in`). 다시 로드되는 DLL(EditorModule · 키트)도 일반 import 다(모듈 호스트가 이름을 바꾼다).
 #
-#   PANEL_VIEW_SOURCES  MVVM 패널 View 파일(이 폴더 기준). 따로 부분(`<TARGET>PanelView`)으로 짓고 에디터 패널 View 와 같은 모델 · 씬 헤더 껍데기를 받는다
-#                       (Source/Editor/CMakeLists.txt 2-2 — 전역 속성 SW_EDITOR_PANEL_VIEW_STUB_ROOT).
+#   PANEL_VIEW_SOURCES  MVVM 패널 View 파일(이 폴더 기준). 따로 부분(`<TARGET>PanelView`)으로 짓고 에디터 패널 View 와 같은 모델 · 씬 헤더 가드를 받는다
+#                       (Source/Editor/CMakeLists.txt 2-2 — 전역 속성 SW_EDITOR_PANEL_VIEW_GUARD_ROOT).
 # ------------------------------------------------------------------------------
 function(sw_add_editor_extension TARGET_NAME)
 	cmake_parse_arguments(ARG "" "" "PANEL_VIEW_SOURCES" ${ARGN})
@@ -519,7 +519,7 @@ function(sw_add_editor_extension TARGET_NAME)
 	endforeach()
 
 	if(list_panel_view_source)
-		list(REMOVE_ITEM list_extension_source ${list_panel_view_source}) # View 는 껍데기를 받는 부분이 짓는다(아래)
+		list(REMOVE_ITEM list_extension_source ${list_panel_view_source}) # View 는 가드를 받는 부분이 짓는다(아래)
 	endif()
 	sw_add_module_library(${TARGET_NAME}
 		KIND editorextension
@@ -530,45 +530,45 @@ function(sw_add_editor_extension TARGET_NAME)
 		SOURCES ${list_extension_source} "${binder_source}"
 		LINK_PRIVATE EditorModule Engine ModuleAPI ${list_linked_module} imgui implot imgui_nodeeditor
 	)
-	sw_apply_editor_input_ban(${TARGET_NAME}) # 확장 패널도 에디터 코드다 — ImGui 입력은 입력 맵 · EditorInputGUI 로
+	sw_apply_editor_input_guard(${TARGET_NAME}) # 확장 패널도 에디터 코드다 — ImGui 입력은 입력 맵 · EditorInputGUI 로
 	if(list_panel_view_source)
-		get_property(panel_view_stub_root GLOBAL PROPERTY SW_EDITOR_PANEL_VIEW_STUB_ROOT)
-		if(NOT panel_view_stub_root)
-			message(FATAL_ERROR "sw_add_editor_extension(${TARGET_NAME}): SW_EDITOR_PANEL_VIEW_STUB_ROOT is not set - Source/Editor must be configured first")
+		get_property(panel_view_guard_root GLOBAL PROPERTY SW_EDITOR_PANEL_VIEW_GUARD_ROOT)
+		if(NOT panel_view_guard_root)
+			message(FATAL_ERROR "sw_add_editor_extension(${TARGET_NAME}): SW_EDITOR_PANEL_VIEW_GUARD_ROOT is not set - Source/Editor must be configured first")
 		endif()
 		sw_add_module_part(${TARGET_NAME}PanelView
 			OWNER ${TARGET_NAME}
 			SOURCES ${list_panel_view_source}
 			LINK EditorModule Engine ModuleAPI ${list_linked_module} imgui implot imgui_nodeeditor
 		)
-		target_include_directories(${TARGET_NAME}PanelView BEFORE PRIVATE "${panel_view_stub_root}")
+		target_include_directories(${TARGET_NAME}PanelView BEFORE PRIVATE "${panel_view_guard_root}")
 		target_compile_definitions(${TARGET_NAME}PanelView PRIVATE SW_EDITOR_PANEL_VIEW=1 SW_DEV_COMMAND_REGISTRATION=0) # 화면 도구 등록 줄(`SW_EDITOR_VISUALIZER_TOOL`)은 View 에서만 짓는다
-		sw_apply_editor_input_ban(${TARGET_NAME}PanelView)
+		sw_apply_editor_input_guard(${TARGET_NAME}PanelView)
 	endif()
 	add_dependencies(EditorAll ${TARGET_NAME})
 endfunction()
 
 # ------------------------------------------------------------------------------
-# sw_apply_editor_input_ban — 에디터 코드 타깃에 `Source/Editor/Common/Input/EditorInputBan.h` 를 imgui.h 의 사용자 헤더로 붙이고 사용 중단을 오류로 올린다
+# sw_apply_editor_input_guard — 에디터 코드 타깃에 `Source/Editor/Common/Input/EditorImGuiInputGuard.h` 를 imgui.h 의 사용자 헤더로 붙이고 사용 중단을 오류로 올린다
 #
 # 그 헤더가 ImGui 입력 · 팝업 · 끌어 놓기 함수(imgui_internal.h 의 다른 겹 포함)를 [[deprecated]] 로 다시 선언한다(`docs/agents/EditorUI.md` 입력 절).
 # 금지를 받지 않는 파일(ImGui 입력 어댑터 둘 · 노드 캔버스 지우기 입구 EditorNodeGraph.cpp · 입력 위젯을 감싸는 EditorWidgets.cpp)의 표시는 이 함수가 소스 속성으로만 준다
-# (SW_EDITOR_INPUT_ADAPTER=1 · SW_EDITOR_NODE_GRAPH_ADAPTER=1 · SW_EDITOR_WIDGET_ADAPTER=1). 나머지 파일은 강제 포함한 EditorInputBanConfig.h 가 0 으로 정해 두므로 소스 안
+# (SW_EDITOR_INPUT_ADAPTER=1 · SW_EDITOR_NODE_GRAPH_ADAPTER=1 · SW_EDITOR_WIDGET_ADAPTER=1). 나머지 파일은 강제 포함한 EditorImGuiInputGuardConfig.h 가 0 으로 정해 두므로 소스 안
 # `#define` 은 다시 정의 오류(-Werror=macro-redefined)로 멈춘다 — 다른 파일이 매크로로 금지를 풀 수 없다. 소스 정의가 붙은 파일은 유니티 묶음에서 빠지고,
-# 관문이 PCH 에 구워 둔 0 과 부딪히지 않게 PCH 도 쓰지 않는다. 옵션 SW_EDITOR_INPUT_BAN(Source/Editor/CMakeLists.txt, 기본 ON)이 꺼져 있으면 아무것도 하지 않는다.
+# 관문이 PCH 에 구워 둔 0 과 부딪히지 않게 PCH 도 쓰지 않는다. 옵션 SW_EDITOR_INPUT_GUARD(Source/Editor/CMakeLists.txt, 기본 ON)이 꺼져 있으면 아무것도 하지 않는다.
 # ------------------------------------------------------------------------------
-function(sw_apply_editor_input_ban TARGET_NAME)
-	if(NOT SW_EDITOR_INPUT_BAN)
+function(sw_apply_editor_input_guard TARGET_NAME)
+	if(NOT SW_EDITOR_INPUT_GUARD)
 		return()
 	endif()
 	target_compile_definitions(${TARGET_NAME} PRIVATE IMGUI_INCLUDE_IMGUI_USER_H
-		"IMGUI_USER_H_FILENAME=\"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Input/EditorInputBan.h\"")
+		"IMGUI_USER_H_FILENAME=\"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Input/EditorImGuiInputGuard.h\"")
 	if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
 		target_compile_options(${TARGET_NAME} PRIVATE /we4996 /we4005)
 	else()
 		target_compile_options(${TARGET_NAME} PRIVATE -Werror=deprecated-declarations -Werror=macro-redefined)
 	endif()
-	set(guard_header "${CMAKE_SOURCE_DIR}/Source/Editor/Common/Input/EditorInputBanConfig.h")
+	set(guard_header "${CMAKE_SOURCE_DIR}/Source/Editor/Common/Input/EditorImGuiInputGuardConfig.h")
 	if(CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC" OR CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
 		target_compile_options(${TARGET_NAME} PRIVATE "/FI${guard_header}")
 	else()

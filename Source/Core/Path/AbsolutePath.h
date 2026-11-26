@@ -4,7 +4,7 @@
  * @details `FileUtil::isAbsolutePath` 는 `C:foo`(드라이브 상대) · `\foo`(드라이브 없는 루트)도 절대로 보지만 이 형식은 그것들을 거절한다.
  *          Windows 는 `X:/` · `X:\` · UNC(`//서버/공유`), POSIX 는 `/` 로 시작해야 한다. 만드는 길은 `tryMake` 하나이고 구분자는 `/` 로 맞춘다(대소문자는 그대로).
  *          만들 때 한 번 검증한 값을 들고 다니는 형식이다(언리얼 `FPaths::IsRelative` 의 반대와는 다르다).
- *          로그 · 파일을 쓰지 않는 값 형식이라 낮은 티어(`Core/Path`)에 둔다 - 프로세스(`ProcessCommand`) · 파일 · 모듈이 함께 쓴다.
+ *          로그 · 파일을 쓰지 않는 값 형식이라 낮은 층(`Core/Path`)에 둔다 - 프로세스(`ProcessCommand`) · 파일 · 모듈이 함께 쓴다.
  */
 #pragma once
 #include "Core/Container/string.h"

@@ -17,14 +17,14 @@
 | `Programs` | 따로 빌드하는 도구 실행 파일 | |
 | `Games` | 게임 하나(새 게임 폴더를 만들지 않는다 — Playground) | |
 
-## 2 Core 폴더 (티어 = `CoreLayers.toml`, 숫자 큰 쪽이 위)
+## 2 Core 폴더 (층 = `CoreLayers.toml`, 숫자 큰 쪽이 위)
 
-| 폴더(티어) | 두는 것 |
+| 폴더(층) | 두는 것 |
 | --- | --- |
 | `Foundation`(0) | 형식 별칭 · 매크로 · OS 헤더 · enum 깃발 · 글자 하나 수준 도구 |
 | `Hash`(0) | 해시 · 씨앗 상수 · 비밀 비교 · PRF |
 | `Predefined`(0) | `.xxx` 이름 표 |
-| `Concurrency`(1) | 원시 동기화와 경합 검출 훅. 스레드 사이 자료 구조는 `Concurrency/Queue`(Container 위 티어) |
+| `Concurrency`(1) | 원시 동기화와 경합 검출 훅. 스레드 사이 자료 구조는 `Concurrency/Queue`(Container 위 층) |
 | `Math`(1) | 벡터 · 행렬 · 쿼터니언 · 색 · 압축 수치 · 결정적 난수 · 노이즈 |
 | `Memory` · `Algorithm`(2) | 할당기 · 메모리 태그 · 블록, 컨테이너에 묶이지 않은 알고리즘 |
 | `Container`(3) | 컨테이너 · 핸들 표 · 슬롯 · 링 · 큐 · 그래프 자료 구조 |

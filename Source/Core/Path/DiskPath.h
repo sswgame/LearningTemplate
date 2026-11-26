@@ -3,7 +3,7 @@
  * @brief 검증을 지난 절대 디스크 경로 가운데 읽기만 하는 형식입니다. 쓰기(`FileUtil::write*` · `remove*` · `save*`)는 파생 `AbsolutePath` 만 받는다.
  * @details 에셋 id 를 푼 경로(`AssetPaths::toDiskPath` · `findLooseFile`)가 이 형식이다 — 콘텐츠 파일을 읽기 전용 · 밖에서 바뀜 확인 없이 바로 쓰는 코드가 컴파일되지 않는다.
  *          쓰는 자리는 문(에디터 `AssetWriter`, 엔진 쪽은 `AssetWriteAccess` 의 친구) 하나를 지난다. 언리얼이 저장을 `UPackage::SavePackage` 로, 유니티가 `AssetDatabase` 로 모은 자리다.
- *          로그 · 파일을 쓰지 않는 값 형식이라 낮은 티어(`Core/Path`)에 둔다.
+ *          로그 · 파일을 쓰지 않는 값 형식이라 낮은 층(`Core/Path`)에 둔다.
  */
 #pragma once
 #include "Core/Container/string.h"

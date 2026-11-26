@@ -4,7 +4,7 @@
  * @details C++17 이라 `std::expected`(C++23)를 못 쓴다 — 인터페이스(has_value · operator bool · value · error · value_or · operator* ·
  *          operator-> · and_then · transform · or_else · `unexpected<E>`)는 그것과 같게 두었다. "없음" 도 실패 이유가 하나뿐인 경우라
  *          `optional<T>` 는 `expected<T, Absent>` 의 별칭이다(사용자 결정 2026-11-08 — 언리얼은 `TValueOrError` · `TOptional` 두 벌, 여기는 한 벌).
- *          자리는 Foundation(티어 0 — 언리얼 Core/Templates): 형식 · 매크로만 쓰고 모든 티어가 반환 형식으로 쓴다.
+ *          자리는 Foundation(층 0 — 언리얼 Core/Templates): 형식 · 매크로만 쓰고 모든 층이 반환 형식으로 쓴다.
  *
  *          std 와 다른 점(모두 의도):
  *          - `expected<T, E>` 는 기본 생성자가 없다(언리얼 `TValueOrError` 와 같다 — "아직 아무것도 아닌 결과" 를 만들지 못하게). `optional<T>` 만

@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Scripts/generate/module_layers.py
+Scripts/generate/module_layer_guards.py
 
 모듈 층 표(`Config/Rules/Layers/<모듈>Layers.toml`)를 CMake 가 읽는 `<모듈>Layers.cmake` 로 옮긴다. 표 하나가 모듈 폴더 하나를 맡는다(`LIST_LAYER_TABLE`):
 Engine(`Source/Engine`)과 GameFramework 런타임(`Source/GameFramework/Runtime`).
 
-왜 린트가 아니라 빌드인가. include 는 글자라 예전에는 린트 게이트가 `#include "Engine/..."` 줄을 읽어 막았다(직접 include 만 보였다).
-지금은 모듈의 CMakeLists 가 층마다 부분(OBJECT 라이브러리 — 오브젝트는 모듈 이미지 안)을 짓고, 부분마다 자기 층보다 위 층의
-모든 헤더 자리에 `#error` 껍데기를 먼저 놓는다(`sw_add_layer_stubs`) — 위 층 헤더를 include 하면 컴파일이 멈춘다(헤더를 거쳐 닿는 전이 include 도 같다).
-에디터 층(`editor_layers.py`)과 같은 방식이다.
+왜 린트가 아니라 빌드인가. include 는 글자라 `#include "Engine/..."` 줄을 읽는 린트는 직접 include 만 본다.
+그래서 모듈의 CMakeLists 가 층마다 부분(OBJECT 라이브러리 — 오브젝트는 모듈 이미지 안)을 짓고, 부분마다 자기 층보다 위 층의
+모든 헤더 자리에 `#error` 가드를 먼저 놓는다(`sw_add_layer_guards`) — 위 층 헤더를 include 하면 컴파일이 멈춘다(헤더를 거쳐 닿는 전이 include 도 같다).
+에디터 층(`editor_layer_guards.py`)과 같은 방식이다.
 
 파일마다 층을 표에서 정한다(키는 모듈 폴더 아래 경로 접두어, 가장 긴 것이 이긴다). 표에 없는 파일이 있으면 멈춘다(configure 가 서지 않는다).
 
@@ -44,8 +44,8 @@ class LayerTable:
 
 
 LIST_LAYER_TABLE = (
-    LayerTable("Engine", "Engine", "SW_ENGINE_TIER"),
-    LayerTable("GameFramework", "GameFramework/Runtime", "SW_GAMEFRAMEWORK_TIER"),
+    LayerTable("Engine", "Engine", "SW_ENGINE_LAYER"),
+    LayerTable("GameFramework", "GameFramework/Runtime", "SW_GAMEFRAMEWORK_LAYER"),
 )
 
 
@@ -56,81 +56,81 @@ def find_layer_table(module: str) -> LayerTable:
     raise GeneratorError(f"층 표가 없는 모듈 '{module}' — {', '.join(table._module for table in LIST_LAYER_TABLE)} 중 하나다")
 
 
-def find_tier(map_tier: dict[str, int], relative: str) -> int | None:
+def find_layer(map_layer: dict[str, int], relative: str) -> int | None:
     """모듈 폴더 기준 경로의 층 — 가장 긴 접두어 키가 이긴다. 표에 없으면 None."""
     best: tuple[str, int] | None = None
-    for key, tier in map_tier.items():
+    for key, layer in map_layer.items():
         if relative == key or relative.startswith(key + "/"):
             if best is None or len(key) > len(best[0]):
-                best = (key, tier)
+                best = (key, layer)
     return best[1] if best is not None else None
 
 
-def assign_tiers(map_tier: dict[str, int], list_relative: Sequence[str], rule_name: str, module: str) -> dict[str, int]:
+def assign_layers(map_layer: dict[str, int], list_relative: Sequence[str], rule_name: str, module: str) -> dict[str, int]:
     """모듈 폴더 기준 경로마다 층을 정한다. 표에 없는 파일이 하나라도 있으면 멈춘다 — 포괄 키 없는 폴더(`Engine/Automation` 뿌리)에 더한 파일이 configure 오류가 되는 자리다."""
     map_result: dict[str, int] = {}
     list_unknown: list[str] = []
     for relative in list_relative:
-        tier = find_tier(map_tier, relative)
-        if tier is None:
+        layer = find_layer(map_layer, relative)
+        if layer is None:
             list_unknown.append(relative)
         else:
-            map_result[relative] = tier
+            map_result[relative] = layer
     if list_unknown:
-        raise GeneratorError(f"층 표에 없는 {module} 파일: {', '.join(list_unknown[:20])} — {rule_name} 의 [tier] 에 층을 정해 넣으세요")
+        raise GeneratorError(f"층 표에 없는 {module} 파일: {', '.join(list_unknown[:20])} — {rule_name} 의 [layer] 에 층을 정해 넣으세요")
     return map_result
 
 
-def require_no_stale_keys(map_tier: dict[str, int], root_dir: Path, rule_name: str) -> None:
-    """[tier] 키가 가리키는 폴더 · 파일이 없으면 멈춘다. 파일을 옮기고 표 줄을 남기면 configure 가 여기서 선다."""
-    list_stale = [key for key in map_tier if not (root_dir / key).exists()]
+def require_no_stale_keys(map_layer: dict[str, int], root_dir: Path, rule_name: str) -> None:
+    """[layer] 키가 가리키는 폴더 · 파일이 없으면 멈춘다. 파일을 옮기고 표 줄을 남기면 configure 가 여기서 선다."""
+    list_stale = [key for key in map_layer if not (root_dir / key).exists()]
     if list_stale:
-        raise GeneratorError(f"폴더 · 파일이 없는 층 표 줄: {', '.join(list_stale)} — {rule_name} 의 [tier] 에서 지우세요")
+        raise GeneratorError(f"폴더 · 파일이 없는 층 표 줄: {', '.join(list_stale)} — {rule_name} 의 [layer] 에서 지우세요")
 
 
-def read_tier_table(rule_file: Path) -> dict[str, int]:
+def read_layer_table(rule_file: Path) -> dict[str, int]:
     try:
-        return tomllib.loads(rule_file.read_text(encoding="utf-8"))["tier"]
+        return tomllib.loads(rule_file.read_text(encoding="utf-8"))["layer"]
     except (OSError, tomllib.TOMLDecodeError, KeyError) as exception:
-        raise GeneratorError(f"{rule_file.name}: 읽지 못했다 ({exception!r}) — [tier] 표가 있어야 한다") from exception
+        raise GeneratorError(f"{rule_file.name}: 읽지 못했다 ({exception!r}) — [layer] 표가 있어야 한다") from exception
 
 
-def generate_module_layers(module: str, output_path: Path) -> None:
+def generate_module_layer_guards(module: str, output_path: Path) -> None:
     table = find_layer_table(module)
     rule_file = table.get_rule_file()
-    map_tier = read_tier_table(rule_file)
+    map_layer = read_layer_table(rule_file)
     source_dir = get_project_root() / "Source"
     root_dir = source_dir / table._root_folder
     list_relative = [path.relative_to(root_dir).as_posix() for path in list_files_under(source_dir)   # 같은 프로세스의 다른 층 표 · TargetLayers 와 한 번 훑은 목록을 나눠 쓴다
                      if path.suffix in SOURCE_SUFFIX | HEADER_SUFFIX and path.is_relative_to(root_dir)]
     map_source: dict[int, list[str]] = {}
     map_header: dict[int, list[str]] = {}
-    for relative, tier in assign_tiers(map_tier, list_relative, rule_file.name, module).items():
+    for relative, layer in assign_layers(map_layer, list_relative, rule_file.name, module).items():
         if Path(relative).suffix in SOURCE_SUFFIX:
-            map_source.setdefault(tier, []).append(relative)
+            map_source.setdefault(layer, []).append(relative)
         else:
-            map_header.setdefault(tier, []).append(f"{table._root_folder}/{relative}")
-    require_no_stale_keys(map_tier, root_dir, rule_file.name)
+            map_header.setdefault(layer, []).append(f"{table._root_folder}/{relative}")
+    require_no_stale_keys(map_layer, root_dir, rule_file.name)
 
-    list_tier = sorted(set(map_tier.values()))
+    list_layer = sorted(set(map_layer.values()))
     header = f"""# ==============================================================================
-# AUTO-GENERATED by Scripts/generate/module_layers.py — do not edit.
+# AUTO-GENERATED by Scripts/generate/module_layer_guards.py — do not edit.
 #
-# 출처: Config/Rules/Layers/{rule_file.name} 의 [tier] 와 Source/{table._root_folder} 의 파일.
-# 쓰는 곳: {module} 의 CMakeLists — 층마다 부분을 짓고 위 층 헤더 자리에 #error 껍데기를 놓는다(sw_add_layer_stubs).
+# 출처: Config/Rules/Layers/{rule_file.name} 의 [layer] 와 Source/{table._root_folder} 의 파일.
+# 쓰는 곳: {module} 의 CMakeLists — 층마다 부분을 짓고 위 층 헤더 자리에 #error 가드를 놓는다(sw_add_layer_guards).
 #   {table._var_prefix}_<N>_SOURCES : 그 층의 .cpp · .c(Source/{table._root_folder} 기준)
 #   {table._var_prefix}_<N>_HEADERS : 그 층의 헤더(Source 기준 — include 줄과 같은 모양)
 # =============================================================================="""
-    list_line = [header, "", f'set({table._var_prefix}_LIST "{";".join(str(tier) for tier in list_tier)}")']
-    for tier in list_tier:
-        list_line.append(f'set({table._var_prefix}_{tier}_SOURCES "{";".join(map_source.get(tier, []))}")')
-        list_line.append(f'set({table._var_prefix}_{tier}_HEADERS "{";".join(map_header.get(tier, []))}")')
+    list_line = [header, "", f'set({table._var_prefix}_LIST "{";".join(str(layer) for layer in list_layer)}")']
+    for layer in list_layer:
+        list_line.append(f'set({table._var_prefix}_{layer}_SOURCES "{";".join(map_source.get(layer, []))}")')
+        list_line.append(f'set({table._var_prefix}_{layer}_HEADERS "{";".join(map_header.get(layer, []))}")')
     list_line.append("")
     file_count = sum(len(v) for v in map_source.values()) + sum(len(v) for v in map_header.values())
-    write_generated_file(output_path, "\n".join(list_line), tag=f"{module}Layers", summary=f"{file_count} files · {len(list_tier)} tiers")
+    write_generated_file(output_path, "\n".join(list_line), tag=f"{module}Layers", summary=f"{file_count} files · {len(list_layer)} layers")
 
 
-class ModuleLayersGenerator(CodeGenerator):
+class ModuleLayerGuardsGenerator(CodeGenerator):
     def generate(self, output_dir: Path, game_name: str) -> None:
         for table in LIST_LAYER_TABLE:
-            generate_module_layers(table._module, output_dir / f"{table._module}Layers.cmake")
+            generate_module_layer_guards(table._module, output_dir / f"{table._module}Layers.cmake")

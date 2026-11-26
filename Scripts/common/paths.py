@@ -79,7 +79,7 @@ def expand_path_template(template: str, extras: dict[str, str] | None = None) ->
 def list_files_under(root: Path) -> tuple[Path, ...]:
     """`root` 아래 모든 파일(경로 정렬 — `sorted(root.rglob("*"))` 의 파일과 같은 순서). 한 프로세스에서 폴더마다 한 번만 훑는다.
 
-    configure 생성기(`Scripts/generate/run_generators.py`)는 한 프로세스에서 층 표 둘 · 타깃 게이트 · 매니페스트가 같은 `Source/` 를
+    configure 생성기(`Scripts/generate/run_generators.py`)는 한 프로세스에서 층 표 둘 · 타깃 가드 · 매니페스트가 같은 `Source/` 를
     따로 rglob 하고 항목마다 `is_file()` 을 물어 같은 트리를 네 번 훑었다. 부분 폴더는 `Source/` 목록을 `is_relative_to` 로 거른다.
     프로세스 안에서 트리가 바뀌지 않는 짧은 도구 전용이다(오래 도는 프로세스는 쓰지 않는다).
     """

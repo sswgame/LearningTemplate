@@ -1,15 +1,15 @@
-# 에디터 층 표 — 읽는 곳은 Scripts/generate/editor_layers.py(→ EditorLayers.cmake). 예전 린트 게이트 CheckEditorLayers 를 빌드 형식이 대신한다:
-# Source/Editor/CMakeLists.txt 가 티어마다 부분을 짓고 위 층 헤더 자리에 #error 껍데기를 놓아, 위 층 헤더 include 가 컴파일에서 멈춘다.
+# 에디터 층 표 — 읽는 곳은 Scripts/generate/editor_layer_guards.py(→ EditorLayers.cmake). include 방향은 빌드 형식이 막는다:
+# Source/Editor/CMakeLists.txt 가 층마다 부분을 짓고 위 층 헤더 자리에 #error 가드를 놓아, 위 층 헤더 include 가 컴파일에서 멈춘다.
 
 # ------------------------------------------------------------------------------
-# Editor 층 — 숫자가 큰 쪽이 위다. 같은 티어의 다른 층끼리는 서로 include 해도 된다.
+# Editor 층 — 숫자가 큰 쪽이 위다. 같은 번호의 다른 층끼리는 서로 include 해도 된다.
 #
 # 층은 `Common/<하위 폴더>`(Common 바로 아래 파일은 `Common`), 그 밖의 최상위 폴더, 그리고 `Source/Editor` 바로 아래 파일(`<root>`)이다.
 # 틀(인터페이스 · 매니저 · 레지스트리)은 아래, 구체(패널 · 팝업 · 에셋 종류 동작)는 위다 — 언리얼에서 탭 매니저가 Slate 틀에 있고
 # 구체 탭을 모듈이 등록하는 것, 에셋 종류 동작 레지스트리(AssetTools)가 편집기들 아래에 있는 것과 같은 선이다.
 # 근거: 에디터 패널이 서로 include 하지 않게 층을 둔다(언리얼 에디터 모듈 분리와 같다).
 # ------------------------------------------------------------------------------
-[tier]
+[layer]
 # 토대 — 경로 · 내보내기 매크로 · 유틸리티 · 설정 표 · ImGui 플랫폼/렌더 백엔드.
 Common = 0
 "Common/Backend" = 0
@@ -25,7 +25,7 @@ Common = 0
 "Common/Commands" = 3
 # 패널 · 팝업 틀과 매니저(셸이 띄우는 커맨드 팔레트 · 빠른 열기 팝업은 `Popup/` — 패널 · 뷰포트를 모른다), 도킹 · 메뉴 · 알림 그리기 · 테마, 공용 위젯.
 "Common/GUI" = 4
-# 에디터 입력 어댑터 — 엔진 입력 맵(editor.input.xml)의 소유 · 포커스 레이어, 맥락 메뉴 · 끌어 놓기. 패널 티어의 ImGui 입력 함수 금지(EditorInputBan.h)를 받지 않는 자리다.
+# 에디터 입력 어댑터 — 엔진 입력 맵(editor.input.xml)의 소유 · 포커스 레이어, 맥락 메뉴 · 끌어 놓기. 패널 층의 ImGui 입력 함수 금지(EditorImGuiInputGuard.h)를 받지 않는 자리다.
 "Common/Input" = 4
 "Common/Widgets" = 4
 # 뷰포트 클라이언트 · 시각화.
@@ -38,7 +38,7 @@ SelfTest = 7
 # 셸(ImGuiEditor) — 모듈 진입점.
 "<root>" = 8
 
-# 어느 층에서 include 해도 되는 잎 헤더(위 층을 include 하지 않는다) → 이유. 위 층 껍데기를 놓지 않는다.
+# 어느 층에서 include 해도 되는 잎 헤더(위 층을 include 하지 않는다) → 이유. 위 층 가드를 놓지 않는다.
 [prelude]
 "Editor/Common/Workspace/EditorSubsystems.h" = "호스트(엔진) 서브시스템 창구와 활성 씬 바로가기 — Core · ModuleAPI 만 include 하는 잎 헤더라 어느 층에서나 쓴다"
 "Editor/Common/Workspace/Notification/EditorNotificationManager.h" = "토스트 알림 목록 — Core · EditorSubsystem · 알림 값만 include 하는 잎 헤더라 UI 없는 도구 층의 쓰기 문(AssetWriter)이 저장 거절을 알린다"
@@ -50,11 +50,11 @@ SelfTest = 7
 "Editor/SelfTest/EditorSelfTestInput.h" = "입력 흉내 표식(EditorSelfTestMarks::note) — 위젯이 그린 자리를 남기는 잎 헤더(Core 만 include)"
 
 # MVVM View(`views` 의 층 · 폴더 · 파일 가운데 `Model` 폴더 밖 파일)가 include 하지 못하는 모델 · 씬 헤더(Source 기준 경로의 정규식). docs/agents/EditorUI.md 'MVVM' 절.
-# Source/Editor/CMakeLists.txt 가 티어마다 View 를 따로 짓는 부분(`EditorTier<N>MVVMView`)에 이 헤더마다 `#error` 껍데기를 놓는다 — 전이 include 도 멈춘다.
+# Source/Editor/CMakeLists.txt 가 층마다 View 를 따로 짓는 부분(`EditorLayer<N>MVVMView`)에 이 헤더마다 `#error` 가드를 놓는다 — 전이 include 도 멈춘다.
 # `views` 는 Source/Editor 기준 경로다(층 이름 · 하위 폴더 · 파일). 옮긴 파일만 더한다.
-# 확장 모듈의 View 는 `sw_add_editor_extension` 의 PANEL_VIEW_SOURCES 로 같은 껍데기를 받는다.
-# 언리얼은 Slate 위젯이 모델을 보지만(규칙 없음), 유니티 UI Toolkit 의 바인딩처럼 View 는 ViewModel 값만 본다 — 형식(껍데기)으로 막는다.
-[panelViewBan]
+# 확장 모듈의 View 는 `sw_add_editor_extension` 의 PANEL_VIEW_SOURCES 로 같은 가드를 받는다.
+# 언리얼은 Slate 위젯이 모델을 보지만(규칙 없음), 유니티 UI Toolkit 의 바인딩처럼 View 는 ViewModel 값만 본다 — 형식(가드)으로 막는다.
+[panelViewGuard]
 views = [
     "Panels",
     "AssetTypeActions",
@@ -102,13 +102,13 @@ patterns = [
 ]
 # 기본 금지 폴더 — 여기 맞는 헤더는 `[panelViewAllowedFolders]` 의 폴더 접두나 `[panelViewAllowed]` 에 없으면 View 가 include 하지 못한다(차단 목록이 아니라 허용 목록 — 검토 A 1 · B 대안 ③④).
 # 새 엔진 · 개발 도구 · 게임 프레임워크 폴더는 이 표에 오르기 전까지 View 에서 막힌다. `patterns` 는 폴더 허용보다 앞선다(허용 폴더 안의 서비스 헤더를 막는다).
-defaultBan = [
+defaultGuard = [
     "^Engine/",
     "^DevTools/",
     "^GameFramework/",
 ]
 
-# 금지 폴더 안에 있지만 값 · 창구라 View 가 써도 되는 헤더 → 까닭. 껍데기를 놓지 않는다(그 헤더가 include 하는 금지 헤더는 껍데기가 멈춘다).
+# 금지 폴더 안에 있지만 값 · 창구라 View 가 써도 되는 헤더 → 까닭. 가드를 놓지 않는다(그 헤더가 include 하는 금지 헤더는 가드가 멈춘다).
 [panelViewAllowed]
 "GameFramework/GameFrameworkExports.h" = "내보내기 매크로"
 "Engine/EngineMinimal.h" = "엔진 최소 머리(형식 · 매크로)"
@@ -145,7 +145,7 @@ defaultBan = [
 "Editor/Common/Commands/Asset/EditorAssetMove.h" = "에셋 옮기기 · 옮기기 계획 값(EditorAssetFileCommands 에서 떼어 낸 값) — Core 만 include 한다. 콘텐츠 브라우저 확인 대화상자가 계획을 그린다"
 "Engine/Object/Component/TagSystem.h" = "태그 집합 값(TagContainer)과 질의 — Core 와 리플렉션 매크로만 include 한다. 외형 데이터 값(CharacterAppearance · ItemVisual · 장비 조건)이 들어 캐릭터 편집 창 모델 헤더를 거쳐 온다"
 
-# 기본 금지 폴더(`[panelViewBan] defaultBan`) 안에서 View 가 include 해도 되는 폴더(접두, `/` 로 끝난다) → 까닭. 값 · 정의 헤더의 폴더다 — 서비스 헤더는 `patterns` 가 따로 막는다.
+# 기본 금지 폴더(`[panelViewGuard] defaultGuard`) 안에서 View 가 include 해도 되는 폴더(접두, `/` 로 끝난다) → 까닭. 값 · 정의 헤더의 폴더다 — 서비스 헤더는 `patterns` 가 따로 막는다.
 # 줄을 더하기 전에 그 폴더의 서비스 · 매니저 헤더를 `patterns` 에 올린다.
 [panelViewAllowedFolders]
 "DevTools/AssetReload/" = "리로드 결과 집계 값(HotReloadTracker 의 상태 열거)을 감시 값 · 표가 읽는다"

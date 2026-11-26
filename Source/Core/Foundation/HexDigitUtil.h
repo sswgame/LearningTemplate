@@ -1,7 +1,7 @@
 /**
  * @file HexDigitUtil.h
- * @brief 16진수 글자와 값 사이의 변환입니다 — 할당 · 로그 없는 기본형이라 크래시 경로와 낮은 티어도 씁니다.
- * @note `string` 을 돌려주는 편의 함수는 `StringUtil`(티어 3)에 있습니다.
+ * @brief 16진수 글자와 값 사이의 변환입니다 — 할당 · 로그 없는 기본형이라 크래시 경로와 낮은 층도 씁니다.
+ * @note `string` 을 돌려주는 편의 함수는 `StringUtil`(층 3)에 있습니다.
  */
 #pragma once
 #include "Core/Foundation/Types.h"
@@ -82,7 +82,7 @@ namespace sw
 
         /**
          * @brief 글자 두 개마다 바이트 하나로 읽어 @p pOut 에 @p byteCount 바이트를 씁니다. 글자 수가 `byteCount * 2` 가 아니거나 16진수가 아닌 글자가 있으면 false 이고, 뒤쪽에서 실패하면 앞 바이트는 이미 써 있습니다(성공한 때만 읽습니다).
-         * @note 티어 0 이라 `span`(Container)을 받지 못해 포인터와 개수를 받습니다.
+         * @note 층 0 이라 `span`(Container)을 받지 못해 포인터와 개수를 받습니다.
          */
         [[nodiscard]] static bool tryParseBytes( string_view text, uint8* pOut, uint32 byteCount ) noexcept
         {

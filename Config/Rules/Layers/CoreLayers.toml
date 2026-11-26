@@ -1,11 +1,11 @@
-# Core 폴더 티어 표 — `Source/Core/CMakeLists.txt` 가 읽어 티어마다 OBJECT 부분(`Core_tier<N>_objects`)을 짓고, 부분 N 의 include 자리 맨 앞에 N 보다 위 티어
-# 헤더의 `#error` 껍데기를 둔다(Engine 층 부분과 같은 틀). 하위 폴더 티어 `[subtier]` 도 같이 읽는다 — 파일의 티어는 가장 긴 키가 정한다.
+# Core 폴더 층 표 — `Source/Core/CMakeLists.txt` 가 읽어 층마다 OBJECT 부분(`Core_layer<N>_objects`)을 짓고, 부분 N 의 include 자리 맨 앞에 N 보다 위 층
+# 헤더의 `#error` 가드를 둔다(Engine 층 부분과 같은 틀). 하위 폴더 층 `[sublayer]` 도 같이 읽는다 — 파일의 층은 가장 긴 키가 정한다.
 
-# 폴더 → 티어. 숫자가 큰 쪽이 위다.
-# 새 폴더는 티어를 정해 여기에 넣는다(표에 없는 폴더는 구성이 선다).
-# 부분마다 pch 는 `CoreMinimal.h` 의 include 가운데 그 티어 이하만 담는다 — `Log` 보다 낮은 티어 코드는 `Logger.h` 없이 컴파일된다.
+# 폴더 → 층. 숫자가 큰 쪽이 위다.
+# 새 폴더는 층을 정해 여기에 넣는다(표에 없는 폴더는 구성이 선다).
+# 부분마다 pch 는 `CoreMinimal.h` 의 include 가운데 그 층 이하만 담는다 — `Log` 보다 낮은 층 코드는 `Logger.h` 없이 컴파일된다.
 # CMake 가 줄 단위로 읽으니 줄 모양(`폴더 = 숫자` · `"폴더/하위" = 숫자`)을 바꾸지 않는다.
-[tier]
+[layer]
 Foundation = 0     # 언어 · 플랫폼 바닥(형식 · 매크로 · 정의 · OS 헤더 · enum 플래그 · ASCII · 16진 글자)
 Hash = 0           # 해시 · 씨앗 상수와 비밀 비교(언리얼 Core/Hash) — 컨테이너가 기본 해시로 쓴다
 Predefined = 0      # 인자 · 이름 표(.xxx) — 아무것도 include 하지 않는다
@@ -36,10 +36,10 @@ Module = 9
 Diagnostics = 10    # 호출 스택 · 크래시 보고 · 메모리 프로파일러 · 교착 검출기 · 경합 보고기
 Event = 10
 TestFramework = 10  # 엔진 안 단위 테스트 틀(등록 · 단언 · 실행기) — 파일 · 로그 · 프로세스를 쓴다. 배포 구성은 짓지 않는다
-Network = 12        # 맨 위 — 다른 Core 폴더는 Network 를 include 하지 못한다(티어 껍데기가 컴파일을 멈춘다). 진단(흐름 기록 여부)을 읽는 쪽이 네트워크다. 다음 단계는 별도 타깃
+Network = 12        # 맨 위 — 다른 Core 폴더는 Network 를 include 하지 못한다(층 가드가 컴파일을 멈춘다). 진단(흐름 기록 여부)을 읽는 쪽이 네트워크다. 다음 단계는 별도 타깃
 
-# 하위 폴더 티어 — 바깥 폴더와 다른 티어에 서는 하위 폴더. 키는 `/` 가 들어 있어 따옴표로 감싼다(TOML).
-[subtier]
+# 하위 폴더 층 — 바깥 폴더와 다른 층에 서는 하위 폴더. 키는 `/` 가 들어 있어 따옴표로 감싼다(TOML).
+[sublayer]
 "Concurrency/Queue" = 3   # 스레드 사이에서 나눠 쓰는 자료 구조(ConcurrentQueue · WorkStealingDeque · SpscQueue · LockedSwapQueue · SharedVectorPool) — vector 를 써서 Container 위
 "Log/Backend" = 11        # 기본 로그 백엔드 AsyncLogBackend(포맷 · 리스너 · 비동기 큐) — 파일 · 프로세스 · 진단을 써서 맨 위(포트는 아래, 구현은 위)
 "Log/Output" = 11         # 출력 장치(ILogOutput 과 콘솔 · 파일 · JSON lines 구현, 언리얼 FOutputDevice) — 파일 · 프로세스를 써서 맨 위

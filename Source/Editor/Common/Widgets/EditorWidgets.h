@@ -29,7 +29,7 @@ namespace sw::editor
      * @details 에디터 입력 위젯(`EditorWidgets::inputInt` · `dragFloat` · `sliderFloat` · `combo` …)이 받는 숨은 id 다 — 보이는 이름표를 담을 수 없다.
      *          ImGui 는 이름표를 칸 오른쪽에 붙여 좁은 칸에서 잘렸다(uiaudit). 이름표는 앞(왼쪽)에 따로 그린다 — 행이면 `drawPropertyRowLabel`, 도구줄이면 `drawInlineLabel`.
      *          린트는 리터럴만 볼 수 있어 실행 중 만든 이름표를 놓쳐서 형식이 가른다. 리터럴은 `SW_WIDGET_ID` 가 컴파일 때 보고(C++17 이라 consteval 이 없다), 실행 중 만든 id 는
-     *          이름 붙은 입구 `fromString` 만 받는다. 에디터 코드는 ImGui 입력 위젯을 직접 부르지 못한다(`EditorInputBan.h`). 언리얼 Slate 도 칸과 이름표가 서로 다른 위젯이다.
+     *          이름 붙은 입구 `fromString` 만 받는다. 에디터 코드는 ImGui 입력 위젯을 직접 부르지 못한다(`EditorImGuiInputGuard.h`). 언리얼 Slate 도 칸과 이름표가 서로 다른 위젯이다.
      *          클래스는 내보내지 않고 실행 중 입구만 내보낸다.
      */
     class EditorWidgetID
@@ -249,7 +249,7 @@ namespace sw::editor
         [[nodiscard]] static bool beginCombo( const utf8* pLabel, const utf8* pPreview, int32 flags = 0 );
 
         // ------------------------------------------------------------------------------
-        // ImGui 입력 위젯 — 에디터가 부르는 유일한 길이다(`EditorInputBan.h` 가 ImGui 의 것을 막는다). id 는 숨은 id 형식이라 이름표를 오른쪽에 둘 수 없다.
+        // ImGui 입력 위젯 — 에디터가 부르는 유일한 길이다(`EditorImGuiInputGuard.h` 가 ImGui 의 것을 막는다). id 는 숨은 id 형식이라 이름표를 오른쪽에 둘 수 없다.
         // 이름표는 앞에 따로 그린다(`drawPropertyRowLabel` · `drawInlineLabel`). 인자 · 기본값은 ImGui 1.92 의 같은 이름 함수와 같다(플래그는 `ImGui*Flags_` 값).
         // ------------------------------------------------------------------------------
         static constexpr int32 kImGuiDefaultPopupHeight = -1;  ///< 콤보가 펼치는 높이 — ImGui 기본(항목 8 개)

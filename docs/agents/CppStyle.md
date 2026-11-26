@@ -35,7 +35,7 @@ C++ 를 쓸 때의 규칙. 린트 · 컴파일이 강제하는 줄은 "강제" �
 - A name-keyed registry does not check empty or duplicate names with its own `if`: `RegistrationList` (`bRequireName`), `NamedEntryRegistry<T>` (named static entries found across modules) or `NameRegistry`, and the caller reports `add`. Duplicate ids of one kind in XML are errors.
 - Subscriptions go through `RegistrationList::addSubscribed`, `ItemSubscriptionList<T>` or a `MulticastDelegate`; never turn an id back into an address.
 - 델리게이트는 `SW_DELEGATE_FUNCTION` · `SW_DELEGATE_METHOD` · `SW_DELEGATE_LAMBDA` 로 붙인다(린트 `cpp-style` 강제). 꺾쇠 안 쉼표가 있으면 `SW_DECLARE_DELEGATE` 별칭.
-- Cannot go on: `reportFatalError( "...%#", value )` (below the log tier `SW_LOW_LEVEL_FATAL`), never `std::abort()`.
+- Cannot go on: `reportFatalError( "...%#", value )` (below the log layer `SW_LOW_LEVEL_FATAL`), never `std::abort()`.
 - Never discard a graphics device result: `isVkSuccess` / `isHrSuccess`, `requireVk` / `requireHr`, or `FAILED()` with a comment (SDK types cannot be `[[nodiscard]]` — review keeps this).
 
 ## Constants
@@ -97,7 +97,7 @@ C++ 를 쓸 때의 규칙. 린트 · 컴파일이 강제하는 줄은 "강제" �
 - Headers prefer forward declarations (`ObjectFwd.h` · `ReflectionFwd.h`), never include ThirdParty headers. Exception: a backend folder's own headers (`Physics/Jolt`, `Graphics/RHI/<backend>`) that only that folder includes may include its SDK, like Unreal's module `Private/` headers; pimpl there only adds an indirection. Diet headers have a fan-in ceiling (린트 `header-include-limits` 강제); a diet commit adds the ceiling.
 - `.cpp` include order (clang-format 강제). Includes are full paths from a root or bare same-folder names.
 - Prefer `StdHeaders.h` · `PlatformOSHeaders.h`; heavy rarely-used standard headers are included by their user. Platform includes go in **one** `#if SW_PLATFORM_…` chain after the others.
-- **Layers:** a lower layer never includes an upper one (`#error` 껍데기 · 린트 `layer-includes` 강제). Fix the dependency, not the table; reach up through an interface or function pointer. Below `Log` report with `SW_LOW_LEVEL_*`.
+- **Layers:** a lower layer never includes an upper one (`#error` 가드 · 린트 `layer-includes` 강제). Fix the dependency, not the table; reach up through an interface or function pointer. Below `Log` report with `SW_LOW_LEVEL_*`.
 - A kit, editor extension or game sees other modules only through its manifest `_listDependency` closure; kit dependencies live only in `*.module.json`.
 - **Dedicated server** sees no `Engine/Renderer` · `UI` · `Audio` and no `Client/` folder: shared code reaches client work through interfaces (`IEngineRenderDriver`, `ISoundPlayer`, `IGameClientPart` …). The client builds no `Server/` folder; an in-process server starts through `IOnlineLocalServerFactory`.
 - **Game code** sees no `Engine/Graphics/RHI` · `Shader` header except `RHIEnums.h`; a game-visible GPU constant is its own constant with a `static_assert` in its `.cpp`.

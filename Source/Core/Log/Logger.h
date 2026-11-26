@@ -331,7 +331,7 @@ namespace sw
     /**
      * @brief 이어 갈 수 없는 결함을 한 줄로 남기고 모든 구성에서 멈춥니다(언리얼 `UE_LOG(Fatal)` · LLVM `report_fatal_error` 자리).
      * @details 서식은 `SW_LOG_*` 와 같은 `formatstring`(`%#`)입니다. 줄은 stderr 에 먼저 동기로 쓰이고 로그로도 가며, 비동기 백엔드를 비운 뒤
-     *          `std::abort` 합니다(`sw::internal::reportFatal`). 로그 수준 필터 · 컴파일 제외를 타지 않습니다. 로그보다 아래 티어는 `SW_LOW_LEVEL_FATAL`.
+     *          `std::abort` 합니다(`sw::internal::reportFatal`). 로그 수준 필터 · 컴파일 제외를 타지 않습니다. 로그보다 아래 층은 `SW_LOW_LEVEL_FATAL`.
      *          버퍼를 부르는 쪽 프레임에 두지 않게 줄 밖에 둔다(`writeFormattedLog` 와 같은 까닭).
      */
     template <typename... Args>

@@ -33,17 +33,17 @@ class MakeUnitsTest(unittest.TestCase):
             write(main_root / "Source/Core/Gone.cpp")   # 이 트리가 지운 파일
             unity = write(main_root / "build/X/Unity/unity_0_cxx.cxx",
                           "".join(f'#include "{(main_root / "Source/Core" / name).as_posix()}"\n' for name in ("A.cpp", "B.cpp", "Gone.cpp")))
-            database = [{"directory": temporary, "file": unity.as_posix(), "command": f"cl -DUNITY -I{main_root}\\Source -I{main_root}\\build\\gates\\core /Foa.obj -c -- {unity}"},
+            database = [{"directory": temporary, "file": unity.as_posix(), "command": f"cl -DUNITY -I{main_root}\\Source -I{main_root}\\build\\guards\\core /Foa.obj -c -- {unity}"},
                         {"directory": temporary, "file": (main_root / "Source/Core/A.cpp").as_posix(), "command": "cl -DALONE -c -- A.cpp"}]
             units = make_units(database, main_root, tree_root)
             self.assertEqual(sorted(units), ["source/core/a.cpp", "source/core/b.cpp"])
             self.assertEqual(units["source/core/a.cpp"].arguments, "cl -DALONE")   # 따로 짓는 항목이 앞선다
-            self.assertEqual(units["source/core/b.cpp"].arguments, f"cl -DUNITY -I{tree_root}\\Source")   # 이 트리의 경로, 문지기 · 산출물 없음
+            self.assertEqual(units["source/core/b.cpp"].arguments, f"cl -DUNITY -I{tree_root}\\Source")   # 이 트리의 경로, 가드 · 산출물 없음
             self.assertEqual(units["source/core/b.cpp"].file, tree_root / "Source/Core/B.cpp")
 
-    def test_module_stubs_stay_in_the_main_tree(self) -> None:
-        self.assertIn("gates", strip_arguments(r"cl -ID:\x\build\gates\m /Fo1.obj -c -- a.cpp", keep_module_stubs=True))
-        self.assertNotIn("gates", strip_arguments(r"cl -ID:\x\build\gates\m /Fo1.obj -c -- a.cpp", keep_module_stubs=False))
+    def test_module_guards_stay_in_the_main_tree(self) -> None:
+        self.assertIn("guards", strip_arguments(r"cl -ID:\x\build\guards\m /Fo1.obj -c -- a.cpp", keep_module_guards=True))
+        self.assertNotIn("guards", strip_arguments(r"cl -ID:\x\build\guards\m /Fo1.obj -c -- a.cpp", keep_module_guards=False))
 
 
 class SelectUnitsTest(unittest.TestCase):

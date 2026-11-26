@@ -99,7 +99,7 @@ namespace sw::editor
     {
         const ImGuiViewport* pMainViewport = ImGui::GetMainViewport();
         const bool           bDetached     = ImGui::GetWindowViewport() != pMainViewport;
-        // 포인터 상태는 어댑터 한 곳에서 읽는다(패널 티어는 ImGui 입력 함수를 부르지 않는다 — EditorInputBan.h).
+        // 포인터 상태는 어댑터 한 곳에서 읽는다(패널 층은 ImGui 입력 함수를 부르지 않는다 — EditorImGuiInputGuard.h).
         _model.forwardDetachedPointer( bDetached, ImGui::IsWindowHovered( ImGuiHoveredFlags_RootAndChildWindows ), EditorInputGUI::readPointer(),
                                        float2{ pMainViewport->Pos.x, pMainViewport->Pos.y } );
         const bool            bForwardKeys = bDetached && ImGui::IsWindowFocused( ImGuiFocusedFlags_RootAndChildWindows );

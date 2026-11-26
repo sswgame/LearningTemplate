@@ -1,13 +1,13 @@
 """
 Scripts/lint/rules/layer_cycles.py
 
-엔진 층 표(`Config/Rules/Layers/EngineLayers.toml` 의 `[tier]`)에서 같은 층 의 두 폴더(표의 키)가 서로 include 하는지 본다.
+엔진 층 표(`Config/Rules/Layers/EngineLayers.toml` 의 `[layer]`)에서 같은 층 의 두 폴더(표의 키)가 서로 include 하는지 본다.
 
-왜 린트인가. 위 층 include 는 빌드가 막는다(층마다 부분을 짓고 위 층 헤더 자리에 `#error` 껍데기). 같은 층은 한 부분이라 껍데기가 없다 —
+왜 린트인가. 위 층 include 는 빌드가 막는다(층마다 부분을 짓고 위 층 헤더 자리에 `#error` 가드). 같은 층은 한 부분이라 가드가 없다 —
 폴더마다 부분을 나누면 층이 수십 개가 되고 층 번호가 폴더 순서를 흉내 낼 뿐이다. 그래서 같은 층 안에서는 한 방향 include 는 두고,
 두 방향(순환) 만 여기서 막는다. 순환이 보이면 한쪽을 위 층으로 올리거나(층 표), 형식 · 창구를 아래로 내려 방향을 하나로 만든다.
 
-아직 순환이 남은 층은 표의 `[sameTierCycle]`("층 번호" = "까닭")에 적는다 — 적지 않은 층은 모두 검사한다(새 층의 기본은 검사).
+아직 순환이 남은 층은 표의 `[sameLayerCycle]`("층 번호" = "까닭")에 적는다 — 적지 않은 층은 모두 검사한다(새 층의 기본은 검사).
 키 · 층 찾기는 생성기(`Scripts/generate/` 의 층 생성기)와 같은 규칙이다: `Source/Engine/` 아래 경로 접두어, 가장 긴 것이 이긴다.
 
   py -3 -m Scripts lint layer-cycles [--self-check]
@@ -29,10 +29,10 @@ EXTENSIONS = (".h", ".hpp", ".inl", ".cpp", ".c", ".xxx")
 ROOT_LAYER_NAME = "<root>"   # 에디터 표: `Source/Editor` 바로 아래 파일
 
 
-def find_key(map_tier: dict[str, int], relative: str) -> str | None:
+def find_key(map_layer: dict[str, int], relative: str) -> str | None:
     """`relative` 를 덮는 가장 긴 키(폴더 또는 파일). 없으면 None."""
     best: str | None = None
-    for key in map_tier:
+    for key in map_layer:
         if (relative == key or relative.startswith(key + "/")) and (best is None or len(key) > len(best)):
             best = key
     return best
@@ -43,26 +43,26 @@ def find_includes(module: str, text: str) -> list[str]:
     return re.findall(r'^\s*#\s*include\s*"' + re.escape(module) + r'/([^"]+)"', text, re.M)
 
 
-def count_include_pairs(map_tier: dict[str, int], map_include: dict[str, list[str]]) -> Counter[tuple[str, str]]:
+def count_include_pairs(map_layer: dict[str, int], map_include: dict[str, list[str]]) -> Counter[tuple[str, str]]:
     """같은 층의 다른 키 사이 include 수 — (include 하는 키, include 되는 키). `map_include` 는 모듈 기준 경로 → include 목록."""
     counter: Counter[tuple[str, str]] = Counter()
     for relative, list_include in map_include.items():
-        source = find_key(map_tier, relative) or (ROOT_LAYER_NAME if "/" not in relative and ROOT_LAYER_NAME in map_tier else None)
+        source = find_key(map_layer, relative) or (ROOT_LAYER_NAME if "/" not in relative and ROOT_LAYER_NAME in map_layer else None)
         if source is None:
             continue
         for include in list_include:
-            target = find_key(map_tier, include)
-            if target is not None and target != source and map_tier[target] == map_tier[source]:
+            target = find_key(map_layer, include)
+            if target is not None and target != source and map_layer[target] == map_layer[source]:
                 counter[(source, target)] += 1
     return counter
 
 
-def find_cycles(map_tier: dict[str, int], counter: Counter[tuple[str, str]], set_allowed_tier: set[int]) -> list[str]:
+def find_cycles(map_layer: dict[str, int], counter: Counter[tuple[str, str]], set_allowed_layer: set[int]) -> list[str]:
     list_problem: list[str] = []
     for (source, target), count in sorted(counter.items()):
         back = counter.get((target, source), 0)
-        if back and source < target and map_tier[source] not in set_allowed_tier:
-            list_problem.append(f"층 {map_tier[source]}: {source} ↔ {target} ({count}/{back}) — 같은 층 폴더가 서로 include 한다. 한쪽을 위 층으로 올리거나 창구를 아래로 내려 방향을 하나로")
+        if back and source < target and map_layer[source] not in set_allowed_layer:
+            list_problem.append(f"층 {map_layer[source]}: {source} ↔ {target} ({count}/{back}) — 같은 층 폴더가 서로 include 한다. 한쪽을 위 층으로 올리거나 창구를 아래로 내려 방향을 하나로")
     return list_problem
 
 
@@ -70,17 +70,17 @@ def read_table(project_root: Path, module: str) -> dict:
     return tomllib.loads((project_root / "Config" / "Rules" / "Layers" / f"{module}Layers.toml").read_text(encoding="utf-8"))
 
 
-def count_pairs(map_tier: dict[str, int], module: str, list_source: Iterable[tuple[str, str]]) -> Counter[tuple[str, str]]:
-    return count_include_pairs(map_tier, {relative: find_includes(module, text) for relative, text in list_source})
+def count_pairs(map_layer: dict[str, int], module: str, list_source: Iterable[tuple[str, str]]) -> Counter[tuple[str, str]]:
+    return count_include_pairs(map_layer, {relative: find_includes(module, text) for relative, text in list_source})
 
 
-def read_pairs(project_root: Path, module: str, map_tier: dict[str, int]) -> Counter[tuple[str, str]]:
+def read_pairs(project_root: Path, module: str, map_layer: dict[str, int]) -> Counter[tuple[str, str]]:
     """같은 층 키 사이 include 수(`count_include_pairs`) — 파일마다의 include 는 색인(`index_cache`)에 두고, 판정은 파일마다 접은 쌍의 수(요약)만 읽는다."""
     head = f"Source/{module}/"
     list_path = [path for path in list_repo_files(project_root) if path.startswith(head) and path.endswith(EXTENSIONS)]
     facts = open_facts(project_root, f"layer-cycles-{module}", [__file__, str(project_root / "Config" / "Rules" / "Layers" / f"{module}Layers.toml")], list_path,
                       lambda _, text: find_includes(module, text), errors="replace",
-                      contribute=lambda path, list_include: [f"{source}\t{target}" for (source, target), count in count_include_pairs(map_tier, {path[len(head):]: list_include}).items()
+                      contribute=lambda path, list_include: [f"{source}\t{target}" for (source, target), count in count_include_pairs(map_layer, {path[len(head):]: list_include}).items()
                                                             for _ in range(count)])
     return Counter({tuple(token.split("\t")): count for token, count in facts.summary.items()})
 
@@ -89,8 +89,8 @@ class LayerCyclesRule(LintRule):
     id = "layer-cycles"
     group = "경계"
     blocks = "같은 엔진 층의 폴더끼리 서로 include(층 안 순환)"
-    why_not_type = "같은 층은 한 부분이라 #error 껍데기가 없다 — 폴더마다 부분을 나누면 층 번호가 폴더 순서를 흉내 낼 뿐이다"
-    exceptions = "Config/Rules/Layers/EngineLayers.toml [sameTierCycle]"
+    why_not_type = "같은 층은 한 부분이라 #error 가드가 없다 — 폴더마다 부분을 나누면 층 번호가 폴더 순서를 흉내 낼 뿐이다"
+    exceptions = "Config/Rules/Layers/EngineLayers.toml [sameLayerCycle]"
     inputs = ("Config/Rules/Layers/",)
 
     def evaluate(self, scope: LintScope, found: Mapping[str, object]) -> list[str]:
@@ -98,16 +98,16 @@ class LayerCyclesRule(LintRule):
         if not scope.whole_repo and not scope.touches(("Source/Engine",), EXTENSIONS):
             return []
         table = read_table(self.root, "Engine")
-        map_tier: dict[str, int] = table["tier"]
-        set_allowed_tier = {int(tier) for tier in table.get("sameTierCycle", {})}
-        return find_cycles(map_tier, read_pairs(self.root, "Engine", map_tier), set_allowed_tier)
+        map_layer: dict[str, int] = table["layer"]
+        set_allowed_layer = {int(layer) for layer in table.get("sameLayerCycle", {})}
+        return find_cycles(map_layer, read_pairs(self.root, "Engine", map_layer), set_allowed_layer)
 
     def self_check(self) -> None:
-        map_tier = {"A": 6, "B": 6, "C": 7, "A/Low": 5}
+        map_layer = {"A": 6, "B": 6, "C": 7, "A/Low": 5}
         list_source = [("A/x.cpp", '#include "Engine/B/y.h"\n'), ("B/y.cpp", '#include "Engine/A/x.h"\n'),
                       ("C/z.cpp", '#include "Engine/A/x.h"\n'), ("A/Low/w.cpp", '#include "Engine/B/y.h"\n')]
-        counter = count_pairs(map_tier, "Engine", list_source)
+        counter = count_pairs(map_layer, "Engine", list_source)
         assert counter == Counter({("A", "B"): 1, ("B", "A"): 1}), "다른 층 · 더 긴 키(A/Low)는 세지 않는다"
-        assert len(find_cycles(map_tier, counter, set())) == 1, "A ↔ B 는 하나로 낸다"
-        assert find_cycles(map_tier, counter, {6}) == [], "적은 층은 두고 본다"
-        assert find_cycles(map_tier, count_pairs(map_tier, "Engine", list_source[:1]), set()) == [], "한 방향은 통과한다"
+        assert len(find_cycles(map_layer, counter, set())) == 1, "A ↔ B 는 하나로 낸다"
+        assert find_cycles(map_layer, counter, {6}) == [], "적은 층은 두고 본다"
+        assert find_cycles(map_layer, count_pairs(map_layer, "Engine", list_source[:1]), set()) == [], "한 방향은 통과한다"

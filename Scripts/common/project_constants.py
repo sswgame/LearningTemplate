@@ -150,7 +150,7 @@ KEY_VCPKG_AUTO_BOOTSTRAP = "vcpkg_auto_bootstrap"
 ENV_SW_LLVM_AUTO_BOOTSTRAP = "SW_LLVM_AUTO_BOOTSTRAP"
 ENV_SW_VCPKG_AUTO_BOOTSTRAP = "SW_VCPKG_AUTO_BOOTSTRAP"
 
-#: 전용 서버가 짓지 않는 엔진 폴더(`Source/Engine/` 기준) — CMake 의 `SW_EXCLUDED_ENGINE_FOLDERS`(OutputLayout.cmake)와 서버 게이트(`target_layers.py`)가 함께 읽는 정본이다.
+#: 전용 서버가 짓지 않는 엔진 폴더(`Source/Engine/` 기준) — CMake 의 `SW_EXCLUDED_ENGINE_FOLDERS`(OutputLayout.cmake)와 서버 가드(`target_guards.py`)가 함께 읽는 정본이다.
 SERVER_EXCLUDED_ENGINE_FOLDERS: tuple[str, ...] = ("Audio", "Renderer", "UI", "Window/Linux", "Input/Linux")
 
 # =============================================================================

@@ -1,5 +1,5 @@
-# GameFramework 런타임 층 표 — 읽는 곳은 Scripts/generate/module_layers.py(→ GameFrameworkLayers.cmake). 엔진 층 표(EngineLayers.toml)와 같은 틀이다:
-# Source/GameFramework/CMakeLists.txt 가 층마다 부분(OBJECT, 오브젝트는 GameFramework 이미지 안)을 짓고 위 층 헤더 자리에 #error 껍데기를 놓아,
+# GameFramework 런타임 층 표 — 읽는 곳은 Scripts/generate/module_layer_guards.py(→ GameFrameworkLayers.cmake). 엔진 층 표(EngineLayers.toml)와 같은 틀이다:
+# Source/GameFramework/CMakeLists.txt 가 층마다 부분(OBJECT, 오브젝트는 GameFramework 이미지 안)을 짓고 위 층 헤더 자리에 #error 가드를 놓아,
 # 위 층 헤더 include 가 컴파일에서 멈춘다(헤더를 거쳐 닿는 전이 include 도 같다).
 # 범위는 Source/GameFramework/Runtime 뿐이다 — Client · Kits · Plugin(그리고 서버 조립)은 Runtime 위라 이 표가 다루지 않는다(Kits 경계는 TargetLayers.toml).
 #
@@ -7,7 +7,7 @@
 # 표에 없는 파일이 있으면 configure 가 멈춘다 — 새 폴더는 층을 정하고 들어온다.
 # 층 순서는 include 집계로 정했다: Online 은 Foundation 만 보고(언리얼 OnlineSubsystem 이 게임 코드를 모르는 자리), Gameplay 가 맨 위다
 # (언리얼 GameplayTags 가 바닥, GameplayAbilities 가 그 위인 방향 — 조건 · 깃발 어휘는 Foundation/Condition 에 둔다).
-[tier]
+[layer]
 # 0 — 바닥: 게임 서비스 · 저장 · 게임 데이터 · 격자 · 난수 · 조건 · 깃발 어휘
 Foundation = 0
 "Foundation/Save/Local/Tests" = 1      # 로컬 저장 계약 테스트의 봉인 케이스는 실제 암호 제공자(Online/Security/OpenSSL)를 픽스처가 든다 — 통합 테스트라 그 위에 둔다

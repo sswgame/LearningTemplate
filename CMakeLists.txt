@@ -139,7 +139,7 @@ sw_write_excluded_source_list()
 # 모든 타깃을 훑어 이 구성이 짓지 않을 소스(플랫폼 폴더 · 개발 전용 · 반대쪽 대상 전용 · 위 목록)를 든 타깃이 있으면 구성을 세운다.
 sw_require_built_sources()
 
-# 모든 타깃이 선 뒤 — `Source/` 아래 폴더를 include 경로로 준 타깃이 있으면 구성을 세운다(접두 없는 include 가 층 게이트를 비껴가는 길).
+# 모든 타깃이 선 뒤 — `Source/` 아래 폴더를 include 경로로 준 타깃이 있으면 구성을 세운다(접두 없는 include 가 층 가드를 비껴가는 길).
 sw_require_source_include_roots()
 
 # 뿌리(`Source/` · `IntegrationTests/` · 시나리오 폴더) 아래를 sw_glob_source_tree 밖에서 빌드마다 훑는 글롭이 있으면 빌드가 멈춘다(생성된 VerifyGlobs.cmake 를 본다).

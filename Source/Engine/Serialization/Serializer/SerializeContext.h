@@ -317,7 +317,7 @@ namespace sw
  *          어떻게 채우는지는 BinarySerializer 의 규약입니다. 그래서 `makeFrom` / `tryGetFrom` 의
  *          정의와 컨텍스트 핸들러 등록이 모두 이쪽(`SerializeReflectAny.cpp`)에 있습니다.
  *
- * @note 이 코드를 Reflection 쪽에 두면 Reflection 이 Serialization 을 참조해 두 티어가 서로를 참조하는
+ * @note 이 코드를 Reflection 쪽에 두면 Reflection 이 Serialization 을 참조해 두 층이 서로를 참조하는
  *       순환이 됩니다. 핸들러는 "둘 다 아는 쪽" 이 갖습니다. 그쪽이 Serialization 입니다.
  */
 namespace sw

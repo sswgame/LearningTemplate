@@ -3,8 +3,8 @@ Scripts/lint/lint_rule.py
 
 린트 규칙의 기반 — 규칙 하나 = `LintRule` 하위 클래스 하나 = 파일 하나(+ 표 하나). 파일을 더하면 규칙이 생기고 지우면 사라진다(clang-tidy 의 check 등록과 같은 자리).
 
-린트는 형식 · 빌드로 막지 못하는 틈에만 둔다(CLAUDE.md 원칙 1). 규칙을 더하기 전에 형식 · API · 빌드 경계(`Config/Rules/Layers/*.toml` 의 층 · 타깃 게이트
-`#error` 껍데기)로 막을 수 없는지 먼저 본다 — `why_not_type` 을 한 줄로 채우지 못하면 린트가 아니다.
+린트는 형식 · 빌드로 막지 못하는 틈에만 둔다(CLAUDE.md 원칙 1). 규칙을 더하기 전에 형식 · API · 빌드 경계(`Config/Rules/Layers/*.toml` 의 층 · 타깃 가드
+`#error` 가드)로 막을 수 없는지 먼저 본다 — `why_not_type` 을 한 줄로 채우지 못하면 린트가 아니다.
 
 도는 길은 둘로 나뉜다(맵 · 리듀스):
 - `inspect(file)` 은 파일 하나만 보고 찾은 것(피클할 수 있는 값)을 돌려준다. 파일마다 한 번 읽고 한 번 지운 글(`SourceFile.code`)을 고른 규칙 모두가 나눠 쓰고,
