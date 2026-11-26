@@ -20,7 +20,7 @@ namespace sw
     {
         const bool bNamesOk   = ServerRecord::isValidName( descriptor._kind ) && ServerRecord::isValidName( descriptor._region );
         const bool bAddressOk = descriptor._address.size() <= static_cast<size_t>( ServerRecord::kMaxAddressSize );
-        // 포트 수는 읽는 쪽(`ServerRecord::decode` — `PROPERTY( Min, Max )`)과 같은 범위다 — 밖이면 모든 읽는 쪽이 기록을 거절해 서버가 목록에서 조용히 빠진다.
+        // 포트 수는 읽는 쪽(`ServerRecord::decode`, `PROPERTY( Min, Max )`)과 같은 범위다. 밖이면 모든 읽는 쪽이 기록을 거절해 서버가 목록에서 조용히 빠진다.
         const bool bPortsOk = 1 <= descriptor._portCount && descriptor._portCount <= ServerDescriptor::kMaxPortCount &&
                               static_cast<int32>( descriptor._port ) + descriptor._portCount - 1 <= 0xFFFF;
         const bool bInvalidDescriptor = pRouter == nullptr || descriptor._serverID == 0 || bNamesOk == false || bAddressOk == false || bPortsOk == false;

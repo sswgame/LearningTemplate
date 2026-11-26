@@ -143,7 +143,7 @@ namespace sw
         subpass.pDepthStencilAttachment = bHasDepth ? &depthRef : nullptr;
 
         // 바깥(앞 패스 · 앞선 제출)의 첨부 쓰기 → 이 패스의 첨부 읽기(LOAD · 블렌드 · 깊이 테스트) · 쓰기. 같은 첨부에 이어 그리는 패스는 레이아웃이 같아 배리어가 없고(`transitionTextureLayouts`)
-        // 이 의존성이 **유일한** 메모리 의존성이다 — 쓰기 접근을 적지 않으면 실행 순서만 서고 앞 패스의 쓰기가 보인다는 보장이 없다.
+        // 이 의존성이 유일한 메모리 의존성이다 — 쓰기 접근을 적지 않으면 실행 순서만 서고 앞 패스의 쓰기가 보인다는 보장이 없다.
         // https://docs.vulkan.org/refpages/latest/refpages/source/VkSubpassDependency.html (접근 범위는 srcAccessMask · dstAccessMask 로 좁혀진다)
         // 이 마스크는 여기 한 곳에서만 정한다(자리마다 적으면 깊이 없는 패스에 깊이 단계를 걸거나 깊이 패스에 빼먹는다).
         VkSubpassDependency dependency{};

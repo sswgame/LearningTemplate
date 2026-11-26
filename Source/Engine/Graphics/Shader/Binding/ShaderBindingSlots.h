@@ -1,6 +1,6 @@
 /**
  * @file ShaderBindingSlots.h
- * @brief 셰이더 바인딩 계약의 C++ 쪽입니다. `Content/engine/shaders/binding_slots.hlsli` 를 **그대로 include** 합니다.
+ * @brief 셰이더 바인딩 계약의 C++ 쪽입니다. `Content/engine/shaders/binding_slots.hlsli` 를 그대로 include 합니다.
  * @details 번호는 이 파일에 없다. HLSL 과 C++ 가 같은 파일을 읽으므로 "수동 동기" 가 없다.
  *          백엔드 4개는 여기 constexpr 로만 바인딩 위치를 정하고, ShaderBindingValidatorIssue 가 쿠킹된 바이너리의
  *          리플렉션을 이 값과 대조한다(런타임 로드 시와 테스트).
@@ -57,7 +57,7 @@ namespace sw
          *          리소스 배열 동적 인덱싱이 없고(그건 SM5.1, 곧 D3D12), GL 은 SPIR-V 로 먹이므로
          *          ARB_bindless_texture 를 쓸 수 없다. 그래서 엔진이 머티리얼 텍스처를 이 고정 슬롯에
          *          바인딩하고 머티리얼 데이터에는 서수를 넣는다. 16 은 언리얼 머티리얼 샘플러 한도와 같다.
-         *          슬롯은 Vulkan t 밴드(`vk::kRangeSize`) 전체의 **뒤**에 있다 — DX12 테이블과 Vulkan t 밴드는 이 슬롯을 모르고(선언도 에뮬 백엔드뿐이다),
+         *          슬롯은 Vulkan t 밴드(`vk::kRangeSize`) 전체의 뒤에 있다 — DX12 테이블과 Vulkan t 밴드는 이 슬롯을 모르고(선언도 에뮬 백엔드뿐이다),
          *          SRV 띠(`kSRVSlotCount`)가 밴드 끝까지 자라도 이 슬롯은 움직이지 않는다.
          */
         inline constexpr uint32 kMaterialTexture0     = SW_SLOT_MATERIAL_TEX0;
@@ -82,7 +82,7 @@ namespace sw
         inline constexpr uint32 kMorphVertexBuffer     = SW_SLOT_MORPH_VERTEX_SRV;
         /**
          * @brief 씬의 라이트 목록(g_SwLights)입니다. 방향광과 점광이 한 버퍼에 섞여 있습니다.
-         * @details 포워드와 디퍼드가 **같은 버퍼를 같은 루프로** 읽는다. 상수 버퍼가 아닌 이유는
+         * @details 포워드와 디퍼드가 같은 버퍼를 같은 루프로 읽는다. 상수 버퍼가 아닌 이유는
          *          인스턴스와 머티리얼 때와 같다. 개수가 씬마다 다르고, 패스당 한 번 바인딩하면 드로우 사이에
          *          바인딩이 바뀌지 않는다.
          */
@@ -505,7 +505,7 @@ namespace sw
                            kLightTypeFreeform2DEdge != kLightTypeReflectionProbe,
                        "라이트 타입 값이 타입 수 안에 있어야 한다" );
         /**
-         * @brief 에뮬 백엔드(DX11 · GL)의 엔진 텍스처 칸 표입니다 — 이 표가 **유일한 원본**이고, 이름 하나가 칸 하나입니다(칸 번호 = 표의 순서).
+         * @brief 에뮬 백엔드(DX11 · GL)의 엔진 텍스처 칸 표입니다 — 이 표가 유일한 원본이고, 이름 하나가 칸 하나입니다(칸 번호 = 표의 순서).
          * @details 이름은 `g_<이름>Index` 의 `<이름>` 이다(역할 이름 `getRenderPassInputRoleName` 과 렌더러가 선언 밖에서 거는 쿠키 · 노출).
          *          칸을 나눠 쓰지 않으므로 한 패스가 어떤 역할을 함께 읽어도 겹치지 않는다(언리얼 D3D11 RHI 가 셰이더 매개변수마다 레지스터를 두는 것과 같다).
          *          셰이더 컴파일러가 항목마다 `SW_EMU_SLOT_<이름>=<칸>` 과 `SW_ENGINE_TEXTURE_INDEX_<칸>=g_<이름>Index` 매크로를 모든 컴파일에 넣는다
@@ -542,10 +542,10 @@ namespace sw
                 "LocalShadowMap",       ///< 점광 · 스폿 그림자 아틀라스(방향광 ShadowMap 과 다른 텍스처 — 감사 RN-4). 그림자 캐시 복원 드로우 동안은 캐시 층
                 "ColorGradingLUTBlend", ///< 겹친 볼륨이 섞는 둘째 컬러 그레이딩 LUT(PostProcessValues::_colorGradingLUTBlend) — 톤맵하는 패스에, 두 LUT 가 다 읽힌 뷰만
                 "VelocityNeighborMax",  ///< 모션 블러 이웃 최대 속도(MotionBlurNeighborMax 출력, 16² 픽셀 타일) — 모션 블러가 선언했을 때만
-                "DBufferA",             ///< DBuffer 데칼 색(rgb 덮인 색, a 남은 비율 — Decal 패스 출력) — 베이스 패스(G버퍼 · 포워드 불투명)가 선언했고 이번 뷰에 데칼이 있을 때만
+                "DBufferA",             ///< DBuffer 데칼 색(rgb 덮인 색, a 남은 비율, Decal 패스 출력). 베이스 패스(G버퍼 · 포워드 불투명)가 선언했고 이번 뷰에 데칼이 있을 때만
                 "DBufferB",             ///< DBuffer 데칼 노멀(rgb 덮인 월드 노멀 × 0.5 + 0.5, a 남은 비율)
                 "DBufferC",             ///< DBuffer 데칼 거칠기 · 금속도(r · g 덮인 값, a 남은 비율)
-                "SkyClouds",            ///< 볼륨 구름(VolumetricClouds 출력, 저해상도 — 산란 rgb · 불투명도 a) — 스카이 패스가 선언했고 이번 뷰에 볼륨 구름이 있을 때만
+                "SkyClouds",            ///< 볼륨 구름(VolumetricClouds 출력, 저해상도, 산란 rgb · 불투명도 a). 스카이 패스가 선언했고 이번 뷰에 볼륨 구름이 있을 때만
                 "RainOcclusion",        ///< 비 가림 맵의 깊이(FrameRainOcclusion) — 젖는 표면(지형 · 환경 표면 · 변형 지면 · 물)이 읽는다. 씬이 켜고 날씨가 있는 프레임만(웹은 읽지 않는다)
             };
             static_assert( sizeof( kEngineTextureNames ) / sizeof( kEngineTextureNames[0] ) == kEngineTextureCount, "엔진 텍스처 칸 표와 칸 수(SW_ENGINE_TEXTURE_COUNT)가 다르다" );

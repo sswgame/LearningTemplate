@@ -30,6 +30,6 @@ namespace sw
     {
         float4 _weather{};     ///< x 젖음(0..1), y 웅덩이(0..1), z 눈(0..1), w 설선 높이(m) — PassCB `g_MaterialGlobalWeather`
         float4 _rain{};        ///< x 비 세기(0..1), yzw 0(예비) — PassCB `g_MaterialGlobalRain`
-        float4 _environment{}; ///< xyz 환경의 기준 시점(게임 카메라 위치), w 환경 시간(초 — 바람) — PassCB `g_MaterialGlobalEnvironment`
+        float4 _environment{}; ///< xyz 환경의 기준 시점(게임 카메라 위치), w 환경 시간(초, 바람). PassCB `g_MaterialGlobalEnvironment`
     };
 } // namespace sw

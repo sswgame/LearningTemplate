@@ -69,7 +69,7 @@ namespace sw
         unique_ptr<FileWatcher> pWatcher = _createWatcher();
         if ( pWatcher == nullptr )
         {
-            // 설계상 없는 것이다(웹 — 브라우저 파일 시스템에는 바깥 편집이 없다) — 경고가 아니라 정보 한 줄이다.
+            // 웹은 브라우저 파일 시스템에 바깥 편집이 없어 설계상 없는 것이므로 경고 대신 정보 한 줄을 남긴다.
             SW_LOG_INFO_ID( "FileWatchService.NoNativeWatcher", "File watch: this platform has no OS file watcher - '%#' is not watched", folder.str() );
             return nullopt;
         }
@@ -151,7 +151,7 @@ namespace sw
             const AbsolutePath       fullPath       = changeEvent.makePath();
             const ComparableDiskPath comparablePath = FileUtil::makeComparableDiskPath( fullPath.str() );
             const ComparableDiskPath comparableDir  = FileUtil::makeComparableDiskPath( fullPath.getParent().str() );
-            // **콜백이 감시를 등록 · 해제할 수 있다.** 인덱스로 돌면서 델리게이트를 부르기 전에 복사한다(`MulticastDelegate::broadcast` 와 같은 모양). 순회 도중 앞쪽 감시가
+            // 콜백이 감시를 등록 · 해제할 수 있다. 인덱스로 돌면서 델리게이트를 부르기 전에 복사한다(`MulticastDelegate::broadcast` 와 같은 모양). 순회 도중 앞쪽 감시가
             // 빠지면 뒤의 하나가 당겨져 건너뛰어질 수 있는데, 부르는 도중 목록을 바꾼 쪽이 감수한다.
             for ( size_t watchIndex = 0; watchIndex < _listWatch.size(); ++watchIndex )
             {
@@ -185,9 +185,9 @@ namespace sw
 
     void FileWatchService::expandRescanEvents( const Root& root, vector<FileChangeEvent>& inoutListEvent, uint64 sinceTimestamp ) const
     {
-        // 파일 이름이 빈 Modified 는 감시자의 **리스캔 신호**다. 큐 상한이나 버퍼 오버플로로 개별 알림을
+        // 파일 이름이 빈 Modified 는 감시자의 리스캔 신호다. 큐 상한이나 버퍼 오버플로로 개별 알림을
         // 잃었다는 뜻이다(브랜치 전환 · 쿠킹 · 대량 임포트). OS 는 잃은 알림을 돌려주지 않으므로, 무엇이
-        // 바뀌었는지는 상태를 대조해서만 알 수 있다. 다만 그 대조는 **여기서 한 번**, 감시 트리 안에서,
+        // 바뀌었는지는 상태를 대조해서만 알 수 있다. 다만 그 대조는 여기서 한 번, 감시 트리 안에서,
         // 직전 비우기 이후 mtime 인 파일만 stat 으로 확인하고 끝낸다. 평소에는 폴링이 없다.
         // 받는 쪽은 평소와 같은 파일 단위 이벤트만 받고, 리스캔이 있었는지 알 필요가 없다.
         const size_t rescanSignalCount = VectorUtil::removeIf( inoutListEvent, []( const FileChangeEvent& event )
@@ -248,7 +248,7 @@ namespace sw
         if ( entry._listExtension.empty() )
             return true;
 
-        // **접미사**로 본다. `hasExtension` 은 마지막 점 뒤만 보므로 `.prefab.xml` 같은 복합
+        // 접미사로 본다. `hasExtension` 은 마지막 점 뒤만 보므로 `.prefab.xml` 같은 복합
         // 접미사가 걸리지 않는다(프리팹 핫 리로드가 등록은 되는데 이벤트를 받지 못한다).
         for ( const string& allowed : entry._listExtension )
         {

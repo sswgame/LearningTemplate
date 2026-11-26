@@ -27,7 +27,7 @@ namespace sw::editor
     {
         struct SourceControlDevCommandsInternal
         {
-            /** @brief `sourcecontrol.history <저장소 기준 경로>` — 파일 하나의 최근 커밋을 읽는다(History 단추와 같다 — 바뀌지 않은 파일도 된다). */
+            /** @brief `sourcecontrol.history <저장소 기준 경로>`: 파일 하나의 최근 커밋을 읽는다(History 단추와 같다. 바뀌지 않은 파일도 된다). */
             static bool runHistory( const vector<string>& listArgument, string& outReply )
             {
                 EditorSourceControl* const pSourceControl = SourceControlChangesViewModel::findSourceControl();

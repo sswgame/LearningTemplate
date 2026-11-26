@@ -3,11 +3,11 @@
  * @brief 캐릭터 편집 창 패널 — 소켓 파일 편집(목록 · 추가 · 이름 바꾸기 · 변환 · 좌우 대칭 · 저장), 스켈레톤 본 트리와 레퍼런스 포즈 편집, 외형 선택 편집(슬롯 · 세트 입히기 ·
  *        체형 · 꾸미기 값 · 규칙 설명 · 프리셋 파일 저장 · 피팅 확인 표시)과, 그 선택을 입은 몸을 보이는 미리보기 씬.
  * @details 상태와 명령(팩 데이터 · 파일 읽기 · 저장 · 프리셋 · 내보내기 · 고른 것)은 모델(`CharacterEditorViewModel`, 편집 모델 셋을 든다)이 하고 이 패널은 그리기와 미리보기 동기화만 한다.
- *          - **문서**: 소켓 파일(`*.sockets.xml`, 종류 `EditorAssetTypeIDs::kData`)이 이 창의 문서다(`EditorDocumentPanel` 계약). 콘텐츠 브라우저에서 소켓 파일을 고르면 이 창이 그 파일로 바뀌고,
+ *          - 문서: 소켓 파일(`*.sockets.xml`, 종류 `EditorAssetTypeIDs::kData`)이 이 창의 문서다(`EditorDocumentPanel` 계약). 콘텐츠 브라우저에서 소켓 파일을 고르면 이 창이 그 파일로 바뀌고,
  *            고른 것이 없으면 팩 데이터의 소켓 파일을 연다. 저장은 소켓과 레퍼런스 포즈 둘 다(미저장 확인 · 닫기 확인이 같은 계약).
- *          - **파일 가름**: 그리기 · 입력은 `CharacterEditorPanel.cpp`(MVVM View — 씬 헤더를 보지 않는다, `PANEL_VIEW_SOURCES`), 문서 · 미리보기 씬 동기화(몸 · 기즈모 대리 · 제약 리그) · 썸네일 · 감시 값은
+ *          - 파일 가름: 그리기 · 입력은 `CharacterEditorPanel.cpp`(MVVM View — 씬 헤더를 보지 않는다, `PANEL_VIEW_SOURCES`), 문서 · 미리보기 씬 동기화(몸 · 기즈모 대리 · 제약 리그) · 썸네일 · 감시 값은
  *            `Model/CharacterEditorPanelScene.cpp`, 미리보기 탭 값 모으기(소켓 축 · 관통 점 · 몸 집기 윤곽 · 애니메이션 줄)와 그 명령은 `Model/CharacterEditorPanelPreview.cpp`(둘 다 ImGui 없음).
- *          - **미리보기 몸**: 미리보기 씬(`EditorPreviewPanel`)에 몸 오브젝트 하나(`SkeletalMeshComponent` + `CharacterAppearanceComponent`)를 세우고, 외형 선택이 바뀔 때마다
+ *          - 미리보기 몸: 미리보기 씬(`EditorPreviewPanel`)에 몸 오브젝트 하나(`SkeletalMeshComponent` + `CharacterAppearanceComponent`)를 세우고, 외형 선택이 바뀔 때마다
  *            `CharacterAppearanceComponent::previewSelection` 으로 이 창의 외형 데이터(모델의 `AppearanceDatabase`)를 입힌다. 게임 서비스(메인 씬의 것)는 보지 않는다.
  *            선택에 기준 프리셋이 없으면 팩 데이터의 `previewPreset` 위에 입힌다. 외형 데이터를 읽기 전에는 몸이 없다.
  */

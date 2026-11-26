@@ -1,7 +1,7 @@
 """
 Scripts/dev/preflight_stages.py
 
-묶음 검증의 단계 — 클래스 하나가 단계 하나이고 **적은 차례가 도는 차례다**. 단계를 더하고 빼는 일은 클래스 하나를 더하고 빼는 일이다(목록 · 번호가 따로 없다).
+묶음 검증의 단계 — 클래스 하나가 단계 하나이고 적은 차례가 도는 차례다. 단계를 더하고 빼는 일은 클래스 하나를 더하고 빼는 일이다(목록 · 번호가 따로 없다).
 차례 · 겹침 · 기록 · 실패 처리는 `preflight_run.py`. 시간 판정이 CPU 경합에 흔들리는 일과 그렇지 않은 일을 가른다 — 시나리오는 벽시계 시한 · 프레임에 걸린 그림을
 판정하므로 GPU 단계는 혼자 돈다.
 """
@@ -66,7 +66,7 @@ def run_shipping_check(shell: PreflightShell, *arguments: str) -> bool:
 
 
 class ShippingBuildJob(Job):
-    """배포 프리셋 둘(shipping-check 가 띄우는 것과 같은 목록 — 플레이어 Client 와 전용 Server) — 쿠킹이 Content 를 읽으므로 임포트 뒤에 띄운다."""
+    """배포 프리셋 둘(shipping-check 가 띄우는 것과 같은 목록, 플레이어 Client 와 전용 Server). 쿠킹이 Content 를 읽으므로 임포트 뒤에 띄운다."""
 
     name = "shipping build"
     # 배포 팩은 호스트 개발 빌드가 굽는다(CookAssets 가 Ninja-Release · Ninja-Release-Server 를 먼저 짓는다 — HostTools.cmake). 같은 폴더를 다른 갈래가 동시에 짓지 않게

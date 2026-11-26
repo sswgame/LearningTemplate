@@ -731,7 +731,7 @@ namespace sw
             }
             if ( pErased != nullptr )
                 pErased->releaseRHI( pDevice );
-            // 밉을 올려도 SRV 번호는 그대로다(`rebindBindlessTexture` — R-6) — 머티리얼은 다시 묶지 않는다.
+            // 밉을 올려도 SRV 번호는 그대로다(`rebindBindlessTexture`, R-6). 그래서 머티리얼은 다시 묶지 않는다.
             if ( bUpgraded )
                 ++upgradedCount;
             _impl->_cvLoaded.notify_all();
@@ -945,7 +945,7 @@ namespace sw
                 }
                 if ( bOverInFlight == false )
                 {
-                    // 풀 예산(`TextureStreamingConfig::_poolMegabytes`) — 넘으면 이 텍스처와 뒤의 것은 아래쪽 밉 그대로 줄에 남는다(화면에서 큰 것부터 받는다 — 작은 것이 건너뛰어 채우지 않는다).
+                    // 풀 예산(`TextureStreamingConfig::_poolMegabytes`)을 넘으면 이 텍스처와 뒤의 것은 아래쪽 밉 그대로 줄에 남는다(화면에서 큰 것부터 받고 작은 것이 건너뛰어 채우지 않는다).
                     optional<TextureStreamingReservation> reservation = _impl->_streamingPool.tryReserve( rangeSize, bShrink ? UINT64_MAX : budget._poolBytes );
                     bOverBudget                                       = reservation.has_value() == false;
                     if ( bOverBudget == false )
@@ -1557,15 +1557,15 @@ namespace sw
     }
 
     /**
-     * @brief 표를 통째로 비웁니다. **GPU 자원을 돌려주지는 않습니다.**
-     * @warning **디바이스가 죽은 뒤에만 부를 수 있습니다.** `AssetCacheBase::clear()` 는 디바이스를
+     * @brief 표를 통째로 비웁니다. GPU 자원을 돌려주지는 않습니다.
+     * @warning 디바이스가 죽은 뒤에만 부를 수 있습니다. `AssetCacheBase::clear()` 는 디바이스를
      *          인자로 받지 않고(그 이유는 `MaterialCache.h` 머리말에 있습니다. 캐시가 디바이스를
      *          들고 있으면 백엔드 교체 때 죽은 포인터가 됩니다), 캐시도 들고 있지 않으므로 여기서
      *          `releaseRHI` 를 부를 방법이 없습니다. 살아 있는 디바이스에서 부르면 텍스처 핸들과
-     *          **bindless SRV 인덱스**가 그대로 샙니다. 후자는 프리리스트로 영영 안 돌아옵니다.
+     *          bindless SRV 인덱스가 그대로 샙니다. 후자는 프리리스트로 영영 안 돌아옵니다.
      *
      *          지금 이 함수로 오는 길은 하나뿐이고 그 순서가 이 계약을 지킵니다:
-     *          `Engine::shutdown` 이 `_rhi->shutdown()` 을 **먼저** 부르고, 그것이
+     *          `Engine::shutdown` 이 `_rhi->shutdown()` 을 먼저 부르고, 그것이
      *          `RHIRenderResource` 레지스트리 전체에 `releaseRHI` 를 밀어 둔 뒤에야
      *          `AssetManager::shutdown` → `clearAssetCaches()` 가 여기에 닿습니다.
      *          참조가 0 이 되어 내리는 평소 경로는 `release()` 이고, 그쪽은 제대로 돌려줍니다.
@@ -1991,7 +1991,7 @@ namespace sw
 
 namespace sw
 {
-    // 렌더 타깃 크기를 받는 쪽 — 카메라(컴포넌트 모델 코어, Graphics 아래 층)가 인터페이스로 찾는다. 캐시는 에셋 매니저와 수명이 같다 — 공장이 그 매니저를 찾으므로 먼저 만든다.
+    // 렌더 타깃 크기를 받는 쪽: 카메라(컴포넌트 모델 코어, Graphics 아래 층)가 인터페이스로 찾는다. 캐시는 에셋 매니저와 수명이 같다. 공장이 그 매니저를 찾으므로 먼저 만든다.
     SW_ENGINE_SUBSYSTEM( IRenderTargetDeclarationSink, Process, Startup, ( AssetManager ), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
     {
         (void)build;

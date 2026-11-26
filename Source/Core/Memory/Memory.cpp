@@ -98,7 +98,7 @@ namespace sw
 
             /**
              * @brief 엔진이 할당하지 않은 블록(또는 이미 해제한 블록)을 풀려 했다고 알립니다. 해제는 하지 않습니다.
-             * @details 말없이 건너뛰면 안 됩니다 — **배포본에는 헤더가 없어** 같은 호출이 진짜 이중 해제 · 남의 힙 해제가 되므로,
+             * @details 말없이 건너뛰면 안 됩니다 — 배포본에는 헤더가 없어 같은 호출이 진짜 이중 해제 · 남의 힙 해제가 되므로,
              *          개발 빌드에서 조용한 버그가 배포본에서만 힙을 깹니다. 로그보다 아래 층이라 낮은 층 보고(Error 는 stderr 에 동기로 먼저)로 냅니다.
              */
             static void reportForeignFree( const void* pUserPtr )
@@ -160,7 +160,7 @@ namespace sw
 #if defined( SW_SHIPPING )
         return MemoryBackend::allocateAligned( size, align );
 #else  // SW_SHIPPING
-       // 헤더와 정렬 여유를 더하다 오버플로하면 **요청보다 작은 블록**이 잡히고, 그 뒤의 헤더 쓰기가 곧바로 범위를 넘는다.
+       // 헤더와 정렬 여유를 더하다 오버플로하면 요청보다 작은 블록이 잡히고, 그 뒤의 헤더 쓰기가 곧바로 범위를 넘는다.
        // 오버플로할 크기는 어차피 할당될 수 없으므로 여기서 거절한다.
         if ( size > SIZE_MAX - sizeof( AllocHeader ) - align )
             return nullptr;

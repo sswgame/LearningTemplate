@@ -42,7 +42,7 @@ namespace sw
         float32 _arrNormal[3];
         /**
          * @brief 텍스처 좌표 (U, V)입니다.
-         * @details 노멀과 **같은 함정**이 있다. 위치로 만들어 내면(`xy * 0.5 + 0.5`) 원점 중심 단위 도형이 아닐 때 알베도가
+         * @details 노멀과 같은 함정이 있다. 위치로 만들어 내면(`xy * 0.5 + 0.5`) 원점 중심 단위 도형이 아닐 때 알베도가
          *          엉뚱하게 붙고 옆면과 뚜껑이 같은 위치를 읽는다. 도형 생성기가 면마다 UV 를 펼쳐 준다.
          */
         float32 _arrUV[2];
@@ -51,7 +51,7 @@ namespace sw
          * @brief 탄젠트 (X, Y, Z)와 바이탄젠트 부호(W 의 부호)입니다. 노멀 맵이 탄젠트 공간을 세울 때 씁니다(glTF · MikkTSpace 규약 — 바이탄젠트 = cross( N, T ) × W).
          * @details 위치 · 노멀 · UV 에서 나오는 값이라 손으로 채우지 않는다. `Mesh::setVertices` 가 `Mesh::computeTangents` 로 구하고,
          *          `.mesh` 는 임포트 때 구한 값을 싣는다(`Mesh::setVerticesWithTangents`). 노멀과 같은 함정 — 셰이더가 다른 값에서 지어내지 않는다.
-         *          W 의 크기는 **이음매 표시**다 — 이음매 정점(같은 위치에 노멀이나 UV 가 다른 정점이 있거나 이음매 변의 끝)이면 `makeSeamTangentW`, 아니면 1 이다. 부호만 손잡이이므로 읽는 쪽은 부호로만 쓴다.
+         *          W 의 크기는 이음매 표시다 — 이음매 정점(같은 위치에 노멀이나 UV 가 다른 정점이 있거나 이음매 변의 끝)이면 `makeSeamTangentW`, 아니면 1 이다. 부호만 손잡이이므로 읽는 쪽은 부호로만 쓴다.
          *          변 묶음은 변이 이음매인지 두 끝점만으로 가르게 하는 비트다(`Mesh::refineSeamEdges`). 고르지 않은 메시(런타임 생성)는 모든 비트라 두 끝이 이음매인 변을 모두 이음매로 본다.
          *          변위(material_displacement.hlsli)가 이음매에서 높이를 눌러 틈을 막는다.
          */

@@ -69,9 +69,9 @@ namespace sw
         string              _text{};       ///< 채널 · 표 · 모드 · 종류 · 상태 · 로그인 방식 — 동작마다 한 칸
         string              _secondText{}; ///< 채팅 글 · 활동 글
         int64               _amount{ 0 };  ///< 거래 · 길드 창고 양, 점수(`_amount`)
-        int64               _minMs{ 0 };   ///< Wait — 아래, WaitMatch · Trade — 시한
+        int64               _minMs{ 0 };   ///< Wait 는 아래, WaitMatch · Trade 는 시한
         int64               _maxMs{ 0 };   ///< Wait — 위
-        int32               _count{ 1 };   ///< Repeat — 횟수, 순위 · 기록 — 줄 수
+        int32               _count{ 1 };   ///< Repeat 는 횟수, 순위 · 기록은 줄 수
         int32               _weight{ 0 };  ///< `pick` 의 자식만 — 고를 비율(1 이상)
         LoadBotAction       _action{ LoadBotAction::Wait };
     };

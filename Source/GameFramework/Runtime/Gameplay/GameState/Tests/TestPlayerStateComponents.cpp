@@ -25,7 +25,7 @@
 #include "GameFramework/Runtime/Gameplay/Quest/QuestCatalog.h"
 #include "GameFramework/Runtime/Gameplay/Quest/QuestLogComponent.h"
 
-// PlayerStateComponentsTest — 플레이어 상태 컴포넌트(조종자 오브젝트의 지갑 · 가방 · 퀘스트 일지 · 평판 — 기능마다 하나): 각자의 저장 왕복과 열기 전에 받은 복원 바이트,
+// PlayerStateComponentsTest: 플레이어 상태 컴포넌트(조종자 오브젝트의 지갑 · 가방 · 퀘스트 일지 · 평판, 기능마다 하나): 각자의 저장 왕복과 열기 전에 받은 복원 바이트,
 // 가방 없음 = 컴포넌트 없음(아이템 받기 계약도 가방 컴포넌트가 내보낸다), 폰에서 찾기, 씬 하나를 읽는 쪽의 "하나뿐" 규칙(nogpu, 헤드리스).
 
 using namespace sw;
@@ -179,7 +179,7 @@ SW_TEST_CASE( PlayerStateComponentsTest, FoundFromThePawn )
     SW_EXPECT_TRUE( pFound->getComponent<WalletComponent>() == pWallet );
 }
 
-/** @brief [PlayerStateComponentsTest] 씬 하나를 읽는 쪽(`findOpen` — 감시 값 · 치트 · 목표 표시)은 열린 것만 보고, 둘이면 오류로 멈춘다 — 어느 플레이어인지 등록 순서로 고르지 않는다 */
+/** @brief [PlayerStateComponentsTest] 씬 하나를 읽는 쪽(`findOpen`: 감시 값 · 치트 · 목표 표시)은 열린 것만 보고, 둘이면 오류로 멈춘다. 어느 플레이어인지 등록 순서로 고르지 않는다 */
 SW_TEST_CASE( PlayerStateComponentsTest, SecondOpenComponentStopsTheSingleReader )
 {
     SW_EXPECT_LOG( "PlayerComponent.SeveralOpen" );

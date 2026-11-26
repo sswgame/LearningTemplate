@@ -331,7 +331,7 @@ namespace sw
 
         // 1) 씬 오브젝트 바이너리 스냅샷
         //
-        // **씬이 없는 것은 실패가 아니다.** 씬 없이 커스텀 상태만 스냅샷하는 것은 지원하는 사용법이다
+        // 씬이 없는 것은 실패가 아니다. 씬 없이 커스텀 상태만 스냅샷하는 것은 지원하는 사용법이다
         // (GameFrameworkTest.GameInstanceSnapshotAndFileRoundTrip 이 그렇게 쓴다). 그러니 여기서 끊으면 안 된다.
         // 다만 반환값을 흔적 없이 버리면, 씬이 있어야 할 상황에서 오브젝트가 하나도 없는 세이브가 나와도
         // 로드할 때까지 아무도 모른다. 빈 섹션은 그대로 쓰되 단서는 남긴다(지원하는 사용법이라 Warning 이 아니라 Info).
@@ -572,9 +572,9 @@ namespace sw
 
         vector<GameObject*> listRestoredObject;
 
-        // **파일이 말한 개수를 그대로 잡아 두지 않는다.** 오브젝트 하나는 적어도 길이 4바이트를
+        // 파일이 말한 개수를 그대로 잡아 두지 않는다. 오브젝트 하나는 적어도 길이 4바이트를
         // 쓰므로, 남은 바이트 / 4 보다 많은 오브젝트는 어떤 스냅샷에도 있을 수 없다. 아래 읽기는
-        // 잘린 데이터에서 어차피 멈추지만, **그 전에 이 `reserve` 가 먼저 터진다.** `count` 가
+        // 잘린 데이터에서 어차피 멈추지만, 그 전에 이 `reserve` 가 먼저 터진다. `count` 가
         // 40억이면 이 한 줄이 수십 기가를 요구한다. `SceneDocument::loadBinary` 가 같은 이유로
         // 같은 계산을 한다.
         constexpr size_t kMinBytesPerObject = sizeof( uint32 );
@@ -583,10 +583,10 @@ namespace sw
 
         // 모든 게임오브젝트를 만들고 읽은 뒤에 묶음이 계층을 한 번에 잇는다.
         // 같은 프로세스의 스냅샷이면 원래 id 로 만들고 컴포넌트 id 도 복원한다.
-        // 부착은 상태의 부착 필드(부모의 **id** 와 컴포넌트 키)로 잇는다. 부모 이름으로 찾아 부모의 primary 에 붙이면
+        // 부착은 상태의 부착 필드(부모의 id 와 컴포넌트 키)로 잇는다. 부모 이름으로 찾아 부모의 primary 에 붙이면
         // 부모보다 먼저 읽힌 소켓 자식(손에 든 무기)이 몸통으로 옮겨 가므로 깨진다.
         // 다른 실행의 세이브는 id 를 복원하지 않고, 스트림에 적힌 그때의 id 로 묶음 안에서 부모를 찾는다.
-        // **하나라도 못 읽으면 실패다.** 읽기를 멈추고도 true 를 돌려주면 검증이 지나가 활성 씬이 못 읽은 오브젝트부터 뒤가 사라진 채 교체된다.
+        // 하나라도 못 읽으면 실패다. 읽기를 멈추고도 true 를 돌려주면 검증이 지나가 활성 씬이 못 읽은 오브젝트부터 뒤가 사라진 채 교체된다.
         const bool       bRestoreIdentity = ( format == SceneObjectFormat::RestoreIdentity );
         bool             bComplete        = true;
         ObjectStateBatch batch( bRestoreIdentity ? ObjectIDSpace::Live : ObjectIDSpace::Saved );

@@ -37,7 +37,7 @@ namespace sw
     /**
      * @class StatBlock
      * @brief 넣은 순서를 지키는 작은 이름 → 값 목록입니다(보통 열 개 안팎이라 선형 조회가 맵보다 빠르다).
-     * @details XML 은 `<Stats armor="5" speed="-0.1"/>` 처럼 **속성 이름이 곧 능력치 이름**입니다(`MonsterDef::_mapDrop` 과 같은 방식).
+     * @details XML 은 `<Stats armor="5" speed="-0.1"/>` 처럼 속성 이름이 곧 능력치 이름입니다(`MonsterDef::_mapDrop` 과 같은 방식).
      */
     REFLECT()
     class SW_GF_API StatBlock

@@ -54,7 +54,7 @@ namespace sw::editor
         Scene,           ///< 이 호출이 활성 씬의 오브젝트를 바꾼다(붙여넣기 · 정렬 · 만들기 · 지우기) — 거래 구간을 받는다
         SceneDuringPlay, ///< `Scene` 과 같이 거래 구간을 받지만 편집 허용 답을 묻지 않는다 — 플레이 중에도 사본을 바로 바꾸고 Stop 이 되돌린다(컴포넌트 지우기 · 옮기기 · 붙여넣기, 인스펙터 편집 규칙)
         History,         ///< 되돌리기 스택을 움직인다(되돌리기 · 다시 하기) — 편집 허용 답을 묻고 거래를 열지 않는다. UI 입구(`request`)는 씬 편집과 같은 줄에 세워 게임 단계가 실행한다(되돌리기 실행이 씬을 바꾼다)
-        SceneUnrecorded, ///< 편집 허용 답은 묻지만 이 호출은 거래를 열지 않는다 — 이름 칸 · 프리셋 창 · 하위 메뉴(씬을 바꾸는 완료 함수가 `EditorTransaction&` 를 받는다 — `EditorSceneCommands::rename` · `EditorTransformCommands::loadComponentPreset`), 굽기(결과는 파생 데이터라 기록하지 않는다 — 언리얼 Build Lighting 도 트랜잭션 밖)
+        SceneUnrecorded, ///< 편집 허용 답은 묻지만 이 호출은 거래를 열지 않는다. 이름 칸 · 프리셋 창 · 하위 메뉴(씬을 바꾸는 완료 함수가 `EditorTransaction&` 를 받는다: `EditorSceneCommands::rename` · `EditorTransformCommands::loadComponentPreset`), 굽기(결과는 파생 데이터라 기록하지 않는다 — 언리얼 Build Lighting 도 트랜잭션 밖)
     };
 } // namespace sw::editor
 
@@ -317,7 +317,7 @@ namespace sw::editor
         bool request( string_view commandID, const EditorCommandTarget& target );
         /**
          * @brief UI 쪽 — 명령 표에 없는 씬 편집(계층 끌어 놓기 · 이름 칸 확정 · 만들기 · 컴포넌트 더하기)을 게임 스레드에 넘깁니다. `request` 의 씬 명령과 같은 줄에 요청 순서대로 선다.
-         * @details @p edit 는 거래 구간(`EditorTransaction`) 하나를 받아 씬을 바꾼다. **값만 붙잡는다** — 오브젝트는 id 로, 이름 · 경로는 문자열 사본으로(포인터 · 참조를 붙잡으면 실행 프레임에 낡는다).
+         * @details @p edit 는 거래 구간(`EditorTransaction`) 하나를 받아 씬을 바꾼다. 값만 붙잡는다 — 오브젝트는 id 로, 이름 · 경로는 문자열 사본으로(포인터 · 참조를 붙잡으면 실행 프레임에 낡는다).
          *          실행할 때 대상이 사라졌으면 아무것도 하지 않아야 한다. 언리얼 Slate 가 게임 스레드에 넘기는 편집과 같은 자리다.
          */
         void requestSceneEdit( const Delegate<void( EditorTransaction& )>& edit );
@@ -334,7 +334,7 @@ namespace sw::editor
          */
         void collectContextMenuItems( EditorCommandTargetKind kind, vector<EditorMenuItem>& outListItem ) const;
         /**
-         * @brief Model 쪽 — @p target 의 종류 맥락 메뉴 항목과 그 대상에 대한 켜짐을 @p outState 에 모읍니다(`isEnabled( desc, target )` — 씬 · 선택 · 세션을 읽는다).
+         * @brief Model 쪽: @p target 의 종류 맥락 메뉴 항목과 그 대상에 대한 켜짐을 @p outState 에 모읍니다(`isEnabled( desc, target )` 는 씬 · 선택 · 세션을 읽는다).
          * @details 대상은 메뉴를 여는 순간에야 정해지므로 프레임 앞 값 묶음(`publishEnabledState`)에 담을 수 없다 — 같은 스레드의 ViewModel gather 처럼 여는 순간과 열린 프레임마다 그 자리에서 모은다.
          *          View(`EditorInputGUI::drawContextMenu`)는 이 값만 읽는다.
          */

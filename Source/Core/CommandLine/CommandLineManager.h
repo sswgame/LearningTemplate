@@ -20,7 +20,7 @@ namespace sw
     /**
      * @struct CommandLineDiskPath
      * @brief 디스크 경로 인자의 저장 형식입니다. `ArgumentList.xxx` 에서 기본값을 `CommandLineDiskPath{}` 로 적은 줄이 이 형식이다.
-     * @details `parse` 가 받을 때 한 번 절대화한다 - 상대 경로는 **기동 때 넘긴 기준 폴더**(그 셸의 작업 폴더) 기준이다(R5). 읽는 쪽은 `AbsolutePath` 로 꺼낸다(글로 꺼내도 늘 절대 경로다). 예전에는 받은 글을 그대로 두어, 읽는 쪽마다 실행 중 작업 폴더로 다시 풀었다(작업 폴더를 바꾸면 산출물 위치가 바뀌었다).
+     * @details `parse` 가 받을 때 한 번 절대화한다 - 상대 경로는 기동 때 넘긴 기준 폴더(그 셸의 작업 폴더) 기준이다(R5). 읽는 쪽은 `AbsolutePath` 로 꺼낸다(글로 꺼내도 늘 절대 경로다). 예전에는 받은 글을 그대로 두어, 읽는 쪽마다 실행 중 작업 폴더로 다시 풀었다(작업 폴더를 바꾸면 산출물 위치가 바뀌었다).
      */
     struct CommandLineDiskPath
     {
@@ -161,11 +161,11 @@ namespace sw
                 , _reserved{ 0 } {}
 
             /**
-             * @brief `-key` 처럼 **값 없이** 적을 수 있는 인자인지 확인합니다.
+             * @brief `-key` 처럼 값 없이 적을 수 있는 인자인지 확인합니다.
              * @details 그럴 수 있는 것은 bool 뿐입니다. 값 없는 `-dx12` 는 "true" 라는 뜻이 되지만, 값 없는 `-W` 나
              *          `-gv_stressTestMeshes` 에는 그런 뜻이 없습니다. 판단은 타입이 합니다(별도 칸을 두지 않습니다) — 값을 빠뜨린
              *          `-gv_stressTestMeshes` 를 받아 주면 int32 항목에 bool 이 들어가고, `readValue` 의 `get_if<int32>` 가 nullptr 을
-             *          반환해 **경고 한 줄 없이 아무 일도 일어나지 않습니다.**
+             *          반환해 경고 한 줄 없이 아무 일도 일어나지 않습니다.
              */
             bool isFlagArgument() const { return std::holds_alternative<bool>( _valueSample ); }
         };
@@ -190,7 +190,7 @@ namespace sw
          *               기본은 이 빌드의 정책이고, 테스트만 다른 정책(배포)을 넘긴다.
          * @details 등록 순서는 그 파일의 줄 순서이고, `CommandLineArgument` 열거 멤버도 같은 파일에서 같은 순서로 만들어집니다.
          *          그래서 열거값이 곧 `_listArgument` 인덱스입니다. 그 일치를 줄마다 assert 하므로, 열거형으로 조회할 때는 이름을
-         *          만들지도 해시하지도 않습니다. 표를 **먼저 비우므로 몇 번을 불러도 같은 표가 됩니다.** 다만 그 전에
+         *          만들지도 해시하지도 않습니다. 표를 먼저 비우므로 몇 번을 불러도 같은 표가 됩니다. 다만 그 전에
          *          `addArgument` 로 넣어 둔 커스텀 인자는 함께 사라집니다.
          */
         void initialize( const CommandLineBuildPolicy& policy = CommandLineBuildPolicy::current() );
@@ -247,7 +247,7 @@ namespace sw
         bool getArgument( CommandLineArgument argument, T& outValue ) const;
 
         /**
-         * @brief 그 인자가 **커맨드라인에 실제로 적혔는지** 반환합니다.
+         * @brief 그 인자가 커맨드라인에 실제로 적혔는지 반환합니다.
          * @details `getArgument` 로는 알 수 없습니다. 기본값이 있는 인자는 적지 않아도 true 를 반환하기 때문입니다. "설정 파일
          *          기본값보다 커맨드라인이 우선" 같은 판단에는 이 함수가 필요합니다(안 그러면 `EngineConfig` 의 백엔드 기본값이
          *          `-gv_rhiBackend` 를 조용히 덮어씁니다).
@@ -259,7 +259,7 @@ namespace sw
 
         /**
          * @brief 자동화 실행(`-unattended` 또는 `-scenario`)이면 true 입니다 — 사람의 사용자 설정 · 세이브 · 상태 폴더를 읽지도 쓰지도 않는 실행의 판정 하나입니다.
-         * @details 사용자 설정의 무인 자리(`UserSettingsManager`) · 사용자 데이터 뿌리 격리(`AutomationUserDataIsolation`) · 어서트 대화상자가 같은 판정을 쓴다(예전에는 곳마다 두 인자를 따로 물었다).
+         * @details 사용자 설정의 무인 자리(`UserSettingsManager`) · 사용자 데이터 뿌리 격리(`AutomationUserDataIsolation`) · 어서트 대화상자가 같은 판정을 쓴다.
          */
         bool isAutomatedRun() const;
 
@@ -271,9 +271,9 @@ namespace sw
 
         /**
          * @brief 인자를 추가합니다.
-         * @tparam T 저장 타입. **값을 반드시 적어야 하는지도 이것으로 정해집니다.** `bool` 이면 `-key` 만 적을 수 있고(그때
+         * @tparam T 저장 타입. 값을 반드시 적어야 하는지도 이것으로 정해집니다. `bool` 이면 `-key` 만 적을 수 있고(그때
          *         true), 나머지는 `-key=value` 를 요구합니다(`ArgumentInfo::isFlagArgument`).
-         * @param listAlias 이 인자를 부르는 이름들. 하나라도 이미 쓰이고 있으면 **아무것도 넣지 않습니다.**
+         * @param listAlias 이 인자를 부르는 이름들. 하나라도 이미 쓰이고 있으면 아무것도 넣지 않습니다.
          * @param valueSample 저장 타입을 정하는 견본 값(값 자체는 쓰이지 않는다 — 주지 않은 인자는 `getArgument` 가 false)
          */
         template <typename T>
@@ -283,14 +283,14 @@ namespace sw
 
         /**
          * @brief 아직 등록된 인자가 없어 보류해 둔 `gv_` 값을 찾습니다.
-         * @details 커맨드라인은 모듈(EditorModule · SWGame)이 로드되기 **전에** 파싱됩니다. 그래서 모듈이 선언하는 전역 변수의
+         * @details 커맨드라인은 모듈(EditorModule · SWGame)이 로드되기 전에 파싱됩니다. 그래서 모듈이 선언하는 전역 변수의
          *          값은 파싱 시점에 갈 곳이 없습니다. 버리는 대신 여기에 남겨 두고, 모듈이 나중에 등록할 때
          *          `GlobalVariableManager` 가 꺼내 씁니다.
          */
         [[nodiscard]] bool findPendingGlobalValue( string_view name, string& outValue ) const;
 
         /**
-         * @brief 그 전역 변수를 **명령줄이 실제로 줬는지** 반환합니다.
+         * @brief 그 전역 변수를 명령줄이 실제로 줬는지 반환합니다.
          * @details 등록된 변수(Engine 전역 변수)와 보류된 변수(모듈 것)를 둘 다 묻는다. `findPendingGlobalValue` 는 보류표만 보므로
          *          Engine 변수를 놓친다 — "명령줄 값이 저장된 값을 이긴다" 같은 판단은 이 함수로 한다.
          */

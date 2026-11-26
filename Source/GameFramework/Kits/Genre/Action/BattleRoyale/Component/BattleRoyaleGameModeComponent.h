@@ -4,7 +4,7 @@
  * @details 키트 세 갈래의 가운데다: 규칙(키트 루트 — `BattleRoyaleMatch` · `BattleRoyaleFlightPath` · `BattleRoyaleSkydiver` · `BattleRoyaleGroundItem`)을 들고 씬과 잇는다.
  *          입력 · 모습 · HUD 는 클라이언트 모듈(`GF_Client_BattleRoyale` 의 `BattleRoyaleViewComponent`)이 이 디렉터의 명령 · 읽기 API 로만 다룬다 — 전용 서버는 그 모듈을 짓지 않는다.
  *          0 번이 플레이어이고 나머지는 컴퓨터다(같은 분대의 동료 포함). 몸 · 사격은 여기서 최소로 둔다 — 평면을 걷고 사거리 안의 가장 가까운 보이는 적을 쏜다(명중 확률). 건물(씬의 정적 바디)은 걷기 · 시야를 막고 컴퓨터는 씬 내비메시의 길로 돌아간다(`BattleRoyaleSceneTerrain`). 구역 피해 · 기절 · 부활 · 전멸 · 순위는 키트 규칙이다.
- *          총은 기반 무기 표(`WeaponCatalog` · `ProjectileCatalog`)의 것이고 이 판이 쓰는 것은 `_listWeaponID`(나쁜 것부터)다 — 모두 첫 총으로 시작해 바닥 · 보급 상자에서 더 나은 총과 탄(무기 표의 `ammo` 아이템)을 줍는다. 수치는 카탈로그(`BattleRoyaleCatalog`)와 씬 데이터다. 판이 끝나거나 플레이어 분대가 전멸하면 `_resultHoldSeconds` 뒤 미니게임을 끝낸다(디렉터 계약 ③) — 이기면 결과 값 `money`(`_victoryMoney`).
+ *          총은 기반 무기 표(`WeaponCatalog` · `ProjectileCatalog`)의 것이고 이 판이 쓰는 것은 `_listWeaponID`(나쁜 것부터)다. 모두 첫 총으로 시작해 바닥 · 보급 상자에서 더 나은 총과 탄(무기 표의 `ammo` 아이템)을 줍는다. 수치는 카탈로그(`BattleRoyaleCatalog`)와 씬 데이터다. 판이 끝나거나 플레이어 분대가 전멸하면 `_resultHoldSeconds` 뒤 미니게임을 끝낸다(디렉터 계약 ③) — 이기면 결과 값 `money`(`_victoryMoney`).
  *          장르 완결 루프 시나리오: `game/playground/automation/battleroyale_slice.scenario.xml`.
  */
 #pragma once

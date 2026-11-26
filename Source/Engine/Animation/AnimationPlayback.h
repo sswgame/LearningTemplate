@@ -147,7 +147,7 @@ namespace sw
 {
     /**
      * @class AnimationNotifyTrack
-     * @brief 시각순으로 정렬된 알림 목록입니다. 커서 걸음 하나에서 지나간 것을 **정확히 한 번씩** 고릅니다(반복 경계 포함).
+     * @brief 시각순으로 정렬된 알림 목록입니다. 커서 걸음 하나에서 지나간 것을 정확히 한 번씩 고릅니다(반복 경계 포함).
      */
     class SW_API AnimationNotifyTrack
     {

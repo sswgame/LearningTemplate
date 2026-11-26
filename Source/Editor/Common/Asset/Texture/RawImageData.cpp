@@ -69,7 +69,7 @@ namespace sw::editor
             return false;
         }
 
-        // stb 는 길이를 `int` 로 받는다. 잘라서 넘기면 **뒷부분이 없는 것처럼** 읽혀 디코딩이 엉뚱하게 성공하거나 실패하므로,
+        // stb 는 길이를 `int` 로 받는다. 잘라서 넘기면 뒷부분이 없는 것처럼 읽혀 디코딩이 엉뚱하게 성공하거나 실패하므로,
         // 넘기기 전에 거절한다.
         if ( bufferSize > static_cast<size_t>( MathUtil::kMaxInt32 ) )
         {

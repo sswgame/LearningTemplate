@@ -42,7 +42,7 @@ namespace sw
 namespace sw
 {
     /**
-     * @brief 원소 하나를 채우는 콜백입니다. 인자는 **채울 원소의 주소**입니다. 실패하면 false 를 반환합니다.
+     * @brief 원소 하나를 채우는 콜백입니다. 인자는 채울 원소의 주소입니다. 실패하면 false 를 반환합니다.
      * @details 읽는 방법(바이너리 스트림, JSON 값, XML 노드)은 부르는 쪽이 알고, **그 값을 컨테이너에
      *          넣는 방법**은 컨테이너가 안다. 이 둘을 나누려고 만든 타입이다(`appendElement` 참고).
      */
@@ -62,7 +62,7 @@ namespace sw
         virtual void reserve( void*, size_t ) const {}
 
         /**
-         * @brief 이미 들어 있는 원소를 **제자리에서 고쳐도 되는지** 반환합니다.
+         * @brief 이미 들어 있는 원소를 제자리에서 고쳐도 되는지 반환합니다.
          * @details 연관 컨테이너는 원소가 곧 정렬 키라 고치면 안 된다. 고치는 순간 트리가 정렬을 잃는다.
          *          역직렬화는 `appendElement` 로 이 문제를 피하지만, **인스펙터처럼 이미 들어 있는
          *          원소를 편집하는 UI** 는 먼저 이 함수로 확인해야 한다.
@@ -77,7 +77,7 @@ namespace sw
 
         /**
          * @brief @p index 번째 원소를 @p fill 로 고칩니다. 범위 밖이거나 @p fill 이 false 를 반환하면 false 를 반환하고 컨테이너는 그대로입니다.
-         * @details 기본은 제자리 쓰기다. 원소가 곧 정렬 키나 해시 키인 컨테이너(`set`)는 원소를 꺼내 고친 뒤 **지우고 다시 넣는다.**
+         * @details 기본은 제자리 쓰기다. 원소가 곧 정렬 키나 해시 키인 컨테이너(`set`)는 원소를 꺼내 고친 뒤 지우고 다시 넣는다.
          *          고친 값의 위치는 컨테이너가 정하므로 원소의 순번이 바뀔 수 있고, 같은 값이 이미 있으면 하나로 합쳐진다.
          */
         virtual bool replaceElement( void* pContainer, size_t index, const ElementFillDelegate& fill ) const
@@ -92,7 +92,7 @@ namespace sw
          *
          * @details 기본 구현은 슬롯을 먼저 만들고(`addElementDefault`) 그 슬롯에 제자리로 쓴다(연속 컨테이너와 노드 컨테이너).
          *          연관 컨테이너(`set`)는 원소가 곧 정렬 키라 트리에 들어간 원소를 고치면 정렬 불변식이 깨지므로 **다 읽은 뒤
-         *          insert** 하도록 재정의하고, 고정 배열은 자라지 않으므로 **@p elementIndex 번째 슬롯을 채우도록** 재정의한다.
+         *          insert** 하도록 재정의하고, 고정 배열은 자라지 않으므로 @p elementIndex 번째 슬롯을 채우도록 재정의한다.
          *          새 컨테이너 래퍼를 추가할 때는 "내 컨테이너에 원소를 어떻게 넣는가"만 답하면 된다.
          * @param elementIndex 이번 읽기에서 이 원소의 순번(0 부터). 부르는 쪽은 컨테이너를 비운(`clear`) 뒤 0 부터 하나씩 늘려 부릅니다.
          */
@@ -311,7 +311,7 @@ namespace sw
         }
 
         /**
-         * @brief **다 읽은 뒤에 넣습니다.** 트리에 들어간 원소를 제자리에서 고치지 않습니다.
+         * @brief 다 읽은 뒤에 넣습니다. 트리에 들어간 원소를 제자리에서 고치지 않습니다.
          * @details 기본 구현(슬롯을 만들고 제자리에 쓰기)은 연관 컨테이너에서 틀린다. 원소가 곧 정렬
          *          키라서, 넣은 뒤에 값을 바꾸면 트리가 정렬을 잃고 이후의 삽입과 조회가 무너진다.
          *          지역 변수에 읽어 `insert` 로 넘기면 컨테이너가 위치를 스스로 정한다.
@@ -336,10 +336,10 @@ namespace sw
 namespace sw
 {
     /**
-     * @brief unordered_set 래퍼입니다. `SetWrapper` 와 **하는 일이 같아 별칭으로 둡니다.**
+     * @brief unordered_set 래퍼입니다. `SetWrapper` 와 하는 일이 같아 별칭으로 둡니다.
      * @details 정렬 여부는 컨테이너의 성질이고, 이 래퍼가 하는 일(개수, 비우기, 순회, 삽입, 키와 값 크기)은
      *          거기에 좌우되지 않는다. 구현을 복사해 두면 한쪽에 메서드를 추가할 때 다른 쪽이 조용히 뒤처지고,
-     *          별칭이면 **뒤처질 수가 없다.**
+     *          별칭이면 뒤처질 수가 없다.
      */
     template <typename TContainer>
     using UnorderedSetWrapper = SetWrapper<TContainer>;
@@ -394,7 +394,7 @@ namespace sw
                 static_cast<TContainer*>( pContainer )->~TContainer();
         }
 
-        /** @brief 고정 배열은 **자랄 수 없으므로** 아무 일도 하지 않습니다. */
+        /** @brief 고정 배열은 자랄 수 없으므로 아무 일도 하지 않습니다. */
         void addElementDefault( void* ) const override {}
 
         /**
@@ -562,10 +562,10 @@ namespace sw
 namespace sw
 {
     /**
-     * @brief unordered_map 래퍼입니다. `MapWrapper` 와 **하는 일이 같아 별칭으로 둡니다.**
+     * @brief unordered_map 래퍼입니다. `MapWrapper` 와 하는 일이 같아 별칭으로 둡니다.
      * @details 정렬 여부는 컨테이너의 성질이고, 이 래퍼가 하는 일(개수, 비우기, 순회, 삽입, 키와 값 크기)은
      *          거기에 좌우되지 않는다. 구현을 복사해 두면 한쪽에 메서드를 추가할 때 다른 쪽이 조용히 뒤처지고,
-     *          별칭이면 **뒤처질 수가 없다.**
+     *          별칭이면 뒤처질 수가 없다.
      */
     template <typename TContainer>
     using UnorderedMapWrapper = MapWrapper<TContainer>;

@@ -81,7 +81,7 @@ namespace sw
         /** @brief 든 타일을 모두 베껴 냅니다(쿠킹). */
         virtual void collectTiles( vector<NavTileData>& outListTile ) const = 0;
         /**
-         * @brief 든 타일에서 대략 그래프(`NavClusterGraph` — 타일 안 이어진 덩어리 · 타일 경계와 오프 메시 링크의 이음)를 짓습니다(쿠킹 — 모든 타일을 끼운 뒤).
+         * @brief 든 타일에서 대략 그래프(`NavClusterGraph`: 타일 안 이어진 덩어리 · 타일 경계와 오프 메시 링크의 이음)를 짓습니다(쿠킹, 모든 타일을 끼운 뒤).
          * @details 끼우지 않은 타일 쪽 이음은 없다 — 스트리밍 런타임이 아니라 다 끼운 쿠킹이 부른다.
          */
         virtual void collectClusterGraph( NavClusterGraph& outGraph ) const = 0;

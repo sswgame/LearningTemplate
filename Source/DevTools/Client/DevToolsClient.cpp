@@ -55,7 +55,7 @@ namespace sw
 {
     /**
      * @class DevConsoleOverlay
-     * @brief 게임 창 위쪽에 출력 줄과 입력 줄을 런타임 UI 오버레이로 그리는 화면 하나입니다(플랫폼 창을 띄우지 않는다 — 언리얼 `UConsole` 이 뷰포트 캔버스에 그리는 자리). 그리기만 한다 — 키보드는 `InputManager` 의 콘솔 포커스로 받는다.
+     * @brief 게임 창 위쪽에 출력 줄과 입력 줄을 런타임 UI 오버레이로 그리는 화면 하나입니다(플랫폼 창을 띄우지 않는다. 언리얼 `UConsole` 이 뷰포트 캔버스에 그리는 자리). 그리기만 한다. 키보드는 `InputManager` 의 콘솔 포커스로 받는다.
      * @details 화면은 오버레이 레이어라서 포커스 · 포인터 · 게임 입력을 받지 않는다. 줄 위젯은 처음 보일 때 정해진 수만큼 만들고 글만 바꾼다.
      */
     class DevConsoleOverlay final : public IDevConsoleView

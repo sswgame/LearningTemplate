@@ -36,7 +36,7 @@ namespace sw
      * @class CustomizationValueSet
      * @brief 넣은 순서를 지키는 작은 이름 → 꾸미기 값 목록입니다(보통 수십 개 안이라 선형 조회).
      * @details 값은 스키마의 범위와 간격에 맞추기 전의 것일 수 있습니다. 해석기(`ResolvedAppearance`)가 스키마로 정규화한 뒤 씁니다.
-     *          **스키마 판**(`getSchemaVersion`): 값을 쓴 스키마의 판입니다. 세이브 · 공유 코드가 함께 싣고, 스키마가 바뀐 뒤 읽으면 `CustomizationSchemaDef::migrate` 가
+     *          스키마 판(`getSchemaVersion`): 값을 쓴 스키마의 판입니다. 세이브 · 공유 코드가 함께 싣고, 스키마가 바뀐 뒤 읽으면 `CustomizationSchemaDef::migrate` 가
      *          판을 차례로 올린다(이름 바꾸기 · 채널 나누기 · 팔레트 번호 → 색). 판이 없으면(nullopt) 아직 찍지 않은 값 — 이 실행이 읽은 스키마(콘텐츠 · 코드)로 만든 값이라 지금 판으로 읽는다. 첫 판은 0 이다.
      *          스키마를 아는 자리(`applyValue` · `normalize` · `migrate` · 공유 코드 읽기)가 판을 찍는다.
      */

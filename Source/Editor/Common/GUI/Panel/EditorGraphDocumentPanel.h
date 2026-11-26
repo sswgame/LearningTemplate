@@ -12,14 +12,14 @@
  * [애셋에 요구하는 것]
  * `AssetType` 은 `_listNode` 와 `_listLink` 를 가지고 `toXML()` 과 `loadFromXMLText()` 을 제공해야 합니다. 노드와 링크 타입은
  * 그 목록에서 추론하므로 애셋이 따로 별칭을 노출할 필요는 없습니다.
- * 패널은 애셋을 **통째로** 보관하고 있습니다(`_graph`). 노드와 링크만 따로 들면 캔버스에 없는 필드(애니메이션 그래프의 레이어와 본 마스크)가
+ * 패널은 애셋을 통째로 보관하고 있습니다(`_graph`). 노드와 링크만 따로 들면 캔버스에 없는 필드(애니메이션 그래프의 레이어와 본 마스크)가
  * 읽기 → 저장 · Undo 를 한 번 지날 때마다 조용히 사라집니다.
  *
  * [imgui-node-editor 사본]
  * 확장 모듈은 imgui-node-editor 를 정적으로 따로 링크하므로 모듈마다 사본이 있고, "현재 편집기" 도 사본마다 따로 있다. 이 헤더는 그 라이브러리를
  * include 하지 않는다. 노드 편집기를 부르는 일은 템플릿이 아닌 `EditorGraphDocumentPanelBase`(본문은 EditorModule 의 .cpp)가 맡고, 템플릿은
  * 애셋 형식의 접착만 더한다. EditorModule 의 사본은 `EditorNodeGraph::beginCanvas` 가 걸어 둔 편집기로 같은 문맥 객체를 다룬다.
- * 패널 .cpp 가 캔버스 안에서 `ax::NodeEditor` 를 직접 부르려면 **그 모듈의 사본**에도 편집기를 걸어야 해서, 패널은 자기 .cpp 에서 본
+ * 패널 .cpp 가 캔버스 안에서 `ax::NodeEditor` 를 직접 부르려면 그 모듈의 사본에도 편집기를 걸어야 해서, 패널은 자기 .cpp 에서 본
  * `&ax::NodeEditor::SetCurrentEditor` 를 생성자로 넘긴다(`NodeEditorBindFunction`). 그 주소가 곧 그 모듈의 사본이다.
  */
 #pragma once
@@ -78,7 +78,7 @@ namespace sw::editor
 
     private:
         /**
-         * @brief 그래프 틀이 문서를 고쳤음을 알립니다(문서 패널의 편집 알림 창구 — `getDocumentEditRecorder`). 파생 패널(View)은 부를 수 없다 — 패널의 편집은 그 Model 이 알린다(감사 E-16).
+         * @brief 그래프 틀이 문서를 고쳤음을 알립니다(문서 패널의 편집 알림 창구, `getDocumentEditRecorder`). 파생 패널(View)은 부를 수 없고 패널의 편집은 그 Model 이 알린다(감사 E-16).
          * @details 이 틀은 공용 GUI 층이라 View 가 아니다. 본문은 .cpp 에 있어 이 헤더가 작업 공간 헤더(창구)를 끌지 않는다 — 이 헤더를 include 하는 View 가 창구에 닿지 않는다.
          */
         void recordGraphEdit( string_view label ) const;
@@ -243,7 +243,7 @@ namespace sw::editor
 
         /**
          * @brief 캔버스 단축키 복사 · 잘라내기 · 붙여 넣기 · 복제(Ctrl+C · X · V · D)를 목록에 반영합니다. 캔버스 안에서 `processCanvasDeletions` 보다 먼저 부릅니다(잘라내기는 지우기 요청을 낸다).
-         * @details 언리얼 그래프 편집기의 노드 복사와 같은 모양이다 — 고른 노드와 **그 노드끼리의** 링크를 애셋 XML 조각으로 만들어 편집기 복사 버퍼에 두고(OS 클립보드는 쓰지 않는다,
+         * @details 언리얼 그래프 편집기의 노드 복사와 같은 모양이다 — 고른 노드와 그 노드끼리의 링크를 애셋 XML 조각으로 만들어 편집기 복사 버퍼에 두고(OS 클립보드는 쓰지 않는다,
          *          `ObjectCopyBuffer` 와 같은 까닭), 붙일 때 노드 · 링크 id 를 새로 매긴다. 붙여 넣기는 마우스 자리에, 복제는 원본에서 조금 비켜 놓는다. 패널마다 다른 것은
          *          링크 양 끝이 어느 노드인지(@p linkNodes)와 양 끝을 새 노드 id 로 바꾸는 법(@p remapLink)뿐이다(대화는 핀 번호에 노드 id 가 들어 있다).
          * @param linkNodes `( const LinkType&, int32& outFromNode, int32& outToNode ) -> void` 시그니처의 콜백입니다.

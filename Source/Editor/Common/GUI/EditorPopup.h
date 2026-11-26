@@ -64,7 +64,7 @@ namespace sw::editor
         }
 
         // `getOpenFlagAddress()` 은 두지 않는다. ImGui 의 `p_open` 에 `&_bOpen` 을 그대로 넘기면 창의 X
-        // 버튼이 그 값을 **직접** false 로 쓰므로 `close()` 를 지나가지 않고, 그래서 `onClose()` 가
+        // 버튼이 그 값을 직접 false 로 쓰므로 `close()` 를 지나가지 않고, 그래서 `onClose()` 가
         // 불리지 않는다. 열 때는 훅이 돌고 닫을 때는 돌지 않는 반쪽 수명이 된다. 팝업은
         // `open()`/`close()`/`toggle()`/`setOpen()` 으로만 상태를 바꾼다.
         // (패널 쪽 `EditorPanel::getOpenFlagAddress()` 은 그대로 둔다. 거기엔 닫힘 훅이 없고 열림 상태가

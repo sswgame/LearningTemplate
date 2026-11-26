@@ -66,7 +66,7 @@ namespace sw
 
         constexpr bool isValid() const { return ( _high | _low ) != 0; }
         constexpr bool operator==( const NetIdempotencyKey& other ) const { return _high == other._high && _low == other._low; }
-        /** @brief 운영체제 난수로 만듭니다. 재시도마다 **같은** 키를 다시 써야 하며, 새로 만들면 다른 요청이 됩니다. */
+        /** @brief 운영체제 난수로 만듭니다. 재시도마다 같은 키를 다시 써야 하며, 새로 만들면 다른 요청이 됩니다. */
         SW_API static NetIdempotencyKey makeRandom();
     };
 } // namespace sw

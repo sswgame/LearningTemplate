@@ -317,7 +317,7 @@ namespace sw::test
         static void                                   sw_testBody_##suite##_##name()
 
     /**
-     * @brief 픽스처 케이스 — `SW_TEST_CASE_F( MyFixture, Name ) { … }`. 케이스마다 `MyFixture` 를 새로 만들고(생성자가 준비, 소멸자가 정리 — 실패 · `SW_REQUIRE` 로
+     * @brief 픽스처 케이스 `SW_TEST_CASE_F( MyFixture, Name ) { … }` 입니다. 케이스마다 `MyFixture` 를 새로 만들고(생성자가 준비, 소멸자가 정리하며 실패 · `SW_REQUIRE` 로
      *        끝나도 정리된다) 본문은 그 멤버 함수라 픽스처의 멤버를 바로 쓴다. 이름은 `<픽스처>.<케이스>` 입니다.
      */
     #define SW_TEST_CASE_F( fixture, name, ... )                                                                                                     \

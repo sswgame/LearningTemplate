@@ -192,11 +192,11 @@ SW_TEST_CASE( SlotHandleTableTest, StressGenerationRolloverAndRandomChurn )
 
 /**
  * @brief [SlotHandleTableTest] 세대는 점유 비트와 절대 섞이지 않는다
- * @details 슬롯의 "점유 중인가" 와 "몇 번째 세대인가" 는 **한 원자값**에 같이 산다 — 따로 두면 락
+ * @details 슬롯의 "점유 중인가" 와 "몇 번째 세대인가" 는 한 원자값에 같이 산다 — 따로 두면 락
  *          없이 읽는 `get()` 이 둘을 두 번에 나눠 읽게 되고, 그 사이에 `erase()` 가 끼면
- *          "점유 중 + 옛 세대" 라는 있어서는 안 되는 조합이 보여 **비워지는 중인 값의 주소**가
+ *          "점유 중 + 옛 세대" 라는 있어서는 안 되는 조합이 보여 비워지는 중인 값의 주소가
  *          돌아간다. 합치는 대가로 세대가 31비트가 되었으므로, 최상위 비트를 켠 세대를 들고 온
- *          핸들이 **점유 비트를 세대로 오해받아 통과하지 않는지**를 여기서 못박는다.
+ *          핸들이 점유 비트를 세대로 오해받아 통과하지 않는지를 여기서 못박는다.
  */
 SW_TEST_CASE( SlotHandleTableTest, CraftedGenerationDoesNotAliasTheOccupiedBit )
 {

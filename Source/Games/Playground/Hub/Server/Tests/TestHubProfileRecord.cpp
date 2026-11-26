@@ -1,4 +1,4 @@
-// HubProfileRecordTest — 허브 진행 레코드는 진행 표(`HubProfileStore::getTable`)의 형식이다 — 칸 선언(`HubProfile` 의 범위)이 쓰기와 읽기를 막는다.
+// HubProfileRecordTest: 허브 진행 레코드는 진행 표(`HubProfileStore::getTable`)의 형식이다. 칸 선언(`HubProfile` 의 범위)이 쓰기와 읽기를 막는다.
 // 레코드는 왕복하고, 깨진 바이트 · 범위 밖 값은 쓰지도 읽지도 않는다(nogpu, 에셋 없음).
 #include "pch.h"
 

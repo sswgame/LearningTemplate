@@ -338,7 +338,7 @@ namespace sw
                             SerializerUtil::valueToText( ss, propValue, prop._typeName, prop.findValueBinding(), context );
 
                             // 기본은 "모두 쓴다" 이다. 그래야 파일에 없음과 명시적으로 비어 있음이
-                            // 구분된다. 생략해도 좋다고 **스키마가 선언한** 필드만 비었을 때 뺀다.
+                            // 구분된다. 생략해도 좋다고 스키마가 선언한 필드만 비었을 때 뺀다.
                             if ( prop._metadata->_bSkipIfEmpty == SW_TRUE && context.shouldWriteEmptyValues() == false && ss.size() == 0 )
                                 return ReflectVisitFlow::Continue;
 
@@ -406,7 +406,7 @@ namespace sw
 
             /**
              * @brief `readXMLIntoInstance` 가 필드마다 나눠 쓰는 읽기 상태입니다.
-             * @details 소프트 읽기(orphan 목록이 있음)는 읽지 못한 필드를 orphan 으로 넘기고 이어 읽는다. 그 필드는 **읽기 전 값**이다(바이너리 · JSON 과 같다).
+             * @details 소프트 읽기(orphan 목록이 있음)는 읽지 못한 필드를 orphan 으로 넘기고 이어 읽는다. 그 필드는 읽기 전 값이다(바이너리 · JSON 과 같다).
              *          되돌리는 단위는 필드 하나다. 구조체 칸은 안쪽 읽기가 같은 규칙으로 안쪽 필드만 되돌리므로, 칸 자신은 담지 않는다.
              *          되돌릴 수 없으면(소유 포인터 목록, 코덱 결함) 그 뒤를 읽지 않고 객체째 실패한다(`_bObjectFailed`).
              */
@@ -1152,7 +1152,7 @@ namespace sw
                                               string_view xmlStr, uint32 currentVersion, const SerializeContext& context )
     {
         // 절차는 JSON · XML · Binary 가 공통이다(`runVersionedDeserialize`). 여기서 정하는 것은 두 가지뿐이다.
-        // **버전이 어디서 오는가**(본문 안의 `_schemaVersion`)와 **orphan 만 있을 때의 정책**이다.
+        // 버전이 어디서 오는가(본문 안의 `_schemaVersion`)와 orphan 만 있을 때의 정책이다.
         return runVersionedDeserialize(
             0, MutableObjectAddress{ pInstance }, typeInfo, currentVersion,
             SchemaVersionSource::Payload, SchemaOrphanPolicy::Ignore,

@@ -189,8 +189,8 @@ namespace sw
             }
 
             /**
-             * @brief 로컬 문서에서 **이 기계에 딸린 키만** 남깁니다 — `paths.*` 와 `parser_args.extra` · `parser_args.force_include`.
-             * @details 나머지 키는 기본값과 다르면 경고하고 버린다(기본값이 이긴다) — 셋업이 로컬에 기본값 **전체 사본**을 써 두므로, 로컬이
+             * @brief 로컬 문서에서 이 기계에 딸린 키만 남깁니다 — `paths.*` 와 `parser_args.extra` · `parser_args.force_include`.
+             * @details 나머지 키는 기본값과 다르면 경고하고 버린다(기본값이 이긴다) — 셋업이 로컬에 기본값 전체 사본을 써 두므로, 로컬이
              *          키마다 이기면 나중에 커밋된 기본값을 고쳐도 그 기계는 옛 값을 계속 쓴다(예: `flag_ops_marker` 가 바뀌면 FlagOps 우산이 비어
              *          Engine 빌드가 깨진다). 기본값에 없는 키(지운 이름)도 알린다.
              */

@@ -22,10 +22,10 @@ namespace sw
     {
         /**
          * @struct SharedFutureSignal
-         * @brief future 의 **완료 신호**입니다. 값 타입과 상관없는 부분을 모두 담습니다.
+         * @brief future 의 완료 신호입니다. 값 타입과 상관없는 부분을 모두 담습니다.
          *
          * @details `SharedFutureState<T>` 와 `SharedFutureState<void>` 가 함께 씁니다: 뮤텍스 · 조건 변수 · `_bReady` · `wait` · `waitFor`,
-         *          그리고 "락 안에서 표시하고, 알림과 후속 작업(continuation) 호출은 락 밖에서" 라는 **순서 규칙**입니다. 그 규칙은
+         *          그리고 "락 안에서 표시하고, 알림과 후속 작업(continuation) 호출은 락 밖에서" 라는 순서 규칙입니다. 그 규칙은
          *          틀리기 쉽습니다. 후속 작업이 다시 이 future 를 건드릴 수 있어 락 밖에서 불러야 하고, 이동시킨 델리게이트를 다시
          *          읽어서도 안 됩니다(use-after-move).
          *
@@ -71,10 +71,10 @@ namespace sw
             }
 
             /**
-             * @brief 완료로 표시하고 **보관해 둔 후속 작업을 반환합니다.** 이미 끝났으면 빈 것을 반환합니다.
+             * @brief 완료로 표시하고 보관해 둔 후속 작업을 반환합니다. 이미 끝났으면 빈 것을 반환합니다.
              * @param storage    보관 중인 후속 작업 델리게이트
-             * @param storeValue 값을 저장하는 일. **락 안에서** 부릅니다(타입마다 하는 일이 다릅니다).
-             * @details 반환받은 후속 작업은 **호출하는 쪽이 락 밖에서** 부릅니다. 락 안에서 부르면 그 콜백이 다시 이 future 를
+             * @param storeValue 값을 저장하는 일. 락 안에서 부릅니다(타입마다 하는 일이 다릅니다).
+             * @details 반환받은 후속 작업은 호출하는 쪽이 락 밖에서 부릅니다. 락 안에서 부르면 그 콜백이 다시 이 future 를
              *          건드릴 때 교착합니다. 알림은 값이 보이게 된 뒤에 한 번만 보냅니다.
              */
             template <typename TDelegate, typename FStoreValue>
@@ -99,8 +99,8 @@ namespace sw
             }
 
             /**
-             * @brief 후속 작업을 **보관하거나**, 이미 끝났으면 그대로 반환합니다.
-             * @details 반환받았으면 호출하는 쪽이 **락 밖에서** 부릅니다. 갈 곳을 하나만 정하므로 이동시킨 값을 다시 읽는 곳이
+             * @brief 후속 작업을 보관하거나, 이미 끝났으면 그대로 반환합니다.
+             * @details 반환받았으면 호출하는 쪽이 락 밖에서 부릅니다. 갈 곳을 하나만 정하므로 이동시킨 값을 다시 읽는 곳이
              *          없습니다(bool 플래그와 `std::move` 가 서로 배타적이라는 사실에 기대면 읽는 사람도 분석기도 use-after-move 로 봅니다).
              */
             template <typename TDelegate>
@@ -268,8 +268,8 @@ namespace sw
         {
             using ReturnType = std::invoke_result_t<F, const T&>;
 
-            // **원본이 무효하면 결과도 무효다.** 유효한(그러나 아무도 값을 넣어 주지 않는) future 를 반환하면 그것을 `wait()` 할 때
-            // **영원히 멈춘다.** 호출부마다 우회하게 두지 않고 근본 원인을 여기서 막는다. 무효한 future 는 `wait()` 가 바로 돌아오고,
+            // 원본이 무효하면 결과도 무효다. 유효한(그러나 아무도 값을 넣어 주지 않는) future 를 반환하면 그것을 `wait()` 할 때
+            // 영원히 멈춘다. 호출부마다 우회하게 두지 않고 근본 원인을 여기서 막는다. 무효한 future 는 `wait()` 가 바로 돌아오고,
             // `waitFor` 는 false 이며, `isValid()` 로 확인할 수 있다. "무효가 들어오면 무효가 나간다" 가 체인 전체에 전해진다.
             // (`fallback()` 은 이 경우 값을 채워 완료시킨다.)
             if ( _pState == nullptr )
@@ -360,7 +360,7 @@ namespace sw
         {
             using ReturnType = std::invoke_result_t<F>;
 
-            // **원본이 무효하면 결과도 무효다**(값 있는 `then` 과 같은 규칙 — 유효하지만 아무도 채우지 않는 future 는 `wait()` 가
+            // 원본이 무효하면 결과도 무효다(값 있는 `then` 과 같은 규칙 — 유효하지만 아무도 채우지 않는 future 는 `wait()` 가
             // 영원히 멈춘다).
             if ( _pState == nullptr )
                 return TaskFuture<ReturnType>{};
@@ -448,15 +448,15 @@ namespace sw
 
     /**
      * @brief 여러 TaskFuture 가 모두 완료되면 결과를 벡터로 모아 주는 future 를 반환합니다(Promise.all / WhenAll).
-     * @details 결과 벡터는 입력과 **길이가 같고** 순서도 그대로입니다. 유효하지 않은 future 슬롯은 기본값으로 남습니다. 그런
+     * @details 결과 벡터는 입력과 길이가 같고 순서도 그대로입니다. 유효하지 않은 future 슬롯은 기본값으로 남습니다. 그런
      *          future 는 `then` 이 콜백을 등록해 주지 않으므로 기다릴 수 없기 때문입니다. 목록이 비었거나 모두 유효하지 않으면
-     *          **이미 완료된 future** 를 반환합니다.
+     *          이미 완료된 future 를 반환합니다.
      */
     template <typename T>
     inline TaskFuture<vector<T>> whenAllFutures( const vector<TaskFuture<T>>& listFuture )
     {
-        // **유효하지 않은 future 는 세지 않는다.** `then` 은 상태가 없으면 콜백을 걸지 않고 그냥 돌아간다. 그런 것을
-        // 카운트다운에 넣으면 0 에 닿지 못해 결과 future 가 **영원히 끝나지 않는다.** 기본 생성된 future 하나가 섞이는 것만으로
+        // 유효하지 않은 future 는 세지 않는다. `then` 은 상태가 없으면 콜백을 걸지 않고 그냥 돌아간다. 그런 것을
+        // 카운트다운에 넣으면 0 에 닿지 못해 결과 future 가 영원히 끝나지 않는다. 기본 생성된 future 하나가 섞이는 것만으로
         // 대기가 멈춘다.
         size_t validCount = 0;
         for ( const TaskFuture<T>& future : listFuture )
@@ -510,13 +510,13 @@ namespace sw
 
     /**
      * @brief 여러 TaskFuture 중 가장 먼저 완료된 것의 결과를 받는 future 를 반환합니다(Promise.race / WhenAny).
-     * @details 유효하지 않은 future 는 후보에서 뺍니다. 후보가 하나도 없으면 **유효하지 않은 future**(`isValid() == false`)를
+     * @details 유효하지 않은 future 는 후보에서 뺍니다. 후보가 하나도 없으면 유효하지 않은 future(`isValid() == false`)를
      *          반환합니다. 값을 만들 방법이 없으므로 기다리게 두면 안 되기 때문입니다.
      */
     template <typename T>
     inline TaskFuture<T> whenAnyFuture( const vector<TaskFuture<T>>& listFuture )
     {
-        // 이길 후보가 하나도 없으면 값을 만들 방법이 없다. **유효한** future 를 반환하면 아무도 값을 넣어 주지 않아 `wait()` 가
+        // 이길 후보가 하나도 없으면 값을 만들 방법이 없다. 유효한 future 를 반환하면 아무도 값을 넣어 주지 않아 `wait()` 가
         // 영원히 멈춘다. `isValid()` 가 false 인 future 를 반환하면 `wait()` 는 바로 돌아오고, 호출하는 쪽이 "결과가 없다" 를
         // 확인할 수 있다.
         bool bHasValid = false;

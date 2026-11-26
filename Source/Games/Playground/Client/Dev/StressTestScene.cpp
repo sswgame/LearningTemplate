@@ -69,7 +69,7 @@ namespace sw
         constexpr uint32 kRagdollLogInterval = 97;
         /**
          * @brief 벤치가 섞어 쓸 도형입니다. `MeshUtil::createPrimitive` 가 아는 이름입니다.
-         * @note 큐브가 **첫 번째**여야 합니다. `-gv_stressTestMeshShapes=1`(기본값)일 때 큐브만 그려야
+         * @note 큐브가 첫 번째여야 합니다. `-gv_stressTestMeshShapes=1`(기본값)일 때 큐브만 그려야
          *       기존 측정과 스크린샷을 비교할 수 있습니다.
          */
         constexpr const utf8* kArrBenchShape[] = { "Cube", "Sphere", "Cylinder", "Capsule", "Cone" };
@@ -259,7 +259,7 @@ namespace sw
     SW_TEST_GLOBAL_VARIABLE( int32, gv_stressTestMaterialInstances, 0, "벤치 큐브마다 MaterialInstance 부여 (배치를 큐브 수만큼 가른다)" );
 
     /**
-     * @brief `-gv_stressTestMeshVariants=N`: 벤치가 쓸 **메시 종류 수**입니다. 배치 키에 메시가 들어가므로 곧 배치 수입니다.
+     * @brief `-gv_stressTestMeshVariants=N`: 벤치가 쓸 메시 종류 수입니다. 배치 키에 메시가 들어가므로 곧 배치 수입니다.
      * @details 기본값 1 에서는 모든 큐브가 한 배치로 합쳐져서 드로우 경로(드로우별 상수와 바인딩)를 전혀 측정하지 못합니다.
      *          실제 씬은 늘 여러 메시를 쓰므로, 드로우 경로를 측정하거나 다중 배치 버그를 찾으려면 이 값을 올립니다.
      */
@@ -269,24 +269,24 @@ namespace sw
      * @brief `-gv_stressTestTransparent=<퍼센트>`: 벤치 큐브 중 이 비율을 투명으로 만듭니다(0 이면 전부 불투명).
      * @details 투명 오브젝트는 불투명 오브젝트와 다른 경로를 탑니다. 배치가 깊이 순서로 나뉘고, 컬링이 압축한 순서를
      *          instance_sort 가 되돌리며, 블렌딩 PSO 를 씁니다. 벤치가 전부 불투명이면 그 경로를 한 번도
-     *          실행하지 않습니다. 투명 큐브는 **소수의 머티리얼 인스턴스를 나눠 쓰므로** 한 배치에 투명
+     *          실행하지 않습니다. 투명 큐브는 소수의 머티리얼 인스턴스를 나눠 쓰므로 한 배치에 투명
      *          인스턴스가 여럿 들어갑니다. 그래야 배치 안의 정렬이 실제로 검사됩니다.
      */
     SW_TEST_GLOBAL_VARIABLE( int32, gv_stressTestTransparent, 25, "벤치 큐브 중 투명으로 만들 비율 (퍼센트)" );
 
     /**
-     * @brief `-gv_stressTestMaterialChurn=N`: 매 프레임 머티리얼 인스턴스 N 개의 **값**을 무작위로 바꿉니다.
+     * @brief `-gv_stressTestMaterialChurn=N`: 매 프레임 머티리얼 인스턴스 N 개의 값을 무작위로 바꿉니다.
      * @details 색과 러프니스를 흔듭니다. 정적인 벤치는 머티리얼 바이트가 한 번 업로드된 뒤 영원히 그대로여서
      *          "바뀐 것만 업로드하는" 경로(`GPUMaterialGroupBuffer::_lastBytes` 비교, 인스턴스 CB 재작성,
-     *          구조 버퍼 재업로드)를 **한 번도 실행하지 않습니다.** 이 스위치가 그 경로를 매 프레임 실행합니다.
+     *          구조 버퍼 재업로드)를 한 번도 실행하지 않습니다. 이 스위치가 그 경로를 매 프레임 실행합니다.
      */
     SW_TEST_GLOBAL_VARIABLE( int32, gv_stressTestMaterialChurn, 0, "프레임당 값을 무작위로 바꿀 머티리얼 인스턴스 수 (0=사용 안 함)" );
 
     /**
      * @brief `-gv_stressTestMaterialChurnAdd=N`: 매 프레임 인스턴스 N 개를 새로 붙이거나 제거합니다.
-     * @details 값이 아니라 **집합**을 흔듭니다. 붙이면 배치 키가 갈리고 머티리얼 요소 테이블에 슬롯이 하나
+     * @details 값이 아니라 집합을 흔듭니다. 붙이면 배치 키가 갈리고 머티리얼 요소 테이블에 슬롯이 하나
      *          늘어납니다. 제거하면 참조가 사라져서 `freeUnusedMaterialElements` 가 그 슬롯을 회수하고 다음에
-     *          재사용합니다. 슬롯을 **옮기지는 않으므로** 인스턴스에 적힌 materialIndex 는 그대로여야 합니다.
+     *          재사용합니다. 슬롯을 옮기지는 않으므로 인스턴스에 적힌 materialIndex 는 그대로여야 합니다.
      *          제거한 인스턴스는 렌더 패킷이 아직 참조하고 있을 수 있습니다. 그래서 소유권이 마지막 참조와 함께
      *          실제로 사라지는지(상수 버퍼 해제 포함)도 함께 검사합니다.
      * @note 인스턴스 수는 512개에서 멈춘다. 그 뒤로는 새로 붙이는 대신 제거하는 쪽으로 기운다.
@@ -295,14 +295,14 @@ namespace sw
 
     /**
      * @brief `-gv_stressTestMaterialChurnKeyword=N`: N 프레임마다 인스턴스 하나의 런타임 스위치를 바꿉니다. 큐브는 스위치를 선언한 머티리얼(`_permutationMaterial`)을 씁니다.
-     * @warning **셰이더가 다시 컴파일됩니다.** 퍼뮤테이션 해시가 바뀌면 배치 키가 갈리고 PSO 가 새로
-     *          만들어지므로 프레임 시간이 크게 튑니다. 성능 측정용이 아니라 **퍼뮤테이션 경로가 살아 있는지**
+     * @warning 셰이더가 다시 컴파일됩니다. 퍼뮤테이션 해시가 바뀌면 배치 키가 갈리고 PSO 가 새로
+     *          만들어지므로 프레임 시간이 크게 튑니다. 성능 측정용이 아니라 퍼뮤테이션 경로가 살아 있는지
      *          확인하는 스위치입니다. 값은 크게 줍니다(예: 60 은 1초에 한 번).
      */
     SW_TEST_GLOBAL_VARIABLE( int32, gv_stressTestMaterialChurnKeyword, 0, "N 프레임마다 런타임 스위치를 흔듭니다 (0=사용 안 함)" );
 
     /**
-     * @brief `-gv_stressTestMaterialChurnSwap=N`: 매 프레임 큐브 N 개의 머티리얼 인스턴스를 **이미 있는** 다른 인스턴스로 바꿉니다(메시 컴포넌트의 머티리얼 교체).
+     * @brief `-gv_stressTestMaterialChurnSwap=N`: 매 프레임 큐브 N 개의 머티리얼 인스턴스를 이미 있는 다른 인스턴스로 바꿉니다(메시 컴포넌트의 머티리얼 교체).
      * @details 값도 집합도 그대로이고 큐브가 드는 배치만 바뀐다 — 장면 빌더가 그 칸만 옛 배치에서 빼 새 배치에 넣는지(`GT.GPUScene.build.patchEnter` · `patchLeave`),
      *          다시 나누기(`GT.GPUScene.build.partition`)로 가지 않는지 잰다. 같은 부모의 인스턴스로만 바꾼다(블렌드가 뒤집히지 않게).
      *          `-gv_stressTestMaterialInstances=1` 과 함께 쓴다(돌려 쓸 인스턴스가 큐브 수만큼 있다).
@@ -313,19 +313,19 @@ namespace sw
      * @brief `-gv_stressTestMeshShapes=N`: 벤치가 섞어 쓸 도형 수입니다(1 은 큐브만, 최대 5).
      * @details 순서는 큐브, 구, 실린더, 캡슐, 원뿔입니다. 큐브 하나만 쓰면 삼각형이 12개뿐이고 면이
      *          축에 정렬되어 있어서 래스터화, 보간, 컬링을 거의 자극하지 못합니다. 곡면을 섞으면 배치마다
-     *          **정점 수가 크게 달라져서** 간접 인자, 정점 버퍼 바인딩, 바운드 반경이 전부 다른 값을 씁니다.
-     * @note 기본값이 1 인 이유는 **기존 측정과 스크린샷을 그대로 유지하기 위해서**입니다. 도형을 섞으면 이미지가
+     *          정점 수가 크게 달라져서 간접 인자, 정점 버퍼 바인딩, 바운드 반경이 전부 다른 값을 씁니다.
+     * @note 기본값이 1 인 이유는 기존 측정과 스크린샷을 그대로 유지하기 위해서입니다. 도형을 섞으면 이미지가
      *       달라지므로 큐브만 쓴 측정값과 직접 비교할 수 없습니다.
      */
     SW_TEST_GLOBAL_VARIABLE( int32, gv_stressTestMeshShapes, 1, "벤치가 섞어 쓸 도형 수 (1=큐브만 · 최대 5: 큐브·구·실린더·캡슐·원뿔)" );
 
     /**
-     * @brief `-gv_stressTestMeshMorph=1`: 벤치 도형의 **정점**을 GPU 가 매 프레임 변형합니다.
+     * @brief `-gv_stressTestMeshMorph=1`: 벤치 도형의 정점을 GPU 가 매 프레임 변형합니다.
      * @details 컴퓨트(mesh_morph.hlsl)가 레스트 포즈를 읽어 결과 버퍼에 쓰고, 정점 셰이더가 그 결과를
      *          `SV_VertexID` 로 읽습니다. CPU 는 정점을 한 번도 다시 업로드하지 않습니다. `Mesh::setVertices` 로
      *          매 프레임 바꾸면 메시마다 정점 버퍼를 파괴하고 다시 만들어야 하고, 게임 스레드에서 부르는 호출이라
      *          OpenGL 에서는 컨텍스트도 없습니다.
-     * @note 기본값이 0 인 이유는 **픽셀 비교 검증을 흔들지 않기 위해서**입니다. 켠 상태의 검증은
+     * @note 기본값이 0 인 이유는 픽셀 비교 검증을 흔들지 않기 위해서입니다. 켠 상태의 검증은
      *       `-gv_screenshotFrame` 으로 서로 다른 시각을 찍어 이미지가 실제로 달라지는지로 확인합니다.
      */
     /**
@@ -339,11 +339,11 @@ namespace sw
     SW_TEST_GLOBAL_VARIABLE( int32, gv_stressTestMeshMorph, 0, "벤치 도형의 정점을 GPU 가 매 프레임 변형합니다 (0=사용 안 함)" );
 
     /**
-     * @brief `-gv_stressTestAnimate=0`: 벤치의 **모든** 시간 구동 변화를 멈춥니다(기본값 1 은 움직입니다).
-     * @details **기하가 있는 씬을 픽셀로 비교하려면 이 스위치가 필요합니다.** 벤치는 두 가지를 시간에 따라
+     * @brief `-gv_stressTestAnimate=0`: 벤치의 모든 시간 구동 변화를 멈춥니다(기본값 1 은 움직입니다).
+     * @details 기하가 있는 씬을 픽셀로 비교하려면 이 스위치가 필요합니다. 벤치는 두 가지를 시간에 따라
      *          움직입니다. 컴퓨트(instance_animation)가 만드는 회전과, `update()` 의 사인파가 만드는 상하
      *          이동과 스케일입니다. 둘 다 실제 시계의 델타에서 나오므로 같은 `-gv_screenshotFrame` 으로 두 번
-     *          찍어도 이미지가 다릅니다(같은 설정으로 두 번 실행하면 **1.5%** 어긋나서, 셰이더 변경으로 생기는 0.5% 차이를 가립니다).
+     *          찍어도 이미지가 다릅니다(같은 설정으로 두 번 실행하면 1.5% 어긋나서, 셰이더 변경으로 생기는 0.5% 차이를 가립니다).
      *          손대지 않은 대조군이 움직이면 하니스를 먼저 의심하세요. 회전만 멈추는 것으로는 부족합니다(사인파가 남아
      *          0.05% 흔들립니다).
      */
@@ -372,32 +372,32 @@ namespace sw
 
     /**
      * @brief `-gv_stressTestLights=N`: 격자 위에 점광과 스포트라이트를 N 개 흩뿌립니다(주 광원은 별개입니다).
-     * @details 라이트 수를 늘리면 **픽셀당 루프가 길어집니다**. 디퍼드는 화면 픽셀 수만큼, 포워드는
+     * @details 라이트 수를 늘리면 픽셀당 루프가 길어집니다. 디퍼드는 화면 픽셀 수만큼, 포워드는
      *          오버드로를 포함한 픽셀 수만큼 루프를 돕니다. 그래서 두 경로의 라이트 비용이 어떻게 달라지는지를
      *          이 스위치 하나로 측정합니다(`-gv_deferredShading` 와 함께 씁니다).
      * @note 홀수 번째는 스포트라이트입니다. 점광만 두면 원뿔 감쇠 경로가 한 번도 실행되지 않습니다.
-     * @note 기본값이 0 인 이유는 **기존 측정과 스크린샷을 그대로 유지하기 위해서**입니다.
+     * @note 기본값이 0 인 이유는 기존 측정과 스크린샷을 그대로 유지하기 위해서입니다.
      */
     SW_TEST_GLOBAL_VARIABLE( int32, gv_stressTestLights, 0, "격자에 흩뿌릴 점광·스포트라이트 수 (주광은 별개)" );
 
     /**
      * @brief `-gv_stressTestLightRadius=<유닛>`: 벤치 라이트가 닿는 반경입니다(0 이면 격자 간격에서 정합니다).
-     * @details 반경은 **비용을 정하는 값**입니다. 크면 한 픽셀에 닿는 라이트가 늘어 루프가 실제로 돌고,
+     * @details 반경은 비용을 정하는 값입니다. 크면 한 픽셀에 닿는 라이트가 늘어 루프가 실제로 돌고,
      *          작으면 감쇠가 0 이라 일찍 빠져나갑니다. 타일 컬링의 효과를 측정하려면 이 값을 바꿔 봐야 합니다.
      */
     SW_TEST_GLOBAL_VARIABLE( float32, gv_stressTestLightRadius, 0.0f, "벤치 라이트 반경 (0=격자 간격에서 정한다)" );
 
     /**
      * @brief `-gv_stressTestGround=1`: 격자 아래에 바닥 평면을 깝니다.
-     * @details **그림자를 눈으로 확인하려면 그림자를 받는 면이 있어야 합니다.** 큐브만 떠 있으면 그림자는 다른
+     * @details 그림자를 눈으로 확인하려면 그림자를 받는 면이 있어야 합니다. 큐브만 떠 있으면 그림자는 다른
      *          큐브 위에만 생기는데, 큐브가 서로 떨어져 있어서 거의 보이지 않습니다. 그러면 그림자 투영이
      *          맞는지 이미지로 판단할 수 없습니다.
-     * @note 기본값이 0 인 이유는 **기존 측정과 스크린샷을 그대로 유지하기 위해서**입니다.
+     * @note 기본값이 0 인 이유는 기존 측정과 스크린샷을 그대로 유지하기 위해서입니다.
      */
     SW_TEST_GLOBAL_VARIABLE( int32, gv_stressTestGround, 0, "격자 아래에 바닥 평면을 깝니다 (그림자를 받는 면)" );
 
     /**
-     * @brief `-gv_stressTestTickMovers=N`: 큐브마다 틱하는 무버 컴포넌트를 N 개 붙이고, 첫 번째가 **틱 안에서** 위치와 스케일을 씁니다.
+     * @brief `-gv_stressTestTickMovers=N`: 큐브마다 틱하는 무버 컴포넌트를 N 개 붙이고, 첫 번째가 틱 안에서 위치와 스케일을 씁니다.
      * @details 0 이면 게임 스레드가 틱 밖에서 배치로 씁니다. 1 은 게임플레이의 일반적인 패턴(`onTick` 안의 세터,
      *          병렬 틱 중이라 지연 경로를 탑니다)을 측정하고, 2 이상은 한 오브젝트에 틱 컴포넌트가 여럿일 때의 틱 디스패치
      *          비용을 측정합니다(나머지 무버는 틱만 실행합니다). 두 경로의 이미지는 같습니다.
@@ -458,7 +458,7 @@ namespace sw
     bool StressTestScene::spawnFromGlobals()
     {
         // 커맨드라인은 게임에 열려 있지 않지만(CommandLineManager HostOnly), 이 스위치는
-        // **이 모듈이 선언한다**(이 파일 위쪽). 그래서 이름으로 조회하지 않고 그대로 읽는다.
+        // 이 모듈이 선언한다(이 파일 위쪽). 그래서 이름으로 조회하지 않고 그대로 읽는다.
         // 주의: 문자열 조회는 이름을 잘못 쓰면 조용히 0 으로 읽힌다.
         const bool bNoBenchmarkRequested = gv_stressTestMeshes <= 0 && gv_stressTestCharacters <= 0 && gv_stressTestFaces <= 0 && getRigCharacterCount() == 0 && gv_stressTestCombat <= 0 && gv_stressTestRagdolls <= 0;
         if ( bNoBenchmarkRequested )
@@ -507,7 +507,7 @@ namespace sw
                 ++removedCount;
             }
 
-            // 흩뿌린 라이트와 바닥도 **벤치가 만든 오브젝트**이므로 같이 정리합니다.
+            // 흩뿌린 라이트와 바닥도 벤치가 만든 오브젝트이므로 같이 정리합니다.
             for ( const ComponentHandle& handle : _listBenchExtra )
             {
                 if ( Component* pComp = pObjects->resolveComponent( handle ) )
@@ -518,7 +518,7 @@ namespace sw
             }
         }
 
-        // **만든 수와 정리한 수가 같아야 합니다.** 리로드와 백엔드 교체는 despawn 과 spawn 을 한 쌍으로
+        // 만든 수와 정리한 수가 같아야 합니다. 리로드와 백엔드 교체는 despawn 과 spawn 을 한 쌍으로
         // 실행하는데, 정리되지 않은 오브젝트는 그때마다 한 벌씩 쌓여서 다음 측정을 오염시킵니다.
         SW_LOG_INFO_ID( "StressTestScene.CleanedUpObjectsCubes", "[Bench] Cleaned up %# objects (cubes %#, others %#).",
                         removedCount, static_cast<uint32>( _listBenchMesh.size() ),
@@ -605,11 +605,11 @@ namespace sw
 
     void StressTestScene::createTransparentMaterials( vector<shared_ptr<MaterialInstance>>& outList )
     {
-        // 투명은 **별도 머티리얼 에셋**으로 만듭니다. 블렌드 모드가 머티리얼의 속성이고, 알파 사용 여부가
+        // 투명은 별도 머티리얼 에셋으로 만듭니다. 블렌드 모드가 머티리얼의 속성이고, 알파 사용 여부가
         // 셰이더 퍼뮤테이션(MATERIAL_BLEND_TRANSLUCENT)을 가르기 때문입니다. 주의: 메시에 플래그를 설정하면
         // 불투명으로 컴파일된 머티리얼을 블렌딩으로 그리는 어긋난 상태가 됩니다.
         //
-        // 인스턴스는 **소수만 만들어 돌려 씁니다.** 큐브마다 하나씩 주면 배치가 인스턴스마다 갈라져서 한
+        // 인스턴스는 소수만 만들어 돌려 씁니다. 큐브마다 하나씩 주면 배치가 인스턴스마다 갈라져서 한
         // 배치에 투명 인스턴스가 하나뿐이고, 그러면 배치 안의 정렬(instance_sort 가 되돌리는 그 순서)이
         // 한 번도 검사되지 않습니다.
         constexpr uint32 kTransparentMaterialCount = 3;
@@ -727,7 +727,7 @@ namespace sw
         if ( pSceneMaterial == nullptr )
             SW_LOG_WARNING_ID( "StressTestScene.SceneNoDefaultMaterial", "[Bench] The scene has no default material - cubes may be invisible." );
 
-        // 메시 종류 수입니다. 배치 키에 메시가 들어가므로 종류 수가 곧 **배치 수**입니다. 1 이면 배치가 하나로 합쳐져서
+        // 메시 종류 수입니다. 배치 키에 메시가 들어가므로 종류 수가 곧 배치 수입니다. 1 이면 배치가 하나로 합쳐져서
         // 드로우 경로(드로우별 상수와 바인딩)를 전혀 측정하지 못합니다. 실제 씬은 늘 여러 메시를 씁니다.
         uint32 meshVariantCount = static_cast<uint32>( MathUtil::max( 1, gv_stressTestMeshVariants ) );
         meshVariantCount        = MathUtil::min( meshVariantCount, meshCount );
@@ -1169,7 +1169,7 @@ namespace sw
         const uint32       row     = index / side;
         const MeshVariant& variant = _listMeshVariant[index % static_cast<uint32>( _listMeshVariant.size() )];
         pMesh->setMesh( variant._mesh );
-        // 기본 머티리얼은 씬 **로드** 경로(bindSceneMeshDefaults)에서만 붙습니다.
+        // 기본 머티리얼은 씬 로드 경로(bindSceneMeshDefaults)에서만 붙습니다.
         // createScene 으로 직접 만든 씬은 그 단계를 거치지 않으므로 여기서 붙여 줍니다.
         // 붙이지 않으면 배치는 만들어져도 화면에는 아무것도 나오지 않습니다. 스캔 소품은 자기 머티리얼 경로입니다.
         if ( variant._materialPath.empty() == false )
@@ -1456,7 +1456,7 @@ namespace sw
         if ( pObjects == nullptr )
             return;
 
-        // 씬의 **모든** 카메라를 맞춘다. 에디터 씬 뷰는 게임 카메라가 아니라 에디터 카메라로
+        // 씬의 모든 카메라를 맞춘다. 에디터 씬 뷰는 게임 카메라가 아니라 에디터 카메라로
         // 그리므로(App::getSceneViewCamera), 게임 카메라만 옮기면 씬 뷰에서는 아무것도 안 보인다.
         for ( CameraComponent* pCam : pObjects->getCameraRegistry().getAll() )
         {
@@ -1625,7 +1625,7 @@ namespace sw
         if ( gv_stressTestAnimate == 0 )
             return;
 
-        // **쓰기를 모아서 배치로 넘깁니다**(유니티의 IJobParallelForTransform 에 해당합니다). 주의: 큐브마다 핸들로 대상을 찾고
+        // 쓰기를 모아서 배치로 넘깁니다(유니티의 IJobParallelForTransform 에 해당합니다). 주의: 큐브마다 핸들로 대상을 찾고
         // 세터 둘을 부르면 세터 하나에 약 24ns, 8000개면 프레임당 약 380µs 가 들어 게임 스레드에서 가장 큰 항목이 됩니다.
         // 배치는 핸들 해석, 필드 쓰기, 더티 표시를 워커에 나눠 맡기고 세대를 한 번만 올립니다.
         const uint32  count       = _listInstanceBatch.empty() ? static_cast<uint32>( _listBenchMesh.size() ) : _instanceCubeCount;
@@ -1675,7 +1675,7 @@ namespace sw
                                            wave * _settings._waveHeight,
                                            origin + static_cast<float32>( index / side ) * _settings._cubeSpacing };
             write._bSetPosition        = SW_TRUE;
-            // 회전은 **컴퓨트가 만듭니다**(instance_animation.hlsl). 시드 해시가 인스턴스마다 속도와 방향을 다르게 정해 줍니다
+            // 회전은 컴퓨트가 만듭니다(instance_animation.hlsl). 시드 해시가 인스턴스마다 속도와 방향을 다르게 정해 줍니다
             // (속도가 하나면 큐브가 몇천 개여도 한 덩어리처럼 보입니다). CPU 가 여기서 회전을 다시 쓰면 GPU 가 쓴 값을
             // 다음 업로드가 덮어써서 다시 균일해집니다. 그래서 회전은 CPU 가 건드리지 않습니다.
 
@@ -1759,7 +1759,7 @@ namespace sw
                 const shared_ptr<MaterialInstance> dropped = pMesh->getMaterialInstance();
                 if ( dropped == nullptr )
                     continue;
-                // 큐브에서 분리하고 **이 목록에서도 해제합니다.** 목록에 남겨 두면 참조가 사라지지 않아
+                // 큐브에서 분리하고 이 목록에서도 해제합니다. 목록에 남겨 두면 참조가 사라지지 않아
                 // 회수 경로가 영영 실행되지 않습니다. 렌더 패킷이 아직 참조하고 있으면 거기서 마지막으로 해제됩니다.
                 pMesh->setMaterialInstance( nullptr );
                 releaseChurnInstance( dropped.get() );
@@ -1769,7 +1769,7 @@ namespace sw
             Material* pParent = pMesh->getMaterial();
             if ( pParent == nullptr )
                 continue;
-            // 부모는 **그 큐브가 쓰는 머티리얼**이어야 합니다. 불투명 큐브에 유리 머티리얼을 부모로 주면 블렌드
+            // 부모는 그 큐브가 쓰는 머티리얼이어야 합니다. 불투명 큐브에 유리 머티리얼을 부모로 주면 블렌드
             // 모드가 뒤집혀 이미지가 달라지고, 스트레스 테스트가 아니라 버그가 됩니다.
             shared_ptr<MaterialInstance> instance = MaterialInstance::create( pParent );
             churnInstanceValue( instance.get() );

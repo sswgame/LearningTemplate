@@ -49,7 +49,7 @@ namespace sw
     // 표면
     SW_MATERIAL_GRAPH_NODE( Fresnel, "Surface", "Normal:float3=context._normal|Power:float=5", "Out:float=pow( saturate( 1.0f - dot( normalize( $Normal ), View::computeToView( context._worldPosition ) ) ), $Power )", "" );
 
-    // 함수 묶음(material_functions.hlsli — 지형 · 환경 · 기믹 셰이더와 같은 식, 언리얼 Material Function 자리). 스칼라 · 벡터를 내는 것만 노드다 — 층을 바꾸는 함수(젖음 · 눈 얹기)는 층 파일로 쓴다.
+    // 함수 묶음(material_functions.hlsli: 지형 · 환경 · 기믹 셰이더와 같은 식, 언리얼 Material Function 자리). 스칼라 · 벡터를 내는 것만 노드다. 층을 바꾸는 함수(젖음 · 눈 얹기)는 층 파일로 쓴다.
     SW_MATERIAL_GRAPH_NODE( TriplanarWeights, "Surface Function", "Normal:float3=context._normal|Sharpness:float=4", "Out:float3=SurfaceFunction::computeTriplanarWeights( $Normal, $Sharpness )", "" );
     SW_MATERIAL_GRAPH_NODE( ValueNoise,       "Surface Function", "Position:float3=context._worldPosition|Size:float=1", "Out:float=SurfaceFunction::computeValueNoise( $Position / max( $Size, 0.0001f ) )", "" );
     SW_MATERIAL_GRAPH_NODE( FractalNoise,     "Surface Function", "Position:float3=context._worldPosition|Size:float=1", "Out:float=SurfaceFunction::computeFbm( $Position / max( $Size, 0.0001f ), uint( %Octaves ) )", "Octaves:float=4" );

@@ -33,7 +33,7 @@ namespace sw
         /** @brief 잘림 표시의 머리입니다. 뒤에 잘리기 전 줄의 바이트 수가 붙는다. */
         static constexpr const utf8* kTruncatedMarker = " truncated=";
 
-        /** @brief @p byteCount 바이트의 줄이 상한 안인가입니다(상한을 넘으면 거절하는 줄 — 목록이 줄여 담을 수 없는 형식 — 이 쓴다). */
+        /** @brief @p byteCount 바이트의 줄이 상한 안인가입니다(상한을 넘으면 거절하는 줄, 곧 목록이 줄여 담을 수 없는 형식이 쓴다). */
         [[nodiscard]] static constexpr bool canFit( size_t byteCount )
         {
             return byteCount <= kMaxBytes;

@@ -17,7 +17,7 @@ namespace sw
 {
     /**
      * @class InterpToMovementComponent
-     * @brief 플레이 시작 자리에서 경유점(`_listWaypoint`, 시작 자리 기준 오프셋)을 차례로 지나는 바닥입니다. 자리는 **틱 번호의 순수 함수**입니다(`computeOffset`).
+     * @brief 플레이 시작 자리에서 경유점(`_listWaypoint`, 시작 자리 기준 오프셋)을 차례로 지나는 바닥입니다. 자리는 틱 번호의 순수 함수입니다(`computeOffset`).
      * @details 결정: 움직이는 바닥 위 캐릭터의 예측이 서버와 어긋나지 않으려면, 바닥이 "지금까지 쌓은 시간" 이 아니라 "이 틱의 자리" 로 정해져야 한다.
      *          쌓은 시간은 프레임 수 · 멈춤 · 접속 시점에 따라 갈라지지만, 틱의 함수는 같은 틱이면 어디서 다시 돌려도 같다(되감아 다시 시뮬레이션해도 같다).
      *          틱은 씬의 서버 틱이다 — 서버는 월드의 서버 시계(`SceneNetLink::getServerClock`), 클라이언트와 혼자 하는 게임은 `ControlSystem::getServerTick`(조종 틱에 예측하는 쪽이 알린 차이를 더한 값). 조종 시스템이 없는 씬에서는 틱이 없으므로

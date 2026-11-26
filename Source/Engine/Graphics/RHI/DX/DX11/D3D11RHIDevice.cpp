@@ -55,7 +55,7 @@ namespace sw
 
         /**
          * @brief 리소스가 출력과 입력에 동시에 걸린 "해저드" 메시지인지 판별합니다.
-         * @details D3D11 은 이것을 **WARNING** 으로 냅니다. 그런데 결과는 조용한 실패입니다. 런타임이 한쪽을
+         * @details D3D11 은 이것을 WARNING 으로 냅니다. 그런데 결과는 조용한 실패입니다. 런타임이 한쪽을
          *          NULL 로 강제하고 셰이더는 0 을 읽습니다(예: 인스턴스 버퍼 t4 가 컴퓨트 UAV 에 걸린 채
          *          남으면 화면에 아무것도 안 그려집니다). 심각도로만 거르면 로그에 한 줄도 안 나오므로
          *          해저드만은 ERROR 로 올립니다.
@@ -519,7 +519,7 @@ namespace sw
 
         Microsoft::WRL::ComPtr<IDXGISwapChain>      createdSwapChain;
         Microsoft::WRL::ComPtr<ID3D11DeviceContext> createdContext;
-        // 소프트웨어 어댑터(WARP) — CI 러너와 같은 래스터라이저(_rhi._bSoftwareAdapter). 하드웨어는 고성능 순서의 첫 어댑터다(RHIDxgiAdapter.h — 기본 어댑터는 하이브리드 노트북의 내장 GPU).
+        // 소프트웨어 어댑터(WARP)는 CI 러너와 같은 래스터라이저(_rhi._bSoftwareAdapter). 하드웨어는 고성능 순서의 첫 어댑터다(RHIDxgiAdapter.h. 기본 어댑터는 하이브리드 노트북의 내장 GPU).
         Microsoft::WRL::ComPtr<IDXGIFactory1> factory;
         Microsoft::WRL::ComPtr<IDXGIAdapter1> adapter;
         if ( deviceDesc._bSoftwareAdapter == false )
@@ -783,7 +783,7 @@ namespace sw
 
         // 백버퍼를 가리키는 참조가 하나라도 남아 있으면 ResizeBuffers 가 거부된다
         // (DXGI_ERROR_INVALID_CALL). 참조는 세 군데에 있다: 백버퍼 RTV, Immediate Context 의
-        // 바인딩, 그리고 **기록이 끝난 커맨드 리스트**다. 마지막 것을 빠뜨리면 창 크기 변경이
+        // 바인딩, 그리고 기록이 끝난 커맨드 리스트다. 마지막 것을 빠뜨리면 창 크기 변경이
         // 매번 조용히 실패한다.
         swapChain.releaseBackBufferRTV();
         {
@@ -978,8 +978,8 @@ namespace sw
             return;
 
         const D3D11ImmediateContext::ScopedLock context = _immediateContext.lock();
-        // **GetData 는 즉시 컨텍스트 전용이다.** Deferred Context 에서 End 한 쿼리도 여기서만 읽는다.
-        // **이 묶음은 곧 다시 End 하므로 지금 읽지 못하면 영영 잃는다.** 한 번만 묻고(DONOTFLUSH) 물러나면 GPU 가 몇 프레임 뒤처진 무거운
+        // GetData 는 즉시 컨텍스트 전용이다. Deferred Context 에서 End 한 쿼리도 여기서만 읽는다.
+        // 이 묶음은 곧 다시 End 하므로 지금 읽지 못하면 영영 잃는다. 한 번만 묻고(DONOTFLUSH) 물러나면 GPU 가 몇 프레임 뒤처진 무거운
         // 그래프(디퍼드 15 패스)에서 프레임 뒤쪽 패스의 칸이 늘 준비 전이라 GPU 표에서 Tonemap · Present · Canvas 가 빠졌다. 그래서 묶음마다
         // 상한(kClockReadTimeoutMilliseconds)까지 기다려 읽는다 — DX12 · Vulkan 이 묶음을 다시 쓰기 전에 펜스를 기다리는 것과 같은 자리다.
         // 프로파일러가 켜졌을 때만 오는 경로다(`_bTimestampEnabled`).

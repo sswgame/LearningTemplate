@@ -111,7 +111,7 @@ namespace sw
         if ( bInvalidDecompressInput )
             return false;
 
-        // 입력 크기를 **여기서도** 본다. 외부에서 온 바이트를 먹는 쪽은 이쪽이다. 2GB 를 넘는 값을 int32 로 캐스팅하면 음수가 되어 LZ4 에 그대로
+        // 입력 크기를 여기서도 본다. 외부에서 온 바이트를 먹는 쪽은 이쪽이다. 2GB 를 넘는 값을 int32 로 캐스팅하면 음수가 되어 LZ4 에 그대로
         // 들어가고, 그때 동작은 정의되어 있지 않다. (대상 용량은 아래에서 좁은 쪽으로 자른다.)
         if ( srcSize > static_cast<size_t>( LZ4_MAX_INPUT_SIZE ) )
         {
@@ -120,7 +120,7 @@ namespace sw
             return false;
         }
 
-        // **`_safe` 를 쓴다.** 입력 크기를 믿고 읽는 변형(`LZ4_decompress_fast`)은 손상된 데이터에
+        // `_safe` 를 쓴다. 입력 크기를 믿고 읽는 변형(`LZ4_decompress_fast`)은 손상된 데이터에
         // 대해 대상 버퍼 밖으로 쓴다. 팩 · 세이브는 외부에서 오는 바이트다.
         // 대상 용량은 한계까지만 알려 준다. 실제 버퍼보다 좁게 보는 것은 안전한 방향이다
         // (넘치면 LZ4 가 실패로 끝낸다). 그냥 캐스팅하면 음수가 될 수 있다.
@@ -343,7 +343,7 @@ namespace sw
             }
         };
 
-        // zlib 의 길이 타입은 `uLong`(= unsigned long) 이라 **Windows 에서 32비트다.** 이보다 큰
+        // zlib 의 길이 타입은 `uLong`(= unsigned long) 이라 Windows 에서 32비트다. 이보다 큰
         // 크기를 그대로 캐스팅하면 조용히 잘린 값이 들어가고, compress2 는 그 잘린 만큼만 압축한
         // 뒤 Z_OK 를 반환한다. 성공을 보고하면서 데이터를 버리는 셈이다. 입구에서 막는다.
         constexpr size_t kZlibMaxSize = static_cast<size_t>( static_cast<uLong>( -1 ) );

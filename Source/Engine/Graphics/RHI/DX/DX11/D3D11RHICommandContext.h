@@ -72,14 +72,14 @@ namespace sw
     private:
         /**
          * @brief 드로우 본문의 한 길입니다. 그래픽스 파이프라인(@p bIndexed 면 인덱스 버퍼도)을 걸고, 걸었을 때만 @p issue( ID3D11DeviceContext& ) 로 드로우를 냅니다.
-         * @details `setPipelineState` 는 **핸들만 기록**하고(공용 기반), 셰이더 · 렌더 상태 · 슬롯 · 정점 버퍼는 드로우 시점에 바뀐 것만 바인딩합니다.
+         * @details `setPipelineState` 는 핸들만 기록하고(공용 기반), 셰이더 · 렌더 상태 · 슬롯 · 정점 버퍼는 드로우 시점에 바뀐 것만 바인딩합니다.
          *          예전에는 드로우 진입점마다 바인딩을 손으로 불렀고, 한 곳이라도 빠뜨리면 그 경로의 드로우가 셰이더도 정점 버퍼도 없이 나가
          *          클리어 색만 남았다. 이제 바인딩 함수는 이 템플릿만 부르고 진입점은 본문만 넘깁니다(언리얼 D3D11 RHI 의 `CommitGraphicsResourceTables` 단일 경로).
          *          템플릿 · 인라인이라 드로우마다 간접 호출 · 할당이 늘지 않습니다.
          */
         template <bool bIndexed, typename TIssue>
         void drawWith( TIssue&& issue );
-        /** @brief 드로우 직전에 그래픽스 파이프라인을 **실제로 바인딩합니다**. 바인딩할 수 없으면 false 입니다(드로우하지 말 것). `drawWith` 만 부릅니다. */
+        /** @brief 드로우 직전에 그래픽스 파이프라인을 실제로 바인딩합니다. 바인딩할 수 없으면 false 입니다(드로우하지 말 것). `drawWith` 만 부릅니다. */
         [[nodiscard]] bool bindGraphicsPipelineForDraw();
         /** @brief 건 인덱스 버퍼를 겁니다. 걸지 않았거나 부서졌으면 알리고 false 이며 드로우를 버립니다(네 백엔드가 같다 — `RHIBufferBinding::bindForDraw`). `drawWith` 만 부릅니다. */
         [[nodiscard]] bool bindIndexBufferForDraw();

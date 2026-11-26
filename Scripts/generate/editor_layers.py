@@ -5,7 +5,7 @@ Scripts/generate/editor_layers.py
 
 에디터 층 표(`Config/Rules/Layers/EditorLayers.toml`)를 CMake 가 읽는 `EditorLayers.cmake` 로 옮긴다.
 
-**왜 린트가 아니라 빌드인가.** `Source/Editor` 의 폴더는 층이고 아래 층은 위 층의 헤더를 include 하지 못한다. 이 규칙은 예전에 린트 게이트가
+왜 린트가 아니라 빌드인가. `Source/Editor` 의 폴더는 층이고 아래 층은 위 층의 헤더를 include 하지 못한다. 이 규칙은 예전에 린트 게이트가
 `#include` 글자를 읽어 막았다. 지금은 `Source/Editor/CMakeLists.txt` 가 티어마다 OBJECT 라이브러리(부분)로 짓고, 부분마다 자기 티어보다 위 층의
 모든 헤더 자리에 `#error` 껍데기를 먼저 놓는다 — 위 층 헤더를 include 하면 컴파일이 멈춘다(전이 include 도 같다). 표는 여기서 한 번만 읽고
 CMake 는 결과를 읽는다(`project_constants.py` → `ConfigVars.cmake` 와 같은 방식).

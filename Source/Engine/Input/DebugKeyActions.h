@@ -2,7 +2,7 @@
  * @file Engine/Input/DebugKeyActions.h
  * @brief 디버그 키 액션 맵(`EngineDefaultAssets::_debugKeyInputMap`)을 만들고 프레임마다 돌립니다. 서비스 범위의 서브시스템이고
  *        (`engine::getSubsystem<DebugKeyActions>()`), 호스트 루프(App)가 프레임마다 돌리고 개발 도구 · 개발 명령이 같은 창구로 읽습니다.
- * @details 이 클래스가 내주는 것은 **입력 사실**(그 액션이 이번 프레임에 발동했나)뿐입니다. 액션이 무엇을 뜻하는지(셰이더를 다시 베이크한다,
+ * @details 이 클래스가 내주는 것은 입력 사실(그 액션이 이번 프레임에 발동했나)뿐입니다. 액션이 무엇을 뜻하는지(셰이더를 다시 베이크한다,
  *          모듈을 다시 올린다)는 그 장치를 가진 쪽이 정합니다 — 셰이더 리로드 단축키는 재컴파일기를 가진 개발 도구(`DevToolsHost`)가 읽습니다.
  */
 #pragma once
@@ -73,7 +73,7 @@ namespace sw
 
         /**
          * @brief 디버그 키 액션 맵을 @p inputMapPath 의 InputMap 리소스에서 만듭니다.
-         * @details 경로가 비었거나 읽지 못하면 오류를 남기고 **빈 맵**을 돌려줍니다. 손으로 적은 바인딩으로 바꿔 끼우지 않습니다 —
+         * @details 경로가 비었거나 읽지 못하면 오류를 남기고 빈 맵을 돌려줍니다. 손으로 적은 바인딩으로 바꿔 끼우지 않습니다 —
          *          그 내용은 리소스와 따로 낡고, 실패를 가립니다.
          */
         static unique_ptr<InputMap> createInputMap( const AssetID& assetID );
@@ -94,7 +94,7 @@ namespace sw
          */
         static AbsolutePath makeUserBindingsPath( const AbsolutePath& userSettingsFilePath );
         /**
-         * @brief @p map 에서 **기본 바인딩과 다른 슬롯만** @p filePath 에 씁니다. 다른 것이 없으면 파일을 지웁니다. 키보드 키 · 단축키는 수정 키(`modifier`)도 함께 적습니다.
+         * @brief @p map 에서 기본 바인딩과 다른 슬롯만 @p filePath 에 씁니다. 다른 것이 없으면 파일을 지웁니다. 키보드 키 · 단축키는 수정 키(`modifier`)도 함께 적습니다.
          * @details 디버그 키 맵과 에디터 입력 맵(`EditorInputActions`)이 같은 형식 · 같은 함수로 사용자 재배치를 저장한다.
          *          전체 스냅샷(`InputRemapSerializer::save`)을 두지 않는 까닭: 읽을 때 `bind*` 가 기본 바인딩 위에 더해져 재배치가 아니라 중복이 되고, 그 뒤 리소스의 기본 키를 바꿔도
          *          스냅샷이 옛 기본 키를 붙든다. 사용자가 바꾼 슬롯만 적으면 사용자 설정(`applyKeyBinding`)처럼 "기본값에서의 차이" 가 된다.

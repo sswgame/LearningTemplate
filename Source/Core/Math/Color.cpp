@@ -39,7 +39,7 @@ namespace sw
             }
 
             /**
-             * @brief 색상(0~1) · 채도 폭(span — 가장 큰 채널 − 가장 작은 채널) · 밝기 바닥(@p minimum)에서 RGB 를 만듭니다 — HSV 는 폭 = 명도 × 채도, 바닥 = 명도 − 폭이다.
+             * @brief 색상(0~1) · 채도 폭(span: 가장 큰 채널 − 가장 작은 채널) · 밝기 바닥(@p minimum)에서 RGB 를 만듭니다. HSV 는 폭 = 명도 × 채도, 바닥 = 명도 − 폭이다.
              * @details 색상환은 여섯 구간(빨강 → 노랑 → 초록 → 청록 → 파랑 → 자홍)이고, 구간마다 가장 큰 채널이 폭, 둘째 채널이 구간 안 위치만큼이다.
              */
             static Color makeFromHueSpan( const float32 hue, const float32 span, const float32 minimum, const float32 alpha ) noexcept

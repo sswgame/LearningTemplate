@@ -34,7 +34,7 @@ namespace sw
         AppearanceDataWatcher& operator=( const AppearanceDataWatcher& ) = delete;
 
         /**
-         * @brief 리소스 폴더 @p folder(로드에 쓴 것과 같은 리소스 경로)를 감시합니다. 데이터베이스와 아이템 카탈로그는 **기억하지 않는다** — 다시 읽을 때마다 `update` 가 부르는 쪽이 넘긴다(소유자보다 오래 사는 포인터가 남지 않는다).
+         * @brief 리소스 폴더 @p folder(로드에 쓴 것과 같은 리소스 경로)를 감시합니다. 데이터베이스와 아이템 카탈로그는 기억하지 않는다 — 다시 읽을 때마다 `update` 가 부르는 쪽이 넘긴다(소유자보다 오래 사는 포인터가 남지 않는다).
          * @return 감시를 시작했으면 true. 폴더가 디스크에 없거나(팩) 이 플랫폼에 감시자가 없으면 false 입니다.
          */
         [[nodiscard]] bool initialize( string_view folder );

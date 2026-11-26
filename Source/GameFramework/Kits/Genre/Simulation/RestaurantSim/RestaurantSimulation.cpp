@@ -396,7 +396,7 @@ namespace sw
 
     bool RestaurantSimulation::areLinksValid() const
     {
-        // 열기 전(카탈로그 없음)의 판은 카탈로그가 뜻을 주는 것 — 손님 · 주문 · 메뉴 · 만족도 — 이 하나도 없어야 한다. 그 밖의 검사는 볼 것이 없다.
+        // 열기 전(카탈로그 없음)의 판은 카탈로그가 뜻을 주는 것(손님 · 주문 · 메뉴 · 만족도)이 하나도 없어야 한다. 그 밖의 검사는 볼 것이 없다.
         const bool bNeedsCatalog = _listCustomer.empty() == false || _listOrder.empty() == false || _listMenu.empty() == false || _listSatisfaction.empty() == false;
         if ( _pCatalog == nullptr && bNeedsCatalog )
             return false;

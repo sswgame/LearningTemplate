@@ -252,7 +252,7 @@ namespace sw
         glBindFramebuffer( GL_FRAMEBUFFER, 0 );
         if ( status != GL_FRAMEBUFFER_COMPLETE )
         {
-            // status==0 은 "불완전" 이 아니라 **glCheckFramebufferStatus 자체가 실패했다**는 뜻이다.
+            // status==0 은 "불완전" 이 아니라 glCheckFramebufferStatus 자체가 실패했다는 뜻이다.
             // 실질적으로 현재 GL 컨텍스트가 없다는 신호다(GL 컨텍스트는 스레드 전용이고, 백엔드
             // 핫스왑은 Windows 에서 창과 컨텍스트를 통째로 재생성한다). 둘을 같은 문구로 찍으면
             // 첨부 포맷 문제인 줄 알고 엉뚱한 데를 파게 된다.
@@ -339,7 +339,7 @@ namespace sw
             (void)pUserParam;
             if ( pMessage == nullptr || severity == GL_DEBUG_SEVERITY_NOTIFICATION )
                 return;
-            // 성능 안내(상태에 따른 셰이더 재컴파일 · 픽셀 전송 동기화 — NVIDIA 가 낸다)는 결함이 아니라 정보다. 언리얼도 GL 성능 메시지는 상세 로그다 — 따로 id 로 남긴다.
+            // 성능 안내(상태에 따른 셰이더 재컴파일 · 픽셀 전송 동기화, NVIDIA 가 낸다)는 정보다. 언리얼도 GL 성능 메시지는 상세 로그로 둔다. 따로 id 로 남긴다.
             if ( type == GL_DEBUG_TYPE_PERFORMANCE && severity != GL_DEBUG_SEVERITY_HIGH )
             {
                 SW_LOG_INFO_ID( "OpenGL.GLDebugPerformance", "GL performance note %#: %#", static_cast<uint32>( id ), pMessage );
@@ -404,10 +404,10 @@ namespace sw
                 _bTextureETC2 = isFormatSupported( OpenGLRHIDeviceFormat::kCompressedRGBA8ETC2EAC ) ? SW_TRUE : SW_FALSE;
             }
 
-            // ZERO_TO_ONE = Direct3D 의 깊이 NDC [0,1]. 클립 **원점**은 대상마다 달라야 해서 여기서 고정하지 않는다.
+            // ZERO_TO_ONE = Direct3D 의 깊이 NDC [0,1]. 클립 원점은 대상마다 달라야 해서 여기서 고정하지 않는다.
             // 오프스크린 FBO 는 UPPER_LEFT(행 순서를 DX 와 맞춤), 기본 프레임버퍼는 LOWER_LEFT(창 표시가 아래에서 위)로
             // OpenGLRHICommandContext::beginRenderPass 가 매 패스 정한다. 여기서는 가능 여부만 확인하고 기본값을 깐다.
-            // **이 호출은 선택이 아니다.** 빠지면 GL 만 프레임버퍼 원점이 좌하단이라 SceneColor 의 행 순서가 다른 세
+            // 이 호출은 선택이 아니다. 빠지면 GL 만 프레임버퍼 원점이 좌하단이라 SceneColor 의 행 순서가 다른 세
             // 백엔드와 반대로 쌓인다. 풀스크린 블릿은 DX 규약(NDC 위쪽 = uv.y 0)을 백엔드 분기 없이 쓰므로 화면과
             // 스크린샷이 통째로 상하 반전된다. 깊이도 [-1,1] 로 남아 [0,1] 을 내보내는 투영이 버퍼의 절반만 쓴다.
             // 주의: 가능 여부를 `#ifdef GL_CLIP_CONTROL` 로 가리면 안 된다. 그런 GL 토큰은 없다(실제 토큰은
@@ -437,7 +437,7 @@ namespace sw
                 SW_LOG_ERROR_ID( "OpenGL.GlClipControlUnavailableNeedsGL", "glClipControl is unavailable (needs GL 4.5 / ARB_clip_control) - the screen is flipped vertically and depth precision is halved." );
             }
 
-            // **GL 오류를 로그로.** 드라이버는 디버그 컨텍스트(WGL_CONTEXT_DEBUG_BIT_ARB)에서만 메시지를 만들 의무가 있다.
+            // GL 오류를 로그로. 드라이버는 디버그 컨텍스트(WGL_CONTEXT_DEBUG_BIT_ARB)에서만 메시지를 만들 의무가 있다.
             // 그 비트는 플랫폼 컨텍스트(WGL · GLX)가 진단을 켜는 빌드에서 켠다(`build::kShipping` 가 아닌 구성). SYNCHRONOUS 라 메시지가 원인 호출 안에서 나온다.
             const bool bDebugOutput = build::kShipping == false; // 배포본은 디버그 컨텍스트가 없어 메시지도 없다
             const bool bHasDebugAPI = glad_glDebugMessageCallback != nullptr && glad_glDebugMessageControl != nullptr;
@@ -452,8 +452,8 @@ namespace sw
             else if ( bDebugOutput )
                 SW_LOG_WARNING_ID( "OpenGL.GlDebugMessageCallbackUnavailableNeedsGL", "glDebugMessageCallback is unavailable (needs GL 4.3 / KHR_debug) - GL errors will not appear in the log." );
 
-            // **프로보킹 정점은 FIRST 다.** GL 기본은 LAST 인데 DirectX · Vulkan 은 FIRST 라, `nointerpolation`
-            // 값이 삼각형의 **다른 정점**에서 온다. 지금 flat 으로 넘기는 값(materialIndex)은 배치 안에서 모두
+            // 프로보킹 정점은 FIRST 다. GL 기본은 LAST 인데 DirectX · Vulkan 은 FIRST 라, `nointerpolation`
+            // 값이 삼각형의 다른 정점에서 온다. 지금 flat 으로 넘기는 값(materialIndex)은 배치 안에서 모두
             // 같아 증상이 없지만, 정점마다 다른 flat 값을 넘기는 날 GL 만 다른 그림을 낸다. 백엔드 하나만
             // 조용히 다른 종류의 버그는 여기서 미리 막는다.
             if ( glad_glProvokingVertex != nullptr )
@@ -465,7 +465,7 @@ namespace sw
             _bNvxMemoryInfo = OpenGLRHIUtil::hasGlExtension( "GL_NVX_gpu_memory_info" ) ? SW_TRUE : SW_FALSE;
             _bAtiMemInfo    = OpenGLRHIUtil::hasGlExtension( "GL_ATI_meminfo" ) ? SW_TRUE : SW_FALSE;
 
-            // **정점 스테이지의 SSBO 한도를 실제로 물어본다.** GL 4.3 스펙이 요구하는 최소값은 0 이다.
+            // 정점 스테이지의 SSBO 한도를 실제로 물어본다. GL 4.3 스펙이 요구하는 최소값은 0 이다.
             // 정점 셰이더에서 구조버퍼를 읽는 것이 보장된 기능이 아니다. 이 엔진은 정점 셰이더에서
             // 인스턴스(t4) · 가시 목록(t6) · 모프 정점(t7)을 읽으므로, 한도가 그보다 작으면 링크는
             // 통과해도 읽기가 어긋난다. 화면으로는 "기하가 무너진다" 로만 보여서 원인을 짚기 어렵다.
@@ -981,7 +981,7 @@ namespace sw
     {
         if ( _bInitialized == SW_FALSE || _platformContext == nullptr )
             return;
-        // 쥔 스레드만 놓는다. 놓은 **뒤에** 주인 칸을 비운다 — 먼저 비우면 그 사이 다른 스레드가 아직 걸린 문맥에 건다.
+        // 쥔 스레드만 놓는다. 놓은 뒤에 주인 칸을 비운다 — 먼저 비우면 그 사이 다른 스레드가 아직 걸린 문맥에 건다.
         if ( _contextOwnerThread.load( std::memory_order_acquire ) != std::this_thread::get_id() )
             return;
         _platformContext->clearCurrent();
@@ -1058,7 +1058,7 @@ namespace sw
             if ( writtenMask.test( slotIndex ) == false )
                 continue;
 
-            // **가용 여부부터 묻는다.** 바로 결과를 읽으면 GL 이 그 자리에서 GPU 를 기다려,
+            // 가용 여부부터 묻는다. 바로 결과를 읽으면 GL 이 그 자리에서 GPU 를 기다려,
             // 측정하려던 파이프라인을 멈춰 세운다. 그러면 측정값이 거짓이 된다.
             GLint bAvailable{ 0 };
             glGetQueryObjectiv( _arrTimestampQuery[base + slotIndex], GL_QUERY_RESULT_AVAILABLE, &bAvailable );

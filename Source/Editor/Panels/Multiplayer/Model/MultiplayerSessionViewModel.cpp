@@ -136,7 +136,7 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief `netplay.wait <클라이언트 수> [<초>]` — 그만큼 붙을 때까지 이 프레임을 붙잡습니다(자동화 시나리오용 — 시나리오는 프레임 단위라 기동 시간을 모른다). */
+            /** @brief `netplay.wait <클라이언트 수> [<초>]`: 그만큼 붙을 때까지 이 프레임을 붙잡습니다(자동화 시나리오용. 시나리오는 프레임 단위라 기동 시간을 모른다). */
             static bool runWait( const vector<string>& listArgument, string& outReply )
             {
                 int32      clientCount             = 0;

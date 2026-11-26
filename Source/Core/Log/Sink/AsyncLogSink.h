@@ -32,7 +32,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     /**
      * @class AsyncLogSink
-     * @brief 기본 로그 싱크입니다. 포맷 · 리스너 · 비동기 큐를 맡고, **출력은 `ILogOutput` 에 넘깁니다.**
+     * @brief 기본 로그 싱크입니다. 포맷 · 리스너 · 비동기 큐를 맡고, 출력은 `ILogOutput` 에 넘깁니다.
      * @details 장치마다 자기 락을 가지므로 파일 I/O 가 느려도 콘솔이 멈추지 않습니다. 기본으로 콘솔 · 파일 출력을 하나씩 달고
      *          시작하며, `addOutput` 으로 더 붙일 수 있습니다(에디터 패널 · 네트워크 등. 그때도 이 클래스를 고칠 필요는 없습니다).
      *          매크로가 부르는 전역 진입점(`Logger`)는 아래층(Log)에 있고, 이 싱크는 파일 · 크래시 · 모듈을 알아야 해서 위층(LogSink)에 있습니다.
@@ -66,8 +66,8 @@ namespace sw
         /**
          * @brief 출력 장치를 하나 더 답니다. 이미 초기화된 뒤라면 바로 `open` 합니다.
          * @param output 소유권을 가져갑니다. nullptr 이면 무시합니다.
-         * @return 실제로 달았으면 true. **상한(`_s_kMaxOutput`)을 넘으면 false** 이고, 그때 `output` 은 그대로 파괴됩니다.
-         * @warning 상한을 넘기면 받아서 `open` 해 놓고 디스패치에서 말없이 빠뜨리는 대신, 거절하고 **거절했다고 알립니다.**
+         * @return 실제로 달았으면 true. 상한(`_s_kMaxOutput`)을 넘으면 false 이고, 그때 `output` 은 그대로 파괴됩니다.
+         * @warning 상한을 넘기면 받아서 `open` 해 놓고 디스패치에서 말없이 빠뜨리는 대신, 거절하고 거절했다고 알립니다.
          *          조용히 무시하든 조용히 파괴하든 호출하는 쪽에게는 똑같이 보이지 않는 실패이기 때문입니다.
          */
         bool addOutput( unique_ptr<ILogOutput> output );
@@ -87,7 +87,7 @@ namespace sw
     private:
         /**
          * @brief 달 수 있는 출력 장치의 최대 개수입니다.
-         * @details `dispatchToOutputs` 는 잠금 안에서 포인터만 고정 배열로 복사해 오고 쓰기는 **락 밖에서** 합니다(느린 파일 I/O
+         * @details `dispatchToOutputs` 는 잠금 안에서 포인터만 고정 배열로 복사해 오고 쓰기는 락 밖에서 합니다(느린 파일 I/O
          *          가 콘솔을 막지 않도록). 그 배열의 크기가 곧 이 상한이고, `addOutput` 도 이 값으로 거절합니다.
          */
         static constexpr uint32 _s_kMaxOutput = 8;
@@ -105,7 +105,7 @@ namespace sw
         void dispatchToOutputs( const LogRecord& record );
 
         /**
-         * @brief 달려 있는 출력 장치의 포인터를 @p outArrDevice 에 복사하고 개수를 돌려줍니다. 장치를 부르는 일(`open` · `close` · `write`)은 모두 이 복사본으로 **락 밖에서** 합니다.
+         * @brief 달려 있는 출력 장치의 포인터를 @p outArrDevice 에 복사하고 개수를 돌려줍니다. 장치를 부르는 일(`open` · `close` · `write`)은 모두 이 복사본으로 락 밖에서 합니다.
          * @details `_mutex` 는 잎 락입니다 — 락을 쥔 채 로그 · 장치 · 리스너를 부르지 않습니다. 그 호출이 남기는 로그가 이 싱크로 되돌아와 같은 `_mutex` 를 잡으면
          *          재진입 불가라 같은 스레드가 영구 정지합니다(예: 로그 폴더를 못 만들어 남긴 오류가 `initialize` 를 멈춤). 장치는 `addOutput` 으로 붙기만 하고
          *          떼지 않으므로(싱크가 소유) 복사한 포인터는 싱크 수명 동안 유효합니다.

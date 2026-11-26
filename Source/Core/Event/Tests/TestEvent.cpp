@@ -254,10 +254,10 @@ SW_TEST_CASE( EventTest, FrameAllocatorOverflowFallback )
 }
 
 /**
- * @brief `clear()` 는 큐에 남은 이벤트를 **파괴하고** 버린다
+ * @brief `clear()` 는 큐에 남은 이벤트를 파괴하고 버린다
  * @details `processEvents` 는 방송한 뒤 `pEvent->~EventBase()` 를 부른다. `clear()` 가 큐 맵만
  *          비우고 아레나를 되감으면 안 된다. 이벤트는 아레나에 placement new 로 올라가므로, 소멸자를
- *          부르지 않으면 **멤버가 든 힙이 그대로 샌다**(게임플레이 이벤트는 `sw::string` 을 든다).
+ *          부르지 않으면 멤버가 든 힙이 그대로 샌다(게임플레이 이벤트는 `sw::string` 을 든다).
  *          소멸자가 도는지를 살아 있는 개수로 본다.
  */
 SW_TEST_CASE( EventTest, ClearDestroysQueuedEvents )
@@ -333,7 +333,7 @@ SW_TEST_CASE( EventTest, DestructorDestroysQueuedEvents )
 
 /**
  * @brief 다른 스레드에서 `push` 한 이벤트가 퍼내는 스레드에 도착한다
- * @details 이것이 이 클래스가 실제로 쓰이는 방식이자, **교차 스레드로 지원되는 유일한 입구**다.
+ * @details 이것이 이 클래스가 실제로 쓰이는 방식이자, 교차 스레드로 지원되는 유일한 입구다.
  *          워커가 큐에 밀어 넣고(`_queueSpinLock` + 프레임 아레나가 지킨다), 버스를 퍼내는
  *          스레드가 프레임마다 `processEvents` 로 빼서 방송한다(`Engine::update`).
  *          버스 쪽(subscribe/publish)은 퍼내는 스레드 전용이며 Debug 에서 확인한다.

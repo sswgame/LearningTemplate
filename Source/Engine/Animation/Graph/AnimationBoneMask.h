@@ -5,8 +5,8 @@
  *          @code
  *          <AnimationBoneMaskDef><roots><entry bone="Spine" weight="1" /></roots><bones><entry bone="Spine" weight="0.5" /></bones></AnimationBoneMaskDef>
  *          @endcode
- *          - **roots**: 그 본과 모든 자손에 가중치를 퍼뜨린다. 자손 쪽에 다른 root 가 있으면 그 아래는 그 root 의 값이다.
- *          - **bones**: 그 본 하나만 가중치를 바꾼다(퍼뜨리지 않는다). 퍼뜨린 뒤에 적용한다.
+ *          - roots: 그 본과 모든 자손에 가중치를 퍼뜨린다. 자손 쪽에 다른 root 가 있으면 그 아래는 그 root 의 값이다.
+ *          - bones: 그 본 하나만 가중치를 바꾼다(퍼뜨리지 않는다). 퍼뜨린 뒤에 적용한다.
  *          어느 쪽에도 닿지 않는 본은 0 이다. 가중치는 0 이상 1 이하이고 필수다. 스켈레톤에 없는 본 이름은 오류다(조용히 건너뛰지 않는다).
  */
 #pragma once

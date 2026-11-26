@@ -2,7 +2,7 @@
 Scripts/lint/feature_references.py
 
 만들어 두고 아무 데도 싣지 않은 기능을 잡는다 — 리플렉션 컴포넌트 · 감시 값 · 개발 명령마다 콘텐츠 · 시나리오 · 코드의 참조를 세어 0 이면 위반이다.
-**왜 린트인가.** "쓰는 곳이 있다" 는 형식이 말할 수 없다(컴포넌트는 데이터가 이름으로 부른다). 그래서 이 틈만 글로 본다. 근본 원인은 기능을 "코드 + 단위 테스트" 까지만 만들고
+왜 린트인가. "쓰는 곳이 있다" 는 형식이 말할 수 없다(컴포넌트는 데이터가 이름으로 부른다). 그래서 이 틈만 글로 본다. 근본 원인은 기능을 "코드 + 단위 테스트" 까지만 만들고
 사용처를 완료 조건에 두지 않은 것이다.
 
 - 컴포넌트: `REFLECT` 가 붙은 `*Component`(폴더 `Tests/` 제외). 참조 = `Content` 글 파일의 그 이름, 코드(`Tests/` 제외)의 `addComponent<이름>`, 그 이름을 기반으로 삼은 클래스.
@@ -10,7 +10,7 @@ Scripts/lint/feature_references.py
 - 개발 명령: `SW_DEV_COMMAND`. 참조 = 시나리오 `line="…"` 의 낱말, 등록 줄 밖 코드 · 스크립트 글자의 첫 낱말.
 - 등록 없는 명령 함수: 명령 모양(`static bool f( const vector<string>&, string& )`)의 함수가 그 파일에서 정의 말고 한 번도 불리지 않으면 위반이다 —
   `*DevCommands.cpp` 를 기능 파일로 합칠 때(165e16647c) `SW_DEV_COMMAND` 줄만 빠져 치트 명령 아홉이 함수만 남았는데, 익명 구조체의 static 멤버는 컴파일러가 경고하지 않는다.
-- 낡은 기대 로그 id(방향이 거꾸로 — 참조가 정의를 요구한다): `SW_EXPECT_LOG( "X" )` · 시나리오 `<ExpectLog id="X">` · `<AllowLog id="X">` 의 X 가 정의에 없으면 위반이다 —
+- 낡은 기대 로그 id(방향이 거꾸로, 참조가 정의를 요구한다): `SW_EXPECT_LOG( "X" )` · 시나리오 `<ExpectLog id="X">` · `<AllowLog id="X">` 의 X 가 정의에 없으면 위반이다 —
   id 를 바꾸거나 지우면 기대가 조용히 무의미해진다(`docs/agents/Testing.md` 시나리오). 정의 = `Tests/` 밖 C++ 의 id 모양(`영역.사건`) 글자 리터럴 전부(주석 · `SW_EXPECT_LOG` 인자 제외),
   `Tests/` 안에서는 `SW_*_ID( "X"` 의 첫 인자. 로그 매크로만 보지 않는 까닭: id 는 `addErrorWithID` · `report` · `parseBoolToken` · `#define SW_LOG_ID_…` 같은 도우미를 거쳐
   매크로에 닿아(`"" id` 이어 붙이기) 매크로 자리에는 이름만 남는다. 실행 중에 이어 붙인 id 는 리터럴이 없으니 예외 표(`_logIDs`)에 까닭과 함께 둔다.
@@ -176,7 +176,7 @@ def evaluate_summary(list_token: Iterable[str], table: ExceptionTable) -> list[s
             list_problem.append(f"{path}: 기대 로그 id {name} 를 내는 코드가 없다(바꿨거나 지웠다) — 지금 id 로 고치거나 기대를 지우거나 {table.hint('_logIDs')}")
     for path, _, name in sorted(list_lost):
         list_problem.append(f"{path}: 명령 함수 {name} 를 등록(SW_DEV_COMMAND)도 호출도 하지 않는다 — 등록 줄을 되살리거나 함수를 지운다")
-    # 참조는 어느 파일에서 와도 되므로 판정은 늘 전체 요약이다 — 낡은 줄(이제 참조 · 정의가 생겼거나 이름이 사라진 줄)도 늘 센다. 폴더 줄은 예전처럼 세지 않는다.
+    # 참조는 어느 파일에서 와도 되므로 판정은 늘 전체 요약이다. 낡은 줄(이제 참조 · 정의가 생겼거나 이름이 사라진 줄)도 늘 센다. 폴더 줄은 예전처럼 세지 않는다.
     return list_problem + table.list_problems(whole_repo=True, stale_sections=("_components", "_watches", "_devCommands", "_logIDs"))
 
 

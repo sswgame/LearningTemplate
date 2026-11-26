@@ -670,7 +670,7 @@ namespace sw
     void WebGPURHICommandContext::beginEventMarker( const utf8* pName )
     {
         // 표지는 연 곳에서 닫아야 한다(https://www.w3.org/TR/webgpu/#dom-gpudebugcommandsmixin-popdebuggroup — 빈 스택의 pop 은 인코더를 무효로 만든다).
-        // 계산 패스는 디스패치가 처음 나올 때 이 컨텍스트가 연다 — 표지를 연 쪽은 그 경계를 모른다. 그래서 렌더 패스 밖의 표지는 늘 **인코더**에 걸고, 열린 계산 패스는 먼저 닫는다.
+        // 계산 패스는 디스패치가 처음 나올 때 이 컨텍스트가 연다 — 표지를 연 쪽은 그 경계를 모른다. 그래서 렌더 패스 밖의 표지는 늘 인코더에 걸고, 열린 계산 패스는 먼저 닫는다.
         if ( _state._renderPass != nullptr )
         {
             wgpuRenderPassEncoderPushDebugGroup( _state._renderPass, WebGPURHIUtil::toStringView( pName ) );

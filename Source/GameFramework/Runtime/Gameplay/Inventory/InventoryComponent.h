@@ -38,8 +38,8 @@ namespace sw
     /**
      * @class InventoryComponent
      * @brief 플레이어 한 명의 가방입니다. 조종자 오브젝트에 다른 플레이어 상태 컴포넌트와 함께 둡니다. 아이템 받기 계약(`IItemReceiver`)을 포트로 내보냅니다.
-     * @details - **가방 없음**: 컴포넌트가 없는 것이다. 가방을 선택으로 빌리는 키트(`Inventory*`)에는 `PlayerComponentUtil::findOnOwner` 의 결과로 넘긴다.
-     *          - **찾기 · 세이브**: `PlayerComponentUtil` · `DeferredStateRestore`. 정의한 .cpp 가 `StatefulComponentRegistrar` 로 모든 게임의 스냅샷에 올린다.
+     * @details - 가방 없음: 컴포넌트가 없는 것이다. 가방을 선택으로 빌리는 키트(`Inventory*`)에는 `PlayerComponentUtil::findOnOwner` 의 결과로 넘긴다.
+     *          - 찾기 · 세이브: `PlayerComponentUtil` · `DeferredStateRestore`. 정의한 .cpp 가 `StatefulComponentRegistrar` 로 모든 게임의 스냅샷에 올린다.
      */
     REFLECT( Category = "Framework", DisplayName = "Inventory", Tooltip = "One player's bag, on the controller object (or the director object in a scene without a controller); accepts items from pickups, item boxes and gathering nodes" )
     class SW_GF_API InventoryComponent : public Component

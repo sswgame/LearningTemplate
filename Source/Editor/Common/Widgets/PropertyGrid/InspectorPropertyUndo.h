@@ -20,7 +20,7 @@ namespace sw::editor
     class InspectorPropertyUndo
     {
     public:
-        /** @brief 지금 활성 위젯이 이번 프레임에 이미 그려졌으면 true 입니다. 행을 그리기 **전에** 읽어 `trackRow` 에 넘긴다. */
+        /** @brief 지금 활성 위젯이 이번 프레임에 이미 그려졌으면 true 입니다. 행을 그리기 전에 읽어 `trackRow` 에 넘긴다. */
         [[nodiscard]] static bool isActiveItemDrawn();
         /** @brief 행 @p rowID 를 그린 뒤 부릅니다 — 그리기 전(@p bActiveDrawnBefore)에는 없던 활성 위젯이 그 사이 그려졌으면 그 행의 구간을 잇는다. */
         static void trackRow( PropertyGridViewModel& model, uint32 rowID, bool bActiveDrawnBefore );

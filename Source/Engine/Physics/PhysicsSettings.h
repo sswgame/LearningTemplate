@@ -2,9 +2,9 @@
  * @file PhysicsSettings.h
  * @brief 사람이 고치는 물리 설정입니다. 충돌 채널 · 충돌 프로필(응답), 물리 재질, 중력, 고정 스텝을 담습니다(`engine/physics/physicssettings.xml`).
  * @details 충돌은 언리얼 충돌 체계와 같은 세 층이다.
- *          - **채널**(`CollisionChannelDef`): 이름 있는 칸 32 개 이하. 오브젝트 채널(바디의 종류 — WorldStatic · Pawn · Projectile …)과 트레이스 채널(질의의 종류 — Visibility · Camera).
- *          - **프로필**(`CollisionProfileDef`): 오브젝트 채널 하나 + 채널마다의 응답(막음 · 겹침 · 무시, 적지 않은 채널은 그 채널의 기본 응답) + 질의 · 물리 켜기. 32 개 이하이고 차례가 바디의 레이어 번호다.
- *          - **응답 표**: 두 프로필의 응답은 서로의 오브젝트 채널에 준 응답 중 약한 쪽이다(`makeCollisionLayers`). 트레이스 채널 질의는 그 채널을 막는 프로필만 맞는다(`makeTraceLayerMask`).
+ *          - 채널(`CollisionChannelDef`): 이름 있는 칸 32 개 이하. 오브젝트 채널(바디의 종류: WorldStatic · Pawn · Projectile …)과 트레이스 채널(질의의 종류: Visibility · Camera).
+ *          - 프로필(`CollisionProfileDef`): 오브젝트 채널 하나 + 채널마다의 응답(막음 · 겹침 · 무시, 적지 않은 채널은 그 채널의 기본 응답) + 질의 · 물리 켜기. 32 개 이하이고 차례가 바디의 레이어 번호다.
+ *          - 응답 표: 두 프로필의 응답은 서로의 오브젝트 채널에 준 응답 중 약한 쪽이다(`makeCollisionLayers`). 트레이스 채널 질의는 그 채널을 막는 프로필만 맞는다(`makeTraceLayerMask`).
  *          코드는 이름으로만 고른다(`findLayerIndex` — 프로필 번호, `findMaterial`). 표에 없는 이름, 32 개를 넘는 채널 · 프로필, 겹친 이름은 읽을 때 오류다.
  *          표는 2D 와 3D 가 함께 쓰고, 2D 콜라이더(`BoxCollider2DComponent`)도 2D 씬의 바디라 같은 표를 받는다.
  */

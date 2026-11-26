@@ -614,7 +614,7 @@ namespace sw
         }
         for ( const SceneDocument::SceneObjectNode& entity : doc._listSceneObjectNode )
         {
-            // 쿠커가 만든 엔티티(HLOD 대리 — 조각의 `_hlodFileID`)는 열린 씬에 없다 — 뺀다.
+            // 쿠커가 만든 엔티티(HLOD 대리, 조각의 `_hlodFileID`)는 열린 씬에 없으므로 뺀다.
             const uint64 objectID = toObjectID( entity._fileID );
             if ( objectID != 0 )
                 outPreview._listAlwaysLoadedID.push_back( objectID );

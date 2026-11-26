@@ -114,7 +114,7 @@ SW_TEST_CASE( HZBPyramidTest, SelectMipFitsFootprint )
     SW_EXPECT_EQUAL( 0u, layout.selectMip( makeRect( 0.0f, 0.0f, 3.5f / 1024.0f, 3.5f / 1024.0f ), kFootprint ).value() );
     // 깊이 px 0..7 — 밉 0 은 넷, 밉 1 은 둘.
     SW_EXPECT_EQUAL( 1u, layout.selectMip( makeRect( 0.0f, 0.0f, 7.5f / 1024.0f, 7.5f / 1024.0f ), kFootprint ).value() );
-    // 깊이 px 3..4 — 두 픽셀이지만 밉 0 의 텍셀 1 · 2 를 걸친다(둘 — 맞는다). 발자국 1 이면 밉 2(텍셀 0)까지 가야 한다.
+    // 깊이 px 3..4 는 두 픽셀이지만 밉 0 의 텍셀 1 · 2 를 걸친다(둘, 맞는다). 발자국 1 이면 밉 2(텍셀 0)까지 가야 한다.
     SW_EXPECT_EQUAL( 0u, layout.selectMip( makeRect( 3.5f / 1024.0f, 0.0f, 4.5f / 1024.0f, 0.5f / 1024.0f ), kFootprint ).value() );
     SW_EXPECT_EQUAL( 2u, layout.selectMip( makeRect( 3.5f / 1024.0f, 0.0f, 4.5f / 1024.0f, 0.5f / 1024.0f ), 1u ).value() );
     // 화면 전체 — 맨 위(1 x 1) 바로 아래 밉(2 x 2)에 맞는다.

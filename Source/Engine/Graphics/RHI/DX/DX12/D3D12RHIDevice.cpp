@@ -735,7 +735,7 @@ namespace sw
             {
                 debugController->EnableDebugLayer();
                 SW_LOG_INFO_ID( "D3D12.DebugLayerEnabled", "Debug layer enabled." );
-                // GPU 기반 검증(GBV)은 장치를 만들기 **전에만** 켤 수 있다(ID3D12Debug1::SetEnableGPUBasedValidation 문서). 켜 달라고 했는데 인터페이스가 없으면 멈춘다(R-9).
+                // GPU 기반 검증(GBV)은 장치를 만들기 전에만 켤 수 있다(ID3D12Debug1::SetEnableGPUBasedValidation 문서). 켜 달라고 했는데 인터페이스가 없으면 멈춘다(R-9).
                 if ( deviceDesc._bGPUBasedValidation )
                 {
                     Microsoft::WRL::ComPtr<ID3D12Debug1> debugController1;
@@ -760,7 +760,7 @@ namespace sw
         if ( deviceDesc._bGPUBasedValidation )
             SW_LOG_WARNING_ID( "D3D12.GPUBasedValidationWithoutLayer", "EngineConfig _rhi._bGPUBasedValidation is on, but this build has no D3D12 debug layer - ignored" );
     #endif
-        // DRED(Device Removed Extended Data)의 자동 브레드크럼 · 페이지 폴트 - 디바이스를 만들기 **전에** 켜야 한다. 켤지는 EngineConfig `_rhi._dred`(배포가 아닌 구성 기본 켬)와
+        // DRED(Device Removed Extended Data)의 자동 브레드크럼 · 페이지 폴트 - 디바이스를 만들기 전에 켜야 한다. 켤지는 EngineConfig `_rhi._dred`(배포가 아닌 구성 기본 켬)와
         // `-rhi-dred` 가 정한다 — 배포 구성도 인자로 켠다(언리얼 `-gpucrashdebugging`). 소실 뒤 마지막 패스 이름은 우리 표지(`createBreadcrumbBuffer`, `-rhi-breadcrumbs`)가 싣고,
         // DRED 는 명령 종류별 진행과 폴트 주소를 싣는다.
         _bDRED = deviceDesc._bDRED ? SW_TRUE : SW_FALSE;
@@ -1393,7 +1393,7 @@ namespace sw
     {
         if ( _swapChain.isValid() == false )
             return false;
-        // 크기 바꿈과 같은 길 — 포맷만 바꿔 `ResizeBuffers` 한다. 실패해도 버퍼는 다시 만든다(옛 포맷 그대로 — `setColorSpace` 가 되돌렸다).
+        // 크기 바꿈과 같은 길로 포맷만 바꿔 `ResizeBuffers` 한다. 실패해도 버퍼는 다시 만든다(옛 포맷 그대로, `setColorSpace` 가 되돌렸다).
         ScopedThreadRoleBorrow borrow{ _swapChain.getRenderThreadRole() };
         releaseSwapChainBuffersForRebuild( _swapChain );
         const bool bChanged = _swapChain.setColorSpace( colorSpace, metadata );
@@ -1529,10 +1529,10 @@ namespace sw
 
         // 프레임 스트림을 이 지점에서 자르고 [지금까지의 조각][이 리스트] 순서로 모아 endFrame 에서 한 번에
         // 제출한다(Vulkan 과 같다). 같은 큐의 제출 순서가 곧 실행 순서다. 주의: 여기서 곧바로 ExecuteCommandLists 를
-        // 부르면 프레임 스트림은 endFrame 에 제출되므로, 그래프보다 **먼저** 기록한 것(오프스크린 게임 RT 클리어 등)이
+        // 부르면 프레임 스트림은 endFrame 에 제출되므로, 그래프보다 먼저 기록한 것(오프스크린 게임 RT 클리어 등)이
         // 그래프 뒤에 실행된다.
         //
-        // **빈 조각은 자르지 않는다.** 이 조각에 아무것도 기록되지 않았으면(레벨 배리어는 패스 리스트에 들어가므로
+        // 빈 조각은 자르지 않는다. 이 조각에 아무것도 기록되지 않았으면(레벨 배리어는 패스 리스트에 들어가므로
         // 레벨 사이가 그렇다) 패스 리스트만 넣고 조각은 열어 둔 채 다음 기록을 받는다. 그 조각은 뒤에 기록될
         // 것만 담으므로 뒤에 제출돼도 순서가 맞다. 잘라 내보내면 큐에 빈 리스트가 나가고 제출이 리스트당 ~7 us 다.
         const bool bSegmentEmpty = ( _frameStreamState._bRecordedAny == SW_FALSE );
@@ -1585,7 +1585,7 @@ namespace sw
         if ( _bImmediateSubmit == false || _listPendingSubmit.empty() )
             return;
 
-        // 여기까지 기록된 구조 버퍼 갱신 복사가 이 리스트들보다 먼저 가야 한다. 앞에 끼운다. **실행까지 업로드 락을 쥔다** — 닫아서 대기열에 넣은 복사
+        // 여기까지 기록된 구조 버퍼 갱신 복사가 이 리스트들보다 먼저 가야 한다. 앞에 끼운다. 실행까지 업로드 락을 쥔다 — 닫아서 대기열에 넣은 복사
         // 리스트를 실행 전에 다른 스레드의 갱신이 `Reset` 하면 그 복사가 사라진다.
         const ScopedDeferredLog deferredLog;
         ScopedLock<mutex>       uploadLock{ _uploadSlotMutex };
@@ -1678,7 +1678,7 @@ namespace sw
         StructuredUploadSlot& slot = _arrStructuredUploadSlot[*_openUploadSlotIndex];
         _openUploadSlotIndex.reset();
         requireHr( slot._copyCommandList->Close(), "ID3D12GraphicsCommandList::Close (structured upload)" );
-        // 이 얼로케이터의 기록이 모두 끝났다고 믿어도 되는 펜스는 **이 제출 뒤 첫 Signal** 이다. 주의: 리스트를 **열 때** 적으면, 프레임 제출 뒤 ·
+        // 이 얼로케이터의 기록이 모두 끝났다고 믿어도 되는 펜스는 이 제출 뒤 첫 Signal 이다. 주의: 리스트를 열 때 적으면, 프레임 제출 뒤 ·
         // Signal 전에 연 복사(다음 프레임에 제출된다)가 한 프레임 이른 펜스를 달고, 세 프레임 뒤 그 펜스만 기다리고 얼로케이터를 Reset 한다 —
         // `_resetFence` 가 막으려는 "실행 중 Reset" 그대로다. 부르는 쪽은 업로드 락을 쥐고 있고, 실행은 다음 Signal 보다 먼저다.
         slot._resetFence = _frameFenceRing.getRecordingSerial();
@@ -1781,7 +1781,7 @@ namespace sw
         {
             const uint32 nextIndex = ( _frameRing.currentIndex() + 1 ) % constant::render::kMaxFrameCountInFlight;
             const uint64 waitValue = _frameRing.getFenceValue( nextIndex );
-            // 2 초가 지나도 **끝날 때까지** 기다린다(`waitForFenceValue`). 주의: 시간 초과를 무시하고 링을 넘기지 못한 채 이어가면, 방금 제출한
+            // 2 초가 지나도 끝날 때까지 기다린다(`waitForFenceValue`). 주의: 시간 초과를 무시하고 링을 넘기지 못한 채 이어가면, 방금 제출한
             // 프레임의 얼로케이터를 Reset 하고 GPU 가 읽는 상수버퍼 링 칸을 덮어쓴다. 장치가 제거됐으면(Windows 는 멈춘 GPU 를 TDR 로 제거한다)
             // 기다리지 않는다.
             waitForFenceValue( waitValue );
@@ -2065,7 +2065,7 @@ namespace sw
         if ( isHrSuccess( _timestampReadback->Map( 0, &range, &pMapped ), "ID3D12Resource::Map (timestamp readback)" ) == false || pMapped == nullptr )
             return;
 
-        // DX12 는 쿼리 힙을 리셋하지 않는다. 안 적은 칸에는 **지난 사이클의 값**이 그대로 남는다.
+        // DX12 는 쿼리 힙을 리셋하지 않는다. 안 적은 칸에는 지난 사이클의 값이 그대로 남는다.
         // 그래서 어느 칸이 이번 것인지 비트로 가려야 한다. 안 그러면 건너뛴 패스가 0us 로 보고된다.
         uint64 arrTick[constant::render::kMaxGPUTimestampSlot]{};
         Memory::copy( arrTick, static_cast<const uint8*>( pMapped ) + byteOffset, sizeof( arrTick ) );
@@ -2102,7 +2102,7 @@ namespace sw
             D3D12MA::Budget nonLocalBudget{};
             _allocator->GetBudget( &localBudget, &nonLocalBudget );
             SW_PROFILE_COUNT( "RT.DX12.allocationCount", localBudget.Stats.BlockCount + nonLocalBudget.Stats.BlockCount ); // 살아 있는 힙 + 커밋 자원(Vulkan 의 RT.Vulkan.allocationCount 자리)
-            // **여기가 타임스탬프를 읽는 유일한 안전한 자리다.** 이 슬롯의 펜스를 방금 통과했으므로
+            // 여기가 타임스탬프를 읽는 유일한 안전한 자리다. 이 슬롯의 펜스를 방금 통과했으므로
             // 지난번 이 슬롯에 적은 값이 GPU 에서 끝나 있다. 기다리지 않으니 파이프라인이 안 멈춘다.
             ensureTimestampResources();
             collectTimestampsForSlot();
@@ -2179,7 +2179,7 @@ namespace sw
                 SW_PROFILE_SCOPE( "RT.Present.submit.close" );
                 // 구간 전체를 읽기 버퍼로 옮긴다. 32 칸이면 256 바이트라 옮기는 값이 사실상 공짜고,
                 // 어느 칸이 이번 것인지는 비트로 따로 굳혀 둔다(안 적은 칸에는 지난 사이클 값이 남아 있다).
-                // 슬롯 번호는 **패스 인덱스로 고정**이라 병렬 기록에도 경쟁이 없다.
+                // 슬롯 번호는 패스 인덱스로 고정이라 병렬 기록에도 경쟁이 없다.
                 const GPUTimestampSlotMask writtenMask              = _timestampRing.closeFrame( _frameRing.currentIndex() );
                 const bool                 bShouldResolveTimestamps = _bTimestampEnabled.load( std::memory_order_relaxed ) != SW_FALSE && _timestampHeap != nullptr && _timestampReadback != nullptr &&
                                                       writtenMask.any();
@@ -2210,7 +2210,7 @@ namespace sw
                 releaseOnlineBlocksDeferred( _frameStreamState );
             }
 
-            // 열어 둔 구조 버퍼 갱신 복사 리스트를 프레임 리스트 앞에 끼우고 한 번에 제출한다. **실행까지 업로드 락을 쥔다** — 닫아서 대기열에 넣은 복사
+            // 열어 둔 구조 버퍼 갱신 복사 리스트를 프레임 리스트 앞에 끼우고 한 번에 제출한다. 실행까지 업로드 락을 쥔다 — 닫아서 대기열에 넣은 복사
             // 리스트를 실행 전에 다른 스레드의 갱신이 `Reset` 하면 GPUScene 복사가 사라진다(submitPendingIfImmediate 와 같은 이유).
             // 텍스처 전송은 제출 때 이미 큐에 나갔다 — 이 프레임 리스트들보다 먼저 실행된다(계약 3).
             // 아직 기다리지 않은 비동기 컴퓨트 일이 있으면 마지막 그래픽스 일 앞에서 기다린다 — 뒤의 프레임 펜스 하나가 두 큐의 끝을 덮어야
@@ -2558,7 +2558,7 @@ namespace sw
 
     bool D3D12RHIDevice::isBindlessIndexLive( RHIBindlessIndexSpace space, RHIDescriptorIndex index ) const
     {
-        // 락이 없다(L-1) — 드로우마다 묻는 진단이 `_bindlessMutex` 읽기 락을 잡던 자리다. 기록 경로와 같은 고정 표를 본다(종류까지 — `RHIBindlessReadSlot::isLive`).
+        // 락이 없다(L-1). 드로우마다 묻는 진단이 `_bindlessMutex` 읽기 락을 잡던 자리다. 기록 경로와 같은 고정 표를 본다(종류까지, `RHIBindlessReadSlot::isLive`).
         return index < kBindlessDescriptorCapacity && _arrBindlessReadSlot.get()[index].isLive( space );
     }
 

@@ -523,7 +523,7 @@ namespace sw
         bool requiresComponentFactory() const noexcept { return _bComponentFactory == SW_TRUE; }
         /**
          * @brief 이 타입에 틱 등록 줄을 낸다 — `REFLECT( TickMode = … )` 를 단 컴포넌트, 그리고 추상이 아닌 모든 컴포넌트다.
-         * @details 모드를 적지 않은 컴포넌트는 `makeDeclaredTickEntry` 줄이고, 틱 함수를 **직접 선언했는지**는 그 줄이 컴파일에서 정한다(생성기는 이름 · 인자 수를 보지 않는다).
+         * @details 모드를 적지 않은 컴포넌트는 `makeDeclaredTickEntry` 줄이고, 틱 함수를 직접 선언했는지는 그 줄이 컴파일에서 정한다(생성기는 이름 · 인자 수를 보지 않는다).
          *          추상 타입은 `TickMode` 를 적었을 때만 낸다(파생이 물려받는 모드 — 재정의만으로는 그 타입의 인스턴스가 없다).
          */
         bool requiresTickRegistration() const noexcept
@@ -553,7 +553,7 @@ namespace sw
         string _underlyingType;
         /** @brief `ENUM( Flags )` 입니다. 레지스트리의 비트플래그 표시와 비트 연산자 트레이트 코드젠을 함께 켭니다. */
         uint8 _bIsBitFlag : 1;
-        /** @brief 클래스 · 구조체 **안에** 선언된 열거형이면 1 입니다. 그러면 밖에서 전방 선언할 수 없습니다. */
+        /** @brief 클래스 · 구조체 안에 선언된 열거형이면 1 입니다. 그러면 밖에서 전방 선언할 수 없습니다. */
         uint8 _bNestedInType : 1;
         /** @brief 바깥 형식 사슬에 public 이 아닌 고리가 있습니다(`ParsedTypeInfo::_bHidden` 과 같다). */
         uint8                  _bHidden  : 1;

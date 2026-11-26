@@ -112,29 +112,29 @@ namespace sw
     /**
      * @class CharacterAppearanceComponent
      * @brief 몸 유닛(같은 오브젝트의 `SkeletalMeshComponent`)에 외형 프리셋을 입힙니다. 외형 데이터는 게임 서비스 `AppearanceDatabase` 에서 가져옵니다.
-     * @details - **조립**: 프리셋을 시드로 펼치고(`CharacterAppearanceCatalog::expand`), 슬롯 덮어쓰기(`setSlotItem`, 무기 바꾸기에 씀)를 적용해 해석한다.
+     * @details - 조립: 프리셋을 시드로 펼치고(`CharacterAppearanceCatalog::expand`), 슬롯 덮어쓰기(`setSlotItem`, 무기 바꾸기에 씀)를 적용해 해석한다.
      *            몸 부품(주인이 비어 있는 첫 스킨드 부품)은 이 오브젝트의 유닛에 메시, 스켈레톤, 머티리얼로 적용한다. 다른 스킨드 부품은 몸을 리더로 따르는 자식 유닛으로 만든다.
      *            자기 리그(`rig`)를 적은 스킨드 부품은 리더를 두지 않고 자기 스켈레톤을 그 리그가 움직인다(스프링 망토, 리그 유닛 `Body` = 몸).
-     *          - **리그 유닛**: 같은 오브젝트의 후처리 리그에 소켓 에셋을 가진 소켓 부품을 칸 이름의 강체 유닛으로 잇는다(왼손 IK 가 `MainHand` 의 `SupportHand` 를 따른다).
-     *          - **부품 풀**: 바꾼 소켓 부품과 `destroyOwnerStowingParts` 로 거둔 소켓 부품은 씬의 `SocketPartPool` 에 쉬게 하고, 다음 스폰이 같은 에셋을 꺼낸다.
+     *          - 리그 유닛: 같은 오브젝트의 후처리 리그에 소켓 에셋을 가진 소켓 부품을 칸 이름의 강체 유닛으로 잇는다(왼손 IK 가 `MainHand` 의 `SupportHand` 를 따른다).
+     *          - 부품 풀: 바꾼 소켓 부품과 `destroyOwnerStowingParts` 로 거둔 소켓 부품은 씬의 `SocketPartPool` 에 쉬게 하고, 다음 스폰이 같은 에셋을 꺼낸다.
      *            소켓 부품(`SocketPrefab`)은 프리팹을 스폰해서 `SocketBindingComponent` 로 소켓에 붙인다. 다시 조립할 때 같은 부품(주인, 이름, 에셋)은 그대로 둔다.
      *            휘지 않는 스킨드 부품(`deforms="false"`)은 메시 하나(`MeshComponent`, 구간 머티리얼 포함)로, 스프라이트 부품은 `SpriteComponent`(클립 · 그리기 순서 `layer`)로 만들어
      *            같은 길로 소켓에 붙인다(풀에는 쉬지 않는다).
-     *          - **구간 머티리얼**: 부품 · 변형 · 규칙이 메시 구간 이름마다 머티리얼과 매개변수를 정한다(`ResolvedPart::_listSection`, `ResolvedMaterialValue::_section`). 합쳐도 구간마다 머티리얼이 남는다.
-     *          - **소켓**: 몸과 부품의 소켓 에셋이 하나의 이름 공간을 이룬다(`AppearanceSocketRig`, 예: `MainHand.Muzzle`). 몸의 포즈가 끝난 프레임마다(단계 작업) 부품의
+     *          - 구간 머티리얼: 부품 · 변형 · 규칙이 메시 구간 이름마다 머티리얼과 매개변수를 정한다(`ResolvedPart::_listSection`, `ResolvedMaterialValue::_section`). 합쳐도 구간마다 머티리얼이 남는다.
+     *          - 소켓: 몸과 부품의 소켓 에셋이 하나의 이름 공간을 이룬다(`AppearanceSocketRig`, 예: `MainHand.Muzzle`). 몸의 포즈가 끝난 프레임마다(단계 작업) 부품의
      *            소켓 위치를 고친다. `findSocketWorldTransform` 은 지난 프레임의 포즈와 월드로 답하며, 틱 안에서는 읽기만 한다.
-     *          - **체형 · 피팅**: 해석의 모프(체형)와, 몸 부품에 피팅 표(`fitTables`)가 있으면 피팅 데이터(`fit`)를 가진 스킨드 부품의 피팅을 베이크한 메시 사본으로 그린다
+     *          - 체형 · 피팅: 해석의 모프(체형)와, 몸 부품에 피팅 표(`fitTables`)가 있으면 피팅 데이터(`fit`)를 가진 스킨드 부품의 피팅을 베이크한 메시 사본으로 그린다
      *            (`AppearanceMeshPart` — 덮인 삼각형 · 숨김 영역을 빼고 델타와 모프를 레스트에 베이크한다). 원본 메시 · 데이터는 비동기로 읽고, 다 읽힌 틱 뒤에 유닛의
      *            스킨 원본을 바꾼다(`SkeletalMeshComponent::setSkinSourceMesh`). 그동안 피팅하는 부품은 숨긴다. 원본 메시 · 표 · 피팅 데이터가 다시 읽히면 다시 조립한다.
-     *          - **병합**(`_bMergeParts`): 켜면 몸을 따르는 스킨드 부품(자기 리그 · 다른 스켈레톤이 아닌 것)은 오브젝트를 따로 두지 않는다. 몸과 그 부품들의 메시(베이크한 사본이거나 원본)를
+     *          - 병합(`_bMergeParts`): 켜면 몸을 따르는 스킨드 부품(자기 리그 · 다른 스켈레톤이 아닌 것)은 오브젝트를 따로 두지 않는다. 몸과 그 부품들의 메시(베이크한 사본이거나 원본)를
      *            구간이 있는 메시 하나로 합쳐(`CharacterMeshUtil::mergeMeshes`) 몸 유닛이 한 번에 스키닝하고, 부품마다 몸 오브젝트의 구간 컴포넌트(`MeshSectionComponent`)가 자기 머티리얼로 그린다.
-     *            병합한 메시가 처음 걸리기 전에는 몸을 그리지 않는다(`isMergedMeshAwaited` — 몸 유닛의 등장 대기). 합친 메시는 워커가 낮은 상세 단계(LOD)를 만든다(`CharacterLODSettings::buildLODs` — 단계마다 구간 범위가 있고
+     *            병합한 메시가 처음 걸리기 전에는 몸을 그리지 않는다(`isMergedMeshAwaited`, 몸 유닛의 등장 대기). 합친 메시는 워커가 낮은 상세 단계(LOD)를 만든다(`CharacterLODSettings::buildLODs` — 단계마다 구간 범위가 있고
      *            구간마다 줄인다, 부품 · `<Section>` 의 `lodDetail` · `lodDropLevel` 규칙). 몸 유닛은 그 단계에서 가중치가 없는 본을 풀지 않는다(본 LOD 자동 마스크).
-     *          - **염색**: 해석 결과의 머티리얼 값(`Parameter`, 꾸미기의 `MaterialColor` 와 `MaterialScalar`)을 주인의 부품마다 머티리얼 인스턴스에 적용한다.
-     *          - **장비**: `setEquipment` 로 빌린 장비(`Equipment`)의 슬롯이 프리셋의 장비 구성을 덮는다. 해석은 외형 상태(`CharacterAppearanceState`)가 하고,
+     *          - 염색: 해석 결과의 머티리얼 값(`Parameter`, 꾸미기의 `MaterialColor` 와 `MaterialScalar`)을 주인의 부품마다 머티리얼 인스턴스에 적용한다.
+     *          - 장비: `setEquipment` 로 빌린 장비(`Equipment`)의 슬롯이 프리셋의 장비 구성을 덮는다. 해석은 외형 상태(`CharacterAppearanceState`)가 하고,
      *            장비 · 데이터 · 입력의 버전이 그대로이면 다시 해석하지 않는다. 지난 해석에 붙어 있다가 떨어져 나간 소켓 부품은 지우지 않고 물리로 뗀다
      *            (`SocketBindingComponent::release( Physics )`, 해석의 충격 힌트가 시작 속도). 물리 바디가 없는 부품은 알리고 지운다.
-     *          - **틱 안 호출**: 구조를 바꾸는 일(스폰, 부착)은 틱 뒤로 미룬다. 그래서 바꾸는 함수는 언제 불러도 된다.
+     *          - 틱 안 호출: 구조를 바꾸는 일(스폰, 부착)은 틱 뒤로 미룬다. 그래서 바꾸는 함수는 언제 불러도 된다.
      *          - 스폰한 부품은 현재 상태의 결과일 뿐이므로, 상태를 저장하기 전에 `despawnParts` 로 정리한다. 다시 시작하면 다시 조립한다.
      */
     REFLECT( Category = "Character", DisplayName = "Character Appearance", Tooltip = "Assembles an appearance preset: body mesh, equipment on sockets and dye" )
@@ -307,7 +307,7 @@ namespace sw
         const AppearanceDatabase*  findDatabase() const;
         static constexpr FormatDef kStateFormat{ "CAPP" };
         /**
-         * @brief `ComponentStateCodec` 계약 — 게임 중 꾸민 모습을 게임 세이브에 싣습니다: 게임 선택(`applySelection` — 공유 코드, 판이 따로 있어 옛 판을 읽는다)과 슬롯 덮어쓰기.
+         * @brief `ComponentStateCodec` 계약: 게임 중 꾸민 모습을 게임 세이브에 싣습니다: 게임 선택(`applySelection`: 공유 코드, 판이 따로 있어 옛 판을 읽는다)과 슬롯 덮어쓰기.
          * @details 프리셋 id · 시드는 프로퍼티라 씬과 함께 실린다. 미리보기 입히기(편집기 데이터)는 싣지 않는다. 장비 인스턴스(아이템 염색)는 `CharacterEquipmentComponent` 가 싣는다.
          *          예전에는 상태가 없어 불러오면 꾸민 모습이 프리셋으로 돌아갔다. 읽기는 외형 데이터가 있어야 해 시작 뒤에만 한다 — 그 전 바이트는 `restoreState` 가 보관한다.
          */

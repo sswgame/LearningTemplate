@@ -166,7 +166,7 @@ namespace sw
                 target._pManager->destroyGameObject( pTarget );
             }
 
-            /** @brief 스냅샷으로 오브젝트를 **원래 id 로** 복원합니다. 그래야 그 오브젝트 · 컴포넌트를 가리키던 핸들이 이어진다(데이터 단계). */
+            /** @brief 스냅샷으로 오브젝트를 원래 id 로 복원합니다. 그래야 그 오브젝트 · 컴포넌트를 가리키던 핸들이 이어진다(데이터 단계). */
             static void recreate( editor::UndoStepContext& context, uint32 sceneKey, string name, ObjectSnapshot snapshot, string prefabPath, bool bNestedPart, PrefabNestedPart nestedPart )
             {
                 const ActiveTarget target = findActiveTarget( editor::findSubsystem<SceneManager>(), sceneKey );

@@ -210,7 +210,7 @@ namespace sw
     }
 
     /**
-     * @brief D3D11 에는 끝낼 렌더 패스가 **없습니다.** 비어 있는 것이 맞습니다.
+     * @brief D3D11 에는 끝낼 렌더 패스가 없습니다. 비어 있는 것이 맞습니다.
      * @details 패스 규칙(열림 상태, 패스 밖 일 전에 닫기, 패스 없는 드로우 버리기)은 `IRHICommandContext` 가 네 백엔드에 같이 지킨다 — 여기는 네이티브로 할 일만 한다.
      *          Vulkan · DX12 는 네이티브 패스를 닫고, GL 은 기본 프레임버퍼와 `glClipControl` 을 되돌린다. D3D11 은 즉시 모드라 패스 객체가 없고 렌더 타깃도 그대로 둔다.
      *          끝난 타깃을 컴퓨트 UAV 로 거는 해저드는 `bindComputeUAV` 가 RT 를 떼서 막는다.
@@ -639,7 +639,7 @@ namespace sw
             return;
 
         // DX11 에는 루트 상수가 없다. 계약 슬롯 b2 의 작은 상수버퍼로 흉내 낸다. WRITE_DISCARD 라 드로우마다
-        // 버퍼가 새로 이름 지어져(rename) 앞 드로우가 읽던 내용과 섞이지 않는다. 버퍼는 **기록 스트림 · 바인드 포인트마다**
+        // 버퍼가 새로 이름 지어져(rename) 앞 드로우가 읽던 내용과 섞이지 않는다. 버퍼는 기록 스트림 · 바인드 포인트마다
         // 따로다. 전역이면 병렬 기록이 서로의 값을 덮고, 바인드 포인트가 나눠 쓰면 디스패치가 채운 값이 다음 드로우에 보인다.
         ID3D11Buffer* const      pCb = _pState->_arrRootConstantCb[static_cast<uint32>( point )].Get();
         D3D11_MAPPED_SUBRESOURCE mapped{};
@@ -746,7 +746,7 @@ namespace sw
     {
         // DX11 은 리소스 상태를 명시적으로 전환하지 않는다. 다만 같은 텍스처가 렌더타깃으로 걸린 채
         // SRV 로도 걸려 있으면 런타임이 조용히 한쪽을 풀어버리므로, 읽기로 넘기기 전에 픽셀 셰이더
-        // SRV 슬롯을 비운다. 이 호출은 항상 바인딩 **이전**에
+        // SRV 슬롯을 비운다. 이 호출은 항상 바인딩 이전에
         // 오므로(FramePassExecutor::registerPassTexture) 유효한 바인딩을 지우지 않는다.
         (void)texture;
         if ( _pContext == nullptr )
@@ -816,7 +816,7 @@ namespace sw
         if ( pAnnotation != nullptr )
         {
             // 주의: 고정 배열에 `MultiByteToWideChar` 로 옮기지 말 것. 그 API 는 이름이 버퍼보다 길면
-            // **0 을 반환하고 널 종단을 보장하지 않으므로**, 그대로 `BeginEvent` 에 넘기면 배열 밖까지
+            // 0 을 반환하고 널 종단을 보장하지 않으므로, 그대로 `BeginEvent` 에 넘기면 배열 밖까지
             // 읽는다. 길이에 상한이 없는 `StringUtil::utf8ToUTF16` 은 잘라 담을 일도, 다중바이트 시퀀스가
             // 중간에서 끊길 일도 없다. 마커는 그래픽스 디버거가 붙었을 때만 동작하므로(그때만 annotation 이
             // 널이 아니다) 여기서 한 번 할당하는 비용은 캡처 비용에 묻힌다.

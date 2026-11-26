@@ -8,7 +8,7 @@
 설정은 코드가 만들지 않고 파일을 쓴다(`Config/Server/Online/<게임>.json` 과 옆 `.online.json`) — 포트만 빈 것으로 바꾼 사본을 출력 폴더에 쓴다. 저장 키트(`GF_Server_SQLStore` · `GF_Server_CacheStore`)는 Playground 매니페스트가 켠다(`_listModuleOverride`).
 `Config/Server/Online/Playground.external.json` 이 Postgres · RESP · 영수증 · 푸시를 모두 고른 견본이다 - 끝점과 환경 변수의 값은 운영자가 준다. 없으면 서버가 까닭을 남기고 기동하지 못한다.
 서버는 매치 서버다(`gv_firstMinigame` 이 매치 맵을 첫 씬으로 띄운다). 매칭은 허브에서 매치형 미니게임(`shooter3d_match`)으로 들어가 선다 - 혼자 서는 모드(`arena_solo`)라 줄을 서면 바로 이 서버
-(`_publicAddress` 로 디렉터리에 등록한 게임 서버)로 배정되고, 접속 티켓으로 그 게임 포트(암호화 UDP)에 붙은 뒤 매치에 들어간다. 나오면 **서버가** 순위표 `arena_kills` 에 점수를 내고, 클라이언트가 내는 점수는 거절된다.
+(`_publicAddress` 로 디렉터리에 등록한 게임 서버)로 배정되고, 접속 티켓으로 그 게임 포트(암호화 UDP)에 붙은 뒤 매치에 들어간다. 나오면 서버가 순위표 `arena_kills` 에 점수를 내고, 클라이언트가 내는 점수는 거절된다.
 판정: 값은 클라이언트 시나리오(`netpair/online_run` · `people_first` · `people_second`)가 감시 값으로 본다. 여기는 종료 코드, 서버가 점수를 내고 저장한 사건(로그 id), 허용 밖 Error · Warning 줄을 본다.
 허용: 개발 티켓 키 경고(기본 설정은 주 키를 두지 않고 개발 키로 티켓을 만든다).
 """

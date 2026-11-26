@@ -28,11 +28,11 @@ namespace
 } // namespace
 
 /**
- * @brief [MeshPrimitiveTest] 같은 id 는 **같은 메시 객체**를 돌려주고, create 는 매번 새로 만드는지 검증
+ * @brief [MeshPrimitiveTest] 같은 id 는 같은 메시 객체를 돌려주고, create 는 매번 새로 만드는지 검증
  *
- * @details 배치 키가 메시 **포인터**라, 씬에서 온 컴포넌트가 저마다 제 Mesh 를 만들면 같은 큐브
+ * @details 배치 키가 메시 포인터라, 씬에서 온 컴포넌트가 저마다 제 Mesh 를 만들면 같은 큐브
  *          8000 개가 배치 8000 개로 갈린다(GPU 정점 버퍼도 8000 벌). 벤치는 메시 하나를 나눠 쓰므로
- *          **벤치로는 이것이 보이지 않는다.**
+ *          벤치로는 이것이 보이지 않는다.
  *
  *          `createPrimitive` 가 매번 새로 만드는 성질도 같이 지킨다 — 벤치가 그것으로 도형 변종을
  *          갈라 배치를 일부러 나눈다(`BenchScene`).
@@ -54,7 +54,7 @@ SW_TEST_CASE( MeshPrimitiveTest, AcquireSharesOneMeshPerIDWhileCreateMakesNew )
     SW_EXPECT_TRUE( sw::MeshUtil::acquirePrimitive( "Rect" ) == nullptr );
     SW_EXPECT_TRUE( sw::MeshUtil::acquirePrimitive( "cube" ) == nullptr );
 
-    // 4. create 는 **매번 새로** 만든다 — 벤치가 이 성질로 배치를 나눈다.
+    // 4. create 는 매번 새로 만든다 — 벤치가 이 성질로 배치를 나눈다.
     sw::shared_ptr<sw::Mesh> freshA = sw::MeshUtil::createPrimitive( "Cube" );
     sw::shared_ptr<sw::Mesh> freshB = sw::MeshUtil::createPrimitive( "Cube" );
     SW_REQUIRE_TRUE( freshA != nullptr && freshB != nullptr );
@@ -91,7 +91,7 @@ SW_TEST_CASE( MeshPrimitiveTest, MeshBoundsCoverEveryVertexOfEveryPrimitive )
 
 /**
  * @brief [MeshPrimitiveTest] 내장 도형이 닫혀 있고 바깥을 향하는지 (GPU 불필요).
- * @details 감김이 뒤집힌 메시는 **화면에서 그냥 사라진다**(후면 컬링). 그림으로는 "안 그려진다" 로만
+ * @details 감김이 뒤집힌 메시는 화면에서 그냥 사라진다(후면 컬링). 그림으로는 "안 그려진다" 로만
  *          보여서 렌더러 버그로 오인하기 쉬우므로, 기하 자체를 CPU 에서 본다. 원점 중심 볼록 도형이면
  *          각 삼각형의 면 법선이 그 삼각형 중심과 같은 쪽을 향해야 한다(dot > 0).
  */
@@ -156,8 +156,8 @@ SW_TEST_CASE( MeshPrimitiveTest, PrimitivesAreClosedAndOutwardFacing )
 }
 
 /**
- * @brief [MeshPrimitiveTest] 내장 도형의 **정점 노멀·UV** 가 쓸 만한 값인지 (GPU 불필요).
- * @details 노멀과 UV 는 정점 속성이므로 **생성기가 제대로 채웠는지**가 유일한 실패 지점이다. 셰이더가 위치로 지어내면
+ * @brief [MeshPrimitiveTest] 내장 도형의 정점 노멀·UV 가 쓸 만한 값인지 (GPU 불필요).
+ * @details 노멀과 UV 는 정점 속성이므로 생성기가 제대로 채웠는지가 유일한 실패 지점이다. 셰이더가 위치로 지어내면
  *          "원점 중심 박스형 단위 도형" 에만 맞아 평면·구·원뿔은 조용히 틀린 빛을 받고 텍스처가 엉뚱하게 붙는다.
  * @note 바깥을 향하는지는 `normal · position >= 0` 으로 본다 — 원점 중심 볼록 도형에서만 성립하는
  *       판정이라 평면은 따로 본다(면이 원점을 지나므로 내적이 0 이다).
@@ -198,7 +198,7 @@ SW_TEST_CASE( MeshPrimitiveTest, PrimitiveNormalsAndUvsAreUsable )
         SW_EXPECT_TRUE_MSG( inwardCount == 0, "vertex normals point inward" );
         SW_EXPECT_TRUE_MSG( badUVCount == 0, "UVs are outside 0..1" );
 
-        // 곡면은 **면마다 노멀이 달라야** 한다 — 전부 같으면 평면 음영으로 되돌아간 것이다.
+        // 곡면은 면마다 노멀이 달라야 한다 — 전부 같으면 평면 음영으로 되돌아간 것이다.
         if ( sw::StringUtil::equals( pID, "Sphere", true ) )
         {
             bool bFoundDifferent = false;
@@ -215,7 +215,7 @@ SW_TEST_CASE( MeshPrimitiveTest, PrimitiveNormalsAndUvsAreUsable )
     }
 
     // 바닥 평면은 면이 원점을 지나므로 위 판정이 안 맞는다 — 노멀이 +Y 인지 직접 본다.
-    // 이것이 틀리면 바닥이 **옆을 보는 것처럼** 칠해진다(정점 노멀이 없던 시절의 그 증상이다).
+    // 이것이 틀리면 바닥이 옆을 보는 것처럼 칠해진다(정점 노멀이 없던 시절의 그 증상이다).
     sw::shared_ptr<sw::Mesh> plane = sw::MeshUtil::createPrimitive( "Plane" );
     SW_REQUIRE_TRUE( plane != nullptr );
     const sw::vector<sw::RHIVertex>& listPlaneVertex = plane->getCPUView().getVertices();
@@ -232,7 +232,7 @@ SW_TEST_CASE( MeshPrimitiveTest, PrimitiveNormalsAndUvsAreUsable )
 /**
  * @brief [MeshPrimitiveTest] 정점 탄젠트는 길이 1 이고 노멀에 수직이며 부호가 ±1 이다. 평면의 탄젠트는 u 가 느는 쪽(dP/du)이다
  * @details 탄젠트는 `Mesh::setVertices` 가 구한다 — 도형 생성기는 채우지 않는다. 0 탄젠트로 그려지면 노멀 맵이 노멀을 0 으로 만들어 그 면이 까맣다.
- *          바이탄젠트(cross( N, T ) × w)는 v 가 **줄어드는** 쪽이다(v 는 위가 0 — glTF 노멀 맵의 초록이 위).
+ *          바이탄젠트(cross( N, T ) × w)는 v 가 줄어드는 쪽이다(v 는 위가 0 — glTF 노멀 맵의 초록이 위).
  */
 SW_TEST_CASE( MeshPrimitiveTest, PrimitiveTangentsAreOrthonormalToNormals )
 {

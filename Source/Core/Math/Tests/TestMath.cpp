@@ -523,7 +523,7 @@ SW_TEST_CASE( MathTest, Double3VectorOperations )
 }
 
 /**
- * @brief [MathTest] 네 벡터 타입의 `isInBounds` 가 **같은 답**을 낸다
+ * @brief [MathTest] 네 벡터 타입의 `isInBounds` 가 같은 답을 낸다
  * @details 경계는 포함이고 범위는 `[-bound, +bound]` 다. `float4` 만 비교를 뒤집어 적고 있었는데
  *          (docs/agents/CppStyle.md 의 "값을 가운데 두는" 범위 비교 규칙과도 어긋난다) 결과는 같아야 한다 —
  *          같은 이름의 함수가 타입마다 다르게 읽히면 그 자체가 다음 실수의 씨앗이다.
@@ -552,7 +552,7 @@ SW_TEST_CASE( MathTest, IsInBoundsAgreesAcrossVectorTypes )
 }
 
 /**
- * @brief [MathTest] 뒤집을 수 없는 행렬은 **Identity 로 돌아온다** (조용히 쓰레기를 내지 않는다)
+ * @brief [MathTest] 뒤집을 수 없는 행렬은 Identity 로 돌아온다 (조용히 쓰레기를 내지 않는다)
  * @details 실패를 알리는 경로가 없어서 그렇게 정해 두었다. 그 계약을 여기서 못박는다 — 스케일 0 인
  *          트랜스폼을 뒤집으면 렌더러가 엉뚱한 자리에 그리는데, 적어도 값은 예측 가능해야 한다.
  */
@@ -578,9 +578,9 @@ SW_TEST_CASE( MathTest, SingularMatrixInvertsToIdentity )
 }
 
 /**
- * @brief [MathTest] `makeTrs` 는 행렬 셋을 곱한 것과 **같은 값**이다
+ * @brief [MathTest] `makeTrs` 는 행렬 셋을 곱한 것과 같은 값이다
  * @details 곱을 생략하는 지름길이라 "빠른데 값이 다르다" 가 가장 무서운 실패다. 비교 대상을 손으로
- *          적지 않고 **원래 식 그대로**(S * R * T) 두어, 규격(행-벡터 · 요/피치/롤 해석)이 바뀌면
+ *          적지 않고 원래 식 그대로(S * R * T) 두어, 규격(행-벡터 · 요/피치/롤 해석)이 바뀌면
  *          둘이 함께 움직이게 한다. 비대칭 스케일·세 축 회전·0 이 아닌 이동을 섞어야 행이 뒤바뀐
  *          구현이 통과하지 못한다.
  */
@@ -622,7 +622,7 @@ SW_TEST_CASE( MathTest, CreateTrsMatchesTheProductOfThree )
 }
 
 /**
- * @brief [MathTest] 회전이 없는 `makeTrs` 지름길은 단위 사원수를 거친 값과 **같다**
+ * @brief [MathTest] 회전이 없는 `makeTrs` 지름길은 단위 사원수를 거친 값과 같다
  * @details 오일러 오버로드는 세 각이 모두 0 이면 사원수를 만들지 않고 대각선에 스케일만 놓는다(움직이는 컴포넌트마다 지나는
  *          자리라 삼각 함수 여섯 번이 아깝다). 지름길이 틀리면 회전 없는 물체만 조용히 틀어지므로, 원래 경로(단위 사원수 오버로드)와
  *          성분마다 정확히 비교한다. 음수 스케일과 -0 각도도 섞는다 — 둘 다 "0 인가" 판정과 부호가 엇갈리기 쉬운 자리다.

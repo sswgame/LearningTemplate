@@ -2,7 +2,7 @@
  * @file SkyGradient.h
  * @brief 하늘 한 벌(그러데이션 또는 대기 산란, 구름 층)과 방향마다의 하늘빛 식입니다.
  * @details 값은 씬의 `SkyComponent` 가 정하고, 렌더 패킷(`RenderFramePacket::_sky`)이 렌더 스레드로 나른다. 렌더러가 컴포넌트 헤더를 보지 않도록 값 타입만 따로 둔다.
- *          모드가 둘이다 — `Gradient`(천정 · 지평선 · 땅 3색)와 `Atmosphere`(레일리 · 미 단일 산란, `SkyAtmosphere`). 구름(`SkyClouds`)은 모드와 무관하게 하늘 위에 얹는다(평면 노이즈 층 또는 볼륨 — 셰이더만 그리고
+ *          모드가 둘이다. `Gradient`(천정 · 지평선 · 땅 3색)와 `Atmosphere`(레일리 · 미 단일 산란, `SkyAtmosphere`). 구름(`SkyClouds`)은 모드와 무관하게 하늘 위에 얹는다(평면 노이즈 층 또는 볼륨 — 셰이더만 그리고
  *          프로브 베이크는 구름을 보지 않는다).
  */
 #pragma once
@@ -50,7 +50,7 @@ namespace sw
      * @details 눈은 행성 중심에서 `_planetRadiusKm + _observerAltitudeKm` 위(+y)에 있다. 시선을 대기 끝(또는 행성 표면)까지 `kViewStepCount` 구간으로 걸으며 구간마다
      *          해 쪽으로 `kLightStepCount` 구간의 광학 두께를 구한다. 레일리(산란 계수 `computeRayleighBeta`, 규모 높이 `kRayleighScaleHeightKm`)와 미(`computeMieBeta`, `kMieScaleHeightKm`,
      *          소멸 = 산란 × `kMieExtinctionRatio`, 위상 함수 이방성 `_mieAnisotropy`)의 합이다. 시선이 행성 표면을 만나면 땅의 반사(알베도 × N·L × 해 투과율 / π)를 더한다.
-     *          행성이 해를 가리는 구간은 해 빛이 없다(행성 그림자). 결과는 **해 복사휘도 1 당** 값이고 부르는 쪽이 해 색 · 세기를 곱한다.
+     *          행성이 해를 가리는 구간은 해 빛이 없다(행성 그림자). 결과는 해 복사휘도 1 당 값이고 부르는 쪽이 해 색 · 세기를 곱한다.
      *          셰이더 `sky.hlsl` 의 `computeAtmosphere` 가 같은 식 · 같은 구간 수 · 같은 상수다 — 식을 고치면 두 곳을 함께 고친다.
      */
     struct SW_API SkyAtmosphere

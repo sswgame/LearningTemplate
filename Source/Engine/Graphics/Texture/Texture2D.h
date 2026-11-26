@@ -101,7 +101,7 @@ namespace sw
         /** @brief `readImage` 가 실제로 읽는 경로입니다 — 붙은 장치가 고른 형식 변형이 쿠킹돼 있으면 그 경로, 아니면 @p assetID 그대로다(밉 범위 읽기가 같은 파일을 읽게). */
         [[nodiscard]] static string findReadPath( const AssetID& assetID );
         /**
-         * @brief 읽은 이미지의 밉마다 파일 구간입니다(`DDSImageData::_dataOffset` 부터 큰 밉 순 — DDS 는 큰 밉부터 이어진다). 픽셀은 쥐지 않는다(MR-2 — 올리기 줄이 범위로 다시 읽는다).
+         * @brief 읽은 이미지의 밉마다 파일 구간입니다(`DDSImageData::_dataOffset` 부터 큰 밉 순. DDS 는 큰 밉부터 이어진다). 픽셀은 쥐지 않는다(MR-2, 올리기 줄이 범위로 다시 읽는다).
          * @details 머리를 다시 풀지 않고 업로드와 같은 밉 배치(`computeRHITextureMipLayout`)로 센다 — 업로드가 읽는 구간과 어긋날 수 없다.
          */
         [[nodiscard]] static TextureMipLayout makeMipLayout( const DDSImageData& image );

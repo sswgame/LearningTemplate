@@ -105,7 +105,7 @@ namespace sw
         void notifyFrameBegin( const EngineFrameContext& context );
         /** @brief 씬 틱 뒤 훅(`_onAfterSceneTick`)을 모두 부릅니다. */
         void notifyAfterSceneTick( const EngineFrameContext& context );
-        /** @brief 프레임 뒤 훅(`_onFrameEnd`)을 **모두** 부르고(멈추지 않는다) 처음으로 낸 종료 코드를 돌려줍니다. 아무도 내지 않았으면 `kEngineFrameRunning` 입니다. */
+        /** @brief 프레임 뒤 훅(`_onFrameEnd`)을 모두 부르고(멈추지 않는다) 처음으로 낸 종료 코드를 돌려줍니다. 아무도 내지 않았으면 `kEngineFrameRunning` 입니다. */
         [[nodiscard]] EngineFrameExit notifyFrameEnd( const EngineFrameContext& context );
         /** @brief 창 닫힘 훅(`_onWindowClosed`)을 붙인 순서대로 부르다 처음으로 코드를 낸 훅에서 멈추고 그 코드를 돌려줍니다. 아무도 내지 않았으면 `kEngineFrameRunning` 입니다. */
         [[nodiscard]] EngineFrameExit notifyWindowClosed( const EngineFrameContext& context );

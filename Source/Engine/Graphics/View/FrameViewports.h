@@ -36,7 +36,7 @@ namespace sw
 
     /**
      * @struct PreviewSceneView
-     * @brief 호스트(에디터 툴 창)가 이번 프레임에 그려 달라고 요청한 **미리보기 씬** 뷰 하나입니다(언리얼 `FPreviewScene` 의 뷰). 값 타입이며 C ABI 를 넘어갑니다(`EditorAPI::getPreviewSceneViews`).
+     * @brief 호스트(에디터 툴 창)가 이번 프레임에 그려 달라고 요청한 미리보기 씬 뷰 하나입니다(언리얼 `FPreviewScene` 의 뷰). 값 타입이며 C ABI 를 넘어갑니다(`EditorAPI::getPreviewSceneViews`).
      * @details 어느 씬(`_sceneKey` — `SceneManager::getPreviewSceneKey`), 어느 눈(`_viewProj` · `_cameraPos`), 어느 렌더 타깃(`_target`)인지를 고른다.
      *          씬마다 GT 의 스냅샷 빌더 하나 · RT 의 렌더러 하나가 따로 돌므로 메인 씬과 섞이지 않는다(`RenderPacketBuilder::populateScenePreviews`).
      *          안 보이는 창은 요청하지 않는다 — 요청이 없는 씬은 그리지 않는다.

@@ -7,7 +7,7 @@
 // 스플래시 이미지 스케일러 — 창을 만들지 않으므로 GPU·디스플레이가 필요 없다(`nogpu`).
 //
 // 스플래시 이미지(`splash.dds`)와 창은 크기가 다르다. Win32 는 `StretchDIBits` 로 창에 맞춰 늘리지만
-// **X11 의 `XPutImage` 는 1:1 로만 찍어** 원본의 좌상단만 보인다. 그래서 늘리기는 우리 코드가 하고,
+// X11 의 `XPutImage` 는 1:1 로만 찍어 원본의 좌상단만 보인다. 그래서 늘리기는 우리 코드가 하고,
 // 그 계산을 여기서 못 박는다.
 
 namespace
@@ -23,7 +23,7 @@ namespace
 } // namespace
 
 /**
- * @brief [SplashImageTest] 줄이면 덮는 원본 픽셀들의 **평균**이 된다
+ * @brief [SplashImageTest] 줄이면 덮는 원본 픽셀들의 평균이 된다
  * @details 최근접으로 뽑으면 2.9배 축소에서 글자와 로고 가장자리가 부서진다. Win32 가
  *          `SetStretchBltMode(HALFTONE)` 로 시키는 것과 같은 일을 우리가 한다.
  */
@@ -47,7 +47,7 @@ SW_TEST_CASE( SplashImageTest, DownscaleAveragesTheCoveredPixels )
 }
 
 /**
- * @brief [SplashImageTest] 줄여도 **목적지 전체**가 채워진다
+ * @brief [SplashImageTest] 줄여도 목적지 전체가 채워진다
  * @details 채우는 범위가 원본 크기를 따라가면 목적지의 일부만 그려지고 나머지는 그대로 남는다
  *          (창의 좌상단만 보인다). 한 픽셀이라도 손대지 않은 곳이 있으면 실패한다.
  */
@@ -99,7 +99,7 @@ SW_TEST_CASE( SplashImageTest, UpscaleReplicatesSourcePixels )
 /**
  * @brief [SplashImageTest] 빈 입력에는 아무것도 하지 않는다
  * @details 스플래시는 이미지 로드가 실패해도 떠야 한다 — 그때 이 함수가 0 으로 나누거나 버퍼 밖을
- *          쓰면 **로고가 없는 것이 아니라 시작 자체가 죽는다.**
+ *          쓰면 로고가 없는 것이 아니라 시작 자체가 죽는다.
  */
 SW_TEST_CASE( SplashImageTest, EmptyInputIsLeftAlone )
 {
@@ -114,8 +114,8 @@ SW_TEST_CASE( SplashImageTest, EmptyInputIsLeftAlone )
     SW_EXPECT_TRUE_MSG( listDest == listExpected, "빈 입력인데 목적지를 건드렸습니다" );
 }
 
-// **실제 에셋으로 재 보는 케이스는 두지 않는다 — 이 버그를 구분하지 못한다.** 좌상단만 그리는 변이에도
-// (1) 전체 평균색, (2) 네 분면 평균색 비교가 **둘 다 통과한다**(지금 아트의 좌상단이 그림 전체와 색 분포가
+// 실제 에셋으로 재 보는 케이스는 두지 않는다 — 이 버그를 구분하지 못한다. 좌상단만 그리는 변이에도
+// (1) 전체 평균색, (2) 네 분면 평균색 비교가 둘 다 통과한다(지금 아트의 좌상단이 그림 전체와 색 분포가
 // 비슷하다). 잡지 못하는 검사는 "실제 그림도 본다" 는 거짓 안심만 만든다 — 위의 합성 케이스들은 같은 변이에서
 // 진다(`DownscaleAveragesTheCoveredPixels` · `UpscaleReplicatesSourcePixels`).
 // 진짜 그림을 보려면 창을 띄워 픽셀을 되읽어야 하고, 그것은 `hostgpu` 쪽 일이다.

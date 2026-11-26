@@ -233,7 +233,7 @@ namespace sw
         BLOCK( "기동 단계 구성" )
         {
             _startup.setParentScope( &_sharedScope );
-            // 외부 라이브러리 코덱은 **목록이 있는 자리**에서 붙인다(EngineCompressionCodecUtil). 레지스트리는 만들 때 내장 코덱을 갖추므로 기동 전에 붙여도 된다.
+            // 외부 라이브러리 코덱은 목록이 있는 자리에서 붙인다(EngineCompressionCodecUtil). 레지스트리는 만들 때 내장 코덱을 갖추므로 기동 전에 붙여도 된다.
             // 전용 서버 역할은 창 · RHI · 렌더러를 두지 않는다(그 구성은 렌더러를 짓지도 않는다) — 그 공장들이 `_bDedicatedServer` 를 보고 만들지 않는다.
             engine::StartupSetup         startupSetup{ _headlessState, bDedicatedServer, CommandletRegistration::isAnyRequested( commandLine.getCommandLine() ) };
             engine::EngineSubsystemBuild startupBuild;
@@ -578,7 +578,7 @@ namespace sw
         const uint32               vpWidth     = bHasOutput ? mainOutput._width : ( bHasDevice ? _pRHI->getDevice().getBackBufferWidth() : ( pMainWindow != nullptr ? pMainWindow->getWidth() : 0 ) );
         const uint32               vpHeight    = bHasOutput ? mainOutput._height : ( bHasDevice ? _pRHI->getDevice().getBackBufferHeight() : ( pMainWindow != nullptr ? pMainWindow->getHeight() : 0 ) );
         _frameDeltaSeconds                     = deltaTime;
-        // 게임 시간이 선 동안(정지 메뉴 · 포토 모드 — `GameTimeScale`, 함께 쓰는 시간은 서지 않는다) 게임 소리와 자막도 선다. 에디터가 씬을 틱하지 않는 동안은 일시정지가 아니다 — 패널의 소리 미리듣기가 난다.
+        // 게임 시간이 선 동안(정지 메뉴 · 포토 모드, `GameTimeScale`, 함께 쓰는 시간은 서지 않는다) 게임 소리와 자막도 선다. 에디터가 씬을 틱하지 않는 동안은 일시정지가 아니다. 패널의 소리 미리듣기가 난다.
         _bGamePaused = sceneTick == SceneTick::Run && engine::getSubsystem<GameTimeScale>().get() <= 0.0f ? SW_TRUE : SW_FALSE;
 
         if ( _headlessState.isHeadless() )

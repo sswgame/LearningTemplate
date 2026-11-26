@@ -10,7 +10,7 @@
  *            정수 경계, 실수 필드를 범위로 쓰는 정수 필드, 찾지 못한 범위 이름, 숫자가 아닌 필드의 `Min` · `Max`, 맞지 않는 `Step` · `MaxCount` 입니다.
  *          - 같은 헤더의 중첩 타입은 공개 필드뿐이면 부모 표 안에 펼칩니다(`Inline` 칸). 바깥 필드 이름 범위는 이때만 풀립니다.
  *            펼칠 수 없으면 그 타입의 코덱을 실행 시간에 찾아 부릅니다(`Codec` 칸).
- *          - **복제 스키마**: `PROPERTY( Replicated )` 칸이 있는 타입은 그 칸만 든 두 번째 표와 정규 문자열(`R=` 로 시작)을 내고 `FixedCodec::_pReplicated` 에 겁니다
+ *          - 복제 스키마: `PROPERTY( Replicated )` 칸이 있는 타입은 그 칸만 든 두 번째 표와 정규 문자열(`R=` 로 시작)을 내고 `FixedCodec::_pReplicated` 에 겁니다
  *            (런타임 `ReplicatedLayout`). 타입 전체가 적격이 아니어도 낸다. `Replicated` 칸의 형식이 인코딩 표 밖이거나, 범위 이름이 앞선 `Replicated` 칸이
  *            아니면 생성 오류다 — 전체 코덱의 "이유 등록" 과 달리 `Replicated` 는 명시한 요청이다.
  */

@@ -160,7 +160,7 @@ namespace sw
         _width  = width;
         _height = height;
 
-        // 생성 때와 **같은 플래그**여야 한다. 티어링 스왑체인을 0 으로 리사이즈하면 그 뒤의
+        // 생성 때와 같은 플래그여야 한다. 티어링 스왑체인을 0 으로 리사이즈하면 그 뒤의
         // Present( 0, ALLOW_TEARING ) 이 INVALID_CALL 이 된다.
         const HRESULT resizeHr = _swapChain->ResizeBuffers( _bufferCount, width, height, DXGI_FORMAT_UNKNOWN, _swapChainFlags );
         if ( FAILED( resizeHr ) )

@@ -58,11 +58,11 @@ namespace sw
         uint32          _lastCbRegistryVersion{ 0 };
         uint64          _lastCbLayoutHash{ 0 }; ///< 마지막으로 올린 엔진 CB 배치(`ShaderBindingLayout::getEngineCbLayoutHash`) — 다르면 같은 값이라도 바이트가 다르다
         /**
-         * @brief 마지막으로 리소스를 **실제로 바인딩한** PSO 입니다.
+         * @brief 마지막으로 리소스를 실제로 바인딩한 PSO 입니다.
          * @details 슬롯 상태는 PSO 단위다. `setPipelineState` 는 이전 PSO 가 바인딩한 t/u 슬롯이 다음 PSO 로
          *          새지 않게 슬롯 상태를 통째로 비운다. 그래서 값과 레지스트리가 그대로여도 PSO 가 바뀌었으면
          *          다시 바인딩해야 한다. 이를 빼먹으면 배치가 퍼뮤테이션 PSO 로 바뀐 순간 t5(g_SwMaterials)
-         *          가 **바인딩되지 않은 채** 드로우가 나가고, Vulkan 은 초기화되지 않은 디스크립터를 읽어
+         *          가 바인딩되지 않은 채 드로우가 나가고, Vulkan 은 초기화되지 않은 디스크립터를 읽어
          *          디바이스를 잃는다(GPU-AV: "binding 25 Descriptor index 0 is uninitialized").
          */
         RHIPipelineStateHandle _lastBindPSO{ 0 };
@@ -99,7 +99,7 @@ namespace sw
 
         /**
          * @brief "마지막으로 바인딩한 것" 캐시를 모두 지웁니다. PSO 와 버퍼 핸들이 무효가 되는 시점(디바이스 교체)에 부릅니다.
-         * @details 핸들 값은 **디바이스 안에서만** 식별자 역할을 한다. 새 디바이스의 PSO 가 옛 디바이스의 PSO 와 같은 값을
+         * @details 핸들 값은 디바이스 안에서만 식별자 역할을 한다. 새 디바이스의 PSO 가 옛 디바이스의 PSO 와 같은 값을
          *          받을 수 있고(둘 다 첫 PSO 가 같은 번호), 그러면 `_lastLayoutPSO == pso` 가 참이 되어 이미 파괴된
          *          레이아웃(`_pLastLayout`)을 쓰고 리소스 재바인딩도 건너뛴다. 결과적으로 백엔드를 교체한 뒤
          *          아무것도 그려지지 않는다. 파괴할 때 캐시도 함께 지워야 "같은 값은 같은 대상" 이 성립한다.

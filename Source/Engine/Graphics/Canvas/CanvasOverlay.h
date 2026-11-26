@@ -26,7 +26,7 @@ namespace sw
     enum class CanvasOverlayLayer : uint8
     {
         MainOutput, ///< 주 출력(UI 위) — 사진 캡처 · `<ExpectImage>` 골든에 든다. 그림 자체가 확인 대상일 때만 쓴다(캔버스 테스트 그림).
-        DevOverlay  ///< 개발 겹치기 층(디버그 HUD 와 같은 목록 — `CanvasFrameData::getDevOverlay`) — 사진 캡처 뒤에 화면에만 합친다. 개발 그림의 기본 자리다.
+        DevOverlay  ///< 개발 겹치기 층(디버그 HUD 와 같은 목록, `CanvasFrameData::getDevOverlay`). 사진 캡처 뒤에 화면에만 합친다. 개발 그림의 기본 자리다.
     };
 
     /** @struct CanvasOverlayContext @brief 겹치기 하나에 넘기는 이번 프레임 값입니다(게임 스레드, 패킷을 채우는 동안만 유효). */

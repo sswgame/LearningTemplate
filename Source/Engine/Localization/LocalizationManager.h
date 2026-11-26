@@ -202,7 +202,7 @@ namespace sw
         // 4) 문자열 조회와 포맷
         // ------------------------------------------------------------------------------
         /**
-         * @brief 조회 사슬에서 키를 찾아 보일 글을 돌려줍니다. 어디에도 없으면 빠진 키로 알리고(`Localization.MissingKey`) **키 이름**을 돌려줍니다.
+         * @brief 조회 사슬에서 키를 찾아 보일 글을 돌려줍니다. 어디에도 없으면 빠진 키로 알리고(`Localization.MissingKey`) 키 이름을 돌려줍니다.
          * @details 빈 글로 숨기지 않는다 — 빠진 번역이 화면에서 키로 보여야 고칠 수 있다(언리얼 FText 가 빠진 키를 키 그대로 보이는 것과 같다).
          *          없음을 스스로 다룰 곳은 `findString` 을 쓴다.
          */
@@ -210,7 +210,7 @@ namespace sw
         /** @brief 조회 사슬에서 키를 찾습니다. 없으면 nullptr 이고 빠진 키로 알리지 않습니다. */
         [[nodiscard]] const utf8* findString( const hashed_string& key ) const;
         /**
-         * @brief 키를 **intern 하지 않고** 찾습니다. 없으면 nullptr 이고 빠진 키로 알리지 않습니다.
+         * @brief 키를 intern 하지 않고 찾습니다. 없으면 nullptr 이고 빠진 키로 알리지 않습니다.
          * @details 물어보는 텍스트가 키가 아닐 수도 있는 곳(대사 원문 등)에서 쓴다. `hashed_string` 을 만들면 그 텍스트가 intern 아레나에 영구히 남는다.
          *          없을 때 무엇을 보일지(텍스트 그대로 · 원문)는 부르는 쪽이 정한다.
          */
@@ -271,7 +271,7 @@ namespace sw
         void syncCookedTables();
         /**
          * @brief 올린 프로젝트 · 낱개 표에 들어올 것을 더한 키 전체에서 "같은 64 비트 해시, 다른 키" 를 찾습니다(`_mutex` 를 잡은 상태에서 부릅니다).
-         * @details 실행 표는 해시로만 열려 충돌하면 나중 것이 조용히 이긴다. 그래서 들이기 **전에** 검사하고 지면 들이지 않는다.
+         * @details 실행 표는 해시로만 열려 충돌하면 나중 것이 조용히 이긴다. 그래서 들이기 전에 검사하고 지면 들이지 않는다.
          *          @p pIncomingProject 와 이름 · 경로가 같은 올린 프로젝트는 건너뛴다(그것을 바꿔 넣는 중이다). 쿠킹된 이진 표는 키 글이 없어 쿠킹 때 검사한다.
          */
         [[nodiscard]] expected<void> validateKeyHashesLocked( const MountedProject* pIncomingProject, const TranslationTable* pIncomingLoose ) const SW_REQUIRES_LOCK( _mutex );

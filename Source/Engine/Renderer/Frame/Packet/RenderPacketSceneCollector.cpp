@@ -112,7 +112,7 @@ namespace sw
         // 스카이 라이트 — 하늘을 거칠기 단계마다 거른 환경광이다. 하늘이 바뀐 프레임에만 다시 거르고(`SkyLightCache`), 하늘이 없으면 없다(그 씬의 환경광은 앰비언트 색이다).
         const SkyLightData* const pSkyLight = _skyLight.update( packet._bHasSky != SW_FALSE ? &packet._sky : nullptr, engine::getSubsystem<EngineConfig>()._render._skyLight );
 
-        // 씬의 **모든** 라이트다. 방향광 · 점광 · 스폿이 한 목록으로 간다. 위의 키라이트는 앰비언트의 출처이고, 목록이 비면
+        // 씬의 모든 라이트다. 방향광 · 점광 · 스폿이 한 목록으로 간다. 위의 키라이트는 앰비언트의 출처이고, 목록이 비면
         // 그 씬은 환경광만 받는다(키라이트로 대신 비추지 않는다). 그림자를 켠 점광 · 스폿은 번호 · 정체를 따로 받아 아래에서 아틀라스 칸을 준다.
         collectSceneLights( &activeScene, packet._listLight, &_listShadowLight, &_lightProbeElement, &packet._listLightCookie, &packet._listRealtimeProbe, pSkyLight );
         packet._pLightProbe = _lightProbeElement.getElements();
@@ -263,7 +263,7 @@ namespace sw
         // 추가 뷰(CCTV · PiP)는 자기 눈으로 투명을 정렬한다 — 주 카메라 순서로 그리면 반대편을 보는 뷰에서 앞뒤가 뒤집힌다.
         _gpuSceneBuilder->computeViewTransparentOrders( packet._listView );
 
-        // 그릴 것이 정해졌으니 **스냅샷을 내보내기 전에** GPU 쪽을 만들어 둔다. 렌더 스레드는 그리기만
+        // 그릴 것이 정해졌으니 스냅샷을 내보내기 전에 GPU 쪽을 만들어 둔다. 렌더 스레드는 그리기만
         // 하면 된다(새 메시가 등장한 프레임에 RT 가 정점 버퍼 생성을 떠안지 않게).
         if ( pUploadQueue != nullptr )
         {

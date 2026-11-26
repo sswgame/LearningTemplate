@@ -17,10 +17,10 @@ namespace sw
      * @class ShooterAutoAimControllerComponent
      * @brief 자동 플레이가 켜지면 디렉터가 `prefabs/autoplay_ai.prefab.xml` 로 세워 플레이어 폰에 빙의시킵니다(`gv_playgroundAutoPlay` · 에디터 툴바 스위치 하나 — 끄면 플레이어 조종자가 다시 쥔다).
      * @details 몸(`ShooterPlayerComponent`)에는 자동 플레이 분기가 없습니다 — 트리가 사람과 같은 의도(이동 · 조종 회전 · `Fire` · `Melee` · `Weapon1` · `Weapon2`)를 냅니다.
-     *          감각은 블랙보드에 사실과 문턱을 적습니다: `CirclePoint`(아레나 가운데를 도는 나선 — 접선 + 안쪽 — 의 앞 점, 판이 아니거나 플레이어가 쓰러졌으면 지운다) · `HasEnemy` ·
+     *          감각은 블랙보드에 사실과 문턱을 적습니다: `CirclePoint`(아레나 가운데를 도는 나선(접선 + 안쪽)의 앞 점, 판이 아니거나 플레이어가 쓰러졌으면 지운다) · `HasEnemy` ·
      *          `AimPoint`(보이는 적 가운데 가장 가까운 가슴, 보이는 적이 없으면 가장 가까운 가슴) · `TargetVisible` · `TargetDistance` · `AimError`(조준 요 오차의 크기) ·
      *          `WeaponIndex` · `RifleAmmo` · `ShotgunAmmo` 와 칸의 `AimTolerance` · `EngageDistance` · `CloseRangeDistance` · `MeleeReach` · `Melee`.
-     *          조종 회전은 `_turnRate` 로 돈다 — 표적이 바뀌어도 시점이 튀지 않게. 적 목록 · 상자는 디렉터가 앞 프레임에 적은 것을 읽습니다(조종 단계 — 틱 전, 게임 스레드).
+     *          조종 회전은 `_turnRate` 로 돈다. 표적이 바뀌어도 시점이 튀지 않게. 적 목록 · 상자는 디렉터가 앞 프레임에 적은 것을 읽습니다(조종 단계 — 틱 전, 게임 스레드).
      *          언리얼 `AAIController` + BT 서비스(감각) + 트리(판단)와 같은 나눔이다 — 스켈레톤 적(`ShooterEnemyAIControllerComponent`)과 같은 모양.
      */
     /**

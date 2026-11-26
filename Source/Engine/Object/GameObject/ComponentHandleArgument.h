@@ -2,7 +2,7 @@
  * @file ComponentHandleArgument.h
  * @brief 리플렉션 호출 썽크가 타입 없는 핸들 인자를 타입 핸들(`TComponentHandle<T>`)로 바꾸는 확인입니다. 타입 핸들 인자가 있는 `.gen.cpp` 만 이 헤더를 넣습니다.
  * @details 부르는 쪽(인스펙터 선택기 · 콘솔 · 비주얼 스크립팅)은 인자 타입을 모르고 `ComponentHandle` 을 넘긴다. 바꾸는 길은 대상의 타입을 확인하는
- *          `GameObjectManager::makeTypedHandle` 하나이고, 그 매니저는 **불린 컴포넌트의 씬**이다(파서가 타입 핸들 인자를 컴포넌트의 비정적 메서드에만 허락한다).
+ *          `GameObjectManager::makeTypedHandle` 하나이고, 그 매니저는 불린 컴포넌트의 씬이다(파서가 타입 핸들 인자를 컴포넌트의 비정적 메서드에만 허락한다).
  *          확인이 지면 오류를 남기고 메서드를 부르지 않는다 — 빈 핸들로 바꿔 부르면 타입이 틀린 값이 "대상 없음" 으로 조용히 바뀐다.
  */
 #pragma once

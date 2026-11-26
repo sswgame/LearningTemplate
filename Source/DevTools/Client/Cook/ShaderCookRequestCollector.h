@@ -1,7 +1,7 @@
 /**
  * @file ShaderCookRequestCollector.h
- * @brief **무엇을 쿠킹할지** 정합니다. 파이프라인 XML 과 머티리얼을 훑어 (셰이더 · 진입점 · define) 요청 목록을 만듭니다.
- * @details 쿠킹하는 일(`ShaderCookDriver` · `Shader/Compile/ShaderCooker`)과 나누는 이유는 입력이 다르기 때문입니다. 여기 입력은 **에셋**(파이프라인 · 머티리얼)이고
+ * @brief 무엇을 쿠킹할지 정합니다. 파이프라인 XML 과 머티리얼을 훑어 (셰이더 · 진입점 · define) 요청 목록을 만듭니다.
+ * @details 쿠킹하는 일(`ShaderCookDriver` · `Shader/Compile/ShaderCooker`)과 나누는 이유는 입력이 다르기 때문입니다. 여기 입력은 에셋(파이프라인 · 머티리얼)이고
  *          저쪽 입력은 요청 목록입니다(언리얼도 머티리얼 · 버텍스 팩토리가 셰이더 맵을 정하고 컴파일 관리자는 받은 작업만 돈다).
  */
 #pragma once

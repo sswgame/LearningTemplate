@@ -15,7 +15,7 @@ namespace sw
      * @struct LittleEndianUtil
      * @brief 리틀 엔디언 정수 하나를 바이트 포인터에서 읽고(`read*`), 그 위치에 쓰고(`write*`), 벡터 끝에 덧붙이는(`append*`) static 도우미입니다.
      * @details 범위 검사는 하지 않습니다. 정렬되지 않은 주소도 됩니다(바이트 단위로 읽습니다). 부호 있는 값은 같은 비트의 부호 없는 값으로 읽고 씁니다.
-     *          **읽기는 비공개이고 `ByteReader` 만 부른다(friend).** 바깥이 포인터 · 오프셋으로 제 커서를 굴리면 남은 바이트 검사를 빠뜨려 버퍼 밖을 읽는다 —
+     *          읽기는 비공개이고 `ByteReader` 만 부른다(friend). 바깥이 포인터 · 오프셋으로 제 커서를 굴리면 남은 바이트 검사를 빠뜨려 버퍼 밖을 읽는다 —
      *          읽는 쪽은 모두 범위를 보는 `ByteReader` 를 지난다(언리얼 `FMemoryReader` 가 `FArchive` 로만 읽게 하는 자리). 쓰기 · 덧붙이기는 버퍼를 쥔 쪽이 크기를 정하므로 공개다.
      */
     struct LittleEndianUtil

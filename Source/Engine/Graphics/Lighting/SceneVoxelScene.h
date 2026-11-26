@@ -1,7 +1,7 @@
 /**
  * @file SceneVoxelScene.h
  * @brief 실시간 프로브 갱신이 광선을 쏠 장면입니다 — 복셀 격자의 모양과, 그 격자에 칠할 메시 목록입니다(칠한 칸은 GPU 버퍼에만 있다).
- * @details 게임 스레드(`SceneVoxelizer`)가 레지스트리에서 모아 만들고, 렌더 스레드(`RealtimeProbeUpdater`)가 메시의 **GPU 원본 정점**(렌더 프록시 버퍼의 복사)으로 칠한다 —
+ * @details 게임 스레드(`SceneVoxelizer`)가 레지스트리에서 모아 만들고, 렌더 스레드(`RealtimeProbeUpdater`)가 메시의 GPU 원본 정점(렌더 프록시 버퍼의 복사)으로 칠한다 —
  *          CPU 정점을 읽지 않으므로 메시가 CPU 정점을 놓아도 된다(`MeshCPUAccess`, R-15). 만든 뒤에는 바뀌지 않는 공유 값이다(컴포넌트가 캐시로, 렌더 스레드가 지난 장면으로 든다).
  */
 #pragma once
@@ -55,7 +55,7 @@ namespace sw
         vector<SceneVoxelMovingSource>             _listMovingSource{};       ///< 움직이는 원천들(칸 번호 오름차순)
         uint8                                      _bMovingLayer{ SW_FALSE }; ///< 움직이는 원천이 있었다 — 정적 사본 자리를 잡는다(다시 모을 때까지 켜져 있어 자리가 오가지 않는다)
         /**
-         * @brief 이 장면의 서로 다른 발광(RGB9E5)을 어두운 것부터 세운 목록입니다. 발광 칸에는 색이 아니라 **순위**(목록 번호 + 1, 0 은 발광 없음)를 쓴다.
+         * @brief 이 장면의 서로 다른 발광(RGB9E5)을 어두운 것부터 세운 목록입니다. 발광 칸에는 색이 아니라 순위(목록 번호 + 1, 0 은 발광 없음)를 쓴다.
          * @details 여러 면이 한 칸을 덮으면 더 밝은 쪽이 남는다 — RGB9E5 비트는 밝기 차례가 아니라 원자 최댓값으로 고를 수 없으므로 순위를 쓴다(`InterlockedMax`, scene_voxelize.hlsl).
          *          읽는 쪽(probe_update.hlsl)은 순위로 이 목록(입력 행)을 찾는다.
          */

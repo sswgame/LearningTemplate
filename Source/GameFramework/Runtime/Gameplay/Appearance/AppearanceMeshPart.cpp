@@ -185,7 +185,7 @@ namespace sw
             uint64 _cachedBytes SW_GUARDED_BY( _mutex ){ 0 }; ///< 항목 바이트의 합
             DevCounter          _hitCount;                    ///< `tryGet` 이 내준 횟수(감시 값만 읽는 개발 전용 칸 — 원자라 잠금 밖에서도 된다)
 
-            // Subsystem — 세울 것이 없다(처음 구운 차림부터 채운다). 예산은 남길 때 읽는다 — 모듈 서브시스템 초기화 때는 게임 서비스가 아직 걸리지 않았을 수 있다.
+            // Subsystem: 세울 것이 없다(처음 구운 차림부터 채운다). 예산은 남길 때 읽는다. 모듈 서브시스템 초기화 때는 게임 서비스가 아직 걸리지 않았을 수 있다.
             SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
             void                shutdownSubsystem() override
             {

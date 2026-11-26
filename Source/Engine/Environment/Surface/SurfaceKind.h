@@ -10,7 +10,7 @@
  *          종류 이름이 목록의 열쇠라 게임이 덮어쓰기 층(`_listResourceLayer`)으로 종류 하나의 칸만 얹을 수 있다(Playground 가 `_zoneProfile` 을 단다).
  *          모든 물리 재질은 표에 종류가 있어야 한다(테스트 `SurfaceKindTest.ShippedTableCoversPhysicsMaterials`) — 모르는 재질을 다른 종류로 대신하지 않는다.
  *
- *          발걸음 반응(`SurfaceStepResponse`)은 종류마다 한 벌 — 소리(오디오 이벤트), 튀는 효과(`*.vfx.xml` — 흙먼지 · 모래 · 눈 가루 · 물 튀김 · 진흙),
+ *          발걸음 반응(`SurfaceStepResponse`)은 종류마다 한 벌: 소리(오디오 이벤트), 튀는 효과(`*.vfx.xml`: 흙먼지 · 모래 · 눈 가루 · 물 튀김 · 진흙),
  *          발자국 도장(표면 변형 층), 발을 얼마나 적시는지를 묶는다(언리얼 Physical Material 별 발걸음 데이터 에셋 · 유니티 Terrain Layer 별 발걸음 표 자리).
  *          젖음은 그 위에 얹는 상태다 — 같은 흙이라도 땅이 젖었으면(`SurfaceSample::_wetness` ≥ `_wetThreshold`) `_wetStep` 을, 아니면 `_step` 을 쓴다.
  *          웅덩이는 물(`_waterKind` — 얕은 `WaterBodyComponent`)의 반응이다(밟은 표면은 발 아래 물이 정한다).
@@ -143,7 +143,7 @@ namespace sw
         PROPERTY( Tooltip = "Surface kinds; one per physics material" )
         vector<SurfaceKindDef> _listKind;
 
-        /** @brief 표를 **디스크 파일**에서 읽습니다(테스트의 임시 파일). 검사는 리소스 읽기와 같습니다. */
+        /** @brief 표를 디스크 파일에서 읽습니다(테스트의 임시 파일). 검사는 리소스 읽기와 같습니다. */
         [[nodiscard]] bool loadFromDiskFile( const AbsolutePath& diskPath );
         /** @brief 이름의 종류입니다. 없으면 nullptr 입니다. */
         const SurfaceKindDef* findKind( const hashed_string& name ) const;

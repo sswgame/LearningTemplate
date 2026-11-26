@@ -5,12 +5,12 @@ Scripts/dev/api_diff.py
 
 묶음이 새로 들인 함수 이름(헤더 선언)을 모아 사람이 검토할 목록으로 내고, 두 갈래 이상이 같은 이름을 새로 더했으면 따로 낸다 — 통합 때 `code-review-and-quality` 와 함께 본다.
 
-**왜 게이트가 아니라 목록인가.** `naming-words` 는 함수의 앞 단어(동사)만 표와 대조한다. `allowsOneMore` · `finishGraceFind` 처럼 동사는 흔하고
+왜 게이트가 아니라 목록인가. `naming-words` 는 함수의 앞 단어(동사)만 표와 대조한다. `allowsOneMore` · `finishGraceFind` 처럼 동사는 흔하고
 이름 전체가 무엇을 하는지 말하지 않는 것은 낱말 표로 가릴 수 없다(`Peak` · `Extra` 는 업계에서도 쓰는 말이라 낱말을 막으면 맞는 이름까지 막힌다,
 2026-11-08). 그래서 기계는 새 이름만 빠짐없이 모으고, 판정(언리얼 · 유니티 · Godot 의 같은 일 이름과 대조)은 통합 담당이 한다. 바꾼 옛 이름은
 이름 이력 표(`Config/Rules/Lint/NamingWordsBannedNames.json`)의 `_bannedNames` 에 올려 다른 브랜치가 되살리지 못하게 한다.
 
-**갈래 사이 겹침.** 갈래 여럿이 같은 함수 · 멤버 · 등록 이름(감시 값 · 단계 · 차단 조건 — `SW_…( id, "이름"` 의 이름) · Config 키를 각자 더하면
+갈래 사이 겹침. 갈래 여럿이 같은 함수 · 멤버 · 등록 이름(감시 값 · 단계 · 차단 조건 — `SW_…( id, "이름"` 의 이름) · Config 키를 각자 더하면
 병합은 글자 충돌 없이 지나가고 빌드 · 기동에서야 겹침이 드러났다(통합 묶음 5 — `RenderStabilitySample` · `EngineConfig::_renderStability`).
 멤버 · Config 키는 같은 파일 안에서, 함수 · 등록 이름은 저장소 전체에서 같으면 겹침이다. 겹침이 있으면 실패로 끝난다 — 병합 전에 한 갈래로 모은다.
 

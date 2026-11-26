@@ -63,7 +63,7 @@ namespace sw
             return false;
         }
 
-        // 깊이 · 스텐실은 GLX 가 고르는 창 비주얼처럼 24/8 이상을 요구한다. 색은 8/8/8 을 **정확히** 고른다: eglChooseConfig 는 요청한 색 비트의 합이 큰
+        // 깊이 · 스텐실은 GLX 가 고르는 창 비주얼처럼 24/8 이상을 요구한다. 색은 8/8/8 을 정확히 고른다: eglChooseConfig 는 요청한 색 비트의 합이 큰
         // 설정을 앞에 두어 10 비트 설정이 먼저 온다(https://registry.khronos.org/EGL/sdk/docs/man/html/eglChooseConfig.xhtml). 알파는 요구하지 않는다 — 같은 색 비트에서는 버퍼가 작은(알파 없는) 설정이 먼저다.
         const EGLint      arrConfigAttrib[] = { EGL_SURFACE_TYPE, EGL_WINDOW_BIT, EGL_RENDERABLE_TYPE, EGL_OPENGL_BIT, EGL_RED_SIZE, 8, EGL_GREEN_SIZE, 8, EGL_BLUE_SIZE, 8, EGL_DEPTH_SIZE, 24, EGL_STENCIL_SIZE, 8, EGL_NONE };
         EGLint            configCount{ 0 };
@@ -188,7 +188,7 @@ namespace sw
         if ( _pEGLDisplay == nullptr || _pEGLContext == nullptr )
             return false;
 
-        // 현재 API 는 **스레드마다** 따로이고 기본값은 GLES 다 — 렌더 스레드가 묶지 않으면 eglGetCurrentContext · eglSwapInterval · 문맥 놓기가 GLES 의 것을 본다.
+        // 현재 API 는 스레드마다 따로이고 기본값은 GLES 다 — 렌더 스레드가 묶지 않으면 eglGetCurrentContext · eglSwapInterval · 문맥 놓기가 GLES 의 것을 본다.
         // https://registry.khronos.org/EGL/sdk/docs/man/html/eglBindAPI.xhtml ("defines the current rendering API for EGL in the thread it is called from")
         if ( eglBindAPI( EGL_OPENGL_API ) == EGL_FALSE )
             return false;

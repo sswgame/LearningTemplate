@@ -2,7 +2,7 @@
  * @file SocketPartPool.h
  * @brief 소켓에 붙는 부품 오브젝트(무기 · 방패 · 투구 프리팹)의 씬 풀입니다. 외형이 부품을 지울 때 넣고, 스폰할 때 같은 에셋을 꺼냅니다.
  * @details 스켈레톤 하나가 사라지고 생길 때마다 부품 프리팹을 세우고 지우던 비용(프리팹 로드 · 컴포넌트 생성)을 없앤다. 쉬는 부품은 소켓에서 떼고
- *          (`SocketBindingComponent::release( Animated )` — 붙은 오브젝트의 자식이면 그 오브젝트와 함께 지워진다) 꺼 둔다(`GameObject::setActive( false )` —
+ *          (`SocketBindingComponent::release( Animated )`: 붙은 오브젝트의 자식이면 그 오브젝트와 함께 지워진다) 꺼 둔다(`GameObject::setActive( false )` —
  *          그리기 · 틱 · 물리 바디가 모두 빠진다). 꺼낼 때 켜고, 다시 붙이는 일은 부르는 쪽(외형 조립)이 한다.
  *          물리로 떨어진 부품(`ReleasedPhysics`)과 이미 지울 예정인 오브젝트는 받지 않는다 — 부르는 쪽이 지운다.
  *          언리얼의 Actor Pool · 유니티의 `ObjectPool<T>` 에 해당한다.

@@ -1,4 +1,4 @@
-// ServiceSchedulerTest — 예약 작업: 회차 계산, 회차마다 서버 하나만 실행, 임대가 지나면 이어받기, 지나친 회차, 저장소 실패 뒤 다시 하기. ServiceTTLTest — 보존 기간 쓸기와 그 예약 작업(메모리 저장소, nogpu).
+// ServiceSchedulerTest: 예약 작업: 회차 계산, 회차마다 서버 하나만 실행, 임대가 지나면 이어받기, 지나친 회차, 저장소 실패 뒤 다시 하기. ServiceTTLTest — 보존 기간 쓸기와 그 예약 작업(메모리 저장소, nogpu).
 #include "pch.h"
 
 #include "Core/Memory/Memory.h"

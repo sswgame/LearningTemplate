@@ -3,7 +3,7 @@
  * @brief 클립 하나를 버스 입력에 섞는 보이스입니다. 재생 위치, 피치 리샘플, 게인 램프, 팬, 페이드, 루프, 가상 진행을 처리합니다.
  * @details 보이스는 오디오 스레드만 만진다. 블록마다 엔진이 목표(볼륨, 팬, 피치)를 정하면, 보이스는 블록 안에서 샘플마다 게인을 목표로 램프한다.
  *          스트리밍 클립(`AudioClipData::_pStream`)은 시작할 때 보이스가 디코더를 열고(`AudioStreamWindow`), 믹스하면서 필요한 만큼만 앞으로 풀어 읽는다.
- *          **가상(virtual)** 보이스는 섞지 않고 재생 위치만 진행한다. 다시 들리게 되면 그 시각의 위치에서 이어서 재생한다(Wwise 의 "virtual voice").
+ *          가상(virtual) 보이스는 섞지 않고 재생 위치만 진행한다. 다시 들리게 되면 그 시각의 위치에서 이어서 재생한다(Wwise 의 "virtual voice").
  */
 #pragma once
 #include "Core/Foundation/Macros.h"

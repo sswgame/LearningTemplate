@@ -46,7 +46,7 @@ namespace sw
     /**
      * @class IStreamEndpointListener
      * @brief `poll` 가 호출하는 리스너입니다. 모두 `poll` 를 부른 스레드에서 호출되며, 연결마다 열림, 프레임, 닫힘 순서입니다.
-     * @details 연결 실패처럼 **열린 적 없는 연결도 닫힘은 한 번 온다**(`connect` 한 쪽이 결과를 알 수 있게).
+     * @details 연결 실패처럼 열린 적 없는 연결도 닫힘은 한 번 온다(`connect` 한 쪽이 결과를 알 수 있게).
      */
     class SW_API IStreamEndpointListener
     {

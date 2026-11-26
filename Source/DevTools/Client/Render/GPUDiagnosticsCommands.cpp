@@ -1,6 +1,6 @@
 /**
  * @file DevTools/Client/Render/GPUDiagnosticsCommands.cpp
- * @brief GPU 진단 개발 명령입니다 — `gpu.inspect x y [첨부] | off`(픽셀 검사 · 셰이더 출력 선택), `gpu.thread n`(컴퓨트 스레드 선택), `gpu.rhicontract`(RHI 계약 검사 — `RHIContractCheck`), `gpu.timings [on|off]`(패스별 GPU 시간 줄).
+ * @brief GPU 진단 개발 명령입니다. `gpu.inspect x y [첨부] | off`(픽셀 검사 · 셰이더 출력 선택), `gpu.thread n`(컴퓨트 스레드 선택), `gpu.rhicontract`(RHI 계약 검사, `RHIContractCheck`), `gpu.timings [on|off]`(패스별 GPU 시간 줄).
  * @details 언리얼 `r.ShaderPrint` 커서 · `stat gpu`, RenderDoc 픽셀 기록과 같은 자리다. 상태는 엔진 서브시스템(`GPUPixelInspector` · `FrameProfiler`)이 들고, 이 파일은 명령 줄만 푼다.
  *          셰이더 출력(`SW_GPU_PRINT`)은 `-gv_gpuMessages=1` 로 띄운 실행에서만 줄이 나온다(메시지 변형 PSO). 첨부 값 줄(`GPUInspect.Pixel`)은 늘 나온다.
  */

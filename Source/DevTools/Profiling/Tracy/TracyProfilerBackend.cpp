@@ -180,7 +180,7 @@ namespace sw
             }
 #endif
 
-            /** @brief Tracy 출력입니다. **프로세스 수명**이다 — 엔진이 내려간 뒤에 닫히는 구간도 이것을 부른다(`ProfilerBackend` 의 활성 칸이 가리킨다). */
+            /** @brief Tracy 출력입니다. 프로세스 수명이다 — 엔진이 내려간 뒤에 닫히는 구간도 이것을 부른다(`ProfilerBackend` 의 활성 칸이 가리킨다). */
             static TracyProfilerBackend s_tracy;
         };
 

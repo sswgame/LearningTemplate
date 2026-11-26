@@ -1,7 +1,7 @@
 /**
  * @file TransientAttachmentPool.h
  * @brief 이름으로 찾는 프레임 첨부(트랜지언트 렌더 타깃) 풀입니다. 파이프라인 XML 이 선언한 첨부를 창 크기로 보관합니다.
- * @details 트랜지언트는 **구성이 바뀔 때만** 다시 만들어집니다(창 크기, 파이프라인). 프레임 안에서는 이름 → (텍스처, SRV)
+ * @details 트랜지언트는 구성이 바뀔 때만 다시 만들어집니다(창 크기, 파이프라인). 프레임 안에서는 이름 → (텍스처, SRV)
  *          조회와 "이 첨부를 이번 프레임에 처음 여는가" 판정만 일어나고, 후자는 같은 레벨의 패스들이 동시에 부릅니다.
  *          언리얼 RDG 는 생명주기가 겹치지 않는 트랜지언트끼리 메모리를 공유하지만 여기는 각 첨부를 프레임 내내 보관합니다.
  *          정확성 문제는 아니고 메모리 차이입니다.
@@ -149,7 +149,7 @@ namespace sw
          */
         bool allocateAlias( const hashed_string& name, const hashed_string& owner, const RHIAttachmentOps& ops );
         /**
-         * @brief 풀의 힙(@p heapBytes — 처음 부를 때 만든다)의 @p offsetBytes 에 첨부를 놓습니다(서술이 다른 첨부와 바이트를 나눈다 — `RenderGraphMemoryPlan`). 능력 `_bPlacedTextures` 가 있는 백엔드만 부른다.
+         * @brief 풀의 힙(@p heapBytes, 처음 부를 때 만든다)의 @p offsetBytes 에 첨부를 놓습니다(서술이 다른 첨부와 바이트를 나눈다, `RenderGraphMemoryPlan`). 능력 `_bPlacedTextures` 가 있는 백엔드만 부른다.
          * @return 힙이나 텍스처를 만들지 못하면 false 이고 아무것도 남기지 않는다(부르는 쪽이 `allocate` 로 자기 텍스처를 만든다 — 힙은 메모리 절약이지 그림이 다르지 않다).
          */
         bool allocatePlaced( IRHIDevice* pDevice, const hashed_string& name, RHIFormat format, const RHIAttachmentOps& ops, RenderResolutionSpace space, uint32 resolutionDivisor, uint64 heapBytes,
@@ -190,7 +190,7 @@ namespace sw
         /** @brief 전체 첨부입니다. 레지스트리 등록이나 Present 소스 선택처럼 목록을 훑는 곳에서 씁니다. */
         const unordered_map<hashed_string, Attachment>& getAll() const { return _mapAttachment; }
 
-        /** @brief 모두 놓고 비웁니다. 디바이스가 **살아 있을 때** 부릅니다. 텍스처 SRV 는 텍스처용 해제로 돌려줍니다(버퍼용과 인덱스 공간이 다릅니다). */
+        /** @brief 모두 놓고 비웁니다. 디바이스가 살아 있을 때 부릅니다. 텍스처 SRV 는 텍스처용 해제로 돌려줍니다(버퍼용과 인덱스 공간이 다릅니다). */
         void release( IRHIDevice* pDevice );
         /**
          * @brief 그 이름으로 만든 첨부의 쉰 프레임 수를 나아가게 하고, `kIdleFramesBeforeRelease` 프레임 이어서 쓰이지 않았으면 놓습니다. 셋업(기록 전)에서 프레임마다 부릅니다.

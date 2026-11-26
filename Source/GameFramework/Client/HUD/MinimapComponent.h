@@ -37,7 +37,7 @@ namespace sw
      * @details 점은 패널의 자식 위젯이고 자리는 렌더 변환만 바꾼다(배치를 다시 하지 않는다). 위젯은 표시 수만큼 한 번 만들고 남는 것은 숨긴다. 문서를 다시 읽어 패널이 새로 생기면 다시 만든다.
      *          그림 지도는 캡처 카메라(`_captureCamera`)가 찍는다 — 점과 같은 가운데 · 범위 · 방향으로 위에서 내려다보게 맞춰 주므로 그 렌더 텍스처를 HUD 문서가 패널 뒤의
      *          `ImageWidget` 에 같은 자리로 놓으면 점과 그림이 겹친다(언리얼 SceneCapture2D, 유니티 `Camera.targetTexture` 미니맵). 카메라가 없으면 점만 있는 레이더다.
-     *          가운데와 방향은 이 오브젝트가 아니라 **지금 조종하는 폰**이다 — 플레이어가 다른 폰(말 · 드론 · 탈것)에 빙의하면(`PossessionChangedEvent`) 그 폰을 따라간다. 놓으면 이 오브젝트로 돌아온다.
+     *          가운데와 방향은 이 오브젝트가 아니라 지금 조종하는 폰이다 — 플레이어가 다른 폰(말 · 드론 · 탈것)에 빙의하면(`PossessionChangedEvent`) 그 폰을 따라간다. 놓으면 이 오브젝트로 돌아온다.
      */
     REFLECT( TickMode = Main, Category = "UI", DisplayName = "Minimap", Tooltip = "Places the minimap markers around this object as dots on a canvas panel of the HUD document" )
     class SW_GF_API MinimapComponent : public Component

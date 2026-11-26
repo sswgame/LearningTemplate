@@ -4,7 +4,7 @@
 @file apk_packager.py
 @brief Android 빌드 산출물(`lib<이름>.so` + 쿠킹한 팩)을 서명한 디버그 APK 하나로 묶는다 — 배포 구성(Android-Shipping) · 개발 구성(Android-Release, 자동화 실행기가 있다).
 
-NativeActivity 앱에 얇은 Java 뷰(`SWInputView` — 입력기 조합, 감사 P-4)만 얹은 구성이라 Gradle 을 쓰지 않는다 — Java 를 컴파일하는 javac(`Tools/JDK`),
+NativeActivity 앱에 얇은 Java 뷰(`SWInputView`: 입력기 조합, 감사 P-4)만 얹은 구성이라 Gradle 을 쓰지 않는다. Java 를 컴파일하는 javac(`Tools/JDK`),
 dex 로 바꾸는 d8, 매니페스트를 이진 XML 로 바꾸고 자산을 담는 aapt2, 정렬하는 zipalign, 서명하는 apksigner(넷 다 `Tools/Android/build-tools/<판>`)와
 디버그 키를 만드는 keytool(`Tools/JDK`)이다. 언리얼 · Godot 은 Gradle 프로젝트를 만들지만 그것은 Java 쪽(결제 · 알림 플러그인 · 의존 라이브러리)을 붙이기 위해서다 —
 외부 Java 라이브러리(aar)를 붙일 일이 생기면 Gradle 로 옮긴다. 도구가 하나라도 없으면 멈춘다(dex 없는 APK 는 입력 뷰 클래스를 못 찾아 창이 서지 않는다).

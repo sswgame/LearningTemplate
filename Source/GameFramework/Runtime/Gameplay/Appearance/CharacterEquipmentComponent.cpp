@@ -534,7 +534,7 @@ namespace sw
                 return true;
             }
 
-            /** @brief `equipment.sort <object>` — 가방을 정렬한다(인벤토리 화면의 정렬과 같은 명령 길 — `applyCommand`). */
+            /** @brief `equipment.sort <object>`: 가방을 정렬한다(인벤토리 화면의 정렬과 같은 명령 길, `applyCommand`). */
             static bool runSort( const vector<string>& listArgument, string& outReply )
             {
                 if ( listArgument.size() != 1 )
@@ -562,7 +562,7 @@ namespace sw
                 return true;
             }
 
-            /** @brief 감시 값 `Equipment.Stat` — 낀 장비 능력치(key, 예: armor)의 합입니다(숨김 칸 제외 — `Equipment::computeStats`). */
+            /** @brief 감시 값 `Equipment.Stat`: 낀 장비 능력치(key, 예: armor)의 합입니다(숨김 칸 제외, `Equipment::computeStats`). */
             [[nodiscard]] static bool readStat( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
                 const CharacterEquipmentComponent* pEquipment = findTarget( query, outValue );

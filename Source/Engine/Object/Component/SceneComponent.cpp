@@ -59,18 +59,18 @@ namespace sw
         _bIsSceneComponent = SW_TRUE;
     }
 
-    // **SceneComponent 는 이동하지 않는다.** 이 클래스는 부모 포인터 · 자식 목록 · 계층의 더티
-    // 루트 목록에 **자기 주소로** 얽혀 있는 계층의 노드다. 옮기려면 자식들의 `_pParent`, 부모의
+    // SceneComponent 는 이동하지 않는다. 이 클래스는 부모 포인터 · 자식 목록 · 계층의 더티
+    // 루트 목록에 자기 주소로 얽혀 있는 계층의 노드다. 옮기려면 자식들의 `_pParent`, 부모의
     // `_listChild` 항목, 더티 루트 목록이 들고 있는 포인터를 모두 새 주소로
     // 고쳐야 한다. 컴포넌트는 풀 안의 제자리에서 만들고 없애므로 실제로 옮겨지는 일이 없고,
-    // 그래서 **막는다.** 파생 타입도 이동 연산을 선언하지 않는다.
+    // 그래서 막는다. 파생 타입도 이동 연산을 선언하지 않는다.
     // 트랜스폼 칸도 같은 이유로 옮길 수 없다(칸의 소유자 포인터가 이 주소다).
 
     SceneComponent::~SceneComponent()
     {
         // 소멸할 때 자식 컴포넌트들을 떼어 낸다(힙 복사 없이 뒤에서부터).
         //
-        // **미루는 쪽(`detachFromComponent`)을 쓰면 안 된다.** 그쪽은 틱 중이면 일을 큐에 넣고
+        // 미루는 쪽(`detachFromComponent`)을 쓰면 안 된다. 그쪽은 틱 중이면 일을 큐에 넣고
         // 그냥 돌아오므로 `_listChild` 가 줄지 않는다. 아래 루프가 끝나지 않고 미룬 일만 무한히
         // 쌓인다. 게다가 그 일이 나중에 실행될 때 핸들로 되찾을 자기 자신은 이미 없다. 파괴는
         // 지금 틱 창 밖에서만 일어나므로 실제로 닿지는 않지만, 닿았을 때의 모습이 "멈춘다" 인
@@ -143,7 +143,7 @@ namespace sw
 
     void SceneComponent::writeTickTransform( uint8 bit, const float3& value )
     {
-        // **자기 오브젝트를 틱하는 스레드면 칸에 바로 쓴다.** 한 오브젝트의 항목은 한 워커가 돌므로 이 칸의 대기 자리를 쓰는 스레드는
+        // 자기 오브젝트를 틱하는 스레드면 칸에 바로 쓴다. 한 오브젝트의 항목은 한 워커가 돌므로 이 칸의 대기 자리를 쓰는 스레드는
         // 이 스레드 하나다. 틱 뒤 적용은 칸 번호 목록을 따라 배열만 읽는다.
         const GameObject*      pOwner      = getOwner();
         const TickThreadState& threadState = StructuralChangeBuffer::getThreadState();
@@ -175,7 +175,7 @@ namespace sw
 
     void SceneComponent::setLocalValue( uint8 bit, const float3& value )
     {
-        // NaN 은 자식 · 본 · 스키닝으로 번진다 — 들어온 자리에서 이름과 함께 한 번 알린다(값은 그대로 쓴다 — 고칠 곳은 값을 계산한 쪽이다).
+        // NaN 은 자식 · 본 · 스키닝으로 번지므로 들어온 자리에서 이름과 함께 한 번 알린다(값은 그대로 쓴다. 고칠 곳은 값을 계산한 쪽이다).
         SW_DIAGNOSTIC_CHECK_NAN_ID( "SceneComponent.NonFiniteTransform", value, getOwnerName().view(),
                                     "'%#' got a non-finite local %# (%#, %#, %#) - it spreads to children, bones and skinning; fix the code that computed it",
                                     getOwnerName().c_str(), SceneComponentInternal::getLocalValueName( bit ), value._x, value._y, value._z );
@@ -335,7 +335,7 @@ namespace sw
         if ( _bIsTransformDirty.load( std::memory_order_relaxed ) == SW_FALSE || isInParallelTick() )
             return;
 
-        // **합성은 `updateWorldTransformFromParent` 한 곳에서만 한다.** 주의: 여기서 따로 합성 · 해제하면 갱신 훅(`onWorldTransformUpdated`)이
+        // 합성은 `updateWorldTransformFromParent` 한 곳에서만 한다. 주의: 여기서 따로 합성 · 해제하면 갱신 훅(`onWorldTransformUpdated`)이
         // 빠진다. 여기서 깨끗해진 노드는 플러시가 건너뛰므로(더티가 아니다) 훅이 영영 안 불린다 — 인스펙터에서 메시 위치를 끌면 세터 직후
         // 월드 위치를 읽어, 화면의 메시가 제자리에 멈춰 있게 된다.
         //
@@ -433,7 +433,7 @@ namespace sw
         if ( pParent == nullptr || pParent == this )
             return false;
 
-        // 다른 매니저의 부모는 거절한다. 붙이면 **부모 쪽 루트**가 자기 매니저의 더티 루트 목록에 오르는데, 부모 매니저가 그 루트를 파괴해도
+        // 다른 매니저의 부모는 거절한다. 붙이면 부모 쪽 루트가 자기 매니저의 더티 루트 목록에 오르는데, 부모 매니저가 그 루트를 파괴해도
         // 이쪽 목록은 모르니 다음 플러시가 해제된 컴포넌트를 읽는다.
         if ( pParent->_pManager != _pManager )
         {
@@ -468,7 +468,7 @@ namespace sw
 
     bool SceneComponent::attachToComponent( SceneComponent* pParent, AttachRule rule )
     {
-        // 붙일 수 있는지는 틱 중이든 아니든 **여기서** 거른다 — 미룬 붙이기가 그때 실패하면 부른 쪽은 모른다.
+        // 붙일 수 있는지는 틱 중이든 아니든 여기서 거른다 — 미룬 붙이기가 그때 실패하면 부른 쪽은 모른다.
         if ( canAttachTo( pParent ) == false )
             return false;
 
@@ -487,11 +487,11 @@ namespace sw
             } );
             return true;
         }
-        // 이미 그 부모면 할 일이 없다(성공). 미룬 **뒤에** 본다 — 틱 중 떼기 → 다시 붙이기에서 아직 붙어 있다고 버리면 미룬 떼기만 남는다.
+        // 이미 그 부모면 할 일이 없다(성공). 미룬 뒤에 본다 — 틱 중 떼기 → 다시 붙이기에서 아직 붙어 있다고 버리면 미룬 떼기만 남는다.
         if ( _pParent == pParent )
             return true;
 
-        // 월드를 지키려면 붙이기 **전의** 월드를 찍어 두고, 붙인 뒤 새 부모 기준으로 다시 적는다(`setWorldTransform` 이 분해한다).
+        // 월드를 지키려면 붙이기 전의 월드를 찍어 두고, 붙인 뒤 새 부모 기준으로 다시 적는다(`setWorldTransform` 이 분해한다).
         const bool     bKeepWorld  = ( rule == AttachRule::KeepWorld );
         const float4x4 worldBefore = bKeepWorld ? getWorldMatrix() : float4x4{};
         detachFromComponent();
@@ -672,7 +672,7 @@ namespace sw
             return;
 
         // 같은 오브젝트 안의 부착은 소유자 칸을 비운다(= 자기). 자기 이름을 적으면 읽을 때 이름이 유일하게 바뀐(`Rig` → `Rig_2`)
-        // 복제본 · 두 번째 프리팹 인스턴스가 이름으로 **원본**을 찾아 그 컴포넌트에 붙는다.
+        // 복제본 · 두 번째 프리팹 인스턴스가 이름으로 원본을 찾아 그 컴포넌트에 붙는다.
         if ( pParentOwner == getOwner() )
         {
             _attachComponent = hashed_string( parentKey.c_str() );

@@ -64,7 +64,7 @@ namespace sw
 
         /** @brief @p path 가 가리키는 것을 묻습니다(링크는 따라간다). 없거나 못 읽으면 false 입니다. */
         [[nodiscard]] static bool queryStatus( string_view path, FileStatus& outStatus );
-        /** @brief 폴더 하나를 만듭니다(한 단계). **이 호출이 만들었을 때만** true 입니다 - 이미 있으면 false 입니다. */
+        /** @brief 폴더 하나를 만듭니다(한 단계). 이 호출이 만들었을 때만 true 입니다 - 이미 있으면 false 입니다. */
         [[nodiscard]] static bool createDirectory( string_view path );
         /** @brief 파일 · 링크 · 빈 폴더 하나를 지웁니다(POSIX 의 `remove` 의미). Windows 도 읽기 전용 속성을 무시하고 지웁니다. */
         [[nodiscard]] static bool removeEntry( string_view path );

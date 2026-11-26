@@ -46,7 +46,7 @@ namespace sw::editor
     void waitEditorBackgroundJob( const TaskStageHandle& jobStage, string_view owner );
     /**
      * @brief 에디터가 낸 모든 잡에게 "종료가 시작됐다"는 협조 신호를 올립니다. 잡 본문(긴 스캔 · 파싱)이 `readStopSignal` 로 받은 신호를 읽고 일찍 끝낸다.
-     * @details 종료 경로는 에디터 모듈을 내리기 **앞에서** 엔진 전체 태스크를 기다린다(`GameModuleManager::flushRenderWorkers`). 신호가 없으면 에디터 잡(자산 참조 색인 스캔 등)이
+     * @details 종료 경로는 에디터 모듈을 내리기 앞에서 엔진 전체 태스크를 기다린다(`GameModuleManager::flushRenderWorkers`). 신호가 없으면 에디터 잡(자산 참조 색인 스캔 등)이
      *          끝까지 돌아 다른 GPU · 빌드 작업과 겹칠 때 그 대기 시한을 넘겼다(`Task fencing timeout`). 에디터 컨텍스트가 없으면(테스트) 아무것도 하지 않는다.
      */
     void requestEditorBackgroundStop();
@@ -93,7 +93,7 @@ namespace sw::editor
 
         /**
          * @brief 완료된 결과를 가져오고, 그 순간의 잡 상태를 돌려줍니다.
-         * @details 결과 유무와 대기 여부를 **같은 락 안에서 한 번에** 읽는다. 따로 읽으면(`take` 가 false 인 뒤 `isPending` 을 부르면)
+         * @details 결과 유무와 대기 여부를 같은 락 안에서 한 번에 읽는다. 따로 읽으면(`take` 가 false 인 뒤 `isPending` 을 부르면)
          *          그 사이 워커가 끝나 "대기 아님 · 결과는 아직 안 꺼냄" 이 보이고, 그 틈에 새 요청을 올리면 끝난 결과를 읽지도 못하고 버린다.
          *          그래서 "비었으면 요청" 같은 판단은 이 반환값 하나로 한다.
          *          `Ready` 이면 @p outResult 에 결과가 들어 있고 완료 플래그가 해제된다(같은 결과를 두 번 주지 않는다).

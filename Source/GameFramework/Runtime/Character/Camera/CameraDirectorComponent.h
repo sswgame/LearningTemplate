@@ -49,7 +49,7 @@ namespace sw
     /**
      * @class CameraDirectorComponent
      * @brief 프리셋 카탈로그(`<CameraPresetCatalog>` XML)를 읽고, 켠 프리셋을 대상에 맞춰 계산하고 블렌드, 감쇠, 흔들림을 거쳐 같은 오브젝트의 카메라에 씁니다.
-     * @details **카메라에는 틱 뒤에 쓴다.** `TickGroup::PostPhysics` 에서는 입력만 읽고, 포즈 계산과 쓰기는 틱 뒤 게임 스레드로 미룬다(`executeOrDeferPostTick`).
+     * @details 카메라에는 틱 뒤에 쓴다. `TickGroup::PostPhysics` 에서는 입력만 읽고, 포즈 계산과 쓰기는 틱 뒤 게임 스레드로 미룬다(`executeOrDeferPostTick`).
      *          틱 중의 트랜스폼 쓰기는 틱이 끝나야 적용되므로, 틱 안에서 대상을 읽으면 한 프레임 늦은 위치를 따라간다.
      *          1인칭 프리셋이면 손에 든 총이 시점보다 한 프레임 앞서 흔들린다.
      *          틱 밖에서 부르면 바로 쓴다.
@@ -60,7 +60,7 @@ namespace sw
      *          암 충돌(`<Collision>`)은 따로 준 질의(`setCollisionProbe`)가 없으면 씬의 물리(`SceneCameraProbe`)에 쓸어 본다. 대상 자신은 뺀다.
      *          입력 맵 액션 `_cycleAction` 이 발동하면 카탈로그 순서로 다음 프리셋을 켠다(상황 프리셋은 건너뛴다). 순환 액션이 있는 디렉터는 플레이어가 시점을 고르는 카메라라서,
      *          고른 프리셋을 사용자 설정(`CameraUserSettings::saveChosenPreset`)에 쓰고 다음 시작에 그 프리셋에서 시작한다.
-     *          **선택 프리셋과 상황.** 플레이어 · 코드가 고른 프리셋(`_selectedPreset`) 위에 켜진 상황(카탈로그 `<Context>` — 조준 · 탈것 · 실내)이 보일 프리셋을 정한다
+     *          선택 프리셋과 상황. 플레이어 · 코드가 고른 프리셋(`_selectedPreset`) 위에 켜진 상황(카탈로그 `<Context>` — 조준 · 탈것 · 실내)이 보일 프리셋을 정한다
      *          (`CameraPresetCatalog::resolveContextPreset`). 상황은 게임 코드가 `setContext` 으로 켜거나, 데이터의 `action` 을 누르고 있는 동안 켜진다.
      *          보일 프리셋이 바뀔 때만 켜므로(블렌드 표를 따른다) 코드가 `activatePreset` 으로 직접 켠 프리셋(킬캠)과 다투지 않는다.
      *          블렌드 없는 전환(컷)은 카메라에 컷 표시를 넣어서 렌더러가 TAA 기록을 버리게 한다.

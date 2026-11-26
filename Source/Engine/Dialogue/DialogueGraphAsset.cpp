@@ -318,7 +318,7 @@ namespace sw
 
     int32 DialogueGraphAsset::encodePin( int32 nodeID, int32 pinOffset )
     {
-        // 오프셋이 자릿수를 넘으면 노드 id 를 오염시켜, 링크가 **다른 노드**를 가리키게 된다.
+        // 오프셋이 자릿수를 넘으면 노드 id 를 오염시켜, 링크가 다른 노드를 가리키게 된다.
         // 그런 값을 조용히 만들지 않고 0(없는 핀)을 반환한다.
         const bool bInvalidPinID = nodeID <= 0 || pinOffset <= 0 || pinOffset >= kPinScale;
         if ( bInvalidPinID )

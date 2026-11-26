@@ -3,9 +3,9 @@
  * @brief 어빌리티 시스템의 이벤트 페이로드와 "game" 채널 이벤트입니다.
  *
  * @details 알림은 두 경로로 나가며, 언리얼 GAS 와 같다.
- *          - **게임플레이 이벤트**(`AbilityEventData`): 태그 하나와 페이로드로 이루어진다. `AbilitySystemComponent::handleGameplayEvent` 로 한 오브젝트에
+ *          - 게임플레이 이벤트(`AbilityEventData`): 태그 하나와 페이로드로 이루어진다. `AbilitySystemComponent::handleGameplayEvent` 로 한 오브젝트에
  *            보내면, 그 태그를 트리거로 둔 어빌리티가 발동하고 `AbilityTaskWaitEvent` 가 깨어난다(언리얼의 `SendGameplayEventToActor` 에 해당).
- *          - **게임플레이 큐**(`AbilityPresentationEvent`): 이펙트가 내는 "보여 줄 것"(피격 섬광, 오라, 소리)이다. 게임 상태를 바꾸지 않는 연출 전용이다.
+ *          - 게임플레이 큐(`AbilityPresentationEvent`): 이펙트가 내는 "보여 줄 것"(피격 섬광, 오라, 소리)이다. 게임 상태를 바꾸지 않는 연출 전용이다.
  *            컴포넌트 델리게이트(`registerGameplayCue`)와 연출 창구(`IAbilityCueSink`)로 나간다.
  *          쓰러짐은 `AbilityOwnerDiedEvent` 로 알린다. `CombatAttributeSet` 이 체력이 0 에 닿는 순간 한 번 낸다.
  */

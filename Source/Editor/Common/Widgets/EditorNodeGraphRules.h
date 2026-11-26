@@ -149,7 +149,7 @@ namespace sw::editor
         static float2 minimapToCanvas( const EditorGraphMinimapTransform& transform, const float2& mapPoint );
         /** @brief 캔버스 점 @p canvasPoint 에 가운데가 가장 가까운 노드의 id 입니다. 노드가 없으면 비어 있습니다. */
         static optional<int32> findNearestNode( const vector<EditorGraphNodeRect>& listRect, const float2& canvasPoint );
-        /** @brief 에셋 @p assetPath 를 놓으면 만들 노드 종류입니다 — 확장자가 맞는 첫 줄. 맞는 줄이 없으면 비어 있습니다(그 캔버스는 놓을 자리를 열지 않는다 — EditorUI R11). */
+        /** @brief 에셋 @p assetPath 를 놓으면 만들 노드 종류이며 확장자가 맞는 첫 줄. 맞는 줄이 없으면 비어 있습니다(그 캔버스는 놓을 자리를 열지 않는다, EditorUI R11). */
         static optional<uint32> findAssetNodeKind( const vector<EditorGraphAssetNodeRule>& listRule, string_view assetPath );
     };
 } // namespace sw::editor

@@ -37,7 +37,7 @@ SW_TEST_CASE( StringTest, SnakeCaseSplitsPascalWords )
 
 /**
  * @brief [StringTest] 비워진 intern 테이블은 다시 세워진다 — 빈 채로 남지 않는다
- * @details 테이블 인스턴스는 `HashedStringPool::initialize` 안의 **함수 지역 static** 이라 두 번째
+ * @details 테이블 인스턴스는 `HashedStringPool::initialize` 안의 함수 지역 static 이라 두 번째
  *          initialize 에서는 생성자가 돌지 않는다. `shutdown` 이 `clear()` 로 0번 청크와 사전 정의
  *          이름까지 돌려준 뒤라, 그대로 두면 `hashed_string( NameType_float3 )` 의 `c_str()` 이
  *          nullptr 이고 새로 intern 되는 첫 문자열이 0번(`NameType_None`)을 받는다.
@@ -355,7 +355,7 @@ SW_TEST_CASE( StringTest, FixedStringFullCoverage )
 
 /**
  * @brief [StringTest] 용량을 넘는 입력은 잘리고 버퍼 밖은 건드리지 않는다
- * @details 단정으로 알리기만 하고 **원래 길이 그대로 복사**하면 `_arrData` 뒤(여기서는 `_canary`)를
+ * @details 단정으로 알리기만 하고 원래 길이 그대로 복사하면 `_arrData` 뒤(여기서는 `_canary`)를
  *          덮어쓴다. 단정은 실행을 멈추지 않고 Shipping 에서는 사라지므로 그대로 스택 오버플로가 된다.
  *          이 테스트는 잘리는지(size)와 이웃을 안 건드리는지(canary)를 함께 본다.
  */
@@ -1039,7 +1039,7 @@ SW_TEST_CASE( StringTest, FixedStringOperatorPlusWithCStringLhs )
 /**
  * @brief [StringTest] 표준 서식 지정자(정밀도·너비·플래그)를 formatstring 이 이해하는지
  * @details `%#` 과 맨 변환 문자(`%d`, `%f`)만 알아보면 `%.3f` 가 `%.` 까지만 플레이스홀더로 먹히고
- *          `3f` 가 글자로 남아 **조용히 틀린 출력**이 나온다.
+ *          `3f` 가 글자로 남아 조용히 틀린 출력이 나온다.
  */
 SW_TEST_CASE( StringTest, FormatStringSupportsPrintfSpecifiers )
 {
@@ -1092,7 +1092,7 @@ SW_TEST_CASE( StringTest, FormatStringSupportsPrintfSpecifiers )
 /**
  * @brief [StringTest] 서식이 붙은 긴 문자열이 임시 버퍼 크기에서 잘리지 않는지
  * @details 값은 스택 임시 버퍼(kTempBufferSize)를 거쳐 문자열이 된다. 문자열 인자가 그 버퍼를 건너뛰는
- *          지름길이 **서식 없는 경로에만** 있으면 `%s` 는 멀쩡한데 `%-20s` 처럼 폭을 주는 순간 버퍼 크기에서
+ *          지름길이 서식 없는 경로에만 있으면 `%s` 는 멀쩡한데 `%-20s` 처럼 폭을 주는 순간 버퍼 크기에서
  *          잘린다 — 로그에서 긴 메시지의 꼬리가 조용히 사라진다.
  */
 SW_TEST_CASE( StringTest, FormatStringLongTextSurvivesWidthSpec )
@@ -1194,7 +1194,7 @@ SW_TEST_CASE( StringTest, PlaceholderNeverTakesSpecifiers )
  * @brief [StringTest] stristr 은 널 종단자를 지나 읽지 않는다
  * @details `stristr` 은 `string_view( pStr, subLen )` 를 만들어 비교한다 — 남은 문자열이 검색어보다
  *          짧아도 길이를 `subLen` 으로 잡으므로, 읽어 보면 종단자 뒤로 넘어갈 것처럼 생겼다.
- *          **실제로는 넘어가지 않는다.** `equals` 의 비교 루프가 첫 불일치에서 끊기고, 널 종단자는
+ *          실제로는 넘어가지 않는다. `equals` 의 비교 루프가 첫 불일치에서 끊기고, 널 종단자는
  *          검색어의 어떤 문자와도(검색어에는 널이 없다) 반드시 불일치하기 때문이다. 즉 안전한
  *          이유가 구현 세부(단축 평가)에 걸려 있다.
  *
@@ -1218,7 +1218,7 @@ SW_TEST_CASE( StringTest, StristrStopsAtTerminator )
     DWORD oldProtect{ 0 };
     SW_EXPECT_TRUE( VirtualProtect( pBase + pageSize, pageSize, PAGE_NOACCESS, &oldProtect ) != 0 );
 
-    // "ab\0" 의 종단자가 첫 페이지의 **마지막 바이트**가 되도록 붙인다.
+    // "ab\0" 의 종단자가 첫 페이지의 마지막 바이트가 되도록 붙인다.
     utf8* pHaystack = pBase + pageSize - 3;
     pHaystack[0]    = 'a';
     pHaystack[1]    = 'b';
@@ -1241,7 +1241,7 @@ SW_TEST_CASE( StringTest, StristrStopsAtTerminator )
  * @details `char` 의 부호성은 구현 정의이고, UTF-8 의 0x80 이상 바이트는 signed char 에서 음수다.
  *          그대로 int 로 넓히면 두 가지가 깨진다:
  *
- *          `compare` 가 한글처럼 비-ASCII 가 섞인 문자열을 ASCII 보다 **작다고** 답한다.
+ *          `compare` 가 한글처럼 비-ASCII 가 섞인 문자열을 ASCII 보다 작다고 답한다.
  *          `strcmp` 규약(부호 없는 바이트 비교)의 반대이고, 대소문자 구분 경로는 `uint8` 로
  *          비교하므로 두 모드가 서로 다른 순서를 낸다. 문자열 해시 쪽은 `TestHashUtil.cpp` 가 든다.
  */
@@ -1310,9 +1310,9 @@ SW_TEST_CASE( StringTest, FormatStringHugeFloatAndDirectWrite )
 }
 
 /**
- * @brief [StringTest] strncpy 가 플랫폼과 무관하게 **언제나 끝을 맺고** 넘치면 자르는지 검증
+ * @brief [StringTest] strncpy 가 플랫폼과 무관하게 언제나 끝을 맺고 넘치면 자르는지 검증
  * @details 플랫폼 함수에 그대로 넘기면 답이 갈린다. Windows 의 `strncpy_s( dst, length, src, length )`
- *          는 원본이 종결자까지 들어가지 않으면 목적지를 **빈 문자열로 만들고** 잘못된 파라미터
+ *          는 원본이 종결자까지 들어가지 않으면 목적지를 빈 문자열로 만들고 잘못된 파라미터
  *          핸들러를 부른다. Linux 의 `::strncpy` 는 `length` 글자를 복사하고 **종결자를
  *          붙이지 않는다** — 뒤이어 읽는 쪽이 버퍼 밖까지 훑는다.
  */
@@ -1359,7 +1359,7 @@ SW_TEST_CASE( StringTest, StrncpyAlwaysTerminatesAndTruncates )
  * @brief [StringTest] fixed_string::erase 가 큰 길이에서 첨자를 접지 않는지 검증
  * @details 판정을 `pos + length >= currentSize` 로 하면 `npos` 가 아닌 큰 길이가 들어올 때
  *          (끝-시작 이 뒤집힌 계산 같은 것) 그 합이 `uint32` 안에서 접혀 작은 수가 되고,
- *          "끝까지 지운다" 가 아니라 **범위 이동** 쪽으로 빠진다 — 거기서
+ *          "끝까지 지운다" 가 아니라 범위 이동 쪽으로 빠진다 — 거기서
  *          `_arrData + pos + length` 라는 엉뚱한 주소를 읽는다. 뺄셈 형태(`currentSize - pos`)로 판정해야 한다.
  */
 SW_TEST_CASE( StringTest, FixedStringEraseWithHugeLengthDoesNotWrap )
@@ -1390,7 +1390,7 @@ SW_TEST_CASE( StringTest, FixedStringEraseWithHugeLengthDoesNotWrap )
 
 /**
  * @brief [StringTest] 용량 0 으로 부른 formatstring 이 버퍼 밖에 쓰지 않는지 검증
- * @details 입구의 `SW_ASSERT( capacity > 0 )` 는 **Debug 밖에서는 통째로 사라진다.**
+ * @details 입구의 `SW_ASSERT( capacity > 0 )` 는 Debug 밖에서는 통째로 사라진다.
  *          `capacity` 는 어디서나 `capacity - 1` 로 쓰이므로(남은 자리 계산, 종결자 위치)
  *          가드가 없으면 0 에서 그 뺄셈이 뒤집혀 4,294,967,295 가 되고, 길이 제한 없이 복사한다.
  */
@@ -1430,7 +1430,7 @@ SW_TEST_CASE( StringTest, ContainsFollowsTheSameRulesAsItsTwoSiblings )
     SW_EXPECT_TRUE( StringUtil::contains( "ab", "abc" ) == false );
     SW_EXPECT_TRUE( StringUtil::contains( "", "a" ) == false );
 
-    // 대소문자 무시는 **선택**이고, 켜면 세 자리 어디서든 같게 동작한다.
+    // 대소문자 무시는 선택이고, 켜면 세 자리 어디서든 같게 동작한다.
     SW_EXPECT_TRUE( StringUtil::contains( "Levels/Dungeon_01.scene", "dungeon" ) == false );
     SW_EXPECT_TRUE( StringUtil::contains( "Levels/Dungeon_01.scene", "dungeon", true ) );
     SW_EXPECT_TRUE( StringUtil::contains( "levels/DUNGEON.scene", "Dungeon", true ) );

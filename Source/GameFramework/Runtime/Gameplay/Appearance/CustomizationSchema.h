@@ -253,7 +253,7 @@ namespace sw
 {
     /**
      * @brief 스키마 하나입니다. 캐릭터 종류 하나(사람)나 아이템 종류 하나(소총)의 꾸미기 매개변수를 담습니다. 이 순서가 정규화와 조건 판정의 순서입니다.
-     * @details **판**(`version`, 적지 않으면 0): 매개변수의 뜻이 바뀌면(이름 · 채널 나눔 · 팔레트 번호가 색으로) 판을 올리고 `<Migration toVersion>` 에 옛 값을 옮기는 단계를 적는다.
+     * @details 판(`version`, 적지 않으면 0): 매개변수의 뜻이 바뀌면(이름 · 채널 나눔 · 팔레트 번호가 색으로) 판을 올리고 `<Migration toVersion>` 에 옛 값을 옮기는 단계를 적는다.
      *          세이브 · 공유 코드의 값은 쓴 판을 함께 싣고, 읽는 쪽이 `migrate` 로 지금 판까지 올린다 — 언리얼 `FCustomVersion`(데이터가 쓴 판을 싣고 읽는 쪽이 판으로 가른다) ·
      *          유니티 `ISerializationCallbackReceiver::OnAfterDeserialize`(읽은 뒤 옛 칸을 새 칸으로 옮긴다)와 같은 자리를, 분기 코드 대신 데이터 단계로 둔다.
      */
@@ -290,7 +290,7 @@ namespace sw
         const CustomizationParamDef* findParameter( const hashed_string& name ) const;
         /**
          * @brief @p values 를 이 스키마에 맞춰 @p outValues 를 채웁니다. 매개변수마다 정확히 하나를 채우고(없으면 기본값), 범위와 격자에 맞춥니다.
-         * @details **값은 전송 정밀도로 저장한다.** 슬라이더는 범위를 65535 단계, 색은 성분마다 255 단계로 맞춘다. 해석기는 맞춘 값만 쓰므로
+         * @details 값은 전송 정밀도로 저장한다. 슬라이더는 범위를 65535 단계, 색은 성분마다 255 단계로 맞춘다. 해석기는 맞춘 값만 쓰므로
          *          네트워크나 공유 코드로 오간 값이 보낸 쪽과 비트까지 같고, 해석 해시도 같다.
          *          스키마에 없는 이름은 버리고 @p pOutListDropped 에 담는다. 콘텐츠가 바뀌어 지워진 매개변수가 여기에 해당한다. 결과 순서는 스키마 순서다.
          *          값을 쓰는 입구는 이것 하나다 — 옛 판 값은 먼저 `migrate` 로 올린다(빠진 값도 @p pOutListDropped). 결과에는 지금 판을 찍는다.
@@ -312,7 +312,7 @@ namespace sw
      * @brief `<CustomizationSchemaCatalog><Schema id="Human"><Slider name="Height" category="Body" min="0" max="1" default="0.5"><Drive kind="BoneProportion" target="Height"/></Slider>
      *        <Color name="Hair" default="0.2 0.1 0.05 1"><Drive kind="DyeChannel" target="Hair" channel="0"/></Color><Choice name="Beard" default="None"><Option name="None"/>
      *        <Option name="Full" visual="beard_full"/></Choice><Slider name="BeardLength"><Condition parameter="Beard" options="Full"/></Slider></Schema></CustomizationSchemaCatalog>` 형식으로 읽습니다.
-     * @details 조건은 **앞에 선언한** 매개변수만 가리킬 수 있다. 그래서 조건끼리 순환할 수 없고, 정규화가 앞에서 뒤로 한 번에 끝난다.
+     * @details 조건은 앞에 선언한 매개변수만 가리킬 수 있다. 그래서 조건끼리 순환할 수 없고, 정규화가 앞에서 뒤로 한 번에 끝난다.
      */
     class SW_GF_API CustomizationSchemaCatalog
     {

@@ -28,7 +28,7 @@ namespace sw
         static uint32 makeStandardButtonMask( const bool* pDigital, uint32 count );
         /** @brief 플랫폼 세로축(아래가 + — 웹 standard · Android AXIS_Y/RZ)을 엔진 세로축(위가 +)으로 바꿉니다. */
         static float32 toEngineStickY( float32 platformY ) { return -platformY; }
-        /** @brief 해트 축 값 @p value 가 음의 방향(@p outNegative — 왼쪽 · 위)인지 양의 방향(@p outPositive — 오른쪽 · 아래)인지 나눕니다. 가운데면 둘 다 거짓입니다. */
+        /** @brief 해트 축 값 @p value 가 음의 방향(@p outNegative: 왼쪽 · 위)인지 양의 방향(@p outPositive: 오른쪽 · 아래)인지 나눕니다. 가운데면 둘 다 거짓입니다. */
         static void splitHatAxis( float32 value, bool& outNegative, bool& outPositive );
     };
 } // namespace sw

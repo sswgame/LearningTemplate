@@ -19,7 +19,7 @@ namespace sw
     /**
      * @class RemoteControllerComponent
      * @brief 서버(또는 롤백 피어)의 폰을 상대 연결의 의도로 몹니다. 조종 시스템 틱마다 받아 둔 상대 틱을 모두 읽어 하나의 의도로 냅니다.
-     * @details - 결정: 받은 의도는 **조종자가 사본으로 소유**합니다(틱 링, `kReceiveCapacity`). 예전에는 네트워크 키트의 받는 버퍼를 빌려 읽었는데,
+     * @details - 결정: 받은 의도는 조종자가 사본으로 소유합니다(틱 링, `kReceiveCapacity`). 예전에는 네트워크 키트의 받는 버퍼를 빌려 읽었는데,
      *            서버의 버퍼는 연결 목록(`vector`) 원소라 연결이 늘면 주소가 바뀌어 빌린 포인터가 매달렸다. 이제 키트는 틱마다 꺼낸 의도
      *            (`ReplicationServer::popIntent`, 입력 창 바이트를 `ControlIntent::read`)를 `receiveIntent` 로 넣기만 한다.
      *          - 상대 틱(네트 고정 틱)과 조종 시스템 틱(프레임)은 걸음이 다르다. 프레임에 새 틱이 없으면 마지막 의도를 되풀이하고(발동 칸은 지운 채 — 한 번 누름이 두 번 되지 않게),

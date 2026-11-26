@@ -1,6 +1,6 @@
 /**
  * @file TestRHIPipelineFront.cpp
- * @brief PSO 앞단(`IRHIResourceFactory::createPipelineState` · `RHIShaderRequest::buildGraphicsStages`)이 컴파일 전에 끊어야 할 것을 끊는가 — 묶지 않은 앞단, 기동 능력에 없는 선택 스테이지 —
+ * @brief PSO 앞단(`IRHIResourceFactory::createPipelineState` · `RHIShaderRequest::buildGraphicsStages`)이 컴파일 전에 끊어야 할 것을 끊는가: 묶지 않은 앞단, 기동 능력에 없는 선택 스테이지 —
  *        그리고 정점 속성 마스크를 리플렉션(바이트코드가 아니라)에서 읽는가입니다(nogpu · 셰이더 캐시 없음).
  */
 #include "pch.h"

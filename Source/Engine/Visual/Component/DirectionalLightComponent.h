@@ -41,7 +41,7 @@ namespace sw
      *          물체(벤치 · 레일)는 그림자가 통째로 사라지고 나무 그림자는 밑동에서 떨어진다. 그래서 바이어스는 텍셀 수로 정하고 이 크기로 환산한다
      *          (유니티 URP 의 Depth · Normal Bias, 언리얼 CSM 의 캐스케이드별 바이어스와 같은 자리).
      *
-     *          `_viewProj` 는 **모든 캐스케이드를 덮는 기준 볼륨**이다(캐스케이드 하나면 그 캐스케이드 그대로). 셰이더의 `g_LightViewProj` 이자
+     *          `_viewProj` 는 모든 캐스케이드를 덮는 기준 볼륨이다(캐스케이드 하나면 그 캐스케이드 그대로). 셰이더의 `g_LightViewProj` 이자
      *          그림자 컬링의 절두체다. 캐스케이드 c 를 그리는 행렬은 `computeCascadeViewProj( c )` 다.
      */
     struct SW_API DirectionalShadowProjection
@@ -101,7 +101,7 @@ namespace sw
         [[nodiscard]] static DirectionalLightComponent* findActive( const GameObjectManager* pObjectManager );
         /**
          * @brief 그림자 맵을 가져가는 방향광입니다 — 켜져 있고 그림자를 드리우는 방향광 가운데 가장 밝은 것(같으면 컴포넌트 번호가 작은 것). 없으면 nullptr 입니다.
-         * @details 그림자 행렬을 만드는 쪽과 그림자 플래그를 싣는 쪽(`collectSceneLights`)이 **둘 다 이것을 부릅니다.** 주의: 둘이 따로 고르면 주광이 그림자를 끄고
+         * @details 그림자 행렬을 만드는 쪽과 그림자 플래그를 싣는 쪽(`collectSceneLights`)이 둘 다 이것을 부릅니다. 주의: 둘이 따로 고르면 주광이 그림자를 끄고
          *          다른 빛이 켤 때 행렬은 비고 플래그는 뒤의 빛에 붙어, 그림자를 드리우는 빛에 그림자가 지지 않는다. 방향 · 색 · 앰비언트는 그대로 주광에서 옵니다.
          */
         [[nodiscard]] static DirectionalLightComponent* findShadowCasting( const GameObjectManager* pObjectManager );
@@ -151,7 +151,7 @@ namespace sw
         /**
          * @brief 카메라 뷰-투영에 맞춘 그림자 투영입니다. `_shadowViewDistance` 가 0 이면 고정 볼륨(`computeShadowProjection`)입니다.
          * @details 볼륨 = 카메라 절두체(가까운 면에서 `_shadowViewDistance` 까지) ∩ 받는 높이 띠(`_shadowReceiverMinHeight` ~ `_shadowReceiverMaxHeight`,
-         *          두 값이 같으면 띠 없음)를 감싸는 **경계 구**의 빛 공간 정사각형이다(언리얼 CSM · 유니티 Stable Fit). 구의 반지름은 카메라가 돌아도
+         *          두 값이 같으면 띠 없음)를 감싸는 경계 구의 빛 공간 정사각형이다(언리얼 CSM · 유니티 Stable Fit). 구의 반지름은 카메라가 돌아도
          *          그대로라 회전 중에 볼륨 크기가 튀지 않는다. 지름은 양자 단위로 올리고 원점은 텍셀 격자에 스냅한다. 빛 쪽 깊이는 `_shadowDistance` 만큼
          *          당겨 화면 밖 · 띠 위의 가리는 물체를 담는다. 직교 탑다운 카메라는 절두체가 수백 m 깊이라 띠가 없으면 볼륨이 바닥 몇 배로 커진다.
          *

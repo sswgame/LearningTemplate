@@ -434,7 +434,7 @@ namespace sw
         }
         if ( bFreeSeat == false )
             return;
-        // 주체는 접속 티켓이 정한 계정이다 — 클라이언트가 보낸 값이 아니다. 매칭이 배정한 서버에서는 주체 없는 연결(티켓 없이 들어온 것)에 몸을 맡기지 않는다 —
+        // 주체는 접속 티켓이 정한 계정이며 클라이언트가 보낸 값이 아니다. 매칭이 배정한 서버에서는 주체 없는 연결(티켓 없이 들어온 것)에 몸을 맡기지 않는다 —
         // 세션 역할만 보면 티켓을 요구하지 않는 설정의 매치 서버가 아무 연결에나 배정받은 사람의 몸을 넘긴다. 매칭 없는 서버(개발 접속 · 한 프로세스 재생)는 붙은 차례다.
         const bool bAccountRequired = ShooterNetPawnComponentInternal::findBackfillSender() != nullptr;
         _listConnectionScratch.clear();

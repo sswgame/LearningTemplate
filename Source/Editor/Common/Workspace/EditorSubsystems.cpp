@@ -137,7 +137,7 @@ namespace sw::editor
 
     EditorToolDefaults& getEditorToolDefaults()
     {
-        // **참조를 반환하는 API 에는 "없다" 고 답할 방법이 없다.** 값의 원본은 editortooldefaults.json 이고 헤더는 형식만 가지므로
+        // 참조를 반환하는 API 에는 "없다" 고 답할 방법이 없다. 값의 원본은 editortooldefaults.json 이고 헤더는 형식만 가지므로
         // 지어낼 기본값도 없다(빈 글꼴 목록 · 0 색). 에디터 컨텍스트가 범위에 건 뒤에 묻는 것이 계약이라, 없으면 `getSubsystem` 이 모든 구성에서 멈춘다.
         return getSubsystem<EditorToolDefaults>();
     }

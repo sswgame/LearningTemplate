@@ -2,17 +2,17 @@
  * @file hashed_string.h
  * @brief 해시 기반 intern 문자열(basic_hashed_string)과 미리 정의된 이름의 열거형입니다.
  *
- * **규칙은 언리얼 FName 과 같습니다.**
- * - 같음은 **대소문자를 무시**합니다(`"Hero" == "hero"`). 비교 인덱스(FName 의 ComparisonIndex)를 정수로 비교합니다.
- * - 표시는 **적은 철자 그대로**입니다. "hero" 로 만든 이름의 `c_str()` 은 "hero" 입니다(FName 의 DisplayIndex).
+ * 규칙은 언리얼 FName 과 같습니다.
+ * - 같음은 대소문자를 무시합니다(`"Hero" == "hero"`). 비교 인덱스(FName 의 ComparisonIndex)를 정수로 비교합니다.
+ * - 표시는 적은 철자 그대로입니다. "hero" 로 만든 이름의 `c_str()` 은 "hero" 입니다(FName 의 DisplayIndex).
  *   처음 intern 된 철자를 모두에게 보여 주면, 에디터에서 `hero` 를 `Hero` 로 고치는 이름 바꾸기가 아무 일도 하지 않습니다.
  *   철자까지 비교하려면 `isEqual( other, NameCase::CaseSensitive )` 를 씁니다(FName 의 `IsEqual( …, ENameCase::CaseSensitive )`).
  * - 순서는 용도에 맞게 고릅니다. `lexicalLess` 는 대소문자를 무시한 사전순(`FNameLexicalLess`)이고,
  *   `fastLess` 는 비교 인덱스 순(`FNameFastLess`)입니다. 후자는 intern 순서라 실행마다 달라질 수 있습니다.
  * - FName 과 다른 점이 둘 있습니다.
- *   첫째, 해시는 대소문자를 무시한 **FNV** 이며 실행이 바뀌어도 같습니다. 바이너리 필드 이름, 열거자, 지역화 테이블이 이 값을 저장하기 때문입니다.
- *   둘째, 철자 보존은 **모든 빌드 구성**에서 합니다(언리얼은 에디터에서만 합니다). 저장되는 철자가 빌드에 따라 달라지지 않게 하려는 것입니다.
- * - 빈 이름(None)의 `c_str()` · `view()` 는 **빈 글**입니다(Godot `StringName`). "None" 표시는 `toString()` 이 냅니다(FName 의 `ToString`).
+ *   첫째, 해시는 대소문자를 무시한 FNV 이며 실행이 바뀌어도 같습니다. 바이너리 필드 이름, 열거자, 지역화 테이블이 이 값을 저장하기 때문입니다.
+ *   둘째, 철자 보존은 모든 빌드 구성에서 합니다(언리얼은 에디터에서만 합니다). 저장되는 철자가 빌드에 따라 달라지지 않게 하려는 것입니다.
+ * - 빈 이름(None)의 `c_str()` · `view()` 는 빈 글입니다(Godot `StringName`). "None" 표시는 `toString()` 이 냅니다(FName 의 `ToString`).
  *   읽기는 "None" 철자를 빈 이름으로 되돌립니다(쌓인 데이터).
  * - FName 의 숫자 꼬리(`Actor_12` = "Actor" + 13)는 두지 않았습니다.
  *   `c_str()` 의 영구 포인터를 보관하는 곳이 많고, 같은 이름의 번호는 `GameObjectManager` 가 다시 쓰기 때문입니다.
@@ -141,10 +141,10 @@ namespace sw
             : basic_hashed_string{ helper( scopedString.data() ) } {}
 
         /**
-         * @brief 리터럴 배열을 intern 하고 그 인덱스를 가집니다. **암시적 변환**이라 `isActionDown( "Jump" )` 처럼 쓸 수 있습니다.
+         * @brief 리터럴 배열을 intern 하고 그 인덱스를 가집니다. 암시적 변환이라 `isActionDown( "Jump" )` 처럼 쓸 수 있습니다.
          * @details 리터럴은 컴파일 타임에 정해진 유한 집합이라 intern 이 계속 늘어날 수 없다. 포인터, `string_view`, `string` 에서의 변환은 그대로 explicit 이다.
          *          동적 텍스트를 이름으로 올리는 곳은 눈에 보여야 하기 때문이다(StringTable 처럼 조회만 하려는 텍스트를 intern 하면 그것이 곧 누수다).
-         *          같은 이름의 함수에 `string_view` 오버로드와 `hashed_string` 오버로드를 **둘 다** 두면 리터럴 호출이 모호해지므로 그런 쌍은 두지 않는다
+         *          같은 이름의 함수에 `string_view` 오버로드와 `hashed_string` 오버로드를 둘 다 두면 리터럴 호출이 모호해지므로 그런 쌍은 두지 않는다
          *          (InputMap 의 쌍 37개를 이 규칙으로 제거했다).
          */
         template <size_type U>
@@ -171,9 +171,9 @@ namespace sw
         std::basic_string_view<value_type> view() const noexcept { return { c_str(), size() }; }
 
         /**
-         * @brief 사람이 읽는 글입니다. 빈 이름이면 "None" 입니다(언리얼 FName 의 `ToString`). 로그 · 에디터 표시 · 열거자 이름처럼 **보이는 글**은 이것으로 꺼냅니다.
+         * @brief 사람이 읽는 글입니다. 빈 이름이면 "None" 입니다(언리얼 FName 의 `ToString`). 로그 · 에디터 표시 · 열거자 이름처럼 보이는 글은 이것으로 꺼냅니다.
          * @details `c_str()` · `view()` 는 빈 이름이면 빈 글이다(Godot `StringName` → `String`). 그래서 경로 · 리소스 id · 키 자리에 그대로 넘겨도
-         *          'None' 파일을 찾지 않는다 — 예전에는 거꾸로라 경로 자리마다 린트로 막았다. 돌려주는 글의 `data()` 는 늘 널로 끝난다.
+         *          'None' 파일을 찾지 않는다. 돌려주는 글의 `data()` 는 늘 널로 끝난다.
          *          열거자 `None` 의 이름도 빈 이름이므로(`hashed_string( "None" )` 이 빈 이름이다) 열거자 이름을 글로 꺼내는 곳은 이것을 쓴다.
          */
         std::basic_string_view<value_type> toString() const noexcept
@@ -189,8 +189,8 @@ namespace sw
         hash_type getHash() const noexcept;
 
         /**
-         * @brief 문자열을 **intern 하지 않고** 해시만 계산합니다.
-         * @details `getHash()` 와 같은 값이 나온다. intern 여부와 상관없이 같은 해시 규칙을 쓴다. 해시로만 여는 테이블(`StringTable` 등)을 **조회**할 때 쓴다.
+         * @brief 문자열을 intern 하지 않고 해시만 계산합니다.
+         * @details `getHash()` 와 같은 값이 나온다. intern 여부와 상관없이 같은 해시 규칙을 쓴다. 해시로만 여는 테이블(`StringTable` 등)을 조회할 때 쓴다.
          *          조회하려고 intern 하면 그 문자열이 아레나에 영원히 남는다. 대사 원문처럼 키가 아닌 텍스트로 묻는 곳에서는 그것이 계속 늘어나는 누수가 된다.
          */
         static constexpr hash_type computeHash( std::basic_string_view<value_type> text ) noexcept
@@ -204,9 +204,9 @@ namespace sw
         }
 
         /**
-         * @brief 이미 intern 된 문자열이면 그 이름을, 아니면 None 을 반환합니다. **테이블에 넣지 않습니다.**
-         * @details 파일에서 읽은 이름으로 무엇을 **찾기만** 할 때 쓴다(타입, 메서드). 등록된 것의 이름은 이미 테이블에 있으므로 없으면 찾는 대상도 없다.
-         *          찾으려고 intern 하면 파일 하나가 서로 다른 이름 수만 개로 전역 테이블을 채울 수 있다. 테이블이 차면 그 뒤 **엔진의 모든** 새 이름이 None 이 된다.
+         * @brief 이미 intern 된 문자열이면 그 이름을, 아니면 None 을 반환합니다. 테이블에 넣지 않습니다.
+         * @details 파일에서 읽은 이름으로 무엇을 찾기만 할 때 쓴다(타입, 메서드). 등록된 것의 이름은 이미 테이블에 있으므로 없으면 찾는 대상도 없다.
+         *          찾으려고 intern 하면 파일 하나가 서로 다른 이름 수만 개로 전역 테이블을 채울 수 있다. 테이블이 차면 그 뒤 엔진의 모든 새 이름이 None 이 된다.
          */
         static basic_hashed_string findInterned( std::basic_string_view<value_type> text ) noexcept;
 
@@ -420,14 +420,14 @@ namespace sw
      * @struct AllocationInfo
      * @brief 문자열 intern 풀의 저장소이자 검색 엔진입니다.
      * @details
-     * - **청크 테이블(`_arrChunk`)**:
+     * - 청크 테이블(`_arrChunk`):
      *   1024개 단위의 Entry 청크 배열(`atomic<Entry*> _arrChunk[64]`)을 관리합니다. 인덱스를 `chunkIndex = id / 1024`,
-     *   `offset = id % 1024` 로 나누기만 하면 되므로, 뮤텍스 없이 **O(1) 포인터 역참조**로 문자열 포인터, 길이, 해시를
+     *   `offset = id % 1024` 로 나누기만 하면 되므로, 뮤텍스 없이 O(1) 포인터 역참조로 문자열 포인터, 길이, 해시를
      *   바로 반환합니다.
-     * - **문자열 아레나(`_listArenaBlock`)**:
+     * - 문자열 아레나(`_listArenaBlock`):
      *   짧은 문자열마다 `new[]` 를 따로 부르면 힙 단편화가 생기므로, 64KB 연속 메모리 블록을 미리 할당하고 차례로 채워 넣어
-     *   **힙 할당 횟수를 99% 이상 줄입니다.**
-     * - **32개 샤드 뮤텍스(`_arrShard`)**:
+     *   힙 할당 횟수를 99% 이상 줄입니다.
+     * - 32개 샤드 뮤텍스(`_arrShard`):
      *   여러 스레드에서 intern 요청이 몰릴 때 락 하나에 경합이 생기지 않도록, 해시 상위 비트로 32개의 독립된
      *   `shared_mutex` 와 `unordered_map` 에 나눠 처리합니다.
      */
@@ -467,8 +467,8 @@ namespace sw
         }
 
         /**
-         * @brief 0번 청크를 잡고 미리 정의된 이름을 적재합니다. **빈 테이블에서만 부릅니다.**
-         * @details 생성자와 `HashedStringPool::initialize` 가 함께 쓴다. 후자가 필요한 이유는 그 인스턴스가 **함수 지역 static** 이라
+         * @brief 0번 청크를 잡고 미리 정의된 이름을 적재합니다. 빈 테이블에서만 부릅니다.
+         * @details 생성자와 `HashedStringPool::initialize` 가 함께 쓴다. 후자가 필요한 이유는 그 인스턴스가 함수 지역 static 이라
          *          두 번째 initialize 에서는 생성자가 돌지 않기 때문이다. `clear()` 가 0번 청크까지 돌려준 뒤라 그대로 두면
          *          빈 테이블을 가리키게 된다.
          */
@@ -600,7 +600,7 @@ namespace sw
         return ( pEntry != nullptr ) ? pEntry->_stringLength : 0;
     }
 
-    /** @brief 적은 철자의 널 종료 C 문자열 포인터를 락 없이 O(1) 로 반환합니다(영구 — 테이블이 살아 있는 동안). */
+    /** @brief 적은 철자의 널 종료 C 문자열 포인터를 락 없이 O(1) 로 반환합니다. 테이블이 살아 있는 동안 유효하다. */
     template <typename T, typename N>
     const typename basic_hashed_string<T, N>::value_type* basic_hashed_string<T, N>::c_str() const noexcept
     {
@@ -608,7 +608,7 @@ namespace sw
         return ( pEntry != nullptr ) ? pEntry->_pStr : nullptr;
     }
 
-    /** @brief 이름의 FNV 해시 값(대소문자 무시 — 철자가 달라도 같다)을 락 없이 O(1) 로 반환합니다. */
+    /** @brief 이름의 FNV 해시 값(대소문자 무시라 철자가 달라도 같다)을 락 없이 O(1) 로 반환합니다. */
     template <typename T, typename N>
     typename basic_hashed_string<T, N>::hash_type basic_hashed_string<T, N>::getHash() const noexcept
     {

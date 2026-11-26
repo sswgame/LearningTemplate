@@ -2,17 +2,17 @@
  * @file GPUMessage.h
  * @brief 셰이더 메시지 채널의 CPU 쪽입니다 — 셰이더가 UAV 링에 적은 기록(메시지 id · 픽셀 또는 스레드 · 인자 넷)을 몇 프레임 뒤 비동기 되읽기로 읽어, id 의 서식으로 풀어 로그로 냅니다.
  * @details 언리얼 ShaderPrint(`ShaderPrint::PrintSymbol` — 글자를 GPU 에서 그린다) · ShaderDebug, 유니티 셰이더 printf 선과 같은 자리다. 여기서는 글자를 GPU 에서 만들지 않고
- *          **id 와 인자 비트만** 적는다 — 서식 문자열은 CPU 표에 있다(`SW_GPU_MESSAGE_FORMAT`). 그래서 셰이더에 문자열 리터럴이 없고, 로그 · 시나리오 판정(`ExpectLog`)이 같은 줄을 본다.
+ *          id 와 인자 비트만 적는다 — 서식 문자열은 CPU 표에 있다(`SW_GPU_MESSAGE_FORMAT`). 그래서 셰이더에 문자열 리터럴이 없고, 로그 · 시나리오 판정(`ExpectLog`)이 같은 줄을 본다.
  *          셰이더 쪽은 `Content/engine/shaders/gpu_message.hlsli`(`SW_GPU_PRINT` · `SW_GPU_LOG` · `SW_GPU_ASSERT` · `SW_GPU_ASSERT_ARGS`), 버퍼 배치와 id 는 `gpu_message_ids.hlsli` 하나다 —
  *          HLSL 과 이 파일이 같은 파일을 include 하므로 번호를 두 번 적지 않는다.
  *
- *          **퍼뮤테이션이다.** 켜는 스위치는 진단 정책(`RenderDiagnosticsPolicy::_bGPUMessages`, 개발 도구의 `-gv_gpuMessages=1`, 기본 끔)이고, 켜면 메시지를 가진 패스
+ *          퍼뮤테이션이다. 켜는 스위치는 진단 정책(`RenderDiagnosticsPolicy::_bGPUMessages`, 개발 도구의 `-gv_gpuMessages=1`, 기본 끔)이고, 켜면 메시지를 가진 패스
  *          (표의 `RenderPassTraitFlag::kGPUMessageTarget`)가 셰이더에 `SW_GPU_MESSAGES_ENABLED` 를 붙여 컴파일되고(`selectRenderPassShader` — 쿠커와 같은 함수) 렌더러가 그 패스 앞에서
  *          이 버퍼를 u4 에 건다(컴퓨트는 매개변수 구조체의 `getComputeUAV`, 그래픽스 `bindGraphics`). Shipping 은 `isRequested` 가 늘 거짓이라 define 도 PSO 변형도 바인딩도 생기지 않는다.
  *          필수 값(버퍼 · 컴퓨트 · 그래픽스 쓰기 능력)이 없으면 오류로 멈춘다 — 메시지가 켜진 PSO 를 버퍼 없이 돌리는 길은 없다.
  *
  *          버퍼는 상한 있는 링이다. 셰이더가 누적 카운터를 원자적으로 올려 순번을 받고 순번 % 용량 칸에 적는다(지우지 않는다 — 클리어 패스가 필요 없다). CPU 는 지난번 읽은 누적 수와의 차에서
- *          한 바퀴 넘어 덮인 수를 **버려진 수**로 세어 알린다. 출력을 고르는 값(픽셀 · 스레드 · 로그 예산)은 CPU 가 프레임마다 머리 칸에 올린다(`updateControl`).
+ *          한 바퀴 넘어 덮인 수를 버려진 수로 세어 알린다. 출력을 고르는 값(픽셀 · 스레드 · 로그 예산)은 CPU 가 프레임마다 머리 칸에 올린다(`updateControl`).
  * @note 슬롯 u4(`SW_SLOT_GPU_MESSAGE_UAV`)를 컴퓨트 · 그래픽스 단계가 함께 쓴다. SRV t 띠는 꽉 차 있어 t 가 아니라 u 다. DX11 픽셀 셰이더는 렌더 타깃이 넷 이하인 패스에서만 걸린다(binding_slots.hlsli 3 절).
  */
 #pragma once
@@ -32,7 +32,7 @@ namespace sw
     class IRHIPassCommandList;
     class IRHIDevice;
 
-    /** @brief 메시지 한 건의 심각도입니다. 로그 수준이 된다(`Info` — `SW_GPU_PRINT` · `SW_GPU_LOG`, `Warning` · `Error` — 대개 `SW_GPU_ASSERT`). */
+    /** @brief 메시지 한 건의 심각도입니다. 로그 수준이 된다(`Info` 는 `SW_GPU_PRINT` · `SW_GPU_LOG`, `Warning` · `Error` 는 대개 `SW_GPU_ASSERT`). */
     enum class GPUMessageSeverity : uint8
     {
         Info,
@@ -153,7 +153,7 @@ namespace sw
         bool isActive() const { return _buffer.isValid(); }
 
         /**
-         * @brief 이번 프레임의 선택(픽셀 · 스레드)과 로그 예산을 머리 칸에 올리고 예산 칸을 0 으로 되돌립니다. 프레임 기록 **앞**(열린 렌더 패스가 없을 때) 한 번 부릅니다.
+         * @brief 이번 프레임의 선택(픽셀 · 스레드)과 로그 예산을 머리 칸에 올리고 예산 칸을 0 으로 되돌립니다. 프레임 기록 앞(열린 렌더 패스가 없을 때) 한 번 부릅니다.
          * @details 누적 카운터(머리 [0])는 건드리지 않는다 — GPU 만 쓴다. 업로드는 프레임 순서로 큐에 들어가 앞 프레임의 기록 뒤 · 이번 프레임의 기록 앞에 놓인다.
          */
         void updateControl( const GPUMessageSelection& selection, uint32 logBudget );
@@ -161,7 +161,7 @@ namespace sw
         void transitionForWrite( IRHICommandList& commands );
         /** @brief 컴퓨트 셰이더 매개변수(`g_GPUMessageRW`, u4)에 채울 링의 쓰기 번호입니다. 꺼져 있으면 무효 번호라 걸지 않는다(메시지 변형 PSO 가 아니면 셰이더도 읽지 않는다). */
         RHIUnorderedAccessIndex getComputeUAV() const { return isActive() ? _buffer._uav : RHIUnorderedAccessIndex{}; }
-        /** @brief 메시지가 켜진 그래픽스 드로우 **앞에서**(렌더 패스를 연 뒤) 부릅니다. u4 를 그래픽스 단계에 겁니다. 꺼져 있으면 아무것도 하지 않습니다. */
+        /** @brief 메시지가 켜진 그래픽스 드로우 앞에서(렌더 패스를 연 뒤) 부릅니다. u4 를 그래픽스 단계에 겁니다. 꺼져 있으면 아무것도 하지 않습니다. */
         void bindGraphics( IRHIPassCommandList& commands );
         /** @brief 이 프레임의 메시지 디스패치가 모두 끝난 뒤 한 번 부릅니다. 링 전체를 읽기 버퍼로 복사하는 명령을 넣습니다(프레임 번호가 요청의 tag 다). */
         void requestReadback( IRHICommandList& commands );

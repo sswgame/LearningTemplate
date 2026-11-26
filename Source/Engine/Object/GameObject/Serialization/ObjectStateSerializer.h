@@ -135,7 +135,7 @@ namespace sw
         bool _bExternalParentAllowed{ true }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         /**
          * @brief 읽기에 실패하면 오브젝트를 읽기 전 상태로 되돌립니다(기본). 되돌리기 로드만 끕니다.
-         * @details 제자리 로드는 컴포넌트를 먼저 비우므로, 되돌리지 않으면 읽기가 실패할 때 **빈 오브젝트**가 남는다. 되돌리기, 복제, 프리팹
+         * @details 제자리 로드는 컴포넌트를 먼저 비우므로, 되돌리지 않으면 읽기가 실패할 때 빈 오브젝트가 남는다. 되돌리기, 복제, 프리팹
          *          되돌리기는 결과를 버리므로 그 빈 오브젝트가 그대로 저장된다.
          */
         uint8 _bRestorePreviousOnFailure : 1;
@@ -165,9 +165,9 @@ namespace sw
     /**
      * @struct ObjectIdentity
      * @brief 오브젝트 하나와 그 컴포넌트들의 런타임 ID 입니다. 같은 오브젝트를 복원할 때 핸들이 끊기지 않게 상태와 함께 적어 둡니다.
-     * @details 상태(XML, JSON, 바이너리)에는 오브젝트 **자신의** ID 가 들어가지 않는다. 부착이 가리키는 부모의 id 는 들어간다(`ObjectStateBatch` 참고).
+     * @details 상태(XML, JSON, 바이너리)에는 오브젝트 자신의 ID 가 들어가지 않는다. 부착이 가리키는 부모의 id 는 들어간다(`ObjectStateBatch` 참고).
      *          씬이나 프리팹을 읽거나 오브젝트를 복제할 때는 늘 새 ID 를 받아야 하기 때문이다(같은 프리팹을 두 번 놓으면 ID 가 겹친다).
-     *          에디터 되돌리기, 플레이 세션 복원, 핫 리로드처럼 **같은 프로세스에서 같은 오브젝트를 복원하는** 경우에만
+     *          에디터 되돌리기, 플레이 세션 복원, 핫 리로드처럼 같은 프로세스에서 같은 오브젝트를 복원하는 경우에만
      *          이것을 로드 함수에 넘겨 원래 ID 를 복원한다.
      *          objectID 는 오브젝트를 만들 때 `GameObjectManager::createGameObjectWithID` 가, componentID 는 로드가 복원한다.
      */
@@ -175,7 +175,7 @@ namespace sw
     {
         /**
          * @brief 컴포넌트 하나의 타입 FQN 과 ID 입니다. 오브젝트의 컴포넌트 목록 순서대로 적습니다.
-         * @details **짧은 이름이 아니라 FQN 이다.** 복원(`takeRestoredComponentID`)이 이 값으로 원래 id 를 돌려준다. 짧은 이름이면 이름이 같은
+         * @details 짧은 이름이 아니라 FQN 이다. 복원(`takeRestoredComponentID`)이 이 값으로 원래 id 를 돌려준다. 짧은 이름이면 이름이 같은
          *          다른 네임스페이스의 타입이 그 id 를 가져가, 그 id 를 가리키던 타입 핸들(`TComponentHandle<T>`)이 다른 타입의 칸을 가리킨다.
          *          같은 프로세스에서만 읽으므로(프로세스 토큰) 이전 실행이 적은 짧은 이름과의 호환은 필요 없다.
          */
@@ -201,12 +201,12 @@ namespace sw
 
     /**
      * @class ObjectStateBatch
-     * @brief 여러 오브젝트의 상태를 **모두 읽은 뒤** 그 사이의 부착(부모, 소켓)을 한 번에 연결하는 배치입니다.
+     * @brief 여러 오브젝트의 상태를 모두 읽은 뒤 그 사이의 부착(부모, 소켓)을 한 번에 연결하는 배치입니다.
      * @details 상태를 읽는 모든 경로(씬 로드, 쿠커, 플레이 종료 복원, 핫 리로드, 세이브, 영속 이월, 복제, 되돌리기)가 이 배치를 거친다.
      *          상태 하나만 읽는 로드도 한 개짜리 배치다. 규칙은 다음과 같다.
      *          - 자기 오브젝트 안의 부착은 소유자 필드가 비어 있다.
-     *          - 다른 오브젝트는 **id** 로 찾는다. 먼저 이 배치의 저장된 id 로, 그다음(`ObjectIDSpace::Live` 일 때만) 매니저의 런타임 id 로 찾는다.
-     *          - id 가 빈 참조(찾지 못한 참조를 다른 id 공간으로 옮겨 적은 것)만 이름으로 찾되 **이 배치의 저장된 이름**에서만 찾는다. 매니저는 이름을 유일하게 바꾸므로(`X` → `X_2`)
+     *          - 다른 오브젝트는 id 로 찾는다. 먼저 이 배치의 저장된 id 로, 그다음(`ObjectIDSpace::Live` 일 때만) 매니저의 런타임 id 로 찾는다.
+     *          - id 가 빈 참조(찾지 못한 참조를 다른 id 공간으로 옮겨 적은 것)만 이름으로 찾되 이 배치의 저장된 이름에서만 찾는다. 매니저는 이름을 유일하게 바꾸므로(`X` → `X_2`)
      *            매니저에서 이름으로 찾으면 같은 이름의 다른 오브젝트(원본, 자동으로 만든 카메라, 들어오는 씬의 같은 이름)에 붙는다.
      *          - 찾지 못한 참조는 지우지 않고 그대로 둔다(`SceneComponent::keepUnresolvedAttach`). 다음 저장이 살아 있는 부모 포인터(null)에서
      *            필드를 다시 만들면 연결이 지워지기 때문이다. 쿠커는 자식이 부모보다 앞에 있는 씬의 연결을 모두 잃는다.
@@ -216,13 +216,13 @@ namespace sw
      *          쓰기 처리기가 모든 깊이에서 저장 id 로 적으므로 읽기도 같은 깊이를 본다(`ReflectedValueVisitor`). 상태를 읽은 항목만, 그 읽기의 목적이 다룬 필드만 바꾼다.
      *          배치의 저장된 id 면 그 오브젝트로, `Live` 면 런타임 id 를 그대로(핫 리로드와 되돌리기에서는 id 가 다시 쓰이지 않는다), `Saved` 인데 배치에 없으면 없음으로 처리한다.
      *          컨테이너(시퀀스, set, 맵의 키와 값, 중첩)의 핸들도 옮긴다. 옮기지 못하는 모양(원소가 컨테이너인 set)이나 옮기다 실패한 것은 `Saved` 면
-     *          **로드 오류**다(`finish` 가 false). 파일 id 를 그대로 두면 이 실행에서 같은 값을 받은 다른 오브젝트를 가리키고, 비우면 값이 조용히 사라진다.
+     *          로드 오류다(`finish` 가 false). 파일 id 를 그대로 두면 이 실행에서 같은 값을 받은 다른 오브젝트를 가리키고, 비우면 값이 조용히 사라진다.
      *          `Live` 면 런타임 id 가 맞으므로 그대로 둔다.
      *
      *          타입 핸들(`TComponentHandle<T>`) PROPERTY 도 옮긴다(값 하나, 또는 시퀀스 원소 — 파서가 그 밖의 모양을 막는다). 파일 형태는 `{대상 오브젝트의 저장 id, 컴포넌트 안정 키}` 이고
      *          오브젝트 자리가 0 이면 이 오브젝트 자신이다. 읽은 값의 컴포넌트 자리는 키의 해시이며, 대상 오브젝트의 컴포넌트 키 해시와 맞춰 찾는다.
      *          오브젝트를 찾지 못했거나 그 키의 컴포넌트가 없으면 핸들은 비운다(약한 참조라서 사라진 대상은 정상 값이다). 다만 대상 오브젝트에 모르는 타입의 자리
-     *          (`MissingComponent`)가 있으면 그것이 대상일 수 있어 키 해시 그대로 남기고, 키 글은 그 자리가 맡아 다음 저장이 같은 글로 다시 쓴다(부착의 `keepUnresolvedAttach` 와 같은 규칙). **대상이 있는데 대상 타입이 아니면 로드 오류**다(`finish` 가 false).
+     *          (`MissingComponent`)가 있으면 그것이 대상일 수 있어 키 해시 그대로 남기고, 키 글은 그 자리가 맡아 다음 저장이 같은 글로 다시 쓴다(부착의 `keepUnresolvedAttach` 와 같은 규칙). 대상이 있는데 대상 타입이 아니면 로드 오류다(`finish` 가 false).
      *          `Live` 면 런타임 id 를 그대로 두되 같은 타입 확인을 한다. 타입 없는 `ComponentHandle` 은 PROPERTY 에 둘 수 없다(리플렉션 파서 생성 오류).
      */
     class SW_API ObjectStateBatch
@@ -242,14 +242,14 @@ namespace sw
          * @brief 이 배치가 상태를 읽지 않은 오브젝트를 가리킴 대상으로만 기록합니다(상태 없는 엔티티). 이미 올라 있는 오브젝트는 기록하지 않고 해석기(`setExternalResolver`)로 찾는다.
          * @details `finish` 는 이름만 되찾고 부착 · 핸들은 다시 풀지 않는다 — 그 연결은 그 오브젝트를 읽은 배치가 이미 풀었다(다시 풀면 씬 인스턴스 멤버의 부모를 잃는다).
          * @param savedID 같은 배치의 다른 상태가 이 오브젝트를 가리킬 때 쓰는 id 입니다. 0 이면 id 로는 찾을 수 없습니다(id 가 없는 데이터).
-         * @param savedName 상태에 적힌 이름입니다. 매니저가 유일하게 바꾸기 **전**의 이름입니다.
+         * @param savedName 상태에 적힌 이름입니다. 매니저가 유일하게 바꾸기 전의 이름입니다.
          */
         void addReferenceTarget( GameObject* pObject, uint64 savedID, hashed_string savedName );
         /** @brief 이 배치에 없는 저장된 id · 이름을 물을 해석기를 겁니다(셀 · 레이어 묶음 — 씬의 이미 올라 있는 오브젝트). `finish` 까지 살아 있어야 합니다. */
         void setExternalResolver( SavedObjectResolver resolver ) { _externalResolver = std::move( resolver ); }
         /**
          * @brief 상태를 읽은 오브젝트 하나를 기록합니다. `finish` 가 부착 · 핸들을 잇고 이 오브젝트의 컴포넌트에 `onPostLoad` 를 부릅니다. 로더가 부릅니다.
-         * @details `onPostLoad` 는 부착과 핸들 PROPERTY 가 해석된 **뒤에** 온다. 읽는 시점에 부르면 다른 오브젝트를 가리키는 필드가 아직 저장된 id 다.
+         * @details `onPostLoad` 는 부착과 핸들 PROPERTY 가 해석된 뒤에 온다. 읽는 시점에 부르면 다른 오브젝트를 가리키는 필드가 아직 저장된 id 다.
          */
         void addLoadedState( GameObject* pObject, uint64 savedID, hashed_string savedName, SerializePurpose purpose, bool bExternalParentAllowed = true, uint64 savedIDScope = 0 );
         /**
@@ -416,7 +416,7 @@ namespace sw
 /*
  * 전용 서버가 짓지 않는 소스(런타임 UI · `Client/`)의 리플렉션 형식 이름 표입니다 — 서버가 씬에서 그 컴포넌트를 만나면 `MissingComponent` 가 아니라 조용히 건너뜁니다.
  * 표는 전용 서버 실행 파일을 짓는 빌드(서버 구성 · 개발 구성)가 클라이언트 전용 헤더에서 만들어 실행 파일 옆에 두는 `ClientOnlyTypes.json`(`Scripts/generate/client_only_types.py`, 패키지가 함께 싣는다)이다. 서버는 그 형식을 모르므로
- *          이름 바꾸기 · 빠진 모듈(오류 — 경고를 남기고 원문을 지킨다)과 클라이언트 전용(정상 — 서버에는 할 일이 없다)을 이 표로 가른다.
+ *          이름 바꾸기 · 빠진 모듈(오류, 경고를 남기고 원문을 지킨다)과 클라이언트 전용(정상, 서버에는 할 일이 없다)을 이 표로 가른다.
  *          언리얼은 클래스를 서버도 지어 두고 HUD 를 띄우지 않지만, 여기는 클래스를 짓지 않으니 이름만 싣는다(기억). 클라이언트로 선 프로세스는 표를 읽지 않는다.
  */
 namespace sw

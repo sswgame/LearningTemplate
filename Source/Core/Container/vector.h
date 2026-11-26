@@ -1,7 +1,7 @@
 /**
  * @file vector.h
  * @brief 연속 배열 sw::vector 입니다(std::vector 와 인터페이스 호환). 검사 구성에서는 RaceDetectContext 로 동시 접근을 잡아내고, InlineAllocator 와 함께 쓰면 SBO 를 지원합니다.
- * @details 구현은 **여기 한 자리** 에서 구성(`SW_ENABLE_STL_CONTAINER`)으로 고른다: 기본은 자체 구현(`Native/NativeVector.h`), 켜면 std::vector 를 멤버로 든 같은 이름 · 같은 공개 API 의
+ * @details 구현은 여기 한 자리 에서 구성(`SW_ENABLE_STL_CONTAINER`)으로 고른다: 기본은 자체 구현(`Native/NativeVector.h`), 켜면 std::vector 를 멤버로 든 같은 이름 · 같은 공개 API 의
  *          클래스(`Std/StdVector.h`)다. 형식 별칭이 아니라 클래스라 `vector<bool>` 금지 · 레이스 검사 · 범위 밖 계약(단언하고 자른다) · 옮긴 뒤 빈 목록이 두 구성에서 같다.
  *          std 짝이 없는 것 — 인라인 할당자(`small_vector`)는 std 구성에서도 자체 구현에 담고, `frame_vector` 는 아레나 할당자라 그대로 std::vector 에 들어간다.
  */

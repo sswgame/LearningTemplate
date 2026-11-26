@@ -29,7 +29,7 @@ namespace sw
      * @class SceneCooker
      * @brief 씬 문서의 엔티티 상태를 리플렉션 바이너리로 쿠킹하는 오프라인 단계입니다.
      *
-     * @details **왜 C++ 에 있는가.** 쿠킹은 모두 엔진 안이다(팩은 `PackCooker`). 특히
+     * @details 왜 C++ 에 있는가. 쿠킹은 모두 엔진 안이다(팩은 `PackCooker`). 특히
      *          엔티티 상태를 바이너리로 만들려면 리플렉션(`TypeInfo` · 프로퍼티 표)이 있어야 하고,
      *          그것은 엔진 안에만 있습니다. 그래서 이 단계만 `App.exe --cook-scenes` 로 넘어옵니다.
      *          셰이더가 `--cook-shaders` 로 넘어오는 것과 같은 이유, 같은 모양입니다.
@@ -49,7 +49,7 @@ namespace sw
          * @param pOutMissingComponentCount 주면, 모르는 타입으로 지어진 컴포넌트(`MissingComponent`) 수를 받습니다. 하나마다 오류 로그를 남깁니다.
          * @return 바이너리로 바꾼 엔티티 수입니다.
          *
-         * @details **왕복으로 검증하고 나서만 바꿉니다.** 쿠킹된 바이트를 즉시 되읽어 엔티티 상태 전체가 같은지 본 뒤에 XML 을 버립니다.
+         * @details 왕복으로 검증하고 나서만 바꿉니다. 쿠킹된 바이트를 즉시 되읽어 엔티티 상태 전체가 같은지 본 뒤에 XML 을 버립니다.
          *          모르는 컴포넌트 타입(이 프로세스에 올라오지 않은 모듈의 것 · 이름이 바뀐 타입)은 `MissingComponent` 가 원문을 맡아 왕복을
          *          통과하므로 검증으로는 걸러지지 않습니다 — 그 수를 @p pOutMissingComponentCount 로 받아 쿠킹을 실패시킵니다(`cookAllScenes`).
          */

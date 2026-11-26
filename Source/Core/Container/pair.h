@@ -2,7 +2,7 @@
  * @file pair.h
  * @brief 값 쌍(sw::pair)과 빈 함수 객체를 0 바이트로 담는 쌍(sw::CompressedPair)입니다.
  *
- * - sw::pair: std::pair 와 같이 **늘** first, second 데이터 멤버를 둡니다. 예전에는 빈 형식이 들어가면 그쪽을 EBO 로 압축해
+ * - sw::pair: std::pair 와 같이 늘 first, second 데이터 멤버를 둡니다. 예전에는 빈 형식이 들어가면 그쪽을 EBO 로 압축해
  *   `first` 가 함수 `first()` 로 바뀌었다 — 제네릭 코드와 구조적 바인딩이 원소 형식에 따라 깨졌다. 압축은 접근자가 늘 함수인 `CompressedPair` 가 맡는다.
  *   `SW_ENABLE_STL_CONTAINER` 의 교체 대상이 아니다 — 공개 칸 `first` · `second` 가 곧 API 라 std::pair 를 멤버로 들면 그 칸을 내줄 수 없다(참조 칸은 쌍을 세 배로 키우고 복사 ·
  *   대입 · 바이트 복사를 깬다). 저장할 버퍼도 없어 바꿀 구현이 없다. std::pair 와는 양쪽으로 바뀐다.

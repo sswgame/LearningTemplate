@@ -14,7 +14,7 @@
 #include "GameFramework/Runtime/Gameplay/Respawn/Tests/RespawnTestWorld.h"
 
 // CheckpointStateTest — 켜기 규칙(처음 · 다시 쓰기 · 한 번뿐 · 앞으로만), 상태 바이트 왕복과 어긋난 바이트 거절.
-// RespawnRulesTest — `<Respawn>` 읽기와 틀린 규칙 거절. RespawnFlowTest — 정책 고르기 차례 · 제자리(안전 지점 · 낭떠러지) · 대기 · 자리 준비 · 무적 · 벌칙 · 고르기 시한 · 동료 부활 · 상태 왕복.
+// RespawnRulesTest: `<Respawn>` 읽기와 틀린 규칙 거절. RespawnFlowTest: 정책 고르기 차례 · 제자리(안전 지점 · 낭떠러지) · 대기 · 자리 준비 · 무적 · 벌칙 · 고르기 시한 · 동료 부활 · 상태 왕복.
 
 namespace
 {

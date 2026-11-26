@@ -18,7 +18,7 @@ namespace sw
 
     /**
      * @class CueTriggerComponent
-     * @brief 활성자(보통 태그 `Player`)가 들어오면(`TriggerComponent` — 겹침 또는 거리) 연출 신호(`GimmickUtil::sendCue`, `_cue` — 큐 표의 연출과 `GimmickCueEvent`)와 소리를 냅니다.
+     * @brief 활성자(보통 태그 `Player`)가 들어오면(`TriggerComponent`: 겹침 또는 거리) 연출 신호(`GimmickUtil::sendCue`, `_cue`: 큐 표의 연출과 `GimmickCueEvent`)와 소리를 냅니다.
      * @details 한 번만 하지 않는 볼륨(`_bOnce` 꺼짐)은 `_cooldown` 뒤에 다시 작동합니다. 연출은 보이는 일이라 월드마다 판정합니다(`TriggerAuthority::Local`).
      */
     REFLECT( Category = "Gimmick", DisplayName = "Cue Trigger", Tooltip = "Fires a presentation cue and a sound when the activator enters" )

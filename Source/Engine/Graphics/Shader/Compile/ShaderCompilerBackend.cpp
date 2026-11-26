@@ -556,7 +556,7 @@ namespace sw
                     listArgument.push_back( listDefineArg.back().c_str() );
                 }
 
-                // 디버그 코드젠은 빌드 구성이 아니라 **요청**이 정한다 (ShaderCompileDesc::_bDebugCodegen).
+                // 디버그 코드젠은 빌드 구성이 아니라 요청이 정한다 (ShaderCompileDesc::_bDebugCodegen).
                 if ( desc._bDebugCodegen != SW_FALSE )
                 {
                     listArgument.push_back( L"-Zi" );

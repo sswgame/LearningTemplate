@@ -322,7 +322,7 @@ namespace sw
                 _listEmitterEnabled = listEnabled;
         }
         restartSimulations();
-        // 월드 공간 입자의 기준 틀 — 재생 시작의 자리와 배율이다(회전은 없다 — 월드 축). 원점에서 먼 곳에서도 입자 좌표가 작아 정밀도를 지킨다(언리얼 Niagara LWC 타일과 같은 까닭).
+        // 월드 공간 입자의 기준 틀은 재생 시작의 자리와 배율이다(회전은 없다, 월드 축). 원점에서 먼 곳에서도 입자 좌표가 작아 정밀도를 지킨다(언리얼 Niagara LWC 타일과 같은 까닭).
         const float32 frameScale = getWorldMatrix().getMaximumAxisScale();
         _worldSpaceFrame         = float4x4::makeScale( frameScale > MathUtil::kEpsilon ? frameScale : 1.0f ) * float4x4::makeTranslation( getWorldPosition() ); // 배율 0 은 보이지 않는 방출기다 — 틀이 특이 행렬이 되지 않게만 한다
         _bPlaying                = _listSimulation.empty() == false;

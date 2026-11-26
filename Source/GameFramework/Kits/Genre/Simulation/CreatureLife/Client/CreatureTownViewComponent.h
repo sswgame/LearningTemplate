@@ -35,7 +35,7 @@ namespace sw
 
     /**
      * @struct CreatureTownObjectView
-     * @brief 마을 오브젝트 뷰 표 한 줄 — 서식지 키의 오브젝트(`<Habitat><Key object>`)와 그 모습 프리팹입니다(뷰의 PROPERTY — 씬 데이터).
+     * @brief 마을 오브젝트 뷰 표 한 줄: 서식지 키의 오브젝트(`<Habitat><Key object>`)와 그 모습 프리팹입니다(뷰의 PROPERTY, 씬 데이터).
      *        카탈로그의 오브젝트마다 한 줄이 있어야 모습을 세운다(`CreatureTownViewComponent::validateViews`). 생물 종 줄(`CreatureTownCreatureView`)과 형식을 나눈 까닭은
      *        가리키는 표가 달라서다 — 한 칸이 두 표를 가리키면 쿠커 · 인스펙터가 어느 표인지 모른다.
      */

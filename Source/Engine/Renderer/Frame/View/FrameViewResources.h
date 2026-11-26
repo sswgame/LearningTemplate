@@ -1,7 +1,7 @@
 /**
  * @file FrameViewResources.h
  * @brief 뷰 하나의 GPU 자원 수명입니다 — 트랜지언트 첨부 풀(파이프라인이 선언한 것을 뷰 크기로), TAA · 깊이 히스토리, 가림 타일, 후처리 기록, 프레임마다의 패스 고르기.
- * @details 첨부는 **구성이 바뀔 때만** 다시 만들어진다(뷰 크기 · 파이프라인 · 그림자 품질). 소유는 뷰의 `TransientAttachmentPool` 이 하고 여기서는 "무엇을 얼마나 만들지" 를
+ * @details 첨부는 구성이 바뀔 때만 다시 만들어진다(뷰 크기 · 파이프라인 · 그림자 품질). 소유는 뷰의 `TransientAttachmentPool` 이 하고 여기서는 "무엇을 얼마나 만들지" 를
  *          파이프라인 선언에서 읽어 채운다. 모두 셋업 단계(기록 전)의 일이다 — 기록 중에는 버퍼 · 텍스처 생성과 bindless 등록을 할 수 없다.
  *          언리얼 RDG 의 뷰별 외부 텍스처(`FSceneViewState` 의 히스토리)와 트랜지언트 풀을 한 자리에 둔 것과 같다.
  */
@@ -38,15 +38,15 @@ namespace sw
     class SW_API FrameViewResources
     {
     public:
-        /** @brief 패스 고르기가 보는 이번 프레임의 씬 상태입니다(뷰마다 같다 — 고르기 앞에서 `FrameRenderer::prepareViewPassSceneState` 가 한 번 정한다. 값 묶음이라 Context 가 아니라 State 다 — 언리얼 FViewInfo · …State). */
+        /** @brief 패스 고르기가 보는 이번 프레임의 씬 상태입니다(뷰마다 같다. 고르기 앞에서 `FrameRenderer::prepareViewPassSceneState` 가 한 번 정한다. 값 묶음이라 Context 가 아니라 State 다, 언리얼 FViewInfo · …State). */
         struct ViewPassSceneState
         {
             uint8 _bObjectMotion{ SW_FALSE };      ///< 기록이 있는 물체가 움직였다(`GPUScene::hasObjectMotion` — 스냅샷을 적용할 때 정한 이번 프레임 값)
             uint8 _bContactShadows{ SW_FALSE };    ///< 접촉 그림자를 받는 빛이 있다(`FrameShadowData::hasContactShadows`) — 없으면 접촉 그림자 패스가 빠진다
             uint8 _bLocalShadows{ SW_FALSE };      ///< 그림자 칸을 받은 점광 · 스폿이 있다(`FrameShadowData::_listLocalTile` 이 비지 않았다) — 없으면 점광 · 스폿 아틀라스 패스가 빠진다
-            uint8 _bRefractionBatches{ SW_FALSE }; ///< 굴절 머티리얼(`MATERIAL_REFRACTION` — 물 · 유리) 배치가 있다(`GPUScene::hasRefractionBatches`) — 없으면 반투명 패스가 장면 색 · 깊이 사본을 필요로 하지 않는다(언리얼 MaterialUsesSceneColorCopy)
+            uint8 _bRefractionBatches{ SW_FALSE }; ///< 굴절 머티리얼(`MATERIAL_REFRACTION`: 물 · 유리) 배치가 있다(`GPUScene::hasRefractionBatches`). 없으면 반투명 패스가 장면 색 · 깊이 사본을 필요로 하지 않는다(언리얼 MaterialUsesSceneColorCopy)
             uint8 _bDistortionBatches{ SW_FALSE }; ///< 왜곡 배치가 있다(`GPUScene::hasDistortionBatches`) — 없으면 왜곡 누적 · 적용이 비활성이다
-            uint8 _bVolumetricClouds{ SW_FALSE };  ///< 하늘에 볼륨 구름이 있다(품질이 켠 것 — `SkyClouds::applyQuality`) — 없으면 볼륨 구름 패스가 빠지고 출력 · 기록이 없다
+            uint8 _bVolumetricClouds{ SW_FALSE };  ///< 하늘에 볼륨 구름이 있다(품질이 켠 것, `SkyClouds::applyQuality`). 없으면 볼륨 구름 패스가 빠지고 출력 · 기록이 없다
             uint8 _bDecals{ SW_FALSE };            ///< 이번 프레임에 그릴 데칼이 있다(`FrameRenderState::_listFrameDecalDraw`) — 없으면 데칼 패스가 빠지고 DBuffer 출력이 없다
         };
 
@@ -99,7 +99,7 @@ namespace sw
         /** @brief 파이프라인 패스가 쓰는 첨부의 쉰 프레임 수를 나아가게 하고, 오래 쓰지 않은 것을 놓습니다. 하나라도 놓았으면 true 입니다. */
         [[nodiscard]] bool ageAttachments( TransientAttachmentPool& pool );
         /**
-         * @brief 시간 누적 패스(TAA · 볼륨 구름)의 기록을 출력 첨부 @p outputName 과 같은 크기 · 형식으로 **셋업 단계에서** 맞춥니다. 도는 뷰(`FrameViewHistory::isWritten`)만 있고, 출력을 놓은 뷰는 기록도 놓습니다.
+         * @brief 시간 누적 패스(TAA · 볼륨 구름)의 기록을 출력 첨부 @p outputName 과 같은 크기 · 형식으로 셋업 단계에서 맞춥니다. 도는 뷰(`FrameViewHistory::isWritten`)만 있고, 출력을 놓은 뷰는 기록도 놓습니다.
          * @details 패스 콜백은 병렬 기록에서 태스크 스레드가 실행하므로, 콜백 안에서 만들고 bindless 에 등록하면 다른 스레드가 같은 레지스트리를 읽는 도중에 레지스트리가 resize 된다.
          */
         void updateOutputHistory( const TransientAttachmentPool& pool, const hashed_string& outputName, const utf8* pDebugName, FrameViewHistory& history );

@@ -137,7 +137,7 @@ namespace sw
 {
     /**
      * @struct D3D12CommandListEntry
-     * @brief 커맨드 리스트와 **그 리스트 전용** 얼로케이터 한 쌍입니다.
+     * @brief 커맨드 리스트와 그 리스트 전용 얼로케이터 한 쌍입니다.
      * @details D3D12 는 하나의 얼로케이터에 동시에 두 리스트를 기록할 수 없고, 기록 중인 리스트가
      *          있으면 Reset 도 할 수 없다. `RenderGraph::executeParallel` 이 패스마다 리스트를 만들어
      *          여러 스레드에서 동시에 기록하므로, 리스트는 반드시 자기 얼로케이터를 가져야 한다.
@@ -217,7 +217,7 @@ namespace sw
         uint32 acquireOnlineBlock();
         /**
          * @brief 기록 상태가 빌린 온라인 블록들을 현재 펜스 뒤에 프리리스트로 돌려보냅니다(리스트가 닫힐 때).
-         * @details 블록 벡터를 **통째로 옮겨** 묶음에 넣는다. 주의: 벡터를 복사해 람다에 캡처하면 그 람다가 SBO 를 넘어
+         * @details 블록 벡터를 통째로 옮겨 묶음에 넣는다. 주의: 벡터를 복사해 람다에 캡처하면 그 람다가 SBO 를 넘어
          *          힙으로 간다(리스트마다 프레임마다 두 번). 상태는 빈 벡터(용량은 남아 있다)를 돌려받는다.
          */
         void releaseOnlineBlocksDeferred( D3D12RecordingState& state );
@@ -360,7 +360,7 @@ namespace sw
         /// @brief 오프스크린 RTV · DSV 힙 한 쪽의 칸 수입니다. 칸이 모자라면 쪽을 하나 더 만든다 — 상한이 없다(R-11, 언리얼 `FD3D12OfflineDescriptorManager` 의 힙 목록과 같다).
         ///        면마다 칸 하나를 쓴다(큐브 하나가 여섯). 크기는 비용이 아니라 힙 생성 횟수만 정한다.
         static constexpr uint32 kOffscreenViewPageSize = 64;
-        // 루트 시그니처. 언리얼 FD3D12RootSignature 와 같은 배치다. b# 는 루트 CBV(GPU 주소)이고, t#/u# 슬롯은 **디스크립터 테이블**이다
+        // 루트 시그니처. 언리얼 FD3D12RootSignature 와 같은 배치다. b# 는 루트 CBV(GPU 주소)이고, t#/u# 슬롯은 디스크립터 테이블이다
         // (오프라인 힙의 뷰를 드로우 직전 온라인 블록에 복사해 바인딩한다. FD3D12DescriptorCache). 텍스처 배열(t0 space1)은 힙 시작을
         // 가리키는 테이블이다. 예산은 shaderslot::dx12 (25/64 dword)이고, 슬롯을 늘려도 테이블 안이라 예산이 늘지 않는다.
         // 슬롯 번호는 binding_slots.hlsli(shaderslot)가 정한다. 드로우별 데이터는 GPUScene 버퍼의 원소라 바인딩은 배치마다 한 번이다.
@@ -503,7 +503,7 @@ namespace sw
          * @struct StructuredUploadSlot
          * @brief 구조 버퍼 갱신(updateStructuredBufferRegions)이 쓰는 프레임 링 슬롯 하나입니다. 스테이징 힙과 복사 얼로케이터, 리스트로 이루어집니다.
          * @details 한 프레임 안에서 여러 번 불린다(GPUScene 만 해도 인스턴스, 배치 테이블, 간접 인자, 머티리얼 그룹). 그래서
-         *          얼로케이터는 **펜스 구간마다 한 번만** Reset 하고(_resetFence), 스테이징은 bump
+         *          얼로케이터는 펜스 구간마다 한 번만 Reset 하고(_resetFence), 스테이징은 bump
          *          오프셋으로 이어서 쓴다(_uploadOffset). 주의: 호출마다 둘 다 처음부터 다시 쓰면 두 번째 호출이
          *          첫 번째 복사가 아직 실행 중인 얼로케이터를 Reset 한다("allocator is being reset [in use]"
          *          후 디바이스 제거, 세그폴트).
@@ -600,7 +600,7 @@ namespace sw
         void waitForRingSlot();
         /**
          * @brief 펜스가 fenceValue 에 닿을 때까지 기다립니다(이미 지났으면 바로 true). 2초 안에 닿지 못하면 false 입니다.
-         * @details 링 슬롯 대기와 달리 **특정 값 하나**만 본다. "이 얼로케이터의 마지막 제출이 끝났는가" 처럼
+         * @details 링 슬롯 대기와 달리 특정 값 하나만 본다. "이 얼로케이터의 마지막 제출이 끝났는가" 처럼
          *          프레임 링과 무관한 경우의 대기다. Signal 되지 않은 값을 넘기면 타임아웃으로 끝난다.
          */
         bool waitForFenceValue( uint64 fenceValue );
@@ -649,7 +649,7 @@ namespace sw
         void releaseAllocator();
         /**
          * @brief 자원 하나를 D3D12MA 로 만듭니다(모든 버퍼 · 텍스처가 여기를 지난다). 실패하면 이유를 로그로 남기고 @p outResource 는 비어 있습니다.
-         * @details 할당은 **자원이 든다**(사적 데이터) — 자원의 마지막 ComPtr 가 놓일 때 구간도 돌아가므로 해제 큐 · 등록표 · 전송이 할당을 따로 놓지 않는다.
+         * @details 할당은 자원이 든다(사적 데이터) — 자원의 마지막 ComPtr 가 놓일 때 구간도 돌아가므로 해제 큐 · 등록표 · 전송이 할당을 따로 놓지 않는다.
          *          언리얼 `FD3D12ResourceLocation` · Godot 은 할당을 자원 옆 칸에 두고 놓는 쪽이 함께 놓는다 — 여기는 자원 ComPtr 가 여러 표에 나뉘어 있어 한 참조로 묶는다.
          * @param pName 할당의 진단 이름입니다(종료 때 남은 할당 보고가 이 이름을 보인다).
          */
@@ -731,7 +731,7 @@ namespace sw
         /**
          * @brief 열어 둔 업로드 복사 리스트를 닫아 제출합니다.
          * @details 업로드 리스트는 프레임 밖 · 다른 스레드의 갱신과 새 버퍼의 첫 내용만 담는다 — 프레임을 기록하는 스레드의 갱신은 프레임 스트림에 기록 순서대로 들어간다
-         *          (`D3D12RHIResourceFactory::recordBufferCopies`). 큐 순서가 곧 실행 순서라 프레임 리스트 **앞에** 넣으면 그 프레임의 드로우보다 먼저 실행된다.
+         *          (`D3D12RHIResourceFactory::recordBufferCopies`). 큐 순서가 곧 실행 순서라 프레임 리스트 앞에 넣으면 그 프레임의 드로우보다 먼저 실행된다.
          *          텍스처 전송은 이 리스트를 거치지 않는다(`submitTransferJob`).
          * @param bExecuteNow true 면 지금 큐에 넣습니다(펜스 대기 직전). false 면 `_listPendingSubmit` 맨 앞에 끼워
          *                    endFrame 의 한 번의 제출에 같이 나갑니다.
@@ -884,7 +884,7 @@ namespace sw
 
         /**
          * @brief GPU 타임스탬프입니다. 링 슬롯마다 `constant::render::kMaxGPUTimestampSlot` 개의 슬롯을 씁니다.
-         * @details 읽기는 `waitForRingSlot()` 이 그 슬롯의 펜스를 통과시킨 **직후**에 한다. 그때가
+         * @details 읽기는 `waitForRingSlot()` 이 그 슬롯의 펜스를 통과시킨 직후에 한다. 그때가
          *          "그 프레임의 GPU 작업이 끝났음" 이 이미 보장된 유일한 지점이라, 측정하려고 파이프라인을
          *          멈춰 세우는 일이 없다.
          */
@@ -903,7 +903,7 @@ namespace sw
         StructuredUploadSlot _arrStructuredUploadSlot[constant::render::kMaxFrameCountInFlight];
         /**
          * @brief 복사 리스트가 열려 있고 아직 제출하지 않은 복사가 있는 업로드 슬롯입니다. 없으면 빈 값입니다(`_uploadSlotMutex`).
-         * @details 열린 리스트는 **장치에 하나**다. 슬롯마다 열림 표시를 두면 프레임 밖 업로드(프레임 앞 렌더 명령의 자원 만들기)가 연 리스트와 다음 링 칸의 리스트가 함께 열리고,
+         * @details 열린 리스트는 장치에 하나다. 슬롯마다 열림 표시를 두면 프레임 밖 업로드(프레임 앞 렌더 명령의 자원 만들기)가 연 리스트와 다음 링 칸의 리스트가 함께 열리고,
          *          제출 순서를 슬롯 번호로 정해 뒤에 기록한 복사가 먼저 실행됐다 — 0 채움이 그 뒤의 갱신을 덮고, 추적 상태로 적은 배리어의 앞 상태가 어긋났다(디버그 레이어 527).
          *          다른 칸을 열려면 열린 리스트를 먼저 낸다(`openUploadSlot`). 같은 ExecuteCommandLists 안에서는 버퍼가 COMMON 으로 감쇠하지 않아 순서가 곧 상태다.
          *          https://learn.microsoft.com/en-us/windows/win32/direct3d12/using-resource-barriers-to-synchronize-resource-states-in-direct3d-12#state-decay-to-common
@@ -953,7 +953,7 @@ namespace sw
         /**
          * @brief 큐 하나의 GPU 브레드크럼 버퍼입니다(`IRHICommandList::writeBreadcrumb`) - 읽기 힙의 uint32 두 칸 버퍼를 영속 매핑해 두고 `WriteBufferImmediate` 가 패스 id 를 쓴다(시작 MARKER_IN · 끝 MARKER_OUT).
          * @details 디바이스를 잃은 뒤에도 CPU 가 이 매핑으로 마지막으로 닿은 패스를 읽는다(`readLastBreadcrumbs`). 만들지 못했거나 `-rhi-breadcrumbs`(`_rhi._gpuBreadcrumbs`)가 꺼졌으면 주소가 0 이다.
-         *          **큐마다 따로다** — 한 버퍼를 두 큐가 쓰면 서로 기다리지 않는 쓰기라 디버그 레이어가 큐 사이 경합(id 1047)으로 막았다(같은 버퍼의 다른 칸이어도 자원 단위로 본다).
+         *          큐마다 따로다 — 한 버퍼를 두 큐가 쓰면 서로 기다리지 않는 쓰기라 디버그 레이어가 큐 사이 경합(id 1047)으로 막았다(같은 버퍼의 다른 칸이어도 자원 단위로 본다).
          */
         struct BreadcrumbTrack
         {
@@ -979,7 +979,7 @@ namespace sw
         /// 파괴만 배타 잠금을 잡습니다. 기록 중의 읽기(컨텍스트의 resolveBufferAddress, resolveOfflineView)는 이 락도 등록표도 보지 않고
         /// 고정 크기 표 `_arrBindlessReadSlot` 를 읽습니다. 병렬 기록 중의 등록 · 해제는 `requireRegistryMutableNow` 가 멈춥니다.
         mutable shared_mutex _bindlessMutex;
-        /// @brief 셰이더 가시 힙의 번호 발급기입니다. SRV/CBV 와 UAV 가 **같은 힙 인덱스 공간**을 나눈다 — 셰이더가 RWStructuredBuffer<T> name[] 을
+        /// @brief 셰이더 가시 힙의 번호 발급기입니다. SRV/CBV 와 UAV 가 같은 힙 인덱스 공간을 나눈다 — 셰이더가 RWStructuredBuffer<T> name[] 을
         ///        그 번호로 고르므로 힙 슬롯 번호와 같아야 한다. 0 번은 null 텍스처 자리라 초기화가 그 다음부터 내게 한다.
         RHIBindlessIndexAllocator                   _bindlessIndexAllocator;
         RHIBindlessRegistry<BindlessResourceRecord> _srvRegistry; ///< SRV/CBV 표(`_bindlessIndexAllocator` 를 나눈다)

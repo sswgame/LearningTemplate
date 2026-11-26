@@ -68,7 +68,7 @@ namespace sw
          * @brief 이미 확보해 둔 블록 중 requiredCapacity 를 담을 수 있는 빈 블록으로 바꿉니다.
          * @details reset() 은 오프셋만 되돌리므로, 그 뒤에는 앞서 잡아 둔 블록들이 비어 있습니다. 새 블록을 잡기 전에 그것부터
          *          씁니다. `_mutex` 를 잡은 채로 불러야 합니다.
-         * @param fromBlockIndex 방금 가득 찬 블록의 인덱스. 그 **다음** 블록부터 찾습니다.
+         * @param fromBlockIndex 방금 가득 찬 블록의 인덱스. 그 다음 블록부터 찾습니다.
          * @param requiredCapacity 정렬 여유를 포함해 담아야 하는 바이트 수
          * @return 바꿨으면 true, 쓸 수 있는 블록이 없으면 false
          */

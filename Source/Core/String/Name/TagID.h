@@ -5,7 +5,7 @@
  * @details 태그는 "parent.child" 처럼 점으로 나뉜 계층을 가지며, 비교는 해시 하나로 끝납니다. 리터럴은 컴파일 타임에
  *          (`""_tag`), 런타임 문자열은 `TagID::request` 로 만듭니다.
  *
- * @note 이 타입이 **Core 에 있는 이유**: 쓰는 것이 Core 기능뿐이고, 직렬화기가 TagID 의 기본 핸들러를 등록하려고 Object 를
+ * @note 이 타입이 Core 에 있는 이유: 쓰는 것이 Core 기능뿐이고, 직렬화기가 TagID 의 기본 핸들러를 등록하려고 Object 를
  *       include 하면 Reflection · Serialization · Config 가 Engine 코어의 강결합 덩어리에 묶입니다. 리플렉션이 필요한 태그
  *       집합과 질의는 `Engine` 쪽 `Object/Component/TagSystem.h` 에 있습니다.
  */
@@ -18,7 +18,7 @@
 namespace sw
 {
     // ------------------------------------------------------------------------------
-    // 1) TagID — intern 된 문자열 + 해시, 점 계층(parent.child)
+    // 1) TagID: intern 된 문자열 + 해시, 점 계층(parent.child)
     // ------------------------------------------------------------------------------
     struct SW_API TagID
     {
@@ -43,12 +43,12 @@ namespace sw
         constexpr bool isValid() const { return _id != 0; }
 
         /**
-         * @brief 태그 문자열에서 ID 를 구합니다. **리터럴 · 런타임 · 조회가 모두 이 함수를 씁니다.**
+         * @brief 태그 문자열에서 ID 를 구합니다. 리터럴 · 런타임 · 조회가 모두 이 함수를 씁니다.
          * @details 해시를 따로 계산하지 말 것 — 규칙이 갈라지면(대소문자 · `char` 부호 확장) 같은 태그를 찾지 못합니다.
          *
          *          대소문자를 무시합니다. `request` 는 문자열을 `hashed_string` 으로 intern 하는데, 그 intern 이 이미
          *          대소문자를 무시하므로(`Player` 와 `player` 는 한 항목입니다) ID 만 대소문자를 구별하면 **같은 문자열을 가리키는
-         *          두 태그가 서로 다른 ID** 를 갖는 모순이 생깁니다. 태그는 ID 가 아니라 **문자열로 직렬화**되므로(SerializeContext 가
+         *          두 태그가 서로 다른 ID** 를 갖는 모순이 생깁니다. 태그는 ID 가 아니라 문자열로 직렬화되므로(SerializeContext 가
          *          `TagID::request( text )` 로 다시 읽습니다) 규칙을 바꿔도 저장된 씬은 그대로입니다.
          */
         static constexpr uint64 computeID( const utf8* pStr, size_t length )
@@ -87,7 +87,7 @@ namespace sw
     };
 
     // ------------------------------------------------------------------------------
-    // 2) intern — 런타임은 TagID::request, 리터럴은 ""_tag
+    // 2) intern: 런타임은 TagID::request, 리터럴은 ""_tag
     // ------------------------------------------------------------------------------
     /** @brief 리터럴로 컴파일 타임 태그를 만듭니다. */
     constexpr TagID operator""_tag( const utf8* pStr, size_t len )

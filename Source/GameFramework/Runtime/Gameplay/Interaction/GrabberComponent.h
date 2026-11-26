@@ -77,7 +77,7 @@ namespace sw
      * @class GrabberComponent
      * @brief 하나를 집어 들고(`grab`) 던지거나(`throwHeld`) 내려놓습니다(`dropHeld`). 소켓에 붙이기(무기를 등에 메기)는 `grab` 에 그 소켓의 위치를 오프셋으로 줍니다.
      * @details 쥔 대상은 핸들로 저장한다(`_held`). 백엔드는 게임 서비스 `IGrabPhysics` 를 쓰고, 없으면 `RigidBodyGrabPhysics` 를 쓴다.
-     *          **입력**: 같은 오브젝트가 폰이면 의도 버튼 `_grabButton` 이 발동할 때 집기 · 놓기를 번갈아 한다(`MountInteractionComponent` 와 같은 길 — 입력 맵은 읽지 않고
+     *          입력: 같은 오브젝트가 폰이면 의도 버튼 `_grabButton` 이 발동할 때 집기 · 놓기를 번갈아 한다(`MountInteractionComponent` 와 같은 길 — 입력 맵은 읽지 않고
      *          폰의 의도만, 일은 틱 뒤). 집을 것은 태그 `_grabbableTags` 를 가진 것 중 `_reach` 안의 가장 가까운 것이고, 놓을 때는 앞(+Z)으로 `_throwSpeed` 만큼 던진다(0 이면 내려놓기).
      *          하프라이프 2 · 유니티 Starter Assets 의 "한 키로 들고 다시 눌러 놓기" 와 같다. 버튼이 비면 입력을 듣지 않는다(코드 · 개발 명령만).
      */

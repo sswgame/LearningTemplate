@@ -38,9 +38,9 @@ namespace sw
             }
 
             /**
-             * @brief 섀도 복사본에 세대 이름을 주고(리눅스 SONAME, Windows 파일 이름), 복사본이 부르는 의존 모듈 이름을 그 의존의 **지금** 이름으로 바꿉니다.
+             * @brief 섀도 복사본에 세대 이름을 주고(리눅스 SONAME, Windows 파일 이름), 복사본이 부르는 의존 모듈 이름을 그 의존의 지금 이름으로 바꿉니다.
              * @details 로더는 의존을 이름으로 풀고 같은 이름의 라이브러리가 이미 로드돼 있으면 그것을 쓴다. 복사본이 원본 이름을 그대로 가지고 있으면
-             *          리눅스는 SONAME 이 같은 **먼저 로드된** 라이브러리(연쇄 리로드의 prepare 에서는 아직 언로드되지 않은 옛 라이브러리)에 바인딩되고,
+             *          리눅스는 SONAME 이 같은 먼저 로드된 라이브러리(연쇄 리로드의 prepare 에서는 아직 언로드되지 않은 옛 라이브러리)에 바인딩되고,
              *          Windows 는 원본 DLL 을 한 벌 더 로드한다. 이름을 세대마다 고유하게 하면 이름이 가리키는 라이브러리가 하나뿐이다(`ModuleLibraryPatch`).
              *          그래서 모듈끼리는 지연 로드 없이 일반 import 로 바인딩된다. 첫 호출이 썽크를 지나는 일이 없다.
              * @return Windows 에서 세대 이름을 만들 수 없거나(이름이 너무 짧다), 복사본이 등록된 모듈을 의존 목록에 없이 원본 이름으로 부르면 false 입니다.
@@ -174,7 +174,7 @@ namespace sw
             return false;
         }
 
-        // 스탬프가 **없는** 모듈도 거절한다. 스탬프를 박지 않는 빌드 규칙으로 만든 모듈이 대조 없이 로드되지 않게 하기 위해서다(동적 모듈은 모두
+        // 스탬프가 없는 모듈도 거절한다. 스탬프를 박지 않는 빌드 규칙으로 만든 모듈이 대조 없이 로드되지 않게 하기 위해서다(동적 모듈은 모두
         // `sw_register_dynamic_module` 이 스탬프를 박는다).
         string     moduleStamp;
         const bool bEngineABIMismatch = ModuleLibraryPatch::findEngineABIStamp( bytes, moduleStamp ) == false || moduleStamp != engine::getEngineABIStamp();

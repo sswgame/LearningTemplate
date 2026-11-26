@@ -47,7 +47,7 @@ namespace sw
         virtual void onAnimationNotifiesFired( const AnimationNotifyFrame& frame ) = 0;
         /**
          * @brief 받는 쪽이 이 이름의 알림을 처리할 수 있으면(표에 항목이 있으면) true 입니다.
-         * @details 애니메이터 밖의 타임라인(페어드 애니메이션 — 캐릭터)이 시작 전에 묻는다. 그쪽은 받는 쪽(알림 디스패치 — 위 단)의 형식을 모르고 이 창구만 본다.
+         * @details 애니메이터 밖의 타임라인(페어드 애니메이션, 캐릭터)이 시작 전에 묻는다. 그쪽은 받는 쪽(알림 디스패치, 위 단)의 형식을 모르고 이 창구만 본다.
          */
         virtual bool hasNotify( const hashed_string& notify ) const = 0;
         /**
@@ -65,7 +65,7 @@ namespace sw
     /**
      * @struct RootMotionFrame
      * @brief 한 프레임의 루트 모션입니다. 오브젝트에 옮기기 직전의 값이며, 고치는 쪽이 이 값을 바꿉니다.
-     * @details 이동은 **월드** 공간(오브젝트의 현재 회전과 배율로 돌린 것)이고, 회전은 오브젝트 로컬 회전 뒤에 곱할 차이(`로컬 × 차이`)다.
+     * @details 이동은 월드 공간(오브젝트의 현재 회전과 배율로 돌린 것)이고, 회전은 오브젝트 로컬 회전 뒤에 곱할 차이(`로컬 × 차이`)다.
      *          `_previousClipTime` 에서 `_clipTime` 까지는 현재 슬롯 클립이 이번 프레임에 지나간 시각이다(반복으로 감겼으면 `_bClipWrapped`).
      */
     struct RootMotionFrame

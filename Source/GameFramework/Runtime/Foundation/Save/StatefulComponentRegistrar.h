@@ -21,7 +21,7 @@ namespace sw
 {
     /**
      * @class StatefulComponentRegistration
-     * @brief 게임 프레임워크의 컴포넌트 타입 하나를 **모든 게임**에 등록하는 정적 등록입니다. 컴포넌트를 정의한 .cpp 에 하나 둡니다.
+     * @brief 게임 프레임워크의 컴포넌트 타입 하나를 모든 게임에 등록하는 정적 등록입니다. 컴포넌트를 정의한 .cpp 에 하나 둡니다.
      * @details 상태 코덱(`ComponentStateCodec`)은 세이브 · 핫 리로드 · 스트리밍 셀 · 씬 전환이 함께 쓴다. 게임마다 한 줄씩 넣으면 빠뜨린 게임만 그 상태를 조용히 잃으므로,
      *          타입을 정의한 쪽이 한 번 등록한다. 층이 위인 컴포넌트(Actor 의 카메라 디렉터)도 기반 층(Foundation)의 게임 인스턴스가 include 하지 않고 올라온다.
      *          등록은 프레임워크 모듈의 정적 초기화에서 돌아 어떤 게임 인스턴스보다 먼저 끝난다. 같은 이름은 두 번 오르지 않는다.
@@ -88,7 +88,7 @@ namespace sw
      * @details 오브젝트 매니저를 include 한 .cpp 에서 만든다(순회 템플릿이 그때 인스턴스화된다).
      *          `despawnViews()` 가 있는 타입(`GameModeComponent` 파생 — 키트의 부지 · 디렉터)은 상태를 실은 뒤 세운 것도 걷는다. 걷지 않으면 세운 오브젝트가 씬 섹션에 실려
      *          복원한 뒤 다시 세운 것과 겹친다 — 그래서 등록 한 줄이 둘을 함께 정한다(게임마다 `registerGameMode` 를 적지 않는다).
-     *          상태 없이 세운 것만 가진 타입(`CharacterAppearanceComponent` — 스폰한 부품 · 합친 구간 컴포넌트)도 같은 한 줄이다 — 있는 쪽만 연결한다.
+     *          상태 없이 세운 것만 가진 타입(`CharacterAppearanceComponent`: 스폰한 부품 · 합친 구간 컴포넌트)도 같은 한 줄이고 있는 쪽만 연결한다.
      */
     template <typename TComponent>
     class StatefulComponentRegistrar final : public StatefulComponentRegistration

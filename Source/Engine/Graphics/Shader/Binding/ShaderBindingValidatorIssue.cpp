@@ -660,7 +660,7 @@ namespace sw
 
             /**
              * @brief 5) 정점 입력: 시맨틱이 정점 레이아웃 표(constant::render::getMeshVertexAttributes)에 있고, Vulkan · GL 은 location 까지 같은가.
-             * @details DX 는 시맨틱 이름으로 묶어 순서가 달라도 맞지만, 두 백엔드는 **선언 순서**가 location 이라 중간 속성을
+             * @details DX 는 시맨틱 이름으로 묶어 순서가 달라도 맞지만, 두 백엔드는 선언 순서가 location 이라 중간 속성을
              *          빼먹으면 그 뒤가 한 칸씩 당겨진다(색을 읽으려다 노멀을 읽는다). 픽셀로는 늦게 드러난다.
              */
             /**

@@ -463,7 +463,7 @@ namespace sw
                 outBytes.clear();
                 return false;
             }
-            // CRC32 로 블록마다 검증한다. 플래그가 있으면 **늘** 대조한다 — 저장된 값이 0 일 때 건너뛰면 그 칸을 0 으로 지우는 것만으로 검사가 꺼진다.
+            // CRC32 로 블록마다 검증한다. 플래그가 있으면 늘 대조한다 — 저장된 값이 0 일 때 건너뛰면 그 칸을 0 으로 지우는 것만으로 검사가 꺼진다.
             const uint32 expectedCRC = block._crc32; // 묶음(pack 1) 칸은 참조로 넘기지 않는다
             const uint32 computedCRC = plan._bVerifyCRC ? HashUtil::computeCRC32( pRaw, rawSize ) : expectedCRC;
             if ( computedCRC != expectedCRC )
@@ -691,13 +691,13 @@ namespace sw
         for ( size_t entryIndex = 0; entryIndex < listDiskEntry.size(); ++entryIndex )
         {
             const PackFileEntryOnDisk& diskEntry = listDiskEntry[entryIndex];
-            // **항목도 페이로드 구역 안을 가리켜야 하고 블록 줄이 맞아야 한다.** `readFile` 은 항목 · 블록이 적어 둔 크기를 그대로 `resize` 에 넣는다 —
+            // 항목도 페이로드 구역 안을 가리켜야 하고 블록 줄이 맞아야 한다. `readFile` 은 항목 · 블록이 적어 둔 크기를 그대로 `resize` 에 넣는다 —
             // 손상된 32바이트 항목 하나가 4GB 할당 요청이 된다. 여기서 한 번 걸러 두면 `readFile` 은 그 값을 믿어도 된다.
             if ( validateFileEntry( diskEntry, _header._indexOffset, expectedFirstBlock ) == false )
                 return false;
             expectedFirstBlock += static_cast<uint32>( ( static_cast<uint64>( diskEntry._uncompressedSize ) + _header._blockSize - 1 ) / _header._blockSize );
 
-            // **풀 안에서만 읽는다.** `const utf8*` 를 그대로 넘기면 string 이 NUL 을 찾아 풀 **밖까지** 훑는다. 종결자가 풀 안에 없거나
+            // 풀 안에서만 읽는다. `const utf8*` 를 그대로 넘기면 string 이 NUL 을 찾아 풀 밖까지 훑는다. 종결자가 풀 안에 없거나
             // (끊긴 다운로드 · 손상) 경로의 해시가 항목과 다르면 이 팩의 나열이 읽을 수 없는 이름을 내놓으므로 팩을 거절한다.
             const size_t terminator = diskEntry._stringPoolOffset < pool.size() ? pool.find( '\0', diskEntry._stringPoolOffset ) : string_view::npos;
             if ( terminator == string_view::npos || terminator == diskEntry._stringPoolOffset )
@@ -726,7 +726,7 @@ namespace sw
 
     bool PackReader::validateHeaderGeometry( uint64 fileSize ) const
     {
-        // 헤더가 인덱스 크기를 **두 번** 말한다. `_indexSize` 로 한 번, `_fileCount` 로 한 번.
+        // 헤더가 인덱스 크기를 두 번 말한다. `_indexSize` 로 한 번, `_fileCount` 로 한 번.
         // 둘이 어긋난 팩은 리더와 쿠커가 레이아웃을 다르게 보고 있다는 뜻이므로 여기서 멈춘다.
         const uint64 derivedIndexSize = static_cast<uint64>( _header._fileCount ) * sizeof( PackFileEntryOnDisk );
         if ( _header._indexSize != derivedIndexSize )
@@ -744,7 +744,7 @@ namespace sw
         }
 
         // 그리고 그 구역들이 헤더 앞(파일 안)에 있어야 한다. 헤더의 수를 그대로 믿고 `resize` 하면 잘린 팩 하나가 수십 기가짜리 할당 요청이 될 수 있다.
-        // **뺄셈으로 측정한다.** `offset + size` 는 넘칠 수 있다.
+        // 뺄셈으로 측정한다. `offset + size` 는 넘칠 수 있다.
         const uint64 headerOffset = fileSize - sizeof( PackHeader ); // `open` 이 파일이 헤더보다 큰 것을 확인했다
         const auto   isOutside    = [headerOffset]( uint64 offset, uint64 size )
         { return offset > headerOffset || size > headerOffset - offset; };
@@ -784,7 +784,7 @@ namespace sw
 
     bool PackReader::validateFileEntry( const PackFileEntryOnDisk& diskEntry, uint64 payloadEnd, uint32 expectedFirstBlock ) const
     {
-        // 페이로드가 페이로드 구역(FAT 앞) 안에 있어야 한다. **뺄셈으로 측정한다.** `offset + size` 는 넘칠 수 있다.
+        // 페이로드가 페이로드 구역(FAT 앞) 안에 있어야 한다. 뺄셈으로 측정한다. `offset + size` 는 넘칠 수 있다.
         // 저장 방식은 디스크 값이다 — 모르는 값을 어느 방식으로도 읽지 않는다.
         if ( diskEntry.getStorageValue() >= kPackEntryStorageCount )
         {

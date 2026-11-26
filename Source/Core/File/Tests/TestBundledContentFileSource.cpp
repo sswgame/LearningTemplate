@@ -186,7 +186,7 @@ SW_TEST_CASE( BundledContentFileSourceTest, BundledRangeGoesThroughAsyncFileIO )
     }
 }
 
-/** @brief [ContentFileSourceTest] 묶음 소스의 구간 읽기가 통째 읽기의 같은 자리와 같다 — 묶음 파일 안 위치가 아니라 파일 기준 구간이다(밉 범위 읽기 — MR-1). */
+/** @brief [ContentFileSourceTest] 묶음 소스의 구간 읽기가 통째 읽기의 같은 자리와 같다. 구간은 묶음 파일 안 위치가 아닌 파일 기준이다(밉 범위 읽기, MR-1). */
 SW_TEST_CASE( ContentFileSourceTest, RangeMatchesWholeReadInBundle )
 {
     FakeBundleReader reader( "ContentFileSourceTest.range.bundle" );

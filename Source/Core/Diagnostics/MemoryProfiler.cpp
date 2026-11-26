@@ -15,8 +15,8 @@
 #include "Core/String/formatString.h"
 
 // ASan 빌드에서는 CRT 누수 검사를 쓰지 않는다. ASan 이 힙을 자기 것으로 바꾸므로 `_CrtSetDbgFlag` 류가 모두 효과가 없고,
-// 검사가 **도는 척만 하고 아무것도 잡지 못한다**(증상은 "set but not used" 경고 정도로 조용하다). Linux 쪽은 아래에서
-// ASan 이면 LSAN 을 쓴다. Windows ASan 에는 LSAN 이 없으므로 여기서는 누수 검사가 **없는 것으로** 둔다.
+// 검사가 도는 척만 하고 아무것도 잡지 못한다(증상은 "set but not used" 경고 정도로 조용하다). Linux 쪽은 아래에서
+// ASan 이면 LSAN 을 쓴다. Windows ASan 에는 LSAN 이 없으므로 여기서는 누수 검사가 없는 것으로 둔다.
 
 #if defined( SW_PLATFORM_WINDOWS ) && defined( SW_DEBUG ) && !defined( SW_SHIPPING ) && !defined( SW_SANITIZER_ADDRESS )
     #define SW_HAS_CRT_LEAK_CHECK 1
@@ -654,7 +654,7 @@ namespace sw
 
     vector<CallStackAllocInfo> MemoryProfiler::getTopCallStacks( TopCallStackOrder order ) const
     {
-        // 결과 버퍼는 **가드 밖에서** 잡아 호출한 쪽의 태그로 센다. 가드(`t_bIsInsideProfiler`) 안에서 잡으면 세지 않는 블록이 된다
+        // 결과 버퍼는 가드 밖에서 잡아 호출한 쪽의 태그로 센다. 가드(`t_bIsInsideProfiler`) 안에서 잡으면 세지 않는 블록이 된다
         // (그 해제도 세지 않으므로 어긋나지는 않는다). 표가 자란 만큼만 여유를 두고, 가드 안에서는 그 용량 안에서만 넣어 다시 할당하지 않는다.
         size_t entryCount{ 0 };
         {

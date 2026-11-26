@@ -25,11 +25,11 @@ namespace sw
     /**
      * @class ReputationComponent
      * @brief 플레이어 한 명의 평판입니다. 조종자 오브젝트에 다른 플레이어 상태 컴포넌트와 함께 둡니다.
-     * @details - **열기**: 평판 카탈로그(세력 정의)를 받아 연다(디렉터의 `startGame` — `PlayerComponentUtil::openOnOwner`). 카탈로그는 소유하지 않고 참조만 한다.
-     *          - **틱**: 날이 넘어가면(월드 상태의 시계 알림) 평판을 한 번 식힌다. 참조해서 쓰는 키트는 식히지 않는다 — 키트 수만큼 거듭 식지 않게.
+     * @details - 열기: 평판 카탈로그(세력 정의)를 받아 연다(디렉터의 `startGame` — `PlayerComponentUtil::openOnOwner`). 카탈로그는 소유하지 않고 참조만 한다.
+     *          - 틱: 날이 넘어가면(월드 상태의 시계 알림) 평판을 한 번 식힌다. 참조해서 쓰는 키트는 식히지 않는다 — 키트 수만큼 거듭 식지 않게.
      *            시계 알림을 쓰는 월드 상태(`PrePhysics`)의 다음 그룹에서 읽는다 — 다른 오브젝트(조종자)의 같은 그룹 틱은 동시에 돌아 데이터 경쟁이다. 디렉터의 규칙은 틱 뒤에 돌아
      *            식힌 평판을 읽는다.
-     *          - **찾기 · 세이브**: `PlayerComponentUtil` · `DeferredStateRestore`. 정의한 .cpp 가 `StatefulComponentRegistrar` 로 모든 게임의 스냅샷에 올린다.
+     *          - 찾기 · 세이브: `PlayerComponentUtil` · `DeferredStateRestore`. 정의한 .cpp 가 `StatefulComponentRegistrar` 로 모든 게임의 스냅샷에 올린다.
      */
     REFLECT( Category = "Framework", DisplayName = "Reputation", Tooltip = "One player's faction reputation, on the controller object (or the director object in a scene without a controller)" )
     class SW_GF_API ReputationComponent : public Component

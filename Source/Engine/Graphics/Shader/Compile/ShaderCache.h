@@ -31,8 +31,8 @@ namespace sw
 
     /**
      * @class ShaderLoadOperation
-     * @brief 셰이더 바이트코드 하나를 얻는 로드의 공유 상태입니다 — 쿠킹본 정책은 팩의 쿠킹본, 소스 정책은 컴파일 — 셰이더 DDC 를 먼저 본다(`ShaderCache::loadOrCompile`).
-     * @details 결과는 실패해도 남긴다(`getResult` — 컴파일 오류 문구). 로드 작업은 캐시를 원시 포인터로 가리킨다 — 캐시 종료(`shutdown`)가 진행 중인 로드를 모두 기다린다.
+     * @brief 셰이더 바이트코드 하나를 얻는 로드의 공유 상태입니다. 쿠킹본 정책은 팩의 쿠킹본, 소스 정책은 컴파일이며 셰이더 DDC 를 먼저 본다(`ShaderCache::loadOrCompile`).
+     * @details 결과는 실패해도 남긴다(`getResult`, 컴파일 오류 문구). 로드 작업은 캐시를 원시 포인터로 가리키므로 캐시 종료(`shutdown`)가 진행 중인 로드를 모두 기다린다.
      */
     class SW_API ShaderLoadOperation final : public AssetLoadOperation
     {
@@ -133,9 +133,9 @@ namespace sw
 
         /**
          * @brief 지금까지 컴파일한 셰이더들의 요청을 모읍니다.
-         * @details **"이 실행에서 실제로 쓰이는 셰이더"의 기준이 여기입니다.** 수동 리로드는 따로 등록 목록을
+         * @details "이 실행에서 실제로 쓰이는 셰이더"의 기준이 여기입니다. 수동 리로드는 따로 등록 목록을
          *          두지 않고 이것을 씁니다(따로 채우는 목록은 채우는 쪽을 빠뜨리면 리로드 단축키가 빈 목록을 돕니다).
-         *          **컴파일 중인 요청도 든다** — 편집 앞의 소스를 읽은 컴파일이 편집 뒤에 끝나면 옛 바이트코드가 캐시에 남는다. 목록에 들어야 다시 컴파일해 견준다.
+         *          컴파일 중인 요청도 든다 — 편집 앞의 소스를 읽은 컴파일이 편집 뒤에 끝나면 옛 바이트코드가 캐시에 남는다. 목록에 들어야 다시 컴파일해 견준다.
          */
         void collectCompiledDescs( vector<ShaderCompileDesc>& outListDesc ) const;
 
@@ -153,7 +153,7 @@ namespace sw
         [[nodiscard]] bool replaceCompiled( const ShaderCompileDesc& desc, const ShaderCompileResult& result );
         /**
          * @brief 실시간 컴파일이 실제로 쓰는 요청입니다. @p bDebugCodegen 이 켜졌으면 디버그 코드젠(RenderDoc 에서 한 줄씩), 아니면 요청 그대로(쿠킹과 같은 최적화)입니다.
-         * @details 캐시의 실시간 컴파일과 `ShaderRecompiler` 의 재컴파일이 **이 하나**로 코드젠을 정합니다. 깃발은 둘 다 `isLiveDebugCodegen` 의 값을 넘긴다.
+         * @details 캐시의 실시간 컴파일과 `ShaderRecompiler` 의 재컴파일이 이 하나로 코드젠을 정합니다. 깃발은 둘 다 `isLiveDebugCodegen` 의 값을 넘긴다.
          *          둘이 따로 정하면 DDC 에 두 코드젠이 섞이고, 핫 리로드한 셰이더만 디버그 정보를 잃습니다.
          *          쿠킹된 바이너리는 이 규칙을 타지 않습니다(쿠커는 늘 최적화 코드젠).
          */
@@ -175,7 +175,7 @@ namespace sw
         /** @brief 공급자(팩 · 컴파일)까지 간 로드 수입니다(초기화마다 0 부터). */
         [[nodiscard]] const DevCounter& getProviderLoadCount() const { return _providerLoadCount; }
         /**
-         * @brief 컴파일(셰이더 공급자 로드 — 팩 읽기 · 컴파일, 그리고 RHI 의 파이프라인 생성 — 드라이버 링크 · 특수화)이 하나라도 진행 중이던 벽시계 시간입니다(겹친 일은 한 번).
+         * @brief 컴파일(셰이더 공급자 로드인 팩 읽기 · 컴파일, 그리고 RHI 의 파이프라인 생성인 드라이버 링크 · 특수화)이 하나라도 진행 중이던 벽시계 시간입니다(겹친 일은 한 번).
          * @details 자동화의 모든 벽시계 시한(전체 · `WaitUntil timeoutWallSeconds`)과 행 감시가 이만큼을 뺀다 — 빈 캐시의 첫 실행이 컴파일하는 동안 시한에 지지 않게.
          *          파이프라인 생성은 `IRHIResourceFactory::createPipelineState` 한 입구가 센다(GL 은 링크가 프레임 하나에 수십 초 걸렸다). 시계가 스스로 잠근다.
          */

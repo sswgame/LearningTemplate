@@ -108,7 +108,7 @@ namespace sw
         const utf8* pAttr = root.isValid() ? root.findAttribute( kXMLAttrName ) : nullptr;
         if ( StringUtil::isNullOrEmpty( pAttr ) )
             return nullopt;
-        // 읽지 못했거나 버전 타입에 담기지 않으면 **가장 큰 버전**으로 본다 — "지원하는 것보다 새 형식" 으로 거절된다. 잘라 담으면
+        // 읽지 못했거나 버전 타입에 담기지 않으면 가장 큰 버전으로 본다 — "지원하는 것보다 새 형식" 으로 거절된다. 잘라 담으면
         // "4294967296" · "-1" 이 0(첫 버전)으로 읽혀 그 거절을 지나친다.
         uint64 ver{ 0 };
         if ( StringUtil::parseUint64( pAttr, ver, 10 ) == false || ver > static_cast<uint64>( std::numeric_limits<AssetFormatVersion>::max() ) )

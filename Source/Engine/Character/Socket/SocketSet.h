@@ -3,7 +3,7 @@
  * @brief 소켓 에셋(`*.sockets.xml`)입니다. 본과 메시와 따로 둔 원본 데이터이며, 소켓 종류 테이블(`SocketKindTable`)과 가상 본도 여기에 있습니다.
  * @details 임포트 산출물(`.mesh`, 스켈레톤)에 소켓을 넣으면 재임포트가 지우므로, 소켓은 사람이 고치는 별도 파일이고 임포트가 덮어쓰지 않는다
  *          (내보내기 도구는 파일이 없을 때만 처음 한 번 쓴다). 층은 스켈레톤, 메시(부품), 외형 순서이고, 위층이 같은 이름의 항목을
- *          **적은 필드만** 덮어쓴다(`applyOverride`). 2D 도 같은 에셋이며, 본이 Z 축으로만 돌 뿐이다.
+ *          적은 필드만 덮어쓴다(`applyOverride`). 2D 도 같은 에셋이며, 본이 Z 축으로만 돌 뿐이다.
  *
  *          XML 예:
  *          @code
@@ -81,7 +81,7 @@ namespace sw
 
     /**
      * @brief `<Socket>` 의 칸입니다(`<SocketKinds><Kind name>` 은 `name` 하나라 `_name` 만 쓴다). 회전은 도 단위 오일러(피치, 요, 롤)이고 읽은 뒤 쿼터니언으로 옮긴다.
-     * @details 소켓은 덮어쓰기 층이라 어느 칸을 **적었는지**가 뜻이다 — 칸은 이 스키마로 읽고, 적은 칸의 표시(`SocketFieldBit`)는 `SocketSet::readSocket` 이 정한다.
+     * @details 소켓은 덮어쓰기 층이라 어느 칸을 적었는지가 뜻이다 — 칸은 이 스키마로 읽고, 적은 칸의 표시(`SocketFieldBit`)는 `SocketSet::readSocket` 이 정한다.
      *          `fallback` 은 이름 목록 글이라 손으로 푼다.
      */
     REFLECT()
@@ -233,7 +233,7 @@ namespace sw
         void clear();
 
         /**
-         * @brief 위층(@p upper)을 이름으로 덮어씁니다. 같은 이름은 위층이 **적은 필드만** 바꾸고, 새 이름은 추가합니다. 가상 본은 통째로 바꿉니다.
+         * @brief 위층(@p upper)을 이름으로 덮어씁니다. 같은 이름은 위층이 적은 필드만 바꾸고, 새 이름은 추가합니다. 가상 본은 통째로 바꿉니다.
          * @details 스켈레톤 층에 메시 층, 그 위에 외형 층을 차례로 호출한다.
          */
         void applyOverride( const SocketSet& upper );

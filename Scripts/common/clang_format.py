@@ -1,9 +1,9 @@
 """
 Scripts/common/clang_format.py
 
-clang-format 을 찾고, 고정 버전이 없으면 설치합니다. **포맷을 돌리는 쪽과 설치하는 쪽이 같은 규칙을 쓰도록 한 곳에 둡니다.**
+clang-format 을 찾고, 고정 버전이 없으면 설치합니다. 포맷을 돌리는 쪽과 설치하는 쪽이 같은 규칙을 쓰도록 한 곳에 둡니다.
 
-주의: 두 쪽이 규칙을 따로 들면 포맷하는 쪽이 toolchain 의 LLVM 경로나 PATH 를 **버전 확인 없이** 먼저 쓰게 된다 —
+주의: 두 쪽이 규칙을 따로 들면 포맷하는 쪽이 toolchain 의 LLVM 경로나 PATH 를 버전 확인 없이 먼저 쓰게 된다 —
 toolchain 이 시스템 LLVM(21.x)을 가리키는 PC 는 고정 버전(`Tools/LLVM/bin`, 20.1.8)이 설치돼 있어도 다른 판으로 포맷한다.
 그래서 고정본을 먼저 보는 규칙이 여기 하나뿐이고, `setup` 도 이 모듈을 부른다(`common` 은 `setup` 을 import 하지 않는다).
 
@@ -56,7 +56,7 @@ def find_clang_format_path(llvm_path: str = "") -> str:
     """
     고정 버전으로 설치해 둔 clang-format 을 찾습니다 (주어진 LLVM 경로, 그다음 Tools/LLVM/bin).
 
-    **PATH 의 clang-format 은 마지막 수단이다.** 그 버전은 PC 마다 다르고, clang-format 은 버전이
+    PATH 의 clang-format 은 마지막 수단이다. 그 버전은 PC 마다 다르고, clang-format 은 버전이
     다르면 결과가 달라진다 — 실제로 18 과 20 은 이 저장소 400 파일 중 2 개를 다르게 포맷한다
     (동아시아 문자 폭 계산이 달라져 한글 주석 정렬이 갈린다). 포매터만은 "설치된 것" 이 아니라
     "정해진 것" 을 써야 두 PC 의 커밋이 서로를 되돌리지 않는다.
@@ -82,7 +82,7 @@ def _resolve_clang_format_wheel_url(version: str) -> str:
     LLVM 공식 릴리스는 전체 배포판만 올린다 — clang-format 하나를 얻자고 335 MB(리눅스 18) 나
     2 GB(20.1.8 의 `LLVM-*-Linux-X64.tar.xz`) 를 받아야 했고, 게다가 그 바이너리는 빌드된 배포판의
     `libtinfo.so.5` 를 요구해 요즘 리눅스에서는 실행조차 안 됐다. PyPI 의 `clang-format` 패키지는
-    **바이너리 하나만** 담은 휠(약 1.4~1.7 MB)을 플랫폼별로 내고 버전이 LLVM 릴리스를 그대로 따른다.
+    바이너리 하나만 담은 휠(약 1.4~1.7 MB)을 플랫폼별로 내고 버전이 LLVM 릴리스를 그대로 따른다.
 
     URL 에 해시가 들어 있어 손으로 적어 둘 수 없으므로 버전만 고정하고 URL 은 여기서 받아 온다.
     """
@@ -172,7 +172,7 @@ def resolve_clang_format(llvm_path: str = "", *, allow_download: bool = True) ->
     포맷을 돌릴 clang-format 실행 파일 경로입니다. `ensure_clang_format` 과 같은 규칙이고, LLVM 경로를 주지 않으면
     toolchain_config.json 의 것을 씁니다.
 
-    `.clang-format` 은 규칙만 고정하지 **도구 버전은 고정하지 못합니다.** 한쪽에서 커밋한 줄을 다른 쪽 pre-commit 훅이
+    `.clang-format` 은 규칙만 고정하지 도구 버전은 고정하지 못합니다. 한쪽에서 커밋한 줄을 다른 쪽 pre-commit 훅이
     거부하고, 고쳐서 올리면 원래 PC 가 다시 되돌리는 왕복이 생깁니다(판마다 이어붙인 줄의 정렬 칸 수가 다릅니다).
     """
     if not llvm_path:

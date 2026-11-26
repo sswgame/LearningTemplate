@@ -98,7 +98,7 @@ namespace sw
      * @details 시뮬레이션 바디가 아닙니다 — 고정 스텝마다 원하는 속도(`setMoveVelocity`) + 중력으로 캡슐을 쓸어 옮깁니다. 서 있으면 수직 속도를 지우고,
      *          `jump` 가 수직 속도를 줍니다. 자리는 마지막 두 스텝 사이를 보간해 씁니다. 코드가 트랜스폼을 옮기면 순간이동입니다.
      *          이동 요청은 어느 틱에서든 부를 수 있습니다(다음 물리 프레임에 든다).
-     *          **손으로 돌리기**(`setManualSimulation`): 네트워크 예측처럼 자기 고정 틱으로 걷는 쪽이 `simulateMotion` 으로 걸음을 돌린다. 켜져 있는 동안 물리 고정 스텝은 이 캐릭터를
+     *          손으로 돌리기(`setManualSimulation`): 네트워크 예측처럼 자기 고정 틱으로 걷는 쪽이 `simulateMotion` 으로 걸음을 돌린다. 켜져 있는 동안 물리 고정 스텝은 이 캐릭터를
      *          옮기지 않고, 트랜스폼에는 부른 쪽이 준 그리기 자리(`setMotionDisplay`)를 쓴다. 두 길이 같은 걸음 계산(`beginStep` · `finishStep`)을 쓴다.
      */
     REFLECT( Category = "Physics", DisplayName = "Character Controller", Tooltip = "Capsule character mover: slides on walls, climbs steps, blocked by steep slopes", Meta = "Icon=Character" )
@@ -251,7 +251,7 @@ namespace sw
         void setMotionState( const CharacterMotionState& state );
         /**
          * @brief @p state 에서 @p input 으로 한 걸음(@p deltaTime) 갑니다 — 끝 상태가 이 캐릭터의 상태가 됩니다. 손으로 돌리는 캐릭터만 부릅니다(게임 스레드, 틱 · 물리 스텝 밖).
-         * @details 걸음 앞에 늘 @p state 로 되돌리므로(`setMotionState`) 같은 (상태, 입력, 세계)면 이어 돌린 것과 되감아 다시 돌린 것이 비트까지 같다. 지역 필드 · 표면 계수 · 바닥은 **지금** 세계의
+         * @details 걸음 앞에 늘 @p state 로 되돌리므로(`setMotionState`) 같은 (상태, 입력, 세계)면 이어 돌린 것과 되감아 다시 돌린 것이 비트까지 같다. 지역 필드 · 표면 계수 · 바닥은 지금 세계의
          *          것이다 — 언리얼이 저장한 이동을 지금 세계에서 다시 돌리는 것과 같다(세계가 달랐으면 서버 상태가 다시 맞춘다).
          *          캐릭터가 아직 없으면(첫 물리 프레임 전 · 꺼짐) @p state 를 그대로 돌려준다.
          */

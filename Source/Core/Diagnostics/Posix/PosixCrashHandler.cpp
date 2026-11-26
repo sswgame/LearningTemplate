@@ -60,7 +60,7 @@ namespace sw
             /**
              * @brief 시한(`alarm`)이 닿았다 — 그동안 보고가 나아갔으면 시한을 다시 걸고, 한 걸음도 나아가지 않았으면 보고를 버리고 곧장 끝냅니다.
              * @details 시한은 진척이 멈춘 시간이다(`CrashHandler::recordProgress`). 시그널 안이라 async-signal-safe 한 것(`alarm` · `write` · `_exit` ·
-             *          잠금 없는 원자 읽기)만 쓴다. **stdio 를 거치지 않는다** — 보고가 막힌 지점이 바로 stderr 의 락일 수 있다(CrashInjectionKind::StderrHeld).
+             *          잠금 없는 원자 읽기)만 쓴다. stdio 를 거치지 않는다 — 보고가 막힌 지점이 바로 stderr 의 락일 수 있다(CrashInjectionKind::StderrHeld).
              */
             static void onReportDeadline( int32 )
             {
@@ -100,7 +100,7 @@ namespace sw
                 }
 
                 // 시한을 설정한다(CrashHandler::setReportDeadline). 보고는 죽어 가는 프로세스 안에서 돈다 — glibc 는 힙 손상을 malloc 의 락을
-                // 쥔 채 abort 하고, 아래의 할당은 그 락을 **같은 스레드에서** 영영 기다린다(시한이 없으면 그대로 서 있다).
+                // 쥔 채 abort 하고, 아래의 할당은 그 락을 같은 스레드에서 영영 기다린다(시한이 없으면 그대로 서 있다).
                 // (Windows 는 폴트 스레드가 보고 스레드의 진척을 본다.) 핸들러의 sa_mask 가 비어 있어 SIGALRM 은 여기서도 들어온다.
                 s_reportSignalNumber.store( signalNumber );
                 s_pReportingHandler.store( &handler );
@@ -111,7 +111,7 @@ namespace sw
                 s_seenReportProgress.store( handler.getProgress() );
                 ::alarm( handler.getReportDeadlineSeconds() );
 
-                // 컨텍스트를 **먼저** 쓴다. 아래 symbolize() 는 sw::string 을 값으로 반환하므로 반드시 할당하고, StringBuilder 도
+                // 컨텍스트를 먼저 쓴다. 아래 symbolize() 는 sw::string 을 값으로 반환하므로 반드시 할당하고, StringBuilder 도
                 // 8KB 를 넘기면 힙으로 늘어난다. 힙이 깨져서 죽은 경우라면 거기서 다시 죽는다. 컨텍스트 쓰기는 fixed_string 과
                 // 원시 쓰기뿐이라 할당이 없다(formatstring 은 호출하는 쪽의 버퍼에 쓰므로 크래시 경로에서도 안전하다).
                 // POSIX 에는 미니덤프가 없다. 코어 덤프는 `ulimit -c` 와 `kernel.core_pattern` 이 정하는 것이라 프로세스가 만들 수

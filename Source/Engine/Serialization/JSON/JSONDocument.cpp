@@ -350,7 +350,7 @@ namespace sw
         return JSONDocumentInternal::describeValue( *pValue );
     }
 
-    // 정수 읽기는 **부호 없는 쪽을 먼저 본다**(`JSONMemberReader::parse`). nlohmann 의 `is_number_integer()` 는 부호 있는 정수와 부호 없는 정수
+    // 정수 읽기는 부호 없는 쪽을 먼저 본다(`JSONMemberReader::parse`). nlohmann 의 `is_number_integer()` 는 부호 있는 정수와 부호 없는 정수
     // 둘 다에 참이라, 순서가 뒤집히면 큰 부호 없는 값이 음수로 돌아온다.
     template <typename T>
     JSONValue::JSONValueRead JSONValue::readNode( string_view key, T& outValue ) const

@@ -18,7 +18,7 @@ namespace sw
 
     /**
      * @class TutorialHintTriggerComponent
-     * @brief 활성자가 들어오면(`TriggerComponent` — 겹침 또는 거리) 플레이어 알림 창구(`IPlayerNotificationSink`, 종류 Hint — 구현은 UI 의 알림 화면)로 힌트를 띄웁니다(기본 한 번). UI 를 모르므로 전용 서버도 짓고, 서버는 창구가 없어 발동하지 않는다.
+     * @brief 활성자가 들어오면(`TriggerComponent`: 겹침 또는 거리) 플레이어 알림 창구(`IPlayerNotificationSink`, 종류 Hint, 구현은 UI 의 알림 화면)로 힌트를 띄웁니다(기본 한 번). UI 를 모르므로 전용 서버도 짓고, 서버는 창구가 없어 발동하지 않는다.
      * @details 사용자 설정 `gameplay.showTutorials` 가 꺼져 있으면 띄우지 않습니다(설정 서비스가 없으면 켜진 것으로 본다). 글은 현지화 키 또는 글 그대로이고
      *          리치 텍스트 행동 태그 `[action=이름]` 을 쓸 수 있다. 키보드면 `[ E ]`, 패드면 그 패드의 버튼(입력 장치가 바뀌면 다시 배치된다).
      *          언리얼 Lyra 의 튜토리얼 프롬프트, 유니티 튜토리얼 트리거 스크립트에 해당합니다.

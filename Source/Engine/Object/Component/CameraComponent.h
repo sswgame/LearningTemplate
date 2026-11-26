@@ -185,7 +185,7 @@ namespace sw
         SceneViewQuery makeViewQuery( float32 aspectRatio ) const;
         /**
          * @brief 오브젝트의 렌더 경계(`PrimitiveComponent::computeObjectRenderBounds`)가 @p view 의 절두체에 걸치면 true 입니다. 렌더 경계가 없으면 false 입니다.
-         * @details **기하만** 본다 — 가림 · 렌더러가 실제로 그렸는지(언리얼 `WasRecentlyRendered`, 유니티 `Renderer.isVisible`)는 보지 않는다. GPU 컬링과 같은 평면 · 같은 구다.
+         * @details 기하만 본다 — 가림 · 렌더러가 실제로 그렸는지(언리얼 `WasRecentlyRendered`, 유니티 `Renderer.isVisible`)는 보지 않는다. GPU 컬링과 같은 평면 · 같은 구다.
          */
         [[nodiscard]] static bool isObjectInFrustum( const SceneViewQuery& view, const GameObject& object );
         /** @brief 오브젝트 렌더 경계의 화면 크기(지름 / 화면 높이)입니다. 절두체 밖이거나 렌더 경계가 없으면 0 — LOD 와 같은 식입니다. */
@@ -238,7 +238,7 @@ namespace sw
         void setLensShift( const float2& shift ) { _lensShift = shift; }
 
         /**
-         * @brief 이 카메라의 화면이 이번 프레임에 **끊어** 바뀌었다고 표시합니다(언리얼의 `bCameraCut`). 렌더러가 시간 누적(TAA 기록)을 버립니다.
+         * @brief 이 카메라의 화면이 이번 프레임에 끊어 바뀌었다고 표시합니다(언리얼의 `bCameraCut`). 렌더러가 시간 누적(TAA 기록)을 버립니다.
          * @details 블렌드 없는 프리셋과 뷰 타깃 전환이 부른다(게임 스레드, 틱 또는 틱 뒤 큐). 컷은 세운 씬 프레임 번호(`GameObjectManager::getUpdateCount`)와
          *          세운 차례를 갖고, 읽는 쪽(`CameraCutReader`)마다 마지막으로 본 차례를 따로 적는다. 그래서 소비자가 몇이든 각자 한 번씩 이 컷을 보고,
          *          읽는 쪽이 없는 채로 두 프레임이 지난 컷은 저절로 무효가 되어 나중에 이 카메라를 잡는 쪽이 가짜 컷을 보지 않는다(프레임 훅이 필요 없다).

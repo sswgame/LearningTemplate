@@ -52,7 +52,7 @@ namespace sw
         static bool circleCast2D( const GameObjectManager& manager, const float3& origin, const float3& direction, float32 maxDistance, float32 radius, uint32 layerMask,
                                   uint64 ignoreObjectID, CharacterRayHit& outHit );
         /**
-         * @brief @p from 에서 @p to 까지 구(2D 는 원, @p radius 가 0 이면 광선)를 쓸어 닿은 바디를 **모두** @p outListHit 끝에 붙이고 그 수를 반환합니다.
+         * @brief @p from 에서 @p to 까지 구(2D 는 원, @p radius 가 0 이면 광선)를 쓸어 닿은 바디를 모두 @p outListHit 끝에 붙이고 그 수를 반환합니다.
          * @details 바디마다 가장 가까운 닿음 하나이고 가까운 순서다. 출발점에서 이미 겹친 바디도 들어온다(`shapeCastAll`). 근접 판정(`MeleeHit`)이
          *          칼날 한 토막에 걸린 것을 모두 찾는 데 쓴다 — 처음 닿은 것에서 멈추면 이미 맞힌 오브젝트가 뒤의 표적을 가린다. 길이가 거의 0 이거나 씬이 없으면 0 입니다.
          */

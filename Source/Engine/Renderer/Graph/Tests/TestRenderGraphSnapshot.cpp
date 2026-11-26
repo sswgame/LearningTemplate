@@ -43,7 +43,7 @@ SW_TEST_CASE( RenderGraphSnapshotTest, ImportedFirstAccessIsNotATransition )
 {
     RenderGraph         graph;
     const hashed_string tiles( "Tiles" );
-    // 들인 자원도 앞서 쓰는 패스 없는 읽기는 이번 프레임의 첫 쓰기를 읽는다(지난 값을 읽는 것은 Persistent 뿐 — collectDependencyEdges) — 그래서 Build 가 먼저 돈다.
+    // 들인 자원도 앞서 쓰는 패스 없는 읽기는 이번 프레임의 첫 쓰기를 읽는다(지난 값을 읽는 것은 Persistent 뿐, collectDependencyEdges). 그래서 Build 가 먼저 돈다.
     graph.importResource( tiles, RenderGraphViewableKind::Buffer, RenderGraphAccess::UnorderedAccess );
     graph.addPass( hashed_string( "Build" ), { RenderGraphBufferUAV{ tiles } } );
     graph.addPass( hashed_string( "Cull" ), { RenderGraphBufferSRV{ tiles } } );

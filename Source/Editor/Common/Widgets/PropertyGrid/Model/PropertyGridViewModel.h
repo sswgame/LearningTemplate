@@ -29,7 +29,7 @@
 #include "Engine/Reflection/ReflectionInvoke.h"
 #include "Engine/Reflection/TextAddress.h"
 
-// 인스펙터가 마지막으로 부른 FUNCTION 의 결과입니다 — 실패 갈래(`ReflectCallResult`), 부른 대상 수와 실패 수, 첫 성공 대상의 반환값 글. 다중 선택은 같은 메서드를 대상마다 부르므로 결과가 대상 수만큼 온다. 패널은 한 줄(성공이면 반환값, 실패면 첫 실패 갈래와 실패 수/대상 수)만 보인다. 언리얼 Details 의 CallInEditor 는 결과를 보이지 않는다 — 우리는 틀린 인자 · 없는 함수를 삼키지 않으려고 둔다.
+// 인스펙터가 마지막으로 부른 FUNCTION 의 결과입니다: 실패 갈래(`ReflectCallResult`), 부른 대상 수와 실패 수, 첫 성공 대상의 반환값 글. 다중 선택은 같은 메서드를 대상마다 부르므로 결과가 대상 수만큼 온다. 패널은 한 줄(성공이면 반환값, 실패면 첫 실패 갈래와 실패 수/대상 수)만 보인다. 언리얼 Details 의 CallInEditor 는 결과를 보이지 않는다 — 우리는 틀린 인자 · 없는 함수를 삼키지 않으려고 둔다.
 namespace sw::editor
 {
     /** @brief 마지막 FUNCTION 호출(대상 하나 이상)의 결과입니다. `begin` 으로 비우고 대상마다 `record` 합니다. */
@@ -212,7 +212,7 @@ namespace sw::editor
         void toggleActionFavorite( const TypeInfo& type, const FunctionInfo& method );
 
         // ------------------------------------------------------------------------------
-        // 명령 — 값을 바꾸는 한 길. 행 번호로 받아 편집 요청(`PropertyEditRequest` — 경로 · 종류 · 새 값)으로 바꾼다. 씬 대상은 요청을 게임 단계에 넘기고
+        // 명령: 값을 바꾸는 한 길. 행 번호로 받아 편집 요청(`PropertyEditRequest`: 경로 · 종류 · 새 값)으로 바꾼다. 씬 대상은 요청을 게임 단계에 넘기고
         // (UI 프레임은 씬 메모리에 쓰지 않는다 — 적용 · 알림은 `EditorCommandRegistry::requestSceneEdit` 의 실행이 한다), 넘기기 전에 편집 구간을 연다
         // (`PropertyEditSpan` — 대상마다 그 프로퍼티의 값 글만 찍는다). 구간은 위젯이 풀리면 한 단계로 오른다. 씬 밖 대상은 바로 적용하고 `_onEdited` 로 알린다
         // ------------------------------------------------------------------------------
@@ -385,7 +385,7 @@ namespace sw::editor
          */
         void notifyPropertyEdited( const PropertyInfo& prop );
         /**
-         * @brief 행 @p binding 의 쓰기 요청을 내기 **직전**입니다 — 씬 대상이면 그 깊이 0 프로퍼티의 편집 구간을 잇거나 엽니다(@p label 은 되돌리기 이름, 비면 프로퍼티 표시 이름).
+         * @brief 행 @p binding 의 쓰기 요청을 내기 직전입니다 — 씬 대상이면 그 깊이 0 프로퍼티의 편집 구간을 잇거나 엽니다(@p label 은 되돌리기 이름, 비면 프로퍼티 표시 이름).
          * @details 값을 쓰는 명령은 모두 이것을 먼저 부른다("명령 한 길"). 씬 밖 대상 · 플레이 중에는 아무것도 하지 않는다.
          */
         void ensureEditSpan( const RowBinding& binding, string_view label );

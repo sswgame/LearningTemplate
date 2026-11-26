@@ -3,17 +3,17 @@
  * @brief 권위 서버가 시작한 페어드 애니메이션 세션(`PairedAnimationSystem`)을 클라이언트에 복제합니다.
  * @details 이 기능은 키트 `GF_NetPairedAnimation` 이 제공하며 자기 메시지 영역(`NetKitMessageRange::kPairedAnimation`)을 쓴다. 권위 방식과 상관없이 `NetEndpoint` 위에 얹는다.
  *
- *          - **시작은 서버가 결정한다.** 서버는 재생 중인 세션을 처음 본 갱신에 상태 메시지 하나(`kSessionState`)를 모두에게 보낸다. 메시지는 에셋 경로,
+ *          - 시작은 서버가 결정한다. 서버는 재생 중인 세션을 처음 본 갱신에 상태 메시지 하나(`kSessionState`)를 모두에게 보낸다. 메시지는 에셋 경로,
  *            역할마다 참가 오브젝트 번호, 세션 스냅숏(`PairedAnimationSession::captureSnapshot` — 서버의 실제 진입 시각)이다. 클라이언트는 그것으로
  *            바인딩을 만들어 `PairedAnimationSystem::restoreSession` 을 부른다. 시작 틱만 보내고 클라이언트가 진입 시각을 추정하는 길(`makeAtElapsedTime`)은 쓰지 않는다
  *            — 서버의 진입은 프레임 단위라 추정은 최대 한 프레임 틀린다.
- *          - **늦은 참가.** 연결이 열리면 다음 갱신에서 재생 중인 세션마다 그때의 상태를 그 연결에만 보낸다(같은 메시지).
- *          - **끝.** 서버에서 세션이 끝나거나(`Finished` · `Aborted`) 목록에서 빠지면 끝 메시지(`kSessionEnd`)를 보내고, 클라이언트는 아직 재생 중이면 중단한다
+ *          - 늦은 참가. 연결이 열리면 다음 갱신에서 재생 중인 세션마다 그때의 상태를 그 연결에만 보낸다(같은 메시지).
+ *          - 끝. 서버에서 세션이 끝나거나(`Finished` · `Aborted`) 목록에서 빠지면 끝 메시지(`kSessionEnd`)를 보내고, 클라이언트는 아직 재생 중이면 중단한다
  *            (남은 역할은 각자 `exitState` 로 블렌드 — 클립이 끝난 세션과 같은 규칙이다).
- *          - **오브젝트 번호.** 씬의 번호표(`NetObjectTable` — 파괴 복제와 같은 표)의 번호다. 씬 오브젝트는 이름 해시, 플레이 중에 생긴 오브젝트(투사체)는
+ *          - 오브젝트 번호. 씬의 번호표(`NetObjectTable` — 파괴 복제와 같은 표)의 번호다. 씬 오브젝트는 이름 해시, 플레이 중에 생긴 오브젝트(투사체)는
  *            서버가 매기고 게임의 스폰 복제가 클라이언트에 묶은 생성 번호다. 번호가 없는 오브젝트(묶지 않은 생성 오브젝트, 이름이 겹친 씬 오브젝트)가 참가한 세션은
  *            복제할 수 없어 서버가 오류를 남기고 보내지 않는다 — 다른 오브젝트에 조용히 묶지 않는다.
- *          - **롤백.** 소유 상태(`ReplicationServer::setOwnerState`)에 세션을 실으려면 게임이 `PairedAnimationNetState::write` 의 바이트를 싣고, 되감은 뒤
+ *          - 롤백. 소유 상태(`ReplicationServer::setOwnerState`)에 세션을 실으려면 게임이 `PairedAnimationNetState::write` 의 바이트를 싣고, 되감은 뒤
  *            `PairedAnimationReplicationClient::applyState` 를 부른다. 같은 id 가 재생 중이면 중단하고 다시 복원한다(서버 상태가 기준이다).
  *          - 트랜스폼은 서버 권위다. 복원은 정렬(`snap` · `warp`)을 하지 않고 트랜스폼 복제가 맞춘다.
  */

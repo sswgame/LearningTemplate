@@ -1,7 +1,7 @@
 /**
  * @file PlatformInputManager.cpp
  * @brief 콜백 입력 창(웹 · Android)의 입력 플랫폼 훅입니다. 창이 실은 `PlatformInputEvent` 를 엔진 원시 이벤트로 옮깁니다.
- * @details 키 번호만 플랫폼마다 다르다(웹 — DOM `KeyboardEvent.code`, Android — `AKEYCODE_*`). 커서 모양 · 숨김은 창이 한다(웹 캔버스 CSS cursor, Android 는 커서가 없다).
+ * @details 키 번호만 플랫폼마다 다르다(웹은 DOM `KeyboardEvent.code`, Android 는 `AKEYCODE_*`). 커서 모양 · 숨김은 창이 한다(웹 캔버스 CSS cursor, Android 는 커서가 없다).
  *          포인터 잠금은 창이 묶는다(`GenericWindow::setPointerLock` — 웹은 Pointer Lock API, Android 는 묶지 않는다). 잠긴 동안의 이동은 `PointerRelative` 다.
  *          패드: 웹은 Gamepad API 를 프레임마다 읽고(standard 배치만 — `PlatformGamepadLayout`), Android 는 창이 패드 입력 장치의 키 · 축 이벤트와 연결 · 끊김을
  *          패드 칸 번호로 실어 보낸다. 둘 다 가상 입력 · 재생과 같은 원시 이벤트 길(`makeGamepad*`)로 들어온다.

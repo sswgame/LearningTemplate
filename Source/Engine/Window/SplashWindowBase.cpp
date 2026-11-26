@@ -109,10 +109,10 @@ namespace sw
         if ( DDSLoader::loadFromAsset( imageID, _splashData ) == false || _splashData.isValid() == false )
             return false; // 이유는 로더가 오류로 남겼다
 
-        // 스플래시를 그리는 두 경로는 **압축 없는 32bpp** 를 전제한다. Win32 는 StretchDIBits 에
+        // 스플래시를 그리는 두 경로는 압축 없는 32bpp 를 전제한다. Win32 는 StretchDIBits 에
         // biBitCount=32 로, X11 은 XCreateImage 에 depth 32 로 넘기고, 그 전에 아래
         // `normalizeSplashToBgra` 가 폭×높이 개의 픽셀을 4바이트씩 제자리에서 뒤집는다. 압축 텍스처가
-        // 들어오면(BC1 은 같은 크기의 1/8 이다) 그 뒤집기 루프가 버퍼 밖을 **쓴다**. 지금 들어 있는
+        // 들어오면(BC1 은 같은 크기의 1/8 이다) 그 뒤집기 루프가 버퍼 밖을 쓴다. 지금 들어 있는
         // splash.dds 는 B8G8R8A8 이라 맞지만, 아트를 교체하면서 압축으로 저장하는 것은 흔한 일이다.
         const size_t requiredBytes = static_cast<size_t>( _splashData._width ) * static_cast<size_t>( _splashData._height ) * 4u;
         if ( _splashData._bCompressed != SW_FALSE || _splashData._bytes.size() < requiredBytes )
@@ -131,7 +131,7 @@ namespace sw
 
     void SplashWindowBase::normalizeSplashToBgra()
     {
-        // **채널 순서를 여기서 한 번에 맞춘다**(모든 플랫폼). 플랫폼 창 안에서 뒤집으면 아트를 `R8G8B8A8` 로 다시 내보낼 때
+        // 채널 순서를 여기서 한 번에 맞춘다(모든 플랫폼). 플랫폼 창 안에서 뒤집으면 아트를 `R8G8B8A8` 로 다시 내보낼 때
         // 그 플랫폼만 맞고 나머지는 빨강과 파랑이 뒤바뀐다(지금 `splash.dds` 는 `B8G8R8A8` 이라 뒤집기가 건너뛰어진다).
         //
         // 그리는 두 경로가 모두 BGRA 를 원한다. Win32 의 `BI_RGB` 32bpp DIB 는 메모리에서 B,G,R,X

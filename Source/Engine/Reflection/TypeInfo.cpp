@@ -44,7 +44,7 @@ namespace sw
 
             /**
              * @brief 두 TypeInfo 가 같은 타입을 말하는지 판단합니다. 포인터가 달라도 이름이 같으면 같은 타입입니다.
-             * @details 레지스트리는 FQN 하나당 항목 하나지만, 레지스트리 **밖**에 사본이 있을 수 있다
+             * @details 레지스트리는 FQN 하나당 항목 하나지만, 레지스트리 밖에 사본이 있을 수 있다
              *          (테스트 목의 손으로 만든 `StaticType()` 이 자기 사본을 반환한다). 포인터를 따라가다가
              *          그 사본을 만나면 이름으로 한 번 더 본다. intern 인덱스 정수 비교 한 번이다.
              */
@@ -267,7 +267,7 @@ namespace sw
         if ( _parentFQN.empty() )
             return;
 
-        // 새 판을 다 지은 뒤 한 번에 바꿔 끼운다(`TypeInheritedPropertySlot`). 사슬을 모아 기반부터 단계마다 **자기 선언 목록**을 접는다.
+        // 새 판을 다 지은 뒤 한 번에 바꿔 끼운다(`TypeInheritedPropertySlot`). 사슬을 모아 기반부터 단계마다 자기 선언 목록을 접는다.
         // 같은 타입이 사슬에 두 번 나오면 순환이다 — 자기 것만 둔다(로그는 잠금 밖 `TypeRegistry::rebuildAffected`).
         auto            pSnapshot = make_unique<TypeInheritedPropertySlot::Snapshot>();
         const TypeChain chain     = getTypeChain();
@@ -559,7 +559,7 @@ namespace sw
 
     bool TypeInfo::isDerivedFrom( const hashed_string& targetFqn ) const
     {
-        // **순환에서 멈춘다.** 걸음 수를 세는 것이 방문 목록보다 싸고(할당 없음), 체인은 보통 다섯을
+        // 순환에서 멈춘다. 걸음 수를 세는 것이 방문 목록보다 싸고(할당 없음), 체인은 보통 다섯을
         // 넘지 않는다. 부모가 미등록이어도 `_parentFQN` 이 같으면 파생으로 본다. 모듈이 아직 로드되지
         // 않은 동안 이름으로 묻는 쪽(직렬화)이 그것에 기댄다.
         for ( const TypeInfo* pCurrent : getTypeChain() )
@@ -632,13 +632,13 @@ namespace sw
         constexpr uint32 kDepth = constant::reflection::kAncestorDisplayDepth;
         constexpr uint32 kNone  = static_cast<uint32>( PredefinedNameType::NameType_None );
 
-        // 자기부터 위로 이름을 모은다. 순환은 테이블 깊이에서 걸린다. **찾을 수 없는 부모는 체인의 끝이다.** `Component`
+        // 자기부터 위로 이름을 모은다. 순환은 테이블 깊이에서 걸린다. 찾을 수 없는 부모는 체인의 끝이다. `Component`
         // 처럼 등록되지 않은 기반은 이름만 적혀 있으므로, 그 이름을 실패한 캐스트마다 잠그고 레지스트리에서 찾지 않는다.
         // 부모가 나중에 등록되면 registerClass 가 테이블을 모두 비우므로 그때 다시 이어진다.
         uint32          arrChain[kDepth];
         uint32          chainCount = 0;
         const TypeChain chain      = getTypeChain();
-        // 고리 · 상한에서 끝난 사슬은 표를 만들지 않는다(예전에는 고리가 표 깊이에서 걸렸다 — 같은 결과다).
+        // 고리 · 상한에서 끝난 사슬은 표를 만들지 않는다.
         bool bTableable = chain.isLoop() == false && chain._bCapped == SW_FALSE;
         for ( uint32 level = 0; level < chain.size() && bTableable; ++level )
         {
@@ -715,7 +715,7 @@ namespace sw
         // 부모가 없으면 자기 목록만 본다.
         if ( _parentFQN.empty() )
             return findProperty( propNameOrAlias );
-        // 목록과 맵을 **같은 판**에서 읽는다 — 그 사이 다른 판이 발행돼도 섞이지 않는다.
+        // 목록과 맵을 같은 판에서 읽는다 — 그 사이 다른 판이 발행돼도 섞이지 않는다.
         const TypeInheritedPropertySlot::Snapshot& snapshot = loadInheritedProperties();
         const PropertyListView                     listWithBase{ snapshot._listProperty.data(), snapshot._listProperty.size() };
 

@@ -3,7 +3,7 @@
  * @brief 내장 도형 생성기입니다. 큐브, 쿼드, 평면, 구, 실린더, 캡슐, 원뿔을 만듭니다.
  *
  * [왜 Mesh 가 아닌가]
- * `Mesh` 가 책임지는 것은 **정점 버퍼와 그 수명**입니다. 어떤 기하를 만들지는 다른 일이고, 도형이
+ * `Mesh` 가 책임지는 것은 정점 버퍼와 그 수명입니다. 어떤 기하를 만들지는 다른 일이고, 도형이
  * 늘어날 때마다 리소스 클래스가 커질 이유가 없습니다. `MaterialPacking` · `MaterialXML` 이 `Material` 옆에 따로 있는 것과
  * 같은 이유입니다.
  */
@@ -31,9 +31,9 @@ namespace sw
     /**
      * @struct MeshUtil
      * @brief 원점 중심 단위 도형을 만듭니다. 모두 삼각형 목록이고 인덱스는 쓰지 않습니다.
-     * @note 감김은 **바깥을 향합니다**(이 엔진의 앞면 규약). 뒤집히면 후면 컬링에 화면에서 사라지므로
+     * @note 감김은 바깥을 향합니다(이 엔진의 앞면 규약). 뒤집히면 후면 컬링에 화면에서 사라지므로
      *       `MeshPrimitiveTest.PrimitivesAreClosedAndOutwardFacing` 이 그것을 고정합니다.
-     * @note 개별 `createXxx` 는 **검증용 색**(`PrimitiveVertexColor::Diagnostic`)으로 만듭니다. 게임과 씬이 쓰는 이름 기반 함수
+     * @note 개별 `createXxx` 는 검증용 색(`PrimitiveVertexColor::Diagnostic`)으로 만듭니다. 게임과 씬이 쓰는 이름 기반 함수
      *       (`createPrimitive`, `acquirePrimitive`)는 기본이 흰색입니다. 검증 색이 게임에 섞이면 회색으로 칠한 벽이 면마다 초록과 주황이 됩니다.
      */
     struct SW_API MeshUtil
@@ -46,18 +46,18 @@ namespace sw
         /** @brief 원점 중심 단위 2D 쿼드입니다(범위 [-0.5,0.5]). XY 평면이라 화면을 마주 봅니다. */
         static shared_ptr<Mesh> createRectMesh();
         /**
-         * @brief 스프라이트 사각형입니다(XY 평면, 한 변 1). **양면**이고 어느 쪽에서 봐도 텍스처가 바로 읽힙니다.
+         * @brief 스프라이트 사각형입니다(XY 평면, 한 변 1). 양면이고 어느 쪽에서 봐도 텍스처가 바로 읽힙니다.
          * @details 앞면은 -Z 를 향합니다. 카메라의 기본 방향(+Z 를 보고 화면 오른쪽이 +X, 위가 +Y)이 마주 보는 면이고 2D 게임의 화면입니다.
          *          그 면의 u 는 +X 로 늘어납니다. 뒷면(+Z 를 향하며, -Z 를 보는 카메라가 봅니다. 씬의 기본 GameCamera 가 그렇습니다)은 u 가 -X 로 늘어 글자가
          *          뒤집히지 않습니다. v 는 두 면 모두 위가 0 입니다.
          *          주의: 스프라이트에 3D 쿼드(`createRectMesh`, +Z 한 면, u 가 +X)를 쓰지 마십시오. 그 면은 -Z 를 보는 카메라에서만 보이는데
-         *          그 카메라의 화면 오른쪽은 -X 라서 **모든 스프라이트가 좌우로 뒤집혀** 그려지고, 2D 카메라(+Z 를 봄)에서는 후면 컬링으로
+         *          그 카메라의 화면 오른쪽은 -X 라서 모든 스프라이트가 좌우로 뒤집혀 그려지고, 2D 카메라(+Z 를 봄)에서는 후면 컬링으로
          *          아예 사라집니다. 유니티 스프라이트도 양면입니다(Cull Off).
          *          투명 패스는 후면을 걸러 내므로 한 시점에서는 한 면만 그려집니다.
          */
         static shared_ptr<Mesh> createSpriteQuad();
         /**
-         * @brief 위를 향한 바닥 평면입니다(XZ, 한 변 1). 그림자를 **받아서 보여 주는** 면입니다.
+         * @brief 위를 향한 바닥 평면입니다(XZ, 한 변 1). 그림자를 받아서 보여 주는 면입니다.
          * @param segmentCount 한 변의 분할 수(최소 1). 나누는 이유는 정점 색과 조명이 정점 단위로
          *        보간되기 때문입니다. 한 장짜리 쿼드는 네 꼭짓점 사이가 선형으로 늘어나 빛이 뭉개집니다.
          * @note 면은 로컬 `y = 0` 이고 노멀은 +Y 입니다. 노멀은 정점이 가지고 있습니다.
@@ -80,7 +80,7 @@ namespace sw
         static shared_ptr<Mesh> createCone( uint32 sliceCount = 16 );
         /**
          * @brief 풀 한 포기입니다. 뿌리가 원점(y = 0)에 있고 끝으로 갈수록 가는 잎 @p bladeCount 장으로 이루어집니다(반지름 약 0.25, 높이 약 0.5..0.8).
-         * @details 잎은 **양면**(두 감김)입니다. 패스의 후면 컬링 아래에서도 어느 쪽에서나 보입니다. 노멀은 잎 면보다 위쪽으로 기울여(풀밭이 하늘
+         * @details 잎은 양면(두 감김)입니다. 패스의 후면 컬링 아래에서도 어느 쪽에서나 보입니다. 노멀은 잎 면보다 위쪽으로 기울여(풀밭이 하늘
          *          빛을 받는 흔한 근사) 양면이 같은 빛을 받습니다. 잎 배치는 고정 시드를 쓰므로 늘 같은 풀 포기가 나옵니다. 식생의 내장 메시(`GrassClump`)입니다.
          */
         static shared_ptr<Mesh> createGrassClump( uint32 bladeCount = 8 );
@@ -94,13 +94,13 @@ namespace sw
         static shared_ptr<Mesh> createPrimitive( string_view meshID, PrimitiveVertexColor vertexColor = PrimitiveVertexColor::White );
 
         /**
-         * @brief 프리미티브 id 로 **공유되는** 내장 도형을 반환합니다. 같은 id 면 같은 객체입니다.
+         * @brief 프리미티브 id 로 공유되는 내장 도형을 반환합니다. 같은 id 면 같은 객체입니다.
          *
-         * @details **반환받은 메시를 고치지 마십시오.** 씬 전체가 그 하나를 공유합니다. 자기만의
+         * @details 반환받은 메시를 고치지 마십시오. 씬 전체가 그 하나를 공유합니다. 자기만의
          *          기하가 필요하면 `createPrimitive`(매번 새로 만듭니다)나 개별 `createXxx` 를 쓰십시오.
          *
          *          씬에서 온 `MeshComponent` 는 모두 이쪽을 씁니다. 주의: 컴포넌트마다 `createPrimitive` 로
-         *          **자기 Mesh 객체를 따로** 만들면, 배치 키가 메시 포인터라 같은 큐브 8000개가 배치 8000개로
+         *          자기 Mesh 객체를 따로 만들면, 배치 키가 메시 포인터라 같은 큐브 8000개가 배치 8000개로
          *          나뉘고 GPU 정점 버퍼도 8000개가 됩니다.
          *
          *          캐시는 `weak_ptr` 이라 아무도 안 쓰면 알아서 사라집니다. 수명을 따로 관리하지

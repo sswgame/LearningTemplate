@@ -20,7 +20,7 @@ namespace sw
     {
         /**
          * @struct BuildVertex
-         * @brief 생성기가 다루는 정점입니다. 위치 · 노멀 · UV 가 **같이 다닙니다**.
+         * @brief 생성기가 다루는 정점입니다. 위치 · 노멀 · UV 가 같이 다닙니다.
          * @details 셋을 따로 넘기면 인자가 아홉 개가 되고, 감김을 바로잡느라 정점을 맞바꿀 때
          *          하나를 빠뜨리기 쉽습니다. 그러면 노멀이나 UV 만 짝이 어긋나 조용히 틀린 그림이 나옵니다.
          */
@@ -54,11 +54,11 @@ namespace sw
         }
 
         /**
-         * @brief 삼각형 하나를 **바깥을 향하도록** 넣습니다. 감김이 반대면 두 정점을 맞바꿉니다.
-         * @details 감김이 뒤집힌 면은 후면 컬링에 걸려 **화면에서 그냥 사라집니다.** 그림으로는
+         * @brief 삼각형 하나를 바깥을 향하도록 넣습니다. 감김이 반대면 두 정점을 맞바꿉니다.
+         * @details 감김이 뒤집힌 면은 후면 컬링에 걸려 화면에서 그냥 사라집니다. 그림으로는
          *          "안 그려진다" 로만 보여서 렌더러 버그로 오인하기 쉽습니다. 손으로 맞추는 대신 여기서 바로잡습니다.
-         *          맞바꿀 때 노멀 · UV 가 **위치와 같이** 따라갑니다. `BuildVertex` 로 묶어 둔 이유입니다.
-         * @warning **원점 중심 볼록 도형에서만 맞는 판정입니다.** 삼각형 중심이 곧 바깥 방향이라는 가정을
+         *          맞바꿀 때 노멀 · UV 가 위치와 같이 따라갑니다. `BuildVertex` 로 묶어 둔 이유입니다.
+         * @warning 원점 중심 볼록 도형에서만 맞는 판정입니다. 삼각형 중심이 곧 바깥 방향이라는 가정을
          *          씁니다. 오목하거나 원점을 품지 않는 기하를 넣으려면 이 함수를 쓰면 안 됩니다.
          */
         void pushTriangle( vector<RHIVertex>& outList, const BuildVertex& a, const BuildVertex& b, const BuildVertex& c )
@@ -92,7 +92,7 @@ namespace sw
 
         /**
          * @brief 평평한 삼각형 하나를 넣습니다. 면 노멀을 셋이 나눠 갖고 UV 는 그 면에 펼칩니다.
-         * @details 큐브 면 · 실린더 뚜껑 · 원뿔 밑면처럼 **실제로 평평한** 곳에 씁니다. 곡면에 쓰면
+         * @details 큐브 면 · 실린더 뚜껑 · 원뿔 밑면처럼 실제로 평평한 곳에 씁니다. 곡면에 쓰면
          *          면마다 노멀이 뚝뚝 끊겨 각져 보입니다.
          */
         void pushFlatTriangle( vector<RHIVertex>& outList, const float3& a, const float3& b, const float3& c )
@@ -149,7 +149,7 @@ namespace sw
             return quad;
         }
 
-        /** @brief 옆면 조각을 두 삼각형으로 냅니다. 노멀은 **축을 뺀 방사 방향**입니다. 위치를 그대로 정규화하면 위아래로 기웁니다. */
+        /** @brief 옆면 조각을 두 삼각형으로 냅니다. 노멀은 축을 뺀 방사 방향입니다. 위치를 그대로 정규화하면 위아래로 기웁니다. */
         void pushRevolvedSide( vector<RHIVertex>& outList, const RevolvedQuad& quad, uint32 slice, uint32 sliceCount, float32 vUpper, float32 vLower )
         {
             const float3      side0 = float3{ quad._lower0._x, 0.0f, quad._lower0._z }.normalize();
@@ -197,7 +197,7 @@ namespace sw
 
         /**
          * @brief 캡슐 반구의 (stack, slice) 꼭짓점입니다. 반구는 중심을 ±halfY 로 옮긴 구면이다.
-         * @details 노멀은 **그 반구의 중심**(0, ±halfY, 0) 기준 방향이다. 원점 기준으로 잡으면 캡슐이 길수록 어긋난다.
+         * @details 노멀은 그 반구의 중심(0, ±halfY, 0) 기준 방향이다. 원점 기준으로 잡으면 캡슐이 길수록 어긋난다.
          *          반구의 v 는 위 [0, 0.25] · 아래 [0.75, 1] 이다. 원통부(0.25~0.75)와 이어진다.
          */
         BuildVertex makeCapVertex( const CapsuleShape& shape, uint32 stack, uint32 slice, bool bTop )
@@ -217,7 +217,7 @@ namespace sw
         }
 
         /**
-         * @brief 원뿔 옆면 노멀입니다. **기울기를 반영한다.** 높이 h, 밑반지름 r 인 원뿔의 옆면 노멀은 normalize( h*cosθ, r, h*sinθ ) 다.
+         * @brief 원뿔 옆면 노멀입니다. 기울기를 반영한다. 높이 h, 밑반지름 r 인 원뿔의 옆면 노멀은 normalize( h*cosθ, r, h*sinθ ) 다.
          *        방사 방향(수평)으로 두면 원뿔이 원통처럼 칠해진다.
          */
         float3 coneSideNormal( const float3& basePoint, float32 height, float32 radius )
@@ -327,7 +327,7 @@ namespace sw
 
     /**
      * @brief 프리미티브 id 를 공유 캐시 키 하나로 바꿉니다. 모르면 nullptr 입니다.
-     * @details 만들기와 공유 캐시가 **같은 판정**을 써야 합니다. id 는 표의 철자 그대로만 받는다 — 별칭(`Rect` · `Ground`)과 대소문자 무시는
+     * @details 만들기와 공유 캐시가 같은 판정을 써야 합니다. id 는 표의 철자 그대로만 받는다 — 별칭(`Rect` · `Ground`)과 대소문자 무시는
      *          같은 기하를 여러 철자로 적게 해 캐시 자리와 배치를 가르므로 두지 않는다. 빈 id 는 큐브다(기본 메시).
      *          이름 표는 메시 종류의 내장 이름(`MeshAssetFormat::kArrBuiltinName`) 한 벌이다 — 타입 있는 메시 칸이 받는 이름과 여기서 만드는 이름이 갈라지지 않는다.
      */
@@ -400,7 +400,7 @@ namespace sw
         if ( pCanonical == nullptr )
             return {};
 
-        // 캐시는 **약한 참조**다. 소유는 쓰는 쪽에 있고, 마지막 사용자가 놓으면 메시도 같이 사라진다.
+        // 캐시는 약한 참조다. 소유는 쓰는 쪽에 있고, 마지막 사용자가 놓으면 메시도 같이 사라진다.
         // 그래서 디바이스가 내려갈 때 이 표가 붙들고 있는 GPU 자원이 없다.
         return MeshUtilInternal::getPrimitiveCache().acquire( hashed_string( pCanonical ), &MeshUtilInternal::createSharedPrimitive );
     }
@@ -604,14 +604,14 @@ namespace sw
                 const float3 p11 = makePlaneCorner( ix + 1, iz + 1, step );
                 const float3 p01 = makePlaneCorner( ix, iz + 1, step );
 
-                // 체크무늬로 칠한다. 단색이면 그림자 경계는 보여도 **면이 어디까지인지**가 안 보여서,
+                // 체크무늬로 칠한다. 단색이면 그림자 경계는 보여도 면이 어디까지인지가 안 보여서,
                 // 그림자가 맞는 자리에 졌는지 판단할 기준이 사라진다.
                 const bool    bDark = ( ( ix + iz ) & 1u ) != 0u;
                 const float32 tone  = bDark ? 0.52f : 0.72f;
                 const float4  color{ tone, tone, tone * 1.05f, 1.0f };
 
                 // 위에서 내려다볼 때 앞면이 되도록 감는다(이 엔진의 앞면 규약). 노멀은 모두 +Y 다.
-                // UV 는 격자 칸이 아니라 **평면 전체**에 0..1 로 편다. 칸마다 0..1 을 주면
+                // UV 는 격자 칸이 아니라 평면 전체에 0..1 로 편다. 칸마다 0..1 을 주면
                 // 텍스처가 칸마다 반복돼 "바닥 한 장" 이 아니라 타일이 된다.
                 for ( const float3& position : { p00, p01, p11, p00, p11, p10 } )
                 {

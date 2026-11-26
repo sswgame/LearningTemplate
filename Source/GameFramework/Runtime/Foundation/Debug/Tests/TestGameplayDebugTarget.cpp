@@ -9,7 +9,7 @@
 
 #include "GameFramework/Runtime/Foundation/Debug/GameplayDebugTarget.h"
 
-// GameplayDebugTargetTest — 디버그 섹션의 대상 고르기: 대상을 정하지 않으면 그 컴포넌트를 가진 오브젝트 가운데 id 가 가장 작은 것이다(nogpu, 헤드리스 — 디버그 HUD 서비스가 없어 대상이 비었다).
+// GameplayDebugTargetTest: 디버그 섹션의 대상 고르기: 대상을 정하지 않으면 그 컴포넌트를 가진 오브젝트 가운데 id 가 가장 작은 것이다(nogpu, 헤드리스. 디버그 HUD 서비스가 없어 대상이 비었다).
 
 using namespace sw;
 

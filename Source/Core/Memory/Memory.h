@@ -48,7 +48,7 @@ namespace sw
     /**
      * @brief 할당마다 불리는 기록기입니다(`MemoryProfiler` 가 구현합니다). `Memory::registerAllocationTracker` 로 겁니다.
      * @details 프로파일러는 컨테이너 · 호출 스택을 쓰므로 위층(Diagnostics)에 있고, 할당기는 이 인터페이스만 압니다. 배포본에서는 불리지 않습니다(헤더가 없다).
-     *          **해제는 이 기록기가 세었다고 답한 블록만 받습니다**(`AllocationRecord::_bCounted`). 블록 헤더에는 센 기록기의 번호(`getTrackerID`)가
+     *          해제는 이 기록기가 세었다고 답한 블록만 받습니다(`AllocationRecord::_bCounted`). 블록 헤더에는 센 기록기의 번호(`getTrackerID`)가
      *          남으므로, 기록기를 교체해도 다른 기록기가 센 블록의 해제는 오지 않습니다.
      */
     class SW_API AllocationTracker
@@ -111,7 +111,7 @@ namespace sw
         static void* allocate( size_t size );
         /**
          * @brief `allocate` · `allocateAligned` 로 잡은 블록을 풉니다. nullptr 이면 아무것도 하지 않습니다.
-         * @details **해제 길은 하나다.** 정렬 블록을 따로 푸는 함수가 있으면 부르는 쪽이 짝을 골라야 하고, 틀리면 백엔드에 따라 힙이 깨졌다(CRT 의 Windows 정렬 블록) —
+         * @details 해제 길은 하나다. 정렬 블록을 따로 푸는 함수가 있으면 부르는 쪽이 짝을 골라야 하고, 틀리면 백엔드에 따라 힙이 깨졌다(CRT 의 Windows 정렬 블록) —
          *          그래서 CRT 백엔드는 Windows 에서 모든 블록을 정렬 힙(`_aligned_malloc`)에서 잡는다(언리얼 `FMalloc::Free` 도 하나다).
          */
         static void free( void* pPtr );
@@ -136,7 +136,7 @@ namespace sw
 
         /**
          * @brief 할당 · 해제를 밖(외부 프로파일러)에 알리는 관찰자를 겁니다. 배포본은 블록 헤더가 없어 알리지 않습니다.
-         * @details 관찰자가 걸린 동안 할당된 블록에만 표시를 남기고, **그 블록의 해제만** 알립니다 — 관찰자를 걸기 전에 잡은 블록의 해제를
+         * @details 관찰자가 걸린 동안 할당된 블록에만 표시를 남기고, 그 블록의 해제만 알립니다 — 관찰자를 걸기 전에 잡은 블록의 해제를
          *          알리면 받는 쪽(Tracy)은 짝 없는 해제로 기록을 멈춥니다. 관찰자는 하나이고 이미 걸려 있으면 이중 등록 단언입니다(덮어쓰지 않는다).
          *          @p pObserver 는 돌려준 토큰이 사라질 때까지 살아 있어야 합니다.
          */
@@ -170,7 +170,7 @@ namespace sw
 {
     /**
      * @brief `T` 를 담는 블록을 정렬 할당(`allocateAligned`)으로 잡아야 하는지입니다. 할당 쪽만 본다 — 해제는 `Memory::free` 하나다.
-     * @details **`make_unique` · `Allocator` · `sw_new_array_func` 가 이 한 기준을 씁니다.** 기준은 컴파일러가 정렬 `operator new` 를
+     * @details `make_unique` · `Allocator` · `sw_new_array_func` 가 이 한 기준을 씁니다. 기준은 컴파일러가 정렬 `operator new` 를
      *          고르는 경계(`__STDCPP_DEFAULT_NEW_ALIGNMENT__`, x64 에서 16)입니다. `Memory::allocate` 는 16 바이트 정렬을 보장합니다(헤더 48 바이트).
      *          64 바이트 정렬 타입(`ParallelGroup` 등)과 `vector` · `make_shared` 에 담긴 과정렬 타입도 이 기준으로 정렬 할당을 받습니다.
      */
@@ -189,7 +189,7 @@ namespace sw
 
         /**
          * @brief 원소 `n` 개 분량의 메모리를 잡습니다.
-         * @details `n * sizeof( T )` 가 **오버플로하면 요청보다 훨씬 작은 블록이 잡히고**, 호출하는 쪽은 원소 `n` 개를 쓸 수 있다고
+         * @details `n * sizeof( T )` 가 오버플로하면 요청보다 훨씬 작은 블록이 잡히고, 호출하는 쪽은 원소 `n` 개를 쓸 수 있다고
          *          믿고 그 밖에 씁니다. 표준 할당자가 같은 상황에서 예외를 던지는 이유입니다(`vector::max_size()` 가 알려 주는 한계를 여기서 강제합니다).
          */
         [[nodiscard]] T* allocate( size_t n )
@@ -253,7 +253,7 @@ void sw_delete( T* pPtr )
 }
 
 /**
- * @brief `make_unique<T[]>` 가 만든 배열을 해제합니다(`default_delete<T[]>` 만 부릅니다). **원소의 소멸자는 부르지 않습니다.**
+ * @brief `make_unique<T[]>` 가 만든 배열을 해제합니다(`default_delete<T[]>` 만 부릅니다). 원소의 소멸자는 부르지 않습니다.
  * @warning 그래서 소멸자가 하는 일이 없는 타입(trivially destructible)에만 쓸 수 있습니다. 소멸이 필요한 배열은 `vector<T>` 를 쓰거나,
  *          개수를 컴파일 때 아는 청크는 `FixedCountArray<T, N>`(`makeFixedCountArray`)를 쓰십시오(`PagedArray` 가 후자입니다. 임의의 T 를 담기 때문입니다).
  */
@@ -271,7 +271,7 @@ void sw_delete_array_func( T* pPtr )
 #define sw_placement_new( pPtr ) new ( static_cast<void*>( pPtr ) )
 
 /**
- * @brief 원소 @p count 개를 값 초기화(`T{}`)한 배열을 sw 할당자로 잡습니다. **맨 포인터를 돌려주므로 `make_unique<T[]>` · `makeFixedCountArray` 안에서만 부릅니다.**
+ * @brief 원소 @p count 개를 값 초기화(`T{}`)한 배열을 sw 할당자로 잡습니다. 맨 포인터를 돌려주므로 `make_unique<T[]>` · `makeFixedCountArray` 안에서만 부릅니다.
  * @details 배열 앞에 개수 쿠키를 두지 않으므로 소멸자가 있는 타입도 담을 수 있습니다. 대신 풀 때 같은 개수를 다시
  *          넘겨야 원소 소멸자가 불립니다(그 짝을 손으로 맞추지 않게 `FixedCountArray` 가 개수를 해제자 타입에 넣습니다). 원소 생성자는 예외를 던지지 않아야 합니다(던지면 이미 만든 원소와 블록이 샙니다).
  * @return 첫 원소 주소. 크기가 넘치거나 할당에 실패하면 `std::bad_alloc` 을 던집니다(`Allocator::allocate` 와 같습니다).
@@ -487,7 +487,7 @@ namespace sw
     };
 
     /**
-     * @brief 스코프 동안 이 스레드가 **들어올 때의 태그로** 잡아 남긴 바이트를 잽니다(잡았다 놓은 임시 버퍼는 빠진다). 같은 태그로 안쪽에 또 잰 것은 빼므로 겹쳐 세지 않습니다.
+     * @brief 스코프 동안 이 스레드가 들어올 때의 태그로 잡아 남긴 바이트를 잽니다(잡았다 놓은 임시 버퍼는 빠진다). 같은 태그로 안쪽에 또 잰 것은 빼므로 겹쳐 세지 않습니다.
      * @details 태그가 다른 할당은 남의 것이다 — 머티리얼을 짓다 텍스처 캐시가 잡은 몫은 텍스처 태그라 섞이지 않는다(캐시 · 로더마다 제 태그를 건다).
      *          태그 표는 "무엇에 쓰나"(Animation · Game …)로 나눈 합이라 에셋 하나의 몫을 모른다. 읽는 동안 남긴 바이트를 에셋마다 적으면 종류마다 크기 함수를 적지 않아도 안쪽 컨테이너까지 정확하다
      *          (유니티 네이티브 메모리의 할당 주인 · 언리얼 LLM 의 에셋 태그와 같은 자리). 배포본은 늘 0 입니다(`kMemoryTagScopesEnabled`).

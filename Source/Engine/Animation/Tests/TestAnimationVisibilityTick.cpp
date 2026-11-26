@@ -187,7 +187,7 @@ namespace AnimationVisibilityTickTestInternal
 
         // (a) 루트 모션 — 다가오는 거리 · 시간이 같다.
         SW_EXPECT_NEAR( visibleTask.getRootTravel(), offscreenTask.getRootTravel(), 1e-5f );
-        // (c) 알림 — 같은 프레임에 같은 순서로, 빠짐 · 겹침 없이(2.5 초에 FootL · Impact · FootR 가 세 번씩 — 마지막 FootR 은 2.6 초라 두 번).
+        // (c) 알림: 같은 프레임에 같은 순서로, 빠짐 · 겹침 없이(2.5 초에 FootL · Impact · FootR 가 세 번씩, 마지막 FootR 은 2.6 초라 두 번).
         const vector<HitRecord>& listVisible   = visibleTask.getRecords();
         const vector<HitRecord>& listOffscreen = offscreenTask.getRecords();
         SW_EXPECT_EQUAL( size_t( 8 ), listVisible.size() );

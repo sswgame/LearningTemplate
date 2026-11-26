@@ -16,7 +16,7 @@ namespace sw
 {
     /**
      * @enum VulkanSwapChainStatus
-     * @brief acquire / present 결과 중 **프레임 루프가 실제로 분기하는** 네 가지입니다.
+     * @brief acquire / present 결과 중 프레임 루프가 실제로 분기하는 네 가지입니다.
      * @details `VkResult` 를 그대로 내보내지 않는 이유는 두 가지입니다. 헤더에 Vulkan 열거형을 노출하지
      *          않으려는 것이 하나고(`VulkanRHIHandle.h` 참고), 40여 개 결과 코드 중 프레임 루프가
      *          정말 구분하는 것은 이 넷뿐이라는 것이 다른 하나입니다.
@@ -42,17 +42,17 @@ namespace sw
         Xlib,    ///< VK_KHR_xlib_surface — Display* 와 X11 Window
         Xcb,     ///< VK_KHR_xcb_surface — Display* 에서 얻은 xcb 연결과 X11 Window
         Wayland, ///< VK_KHR_wayland_surface — wl_display* 와 wl_surface*
-        Android, ///< VK_KHR_android_surface — ANativeWindow*(앱 수명 안에서 사라졌다 생긴다 — `IRHIDevice::releaseSurface` · `restoreSurface`)
+        Android, ///< VK_KHR_android_surface, ANativeWindow*(앱 수명 안에서 사라졌다 생긴다, `IRHIDevice::releaseSurface` · `restoreSurface`)
     };
 
     /**
      * @class VulkanRHISwapChain
-     * @brief 창 하나의 서피스, 스왑체인, 백버퍼 이미지입니다. **만들고, 다시 만들고, 다음 이미지를 받고, 표시합니다.**
+     * @brief 창 하나의 서피스, 스왑체인, 백버퍼 이미지입니다. 만들고, 다시 만들고, 다음 이미지를 받고, 표시합니다.
      * @details Vulkan 은 다른 API 와 달리 백버퍼에 딸린 것이 많습니다. 이미지, 이미지 뷰, 프레임버퍼,
      *          그리고 "이 이미지를 써도 된다"(acquire)와 "이 이미지를 다 그렸다"(renderFinished)를
      *          알리는 세마포어 두 종류입니다. 모두 스왑체인의 수명과 같이 가므로 여기 모아 둡니다.
      *
-     *          세마포어 두 종류는 **인덱스가 다릅니다.** acquire 세마포어는 인플라이트 프레임 슬롯
+     *          세마포어 두 종류는 인덱스가 다릅니다. acquire 세마포어는 인플라이트 프레임 슬롯
      *          (`frameSlot`)으로, renderFinished 세마포어는 스왑체인 이미지 인덱스로 셉니다. 드라이버가
      *          인플라이트 프레임 수보다 적은 이미지를 줄 수 있어서 두 개수가 같다는 보장이 없습니다.
      *          획득한 이미지를 표시하지 않고 끝난 프레임(무인 실행 · bPresent=false)은 그 이미지를 쥔 채로 다음 프레임에 넘긴다 —
@@ -70,7 +70,7 @@ namespace sw
         VulkanRHISwapChain& operator=( const VulkanRHISwapChain& ) = delete;
 
         /**
-         * @brief 창에 붙는 서피스를 만듭니다. **논리 디바이스보다 먼저** 있어야 합니다.
+         * @brief 창에 붙는 서피스를 만듭니다. 논리 디바이스보다 먼저 있어야 합니다.
          * @details 물리 디바이스를 고를 때 "이 큐 패밀리가 이 서피스에 present 할 수 있는가"를 묻기
          *          때문입니다. 그래서 서피스만 인스턴스 단계에서 먼저 만들어 둡니다.
          * @param wsiKind 인스턴스를 만들 때 고른 서피스 확장입니다. 이 플랫폼에서 만들 수 없는 종류(`None` 포함)는 대신하지 않고 false 입니다.
@@ -83,7 +83,7 @@ namespace sw
         /**
          * @brief 백버퍼 포맷, 개수, VSync 요청값을 기억합니다. 서피스 능력으로 제한될 수 있습니다.
          * @details VSync 가 여기 있는 이유: Vulkan 은 다른 셋과 달리 present 호출에 동기화 인자가 없고
-         *          **스왑체인의 present 모드**가 그 역할을 합니다. 그래서 스왑체인을 다시 만들 때도 같은
+         *          스왑체인의 present 모드가 그 역할을 합니다. 그래서 스왑체인을 다시 만들 때도 같은
          *          요청을 다시 써야 합니다. 백버퍼 포맷과 개수를 여기 두는 것과 같은 이유입니다.
          */
         void setRequested( RHIFormat format, uint32 bufferCount, bool bVSync );

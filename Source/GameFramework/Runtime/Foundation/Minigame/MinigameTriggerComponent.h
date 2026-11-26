@@ -17,7 +17,7 @@ namespace sw
 
     /**
      * @class MinigameTriggerComponent
-     * @brief 활성자가 들어오면(`TriggerComponent` — 겹침 또는 거리) `_minigame` 으로 들어가기를 `MinigameFlow` 에 맡깁니다(`requestEnter` — 다음 게임 프레임 앞, 틱 밖).
+     * @brief 활성자가 들어오면(`TriggerComponent`: 겹침 또는 거리) `_minigame` 으로 들어가기를 `MinigameFlow` 에 맡깁니다(`requestEnter`: 다음 게임 프레임 앞, 틱 밖).
      * @details 용과 같이 · GTA 의 가게 문 · 오락실 기계, 유니티의 `OnTriggerEnter` 에서 `SceneManager.LoadScene` 을 부르는 스크립트 자리다 —
      *          게임마다 적는 일을 데이터 칸 하나로 둔다. 진입이 되었는지는 흐름이 알린다(맡기기까지가 발동이다).
      *          판정 자리: 접속한 세션에서 보통 미니게임은 서버만 판정한다(게임 상태를 바꾸는 일). 매치형은 닿은 클라이언트가 매칭 서버에 줄을 세워 달라고 요청한다 —

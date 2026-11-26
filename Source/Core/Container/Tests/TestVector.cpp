@@ -192,7 +192,7 @@ SW_TEST_CASE( VectorTest, VectorConstructorsAndRangeOperations )
  * @brief [VectorTest] 바이트 복사 빠른 경로가 값을 그대로 옮긴다.
  * @details `vector` 는 복사에도 소멸에도 사용자 코드가 없는 타입이면 원소 루프 대신 `Memory::copy`
  *          한 번으로 옮긴다. 그 경로가 크기·용량·값을 바꾸지 않는지 고정한다 — 빈 대상과
- *          **이미 원소가 든 대상**(clear 뒤 재사용) 양쪽을 본다. 후자가 매 프레임 렌더 패킷이 타는 길이다.
+ *          이미 원소가 든 대상(clear 뒤 재사용) 양쪽을 본다. 후자가 매 프레임 렌더 패킷이 타는 길이다.
  */
 SW_TEST_CASE( VectorTest, BitwiseCopyKeepsValues )
 {
@@ -234,7 +234,7 @@ SW_TEST_CASE( VectorTest, BitwiseCopyKeepsValues )
 
 /**
  * @brief [VectorTest] 루프 경로는 생성자·소멸자 짝을 그대로 지킨다.
- * @details 빠른 경로를 넣으면서 **분기를 잘못 태우면** 여기서 살아 있는 개수가 어긋난다.
+ * @details 빠른 경로를 넣으면서 분기를 잘못 태우면 여기서 살아 있는 개수가 어긋난다.
  *          성장(재할당)과 복사 대입 둘 다 통과시킨다.
  */
 SW_TEST_CASE( VectorTest, NonTrivialCopyKeepsLifetimeBalance )
@@ -264,7 +264,7 @@ SW_TEST_CASE( VectorTest, NonTrivialCopyKeepsLifetimeBalance )
 /**
  * @brief [VectorTest] 가진 것보다 많이 끼워 넣어도 범위 밖을 읽지 않는다
  * @details `insert( pos, count, value )` 의 첫 루프가 `itemIndex - count >= offset` 으로 "옮길
- *          원소인가" 를 갈랐다. `count > _size` 면 그 뺄셈이 **size_t 로 뒤집혀** 조건이 언제나
+ *          원소인가" 를 갈랐다. `count > _size` 면 그 뺄셈이 size_t 로 뒤집혀 조건이 언제나
  *          참이 되고, 존재하지도 않는 `_pData[2^64-k]` 에서 move 해 온다. 앞쪽에 두 개만 끼워
  *          넣어도(`{1} 에 insert(begin, 2, ...)`) 바로 걸린다.
  */
@@ -307,7 +307,7 @@ SW_TEST_CASE( VectorTest, InsertMoreThanSizeDoesNotReadOutOfBounds )
 /**
  * @brief [VectorTest] 0개를 끼워 넣는 것은 아무 일도 하지 않는다
  * @details count 가 0 이면 두 번째 루프의 종료 조건이 `itemIndex >= offset + 0` 이 된다. offset 이 0
- *          이면 **언제나 참**이라 `itemIndex` 가 0 에서 한 번 더 줄어 size_t 로 뒤집히고, 범위 밖에
+ *          이면 언제나 참이라 `itemIndex` 가 0 에서 한 번 더 줄어 size_t 로 뒤집히고, 범위 밖에
  *          계속 쓰면서 끝나지 않는다. 그 전에 `_pData[i] = move(_pData[i])` 라는 자기 자신으로의
  *          이동 대입도 돈다.
  */
@@ -333,7 +333,7 @@ SW_TEST_CASE( VectorTest, InsertZeroCountIsANoOp )
  * @brief [VectorTest] 자기 안의 원소를 끼워 넣어도 된다
  * @details `v.insert( v.begin(), 3, v[0] )` 는 적법한 호출이다. 그런데 그 자리를 덮어쓰기도 하고,
  *          그 전에 재할당이 버퍼를 통째로 옮기기도 한다 — 참조로 들고 있으면 둘 중 하나에서
- *          **이미 사라진 값**을 복사하게 된다. 손대기 전에 값으로 떠 둔다.
+ *          이미 사라진 값을 복사하게 된다. 손대기 전에 값으로 떠 둔다.
  */
 SW_TEST_CASE( VectorTest, InsertAcceptsAnElementOfItself )
 {
@@ -357,10 +357,10 @@ SW_TEST_CASE( VectorTest, InsertAcceptsAnElementOfItself )
 /**
  * @brief [VectorTest] 이동 삽입의 원본이 이 벡터 안의 원소여도 올바른 값이 들어가는지 검증
  * @details `insert( pos, count, value )` 는 값을 먼저 떠 두는데(그 주석에 `v.insert( v.begin(),
- *          3, v[0] )` 이 적법하다고 적혀 있다) **이동 오버로드도 그래야 한다.**
+ *          3, v[0] )` 이 적법하다고 적혀 있다) 이동 오버로드도 그래야 한다.
  *          `push_back` 둘과 `emplace_back` 도 전부 떠 둔다.
  *
- *          재할당이 없어도 틀린다 — 밀기 루프가 `value` 가 가리키는 칸을 **먼저 덮기** 때문이다.
+ *          재할당이 없어도 틀린다 — 밀기 루프가 `value` 가 가리키는 칸을 먼저 덮기 때문이다.
  *          재할당까지 겹치면 옛 버퍼가 해제된 뒤라 죽은 자리를 읽는다(ASAN).
  */
 SW_TEST_CASE( VectorTest, InsertMoveAcceptsAnElementOfItself )
@@ -405,7 +405,7 @@ SW_TEST_CASE( VectorTest, InsertMoveAcceptsAnElementOfItself )
 
 /**
  * @brief [VectorTest] 빈 벡터에서 `pop_back` 이 범위 밖을 건드리지 않는지 검증
- * @details `SW_ASSERT( _size > 0 )` 는 **Release 에서는 통째로 사라진다.** 진짜 가드가 없으면
+ * @details `SW_ASSERT( _size > 0 )` 는 Release 에서는 통째로 사라진다. 진짜 가드가 없으면
  *          `_pData[_size - 1].~T()` 의 첨자가 뒤집혀 `_pData[SIZE_MAX]` 의 소멸자를 부른다.
  */
 SW_TEST_CASE( VectorTest, PopBackOnAnEmptyVectorIsSafe )
@@ -427,7 +427,7 @@ SW_TEST_CASE( VectorTest, PopBackOnAnEmptyVectorIsSafe )
 /**
  * @brief [VectorTest] 뒤집힌 이터레이터 쌍과 거대한 개수가 첨자를 접지 않는지 검증
  * @details 가드를 덧셈 형태로 쓰면 — `erase` 는 `offset + count > _size`, `insert` 는
- *          `_size + count > _capacity` — `size_t` 안에서 그 합이 넘칠 때 **작은 수로 접혀**
+ *          `_size + count > _capacity` — `size_t` 안에서 그 합이 넘칠 때 작은 수로 접혀
  *          가드를 그냥 지나간다. `last < first` 인 이터레이터 쌍이면 `last - first` 가 음수라
  *          `count` 가 거대해지고(뒤집힌 뺄셈으로 만든 개수도 같다), 그 뒤 `_size - count` 와
  *          `fromIndex + count` 가 전부 범위 밖을 가리킨다(`fixed_string::erase` 도 같은 모양을 지킨다).
@@ -514,7 +514,7 @@ SW_TEST_CASE( VectorTest, InlineStorageMoveKeepsElements )
 }
 
 /**
- * @brief [VectorTest] 복사 대입은 용량이 넉넉하면 원소를 **대입**한다 — 원소 안의 힙이 제 용량을 남긴다
+ * @brief [VectorTest] 복사 대입은 용량이 넉넉하면 원소를 대입한다 — 원소 안의 힙이 제 용량을 남긴다
  * @details 부수고 다시 만들면 겉 벡터의 용량은 남아도 안의 문자열은 매번 새 힙이다(스냅샷의 그룹 목록이 그랬다).
  *          std::vector 와 같은 규칙: 겹치는 앞부분 대입, 남는 뒤는 새로 만들거나 부순다.
  */

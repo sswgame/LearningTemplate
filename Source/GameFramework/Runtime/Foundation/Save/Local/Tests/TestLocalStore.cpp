@@ -148,7 +148,7 @@ SW_TEST_CASE( LocalStoreFileTest, FactoryBuildsFileAndMemoryAndRefusesUnknownBac
     SW_REQUIRE_FALSE( cloudStore.has_value() );
     SW_EXPECT_TRUE( cloudStore.error().detail() == "cloud" );
     {
-        // 기반 이름은 키트가 덮지 못한다 — 기반 백엔드도 같은 표에 있어 이름 중복으로 거절된다(정적 등록이면 시작 검사가 멈춘다 — 여기서는 손으로 올려 세지 않는다).
+        // 기반 이름은 키트가 덮지 못한다. 기반 백엔드도 같은 표에 있어 이름 중복으로 거절된다(정적 등록이면 시작 검사가 멈추고, 여기서는 손으로 올려 세지 않는다).
         SW_EXPECT_LOG( "Registration.DuplicateName" );
         const LocalStoreBackend reserved{ LocalStoreBackend::kFileBackendName, &createNeverUsedLocalStorage };
         SW_EXPECT_FALSE( LocalStoreBackend::registerBackend( &reserved ) );

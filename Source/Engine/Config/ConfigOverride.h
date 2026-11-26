@@ -1,7 +1,7 @@
 /**
  * @file ConfigOverride.h
  * @brief 엔진 설정의 덮어쓰기 층 둘입니다 — 플랫폼 층(`PlatformConfigOverride`)과 렌더 품질 단계 층(`RenderQualityOverride`).
- * @details **플랫폼 층**
+ * @details 플랫폼 층
  *          호스트 엔진 설정의 플랫폼 덮어쓰기 층입니다 — `Config/Platform/<플랫폼>/EngineConfig.json` 이 `Config/Engine/EngineConfig.json` 위에 섭니다.
  *          언리얼의 플랫폼 ini 층(`Config/<Platform>/<Platform>Engine.ini` 가 `DefaultEngine.ini` 를 덮는다)과 같은 자리다. 덮어쓰기 파일은 바뀌는 키만 적는다
  *          (빈 객체도 된다). 없으면 덮어쓰기가 없다 — 선택 층이다. 합친 결과는 바탕 층과 같은 엄격 읽기(`ConfigManager::readConfigJSON`)를 지나므로
@@ -9,7 +9,7 @@
  *          (`shipping_host::kEngineConfigPlatformOverrideJSON`)을 같은 합치기(`apply`) 하나로 덮는다.
  *          게임 프리셋은 팩 루트 한 칸뿐이라 이 층이 없다 — 게임의 쿠킹 규칙 층(`GameConfig::_cookRules`)과 같은 "바탕 뒤에 합친다" 모양이다.
  *
- *          **렌더 품질 단계 층**
+ *          렌더 품질 단계 층
  *          렌더 품질 단계 층입니다 — `Config/Engine/RenderQuality.json` 의 고른 단계가 엔진 설정의 `_render` 위에 섭니다(바탕 → 플랫폼 → 품질 단계).
  *          언리얼 스케일러빌리티 그룹(`sg.*` 단계마다 `r.*` 묶음) · 유니티 SRP 품질 에셋(품질 단계마다 렌더 파이프라인 에셋) 자리다.
  *          표는 단계 이름 → `RenderConfig` 덮어쓰기 객체이고, 단계는 `_render` 안쪽만 적는다 — 층이 `{ "_render": <단계> }` 로 감싸므로 다른 칸은 형식상 건드릴 수 없다.

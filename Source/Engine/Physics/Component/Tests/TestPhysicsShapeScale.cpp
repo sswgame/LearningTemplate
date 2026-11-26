@@ -197,7 +197,7 @@ SW_TEST_CASE( PhysicsShapeScaleTest, RigidBody2DFollowsScale )
 }
 
 /**
- * @brief [PhysicsShapeScaleTest] 바닥에 놓인 3D 상자의 배율을 바꿔도 접촉은 끝 → 시작을 내지 않는다(셰이프만 간다 — 감사 S-4) — 줄여 떨어지면 그때만 끝난다
+ * @brief [PhysicsShapeScaleTest] 바닥에 놓인 3D 상자의 배율을 바꿔도 접촉은 끝 → 시작을 내지 않는다(셰이프만 간다, 감사 S-4). 줄여 떨어지면 그때만 끝난다
  * @details 상자는 바닥에 0.01 들어가 닿은 채 놓인다. 가로(XZ)만 1.5 배로 키우면 높이가 그대로라 계속 닿아 있다. 이어서 세로를 0.5 배로 줄이면 바닥과
  *          0.24 벌어져 다음 프레임에 끝이 난다.
  */

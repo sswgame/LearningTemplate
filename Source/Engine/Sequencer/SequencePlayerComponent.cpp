@@ -652,7 +652,7 @@ namespace sw
         if ( listCrossed.empty() )
             return;
 
-        // **사본으로 알린다.** 지난 항목은 플레이어가 가진 에셋의 원소라, 핸들러가 다른 시퀀스를 설정하면(`setSequence`) 남은 포인터가 무효가 된다.
+        // 사본으로 알린다. 지난 항목은 플레이어가 가진 에셋의 원소라, 핸들러가 다른 시퀀스를 설정하면(`setSequence`) 남은 포인터가 무효가 된다.
         vector<SequenceFiredEvent> listEvent;
         listEvent.reserve( listCrossed.size() );
         for ( const SequenceTrackItem* pItem : listCrossed )

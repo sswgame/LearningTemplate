@@ -131,7 +131,7 @@ namespace sw::editor
     {
         {
             // 씬 뷰의 보기 모드다(`FrameRenderer::setSceneViewMode`) — 게임 뷰는 늘 주 출력 모드(Lit)로 그린다(언리얼 뷰포트마다의 View Mode).
-            // 값이 아니라 **렌더러 상태**가 원본이므로 프레임마다 모은 값(`ViewportToolbarState::_sceneViewMode`)을 표시하고, 고르면 요청 칸에 적는다. 항목 목록은 보기 모드 표(kArrRenderViewModeInfo)를 돈다.
+            // 값이 아니라 렌더러 상태가 원본이므로 프레임마다 모은 값(`ViewportToolbarState::_sceneViewMode`)을 표시하고, 고르면 요청 칸에 적는다. 항목 목록은 보기 모드 표(kArrRenderViewModeInfo)를 돈다.
             // 렌더러가 없는 호스트(테스트 하네스)에서는 값이 비어 콤보를 막는다.
             const bool           bHasRenderer = state._sceneViewMode.has_value();
             const RenderViewMode currentMode  = bHasRenderer ? *state._sceneViewMode : RenderViewMode::Lit;

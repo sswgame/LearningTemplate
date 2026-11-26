@@ -178,7 +178,7 @@ namespace sw
         /** @brief `writeReport` 의 글을 되읽습니다. 빈 줄은 건너뛰고, 형식이 다른 줄이 하나라도 있으면 목록을 비우고 false 입니다. */
         [[nodiscard]] static bool parseReport( string_view text, vector<StateHashSample>& outListSample );
         /**
-         * @brief 두 이력에서 틱이 같은데 해시가 다른 **가장 이른 틱**을 찾습니다. 한쪽에만 있는 틱은 건너뜁니다.
+         * @brief 두 이력에서 틱이 같은데 해시가 다른 가장 이른 틱을 찾습니다. 한쪽에만 있는 틱은 건너뜁니다.
          * @return 찾았으면 true
          */
         [[nodiscard]] static bool findFirstDivergence( const vector<StateHashSample>& listLeft, const vector<StateHashSample>& listRight, uint64& outTick );

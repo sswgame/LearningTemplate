@@ -3,7 +3,7 @@
  * @brief 방출기마다의 입자 그리기(`GPUParticleBatch`)를 투명 패스에 빌보드로 그립니다(렌더 스레드). `FrameRenderer` 가 소유합니다.
  * @details 캔버스 렌더러(`CanvasRenderer`)와 같은 모양이다: 기록 전(`prepareFrame`)에 입자 버퍼와 텍스처를 갖추고, 기록 중(`drawBatches`)에는 바인딩과 드로우만 한다.
  *          CPU 방출기의 입자는 프레임마다 모두 이어 붙인 구조 버퍼 하나로 올리고(패스 전용 슬롯 t11 — `shaderslot::kPassBuffer`), 방출기 하나가 `drawInstanced( 6, 입자 수 )` 하나다.
- *          정렬 모드가 있는 CPU 방출기는 자리(`GPUTransparentParticleSlot::_order`)의 구간으로 순서 목록(t3 — `shaderslot::kParticleOrderBuffer`)을 거쳐 입자를 고른다 — 입자는 옮기지 않는다.
+ *          정렬 모드가 있는 CPU 방출기는 자리(`GPUTransparentParticleSlot::_order`)의 구간으로 순서 목록(t3, `shaderslot::kParticleOrderBuffer`)을 거쳐 입자를 고른다. 입자는 옮기지 않는다.
  *          GPU 방출기는 `VFXGPUSimulation` 이 프레임 그래프에서 만든 자기 렌더 입력을 t11 에 걸고 간접 인자(`drawIndirect`)로 그린다 — 입자 수를 CPU 가 모른다.
  *          PSO 와 PassCB 바인딩은 부르는 쪽(`FramePassExecutor::drawParticleSlots`)이 한다. 그리는 순서와 메시 투명 배치 사이의 자리는 스냅샷의 자리 목록이 정한다.
  *          메시 배치 사이에 끼는 자리마다 PSO 를 입자 것으로 바꿨다가 되돌린다(교차 정렬의 비용 — 자리가 이어지는 입자는 한 번에 그린다).
@@ -49,7 +49,7 @@ namespace sw
         VFXParticleRenderer& operator=( const VFXParticleRenderer& ) = delete;
 
         /**
-         * @brief 이번 프레임의 입자를 올리고 텍스처를 빌립니다. **기록 시작 전에** 부릅니다(버퍼 생성과 텍스처 읽기는 기록 중에 할 수 없다).
+         * @brief 이번 프레임의 입자를 올리고 텍스처를 빌립니다. 기록 시작 전에 부릅니다(버퍼 생성과 텍스처 읽기는 기록 중에 할 수 없다).
          * @details 방출기마다 버퍼 안 시작 위치를 기억한다(`drawBatches` 가 같은 목록으로 부른다). 처음 보는 텍스처 경로는 `TextureCache` 에서 빌리고 `release` 까지 든다.
          *          GPU 방출기(빌보드 · 띠 · 메시)의 상태와 매개변수도 여기서 갖춘다(`VFXGPUSimulation::prepareFrame`).
          * @param listMeshEmitter GPU 메시 방출기(인스턴스 칸 목록) — 그리기는 메시 경로가 한다

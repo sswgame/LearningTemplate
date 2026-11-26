@@ -1,4 +1,4 @@
-// VirtualInputScriptTest · InputReplayTest — 가상 입력 원천: 프레임 순서 · 탭 · 마우스 위치 · 밀기, 녹화 · 시작 프레임 · 파일 왕복과 망가진 파일 거절, VirtualInputAttachmentTest — 붙임의 쌓임과 수명(nogpu).
+// VirtualInputScriptTest · InputReplayTest: 가상 입력 원천: 프레임 순서 · 탭 · 마우스 위치 · 밀기, 녹화 · 시작 프레임 · 파일 왕복과 망가진 파일 거절, VirtualInputAttachmentTest: 붙임의 쌓임과 수명(nogpu).
 #include "pch.h"
 
 #include "Core/File/FileUtil.h"

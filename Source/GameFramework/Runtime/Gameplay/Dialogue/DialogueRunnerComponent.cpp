@@ -357,9 +357,9 @@ namespace sw
         if ( _onLine.isBound() == false )
             return;
 
-        // **사본을 넘긴다.** 델리게이트는 `const string&` 를 받는데 그것이 이 객체의 멤버를
+        // 사본을 넘긴다. 델리게이트는 `const string&` 를 받는데 그것이 이 객체의 멤버를
         // 그대로 가리키면, 핸들러가 그 안에서 `advance()` · `stopDialogue()` · `startDialogue()`
-        // 를 부르는 순간 **자기가 받은 참조가 바뀌거나 비워진다.** 대화 UI 에서 "이 줄을 보고
+        // 를 부르는 순간 자기가 받은 참조가 바뀌거나 비워진다. 대화 UI 에서 "이 줄을 보고
         // 바로 다음으로 넘긴다" 는 가장 흔한 사용법이고, 그러면 핸들러가 돌아와서 읽는 `text`
         // 는 방금 받은 줄이 아니라 다음 줄이다(재할당이 일어났으면 그마저도 아니다).
         const string             speaker = _currentSpeaker;
@@ -387,7 +387,7 @@ namespace sw
         if ( _onChoices.isBound() == false )
             return;
 
-        // 위와 같은 이유다. 이쪽은 더 나쁜데, 핸들러가 목록을 **돌면서** `selectChoice()` 를
+        // 위와 같은 이유다. 이쪽은 더 나쁜데, 핸들러가 목록을 돌면서 `selectChoice()` 를
         // 부르면 그 순간 `_listCurrentChoice` 가 비워지고 다시 채워진다.
         const vector<string>        listChoice = _listCurrentChoice;
         const OnDialogueChoicesFunc onChoices  = _onChoices.get();
@@ -410,9 +410,9 @@ namespace sw
         context._world  = makeWorld( nodeID );
         context._pOwner = this;
 
-        // **값으로 받는다.** `const string&` 로 받으면 `node._actionCommand`, 곧 `_graph` 가 가진
+        // 값으로 받는다. `const string&` 로 받으면 `node._actionCommand`, 곧 `_graph` 가 가진
         // 문자열을 가리킨다. 아래 `_onEvent` 핸들러가 `loadGraphFile()` 로 그래프를 갈면
-        // 그 참조는 죽은 메모리가 되는데, **그 뒤로도 계속 읽는다**(`startsWith` · `substr`).
+        // 그 참조는 죽은 메모리가 되는데, 그 뒤로도 계속 읽는다(`startsWith` · `substr`).
         SW_LOG_TRACE_ID( "DialogueRunnerComponent.ExecuteAction", "Execute Action: %#", actionCmd );
         if ( _onEvent.isBound() )
         {

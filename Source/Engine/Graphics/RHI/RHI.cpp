@@ -287,7 +287,7 @@ namespace sw
             }
         }
 
-        // `-gv_rhiBackend=<이름>` 도 **명시적 지정**이다. 짧은 플래그만 보면 전역 변수로 고른 백엔드를
+        // `-gv_rhiBackend=<이름>` 도 명시적 지정이다. 짧은 플래그만 보면 전역 변수로 고른 백엔드를
         // EngineConfig 기본값이 로그 없이 덮어쓴다. 값 자체는 updateFromCommandLine 이 이미 전역
         // 변수에 넣어 두었으므로 여기서는 그것을 읽는다.
         if ( commandLineManager.isArgumentProvided( "gv_rhiBackend" ) )
@@ -321,7 +321,7 @@ namespace sw
         // 우선순위: 명시한 CLI > 지금 전역 변수 값 > OS 기본값 > 처음으로 쓸 수 있는 것
         RHIBackend currentBackend = gv_rhiBackend;
 
-        // 커맨드라인이 고른 것은 **폴백하지 않는다.** 쓸 수 없으면 아래에서 에러로 선다.
+        // 커맨드라인이 고른 것은 폴백하지 않는다. 쓸 수 없으면 아래에서 에러로 선다.
         // 조용히 다른 백엔드로 뜨면 "네 백엔드를 확인했다" 가 거짓이 된다.
         RHIBackend commandLineBackend{};
         const bool bCommandLineOverride = RHI::findCommandLineBackend( engine::getSubsystem<CommandLineManager>(), commandLineBackend );

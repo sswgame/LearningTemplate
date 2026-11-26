@@ -482,7 +482,7 @@ namespace sw
                 _listPendingCopy.push_back( PendingPositionCopy{ span._mesh, byteOffset, byteCount } );
                 continue;
             }
-            // GPU 버퍼가 없는 동적 메시(프레임마다 새 메시 — 천)만 CPU 정점을 올린다. 그 밖은 GPU 버퍼를 만들지 못한 것이다 — 위치를 0 으로 두어(넓이 없는 삼각형) 칠하지 않는다.
+            // GPU 버퍼가 없는 동적 메시(프레임마다 새 메시, 예: 천)만 CPU 정점을 올린다. 그 밖은 GPU 버퍼를 만들지 못한 것이므로 위치를 0 으로 두어(넓이 없는 삼각형) 칠하지 않는다.
             _listPositionScratch.assign( static_cast<size_t>( mesh.getVertexCount() ) * Internal::kFloatsPerPosition, 0.0f );
             if ( mesh.isDynamic() )
             {

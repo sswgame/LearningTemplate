@@ -1,6 +1,6 @@
 /**
  * @file FileReadDiagnostics.h
- * @brief 파일 읽기의 개발 진단입니다 — 디스크 흉내(지연 · 대역폭)와 읽기 기록(개발 도구 `DevTools` — 배포 빌드는 짓지 않는다).
+ * @brief 파일 읽기의 개발 진단입니다. 디스크 흉내(지연 · 대역폭)와 읽기 기록을 둔다(개발 도구 `DevTools`, 배포 빌드는 짓지 않는다).
  */
 #pragma once
 #include "Core/Concurrency/atomic.h"

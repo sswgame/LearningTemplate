@@ -1,6 +1,6 @@
 /**
  * @file MemberCollector.h
- * @brief REFLECT 타입 하나의 멤버 — 베이스 · PROPERTY · FUNCTION · 이벤트 · 생성자 · BODY 마커 — 를 한 번의 자식 순회로 모읍니다.
+ * @brief REFLECT 타입 하나의 멤버(베이스 · PROPERTY · FUNCTION · 이벤트 · 생성자 · BODY 마커)를 한 번의 자식 순회로 모읍니다.
  * @details 오류가 나도 순회를 멈추지 않습니다 — 한 번의 실행이 그 타입의 오류를 모두 알립니다. 오류 난 멤버는 수집 함수가 목록에
  *          넣기 전에 돌아오므로 반쯤 찬 DTO 가 코드젠에 들어가지 않고, `hasError` 가 헤더를 실패로 만듭니다.
  */
@@ -54,7 +54,7 @@ namespace sw
         /** @brief 필드 타입이 리플렉션 이벤트(멀티캐스트 델리게이트)인지 봅니다. */
         static bool isEventType( CXType fieldType );
         /**
-         * @brief 이벤트 필드 타입의 함수 타입(`void( int32, const string& )`)을 **적힌 꼴로** 찾습니다.
+         * @brief 이벤트 필드 타입의 함수 타입(`void( int32, const string& )`)을 적힌 꼴로 찾습니다.
          * @details 정규 타입에서 꺼내면 인자 타입이 펼쳐진 철자(`sw::basic_string<char>`)라 정규 이름(`string`)이 되지 않는다. 별칭
          *          (`using ScoreEvent = …`)은 벗겨 적힌 템플릿 인자를 읽고, 그래도 못 찾으면 정규 타입으로 물러선다.
          */

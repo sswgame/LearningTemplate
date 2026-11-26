@@ -38,7 +38,7 @@ namespace sw
      * @class FarmAutoFarmerAIComponent
      * @brief 감각만 냅니다 — 농부의 자리 · 체력 · 도구 · 가방 · 밭을 블랙보드에 적고, 할 일 고르기(늦었거나 지쳤으면 출하하고 잔다, 거둘 것 → 물 → 심기 → 씨앗 사기 → 갈기)는
      *        행동 트리 데이터(`data/ai/autofarmer.bt.xml`)가 합니다. 플레이어와 같은 폰 버튼(`Farm.*`)과 이동 축만 냅니다.
-     * @details 농부의 자리 · 체력 · 도구 · 밭은 디렉터의 판 상태이고, 이 조종자는 그것을 **읽기만** 합니다(감각은 조종 시스템이 틱 전에 게임 스레드에서 부른다).
+     * @details 농부의 자리 · 체력 · 도구 · 밭은 디렉터의 판 상태이고, 이 조종자는 그것을 읽기만 합니다(감각은 조종 시스템이 틱 전에 게임 스레드에서 부른다).
      *          칸에 도구를 쓸 때는 칸 아래(−Z) 한 칸에 서서 위(+Z)를 봐야 하므로 트리가 `farm.walkUpTo` 로 그 아래 자리로 먼저 간 뒤 위로 걸어 들어갑니다 — 디렉터는 걷는 쪽으로
      *          바라보는 쪽을 정한다(네 방향).
      *          블랙보드(감각): `FarmReady` · `PlayerPosition` · `FacingUp` · `NearShop` · `Stamina` · `Tired` · `ProduceCount` · `SelectedSeedCount` · `SeedSelected` · `HasSeed` · `CanAffordSeed`,

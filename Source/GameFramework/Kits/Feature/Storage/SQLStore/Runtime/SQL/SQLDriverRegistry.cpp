@@ -13,7 +13,7 @@ namespace sw
     namespace
     {
         /**
-         * @brief 드라이버 등록 표입니다(정적 등록 공통 틀 — 잠금을 든 함수 정적 목록). 이름은 올릴 때 복사한다 — 이미지가 내려간 뒤에도 안내 문구가 죽은 드라이버를 묻지 않는다.
+         * @brief 드라이버 등록 표입니다(정적 등록 공통 틀, 잠금을 든 함수 정적 목록). 이름은 올릴 때 복사한다. 이미지가 내려간 뒤에도 안내 문구가 죽은 드라이버를 묻지 않는다.
          */
         SW_DEFINE_LOCKED_REGISTRATION_LIST( getDrivers, ISQLDriver, "SQLDriverRegistry" )
 

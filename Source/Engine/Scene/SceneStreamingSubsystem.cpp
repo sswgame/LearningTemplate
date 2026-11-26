@@ -168,7 +168,7 @@ namespace sw
     {
         if ( _pScene == nullptr )
             return;
-        // 매니저가 오브젝트를 이미 비웠다(세이브 복원) — 걸린 읽기를 거두고 조각을 문서 내용으로 되돌린다. 월드는 놓지 않는다 — 복원이 세이브의 상태를 얹고(`applySaveState`) 다음 갱신이 다시 짓는다.
+        // 매니저가 오브젝트를 이미 비웠다(세이브 복원). 걸린 읽기를 거두고 조각을 문서 내용으로 되돌린다. 월드는 놓지 않는다. 복원이 세이브의 상태를 얹고(`applySaveState`) 다음 갱신이 다시 짓는다.
         for ( unique_ptr<CellSlot>& pSlot : _listCell )
         {
             if ( pSlot->_state == CellState::Loading )

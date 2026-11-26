@@ -33,13 +33,13 @@ namespace sw
         /** @brief 지금 살아 있는 할당 수입니다(0 아래는 0). */
         uint64 _currentAllocationCount{ 0 };
         /**
-         * @brief 추적을 켠 뒤로 센 할당 **횟수**의 누계입니다. 해제해도 줄지 않습니다.
+         * @brief 추적을 켠 뒤로 센 할당 횟수의 누계입니다. 해제해도 줄지 않습니다.
          * @details "살아 있는 양"(위의 두 값)으로는 프레임 안에서 할당했다가 바로 해제한 것을 볼 수 없습니다. 그것이 churn 이고,
          *          상용 엔진이 프레임당 할당 수로 감시하는 것입니다. 두 시점의 차이를 프레임 수로 나눠 읽습니다(`FrameProfileSession`).
          */
         uint64 _totalAllocationCount{ 0 };
         /**
-         * @brief 추적을 켠 뒤(또는 `resetPeaks` 뒤) **읽을 때마다 본** 살아 있는 바이트의 최고치입니다.
+         * @brief 추적을 켠 뒤(또는 `resetPeaks` 뒤) 읽을 때마다 본 살아 있는 바이트의 최고치입니다.
          * @details 할당 경로는 칸에만 더하므로 최고치는 합을 읽는 쪽(`getStats` · 프레임마다의 `reportExceededBudgets` · 패널)이 올립니다 — 언리얼 LLM 이
          *          스레드별 상태를 프레임마다 합칠 때 최고치를 보는 것과 같습니다. 두 번 읽는 사이에 잡았다 놓은 순간 최고치는 잡히지 않습니다.
          */
@@ -133,7 +133,7 @@ namespace sw
     /**
      * @brief `MemoryLeakWindow::close` 가 돌려주는 보고서입니다. 줄은 늘어난 바이트가 큰 순서입니다.
      * @details 창 안에서 태어난 블록 가운데 창이 닫힐 때 살아 있는 것만 들어 있습니다. 창 밖에서 태어난 블록의 해제는 뺄 대상이 아니므로
-     *          어떤 줄도 줄이지 않습니다. 반대로 **창을 연 스레드가 아닌 스레드의 할당도 섞여 듭니다** — `_foreignThreadBlockCount` 가 그 개수라
+     *          어떤 줄도 줄이지 않습니다. 반대로 창을 연 스레드가 아닌 스레드의 할당도 섞여 듭니다 — `_foreignThreadBlockCount` 가 그 개수라
      *          0 이 아니면 줄의 일부는 측정 대상 밖의 일(로더 · 로그 워커)일 수 있다.
      */
     struct SW_API LeakWindowReport
@@ -223,7 +223,7 @@ namespace sw
 namespace sw
 {
     /**
-     * @brief `FullStacks` 창의 슬롯 하나 — 블록 테이블과 스택 테이블입니다. 블록의 **주소**로 슬롯을 고릅니다.
+     * @brief `FullStacks` 창의 슬롯 하나 — 블록 테이블과 스택 테이블입니다. 블록의 주소로 슬롯을 고릅니다.
      * @details 해제하는 스레드는 낳은 스레드와 다를 수 있어 스레드 슬롯으로는 지울 슬롯을 알 수 없습니다. 주소로 고르면 같은 블록은 늘 같은 슬롯에서 만나고,
      *          스레드들이 슬롯 열여섯에 흩어져 하나의 잠금에 몰리지 않습니다. 스택 테이블은 슬롯마다 따로 둡니다(같은 스택이 슬롯마다 한 벌씩 들어갈 수 있습니다).
      */
@@ -268,7 +268,7 @@ namespace sw
         void beginRound();
         /**
          * @brief 창을 닫고 창 안에서 태어나 아직 살아 있는 블록을 보고합니다. 닫은 뒤의 할당에는 스탬프가 찍히지 않습니다.
-         * @details **열린 창이 없으면 오류**입니다 — 단언하고 `_bValid` 가 false 인 빈 보고서를 돌려줍니다(받는 쪽이 `_bValid` 를 봐야 한다).
+         * @details 열린 창이 없으면 오류입니다 — 단언하고 `_bValid` 가 false 인 빈 보고서를 돌려줍니다(받는 쪽이 `_bValid` 를 봐야 한다).
          */
         [[nodiscard]] LeakWindowReport close();
 
@@ -344,7 +344,7 @@ namespace sw
          */
         static uint64 getPlatformHeapBytes();
         /**
-         * @brief 프로세스가 시작한 뒤 플랫폼 힙(CRT)이 받은 할당의 **누계**입니다(바이트 · 횟수). 해제해도 줄지 않습니다.
+         * @brief 프로세스가 시작한 뒤 플랫폼 힙(CRT)이 받은 할당의 누계입니다(바이트 · 횟수). 해제해도 줄지 않습니다.
          * @details 힙 백엔드가 crt 면 이 값에서 sw 할당자의 누계(`getTotalAllocatedBytes` · `getTotalAllocationCount`)를 뺀 것이, 아니면 이 값이 그대로 sw 할당자 밖
          *          (`std::allocator` · 외부 라이브러리 · CRT 직접 호출)의 churn 입니다. 횟수는 CRT 의 할당 요청 번호입니다(블록 하나를 잡아 그 번호를 읽고 바로 놓는다).
          *          Windows Debug CRT 에서만 측정할 수 있습니다.
@@ -408,7 +408,7 @@ namespace sw
         [[nodiscard]] AllocationRecord recordAllocation( void* pPtr, size_t size, MemoryTag tag ) override;
 
         /**
-         * @brief 메모리 해제를 기록합니다. **이 프로파일러가 센 블록만** 넘깁니다 — 할당기는 블록 헤더의 기록기 번호로 거른다.
+         * @brief 메모리 해제를 기록합니다. 이 프로파일러가 센 블록만 넘깁니다 — 할당기는 블록 헤더의 기록기 번호로 거른다.
          * @details 센 블록이면 추적을 지금 꺼 두었어도 뺍니다. 할당을 셀 때와 해제를 셀 때가 늘 짝이라 살아 있는 양이 어긋나지 않는다.
          */
         void recordFree( void* pPtr, size_t size, MemoryTag tag, const AllocationRecord& born = AllocationRecord{} ) override;
@@ -425,7 +425,7 @@ namespace sw
         uint64 getTotalAllocationCount() const;
 
         /**
-         * @brief 지금 **살아 있는** 할당 수의 합입니다. 해제하면 줄어듭니다. 두 시점의 차이가 0 이 아니면 그만큼 남은 것입니다.
+         * @brief 지금 살아 있는 할당 수의 합입니다. 해제하면 줄어듭니다. 두 시점의 차이가 0 이 아니면 그만큼 남은 것입니다.
          * @details 위의 누계(churn)와는 쓰임이 다릅니다. 이쪽은 "되돌려 놓았는가" 를 봅니다. 어떤 소유자를 만들었다 부순 전후로
          *          측정하면 그 소유자가 흘린 할당을 셀 수 있고, LeakSanitizer 가 없는 구성(윈도우 Debug)에서도 같은 결함을 잡습니다.
          */
@@ -443,7 +443,7 @@ namespace sw
         /** @brief 모든 예산을 없앱니다. */
         void clearBudgets();
         /**
-         * @brief 살아 있는 바이트를 예산과 비교해, **이번에 새로** 넘은 태그마다 경고 한 줄을 남깁니다. 프레임마다 한 번 부릅니다(태그 수만큼 원자 읽기).
+         * @brief 살아 있는 바이트를 예산과 비교해, 이번에 새로 넘은 태그마다 경고 한 줄을 남깁니다. 프레임마다 한 번 부릅니다(태그 수만큼 원자 읽기).
          * @details 넘은 상태는 기억합니다 — 넘어 있는 동안 다시 경고하지 않고, 예산의 90 % 아래로 내려가면 다시 켭니다(경계에서 오락가락할 때 로그가 넘치지 않게).
          * @param pOutListNewlyExceeded 있으면 이번에 새로 넘은 태그를 담습니다.
          * @return 이번에 새로 넘은 태그 수입니다.

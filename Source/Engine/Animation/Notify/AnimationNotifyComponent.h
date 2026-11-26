@@ -67,11 +67,11 @@ namespace sw
     /**
      * @class AnimationNotifyComponent
      * @brief 같은 오브젝트의 애니메이터에 받는 쪽으로 붙어 알림을 처리기로 보냅니다(언리얼 AnimationNotify, AnimationNotifyState 의 디스패치와 유니티 Animation Event 의 수신자에 해당합니다).
-     * @details - **한 번씩**: 알림은 트랙의 의미(지나간 것을 정확히 한 번, 반복 경계 포함)대로 온다. 구간 알림은 시작, 프레임마다 틱, 끝 순서이고,
+     * @details - 한 번씩: 알림은 트랙의 의미(지나간 것을 정확히 한 번, 반복 경계 포함)대로 온다. 구간 알림은 시작, 프레임마다 틱, 끝 순서이고,
      *            클립이 재생에서 빠지면(상태 전이나 정지) 끝을 대신 낸다. 같은 구간은 열린 것이 하나뿐이다.
-     *          - **스레드**: 3D 는 애니메이션 시스템의 게임 스레드 마무리에서 바로 받고, 2D 는 스프라이트 틱(워커)에서 받아 틱 뒤 게임 스레드로 미뤄서 처리한다.
+     *          - 스레드: 3D 는 애니메이션 시스템의 게임 스레드 마무리에서 바로 받고, 2D 는 스프라이트 틱(워커)에서 받아 틱 뒤 게임 스레드로 미뤄서 처리한다.
      *            처리기는 항상 게임 스레드에서 돈다(스폰, 물리 질의, 맞음 알림).
-     *          - **차원**: 같은 오브젝트에 `SkeletalMeshComponent` 가 있으면 3D 로, 없으면 2D 물리 씬에 묻는다.
+     *          - 차원: 같은 오브젝트에 `SkeletalMeshComponent` 가 있으면 3D 로, 없으면 2D 물리 씬에 묻는다.
      *          - 테이블은 공유 캐시(`SharedAssetCache<AnimationNotifyTable>`)에서 받는다. 파일을 고치면 열린 구간을 닫고 새 테이블로 이어 간다.
      */
     REFLECT( Category = "Animation", DisplayName = "Animation Notify", Tooltip = "Dispatches animation notifies to handlers named in a notify table (*.notifies.xml)" )

@@ -164,7 +164,7 @@ namespace sw::editor
         [[nodiscard]] static bool isPayloadInFlight( EditorPayloadKindSet acceptedKinds );
         /**
          * @brief @p acceptedKinds 안의 끌기가 진행 중이면 그 페이로드를 @p outPayload 에 담고 true 입니다(놓을 자리를 열지 않는다).
-         * @details 받는 쪽이 종류 다음으로 내용(확장자 · 에셋 종류 · 대상 타입)을 보고 **놓을 자리를 열기 전에** 거르는 입구다(R11) — 받지 않을 것은 강조하지 않고,
+         * @details 받는 쪽이 종류 다음으로 내용(확장자 · 에셋 종류 · 대상 타입)을 보고 놓을 자리를 열기 전에 거르는 입구다(R11) — 받지 않을 것은 강조하지 않고,
          *          받는 자리가 없으면 끄는 쪽이 금지 표시를 한다(`beginDragSource`).
          */
         [[nodiscard]] static bool peekPayload( EditorPayloadKindSet acceptedKinds, EditorDragPayload& outPayload );
@@ -201,7 +201,7 @@ namespace sw::editor
         static bool wasCancelPressed();
         /**
          * @brief 글 칸 · 목록의 편집 키(@p key)를 이번 프레임에 눌렀으면 true 입니다. @p bRepeat 면 누른 채 반복도 셉니다.
-         * @details 목록 위젯의 위 · 아래 · Enter, 빠른 실행 창의 Enter 처럼 **글을 치는 동안** 듣는 키다. 입력 맵의 액션은 글 입력 중 멈추므로(단축키가 글 칸의 것)
+         * @details 목록 위젯의 위 · 아래 · Enter, 빠른 실행 창의 Enter 처럼 글을 치는 동안 듣는 키다. 입력 맵의 액션은 글 입력 중 멈추므로(단축키가 글 칸의 것)
          *          여기에 둔다 — 재배치 대상이 아닌 편집 키라는 예외다(유니티 · 언리얼의 검색 목록도 화살표 · Enter 를 고정 키로 쓴다).
          */
         static bool wasEditKeyPressed( EditorEditKey key, bool bRepeat = false );

@@ -2,7 +2,7 @@
  * @file BodyShape.h
  * @brief 체형입니다. 축(홀쭉함과 뚱뚱함, 약함과 근육, 키) 데이터(`BodyShapeSet`, `*.bodyshape.xml`)와 본 비율 보정(`BoneProportion`)을 담습니다.
  * @details 같은 스켈레톤으로 여러 외형을 내는 두 가지 방법이다. 축 값(슬라이더)마다 양쪽과 음쪽에 모프 대상 하나와 본 비율 몇 줄을 적고, 값이
- *          그쪽 끝으로 갈수록 모프 가중치와 본 비율이 커진다. 본 비율은 **가산 층**이라 애니메이션이 정한 로컬 변환 위에 겹친다
+ *          그쪽 끝으로 갈수록 모프 가중치와 본 비율이 커진다. 본 비율은 가산 층이라 애니메이션이 정한 로컬 변환 위에 겹친다
  *          (스케일은 곱하고 오프셋은 더하며, 키와 팔다리 길이를 바꾼다). 모프는 통합 쪽이 GPU 모프 풀에 적용한다. `AppearanceGeometry::applyMorphs` · `skinToPose` 는 CPU 에서 같은 일을 해서,
  *          피팅과 소켓 보정이 체형을 적용한 바인드 형상을 보게 한다.
  *
@@ -85,7 +85,7 @@ namespace sw
         /** @brief 모두 비웁니다. */
         void clear() { _listEntry.clear(); }
         /**
-         * @brief 본 배열의 **지금 로컬 변환**(애니메이션이 정한 것) 위에 보정을 겹치고 모델 변환을 다시 계산합니다.
+         * @brief 본 배열의 지금 로컬 변환(애니메이션이 정한 것) 위에 보정을 겹치고 모델 변환을 다시 계산합니다.
          * @details 매 프레임 애니메이션 평가 뒤, 스키닝 앞에서 부릅니다(가산 층이라 애니메이션과 겹친다). 배열에 없는 본은 건너뜁니다.
          */
         void apply( CharacterBoneArray& inoutBones ) const;
@@ -195,7 +195,7 @@ namespace sw
         /** @brief 축들입니다. */
         const vector<BodyShapeAxis>& getAxes() const { return _listAxis; }
         /**
-         * @brief 이 스켈레톤이 **일부러** 받지 않는 채널(`<Unsupported name/>`)인지 반환합니다. 이런 채널 값은 `evaluate` 가 오류 없이 버린다.
+         * @brief 이 스켈레톤이 일부러 받지 않는 채널(`<Unsupported name/>`)인지 반환합니다. 이런 채널 값은 `evaluate` 가 오류 없이 버린다.
          * @details 아이템은 뼈가 아니라 채널 이름(`Bust.Compression`)에 값을 적는다. 채널을 본 · 모프로 옮기는 매핑은 스켈레톤마다 이 파일이 가진다 —
          *          같은 아이템이 사람 · 작은 몸 · 짐승 스켈레톤에 그대로 맞는다. 매핑도 선언도 없는 채널은 오류다(조용히 건너뛰지 않는다).
          */

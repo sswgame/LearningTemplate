@@ -17,7 +17,7 @@ namespace sw
     /**
      * @class VulkanRHICommandList
      * @brief 네이티브 Vulkan 커맨드 버퍼에 곧바로 기록하는 IRHICommandList 입니다. CPU 쪽 기록 벡터와 재생이 없습니다.
-     * @details 이 리스트는 **자기 커맨드 풀, 커맨드 버퍼, 기록 상태**를 소유합니다. `VkCommandPool` 은
+     * @details 이 리스트는 자기 커맨드 풀, 커맨드 버퍼, 기록 상태를 소유합니다. `VkCommandPool` 은
      *          외부 동기화 대상이라, 여러 리스트가 서로 다른 스레드에서 동시에 기록하려면 풀이
      *          리스트마다 따로여야 합니다(DX12 의 얼로케이터와 같은 제약). 쌍은 디바이스 풀에서 빌리고
      *          다 쓰면 GPU 펜스 통과 후 돌려줍니다.

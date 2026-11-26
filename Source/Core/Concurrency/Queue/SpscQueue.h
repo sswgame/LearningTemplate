@@ -15,7 +15,7 @@ namespace sw
      * @tparam T 요소 타입
      * @tparam Capacity 용량(2의 거듭제곱)
      *
-     * @warning **SPSC 전용입니다.** push 는 생산자 스레드 하나, pop 은 소비자 스레드 하나에서만 불러야 합니다.
+     * @warning SPSC 전용입니다. push 는 생산자 스레드 하나, pop 은 소비자 스레드 하나에서만 불러야 합니다.
      *          생산자나 소비자가 여럿이면 데이터 레이스가 생깁니다. MPMC(다중 생산자 · 다중 소비자)가 필요하면
      *          sw::ConcurrentQueue 를 쓰십시오.
      */

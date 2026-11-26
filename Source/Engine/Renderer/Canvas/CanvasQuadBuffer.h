@@ -20,7 +20,7 @@ namespace sw
 
     /**
      * @class CanvasQuadBuffer
-     * @brief 캔버스 사각형 버퍼와 그 안의 목록별 시작 위치입니다. **프레임에 한 번** 갱신하고, 내용 번호(`CanvasFrameData::_contentRevision`)가 지난번과 같으면 사각형 갱신을 건너뜁니다.
+     * @brief 캔버스 사각형 버퍼와 그 안의 목록별 시작 위치입니다. 프레임에 한 번 갱신하고, 내용 번호(`CanvasFrameData::_contentRevision`)가 지난번과 같으면 사각형 갱신을 건너뜁니다.
      */
     class SW_API CanvasQuadBuffer
     {

@@ -2,9 +2,9 @@
  * @file MaterialGraph.h
  * @brief 머티리얼 그래프 저작 데이터(`*.matgraph.xml`)입니다. 노드 · 연결 · 값 · 캔버스 위치만 담고, 노드 종류의 뜻은 등록표(`MaterialGraphNodeRegistry`)가 정합니다.
  * @details 언리얼 Material Editor · 유니티 Shader Graph · Godot Visual Shader 의 저작 형식 자리입니다(비교는 기억에 의존).
- *          - **개발 전용이다.** `Dev/` 폴더라 배포 구성은 짓지 않고, 팩도 이 파일을 담지 않는다(`Config/Engine/PackConfig.json`). 런타임은 컴파일이 낸 `.hlsl` · `.gen.material` 만 읽는다.
- *          - **연결의 기준은 받는 노드의 입력 목록이다**(`_listLink` — 소리 그래프와 같은 선). 링크 표를 따로 두면 두 표가 어긋난다. 입력 핀 하나는 링크 하나만 받는다.
- *          - **변형.** 루트의 `_base` 와 열쇠(`_name` · `_pin`)로 부모 그래프의 차이만 적는다(`docs/agents/DataInheritance.md`). 값만 바꾸는 변형은 생성된 머티리얼의 `_base`(언리얼 Material Instance)가 먼저다 — 그래프 변형은 셰이더가 달라지는 경우에 쓴다.
+ *          - 개발 전용이다. `Dev/` 폴더라 배포 구성은 짓지 않고, 팩도 이 파일을 담지 않는다(`Config/Engine/PackConfig.json`). 런타임은 컴파일이 낸 `.hlsl` · `.gen.material` 만 읽는다.
+ *          - 연결의 기준은 받는 노드의 입력 목록이다(`_listLink` — 소리 그래프와 같은 선). 링크 표를 따로 두면 두 표가 어긋난다. 입력 핀 하나는 링크 하나만 받는다.
+ *          - 변형. 루트의 `_base` 와 열쇠(`_name` · `_pin`)로 부모 그래프의 차이만 적는다(`docs/agents/DataInheritance.md`). 값만 바꾸는 변형은 생성된 머티리얼의 `_base`(언리얼 Material Instance)가 먼저다 — 그래프 변형은 셰이더가 달라지는 경우에 쓴다.
  * @code
  *     <MaterialGraphDef formatVersion="0">
  *         <_listNode>

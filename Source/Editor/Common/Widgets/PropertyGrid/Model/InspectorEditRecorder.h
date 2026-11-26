@@ -14,7 +14,7 @@
 
 #include "Editor/Common/EditorExports.h"
 
-// 인스펙터 프로퍼티 편집의 되돌리기 단위입니다 — (오브젝트 id, 컴포넌트 지역 id, 프로퍼티 경로, 값 글). 되돌리기 · 다시 하기가 같은 데이터 단계(`PropertyEditTarget::applyPropertyText`)를 탄다. 유니티 `Undo.RecordObject` 의 `PropertyModification`(대상 · `propertyPath` · 값), Godot `add_do_property` / `add_undo_property` 와 같은 단위다. 예전에는 위젯이 활성화되면 선택 전체를 직렬화했다(8000 선택에서 숫자 한 칸이 XML 16000 개, 감사 E-7). 컴포넌트는 영속 지역 id(`ComponentStableKey::getLocalID` — 프리팹 오버라이드 키 `#<16진>` 의 값)이고 0 이면 오브젝트 자신이다(지역 id 는 0 이 아니다). 프로퍼티 경로는 깊이 0 프로퍼티 이름이다 — 중첩 필드 · 원소 편집도 다중 선택은 그 프로퍼티를 통째로 입히므로(`PropertyGridViewModel` 의 편집 요청 적용) 단위가 같다. 값 글은 `SerializerUtil::formatPropertyText` 꼴이다(`PropertyGridViewModel::setPropertyText` 와 같다). 단계 하나는 경로 하나와 대상 목록이고 값 글은 겹치지 않게 한 벌만 든다 — 다중 선택은 대개 값이 하나라 8000 선택의 거래도 대상 수 × 20 바이트 남짓이다.
+// 인스펙터 프로퍼티 편집의 되돌리기 단위입니다: (오브젝트 id, 컴포넌트 지역 id, 프로퍼티 경로, 값 글). 되돌리기 · 다시 하기가 같은 데이터 단계(`PropertyEditTarget::applyPropertyText`)를 탄다. 유니티 `Undo.RecordObject` 의 `PropertyModification`(대상 · `propertyPath` · 값), Godot `add_do_property` / `add_undo_property` 와 같은 단위다. 예전에는 위젯이 활성화되면 선택 전체를 직렬화했다(8000 선택에서 숫자 한 칸이 XML 16000 개, 감사 E-7). 컴포넌트는 영속 지역 id(`ComponentStableKey::getLocalID` — 프리팹 오버라이드 키 `#<16진>` 의 값)이고 0 이면 오브젝트 자신이다(지역 id 는 0 이 아니다). 프로퍼티 경로는 깊이 0 프로퍼티 이름이다 — 중첩 필드 · 원소 편집도 다중 선택은 그 프로퍼티를 통째로 입히므로(`PropertyGridViewModel` 의 편집 요청 적용) 단위가 같다. 값 글은 `SerializerUtil::formatPropertyText` 꼴이다(`PropertyGridViewModel::setPropertyText` 와 같다). 단계 하나는 경로 하나와 대상 목록이고 값 글은 겹치지 않게 한 벌만 든다 — 다중 선택은 대개 값이 하나라 8000 선택의 거래도 대상 수 × 20 바이트 남짓이다.
 namespace sw
 {
     class Component;
@@ -93,7 +93,7 @@ namespace sw::editor
         /**
          * @brief 닫힌 구간 @p inoutListSpan 을 거래 @p transaction 에 남기고 비웁니다. 바뀐 대상만 프로퍼티 경로마다 한 단계(`PropertyEditTarget::applyPropertyText` 한 쌍)이고,
          *        이번 마감의 단계들은 그 거래 하나로 묶인다. 바뀐 것이 없으면 남기지 않는다. 그리드는 쓰기 요청 뒤 게임 단계에서 부른다(`PropertyGridViewModel::endFrame`).
-         * @details 스택은 오브젝트가 사는 씬이 고른다(`EditorTransaction::recordObjectCommand` — 미리보기 창이면 그 창의 스택). 플레이 중 편집은 남기지 않는다 —
+         * @details 스택은 오브젝트가 사는 씬이 고른다(`EditorTransaction::recordObjectCommand`. 미리보기 창이면 그 창의 스택). 플레이 중 편집은 남기지 않는다 —
          *          편집 내역은 맡겨 두었고(`CommandStack::suspendHistory`) Stop 이 스냅샷으로 되돌린다.
          */
         static void commit( EditorTransaction& transaction, vector<PropertyEditSpan>& inoutListSpan );

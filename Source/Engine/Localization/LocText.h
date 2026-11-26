@@ -1,7 +1,7 @@
 /**
  * @file LocText.h
  * @brief 코드 안에서 사용자에게 보이는 텍스트를 정의합니다. `SW_LOCTEXT( "Namespace", "Key", "Source" )` 형태이며 언리얼 `NSLOCTEXT` 와 같은 모양입니다.
- * @details 세 인자는 **문자열 리터럴**이어야 한다. 수집기(`App --gather-text`)가 소스를 읽어 원문 테이블에 `Namespace.Key` 줄을 만들기 때문이다.
+ * @details 세 인자는 문자열 리터럴이어야 한다. 수집기(`App --gather-text`)가 소스를 읽어 원문 테이블에 `Namespace.Key` 줄을 만들기 때문이다.
  *          실행 중에는 지금 문화권의 텍스트를 돌려주고, 테이블에 없으면 빠진 키로 알린 뒤 원문을 돌려준다(화면이 비지 않는다).
  *          돌려준 포인터는 영구히 유효하다. 인자가 있는 메시지는 `SW_LOCFORMAT( ns, key, source, arguments )` 로 포맷한다.
  *
@@ -46,7 +46,7 @@ namespace sw
 
     /**
      * @class LocalizedMessage
-     * @brief 인자가 있는 현지화 글 하나를 **키와 인자로** 담은 글을 만듭니다. 화면 글 · 뷰모델 칸 · 툴팁 · 알림 · 세이브가 들던 `string` 에 그대로 넣고, 그릴 때 `LocalizedText::resolve` 가 지금 문화권으로 풉니다.
+     * @brief 인자가 있는 현지화 글 하나를 키와 인자로 담은 글을 만듭니다. 화면 글 · 뷰모델 칸 · 툴팁 · 알림 · 세이브가 들던 `string` 에 그대로 넣고, 그릴 때 `LocalizedText::resolve` 가 지금 문화권으로 풉니다.
      * @details 포맷한 글을 값으로 들면 언어를 바꿔도 그대로이고 저장하면 그 언어로 굳는다(언리얼 FText 가 키 · 인자 이력을 들고 `FTextStringHelper` 로 문자열에 적는 것과 같다).
      *          적은 글은 제어 문자로 나뉜다 — 글 인자에서 그 문자는 지운다(플레이어가 친 글이 다른 메시지가 되지 않게).
      *

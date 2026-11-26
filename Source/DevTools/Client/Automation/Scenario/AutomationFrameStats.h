@@ -1,7 +1,7 @@
 /**
  * @file AutomationFrameStats.h
  * @brief 시나리오 구간의 프레임 시간 기록 — 내장 벤치마크(`<BeginFrameStats/>` … `<EndFrameStats file="bench.json"/>`)입니다.
- * @details Source · id Tech 의 `timedemo` 와 게임 내장 벤치마크(정해진 카메라 경로 + 프레임 통계)의 자리다. 고정 프레임 시간으로 도는 시나리오도 실제로 걸린 **벽시계** 시간을 잰다.
+ * @details Source · id Tech 의 `timedemo` 와 게임 내장 벤치마크(정해진 카메라 경로 + 프레임 통계)의 자리다. 고정 프레임 시간으로 도는 시나리오도 실제로 걸린 벽시계 시간을 잰다.
  *          실행기가 프레임 끝마다 `onFrameEnd` 를 부르고, 기록은 시작 단계와 끝 단계 사이만 쌓인다. 결과 JSON 은 산출물 폴더에 쓴다(`resolveOutputPath`).
  */
 #pragma once

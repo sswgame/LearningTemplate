@@ -8,7 +8,7 @@
  *          피연산자는 n · i · v · f · t · e(= c, 압축 표기의 지수)다. 숫자 서식은 압축 표기를 내지 않아 서식이 넘기는 e 는 늘 0 이다.
  *          범위(`3..10`)는 값이 정수일 때만 맞는다(CLDR: `n = 3..10` 은 3.5 에 거짓). 범주는 zero → one → two → few → many 순서로 보고, 맞는 것이 없으면 other 다.
  *
- *          **보기(`@integer` · `@decimal`)는 규칙 글의 일부다.** CLDR 글을 보기째 붙여 넣고(`other` 는 보기만), 읽은 뒤 보기마다 그 범주가 고르는지 대조한다(`verifySamples`) —
+ *          보기(`@integer` · `@decimal`)는 규칙 글의 일부다. CLDR 글을 보기째 붙여 넣고(`other` 는 보기만), 읽은 뒤 보기마다 그 범주가 고르는지 대조한다(`verifySamples`) —
  *          손으로 고친 규칙이 CLDR plurals.xml 과 어긋나면 문화권 표가 읽히지 않는다(ICU 의 규칙 보기 검사와 같은 자리).
  */
 #pragma once

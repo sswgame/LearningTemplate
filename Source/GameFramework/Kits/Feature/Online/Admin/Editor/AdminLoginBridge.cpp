@@ -12,7 +12,7 @@
 #include "GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolSession.h"
 
 // GM 도구 로그인 조립입니다 - GM Tool 패널의 계정 이름 · 비밀번호 칸을 계정 키트의 로그인 도우미(`AccountGMLogin`)에 잇습니다.
-// GM 연결도 일반 계정 로그인을 거친다. 계정은 온라인 코어이므로 GM 확장이 계정 키트를 직접 안다 — 예전에는 둘을 잇는 확장(`GF_EditorPlugin_AdminLogin`)이 따로 있었다(서버 온라인 조사 P9):
+// GM 연결도 일반 계정 로그인을 거친다. 계정은 온라인 코어이므로 GM 확장이 계정 키트를 직접 안다. 예전에는 둘을 잇는 확장(`GF_EditorPlugin_AdminLogin`)이 따로 있었다(서버 온라인 조사 P9):
 // - 패널이 연결을 누르면 `AdminToolSession::connectWithLogin` 이 입력 칸의 값을 이 서브시스템의 처리기(`acceptCredentials`)에 넘긴다 → `AccountGMLogin::setCredentials`.
 // - 연결이 Ready 가 될 때마다(`AdminToolConnection::bindLoginHook`) `AccountGMLogin::onReady` 가 로그인을 보낸다. 다시 연결된 경우는 계정 클라이언트가 보관한 토큰으로 스스로 재접속한다.
 // - 프레임마다(`AdminToolSession::bindFrameHook`) 응답을 꺼내 상태를 갱신한다. 비밀번호는 응답을 받으면 지운다.

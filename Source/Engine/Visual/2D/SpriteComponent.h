@@ -38,16 +38,16 @@ namespace sw
     /**
      * @class SpriteComponent
      * @brief 텍스처를 입힌 사각형을 그립니다(2D). 메시는 사각형, 머티리얼은 스프라이트 머티리얼(`sprite2d.material`)이 기본입니다.
-     * @details 텍스처는 그 머티리얼의 **인스턴스**가 덮어쓰고(`albedoMap`), 같은 (머티리얼, 텍스처)의 스프라이트는 인스턴스 하나를 나눠 쓴다.
+     * @details 텍스처는 그 머티리얼의 인스턴스가 덮어쓰고(`albedoMap`), 같은 (머티리얼, 텍스처)의 스프라이트는 인스턴스 하나를 나눠 쓴다.
      *          배치 키가 인스턴스라서 그래야 한 드로우로 묶인다. 유니티의 `SpriteRenderer`(스프라이트 기본 머티리얼, 텍스처는 프로퍼티 블록)와
      *          언리얼의 Paper2D(`UPaperSpriteComponent`)에 해당한다.
      *
-     *          **무엇을 보여 주나.** 아틀라스의 한 프레임(UV 사각형)과 색이다. 둘 다 머티리얼 인스턴스가 아니라 GPU 인스턴스에 실린다
+     *          무엇을 보여 주나. 아틀라스의 한 프레임(UV 사각형)과 색이다. 둘 다 머티리얼 인스턴스가 아니라 GPU 인스턴스에 실린다
      *          (`MeshComponent::getSpriteFrame` → 빌더가 담아 `GPUInstance::_sprite`). 그래서 프레임이 넘어가거나 알파가 줄어도 배치는 그대로다.
      *          프레임은 클립(`_clipPath`, `.sprite.xml`)이 있으면 그 클립의 `_clipFrame` 번째 프레임이고, 없으면 `_uvRect` 다.
      *          텍스처 경로가 비어 있으면 클립의 아틀라스를 쓴다. 애니메이터(`SpriteAnimatorComponent`)는 `setClipFrame` 으로 프레임 번호만 넘긴다.
      *
-     *          **라이브러리.** 클립의 프레임이 라벨(`SpriteClipFrame::_label`)을 적었으면 그림은 `_spriteLibraryPath` 의 라이브러리가 정한다(유니티 Sprite Library · Sprite Resolver).
+     *          라이브러리. 클립의 프레임이 라벨(`SpriteClipFrame::_label`)을 적었으면 그림은 `_spriteLibraryPath` 의 라이브러리가 정한다(유니티 Sprite Library · Sprite Resolver).
      *          라이브러리를 바꾸면 같은 클립 · 같은 애니메이터가 다른 그림을 보인다. 라벨을 쓰는 클립의 아틀라스는 라이브러리의 것이다.
      */
     REFLECT( Category = "Rendering 2D", DisplayName = "Sprite Component", Tooltip = "2D Sprite rendering component", Meta = "Icon=Sprite" )

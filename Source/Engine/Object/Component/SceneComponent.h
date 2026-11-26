@@ -35,7 +35,7 @@ namespace sw
      */
     struct SceneAttachReference
     {
-        /** @brief 부모 오브젝트의 이름입니다. **비어 있으면 같은 오브젝트**입니다. id 가 없는 데이터는 다른 오브젝트도 이 이름만 가지고 있습니다. */
+        /** @brief 부모 오브젝트의 이름입니다. 비어 있으면 같은 오브젝트입니다. id 가 없는 데이터는 다른 오브젝트도 이 이름만 가지고 있습니다. */
         hashed_string _ownerName{};
         /** @brief 다른 오브젝트의 id 입니다(`_idSpace` 에 속한 값). 0 이면 같은 오브젝트이거나 id 가 없는 데이터입니다. */
         uint64 _ownerID{ 0 };
@@ -62,7 +62,7 @@ namespace sw
     /**
      * @class SceneComponent
      * @brief 로컬 트랜스폼, 부모-자식 계층, float64 로 누적한 월드 위치(LWC), 카메라 상대 행렬을 제공하는 씬 컴포넌트입니다.
-     * @details **트랜스폼 값은 이 객체 안에 없다.** 로컬 TRS, 월드 행렬, LWC 는 전역 `SceneTransformStorage` 의 슬롯에 있고, 이 객체는
+     * @details 트랜스폼 값은 이 객체 안에 없다. 로컬 TRS, 월드 행렬, LWC 는 전역 `SceneTransformStorage` 의 슬롯에 있고, 이 객체는
      *          슬롯 번호와 페이지만 가진다. 틱 뒤 적용과 렌더 수집이 값만 연달아 읽게 하려는 구조다(객체에는 값 대신 슬롯 번호만 두어 크기를 줄였다).
      *          리플렉션 이름(`_localPosition`, `_localRotation`, `_localScale`)은 그대로이고 값 접근자가 슬롯을 찾으므로,
      *          씬 파일, 인스펙터, 직렬화는 달라지지 않는다. 계층(부모, 자식)과 더티 표시는 이 객체에 남아 있다.
@@ -91,9 +91,9 @@ namespace sw
         virtual ~SceneComponent() override;
 
         /**
-         * @brief **옮기지 않습니다.** 이 클래스는 자기 주소로 얽혀 있는 계층의 노드입니다.
+         * @brief 옮기지 않습니다. 이 클래스는 자기 주소로 얽혀 있는 계층의 노드입니다.
          * @details 자식의 `_pParent`, 부모의 `_listChild` 항목, 매니저의 루트 레지스트리가 모두
-         *          이 객체의 **주소**를 가지고 있어, 옮기려면 그 셋을 모두 새 주소로 고쳐야 합니다.
+         *          이 객체의 주소를 가지고 있어, 옮기려면 그 셋을 모두 새 주소로 고쳐야 합니다.
          *          컴포넌트는 풀 안의 제자리에서 만들고 없애므로 실제로 옮겨지는 일이 없습니다. 그래서 막습니다.
          */
         SceneComponent( SceneComponent&& )            = delete;
@@ -155,7 +155,7 @@ namespace sw
         /** @brief `getZeroOriginPosition` 이 읽는 자리를 정합니다(부모 기준, 루트면 절대). */
         void setZeroOriginPosition( const float3& position );
         /**
-         * @brief 월드 위치로 **순간이동**합니다. `setWorldPosition` 과 같은 위치로 가지만, 연속 충돌 콜라이더가 이전 위치에서 새 위치까지의 경로를 쓸지 않습니다.
+         * @brief 월드 위치로 순간이동합니다. `setWorldPosition` 과 같은 위치로 가지만, 연속 충돌 콜라이더가 이전 위치에서 새 위치까지의 경로를 쓸지 않습니다.
          * @details 언리얼의 `SetActorLocation( …, ETeleportType::TeleportPhysics )`, 유니티의 `Rigidbody.position` 대입에 해당한다. 이 컴포넌트와 그
          *          아래에 붙은 모든 것(자식 오브젝트 포함)이 순간이동한 것으로 취급한다(`onTeleported`). 그냥 옮기면(`setWorldPosition`) 빠른 바디가 그 경로에
          *          놓인 것과 겹친다. 리스폰이나 문 통과처럼 실제로 지나가지 않은 이동은 이 함수를 쓴다.
@@ -203,13 +203,13 @@ namespace sw
 
         /**
          * @brief 이 컴포넌트가 차지하는 월드 공간의 경계 구입니다. 경계가 없는 컴포넌트(빈 트랜스폼, 라이트, 카메라)는 false 를 반환합니다.
-         * @details 경계는 **컴포넌트가 직접 선언**한다. 언리얼의 `USceneComponent::CalcBounds( LocalToWorld )`, 유니티의 `Renderer.bounds` 와
-         *          `Collider.bounds` 에 해당한다. 에디터 피킹과 GPU 컬링이 같은 값을 쓴다. 종류마다 경계를 따로 계산하면 **로컬** 스케일만 봐서
+         * @details 경계는 컴포넌트가 직접 선언한다. 언리얼의 `USceneComponent::CalcBounds( LocalToWorld )`, 유니티의 `Renderer.bounds` 와
+         *          `Collider.bounds` 에 해당한다. 에디터 피킹과 GPU 컬링이 같은 값을 쓴다. 종류마다 경계를 따로 계산하면 로컬 스케일만 봐서
          *          부모가 키운 물체에서 클릭이 빗나간다.
          */
         virtual bool getWorldBounds( float3& outCenter, float32& outRadius ) const;
         /**
-         * @brief 그리거나 부딪히는 것의 **월드** 축 정렬 상자입니다. 크기가 없는 컴포넌트(빈 씬 컴포넌트, 카메라, 라이트)는 false 를 반환합니다.
+         * @brief 그리거나 부딪히는 것의 월드 축 정렬 상자입니다. 크기가 없는 컴포넌트(빈 씬 컴포넌트, 카메라, 라이트)는 false 를 반환합니다.
          * @details 크기를 측정하는 쪽(에디터의 바닥과 표면 붙이기, 프레이밍)은 이 함수 하나를 본다. 곳곳에서 "메시면 로컬 스케일 × 단위 상자,
          *          콜라이더면 오프셋 크기"를 따로 계산하면 부모가 키운 오브젝트, 단위 상자가 아닌 메시, 키운 콜라이더를 틀리게 측정한다.
          */
@@ -237,9 +237,9 @@ namespace sw
         [[nodiscard]] bool attachToComponent( SceneComponent* pParent, AttachRule rule = AttachRule::KeepRelative );
         /**
          * @brief @p pParent 에 붙일 수 있는지 확인합니다. 붙이는 모든 경로(직접, 틱 중 미룸, 오브젝트 단위)가 이 함수를 먼저 부릅니다.
-         * @details 붙일 수 없는 경우는 다음과 같다. 자기 자신, null, **다른 매니저(씬)의 부모**(계층이 두 매니저에 걸치면 한쪽의 더티 루트 목록에 다른 쪽
+         * @details 붙일 수 없는 경우는 다음과 같다. 자기 자신, null, 다른 매니저(씬)의 부모(계층이 두 매니저에 걸치면 한쪽의 더티 루트 목록에 다른 쪽
          *          루트가 오르고, 그 루트가 파괴되면 남은 포인터를 플러시가 읽는다), 파괴 대기 중인 부모, 컴포넌트 체인의 순환,
-         *          **오브젝트 체인의 순환**(primary 가 아닌 컴포넌트(소켓)를 거치면 컴포넌트 체인은 끊겨 있어도 오브젝트는 서로의 부모가 될 수 있고,
+         *          오브젝트 체인의 순환(primary 가 아닌 컴포넌트(소켓)를 거치면 컴포넌트 체인은 끊겨 있어도 오브젝트는 서로의 부모가 될 수 있고,
          *          그러면 `GameObject::isDescendantOf` 가 끝나지 않는다). 언리얼의 `AttachToComponent` 가 자기 자신과 순환을 거절하고,
          *          유니티가 계층이 씬을 넘지 않게 하는 것과 같은 규칙이다.
          */
@@ -334,7 +334,7 @@ namespace sw
          */
         void deferSelfCall( void ( SceneComponent::*pMethod )() );
         /**
-         * @brief 부모에서 **지금 당장** 분리합니다(미루지 않습니다).
+         * @brief 부모에서 지금 당장 분리합니다(미루지 않습니다).
          * @details `detachFromComponent` 는 틱 중이면 일을 미루고 그냥 반환한다. 소멸자가 그
          *          경로를 타면 `_listChild` 가 줄지 않아 루프가 끝나지 않고, 미룬 일이 큐에
          *          무한히 쌓인다. 소멸 중에는 미룰 대상(나중에 핸들로 다시 찾을 자기 자신)이
@@ -377,7 +377,7 @@ namespace sw
         /**
          * @brief 다른 오브젝트인 부모의 id 입니다. 씬 파일에서는 파일 id, 스냅샷에서는 런타임 id 입니다(`ObjectIDSpace`). 0 이면 같은 오브젝트이거나 id 가 없는 데이터입니다.
          * @details 이름만으로 찾으면 안 된다. 매니저는 이름을 유일하게 바꾸므로(`X` → `X_2`) 복제본, 두 번 놓은 프리팹, 되돌린 오브젝트가
-         *          **같은 이름의 다른 오브젝트**(원본이나 자동으로 생긴 카메라)에 붙는다.
+         *          같은 이름의 다른 오브젝트(원본이나 자동으로 생긴 카메라)에 붙는다.
          */
         PROPERTY( HideInInspector )
         mutable uint64 _attachOwnerID;
@@ -408,7 +408,7 @@ namespace sw
         SW_TRANSIENT vector<SceneComponent*> _listChild;
         /** @brief 찾지 못한 부착 참조입니다(`keepUnresolvedAttach`). 거의 늘 비어 있어 따로 둡니다. 컴포넌트마다 40 바이트를 차지하지 않게 하기 위해서입니다. */
         SW_TRANSIENT unique_ptr<SceneAttachReference> _unresolvedAttach;
-        /// @brief 비트필드가 **아닙니다.** 적용과 배치 쓰기의 워커들이 이 둘을 같은 조상과 자손에 겹쳐 세웁니다(`markHierarchyDirtyParallel`).
+        /// @brief 비트필드가 아닙니다. 적용과 배치 쓰기의 워커들이 이 둘을 같은 조상과 자손에 겹쳐 세웁니다(`markHierarchyDirtyParallel`).
         /// 비트필드이면 이웃 비트까지 쓰게 됩니다. 같은 값을 쓰므로 결과는 무해하지만, 평범한 바이트로 쓰면 데이터 경쟁(미정의 동작)이라
         /// ThreadSanitizer 가 지적합니다. 그래서 relaxed 원자값으로 둡니다(x86 에서는 같은 명령입니다).
         SW_TRANSIENT atomic<uint8> _bIsTransformDirty;

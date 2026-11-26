@@ -1,7 +1,7 @@
 /**
  * @file TestFileWatcher.cpp
  * @brief 플랫폼 워처가 공유하는 큐 규칙 — 상한 · 오버플로 리스캔 · 연속 중복 접기.
- * @details 규칙은 `FileWatcher` 한 곳에 있으므로 **플랫폼과 무관하게** 검사한다 — 여기서 OS 를 전혀 건드리지 않고
+ * @details 규칙은 `FileWatcher` 한 곳에 있으므로 플랫폼과 무관하게 검사한다 — 여기서 OS 를 전혀 건드리지 않고
  *          규칙만 확인한다.
  */
 #include "pch.h"
@@ -43,7 +43,7 @@ namespace
 } // namespace
 
 /**
- * @brief [FileWatcherTest] 같은 파일에 같은 동작이 **연달아** 오면 하나로 접는다
+ * @brief [FileWatcherTest] 같은 파일에 같은 동작이 연달아 오면 하나로 접는다
  * @details 저장 한 번에 OS 가 변경 알림을 둘씩 준다(리눅스의 IN_MODIFY + IN_CLOSE_WRITE, 윈도우의
  *          LAST_WRITE + SIZE). 접지 않으면 리로드가 두 번 돌고 큐도 그만큼 빨리 찬다.
  */
@@ -86,10 +86,10 @@ SW_TEST_CASE( FileWatcherTest, NonConsecutiveDuplicatesAreKept )
 }
 
 /**
- * @brief [FileWatcherTest] 큐가 상한에 걸리면 **합성 리스캔 하나**로 접는다
+ * @brief [FileWatcherTest] 큐가 상한에 걸리면 합성 리스캔 하나로 접는다
  * @details 폴링이 밀리는 동안(대량 임포트·브랜치 전환) 큐가 끝없이 자라면 안 된다. 상한을 넘으면
  *          개별 변경을 버리고, 다음 폴링이 "전부 다시 봐라" 하나를 덧붙인다 —
- *          **파일 이름이 빈 `Modified`** 가 그 약속이고 소비자가 그렇게 읽는다.
+ *          파일 이름이 빈 `Modified` 가 그 약속이고 소비자가 그렇게 읽는다.
  */
 SW_TEST_CASE( FileWatcherTest, QueueCapCollapsesIntoSingleRescan )
 {
@@ -125,7 +125,7 @@ SW_TEST_CASE( FileWatcherTest, QueueCapCollapsesIntoSingleRescan )
  * @brief [FileWatcherTest] 디렉터리가 다르면 이름이 같아도 접지 않는다
  * @details Windows · Linux 는 감시 루트 하나를 `directory` 로 주고 하위 경로를 `filename` 에 담지만,
  *          이벤트마다 그 파일이 있는 디렉터리를 주는 워처라면 서로 다른 폴더의 같은 이름이 잇달아 온다 —
- *          `_action` 과 `_filename` 만 보면 뒤엣것이 **조용히 사라진다.**
+ *          `_action` 과 `_filename` 만 보면 뒤엣것이 조용히 사라진다.
  */
 SW_TEST_CASE( FileWatcherTest, SameNameInDifferentDirectoriesIsNotCollapsed )
 {
@@ -150,7 +150,7 @@ SW_TEST_CASE( FileWatcherTest, SameNameInDifferentDirectoriesIsNotCollapsed )
 }
 
 /**
- * @brief [FileWatcherTest] 워커가 감시를 잃으면 다음 폴링이 **한 번** 알리고 합성 리스캔을 덧붙인다
+ * @brief [FileWatcherTest] 워커가 감시를 잃으면 다음 폴링이 한 번 알리고 합성 리스캔을 덧붙인다
  * @details 워커가 조용히 끝나면 받는 쪽은 "변경이 없다" 와 구별하지 못해 핫 리로드가 소리 없이 꺼진다.
  *          끊김은 `FileWatchPollResult::_bWatchLost` 로 오고, 멈추기 전 잃었을 변경은 리스캔으로 다시 훑게 한다.
  */

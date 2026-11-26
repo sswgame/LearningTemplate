@@ -25,7 +25,7 @@ namespace sw
     class CharacterIssueList
     {
     public:
-        /** @param pID `"영역.사건"` 꼴의 **글자 상수**입니다(`SW_LOG_ERROR_ID` 와 같다). */
+        /** @param pID `"영역.사건"` 꼴의 글자 상수입니다(`SW_LOG_ERROR_ID` 와 같다). */
         void add( const utf8* pID, string text ) { _listIssue.push_back( { pID, std::move( text ) } ); }
 
         bool                          empty() const { return _listIssue.empty(); }

@@ -13,7 +13,7 @@ Scripts/lint/pre_commit.py
 여러 규칙이 함께 쓰는 도우미만 바뀌었으면 그것을 쓰는 규칙의 자체 검사를 돈다(`LintRule.list_inputs`). `--all` 은 모든 규칙의 자체 검사도 돈다.
 이 모양은 시간이 아니라 연 파일 수로 지킨다(`check_read_bound` — 린트 코드가 바뀐 커밋과 `--all` 이 돈다): 파일 하나를 스테이지하면 모든 규칙을 통틀어
 그 파일을 한 번만 연다. 규칙은 파일 글을 `SourceFile` · `lint_scope.read_text` · `index_cache` 로만 얻는다.
-**통과한 것은 찍지 않는다.** 통과는 한 줄, 실패만 상세를 찍는다. 고치는 것은 `py -3 -m Scripts format` 하나다(clang-format — include 순서 포함, vcpkg format-manifest).
+통과한 것은 찍지 않는다. 통과는 한 줄, 실패만 상세를 찍는다. 고치는 것은 `py -3 -m Scripts format` 하나다(clang-format — include 순서 포함, vcpkg format-manifest).
 """
 
 from __future__ import annotations
@@ -71,7 +71,7 @@ def list_blob_reads(list_argument: Sequence[str], input_data: bytes | str | None
 
 def check_read_bound(project_root: Path) -> list[str]:
     """
-    커밋 훅이 저장소 크기에 비례하지 않는다는 것을 형식으로 지킨다(시간을 재지 않는다): 파일 하나를 스테이지한 범위로 **모든 규칙을 차례로** 돌 때
+    커밋 훅이 저장소 크기에 비례하지 않는다는 것을 형식으로 지킨다(시간을 재지 않는다): 파일 하나를 스테이지한 범위로 모든 규칙을 차례로 돌 때
     연 파일이 그 파일 한 번뿐이어야 한다. 사실 캐시(`index_cache`)를 먼저 데우므로 캐시 미스는 0 이다 — 넘으면 어떤 규칙이 스테이지 밖 파일을 읽거나
     (색인 없이 저장소 · 폴더 · 짝을 읽는다) 같은 파일을 따로 읽은 것이다(`lint_scope.read_bytes` 를 거치지 않았다).
 

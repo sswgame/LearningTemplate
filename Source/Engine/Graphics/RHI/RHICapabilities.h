@@ -9,8 +9,8 @@ namespace sw
 {
     /**
      * @note 비트필드 대신 uint8 입니다. DLL 과 컴파일러 사이의 패킹, true 대입 문제를 피합니다. 0/1 만 씁니다.
-     * @note **여기에 에디터 능력을 넣지 말 것.** "이 백엔드로 에디터가 도는가" 는
-     *       디바이스가 아니라 **에디터가 아는 사실**입니다. 에디터 UI 는 RHI 로 그리므로(`ImGuiRenderer`) 그 답은 에디터 렌더러의 초기화(PSO 생성)가 정합니다.
+     * @note 여기에 에디터 능력을 넣지 말 것. "이 백엔드로 에디터가 도는가" 는
+     *       디바이스가 아니라 에디터가 아는 사실입니다. 에디터 UI 는 RHI 로 그리므로(`ImGuiRenderer`) 그 답은 에디터 렌더러의 초기화(PSO 생성)가 정합니다.
      */
     struct SW_API RHICapabilities
     {
@@ -20,7 +20,7 @@ namespace sw
         uint8 _bGPUCulling{ SW_FALSE };     ///< 컴퓨트 컬 + 인디렉트 인자 경로
         /**
          * @brief GPU 메시 모프입니다. 컴퓨트가 정점을 변형하고 정점 셰이더가 그 결과를 풀링합니다.
-         * @details 끄면 모프를 요청한 메시도 **레스트 포즈로 그려집니다**(셰이더의 폴백 경로 그대로).
+         * @details 끄면 모프를 요청한 메시도 레스트 포즈로 그려집니다(셰이더의 폴백 경로 그대로).
          *          언리얼도 스킨 캐시를 못 쓰면 일반 정점 팩토리로 되돌립니다. 그리기가 멈추지는 않습니다.
          */
         uint8 _bGPUMeshMorph{ SW_FALSE };
@@ -28,9 +28,9 @@ namespace sw
         uint8 _bParallelCommandRecording{ SW_FALSE }; ///< 멀티스레드 커맨드 리스트 병렬 기록 및 제출 지원 (DX12/VK)
         uint8 _bRequiresWindowRecreate{ SW_FALSE };   ///< OS 윈도우 픽셀 포맷 1회 제한(Windows WGL 등)으로 핫스왑 시 윈도우 재생성 필요
         /**
-         * @brief 워커 스레드에서 GPU 리소스를 **만들어도** 되는지입니다(그리기가 아니라 생성만).
+         * @brief 워커 스레드에서 GPU 리소스를 만들어도 되는지입니다(그리기가 아니라 생성만).
          * @details DX12 · Vulkan 은 디바이스 레벨 생성이 스펙상 스레드 안전하고, DX11 도 ID3D11Device 는
-         *          (컨텍스트와 달리) 안전합니다. OpenGL 은 `glGen*` 이 **현재 컨텍스트**를 필요로 해 안 됩니다.
+         *          (컨텍스트와 달리) 안전합니다. OpenGL 은 `glGen*` 이 현재 컨텍스트를 필요로 해 안 됩니다.
          *          `GPUUploadQueue` 가 이 값으로 워커 병렬과 "받지 않음(렌더 스레드가 만든다)" 을 가릅니다.
          */
         uint8 _bThreadSafeResourceCreation{ SW_FALSE };
@@ -81,7 +81,7 @@ namespace sw
         uint8 _bTessellationStages{ SW_FALSE };
         /**
          * @brief 서술이 다른 렌더 타깃 텍스처를 힙 하나에 겹쳐 놓을 수 있는지입니다(`IRHIResourceFactory::createTransientHeap` · `createPlacedTexture2D`, 첫 쓰기 앞 `IRHICommandList::beginTextureAlias`).
-         * @details DX12 는 placed resource(D3D12_HEAP_FLAG_ALLOW_ONLY_RT_DS_TEXTURES 힙 — 모든 리소스 힙 등급이 받는다)와 앨리어싱 배리어로 참이다. Vulkan 도 참이다 — 메모리 하나에 이미지를
+         * @details DX12 는 placed resource(D3D12_HEAP_FLAG_ALLOW_ONLY_RT_DS_TEXTURES 힙. 모든 리소스 힙 등급이 받는다)와 앨리어싱 배리어로 참이다. Vulkan 도 참이다. 메모리 하나에 이미지를
          *          겹쳐 묶고(`vkBindImageMemory` 오프셋), 해제 큐의 대리자가 힙 메모리 참조를 펜스까지 들어 마지막 이미지가 사라진 뒤에 메모리를 놓는다. DX11 · GL · WebGPU 는 API 에 없어 거짓이다.
          *          거짓이면 트랜지언트 풀은 같은 서술끼리만 텍스처를 나눈다(`RenderGraphAliasPlan`) — 능력 표가 정한 길이다(언리얼 `GRHISupportsPlacedResources` 와 같은 자리).
          */
@@ -93,7 +93,7 @@ namespace sw
         uint8 _bSurfacePreRotation{ SW_FALSE };
         /**
          * @brief 주 스왑체인이 낼 수 있는 출력 종류의 비트입니다(`makeColorSpaceBit( RHIColorSpace )` 들의 합 — `DisplayOutputKind` 비트와 같은 값). SDR 비트(bit 0)는 늘 있다.
-         * @details 백엔드와 **창이 놓인 모니터**가 함께 정한다 — DX12 · DX11 은 `IDXGIOutput6::GetDesc1`(OS 의 HDR 켬) + `IDXGISwapChain3::CheckColorSpaceSupport`,
+         * @details 백엔드와 창이 놓인 모니터가 함께 정한다 — DX12 · DX11 은 `IDXGIOutput6::GetDesc1`(OS 의 HDR 켬) + `IDXGISwapChain3::CheckColorSpaceSupport`,
          *          Vulkan 은 `VK_EXT_swapchain_colorspace` 의 표면 포맷 목록이다. GL · WebGPU · Android 는 SDR 만이다(능력 표가 정한 길 — 실패의 대체가 아니다).
          *          언리얼 `GRHISupportsHDROutput` · 유니티 `HDROutputSettings.available` 자리다. 렌더러는 `DisplayOutputDesc::resolve` 로 요청을 이 비트에 맞춘다.
          */

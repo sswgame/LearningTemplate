@@ -327,7 +327,7 @@ namespace sw
     {
         // 상태는 옮기지 않는다 — 선언한 입력은 레벨 콜백이 셰이더 읽기로 옮겼다(꺼진 효과가 가리키는 원본은 그 효과 패스의 입력 선언이 옮겼다). 패스 기록 면에는 텍스처 전이가 없다.
         const TransientAttachmentPool::Attachment attachment = findTransientAttachment( attachmentName );
-        // 이 뷰에 없는 첨부(빠진 패스의 출력 — 꺼진 SSAO · 데칼 없는 DBuffer · 타일 없는 점광 그림자 아틀라스)는 걸지 않는다 — 셰이더는 그 역할의 기본값을 쓴다.
+        // 이 뷰에 없는 첨부(빠진 패스의 출력: 꺼진 SSAO · 데칼 없는 DBuffer · 타일 없는 점광 그림자 아틀라스)는 걸지 않는다. 셰이더는 그 역할의 기본값을 쓴다.
         if ( attachment._texture == 0 )
             return;
         context._resourceRegistry.registerTexture( canonicalName, attachment._texture, attachment._srv );
@@ -358,7 +358,7 @@ namespace sw
             return;
 
         // 역할 하나가 칸 하나라 고를 것이 없다 — 한 패스가 어떤 역할을 함께 읽어도 겹치지 않는다(예전에는 네 칸을 나눠 써 선언 밖에서 거는 쿠키 · 노출이 부딪혔다).
-        // 이 함수는 드로우 루프 안에서 불린다. 이름은 처음 한 번 intern 한다 — 문자열로 찾으면 **드로우마다** intern 하게 된다(FNV 해시 + 샤드 뮤텍스).
+        // 이 함수는 드로우 루프 안에서 불린다. 이름은 처음 한 번 intern 한다 — 문자열로 찾으면 드로우마다 intern 하게 된다(FNV 해시 + 샤드 뮤텍스).
         static const auto s_arrName = []
         {
             array<hashed_string, shaderslot::kEngineTextureCount> arrName{};
@@ -487,7 +487,7 @@ namespace sw
                                                   _state._gpuScene.getInstanceBuffer(), _state._gpuScene.getInstanceSRV() );
         context._passValues.setUint( passConstantNames()._swInstanceCount, _state._gpuScene.getInstanceSlotCount() ); // 칸 순 버퍼 — 인스턴스 번호는 칸이다
 
-        // 배치 표. **패스당 한 번** 건다. 배치마다 다른 값(인스턴스 시작 · 모프 풀 시작 · 정점 풀 시작)이 모두 여기 있어
+        // 배치 표. 패스당 한 번 건다. 배치마다 다른 값(인스턴스 시작 · 모프 풀 시작 · 정점 풀 시작)이 모두 여기 있어
         // 드로우는 배치 번호만 실어 나른다. 그래서 같은 PSO 의 배치들을 멀티 드로우 하나로 낼 수 있다.
         if ( _state._gpuScene.getBatchInfoBuffer() != 0 && _state._gpuScene.getBatchInfoSRV() != kInvalidDescriptorIndex )
         {
@@ -495,7 +495,7 @@ namespace sw
             context._passValues.setUint( passConstantNames()._swBatchCount, _state._gpuScene.getIndirectCommandCount() );
         }
 
-        // 모프 결과 풀. **패스당 한 번** 건다. 배치는 시작 오프셋을 배치 표에 싣는다(드로우 사이에
+        // 모프 결과 풀. 패스당 한 번 건다. 배치는 시작 오프셋을 배치 표에 싣는다(드로우 사이에
         // 바인딩이 바뀌지 않는다는 이 엔진의 규약). 안 걸리면 셰이더가 g_SwMorphVerticesIndex 로 알아채고
         // 입력 스트림을 그대로 쓴다.
         const RHIStructuredBuffer& morphBuffer = _state._deform._meshMorphPool.getMorphBuffer();
@@ -504,7 +504,7 @@ namespace sw
             context._resourceRegistry.registerBuffer( passConstantNames()._swMorphVertices, morphBuffer._buffer, morphBuffer._srv );
             context._passValues.setUint( passConstantNames()._swMorphVertexCount, _state._deform._meshMorphPool.getResultVertexCapacity() );
         }
-        // 스킨 칸 표 — 패스당 한 번. 스키닝을 디스패치할 수 없으면 걸지 않는다 — 칸이 있는 인스턴스는 그리지 않는다(레스트 포즈로 대신 그리지 않는다, 풀이 오류를 남겼다).
+        // 스킨 칸 표는 패스당 한 번 건다. 스키닝을 디스패치할 수 없으면 걸지 않고, 칸이 있는 인스턴스는 그리지 않는다(레스트 포즈로 대신 그리지 않는다, 풀이 오류를 남겼다).
         // 진단(SkipDispatch)이면 스킨 결과가 없어 걸지 않는다 — 칸 있는 인스턴스는 그 진단에서 그려지지 않는다.
         const RHIStructuredBuffer& skinResultOffsetBuffer = _state._deform._meshMorphPool.getSkinResultOffsetBuffer();
         const bool                 bSkinResultOffsets     = _state._deform._bDeformDispatchSkipped == SW_FALSE && _state._deform._meshMorphPool.isSkinDispatchable() && skinResultOffsetBuffer._buffer != 0 &&
@@ -513,7 +513,7 @@ namespace sw
         {
             context._resourceRegistry.registerBuffer( passConstantNames()._swSkinResultOffsets, skinResultOffsetBuffer._buffer, skinResultOffsetBuffer._srv );
             context._passValues.setUint( passConstantNames()._swSkinResultOffsetCount, _state._deform._meshMorphPool.getSkinResultOffsetCount() );
-            // 스킨 결과는 두 벌이다 — 이번 벌의 이동과 지난 프레임 결과가 든 벌의 이동(없으면 무효 — 셰이더가 이번 위치를 지난 위치로 쓴다).
+            // 스킨 결과는 두 벌이다. 이번 벌의 이동과 지난 프레임 결과가 든 벌의 이동(없으면 무효, 셰이더가 이번 위치를 지난 위치로 쓴다).
             context._passValues.setUint( passConstantNames()._swSkinResultShift, _state._deform._meshMorphPool.getSkinCurrentShift() );
             context._passValues.setUint( passConstantNames()._swSkinPreviousShift, _state._deform._meshMorphPool.getSkinPreviousShift() );
         }
@@ -610,7 +610,7 @@ namespace sw
         if ( binding._materialBuffer == 0 || binding._materialSRV == kInvalidDescriptorIndex )
         {
             // 머티리얼 없는 배치. 빈 슬롯으로 그리지 않는다(Vulkan 은 partially-bound 슬롯을 실제로 읽으면 정의되지 않는다).
-            // 폴백은 **이 PSO 셰이더의 레이아웃**(stride · 텍스처 인덱스 필드)으로 만든 것을 고른다. 공용 256 바이트를 걸면 DX11 이 드로우마다
+            // 폴백은 이 PSO 셰이더의 레이아웃(stride · 텍스처 인덱스 필드)으로 만든 것을 고른다. 공용 256 바이트를 걸면 DX11 이 드로우마다
             // "structure stride 256 vs 24" 를 낸다(SRV 의 구조 stride 는 셰이더 선언과 같아야 한다).
             const ShaderBindingLayout* pLayout = ( context._lastLayoutPSO == pso ) ? context._pLastLayout : _psoManager.findLayout( pso );
             const ShaderBindingSlot*   pSlot   = ( pLayout != nullptr ) ? pLayout->find( passConstantNames()._swMaterials ) : nullptr;
@@ -655,7 +655,7 @@ namespace sw
         if ( pLayout == nullptr || pLayout->isEmpty() )
             return true; // 걸 것이 없다(바인딩 없는 셰이더) — 그대로 그린다
 
-        // 배치마다 바뀌는 값은 **루트/푸시 상수**로 싣는다. 커맨드 리스트에 값이 그대로 들어가므로 드로우끼리
+        // 배치마다 바뀌는 값은 루트/푸시 상수로 싣는다. 커맨드 리스트에 값이 그대로 들어가므로 드로우끼리
         // 덮어쓸 수 없다. 그래서 PassCB 는 패스당 하나면 충분하다(PassCB 에 넣으면 드로우마다 버퍼를 새로 잡아야
         // 한다). 언리얼의 드로우별 느슨한 파라미터와 같은 자리다.
         const uint32 arrDrawRootConstant[] = { context._drawMaterialCount };
@@ -673,7 +673,7 @@ namespace sw
             return false; // 링 고갈 — 이 드로우는 그리지 않는다(앞 드로우의 슬롯을 덮지 않는다, 링이 이유를 남겼다)
 
         // 엔진 상수버퍼를 이 드로우에서 다시 만들 필요가 있나. 값 · 레지스트리 버전과 버퍼가 모두 그대로면 없다.
-        // **PSO 도 같아야 한다.** 이 플래그는 상수버퍼 재업로드만이 아니라 리소스 재바인딩까지 건너뛰게 하는데,
+        // PSO 도 같아야 한다. 이 플래그는 상수버퍼 재업로드만이 아니라 리소스 재바인딩까지 건너뛰게 하는데,
         // 슬롯 상태는 PSO 가 바뀌거나 패스를 여는 순간 비기 때문이다(FramePassContext::_lastBindPSO 참고).
         const uint32 valuesVersion   = context._passValues.getVersion();
         const uint32 registryVersion = context._resourceRegistry.getVersion();
@@ -793,7 +793,7 @@ namespace sw
                 continue;
             }
             const uint32 groupCount = countDrawGroup( inoutState, orderIndex, bDrawsParticles );
-            // **이 패스의 뷰**가 만든 인자를 쓴다. 그림자 패스가 메인 카메라 인자를 쓰면 화면 밖에서
+            // 이 패스의 뷰가 만든 인자를 쓴다. 그림자 패스가 메인 카메라 인자를 쓰면 화면 밖에서
             // 화면 안으로 그림자를 드리우는 물체가 사라진다.
             if ( drawBatchGroup( context, inoutState, batchIndex, groupCount ) )
                 ++inoutState._drawCallCount;
@@ -831,7 +831,7 @@ namespace sw
         // 간접 인자 슬롯은 업로드 순서대로 불투명 다음 투명으로 놓인다.
         state._batchOffset = bTransparentPass ? static_cast<uint32>( _state._gpuScene.getOpaqueBatches().size() ) : 0u;
 
-        // **같은 PSO · 정점 버퍼 · 머티리얼(버퍼 · CB · 텍스처 · 원소 수)의 연속 배치는 drawIndexedIndirect 한 번(멀티 드로우)이다.** 배치마다
+        // 같은 PSO · 정점 버퍼 · 머티리얼(버퍼 · CB · 텍스처 · 원소 수)의 연속 배치는 drawIndexedIndirect 한 번(멀티 드로우)이다. 배치마다
         // 다른 값은 배치 표(g_SwBatches)와 인스턴스 슬롯 스트림(슬롯 1)이 준다. 간접 인자의 startInstance 가 배치 시작이라 입력
         // 어셈블러가 인스턴스마다 자기 전역 자리를 넘기고, 정점은 그 인스턴스의 meshBatchIndex 로 표를 읽는다. 드로우 ID 도 루트
         // 상수 주입도 없다(DX12 커맨드 시그니처에 루트 상수를 넣으면 ExecuteIndirect 가 두 배 느려진다. 실측이다). 멀티 드로우가 없는
@@ -900,7 +900,7 @@ namespace sw
 
     bool FramePassExecutor::drawBatchGroup( FramePassContext& context, BatchDrawState& inoutState, uint32 headIndex, uint32 groupCount )
     {
-        // **이 머티리얼의 퍼뮤테이션**으로 그린다. 주의: 패스 PSO 하나로 모두 그리면 머티리얼이 선언한
+        // 이 머티리얼의 퍼뮤테이션으로 그린다. 주의: 패스 PSO 하나로 모두 그리면 머티리얼이 선언한
         // 정적 스위치(유리의 MATERIAL_BLEND_TRANSLUCENT 같은)가 쿠킹되기만 하고 한 번도 걸리지 않는다.
         // 표는 기록 전에 다 풀렸다(`FramePSOManager::buildBatchPSOTable`). 여기서는 읽기만 한다.
         const GPUMeshBatch&          head        = inoutState._batches[headIndex];

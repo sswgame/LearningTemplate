@@ -1,4 +1,4 @@
-// ServerPoseOverlayTest — 서버 포즈 글의 읽기 · 쓰기(공백이 든 이름, 선택 묶음, 옛 형식, 망가진 줄), 이름으로 맞춘 차이의 차례, 차이 글, 로컬 포즈 모으기(서버 · 소켓 없음 — nogpu).
+// ServerPoseOverlayTest: 서버 포즈 글의 읽기 · 쓰기(공백이 든 이름, 선택 묶음, 옛 형식, 망가진 줄), 이름으로 맞춘 차이의 차례, 차이 글, 로컬 포즈 모으기(서버 · 소켓 없음, nogpu).
 #include "pch.h"
 
 #include "Core/String/StringUtil.h"

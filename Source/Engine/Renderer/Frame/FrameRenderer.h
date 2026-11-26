@@ -119,14 +119,14 @@ namespace sw
     /**
      * @class FrameRenderer
      * @brief 프레임 경로를 담당합니다. RenderPipeline XML 에서 RenderGraph 를 만들고, GPUScene 과 MeshComponent 를 IRHIDevice 로 그립니다.
-     * @details **뷰는 여럿일 수 있다.** 주 시점 하나와 추가 뷰를 같은 그래프로 한 번씩 그린다.
+     * @details 뷰는 여럿일 수 있다. 주 시점 하나와 추가 뷰를 같은 그래프로 한 번씩 그린다.
      *          추가 뷰(`RenderViewRequest`)에는 CCTV, 백미러, 미니맵 같은 렌더 텍스처 뷰와 분할 화면, PiP 같은 화면 사각형 뷰가 있다.
      *          뷰마다 트랜지언트 풀, 컬링 슬롯, TAA 히스토리, 커맨드 리스트를 따로 가진다(`FrameViewTarget`).
      *          컬링 슬롯은 간접 인자, 가시 목록, 컬링 상수 버퍼로 이루어진다.
      *          실행 순서는 프레임 그래프(모든 뷰의 컬링), 렌더 텍스처 뷰, 주 시점, 화면 사각형 뷰다.
      *          주 시점이 렌더 텍스처를 읽으므로 렌더 텍스처 뷰가 먼저 돌고, 화면 사각형 뷰는 주 시점 위에 겹친다.
      *
-     *          **얇은 지휘자.** 렌더러는 프레임 순서(스냅샷 받기 · 라이트 · 그림자 · 하늘 · 뷰 준비 · 업로드 · PSO 준비 · 제출)를 정하고 프레임 데이터(`FrameRenderState`)를 소유한다.
+     *          얇은 지휘자. 렌더러는 프레임 순서(스냅샷 받기 · 라이트 · 그림자 · 하늘 · 뷰 준비 · 업로드 · PSO 준비 · 제출)를 정하고 프레임 데이터(`FrameRenderState`)를 소유한다.
      *          혼자 서는 일은 소유한 협력 객체가 한다 — 기록과 제출(`FramePassExecutor`), PSO 만들기 · 찾기(`FramePSOManager`), 후처리 효과 셋(`FrameAutoExposure` · `FrameUpscale` · `FrameFog`),
      *          모듈 확장 받아들이기(`FrameExtensionHost`), 뷰 GPU 자원 수명(`FrameViewResources`), 캡처(`FrameCapture`).
      *          협력 객체는 지금 그리는 뷰를 인자로 받고 렌더러의 `_pDevice` 변수를 참조한다. 언리얼 `FSceneRenderer` 의 셋업(InitViews)과 패스 기록(RDG 패스 실행)을 나눈 것과 같다.
@@ -191,7 +191,7 @@ namespace sw
          */
         void executePacketWithoutDrawing( IRHIDevice* pDevice, RenderFramePacket& packet );
         /**
-         * @brief 텍스처 구간 업로드 · 비동기 로드 마무리 · 밉 스트리밍입니다. **프레임을 연 쪽**(`RenderThread` · `SceneCapture`)이 `beginFrame` 바로 뒤, 아무것도 기록하기 전에 한 번 부릅니다.
+         * @brief 텍스처 구간 업로드 · 비동기 로드 마무리 · 밉 스트리밍입니다. 프레임을 연 쪽(`RenderThread` · `SceneCapture`)이 `beginFrame` 바로 뒤, 아무것도 기록하기 전에 한 번 부릅니다.
          * @param viewHeightPixels 밉 스트리밍이 화면 크기를 재는 출력 높이입니다.
          */
         static void updateTextureUploads( IRHIDevice* pDevice, uint32 viewHeightPixels );
@@ -225,7 +225,7 @@ namespace sw
             return sample;
         }
         /**
-         * @brief 풀스크린 패스가 이 역할의 입력을 바인딩하지 **않게** 합니다. 언리얼의 r.AmbientOcclusion.Levels=0 같은 쇼 플래그입니다.
+         * @brief 풀스크린 패스가 이 역할의 입력을 바인딩하지 않게 합니다. 언리얼의 r.AmbientOcclusion.Levels=0 같은 쇼 플래그입니다.
          * @details 셰이더는 그 인덱스를 kInvalidIndex 로 읽고 폴백한다(AO 는 1). 같은 프레임 안에서 "이 입력이 실제로 이미지를 바꾸는가" 를 비교할 수 있다.
          *          입력을 매 프레임 계산하기만 하고 화면에는 쓰지 않는 결함을 픽셀로 잡는다. 바인딩은 패스 실행(`FramePassExecutor`)이 한다.
          */
@@ -284,7 +284,7 @@ namespace sw
         string_view getPresentedAttachmentName() const;
         /**
          * @brief 지금 살아 있는 트랜지언트 목록을 엔진 레지스트리에 공개합니다. 에디터 패널이 이 목록을 읽습니다.
-         * @details 트랜지언트는 **구성이 바뀔 때만** 다시 만들어지므로 그때 한 번만 부르면 된다(풀을 다시 만들 때, 꺼진 효과의 출력이 가리키는 곳이 바뀔 때).
+         * @details 트랜지언트는 구성이 바뀔 때만 다시 만들어지므로 그때 한 번만 부르면 된다(풀을 다시 만들 때, 꺼진 효과의 출력이 가리키는 곳이 바뀔 때).
          *          매 프레임 부를 필요는 없다.
          */
         void publishRenderTargets() const;
@@ -408,7 +408,7 @@ namespace sw
         void releaseViewCullBuffers( FrameViewTarget& view );
         /**
          * @brief 이번 프레임의 추가 뷰 요청을 뷰 상태에 반영합니다. 새 뷰를 만들고, 사라진 뷰를 해제하고, 출력 텍스처, 풀 크기, 컬링 입력을 맞추고,
-         *        GPUScene 의 컬링 슬롯 수를 정합니다. **업로드 전에**(셋업 단계) 불러야 합니다. 버퍼와 텍스처 생성은 기록 중에 할 수 없습니다.
+         *        GPUScene 의 컬링 슬롯 수를 정합니다. 업로드 전에(셋업 단계) 불러야 합니다. 버퍼와 텍스처 생성은 기록 중에 할 수 없습니다.
          */
         void prepareExtraViews( const vector<RenderViewRequest>& listRequest, const FrameViewResources::ViewPassSceneState& sceneState );
         /**
@@ -443,7 +443,7 @@ namespace sw
          */
         void updatePassConstants( FramePassContext& context, const float4x4& mainViewProj, const FrameViewResources::ViewPassSceneState& sceneState );
         /**
-         * @brief 뷰 패스 고르기가 보는 이번 프레임의 씬 상태를 **준비해** 값으로 냅니다 — 주 시점과 추가 뷰가 같은 값을 쓴다. 프레임에 한 번, 스냅샷을 적용한 뒤 부른다.
+         * @brief 뷰 패스 고르기가 보는 이번 프레임의 씬 상태를 준비해 값으로 냅니다 — 주 시점과 추가 뷰가 같은 값을 쓴다. 프레임에 한 번, 스냅샷을 적용한 뒤 부른다.
          * @details 고르기는 이 값만 받는다 — 상태를 만드는 일(데칼 목록)이 이 안에 있어 고르기보다 늦게 준비한 상태(지난 프레임 값)를 읽을 수 없다.
          */
         [[nodiscard]] FrameViewResources::ViewPassSceneState prepareViewPassSceneState();
@@ -451,7 +451,7 @@ namespace sw
         /** @brief 이번 프레임의 하늘(`_state._frameSky` · `_state._bHasFrameSky`)을 정합니다. 씬 직접 경로와 패킷 경로가 같은 규칙으로 부릅니다. */
         void applyFrameSky( bool bHasSky, const SkyGradient& sky, const float4& skyLight );
         /**
-         * @brief 실시간 라이트 프로브 갱신의 버퍼와 입력을 갖춥니다(`_state._listFrameRealtimeProbe`). **기록 전에** 부릅니다 - 라이트 버퍼가 올라간 뒤(프로브 버퍼의 UAV가 정해진 뒤)다.
+         * @brief 실시간 라이트 프로브 갱신의 버퍼와 입력을 갖춥니다(`_state._listFrameRealtimeProbe`). 기록 전에 부릅니다 - 라이트 버퍼가 올라간 뒤(프로브 버퍼의 UAV가 정해진 뒤)다.
          * @details 못 켜는 이유(컴퓨트 PSO · 프로브 버퍼 UAV · 버퍼 할당)는 갱신기가 한 번만 오류로 남기고, 실시간 볼륨은 검게 남는다(베이크로 대신하지 않는다).
          */
         void prepareRealtimeProbes( IRHIDevice* pDevice );
@@ -500,7 +500,7 @@ namespace sw
         [[nodiscard]] bool tryGetAttachmentClearColor( string_view attachmentName, float4& outClearColor ) const;
 
         /**
-         * @brief 이번 프레임 배치 수에 맞춰 상수 버퍼 슬롯을 **기록 시작 전에** 늘려 둡니다. 드로우마다 슬롯을 하나씩 쓰기 때문입니다.
+         * @brief 이번 프레임 배치 수에 맞춰 상수 버퍼 슬롯을 기록 시작 전에 늘려 둡니다. 드로우마다 슬롯을 하나씩 쓰기 때문입니다.
          * @details 기록 중에는 버퍼 생성과 bindless 등록을 할 수 없다. 지난 프레임의 최대 사용량(하이워터)도 최솟값으로 본다.
          */
         void ensurePassCbCapacityForFrame();

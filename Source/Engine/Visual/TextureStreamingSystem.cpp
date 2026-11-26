@@ -7,7 +7,7 @@
  *          추가 뷰 · 대기 뷰 중 가장 큰 것)를 구해 그 머티리얼의 텍스처마다 가장 큰 값을 `TextureCache::recordStreamingDemand` 로 알린다. 대기 뷰(컷 프리롤)가 있으면 곧 볼 것도 같이 앞선다.
  *          화면 크기 앞에 메시 자리의 스트리밍 우선순위(`SceneStreamingSubsystem::computePriorityAt` — 셀 로드 차례와 같은 값)를 둔다: 급한 스트리밍 소스가 덮는 자리의 텍스처를
  *          먼저 올리고, 소스 반경 밖(HLOD 대리가 그리는 먼 영역)은 `Lowest` 로 뒤에 선다. 스트리밍하지 않는 씬은 모두 `Normal` 이라 화면 크기 차례 그대로다.
- *          **싸게 만든다**: 위쪽 밉을 기다리는 텍스처가 없으면 메시를 훑지 않는다(`TextureCache::hasPendingStreamingUpgrades`) — 스트리밍이 몰리는 때(씬 로드 직후 · 새 오브젝트)만 돈다.
+ *          싸게 만든다: 위쪽 밉을 기다리는 텍스처가 없으면 메시를 훑지 않는다(`TextureCache::hasPendingStreamingUpgrades`) — 스트리밍이 몰리는 때(씬 로드 직후 · 새 오브젝트)만 돈다.
  *          UV 밀도(텍셀 대 화면 픽셀)는 모르므로 화면 크기만 쓴다 — 같은 머티리얼의 텍스처는 같은 우선도를 받는다.
  */
 #include "pch.h"

@@ -115,9 +115,9 @@ namespace sw
 
         const string pathStr = string( assetPath );
 
-        // **성공한 것만** 여기서 끝낸다. 실패는 기록돼 있어도 아래로 흘려보내 다시 요청한다
+        // 성공한 것만 여기서 끝낸다. 실패는 기록돼 있어도 아래로 흘려보내 다시 요청한다
         // (아직 쿠킹하지 않은 셰이더, 늦게 마운트되는 팩 — 한 번 실패한 경로가 영영 실패가 되지 않게).
-        // 콜백은 **락 밖에서** 부른다(비동기 완료 `update` 와 같다). 락을 쥔 채 부르면 콜백이 이 큐에 다시 물을 때(`isLoaded` ·
+        // 콜백은 락 밖에서 부른다(비동기 완료 `update` 와 같다). 락을 쥔 채 부르면 콜백이 이 큐에 다시 물을 때(`isLoaded` ·
         // `requestAsset`) 같은 뮤텍스에 재진입해 스레드가 스스로 멈춘다.
         bool             bAlreadyLoaded{ false };
         StreamingRequest request{ pathStr, 0 };
@@ -165,9 +165,9 @@ namespace sw
             ScopedLock<mutex>       lock{ _mutex };
             request._requestID = ++_nextRequestID;
 
-            // **바이트를 읽는 요청에만 편승한다.** 존재 확인 태스크(`requestAsset`)는 파일을 읽지
+            // 바이트를 읽는 요청에만 편승한다. 존재 확인 태스크(`requestAsset`)는 파일을 읽지
             // 않으므로, 거기 붙으면 `bSuccess = true` 에 빈 버퍼를 받는다. 그때는 세대를 올려
-            // 그 태스크의 완료를 버리고 **데이터 읽기를 새로 건다.** `processAssetTask` 는 세대가
+            // 그 태스크의 완료를 버리고 데이터 읽기를 새로 건다. `processAssetTask` 는 세대가
             // 어긋나면 콜백 표에 손대기 전에 돌아가므로, 먼저 등록된 존재 확인 콜백도 그대로 살아
             // 새 읽기의 완료에 함께 실린다.
             const bool bAlreadyFetchingData = _uniqueActiveDataRequest.find( pathStr ) != _uniqueActiveDataRequest.end();
@@ -272,7 +272,7 @@ namespace sw
             return;
         }
 
-        // 엔진 서비스가 없거나(테스트 · 툴) 쿠킹 중이면 그 자리에서 끝낸다. 태스크가 끝났을 때와 **같은 완료 절차**다.
+        // 엔진 서비스가 없거나(테스트 · 툴) 쿠킹 중이면 그 자리에서 끝낸다. 태스크가 끝났을 때와 같은 완료 절차다.
         vector<uint8> bytes;
         const bool    bSuccess = bFetchData ? AssetIO::readBinaryAsset( AssetID{ pathStr }, bytes ) : AssetIO::hasAsset( AssetID{ pathStr } );
         completeRequestLocked( pathStr, bSuccess, std::move( bytes ) );

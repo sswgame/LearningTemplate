@@ -4,9 +4,9 @@
  * @details 형제 `GameSceneFlow` · `RespawnFlow` 와 같은 줄의 게임 인스턴스 서브시스템이다. 용과 같이 · GTA · RDR2 의 가게 · 오락실 미니게임, 마리오 파티의 연속 미니게임,
  *          언리얼 Lyra 의 `ULyraExperienceManagerComponent`(Experience 를 올리고 내린다)와 같은 자리다. 형제 서브시스템(`OnlineSession`)처럼 늘 서고, 미니게임을 쓰지 않는 게임에서는 아무 일도 안 한다.
  *          게임 범위 기능(gamesettings `gameFeatures`)은 게임 인스턴스가 이 흐름보다 먼저 켜 둔다 — 미니게임 범위의 해제 검사는 그것이 켜진 채로 찍어 그 몫을 남은 것으로 세지 않는다.
- *          칸 스택(`MinigameStack`): `enter` 는 쌓고(미니게임 안의 미니게임 — 덮인 미니게임의 범위는 끄고 돌아올 때 씬 복원 **전에** 다시 켠다, 컴포넌트가 `beginPlay` 에서 서비스를 찾는다),
+ *          칸 스택(`MinigameStack`): `enter` 는 쌓고(미니게임 안의 미니게임 — 덮인 미니게임의 범위는 끄고 돌아올 때 씬 복원 전에 다시 켠다, 컴포넌트가 `beginPlay` 에서 서비스를 찾는다),
  *          `switchTo` 는 맨 위를 바꾼다(돌아올 자리를 그대로 두고 다음 씬 전환 미니게임으로 — 마리오 파티식). 깊이 한도는 엔진 설정 `_minigame._stackDepthLimit`(없으면 진입이 진다).
- *          켜기는 맵을 요청하기 전이다 — 맵의 컴포넌트는 씬이 적용될 때(`beginPlay`, 맵 로드 완료 알림보다 앞) 기능 서비스 · 카탈로그를 찾는다. 진입은 원자적이다 — 지면 덮었던 미니게임을 다시 켠다.
+ *          켜기는 맵을 요청하기 전이다. 맵의 컴포넌트는 씬이 적용될 때(`beginPlay`, 맵 로드 완료 알림보다 앞) 기능 서비스 · 카탈로그를 찾는다. 진입은 원자적이라 지면 덮었던 미니게임을 다시 켠다.
  *          들어가기: `SceneSwitch` 는 들어갈 때의 활성 씬을 돌아올 자리(씬 경로 + `GameStateSnapshot` 목적 `Snapshot`)로 찍고 맵을 바꾼다. 찍기 직전에 자동 저장을 한 번 맡긴다.
  *          저장: 정의가 허락하면(`MinigameSavePolicy::Allowed`) 세이브가 칸 스택(미니게임 이름 · 덮인 씬의 세이브 봉투)을 머리에 담고, 불러오면 그 미니게임을 켠 뒤 그 맵을 열어 되살린다
  *          (`travelToSavedMinigame` — 언리얼이 세이브의 맵으로 `OpenLevel` 할 때 URL 로 경험 · 게임 모드를 함께 싣는 자리). 막는 미니게임의 칸은 있는 동안 저장을 막는다(`SaveLock` 까닭 `minigame`).
@@ -14,12 +14,12 @@
  *          넷 세션이 열린 인스턴스에서 씬 전환 진입은 오류로 거절한다(세션의 모든 피어가 같은 씬을 돌아야 한다 — 세션 이동 갈래는 돌아올 자리 형식에 더할 자리만 둔다).
  *          `SubLevel` 은 들어갈 때의 활성 씬에 맵을 하위 레벨(이름 = 미니게임 이름)로 더하고 나올 때 뺀다. 자리는 진입을 건 사물(트리거)의 변환이다 — 언리얼 레벨 인스턴스 액터 자리,
  *          얹을 자리 없이는 들어가지 않는다(원점에 엉뚱하게 얹히지 않게). 바탕 틱은 멈추지 않는다 — 미니게임 입력은 `inputContexts` 레이어가 위에서 가린다.
- *          넷 세션에서 `SubLevel` 은 서버가 들어가고 클라이언트는 **본다** — 서버의 목록(`MinigameReplication.h`)을 받아 기능 · 카탈로그를 켜고 같은 하위 레벨을 세우되 입력 문맥 · UI 는 열지 않으며, 칸 스택에 들지 않는다.
+ *          넷 세션에서 `SubLevel` 은 서버가 들어가고 클라이언트는 본다 — 서버의 목록(`MinigameReplication.h`)을 받아 기능 · 카탈로그를 켜고 같은 하위 레벨을 세우되 입력 문맥 · UI 는 열지 않으며, 칸 스택에 들지 않는다.
  *          장치 밖 씬 이동(세이브 불러오기 · 타이틀로 · 시나리오의 씬 열기)이 오면 칸 스택과 미니게임 범위를 비운다 — 씬 매니저의 받아들임 알림으로 이 흐름이 요청하지 않은 게임 이동을 듣는다.
  *          월드가 플레이를 시작할 때 활성 씬이 씬 전환 미니게임의 맵이면(에디터가 미니게임 맵을 편집하다 플레이 · 모듈 리로드 뒤 다시 시작) 그 미니게임 안으로 시작하고, 멈추면 비운다 —
  *          언리얼 Lyra 가 월드 설정의 기본 경험으로 에디터 플레이를 여는 자리다. 실행 전역 변수로 들어간 것과 같은 칸(돌아올 씬 없음)이다.
  *          진입: 개발 명령 `minigame.enter <이름> [얹을 사물]` · `minigame.switch <이름>` · `minigame.leave [결과]` · `minigame.quit`, 사물의 `MinigameTriggerComponent`(틱 뒤에 맡기고 `update` 가
- *          틱 밖에서 처리 — 스냅숏은 씬을 도는 동안 찍지 않는다), 실행 전역 변수 `-gv_firstMinigame=<이름>`(첫 씬 `gv_firstScene` 보다 위 — `enterFirstMinigame`).
+ *          틱 밖에서 처리. 스냅숏은 씬을 도는 동안 찍지 않는다), 실행 전역 변수 `-gv_firstMinigame=<이름>`(첫 씬 `gv_firstScene` 보다 위, `enterFirstMinigame`).
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -194,7 +194,7 @@ namespace sw
          * @details 파일마다 들어갈 때와 같은 읽기 · 검사를 한다. 못 읽은 정의와 자리가 겹친 뒤의 정의는 오류를 남기고 빼며, 나머지 입구는 그대로 선다.
          */
         void collectPortals( vector<MinigameDefinition>& outListPortal ) const;
-        /** @brief 하위 레벨을 사물 @p anchor 의 변환(위치는 절대 — 월드 원점을 더한다)에 얹는 자리입니다 — 트리거 · 개발 명령이 쓴다. 장면 컴포넌트가 없으면 nullopt 입니다. */
+        /** @brief 하위 레벨을 사물 @p anchor 의 변환(위치는 절대, 월드 원점을 더한다)에 얹는 자리입니다. 트리거 · 개발 명령이 쓴다. 장면 컴포넌트가 없으면 nullopt 입니다. */
         static optional<SubLevelPlacement> makeAnchorPlacement( const GameObject& anchor );
         /**
          * @brief @p definition 이 지금 인스턴스에서 들어갈 수 있는 방식인지 봅니다 — 넷 세션이 열렸으면(@p bNetSessionActive) 씬 전환은 거절한다(폴백 없음). 씬이 서기 전 첫 진입은 세션을 가르지 않아 열린 것으로 치지 않는다.
@@ -263,7 +263,7 @@ namespace sw
         void enterMinigameOfActiveScene();
         /** @brief 팩의 미니게임 이름을 모읍니다(파일 이름순). 폴더를 나열하지 못하면 까닭은 나열이 남기고 빈 목록입니다. */
         void collectNames( vector<string>& outListName ) const;
-        /** @brief 장치 밖 씬 이동 — 기다리던 진입 · 나가기, 칸 스택, 켜진 미니게임을 모두 버린다(맵은 바꾸지 않는다 — 이동이 이미 들어왔다). */
+        /** @brief 장치 밖 씬 이동: 기다리던 진입 · 나가기, 칸 스택, 켜진 미니게임을 모두 버린다(이동이 이미 들어왔으므로 맵은 바꾸지 않는다). */
         void clearForOutsideTravel( const string& scenePath );
         /** @brief @p name 의 정의를 읽고 이름 · 참조를 봅니다. 지면 알리고 false 입니다. */
         [[nodiscard]] bool loadDefinition( string_view name, MinigameDefinition& outDefinition ) const;

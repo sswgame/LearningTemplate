@@ -2,12 +2,12 @@
  * @file StoreReceiptValidator.h
  * @brief HTTP 로 묻는 실제 스토어 검증 제공자의 공통 틀입니다. 스토어는 요청의 모양과 응답 파싱만 적고, 판단은 여기 한 벌만 둡니다.
  * @details 틀이 정하는 것:
- *          - **응답 분류**(`classifyResponse`): 전송 실패 · 429 · 5xx 는 Retry, 401 · 403 은 우리 자격 문제라 Retry(오류 로그는 스토어가 남긴다), 그 밖의 4xx 는 Invalid, 2xx 인데 JSON 이 아니면 Retry 다.
+ *          - 응답 분류(`classifyResponse`): 전송 실패 · 429 · 5xx 는 Retry, 401 · 403 은 우리 자격 문제라 Retry(오류 로그는 스토어가 남긴다), 그 밖의 4xx 는 Invalid, 2xx 인데 JSON 이 아니면 Retry 다.
  *            "스토어가 없다고 답했다" 만 Invalid 이다 — 읽지 못한 답을 Invalid 로 하면 결제한 사람의 영수증이 버려진다.
- *          - **요청과의 대조**(`applyOrderInfo`): 물은 거래 · 상품 · 키와 답이 다르면 Invalid, 판정에 필요한 거래 id · 상품 · 산 수가 없으면 Invalid 이다. 스토어는 답이 말한 값을 옮겨 적기만 한다.
- *          - **조회 구간**(`ReceiptPollWindow`): 끝까지 읽은 조회만 구간을 옮긴다. 실패 · 읽지 못한 항목 · 잇지 못한 잘림은 그대로 둬 다음 조회가 다시 읽는다 — 구간을 지나치면 그 환불을 영영 놓친다.
+ *          - 요청과의 대조(`applyOrderInfo`): 물은 거래 · 상품 · 키와 답이 다르면 Invalid, 판정에 필요한 거래 id · 상품 · 산 수가 없으면 Invalid 이다. 스토어는 답이 말한 값을 옮겨 적기만 한다.
+ *          - 조회 구간(`ReceiptPollWindow`): 끝까지 읽은 조회만 구간을 옮긴다. 실패 · 읽지 못한 항목 · 잇지 못한 잘림은 그대로 둬 다음 조회가 다시 읽는다 — 구간을 지나치면 그 환불을 영영 놓친다.
  *            기준 시각은 서비스가 저장소(`econ_refund_cursor`)에 남긴다. 받기 전(`restoreRefundCursor`)에는 조회하지 않아 재시작이 구간을 비우지 않고, 스토어의 한계를 넘겨 멈춘 동안 놓친 구간은 경고한다.
- *          - **지급 알림**(`confirmDelivery`): 답이 "지급 뒤에 알려라" 고 하면(`_bNeedsDeliveryConfirm`) 결과에 키만 실어 내고, 알림은 서비스가 지급을 커밋한 뒤에 맡긴다. 2xx Confirmed, 그 밖의 4xx Refused, 닿지 못함 · 자격 거절 Retry 다.
+ *          - 지급 알림(`confirmDelivery`): 답이 "지급 뒤에 알려라" 고 하면(`_bNeedsDeliveryConfirm`) 결과에 키만 실어 내고, 알림은 서비스가 지급을 커밋한 뒤에 맡긴다. 2xx Confirmed, 그 밖의 4xx Refused, 닿지 못함 · 자격 거절 Retry 다.
  *          - 결과 · 환불 알림의 큐, 겹친 알림 거름, 종료 때 Retry 로 끝내기, 자격이 준비될 때까지 호출을 기다리게 하기.
  *          언리얼 OSS(`IOnlinePurchase`)는 플랫폼마다 영수증 파싱만 다르고 공통 상태(`EPurchaseTransactionState`)를 내며, 유니티 IAP 도 `IPurchaseReceipt` 하나로 모은다(기억에 의존). 둘 다 판단을 플랫폼 코드에
  *          흩어 두는데, 이 틀은 한 걸음 더 가 분류와 대조까지 위로 올린다 — 스토어가 늘 때 같은 결함을 다시 쓰지 못하게 하려는 것이다. 새 스토어는 이 클래스를 상속해 순수 가상 다섯을 적는다.

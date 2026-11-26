@@ -52,7 +52,7 @@ namespace sw
 
         /**
          * @brief 호스트 범위를 세웁니다 — 개발 계층(개발 구성만)을 더하고 모듈 라이브러리 창구를 걸어 범위를 초기화합니다. 엔진을 세우기 전에 부릅니다.
-         * @details 호스트가 더 넣을 서브시스템은 이 함수 **전에** `getHostScope` 로 더합니다.
+         * @details 호스트가 더 넣을 서브시스템은 이 함수 전에 `getHostScope` 로 더합니다.
          * @param moduleTypeLoader 엔진의 `ModuleLoadStage` 가 부르는 호스트 로더입니다. 안에서 `loadModuleLibraries` 를 부릅니다.
          * @param pDevLayer 개발 계층입니다(호스트가 `makeHostDevLayer` 로 만든다 — 구현은 DevTools.dll). 개발 구성은 반드시 주고 배포는 nullptr 입니다.
          * @return 서지 못하면 false 입니다.

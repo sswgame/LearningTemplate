@@ -509,7 +509,7 @@ SW_TEST_CASE( DelegateTest, MulticastDelegateBroadcastUntilStopsAndDefersRemove 
 }
 
 /**
- * @brief [DelegateTest] MulticastDelegate 는 **진짜로 이동한다** (복사로 떨어지지 않는다)
+ * @brief [DelegateTest] MulticastDelegate 는 진짜로 이동한다 (복사로 떨어지지 않는다)
  * @details 복사 생성자를 `= default` 로 *선언* 하면 암시적 이동 생성자·이동 대입이 생기지 않는다.
  *          그러면 `std::move` 를 써도 구독자 벡터가 통째로 깊은 복사되고,
  *          `is_nothrow_move_constructible` 이 false 다. 옮긴 뒤 원본이 비는지로 확인한다 —
@@ -545,13 +545,13 @@ SW_TEST_CASE( DelegateTest, MulticastDelegateMovesInsteadOfCopying )
 }
 
 /**
- * @brief [DelegateTest] 방송 중에 복사해도 **사본은 지연 제거에 갇히지 않는다**
+ * @brief [DelegateTest] 방송 중에 복사해도 사본은 지연 제거에 갇히지 않는다
  * @details `_broadcastDepth` 와 지연 제거 큐는 값이 아니라 *그 인스턴스의 호출 스택 상태*다.
  *          복사 생성자가 `= default` 면 그 둘까지 같이 복사된다 — broadcast 중에 복사하면
- *          사본이 깊이 0 이 아닌 채로 태어나, 그 사본에서 `remove` 한 것이 **영영 반영되지 않는다**
+ *          사본이 깊이 0 이 아닌 채로 태어나, 그 사본에서 `remove` 한 것이 영영 반영되지 않는다
  *          (자기 broadcast 는 1→2→1 로만 오가므로 0 이 안 된다).
  *
- * @note **복사 생성자를 타야 한다.** 복사 대입은 받는 쪽의 깊이를 건드리지 않으므로(그 깊이는 지금
+ * @note 복사 생성자를 타야 한다. 복사 대입은 받는 쪽의 깊이를 건드리지 않으므로(그 깊이는 지금
  *       그 객체를 방송 중인 호출 스택의 것이다) 이 결함을 드러내지 못한다 — 대입으로 쓰면 변이 검사에서도 통과한다.
  */
 SW_TEST_CASE( DelegateTest, CopyMadeDuringBroadcastStartsWithCleanBroadcastState )
@@ -563,7 +563,7 @@ SW_TEST_CASE( DelegateTest, CopyMadeDuringBroadcastStartsWithCleanBroadcastState
     Multi                 source;
     sw::unique_ptr<Multi> pCopy;
 
-    // 방송 도중에 **복사 생성자**로 사본을 만든다 — 그 순간 원본의 _broadcastDepth 는 1 이다.
+    // 방송 도중에 복사 생성자로 사본을 만든다 — 그 순간 원본의 _broadcastDepth 는 1 이다.
     const sw::Subscription subscription = source.add( SW_DELEGATE_LAMBDA( sw::Delegate<void()>, [&]()
     {
         ++sourceCount;
@@ -575,7 +575,7 @@ SW_TEST_CASE( DelegateTest, CopyMadeDuringBroadcastStartsWithCleanBroadcastState
     SW_EXPECT_EQUAL( 1, sourceCount );
     SW_EXPECT_TRUE( pCopy->isBound() );
 
-    // 사본에서 전부 제거한다. 사본의 방송 깊이가 0 이라면 **즉시** 반영돼야 한다.
+    // 사본에서 전부 제거한다. 사본의 방송 깊이가 0 이라면 즉시 반영돼야 한다.
     pCopy->removeAll();
     SW_EXPECT_TRUE_MSG( pCopy->isBound() == false,
                         "방송 중에 뜬 사본이 방송 깊이를 물려받아 제거가 지연되고 있다" );

@@ -224,7 +224,7 @@ namespace sw::editor
         /**
          * @brief 핫 리로드가 넘긴 파일 가운데 모델 원본을 임포트합니다. `models_raw/` 아래의 원본을 옆 `models/` 의 `.mesh` 로 만듭니다.
          * @details 임포트한 `.mesh` 를 쓰면 다음 감시 이벤트로 들어오고, 메시 캐시가 그 즉시 다시 읽는다. `models_raw/` 밖의 원본은 경고만 한다.
-         *          **바뀐 원본만** 임포트한다(`AssetImportStampUtil::importSources`). 루트 전체의 대조는 `importAllModels`(`App --import-models`)가 한다.
+         *          바뀐 원본만 임포트한다(`AssetImportStampUtil::importSources`). 루트 전체의 대조는 `importAllModels`(`App --import-models`)가 한다.
          *          워커에서 불린다(`AssetHotReload` 의 임포트 잡) — UI 서브시스템을 건드리지 않고 공유 상태를 두지 않는다. 모델 원본은 임포트했든 경고만 했든 처리한 것이고 `.mesh` 는 처리하지 않은 것이다.
          */
         static void importChangedSources( AssetSourceBatch& batch );

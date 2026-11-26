@@ -18,7 +18,7 @@ namespace sw
     {
         /**
          * @brief PROPERTY 에 컴포넌트 핸들이 있으면 저장할 수 있는 모양인지 확인하고 내장 `ComponentHandle` 로 정규화합니다. 아니면 오류를 남기고 false 입니다.
-         * @details 저장할 수 있는 모양은 **타입 핸들 `TComponentHandle<T>` 한 값**, 또는 **그 시퀀스(한 겹, `vector` 등)** 입니다. 정규화하면 값 · 원소의 타입 이름은
+         * @details 저장할 수 있는 모양은 타입 핸들 `TComponentHandle<T>` 한 값, 또는 그 시퀀스(한 겹, `vector` 등) 입니다. 정규화하면 값 · 원소의 타입 이름은
          *          내장 `ComponentHandle` 이 되어 직렬화기 · 인스펙터가 기존 처리기를 그대로 쓰고, 대상 `T` 는 `_handleTargetTypeName` 에 실려
          *          읽은 뒤의 연결이 타입을 확인한다. 맵 · 중첩 컨테이너 · 타입 없는 `ComponentHandle` 은 대상 타입을 확인할 자리가 없어 생성 오류다.
          *          리플렉션 구조체의 필드도 이 검사를 지난다.
@@ -42,7 +42,7 @@ namespace sw
         /**
          * @brief FUNCTION 인자에 타입 핸들(`TComponentHandle<T>`)이 있으면 내장 `ComponentHandle` 로 정규화하고 대상 `T` 를 싣습니다. 쓸 수 없는 모양이면 오류를 남기고 false 입니다.
          * @details 호출 쪽(인스펙터의 선택기 · 콘솔)은 타입 없는 핸들을 넘기고, 생성한 호출 썽크가 `ComponentHandleArgument::cast` 로 대상 타입을 확인해 바꾼다.
-         *          확인에는 그 씬의 매니저가 들어서 **컴포넌트의 비정적 메서드**만 받는다(생성자 · 정적 함수 · 컴포넌트가 아닌 타입은 생성 오류다).
+         *          확인에는 그 씬의 매니저가 들어서 컴포넌트의 비정적 메서드만 받는다(생성자 · 정적 함수 · 컴포넌트가 아닌 타입은 생성 오류다).
          *          컨테이너에 든 타입 핸들은 대상 타입을 확인할 자리가 없어 오류다. 타입 없는 `ComponentHandle` 은 예전처럼 그대로 둔다.
          *          인자 형식의 정체는 수집할 때 clang 형식으로 읽어 둔다(`ParsedParameterInfo::_bHoldsTypedHandle` · `_handleTargetTypeName`).
          */

@@ -1,7 +1,7 @@
 /**
  * @file PartyItemSpawner.h
  * @brief 파티 미니 게임의 무작위 아이템을 생성합니다. 시드를 고정한 난수(`GameRandom`)로 간격, 위치, 종류(가중치)를 정해 원판 위에 놓고, 수명이 지나면 치우며, 가까이 온 사람이 줍습니다.
- * @details 아이템이 **무엇을 하는지는 모른다**. `_effect`(이름)와 `_stats`(이름에서 수치로의 매핑)를 미니 게임이 읽는다(트램펄린 아레나는 `SuperBounce`, `Heavy`,
+ * @details 아이템이 무엇을 하는지는 모른다. `_effect`(이름)와 `_stats`(이름에서 수치로의 매핑)를 미니 게임이 읽는다(트램펄린 아레나는 `SuperBounce`, `Heavy`,
  *          `Shield` 를 쓴다). 같은 시드와 같은 걸음이면 같은 위치에 같은 아이템이 나온다.
  */
 #pragma once

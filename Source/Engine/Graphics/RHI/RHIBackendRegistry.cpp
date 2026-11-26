@@ -134,7 +134,7 @@ namespace sw
         if ( pEntry == nullptr || pEntry->_factory.isBound() == false )
         {
             // 숫자만 찍으면(예: "backend 0") 설정 파일에 DirectX11 을 적어 둔 사람이 원인을 알 수
-            // 없다. 배포본은 고른 백엔드 **하나만** 링크하므로(`SW_SHIPPING_RHI_BACKEND`), 무엇이 있는지
+            // 없다. 배포본은 고른 백엔드 하나만 링크하므로(`SW_SHIPPING_RHI_BACKEND`), 무엇이 있는지
             // 같이 알려 준다.
             SW_LOG_ERROR_ID( "RHIBackendRegistry.BackendNotBuildAvailable", "The %# backend is not in this build. Available: %#",
                              RHI::getBackendTypeName( backend ), describeRegisteredBackends().c_str() );

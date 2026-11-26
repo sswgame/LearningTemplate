@@ -319,8 +319,8 @@ namespace sw
 
             /**
              * @brief `<tiles>` 아래에 셀마다 `<t>` 를 씁니다.
-             * @details **네 배열이 `_width × _height` 와 같다는 보장은 이 구조체에 없다.** 필드가 모두 공개라 크기만 바꾸고 셀을 늘리지 않은 채로 저장할 수 있고, 그러면 여기서 남의 메모리를 읽어 파일에
-             *          적는다(Debug 는 vector assert 에서 죽고, 배포본은 조용히 쓰레기 값을 쓴다). 모자란 셀은 **읽기 쪽 기본값**으로 적는다. `loadFromXML` 이 `<t>` 가 없을 때 넣는 값과 같아서
+             * @details 네 배열이 `_width × _height` 와 같다는 보장은 이 구조체에 없다. 필드가 모두 공개라 크기만 바꾸고 셀을 늘리지 않은 채로 저장할 수 있고, 그러면 여기서 남의 메모리를 읽어 파일에
+             *          적는다(Debug 는 vector assert 에서 죽고, 배포본은 조용히 쓰레기 값을 쓴다). 모자란 셀은 읽기 쪽 기본값으로 적는다. `loadFromXML` 이 `<t>` 가 없을 때 넣는 값과 같아서
              *          왕복이 어긋나지 않는다(통행 가능, 조우 없음, 기본 틴트).
              */
             static void appendTiles( const XMLNode& tiles, const TileMapXMLData& data, ResourceFieldWrite fieldWrite )

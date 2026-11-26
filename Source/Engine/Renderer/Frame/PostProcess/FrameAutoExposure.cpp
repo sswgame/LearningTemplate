@@ -263,7 +263,7 @@ namespace sw
             context._resourceRegistry.registerTexture( attachmentNames()._autoExposure, target, current._srv );
             return;
         }
-        // 1 px 그리기 판 — 이번 칸을 렌더 타깃으로 옮긴다(선언은 UAV — 컴퓨트 판이 기본이다).
+        // 1 px 그리기 판: 이번 칸을 렌더 타깃으로 옮긴다(선언은 UAV, 컴퓨트 판이 기본이다).
         graphPass.transition( ViewGraphResource::autoExposureTarget(), RenderGraphAccess::RenderTarget );
 
         context.beginRenderPass( RHIRenderPassBeginInfo::color( target, RHIRenderPassLoadOp::DontCare ).setExtent( 1, 1 ) );

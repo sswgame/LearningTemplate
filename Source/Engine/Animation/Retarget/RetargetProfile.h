@@ -78,7 +78,7 @@ namespace sw
 {
     /**
      * @brief 리타깃 포즈(대상 레퍼런스를 원본 레퍼런스 자세에 맞추는 포즈, 언리얼 IK Retargeter 의 Retarget Pose)의 한 줄입니다.
-     * @details 대상 본 하나를 **부모 공간에서** 이 회전(`[피치, 요, 롤]`, `quaternion::makeFromYawPitchRoll` 배치) 만큼 더 돌립니다 — 새 로컬 회전 = 돌림 × 레퍼런스 로컬 회전.
+     * @details 대상 본 하나를 부모 공간에서 이 회전(`[피치, 요, 롤]`, `quaternion::makeFromYawPitchRoll` 배치) 만큼 더 돌립니다 — 새 로컬 회전 = 돌림 × 레퍼런스 로컬 회전.
      *          A 자세 대상을 T 자세 원본에 맞출 때 팔을 내리는 식으로 쓴다. 이동 · 스케일은 건드리지 않는다(체형은 본 비율 `BoneProportion` 의 몫).
      */
     struct RetargetPoseBone

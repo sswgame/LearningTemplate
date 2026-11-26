@@ -192,7 +192,7 @@ namespace sw
     private:
         ShaderSourceResolver( const AssetPaths& assetPaths, ShaderIncludeResolver includeResolver );
         /**
-         * @brief 셰이더 `#include` 가 자기 폴더 다음으로 찾는 도메인 **종류**(`engine`, `common` 순)를 돌려줍니다(`<도메인>/shaders`).
+         * @brief 셰이더 `#include` 가 자기 폴더 다음으로 찾는 도메인 종류(`engine`, `common` 순)를 돌려줍니다(`<도메인>/shaders`).
          * @return @p listPriority 에 두 종류 중 하나라도 없으면 오류를 남기고 false 입니다.
          */
         [[nodiscard]] static bool collectIncludeRootDomains( const vector<string>& listPriority, vector<string>& outListDomain );

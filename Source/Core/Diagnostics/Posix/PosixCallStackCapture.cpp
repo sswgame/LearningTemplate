@@ -100,7 +100,7 @@ namespace sw
         if ( s_initRefCount.fetch_add( 1, std::memory_order_acq_rel ) != 0 )
             return;
 
-        // 심볼 초기화는 따로 없다. 대신 backtrace() 를 **한 번 불러 둔다** — glibc 는 처음 불릴 때 libgcc_s 를 dlopen 하고 거기서
+        // 심볼 초기화는 따로 없다. 대신 backtrace() 를 한 번 불러 둔다 — glibc 는 처음 불릴 때 libgcc_s 를 dlopen 하고 거기서
         // malloc 한다(`man 3 backtrace` 의 NOTES). 그 첫 호출이 크래시 핸들러 안이면, malloc 의 락을 쥔 채 죽은 경우(힙 손상 abort)
         // 그 자리에서 멈춘다. 크로미움의 WarmUpBacktrace 와 같은 일이다.
         void* arrWarmUpFrame[2]{};
@@ -147,9 +147,9 @@ namespace sw
     {
         outStack._frameCount = 0;
 
-        // glibc 의 backtrace() 는 시그널 트램폴린에 CFI 가 있어 **폴트 지점까지** 따라 내려간다. 문제는 그 위에 핸들러
+        // glibc 의 backtrace() 는 시그널 트램폴린에 CFI 가 있어 폴트 지점까지 따라 내려간다. 문제는 그 위에 핸들러
         // 프레임(이 함수 · reportCrash · onFatalSignal · 트램폴린)이 얹혀 있다는 것뿐이다. 그래서 컨텍스트에서 폴트 PC 를
-        // 꺼내 그 프레임을 찾고 **거기서부터** 담는다. 그러면 스택이 폴트 지점에서 시작하는 Windows(StackWalk64 + CONTEXT)
+        // 꺼내 그 프레임을 찾고 거기서부터 담는다. 그러면 스택이 폴트 지점에서 시작하는 Windows(StackWalk64 + CONTEXT)
         // 와 같은 형태가 된다.
         void*       arrTempFrame[DeepCallStack::kMaxFrames + 16];
         const int32 count = collectFramesInternal( arrTempFrame, static_cast<int32>( DeepCallStack::kMaxFrames + 16 ) );
@@ -197,7 +197,7 @@ namespace sw
             return kEmptyCallStackText;
 
         // 크래시 경로에서도 불리므로 절대 막히면 안 된다. 다른 스레드가 심볼 변환 중이면 교착 대신 주소만 출력한다
-        // (맵 파일로 나중에 풀 수 있다). **이 관문은 플랫폼 공통**이고, 그 아래 본체만 플랫폼마다 완전히 다르다
+        // (맵 파일로 나중에 풀 수 있다). 이 관문은 플랫폼 공통이고, 그 아래 본체만 플랫폼마다 완전히 다르다
         // (DbgHelp 와 backtrace_symbols).
         UniqueLock<mutex> lock{ s_symbolMutex, std::defer_lock };
         if ( lock.try_lock() == false )

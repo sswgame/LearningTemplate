@@ -77,7 +77,7 @@ namespace sw
          * @brief 데스크톱이 알리는 `Xft.dpi` 리소스 / 96 입니다(GNOME · KDE · xrdb). 없으면 1.
          * @details XWayland 에서도 같은 길이다(컴포지터가 배율을 이 리소스에 적는다). 리소스는 연결을 연 때의 값(`XResourceManagerString` 은 `XOpenDisplay` 가 읽어 둔 것)이라
          *          실행 중 배율을 바꾸면 따라가지 않는다 — 서버에 묻는 길은 왕복이고 `Engine::updateRuntimeUI` 가 프레임마다 부르므로 그대로 둔다.
-         *          **모니터마다 다른 배율은 두지 않는다.** RandR 의 물리 크기(mm)로 재면 EDID 가 없거나 틀린 모니터(프로젝터 · KVM · Xvfb 의 1.04)에서 글자가 튀고, 데스크톱의 나머지 프로그램과도 어긋난다.
+         *          모니터마다 다른 배율은 두지 않는다. RandR 의 물리 크기(mm)로 재면 EDID 가 없거나 틀린 모니터(프로젝터 · KVM · Xvfb 의 1.04)에서 글자가 튀고, 데스크톱의 나머지 프로그램과도 어긋난다.
          *          GTK(`Gdk/WindowScalingFactor`) · GLFW(`glfwGetMonitorContentScale`)도 X11 에서는 모든 모니터에 같은 값을 준다. Qt 는 물리 DPI 를 옵션(`QT_USE_PHYSICAL_DPI`)으로만 쓴다(기억에 의존한 비교다).
          *          X 서버에 모니터별 배율을 알리는 표준이 없어서이고, 실제로 모니터별 배율이 있는 곳은 Wayland 다(`wl_output.scale`).
          */

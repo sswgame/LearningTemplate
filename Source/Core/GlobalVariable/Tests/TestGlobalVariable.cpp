@@ -406,10 +406,10 @@ SW_TEST_CASE( GlobalVariableTest, GlobalStringCopyStaysWholeWhileAnotherThreadWr
 }
 
 /**
- * @brief `findVariable` 이 준 포인터는 **다른 변수를 등록·해제해도 살아 있다**
+ * @brief `findVariable` 이 준 포인터는 다른 변수를 등록·해제해도 살아 있다
  * @details 패널은 이름을 훑어 포인터를 모아 두었다가 한 번에 그린다 — 헤더가 권하는 사용법이다.
- *          그런데 `sw::unordered_map` 은 밀집 배열이라 삽입하면 재할당으로 **모든** 원소가, 삭제하면
- *          swap-and-pop 으로 **마지막 원소가** 옮겨 간다. 값을 그대로 담고 그 주소를 내주면 그 포인터가
+ *          그런데 `sw::unordered_map` 은 밀집 배열이라 삽입하면 재할당으로 모든 원소가, 삭제하면
+ *          swap-and-pop 으로 마지막 원소가 옮겨 간다. 값을 그대로 담고 그 주소를 내주면 그 포인터가
  *          조용히 다른 변수를 가리키거나 죽은 자리를 가리킨다. 그래서 값을 `unique_ptr` 로 든다.
  */
 SW_TEST_CASE( GlobalVariableTest, FoundPointerSurvivesOtherRegistrations )

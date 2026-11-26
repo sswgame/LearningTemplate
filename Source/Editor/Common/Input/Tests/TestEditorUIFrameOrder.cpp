@@ -1,6 +1,6 @@
 /**
  * @file TestEditorUIFrameOrder.cpp
- * @brief 한 호스트 프레임의 순서 계약을 봅니다 — UI 가 읽는 Model 값(명령 켜짐 값 묶음)은 UI 프레임을 열기 직전(`EditorCommandGUI::syncWithRegistry` — 셸의 `prepareFrameState`)에 나므로 늦는 프레임이 없다.
+ * @brief 한 호스트 프레임의 순서 계약을 봅니다. UI 가 읽는 Model 값(명령 켜짐 값 묶음)은 UI 프레임을 열기 직전(`EditorCommandGUI::syncWithRegistry`, 셸의 `prepareFrameState`)에 나므로 늦는 프레임이 없다.
  * @details 스레드를 나누지 않는다(사용자 결정): 준비 → UI 프레임 → 명령 적용 · 게임 단계 → 씬 틱이 한 스레드에서 돈다. 에디터 안에서 돈다(에디터 컨텍스트 필요).
  *          등록부를 다시 만드는 길(`EditorCommandGUI::registerDefaults` — 모듈 리로드 · 첫 프레임과 같은 길)을 밟고, 준비 한 번으로 그 프레임의 메뉴가 켜지는지 본다.
  */

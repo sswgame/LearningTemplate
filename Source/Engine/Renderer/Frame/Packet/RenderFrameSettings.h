@@ -5,7 +5,7 @@
  *          게임 스레드가 패킷을 짓기 시작할 때 한 번 뜬 사본(`capture`)이 패킷에 실려 가고, 렌더러는 그 프레임 동안 그 사본만 본다(`FrameRenderState::_settings`).
  *          콘솔이 값을 바꾼 프레임의 패킷부터 새 값이 들고, 한 프레임 안에서는 패스 · 기록 워커가 모두 같은 값을 본다.
  *          언리얼 콘솔 변수의 렌더 스레드 사본(`GetValueOnRenderThread` — 게임 스레드 값을 렌더 명령으로 넘긴다)과 같은 생각이다.
- *          **변수는 `RenderFrameSettings.cpp` 의 익명 이름공간에 있다** — 다른 번역 단위는 이름을 볼 수 없어 렌더 쪽 코드가 변수를 직접 읽는 모양을 쓸 수 없다.
+ *          변수는 `RenderFrameSettings.cpp` 의 익명 이름공간에 있다 — 다른 번역 단위는 이름을 볼 수 없어 렌더 쪽 코드가 변수를 직접 읽는 모양을 쓸 수 없다.
  *          스위치를 더할 때는 이 구조체에 칸을 더하고 변수는 그 파일에 둔다. 패킷 밖 소비자(RHI 의 bindless 검사 · 셰이더 컴파일)는 `RenderDiagnostics` 원자 사본을 읽는다.
  */
 #pragma once
@@ -51,7 +51,7 @@ namespace sw
         uint8                   _bRHIImmediateSubmit{ SW_FALSE };                 ///< 커맨드 리스트를 잘릴 때마다 바로 제출(`-gv_rhiImmediateSubmit`, 디버깅용)
 
         /**
-         * @brief 지금의 변수 값으로 사본을 뜹니다. **게임 스레드 전용**(Debug 단언)입니다 — 진단 정책도 여기서 내보낸다(`RenderDiagnostics::publish`).
+         * @brief 지금의 변수 값으로 사본을 뜹니다. 게임 스레드 전용(Debug 단언)입니다 — 진단 정책도 여기서 내보낸다(`RenderDiagnostics::publish`).
          * @details 패킷을 짓기 시작할 때(`RenderPacketBuilder::beginPacket`)와 렌더러 기동(`FrameRendererSubsystem`) 때 부른다.
          */
         [[nodiscard]] SW_API static RenderFrameSettings capture();

@@ -126,7 +126,7 @@ namespace sw
                 bLoaded = createFromData( key, std::move( data ), loadScope );
         }
 
-        // 결과가 캐시에 든 **뒤에** 진행 중 표에서 뺀다 — 그 사이에 온 요청은 진행 중 로드 작업이나 캐시 둘 중 하나를 반드시 본다.
+        // 결과가 캐시에 든 뒤에 진행 중 표에서 뺀다 — 그 사이에 온 요청은 진행 중 로드 작업이나 캐시 둘 중 하나를 반드시 본다.
         {
             MeshCacheInternal::InFlightTable& inFlight = MeshCacheInternal::getState()._inFlight;
             ScopedLock<mutex>                 lock{ inFlight._mutex };

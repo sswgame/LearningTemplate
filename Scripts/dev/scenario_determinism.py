@@ -4,7 +4,7 @@
   py -3 -m Scripts scenario-bisect <체인> <단계> --determinism [--backend dx12] [--preset Ninja-Release]
 
 골든 비교는 상한(`Config/Dev/GoldenImage.json`) 안의 차이를 통과시키므로, 로딩 길이 · 핸들 번호 · 앞 단계에 달린 값은 우연히 상한을 넘는 날에야 보인다
-(wildwest_mount 의 먼 캐릭터 갱신 시점이 그랬다). 같은 백엔드 · 같은 프로세스 모양의 사진은 바이트까지 같아야 한다. 묶음 검증의 changed 단계는 **새 시나리오**에 이것을 쓴다.
+(wildwest_mount 의 먼 캐릭터 갱신 시점이 그랬다). 같은 백엔드 · 같은 프로세스 모양의 사진은 바이트까지 같아야 한다. 묶음 검증의 changed 단계는 새 시나리오에 이것을 쓴다.
 """
 
 from __future__ import annotations

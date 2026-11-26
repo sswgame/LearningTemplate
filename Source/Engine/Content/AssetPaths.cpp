@@ -29,7 +29,7 @@ namespace sw
     namespace
     {
         /**
-         * @brief 경로 표 하나(프로젝트 · 리소스 루트, 검색 우선순위 · 검색 루트, 호스트가 읽지 않는 에셋 묶음)입니다. **만든 뒤 바꾸지 않는다.**
+         * @brief 경로 표 하나(프로젝트 · 리소스 루트, 검색 우선순위 · 검색 루트, 호스트가 읽지 않는 에셋 묶음)입니다. 만든 뒤 바꾸지 않는다.
          * @details 읽는 쪽(로더 · 디코드 워커 · 게임 스레드)은 지금 표를 원자 포인터로 한 번 잡아 잠금 없이 읽는다 — 쓰는 쪽이 칸을 제자리에서 고치던 때는 읽는 쪽이
          *          반쯤 고친 벡터를 볼 수 있었다. 쓰기는 사본을 고쳐 새 표로 갈아 끼운다(`AssetPathsInternal::publishTable`).
          */
@@ -54,7 +54,7 @@ namespace sw
         };
 
         /**
-         * @brief 해석을 시작한 때의 세대입니다. **저장은 이 값을 들고서만 할 수 있습니다**(`storeResolved`) — 해석하는 동안 검색 목록이 바뀌었으면(`clearPathCache`) 옛 목록으로 푼
+         * @brief 해석을 시작한 때의 세대입니다. 저장은 이 값을 들고서만 할 수 있습니다(`storeResolved`) — 해석하는 동안 검색 목록이 바뀌었으면(`clearPathCache`) 옛 목록으로 푼
          *        결과를 새 캐시에 넣지 않는다. 찾기 전에 한 번 잡고(`captureStamp`) 찾은 뒤 저장에 넘긴다.
          */
         struct PathCacheStamp
@@ -110,7 +110,7 @@ namespace sw
         atomic<const AssetPathTable*>                          _pCurrentTable{ &_initialTable };
         mutex                                                  _publishMutex{};
         vector<unique_ptr<AssetPathTable>> _listPublishedTable SW_GUARDED_BY( _publishMutex ){};
-        bool                                                   _bInitialized{ SW_FALSE }; ///< `initialize()` 가 **성공했는지**(소유자가 직렬 구간에서만 쓴다)
+        bool                                                   _bInitialized{ SW_FALSE }; ///< `initialize()` 가 성공했는지(소유자가 직렬 구간에서만 쓴다)
 
         // --- 붙인 디스크 도메인 ---
         mutex                                     _diskDomainMutex{};
@@ -533,7 +533,7 @@ namespace sw
         FileUtil::setCreateRule( &AssetPaths::validateLowercaseResourceName );
         // 리소스 트리의 읽기 전용 파일은 체크아웃하지 않은 파일이다 — 지우기 · 옮기기 · 덮는 복사가 모두 Core 입구에서 거절된다(임포트 정리 · 옮기기 · 삭제가 따로 묻지 않는다).
         (void)FileUtil::setCheckoutRule( &AssetPaths::isUnderSourceControl );
-        // `_bInitialized` 는 "시작했다" 가 아니라 **"성공했다"** 를 뜻한다 — 루트를 못 찾아 false 로 나가면 다음 호출이 다시 찾는다.
+        // `_bInitialized` 는 "시작했다" 가 아니라 "성공했다" 를 뜻한다 — 루트를 못 찾아 false 로 나가면 다음 호출이 다시 찾는다.
         // 예전에는 프로세스 정적이라 `call_once` 로 막았다. 이제 부르는 쪽은 이 객체의 소유자 하나(기동의 직렬 구간)라 겹치지 않는다.
         if ( _pState->_bInitialized )
             return true;

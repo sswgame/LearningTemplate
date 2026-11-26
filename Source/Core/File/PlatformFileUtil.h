@@ -72,7 +72,7 @@ namespace sw
         IFileWriteObserver& operator=( const IFileWriteObserver& ) = delete;
 
         /**
-         * @brief @p filePath 의 내용이나 도장을 이 프로세스가 바꾼 **뒤에** 불립니다(쓰기 · 덧붙이기 · 복사 대상 · 이름 바꾸기 대상 · 시각 바꾸기 · 지우기).
+         * @brief @p filePath 의 내용이나 도장을 이 프로세스가 바꾼 뒤에 불립니다(쓰기 · 덧붙이기 · 복사 대상 · 이름 바꾸기 대상 · 시각 바꾸기 · 지우기).
          * @details 경로는 쓰기 입구가 받은 그대로(구분자만 정규화)다. 폴더 지우기 · 옮기기는 폴더 경로 하나로 온다.
          */
         virtual void recordFileWritten( string_view filePath ) = 0;
@@ -89,17 +89,17 @@ namespace sw
 
         /**
          * @brief 파일을 엽니다. 실패하면 nullptr 입니다.
-         * @param pFilePath 널 종료 **UTF-8** 경로. 구분자 정규화는 호출하는 쪽이 먼저 합니다.
+         * @param pFilePath 널 종료 UTF-8 경로. 구분자 정규화는 호출하는 쪽이 먼저 합니다.
          * @param pMode fopen 모드 문자열("rb", "wb", "a" 등)
          * @details 다른 프로세스의 읽기 · 쓰기를 막지 않습니다(POSIX `fopen` 과 같다) — 실행 중인 로그 파일을 다른 프로그램이 열 수 있다.
-         *          Windows 에서는 UTF-16 으로 바꿔 엽니다(`_wfsopen`, `_SH_DENYNO`). 좁은 문자 `fopen_s` 는 경로를 **ANSI 코드 페이지**(한국어
+         *          Windows 에서는 UTF-16 으로 바꿔 엽니다(`_wfsopen`, `_SH_DENYNO`). 좁은 문자 `fopen_s` 는 경로를 ANSI 코드 페이지(한국어
          *          Windows 는 CP949)로 해석해, 한글이 들어간 UTF-8 경로를 다른 이름으로 읽습니다. 읽기(`readRange`)도 UTF-16 으로
          *          열므로 쓰기와 읽기가 같은 파일을 봅니다.
          */
         static FILE* openFile( const utf8* pFilePath, const utf8* pMode );
 
         /**
-         * @brief @p pSourcePath 를 @p pTargetPath 경로로 옮기며, 이미 있으면 **한 번에** 바꿔치기합니다(같은 볼륨 안에서 원자적).
+         * @brief @p pSourcePath 를 @p pTargetPath 경로로 옮기며, 이미 있으면 한 번에 바꿔치기합니다(같은 볼륨 안에서 원자적).
          * @details 저장은 임시 파일에 다 쓴 뒤 이것으로 바꿔 끼웁니다. 도중에 죽어도 원본은 온전하거나 새 파일이 온전하며, 반쯤 쓴 파일이
          *          남지 않습니다. Windows 는 `MoveFileExW( REPLACE_EXISTING | WRITE_THROUGH )`, POSIX 는 `rename` 입니다.
          * @return 성공하면 true 입니다. 다른 프로세스가 대상 파일을 삭제 공유 없이 열고 있으면 Windows 에서 실패할 수 있습니다.
@@ -158,12 +158,12 @@ namespace sw
          */
         static NativeFileHandle openNativeFileForRead( const utf8* pFilePath );
         /**
-         * @brief 쓰기 전용으로 만들거나 비우고 OS 핸들을 엽니다(다른 프로세스와 공유하지 않는다). **할당하지 않고** 로그를 쓰지 않습니다 - 크래시 경로(시그널 처리기 포함)가 씁니다.
+         * @brief 쓰기 전용으로 만들거나 비우고 OS 핸들을 엽니다(다른 프로세스와 공유하지 않는다). 할당하지 않고 로그를 쓰지 않습니다 - 크래시 경로(시그널 처리기 포함)가 씁니다.
          * @details 경로 변환은 스택에서 한다(`kMaxBuffer1024` 글자까지). 보통 쓰기는 `FileUtil::writeFile`(원자적 · 쓰기 문 · 로그)이다.
          * @return 열지 못했으면 `kInvalidNativeFileHandle` 입니다.
          */
         static NativeFileHandle createNativeFileForWrite( const utf8* pFilePath );
-        /** @brief 열린 핸들에 @p size 바이트를 다 씁니다(끊긴 쓰기는 이어 쓴다). **할당하지 않습니다.** 다 쓰지 못하면 false 입니다. */
+        /** @brief 열린 핸들에 @p size 바이트를 다 씁니다(끊긴 쓰기는 이어 쓴다). 할당하지 않습니다. 다 쓰지 못하면 false 입니다. */
         [[nodiscard]] static bool writeNativeFile( NativeFileHandle handle, const void* pData, size_t size );
         /** @brief `openNativeFileForRead` · `createNativeFileForWrite` 로 연 핸들을 닫습니다. 잘못된 핸들이면 아무 일도 하지 않습니다. */
         static void closeNativeFile( NativeFileHandle handle );

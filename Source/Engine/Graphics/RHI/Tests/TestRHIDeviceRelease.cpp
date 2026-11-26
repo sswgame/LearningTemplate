@@ -51,7 +51,7 @@ SW_TEST_CASE( RHIDeviceReleaseTest, TrackerFollowsCreationAndTheGPURelease )
 }
 
 /**
- * @brief [RHIDeviceReleaseTest] 끝나지 않은 전송이 쓰는 텍스처는 그 전송이 끝난 **뒤의** 프레임이 끝나야 놓인다
+ * @brief [RHIDeviceReleaseTest] 끝나지 않은 전송이 쓰는 텍스처는 그 전송이 끝난 뒤의 프레임이 끝나야 놓인다
  * @details 변이: 전송을 보지 않으면 첫 묶음이, 전송만 보고 바로 놓으면 둘째 묶음이 진다.
  */
 SW_TEST_CASE( RHIDeviceReleaseTest, TextureWaitsForItsTransferThenForAFrame )

@@ -1,6 +1,6 @@
 /**
  * @file GPUSceneSnapshot.h
- * @brief 게임 스레드가 만들고 렌더 스레드가 받는 씬 스냅샷입니다. 두 스레드가 공유하는 **유일한** 타입입니다.
+ * @brief 게임 스레드가 만들고 렌더 스레드가 받는 씬 스냅샷입니다. 두 스레드가 공유하는 유일한 타입입니다.
  * @details 만드는 쪽은 `GPUSceneBuilder`(GT)이고, 받아서 GPU 에 올리는 쪽은 `GPUScene`(RT)이다. 두 클래스는 서로를 모르고
  *          이 구조체만 안다. 그래서 "GT 가 RT 의 값을 덮어쓴다", "RT 가 씬을 읽는다" 같은 실수는 컴파일되지 않는다.
  *          소유 규칙(shared_ptr 로 소유권을 함께 싣는다)은 `GPUSceneSnapshot` 주석을 참고한다.
@@ -52,7 +52,7 @@ namespace sw
         uint32   _blendMode{ 0 }; ///< BlendMode
         /**
          * @brief GPU 인스턴스 애니메이션 시드입니다. 0 이면 애니메이션이 없습니다.
-         * @details instance_animation.hlsl 이 이 값을 해시해 **인스턴스마다 다른 각속도**를 만든다. 회전은 CPU 가 매 프레임
+         * @details instance_animation.hlsl 이 이 값을 해시해 인스턴스마다 다른 각속도를 만든다. 회전은 CPU 가 매 프레임
          *          계산해 올리지 않고 GPU 가 계산한다.
          */
         uint32 _spinSeed{ 0 };
@@ -120,13 +120,13 @@ namespace sw
      */
     struct GPUMeshBatch
     {
-        shared_ptr<Mesh> _mesh;            ///< **소유권을 함께 싣는다.** RT 가 upload() 에서 이 메시를 역참조한다.
+        shared_ptr<Mesh> _mesh;            ///< 소유권을 함께 싣는다. RT 가 upload() 에서 이 메시를 역참조한다.
         uint32           _indexCount{ 0 }; ///< 이 배치가 그리는 인덱스 수(구간 · LOD 단계, 아니면 LOD 0 전체)
         /// @brief 이 배치가 그리는 메시 구간 · LOD 단계의 첫 인덱스(메시의 그릴 인덱스 흐름 안 번호)입니다. 메시 전체면 0 입니다. RT 가 인덱스 풀 시작에 더한다(`GPUMeshBatchBinding::_firstIndex`).
         uint32 _sectionFirstIndex{ 0 };
         /**
          * @brief 인스턴스 배열 안에서 이 배치의 구간입니다. 배치의 인스턴스는 연속이고 구간은 앞 배치의 끝에서 빈틈없이 이어집니다.
-         * @details 인스턴스 구간과 가시 구간(`_visibleBase`)은 **다른 축**이다. LOD 그룹의 낮은 단계 배치는 인스턴스를 가지지 않고(`_instanceCount` 0) 그룹의 인스턴스를
+         * @details 인스턴스 구간과 가시 구간(`_visibleBase`)은 다른 축이다. LOD 그룹의 낮은 단계 배치는 인스턴스를 가지지 않고(`_instanceCount` 0) 그룹의 인스턴스를
          *          공유하지만 컬링이 단계마다 가시 칸을 쓰므로 자기 가시 구간이 있다.
          */
         uint32 _instanceBase{ 0 };
@@ -183,7 +183,7 @@ namespace sw
      * @brief 머티리얼 데이터 원소 하나를 가리키는 키입니다. (머티리얼, 인스턴스) 쌍입니다.
      * @details 인스턴스가 없으면 머티리얼 자신이 원소다. 인스턴스는 CB 값만 덮어쓰므로 부모 머티리얼과 함께 봐야 한다.
      */
-    // SW_OWNERSHIP_RAW_OK( _pMaterial, _pInstance ): 정체성 키다. 비교만 하고 **역참조하지 않는다**. 소유권을 실으면 키가 수명을 붙들어,
+    // SW_OWNERSHIP_RAW_OK( _pMaterial, _pInstance ): 정체성 키다. 비교만 하고 역참조하지 않는다. 소유권을 실으면 키가 수명을 붙들어,
     //                                               회수되어야 할 머티리얼이 스냅샷이 사는 동안 살아남는다(그것이 원소 테이블이 따로 있는 이유다).
     struct GPUMaterialElementKey
     {
@@ -233,8 +233,8 @@ namespace sw
     /**
      * @struct GPUShaderPermutation
      * @brief 머티리얼이 요구하는 셰이더 변형 하나입니다. 경로와 정적 define 으로 이루어집니다.
-     * @details 언리얼의 `FMaterialShaderMap` 에 해당한다. 같은 .hlsl 이라도 정적 스위치가 다르면 **다른 셰이더**라서
-     *          다른 PSO 로 그려야 한다. 주의: 셰이더 **경로**만 보면 유리 머티리얼처럼 always-define 을 가진 것이
+     * @details 언리얼의 `FMaterialShaderMap` 에 해당한다. 같은 .hlsl 이라도 정적 스위치가 다르면 다른 셰이더라서
+     *          다른 PSO 로 그려야 한다. 주의: 셰이더 경로만 보면 유리 머티리얼처럼 always-define 을 가진 것이
      *          불투명 머티리얼과 한 배치로 합쳐지고, 배치는 PSO 하나로 그리므로 그 정보가 그냥 버려진다.
      *
      *          렌더 스레드는 씬을 볼 수 없으므로(Material* 을 따라갈 수 없다) 값으로 실어 보낸다.
@@ -247,7 +247,7 @@ namespace sw
         vector<string> _listDefine;
         /// @brief 머티리얼이 패스 위에 덮는 렌더 상태입니다(`Material::getRenderStateOverride`). 패스 → 머티리얼 순서로 합쳐 변형 PSO 를 만듭니다(`FramePSOManager::createMaterialPSOVariant`).
         RenderStateOverride _renderStateOverride{};
-        /// @brief (경로, define, 렌더 상태) 해시입니다. PSO 캐시 키이자 **배치 병합 키**입니다.
+        /// @brief (경로, define, 렌더 상태) 해시입니다. PSO 캐시 키이자 배치 병합 키입니다.
         uint64 _hash{ 0 };
         /**
          * @brief 이 변형을 처음 낸 머티리얼이 스위치를 바꾸기 직전에 쓰던 퍼뮤테이션 해시입니다(없으면 0). 배치 키가 아니다.
@@ -270,7 +270,7 @@ namespace sw
     {
         string                     _shaderPath;
         vector<GPUMaterialElement> _listEntry;
-        // 원소 인덱스 테이블(키에서 인덱스, 마지막 사용 빌드, 프리리스트, 직전 조회)은 **빌더의 것**이다
+        // 원소 인덱스 테이블(키에서 인덱스, 마지막 사용 빌드, 프리리스트, 직전 조회)은 빌더의 것이다
         // (`GPUSceneBuilder::MaterialGroupState`). 스냅샷에는 RT 가 읽는 것만 싣는다. 테이블을 여기 두면
         // 프레임마다 패킷으로 복사된다(그룹마다 맵 하나와 벡터 둘).
     };
@@ -312,7 +312,7 @@ namespace sw
     /**
      * @struct GPUTransparentParticleSlot
      * @brief 입자 그리기 하나가 투명 큐에서 그려지는 자리입니다. 메시 투명 배치와 방출기를 한 순서로 섞는 단위입니다(언리얼 · 유니티의 프리미티브 단위 정렬).
-     * @details 목록은 그리는 순서로 놓이고 `_drawPosition` 이 줄지 않는다. 투명 패스는 그 뷰의 배치 순서에서 `_drawPosition` 번째 배치를 그리기 **전에**
+     * @details 목록은 그리는 순서로 놓이고 `_drawPosition` 이 줄지 않는다. 투명 패스는 그 뷰의 배치 순서에서 `_drawPosition` 번째 배치를 그리기 전에
      *          이 입자를 그린다(배치 수와 같으면 모든 배치 뒤). 배치와 방출기는 배치의 첫 인스턴스(그 뷰에서 가장 먼저 그리는 것)의 키와
      *          방출기 위치의 키로 비교한다(`GPUTransparentSorter::placeParticles`) — 배치 안을 가르지 않는다.
      */
@@ -351,13 +351,13 @@ namespace sw
      * @struct GPUParticleBatch
      * @brief 방출기 하나의 입자 그리기입니다. 투명 정렬 후보 하나이며, 투명 패스가 메시 투명 배치 사이의 제자리(`GPUTransparentParticleSlot`)에 빌보드로 그립니다(`VFXParticleRenderer`).
      * @details 입자는 시뮬레이션 공간 좌표(`VFXSimulationSpace`)이고 `_world` 가 월드로 옮깁니다. 입자의 출처는 방출기의 시뮬레이션 대상(`VFXSimulationTarget`)마다 하나다 —
-     *          CPU 방출기는 입자 배열을 **공유합니다**(방출기가 단계마다 새 배열을 내므로 RT 가 읽는 동안 GT 가 고쳐 쓰지 않는다 — `VFXComponent`),
+     *          CPU 방출기는 입자 배열을 공유합니다(방출기가 단계마다 새 배열을 내므로 RT 가 읽는 동안 GT 가 고쳐 쓰지 않는다 — `VFXComponent`),
      *          GPU 방출기는 누적 단계 수의 요청을 싣고 RT 가 컴퓨트로 입자를 만들어 간접 인자로 그린다(`VFXGPUSimulation`).
      *          텍스처는 경로로 싣고 RT 가 텍스처 캐시에서 빌립니다(캔버스 경로 이미지와 같다).
      */
     struct GPUParticleBatch
     {
-        /** @brief 입자의 출처입니다 — CPU 시뮬레이션의 입자 배열(비지 않는다 — 빈 방출기는 싣지 않는다)이거나 GPU 시뮬레이션의 요청이다. */
+        /** @brief 입자의 출처입니다. CPU 시뮬레이션의 입자 배열(빈 방출기는 싣지 않아 비지 않는다)이거나 GPU 시뮬레이션의 요청이다. */
         using Source = std::variant<shared_ptr<const vector<GPUParticle>>, VFXGPUEmitterRequest>;
 
         Source        _source{};                      ///< 입자의 출처(위)
@@ -401,13 +401,13 @@ namespace sw
 {
     /**
      * @struct GPUSceneSnapshot
-     * @brief 게임 스레드가 만들어 렌더 패킷에 실어 렌더 스레드로 **옮기는 모든 데이터**입니다.
+     * @brief 게임 스레드가 만들어 렌더 패킷에 실어 렌더 스레드로 옮기는 모든 데이터입니다.
      *
      * @details 소유 규칙이 이 타입에 적혀 있다.
      *          - 머티리얼 · 인스턴스는 싣지 않는다. 렌더 쪽 객체와 불변 사본(`MaterialRenderBinding`)만 싣는다(게임 스레드 객체를 렌더 스레드가 읽지 않는다).
-     *          - 렌더 스레드가 역참조하는 CPU 객체(메시, 머티리얼 프록시 · 사본)는 **shared_ptr 로 소유권을 함께 싣는다.**
+     *          - 렌더 스레드가 역참조하는 CPU 객체(메시, 머티리얼 프록시 · 사본)는 shared_ptr 로 소유권을 함께 싣는다.
      *            패킷이 살아 있는 동안(렌더 큐 깊이만큼) 게임 스레드가 놓아도 살아 있다. 생포인터는 정렬 키 같은
-     *            **정체성**에만 쓰고 스레드를 넘어 역참조하지 않는다.
+     *            정체성에만 쓰고 스레드를 넘어 역참조하지 않는다.
      *          - RT 가 upload() 에서 만드는 `GPUScene` 의 값(인스턴스와 간접 인자 버퍼, 간접 개수, 컬 뷰)은 여기 없다.
      *            그래서 옮겨질 수 없고, "한쪽만 만드는 값을 스냅샷이 매 프레임 덮어쓴다" 는 버그가 타입으로 막힌다.
      *            배치의 GPU 값(정점 버퍼 · 머티리얼 CB 등)도 여기 없다 — `GPUScene` 이 배치 번호로 따로 든다(`GPUMeshBatchBinding`).
@@ -417,11 +417,11 @@ namespace sw
     struct GPUSceneSnapshot
     {
         /**
-         * @brief **칸 순** 인스턴스 배열입니다(원소 번호 = GPUScene 칸 = 레지스트리 칸 = 빌더의 후보 번호, 실리지 않은 칸은 배치 번호가 무효인 구멍).
-         *        **값이 아니라 공유합니다.** RT 는 읽기만 하므로 프레임마다 복사할 이유가 없습니다.
+         * @brief 칸 순 인스턴스 배열입니다(원소 번호 = GPUScene 칸 = 레지스트리 칸 = 빌더의 후보 번호, 실리지 않은 칸은 배치 번호가 무효인 구멍).
+         *        값이 아니라 공유합니다. RT 는 읽기만 하므로 프레임마다 복사할 이유가 없습니다.
          *
          * @details 값으로 두면 `exportCPUSnapshot` 이 매 프레임 통째로 복사한다. 아무것도 움직이지 않는 정적 씬에서도
-         *          인스턴스당 55ns(엔티티 8000개면 441µs)가 들고, 그것이 정적 씬에서 **게임 스레드의 유일한 실제 작업**이 된다.
+         *          인스턴스당 55ns(엔티티 8000개면 441µs)가 들고, 그것이 정적 씬에서 게임 스레드의 유일한 실제 작업이 된다.
          *
          *          배치 목록도 공유한다(아래 비공개 `_pListBatch`, 불투명 · 투명은 그 구간 뷰). RT 가 쓰는 GPU 값은 `GPUScene` 이 배치 번호로 따로 든다
          *          (`GPUMeshBatchBinding`) — 예전에는 그 값을 배치에 덧써서 공유하지 못하고 패킷마다 통째로 베꼈다(배치마다 shared_ptr 원자 연산).
@@ -430,14 +430,14 @@ namespace sw
          */
         shared_ptr<const vector<GPUInstance>> _pListInstance;
         /**
-         * @brief 그리는 차례(배치 순 — 배치의 `_instanceBase` · `_instanceCount` 가 이 번호다) → GPUScene 칸입니다. **불변 목록을 공유합니다.** 차례가 바뀐 빌드(배치 구성원이 드나듦 ·
+         * @brief 그리는 차례(배치 순 — 배치의 `_instanceBase` · `_instanceCount` 가 이 번호다) → GPUScene 칸입니다. 불변 목록을 공유합니다. 차례가 바뀐 빌드(배치 구성원이 드나듦 ·
          *        투명 꼬리 재방출)만 새 목록을 싣습니다.
          * @details 인스턴스 배열(`_pListInstance`)은 칸 순이다. 컬링(`gpu_cull.hlsl` t3)은 차례마다 이 칸을 읽고, 컬링이 없는 길은 이 목록을 가시 목록 자리(`g_SwVisibleInstanceIDs`)에
          *          걸어 정점 셰이더가 차례 → 칸을 읽는다 — 한 셰이더가 두 길을 같은 형식으로 읽는다. 널이면 차례가 곧 칸이다(발행 전).
          */
         shared_ptr<const vector<uint32>> _pListInstanceSlot;
         /**
-         * @brief 퍼뮤테이션 목록입니다. 배치의 `_shaderPermutation` 이 가리킵니다. **불변 목록을 공유합니다.**
+         * @brief 퍼뮤테이션 목록입니다. 배치의 `_shaderPermutation` 이 가리킵니다. 불변 목록을 공유합니다.
          * @details 문자열 경로와 define 목록이 든 값이라 프레임마다 복사하면 그 문자열들이 모두 힙 할당이다(프레임당 약 30회).
          *          빌더는 새 퍼뮤테이션이 나타날 때만 목록을 새로 만들어 바꿔 끼운다(copy-on-write). RT 는 읽기만 한다.
          */
@@ -445,12 +445,12 @@ namespace sw
         /// @brief 스킨드 메시마다의 팔레트 구간입니다. 작아서 복사합니다.
         vector<GPUSkinPalette> _listSkinPalette;
         /**
-         * @brief 이번 프레임의 스킨 팔레트 행 전부입니다(본 하나가 float4 세 개). **공유합니다.** RT 는 읽기만 하고, GT 는 프레임마다 새 배열을 만듭니다.
+         * @brief 이번 프레임의 스킨 팔레트 행 전부입니다(본 하나가 float4 세 개). 공유합니다. RT 는 읽기만 하고, GT 는 프레임마다 새 배열을 만듭니다.
          * @details 팔레트는 애니메이션 시스템이 틱 뒤에 만들고 빌더가 여기로 옮긴다. RT 가 모프 풀의 스킨 구간 순서로 다시 올린다(`GPUMeshMorphPool::uploadSkinPalettes`).
          */
         shared_ptr<const vector<float4>> _pListSkinPaletteRow;
         /**
-         * @brief 이번 프레임의 모프 타깃 가중치 전부입니다(스킨드 메시마다 `GPUSkinPalette::_firstMorphWeight` 부터). **공유합니다.** 팔레트 행과 같은 규칙입니다.
+         * @brief 이번 프레임의 모프 타깃 가중치 전부입니다(스킨드 메시마다 `GPUSkinPalette::_firstMorphWeight` 부터). 공유합니다. 팔레트 행과 같은 규칙입니다.
          * @details 유닛(`SkeletalMeshComponent::getMorphWeights`)이 내고, RT 가 팔레트 버퍼 뒤에 실어 스키닝 컴퓨트가 레스트에 차이를 더한다.
          */
         shared_ptr<const vector<float32>> _pListMorphWeight;
@@ -478,7 +478,7 @@ namespace sw
         uint8 _bCPUDirty{ SW_TRUE };
         /**
          * @brief 빌더가 내보낸 차례(`GPUSceneBuilder::exportCPUSnapshot` 마다 1 씩, 처음이 1)입니다. 0 이면 빌더가 내보내지 않은 빈 스냅샷입니다.
-         * @details 내용 바뀜(`_bCPUDirty`) · 바뀐 칸(`_bAllInstancesDirty` · `_listDirtyInstanceRange`)은 **지난 스냅샷 기준의 차분**이다. 받는 쪽은 번호가 이어지지 않으면
+         * @details 내용 바뀜(`_bCPUDirty`) · 바뀐 칸(`_bAllInstancesDirty` · `_listDirtyInstanceRange`)은 지난 스냅샷 기준의 차분이다. 받는 쪽은 번호가 이어지지 않으면
          *          (그리지 않고 끝난 패킷의 스냅샷을 받지 못했다) 차분을 믿지 않고 전체로 맞춘다(`GPUScene::applyCPUSnapshot` — 글리프 아틀라스 묶음 번호와 같은 길).
          */
         uint64 _exportSerial{ 0 };
@@ -495,14 +495,14 @@ namespace sw
          */
         uint8 _bMeshesCreatedBeforeHandoff{ SW_FALSE };
         /**
-         * @brief 1이면 인스턴스 배열 **전체**가 바뀌었고, 0이면 `_listDirtyInstanceRange` 의 칸만 바뀌었습니다.
+         * @brief 1이면 인스턴스 배열 전체가 바뀌었고, 0이면 `_listDirtyInstanceRange` 의 칸만 바뀌었습니다.
          * @details 전체 재구축은 1이고, 물체만 움직인 프레임은 0이다. 버퍼를 새로 만든 프레임도 받는 쪽이
          *          전체로 취급해야 한다. 새 버퍼에는 아직 아무것도 없기 때문이다.
          */
         uint8 _bAllInstancesDirty{ SW_TRUE };
         /**
-         * @brief 바뀐 **칸** 구간들입니다(`_bAllInstancesDirty` 가 0일 때만 의미가 있습니다). 칸 순 배열의 번호라 배치를 다시 나눠도 드나든 칸만 든다.
-         * @details 하나만 움직여도 인스턴스 버퍼 **전체**를 다시 올리면 8000개 중 10개만 움직여도 800개를 움직일 때와
+         * @brief 바뀐 칸 구간들입니다(`_bAllInstancesDirty` 가 0일 때만 의미가 있습니다). 칸 순 배열의 번호라 배치를 다시 나눠도 드나든 칸만 든다.
+         * @details 하나만 움직여도 인스턴스 버퍼 전체를 다시 올리면 8000개 중 10개만 움직여도 800개를 움직일 때와
          *          같은 100µs 가 든다. 그래서 바뀐 구간만 올린다. 구간이 너무 잘게 흩어지면
          *          작은 업로드가 오히려 비싸므로, 빌더가 개수 상한을 넘기면 전체로 돌린다.
          */
@@ -695,7 +695,7 @@ namespace sw
 
     private:
         /**
-         * @brief 배치 목록 **한 벌**입니다(공유 값). 불투명 배치 `[0, _opaqueBatchCount)` 다음에 투명 배치가 오며, 간접 슬롯과 일치합니다.
+         * @brief 배치 목록 한 벌입니다(공유 값). 불투명 배치 `[0, _opaqueBatchCount)` 다음에 투명 배치가 오며, 간접 슬롯과 일치합니다.
          * @details 불투명 · 투명 목록을 따로 두지 않고 구간 뷰만 내준다. 고치는 길은 위 함수뿐이라(모두 `editBatches` 를 거친다) 경계가 깨지지 않고,
          *          공유 중인 목록을 제자리에서 고치는 일이 없다. 바뀌지 않은 프레임의 내보내기(`GPUSceneBuilder::exportCPUSnapshot`)는 포인터 하나다.
          */

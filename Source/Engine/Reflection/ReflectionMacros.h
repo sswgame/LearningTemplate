@@ -51,7 +51,7 @@ namespace sw::generated
     /**
      * @brief 생성 코드가 타입마다 특수화하는 등록기입니다. 선언만 여기 있고 정의는 .gen.cpp 가 냅니다.
      * @details 등록기는 `offsetof( Foo, _privateField )` 로 private 멤버를 만지므로 friend 여야 합니다.
-     *          등록기를 타입으로 특수화되는 **템플릿**으로 두면 타입마다 이름을 만들 필요가 없어
+     *          등록기를 타입으로 특수화되는 템플릿으로 두면 타입마다 이름을 만들 필요가 없어
      *          `template <typename> friend struct` 한 줄로 REFLECT_BODY() 안에 접힙니다(전방 선언도 필요 없습니다).
      */
     template <typename T>
@@ -61,7 +61,7 @@ namespace sw::generated
 #if defined( __REFLECT_PARSER__ )
     /**
      * @brief 리플렉션 대상 타입을 표시합니다. 선택 플래그: Abstract, Static
-     * @details 형식 앞 매크로(REFLECT · ENUM · REFLECT_CONTAINER)는 파서 모드에서 **표식 선언**입니다. 형식 키워드 앞의 GNU 속성은 clang 이 형식
+     * @details 형식 앞 매크로(REFLECT · ENUM · REFLECT_CONTAINER)는 파서 모드에서 표식 선언입니다. 형식 키워드 앞의 GNU 속성은 clang 이 형식
      *          선언에서 버린다(`-Wignored-attributes`) — 파서는 표식을 바로 다음 형제 선언과 짝짓는다(`AnnotationLookup`). `static_assert` 는
      *          이름공간 · 클래스 범위 어디서나 이름 없이 놓이고, `template` 앞이면 짝이 클래스 템플릿이라 그 자리에서 오류로 알린다.
      *          멤버 · 열거자 매크로(PROPERTY · FUNCTION · ENUMERATOR)는 선언에 붙는 속성 그대로다.

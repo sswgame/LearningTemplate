@@ -1,7 +1,7 @@
 /**
  * @file EditorSelectionUpdateQueue.h
  * @brief 되돌리기 · 다시 하기가 선택에 남기는 고칠 일(지운 오브젝트 빼기 · 되살린 오브젝트 고르기)의 줄입니다 — 기록 쪽은 선택을 쓰지 않고 오브젝트 id 만 남기고, UI 가 선택에 입힙니다.
- * @details **선택은 되돌리기 기록 밖이다.** 선택은 UI 상태라 Ctrl+Z 가 클릭을 되감지 않고, 기록 · 되돌리기 실행(데이터 명령의 알림 `CommandStack::ObjectEditEvent`)은 선택을
+ * @details 선택은 되돌리기 기록 밖이다. 선택은 UI 상태라 Ctrl+Z 가 클릭을 되감지 않고, 기록 · 되돌리기 실행(데이터 명령의 알림 `CommandStack::ObjectEditEvent`)은 선택을
  *          바로 고치지 않는다 — Godot 처럼 선택을 히스토리에 넣지 않는다(언리얼은 선택을 트랜잭션에 넣지만 `USelection` 이 UObject 라서다). 알림은 이 줄에 id 를 넣고,
  *          UI 프레임 시작(`ImGuiEditor::prepareFrameState`)과 UI 의 되돌리기 입구(`EditorUndoEntry`)가 `applyTo` 로 선택에 입힌다.
  */

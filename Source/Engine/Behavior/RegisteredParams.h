@@ -20,7 +20,7 @@ namespace sw
     {
     public:
         RegisteredParams();
-        /** @brief 목록 @p entries 의 등록 줄 @p pEntry 가 만든 값 @p pParams 를 쥡니다. @p generation 은 줄을 찾기 **전에** 읽은 등록표 세대다. */
+        /** @brief 목록 @p entries 의 등록 줄 @p pEntry 가 만든 값 @p pParams 를 쥡니다. @p generation 은 줄을 찾기 전에 읽은 등록표 세대다. */
         RegisteredParams( shared_ptr<const void> pParams, const void* pEntry, const LockedRegistrationListBase& entries, uint32 generation );
         RegisteredParams( const RegisteredParams& other );
         RegisteredParams& operator=( const RegisteredParams& other );

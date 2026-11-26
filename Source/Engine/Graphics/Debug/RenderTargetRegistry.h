@@ -8,7 +8,7 @@
  * 띄워** PPM 을 찍어야 하고, 한 장 볼 때마다 앱을 새로 켜야 합니다.
  *
  * [무엇을 지키는가]
- * 목록은 렌더 스레드가 쓰고 UI 스레드가 읽습니다. 그래서 **스냅샷을 복사해 줍니다.** 포인터나 참조를
+ * 목록은 렌더 스레드가 쓰고 UI 스레드가 읽습니다. 그래서 스냅샷을 복사해 줍니다. 포인터나 참조를
  * 넘기면 읽는 도중에 트랜지언트가 재생성될 수 있습니다(창 크기가 바뀌면 모두 다시 만들어집니다).
  * 텍스처 핸들 자체는 값이므로 복사해도 안전하고, 죽은 핸들은 RHI 가 generation 으로 거릅니다.
  *
@@ -71,7 +71,7 @@ namespace sw
         uint32            _serial{ 0 };            ///< 요청 번호(`requestReadback` 이 돌려준 값)
         uint8             _bSucceeded{ SW_FALSE }; ///< 읽기에 성공했으면 1
 
-        // 픽셀 풀기 — 에디터 렌더 타깃 창의 픽셀 값과 `gpu.inspect` 가 같은 함수를 쓴다(예전에는 에디터에만 있었다).
+        // 픽셀 풀기 — 에디터 렌더 타깃 창의 픽셀 값과 `gpu.inspect` 가 같은 함수를 쓴다.
         /** @brief CPU 로 읽은 값을 풀 수 있는 포맷이면 true 입니다. 블록 압축과 Unknown 은 해당하지 않습니다. 깊이는 항상 true 입니다. */
         [[nodiscard]] static bool isDecodableFormat( RHIFormat format, bool bDepth );
         /** @brief 포맷이 가진 채널 수를 반환합니다. 깊이는 1 입니다. 픽셀 값 행에 몇 개를 적을지 정합니다. */
@@ -91,7 +91,7 @@ namespace sw
     /**
      * @class RenderTargetRegistry
      * @brief 이번 프레임 구성의 렌더 타깃 목록을 담아 두고 스냅샷으로 반환합니다.
-     * @note 매 프레임 갱신하지 않습니다. 트랜지언트는 **구성이 바뀔 때만** 다시 만들어지므로
+     * @note 매 프레임 갱신하지 않습니다. 트랜지언트는 구성이 바뀔 때만 다시 만들어지므로
      *       그때 한 번 공개하면 됩니다. 세대 번호로 "목록이 바뀌었나" 를 알 수 있습니다.
      */
     class SW_API RenderTargetRegistry : public Subsystem

@@ -365,7 +365,7 @@ namespace sw
         vector<const SequenceTrackItem*> listActive;
         asset.collectActiveItems( frame, listActive );
 
-        // 대상마다 원하는 상태는 하나다. 그 대상을 덮는 활성 클립이 있으면 켜짐이다. **바뀔 때만** 설정한다(클립마다 끄고 켜면
+        // 대상마다 원하는 상태는 하나다. 그 대상을 덮는 활성 클립이 있으면 켜짐이다. 바뀔 때만 설정한다(클립마다 끄고 켜면
         // 클립이 둘인 대상이 매 프레임 꺼졌다 켜져 렌더 집합이 두 번 흔들린다).
         for ( const SequenceTrackItem& item : asset._listItem )
         {

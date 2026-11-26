@@ -317,7 +317,7 @@ namespace sw
 
         const RHIFormat format = toRHIFormatFromDXGI( image._dxgiFormat );
         SW_ASSERT( format != RHIFormat::Unknown ); // `readImage` 가 거른다
-        // 텍스처 품질(@p qualityMipDrop — 기동 때 뜬 사본) — DDS 페이로드는 밉 0 부터 이어지므로 버린 밉의 바이트를 건너뛰고 남은 밉 사슬을 업로드한다.
+        // 텍스처 품질(@p qualityMipDrop, 기동 때 뜬 사본). DDS 페이로드는 밉 0 부터 이어지므로 버린 밉의 바이트를 건너뛰고 남은 밉 사슬을 업로드한다.
         // 스트리밍 기반(`StreamingBase`)은 같은 규칙으로 버릴 수 있는 만큼 버린다 — 품질이 버리는 밉보다 늘 많거나 같다(같은 식에 더 큰 요청).
         const uint32           fileMipCount = image._mipCount > 0 ? image._mipCount : 1;
         const Texture2DMipDrop qualityDrop  = computeMipDrop( format, image._width, image._height, fileMipCount, qualityMipDrop );
@@ -331,8 +331,8 @@ namespace sw
         if ( step != Texture2DUploadStep::Submitted )
             return step;
 
-        // `_pDevice` 는 **제출한 뒤에만** 적는다. 먼저 적으면 실패하고 돌아간 뒤에도 "이 디바이스에 올라가 있다" 는
-        // 표시가 남는다. `isRHIValid` 는 핸들과 SRV 를 보지만 `releaseRHI` 는 이 값으로 **남의 디바이스 통보인지**를 가른다.
+        // `_pDevice` 는 제출한 뒤에만 적는다. 먼저 적으면 실패하고 돌아간 뒤에도 "이 디바이스에 올라가 있다" 는
+        // 표시가 남는다. `isRHIValid` 는 핸들과 SRV 를 보지만 `releaseRHI` 는 이 값으로 남의 디바이스 통보인지를 가른다.
         // 가진 것이 없는데 주인만 적혀 있는 상태를 애초에 만들지 않는다. SRV 는 `finishUpload` 가 완료를 본 뒤에 등록한다.
         _handle.store( handle, std::memory_order_release );
         _srv.store( kInvalidDescriptorIndex, std::memory_order_release );

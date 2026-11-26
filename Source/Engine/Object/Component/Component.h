@@ -29,7 +29,7 @@ namespace sw
     /**
      * @enum TickGroup
      * @brief 한 프레임 안에서 컴포넌트 틱이 도는 순서 슬롯입니다.
-     * @details 이름대로 물리 파이프라인 단계(언리얼의 ETickingGroup)를 뜻한다. 물리는 **DuringPhysics 와 PostPhysics 사이**에 한 번 step 한다.
+     * @details 이름대로 물리 파이프라인 단계(언리얼의 ETickingGroup)를 뜻한다. 물리는 DuringPhysics 와 PostPhysics 사이에 한 번 step 한다.
      *          프레임 안에서 어느 단계가 무엇을 보는지는 프레임 단계 목록 `Engine/Object/GameObject/Tick/SceneFrameStepList.xxx` 한 곳에 있다.
      */
     enum class TickGroup : uint8
@@ -49,8 +49,8 @@ namespace sw
     /**
      * @enum TickPhase
      * @brief 같은 TickGroup 안의 세부 실행 단계입니다. 단계는 64 간격이고, 서브틱 우선순위(0..`kMaxTickPriority`)는 한 단계 안에서의 순서입니다.
-     * @details **한 오브젝트 안의** 컴포넌트 틱 순서를 정하는 수단이다(UE 의 컴포넌트 틱 순서 · Unity 의 Script Execution Order 자리). 같은 프레임, 같은 그룹 안에서 (단계, 우선순위) 순으로 돈다.
-     *          **오브젝트 사이** 순서는 그룹(`TickGroup`)이나 서브틱 선행 조건(`addSubTickPrerequisite`)으로 정한다.
+     * @details 한 오브젝트 안의 컴포넌트 틱 순서를 정하는 수단이다(UE 의 컴포넌트 틱 순서 · Unity 의 Script Execution Order 자리). 같은 프레임, 같은 그룹 안에서 (단계, 우선순위) 순으로 돈다.
+     *          오브젝트 사이 순서는 그룹(`TickGroup`)이나 서브틱 선행 조건(`addSubTickPrerequisite`)으로 정한다.
      *          예: 래그돌 합성이 애니메이션 평가 뒤에 와야 하는 컴포넌트는 `registerSubTick( TickGroup::PrePhysics, id, TickPhase::Late )` 로 등록한다.
      */
     enum class TickPhase : uint8
@@ -101,8 +101,8 @@ namespace sw
     /**
      * @enum TickPrerequisiteKind
      * @brief 서브틱 선행 조건이 무엇을 기다리는지입니다(`Component::addSubTickPrerequisite` 의 필수 인자 — 기본값이 없어 부르는 쪽이 고른다).
-     * @details 틱 중 트랜스폼 쓰기는 대기 칸에 쌓였다가 게임 스레드가 적용해야 보인다. 그래서 선행이 **쓴 자리를 읽는** 간선은 레벨 장벽(그 앞에서 적용)이
-     *          있어야 하고, **순서만** 필요한 간선(선행이 고친 자기 멤버를 직접 읽거나 그냥 뒤에 돌면 되는 규칙 틱)은 태스크 간선(`TaskHandle::runAfter`)으로
+     * @details 틱 중 트랜스폼 쓰기는 대기 칸에 쌓였다가 게임 스레드가 적용해야 보인다. 그래서 선행이 쓴 자리를 읽는 간선은 레벨 장벽(그 앞에서 적용)이
+     *          있어야 하고, 순서만 필요한 간선(선행이 고친 자기 멤버를 직접 읽거나 그냥 뒤에 돌면 되는 규칙 틱)은 태스크 간선(`TaskHandle::runAfter`)으로
      *          충분하다 — 장벽 · 적용 없이 선행이 끝나는 대로 돈다. 언리얼은 쓰기가 즉시라 이 구분이 없다(틱 함수 간선 하나). 여기서는 대기 칸 때문에 고른다.
      */
     enum class TickPrerequisiteKind : uint8
@@ -136,7 +136,7 @@ namespace sw
      * @brief 부모에 붙이거나 뗄 때 무엇을 유지할지 정합니다(언리얼의 `EAttachmentRule`, 유니티의 `SetParent( parent, worldPositionStays )`).
      * @details `KeepRelative` 는 로컬 값을 그대로 두므로 새 부모를 따라 월드 위치가 바뀐다. 상태 로드와 코드의 기본값이며, 저장된 로컬은 부모 기준이기 때문이다.
      *          `KeepWorld` 는 월드 위치를 유지하도록 로컬 값을 다시 계산한다. 에디터에서 부모를 바꾸거나 떼어 낼 때 쓴다.
-     *          이때 `KeepRelative` 로 부모를 바꾸면 계층 창에서 끌어 놓은 오브젝트가 새 부모만큼 **튄다**.
+     *          이때 `KeepRelative` 로 부모를 바꾸면 계층 창에서 끌어 놓은 오브젝트가 새 부모만큼 튄다.
      */
     enum class AttachRule : uint8
     {
@@ -230,7 +230,7 @@ namespace sw
     /**
      * @struct OverlapInfo
      * @brief 겹침 시작과 끝 이벤트 하나의 정보입니다. 상대 오브젝트, 어느 콜라이더끼리 겹쳤는지(트리거 여부), 닿은 시점을 담습니다(언리얼 `OnComponentBeginOverlap` 의 인자).
-     * @details 겹침은 오브젝트 쌍마다 한 번이다(`PhysicsOverlapTracker` — 몸이 여럿인 상대도 진입 한 번, 마지막 몸이 나갈 때 이탈 한 번). 다만 트리거 여부는 따로 센다 —
+     * @details 겹침은 오브젝트 쌍마다 한 번이다(`PhysicsOverlapTracker`: 몸이 여럿인 상대도 진입 한 번, 마지막 몸이 나갈 때 이탈 한 번). 다만 트리거 여부는 따로 센다.
      *          오브젝트 하나에 막는 콜라이더와 트리거(감지 범위)가 함께 있으면 같은 상대에게서 이벤트 둘이 올 수 있으므로, 받는 쪽은 트리거 여부로 구분한다.
      *          예를 들어 투사체는 상대의 트리거에 막히지도 피해를 주지도 않는다. 바디 칸은 그 쌍에서 마지막으로 알린 바디다.
      */
@@ -333,7 +333,7 @@ namespace sw
     /**
      * @class Component
      * @brief GameObject 에 기능과 데이터를 덧붙이는 컴포넌트의 기반 클래스입니다.
-     * @details 리플렉션에는 **만들 수 없는 기반**(`Abstract`)으로 등록한다. 팩토리가 없어 이름으로 붙일 수 없다.
+     * @details 리플렉션에는 만들 수 없는 기반(`Abstract`)으로 등록한다. 팩토리가 없어 이름으로 붙일 수 없다.
      *          등록하지 않으면 모든 컴포넌트의 부모 체인이 여기서 끊긴다(`SceneComponent : Component` 의 부모가 "없음"이 된다).
      */
     REFLECT( Abstract, Category = "Core", DisplayName = "Component", Tooltip = "Base of every component" )
@@ -378,7 +378,7 @@ namespace sw
         Component& operator=( const Component& ) = delete;
 
         /**
-         * @brief **옮기지 않습니다.** 컴포넌트는 풀 안의 제자리에서 만들고 없앱니다.
+         * @brief 옮기지 않습니다. 컴포넌트는 풀 안의 제자리에서 만들고 없앱니다.
          * @details 컴포넌트를 옮기는 코드는 없다. 옮기면 원본과 사본이 같은 `_componentID` 를 가지고, `findComponentByID` 가
          *          어느 쪽이든 반환할 수 있으므로 막는다. 파생 타입도 이동 연산을 선언하지 않는다.
          * @see SceneComponent 도 계층 포인터가 얽혀 있어 같은 이유로 막혀 있다.
@@ -390,9 +390,9 @@ namespace sw
         virtual ~Component() = default;
 
         /**
-         * @brief 게임플레이가 시작될 때 불리는 초기화 콜백입니다. 인스턴스마다 **정확히 한 번** 불리며 `onEndPlay` 와 짝을 이룹니다.
+         * @brief 게임플레이가 시작될 때 불리는 초기화 콜백입니다. 인스턴스마다 정확히 한 번 불리며 `onEndPlay` 와 짝을 이룹니다.
          * @details 월드가 플레이 중이면(에디터 Play, 에디터 없는 App, Shipping 모두 `SceneManager::setWorldPlaying` 으로 판정한다) 활성 씬의 컴포넌트는
-         *          플레이가 시작될 때 불리고, 플레이 중에 붙은 컴포넌트는 **다음 틱 단계**에서 불린다. 붙인 직후에 설정한 필드와 상태 로드가 채운
+         *          플레이가 시작될 때 불리고, 플레이 중에 붙은 컴포넌트는 다음 틱 단계에서 불린다. 붙인 직후에 설정한 필드와 상태 로드가 채운
          *          PROPERTY 를 볼 수 있다. 활성 여부와 무관하게 불린다(언리얼과 같다). 되돌리기나 핫 리로드로 다시 만든 인스턴스는 새 인스턴스이므로
          *          다시 불린다. 런타임에만 있는 상태는 여기서 만든다. 직접 부르지 말고 `dispatchBeginPlay` 를 쓴다.
          */
@@ -422,7 +422,7 @@ namespace sw
          * @details 컴포넌트가 어느 레지스트리에 들어가야 하는지는 컴포넌트 자신이 안다. GameObject 가 `castTo` 로
          *          타입을 골라 대신 등록해 주면, 레지스트리가 하나 늘 때마다 GameObject 를 고쳐야 하고
          *          GameObject 가 MeshComponent 같은 하위 타입을 알게 된다.
-         * @param manager 자기가 속한 매니저. 필요한 것(레지스트리, 물리 월드 등)을 여기서 꺼내 **보관한다**.
+         * @param manager 자기가 속한 매니저. 필요한 것(레지스트리, 물리 월드 등)을 여기서 꺼내 보관한다.
          *        쓸 때마다 소유자를 거슬러 올라가 찾지 않는다. 소유자와의 연결이 이미 끊긴
          *        파괴 시점에는 그 조회가 엉뚱한 씬을 가리키기 때문이다.
          */
@@ -458,7 +458,7 @@ namespace sw
         /** @brief 이 컴포넌트의 `onPostLoad` 가 아직 오지 않았고 곧 온다면 true 입니다. `onRegister` 가 같은 빌드를 두 번 하지 않게 본다. */
         bool isPostLoadPending() const { return _bPostLoadPending == SW_TRUE; }
         /**
-         * @brief 소유 GameObject 에서 떨어지기 직전에 불립니다. 등록(`onRegister`) 한 번마다 **정확히 한 번** 불립니다.
+         * @brief 소유 GameObject 에서 떨어지기 직전에 불립니다. 등록(`onRegister`) 한 번마다 정확히 한 번 불립니다.
          * @details 해체는 `GameObjectManager::destroyComponentInstance` 하나를 거치므로 구현이 멱등일 필요는 없다.
          */
         virtual void onUnregister( GameObjectManager& manager ) { (void)manager; }
@@ -490,7 +490,7 @@ namespace sw
          * @brief 씬 상태 해시(`SceneObjectHash`)에 이 컴포넌트의 시뮬레이션 상태를 접습니다. 기본은 상태 역할 칸(`PROPERTY( RuntimeState )`, 기반부터)을 리플렉션으로 접습니다.
          * @details 두 프로세스가 같은 입력으로 같은 상태가 되었는지 견주는 값이라 게임플레이를 바꾸는 상태(트랜스폼 · 속도 · 난수 상태 · 남은 시간)만 넣는다.
          *          게임 스레드에서, 해시 이력이 켜진 틱에만 불린다(`-gv_stateHashHistory`). 칸을 손으로 나열하지 않으므로 새 상태 칸이 빠질 수 없다
-         *          (`StateHashTest.EveryStateFieldChangesTheHash`). 재정의는 리플렉션 밖 상태(물리 바디의 속도처럼 칸이 아닌 값)를 **더할** 때만 두고, 부모 것을 먼저 부른다.
+         *          (`StateHashTest.EveryStateFieldChangesTheHash`). 재정의는 리플렉션 밖 상태(물리 바디의 속도처럼 칸이 아닌 값)를 더할 때만 두고, 부모 것을 먼저 부른다.
          *          접을 수 없는 형식의 상태 칸(맵 · 컴포넌트 핸들)은 선언 결함이라 이유와 함께 멈춘다 — 빼고 접으면 그 칸이 어긋나도 해시가 같다.
          */
         virtual void foldStateHash( StateHashBuilder& inoutBuilder ) const;
@@ -502,7 +502,7 @@ namespace sw
          */
         [[nodiscard]] virtual SpawnStateReset resetToSpawnState() { return SpawnStateReset::Unsupported; }
         /**
-         * @brief 리플렉션 값을 직렬화기로 **직접** 쓴 뒤 부릅니다. 프로퍼티마다 `onPropertyChanged` 를 부르고, 그다음 `onPostLoad` 를 부릅니다(언리얼의
+         * @brief 리플렉션 값을 직렬화기로 직접 쓴 뒤 부릅니다. 프로퍼티마다 `onPropertyChanged` 를 부르고, 그다음 `onPostLoad` 를 부릅니다(언리얼의
          *        `PostEditChangeProperty`, 유니티의 `OnValidate` 에 해당).
          * @details 에디터에서 컴포넌트 값 붙여넣기, 새로 붙여넣기, 프리셋, 오버라이드 되돌리기, 기본값 되돌리기는 `BinarySerializer`,
          *          `XMLSerializer`, `JSONSerializer` 로 값을 바로 쓰는데, 이 경로는 알림을 부르지 않는다. 이 함수를 빼면 트랜스폼이 더티가 되지 않고
@@ -516,7 +516,7 @@ namespace sw
          * @param interval 주기(초)입니다. 0 이면 매 프레임, 음수나 NaN 이면 오류를 남기고 등록하지 않습니다. 차례의 셈은 주 틱의 주기(`kTickInterval`)와 같습니다.
          * @details 우선순위는 한 단계 안에서의 순서(0..`kMaxTickPriority`)이고, 넘으면 상한으로 제한한다(경고). 그룹이 유효하지 않으면 등록하지 않고 빈 핸들을 반환한다.
          *
-         *          **서브틱 목록(`_listSubTick`)을 바꾸는 네 함수(등록, 해제, 선행 조건, 활성)는 틱 중이면 변경을 틱 직후로 미룬다**(구조 변경 큐이며,
+         *          서브틱 목록(`_listSubTick`)을 바꾸는 네 함수(등록, 해제, 선행 조건, 활성)는 틱 중이면 변경을 틱 직후로 미룬다(구조 변경 큐이며,
          *          부른 순서대로 처리하므로 이어서 부른 선행 조건 추가도 등록 뒤에 실행된다). 목록은 이 컴포넌트를 틱하는 워커가 읽는데(64 번부터의 활성 여부,
          *          자기 틱 안의 등록과 해제), 다른 오브젝트의 틱이 목록을 늘리면 벡터가 다시 할당되어 그 워커가 해제된 메모리를 읽는다. 두 워커가 같은 컴포넌트에
          *          등록하면 `push_back` 이 겹친다(형제 함수인 `setCanEverTick` 도 같은 이유로 미룬다). 미루더라도 핸들은 바로 반환한다.
@@ -528,7 +528,7 @@ namespace sw
         bool unregisterSubTick( uint32 subTickID );
         /**
          * @brief 서브틱에 선행 조건을 추가합니다. prerequisiteHandle 이 먼저 실행되어야 합니다.
-         * @param kind 순서만(`OrderOnly` — 태스크 간선) 또는 선행이 쓴 트랜스폼을 읽음(`ReadsWrites` — 레벨 장벽 · 적용). 같은 핸들을 다시 걸면 종류만 바꾼다.
+         * @param kind 순서만(`OrderOnly`, 태스크 간선) 또는 선행이 쓴 트랜스폼을 읽음(`ReadsWrites`, 레벨 장벽 · 적용). 같은 핸들을 다시 걸면 종류만 바꾼다.
          * @details 선행 조건이 뒤쪽 그룹에 있으면 이 서브틱이 그 그룹으로 옮겨 가서 돈다(언리얼의 `ActualStartTickGroup`). 체인을 따라 옮긴다.
          *          선행 조건이 있는 서브틱만 별도 스테이지로 가고, 이 컴포넌트의 다른 틱과 체인 밖 오브젝트는 기본 경로 그대로 돈다.
          *          `ReadsWrites` 면 앞에서 실행된 선행 조건이 쓴 트랜스폼이 이 서브틱이 실행되기 전에 적용되어 같은 프레임에 보인다. `OrderOnly` 는 적용을 기다리지 않는다.
@@ -566,16 +566,16 @@ namespace sw
         static const hashed_string& getActivePropertyName();
         /**
          * @brief 주 틱에 참여할지 설정합니다. 생성자에서 끄면(언리얼의 `bCanEverTick = false`) 끈 것이 이깁니다.
-         * @details **기본값은 "`onTick` 을 오버라이드했는가"** 이다(유니티는 `Update` 가 있으면 부른다). `GameObject::addComponent` 가
+         * @details 기본값은 "`onTick` 을 오버라이드했는가" 이다(유니티는 `Update` 가 있으면 부른다). `GameObject::addComponent` 가
          *          `HasOnTickOverride_v` 로 판정하고, 오버라이드하지 않은 타입은 끈다. `Component` 와 `SceneComponent` 모두 같은 규칙이다.
          */
         void setCanEverTick( bool bCanEverTick );
         /**
-         * @brief 컴포넌트의 이름을 설정합니다(기본은 타입 이름). **타입이 아닙니다.** 상태와 함께 저장됩니다.
+         * @brief 컴포넌트의 이름을 설정합니다(기본은 타입 이름). 타입이 아닙니다. 상태와 함께 저장됩니다.
          * @details 오브젝트 안에서 컴포넌트를 가리키는 키(`ComponentStableKey`: 부착 대상, 프리팹 오버라이드, 에디터 선택 복원)가 이 이름으로
          *          만들어진다. 언리얼에서 컴포넌트 이름이 참조와 오버라이드의 키인 것과 같다. 이름이 없는 상태는 기본값(타입 이름)으로
          *          읽힌다. 타입은 만들 때 받은 `TypeInfo`(`_pTypeInfo`)이고 이름과 무관하다. 타입 이름이 필요하면 `getTypeName` 을 쓴다.
-         * @note 풀 키도 **아니다.** 파괴할 때는 `_pPoolEntry` 로 돌아간다. 이름을 바꾸면 그 컴포넌트를 키로 가리키던 저장된 참조(다른 컴포넌트의 부착,
+         * @note 풀 키도 아니다. 파괴할 때는 `_pPoolEntry` 로 돌아간다. 이름을 바꾸면 그 컴포넌트를 키로 가리키던 저장된 참조(다른 컴포넌트의 부착,
          *       프리팹 오버라이드)가 다음 로드에서 대상을 잃는다. 언리얼에서 컴포넌트 이름을 바꿀 때와 같다.
          */
         void setComponentName( hashed_string name ) { _componentName = name; }
@@ -623,24 +623,24 @@ namespace sw
         /**
          * @brief 씬 컴포넌트(트랜스폼을 가진 것)인지 리플렉션 없이 답합니다.
          * @details `castTo<SceneComponent>` 는 가상 호출 하나, 캐시 조회 둘, 조상 테이블 비교로 이루어져 약 8 ns 가 든다. 워커 14개가
-         *          건마다 이것을 부르자 배치 트랜스폼 쓰기가 세터보다 **느려졌다**(체인을 따라가던 때 8000건에 2.1 ms).
+         *          건마다 이것을 부르자 배치 트랜스폼 쓰기가 세터보다 느려졌다(체인을 따라가던 때 8000건에 2.1 ms).
          *          생성자에서 세우는 비트 하나로 판정한다.
          */
         bool isSceneComponent() const { return _bIsSceneComponent == SW_TRUE; }
 
-        /** @brief 컴포넌트 고유 ID 를 반환합니다. 붙을 때(`GameObject::attachCreatedComponent`) 매니저의 번호 공간(`ObjectIDAllocator` — 엔진 범위)이 준다 — 붙기 전에는 0 입니다. */
+        /** @brief 컴포넌트 고유 ID 를 반환합니다. 붙을 때(`GameObject::attachCreatedComponent`) 매니저의 번호 공간(`ObjectIDAllocator`, 엔진 범위)이 준다. 붙기 전에는 0 입니다. */
         uint64 getComponentID() const { return _componentID; }
 
         /** @brief 삭제 예정(묘비) 표시를 합니다. */
         void markPendingDestroy() { (void)tryMarkPendingDestroy(); } // 이미 표시돼 있어도 된다
 
         /**
-         * @brief 삭제 예정 표시를 **이 호출이 처음으로 했는지** 반환합니다.
+         * @brief 삭제 예정 표시를 이 호출이 처음으로 했는지 반환합니다.
          * @details `isPendingDestroy()` 로 확인한 뒤 `markPendingDestroy()` 를 부르는 두 단계는 원자적이지
-         *          않다. 두 스레드가 그 사이를 동시에 통과하면 파괴 목록에 같은 포인터가 **두 번**
+         *          않다. 두 스레드가 그 사이를 동시에 통과하면 파괴 목록에 같은 포인터가 두 번
          *          들어가고, 풀이 같은 블록을 두 번 반납한다. `onTick` 은 병렬로 실행되므로
          *          (총알 둘이 같은 적을 같은 프레임에 맞히는 경우처럼) 흔히 일어난다. 없애는 쪽은 반드시
-         *          이 함수가 `true` 를 반환한 스레드 **하나만** 진행해야 한다.
+         *          이 함수가 `true` 를 반환한 스레드 하나만 진행해야 한다.
          */
         [[nodiscard]] bool tryMarkPendingDestroy() { return _bIsPendingDestroy.exchange( true, std::memory_order_acq_rel ) == false; }
 

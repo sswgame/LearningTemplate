@@ -1,7 +1,7 @@
 /**
  * @file ReflectionEditorMetadata.h
  * @brief 에디터 · 문서만 읽는 리플렉션 메타데이터(카테고리 · 표시 이름 · 툴팁 · 커스텀 메타 · 편집 조건 · 슬라이더 범위)와 그 옆 표입니다.
- * @details 런타임 메타데이터(`ReflectionMetadata.h`)와 떼어 둔다 — 그 구조체는 이 데이터를 포인터 하나(`_pEditor`)로만 가리켜 **배치가 구성마다 같다**.
+ * @details 런타임 메타데이터(`ReflectionMetadata.h`)와 떼어 둔다 — 그 구조체는 이 데이터를 포인터 하나(`_pEditor`)로만 가리켜 배치가 구성마다 같다.
  *          값은 생성기가 헤더마다 내는 개발 전용 단위(`<이름>.gen.meta.cpp`)가 정적 등록으로 올리고(`TypeEditorMetadataSource`), 타입을 등록할 때
  *          `TypeRegistry` 가 FQN 으로 찾아 붙인다(`TypeEditorMetadataSource::find`). 배포 구성은 그 단위를 짓지 않아 포인터가 비고, 읽는 쪽은 기본값을 본다.
  *          언리얼 `WITH_METADATA`(UMetaData 를 패키지 옆 표에 두고 배포에서 뺀다)와 같은 자리다 — 다만 `#if` 로 칸을 가르지 않고 빌드 단위로 가른다.
@@ -30,7 +30,7 @@ namespace sw
 
         /** @brief 커스텀 메타데이터를 조회합니다. 없으면 nullptr 입니다. */
         const string* findCustomMeta( const hashed_string& key ) const noexcept;
-        /** @brief 아무것도 적지 않은 기본값입니다(포인터가 빈 타입 — 배포 구성 · 메타데이터 없는 타입 — 이 읽는다). */
+        /** @brief 아무것도 적지 않은 기본값입니다(배포 구성 · 메타데이터 없는 타입처럼 포인터가 빈 타입이 읽는다). */
         static const TypeEditorMetadata& getDefault() noexcept;
     };
 

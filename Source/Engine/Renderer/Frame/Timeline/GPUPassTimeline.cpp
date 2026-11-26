@@ -58,7 +58,7 @@ namespace sw
         if ( scope._profilerSlot != FrameProfiler::kInvalidSlot && scope._passName == passName )
             return scope._profilerSlot;
 
-        // 프로파일러는 이름 **포인터**를 가지고 있으므로 제자리에 머무는 곳에 둔다. intern 아레나는 프로세스가 끝날 때까지 그대로다.
+        // 프로파일러는 이름 포인터를 가지고 있으므로 제자리에 머무는 곳에 둔다. intern 아레나는 프로세스가 끝날 때까지 그대로다.
         // 패스 이름은 유한한 집합이라 intern 이 늘어나지 않는다.
         StringBuilder<constant::buffer::kMax128> scopeText;
         scopeText.appendFormat( "GPU.%#", passName );

@@ -39,7 +39,7 @@ namespace sw
         [[nodiscard]] bool loadModuleLibraries( ILiveReloadManager* pLiveReloadManager, const ModuleCatalog& catalog, const ModuleResolution& resolution ) override;
         /**
          * @brief 게임과 에디터 인스턴스를 만들고 에디터 렌더 훅 · 창 최소 크기를 겁니다(게임 모듈 라이브러리는 `loadModuleLibraries` 가 이미 로드했습니다).
-         * @details **게임이 먼저, 에디터가 나중**입니다. 게임이 처음 여는 씬(실행 설정의 시작 씬, 타이틀, 시작 맵)을 요청한 뒤에 에디터가 자기 시작 씬
+         * @details 게임이 먼저, 에디터가 나중입니다. 게임이 처음 여는 씬(실행 설정의 시작 씬, 타이틀, 시작 맵)을 요청한 뒤에 에디터가 자기 시작 씬
          *          (`-gv_editorStartupScene`)을 요청해야, 마지막 요청을 남기는 씬 매니저에서 에디터의 씬이 열립니다.
          */
         [[nodiscard]] bool initializeClient( ILiveReloadManager* pLiveReloadManager, RHI* pRHI, GenericWindow* pWindow, IEngineRenderDriver* pRenderDriver ) override;
@@ -68,7 +68,7 @@ namespace sw
         /** @brief 편집기 모듈을 지금 내리면 안 되는지입니다(편집기 API `isReloadHeld` — 열린 파일 대화상자). 리로드 잡음(`LiveReloadManager::addReloadHold`)으로 건다. */
         bool isEditorReloadHeld() const;
         /**
-         * @brief 새 에디터 모듈이 리로드 직후 결함을 냈을 때 불립니다. 인스턴스와 API 테이블을 **모듈을 부르지 않고** 버립니다.
+         * @brief 새 에디터 모듈이 리로드 직후 결함을 냈을 때 불립니다. 인스턴스와 API 테이블을 모듈을 부르지 않고 버립니다.
          * @param faultCode 예외 코드(Windows) 또는 시그널 번호(리눅스)
          */
         void onEditorReloadFault( uint32 faultCode );
@@ -76,7 +76,7 @@ namespace sw
         /** @brief 에디터 DLL 에서 API 테이블을 받아 바인딩합니다. ABI 버전이나 스탬프가 다르면 실패합니다. */
         [[nodiscard]] bool bindEditorAPI( ModuleLibraryHandle library );
 
-        // 렌더 스레드 훅 — 이 관리자가 사는 동안만 걸린다(`initializeClient` 가 걸고 소멸자가 `shutdown` 뒤에 뗀다 — 떼는 세터가 렌더 스레드를 먼저 비운다).
+        // 렌더 스레드 훅은 이 관리자가 사는 동안만 걸린다(`initializeClient` 가 걸고 소멸자가 `shutdown` 뒤에 뗀다. 떼는 세터가 렌더 스레드를 먼저 비운다).
         /** @brief 에디터 렌더 훅 셋(준비 · 그리기 · Present 뒤)을 렌더 스레드에 걸거나(@p bBind) 뗍니다. 렌더 스레드가 없는 호스트는 할 일이 없다. */
         void bindRenderHooks( bool bBind );
         /** @brief 렌더 패스 밖에서 에디터 UI 의 업로드를 합니다(렌더 스레드가 백버퍼 패스를 열기 직전 — `IEditor::prepareRender`). */

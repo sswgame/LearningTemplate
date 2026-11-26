@@ -17,7 +17,7 @@ namespace sw
         struct ModuleCallGuardInternal
         {
 #if defined( SW_PLATFORM_WINDOWS )
-            /** @brief 잡는 예외 코드입니다. 코드가 **어긋나서** 나는 것만 고른다 — 중단점(assert) · 스택 넘침 · C++ 예외는 여기 없다. */
+            /** @brief 잡는 예외 코드입니다. 코드가 어긋나서 나는 것만 고른다 — 중단점(assert) · 스택 넘침 · C++ 예외는 여기 없다. */
             static constexpr uint32 kArrFaultCode[] = {
                 EXCEPTION_ACCESS_VIOLATION,
                 EXCEPTION_ILLEGAL_INSTRUCTION,

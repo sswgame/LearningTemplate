@@ -1,7 +1,7 @@
 /**
  * @file MaterialParameterCollection.h
  * @brief 머티리얼 파라미터 묶음(`*.matparams.xml`)입니다. 파일 하나의 값을 머티리얼 여럿이 읽고, 런타임에 값을 바꾸면 그 묶음을 쓰는 모든 그림이 바뀝니다(언리얼 Material Parameter Collection).
- * @details **셰이더 슬롯을 새로 두지 않는다.** 머티리얼 프로퍼티가 묶음의 이름을 가리키고(`collection` · `collectionParameter`), 값이 바뀌면 그 머티리얼이 다음 프레임에 그 칸만 다시 쓴다
+ * @details 셰이더 슬롯을 새로 두지 않는다. 머티리얼 프로퍼티가 묶음의 이름을 가리키고(`collection` · `collectionParameter`), 값이 바뀌면 그 머티리얼이 다음 프레임에 그 칸만 다시 쓴다
  *          (`Material::syncParameterCollections`). 그래서 값은 리플렉션이 정한 자리의 머티리얼 데이터로 가고, 슬롯 · 바인딩 · 백엔드 코드가 그대로라 네 백엔드(dx11 · dx12 · vk · gl)에서 같은 길을 탄다.
  *          어떤 셰이더의 어떤 프로퍼티든 셰이더를 고치지 않고 묶을 수 있다.
  *          여기는 바꾼 값이 그 묶음을 쓰는 머티리얼 수만큼의 패킹이다. 많은 머티리얼이 읽고 자주 바뀌는 값(날씨)은 값에 `_global` 을 적는다 — 셰이더가 프레임 상수(`MaterialGlobals`)에서
@@ -127,7 +127,7 @@ namespace sw
      * @brief 쥔 쪽이 있는 묶음의 표입니다. 에셋 매니저가 내장 캐시로 소유합니다(`SW_BUILT_IN_ASSET_CACHE`).
      * @details 예전에는 함수 정적 표라 레지스트리에 보이지 않아 핫 리로드 · 합성 문맥 다시 읽기 · 재초기화 비우기가 닿지 않았다. 이제 다른 경로 캐시와 같은 길을 탄다:
      *          핫 리로드(개발 전용)와 합성 문맥 변경은 쥔 묶음을 제자리에서 파일 값으로 바꾸고, `clear` 는 표만 비운다(쥔 쪽의 묶음은 산다).
-     *          공유 에셋 표(`SharedAssetTable` — 새 판 넣기)와 달리 제자리인 것은 묶음이 에셋이 아니라 **런타임에 바뀌는 값**이기 때문이다 — 게임이 `setValue` 로 늘 고치고,
+     *          공유 에셋 표(`SharedAssetTable`, 새 판 넣기)와 달리 제자리인 것은 묶음이 에셋이 아니라 런타임에 바뀌는 값이기 때문이다 — 게임이 `setValue` 로 늘 고치고,
      *          다시 읽기도 같은 종류의 쓰기다(언리얼 `UMaterialParameterCollectionInstance` 도 월드마다 하나인 고치는 객체다). 읽고 쓰는 쪽은 게임 스레드뿐이다
      *          (`setValue` · `replaceValues` · 머티리얼 동기화 `Material::syncParameterCollections`) — 워커 · 렌더 스레드는 세대가 오른 뒤 패킹한 값만 본다.
      */

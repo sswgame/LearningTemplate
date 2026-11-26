@@ -348,7 +348,7 @@ namespace sw
                         string text;
                         if ( AssetIO::readTextFile( file._absolutePath, text ) == false || check.isMentioned( text ) == false )
                             continue;
-                        // 쿠킹본을 따로 만드는 종류(씬 · 프리팹)는 펼치지 않는다 — 그 쿠커가 펼치고, 칸 값은 원문에 적힌 그대로다. 층은 부모(원본)가 읽을 때 정해진다 — 적힌 행과 값만 본다.
+                        // 쿠킹본을 따로 만드는 종류(씬 · 프리팹)는 펼치지 않는다. 그 쿠커가 펼치고, 칸 값은 원문에 적힌 그대로다. 층은 부모(원본)가 읽을 때 정해지므로 적힌 행과 값만 본다.
                         string flatText;
                         bool   bComposed = false;
                         if ( AssetCookPath::isCookableSource( file._assetID ) == false && isLayerFile( selection, file._assetID ) == false &&

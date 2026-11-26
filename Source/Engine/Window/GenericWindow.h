@@ -98,7 +98,7 @@ namespace sw
      * @class GenericWindow
      * @brief 애플리케이션의 주 화면이나 보조 화면을 추상화하는 기본 인터페이스입니다.
      * @details 플랫폼별(Windows, Linux) 구체 클래스가 이 인터페이스를 상속해 구현합니다.
-     *          `IRenderSurface` 를 구현하므로 RHI 는 창을 **표면으로만** 봅니다. `Graphics` 가 `Window` 를
+     *          `IRenderSurface` 를 구현하므로 RHI 는 창을 표면으로만 봅니다. `Graphics` 가 `Window` 를
      *          include 하지 않는 이유입니다(Engine/Window/IRenderSurface.h).
      */
     class SW_API GenericWindow : public IRenderSurface
@@ -132,12 +132,12 @@ namespace sw
         /**
          * @brief 같은 크기, 제목, 위치, 표시 상태로 네이티브 창을 다시 만듭니다(OpenGL↔DXGI 핫스왑용).
          *
-         * @details **절차는 여기 한 벌뿐이다.** `_bRecreating` 을 켜서 다시 만드는 동안의 리사이즈와 닫기 통보를 막고,
-         *          **보이던 창을 다시 보이게 한다.** 백엔드 교체(`RHI::recreateDevice` → `recreateSurface`)가 이 함수를 부른다.
+         * @details 절차는 여기 한 벌뿐이다. `_bRecreating` 을 켜서 다시 만드는 동안의 리사이즈와 닫기 통보를 막고,
+         *          보이던 창을 다시 보이게 한다. 백엔드 교체(`RHI::recreateDevice` → `recreateSurface`)가 이 함수를 부른다.
          *          플랫폼마다 정말로 다른 두 가지는 아래 훅으로 분리했다.
          *
          * @note 플랫폼이 이 기능을 지원하지 않으면 이 함수를 재정의해 `false` 를 반환합니다.
-         *       재정의해서 **절차를 다시 적지는 마십시오** — 벌마다 조용히 어긋납니다.
+         *       재정의해서 절차를 다시 적지는 마십시오 — 벌마다 조용히 어긋납니다.
          */
         [[nodiscard]] virtual bool recreate();
 
@@ -215,7 +215,7 @@ namespace sw
          */
         [[nodiscard]] virtual bool canPlaceWindow() const = 0;
         /**
-         * @brief 창 틀의 왼쪽 위를 화면 좌표 (@p x, @p y)로 옮깁니다. 크기는 그대로다. **창 스레드(메인 스레드)에서만 부릅니다.**
+         * @brief 창 틀의 왼쪽 위를 화면 좌표 (@p x, @p y)로 옮깁니다. 크기는 그대로다. 창 스레드(메인 스레드)에서만 부릅니다.
          * @return 창이 없거나 `canPlaceWindow` 가 아니면 false 입니다.
          */
         [[nodiscard]] virtual bool setFramePosition( int32 x, int32 y ) = 0;
@@ -309,19 +309,19 @@ namespace sw
         // ---- 입력기(IME). 모양은 `WindowTextInput.h` 머리말. 글은 `NativeWindowEvent::kMessageTextInput` 으로 외부 처리기에 온다 ----
         /**
          * @brief @p client 가 글 입력을 원하는지 알립니다. 어느 쪽이든 원하면 입력기가 켜집니다. 가상이 아니다 - 원하는 쪽을 세는 일을 플랫폼이 빠뜨릴 수 없게 하고, 실제 켜고 끄기만 `applyTextInputWanted` 로 내려간다.
-         * @details 꺼진 동안 입력기는 키를 가져가지 않는다(게임의 WASD 가 한글 조합에 먹히지 않는다). 키가 낸 글자는 입력기가 꺼져도 확정 글로 온다. **창 스레드(메인 스레드)에서만 부릅니다.**
+         * @details 꺼진 동안 입력기는 키를 가져가지 않는다(게임의 WASD 가 한글 조합에 먹히지 않는다). 키가 낸 글자는 입력기가 꺼져도 확정 글로 온다. 창 스레드(메인 스레드)에서만 부릅니다.
          */
         void requestTextInput( WindowTextInputClient client, bool bWanted );
         /** @brief 입력기를 원하는 쪽이 있는지입니다. */
         [[nodiscard]] bool isTextInputWanted() const { return _textInputClientMask != 0; }
-        /** @brief 글 커서의 자리를 알립니다. 같은 자리면 아무것도 하지 않는다. 다시 만든 창에도 그대로 적용된다. **창 스레드(메인 스레드)에서만 부릅니다.** */
+        /** @brief 글 커서의 자리를 알립니다. 같은 자리면 아무것도 하지 않는다. 다시 만든 창에도 그대로 적용된다. 창 스레드(메인 스레드)에서만 부릅니다. */
         void setTextInputArea( const WindowTextInputArea& area );
 
         /**
          * @brief 창 방식과 (창 모드일 때의) 클라이언트 크기를 바꿉니다.
          * @details 크기가 바뀌면 플랫폼의 크기 통보가 대기 크기를 적고, 다음 프레임 시작의 `applyPendingResize` 가 `bindResizeCallback` 의 콜백을 부른다.
          *          스왑체인은 이 경로(Engine::onMainWindowResize 가 렌더 스레드를 기다린 뒤 resize)로만 바뀐다.
-         *          **창 스레드(메인 스레드)에서만 부른다.** `BorderlessFullscreen` 이면 @p width 와 @p height 는 무시하고 모니터 크기를 쓴다.
+         *          창 스레드(메인 스레드)에서만 부른다. `BorderlessFullscreen` 이면 @p width 와 @p height 는 무시하고 모니터 크기를 쓴다.
          * @return 지원하지 않는 플랫폼이면 false 입니다.
          */
         virtual bool setDisplayMode( WindowDisplayMode mode, uint32 width, uint32 height ) = 0;
@@ -330,12 +330,12 @@ namespace sw
 
         /**
          * @brief 창을 최소화하거나 되돌립니다. 최소화 상태(`isMinimized`)는 플랫폼의 통보가 바꾼다.
-         * @details 자동화 시나리오(`MinimizeWindow` · `RestoreWindow`)가 최소화 중의 프레임 · 스왑체인 경로를 볼 때 쓴다. **창 스레드(메인 스레드)에서만 부른다.**
+         * @details 자동화 시나리오(`MinimizeWindow` · `RestoreWindow`)가 최소화 중의 프레임 · 스왑체인 경로를 볼 때 쓴다. 창 스레드(메인 스레드)에서만 부른다.
          * @return 지원하지 않는 플랫폼이면 false 입니다(Wayland 는 되돌리기 요청이 프로토콜에 없다).
          */
         virtual bool setMinimized( bool bMinimized ) = 0;
         /**
-         * @brief 자기 창에 포커스를 잃거나(@p bFocused false) 얻는 OS 이벤트를 보내 실제 이벤트 경로를 타게 합니다. OS 포커스는 그대로입니다. **창 스레드(메인 스레드)에서만 부른다.**
+         * @brief 자기 창에 포커스를 잃거나(@p bFocused false) 얻는 OS 이벤트를 보내 실제 이벤트 경로를 타게 합니다. OS 포커스는 그대로입니다. 창 스레드(메인 스레드)에서만 부른다.
          * @details 자동화 시나리오(`PostWindowMessage` 의 `KillFocus` · `SetFocus`)가 부른다. Win32 는 이 호출 안에서 처리기가 돌고(`SendMessageW`), X11 은 다음 `processMessages` 가 받는다.
          *          언리얼 `FGenericWindow` · Godot `DisplayServer` 처럼 창 시스템 일은 창의 가상 함수에 두어 자동화 층이 플랫폼을 모른다.
          * @return 지원하지 않는 플랫폼이면 false 입니다(Wayland 는 클라이언트가 자기 키보드 enter · leave 를 보낼 길이 없다).
@@ -346,7 +346,7 @@ namespace sw
         /**
          * @brief 사용자가 창을 줄일 수 있는 가장 작은 클라이언트 크기(물리 픽셀)를 정합니다. 0 이면 제한하지 않습니다.
          * @details 창 모드에만 적용한다(Win32 `WM_GETMINMAXINFO`, X11 `WM_NORMAL_HINTS` 최소 크기). 지금 창이 이보다 작으면 이 크기로 키운다.
-         *          다시 만든 창(`recreate`)에도 그대로 적용된다. **창 스레드(메인 스레드)에서만 부른다.**
+         *          다시 만든 창(`recreate`)에도 그대로 적용된다. 창 스레드(메인 스레드)에서만 부른다.
          */
         void setMinimumClientSize( uint32 width, uint32 height );
         /** @brief `setMinimumClientSize` 의 가로 크기입니다. 0 이면 제한이 없습니다. */
@@ -358,7 +358,7 @@ namespace sw
         /** 제목을 거는 길을 하나로 만든다 — 호출할 수 있는 곳은 `MainWindowSubsystem`(엔진의 제목 추적기가 `IWindowTitleTarget` 으로 부른다) 뿐이다. 다른 곳은 컴파일 오류다. */
         friend class MainWindowSubsystem;
         /**
-         * @brief 창 제목을 바꿉니다(UTF-8). 같은 제목이거나 빈 제목이면 아무것도 하지 않습니다. **창 스레드(메인 스레드)에서만 부릅니다.**
+         * @brief 창 제목을 바꿉니다(UTF-8). 같은 제목이거나 빈 제목이면 아무것도 하지 않습니다. 창 스레드(메인 스레드)에서만 부릅니다.
          * @details 제목은 `_arrTitle` 에 남아 `recreate` 가 같은 제목으로 다시 만듭니다(빈 제목은 `recreate` 가 거절하므로 받지 않습니다).
          *          `kTitleCapacity` 를 넘는 제목은 오류를 남기고 받지 않습니다(지금 제목이 그대로 남습니다).
          */
@@ -388,7 +388,7 @@ namespace sw
         uint32             getSurfaceHeight() const override { return getHeight(); }
         [[nodiscard]] bool recreateSurface() override { return recreate(); }
         /**
-         * @brief 창을 화면에 띄우거나 숨깁니다. **"보이기로 했다" 는 사실을 기억합니다.**
+         * @brief 창을 화면에 띄우거나 숨깁니다. "보이기로 했다" 는 사실을 기억합니다.
          * @details 이 함수는 가상이 아니다. 의도를 기록하는 일을 플랫폼이 빠뜨릴 수 없게 하기 위해서다.
          *          실제로 창을 띄우고 내리는 일만 `applyWindowVisibility` 로 내려간다.
          */
@@ -399,18 +399,18 @@ namespace sw
         }
 
         /**
-         * @brief **지금 화면에 보이는지** 플랫폼에 직접 묻습니다.
-         * @warning 이 함수는 `isVisibleRequested()` 와 **다른 질문**입니다. X11 에서는 `XMapWindow` 가
+         * @brief 지금 화면에 보이는지 플랫폼에 직접 묻습니다.
+         * @warning 이 함수는 `isVisibleRequested()` 와 다른 질문입니다. X11 에서는 `XMapWindow` 가
          *          요청일 뿐이고 창 관리자가 실제로 매핑하기 전까지 `IsViewable` 이 아닙니다.
-         *          즉 방금 보이라고 한 창도 여기서는 **false** 입니다. 최소화나 다른 워크스페이스도 같습니다.
+         *          즉 방금 보이라고 한 창도 여기서는 false 입니다. 최소화나 다른 워크스페이스도 같습니다.
          *          "다시 만든 뒤 복원할까" 같은 판단에는 쓰지 마십시오(그래서 `recreate` 는 의도를 봅니다).
          */
         virtual bool isVisible() const = 0;
 
         /**
-         * @brief **보이기로 정해져 있는지** 반환합니다. 마지막 `showWindow()` 의 인자입니다.
+         * @brief 보이기로 정해져 있는지 반환합니다. 마지막 `showWindow()` 의 인자입니다.
          * @details 창 관리자의 사정과 상관없이 바로 답합니다. 창을 다시 만들 때 복원할지를 정하는
-         *          것은 이 값입니다. 화면 상태가 아니라 **우리가 원한 상태**가 기준이어야 합니다.
+         *          것은 이 값입니다. 화면 상태가 아니라 우리가 원한 상태가 기준이어야 합니다.
          */
         bool isVisibleRequested() const { return _bVisibleRequested == SW_TRUE; }
 
@@ -431,7 +431,7 @@ namespace sw
         /**
          * @brief 지난 적용 뒤 크기가 바뀌었으면 크기 콜백을 마지막 크기로 한 번 부릅니다. 메인 루프가 프레임 시작에 부른다(모달 루프 틱도 같다).
          * @details 창 메시지마다 스왑체인을 바꾸면 끌기 한 번에 `waitIdle` + `resize` 가 메시지 수만큼 돌았다(감사 P-2). 언리얼 `FSlateApplication` 도
-         *          크기 통보를 모아 프레임에서 뷰포트를 바꾼다. **창 스레드(메인 스레드)에서만 부릅니다.**
+         *          크기 통보를 모아 프레임에서 뷰포트를 바꾼다. 창 스레드(메인 스레드)에서만 부릅니다.
          */
         void applyPendingResize();
         /** @brief 적용을 기다리는 크기 변경이 있는지입니다(`applyPendingResize`). */
@@ -557,7 +557,7 @@ namespace sw
          *          절차가 이 클래스로 올라왔으므로 플래그도 같이 올라왔다.
          */
         uint8                  _bRecreating       : 1;
-        uint8                  _bVisibleRequested : 1; /**< 마지막 showWindow() 의 인자. 화면 상태가 아니라 **의도**. */
+        uint8                  _bVisibleRequested : 1; /**< 마지막 showWindow() 의 인자. 화면 상태가 아니라 의도. */
         uint8                  _bMinimized        : 1; /**< 창 이벤트가 알린 최소화 상태(`isMinimized`). */
         uint8                  _bFocused          : 1; /**< 창 이벤트가 알린 포커스 상태(`hasFocus`). */
         uint8                  _bSurfaceLost      : 1; /**< 표면을 잃은 상태(`isRenderPaused`). */

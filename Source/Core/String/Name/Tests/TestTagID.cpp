@@ -1,4 +1,4 @@
-// TagIDTest — 태그 id 규칙: 리터럴 · 런타임 요청이 같은 id(대소문자 무시), 점 계층의 조상 판정 경계, id 만 든 태그의 이름 역조회.
+// TagIDTest: 태그 id 규칙. 리터럴 · 런타임 요청이 같은 id(대소문자 무시), 점 계층의 조상 판정 경계, id 만 든 태그의 이름 역조회.
 // 이름 풀(hashed_string) 자체의 규칙은 StringTest.HashedStringFollowsFNameRules 가 본다.
 #include "pch.h"
 

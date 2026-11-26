@@ -6,7 +6,7 @@
  *
  *          데이터는 반사 프로브와 같은 모양(옥타헤드럴, 단계마다 같은 크기 — `ReflectionProbeAsset`)이고 프로브 버퍼(t13)에 같이 올라간다. 큐브맵 · 새 패스 · 새 슬롯이 없어
  *          네 백엔드가 같은 길로 읽는다. 거르기는 CPU 가 원본(`OctahedralRadianceMap`)을 만들어 반사 프로브 베이크와 같은 함수(`ReflectionProbeAsset::filterRoughnessLevels`
- *          — 원본 밉 사슬을 쓰는 filtered importance sampling)로 한다 — GPU 캡처 · 리드백이 없다. 원본은 그러데이션 · 대기 모드면 하늘 식(`SkyGradient::evaluateRadiance`
+ *          — 원본 밉 사슬을 쓰는 filtered importance sampling)로 하므로 GPU 캡처 · 리드백이 없다. 원본은 그러데이션 · 대기 모드면 하늘 식(`SkyGradient::evaluateRadiance`
  *          — sky.hlsl 과 같은 식)을 텍셀마다 센 것이라 구름 층과 해 원반은 들지 않는다(해는 방향광이 따로 비춘다). HDRI 모드면 원본 그림을 옥타헤드럴로 접은
  *          `.radiancemap`(`SkyGradient::_hdriRadianceMap`, 회전을 돌려 읽는다)이다 — CPU 는 BC6H 텍스처를 읽지 않는다. 언리얼 Sky Light 가 HDRI 큐브맵을 걸러 밉에 담는 자리다.
  *
@@ -66,7 +66,7 @@ namespace sw
 
     private:
         /**
-         * @brief HDRI 하늘의 원본을 돌려줍니다 — 경로가 바뀐 때만 읽는다(동기 — 밉 0 하나, 한 변 128 이면 약 200 KB). HDRI 모드가 아니거나 못 읽었으면 nullptr 이다(오류는 한 번 남긴다).
+         * @brief HDRI 하늘의 원본을 돌려줍니다. 경로가 바뀐 때만 읽는다(동기, 밉 0 하나, 한 변 128 이면 약 200 KB). HDRI 모드가 아니거나 못 읽었으면 nullptr 이다(오류는 한 번 남긴다).
          * @details 반사 프로브 데이터(`ReflectionProbeComponent`)도 경로가 정해질 때 동기로 읽는다 — 같은 크기의 일이다.
          */
         const OctahedralRadianceMap* findHdriRadiance( const SkyGradient& sky );

@@ -82,7 +82,7 @@ namespace sw
                     }
                 }
                 const uint32 leftoverMask = ( 1u << bufferedBitCount ) - 1u;
-                return ( buffer & leftoverMask ) == 0; // 끝에 남는 비트는 0 이어야 한다(한 바이트 열에 글 하나 — 변조 막기)
+                return ( buffer & leftoverMask ) == 0; // 끝에 남는 비트는 0 이어야 한다. 그래야 한 바이트 열에 글이 하나뿐이라 변조를 막는다
             }
         };
     } // namespace

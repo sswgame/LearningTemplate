@@ -3,7 +3,7 @@ Scripts/lint/layer_includes.py
 
 층 표(`Config/Rules/Layers/{Core,Engine,GameFramework,Editor}Layers.toml`)에서 아래 층 파일이 위 층 헤더를 include 하는지 본다.
 
-**왜 린트인가.** 막는 것은 빌드다 — 층마다 부분을 짓고 위 층 헤더 자리에 `#error` 껍데기를 둔다. 그런데 껍데기는 그 부분을 컴파일할 때만
+왜 린트인가. 막는 것은 빌드다 — 층마다 부분을 짓고 위 층 헤더 자리에 `#error` 껍데기를 둔다. 그런데 껍데기는 그 부분을 컴파일할 때만
 드러나서, 층 위반이 커밋을 지나 Debug 빌드에서야 멈췄다(아무도 include 하지 않는 헤더는 빌드도 보지 않는다). 같은 표로 커밋 때 직접 include 를 먼저 본다.
 헤더마다 자기 층에서 검사되므로 직접 include 만 보아도 전이 include 가 덮인다 — 예외는 어느 층에서나 쓰는 에디터 `[prelude]` 헤더라, 그 헤더를 거친 include 는 따라간다.
 

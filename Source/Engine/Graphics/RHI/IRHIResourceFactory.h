@@ -93,7 +93,7 @@ namespace sw
          * @brief 그래픽스 파이프라인 상태(PSO)를 만듭니다.
          * @details 모든 PSO 생성이 지나는 한 입구다 — 셰이더 컴파일과 드라이버 링크 · 특수화(GL 은 프레임 하나에 수십 초)를 컴파일 바쁜 시계
          *          (`ShaderCache::getCompileBusyClock`)에 센다. 자동화 시한이 그 시간을 뺀다.
-         *          **셰이더는 여기서 한 번 컴파일한다**: 서술체 해석 → 기동 능력으로 선택 스테이지 거절 → 컴파일 → 정점 리플렉션(실패면 끊는다) → 정점 속성 마스크.
+         *          셰이더는 여기서 한 번 컴파일한다: 서술체 해석 → 기동 능력으로 선택 스테이지 거절 → 컴파일 → 정점 리플렉션(실패면 끊는다) → 정점 속성 마스크.
          *          백엔드는 그 바이트코드 서술(`RHICompiledGraphicsStages`)만 받는다(`createPipelineStateNative`). 실패는 오류 로그와 핸들 0 이다.
          */
         RHIPipelineStateHandle createPipelineState( RHIResourceCreateKey, const RHIPipelineStateDesc& desc );
@@ -123,7 +123,7 @@ namespace sw
          */
         [[nodiscard]] RHIBufferHandle createConstantBufferPage( RHIResourceCreateKey, uint32 size );
         /**
-         * @brief **새로 받은** 페이지 구간 @p slice 에 내용을 씁니다(이번 프레임 칸 — 나머지 칸은 링이 그 칸으로 돌아올 때 같은 오프셋에 채운다, `RHIConstantBufferMirror`).
+         * @brief 새로 받은 페이지 구간 @p slice 에 내용을 씁니다(이번 프레임 칸 — 나머지 칸은 링이 그 칸으로 돌아올 때 같은 오프셋에 채운다, `RHIConstantBufferMirror`).
          * @details 쓴 구간은 놓을 때까지 고치지 않는다 — 값이 바뀌면 새 구간을 받아 쓴다(`ConstantBufferPagePool::write`, 키를 받는 곳이 그 풀이다). 그래서 이미 기록한 드로우 · GPU 가 읽는 중인
          *          구간을 덮지 않고, 쓰기는 기록과 순서를 맞추지 않아도 된다(WebGPU 큐 쓰기 · DX11 `D3D11_COPY_NO_OVERWRITE` 가 이 규칙에 기댄다).
          * @param size `slice._size` 이하여야 합니다 — 풀이 크기로 구간을 고른다.
@@ -134,18 +134,18 @@ namespace sw
         [[nodiscard]] RHIBufferHandle createStructuredBuffer( RHIResourceCreateKey, uint32 elementSize, uint32 elementCount );
 
         /**
-         * @brief 구조화 버퍼나 스토리지 버퍼의 **여러 조각**을 한 번에 갱신합니다.
+         * @brief 구조화 버퍼나 스토리지 버퍼의 여러 조각을 한 번에 갱신합니다.
          * @param pBaseSource 조각들의 `_srcOffset` 이 가리키는 원본 블롭입니다.
          *
-         * @details 오프셋이 필요한 이유는 하나다. **바뀐 것만 올리기 위해서다.** 인스턴스 8000개 중 10개만
+         * @details 오프셋이 필요한 이유는 하나다. 바뀐 것만 올리기 위해서다. 인스턴스 8000개 중 10개만
          *          움직였는데 버퍼 전체를 올리면 800개가 움직일 때와 같은 비용이 든다.
          *
-         *          **순서.** 프레임을 기록하는 스레드의 갱신은 기록 순서대로 실행된다 — 앞서 낸 리스트의 읽기 뒤, 뒤에 내는 리스트 앞이다(DX12 · Vulkan 은 프레임 스트림의 복사, DX11 · GL 은
+         *          순서. 프레임을 기록하는 스레드의 갱신은 기록 순서대로 실행된다 — 앞서 낸 리스트의 읽기 뒤, 뒤에 내는 리스트 앞이다(DX12 · Vulkan 은 프레임 스트림의 복사, DX11 · GL 은
          *          즉시 컨텍스트, WebGPU 는 앞 기록을 먼저 낸 큐 쓰기). 언리얼 RHI 도 명령 리스트 안의 `UpdateBuffer` 로 순서를 지킨다. 다른 스레드 · 프레임 밖의 갱신과 새 버퍼의 첫 내용은
          *          다음 제출의 맨 앞에 실행된다. 패스를 기록하는 동안은 부르지 않는다. 다른 스레드는
          *          그 프레임이 쓰는 버퍼를 갱신하지 않는다(둘 다 `IRHIDevice::beginBufferUpload`).
          *
-         * @warning 크기와 마찬가지로 **범위를 백엔드가 검사해 주지 않는다.** `byteOffset + size` 가
+         * @warning 크기와 마찬가지로 범위를 백엔드가 검사해 주지 않는다. `byteOffset + size` 가
          *          버퍼를 넘으면 버퍼 밖까지 쓴다. 호출하는 쪽이 지켜야 한다.
          */
         void updateStructuredBufferRegions( RHIBufferHandle buffer, const void* pBaseSource, const RHIBufferCopyRegion* pRegions, uint32 regionCount );
@@ -166,7 +166,7 @@ namespace sw
         /** @brief 내용을 담아 정점 버퍼를 만듭니다. 레이아웃은 PSO 의 입력 레이아웃(`constant::render::getMeshVertexAttributes`)이 정합니다. */
         [[nodiscard]] RHIBufferHandle createVertexBuffer( RHIResourceCreateKey, const void* pData, uint32 sizeBytes );
         /**
-         * @brief 내용 없이 GPU 쪽에만 있는 정점 버퍼를 만듭니다 — GPU 복사(`IRHICommandList::copyBufferRegion`)의 도착이 되는 버퍼다(감사 R-15 — 정점 풀이 CPU 정점 대신 GPU 원본에서 채운다).
+         * @brief 내용 없이 GPU 쪽에만 있는 정점 버퍼를 만듭니다. GPU 복사(`IRHICommandList::copyBufferRegion`)의 도착이 되는 버퍼다(감사 R-15, 정점 풀이 CPU 정점 대신 GPU 원본에서 채운다).
          * @details `createVertexBuffer` 의 버퍼는 DX12 업로드 힙이라 복사 도착이 될 수 없다. 이 버퍼는 CPU 가 쓰지 않는다(`updateGeometryBufferRegions` 를 받지 않는다) — 내용은 복사로만 들어온다.
          *          백엔드: DX12 default 힙(상태 추적, COMMON 으로 시작) · Vulkan 전송 도착 · 원본 용도(호스트 보임 메모리 — 엔진의 모든 Vulkan 버퍼와 같다) · DX11 DEFAULT ·
          *          GL 빈 `glBufferData` · WebGPU CopyDst · CopySrc. 처음 내용은 0 이다(DX12 · Vulkan 은 정해지지 않아 복사 전에는 읽지 않는다).
@@ -174,11 +174,11 @@ namespace sw
         [[nodiscard]] RHIBufferHandle createGPUVertexBuffer( RHIResourceCreateKey, uint32 sizeBytes );
 
         /**
-         * @brief `createVertexBuffer` · `createIndexBuffer` 로 만든 정점 · 인덱스 버퍼의 **여러 조각**을 갱신합니다. 메시 풀(`GPUMeshVertexPool`)의 부분 갱신용입니다.
+         * @brief `createVertexBuffer` · `createIndexBuffer` 로 만든 정점 · 인덱스 버퍼의 여러 조각을 갱신합니다. 메시 풀(`GPUMeshVertexPool`)의 부분 갱신용입니다.
          * @param pBaseSource 조각들의 `_srcOffset` 이 가리키는 원본 블롭입니다.
          * @details 정점 · 인덱스 버퍼는 같은 메모리에 살고 그 메모리는 백엔드마다 다르다. DX12 와 Vulkan 은 기기 로컬이라 스테이징
          *          복사로 쓰고, DX11 과 GL 은 즉시 컨텍스트의 갱신(UpdateSubresource, glBufferSubData), WebGPU 는 큐 쓰기다. 순서는 `updateStructuredBufferRegions` 와 같다.
-         * @warning **아직 끝나지 않은 프레임이 읽는 조각을 쓰면 안 된다.** 직접 쓰는 백엔드는 GPU 와 순서를 맞추지 않는다. 그래서 부르는 쪽이
+         * @warning 아직 끝나지 않은 프레임이 읽는 조각을 쓰면 안 된다. 직접 쓰는 백엔드는 GPU 와 순서를 맞추지 않는다. 그래서 부르는 쪽이
          *          돌려받은 구간을 그 구간을 읽던 프레임의 GPU 펜스가 끝난 뒤에야 다시 쓴다(`RHIFence` 값을 키로 `SpanAllocator::freeDeferred`).
          *          범위는 백엔드가 검사해 넘는 조각을 버리고 알린다.
          */
@@ -195,7 +195,7 @@ namespace sw
 
         /**
          * @brief 내용을 담아 인덱스 버퍼(uint16, uint32)를 만듭니다. 인덱스 크기는 바인딩할 때(`setIndexBuffer`) 다시 알려 줍니다.
-         * @details 백엔드마다 **인덱스 버퍼 용도**로 만들어야 한다(D3D11_BIND_INDEX_BUFFER, VK_BUFFER_USAGE_INDEX_BUFFER_BIT 등).
+         * @details 백엔드마다 인덱스 버퍼 용도로 만들어야 한다(D3D11_BIND_INDEX_BUFFER, VK_BUFFER_USAGE_INDEX_BUFFER_BIT 등).
          *          주의: 구조화 버퍼로 대신하면 안 된다(D3D11 은 BUFFER_STRUCTURED 에 BIND_INDEX_BUFFER 를 붙일 수 없고, Vulkan 은
          *          검증 레이어가 용도 위반으로 잡는다). 드라이버가 받아 줘서 그려지는 백엔드도 있어 이미지만으로는 드러나지 않는다.
          */
@@ -210,7 +210,7 @@ namespace sw
 
         /**
          * @brief 읽기 버퍼의 앞쪽 @p sizeBytes 를 @p pDestination 에 복사합니다. 끝난 작업을 기다리지 않습니다(DX11 은 드라이버의 사용 추적을 맞추려 짧게 기다리는 Map 이다).
-         * @details **복사를 기록한 프레임의 GPU 작업이 끝난 뒤에만** 부른다 — `IRHIDevice::notifyFrameCompletion` 의 `Completed` 통지 안이 그 자리다. 콜백은 완료를 확인하는 스레드에서 불리므로
+         * @details 복사를 기록한 프레임의 GPU 작업이 끝난 뒤에만 부른다 — `IRHIDevice::notifyFrameCompletion` 의 `Completed` 통지 안이 그 자리다. 콜백은 완료를 확인하는 스레드에서 불리므로
          *          이 함수는 어느 스레드에서 불러도 안전하다(DX11 은 즉시 컨텍스트를 잠그고 GL 은 컨텍스트를 빌린다). 끝나기 전에 부르면 결과가 정해져 있지 않다(DX11 은 GPU 가 끝나기를 기다리고, DX12 · Vulkan 은 이전 내용이거나 0, GL 은 드라이버가 암묵적으로 기다린다).
          * @return 핸들이 읽기 버퍼가 아니거나 크기가 버퍼를 넘거나 내용을 가져오지 못하면 false 입니다(이유는 로그). 읽기 버퍼가 아닌 핸들은 네 백엔드가 같이 거절한다
          *         (DX11 스테이징 버퍼, DX12 읽기 힙, Vulkan 복사 도착지 전용 버퍼, GL `GL_STREAM_READ` 만 읽기 버퍼로 본다).
@@ -246,7 +246,7 @@ namespace sw
 
         /**
          * @brief 텍스처가 실제로 만들어진 RHIFormat 을 반환합니다(없는 핸들이면 Unknown).
-         * @details 렌더 타깃에 그리는 PSO 는 **대상의 실제 포맷**으로 만들어야 한다. 언리얼이 PSO 초기화자의
+         * @details 렌더 타깃에 그리는 PSO 는 대상의 실제 포맷으로 만들어야 한다. 언리얼이 PSO 초기화자의
          *          RenderTargetFormats 를 바인딩된 FRHITexture::GetFormat() 에서 뽑는 것과 같은 방식이다.
          *          백버퍼(`kRHIBackBufferTexture`)는 여기가 아니라 `IRHIDevice::getBackBufferFormat()` 이 알려 준다.
          */
@@ -263,21 +263,21 @@ namespace sw
         //   1. 반환하기 전에 소스 메모리를 복사한다. 호출자는 바로 버퍼를 재사용한다.
         //   2. GPU 완료를 기다리지 않는다. 결과는 세 가지다.
         //      - `Accepted`: 티켓이 유효하다.
-        //      - `Busy`: **다시 시도하면 될 수 있을 때만** 쓴다(지금은 스테이징 링이나 단독 버퍼 총량이 차 있지만 GPU 가 진행하면 비는 경우). 티켓은 무효이고 호출자가 다음 프레임에 다시 제출한다.
-        //      - `Rejected`: 다시 시도해도 안 되는 요청이다. 검사에 걸린 것(포맷, 범위, 데이터 크기, 잘못된 핸들)과 링 · 단독 버퍼 총량 **상한보다 큰 요청**, 장치 손실이 여기에 든다.
+        //      - `Busy`: 다시 시도하면 될 수 있을 때만 쓴다(지금은 스테이징 링이나 단독 버퍼 총량이 차 있지만 GPU 가 진행하면 비는 경우). 티켓은 무효이고 호출자가 다음 프레임에 다시 제출한다.
+        //      - `Rejected`: 다시 시도해도 안 되는 요청이다. 검사에 걸린 것(포맷, 범위, 데이터 크기, 잘못된 핸들)과 링 · 단독 버퍼 총량 상한보다 큰 요청, 장치 손실이 여기에 든다.
         //        이유는 로그로 남는다.
-        //   3. 순서는 양방향이다. (a) 이 전송은 **앞서 제출된** 프레임(`endFrame` 이 이미 반환한 프레임) 뒤에 실행되고, (b) **뒤에 제출될** 모든 프레임 커맨드 앞에 실행된다.
+        //   3. 순서는 양방향이다. (a) 이 전송은 앞서 제출된 프레임(`endFrame` 이 이미 반환한 프레임) 뒤에 실행되고, (b) 뒤에 제출될 모든 프레임 커맨드 앞에 실행된다.
         //      (c) 같은 텍스처에 대한 제출끼리는 제출 순서대로 실행된다. (d) 되읽기는 요청 시점까지 제출된 프레임(직전 프레임까지)의 쓰기를 본다.
         //      진행 중인 프레임 안에서 `executeCommandList` 로 넘긴 리스트는 (a) 에 들지 않는다: DX12 · Vulkan 은 그 리스트들을 `endFrame` 까지 모아 두었다가 한 번에 내므로
         //      전송이 그 앞에 끼고, DX11 · GL 은 곧바로 실행한다. 아직 제출하지 않고 기록 중인 커맨드 리스트가 어느 내용을 보는지도 백엔드마다 달라 정해져 있지 않으므로
         //      호출자는 전송을 그리기 기록 전에 제출한다.
-        //      **렌더 타깃처럼 프레임 커맨드가 상태(레이아웃 · 리소스 상태)를 바꾸는 텍스처의 전송은 RT 기록 밖 구간에서만** 제출한다. 기록 중인 프레임과 같은 텍스처의 상태를 두 곳에서 바꾸지 않게 하는 규칙이다.
+        //      렌더 타깃처럼 프레임 커맨드가 상태(레이아웃 · 리소스 상태)를 바꾸는 텍스처의 전송은 RT 기록 밖 구간에서만 제출한다. 기록 중인 프레임과 같은 텍스처의 상태를 두 곳에서 바꾸지 않게 하는 규칙이다.
         //      공통 입구가 개발 구성에서 판정한다(`IRHIDevice::beginTextureUpload` · `beginTextureReadback`). 이미 낸 프레임이 읽는 내용은 덮지 않는다 — 다섯 백엔드 모두 전송을 그래픽스 큐에
         //      순서대로 내고(DX12 배리어 · Vulkan ALL_COMMANDS 배리어 · WebGPU 큐 순서 · DX11 · GL 은 드라이버), 비동기 컴퓨트 큐의 일은 `endFrame` 이 그래픽스 큐에서 기다린다.
-        //   4. 스레드: 제출 함수는 **어느 스레드에서나** 부를 수 있다. DX12 · Vulkan 은 자기 락으로, DX11 은 렌더 스레드의 프레임 스트림도 지나는 즉시 컨텍스트의
+        //   4. 스레드: 제출 함수는 어느 스레드에서나 부를 수 있다. DX12 · Vulkan 은 자기 락으로, DX11 은 렌더 스레드의 프레임 스트림도 지나는 즉시 컨텍스트의
         //      런타임 임계 구역(`D3D11ImmediateContext::lock()`)으로 직렬화하고, GL 은 제출 함수가 `ScopedOpenGLContext` 로 컨텍스트를 빌린다
         //      (렌더 스레드가 쥐고 있으면 프레임 끝에 놓을 때까지 기다린다). GL 의 비 RT 스레드 제출은 컨텍스트를 두고 RT 와 겨루므로 프레임 경로 밖(동기 `acquire`, 도구)에서만 쓴다.
-        //   5. 시리얼은 **큐에 낸 순서대로 같은 락 안에서** 매긴다(`RHITransferSerials::issue`). 락 밖에서 매기면 시리얼 순서가 큐 실행 순서와 어긋나 워터마크가 끝나지 않은 제출을 덮는다.
+        //   5. 시리얼은 큐에 낸 순서대로 같은 락 안에서 매긴다(`RHITransferSerials::issue`). 락 밖에서 매기면 시리얼 순서가 큐 실행 순서와 어긋나 워터마크가 끝나지 않은 제출을 덮는다.
         //      티켓에는 장치 세대가 실려 있어, 백엔드를 바꾼 뒤의 옛 티켓은 새 장치에서 `Failed` 다.
         //   6. 전송 중인 텍스처를 해제(`IRHIDevice::releaseHandle`)하면 백엔드가 GPU 자원 해제를 전송이 끝난 뒤로 미룬다(해제 큐). 호출자는 전송 중에도 안전하게 파괴할 수 있지만 그 티켓의 결과는 쓸 수 없다.
         //   7. 진행: 프레임을 돌리지 않아도 `pollTransfer` 를 되풀이하면 결국 `Complete` 나 `Failed` 가 된다. 아직 GPU 에 내보내지 않은 일(DX12 의 열린 복사 리스트, GL 의 flush 안 된 명령)은
@@ -294,7 +294,7 @@ namespace sw
 
         /**
          * @brief 2D 텍스처의 밉 하나, 면 하나의 사각형 구간에 픽셀을 올리도록 제출합니다(비압축 컬러 포맷만). 나머지 픽셀은 그대로 둡니다.
-         * @details 글리프 아틀라스처럼 **가끔, 작게** 바뀌는 텍스처용이고, 매 프레임 큰 구간을 올리는 용도가 아니다.
+         * @details 글리프 아틀라스처럼 가끔, 작게 바뀌는 텍스처용이고, 매 프레임 큰 구간을 올리는 용도가 아니다.
          *          검사(포맷, 범위, 데이터 크기)는 validateTextureRegionUpload 한 곳이 한다.
          * @return 검사에 걸리면 `Rejected` 입니다(이유는 로그에 남깁니다).
          */
@@ -303,7 +303,7 @@ namespace sw
         /**
          * @brief 텍스처의 면(`arraySlice`: 배열 원소 또는 큐브 면, 2D 는 0) 하나의 밉 하나를 CPU 로 읽도록 요청합니다. 행은 빈틈없이(업로드와 같은 배치,
          *        BC 는 블록 행) 채웁니다.
-         * @param outLayout 밉 크기와 행 바이트입니다. **제출 시점에 바로 채웁니다**(_pData 는 쓰지 않는다). 결과 바이트는 `takeTextureReadback` 이 준다.
+         * @param outLayout 밉 크기와 행 바이트입니다. 제출 시점에 바로 채웁니다(_pData 는 쓰지 않는다). 결과 바이트는 `takeTextureReadback` 이 준다.
          * @details 깊이 텍스처는 네 백엔드 모두 `kRHIDepthReadbackFormat` 배치(텍셀마다 0..1 깊이 float32, 스텐실 없음)로 채운다.
          *          요청 시점까지 제출된 이 텍스처의 쓰기가 읽기에 보인다(순서 규칙 3).
          * @return 포맷이 대상이 아니거나 밉이나 면이 범위 밖이면 `Rejected` 다.
@@ -315,13 +315,13 @@ namespace sw
          * @details `Complete` 는 완료 워터마크 이상으로 판정하므로 `Complete` 를 본 뒤 같은 티켓을 다시 물어도 `Complete` 이고, 티켓을 해제하는 함수는 없다.
          *          무효 티켓, 다른 장치 세대의 티켓, 발급한 적 없는 시리얼은 오류를 남기고 `Failed` 다. 어느 스레드에서나 부를 수 있고, 프레임을 돌리지 않아도 되풀이하면 결국
          *          `Complete` 나 `Failed` 가 된다(계약 7).
-         *          **GL 은 컨텍스트를 기다리며 빌리지 않는다**: 원자 워터마크를 읽고, 이 스레드가 이미 컨텍스트를 가졌을 때만 GL 에 물어 워터마크를 올린다.
+         *          GL 은 컨텍스트를 기다리며 빌리지 않는다: 원자 워터마크를 읽고, 이 스레드가 이미 컨텍스트를 가졌을 때만 GL 에 물어 워터마크를 올린다.
          *          컨텍스트가 없는 스레드의 폴링은 컨텍스트를 가진 쪽(RT 의 `endFrame`, 제출 스레드)이 올려 둔 워터마크만 본다.
          */
         [[nodiscard]] virtual RHITransferStatus pollTransfer( RHITransferTicket ticket ) = 0;
 
         /**
-         * @brief 완료된 읽기 결과를 **한 번** 가져갑니다.
+         * @brief 완료된 읽기 결과를 한 번 가져갑니다.
          * @param ticket `submitTextureReadback` 이 돌려준 티켓입니다. `pollTransfer` 가 `Complete` 를 돌려준 뒤에 부릅니다.
          * @param outBytes 결과 바이트입니다(제출 때 받은 `outLayout` 의 배치).
          * @return 읽기 티켓이 아니거나(업로드 티켓), 아직 `Complete` 가 아니거나, 이미 가져갔거나 버렸으면 false 입니다(이유는 로그).
@@ -343,14 +343,14 @@ namespace sw
         // 페이지 밖 구간은 같은 로그 ID(`RHI.Bindless…`)로 거절한다. 백엔드(`…Native`)는 검사한 자원의 번호와 뷰만 만든다.
         /**
          * @brief Bindless 테이블에 텍스처를 등록하고 SRV 인덱스를 발급합니다.
-         * @details 텍스처 인덱스와 버퍼 인덱스는 **서로 다른 공간**이다. DX12 만 하나의 셰이더 가시
+         * @details 텍스처 인덱스와 버퍼 인덱스는 서로 다른 공간이다. DX12 만 하나의 셰이더 가시
          *          힙을 공유하고, DX11/OpenGL/Vulkan 은 텍스처 테이블과 버퍼 테이블을 따로 둔다. 같은 정수가
          *          양쪽에서 각각 다른 리소스를 가리킬 수 있다. 그래서 해제도 종류별로 나뉜다.
-         *          **첫 업로드가 끝나지 않은 텍스처는 등록하지 않는다.** 공통 입구가 레코드의 첫 업로드 시리얼이 완료 워터마크 아래인지 확인하고, 아니면 오류를 남기고
+         *          첫 업로드가 끝나지 않은 텍스처는 등록하지 않는다. 공통 입구가 레코드의 첫 업로드 시리얼이 완료 워터마크 아래인지 확인하고, 아니면 오류를 남기고
          *          `kInvalidDescriptorIndex` 를 돌려준다(소비자는 `pollTransfer` 가 `Complete` 를 돌려준 뒤에 등록한다). 뒤의 구간 갱신이 남아도 막지 않는다 — 이미 내보낸
          *          텍스처를 다른 쪽(에디터 UI)이 등록할 수 있다(`RHITextureTransferSerials`).
-         *          **등록마다 새 번호다**(네 백엔드가 같다). 같은 텍스처를 여러 쪽(엔진 · 에디터 UI)이 등록해도 각자의 번호를 각자 해제한다 — 번호를 나눠 주면 한쪽의 해제가
-         *          다른 쪽이 쓰는 번호를 놓는다(Vulkan 이 그랬다, 2026-11-02 에디터 RHI 렌더러). **텍스처 해제(`IRHIDevice::releaseHandle`)는 그 텍스처의 번호를 모두 놓는다**(네 백엔드가 같다 —
+         *          등록마다 새 번호다(네 백엔드가 같다). 같은 텍스처를 여러 쪽(엔진 · 에디터 UI)이 등록해도 각자의 번호를 각자 해제한다 — 번호를 나눠 주면 한쪽의 해제가
+         *          다른 쪽이 쓰는 번호를 놓는다(Vulkan 이 그랬다, 2026-11-02 에디터 RHI 렌더러). 텍스처 해제(`IRHIDevice::releaseHandle`)는 그 텍스처의 번호를 모두 놓는다(네 백엔드가 같다 —
          *          DX12 만 번호를 남겨 늦은 해제가 다시 발급된 번호를 놓았다). 텍스처 주인이 아닌 쪽은 번호를 해제하지 않고 파괴에 맡긴다.
          */
         RHITextureSRVIndex registerBindlessTexture( RHITextureHandle texture );
@@ -364,7 +364,7 @@ namespace sw
          */
         [[nodiscard]] bool rebindBindlessTexture( RHITextureSRVIndex index, RHITextureHandle texture );
         /**
-         * @brief 텍스처 번호 하나만 예약합니다. **어느 스레드에서든** 부른다(병렬 기록 중에도 — 번호 발급기만 짧은 잠금으로 건드리고 기록 경로가 읽는 칸은 바꾸지 않는다).
+         * @brief 텍스처 번호 하나만 예약합니다. 어느 스레드에서든 부른다(병렬 기록 중에도 — 번호 발급기만 짧은 잠금으로 건드리고 기록 경로가 읽는 칸은 바꾸지 않는다).
          * @details 예약한 번호는 아직 산 칸이 아니다 — `activateReservedBindlessTexture` 가 렌더 스레드에서 디스크립터를 쓰고 살린다(`IRHIDevice::reserveBindlessTexture` 가 둘을 잇는다).
          *          텍스처 캐시가 로드를 시작할 때 번호를 정해 두어, 로드가 끝나도 번호가 바뀌지 않게 한다(감사 R-6 — 언리얼 `FD3D12BindlessDescriptorManager` 도 할당은 스레드 안전이고 갱신은 뒤에 한다).
          * @return 표가 차면 kInvalidDescriptorIndex 입니다.
@@ -401,7 +401,7 @@ namespace sw
         RHIBufferSRVIndex registerBindlessBufferSRV( const RHIBufferSlice& slice );
 
         /**
-         * @brief registerBindlessBufferSRV 가 발급한 **버퍼** 인덱스를 해제합니다.
+         * @brief registerBindlessBufferSRV 가 발급한 버퍼 인덱스를 해제합니다.
          * @details 이미 비어 있는 슬롯(다른 종류의 인덱스, 이중 해제)은 프리리스트에 다시 넣지 않는다.
          *          한 번이라도 넣으면 같은 인덱스가 두 리소스에 발급되어 조용히 엉뚱한 버퍼가 바인딩된다.
          */
@@ -423,7 +423,7 @@ namespace sw
 
     protected:
         // ------------------------------------------------------------------------------
-        // 자원 생성 — 백엔드 구현. 부르는 쪽은 키를 받는 공개 판이다(`RHIResourceCreateKey` — 설명도 거기 있다). 크기 · 모양 · 형식 검사는 거기서 했다
+        // 자원 생성: 백엔드 구현. 부르는 쪽은 키를 받는 공개 판이다(`RHIResourceCreateKey`, 설명도 거기 있다). 크기 · 모양 · 형식 검사는 거기서 했다
         // ------------------------------------------------------------------------------
         [[nodiscard]] virtual RHIBufferHandle createConstantBufferNative( uint32 size )                               = 0;
         [[nodiscard]] virtual RHIBufferHandle createConstantBufferPageNative( uint32 size )                           = 0;

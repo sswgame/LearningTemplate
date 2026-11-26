@@ -49,7 +49,7 @@ namespace sw
             }
 
             /**
-             * @brief 기반 타입부터 파생 타입까지의 TypeInfo 를 **루트 → 파생** 순서로 모읍니다.
+             * @brief 기반 타입부터 파생 타입까지의 TypeInfo 를 루트 → 파생 순서로 모읍니다.
              * @details 기본값은 `<Component>` 처럼 기반 이름으로도 적을 수 있어야 합니다(모든 컴포넌트에
              *          공통으로 거는 값). 기반 생성자 시점에는 가상 `getTypeInfo()` 가 파생으로 디스패치되지
              *          않으므로 체인 적용은 생성자가 아니라 여기서 합니다. 루트부터 적용해 파생이 마지막에
@@ -125,8 +125,8 @@ namespace sw
         // 이중 검사 잠금이다. 깃발이 원자적이어야 성립한다. acquire 로 읽어야 `true` 를 본
         // 스레드가 그 앞에서 만들어진 `_defaultsDoc` 도 함께 본다.
         //
-        // **보는 깃발은 "시도했는가" 다.** "성공했는가" 를 보면 파일이 없을 때 깃발이 false 로 남아
-        // **다음 컴포넌트가 또 연다.** 기본값 파일은 없어도 되는 것이라, 그러면 씬 로드가
+        // 보는 깃발은 "시도했는가" 다. "성공했는가" 를 보면 파일이 없을 때 깃발이 false 로 남아
+        // 다음 컴포넌트가 또 연다. 기본값 파일은 없어도 되는 것이라, 그러면 씬 로드가
         // `컴포넌트 수 x 파일 열기 실패` 가 된다.
         if ( _bLoadAttempted.load( std::memory_order_acquire ) )
             return;
@@ -150,7 +150,7 @@ namespace sw
         else
             SW_LOG_TRACE_ID( "ComponentDefaults.ComponentDefaultsNotFound", "Component defaults not found at '%#' — skipping defaults for this run.", _customDefaultsPath );
 
-        // **성공하든 실패하든 시도는 끝났다.** 이 줄이 없으면 실패가 매번 되풀이된다.
+        // 성공하든 실패하든 시도는 끝났다. 이 줄이 없으면 실패가 매번 되풀이된다.
         _bLoadAttempted.store( true, std::memory_order_release );
     }
 
@@ -163,12 +163,12 @@ namespace sw
         if ( _bDefaultsLoaded.load( std::memory_order_acquire ) == false )
             return;
 
-        // **`reload()` 는 컴포넌트를 만드는 중에 부르면 안 된다.** 여기서부터 문서와 해석 결과를
+        // `reload()` 는 컴포넌트를 만드는 중에 부르면 안 된다. 여기서부터 문서와 해석 결과를
         // 락 없이 읽는다(컴포넌트 생성마다 도는 자리라 잠그면 직렬화된다). 다시 읽는 일은
         // 개발 중 한 번씩 일어나는 일이므로, 그 순간에 생성이 돌지 않게 하는 것은 부르는
         // 쪽의 몫이다.
 
-        // 어느 프로퍼티에 무엇을 넣을지는 **타입당 한 번만** 푼다(문서의 GameSettings · Defaults 찾기도 그때 한 번). 인스턴스마다는 memcpy
+        // 어느 프로퍼티에 무엇을 넣을지는 타입당 한 번만 푼다(문서의 GameSettings · Defaults 찾기도 그때 한 번). 인스턴스마다는 memcpy
         // 몇 번이다.
         const ResolvedDefaults& resolved = resolveFor( typeInfo );
         for ( const DefaultPatch& patch : resolved._listPatch )
@@ -213,7 +213,7 @@ namespace sw
         }
 
         UniqueLock<shared_mutex> writeLock{ _resolvedMutex };
-        // 그 사이에 다른 스레드가 같은 세대로 넣었으면 그것을 쓴다. 어차피 같은 값이다. 세대가 지난 것은 갈아 끼우되 **버리지 않는다** —
+        // 그 사이에 다른 스레드가 같은 세대로 넣었으면 그것을 쓴다. 어차피 같은 값이다. 세대가 지난 것은 갈아 끼우되 버리지 않는다 —
         // 다른 스레드가 잠금 밖에서 아직 그 패치를 돌고 있을 수 있다. 제자리에 이동 대입하면 그 순회가 풀린 목록을 읽는다.
         auto it = _mapResolved.find( &typeInfo );
         if ( it == _mapResolved.end() )
@@ -311,7 +311,7 @@ namespace sw
 
     string ComponentDefaults::getPath() const
     {
-        // **값으로 반환한다.** `string_view` 를 주면 락을 놓은 뒤의 뷰가 되고, 그 사이
+        // 값으로 반환한다. `string_view` 를 주면 락을 놓은 뒤의 뷰가 되고, 그 사이
         // `setPath` 가 문자열을 갈아 끼우면 사라진 버퍼를 가리킨다.
         ScopedLock<mutex> lock{ _defaultsMutex };
         return _customDefaultsPath;
@@ -319,7 +319,7 @@ namespace sw
 
     void ComponentDefaults::clearResolvedCache()
     {
-        // **문서를 다시 읽으면 캐시는 통째로 버린다.** 패치는 그 문서에서 푼 값이라, 안 버리면 옛 기본값이 계속 먹는다.
+        // 문서를 다시 읽으면 캐시는 통째로 버린다. 패치는 그 문서에서 푼 값이라, 안 버리면 옛 기본값이 계속 먹는다.
         UniqueLock<shared_mutex> writeLock{ _resolvedMutex };
         _mapResolved.clear();
         _listReplacedResolved.clear();

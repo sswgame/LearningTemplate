@@ -201,7 +201,7 @@ namespace sw::editor
         void drawContent() final { drawDocumentContent(); }
 
         /**
-         * @brief 문서가 바뀌었음을 알립니다(편집 알림 창구 `DocumentEditRecorder` 가 부른다 — 패널은 부를 수 없다, 감사 E-16) — dirty 로 표시하고 되돌리기를 남긴다. 위젯이 활성인 동안(끌기 · 슬라이더 · 글 칸)은 상호작용 구간으로 쥐고,
+         * @brief 문서가 바뀌었음을 알립니다(편집 알림 창구 `DocumentEditRecorder` 가 부르며 패널은 부를 수 없다, 감사 E-16). dirty 로 표시하고 되돌리기를 남긴다. 위젯이 활성인 동안(끌기 · 슬라이더 · 글 칸)은 상호작용 구간으로 쥐고,
          *        풀린 프레임에 (구간 전 글, 끝 글)을 한 단계로 기록한다(`flushDocumentInteraction`, 감사 P0-1). 바뀐 것이 없으면 아무것도 하지 않는다.
          */
         void notifyDocumentEdited( string_view label );

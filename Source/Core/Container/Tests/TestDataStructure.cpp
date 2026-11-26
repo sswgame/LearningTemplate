@@ -41,7 +41,7 @@ namespace
 
     /**
      * @brief 모든 키를 같은 버킷으로 보내는 해시입니다.
-     * @details 충돌 체인을 **손으로** 만들기 위한 것이다 — 실제 해시로는 어떤 체인이 생길지가
+     * @details 충돌 체인을 손으로 만들기 위한 것이다 — 실제 해시로는 어떤 체인이 생길지가
      *          운에 달려 있어서, swap-and-pop 이 고쳐야 하는 링크에 닿을지 보장할 수 없다.
      */
     struct AlwaysCollideHasher
@@ -1213,12 +1213,12 @@ SW_TEST_CASE( DataStructureTest, DynamicBitsetBlockOperationsMatchBitModel )
 }
 
 /**
- * @brief [DataStructureTest] 네 연관 컨테이너 모두 **키를 만들지 않고** 찾는다
+ * @brief [DataStructureTest] 네 연관 컨테이너 모두 키를 만들지 않고 찾는다
  * @details 0-Alloc 이종 검색은 `unordered_map.h` 가 계약으로 적어 둔 것이다. 이종 `find` 가 빠진 컨테이너는
- *          `string_view` 로 찾을 때 **키를 하나 만들어서** 찾는다.
+ *          `string_view` 로 찾을 때 키를 하나 만들어서 찾는다.
  *          std 저장(`SW_ENABLE_STL_CONTAINER`)도 같은 계약을 지킨다.
  *
- * @note 이 케이스는 **컴파일되는 것 자체가 검사**다. 이종 오버로드가 사라지면 빌드가 선다.
+ * @note 이 케이스는 컴파일되는 것 자체가 검사다. 이종 오버로드가 사라지면 빌드가 선다.
  */
 SW_TEST_CASE( DataStructureTest, AssociativeContainersFindWithoutBuildingAKey )
 {
@@ -1251,11 +1251,11 @@ SW_TEST_CASE( DataStructureTest, AssociativeContainersFindWithoutBuildingAKey )
 }
 
 /**
- * @brief [DataStructureTest] 충돌 체인의 **어느 자리**를 지워도 나머지가 전부 남는다
+ * @brief [DataStructureTest] 충돌 체인의 어느 자리를 지워도 나머지가 전부 남는다
  * @details `sw::unordered_map` 은 밀집 배열 + 버킷 체인이고, `erase` 는 **마지막 원소를 지운
  *          자리로 옮긴다**(swap-and-pop). 그러면 "마지막 원소를 가리키던 체인 링크"를 새 자리로
- *          고쳐 줘야 하는데, 그 고치기가 어긋나면 **지우지도 않은 키가 조회에서 사라진다.**
- *          특히 까다로운 것이 지우려는 원소의 **바로 앞 노드가 마지막 원소인** 경우다 — 링크를
+ *          고쳐 줘야 하는데, 그 고치기가 어긋나면 지우지도 않은 키가 조회에서 사라진다.
+ *          특히 까다로운 것이 지우려는 원소의 바로 앞 노드가 마지막 원소인 경우다 — 링크를
  *          끊는 것과 옮기는 것이 같은 노드를 건드린다.
  *
  *          해시를 전부 0 으로 만들어 한 버킷에 몰아넣고, 체인의 모든 위치를 하나씩 지워 본다.
@@ -1279,7 +1279,7 @@ SW_TEST_CASE( DataStructureTest, HashMapEraseFixesCollisionChainAtEveryPosition 
         SW_EXPECT_EQUAL( size_t( kCount - 1 ), map.size() );
         SW_EXPECT_TRUE( map.find( eraseTarget ) == map.end() );
 
-        // 지우지 않은 키는 **전부** 제 값으로 남아 있어야 한다.
+        // 지우지 않은 키는 전부 제 값으로 남아 있어야 한다.
         for ( int32 key = 0; key < kCount; ++key )
         {
             if ( key == eraseTarget )
@@ -1303,7 +1303,7 @@ SW_TEST_CASE( DataStructureTest, HashMapEraseFixesCollisionChainAtEveryPosition 
 
 /**
  * @brief [DataStructureTest] 충돌 체인을 전부 지워도 끝까지 일관된다
- * @details 위 검사는 한 번 지운 직후만 본다. 이쪽은 **지우는 순서를 바꿔 가며 끝까지** 비운다 —
+ * @details 위 검사는 한 번 지운 직후만 본다. 이쪽은 지우는 순서를 바꿔 가며 끝까지 비운다 —
  *          swap-and-pop 은 매번 배열 끝의 원소를 옮기므로, 어긋남이 있으면 여러 번 지운 뒤에야
  *          드러나는 경우가 있다.
  */

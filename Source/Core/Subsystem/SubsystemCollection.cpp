@@ -408,7 +408,7 @@ namespace sw
             }
         }
 
-        // 남은 의존이 0 인 노드 중 **이름이 가장 앞인** 것을 고른다(`DependencyGraph::sortByName` — 모듈 적재 순서와 같은 규칙). 목록 순서를 보지 않으므로
+        // 남은 의존이 0 인 노드 중 이름이 가장 앞인 것을 고른다(`DependencyGraph::sortByName` — 모듈 적재 순서와 같은 규칙). 목록 순서를 보지 않으므로
         // 순서는 의존만이 정한다 — 추가한 순서는 뜻이 없다.
         vector<string_view> listName;
         listName.reserve( nodeCount );

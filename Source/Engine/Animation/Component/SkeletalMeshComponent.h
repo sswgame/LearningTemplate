@@ -58,12 +58,12 @@ namespace sw
     /**
      * @class SkeletalMeshComponent
      * @brief 장비 부품 하나가 유닛 하나입니다(캐릭터 몸, 투구, 무기). 스켈레톤이 없는 부품은 본 하나짜리 암묵 스켈레톤을 받습니다.
-     * @details - **포즈**: 로컬 포즈(SoA) → 모델 공간 → 스킨 팔레트 순서입니다. 기본 포즈 단계에서 레퍼런스 포즈로 시작하고, 등록된 작업(애니메이터)이 덮어씁니다.
-     *          - **리더 포즈(Leader Pose)**: 리더를 정하면 기본 포즈 단계에서 리더의 로컬 포즈를 본 이름 기준으로 옮깁니다(모듈식 파츠가 몸을 따릅니다).
+     * @details - 포즈: 로컬 포즈(SoA) → 모델 공간 → 스킨 팔레트 순서입니다. 기본 포즈 단계에서 레퍼런스 포즈로 시작하고, 등록된 작업(애니메이터)이 덮어씁니다.
+     *          - 리더 포즈(Leader Pose): 리더를 정하면 기본 포즈 단계에서 리더의 로컬 포즈를 본 이름 기준으로 옮깁니다(모듈식 파츠가 몸을 따릅니다).
      *            리더는 의존이 되어 먼저 평가됩니다. `_bFollowParentPose` 가 true 이면 부모 오브젝트의 유닛이 리더입니다.
-     *          - **메시**: `_meshID` 의 `.mesh` 가 스킨을 가지면 컴포넌트마다 메시 객체를 따로 둡니다. GPU 스키닝 결과(모프 풀 구간)가 메시마다
+     *          - 메시: `_meshID` 의 `.mesh` 가 스킨을 가지면 컴포넌트마다 메시 객체를 따로 둡니다. GPU 스키닝 결과(모프 풀 구간)가 메시마다
      *            하나라서, 포즈가 다른 캐릭터가 같은 메시 객체를 나누면 한 포즈로 그려집니다. 정점 데이터는 그 복사본입니다.
-     *          - **LOD**: `AnimationSystem` 이 프레임마다 뷰(카메라 절두체)로 판정해 넣습니다(`applyAnimationLOD`). 화면 밖이거나 숨겼으면(`setVisible( false )`) 포즈를 건너뛰고
+     *          - LOD: `AnimationSystem` 이 프레임마다 뷰(카메라 절두체)로 판정해 넣습니다(`applyAnimationLOD`). 화면 밖이거나 숨겼으면(`setVisible( false )`) 포즈를 건너뛰고
      *            (`_visibilityBasedTickOption` 이 `AlwaysTickPoseAndRefreshBones` 가 아닐 때. 숨긴 리더가 보이는 따르는 유닛을 몰면 리더에 고른다), 화면 크기 단계와 예산이 정한 주기마다 포즈를 만듭니다(시간과 알림은 매 프레임 처리합니다). 건너뛴 프레임은
      *            직전 두 포즈 사이를 보간합니다(한 주기만큼 늦으며, 언리얼의 URO 보간과 같습니다). 본 LOD(`<스켈레톤>.bonelod.xml`)는 작은 화면에서 끝 본을
      *            평가하지 않습니다. `_updateRateDivisor`(PROPERTY)는 하한이고 LOD 가 더 늘릴 수 있습니다. 같은 주기의 유닛은 위상(핸들 해시)이 달라 같은
@@ -190,7 +190,7 @@ namespace sw
         /**
          * @brief 현재 본 LOD 단계의 본 마스크입니다(본 수 크기, 1 이면 그 본을 평가). 모든 본을 평가하면 nullptr 입니다. 애니메이터가 샘플할 때 읽습니다(워커).
          * @details 마스크는 손 파일(`<levels>`)이 있으면 그 표, 없으면 스킨 원본 메시의 LOD 단계마다 가중치가 쓰는 본이다(`SkeletonBoneLOD::computeMeshMasks`). 어느 쪽이든 핵심 본은 남는다.
-         *          자동 마스크는 이 유닛의 포즈를 다른 유닛이 읽으면(리더 · 리그 대상 — `hasAnimationDependents`) 쓰지 않는다 — 따르는 쪽이 어느 본을 쓰는지 이 메시로 알 수 없다.
+         *          자동 마스크는 이 유닛의 포즈를 다른 유닛이 읽으면(리더 · 리그 대상, `hasAnimationDependents`) 쓰지 않는다. 따르는 쪽이 어느 본을 쓰는지 이 메시로 알 수 없다.
          */
         const uint8* findBoneLODMask() const;
         /** @brief 본 LOD 마스크 단계 수입니다(0 이면 본 LOD 없음). 단계 n 은 메시 LOD n 에 맞춰 고릅니다(`AnimationSystem::updateLOD`). */

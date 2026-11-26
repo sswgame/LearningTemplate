@@ -113,7 +113,7 @@ namespace sw
          *          고치지 않은 부품은 적히지 않는다. 씬 저장(인스턴스 엔티티의 `<Part>`)과 Apply to Prefab(바깥 프리팹 노드의 `<Part>`)이 쓴다.
          *          옮긴 부품(`isAttachedNestedPart` 가 false)과 부품 키가 없는 부품(에디터가 프리팹을 만들며 들인 것)은 적지 않는다.
          *          구조 변경이 막힌 순회(`forEachGameObject`) 안에서는 부르지 않는다 — 임시 매니저에 오브젝트를 만든다.
-         * @param pSavedIDMap 부품이 가리키는 다른 오브젝트를 이 표의 id 로 적습니다(씬 저장 — 부품의 핸들을 씬 오브젝트로 이은 것). 없으면 바깥 참조를 적지 않습니다(프리팹 — 바깥이 없다).
+         * @param pSavedIDMap 부품이 가리키는 다른 오브젝트를 이 표의 id 로 적습니다(씬 저장, 부품의 핸들을 씬 오브젝트로 이은 것). 없으면 바깥 참조를 적지 않습니다(프리팹, 바깥이 없다).
          * @return 기준 스폰이나 비교에 실패하면 false 입니다.
          */
         [[nodiscard]] bool collectPartOverrides( const GameObject& root, const PrefabAsset& asset, const unordered_map<uint64, uint64>* pSavedIDMap, vector<PrefabPartOverride>& outListPartOverride );
@@ -126,7 +126,7 @@ namespace sw
         [[nodiscard]] bool flattenNestedInstances( PrefabAsset& inoutAsset );
         /**
          * @brief 캐시에서 프리팹 하나를 버립니다. 다음 `loadPrefab` 이 디스크를 다시 읽습니다(에디터 핫 리로드).
-         * @details **지금 살아 있는 오브젝트는 바뀌지 않는다.** 보장하는 것은 "다음에 만드는 인스턴스에 고친 내용이 나온다"이다. 스폰할 때와
+         * @details 지금 살아 있는 오브젝트는 바뀌지 않는다. 보장하는 것은 "다음에 만드는 인스턴스에 고친 내용이 나온다"이다. 스폰할 때와
          *          씬을 다시 읽을 때가 그렇다. 씬은 프리팹 인스턴스의 덮어쓴 값만 저장하므로(`PrefabOverrides`) 다시 읽은 씬의 인스턴스에는
          *          고친 프리팹의 값이 퍼지고, 인스턴스가 덮어쓴 값은 그대로 남는다. 중첩 인스턴스를 가진 프리팹도 함께 버린다 — 고친 원본이 순환을
          *          만들었는지 다음 로드가 다시 본다(상위 프리팹은 원본을 경로로만 가지므로 버리지 않아도 고친 원본이 퍼진다).

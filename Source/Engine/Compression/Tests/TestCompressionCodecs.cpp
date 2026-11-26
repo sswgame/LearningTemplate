@@ -77,7 +77,7 @@ namespace
 } // namespace
 
 /**
- * @brief [CompressionCodecTest] LZ4 · Zstd · Zlib 왕복이 원본과 **바이트까지** 같고, 반복이 있는 표본을 줄인다
+ * @brief [CompressionCodecTest] LZ4 · Zstd · Zlib 왕복이 원본과 바이트까지 같고, 반복이 있는 표본을 줄인다
  * @details Zlib 은 리소스 팩이 실제로 쓰는 코덱이라 팩 쿠킹으로 간접적으로만 지나가게 두지 않고 직접 왕복을 본다.
  */
 SW_TEST_CASE( CompressionCodecTest, ExternalCodecRoundTrip )

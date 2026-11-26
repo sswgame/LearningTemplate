@@ -18,7 +18,7 @@ namespace sw
     namespace
     {
         /**
-         * @brief `--write-state-layouts=<파일>` — 상태 칸(`PROPERTY( RuntimeState )`)이 있는 타입(`states`)과 영속 레코드 형식(`records` — `DurableRecordType`)마다
+         * @brief `--write-state-layouts=<파일>`: 상태 칸(`PROPERTY( RuntimeState )`)이 있는 타입(`states`)과 영속 레코드 형식(`records`, `DurableRecordType`)마다
          *        판(`REFLECT( Version )`)과 칸 배치 글을 JSON 으로 쓴다. 레코드는 Transient 가 아닌 칸 전부다(A 가 싣는 칸).
          * @details `py -3 -m Scripts format-release` 가 출시 스냅숏과 견준다 — 배치를 바꾸고 판을 올리지 않은 것을 출시 뒤 기계가 잡는다. 글의 규칙은 읽기가 보는
          *          배치 해시(`StateIO::computeReflectedLayoutHash`)와 같다: 최상위는 상태 칸만, 안쪽 구조체는 Transient 가 아닌 칸 전부, 차례대로.

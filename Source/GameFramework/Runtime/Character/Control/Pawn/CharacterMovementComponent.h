@@ -70,7 +70,7 @@ namespace sw
      *          PrePhysics 틱에서 폰의 의도를 읽고 `setMoveVelocity` · `jump` 를 부릅니다(컨트롤러 요청은 틱 안에서 불러도 된다). 수평 속도는 목표 속도로
      *          `_acceleration`(목표가 있을 때) · `_deceleration`(멈출 때)만큼 다가갑니다. 그래서 의도가 0/1 로 끊겨도 부드럽게 움직입니다.
      *          컨트롤러가 멈춰 있으면(`CharacterControllerComponent::suspend` — 탑승 · 래그돌) 걷지 않습니다(이어 오던 속도와 컨트롤러 요청을 0 으로 둔다).
-     *          **네트워크 예측**(`setNetDriven`): 켜면 틱이 아무것도 하지 않고, 고정 넷 틱의 걸음(`simulate`)이 컨트롤러까지 움직인다 — 서버 시뮬레이션 · 클라이언트 예측 · 되감아 다시 돌리기가
+     *          네트워크 예측(`setNetDriven`): 켜면 틱이 아무것도 하지 않고, 고정 넷 틱의 걸음(`simulate`)이 컨트롤러까지 움직인다 — 서버 시뮬레이션 · 클라이언트 예측 · 되감아 다시 돌리기가
      *          이 한 함수다(`ShooterBodyMovementComponent::simulate` 와 같은 계약, `ClientPrediction` 이 쓴다). 틱과 걸음이 의도를 이동 입력으로 바꾸는 계산(`advance`)도 하나다.
      */
     REFLECT( Category = "Control", DisplayName = "Character Pawn Movement", Tooltip = "Control intent -> character controller: walk, sprint, jump, facing" )

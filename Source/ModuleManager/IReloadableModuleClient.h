@@ -27,7 +27,7 @@ namespace sw
         virtual void onAfterReload( ModuleLibraryHandle library ) = 0;
         /**
          * @brief `onAfterReload` 가 결함(접근 위반 등)을 냈을 때 불립니다. 인자는 예외 코드(Windows) · 시그널 번호(리눅스)입니다.
-         * @details 그 모듈에서 받은 것(인스턴스, API 테이블)을 **그 모듈을 부르지 않고** 버린다 — 반쯤 만든 인스턴스를 파괴하는 코드도 같은 모듈에 있다.
+         * @details 그 모듈에서 받은 것(인스턴스, API 테이블)을 그 모듈을 부르지 않고 버린다 — 반쯤 만든 인스턴스를 파괴하는 코드도 같은 모듈에 있다.
          */
         virtual void onReloadFault( uint32 faultCode ) = 0;
         /** @brief 옛 라이브러리가 아직 도는 동안(prepare) 새 라이브러리를 받아들일지 정합니다. false 면 옛 라이브러리를 그대로 둡니다. */

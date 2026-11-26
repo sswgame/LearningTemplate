@@ -39,14 +39,14 @@ namespace sw
         FrameUpscale& operator=( const FrameUpscale& ) = delete;
 
         /**
-         * @brief 뷰 @p view 가 이번 프레임에 Present 에서 FSR 1 로 키울지 정하고, 키우면 중간 RT 를 **셋업 단계에서** 뷰포트 크기로 맞춥니다.
+         * @brief 뷰 @p view 가 이번 프레임에 Present 에서 FSR 1 로 키울지 정하고, 키우면 중간 RT 를 셋업 단계에서 뷰포트 크기로 맞춥니다.
          * @details Present 가 톤맵하는 파이프라인(후처리 체인)에서 켜면 한 번 오류를 남기고 선형으로 키운다 — 그 파이프라인에는 톤맵한 중간 그림이 없다.
          */
         void prepareUpscale( FrameViewTarget& view, uint32 viewportWidth, uint32 viewportHeight );
         /** @brief 뷰의 FSR 중간 RT 를 놓습니다. 디바이스가 없으면 핸들만 잊습니다. */
         void releaseUpscaleIntermediate( FrameViewTarget& view );
         /**
-         * @brief Present 렌더 패스를 열기 **전에** EASU(배율 크기 원본 → 중간 RT)를 기록합니다. 이번 프레임에 FSR 로 키우지 않는 뷰면 false 이고 아무것도 하지 않습니다.
+         * @brief Present 렌더 패스를 열기 전에 EASU(배율 크기 원본 → 중간 RT)를 기록합니다. 이번 프레임에 FSR 로 키우지 않는 뷰면 false 이고 아무것도 하지 않습니다.
          * @return true 면 Present 는 블릿 대신 `drawUpscaleRcas` 로 그린다
          */
         bool recordUpscaleEasu( FramePassContext& context, const FrameViewTarget& view, const hashed_string& sourceName ) const;

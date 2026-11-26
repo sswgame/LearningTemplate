@@ -19,7 +19,7 @@
 namespace sw
 {
     /**
-     * @brief OS 의 GPU 선호 순서(@p bMinimumPower 가 아니면 고성능 — 외장 GPU, 맞으면 저전력 — 내장 GPU)의 첫 하드웨어 어댑터입니다(소프트웨어 어댑터는 건너뛴다).
+     * @brief OS 의 GPU 선호 순서(@p bMinimumPower 가 아니면 고성능인 외장 GPU, 맞으면 저전력인 내장 GPU)의 첫 하드웨어 어댑터입니다(소프트웨어 어댑터는 건너뛴다).
      * @details 제조사를 보지 않는다 — 외장이 Radeon 이든 GeForce 든 OS 가 매긴 순서를 따른다(사용자가 Windows 그래픽 설정으로 바꾼 선호도 이 순서에 든다).
      * @return `IDXGIFactory6` 가 없거나(Windows 10 1803 이전) 하드웨어 어댑터가 없으면 nullptr 입니다 — 부르는 쪽이 오류로 멈춘다(기본 어댑터로 대신하지 않는다).
      */

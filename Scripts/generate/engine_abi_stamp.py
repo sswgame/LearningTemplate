@@ -1,8 +1,8 @@
 """Core · Engine 헤더 내용의 지문을 C++ 헤더로 씁니다 — 핫 리로드의 엔진 ABI 스탬프.
 
 핫 리로드는 모듈 DLL/SO 만 갈아 끼우고 Engine 은 그대로 둡니다. 그런데 Engine 헤더를 고친 빌드에서 `Engine.dll` 은 실행 중이라
-다시 링크되지 못해도(잠김) 모듈은 **새 헤더로** 빌드되어 써질 수 있습니다. 그 모듈을 올리면 돌고 있는 엔진과 구조체 배치 · vtable 이
-어긋나 조용히 망가집니다. 그래서 Engine 과 모듈이 **같은 헤더 지문**을 바이너리에 박고, 핫 리로드는 올리기 전에 둘을 대조합니다.
+다시 링크되지 못해도(잠김) 모듈은 새 헤더로 빌드되어 써질 수 있습니다. 그 모듈을 올리면 돌고 있는 엔진과 구조체 배치 · vtable 이
+어긋나 조용히 망가집니다. 그래서 Engine 과 모듈이 같은 헤더 지문을 바이너리에 박고, 핫 리로드는 올리기 전에 둘을 대조합니다.
 
 지문은 헤더의 코드(주석 · 빈 줄을 뺀 것)입니다 — 경로와 파일마다의 SHA-1 을 차례로 넣은 SHA-1 이고, 파일 지문은 빌드 트리의 캐시(`--cache`)에서
 (mtime, 크기)가 같으면 다시 읽지 않습니다(`file_digest_cache.py`). 주석은 배치 · vtable 을 바꾸지 않습니다 — 넣으면 헤더의 설명 한 줄에 모든 모듈이 다시 링크되고
@@ -26,7 +26,7 @@ from generate.file_digest_cache import FileDigestCache  # noqa: E402
 from generate.generator_output import write_generated_file  # noqa: E402
 from common.exit_code import ExitCode  # noqa: E402
 
-# 핫 리로드가 갈아 끼우지 않는 쪽의 헤더다 — Core · Engine, 모듈과 호스트의 계약(ModuleAPI), 공용 모듈(GameFramework — 섀도 복사 없이 한 번
+# 핫 리로드가 갈아 끼우지 않는 쪽의 헤더다: Core · Engine, 모듈과 호스트의 계약(ModuleAPI), 공용 모듈(GameFramework — 섀도 복사 없이 한 번
 # 올리고 다시 올리지 않는다). 키트(GameFramework/Kits)는 스스로 리로드되는 모듈이라 뺀다. X 매크로 표(.xxx)도 넣는다 — `PredefinedNameType.xxx` 가
 # 예약 이름 색인을 정한다. 주의: 표를 빼면 거기에 줄을 더한 모듈이 같은 스탬프로 옛 엔진에 올라 엉뚱한 이름을 읽는다.
 HEADER_ROOTS = ("Source/Core", "Source/Engine", "Source/ModuleAPI", "Source/GameFramework")

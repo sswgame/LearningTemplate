@@ -12,7 +12,7 @@ namespace sw
     /**
      * @struct RenderDocCapture
      * @brief RenderDoc 이 이 프로세스에 붙어 있으면 캡처와 재생 UI 를 부릅니다(언리얼 RenderDoc 플러그인, 유니티 Frame Capture 버튼에 해당합니다).
-     * @details 붙어 있으려면 RenderDoc UI 로 띄웠거나(`renderdoc.dll` 이 이미 로드되어 있습니다), `-renderdoc` 로 **RHI 디바이스를 만들기 전에** 로드했어야 합니다
+     * @details 붙어 있으려면 RenderDoc UI 로 띄웠거나(`renderdoc.dll` 이 이미 로드되어 있습니다), `-renderdoc` 로 RHI 디바이스를 만들기 전에 로드했어야 합니다
      *          (RenderDoc 은 그래픽 API 를 만들 때 끼어듭니다). 캡처 파일은 `Saved/RenderDoc/capture_frame<N>.rdc` 이고 화면 글자(오버레이)는 끕니다.
      */
     struct SW_DEVTOOLS_API RenderDocCapture

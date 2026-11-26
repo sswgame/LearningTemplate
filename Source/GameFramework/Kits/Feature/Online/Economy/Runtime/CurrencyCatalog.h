@@ -2,7 +2,7 @@
  * @file CurrencyCatalog.h
  * @brief 화폐 정의입니다. 형식은 `<CurrencyCatalog><Currency id="cur.gold" cap="999999999"/><Currency id="cur.gem_paid" paid="true"/><Currency id="cur.gem_free"/>
  *        <Currency id="cur.gem"><Funding asset="cur.gem_free"/><Funding asset="cur.gem_paid"/></Currency></CurrencyCatalog>` 입니다.
- * @details `<Funding>` 이 있는 화폐는 **가상** 화폐(가격 단위)이다. 가상 화폐에는 잔액이 없고, 그 가격은 재원 자산을 적힌 순서대로 차감한다.
+ * @details `<Funding>` 이 있는 화폐는 가상 화폐(가격 단위)이다. 가상 화폐에는 잔액이 없고, 그 가격은 재원 자산을 적힌 순서대로 차감한다.
  *          유상과 무상을 구분하며 차감 순서는 데이터가 정한다. 관례는 무상을 먼저 쓰는 것이다.
  *          재원은 가상이 아닌, 정의된 화폐여야 한다. 아니면 그 가상 화폐를 버리는 오류다.
  *          멤버로 든 `ILedgerPolicy`(`getLedgerPolicy`)로 계정 상한을 답한다(`cap`, 0이면 원장 상한만 적용한다).

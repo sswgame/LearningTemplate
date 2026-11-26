@@ -39,7 +39,7 @@
 
 namespace
 {
-    // LogCapture 는 **모든 빌드**에서 쓴다 — 로그가 검사 구성 전용이 아니게 됐으므로 검증도 그래야 한다.
+    // LogCapture 는 모든 빌드에서 쓴다 — 로그가 검사 구성 전용이 아니게 됐으므로 검증도 그래야 한다.
     /** @brief 로그 매크로가 실제로 기록한 내용을 확인할 때 붙이는 메시지 접두사입니다. */
     constexpr const utf8* kCapturePrefix = "[TestLog] ";
 
@@ -247,7 +247,7 @@ SW_TEST_CASE( LogTest, WriteLogDeliversEveryLevel )
 
     SW_EXPECT_LOG( "Test.LogLevelProbe" ); // Warning · Error 줄은 이 테스트가 전달을 보려는 대상이다
 
-    // 기본 런타임 상세도는 Info 라 Trace 가 버려진다 — 이 테스트는 **네 레벨 모두**를 보는 것이
+    // 기본 런타임 상세도는 Info 라 Trace 가 버려진다 — 이 테스트는 네 레벨 모두를 보는 것이
     // 목적이므로 잠깐 올렸다가 되돌린다(컴파일 상한과 런타임 상세도는 다른 축이다).
     const sw::LogLevel previousVerbosity = sw::Logger::getRuntimeVerbosity();
     sw::Logger::setRuntimeVerbosity( sw::LogLevel::Trace );
@@ -324,7 +324,7 @@ SW_TEST_CASE( LogTest, RuntimeVerbosityDropsLessSevere )
 }
 
 /**
- * @brief [LogTest] Error/Warning 은 **모든 빌드**에 컴파일되는지
+ * @brief [LogTest] Error/Warning 은 모든 빌드에 컴파일되는지
  * @details SW_DEBUG 가 아닐 때 매크로가 통째로 사라지면 배포본에 로그가 하나도 없다.
  *          상한이 Warning 밑으로 내려가면 여기서 걸린다.
  */
@@ -372,7 +372,7 @@ SW_TEST_CASE( LogTest, LogMacrosFormatArguments )
 
     SW_EXPECT_LOG( "Test.LogFormatProbe" ); // Warning · Error 줄은 이 테스트가 치환을 보려는 대상이다
 
-    // 기본 런타임 상세도는 Info 라 Trace 가 버려진다 — 이 테스트는 **네 레벨 모두**를 보는 것이
+    // 기본 런타임 상세도는 Info 라 Trace 가 버려진다 — 이 테스트는 네 레벨 모두를 보는 것이
     // 목적이므로 잠깐 올렸다가 되돌린다(컴파일 상한과 런타임 상세도는 다른 축이다).
     const sw::LogLevel previousVerbosity = sw::Logger::getRuntimeVerbosity();
     sw::Logger::setRuntimeVerbosity( sw::LogLevel::Trace );
@@ -702,10 +702,10 @@ SW_TEST_CASE( LogTest, ConcurrentListenerAttachDetach )
 }
 
 /**
- * @brief [LogTest] 출력 장치 상한을 넘기면 **거절하고 경고한다** (조용히 삼키지 않는다)
+ * @brief [LogTest] 출력 장치 상한을 넘기면 거절하고 경고한다 (조용히 삼키지 않는다)
  * @details 디스패치는 잠금 안에서 포인터만 고정 배열로 떠 와 락 밖에서 쓴다 — 느린 파일 I/O 가
  *          콘솔을 막지 않게 하는 분리다. 그 배열은 상한에서 잘리므로 `addOutput` 이 상한을 넘는 장치를
- *          **받아서 `open` 까지 해 놓으면 한 줄도 주지 못한다.** 붙인 자리에서는 보이지 않는 실패라
+ *          받아서 `open` 까지 해 놓으면 한 줄도 주지 못한다. 붙인 자리에서는 보이지 않는 실패라
  *          상한에서 거절한다 — 그래서 "달린 장치는 반드시 받는다" 가 참이 된다.
  */
 SW_TEST_CASE( LogTest, OutputsBeyondTheCapAreRejectedNotSilentlyIgnored )
@@ -721,7 +721,7 @@ SW_TEST_CASE( LogTest, OutputsBeyondTheCapAreRejectedNotSilentlyIgnored )
         {
             sw::unique_ptr<CountingLogOutput> output = sw::make_unique<CountingLogOutput>();
             CountingLogOutput*                pRaw   = output.get();
-            // 거절되면 `output` 은 그 자리에서 파괴된다 — 그래서 **받아들여진 것만** 들고 있는다.
+            // 거절되면 `output` 은 그 자리에서 파괴된다 — 그래서 받아들여진 것만 들고 있는다.
             // 반환값이 없던 시절에는 이것을 알 방법이 없어, 죽은 포인터를 들고 있게 된다.
             if ( logger.addOutput( std::move( output ) ) )
                 listAttached.push_back( pRaw );
@@ -731,7 +731,7 @@ SW_TEST_CASE( LogTest, OutputsBeyondTheCapAreRejectedNotSilentlyIgnored )
     logger.writeEvent( sw::LogEvent{ sw::LogLevel::Info, "Test", "한 줄", __FILE__, __LINE__ } ); // 지역 싱크의 콘솔 장치로도 나가므로 오류 줄로 남기지 않는다(레벨은 이 확인과 무관하다)
     logger.shutdown();
 
-    // 거절되지 않고 달린 장치는 **전부** 그 줄을 받아야 한다.
+    // 거절되지 않고 달린 장치는 전부 그 줄을 받아야 한다.
     uint32 attachedCount = 0;
     uint32 silentCount   = 0;
     for ( CountingLogOutput* pOutput : listAttached )
@@ -840,7 +840,7 @@ namespace
 
     /**
      * @class BlockedFolderLogOutput
-     * @brief 열 때 폴더를 만드는 장치입니다. 길을 파일이 막고 있으면 `FileUtil` 이 **열다가** 오류 로그를 남깁니다(`FileLogOutput` 이 로그 폴더를 못 만들 때와 같은 모양).
+     * @brief 열 때 폴더를 만드는 장치입니다. 길을 파일이 막고 있으면 `FileUtil` 이 열다가 오류 로그를 남깁니다(`FileLogOutput` 이 로그 폴더를 못 만들 때와 같은 모양).
      */
     class BlockedFolderLogOutput final : public sw::ILogOutput
     {
@@ -893,7 +893,7 @@ namespace
         }
     };
 
-    /** @brief 스코프 동안 전역 싱크를 @p pSink 로 바꿉니다 — `SW_LOG_*` 가 그 싱크로 들어가 싱크가 자기 로그를 받는 길을 만든다. 싱크보다 **나중에** 만든다(소멸이 거꾸로). */
+    /** @brief 스코프 동안 전역 싱크를 @p pSink 로 바꿉니다 — `SW_LOG_*` 가 그 싱크로 들어가 싱크가 자기 로그를 받는 길을 만든다. 싱크보다 나중에 만든다(소멸이 거꾸로). */
     class GlobalSinkSwap
     {
     public:
@@ -921,7 +921,7 @@ namespace
 /**
  * @brief [LogTest] 자식 역할: 교착 시나리오 하나(인자가 이름)를 돌린다.
  * @details 로거의 락을 쥔 채 로그를 부르면 그 로그가 같은 락으로 되돌아와 같은 스레드가 영구 정지한다 — 그래서 부모가 시한을 걸고 띄운다.
- *          시나리오마다 싱크를 **전역 싱크로** 만들어 `SW_LOG_*` 가 그 싱크 자신으로 들어오게 한다(전역 싱크가 따로 있으면 되돌아오는 길이 없다).
+ *          시나리오마다 싱크를 전역 싱크로 만들어 `SW_LOG_*` 가 그 싱크 자신으로 들어오게 한다(전역 싱크가 따로 있으면 되돌아오는 길이 없다).
  *          그동안 실행기의 로그 감시는 바꾼 싱크를 보지 않는다 — 시나리오가 일부러 내는 경고는 지역 싱크에서 센다.
  */
 SW_TEST_CHILD_ROLE( LogTest, DeadlockChildRunsAScenario )
@@ -970,7 +970,7 @@ SW_TEST_CHILD_ROLE( LogTest, DeadlockChildRunsAScenario )
         SW_REQUIRE_TRUE( logger.addOutput( std::move( logging ) ) );
         SW_EXPECT_EQUAL( 1u, pLogging->_openCount );
 
-        // 상한을 넘기면 거절 경고가 **리스너가 있는 채로** 남는다 — 락 안에서 남기면 방송이 같은 락을 잡는다.
+        // 상한을 넘기면 거절 경고가 리스너가 있는 채로 남는다 — 락 안에서 남기면 방송이 같은 락을 잡는다.
         bool bRejected = false;
         for ( uint32 attempt = 0; attempt < 16 && bRejected == false; ++attempt )
             bRejected = logger.addOutput( sw::make_unique<CountingLogOutput>() ) == false;

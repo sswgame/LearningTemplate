@@ -26,7 +26,7 @@ namespace sw
 
     namespace
     {
-        // 스플래시 팔레트. 창 배경과 픽스맵 배경이 **같은 값이어야** 노출 순간에 색이 튀지 않는다.
+        // 스플래시 팔레트. 창 배경과 픽스맵 배경이 같은 값이어야 노출 순간에 색이 튀지 않는다.
         constexpr uint64 kSplashBackgroundColor = 0x181C24;
         constexpr uint64 kSplashTextColor       = 0xAEC3E6;
         constexpr uint64 kSplashBarTrackColor   = 0x202632;
@@ -77,14 +77,14 @@ namespace sw
         const int32                posX     = area._position._x + ( area._size._x - static_cast<int32>( _width ) ) / 2;
         const int32                posY     = area._position._y + ( area._size._y - static_cast<int32>( _height ) ) / 2;
 
-        // **`override_redirect` 를 쓰지 않는다.** 그 플래그는 "창 관리자는 이 창에 손대지 말라" 는
-        // 뜻이고, 메뉴나 툴팁처럼 **이미 떠 있는 창에 딸린 것**을 위한 것이다. 스플래시는 그 앱의
+        // `override_redirect` 를 쓰지 않는다. 그 플래그는 "창 관리자는 이 창에 손대지 말라" 는
+        // 뜻이고, 메뉴나 툴팁처럼 이미 떠 있는 창에 딸린 것을 위한 것이다. 스플래시는 그 앱의
         // 첫 창이라 딸릴 곳이 없다. XWayland(WSLg)에서는 그런 창이 화면에 나타나지 않는다
         // (서버 안에는 멀쩡히 있어 `XGetImage` 로 되읽으면 다 들어 있지만, 사용자 화면에는 아무것도 뜨지 않는다).
         //
-        // 표준 방법은 **창 종류를 스플래시라고 알려 주는 것**이다(EWMH `_NET_WM_WINDOW_TYPE_SPLASH`).
+        // 표준 방법은 창 종류를 스플래시라고 알려 주는 것이다(EWMH `_NET_WM_WINDOW_TYPE_SPLASH`).
         // 그러면 창 관리자가 장식 없이, 가운데에, 위로 띄운다. 우리가 하려던 바로 그 일을
-        // 창 관리자와 **싸우지 않고** 얻는다.
+        // 창 관리자와 싸우지 않고 얻는다.
         XSetWindowAttributes attrs{};
         attrs.background_pixel = kSplashBackgroundColor;
 
@@ -104,7 +104,7 @@ namespace sw
                              reinterpret_cast<const uint8*>( &splashTypeAtom ), 1 );
         }
 
-        // **`PPosition` 이 아니라 `USPosition` 이다.** `PPosition` 은 "프로그램이 정한 위치" 라
+        // `PPosition` 이 아니라 `USPosition` 이다. `PPosition` 은 "프로그램이 정한 위치" 라
         // 창 관리자가 자기 배치 규칙으로 덮어써도 되는 힌트라, 가운데를 요청해도 좌상단에 놓여
         // 메인 창과 겹칠 수 있다. `USPosition` 은 "사용자가 정한 위치" 라
         // 창 관리자가 존중해야 한다. 매핑 뒤에 한 번 더 옮겨 확실히 한다.
@@ -126,7 +126,7 @@ namespace sw
         // 매핑하면서 창 관리자가 다시 놓을 수 있으므로 그 뒤에 한 번 더 옮긴다.
         XMoveWindow( pDisplay, win, posX, posY );
 
-        // **`XFlush` 가 아니라 `XSync` 다.** 매핑은 요청일 뿐이라, 서버가 처리하기 전에 그리면 그
+        // `XFlush` 가 아니라 `XSync` 다. 매핑은 요청일 뿐이라, 서버가 처리하기 전에 그리면 그
         // 그리기는 버려진다. 한 번 왕복해 두면 이후의 그리기가 확실히 창에 닿는다.
         XSync( pDisplay, 0 ); // discard=0. Xlib 의 `False` 매크로는 이 저장소가 해제한다.
         splashThread.markReady();
@@ -163,10 +163,10 @@ namespace sw
         const int32 screen   = DefaultScreen( pDisplay );
         GC          gc       = DefaultGC( pDisplay, screen );
 
-        // **창에 직접 그리지 않고 픽스맵에 그려 그것을 창 배경으로 설정한다.**
+        // 창에 직접 그리지 않고 픽스맵에 그려 그것을 창 배경으로 설정한다.
         //
-        // X11 은 창이 노출될 때마다(`Expose`) **배경색으로 지우고** 다시 그리라고 알린다. 창에 직접 그리면 그 알림마다 다시 그려야 하는데,
-        // 배경 픽스맵으로 설정해 두면 **다시 그리는 일을 서버가 한다.** 노출, 가림, 이동을 스레드가 그리지 않고 견딘다.
+        // X11 은 창이 노출될 때마다(`Expose`) 배경색으로 지우고 다시 그리라고 알린다. 창에 직접 그리면 그 알림마다 다시 그려야 하는데,
+        // 배경 픽스맵으로 설정해 두면 다시 그리는 일을 서버가 한다. 노출, 가림, 이동을 스레드가 그리지 않고 견딘다.
         // Win32 가 `WM_PAINT` 로 하는 일을 여기서는 서버에게 맡기는 셈이다.
         Pixmap pixmap = static_cast<Pixmap>( inoutX11Pixmap );
         if ( pixmap == 0 )

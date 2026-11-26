@@ -49,7 +49,7 @@ namespace sw
 
         /**
          * @brief 상자에 겹치는 핸들을 찾습니다.
-         * @param outListHandle 결과입니다. **부르기 전 내용은 지워집니다**.
+         * @param outListHandle 결과입니다. 부르기 전 내용은 지워집니다.
          */
         void queryAABB( const AABB& queryBox, vector<SlotHandle>& outListHandle ) const;
         /**

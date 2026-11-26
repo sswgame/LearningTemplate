@@ -97,7 +97,7 @@ namespace sw
 #endif // SW_WITH_DYNAMIC_MODULES — 정적 모듈 구성에는 `SwapBackend` 단계가 없다(백엔드 하나)
 
             /**
-             * @brief 개발 명령 `rhi.removeDevice [driverWaitMs]` — 장치 제거(TDR)를 흉내 낸다. 제거 뒤 엔진이 Config 정책(`EngineConfig::_deviceLostPolicy`)대로 끝나는지 — 멈추지 않고 정한 종료 코드로 — 보는 데 쓴다.
+             * @brief 개발 명령 `rhi.removeDevice [driverWaitMs]` 로 장치 제거(TDR)를 흉내 낸다. 제거 뒤 엔진이 멈추지 않고 Config 정책(`EngineConfig::_deviceLostPolicy`)이 정한 종료 코드로 끝나는지 보는 데 쓴다.
              * @details 대기를 주면 렌더 스레드가 다음 프레임의 펜스 대기 자리에서 그만큼 잠든 뒤 제거한다(`RHIBackendSwitcher::removeDeviceAfterDriverWaitForTest`) — 실제 TDR 이 첫 손실 결과를 돌려주기 전 드라이버 안에서 막히는 모양이다.
              */
             static bool runRemoveDevice( const vector<string>& listArgument, string& outReply )

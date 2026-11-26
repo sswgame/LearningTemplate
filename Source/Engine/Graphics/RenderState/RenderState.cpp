@@ -183,7 +183,7 @@ namespace sw
 
     OpaqueDrawBand RenderStateOverride::classifyOpaqueDrawBand() const noexcept
     {
-        // 보통 불투명 패스(기본 상태 — 깊이 테스트 · 쓰기, LessEqual, 블렌드 끔) 위에 덮은 결과로 본다 — 덮지 않은 칸은 보통 값이라 띠를 바꾸지 않는다.
+        // 보통 불투명 패스(기본 상태: 깊이 테스트 · 쓰기, LessEqual, 블렌드 끔) 위에 덮은 결과로 본다. 덮지 않은 칸은 보통 값이라 띠를 바꾸지 않는다.
         const RenderState state = applyTo( RenderState{}, Scope::FixedAndBlend );
         // 색: 모든 타깃이 RGB 를 다 덮어쓰면(알파만 빼는 것은 덮어쓰기다) 순서와 상관없다. 아무 채널도 쓰지 않는 타깃은 깊이 · 스텐실만 남기는 가리개다.
         bool bReadsTarget = false;

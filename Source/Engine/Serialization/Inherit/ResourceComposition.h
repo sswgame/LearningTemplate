@@ -1,10 +1,10 @@
 /**
  * @file ResourceComposition.h
  * @brief 합성의 로드 단계(로드 축 조건 · 덮어쓰기 층)가 남기는 기록과, 덮어쓰기 층의 목록입니다.
- * @details - **덮어쓰기 층(`ResourceLayers`)**: 순서 있는 층 뿌리 목록이다. 리소스 `X` 의 층 파일은 `<뿌리>/X` 이고 원본을 암묵적 부모로 가진 차이다(`_base` 를 적지 않는다).
+ * @details - 덮어쓰기 층(`ResourceLayers`): 순서 있는 층 뿌리 목록이다. 리소스 `X` 의 층 파일은 `<뿌리>/X` 이고 원본을 암묵적 부모로 가진 차이다(`_base` 를 적지 않는다).
  *            언리얼 팩 우선순위 · Composite Data Table, 유니티 Addressables 의 콘텐츠 갱신과 같은 자리이고(기억에 의존), 파일 통째 교체(팩 우선순위)와 달리 다른 칸만 적는다.
- *          - **기록(`ResourceComposition`)**: 리소스 id 로 읽은 합성마다 그 결과가 무엇에 기댔는지(로드 축 태그 · 층)를 적는다. 세 곳이 읽는다 —
- *            (1) 태그 · 층이 바뀌면 기댄 리소스를 다시 읽을 목록(`takePendingReload` — 에셋 매니저가 프레임마다 비운다), (2) 합성 해시 대조(`collectTagDependentChanges` · `ResourceDigestComparer` — 서버와 다르면 거절),
+ *          - 기록(`ResourceComposition`): 리소스 id 로 읽은 합성마다 그 결과가 무엇에 기댔는지(로드 축 태그 · 층)를 적는다. 세 곳이 읽는다 —
+ *            (1) 태그 · 층이 바뀌면 기댄 리소스를 다시 읽을 목록(`takePendingReload`, 에셋 매니저가 프레임마다 비운다), (2) 합성 해시 대조(`collectTagDependentChanges` · `ResourceDigestComparer` — 서버와 다르면 거절),
  *            (3) 테스트. 기대지 않은 합성도 해시를 든다 — 서버가 층 없이 읽은 표를 클라이언트가 층을 얹어 읽으면 서버 쪽은 기댄 것이 없어도 대조해야 한다.
  *          층 목록과 기록의 주인은 코어 범위의 리소스 루트(`ContentRootSubsystem`)다 — 엔진 코드는 `engine::getSubsystem<ResourceComposition>()` 로 닿는다(예전 함수 정적 상태는 감춘 싱글턴이었다).
  */

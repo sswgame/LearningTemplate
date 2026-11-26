@@ -70,7 +70,7 @@ namespace sw
          * @details 엔진 팩의 표 경로는 엔진 기본 에셋 표(`EngineDefaultAssets::_netEmulationPresets`)가 기준이다 — 코드에 경로를 두지 않는다.
          */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
-        /** @brief 표를 **디스크 파일**에서 읽습니다(테스트의 임시 파일 · 도구). 검사는 `loadFromAsset` 과 같습니다(`ReflectedXMLFile::loadDescFromDiskFile`). */
+        /** @brief 표를 디스크 파일에서 읽습니다(테스트의 임시 파일 · 도구). 검사는 `loadFromAsset` 과 같습니다(`ReflectedXMLFile::loadDescFromDiskFile`). */
         [[nodiscard]] bool loadFromDiskFile( const AbsolutePath& diskPath );
         /** @brief 이름(대소문자 무시)으로 프리셋을 찾습니다. 없으면 nullptr 입니다. */
         const NetEmulationPresetDef* findPreset( string_view name ) const;

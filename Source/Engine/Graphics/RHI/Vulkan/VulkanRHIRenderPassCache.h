@@ -1,7 +1,7 @@
 /**
  * @file VulkanRHIRenderPassCache.h
  * @brief Vulkan 에만 있는 렌더패스와 프레임버퍼 캐시입니다. PSO 호환 렌더패스, 합성 프레임버퍼(MRT, 컬러+깊이), desc 로 만든 렌더패스를 보관합니다.
- * @details 다른 API 는 렌더타깃을 그때그때 바인딩하지만 Vulkan 은 렌더패스와 프레임버퍼를 **미리 만들어** 두고 호환되는 것을
+ * @details 다른 API 는 렌더타깃을 그때그때 바인딩하지만 Vulkan 은 렌더패스와 프레임버퍼를 미리 만들어 두고 호환되는 것을
  *          골라 써야 합니다. 그 "만들어 둔 것"의 키, 레코드, 맵, 뮤텍스와 파괴 순서를 이 클래스 하나가 소유합니다.
  *
  *          스왑체인 렌더패스(CLEAR/LOAD 변종)와 공용 오프스크린 렌더패스는 캐시가 아니라 디바이스 상태라 여기 없습니다.
@@ -118,7 +118,7 @@ namespace sw
 
         /**
          * @brief 합성 프레임버퍼를 키로 찾고, 없으면 spec 과 첨부 뷰로 렌더패스와 프레임버퍼를 만들어 넣습니다.
-         * @details 조회와 생성이 **한 임계 구역**입니다. RenderGraph::executeParallel 이 여러 스레드에서 동시에 beginRenderPass 를
+         * @details 조회와 생성이 한 임계 구역입니다. RenderGraph::executeParallel 이 여러 스레드에서 동시에 beginRenderPass 를
          *          부르므로, 나눠 놓으면 같은 키를 둘이 만들어 하나가 누수됩니다. 첨부 뷰는 부르는 쪽이 미리 찾아서 넘깁니다.
          */
         [[nodiscard]] bool ensureComposite( VkDevice device, const CompositeKey& key, const RenderPassSpec& spec, const VkImageView* pAttachmentView,

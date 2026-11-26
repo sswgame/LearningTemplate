@@ -46,7 +46,7 @@ namespace sw::editor
      * @details 종류별 코드가 없다. 어느 캐시가 읽을지, 먼저 쿠킹할지는 `EditorAssetTypeRegistry::findReloadRoute` 의 테이블이 정한다.
      *          엔진 캐시는 자기 런타임 파일을 그 즉시 다시 읽을 뿐이고(로드), 소스 임포트, 감시, 씬 알림은 여기(에디터)에 있다.
      *          새 에셋 종류를 추가해도 이 파일은 고치지 않는다.
-     *          **연쇄 리로드**: 바뀐 에셋을 로드할 때 펼쳐 넣은 에셋(표의 칸 `AssetReloadRoute::_referenceUse`)이 로드돼 있으면 같은 프레임에 의존 순서로 다시 읽는다
+     *          연쇄 리로드: 바뀐 에셋을 로드할 때 펼쳐 넣은 에셋(표의 칸 `AssetReloadRoute::_referenceUse`)이 로드돼 있으면 같은 프레임에 의존 순서로 다시 읽는다
      *          (`AssetReloadCascade`). 누가 무엇을 쓰는지는 에디터 전역의 참조 역색인(`AssetReferenceTracker`, 이 서브시스템이 소유)이 답한다.
      */
     class AssetHotReload : public EditorSubsystem
@@ -92,7 +92,7 @@ namespace sw::editor
         static void takePendingPaths( IModuleStateStore& store, vector<string>& outListPath );
 
         /**
-         * @brief 에디터 프레임마다 호출해 변경 이벤트를 꺼내고, 끝난 임포트 잡의 결과를 가져와 다음 잡을 시작합니다. **에디터 스레드에서만 부릅니다.**
+         * @brief 에디터 프레임마다 호출해 변경 이벤트를 꺼내고, 끝난 임포트 잡의 결과를 가져와 다음 잡을 시작합니다. 에디터 스레드에서만 부릅니다.
          * @details 캐시 리로드와 씬 알림은 모두 이 함수 안(감시 대리자와 잡 결과 처리)에서 에디터 스레드가 한다. 워커는 원본을 임포트해 파일을 쓸 뿐이다.
          */
         void update();
@@ -143,7 +143,7 @@ namespace sw::editor
 
         /**
          * @brief 바뀐 에셋 하나를 다시 읽습니다. 에디터 스레드 임포터(있으면), 엔진 캐시의 `reload`, 활성 씬의 `notifyAssetUsers` 순서로 처리합니다. 게임 스레드에서 틱 밖에서 호출합니다.
-         * @details **워커 임포터를 가진 원본(`AssetReloadRoute::_pfnImportBatch`: 모델 · 텍스처 · 높이장 원본)은 여기서 임포트하지 않습니다** — 긴 일은 에디터 스레드에서 동기로 돌지 않는다.
+         * @details 워커 임포터를 가진 원본(`AssetReloadRoute::_pfnImportBatch`: 모델 · 텍스처 · 높이장 원본)은 여기서 임포트하지 않습니다 — 긴 일은 에디터 스레드에서 동기로 돌지 않는다.
          *          그런 원본은 감시 이벤트가 임포트 잡(`EditorAssetImportJob`)으로 보내고, 임포트가 쓴 결과 파일의 사건이 이 함수로 와서 캐시 리로드 · 씬 알림을 한다.
          * @return 처리했으면 `Reloaded`, 핫 리로드 대상이 아니거나 아무 캐시도 들지 않은 파일이면(워커 임포터의 원본 포함) `NotTracked`,
          *         경로표가 가리키는 캐시가 등록되지 않았으면(오류를 남겼다) `Failed` 입니다.

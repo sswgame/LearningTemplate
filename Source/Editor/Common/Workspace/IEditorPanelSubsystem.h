@@ -74,7 +74,7 @@ namespace sw::editor
 
         /**
          * @brief Ctrl+Z 가 갈 스택을 고릅니다. 포커스 창(@p focusedWindowID)이 패널이면 그 답(메인이면 @p pMain), 패널이 아니거나(메뉴 · 팝업) 겨눈 스택을 지키는 창(History)이면
-         *        앞서 포커스였던 패널(@p rememberedPanelID, `setFocusedPanel`)의 **지금** 답, 그 패널이 열려 있지 않으면 @p pMain 입니다.
+         *        앞서 포커스였던 패널(@p rememberedPanelID, `setFocusedPanel`)의 지금 답, 그 패널이 열려 있지 않으면 @p pMain 입니다.
          * @details 처리하는 순간의 포커스로 고른다 — 포커스를 옮긴 바로 그 프레임의 Ctrl+Z 도 새 창의 스택으로 간다. 메뉴의 Edit > Undo 는 메뉴가 포커스라 앞 창의 것이다.
          *          앞 포커스는 스택 포인터가 아니라 패널 id 로 기억한다 — 스택이 사라지거나 창이 닫힐 때 손으로 풀 일이 없고(풀기를 잊으면 사라진 스택을 겨눴다), 닫힌 패널은 목록에 없다.
          */

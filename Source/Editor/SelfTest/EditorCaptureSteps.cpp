@@ -2,8 +2,8 @@
  * @file EditorCaptureSteps.cpp
  * @brief 자동화 시나리오 단계 `CaptureEditorUI` 를 구현합니다. 에디터 UI 전체(패널 + 플로팅 창)를 PNG 로 찍고 튼튼한 지표를 단언합니다.
  * @details `<CaptureEditorUI file="ui/hierarchy.png" maxMagentaFraction="0" maxClippedWindows="0"/>`. 경로는 시나리오 출력 폴더 기준이다(`<Screenshot>` 과 같다).
- *          단계는 차례가 오면 **에디터가 멈출 때까지**(`EditorStabilityWait` — `<EditorWaitStable/>` 와 같은 판정: 창 배치 · 씬 · 에셋 · 에디터 백그라운드 잡 · 뒤에 끝날 일),
- *          이어서 **창 내용이 자리 잡을 때까지**(보이는 창의 위치 · 크기 · 내용 크기 · 스크롤이 연속 `kLayoutStableFrames` 프레임 같을 때까지) 기다린 뒤
+ *          단계는 차례가 오면 에디터가 멈출 때까지(`EditorStabilityWait` — `<EditorWaitStable/>` 와 같은 판정: 창 배치 · 씬 · 에셋 · 에디터 백그라운드 잡 · 뒤에 끝날 일),
+ *          이어서 창 내용이 자리 잡을 때까지(보이는 창의 위치 · 크기 · 내용 크기 · 스크롤이 연속 `kLayoutStableFrames` 프레임 같을 때까지) 기다린 뒤
  *          캡처를 요청하고, 파일이 써질 때까지 시나리오 시계를 붙잡는다(`holdUntilReady`). 그래서 시나리오가 패널을 연 뒤 고정 프레임을 기다리지 않는다 —
  *          예전에는 패널마다 `<Wait frames="20"/>` 를 두어 uiaudit 하나가 Debug 에서 2 분을 넘겼다(언리얼 Automation Driver · Playwright 의 자동 대기와 같은 자리).
  *          지표는 둘이다.
@@ -119,7 +119,7 @@ namespace sw::editor
             }
 
             /**
-             * @brief 캡처 대기가 `kCaptureWaitFrames` 에 닿았다 — 대기 항목을 지우고 `WaitTimeout` 으로 시나리오를 끝냅니다(Skip — 단계는 돌지 않는다).
+             * @brief 캡처 대기가 `kCaptureWaitFrames` 에 닿았다. 대기 항목을 지우고 `WaitTimeout` 으로 시나리오를 끝냅니다(Skip, 단계는 돌지 않는다).
              * @details 예전에는 놓아서 단계가 "never completed" 를 적고 다음 단계로 갔다. 항목은 단계가 돌 때 지우던 것이라 여기서 지운다 —
              *          세션은 컨텍스트와 함께 살아 체인의 다음 시나리오까지 남는다.
              * @param phase 반복 실패 차단 열쇠의 꼬리(`<단계 종류> <phase>`)

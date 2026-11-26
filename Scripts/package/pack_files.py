@@ -11,7 +11,7 @@ from common.toolchain_config import ConfigError, require_config
 
 #: Bin 에서 베끼는 폴더 · 파일.
 PACK_FOLDER_NAME = "Packs"
-#: 미룬 청크(씬 청크 · 공유 청크)의 목록 — 쿠커가 팩 도메인마다 팩 폴더에 쓴다(`PackChunkManifest::makeFileName` — `packchunks.<도메인 줄기>.xml`).
+#: 미룬 청크(씬 청크 · 공유 청크)의 목록. 쿠커가 팩 도메인마다 팩 폴더에 쓴다(`PackChunkManifest::makeFileName`, `packchunks.<도메인 줄기>.xml`).
 #: 런타임은 폴더의 목록을 모두 합쳐 목록에 든 팩을 기동 때 올리지 않고 씬을 열 때 올린다.
 CHUNK_MANIFEST_PREFIX = "packchunks."
 CHUNK_MANIFEST_SUFFIX = ".xml"

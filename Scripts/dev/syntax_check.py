@@ -12,9 +12,9 @@ TU 마다 구문만 확인한다(clang-cl `-fsyntax-only`) — 빌드하지 않�
   py -3 -m Scripts syntax --files A.cpp --changed --direct --define SW_ENABLE_STL_CONTAINER   # 다른 구성의 매크로를 더해(preflight 의 std 컨테이너 갈래)
   … --jobs 4
 
-컴파일 DB 는 **본 트리** `build/<프리셋>/compile_commands.json` 을 읽기만 한다(`Scripts/lint/clang_tidy.py` 와 같은 경로 바꾸기). 낮은 우선순위로 돌아 겹쳐 도는 빌드가 CPU 를 먼저 받는다.
+컴파일 DB 는 본 트리 `build/<프리셋>/compile_commands.json` 을 읽기만 한다(`Scripts/lint/clang_tidy.py` 와 같은 경로 바꾸기). 낮은 우선순위로 돌아 겹쳐 도는 빌드가 CPU 를 먼저 받는다.
 
-보지 못하는 것 — 생성 코드(`.gen.cpp`)와 생성 헤더는 본 트리 것이다. 워크트리에서는 모듈 의존 문지기(`build/…/gates` — 본 트리의 모듈 그래프로 만든 금지 헤더)를 뺀다:
+보지 못하는 것: 생성 코드(`.gen.cpp`)와 생성 헤더는 본 트리 것이다. 워크트리에서는 모듈 의존 문지기(`build/…/gates`, 본 트리의 모듈 그래프로 만든 금지 헤더)를 뺀다:
 이 트리가 더한 의존을 옛 문지기가 거절한다. 링크 · 다른 구성(서버 · Shipping · 웹)은 실제 빌드가 본다.
 
 종료 코드: 오류가 난 TU 가 있으면 VIOLATION.

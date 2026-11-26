@@ -49,7 +49,7 @@ namespace sw
         float64                _exitDeadlineSeconds;           ///< `ExpectExitWithin` 이 정한 벽시계 시한입니다(단조 시계 초). 0 이면 기다리지 않습니다.
         int32                  _expectedExitCode;              ///< `ExpectExitWithin exitCode` — 엔진이 끝낼 때 요청했어야 할 종료 코드입니다(`QuitRequest`, 창 닫기는 0)
         float64                _wallStartSeconds;              ///< 시나리오를 읽기 시작한 단조 시계 초(벽시계 감시의 기준)
-        const BusyClock*       _pCompileBusy;                  ///< 셰이더 공급자의 바쁜 시계(`ShaderCache::getCompileBusyClock` — 셰이더 로드 · PSO 생성) — 그 시간은 벽시계 시한에 세지 않는다. 셰이더 캐시가 없는 호스트는 nullptr
+        const BusyClock*       _pCompileBusy;                  ///< 셰이더 공급자의 바쁜 시계(`ShaderCache::getCompileBusyClock`: 셰이더 로드 · PSO 생성). 그 시간은 벽시계 시한에 세지 않는다. 셰이더 캐시가 없는 호스트는 nullptr
         int64                  _compileBusyAtStartNanoseconds; ///< 시작 때 `_pCompileBusy` 의 값
         float64                _wallEndSeconds;                ///< 끝맺은 단조 시계 초(끝나기 전에는 0)
         float64                _lastFrameEndSeconds;           ///< 앞 프레임의 `onFrameEnd` 가 닿은 단조 시계 초(프레임 시간을 더하는 기준 — 처음엔 `_wallStartSeconds`)
@@ -406,7 +406,7 @@ namespace sw
         TaskFuture<SceneHandle>           _startSceneLoad;         ///< 시작 씬의 로드 요청(요청 전이면 무효)
         optional<AutomationRunResult>     _runResult;              ///< 끝난 판정(도는 중이면 없다 — `isActive`). 결과 · 종류 · 까닭이 한 값이라 따로 놀지 않는다
         AutomationFrameStats              _frameStats{};           ///< 벤치마크 구간의 프레임 시간(`BeginFrameStats` … `EndFrameStats`)
-        /// 대기 정책(`Config/Dev/ScenarioRun.json` — 정지 시한 · 정착 조건의 문턱). 렌더 정착 · 활동 수가 있는 벽시계 감시 값을 처음 기다릴 때 읽는다(`loadRunPolicy`) — 둘을 기다리지 않는 재생(데모)은 그 파일이 없어도 돈다
+        /// 대기 정책(`Config/Dev/ScenarioRun.json`: 정지 시한 · 정착 조건의 문턱). 렌더 정착 · 활동 수가 있는 벽시계 감시 값을 처음 기다릴 때 읽으므로(`loadRunPolicy`) 둘을 기다리지 않는 재생(데모)은 그 파일이 없어도 돈다
         optional<AutomationRunPolicy> _runPolicy{};
         AutomationTextStore           _storedText{}; ///< 이 실행 안에서 이름 붙여 기억한 글(`storeText`)
         /// 단계가 덮어쓰기 전에 맡긴 (절대 경로, 원본 글) — 끝(`endRun` · 소멸자)이나 `<RestoreOverwrites/>` 가 되돌린다(`restoreFileAtEnd`)

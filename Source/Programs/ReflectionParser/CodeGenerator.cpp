@@ -26,7 +26,7 @@ namespace sw
         {
             /**
              * @brief 범위 경계 하나를 float32 글(`1.5f`)로 냅니다. 등록 단위의 허용 범위와 개발 전용 단위의 슬라이더 범위가 함께 쓴다.
-             * @details 접미사 f 가 없으면 `0.100000` 은 double 이라, float32 멤버에 넣을 때 정밀도 손실 경고가 **생성된 파일마다** 난다.
+             * @details 접미사 f 가 없으면 `0.100000` 은 double 이라, float32 멤버에 넣을 때 정밀도 손실 경고가 생성된 파일마다 난다.
              *          경계는 float32 가 되돌아오는 자릿수(9)로 낸다. 6 자리로 자르면 `Max = 6.2831853` 이 6.283185f 가 되어 2π 를 담은 값이 범위 밖이 된다.
              */
             static string formatRangeLiteral( const float32 value )
@@ -892,7 +892,7 @@ namespace sw
         CodeEmit emit( outBuffer );
         emit.push( 3 );
 
-        // 서술자에 이을 조각이다 — 적은 것만 잇는다(`TypeDesc::withX`). 부모는 리플렉션된 형식일 때만 적는다 — 리플렉션 밖 기반(`Subsystem` 같은 Core 인터페이스)은
+        // 서술자에 이을 조각이며 적은 것만 잇는다(`TypeDesc::withX`). 부모는 리플렉션된 형식일 때만 적는다. 리플렉션 밖 기반(`Subsystem` 같은 Core 인터페이스)은
         // 등록부 사슬에 없어 끊긴 고리가 된다(언리얼 UCLASS 사슬도 UObject 계열 기반만 잇는다).
         vector<string> listPart;
         {
@@ -1043,7 +1043,7 @@ namespace sw
         const ParsedEnumeratorInfo* countEn   = findEnumerator( enumInfo, enumInfo._countEnumerator );
 
         // 열거형마다 맵 초기화를 펼치지 않고 항목 표(이름 · 값 배열) 하나만 낸다. 이름 표 · 값 표 · 인덱스 목록은 런타임이 이 표에서 짓는다(`EnumInfo::createFromDesc`).
-        // 값은 숫자로 박지 않고 **컴파일러가 계산하게** 한다. libclang 의 값은 부호 있는 64 비트라 `uint8` 의 0x80 이 -128 로 적혔고,
+        // 값은 숫자로 박지 않고 컴파일러가 계산하게 한다. libclang 의 값은 부호 있는 64 비트라 `uint8` 의 0x80 이 -128 로 적혔고,
         // 런타임은 그것을 128 로 읽어 이름을 잃었다(`EnumInfo::readValueFromMemory`). 열거자 자체를 넓히면 밑바탕 타입의 부호를 따른다.
         // 인덱스 목록도 그 값으로 지으므로 libclang 의 값과 대조하는 `static_assert` 가 필요 없다.
         CodeEmitBuffer tableBuffer;
@@ -1269,9 +1269,9 @@ namespace sw
             // 스코프 SFINAE 연산자로 통일한다. 로직이 모든 enum 에서 같아 타입별 코드젠이 필요
             // 없다. 여기서는 그 트레이트를 켜는(opt-in) 한 줄짜리 명시적 특수화만 생성한다.
             //
-            // **열거형을 전방 선언한 뒤 특수화한다.** 원본 헤더를 include 하지 않는다. 이 파일을
+            // 열거형을 전방 선언한 뒤 특수화한다. 원본 헤더를 include 하지 않는다. 이 파일을
             // 모으는 우산(`FlagOps.gen.h`)이 타깃 전 TU 에 `/FI` 로 들어가므로, 여기서 원본 헤더를
-            // 들이면 그 헤더가 끌어오는 것 전부가 **모든 TU 에 이미 있는 이름**이 되어 다른 헤더들의
+            // 들이면 그 헤더가 끌어오는 것 전부가 모든 TU 에 이미 있는 이름이 되어 다른 헤더들의
             // include 누락을 통째로 가린다. 불투명 열거형 선언은 완전한 타입이라 특수화에 이것으로 충분하다.
             // 같은 이유로 트레이트도 `<type_traits>` 만 드는 `BitFlagTrait.h` 에서 받는다 — `EnumUtil.h` 는 `Macros.h` 를 끌어온다.
             emit.line( "#include \"Core/Foundation/BitFlagTrait.h\"" );
@@ -1283,7 +1283,7 @@ namespace sw
 
                 if ( enumInfo._bNestedInType != SW_FALSE )
                 {
-                    // 클래스 안의 열거형은 밖에서 전방 선언할 수 없어 **비트 연산자 트레이트만**
+                    // 클래스 안의 열거형은 밖에서 전방 선언할 수 없어 비트 연산자 트레이트만
                     // 코드젠하지 못한다. 레지스트리의 비트플래그 표시(`EnumInfo::_bIsBitFlag`)는 그와
                     // 무관하게 유효하다. 인스펙터와 문자열 변환은 연산자를 쓰지 않는다. 그래서
                     // 여기서 멈추지 않고 연산자만 건너뛴다.

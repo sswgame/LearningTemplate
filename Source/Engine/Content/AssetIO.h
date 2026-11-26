@@ -55,7 +55,7 @@ namespace sw
         static bool usesSource();
         /**
          * @brief 리소스 id 를 해석해 텍스트로 읽습니다. 낱개 파일 우선이 켜져 있으면 디스크를 먼저, 꺼져 있으면 마운트된 팩만 봅니다.
-         *        **OS 경로는 받지 않습니다** — 모든 구성에서 오류 로그를 남기고 false 입니다. 디스크 파일은
+         *        OS 경로는 받지 않습니다 — 모든 구성에서 오류 로그를 남기고 false 입니다. 디스크 파일은
          *        `readTextFile` 로, 루트 밖 폴더를 리소스로 읽으려면 `AssetPaths::mountDiskDomain` 으로 붙여 id 로 읽습니다.
          * @param id 리소스 id. 풀지 못하면 false 입니다(작업 폴더 기준 경로로 다시 열어 보지 않는다)
          * @param outText 읽은 UTF-8 본문
@@ -93,13 +93,13 @@ namespace sw
          * @return 어디에도 없거나 구간을 읽을 수 없으면 `isValid() == false` 이고 @p onComplete 는 불리지 않습니다.
          */
         /**
-         * @brief 리소스의 바이트 길이입니다(없으면 nullopt). 찾는 순서는 읽기와 같다 — 낱개 파일은 파일 길이, 팩은 항목의 원본 크기다(MR-3 — 범위 읽기의 머리 풀이).
+         * @brief 리소스의 바이트 길이입니다(없으면 nullopt). 찾는 순서는 읽기와 같다. 낱개 파일은 파일 길이, 팩은 항목의 원본 크기다(MR-3, 범위 읽기의 머리 풀이).
          */
         [[nodiscard]] static optional<uint64> findAssetSize( const AssetID& id );
         static AsyncReadHandle                readBinaryAssetRangeAsync( const AssetID& id, uint64 offset, uint64 size, AsyncIOPriority priority, const AssetReadCompleteDelegate& onComplete );
         /**
          * @brief 리소스의 구간 [@p offset, @p offset + @p size) 를 동기로 읽습니다 — 찾는 순서는 `readBinaryAsset` 와 같다(낱개 파일은 위치 지정 읽기 `AsyncFileHandle::readAt`, 팩은 `PackReader::readRange`).
-         * @details 쿠킹본의 머리만 읽는 로더(씬 셀 색인 · 내비메시 타일 색인)가 쓴다 — 파일 전체를 읽지 않는다. 쿠킹 작업 안이면 실패한다(구간만으로는 입력 해시를 만들 수 없다 — 쿠커는 전체를 읽는다).
+         * @details 쿠킹본의 머리만 읽는 로더(씬 셀 색인 · 내비메시 타일 색인)가 쓰며 파일 전체를 읽지 않는다. 쿠킹 작업 안이면 실패한다(구간만으로는 입력 해시를 만들 수 없다. 쿠커는 전체를 읽는다).
          * @return 어디에도 없거나 구간이 파일 끝을 넘으면 false 이고 @p outBytes 는 비어 있습니다.
          */
         [[nodiscard]] static bool readBinaryAssetRange( const AssetID& id, uint64 offset, uint64 size, vector<uint8>& outBytes );

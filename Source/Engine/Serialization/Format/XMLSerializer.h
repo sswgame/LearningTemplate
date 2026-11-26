@@ -57,7 +57,7 @@ namespace sw
         // ------------------------------------------------------------------------------
         /**
          * @brief XML 역직렬화를 시작합니다.
-         * @note XML 을 **`string_view` 로** 받습니다. `const utf8*` 로 받으면 부르는 쪽이 `string_view::data()` 를 넘기며
+         * @note XML 을 `string_view` 로 받습니다. `const utf8*` 로 받으면 부르는 쪽이 `string_view::data()` 를 넘기며
          *       길이가 사라지고, 뷰가 더 큰 버퍼의 일부면 널 종단이 없어 파서가 끝을 넘어 읽습니다. `XMLDocument::parse` 도
          *       `string_view` 를 받아 `load_buffer(data, size)` 로 읽습니다.
          *       루트 이름이 @p pRootTagName 이 아니면 다른 종류의 파일이다 — `Xml.WrongRoot` 를 남기고 false 입니다(첫 루트로 대신 읽지 않는다).
@@ -171,10 +171,10 @@ namespace sw
         [[nodiscard]] XMLNode getCurrentNode() const override;
 
         /**
-         * @brief 역직렬화 중인 문서의 **루트 노드**입니다. 초기화 전이면 무효 노드입니다.
+         * @brief 역직렬화 중인 문서의 루트 노드입니다. 초기화 전이면 무효 노드입니다.
          * @details `XMLSerializer::deserializeSoft` 가 이 노드로 버전 속성과 orphan 자식을 훑는다. 같은 문자열을 두 번
          *          파싱하지 않게 하려는 것이다(형제 `JSONSerializer::deserializeSoft` 도 문서 하나로 세 가지를 모두 처리한다).
-         * @warning 반환된 노드는 **이 백엔드가 살아 있는 동안만** 유효합니다(문서를 이 백엔드가 소유합니다).
+         * @warning 반환된 노드는 이 백엔드가 살아 있는 동안만 유효합니다(문서를 이 백엔드가 소유합니다).
          */
         XMLNode getDeserializationRoot() const;
 
@@ -237,7 +237,7 @@ namespace sw
         /**
          * @brief Soft 역직렬화입니다. 변환하지 못한 필드를 orphan 으로 모읍니다.
          * @return 문서를 읽지 못하거나 루트 이름이 타입 이름이 아니면(`Xml.WrongRoot`) `NotParsed`, 읽지 못한 칸이나 범위 밖 값이 있으면 `Rejected`(루트의 orphan 과 범위는 끝까지 본다)입니다(`SoftReadResult`).
-         *         orphan 목록이 있으면 읽지 못한 필드는 orphan 으로 넘어가고 **읽기 전 값**으로 남습니다(`PropertyReadRollback`, 컨테이너는 칸 원문 하나가 orphan 이다).
+         *         orphan 목록이 있으면 읽지 못한 필드는 orphan 으로 넘어가고 읽기 전 값으로 남습니다(`PropertyReadRollback`, 컨테이너는 칸 원문 하나가 orphan 이다).
          *         되돌릴 수 없으면(읽다 만 소유 포인터 목록) 그 뒤를 읽지 않고 `Rejected` 입니다. 안쪽(구조체 칸, 컨테이너 원소인 구조체 · 컴포넌트)의
          *         금지된 필드도 그 칸을 넘기지 않고 `Rejected` 입니다(`FieldReadResult::ObjectRejected`).
          */

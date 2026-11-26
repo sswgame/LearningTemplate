@@ -313,7 +313,7 @@ namespace sw
 
             /**
              * @brief enum 값 하나를 열거자 정체성(이름 해시)으로 읽습니다.
-             * @return 바이트가 모자라면 false 입니다. 모르는 열거자 이름이면 **값은 그대로 두고** false 입니다(바이트는 끝까지 읽었으며, XML 의 모르는 이름과 같은 필드
+             * @return 바이트가 모자라면 false 입니다. 모르는 열거자 이름이면 값은 그대로 두고 false 입니다(바이트는 끝까지 읽었으며, XML 의 모르는 이름과 같은 필드
              *         실패입니다).
              */
             [[nodiscard]] static bool readEnumBinary( const EnumInfo& enumInfo, const MutableValueAddress address, const uint8* pData, size_t dataSize, size_t& inoutOffset,
@@ -423,7 +423,7 @@ namespace sw
             /**
              * @brief `writeOwnedPointerBinary` 가 적은 원소 하나를 되읽습니다.
              *
-             * 컨테이너에 넣는 것은 **팩토리가** 합니다(`createOwnedPointer` 가 소유자에 붙입니다).
+             * 컨테이너에 넣는 것은 팩토리가 합니다(`createOwnedPointer` 가 소유자에 붙입니다).
              * XML, JSON 도 같은 약속이라 여기서 `appendElement` 를 부르지 않습니다.
              * 본문 크기가 있어 모르는 타입은 건너뛰지만, 아는 타입의 본문을 못 읽으면 스트림이 망가진 것입니다(`StreamBroken`).
              * 본문 안에 객체째 실패여야 할 것(금지된 필드)이 있으면 `ObjectRejected` 로 올립니다 — 원소 실패로 낮추지 않습니다.

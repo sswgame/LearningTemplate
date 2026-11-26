@@ -30,7 +30,7 @@ namespace sw
         {
             /**
              * @brief 지금 출력 장치의 `write` 를 부르는 중인 깊이입니다(`dispatchToOutputs`).
-             * @details 안전망입니다. 이 싱크의 락은 로그를 부르는 구간에 쥐지 않게 짰지만(`snapshotOutputs`), 장치는 **자기 락을 쥔 채** `write` 하고
+             * @details 안전망입니다. 이 싱크의 락은 로그를 부르는 구간에 쥐지 않게 짰지만(`snapshotOutputs`), 장치는 자기 락을 쥔 채 `write` 하고
              *          그 안에서 남기는 로그를 싱크가 막을 형식이 없습니다. 그 로그가 같은 장치의 `write` 로 되돌아오면 장치 락에서 영구 정지하거나(재진입 불가)
              *          끝없이 되풀이합니다. 그래서 이 깊이가 0 이 아닐 때 들어온 로그는 큐에 넣지 않고 stderr 로 바로 씁니다(버리지 않는다).
              *          `open` · `close` 에는 걸지 않습니다 — 그 안의 로그는 정상 경로로 가야 하고, 장치가 락을 쥐지 않는 것이 계약입니다(`ILogOutput::open`).
@@ -169,7 +169,7 @@ namespace sw
         if ( _bInitialized )
             return;
 
-        // 장치는 `_mutex` **밖에서** 연다. 열다가 남기는 로그(로그 폴더를 못 만든 오류 등)는 이 싱크로 되돌아와 같은 `_mutex` 를 잡는다 —
+        // 장치는 `_mutex` 밖에서 연다. 열다가 남기는 로그(로그 폴더를 못 만든 오류 등)는 이 싱크로 되돌아와 같은 `_mutex` 를 잡는다 —
         // 락을 쥔 채 열면 같은 스레드가 영구 정지한다(재진입 불가).
         ILogOutput*  arrDevice[_s_kMaxOutput]{};
         const uint32 deviceCount = snapshotOutputs( arrDevice );
@@ -263,7 +263,7 @@ namespace sw
 
         // 락 안에서는 목록만 만진다. 거절 경고(`SW_LOG_WARNING`)는 이 싱크로 되돌아와 같은 `_mutex` 를 잡고(`dispatchToOutputs`),
         // 리스너가 있으면 방송(`_onLogWritten`)까지 하므로 락 밖에서 남긴다.
-        // 상한을 **여기서** 확인한다. 디스패치는 고정 배열로 복사해 가므로, 일단 받아 두면 열어 놓고도 한 줄도 받지 못하는
+        // 상한을 여기서 확인한다. 디스패치는 고정 배열로 복사해 가므로, 일단 받아 두면 열어 놓고도 한 줄도 받지 못하는
         // 장치가 생긴다. 그 실패는 붙인 쪽에서 보이지 않는다.
         bool bRejected{ false };
         {
@@ -357,7 +357,7 @@ namespace sw
             if ( bProcessedAny == false && _bIsRunning.load( std::memory_order_acquire ) )
             {
                 UniqueLock<mutex> lock{ _cvMutex };
-                // 잠든다고 알린 **뒤에** 큐를 본다(아래 술어). 생산자는 넣은 뒤 이 값을 보므로 둘 중 하나는 상대를 본다.
+                // 잠든다고 알린 뒤에 큐를 본다(아래 술어). 생산자는 넣은 뒤 이 값을 보므로 둘 중 하나는 상대를 본다.
                 _bWorkerSleeping.store( true, std::memory_order_seq_cst );
                 std::atomic_thread_fence( std::memory_order_seq_cst );
                 _cv.wait_for( lock, std::chrono::milliseconds( 5 ), [this]
@@ -390,7 +390,7 @@ namespace sw
 
     void AsyncLogSink::dispatchToOutputs( const LogRecord& record )
     {
-        // 목록만 잠깐 잠그고 **쓰기는 락 밖에서** 한다. 장치마다 자기 락이 있고, 느린 파일 I/O 가 콘솔을 막지 않게 하는
+        // 목록만 잠깐 잠그고 쓰기는 락 밖에서 한다. 장치마다 자기 락이 있고, 느린 파일 I/O 가 콘솔을 막지 않게 하는
         // 것이 이렇게 나눈 목적이다.
         ILogOutput*  arrDevice[_s_kMaxOutput]{};
         const uint32 deviceCount = snapshotOutputs( arrDevice );
@@ -405,7 +405,7 @@ namespace sw
 
     uint32 AsyncLogSink::snapshotOutputs( ILogOutput* ( &outArrDevice )[_s_kMaxOutput] )
     {
-        // `_mutex` 는 **잎 락**이다 — 이 안에서는 목록과 리스너 사본만 만지고 로그 · 장치 · 리스너를 부르지 않는다. 부르면 그 로그가 이 싱크로
+        // `_mutex` 는 잎 락이다 — 이 안에서는 목록과 리스너 사본만 만지고 로그 · 장치 · 리스너를 부르지 않는다. 부르면 그 로그가 이 싱크로
         // 되돌아와 같은 `_mutex` 를 잡는다(재진입 불가 → 같은 스레드가 영구 정지). 장치 포인터를 복사해 락 밖에서 부르는 것이 그 규칙의 모양이다.
         uint32            deviceCount{ 0 };
         ScopedLock<mutex> lock{ _mutex };
@@ -510,7 +510,7 @@ namespace sw
         const fixed_string<128>                  idTag = Internal::makeIDTag( event._pID );
         Internal::formatLine( formattedBuffer, stamp, event._level, pEffectiveTag, tickTag.c_str(), arrContextTag, idTag.c_str(), pEffectiveMsg, pEffectiveFile, event._line );
 
-        // 3단계: 64비트 SWAR 로 UTF-8 인지 빠르게 검증하고, 아니면 **잘못된 바이트만** `\xNN` 으로 바꾼다. 줄 전체를 로캘 변환하면
+        // 3단계: 64비트 SWAR 로 UTF-8 인지 빠르게 검증하고, 아니면 잘못된 바이트만 `\xNN` 으로 바꾼다. 줄 전체를 로캘 변환하면
         //        C 로캘(아무도 `setlocale` 을 부르지 않는다)이라 멀쩡한 한글까지 깨지거나(Windows) 줄이 빈다(glibc).
         string      fallbackUTF8;
         const utf8* pFormattedBuffer = formattedBuffer.c_str();
