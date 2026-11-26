@@ -3,6 +3,7 @@
 #include "Engine/Renderer/Pipeline/RenderPipelineAsset.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/Log/LogOnce.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Asset/AssetFormat.h"
