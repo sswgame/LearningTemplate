@@ -24,7 +24,7 @@
 | 갈래 · 워크트리 | 몫 |
 | --- | --- |
 | w-cpp-reflect · LT-wt/cppreflect | 파서 정의 · include 를 타깃 속성에서(671f8c8988 · fd2dac7d65 끝), 컴파일 옵션(9d9872a619 끝), 구성 단계 경로 테스트, Core (c) 열거 이름 constexpr 표, 모르는 옵션은 생성 오류 |
-| w-enum-meta · LT-wt/enummeta | F2b 키트 현지화 키, Engine/Audio `*Data` 종류 정의를 실행 폴더 밖으로, FixedReadResult · OnlineClientState ENUM() 의 include 상한 |
+| w-enum-meta · LT-wt/enummeta | ENUM 잎 헤더 · 열거형 둘(2898146f6c 끝), 키트별 현지화 표(모듈 단위 탑재 · 수집 대상 · 쿠킹 · 표 이전), AssetTypeDef 접미사 중복(AudioPlayableAsset) |
 | w-gf-dev · LT-wt/gfdev | 개발 등록 매크로 배포 컴파일 오류(1994afb762 끝), DevTools 확장자 글 · `.hlsli`, 내비 베이크 테스트 되살리기 |
 | w-pimpl · LT-wt/pimpl | P1 Jolt 넷 · P3 ImGuiRenderer · P4 백엔드 팩토리 |
 | w-devtools-merge · LT-wt/devtoolsmerge | T1(605e855120 · 1eeddfc3ae 끝), PE 헤더 읽기를 한 곳에 두고 findBoundImportLibrary 를 ModuleReload 로, 이름만 쓰이는 단일 .cpp 헤더 합치기 |
