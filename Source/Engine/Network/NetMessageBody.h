@@ -19,7 +19,8 @@
 #include "Core/Log/Logger.h"
 #include "Core/Network/Message/NetMessage.h"
 #include "Core/Network/Message/NetMessageTable.h"
-#include "Core/Network/NetTypes.h"
+#include "Core/Network/NetChannelKind.h"
+#include "Core/Network/NetMessageRange.h"
 #include "Core/Serialization/BitStream.h"
 
 #include "Engine/Serialization/Fixed/FixedLayout.h"

@@ -5,7 +5,7 @@
 #include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/Connection/NetEndpoint.h"
-#include "Core/Network/NetTypes.h"
+#include "Core/Network/NetConnectionState.h"
 #include "Core/Serialization/BitStream.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/ConfigRangeUtil.h"

@@ -35,7 +35,7 @@
 #include "Core/Network/Connection/NetConnection.h"
 #include "Core/Network/Message/NetMessage.h"
 #include "Core/Network/Message/NetMessageTable.h"
-#include "Core/Network/NetTypes.h"
+#include "Core/Network/NetChannelKind.h"
 #include "Core/Network/Replication/InterpolationBuffer.h"
 #include "Core/Network/Replication/NetClock.h"
 

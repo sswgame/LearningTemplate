@@ -15,7 +15,6 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Network/Connection/NetConnection.h"
 #include "Core/Network/Message/NetMessage.h"
-#include "Core/Network/NetTypes.h"
 #include "Core/Network/Replication/NetInputWindow.h"
 #include "Core/Network/Replication/NetParallel.h"
 #include "Core/Network/Replication/NetPrioritizer.h"

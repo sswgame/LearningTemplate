@@ -4,7 +4,6 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Encoding/Base64Util.h"
-#include "Core/Network/NetTypes.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/Network/Transport/IStreamTransport.h"
 #include "Core/String/StringUtil.h"

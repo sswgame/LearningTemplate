@@ -26,7 +26,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Network/Message/NetMessage.h"
 #include "Core/Network/Message/NetMessageTable.h"
-#include "Core/Network/NetTypes.h"
+#include "Core/Network/NetChannelKind.h"
 
 #include "Engine/Foundation/ComponentHandle.h"
 #include "Engine/Foundation/GameObjectHandle.h"

@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Core/Network/NetTypes.h"
+#include "Core/Network/NetAddress.h"
 
 #include "Core/Encoding/HexUtil.h"
 #include "Core/String/StringUtil.h"

@@ -4,7 +4,7 @@
  */
 #include "pch.h"
 
-#include "Core/Network/NetTypes.h"
+#include "Core/Network/NetAddress.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"

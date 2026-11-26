@@ -32,7 +32,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Log/Output/ConsoleLogOutput.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Network/NetTypes.h"
+#include "Core/Network/NetAddress.h"
 #include "Core/Process/Process.h"
 #include "Core/Process/ShutdownSignal.h"
 #include "Core/String/fixed_string.h"

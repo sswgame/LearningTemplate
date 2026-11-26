@@ -2,7 +2,7 @@
 
 #include "Programs/OnlineLoadBot/LoadBotLocalServer.h"
 
-#include "Core/Network/NetTypes.h"
+#include "Core/Network/NetAddress.h"
 #include "Core/Network/Transport/IStreamTransport.h"
 #include "Core/Time/MonotonicClock.h"
 #include "Core/Time/WallClock.h"

@@ -18,7 +18,10 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Network/Message/NetMessage.h"
-#include "Core/Network/NetTypes.h"
+#include "Core/Network/NetChannelKind.h"
+#include "Core/Network/NetConnectionState.h"
+#include "Core/Network/NetMessageRange.h"
+#include "Core/Network/NetProtocol.h"
 
 #include <type_traits>
 

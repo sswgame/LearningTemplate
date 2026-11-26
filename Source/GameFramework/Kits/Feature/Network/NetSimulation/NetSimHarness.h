@@ -35,7 +35,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Network/Connection/NetEndpoint.h"
 #include "Core/Network/Message/NetMessage.h"
-#include "Core/Network/NetTypes.h"
+#include "Core/Network/NetAddress.h"
 #include "Core/Network/Transport/NetEmulation.h"
 #include "Core/Network/Transport/NetTransport.h"
 

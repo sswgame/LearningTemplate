@@ -3,6 +3,7 @@
 #include "Core/Network/Transport/StreamNetTransport.h"
 
 #include "Core/Concurrency/ScopedLock.h"
+#include "Core/Network/NetProtocol.h"
 
 #include <chrono>
 
