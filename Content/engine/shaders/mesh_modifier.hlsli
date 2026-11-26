@@ -325,7 +325,7 @@ static float MeshDeform::axisFraction( float3 position, ModifierContext context 
 }
 
 // ------------------------------------------------------------------------------
-// 값 노이즈 — Stack/MeshModifierNoise.h 와 비트 단위로 같은 정수 해시
+// 값 노이즈 — Core/Math/ValueNoise.cpp(`ValueNoise::sampleValue3D`)와 같은 정수 해시
 // ------------------------------------------------------------------------------
 static uint4 MeshDeform::hashLattice( int4 cellX, int4 cellY, int cellZ, uint seed )
 {
@@ -353,7 +353,7 @@ static float MeshDeform::smooth( float ratio )
     return ratio * ratio * ( 3.0f - 2.0f * ratio );
 }
 
-/** 모서리 여덟을 z 면 둘로 묶어 한 면 넷(x 는 0 1 0 1, y 는 0 0 1 1)을 벡터로 센다 — 모서리마다의 값은 `MeshModifierNoise` 의 정수 해시 그대로다 */
+/** 모서리 여덟을 z 면 둘로 묶어 한 면 넷(x 는 0 1 0 1, y 는 0 0 1 1)을 벡터로 센다 — 모서리마다의 값은 `ValueNoise::sampleValue3D` 의 정수 해시 그대로다 */
 static float MeshDeform::valueNoise3D( float3 position, uint seed )
 {
     const float3 cell      = floor( position );
@@ -1443,7 +1443,7 @@ static float3 MeshDeform::hitDeform( float3 location, ModifierContext context )
     return location + offset * context.param( 0u );
 }
 
-/** MeshModifierNoise::hashToUnit — 정수 하나를 [0, 1) 로 섞는다(정점 위상 · 1 차원 노이즈) */
+/** HashUtil::toUnitFloatExclusive( HashUtil::mix32 ) — 정수 하나를 [0, 1) 로 섞는다(정점 위상 · 1 차원 노이즈) */
 static float MeshDeform::hashToUnit( uint value )
 {
     uint mixed = value;
@@ -1455,7 +1455,7 @@ static float MeshDeform::hashToUnit( uint value )
     return (float)( mixed & 0x00ffffffu ) / 16777216.0f;
 }
 
-/** MeshModifierNoise::valueNoise1D — 씨앗별 1 차원 값 노이즈 [-1, 1] */
+/** ValueNoise::sampleValue1D — 씨앗별 1 차원 값 노이즈 [-1, 1] */
 static float MeshDeform::valueNoise1D( uint seed, float time )
 {
     const float safeTime = clamp( time, -1.0e6f, 1.0e6f );

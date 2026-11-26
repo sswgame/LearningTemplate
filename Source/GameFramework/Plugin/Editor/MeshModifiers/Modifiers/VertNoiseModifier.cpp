@@ -6,9 +6,9 @@
 #include "pch.h"
 
 #include "Core/Math/MathUtil.h"
+#include "Core/Math/ValueNoise.h"
 
 #include "GameFramework/Plugin/Editor/MeshModifiers/Stack/MeshModifier.h"
-#include "GameFramework/Plugin/Editor/MeshModifiers/Stack/MeshModifierNoise.h"
 #include "GameFramework/Plugin/Editor/MeshModifiers/Stack/MeshModifierRegistry.h"
 
 namespace sw::editor
@@ -41,7 +41,7 @@ namespace sw::editor
             const uint32  seed   = static_cast<uint32>( getInt( _seedParam ) );
             const float32 drift  = getFloat( _speedParam ) * context.getTime();
             const float3  sample = point._position * getFloat( _frequencyParam ) + float3{ drift, drift * 0.5f, drift * 0.25f };
-            return point._position + point._normal * ( MeshModifierNoise::valueNoise3D( sample, seed ) * amplitude );
+            return point._position + point._normal * ( ValueNoise::sampleValue3D( sample, seed ) * amplitude );
         }
 
     private:

@@ -7,10 +7,11 @@
  */
 #include "pch.h"
 
+#include "Core/Hash/HashUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Math/ValueNoise.h"
 
 #include "GameFramework/Plugin/Editor/MeshModifiers/Stack/MeshModifier.h"
-#include "GameFramework/Plugin/Editor/MeshModifiers/Stack/MeshModifierNoise.h"
 #include "GameFramework/Plugin/Editor/MeshModifiers/Stack/MeshModifierRegistry.h"
 
 namespace sw::editor
@@ -42,7 +43,7 @@ namespace sw::editor
             if ( amplitude.getLengthSquared() < MathUtil::kEpsilon * MathUtil::kEpsilon )
                 return point._position;
             const uint32  seed     = static_cast<uint32>( getInt( _seedParam ) ) * 7919u + point._vertexIndex;
-            const float32 phase    = MeshModifierNoise::hashToUnit( seed ) * getFloat( _phaseVariationParam );
+            const float32 phase    = HashUtil::toUnitFloatExclusive( HashUtil::mix32( seed ) ) * getFloat( _phaseVariationParam );
             const float32 cycle    = context.getTime() * getFloat( _speedParam ) + phase;
             const float32 noiseMix = getFloat( _noiseParam );
             float3        offset{ 0.0f, 0.0f, 0.0f };
@@ -50,7 +51,7 @@ namespace sw::editor
             {
                 const float32 axisCycle = cycle + static_cast<float32>( axis ) * 0.25f;
                 const float32 sine      = MathUtil::sin( MathUtil::kTwoPi * axisCycle );
-                const float32 noise     = MeshModifierNoise::valueNoise1D( seed * 3u + axis, axisCycle );
+                const float32 noise     = ValueNoise::sampleValue1D( axisCycle, seed * 3u + axis );
                 MeshModifierUtil::setComponent( offset, axis, MeshModifierUtil::getComponent( amplitude, axis ) * ( sine + ( noise - sine ) * noiseMix ) );
             }
             return point._position + offset;

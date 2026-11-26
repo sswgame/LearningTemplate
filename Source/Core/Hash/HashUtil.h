@@ -126,6 +126,11 @@ namespace sw
 
         /** @brief 해시의 아래 24 비트를 [0, 1] 실수로 바꿉니다. 확률 비교 · 노이즈 값에 씁니다. */
         [[nodiscard]] static constexpr float32 toUnitFloat( uint32 hash ) noexcept { return static_cast<float32>( hash & kUnitFloatMask ) / static_cast<float32>( kUnitFloatMask ); }
+        /** @brief 해시의 아래 24 비트를 [0, 1) 실수로 바꿉니다(1 에 닿지 않는다). 1D 값 노이즈의 격자값 · 정점 위상처럼 한 바퀴를 넘지 않아야 하는 값에 씁니다. */
+        [[nodiscard]] static constexpr float32 toUnitFloatExclusive( uint32 hash ) noexcept
+        {
+            return static_cast<float32>( hash & kUnitFloatMask ) / static_cast<float32>( kUnitFloatMask + 1u );
+        }
 
         /** @brief splitmix64 수열의 다음 값입니다. 상태에 황금비를 더하고 마무리 섞기를 합니다. 고정점이 없어 씨앗 0 도 쓸 수 있습니다. */
         [[nodiscard]] static constexpr uint64 splitMix64Next( uint64& inoutState ) noexcept
