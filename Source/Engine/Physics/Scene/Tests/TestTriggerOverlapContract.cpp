@@ -3,16 +3,80 @@
 // 서버 단위(`Server --test`)에도 그대로 돈다 — 전용 서버도 Engine(물리)을 싣는다.
 #include "pch.h"
 
+#include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/Name/hashed_string.h"
 #include "Core/TestFramework/TestFramework.h"
 
+#include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectEvents.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Physics/Collision/PhysicsShape.h"
 #include "Engine/Physics/Component/RigidBody2DComponent.h"
 #include "Engine/Physics/Component/RigidBodyComponent.h"
 #include "Engine/Physics/Scene/ScenePhysics.h"
-#include "Engine/Physics/Scene/Tests/OverlapRecorderTestComponent.h"
+#include "Engine/Reflection/ReflectionMacros.h"
+
+namespace sw
+{
+    /** @brief 겹침 진입 · 이탈을 세고 차례를 남깁니다(파일 머리말). 상대의 트리거 겹침은 세지 않는다(몸만). */
+    REFLECT( HideInMenu )
+    struct OverlapRecorderTestComponent : public Component
+    {
+        REFLECT_BODY();
+
+        uint32        _beginCount{ 0 };
+        uint32        _endCount{ 0 };
+        uint32        _spawnedInsideBeginCount{ 0 };  ///< 그 가운데 상대가 안에서 생긴 진입 수(`OverlapInfo::_bOtherSpawnedInside`)
+        uint32        _collisionBeginCount{ 0 };      ///< 막는 접촉 시작 수(바디 쌍마다 — 충격 단위)
+        vector<uint8> _listOrder{};                   ///< 'B' · 'E' 와 상대 오브젝트 id 의 낮은 바이트가 번갈아 든다
+        bool          _bDestroyOtherOnBegin{ false }; ///< NOLINT(sw-bool-flag): 테스트 칸 — 비트필드는 기본값을 둘 수 없다
+        Subscription  _overlapBeginSubscription;
+        Subscription  _overlapEndSubscription;
+        Subscription  _collisionBeginSubscription;
+
+        void onRegister( GameObjectManager& manager ) override
+        {
+            Component::onRegister( manager );
+            _overlapBeginSubscription   = GameObjectEvents::listen<&OverlapRecorderTestComponent::handleOverlapBegin>( *this, &GameObjectEvents::_overlapBegin );
+            _overlapEndSubscription     = GameObjectEvents::listen<&OverlapRecorderTestComponent::handleOverlapEnd>( *this, &GameObjectEvents::_overlapEnd );
+            _collisionBeginSubscription = GameObjectEvents::listen<&OverlapRecorderTestComponent::handleCollisionBegin>( *this, &GameObjectEvents::_collisionBegin );
+        }
+
+        void handleOverlapBegin( const OverlapInfo& overlap )
+        {
+            if ( overlap._bOtherTrigger == SW_TRUE )
+                return;
+            ++_beginCount;
+            _spawnedInsideBeginCount += overlap._bOtherSpawnedInside == SW_TRUE ? 1u : 0u;
+            record( 'B', overlap );
+            if ( _bDestroyOtherOnBegin && overlap._pOther != nullptr && overlap._pOther->getMutableManager() != nullptr )
+                overlap._pOther->getMutableManager()->destroyGameObject( overlap._pOther );
+        }
+
+        void handleOverlapEnd( const OverlapInfo& overlap )
+        {
+            if ( overlap._bOtherTrigger == SW_TRUE )
+                return;
+            ++_endCount;
+            record( 'E', overlap );
+        }
+
+        void handleCollisionBegin( const CollisionInfo& collision )
+        {
+            (void)collision;
+            ++_collisionBeginCount;
+        }
+
+    private:
+        void record( uint8 phase, const OverlapInfo& overlap )
+        {
+            _listOrder.push_back( phase );
+            _listOrder.push_back( overlap._pOther != nullptr ? static_cast<uint8>( overlap._pOther->getObjectID() & 0xFFu ) : uint8{ 0 } );
+        }
+    };
+} // namespace sw
 
 using namespace sw;
 
@@ -351,3 +415,5 @@ SW_TEST_CASE( TriggerOverlapContractTest, CollisionStaysPerBodyPair3D )
     SW_EXPECT_EQUAL( 2u, pRecorder->_collisionBeginCount );
     SW_EXPECT_EQUAL( 0u, pRecorder->_beginCount );
 }
+
+#include "TestTriggerOverlapContract.cpp.gen.inl"

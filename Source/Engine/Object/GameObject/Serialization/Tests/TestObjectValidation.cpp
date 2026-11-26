@@ -2,12 +2,33 @@
 
 #include "Core/TestFramework/TestFramework.h"
 
+#include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
 #include "Engine/Object/GameObject/Serialization/ObjectValidation.h"
-#include "Engine/Object/GameObject/Serialization/Tests/ValidationTestComponent.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Reflection/ReflectionValidation.h"
+
+namespace sw
+{
+    /** @brief 검증 함수가 있는 컴포넌트입니다 — 오브젝트 로드 · 저장 · 인스펙터 편집 길을 본다. */
+    REFLECT( HideInMenu, Validate = validateSpeed )
+    struct ValidatedTestComponent : public Component
+    {
+        REFLECT_BODY();
+
+        PROPERTY()
+        float32 _speed = 1.0f;
+
+        /** @brief 속도는 0 보다 크다. */
+        void validateSpeed( ValidationContext& context ) const
+        {
+            if ( _speed <= 0.0f )
+                context.addError( "speed must be positive" );
+        }
+    };
+} // namespace sw
 
 // ObjectValidationTest — 오브젝트 로드 · 저장 · 인스펙터 편집이 컴포넌트 검증 함수를 돌려 결과를 월드의 표(`SceneValidationIssues`)에 두는 길.
 
@@ -90,3 +111,5 @@ SW_TEST_CASE( ObjectValidationTest, DestroyedObjectLeavesTheIssueLog )
     manager.clear();
     SW_EXPECT_TRUE_MSG( issueLog.getIssueCount() == 0, "Object results remain in the table after the scene was cleared" );
 }
+
+#include "TestObjectValidation.cpp.gen.inl"

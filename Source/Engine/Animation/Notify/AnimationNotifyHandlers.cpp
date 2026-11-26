@@ -5,10 +5,10 @@
 #include "Core/Subsystem/SubsystemScope.h"
 
 #include "Engine/Animation/Component/MotionWarpingComponent.h"
-#include "Engine/Animation/Notify/AnimationNotifyAssetParams.h"
 #include "Engine/Animation/Notify/AnimationNotifyComponent.h"
 #include "Engine/Animation/Notify/AnimationNotifyTable.h"
 #include "Engine/Asset/AssetManager.h"
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Character/Hit/CharacterHit.h"
 #include "Engine/Character/Hit/MeleeHitWindow.h"
 #include "Engine/Environment/Foliage/FoliageComponent.h"
@@ -22,12 +22,25 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/CameraRegistry.h"
 #include "Engine/Object/GameObject/Subsystem/SceneEngineSubsystems.h"
+#include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Object/Prefab/PrefabCache.h"
 #include "Engine/Presentation/ISoundPlayer.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/VFX/VFXEffectPool.h"
 
 namespace sw
 {
+    /** @brief `SpawnPrefab` 처리기의 에셋 인자입니다. */
+    REFLECT()
+    struct AnimationNotifySpawnPrefabParams
+    {
+        REFLECT_BODY();
+
+        /** @brief 소켓 자리에 스폰할 프리팹입니다 — 저장 꼴은 GUID 참조(`AssetRefBase`). */
+        PROPERTY( Required, Tooltip = "Prefab spawned at the socket" )
+        AssetRef<PrefabAsset> _prefab{};
+    };
+
     namespace
     {
         struct AnimationNotifyHandlersInternal
@@ -399,3 +412,5 @@ namespace sw
                registry.registerHandler( hashed_string( "MotionWarp" ), make_unique<AnimationNotifyHandlersInternal::MotionWarpHandler>() );
     }
 } // namespace sw
+
+#include "AnimationNotifyHandlers.cpp.gen.inl"
