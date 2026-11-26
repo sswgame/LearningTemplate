@@ -351,10 +351,15 @@ namespace sw
                 b.appendFormat( "[]( void* pInstance, const void* ) { static_cast<Self*>( pInstance )->%#(); }", prop._repNotify );
             repNotify = string( b.view() );
         }
-        // const 든 아니든 부를 수 있게 인스턴스를 그 타입으로 돌려 부른다.
+        // const 든 아니든 부를 수 있게 인스턴스를 그 타입으로 돌려 부른다. 프로퍼티 검증은 에디터 데이터 검증이라 배포에는 없다(`SW_DEV_ONLY_FUNCTION`).
+        // 그래서 배포는 검증 함수를 참조하지 않고, 본문은 개발 전용 소스(`Dev/`)에 둘 수 있다. 배포에서 도는 읽기 관문은 `REFLECT( Validate )` 다.
         string validate( "nullptr" );
         if ( prop._validate.empty() == false )
-            validate = makeValidateLambda( prop._validate );
+        {
+            StringBuilder<constant::buffer::kMax512> b;
+            b.appendFormat( "SW_DEV_ONLY_FUNCTION( ( %# ) )", makeValidateLambda( prop._validate ) );
+            validate = string( b.view() );
+        }
         // 파서가 측정한 바이트를 박지 않는다 — 파서는 Debug 정의를 모르고 측정한다(`PropertyInfo::resolveBitField` 설명).
         string setBit( "nullptr" );
         if ( prop._bIsBitField == SW_TRUE )

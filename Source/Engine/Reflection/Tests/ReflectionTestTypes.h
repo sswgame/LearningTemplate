@@ -400,8 +400,8 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 검증 샘플 — 프로퍼티 검증 · 타입 검증 · 값 구조체 · 그 시퀀스입니다(`ReflectionValidationTest`). */
-    REFLECT( Validate = validateRange )
+    /** @brief 검증 샘플 — 프로퍼티 검증 · 값 구조체 · 그 시퀀스입니다(`ReflectionValidationTest`). 타입 검증은 관문 샘플(`ValidatedRecord`)이 든다(한 타입에 둘을 두면 생성 오류다). */
+    REFLECT()
     struct ValidatedActor
     {
         REFLECT_BODY();
@@ -412,7 +412,7 @@ namespace sw
         PROPERTY()
         int32 _min = 0;
 
-        PROPERTY()
+        PROPERTY( Validate = validateRange )
         int32 _max = 10;
 
         PROPERTY()
@@ -447,6 +447,36 @@ namespace sw
 
         PROPERTY()
         int32 _extra = 0;
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 타입 검증(읽기 관문) 샘플입니다(`ReflectionValidationTest`). 배포에서도 도는 검증이다. */
+    REFLECT( Validate = validateLimit )
+    struct ValidatedRecord
+    {
+        REFLECT_BODY();
+
+        PROPERTY()
+        int32 _count = 0;
+
+        PROPERTY()
+        int32 _limit = 4;
+
+        /** @brief 개수가 상한을 넘지 않는다. */
+        void validateLimit( ValidationContext& context ) const
+        {
+            if ( _count > _limit )
+                context.addError( "count is over the limit" );
+        }
+    };
+
+    /** @brief 타입 검증도 상속된다. */
+    REFLECT()
+    struct ValidatedRecordChild : public ValidatedRecord
+    {
+        REFLECT_BODY();
     };
 } // namespace sw
 
