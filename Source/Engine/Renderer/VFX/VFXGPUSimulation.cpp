@@ -649,7 +649,7 @@ namespace sw
         Internal::appendMatrixRows( _listParamWord, emitter._world );
         static_assert( SW_VFX_MESH_ROW_FIRST_SLOT == 5u, "the mesh header rows above must match vfx_simulate.hlsli" );
         // 입자 인스턴스 칸(0 ~ 풀 - 1, 입자가 수명 내내 쥔다, vfx_simulate.hlsl 의 빈 칸 스택)마다 GPUScene 칸이 있고 행 하나에 넷. 배치 항목 수는 풀 크기와 같다(`VFXComponent::rebuildMeshEmitters`). 모자란 칸은 쓰지 않는다.
-        const uint32 slotRowCount = ( poolSize + Internal::kWordsPerRow - 1u ) / Internal::kWordsPerRow;
+        const uint32 slotRowCount = MathUtil::divideAndRoundUp<uint32>( poolSize, Internal::kWordsPerRow );
         for ( uint32 slotRow = 0; slotRow < slotRowCount; ++slotRow )
         {
             uint32 arrSlot[Internal::kWordsPerRow]{ SW_VFX_INVALID_SLOT, SW_VFX_INVALID_SLOT, SW_VFX_INVALID_SLOT, SW_VFX_INVALID_SLOT };
@@ -664,7 +664,7 @@ namespace sw
         MeshDispatch& dispatch = _listMeshDispatch.emplace_back();
         dispatch._pState       = &state;
         dispatch._paramRow     = paramRow;
-        dispatch._groupCount   = ( poolSize + SW_VFX_MESH_INSTANCE_THREAD_COUNT - 1u ) / SW_VFX_MESH_INSTANCE_THREAD_COUNT;
+        dispatch._groupCount   = MathUtil::divideAndRoundUp<uint32>( poolSize, SW_VFX_MESH_INSTANCE_THREAD_COUNT );
         for ( const uint32 slot : listSlot )
         {
             if ( slot == SW_VFX_INVALID_SLOT )
@@ -686,7 +686,7 @@ namespace sw
 
     uint32 VFXGPUSimulation::getGroupCount( const VFXEmitterDef& def )
     {
-        return ( def._maxParticles + SW_VFX_SIMULATE_THREAD_COUNT - 1u ) / SW_VFX_SIMULATE_THREAD_COUNT;
+        return MathUtil::divideAndRoundUp<uint32>( def._maxParticles, SW_VFX_SIMULATE_THREAD_COUNT );
     }
 
     void VFXGPUSimulation::assignReadSlot( EmitterState& state )

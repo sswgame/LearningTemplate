@@ -568,8 +568,8 @@ namespace sw
         constants._width     = view.scaleToRect( albedo, true );
         constants._height    = view.scaleToRect( albedo, false );
         constants._capacity  = view._deferredTileCapacity;
-        const uint32 columns = FrameRendererUtil::divideRoundUp( constants._width, kDeferredTileSize );
-        const uint32 rows    = FrameRendererUtil::divideRoundUp( constants._height, kDeferredTileSize );
+        const uint32 columns = MathUtil::divideAndRoundUp( constants._width, kDeferredTileSize );
+        const uint32 rows    = MathUtil::divideAndRoundUp( constants._height, kDeferredTileSize );
         // 목록은 풀 크기로 만들었다 — 사각형은 풀 안이라 넘지 않는다. 넘는다면(풀을 다시 만들기 전 한 프레임) 그 프레임은 풀스크린으로 그린다.
         if ( albedo._srv == kInvalidDescriptorIndex || columns * rows > view._deferredTileCapacity || columns == 0 || rows == 0 )
             return false;

@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
@@ -300,7 +301,7 @@ namespace sw
             const uint32          rect      = bHorizontal ? spaceRect._width : spaceRect._height;
             if ( bViewSized == false || pool == 0 || rect == 0 || rect >= pool )
                 return attachmentExtent;
-            const uint64 scaled = ( static_cast<uint64>( attachmentExtent ) * rect + pool - 1u ) / pool;
+            const uint64 scaled = MathUtil::divideAndRoundUp<uint64>( static_cast<uint64>( attachmentExtent ) * rect, pool );
             return scaled < 1u ? 1u : static_cast<uint32>( scaled );
         }
         /** @brief 첨부 @p attachment 한 축에서 사각형이 덮는 픽셀 수입니다 — 첨부의 크기 · 크기 따름 · 공간으로 위 함수를 부른다. */

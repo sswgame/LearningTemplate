@@ -70,8 +70,8 @@ SW_TEST_CASE( HZBPyramidTest, TileMipMatchesOcclusionTileGrid )
 {
     static_assert( ( 1u << ( HZBLayout::kTileMip + 1u ) ) == FrameRendererUtil::kOcclusionTileSize, "타일 밉 텍셀 하나가 가림 타일 한 변이어야 한다" );
     const HZBLayout large = HZBLayout::make( 1283, 721 );
-    SW_EXPECT_EQUAL( FrameRendererUtil::divideRoundUp( 1283, FrameRendererUtil::kOcclusionTileSize ), large._arrMip[HZBLayout::kTileMip]._width );
-    SW_EXPECT_EQUAL( FrameRendererUtil::divideRoundUp( 721, FrameRendererUtil::kOcclusionTileSize ), large._arrMip[HZBLayout::kTileMip]._height );
+    SW_EXPECT_EQUAL( MathUtil::divideAndRoundUp( 1283u, FrameRendererUtil::kOcclusionTileSize ), large._arrMip[HZBLayout::kTileMip]._width );
+    SW_EXPECT_EQUAL( MathUtil::divideAndRoundUp( 721u, FrameRendererUtil::kOcclusionTileSize ), large._arrMip[HZBLayout::kTileMip]._height );
     const HZBLayout tiny = HZBLayout::make( 4, 4 );
     SW_EXPECT_EQUAL( HZBLayout::kTileMip + 1u, tiny._mipCount );
     SW_EXPECT_EQUAL( 1u, tiny._arrMip[HZBLayout::kTileMip]._width );

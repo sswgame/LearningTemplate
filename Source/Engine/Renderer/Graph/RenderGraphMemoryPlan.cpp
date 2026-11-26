@@ -7,19 +7,6 @@
 
 namespace sw
 {
-    namespace
-    {
-        struct RenderGraphMemoryPlanInternal
-        {
-            /** @brief @p value 를 @p alignment(2 의 거듭제곱, 0 이면 1) 배수로 올립니다. */
-            static uint64 alignUp( uint64 value, uint64 alignment )
-            {
-                const uint64 safe = alignment > 0 ? alignment : 1;
-                return ( value + safe - 1 ) / safe * safe;
-            }
-        };
-    } // namespace
-
     bool RenderGraphMemoryPlan::overlapsInTime( const RenderGraphMemoryItem& left, const RenderGraphMemoryItem& right )
     {
         return left._firstLevel <= right._lastLevel && right._firstLevel <= left._lastLevel;
@@ -27,7 +14,6 @@ namespace sw
 
     RenderGraphMemoryPlan RenderGraphMemoryPlan::make( const vector<RenderGraphMemoryItem>& listItem )
     {
-        using Internal = RenderGraphMemoryPlanInternal;
         RenderGraphMemoryPlan plan;
         plan._listOffset.assign( listItem.size(), 0 );
         // 큰 것부터 놓는다 — 작은 것이 큰 것의 틈을 채운다. 같은 크기는 앞 레벨, 그다음 목록 차례(결정적).
@@ -65,11 +51,11 @@ namespace sw
                     const bool                   bBytes      = offset < placedEnd && placedBegin < offset + item._sizeBytes;
                     if ( bBytes == false || overlapsInTime( item, placed ) == false )
                         continue;
-                    offset = Internal::alignUp( placedEnd, item._alignment );
+                    offset = MathUtil::align( placedEnd, item._alignment );
                     bMoved = true;
                 }
             }
-            offset                  = Internal::alignUp( offset, item._alignment );
+            offset                  = MathUtil::align( offset, item._alignment );
             plan._listOffset[index] = offset;
             plan._heapBytes         = MathUtil::max( plan._heapBytes, offset + item._sizeBytes );
             listPlaced.push_back( index );

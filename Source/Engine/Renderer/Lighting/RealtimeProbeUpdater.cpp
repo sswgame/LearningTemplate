@@ -172,7 +172,7 @@ namespace sw
             layout._listStaticWordOffset.push_back( SceneVoxelizer::kNoStaticCopy );
             layout._listStaticEmissionOffset.push_back( SceneVoxelizer::kNoEmission );
             layout._listPaletteRow.push_back( paletteRow );
-            paletteRow += ( static_cast<uint32>( scene._listEmissionPalette.size() ) + Internal::kPaletteEntriesPerRow - 1u ) / Internal::kPaletteEntriesPerRow;
+            paletteRow += MathUtil::divideAndRoundUp<uint32>( static_cast<uint32>( scene._listEmissionPalette.size() ), Internal::kPaletteEntriesPerRow );
             layout._totalProbes += request._probeCount;
         }
         // 정적 사본은 읽는 자리들 뒤에 놓는다 — 움직이는 층이 생겨도 다른 볼륨이 읽는 자리는 그대로다.
@@ -538,7 +538,7 @@ namespace sw
         parameters.set( SceneVoxelizeShader::VoxelGrid, _voxelBuffer._uav );
         if ( parameters.apply( cmd, pipeline ) == false )
             return;
-        const uint32 rowCount = ( threadCount + SceneVoxelizer::kThreadsPerRow - 1u ) / SceneVoxelizer::kThreadsPerRow;
+        const uint32 rowCount = MathUtil::divideAndRoundUp<uint32>( threadCount, SceneVoxelizer::kThreadsPerRow );
         cmd.dispatchThreads( MathUtil::min( threadCount, SceneVoxelizer::kThreadsPerRow ), rowCount, 1 );
     }
 

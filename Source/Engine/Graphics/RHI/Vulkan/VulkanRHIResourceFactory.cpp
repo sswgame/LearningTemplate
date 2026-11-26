@@ -62,12 +62,6 @@ namespace sw
             return ( blockBytes != 0 && blockBytes % 4 == 0 ) ? blockBytes : 4;
         }
 
-        /** @brief @p value 를 @p alignment 의 배수로 올립니다. 정렬이 2 의 거듭제곱이 아니어도 된다(12 바이트 텍셀). */
-        uint64 alignUpToMultiple( uint64 value, uint64 alignment )
-        {
-            return ( ( value + alignment - 1 ) / alignment ) * alignment;
-        }
-
         /** @brief 정점 속성 형식을 VkFormat 으로 옮깁니다. `default:` 를 두지 않는다 — 형식을 더하면 `-Werror=switch` 가 여기를 가리킨다. */
         VkFormat toVkVertexFormat( RHIVertexAttributeFormat format )
         {
@@ -724,7 +718,7 @@ namespace sw
         for ( uint32 mip = 0; mip < mipCount; ++mip )
         {
             const RHITextureMipSpan& mipSpan = arrMip[mip];
-            ringOffset                       = alignUpToMultiple( ringOffset, copyAlignment );
+            ringOffset                       = MathUtil::align( ringOffset, copyAlignment );
             Memory::copy( ring.getSpanBuffer( span )._memory._pMapped + ringOffset, mipSpan._pData, mipSpan._sizeBytes );
             _pDevice->_memoryAllocator.flush( ring.getSpanBuffer( span )._memory, ringOffset, mipSpan._sizeBytes );
 
@@ -798,7 +792,7 @@ namespace sw
         const RHISubmitResult               allocateResult = _pDevice->allocateStagingSpan( ring, usedBytes + copyAlignment, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, "submitTextureRegionUpload", span );
         if ( allocateResult != RHISubmitResult::Accepted )
             return RHITransferSubmit::fromUnaccepted( allocateResult );
-        const uint64 ringOffset = alignUpToMultiple( span.getOffsetBytes(), copyAlignment );
+        const uint64 ringOffset = MathUtil::align( span.getOffsetBytes(), copyAlignment );
         Memory::copy( ring.getSpanBuffer( span )._memory._pMapped + ringOffset, desc._pData, static_cast<size_t>( usedBytes ) );
         _pDevice->_memoryAllocator.flush( ring.getSpanBuffer( span )._memory, ringOffset, usedBytes );
 
@@ -961,7 +955,7 @@ namespace sw
         const RHISubmitResult               allocateResult = _pDevice->allocateStagingSpan( ring, outLayout._sizeBytes + copyAlignment, VK_BUFFER_USAGE_TRANSFER_DST_BIT, "submitTextureReadback", span );
         if ( allocateResult != RHISubmitResult::Accepted )
             return RHITransferSubmit::fromUnaccepted( allocateResult );
-        const uint64 ringOffset = alignUpToMultiple( span.getOffsetBytes(), copyAlignment );
+        const uint64 ringOffset = MathUtil::align( span.getOffsetBytes(), copyAlignment );
 
         const ScopedDeferredLog deferredLog;
         ScopedLock<mutex>       transferLock{ _pDevice->_transferMutex };

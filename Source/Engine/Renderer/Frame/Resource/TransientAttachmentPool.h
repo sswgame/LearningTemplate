@@ -11,6 +11,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/String/Name/hashed_string.h"
 
 #include "Engine/EngineMinimal.h"
@@ -73,7 +74,7 @@ namespace sw
         static constexpr uint32 computeScaledExtent( uint32 extent, uint32 divisor )
         {
             const uint32 safeDivisor = divisor > 0u ? divisor : 1u;
-            const uint32 scaled      = ( extent + safeDivisor - 1u ) / safeDivisor;
+            const uint32 scaled      = MathUtil::divideAndRoundUp( extent, safeDivisor );
             return scaled > 0u ? scaled : 1u;
         }
 

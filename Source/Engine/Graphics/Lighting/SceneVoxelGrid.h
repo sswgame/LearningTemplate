@@ -58,7 +58,7 @@ namespace sw
         /** @brief 칸 수입니다. */
         uint32 getCellCount() const { return _dimX * _dimY * _dimZ; }
         /** @brief 점유 비트가 차지하는 단어 수입니다. */
-        uint32 getWordCount() const { return ( getCellCount() + kCellsPerWord - 1u ) / kCellsPerWord; }
+        uint32 getWordCount() const { return MathUtil::divideAndRoundUp( getCellCount(), kCellsPerWord ); }
         /** @brief 격자가 덮는 상자입니다. */
         AABB getBounds() const;
         /** @brief 칸 (x, y, z) 의 번호입니다. */

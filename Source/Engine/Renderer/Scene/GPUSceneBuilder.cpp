@@ -1951,7 +1951,7 @@ namespace sw
         // 청크는 참여 스레드보다 넉넉히 많아야 한다(2048이면 불투명 6000개에 청크 셋이라 여섯 스레드 중 셋이 놀고,
         // 갱신 구간이 청크 하나의 길이가 된다).
         constexpr uint32 kRefreshChunkSize = 512;
-        const uint32     chunkCount        = static_cast<uint32>( ( slotCount + kRefreshChunkSize - 1 ) / kRefreshChunkSize );
+        const uint32     chunkCount        = static_cast<uint32>( MathUtil::divideAndRoundUp<size_t>( slotCount, kRefreshChunkSize ) );
         _listRefreshChunk.resize( chunkCount );
         for ( uint32 chunkIndex = 0; chunkIndex < chunkCount; ++chunkIndex )
         {

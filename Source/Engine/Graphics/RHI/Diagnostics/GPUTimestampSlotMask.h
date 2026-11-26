@@ -7,6 +7,7 @@
 #pragma once
 #include "Core/Concurrency/atomic.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Math/MathUtil.h"
 
 #include "Engine/Graphics/RHI/RHIConstants.h"
 
@@ -21,7 +22,7 @@ namespace sw
     struct GPUTimestampSlotMask
     {
         static constexpr uint32 kBitsPerWord = static_cast<uint32>( std::numeric_limits<uint64>::digits );
-        static constexpr uint32 kWordCount   = ( constant::render::kMaxGPUTimestampSlot + kBitsPerWord - 1u ) / kBitsPerWord;
+        static constexpr uint32 kWordCount   = MathUtil::divideAndRoundUp( constant::render::kMaxGPUTimestampSlot, kBitsPerWord );
 
         uint64 _arrWord[kWordCount]{};
 
