@@ -41,12 +41,7 @@ namespace sw
         CameraShakeOffset operator*( float32 scale ) const { return CameraShakeOffset{ _position * scale, _rotation * scale }; }
     };
 
-    /**
-     * @brief 1D 그레이디언트(펄린) 잡음입니다. 정수 위치에서 0 이고, 값은 [-1, 1] 안으로 맞춥니다.
-     * @details 격자점마다 시드로 정해지는 기울기를 두고 5 차 보간(6t⁵ - 15t⁴ + 10t³)으로 연결한다. 시간에 대해 매끄러워서 손떨림처럼 보인다.
-     */
-    SW_GF_API float32 computePerlinNoise1d( float32 position, uint32 seed );
-    /** @brief 손떨림 섹션을 시간 @p time(초)에서 평가해 오프셋을 냅니다. 채널(위치 셋, 회전 셋)마다 다른 시드 스트림을 씁니다. */
+    /** @brief 손떨림 섹션을 시간 @p time(초)에서 평가해 오프셋을 냅니다. 채널(위치 셋, 회전 셋)마다 다른 시드 스트림의 1D 펄린(`ValueNoise::samplePerlin1D`)을 씁니다. */
     SW_GF_API CameraShakeOffset computeCameraNoise( const CameraNoiseDef& noise, float32 time );
     /** @brief 포즈에 흔들림을 더합니다. 위치는 포즈의 축으로 더하고, 회전은 포즈 회전 뒤에(카메라 로컬) 곱합니다. */
     SW_GF_API CameraPose applyCameraShake( const CameraPose& pose, const CameraShakeOffset& offset );

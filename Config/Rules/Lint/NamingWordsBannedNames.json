@@ -1,6 +1,8 @@
 {
   "_comment": "전수 개명한 옛 이름 → 새 이름 · 까닭(Scripts/lint/naming_words.py 의 naming-words 규칙이 되살린 옛 이름을 막는다). 언리얼 CoreRedirects 의 옛 이름 → 새 이름 자리이되 고쳐 주지 않고 막는다. 개명 도구(py -3 -m Scripts rename-symbol)가 줄을 더한다 — 키(옛 이름)는 개명 도구가 바꾸지 않는다.",
   "_bannedNames": {
+    "MeshModifierNoise": "ValueNoise::sampleValue1D · sampleValue3D, HashUtil::toUnitFloatExclusive — 노이즈 식은 Core 결정성 TU 하나에 둔다(2026-11-26)",
+    "computePerlinNoise1d": "ValueNoise::samplePerlin1D(2026-11-26)",
     "bindProfileHook": "TaskProfileHook::bind — 태스크 프로파일 훅 자리는 훅 형식의 정적 멤버다(2026-11-26)",
     "copyTaskDebugName": "TaskProfileHook::copyName · TaskNode::setName · StageNode::setName(2026-11-26)",
     "kTaskDebugNameCapacity": "TaskProfileHook::kNameCapacity(2026-11-26)",

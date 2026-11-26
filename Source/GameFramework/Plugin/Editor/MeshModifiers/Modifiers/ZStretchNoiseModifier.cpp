@@ -6,9 +6,9 @@
 #include "pch.h"
 
 #include "Core/Math/MathUtil.h"
+#include "Core/Math/ValueNoise.h"
 
 #include "GameFramework/Plugin/Editor/MeshModifiers/Stack/MeshModifier.h"
-#include "GameFramework/Plugin/Editor/MeshModifiers/Stack/MeshModifierNoise.h"
 #include "GameFramework/Plugin/Editor/MeshModifiers/Stack/MeshModifierRegistry.h"
 
 namespace sw::editor
@@ -44,7 +44,7 @@ namespace sw::editor
             const uint32  axis       = getAxisIndex( _stretchAxisParam );
             const uint32  seed       = static_cast<uint32>( getInt( _seedParam ) );
             const float32 coordinate = MeshModifierUtil::getComponent( point._position, axis );
-            const float32 wobble     = MeshModifierNoise::valueNoise3D( point._position * getFloat( _frequencyParam ), seed );
+            const float32 wobble     = ValueNoise::sampleValue3D( point._position * getFloat( _frequencyParam ), seed );
             float3        result     = point._position;
             MeshModifierUtil::setComponent( result, axis, coordinate * ( 1.0f + amount ) + noise * wobble );
             return result;

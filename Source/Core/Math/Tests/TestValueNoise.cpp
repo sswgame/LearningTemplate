@@ -85,3 +85,20 @@ SW_TEST_CASE( ValueNoiseTest, SignedNoiseStaysInRangeAndContinuous )
     SW_EXPECT_NOT_EQUAL( sw::ValueNoise::sampleValue1D( 1.3f, kSeed ), sw::ValueNoise::sampleValue1D( 1.3f, kSeed + 1 ) );
     SW_EXPECT_NOT_EQUAL( sw::ValueNoise::sampleValue3D( sw::float3{ 1.3f, 2.7f, 0.4f }, kSeed ), sw::ValueNoise::sampleValue3D( sw::float3{ 1.3f, 2.7f, 0.4f }, kSeed + 1 ) );
 }
+
+/**
+ * @brief [ValueNoiseTest] [0, 1) 단위 실수는 1 에 닿지 않고, 1D 값 노이즈는 ±1e6 밖 입력을 한계로 자르며, 같은 입력 · 씨앗이면 늘 같은 값이다
+ * @details 카메라 흔들림 · 메시 모디파이어가 이 함수만 부르므로 옛 복사본과 대조하지 않고 성질로 본다(값은 결정성 TU 하나의 식이 정한다).
+ */
+SW_TEST_CASE( ValueNoiseTest, SignedNoiseClampsHugeInputAndRepeats )
+{
+    SW_EXPECT_EQUAL( 0.0f, sw::HashUtil::toUnitFloatExclusive( 0xff000000u ) );
+    SW_EXPECT_TRUE( sw::HashUtil::toUnitFloatExclusive( 0x00ffffffu ) < 1.0f );
+    SW_EXPECT_EQUAL( sw::ValueNoise::sampleValue1D( 1.0e6f, 5u ), sw::ValueNoise::sampleValue1D( 2.0e7f, 5u ) );
+    SW_EXPECT_EQUAL( sw::ValueNoise::sampleValue1D( -1.0e6f, 5u ), sw::ValueNoise::sampleValue1D( -2.0e7f, 5u ) );
+
+    const sw::float3 point{ 1.37f, -2.61f, 0.42f };
+    SW_EXPECT_EQUAL( sw::ValueNoise::sampleValue3D( point, 9u ), sw::ValueNoise::sampleValue3D( point, 9u ) );
+    SW_EXPECT_EQUAL( sw::ValueNoise::samplePerlin1D( 3.7f, 9u ), sw::ValueNoise::samplePerlin1D( 3.7f, 9u ) );
+    SW_EXPECT_NOT_EQUAL( sw::ValueNoise::samplePerlin1D( 3.7f, 9u ), sw::ValueNoise::samplePerlin1D( 3.7f, 10u ) );
+}

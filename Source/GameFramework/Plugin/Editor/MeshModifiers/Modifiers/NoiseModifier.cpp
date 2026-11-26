@@ -6,9 +6,9 @@
 #include "pch.h"
 
 #include "Core/Math/MathUtil.h"
+#include "Core/Math/ValueNoise.h"
 
 #include "GameFramework/Plugin/Editor/MeshModifiers/Stack/MeshModifier.h"
-#include "GameFramework/Plugin/Editor/MeshModifiers/Stack/MeshModifierNoise.h"
 #include "GameFramework/Plugin/Editor/MeshModifiers/Stack/MeshModifierRegistry.h"
 
 namespace sw::editor
@@ -54,9 +54,9 @@ namespace sw::editor
             const float32 drift    = getFloat( _speedParam ) * context.getTime();
             const float3  sample   = point._position * getFloat( _frequencyParam ) + float3{ drift, drift, drift };
             const float3& strength = getVector3( _strengthParam );
-            const float3  offset{ MeshModifierNoise::valueNoise3D( sample, seed ) * strength._x,
-                                 MeshModifierNoise::valueNoise3D( sample + float3{ NoiseModifierInternal::kAxisOffsetY, 0.0f, 0.0f }, seed ) * strength._y,
-                                 MeshModifierNoise::valueNoise3D( sample + float3{ 0.0f, 0.0f, NoiseModifierInternal::kAxisOffsetZ }, seed ) * strength._z };
+            const float3  offset{ ValueNoise::sampleValue3D( sample, seed ) * strength._x,
+                                 ValueNoise::sampleValue3D( sample + float3{ NoiseModifierInternal::kAxisOffsetY, 0.0f, 0.0f }, seed ) * strength._y,
+                                 ValueNoise::sampleValue3D( sample + float3{ 0.0f, 0.0f, NoiseModifierInternal::kAxisOffsetZ }, seed ) * strength._z };
             return point._position + offset * amplitude;
         }
 
