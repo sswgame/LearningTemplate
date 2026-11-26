@@ -117,6 +117,47 @@ SW_TEST_CASE( RenderPSOCacheShaderReleaseTest, ReleasesOnlyPSOsOfTheChangedShade
 }
 
 /**
+ * @brief [RenderPSOCacheShaderReleaseTest] 파이프라인 그래픽스 패스 PSO 는 패스 이름이 열쇠다 — 같은 종류의 두 패스가 PSO 를 따로 가지고, 셰이더를 놓으면 그 패스 PSO 와 그 위의 변형만 놓는다
+ * @details 변이: 패스 PSO 를 놓을 때 변형을 남기면 변형(23)이 파괴 목록에 없어 진다. 열쇠가 종류면 둘째 이름이 첫째를 덮어 21 이 첫 파괴 목록에 들어 진다.
+ */
+SW_TEST_CASE( RenderPSOCacheShaderReleaseTest, PipelinePassPSOsAreKeyedByPassName )
+{
+    test::FakeRHIBufferFactory factory;
+    test::FakeRHIDevice        device;
+    device._pResourceFactory = &factory;
+
+    const RHIPipelineStateHandle kCascadePSO{ 21 };
+    const RHIPipelineStateHandle kLocalPSO{ 22 };
+    const RHIPipelineStateHandle kVariantPSO{ 23 };
+    const hashed_string          cascadeName{ "Shadow" };
+    const hashed_string          localName{ "LocalShadow" };
+    RenderPSOCache               cache;
+    cache.registerDesc( kCascadePSO, makeGraphicsDesc( "shaders/shadow.hlsl" ) );
+    cache.setPipelinePassPSO( &device, cascadeName, makePSO( kCascadePSO ) );
+    cache.registerDesc( kLocalPSO, makeGraphicsDesc( "shaders/local_shadow.hlsl" ) );
+    cache.setPipelinePassPSO( &device, localName, makePSO( kLocalPSO ) );
+    SW_EXPECT_TRUE( factory._listDestroyedPipelineState.empty() );
+    RHIPipelineStateHandle found{ 0 };
+    SW_REQUIRE_TRUE( cache.findPipelinePassPSO( cascadeName, found ) );
+    SW_EXPECT_EQUAL( kCascadePSO, found );
+    SW_REQUIRE_TRUE( cache.findPipelinePassPSO( localName, found ) );
+    SW_EXPECT_EQUAL( kLocalPSO, found );
+    SW_EXPECT_EQUAL( RHIPipelineStateHandle{}, cache.findEnginePSO( RenderPassKind::Shadow ) ); // 종류 칸과 섞이지 않는다
+
+    MaterialPSOKey variantKey{};
+    variantKey._passPSO         = kLocalPSO;
+    variantKey._permutationHash = 7;
+    cache.registerDesc( kVariantPSO, makeGraphicsDesc( "shaders/material.hlsl" ) );
+    cache.setMaterialPSO( variantKey, RenderPSOCache::MaterialPSOEntry::ready( makePSO( kVariantPSO ) ) );
+    SW_EXPECT_EQUAL( 2u, cache.releasePSOsUsingShader( &device, "shaders/local_shadow.hlsl" ) );
+    SW_EXPECT_TRUE( VectorUtil::contains( factory._listDestroyedPipelineState, kLocalPSO ) );
+    SW_EXPECT_TRUE( VectorUtil::contains( factory._listDestroyedPipelineState, kVariantPSO ) );
+    SW_EXPECT_FALSE( VectorUtil::contains( factory._listDestroyedPipelineState, kCascadePSO ) );
+    SW_EXPECT_FALSE( cache.findPipelinePassPSO( localName, found ) );
+    SW_EXPECT_TRUE( cache.findPipelinePassPSO( cascadeName, found ) );
+}
+
+/**
  * @brief [RenderPSOCacheShaderReleaseTest] 엔진 · 출력 · 모듈 PSO 를 덮어쓰면 옛 핸들을 장치의 해제 진입점으로 놓는다
  * @details 변이: 덮어쓰기가 옛 핸들을 잊기만 하면(예전) 파괴 목록이 비어 진다.
  */

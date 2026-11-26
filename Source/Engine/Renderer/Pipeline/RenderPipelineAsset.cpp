@@ -524,6 +524,31 @@ namespace sw
             }
 
             /**
+             * @brief 2-0a) 뷰 패스 종류는 한 번이다 — 여러 번 둘 수 있다고 표가 적은 종류(`kRepeatable`)만 빼고. 프레임 패스의 `FramePassTypeDuplicated` 와 같은 규칙이다.
+             * @details 실행이 종류 하나의 상태(TAA 기록 · 조명 타일 · 입자 원본 · 깊이 프리패스 표시)를 쥐고 그 종류의 첫 패스를 찾는다. 둘째 패스의 서술은 조용히 무시되거나 첫째의 상태를 덮는다.
+             */
+            static uint32 validatePassTypesUnique( const RenderPipelineDesc& desc, string_view sourcePath )
+            {
+                uint32 issueCount{ 0 };
+                for ( size_t passIndex = 0; passIndex < desc._listPass.size(); ++passIndex )
+                {
+                    const RenderGraphPassDesc& pass = desc._listPass[passIndex];
+                    if ( pass._type == RenderPassKind::Invalid || getRenderPassKindInfo( pass._type ).hasFlag( RenderPassTraitFlag::kRepeatable ) )
+                        continue;
+                    for ( size_t earlierIndex = 0; earlierIndex < passIndex; ++earlierIndex )
+                    {
+                        if ( desc._listPass[earlierIndex]._type != pass._type )
+                            continue;
+                        SW_LOG_ERROR_ID( "RenderPipelineAsset.PassTypeDuplicated", "[%#] pass '%#': type %# is already declared by pass '%#' - one view pass per type (only Shadow, Compute and PostProcessMaterial repeat)",
+                                         sourcePath, pass._name, getEnumName( pass._type ), desc._listPass[earlierIndex]._name );
+                        ++issueCount;
+                        break;
+                    }
+                }
+                return issueCount;
+            }
+
+            /**
              * @brief 2-0b) 퍼뮤테이션 한 이름은 패스에 한 번이다. 퍼뮤테이션은 글이 열쇠라(`_base` 합치기) 자식이 값만 바꿔 더하면 옛 글과 새 글이 함께 남는다.
              * @details 같은 매크로를 두 값으로 정의하면 컴파일러가 어느 쪽을 쓸지 셰이더마다 다르고 쿠킹 해시도 갈린다 — 로드에서 멈춘다.
              */
@@ -554,6 +579,7 @@ namespace sw
             /** @brief 패스 하나의 타입 · 뎁스 · 입출력 역할을 해석해 `_resolved*` 에 채웁니다. 역할은 첨부의 선언(`_role`)이 먼저, 그다음 원본 이름 · 포맷이다. */
             static void resolvePass( const RenderPipelineDesc& desc, RenderGraphPassDesc& pass )
             {
+                pass._resolvedName = hashed_string( pass._name.c_str() );
                 pass._resolvedDepthAttachment =
                     pass._depthAttachment.empty() ? hashed_string{} : hashed_string( pass._depthAttachment.c_str() );
                 const RenderPassAttachment* pDepth = pass._depthAttachment.empty() ? nullptr : findAttachment( desc, pass._depthAttachment );
@@ -1265,6 +1291,7 @@ namespace sw
         uint32 issueCount = Internal::validateAttachments( _desc, sourcePath );
         issueCount += Internal::validateShadingModel( _desc, sourcePath );
         issueCount += Internal::validatePassNamesUnique( _desc, sourcePath );
+        issueCount += Internal::validatePassTypesUnique( _desc, sourcePath );
         issueCount += Internal::validatePassPermutations( _desc, sourcePath );
         issueCount += Internal::resolveAndCheckPassAttachments( _desc, sourcePath );
         issueCount += Internal::validatePassRenderState( _desc, sourcePath );

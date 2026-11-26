@@ -75,6 +75,8 @@ namespace sw
         uint32 _cullViewIndex{ 0 };
         /// @brief 지금 기록하는 패스의 종류입니다. `executePass` 가 정하며, 드로우 루프가 이 패스에서 그리지 않는 머티리얼의 배치를 거를 때 봅니다.
         RenderPassKind _passType{ RenderPassKind::Invalid };
+        /// @brief 지금 기록하는 파이프라인 패스의 서술입니다(`executePass` 가 정한다). 그 패스의 PSO(`FramePSOManager::getPassPSO`)를 찾는다. 파이프라인 패스 밖(모듈 확장 패스)이면 nullptr 이다.
+        const RenderGraphPassDesc* _pPassDesc{ nullptr };
         /// @brief 그림자 캐시가 정한 배치 거르기입니다. 그림자 패스의 타일 그리기만 바꾸고 바로 되돌린다 — 병렬 기록에서 패스마다 사본이라 다른 패스로 새지 않는다.
         ShadowCasterFilter _shadowCasterFilter{ ShadowCasterFilter::All };
         /// @brief 지금 기록하는 패스의 파이프라인 이름입니다(진단 로그용 — bindless 인덱스 검사가 어느 패스인지 적는다). 패스 밖이면 비어 있습니다.

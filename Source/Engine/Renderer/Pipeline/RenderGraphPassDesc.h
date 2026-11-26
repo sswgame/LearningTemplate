@@ -539,6 +539,9 @@ namespace sw
          */
         hashed_string _resolvedDepthAttachment;
 
+        /** @brief `_name` 을 intern 해 둔 값입니다. XML 로드 시 RenderPipelineAsset 가 채웁니다(직렬화 대상이 아니다). 패스 이름이 열쇠인 PSO 를 프레임마다 intern 없이 찾는다(`FramePSOManager::getPassPSO`). */
+        hashed_string _resolvedName;
+
         /**
          * @brief `_depthAttachment` 의 역할(`RenderPassInputRole` 정수 — 이 헤더는 그 enum 을 모른다)입니다. XML 로드 시 RenderPipelineAsset 가 채웁니다.
          * @details 그림자 패스는 이 값으로 그릴 타일을 고른다 — ShadowMap 이면 방향광 캐스케이드, LocalShadowMap 이면 점광 · 스폿 타일(아틀라스 둘, 감사 RN-4).

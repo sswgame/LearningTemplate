@@ -197,7 +197,7 @@ namespace sw
             context.beginRenderPass( RHIRenderPassBeginInfo::depthOnly( layer._texture, RHIRenderPassLoadOp::Clear, RHIRenderPassStoreOp::Store, layer._ops._clearDepth, layer._ops._clearStencil )
                                          .setExtent( layer._width, layer._height ) );
             const PassConstantNames&     names           = passConstantNames();
-            const RHIPipelineStateHandle pso             = _psoManager.getEnginePSO( RenderPassKind::Shadow );
+            const RHIPipelineStateHandle pso             = _psoManager.getPassPSO( *context._pPassDesc );
             const uint32                 viewCull        = context._cullViewIndex;
             const uint32                 pending         = _pendingPSOBatchCount.load( std::memory_order_relaxed ) + _fallbackPSOBatchCount.load( std::memory_order_relaxed );
             context._shadowCasterFilter                  = ShadowCasterFilter::StaticOnly;
@@ -258,7 +258,7 @@ namespace sw
     {
         // 그림자는 모든 타일을 덮는 상자로 거른 목록을 쓴다(언리얼의 뷰별 인스턴스 컬링에 해당한다). 끝나면 지금 뷰의 슬롯으로 돌아간다.
         const ViewShadowData&        shadow   = _pActiveView->_shadow;
-        const RHIPipelineStateHandle pso      = _psoManager.getEnginePSO( RenderPassKind::Shadow );
+        const RHIPipelineStateHandle pso      = _psoManager.getPassPSO( *context._pPassDesc );
         const uint32                 viewCull = context._cullViewIndex;
         context._cullViewIndex                = _pActiveView->_shadowCullSlot;
 
@@ -287,7 +287,7 @@ namespace sw
 
     void FramePassExecutor::drawLocalShadowTiles( FramePassContext& context, bool bTransparentBatch, bool bCacheLayer )
     {
-        const RHIPipelineStateHandle  pso      = _psoManager.getEnginePSO( RenderPassKind::Shadow );
+        const RHIPipelineStateHandle  pso      = _psoManager.getPassPSO( *context._pPassDesc );
         const uint32                  viewCull = context._cullViewIndex;
         const vector<ShadowTileDraw>& listTile = _state._frameShadow._listLocalTile;
         // 캐시한 타일은 캐시 층의 깊이를 픽셀 깊이로 옮긴 뒤(ShadowCacheRestore — 층을 LocalShadowMap 역할 이름으로 건다) 움직이는 배치만 그린다.
@@ -444,8 +444,9 @@ namespace sw
 
     void FramePassExecutor::drawRainOcclusion()
     {
-        FrameRainOcclusion&          rain = _state._rainOcclusion;
-        const RHIPipelineStateHandle pso  = _psoManager.getEnginePSO( RenderPassKind::Shadow );
+        FrameRainOcclusion& rain = _state._rainOcclusion;
+        // 그림자 패스 밖의 그리기다 — 그림자 종류의 첫 패스(방향광) PSO 와 그 서술로 그린다.
+        const RHIPipelineStateHandle pso = _psoManager.getEnginePSO( RenderPassKind::Shadow );
         if ( rain.isActive() == false || pso == 0 || _pCmd == nullptr )
             return;
         SW_PROFILE_SCOPE( "RT.RainOcclusion" );
@@ -453,6 +454,7 @@ namespace sw
         FramePassContext context = _state._frameContext;
         context._pCmd            = _pCmd;
         context._passType        = RenderPassKind::Shadow;
+        context._pPassDesc       = findPassDescByType( RenderPassKind::Shadow );
         context._cullViewIndex   = rain.getCullSlot();
         context._resourceRegistry.reset();
         registerLightBuffer( context );

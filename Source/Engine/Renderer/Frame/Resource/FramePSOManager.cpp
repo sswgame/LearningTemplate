@@ -274,6 +274,12 @@ namespace sw
             }
             return bInside;
         }
+
+        /** @brief 앞 패스 @p earlier 의 PSO 를 @p pass 가 함께 쓸 수 있는 종류 조건입니다(서술 지문은 부르는 쪽이 견준다). 종류가 다르면 실행 · 머티리얼 변형 규칙이 다르다. */
+        bool isSamePassPSO( const RenderGraphPassDesc& earlier, const RenderGraphPassDesc& pass )
+        {
+            return earlier._type == pass._type;
+        }
     } // namespace
 
     void FramePSOManager::applyPassRenderState( RHIPipelineStateDesc& desc, RenderPassKind passType, const RenderGraphPassDesc* pPassDesc )
@@ -314,35 +320,29 @@ namespace sw
             const RenderPassKind      passType = static_cast<RenderPassKind>( typeIndex );
             const RenderPassKindInfo& info     = getRenderPassKindInfo( passType );
             const bool                bMissing = info._pDefaultShader != nullptr && _pCache->findEnginePSO( passType ) == 0;
-            if ( bMissing == false )
+            if ( bMissing == false || shouldCreatePassPSO( passType, caps ) == false )
                 continue;
-            // 셰이더가 파이프라인의 퍼뮤테이션을 요구하는 패스는 그 파이프라인에 있을 때만 만든다(없으면 실행도 없다).
+            const bool bGraphics = info.hasFlag( RenderPassTraitFlag::kCompute ) == false;
+            // 파이프라인이 선언한 그래픽스 종류는 아래 패스 단계가 패스마다 만든다(열쇠 = 패스 이름). 종류 하나에 PSO 하나면 같은 종류 둘째 패스의 서술이 버려진다.
+            // 셰이더가 파이프라인의 퍼뮤테이션을 요구하는 패스(kRequiresPassDesc)는 그래서 이 단계에서 늘 빠진다(서술이 없으면 실행도 없다).
+            if ( bGraphics && findPassDescByType( passType ) != nullptr )
+                continue;
             if ( info.hasFlag( RenderPassTraitFlag::kRequiresPassDesc ) && findPassDescByType( passType ) == nullptr )
                 continue;
             // 프레임 패스(컬링 · 그리드 · 스키닝 등)는 파이프라인이 `_listFramePass` 에 선언할 때만 돈다 — 선언이 없으면 PSO 도 만들지 않는다.
             // 실행 쪽은 PSO 가 아니라 선언으로 가른다(`RenderPipelineAsset::hasFramePass`) — 미리보기 렌더러는 주 렌더러의 저장소를 함께 써 PSO 가 있어도 선언이 없을 수 있다.
             if ( isFramePassType( passType ) && _pipeline.hasFramePass( passType ) == false )
                 continue;
-            // 진단 패스는 요청한 실행에서만 만든다. 네이티브 bindless 가 필요한 패스는 에뮬 백엔드에서 쓰지 않는다(능력 질의로 가린 것이지 실패가 아니다).
-            if ( info.hasFlag( RenderPassTraitFlag::kDiagnostic ) && isDiagnosticPassRequested( passType ) == false )
-                continue;
-            if ( info.hasFlag( RenderPassTraitFlag::kRequiresNativeBindless ) && _pDevice->supportsNativeBindlessSampling() == false )
-                continue;
-            // HDR 화면 출력 패스는 모니터가 HDR 을 받을 때만 만든다(능력 표가 정한 길 — HDR 이 없는 기계는 PSO 도 패스도 없다). 실행 중 HDR 을 켜도 셋업의 이 PSO 를 쓴다.
-            if ( isDisplayOutputPassType( passType ) && caps.hasHDRDisplayOutput() == false )
-                continue;
-            // 출력 패스는 엔진 PSO 가 없다 — 대상 포맷마다 아래 collectOutputPSOJobs 가 만든다.
-            if ( info.hasFlag( RenderPassTraitFlag::kOutputPass ) )
-                continue;
-            // 컬러 포맷을 정할 근거(표의 고정 포맷 · 파이프라인의 출력 선언)가 없는 그래픽스 패스는 이 파이프라인에서 실행되지 않는다 — RGBA8 로 짐작해 만들지 않는다.
-            if ( info.hasFlag( RenderPassTraitFlag::kCompute ) == false && hasRenderTargetFormatSource( passType ) == false )
+            // 컬러 포맷을 정할 근거(표의 고정 포맷 · 대신 그리는 패스의 출력 선언)가 없는 그래픽스 슬롯은 이 파이프라인에서 실행되지 않는다. RGBA8 로 짐작해 만들지 않는다.
+            const RenderPassKind sourceType = info._targetSourceType != RenderPassKind::Invalid ? info._targetSourceType : passType;
+            if ( bGraphics && hasRenderTargetFormatSource( info, findPassDescByType( sourceType ) ) == false )
                 continue;
 
-            if ( info.hasFlag( RenderPassTraitFlag::kCompute ) == false )
+            if ( bGraphics )
             {
                 PassPSOJob job;
                 job._passType = passType;
-                if ( makePassPSODesc( passType, findPassDescByType( passType ), nullptr, job._desc ) )
+                if ( makePassPSODesc( passType, nullptr, nullptr, job._desc ) )
                     listJob.push_back( std::move( job ) );
                 else
                     SW_LOG_ERROR_ID( "FramePSOManager.EnginePSOPassCould", "Engine PSO for pass %# could not be created (shader '%#') - the pass draws nothing", passType,
@@ -361,6 +361,46 @@ namespace sw
             computeJob._listDefine                  = std::move( computeShader._listDefine );
             computeJob._passType                    = passType;
             computeJob._parameters                  = ComputeShaderParameterTable{ info._pComputeParameters, info._computeParameterCount };
+        }
+
+        // 파이프라인 그래픽스 패스는 패스마다 제 서술로 PSO 를 만든다(열쇠 = 패스 이름). 서술이 앞 패스와 같은 같은 종류의 패스(방향광 · 점광 그림자)는
+        // 그 패스의 PSO 를 함께 쓴다. 같은 PSO 와 그 위의 머티리얼 변형(열쇠가 패스 PSO 핸들이다)을 두 벌 만들지 않는다.
+        const vector<RenderGraphPassDesc>& listGraphPass = _pipeline.getGraphPass();
+        _listPassPSOOwner.assign( listGraphPass.size(), hashed_string{} );
+        vector<uint64> listPassDescHash( listGraphPass.size(), 0 );
+        for ( size_t passIndex = 0; passIndex < listGraphPass.size(); ++passIndex )
+        {
+            const RenderGraphPassDesc& pass     = listGraphPass[passIndex];
+            const RenderPassKindInfo&  info     = getRenderPassKindInfo( pass._type );
+            const bool                 bSkipped = info._pDefaultShader == nullptr || info.hasFlag( RenderPassTraitFlag::kCompute ) || shouldCreatePassPSO( pass._type, caps ) == false ||
+                                  hasRenderTargetFormatSource( info, &pass ) == false;
+            if ( bSkipped )
+                continue;
+            PassPSOJob job;
+            job._passType = pass._type;
+            if ( makePassPSODesc( pass._type, &pass, nullptr, job._desc ) == false )
+            {
+                SW_LOG_ERROR_ID( "FramePSOManager.EnginePSOPassCould", "Engine PSO for pass %# could not be created (shader '%#') - the pass draws nothing", pass._type,
+                                 ( engineDefaultAssets.*info._pDefaultShader ).c_str() );
+                continue;
+            }
+            const uint64  descHash = job._desc.computeHash();
+            hashed_string owner    = pass._resolvedName;
+            for ( size_t earlierIndex = 0; earlierIndex < passIndex; ++earlierIndex )
+            {
+                if ( isSamePassPSO( listGraphPass[earlierIndex], pass ) && listPassDescHash[earlierIndex] == descHash && _listPassPSOOwner[earlierIndex].empty() == false )
+                {
+                    owner = _listPassPSOOwner[earlierIndex];
+                    break;
+                }
+            }
+            listPassDescHash[passIndex]  = descHash;
+            _listPassPSOOwner[passIndex] = owner;
+            RHIPipelineStateHandle existing{ 0 };
+            if ( ( owner == pass._resolvedName ) == false || _pCache->findPipelinePassPSO( owner, existing ) )
+                continue; // 앞 패스의 PSO 를 함께 쓰거나 저장소에 이미 있다
+            job._pipelinePassName = owner;
+            listJob.push_back( std::move( job ) );
         }
 
         // 파이프라인 컴퓨트 패스는 셰이더가 패스마다 달라 표가 아니라 그래프를 돈다. 컴퓨트 능력이 없는 백엔드는 이 패스를 돌리지 못한다.
@@ -500,7 +540,10 @@ namespace sw
                 SW_LOG_ERROR_ID( "FramePSOManager.EnginePSOPassCould", "Engine PSO for pass %# could not be created (shader '%#') - the pass draws nothing", job._passType, job._desc._vertexShaderPath.c_str() );
                 continue;
             }
-            _pCache->setEnginePSO( _pDevice, job._passType, std::move( pso ) );
+            if ( job._pipelinePassName.empty() == false )
+                _pCache->setPipelinePassPSO( _pDevice, job._pipelinePassName, std::move( pso ) ); // 패스 이름이 열쇠다
+            else
+                _pCache->setEnginePSO( _pDevice, job._passType, std::move( pso ) );
         }
         for ( const DeferredTilePSOJob& tileJob : listTileJob )
         {
@@ -560,7 +603,24 @@ namespace sw
         // 그래서 "PSO 가 있으면 준비한다" 고 묻는 모든 곳(간접 인자를 컬링에 맡김 · GPU 라이트 그리드 · 볼륨 안개 · 프로브 · 입자 · 깊이 히스토리)이 선언을 따른다.
         if ( isFramePassType( passType ) && _pipeline.hasFramePass( passType ) == false )
             return 0;
+        // 이 파이프라인이 선언한 그래픽스 종류는 패스 PSO 다 — 함께 쓰는 저장소에 다른 렌더러가 표로 만든 같은 종류의 PSO 가 있어도 자기 패스의 것을 준다.
+        const RenderGraphPassDesc* pPass = isViewPassType( passType ) ? findPassDescByType( passType ) : nullptr;
+        if ( pPass != nullptr && getRenderPassKindInfo( passType ).hasFlag( RenderPassTraitFlag::kCompute ) == false )
+            return getPassPSO( *pPass );
         return _pCache->findEnginePSO( passType );
+    }
+
+    RHIPipelineStateHandle FramePSOManager::getPassPSO( const RenderGraphPassDesc& pass ) const
+    {
+        const vector<RenderGraphPassDesc>& listPass = _pipeline.getGraphPass();
+        // 이 파이프라인의 패스 서술만 받는다 — 순번은 서술의 자리에서 나온다(이름으로 찾지 않는다).
+        if ( listPass.empty() || &pass < listPass.data() || &pass >= listPass.data() + listPass.size() )
+            return 0;
+        const size_t passIndex = static_cast<size_t>( &pass - listPass.data() );
+        if ( passIndex >= _listPassPSOOwner.size() )
+            return 0;
+        RHIPipelineStateHandle pso{ 0 };
+        return _pCache->findPipelinePassPSO( _listPassPSOOwner[passIndex], pso ) ? pso : RHIPipelineStateHandle{ 0 };
     }
 
     ComputePipeline FramePSOManager::getComputePSO( RenderPassKind passType ) const
@@ -911,13 +971,46 @@ namespace sw
         return desc._numRenderTargets == 0;
     }
 
-    bool FramePSOManager::hasRenderTargetFormatSource( RenderPassKind passType ) const
+    bool FramePSOManager::hasRenderTargetFormatSource( const RenderPassKindInfo& info, const RenderGraphPassDesc* pTargetDesc )
     {
-        const RenderPassKindInfo&  info        = getRenderPassKindInfo( passType );
-        const RenderPassKind       sourceType  = info._targetSourceType != RenderPassKind::Invalid ? info._targetSourceType : passType;
-        const RenderGraphPassDesc* pTargetDesc = findPassDescByType( sourceType );
-        const bool                 bDeclared   = pTargetDesc != nullptr && pTargetDesc->_listOutput.empty() == false;
+        const bool bDeclared = pTargetDesc != nullptr && pTargetDesc->_listOutput.empty() == false;
         return info._pColorFormat != nullptr || info._colorTargetCount == 0 || bDeclared;
+    }
+
+    bool FramePSOManager::shouldCreatePassPSO( RenderPassKind passType, const RHICapabilities& caps ) const
+    {
+        const RenderPassKindInfo& info = getRenderPassKindInfo( passType );
+        // 진단 패스는 요청한 실행에서만 만든다. 네이티브 bindless 가 필요한 패스는 에뮬 백엔드에서 쓰지 않는다(능력 질의로 가린 것이지 실패가 아니다).
+        if ( info.hasFlag( RenderPassTraitFlag::kDiagnostic ) && isDiagnosticPassRequested( passType ) == false )
+            return false;
+        if ( info.hasFlag( RenderPassTraitFlag::kRequiresNativeBindless ) && _pDevice->supportsNativeBindlessSampling() == false )
+            return false;
+        // HDR 화면 출력 패스는 모니터가 HDR 을 받을 때만 만든다(능력 표가 정한 길 — HDR 이 없는 기계는 PSO 도 패스도 없다). 실행 중 HDR 을 켜도 셋업의 이 PSO 를 쓴다.
+        if ( isDisplayOutputPassType( passType ) && caps.hasHDRDisplayOutput() == false )
+            return false;
+        // 출력 패스는 엔진 PSO 가 없다 — 대상 포맷마다 collectOutputPSOJobs 가 만든다.
+        return info.hasFlag( RenderPassTraitFlag::kOutputPass ) == false;
+    }
+
+    template <typename TFunction>
+    void FramePSOManager::forEachSceneMeshPassPSO( TFunction&& fn ) const
+    {
+        for ( const auto& [passType, passState] : _pCache->getEnginePSOs() )
+        {
+            if ( passState._pso._handle != 0 && getRenderPassKindInfo( passType ).shouldDrawSceneMeshes() )
+                fn( passState._pso._handle, passType );
+        }
+        const vector<RenderGraphPassDesc>& listPass = _pipeline.getGraphPass();
+        for ( size_t passIndex = 0; passIndex < listPass.size() && passIndex < _listPassPSOOwner.size(); ++passIndex )
+        {
+            const RenderGraphPassDesc& pass = listPass[passIndex];
+            // 앞 패스와 PSO 를 함께 쓰는 패스는 그 패스 차례에 이미 불렀다(같은 변형을 두 번 만들지 않는다).
+            if ( ( _listPassPSOOwner[passIndex] == pass._resolvedName ) == false || getRenderPassKindInfo( pass._type ).shouldDrawSceneMeshes() == false )
+                continue;
+            RHIPipelineStateHandle pso{ 0 };
+            if ( _pCache->findPipelinePassPSO( pass._resolvedName, pso ) && pso != 0 )
+                fn( pso, pass._type );
+        }
     }
 
     RenderPSOCache::MaterialPSOEntry FramePSOManager::createMaterialPSOVariant( RHIPipelineStateHandle passPSO, RenderPassKind passType,
@@ -1049,18 +1142,15 @@ namespace sw
         if ( listOpaqueRequest.empty() && listTransparentRequest.empty() )
             return;
 
-        for ( const auto& [passType, passState] : _pCache->getEnginePSOs() )
+        forEachSceneMeshPassPSO( [&]( RHIPipelineStateHandle passPSO, RenderPassKind passType )
         {
-            const RHIPipelineStateHandle passPSO = passState._pso._handle;
-            if ( passPSO == 0 || getRenderPassKindInfo( passType ).shouldDrawSceneMeshes() == false )
-                continue;
             const bool                        bTransparentPass = getRenderPassKindInfo( passType ).hasFlag( RenderPassTraitFlag::kDrawsTransparentBatch );
             const vector<MaterialPSORequest>& listRequest      = bTransparentPass ? listTransparentRequest : listOpaqueRequest;
             for ( const MaterialPSORequest& request : listRequest )
             {
                 ensureRequestMaterialPSOs( passPSO, passType, request, viewModeMask );
             }
-        }
+        } );
     }
 
     void FramePSOManager::warmPinnedMaterialPSOs( MaterialCache& pinnedMaterials, uint32 viewModeMask )
@@ -1081,13 +1171,11 @@ namespace sw
             for ( const bool bAppearanceDither : { false, true } )
             {
                 const GPUShaderPermutation permutation = GPUMaterialRegistry::makeShaderPermutation( entry, bAppearanceDither );
-                for ( const auto& [passType, passState] : _pCache->getEnginePSOs() )
+                forEachSceneMeshPassPSO( [&]( RHIPipelineStateHandle passPSO, RenderPassKind passType )
                 {
-                    const RHIPipelineStateHandle passPSO          = passState._pso._handle;
-                    const bool                   bTransparentPass = getRenderPassKindInfo( passType ).hasFlag( RenderPassTraitFlag::kDrawsTransparentBatch );
-                    const bool                   bSkippedPass     = passPSO == 0 || getRenderPassKindInfo( passType ).shouldDrawSceneMeshes() == false || bTransparentPass != bTransparentMaterial;
-                    if ( bSkippedPass || getRenderPassKindInfo( passType ).shouldDrawMaterial( &permutation._listDefine ) == false )
-                        continue;
+                    const bool bTransparentPass = getRenderPassKindInfo( passType ).hasFlag( RenderPassTraitFlag::kDrawsTransparentBatch );
+                    if ( bTransparentPass != bTransparentMaterial || getRenderPassKindInfo( passType ).shouldDrawMaterial( &permutation._listDefine ) == false )
+                        return;
                     const uint32 passModeMask = getPassViewModeMask( getRenderPassKindInfo( passType ), viewModeMask );
                     for ( uint32 modeIndex = 0; modeIndex < static_cast<uint32>( RenderViewMode::Count ); ++modeIndex )
                     {
@@ -1095,7 +1183,7 @@ namespace sw
                             continue;
                         ensureMaterialPSOVariant( passPSO, passType, &permutation, permutation._hash, false, static_cast<RenderViewMode>( modeIndex ), RHIMeshVertexFormat::Packed, false );
                     }
-                }
+                } );
             }
         }
         listEntry.clear();
@@ -1272,12 +1360,9 @@ namespace sw
         _listBatchPSORow.clear();
         if ( _pDevice == nullptr )
             return;
-        for ( const auto& [passType, passState] : _pCache->getEnginePSOs() )
+        forEachSceneMeshPassPSO( [&]( RHIPipelineStateHandle passPSO, RenderPassKind passType )
         {
-            const RHIPipelineStateHandle passPSO  = passState._pso._handle;
-            const RenderPassKindInfo&    passInfo = getRenderPassKindInfo( passType );
-            if ( passPSO == 0 || passInfo.shouldDrawSceneMeshes() == false )
-                continue;
+            const RenderPassKindInfo&         passInfo         = getRenderPassKindInfo( passType );
             const bool                        bTransparentPass = passInfo.hasFlag( RenderPassTraitFlag::kDrawsTransparentBatch );
             const vector<MaterialPSORequest>& listRequest      = bTransparentPass ? _listTransparentPSORequestScratch : _listOpaquePSORequestScratch;
             const uint32                      passModeMask     = getPassViewModeMask( passInfo, viewModeMask );
@@ -1297,7 +1382,7 @@ namespace sw
                     _listBatchPSO.push_back( resolveBatchPSO( passPSO, request, row._viewMode ) );
                 }
             }
-        }
+        } );
     }
 
     bool FramePSOManager::findBatchPSORow( RHIPipelineStateHandle passPSO, bool bTransparentBatch, RenderViewMode viewMode, const GPUMeshBatchPSO*& outPSO,

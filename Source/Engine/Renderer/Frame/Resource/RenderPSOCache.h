@@ -139,6 +139,13 @@ namespace sw
         ComputePipeline findEngineComputePSO( RenderPassKind passType ) const;
         /** @brief 엔진 PSO 모두입니다. 머티리얼 변형을 만들 때 씬 메시 패스를 고르려고 훑습니다(기록 전). */
         const unordered_map<RenderPassKind, PassPSOEntry>& getEnginePSOs() const { return _mapEnginePSO; }
+        /**
+         * @brief 렌더 파이프라인 그래픽스 패스의 PSO 를 패스 이름으로 둡니다. 실패(0)도 기록합니다. 덮어쓴 옛 핸들은 `setEnginePSO` 와 같이 해제한다.
+         * @details 같은 종류의 패스가 여럿(그림자 둘)이어도 패스마다 제 서술의 PSO 다 — 종류가 열쇠면 둘째 패스의 셰이더 · 상태가 조용히 버려진다(언리얼 RDG · 유니티 Render Graph 도 패스는 인스턴스 단위다).
+         */
+        void setPipelinePassPSO( IRHIDevice* pDevice, const hashed_string& passName, RHIPipelineState&& pso );
+        /** @brief 그 패스의 PSO 가 등록돼 있으면 true 와 함께 반환합니다(값이 0 이어도 등록된 것입니다). */
+        [[nodiscard]] bool findPipelinePassPSO( const hashed_string& passName, RHIPipelineStateHandle& outPipelineState ) const;
 
         /** @brief 주 출력에 그리는 패스(Present, Canvas)의 대상 포맷별 PSO 를 둡니다. 실패(0)도 기록합니다. 부르는 쪽이 폴백으로 갑니다. 덮어쓴 옛 핸들은 `setEnginePSO` 와 같이 해제한다. */
         void setOutputPSO( IRHIDevice* pDevice, RenderPassKind passType, RHIFormat targetFormat, RHIPipelineState&& pso );
@@ -200,7 +207,7 @@ namespace sw
         // ------------------------------------------------------------------------------
         /**
          * @brief 모두 파괴하고 비웁니다. 디바이스가 살아 있을 때 부릅니다.
-         * @details 순서가 규칙입니다: 머티리얼 변형(소유한 것만) → 엔진 PSO → 출력 포맷별 PSO → 레이아웃 테이블.
+         * @details 순서가 규칙입니다: 머티리얼 변형(소유한 것만) → 엔진 · 파이프라인 패스 PSO → 출력 포맷별 PSO → 레이아웃 테이블.
          *          `_owned` 가 빈 변형은 패스 PSO 를 그대로 가리킬 뿐이라 놓을 것이 없습니다.
          */
         void releaseAll( IRHIDevice* pDevice );
@@ -209,7 +216,7 @@ namespace sw
         /**
          * @brief 셰이더 핫 리로드: 그 셰이더로 만든 PSO 만 파괴하고 비웁니다(레이아웃 캐시도 그 셰이더 것만). 빈 자리는 `FramePSOManager::createPassPSOs` · 지연 생성이 다시 채웁니다.
          * @details 언리얼 셰이더 핫 리로드처럼 바뀐 셰이더를 쓰는 PSO 만 다시 만든다 — 패스 자원(상수 버퍼 · 풀 · 그리기 캐시)은 그대로다.
-         *          엔진 패스 PSO 를 하나라도 놓으면 머티리얼 변형을 모두 놓는다: 변형 키에 패스 PSO 핸들이 들어 있어 남기면 쓰이지 않는 채로 쌓이고, `_owned` 가 빈 변형은 놓은 패스 PSO 를 가리킨다.
+         *          엔진 · 파이프라인 패스 PSO 를 하나라도 놓으면 머티리얼 변형을 모두 놓는다: 변형 키에 패스 PSO 핸들이 들어 있어 남기면 쓰이지 않는 채로 쌓이고, `_owned` 가 빈 변형은 놓은 패스 PSO 를 가리킨다.
          *          `Failed` 변형과 실패(0)로 적힌 모듈 프로그램도 지운다 — 고친 셰이더로 다시 만들어 본다.
          *          만드는 중(`Building`)인 변형도 지우고 빌더의 작업을 무효로 한다(`MaterialPSOBuilder::discardPending`) — 옛 바이트코드로 만든 PSO 를 받지 않는다.
          * @return 파괴한 PSO 수입니다.
@@ -241,6 +248,8 @@ namespace sw
         unordered_map<uint64, RHIPipelineState> _mapOutputPSO;
         /// @brief 코드가 짓는 PSO 입니다(키 = 서술체 지문 `RHIPipelineStateDesc::computeHash`).
         unordered_map<uint64, RHIPipelineState> _mapGlobalPSO;
+        /// @brief 렌더 파이프라인 그래픽스 패스의 PSO 입니다(키 = 패스 이름). 머티리얼 변형의 패스 PSO 이기도 하다.
+        unordered_map<hashed_string, RHIPipelineState> _mapPipelinePassPSO;
         /// @brief 렌더 파이프라인 컴퓨트 패스의 PSO 입니다(키 = 패스 이름).
         unordered_map<hashed_string, PassPSOEntry>                                          _mapPipelineComputePSO;
         unordered_map<MaterialPSOKey, MaterialPSOEntry, MaterialPSOKeyHash> _mapMaterialPSO SW_GUARDED_BY( _materialPSOMutex );

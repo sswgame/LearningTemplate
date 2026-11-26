@@ -422,6 +422,37 @@ SW_TEST_CASE( RenderPipelineAssetTest, PermutationNameIsDefinedOnce )
     SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, RenderPipelineTestUtil::makeXML( passAttributes.view(), "", "", depth, "<item>X=1</item><item>X=2</item>" ) ) );
 }
 
+/**
+ * @brief [RenderPipelineAssetTest] 같은 종류의 뷰 패스는 한 번이다 — 표가 여러 번 둘 수 있다고 적은 종류(그림자 · Compute · 후처리 머티리얼)만 빼고. 패스 이름은 로드 때 intern 된다
+ * @details 변이: 검사를 지우면 둘째 ForwardOpaque 가 읽혀 마지막 단언이 진다. 그림자에 `kRepeatable` 이 없으면 엔진 포워드 파이프라인(방향광 · 점광 그림자 둘)이 읽히지 않아 첫 단언이 진다.
+ */
+SW_TEST_CASE( RenderPipelineAssetTest, ViewPassTypeIsDeclaredOnce )
+{
+    RenderPipelineAsset forward;
+    SW_REQUIRE_TRUE( forward.loadFromXMLFile( AssetID{ "engine/pipeline/forwardpipeline.xml" } ) );
+    uint32 shadowCount = 0;
+    for ( const RenderGraphPassDesc& pass : forward.getGraphPass() )
+    {
+        shadowCount += pass._type == RenderPassKind::Shadow ? 1u : 0u;
+        SW_EXPECT_TRUE( pass._resolvedName == hashed_string( pass._name.c_str() ) );
+    }
+    SW_EXPECT_EQUAL( 2u, shadowCount );
+
+    SW_EXPECT_LOG( "RenderPipelineAsset.PassTypeDuplicated" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.PipelineValidationFoundIssues" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.PipelineIssueNotLoaded" );
+    StringBuilder<constant::buffer::kMax2048> xml;
+    xml.append( "<RenderPipelineDesc _name=\"Test\"><_listAttachment>"
+                "<RenderPassAttachment _name=\"SceneColor\" _format=\"R16G16B16A16_FLOAT\" _clearColor=\"0,0,0,1\" _loadOp=\"Clear\"/>"
+                "<RenderPassAttachment _name=\"SceneDepth\" _format=\"D24_UNORM_S8_UINT\" _clearDepth=\"1\" _loadOp=\"Clear\"/></_listAttachment><_listPass>" );
+    for ( const utf8* pName : { "First", "Second" } )
+        xml.appendFormat( "<RenderGraphPassDesc _name=\"%#\" _type=\"ForwardOpaque\" _depthAttachment=\"SceneDepth\" %#><_listOutput><item>SceneColor</item></_listOutput></RenderGraphPassDesc>", pName,
+                          RenderPipelineTestUtil::kOpaqueState );
+    xml.append( "</_listPass></RenderPipelineDesc>" );
+    RenderPipelineAsset opaque;
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( opaque, string( xml.view() ) ) );
+}
+
 /** @brief [RenderPipelineAssetTest] 쿠킹이 펼친 글은 원본을 합쳐 읽은 것과 같은 값이고, 부모를 가리키지 않는다(팩 쿠커의 펼치기와 같은 함수) */
 SW_TEST_CASE( RenderPipelineAssetTest, CookedFlatTextReadsLikeTheSource )
 {
