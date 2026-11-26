@@ -67,3 +67,6 @@ Content/**/quaternius/**/*.glb filter=lfs diff=lfs merge=lfs -text
 *.vrm binary
 # 퍼저 씨앗은 바이트 그대로다(줄 끝을 바꾸면 다른 입력이 된다)
 IntegrationTests/Fuzz/Seeds/** binary
+
+# 이름 이력 표는 갈래마다 _bannedNames 머리에 "옛 이름": "까닭", 줄을 더해 병합마다 같은 자리에서 부딪혔다. 줄 하나가 항목 하나라 양쪽 줄을 다 남기는 union 병합이 맞다(린트가 JSON 을 다시 읽는다).
+Config/Rules/Lint/NamingWordsBannedNames.json merge=union
