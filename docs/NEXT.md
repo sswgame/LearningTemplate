@@ -23,21 +23,20 @@
 
 | 갈래 · 워크트리 | 몫 |
 | --- | --- |
-| w-cpp-reflect · LT-wt/cppreflect | 파서 정의 · include 를 타깃 속성에서(671f8c8988 · fd2dac7d65 끝), 컴파일 옵션 · 옵션 표 엄격화 · 구성 경로 ctest(9d9872a619 · 4de5136b58 · 1f9504d287 끝), Core (c) 열거 이름 6 개(9d545b213c 끝), 남은 (a) 열거 이름 23 건 |
+| w-cpp-reflect · LT-wt/cppreflect | 파서 정의 · include 를 타깃 속성에서(671f8c8988 · fd2dac7d65 끝), 컴파일 옵션 · 옵션 표 엄격화 · 구성 경로 ctest(9d9872a619 · 4de5136b58 · 1f9504d287 끝), Core (c) 열거 이름 · (a) 23 건(9d545b213c · 8214df6dac · 7b6953c4d2 끝 — 바꿈 2 · 이미 됨 8 · 데이터 철자라 둠 13), 파싱 단계 앞부분 재사용 |
 | w-enum-meta · LT-wt/enummeta | ENUM 잎 헤더 · 열거형 둘(2898146f6c 끝), 키트별 현지화 표(모듈 단위 탑재 · 수집 대상 · 쿠킹 · 표 이전), AssetTypeDef 접미사 중복(AudioPlayableAsset) |
 | w-gf-dev · LT-wt/gfdev | 배포 매크로 오류 · 확장자 글 · 내비 베이크(1994afb762 · 300285e7e5 · d46c67287a 끝), 에디터 `.hlsl` · `.hlsli` 글 셋, 개발 구성에서도 등록 자리 막기 |
 | w-pimpl · LT-wt/pimpl | P1 · P3 · P4(bf52a2d679 · 32ac84a437 · ac9a1f1bf7 끝), 렌더 R4 나머지(쿠킹 컴파일 스트리핑 · 패치 팩 색인 합치기 · 색인 첫 사용처) |
-| w-devtools-merge · LT-wt/devtoolsmerge | T1(605e855120 · 1eeddfc3ae 끝), PE 헤더 · 단일 헤더 4 개(7cd17031ac · 432e884715 · 7049625e66 끝), 리플렉션 형식 단일 .cpp 헤더 약 45 개, VulkanRHISamplerPreset |
+| w-devtools-merge · LT-wt/devtoolsmerge | T1(605e855120 · 1eeddfc3ae 끝), PE 헤더 · 단일 헤더 43 개 · VulkanRHISamplerPreset(…7049625e66 · 68412caa1e~2a4f7ba666 끝), 남은 단일 헤더 7 개 |
 | w-server-subsystem · LT-wt/serversub | 6 절 서버 서비스를 모듈 서브시스템으로 |
-| w-shaderreload · LT-wt/shaderreload | 셰이더 리로드 · Source shortcut(3b97e3a2c6 · ab3f9659f4 끝), Scripts · cmake 의 shortcut, mesh_modifier.hlsli 노이즈 대조 |
+| w-shaderreload · LT-wt/shaderreload | 셰이더 리로드 · shortcut · 노이즈 대조 · 매니페스트 · 층 표 테스트(ece90ecaea 끝), 쿠킹 표 테스트 · target_layers 음성 사례 |
 | w-engine-owner · LT-wt/engineowner | 끝남(3c5d1c924a 까지) — 다음 묶음에 합친다 |
 
 ### 아직 아무도 맡지 않은 몫 [코드]
 
-- ReflectionParser 파싱 단계: 104 회 CPU 합 약 290 초 중 libclang parse 가 95 % 다(GameFramework 한 실행 parse 42~53 초, Engine 23~25 초). 모듈 안 입력이 같은 앞부분(pch · 엔진 헤더)을 매번 파싱한다 — 모듈마다 앞부분을 한 번 파싱해 나눠 쓰기(언리얼 UHT 는 파싱 자체가 가볍고, libclang 은 preamble · PCH 재사용이 정본)를 측정과 함께.
+- 소문자 데이터 철자 열거 7 건(PairedAnimationAlign · FracturePattern · FractureVolume · SubLevelState · FacingDirection · AppearancePartKind · CookInputKind): 데이터를 열거자 철자로 다시 쓰면 이름 switch 를 걷을 수 있다.
 - 보류(조사 먼저): ReflectionValidation → TypeInfo, PROPERTY 검증기를 개발 전용으로 빼도 배포 안전이 지켜지는가.
 - AssertDialog 합치기 — 사용자에게 물을 것.
-- 나머지 `sw_*` CMake 함수(모듈 매니페스트 · 층 문지기 · 쿠킹 표)의 구성 단계 경로 테스트.
 
 ## 1. 다음 순서
 
@@ -57,7 +56,6 @@
 
 ## 3. 알려진 실패 · 흔들림
 
-- 셰이더 리로드 시나리오(`desktop/editor/shaderreload`)가 묶음 검증에서 한 번도 돌지 않았다 — 재컴파일기가 Debug 전용이다. 개발 빌드에서 켤 수 있게(시나리오가 `<Launch>` 로 켬) 하고, 켰을 때 Ctrl+F8 이 재컴파일 묶음을 끝내지 않는 단축키 경로(편집 모드의 디버그 키)를 고친 뒤 격리(만료 2026-12-10)를 뺀다.
 
 - **Linux:** sequencercuts · sequencerkeys `SequencerUnboundCount`(`--gpu software chain editor`), netresourcedigest, 에디터 체인 약 18 단계(입력 초점), themepark 체인 멈춤, lavapipe `blendEnable` + `R16G16_SNORM`(재현 안 되면 지운다), `editor.screenrectview` 1.09375 %(`all` 에서만 — 사진 앞 대기를 정착 조건으로). 빈 골든은 `scenario_bisect.py --golden-coverage` 로 찾아 채운다.
 - 흔들리는 게임 골든: 다시 지면 단계 · 백엔드 · 직전 `Assets.Pending` 을 적는다.
@@ -97,6 +95,8 @@
 
 ## 8. 에셋 정체성(GUID)
 
+- 임포트 산출물 이름을 원본 .meta 에 적기(유니티 .meta 하위 에셋 표 자리) — 임포터 · .meta 형식 · EditorAssetIndex · asset_identity.py 를 함께 바꾸고 모델 전체 다시 임포트. 그러면 Scripts/dev/scenario_reach.py 의 `shortcut:` 이 풀린다.
+
 - **3 단계 원본 저장소 떼기:** 코드(`store:<SHA-256>` · `AssetSourceLocator`)는 있다. 데이터는 원본 2 GB 또는 LFS 비용이 문제일 때.
 
 ## 9. 감사 열린 항목
@@ -106,10 +106,6 @@
 - **P-4 [14] Android IME 조합:** 실기기(4 절).
 - **O-12 [30] 원장 경로 부하:** PostgreSQL · RESP 로 `OnlineLoadBot` `ledger_mix`(`--store-config=Config/Server/Online/Playground.external.json`) — 재시도 · busy · 버린 도착 수. 종료 코드 5 는 재화 보존 깨짐.
 - **A-13 [36] · K-11 [50]:** 2 절.
-
-## 10. 코드 `shortcut:` 정리
-
-정본 모양이 있으면 크기와 무관하게 고친다. 문턱이 규모인 것(`PackWriter` · `LinkJobPool` · `AssetAndToolTargets` · `GPUSceneBuilder` 둘 · `SceneVoxelizer`)만 남긴다.
 
 ## 11. 리소스
 
