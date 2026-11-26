@@ -14,7 +14,7 @@
 
 ### 통합 중
 
-- main(push 전, preflight 중): .cpp 리플렉션 · 모듈 PCH · Core 정리 · 렌더 데이터 R1~R4 · E1~E5 · H1~H4 · D1 · G2 · P1~P4 · Enum 메타 · 키트 현지화 · GameFramework 개발 코드 분리 · DevTools 합치기 · 서버 서비스 서브시스템 · 셰이더 리로드 · 현지화 수집(공유 에디터 키 editorplugincommon). 통과하면 `WINDOWS_OK` sha 를 push 하고 합친 워크트리 일곱(enum-meta · gf-dev · server-subsystem · engine-owner · core-lift · render-data · 이 넷)을 지운다.
+- main(push 전 — preflight 9e01514e59 가 changed 에서 졌다, 맡긴 일 표의 네 결함을 고친 뒤 `--from changed`): .cpp 리플렉션 · 모듈 PCH · Core 정리 · 렌더 데이터 R1~R4 · E1~E5 · H1~H4 · D1 · G2 · P1~P4 · Enum 메타 · 키트 현지화 · GameFramework 개발 코드 분리 · DevTools 합치기 · 서버 서비스 서브시스템 · 셰이더 리로드 · 현지화 수집(공유 에디터 키 editorplugincommon). 통과하면 `WINDOWS_OK` sha 를 push 하고 합친 워크트리 일곱(enum-meta · gf-dev · server-subsystem · engine-owner · core-lift · render-data · 이 넷)을 지운다.
 - 다음 묶음(통합 워크트리 LT-wt/integrate, 갈래 w-integrate d8a97b9c4e — shaderreload b58d3c91df · pimpl d7a634aef5 · cpp-reflect ba567aadce · devtools-merge ecdb7080f6, 충돌 없음): push 뒤 main 으로 옮겨 세 구성 빌드 · 테스트 → `App --import-models --import-textures --import-heightfields -unattended` 로 원본 .meta 약 1486 개 채우고 `py -3 -m Scripts asset-ids` 확인 뒤 커밋 → 파서를 다시 잰다(이름공간 건너뛰기 f443d780ea 는 PCH 없이 251.5 초로 느렸다 — 다시 느리면 되돌리고, PCH 문턱 4 는 GF_NetDestruction · GF_Overworld · GF_Server_Admin total 로 정한다) → preflight.
 - 그림 확인: 카메라 흔들림 · 메시 모디파이어 노이즈, RigIK 정반대 방향(-q), TAA · 구름 기록 칸, 파이프라인 선택 경로, 픽셀 마을 스프라이트 이름(`walk_Down`), 메모리 추적기 · 로그 글 철자(`Allocation size` 등).
 - 판단 남음: TAA 출력의 앨리어싱 제외를 지울지(`-gv_transientAliasing=0` 비교).
@@ -23,7 +23,10 @@
 
 | 누가 | 몫 |
 | --- | --- |
-| (없음) | |
+| w-devtools-merge · LT-wt/devtoolsmerge | 플러그인 시각화 도구 키(`EdPluginVisualizer.*` — ThemePark · MeshModifiers · Splines)가 기동 직후 비는 결함(`Localization.MissingKey`, 시나리오 일곱) |
+| w-shaderreload · LT-wt/shaderreload | 옛 판 쿠킹 기록이 경고(`Cook.RecordInvalid`)를 내는 결함 — 판 번호로 조용한 미스, shaderreload 시나리오 `Reload.FailedCount` 가 늘지 않음 |
+| w-pimpl · LT-wt/pimpl | materialswitch `matfind` 가 머티리얼 0 개 |
+| w-fsp-determinism · LT-wt/fspdeterminism | fullscreentrail 결정성 — 씬 시작 · 카메라 컷에서 패스 기록을 비운다 |
 
 ### 아직 아무도 맡지 않은 몫 [코드]
 
