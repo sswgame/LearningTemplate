@@ -272,7 +272,7 @@ namespace sw::internal
 //     호출하는 쪽의 이름은 인자가 아니라 파일에서 자동으로 정해진다). 구조는 Godot 의 `_err_print_error` + `add_error_handler` 와 같다 —
 //     `const char*` 만 오가는 동기 통로이고, 로그가 기동 때 거는 보고자(`bindLowLevelReporter`, `Logger.cpp`)가 로그 줄로 바꾼다.
 //     Error · 단언은 보고자가 있어도 stderr 에 먼저 동기로 쓰고 flush 한 뒤 보고자에게 넘긴다(비동기 로거는 크래시 직전 메시지를 잃는다).
-//     Warning 은 보고자가 받아 가면 stderr 에 쓰지 않는다. 보고자가 없거나 받지 못하면(로거 이전 · 로거 없는 도구 · 싱크 없음) stderr 에 남는다.
+//     Warning 은 보고자가 받아 가면 stderr 에 쓰지 않는다. 보고자가 없거나 받지 못하면(로거 이전 · 로거 없는 도구 · 백엔드 없음) stderr 에 남는다.
 //     stderr 로 가는 경로는 `Core/Foundation/Macros.cpp` 한 곳이다.
 //
 //     서식은 `printf` 문법이다(`snprintf`). 엔진 `formatstring` 의 `%#` 가 아니다. 어긋남은 `SW_PRINTF_FORMAT` 이 컴파일러(`-Wformat`)에게 맡긴다.
@@ -291,7 +291,7 @@ namespace sw::internal
     {
         Warning,
         Error,
-        Fatal, ///< `reportFatal` 만 쓴다 — Error 처럼 stderr 에 먼저 쓰고, 보고자(로그)는 줄을 남긴 뒤 싱크를 비운다(곧 멈추므로).
+        Fatal, ///< `reportFatal` 만 쓴다 — Error 처럼 stderr 에 먼저 쓰고, 보고자(로그)는 줄을 남긴 뒤 백엔드를 비운다(곧 멈추므로).
     };
 
     /** @brief 한 보고의 글 버퍼 크기(널 포함)입니다. 넘치면 끝이 잘리고 `...[truncated]` 가 붙습니다. */
@@ -299,7 +299,7 @@ namespace sw::internal
 
     /**
      * @brief 보고자 함수입니다. @p pFile · @p line 은 보고한 위치(`__FILE__` · `__LINE__`)이고 @p pMessage 는 끝난 글, @p pID 는 로그 id(없으면 nullptr)입니다.
-     * @return 로그가 받았으면 true(수준 필터로 버려진 것도 받은 것). 받지 못했으면(싱크 없음) false 이고, 그러면 `Warning` 은 stderr 로 갑니다.
+     * @return 로그가 받았으면 true(수준 필터로 버려진 것도 받은 것). 받지 못했으면(백엔드 없음) false 이고, 그러면 `Warning` 은 stderr 로 갑니다.
      */
     using LowLevelReporterFunc = bool ( * )( LowLevelReportLevel level, const utf8* pFile, int32 line, const utf8* pMessage, const utf8* pID ) noexcept;
 
@@ -321,7 +321,7 @@ namespace sw::internal
     SW_API void reportMissingRequiredSubsystem( const utf8* pLookup ) noexcept;
     /**
      * @brief 치명 오류 한 줄을 남기고 프로세스를 멈춥니다. 엔진에서 `std::abort` 를 부르는 유일한 자리입니다(`reportFatalError` · `SW_LOW_LEVEL_FATAL` 이 부른다).
-     * @details stderr 에 먼저 동기로 쓰고(로거 이전 · 정적 초기화 중에도 남는다) 로그 보고자에게 넘긴다. 보고자는 줄을 쓰고 비동기 싱크를 비운다
+     * @details stderr 에 먼저 동기로 쓰고(로거 이전 · 정적 초기화 중에도 남는다) 로그 보고자에게 넘긴다. 보고자는 줄을 쓰고 비동기 백엔드를 비운다
      *          (`Logger::flushGlobalForCrash`) — 직접 `std::abort` 를 부르면 이 둘을 빠뜨려 크래시 직전 줄을 잃는다.
      */
     [[noreturn]] SW_API void reportFatal( const utf8* pFile, int32 line, const utf8* pMessage ) noexcept;
@@ -354,7 +354,7 @@ namespace sw::internal
 /** @brief 로그 id 를 붙인 `SW_LOW_LEVEL_WARNING` 입니다(`SW_LOG_WARNING_ID` 에 해당). id 는 문자열 리터럴입니다. */
 #define SW_LOW_LEVEL_WARNING_ID( id, ... ) SW_LOW_LEVEL_INTERNAL_ID( ::sw::internal::LowLevelReportLevel::Warning, "" id, __VA_ARGS__ )
 
-/** @brief 로그보다 아래 티어의 `reportFatalError` 입니다. 한 줄을 남기고(stderr 동기 + 로그 · 싱크 비우기) 멈춥니다. 서식은 `printf` 문법입니다. */
+/** @brief 로그보다 아래 티어의 `reportFatalError` 입니다. 한 줄을 남기고(stderr 동기 + 로그 · 백엔드 비우기) 멈춥니다. 서식은 `printf` 문법입니다. */
 #define SW_LOW_LEVEL_FATAL( ... )                                                                                           \
     do                                                                                                                      \
     {                                                                                                                       \

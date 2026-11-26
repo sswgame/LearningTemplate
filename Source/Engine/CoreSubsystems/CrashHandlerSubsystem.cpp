@@ -2,7 +2,7 @@
 
 #include "Engine/CoreSubsystems/CrashHandlerSubsystem.h"
 
-#include "Core/CommandLine/CommandLineManager.h"
+#include "Core/CommandLine/CommandLine.h"
 #include "Core/Diagnostics/CrashHandler.h"
 #include "Core/Foundation/BuildInfo.h"
 #include "Core/Log/Logger.h"
@@ -35,7 +35,7 @@ namespace sw
 
         // 덤프 · 리포트는 로그 폴더에 둔다 — 사용자가 폴더 하나만 보내면 되도록. 로그가 고정 이름 파일(`-log-file`)이면 다음 실행의 보고 묶음이
         // 그 파일을 찾도록 문맥에 적는다(기본 로그는 세션 접미사로 찾는다 — `CrashContextStore::kLogFileKey`).
-        _handler.setReportFolder( Logger::getGlobalSink()->getLogFolderPath() );
+        _handler.setReportFolder( Logger::getGlobalBackend()->getLogFolderPath() );
         string fixedLogFile;
         if ( _pCommandLine != nullptr && _pCommandLine->getCommandLine().getArgument( CommandLineArgument::LOG_FILE, fixedLogFile ) && fixedLogFile.empty() == false )
             _handler.setContextValue( CrashContextStore::kLogFileKey, fixedLogFile );

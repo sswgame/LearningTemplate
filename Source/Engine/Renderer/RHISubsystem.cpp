@@ -2,7 +2,7 @@
 
 #include "Engine/Renderer/RHISubsystem.h"
 
-#include "Core/CommandLine/CommandLineManager.h"
+#include "Core/CommandLine/CommandLine.h"
 #include "Core/Concurrency/DevCounter.h"
 #include "Core/Diagnostics/CrashHandler.h"
 
@@ -40,7 +40,7 @@ namespace sw
 
     SubsystemInitResult RHISubsystem::initializeSubsystem()
     {
-        CommandLineManager& commandLine = engine::getSubsystem<CommandLineManager>();
+        CommandLine& commandLine = engine::getSubsystem<CommandLine>();
 
         RHIBackend          commandLineBackend{};
         const EngineConfig& engineConfig = engine::getSubsystem<EngineConfig>();

@@ -6,7 +6,6 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/Connection/NetEndpoint.h"
 #include "Core/Network/Message/NetSendBudget.h"
-#include "Core/Network/NetTypes.h"
 #include "Core/Serialization/BitStream.h"
 
 #include "Engine/Foundation/StateHashBuilder.h"

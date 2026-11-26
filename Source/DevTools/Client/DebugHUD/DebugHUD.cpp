@@ -3,7 +3,7 @@
 #include "DevTools/Client/DebugHUD/DebugHUD.h"
 
 #include "Core/Algorithm/VectorUtil.h"
-#include "Core/CommandLine/CommandLineManager.h"
+#include "Core/CommandLine/CommandLine.h"
 #include "Core/Container/EnumArray.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
@@ -786,9 +786,9 @@ namespace sw
         if ( _bRunVisibilityRead == SW_TRUE )
             return;
         // 명령줄 · 환경 변수(`SW_SHOW_WINDOWS`)는 실행 동안 바뀌지 않는다 — 한 번만 읽는다. 명령줄 서비스가 없는 호스트는 창도 없다.
-        const CommandLineManager* const pCommandLine = engine::findSubsystem<CommandLineManager>();
-        _bOffScreenRun                               = pCommandLine == nullptr || MainWindowSubsystem::shouldRenderOffScreen( *pCommandLine ) ? SW_TRUE : SW_FALSE;
-        _bRunVisibilityRead                          = SW_TRUE;
+        const CommandLine* const pCommandLine = engine::findSubsystem<CommandLine>();
+        _bOffScreenRun                        = pCommandLine == nullptr || MainWindowSubsystem::shouldRenderOffScreen( *pCommandLine ) ? SW_TRUE : SW_FALSE;
+        _bRunVisibilityRead                   = SW_TRUE;
     }
 
     bool DebugHUD::isSectionShown( const DebugHUDSectionRegistration& registration )

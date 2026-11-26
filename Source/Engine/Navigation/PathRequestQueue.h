@@ -30,8 +30,9 @@
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Task/TaskDelegate.h"
+#include "Core/Task/TaskHandle.h"
 #include "Core/Task/TaskManager.h"
-#include "Core/Task/TaskTypes.h"
 
 #include "Engine/Foundation/WorkerReadFence.h"
 

@@ -1,7 +1,7 @@
 #include "pch.h"
 
 #include "Core/Network/Connection/NetEndpoint.h"
-#include "Core/Network/Message/NetMessage.h"
+#include "Core/Network/Message/NetMessageWriter.h"
 #include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Object/GameObject/GameObjectManager.h"

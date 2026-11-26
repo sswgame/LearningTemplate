@@ -16,8 +16,8 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/Name/hashed_string.h"
+#include "Core/Task/TaskHandle.h"
 #include "Core/Task/TaskManager.h"
-#include "Core/Task/TaskTypes.h"
 
 #include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Navigation/INavMesh.h"

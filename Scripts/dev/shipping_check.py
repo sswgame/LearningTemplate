@@ -54,7 +54,7 @@ APP_RUN_SECONDS = 8.0
 EXIT_TIMEOUT_SECONDS = 60.0
 #: 배포 서버를 살려 두는 시간(초) — 기동 · 몇 틱이 지나기에 넉넉하다. 그 뒤 종료 신호를 보낸다.
 SERVER_RUN_SECONDS = 6.0
-#: 등록되지 않은 철자를 받았을 때 명령줄이 남기는 오류(`CommandLineManager::parseArgumentLine` — 뒤에 받은 키 `-name` 이 붙는다).
+#: 등록되지 않은 철자를 받았을 때 명령줄이 남기는 오류(`CommandLine::parseArgumentLine` — 뒤에 받은 키 `-name` 이 붙는다).
 UNKNOWN_ARGUMENT_ERROR = "No argument matches"
 LOG_LINE_PATTERN = re.compile(r"\[(Error|Warning)\]")
 #: 테스트용 전역 변수 정의(`SW_TEST_GLOBAL_VARIABLE( 형, gv_이름, …)`) — 배포 실행 파일에 이 이름이 남으면 안 된다.

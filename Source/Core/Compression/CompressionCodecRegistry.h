@@ -22,7 +22,7 @@ namespace sw
      *
      *          소유자는 `Engine`(테스트에서는 테스트 호스트)이고, Core 에는 이를 가리키는 포인터 슬롯만 둡니다.
      *          `CompressionStream` 은 Core 에 있어서 엔진 서비스 테이블에 닿을 수 없기 때문입니다(Core → Engine 은 레이어
-     *          역방향입니다). `Logger` 가 `setGlobalSink` 로 같은 문제를 푸는 방식과 같습니다.
+     *          역방향입니다). `Logger` 가 `setGlobalBackend` 로 같은 문제를 푸는 방식과 같습니다.
      *
      *          소유자를 하나로 두고 슬롯이 그것을 가리키므로, 등록한 코덱(LZ4/Zstd 등)을 스트림이 실제로 씁니다.
      *          주의: 함수 지역 static 인스턴스를 따로 두면 테스트 호스트가 서비스에 등록하는 인스턴스와 스트림이 보는

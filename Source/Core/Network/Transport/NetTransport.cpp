@@ -4,6 +4,7 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Concurrency/thread.h"
+#include "Core/Network/NetProtocol.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include <chrono>

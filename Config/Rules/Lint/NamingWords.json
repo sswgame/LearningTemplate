@@ -8062,7 +8062,7 @@
     "getElapsedMicroseconds": "Stopwatch(Core/Time/MonotonicClock.h) — 시계 형식 자체의 읽기다(감시 값 칸이 아니다)",
     "getElapsedMilliseconds": "Stopwatch(Core/Time/MonotonicClock.h) — 시계 형식 자체의 읽기다(감시 값 칸이 아니다)",
     "getRemainingMilliseconds": "Deadline(Core/Time/MonotonicClock.h) — 시한까지 남은 시간, 대기 · 시한 동작에 쓴다",
-    "getBusyNanoseconds": "BusyClock(Core/Time/BusyClock.h) — 바쁜 시간 시계 형식 자체의 읽기다",
+    "getBusyNanoseconds": "BusyTimeAccumulator(Core/Time/BusyTimeAccumulator.h) — 바쁜 시간 누산기 형식 자체의 읽기다",
     "getExpectedEvaluationMicroseconds": "AnimationSystem — LOD 예산 배분(AnimationLODState::allocateBudget)이 계산한 예상 비용이다(시계로 잰 값이 아니다)"
   }
 }

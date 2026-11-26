@@ -10,8 +10,8 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Task/TaskDelegate.h"
 #include "Core/Task/TaskManager.h"
-#include "Core/Task/TaskTypes.h"
 
 namespace sw
 {

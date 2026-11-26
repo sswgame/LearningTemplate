@@ -2,11 +2,11 @@
 
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/vector.h"
+#include "Core/Log/Backend/AsyncLogBackend.h"
 #include "Core/Log/LogContext.h"
 #include "Core/Log/LogOnce.h"
 #include "Core/Log/Logger.h"
-#include "Core/Log/Sink/AsyncLogSink.h"
-#include "Core/Log/Sink/ILogOutput.h"
+#include "Core/Log/Output/ILogOutput.h"
 #include "Core/TestFramework/TestFramework.h"
 
 #include <thread>
@@ -105,7 +105,7 @@ SW_TEST_CASE( LogContextTest, TagHasOnlyThePresentProperties )
 
 SW_TEST_CASE( LogContextTest, OnlyLinesWithAContextCarryTheTag )
 {
-    AsyncLogSink logger;
+    AsyncLogBackend logger;
     logger.initialize();
     unique_ptr<LogContextCaptureOutput> output   = make_unique<LogContextCaptureOutput>();
     LogContextCaptureOutput*            pCapture = output.get();
@@ -140,7 +140,7 @@ SW_TEST_CASE( LogContextTest, OnlyLinesWithAContextCarryTheTag )
  */
 SW_TEST_CASE( LogContextTest, TickTagAppearsOnlyWhileTheTickNumberIsSet )
 {
-    AsyncLogSink logger;
+    AsyncLogBackend logger;
     logger.initialize();
     unique_ptr<LogContextCaptureOutput> output   = make_unique<LogContextCaptureOutput>();
     LogContextCaptureOutput*            pCapture = output.get();

@@ -10,7 +10,7 @@
 #include "Core/Container/string.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Network/NetTypes.h"
+#include "Core/Network/NetAddress.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/Subsystem/Subsystem.h"
 #include "Core/Time/TimePoint.h"

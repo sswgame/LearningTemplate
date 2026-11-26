@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Core/CommandLine/CommandLineManager.h"
+#include "Core/CommandLine/CommandLine.h"
 #include "Core/File/FileUtil.h"
 
 #include "Engine/Foundation/Commandlet.h"
@@ -46,7 +46,7 @@ namespace sw
                 }
             }
 
-            static bool isRequested( const CommandLineManager& commandLine )
+            static bool isRequested( const CommandLine& commandLine )
             {
                 string path;
                 return commandLine.getArgument( CommandLineArgument::WRITE_STATE_LAYOUTS, path ) && path.empty() == false;

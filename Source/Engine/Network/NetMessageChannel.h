@@ -23,7 +23,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Network/Connection/NetEndpoint.h"
-#include "Core/Network/Message/NetMessage.h"
+#include "Core/Network/Message/NetMessageWriter.h"
 
 #include "Engine/Serialization/Fixed/FixedLayout.h"
 #include "Engine/Serialization/Fixed/ReplicatedLayout.h"

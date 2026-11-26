@@ -9,7 +9,7 @@
 #include "Core/Hash/SecureUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/Connection/NetEndpoint.h"
-#include "Core/Network/NetTypes.h"
+#include "Core/Network/NetConnectionState.h"
 #include "Core/Serialization/BitStream.h"
 #include "Core/Serialization/ByteStream.h"
 #include "Core/Time/MonotonicClock.h"

@@ -11,6 +11,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/Task/TaskManager.h"
+#include "Core/Task/TaskProfileHook.h"
 #include "Core/TestFramework/TestFramework.h"
 #include "Core/TestFramework/TestWait.h"
 #include "Core/TestFramework/ThreadTestAccess.h"

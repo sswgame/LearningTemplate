@@ -3,7 +3,7 @@
  * @brief 유닛이 피해를 받았음을 알리는 이벤트입니다. 채널은 GameEvents.h 의 `gameEventChannel()`("game")입니다.
  */
 #pragma once
-#include "Core/Event/EventType.h"
+#include "Core/Event/EventBase.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 

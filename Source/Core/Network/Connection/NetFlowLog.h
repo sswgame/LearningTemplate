@@ -12,7 +12,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Network/NetTypes.h"
+#include "Core/Network/NetChannelKind.h"
 
 #if !defined( SW_SHIPPING )
 

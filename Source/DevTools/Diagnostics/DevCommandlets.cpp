@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Core/CommandLine/CommandLineManager.h"
+#include "Core/CommandLine/CommandLine.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/StringUtil.h"
 #include "Core/String/string_splitter.h"
@@ -27,20 +27,20 @@ namespace sw
         struct DevCommandletsInternal
         {
             /** @brief bool 인자 @p argument 가 켜져 주어졌으면 true 입니다. */
-            static bool isFlagGiven( const CommandLineManager& commandLine, CommandLineArgument argument )
+            static bool isFlagGiven( const CommandLine& commandLine, CommandLineArgument argument )
             {
                 bool bGiven = false;
                 return commandLine.getArgument( argument, bGiven ) && bGiven;
             }
 
             /** @brief 글 인자 @p argument 가 비지 않게 주어졌으면 true 입니다. */
-            static bool isTextGiven( const CommandLineManager& commandLine, CommandLineArgument argument )
+            static bool isTextGiven( const CommandLine& commandLine, CommandLineArgument argument )
             {
                 string value;
                 return commandLine.getArgument( argument, value ) && value.empty() == false;
             }
 
-            static bool isUnitTestRequested( const CommandLineManager& commandLine ) { return isFlagGiven( commandLine, CommandLineArgument::TEST ); }
+            static bool isUnitTestRequested( const CommandLine& commandLine ) { return isFlagGiven( commandLine, CommandLineArgument::TEST ); }
 
             /**
              * @brief `--test` — 엔진 안 단위 테스트(`<기능>/Tests/` 의 `SW_TEST_CASE`)를 돌린다.
@@ -55,7 +55,7 @@ namespace sw
                 return bPassed;
             }
 
-            static bool isScenarioPerBackendRequested( const CommandLineManager& commandLine ) { return isTextGiven( commandLine, CommandLineArgument::SCENARIO_BACKENDS ); }
+            static bool isScenarioPerBackendRequested( const CommandLine& commandLine ) { return isTextGiven( commandLine, CommandLineArgument::SCENARIO_BACKENDS ); }
 
             /**
              * @brief `-scenario=<경로> -scenario-backends=all|dx11,vk` — 시나리오를 백엔드마다 자식 App 으로 동시에 돌리고 모은다(`AutomationPerBackend`).
@@ -76,7 +76,7 @@ namespace sw
                 return context._state._bFailed == SW_FALSE;
             }
 
-            static bool isReflectionDocsRequested( const CommandLineManager& commandLine ) { return isTextGiven( commandLine, CommandLineArgument::WRITE_REFLECTION_DOCS ); }
+            static bool isReflectionDocsRequested( const CommandLine& commandLine ) { return isTextGiven( commandLine, CommandLineArgument::WRITE_REFLECTION_DOCS ); }
 
             /** @brief 리플렉션 문서도 같은 자리다 — 모든 타입 공급자가 등록을 끝낸 뒤(ModuleLoadStage)라 게임 · 킷의 타입까지 든다. */
             static bool runReflectionDocsTask( CommandletContext& context )
@@ -86,7 +86,7 @@ namespace sw
                 return ReflectionDocWriter::writeMarkdown( engine::getSubsystem<TypeRegistry>(), reflectionDocsDir ) != 0;
             }
 
-            static bool isBakeRetargetRequested( const CommandLineManager& commandLine ) { return isTextGiven( commandLine, CommandLineArgument::BAKE_RETARGET ); }
+            static bool isBakeRetargetRequested( const CommandLine& commandLine ) { return isTextGiven( commandLine, CommandLineArgument::BAKE_RETARGET ); }
 
             /** @brief 리타깃 베이크(`--bake-retarget=<프로필>,<원본 클립>,<출력 클립>`) — 클립 · 스켈레톤 · 코덱이 모두 엔진 것이라 여기서 한다. */
             static bool runBakeRetargetTask( CommandletContext& context )
@@ -103,7 +103,7 @@ namespace sw
                 return PoseRetargeter::bakeClipFile( AssetID{ StringUtil::trim( listArgument[0] ) }, AssetID{ StringUtil::trim( listArgument[1] ) }, StringUtil::trim( listArgument[2] ) );
             }
 
-            static bool isImportLipSyncRequested( const CommandLineManager& commandLine ) { return isFlagGiven( commandLine, CommandLineArgument::IMPORT_LIPSYNC ); }
+            static bool isImportLipSyncRequested( const CommandLine& commandLine ) { return isFlagGiven( commandLine, CommandLineArgument::IMPORT_LIPSYNC ); }
 
             /** @brief 립싱크 분석 — 음성마다 비즘 트랙을 곁에 쓴다. 분석 표가 엔진 데이터라 엔진이 한다(음성 디코드라 오디오를 짓지 않는 서버는 하지 않는다). */
             static bool runImportLipSyncTask( CommandletContext& context )

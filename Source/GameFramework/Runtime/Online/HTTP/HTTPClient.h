@@ -19,7 +19,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Network/NetTypes.h"
+#include "Core/Network/NetAddress.h"
 #include "Core/Network/Transport/IStreamTransport.h"
 #include "Core/Task/DedicatedWorker.h"
 #include "Core/Time/Clock.h"

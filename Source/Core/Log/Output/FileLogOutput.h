@@ -1,0 +1,78 @@
+/**
+ * @file FileLogOutput.h
+ * @brief 파일 로그 장치입니다. `Saved/Logs` 폴더에 쓰고, 시간과 세션마다 파일을 바꿉니다. 경로를 받으면 그 파일 하나에 씁니다(`-log-file`).
+ */
+#pragma once
+#include "Core/Concurrency/mutex.h"
+#include "Core/Container/string.h"
+#include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Types.h"
+#include "Core/Log/Output/ILogOutput.h"
+#include "Core/Path/AbsolutePath.h"
+
+namespace sw
+{
+    /** @brief 시간별 파일을 열 폴더입니다(`FileLogOutput` 의 기본 `Saved/Logs` 대신 — 테스트가 케이스 폴더에 연다). 고정 파일 경로와 형식으로 가른다. */
+    struct FileLogOutputFolder
+    {
+        AbsolutePath _path;
+    };
+
+    /**
+     * @class FileLogOutput
+     * @brief 로그 한 줄을 `Saved/Logs/LOG_<날짜>_<세션>.txt` 에 씁니다.
+     * @details 파일은 시간이 바뀔 때 새로 엽니다. 이름에 세션 ID 가 들어가므로 같은 시간에 여러 번 실행해도 섞이지
+     *          않습니다. 배포본은 크래시 뒤 바로 다시 실행하는 일이 잦아서 이것이 기본 상황입니다. 크래시 덤프도 같은 세션
+     *          ID 를 쓰므로 둘을 짝지을 수 있습니다.
+     *          고정 경로(`-log-file=<경로>`)를 받으면 그 파일 하나에 처음부터 덮어쓰고 시간으로 나누지 않습니다 — 병렬 실행(ctest -j)이 실행마다
+     *          제 로그를 정해 둘 수 있게 한다(언리얼의 `-abslog=`). 크래시 리포트는 그 파일의 폴더에 둔다.
+     */
+    class SW_API FileLogOutput final : public ILogOutput
+    {
+    public:
+        /** @param fixedFilePath 비면 `Saved/Logs/LOG_<날짜>_<세션>.txt`, 아니면 이 파일 하나(명령줄의 상대 경로는 `CommandLineDiskPath` 가 절대로 올린다). */
+        explicit FileLogOutput( AbsolutePath fixedFilePath = {} );
+        /** @param rollingFolder 시간별 파일(`LOG_<날짜>_<세션>.txt`)을 열 폴더입니다(`Saved/Logs` 대신). */
+        explicit FileLogOutput( FileLogOutputFolder rollingFolder );
+        virtual ~FileLogOutput() override;
+
+        FileLogOutput( const FileLogOutput& )            = delete;
+        FileLogOutput& operator=( const FileLogOutput& ) = delete;
+
+        /**
+         * @brief 로그 폴더를 만들고, 크래시 리포트 폴더도 같은 곳으로 맞춥니다.
+         * @details 파일 자체는 첫 `write` 때 엽니다. 한 줄도 남기지 않고 끝나는 실행에서 빈 파일을 만들지 않기 위해서입니다.
+         *          폴더를 만들지 못하면(그 이름의 파일이 있는 경우 등) false 이고 크래시 리포트 폴더도 바꾸지 않습니다. 이유는 폴더 생성이 로그로 남기며,
+         *          그 호출은 `_mutex` 밖에서 합니다(남긴 로그가 이 장치의 `write` 로 되돌아와 `_mutex` 를 잡는다).
+         */
+        [[nodiscard]] bool open() override;
+        /** @brief 열려 있는 파일을 비우고 닫습니다. */
+        void close() override;
+        /** @brief 시각이 바뀌었으면 파일을 새로 연 뒤 한 줄을 씁니다. */
+        void write( const LogRecord& record ) override;
+        void writeWithoutWaiting( const LogRecord& record ) override;
+        void flushWithoutWaiting() override;
+
+        /** @brief 로그 파일이 있는 폴더 경로입니다. `open` 전에는 비어 있습니다. */
+        const AbsolutePath& getLogFolderPath() const { return _logFolderPath; }
+        /** @brief 지금 쓰는 파일의 경로입니다(시간이 바뀌면 다음 파일). 아직 한 줄도 쓰지 않았으면 빈 글입니다. */
+        string getCurrentLogFilePath();
+
+    private:
+        /** @brief 두 공개 생성자의 본체입니다 — 고정 파일과 시간별 폴더 가운데 많아야 하나가 찬다. */
+        FileLogOutput( AbsolutePath fixedFilePath, FileLogOutputFolder rollingFolder );
+        /** @brief `write` · `writeWithoutWaiting` 의 본체입니다. */
+        void writeLocked( const LogRecord& record ) SW_REQUIRES_LOCK( _mutex );
+
+    private:
+        mutex                      _mutex;             ///< 이 장치 전용. 콘솔 출력과 락을 공유하지 않는다
+        const AbsolutePath         _fixedFilePath;     ///< 비면 날짜 · 세션 이름으로 시간마다 바꾼다
+        const AbsolutePath         _rollingFolderPath; ///< 시간별 파일의 폴더(비면 `Saved/Logs`)
+        AbsolutePath               _logFolderPath;
+        string _currentLogFileName SW_GUARDED_BY( _mutex );
+        std::FILE* _pFile          SW_GUARDED_BY( _mutex );
+        int32 _lastLogHour         SW_GUARDED_BY( _mutex ); ///< 시간별 로그 파일 교체를 감지하는 데 쓴다
+        bool _bOpened              SW_GUARDED_BY( _mutex );
+        bool _bFixedFileStarted    SW_GUARDED_BY( _mutex ); ///< 고정 경로를 한 번 열었다(다시 열면 덮어쓰지 않고 이어 쓴다)
+    };
+} // namespace sw

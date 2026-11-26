@@ -7,7 +7,6 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Task/TaskTypes.h"
 
 #include <condition_variable>
 

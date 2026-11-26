@@ -4,7 +4,7 @@
  * @details 받는 쪽이 대상 하나뿐인 효과(발사 · 부스트 · 아이템 지급 · 피해)는 이벤트를 내지 않고 기믹이 그 컴포넌트를 직접 부른다(피해는 맞음 길 `CharacterRayHit::deliverHit`).
  */
 #pragma once
-#include "Core/Event/EventType.h"
+#include "Core/Event/EventBase.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/String/Name/hashed_string.h"

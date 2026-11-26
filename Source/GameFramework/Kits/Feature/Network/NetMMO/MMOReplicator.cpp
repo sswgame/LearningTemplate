@@ -8,7 +8,8 @@
 #include "Core/Network/Connection/NetConnection.h"
 #include "Core/Network/Connection/NetEndpoint.h"
 #include "Core/Network/Message/NetSendBudget.h"
-#include "Core/Network/NetTypes.h"
+#include "Core/Network/NetConnectionState.h"
+#include "Core/Network/NetDeliveryNotification.h"
 #include "Core/Serialization/BitStream.h"
 
 #include "Engine/Object/GameObject/GameObject.h"

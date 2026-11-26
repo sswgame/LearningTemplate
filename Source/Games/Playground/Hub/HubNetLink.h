@@ -17,7 +17,7 @@
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Network/Message/NetMessage.h"
+#include "Core/Network/Message/NetMessageRouter.h"
 #include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Foundation/WorldOrigin.h"

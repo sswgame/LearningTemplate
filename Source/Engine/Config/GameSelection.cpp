@@ -2,7 +2,7 @@
 
 #include "Engine/Config/GameSelection.h"
 
-#include "Core/CommandLine/CommandLineManager.h"
+#include "Core/CommandLine/CommandLine.h"
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
 #include "Core/Foundation/BuildInfo.h"
@@ -40,7 +40,7 @@ namespace sw
         };
     } // namespace
 
-    bool GameSelection::select( const CommandLineManager& commandLine )
+    bool GameSelection::select( const CommandLine& commandLine )
     {
         // 정적 구성(배포 · 웹 · Android 개발)은 베이크한 게임 하나이고 `-game=` 을 보지 않는다(모듈은 정적 링크).
         if constexpr ( build::kStaticModules )

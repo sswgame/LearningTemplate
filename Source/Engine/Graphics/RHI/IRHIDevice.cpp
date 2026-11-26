@@ -2,7 +2,7 @@
 
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 
-#include "Core/CommandLine/CommandLineManager.h"
+#include "Core/CommandLine/CommandLine.h"
 #include "Core/Concurrency/DevCounter.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
@@ -706,7 +706,7 @@ namespace sw
         deviceDesc._bSynchronizationValidation       = rhiConfig._bSynchronizationValidation;
         {
             // 검증 층 · DRED · GPU 브레드크럼은 장치를 만들기 전에만 걸 수 있어 여기서 한 번 정한다(설정 기본값, 시작 인자가 이긴다 — `resolveRHIDiagnosticSwitches`).
-            const CommandLineManager*             pCommandLine = engine::areEngineSubsystemsBound() ? &engine::getSubsystem<CommandLineManager>() : nullptr;
+            const CommandLine*                    pCommandLine = engine::areEngineSubsystemsBound() ? &engine::getSubsystem<CommandLine>() : nullptr;
             const expected<RHIDiagnosticSwitches> switches     = resolveRHIDiagnosticSwitches( rhiConfig, pCommandLine, kCurrentRHIDiagnosticBuild );
             if ( switches.has_value() == false )
             {
@@ -738,8 +738,8 @@ namespace sw
         _bSoftwareAdapter = SW_FALSE;
         if ( engine::areEngineSubsystemsBound() )
         {
-            const CommandLineManager& commandLine = engine::getSubsystem<CommandLineManager>();
-            bool                      bCLIVSync{ false };
+            const CommandLine& commandLine = engine::getSubsystem<CommandLine>();
+            bool               bCLIVSync{ false };
             if ( commandLine.getArgument( CommandLineArgument::VSYNC, bCLIVSync ) )
                 swapChainDesc._bVSync = bCLIVSync;
             // 시나리오 재생은 시간을 프레임마다 고정해 흘리므로 모니터 주사율에 묶을 까닭이 없다 — 지켜보는 실행도 기계가 내는 만큼 빨리 돈다(언리얼 `-benchmark` · 유니티 배치 실행과 같다).

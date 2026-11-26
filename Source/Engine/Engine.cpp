@@ -2,7 +2,7 @@
 
 #include "Engine/Engine.h"
 
-#include "Core/CommandLine/CommandLineManager.h"
+#include "Core/CommandLine/CommandLine.h"
 #include "Core/Compression/CompressionCodecRegistry.h"
 #include "Core/Concurrency/ThreadName.h"
 #include "Core/Diagnostics/CrashHandler.h"
@@ -133,7 +133,7 @@ namespace sw
 
     Engine::~Engine() = default;
 
-    CommandLineManager* Engine::getCommandLineManager() const
+    CommandLine* Engine::getCommandLine() const
     {
         return _pCommandLineSubsystem != nullptr ? &_pCommandLineSubsystem->getCommandLine() : nullptr;
     }
@@ -152,7 +152,7 @@ namespace sw
         constexpr bool kDiagnostics = build::kMemoryDiagnostics;
         // 코어 범위는 호스트 값(명령줄 인자)을 서로 넘겨 만들고 수가 적어 등록 줄 없이 여기서 채운다. 안의 객체를 묶는 서브시스템 칸은 주인 서브시스템의 .cpp 가 등록한다(`SW_ENGINE_SUBSYSTEM_SLOT`).
         // 교착 탐지(`-deadlock-detection`)는 명령줄 표가 서기 전에 읽는다 — 진단 서브시스템이 코어 범위의 첫째라, 잠금 추적을 그보다 늦게 켜면 이미 쥔 잠금을 놓친다.
-        const bool            bDeadlockDetection = build::kDeadlockDetection && CommandLineManager::isFlagGivenBeforeParse( argc, pArgv, CommandLineArgument::DEADLOCK_DETECTION );
+        const bool            bDeadlockDetection = build::kDeadlockDetection && CommandLine::isFlagGivenBeforeParse( argc, pArgv, CommandLineArgument::DEADLOCK_DETECTION );
         DiagnosticsSubsystem& diagnostics        = _coreScope.emplaceSubsystem<DiagnosticsSubsystem>( kDiagnostics, bDeadlockDetection );
         _coreScope.emplaceSubsystem<NamePoolSubsystem>();
         CommandLineSubsystem& commandLine = _coreScope.emplaceSubsystem<CommandLineSubsystem>( argc, pArgv );

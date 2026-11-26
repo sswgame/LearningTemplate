@@ -291,7 +291,7 @@ SW_TEST_CASE( LowLevelReportTest, WithoutReporterWarningGoesToStderr )
 }
 
 /**
- * @brief 보고자가 받지 못한 경고(싱크 없음)는 stderr 로 가고, 오류는 이미 쓴 것을 한 번 더 쓰지 않는다.
+ * @brief 보고자가 받지 못한 경고(백엔드 없음)는 stderr 로 가고, 오류는 이미 쓴 것을 한 번 더 쓰지 않는다.
  */
 SW_TEST_CASE( LowLevelReportTest, UnhandledReportFallsBackToStderrOnce )
 {

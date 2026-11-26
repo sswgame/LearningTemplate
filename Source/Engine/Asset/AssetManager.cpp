@@ -3,7 +3,7 @@
 #include "Engine/Asset/AssetManager.h"
 
 #include "Core/Algorithm/VectorUtil.h"
-#include "Core/CommandLine/CommandLineManager.h"
+#include "Core/CommandLine/CommandLine.h"
 #include "Core/Compression/CompressionCodecRegistry.h"
 #include "Core/File/AsyncFileIO.h"
 #include "Core/File/FileUtil.h"
@@ -391,8 +391,8 @@ namespace sw
         ContentSource source = kBuildContentSource;
         if ( engine::areEngineSubsystemsBound() )
         {
-            const CommandLineManager& commandLine = engine::getSubsystem<CommandLineManager>();
-            const auto                isGiven     = [&commandLine]( CommandLineArgument argument )
+            const CommandLine& commandLine = engine::getSubsystem<CommandLine>();
+            const auto         isGiven     = [&commandLine]( CommandLineArgument argument )
             {
                 bool bGiven = false;
                 return commandLine.getArgument( argument, bGiven ) && bGiven;

@@ -1563,8 +1563,8 @@ namespace
         Positive = 3
     };
 
-    /** @brief 경고를 받으면 그 글을 작은 fixed_string 에 넘치게 담는 싱크 — 잘림 경고가 다시 이 싱크로 들어오는지 센다. */
-    class OverflowingLogSink final : public sw::ILogSink
+    /** @brief 경고를 받으면 그 글을 작은 fixed_string 에 넘치게 담는 백엔드 — 잘림 경고가 다시 이 백엔드로 들어오는지 센다. */
+    class OverflowingLogBackend final : public sw::ILogBackend
     {
     public:
         static constexpr uint32 kMaxWriteCount = 8;
@@ -1589,25 +1589,25 @@ namespace
         sw::Subscription registerLogWrittenListener( const sw::LogWrittenDelegate& listener ) override
         {
             (void)listener;
-            return sw::Subscription{}; // 줄을 모으기만 하는 싱크라 리스너를 받지 않는다
+            return sw::Subscription{}; // 줄을 모으기만 하는 백엔드라 리스너를 받지 않는다
         }
         sw::string_view getLogFolderPath() override { return _folderPath; }
         sw::string      getLogFilePath() override { return sw::string{}; }
     };
 
-    /** @brief 스코프 동안 전역 로그 싱크를 바꿔 끼우고 끝에서 되돌립니다. */
-    struct ScopedGlobalLogSinkInternal
+    /** @brief 스코프 동안 전역 로그 백엔드를 바꿔 끼우고 끝에서 되돌립니다. */
+    struct ScopedGlobalLogBackendInternal
     {
 
-        sw::ILogSink* _pPrevious;
-        explicit ScopedGlobalLogSinkInternal( sw::ILogSink& sink )
-            : _pPrevious{ sw::Logger::getGlobalSink() }
+        sw::ILogBackend* _pPrevious;
+        explicit ScopedGlobalLogBackendInternal( sw::ILogBackend& sink )
+            : _pPrevious{ sw::Logger::getGlobalBackend() }
         {
-            sw::Logger::setGlobalSink( &sink );
+            sw::Logger::setGlobalBackend( &sink );
         }
-        ~ScopedGlobalLogSinkInternal() { sw::Logger::setGlobalSink( _pPrevious ); }
-        ScopedGlobalLogSinkInternal( const ScopedGlobalLogSinkInternal& )            = delete;
-        ScopedGlobalLogSinkInternal& operator=( const ScopedGlobalLogSinkInternal& ) = delete;
+        ~ScopedGlobalLogBackendInternal() { sw::Logger::setGlobalBackend( _pPrevious ); }
+        ScopedGlobalLogBackendInternal( const ScopedGlobalLogBackendInternal& )            = delete;
+        ScopedGlobalLogBackendInternal& operator=( const ScopedGlobalLogBackendInternal& ) = delete;
     };
 } // namespace
 
@@ -1877,16 +1877,16 @@ SW_TEST_CASE( StringTest, FixedStringConcurrentSizeReadsWriteNothing )
 }
 
 /**
- * @brief [StringTest] 로그 싱크 안에서 fixed_string 이 넘쳐도 잘림 경고가 자기를 다시 부르지 않는다
- * @details 잘림 경고는 로거를 부른다. 싱크가 받은 글을 작은 fixed_string 에 담다 또 넘치면 경고가 경고를 부르는 재귀가 된다 — 스레드 로컬
+ * @brief [StringTest] 로그 백엔드 안에서 fixed_string 이 넘쳐도 잘림 경고가 자기를 다시 부르지 않는다
+ * @details 잘림 경고는 로거를 부른다. 백엔드가 받은 글을 작은 fixed_string 에 담다 또 넘치면 경고가 경고를 부르는 재귀가 된다 — 스레드 로컬
  *          가드(`FixedStringWarningGuard`)가 서 있는 동안의 잘림은 경고 없이 자르기만 한다.
  */
 SW_TEST_CASE( StringTest, FixedStringTruncationWarningDoesNotReenter )
 {
-    OverflowingLogSink sink;
+    OverflowingLogBackend sink;
     {
-        const ScopedGlobalLogSinkInternal swapSink{ sink };
-        const sw::fixed_string<4>         overflowed( "longer than four" );
+        const ScopedGlobalLogBackendInternal swappedBackend{ sink };
+        const sw::fixed_string<4>            overflowed( "longer than four" );
         SW_EXPECT_EQUAL( 4u, overflowed.size() );
     }
 
@@ -1895,8 +1895,8 @@ SW_TEST_CASE( StringTest, FixedStringTruncationWarningDoesNotReenter )
 
     // 가드는 경고가 끝나면 내려간다 — 다음 잘림은 다시 경고한다.
     {
-        const ScopedGlobalLogSinkInternal swapSink{ sink };
-        sw::fixed_string<4>               again;
+        const ScopedGlobalLogBackendInternal swappedBackend{ sink };
+        sw::fixed_string<4>                  again;
         again.append( "overflow again" );
     }
     SW_EXPECT_EQUAL( 2u, sink._writeCount );
@@ -1907,9 +1907,9 @@ SW_TEST_CASE( StringTest, FixedStringTruncationWarningDoesNotReenter )
  */
 SW_TEST_CASE( StringTest, FixedStringTryAssignAndAppend )
 {
-    OverflowingLogSink sink;
+    OverflowingLogBackend sink;
     {
-        const ScopedGlobalLogSinkInternal swapSink{ sink };
+        const ScopedGlobalLogBackendInternal swappedBackend{ sink };
 
         sw::fixed_string<5> text;
         SW_EXPECT_TRUE( text.try_assign( "abc" ) );

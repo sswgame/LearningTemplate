@@ -11,7 +11,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/PackedTypesFwd.h"
 #include "Core/String/Name/hashed_string.h"
-#include "Core/Task/TaskTypes.h"
+#include "Core/Task/TaskArgs.h"
 
 #include "Engine/Reflection/ReflectedValue.h"
 
@@ -108,7 +108,6 @@ namespace sw::editor
         static constexpr uint32 kBuiltinCount = 0
 #define SW_REFLECT_BUILTIN_TYPE( ... ) +1
 #define SW_REFLECT_BUILTIN_CONTAINER( ... )
-#include "Engine/Reflection/ReflectBuiltins.xxx"
 #undef SW_REFLECT_BUILTIN_TYPE
 #undef SW_REFLECT_BUILTIN_CONTAINER
             ;

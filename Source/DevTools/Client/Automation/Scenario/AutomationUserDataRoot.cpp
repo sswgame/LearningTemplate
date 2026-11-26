@@ -2,7 +2,7 @@
 
 #include "DevTools/Client/Automation/Scenario/AutomationUserDataRoot.h"
 
-#include "Core/CommandLine/CommandLineManager.h"
+#include "Core/CommandLine/CommandLine.h"
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
 #include "Core/File/UserDataPath.h"
@@ -53,7 +53,7 @@ namespace sw
              * @brief 상태 자리 변수 @p name 의 값(절대 경로)입니다. 주지 않았으면 빈 글. 상대 경로를 풀 수 없으면 오류입니다.
              * @details 에디터 변수는 기동 단계에 아직 등록 전이라(에디터 모듈이 뒤에 선다) 명령줄의 보류 값으로 읽고 작업 폴더 기준으로 푼다(`GlobalDiskPath` 와 같은 규칙).
              */
-            static expected<string> readStateVariable( const CommandLineManager& commandLine, string_view name )
+            static expected<string> readStateVariable( const CommandLine& commandLine, string_view name )
             {
                 if ( const GlobalVariableInfo* pVariable = engine::getSubsystem<GlobalVariableManager>().findVariable( name ) )
                     return pVariable->getValueAsString(); // 등록된 디스크 경로 변수는 받을 때 이미 절대로 풀었다
@@ -160,7 +160,7 @@ namespace sw
         using Internal = AutomationUserDataRootInternal;
         for ( const string& argument : listArgument )
         {
-            const string_view name = CommandLineManager::getArgumentName( argument );
+            const string_view name = CommandLine::getArgumentName( argument );
             if ( std::find( std::begin( Internal::kArrStateVariable ), std::end( Internal::kArrStateVariable ), name ) != std::end( Internal::kArrStateVariable ) )
                 return argument;
         }
@@ -214,8 +214,8 @@ namespace sw
 
     SubsystemInitResult AutomationUserDataIsolation::initializeSubsystem()
     {
-        using Internal                        = AutomationUserDataRootInternal;
-        const CommandLineManager& commandLine = engine::getSubsystem<CommandLineManager>();
+        using Internal                 = AutomationUserDataRootInternal;
+        const CommandLine& commandLine = engine::getSubsystem<CommandLine>();
         if ( commandLine.isAutomatedRun() == false )
             return SubsystemInitResult::Succeeded; // 사람의 실행은 사람의 폴더를 쓴다
         _platformFolder                = UserDataPath::findPlatformDataDirectory( GameSelection::getName() );

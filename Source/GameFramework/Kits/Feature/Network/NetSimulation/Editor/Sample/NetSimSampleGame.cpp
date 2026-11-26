@@ -7,8 +7,9 @@
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/Network/Message/NetMessage.h"
+#include "Core/Network/Message/INetMessageHandler.h"
 #include "Core/Network/Message/NetMessageTable.h"
+#include "Core/Network/Message/NetMessageWriter.h"
 #include "Core/Serialization/BitStream.h"
 
 #include "Engine/Input/InputManager.h"

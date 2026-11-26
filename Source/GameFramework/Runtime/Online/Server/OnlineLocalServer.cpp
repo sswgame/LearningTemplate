@@ -7,7 +7,7 @@
 #include "pch.h"
 
 #include "Core/Memory/Memory.h"
-#include "Core/Network/NetTypes.h"
+#include "Core/Network/NetAddress.h"
 
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/ServerConfig.h"

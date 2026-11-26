@@ -2,7 +2,7 @@
 
 #include "Engine/Graphics/RHI/RHI.h"
 
-#include "Core/CommandLine/CommandLineManager.h"
+#include "Core/CommandLine/CommandLine.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Hash/HashUtil.h"
@@ -275,12 +275,12 @@ namespace sw
         return true;
     }
 
-    bool RHI::findCommandLineBackend( const CommandLineManager& commandLineManager, RHIBackend& outBackend )
+    bool RHI::findCommandLineBackend( const CommandLine& commandLine, RHIBackend& outBackend )
     {
         for ( const RHIInternal::BackendArgument& row : RHIInternal::kArrBackendArgument )
         {
             bool bFlag{ false };
-            if ( commandLineManager.getArgument( row._argument, bFlag ) && bFlag )
+            if ( commandLine.getArgument( row._argument, bFlag ) && bFlag )
             {
                 outBackend = row._backend;
                 return true;
@@ -290,7 +290,7 @@ namespace sw
         // `-gv_rhiBackend=<이름>` 도 명시적 지정이다. 짧은 플래그만 보면 전역 변수로 고른 백엔드를
         // EngineConfig 기본값이 로그 없이 덮어쓴다. 값 자체는 updateFromCommandLine 이 이미 전역
         // 변수에 넣어 두었으므로 여기서는 그것을 읽는다.
-        if ( commandLineManager.isArgumentProvided( "gv_rhiBackend" ) )
+        if ( commandLine.isArgumentProvided( "gv_rhiBackend" ) )
         {
             outBackend = gv_rhiBackend;
             return true;
@@ -324,7 +324,7 @@ namespace sw
         // 커맨드라인이 고른 것은 폴백하지 않는다. 쓸 수 없으면 아래에서 에러로 선다.
         // 조용히 다른 백엔드로 뜨면 "네 백엔드를 확인했다" 가 거짓이 된다.
         RHIBackend commandLineBackend{};
-        const bool bCommandLineOverride = RHI::findCommandLineBackend( engine::getSubsystem<CommandLineManager>(), commandLineBackend );
+        const bool bCommandLineOverride = RHI::findCommandLineBackend( engine::getSubsystem<CommandLine>(), commandLineBackend );
         if ( bCommandLineOverride )
             currentBackend = commandLineBackend;
         else if ( RHIAvailability::isAvailable( currentBackend ) == false )

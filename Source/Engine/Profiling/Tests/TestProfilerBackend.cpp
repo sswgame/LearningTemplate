@@ -1,7 +1,7 @@
 // ProfilerBackendTest — 태스크 프로파일 훅: 외부 출력이 없으면 구간을 열지 않는다(nogpu).
 #include "pch.h"
 
-#include "Core/Task/TaskTypes.h"
+#include "Core/Task/TaskProfileHook.h"
 #include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Profiling/ProfilerBackend.h"

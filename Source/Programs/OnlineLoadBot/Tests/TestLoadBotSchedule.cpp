@@ -3,7 +3,7 @@
 // `pick` 의 비율은 자식마다 `_weight` 로 적는다. 봇 모듈(`OnlineLoadBotCore`)에 들어 `UnitTests.OnlineKits` 가 돌린다(nogpu).
 #include "pch.h"
 
-#include "Core/Network/NetTypes.h"
+#include "Core/Network/NetAddress.h"
 #include "Core/Network/Tests/LoopbackStreamTransport.h"
 #include "Core/Network/Transport/IStreamTransport.h"
 #include "Core/TestFramework/TestFramework.h"

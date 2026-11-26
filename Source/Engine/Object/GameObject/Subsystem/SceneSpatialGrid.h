@@ -26,7 +26,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Spatial/SpatialHashGrid2D.h"
-#include "Core/Task/TaskTypes.h"
+#include "Core/Task/TaskHandle.h"
 
 #include "Engine/Object/Component/SceneMoveDispatch.h"
 #include "Engine/Object/GameObject/Subsystem/ISceneSubsystem.h"

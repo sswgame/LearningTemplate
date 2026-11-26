@@ -21,7 +21,7 @@ namespace sw
     struct WindowMonitor;
     struct WindowMonitorRect;
 
-    class CommandLineManager;
+    class CommandLine;
 
     /**
      * @brief 표면 · 앱 수명 이벤트입니다. 데스크톱은 오지 않고, 모바일 · 웹의 플랫폼 창이 냅니다(`GenericWindow::notifyLifecycleEvent`).
@@ -232,7 +232,7 @@ namespace sw
          * @details 주 창을 만드는 곳(RHI 기동 · 헤드리스 App)이 모두 이 길로 만든다 — 위치 인자를 읽는 규칙이 한 곳이다.
          * @return 인자가 틀렸거나(반쪽 좌표 · 칸과 좌표를 함께 · 열 수 없음) 창을 만들지 못하거나 틀 두께를 모르면 오류를 남기고 nullptr 입니다.
          */
-        static unique_ptr<GenericWindow> createMainWindow( const utf8* pTitle, uint32 width, uint32 height, const CommandLineManager& commandLine );
+        static unique_ptr<GenericWindow> createMainWindow( const utf8* pTitle, uint32 width, uint32 height, const CommandLine& commandLine );
         /** @brief 클라이언트 너비를 반환합니다. */
         virtual uint32 getWidth() const { return _width; }
         /** @brief 클라이언트 높이를 반환합니다. */

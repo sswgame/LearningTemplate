@@ -38,7 +38,9 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Network/Connection/SequenceBuffer.h"
-#include "Core/Network/NetTypes.h"
+#include "Core/Network/NetChannelKind.h"
+#include "Core/Network/NetConnectionState.h"
+#include "Core/Network/NetDeliveryNotification.h"
 
 namespace sw
 {

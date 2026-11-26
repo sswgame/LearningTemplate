@@ -2,7 +2,7 @@
 
 #include "Editor/Common/Workspace/NetPlay/EditorNetPlaySession.h"
 
-#include "Core/CommandLine/CommandLineManager.h"
+#include "Core/CommandLine/CommandLine.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Concurrency/thread.h"
@@ -380,7 +380,7 @@ namespace sw::editor
             listArgument.push_back( string( traceArgument.view() ) );
         }
         // 자동화 실행의 자식도 자동화 실행이다(ProcessCommand::forEngineChild) — 빠지면 약한 GPU 의 클라이언트가 품질 low 를 골라 서버와 합성이 갈려 접속이 끊겼다(editor.netresourcedigest, Linux).
-        const ProcessCommand command     = ProcessCommand::forEngineChild( editor::getSubsystem<CommandLineManager>(), executablePath, std::move( listArgument ) );
+        const ProcessCommand command     = ProcessCommand::forEngineChild( editor::getSubsystem<CommandLine>(), executablePath, std::move( listArgument ) );
         string               commandText = command.toCommandLine(); // 로그용 — 디버그 채널 토큰은 남기지 않는다(`GlobalSecret`)
         if ( _debugChannelToken.empty() == false )
             commandText = StringUtil::replace( commandText, _debugChannelToken, GlobalSecret::kMask );

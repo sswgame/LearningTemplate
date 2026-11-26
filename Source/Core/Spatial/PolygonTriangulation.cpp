@@ -1,9 +1,8 @@
 #include "pch.h"
 
-#include "Core/Spatial/PolygonTriangulation.h"
-
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Spatial/PolygonTriangulationUtil.h"
 
 namespace sw
 {

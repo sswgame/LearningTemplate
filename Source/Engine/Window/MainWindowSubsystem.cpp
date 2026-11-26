@@ -2,7 +2,7 @@
 
 #include "Engine/Window/MainWindowSubsystem.h"
 
-#include "Core/CommandLine/CommandLineManager.h"
+#include "Core/CommandLine/CommandLine.h"
 #include "Core/Process/Process.h"
 
 #include "Engine/Foundation/EngineSubsystemHost.h"
@@ -12,7 +12,7 @@
 
 namespace sw
 {
-    bool MainWindowSubsystem::shouldRenderOffScreen( const CommandLineManager& commandLine )
+    bool MainWindowSubsystem::shouldRenderOffScreen( const CommandLine& commandLine )
     {
         if ( commandLine.isArgumentProvided( CommandLineArgument::UNATTENDED ) == false )
             return false;

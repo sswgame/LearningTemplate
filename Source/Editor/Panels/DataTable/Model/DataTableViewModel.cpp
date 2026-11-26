@@ -3,7 +3,7 @@
 #include "Editor/Panels/DataTable/Model/DataTableViewModel.h"
 
 #include "Core/Algorithm/VectorUtil.h"
-#include "Core/CommandLine/CommandLineManager.h"
+#include "Core/CommandLine/CommandLine.h"
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
 #include "Core/Log/Logger.h"
@@ -208,7 +208,7 @@ namespace sw::editor
         StringBuilder<constant::buffer::kMax1024> project;
         project.appendFormat( "-loc-project=%#", _localizationSheet._projectPath.str() );
         listArgument.push_back( string( project.view() ) );
-        ProcessCommand command = ProcessCommand::forEngineChild( editor::getSubsystem<CommandLineManager>(), FileUtil::getExecutablePath(), std::move( listArgument ) );
+        ProcessCommand command = ProcessCommand::forEngineChild( editor::getSubsystem<CommandLine>(), FileUtil::getExecutablePath(), std::move( listArgument ) );
         if ( _pLocalizationToolJob->request( std::move( command ), ProcessRoots::get()._project.str() ) == false )
             return false;
         _runningTool            = tool;

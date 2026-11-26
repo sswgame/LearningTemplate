@@ -10,7 +10,8 @@
 #include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Network/Message/NetMessage.h"
+#include "Core/Network/Message/INetMessageHandler.h"
+#include "Core/Network/Message/NetMessageRouter.h"
 #include "Core/Time/Countdown.h"
 #include "Core/Time/TimeSeconds.h"
 

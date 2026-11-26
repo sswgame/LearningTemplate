@@ -55,7 +55,7 @@ namespace sw
     /**
      * @struct AutomationReproduceInput
      * @brief 이 실행을 다시 띄우는 App 명령줄(재현 명령)의 재료입니다. 보고 JSON 의 `reproduce` 가 이것으로 만든 글입니다.
-     * @details 원본 인자(`CommandLineManager::getOriginalArguments`)를 그대로 옮기고, 보고 · 녹화 경로처럼 결과를 바꾸지 않는 인자는 빼며, 이름에 token · secret · password 같은 조각이 든
+     * @details 원본 인자(`CommandLine::getOriginalArguments`)를 그대로 옮기고, 보고 · 녹화 경로처럼 결과를 바꾸지 않는 인자는 빼며, 이름에 token · secret · password 같은 조각이 든
      *          인자의 값은 `REDACTED` 로 가린다(규칙은 `AutomationRunTitle.cpp` 의 `AutomationReproduceRules` 한 곳). 원본에 없는 것만 실행기가 아는 값(게임 · 실제 백엔드 · 에디터 ·
      *          시나리오 · `<Launch>` 변수)으로 채운다 — 세션 없이 돈 실행기는 원본이 비어 이 값만으로 짓는다.
      */
@@ -76,7 +76,7 @@ namespace sw
 {
     struct AutomationRunStatus;
 
-    class CommandLineManager;
+    class CommandLine;
     class IWindowTitleTarget;
 
     /**
@@ -102,7 +102,7 @@ namespace sw
          * @param backendName 지금 RHI 백엔드 이름(없으면 빈 글)
          * @param pRunStatus 돌고 있는 시나리오(없으면 nullptr — 벤치 요약이나 평소 제목)
          */
-        void onFrameEnd( IWindowTitleTarget* pTitleTarget, const CommandLineManager* pCommandLine, string_view backendName, const AutomationRunStatus* pRunStatus );
+        void onFrameEnd( IWindowTitleTarget* pTitleTarget, const CommandLine* pCommandLine, string_view backendName, const AutomationRunStatus* pRunStatus );
         /** @brief 처음 상태로 돌아가며 프레임마다 모은 제목 · 요약 글을 저장소까지 놓습니다. 세션이 엔진에서 떨어질 때 부릅니다(종료 누수 창이 닫히기 전 — 세션은 엔진보다 오래 산다). */
         void reset();
 

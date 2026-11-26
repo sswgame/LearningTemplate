@@ -2,7 +2,7 @@
 
 #include "DevTools/Client/Automation/Runner/AutomationGoldenUtil.h"
 
-#include "Core/CommandLine/CommandLineManager.h"
+#include "Core/CommandLine/CommandLine.h"
 #include "Core/File/ProcessRoots.h"
 #include "Core/Process/Process.h"
 #include "Core/String/StringBuilder.h"
@@ -69,9 +69,9 @@ namespace sw
     {
         if ( engine::areEngineSubsystemsBound() == false )
             return GoldenWriteMode::Off;
-        bool                      bUpdate        = false;
-        bool                      bRecordMissing = false;
-        const CommandLineManager& commandLine    = engine::getSubsystem<CommandLineManager>();
+        bool               bUpdate        = false;
+        bool               bRecordMissing = false;
+        const CommandLine& commandLine    = engine::getSubsystem<CommandLine>();
         (void)commandLine.getArgument( CommandLineArgument::SCENARIO_UPDATE_GOLDEN, bUpdate );
         (void)commandLine.getArgument( CommandLineArgument::SCENARIO_RECORD_MISSING_GOLDEN, bRecordMissing );
         if ( bUpdate && bRecordMissing )

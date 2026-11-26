@@ -457,7 +457,7 @@ namespace sw
 
     bool StressTestScene::spawnFromGlobals()
     {
-        // 커맨드라인은 게임에 열려 있지 않지만(CommandLineManager HostOnly), 이 스위치는
+        // 커맨드라인은 게임에 열려 있지 않지만(CommandLine HostOnly), 이 스위치는
         // 이 모듈이 선언한다(이 파일 위쪽). 그래서 이름으로 조회하지 않고 그대로 읽는다.
         // 주의: 문자열 조회는 이름을 잘못 쓰면 조용히 0 으로 읽힌다.
         const bool bNoBenchmarkRequested = gv_stressTestMeshes <= 0 && gv_stressTestCharacters <= 0 && gv_stressTestFaces <= 0 && getRigCharacterCount() == 0 && gv_stressTestCombat <= 0 && gv_stressTestRagdolls <= 0;

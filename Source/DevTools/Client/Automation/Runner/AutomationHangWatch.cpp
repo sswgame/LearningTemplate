@@ -11,7 +11,7 @@
 #include "Core/String/StringUtil.h"
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
-#include "Core/Time/BusyClock.h"
+#include "Core/Time/BusyTimeAccumulator.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "DevTools/Client/Automation/Runner/AutomationExitCode.h"

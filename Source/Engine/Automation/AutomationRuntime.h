@@ -41,7 +41,7 @@ namespace sw
 
 namespace sw
 {
-    class CommandLineManager;
+    class CommandLine;
     class Engine;
     class SubsystemScope;
     struct CommandletState;
@@ -71,14 +71,14 @@ namespace sw
          *          게임 · 콘솔의 재생(`ScenarioPlayback::play`)은 기동 뒤 아무 때나 시작하므로 시나리오가 없어도 붙인다.
          * @return 기동을 이어 가도 되면 true 입니다.
          */
-        [[nodiscard]] virtual bool start( Engine& engine, SubsystemScope& host, const CommandLineManager& commandLine ) = 0;
+        [[nodiscard]] virtual bool start( Engine& engine, SubsystemScope& host, const CommandLine& commandLine ) = 0;
         /** @brief 무인 시나리오를 돌리는 중인가입니다(재생은 사람이 보는 화면이라 세지 않는다). 프레임 페이싱이 읽는다. */
         virtual bool isBusy() const = 0;
         /**
          * @brief `-scenario-backends=<목록>` 작업 — 시나리오를 백엔드마다 자식 App 으로 동시에 돌리고 모읍니다(`AutomationPerBackend`). 결과는 @p inoutState 에 적습니다.
          * @param backends `-scenario-backends` 값(비어 있지 않다)
          */
-        virtual void runPerBackend( string_view backends, CommandLineManager& commandLine, CommandletState& inoutState ) = 0;
+        virtual void runPerBackend( string_view backends, CommandLine& commandLine, CommandletState& inoutState ) = 0;
         /**
          * @brief 지금 시나리오의 진행 · 판정 상태입니다. 시나리오가 없으면 nullptr 입니다(끝난 뒤 결과를 남기는 프레임 동안은 끝난 상태를 준다).
          * @details 포인터는 이 프레임 안에서만 쓴다(세션이 프레임 끝마다 다시 쓴다). 게임 스레드에서만 읽는다.

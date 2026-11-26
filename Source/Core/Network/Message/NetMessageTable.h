@@ -17,8 +17,12 @@
 #pragma once
 #include "Core/Foundation/Types.h"
 #include "Core/Hash/HashUtil.h"
-#include "Core/Network/Message/NetMessage.h"
-#include "Core/Network/NetTypes.h"
+#include "Core/Network/Message/INetMessageHandler.h"
+#include "Core/Network/Message/NetMessageWriter.h"
+#include "Core/Network/NetChannelKind.h"
+#include "Core/Network/NetConnectionState.h"
+#include "Core/Network/NetMessageRange.h"
+#include "Core/Network/NetProtocol.h"
 
 #include <type_traits>
 
@@ -70,7 +74,7 @@ namespace sw
      * @brief 서버 수신 상한의 단계입니다(`NetLimitedMessageDef` — 한 연결이 `poll` 한 번에 보내는 수). 정상 게임이 닿지 않는 값이다.
      * @details 정상 클라이언트가 `poll` 한 번에 가장 많이 몰아 보내는 때는 서버가 멈췄다 깬 뒤다. 그 길이는 연결 시한(`NetEndpointConfig::_timeoutSeconds`, 5 초)을 넘지 못한다 —
      *          넘으면 클라이언트가 먼저 끊는다. 신뢰 메시지는 서버가 확인을 보내지 못하는 동안 창(`NetConnection::kReliableWindow`, 256)까지만 나가므로, 상한이 창 이상이면
-     *          디버거로 오래 세운 서버에서도 정상 연결이 끊기지 않는다(`NetMessage.cpp` 의 단언). 그래서 사람이 시키는 일도 64 가 아니라 창이다 — 64 면 5 초 멈춤에 초당 13 번이라 연타에 끊긴다.
+     *          디버거로 오래 세운 서버에서도 정상 연결이 끊기지 않는다(`NetMessageRouter.cpp` 의 단언). 그래서 사람이 시키는 일도 64 가 아니라 창이다 — 64 면 5 초 멈춤에 초당 13 번이라 연타에 끊긴다.
      */
     struct NetRequestLimit
     {
@@ -93,34 +97,46 @@ namespace sw
         static constexpr uint32 kMaxPerPoll = MaxPerPoll;
     };
 
-    /** @brief 메시지 서술자 @p TMessage 의 서버 수신 상한입니다(`NetLimitedMessageDef`). 선언하지 않았으면 0 입니다. */
-    template <typename TMessage, typename = void>
-    struct NetMessageMaxPerPoll : std::integral_constant<uint32, 0u>
+    namespace NetMessageTraitsInternal
     {
-    };
-    template <typename TMessage>
-    struct NetMessageMaxPerPoll<TMessage, std::void_t<decltype( TMessage::kMaxPerPoll )>> : std::integral_constant<uint32, TMessage::kMaxPerPoll>
-    {
-    };
+        template <typename TMessage, typename = void>
+        struct MaxPerPoll : std::integral_constant<uint32, 0u>
+        {
+        };
+        template <typename TMessage>
+        struct MaxPerPoll<TMessage, std::void_t<decltype( TMessage::kMaxPerPoll )>> : std::integral_constant<uint32, TMessage::kMaxPerPoll>
+        {
+        };
 
-    /** @brief 메시지 서술자 @p TMessage 가 보류를 선언했으면 true 입니다(`NetHeldMessageDef`). */
-    template <typename TMessage, typename = void>
-    struct NetMessageIsHeld : std::false_type
-    {
-    };
-    template <typename TMessage>
-    struct NetMessageIsHeld<TMessage, std::void_t<decltype( TMessage::kHoldMilliseconds )>> : std::true_type
-    {
-    };
+        template <typename TMessage, typename = void>
+        struct IsHeld : std::false_type
+        {
+        };
+        template <typename TMessage>
+        struct IsHeld<TMessage, std::void_t<decltype( TMessage::kHoldMilliseconds )>> : std::true_type
+        {
+        };
 
-    /** @brief 메시지 서술자 @p TMessage 가 본문 형식(`Body`)을 가지면 true 입니다 — 표가 본문을 읽어 처리기에 넘긴다. */
-    template <typename TMessage, typename = void>
-    struct NetMessageHasBody : std::false_type
-    {
-    };
+        template <typename TMessage, typename = void>
+        struct HasBody : std::false_type
+        {
+        };
+        template <typename TMessage>
+        struct HasBody<TMessage, std::void_t<typename TMessage::Body>> : std::true_type
+        {
+        };
+    } // namespace NetMessageTraitsInternal
+
+    /** @brief 메시지 서술자 @p TMessage 가 선언한 것을 컴파일 시간에 읽습니다(`std::iterator_traits` 꼴 — 술어마다 형식을 두지 않는다). */
     template <typename TMessage>
-    struct NetMessageHasBody<TMessage, std::void_t<typename TMessage::Body>> : std::true_type
+    struct NetMessageTraits
     {
+        /** @brief 본문 형식(`Body`)이 있으면 true 입니다 — 표가 본문을 읽어 처리기에 넘긴다. */
+        static constexpr bool kHasBody = NetMessageTraitsInternal::HasBody<TMessage>::value;
+        /** @brief 보류를 선언했으면 true 입니다(`NetHeldMessageDef`). */
+        static constexpr bool kIsHeld = NetMessageTraitsInternal::IsHeld<TMessage>::value;
+        /** @brief 서버 수신 상한입니다(`NetLimitedMessageDef`). 선언하지 않았으면 0 입니다. */
+        static constexpr uint32 kMaxPerPoll = NetMessageTraitsInternal::MaxPerPoll<TMessage>::value;
     };
 
     /**
@@ -162,7 +178,7 @@ namespace sw
         static constexpr NetMessageDirectionMask makeDirectionMask()
         {
             static_assert( ( contains<TSubset>() && ... ), "every message of the mask must be in this table" );
-            static_assert( ( ( TSubset::kDirection == NetMessageDirection::ToClient || NetMessageMaxPerPoll<TSubset>::value > 0 ) && ... ),
+            static_assert( ( ( TSubset::kDirection == NetMessageDirection::ToClient || NetMessageTraits<TSubset>::kMaxPerPoll > 0 ) && ... ),
                            "a message the server receives must declare its request limit (NetLimitedMessageDef)" );
             NetMessageDirectionMask mask{};
             mask._toServerMask = static_cast<uint16>( ( 0u | ... | ( TSubset::kDirection != NetMessageDirection::ToClient ? 1u << TSubset::kOffset : 0u ) ) );
@@ -174,7 +190,7 @@ namespace sw
         static constexpr uint32 getMaxPerPollOf( uint8 kind )
         {
             uint32 maxPerPoll = 0;
-            ( ( maxPerPoll = kind == static_cast<uint8>( RangeBase + TMessage::kOffset ) ? NetMessageMaxPerPoll<TMessage>::value : maxPerPoll ), ... );
+            ( ( maxPerPoll = kind == static_cast<uint8>( RangeBase + TMessage::kOffset ) ? NetMessageTraits<TMessage>::kMaxPerPoll : maxPerPoll ), ... );
             return maxPerPoll;
         }
 
@@ -251,7 +267,7 @@ namespace sw
     /**
      * @struct NetMessageDelivery
      * @brief 표 메시지 하나를 처리기의 `receive` 오버로드로 넘깁니다. 표 처리기(`NetTableHandler`)와 역할마다 마스크를 고르는 처리기(엔진 세션)가 함께 쓴다.
-     * @details 본문 형식이 있는 메시지(`NetMessageHasBody`)는 본문을 다 읽은 뒤에만 넘긴다 — 처리기가 넘침 · 범위 검사를 빠뜨릴 자리가 없다.
+     * @details 본문 형식이 있는 메시지(`NetMessageTraits::kHasBody`)는 본문을 다 읽은 뒤에만 넘긴다 — 처리기가 넘침 · 범위 검사를 빠뜨릴 자리가 없다.
      *          잘림 · 남는 비트 · 범위 밖 값 · 등록 밖 열거자는 처리기를 부르지 않고 Malformed 다.
      *          손 본문은 처리기가 Handled 를 돌려도 읽기가 넘쳤으면 Malformed 로 바꾼다 — `BitReader` 는 잘림 · 범위 밖 값(`readInt` · `readEnum` · `readCount`) ·
      *          유한하지 않은 실수 · 남는 비트(`readEnd`)를 넘침으로 표시하므로, 처리기가 마지막 넘침 검사를 빠뜨려도 깨진 메시지가 처리된 것으로 세지지 않는다.
@@ -261,7 +277,7 @@ namespace sw
         template <typename TMessage, typename THandler>
         static NetHandleResult deliver( THandler& handler, const NetMessageContext& context, BitReader& body )
         {
-            if constexpr ( NetMessageHasBody<TMessage>::value )
+            if constexpr ( NetMessageTraits<TMessage>::kHasBody )
             {
                 typename TMessage::Body value{};
                 if ( TMessage::readBody( body, value ) == false )
@@ -336,7 +352,7 @@ namespace sw
             template <typename TMessage>
             uint32 visit()
             {
-                if constexpr ( NetMessageIsHeld<TMessage>::value )
+                if constexpr ( NetMessageTraits<TMessage>::kIsHeld )
                     return TMessage::kHoldMilliseconds;
                 else
                     return 0u;
@@ -351,7 +367,7 @@ namespace sw
             template <typename TMessage>
             uint64 visit()
             {
-                if constexpr ( NetMessageIsHeld<TMessage>::value && ( std::is_same_v<TMessage, TReceived> || ... ) )
+                if constexpr ( NetMessageTraits<TMessage>::kIsHeld && ( std::is_same_v<TMessage, TReceived> || ... ) )
                     return _handler.readHoldKey( TMessage{}, _body );
                 else
                     return 0;

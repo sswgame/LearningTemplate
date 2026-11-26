@@ -80,7 +80,7 @@ namespace sw::internal
 
         const LowLevelReporterFunc pfnReporter = s_lowLevelReporterSlot.get();
         const bool                 bReported   = pfnReporter != nullptr && pfnReporter( level, pFile, line, pMessage, pID );
-        // 로거가 서기 전이거나 로거가 없는 도구이거나 싱크가 없다 — 경고를 잃지 않게 stderr 에 남긴다(Error · Fatal 은 위에서 이미 썼다).
+        // 로거가 서기 전이거나 로거가 없는 도구이거나 백엔드가 없다 — 경고를 잃지 않게 stderr 에 남긴다(Error · Fatal 은 위에서 이미 썼다).
         if ( bReported == false && bWarning )
             LowLevelReportInternal::writeStderr( level, pFile, line, pMessage, pID );
     }
@@ -278,7 +278,7 @@ namespace sw::internal
 
     void reportFatal( const utf8* pFile, int32 line, const utf8* pMessage ) noexcept
     {
-        reportLowLevel( LowLevelReportLevel::Fatal, pFile, line, pMessage ); // stderr 동기 + 로그 줄 · 싱크 비우기(`forwardLowLevelReport`)
+        reportLowLevel( LowLevelReportLevel::Fatal, pFile, line, pMessage ); // stderr 동기 + 로그 줄 · 백엔드 비우기(`forwardLowLevelReport`)
         std::abort();
     }
 } // namespace sw::internal

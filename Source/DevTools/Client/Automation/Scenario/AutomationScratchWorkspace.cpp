@@ -2,7 +2,7 @@
 
 #include "DevTools/Client/Automation/Scenario/AutomationScratchWorkspace.h"
 
-#include "Core/CommandLine/CommandLineManager.h"
+#include "Core/CommandLine/CommandLine.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
@@ -128,7 +128,7 @@ namespace sw
                 bool bRecordMissingGolden = false;
                 if ( engine::areEngineSubsystemsBound() )
                 {
-                    const CommandLineManager& commandLine = engine::getSubsystem<CommandLineManager>();
+                    const CommandLine& commandLine = engine::getSubsystem<CommandLine>();
                     (void)commandLine.getArgument( CommandLineArgument::SCENARIO_UPDATE_GOLDEN, bUpdateGolden );
                     (void)commandLine.getArgument( CommandLineArgument::SCENARIO_RECORD_MISSING_GOLDEN, bRecordMissingGolden );
                 }

@@ -3,7 +3,7 @@
 #include "GameFramework/Kits/Feature/Online/Account/Runtime/AccountTicketConnect.h"
 
 #include "Core/Network/Connection/NetEndpointSecurity.h"
-#include "Core/Network/NetTypes.h"
+#include "Core/Network/NetAddress.h"
 #include "Core/Network/Transport/IStreamTransport.h"
 #include "Core/Network/Transport/PlatformSocketUtil.h"
 #include "Core/String/StringBuilder.h"

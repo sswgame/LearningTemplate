@@ -16,7 +16,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Network/Message/NetRequest.h"
 #include "Core/Network/Message/StreamMessageEndpoint.h"
-#include "Core/Network/NetTypes.h"
+#include "Core/Network/NetAddress.h"
 #include "Core/Time/TimePoint.h"
 
 #include "Programs/OnlineLoadBot/LoadBotMetrics.h"

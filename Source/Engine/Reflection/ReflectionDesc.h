@@ -10,7 +10,7 @@
 #pragma once
 #include "Core/Container/span.h"
 #include "Core/String/NamedValue.h"
-#include "Core/Task/TaskTypes.h"
+#include "Core/Task/TaskArgs.h"
 
 #include "Engine/Reflection/ContainerKind.h"
 #include "Engine/Reflection/ReflectionMetadata.h"

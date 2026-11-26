@@ -1,7 +1,7 @@
 // EngineChildProcess — 엔진 자식 명령의 한 입구: 자동화 실행(-unattended · -scenario)만 자식 인자에 -unattended 를 더하고, 이미 있으면 다시 더하지 않으며, 상대 경로는 빈 명령이다.
 #include "pch.h"
 
-#include "Core/CommandLine/CommandLineManager.h"
+#include "Core/CommandLine/CommandLine.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Path/AbsolutePath.h"
 #include "Core/Process/Process.h"
@@ -10,7 +10,7 @@
 namespace
 {
     /** @brief @p argument 하나(없으면 실행 파일 이름만)로 파싱한 명령줄입니다. */
-    void parseCommandLine( sw::CommandLineManager& outCommandLine, const utf8* pArgument )
+    void parseCommandLine( sw::CommandLine& outCommandLine, const utf8* pArgument )
     {
         outCommandLine.initialize();
         const sw::optional<sw::AbsolutePath> baseDirectory = sw::AbsolutePath::tryMake( sw::test::makeScratchPath( "base" ).str() );
@@ -27,12 +27,12 @@ SW_TEST_CASE( EngineChildProcessTest, AutomatedRunPassesUnattendedToChildren )
 {
     const sw::AbsolutePath executable = sw::FileUtil::getExecutablePath();
 
-    sw::CommandLineManager humanRun;
+    sw::CommandLine humanRun;
     parseCommandLine( humanRun, nullptr );
     const sw::ProcessCommand humanChild = sw::ProcessCommand::forEngineChild( humanRun, executable, { "-gv_firstScene=a.scene.xml" } );
     SW_EXPECT_EQUAL( size_t{ 1 }, humanChild._listArgument.size() );
 
-    sw::CommandLineManager scenarioRun;
+    sw::CommandLine scenarioRun;
     parseCommandLine( scenarioRun, "-scenario=engine/automation/editor/idle.scenario.xml" );
     const sw::ProcessCommand child = sw::ProcessCommand::forEngineChild( scenarioRun, executable, { "-gv_firstScene=a.scene.xml" } );
     SW_REQUIRE_EQUAL( size_t{ 2 }, child._listArgument.size() );
@@ -47,7 +47,7 @@ SW_TEST_CASE( EngineChildProcessTest, AutomatedRunPassesUnattendedToChildren )
  */
 SW_TEST_CASE( EngineChildProcessTest, EmptyExecutableMakesEmptyCommand )
 {
-    sw::CommandLineManager humanRun;
+    sw::CommandLine humanRun;
     parseCommandLine( humanRun, nullptr );
     const sw::ProcessCommand command = sw::ProcessCommand::forEngineChild( humanRun, sw::AbsolutePath{}, { "-x" } );
     SW_EXPECT_TRUE( command._listArgument.empty() );

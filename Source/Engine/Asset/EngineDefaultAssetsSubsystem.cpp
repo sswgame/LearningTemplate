@@ -2,7 +2,7 @@
 
 #include "Engine/Asset/EngineDefaultAssetsSubsystem.h"
 
-#include "Core/CommandLine/CommandLineManager.h"
+#include "Core/CommandLine/CommandLine.h"
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Config/EngineDefaultAssets.h"
@@ -50,7 +50,7 @@ namespace sw
         if ( localization.syncModuleProjects() == false ) // 정적 링크(배포)는 키트의 등록이 이미 있다
             return SubsystemInitResult::Failed;
         string commandLineLanguage;
-        if ( engine::getSubsystem<CommandLineManager>().getArgument( CommandLineArgument::LANGUAGE, commandLineLanguage ) && localization.hasLanguage( commandLineLanguage ) )
+        if ( engine::getSubsystem<CommandLine>().getArgument( CommandLineArgument::LANGUAGE, commandLineLanguage ) && localization.hasLanguage( commandLineLanguage ) )
             localization.setCurrentLanguage( commandLineLanguage );
         return SubsystemInitResult::Succeeded;
     }

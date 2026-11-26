@@ -2,7 +2,7 @@
 
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 
-#include "Core/CommandLine/CommandLineManager.h"
+#include "Core/CommandLine/CommandLine.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/String/StringBuilder.h"
@@ -59,12 +59,12 @@ namespace sw
             /** @brief `_defaultValue` 를 값에 씁니다. 기본값의 타입이 다르면 아무것도 하지 않습니다. */
             void ( *_writeDefault )( GlobalVariableInfo& info );
             /** @brief 명령줄 인자(`-gv_*`)로 등록합니다. */
-            void ( *_addCommandLineArgument )( CommandLineManager& commandLine, const GlobalVariableInfo& info );
+            void ( *_addCommandLineArgument )( CommandLine& commandLine, const GlobalVariableInfo& info );
             /**
              * @brief 명령줄 인자 값을 씁니다. 썼으면 true 입니다.
              * @param outPendingText 지금 읽을 수 없어 나중에 다시 적용할 글입니다(enum 이름은 파서가 걸린 뒤에 읽는다). 없으면 비워 둡니다.
              */
-            bool ( *_readCommandLineArgument )( const CommandLineManager& commandLine, GlobalVariableInfo& info, string& outPendingText );
+            bool ( *_readCommandLineArgument )( const CommandLine& commandLine, GlobalVariableInfo& info, string& outPendingText );
         };
 
         /** @brief bool · int32 · float32 처럼 변수에 그대로 저장하는 타입의 처리입니다. */
@@ -110,13 +110,13 @@ namespace sw
                     *static_cast<T*>( info._pData ) = std::get<T>( info._defaultValue );
             }
 
-            static void addCommandLineArgument( CommandLineManager& commandLine, const GlobalVariableInfo& info )
+            static void addCommandLineArgument( CommandLine& commandLine, const GlobalVariableInfo& info )
             {
                 const T defaultValue = std::holds_alternative<T>( info._defaultValue ) ? std::get<T>( info._defaultValue ) : T{};
                 commandLine.addArgument<T>( { info._name }, defaultValue );
             }
 
-            [[nodiscard]] static bool readCommandLineArgument( const CommandLineManager& commandLine, GlobalVariableInfo& info, string& /*outPendingText*/ )
+            [[nodiscard]] static bool readCommandLineArgument( const CommandLine& commandLine, GlobalVariableInfo& info, string& /*outPendingText*/ )
             {
                 T value{};
                 if ( commandLine.getArgument( info._name, value ) == false )
@@ -147,13 +147,13 @@ namespace sw
                 static_cast<GlobalString*>( info._pData )->set( std::get<string>( info._defaultValue ) );
             }
 
-            static void addCommandLineArgument( CommandLineManager& commandLine, const GlobalVariableInfo& info )
+            static void addCommandLineArgument( CommandLine& commandLine, const GlobalVariableInfo& info )
             {
                 string defaultValue = std::holds_alternative<string>( info._defaultValue ) ? std::get<string>( info._defaultValue ) : string{};
                 commandLine.addArgument<string>( { info._name }, std::move( defaultValue ) );
             }
 
-            [[nodiscard]] static bool readCommandLineArgument( const CommandLineManager& commandLine, GlobalVariableInfo& info, string& /*outPendingText*/ )
+            [[nodiscard]] static bool readCommandLineArgument( const CommandLine& commandLine, GlobalVariableInfo& info, string& /*outPendingText*/ )
             {
                 string value;
                 if ( commandLine.getArgument( info._name, value ) == false )
@@ -189,13 +189,13 @@ namespace sw
 
             static void writeDefault( GlobalVariableInfo& info ) { GlobalVariableStringOps::writeDefault( info ); }
 
-            static void addCommandLineArgument( CommandLineManager& commandLine, const GlobalVariableInfo& info )
+            static void addCommandLineArgument( CommandLine& commandLine, const GlobalVariableInfo& info )
             {
                 // 명령줄이 받을 때 절대화한다 - 같은 규칙(CommandLineDiskPath · AbsolutePath::tryResolve)이다. 기본값은 빈 글(끔)만 둔다.
                 commandLine.addArgument<CommandLineDiskPath>( { info._name }, CommandLineDiskPath{} );
             }
 
-            [[nodiscard]] static bool readCommandLineArgument( const CommandLineManager& commandLine, GlobalVariableInfo& info, string& outPendingText )
+            [[nodiscard]] static bool readCommandLineArgument( const CommandLine& commandLine, GlobalVariableInfo& info, string& outPendingText )
             {
                 return GlobalVariableStringOps::readCommandLineArgument( commandLine, info, outPendingText );
             }
@@ -216,9 +216,9 @@ namespace sw
 
             static void writeDefault( GlobalVariableInfo& info ) { GlobalVariableStringOps::writeDefault( info ); }
 
-            static void addCommandLineArgument( CommandLineManager& commandLine, const GlobalVariableInfo& info ) { GlobalVariableStringOps::addCommandLineArgument( commandLine, info ); }
+            static void addCommandLineArgument( CommandLine& commandLine, const GlobalVariableInfo& info ) { GlobalVariableStringOps::addCommandLineArgument( commandLine, info ); }
 
-            [[nodiscard]] static bool readCommandLineArgument( const CommandLineManager& commandLine, GlobalVariableInfo& info, string& outPendingText )
+            [[nodiscard]] static bool readCommandLineArgument( const CommandLine& commandLine, GlobalVariableInfo& info, string& outPendingText )
             {
                 return GlobalVariableStringOps::readCommandLineArgument( commandLine, info, outPendingText );
             }
@@ -261,13 +261,13 @@ namespace sw
                     GlobalVariableInternal::writeEnumValue( info._pData, info._typeSize, std::get<int32>( info._defaultValue ) );
             }
 
-            static void addCommandLineArgument( CommandLineManager& commandLine, const GlobalVariableInfo& info )
+            static void addCommandLineArgument( CommandLine& commandLine, const GlobalVariableInfo& info )
             {
                 // 숫자 또는 열거자 이름이라 글로 받는다. 정수로 받으면 `Vulkan` 이 파싱 경고 한 줄과 함께 버려진다.
                 commandLine.addArgument<string>( { info._name }, string{} );
             }
 
-            [[nodiscard]] static bool readCommandLineArgument( const CommandLineManager& commandLine, GlobalVariableInfo& info, string& outPendingText )
+            [[nodiscard]] static bool readCommandLineArgument( const CommandLine& commandLine, GlobalVariableInfo& info, string& outPendingText )
             {
                 // 이름은 파서가 있으면 바로 적용하고, 아직 없으면 `applyPendingEnumText` 까지 받아 둔다. 숫자는 적용하지 않고 같은 길로 보내
                 // `setValueFromCommandLine` 이 거절 이유와 함께 알린다(명령줄은 열거자 이름만 받는다).
@@ -538,11 +538,11 @@ namespace sw
     // ============================================================================
 
     /**
-     * @brief 등록된 모든 전역 변수를 CommandLineManager 의 허용 인자로 등록합니다.
+     * @brief 등록된 모든 전역 변수를 CommandLine 의 허용 인자로 등록합니다.
      *
      * 그래서 커맨드라인에서 -gv_myVar=123 처럼 값을 넘길 수 있습니다.
      */
-    void GlobalVariableManager::registerToCommandLine( CommandLineManager* pCmdLineManager )
+    void GlobalVariableManager::registerToCommandLine( CommandLine* pCmdLineManager )
     {
         if ( pCmdLineManager == nullptr )
             return;
@@ -571,7 +571,7 @@ namespace sw
      * 문자열로 다시 바꿨다가 파싱하는 과정 없이 타입별 행이 원시 포인터(*_pData)에 값을 넣고, 여기서 변경 알림 콜백을 부릅니다.
      * 지금 읽을 수 없는 글(파서가 아직 없는 enum 이름)은 `applyPendingEnumText` 까지 받아 둡니다.
      */
-    void GlobalVariableManager::updateFromCommandLine( const CommandLineManager* pCmdLineManager )
+    void GlobalVariableManager::updateFromCommandLine( const CommandLine* pCmdLineManager )
     {
         if ( pCmdLineManager == nullptr )
             return;
@@ -652,7 +652,7 @@ namespace sw
         _registrationGeneration.fetch_add( 1, std::memory_order_release );
 
         // 모듈(EditorModule · SWGame)이 선언한 변수는 커맨드라인 파싱이 이미 끝난 뒤 여기로 온다. 그 값은
-        // CommandLineManager 의 보류표에 남아 있으므로 등록 직후 꺼내 적용한다. 이것이 없으면 `-gv_editorPanelDump=25` 같은
+        // CommandLine 의 보류표에 남아 있으므로 등록 직후 꺼내 적용한다. 이것이 없으면 `-gv_editorPanelDump=25` 같은
         // 모듈 스위치가 조용히 무시된다. 엔진 자체의 변수는 registerToCommandLine 전에 등록되므로 여기에 걸리지 않고
         // updateFromCommandLine 이 맡는다. 잠금 안이므로 매니저의 setValueFromString(다시 잠근다)이 아니라 info 쪽을 직접 부른다.
         if ( _pCmdLineManager != nullptr && bInserted )

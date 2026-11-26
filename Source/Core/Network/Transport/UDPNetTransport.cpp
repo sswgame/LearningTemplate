@@ -2,6 +2,7 @@
 
 #include "Core/Network/Transport/UDPNetTransport.h"
 
+#include "Core/Network/NetProtocol.h"
 #include "Core/Network/Transport/PlatformSocketUtil.h"
 
 namespace sw

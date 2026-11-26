@@ -15,7 +15,7 @@
 
 namespace sw
 {
-    class CommandLineManager;
+    class CommandLine;
     class GlobalVariableManager;
     class InputMap;
     class LocalizationManager;
@@ -23,10 +23,10 @@ namespace sw
     /** @brief 엔진 핸들러가 값을 넣는 대상입니다. 테스트는 자기 것을 넘기고, 엔진은 서비스를 넘깁니다. 비어 있는 대상의 핸들러는 아무것도 하지 않습니다. */
     struct UserSettingsTargets
     {
-        GlobalVariableManager*    _pGlobalVariableManager{ nullptr };
-        const CommandLineManager* _pCommandLineManager{ nullptr }; ///< 있으면 명령줄로 준 전역 변수(`-gv_*`)는 기동 적용이 덮지 않는다(명령줄이 이긴다)
-        InputMap*                 _pInputMap{ nullptr };
-        LocalizationManager*      _pLocalizationManager{ nullptr };
+        GlobalVariableManager* _pGlobalVariableManager{ nullptr };
+        const CommandLine*     _pCommandLine{ nullptr }; ///< 있으면 명령줄로 준 전역 변수(`-gv_*`)는 기동 적용이 덮지 않는다(명령줄이 이긴다)
+        InputMap*              _pInputMap{ nullptr };
+        LocalizationManager*   _pLocalizationManager{ nullptr };
     };
 } // namespace sw
 

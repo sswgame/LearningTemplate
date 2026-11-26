@@ -7,7 +7,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Network/Message/NetMessageTable.h"
-#include "Core/Network/NetTypes.h"
+#include "Core/Network/NetChannelKind.h"
 
 #include "Engine/Network/NetMessageBody.h"
 #include "Engine/Reflection/ReflectionMacros.h"

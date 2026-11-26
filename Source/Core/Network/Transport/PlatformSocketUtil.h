@@ -6,7 +6,7 @@
 #pragma once
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Network/NetTypes.h"
+#include "Core/Network/NetAddress.h"
 
 namespace sw
 {

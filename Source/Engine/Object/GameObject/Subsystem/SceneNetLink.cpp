@@ -6,7 +6,6 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/Connection/NetConnection.h"
 #include "Core/Network/Connection/NetEndpoint.h"
-#include "Core/Network/Message/NetMessage.h"
 #include "Core/Network/Replication/NetClock.h"
 
 #include "Engine/Object/Component/Component.h"

@@ -9,7 +9,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 #include "Core/String/Name/hashed_string.h"
-#include "Core/Task/TaskTypes.h"
+#include "Core/Task/TaskArgs.h"
 
 #include "Editor/Common/Widgets/PropertyGrid/Model/InspectorBuiltinValue.h"
 #include "Editor/Common/Widgets/PropertyGrid/Model/InspectorComponentPicker.h"

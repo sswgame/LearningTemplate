@@ -9,6 +9,7 @@
 #pragma once
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Network/NetProtocol.h"
 #include "Core/Network/Transport/NetTransport.h"
 #include "Core/Network/Transport/PlatformSocketUtil.h"
 

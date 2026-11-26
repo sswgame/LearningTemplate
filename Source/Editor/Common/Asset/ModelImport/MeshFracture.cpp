@@ -9,7 +9,7 @@
 #include "Core/Math/DeterministicMathUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Spatial/PolygonTriangulation.h"
+#include "Core/Spatial/PolygonTriangulationUtil.h"
 #include "Core/Spatial/PositionWelder.h"
 
 #include "Engine/Character/Fit/CharacterGeometry.h"

@@ -3,7 +3,7 @@
 // 테스트는 자기 목록(`EngineRegistrationList`)에 자기 등록을 단다 — 엔진의 전역 목록과 칸을 건드리지 않는다.
 #include "pch.h"
 
-#include "Core/CommandLine/CommandLineManager.h"
+#include "Core/CommandLine/CommandLine.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/String/StringUtil.h"
 #include "Core/Subsystem/Subsystem.h"
@@ -477,8 +477,8 @@ SW_TEST_CASE( EngineRegistrationTest, LifetimeDependencyMustFollowTheAfterList )
  */
 SW_TEST_CASE( EngineRegistrationTest, CommandLineSlotsKnowTheirOwner )
 {
-    SW_REQUIRE_TRUE( SubsystemSlotOf<CommandLineManager>::getSlot()._pBound != nullptr );
-    SW_EXPECT_TRUE( SubsystemSlotOf<CommandLineManager>::getSlot()._pOwner != nullptr );
+    SW_REQUIRE_TRUE( SubsystemSlotOf<CommandLine>::getSlot()._pBound != nullptr );
+    SW_EXPECT_TRUE( SubsystemSlotOf<CommandLine>::getSlot()._pOwner != nullptr );
     SW_REQUIRE_TRUE( SubsystemSlotOf<GlobalVariableManager>::getSlot()._pBound != nullptr );
-    SW_EXPECT_TRUE( SubsystemSlotOf<GlobalVariableManager>::getSlot()._pOwner == SubsystemSlotOf<CommandLineManager>::getSlot()._pOwner );
+    SW_EXPECT_TRUE( SubsystemSlotOf<GlobalVariableManager>::getSlot()._pOwner == SubsystemSlotOf<CommandLine>::getSlot()._pOwner );
 }
