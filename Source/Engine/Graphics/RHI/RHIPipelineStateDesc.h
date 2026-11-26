@@ -1,7 +1,7 @@
 /**
  * @file RHIPipelineStateDesc.h
  * @brief 그래픽스 · 컴퓨트 파이프라인 상태 서술체입니다.
- * @details PSO 를 짓는 곳(백엔드 팩토리 · PSO 캐시)만 읽는다 — 서술체 묶음(`RHIDescriptors.h`)에서 떼어 렌더 상태 · 메시 정점 헤더를 그 몇 곳만 끈다.
+ * @details PSO 를 짓는 곳(백엔드 팩토리 · PSO 캐시)만 읽는다 — 서술체 묶음(`RHITypes.h`)에서 떼어 렌더 상태 · 메시 정점 헤더를 그 몇 곳만 끈다.
  */
 #pragma once
 #include "Core/Container/string.h"

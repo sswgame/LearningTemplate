@@ -20,7 +20,7 @@
 #include "Engine/Foundation/EngineParallel.h"
 #include "Engine/Foundation/EnginePlatformHeaders.h"
 #include "Engine/Foundation/EngineSubsystems.h"
-#include "Engine/Graphics/RHI/RHIDescriptors.h"
+#include "Engine/Graphics/RHI/RHIConstants.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompileClaims.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompileSession.h"

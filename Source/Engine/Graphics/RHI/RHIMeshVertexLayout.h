@@ -1,7 +1,7 @@
 /**
  * @file RHIMeshVertexLayout.h
  * @brief 메시 정점 스트림의 계약입니다: 속성 스트림 원소(Packed · HighPrecision), 정점 속성 선언 표, 정점 버퍼 슬롯 상수.
- * @details 네 백엔드의 입력 레이아웃과 메시 업로드만 읽는다 — 서술체 묶음(`RHIDescriptors.h`)에서 떼어 half · 메시 정점 헤더를 그 몇 곳만 끈다.
+ * @details 네 백엔드의 입력 레이아웃과 메시 업로드만 읽는다 — 서술체 묶음(`RHITypes.h`)에서 떼어 half · 메시 정점 헤더를 그 몇 곳만 끈다.
  */
 #pragma once
 #include "Core/Foundation/Macros.h"

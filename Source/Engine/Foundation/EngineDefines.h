@@ -7,7 +7,7 @@
 
 namespace sw
 {
-    // 렌더 백엔드 계약 상수(`constant::render` — 프레임 수 · 형식 · 정렬)는 RHI 형식 값이 필요해 `RHIDescriptors.h` 에 있다. 분류 목록은 `Core/Foundation/Constants.h`.
+    // 렌더 백엔드 계약 상수(`constant::render` — 프레임 수 · 형식 · 정렬)는 RHI 형식 값이 필요해 `RHIConstants.h` 에 있다. 분류 목록은 `Core/Foundation/Constants.h`.
     namespace constant::window
     {
         /** @brief 기본 뷰포트 너비입니다. */

@@ -19,7 +19,8 @@
 #include "Engine/Graphics/RHI/Backend/RHIRetireList.h"
 #include "Engine/Graphics/RHI/ConstantBufferPoolSlice.h"
 #include "Engine/Graphics/RHI/ConstantBufferSlotAllocator.h"
-#include "Engine/Graphics/RHI/RHIDescriptors.h"
+#include "Engine/Graphics/RHI/RHIBufferSlice.h"
+#include "Engine/Graphics/RHI/RHIConstants.h"
 #include "Engine/Graphics/RHI/RHIHandles.h"
 
 namespace sw

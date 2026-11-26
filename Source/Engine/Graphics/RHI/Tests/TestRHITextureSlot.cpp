@@ -9,10 +9,10 @@
 
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/RHI/RHIConstantBuffer.h"
-#include "Engine/Graphics/RHI/RHIDescriptors.h"
 #include "Engine/Graphics/RHI/RHIGeometryBuffer.h"
 #include "Engine/Graphics/RHI/RHIPipelineState.h"
 #include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
+#include "Engine/Graphics/RHI/RHITextureDesc.h"
 #include "Engine/Graphics/RHI/RHITextureSlot.h"
 #include "Engine/Graphics/RHI/Tests/RHIFakeDevice.h"
 

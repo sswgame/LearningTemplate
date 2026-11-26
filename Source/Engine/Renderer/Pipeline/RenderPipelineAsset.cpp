@@ -11,6 +11,7 @@
 #include "Engine/Asset/Cache/SharedAssetCacheDefinition.h"
 #include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/Material/RenderBlendPreset.h"
+#include "Engine/Graphics/RHI/RHIConstants.h"
 #include "Engine/Graphics/RHI/RHIFormatInfo.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Reflection/EnumName.h"

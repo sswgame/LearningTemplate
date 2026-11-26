@@ -5,7 +5,7 @@
 #pragma once
 #include "Core/Container/vector.h"
 
-#include "Engine/Graphics/RHI/RHIDescriptors.h"
+#include "Engine/Graphics/RHI/RHIBufferDesc.h"
 
 namespace sw
 {

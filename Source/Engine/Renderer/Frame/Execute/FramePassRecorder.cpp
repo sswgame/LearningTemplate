@@ -30,6 +30,7 @@
 #include "Engine/Renderer/Frame/FrameRenderState.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Renderer/Frame/PostProcess/FrameFog.h"
+#include "Engine/Renderer/Frame/RenderPassNames.h"
 #include "Engine/Renderer/Frame/Resource/FramePSOManager.h"
 #include "Engine/Renderer/Frame/View/FrameViewTarget.h"
 #include "Engine/Renderer/Graph/RenderGraphImportedResourceTable.h"

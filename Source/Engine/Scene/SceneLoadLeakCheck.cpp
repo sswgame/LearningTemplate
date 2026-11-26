@@ -6,7 +6,7 @@
 #include "Core/Log/Logger.h"
 
 #include "Engine/Foundation/EngineSubsystems.h"
-#include "Engine/Graphics/RHI/RHIDescriptors.h"
+#include "Engine/Graphics/RHI/RHIConstants.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 

@@ -24,6 +24,7 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHITimestampProvider.h"
 #include "Engine/Graphics/RHI/RHIBackendInfo.h"
+#include "Engine/Graphics/RHI/RHIBufferSlice.h"
 #include "Engine/Graphics/RHI/RHIRecordingBindings.h"
 #include "Engine/Graphics/RHI/Transfer/RHIStagingRing.h"
 #include "Engine/Graphics/RHI/Transfer/RHITransferSerials.h"

@@ -9,8 +9,8 @@
 
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Foundation/Foundation.h"
-#include "Engine/Graphics/Material/MaterialTypes.h"
-#include "Engine/Graphics/RHI/RHIDescriptors.h"
+#include "Engine/Graphics/Material/MaterialPermutation.h"
+#include "Engine/Graphics/RHI/RHIRenderPassInfo.h"
 #include "Engine/Graphics/RenderState/RenderState.h"
 #include "Engine/Graphics/View/PostProcessValues.h"
 #include "Engine/Reflection/ReflectionMacros.h"

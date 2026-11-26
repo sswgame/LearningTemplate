@@ -11,8 +11,9 @@
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Foundation/RenderTargetDeclaration.h"
-#include "Engine/Graphics/RHI/RHIDescriptors.h"
 #include "Engine/Graphics/RHI/RHIRenderResource.h"
+#include "Engine/Graphics/RHI/RHITextureDesc.h"
+#include "Engine/Graphics/RHI/RHITransferTicket.h"
 #include "Engine/Graphics/Texture/Texture2DAssetKind.h"
 
 namespace sw

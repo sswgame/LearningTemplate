@@ -11,6 +11,7 @@
 
 #include "Engine/EngineMinimal.h"
 #include "Engine/Graphics/RHI/RHIGeometryBuffer.h"
+#include "Engine/Graphics/RHI/RHIIndirectCommand.h"
 #include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
 #include "Engine/Graphics/RHI/RHIVertex.h"
 #include "Engine/Presentation/InstanceHighlight.h"

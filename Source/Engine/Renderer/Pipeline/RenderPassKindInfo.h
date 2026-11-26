@@ -15,7 +15,7 @@
 
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Foundation/Foundation.h"
-#include "Engine/Graphics/Material/MaterialTypes.h"
+#include "Engine/Graphics/Material/MaterialPermutation.h"
 #include "Engine/Graphics/RenderState/RenderState.h"
 #include "Engine/Renderer/Pipeline/RenderGraphPassDesc.h"
 #include "Engine/Renderer/Pipeline/RenderPassInputSignature.h"
@@ -104,7 +104,7 @@ namespace sw
     inline constexpr const utf8* kAppearanceDitherDefine = "SW_APPEARANCE_DITHER";
 
     // 머티리얼이 내는 기능 define(`kMaterialForwardOnlyDefine` · `kMaterialDistortionDefine` · `kMaterialOutlineDefine` · `kMaterialVertexDeformDefine` · `kMaterialDisplacementDefine` ·
-    // `kMaterialDomainPostProcessDefine`)은 MaterialTypes.h 에 있다 — 머티리얼 읽기가 조합을 검사한다(`MaterialPermutation::validateFeatures`).
+    // `kMaterialDomainPostProcessDefine`)은 MaterialPermutation.h 에 있다 — 머티리얼 읽기가 조합을 검사한다(`MaterialPermutation::validateFeatures`).
 
     /** @brief 그림자를 드리우지 않는 머티리얼의 define 입니다. 그림자 패스 셰이더가 정점을 클립 공간 밖으로 모아 그리지 않습니다. */
     inline constexpr const utf8* kMaterialShadowCastOffDefine = "MATERIAL_SHADOW_CAST_OFF";

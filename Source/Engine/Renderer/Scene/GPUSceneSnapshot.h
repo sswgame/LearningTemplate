@@ -16,8 +16,8 @@
 
 #include "Engine/Animation/Scene/AnimationSkinSlot.h"
 #include "Engine/EngineMinimal.h"
+#include "Engine/Graphics/Material/MaterialPermutation.h"
 #include "Engine/Graphics/Material/MaterialRenderProxy.h"
-#include "Engine/Graphics/Material/MaterialTypes.h"
 #include "Engine/Graphics/RenderState/RenderState.h"
 #include "Engine/Graphics/Shader/Binding/GPUSpriteInstanceData.h"
 #include "Engine/Presentation/InstanceCustomData.h"

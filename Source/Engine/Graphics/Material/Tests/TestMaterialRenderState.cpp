@@ -7,7 +7,8 @@
 
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
 #include "Engine/Graphics/Material/Material.h"
-#include "Engine/Graphics/Material/MaterialTypes.h"
+#include "Engine/Graphics/Material/MaterialDef.h"
+#include "Engine/Graphics/Material/MaterialPermutation.h"
 #include "Engine/Graphics/Material/RenderBlendPreset.h"
 #include "Engine/Graphics/RenderState/RenderState.h"
 

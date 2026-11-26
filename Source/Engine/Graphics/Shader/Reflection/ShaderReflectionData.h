@@ -6,7 +6,7 @@
 #include "Core/Foundation/Expected.h"
 
 #include "Engine/EngineMinimal.h"
-#include "Engine/Graphics/RHI/RHIHandles.h"
+#include "Engine/Graphics/RHI/RHIThreadGroupSize.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw

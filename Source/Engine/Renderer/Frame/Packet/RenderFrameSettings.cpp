@@ -15,7 +15,7 @@
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Foundation/EngineSubsystems.h"
-#include "Engine/Graphics/RHI/RHIDescriptors.h"
+#include "Engine/Graphics/RHI/RHIConstants.h"
 
 namespace sw
 {

@@ -38,6 +38,7 @@
 #include "Engine/Renderer/Extension/RenderExtensionRegistry.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Renderer/Frame/Packet/RenderFramePacket.h"
+#include "Engine/Renderer/Frame/RenderPassNames.h"
 #include "Engine/Renderer/Frame/Timeline/GPUTimestampSlotLayout.h"
 #include "Engine/Renderer/Frame/View/RenderViewCollector.h"
 #include "Engine/Renderer/Pipeline/RenderPassInputSignature.h"
@@ -255,7 +256,7 @@ namespace sw
 #endif
 
         float4 sceneColorClear;
-        if ( tryGetAttachmentClearColor( FrameRendererUtil::Attachment::kSceneColor, sceneColorClear ) )
+        if ( tryGetAttachmentClearColor( AttachmentNames::kSceneColor, sceneColorClear ) )
             _state._clearColor = sceneColorClear;
 
         // 파이프라인 패스 설정(셰이더, 진입점, 블렌드, 퍼뮤테이션)으로 PSO 를 다시 만든다.

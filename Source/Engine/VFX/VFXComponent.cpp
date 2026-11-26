@@ -11,6 +11,7 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Asset/Cache/SharedAssetRef.h"
+#include "Engine/Environment/EnvironmentMaterial.h"
 #include "Engine/Environment/EnvironmentUtil.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Mesh/Mesh.h"

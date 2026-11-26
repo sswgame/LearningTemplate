@@ -14,9 +14,10 @@
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetTypeRegistry.h"
+#include "Engine/Graphics/Material/MaterialDef.h"
+#include "Engine/Graphics/Material/MaterialPermutation.h"
 #include "Engine/Graphics/Material/MaterialRenderBinding.h"
 #include "Engine/Graphics/Material/MaterialRenderVersion.h"
-#include "Engine/Graphics/Material/MaterialTypes.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
 
 namespace sw

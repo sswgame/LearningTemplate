@@ -5,6 +5,7 @@
 #pragma once
 #include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/RHIRecordingBindings.h"
+#include "Engine/Graphics/RHI/RHIThreadGroupSize.h"
 
 namespace sw
 {

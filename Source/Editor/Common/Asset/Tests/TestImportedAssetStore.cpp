@@ -15,8 +15,8 @@
 #include "Engine/Asset/AssetDatabase.h"
 #include "Engine/Content/AssetGUID.h"
 #include "Engine/Graphics/Material/Material.h"
+#include "Engine/Graphics/Material/MaterialDef.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
-#include "Engine/Graphics/Material/MaterialTypes.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 

@@ -13,6 +13,7 @@
 #include "Engine/Graphics/RHI/RHIGeometryBuffer.h"
 #include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
 #include "Engine/Graphics/RHI/RHITextureSlot.h"
+#include "Engine/Graphics/RHI/RHITransferTicket.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
 #include "Engine/Renderer/Frame/Resource/TransientAttachmentPool.h"
 #include "Engine/Renderer/Frame/View/FrameViewHistory.h"

@@ -12,7 +12,7 @@
 #include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
-#include "Engine/Graphics/RHI/RHIDescriptors.h"
+#include "Engine/Graphics/RHI/RHITextureDesc.h"
 #include "Engine/Graphics/RHI/Tests/RHIFakeDevice.h"
 #include "Engine/Reflection/EnumName.h"
 

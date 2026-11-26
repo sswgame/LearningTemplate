@@ -5,7 +5,8 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Graphics/RHI/IRHICommandList.h"
-#include "Engine/Graphics/RHI/RHIDescriptors.h"
+#include "Engine/Graphics/RHI/RHIIndirectCommand.h"
+#include "Engine/Graphics/RHI/RHITransition.h"
 #include "Engine/Renderer/Scene/GPUSceneSnapshot.h"
 
 #include "vfx_simulate.hlsli"

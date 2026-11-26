@@ -6,6 +6,7 @@
 #include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
+#include "Engine/Renderer/Frame/RenderPassNames.h"
 
 // 뷰 사각형 상수(RS-3) — 사각형이 풀을 다 덮으면 배율이 정확히 1(그림이 같다), 줄면 그 비율이고 지난 배율을 함께 싣는다. 셰이더 PassCB 가 같은 이름을 선언한다.
 

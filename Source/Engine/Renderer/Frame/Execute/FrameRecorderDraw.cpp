@@ -58,6 +58,7 @@
 #include "Engine/Renderer/Frame/PostProcess/FrameFog.h"
 #include "Engine/Renderer/Frame/PostProcess/FramePostGrade.h"
 #include "Engine/Renderer/Frame/PostProcess/FrameUpscale.h"
+#include "Engine/Renderer/Frame/RenderPassNames.h"
 #include "Engine/Renderer/Frame/Resource/FramePSOManager.h"
 #include "Engine/Renderer/Frame/Resource/RenderPSOCache.h"
 #include "Engine/Renderer/Frame/Resource/ShaderParameterBinder.h"
@@ -67,6 +68,7 @@
 #include "Engine/Renderer/Pipeline/GBufferLayout.h"
 #include "Engine/Renderer/Pipeline/RenderPassKindInfo.h"
 #include "Engine/Renderer/Pipeline/RenderPipelineAsset.h"
+#include "Engine/Renderer/Scene/GPUMeshBatchPSO.h"
 #include "Engine/Visual/Component/MeshComponent.h"
 
 namespace sw

@@ -14,7 +14,7 @@
 #include "Editor/Common/Workspace/EditorSubsystems.h"
 
 #include "Engine/Asset/Image/DDSLoader.h"
-#include "Engine/Graphics/RHI/RHIDescriptors.h"
+#include "Engine/Graphics/RHI/RHITextureDesc.h"
 #include "Engine/Graphics/RHI/RHITextureMipLayout.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Graphics/Texture/TextureFormatFamily.h"

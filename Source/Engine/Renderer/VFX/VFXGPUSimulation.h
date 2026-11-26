@@ -12,7 +12,8 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Graphics/RHI/RHIDescriptors.h"
+#include "Engine/Graphics/RHI/RHIEnums.h"
+#include "Engine/Graphics/RHI/RHIHandles.h"
 #include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
 #include "Engine/Renderer/Graph/RenderGraph.h"
 #include "Engine/Renderer/VFX/VFXParticleOrder.h"

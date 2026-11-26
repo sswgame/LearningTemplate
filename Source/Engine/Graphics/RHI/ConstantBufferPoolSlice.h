@@ -6,6 +6,7 @@
 #include "Core/Foundation/Macros.h"
 
 #include "Engine/Graphics/RHI/ConstantBufferSlotAllocator.h"
+#include "Engine/Graphics/RHI/RHIBufferSlice.h"
 #include "Engine/Graphics/RHI/RHIHandles.h"
 
 namespace sw
