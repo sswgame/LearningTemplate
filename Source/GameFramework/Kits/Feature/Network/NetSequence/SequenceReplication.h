@@ -84,9 +84,9 @@ namespace sw
     /** @brief 컷씬 재생 키트의 메시지 표입니다. 종류 · 마스크 · 와이어 버전은 표에서 나온다(`NetMessageTable`). 본문은 모두 스키마 결합형이다. */
     struct NetSequenceMessage
     {
-        using Start       = NetMessageBodyDef<0, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, SequenceNetStartBody>;
-        using End         = NetMessageBodyDef<1, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, SequenceNetEndBody>; ///< 시작 뒤에 닿아야 한다(같은 순서 채널)
-        using SkipRequest = NetLimitedMessageDef<NetMessageBodyDef<2, NetMessageDirection::ToServer, NetChannelKind::ReliableOrdered, SequenceNetSkipRequestBody>, NetRequestLimit::kCommand>;
+        using Start       = NetMessageBodyDesc<0, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, SequenceNetStartBody>;
+        using End         = NetMessageBodyDesc<1, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, SequenceNetEndBody>; ///< 시작 뒤에 닿아야 한다(같은 순서 채널)
+        using SkipRequest = NetLimitedMessageDesc<NetMessageBodyDesc<2, NetMessageDirection::ToServer, NetChannelKind::ReliableOrdered, SequenceNetSkipRequestBody>, NetRequestLimit::kCommand>;
         using Table       = NetWorldMessageTable<NetKitMessageRange::kSequence, Start, End, SkipRequest>;
 
         static constexpr uint8 kStart       = Table::getKindOf<Start>();

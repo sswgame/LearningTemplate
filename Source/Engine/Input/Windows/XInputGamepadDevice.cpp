@@ -7,7 +7,7 @@
 #include "Core/Math/NormalizedInt.h"
 #include "Core/Module/ModuleLibraryUtil.h"
 
-#include "Engine/Input/GamepadButtonUtil.h"
+#include "Engine/Input/GamepadButton.h"
 
 namespace sw
 {

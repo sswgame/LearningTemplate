@@ -41,8 +41,8 @@ namespace sw
                 return channel._elapsed >= channel._delay + channel._duration;
             }
 
-            /** @brief 항목 하나(`_field 0.2 EaseOut`)를 @p inoutSpec 에 더합니다. */
-            [[nodiscard]] static expected<void> parseEntry( string_view item, UIStyleTransitionSpec& inoutSpec )
+            /** @brief 항목 하나(`_field 0.2 EaseOut`)를 @p inoutTransition 에 더합니다. */
+            [[nodiscard]] static expected<void> parseEntry( string_view item, UIStyleTransition& inoutTransition )
             {
                 // 공백으로 나눈 단어를 셋까지 읽는다. 필드, 길이, 곡선 순서다.
                 string_view arrToken[4]{};
@@ -70,7 +70,7 @@ namespace sw
                 }
                 if ( tokenCount < 2 )
                     return unexpected( Error{ ErrorKind::InvalidArgument, "a transition item must be 'field seconds [curve] [delay]'", item } );
-                UIStyleTransitionSpec::Entry entry{};
+                UIStyleTransition::Entry entry{};
                 if ( StringUtil::parseFloat( arrToken[1], entry._duration ) == false || entry._duration < 0.0f )
                     return unexpected( Error{ ErrorKind::InvalidArgument, "a transition item has an unreadable duration", item } );
                 // 길이 다음 단어: 숫자면 지연(곡선 없음), 아니면 곡선이다. 곡선 다음 숫자는 지연이다.
@@ -104,23 +104,23 @@ namespace sw
                 {
                     if ( UIStyleFieldTable::tryFindField( arrToken[0], entry._field ) == false )
                         return unexpected( Error{ ErrorKind::NotFound, "a transition names an unknown style property", arrToken[0] } );
-                    if ( UIStyleTransitionSpec::isInterpolable( entry._field ) == false )
+                    if ( UIStyleTransition::isInterpolable( entry._field ) == false )
                         return unexpected( Error{ ErrorKind::Unsupported, "the style property cannot transition (not a number, size or color)", arrToken[0] } );
                 }
                 for ( uint32 index = 0; index < static_cast<uint32>( UIStyleField::Count ); ++index )
                 {
                     const UIStyleField field = static_cast<UIStyleField>( index );
-                    if ( ( bAll && UIStyleTransitionSpec::isInterpolable( field ) ) || ( bAll == false && field == entry._field ) )
-                        setEntry( inoutSpec, field, entry );
+                    if ( ( bAll && UIStyleTransition::isInterpolable( field ) ) || ( bAll == false && field == entry._field ) )
+                        setEntry( inoutTransition, field, entry );
                 }
                 return {};
             }
 
-            static void setEntry( UIStyleTransitionSpec& inoutSpec, UIStyleField field, const UIStyleTransitionSpec::Entry& source )
+            static void setEntry( UIStyleTransition& inoutTransition, UIStyleField field, const UIStyleTransition::Entry& source )
             {
-                UIStyleTransitionSpec::Entry entry = source;
-                entry._field                       = field;
-                for ( UIStyleTransitionSpec::Entry& existing : inoutSpec._listEntry )
+                UIStyleTransition::Entry entry = source;
+                entry._field                   = field;
+                for ( UIStyleTransition::Entry& existing : inoutTransition._listEntry )
                 {
                     if ( existing._field == field )
                     {
@@ -128,7 +128,7 @@ namespace sw
                         return;
                     }
                 }
-                inoutSpec._listEntry.push_back( entry );
+                inoutTransition._listEntry.push_back( entry );
             }
 
             /** @brief 필드 @p field 의 진행 중인 채널이 있으면 그 지금 값을 @p outFrom 에 담고 채널을 뺍니다(새 채널이 그 값에서 이어 간다). */
@@ -153,14 +153,14 @@ namespace sw
 
 namespace sw
 {
-    const UIStyleTransitionSpec::Entry* UIStyleTransitionSpec::findEntry( UIStyleField field ) const
+    const UIStyleTransition::Entry* UIStyleTransition::findEntry( UIStyleField field ) const
     {
         return VectorUtil::findBy<&Entry::_field>( _listEntry, field );
     }
 
-    expected<void> UIStyleTransitionSpec::parse( string_view text, UIStyleTransitionSpec& outSpec )
+    expected<void> UIStyleTransition::parse( string_view text, UIStyleTransition& outTransition )
     {
-        outSpec                            = UIStyleTransitionSpec{};
+        outTransition                      = UIStyleTransition{};
         const vector<string_view> listItem = StringUtil::split( text, ",", { ._bTrim = true } );
         // 빈 글 하나(항목 없음)는 받고, 항목이 여럿인데 빈 것이 끼면 오류다.
         if ( listItem.size() == 1 && listItem[0].empty() )
@@ -169,13 +169,13 @@ namespace sw
         {
             if ( item.empty() )
                 return unexpected( Error{ ErrorKind::InvalidArgument, "a transition has an empty item", text } );
-            if ( expected<void> parsed = UIStyleTransitionInternal::parseEntry( item, outSpec ); parsed.has_value() == false )
+            if ( expected<void> parsed = UIStyleTransitionInternal::parseEntry( item, outTransition ); parsed.has_value() == false )
                 return parsed;
         }
         return {};
     }
 
-    bool UIStyleTransitionSpec::isInterpolable( UIStyleField field )
+    bool UIStyleTransition::isInterpolable( UIStyleField field )
     {
         return UIStyleFieldTable::getComponentCount( field ) > 0;
     }
@@ -218,11 +218,11 @@ namespace sw
             pTree->_uniqueStyleTransition.insert( widget.getID() ); // 이미 있으면 넣지 않는다 — 같은 위젯이 두 번 들어오지 않는다
     }
 
-    bool UIStyleTransitionState::makeChannel( Widget& widget, const UIComputedStyle& oldStyle, const UIComputedStyle& newStyle, UIStyleField field, const UIStyleTransitionSpec& spec,
+    bool UIStyleTransitionState::makeChannel( Widget& widget, const UIComputedStyle& oldStyle, const UIComputedStyle& newStyle, UIStyleField field, const UIStyleTransition& styleTransition,
                                               uint32 oldStates, uint32 newStates, bool bHaveFrom, float32 ( &inoutFrom )[4], UIStyleTransitionState::Channel& outChannel )
     {
-        const UIStyleTransitionSpec::Entry* pEntry   = spec.findEntry( field );
-        const bool                          bOwnSpec = pEntry != nullptr && pEntry->_duration > 0.0f;
+        const UIStyleTransition::Entry* pEntry         = styleTransition.findEntry( field );
+        const bool                      bOwnTransition = pEntry != nullptr && pEntry->_duration > 0.0f;
         // 새 값: 시트가 정했으면 그 값, 아니면 위젯이 자기 필드로 그리는 값이다(읽지 못하는 위젯은 바로 바뀐다).
         UIStyleTransitionState::Channel channel{};
         if ( newStyle.has( field ) )
@@ -230,9 +230,9 @@ namespace sw
         else if ( widget.tryGetOwnStyleField( field, newStates, channel._arrTo ) == false )
             return false;
         UIStyleTransitionState::Channel mirrored{};
-        const bool                      bMirror = bOwnSpec == false && newStyle.has( field ) && ( UIStyleFieldTable::getFlags( field ) & UIStyleFieldTable::kInherited ) != 0 &&
+        const bool                      bMirror = bOwnTransition == false && newStyle.has( field ) && ( UIStyleFieldTable::getFlags( field ) & UIStyleFieldTable::kInherited ) != 0 &&
                              findParentChannel( widget, field, channel._arrTo, mirrored );
-        if ( bOwnSpec == false && bMirror == false )
+        if ( bOwnTransition == false && bMirror == false )
             return false; // 적지 않은 필드는 바로 바꾼다
         if ( bMirror )
         {
@@ -276,11 +276,11 @@ namespace sw
             widget._styleTransition.reset();
             return;
         }
-        UIStyleTransitionSpec spec{};
+        UIStyleTransition styleTransition{};
         if ( pNew->has( UIStyleField::Transition ) && pNew->_value._transition.empty() == false )
         {
-            if ( UIStyleTransitionSpec::parse( pNew->_value._transition, spec ).has_value() == false )
-                spec = UIStyleTransitionSpec{}; // 시트 로드가 이미 걸렀으므로 여기서는 조용히 전환 없음으로 처리한다
+            if ( UIStyleTransition::parse( pNew->_value._transition, styleTransition ).has_value() == false )
+                styleTransition = UIStyleTransition{}; // 시트 로드가 이미 걸렀으므로 여기서는 조용히 전환 없음으로 처리한다
         }
 
         unique_ptr<UIStyleTransitionState>& state = widget._styleTransition;
@@ -293,7 +293,7 @@ namespace sw
             float32                         arrFrom[4]{ 0.0f, 0.0f, 0.0f, 0.0f };
             const bool                      bHaveFrom = Internal::takeRunningValue( state.get(), field, arrFrom );
             UIStyleTransitionState::Channel channel{};
-            if ( makeChannel( widget, *pOld, *pNew, field, spec, oldStates, newStates, bHaveFrom, arrFrom, channel ) == false )
+            if ( makeChannel( widget, *pOld, *pNew, field, styleTransition, oldStates, newStates, bHaveFrom, arrFrom, channel ) == false )
                 continue;
             if ( state == nullptr )
                 state = make_unique<UIStyleTransitionState>();

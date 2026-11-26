@@ -46,13 +46,13 @@ SW_TEST_CASE( SecretValueTest, TextFormatsNeverCarryTheValue )
     {
         SW_EXPECT_TRUE( text.find( "hunter2" ) == string::npos );
         SW_EXPECT_TRUE( text.find( "200" ) == string::npos ); // 다이제스트 첫 바이트
-        SW_EXPECT_TRUE( text.find( SecretValueUtil::kRedactedText ) != string::npos );
+        SW_EXPECT_TRUE( text.find( kSecretRedactedText ) != string::npos );
         SW_EXPECT_TRUE( text.find( "7" ) != string::npos );
     }
 
     // 가린 글을 값으로 읽지 않는다
     SecretText restored;
-    SW_EXPECT_FALSE( ValueSerializer::parseTextValue( MutableValueAddress{ &restored }, SecretText::StaticType()->_name, SecretValueUtil::kRedactedText,
+    SW_EXPECT_FALSE( ValueSerializer::parseTextValue( MutableValueAddress{ &restored }, SecretText::StaticType()->_name, kSecretRedactedText,
                                                       SerializeContext::getDefault( SerializePurpose::Authoring ) ) );
     SW_EXPECT_TRUE( restored.empty() );
 }

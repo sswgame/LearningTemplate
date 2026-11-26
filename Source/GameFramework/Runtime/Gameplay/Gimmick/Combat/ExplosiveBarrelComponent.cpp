@@ -52,7 +52,7 @@ namespace sw
         if ( _fuseTime > 0.0f )
         {
             if ( _fuseStepsLeft < 0 )
-                _fuseStepsLeft = TickIntervalUtil::secondsToCount( kTickInterval, _fuseTime, 1 );
+                _fuseStepsLeft = TickTurn::secondsToIntervalCount( kTickInterval, _fuseTime, 1 );
             if ( --_fuseStepsLeft <= 0 )
             {
                 explode( *pOwner );

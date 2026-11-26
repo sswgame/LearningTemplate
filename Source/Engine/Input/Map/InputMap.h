@@ -24,10 +24,10 @@
 #include "Core/String/Name/hashed_string.h"
 
 #include "Engine/Content/AssetID.h"
-#include "Engine/Input/GamepadButtonUtil.h"
+#include "Engine/Input/GamepadButton.h"
 #include "Engine/Input/IInputDevice.h"
 #include "Engine/Input/InputUserDevices.h"
-#include "Engine/Input/KeyCodeUtil.h"
+#include "Engine/Input/Key.h"
 #include "Engine/Input/Map/InputBinding.h"
 #include "Engine/Input/Map/InputTriggerRules.h"
 

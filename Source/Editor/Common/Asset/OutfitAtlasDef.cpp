@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Editor/Common/Asset/OutfitAtlasSpec.h"
+#include "Editor/Common/Asset/OutfitAtlasDef.h"
 
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
@@ -30,9 +30,9 @@ namespace sw::editor
     {
         struct OutfitAtlasBakerInternal
         {
-            static void readMap( const XMLNode& node, CharacterDataReader& reader, OutfitAtlasMapSpec& outMap )
+            static void readMap( const XMLNode& node, CharacterDataReader& reader, OutfitAtlasMapDef& outMap )
             {
-                (void)reader.readProperties( node, outMap ); // 칸은 OutfitAtlasMapSpec 의 PROPERTY — 오류는 읽개의 목록에 쌓인다
+                (void)reader.readProperties( node, outMap ); // 칸은 OutfitAtlasMapDef 의 PROPERTY — 오류는 읽개의 목록에 쌓인다
                 for ( XMLNode child = node.findChild(); child; child = child.findNextSibling() )
                 {
                     if ( StringUtil::equals( child.getName(), "Source" ) == false )
@@ -40,28 +40,28 @@ namespace sw::editor
                         reader.reportUnknownElement( child );
                         continue;
                     }
-                    OutfitAtlasSourceSpec source;
+                    OutfitAtlasSourceDef source;
                     (void)reader.readProperties( child, source );
                     outMap._listSource.push_back( std::move( source ) );
                 }
             }
 
-            static void readRoot( const XMLNode& root, CharacterDataReader& reader, OutfitAtlasSpec& outSpec )
+            static void readRoot( const XMLNode& root, CharacterDataReader& reader, OutfitAtlasDef& outDef )
             {
-                (void)reader.readProperties( root, outSpec );
+                (void)reader.readProperties( root, outDef );
                 for ( XMLNode child = root.findChild(); child; child = child.findNextSibling() )
                 {
                     if ( StringUtil::equals( child.getName(), "Part" ) )
                     {
-                        OutfitAtlasPartSpec part;
+                        OutfitAtlasPartDef part;
                         (void)reader.readProperties( child, part );
-                        outSpec._listPart.push_back( std::move( part ) );
+                        outDef._listPart.push_back( std::move( part ) );
                     }
                     else if ( StringUtil::equals( child.getName(), "Map" ) )
                     {
-                        OutfitAtlasMapSpec map;
+                        OutfitAtlasMapDef map;
                         readMap( child, reader, map );
-                        outSpec._listMap.push_back( std::move( map ) );
+                        outDef._listMap.push_back( std::move( map ) );
                     }
                     else
                     {
@@ -71,26 +71,26 @@ namespace sw::editor
             }
 
             /** @brief 의미를 봅니다 — 부품 · 텍스처 종류가 있고, 종류마다 부품마다 텍스처가 하나씩이다. */
-            static void validateSpec( const OutfitAtlasSpec& spec, CharacterDataReader& reader )
+            static void validateDef( const OutfitAtlasDef& def, CharacterDataReader& reader )
             {
-                if ( spec._listPart.empty() )
+                if ( def._listPart.empty() )
                     reader.addError( "Outfit.NoPart", "OutfitAtlas needs at least one Part" );
-                if ( spec._listMap.empty() )
+                if ( def._listMap.empty() )
                     reader.addError( "Outfit.NoMap", "OutfitAtlas needs at least one Map" );
-                if ( spec._size <= 0 || spec._padding < 0 )
+                if ( def._size <= 0 || def._padding < 0 )
                     reader.addError( "Outfit.SizeInvalid", "OutfitAtlas size must be positive and padding 0 or more" );
-                for ( const OutfitAtlasMapSpec& map : spec._listMap )
+                for ( const OutfitAtlasMapDef& map : def._listMap )
                 {
-                    if ( map._listSource.size() != spec._listPart.size() )
+                    if ( map._listSource.size() != def._listPart.size() )
                     {
                         fixed_string<constant::buffer::kMax256> errorText;
                         formatstring( errorText.data(), errorText.capacity(), "Map '%#' needs one Source per Part", map._name.c_str() );
                         reader.addError( "Outfit.MapSourceCount", errorText );
                     }
-                    for ( const OutfitAtlasSourceSpec& source : map._listSource )
+                    for ( const OutfitAtlasSourceDef& source : map._listSource )
                     {
                         bool bKnown = false;
-                        for ( const OutfitAtlasPartSpec& part : spec._listPart )
+                        for ( const OutfitAtlasPartDef& part : def._listPart )
                         {
                             bKnown = bKnown || part._name == source._part;
                         }
@@ -105,10 +105,10 @@ namespace sw::editor
             }
 
             /** @brief 맵에서 부품의 텍스처 경로입니다. 없으면 빈 글입니다. */
-            static const string& findTexture( const OutfitAtlasMapSpec& map, const hashed_string& part )
+            static const string& findTexture( const OutfitAtlasMapDef& map, const hashed_string& part )
             {
                 static const string s_empty;
-                for ( const OutfitAtlasSourceSpec& source : map._listSource )
+                for ( const OutfitAtlasSourceDef& source : map._listSource )
                 {
                     if ( source._part == part && source._texture.isSet() )
                         return source._texture.get();
@@ -130,10 +130,10 @@ namespace sw::editor
             }
 
             /** @brief 맵 하나의 이미지를 모두 읽습니다(부품 순서). 읽지 못하면 까닭을 남기고 false 입니다. */
-            [[nodiscard]] static bool loadImages( const OutfitAtlasSpec& spec, const OutfitAtlasMapSpec& map, vector<RawImageData>& outListImage )
+            [[nodiscard]] static bool loadImages( const OutfitAtlasDef& def, const OutfitAtlasMapDef& map, vector<RawImageData>& outListImage )
             {
                 outListImage.clear();
-                for ( const OutfitAtlasPartSpec& part : spec._listPart )
+                for ( const OutfitAtlasPartDef& part : def._listPart )
                 {
                     const string&            texture = findTexture( map, part._name );
                     RawImageData             image;
@@ -149,10 +149,10 @@ namespace sw::editor
             }
 
             /** @brief 부품 메시를 모두 읽습니다(부품 순서). 읽지 못하면 까닭을 남기고 false 입니다. */
-            [[nodiscard]] static bool loadPartMeshes( const OutfitAtlasSpec& spec, vector<shared_ptr<Mesh>>& outListMesh )
+            [[nodiscard]] static bool loadPartMeshes( const OutfitAtlasDef& def, vector<shared_ptr<Mesh>>& outListMesh )
             {
                 outListMesh.clear();
-                for ( const OutfitAtlasPartSpec& part : spec._listPart )
+                for ( const OutfitAtlasPartDef& part : def._listPart )
                 {
                     shared_ptr<Mesh> mesh = MeshCache::acquire( part._mesh, MeshCPUAccess::Keep );
                     if ( mesh == nullptr )
@@ -166,23 +166,23 @@ namespace sw::editor
             }
 
             /** @brief 맵마다 이미지를 읽고, 첫 맵의 크기로 배치합니다. 다른 맵은 부품마다 같은 크기여야 합니다. */
-            [[nodiscard]] static bool loadMapImagesAndPack( const OutfitAtlasSpec& spec, uint32 atlasSize, uint32 padding, vector<vector<RawImageData>>& outListMapImage,
+            [[nodiscard]] static bool loadMapImagesAndPack( const OutfitAtlasDef& def, uint32 atlasSize, uint32 padding, vector<vector<RawImageData>>& outListMapImage,
                                                             vector<OutfitAtlasRect>& outListRect )
             {
                 outListMapImage.clear();
-                outListMapImage.resize( spec._listMap.size() );
+                outListMapImage.resize( def._listMap.size() );
                 vector<OutfitAtlasSource> listSource;
-                for ( size_t mapIndex = 0; mapIndex < spec._listMap.size(); ++mapIndex )
+                for ( size_t mapIndex = 0; mapIndex < def._listMap.size(); ++mapIndex )
                 {
-                    if ( loadImages( spec, spec._listMap[mapIndex], outListMapImage[mapIndex] ) == false )
+                    if ( loadImages( def, def._listMap[mapIndex], outListMapImage[mapIndex] ) == false )
                         return false;
-                    for ( size_t partIndex = 0; partIndex < spec._listPart.size(); ++partIndex )
+                    for ( size_t partIndex = 0; partIndex < def._listPart.size(); ++partIndex )
                     {
                         const RawImageData& image = outListMapImage[mapIndex][partIndex];
                         if ( mapIndex == 0 )
                         {
                             OutfitAtlasSource source;
-                            source._part   = spec._listPart[partIndex]._name;
+                            source._part   = def._listPart[partIndex]._name;
                             source._width  = static_cast<uint32>( image._width );
                             source._height = static_cast<uint32>( image._height );
                             listSource.push_back( source );
@@ -192,7 +192,7 @@ namespace sw::editor
                         if ( bSameSize == false )
                         {
                             SW_LOG_ERROR_ID( "OutfitAtlasBaker.OutfitAtlasMapTexture2", "Outfit atlas map '%#': texture of part '%#' is %#x%# but the first map made it %#x%# - every map must share one layout",
-                                             spec._listMap[mapIndex]._name.c_str(), spec._listPart[partIndex]._name.c_str(), image._width, image._height, listSource[partIndex]._width,
+                                             def._listMap[mapIndex]._name.c_str(), def._listPart[partIndex]._name.c_str(), image._width, image._height, listSource[partIndex]._width,
                                              listSource[partIndex]._height );
                             return false;
                         }
@@ -207,14 +207,14 @@ namespace sw::editor
             }
 
             /** @brief 부품 메시를 하나로 병합합니다 — 훅이 부품을 한 그룹(구간)으로 모으고 UV 를 배치대로 옮깁니다. 타일링 UV 가 있으면 false 입니다. */
-            [[nodiscard]] static bool mergeParts( const OutfitAtlasSpec& spec, const vector<shared_ptr<Mesh>>& listMesh, uint32 atlasSize, const vector<OutfitAtlasRect>& listRect,
+            [[nodiscard]] static bool mergeParts( const OutfitAtlasDef& def, const vector<shared_ptr<Mesh>>& listMesh, uint32 atlasSize, const vector<OutfitAtlasRect>& listRect,
                                                   MeshMergeResult& outMerged )
             {
-                const OutfitAtlasHooks hooks( spec._group, atlasSize, listRect );
+                const OutfitAtlasHooks hooks( def._group, atlasSize, listRect );
                 vector<MeshMergePart>  listMergePart;
-                for ( size_t partIndex = 0; partIndex < spec._listPart.size(); ++partIndex )
+                for ( size_t partIndex = 0; partIndex < def._listPart.size(); ++partIndex )
                 {
-                    listMergePart.push_back( MeshMergePart{ spec._listPart[partIndex]._name, hashed_string{}, listMesh[partIndex].get() } );
+                    listMergePart.push_back( MeshMergePart{ def._listPart[partIndex]._name, hashed_string{}, listMesh[partIndex].get() } );
                 }
                 expected<MeshMergeResult> merged = CharacterMeshUtil::mergeMeshes( listMergePart, &hooks );
                 if ( merged.has_value() == false )
@@ -232,15 +232,15 @@ namespace sw::editor
             }
 
             /** @brief 맵마다 아틀라스 이미지를 합성합니다. 쓰기 전에 모두 메모리에서 끝내므로 도중에 실패해도 반쪽 결과를 남기지 않습니다. */
-            [[nodiscard]] static bool composeAtlases( const OutfitAtlasSpec& spec, uint32 atlasSize, uint32 padding, const vector<vector<RawImageData>>& listMapImage,
+            [[nodiscard]] static bool composeAtlases( const OutfitAtlasDef& def, uint32 atlasSize, uint32 padding, const vector<vector<RawImageData>>& listMapImage,
                                                       const vector<OutfitAtlasRect>& listRect, vector<vector<uint8>>& outListAtlas )
             {
                 outListAtlas.clear();
-                outListAtlas.resize( spec._listMap.size() );
-                for ( size_t mapIndex = 0; mapIndex < spec._listMap.size(); ++mapIndex )
+                outListAtlas.resize( def._listMap.size() );
+                for ( size_t mapIndex = 0; mapIndex < def._listMap.size(); ++mapIndex )
                 {
                     OutfitAtlasComposer::initialize( atlasSize, outListAtlas[mapIndex] );
-                    for ( size_t partIndex = 0; partIndex < spec._listPart.size(); ++partIndex )
+                    for ( size_t partIndex = 0; partIndex < def._listPart.size(); ++partIndex )
                     {
                         const RawImageData&  image   = listMapImage[mapIndex][partIndex];
                         const expected<void> blitted = OutfitAtlasComposer::blit( atlasSize, listRect[partIndex], padding, image._bytes, static_cast<uint32>( image._width ),
@@ -256,13 +256,13 @@ namespace sw::editor
             }
 
             /** @brief 아틀라스 이미지와 병합한 메시를 디스크에 쓰고 결과를 채웁니다. */
-            [[nodiscard]] static bool writeOutputs( const OutfitAtlasSpec& spec, uint32 atlasSize, const vector<vector<uint8>>& listAtlas, const MeshMergeResult& merged,
+            [[nodiscard]] static bool writeOutputs( const OutfitAtlasDef& def, uint32 atlasSize, const vector<vector<uint8>>& listAtlas, const MeshMergeResult& merged,
                                                     OutfitAtlasBakeResult& outResult )
             {
                 AssetWriter writer;
-                for ( size_t mapIndex = 0; mapIndex < spec._listMap.size(); ++mapIndex )
+                for ( size_t mapIndex = 0; mapIndex < def._listMap.size(); ++mapIndex )
                 {
-                    const optional<DiskPath> imageFile = editor::getSubsystem<AssetPaths>().toDiskPath( spec._listMap[mapIndex]._output );
+                    const optional<DiskPath> imageFile = editor::getSubsystem<AssetPaths>().toDiskPath( def._listMap[mapIndex]._output );
                     const AssetWriteResult   written   = imageFile.has_value() ? writer.save( *imageFile, [&]( const AbsolutePath& writable )
                         { return ImageFileWriter::writePNGRGBA8( writable, listAtlas[mapIndex], atlasSize, atlasSize ); } )
                                                                                : AssetWriteResult::Failed;
@@ -270,12 +270,12 @@ namespace sw::editor
                         return false; // 문이 이미 알렸다
                     if ( written == AssetWriteResult::Failed )
                     {
-                        SW_LOG_ERROR_ID( "OutfitAtlasBaker.OutfitAtlasImageCould", "Outfit atlas image '%#' could not be written", spec._listMap[mapIndex]._output.c_str() );
+                        SW_LOG_ERROR_ID( "OutfitAtlasBaker.OutfitAtlasImageCould", "Outfit atlas image '%#' could not be written", def._listMap[mapIndex]._output.c_str() );
                         return false;
                     }
-                    outResult._listTexturePath.push_back( spec._listMap[mapIndex]._output );
+                    outResult._listTexturePath.push_back( def._listMap[mapIndex]._output );
                 }
-                const optional<DiskPath> meshFile = editor::getSubsystem<AssetPaths>().toDiskPath( spec._outputMesh );
+                const optional<DiskPath> meshFile = editor::getSubsystem<AssetPaths>().toDiskPath( def._outputMesh );
                 const AssetWriteResult   written  = meshFile.has_value() ? writer.save( *meshFile, [&]( const AbsolutePath& writable )
                    { return MeshAssetFormat::saveToFile( writable, makeAssetData( *merged._mesh ) ); } )
                                                                          : AssetWriteResult::Failed;
@@ -283,7 +283,7 @@ namespace sw::editor
                     return false; // 문이 이미 알렸다
                 if ( written == AssetWriteResult::Failed )
                 {
-                    SW_LOG_ERROR_ID( "OutfitAtlasBaker.OutfitAtlasMeshCould", "Outfit atlas mesh '%#' could not be written", spec._outputMesh.c_str() );
+                    SW_LOG_ERROR_ID( "OutfitAtlasBaker.OutfitAtlasMeshCould", "Outfit atlas mesh '%#' could not be written", def._outputMesh.c_str() );
                     return false;
                 }
                 return true;
@@ -293,16 +293,16 @@ namespace sw::editor
             {
                 if ( listArgument.size() != 1 )
                     return false;
-                OutfitAtlasSpec spec;
-                if ( OutfitAtlasSpec::loadSpec( AssetID{ listArgument[0] }, spec ) == false )
+                OutfitAtlasDef def;
+                if ( OutfitAtlasDef::loadFromAsset( AssetID{ listArgument[0] }, def ) == false )
                 {
                     StringBuilder<constant::buffer::kMax256> replyBuilder;
-                    replyBuilder.appendFormat( "outfit atlas spec '%#' could not be read (see the log)", listArgument[0] );
+                    replyBuilder.appendFormat( "outfit atlas def '%#' could not be read (see the log)", listArgument[0] );
                     outReply = string( replyBuilder.view() );
                     return false;
                 }
                 OutfitAtlasBakeResult result;
-                if ( OutfitAtlasSpec::bake( spec, result ) == false )
+                if ( OutfitAtlasDef::bake( def, result ) == false )
                 {
                     StringBuilder<constant::buffer::kMax256> replyBuilder;
                     replyBuilder.appendFormat( "outfit atlas '%#' failed (see the log) - nothing was written", listArgument[0] );
@@ -317,83 +317,83 @@ namespace sw::editor
         };
     } // namespace
 
-    bool OutfitAtlasSpec::parseSpec( string_view xmlText, string_view sourceName, OutfitAtlasSpec& outSpec )
+    bool OutfitAtlasDef::loadFromXMLText( string_view xmlText, string_view sourceName, OutfitAtlasDef& outDef )
     {
-        outSpec = OutfitAtlasSpec{};
+        outDef = OutfitAtlasDef{};
         CharacterDataReader reader( sourceName );
         XMLDocument         document;
         XMLNode             root;
         if ( reader.parseRoot( document, xmlText, "OutfitAtlas", root ) )
         {
-            OutfitAtlasBakerInternal::readRoot( root, reader, outSpec );
-            OutfitAtlasBakerInternal::validateSpec( outSpec, reader );
+            OutfitAtlasBakerInternal::readRoot( root, reader, outDef );
+            OutfitAtlasBakerInternal::validateDef( outDef, reader );
         }
         const bool bRead = reader.finish();
         if ( bRead == false )
-            outSpec = OutfitAtlasSpec{};
+            outDef = OutfitAtlasDef{};
         return bRead;
     }
 
-    bool OutfitAtlasSpec::loadSpec( const AssetID& assetID, OutfitAtlasSpec& outSpec )
+    bool OutfitAtlasDef::loadFromAsset( const AssetID& assetID, OutfitAtlasDef& outDef )
     {
         const string_view assetPath = assetID.view();
-        outSpec                     = OutfitAtlasSpec{};
+        outDef                      = OutfitAtlasDef{};
         CharacterDataReader reader( assetPath );
         XMLDocument         document;
         XMLNode             root;
         if ( reader.loadRoot( document, assetID, "OutfitAtlas", root ) )
         {
-            OutfitAtlasBakerInternal::readRoot( root, reader, outSpec );
-            OutfitAtlasBakerInternal::validateSpec( outSpec, reader );
+            OutfitAtlasBakerInternal::readRoot( root, reader, outDef );
+            OutfitAtlasBakerInternal::validateDef( outDef, reader );
         }
         const bool bRead = reader.finish();
         if ( bRead == false )
-            outSpec = OutfitAtlasSpec{};
+            outDef = OutfitAtlasDef{};
         return bRead;
     }
 
-    bool OutfitAtlasSpec::bake( const OutfitAtlasSpec& spec, OutfitAtlasBakeResult& outResult )
+    bool OutfitAtlasDef::bake( const OutfitAtlasDef& def, OutfitAtlasBakeResult& outResult )
     {
-        using Internal        = OutfitAtlasBakerInternal;
-        outResult             = OutfitAtlasBakeResult{};
-        const bool bEmptySpec = spec._listPart.empty() || spec._listMap.empty();
-        const bool bBadSize   = spec._size <= 0 || spec._padding < 0;
-        if ( bEmptySpec || bBadSize )
+        using Internal       = OutfitAtlasBakerInternal;
+        outResult            = OutfitAtlasBakeResult{};
+        const bool bEmptyDef = def._listPart.empty() || def._listMap.empty();
+        const bool bBadSize  = def._size <= 0 || def._padding < 0;
+        if ( bEmptyDef || bBadSize )
         {
-            SW_LOG_ERROR_ID( "OutfitAtlasBaker.OutfitAtlasSpecEmpty", "Outfit atlas spec is empty or has a bad size - nothing baked" );
+            SW_LOG_ERROR_ID( "OutfitAtlasBaker.OutfitAtlasDefEmpty", "Outfit atlas def is empty or has a bad size - nothing baked" );
             return false;
         }
 
         vector<shared_ptr<Mesh>> listMesh;
-        if ( Internal::loadPartMeshes( spec, listMesh ) == false )
+        if ( Internal::loadPartMeshes( def, listMesh ) == false )
             return false;
 
-        const uint32                 atlasSize = static_cast<uint32>( spec._size );
-        const uint32                 padding   = static_cast<uint32>( spec._padding );
+        const uint32                 atlasSize = static_cast<uint32>( def._size );
+        const uint32                 padding   = static_cast<uint32>( def._padding );
         vector<vector<RawImageData>> listMapImage;
         vector<OutfitAtlasRect>      listRect;
-        if ( Internal::loadMapImagesAndPack( spec, atlasSize, padding, listMapImage, listRect ) == false )
+        if ( Internal::loadMapImagesAndPack( def, atlasSize, padding, listMapImage, listRect ) == false )
             return false;
 
         MeshMergeResult merged;
-        if ( Internal::mergeParts( spec, listMesh, atlasSize, listRect, merged ) == false )
+        if ( Internal::mergeParts( def, listMesh, atlasSize, listRect, merged ) == false )
             return false;
 
         // 합성은 쓰기 전에 모두 메모리에서 끝낸다 — 도중에 실패해도 반쪽 결과를 남기지 않는다.
         vector<vector<uint8>> listAtlas;
-        if ( Internal::composeAtlases( spec, atlasSize, padding, listMapImage, listRect, listAtlas ) == false )
+        if ( Internal::composeAtlases( def, atlasSize, padding, listMapImage, listRect, listAtlas ) == false )
             return false;
-        if ( Internal::writeOutputs( spec, atlasSize, listAtlas, merged, outResult ) == false )
+        if ( Internal::writeOutputs( def, atlasSize, listAtlas, merged, outResult ) == false )
             return false;
-        outResult._partCount   = static_cast<uint32>( spec._listPart.size() );
+        outResult._partCount   = static_cast<uint32>( def._listPart.size() );
         outResult._vertexCount = merged._mesh->getVertexCount();
-        outResult._meshPath    = spec._outputMesh;
+        outResult._meshPath    = def._outputMesh;
         SW_LOG_INFO_ID( "OutfitAtlasBaker.OutfitAtlasBakedParts", "Outfit atlas baked: %# parts, %# vertices, %# image(s) at %#x%# -> %#", outResult._partCount, outResult._vertexCount,
-                        static_cast<uint32>( outResult._listTexturePath.size() ), atlasSize, atlasSize, spec._outputMesh.c_str() );
+                        static_cast<uint32>( outResult._listTexturePath.size() ), atlasSize, atlasSize, def._outputMesh.c_str() );
         return true;
     }
 
-    SW_DEV_COMMAND( AppearanceBakeAtlas, "appearance.bakeatlas", "appearance.bakeatlas <spec.outfitatlas.xml>",
-                    "Bake an outfit atlas: merge the spec's part meshes into one with atlas UVs and compose the atlas image(s) (then run --import-textures)",
+    SW_DEV_COMMAND( AppearanceBakeAtlas, "appearance.bakeatlas", "appearance.bakeatlas <def.outfitatlas.xml>",
+                    "Bake an outfit atlas: merge the def's part meshes into one with atlas UVs and compose the atlas image(s) (then run --import-textures)",
                     &OutfitAtlasBakerInternal::runBake );
 } // namespace sw::editor

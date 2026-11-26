@@ -127,9 +127,10 @@ Use a banned verb only when it is the domain's own term (`UUID::generate`, `Surf
 
 | Suffix | What the data is for |
 | --- | --- |
-| `Def` | Authored data definition (from a file, shared, immutable); a catalog sub-struct is a `Def` |
-| `Desc` | Creation description handed to `create*` |
-| `Spec` | A granted runtime instance (GAS `AbilitySpec`) |
+| `Def` | Authored data definition (from a file, shared, immutable); a catalog sub-struct is a `Def`. 코드 상수 표에는 쓰지 않는다(언리얼 DataAsset 행) |
+| `Desc` | Creation description handed to `create*` · 등록, 그리고 코드 상수로 적는 서술자 표 · 템플릿(`NetMessageDesc`, `GBufferAttachmentDesc` — D3D12 `_DESC`, protobuf Descriptor) |
+| `Info` | 실행 중 읽는 정적 사실 표(`TypeInfo` · `EnumInfo`, 처리기가 선언하는 매개변수 목록 `ZoneParamInfo` — Godot `PropertyInfo`) |
+| `Spec` | GAS 뜻만: `Def` 에서 펼친 실행 값(`AbilitySpec` · `AbilityEffectSpec`). 고르는 값(`FontDesc`) · 굽기 입력(`OutfitAtlasDef`) · 캐시 키(`VulkanRenderPassKey`)에는 쓰지 않는다 |
 | `Config` | Preset or deployment configuration; a service's `initialize` configuration |
 | `Settings` | User or game settings changed at run time; project-wide engine tables (`PhysicsSettings`) |
 | `Preferences` | 에디터 사용자 환경(`EditorPreferences.json` 섹션, `SW_EDITOR_PREFERENCES`). 게임 · 프로젝트 설정은 `Settings`(언리얼 Editor Preferences ↔ Project Settings) |

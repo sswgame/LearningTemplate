@@ -9,7 +9,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 
-#include "Engine/Input/KeyCodeUtil.h"
+#include "Engine/Input/Key.h"
 #include "Engine/Input/RawInputEvent.h"
 
 enum ImGuiKey : int;

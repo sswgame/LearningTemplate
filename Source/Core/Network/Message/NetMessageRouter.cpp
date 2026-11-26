@@ -78,7 +78,7 @@ namespace sw
         {
             if ( ( ( toServerMask >> offset ) & 1u ) == 0 || pHandler->getMaxPerPoll( static_cast<uint8>( rangeBase + offset ) ) != 0 )
                 continue;
-            SW_LOG_ERROR_ID( "Net.RouterKindWithoutLimit", "NetMessageRouter: message kind 0x%02x travels to the server without a request limit - the handler is refused (declare it with NetLimitedMessageDef)",
+            SW_LOG_ERROR_ID( "Net.RouterKindWithoutLimit", "NetMessageRouter: message kind 0x%02x travels to the server without a request limit - the handler is refused (declare it with NetLimitedMessageDesc)",
                              static_cast<int32>( rangeBase ) + offset );
             return Subscription{};
         }
@@ -563,7 +563,7 @@ namespace sw
         if ( holdMilliseconds != 0u )
             holdMessage( peers, message, pData, key, static_cast<int64>( holdMilliseconds ), false );
         else if ( bReliable )
-            SW_LOG_ERROR_ID( "Net.RouterHoldNotDeclared", "NetMessageRouter: the handler of kind 0x%02x is not ready but its message does not declare a hold (NetHeldMessageDef) - dropped", static_cast<int32>( pData[0] ) );
+            SW_LOG_ERROR_ID( "Net.RouterHoldNotDeclared", "NetMessageRouter: the handler of kind 0x%02x is not ready but its message does not declare a hold (NetHeldMessageDesc) - dropped", static_cast<int32>( pData[0] ) );
         return result;
     }
 

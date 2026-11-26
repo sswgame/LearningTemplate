@@ -47,35 +47,27 @@ namespace sw
         float32           _fraction{ 0.0f }; ///< 쏜 길이에 대한 비율이다(0..1).
         float32           _distance{ 0.0f }; ///< 출발점에서 닿은 지점까지의 거리다(미터).
         hashed_string     _material{};       ///< 닿은 셰이프의 물리 재질 이름이다(발소리와 탄흔에 쓰며, 레이캐스트만 채운다).
-    };
 
-    using PhysicsCastHit3D = PhysicsCastHit<PhysicsDimension3D>;
-    using PhysicsCastHit2D = PhysicsCastHit<PhysicsDimension2D>;
-} // namespace sw
-
-namespace sw
-{
-    /** @brief 여러 닿음을 모으는 질의(`raycastAll`, `shapeCastAll`)가 두 백엔드에서 같은 모양의 결과를 내게 하는 도우미입니다. */
-    struct PhysicsQueryUtil
-    {
         /**
-         * @brief @p inoutListHit 의 @p firstIndex 부터 끝까지를 바디마다 가장 가까운 닿음 하나만 남기고 가까운 순서로 정렬합니다. 남은 수를 돌려줍니다.
+         * @brief 여러 닿음을 모으는 질의(`raycastAll`, `shapeCastAll`)의 결과 @p inoutListHit 의 @p firstIndex 부터 끝까지를 바디마다 가장 가까운 닿음 하나만 남기고
+         *        가까운 순서로 정렬합니다. 두 백엔드가 같은 모양의 결과를 낸다. 남은 수를 돌려줍니다.
          * @details 컴파운드 바디는 서브 셰이프마다 따로 잡히므로 바디 하나가 여러 번 나온다. 거리가 같으면 바디 핸들 순서로 정해 결과가 결정적이다.
          *          출력 끝에서 제자리로 처리하므로 임시 버퍼를 할당하지 않는다.
          */
-        template <typename TDimension>
-        static uint32 keepNearestHitPerBody( vector<PhysicsCastHit<TDimension>>& inoutListHit, size_t firstIndex )
+        static uint32 keepNearestPerBody( vector<PhysicsCastHit>& inoutListHit, size_t firstIndex )
         {
-            using Hit                                  = PhysicsCastHit<TDimension>;
-            const typename vector<Hit>::iterator first = inoutListHit.begin() + static_cast<ptrdiff_t>( firstIndex );
-            VectorUtil::sortRange( first, inoutListHit.end(), []( const Hit& lhs, const Hit& rhs )
+            const typename vector<PhysicsCastHit>::iterator first = inoutListHit.begin() + static_cast<ptrdiff_t>( firstIndex );
+            VectorUtil::sortRange( first, inoutListHit.end(), []( const PhysicsCastHit& lhs, const PhysicsCastHit& rhs )
             { return lhs._body == rhs._body ? lhs._fraction < rhs._fraction : lhs._body < rhs._body; } );
-            inoutListHit.erase( std::unique( first, inoutListHit.end(), []( const Hit& lhs, const Hit& rhs )
+            inoutListHit.erase( std::unique( first, inoutListHit.end(), []( const PhysicsCastHit& lhs, const PhysicsCastHit& rhs )
             { return lhs._body == rhs._body; } ),
                                 inoutListHit.end() );
-            VectorUtil::sortRange( first, inoutListHit.end(), []( const Hit& lhs, const Hit& rhs )
+            VectorUtil::sortRange( first, inoutListHit.end(), []( const PhysicsCastHit& lhs, const PhysicsCastHit& rhs )
             { return lhs._fraction == rhs._fraction ? lhs._body < rhs._body : lhs._fraction < rhs._fraction; } );
             return static_cast<uint32>( inoutListHit.size() - firstIndex );
         }
     };
+
+    using PhysicsCastHit3D = PhysicsCastHit<PhysicsDimension3D>;
+    using PhysicsCastHit2D = PhysicsCastHit<PhysicsDimension2D>;
 } // namespace sw

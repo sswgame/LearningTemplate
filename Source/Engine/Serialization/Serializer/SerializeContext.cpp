@@ -686,7 +686,8 @@ namespace sw
         DataPath::registerSerializeHandler( context );
         AssetRefBase::registerSerializeHandler( context );
         CatalogKeyBase::registerSerializeHandler( context );
-        SecretValueUtil::registerSerializeHandler( context );
+        Secret32::registerSerializeHandler( context );
+        SecretText::registerSerializeHandler( context );
         SerializeContextInternal::registerHandleTextHandlers( context );
 
         SerializeContextInternal::registerFloatVectorTextHandlers( context );

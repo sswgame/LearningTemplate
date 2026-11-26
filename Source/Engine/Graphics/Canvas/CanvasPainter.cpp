@@ -435,7 +435,7 @@ namespace sw
 {
     void CanvasPainter::drawLine( CanvasPainter& painter, FontSubsystem& fontService, string_view text, const float2& origin, const CanvasGlyphStyle& style, uint64 frameIndex )
     {
-        const FontFaceChain chain      = fontService.getFaceChain( FontSpec{} );
+        const FontFaceChain chain      = fontService.getFaceChain( FontDesc{} );
         CanvasGlyphStyle    glyphStyle = style;
         glyphStyle._bFauxBold          = chain._bFauxBold;
         glyphStyle._bFauxItalic        = chain._bFauxItalic;

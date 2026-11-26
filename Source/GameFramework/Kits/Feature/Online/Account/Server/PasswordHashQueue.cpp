@@ -51,12 +51,12 @@ namespace sw
         // 해시 구현은 스레드 안전하다(`IPasswordHasher` 계약). 비밀번호 상한을 넘는 입력은 빈 글로 해시한다 — 느린 해시에 거대한 입력을 넣지 않는다(시간은 같다).
         const bool        bWithinLimit = _request._password.size() <= static_cast<size_t>( LoginConstant::kMaxPasswordSize );
         const string_view password     = bWithinLimit ? _request._password.reveal() : string_view{};
-        bool              bComputed    = _request._specCount > 0;
-        for ( int32 index = 0; index < _request._specCount && bComputed; ++index )
+        bool              bComputed    = _request._hashCount > 0;
+        for ( int32 index = 0; index < _request._hashCount && bComputed; ++index )
         {
-            const PasswordHashSpec& spec = _request._arrSpec[index];
-            bComputed                    = _pOwner->_pHasher->computePasswordHash( password, spec._arrSalt, LoginConstant::kSaltSize, spec._params, _completion._arrHash[index],
-                                                                                   LoginConstant::kPasswordHashSize );
+            const PasswordHashParams& hashParams = _request._arrHashParams[index];
+            bComputed                            = _pOwner->_pHasher->computePasswordHash( password, hashParams._arrSalt, LoginConstant::kSaltSize, hashParams._params, _completion._arrHash[index],
+                                                                                           LoginConstant::kPasswordHashSize );
         }
         _completion._bComputed = bComputed ? SW_TRUE : SW_FALSE;
         _request._password.wipe(); // 해시가 끝난 워커에서 비밀번호를 지운다

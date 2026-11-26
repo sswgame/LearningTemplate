@@ -1199,7 +1199,7 @@ namespace sw
             }
 
             /**
-             * @brief 3-1) G버퍼 패스의 출력이 명세(`GBufferAttachmentSpec` 판 `kVersion`)와 같은가 — MRT 슬롯마다 첨부의 포맷 · 클리어 값.
+             * @brief 3-1) G버퍼 패스의 출력이 명세(`GBufferAttachmentDesc` 판 `kVersion`)와 같은가 — MRT 슬롯마다 첨부의 포맷 · 클리어 값.
              * @details 셰이더는 명세의 슬롯 순서 · 인코딩으로 쓰고(SV_TARGET0 ..) PSO 포맷도 명세에서 온다. 첨부 이름은 파이프라인이 고른다(역할로 읽는다).
              *          XML 의 포맷이 다르면 PSO 와 첨부가 어긋나고, 클리어 값이 다르면 "그려지지 않은 픽셀" 표시(알파 0)가 깨진다 — 로드 오류로 막는다.
              */
@@ -1212,18 +1212,18 @@ namespace sw
                         continue;
                     for ( uint32 slot = 0; slot < GBufferLayout::kAttachmentCount; ++slot )
                     {
-                        const GBufferAttachmentSpec& spec           = GBufferLayout::kArrAttachment[slot];
+                        const GBufferAttachmentDesc& attachmentDesc = GBufferLayout::kArrAttachment[slot];
                         const hashed_string&         outputName     = pass._listResolvedColorOutput[slot]._attachment;
                         const RenderPassAttachment*  pAttachment    = findAttachment( desc, outputName.view() );
-                        const bool                   bFormatMatches = pAttachment != nullptr && pAttachment->_format == spec._format;
+                        const bool                   bFormatMatches = pAttachment != nullptr && pAttachment->_format == attachmentDesc._format;
                         const float4                 clear          = pAttachment != nullptr ? pAttachment->_clearColor : float4{};
                         // 장면 색 칸(자체 발광)의 클리어는 파이프라인의 배경색이다 — 표가 정하지 않는다.
-                        const bool bClearMatches = pAttachment != nullptr && ( spec._bPipelineClear != 0 || ( clear._x == spec._clearColor._x && clear._y == spec._clearColor._y &&
-                                                                                                              clear._z == spec._clearColor._z && clear._w == spec._clearColor._w ) );
+                        const bool bClearMatches = pAttachment != nullptr && ( attachmentDesc._bPipelineClear != 0 || ( clear._x == attachmentDesc._clearColor._x && clear._y == attachmentDesc._clearColor._y &&
+                                                                                                                        clear._z == attachmentDesc._clearColor._z && clear._w == attachmentDesc._clearColor._w ) );
                         if ( bFormatMatches && bClearMatches )
                             continue;
                         SW_LOG_ERROR_ID( "RenderPipelineAsset.GBufferLayoutMismatch", "[%#] pass '%#': G-buffer slot %# ('%#', %#) must be %# cleared to 0 by the G-buffer layout v%#%#",
-                                         sourcePath, pass._name, slot, outputName.c_str(), spec._pName, getEnumName( spec._format ), GBufferLayout::kVersion,
+                                         sourcePath, pass._name, slot, outputName.c_str(), attachmentDesc._pName, getEnumName( attachmentDesc._format ), GBufferLayout::kVersion,
                                          pAttachment == nullptr ? " - the attachment is not declared" : ( bFormatMatches ? " - its clear color differs" : " - its format differs" ) );
                         ++issueCount;
                     }
@@ -1239,7 +1239,7 @@ namespace sw
             static uint32 validateVelocityOutputs( const RenderPipelineDesc& desc, string_view sourcePath )
             {
                 uint32                       issueCount{ 0 };
-                const GBufferAttachmentSpec& velocitySpec = GBufferLayout::kArrAttachment[GBufferLayout::kVelocitySlot];
+                const GBufferAttachmentDesc& velocitySpec = GBufferLayout::kArrAttachment[GBufferLayout::kVelocitySlot];
                 for ( const RenderGraphPassDesc& pass : desc._listPass )
                 {
                     const vector<RenderGraphPassDesc::ResolvedAttachment>& listColor = pass._listResolvedColorOutput;

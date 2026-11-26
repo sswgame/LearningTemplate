@@ -99,7 +99,7 @@ namespace sw
             case CrumbleState::Shaking:
             {
                 // 흔들리기 시작하면 내려와도 무너진다. 되돌리지 않는다.
-                if ( _stepsInState >= TickIntervalUtil::secondsToCount( kTickInterval, _crumbleDelay, 1 ) )
+                if ( _stepsInState >= TickTurn::secondsToIntervalCount( kTickInterval, _crumbleDelay, 1 ) )
                 {
                     _state        = CrumbleState::Fallen;
                     _stepsInState = 0;
@@ -109,7 +109,7 @@ namespace sw
             }
             case CrumbleState::Fallen:
             {
-                if ( _respawnDelay > 0.0f && _stepsInState >= TickIntervalUtil::secondsToCount( kTickInterval, _respawnDelay, 1 ) )
+                if ( _respawnDelay > 0.0f && _stepsInState >= TickTurn::secondsToIntervalCount( kTickInterval, _respawnDelay, 1 ) )
                 {
                     _state        = CrumbleState::Solid;
                     _stepsInState = 0;

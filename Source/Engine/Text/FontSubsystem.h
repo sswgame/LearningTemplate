@@ -35,7 +35,7 @@ namespace sw
 {
     /** @brief 폰트 하나를 고르는 값입니다. 패밀리 이름, 굵기, 기울기를 가집니다. 크기는 배치 인자라 여기에 없습니다. */
     REFLECT()
-    struct SW_API FontSpec
+    struct SW_API FontDesc
     {
         REFLECT_BODY();
         PROPERTY( DisplayName = "Family", Tooltip = "Font family name from the font catalog; empty means the catalog default" )
@@ -113,7 +113,7 @@ namespace sw
         void registerMemoryFontFile( string_view path, vector<uint8> bytes );
 
         /** @brief 그 폰트로 코드 포인트를 그릴 면 연쇄입니다. 지금 문화권의 대체 목록을 씁니다. 시작 전이면 빈 연쇄입니다. */
-        FontFaceChain getFaceChain( const FontSpec& spec );
+        FontFaceChain getFaceChain( const FontDesc& desc );
         /**
          * @brief 사슬에서 코드 포인트의 글리프를 가진 첫 면입니다.
          * @details 어디에도 없으면 사슬 첫 면 + 글리프 0(두부)이고, 코드 포인트마다 처음 한 번 경고합니다. 빈 사슬이면 kInvalidFontFaceID.
@@ -154,7 +154,7 @@ namespace sw
         // 아래 세 맵의 키는 해시가 아니라 원문 문자열이다(`FontSubsystemInternal::kKeySeparator` 로 이은 값) — 해시 단독 키는 부딪히면 다른 면을 조용히 돌려준다.
         unordered_map<string, OpenedFamilyFace> _mapOpenedFamilyFace; ///< (패밀리, 굵기, 기울기)에서 연 면을 찾는 맵입니다.
         unordered_map<string, FontFaceID>       _mapOpenedFile;       ///< (경로, 면 번호)에서 연 면을 찾는 맵입니다.
-        unordered_map<string, FontFaceChain>    _mapChain;            ///< (FontSpec, 문화권)에서 연쇄를 찾는 맵입니다.
+        unordered_map<string, FontFaceChain>    _mapChain;            ///< (FontDesc, 문화권)에서 연쇄를 찾는 맵입니다.
         unordered_map<string, vector<uint8>>    _mapMemoryFile;       ///< 등록한 메모리 폰트입니다(소문자 경로에서 바이트를 찾습니다).
         OnceKeySet                              _warnedOnce;          ///< 한 번 경고한 항목입니다(패밀리, 코드 포인트 — 원문 키의 해시).
         SystemFontLocator                       _systemFontLocator;   ///< 시스템 패밀리의 파일 찾기(리눅스는 하위 폴더 색인을 든다)

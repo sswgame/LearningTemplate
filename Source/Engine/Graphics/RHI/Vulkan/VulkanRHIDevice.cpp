@@ -4227,9 +4227,9 @@ namespace sw
         }
     }
 
-    VkRenderPass VulkanRHIDevice::createRenderPassFromSpec( const VulkanRHIRenderPassCache::VulkanRenderPassKey& spec ) const
+    VkRenderPass VulkanRHIDevice::createRenderPassFromKey( const VulkanRHIRenderPassCache::VulkanRenderPassKey& spec ) const
     {
-        return VulkanRHIRenderPassCache::createFromSpec( _device, spec );
+        return VulkanRHIRenderPassCache::createFromKey( _device, spec );
     }
 
     bool VulkanRHIDevice::ensureOffscreenRenderPass( uint32 vkFormat )
@@ -4246,7 +4246,7 @@ namespace sw
 
         VulkanRHIRenderPassCache::VulkanRenderPassKey spec{};
         spec.addColor( sharedFormat, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
-        _offscreenRenderPass = createRenderPassFromSpec( spec );
+        _offscreenRenderPass = createRenderPassFromKey( spec );
         return _offscreenRenderPass != VK_NULL_HANDLE;
     }
 
@@ -4267,7 +4267,7 @@ namespace sw
             // 포맷별 전용 RP. beginRenderPass 가 전이를 먼저 걸어 두므로 COLOR_ATTACHMENT_OPTIMAL 에서 시작한다.
             VulkanRHIRenderPassCache::VulkanRenderPassKey spec{};
             spec.addColor( record._format, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
-            record._renderPass = createRenderPassFromSpec( spec );
+            record._renderPass = createRenderPassFromKey( spec );
             if ( record._renderPass == VK_NULL_HANDLE )
                 return false;
         }

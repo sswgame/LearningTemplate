@@ -6,12 +6,12 @@
  *          (`NetKitWireVersion`)이 따로 놀았다. 마스크에서 종류 하나를 빠뜨리면 라우터가 그 메시지를 버렸고, 메시지를 더해도 버전을 올리지 않으면 다른 빌드와 갈리지 않았다.
  *          - 처리기는 `NetTableHandler<TDerived, TTable, TMessage...>` 로 서서 받는 메시지를 형식으로 적는다. 마스크와 디스패치는 그 목록에서 나오고,
  *            목록의 메시지마다 `receive( TMessage, const NetMessageContext&, BitReader& )` 오버로드가 없으면 컴파일되지 않는다.
- *          - 본문 형식이 있는 메시지(`Body` 를 가진 서술자 — Engine 의 `NetMessageBodyDef`, 본문은 `REFLECT` 스키마 결합형)는 처리기가 본문을 읽지 않는다.
+ *          - 본문 형식이 있는 메시지(`Body` 를 가진 서술자 — Engine 의 `NetMessageBodyDesc`, 본문은 `REFLECT` 스키마 결합형)는 처리기가 본문을 읽지 않는다.
  *            표가 본문을 다 읽고(잘림 · 남는 비트 · 범위 밖 값 · 등록 밖 열거자는 Malformed) `receive( TMessage, const NetMessageContext&, const Body& )` 를 부른다.
  *            보내는 쪽은 `NetMessageWriter::writeMessage<TTable, TMessage>( body )` 하나다.
  *          - 와이어 버전(`computeWireVersion`)은 영역과 메시지마다 (번호, 방향, 채널, 본문 판)을 섞은 값이다. 메시지를 더하거나 빼거나 방향 · 채널을 바꾸면 저절로 바뀐다.
  *            본문 형식이 있는 메시지의 판은 그 형식의 스키마 해시다(`getBodyRevision`) — 필드 · 범위 · 순서를 바꾸면 저절로 바뀐다(GameServer PacketGenerator 의 자리).
- *            손으로 쓰는 비트 본문(`NetMessageDef`)은 배치가 해시에 들지 않는다 — 본문을 바꾸면 그 메시지의 판(`BodyRevision`)만 손으로 올린다.
+ *            손으로 쓰는 비트 본문(`NetMessageDesc`)은 배치가 해시에 들지 않는다 — 본문을 바꾸면 그 메시지의 판(`BodyRevision`)만 손으로 올린다.
  *          gRPC 서비스 서술자, 언리얼 `NetSerialize` 를 가진 RPC 표의 자리입니다(기억에 의존).
  */
 #pragma once
@@ -29,14 +29,14 @@
 namespace sw
 {
     /**
-     * @brief 메시지 서술자입니다. 키트는 `using Input = NetMessageDef<0, NetMessageDirection::Both, NetChannelKind::ReliableOrdered>;` 로 씁니다.
+     * @brief 메시지 서술자입니다. 키트는 `using Input = NetMessageDesc<0, NetMessageDirection::Both, NetChannelKind::ReliableOrdered>;` 로 씁니다.
      * @tparam Offset 영역 안 번호(0 ~ 15)
      * @tparam Channel 기본 채널. 보내는 쪽이 상태에 따라 다른 채널을 고르는 메시지(멈추면 신뢰로 보내는 자세)는 평소 채널을 적는다
      * @tparam BodyRevision 본문 판. 본문의 형식이나 뜻을 바꾸면 올린다
-     * @details 손으로 쓰는 비트 본문의 서술자다. 본문이 스키마 결합형으로 적히는 메시지는 Engine 의 `NetMessageBodyDef` 를 쓴다(판이 스키마 해시라 손으로 올리지 않는다).
+     * @details 손으로 쓰는 비트 본문의 서술자다. 본문이 스키마 결합형으로 적히는 메시지는 Engine 의 `NetMessageBodyDesc` 를 쓴다(판이 스키마 해시라 손으로 올리지 않는다).
      */
     template <uint8 Offset, NetMessageDirection Direction, NetChannelKind Channel, uint32 BodyRevision = 0>
-    struct NetMessageDef
+    struct NetMessageDesc
     {
         static constexpr uint8               kOffset        = Offset;
         static constexpr NetMessageDirection kDirection     = Direction;
@@ -54,7 +54,7 @@ namespace sw
      * @details 고르는 자리는 `NetMessageWriter::beginMessage( channel )` 하나다 — 이 서술자가 아니면 채널을 고르는 시작이 컴파일되지 않는다.
      */
     template <uint8 Offset, NetMessageDirection Direction, NetChannelKind DefaultChannel, uint32 BodyRevision = 0>
-    struct NetMessageSenderChannelDef : NetMessageDef<Offset, Direction, DefaultChannel, BodyRevision>
+    struct NetMessageSenderChannelDesc : NetMessageDesc<Offset, Direction, DefaultChannel, BodyRevision>
     {
         static constexpr NetChannelPolicy kChannelPolicy = NetChannelPolicy::SenderChooses;
     };
@@ -64,14 +64,14 @@ namespace sw
      * @details 전달 약속은 채널 이름이 아니라 메시지 선언이 갖는다. 처리기에 `uint64 readHoldKey( TMessage, BitReader ) const`(같은 열쇠끼리 순서를 지킨다)가 없으면 컴파일되지 않는다.
      */
     template <typename TMessage, uint32 HoldMilliseconds>
-    struct NetHeldMessageDef : TMessage
+    struct NetHeldMessageDesc : TMessage
     {
         static_assert( HoldMilliseconds > 0, "a held message needs a time limit" );
         static constexpr uint32 kHoldMilliseconds = HoldMilliseconds;
     };
 
     /**
-     * @brief 서버 수신 상한의 단계입니다(`NetLimitedMessageDef` — 한 연결이 `poll` 한 번에 보내는 수). 정상 게임이 닿지 않는 값이다.
+     * @brief 서버 수신 상한의 단계입니다(`NetLimitedMessageDesc` — 한 연결이 `poll` 한 번에 보내는 수). 정상 게임이 닿지 않는 값이다.
      * @details 정상 클라이언트가 `poll` 한 번에 가장 많이 몰아 보내는 때는 서버가 멈췄다 깬 뒤다. 그 길이는 연결 시한(`NetEndpointConfig::_timeoutSeconds`, 5 초)을 넘지 못한다 —
      *          넘으면 클라이언트가 먼저 끊는다. 신뢰 메시지는 서버가 확인을 보내지 못하는 동안 창(`NetConnection::kReliableWindow`, 256)까지만 나가므로, 상한이 창 이상이면
      *          디버거로 오래 세운 서버에서도 정상 연결이 끊기지 않는다(`NetMessageRouter.cpp` 의 단언). 그래서 사람이 시키는 일도 64 가 아니라 창이다 — 64 면 5 초 멈춤에 초당 13 번이라 연타에 끊긴다.
@@ -90,7 +90,7 @@ namespace sw
      *          상한은 서버가 멈췄다 깬 뒤 몰려온 정상 트래픽보다 넉넉히 적는다.
      */
     template <typename TMessage, uint32 MaxPerPoll>
-    struct NetLimitedMessageDef : TMessage
+    struct NetLimitedMessageDesc : TMessage
     {
         static_assert( TMessage::kDirection != NetMessageDirection::ToClient, "only messages that travel to the server have a request limit" );
         static_assert( MaxPerPoll > 0 && MaxPerPoll <= 0xFFFF, "a request limit is 1 to 65535" );
@@ -133,9 +133,9 @@ namespace sw
     {
         /** @brief 본문 형식(`Body`)이 있으면 true 입니다 — 표가 본문을 읽어 처리기에 넘긴다. */
         static constexpr bool kHasBody = NetMessageTraitsInternal::HasBody<TMessage>::value;
-        /** @brief 보류를 선언했으면 true 입니다(`NetHeldMessageDef`). */
+        /** @brief 보류를 선언했으면 true 입니다(`NetHeldMessageDesc`). */
         static constexpr bool kIsHeld = NetMessageTraitsInternal::IsHeld<TMessage>::value;
-        /** @brief 서버 수신 상한입니다(`NetLimitedMessageDef`). 선언하지 않았으면 0 입니다. */
+        /** @brief 서버 수신 상한입니다(`NetLimitedMessageDesc`). 선언하지 않았으면 0 입니다. */
         static constexpr uint32 kMaxPerPoll = NetMessageTraitsInternal::MaxPerPoll<TMessage>::value;
     };
 
@@ -179,7 +179,7 @@ namespace sw
         {
             static_assert( ( contains<TSubset>() && ... ), "every message of the mask must be in this table" );
             static_assert( ( ( TSubset::kDirection == NetMessageDirection::ToClient || NetMessageTraits<TSubset>::kMaxPerPoll > 0 ) && ... ),
-                           "a message the server receives must declare its request limit (NetLimitedMessageDef)" );
+                           "a message the server receives must declare its request limit (NetLimitedMessageDesc)" );
             NetMessageDirectionMask mask{};
             mask._toServerMask = static_cast<uint16>( ( 0u | ... | ( TSubset::kDirection != NetMessageDirection::ToClient ? 1u << TSubset::kOffset : 0u ) ) );
             mask._toClientMask = static_cast<uint16>( ( 0u | ... | ( TSubset::kDirection != NetMessageDirection::ToServer ? 1u << TSubset::kOffset : 0u ) ) );
@@ -206,7 +206,7 @@ namespace sw
 
         /**
          * @brief 영역과 메시지마다 (번호, 방향, 채널, 본문 판)을 FNV-1a 로 섞은 와이어 버전입니다. 게임은 쓰는 표의 값과 자기 값을 `NetWireVersion::combine` 으로 묶는다.
-         * @details 본문 형식이 있는 메시지의 판은 실행 중 코덱의 스키마 해시라(`NetMessageBodyDef::getBodyRevision`) 상수식이 아니다. 라우터가 등록 · 판 알림 때 부른다.
+         * @details 본문 형식이 있는 메시지의 판은 실행 중 코덱의 스키마 해시라(`NetMessageBodyDesc::getBodyRevision`) 상수식이 아니다. 라우터가 등록 · 판 알림 때 부른다.
          */
         static uint32 computeWireVersion()
         {

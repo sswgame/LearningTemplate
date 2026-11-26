@@ -204,20 +204,20 @@ namespace sw
      */
     struct GameNetSessionMessage
     {
-        using ServerTick     = NetMessageBodyDef<0x00, NetMessageDirection::ToClient, NetChannelKind::UnreliableSequenced, GameServerTickBody>; ///< 서버 → 모두. 방금 끝낸 서버 틱 번호
-        using ShutdownNotice = NetMessageBodyDef<0x01, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, GameShutdownNotice>;     ///< 서버 → 모두. 서버가 내려가기 시작한다 — 사유 + 기다려 주는 시간(초)
+        using ServerTick     = NetMessageBodyDesc<0x00, NetMessageDirection::ToClient, NetChannelKind::UnreliableSequenced, GameServerTickBody>; ///< 서버 → 모두. 방금 끝낸 서버 틱 번호
+        using ShutdownNotice = NetMessageBodyDesc<0x01, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, GameShutdownNotice>;     ///< 서버 → 모두. 서버가 내려가기 시작한다 — 사유 + 기다려 주는 시간(초)
         /**
          * @brief 클라이언트 → 서버(신뢰 순서). 로드 축 조건 · 덮어쓰기 층에 기댄 합성 한 줄씩 — 리소스 id(blob) + 합성 결과 해시(varuint, `ResourceComposition::hashText`). 접속하자마자 모두 보내고, 붙은 뒤 새로 읽거나 바뀐 합성을 그때마다 보낸다.
          * @details 서버가 같은 리소스를 다르게 합성했고 유예(`gv_netResourceDigestGraceSeconds`)가 지나도 다르면(품질 축이 시뮬레이션 값을 건드렸다 · 다른 모드 층) 그 연결을 끊는다. 일관성 검사이지 부정행위 방지가 아니다(클라이언트가 거짓을 보낼 수 있다).
          */
-        using ResourceDigest                     = NetLimitedMessageDef<NetMessageBodyDef<0x02, NetMessageDirection::ToServer, NetChannelKind::ReliableOrdered, GameResourceDigestBody>, GameNetSessionLimit::kMaxDigestPerPoll>;
+        using ResourceDigest                     = NetLimitedMessageDesc<NetMessageBodyDesc<0x02, NetMessageDirection::ToServer, NetChannelKind::ReliableOrdered, GameResourceDigestBody>, GameNetSessionLimit::kMaxDigestPerPoll>;
         static constexpr int32 kMaxDigestIDBytes = GameNetSessionLimit::kMaxDigestIDBytes; ///< `kResourceDigest` 의 리소스 id 길이 상한(넘는 id 는 보내지 않고 오류를 남긴다)
         /**
          * @brief `net.traffic` 부하 메시지입니다. 처리기가 없어 받는 쪽 라우터가 버린다.
          * @details 재전송 수치를 보려고 신뢰 메시지를 흘리는 용도다 — 키트가 없는 게임(Playground)의 세션은 연결 유지 패킷만 오가서 다시 보낼 것이 없다.
          *          0x0F 는 라우터의 판 알림 종류다(`NetMessageRange::kRouterWireVersionKind`) — 예전에 여기 있어 받는 라우터가 부하 메시지를 판 알림으로 읽었다(표가 이제 컴파일 오류로 막는다).
          */
-        using Traffic = NetMessageDef<0x0E, NetMessageDirection::Both, NetChannelKind::ReliableOrdered>;
+        using Traffic = NetMessageDesc<0x0E, NetMessageDirection::Both, NetChannelKind::ReliableOrdered>;
         using Table   = NetMessageTable<NetMessageRange::kEngine, ServerTick, ShutdownNotice, ResourceDigest, Traffic>;
 
         static constexpr uint8 kServerTick     = Table::getKindOf<ServerTick>();

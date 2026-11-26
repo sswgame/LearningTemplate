@@ -105,7 +105,7 @@ namespace sw
             return false;
         _from      = pManager->getWorldOrigin().toAbsolute( from ); // 저장하는 자리라 절대다 — 되돌릴 때의 원점이 다를 수 있다
         _to        = pManager->getWorldOrigin().toAbsolute( from + cellStep );
-        _moveSteps = TickIntervalUtil::secondsToCount( kTickInterval, _moveTime, 1 );
+        _moveSteps = TickTurn::secondsToIntervalCount( kTickInterval, _moveTime, 1 );
         _stepsLeft = _moveSteps;
         return true;
     }

@@ -197,19 +197,19 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 턴 중계 키트의 메시지 표입니다. 종류 · 마스크 · 와이어 버전은 표에서 나오고, 본문은 스키마 결합형이라 판이 스키마 해시다(`NetMessageBodyDef`). */
+    /** @brief 턴 중계 키트의 메시지 표입니다. 종류 · 마스크 · 와이어 버전은 표에서 나오고, 본문은 스키마 결합형이라 판이 스키마 해시다(`NetMessageBodyDesc`). */
     struct NetTurnRelayMessage
     {
-        using Join     = NetLimitedMessageDef<NetMessageBodyDef<0, NetMessageDirection::ToServer, NetChannelKind::ReliableOrdered, TurnJoinBody>, NetRequestLimit::kCommand>;
-        using Joined   = NetMessageBodyDef<1, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, TurnJoinedBody>;
-        using Action   = NetLimitedMessageDef<NetMessageBodyDef<2, NetMessageDirection::ToServer, NetChannelKind::ReliableOrdered, TurnActionBody>, NetRequestLimit::kCommand>;
-        using Applied  = NetMessageBodyDef<3, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, TurnAppliedBody>;
-        using Rejected = NetMessageBodyDef<4, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, TurnRejectedBody>;
-        using Started  = NetMessageBodyDef<5, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, TurnStartedBody>;
-        using Denied   = NetMessageBodyDef<6, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, TurnDeniedBody>;
-        using View     = NetMessageBodyDef<7, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, TurnViewBody>;
-        using Leave    = NetLimitedMessageDef<NetMessageBodyDef<8, NetMessageDirection::ToServer, NetChannelKind::ReliableOrdered, TurnRoomBody>, NetRequestLimit::kCommand>;
-        using Closed   = NetMessageBodyDef<9, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, TurnRoomBody>;
+        using Join     = NetLimitedMessageDesc<NetMessageBodyDesc<0, NetMessageDirection::ToServer, NetChannelKind::ReliableOrdered, TurnJoinBody>, NetRequestLimit::kCommand>;
+        using Joined   = NetMessageBodyDesc<1, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, TurnJoinedBody>;
+        using Action   = NetLimitedMessageDesc<NetMessageBodyDesc<2, NetMessageDirection::ToServer, NetChannelKind::ReliableOrdered, TurnActionBody>, NetRequestLimit::kCommand>;
+        using Applied  = NetMessageBodyDesc<3, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, TurnAppliedBody>;
+        using Rejected = NetMessageBodyDesc<4, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, TurnRejectedBody>;
+        using Started  = NetMessageBodyDesc<5, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, TurnStartedBody>;
+        using Denied   = NetMessageBodyDesc<6, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, TurnDeniedBody>;
+        using View     = NetMessageBodyDesc<7, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, TurnViewBody>;
+        using Leave    = NetLimitedMessageDesc<NetMessageBodyDesc<8, NetMessageDirection::ToServer, NetChannelKind::ReliableOrdered, TurnRoomBody>, NetRequestLimit::kCommand>;
+        using Closed   = NetMessageBodyDesc<9, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, TurnRoomBody>;
         using Table    = NetMessageTable<NetKitMessageRange::kTurnRelay, Join, Joined, Action, Applied, Rejected, Started, Denied, View, Leave, Closed>;
 
         static constexpr uint8 kJoin     = Table::getKindOf<Join>();

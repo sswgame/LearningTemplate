@@ -72,7 +72,7 @@ namespace sw
     void NoiseEmitterComponent::stepOnce()
     {
         ++_steps;
-        if ( _interval > 0.0f && _steps % TickIntervalUtil::secondsToCount( kTickInterval, _interval, 1 ) == 0 )
+        if ( _interval > 0.0f && _steps % TickTurn::secondsToIntervalCount( kTickInterval, _interval, 1 ) == 0 )
             emit( _radius );
         const GameObject*             pOwner  = getOwner();
         const GimmickSensorComponent* pSensor = pOwner != nullptr ? pOwner->getComponent<GimmickSensorComponent>() : nullptr;

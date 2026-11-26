@@ -62,7 +62,7 @@ namespace sw
     {
         REFLECT_BODY();
         PROPERTY( DisplayName = "Font" )
-        FontSpec _font{};
+        FontDesc _font{};
         PROPERTY( DisplayName = "Size", Min = 1.0, Tooltip = "Font size in UI units (one em)" )
         float32 _fontSize{ 18.0f };
         PROPERTY( DisplayName = "Line Height", Tooltip = "Multiplier of the font's natural line height", Min = 0.5 )

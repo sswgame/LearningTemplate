@@ -674,7 +674,7 @@ namespace sw
         const VulkanTextureRecord* resolveTexture( RHITextureHandle handle ) const;
 
         /** @brief 서술대로 VkRenderPass 를 만듭니다. 실패하면 VK_NULL_HANDLE 을 반환합니다. */
-        VkRenderPass createRenderPassFromSpec( const VulkanRHIRenderPassCache::VulkanRenderPassKey& spec ) const;
+        VkRenderPass createRenderPassFromKey( const VulkanRHIRenderPassCache::VulkanRenderPassKey& spec ) const;
 
         /** @brief 텍스처 배열 세트(set 1: 무제한 텍스처 배열과 immutable sampler)를 확보합니다. */
         [[nodiscard]] bool ensureTextureSet();

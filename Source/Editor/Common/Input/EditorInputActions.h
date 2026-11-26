@@ -21,7 +21,7 @@
 #include "Editor/Common/EditorSubsystem.h"
 #include "Editor/Common/Input/Model/EditorShortcutMap.h"
 
-#include "Engine/Input/KeyCodeUtil.h"
+#include "Engine/Input/Key.h"
 
 namespace sw::editor
 {

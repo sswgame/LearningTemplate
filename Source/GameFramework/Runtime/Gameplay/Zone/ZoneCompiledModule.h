@@ -60,7 +60,7 @@ namespace sw
     };
 
     /** @brief 처리기가 선언하는 매개변수 하나입니다. 기본값이 nullptr 이면 필수입니다. */
-    struct ZoneParamSpec
+    struct ZoneParamInfo
     {
         const utf8*   _pName{ nullptr };
         ZoneParamKind _kind{ ZoneParamKind::Number };

@@ -4,8 +4,8 @@
 
 #include "Core/String/StringUtil.h"
 
-#include "Engine/Input/GamepadButtonUtil.h"
-#include "Engine/Input/KeyCodeUtil.h"
+#include "Engine/Input/GamepadButton.h"
+#include "Engine/Input/Key.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Input/Map/InputMapParams.h"
 #include "Engine/Input/Map/InputRemapSerializer.h"
@@ -89,19 +89,19 @@ namespace sw
                 {
                     case InputBindSource::Key:
                     {
-                        const Key key = KeyCodeUtil::fromName( name );
+                        const Key key = findKeyByName( name );
                         outSlot       = InputSlot::fromKey( key );
                         return key != Key::Unknown;
                     }
                     case InputBindSource::Gamepad:
                     {
-                        const GamepadButton button = GamepadButtonUtil::fromName( name );
+                        const GamepadButton button = findGamepadButtonByName( name );
                         outSlot                    = InputSlot::fromGamepadButton( button, static_cast<uint8>( pad ) );
                         return button != GamepadButton::Count;
                     }
                     case InputBindSource::Mouse:
                     {
-                        const MouseButton button = MouseButtonUtil::fromName( name );
+                        const MouseButton button = findMouseButtonByName( name );
                         outSlot                  = InputSlot::fromMouseButton( button );
                         return button != MouseButton::Count;
                     }
@@ -117,16 +117,16 @@ namespace sw
                 {
                     case InputDeviceKind::Keyboard:
                         outSource = InputBindSource::Key;
-                        outName   = KeyCodeUtil::toName( static_cast<Key>( slot._controlIndex ) );
+                        outName   = getKeyName( static_cast<Key>( slot._controlIndex ) );
                         outPad    = 0;
                         return true;
                     case InputDeviceKind::Gamepad:
                         outSource = InputBindSource::Gamepad;
-                        outName   = GamepadButtonUtil::toName( static_cast<GamepadButton>( slot._controlIndex ) );
+                        outName   = getGamepadButtonName( static_cast<GamepadButton>( slot._controlIndex ) );
                         return true;
                     case InputDeviceKind::Mouse:
                         outSource = InputBindSource::Mouse;
-                        outName   = MouseButtonUtil::toName( static_cast<MouseButton>( slot._controlIndex ) );
+                        outName   = getMouseButtonName( static_cast<MouseButton>( slot._controlIndex ) );
                         outPad    = 0;
                         return true;
                     default:
@@ -146,7 +146,7 @@ namespace sw
                 {
                     // `modifier` 가 있으면 단축키다(수정 키 마스크 + 키, 정확 일치 — `InputMap::bindShortcut`). 두 키 조합은 `<chord>` 다.
                     uint8     modifierMask = 0;
-                    const Key key          = KeyCodeUtil::fromName( params._code );
+                    const Key key          = findKeyByName( params._code );
                     if ( params._source != InputBindSource::Key || key == Key::Unknown || InputRemapSerializer::tryParseModifierNames( params._modifier, modifierMask ) == false )
                     {
                         context.reject( element, "is not a key shortcut (modifier is Ctrl, Shift, Alt, Super joined by '+')" );

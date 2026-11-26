@@ -151,7 +151,7 @@ namespace sw
         const DevCounter& getMalformedCount() const { return _malformedCount; }
         /** @brief 다른 월드의 메시지라 처리기에 넘기지 않은 수입니다(월드가 바뀌는 사이 날아오던 것). */
         const DevCounter& getOtherWorldCount() const { return _otherWorldCount; }
-        /** @brief 서버 수신 상한(`NetLimitedMessageDef`)을 넘어 버린 비신뢰 메시지 수입니다. */
+        /** @brief 서버 수신 상한(`NetLimitedMessageDesc`)을 넘어 버린 비신뢰 메시지 수입니다. */
         const DevCounter& getOverLimitCount() const { return _overLimitCount; }
         /** @brief 보류했다가 시한 · 상한 · 월드 바뀜으로 전하지 못한 메시지 수입니다. */
         const DevCounter& getDeliveryFailedCount() const { return _deliveryFailedCount; }

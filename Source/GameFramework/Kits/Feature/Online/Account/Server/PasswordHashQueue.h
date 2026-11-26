@@ -39,7 +39,7 @@ namespace sw
     };
 
     /** @brief 해시 하나의 솔트와 매개변수입니다. */
-    struct PasswordHashSpec
+    struct PasswordHashParams
     {
         NetPasswordHashParams _params{};
         uint8                 _arrSalt[LoginConstant::kSaltSize]{};
@@ -48,17 +48,17 @@ namespace sw
     /** @brief 해시 일 하나입니다 — 비밀번호 하나로 해시를 하나 또는 둘(로그인 확인 + 매개변수가 바뀐 계정의 다시 해시) 계산합니다. */
     struct PasswordHashRequest
     {
-        static constexpr int32 kMaxSpecCount = 2;
+        static constexpr int32 kMaxHashCount = 2;
 
-        SecretText       _password{}; ///< 워커가 해시를 끝내면 지운다
-        PasswordHashSpec _arrSpec[kMaxSpecCount]{};
-        int32            _specCount{ 0 };
+        SecretText         _password{}; ///< 워커가 해시를 끝내면 지운다
+        PasswordHashParams _arrHashParams[kMaxHashCount]{};
+        int32              _hashCount{ 0 };
     };
 
     /** @brief 해시 일 하나의 결과입니다. `_bComputed` 가 거짓이면 실패(제공자 오류) 또는 취소(`_bCancelled`)입니다. */
     struct PasswordHashCompletion
     {
-        uint8  _arrHash[PasswordHashRequest::kMaxSpecCount][LoginConstant::kPasswordHashSize]{};
+        uint8  _arrHash[PasswordHashRequest::kMaxHashCount][LoginConstant::kPasswordHashSize]{};
         uint64 _jobID{ 0 };
         uint8  _bComputed  : 1;
         uint8  _bCancelled : 1;

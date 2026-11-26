@@ -46,7 +46,7 @@ namespace sw
         PROPERTY( DisplayName = "Padding", Tooltip = "Inner padding of borders and buttons (left, top, right, bottom)", Meta = "Units=ui" )
         float4 _padding{};
         PROPERTY( DisplayName = "Font" )
-        FontSpec _font{};
+        FontDesc _font{};
         PROPERTY( DisplayName = "Font Size", Min = 1.0, Meta = "Units=ui" )
         float32 _fontSize{ 18.0f };
         PROPERTY( DisplayName = "Text Color" )
