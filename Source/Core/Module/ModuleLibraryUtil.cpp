@@ -48,17 +48,6 @@ namespace sw
             }
 
 #if defined( SW_PLATFORM_WINDOWS )
-            /** @brief 라이브러리 기준 주소 @p pBase 의 PE NT 머리입니다. DOS · NT 서명이 맞지 않으면 nullptr 입니다. */
-            static const IMAGE_NT_HEADERS* findNtHeaders( const void* pBase )
-            {
-                const uint8*            pBytes = static_cast<const uint8*>( pBase );
-                const IMAGE_DOS_HEADER* pDos   = reinterpret_cast<const IMAGE_DOS_HEADER*>( pBytes );
-                if ( pDos->e_magic != IMAGE_DOS_SIGNATURE )
-                    return nullptr;
-                const IMAGE_NT_HEADERS* pNt = reinterpret_cast<const IMAGE_NT_HEADERS*>( pBytes + pDos->e_lfanew );
-                return ( pNt->Signature == IMAGE_NT_SIGNATURE ) ? pNt : nullptr;
-            }
-
             /** @brief 이름이 @p pDLLName 인 DLL 이 로드돼 있으면 프로세스 끝까지 언로드되지 않게 고정합니다. 고정했으면 true 를 반환합니다. */
             static bool pinLoadedModule( const utf8* pDLLName )
             {
@@ -112,37 +101,6 @@ namespace sw
         StringBuilder<constant::buffer::kMax128> sb;
         sb.append( getSharedLibraryPrefix() ).append( baseName ).append( getSharedLibraryExtension() );
         return string( sb.view() );
-    }
-
-    AbsolutePath ModuleLibraryUtil::getDebugSymbolPath( const AbsolutePath& libraryPath )
-    {
-#if defined( SW_PLATFORM_WINDOWS )
-        return libraryPath.removeExtension().appendSuffix( ".pdb" );
-#elif defined( SW_PLATFORM_POSIX )
-        return libraryPath.removeExtension().appendSuffix( ".debug" );
-#else
-    #error "Unsupported platform"
-#endif
-    }
-
-    AbsolutePath ModuleLibraryUtil::findBuiltDebugSymbolPath( const AbsolutePath& libraryPath )
-    {
-        const AbsolutePath besideLibrary = getDebugSymbolPath( libraryPath );
-        string_view        fileName;
-        FileUtil::getFileNamePart( besideLibrary.str(), fileName );
-        AbsolutePath symbolDirectory = ProcessRoots::get()._binary.join( kSymbolFolder );
-        // 옮긴 모듈(게임 팩)은 그 폴더에서 낸 라이브러리일 때만 `Symbols/<폴더>` 다 — 같은 이름의 `Bin/Symbols/SWGame.pdb` 는 활성 게임의 것이다.
-        const ModuleSubdirectory& moved = s_moduleSubdirectory;
-        if ( moved._arrDirectory[0] != '\0' )
-        {
-            const AbsolutePath movedDirectory = ProcessRoots::get()._binary.join( moved._arrDirectory );
-            if ( FileUtil::isSameDiskPath( libraryPath.getParent().str(), movedDirectory.str() ) )
-                symbolDirectory = symbolDirectory.join( moved._arrDirectory );
-        }
-        AbsolutePath found = symbolDirectory.join( fileName );
-        if ( FileUtil::exists( found ) == false )
-            found = FileUtil::exists( besideLibrary ) ? besideLibrary : AbsolutePath{};
-        return found;
     }
 
     AbsolutePath ModuleLibraryUtil::getModuleDirectory()
@@ -329,7 +287,7 @@ namespace sw
 #if defined( SW_PLATFORM_WINDOWS )
         // Windows 의 모듈 핸들은 라이브러리의 기준 주소다.
         const uint8*            pBase = static_cast<const uint8*>( pHandle );
-        const IMAGE_NT_HEADERS* pNt   = ModuleLibraryUtilInternal::findNtHeaders( pHandle );
+        const IMAGE_NT_HEADERS* pNt   = static_cast<const IMAGE_NT_HEADERS*>( findImageNtHeaders( pHandle ) );
         if ( pNt == nullptr )
             return 0;
 
@@ -383,38 +341,19 @@ namespace sw
     }
 
 #if SW_WITH_DYNAMIC_MODULES
-    void* ModuleLibraryUtil::findBoundImportLibrary( void* pHandle, string_view dependencyFileName )
+    const void* ModuleLibraryUtil::findImageNtHeaders( const void* pBase )
     {
     #if defined( SW_PLATFORM_WINDOWS )
-        if ( pHandle == nullptr )
+        if ( pBase == nullptr )
             return nullptr;
-        const IMAGE_NT_HEADERS* pNt = ModuleLibraryUtilInternal::findNtHeaders( pHandle );
-        if ( pNt == nullptr )
+        const uint8*            pBytes = static_cast<const uint8*>( pBase );
+        const IMAGE_DOS_HEADER* pDos   = reinterpret_cast<const IMAGE_DOS_HEADER*>( pBytes );
+        if ( pDos->e_magic != IMAGE_DOS_SIGNATURE )
             return nullptr;
-        const uint8* pBase = static_cast<const uint8*>( pHandle );
-
-        const IMAGE_DATA_DIRECTORY& importDir = pNt->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT];
-        if ( importDir.VirtualAddress != 0 )
-        {
-            const IMAGE_IMPORT_DESCRIPTOR* pDesc = reinterpret_cast<const IMAGE_IMPORT_DESCRIPTOR*>( pBase + importDir.VirtualAddress );
-            for ( ; pDesc->Name != 0; ++pDesc )
-            {
-                const utf8* pName = reinterpret_cast<const utf8*>( pBase + pDesc->Name );
-                if ( StringUtil::equals( string_view{ pName }, dependencyFileName, true ) == false )
-                    continue;
-                const IMAGE_THUNK_DATA* pThunk = reinterpret_cast<const IMAGE_THUNK_DATA*>( pBase + pDesc->FirstThunk );
-                if ( pThunk->u1.Function == 0 )
-                    return nullptr;
-                HMODULE hBound = nullptr;
-                GetModuleHandleExW( GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
-                                    reinterpret_cast<LPCWSTR>( pThunk->u1.Function ), &hBound );
-                return hBound;
-            }
-        }
-        return nullptr;
+        const IMAGE_NT_HEADERS* pNt = reinterpret_cast<const IMAGE_NT_HEADERS*>( pBytes + pDos->e_lfanew );
+        return ( pNt->Signature == IMAGE_NT_SIGNATURE ) ? pNt : nullptr;
     #elif defined( SW_PLATFORM_POSIX )
-        (void)pHandle; // 리눅스는 import 테이블에서 바인딩을 읽을 수 없다. 부르는 쪽이 심볼로 판단한다.
-        (void)dependencyFileName;
+        (void)pBase;
         return nullptr;
     #else
         #error "Unsupported platform"

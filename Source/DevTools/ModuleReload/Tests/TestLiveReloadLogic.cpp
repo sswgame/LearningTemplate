@@ -12,7 +12,6 @@
 #include "DevTools/ModuleReload/LiveReload/ModuleCompiler.h"
 #include "DevTools/ModuleReload/LiveReload/ModuleDependencyGraph.h"
 #include "DevTools/ModuleReload/LiveReload/ModuleShadowCopy.h"
-#include "DevTools/ModuleReload/LiveReload/ShadowCopyName.h"
 
 #include "Engine/Config/GameSelection.h"
 
@@ -120,18 +119,18 @@ SW_TEST_CASE( LiveReloadLogicTest, CycleFailsSort )
 /** @brief [LiveReloadLogicTest] 섀도 복사본 자리: 이름에 프로세스 꼬리가 없고, 폴더는 실행 뿌리 아래다. 남은 복사본(파일 · Windows 의 복사본 폴더)을 치운다 */
 SW_TEST_CASE( LiveReloadLogicTest, ShadowCopyNames )
 {
-    SW_EXPECT_EQUAL( string( "SWGame_3" ), ShadowCopyName::make( "SWGame", 3 ) );
-    SW_EXPECT_TRUE( FileUtil::isPathUnderRoot( ProcessRoots::get()._run.str(), ShadowCopyName::getDirectory().str() ) );
+    SW_EXPECT_EQUAL( string( "SWGame_3" ), ModuleShadowCopy::makeCopyName( "SWGame", 3 ) );
+    SW_EXPECT_TRUE( FileUtil::isPathUnderRoot( ProcessRoots::get()._run.str(), ModuleShadowCopy::getCopyDirectory().str() ) );
 
     const AbsolutePath directory = test::makeScratchPath( "ShadowCopies" );
     SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( directory.join( "SWGame_1" ) ) );
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( directory.join( "SWGame_1/SWGame.g1.dll" ), "copy" ) );
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( directory.join( "SWGame_2.so" ), "copy" ) );
-    SW_EXPECT_EQUAL( 2u, ShadowCopyName::removeCopies( directory ) );
+    SW_EXPECT_EQUAL( 2u, ModuleShadowCopy::removeCopies( directory ) );
     vector<AbsolutePath> listLeft;
     SW_EXPECT_TRUE( FileUtil::collectFiles( directory, "", listLeft, true ) );
     SW_EXPECT_TRUE( listLeft.empty() );
-    SW_EXPECT_EQUAL( 0u, ShadowCopyName::removeCopies( directory.join( "Missing" ) ) );
+    SW_EXPECT_EQUAL( 0u, ModuleShadowCopy::removeCopies( directory.join( "Missing" ) ) );
 }
 
 namespace
