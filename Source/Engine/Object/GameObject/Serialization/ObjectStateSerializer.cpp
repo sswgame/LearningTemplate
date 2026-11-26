@@ -23,12 +23,12 @@
 #include "Engine/Reflection/ReflectedValueVisitor.h"
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/TypeRegistry.h"
-#include "Engine/Serialization/Format/BinarySerializer.h"
-#include "Engine/Serialization/Format/JSONSerializer.h"
-#include "Engine/Serialization/Format/XMLSerializer.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
+#include "Engine/Serialization/Serializer/BinarySerializer.h"
+#include "Engine/Serialization/Serializer/JSONSerializer.h"
 #include "Engine/Serialization/Serializer/SerializeContext.h"
 #include "Engine/Serialization/Serializer/SerializerUtil.h"
+#include "Engine/Serialization/Serializer/XMLSerializer.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw

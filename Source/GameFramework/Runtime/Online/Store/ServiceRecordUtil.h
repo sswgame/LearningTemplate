@@ -27,10 +27,10 @@
 
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/TypeInfo.h"
-#include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/BinarySerializer.h"
 #include "Engine/Serialization/Format/FormatUpgrade.h"
 #include "Engine/Serialization/Layout/LayoutSerializer.h"
+#include "Engine/Serialization/Serializer/Archive.h"
+#include "Engine/Serialization/Serializer/BinarySerializer.h"
 
 #include "GameFramework/Runtime/Online/Bus/MixedBuildCodec.h"
 #include "GameFramework/Runtime/Online/Store/ServiceRecordUnknownFields.h"

@@ -4,8 +4,8 @@
 #include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Destruction/Fracture/FractureComponent.h"
-#include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/FormatDesc.h"
+#include "Engine/Serialization/Serializer/Archive.h"
 
 // FractureComponentTest — 파괴 컴포넌트의 질의는 엔진(씬 · 물리) 없이 정해진다.
 

@@ -14,9 +14,9 @@
 #include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/TypeRegistry.h"
+#include "Engine/Serialization/Format/SchemaMigrate.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
-#include "Engine/Serialization/Serializer/SchemaMigrate.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw

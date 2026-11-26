@@ -18,8 +18,8 @@
 #include "Engine/Content/Pack/PackConfig.h"
 #include "Engine/Profiling/MemoryBudgetMonitor.h"
 #include "Engine/Reflection/TypeInfo.h"
-#include "Engine/Serialization/Format/JSONSerializer.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
+#include "Engine/Serialization/Serializer/JSONSerializer.h"
 
 namespace
 {

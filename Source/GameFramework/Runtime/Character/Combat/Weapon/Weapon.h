@@ -21,7 +21,7 @@
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Behavior/ConditionExpr.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Serializer/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Character/Combat/Projectile/ProjectileDef.h"

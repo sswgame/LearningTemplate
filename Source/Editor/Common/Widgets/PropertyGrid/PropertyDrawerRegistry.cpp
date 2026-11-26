@@ -39,8 +39,8 @@
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Inherit/DataCatalogReferences.h"
-#include "Engine/Serialization/Serializer/AssetRefBase.h"
-#include "Engine/Serialization/Serializer/CatalogKey.h"
+#include "Engine/Serialization/Reference/AssetRefBase.h"
+#include "Engine/Serialization/Reference/CatalogKey.h"
 #include "Engine/Serialization/Serializer/SerializerUtil.h"
 
 #include <imgui.h>

@@ -23,7 +23,7 @@
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Reflection/ReflectionValidation.h"
 #include "Engine/Scene/SceneManager.h"
-#include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Serializer/Archive.h"
 
 #include "GameFramework/Kits/Feature/World/Housing/Component/HousingNetSessionComponent.h"
 #include "GameFramework/Kits/Feature/World/Housing/Component/HousingPlotComponent.h"

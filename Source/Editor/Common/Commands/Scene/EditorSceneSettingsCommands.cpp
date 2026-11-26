@@ -11,7 +11,7 @@
 
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneSettings.h"
-#include "Engine/Serialization/Format/XMLSerializer.h"
+#include "Engine/Serialization/Serializer/XMLSerializer.h"
 
 namespace sw::editor
 {

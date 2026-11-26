@@ -3,8 +3,8 @@
 
 #include "Core/TestFramework/TestFramework.h"
 
-#include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Serializer/Archive.h"
+#include "Engine/Serialization/Serializer/StateIO.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceTypes.h"

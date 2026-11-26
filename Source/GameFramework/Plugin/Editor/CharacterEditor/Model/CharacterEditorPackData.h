@@ -16,7 +16,7 @@
 #include "Engine/Character/Socket/SocketSet.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Serialization/Serializer/DataPath.h"
+#include "Engine/Serialization/Reference/DataPath.h"
 
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
 

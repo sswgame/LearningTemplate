@@ -2623,6 +2623,7 @@
     "fixedCodec": "layoutSchema — LayoutSchema(2026-11-27)",
     "bFixedPlanned": "bLayoutPlanned — LayoutSchema(2026-11-27)",
     "FormatDef": "FormatDesc — 코드 상수로 등록하는 서술이라 Desc(D3D12 _DESC) — Def 는 데이터 파일 저작 정의만(2026-11-27)",
-    "ParserUtil": "TypeSpelling — 형식 철자 다루기 — 하는 일의 이름(TypeMap/TypeSpelling.h)(2026-11-27)"
+    "ParserUtil": "TypeSpelling — 형식 철자 다루기 — 하는 일의 이름(TypeMap/TypeSpelling.h)(2026-11-27)",
+    "SerializerTranscodeUtil": "SerializerTranscode — 형식 사이 옮겨 쓰기 — 주인 없는 Util 이 아니라 그 일의 이름(Serializer/SerializerTranscode.h)(2026-11-27)"
   }
 }

@@ -8,8 +8,8 @@
 #include "Engine/Presentation/AudioPlayableAsset.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/TypeInfo.h"
-#include "Engine/Serialization/Format/BinarySerializer.h"
-#include "Engine/Serialization/Format/JSONSerializer.h"
+#include "Engine/Serialization/Serializer/BinarySerializer.h"
+#include "Engine/Serialization/Serializer/JSONSerializer.h"
 #include "Engine/Serialization/Serializer/SerializeContext.h"
 #include "Engine/Serialization/Serializer/SerializerUtil.h"
 

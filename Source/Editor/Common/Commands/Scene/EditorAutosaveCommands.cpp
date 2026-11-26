@@ -35,8 +35,8 @@
 #include "Engine/Content/ContentHash.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
-#include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/FormatDesc.h"
+#include "Engine/Serialization/Serializer/Archive.h"
 
 #include "ModuleAPI/Service/IModuleStateStore.h"
 

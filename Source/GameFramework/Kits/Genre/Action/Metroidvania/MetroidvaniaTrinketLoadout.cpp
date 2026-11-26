@@ -5,8 +5,8 @@
 #include "Core/Algorithm/VectorUtil.h"
 
 #include "Engine/Reflection/TypeFqn.h"
-#include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Serializer/Archive.h"
+#include "Engine/Serialization/Serializer/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Action/Metroidvania/MetroidvaniaCatalog.h"
 #include "GameFramework/Runtime/Foundation/GameData/StatBlock.h"

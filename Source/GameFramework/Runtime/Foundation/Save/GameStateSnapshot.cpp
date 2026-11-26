@@ -18,9 +18,9 @@
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Scene/SceneStreamingSubsystem.h"
 #include "Engine/Scene/SceneSubLevelSubsystem.h"
-#include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/BinarySerializer.h"
 #include "Engine/Serialization/Format/FormatDesc.h"
+#include "Engine/Serialization/Serializer/Archive.h"
+#include "Engine/Serialization/Serializer/BinarySerializer.h"
 
 #include "GameFramework/Runtime/Foundation/Flow/IContentConfiguration.h"
 #include "GameFramework/Runtime/Foundation/Save/SnapshotFaultHook.h"

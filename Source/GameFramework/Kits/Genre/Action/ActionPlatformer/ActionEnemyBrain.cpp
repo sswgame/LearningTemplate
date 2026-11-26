@@ -3,8 +3,8 @@
 #include "GameFramework/Kits/Genre/Action/ActionPlatformer/ActionEnemyBrain.h"
 
 #include "Engine/Reflection/TypeFqn.h"
-#include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Serializer/Archive.h"
+#include "Engine/Serialization/Serializer/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Action/ActionPlatformer/ActionPlatformerCatalog.h"
 

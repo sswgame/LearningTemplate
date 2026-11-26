@@ -4,8 +4,8 @@
 
 #include "Editor/Common/Workspace/EditorSubsystems.h"
 
-#include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/FormatDesc.h"
+#include "Engine/Serialization/Serializer/Archive.h"
 
 #include "ModuleAPI/Service/IModuleStateStore.h"
 

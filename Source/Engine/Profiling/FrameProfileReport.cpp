@@ -5,7 +5,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 
-#include "Engine/Serialization/Format/JSONSerializer.h"
+#include "Engine/Serialization/Serializer/JSONSerializer.h"
 
 namespace sw
 {

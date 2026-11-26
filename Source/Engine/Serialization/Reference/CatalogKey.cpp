@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Serialization/Serializer/CatalogKey.h"
+#include "Engine/Serialization/Reference/CatalogKey.h"
 
 #include "Core/String/StringUtil.h"
 

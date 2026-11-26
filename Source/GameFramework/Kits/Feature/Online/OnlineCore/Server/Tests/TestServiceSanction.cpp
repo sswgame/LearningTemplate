@@ -3,7 +3,7 @@
 #include "Core/Serialization/BitStream.h"
 #include "Core/TestFramework/TestFramework.h"
 
-#include "Engine/Serialization/Format/BinarySerializer.h"
+#include "Engine/Serialization/Serializer/BinarySerializer.h"
 
 #include "GameFramework/Runtime/Online/Sanction/Server/ServiceSanction.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"

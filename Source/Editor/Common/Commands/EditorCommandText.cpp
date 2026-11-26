@@ -9,7 +9,7 @@
 #include "Editor/Common/Localization/EditorDataText.h"
 #include "Editor/Common/Workspace/EditorSubsystems.h"
 
-#include "Engine/Serialization/Format/XMLSerializer.h"
+#include "Engine/Serialization/Serializer/XMLSerializer.h"
 
 namespace sw::editor
 {

@@ -4,7 +4,7 @@
 #include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Object/Component/SceneComponent.h"
-#include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Serializer/Archive.h"
 
 #include "GameFramework/Runtime/Character/Camera/CameraDirector.h"
 #include "GameFramework/Runtime/Character/Camera/CameraPreset.h"

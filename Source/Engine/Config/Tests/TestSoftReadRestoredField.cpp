@@ -8,10 +8,10 @@
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Reflection/TypeInfo.h"
-#include "Engine/Serialization/Format/BinarySerializer.h"
-#include "Engine/Serialization/Format/JSONSerializer.h"
-#include "Engine/Serialization/Format/XMLSerializer.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
+#include "Engine/Serialization/Serializer/BinarySerializer.h"
+#include "Engine/Serialization/Serializer/JSONSerializer.h"
+#include "Engine/Serialization/Serializer/XMLSerializer.h"
 
 #include "sw/config/ShippingHostDefaults.h"
 

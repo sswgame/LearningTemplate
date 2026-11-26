@@ -10,8 +10,8 @@
 #include "Core/String/StringUtil.h"
 #include "Core/TestFramework/TestFramework.h"
 
-#include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Serializer/Archive.h"
+#include "Engine/Serialization/Serializer/StateIO.h"
 
 /**
  * @brief [ArchiveTest] 개수는 남은 바이트로 담을 수 있을 때만 읽히고, 실패하면 0 을 돌려주고 오류를 남긴다

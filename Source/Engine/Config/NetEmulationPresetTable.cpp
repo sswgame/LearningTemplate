@@ -6,7 +6,7 @@
 #include "Core/Network/Transport/NetEmulation.h"
 #include "Core/String/StringUtil.h"
 
-#include "Engine/Serialization/Format/ReflectedXMLFile.h"
+#include "Engine/Serialization/XML/ReflectedXMLFile.h"
 
 namespace sw
 {

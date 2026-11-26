@@ -4,11 +4,11 @@
 
 #include "Engine/Reflection/Tests/ReflectionTestTypes.h"
 #include "Engine/Reflection/TypeInfo.h"
-#include "Engine/Serialization/Format/BinarySerializer.h"
-#include "Engine/Serialization/Format/JSONSerializer.h"
-#include "Engine/Serialization/Format/XMLSerializer.h"
-#include "Engine/Serialization/Serializer/SchemaMigrate.h"
+#include "Engine/Serialization/Format/SchemaMigrate.h"
+#include "Engine/Serialization/Serializer/BinarySerializer.h"
+#include "Engine/Serialization/Serializer/JSONSerializer.h"
 #include "Engine/Serialization/Serializer/SerializeContext.h"
+#include "Engine/Serialization/Serializer/XMLSerializer.h"
 
 // ReflectionPurposeTest — 저장 목적(Authoring · Snapshot · SaveGame) × 필드 플래그(없음 · Transient · RuntimeState · SaveGame) × 형식(XML · JSON · 바이너리)의 표가
 // `SerializerUtil::shouldSerializeProperty` 한 곳에서 같게 나오는지 본다. 읽는 쪽은 목적이 다루지 않는 필드를 지금 값 그대로 둔다.

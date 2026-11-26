@@ -12,8 +12,8 @@
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Reflection/TypeInfo.h"
-#include "Engine/Serialization/Format/JSONSerializer.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
+#include "Engine/Serialization/Serializer/JSONSerializer.h"
 
 #include "sw/config/ConfigConstants.h"
 #include "sw/config/ShippingHostDefaults.h"

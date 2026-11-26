@@ -1,18 +1,18 @@
 #include "pch.h"
 
-#include "Engine/Serialization/Format/SerializerTranscodeUtil.h"
+#include "Engine/Serialization/Serializer/SerializerTranscode.h"
 
 #include "Engine/Reflection/TypeInfo.h"
-#include "Engine/Serialization/Format/BinarySerializer.h"
-#include "Engine/Serialization/Format/JSONSerializer.h"
-#include "Engine/Serialization/Format/XMLSerializer.h"
+#include "Engine/Serialization/Serializer/BinarySerializer.h"
+#include "Engine/Serialization/Serializer/JSONSerializer.h"
 #include "Engine/Serialization/Serializer/SerializerUtil.h"
+#include "Engine/Serialization/Serializer/XMLSerializer.h"
 
 namespace sw
 {
     namespace
     {
-        struct SerializerTranscodeUtilInternal
+        struct SerializerTranscodeInternal
         {
             /**
              * @brief 텍스트(JSON, XML)를 임시 인스턴스로 읽어 바이너리로 다시 씁니다. `deserializeText` 가 텍스트 형식을 고릅니다.
@@ -56,42 +56,42 @@ namespace sw
 
 namespace sw
 {
-    bool SerializerTranscodeUtil::transcodeJSONToBinary( string_view jsonStr, const TypeInfo& typeInfo, vector<uint8>& outBinary,
-                                                         const SerializeContext& context )
+    bool SerializerTranscode::transcodeJSONToBinary( string_view jsonStr, const TypeInfo& typeInfo, vector<uint8>& outBinary,
+                                                     const SerializeContext& context )
     {
-        return SerializerTranscodeUtilInternal::transcodeTextToBinary( jsonStr, typeInfo, outBinary, context, [&]( void* pScratch )
+        return SerializerTranscodeInternal::transcodeTextToBinary( jsonStr, typeInfo, outBinary, context, [&]( void* pScratch )
         {
             return JSONSerializer::deserialize( pScratch, typeInfo, jsonStr, context );
         } );
     }
 
-    string SerializerTranscodeUtil::transcodeBinaryToJSON( const uint8* pData, size_t dataSize, const TypeInfo& typeInfo, bool bPretty,
-                                                           const SerializeContext& context )
+    string SerializerTranscode::transcodeBinaryToJSON( const uint8* pData, size_t dataSize, const TypeInfo& typeInfo, bool bPretty,
+                                                       const SerializeContext& context )
     {
-        return SerializerTranscodeUtilInternal::transcodeBinaryToText( pData, dataSize, typeInfo, context, [&]( const void* pScratch )
+        return SerializerTranscodeInternal::transcodeBinaryToText( pData, dataSize, typeInfo, context, [&]( const void* pScratch )
         {
             const expected<string> text = bPretty ? JSONSerializer::serializePretty( pScratch, typeInfo, 4, context ) : JSONSerializer::serialize( pScratch, typeInfo, context );
             if ( text.has_value() )
                 return *text;
             // 이 함수의 계약은 "못 쓰면 빈 글" 이다(XML 쪽과 같다) — 이유는 여기서 남긴다.
-            SW_LOG_ERROR_ID( "SerializerTranscodeUtil.JSONNotWritable", "Binary data could not be transcoded to JSON: %# (%#)", text.error().message(), text.error().detail() );
+            SW_LOG_ERROR_ID( "SerializerTranscode.JSONNotWritable", "Binary data could not be transcoded to JSON: %# (%#)", text.error().message(), text.error().detail() );
             return string{};
         } );
     }
 
-    bool SerializerTranscodeUtil::transcodeXMLToBinary( string_view xmlStr, const TypeInfo& typeInfo, vector<uint8>& outBinary,
-                                                        const SerializeContext& context )
+    bool SerializerTranscode::transcodeXMLToBinary( string_view xmlStr, const TypeInfo& typeInfo, vector<uint8>& outBinary,
+                                                    const SerializeContext& context )
     {
-        return SerializerTranscodeUtilInternal::transcodeTextToBinary( xmlStr, typeInfo, outBinary, context, [&]( void* pScratch )
+        return SerializerTranscodeInternal::transcodeTextToBinary( xmlStr, typeInfo, outBinary, context, [&]( void* pScratch )
         {
             return XMLSerializer::deserialize( pScratch, typeInfo, xmlStr, context );
         } );
     }
 
-    string SerializerTranscodeUtil::transcodeBinaryToXML( const uint8* pData, size_t dataSize, const TypeInfo& typeInfo,
-                                                          const SerializeContext& context )
+    string SerializerTranscode::transcodeBinaryToXML( const uint8* pData, size_t dataSize, const TypeInfo& typeInfo,
+                                                      const SerializeContext& context )
     {
-        return SerializerTranscodeUtilInternal::transcodeBinaryToText( pData, dataSize, typeInfo, context, [&]( const void* pScratch )
+        return SerializerTranscodeInternal::transcodeBinaryToText( pData, dataSize, typeInfo, context, [&]( const void* pScratch )
         {
             return XMLSerializer::serialize( pScratch, typeInfo, context );
         } );

@@ -1,14 +1,14 @@
 #include "pch.h"
 
-#include "Engine/Serialization/Format/ReflectedXMLFile.h"
+#include "Engine/Serialization/XML/ReflectedXMLFile.h"
 
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Foundation/EngineSubsystems.h"
-#include "Engine/Serialization/Format/XMLSerializer.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
 #include "Engine/Serialization/Inherit/ResourceComposer.h"
 #include "Engine/Serialization/Serializer/SerializerUtil.h"
+#include "Engine/Serialization/Serializer/XMLSerializer.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw

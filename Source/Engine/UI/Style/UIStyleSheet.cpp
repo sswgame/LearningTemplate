@@ -7,8 +7,8 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Reflection/TypeInfo.h"
+#include "Engine/Serialization/Format/SchemaMigrate.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
-#include "Engine/Serialization/Serializer/SchemaMigrate.h"
 #include "Engine/Serialization/Serializer/SerializeContext.h"
 #include "Engine/Serialization/Serializer/SerializerUtil.h"
 #include "Engine/Serialization/XML/XMLDocument.h"

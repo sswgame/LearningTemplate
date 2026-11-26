@@ -4,14 +4,14 @@
 
 #include "Core/TestFramework/TestFramework.h"
 
-#include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/BinarySerializer.h"
-#include "Engine/Serialization/Format/JSONSerializer.h"
-#include "Engine/Serialization/Format/SerializerTranscodeUtil.h"
-#include "Engine/Serialization/Format/XMLSerializer.h"
+#include "Engine/Serialization/Serializer/Archive.h"
+#include "Engine/Serialization/Serializer/BinarySerializer.h"
+#include "Engine/Serialization/Serializer/JSONSerializer.h"
 #include "Engine/Serialization/Serializer/SerializeContext.h"
+#include "Engine/Serialization/Serializer/SerializerTranscode.h"
 #include "Engine/Serialization/Serializer/SerializerUtil.h"
 #include "Engine/Serialization/Serializer/Tests/SerializerTestTypes.h"
+#include "Engine/Serialization/Serializer/XMLSerializer.h"
 
 using namespace sw;
 
@@ -56,13 +56,13 @@ SW_TEST_CASE( SerializerTranscodeTest, TextAndBinaryTranscodeBothWays )
 
     vector<uint8> fromJSON;
     vector<uint8> fromXML;
-    SW_REQUIRE_TRUE( SerializerTranscodeUtil::transcodeJSONToBinary( *json, type, fromJSON ) );
-    SW_REQUIRE_TRUE( SerializerTranscodeUtil::transcodeXMLToBinary( xml, type, fromXML ) );
+    SW_REQUIRE_TRUE( SerializerTranscode::transcodeJSONToBinary( *json, type, fromJSON ) );
+    SW_REQUIRE_TRUE( SerializerTranscode::transcodeXMLToBinary( xml, type, fromXML ) );
     SW_EXPECT_TRUE( fromJSON == binary );
     SW_EXPECT_TRUE( fromXML == binary );
 
-    SW_EXPECT_EQUAL( *json, SerializerTranscodeUtil::transcodeBinaryToJSON( binary.data(), binary.size(), type ) );
-    SW_EXPECT_EQUAL( xml, SerializerTranscodeUtil::transcodeBinaryToXML( binary.data(), binary.size(), type ) );
+    SW_EXPECT_EQUAL( *json, SerializerTranscode::transcodeBinaryToJSON( binary.data(), binary.size(), type ) );
+    SW_EXPECT_EQUAL( xml, SerializerTranscode::transcodeBinaryToXML( binary.data(), binary.size(), type ) );
 }
 
 /**
@@ -72,12 +72,12 @@ SW_TEST_CASE( SerializerTranscodeTest, EmptyInputLeavesTheOutputAlone )
 {
     const TypeInfo& type = *SerializerSample::StaticType();
     vector<uint8>   untouched{ 7 };
-    SW_EXPECT_FALSE( SerializerTranscodeUtil::transcodeJSONToBinary( "", type, untouched ) );
-    SW_EXPECT_FALSE( SerializerTranscodeUtil::transcodeXMLToBinary( "", type, untouched ) );
+    SW_EXPECT_FALSE( SerializerTranscode::transcodeJSONToBinary( "", type, untouched ) );
+    SW_EXPECT_FALSE( SerializerTranscode::transcodeXMLToBinary( "", type, untouched ) );
     SW_REQUIRE_EQUAL( size_t{ 1 }, untouched.size() );
     SW_EXPECT_EQUAL( 7, static_cast<int32>( untouched[0] ) );
-    SW_EXPECT_TRUE( SerializerTranscodeUtil::transcodeBinaryToJSON( nullptr, 0, type ).empty() );
-    SW_EXPECT_TRUE( SerializerTranscodeUtil::transcodeBinaryToXML( nullptr, 0, type ).empty() );
+    SW_EXPECT_TRUE( SerializerTranscode::transcodeBinaryToJSON( nullptr, 0, type ).empty() );
+    SW_EXPECT_TRUE( SerializerTranscode::transcodeBinaryToXML( nullptr, 0, type ).empty() );
 }
 
 /**

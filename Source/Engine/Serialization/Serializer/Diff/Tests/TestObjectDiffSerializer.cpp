@@ -3,7 +3,7 @@
 #include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Config/ServerConfig.h"
-#include "Engine/Serialization/Diff/ObjectDiffSerializer.h"
+#include "Engine/Serialization/Serializer/Diff/ObjectDiffSerializer.h"
 #include "Engine/Serialization/Serializer/SerializeContext.h"
 
 // ObjectDiffSerializerTest — 기본값(CDO) 대비 델타: 바꾼 필드만 싣고, 새 기본 객체에 적용하면 바꾼 객체와 같으며, 깨진 델타는 적용하지 않는다.

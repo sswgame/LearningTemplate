@@ -5,7 +5,7 @@
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
-#include "Engine/Serialization/Serializer/DataPath.h"
+#include "Engine/Serialization/Reference/DataPath.h"
 
 namespace sw
 {

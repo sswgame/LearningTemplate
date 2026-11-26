@@ -49,8 +49,8 @@
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Serialization/Inherit/DataCatalogReferences.h"
-#include "Engine/Serialization/Serializer/AssetRefBase.h"
-#include "Engine/Serialization/Serializer/DataPath.h"
+#include "Engine/Serialization/Reference/AssetRefBase.h"
+#include "Engine/Serialization/Reference/DataPath.h"
 #include "Engine/Serialization/Serializer/SerializerUtil.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 

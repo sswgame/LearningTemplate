@@ -7,7 +7,7 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
-#include "Engine/Serialization/Format/XMLSerializer.h"
+#include "Engine/Serialization/Serializer/XMLSerializer.h"
 
 #include "GameFramework/Runtime/Gameplay/Gimmick/Circuit/GimmickCircuit.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/Circuit/GimmickCircuitComponent.h"

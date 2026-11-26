@@ -13,7 +13,7 @@
 #include "Engine/Reflection/PropertyInfo.h"
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Scene/Scene.h"
-#include "Engine/Serialization/Serializer/AssetRefBase.h"
+#include "Engine/Serialization/Reference/AssetRefBase.h"
 
 using namespace sw;
 using namespace sw::editor;

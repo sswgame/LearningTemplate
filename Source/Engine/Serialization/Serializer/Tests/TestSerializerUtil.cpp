@@ -10,16 +10,16 @@
 #include "Engine/Reflection/ReflectedValue.h"
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Reflection/TypeRegistry.h"
-#include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/BinarySerializer.h"
-#include "Engine/Serialization/Format/JSONSerializer.h"
-#include "Engine/Serialization/Format/XMLSerializer.h"
+#include "Engine/Serialization/Format/SchemaMigrate.h"
+#include "Engine/Serialization/Reference/DataPath.h"
+#include "Engine/Serialization/Serializer/Archive.h"
+#include "Engine/Serialization/Serializer/BinarySerializer.h"
 #include "Engine/Serialization/Serializer/ContainerVisitor.h"
-#include "Engine/Serialization/Serializer/DataPath.h"
-#include "Engine/Serialization/Serializer/SchemaMigrate.h"
+#include "Engine/Serialization/Serializer/JSONSerializer.h"
 #include "Engine/Serialization/Serializer/SerializeContext.h"
 #include "Engine/Serialization/Serializer/SerializerUtil.h"
 #include "Engine/Serialization/Serializer/Tests/SerializerTestTypes.h"
+#include "Engine/Serialization/Serializer/XMLSerializer.h"
 
 // SerializerUtilTest · SchemaMigrateTest · DataPathTest — 직렬화 공통 도우미: 값 텍스트 왕복 · 범위 밖 정수 거절 · 키 철자 일치 · 모르는 이름 · 비트필드 한 칸만 쓰기 ·
 // 페이로드 끝까지 읽기 · 선언 범위(경계 포함) · 선언 기본값, 판 정확 일치(옛 판은 이관하지 않고 거절) · orphan 정책(텍스트는 버리고 알림, 바이너리는 거절) ·

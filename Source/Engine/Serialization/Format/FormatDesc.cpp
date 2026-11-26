@@ -8,7 +8,7 @@
 #include "Core/Serialization/ByteStream.h"
 #include "Core/Serialization/LittleEndianUtil.h"
 
-#include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Serializer/Archive.h"
 
 namespace sw
 {

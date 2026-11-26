@@ -12,8 +12,8 @@
 #include "Engine/Reflection/Tests/ScopedTestModule.h"
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Reflection/TypeRegistry.h"
-#include "Engine/Serialization/Format/JSONSerializer.h"
-#include "Engine/Serialization/Format/XMLSerializer.h"
+#include "Engine/Serialization/Serializer/JSONSerializer.h"
+#include "Engine/Serialization/Serializer/XMLSerializer.h"
 
 // ReflectionEnumTest — EnumInfo 등록 · 조회 · 플래그 연산 · 비트플래그 문자열 · 이름 테이블 · 좁은 enum 의 부호.
 

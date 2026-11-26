@@ -9,8 +9,8 @@
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Asset/Cache/BuiltInAssetCache.h"
 #include "Engine/Foundation/EngineSubsystems.h"
-#include "Engine/Serialization/Format/ReflectedXMLFile.h"
 #include "Engine/Serialization/Serializer/ReloadResult.h"
+#include "Engine/Serialization/XML/ReflectedXMLFile.h"
 
 namespace sw
 {

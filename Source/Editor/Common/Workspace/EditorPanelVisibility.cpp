@@ -3,7 +3,7 @@
 #include "Editor/Common/Workspace/EditorPanelVisibility.h"
 
 #include "Engine/Reflection/TypeInfo.h"
-#include "Engine/Serialization/Format/JSONSerializer.h"
+#include "Engine/Serialization/Serializer/JSONSerializer.h"
 
 namespace sw::editor
 {

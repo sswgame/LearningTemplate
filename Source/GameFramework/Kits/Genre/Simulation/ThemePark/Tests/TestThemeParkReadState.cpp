@@ -3,9 +3,9 @@
 #include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Reflection/TypeFqn.h"
-#include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/StateIO.h"
-#include "Engine/Serialization/Format/Tests/StateBytesTestUtil.h"
+#include "Engine/Serialization/Serializer/Archive.h"
+#include "Engine/Serialization/Serializer/StateIO.h"
+#include "Engine/Serialization/Serializer/Tests/StateBytesTestUtil.h"
 
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/Tests/ThemeParkTestRules.h"
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/ThemePark.h"

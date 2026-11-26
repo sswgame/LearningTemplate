@@ -3,7 +3,7 @@
 #include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Curve/FloatCurve.h"
-#include "Engine/Serialization/Format/JSONSerializer.h"
+#include "Engine/Serialization/Serializer/JSONSerializer.h"
 
 using namespace sw;
 

@@ -1,8 +1,7 @@
 /**
- * @file SerializerTranscodeUtil.h
+ * @file SerializerTranscode.h
  * @brief 리플렉션 객체 하나를 형식 사이(JSON · XML ↔ 바이너리)로 옮겨 씁니다.
- * @details 세 형식 직렬화기(`BinarySerializer` · `JSONSerializer` · `XMLSerializer`)를 모두 부르므로 형식 층(Format)에 둡니다.
- *          아래 층(`Base/SerializerUtil`)이 위 층 직렬화기를 부르지 않게 하려고 옮겼습니다.
+ * @details 세 형식 직렬화기(`BinarySerializer` · `JSONSerializer` · `XMLSerializer`)를 모두 부르므로 값 하나를 다루는 도우미(`ValueSerializer`)가 아니라 이 형식에 둡니다.
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -17,7 +16,7 @@ namespace sw
     struct TypeInfo;
 
     /** @brief JSON · XML 과 바이너리 사이를 임시 인스턴스 하나를 거쳐 옮겨 씁니다. */
-    struct SW_API SerializerTranscodeUtil
+    struct SW_API SerializerTranscode
     {
         /** @brief JSON 문자열을 바이너리 버퍼로 트랜스코딩합니다. 읽지 못하면 false 이고 그때 @p outBinary 는 건드리지 않습니다. */
         static bool transcodeJSONToBinary( string_view jsonStr, const TypeInfo& typeInfo, vector<uint8>& outBinary,

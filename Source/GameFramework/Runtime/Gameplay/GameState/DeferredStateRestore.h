@@ -8,9 +8,9 @@
 #include "Core/Log/Logger.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/FormatDesc.h"
-#include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Serializer/Archive.h"
+#include "Engine/Serialization/Serializer/StateIO.h"
 
 #include "GameFramework/Runtime/Gameplay/GameState/StateSectionTableUtil.h"
 

@@ -27,7 +27,7 @@
 #include "Engine/Reflection/ReflectionInvoke.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/TypeInfo.h"
-#include "Engine/Serialization/Serializer/AssetRefBase.h"
+#include "Engine/Serialization/Reference/AssetRefBase.h"
 
 #include <imgui.h>
 #include <imgui_internal.h>

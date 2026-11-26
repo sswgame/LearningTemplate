@@ -10,8 +10,8 @@
 
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Content/AssetIO.h"
-#include "Engine/Serialization/Format/XMLSerializer.h"
 #include "Engine/Serialization/Inherit/ResourceComposer.h"
+#include "Engine/Serialization/Serializer/XMLSerializer.h"
 
 #include <algorithm>
 

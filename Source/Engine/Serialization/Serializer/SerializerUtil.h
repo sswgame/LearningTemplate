@@ -10,7 +10,7 @@
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/TextAddress.h"
 #include "Engine/Reflection/TypeInfo.h"
-#include "Engine/Serialization/Serializer/SchemaMigrate.h"
+#include "Engine/Serialization/Format/SchemaMigrate.h"
 #include "Engine/Serialization/Serializer/SerializeContext.h"
 
 namespace sw

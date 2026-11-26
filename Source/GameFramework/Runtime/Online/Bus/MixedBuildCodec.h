@@ -15,8 +15,8 @@
 #include "Core/String/Name/hashed_string.h"
 
 #include "Engine/Reflection/TypeInfo.h"
-#include "Engine/Serialization/Format/BinarySerializer.h"
 #include "Engine/Serialization/Layout/LayoutSerializer.h"
+#include "Engine/Serialization/Serializer/BinarySerializer.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 

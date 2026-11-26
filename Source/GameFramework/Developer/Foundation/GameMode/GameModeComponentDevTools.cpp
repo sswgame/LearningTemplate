@@ -20,7 +20,7 @@
 #include "Engine/Reflection/ReflectVisit.h"
 #include "Engine/Reflection/ReflectedInstance.h"
 #include "Engine/Reflection/TypeFqn.h"
-#include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Serializer/Archive.h"
 #include "Engine/Serialization/Serializer/SerializerUtil.h"
 
 #include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"

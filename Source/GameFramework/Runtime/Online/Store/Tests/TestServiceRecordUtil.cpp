@@ -2,8 +2,8 @@
 
 #include "Core/TestFramework/TestFramework.h"
 
-#include "Engine/Serialization/Format/BinarySerializer.h"
 #include "Engine/Serialization/Format/FormatUpgrade.h"
+#include "Engine/Serialization/Serializer/BinarySerializer.h"
 
 #include "GameFramework/Runtime/Online/Store/ServiceRecordUtil.h"
 #include "GameFramework/Runtime/Online/Store/Tests/ServiceRecordUtilTestTypes.h"

@@ -13,7 +13,7 @@
 #include "Core/String/Name/hashed_string.h"
 
 #include "Engine/Content/AssetID.h"
-#include "Engine/Serialization/Serializer/DataPath.h"
+#include "Engine/Serialization/Reference/DataPath.h"
 #include "Engine/UI/Screen/UIOwnedScreen.h"
 #include "Engine/UI/WidgetTree/WidgetTypes.h"
 

@@ -18,7 +18,7 @@
 #include "Engine/Physics/PhysicsTypes.h"
 #include "Engine/Physics/Scene/SocketPhysicsBody.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Serializer/StateIO.h"
 
 namespace sw
 {

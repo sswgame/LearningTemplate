@@ -1,6 +1,6 @@
 ﻿#include "pch.h"
 
-#include "Engine/Serialization/Format/BinarySerializer.h"
+#include "Engine/Serialization/Serializer/BinarySerializer.h"
 
 #include "Core/Compression/CompressionStream.h"
 #include "Core/Log/LogOnce.h"
@@ -9,10 +9,10 @@
 
 #include "Engine/Reflection/ReflectVisit.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
-#include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/SchemaMigrate.h"
+#include "Engine/Serialization/Serializer/Archive.h"
 #include "Engine/Serialization/Serializer/ContainerVisitor.h"
 #include "Engine/Serialization/Serializer/NestedObjectCodec.h"
-#include "Engine/Serialization/Serializer/SchemaMigrate.h"
 #include "Engine/Serialization/Serializer/SerializerUtil.h"
 
 namespace sw

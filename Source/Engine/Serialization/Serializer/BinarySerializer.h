@@ -6,7 +6,7 @@
 #include "Core/Compression/ICompressionCodec.h"
 
 #include "Engine/EngineMinimal.h"
-#include "Engine/Serialization/Serializer/SchemaMigrate.h"
+#include "Engine/Serialization/Format/SchemaMigrate.h"
 #include "Engine/Serialization/Serializer/SerializeContext.h"
 
 namespace sw

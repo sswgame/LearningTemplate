@@ -9,8 +9,8 @@
 #include "Engine/Reflection/PropertyInfo.h"
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Reflection/TypeRegistry.h"
-#include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/Tests/StateBytesTestUtil.h"
+#include "Engine/Serialization/Serializer/Archive.h"
+#include "Engine/Serialization/Serializer/Tests/StateBytesTestUtil.h"
 
 #include "GameFramework/Kits/Genre/Horror/AsymmetricHorror/Component/AsymmetricHorrorGameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Minigame/MinigameStack.h"

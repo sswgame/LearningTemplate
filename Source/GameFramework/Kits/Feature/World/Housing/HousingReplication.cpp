@@ -9,8 +9,8 @@
 #include "Core/Network/Connection/NetEndpoint.h"
 #include "Core/Serialization/BitStream.h"
 
-#include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Layout/ReplicatedLayout.h"
+#include "Engine/Serialization/Serializer/Archive.h"
 
 #include "GameFramework/Runtime/Gameplay/Inventory/Wallet.h"
 

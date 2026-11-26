@@ -19,9 +19,9 @@
 #include "Engine/Reflection/ReflectedAny.h"
 #include "Engine/Reflection/ReflectedValue.h"
 #include "Engine/Reflection/TypeRegistry.h"
-#include "Engine/Serialization/Serializer/AssetRefBase.h"
-#include "Engine/Serialization/Serializer/CatalogKey.h"
-#include "Engine/Serialization/Serializer/DataPath.h"
+#include "Engine/Serialization/Reference/AssetRefBase.h"
+#include "Engine/Serialization/Reference/CatalogKey.h"
+#include "Engine/Serialization/Reference/DataPath.h"
 #include "Engine/Serialization/Serializer/SecretValue.h"
 
 #include <cmath>

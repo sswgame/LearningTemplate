@@ -8,8 +8,8 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Reflection/TypeFqn.h"
-#include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Serializer/Archive.h"
+#include "Engine/Serialization/Serializer/StateIO.h"
 #include "Engine/Serialization/XML/XMLWriter.h"
 
 #include "GameFramework/Kits/Genre/Horror/CoopScavenger/ScavengerCatalog.h"

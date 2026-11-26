@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Serializer/Archive.h"
 
 #include "Core/Compression/CompressionStream.h"
 #include "Core/File/FileUtil.h"
@@ -15,11 +15,11 @@
 
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Reflection/TypeInfo.h"
-#include "Engine/Serialization/Format/BinarySerializer.h"
-#include "Engine/Serialization/Format/JSONSerializer.h"
-#include "Engine/Serialization/Format/SerializerTranscodeUtil.h"
-#include "Engine/Serialization/Format/XMLSerializer.h"
-#include "Engine/Serialization/Serializer/SchemaMigrate.h"
+#include "Engine/Serialization/Format/SchemaMigrate.h"
+#include "Engine/Serialization/Serializer/BinarySerializer.h"
+#include "Engine/Serialization/Serializer/JSONSerializer.h"
+#include "Engine/Serialization/Serializer/SerializerTranscode.h"
+#include "Engine/Serialization/Serializer/XMLSerializer.h"
 
 namespace sw
 {
@@ -742,7 +742,7 @@ namespace sw
         }
 
         vector<uint8> outBytes;
-        if ( SerializerTranscodeUtil::transcodeJSONToBinary( jsonStr, typeInfo, outBytes ) == false )
+        if ( SerializerTranscode::transcodeJSONToBinary( jsonStr, typeInfo, outBytes ) == false )
         {
             _bError = SW_TRUE;
             return false;
@@ -758,7 +758,7 @@ namespace sw
         if ( bNothingToConvert )
             return {};
 
-        return SerializerTranscodeUtil::transcodeBinaryToJSON( _pData + _offset, _dataSize - _offset, typeInfo, bPretty );
+        return SerializerTranscode::transcodeBinaryToJSON( _pData + _offset, _dataSize - _offset, typeInfo, bPretty );
     }
 
     bool Archive::serializeXMLObject( const void* pInstance, const TypeInfo& typeInfo )
@@ -799,7 +799,7 @@ namespace sw
         }
 
         vector<uint8> outBytes;
-        if ( SerializerTranscodeUtil::transcodeXMLToBinary( xmlStr, typeInfo, outBytes ) == false )
+        if ( SerializerTranscode::transcodeXMLToBinary( xmlStr, typeInfo, outBytes ) == false )
         {
             _bError = SW_TRUE;
             return false;

@@ -8,7 +8,7 @@
 #include "DevTools/Maintenance/SavedCleanupSubsystem.h"
 
 #include "Engine/Config/ConfigManager.h"
-#include "Engine/Serialization/Format/JSONSerializer.h"
+#include "Engine/Serialization/Serializer/JSONSerializer.h"
 
 using namespace sw;
 

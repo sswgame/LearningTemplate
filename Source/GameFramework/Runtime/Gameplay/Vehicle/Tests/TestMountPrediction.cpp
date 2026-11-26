@@ -9,7 +9,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Physics/Component/CharacterControllerComponent.h"
-#include "Engine/Serialization/Format/BinarySerializer.h"
+#include "Engine/Serialization/Serializer/BinarySerializer.h"
 #include "Engine/Serialization/Serializer/SerializeContext.h"
 
 #include "GameFramework/Runtime/Character/Control/Controller/IntentTrackControllerComponent.h"

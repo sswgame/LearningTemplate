@@ -6,7 +6,7 @@
 
 #include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Module/ModuleSharedAssetCache.h"
-#include "Engine/Serialization/Format/ReflectedXMLFile.h"
+#include "Engine/Serialization/XML/ReflectedXMLFile.h"
 
 namespace sw
 {

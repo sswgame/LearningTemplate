@@ -9,9 +9,9 @@
 
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Reflection/ReflectionValidation.h"
-#include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/BinarySerializer.h"
 #include "Engine/Serialization/Layout/LayoutSerializer.h"
+#include "Engine/Serialization/Serializer/Archive.h"
+#include "Engine/Serialization/Serializer/BinarySerializer.h"
 #include "Engine/Serialization/Serializer/SerializerUtil.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/ConfigRangeUtil.h"

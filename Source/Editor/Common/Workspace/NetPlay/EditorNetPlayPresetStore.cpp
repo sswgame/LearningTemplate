@@ -9,7 +9,7 @@
 
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Reflection/TypeInfo.h"
-#include "Engine/Serialization/Format/JSONSerializer.h"
+#include "Engine/Serialization/Serializer/JSONSerializer.h"
 
 namespace sw::editor
 {

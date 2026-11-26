@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Serialization/Serializer/AssetRefBase.h"
+#include "Engine/Serialization/Reference/AssetRefBase.h"
 
 #include "Core/Log/Logger.h"
 #include "Core/String/StringUtil.h"

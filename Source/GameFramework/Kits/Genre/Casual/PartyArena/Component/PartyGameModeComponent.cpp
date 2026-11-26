@@ -5,9 +5,9 @@
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/FormatDesc.h"
-#include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Serializer/Archive.h"
+#include "Engine/Serialization/Serializer/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Casual/PartyArena/TrampolineArena.h"
 #include "GameFramework/Runtime/Foundation/Random/GameRandom.h"

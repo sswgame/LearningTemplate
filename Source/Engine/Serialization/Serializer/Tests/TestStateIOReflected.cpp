@@ -4,10 +4,10 @@
 #include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Reflection/TypeInfo.h"
-#include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/FormatUpgrade.h"
-#include "Engine/Serialization/Format/StateIO.h"
-#include "Engine/Serialization/Format/Tests/StateIOReflectedTestTypes.h"
+#include "Engine/Serialization/Serializer/Archive.h"
+#include "Engine/Serialization/Serializer/StateIO.h"
+#include "Engine/Serialization/Serializer/Tests/StateIOReflectedTestTypes.h"
 
 #include <cstring>
 

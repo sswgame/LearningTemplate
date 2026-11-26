@@ -8,7 +8,7 @@
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetTypeRegistry.h"
-#include "Engine/Serialization/Format/XMLSerializer.h"
+#include "Engine/Serialization/Serializer/XMLSerializer.h"
 
 /**
  * @brief UI 안전 영역 비율(0..0.1)입니다. 각 변을 물리 크기의 이 비율만큼 안쪽으로 밉니다 — TV 가장자리 잘림(오버스캔)에 맞추는 화면 설정이고, 휴대 기기 노치 흉내 · 미리보기에도 쓴다.

@@ -84,7 +84,7 @@
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Reflection/ReflectionValidation.h"
 #include "Engine/Scene/SceneManager.h"
-#include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Serializer/Archive.h"
 #include "Engine/Visual/MeshInstanceBatch.h"
 
 // Engine/Environment/Surface/SurfaceFootprintSystem.cpp 에서 옮긴 개발 등록(배포 엔진에 컴파일되지 않게).

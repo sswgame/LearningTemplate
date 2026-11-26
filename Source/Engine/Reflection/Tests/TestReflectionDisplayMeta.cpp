@@ -8,9 +8,9 @@
 #include "Engine/Reflection/ReflectionUnits.h"
 #include "Engine/Reflection/Tests/ReflectionTestTypes.h"
 #include "Engine/Reflection/TypeInfo.h"
-#include "Engine/Serialization/Format/BinarySerializer.h"
-#include "Engine/Serialization/Format/JSONSerializer.h"
-#include "Engine/Serialization/Format/XMLSerializer.h"
+#include "Engine/Serialization/Serializer/BinarySerializer.h"
+#include "Engine/Serialization/Serializer/JSONSerializer.h"
+#include "Engine/Serialization/Serializer/XMLSerializer.h"
 
 // ReflectionDisplayMetaTest — 표시 메타(단위 · 슬라이더 범위 · HDR 색 · 여러 줄 · 파일 필터)와 C 고정 배열 프로퍼티. 편집 조건 판정은 편집기 쪽(Inspector/Model/Tests)이 본다.
 

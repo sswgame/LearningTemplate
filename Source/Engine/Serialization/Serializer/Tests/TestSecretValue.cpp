@@ -4,12 +4,12 @@
 #include "Core/Serialization/BitStream.h"
 #include "Core/TestFramework/TestFramework.h"
 
-#include "Engine/Serialization/Format/BinarySerializer.h"
-#include "Engine/Serialization/Format/JSONSerializer.h"
-#include "Engine/Serialization/Format/XMLSerializer.h"
 #include "Engine/Serialization/Layout/LayoutSerializer.h"
+#include "Engine/Serialization/Serializer/BinarySerializer.h"
+#include "Engine/Serialization/Serializer/JSONSerializer.h"
 #include "Engine/Serialization/Serializer/SerializerUtil.h"
 #include "Engine/Serialization/Serializer/Tests/SerializerTestTypes.h"
+#include "Engine/Serialization/Serializer/XMLSerializer.h"
 
 #include <type_traits>
 

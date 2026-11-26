@@ -18,7 +18,7 @@
 #include "Engine/Graphics/Shader/ShaderSourceAssetKind.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Renderer/Pipeline/RenderGraphPassDesc.h"
-#include "Engine/Serialization/Serializer/DataPath.h"
+#include "Engine/Serialization/Reference/DataPath.h"
 
 namespace sw
 {
