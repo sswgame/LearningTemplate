@@ -65,7 +65,7 @@ namespace sw
                     return isExecutableFile( pName ) ? string{ pName } : string{};
 
                 string pathEnvStr;
-                if ( ProcessEnvironment::tryReadNonEmpty( "PATH", pathEnvStr ) == false )
+                if ( Process::tryReadEnvironmentNonEmpty( "PATH", pathEnvStr ) == false )
                     return {};
 
                 // 빈 항목은 현재 폴더다(POSIX PATH 규칙) — 빈 토큰을 남겨 "." 로 읽는다.

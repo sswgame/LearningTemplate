@@ -312,7 +312,7 @@ namespace sw
         UserSettingsManager&      userSettings = engine::getSubsystem<UserSettingsManager>();
         const string&             engineSchema = engine::getSubsystem<EngineDefaultAssets>()._telemetrySchema.get();
         TelemetryContext          context;
-        context._sessionID   = ProcessSession::getID();
+        context._sessionID   = Process::getSessionID();
         context._buildConfig = build::kConfigName;
         context._platform    = build::kPlatformName;
         context._buildID     = ModuleBuildID::find( nullptr )._id;
@@ -339,7 +339,7 @@ namespace sw
             CrashReportSubsystem& crashReports = engine::getSubsystem<CrashReportSubsystem>();
             const AbsolutePath    reportsFolder =
                 crashFolder.getParent().join( CrashReportSubsystem::kReportsFolderName );
-            crashReports.initialize( crashFolder, reportsFolder, ProcessSession::getID() );
+            crashReports.initialize( crashFolder, reportsFolder, Process::getSessionID() );
             crashReports.bindConsentSetting( userSettings );
             crashReports.setReporterExecutable( FileUtil::getExecutablePath() ); // App 이 -crash-reporter 를 알아듣는다(App::initialize 헤드리스 분기)
             (void)crashReports.collectNewCrashes();                              // 모은 수는 쓰지 않는다 — 보고 프로세스가 폴더를 다시 본다

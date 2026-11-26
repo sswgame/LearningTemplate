@@ -17,7 +17,7 @@ namespace sw
         if ( commandLine.isArgumentProvided( CommandLineArgument::UNATTENDED ) == false )
             return false;
         string showWindows;
-        return ( ProcessEnvironment::tryReadNonEmpty( "SW_SHOW_WINDOWS", showWindows ) && showWindows == "1" ) == false;
+        return ( Process::tryReadEnvironmentNonEmpty( "SW_SHOW_WINDOWS", showWindows ) && showWindows == "1" ) == false;
     }
 
     GenericWindow* MainWindowSubsystem::findMainWindow()

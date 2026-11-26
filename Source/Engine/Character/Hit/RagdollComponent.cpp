@@ -37,7 +37,7 @@ namespace sw
                     outPosition = matrix.getTranslation();
                     outRotation = quaternion::Identity;
                 }
-                outRotation.normalize();
+                outRotation = outRotation.normalize();
             }
 
             /** @brief XZ 평면 방향의 요(라디안)입니다. 길이가 거의 0 이면 false 입니다. */

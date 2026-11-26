@@ -285,7 +285,7 @@ namespace sw
         // 표준 라이브러리 `temp_directory_path` 와 같은 순서로 찾고, 모두 없으면 `/tmp` 다.
         for ( const utf8* pName : { "TMPDIR", "TMP", "TEMP", "TEMPDIR" } )
         {
-            if ( ProcessEnvironment::tryReadNonEmpty( pName, outResult ) )
+            if ( Process::tryReadEnvironmentNonEmpty( pName, outResult ) )
                 return true;
         }
         outResult = "/tmp";

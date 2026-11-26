@@ -399,7 +399,7 @@ SW_TEST_CASE( ShadowSetupTest, PerspectiveCameraSplitsIntoNestedCascades )
 
     // 시선 한가운데의 점 — 클립 w(뷰 깊이)가 곧 거리다. 그 깊이를 맡는 캐스케이드 볼륨 안에 있고, 그리는 행렬과 (배율, 이동)이 같은 NDC 를 낸다.
     sw::float3 forward = target - eye;
-    forward.normalize();
+    forward            = forward.normalize();
     for ( uint32 cascadeIndex = 0; cascadeIndex < projection._cascadeCount; ++cascadeIndex )
     {
         const float32    startDepth = cascadeIndex == 0 ? 0.1f : projection._arrCascade[cascadeIndex - 1]._splitDepth;

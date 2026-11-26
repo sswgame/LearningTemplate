@@ -68,7 +68,7 @@ SW_TEST_CASE_F( CrashReportTest, RegisteredContextReachesTheContextFile )
     SW_EXPECT_TRUE( text.find( "8484" ) != string::npos );
     SW_EXPECT_TRUE( text.find( "DX12" ) != string::npos );
     SW_EXPECT_TRUE( text.find( "CrashReportTest" ) != string::npos );
-    SW_EXPECT_TRUE( text.find( ProcessSession::getID() ) != string::npos );
+    SW_EXPECT_TRUE( text.find( Process::getSessionID() ) != string::npos );
 }
 
 /**
@@ -154,8 +154,8 @@ SW_TEST_CASE_F( CrashReportTest, ReportListsFilesToSendAndSkipsTheDumpWhenThereI
  */
 SW_TEST_CASE_F( CrashReportTest, SessionIDIsStableAndAppearsInReportPaths )
 {
-    const utf8* pFirst  = ProcessSession::getID();
-    const utf8* pSecond = ProcessSession::getID();
+    const utf8* pFirst  = Process::getSessionID();
+    const utf8* pSecond = Process::getSessionID();
 
     SW_REQUIRE_NOT_NULL( pFirst );
     SW_EXPECT_EQUAL( string( pFirst ), string( pSecond ) );

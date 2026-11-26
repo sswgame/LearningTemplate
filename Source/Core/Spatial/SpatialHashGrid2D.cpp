@@ -254,7 +254,7 @@ namespace sw
         if ( dir.getLengthSquared() <= MathUtil::kEpsilon || maxDist <= 0.0f )
             return;
 
-        dir.normalize();
+        dir                      = dir.normalize();
         const float32 directionX = dir._x;
         const float32 directionY = dir._y;
 

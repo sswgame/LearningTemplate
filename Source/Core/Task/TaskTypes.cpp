@@ -85,13 +85,10 @@ namespace sw
         }
 
         /** @brief 로그에 쓸 노드 이름입니다. Shipping 에는 이름이 없습니다. */
-        const utf8* describeNode( [[maybe_unused]] const TaskNode* pNode )
+        const utf8* describeNode( const TaskNode* pNode )
         {
-#if !defined( SW_SHIPPING )
-            if ( pNode->_arrName[0] != '\0' )
-                return pNode->_arrName;
-#endif
-            return "(unnamed)";
+            const utf8* pName = pNode->getName();
+            return pName[0] != '\0' ? pName : "(unnamed)";
         }
 
         /**

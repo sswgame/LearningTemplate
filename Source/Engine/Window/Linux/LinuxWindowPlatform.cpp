@@ -59,13 +59,13 @@ namespace sw
                 {
 #if defined( SW_WITH_WAYLAND )
                     // Wayland 스플래시는 `wl_display_connect( nullptr )` 로 연결한다 — `WAYLAND_DISPLAY` 가 없으면 기본 소켓 이름을 찾지만, 메인 창과 같은 조건(변수 있음)으로 맞춘다.
-                    return ProcessEnvironment::tryReadNonEmpty( "WAYLAND_DISPLAY", display );
+                    return Process::tryReadEnvironmentNonEmpty( "WAYLAND_DISPLAY", display );
 #else
                     return false; // 이 빌드에 Wayland 창 계층이 없다(메인 창 생성이 오류로 알린다)
 #endif
                 }
                 // X11 스플래시는 `XOpenDisplay( nullptr )` 로 연결한다 — `DISPLAY` 가 없으면 열 수 없다(순수 Wayland 세션에서 X11 을 골랐을 때).
-                return ProcessEnvironment::tryReadNonEmpty( "DISPLAY", display );
+                return Process::tryReadEnvironmentNonEmpty( "DISPLAY", display );
             }
         };
 

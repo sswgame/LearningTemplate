@@ -806,10 +806,10 @@ SW_TEST_CASE( FileTest, WriteFilterRefusesEveryMutatingEntry )
 SW_TEST_CASE( FileTest, LinuxTrashFollowsFreedesktop )
 {
     sw::string             savedDataHome;
-    const bool             bHadDataHome = sw::ProcessEnvironment::tryRead( "XDG_DATA_HOME", savedDataHome );
+    const bool             bHadDataHome = sw::Process::tryReadEnvironment( "XDG_DATA_HOME", savedDataHome );
     const sw::AbsolutePath root         = sw::test::makeScratchPath( "TrashRoot" );
     SW_REQUIRE_TRUE( sw::FileUtil::ensureDirectoryExists( root ) );
-    SW_REQUIRE_TRUE( sw::ProcessEnvironment::trySet( "XDG_DATA_HOME", root.join( "data" ).str() ) );
+    SW_REQUIRE_TRUE( sw::Process::trySetEnvironment( "XDG_DATA_HOME", root.join( "data" ).str() ) );
     SW_EXPECT_TRUE( sw::PlatformFileUtil::hasRecycleBin() );
 
     const sw::AbsolutePath path = root.join( "my file.txt" );
@@ -836,9 +836,9 @@ SW_TEST_CASE( FileTest, LinuxTrashFollowsFreedesktop )
     SW_EXPECT_FALSE( sw::FileUtil::exists( root.join( "data/Trash/info/nothing.txt.trashinfo" ) ) );
 
     if ( bHadDataHome )
-        SW_EXPECT_TRUE( sw::ProcessEnvironment::trySet( "XDG_DATA_HOME", savedDataHome ) );
+        SW_EXPECT_TRUE( sw::Process::trySetEnvironment( "XDG_DATA_HOME", savedDataHome ) );
     else
-        SW_EXPECT_TRUE( sw::ProcessEnvironment::tryUnset( "XDG_DATA_HOME" ) );
+        SW_EXPECT_TRUE( sw::Process::tryUnsetEnvironment( "XDG_DATA_HOME" ) );
 }
 
 /**
@@ -858,8 +858,8 @@ SW_TEST_CASE( FileTest, LinuxTrashUsesVolumeTrashAcrossFileSystems )
         return; // 꼭대기가 /dev/shm 이 아니다
 
     sw::string savedDataHome;
-    const bool bHadDataHome = sw::ProcessEnvironment::tryRead( "XDG_DATA_HOME", savedDataHome );
-    SW_REQUIRE_TRUE( sw::ProcessEnvironment::trySet( "XDG_DATA_HOME", root.join( "data" ).str() ) );
+    const bool bHadDataHome = sw::Process::tryReadEnvironment( "XDG_DATA_HOME", savedDataHome );
+    SW_REQUIRE_TRUE( sw::Process::trySetEnvironment( "XDG_DATA_HOME", root.join( "data" ).str() ) );
 
     sw::fixed_string<sw::constant::buffer::kMax64> name;
     sw::formatstring( name.data(), name.capacity(), "sw_volume_trash_%#.txt", static_cast<uint64>( ::getpid() ) );
@@ -884,9 +884,9 @@ SW_TEST_CASE( FileTest, LinuxTrashUsesVolumeTrashAcrossFileSystems )
     SW_EXPECT_TRUE( sw::FileUtil::removeFile( sw::FileUtil::toDiskPath( trashedFile.view() ) ) );
     SW_EXPECT_TRUE( sw::FileUtil::removeFile( sw::FileUtil::toDiskPath( trashInfo.view() ) ) );
     if ( bHadDataHome )
-        SW_EXPECT_TRUE( sw::ProcessEnvironment::trySet( "XDG_DATA_HOME", savedDataHome ) );
+        SW_EXPECT_TRUE( sw::Process::trySetEnvironment( "XDG_DATA_HOME", savedDataHome ) );
     else
-        SW_EXPECT_TRUE( sw::ProcessEnvironment::tryUnset( "XDG_DATA_HOME" ) );
+        SW_EXPECT_TRUE( sw::Process::tryUnsetEnvironment( "XDG_DATA_HOME" ) );
 }
 #endif
 

@@ -94,11 +94,13 @@ namespace sw
         return false;
     }
 
+    #if !defined( SW_SHIPPING )
     expected<string> Process::requestDump( string_view dumpPath )
     {
         (void)dumpPath;
         return unexpected( Error{ ErrorKind::Unsupported, "the browser has no child processes to dump" } );
     }
+    #endif
 
     bool Process::isRunning() const
     {
@@ -128,10 +130,12 @@ namespace sw
         return processID > 0 && processID == getCurrentProcessID(); // 이 탭 말고는 볼 수 있는 프로세스가 없다
     }
 
+    #if !defined( SW_SHIPPING )
     bool Process::isDebuggerPresent()
     {
         return false;
     }
+    #endif
 } // namespace sw
 #endif
 

@@ -148,12 +148,11 @@ namespace sw
         // 공용 서브시스템) → 엔진(기동 단계). 아래 범위가 모두 선 뒤에 위 범위를 세우고, 위 범위가 모두 사라진 뒤에 아래 범위를 내린다 — 범위 사이의
         // 순서는 의존으로 적지 않는다. 공용 범위의 객체는 이름 풀 · 로거가 선 뒤에 만든다(생성자가 이름 · 블록을 잡는다). 테스트 하네스도 같은 세 범위다(호스트 범위는 없다).
         _coreScope.setParentScope( pHostScope );
-        // 진단(CRT 누수 검사 · 메모리 태그 추적 · 누수 창)은 Debug 만 — 할당마다 추적 비용이 붙는다. ASan 구성(Ninja-Release-ASan)도 끈다: Windows ASan 은 CRT 디버그 힙을
-        // 쓸 수 없고(MemoryProfiler.cpp) 힙 오용은 ASan 이 직접 잡는다(언리얼 -EnableASan 도 메모리 추적을 더하지 않는다).
-        constexpr bool kDiagnostics = build::kDebug;
+        // 진단(CRT 누수 검사 · 메모리 태그 추적 · 누수 창)을 켜는 구성은 `build::kMemoryDiagnostics` 가 정한다.
+        constexpr bool kDiagnostics = build::kMemoryDiagnostics;
         // 코어 범위는 호스트 값(명령줄 인자)을 서로 넘겨 만들고 수가 적어 등록 줄 없이 여기서 채운다. 안의 객체를 묶는 서브시스템 칸은 주인 서브시스템의 .cpp 가 등록한다(`SW_ENGINE_SUBSYSTEM_SLOT`).
         // 교착 탐지(`-deadlock-detection`)는 명령줄 표가 서기 전에 읽는다 — 진단 서브시스템이 코어 범위의 첫째라, 잠금 추적을 그보다 늦게 켜면 이미 쥔 잠금을 놓친다.
-        const bool            bDeadlockDetection = build::kShipping == false && CommandLineManager::isFlagGivenBeforeParse( argc, pArgv, CommandLineArgument::DEADLOCK_DETECTION );
+        const bool            bDeadlockDetection = build::kDeadlockDetection && CommandLineManager::isFlagGivenBeforeParse( argc, pArgv, CommandLineArgument::DEADLOCK_DETECTION );
         DiagnosticsSubsystem& diagnostics        = _coreScope.emplaceSubsystem<DiagnosticsSubsystem>( kDiagnostics, bDeadlockDetection );
         _coreScope.emplaceSubsystem<NamePoolSubsystem>();
         CommandLineSubsystem& commandLine = _coreScope.emplaceSubsystem<CommandLineSubsystem>( argc, pArgv );

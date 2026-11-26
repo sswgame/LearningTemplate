@@ -71,7 +71,7 @@ namespace sw
             [[nodiscard]] static bool readIsolated( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 string     root;
-                const bool bUnder = ProcessEnvironment::tryReadNonEmpty( kUserDataRootVariable, root ) && AutomationUserDataRoot::validateUnderBase( root, AutomationUserDataRoot::getBaseFolder().str() ).has_value();
+                const bool bUnder = Process::tryReadEnvironmentNonEmpty( kUserDataRootVariable, root ) && AutomationUserDataRoot::validateUnderBase( root, AutomationUserDataRoot::getBaseFolder().str() ).has_value();
                 outValue          = bUnder ? 1.0 : 0.0;
                 return true;
             }
@@ -170,7 +170,7 @@ namespace sw
     expected<string> AutomationUserDataRoot::resolve( bool bAllowOutside )
     {
         string root;
-        if ( ProcessEnvironment::tryReadNonEmpty( kUserDataRootVariable, root ) )
+        if ( Process::tryReadEnvironmentNonEmpty( kUserDataRootVariable, root ) )
         {
             if ( bAllowOutside )
                 return root;
@@ -184,7 +184,7 @@ namespace sw
         root = makeRunUserDataRoot( ProcessRoots::get()._run ).str();
         if ( expected<void> under = validateUnderBase( root, getBaseFolder().str() ); under.has_value() == false )
             return unexpected( under.error() ); // 부모가 실행 뿌리를 자동화 폴더 밖에 줬다
-        if ( ProcessEnvironment::trySet( kUserDataRootVariable, root ) == false )
+        if ( Process::trySetEnvironment( kUserDataRootVariable, root ) == false )
             return unexpected( Error{ ErrorKind::ExternalFailure, "could not set the user data root variable", root } );
         return root;
     }

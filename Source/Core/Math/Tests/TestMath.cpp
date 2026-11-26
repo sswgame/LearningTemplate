@@ -80,7 +80,7 @@ SW_TEST_CASE( MathTest, Float2FullTest )
     SW_EXPECT_NEAR( 0.8f, vNormalized._y, 1e-4f );
 
     sw::float2 vMutable = vComp;
-    vMutable.normalize();
+    vMutable            = vMutable.normalize();
     SW_EXPECT_NEAR( 1.0f, vMutable.getLength(), 1e-4f );
 
     SW_EXPECT_NEAR( 11.0f, vComp.dot( sw::float2( 1.0f, 2.0f ) ), 1e-4f );
@@ -315,9 +315,8 @@ SW_TEST_CASE( MathTest, QuaternionFullTest )
     SW_EXPECT_NEAR( 1.0f, rotated._x, 1e-3f );
     SW_EXPECT_NEAR( 0.0f, rotated._z, 1e-3f );
 
-    const sw::quaternion constQRot = qRot;
-    sw::quaternion       invQ      = constQRot.inverse();
-    sw::quaternion       resultQ   = qRot * invQ;
+    sw::quaternion invQ    = qRot.inverse(); // const 아닌 값에서도 값을 돌려준다(제자리 판이 없다)
+    sw::quaternion resultQ = qRot * invQ;
     SW_EXPECT_NEAR( 0.0f, resultQ._x, 1e-4f );
     SW_EXPECT_NEAR( 1.0f, resultQ._w, 1e-4f );
 
@@ -508,7 +507,7 @@ SW_TEST_CASE( MathTest, Double3VectorOperations )
     sw::double3 v1( 3.0, 4.0, 0.0 );
     SW_EXPECT_NEAR( 5.0, v1.getLength(), 1e-6 );
 
-    v1.normalize();
+    v1 = v1.normalize();
     SW_EXPECT_NEAR( 0.6, v1._x, 1e-6 );
     SW_EXPECT_NEAR( 0.8, v1._y, 1e-6 );
 
@@ -974,6 +973,38 @@ SW_TEST_CASE( MathTest, QuaternionAxisAngleRoundTripAndShortestArc )
     quaternion same = q;
     same.enforceShortestArcWith( q );
     SW_EXPECT_TRUE( same == q );
+}
+
+/**
+ * @brief [MathTest] swing-twist 분해는 swing * twist 로 원래 회전을 되돌리고, twist 는 축 둘레 회전이며 그 각은 부호를 지킨다. 축에 수직인 180° 회전은 비틀림이 없다.
+ *        fromToRotation 은 0.08° 안쪽의 작은 각도 버리지 않는다
+ */
+SW_TEST_CASE( MathTest, QuaternionSwingTwistRecomposesAndFromToKeepsSmallAngles )
+{
+    const float3     axis     = float3::UnitY;
+    const quaternion twistIn  = quaternion::makeFromAxisAngle( axis, -0.7f );
+    const quaternion swingIn  = quaternion::makeFromAxisAngle( float3( 1.0f, 0.0f, 1.0f ).normalize(), 0.4f );
+    const quaternion combined = ( swingIn * twistIn ).normalize();
+    quaternion       swing{};
+    quaternion       twist{};
+    combined.toSwingTwist( axis, swing, twist );
+    const quaternion recomposed = swing * twist;
+    SW_EXPECT_NEAR( 1.0f, MathUtil::abs( recomposed.dot( combined ) ), 1e-5 );
+    SW_EXPECT_NEAR( 0.0f, twist._x, 1e-6 );
+    SW_EXPECT_NEAR( 0.0f, twist._z, 1e-6 );
+    SW_EXPECT_NEAR( -0.7f, twist.getTwistAngle( axis ), 1e-4 );
+    SW_EXPECT_NEAR( -0.7f, ( -twist ).getTwistAngle( axis ), 1e-4 ); // q 와 −q 는 같은 각이다
+
+    const quaternion halfTurn = quaternion::makeFromAxisAngle( float3::UnitX, MathUtil::kPi );
+    halfTurn.toSwingTwist( axis, swing, twist );
+    SW_EXPECT_TRUE( twist == quaternion::Identity );
+    SW_EXPECT_TRUE( swing == halfTurn );
+
+    const float3     from  = float3::UnitZ;
+    const float3     to    = float3( 0.0005f, 0.0f, 1.0f ).normalize(); // 약 0.03°
+    const quaternion small = quaternion::fromToRotation( from, to );
+    SW_EXPECT_TRUE( float3::transform( from, small ).nearEqual( to, 1e-6f ) );
+    SW_EXPECT_TRUE( small._y > 0.0f );
 }
 
 /** @brief [MathTest] 행렬 isFinite 는 열여섯 성분 어디의 NaN 이든 잡고, orthogonalize 는 스케일 · 기울임을 빼 직교 회전을 남기며 거울(행렬식 음수)과 이동을 지킨다 */

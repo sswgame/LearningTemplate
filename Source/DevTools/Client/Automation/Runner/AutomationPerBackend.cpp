@@ -781,7 +781,7 @@ namespace sw
         SW_LOG_INFO_ID( "ScenarioPerBackend.Result", "[Scenario] %#", resultLine.c_str() );
         StringBuilder<constant::buffer::kMax256> resultOutput;
         resultOutput.appendFormat( "%#\n", resultLine );
-        (void)StandardOutput::write( resultOutput.view() ); // 표준 출력의 마지막 줄 — 출력을 잘라 본 쪽도 결과를 읽는다(못 쓰면 로그 줄이 남는다)
+        (void)Process::writeStandardOutput( resultOutput.view() ); // 표준 출력의 마지막 줄 — 출력을 잘라 본 쪽도 결과를 읽는다(못 쓰면 로그 줄이 남는다)
         return exitCode;
     }
 } // namespace sw

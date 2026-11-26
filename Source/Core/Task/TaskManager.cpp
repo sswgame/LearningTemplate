@@ -59,7 +59,7 @@ namespace sw
         atomic<uint32>         s_nextInstanceID{ 1 };
         thread_local TaskNode* t_pCurrentRunningTask = nullptr; ///< 현재 스레드에서 실행 중인 태스크 노드
 #if !defined( SW_SHIPPING )
-        /// @brief 태스크 · 스테이지 대기 구간을 내보낼 곳입니다(`TaskManager::bindProfileHook`). 없으면 nullptr.
+        /// @brief 태스크 · 스테이지 대기 구간을 내보낼 곳입니다(`TaskProfileHook::bind`). 없으면 nullptr.
         AtomicSlot<const TaskProfileHook*> s_profileHookSlot;
 #endif
 
@@ -792,19 +792,13 @@ namespace sw
         // 제 청크를 다 돌고도 남의 청크가 남았을 때만 합류 대기다 — 그때만 시계를 읽고 구간을 연다(곧 스핀 · 잠들 자리라 비용이 묻힌다).
         if ( pGroup->_join.getPending() > 0 )
         {
-#if !defined( SW_SHIPPING )
-            const TaskProfileHook* pHook = s_profileHookSlot.get();
-            const TaskProfileZone  zone  = pHook != nullptr ? pHook->_pBeginZone( "runParallel", TaskProfileZoneKind::WaitJoin ) : TaskProfileZone{};
-#endif
-            const int64 waitStart = MonotonicClock::nowNanoseconds();
+            const TaskProfileZone zone      = TaskProfileHook::beginZone( "runParallel", TaskProfileZoneKind::WaitJoin );
+            const int64           waitStart = MonotonicClock::nowNanoseconds();
             // Low 줄(백그라운드 I/O)은 돕지 않는다 — 합류는 남이 도는 청크만 기다린다. Low 하나를 집으면 그 태스크만큼 합류가 늦어진다.
             waitForJoin( pGroup->_join, false );
-            _joinWaitNanos.fetch_add( static_cast<uint64>( MonotonicClock::nowNanoseconds() - waitStart ), std::memory_order_relaxed );
-            _joinWaitCount.fetch_add( 1, std::memory_order_relaxed );
-#if !defined( SW_SHIPPING )
-            if ( zone._pContext != nullptr )
-                pHook->_pEndZone( zone );
-#endif
+            _joinWaitNanos.add( static_cast<uint64>( MonotonicClock::nowNanoseconds() - waitStart ) );
+            _joinWaitCount.add();
+            TaskProfileHook::endZone( zone );
         }
         withdrawLocalTickets( pGroup, ticketCount );
         releaseGroupReference( pGroup );
@@ -816,10 +810,10 @@ namespace sw
     TaskManager::WaitStats TaskManager::takeWaitStats()
     {
         WaitStats stats;
-        stats._joinWaitCount = _joinWaitCount.exchange( 0, std::memory_order_relaxed );
-        stats._joinWaitNanos = _joinWaitNanos.exchange( 0, std::memory_order_relaxed );
-        stats._joinParkCount = _joinParkCount.exchange( 0, std::memory_order_relaxed );
-        stats._idleParkCount = _idleParkCount.exchange( 0, std::memory_order_relaxed );
+        stats._joinWaitCount = _joinWaitCount.take();
+        stats._joinWaitNanos = _joinWaitNanos.take();
+        stats._joinParkCount = _joinParkCount.take();
+        stats._idleParkCount = _idleParkCount.take();
         return stats;
     }
 
@@ -998,9 +992,25 @@ namespace sw
     // 5) 스테이지
     // ------------------------------------------------------------------------------
 #if !defined( SW_SHIPPING )
-    Subscription TaskManager::bindProfileHook( const TaskProfileHook* pHook )
+    Subscription TaskProfileHook::bind( const TaskProfileHook* pHook )
     {
         return s_profileHookSlot.bind( pHook );
+    }
+
+    TaskProfileZone TaskProfileHook::beginZone( const utf8* pName, TaskProfileZoneKind kind )
+    {
+        const TaskProfileHook* pHook = s_profileHookSlot.get();
+        if ( pHook == nullptr || pName[0] == '\0' )
+            return {};
+        TaskProfileZone zone = pHook->_pBeginZone( pName, kind );
+        zone._pHook          = pHook;
+        return zone;
+    }
+
+    void TaskProfileHook::endZone( const TaskProfileZone& zone )
+    {
+        if ( zone._pContext != nullptr )
+            zone._pHook->_pEndZone( zone );
     }
 #endif
 
@@ -1009,13 +1019,11 @@ namespace sw
         return createStage( string_view{} );
     }
 
-    TaskStageHandle TaskManager::createStage( [[maybe_unused]] string_view debugName )
+    TaskStageHandle TaskManager::createStage( string_view debugName )
     {
         // 풀에서 가져온다. 프레임마다 레벨 수만큼 만드는 곳이라 힙을 쓰면 그 수만큼 할당과 해제가 반복된다(churn).
         StageNode* pStage = _nodePool->allocateStage();
-#if !defined( SW_SHIPPING )
-        copyTaskDebugName( pStage->_arrName, debugName ); // 풀에서 다시 쓰는 노드라 늘 덮어쓴다(빈 이름 포함)
-#endif
+        pStage->setName( debugName );
         return TaskStageHandle{ pStage };
     }
 
@@ -1023,17 +1031,12 @@ namespace sw
     {
         if ( stage._pNode == nullptr )
             return;
-#if !defined( SW_SHIPPING )
-        const TaskProfileHook* pHook = s_profileHookSlot.get();
-        const TaskProfileZone  zone  = ( pHook != nullptr && stage._pNode->_arrName[0] != '\0' && stage._pNode->_join.getPending() > 0 )
-                                         ? pHook->_pBeginZone( stage._pNode->_arrName, TaskProfileZoneKind::WaitStage )
-                                         : TaskProfileZone{};
-#endif
+        // 이미 끝난 스테이지는 구간을 열지 않는다. 배포는 남은 수를 읽지도 않는다(`kCompiled`).
+        const TaskProfileZone zone = ( TaskProfileHook::kCompiled && stage._pNode->_join.getPending() > 0 )
+                                       ? TaskProfileHook::beginZone( stage._pNode->getName(), TaskProfileZoneKind::WaitStage )
+                                       : TaskProfileZone{};
         waitForJoin( stage._pNode->_join, true );
-#if !defined( SW_SHIPPING )
-        if ( zone._pContext != nullptr )
-            pHook->_pEndZone( zone );
-#endif
+        TaskProfileHook::endZone( zone );
     }
 
     void TaskManager::waitStage( const TaskStageHandle& stage, const string_view owner )
@@ -1224,7 +1227,7 @@ namespace sw
             }
         }
 
-        _joinParkCount.fetch_add( 1, std::memory_order_relaxed );
+        _joinParkCount.add();
         Futex::wait( word, observed );
 
         if ( idleBit != 0 )
@@ -1287,11 +1290,7 @@ namespace sw
             t_threadState._runningPriority  = pNode->_priority; // 본문 안의 `runParallel` 이 물려받는다
             const ScopedMemoryTag    taskMemoryTag{ pNode->_memoryTag };
             const DiskIOAllowedScope allowDiskIO; // 기다리다 돕는 스레드(렌더 스레드)의 금지는 그 스레드의 코드에만 걸린다
-#if !defined( SW_SHIPPING )
-            const TaskProfileHook* pHook = s_profileHookSlot.get();
-            const TaskProfileZone  zone  = ( pHook != nullptr && pNode->_arrName[0] != '\0' ) ? pHook->_pBeginZone( pNode->_arrName, TaskProfileZoneKind::Execute )
-                                                                                              : TaskProfileZone{};
-#endif
+            const TaskProfileZone    zone = TaskProfileHook::beginZone( pNode->getName(), TaskProfileZoneKind::Execute );
 
             BLOCK( "Execute Task Delegate" )
             {
@@ -1299,10 +1298,7 @@ namespace sw
                 std::visit( visitor, pNode->_callable );
             }
 
-#if !defined( SW_SHIPPING )
-            if ( zone._pContext != nullptr )
-                pHook->_pEndZone( zone );
-#endif
+            TaskProfileHook::endZone( zone );
             t_threadState._runningPriority = prevPriority;
             t_pCurrentRunningTask          = pPrevRunningTask;
         }
@@ -1587,7 +1583,7 @@ namespace sw
                 _idleWorkerMask.fetch_and( ~idleBit, std::memory_order_seq_cst );
                 break;
             }
-            _idleParkCount.fetch_add( 1, std::memory_order_relaxed );
+            _idleParkCount.add();
             Futex::wait( slot._park._word, observedParkWord );
             // 깨운 쪽이 비트를 내렸다. 이유 없이 깨어났다면 비트가 아직 켜져 있으니 여기서 내린다. 다시 잠들지는 다음 회차가 정한다.
             _idleWorkerMask.fetch_and( ~idleBit, std::memory_order_seq_cst );

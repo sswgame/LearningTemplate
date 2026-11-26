@@ -40,6 +40,17 @@ namespace sw
          */
         virtual AsyncReadHandle readRangeAsync( AsyncFileIO& io, string_view path, uint64 offset, uint64 size, AsyncIOPriority priority,
                                                 const AsyncReadCompleteDelegate& onComplete ) const = 0;
+
+        /**
+         * @brief 이 프로세스의 지금 소스입니다. 엔진 없이 도는 도구(쿠커)도 팩을 읽으므로 서브시스템 칸이 아니라 프로세스 범위다.
+         * @details 기본은 플랫폼 것이다(데스크톱은 `DiskContentFileSource`. Android · 웹은 그 플랫폼의 기동이 소스를 건 뒤에 읽는다).
+         */
+        SW_API static const IContentFileSource& getCurrent();
+        /**
+         * @brief 소스를 바꾸고 이전 것을 돌려줍니다. nullptr 이면 플랫폼 기본으로 돌아갑니다. 읽기 스레드가 돌기 전(기동)이나 테스트에서만 부릅니다.
+         * @param pSource 호출자가 소유한다. 다시 바꿀 때까지 살아 있어야 한다.
+         */
+        SW_API static const IContentFileSource* bindCurrent( const IContentFileSource* pSource );
     };
 } // namespace sw
 
@@ -87,23 +98,5 @@ namespace sw
 
     private:
         unordered_map<string, shared_ptr<const vector<uint8>>> _mapFile;
-    };
-} // namespace sw
-
-namespace sw
-{
-    /**
-     * @brief 이 프로세스의 콘텐츠 소스 자리입니다. 엔진 없이 도는 도구(쿠커)도 팩을 읽으므로 서브시스템 칸이 아니라 프로세스 범위다.
-     * @details 기본은 플랫폼 것이다(데스크톱은 `DiskContentFileSource`. Android · 웹은 그 플랫폼의 기동이 소스를 건 뒤에 읽는다).
-     */
-    struct SW_API ContentFileSource
-    {
-        /** @brief 지금 소스입니다. */
-        static const IContentFileSource& getCurrent();
-        /**
-         * @brief 소스를 바꾸고 이전 것을 돌려줍니다. nullptr 이면 플랫폼 기본으로 돌아갑니다. 읽기 스레드가 돌기 전(기동)이나 테스트에서만 부릅니다.
-         * @param pSource 호출자가 소유한다. 다시 바꿀 때까지 살아 있어야 한다.
-         */
-        static const IContentFileSource* bindCurrent( const IContentFileSource* pSource );
     };
 } // namespace sw

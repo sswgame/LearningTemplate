@@ -109,13 +109,13 @@ SW_TEST_CASE( PackManagerTest, ScansAndReadsPacksThroughTheContentFileSource )
 
     MemoryContentFileSource memorySource;
     memorySource.addFile( "/downloaded/engine.pack", std::move( packBytes ) );
-    const IContentFileSource* const pPrevious = ContentFileSource::bindCurrent( &memorySource );
+    const IContentFileSource* const pPrevious = IContentFileSource::bindCurrent( &memorySource );
     {
         PackManager packs;
         SW_EXPECT_TRUE( packs.scanAndMountPacks( "/downloaded" ) );
         SW_EXPECT_TRUE( Internal::read( packs, "engine/data/a.txt" ) == "from memory" );
     }
-    (void)ContentFileSource::bindCurrent( pPrevious );
+    (void)IContentFileSource::bindCurrent( pPrevious );
 }
 
 SW_TEST_CASE( PackManagerTest, PackOutsideTheSearchPriorityNeedsAnExplicitPriority )

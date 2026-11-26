@@ -122,7 +122,7 @@ namespace
     {
     }
 
-    /** @brief 구간 표지를 남기는 훅입니다. 케이스는 표지를 비운 뒤 `TaskManager::bindProfileHook` 으로 걸고, 시간 대신 이 사건으로 순서를 맞춘다. */
+    /** @brief 구간 표지를 남기는 훅입니다. 케이스는 표지를 비운 뒤 `TaskProfileHook::bind` 으로 걸고, 시간 대신 이 사건으로 순서를 맞춘다. */
     const sw::TaskProfileHook kZoneStartProbe{ &markZoneStarted, &ignoreZoneEnd };
 
     /** @brief @p kind 구간이 한 번이라도 열렸으면 true 입니다. */
@@ -735,7 +735,7 @@ SW_TEST_CASE( TaskManagerTest, MainThreadTaskWakesParkedMainThread )
     sw::TaskStageHandle stage = manager.createStage( "ParkedMainStage" ); // 이름이 있어야 대기 구간 훅이 불린다
 
     s_startedZoneKindMask.store( 0, std::memory_order_relaxed );
-    const sw::Subscription probe = sw::TaskManager::bindProfileHook( &kZoneStartProbe );
+    const sw::Subscription probe = sw::TaskProfileHook::bind( &kZoneStartProbe );
 
     sw::TaskHandle worker = manager.emplaceTask( "LateMainSpawner", SW_DELEGATE_LAMBDA( sw::TaskDelegate, [&manager, &stage, &bMainTaskRan, &bMainTaskRanOnMain]()
     {
@@ -833,7 +833,7 @@ SW_TEST_CASE( TaskManagerTest, RunParallelJoinDoesNotHelpLowPriorityTasks )
 
     sw::atomic<uint32>     lowOnJoiningThreadCount{ 0 };
     sw::atomic<bool>       bJoining{ false };
-    const sw::Subscription probe = sw::TaskManager::bindProfileHook( &kZoneStartProbe );
+    const sw::Subscription probe = sw::TaskProfileHook::bind( &kZoneStartProbe );
     for ( uint32 round = 0; round < kRoundCount; ++round )
     {
         sw::atomic<bool> bLowSubmitted{ false };
@@ -2037,7 +2037,7 @@ SW_TEST_CASE( TaskManagerTest, JoinWaitIsCountedAndTakeResetsTheStats )
     (void)manager.takeWaitStats();
 
     s_startedZoneKindMask.store( 0, std::memory_order_relaxed );
-    const sw::Subscription probe = sw::TaskManager::bindProfileHook( &kZoneStartProbe );
+    const sw::Subscription probe = sw::TaskProfileHook::bind( &kZoneStartProbe );
 
     sw::atomic<int32>     workerChunkCount{ 0 };
     const std::thread::id callerID = std::this_thread::get_id();

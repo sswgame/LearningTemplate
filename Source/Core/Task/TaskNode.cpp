@@ -142,9 +142,7 @@ namespace sw
         pMem->_bParallelGroupParent.store( false, std::memory_order_relaxed );
         pMem->_refCount.store( 1, std::memory_order_relaxed );
         pMem->_pParent = nullptr;
-#if !defined( SW_SHIPPING )
-        pMem->_arrName[0] = 0;
-#endif
+        pMem->setName( {} );
         pMem->_affinity = TaskThreadAffinity::Any;
         pMem->_priority = TaskPriority::Normal;
         return pMem;
@@ -162,9 +160,7 @@ namespace sw
             pAnyOfSuccessor->release();
         pNode->_callable    = std::monostate{};
         pNode->_parentStage = nullptr;
-#if !defined( SW_SHIPPING )
-        pNode->_arrName[0] = 0;
-#endif
+        pNode->setName( {} );
         if ( _bDetached.load( std::memory_order_acquire ) )
         {
             returnDetachedReference(); // 매니저가 없으니 다시 꺼낼 쪽도 없다 — 자유 목록에 넣지 않는다

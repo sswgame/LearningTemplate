@@ -139,7 +139,7 @@ namespace sw
             _lastLogHour = record._hour;
             fixed_string<constant::buffer::kMax128> expectedFileName{};
             formatstring( expectedFileName.data(), expectedFileName.capacity(), "LOG_%#-%#-%#-%#_%#.txt",
-                          record._year, record._month, record._day, record._hour, ProcessSession::getID() );
+                          record._year, record._month, record._day, record._hour, Process::getSessionID() );
             _currentLogFileName = expectedFileName.c_str();
 
             _pFile = PlatformFileUtil::openFile( _logFolderPath.join( _currentLogFileName ).c_str(), "a" );

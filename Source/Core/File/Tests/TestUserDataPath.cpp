@@ -50,18 +50,18 @@ SW_TEST_CASE( UserDataPathTest, LocalStoreLocationKeepsTheChosenKind )
 SW_TEST_CASE( UserDataPathTest, RootOverrideVariableMovesDataAndConfigTogether )
 {
     string     previous;
-    const bool bHadValue = ProcessEnvironment::tryRead( kUserDataRootVariable, previous );
-    SW_REQUIRE_TRUE( ProcessEnvironment::tryUnset( kUserDataRootVariable ) );
+    const bool bHadValue = Process::tryReadEnvironment( kUserDataRootVariable, previous );
+    SW_REQUIRE_TRUE( Process::tryUnsetEnvironment( kUserDataRootVariable ) );
     const string osRuleDirectory = UserDataPath::getConfigDirectory( "Playground" ).str();
 
     const AbsolutePath overrideRoot = test::makeScratchPath( "sw_override_root" );
-    SW_REQUIRE_TRUE( ProcessEnvironment::trySet( kUserDataRootVariable, overrideRoot.str() ) );
+    SW_REQUIRE_TRUE( Process::trySetEnvironment( kUserDataRootVariable, overrideRoot.str() ) );
     const AbsolutePath expected = overrideRoot.join( "playground" );
     SW_EXPECT_TRUE( UserDataPath::getDataDirectory( "Playground" ) == expected );
     SW_EXPECT_TRUE( UserDataPath::getConfigDirectory( "Playground" ) == expected );
 
-    SW_REQUIRE_TRUE( ProcessEnvironment::tryUnset( kUserDataRootVariable ) );
+    SW_REQUIRE_TRUE( Process::tryUnsetEnvironment( kUserDataRootVariable ) );
     SW_EXPECT_TRUE( UserDataPath::getConfigDirectory( "Playground" ).str() == osRuleDirectory );
     if ( bHadValue )
-        SW_EXPECT_TRUE( ProcessEnvironment::trySet( kUserDataRootVariable, previous ) );
+        SW_EXPECT_TRUE( Process::trySetEnvironment( kUserDataRootVariable, previous ) );
 }

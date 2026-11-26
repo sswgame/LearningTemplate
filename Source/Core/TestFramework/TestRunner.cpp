@@ -168,8 +168,8 @@ namespace sw::test
 
             static void writeLine( string_view text )
             {
-                (void)StandardOutput::write( text );
-                (void)StandardOutput::write( "\n" );
+                (void)Process::writeStandardOutput( text );
+                (void)Process::writeStandardOutput( "\n" );
             }
 
             /** @brief 실패 하나를 종류 @p kind 와 함께 적고 바로 찍습니다(잠금을 잡은 채 부르지 않는다 — 표준 출력은 잠금 밖). */

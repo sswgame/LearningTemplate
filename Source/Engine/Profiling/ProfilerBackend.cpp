@@ -138,7 +138,10 @@ namespace sw
                 const ProfileZoneSite* pSite = findTaskZoneSite( pName, kind );
                 if ( pSite == nullptr )
                     return {};
-                return TaskProfileZone{ pBackend, pBackend->beginZone( *pSite ) };
+                TaskProfileZone zone{};
+                zone._pContext = pBackend;
+                zone._token    = pBackend->beginZone( *pSite );
+                return zone;
             }
 
             /** @brief 구간은 연 출력으로 닫는다 — 열린 동안 활성 출력이 바뀌어도 짝이 어긋나지 않는다(`ScopedFrameProfile` 과 같은 규칙). */
@@ -177,7 +180,7 @@ namespace sw
             return true;
         setActiveBackend( &backend );
         // 태스크 · 스테이지 이름이 구간이 된다(Core 는 프로파일러를 모르므로 여기서 꽂는다).
-        ProfilerBackendInternal::s_taskProfileHookBinding = TaskManager::bindProfileHook( &ProfilerBackendInternal::kTaskProfileHook );
+        ProfilerBackendInternal::s_taskProfileHookBinding = TaskProfileHook::bind( &ProfilerBackendInternal::kTaskProfileHook );
         if ( bObserveAllocations )
             ProfilerBackendInternal::s_allocationObserverRegistration = Memory::registerAllocationObserver( &ProfilerBackendInternal::kObserver );
         // 카운터 그래프 · GPU 타임스탬프는 엔진 프로파일러 경로를 탄다. 켜 두지 않으면 외부 출력에 GPU 줄이 없다.

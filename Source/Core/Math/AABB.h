@@ -87,7 +87,7 @@ namespace sw
             };
         }
         /** @brief 상자 안에서 @p point 에 가장 가까운 점입니다(안이면 그 점 — 언리얼 `FBox::GetClosestPointTo`). */
-        float3 getClosestPoint( const float3& point ) const noexcept { return point.clamp( _min, _max ); }
+        float3 getClosestPoint( const float3& point ) const noexcept { return point.clamped( _min, _max ); }
         /** @brief 상자까지의 거리 제곱입니다(안이면 0 — 언리얼 `FBox::ComputeSquaredDistanceToPoint`). */
         float32 getDistanceSquared( const float3& point ) const noexcept { return float3::getDistanceSquared( point, getClosestPoint( point ) ); }
         /** @brief 축마다의 길이(max − min)입니다. 유효하지 않으면 0 입니다(언리얼 `FBox::GetSize`). */

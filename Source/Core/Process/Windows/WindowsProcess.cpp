@@ -61,7 +61,7 @@ namespace sw
                 if ( fileName.find( L'.' ) == wstring::npos )
                     candidate += L".exe";
                 string pathValue;
-                if ( ProcessEnvironment::tryReadNonEmpty( "PATH", pathValue ) == false )
+                if ( Process::tryReadEnvironmentNonEmpty( "PATH", pathValue ) == false )
                     return {};
                 const wstring widePath = StringUtil::utf8ToUTF16( pathValue.c_str() );
                 size_t        start    = 0;
@@ -568,6 +568,7 @@ namespace sw
         return _bNewProcessGroup && processID > 0 && GenerateConsoleCtrlEvent( CTRL_BREAK_EVENT, static_cast<DWORD>( processID ) ) != FALSE;
     }
 
+    #if !defined( SW_SHIPPING )
     expected<string> Process::requestDump( string_view dumpPath )
     {
         const int32 processID = _processID.load();
@@ -591,6 +592,7 @@ namespace sw
         }
         return path;
     }
+    #endif
 
     bool Process::isRunning() const
     {
@@ -623,10 +625,12 @@ namespace sw
         return StringUtil::utf16ToUTF8( arrBuffer );
     }
 
+    #if !defined( SW_SHIPPING )
     bool Process::isDebuggerPresent()
     {
         return IsDebuggerPresent() != FALSE;
     }
+    #endif
 
     bool Process::isProcessAlive( int32 processID )
     {
@@ -645,7 +649,7 @@ namespace sw
 } // namespace sw
 
 // ------------------------------------------------------------------------------
-// ProcessEnvironment
+// Process — 환경 변수
 // ------------------------------------------------------------------------------
 
 namespace sw
@@ -661,7 +665,7 @@ namespace sw
         };
     } // namespace
 
-    bool ProcessEnvironment::tryRead( string_view name, string& outValue )
+    bool Process::tryReadEnvironment( string_view name, string& outValue )
     {
         using Internal = WindowsProcessEnvironmentInternal;
         outValue.clear();
@@ -689,7 +693,7 @@ namespace sw
         return false;
     }
 
-    bool ProcessEnvironment::trySet( string_view name, string_view value )
+    bool Process::trySetEnvironment( string_view name, string_view value )
     {
         if ( WindowsProcessEnvironmentInternal::isValidName( name ) == false )
             return false;
@@ -702,7 +706,7 @@ namespace sw
         return bCRTSet && bOSSet;
     }
 
-    bool ProcessEnvironment::tryUnset( string_view name )
+    bool Process::tryUnsetEnvironment( string_view name )
     {
         if ( WindowsProcessEnvironmentInternal::isValidName( name ) == false )
             return false;

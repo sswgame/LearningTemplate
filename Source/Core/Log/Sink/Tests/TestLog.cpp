@@ -793,7 +793,7 @@ namespace
         static sw::AbsolutePath makeProbeLogPath( const sw::FileLogOutput& output, int32 hour )
         {
             sw::fixed_string<sw::constant::buffer::kMax256> fileName;
-            sw::formatstring( fileName.data(), fileName.capacity(), "LOG_2099-1-2-%#_%#.txt", hour, sw::ProcessSession::getID() );
+            sw::formatstring( fileName.data(), fileName.capacity(), "LOG_2099-1-2-%#_%#.txt", hour, sw::Process::getSessionID() );
             return output.getLogFolderPath().join( fileName.view() );
         }
     };

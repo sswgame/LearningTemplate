@@ -148,7 +148,7 @@ namespace sw
 
         /**
          * @brief 이 프로세스의 환경에 @p listEntry 를 덮어쓴 envp 를 fork 전에 @p inoutImage 에 만듭니다. 이름이 비었거나 `=` 를 품으면 false 입니다.
-         * @details `environ` 을 읽는 곳은 여기뿐이다(`getenv` 계열은 `ProcessEnvironment` 가 맡는다) — 환경 전체를 복사해야 하는 일이라 이름 하나를 묻는 그쪽 API 로는 못 한다.
+         * @details `environ` 을 읽는 곳은 여기뿐이다(`getenv` 계열은 `Process::tryReadEnvironment` 가 맡는다) — 환경 전체를 복사해야 하는 일이라 이름 하나를 묻는 그쪽 API 로는 못 한다.
          */
         [[nodiscard]] bool prepareEnvironmentOverride( const vector<ProcessEnvironmentEntry>& listEntry, PosixExecImage& inoutImage )
         {
@@ -231,7 +231,7 @@ namespace sw
             else
             {
                 string searchPath;
-                if ( ProcessEnvironment::tryReadNonEmpty( "PATH", searchPath ) )
+                if ( Process::tryReadEnvironmentNonEmpty( "PATH", searchPath ) )
                 {
                     size_t begin = 0;
                     while ( begin <= searchPath.size() && outImage._path.empty() )
@@ -728,6 +728,7 @@ namespace sw
         return childPid > 0 && ( kill( -childPid, SIGTERM ) == 0 || kill( childPid, SIGTERM ) == 0 );
     }
 
+        #if !defined( SW_SHIPPING )
     expected<string> Process::requestDump( string_view dumpPath )
     {
         (void)dumpPath; // 남의 프로세스를 할당 없이 덤프할 길이 없다 — 자식의 크래시 처리기가 제 보고를 쓴다(헤더 설명)
@@ -745,6 +746,7 @@ namespace sw
             MonotonicClock::sleepUntilNanoseconds( MonotonicClock::nowNanoseconds() + kPollMilliseconds * constant::time::kNanosecondsPerMillisecond );
         return string( "the child's crash report (SIGABRT - see its CrashReports folder and log)" );
     }
+        #endif
 
     bool Process::isRunning() const
     {
@@ -792,6 +794,7 @@ namespace sw
         return errno == EPERM;
     }
 
+        #if !defined( SW_SHIPPING )
     bool Process::isDebuggerPresent()
     {
         // ptrace 로 붙은 디버거(gdb · lldb)는 /proc/self/status 의 TracerPid 에 pid 를 남긴다. 0 이면 아무도 붙지 않았다.
@@ -811,12 +814,13 @@ namespace sw
         cursor = text.find_first_not_of( " \t", cursor + kField.size() );
         return cursor != string_view::npos && text[cursor] != '0' && text[cursor] != '\n';
     }
+        #endif
 } // namespace sw
 
     #endif
 
 // ------------------------------------------------------------------------------
-// ProcessEnvironment
+// Process — 환경 변수
 // ------------------------------------------------------------------------------
 
 namespace sw
@@ -830,7 +834,7 @@ namespace sw
         }
     } // namespace
 
-    bool ProcessEnvironment::tryRead( string_view name, string& outValue )
+    bool Process::tryReadEnvironment( string_view name, string& outValue )
     {
         outValue.clear();
         if ( isValidName( name ) == false )
@@ -842,12 +846,12 @@ namespace sw
         return true;
     }
 
-    bool ProcessEnvironment::trySet( string_view name, string_view value )
+    bool Process::trySetEnvironment( string_view name, string_view value )
     {
         return isValidName( name ) && ::setenv( string{ name }.c_str(), string{ value }.c_str(), 1 ) == 0;
     }
 
-    bool ProcessEnvironment::tryUnset( string_view name )
+    bool Process::tryUnsetEnvironment( string_view name )
     {
         return isValidName( name ) && ::unsetenv( string{ name }.c_str() ) == 0;
     }

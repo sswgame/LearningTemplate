@@ -47,7 +47,7 @@ namespace sw
         /** @brief 실수부 길이로 양쪽을 나눠 단위 듀얼 쿼터니언으로 만듭니다. */
         void normalize();
         /** @brief 정규화한 사본을 반환합니다. */
-        DualQuaternion normalized() const;
+        [[nodiscard]] DualQuaternion normalized() const;
 
         /** @brief 이동 성분을 반환합니다. */
         float3 getTranslation() const;

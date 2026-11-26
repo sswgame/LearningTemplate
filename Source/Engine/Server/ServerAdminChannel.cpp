@@ -41,7 +41,7 @@ namespace sw
             return true;
         // 토큰은 환경에서만 읽는다(설정 파일 · 명령줄에 두지 않는다). 없거나 비면 채널을 토큰 없이 여는 대신 기동을 멈춘다.
         string token;
-        if ( ProcessEnvironment::tryReadNonEmpty( config._adminChannelTokenEnvironment, token ) == false )
+        if ( Process::tryReadEnvironmentNonEmpty( config._adminChannelTokenEnvironment, token ) == false )
         {
             SW_LOG_ERROR_ID( "Server.AdminChannelEnabledAdminChannelPort", "The admin channel is enabled (_adminChannelPort=%#) but the token environment variable '%#' is not set or empty - the server does not start without a token",
                              config._adminChannelPort, config._adminChannelTokenEnvironment.c_str() );

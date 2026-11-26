@@ -136,7 +136,7 @@ namespace sw
         float3 direction = to - from;
         if ( direction.getLengthSquared() <= MathUtil::kEpsilon )
             return float2{ 0.0f, 0.0f };
-        direction.normalize();
+        direction = direction.normalize();
         return float2{ MathUtil::atan2( direction._x, direction._z ), -MathUtil::asin( MathUtil::clamp( direction._y, -1.0f, 1.0f ) ) };
     }
 
@@ -507,9 +507,9 @@ namespace sw
         }
         const float32 tanHalfY  = MathUtil::tan( pose._fieldOfViewY * 0.5f );
         float3        direction = forward + right * ( screenX * tanHalfY * aspect ) + up * ( screenY * tanHalfY );
-        direction.normalize();
-        ray._origin    = pose._position;
-        ray._direction = direction;
+        direction               = direction.normalize();
+        ray._origin             = pose._position;
+        ray._direction          = direction;
         return ray;
     }
 } // namespace sw

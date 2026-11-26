@@ -47,9 +47,9 @@ namespace sw
             static string findTrashFolder()
             {
                 string folder;
-                if ( ProcessEnvironment::tryReadNonEmpty( "XDG_DATA_HOME", folder ) )
+                if ( Process::tryReadEnvironmentNonEmpty( "XDG_DATA_HOME", folder ) )
                     folder += "/Trash";
-                else if ( ProcessEnvironment::tryReadNonEmpty( "HOME", folder ) )
+                else if ( Process::tryReadEnvironmentNonEmpty( "HOME", folder ) )
                     folder += "/.local/share/Trash";
                 else
                     return {};

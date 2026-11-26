@@ -208,7 +208,7 @@ namespace sw
 
     bool AudioSubsystem::tryParseSpeakerMode( string_view text, AudioSpeakerMode& outMode )
     {
-        return NamedValueUtil::find( AudioSubsystemInternal::kArrSpeakerMode, text, outMode );
+        return NamedValue<AudioSpeakerMode>::find( AudioSubsystemInternal::kArrSpeakerMode, text, outMode );
     }
 
     bool AudioSubsystem::resolveLayout( AudioSpeakerMode mode, const AudioOutputDevice& device, AudioChannelLayout& outLayout )

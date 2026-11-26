@@ -181,7 +181,7 @@ namespace sw
         const float32  lenSq   = forward.getLengthSquared();
         if ( lenSq <= MathUtil::kEpsilon )
             return;
-        forward.normalize();
+        forward = forward.normalize();
 
         const float32 yaw   = MathUtil::atan2( forward._x, forward._z );
         const float32 pitch = -MathUtil::asin( MathUtil::clamp( forward._y, -1.0f, 1.0f ) );
@@ -215,7 +215,7 @@ namespace sw
         if ( forward.getLengthSquared() <= MathUtil::kEpsilon )
             forward = float3( 0.0f, 0.0f, 1.0f );
         else
-            forward.normalize();
+            forward = forward.normalize();
         return forward;
     }
 

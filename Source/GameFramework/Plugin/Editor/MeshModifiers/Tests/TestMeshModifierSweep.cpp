@@ -1,11 +1,13 @@
 #include "pch.h"
 
 #include "Core/Math/MathUtil.h"
+#include "Core/Math/ValueNoise.h"
 #include "Core/String/formatString.h"
 #include "Core/TestFramework/TestFramework.h"
 
 #include "GameFramework/Plugin/Editor/MeshModifiers/MeshModifierSession.h"
 #include "GameFramework/Plugin/Editor/MeshModifiers/Stack/MeshModifier.h"
+#include "GameFramework/Plugin/Editor/MeshModifiers/Stack/MeshModifierNoise.h"
 #include "GameFramework/Plugin/Editor/MeshModifiers/Stack/MeshModifierRegistry.h"
 #include "GameFramework/Plugin/Editor/MeshModifiers/Stack/MeshModifierStack.h"
 
@@ -244,4 +246,22 @@ SW_TEST_CASE( MeshModifierSessionTest, UnsavedFlagFollowsEveryStackChange )
     SW_EXPECT_EQUAL( 0, session.getStack().getModifierCount() );
     session.clearTarget();
     SW_EXPECT_FALSE( session.isStackUnsaved() );
+}
+
+/**
+ * @brief [MeshModifierSweepTest] Core `ValueNoise` 의 1D · 3D 값 노이즈는 `MeshModifierNoise` 와 비트 단위로 같다(모디파이어가 Core 로 옮겨도 저장된 씬 모양이 그대로다)
+ */
+SW_TEST_CASE( MeshModifierSweepTest, CoreValueNoiseMatchesMeshModifierNoise )
+{
+    for ( uint32 seed : { 0u, 13u, 0xDEADBEEFu } )
+    {
+        for ( int32 step = -200; step <= 200; ++step )
+        {
+            const float32 t = static_cast<float32>( step ) * 0.173f;
+            SW_REQUIRE_EQUAL( MeshModifierNoise::valueNoise1D( seed, t ), ValueNoise::sampleValue1D( t, seed ) );
+            const float3 point{ t, t * -0.61f + 2.5f, t * 0.37f - 1.25f };
+            SW_REQUIRE_EQUAL( MeshModifierNoise::valueNoise3D( point, seed ), ValueNoise::sampleValue3D( point, seed ) );
+        }
+    }
+    SW_EXPECT_EQUAL( MeshModifierNoise::valueNoise1D( 5u, 2.0e7f ), ValueNoise::sampleValue1D( 2.0e7f, 5u ) ); // 큰 시간도 같이 자른다
 }

@@ -1,6 +1,6 @@
 /**
  * @file BuildConfig.h
- * @brief 빌드 구성 깃발 상수입니다(배포 · 검사 · Debug · 정적 모듈) — `SW_SHIPPING` · `SW_DO_CHECKS` · `SW_DEBUG` · `SW_STATIC_MODULES` 의 C++ 짝.
+ * @brief 빌드 구성 깃발 상수입니다(배포 · 검사 · Debug · 정적 모듈) — `SW_SHIPPING` · `SW_DO_CHECKS` · `SW_DEBUG` · `SW_STATIC_MODULES` 의 C++ 짝과, 그 깃발로 고르는 진단 기본값.
  * @details 구성 이름 · 플랫폼 · 타깃 이름(`BuildInfo.h`)과 달리 CMake 이름 매크로가 없어도 컴파일된다 — 리플렉션 파서처럼 sw_global_options 를 링크하지 않는
  *          도구가 읽는 기반 헤더(`MemoryTag.h` 등)는 이 헤더만 포함한다(언리얼 `Build.h` 의 UE_BUILD_* 와 같은 자리).
  */
@@ -47,4 +47,15 @@ namespace sw::build
 #else
     inline constexpr bool kStaticModules = false;
 #endif
+
+    // 진단 기본값. 구성마다 켜고 끄는 진단을 파일마다 따로 고르지 않고 여기서 정한다(언리얼 `Build.h` 의 `STATS` · `ENABLE_LOW_LEVEL_MEM_TRACKER` 자리).
+    /**
+     * @brief 메모리 진단(CRT 누수 검사 · 메모리 태그 추적 · 누수 창)을 켜는 구성이면 true 입니다. 할당마다 추적 비용이 붙어 Debug 만 켠다.
+     * @details ASan 구성은 Release 라 여기서 꺼진다. Windows ASan 은 CRT 디버그 힙을 쓸 수 없고 힙 오용은 ASan 이 직접 잡는다(언리얼 -EnableASan 도 메모리 추적을 더하지 않는다).
+     */
+    inline constexpr bool kMemoryDiagnostics = kDebug;
+    /** @brief 교착 탐지(`-deadlock-detection`, `sw::mutex` 잠금 추적)를 받는 구성이면 true 입니다. 배포는 잠금 추적을 짓지 않는다. */
+    inline constexpr bool kDeadlockDetection = kShipping == false;
+    /** @brief 비싼 프로파일 카운터(`SW_PROFILE_COUNT_VERBOSE`, 항목마다 세는 값)를 세는 구성이면 true 입니다. 언리얼 stat 의 verbose 단계 자리다. */
+    inline constexpr bool kVerboseProfileCounters = kDebug;
 } // namespace sw::build

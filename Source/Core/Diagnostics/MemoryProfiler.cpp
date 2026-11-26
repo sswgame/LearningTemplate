@@ -303,7 +303,7 @@ namespace sw
         return __lsan_do_recoverable_leak_check() != 0 ? 1 : 0;
 
 #else
-        if constexpr ( build::kDebug )
+        if constexpr ( build::kMemoryDiagnostics )
         {
             MemoryProfilerInternal::printLeakMessage( "[MemoryLeak] %# — no in-process checker. Windows Debug CRT: rebuild Debug. "
                                                       "Linux: cmake -DSW_ENABLE_SANITIZER=ON OR valgrind --leak-check=full ./App",
