@@ -864,28 +864,6 @@ namespace sw
         return hash;
     }
 
-    const utf8* FixedLayout::toString( const FixedReadResult result ) noexcept
-    {
-        switch ( result )
-        {
-            case FixedReadResult::Ok:
-                return "Ok";
-            case FixedReadResult::SchemaMismatch:
-                return "SchemaMismatch";
-            case FixedReadResult::Truncated:
-                return "Truncated";
-            case FixedReadResult::OutOfRange:
-                return "OutOfRange";
-            case FixedReadResult::ValidateFailed:
-                return "ValidateFailed";
-            case FixedReadResult::TrailingData:
-                return "TrailingData";
-            case FixedReadResult::InvalidText:
-                return "InvalidText";
-        }
-        return "Unknown";
-    }
-
     void FixedLayout::stopForMissingCodec( const hashed_string& fqn, string_view reason, string_view detail )
     {
         // 대체 값(0 해시, 빈 결과)을 돌려주면 그 값이 핸드셰이크 해시나 롤백 상태에 섞입니다. 고칠 곳은 선언이므로 멈춥니다.

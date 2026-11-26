@@ -5,15 +5,6 @@
 		<entry key="Amount" text="양" sourceHash="ba98a7152d80b949" />
 		<entry key="Apply" text="적용" sourceHash="b8f855b49234b81b" />
 		<entry key="Cancel" text="취소" sourceHash="2ceb11be2290bb1b" />
-		<entry key="Chat.InvalidMessage"
-		       text="메시지가 비었거나 올바르지 않습니다"
-		       sourceHash="90852f96d275f811" />
-		<entry key="Chat.SignIn" text="채팅하려면 로그인하세요" sourceHash="3e1a44cdd263dd1e" />
-		<entry key="Chat.TooFast"
-		       text="너무 빠릅니다. 잠시 뒤에 다시 시도하세요"
-		       sourceHash="51ec7c4fa8414af5" />
-		<entry key="Chat.Unavailable" text="지금은 채팅할 수 없습니다" sourceHash="97824550bff00311" />
-		<entry key="Chat.UpdateGame" text="채팅하려면 게임을 업데이트하세요" sourceHash="42ac26bc346890e2" />
 		<entry key="Close" text="닫기" sourceHash="5e8250fb85d64c23" />
 		<entry key="Defaults" text="기본값" sourceHash="48022f6d5501d677" />
 		<entry key="Discard" text="버리기" sourceHash="c00a88b90cd60661" />
@@ -170,7 +161,6 @@
 		<entry key="EdPlugin.AddSkinLayer" text="층 더하기" sourceHash="b546e48af5e5c359" />
 		<entry key="EdPlugin.AddSlot" text="칸 추가" sourceHash="02c64e6a6306c0b0" />
 		<entry key="EdPlugin.Appearance" text="외형" sourceHash="f0e261e04eda82ff" />
-		<entry key="EdPlugin.ApplySanction" text="제재 적용" sourceHash="9f0c979ae0d9d618" />
 		<entry key="EdPlugin.AutoLayout" text="자동 배치" sourceHash="4f4251e697a0d1dc" />
 		<entry key="EdPlugin.BodyChannelMapped" text="매핑됨" sourceHash="2cdab23ce325f812" />
 		<entry key="EdPlugin.BodyChannelMissing" text="매핑 없음" sourceHash="aaefc6231966ac60" />
@@ -197,7 +187,6 @@
 		<entry key="EdPlugin.ClearSmears" text="번짐 지우기" sourceHash="ffe87947b7ce6927" />
 		<entry key="EdPlugin.ClearTarget" text="대상 지우기" sourceHash="d18a85c948654d57" />
 		<entry key="EdPlugin.ClickANodeToEditIt" text="노드를 누르면 편집합니다" sourceHash="3300dd9449098b38" />
-		<entry key="EdPlugin.ClosedReports" text="닫은 신고" sourceHash="3c5905586fa5e736" />
 		<entry key="EdPlugin.ColumnAlias" text="별칭" sourceHash="123effcb9f1a2c17" />
 		<entry key="EdPlugin.ColumnDyeChannels" text="염색 채널" sourceHash="87e693298327f96b" />
 		<entry key="EdPlugin.ColumnDyeable" text="염색" sourceHash="d81c9173bb716ee1" />
@@ -211,16 +200,12 @@
 		<entry key="EdPlugin.DataPresetSceneUse" text="데이터 프리셋(씬에서 씀)" sourceHash="b0eca8332d850996" />
 		<entry key="EdPlugin.Delete" text="삭제" sourceHash="dc673e73b5c13aea" />
 		<entry key="EdPlugin.DeleteNode" text="노드 삭제" sourceHash="d9bdfc0f95188eea" />
-		<entry key="EdPlugin.Disconnect" text="연결 끊기" sourceHash="d2208cd1a767644b" />
-		<entry key="EdPlugin.Dismiss" text="닫기" sourceHash="12d6dde9b30c3093" />
 		<entry key="EdPlugin.Down" text="아래" sourceHash="032c13736048bf35" />
 		<entry key="EdPlugin.Duplicate" text="복제" sourceHash="fac15b89e0668996" />
 		<entry key="EdPlugin.DyeSections" text="염색 구간" sourceHash="d764e534223785af" />
 		<entry key="EdPlugin.DyeSectionsEmpty"
 		       text="메시 구간이 없습니다. 아이템 외형에 별칭과 함께 구간을 적으세요."
 		       sourceHash="fb04825228d546fe" />
-		<entry key="EdPlugin.Edit" text="편집" sourceHash="64ef2a6c2dd1d3d1" />
-		<entry key="EdPlugin.EndMaintenance" text="점검 끝내기" sourceHash="7d5699fb9376bca1" />
 		<entry key="EdPlugin.ExportDataPreset" text="데이터 프리셋 내보내기" sourceHash="64b8de7de2582e1c" />
 		<entry key="EdPlugin.EyeLight" text="눈에 닿는 빛" sourceHash="5290a415808505be" />
 		<entry key="EdPlugin.FitCheckViewOnly" text="맞춤 검사(보기만)" sourceHash="7b272a466c1e8140" />
@@ -229,7 +214,6 @@
 		<entry key="EdPlugin.FluidRemovePoint" text="점 빼기" sourceHash="f48356f4d161499f" />
 		<entry key="EdPlugin.FluidWetness" text="눈물 · 침" sourceHash="183947aee59fc5ab" />
 		<entry key="EdPlugin.FootLift" text="발 들림(m)" sourceHash="ada836515dd9f6b0" />
-		<entry key="EdPlugin.Grant" text="지급" sourceHash="ef16778fe7074a8d" />
 		<entry key="EdPlugin.HighlightDrive" text="강조할 드라이브" sourceHash="ff3f63497344e3d7" />
 		<entry key="EdPlugin.HighlightNone" text="(없음)" sourceHash="8c36545f724b9460" />
 		<entry key="EdPlugin.IKGoal" text="IK 목표" sourceHash="1d84f0c6c37ff4e8" />
@@ -245,9 +229,6 @@
 		<entry key="EdPlugin.LayerRotationTooltip" text="층의 회전(도)" sourceHash="d6e16a6a13328f94" />
 		<entry key="EdPlugin.LayerScale" text="크기" sourceHash="2706a162264c46f1" />
 		<entry key="EdPlugin.LayerScaleTooltip" text="층 하나가 덮는 피부 UV 크기" sourceHash="6b3806797b35e05b" />
-		<entry key="EdPlugin.LiftSanction" text="제재 풀기" sourceHash="81fdfffbe8a3f431" />
-		<entry key="EdPlugin.ListAudit" text="감사 기록 보기" sourceHash="961acb5f276c143a" />
-		<entry key="EdPlugin.ListLiveEvents" text="라이브 이벤트 보기" sourceHash="418530c2b0d3dec6" />
 		<entry key="EdPlugin.Load" text="불러오기" sourceHash="4f20edb48a6287c9" />
 		<entry key="EdPlugin.LoadASkeletonToSeeItsBonesThe"
 		       text="스켈레톤을 불러오면 뼈가 보입니다. 스켈레톤은 읽기 전용이고 편집은 기준 포즈 파일에 들어갑니다."
@@ -265,10 +246,6 @@
 		<entry key="EdPlugin.LoadTheItemsFileAndTheAppearanceFolder"
 		       text="항목 파일과 외형 폴더를 불러오면 항목을 고르고 규칙 설명을 봅니다."
 		       sourceHash="cf5d0a507c2be420" />
-		<entry key="EdPlugin.LookUpAnAccountToSeeItsBalances"
-		       text="계정을 찾으면 잔액과 제재가 보입니다"
-		       sourceHash="5be35335366b396f" />
-		<entry key="EdPlugin.Lookup" text="찾기" sourceHash="3b29e8112bce0f0b" />
 		<entry key="EdPlugin.MapSameNames" text="같은 이름끼리 잇기" sourceHash="18af1bfc89304055" />
 		<entry key="EdPlugin.Mirror" text="대칭" sourceHash="1e5ff0f50c741122" />
 		<entry key="EdPlugin.MirrorBone" text="뼈 대칭" sourceHash="76a77b2d4eb713d0" />
@@ -282,12 +259,6 @@
 		<entry key="EdPlugin.NoFitResultYetThePreviewSceneSolves"
 		       text="아직 맞춤 결과가 없습니다. 슬라이더를 놓으면 미리보기 씬이 맞춥니다."
 		       sourceHash="792e9f927dc4d186" />
-		<entry key="EdPlugin.NoInProcessGameIsRegisteredNetSimGameRegistryOnly"
-		       text="한 프로세스 게임이 등록되지 않았습니다(NetSimGameRegistry) — 키트 세션(INetSimSession)이 있는 게임만 여기서 돕니다."
-		       sourceHash="89f0528658a0433b" />
-		<entry key="EdPlugin.NoLoginHandlerIsBoundGMCommandsAre"
-		       text="로그인 처리기가 없습니다: GM 명령은 로그인하지 않은 것으로 거절됩니다"
-		       sourceHash="0a0746e5bde7cb37" />
 		<entry key="EdPlugin.NoPenetration" text="뚫림 없음." sourceHash="15c1344dcefbbe6b" />
 		<entry key="EdPlugin.NoRuleFired" text="발동한 규칙이 없습니다." sourceHash="74ccb053330e02d2" />
 		<entry key="EdPlugin.OpenABehaviorTreeFileBtXmlWith"
@@ -302,7 +273,6 @@
 		<entry key="EdPlugin.OpenARetargetXmlOrTypeANew"
 		       text=".retarget.xml 을 열거나 새 경로를 적고 새로를 눌러 두 스켈레톤의 사슬을 짝짓고 묶임을 확인합니다."
 		       sourceHash="e35d453f7963c6c1" />
-		<entry key="EdPlugin.OpenReports" text="열린 신고" sourceHash="f38f9ccb5aa4a4d2" />
 		<entry key="EdPlugin.OrthographicPresetThePreviewDrawsItInPerspective"
 		       text="직교 프리셋 — 미리보기는 원근으로 그립니다."
 		       sourceHash="6eb50dde8e0f5da3" />
@@ -315,32 +285,23 @@
 		<entry key="EdPlugin.PickCancel" text="집기 끄기" sourceHash="ea93412d8284f2ae" />
 		<entry key="EdPlugin.PickPlaceLayer" text="미리보기에서 배치" sourceHash="05eac8bfa956f1ab" />
 		<entry key="EdPlugin.PickSection" text="미리보기에서 구간 집기" sourceHash="a88a406ac7c8db0e" />
-		<entry key="EdPlugin.PostAnnouncement" text="공지 올리기" sourceHash="37e6931da5f87431" />
 		<entry key="EdPlugin.PresetsUserData" text="프리셋(사용자 데이터)" sourceHash="5f4339cfe94334b7" />
 		<entry key="EdPlugin.Preview" text="미리보기" sourceHash="417b90913e05bc17" />
 		<entry key="EdPlugin.PreviewConstraintRig" text="제약 리그 미리보기" sourceHash="ca9d7f72602ecd10" />
 		<entry key="EdPlugin.PreviewHit" text="맞기" sourceHash="497c4819cdbf8d0a" />
 		<entry key="EdPlugin.PupilSize" text="동공 크기" sourceHash="91a6a17a04158724" />
-		<entry key="EdPlugin.PutLiveEvent" text="라이브 이벤트 넣기" sourceHash="9a54ec5c13858e78" />
 		<entry key="EdPlugin.Redo" text="다시 실행" sourceHash="7417792bbe720149" />
 		<entry key="EdPlugin.RedoAppearance" text="외형 다시 실행" sourceHash="90c27634b30aba49" />
 		<entry key="EdPlugin.RedoPose" text="포즈 다시 실행" sourceHash="c78d384206df3fda" />
-		<entry key="EdPlugin.RefundRevokeMayLeaveADebt"
-		       text="환불 회수(빚이 남을 수 있다)"
-		       sourceHash="a7c96eb259368178" />
 		<entry key="EdPlugin.Reload" text="다시 읽기" sourceHash="d5b6130b4937488c" />
 		<entry key="EdPlugin.ReloadFromDiskDiscardEdits"
 		       text="디스크에서 다시 읽기(편집 버림)"
 		       sourceHash="1a5da284e88aa713" />
 		<entry key="EdPlugin.Remove" text="제거" sourceHash="ea4f08110bb8f15d" />
-		<entry key="EdPlugin.RemoveAnnouncement" text="공지 지우기" sourceHash="9d6cadb063f5b14f" />
 		<entry key="EdPlugin.RemoveBrokenWires" text="끊어진 선 지우기" sourceHash="56ba420ceb30c42c" />
-		<entry key="EdPlugin.RemoveLiveEvent" text="라이브 이벤트 지우기" sourceHash="286ec822b6f1b615" />
 		<entry key="EdPlugin.RemoveSkinLayer" text="지우기" sourceHash="ea4f08110bb8f15d" />
 		<entry key="EdPlugin.Rename" text="이름 바꾸기" sourceHash="60320a18282b2b33" />
 		<entry key="EdPlugin.ResetBone" text="뼈 초기화" sourceHash="559f9c3dcb23c44e" />
-		<entry key="EdPlugin.Resolve" text="처리" sourceHash="4de430b40c94e903" />
-		<entry key="EdPlugin.Revoke" text="회수" sourceHash="0e871352ba4b17d3" />
 		<entry key="EdPlugin.Roles" text="역할" sourceHash="6b2beba7ab637e9e" />
 		<entry key="EdPlugin.Save" text="저장" sourceHash="33f85f24c0f5f008" />
 		<entry key="EdPlugin.SaveAsPreset" text="프리셋으로 저장" sourceHash="c62bf7298fcf87d7" />
@@ -373,9 +334,6 @@
 		<entry key="EdPlugin.Slots" text="칸" sourceHash="f96b15cd3921d4a6" />
 		<entry key="EdPlugin.SmearDilution" text="화장 번짐" sourceHash="10eccc5d89713996" />
 		<entry key="EdPlugin.Sockets" text="소켓" sourceHash="295e56d2a3af242d" />
-		<entry key="EdPlugin.StartInProcess" text="한 프로세스로 시작" sourceHash="a2fef448b6708fdf" />
-		<entry key="EdPlugin.StartMaintenance" text="점검 시작" sourceHash="2e417dd12aa53688" />
-		<entry key="EdPlugin.Stop" text="정지" sourceHash="d9ad53251f2330a5" />
 		<entry key="EdPlugin.TargetObject" text="대상 오브젝트" sourceHash="385e62428acaa50f" />
 		<entry key="EdPlugin.Task" text="작업" sourceHash="03ee3cfb0919c62c" />
 		<entry key="EdPlugin.TheNodeEditorCouldNotBeCreated"
@@ -394,35 +352,22 @@
 		       sourceHash="aa54935a9461505e" />
 		<entry key="EdPlugin.WrinkleIntensity" text="주름 세기" sourceHash="1b33b65bfb5319d6" />
 		<entry key="EdPlugin.Wrinkles" text="주름" sourceHash="95d81f16550e1cd8" />
-		<entry key="EdPluginButton.Reload" text="다시 불러오기" sourceHash="d5b6130b4937488c" />
-		<entry key="EdPluginField.Amount" text="양" sourceHash="ba98a7152d80b949" />
 		<entry key="EdPluginField.Anchor" text="기준" sourceHash="beff9ac02dc2c474" />
-		<entry key="EdPluginField.AnnouncementId" text="공지 id" sourceHash="346e643ae672864e" />
-		<entry key="EdPluginField.AnnouncementSeconds0UntilRemoved"
-		       text="공지 초(0 = 지울 때까지)"
-		       sourceHash="5ca50ca62e3f11de" />
 		<entry key="EdPluginField.BasePreset" text="기준 프리셋" sourceHash="fb4ae1042ef82b97" />
 		<entry key="EdPluginField.BodyShape" text="체형" sourceHash="c02e72b17896e8d8" />
 		<entry key="EdPluginField.BodyType" text="몸 종류" sourceHash="abd94a00726e12d7" />
 		<entry key="EdPluginField.BoneRotation" text="뼈 회전" sourceHash="ea1eb9c73bf6b097" />
 		<entry key="EdPluginField.BoneScale" text="뼈 크기" sourceHash="e007d2837c41ae09" />
 		<entry key="EdPluginField.BoneTranslation" text="뼈 이동" sourceHash="21b2e5272efd0fe4" />
-		<entry key="EdPluginField.Clients" text="클라이언트" sourceHash="8faea6e4533e9757" />
 		<entry key="EdPluginField.DurationS" text="길이(초)" sourceHash="094748f07458f069" />
 		<entry key="EdPluginField.EnterExitBlendS" text="들어감 · 나감 섞기(초)" sourceHash="ef5314c2253430db" />
 		<entry key="EdPluginField.Face" text="얼굴" sourceHash="19b15a8518073d5c" />
-		<entry key="EdPluginField.GMPassword" text="GM 비밀번호" sourceHash="73021dd72e500432" />
 		<entry key="EdPluginField.HeightRatio0Pelvis" text="높이 비(0 = 골반)" sourceHash="f9434060c23b8cc4" />
-		<entry key="EdPluginField.MaintenanceSeconds0UntilCleared"
-		       text="점검 초(0 = 풀 때까지)"
-		       sourceHash="14988336ae4ff447" />
 		<entry key="EdPluginField.OffsetM" text="오프셋(m)" sourceHash="5ec26a29745a2dfc" />
 		<entry key="EdPluginField.Parent" text="부모" sourceHash="4eb514ebcb80553d" />
 		<entry key="EdPluginField.PreviewMesh" text="미리보기 메시" sourceHash="bf80308374d5e32c" />
-		<entry key="EdPluginField.Priority" text="우선순위" sourceHash="a4e407b3a0fe4669" />
 		<entry key="EdPluginField.Rotation" text="회전" sourceHash="cde2e53f46beac7f" />
 		<entry key="EdPluginField.Scale" text="크기" sourceHash="2706a162264c46f1" />
-		<entry key="EdPluginField.Seconds" text="초" sourceHash="c4842e5b8b90466a" />
 		<entry key="EdPluginField.SourceBones" text="원본 뼈" sourceHash="c823f98fd9ceabff" />
 		<entry key="EdPluginField.StartS" text="시작(초)" sourceHash="27b317f471f59517" />
 		<entry key="EdPluginField.TargetBones" text="대상 뼈" sourceHash="51e1bd58d0eb254f" />
@@ -437,7 +382,6 @@
 		       text="본 {boneCount}개, 덮어씀 {overridesCount}개{dirty}"
 		       sourceHash="707eff48e4e0e751" />
 		<entry key="EdPluginFormat.Clamped" text="범위로 자름: {clamped}" sourceHash="cc1c67ea126eb653" />
-		<entry key="EdPluginFormat.Client" text="{focused}클라이언트 {worldIndex}" sourceHash="9c2c41007f64608b" />
 		<entry key="EdPluginFormat.ClipS"
 		       text="{role, select, anchor {기준} required {필수} other {선택}}  클립 {clip}  {stage} {clipSeconds}초{clipLength, select, unknown {  (클립 길이 모름 - 프리팹을 고르세요)} other {}}"
 		       sourceHash="602e53c08e343113" />
@@ -445,10 +389,6 @@
 		       text="{name}: 자름 {cutTriangleCount}/{triangleCount}({cutRatio}%), 정점 {movedVertexCount}개 옮김, 최대 밀기 {maxDelta}"
 		       sourceHash="123a644d3007c563" />
 		<entry key="EdPluginFormat.Dropped" text="빠짐: {dropped}" sourceHash="ce2449119803e99d" />
-		<entry key="EdPluginFormat.GMConnection" text="GM 연결: {stateText}" sourceHash="ba6187deff08f6db" />
-		<entry key="EdPluginFormat.Id"
-		       text="{displayName}  (id {accountID})  {presence, select, online {접속 중} other {접속 안 함}}"
-		       sourceHash="474a28b48d6cce02" />
 		<entry key="EdPluginFormat.Live" text="실행 중: {liveRunnerName}" sourceHash="a97f0a67617d3e8c" />
 		<entry key="EdPluginFormat.NoAnimationClipsIn"
 		       text="''{clipFolder}'' 에 애니메이션 클립이 없습니다"
@@ -469,8 +409,6 @@
 		       text="뚫음 {partA} / {partB}: 점 {vertexCount}개, 깊이 {maxDepth}"
 		       sourceHash="696849e3606b5dd4" />
 		<entry key="EdPluginFormat.Problems" text="문제 {issueCount}개" sourceHash="ef1fef2a60c87f14" />
-		<entry key="EdPluginFormat.Provider" text="제공자: {providerName}" sourceHash="eff920aeeb94ed28" />
-		<entry key="EdPluginFormat.Server" text="{focused}서버" sourceHash="2ab8e57482d849f1" />
 		<entry key="EdPluginFormat.Slot"
 		       text="칸 {slot}: {requestedItem} -> {fallbackItem}({reason})"
 		       sourceHash="67f88b40b318c4e9" />
@@ -483,36 +421,9 @@
 		<entry key="EdPluginFormat.ThisFileCouldNot"
 		       text="이 파일을 열 수 없습니다: {statusText}"
 		       sourceHash="253bbce2905b4f9e" />
-		<entry key="EdPluginFormat.TickInputFocusWorld"
-		       text="틱 {tick}  입력 초점: 월드 {inputFocus}"
-		       sourceHash="73e089f72ca0df8f" />
 		<entry key="EdPluginFormat.WearingOnBasePreset"
 		       text="기준 프리셋 ''{basePresetID}'' 위에 {wearing, select, none {칸 아이템 없음} other {선택한 것}} 착용(조립 {appearance}번)"
 		       sourceHash="b22e4cfc02026c5c" />
-		<entry key="EdPluginParkLayout.ColumnCapacity" text="정원" sourceHash="662a4649201589c9" />
-		<entry key="EdPluginParkLayout.ColumnCheck" text="검사" sourceHash="42cbd8dca939a9c7" />
-		<entry key="EdPluginParkLayout.ColumnCost" text="비용" sourceHash="367d079d1aed1358" />
-		<entry key="EdPluginParkLayout.ColumnPrice" text="탑승료" sourceHash="b75ee24776b3d425" />
-		<entry key="EdPluginParkLayout.ColumnRide" text="놀이기구" sourceHash="dcc85b2bf9f5004f" />
-		<entry key="EdPluginParkLayout.ColumnTime" text="시간(초)" sourceHash="b30cb1f77e66860c" />
-		<entry key="EdPluginParkLayout.FocusGate" text="정문 보기" sourceHash="0f54f967b84971ee" />
-		<entry key="EdPluginParkLayout.FocusGateTip"
-		       text="씬 뷰 카메라를 공원 정문으로 옮깁니다"
-		       sourceHash="8bfe700223462b90" />
-		<entry key="EdPluginParkLayout.IssueDuplicateID" text="{name}와 id 가 같음" sourceHash="f889fe2f2a742099" />
-		<entry key="EdPluginParkLayout.IssueEntrance"
-		       text="입구가 바닥 영역 안에 있음"
-		       sourceHash="d771331ea711dc1b" />
-		<entry key="EdPluginParkLayout.IssueOverlap" text="{name}와 겹침" sourceHash="1f5279ef06ad20b2" />
-		<entry key="EdPluginParkLayout.NoLayoutHint"
-		       text="이 게임에는 공원 배치 데이터가 없습니다({path})"
-		       sourceHash="57f81944f9952bee" />
-		<entry key="EdPluginParkLayout.ReadFailedHint"
-		       text="공원 배치를 읽지 못했습니다({path}). 로그를 보고 파일을 고친 뒤 다시 불러오세요."
-		       sourceHash="b7bd7c1b560208ed" />
-		<entry key="EdPluginParkLayout.Summary"
-		       text="총 비용 {cost}  ·  시작 자금 {cash}  ·  입장료 {fee}  ·  배치 문제 {issues}"
-		       sourceHash="6e8c60cf7ef53d48" />
 		<entry key="EdPluginTip.AnchorRelativeRootPositionAndYawAt"
 		       text="맞춤 시각의 기준 상대 뿌리 위치 · 방향 — 뷰포트에서 역할 오브젝트를 골라 기즈모로 옮깁니다"
 		       sourceHash="0d52b634e78c2b8a" />
@@ -543,10 +454,6 @@
 		<entry key="EdPluginTip.TurnATargetBoneInItsParent"
 		       text="대상 기준 자세가 원본 기준 자세와 맞게 대상 뼈를 부모 공간에서 돌립니다(도) — 예: T 자세 원본을 A 자세 대상에 맞게 팔을 내린다"
 		       sourceHash="513b712b24165aff" />
-		<entry key="EdPluginVisualizer.HousingPlotLabel" text="부지" sourceHash="01c091af962d4963" />
-		<entry key="EdPluginVisualizer.HousingPlotTip"
-		       text="씬의 하우징 부지마다 경계와 칸, id 와 크기"
-		       sourceHash="6414cac62d24e333" />
 		<entry key="EdPluginVisualizer.MeshModifiersLabel" text="모디파이어" sourceHash="87ca97e3a5f400d9" />
 		<entry key="EdPluginVisualizer.MeshModifiersStageLabel" text="단계" sourceHash="ae5da213b7f896ed" />
 		<entry key="EdPluginVisualizer.MeshModifiersStageTip"
@@ -555,51 +462,26 @@
 		<entry key="EdPluginVisualizer.MeshModifiersTip"
 		       text="메시 모디파이어 스택의 변형 미리보기 선, 기즈모 · 범위 표시와 끌기 편집, 격자 제어점 고르기 · 끌기"
 		       sourceHash="cf2a12185b5ea27c" />
-		<entry key="EdPluginVisualizer.ParkLayoutLabel" text="놀이공원" sourceHash="2e3f0d19ed369939" />
-		<entry key="EdPluginVisualizer.ParkLayoutTip"
-		       text="ThemePark 배치 파일(rides.xml)의 놀이기구 발자국, 입구, 코스터 트랙"
-		       sourceHash="40b20210c0343418" />
 		<entry key="EdPluginVisualizer.SplinesLabel" text="스플라인" sourceHash="c80e88bdeab5993d" />
 		<entry key="EdPluginVisualizer.SplinesTip"
 		       text="씬의 스플라인마다 곡선 - 고른 스플라인은 조절점 손잡이를 끈다(Shapes)"
 		       sourceHash="f23fe5163d0d582d" />
-		<entry key="EdPluginWidget.Account" text="계정" sourceHash="846b3790b6e25c1c" />
-		<entry key="EdPluginWidget.AccountIdHex" text="계정 id(16진수)" sourceHash="b6db0ef22675ed05" />
-		<entry key="EdPluginWidget.ActingRole" text="맡은 역할" sourceHash="25bba11d3a172de3" />
-		<entry key="EdPluginWidget.AnnouncementText" text="공지 글" sourceHash="30c28e16a2b1dc84" />
-		<entry key="EdPluginWidget.AssetId" text="에셋 id" sourceHash="69d468f7fdd713f4" />
-		<entry key="EdPluginWidget.AuditLog" text="감사 기록" sourceHash="2bd16f12896a150a" />
 		<entry key="EdPluginWidget.BasePreset" text="기준 프리셋" sourceHash="fb4ae1042ef82b97" />
 		<entry key="EdPluginWidget.BoneMap" text="본 매핑" sourceHash="4b8920f82d776b69" />
 		<entry key="EdPluginWidget.Chains" text="체인" sourceHash="3a6771172abb34bf" />
 		<entry key="EdPluginWidget.Check" text="검사" sourceHash="42cbd8dca939a9c7" />
 		<entry key="EdPluginWidget.EquipmentSet" text="장비 세트" sourceHash="647fb99b02fe02df" />
-		<entry key="EdPluginWidget.EventId" text="이벤트 id" sourceHash="9b572c9af0cf6ef8" />
-		<entry key="EdPluginWidget.EventJson" text="이벤트 JSON" sourceHash="f9211a1af156135b" />
 		<entry key="EdPluginWidget.From" text="보내는 곳" sourceHash="a6ab5184d6315895" />
-		<entry key="EdPluginWidget.Game" text="게임" sourceHash="b568a67e05a19907" />
-		<entry key="EdPluginWidget.GrantRevoke" text="지급 / 회수" sourceHash="b43e7fa0410aeb6e" />
 		<entry key="EdPluginWidget.Kind" text="종류" sourceHash="70af97de3ad8fb23" />
-		<entry key="EdPluginWidget.LiveEvents" text="라이브 이벤트" sourceHash="b5622b26740874ec" />
 		<entry key="EdPluginWidget.Loop" text="반복" sourceHash="4efee5b48a4593cb" />
-		<entry key="EdPluginWidget.MaintenanceAnnouncement" text="점검 / 공지" sourceHash="85b0db04bdd7964f" />
-		<entry key="EdPluginWidget.MemoTicket" text="메모(티켓)" sourceHash="fdcbf34ceeb42ab6" />
-		<entry key="EdPluginWidget.MessageKey" text="메시지 키" sourceHash="a982200e6ce2d4db" />
 		<entry key="EdPluginWidget.Options" text="옵션" sourceHash="463b8c4e92751ba5" />
 		<entry key="EdPluginWidget.Play" text="재생" sourceHash="cd105819b5a10243" />
 		<entry key="EdPluginWidget.Preview" text="미리보기" sourceHash="417b90913e05bc17" />
 		<entry key="EdPluginWidget.Problems" text="문제" sourceHash="0e6bbd9fe1101fbd" />
-		<entry key="EdPluginWidget.ReasonCode" text="사유 코드" sourceHash="e4e83587c443b062" />
-		<entry key="EdPluginWidget.Reports" text="신고" sourceHash="884bcdca26998a48" />
 		<entry key="EdPluginWidget.RetargetPose" text="리타깃 포즈" sourceHash="53c8b9621d796bca" />
 		<entry key="EdPluginWidget.RootAndPelvis" text="루트와 골반" sourceHash="e01e5ada837b1395" />
-		<entry key="EdPluginWidget.Sanction" text="제재" sourceHash="454ca7e5daa9851c" />
-		<entry key="EdPluginWidget.ScopeAllOrServerKind"
-		       text="범위(all 또는 서버 종류)"
-		       sourceHash="b549f10e94463f43" />
 		<entry key="EdPluginWidget.Skeletons" text="스켈레톤" sourceHash="ddf41736311408a7" />
 		<entry key="EdPluginWidget.Stop" text="정지" sourceHash="d9ad53251f2330a5" />
-		<entry key="EdPluginWidget.SubjectPrefix" text="주체 접두어" sourceHash="f5ff56bd51df1f21" />
 		<entry key="EdPluginWidget.To" text="받는 곳" sourceHash="09353907b5c79284" />
 		<entry key="EdPluginWidget.Wires" text="선" sourceHash="b1344bf526482d11" />
 		<entry key="EdSchedule.ColumnActivity" text="행동" sourceHash="6c76b294d740446c" />
@@ -643,23 +525,6 @@
 		<entry key="Enum.AbilityEntryKind.AbilitySet" text="어빌리티 세트" sourceHash="ff3820b1acda8056" />
 		<entry key="Enum.AbilityEntryKind.Effect" text="이펙트" sourceHash="d004bbafa47097e5" />
 		<entry key="Enum.AbilityEntryKind.Presentation" text="큐 연출" sourceHash="e160bc2d29075769" />
-		<entry key="Enum.ChatResult.Muted"
-		       text="채팅이 금지되어 있습니다({seconds}초 남음)"
-		       sourceHash="d44ad231e1dc9e57" />
-		<entry key="Enum.ChatResult.NotFound" text="메시지를 찾을 수 없습니다" sourceHash="9e5e30bbb5ad2ca9" />
-		<entry key="Enum.ChatResult.NotJoinable" text="참여할 수 없는 채널입니다" sourceHash="46a0dd5bcc062ecf" />
-		<entry key="Enum.ChatResult.NotMember" text="참여하지 않은 채널입니다" sourceHash="3e5bfdfd4245bf3b" />
-		<entry key="Enum.ChatResult.RateLimited"
-		       text="너무 빠릅니다. {milliseconds}ms 기다리세요"
-		       sourceHash="e5b6fe8229c21b06" />
-		<entry key="Enum.ChatResult.Rejected"
-		       text="단어 거르기에 걸려 메시지를 보내지 못했습니다"
-		       sourceHash="9f4be67ffd43a11b" />
-		<entry key="Enum.ChatResult.Repeated" text="이미 한 말입니다" sourceHash="3aed68501070baae" />
-		<entry key="Enum.ChatResult.TargetOffline"
-		       text="상대가 접속해 있지 않습니다"
-		       sourceHash="4e2a36c23fcdbdc0" />
-		<entry key="Enum.ChatResult.TooManyChannels" text="채널이 너무 많습니다" sourceHash="b67867eff6d1139c" />
 		<entry key="Enum.CollisionResponse.Block" text="막기" sourceHash="2b2ae20d26f78ac2" />
 		<entry key="Enum.CollisionResponse.Ignore" text="무시" sourceHash="917734d83f35efa3" />
 		<entry key="Enum.CollisionResponse.Overlap" text="겹침" sourceHash="7ed143cddb1bffa8" />
@@ -792,29 +657,12 @@
 		<entry key="Enum.ShopPurchaseStatus.Unverified"
 		       text="구매 응답이 맞지 않아 지갑을 새로 고쳤습니다."
 		       sourceHash="ccfce3ecd112ddfe" />
-		<entry key="Enum.SocialPresenceStatus.Away" text="자리 비움" sourceHash="6f3fb3842ffa02bb" />
-		<entry key="Enum.SocialPresenceStatus.Busy" text="바쁨" sourceHash="ff75d19be2aea620" />
-		<entry key="Enum.SocialPresenceStatus.InGame" text="게임 중" sourceHash="751b555ee38fcef8" />
-		<entry key="Enum.SocialPresenceStatus.Offline" text="오프라인" sourceHash="574193ebbf068988" />
-		<entry key="Enum.SocialPresenceStatus.Online" text="온라인" sourceHash="abf0e099159a8caa" />
 		<entry key="Enum.Unknown" text="알 수 없음" sourceHash="498865c7bd1f3959" />
 		<entry key="Enum.ZoneModuleOrigin.Added" text="여기서 더함" sourceHash="1d0422d2923a2619" />
 		<entry key="Enum.ZoneModuleOrigin.Changed" text="여기서 바꿈" sourceHash="b670513a18b222f7" />
 		<entry key="Enum.ZoneModuleOrigin.Inherited" text="물려받음" sourceHash="45228ea14dc64581" />
 		<entry key="Enum.ZoneModuleOrigin.Removed" text="여기서 뺌" sourceHash="d595b30d28c16df7" />
 		<entry key="Enum.ZoneModuleOrigin.Replaced" text="여기서 갈아끼움" sourceHash="821d05431d192019" />
-		<entry key="FriendList.Idle"
-		       text="새로 고침을 누르면 친구 목록을 보입니다"
-		       sourceHash="1bf7709ef94325c5" />
-		<entry key="FriendList.LoadFailed"
-		       text="친구 목록을 불러오지 못했습니다(오류 {error})"
-		       sourceHash="126516148f7f55b3" />
-		<entry key="FriendList.Loading" text="친구 목록을 불러오는 중..." sourceHash="fd7afe91ccb1c0b8" />
-		<entry key="FriendList.None" text="아직 친구가 없습니다" sourceHash="2736cb628dbd9e09" />
-		<entry key="FriendList.PendingRequests" text="{title}  (받은 요청 {count}건)" sourceHash="edf972fdfe13cb2e" />
-		<entry key="FriendList.Row" text="#{account}  {presence}" sourceHash="2db55beacdf5ec2a" />
-		<entry key="FriendList.RowActivity" text="#{account}  {presence}  {activity}" sourceHash="b1fda9d92194f095" />
-		<entry key="FriendList.Title" text="친구" sourceHash="4c675180cc54b9ba" />
 		<entry key="Inventory.DropTitle" text="몇 개를 버릴까요?" sourceHash="5851b629b00886c2" />
 		<entry key="Inventory.EquipLine" text="{slot}: {item}" sourceHash="49a515e2a7dc7316" />
 		<entry key="Inventory.ItemCount" text="{item} x{count}" sourceHash="35b4cb38ae71afeb" />
@@ -861,18 +709,6 @@
 		       sourceHash="2422111a96377ee9" />
 		<entry key="SceneLoad.FailedTitle" text="불러오기 실패" sourceHash="3b0d43abf06f4ac4" />
 		<entry key="SceneLoad.Retry" text="다시 시도" sourceHash="8cdcbe65c5e46f7a" />
-		<entry key="ServerPicker.Idle"
-		       text="새로 고침을 누르면 서버 목록을 보입니다"
-		       sourceHash="90268a2738feb664" />
-		<entry key="ServerPicker.LoadFailed"
-		       text="서버 목록을 불러오지 못했습니다(오류 {error})"
-		       sourceHash="9f1431b46bb9b536" />
-		<entry key="ServerPicker.Loading" text="서버 목록을 불러오는 중..." sourceHash="fc9faff913354a2f" />
-		<entry key="ServerPicker.None"
-		       text="지금 들어갈 수 있는 서버가 없습니다"
-		       sourceHash="5fd07d96180b4276" />
-		<entry key="ServerPicker.Pick" text="서버를 고르세요" sourceHash="6711b33edde339d6" />
-		<entry key="ServerPicker.Row" text="{region}  {fill}%  {state}" sourceHash="e8ee51c94be0f27e" />
 		<entry key="Shop.BalanceLine" text="{amount} {currency}" sourceHash="cc7c013f5ab43d0a" />
 		<entry key="Shop.ConfirmAccept" text="구매" sourceHash="166a4319b11387ab" />
 		<entry key="Shop.ConfirmCancel" text="취소" sourceHash="2ceb11be2290bb1b" />
@@ -892,17 +728,6 @@
 		<entry key="UIMenu.QuitAccept" text="끝내기" sourceHash="45156213b0fb2396" />
 		<entry key="UIMenu.QuitMessage" text="게임을 끝낼까요?" sourceHash="d9be4613bcb7a27a" />
 		<entry key="UIMenu.QuitTitle" text="게임 종료" sourceHash="92aee0b2e93f7fd0" />
-		<entry key="Western.Bounty" text="현상금 ${amount}" sourceHash="c58db76a5bd04bb6" />
-		<entry key="Western.Carcasses" text="사체 {count}" sourceHash="ddc82144621ac028" />
-		<entry key="Western.Honor" text="명예 {honor}({tier})" sourceHash="993157e899c31860" />
-		<entry key="Western.Hungry" text="배고픔" sourceHash="d5f6173b71caeddc" />
-		<entry key="Western.Money" text="${amount}" sourceHash="99e2e4655d7f5a1b" />
-		<entry key="Western.OnFoot" text="걷는 중 - E: 타기  F: 휘파람" sourceHash="1682216146fa816d" />
-		<entry key="Western.Pelts" text="가죽 {count}" sourceHash="85a0fcd45b363acc" />
-		<entry key="Western.Riding"
-		       text="{horse} 탑승 - {gait} {speed} m/s - E: 내리기  Shift: 질주"
-		       sourceHash="b783302b2e4d4c79" />
-		<entry key="Western.Wanted" text="수배 {level}" sourceHash="d1573e50d443252a" />
 		<entry key="You have changes that are not applied."
 		       text="적용하지 않은 변경이 있습니다."
 		       sourceHash="9ea9ff2b01f83378" />

@@ -1,0 +1,50 @@
+<?asset guid="a160872002b3422e8528dae2f6cf4314"?>
+<SourceStringTable culture="en">
+	<entries>
+		<entry key="Western.Bounty" source="Bounty ${amount}">
+			<origins>
+				<item>Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Western.Carcasses" source="Carcasses {count}">
+			<origins>
+				<item>Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Western.Honor" source="Honor {honor} ({tier})">
+			<origins>
+				<item>Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Western.Hungry" source="Hungry">
+			<origins>
+				<item>Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Western.Money" source="${amount}">
+			<origins>
+				<item>Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Western.OnFoot" source="On foot - E: mount  F: whistle">
+			<origins>
+				<item>Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Western.Pelts" source="Pelts {count}">
+			<origins>
+				<item>Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Western.Riding" source="Riding {horse} - {gait} {speed} m/s - E: dismount  Shift: gallop">
+			<origins>
+				<item>Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Western.Wanted" source="Wanted {level}">
+			<origins>
+				<item>Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp</item>
+			</origins>
+		</entry>
+	</entries>
+</SourceStringTable>

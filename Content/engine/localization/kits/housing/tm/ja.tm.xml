@@ -1,0 +1,8 @@
+<?asset guid="de5b9caa5ac4494c891a3e569758b772"?>
+<TranslationMemory culture="ja">
+	<entries>
+		<entry source="Bounds and cells of every housing plot in the scene, with its id and size"
+		       text="シーンのハウジング敷地ごとの境界とマス、ID とサイズ" />
+		<entry source="Plots" text="敷地" />
+	</entries>
+</TranslationMemory>

@@ -1,0 +1,20 @@
+<?asset guid="138d711ab89043f9af7d843b5bc5f77e"?>
+<TranslationMemory culture="ko">
+	<entries>
+		<entry source="Chat is not available right now" text="지금은 채팅할 수 없습니다" />
+		<entry source="Message is empty or not valid" text="메시지가 비었거나 올바르지 않습니다" />
+		<entry source="Message not found" text="메시지를 찾을 수 없습니다" />
+		<entry source="Message was blocked by the word filter"
+		       text="단어 거르기에 걸려 메시지를 보내지 못했습니다" />
+		<entry source="Sign in to chat" text="채팅하려면 로그인하세요" />
+		<entry source="That player is offline" text="상대가 접속해 있지 않습니다" />
+		<entry source="This channel cannot be joined" text="참여할 수 없는 채널입니다" />
+		<entry source="Too fast, try again soon" text="너무 빠릅니다. 잠시 뒤에 다시 시도하세요" />
+		<entry source="Too fast, wait {milliseconds} ms" text="너무 빠릅니다. {milliseconds}ms 기다리세요" />
+		<entry source="Too many channels" text="채널이 너무 많습니다" />
+		<entry source="Update the game to chat" text="채팅하려면 게임을 업데이트하세요" />
+		<entry source="You already said that" text="이미 한 말입니다" />
+		<entry source="You are muted ({seconds} s left)" text="채팅이 금지되어 있습니다({seconds}초 남음)" />
+		<entry source="You have not joined this channel" text="참여하지 않은 채널입니다" />
+	</entries>
+</TranslationMemory>

@@ -1,0 +1,35 @@
+<?asset guid="3cabb13663f540c3a7eac8abfb870063"?>
+<SourceStringTable culture="en">
+	<entries>
+		<entry key="ServerPicker.Idle" source="Press Refresh to list servers">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/ServerDirectory/Client/ServerPickerScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="ServerPicker.LoadFailed" source="Could not load the server list (error {error})">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/ServerDirectory/Client/ServerPickerScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="ServerPicker.Loading" source="Loading servers...">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/ServerDirectory/Client/ServerPickerScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="ServerPicker.None" source="No server is available right now">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/ServerDirectory/Client/ServerPickerScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="ServerPicker.Pick" source="Pick a server">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/ServerDirectory/Client/ServerPickerScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="ServerPicker.Row" source="{region}  {fill}%  {state}">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/ServerDirectory/Client/ServerPickerScreen.cpp</item>
+			</origins>
+		</entry>
+	</entries>
+</SourceStringTable>

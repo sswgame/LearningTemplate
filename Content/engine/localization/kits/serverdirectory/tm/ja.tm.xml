@@ -1,0 +1,12 @@
+<?asset guid="81ed7be9c7724747a26e67147bac07fc"?>
+<TranslationMemory culture="ja">
+	<entries>
+		<entry source="Could not load the server list (error {error})"
+		       text="サーバー一覧を読み込めませんでした(エラー {error})" />
+		<entry source="Loading servers..." text="サーバーを読み込み中..." />
+		<entry source="No server is available right now" text="現在利用できるサーバーはありません" />
+		<entry source="Pick a server" text="サーバーを選んでください" />
+		<entry source="Press Refresh to list servers" text="更新を押すとサーバー一覧を表示します" />
+		<entry source="{region}  {fill}%  {state}" text="{region}  {fill}%  {state}" />
+	</entries>
+</TranslationMemory>

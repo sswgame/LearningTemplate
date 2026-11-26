@@ -64,6 +64,9 @@ namespace sw::editor
             SW_LOG_WARNING_ID( "EditorContext.NoLocalizationManagerEditorText", "No LocalizationManager - editor text shows its keys" );
         else if ( pLocalization->mountProject( AssetID{ defaultAssets._localizationProject.get() }, LocalizationScope::Editor ) == false )
             SW_LOG_WARNING_ID( "EditorContext.EditorLocalizationProjectNot", "Editor localization project '%#' is not (fully) loaded", defaultAssets._localizationProject.get() );
+        // 에디터 확장 키트(`GF_EditorPlugin_*`)가 등록한 현지화 프로젝트도 붙인다 — 엔진 기동 단계 뒤에 올라온 모듈의 몫이다.
+        if ( pLocalization != nullptr && pLocalization->syncModuleProjects() == false )
+            SW_LOG_ERROR_ID( "EditorContext.ModuleLocalizationProjectsNot", "Localization projects of the loaded editor modules are not all loaded - their text shows its keys" );
 
         // 종료 시간을 서브시스템마다 잰다 — 백엔드 교체 · 리로드가 에디터를 내리고 다시 세우므로 그 몫이 어디서 드는지 줄 하나로 보인다.
         SubsystemTimingReport::enableTiming( _scope.getCollection() );

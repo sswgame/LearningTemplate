@@ -1,0 +1,17 @@
+<?asset guid="0ffbb584a2fe4d4291c9b65d0e99df05"?>
+<TranslationTable culture="ko">
+	<entries>
+		<entry key="ServerPicker.Idle"
+		       text="새로 고침을 누르면 서버 목록을 보입니다"
+		       sourceHash="90268a2738feb664" />
+		<entry key="ServerPicker.LoadFailed"
+		       text="서버 목록을 불러오지 못했습니다(오류 {error})"
+		       sourceHash="9f1431b46bb9b536" />
+		<entry key="ServerPicker.Loading" text="서버 목록을 불러오는 중..." sourceHash="fc9faff913354a2f" />
+		<entry key="ServerPicker.None"
+		       text="지금 들어갈 수 있는 서버가 없습니다"
+		       sourceHash="5fd07d96180b4276" />
+		<entry key="ServerPicker.Pick" text="서버를 고르세요" sourceHash="6711b33edde339d6" />
+		<entry key="ServerPicker.Row" text="{region}  {fill}%  {state}" sourceHash="e8ee51c94be0f27e" />
+	</entries>
+</TranslationTable>

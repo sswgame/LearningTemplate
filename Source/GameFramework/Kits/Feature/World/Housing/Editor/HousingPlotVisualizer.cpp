@@ -13,11 +13,18 @@
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Localization/LocText.h"
+#include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 
 #include "GameFramework/Kits/Feature/World/Housing/Component/HousingPlotComponent.h"
+
+namespace sw
+{
+    // Housing 키트의 글(엔진 현지화 폴더의 `kits/housing/`) — 이 모듈이 올라온 동안 조회 사슬에 든다(언리얼 플러그인 현지화 타깃)
+    SW_LOCALIZATION_PROJECT( HousingKit, "engine/localization/kits/housing/housing.locproject.xml" );
+} // namespace sw
 
 namespace sw::editor
 {

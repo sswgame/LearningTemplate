@@ -1,0 +1,15 @@
+<?asset guid="46bb05f80ec841578cacad6507ba28c5"?>
+<TranslationMemory culture="ko">
+	<entries>
+		<entry source="${amount}" text="${amount}" />
+		<entry source="Bounty ${amount}" text="현상금 ${amount}" />
+		<entry source="Carcasses {count}" text="사체 {count}" />
+		<entry source="Honor {honor} ({tier})" text="명예 {honor}({tier})" />
+		<entry source="Hungry" text="배고픔" />
+		<entry source="On foot - E: mount  F: whistle" text="걷는 중 - E: 타기  F: 휘파람" />
+		<entry source="Pelts {count}" text="가죽 {count}" />
+		<entry source="Riding {horse} - {gait} {speed} m/s - E: dismount  Shift: gallop"
+		       text="{horse} 탑승 - {gait} {speed} m/s - E: 내리기  Shift: 질주" />
+		<entry source="Wanted {level}" text="수배 {level}" />
+	</entries>
+</TranslationMemory>

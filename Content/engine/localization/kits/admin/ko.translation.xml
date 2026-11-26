@@ -1,0 +1,69 @@
+<?asset guid="c0a14e7f4b2a4ea98b5f2b8740b698fb"?>
+<TranslationTable culture="ko">
+	<entries>
+		<entry key="EdPlugin.ApplySanction" text="제재 적용" sourceHash="9f0c979ae0d9d618" />
+		<entry key="EdPlugin.ClosedReports" text="닫은 신고" sourceHash="3c5905586fa5e736" />
+		<entry key="EdPlugin.Disconnect" text="연결 끊기" sourceHash="d2208cd1a767644b" />
+		<entry key="EdPlugin.Dismiss" text="닫기" sourceHash="12d6dde9b30c3093" />
+		<entry key="EdPlugin.Edit" text="편집" sourceHash="64ef2a6c2dd1d3d1" />
+		<entry key="EdPlugin.EndMaintenance" text="점검 끝내기" sourceHash="7d5699fb9376bca1" />
+		<entry key="EdPlugin.Grant" text="지급" sourceHash="ef16778fe7074a8d" />
+		<entry key="EdPlugin.LiftSanction" text="제재 풀기" sourceHash="81fdfffbe8a3f431" />
+		<entry key="EdPlugin.ListAudit" text="감사 기록 보기" sourceHash="961acb5f276c143a" />
+		<entry key="EdPlugin.ListLiveEvents" text="라이브 이벤트 보기" sourceHash="418530c2b0d3dec6" />
+		<entry key="EdPlugin.LookUpAnAccountToSeeItsBalances"
+		       text="계정을 찾으면 잔액과 제재가 보입니다"
+		       sourceHash="5be35335366b396f" />
+		<entry key="EdPlugin.Lookup" text="찾기" sourceHash="3b29e8112bce0f0b" />
+		<entry key="EdPlugin.NoLoginHandlerIsBoundGMCommandsAre"
+		       text="로그인 처리기가 없습니다: GM 명령은 로그인하지 않은 것으로 거절됩니다"
+		       sourceHash="0a0746e5bde7cb37" />
+		<entry key="EdPlugin.OpenReports" text="열린 신고" sourceHash="f38f9ccb5aa4a4d2" />
+		<entry key="EdPlugin.PostAnnouncement" text="공지 올리기" sourceHash="37e6931da5f87431" />
+		<entry key="EdPlugin.PutLiveEvent" text="라이브 이벤트 넣기" sourceHash="9a54ec5c13858e78" />
+		<entry key="EdPlugin.RefundRevokeMayLeaveADebt"
+		       text="환불 회수(빚이 남을 수 있다)"
+		       sourceHash="a7c96eb259368178" />
+		<entry key="EdPlugin.RemoveAnnouncement" text="공지 지우기" sourceHash="9d6cadb063f5b14f" />
+		<entry key="EdPlugin.RemoveLiveEvent" text="라이브 이벤트 지우기" sourceHash="286ec822b6f1b615" />
+		<entry key="EdPlugin.Resolve" text="처리" sourceHash="4de430b40c94e903" />
+		<entry key="EdPlugin.Revoke" text="회수" sourceHash="0e871352ba4b17d3" />
+		<entry key="EdPlugin.StartMaintenance" text="점검 시작" sourceHash="2e417dd12aa53688" />
+		<entry key="EdPluginField.Amount" text="양" sourceHash="ba98a7152d80b949" />
+		<entry key="EdPluginField.AnnouncementId" text="공지 id" sourceHash="346e643ae672864e" />
+		<entry key="EdPluginField.AnnouncementSeconds0UntilRemoved"
+		       text="공지 초(0 = 지울 때까지)"
+		       sourceHash="5ca50ca62e3f11de" />
+		<entry key="EdPluginField.GMPassword" text="GM 비밀번호" sourceHash="73021dd72e500432" />
+		<entry key="EdPluginField.MaintenanceSeconds0UntilCleared"
+		       text="점검 초(0 = 풀 때까지)"
+		       sourceHash="14988336ae4ff447" />
+		<entry key="EdPluginField.Priority" text="우선순위" sourceHash="a4e407b3a0fe4669" />
+		<entry key="EdPluginField.Seconds" text="초" sourceHash="c4842e5b8b90466a" />
+		<entry key="EdPluginFormat.GMConnection" text="GM 연결: {stateText}" sourceHash="ba6187deff08f6db" />
+		<entry key="EdPluginFormat.Id"
+		       text="{displayName}  (id {accountID})  {presence, select, online {접속 중} other {접속 안 함}}"
+		       sourceHash="474a28b48d6cce02" />
+		<entry key="EdPluginFormat.Provider" text="제공자: {providerName}" sourceHash="eff920aeeb94ed28" />
+		<entry key="EdPluginWidget.Account" text="계정" sourceHash="846b3790b6e25c1c" />
+		<entry key="EdPluginWidget.AccountIdHex" text="계정 id(16진수)" sourceHash="b6db0ef22675ed05" />
+		<entry key="EdPluginWidget.ActingRole" text="맡은 역할" sourceHash="25bba11d3a172de3" />
+		<entry key="EdPluginWidget.AnnouncementText" text="공지 글" sourceHash="30c28e16a2b1dc84" />
+		<entry key="EdPluginWidget.AssetId" text="에셋 id" sourceHash="69d468f7fdd713f4" />
+		<entry key="EdPluginWidget.AuditLog" text="감사 기록" sourceHash="2bd16f12896a150a" />
+		<entry key="EdPluginWidget.EventId" text="이벤트 id" sourceHash="9b572c9af0cf6ef8" />
+		<entry key="EdPluginWidget.EventJson" text="이벤트 JSON" sourceHash="f9211a1af156135b" />
+		<entry key="EdPluginWidget.GrantRevoke" text="지급 / 회수" sourceHash="b43e7fa0410aeb6e" />
+		<entry key="EdPluginWidget.LiveEvents" text="라이브 이벤트" sourceHash="b5622b26740874ec" />
+		<entry key="EdPluginWidget.MaintenanceAnnouncement" text="점검 / 공지" sourceHash="85b0db04bdd7964f" />
+		<entry key="EdPluginWidget.MemoTicket" text="메모(티켓)" sourceHash="fdcbf34ceeb42ab6" />
+		<entry key="EdPluginWidget.MessageKey" text="메시지 키" sourceHash="a982200e6ce2d4db" />
+		<entry key="EdPluginWidget.ReasonCode" text="사유 코드" sourceHash="e4e83587c443b062" />
+		<entry key="EdPluginWidget.Reports" text="신고" sourceHash="884bcdca26998a48" />
+		<entry key="EdPluginWidget.Sanction" text="제재" sourceHash="454ca7e5daa9851c" />
+		<entry key="EdPluginWidget.ScopeAllOrServerKind"
+		       text="범위(all 또는 서버 종류)"
+		       sourceHash="b549f10e94463f43" />
+		<entry key="EdPluginWidget.SubjectPrefix" text="주체 접두어" sourceHash="f5ff56bd51df1f21" />
+	</entries>
+</TranslationTable>

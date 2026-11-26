@@ -79,6 +79,29 @@ namespace
 using Internal = LocalizationManagerTestInternal;
 
 /**
+ * @brief [LocalizationManagerTest] 키트 모듈이 등록한 프로젝트는 맞추기(`syncModuleProjects`)가 올리고, 등록이 사라지면(모듈이 내려감) 뗀다
+ * @details 음성 대조: 맞추기가 새 등록을 올리지 않으면 첫 조회가 지고, 사라진 등록을 떼지 않으면 마지막 조회가 원문을 그대로 돌려줘 진다.
+ */
+SW_TEST_CASE( LocalizationManagerTest, ModuleProjectsFollowTheirRegistration )
+{
+    const ScopedScratchDomain domain;
+    const sw::string          projectID = ScopedScratchDomain::toIDText( Internal::writeSampleProject( domain.getFolder() ) );
+    sw::LocalizationManager   loc;
+    {
+        const sw::LocalizationModuleProject          project{ projectID.c_str() };
+        const sw::LocalizationModuleProjectRegistrar registrar{ &project };
+        SW_REQUIRE_TRUE( loc.syncModuleProjects() );
+        SW_EXPECT_EQUAL( size_t( 1 ), loc.getMountedProjectNames().size() );
+        SW_EXPECT_EQUAL( sw::string( "Mystery Island" ), Internal::text( loc.findString( sw::hashed_string( "ui.title" ) ) ) );
+        SW_REQUIRE_TRUE( loc.syncModuleProjects() ); // 이미 올린 등록은 다시 올리지 않는다
+        SW_EXPECT_EQUAL( size_t( 1 ), loc.getMountedProjectNames().size() );
+    }
+    SW_REQUIRE_TRUE( loc.syncModuleProjects() );
+    SW_EXPECT_TRUE( loc.getMountedProjectNames().empty() );
+    SW_EXPECT_NULL( loc.findString( sw::hashed_string( "ui.title" ) ) );
+}
+
+/**
  * @brief [LocalizationManagerTest] 독립적인 복수 인스턴스 — 낱개 표는 인스턴스마다 따로다
  */
 SW_TEST_CASE( LocalizationManagerTest, NonSingletonIndependence )
@@ -472,20 +495,35 @@ SW_TEST_CASE( LocalizedMessageTest, ResolvesInTheLanguageOfTheMoment )
 }
 
 /**
- * @brief [LocalizedMessageTest] 열거값의 보일 글 — 키는 `Enum.<열거형>.<열거자>` 이고, 표에 없으면 원문(DisplayName)을, 원문도 없으면 열거자 이름을 돌려준다
- * @details 음성 대조: 키를 열거형 FQN(`sw::TestMetaEnum`)으로 만들면 수집기가 넣은 키와 어긋나 첫 기대와 표 조회가 진다. 범위 밖 값이 공통 키로 가지 않고 이름을 지어내면 그 두 기대가 진다.
+ * @brief [LocalizationManagerEngineTest] 열거값의 보일 글 — 키는 `Enum.<열거형>.<열거자>` 이고, 표에서 찾고, 표에 없으면 빠진 키로 알린 뒤 원문(DisplayName)을, 원문도 없으면 열거자 이름을 돌려준다
+ * @details 테스트가 제 낱개 표(`qa`)에 키를 세운다 — 수집기가 쓴 엔진 표에 기대지 않는다. 픽스처가 `qa` 표 · 빠진 키 · 언어를 되돌린다.
+ *          음성 대조: 키를 열거형 FQN(`sw::TestMetaEnum`)으로 만들면 표 조회가 지고 빠진 키가 하나 더 생겨 예상 로그가 맞지 않는다. 범위 밖 값이 공통 키로 가지 않으면 마지막 두 기대가 진다.
  */
-SW_TEST_CASE( LocalizedMessageTest, EnumeratorDisplayTextUsesEnumKey )
+SW_TEST_CASE_F( LocalizationManagerEngineTest, EnumeratorDisplayTextUsesEnumKey )
 {
-    SW_EXPECT_EQUAL( string( "Enum.TestMetaEnum.First" ), LocalizedText::makeEnumKey( TestMetaEnum::First ) );
-    SW_EXPECT_EQUAL( string( "First Choice" ), string( LocalizedText::findEnum( TestMetaEnum::First ) ) );
-    SW_EXPECT_EQUAL( string( "The first one" ), string( LocalizedText::findEnumTooltip( TestMetaEnum::First ) ) );
-    SW_EXPECT_EQUAL( string( "Second" ), string( LocalizedText::findEnum( TestMetaEnum::Second ) ) );
-    SW_EXPECT_EQUAL( string(), string( LocalizedText::findEnumTooltip( TestMetaEnum::Second ) ) );
-    SW_EXPECT_EQUAL( string( "unknown" ), string( LocalizedText::findEnum( static_cast<TestMetaEnum>( 7 ) ) ) ); // 범위 밖 값은 공통 키의 원문
-    SW_EXPECT_EQUAL( string( "Enum.Unknown" ), LocalizedText::makeEnumKey( static_cast<TestMetaEnum>( 7 ) ) );
+    _loc.setString( "qa", hashed_string( "Enum.TestMetaEnum.First" ), "QA First" );
+    _loc.setString( "qa", hashed_string( "Enum.TestMetaEnum.First.Tooltip" ), "QA first tip" );
+    _loc.setString( "qa", hashed_string( "Enum.Unknown" ), "QA unknown" );
+    SW_REQUIRE_TRUE( _loc.setCurrentLanguage( "qa" ) );
 
-    // 화면이 든 키는 그릴 때의 표로 풀린다(배포는 메타 없이 이 길만 쓴다).
+    SW_EXPECT_EQUAL( string( "Enum.TestMetaEnum.First" ), LocalizedText::makeEnumKey( TestMetaEnum::First ) );
+    SW_EXPECT_EQUAL( string( "QA First" ), string( LocalizedText::findEnum( TestMetaEnum::First ) ) );
+    SW_EXPECT_EQUAL( string( "QA first tip" ), string( LocalizedText::findEnumTooltip( TestMetaEnum::First ) ) );
+    SW_EXPECT_EQUAL( string(), string( LocalizedText::findEnumTooltip( TestMetaEnum::Second ) ) ); // 툴팁을 적지 않은 열거자는 표를 보지 않는다
+    // 표에 없는 키는 빠진 키로 알리고 원문을 보인다 — `Second` 는 DisplayName 도 없어 열거자 이름이다.
+    SW_EXPECT_LOG( "Localization.MissingKey" );
+    SW_EXPECT_EQUAL( string( "Second" ), string( LocalizedText::findEnum( TestMetaEnum::Second ) ) );
+    const vector<string> listMissing = _loc.getMissingKeys();
+    SW_REQUIRE_EQUAL( size_t( 1 ), listMissing.size() );
+    SW_EXPECT_EQUAL( string( "Enum.TestMetaEnum.Second" ), listMissing[0] );
+    SW_EXPECT_EQUAL( string( "QA unknown" ), string( LocalizedText::findEnum( static_cast<TestMetaEnum>( 7 ) ) ) ); // 범위 밖 값은 공통 키
+    SW_EXPECT_EQUAL( string( "Enum.Unknown" ), LocalizedText::makeEnumKey( static_cast<TestMetaEnum>( 7 ) ) );
+}
+
+/** @brief [LocalizedMessageTest] 화면이 든 열거값 키는 그릴 때의 표로 풀린다(배포는 메타 없이 이 길만 쓴다) */
+SW_TEST_CASE( LocalizedMessageTest, EnumeratorKeyResolvesInTheLanguageOfTheMoment )
+{
+
     LocalizationManager localization;
     localization.setString( "ko", hashed_string( "Enum.TestMetaEnum.First" ), "첫째" );
     SW_REQUIRE_TRUE( localization.setCurrentLanguage( "ko" ) );

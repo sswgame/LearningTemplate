@@ -24,6 +24,7 @@
 #include "Core/Serialization/BitStream.h"
 
 #include "Engine/EngineMinimal.h"
+#include "Engine/Reflection/ReflectionEnumMacros.h"
 #include "Engine/Reflection/ReflectionFwd.h"
 #include "Engine/Reflection/ReflectionMetadataBox.h"
 #include "Engine/Reflection/TypeFqn.h"
@@ -36,7 +37,8 @@ namespace sw
     class NetMessageChannel;
     struct ReplicatedLayout;
 
-    /** @brief 읽기 결과입니다. `Ok` 가 아니면 대상 객체는 바뀌지 않았습니다. 결과를 버리면 컴파일이 멈춥니다. */
+    /** @brief 읽기 결과입니다. `Ok` 가 아니면 대상 객체는 바뀌지 않았습니다. 결과를 버리면 컴파일이 멈춥니다. 로그 이름은 `getEnumName` 입니다. */
+    ENUM()
     enum class [[nodiscard]] FixedReadResult : uint8
     {
         Ok,
@@ -424,9 +426,6 @@ namespace sw
         [[nodiscard]] static uint64 computeSchemaHash( uint32 version, string_view canonical, std::initializer_list<uint64> listNestedHash );
         /** @brief 코덱의 스키마 해시입니다. 정규 문자열과 의존 코덱의 해시(의존 차례)로 셈하고 코덱에 남겨 둡니다. */
         [[nodiscard]] static uint64 getSchemaHash( const FixedCodec& codec );
-
-        /** @brief 로그에 쓰는 이름입니다. */
-        static const utf8* toString( FixedReadResult result ) noexcept;
 
     private:
         template <typename T>

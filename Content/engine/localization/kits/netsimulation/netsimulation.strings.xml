@@ -1,0 +1,46 @@
+<?asset guid="35383fe45b2b498ca641d236548bc6ca"?>
+<SourceStringTable culture="en">
+	<entries>
+		<entry key="EdPlugin.NoInProcessGameIsRegisteredNetSimGameRegistryOnly"
+		       source="No in-process game is registered (NetSimGameRegistry) - only games with a kit session (INetSimSession) can run here.">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Network/NetSimulation/Editor/MultiplayerInProcessTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.StartInProcess" source="Start in process">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Network/NetSimulation/Editor/MultiplayerInProcessTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.Stop" source="Stop">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Network/NetSimulation/Editor/MultiplayerInProcessTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginField.Clients" source="Clients">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Network/NetSimulation/Editor/MultiplayerInProcessTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginFormat.Client" source="{focused}Client {worldIndex}">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Network/NetSimulation/Editor/MultiplayerInProcessTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginFormat.Server" source="{focused}Server">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Network/NetSimulation/Editor/MultiplayerInProcessTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginFormat.TickInputFocusWorld" source="tick {tick}  input focus: world {inputFocus}">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Network/NetSimulation/Editor/MultiplayerInProcessTab.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginWidget.Game" source="Game">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Network/NetSimulation/Editor/MultiplayerInProcessTab.cpp</item>
+			</origins>
+		</entry>
+	</entries>
+</SourceStringTable>

@@ -1,0 +1,14 @@
+<?asset guid="4848530a435a452db24ab3c086e9cc9e"?>
+<TranslationMemory culture="ko">
+	<entries>
+		<entry source="Clients" text="클라이언트" />
+		<entry source="Game" text="게임" />
+		<entry source="No in-process game is registered (NetSimGameRegistry) - only games with a kit session (INetSimSession) can run here."
+		       text="한 프로세스 게임이 등록되지 않았습니다(NetSimGameRegistry) — 키트 세션(INetSimSession)이 있는 게임만 여기서 돕니다." />
+		<entry source="Start in process" text="한 프로세스로 시작" />
+		<entry source="Stop" text="정지" />
+		<entry source="tick {tick}  input focus: world {inputFocus}" text="틱 {tick}  입력 초점: 월드 {inputFocus}" />
+		<entry source="{focused}Client {worldIndex}" text="{focused}클라이언트 {worldIndex}" />
+		<entry source="{focused}Server" text="{focused}서버" />
+	</entries>
+</TranslationMemory>

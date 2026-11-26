@@ -1,0 +1,15 @@
+<?asset guid="af653006cbaf40bdb3ebf863ebf286db"?>
+<TranslationMemory culture="ja">
+	<entries>
+		<entry source="Clients" text="クライアント" />
+		<entry source="Game" text="ゲーム" />
+		<entry source="No in-process game is registered (NetSimGameRegistry) - only games with a kit session (INetSimSession) can run here."
+		       text="インプロセスゲームが登録されていません(NetSimGameRegistry) — キットセッション(INetSimSession)のあるゲームだけがここで動きます。" />
+		<entry source="Start in process" text="インプロセスで開始" />
+		<entry source="Stop" text="停止" />
+		<entry source="tick {tick}  input focus: world {inputFocus}"
+		       text="ティック {tick}  入力フォーカス: ワールド {inputFocus}" />
+		<entry source="{focused}Client {worldIndex}" text="{focused}クライアント {worldIndex}" />
+		<entry source="{focused}Server" text="{focused}サーバー" />
+	</entries>
+</TranslationMemory>

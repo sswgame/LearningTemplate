@@ -1,0 +1,31 @@
+<?asset guid="28641245e4064a42aabf27002781a2da"?>
+<TranslationTable culture="ko">
+	<entries>
+		<entry key="Chat.InvalidMessage"
+		       text="메시지가 비었거나 올바르지 않습니다"
+		       sourceHash="90852f96d275f811" />
+		<entry key="Chat.SignIn" text="채팅하려면 로그인하세요" sourceHash="3e1a44cdd263dd1e" />
+		<entry key="Chat.TooFast"
+		       text="너무 빠릅니다. 잠시 뒤에 다시 시도하세요"
+		       sourceHash="51ec7c4fa8414af5" />
+		<entry key="Chat.Unavailable" text="지금은 채팅할 수 없습니다" sourceHash="97824550bff00311" />
+		<entry key="Chat.UpdateGame" text="채팅하려면 게임을 업데이트하세요" sourceHash="42ac26bc346890e2" />
+		<entry key="Enum.ChatResult.Muted"
+		       text="채팅이 금지되어 있습니다({seconds}초 남음)"
+		       sourceHash="d44ad231e1dc9e57" />
+		<entry key="Enum.ChatResult.NotFound" text="메시지를 찾을 수 없습니다" sourceHash="9e5e30bbb5ad2ca9" />
+		<entry key="Enum.ChatResult.NotJoinable" text="참여할 수 없는 채널입니다" sourceHash="46a0dd5bcc062ecf" />
+		<entry key="Enum.ChatResult.NotMember" text="참여하지 않은 채널입니다" sourceHash="3e5bfdfd4245bf3b" />
+		<entry key="Enum.ChatResult.RateLimited"
+		       text="너무 빠릅니다. {milliseconds}ms 기다리세요"
+		       sourceHash="e5b6fe8229c21b06" />
+		<entry key="Enum.ChatResult.Rejected"
+		       text="단어 거르기에 걸려 메시지를 보내지 못했습니다"
+		       sourceHash="9f4be67ffd43a11b" />
+		<entry key="Enum.ChatResult.Repeated" text="이미 한 말입니다" sourceHash="3aed68501070baae" />
+		<entry key="Enum.ChatResult.TargetOffline"
+		       text="상대가 접속해 있지 않습니다"
+		       sourceHash="4e2a36c23fcdbdc0" />
+		<entry key="Enum.ChatResult.TooManyChannels" text="채널이 너무 많습니다" sourceHash="b67867eff6d1139c" />
+	</entries>
+</TranslationTable>

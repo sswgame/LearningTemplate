@@ -1,0 +1,27 @@
+<?asset guid="f06297a89a5e4da9bcd8d9026a991192"?>
+<TranslationMemory culture="ko">
+	<entries>
+		<entry source="Capacity" text="정원" />
+		<entry source="Check" text="검사" />
+		<entry source="Cost" text="비용" />
+		<entry source="Entrance is inside the footprint" text="입구가 바닥 영역 안에 있음" />
+		<entry source="Focus gate" text="정문 보기" />
+		<entry source="Move the scene view camera to the park gate"
+		       text="씬 뷰 카메라를 공원 정문으로 옮깁니다" />
+		<entry source="Overlaps {name}" text="{name}와 겹침" />
+		<entry source="Park" text="놀이공원" />
+		<entry source="Reload" text="다시 불러오기" />
+		<entry source="Ride" text="놀이기구" />
+		<entry source="Ride footprints, entrances and coaster tracks of the ThemePark layout file (rides.xml)"
+		       text="ThemePark 배치 파일(rides.xml)의 놀이기구 발자국, 입구, 코스터 트랙" />
+		<entry source="Same id as {name}" text="{name}와 id 가 같음" />
+		<entry source="The park layout could not be read ({path}). Fix the file (see the log) and press Reload."
+		       text="공원 배치를 읽지 못했습니다({path}). 로그를 보고 파일을 고친 뒤 다시 불러오세요." />
+		<entry source="This game has no park layout data ({path})"
+		       text="이 게임에는 공원 배치 데이터가 없습니다({path})" />
+		<entry source="Ticket" text="탑승료" />
+		<entry source="Time (s)" text="시간(초)" />
+		<entry source="Total cost {cost}  ·  starting cash {cash}  ·  entry fee {fee}  ·  layout issues {issues}"
+		       text="총 비용 {cost}  ·  시작 자금 {cash}  ·  입장료 {fee}  ·  배치 문제 {issues}" />
+	</entries>
+</TranslationMemory>
