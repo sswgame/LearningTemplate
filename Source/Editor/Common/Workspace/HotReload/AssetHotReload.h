@@ -176,7 +176,7 @@ namespace sw::editor
          */
         [[nodiscard]] static ReloadResult reloadInCachesHolding( AssetManager& resources, const AssetID& assetID );
         /**
-         * @brief `reloadCaches` 의 본문 — 캐시를 다시 읽기만 하고 적지 않습니다. 결과를 집계(`ReloadTracker`)에 적는 곳은 `reloadCaches` 한 곳이다.
+         * @brief `reloadCaches` 의 본문 — 캐시를 다시 읽기만 하고 적지 않습니다. 결과를 집계(`HotReloadTracker`)에 적는 곳은 `reloadCaches` 한 곳이다.
          * @param outReason 실패면 까닭 한 줄(정적 글)을 받습니다.
          */
         [[nodiscard]] static ReloadResult reloadCacheEntries( const AssetReloadRoute& route, const AssetID& assetID, const utf8*& outReason );

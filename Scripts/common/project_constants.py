@@ -34,7 +34,7 @@ DIR_RUNTIME_SERVER_PRESET = "Config/Server"
 # 빌드의 활성 게임 이름을 담는 파일(Dev, `Bin/Modules/<이 이름>`) — `-game=` 이 없을 때 `GameSelection` 이 읽는다. 엔진 TU 에 게임 이름을 굽지 않으려고 파일로 둔다.
 FILE_ACTIVE_GAME = "ActiveGame.txt"
 # 모듈 빌드 성공 스탬프(Dev, `Bin/Modules/<이 이름>`) — 빌드가 동적 모듈을 모두 링크한 뒤에만 다시 쓴다(`sw_add_module_build_stamp`).
-# 바깥 빌드(터미널 · IDE)의 모듈 변경은 `LiveReloadManager` 가 이 파일이 바뀔 때만 올린다(반쯤 링크된 집합을 올리지 않는다).
+# 바깥 빌드(터미널 · IDE)의 모듈 변경은 `ModuleHotReloadManager` 가 이 파일이 바뀔 때만 올린다(반쯤 링크된 집합을 올리지 않는다).
 FILE_MODULE_BUILD_STAMP = "ModuleBuild.stamp"
 # 함께 지은 게임 팩 폴더(Dev, `Bin/<이 이름>/<게임>/SWGame` · `Bin/Symbols/<이 이름>/<게임>/`) — `SW_GAMES`.
 DIR_BIN_GAMES = "Games"

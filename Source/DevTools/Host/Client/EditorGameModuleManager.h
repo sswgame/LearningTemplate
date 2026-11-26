@@ -36,13 +36,13 @@ namespace sw
         ~EditorGameModuleManager() override;
 
         /** @brief 매니페스트가 에디터 모듈을 켰는지 기억하고 공통 `GameModuleManager::loadModuleLibraries` 를 부릅니다. */
-        [[nodiscard]] bool loadModuleLibraries( ILiveReloadManager* pLiveReloadManager, const ModuleCatalog& catalog, const ModuleResolution& resolution ) override;
+        [[nodiscard]] bool loadModuleLibraries( IModuleHotReloadManager* pModuleHotReloadManager, const ModuleCatalog& catalog, const ModuleResolution& resolution ) override;
         /**
          * @brief 게임과 에디터 인스턴스를 만들고 에디터 렌더 훅 · 창 최소 크기를 겁니다(게임 모듈 라이브러리는 `loadModuleLibraries` 가 이미 로드했습니다).
          * @details 게임이 먼저, 에디터가 나중입니다. 게임이 처음 여는 씬(실행 설정의 시작 씬, 타이틀, 시작 맵)을 요청한 뒤에 에디터가 자기 시작 씬
          *          (`-gv_editorStartupScene`)을 요청해야, 마지막 요청을 남기는 씬 매니저에서 에디터의 씬이 열립니다.
          */
-        [[nodiscard]] bool initializeClient( ILiveReloadManager* pLiveReloadManager, RHI* pRHI, GenericWindow* pWindow, IEngineRenderDriver* pRenderDriver ) override;
+        [[nodiscard]] bool initializeClient( IModuleHotReloadManager* pModuleHotReloadManager, RHI* pRHI, GenericWindow* pWindow, IEngineRenderDriver* pRenderDriver ) override;
 
         // 프레임 단위 처리
         /** @brief 메인 스레드에서 에디터 UI 와 플랫폼 창을 갱신하고, 그 결과(게임 뷰포트 RT, 씬 틱 여부)를 프레임 상태에 확정합니다. */
@@ -55,7 +55,7 @@ namespace sw
         CameraComponent* getSceneViewCamera() const override;
 
     private:
-        // LiveReload 콜백 · API 바인딩 — 중첩 `EditorReloadClient` 와 리로드 잡음 델리게이트만 부른다(밖에서 부르는 곳이 없다).
+        // HotReload 콜백 · API 바인딩 — 중첩 `EditorReloadClient` 와 리로드 잡음 델리게이트만 부른다(밖에서 부르는 곳이 없다).
         /** @brief 에디터 모듈을 언로드하기 직전에 불립니다. 인스턴스와 API 테이블을 해제합니다. */
         void onBeforeEditorReload();
         /** @brief 에디터 모듈이 다시 로드된 직후에 불립니다. API 를 다시 바인딩하고 인스턴스를 만듭니다. */
@@ -65,7 +65,7 @@ namespace sw
          * @details 여기서 거절하면 옛 에디터가 그대로 돈다. 같은 검사를 옛 이미지를 언로드한 뒤(`onAfterEditorReload`)에야 하면 거절이 곧 에디터를 잃는 일이 된다.
          */
         bool isEditorLibraryUsable( ModuleLibraryHandle library ) const;
-        /** @brief 편집기 모듈을 지금 내리면 안 되는지입니다(편집기 API `isReloadHeld` — 열린 파일 대화상자). 리로드 잡음(`LiveReloadManager::addReloadHold`)으로 건다. */
+        /** @brief 편집기 모듈을 지금 내리면 안 되는지입니다(편집기 API `isReloadHeld` — 열린 파일 대화상자). 리로드 잡음(`ModuleHotReloadManager::addReloadHold`)으로 건다. */
         bool isEditorReloadHeld() const;
         /**
          * @brief 새 에디터 모듈이 리로드 직후 결함을 냈을 때 불립니다. 인스턴스와 API 테이블을 모듈을 부르지 않고 버립니다.
@@ -145,7 +145,7 @@ namespace sw
          * @details 동적 모듈 구성에만 있다 — 정적 구성은 `initializeClient` 가 부르지 않고 오류로 멈춘다.
          * @return 매니페스트가 에디터 모듈을 껐거나 등록이 실패하거나 리로드 그래프가 깨졌으면 false 입니다(기동 실패).
          */
-        [[nodiscard]] bool registerEditorModule( ILiveReloadManager* pLiveReloadManager );
+        [[nodiscard]] bool registerEditorModule( IModuleHotReloadManager* pModuleHotReloadManager );
 
         /** @brief 에디터 창의 최소 클라이언트 크기입니다. 메뉴바, 도크 다섯 개, 게임 뷰 툴바가 겹치지 않는 하한입니다(언리얼 메인 프레임과 유니티 에디터 창도 최소 크기를 둔다). */
         static constexpr uint32 kMinClientWidth  = 960;

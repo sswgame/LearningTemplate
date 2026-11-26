@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "DevTools/ModuleReload/LiveReload/ModuleCompiler.h"
+#include "DevTools/ModuleReload/HotReload/ModuleCompiler.h"
 
 #include "Core/Concurrency/thread.h"
 #include "Core/File/FileUtil.h"
@@ -10,14 +10,14 @@
 #include "Core/Process/Process.h"
 #include "Core/String/StringBuilder.h"
 
-#include "DevTools/ModuleReload/LiveReload/LiveReloadManager.h"
+#include "DevTools/ModuleReload/HotReload/ModuleHotReloadManager.h"
 
 #include "Engine/Config/GameSelection.h"
 
 namespace sw
 {
-    ModuleCompiler::ModuleCompiler( LiveReloadManager* pLiveReloadManager )
-        : _pLiveReloadManager{ pLiveReloadManager }
+    ModuleCompiler::ModuleCompiler( ModuleHotReloadManager* pModuleHotReloadManager )
+        : _pModuleHotReloadManager{ pModuleHotReloadManager }
         , _pCurrentProcess{ nullptr }
         , _workerThread{}
         , _buildTimer{}
@@ -78,8 +78,8 @@ namespace sw
         _buildState.store( BuildState::Compiling, std::memory_order_relaxed );
         _buildTimer.restart();
         // 빌드가 쓰는 모듈을 하나씩 올리지 않게 감시를 멈춘다 — 끝나면 `runBuildThread` 가 결과를 넘긴다.
-        if ( _pLiveReloadManager != nullptr )
-            _pLiveReloadManager->notifyBuildStarted();
+        if ( _pModuleHotReloadManager != nullptr )
+            _pModuleHotReloadManager->notifyBuildStarted();
 
         _workerThread = sw::thread( ThreadCreationKey{}, &ModuleCompiler::runBuildThread, this, string( moduleName ), string( targetName ), Memory::getCurrentMemoryTag() );
         return true;
@@ -253,8 +253,8 @@ namespace sw
 
     void ModuleCompiler::notifyBuildFinished( bool bSucceeded, const string& moduleName )
     {
-        // 빌드 스레드다 — 리로드는 여기서 하지 않고 넘기기만 한다. 게임 스레드의 `LiveReloadManager::update` 가 처리한다.
-        if ( _pLiveReloadManager != nullptr )
-            _pLiveReloadManager->notifyBuildFinished( bSucceeded, moduleName );
+        // 빌드 스레드다 — 리로드는 여기서 하지 않고 넘기기만 한다. 게임 스레드의 `ModuleHotReloadManager::update` 가 처리한다.
+        if ( _pModuleHotReloadManager != nullptr )
+            _pModuleHotReloadManager->notifyBuildFinished( bSucceeded, moduleName );
     }
 } // namespace sw

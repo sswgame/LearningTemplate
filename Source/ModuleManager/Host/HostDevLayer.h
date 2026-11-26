@@ -25,7 +25,7 @@ namespace sw
     class GameModuleManager;
     class HostLaunch;
     class IAutomationShutdownWatch;
-    class ILiveReloadManager;
+    class IModuleHotReloadManager;
     class ModuleCatalog;
     class ModuleLoaderSubsystem;
     class SubsystemScope;
@@ -63,7 +63,7 @@ namespace sw
         [[nodiscard]] virtual bool initializeModuleReload( uint8 targetMask, SubsystemScope& host, ModuleLoaderSubsystem& moduleLibraryHost, ModuleCatalog& outCatalog,
                                                            ModuleResolution& outResolution ) = 0;
         /** @brief 핫 리로드 매니저입니다(`initializeModuleReload` 전에는 nullptr). 모듈 관리자가 라이브러리를 올릴 때 넘긴다. */
-        virtual ILiveReloadManager* getLiveReloadManager() const = 0;
+        virtual IModuleHotReloadManager* getModuleHotReloadManager() const = 0;
         /** @brief 리로드 묶음을 시작하기 전의 알림을 구독합니다(서버가 서비스를 멈춘다). */
         [[nodiscard]] virtual Subscription addOnBeforeReloadBatch( BeforeReloadBatchDelegate onBeforeBatch ) = 0;
         /** @brief 모듈 @p pModuleName 을 다음 `updateModuleReload` 에서 다시 올리게 합니다(단축키 · 개발 명령). */

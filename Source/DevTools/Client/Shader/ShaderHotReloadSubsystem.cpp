@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "DevTools/Client/Shader/LiveShaderSubsystem.h"
+#include "DevTools/Client/Shader/ShaderHotReloadSubsystem.h"
 
 #include "Core/Foundation/BuildConfig.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
@@ -17,12 +17,12 @@
 namespace sw
 {
     /**
-     * @brief `-gv_liveShaderRecompile=1` — 재컴파일기(Ctrl+F8)를 세웁니다. 기본은 Debug 만 켠다(파일 감시 · 재컴파일 큐를 측정 빌드에 두지 않는다).
+     * @brief `-gv_shaderHotReload=1` — 재컴파일기(Ctrl+F8)를 세웁니다. 기본은 Debug 만 켠다(파일 감시 · 재컴파일 큐를 측정 빌드에 두지 않는다).
      * @details 개발 빌드(Release)는 셰이더 리로드 시나리오가 `<Launch>` 로 켠다. 언리얼 `r.ShaderDevelopmentMode` 자리.
      */
-    SW_TEST_GLOBAL_VARIABLE( bool, gv_liveShaderRecompile, build::kDebug, "Build the live shader recompiler (Ctrl+F8). On by default in Debug only; scenarios turn it on in Release" );
+    SW_TEST_GLOBAL_VARIABLE( bool, gv_shaderHotReload, build::kDebug, "Build the shader hot reload recompiler (Ctrl+F8). On by default in Debug only; scenarios turn it on in Release" );
 
-    LiveShaderSubsystem::LiveShaderSubsystem( const FrameRendererSubsystem& frameRendererSubsystem, const RenderThreadSubsystem& renderThreadSubsystem )
+    ShaderHotReloadSubsystem::ShaderHotReloadSubsystem( const FrameRendererSubsystem& frameRendererSubsystem, const RenderThreadSubsystem& renderThreadSubsystem )
         : _shaderRecompiler{ nullptr }
         , _recompiledSubscription{}
         , _frameRendererSubsystem{ frameRendererSubsystem }
@@ -31,27 +31,27 @@ namespace sw
     {
     }
 
-    LiveShaderSubsystem::~LiveShaderSubsystem() = default;
+    ShaderHotReloadSubsystem::~ShaderHotReloadSubsystem() = default;
 
-    SubsystemInitResult LiveShaderSubsystem::initializeSubsystem()
+    SubsystemInitResult ShaderHotReloadSubsystem::initializeSubsystem()
     {
-        if ( gv_liveShaderRecompile )
+        if ( gv_shaderHotReload )
         {
             _bReady = SW_FALSE;
             if ( _shaderRecompiler == nullptr )
                 _shaderRecompiler = make_unique<ShaderRecompiler>();
             if ( _shaderRecompiler->initialize( "Shaders" ) == false )
             {
-                SW_LOG_ERROR_ID( "LiveShader.FailedInitializeShaderRecompiler", "Failed to initialize ShaderRecompiler!" );
+                SW_LOG_ERROR_ID( "ShaderHotReload.FailedInitializeShaderRecompiler", "Failed to initialize ShaderRecompiler!" );
                 return SubsystemInitResult::Succeeded; // 개발 도구 하나 때문에 기동을 멈추지 않는다
             }
-            _recompiledSubscription = _shaderRecompiler->bindOnAnyShaderRecompiled( SW_DELEGATE_METHOD( ShaderRecompiledDelegate, &LiveShaderSubsystem::onShaderRecompiled, this ) );
+            _recompiledSubscription = _shaderRecompiler->bindOnAnyShaderRecompiled( SW_DELEGATE_METHOD( ShaderRecompiledDelegate, &ShaderHotReloadSubsystem::onShaderRecompiled, this ) );
             _bReady                 = SW_TRUE;
         }
         return SubsystemInitResult::Succeeded;
     }
 
-    void LiveShaderSubsystem::shutdownSubsystem()
+    void ShaderHotReloadSubsystem::shutdownSubsystem()
     {
         _recompiledSubscription.reset(); // 백엔드 교체로 다시 서면 다시 건다
         if ( _shaderRecompiler != nullptr )
@@ -59,7 +59,7 @@ namespace sw
         _bReady = SW_FALSE;
     }
 
-    void LiveShaderSubsystem::onShaderRecompiled( const vector<string>& listShaderPath )
+    void ShaderHotReloadSubsystem::onShaderRecompiled( const vector<string>& listShaderPath )
     {
         FrameRenderer* const           pFrameRenderer      = &_frameRendererSubsystem.getFrameRenderer();
         OffscreenSceneRenderers* const pOffscreenRenderers = &_frameRendererSubsystem.getOffscreenRenderers();
@@ -79,13 +79,13 @@ namespace sw
         } ) );
     }
 
-    span<const utf8* const> LiveShaderSubsystem::getSubsystemDependencies() const
+    span<const utf8* const> ShaderHotReloadSubsystem::getSubsystemDependencies() const
     {
         static constexpr const utf8* kArrDependency[] = { FrameRendererSubsystem::kSubsystemName, RenderThreadSubsystem::kSubsystemName };
         return kArrDependency;
     }
 
-    SubsystemHostMask LiveShaderSubsystem::getSubsystemHost() const
+    SubsystemHostMask ShaderHotReloadSubsystem::getSubsystemHost() const
     {
         return EngineSubsystemHost::kClient;
     }

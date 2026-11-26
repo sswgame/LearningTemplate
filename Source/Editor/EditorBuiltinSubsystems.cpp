@@ -75,7 +75,7 @@ namespace sw::editor
         context.emplaceSubsystem<EditorInputActions>();       // 에디터 단축키의 입력 맵(editor.input.xml) — 명령 등록부 · 패널 매니저 뒤
         context.emplaceSubsystem<EditorPopupManager>();
         context.emplaceSubsystem<AssetHotReload>();
-        context.emplaceSubsystem<EditorToolDefaultsReload>(); // `Config/` 감시는 엔진(ConfigReloadSubsystem)이 한다 — 편집기는 도구 기본값 처리기만 건다
+        context.emplaceSubsystem<EditorToolDefaultsReload>(); // `Config/` 감시는 엔진(ConfigHotReloadSubsystem)이 한다 — 편집기는 도구 기본값 처리기만 건다
         context.emplaceSubsystem<EditorSourceControl>( ProcessRoots::get()._project.str() );
         context.emplaceSubsystem<InspectorComponentManager>();
         context.emplaceSubsystem<PropertyDrawerRegistry>();

@@ -14,9 +14,9 @@
 #include "Core/Subsystem/Subsystem.h"
 #include "Core/Subsystem/SubsystemScope.h"
 
-#include "DevTools/AssetReload/ConfigReloadSubsystem.h"
+#include "DevTools/AssetReload/ConfigHotReloadSubsystem.h"
 #include "DevTools/AssetReload/ContentFolderWatchService.h"
-#include "DevTools/AssetReload/ReloadTracker.h"
+#include "DevTools/AssetReload/HotReloadTracker.h"
 #include "DevTools/Console/DevConsoleHost.h"
 #include "DevTools/DebugDraw/DebugDrawQueue.h"
 #include "DevTools/DevToolsClientPart.h"
@@ -196,13 +196,13 @@ namespace sw
         // 오래된 실행 산출물(`Saved` — 자동화 실행 · 로그 · 스크린샷 · 트레이스 …)을 자기 스레드에서 지운다.
         (void)startup.emplaceSubsystem<SavedCleanupSubsystem>();
         // 리로드 결과 집계 — 설정 · 셰이더 · 에디터 에셋 리로드가 결과를 적는다(`reload.status`). 리로드 주인보다 먼저 선다(셰이더 라이브 리로드는 클라이언트 부분 `IDevToolsClientPart` 가 세운다).
-        (void)startup.emplaceSubsystem<ReloadTracker>();
+        (void)startup.emplaceSubsystem<HotReloadTracker>();
         // 설정 파일 리로드는 서버에도 선다. 헤드리스 작업은 프레임을 돌지 않아 리로드할 자리가 없다 — `Config/` 감시를 걸지 않는다.
         const CommandLineManager* const pHeadlessCommandLine = findSubsystemFrom<CommandLineManager>( &startup );
         const bool                      bHeadless            = pHeadlessCommandLine != nullptr && CommandletRegistration::isAnyRequested( *pHeadlessCommandLine );
         ConfigManager* const            pConfigManager       = startup.find<ConfigManager>();
         if ( pConfigManager != nullptr && bHeadless == false )
-            (void)startup.emplaceSubsystem<ConfigReloadSubsystem>( *pConfigManager, _fileWatch );
+            (void)startup.emplaceSubsystem<ConfigHotReloadSubsystem>( *pConfigManager, _fileWatch );
         // 회선 흉내 — 세션이 열기 전에 샤드 전송 데코레이터를 건다(실행 중 조건은 `net.emulation`).
         // 리슨 포트 덮어쓰기(`-gv_netListenPort`) — 세션이 기동 역할을 정하기 전에 건다.
         if ( GameNetSession* const pNetSession = startup.find<GameNetSession>() )
@@ -261,7 +261,7 @@ namespace sw
             exitCode = pProfileSession->onFrameEnd( context._activeSceneID );
         if ( ProfilerLaunchSubsystem* const pProfilerSwitches = engine::findSubsystem<ProfilerLaunchSubsystem>() )
             pProfilerSwitches->onFrameEnd(); // 느린 프레임 자동 캡처(`-gv_traceSlowTickMs`)
-        // 셰이더 재컴파일 · 강제 리로드 단축키(`gv_liveShaderRecompile`) · 시작 인자 사진 — 클라이언트 전용 부분이 한다. 먼저 끝난 쪽의 종료 코드를 돌려준다.
+        // 셰이더 재컴파일 · 강제 리로드 단축키(`gv_shaderHotReload`) · 시작 인자 사진 — 클라이언트 전용 부분이 한다. 먼저 끝난 쪽의 종료 코드를 돌려준다.
         if ( IDevToolsClientPart* const pClientPart = IDevToolsClientPart::find() )
         {
             const EngineFrameExit clientExit = pClientPart->onFrameEnd();

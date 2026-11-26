@@ -87,7 +87,7 @@ namespace sw
         if ( _pDevLayer != nullptr && _pDevLayer->initializeModuleReload( targetMask, _host, *_pModuleLoader, _moduleCatalog, _moduleResolution ) == false )
             return false;
         _moduleManager = std::move( moduleManager );
-        return _moduleManager->loadModuleLibraries( getLiveReloadManager(), _moduleCatalog, _moduleResolution );
+        return _moduleManager->loadModuleLibraries( getModuleHotReloadManager(), _moduleCatalog, _moduleResolution );
     }
 
     bool HostLaunch::startHostSubsystems()

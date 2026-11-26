@@ -1,4 +1,4 @@
-// LiveReloadLogicTest — 핫 리로드의 파일 없이 도는 규칙: 모듈 의존 그래프(의존하는 쪽 모으기 · 순서 · 순환), 섀도 복사본 자리 · 치우기(nogpu).
+// ModuleHotReloadLogicTest — 핫 리로드의 파일 없이 도는 규칙: 모듈 의존 그래프(의존하는 쪽 모으기 · 순서 · 순환), 섀도 복사본 자리 · 치우기(nogpu).
 // App 이 ModuleManager 를 통째로 링크해 이 등록이 남는다(`Source/App/CMakeLists.txt` 의 `sw_link_whole_archive`) — Server 는 이 스위트를 돌리지 않는다.
 #include "pch.h"
 
@@ -8,10 +8,10 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/TestFramework/TestFramework.h"
 
-#include "DevTools/ModuleReload/LiveReload/DeferredLibraryUnloadQueue.h"
-#include "DevTools/ModuleReload/LiveReload/ModuleCompiler.h"
-#include "DevTools/ModuleReload/LiveReload/ModuleDependencyGraph.h"
-#include "DevTools/ModuleReload/LiveReload/ModuleShadowCopy.h"
+#include "DevTools/ModuleReload/HotReload/DeferredLibraryUnloadQueue.h"
+#include "DevTools/ModuleReload/HotReload/ModuleCompiler.h"
+#include "DevTools/ModuleReload/HotReload/ModuleDependencyGraph.h"
+#include "DevTools/ModuleReload/HotReload/ModuleShadowCopy.h"
 
 #include "Engine/Config/GameSelection.h"
 
@@ -32,8 +32,8 @@ namespace
     }
 } // namespace
 
-/** @brief [LiveReloadLogicTest] 그래프 기본: 있는 모듈 · 의존 목록 · 빼기. ensureModule 은 있던 의존을 지우지 않는다 */
-SW_TEST_CASE( LiveReloadLogicTest, GraphBasics )
+/** @brief [ModuleHotReloadLogicTest] 그래프 기본: 있는 모듈 · 의존 목록 · 빼기. ensureModule 은 있던 의존을 지우지 않는다 */
+SW_TEST_CASE( ModuleHotReloadLogicTest, GraphBasics )
 {
     ModuleDependencyGraph graph = makeGraph();
     SW_EXPECT_TRUE( graph.hasModule( "B" ) );
@@ -53,8 +53,8 @@ SW_TEST_CASE( LiveReloadLogicTest, GraphBasics )
     SW_EXPECT_FALSE( graph.hasModule( "A" ) );
 }
 
-/** @brief [LiveReloadLogicTest] 의존하는 쪽 모으기: 간접까지 모으고 자기를 넣는다. 이미 든 이름과 그래프에 없는 뿌리는 더하지 않는다 */
-SW_TEST_CASE( LiveReloadLogicTest, DependentClosure )
+/** @brief [ModuleHotReloadLogicTest] 의존하는 쪽 모으기: 간접까지 모으고 자기를 넣는다. 이미 든 이름과 그래프에 없는 뿌리는 더하지 않는다 */
+SW_TEST_CASE( ModuleHotReloadLogicTest, DependentClosure )
 {
     const ModuleDependencyGraph graph = makeGraph();
     vector<string>              listModule;
@@ -81,8 +81,8 @@ SW_TEST_CASE( LiveReloadLogicTest, DependentClosure )
     SW_EXPECT_EQUAL( size_t( 2 ), listRing.size() );
 }
 
-/** @brief [LiveReloadLogicTest] 정렬: 의존되는 쪽이 먼저이고, 준비된 것은 이름순이라(모듈 적재 순서와 같은 규칙) 입력 순서와 상관없다. 그래프에 없는 이름은 빠진다 */
-SW_TEST_CASE( LiveReloadLogicTest, SortsByDependency )
+/** @brief [ModuleHotReloadLogicTest] 정렬: 의존되는 쪽이 먼저이고, 준비된 것은 이름순이라(모듈 적재 순서와 같은 규칙) 입력 순서와 상관없다. 그래프에 없는 이름은 빠진다 */
+SW_TEST_CASE( ModuleHotReloadLogicTest, SortsByDependency )
 {
     const ModuleDependencyGraph graph = makeGraph();
     vector<string>              listFirst;
@@ -103,10 +103,10 @@ SW_TEST_CASE( LiveReloadLogicTest, SortsByDependency )
     SW_EXPECT_TRUE( listEmpty.empty() );
 }
 
-/** @brief [LiveReloadLogicTest] 순환이면 로그를 남기고 false 이며 결과는 비어 있다 */
-SW_TEST_CASE( LiveReloadLogicTest, CycleFailsSort )
+/** @brief [ModuleHotReloadLogicTest] 순환이면 로그를 남기고 false 이며 결과는 비어 있다 */
+SW_TEST_CASE( ModuleHotReloadLogicTest, CycleFailsSort )
 {
-    SW_EXPECT_LOG( "LiveReloadManager.DependencyCycleModuleGraph" );
+    SW_EXPECT_LOG( "ModuleHotReloadManager.DependencyCycleModuleGraph" );
     ModuleDependencyGraph graph;
     graph.setDependsOn( "X", { "Y" } );
     graph.setDependsOn( "Y", { "X" } );
@@ -116,8 +116,8 @@ SW_TEST_CASE( LiveReloadLogicTest, CycleFailsSort )
     SW_EXPECT_TRUE( listOrdered.empty() );
 }
 
-/** @brief [LiveReloadLogicTest] 섀도 복사본 자리: 이름에 프로세스 꼬리가 없고, 폴더는 실행 뿌리 아래다. 남은 복사본(파일 · Windows 의 복사본 폴더)을 치운다 */
-SW_TEST_CASE( LiveReloadLogicTest, ShadowCopyNames )
+/** @brief [ModuleHotReloadLogicTest] 섀도 복사본 자리: 이름에 프로세스 꼬리가 없고, 폴더는 실행 뿌리 아래다. 남은 복사본(파일 · Windows 의 복사본 폴더)을 치운다 */
+SW_TEST_CASE( ModuleHotReloadLogicTest, ShadowCopyNames )
 {
     SW_EXPECT_EQUAL( string( "SWGame_3" ), ModuleShadowCopy::makeCopyName( "SWGame", 3 ) );
     SW_EXPECT_TRUE( FileUtil::isPathUnderRoot( ProcessRoots::get()._run.str(), ModuleShadowCopy::getCopyDirectory().str() ) );
@@ -160,8 +160,8 @@ namespace
     };
 } // namespace
 
-/** @brief [LiveReloadLogicTest] 언로드 큐: 상한을 넘으면 가장 오래된 배치가 통째로 내려가고 복사본이 지워진다. 비어 있어도 안전하고 unloadAll 은 전부 내린다 */
-SW_TEST_CASE( LiveReloadLogicTest, DeferredUnloadKeepsRecentBatches )
+/** @brief [ModuleHotReloadLogicTest] 언로드 큐: 상한을 넘으면 가장 오래된 배치가 통째로 내려가고 복사본이 지워진다. 비어 있어도 안전하고 unloadAll 은 전부 내린다 */
+SW_TEST_CASE( ModuleHotReloadLogicTest, DeferredUnloadKeepsRecentBatches )
 {
     DeferredLibraryUnloadQueue queue( 2 );
     queue.unloadOldestBatch(); // 비어 있으면 아무 일도 없다
@@ -198,8 +198,8 @@ SW_TEST_CASE( LiveReloadLogicTest, DeferredUnloadKeepsRecentBatches )
     SW_EXPECT_FALSE( FileUtil::exists( c ) );
 }
 
-/** @brief [LiveReloadLogicTest] 언로드 큐: 상한이 0 이면 넣자마자 내려간다(비운 목록의 끝을 읽지 않는다) */
-SW_TEST_CASE( LiveReloadLogicTest, DeferredUnloadWithoutKeepingAnyBatch )
+/** @brief [ModuleHotReloadLogicTest] 언로드 큐: 상한이 0 이면 넣자마자 내려간다(비운 목록의 끝을 읽지 않는다) */
+SW_TEST_CASE( ModuleHotReloadLogicTest, DeferredUnloadWithoutKeepingAnyBatch )
 {
     DeferredLibraryUnloadQueue queue( 0 );
     const AbsolutePath         path = DeferredUnloadTestUtil::makeShadowFile( "now" );
@@ -208,10 +208,10 @@ SW_TEST_CASE( LiveReloadLogicTest, DeferredUnloadWithoutKeepingAnyBatch )
     SW_EXPECT_FALSE( FileUtil::exists( path ) );
 }
 
-/** @brief [LiveReloadLogicTest] 섀도 복사본: 엔진 ABI 스탬프가 없는 파일은 복사본을 만들지 않고 이름 상태도 그대로다. 복사본 지우기는 빈 경로에 아무 일도 하지 않는다 */
-SW_TEST_CASE( LiveReloadLogicTest, ShadowCopyRefusesUnstampedFile )
+/** @brief [ModuleHotReloadLogicTest] 섀도 복사본: 엔진 ABI 스탬프가 없는 파일은 복사본을 만들지 않고 이름 상태도 그대로다. 복사본 지우기는 빈 경로에 아무 일도 하지 않는다 */
+SW_TEST_CASE( ModuleHotReloadLogicTest, ShadowCopyRefusesUnstampedFile )
 {
-    SW_EXPECT_LOG( "LiveReloadManager.ModuleBuiltAgainstDifferent" );
+    SW_EXPECT_LOG( "ModuleHotReloadManager.ModuleBuiltAgainstDifferent" );
     const AbsolutePath original = test::makeScratchPath( "NotAModule.bin" );
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( original, "no stamp in here" ) );
 
@@ -239,8 +239,8 @@ SW_TEST_CASE( LiveReloadLogicTest, ShadowCopyRefusesUnstampedFile )
     SW_EXPECT_FALSE( FileUtil::exists( original ) );
 }
 
-/** @brief [LiveReloadLogicTest] 게임 모듈 이름은 지금 고른 게임의 빌드 대상(SWGame_<게임>)으로 바뀌고, 그 밖의 대상은 그대로다 — 모듈 이름 그대로는 ninja 에 없는 대상이었다 */
-SW_TEST_CASE( LiveReloadLogicTest, GameModuleBuildTargetNamesTheSelectedGame )
+/** @brief [ModuleHotReloadLogicTest] 게임 모듈 이름은 지금 고른 게임의 빌드 대상(SWGame_<게임>)으로 바뀌고, 그 밖의 대상은 그대로다 — 모듈 이름 그대로는 ninja 에 없는 대상이었다 */
+SW_TEST_CASE( ModuleHotReloadLogicTest, GameModuleBuildTargetNamesTheSelectedGame )
 {
     const sw::string                                 gameTarget = sw::ModuleCompiler::resolveBuildTarget( sw::ModuleCompiler::kGameModuleName );
     sw::StringBuilder<sw::constant::buffer::kMax128> expectedTarget;

@@ -6,7 +6,7 @@
 #include "Core/String/formatString.h"
 #include "Core/Subsystem/SubsystemScope.h"
 
-#include "DevTools/ModuleReload/LiveReload/LiveReloadManager.h"
+#include "DevTools/ModuleReload/HotReload/ModuleHotReloadManager.h"
 
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
@@ -37,10 +37,10 @@ namespace sw
             static constexpr const utf8* kReloadEditorAction = "ReloadEditor";
 
             /** @brief 매니저가 살아 있는 구동기입니다. 범위에 없거나(엔진 밖) 씬 뒤 훅이 매니저를 내렸으면 nullptr 입니다. */
-            static const LiveReloadManager* findManager()
+            static const ModuleHotReloadManager* findManager()
             {
                 const ModuleReloadDriver* pDriver = engine::findSubsystem<ModuleReloadDriver>();
-                return pDriver != nullptr ? pDriver->getLiveReloadManager() : nullptr;
+                return pDriver != nullptr ? pDriver->getModuleHotReloadManager() : nullptr;
             }
 
             /** @brief `module.reload <모듈>` — 그 모듈과 그것에 의존하는 모듈의 리로드를 예약합니다(리로드는 이후 프레임에서 끝납니다. 끝은 `Module.ReloadPending` 으로 봅니다). */
@@ -58,7 +58,7 @@ namespace sw
 
             [[nodiscard]] static bool readReloadCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                const LiveReloadManager* pManager = findManager();
+                const ModuleHotReloadManager* pManager = findManager();
                 if ( pManager == nullptr )
                     return false;
                 outValue = static_cast<float64>( pManager->getCompletedReloadCount() );
@@ -69,7 +69,7 @@ namespace sw
             [[nodiscard]] static bool readReloadPending( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 const ModuleReloadDriver* pDriver = engine::findSubsystem<ModuleReloadDriver>();
-                if ( pDriver == nullptr || pDriver->getLiveReloadManager() == nullptr )
+                if ( pDriver == nullptr || pDriver->getModuleHotReloadManager() == nullptr )
                     return false;
                 outValue = pDriver->isReloadPending() ? 1.0 : 0.0;
                 return true;
@@ -79,13 +79,13 @@ namespace sw
             static AutomationReadiness readReloadReadiness()
             {
                 const ModuleReloadDriver* pDriver  = engine::findSubsystem<ModuleReloadDriver>();
-                const bool                bPending = pDriver != nullptr && pDriver->getLiveReloadManager() != nullptr && pDriver->isReloadPending();
+                const bool                bPending = pDriver != nullptr && pDriver->getModuleHotReloadManager() != nullptr && pDriver->isReloadPending();
                 return bPending ? AutomationReadiness::waiting( 0, "a queued module reload has not finished" ) : AutomationReadiness::ready();
             }
 
             [[nodiscard]] static bool readGraphBroken( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                const LiveReloadManager* pManager = findManager();
+                const ModuleHotReloadManager* pManager = findManager();
                 if ( pManager == nullptr )
                     return false;
                 outValue = pManager->isGraphBroken() ? 1.0 : 0.0;
@@ -94,7 +94,7 @@ namespace sw
 
             [[nodiscard]] static bool readBindingsOk( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                const LiveReloadManager* pManager = findManager();
+                const ModuleHotReloadManager* pManager = findManager();
                 if ( pManager == nullptr )
                     return false;
                 outValue = pManager->verifyModuleBindings() ? 1.0 : 0.0;
@@ -131,7 +131,7 @@ namespace sw
 
     struct ModuleReloadDriver::State
     {
-        unique_ptr<LiveReloadManager> _liveReloadManager;
+        unique_ptr<ModuleHotReloadManager> _moduleHotReloadManager;
         /** @brief 자신을 건 호스트 범위입니다(소유하지 않는다). 씬 뒤 훅이 여기서 자신을 풉니다. */
         SubsystemScope* _pHostScope = nullptr;
         /** @brief `queueReload` 가 예약한 리로드가 끝났다고 볼 완료 수입니다(예약 때의 완료 수 + 1). 0 이면 예약한 적이 없다. */
@@ -165,10 +165,10 @@ namespace sw
         moduleLibraryHost.setResolution( outResolution );
 
         // 헤드리스 작업은 프레임을 돌지 않아 리로드할 자리가 없다 — 모듈을 복사 없이 바로 연다.
-        const ModuleOpenMode openMode = CommandletRegistration::isAnyRequested( commandLine ) ? ModuleOpenMode::Direct : ModuleOpenMode::ShadowCopy;
-        _pState->_liveReloadManager   = make_unique<LiveReloadManager>( fileWatch, openMode );
-        _pState->_pHostScope          = &hostScope;
-        const bool bBound             = hostScope.bind( this ); // 개발 명령 `module.reload` · 감시 값 `Module.*` 가 엔진 범위에서 올라가 찾는다
+        const ModuleOpenMode openMode    = CommandletRegistration::isAnyRequested( commandLine ) ? ModuleOpenMode::Direct : ModuleOpenMode::ShadowCopy;
+        _pState->_moduleHotReloadManager = make_unique<ModuleHotReloadManager>( fileWatch, openMode );
+        _pState->_pHostScope             = &hostScope;
+        const bool bBound                = hostScope.bind( this ); // 개발 명령 `module.reload` · 감시 값 `Module.*` 가 엔진 범위에서 올라가 찾는다
         SW_ASSERT( bBound );
         (void)bBound;
         // 모듈 DLL 을 언로드할 수 있는 곳은 "씬은 사라졌고 서비스는 아직 있는" 좁은 구간뿐이다. 호스트 범위의 모듈 라이브러리 창구가 엔진 종료 안에서 그 자리를 부른다.
@@ -178,23 +178,23 @@ namespace sw
                 _pState->_pHostScope->unbind<ModuleReloadDriver>();
             _pState->_pHostScope = nullptr;
             _pState->_rebuildCompiler.reset(); // 매니저에 빌드 끝을 알리는 컴파일러를 매니저보다 먼저 내린다
-            if ( _pState->_liveReloadManager != nullptr )
-                _pState->_liveReloadManager->shutdown();
+            if ( _pState->_moduleHotReloadManager != nullptr )
+                _pState->_moduleHotReloadManager->shutdown();
         } ) );
         return true;
     }
 
     Subscription ModuleReloadDriver::addOnBeforeReloadBatch( BeforeReloadBatchDelegate onBeforeBatch )
     {
-        if ( _pState->_liveReloadManager == nullptr )
+        if ( _pState->_moduleHotReloadManager == nullptr )
             return Subscription{};
-        return _pState->_liveReloadManager->addOnBeforeCommitBatch( std::move( onBeforeBatch ) );
+        return _pState->_moduleHotReloadManager->addOnBeforeCommitBatch( std::move( onBeforeBatch ) );
     }
 
     void ModuleReloadDriver::requestReload( const utf8* pModuleName )
     {
-        if ( _pState->_liveReloadManager != nullptr )
-            _pState->_liveReloadManager->triggerReload( pModuleName );
+        if ( _pState->_moduleHotReloadManager != nullptr )
+            _pState->_moduleHotReloadManager->triggerReload( pModuleName );
     }
 
     void ModuleReloadDriver::pollReloadActions( const DebugKeyActions& debugKeys, bool bEnableEditor )
@@ -214,18 +214,18 @@ namespace sw
 
     void ModuleReloadDriver::update()
     {
-        if ( _pState->_liveReloadManager != nullptr )
-            _pState->_liveReloadManager->update();
+        if ( _pState->_moduleHotReloadManager != nullptr )
+            _pState->_moduleHotReloadManager->update();
     }
 
-    LiveReloadManager* ModuleReloadDriver::getLiveReloadManager() const
+    ModuleHotReloadManager* ModuleReloadDriver::getModuleHotReloadManager() const
     {
-        return _pState->_liveReloadManager.get();
+        return _pState->_moduleHotReloadManager.get();
     }
 
     bool ModuleReloadDriver::queueReload( const utf8* pModuleName )
     {
-        LiveReloadManager* const pManager = _pState->_liveReloadManager.get();
+        ModuleHotReloadManager* const pManager = _pState->_moduleHotReloadManager.get();
         if ( pManager == nullptr || pManager->getModuleHandle( pModuleName ).isValid() == false )
             return false;
         _pState->_reloadTargetCount = pManager->getCompletedReloadCount() + 1;
@@ -236,7 +236,7 @@ namespace sw
 
     bool ModuleReloadDriver::queueRebuild( const utf8* pModuleName )
     {
-        LiveReloadManager* const pManager = _pState->_liveReloadManager.get();
+        ModuleHotReloadManager* const pManager = _pState->_moduleHotReloadManager.get();
         if ( pManager == nullptr || pManager->getModuleHandle( pModuleName ).isValid() == false )
             return false;
         if ( _pState->_rebuildCompiler == nullptr )
@@ -252,7 +252,7 @@ namespace sw
 
     bool ModuleReloadDriver::isReloadPending() const
     {
-        const LiveReloadManager* const pManager = _pState->_liveReloadManager.get();
+        const ModuleHotReloadManager* const pManager = _pState->_moduleHotReloadManager.get();
         if ( pManager == nullptr || _pState->_reloadTargetCount == 0 )
             return false;
         if ( _pState->_requestKind == ReloadRequestKind::Rebuild && _pState->_rebuildCompiler != nullptr )

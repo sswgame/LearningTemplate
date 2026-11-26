@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "DevTools/ModuleReload/LiveReload/ModuleCallGuard.h"
+#include "DevTools/ModuleReload/HotReload/ModuleCallGuard.h"
 
 #include "Core/Foundation/PlatformOSHeaders.h"
 #include "Core/Foundation/StdHeaders.h"

@@ -19,7 +19,7 @@
 #include "DevTools/Client/Automation/Scenario/AutomationUserDataRoot.h"
 #include "DevTools/Client/Capture/StartupCaptureSubsystem.h"
 #include "DevTools/Client/DebugHUD/DebugHUD.h"
-#include "DevTools/Client/Shader/LiveShaderSubsystem.h"
+#include "DevTools/Client/Shader/ShaderHotReloadSubsystem.h"
 #include "DevTools/Client/Shader/ShaderRecompiler.h"
 #include "DevTools/Console/DevConsoleController.h"
 #include "DevTools/DevToolsClientPart.h"
@@ -377,7 +377,7 @@ namespace sw
                 RenderThreadSubsystem* const  pRenderThread  = startup.find<RenderThreadSubsystem>();
                 if ( pFrameRenderer != nullptr && pRenderThread != nullptr )
                 {
-                    (void)startup.emplaceSubsystem<LiveShaderSubsystem>( *pFrameRenderer, *pRenderThread );
+                    (void)startup.emplaceSubsystem<ShaderHotReloadSubsystem>( *pFrameRenderer, *pRenderThread );
                     (void)startup.emplaceSubsystem<CrashInjectionSubsystem>(); // `-gv_crashTest` — 렌더러 뒤에 죽어 백엔드 이름까지 보고에 든다
                     (void)startup.emplaceSubsystem<StartupCaptureSubsystem>(); // `-gv_screenshot` · `-gv_screenshotQuit` — 렌더 스레드의 실행 중 요청 창구로 찍는다
                 }
@@ -406,9 +406,9 @@ namespace sw
                     if ( commandLine.getArgument( CommandLineArgument::ENABLE_EDITOR, bEditor ) && bEditor )
                         installAssertDialogForInteractiveRun( commandLine );
                 }
-                // 셰이더 재컴파일 · 강제 리로드 단축키(`ReloadShaders`)는 재컴파일기가 선 실행만(`gv_liveShaderRecompile`). 단축키의 뜻은 재컴파일기를 가진 이쪽이 읽는다(디버그 키 맵은 입력 사실만 낸다).
-                LiveShaderSubsystem* const pLiveShader = engine::findSubsystem<LiveShaderSubsystem>();
-                if ( ShaderRecompiler* const pRecompiler = pLiveShader != nullptr ? pLiveShader->findShaderRecompiler() : nullptr )
+                // 셰이더 재컴파일 · 강제 리로드 단축키(`ReloadShaders`)는 재컴파일기가 선 실행만(`gv_shaderHotReload`). 단축키의 뜻은 재컴파일기를 가진 이쪽이 읽는다(디버그 키 맵은 입력 사실만 낸다).
+                ShaderHotReloadSubsystem* const pShaderHotReload = engine::findSubsystem<ShaderHotReloadSubsystem>();
+                if ( ShaderRecompiler* const pRecompiler = pShaderHotReload != nullptr ? pShaderHotReload->findShaderRecompiler() : nullptr )
                 {
                     pRecompiler->update();
                     if ( engine::getSubsystem<DebugKeyActions>().wasActionTriggered( hashed_string( InputMapDefaults::kReloadShadersAction ) ) )

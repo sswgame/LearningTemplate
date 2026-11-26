@@ -124,7 +124,7 @@ endif()
 # 여기까지 오면 동적 모듈이 전부 만들어졌다 — 레지스트리에 빠진 것이 없는지 먼저 확인한다.
 # (빠지면 App 이 그 DLL 보다 먼저 빌드될 수 있고, 증상은 "가끔 실패" 로만 나타난다.)
 sw_verify_dynamic_module_registry()
-# 동적 모듈을 모두 링크한 뒤에만 다시 쓰는 스탬프 — 바깥 빌드의 핫 리로드 신호(`LiveReloadManager`).
+# 동적 모듈을 모두 링크한 뒤에만 다시 쓰는 스탬프 — 바깥 빌드의 핫 리로드 신호(`ModuleHotReloadManager`).
 sw_add_module_build_stamp()
 # 리플렉션 단계가 모두 선 뒤 — 콘텐츠가 쓰는 타입의 모듈을 그 도메인이 가지는지 빌드 단계로 본다(대상마다 파서가 쓴 타입 목록을 읽는다).
 sw_add_content_module_check()

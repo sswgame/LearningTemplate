@@ -1,5 +1,5 @@
 /**
- * @file DevTools/ModuleReload/LiveReload/ModuleCompiler.h
+ * @file DevTools/ModuleReload/HotReload/ModuleCompiler.h
  * @brief 에디터 안에서 C++ 모듈을 백그라운드로 비동기 컴파일하는 구현입니다(App 계층).
  */
 #pragma once
@@ -20,18 +20,18 @@ namespace sw
 {
     enum class MemoryTag : uint8;
 
-    class LiveReloadManager;
+    class ModuleHotReloadManager;
     class Process;
 
     /**
      * @class ModuleCompiler
-     * @brief Process 유틸리티로 CMake 빌드를 백그라운드에서 돌리고, LiveReloadManager 에 핫 스왑을 요청하는 IModuleCompiler 구현입니다.
+     * @brief Process 유틸리티로 CMake 빌드를 백그라운드에서 돌리고, ModuleHotReloadManager 에 핫 스왑을 요청하는 IModuleCompiler 구현입니다.
      */
     class ModuleCompiler : public IModuleCompiler
     {
     public:
         /** @brief 컴파일러를 만듭니다. */
-        ModuleCompiler( LiveReloadManager* pLiveReloadManager = nullptr );
+        ModuleCompiler( ModuleHotReloadManager* pModuleHotReloadManager = nullptr );
         /** @brief 컴파일러를 파괴하고 진행 중인 빌드 스레드를 정리합니다. */
         virtual ~ModuleCompiler() override;
 
@@ -94,14 +94,14 @@ namespace sw
         void notifyBuildFinished( bool bSucceeded, const string& moduleName );
 
     private:
-        /// @brief 빌드가 끝나면 리로드를 걸 대상입니다(없으면 빌드만 한다). 이 파일은 `LiveReload/` 라 배포가 짓지 않는다.
-        LiveReloadManager*  _pLiveReloadManager;
-        unique_ptr<Process> _pCurrentProcess;
-        sw::thread          _workerThread;
-        Stopwatch           _buildTimer;
-        string _targetName  SW_GUARDED_BY( _mutex );
-        mutable mutex       _mutex;
-        atomic<BuildState>  _buildState;
+        /// @brief 빌드가 끝나면 리로드를 걸 대상입니다(없으면 빌드만 한다). 이 파일은 `HotReload/` 라 배포가 짓지 않는다.
+        ModuleHotReloadManager* _pModuleHotReloadManager;
+        unique_ptr<Process>     _pCurrentProcess;
+        sw::thread              _workerThread;
+        Stopwatch               _buildTimer;
+        string _targetName      SW_GUARDED_BY( _mutex );
+        mutable mutex           _mutex;
+        atomic<BuildState>      _buildState;
         /// @brief 실행 중인 바이너리를 다시 링크하려다 막혔는지 여부입니다(핫 리로드로는 해결할 수 없습니다).
         atomic<uint8>   _bBlockedByLoadedBinary;
         atomic<int32>   _lastExitCode;

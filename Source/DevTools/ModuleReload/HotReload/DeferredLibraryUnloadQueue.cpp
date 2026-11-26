@@ -1,11 +1,11 @@
 #include "pch.h"
 
-#include "DevTools/ModuleReload/LiveReload/DeferredLibraryUnloadQueue.h"
+#include "DevTools/ModuleReload/HotReload/DeferredLibraryUnloadQueue.h"
 
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Module/ModuleLibraryUtil.h"
 
-#include "DevTools/ModuleReload/LiveReload/ModuleShadowCopy.h"
+#include "DevTools/ModuleReload/HotReload/ModuleShadowCopy.h"
 
 namespace sw
 {
@@ -55,7 +55,7 @@ namespace sw
         for ( size_t libraryIndex = batchEnd; libraryIndex > 0; --libraryIndex )
         {
             const DeferredLibrary& deferredLibrary = _listLibrary[libraryIndex - 1];
-            SW_LOG_INFO_ID( "LiveReloadManager.UnloadingDeferredModuleImage", "Unloading deferred module image %# (batch %#, handle=%#)", deferredLibrary._moduleName, deferredLibrary._batchID, deferredLibrary._pHandle );
+            SW_LOG_INFO_ID( "ModuleHotReloadManager.UnloadingDeferredModuleImage", "Unloading deferred module image %# (batch %#, handle=%#)", deferredLibrary._moduleName, deferredLibrary._batchID, deferredLibrary._pHandle );
             ModuleLibraryUtil::unloadDynamicLibrary( deferredLibrary._pHandle );
             ModuleShadowCopy::removeArtifacts( deferredLibrary._shadowPath );
         }

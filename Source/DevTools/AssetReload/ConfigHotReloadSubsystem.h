@@ -1,5 +1,5 @@
 /**
- * @file ConfigReloadSubsystem.h
+ * @file ConfigHotReloadSubsystem.h
  * @brief 실행 중 `Config/` 의 설정 JSON 이 바뀌면 다시 읽습니다(개발 빌드만 — 배포 빌드는 이 폴더를 짓지 않는다).
  * @details 예전에는 편집기(`ConfigHotReload`)에만 있어 편집기 없이 띄운 개발 실행은 설정을 다시 읽지 못했다. 엔진 서브시스템이라 App · 전용 서버 · 편집기가 모두 같다.
  *          - 호스트 설정(`ConfigManager` 가 파일에서 읽은 것)은 `ConfigManager::reloadConfigFile` 이 제자리에서 다시 읽고 알린다.
@@ -28,18 +28,18 @@ namespace sw
     /** @brief 설정 파일 하나를 맡는 처리기입니다. 맡은 파일이 아니면 `NotTracked` 를 돌려준다. */
     using ConfigFileReloadDelegate = Delegate<ReloadResult( string_view fullPath )>;
 
-    /** @class ConfigReloadSubsystem @brief `Config/` 감시와 설정 파일 리로드입니다. */
-    class SW_DEVTOOLS_API ConfigReloadSubsystem final : public Subsystem
+    /** @class ConfigHotReloadSubsystem @brief `Config/` 감시와 설정 파일 리로드입니다. */
+    class SW_DEVTOOLS_API ConfigHotReloadSubsystem final : public Subsystem
     {
     public:
         static constexpr const utf8*               kSubsystemName    = "ConfigReload";
         static constexpr SubsystemModuleVisibility kModuleVisibility = SubsystemModuleVisibility::HostModules; ///< 에디터 도구 시드 · 프로젝트 설정 창이 리로드를 건다
 
         /** @param configManager 호스트 설정의 주인 — 이 서브시스템보다 먼저 서고 늦게 사라진다(의존 칸). */
-        ConfigReloadSubsystem( ConfigManager& configManager, FileWatchService& fileWatch );
-        ~ConfigReloadSubsystem() override;
-        ConfigReloadSubsystem( const ConfigReloadSubsystem& )            = delete;
-        ConfigReloadSubsystem& operator=( const ConfigReloadSubsystem& ) = delete;
+        ConfigHotReloadSubsystem( ConfigManager& configManager, FileWatchService& fileWatch );
+        ~ConfigHotReloadSubsystem() override;
+        ConfigHotReloadSubsystem( const ConfigHotReloadSubsystem& )            = delete;
+        ConfigHotReloadSubsystem& operator=( const ConfigHotReloadSubsystem& ) = delete;
 
         /** @brief 프로젝트의 `Config/` 를 감시하기 시작합니다. 폴더가 없으면 꺼진 채로 둔다(기동을 멈추지 않는다). */
         SubsystemInitResult     initializeSubsystem() override;

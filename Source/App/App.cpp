@@ -312,7 +312,7 @@ namespace sw
 
         SubsystemInitResult initializeSubsystem() override
         {
-            const bool bStarted = _app.getModuleManager()->initializeClient( _app._launch.getLiveReloadManager(), _app._launch.getEngine().getRHI(), _app._pWindow,
+            const bool bStarted = _app.getModuleManager()->initializeClient( _app._launch.getModuleHotReloadManager(), _app._launch.getEngine().getRHI(), _app._pWindow,
                                                                              _app._launch.getEngine().getRenderDriver() );
             if ( bStarted == false )
             {

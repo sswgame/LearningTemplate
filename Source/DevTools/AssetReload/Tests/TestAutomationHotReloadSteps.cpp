@@ -4,7 +4,7 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/TestFramework/TestFramework.h"
 
-#include "DevTools/AssetReload/AutomationReloadSteps.h"
+#include "DevTools/AssetReload/AutomationHotReloadSteps.h"
 
 #include "Engine/Automation/Scenario/AutomationScenario.h"
 #include "Engine/Automation/Scenario/AutomationStepParams.h"
@@ -32,8 +32,8 @@ namespace
     }
 } // namespace
 
-/** @brief [AutomationReloadStepsTest] 판 표에서 이름으로 판을 읽는다 — 없는 판 · 빈 글 · 빌드 트리를 벗어나는 머리 경로 · JSON 이 아닌 표는 오류다 */
-SW_TEST_CASE( AutomationReloadStepsTest, VariantTableReadsOnlyWellFormedVariants )
+/** @brief [AutomationHotReloadStepsTest] 판 표에서 이름으로 판을 읽는다 — 없는 판 · 빈 글 · 빌드 트리를 벗어나는 머리 경로 · JSON 이 아닌 표는 오류다 */
+SW_TEST_CASE( AutomationHotReloadStepsTest, VariantTableReadsOnlyWellFormedVariants )
 {
     const auto parse = []( string_view text )
     { return ConfigManager::parseConfig<ModuleRebuildVariantTable>( text, "table.json" ); };
@@ -51,8 +51,8 @@ SW_TEST_CASE( AutomationReloadStepsTest, VariantTableReadsOnlyWellFormedVariants
     SW_EXPECT_FALSE( parse( "[ 1, 2 ]" ).has_value() );
 }
 
-/** @brief [AutomationReloadStepsTest] 저장소의 판 표(Config/Dev/ModuleRebuildVariants.json)는 시나리오가 쓰는 두 판을 읽힌다 — 데이터가 틀리면 시나리오 전에 여기서 진다 */
-SW_TEST_CASE( AutomationReloadStepsTest, ShippedVariantTableHasTheScenarioVariants )
+/** @brief [AutomationHotReloadStepsTest] 저장소의 판 표(Config/Dev/ModuleRebuildVariants.json)는 시나리오가 쓰는 두 판을 읽힌다 — 데이터가 틀리면 시나리오 전에 여기서 진다 */
+SW_TEST_CASE( AutomationHotReloadStepsTest, ShippedVariantTableHasTheScenarioVariants )
 {
     const expected<ModuleRebuildVariantTable> table = ConfigManager::readConfig( ModuleRebuildVariantTable::kConfigFile );
     SW_REQUIRE_TRUE( table.has_value() );
@@ -64,20 +64,20 @@ SW_TEST_CASE( AutomationReloadStepsTest, ShippedVariantTableHasTheScenarioVarian
     SW_EXPECT_TRUE( broken->_text.find( "#error" ) != string::npos ); // 컴파일 오류 판
 }
 
-/** @brief [AutomationReloadStepsTest] 설정 덮어쓰기 경로는 Config/ 아래 .json 상대 경로만 받는다 */
-SW_TEST_CASE( AutomationReloadStepsTest, ConfigFileMustBeARelativeJSONPath )
+/** @brief [AutomationHotReloadStepsTest] 설정 덮어쓰기 경로는 Config/ 아래 .json 상대 경로만 받는다 */
+SW_TEST_CASE( AutomationHotReloadStepsTest, ConfigFileMustBeARelativeJSONPath )
 {
-    SW_EXPECT_TRUE( AutomationReloadSteps::validateConfigFile( "Editor/editortooldefaults.json" ).has_value() );
-    SW_EXPECT_FALSE( AutomationReloadSteps::validateConfigFile( "" ).has_value() );
-    SW_EXPECT_FALSE( AutomationReloadSteps::validateConfigFile( "../Source/a.json" ).has_value() );
-    SW_EXPECT_FALSE( AutomationReloadSteps::validateConfigFile( "Editor/../../a.json" ).has_value() );
-    SW_EXPECT_FALSE( AutomationReloadSteps::validateConfigFile( "/etc/a.json" ).has_value() );
-    SW_EXPECT_FALSE( AutomationReloadSteps::validateConfigFile( "C:/a.json" ).has_value() );
-    SW_EXPECT_FALSE( AutomationReloadSteps::validateConfigFile( "Editor/a.xml" ).has_value() );
+    SW_EXPECT_TRUE( AutomationHotReloadSteps::validateConfigFile( "Editor/editortooldefaults.json" ).has_value() );
+    SW_EXPECT_FALSE( AutomationHotReloadSteps::validateConfigFile( "" ).has_value() );
+    SW_EXPECT_FALSE( AutomationHotReloadSteps::validateConfigFile( "../Source/a.json" ).has_value() );
+    SW_EXPECT_FALSE( AutomationHotReloadSteps::validateConfigFile( "Editor/../../a.json" ).has_value() );
+    SW_EXPECT_FALSE( AutomationHotReloadSteps::validateConfigFile( "/etc/a.json" ).has_value() );
+    SW_EXPECT_FALSE( AutomationHotReloadSteps::validateConfigFile( "C:/a.json" ).has_value() );
+    SW_EXPECT_FALSE( AutomationHotReloadSteps::validateConfigFile( "Editor/a.xml" ).has_value() );
 }
 
-/** @brief [AutomationReloadStepsTest] 단계 속성 검사 — OverwriteConfig 는 configFile 이 필수이고 경로 규칙을 따르며, RestoreOverwrites 는 속성이 없다 */
-SW_TEST_CASE( AutomationReloadStepsTest, StepAttributesAreValidatedAtLoad )
+/** @brief [AutomationHotReloadStepsTest] 단계 속성 검사 — OverwriteConfig 는 configFile 이 필수이고 경로 규칙을 따르며, RestoreOverwrites 는 속성이 없다 */
+SW_TEST_CASE( AutomationHotReloadStepsTest, StepAttributesAreValidatedAtLoad )
 {
     SW_EXPECT_TRUE( validateSingleStep( "<OverwriteConfig configFile=\"Editor/editortooldefaults.json\"/>" ).has_value() );
     SW_EXPECT_FALSE( validateSingleStep( "<OverwriteConfig/>" ).has_value() );
@@ -87,8 +87,8 @@ SW_TEST_CASE( AutomationReloadStepsTest, StepAttributesAreValidatedAtLoad )
     SW_EXPECT_FALSE( validateSingleStep( "<RestoreOverwrites file=\"x\"/>" ).has_value() );
 }
 
-/** @brief [AutomationReloadStepsTest] RebuildModule 의 인자: name 은 필수, variant 는 선택이다(등록은 모듈 리로드가 있는 구성만 하지만 스키마는 어디서나 본다) */
-SW_TEST_CASE( AutomationReloadStepsTest, RebuildModuleNeedsAName )
+/** @brief [AutomationHotReloadStepsTest] RebuildModule 의 인자: name 은 필수, variant 는 선택이다(등록은 모듈 리로드가 있는 구성만 하지만 스키마는 어디서나 본다) */
+SW_TEST_CASE( AutomationHotReloadStepsTest, RebuildModuleNeedsAName )
 {
     AutomationScenario scenario;
     SW_REQUIRE_TRUE( scenario.parse( "<Scenario name=\"test.rebuild\"><RebuildModule variant=\"probe-next\"/><RebuildModule name=\"SWGame\"/>"

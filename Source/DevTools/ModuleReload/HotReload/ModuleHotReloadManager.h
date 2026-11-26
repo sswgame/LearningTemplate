@@ -1,9 +1,9 @@
 /**
- * @file DevTools/ModuleReload/LiveReload/LiveReloadManager.h
+ * @file DevTools/ModuleReload/HotReload/ModuleHotReloadManager.h
  * @brief 모듈 공유 라이브러리를 섀도 복사해 핫 리로드합니다(의존 모듈까지 연쇄로 교체합니다).
  *
  * @note 이 클래스는 Engine 이 아니라 개발 도구(DevTools.dll)에 있습니다. 모듈을 로드하고 교체하는 것은 런처(App, Server)의 일이고, Engine 은 모듈이라는 개념
- *       자체를 몰라야 합니다. 모듈 관리자(GameModuleManager · EditorGameModuleManager)는 창구 `ILiveReloadManager`(ModuleManager)로만 보고, 이 구현을 만드는 것은
+ *       자체를 몰라야 합니다. 모듈 관리자(GameModuleManager · EditorGameModuleManager)는 창구 `IModuleHotReloadManager`(ModuleManager)로만 보고, 이 구현을 만드는 것은
  *       리로드 구동기(`ModuleReloadDriver`)입니다. 배포는 DevTools 를 짓지 않아 함께 빠집니다(언리얼 HotReload 가 Developer 모듈인 자리).
  *
  *       이 클래스는 리로드 순서(prepare → 배치 콜백 → commit, 언로드 구간, 정적 등록 헤드, `RegistrationReloadScope`)를 정하고, 그 밖의 일은
@@ -27,15 +27,15 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Time/MonotonicClock.h"
 
-#include "DevTools/AssetReload/ReloadTracker.h"
-#include "DevTools/ModuleReload/LiveReload/DeferredLibraryUnloadQueue.h"
-#include "DevTools/ModuleReload/LiveReload/ModuleDependencyGraph.h"
-#include "DevTools/ModuleReload/LiveReload/ModuleShadowCopy.h"
+#include "DevTools/AssetReload/HotReloadTracker.h"
+#include "DevTools/ModuleReload/HotReload/DeferredLibraryUnloadQueue.h"
+#include "DevTools/ModuleReload/HotReload/ModuleDependencyGraph.h"
+#include "DevTools/ModuleReload/HotReload/ModuleShadowCopy.h"
 
 #include "Engine/Foundation/Foundation.h"
 #include "Engine/Module/ModuleTypeRegistry.h"
 
-#include "ModuleManager/ILiveReloadManager.h"
+#include "ModuleManager/IModuleHotReloadManager.h"
 
 namespace sw
 {
@@ -61,7 +61,7 @@ namespace sw
      *         덮어쓰거나 통째로 비우는 길이 없습니다. 모듈마다의 칸은 그 모듈의 주인 하나가 걸고(다시 걸면 앞 구독은 아무것도 풀지 않는다),
      *         배치 직전 콜백은 여럿이 걸 수 있는 목록입니다.
      */
-    class LiveReloadManager final : public ILiveReloadManager
+    class ModuleHotReloadManager final : public IModuleHotReloadManager
     {
     public:
         // 모듈 주인 창구(`IReloadableModuleClient`)의 검사(`isLibraryUsable`)는 옛 라이브러리가 아직 돌 때(prepare) 불리고,
@@ -77,14 +77,14 @@ namespace sw
         static constexpr uint32 kMaxDeferredUnloadBatchCount = 4;
 
         /** @brief 모듈 맵과 감시가 빈 상태로 시작합니다. @p openMode 가 `ShadowCopy` 면 @p fileWatch 로 모듈 폴더의 빌드 스탬프를 봅니다(호스트 개발 계층의 것 — 이것보다 오래 산다). */
-        LiveReloadManager( FileWatchService& fileWatch, ModuleOpenMode openMode );
+        ModuleHotReloadManager( FileWatchService& fileWatch, ModuleOpenMode openMode );
         /** @brief 로드된 모듈을 언로드합니다. */
-        ~LiveReloadManager() override;
+        ~ModuleHotReloadManager() override;
 
         /** @brief 복사를 금지합니다. */
-        LiveReloadManager( const LiveReloadManager& ) = delete;
+        ModuleHotReloadManager( const ModuleHotReloadManager& ) = delete;
         /** @brief 대입을 금지합니다. */
-        LiveReloadManager& operator=( const LiveReloadManager& ) = delete;
+        ModuleHotReloadManager& operator=( const ModuleHotReloadManager& ) = delete;
 
         /** @brief 라이브 리로드 매니저를 종료하고 모든 모듈을 해제합니다. */
         void shutdown();
@@ -142,7 +142,7 @@ namespace sw
         void update();
 
         /**
-         * @brief 모듈의 주인 창구를 겁니다(`ILiveReloadManager::setModuleClient`). 구독이 사라지면 풀립니다.
+         * @brief 모듈의 주인 창구를 겁니다(`IModuleHotReloadManager::setModuleClient`). 구독이 사라지면 풀립니다.
          * @details `onAfterReload` 는 새 라이브러리의 코드가 처음 도는 지점(API 바인딩, 인스턴스 생성, 상태 복원)이라 `ModuleCallGuard` 로
          *          보호한다. 결함이 나면 그래프를 막고 `onReloadFault` 를 부른다.
          */
@@ -310,7 +310,7 @@ namespace sw
         bool flushTasksBeforeUnload();
         /** @brief 렌더 · 태스크 워커를 비웁니다(`flushTasksBeforeUnload` 의 앞 절반 — 그 뒤에 이벤트 큐를 비운다). */
         bool flushWorkersBeforeUnload();
-        /** @brief 부분 그래프를, 모든 prepare 가 성공한 뒤에만 commit 합니다. 결과와 걸린 시간을 리로드 집계(`ReloadTracker`, 길 Module)에 적는 한 곳입니다. */
+        /** @brief 부분 그래프를, 모든 prepare 가 성공한 뒤에만 commit 합니다. 결과와 걸린 시간을 리로드 집계(`HotReloadTracker`, 길 Module)에 적는 한 곳입니다. */
         void reloadCascade( const vector<string>& listSubgraphName );
         /** @brief `reloadCascade` 의 본문입니다. 교체할 모듈이 없으면(빈 순서) false 이고, 그 밖에는 성공 · 실패와 상관없이 true 입니다(성공은 완료 수로 가른다). */
         [[nodiscard]] bool runCascade( const vector<string>& listSubgraphName );
@@ -348,15 +348,15 @@ namespace sw
         MulticastDelegate<bool( const vector<string>& )> _onBeforeCommitBatch;         ///< 배치 직전 콜백(더한 순서 — 부를 때는 거꾸로, `broadcastUntilReverse`)
         MulticastDelegate<bool()>                        _reloadHolds;                 ///< 리로드 잡음(`addReloadHold`)
         FlushWorkersDelegate                             _flushWorkers;
-        vector<CallbackRegistration>                     _listCallbackRegistration;                                                                                                ///< 살아 있는 칸 구독이 가리키는 칸
-        IDAllocator<uint64>                              _callbackIDAllocator;                                                                                                     ///< 칸 구독 번호(0 은 빈 구독)
-        SubscriptionList                                 _subscriptions{ SW_DELEGATE_METHOD( SubscriptionList::ReleaseFunction, &LiveReloadManager::releaseSubscription, this ) }; ///< 칸 구독을 내준다(믹스인 상속 대신 합성 — 기반은 창구 하나). 풀리면 `releaseSubscription`
-        DeferredLibraryUnloadQueue                       _deferredUnloadQueue;                                                                                                     ///< 언로드를 미룬 옛 라이브러리(`kMaxDeferredUnloadBatchCount` 배치까지)
-        ShadowCopySerials                                _shadowCopySerials;                                                                                                       ///< 섀도 복사본 이름의 일련번호 · 라이브러리 이름 세대(`ModuleShadowCopy::writeShadowCopy`)
-        ModuleReloadPhases                               _cascadePhases;                                                                                                           ///< 지금(마지막) 연쇄의 단계별 시간 — `runCascade` 가 채우고 `reloadCascade` 가 집계에 적는다
-        float64                                          _buildFinishedSeconds;                                                                                                    ///< 빌드 끝을 처음 본 시각(단조 초, 0 이면 없음) — 연쇄 시작까지의 대기 구간을 잰다
-        const ModuleOpenMode                             _openMode;                                                                                                                ///< 라이브러리를 여는 방법(만들 때 정한다)
-        uint32                                           _completedReloadCount;                                                                                                    ///< 끝까지 성공한 연쇄 리로드 수(`getCompletedReloadCount`)
+        vector<CallbackRegistration>                     _listCallbackRegistration;                                                                                                     ///< 살아 있는 칸 구독이 가리키는 칸
+        IDAllocator<uint64>                              _callbackIDAllocator;                                                                                                          ///< 칸 구독 번호(0 은 빈 구독)
+        SubscriptionList                                 _subscriptions{ SW_DELEGATE_METHOD( SubscriptionList::ReleaseFunction, &ModuleHotReloadManager::releaseSubscription, this ) }; ///< 칸 구독을 내준다(믹스인 상속 대신 합성 — 기반은 창구 하나). 풀리면 `releaseSubscription`
+        DeferredLibraryUnloadQueue                       _deferredUnloadQueue;                                                                                                          ///< 언로드를 미룬 옛 라이브러리(`kMaxDeferredUnloadBatchCount` 배치까지)
+        ShadowCopySerials                                _shadowCopySerials;                                                                                                            ///< 섀도 복사본 이름의 일련번호 · 라이브러리 이름 세대(`ModuleShadowCopy::writeShadowCopy`)
+        ModuleReloadPhases                               _cascadePhases;                                                                                                                ///< 지금(마지막) 연쇄의 단계별 시간 — `runCascade` 가 채우고 `reloadCascade` 가 집계에 적는다
+        float64                                          _buildFinishedSeconds;                                                                                                         ///< 빌드 끝을 처음 본 시각(단조 초, 0 이면 없음) — 연쇄 시작까지의 대기 구간을 잰다
+        const ModuleOpenMode                             _openMode;                                                                                                                     ///< 라이브러리를 여는 방법(만들 때 정한다)
+        uint32                                           _completedReloadCount;                                                                                                         ///< 끝까지 성공한 연쇄 리로드 수(`getCompletedReloadCount`)
         uint8                                            _bReloadGraphBroken   : 1;
         uint8                                            _bBuildStampPending   : 1; ///< 스탬프가 바뀌었는데 이 프로세스의 빌드가 도는 중이라 아직 보지 않았다
         uint8                                            _bModuleFolderChanged : 1; ///< 모듈 폴더가 바뀌었다(`onModuleFolderChanged`) — 다음 `update` 가 스탬프를 본다

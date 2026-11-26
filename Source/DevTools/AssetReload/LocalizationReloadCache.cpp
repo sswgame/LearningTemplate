@@ -1,9 +1,8 @@
 /**
- * @file DataFileReloadCaches.cpp
+ * @file LocalizationReloadCache.cpp
  * @brief 엔진 서비스가 가진 데이터 파일(로컬라이제이션 테이블 · 프로젝트)을 에셋 캐시 레지스트리에 노출하는 리로드 어댑터입니다. 오디오 데이터는 클라이언트 쪽(`Client/AssetReload/AudioReloadCache.cpp`)에 있다.
  *        에디터 핫 리로드가 다른 에셋과 같은 경로로 다시 읽게 합니다. 이 파일 밖에서 이름으로 부르는 곳이 없어 헤더 없이 등록만 한다.
- * @details 파일 이름이 `Reload.cpp` 로 끝나면 `SW_DEV_ONLY_SOURCE_PATTERNS` 가 빼므로 `Caches` 로 끝낸다.
- *          어댑터는 상태가 없다 — 데이터는 서비스가 가지고, 어댑터는 바뀐 파일을 그 서비스에 넘긴다.
+ * @details 어댑터는 상태가 없다 — 데이터는 서비스가 가지고, 어댑터는 바뀐 파일을 그 서비스에 넘긴다.
  *          `clear()` 는 아무것도 비우지 않는다 — 캐시 비우기(재초기화)가 화면의 텍스트를 지우면 안 되고 수명은 서비스가 정한다.
  */
 #include "pch.h"

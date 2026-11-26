@@ -24,7 +24,7 @@
 namespace sw
 {
     class GameModuleManager;
-    class ILiveReloadManager;
+    class IModuleHotReloadManager;
 
     /** @brief 엔진을 세운 결과입니다. */
     enum class HostEngineStart : uint8
@@ -108,7 +108,7 @@ namespace sw
                 return _pDevLayer.get();
         }
         /** @brief 개발 계층의 핫 리로드 매니저입니다. 배포는 nullptr 이다 — 모듈 관리자가 정적 링크로 받는다. */
-        ILiveReloadManager* getLiveReloadManager() const { return _pDevLayer != nullptr ? _pDevLayer->getLiveReloadManager() : nullptr; }
+        IModuleHotReloadManager* getModuleHotReloadManager() const { return _pDevLayer != nullptr ? _pDevLayer->getModuleHotReloadManager() : nullptr; }
         /** @brief 모듈 관리자입니다. 호스트 로더가 돌기 전과 `stopHostSubsystems` 뒤에는 nullptr 입니다. */
         GameModuleManager* getModuleManager() const { return _moduleManager.get(); }
 

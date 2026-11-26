@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "DevTools/ModuleReload/LiveReload/ModuleDependencyGraph.h"
+#include "DevTools/ModuleReload/HotReload/ModuleDependencyGraph.h"
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/DependencyGraph.h"
@@ -121,7 +121,7 @@ namespace sw
                     cycleModules.append( " -> " );
                 cycleModules.append( listSubgraph[nodeIndex] );
             }
-            SW_LOG_ERROR_ID( "LiveReloadManager.DependencyCycleModuleGraph", "Dependency cycle in module graph (%# of %# modules cannot be ordered): %#",
+            SW_LOG_ERROR_ID( "ModuleHotReloadManager.DependencyCycleModuleGraph", "Dependency cycle in module graph (%# of %# modules cannot be ordered): %#",
                              static_cast<uint32>( order._listUnsorted.size() ), static_cast<uint32>( listSubgraph.size() ), cycleModules.c_str() );
             return false;
         }

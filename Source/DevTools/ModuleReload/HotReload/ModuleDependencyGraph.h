@@ -1,9 +1,9 @@
 /**
- * @file DevTools/ModuleReload/LiveReload/ModuleDependencyGraph.h
+ * @file DevTools/ModuleReload/HotReload/ModuleDependencyGraph.h
  * @brief 핫 리로드가 다루는 모듈의 의존 그래프입니다. 연쇄 교체 대상(의존하는 쪽까지)과 교체 순서(위상 정렬)를 계산합니다.
  *
- * @note 이름과 의존 목록만 다루는 순수한 계산이라 DLL 없이 테스트합니다(`DevTools/ModuleReload/Tests/TestLiveReloadLogic.cpp`).
- *       핫 리로드(`LiveReloadManager`)만 쓰고, Shipping 빌드에서 함께 빠집니다(`Source/ModuleManager/CMakeLists.txt` 의 제외 목록).
+ * @note 이름과 의존 목록만 다루는 순수한 계산이라 DLL 없이 테스트합니다(`DevTools/ModuleReload/Tests/TestModuleHotReloadLogic.cpp`).
+ *       핫 리로드(`ModuleHotReloadManager`)만 쓰고, Shipping 빌드에서 함께 빠집니다(`Source/ModuleManager/CMakeLists.txt` 의 제외 목록).
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -16,7 +16,7 @@ namespace sw
     /**
      * @brief 모듈 이름 → 그 모듈이 의존하는 모듈 이름 목록입니다. 그래프에 든 모듈만 계산에 들어갑니다.
      * @details 그래프에 없는 의존(Engine · 공용 GameFramework 처럼 이 매니저가 교체하지 않는 것)은 간선으로 세지 않습니다.
-     *          `LiveReloadManager` 는 모듈 맵과 같은 이름 집합을 이 그래프에 둡니다(콜백만 먼저 등록한 모듈도 이름은 들어 있습니다).
+     *          `ModuleHotReloadManager` 는 모듈 맵과 같은 이름 집합을 이 그래프에 둡니다(콜백만 먼저 등록한 모듈도 이름은 들어 있습니다).
      */
     class ModuleDependencyGraph final
     {

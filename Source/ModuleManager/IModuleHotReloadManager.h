@@ -1,9 +1,9 @@
 /**
- * @file ModuleManager/ILiveReloadManager.h
- * @brief 모듈 관리자(`GameModuleManager` · 개발 계층의 `EditorGameModuleManager`)가 보는 핫 리로드 창구 `ILiveReloadManager` 입니다.
- * @details 구현(`DevTools/ModuleReload/LiveReload/LiveReloadManager` — 섀도 복사 · 연쇄 교체 · 파일 감시)은 개발 도구 공유 라이브러리(DevTools.dll)에 있고,
+ * @file ModuleManager/IModuleHotReloadManager.h
+ * @brief 모듈 관리자(`GameModuleManager` · 개발 계층의 `EditorGameModuleManager`)가 보는 핫 리로드 창구 `IModuleHotReloadManager` 입니다.
+ * @details 구현(`DevTools/ModuleReload/HotReload/ModuleHotReloadManager` — 섀도 복사 · 연쇄 교체 · 파일 감시)은 개발 도구 공유 라이브러리(DevTools.dll)에 있고,
  *          모듈 관리자는 이 창구만 안다 — 의존은 DevTools → ModuleManager 한 방향이다. 배포는 구현이 없어 모듈 관리자가 nullptr 을 받는다.
- *          언리얼 Core 의 `IHotReloadInterface` 를 Developer 모듈 HotReload 가 구현하는 것과 같은 자리다. 계약은 구현 쪽 머리말(`LiveReloadManager.h`)에 있다.
+ *          언리얼 Core 의 `IHotReloadInterface` 를 Developer 모듈 HotReload 가 구현하는 것과 같은 자리다. 계약은 구현 쪽 머리말(`ModuleHotReloadManager.h`)에 있다.
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -21,10 +21,10 @@ namespace sw
     class IModuleCompiler;
 
     /**
-     * @class ILiveReloadManager
+     * @class IModuleHotReloadManager
      * @brief 모듈 공유 라이브러리의 핫 리로드 창구입니다. 게임 스레드에서 씁니다.
      */
-    class ILiveReloadManager
+    class IModuleHotReloadManager
     {
     public:
         /** @brief 연쇄 교체의 첫 commit 직전에 불립니다. false 면 아무것도 바꾸지 않는다. */
@@ -33,7 +33,7 @@ namespace sw
         /** @brief true 를 돌려주는 동안 리로드를 잡아 둡니다(`addReloadHold`). */
         using ReloadHoldDelegate = Delegate<bool()>;
 
-        virtual ~ILiveReloadManager() = default;
+        virtual ~IModuleHotReloadManager() = default;
 
         /** @brief 모듈을 등록하고 섀도 복사본으로 로드합니다(@p listDependsOn 이 먼저). */
         [[nodiscard]] virtual bool registerModule( string_view moduleName, const vector<string>& listDependsOn = {} ) = 0;

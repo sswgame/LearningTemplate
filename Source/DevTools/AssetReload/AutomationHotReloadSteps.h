@@ -1,5 +1,5 @@
 /**
- * @file DevTools/AssetReload/AutomationReloadSteps.h
+ * @file DevTools/AssetReload/AutomationHotReloadSteps.h
  * @brief 플레이 중 리로드를 일으키는 시나리오 단계입니다 — `<RebuildModule name variant>`(모듈을 다시 지어 갈아 끼움) · `<OverwriteConfig configFile from>`(설정 파일 덮어쓰기) ·
  *        `<RestoreOverwrites/>`(맡긴 파일을 지금 되돌림).
  * @details 바꾼 파일은 원본 글을 실행기에 맡기고(`IAutomationStepContext::restoreFileAtEnd`) 시나리오가 어떻게 끝나든 되돌린다. 추적 소스는 고치지 않는다 — 모듈 판은
@@ -51,11 +51,11 @@ namespace sw
     };
 
     /**
-     * @struct AutomationReloadSteps
+     * @struct AutomationHotReloadSteps
      * @brief 리로드 단계의 순수 판정입니다(파일 · 실행 없이 단위 테스트가 부른다). `OverwriteConfig` · `RestoreOverwrites` 는 이 .cpp 가, `RebuildModule` 은
      *        `ModuleReload/ModuleRebuildStep.cpp` 가 등록한다 — 정적 모듈 구성(`SW_STATIC_MODULES`)은 모듈 리로드 폴더를 짓지 않아 그 단계가 없다.
      */
-    struct SW_DEVTOOLS_API AutomationReloadSteps
+    struct SW_DEVTOOLS_API AutomationHotReloadSteps
     {
         /** @brief 비지 않았고, 절대 경로가 아니며, `..` 마디가 없는 상대 경로면 true 입니다(글 연산 — 판 머리 · 설정 파일 경로의 공통 판정). */
         [[nodiscard]] static bool isPlainRelativePath( string_view path );

@@ -70,7 +70,7 @@ namespace sw
         const ISubsystemLocator& getMountedLocator() const { return _mountedLocator; }
         /**
          * @brief 매단 자식이 공개한 칸에 더해, 호스트 모듈에 보인다고 선언한 서브시스템(`SubsystemModuleVisibility::HostModules`)을 보는 조회 창구입니다(에디터 모듈 범위의 부모).
-         * @details 예전에는 호스트가 개발 도구 서브시스템을 손 목록으로 에디터 범위에 빌려 걸었다 — 목록에서 빠지면 에디터가 조용히 못 찾았다(ReloadTracker · assetcascade).
+         * @details 예전에는 호스트가 개발 도구 서브시스템을 손 목록으로 에디터 범위에 빌려 걸었다 — 목록에서 빠지면 에디터가 조용히 못 찾았다(HotReloadTracker · assetcascade).
          */
         const ISubsystemLocator& getHostModuleLocator() const { return _hostModuleLocator; }
 

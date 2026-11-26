@@ -4,7 +4,7 @@
  *
  * @note 호스트와 모듈 사이 계약(ModuleAPI)의 수명 주기를 실행 파일 쪽에서 맡습니다. 에디터 인스턴스, 에디터 리로드, 에디터 UI, RHI 교체 뒤의
  *       재초기화의 호스트 몫은 개발 전용 `EditorGameModuleManager`(DevTools/Host, 배포는 짓지 않는다)가 이 클래스 위에 구현합니다(장치 교체의 순서는 이 클래스의 `applyPendingDeviceChange`). 의존은 그쪽에서 여기로 한 방향입니다.
- * @note 모듈을 잇는 방식(개발은 동적 라이브러리 · 리로드 매니저, 정적 모듈 구성은 정적 링크)은 리로드 매니저 창구(`ILiveReloadManager` — 정적 구성은 nullptr)와
+ * @note 모듈을 잇는 방식(개발은 동적 라이브러리 · 리로드 매니저, 정적 모듈 구성은 정적 링크)은 리로드 매니저 창구(`IModuleHotReloadManager` — 정적 구성은 nullptr)와
  *       `build::kStaticModules` 로 가른다. 한쪽 구성에만 있는 함수를 부르는 `exportGameAPITable` 만 `SW_WITH_DYNAMIC_MODULES` 로 가른다.
  */
 #pragma once
@@ -35,7 +35,7 @@ namespace sw
     class IEngineRenderDriver;
     class GenericWindow;
     class QuitRequest;
-    class ILiveReloadManager;
+    class IModuleHotReloadManager;
     class ModuleCatalog;
     class RHI;
     class SceneManager;
@@ -114,7 +114,7 @@ namespace sw
 
         /**
          * @brief 이미 로드된 모듈의 라이브러리 핸들을 반환합니다. 핫 리로드가 없으면(Shipping) 항상 빈 핸들입니다.
-         * @details 모듈 수명은 이 클래스가 압니다. 부르는 쪽이 LiveReloadManager 를 직접 알 필요가 없습니다. RHI 백엔드 교체가
+         * @details 모듈 수명은 이 클래스가 압니다. 부르는 쪽이 ModuleHotReloadManager 를 직접 알 필요가 없습니다. RHI 백엔드 교체가
          *          모듈을 다시 만들 때 이 핸들로 같은 DLL 을 다시 바인딩합니다.
          */
         ModuleLibraryHandle getLoadedModuleHandle( string_view moduleName ) const;
@@ -125,16 +125,16 @@ namespace sw
          *          그 뒤 기동 함수(`initializeDedicatedServer`, `initializeClient`)가 만듭니다. Shipping 은 모듈이 정적 링크라 로드할 것이 없습니다.
          *          무엇을 어떤 순서로 로드할지는 모듈 매니페스트의 해석 결과(@p resolution)가 정합니다. 켜진 GameFramework, 키트, SWGame 을 로드 순서대로
          *          (의존이 먼저) 로드합니다. 키트의 리로드 의존은 매니페스트의 `_listDependency` 입니다.
-         * @param pLiveReloadManager Dev 모드 전용 모듈 매니저(Shipping 에서는 nullptr)
+         * @param pModuleHotReloadManager Dev 모드 전용 모듈 매니저(Shipping 에서는 nullptr)
          * @param catalog 매니페스트 번들(`Bin/Modules/<모듈>.module.json`)
          * @param resolution `catalog.resolve` 결과
          */
-        [[nodiscard]] virtual bool loadModuleLibraries( ILiveReloadManager* pLiveReloadManager, const ModuleCatalog& catalog, const ModuleResolution& resolution );
+        [[nodiscard]] virtual bool loadModuleLibraries( IModuleHotReloadManager* pModuleHotReloadManager, const ModuleCatalog& catalog, const ModuleResolution& resolution );
         /**
          * @brief 전용 서버로 게임 인스턴스를 만듭니다. 창, RHI, 렌더 스레드, 에디터가 없고 게임은 `initialize( nullptr )`(창 없음)를 받습니다.
          * @details 모듈 콜백, 핫 리로드(Dev), 상태 보존은 App 과 같습니다.
          */
-        [[nodiscard]] bool initializeDedicatedServer( ILiveReloadManager* pLiveReloadManager );
+        [[nodiscard]] bool initializeDedicatedServer( IModuleHotReloadManager* pModuleHotReloadManager );
         /**
          * @brief 모듈 인스턴스를 종료하고, 레지스트리에 걸어 둔 이 객체의 콜백(구독)을 놓습니다.
          * @details 콜백은 이 객체의 메서드를 가리킵니다. 실행 파일이 이 객체를 레지스트리보다 먼저 지우므로, 놓지 않으면 그 사이에
@@ -173,9 +173,9 @@ namespace sw
          * @brief 클라이언트 호스트(App)의 기동입니다 — 콜백을 등록하고 게임 인스턴스를 만듭니다(게임 모듈 라이브러리는 `loadModuleLibraries` 가 이미 로드했습니다).
          * @details 에디터 구성(`DevTools/Host/Client/EditorGameModuleManager` — 개발 계층이 만든다)은 게임 다음에 에디터를 세운다. 전용 서버는 `initializeDedicatedServer` 다.
          */
-        [[nodiscard]] virtual bool initializeClient( ILiveReloadManager* pLiveReloadManager, RHI* pRHI, GenericWindow* pWindow, IEngineRenderDriver* pRenderDriver )
+        [[nodiscard]] virtual bool initializeClient( IModuleHotReloadManager* pModuleHotReloadManager, RHI* pRHI, GenericWindow* pWindow, IEngineRenderDriver* pRenderDriver )
         {
-            return initializeGame( pLiveReloadManager, pRHI, pWindow, pRenderDriver );
+            return initializeGame( pModuleHotReloadManager, pRHI, pWindow, pRenderDriver );
         }
         // 호스트 모듈(에디터)의 프레임 지점 — App 이 프레임마다 부른다. 이 클래스(배포 App · 전용 서버)는 아무것도 하지 않는다.
         /** @brief 호스트 모듈의 UI 프레임을 돌리고 그 결과(뷰 RT, 씬 틱 여부, 다시 그릴 까닭)를 프레임 상태에 확정합니다. 게임 업데이트 뒤 · 페이싱 앞에 부릅니다. */
@@ -193,7 +193,7 @@ namespace sw
         /** @brief 모듈 컴파일러입니다(개발 잇기만 만든다 — 배포는 nullptr). 에디터 모듈의 서비스 범위에 `IModuleCompiler` 로 건다(`fillModuleSubsystemScope`). */
         IModuleCompiler* getModuleCompiler() const { return _moduleCompiler.get(); }
 
-        // 3) LiveReload 콜백. 리로드 매니저에 건 주인 창구(`GameReloadClient` · `KitReloadClient`)가 부른다
+        // 3) HotReload 콜백. 리로드 매니저에 건 주인 창구(`GameReloadClient` · `KitReloadClient`)가 부른다
         /** @brief 게임 모듈을 언로드하기 직전에 불립니다. 상태를 보존하고 인스턴스를 해제합니다. */
         void onBeforeGameReload();
         /**
@@ -266,7 +266,7 @@ namespace sw
          * @param pWindow 플랫폼 창(없으면 nullptr)
          * @param pRenderDriver 렌더러 창구(워커 비우기용, 없으면 nullptr)
          */
-        [[nodiscard]] bool initializeGame( ILiveReloadManager* pLiveReloadManager, RHI* pRHI, GenericWindow* pWindow, IEngineRenderDriver* pRenderDriver );
+        [[nodiscard]] bool initializeGame( IModuleHotReloadManager* pModuleHotReloadManager, RHI* pRHI, GenericWindow* pWindow, IEngineRenderDriver* pRenderDriver );
         /**
          * @brief 호스트 서브시스템 범위를 새로 채워 모듈의 @p bindService 에 넘기고 @p inoutServices 를 그것으로 바꿉니다. @p bindService 가 비었으면(API 표가 없다) 아무것도 하지 않습니다.
          * @details 새 범위를 넘긴 뒤에 앞 범위를 놓는다 — 모듈이 앞 범위를 들고 있는 동안 사라지지 않게. 게임 · 에디터 모듈이 같은 길을 쓴다(@p bGameModule 은 `fillModuleSubsystemScope` 와 같다).
@@ -276,8 +276,8 @@ namespace sw
         /** @brief 이번 프레임 상태를 호스트 모듈이 채웁니다(뷰 RT, 씬 틱 여부). */
         ModuleFrameState& getMutableFrameState() { return _frameState; }
         /** @brief 이번 프레임의 뷰 요청을 호스트 모듈이 채웁니다(인스턴스를 없앨 때는 비운다). */
-        FrameViewports&     getMutableViews() { return _views; }
-        ILiveReloadManager* getLiveReloadManager() const { return _pLiveReloadManager; }
+        FrameViewports&          getMutableViews() { return _views; }
+        IModuleHotReloadManager* getModuleHotReloadManager() const { return _pModuleHotReloadManager; }
         /** @brief 리로드 매니저에 건 콜백의 구독을 이 객체의 수명에 묶습니다(`shutdown` 이 놓는다). */
         void holdReloadSubscription( Subscription subscription ) { _listReloadSubscription.push_back( std::move( subscription ) ); }
         RHI* getRHI() const { return _pRHI; }
@@ -393,17 +393,17 @@ namespace sw
         GameReloadClient _gameReloadClient{ *this };
         KitReloadClient  _kitReloadClient{ *this };
 
-        unique_ptr<IModuleCompiler> _moduleCompiler; ///< 개발 잇기(`SW_WITH_DYNAMIC_MODULES` 구역)가 리로드 매니저에게서 받는다(`ILiveReloadManager::createModuleCompiler`, 구현은 DevTools) — 배포는 nullptr
+        unique_ptr<IModuleCompiler> _moduleCompiler; ///< 개발 잇기(`SW_WITH_DYNAMIC_MODULES` 구역)가 리로드 매니저에게서 받는다(`IModuleHotReloadManager::createModuleCompiler`, 구현은 DevTools) — 배포는 nullptr
 
         GameAPI    _gameAPI;
         GameHandle _game;
         /** @brief 게임 모듈에 넘긴 호스트 서브시스템 범위입니다(`rebindModuleSubsystems` 가 새로 만든다 — 모듈이 들고 있는 동안 산다). */
         unique_ptr<SubsystemScope> _gameServices;
 
-        ILiveReloadManager*  _pLiveReloadManager; // 소유하지 않는다.
-        RHI*                 _pRHI;               // 소유하지 않는다.
-        GenericWindow*       _pWindow;            // 소유하지 않는다.
-        IEngineRenderDriver* _pRenderDriver;      // 소유하지 않는다.
+        IModuleHotReloadManager* _pModuleHotReloadManager; // 소유하지 않는다.
+        RHI*                     _pRHI;                    // 소유하지 않는다.
+        GenericWindow*           _pWindow;                 // 소유하지 않는다.
+        IEngineRenderDriver*     _pRenderDriver;           // 소유하지 않는다.
         /**
          * @brief 프레임 경로(`beginFrame`)가 쓰는 엔진 서비스입니다. `initializeGame` 이 바인딩된 서비스 테이블에서 한 번 읽습니다(소유하지 않음).
          * @details 비어 있으면 그 일을 건너뜁니다. 종료 · 리로드 경로는 서비스가 이미 해제됐을 수 있어 `engine::areEngineSubsystemsBound()` 로 확인한 뒤 전역 조회를 씁니다.

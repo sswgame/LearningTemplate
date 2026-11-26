@@ -1,10 +1,10 @@
 /**
- * @file AutomationReloadSteps.cpp
+ * @file AutomationHotReloadSteps.cpp
  * @brief 플레이 중 리로드 단계 `OverwriteConfig` · `RestoreOverwrites` 와 판 표 읽기를 구현합니다. `RebuildModule` 은 모듈 리로드가 있는 구성만 짓는 `ModuleReload/ModuleRebuildStep.cpp` 에 있다.
  */
 #include "pch.h"
 
-#include "DevTools/AssetReload/AutomationReloadSteps.h"
+#include "DevTools/AssetReload/AutomationHotReloadSteps.h"
 
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
@@ -25,7 +25,7 @@ namespace sw
 {
     namespace
     {
-        struct AutomationReloadStepsInternal
+        struct AutomationHotReloadStepsInternal
         {
             /** @brief 글 연산으로 판정하는 상대 경로인지 봅니다 — 비지 않았고, 절대 경로가 아니며, `..` 마디가 없다. */
             static bool isPlainRelativePath( string_view path )
@@ -43,7 +43,7 @@ namespace sw
                 const expected<void>            read = step.readProperties( params );
                 if ( read.has_value() == false )
                     return read;
-                return AutomationReloadSteps::validateConfigFile( params._configFile );
+                return AutomationHotReloadSteps::validateConfigFile( params._configFile );
             }
 
             static bool runOverwriteConfig( IAutomationStepContext& context, const AutomationStep& step )
@@ -96,7 +96,7 @@ namespace sw
         {
             if ( variant._text.empty() )
                 return unexpected( Error{ ErrorKind::InvalidArgument, "a module rebuild variant needs a non-empty _text", name } );
-            if ( AutomationReloadStepsInternal::isPlainRelativePath( variant._header ) == false )
+            if ( AutomationHotReloadStepsInternal::isPlainRelativePath( variant._header ) == false )
                 return unexpected( Error{ ErrorKind::InvalidArgument, "a module rebuild variant _header is a relative path under the build tree's generated/ folder", variant._header } );
         }
         return {};
@@ -110,22 +110,22 @@ namespace sw
         return variantIt->second;
     }
 
-    bool AutomationReloadSteps::isPlainRelativePath( string_view path )
+    bool AutomationHotReloadSteps::isPlainRelativePath( string_view path )
     {
-        return AutomationReloadStepsInternal::isPlainRelativePath( path );
+        return AutomationHotReloadStepsInternal::isPlainRelativePath( path );
     }
 
-    expected<void> AutomationReloadSteps::validateConfigFile( string_view file )
+    expected<void> AutomationHotReloadSteps::validateConfigFile( string_view file )
     {
-        if ( AutomationReloadStepsInternal::isPlainRelativePath( file ) == false )
+        if ( AutomationHotReloadStepsInternal::isPlainRelativePath( file ) == false )
             return unexpected( Error{ ErrorKind::InvalidArgument, "OverwriteConfig configFile is a relative path under Config/ (no '..', not absolute)", file } );
         if ( FileUtil::hasExtension( file, ".json" ) == false )
             return unexpected( Error{ ErrorKind::InvalidArgument, "OverwriteConfig configFile is a .json config", file } );
         return {};
     }
 
-    SW_AUTOMATION_STEP( reloadOverwriteConfig, "OverwriteConfig", &AutomationReloadStepsInternal::runOverwriteConfig, &AutomationReloadStepsInternal::validateOverwriteConfig,
+    SW_AUTOMATION_STEP( reloadOverwriteConfig, "OverwriteConfig", &AutomationHotReloadStepsInternal::runOverwriteConfig, &AutomationHotReloadStepsInternal::validateOverwriteConfig,
                         AutomationStepOptions{} );
-    SW_AUTOMATION_STEP( reloadRestoreOverwrites, "RestoreOverwrites", &AutomationReloadStepsInternal::runRestoreFiles, &AutomationStep::validateProperties<AutomationNoParams>,
+    SW_AUTOMATION_STEP( reloadRestoreOverwrites, "RestoreOverwrites", &AutomationHotReloadStepsInternal::runRestoreFiles, &AutomationStep::validateProperties<AutomationNoParams>,
                         AutomationStepOptions{} );
 } // namespace sw

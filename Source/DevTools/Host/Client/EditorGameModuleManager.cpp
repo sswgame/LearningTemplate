@@ -25,7 +25,7 @@
     #include "Core/Module/ModuleLibraryUtil.h"
     #include "Core/Path/AbsolutePath.h"
 
-    #include "ModuleManager/ILiveReloadManager.h"
+    #include "ModuleManager/IModuleHotReloadManager.h"
 #endif
 
 namespace sw
@@ -52,7 +52,7 @@ namespace sw
         bindRenderHooks( false );
     }
 
-    bool EditorGameModuleManager::loadModuleLibraries( ILiveReloadManager* pLiveReloadManager, const ModuleCatalog& catalog, const ModuleResolution& resolution )
+    bool EditorGameModuleManager::loadModuleLibraries( IModuleHotReloadManager* pModuleHotReloadManager, const ModuleCatalog& catalog, const ModuleResolution& resolution )
     {
         _bEditorModuleActive = resolution.isActive( config::kTargetEditorModule ) ? SW_TRUE : SW_FALSE;
         // 에디터 확장은 에디터를 켤 때만 로드한다(initialize 의 에디터 블록). 여기서는 이름과 의존만 적어 둔다. 카탈로그는 initialize 에 없다.
@@ -67,14 +67,14 @@ namespace sw
             extension._listDependency = pManifest->collectDependencyNames();
             _listEditorExtension.push_back( std::move( extension ) );
         }
-        return GameModuleManager::loadModuleLibraries( pLiveReloadManager, catalog, resolution );
+        return GameModuleManager::loadModuleLibraries( pModuleHotReloadManager, catalog, resolution );
     }
 
-    bool EditorGameModuleManager::initializeClient( ILiveReloadManager* pLiveReloadManager, RHI* pRHI, GenericWindow* pWindow, IEngineRenderDriver* pRenderDriver )
+    bool EditorGameModuleManager::initializeClient( IModuleHotReloadManager* pModuleHotReloadManager, RHI* pRHI, GenericWindow* pWindow, IEngineRenderDriver* pRenderDriver )
     {
         // 게임이 먼저, 에디터가 나중이다. 게임은 처음 여는 씬을 요청하고(`GameSceneFlow::requestFirstScene`) 에디터는 제 시작 씬
         // (`-gv_editorStartupScene`)을 요청한다. 씬 매니저는 마지막 요청을 남기므로 나중에 요청한 에디터의 씬이 열린다(`GameSettings::_startMap` 주석).
-        if ( initializeGame( pLiveReloadManager, pRHI, pWindow, pRenderDriver ) == false )
+        if ( initializeGame( pModuleHotReloadManager, pRHI, pWindow, pRenderDriver ) == false )
             return false;
 
         // 에디터 모듈을 리로드 그래프에 올리는 일은 동적 모듈 구성에만 있다(이 파일의 `SW_WITH_DYNAMIC_MODULES` 구역 — 정적 구성은 짓지 않는다).
@@ -87,7 +87,7 @@ namespace sw
         }
         else
         {
-            if ( registerEditorModule( pLiveReloadManager ) == false )
+            if ( registerEditorModule( pModuleHotReloadManager ) == false )
                 return false;
         }
         // 에디터 창은 패널 배치가 겹치는 크기 아래로 줄이지 않는다.
@@ -231,7 +231,7 @@ namespace sw
     }
 
     // ======================================================================
-    // LiveReload 콜백. 에디터.
+    // HotReload 콜백. 에디터.
     // ======================================================================
 
     void EditorGameModuleManager::onBeforeEditorReload()
@@ -362,10 +362,10 @@ namespace sw
 
 #if SW_WITH_DYNAMIC_MODULES
     // ----------------------------------------------------------------------------------------------------------------------
-    // 동적 모듈 구성에만 있는 경로 — 리로드 그래프 등록(LiveReload). 인스턴스 없는 헤드리스 작업은 `DevTools/Host/EditorModuleCommandlets.cpp` 다.
+    // 동적 모듈 구성에만 있는 경로 — 리로드 그래프 등록(HotReload). 인스턴스 없는 헤드리스 작업은 `DevTools/Host/EditorModuleCommandlets.cpp` 다.
     // 정적 구성(배포 · 웹 · Android 개발)은 이 헤더 · 라이브러리를 짓지 않아 여기만 `#if` 로 가른다(docs/agents/CppStyle.md "Build configuration switches" 둘째 줄). 부르는 자리는 `build::kStaticModules` 로 가른다.
     // ----------------------------------------------------------------------------------------------------------------------
-    bool EditorGameModuleManager::registerEditorModule( ILiveReloadManager* pLiveReloadManager )
+    bool EditorGameModuleManager::registerEditorModule( IModuleHotReloadManager* pModuleHotReloadManager )
     {
         if ( _bEditorModuleActive == SW_FALSE )
         {
@@ -373,9 +373,9 @@ namespace sw
             SW_LOG_ERROR_ID( "EditorGameModuleManager.EnableEditorGivenButModule", "-EnableEditor was given, but the module manifests turn %# off for this project", config::kTargetEditorModule );
             return false;
         }
-        if ( pLiveReloadManager == nullptr )
+        if ( pModuleHotReloadManager == nullptr )
         {
-            SW_LOG_ERROR_ID( "EditorGameModuleManager.EditorNeedsLiveReload", "-EnableEditor needs the module reload manager of a dynamic-module build" );
+            SW_LOG_ERROR_ID( "EditorGameModuleManager.EditorNeedsHotReload", "-EnableEditor needs the module reload manager of a dynamic-module build" );
             return false;
         }
 
@@ -383,10 +383,10 @@ namespace sw
         {
             const ScopedMemoryTag moduleMemoryTag{ kEditorModuleMemoryTag }; // 라이브러리 로드가 모듈의 정적 등록자를 돌린다
             // 등록이 곧 첫 로드의 "리로드 직후" 다 — 주인 창구를 먼저 걸어 그때 에디터 인스턴스가 선다.
-            holdReloadSubscription( pLiveReloadManager->setModuleClient( config::kTargetEditorModule, _editorReloadClient ) );
+            holdReloadSubscription( pModuleHotReloadManager->setModuleClient( config::kTargetEditorModule, _editorReloadClient ) );
             // 편집기 코드가 다른 스레드에서 돌고 있으면(열린 파일 대화상자) 닫힐 때까지 리로드를 기다린다 — 변경은 버리지 않는다.
-            holdReloadSubscription( pLiveReloadManager->addReloadHold( SW_DELEGATE_METHOD( ILiveReloadManager::ReloadHoldDelegate, &EditorGameModuleManager::isEditorReloadHeld, this ) ) );
-            if ( pLiveReloadManager->registerModule( config::kTargetEditorModule ) == false )
+            holdReloadSubscription( pModuleHotReloadManager->addReloadHold( SW_DELEGATE_METHOD( IModuleHotReloadManager::ReloadHoldDelegate, &EditorGameModuleManager::isEditorReloadHeld, this ) ) );
+            if ( pModuleHotReloadManager->registerModule( config::kTargetEditorModule ) == false )
             {
                 SW_LOG_ERROR_ID( "EditorGameModuleManager.FailedLoadEditorModule", "Failed to load the Editor Module." );
                 return false;
@@ -396,7 +396,7 @@ namespace sw
             // 인스턴스는 없다: 정적 등록자가 EditorModule 의 등록 목록에 오르고, 에디터 매니저가 다음 프레임에 맞춘다(EditorBuiltinSubsystems::syncExtensionRegistrations).
             for ( const EditorExtensionModule& extension : _listEditorExtension )
             {
-                if ( pLiveReloadManager->registerModule( extension._name, extension._listDependency ) == false )
+                if ( pModuleHotReloadManager->registerModule( extension._name, extension._listDependency ) == false )
                 {
                     // 언리얼도 에디터 모듈 하나가 실패하면 그 플러그인만 끈다. 에디터는 시작한다.
                     SW_LOG_ERROR_ID( "EditorGameModuleManager.EditorExtensionModuleCould", "Editor extension module %# could not be loaded - the editor runs without it", extension._name.c_str() );
@@ -405,9 +405,9 @@ namespace sw
                 SW_LOG_INFO_ID( "EditorGameModuleManager.EditorExtensionModuleLoaded", "Editor extension module %# loaded", extension._name.c_str() );
             }
 
-            if ( pLiveReloadManager->isGraphBroken() )
+            if ( pModuleHotReloadManager->isGraphBroken() )
             {
-                SW_LOG_ERROR_ID( "EditorGameModuleManager.LiveReloadGraphBrokenDuring", "LiveReload graph broken during module registration — aborting initialize" );
+                SW_LOG_ERROR_ID( "EditorGameModuleManager.HotReloadGraphBrokenDuring", "HotReload graph broken during module registration — aborting initialize" );
                 return false;
             }
         }

@@ -1,9 +1,9 @@
 /**
- * @file DevTools/ModuleReload/LiveReload/ModuleShadowCopy.h
+ * @file DevTools/ModuleReload/HotReload/ModuleShadowCopy.h
  * @brief 모듈 원본을 읽어 검사하고, 세대 이름을 붙인 섀도 복사본 파일을 씁니다. 복사본의 자리 · 이름과 지우기 · 치우기도 여기서 합니다.
  *
  * @note 파일과 라이브러리 바이트만 다룹니다. 복사본을 로드하고 교체하는 순서(정적 등록 헤드 · `RegistrationReloadScope` · 라이브러리 검사 콜백)는
- *       `LiveReloadManager` 가 정합니다. 핫 리로드만 쓰고, Shipping 빌드에서 함께 빠집니다(`Source/ModuleManager/CMakeLists.txt` 의 제외 목록).
+ *       `ModuleHotReloadManager` 가 정합니다. 핫 리로드만 쓰고, Shipping 빌드에서 함께 빠집니다(`Source/ModuleManager/CMakeLists.txt` 의 제외 목록).
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -31,7 +31,7 @@ namespace sw
 {
     /**
      * @struct ShadowCopySerials
-     * @brief 섀도 복사본의 일련번호 둘입니다. 리로드 매니저(`LiveReloadManager`)가 하나 들고 `writeShadowCopy` 에 넘긴다 — 프로세스 정적 칸이 아니라 번호를 쓰는 주인의 멤버다.
+     * @brief 섀도 복사본의 일련번호 둘입니다. 리로드 매니저(`ModuleHotReloadManager`)가 하나 들고 `writeShadowCopy` 에 넘긴다 — 프로세스 정적 칸이 아니라 번호를 쓰는 주인의 멤버다.
      */
     struct ShadowCopySerials
     {

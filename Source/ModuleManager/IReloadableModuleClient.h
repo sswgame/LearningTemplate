@@ -3,7 +3,7 @@
  * @brief 핫 리로드되는 모듈 하나의 주인(모듈 호스트)이 리로드 매니저에 거는 창구 `IReloadableModuleClient` 입니다.
  * @details 모듈마다의 칸 넷(리로드 직전 · 직후 · 결함 · 새 라이브러리 검사)을 따로 걸면 하나를 빠뜨려도 컴파일된다 — 키트는 결함 · 검사 칸이 비어 있었다.
  *          순수 가상 넷을 한 번에 걸게 해서 모듈 주인이 네 가지를 모두 정하게 한다. 언리얼 `IModuleInterface` 의 `PreUnloadCallback` · `PostLoadCallback` 자리다.
- *          호스트는 다중 상속을 하지 않고 이 창구를 구현한 멤버 객체를 건다(`ILiveReloadManager::setModuleClient`).
+ *          호스트는 다중 상속을 하지 않고 이 창구를 구현한 멤버 객체를 건다(`IModuleHotReloadManager::setModuleClient`).
  */
 #pragma once
 #include "Core/Foundation/Types.h"

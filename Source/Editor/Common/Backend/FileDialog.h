@@ -2,7 +2,7 @@
  * @file Editor/Common/Backend/FileDialog.h
  * @brief 네이티브 파일 열기 · 저장 대화상자입니다(언리얼 DesktopPlatform 자리 — 편집기 도구 전용).
  * @details 대화상자는 별도 스레드가 띄우고 사용자가 닫을 때까지 돌아오지 않는다. 그 스레드가 이 DLL 의 코드로 돌아오므로, 열려 있는 동안(`isOpen` —
- *          스레드를 합류시킬 때까지)은 편집기 모듈 리로드를 잡아 둔다(`LiveReloadManager::addReloadHold`, 편집기 API `isReloadHeld`).
+ *          스레드를 합류시킬 때까지)은 편집기 모듈 리로드를 잡아 둔다(`ModuleHotReloadManager::addReloadHold`, 편집기 API `isReloadHeld`).
  */
 #pragma once
 #include "Core/Container/string.h"

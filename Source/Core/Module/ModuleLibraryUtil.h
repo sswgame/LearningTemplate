@@ -2,7 +2,7 @@
  * @file ModuleLibraryUtil.h
  * @brief 동적 라이브러리(모듈 라이브러리)를 다루는 유일한 진입점입니다.
  * @details 이름 만들기, 로드, 심볼 조회, import 바인딩 조회, 의존 라이브러리 고정, 언로드를 제공합니다.
- *          게임과 에디터 모듈(`GameModuleManager`), RHI 백엔드 모듈(`RHIBackendRegistry`), 핫 리로드(`LiveReloadManager`), DXC 로더가 모두 이 구조체를 거칩니다.
+ *          게임과 에디터 모듈(`GameModuleManager`), RHI 백엔드 모듈(`RHIBackendRegistry`), 핫 리로드(`ModuleHotReloadManager`), DXC 로더가 모두 이 구조체를 거칩니다.
  *          라이브러리의 코드를 가리키는 등록은 여기서 주소로 훑어 떼지 않는다 — 등록은 구독(`Subscription`)이나 모듈 등록자(`ModuleObjectRegistrar`)가 소유하고,
  *          모듈 타입의 인스턴스는 타입의 모듈 이름으로 고른다(`engine::unregisterModuleTypes`).
  *          섀도 복사본의 파일 바이트를 고치는 `ModuleLibraryPatch` 는 핫 리로드만 쓰므로 `GameModuleManager/ModuleLibraryPatch` 에 있습니다.
@@ -63,7 +63,7 @@ namespace sw
         /**
          * @brief 절대 경로 @p libraryPath 의 라이브러리를 로드합니다. 검색하지 않고 한 번만 시도한다(경로인지 이름인지 추측하지 않는다).
          * @details 의존 라이브러리는 그 라이브러리 폴더 · 응용 프로그램 폴더 · `Bin` · `Bin/Modules` · 시스템 폴더에서 찾는다(Windows `AddDllDirectory`, Linux 는 RPATH).
-         *          연 쪽이 핸들을 소유하고 내린다(`LiveReloadManager` · `RHIBackendRegistry` · 헤드리스 에디터 모듈). 프로세스 끝까지 두는 곳은 그 자리에
+         *          연 쪽이 핸들을 소유하고 내린다(`ModuleHotReloadManager` · `RHIBackendRegistry` · 헤드리스 에디터 모듈). 프로세스 끝까지 두는 곳은 그 자리에
          *          이유를 적는다(DXC 의 함수 정적 · OnlineLoadBot 의 서버 키트). `unloadModuleLibrary` 가 고정하는 의존 라이브러리도 같은 규칙의 예외다.
          * @return 실패하면 이유(OS 오류)를 경고로 남기고 nullptr 입니다.
          */
@@ -112,7 +112,7 @@ namespace sw
          * @details 그 라이브러리를 가리키는 등록은 부르는 쪽(모듈 경로)이 먼저 뗐다 — 구독은 소유자가, 모듈 등록자 · 타입은 `engine::unregisterModuleTypes` 가.
          *          그 라이브러리가 끌어온 의존 라이브러리(GameFramework 같은 공유 모듈)는 언로드하지 않는다. 의존 라이브러리가 언제 함께 언로드되는지는 로더만 알아서 그 코드를 미리 해제할 수 없기 때문이다.
          *          Windows 는 지연 로드가 의존 DLL 을 프로세스 끝까지 붙잡으므로 원래 그렇다. 리눅스는 `DT_NEEDED` 참조가 함께 풀려 언로드되므로 여기서 고정한다(`pinDynamicLibraryDependencies`).
-         *          핫 리로드(`LiveReloadManager`)는 언로드를 미룬다(`DeferredLibraryUnloadQueue`).
+         *          핫 리로드(`ModuleHotReloadManager`)는 언로드를 미룬다(`DeferredLibraryUnloadQueue`).
          * @return 라이브러리를 내렸으면 true 입니다.
          */
         [[nodiscard]] static bool unloadModuleLibrary( string_view moduleName, void* pHandle );

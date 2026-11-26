@@ -149,7 +149,7 @@ defaultBan = [
 # 기본 금지 폴더(`[panelViewBan] defaultBan`) 안에서 View 가 include 해도 되는 폴더(접두, `/` 로 끝난다) → 까닭. 값 · 정의 헤더의 폴더다 — 서비스 헤더는 `patterns` 가 따로 막는다.
 # 줄을 더하기 전에 그 폴더의 서비스 · 매니저 헤더를 `patterns` 에 올린다.
 [panelViewAllowedFolders]
-"DevTools/AssetReload/" = "리로드 결과 집계 값(ReloadTracker 의 상태 열거)을 감시 값 · 표가 읽는다"
+"DevTools/AssetReload/" = "리로드 결과 집계 값(HotReloadTracker 의 상태 열거)을 감시 값 · 표가 읽는다"
 "DevTools/Client/" = "자동화 실행기 값(시나리오 결과 · 단계 이름)을 Test Runner 창이 그린다"
 "DevTools/Console/" = "개발 콘솔 줄 값을 Output Log 가 그린다"
 "DevTools/Material/" = "머티리얼 그래프 노드 서술(값)을 그래프 창이 그린다 — 에셋 컴파일러는 쿠킹과 공유한다(검토 B 10)"

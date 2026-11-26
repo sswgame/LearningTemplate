@@ -1,14 +1,14 @@
 #include "pch.h"
 
-#include "DevTools/AssetReload/ConfigReloadSubsystem.h"
+#include "DevTools/AssetReload/ConfigHotReloadSubsystem.h"
 
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
 #include "Core/Log/Logger.h"
 #include "Core/Time/MonotonicClock.h"
 
-#include "DevTools/AssetReload/ReloadSource.h"
-#include "DevTools/AssetReload/ReloadTracker.h"
+#include "DevTools/AssetReload/HotReloadKind.h"
+#include "DevTools/AssetReload/HotReloadTracker.h"
 #include "DevTools/FileWatch/FileWatchService.h"
 
 #include "Engine/Config/ConfigManager.h"
@@ -19,7 +19,7 @@
 
 namespace sw
 {
-    ConfigReloadSubsystem::ConfigReloadSubsystem( ConfigManager& configManager, FileWatchService& fileWatch )
+    ConfigHotReloadSubsystem::ConfigHotReloadSubsystem( ConfigManager& configManager, FileWatchService& fileWatch )
         : _configManager{ configManager }
         , _fileWatch{ fileWatch }
         , _configWatch{}
@@ -27,12 +27,12 @@ namespace sw
     {
     }
 
-    ConfigReloadSubsystem::~ConfigReloadSubsystem()
+    ConfigHotReloadSubsystem::~ConfigHotReloadSubsystem()
     {
         shutdownSubsystem();
     }
 
-    SubsystemInitResult ConfigReloadSubsystem::initializeSubsystem()
+    SubsystemInitResult ConfigHotReloadSubsystem::initializeSubsystem()
     {
         const AbsolutePath configFolder = ProcessRoots::get()._project.join( config::kDirConfig );
         if ( FileUtil::isDirectory( configFolder ) == false )
@@ -41,27 +41,27 @@ namespace sw
             return SubsystemInitResult::Succeeded;
         }
         // 걸지 못하면 빈 구독이다 — 개발 도구 하나 때문에 기동을 멈추지 않는다(감시 창구가 이유를 남겼다).
-        _configWatch = _fileWatch.watch( configFolder, FileWatchDepth::Tree, { ".json" }, SW_DELEGATE_METHOD( FileChangeDelegate, &ConfigReloadSubsystem::onConfigFileChanged, this ) );
+        _configWatch = _fileWatch.watch( configFolder, FileWatchDepth::Tree, { ".json" }, SW_DELEGATE_METHOD( FileChangeDelegate, &ConfigHotReloadSubsystem::onConfigFileChanged, this ) );
         return SubsystemInitResult::Succeeded;
     }
 
-    void ConfigReloadSubsystem::shutdownSubsystem()
+    void ConfigHotReloadSubsystem::shutdownSubsystem()
     {
         _configWatch.reset();
     }
 
-    span<const utf8* const> ConfigReloadSubsystem::getSubsystemDependencies() const
+    span<const utf8* const> ConfigHotReloadSubsystem::getSubsystemDependencies() const
     {
         static constexpr const utf8* kArrDependency[] = { ConfigManager::kSubsystemName };
         return kArrDependency;
     }
 
-    Subscription ConfigReloadSubsystem::registerFileHandler( const ConfigFileReloadDelegate& handler )
+    Subscription ConfigHotReloadSubsystem::registerFileHandler( const ConfigFileReloadDelegate& handler )
     {
         return _fileHandlers.add( handler );
     }
 
-    ReloadResult ConfigReloadSubsystem::reloadChangedFile( string_view fullPath )
+    ReloadResult ConfigHotReloadSubsystem::reloadChangedFile( string_view fullPath )
     {
         const ReloadResult hostResult = _configManager.reloadConfigFile( fullPath );
         if ( hostResult != ReloadResult::NotTracked )
@@ -75,7 +75,7 @@ namespace sw
         return result;
     }
 
-    void ConfigReloadSubsystem::onConfigFileChanged( const FileChangeEvent& changeEvent )
+    void ConfigHotReloadSubsystem::onConfigFileChanged( const FileChangeEvent& changeEvent )
     {
         if ( changeEvent._action == FileWatcherAction::Removed )
             return;
@@ -83,11 +83,11 @@ namespace sw
         // 모르는 파일은 NotTracked 로 지나간다. 깨진 파일은 읽는 쪽이 키 이름과 오류를 남겼다 — 이전 값으로 돈다는 것만 덧붙인다.
         const float64      startSeconds = MonotonicClock::nowSeconds();
         const ReloadResult result       = reloadChangedFile( fullPath );
-        if ( ReloadTracker* const pTracker = engine::findSubsystem<ReloadTracker>() )
+        if ( HotReloadTracker* const pTracker = engine::findSubsystem<HotReloadTracker>() )
         {
-            pTracker->record( ReloadSource::Config, fullPath, result, "the file did not parse - see the log for the key" );
+            pTracker->record( HotReloadKind::Config, fullPath, result, "the file did not parse - see the log for the key" );
             if ( result != ReloadResult::NotTracked )
-                pTracker->recordElapsed( ReloadSource::Config, ( MonotonicClock::nowSeconds() - startSeconds ) * static_cast<float64>( constant::time::kMillisecondsPerSecond ) );
+                pTracker->recordElapsed( HotReloadKind::Config, ( MonotonicClock::nowSeconds() - startSeconds ) * static_cast<float64>( constant::time::kMillisecondsPerSecond ) );
         }
         if ( result == ReloadResult::Failed )
             SW_LOG_WARNING_ID( "ConfigReload.ConfigReloadKeptPrevious", "Config reload kept the previous values - fix and save %# again", fullPath.c_str() );

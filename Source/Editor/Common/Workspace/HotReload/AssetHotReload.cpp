@@ -13,8 +13,8 @@
 #include "Core/Task/TaskManager.h"
 #include "Core/Time/MonotonicClock.h"
 
-#include "DevTools/AssetReload/ReloadSource.h"
-#include "DevTools/AssetReload/ReloadTracker.h"
+#include "DevTools/AssetReload/HotReloadKind.h"
+#include "DevTools/AssetReload/HotReloadTracker.h"
 #include "DevTools/Client/Automation/Scenario/AutomationScratchWorkspace.h"
 
 #include "Editor/Common/Asset/EditorAssetIndex.h"
@@ -733,8 +733,8 @@ namespace sw::editor
             // 소스를 임포트하는 종류는 임포트하는 것이 리로드다 — 임포트된 결과의 쓰기가 다음 감시 이벤트로 온다(그 결과를 읽는 캐시가 없어도 임포트는 한다).
             if ( route._pfnImportSource( editor::getSubsystem<AssetPaths>(), relativePath ) )
             {
-                if ( ReloadTracker* const pTracker = findSubsystem<ReloadTracker>() )
-                    pTracker->record( ReloadSource::Asset, relativePath, ReloadResult::Reloaded );
+                if ( HotReloadTracker* const pTracker = findSubsystem<HotReloadTracker>() )
+                    pTracker->record( HotReloadKind::Asset, relativePath, ReloadResult::Reloaded );
                 return ReloadResult::Reloaded;
             }
         }
@@ -770,11 +770,11 @@ namespace sw::editor
                 SW_LOG_INFO_ID( "AssetHotReload.PreviewUsersNotified", "%# preview component(s) use the reloaded '%#'", previewUsers, relativePath );
         }
         // 결과를 적는 한 곳 — 실패(캐시가 파일을 읽지 못해 이전 판으로 돈다)도 여기서 적는다. NotTracked 는 집계가 버린다.
-        if ( ReloadTracker* const pTracker = findSubsystem<ReloadTracker>() )
+        if ( HotReloadTracker* const pTracker = findSubsystem<HotReloadTracker>() )
         {
-            pTracker->record( ReloadSource::Asset, relativePath, result, pReason );
+            pTracker->record( HotReloadKind::Asset, relativePath, result, pReason );
             if ( result != ReloadResult::NotTracked )
-                pTracker->recordElapsed( ReloadSource::Asset, elapsedMs ); // 캐시 다시 읽기만 — 사용자 알림(onPropertyChanged)은 뺀다
+                pTracker->recordElapsed( HotReloadKind::Asset, elapsedMs ); // 캐시 다시 읽기만 — 사용자 알림(onPropertyChanged)은 뺀다
         }
         return result;
     }

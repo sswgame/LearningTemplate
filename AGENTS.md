@@ -21,7 +21,7 @@ Preserve existing project conventions unless the user explicitly requests otherw
 
 ## Architecture rules
 
-- **Dev** builds include editor tooling and `LiveReload` (dynamic DLLs); **Shipping** excludes editor code and links statically into one executable.
+- **Dev** builds include editor tooling and `HotReload` (dynamic DLLs); **Shipping** excludes editor code and links statically into one executable.
 - Engine and GameFramework `Runtime/` folders are layered (`Config/Rules/Layers/*.toml`); an upper-layer include fails to compile. A feature folder owns its components (`Physics/Component`).
 - `Source/ModuleAPI` is a header-only C-ABI contract — no implementations.
 - **Every editor feature lives in `Source/Editor` or a kit's `Editor/`.** Engine and Core hold no function only the editor calls (no `WITH_EDITOR`). The editor edits a data copy, writes it with the engine serializer, and the runtime reloads. State that must survive a module reload goes through `IModuleStateStore` as bytes; undo steps are data (`SW_UNDO_STEP`).

@@ -1,8 +1,8 @@
 /**
- * @file DevTools/ModuleReload/LiveReload/ModuleLibraryPatch.h
+ * @file DevTools/ModuleReload/HotReload/ModuleLibraryPatch.h
  * @brief 섀도 복사본을 올리기 전에 파일 바이트를 읽고 고칩니다(엔진 ABI 스탬프 · 리눅스 SONAME · Windows import DLL 이름).
  *
- * @note 핫 리로드(`LiveReloadManager`)와 그 테스트만 쓰고, Shipping 빌드에서 함께 빠집니다(`Source/ModuleManager/CMakeLists.txt` 의 제외 목록).
+ * @note 핫 리로드(`ModuleHotReloadManager`)와 그 테스트만 쓰고, Shipping 빌드에서 함께 빠집니다(`Source/ModuleManager/CMakeLists.txt` 의 제외 목록).
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -16,7 +16,7 @@ namespace sw
     /**
      * @struct ModuleLibraryPatch
      * @brief 공유 라이브러리가 의존을 부르는 이름을 같은 길이로 바꿉니다 — ELF64(리틀 엔디언)의 동적 섹션 문자열과 PE32+ 의 import DLL 이름.
-     * @details 파일 바이트만 다루므로 어느 플랫폼에서나 돕니다(테스트는 합성 ELF · 합성 PE 로 돈다). 쓰는 곳은 `LiveReloadManager` 뿐입니다.
+     * @details 파일 바이트만 다루므로 어느 플랫폼에서나 돕니다(테스트는 합성 ELF · 합성 PE 로 돈다). 쓰는 곳은 `ModuleHotReloadManager` 뿐입니다.
      *          문자열을 늘리지 않으므로 섹션 · 세그먼트 배치가 그대로입니다.
      * @note 왜 고치는가: 로더는 의존을 이름으로 풀고, 같은 이름의 라이브러리가 이미 올라와 있으면 그것을 씁니다(리눅스는 SONAME, Windows 는 파일
      *       이름). 섀도 복사본을 원본 이름 그대로 두면 연쇄 리로드("전부 prepare(새 라이브러리 로드) → commit(옛 라이브러리 내림)")의 prepare 중인 새 킷이

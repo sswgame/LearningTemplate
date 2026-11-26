@@ -25,7 +25,7 @@
 #include "ModuleManager/Host/HostLaunch.h"
 
 #if SW_WITH_DYNAMIC_MODULES
-    #include "DevTools/ModuleReload/LiveReload/LiveReloadManager.h"
+    #include "DevTools/ModuleReload/HotReload/ModuleHotReloadManager.h"
     #include "DevTools/ModuleReload/ModuleReloadDriver.h"
 #endif
 
@@ -104,16 +104,16 @@ namespace sw
                 return _moduleReload.initialize( targetMask, host, moduleLibraryHost, _fileWatch, outCatalog, outResolution );
             }
 
-            ILiveReloadManager* getLiveReloadManager() const override { return _moduleReload.getLiveReloadManager(); }
-            Subscription        addOnBeforeReloadBatch( BeforeReloadBatchDelegate onBeforeBatch ) override { return _moduleReload.addOnBeforeReloadBatch( onBeforeBatch ); }
-            void                requestReload( const utf8* pModuleName ) override { _moduleReload.requestReload( pModuleName ); }
-            void                updateModuleReload() override { _moduleReload.update(); }
+            IModuleHotReloadManager* getModuleHotReloadManager() const override { return _moduleReload.getModuleHotReloadManager(); }
+            Subscription             addOnBeforeReloadBatch( BeforeReloadBatchDelegate onBeforeBatch ) override { return _moduleReload.addOnBeforeReloadBatch( onBeforeBatch ); }
+            void                     requestReload( const utf8* pModuleName ) override { _moduleReload.requestReload( pModuleName ); }
+            void                     updateModuleReload() override { _moduleReload.update(); }
 #else
             // 정적 모듈 구성은 모듈을 한 실행 파일에 링크해 리로드할 것이 없다(`ModuleReload/` 를 짓지 않는다) — 모듈 관리자는 매니저 nullptr 로 정적 표를 쓴다.
-            bool                initializeModuleReload( uint8, SubsystemScope&, ModuleLoaderSubsystem&, ModuleCatalog&, ModuleResolution& ) override { return true; }
-            ILiveReloadManager* getLiveReloadManager() const override { return nullptr; }
-            Subscription        addOnBeforeReloadBatch( BeforeReloadBatchDelegate ) override { return Subscription{}; }
-            void                requestReload( const utf8* pModuleName ) override
+            bool                     initializeModuleReload( uint8, SubsystemScope&, ModuleLoaderSubsystem&, ModuleCatalog&, ModuleResolution& ) override { return true; }
+            IModuleHotReloadManager* getModuleHotReloadManager() const override { return nullptr; }
+            Subscription             addOnBeforeReloadBatch( BeforeReloadBatchDelegate ) override { return Subscription{}; }
+            void                     requestReload( const utf8* pModuleName ) override
             {
                 SW_LOG_WARNING_ID( "HostDevLayer.ReloadStaticModules", "Module reload of %# is not available - this build links its modules statically", pModuleName != nullptr ? pModuleName : "" );
             }
