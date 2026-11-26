@@ -87,6 +87,18 @@
         ],
         "-fno-delayed-template-parsing": [
             "-fno-delayed-template-parsing"
+        ],
+        "-clang:-fno-math-errno": [
+            "-fno-math-errno"
+        ],
+        "-clang:-fno-trapping-math": [
+            "-fno-trapping-math"
+        ],
+        "/arch:AVX2": [
+            "-march=haswell"
+        ],
+        "/fsanitize=address": [
+            "-fsanitize=address"
         ]
     },
     "target_option_pass_prefixes": [
@@ -100,7 +112,9 @@
         "-frtti",
         "-std=",
         "-fchar8_t",
-        "-fno-char8_t"
+        "-fno-char8_t",
+        "-fno-math-errno",
+        "-fno-trapping-math"
     ],
     "target_option_ignored_prefixes": [
         "-W",
@@ -119,7 +133,11 @@
         "-O",
         "/Fp",
         "/FI",
+        "/Yu",
+        "/Yc",
+        "-include",
         "-g",
+        "-clang:-W",
         "-clang:-fmerge-all-constants",
         "-clang:-fno-spell-checking",
         "-clang:-ftime-trace",
