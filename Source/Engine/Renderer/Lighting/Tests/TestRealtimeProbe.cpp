@@ -446,8 +446,8 @@ SW_TEST_CASE( SceneVoxelizerTest, DominantAxisPaintMatchesSeparatingAxis )
     };
     for ( uint32 caseIndex = 0; caseIndex < 200u; ++caseIndex )
     {
-        sw::vector<sw::RHIVertex> listVertex( 3 );
-        sw::float3                arrCorner[3];
+        sw::vector<sw::MeshVertex> listVertex( 3 );
+        sw::float3                 arrCorner[3];
         for ( uint32 corner = 0; corner < 3u; ++corner )
         {
             for ( uint32 axis = 0; axis < 3u; ++axis )
@@ -486,13 +486,13 @@ SW_TEST_CASE( SceneVoxelizerTest, EmissionKeepsTheBrightestRank )
     // 밝은 면을 먼저 · 어두운 면을 나중에 칠해도(원천 차례) 밝은 순위가 남는다. 셋째는 밝은 것과 같은 발광이다.
     for ( const uint32 packed : { bright, dim, bright } )
     {
-        sw::vector<sw::RHIVertex> listVertex( 3 );
-        const float32             height = 2.5f;
-        listVertex[0]._arrPosition[0]    = 0.1f;
-        listVertex[1]._arrPosition[0]    = 3.9f;
-        listVertex[2]._arrPosition[0]    = 0.1f;
-        listVertex[2]._arrPosition[2]    = 3.9f;
-        for ( sw::RHIVertex& vertex : listVertex )
+        sw::vector<sw::MeshVertex> listVertex( 3 );
+        const float32              height = 2.5f;
+        listVertex[0]._arrPosition[0]     = 0.1f;
+        listVertex[1]._arrPosition[0]     = 3.9f;
+        listVertex[2]._arrPosition[0]     = 0.1f;
+        listVertex[2]._arrPosition[2]     = 3.9f;
+        for ( sw::MeshVertex& vertex : listVertex )
         {
             vertex._arrPosition[1] = height;
         }

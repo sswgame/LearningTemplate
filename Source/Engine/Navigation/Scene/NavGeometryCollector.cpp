@@ -277,7 +277,7 @@ namespace sw
                     }
                     vector<float3> listPosition;
                     listPosition.reserve( mesh->getVertexCount() );
-                    for ( const RHIVertex& vertex : mesh->getCPUView().getVertices() )
+                    for ( const MeshVertex& vertex : mesh->getCPUView().getVertices() )
                     {
                         listPosition.push_back( float3{ vertex._arrPosition[0], vertex._arrPosition[1], vertex._arrPosition[2] } );
                     }

@@ -486,7 +486,7 @@ namespace sw
             _listPositionScratch.assign( static_cast<size_t>( mesh.getVertexCount() ) * Internal::kFloatsPerPosition, 0.0f );
             if ( mesh.isDynamic() )
             {
-                const vector<RHIVertex>& listVertex = mesh.getCPUView().getVertices();
+                const vector<MeshVertex>& listVertex = mesh.getCPUView().getVertices();
                 for ( size_t vertexIndex = 0; vertexIndex < listVertex.size(); ++vertexIndex )
                 {
                     for ( uint32 component = 0; component < Internal::kFloatsPerPosition; ++component )

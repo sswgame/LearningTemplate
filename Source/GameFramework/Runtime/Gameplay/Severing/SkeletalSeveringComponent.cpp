@@ -47,11 +47,11 @@ namespace sw
             }
 
             /** @brief 형상(인덱스)을 인덱스 없는 정점 목록으로 펼쳐 덧붙입니다(캡). 색은 흰색입니다. */
-            static void appendUnindexed( const AppearanceGeometry& geometry, vector<RHIVertex>& inoutListVertex, vector<MeshSkinVertex>* pInOutListSkin )
+            static void appendUnindexed( const AppearanceGeometry& geometry, vector<MeshVertex>& inoutListVertex, vector<MeshSkinVertex>* pInOutListSkin )
             {
                 for ( const uint32 index : geometry._listIndex )
                 {
-                    RHIVertex vertex{};
+                    MeshVertex vertex{};
                     vertex._arrPosition[0] = geometry._listPosition[index]._x;
                     vertex._arrPosition[1] = geometry._listPosition[index]._y;
                     vertex._arrPosition[2] = geometry._listPosition[index]._z;
@@ -90,17 +90,17 @@ namespace sw
             }
 
             /** @brief 원래 정점(이음매 그대로)을 삼각형 단위로 남은 몸과 조각으로 나눠 삼각형 목록으로 풀고, 각각의 캡을 스킨 정점으로 붙입니다. */
-            static void splitByTriangle( const Mesh& mesh, const SeverResult& result, vector<RHIVertex>& outListKeptVertex, vector<MeshSkinVertex>& outListKeptSkin,
-                                         vector<RHIVertex>& outListPieceVertex, vector<MeshSkinVertex>& outListPieceSkin )
+            static void splitByTriangle( const Mesh& mesh, const SeverResult& result, vector<MeshVertex>& outListKeptVertex, vector<MeshSkinVertex>& outListKeptSkin,
+                                         vector<MeshVertex>& outListPieceVertex, vector<MeshSkinVertex>& outListPieceSkin )
             {
-                const vector<RHIVertex>&      listVertex    = mesh.getCPUView().getVertices();
+                const vector<MeshVertex>&     listVertex    = mesh.getCPUView().getVertices();
                 const vector<uint32>&         listIndex     = mesh.getIndices();
                 const vector<MeshSkinVertex>& listSkin      = mesh.getSkinVertices();
                 const uint32                  triangleCount = mesh.getIndexCount() / 3;
                 for ( uint32 triangle = 0; triangle < triangleCount; ++triangle )
                 {
                     const bool              bSevered       = result._listTriangleSevered[triangle] == SW_TRUE;
-                    vector<RHIVertex>&      listTarget     = bSevered ? outListPieceVertex : outListKeptVertex;
+                    vector<MeshVertex>&     listTarget     = bSevered ? outListPieceVertex : outListKeptVertex;
                     vector<MeshSkinVertex>& listTargetSkin = bSevered ? outListPieceSkin : outListKeptSkin;
                     for ( uint32 corner = 0; corner < 3; ++corner )
                     {
@@ -122,11 +122,11 @@ namespace sw
                 const MeshLOD&                lod        = mesh.getLODs()[lodIndex];
                 const uint32                  vertexBase = static_cast<uint32>( mesh.getCPUView().getVertices().size() );
                 const uint32                  indexBase  = mesh.getIndexCount();
-                const vector<RHIVertex>&      listVertex = mesh.getCPUView().getLODVertices();
+                const vector<MeshVertex>&     listVertex = mesh.getCPUView().getLODVertices();
                 const vector<MeshSkinVertex>& listSkin   = mesh.getLODSkinVertices();
                 const vector<uint32>&         listIndex  = mesh.getLODIndices();
                 const uint32                  firstLocal = lod._firstVertex - vertexBase;
-                vector<RHIVertex>             listLevelVertex( listVertex.begin() + firstLocal, listVertex.begin() + firstLocal + lod._vertexCount );
+                vector<MeshVertex>            listLevelVertex( listVertex.begin() + firstLocal, listVertex.begin() + firstLocal + lod._vertexCount );
                 vector<MeshSkinVertex>        listLevelSkin( listSkin.begin() + firstLocal, listSkin.begin() + firstLocal + lod._vertexCount );
                 vector<uint32>                listLevelIndex;
                 listLevelIndex.reserve( lod._indexCount );
@@ -154,9 +154,9 @@ namespace sw
                     SeverResult            result;
                     if ( source == nullptr || computeSeveredTriangles( *source, skeleton, regionTable, regionIndex, result ) == false )
                         break;
-                    vector<RHIVertex>      listKeptVertex;
+                    vector<MeshVertex>     listKeptVertex;
                     vector<MeshSkinVertex> listKeptSkin;
-                    vector<RHIVertex>      listPieceVertex;
+                    vector<MeshVertex>     listPieceVertex;
                     vector<MeshSkinVertex> listPieceSkin;
                     splitByTriangle( *source, result, listKeptVertex, listKeptSkin, listPieceVertex, listPieceSkin );
                     // 탄젠트 · 인덱스는 LOD 0 과 같은 길(`setVertices`)로 만든다 — 캡 정점은 탄젠트가 없다.
@@ -175,7 +175,7 @@ namespace sw
             /** @brief 떨어진 조각의 정점과 스킨입니다(바인드 자세). */
             struct SeverPieces
             {
-                vector<RHIVertex>      _listVertex{};
+                vector<MeshVertex>     _listVertex{};
                 vector<MeshSkinVertex> _listSkin{};
             };
 
@@ -187,7 +187,7 @@ namespace sw
                 SeverResult result;
                 if ( computeSeveredTriangles( *mesh, skeleton, regionTable, regionIndex, result ) == false )
                     return mesh;
-                vector<RHIVertex>      listKeptVertex;
+                vector<MeshVertex>     listKeptVertex;
                 vector<MeshSkinVertex> listKeptSkin;
                 splitByTriangle( *mesh, result, listKeptVertex, listKeptSkin, outPieces._listVertex, outPieces._listSkin );
                 shared_ptr<Mesh> kept = Mesh::create( MeshCPUAccess::Keep );
@@ -203,14 +203,14 @@ namespace sw
              * @brief 조각 정점을 현재 포즈로 스키닝해 월드로 옮기고, 무게중심 기준 좌표로 바꿉니다. 무게중심을 돌려줍니다.
              * @details 볼록 껍질 점은 고르게 솎아 `kMaxHullPoint` 개 안팎으로 @p outHull 에 담는다.
              */
-            static float3 poseAndCenterPiece( vector<RHIVertex>& inoutListPieceVertex, const vector<MeshSkinVertex>& listPieceSkin, const vector<float4x4>& listPalette,
+            static float3 poseAndCenterPiece( vector<MeshVertex>& inoutListPieceVertex, const vector<MeshSkinVertex>& listPieceSkin, const vector<float4x4>& listPalette,
                                               const float4x4& unitWorld, PhysicsShapeDesc3D& outHull )
             {
                 float3 center{};
                 for ( size_t vertexIndex = 0; vertexIndex < inoutListPieceVertex.size(); ++vertexIndex )
                 {
                     MeshSkinBinding::skinVertex( listPalette, listPieceSkin[vertexIndex], inoutListPieceVertex[vertexIndex] );
-                    RHIVertex&   vertex    = inoutListPieceVertex[vertexIndex];
+                    MeshVertex&  vertex    = inoutListPieceVertex[vertexIndex];
                     const float3 world     = float3::transform( float3{ vertex._arrPosition[0], vertex._arrPosition[1], vertex._arrPosition[2] }, unitWorld );
                     const float3 normal    = float3::transformVector( float3{ vertex._arrNormal[0], vertex._arrNormal[1], vertex._arrNormal[2] }, unitWorld ).normalize();
                     vertex._arrPosition[0] = world._x;
@@ -226,7 +226,7 @@ namespace sw
                 const size_t stride = MathUtil::max<size_t>( 1, inoutListPieceVertex.size() / kMaxHullPoint );
                 for ( size_t vertexIndex = 0; vertexIndex < inoutListPieceVertex.size(); ++vertexIndex )
                 {
-                    RHIVertex& vertex = inoutListPieceVertex[vertexIndex];
+                    MeshVertex& vertex = inoutListPieceVertex[vertexIndex];
                     vertex._arrPosition[0] -= center._x;
                     vertex._arrPosition[1] -= center._y;
                     vertex._arrPosition[2] -= center._z;
@@ -489,7 +489,7 @@ namespace sw
         if ( _pIntactMesh == nullptr )
             _pIntactMesh = mesh; // 처음 자를 때만 — 다음 영역은 이미 자른 몸에서 자른다
         _pSeveredMesh                           = kept;
-        vector<RHIVertex>&      listPieceVertex = pieces._listVertex;
+        vector<MeshVertex>&     listPieceVertex = pieces._listVertex;
         vector<MeshSkinVertex>& listPieceSkin   = pieces._listSkin;
         pUnit->setMesh( std::move( kept ) );
 

@@ -29,11 +29,11 @@ namespace sw
             /** @brief 파일 머리의 매직(`SWMS`)입니다. */
             /** @brief 정점 플래그의 비트 0 입니다 — 바이탄젠트 부호가 -1 이면 켭니다(탄젠트 w). */
             static constexpr uint32 kFlagBitangentNegative = 1u;
-            /** @brief 정점 플래그의 비트 1 입니다 — 이음매 정점이면 켭니다(`RHIVertex::isOnSeam`). */
+            /** @brief 정점 플래그의 비트 1 입니다 — 이음매 정점이면 켭니다(`MeshVertex::isOnSeam`). */
             static constexpr uint32 kFlagSeam = 2u;
-            /** @brief 정점 플래그의 비트 2 부터 변 묶음(`RHIVertex::getSeamEdgeMask`)입니다. */
+            /** @brief 정점 플래그의 비트 2 부터 변 묶음(`MeshVertex::getSeamEdgeMask`)입니다. */
             static constexpr uint32 kSeamEdgeMaskShift = 2u;
-            static constexpr uint32 kSeamEdgeMaskBits  = RHIVertex::kSeamEdgeMaskAll << kSeamEdgeMaskShift;
+            static constexpr uint32 kSeamEdgeMaskBits  = MeshVertex::kSeamEdgeMaskAll << kSeamEdgeMaskShift;
             /** @brief UV 경계(`_min` · `_max` 의 u · v)입니다 — 머리에 싣고 정점의 `unorm16x2` UV 를 이 사각형 안으로 정규화합니다. */
             struct UVBounds
             {
@@ -42,13 +42,13 @@ namespace sw
             };
 
             /** @brief 정점 목록들의 UV 를 모두 덮는 경계입니다. 목록이 모두 비었으면 0 입니다. */
-            static UVBounds computeUVBounds( const vector<RHIVertex>& listFirst, const vector<MeshLODLevel>& listLevel )
+            static UVBounds computeUVBounds( const vector<MeshVertex>& listFirst, const vector<MeshLODLevel>& listLevel )
             {
                 UVBounds   bounds{};
                 bool       bAny    = false;
-                const auto include = [&]( const vector<RHIVertex>& listVertex )
+                const auto include = [&]( const vector<MeshVertex>& listVertex )
                 {
-                    for ( const RHIVertex& vertex : listVertex )
+                    for ( const MeshVertex& vertex : listVertex )
                     {
                         for ( uint32 axis = 0; axis < 2; ++axis )
                         {
@@ -134,13 +134,13 @@ namespace sw
              * @brief 정점 배열을 씁니다. 탄젠트는 받은 값이 아니라 기준(`Mesh::computeTangents`)으로 구해 싣는다 — 파일의 탄젠트가 런타임 메시와 늘 같다.
              * @details LOD 단계는 단계마다 따로 부른다 — 탄젠트를 묶는 이웃은 같은 단계의 삼각형뿐이다.
              */
-            static void appendVertices( vector<uint8>& outBytes, const vector<RHIVertex>& listSource, const vector<uint32>& listIndex, const UVBounds& uvBounds )
+            static void appendVertices( vector<uint8>& outBytes, const vector<MeshVertex>& listSource, const vector<uint32>& listIndex, const UVBounds& uvBounds )
             {
-                vector<RHIVertex> listVertex = listSource;
+                vector<MeshVertex> listVertex = listSource;
                 Mesh::computeTangents( listVertex, listIndex );
                 Mesh::refineSeamEdges( listVertex, listIndex );
                 // 정점 하나(32 바이트): 위치 float32 3 · 노멀 옥타헤드럴 4 · 탄젠트 옥타헤드럴 4 · UV unorm16x2 4 · 색 unorm8x4 4 · 플래그 uint32 4.
-                for ( const RHIVertex& vertex : listVertex )
+                for ( const MeshVertex& vertex : listVertex )
                 {
                     for ( const float32 value : vertex._arrPosition )
                     {
@@ -383,17 +383,17 @@ namespace sw
                 return bRead && chunk.isFullyRead();
             }
 
-            // 파일의 정점은 압축 배치이고 메모리의 `RHIVertex`(float32 16 개)와 크기가 다르다 — 배치를 바꾸면 `kFormat` 의 판을 올리고 모델을 다시 임포트한다.
+            // 파일의 정점은 압축 배치이고 메모리의 `MeshVertex`(float32 16 개)와 크기가 다르다 — 배치를 바꾸면 `kFormat` 의 판을 올리고 모델을 다시 임포트한다.
             static_assert( MeshAssetFormat::kVertexSize == 3 * sizeof( float32 ) + 2 * sizeof( OctahedralNormal ) + sizeof( unorm16x2 ) + sizeof( unorm8x4 ) + sizeof( uint32 ),
                            "kVertexSize must match the packed layout (position, normal, tangent, uv, color, flags)" );
             static_assert( MeshAssetFormat::kHeaderSize == 28 + sizeof( UVBounds ), "kHeaderSize must hold the fixed fields and the UV bounds" );
             static_assert( MeshAssetFormat::kSkinVertexSize == 4 * sizeof( uint16 ) + 4 * sizeof( float32 ), "kSkinVertexSize must match the skin layout" );
 
             /** @brief 원점에서 가장 먼 정점까지의 거리입니다(`Mesh::getBoundingRadius` 와 같은 정의). */
-            static float32 computeBoundingRadius( const vector<RHIVertex>& listVertex )
+            static float32 computeBoundingRadius( const vector<MeshVertex>& listVertex )
             {
                 float32 maxLengthSquared = 0.0f;
-                for ( const RHIVertex& vertex : listVertex )
+                for ( const MeshVertex& vertex : listVertex )
                 {
                     const float32 lengthSquared = vertex._arrPosition[0] * vertex._arrPosition[0] + vertex._arrPosition[1] * vertex._arrPosition[1] +
                                                   vertex._arrPosition[2] * vertex._arrPosition[2];
@@ -406,9 +406,9 @@ namespace sw
              * @brief 정점 @p vertexCount 개를 읽어 풉니다. 잘렸거나 유한하지 않은 위치가 있거나 플래그에 모르는 비트가 있으면 false 입니다.
              * @details 법선 · 탄젠트는 옥타헤드럴을 풀어 단위 길이이고 탄젠트 w 는 플래그에서 ±1 로 복원한다.
              */
-            [[nodiscard]] static bool readVertices( ByteReader& reader, uint32 vertexCount, const UVBounds& uvBounds, vector<RHIVertex>& outListVertex )
+            [[nodiscard]] static bool readVertices( ByteReader& reader, uint32 vertexCount, const UVBounds& uvBounds, vector<MeshVertex>& outListVertex )
             {
-                return reader.readList( outListVertex, vertexCount, MeshAssetFormat::kVertexSize, [&]( RHIVertex& vertex ) -> bool
+                return reader.readList( outListVertex, vertexCount, MeshAssetFormat::kVertexSize, [&]( MeshVertex& vertex ) -> bool
                 {
                     for ( float32& value : vertex._arrPosition )
                     {
@@ -439,7 +439,7 @@ namespace sw
                     vertex._arrTangent[1]    = tangent._y;
                     vertex._arrTangent[2]    = tangent._z;
                     const float32 handedness = ( flags & kFlagBitangentNegative ) != 0u ? -1.0f : 1.0f;
-                    vertex._arrTangent[3]    = bSeam ? RHIVertex::makeSeamTangentW( handedness, ( flags & kSeamEdgeMaskBits ) >> kSeamEdgeMaskShift ) : handedness;
+                    vertex._arrTangent[3]    = bSeam ? MeshVertex::makeSeamTangentW( handedness, ( flags & kSeamEdgeMaskBits ) >> kSeamEdgeMaskShift ) : handedness;
                     return true;
                 } );
             }

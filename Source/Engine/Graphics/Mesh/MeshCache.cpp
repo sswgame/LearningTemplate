@@ -92,7 +92,7 @@ namespace sw
 
     bool MeshLoadOperation::createFromData( const string& key, MeshAssetData&& data, AssetLoadScope& loadScope )
     {
-        loadScope.setBytes( data._listVertex.size() * sizeof( RHIVertex ) + data._listIndex.size() * sizeof( uint32 ) + data._listSkinVertex.size() * sizeof( MeshSkinVertex ) );
+        loadScope.setBytes( data._listVertex.size() * sizeof( MeshVertex ) + data._listIndex.size() * sizeof( uint32 ) + data._listSkinVertex.size() * sizeof( MeshSkinVertex ) );
         shared_ptr<Mesh> loaded = Mesh::createForAsset( MeshCacheInternal::toAssetID( getPath() ), _cpuAccess.load( std::memory_order_acquire ) );
         // 읽기가 인덱스 범위를 이미 봤다 — 실패는 깨진 파일 하나뿐이고 아래 판정이 함께 진다. 스킨 · 모프가 있으면 메시가 저절로 `Keep` 이 된다.
         const bool bGeometry = loaded->setGeometryWithTangents( std::move( data._listVertex ), std::move( data._listIndex ) );
@@ -233,7 +233,7 @@ namespace sw
         _pState->_sharedTable.forEachLive( [&outListEntry]( const string& key, const Mesh& mesh, uint32 referenceCount )
         {
             // 그리는 흐름(LOD 0 + 낮은 단계)의 정점 · 인덱스가 GPU 버퍼이고, CPU 는 인덱스와 쥔 정점(`MeshCPUAccess`)이다.
-            const uint64 gpuBytes = static_cast<uint64>( mesh.getDrawVertexCount() ) * sizeof( RHIVertex ) + static_cast<uint64>( mesh.getDrawIndexCount() ) * sizeof( uint32 );
+            const uint64 gpuBytes = static_cast<uint64>( mesh.getDrawVertexCount() ) * sizeof( MeshVertex ) + static_cast<uint64>( mesh.getDrawIndexCount() ) * sizeof( uint32 );
             const uint64 cpuBytes = sizeof( Mesh ) + mesh.getCPUVertexBytes() + static_cast<uint64>( mesh.getDrawIndexCount() ) * sizeof( uint32 );
             outListEntry.push_back( AssetMemoryEntry{ key, cpuBytes, gpuBytes, referenceCount } );
         } );

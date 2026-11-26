@@ -21,7 +21,7 @@ namespace
         static shared_ptr<Mesh> makeTriangle()
         {
             const shared_ptr<Mesh> mesh = Mesh::create( MeshCPUAccess::Keep );
-            vector<RHIVertex>      listVertex( 3 );
+            vector<MeshVertex>     listVertex( 3 );
             listVertex[1]._arrPosition[0] = 1.0f;
             listVertex[2]._arrPosition[1] = 1.0f;
             const bool bSet               = mesh->setGeometry( std::move( listVertex ), vector<uint32>{ 0, 1, 2 } ); // 값 셋 · 인덱스 셋 — 늘 맞다

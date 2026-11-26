@@ -64,9 +64,9 @@ namespace sw
                 return MathUtil::max( surfaceY - groundY, 0.0f );
             }
 
-            static RHIVertex makeVertex( const float3& localPosition, const float2& flow, float32 depth )
+            static MeshVertex makeVertex( const float3& localPosition, const float2& flow, float32 depth )
             {
-                RHIVertex vertex{};
+                MeshVertex vertex{};
                 vertex._arrPosition[0] = localPosition._x;
                 vertex._arrPosition[1] = localPosition._y;
                 vertex._arrPosition[2] = localPosition._z;
@@ -84,7 +84,7 @@ namespace sw
             }
 
             /** @brief 격자 사각형 하나를 위에서 앞면으로 넣습니다(PrimitiveMeshBuilder::createPlane 과 같은 감김). */
-            static void pushQuad( vector<RHIVertex>& outListVertex, const RHIVertex& v00, const RHIVertex& v10, const RHIVertex& v01, const RHIVertex& v11 )
+            static void pushQuad( vector<MeshVertex>& outListVertex, const MeshVertex& v00, const MeshVertex& v10, const MeshVertex& v01, const MeshVertex& v11 )
             {
                 outListVertex.push_back( v00 );
                 outListVertex.push_back( v01 );
@@ -404,8 +404,8 @@ namespace sw
         const TerrainHeightfield* pField   = pTerrain != nullptr ? &pTerrain->getHeightfield() : nullptr;
         _bBuiltOnTerrain                   = pField != nullptr;
 
-        vector<RHIVertex> listVertex;
-        float32           boundsRadius{ 0.0f };
+        vector<MeshVertex> listVertex;
+        float32            boundsRadius{ 0.0f };
         if ( _shape == WaterBodyShape::River )
             makeRiverVertices( pField, listVertex, boundsRadius );
         else
@@ -429,8 +429,8 @@ namespace sw
         }
         else
         {
-            vector<RHIVertex> listWelded;
-            vector<uint32>    listIndex;
+            vector<MeshVertex> listWelded;
+            vector<uint32>     listIndex;
             Mesh::weldTriangleList( listVertex, listWelded, listIndex );
             (void)mesh->setGeometryWithTangents( std::move( listWelded ), std::move( listIndex ) ); // 번호는 방금 합친 정점 안이다
         }
@@ -442,7 +442,7 @@ namespace sw
         writeMaterialValues();
     }
 
-    void WaterBodyComponent::makeLakeVertices( const TerrainHeightfield* pTerrain, vector<RHIVertex>& outListVertex, float32& outBoundsRadius ) const
+    void WaterBodyComponent::makeLakeVertices( const TerrainHeightfield* pTerrain, vector<MeshVertex>& outListVertex, float32& outBoundsRadius ) const
     {
         using Internal         = WaterBodyComponentInternal;
         const float32 cellSize = MathUtil::max( _cellSize, 0.1f );
@@ -451,7 +451,7 @@ namespace sw
         const float32 stepX    = _size._x / static_cast<float32>( cellsX );
         const float32 stepZ    = _size._y / static_cast<float32>( cellsZ );
         outListVertex.reserve( static_cast<size_t>( cellsX ) * cellsZ * 6 );
-        auto vertexAt = [&]( uint32 gridX, uint32 gridZ ) -> RHIVertex
+        auto vertexAt = [&]( uint32 gridX, uint32 gridZ ) -> MeshVertex
         {
             const float3  local{ -0.5f * _size._x + static_cast<float32>( gridX ) * stepX, 0.0f, -0.5f * _size._y + static_cast<float32>( gridZ ) * stepZ };
             const float32 depth = Internal::computeDepth( pTerrain, _surfaceOrigin._x + local._x, _surfaceOrigin._z + local._z, _surfaceOrigin._y );
@@ -467,7 +467,7 @@ namespace sw
         outBoundsRadius = 0.5f * MathUtil::sqrt( _size._x * _size._x + _size._y * _size._y );
     }
 
-    void WaterBodyComponent::makeRiverVertices( const TerrainHeightfield* pTerrain, vector<RHIVertex>& outListVertex, float32& outBoundsRadius ) const
+    void WaterBodyComponent::makeRiverVertices( const TerrainHeightfield* pTerrain, vector<MeshVertex>& outListVertex, float32& outBoundsRadius ) const
     {
         using Internal = WaterBodyComponentInternal;
         vector<Internal::RiverSample> listSample;
@@ -476,7 +476,7 @@ namespace sw
             return;
         const uint32  acrossCells = MathUtil::clamp( static_cast<uint32>( MathUtil::ceil( _riverWidth / MathUtil::max( _cellSize, 0.1f ) ) ), 1u, Internal::kMaxCellsPerSide );
         const float32 halfWidth   = 0.5f * _riverWidth;
-        auto          vertexAt    = [&]( size_t sampleIndex, uint32 across ) -> RHIVertex
+        auto          vertexAt    = [&]( size_t sampleIndex, uint32 across ) -> MeshVertex
         {
             const Internal::RiverSample& sample = listSample[sampleIndex];
             const float2                 side{ -sample._tangent._y, sample._tangent._x };

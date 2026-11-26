@@ -14,7 +14,7 @@
 
 namespace sw
 {
-    struct RHIVertex;
+    struct MeshVertex;
 
     class TerrainHeightfield;
 
@@ -84,7 +84,7 @@ namespace sw
          * @details 정점은 위치(청크 이동 기준), 노멀(샘플 중앙 차분), UV(지형 정규 좌표 u = 샘플 x / (N-1)), 색(흰색)을 가진다. 삼각형 목록(인덱스 없음)이다.
          */
         static void makeChunkVertices( const TerrainHeightfield& heightfield, const TerrainChunkLayout& layout, uint32 chunkX, uint32 chunkZ, uint32 lod,
-                                       const uint32 ( &arrNeighborLOD )[static_cast<uint32>( TerrainChunkSide::Count )], vector<RHIVertex>& outListVertex );
+                                       const uint32 ( &arrNeighborLOD )[static_cast<uint32>( TerrainChunkSide::Count )], vector<MeshVertex>& outListVertex );
 
         /**
          * @brief 지오모프 값을 정점의 색 · 탄젠트 칸에 씁니다(E4). `makeChunkVertices` 로 만든 정점 배열 @p inoutListVertex 를 그대로 받는다 - 정점의 UV 가 샘플 좌표를 되돌려 준다.
@@ -97,6 +97,6 @@ namespace sw
          * @param lodDistance 컴포넌트의 LOD 거리(`selectLOD` 의 첫 임계값)
          */
         static void applyGeomorph( const TerrainHeightfield& heightfield, const TerrainChunkLayout& layout, uint32 chunkX, uint32 chunkZ, uint32 lod, float32 lodDistance,
-                                   vector<RHIVertex>& inoutListVertex );
+                                   vector<MeshVertex>& inoutListVertex );
     };
 } // namespace sw

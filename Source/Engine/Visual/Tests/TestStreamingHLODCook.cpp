@@ -173,14 +173,14 @@ SW_TEST_CASE( StreamingHLODCookTest, PartsAppendIntoOneMesh )
     HLODMeshPart part;
     part._position = float3{ 10.0f, 0.0f, 0.0f };
     part._scale    = float3{ 2.0f, 1.0f, 1.0f };
-    vector<RHIVertex> listVertex;
-    vector<uint32>    listIndex;
+    vector<MeshVertex> listVertex;
+    vector<uint32>     listIndex;
     SW_REQUIRE_TRUE( HLODMeshComponent::appendPart( part, *cube, listVertex, listIndex ) );
     SW_REQUIRE_EQUAL( static_cast<size_t>( cube->getIndexCount() ), listIndex.size() );
     const size_t firstVertexCount = listVertex.size();
     float32      minX             = MathUtil::kMaxFloat;
     float32      maxX             = -MathUtil::kMaxFloat;
-    for ( const RHIVertex& vertex : listVertex )
+    for ( const MeshVertex& vertex : listVertex )
     {
         minX = MathUtil::min( minX, vertex._arrPosition[0] );
         maxX = MathUtil::max( maxX, vertex._arrPosition[0] );
@@ -198,14 +198,14 @@ SW_TEST_CASE( StreamingHLODCookTest, PartsAppendIntoOneMesh )
     const size_t firstMirrored = static_cast<size_t>( cube->getIndexCount() );
     const auto   position      = [&listVertex, &listIndex]( size_t index )
     {
-        const RHIVertex& vertex = listVertex[listIndex[index]];
+        const MeshVertex& vertex = listVertex[listIndex[index]];
         return float3{ vertex._arrPosition[0], vertex._arrPosition[1], vertex._arrPosition[2] };
     };
-    const RHIVertex& corner = listVertex[listIndex[firstMirrored]];
-    const float3     originalNormal{ listVertex[listIndex[0]]._arrNormal[0], listVertex[listIndex[0]]._arrNormal[1], listVertex[listIndex[0]]._arrNormal[2] };
-    const float3     originalFace = ( position( 1 ) - position( 0 ) ).cross( position( 2 ) - position( 0 ) );
-    const float3     mirroredNormal{ corner._arrNormal[0], corner._arrNormal[1], corner._arrNormal[2] };
-    const float3     mirroredFace = ( position( firstMirrored + 1 ) - position( firstMirrored ) ).cross( position( firstMirrored + 2 ) - position( firstMirrored ) );
+    const MeshVertex& corner = listVertex[listIndex[firstMirrored]];
+    const float3      originalNormal{ listVertex[listIndex[0]]._arrNormal[0], listVertex[listIndex[0]]._arrNormal[1], listVertex[listIndex[0]]._arrNormal[2] };
+    const float3      originalFace = ( position( 1 ) - position( 0 ) ).cross( position( 2 ) - position( 0 ) );
+    const float3      mirroredNormal{ corner._arrNormal[0], corner._arrNormal[1], corner._arrNormal[2] };
+    const float3      mirroredFace = ( position( firstMirrored + 1 ) - position( firstMirrored ) ).cross( position( firstMirrored + 2 ) - position( firstMirrored ) );
     SW_EXPECT_EQUAL( originalFace.dot( originalNormal ) > 0.0f, mirroredFace.dot( mirroredNormal ) > 0.0f );
 
     HLODMeshPart missing;

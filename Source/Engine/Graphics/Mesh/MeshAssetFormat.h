@@ -11,7 +11,7 @@
 
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
-#include "Engine/Graphics/RHI/RHIVertex.h"
+#include "Engine/Graphics/Mesh/MeshVertex.h"
 
 namespace sw
 {
@@ -23,7 +23,7 @@ namespace sw
      */
     struct MeshAssetData
     {
-        vector<RHIVertex>       _listVertex;
+        vector<MeshVertex>      _listVertex;
         vector<uint32>          _listIndex;       ///< 삼각형마다 정점 번호 셋(`Mesh::getIndices`). 비면 쓰기 · 읽기가 거절합니다
         vector<MeshSkinVertex>  _listSkinVertex;  ///< 비었거나 `_listVertex` 와 같은 길이입니다.
         vector<MeshMorphTarget> _listMorphTarget; ///< 모프 타깃(블렌드 셰이프). 없으면 비어 있습니다
@@ -45,7 +45,7 @@ namespace sw
      *          경계 반지름(float32, 원점에서 가장 먼 정점까지), 스킨 본 수(uint32, 0 이면 스킨 없음), UV 경계(float32 4 개 — 최소 u · v, 최대 u · v)입니다.
      *          UV 경계는 기본 정점과 모든 LOD 의 UV 를 덮고, 정점의 UV 는 이 사각형 안으로 정규화한 `unorm16x2` 입니다(오차는 경계 폭의 1/65535).
      *          그 뒤에 정점마다 32 바이트가 옵니다: 위치 float32 3개(12), 노멀 `OctahedralNormal`(4), 탄젠트 `OctahedralNormal`(4 — xyz 는 쓰기가 `Mesh::computeTangents` 로 구한다),
-     *          UV `unorm16x2`(4), 색 `unorm8x4`(4, 0..1 밖은 잘린다), 플래그 uint32(4. 비트 0 이 켜지면 바이탄젠트 부호가 -1, 비트 1 은 이음매 정점, 비트 2..7 은 그 변 묶음(`RHIVertex::getSeamEdgeMask`), 나머지 비트는 0)입니다.
+     *          UV `unorm16x2`(4), 색 `unorm8x4`(4, 0..1 밖은 잘린다), 플래그 uint32(4. 비트 0 이 켜지면 바이탄젠트 부호가 -1, 비트 1 은 이음매 정점, 비트 2..7 은 그 변 묶음(`MeshVertex::getSeamEdgeMask`), 나머지 비트는 0)입니다.
      *          법선 · 탄젠트는 풀면 단위 길이이고 오차가 1e-4 라디안 아래라 위치와 달리 비트까지 같게 돌아오지 않습니다. 스킨 본 수가 0 이 아니면 정점마다 본 번호 4개(uint16)와 가중치 4개(float32)가 옵니다. 본 번호는 스켈레톤 본 순서이고 본 수보다 작습니다.
      *          이어서 본 배치 지문(uint64, 0 이면 배치를 따지지 않음)과 본마다 역 바인드(float32 16 개, 행 우선)가 옵니다 — 역 바인드는 스켈레톤이 아니라 메시의 값입니다(`MeshSkinBinding`).
      *          그 뒤에 인덱스 수만큼의 번호가 옵니다(번호는 정점 수보다 작다). 정점이 65536 개 이하면 uint16, 넘으면 uint32 다(`getIndexBytes` — 정점 수가 폭을 정해 머리에 따로 적지 않는다).
@@ -64,7 +64,7 @@ namespace sw
         static constexpr uint32 kVersion = 0;
         /** @brief 헤더의 바이트 수입니다(고정 필드 28 + UV 경계 float32 4 개). */
         static constexpr uint32 kHeaderSize = 44;
-        /** @brief 파일의 정점 하나의 바이트 수입니다(압축 배치 — 메모리의 `RHIVertex` 는 64 바이트 float32 16 개이고 읽을 때 풉니다). */
+        /** @brief 파일의 정점 하나의 바이트 수입니다(압축 배치 — 메모리의 `MeshVertex` 는 64 바이트 float32 16 개이고 읽을 때 풉니다). */
         static constexpr uint32 kVertexSize = 32;
         /** @brief 스킨 정점 하나의 바이트 수입니다(uint16 4 개 + float32 4 개). */
         static constexpr uint32 kSkinVertexSize = 24;

@@ -8,15 +8,15 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Half.h"
 
-#include "Engine/Graphics/RHI/RHIVertex.h"
+#include "Engine/Graphics/Mesh/MeshVertex.h"
 
 namespace sw
 {
-    /** @brief `RHIMeshVertexFormat::Packed` 의 속성 스트림 원소입니다(슬롯 2). */
+    /** @brief `MeshVertexFormat::Packed` 의 속성 스트림 원소입니다(슬롯 2). */
     struct RHIPackedMeshAttributes
     {
         int8    _arrNormal[4];  ///< snorm8 — w 는 0
-        int8    _arrTangent[4]; ///< snorm8. w 는 바이탄젠트 부호 × 이음매 크기(±127, 이음매는 1 + 변 묶음, RHIVertex::makeSeamTangentW)
+        int8    _arrTangent[4]; ///< snorm8. w 는 바이탄젠트 부호 × 이음매 크기(±127, 이음매는 1 + 변 묶음, MeshVertex::makeSeamTangentW)
         float32 _arrUV[2];      ///< 물이 월드 좌표를 싣는다 — half 로 줄이지 않는다
         /// half — 감사 R-15(float4 16 B → 8 B). 8 비트 unorm(언리얼 `FColor`)이 아닌 까닭: 물이 정점 색에 깊이(1 넘음)와 부호 있는 흐름을 싣는다. 색은 half 의 11 비트 가수로 충분하다
         half _arrColor[4];
@@ -25,7 +25,7 @@ namespace sw
     inline constexpr uint32 kPackedMeshAttributesBytes = 24;
     static_assert( sizeof( RHIPackedMeshAttributes ) == kPackedMeshAttributesBytes, "packed mesh attributes are 24 bytes (imported by four backends' layouts)" );
 
-    /** @brief `RHIMeshVertexFormat::HighPrecision` 의 속성 스트림 원소입니다(슬롯 2). `RHIVertex` 에서 위치를 뺀 모양이다. */
+    /** @brief `MeshVertexFormat::HighPrecision` 의 속성 스트림 원소입니다(슬롯 2). `MeshVertex` 에서 위치를 뺀 모양이다. */
     struct RHIHighPrecisionMeshAttributes
     {
         float32 _arrNormal[3];
@@ -124,17 +124,17 @@ namespace sw
         static_assert( kVertexAttributeCount == sizeof( arrHighPrecisionMeshVertexAttribute ) / sizeof( arrHighPrecisionMeshVertexAttribute[0] ), "the two mesh vertex tables must list the same attributes" );
 
         /** @brief 메시 정점 형식의 속성 표입니다(`kVertexAttributeCount` 칸). */
-        constexpr const RHIVertexAttribute* getMeshVertexAttributes( RHIMeshVertexFormat format )
+        constexpr const RHIVertexAttribute* getMeshVertexAttributes( MeshVertexFormat format )
         {
-            return format == RHIMeshVertexFormat::HighPrecision ? arrHighPrecisionMeshVertexAttribute : arrPackedMeshVertexAttribute;
+            return format == MeshVertexFormat::HighPrecision ? arrHighPrecisionMeshVertexAttribute : arrPackedMeshVertexAttribute;
         }
         /** @brief 메시 정점 형식의 속성 스트림 원소 크기(바이트)입니다. */
-        constexpr uint32 getMeshAttributeStride( RHIMeshVertexFormat format )
+        constexpr uint32 getMeshAttributeStride( MeshVertexFormat format )
         {
-            return format == RHIMeshVertexFormat::HighPrecision ? static_cast<uint32>( sizeof( RHIHighPrecisionMeshAttributes ) ) : static_cast<uint32>( sizeof( RHIPackedMeshAttributes ) );
+            return format == MeshVertexFormat::HighPrecision ? static_cast<uint32>( sizeof( RHIHighPrecisionMeshAttributes ) ) : static_cast<uint32>( sizeof( RHIPackedMeshAttributes ) );
         }
         /** @brief 정점 버퍼 슬롯 하나의 원소 크기(바이트)입니다. 속성 슬롯은 메시 정점 형식이 정한다. */
-        constexpr uint32 getVertexSlotStride( RHIMeshVertexFormat format, uint32 slot )
+        constexpr uint32 getVertexSlotStride( MeshVertexFormat format, uint32 slot )
         {
             return slot == kMeshPositionSlot ? kMeshPositionStride : ( slot == kInstanceSlotStreamSlot ? kInstanceSlotStreamStride : getMeshAttributeStride( format ) );
         }

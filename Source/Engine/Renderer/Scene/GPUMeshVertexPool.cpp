@@ -17,7 +17,7 @@
 
 namespace sw
 {
-    GPUMeshVertexPool::GPUMeshVertexPool( RHIMeshVertexFormat format )
+    GPUMeshVertexPool::GPUMeshVertexPool( MeshVertexFormat format )
         : _format{ format }
         , _allocator{}
         , _indexAllocator{}

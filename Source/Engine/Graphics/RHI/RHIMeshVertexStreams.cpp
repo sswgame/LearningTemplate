@@ -11,27 +11,27 @@
 
 namespace sw
 {
-    uint32 RHIMeshVertexStreams::computeBufferBytes( RHIMeshVertexFormat format, uint32 vertexCapacity )
+    uint32 RHIMeshVertexStreams::computeBufferBytes( MeshVertexFormat format, uint32 vertexCapacity )
     {
         return vertexCapacity * ( constant::render::kMeshPositionStride + constant::render::getMeshAttributeStride( format ) );
     }
 
-    void RHIMeshVertexStreams::bind( IRHIPassCommandList& cmd, RHIBufferHandle vertexBuffer, uint32 attributeOffset, RHIMeshVertexFormat format )
+    void RHIMeshVertexStreams::bind( IRHIPassCommandList& cmd, RHIBufferHandle vertexBuffer, uint32 attributeOffset, MeshVertexFormat format )
     {
         cmd.setVertexBuffer( constant::render::kMeshPositionSlot, vertexBuffer, constant::render::kMeshPositionStride, 0 );
         cmd.setVertexBuffer( constant::render::kMeshAttributeSlot, vertexBuffer, constant::render::getMeshAttributeStride( format ), attributeOffset );
     }
 
-    void RHIMeshVertexStreams::write( RHIMeshVertexFormat format, const RHIVertex* pSource, uint32 count, uint32 firstVertex, uint32 vertexCapacity, uint8* pBuffer )
+    void RHIMeshVertexStreams::write( MeshVertexFormat format, const MeshVertex* pSource, uint32 count, uint32 firstVertex, uint32 vertexCapacity, uint8* pBuffer )
     {
         SW_ASSERT( firstVertex + count <= vertexCapacity );
         uint8* const pOutPosition  = pBuffer + static_cast<size_t>( firstVertex ) * constant::render::kMeshPositionStride;
         uint8* const pOutAttribute = pBuffer + computeAttributeOffset( vertexCapacity ) + static_cast<size_t>( firstVertex ) * constant::render::getMeshAttributeStride( format );
         for ( uint32 vertexIndex = 0; vertexIndex < count; ++vertexIndex )
         {
-            const RHIVertex& vertex = pSource[vertexIndex];
+            const MeshVertex& vertex = pSource[vertexIndex];
             Memory::copy( pOutPosition + static_cast<size_t>( vertexIndex ) * constant::render::kMeshPositionStride, vertex._arrPosition, constant::render::kMeshPositionStride );
-            if ( format == RHIMeshVertexFormat::HighPrecision )
+            if ( format == MeshVertexFormat::HighPrecision )
             {
                 RHIHighPrecisionMeshAttributes attributes{};
                 Memory::copy( attributes._arrNormal, vertex._arrNormal, sizeof( attributes._arrNormal ) );
@@ -47,7 +47,7 @@ namespace sw
                 attributes._arrNormal[axis]  = snorm8::fromFloat( vertex._arrNormal[axis] ).getRaw();
                 attributes._arrTangent[axis] = snorm8::fromFloat( vertex._arrTangent[axis] ).getRaw();
             }
-            // 바이탄젠트 부호(0 은 + 로 둔다. MikkTSpace 가 0 을 내지 않는다) × 이음매 표시 크기(`RHIVertex::makeSeamTangentW`, snorm8 에서 정확하다).
+            // 바이탄젠트 부호(0 은 + 로 둔다. MikkTSpace 가 0 을 내지 않는다) × 이음매 표시 크기(`MeshVertex::makeSeamTangentW`, snorm8 에서 정확하다).
             const float32 handedness  = vertex._arrTangent[3] < 0.0f ? -1.0f : 1.0f;
             attributes._arrTangent[3] = snorm8::fromFloat( vertex.isOnSeam() ? vertex._arrTangent[3] : handedness ).getRaw();
             Memory::copy( attributes._arrUV, vertex._arrUV, sizeof( attributes._arrUV ) );

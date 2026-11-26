@@ -9,8 +9,8 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
+#include "Engine/Graphics/Mesh/MeshVertex.h"
 #include "Engine/Graphics/RHI/RHIEnums.h"
-#include "Engine/Graphics/RHI/RHIVertex.h"
 #include "Engine/Graphics/RenderState/RenderState.h"
 
 namespace sw
@@ -44,7 +44,7 @@ namespace sw
          * @details 그리는 메시의 형식과 같아야 한다 — 머티리얼 PSO 는 배치의 형식으로 짓는다(`MaterialPSOKey::_vertexFormat`). 다르면 속성 스트림 원소 크기가 달라
          *          드로우가 버려진다(`RHIDrawDiagnostics::validateVertexSlotsBound`). 언리얼에서 정점 선언이 vertex factory 로 PSO 에 드는 자리다.
          */
-        RHIMeshVertexFormat _meshVertexFormat;
+        MeshVertexFormat _meshVertexFormat;
 
         /** @brief 기본 토폴로지로, 컬링 · 깊이 테스트 없이 만듭니다. */
         RHIPipelineStateDesc() noexcept;

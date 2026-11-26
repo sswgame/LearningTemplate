@@ -19,12 +19,12 @@
 #include "Engine/Graphics/Material/MaterialPacking.h"
 #include "Engine/Graphics/Material/MaterialPermutation.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
+#include "Engine/Graphics/Mesh/MeshVertex.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/RHI/RHIPipelineStateDesc.h"
 #include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
-#include "Engine/Graphics/RHI/RHIVertex.h"
 #include "Engine/Graphics/Shader/Binding/EngineComputeShaders.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingLayout.h"
 #include "Engine/Graphics/Shader/Compile/RHIShaderRequest.h"
@@ -300,9 +300,9 @@ namespace sw
         /** @brief 이번 프레임 배치가 쓰는 PSO 변형 하나의 조건(퍼뮤테이션, 컬 반전)입니다. 퍼뮤테이션이 없으면 kInvalidShaderPermutation 입니다. */
         struct MaterialPSORequest
         {
-            uint32              _shaderPermutation{ kInvalidShaderPermutation };
-            uint8               _bReverseCulling{ SW_FALSE };
-            RHIMeshVertexFormat _vertexFormat{ RHIMeshVertexFormat::Packed }; ///< 배치 메시의 정점 형식(입력 레이아웃이 다른 변형)
+            uint32           _shaderPermutation{ kInvalidShaderPermutation };
+            uint8            _bReverseCulling{ SW_FALSE };
+            MeshVertexFormat _vertexFormat{ MeshVertexFormat::Packed }; ///< 배치 메시의 정점 형식(입력 레이아웃이 다른 변형)
         };
         /**
          * @brief 머티리얼이 없는 배치에 바인딩하는 원소 하나짜리 구조 버퍼입니다. 내용이 다른 원소마다 하나씩 있습니다.
@@ -1108,7 +1108,7 @@ namespace sw
 
         RenderPSOCache::MaterialPSOEntry createMaterialPSOVariant( RHIPipelineStateHandle passPSO, RenderPassKind passType,
                                                                    const GPUShaderPermutation* pPermutation, RenderViewMode viewMode, bool bReverseCulling,
-                                                                   RHIMeshVertexFormat vertexFormat, RHIPipelineStateDesc* pOutDeferredDesc )
+                                                                   MeshVertexFormat vertexFormat, RHIPipelineStateDesc* pOutDeferredDesc )
         {
             if ( passPSO == 0 || _pDevice == nullptr )
                 return RenderPSOCache::MaterialPSOEntry::failed();
@@ -1276,7 +1276,7 @@ namespace sw
                         {
                             if ( ( passModeMask & ( 1u << modeIndex ) ) == 0 )
                                 continue;
-                            ensureMaterialPSOVariant( passPSO, passType, &permutation, permutation._hash, false, static_cast<RenderViewMode>( modeIndex ), RHIMeshVertexFormat::Packed, false );
+                            ensureMaterialPSOVariant( passPSO, passType, &permutation, permutation._hash, false, static_cast<RenderViewMode>( modeIndex ), MeshVertexFormat::Packed, false );
                         }
                     } );
                 }
@@ -1294,9 +1294,9 @@ namespace sw
             _mapRequestIndexScratch.clear();
             for ( const GPUMeshBatch& batch : listBatch )
             {
-                const RHIMeshVertexFormat batchFormat = batch._mesh != nullptr ? batch._mesh->getVertexFormat() : RHIMeshVertexFormat::Packed;
-                const uint64              packed      = ( static_cast<uint64>( batch._shaderPermutation ) << 16 ) | ( static_cast<uint64>( batchFormat ) << 8 ) | ( batch._bReverseCulling != SW_FALSE ? 1u : 0u );
-                const auto                found       = _mapRequestIndexScratch.try_emplace( packed, static_cast<uint32>( outListRequest.size() ) );
+                const MeshVertexFormat batchFormat = batch._mesh != nullptr ? batch._mesh->getVertexFormat() : MeshVertexFormat::Packed;
+                const uint64           packed      = ( static_cast<uint64>( batch._shaderPermutation ) << 16 ) | ( static_cast<uint64>( batchFormat ) << 8 ) | ( batch._bReverseCulling != SW_FALSE ? 1u : 0u );
+                const auto             found       = _mapRequestIndexScratch.try_emplace( packed, static_cast<uint32>( outListRequest.size() ) );
                 if ( found.second )
                     outListRequest.push_back( MaterialPSORequest{ batch._shaderPermutation, batch._bReverseCulling, batchFormat } );
                 outListVariant.push_back( found.first->second );
@@ -1322,7 +1322,7 @@ namespace sw
                 {
                     // 퍼뮤테이션이 없는 배치를 위한 변형이다. 적용하는 것이 뷰 모드와 컬 반전뿐이다. Lit 이고 거울이 아니면 만들 것이 없다
                     // (그때는 패스 PSO 가 그대로 정답이고 resolveBatchPSO 도 캐시를 보지 않는다).
-                    const bool bNeedsVariant = viewMode != RenderViewMode::Lit || bReverseCulling || request._vertexFormat != RHIMeshVertexFormat::Packed;
+                    const bool bNeedsVariant = viewMode != RenderViewMode::Lit || bReverseCulling || request._vertexFormat != MeshVertexFormat::Packed;
                     if ( bNeedsVariant )
                         ensureMaterialPSOVariant( passPSO, passType, nullptr, 0, bReverseCulling, viewMode, request._vertexFormat );
                     continue;
@@ -1334,7 +1334,7 @@ namespace sw
         }
 
         void ensureMaterialPSOVariant( RHIPipelineStateHandle passPSO, RenderPassKind passType, const GPUShaderPermutation* pPermutation,
-                                       uint64 permutationHash, bool bReverseCulling, RenderViewMode viewMode, RHIMeshVertexFormat vertexFormat, bool bUrgent = true )
+                                       uint64 permutationHash, bool bReverseCulling, RenderViewMode viewMode, MeshVertexFormat vertexFormat, bool bUrgent = true )
         {
             // 키를 `Building` 으로 올린 쪽만 만든다(`beginMaterialPSO`). 셰이더 컴파일이 낄 수 있는 변형은 desc 만 정해 빌더 줄에 넣고(렌더 스레드의 임계 경로에서 뺀다),
             // 결과는 `pollMaterialPSOBuilds` 가 기록 전에 합친다. 드로우 경로는 `Building` 배치를 이번 프레임만 건너뛴다(`RT.PSO.pendingBatches`).
@@ -1429,7 +1429,7 @@ namespace sw
             // 적용할 것이 하나도 없는 조합이다. ensureMaterialPSOs 도 이 키를 만들지 않는다.
             // (해시 0은 퍼뮤테이션 없음을 뜻한다. 실제 퍼뮤테이션 해시가 0이 되더라도 같은 키로
             //  떨어지는데, 그 둘이 만드는 디스크립터는 어차피 같으므로 해롭지 않다.)
-            const bool bDefaultPassPSO = permutationHash == 0 && viewMode == RenderViewMode::Lit && request._bReverseCulling == SW_FALSE && request._vertexFormat == RHIMeshVertexFormat::Packed;
+            const bool bDefaultPassPSO = permutationHash == 0 && viewMode == RenderViewMode::Lit && request._bReverseCulling == SW_FALSE && request._vertexFormat == MeshVertexFormat::Packed;
             if ( bDefaultPassPSO )
                 return makeBatchPSO( passPSO, RenderPSOCache::MaterialPSOState::Ready );
 

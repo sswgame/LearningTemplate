@@ -92,9 +92,9 @@ namespace sw
                 vector<float4x4> listModel;
                 reference.setToReference( skeleton );
                 reference.computeModelSpace( skeleton.getParentIndices(), listModel );
-                const uint32             boneCount  = skeleton.getBoneCount();
-                const vector<RHIVertex>& listVertex = source.getCPUView().getVertices();
-                vector<MeshSkinVertex>   listSkin( listVertex.size() );
+                const uint32              boneCount  = skeleton.getBoneCount();
+                const vector<MeshVertex>& listVertex = source.getCPUView().getVertices();
+                vector<MeshSkinVertex>    listSkin( listVertex.size() );
                 for ( size_t index = 0; index < listVertex.size() && boneCount >= 2; ++index )
                 {
                     const float32 y     = listVertex[index]._arrPosition[1];
@@ -113,7 +113,7 @@ namespace sw
                     skin._arrWeight[1]       = fraction;
                 }
                 shared_ptr<Mesh> copy = Mesh::create( MeshCPUAccess::Keep );
-                (void)copy->setGeometryWithTangents( vector<RHIVertex>( listVertex ), vector<uint32>( source.getIndices() ) ); // 원본에서 이미 검사한 정점 · 인덱스다
+                (void)copy->setGeometryWithTangents( vector<MeshVertex>( listVertex ), vector<uint32>( source.getIndices() ) ); // 원본에서 이미 검사한 정점 · 인덱스다
                 // 정점이 스켈레톤 레퍼런스 포즈 자리에 있다 — 그 포즈가 이 메시의 바인드다.
                 MeshSkinBinding skinBinding{};
                 skeleton.computeReferenceInverseBinds( skinBinding._listInverseBind );

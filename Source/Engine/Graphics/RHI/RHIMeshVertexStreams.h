@@ -1,6 +1,6 @@
 /**
  * @file RHIMeshVertexStreams.h
- * @brief CPU 정점(`RHIVertex`)을 GPU 메시 정점 스트림(위치 · 속성)으로 바꿉니다. 메시 하나의 정점 버퍼와 씬 정점 풀이 같은 모양을 씁니다.
+ * @brief CPU 정점(`MeshVertex`)을 GPU 메시 정점 스트림(위치 · 속성)으로 바꿉니다. 메시 하나의 정점 버퍼와 씬 정점 풀이 같은 모양을 씁니다.
  *
  * [모양]
  * 정점 버퍼 하나 = [위치 구간: 용량 × 12 B][속성 구간: 용량 × 형식의 원소 크기]. 슬롯 0 은 버퍼 시작에서, 슬롯 2 는 속성 구간 시작에서 건다.
@@ -11,10 +11,10 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
+#include "Engine/Graphics/Mesh/MeshVertex.h"
 #include "Engine/Graphics/RHI/RHIEnums.h"
 #include "Engine/Graphics/RHI/RHIHandles.h"
 #include "Engine/Graphics/RHI/RHIMeshVertexLayout.h"
-#include "Engine/Graphics/RHI/RHIVertex.h"
 
 namespace sw
 {
@@ -28,7 +28,7 @@ namespace sw
     struct SW_API RHIMeshVertexStreams
     {
         /** @brief 정점 @p vertexCapacity 개를 담는 버퍼의 바이트 수입니다(위치 구간 + 속성 구간). */
-        static uint32 computeBufferBytes( RHIMeshVertexFormat format, uint32 vertexCapacity );
+        static uint32 computeBufferBytes( MeshVertexFormat format, uint32 vertexCapacity );
         /** @brief 속성 구간이 시작하는 바이트입니다(위치 구간 바로 뒤). */
         static uint32 computeAttributeOffset( uint32 vertexCapacity ) { return vertexCapacity * constant::render::kMeshPositionStride; }
 
@@ -37,9 +37,9 @@ namespace sw
          * @details 원본에서 GPU 모양으로 한 번만 옮긴다(LOD 단계 · 풀의 메시마다 자리를 받아 쓴다 — 중간에 CPU 정점을 이어 붙이지 않는다).
          *          `Packed` 는 노멀 · 탄젠트를 snorm8 로 줄인다 — 단위 벡터가 아닌 값(지형이 탄젠트에 싣는 경계)을 넣은 메시는 `Full` 이어야 한다.
          */
-        static void write( RHIMeshVertexFormat format, const RHIVertex* pSource, uint32 count, uint32 firstVertex, uint32 vertexCapacity, uint8* pBuffer );
+        static void write( MeshVertexFormat format, const MeshVertex* pSource, uint32 count, uint32 firstVertex, uint32 vertexCapacity, uint8* pBuffer );
 
         /** @brief 메시 정점 버퍼의 위치 구간(슬롯 0)과 속성 구간(슬롯 2, @p attributeOffset 부터)을 겁니다. stride 는 형식의 원소 크기다(드로우가 PSO 의 형식과 대조한다). */
-        static void bind( IRHIPassCommandList& cmd, RHIBufferHandle vertexBuffer, uint32 attributeOffset, RHIMeshVertexFormat format );
+        static void bind( IRHIPassCommandList& cmd, RHIBufferHandle vertexBuffer, uint32 attributeOffset, MeshVertexFormat format );
     };
 } // namespace sw

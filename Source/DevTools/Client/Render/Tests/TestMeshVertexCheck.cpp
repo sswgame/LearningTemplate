@@ -9,9 +9,9 @@
 
 #include "DevTools/Client/Render/MeshVertexCheck.h"
 
+#include "Engine/Graphics/Mesh/MeshVertex.h"
 #include "Engine/Graphics/RHI/RHIMeshVertexLayout.h"
 #include "Engine/Graphics/RHI/RHIMeshVertexStreams.h"
-#include "Engine/Graphics/RHI/RHIVertex.h"
 
 using namespace sw;
 
@@ -21,21 +21,21 @@ using namespace sw;
  */
 SW_TEST_CASE( MeshVertexCheckTest, FindsTheVertexWhoseNormalWasLost )
 {
-    constexpr uint32  kVertexCount = 8;
-    vector<RHIVertex> listVertex( kVertexCount );
-    for ( RHIVertex& vertex : listVertex )
+    constexpr uint32   kVertexCount = 8;
+    vector<MeshVertex> listVertex( kVertexCount );
+    for ( MeshVertex& vertex : listVertex )
     {
         vertex._arrNormal[1] = 1.0f;
     }
-    vector<uint8> listExpected( RHIMeshVertexStreams::computeBufferBytes( RHIMeshVertexFormat::Packed, kVertexCount ) );
-    RHIMeshVertexStreams::write( RHIMeshVertexFormat::Packed, listVertex.data(), kVertexCount, 0, kVertexCount, listExpected.data() );
+    vector<uint8> listExpected( RHIMeshVertexStreams::computeBufferBytes( MeshVertexFormat::Packed, kVertexCount ) );
+    RHIMeshVertexStreams::write( MeshVertexFormat::Packed, listVertex.data(), kVertexCount, 0, kVertexCount, listExpected.data() );
     vector<uint8> listActual = listExpected;
-    SW_EXPECT_FALSE( MeshVertexCheck::findDifference( RHIMeshVertexFormat::Packed, kVertexCount, listExpected.data(), listActual.data() ).has_value() );
+    SW_EXPECT_FALSE( MeshVertexCheck::findDifference( MeshVertexFormat::Packed, kVertexCount, listExpected.data(), listActual.data() ).has_value() );
 
     constexpr uint32 kLostVertex                           = 6;
-    const uint32     normalY                               = RHIMeshVertexStreams::computeAttributeOffset( kVertexCount ) + kLostVertex * constant::render::getMeshAttributeStride( RHIMeshVertexFormat::Packed ) + 1u;
+    const uint32     normalY                               = RHIMeshVertexStreams::computeAttributeOffset( kVertexCount ) + kLostVertex * constant::render::getMeshAttributeStride( MeshVertexFormat::Packed ) + 1u;
     listActual[normalY]                                    = 0;
-    const optional<MeshVertexCheck::Difference> difference = MeshVertexCheck::findDifference( RHIMeshVertexFormat::Packed, kVertexCount, listExpected.data(), listActual.data() );
+    const optional<MeshVertexCheck::Difference> difference = MeshVertexCheck::findDifference( MeshVertexFormat::Packed, kVertexCount, listExpected.data(), listActual.data() );
     SW_REQUIRE_TRUE( difference.has_value() );
     SW_EXPECT_TRUE( difference->_bAttribute != SW_FALSE );
     SW_EXPECT_EQUAL( kLostVertex, difference->_vertexIndex );
@@ -47,10 +47,10 @@ SW_TEST_CASE( MeshVertexCheckTest, FindsTheVertexWhoseNormalWasLost )
 SW_TEST_CASE( MeshVertexCheckTest, SeparatesPositionsFromAttributes )
 {
     constexpr uint32 kVertexCount = 4;
-    vector<uint8>    listExpected( RHIMeshVertexStreams::computeBufferBytes( RHIMeshVertexFormat::Packed, kVertexCount ) );
+    vector<uint8>    listExpected( RHIMeshVertexStreams::computeBufferBytes( MeshVertexFormat::Packed, kVertexCount ) );
     vector<uint8>    listActual                                                   = listExpected;
     listActual[RHIMeshVertexStreams::computeAttributeOffset( kVertexCount ) - 1u] = 1;
-    const optional<MeshVertexCheck::Difference> difference                        = MeshVertexCheck::findDifference( RHIMeshVertexFormat::Packed, kVertexCount, listExpected.data(), listActual.data() );
+    const optional<MeshVertexCheck::Difference> difference                        = MeshVertexCheck::findDifference( MeshVertexFormat::Packed, kVertexCount, listExpected.data(), listActual.data() );
     SW_REQUIRE_TRUE( difference.has_value() );
     SW_EXPECT_TRUE( difference->_bAttribute == SW_FALSE );
     SW_EXPECT_EQUAL( kVertexCount - 1u, difference->_vertexIndex );

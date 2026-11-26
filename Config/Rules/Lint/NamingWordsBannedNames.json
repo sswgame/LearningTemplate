@@ -2550,6 +2550,9 @@
     "RenderStabilityTest": "RenderConvergenceTest — RenderConvergenceSample 개명을 따른다(2026-11-27)",
     "MeshUtil": "PrimitiveMeshBuilder — 내장 도형 생성기다(Godot PrimitiveMesh). Util 은 내용을 말하지 않는다(2026-11-27)",
     "MeshUtilInternal": "PrimitiveMeshBuilderInternal — PrimitiveMeshBuilder 개명을 따른다(2026-11-27)",
-    "getMainStabilitySample": "getMainConvergenceSample — RenderConvergenceSample 개명을 따른다(2026-11-27)"
+    "getMainStabilitySample": "getMainConvergenceSample — RenderConvergenceSample 개명을 따른다(2026-11-27)",
+    "RHIVertex": "MeshVertex — CPU 쪽 메시 정점이다(언리얼 FStaticMeshBuildVertex). RHI 헤더를 모르는 값 형식이라 게임 헤더가 쓴다(cae8f4c335 가 RHI 밖으로 옮겼다)(2026-11-27)",
+    "RHIMeshVertexFormat": "MeshVertexFormat — 메시가 고르는 정점 속성 스트림 형식이다. RHI 헤더가 아닌 MeshVertex.h 에 있다(2026-11-27)",
+    "makeRHIVertex": "makeMeshVertex — MeshVertex 개명을 따른다(2026-11-27)"
   }
 }

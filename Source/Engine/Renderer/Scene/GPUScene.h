@@ -10,10 +10,10 @@
 #include "Core/Container/vector.h"
 
 #include "Engine/EngineMinimal.h"
+#include "Engine/Graphics/Mesh/MeshVertex.h"
 #include "Engine/Graphics/RHI/RHIGeometryBuffer.h"
 #include "Engine/Graphics/RHI/RHIIndirectCommand.h"
 #include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
-#include "Engine/Graphics/RHI/RHIVertex.h"
 #include "Engine/Presentation/InstanceHighlight.h"
 #include "Engine/Renderer/Frame/View/RenderView.h"
 #include "Engine/Renderer/Scene/GPUInstanceMotionHistory.h"
@@ -519,7 +519,7 @@ namespace sw
          * @brief 씬 메시 정점을 모은 풀입니다(RT 소유) — 정점 형식마다 하나(속성 원소 크기가 다르다). 배치는 자기 형식의 풀 버퍼와 자기 시작 오프셋으로 그립니다.
          * @details 메시 집합이 바뀔 때만 다시 만든다. 풀에 들어가지 못한 메시는 자기 정점 버퍼로 그린다(멀티 드로우로는 묶이지 않는다).
          */
-        GPUMeshVertexPool _arrVertexPool[static_cast<size_t>( RHIMeshVertexFormat::Count )]{ GPUMeshVertexPool{ RHIMeshVertexFormat::Packed }, GPUMeshVertexPool{ RHIMeshVertexFormat::HighPrecision } };
+        GPUMeshVertexPool _arrVertexPool[static_cast<size_t>( MeshVertexFormat::Count )]{ GPUMeshVertexPool{ MeshVertexFormat::Packed }, GPUMeshVertexPool{ MeshVertexFormat::HighPrecision } };
         /// @brief 풀에 넣을 메시 목록의 스크래치입니다. 프레임마다 할당하지 않습니다.
         vector<Mesh*> _listScratchPoolMesh;
         /// @brief setVertexPoolEnabled 의 값입니다. 0이면 풀을 비우고 배치가 자기 정점 버퍼로 그립니다.

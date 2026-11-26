@@ -48,11 +48,11 @@ namespace sw
         if ( _owner.ensureCPUVertices() == false )
             return false;
         // 업로드는 CPU 사본을 읽기만 한다 - 원본 메시를 워커(외형 조립)가 함께 읽으므로 const 로 받아 경합 검출기가 쓰기로 보지 않게 한다.
-        const vector<uint32>&    listIndex     = _owner.getIndices();
-        const vector<uint32>&    listLODIndex  = _owner.getLODIndices();
-        const vector<RHIVertex>& listVertex    = _owner._listVertex;
-        const vector<RHIVertex>& listLODVertex = _owner._listLODVertex;
-        vector<uint32>           listDrawIndex;
+        const vector<uint32>&     listIndex     = _owner.getIndices();
+        const vector<uint32>&     listLODIndex  = _owner.getLODIndices();
+        const vector<MeshVertex>& listVertex    = _owner._listVertex;
+        const vector<MeshVertex>& listLODVertex = _owner._listLODVertex;
+        vector<uint32>            listDrawIndex;
         if ( listLODIndex.empty() == false )
         {
             listDrawIndex.reserve( _owner.getDrawIndexCount() );
@@ -61,10 +61,10 @@ namespace sw
         }
         const uint32* pDrawIndex = listDrawIndex.empty() ? listIndex.data() : listDrawIndex.data();
         // GPU 정점 = [위치 구간][속성 구간](RHIMeshVertexStreams) — 형식은 메시가 정한다. 그릴 정점 흐름은 LOD 0 뒤에 낮은 단계다(배치가 단계의 범위로 그린다).
-        const RHIMeshVertexFormat format          = _owner.getVertexFormat();
-        const uint32              drawVertexCount = _owner.getDrawVertexCount();
-        const uint32              lod0Count       = static_cast<uint32>( listVertex.size() );
-        vector<uint8>             listStreamByte( RHIMeshVertexStreams::computeBufferBytes( format, drawVertexCount ) );
+        const MeshVertexFormat format          = _owner.getVertexFormat();
+        const uint32           drawVertexCount = _owner.getDrawVertexCount();
+        const uint32           lod0Count       = static_cast<uint32>( listVertex.size() );
+        vector<uint8>          listStreamByte( RHIMeshVertexStreams::computeBufferBytes( format, drawVertexCount ) );
         RHIMeshVertexStreams::write( format, listVertex.data(), lod0Count, 0, drawVertexCount, listStreamByte.data() );
         RHIMeshVertexStreams::write( format, listLODVertex.data(), drawVertexCount - lod0Count, lod0Count, drawVertexCount, listStreamByte.data() );
         // 인덱스 폭은 그릴 정점 수가 정한다(파일과 같은 규칙 — `MeshAssetFormat::getIndexBytes`). 작은 메시는 uint16 으로 올려 인덱스 바이트가 절반이다(R-15).

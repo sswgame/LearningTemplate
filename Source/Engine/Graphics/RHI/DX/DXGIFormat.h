@@ -6,9 +6,9 @@
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Foundation/EnginePlatformHeaders.h"
+#include "Engine/Graphics/Mesh/MeshVertex.h"
 #include "Engine/Graphics/RHI/RHIFormatInfo.h"
 #include "Engine/Graphics/RHI/RHIMeshVertexLayout.h"
-#include "Engine/Graphics/RHI/RHIVertex.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
 
@@ -90,7 +90,7 @@ namespace sw
      * @details D3D11 · D3D12 의 입력 요소 구조는 칸이 같고 분류 값만 제 enum 이다 — 정점 · 인스턴스 분류 값을 받아 한 몸으로 채운다.
      */
     template <auto kPerVertexClass, auto kPerInstanceClass, typename TElement>
-    uint32 fillDXGIInputElements( RHIMeshVertexFormat format, uint32 consumedMask, TElement ( &outArrElement )[constant::render::kVertexAttributeCount] )
+    uint32 fillDXGIInputElements( MeshVertexFormat format, uint32 consumedMask, TElement ( &outArrElement )[constant::render::kVertexAttributeCount] )
     {
         const RHIVertexAttribute* const pAttributeTable = constant::render::getMeshVertexAttributes( format );
         uint32                          elementCount{ 0 };

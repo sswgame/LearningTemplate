@@ -513,7 +513,7 @@ namespace sw
             if ( base == GPUMeshMorphPool::kInvalidBase )
                 continue;
             deform._listScratchRestResult.clear();
-            for ( const RHIVertex& vertex : pMesh->getCPUView().getVertices() )
+            for ( const MeshVertex& vertex : pMesh->getCPUView().getVertices() )
             {
                 deform._listScratchRestResult.push_back( GPUDeformResult::fromVertex( vertex ) );
             }

@@ -9,7 +9,7 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Graphics/RHI/RHIVertex.h"
+#include "Engine/Graphics/Mesh/MeshVertex.h"
 
 namespace sw
 {
@@ -36,7 +36,7 @@ namespace sw
         static constexpr uint32 kMaxTileCountPerAxis = 64;
 
         /** @brief 앞면과 뒷면 삼각형 목록(인덱스 없음)을 만듭니다. 앞면이 먼저이고 사각형마다 정점이 여섯 개입니다. */
-        static void makeSlicedVertices( const SlicedSpriteDef& desc, vector<RHIVertex>& outListVertex );
+        static void makeSlicedVertices( const SlicedSpriteDef& desc, vector<MeshVertex>& outListVertex );
 
         /**
          * @brief 같은 값의 메시를 공유합니다. 없으면 만듭니다. 여러 스레드에서 불러도 됩니다(내부에서 잠급니다).

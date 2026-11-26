@@ -20,7 +20,7 @@ namespace sw
 {
     struct MeshAssetData;
     struct MeshSkinVertex;
-    struct RHIVertex;
+    struct MeshVertex;
 } // namespace sw
 
 namespace sw::editor
@@ -132,7 +132,7 @@ namespace sw::editor
         static void collectSceneRoots( const cgltf_data& data, vector<const cgltf_node*>& outListRoot );
 
         /** @brief 임포트 정점을 RHI 정점으로 바꿉니다. 노멀이 없던 정점은 @p faceNormal 을 받습니다. */
-        static RHIVertex makeRHIVertex( const ModelImportUtil::ImportVertex& source, const float3& faceNormal );
+        static MeshVertex makeMeshVertex( const ModelImportUtil::ImportVertex& source, const float3& faceNormal );
 
         /** @brief 정점의 본 영향을 메시 스킨 정점으로 바꿉니다. */
         static MeshSkinVertex makeSkinVertex( const ModelImportUtil::ImportVertex& source );

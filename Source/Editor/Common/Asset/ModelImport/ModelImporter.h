@@ -21,7 +21,7 @@ namespace sw
 {
     class AssetPaths;
     class TaskManager;
-    struct RHIVertex;
+    struct MeshVertex;
 } // namespace sw
 
 namespace sw::editor
@@ -178,7 +178,7 @@ namespace sw::editor
 {
     /**
      * @struct ModelImporter
-     * @brief cgltf 로 glTF 를 읽어 엔진 공간 에셋으로 바꿉니다. 메시는 meshoptimizer 로 인덱스 순서를 최적화한 뒤 인덱스 없는 삼각형 목록(`RHIVertex`)으로 펼칩니다.
+     * @brief cgltf 로 glTF 를 읽어 엔진 공간 에셋으로 바꿉니다. 메시는 meshoptimizer 로 인덱스 순서를 최적화한 뒤 인덱스 없는 삼각형 목록(`MeshVertex`)으로 펼칩니다.
      * @details 정점에는 위치, 노멀(없으면 면 노멀), TEXCOORD_0(없으면 0), 색이 들어간다. 색은 머티리얼의 baseColorFactor 에 COLOR_0 (있으면)을 곱한 값이다.
      *          삼각형이 아닌 프리미티브는 경고하고 건너뛴다. 첫 baseColorTexture 의 이미지는 로그로만 알린다. 어떤 머티리얼을 쓸지는 게임이 고른다.
      *          씬 루트 목록에 부모가 있는 노드가 들어 있으면(표준 위반이며 UniGLTF 가 이렇게 내보낸다) 그 노드의 최상위 조상으로 바꾸고 경고한다.

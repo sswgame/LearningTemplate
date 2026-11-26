@@ -32,12 +32,12 @@ namespace sw
         };
 
         /** @brief 생성기 정점을 RHI 정점으로 바꿉니다. 색은 노멀에서 뽑아 곡면이 단색 덩어리로 보이지 않게 합니다. */
-        RHIVertex makeShadedVertex( const BuildVertex& source )
+        MeshVertex makeShadedVertex( const BuildVertex& source )
         {
             // 축마다 다른 밝기를 주어 곡면이 단색 덩어리로 보이지 않게 한다(큐브의 면별 색과 같은 목적).
             const float32 shade =
                 0.45f + 0.55f * MathUtil::max( 0.0f, source._normal.dot( float3{ 0.35f, 0.85f, 0.40f }.normalize() ) );
-            RHIVertex vertex{};
+            MeshVertex vertex{};
             vertex._arrPosition[0] = source._position._x;
             vertex._arrPosition[1] = source._position._y;
             vertex._arrPosition[2] = source._position._z;
@@ -61,7 +61,7 @@ namespace sw
          * @warning 원점 중심 볼록 도형에서만 맞는 판정입니다. 삼각형 중심이 곧 바깥 방향이라는 가정을
          *          씁니다. 오목하거나 원점을 품지 않는 기하를 넣으려면 이 함수를 쓰면 안 됩니다.
          */
-        void pushTriangle( vector<RHIVertex>& outList, const BuildVertex& a, const BuildVertex& b, const BuildVertex& c )
+        void pushTriangle( vector<MeshVertex>& outList, const BuildVertex& a, const BuildVertex& b, const BuildVertex& c )
         {
             const float3 faceNormal = ( b._position - a._position ).cross( c._position - a._position );
             if ( faceNormal.getLengthSquared() <= MathUtil::kEpsilon )
@@ -95,7 +95,7 @@ namespace sw
          * @details 큐브 면 · 실린더 뚜껑 · 원뿔 밑면처럼 실제로 평평한 곳에 씁니다. 곡면에 쓰면
          *          면마다 노멀이 뚝뚝 끊겨 각져 보입니다.
          */
-        void pushFlatTriangle( vector<RHIVertex>& outList, const float3& a, const float3& b, const float3& c )
+        void pushFlatTriangle( vector<MeshVertex>& outList, const float3& a, const float3& b, const float3& c )
         {
             float3 normal = ( b - a ).cross( c - a );
             if ( normal.getLengthSquared() <= MathUtil::kEpsilon )
@@ -150,7 +150,7 @@ namespace sw
         }
 
         /** @brief 옆면 조각을 두 삼각형으로 냅니다. 노멀은 축을 뺀 방사 방향입니다. 위치를 그대로 정규화하면 위아래로 기웁니다. */
-        void pushRevolvedSide( vector<RHIVertex>& outList, const RevolvedQuad& quad, uint32 slice, uint32 sliceCount, float32 vUpper, float32 vLower )
+        void pushRevolvedSide( vector<MeshVertex>& outList, const RevolvedQuad& quad, uint32 slice, uint32 sliceCount, float32 vUpper, float32 vLower )
         {
             const float3      side0 = float3{ quad._lower0._x, 0.0f, quad._lower0._z }.normalize();
             const float3      side1 = float3{ quad._lower1._x, 0.0f, quad._lower1._z }.normalize();
@@ -163,9 +163,9 @@ namespace sw
         }
 
         /** @brief 위치 · 노멀 · UV · 색을 RHI 정점으로 묶습니다. 탄젠트는 0 으로 둡니다 — `Mesh::setVertices` 가 위치 · 노멀 · UV 로 구합니다. */
-        RHIVertex makeRHIVertex( const float3& position, const float3& normal, const float2& uv, const float4& color )
+        MeshVertex makeMeshVertex( const float3& position, const float3& normal, const float2& uv, const float4& color )
         {
-            return RHIVertex{
+            return MeshVertex{
                 { position._x, position._y, position._z },
                 { normal._x, normal._y, normal._z },
                 { uv._x, uv._y },
@@ -226,25 +226,25 @@ namespace sw
         }
 
         /** @brief 사각형 메시(XY 평면)의 꼭짓점입니다. 노멀은 +Z(이 감김의 면 노멀), UV 는 좌하단 (0,0) → 우상단 (1,1) 입니다. */
-        RHIVertex makeRectVertex( float32 x, float32 y )
+        MeshVertex makeRectVertex( float32 x, float32 y )
         {
-            return makeRHIVertex( float3{ x, y, 0.0f }, float3{ 0.0f, 0.0f, 1.0f }, float2{ x + 0.5f, 0.5f - y }, float4{ 1.0f, 1.0f, 1.0f, 1.0f } );
+            return makeMeshVertex( float3{ x, y, 0.0f }, float3{ 0.0f, 0.0f, 1.0f }, float2{ x + 0.5f, 0.5f - y }, float4{ 1.0f, 1.0f, 1.0f, 1.0f } );
         }
 
         /**
          * @brief 스프라이트 사각형의 꼭짓점입니다. 앞면(-Z 를 향함)은 +Z 를 보는 카메라의 화면 오른쪽이 +X 라 u 는 +X 로 는다.
          *        뒷면(+Z 를 향함)은 그 카메라의 화면 오른쪽이 -X 라 u 는 -X 로 는다. v 는 두 면 모두 위가 0 이다.
          */
-        RHIVertex makeSpriteVertex( float32 x, float32 y, float32 normalZ )
+        MeshVertex makeSpriteVertex( float32 x, float32 y, float32 normalZ )
         {
             const float32 u = ( normalZ < 0.0f ) ? ( x + 0.5f ) : ( 0.5f - x );
-            return makeRHIVertex( float3{ x, y, 0.0f }, float3{ 0.0f, 0.0f, normalZ }, float2{ u, 0.5f - y }, float4{ 1.0f, 1.0f, 1.0f, 1.0f } );
+            return makeMeshVertex( float3{ x, y, 0.0f }, float3{ 0.0f, 0.0f, normalZ }, float2{ u, 0.5f - y }, float4{ 1.0f, 1.0f, 1.0f, 1.0f } );
         }
 
         /** @brief 잔디 잎의 정점 하나를 넣습니다. 색은 흰색입니다. */
-        void pushGrassVertex( vector<RHIVertex>& outList, const float3& normal, const float3& position, float32 u, float32 v )
+        void pushGrassVertex( vector<MeshVertex>& outList, const float3& normal, const float3& position, float32 u, float32 v )
         {
-            outList.push_back( makeRHIVertex( position, normal, float2{ u, v }, float4{ 1.0f, 1.0f, 1.0f, 1.0f } ) );
+            outList.push_back( makeMeshVertex( position, normal, float2{ u, v }, float4{ 1.0f, 1.0f, 1.0f, 1.0f } ) );
         }
 
         /** @brief 평면 격자의 (ix, iz) 모서리입니다. 면은 로컬 y = 0, 범위는 [-0.5, 0.5] 입니다. */
@@ -276,8 +276,8 @@ namespace sw
 
     shared_ptr<Mesh> PrimitiveMeshBuilder::createUnitCube()
     {
-        auto              mesh = Mesh::create( MeshCPUAccess::Keep );
-        vector<RHIVertex> listVert;
+        auto               mesh = Mesh::create( MeshCPUAccess::Keep );
+        vector<MeshVertex> listVert;
         listVert.reserve( 36 );
 
         // 면마다 색을 달리한다. 어느 면을 보고 있는지가 그림에서 바로 읽혀야 검증이 된다.
@@ -374,13 +374,13 @@ namespace sw
             pMesh = createCone();
         if ( pMesh == nullptr )
             return pMesh;
-        vector<RHIVertex> listVertex = pMesh->getCPUView().getVertices();
-        vector<uint32>    listIndex  = pMesh->getIndices();
+        vector<MeshVertex> listVertex = pMesh->getCPUView().getVertices();
+        vector<uint32>     listIndex  = pMesh->getIndices();
         Mesh::refineSeamEdges( listVertex, listIndex ); // 내장 도형도 임포트한 메시처럼 이음매 변을 가른다
         if ( vertexColor == PrimitiveVertexColor::White )
         {
             // 생성기는 검증 색으로 만든다. 게임이 쓰는 도형은 색을 모두 1 로 — 머티리얼 색이 그대로 보이게.
-            for ( RHIVertex& vertex : listVertex )
+            for ( MeshVertex& vertex : listVertex )
             {
                 vertex._arrColor[0] = 1.0f;
                 vertex._arrColor[1] = 1.0f;
@@ -410,8 +410,8 @@ namespace sw
         stackCount = MathUtil::max( stackCount, 2u );
         sliceCount = MathUtil::max( sliceCount, 3u );
 
-        auto              mesh = Mesh::create( MeshCPUAccess::Keep );
-        vector<RHIVertex> listVert;
+        auto               mesh = Mesh::create( MeshCPUAccess::Keep );
+        vector<MeshVertex> listVert;
         listVert.reserve( static_cast<size_t>( stackCount ) * sliceCount * 6 );
 
         constexpr float32 kRadius = 0.5f;
@@ -440,8 +440,8 @@ namespace sw
     {
         sliceCount = MathUtil::max( sliceCount, 3u );
 
-        auto              mesh = Mesh::create( MeshCPUAccess::Keep );
-        vector<RHIVertex> listVert;
+        auto               mesh = Mesh::create( MeshCPUAccess::Keep );
+        vector<MeshVertex> listVert;
         listVert.reserve( static_cast<size_t>( sliceCount ) * 12 );
 
         constexpr float32 kRadius = 0.5f;
@@ -465,8 +465,8 @@ namespace sw
         stackCount = MathUtil::max( stackCount, 2u );
         sliceCount = MathUtil::max( sliceCount, 3u );
 
-        auto              mesh = Mesh::create( MeshCPUAccess::Keep );
-        vector<RHIVertex> listVert;
+        auto               mesh = Mesh::create( MeshCPUAccess::Keep );
+        vector<MeshVertex> listVert;
         listVert.reserve( static_cast<size_t>( stackCount ) * sliceCount * 12 );
 
         constexpr float32 kRadius = 0.5f;
@@ -513,8 +513,8 @@ namespace sw
     {
         sliceCount = MathUtil::max( sliceCount, 3u );
 
-        auto              mesh = Mesh::create( MeshCPUAccess::Keep );
-        vector<RHIVertex> listVert;
+        auto               mesh = Mesh::create( MeshCPUAccess::Keep );
+        vector<MeshVertex> listVert;
         listVert.reserve( static_cast<size_t>( sliceCount ) * 6 );
 
         constexpr float32 kRadius = 0.5f;
@@ -548,8 +548,8 @@ namespace sw
 
     shared_ptr<Mesh> PrimitiveMeshBuilder::createRectMesh()
     {
-        auto              mesh     = Mesh::create( MeshCPUAccess::Keep );
-        vector<RHIVertex> listVert = {
+        auto               mesh     = Mesh::create( MeshCPUAccess::Keep );
+        vector<MeshVertex> listVert = {
             makeRectVertex( -0.5f, -0.5f ),
             makeRectVertex( 0.5f, -0.5f ),
             makeRectVertex( 0.5f, 0.5f ),
@@ -565,7 +565,7 @@ namespace sw
     {
         auto mesh = Mesh::create( MeshCPUAccess::Keep );
         // 감김은 이 엔진의 앞면 규약((b - a) x (c - a) 가 그 면의 노멀)을 따른다. 앞 · 뒷면의 u 방향은 `makeSpriteVertex` 주석.
-        vector<RHIVertex> listVert = {
+        vector<MeshVertex> listVert = {
             makeSpriteVertex( -0.5f, -0.5f, -1.0f ),
             makeSpriteVertex( 0.5f, 0.5f, -1.0f ),
             makeSpriteVertex( 0.5f, -0.5f, -1.0f ),
@@ -587,8 +587,8 @@ namespace sw
     {
         segmentCount = MathUtil::max( segmentCount, 1u );
 
-        auto              mesh = Mesh::create( MeshCPUAccess::Keep );
-        vector<RHIVertex> listVert;
+        auto               mesh = Mesh::create( MeshCPUAccess::Keep );
+        vector<MeshVertex> listVert;
         listVert.reserve( static_cast<size_t>( segmentCount ) * segmentCount * 6 );
 
         // 면은 로컬 y = 0 이다(`makePlaneCorner`). 노멀은 정점이 들고 다닌다(+Y).
@@ -615,7 +615,7 @@ namespace sw
                 // 텍스처가 칸마다 반복돼 "바닥 한 장" 이 아니라 타일이 된다.
                 for ( const float3& position : { p00, p01, p11, p00, p11, p10 } )
                 {
-                    listVert.push_back( makeRHIVertex( position, kUp, float2{ position._x + 0.5f, position._z + 0.5f }, color ) );
+                    listVert.push_back( makeMeshVertex( position, kUp, float2{ position._x + 0.5f, position._z + 0.5f }, color ) );
                 }
             }
         }
@@ -630,8 +630,8 @@ namespace sw
         // 고정 씨앗 — 포기 모양이 실행마다 같아야 스크린샷이 비교된다.
         DeterministicRandom32 random{ 0x2545F491u };
 
-        constexpr uint32  kSegmentCount = 3;
-        vector<RHIVertex> listVertex;
+        constexpr uint32   kSegmentCount = 3;
+        vector<MeshVertex> listVertex;
         listVertex.reserve( static_cast<size_t>( bladeCount ) * kSegmentCount * 12 );
         for ( uint32 bladeIndex = 0; bladeIndex < bladeCount; ++bladeIndex )
         {

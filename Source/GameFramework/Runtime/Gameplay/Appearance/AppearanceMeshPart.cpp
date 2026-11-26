@@ -74,7 +74,7 @@ namespace sw
             {
                 if ( pMesh == nullptr )
                     return 0;
-                return static_cast<uint64>( pMesh->getDrawVertexCount() ) * sizeof( RHIVertex ) + static_cast<uint64>( pMesh->getDrawIndexCount() ) * sizeof( uint32 );
+                return static_cast<uint64>( pMesh->getDrawVertexCount() ) * sizeof( MeshVertex ) + static_cast<uint64>( pMesh->getDrawIndexCount() ) * sizeof( uint32 );
             }
 
             static void appendReport( string& inoutReport, string_view message )

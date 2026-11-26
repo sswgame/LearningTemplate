@@ -4,7 +4,7 @@
  * @details 모델 임포트가 `.mesh` 옆에 쓴다(`<x>/models/<y>.fracture`). 런타임(`FractureComponent`)은 이 파일을 그대로 읽어 조각 바디와 스킨 조각 메시를 만든다.
  *          파쇄 계산은 쿠킹할 때 한 번만 한다. 언리얼 Chaos 의 Geometry Collection 에셋에 해당한다.
  *
- *          형상은 `.mesh` 와 같은 인덱스 없는 삼각형 목록(`RHIVertex`)이고, 조각 순서(잎 번호)대로 이어 붙어 있다.
+ *          형상은 `.mesh` 와 같은 인덱스 없는 삼각형 목록(`MeshVertex`)이고, 조각 순서(잎 번호)대로 이어 붙어 있다.
  *          삼각형마다 슬롯 번호가 있다. 0 은 원래 겉면이고, 1 은 자른 안쪽 면이다(머티리얼이 따로 있다). 껍질 점은 조각 무게 중심 기준이다.
  */
 #pragma once
@@ -20,7 +20,7 @@
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Destruction/Fracture/FractureGraph.h"
-#include "Engine/Graphics/RHI/RHIVertex.h"
+#include "Engine/Graphics/Mesh/MeshVertex.h"
 #include "Engine/Serialization/Format/FormatDef.h"
 
 namespace sw
@@ -69,7 +69,7 @@ namespace sw
 
         FractureGraph         _graph;
         vector<FracturePiece> _listPiece;        ///< 잎마다 하나다.
-        vector<RHIVertex>     _listVertex;       ///< 모든 조각의 삼각형 목록이다(조각 순서).
+        vector<MeshVertex>    _listVertex;       ///< 모든 조각의 삼각형 목록이다(조각 순서).
         vector<uint8>         _listTriangleSlot; ///< 삼각형마다 `FractureSurfaceSlot` 값이다.
         vector<float3>        _listHullPoint;    ///< 조각 무게 중심 기준 볼록 껍질 점이다.
         float3                _boundsMin{};      ///< 전체 경계다(메시 공간).
@@ -79,7 +79,7 @@ namespace sw
         /** @brief 조각 수(잎 수)입니다. */
         uint32 getPieceCount() const { return static_cast<uint32>( _listPiece.size() ); }
         /** @brief 조각의 정점들입니다. */
-        vector_reference<const RHIVertex> getPieceVertices( uint32 piece ) const;
+        vector_reference<const MeshVertex> getPieceVertices( uint32 piece ) const;
         /** @brief 조각의 껍질 점들(무게 중심 기준)입니다. */
         vector_reference<const float3> getPieceHull( uint32 piece ) const;
         /** @brief 슬롯 하나의 삼각형 수를 반환합니다. 그 슬롯의 메시를 만들 때 씁니다. */

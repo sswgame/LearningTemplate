@@ -229,7 +229,7 @@ namespace sw
         {
             const GPUMeshBatch&                batch     = listBatch[batchIndex];
             GPUMeshBatchBinding&               gpu       = _listBatchBinding[batchIndex];
-            const RHIMeshVertexFormat          format    = batch._mesh != nullptr ? batch._mesh->getVertexFormat() : RHIMeshVertexFormat::Packed;
+            const MeshVertexFormat             format    = batch._mesh != nullptr ? batch._mesh->getVertexFormat() : MeshVertexFormat::Packed;
             const GPUMeshVertexPool&           pool      = _arrVertexPool[static_cast<size_t>( format )];
             const GPUMeshVertexPool::Placement placement = pool.getPlacementOf( batch._mesh.get() );
             if ( placement._baseVertex != GPUMeshVertexPool::kInvalidBase && pool.getVertexBuffer() != 0 )
@@ -560,10 +560,10 @@ namespace sw
         { return listBinding[index].hasGeometry() && listBatch[index].hasDrawSlots() && listBinding[index]._bDeformRefused == SW_FALSE; };
         const auto isSameSegment = [&listBatch, &listBinding]( uint32 head, uint32 other )
         {
-            const GPUMeshBatch&       headBatch   = listBatch[head];
-            const GPUMeshBatch&       otherBatch  = listBatch[other];
-            const RHIMeshVertexFormat headFormat  = headBatch._mesh != nullptr ? headBatch._mesh->getVertexFormat() : RHIMeshVertexFormat::Packed;
-            const RHIMeshVertexFormat otherFormat = otherBatch._mesh != nullptr ? otherBatch._mesh->getVertexFormat() : RHIMeshVertexFormat::Packed;
+            const GPUMeshBatch&    headBatch   = listBatch[head];
+            const GPUMeshBatch&    otherBatch  = listBatch[other];
+            const MeshVertexFormat headFormat  = headBatch._mesh != nullptr ? headBatch._mesh->getVertexFormat() : MeshVertexFormat::Packed;
+            const MeshVertexFormat otherFormat = otherBatch._mesh != nullptr ? otherBatch._mesh->getVertexFormat() : MeshVertexFormat::Packed;
             return headBatch._shaderPermutation == otherBatch._shaderPermutation && headBatch._bReverseCulling == otherBatch._bReverseCulling && headFormat == otherFormat &&
                    headBatch._bStaticShadowCaster == otherBatch._bStaticShadowCaster && listBinding[head]._vertexBuffer == listBinding[other]._vertexBuffer &&
                    GPUMeshBatchBinding::canShareMaterialBinding( listBinding[head], listBinding[other], false );

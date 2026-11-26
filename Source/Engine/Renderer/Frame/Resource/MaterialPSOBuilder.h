@@ -38,7 +38,7 @@ namespace sw
         RHIPipelineStateHandle _passPSO{ 0 };         ///< 물려받을 패스 PSO(0 이면 빈 키)
         uint64                 _permutationHash{ 0 }; ///< 머티리얼 퍼뮤테이션 해시(0 = 퍼뮤테이션 없음)
         RenderViewMode         _viewMode{};           ///< 파이프라인 보기 모드(`RenderViewModeUtil::getPipelineMode`)
-        RHIMeshVertexFormat    _vertexFormat{};
+        MeshVertexFormat       _vertexFormat{};
         uint8                  _bReverseCulling{ SW_FALSE };
 
         bool operator==( const MaterialPSOKey& other ) const

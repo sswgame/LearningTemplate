@@ -52,22 +52,22 @@ namespace sw
             /**
              * @brief 묶는 키(위치 · 노멀 · UV)의 바이트 수입니다. 세 멤버가 정점 앞쪽에 붙어 있어 키는 정점의 앞 32 바이트 그대로다(복사 없이 비교한다).
              */
-            static constexpr size_t kWeldKeyBytes = SW_OFFSET_OF( RHIVertex, _arrColor );
-            static_assert( SW_OFFSET_OF( RHIVertex, _arrPosition ) == 0 && SW_OFFSET_OF( RHIVertex, _arrNormal ) == sizeof( float32 ) * 3 &&
-                               SW_OFFSET_OF( RHIVertex, _arrUV ) == sizeof( float32 ) * 6 && kWeldKeyBytes == sizeof( float32 ) * 8,
-                           "탄젠트 묶기 키는 RHIVertex 앞쪽의 위치 · 노멀 · UV 다 — 멤버 순서를 바꾸면 키를 다시 정한다" );
+            static constexpr size_t kWeldKeyBytes = SW_OFFSET_OF( MeshVertex, _arrColor );
+            static_assert( SW_OFFSET_OF( MeshVertex, _arrPosition ) == 0 && SW_OFFSET_OF( MeshVertex, _arrNormal ) == sizeof( float32 ) * 3 &&
+                               SW_OFFSET_OF( MeshVertex, _arrUV ) == sizeof( float32 ) * 6 && kWeldKeyBytes == sizeof( float32 ) * 8,
+                           "탄젠트 묶기 키는 MeshVertex 앞쪽의 위치 · 노멀 · UV 다 — 멤버 순서를 바꾸면 키를 다시 정한다" );
 
             /** @brief 묶는 키의 앞쪽 — 위치만의 바이트 수입니다. */
-            static constexpr size_t kPositionKeyBytes = SW_OFFSET_OF( RHIVertex, _arrNormal );
+            static constexpr size_t kPositionKeyBytes = SW_OFFSET_OF( MeshVertex, _arrNormal );
 
-            static bool isSamePosition( const RHIVertex& lhs, const RHIVertex& rhs ) { return Memory::compare( &lhs, &rhs, kPositionKeyBytes ) == 0; }
-            static bool isSameWeldKey( const RHIVertex& lhs, const RHIVertex& rhs ) { return Memory::compare( &lhs, &rhs, kWeldKeyBytes ) == 0; }
+            static bool isSamePosition( const MeshVertex& lhs, const MeshVertex& rhs ) { return Memory::compare( &lhs, &rhs, kPositionKeyBytes ) == 0; }
+            static bool isSameWeldKey( const MeshVertex& lhs, const MeshVertex& rhs ) { return Memory::compare( &lhs, &rhs, kWeldKeyBytes ) == 0; }
 
             /**
              * @brief 묶는 키의 -0 을 +0 으로 바꿉니다 — 키는 바이트로 비교하므로 값이 같은 두 0 이 다른 묶음이 되지 않게 한다.
              * @details 외적으로 구한 노멀은 같은 면의 두 삼각형에서도 0 의 부호가 갈린다(큐브 면의 대각선이 이음매로 읽혔다).
              */
-            static void normalizeSignedZeros( vector<RHIVertex>& inoutListVertex )
+            static void normalizeSignedZeros( vector<MeshVertex>& inoutListVertex )
             {
                 const auto normalizeAll = []( auto& arrValue )
                 {
@@ -77,7 +77,7 @@ namespace sw
                             value = 0.0f;
                     }
                 };
-                for ( RHIVertex& vertex : inoutListVertex )
+                for ( MeshVertex& vertex : inoutListVertex )
                 {
                     normalizeAll( vertex._arrPosition );
                     normalizeAll( vertex._arrNormal );
@@ -88,7 +88,7 @@ namespace sw
             /** @brief 정점 번호를 묶는 키(바이트) 순서로 세웁니다. 같은 키가 이웃하게 됩니다. */
             struct WeldLess
             {
-                const vector<RHIVertex>* _pListVertex{ nullptr };
+                const vector<MeshVertex>* _pListVertex{ nullptr };
 
                 bool operator()( uint32 lhs, uint32 rhs ) const
                 {
@@ -135,14 +135,14 @@ namespace sw
             }
 
             /** @brief 정점 하나가 받은 면들의 손잡이입니다. 0 은 오른손(cross( N, T ) 와 바이탄젠트가 같은 쪽), 1 은 왼손입니다. */
-            static uint32 computeHandednessSide( const RHIVertex& vertex, const float3& tangent, const float3& bitangent )
+            static uint32 computeHandednessSide( const MeshVertex& vertex, const float3& tangent, const float3& bitangent )
             {
                 const float3 normal{ vertex._arrNormal[0], vertex._arrNormal[1], vertex._arrNormal[2] };
                 return ( normal.cross( tangent ).dot( bitangent ) < 0.0f ) ? 1u : 0u;
             }
 
             /** @brief 합친 탄젠트를 노멀에 직교화해 정점에 적습니다. 기울기가 없으면 노멀에 수직이고 +X(노멀이 X 축이면 +Z)에 가장 가까운 방향입니다. */
-            static void storeTangent( RHIVertex& inoutVertex, const float3& tangentSum, const float3& bitangentSum )
+            static void storeTangent( MeshVertex& inoutVertex, const float3& tangentSum, const float3& bitangentSum )
             {
                 float3        normal{ inoutVertex._arrNormal[0], inoutVertex._arrNormal[1], inoutVertex._arrNormal[2] };
                 const float32 normalLengthSquared = normal.getLengthSquared();
@@ -204,7 +204,7 @@ namespace sw
     uint64 Mesh::getCPUVertexBytes() const
     {
         const bool bHolds = _bHoldsCPUVertices.load( std::memory_order_acquire ) != SW_FALSE;
-        return bHolds ? static_cast<uint64>( getDrawVertexCount() ) * sizeof( RHIVertex ) : 0u;
+        return bHolds ? static_cast<uint64>( getDrawVertexCount() ) * sizeof( MeshVertex ) : 0u;
     }
 
     void Mesh::requireCPUVertices( const utf8* pWhy )
@@ -226,8 +226,8 @@ namespace sw
         if ( getCPUAccess() == MeshCPUAccess::Keep )
             return;
         _bHoldsCPUVertices.store( SW_FALSE, std::memory_order_release );
-        _listVertex    = vector<RHIVertex>{}; // 용량까지 놓는다
-        _listLODVertex = vector<RHIVertex>{};
+        _listVertex    = vector<MeshVertex>{}; // 용량까지 놓는다
+        _listLODVertex = vector<MeshVertex>{};
     }
 
     bool Mesh::reloadCPUVertices()
@@ -238,7 +238,7 @@ namespace sw
             SW_LOG_ERROR_ID( "Mesh.CPUVerticesUnreadable", "Mesh '%#': the released CPU vertices could not be read again from the file", _sourceAsset.str() );
             return false;
         }
-        vector<RHIVertex> listLODVertex;
+        vector<MeshVertex> listLODVertex;
         for ( const MeshLODLevel& level : data._listLOD )
         {
             listLODVertex.insert( listLODVertex.end(), level._listVertex.begin(), level._listVertex.end() );
@@ -255,15 +255,15 @@ namespace sw
         return true;
     }
 
-    const vector<RHIVertex>& MeshCPUView::getVertices() const
+    const vector<MeshVertex>& MeshCPUView::getVertices() const
     {
-        static const vector<RHIVertex> s_listEmpty;
+        static const vector<MeshVertex> s_listEmpty;
         return _pMesh != nullptr ? _pMesh->_listVertex : s_listEmpty;
     }
 
-    const vector<RHIVertex>& MeshCPUView::getLODVertices() const
+    const vector<MeshVertex>& MeshCPUView::getLODVertices() const
     {
-        static const vector<RHIVertex> s_listEmpty;
+        static const vector<MeshVertex> s_listEmpty;
         return _pMesh != nullptr ? _pMesh->_listLODVertex : s_listEmpty;
     }
 
@@ -293,7 +293,7 @@ namespace sw
     shared_ptr<Mesh> Mesh::createRigidSkinSource( const Mesh& source )
     {
         shared_ptr<Mesh> rigid = create( MeshCPUAccess::Keep );
-        (void)rigid->setGeometryWithTangents( vector<RHIVertex>( source._listVertex ), vector<uint32>( source._listIndex ) );
+        (void)rigid->setGeometryWithTangents( vector<MeshVertex>( source._listVertex ), vector<uint32>( source._listIndex ) );
         // 기본 영향이 본 0 에 가중치 1 이다(`MeshSkinVertex`).
         rigid->setSkin( vector<MeshSkinVertex>( source._listVertex.size() ), MeshSkinBinding::makeIdentity( 1u ) );
         rigid->setMorphTargets( source._listMorphTarget );
@@ -323,19 +323,19 @@ namespace sw
         return rigid;
     }
 
-    void Mesh::setVertices( const vector<RHIVertex>& listVertex )
+    void Mesh::setVertices( const vector<MeshVertex>& listVertex )
     {
-        vector<RHIVertex> listCopy = listVertex;
+        vector<MeshVertex> listCopy = listVertex;
         setVertices( std::move( listCopy ) );
     }
 
     void Mesh::setBuildVertices( const vector<MeshBuildVertex>& listVertex )
     {
-        vector<RHIVertex> listRHIVertex;
-        listRHIVertex.reserve( listVertex.size() );
+        vector<MeshVertex> listConvertedVertex;
+        listConvertedVertex.reserve( listVertex.size() );
         for ( const MeshBuildVertex& source : listVertex )
         {
-            RHIVertex vertex{};
+            MeshVertex vertex{};
             vertex._arrPosition[0] = source._position._x;
             vertex._arrPosition[1] = source._position._y;
             vertex._arrPosition[2] = source._position._z;
@@ -348,31 +348,31 @@ namespace sw
             vertex._arrColor[1]    = source._color._y;
             vertex._arrColor[2]    = source._color._z;
             vertex._arrColor[3]    = source._color._w;
-            listRHIVertex.push_back( vertex );
+            listConvertedVertex.push_back( vertex );
         }
-        setVertices( std::move( listRHIVertex ) );
+        setVertices( std::move( listConvertedVertex ) );
     }
 
-    void Mesh::setVertices( vector<RHIVertex>&& listVertex )
+    void Mesh::setVertices( vector<MeshVertex>&& listVertex )
     {
         computeTangents( listVertex );
         setVerticesWithTangents( std::move( listVertex ) );
     }
 
-    void Mesh::setVerticesWithTangents( vector<RHIVertex>&& listVertex )
+    void Mesh::setVerticesWithTangents( vector<MeshVertex>&& listVertex )
     {
         vector<uint32> listIndex = makeTriangleListIndices( static_cast<uint32>( listVertex.size() ) );
         // 번호가 모두 정점 안이라 검사가 지지 않는다(마지막 덜 찬 삼각형은 인덱스가 없다).
         (void)setGeometryWithTangents( std::move( listVertex ), std::move( listIndex ) );
     }
 
-    bool Mesh::setGeometry( vector<RHIVertex>&& listVertex, vector<uint32>&& listIndex )
+    bool Mesh::setGeometry( vector<MeshVertex>&& listVertex, vector<uint32>&& listIndex )
     {
         computeTangents( listVertex, listIndex );
         return setGeometryWithTangents( std::move( listVertex ), std::move( listIndex ) );
     }
 
-    bool Mesh::setGeometryWithTangents( vector<RHIVertex>&& listVertex, vector<uint32>&& listIndex )
+    bool Mesh::setGeometryWithTangents( vector<MeshVertex>&& listVertex, vector<uint32>&& listIndex )
     {
         _renderData->releaseBuffers();
         // 낮은 단계는 옛 LOD 0 에서 만든 것이다 — 정점이 바뀌면 맞지 않으므로 뗀다(읽기는 정점 뒤에 `setLODs` 로 다시 건다).
@@ -415,7 +415,7 @@ namespace sw
         return listIndex;
     }
 
-    void Mesh::weldTriangleList( const vector<RHIVertex>& listTriangleVertex, vector<RHIVertex>& outListVertex, vector<uint32>& outListIndex )
+    void Mesh::weldTriangleList( const vector<MeshVertex>& listTriangleVertex, vector<MeshVertex>& outListVertex, vector<uint32>& outListIndex )
     {
         const uint32 cornerCount = static_cast<uint32>( listTriangleVertex.size() - listTriangleVertex.size() % 3 );
         outListVertex.clear();
@@ -428,13 +428,13 @@ namespace sw
         }
         VectorUtil::sort( listOrder, [&listTriangleVertex]( uint32 lhs, uint32 rhs )
         {
-            const int32 order = Memory::compare( &listTriangleVertex[lhs], &listTriangleVertex[rhs], sizeof( RHIVertex ) );
+            const int32 order = Memory::compare( &listTriangleVertex[lhs], &listTriangleVertex[rhs], sizeof( MeshVertex ) );
             return order != 0 ? order < 0 : lhs < rhs;
         } );
         vector<uint32> listRepresentative( cornerCount );
         for ( uint32 orderIndex = 0; orderIndex < cornerCount; ++orderIndex )
         {
-            const bool bSameAsPrevious                = orderIndex > 0 && Memory::compare( &listTriangleVertex[listOrder[orderIndex]], &listTriangleVertex[listOrder[orderIndex - 1]], sizeof( RHIVertex ) ) == 0;
+            const bool bSameAsPrevious                = orderIndex > 0 && Memory::compare( &listTriangleVertex[listOrder[orderIndex]], &listTriangleVertex[listOrder[orderIndex - 1]], sizeof( MeshVertex ) ) == 0;
             listRepresentative[listOrder[orderIndex]] = bSameAsPrevious ? listRepresentative[listOrder[orderIndex - 1]] : listOrder[orderIndex];
         }
         // 대표 모서리를 처음 쓰인 순서로 번호 매긴다.
@@ -452,11 +452,11 @@ namespace sw
         }
     }
 
-    void Mesh::setTriangleListWelded( vector<RHIVertex>&& listTriangleVertex )
+    void Mesh::setTriangleListWelded( vector<MeshVertex>&& listTriangleVertex )
     {
         computeTangents( listTriangleVertex );
-        vector<RHIVertex> listVertex;
-        vector<uint32>    listIndex;
+        vector<MeshVertex> listVertex;
+        vector<uint32>     listIndex;
         weldTriangleList( listTriangleVertex, listVertex, listIndex );
         (void)setGeometryWithTangents( std::move( listVertex ), std::move( listIndex ) ); // 번호는 방금 만든 고유 정점 안이다
     }
@@ -568,12 +568,12 @@ namespace sw
         return lodIndex;
     }
 
-    void Mesh::computeTangents( vector<RHIVertex>& inoutListVertex )
+    void Mesh::computeTangents( vector<MeshVertex>& inoutListVertex )
     {
         computeTangents( inoutListVertex, makeTriangleListIndices( static_cast<uint32>( inoutListVertex.size() ) ) );
     }
 
-    void Mesh::computeTangents( vector<RHIVertex>& inoutListVertex, const vector<uint32>& listIndex )
+    void Mesh::computeTangents( vector<MeshVertex>& inoutListVertex, const vector<uint32>& listIndex )
     {
         MeshInternal::normalizeSignedZeros( inoutListVertex );
         const uint32   vertexCount = static_cast<uint32>( inoutListVertex.size() );
@@ -591,9 +591,9 @@ namespace sw
             float2 arrUV[3];
             for ( uint32 corner = 0; corner < 3; ++corner )
             {
-                const RHIVertex& vertex = inoutListVertex[arrCorner[corner]];
-                arrPosition[corner]     = float3{ vertex._arrPosition[0], vertex._arrPosition[1], vertex._arrPosition[2] };
-                arrUV[corner]           = float2{ vertex._arrUV[0], vertex._arrUV[1] };
+                const MeshVertex& vertex = inoutListVertex[arrCorner[corner]];
+                arrPosition[corner]      = float3{ vertex._arrPosition[0], vertex._arrPosition[1], vertex._arrPosition[2] };
+                arrUV[corner]            = float2{ vertex._arrUV[0], vertex._arrUV[1] };
             }
             const float3  edge1       = arrPosition[1] - arrPosition[0];
             const float3  edge2       = arrPosition[2] - arrPosition[0];
@@ -670,13 +670,13 @@ namespace sw
             for ( uint32 orderIndex = groupStart; bSeam && orderIndex < groupEnd; ++orderIndex )
             {
                 float32& tangentW = inoutListVertex[listOrder[orderIndex]]._arrTangent[3];
-                tangentW          = RHIVertex::makeSeamTangentW( tangentW, RHIVertex::kSeamEdgeMaskAll ); // 변은 가르지 않았다 — 임포트 · 내장 도형은 `refineSeamEdges` 가 가른다
+                tangentW          = MeshVertex::makeSeamTangentW( tangentW, MeshVertex::kSeamEdgeMaskAll ); // 변은 가르지 않았다 — 임포트 · 내장 도형은 `refineSeamEdges` 가 가른다
             }
             groupStart = groupEnd;
         }
     }
 
-    void Mesh::refineSeamEdges( vector<RHIVertex>& inoutListVertex, const vector<uint32>& listIndex )
+    void Mesh::refineSeamEdges( vector<MeshVertex>& inoutListVertex, const vector<uint32>& listIndex )
     {
         MeshInternal::normalizeSignedZeros( inoutListVertex );
         const uint32 vertexCount = static_cast<uint32>( inoutListVertex.size() );
@@ -780,10 +780,10 @@ namespace sw
             uint32& highMask = listMask[edge._weldHigh];
             if ( ( lowMask & highMask ) != 0u )
                 continue;
-            const uint32 allowedMask = RHIVertex::kSeamEdgeMaskAll & ~( collectLinkedMask( edge._weldLow ) | collectLinkedMask( edge._weldHigh ) );
+            const uint32 allowedMask = MeshVertex::kSeamEdgeMaskAll & ~( collectLinkedMask( edge._weldLow ) | collectLinkedMask( edge._weldHigh ) );
             const uint32 reusedMask  = allowedMask & ( lowMask | highMask );
             const uint32 chosenMask  = reusedMask != 0u ? reusedMask : allowedMask != 0u ? allowedMask
-                                                                                         : RHIVertex::kSeamEdgeMaskAll;
+                                                                                         : MeshVertex::kSeamEdgeMaskAll;
             const uint32 bit         = chosenMask & ( 0u - chosenMask ); // 가장 낮은 비트
             lowMask |= bit;
             highMask |= bit;
@@ -795,7 +795,7 @@ namespace sw
             float32&     tangentW = inoutListVertex[vertexIndex]._arrTangent[3];
             const uint32 weld     = listWeld[vertexIndex];
             if ( listSeamPosition[listWeldPosition[weld]] != 0 )
-                tangentW = RHIVertex::makeSeamTangentW( tangentW, listMask[weld] );
+                tangentW = MeshVertex::makeSeamTangentW( tangentW, listMask[weld] );
             else
                 tangentW = tangentW < 0.0f ? -1.0f : 1.0f;
         }
@@ -827,7 +827,7 @@ namespace sw
         return listRebind;
     }
 
-    void MeshSkinBinding::skinVertex( const vector<float4x4>& listMatrix, const MeshSkinVertex& skin, RHIVertex& inoutVertex )
+    void MeshSkinBinding::skinVertex( const vector<float4x4>& listMatrix, const MeshSkinVertex& skin, MeshVertex& inoutVertex )
     {
         const float3 position{ inoutVertex._arrPosition[0], inoutVertex._arrPosition[1], inoutVertex._arrPosition[2] };
         const float3 normal{ inoutVertex._arrNormal[0], inoutVertex._arrNormal[1], inoutVertex._arrNormal[2] };
@@ -985,18 +985,18 @@ namespace sw
         return _deformProgram;
     }
 
-    float32 Mesh::computeUVDensity( const vector<RHIVertex>& listVertex, const vector<uint32>& listIndex )
+    float32 Mesh::computeUVDensity( const vector<MeshVertex>& listVertex, const vector<uint32>& listIndex )
     {
         float64 areaSum   = 0.0;
         float64 uvAreaSum = 0.0;
         for ( size_t index = 0; index + 2 < listIndex.size(); index += 3 )
         {
-            const RHIVertex& v0 = listVertex[listIndex[index]];
-            const RHIVertex& v1 = listVertex[listIndex[index + 1]];
-            const RHIVertex& v2 = listVertex[listIndex[index + 2]];
-            const float3     p0{ v0._arrPosition[0], v0._arrPosition[1], v0._arrPosition[2] };
-            const float3     edge1 = float3{ v1._arrPosition[0], v1._arrPosition[1], v1._arrPosition[2] } - p0;
-            const float3     edge2 = float3{ v2._arrPosition[0], v2._arrPosition[1], v2._arrPosition[2] } - p0;
+            const MeshVertex& v0 = listVertex[listIndex[index]];
+            const MeshVertex& v1 = listVertex[listIndex[index + 1]];
+            const MeshVertex& v2 = listVertex[listIndex[index + 2]];
+            const float3      p0{ v0._arrPosition[0], v0._arrPosition[1], v0._arrPosition[2] };
+            const float3      edge1 = float3{ v1._arrPosition[0], v1._arrPosition[1], v1._arrPosition[2] } - p0;
+            const float3      edge2 = float3{ v2._arrPosition[0], v2._arrPosition[1], v2._arrPosition[2] } - p0;
             areaSum += 0.5 * static_cast<float64>( edge1.cross( edge2 ).getLength() );
             const float32 du1 = v1._arrUV[0] - v0._arrUV[0];
             const float32 dv1 = v1._arrUV[1] - v0._arrUV[1];
@@ -1010,7 +1010,7 @@ namespace sw
         return static_cast<float32>( MathUtil::sqrt( areaSum / uvAreaSum ) );
     }
 
-    float32 Mesh::computeMeanEdgeLength( const vector<RHIVertex>& listVertex, const vector<uint32>& listIndex )
+    float32 Mesh::computeMeanEdgeLength( const vector<MeshVertex>& listVertex, const vector<uint32>& listIndex )
     {
         const size_t triangleCount = listIndex.size() / 3;
         if ( triangleCount == 0 )
@@ -1018,12 +1018,12 @@ namespace sw
         float64 doubleAreaSum = 0.0;
         for ( size_t index = 0; index + 2 < listIndex.size(); index += 3 )
         {
-            const RHIVertex& v0 = listVertex[listIndex[index]];
-            const RHIVertex& v1 = listVertex[listIndex[index + 1]];
-            const RHIVertex& v2 = listVertex[listIndex[index + 2]];
-            const float3     p0{ v0._arrPosition[0], v0._arrPosition[1], v0._arrPosition[2] };
-            const float3     edge1 = float3{ v1._arrPosition[0], v1._arrPosition[1], v1._arrPosition[2] } - p0;
-            const float3     edge2 = float3{ v2._arrPosition[0], v2._arrPosition[1], v2._arrPosition[2] } - p0;
+            const MeshVertex& v0 = listVertex[listIndex[index]];
+            const MeshVertex& v1 = listVertex[listIndex[index + 1]];
+            const MeshVertex& v2 = listVertex[listIndex[index + 2]];
+            const float3      p0{ v0._arrPosition[0], v0._arrPosition[1], v0._arrPosition[2] };
+            const float3      edge1 = float3{ v1._arrPosition[0], v1._arrPosition[1], v1._arrPosition[2] } - p0;
+            const float3      edge2 = float3{ v2._arrPosition[0], v2._arrPosition[1], v2._arrPosition[2] } - p0;
             doubleAreaSum += static_cast<float64>( edge1.cross( edge2 ).getLength() );
         }
         // 정삼각형의 넓이 = √3 / 4 × 변² — 넓이의 두 배로 풀면 변² = 두 배 넓이 × 2 / √3 이다.
@@ -1035,7 +1035,7 @@ namespace sw
     {
         float3 boundsMin{ MathUtil::kMaxFloat, MathUtil::kMaxFloat, MathUtil::kMaxFloat };
         float3 boundsMax{ MathUtil::kMinFloat, MathUtil::kMinFloat, MathUtil::kMinFloat };
-        for ( const RHIVertex& vertex : _listVertex )
+        for ( const MeshVertex& vertex : _listVertex )
         {
             const float3 position{ vertex._arrPosition[0], vertex._arrPosition[1], vertex._arrPosition[2] };
             boundsMin = float3{ MathUtil::min( boundsMin._x, position._x ), MathUtil::min( boundsMin._y, position._y ), MathUtil::min( boundsMin._z, position._z ) };
@@ -1046,7 +1046,7 @@ namespace sw
         _localBoundsCenter = ( _localBoundsMin + _localBoundsMax ) * 0.5f;
         // 구는 상자 중심에서 가장 먼 정점까지 — 상자 반대각선보다 작거나 같다(언리얼 FBoxSphereBounds 의 구와 같다).
         float32 maxLengthSquared = 0.0f;
-        for ( const RHIVertex& vertex : _listVertex )
+        for ( const MeshVertex& vertex : _listVertex )
         {
             const float3 position{ vertex._arrPosition[0], vertex._arrPosition[1], vertex._arrPosition[2] };
             maxLengthSquared = MathUtil::max( maxLengthSquared, ( position - _localBoundsCenter ).getLengthSquared() );
@@ -1054,7 +1054,7 @@ namespace sw
         _boundingRadius = MathUtil::sqrt( maxLengthSquared );
     }
 
-    void Mesh::setVertexFormat( RHIMeshVertexFormat format )
+    void Mesh::setVertexFormat( MeshVertexFormat format )
     {
         if ( _vertexFormat == format )
             return;

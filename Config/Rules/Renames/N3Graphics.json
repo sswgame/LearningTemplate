@@ -133,5 +133,21 @@
     "old": "getMainStabilitySample",
     "new": "getMainConvergenceSample",
     "why": "RenderConvergenceSample 개명을 따른다"
+  },
+  {
+    "old": "RHIVertex",
+    "new": "MeshVertex",
+    "why": "CPU 쪽 메시 정점이다(언리얼 FStaticMeshBuildVertex). RHI 헤더를 모르는 값 형식이라 게임 헤더가 쓴다(cae8f4c335 가 RHI 밖으로 옮겼다)",
+    "allowExisting": true
+  },
+  {
+    "old": "RHIMeshVertexFormat",
+    "new": "MeshVertexFormat",
+    "why": "메시가 고르는 정점 속성 스트림 형식이다. RHI 헤더가 아닌 MeshVertex.h 에 있다"
+  },
+  {
+    "old": "makeRHIVertex",
+    "new": "makeMeshVertex",
+    "why": "MeshVertex 개명을 따른다"
   }
 ]

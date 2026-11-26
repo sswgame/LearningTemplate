@@ -5,12 +5,12 @@
 #include "Core/Diagnostics/CallStackCapture.h"
 #include "Core/Log/Logger.h"
 
+#include "Engine/Graphics/Mesh/MeshVertex.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHIEnums.h"
 #include "Engine/Graphics/RHI/RHIGeometryBindings.h"
 #include "Engine/Graphics/RHI/RHIHandles.h"
 #include "Engine/Graphics/RHI/RHIMeshVertexLayout.h"
-#include "Engine/Graphics/RHI/RHIVertex.h"
 
 namespace sw
 {
@@ -144,8 +144,8 @@ namespace sw
 
     bool RHIDrawDiagnostics::validateVertexSlotsBound( const RHIVertexLayout& input, const RHIGeometryBindings& bindings ) const
     {
-        const uint32              vertexSlotMask   = input._slotMask;
-        const RHIMeshVertexFormat meshVertexFormat = input._format;
+        const uint32           vertexSlotMask   = input._slotMask;
+        const MeshVertexFormat meshVertexFormat = input._format;
         for ( uint32 slot = 0; slot < constant::render::kVertexBufferSlotCount; ++slot )
         {
             if ( ( vertexSlotMask & ( 1u << slot ) ) == 0 )

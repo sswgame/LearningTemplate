@@ -36,10 +36,10 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/IdentityToken.h"
 
+#include "Engine/Graphics/Mesh/MeshVertex.h"
 #include "Engine/Graphics/RHI/RHIBufferDesc.h"
 #include "Engine/Graphics/RHI/RHIFence.h"
 #include "Engine/Graphics/RHI/RHIGeometryBuffer.h"
-#include "Engine/Graphics/RHI/RHIVertex.h"
 
 namespace sw
 {
@@ -65,7 +65,7 @@ namespace sw
         };
 
         /** @brief @p format 형식의 메시만 담는 풀을 만듭니다. */
-        explicit GPUMeshVertexPool( RHIMeshVertexFormat format = RHIMeshVertexFormat::Packed );
+        explicit GPUMeshVertexPool( MeshVertexFormat format = MeshVertexFormat::Packed );
         ~GPUMeshVertexPool()                                     = default;
         GPUMeshVertexPool( const GPUMeshVertexPool& )            = delete;
         GPUMeshVertexPool& operator=( const GPUMeshVertexPool& ) = delete;
@@ -91,7 +91,7 @@ namespace sw
         /** @brief 풀 정점 버퍼에서 속성 구간이 시작하는 바이트입니다(용량 × 12 B). 슬롯 2 를 여기서 건다. */
         uint32 getAttributeOffset() const;
         /** @brief 이 풀이 담는 정점 형식입니다. */
-        RHIMeshVertexFormat getFormat() const { return _format; }
+        MeshVertexFormat getFormat() const { return _format; }
         /** @brief 풀 인덱스 버퍼(uint32)를 반환합니다. 정점 버퍼와 함께 만들고 함께 놓습니다. */
         RHIBufferHandle getIndexBuffer() const { return _indexBuffer._buffer; }
         /** @brief 풀에 든(구간을 받은) 메시의 정점 수 합을 반환합니다. */
@@ -164,11 +164,11 @@ namespace sw
         };
 
     private:
-        RHIMeshVertexFormat _format;
-        SpanAllocator       _allocator;
-        SpanAllocator       _indexAllocator;
-        RHIGeometryBuffer   _vertexBuffer;
-        RHIGeometryBuffer   _indexBuffer;
+        MeshVertexFormat  _format;
+        SpanAllocator     _allocator;
+        SpanAllocator     _indexAllocator;
+        RHIGeometryBuffer _vertexBuffer;
+        RHIGeometryBuffer _indexBuffer;
         /// @brief 메시 내용 토큰 → 기록입니다. 키가 토큰을 들어 지운 메시의 주소가 새 메시의 키로 다시 쓰이지 않는다(언리얼 `FObjectKey`, Godot `RID` 의 세대와 같은 자리).
         unordered_map<IdentityToken, Entry> _mapEntry;
         /// @brief 이번 `update` 에 새로 구간이 필요한 메시입니다. 프레임마다 할당하지 않습니다.

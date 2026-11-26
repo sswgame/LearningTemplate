@@ -9,9 +9,9 @@
 #include "Engine/Environment/Terrain/HeightfieldAsset.h"
 #include "Engine/Environment/Terrain/TerrainHeightfield.h"
 #include "Engine/Environment/Terrain/TerrainMeshBuilder.h"
+#include "Engine/Graphics/Mesh/MeshVertex.h"
 #include "Engine/Graphics/RHI/RHIEnums.h"
 #include "Engine/Graphics/RHI/RHIHandles.h"
-#include "Engine/Graphics/RHI/RHIVertex.h"
 
 using namespace sw;
 
@@ -40,14 +40,14 @@ namespace
         }
 
         /** @brief 삼각형 목록(청크 로컬 xz)에서 점 (x, z) 의 높이를 구합니다. 어느 삼각형에도 없으면 false 입니다. */
-        static bool sampleMeshHeight( const vector<RHIVertex>& listVertex, float32 x, float32 z, float32& outHeight )
+        static bool sampleMeshHeight( const vector<MeshVertex>& listVertex, float32 x, float32 z, float32& outHeight )
         {
             for ( size_t index = 0; index + 2 < listVertex.size(); index += 3 )
             {
-                const RHIVertex& a           = listVertex[index];
-                const RHIVertex& b           = listVertex[index + 1];
-                const RHIVertex& c           = listVertex[index + 2];
-                const float32    determinant = ( b._arrPosition[2] - c._arrPosition[2] ) * ( a._arrPosition[0] - c._arrPosition[0] ) +
+                const MeshVertex& a           = listVertex[index];
+                const MeshVertex& b           = listVertex[index + 1];
+                const MeshVertex& c           = listVertex[index + 2];
+                const float32     determinant = ( b._arrPosition[2] - c._arrPosition[2] ) * ( a._arrPosition[0] - c._arrPosition[0] ) +
                                             ( c._arrPosition[0] - b._arrPosition[0] ) * ( a._arrPosition[2] - c._arrPosition[2] );
                 if ( MathUtil::abs( determinant ) < 1.0e-9f )
                     continue;
@@ -65,7 +65,7 @@ namespace
         }
 
         /** @brief 정점의 UV 가 돌려주는 샘플 좌표입니다. */
-        static void findSample( const RHIVertex& vertex, float32 last, uint32& outSampleX, uint32& outSampleZ )
+        static void findSample( const MeshVertex& vertex, float32 last, uint32& outSampleX, uint32& outSampleZ )
         {
             outSampleX = static_cast<uint32>( MathUtil::round( vertex._arrUV[0] * last ) );
             outSampleZ = static_cast<uint32>( MathUtil::round( vertex._arrUV[1] * last ) );
@@ -82,10 +82,10 @@ SW_TEST_CASE( TerrainGeomorphTest, BakedDeltaMovesVerticesOntoTheCoarserMesh )
     const TerrainHeightfield field = TerrainGeomorphTestUtil::makeField( 33 );
     TerrainChunkLayout       layout;
     SW_REQUIRE_TRUE( TerrainMeshBuilder::makeLayout( 33, 16, layout ) );
-    const uint32      arrNeighbor[4]       = { 0, 0, 0, 0 };
-    const uint32      arrCoarseNeighbor[4] = { 1, 1, 1, 1 };
-    vector<RHIVertex> listFine;
-    vector<RHIVertex> listCoarse;
+    const uint32       arrNeighbor[4]       = { 0, 0, 0, 0 };
+    const uint32       arrCoarseNeighbor[4] = { 1, 1, 1, 1 };
+    vector<MeshVertex> listFine;
+    vector<MeshVertex> listCoarse;
     TerrainMeshBuilder::makeChunkVertices( field, layout, 0, 0, 0, arrNeighbor, listFine );
     TerrainMeshBuilder::makeChunkVertices( field, layout, 0, 0, 1, arrCoarseNeighbor, listCoarse );
     SW_REQUIRE_TRUE( listFine.empty() == false );
@@ -94,7 +94,7 @@ SW_TEST_CASE( TerrainGeomorphTest, BakedDeltaMovesVerticesOntoTheCoarserMesh )
     constexpr float32 kLODDistance = 40.0f;
     const float32     last         = 32.0f;
     uint32            morphedCount = 0;
-    for ( const RHIVertex& vertex : listFine )
+    for ( const MeshVertex& vertex : listFine )
     {
         uint32 sampleX{ 0 };
         uint32 sampleZ{ 0 };
@@ -114,7 +114,7 @@ SW_TEST_CASE( TerrainGeomorphTest, BakedDeltaMovesVerticesOntoTheCoarserMesh )
     SW_EXPECT_TRUE( morphedCount > 0u );
 
     // 섞기 구간과 청크 상자(월드) - 청크 (0, 0) 은 0..16 m, 중앙 샘플 (8, 8) 의 높이가 지면이다.
-    const RHIVertex& first = listFine[0];
+    const MeshVertex& first = listFine[0];
     SW_EXPECT_NEAR( kLODDistance * TerrainMeshBuilder::kMorphStartRatio, first._arrColor[1], 1.0e-4f );
     SW_EXPECT_NEAR( kLODDistance * TerrainMeshBuilder::kMorphEndRatio, first._arrColor[2], 1.0e-4f );
     SW_EXPECT_NEAR( 0.0f, first._arrColor[3], 1.0e-4f );    // 최소 x
@@ -137,7 +137,7 @@ SW_TEST_CASE( TerrainGeomorphTest, MorphRangeFollowsTheLODAndTheCoarsestLODNever
     SW_REQUIRE_TRUE( TerrainMeshBuilder::makeLayout( 33, 16, layout ) );
     const uint32 arrNeighbor[4] = { 0, 0, 0, 0 };
 
-    vector<RHIVertex> listLOD2;
+    vector<MeshVertex> listLOD2;
     TerrainMeshBuilder::makeChunkVertices( field, layout, 1, 1, 2, arrNeighbor, listLOD2 );
     SW_REQUIRE_TRUE( listLOD2.empty() == false );
     TerrainMeshBuilder::applyGeomorph( field, layout, 1, 1, 2, 40.0f, listLOD2 );
@@ -146,11 +146,11 @@ SW_TEST_CASE( TerrainGeomorphTest, MorphRangeFollowsTheLODAndTheCoarsestLODNever
     SW_EXPECT_NEAR( 16.0f, listLOD2[0]._arrColor[3], 1.0e-4f );   // 청크 (1, 1) 의 최소 x
     SW_EXPECT_NEAR( 16.0f, listLOD2[0]._arrTangent[0], 1.0e-4f ); // 최소 z
 
-    vector<RHIVertex> listCoarsest;
+    vector<MeshVertex> listCoarsest;
     TerrainMeshBuilder::makeChunkVertices( field, layout, 0, 0, layout._maxLOD, arrNeighbor, listCoarsest );
     SW_REQUIRE_TRUE( listCoarsest.empty() == false );
     TerrainMeshBuilder::applyGeomorph( field, layout, 0, 0, layout._maxLOD, 40.0f, listCoarsest );
-    for ( const RHIVertex& vertex : listCoarsest )
+    for ( const MeshVertex& vertex : listCoarsest )
     {
         SW_EXPECT_NEAR( 0.0f, vertex._arrColor[0], 0.0f );
         SW_EXPECT_TRUE( vertex._arrColor[1] >= 1.0e29f ); // 어떤 거리도 닿지 않는다
