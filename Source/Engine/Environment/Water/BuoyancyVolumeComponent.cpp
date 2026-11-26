@@ -80,9 +80,3 @@ namespace sw
         }
     }
 } // namespace sw
-
-namespace sw
-{
-    SW_AUTOMATION_GETTER_WATCH( buoyancyVolumeSubmergedBodies, "BuoyancyVolume.SubmergedBodies", "Bodies the first water box floated in the last fixed step", BuoyancyVolumeComponent,
-                                &BuoyancyVolumeComponent::getSubmergedBodyCount );
-} // namespace sw

@@ -7,20 +7,39 @@
  */
 #include "pch.h"
 
+#include "Core/Algorithm/VectorUtil.h"
+#include "Core/Log/Logger.h"
+#include "Core/Math/MathUtil.h"
+#include "Core/Math/OrientationUtil.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
+#include "Engine/Animation/AnimationClip.h"
 #include "Engine/Animation/Component/FacialAnimationComponent.h"
+#include "Engine/Animation/Component/LocomotionWarpingComponent.h"
+#include "Engine/Animation/Component/MotionWarpingComponent.h"
+#include "Engine/Animation/Component/PoseAfterimageComponent.h"
+#include "Engine/Animation/Component/PoseRetargetComponent.h"
 #include "Engine/Animation/Component/SkeletalAnimatorComponent.h"
 #include "Engine/Animation/Component/SkeletalMeshComponent.h"
+#include "Engine/Animation/Retarget/RetargetProfile.h"
 #include "Engine/Animation/Scene/AnimationSystem.h"
+#include "Engine/Animation/Skeletal/Pose.h"
+#include "Engine/Animation/Skeletal/Skeleton.h"
+#include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Automation/Watch/AutomationWatchComponent.h"
 #include "Engine/Console/DebugHUDRegistry.h"
 #include "Engine/Console/DebugHUDSectionFormat.h"
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Content/AssetID.h"
+#include "Engine/Graphics/Material/Material.h"
+#include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
+#include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
+#include "Engine/Physics/Component/CharacterControllerComponent.h"
 #include "Engine/Scene/SceneManager.h"
 
 namespace sw
@@ -253,4 +272,32 @@ namespace sw
     SW_AUTOMATION_SCENE_WATCH( animationBlendSpaceActiveSamples, "Animation.BlendSpaceActiveSamples",
                                "Blend space samples the playing states of the scene's animators sample now (a 2D triangulation uses at most three each)",
                                &AnimationWatchesInternal::readBlendSpaceActiveSamples );
+} // namespace sw
+
+// Engine/Animation/Component/PoseAfterimageComponent.cpp 에서 옮긴 개발 등록(배포 엔진에 컴파일되지 않게).
+namespace sw
+{
+    SW_AUTOMATION_GETTER_WATCH( afterimageVisible, "Afterimage.Visible", "Afterimages the first pose afterimage component shows now", PoseAfterimageComponent, &PoseAfterimageComponent::countVisibleGhosts );
+    SW_AUTOMATION_GETTER_WATCH( afterimageCaptureCount, "Afterimage.CaptureCount", "Afterimages the first pose afterimage component has left so far", PoseAfterimageComponent,
+                                &PoseAfterimageComponent::getCaptureCount );
+} // namespace sw
+
+// Engine/Animation/Component/PoseRetargetComponent.cpp 에서 옮긴 개발 등록(배포 엔진에 컴파일되지 않게).
+namespace sw
+{
+    SW_AUTOMATION_GETTER_WATCH( poseRetargetActive, "PoseRetarget.Retargeting", "1 while the first pose retarget component copies its source's pose through its profile", PoseRetargetComponent,
+                                &PoseRetargetComponent::isRetargeting );
+} // namespace sw
+
+// Engine/Animation/Component/MotionWarpingComponent.cpp 에서 옮긴 개발 등록(배포 엔진에 컴파일되지 않게).
+namespace sw
+{
+    SW_AUTOMATION_GETTER_WATCH( motionWarpingOpenWindows, "MotionWarping.OpenWindows", "Warp windows open on the first motion warping component", MotionWarpingComponent, &MotionWarpingComponent::getOpenWindowCount );
+} // namespace sw
+
+// Engine/Animation/Component/LocomotionWarpingComponent.cpp 에서 옮긴 개발 등록(배포 엔진에 컴파일되지 않게).
+namespace sw
+{
+    SW_AUTOMATION_GETTER_WATCH( locomotionWarpingPlayRateHeld, "LocomotionWarping.PlayRateHeld", "1 while another system (a paired animation session) holds the first locomotion warping's play rate",
+                                LocomotionWarpingComponent, &LocomotionWarpingComponent::isPlayRateHeld );
 } // namespace sw

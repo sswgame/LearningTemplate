@@ -6,12 +6,15 @@
  */
 #include "pch.h"
 
+#include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
+#include "Engine/Object/GameObject/Tick/FixedStepContext.h"
 #include "Engine/Physics/Component/CharacterController2DComponent.h"
 #include "Engine/Physics/Component/CharacterControllerComponent.h"
+#include "Engine/Physics/Component/JointComponent.h"
 #include "Engine/Physics/Component/RigidBody2DComponent.h"
 #include "Engine/Physics/Component/RigidBodyComponent.h"
 #include "Engine/Physics/IPhysicsScene.h"
@@ -154,4 +157,10 @@ namespace sw
                                &PhysicsWatchesInternal::readOverlapCount, true, false );
     SW_AUTOMATION_QUERY_WATCH( physicsTraceDistance, "Physics.TraceDistance", "Distance (m) a ray of the trace channel (key) cast from the target along its local +X travels before it hits; 0 when it hits nothing",
                                &PhysicsWatchesInternal::readTraceDistance, true, true );
+} // namespace sw
+
+// Engine/Physics/Component/JointComponent.cpp 에서 옮긴 개발 등록(배포 엔진에 컴파일되지 않게).
+namespace sw
+{
+    SW_AUTOMATION_GETTER_WATCH( jointPosition, "Joint.Position", "Hinge angle (rad), slider distance or distance length of the first joint", JointComponent, &JointComponent::getJointPosition );
 } // namespace sw

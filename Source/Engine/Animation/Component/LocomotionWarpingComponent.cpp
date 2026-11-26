@@ -203,9 +203,3 @@ namespace sw
         }
     }
 } // namespace sw
-
-namespace sw
-{
-    SW_AUTOMATION_GETTER_WATCH( locomotionWarpingPlayRateHeld, "LocomotionWarping.PlayRateHeld", "1 while another system (a paired animation session) holds the first locomotion warping's play rate",
-                                LocomotionWarpingComponent, &LocomotionWarpingComponent::isPlayRateHeld );
-} // namespace sw

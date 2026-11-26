@@ -181,9 +181,3 @@ namespace sw
         _retargeter.retarget( pSource->getLocalPose(), skeletalMesh.getLocalPose() );
     }
 } // namespace sw
-
-namespace sw
-{
-    SW_AUTOMATION_GETTER_WATCH( poseRetargetActive, "PoseRetarget.Retargeting", "1 while the first pose retarget component copies its source's pose through its profile", PoseRetargetComponent,
-                                &PoseRetargetComponent::isRetargeting );
-} // namespace sw
