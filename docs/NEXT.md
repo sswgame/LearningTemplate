@@ -27,7 +27,7 @@
 | w-enum-meta · LT-wt/enummeta | F2b 키트 현지화 키, Engine/Audio `*Data` 종류 정의를 실행 폴더 밖으로, FixedReadResult · OnlineClientState ENUM() 의 include 상한 |
 | w-gf-dev · LT-wt/gfdev | 개발 등록 매크로 배포 컴파일 오류(1994afb762 끝), DevTools 확장자 글 · `.hlsli`, 내비 베이크 테스트 되살리기 |
 | w-pimpl · LT-wt/pimpl | P1 Jolt 넷 · P3 ImGuiRenderer · P4 백엔드 팩토리 |
-| w-devtools-merge · LT-wt/devtoolsmerge | T1 DevTools 중복 합치기 · 디버그 심볼을 ModuleReload 로 |
+| w-devtools-merge · LT-wt/devtoolsmerge | T1(605e855120 · 1eeddfc3ae 끝), Core/Module 의 핫 리로드 전용 함수를 ModuleReload 로, UntaggedLayout 개명 |
 | w-server-subsystem · LT-wt/serversub | 6 절 서버 서비스를 모듈 서브시스템으로 |
 | w-shaderreload · LT-wt/shaderreload | 3 절 셰이더 리로드 시나리오(개발 빌드에서 켜기 · Ctrl+F8 단축키 경로 · 격리 해제), 10 절 `shortcut:` 정리 |
 | w-engine-owner · LT-wt/engineowner | 끝남(3c5d1c924a 까지) — 다음 묶음에 합친다 |
@@ -39,7 +39,6 @@
 - Core (c) 열거 이름 6 개: 생성기가 constexpr 이름 표를 내야 한다.
 - `mesh_modifier.hlsli` 노이즈 복사본이 CPU(Core ValueNoise)와 비트가 같은지.
 - 보류(조사 먼저): ReflectionValidation → TypeInfo, PROPERTY 검증기를 개발 전용으로 빼도 배포 안전이 지켜지는가.
-- UntaggedLayout 개명.
 - AssertDialog 합치기 — 사용자에게 물을 것.
 - 개발 구성에서도 개발 등록 자리를 막기(__FILE__ 경로 검사 — 에디터 플러그인 · 키트 Editor/ 허용 경로 표가 먼저).
 - `sw_add_reflection_step` 의 구성 단계 경로(자리 표시자 · OBJECT_DEPENDS · 후보 검사)를 지나는 테스트.
