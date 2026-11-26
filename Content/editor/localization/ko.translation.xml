@@ -954,9 +954,6 @@
 		       text="오디오 서비스가 돌지 않습니다"
 		       sourceHash="f0ad4f0ff56a00ed" />
 		<entry key="EdLabel.UnsetAttribute" text="속성 지우기" sourceHash="8c086c87fcbad6fa" />
-		<entry key="EdNetMode.DedicatedServer" text="전용 서버" sourceHash="38824ee8fe1f00e1" />
-		<entry key="EdNetMode.ListenHost" text="리슨 호스트" sourceHash="45aa92f0c4a42f5c" />
-		<entry key="EdNetMode.Standalone" text="단독" sourceHash="31bf1464d6e1e996" />
 		<entry key="EdPhysicsAsset.DuplicateBodyTip"
 		       text="이 바디를 아래에 복사합니다. 복사본은 스켈레톤의 본 이름을 적어야 섭니다."
 		       sourceHash="7cf451138bc634ae" />
@@ -1619,18 +1616,6 @@
 		<entry key="EditorAnimationGraph.MaskSkeletonTip"
 		       text="이 마스크를 맞춰 보고 칠할 스켈레톤입니다. 그래프에 저장하지 않습니다."
 		       sourceHash="34b9b59e32d903d6" />
-		<entry key="EditorAnimationGraph.MaskSourceBone"
-		       text="이 본 하나에만 적었습니다."
-		       sourceHash="0e3dbd43e9c2e8ee" />
-		<entry key="EditorAnimationGraph.MaskSourceInherited"
-		       text="부모 본에서 물려받은 값입니다."
-		       sourceHash="53bc8d2890e4b444" />
-		<entry key="EditorAnimationGraph.MaskSourceNone"
-		       text="이 본에 닿는 항목이 없어 가중치가 0 입니다."
-		       sourceHash="e61d23db46c0b23f" />
-		<entry key="EditorAnimationGraph.MaskSourceSubtree"
-		       text="이 본에 적었고 자식 본에 퍼집니다."
-		       sourceHash="c14e89fb8672d1f2" />
 		<entry key="EditorAnimationGraph.NoBoneMasksHint"
 		       text="본 마스크가 없습니다. 마스크는 레이어가 움직일 본과 그 세기를 고릅니다."
 		       sourceHash="888759dd27ba65f1" />
@@ -2676,9 +2661,6 @@
 		<entry key="EditorMultiplayer.ProfilerKindsSent"
 		       text="받은 메시지 종류 대신 프로세스가 보내려고 쌓은 종류를 보입니다(한 프로세스가 두 방향을 모두 보입니다)"
 		       sourceHash="0061fd61eb6f82f9" />
-		<entry key="EditorMultiplayer.ProfilerLoss"
-		       text="패킷 손실 (가장 큰 연결, %)"
-		       sourceHash="98cda942dfc670ee" />
 		<entry key="EditorMultiplayer.ProfilerNoKinds"
 		       text="아직 받은 메시지가 없습니다"
 		       sourceHash="d8b7c54f7554458b" />
@@ -2688,10 +2670,6 @@
 		<entry key="EditorMultiplayer.ProfilerNoSession"
 		       text="멀티플레이 세션을 시작하면(툴바의 Net Mode) 트래픽이 보입니다"
 		       sourceHash="98335b41a9d883a3" />
-		<entry key="EditorMultiplayer.ProfilerReceivedBytes"
-		       text="받은 바이트 / 초 (최근 1 초, 모든 연결)"
-		       sourceHash="90f3f291bab2fdbf" />
-		<entry key="EditorMultiplayer.ProfilerReceivedPackets" text="받은 패킷 / 초" sourceHash="87737fc2254e7748" />
 		<entry key="EditorMultiplayer.ProfilerRecordHidden"
 		       text="다른 탭을 보는 동안에도 프로세스에 net.stats 를 계속 묻습니다(기본은 꺼짐 — 자식 프로세스마다 2 Hz 로 로그를 한 줄씩 남깁니다)"
 		       sourceHash="2b52a73e1bc1febe" />
@@ -2699,14 +2677,6 @@
 		<entry key="EditorMultiplayer.ProfilerReplicasHelp"
 		       text="복제 키트가 센 갱신 수와 바이트를 마지막 두 net.stats 보고의 차로 초당 값으로 보입니다. 비율은 표에 나온 바이트에 대한 몫입니다"
 		       sourceHash="5d77ca3061a868df" />
-		<entry key="EditorMultiplayer.ProfilerResent"
-		       text="다시 보낸 신뢰 메시지 / 초"
-		       sourceHash="aaf42fcd05234ae5" />
-		<entry key="EditorMultiplayer.ProfilerRtt" text="RTT (가장 큰 연결, ms)" sourceHash="ea3b18e0f4b16bed" />
-		<entry key="EditorMultiplayer.ProfilerSentBytes"
-		       text="보낸 바이트 / 초 (최근 1 초, 모든 연결)"
-		       sourceHash="cc3e06518e77000a" />
-		<entry key="EditorMultiplayer.ProfilerSentPackets" text="보낸 패킷 / 초" sourceHash="45f4f36629fc1b23" />
 		<entry key="EditorMultiplayer.ProfilerSource"
 		       text="프로세스가 이미 세는 값(연결 통계, 메시지 종류)을 이 탭이 보이는 동안 0.5 초마다 net.stats 로 묻습니다"
 		       sourceHash="8c25b0608f20e385" />
@@ -3298,21 +3268,6 @@
 		<entry key="EditorSequencer.TextTip"
 		       text="구간 동안 보일 자막 줄의 현지화 키(Namespace.Key)입니다."
 		       sourceHash="46adf64e038e3eed" />
-		<entry key="EditorSequencer.TrackIssueChannelCount"
-		       text="종류에 맞지 않는 채널 수입니다. 파일이 읽히지 않습니다 — 트랙을 지우고 다시 더하세요."
-		       sourceHash="d01870a468f16a7e" />
-		<entry key="EditorSequencer.TrackIssueKeysOutsideTimeline"
-		       text="타임라인 밖의 키가 있어 재생되지 않습니다. 안으로 옮기거나 타임라인을 넓히세요."
-		       sourceHash="84c121d62d5cc730" />
-		<entry key="EditorSequencer.TrackIssueMissingBinding"
-		       text="트랙의 바인딩이 이 시퀀스에 없습니다. 파일이 읽히지 않습니다 — 트랙을 지우세요."
-		       sourceHash="f6bdf99cd9724877" />
-		<entry key="EditorSequencer.TrackIssueMissingPropertyPath"
-		       text="대상 경로가 없습니다. 재생해도 아무것도 움직이지 않습니다 — 프로퍼티나 리그 칸을 적으세요."
-		       sourceHash="815d46c8253d25f7" />
-		<entry key="EditorSequencer.TrackIssueUnknownKind"
-		       text="모르는 트랙 종류입니다. 파일이 읽히지 않습니다 — 트랙을 지우세요."
-		       sourceHash="1e0032aecb9020f0" />
 		<entry key="EditorSequencer.TrackNameLabel" text="이름" sourceHash="ef49aec68fd1dc66" />
 		<entry key="EditorSequencer.TrackTargetLabel" text="대상" sourceHash="ff5bb7742c2896c8" />
 		<entry key="EditorSequencer.UnboundBinding" text="바인딩 안 됨" sourceHash="e7a38a6492965c7a" />
@@ -3930,6 +3885,75 @@
 		<entry key="EditorVolumetricFog.ViewScattering" text="산란 단면" sourceHash="0ea9db71da57c2c9" />
 		<entry key="EditorVolumetricFog.ViewTransmittance" text="투과율 단면" sourceHash="992ce72c0ba6db52" />
 		<entry key="Eject / Possess" text="빠져나오기 / 조종" sourceHash="92cdc8eb70f1077f" />
+		<entry key="Enum.BoneMaskWeightSource.Bone"
+		       text="이 본 하나에만 적었습니다."
+		       sourceHash="0e3dbd43e9c2e8ee" />
+		<entry key="Enum.BoneMaskWeightSource.Inherited"
+		       text="부모 본에서 물려받은 값입니다."
+		       sourceHash="53bc8d2890e4b444" />
+		<entry key="Enum.BoneMaskWeightSource.None"
+		       text="이 본에 닿는 항목이 없어 가중치가 0 입니다."
+		       sourceHash="e61d23db46c0b23f" />
+		<entry key="Enum.BoneMaskWeightSource.Subtree"
+		       text="이 본에 적었고 자식 본에 퍼집니다."
+		       sourceHash="c14e89fb8672d1f2" />
+		<entry key="Enum.EditorGameViewAspect.Free" text="자유 비율" sourceHash="466f5911f9c6d99d" />
+		<entry key="Enum.EditorGameViewAspect.Ratio16x9" text="16:9" sourceHash="fba110f0ee459f4f" />
+		<entry key="Enum.EditorNetMode.DedicatedServer" text="전용 서버" sourceHash="38824ee8fe1f00e1" />
+		<entry key="Enum.EditorNetMode.ListenHost" text="리슨 호스트" sourceHash="45aa92f0c4a42f5c" />
+		<entry key="Enum.EditorNetMode.Standalone" text="단독" sourceHash="31bf1464d6e1e996" />
+		<entry key="Enum.EditorNetProfilerChannel.LossPercent"
+		       text="패킷 손실 (가장 큰 연결, %)"
+		       sourceHash="98cda942dfc670ee" />
+		<entry key="Enum.EditorNetProfilerChannel.ReceivedBytesPerSecond"
+		       text="받은 바이트 / 초 (최근 1 초, 모든 연결)"
+		       sourceHash="90f3f291bab2fdbf" />
+		<entry key="Enum.EditorNetProfilerChannel.ReceivedPacketsPerSecond"
+		       text="받은 패킷 / 초"
+		       sourceHash="87737fc2254e7748" />
+		<entry key="Enum.EditorNetProfilerChannel.ResentMessagesPerSecond"
+		       text="다시 보낸 신뢰 메시지 / 초"
+		       sourceHash="aaf42fcd05234ae5" />
+		<entry key="Enum.EditorNetProfilerChannel.RttMilliseconds"
+		       text="RTT (가장 큰 연결, ms)"
+		       sourceHash="ea3b18e0f4b16bed" />
+		<entry key="Enum.EditorNetProfilerChannel.SentBytesPerSecond"
+		       text="보낸 바이트 / 초 (최근 1 초, 모든 연결)"
+		       sourceHash="cc3e06518e77000a" />
+		<entry key="Enum.EditorNetProfilerChannel.SentPacketsPerSecond"
+		       text="보낸 패킷 / 초"
+		       sourceHash="45f4f36629fc1b23" />
+		<entry key="Enum.EditorPlacementSurface.Bounds" text="오브젝트 경계" sourceHash="2cf45a3c9a4e70cf" />
+		<entry key="Enum.EditorPlacementSurface.Collider" text="콜라이더" sourceHash="cbdc08e3bb09833d" />
+		<entry key="Enum.EditorPlacementSurface.GroundPlane" text="바닥 평면" sourceHash="7cf7cd34cc6f3a4c" />
+		<entry key="Enum.EditorPlacementSurface.None" text="없음" sourceHash="3c0d17bad169557b" />
+		<entry key="Enum.EditorTracyLaunchResult.Launched"
+		       text="Tracy 뷰어를 띄웠고 127.0.0.1 에 연결하는 중입니다"
+		       sourceHash="74e95e726d537b05" />
+		<entry key="Enum.EditorTracyLaunchResult.TracyNotCompiled"
+		       text="이 빌드에는 Tracy 가 링크되지 않았습니다(SW_ENABLE_TRACY=OFF 또는 Shipping)"
+		       sourceHash="7a7736b9e4f52058" />
+		<entry key="Enum.EditorTracyLaunchResult.ViewerLaunchFailed"
+		       text="Tracy 뷰어를 띄우지 못했습니다(로그를 보세요)"
+		       sourceHash="2f7c0d6caaeb55e1" />
+		<entry key="Enum.EditorTracyLaunchResult.ViewerNotFound"
+		       text="gv_tracyViewerPath 에서 Tracy 뷰어를 찾지 못했습니다. 그 자리에 tracy-profiler(0.14.1)를 두거나 변수가 뷰어를 가리키게 하세요"
+		       sourceHash="78b83adefedd40e1" />
+		<entry key="Enum.SequenceTrackIssue.ChannelCount"
+		       text="종류에 맞지 않는 채널 수입니다. 파일이 읽히지 않습니다 — 트랙을 지우고 다시 더하세요."
+		       sourceHash="d01870a468f16a7e" />
+		<entry key="Enum.SequenceTrackIssue.KeysOutsideTimeline"
+		       text="타임라인 밖의 키가 있어 재생되지 않습니다. 안으로 옮기거나 타임라인을 넓히세요."
+		       sourceHash="84c121d62d5cc730" />
+		<entry key="Enum.SequenceTrackIssue.MissingBinding"
+		       text="트랙의 바인딩이 이 시퀀스에 없습니다. 파일이 읽히지 않습니다 — 트랙을 지우세요."
+		       sourceHash="f6bdf99cd9724877" />
+		<entry key="Enum.SequenceTrackIssue.MissingPropertyPath"
+		       text="대상 경로가 없습니다. 재생해도 아무것도 움직이지 않습니다 — 프로퍼티나 리그 칸을 적으세요."
+		       sourceHash="815d46c8253d25f7" />
+		<entry key="Enum.SequenceTrackIssue.UnknownKind"
+		       text="모르는 트랙 종류입니다. 파일이 읽히지 않습니다 — 트랙을 지우세요."
+		       sourceHash="1e0032aecb9020f0" />
 		<entry key="Evenly space selected objects on X"
 		       text="선택한 오브젝트를 X 로 고르게 띄웁니다"
 		       sourceHash="0cd9d9c0bec20cf6" />

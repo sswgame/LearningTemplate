@@ -38,23 +38,6 @@ namespace sw::editor
             static constexpr float32 kBoneTreeLines = 12.0f;
             /** @brief 가중치 막대의 폭(글자 칸)입니다. */
             static constexpr float32 kWeightBarColumns = 4.0f;
-
-            /** @brief 출처를 한 문장으로 풉니다(줄의 툴팁 · 고른 본의 설명). */
-            static const utf8* describeSource( BoneMaskWeightSource source )
-            {
-                switch ( source )
-                {
-                    case BoneMaskWeightSource::None:
-                        return SW_LOCKEY( "EditorAnimationGraph", "MaskSourceNone" );
-                    case BoneMaskWeightSource::Inherited:
-                        return SW_LOCKEY( "EditorAnimationGraph", "MaskSourceInherited" );
-                    case BoneMaskWeightSource::Subtree:
-                        return SW_LOCKEY( "EditorAnimationGraph", "MaskSourceSubtree" );
-                    case BoneMaskWeightSource::Bone:
-                        return SW_LOCKEY( "EditorAnimationGraph", "MaskSourceBone" );
-                }
-                return "";
-            }
         };
     } // namespace
 } // namespace sw::editor
@@ -500,7 +483,7 @@ namespace sw::editor
             _selectedBone = row._bone;
         if ( bExplicit == false )
             ImGui::PopStyleColor();
-        EditorWidgets::drawTooltip( Internal::describeSource( row._source ) );
+        EditorWidgets::drawTooltip( LocalizedText::findEnum( row._source ) );
         EditorSelfTestMarks::recordFormat( "animationGraph.mask.bone.%#", static_cast<uint64>( rowIndex ) );
         ImGui::PopID();
     }
@@ -557,7 +540,7 @@ namespace sw::editor
         }
         ImGui::TextUnformatted( pSelected->_bone.c_str() );
         ImGui::SameLine();
-        ImGui::TextDisabled( "%s", Internal::describeSource( pSelected->_source ) );
+        ImGui::TextDisabled( "%s", LocalizedText::findEnum( pSelected->_source ) );
         // 프리셋의 항목은 그 파일이 원본이다 — 칠하면 저장할 때 버려지므로 보이기만 한다.
         ImGui::BeginDisabled( inoutMask._filePath.empty() == false );
         Internal::drawRowLabel( SW_LOCKEY( "EdWidget", "Weight" ) );

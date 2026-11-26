@@ -45,7 +45,5 @@ namespace sw::editor
         [[nodiscard]] static bool findSurface( const EditorPlacementQuery& query, const Ray& ray, EditorPlacementHit& outHit );
         /** @brief 바닥 두 축(3D 는 X · Z, 2D 는 X · Y)을 @p step 간격에 맞춥니다. 높이 축은 그대로 둡니다. @p step 이 0 이하면 그대로입니다. */
         [[nodiscard]] static float3 snapToGrid( const float3& position, float32 step, bool b2DMode );
-        /** @brief 표면 종류의 영어 이름입니다(로그 · 고스트 글). */
-        [[nodiscard]] static const utf8* getSurfaceName( EditorPlacementSurface surface );
     };
 } // namespace sw::editor

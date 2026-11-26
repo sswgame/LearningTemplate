@@ -13,17 +13,15 @@
 
 namespace sw::editor
 {
-    /** @brief 재생의 네트워크 모드입니다(언리얼 PIE 의 Net Mode). */
+    /** @brief 재생의 네트워크 모드입니다(언리얼 PIE 의 Net Mode). 로그 · 위젯 id 는 `getEnumName`, 콤보 글은 `DisplayName` 이다. */
     ENUM()
     enum class EditorNetMode : uint8
     {
-        Standalone = 0,  ///< 에디터 안에서 재생한다. 이 세션을 쓰지 않으며 `start` 가 false 를 반환한다
-        DedicatedServer, ///< `Server` 하나와 `App` 클라이언트 N 개
-        ListenHost       ///< 첫 `App` 이 리슨 호스트이고 나머지가 `App` 클라이언트이다. 플레이어 수에 호스트가 포함된다
+        Standalone      ENUMERATOR( DisplayName = "Standalone" ) = 0,   ///< 에디터 안에서 재생한다. 이 세션을 쓰지 않으며 `start` 가 false 를 반환한다
+        DedicatedServer ENUMERATOR( DisplayName = "Dedicated Server" ), ///< `Server` 하나와 `App` 클라이언트 N 개
+        /// 첫 `App` 이 리슨 호스트이고 나머지가 `App` 클라이언트이다. 플레이어 수에 호스트가 포함된다
+        ListenHost ENUMERATOR( DisplayName = "Listen Host" )
     };
-
-    /** @brief 메뉴 · 로그에 보이는 이름입니다(정의는 `EditorNetPlaySession.cpp`). */
-    const utf8* toString( EditorNetMode mode );
 } // namespace sw::editor
 
 namespace sw::editor

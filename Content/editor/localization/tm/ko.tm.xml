@@ -20,6 +20,7 @@
 		<entry source="+ Node" text="+ 노드" />
 		<entry source="0 means none" text="0 은 덮어쓰지 않음" />
 		<entry source="0 means unbounded" text="0 은 제한 없음" />
+		<entry source="16:9" text="16:9" />
 		<entry source="236P = down, down-right, right + punch (the map's command history, 0.8 s window)"
 		       text="236P = 아래, 오른쪽 아래, 오른쪽 + 펀치(맵의 커맨드 기록, 0.8초 창)" />
 		<entry source="2D view (XY plane grid). Click to switch to 3D."
@@ -729,6 +730,8 @@
 		       text="애니메이션 그래프 편집기 컨텍스트를 만들지 못했습니다." />
 		<entry source="Failed to create Dialogue Node Editor context."
 		       text="대화 노드 편집기 컨텍스트를 만들지 못했습니다." />
+		<entry source="Failed to launch the Tracy viewer (see the log)"
+		       text="Tracy 뷰어를 띄우지 못했습니다(로그를 보세요)" />
 		<entry source="Failed to open the scene" text="씬을 열지 못했습니다" />
 		<entry source="Failed to write the preset file" text="프리셋 파일을 쓰지 못했습니다" />
 		<entry source="Falloff" text="감쇠" />
@@ -819,6 +822,7 @@
 		<entry source="Frames (u,v,w,h,durationMs)" text="프레임(u,v,w,h,durationMs)" />
 		<entry source="Frames per second" text="초당 프레임" />
 		<entry source="Frames:" text="프레임:" />
+		<entry source="Free Aspect" text="자유 비율" />
 		<entry source="Free-form notes saved with the sequence. It does not affect playback."
 		       text="시퀀스와 함께 저장되는 자유 메모입니다. 재생에는 영향을 주지 않습니다." />
 		<entry source="Freeze" text="멈추기" />
@@ -2591,6 +2595,12 @@
 		<entry source="Tracked Memory By Kind" text="종류별 추적 메모리" />
 		<entry source="Tracked: {bytesBuf}  (+ {unknownSizeCount} of unknown size)"
 		       text="추적: {bytesBuf}  (+ 크기 모름 {unknownSizeCount})" />
+		<entry source="Tracy is not linked into this build (SW_ENABLE_TRACY=OFF or Shipping)"
+		       text="이 빌드에는 Tracy 가 링크되지 않았습니다(SW_ENABLE_TRACY=OFF 또는 Shipping)" />
+		<entry source="Tracy viewer launched and connecting to 127.0.0.1"
+		       text="Tracy 뷰어를 띄웠고 127.0.0.1 에 연결하는 중입니다" />
+		<entry source="Tracy viewer not found at gv_tracyViewerPath: put tracy-profiler (0.14.1) there or point the variable at it"
+		       text="gv_tracyViewerPath 에서 Tracy 뷰어를 찾지 못했습니다. 그 자리에 tracy-profiler(0.14.1)를 두거나 변수가 뷰어를 가리키게 하세요" />
 		<entry source="Tracy: not in this build" text="Tracy: 이 빌드에 없음" />
 		<entry source="Tracy: off" text="Tracy: 꺼짐" />
 		<entry source="Tracy: on (port {tracyPort}, viewer {viewerConnected, select, connected {connected} other {waiting}})"
@@ -2839,12 +2849,14 @@
 		<entry source="client arguments (e.g. -vulkan -width=960 -height=540)"
 		       text="클라이언트 인자 (예: -vulkan -width=960 -height=540)" />
 		<entry source="cmd: {actionCommand}" text="명령: {actionCommand}" />
+		<entry source="collider" text="콜라이더" />
 		<entry source="depth" text="깊이" />
 		<entry source="expected by test" text="테스트가 예상함" />
 		<entry source="first frame" text="첫 프레임" />
 		<entry source="frame count" text="프레임 수" />
 		<entry source="git was not found on PATH, so changes cannot be listed. Install git and restart the editor."
 		       text="PATH 에서 git 을 찾지 못해 변경을 나열할 수 없습니다. git 을 설치하고 에디터를 다시 시작하세요." />
+		<entry source="ground plane" text="바닥 평면" />
 		<entry source="if ({condition})" text="조건({condition})" />
 		<entry source="items" text="항목" />
 		<entry source="layout name" text="레이아웃 이름" />
@@ -2858,6 +2870,8 @@
 		       text="검토 필요(번역 메모리 제안 또는 퍼지 가져오기)" />
 		<entry source="new element (Enter)" text="새 요소 (Enter)" />
 		<entry source="new key (Enter)" text="새 키 (Enter)" />
+		<entry source="none" text="없음" />
+		<entry source="object bounds" text="오브젝트 경계" />
 		<entry source="preset name" text="프리셋 이름" />
 		<entry source="range {snapshotDepthRangeX} .. {snapshotDepthRangeY}"
 		       text="범위 {snapshotDepthRangeX} .. {snapshotDepthRangeY}" />

@@ -7,6 +7,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 namespace sw::editor
 {
     /** @brief 에디터가 호스트에 그려 달라는 뷰의 종류입니다. */
@@ -17,11 +19,12 @@ namespace sw::editor
         Count
     };
 
-    /** @brief 게임 뷰 이미지의 화면 비율입니다. */
+    /** @brief 게임 뷰 이미지의 화면 비율입니다. 콤보 글은 `DisplayName` 이다. */
+    ENUM()
     enum class EditorGameViewAspect : uint8
     {
-        Free = 0,  ///< 패널 전체를 쓴다
-        Ratio16x9, ///< 16:9 비율이며 남는 쪽은 레터박스로 둔다
+        Free      ENUMERATOR( DisplayName = "Free Aspect" ) = 0, ///< 패널 전체를 쓴다
+        Ratio16x9 ENUMERATOR( DisplayName = "16:9" ),            ///< 16:9 비율이며 남는 쪽은 레터박스로 둔다
         Count
     };
 } // namespace sw::editor
@@ -62,7 +65,5 @@ namespace sw::editor
          * @details `Free` 는 영역 전체를 쓰고, `Ratio16x9` 는 영역 안에 16:9 로 가장 크게 넣어 가운데에 둔다. 크기는 렌더 타깃 크기와 같도록 정수 픽셀로 버림한다.
          */
         static EditorViewRect fitViewImage( const float2& available, EditorGameViewAspect aspect );
-        /** @brief 화면 비율 선택에 보이는 이름을 반환합니다. */
-        static const utf8* getAspectLabel( EditorGameViewAspect aspect );
     };
 } // namespace sw::editor

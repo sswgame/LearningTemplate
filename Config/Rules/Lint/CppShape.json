@@ -12,6 +12,7 @@
         "Source/Engine/Physics/IPhysicsScene.h|IPhysicsScene": "역할 인터페이스(바디 · 캐릭터 · 질의 · 차 · 소프트 바디 · 부력)를 묶은 순수 인터페이스 — 차원 트레이트가 없는 역할은 빈 타입으로 갈린다"
     },
     "_staticOwner": {
+        "Source/Editor/Viewport/Model/EditorAssetPlacement.h|EditorAssetPlacement": "배치 판단 창구 — 질의(EditorPlacementQuery)는 인자이고 일은 물리 사본 레이캐스트 · 오브젝트 경계 · 바닥 평면을 견주고 격자에 맞추는 것이다(언리얼 FActorPositioning 자리)",
         "Source/Engine/Graphics/Texture/TextureStreamingPolicy.h|TextureStreamingPolicy": "여러 텍스처 · 예산 · 설정을 함께 보고 정하는 판단 하나 — 후보 하나의 일이 아니다(바이트 계산은 후보의 멤버). 언리얼 FRenderAssetStreamingManager 의 결정 자리",
         "Source/Editor/Common/Workspace/Undo/UndoStep.h|UndoStepRegistry": "정적 등록 목록 창구 — 처리기 줄(UndoStepHandler)을 다루지만 일은 목록(RegistrationList)에 올리고 내리고 찾는 것이고, 정적 등록자(UndoStepRegistrar)가 함수 포인터로 건다(다른 Registry 창구와 같은 자리)",
         "Source/Engine/Graphics/Shader/Compile/ShaderCompiler.h|ShaderCompiler": "컴파일러 창구 — 요청(ShaderCompileDesc)은 인자이고 일은 셰이더 DDC · 바깥 컴파일러 · 소스 해석 · 도구 지문이다(언리얼 FShaderCompilingManager 자리)",

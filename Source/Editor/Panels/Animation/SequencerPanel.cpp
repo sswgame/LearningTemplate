@@ -242,27 +242,6 @@ namespace sw::editor
             {
                 drawList.AddQuadFilled( ImVec2( x, centerY - radius ), ImVec2( x + radius, centerY ), ImVec2( x, centerY + radius ), ImVec2( x - radius, centerY ), color );
             }
-
-            /** @brief 트랙 오류 배지의 풀이(이유와 고칠 일)입니다. */
-            static const utf8* findTrackIssueText( SequenceTrackIssue issue )
-            {
-                switch ( issue )
-                {
-                    case SequenceTrackIssue::UnknownKind:
-                        return SW_LOCKEY( "EditorSequencer", "TrackIssueUnknownKind" );
-                    case SequenceTrackIssue::ChannelCount:
-                        return SW_LOCKEY( "EditorSequencer", "TrackIssueChannelCount" );
-                    case SequenceTrackIssue::MissingBinding:
-                        return SW_LOCKEY( "EditorSequencer", "TrackIssueMissingBinding" );
-                    case SequenceTrackIssue::MissingPropertyPath:
-                        return SW_LOCKEY( "EditorSequencer", "TrackIssueMissingPropertyPath" );
-                    case SequenceTrackIssue::KeysOutsideTimeline:
-                        return SW_LOCKEY( "EditorSequencer", "TrackIssueKeysOutsideTimeline" );
-                    case SequenceTrackIssue::None:
-                        return "";
-                }
-                return "";
-            }
         };
     } // namespace
 
@@ -895,7 +874,7 @@ namespace sw::editor
             ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEME_COLOR( "Signal", "Error" ) ), "%s", pMark );
             if ( issue != SequenceTrackIssue::None )
             {
-                EditorWidgets::drawTooltip( SequencerPanelInternal::findTrackIssueText( issue ) );
+                EditorWidgets::drawTooltip( LocalizedText::findEnum( issue ) );
                 EditorSelfTestMarks::recordFormat( "sequencer.trackIssue.%#", trackIndex );
             }
             ImGui::SameLine();

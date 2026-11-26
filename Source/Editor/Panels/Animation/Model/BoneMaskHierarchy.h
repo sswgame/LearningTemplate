@@ -11,6 +11,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/String/Name/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 namespace sw
 {
     class Skeleton;
@@ -20,13 +22,14 @@ namespace sw
 
 namespace sw::editor
 {
-    /** @brief 본 하나의 최종 가중치가 어디서 왔는지입니다. */
+    /** @brief 본 하나의 최종 가중치가 어디서 왔는지입니다. 줄의 툴팁 · 고른 본의 설명은 `DisplayName` 이다. */
+    ENUM()
     enum class BoneMaskWeightSource : uint8
     {
-        None = 0,  ///< 어느 항목도 닿지 않아 0 이다
-        Inherited, ///< 조상의 "roots" 항목이 퍼뜨린 값이다
-        Subtree,   ///< 이 본의 "roots" 항목이다(자손에 퍼진다)
-        Bone,      ///< 이 본의 "bones" 항목이다(이 본 하나만 — 퍼뜨린 뒤에 덮는다)
+        None      ENUMERATOR( DisplayName = "No entry reaches this bone, so its weight is 0." ) = 0, ///< 어느 항목도 닿지 않아 0 이다
+        Inherited ENUMERATOR( DisplayName = "Inherited from a parent bone." ),                       ///< 조상의 "roots" 항목이 퍼뜨린 값이다
+        Subtree   ENUMERATOR( DisplayName = "Set on this bone and spread to its children." ),        ///< 이 본의 "roots" 항목이다(자손에 퍼진다)
+        Bone      ENUMERATOR( DisplayName = "Set on this bone only." ),                              ///< 이 본의 "bones" 항목이다(이 본 하나만, 퍼뜨린 뒤에 덮는다)
     };
 
     /** @brief 계층 보기의 줄 하나, 곧 스켈레톤 본 하나입니다. 줄 순서는 스켈레톤 본 순서(부모가 앞)입니다. */

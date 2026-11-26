@@ -10,18 +10,23 @@
 #include "Core/Path/AbsolutePath.h"
 #include "Core/Process/Process.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 namespace sw::editor
 {
     /**
      * @enum EditorTracyLaunchResult
-     * @brief "Tracy 열기" 의 결과입니다. 패널이 그대로 사용자에게 보여 줍니다.
+     * @brief "Tracy 열기" 의 결과입니다. 패널이 `DisplayName` 을 그대로 사용자에게 보여 줍니다.
      */
+    ENUM()
     enum class EditorTracyLaunchResult : uint8
     {
-        Launched,          ///< 출력을 켜고 뷰어를 띄웠다
-        TracyNotCompiled,  ///< 이 빌드에 Tracy 가 없다(Shipping · SW_ENABLE_TRACY=OFF)
-        ViewerNotFound,    ///< 뷰어 실행 파일을 찾지 못했다(`gv_tracyViewerPath` 가 가리키는 경로)
-        ViewerLaunchFailed ///< 뷰어 프로세스를 띄우지 못했다
+        Launched ENUMERATOR( DisplayName = "Tracy viewer launched and connecting to 127.0.0.1" ), ///< 출력을 켜고 뷰어를 띄웠다
+        /// 이 빌드에 Tracy 가 없다(Shipping · SW_ENABLE_TRACY=OFF)
+        TracyNotCompiled ENUMERATOR( DisplayName = "Tracy is not linked into this build (SW_ENABLE_TRACY=OFF or Shipping)" ),
+        /// 뷰어 실행 파일을 찾지 못했다(`gv_tracyViewerPath` 가 가리키는 경로)
+        ViewerNotFound     ENUMERATOR( DisplayName = "Tracy viewer not found at gv_tracyViewerPath: put tracy-profiler (0.14.1) there or point the variable at it" ),
+        ViewerLaunchFailed ENUMERATOR( DisplayName = "Failed to launch the Tracy viewer (see the log)" ) ///< 뷰어 프로세스를 띄우지 못했다
     };
 } // namespace sw::editor
 
@@ -48,8 +53,5 @@ namespace sw::editor
 
         /** @brief Tracy 출력을 켜고(이미 켜져 있으면 그대로) 뷰어를 띄웁니다. `gv_tracyViewerPath` 와 프로젝트 루트로 찾습니다. */
         static EditorTracyLaunchResult openViewer();
-
-        /** @brief 결과의 사람이 읽는 한 줄입니다(영문 — 로그 · 패널 공용). */
-        static const utf8* describeResult( EditorTracyLaunchResult result );
     };
 } // namespace sw::editor
