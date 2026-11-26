@@ -5,8 +5,6 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/String/formatString.h"
 
-#include "Engine/Automation/Watch/AutomationWatch.h"
-#include "Engine/Automation/Watch/AutomationWatchComponent.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -46,22 +44,8 @@ namespace sw
                 }
                 return "?";
             }
-
-            /** @brief 감시 값 `Western.OutlawStatus` 입니다. 대상 디렉터 오브젝트의 뷰가 HUD 에 쓰는 무법자 글입니다. 아무 일도 없으면 빈 글입니다. */
-            [[nodiscard]] static bool readOutlawStatus( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
-            {
-                const WesternRiderViewComponent* const pView     = query.findTargetComponent<WesternRiderViewComponent>( "Western Rider View", outValue );
-                const WesternGameModeComponent* const  pDirector = pView != nullptr ? query.findTargetComponent<WesternGameModeComponent>( "Western Game Mode", outValue ) : nullptr;
-                if ( pDirector == nullptr )
-                    return false;
-                outValue.setText( LocalizedText::resolveNow( pView->formatOutlawStatus( *pDirector ) ) );
-                return true;
-            }
         };
     } // namespace
-
-    SW_AUTOMATION_QUERY_WATCH( westernOutlawStatus, "Western.OutlawStatus", "Outlaw line the rider view on target writes to the HUD (empty when nothing happened)",
-                               &WesternRiderViewComponentInternal::readOutlawStatus, true, false );
 
     WesternRiderViewComponent::WesternRiderViewComponent()
         : GameModeViewComponent( GameModeViewBinding::of<&WesternRiderViewComponent::updateView>() )

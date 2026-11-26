@@ -4,8 +4,6 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Automation/Watch/AutomationComponentWatch.h"
-#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Input/Map/CommonInputActions.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -39,8 +37,6 @@ namespace sw
             }
         };
     } // namespace
-
-    SW_AUTOMATION_GETTER_WATCH( cardBattleSelected, "CardBattle.SelectedCard", "Picked hand slot (0 = leftmost)", CardBattleViewComponent, &CardBattleViewComponent::getSelectedCard );
 
     CardBattleViewComponent::CardBattleViewComponent()
         : GameModeViewComponent( GameModeViewBinding::of<&CardBattleViewComponent::updateView, &CardBattleViewComponent::submitInput>() )

@@ -6,8 +6,6 @@
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
 
-#include "Engine/Automation/Watch/AutomationComponentWatch.h"
-#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Console/DebugHUDRegistry.h"
 #include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Input/Map/CommonInputActions.h"
@@ -38,9 +36,6 @@ namespace sw
             }
         };
     } // namespace
-
-    SW_AUTOMATION_GETTER_WATCH( srpgCursorX, "SRPG.CursorX", "Cursor cell X", SRPGCursorComponent, &SRPGCursorComponent::getCursorX );
-    SW_AUTOMATION_GETTER_WATCH( srpgCursorY, "SRPG.CursorY", "Cursor cell Y", SRPGCursorComponent, &SRPGCursorComponent::getCursorY );
 
     SRPGCursorComponent::SRPGCursorComponent()
         : GameModeViewComponent( GameModeViewBinding::of<&SRPGCursorComponent::updateCursor, &SRPGCursorComponent::submitInput>() )
@@ -189,25 +184,4 @@ namespace sw
         const uint32 used = static_cast<uint32>( listUnit.size() );
         pDirector->getGrowthLog().writeDebugLines( writer, GameplayDebugTarget::kMaxLines > used ? GameplayDebugTarget::kMaxLines - used : 0u );
     }
-
-    namespace
-    {
-        /** @brief 성장 디버거(HUD 섹션 `tacticsgrowth`) — 이 판 전장 유닛의 레벨 · 경험치 · 다음까지와 최근 레벨 오름의 출처. 읽기만 한다. */
-        struct TacticsGrowthDebugSectionInternal
-        {
-            static void writeGrowth( DebugHUDSectionWriter& writer )
-            {
-                const GameObjectManager* const   pManager = GameplayDebugTarget::findActiveObjectManager();
-                const SRPGCursorComponent* const pCursor  = pManager != nullptr ? GameplayDebugTarget::findTargetOrLowestIDComponent<SRPGCursorComponent>( writer.getSceneIterationKey(), *pManager ) : nullptr;
-                if ( pCursor == nullptr )
-                {
-                    writer.addLine( "target", "none (no SRPG cursor in the active scene)" );
-                    return;
-                }
-                pCursor->writeGrowthDebugLines( writer, *pManager );
-            }
-        };
-    } // namespace
-
-    SW_DEBUG_HUD_SECTION( tacticsGrowth, "tacticsgrowth", "Tactics growth (levels, xp, sources)", 290, DebugHUDSectionFlag::kNone, &TacticsGrowthDebugSectionInternal::writeGrowth );
 } // namespace sw

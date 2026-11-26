@@ -5,7 +5,6 @@
 #include "Engine/Automation/Scenario/AutomationScenario.h"
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 #include "Engine/Automation/Scenario/IAutomationStepContext.h"
-#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Tick/TickContext.h"
@@ -170,64 +169,4 @@ namespace sw
             SW_LOG_WARNING_ID( "WesternHorse.HorseStateCouldNot", "[Western] horse '%#' state could not be restored - it starts fresh", pOwner != nullptr ? pOwner->getName().c_str() : "?" );
         }
     }
-} // namespace sw
-
-namespace sw
-{
-    namespace
-    {
-        /** @brief 감시 값 `Western.Stamina` 입니다. 대상 말의 스태미나 비율(0..1)이고, 말을 열지 않았으면 값이 없습니다. */
-        [[nodiscard]] bool readStamina( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
-        {
-            const WesternHorseComponent* pHorseComponent = query.findTargetObject() != nullptr ? query.findTargetObject()->getComponent<WesternHorseComponent>() : nullptr;
-            const WesternHorse*          pHorse          = pHorseComponent != nullptr ? pHorseComponent->findHorse() : nullptr;
-            if ( pHorse == nullptr )
-            {
-                outValue.setText( query.describeMissing( "opened Western Horse" ) );
-                return false;
-            }
-            outValue.setNumber( static_cast<float64>( pHorse->getStamina().getRatio() ) );
-            return true;
-        }
-    } // namespace
-
-    SW_AUTOMATION_QUERY_WATCH( westernStamina, "Western.Stamina", "Stamina ratio (0..1) of the western horse on target", &readStamina, true, false );
-} // namespace sw
-
-namespace sw
-{
-    namespace
-    {
-        /** @brief 단계 `<FeedHorse horse="Bessie" food="oats"/>` 입니다 — 대상 말(`AutomationTarget` 규칙)에게 카탈로그의 먹이를 준다. 키트가 제 단계를 등록하는 본보기다. */
-        struct WesternHorseStepsInternal
-        {
-            static expected<void> validateFeedHorse( const AutomationStep& step ) { return step.hasRequiredAttributes( { "horse", "food" }, { "horse", "food" } ); }
-
-            static bool runFeedHorse( IAutomationStepContext& context, const AutomationStep& step )
-            {
-                const string&               horseName = *step.findAttribute( "horse" );
-                const string&               foodID    = *step.findAttribute( "food" );
-                const expected<GameObject*> found     = AutomationTarget::find( context.findActiveObjectManager(), horseName );
-                WesternHorseComponent*      pHorse    = found.has_value() ? ( *found )->getComponent<WesternHorseComponent>() : nullptr;
-                if ( found.has_value() == false )
-                    context.recordFailure( step, AutomationTarget::describe( found.error() ) );
-                else if ( pHorse == nullptr )
-                {
-                    fixed_string<constant::buffer::kMax256> message;
-                    formatstring( message.data(), message.capacity(), "object '%#' has no Western Horse", horseName );
-                    context.recordFailure( step, message.view() );
-                }
-                else if ( pHorse->feed( hashed_string{ foodID.c_str() } ) == false )
-                {
-                    fixed_string<constant::buffer::kMax256> message;
-                    formatstring( message.data(), message.capacity(), "'%#' did not take '%#' (horse not opened or food not in the western catalog)", horseName, foodID );
-                    context.recordFailure( step, message.view() );
-                }
-                return true;
-            }
-        };
-    } // namespace
-
-    // 키트 단계도 엔진 단계와 같은 레지스트리에 제 .cpp 가 올린다(언리얼 Functional Test 의 게임 쪽 액션과 같은 자리). 씬 틱 뒤에 돈다 — 다음 틱의 탈것이 회복한 스태미나를 본다.
-    SW_AUTOMATION_STEP( westernFeedHorse, "FeedHorse", &WesternHorseStepsInternal::runFeedHorse, &WesternHorseStepsInternal::validateFeedHorse, AutomationStepOptions{} );
 } // namespace sw

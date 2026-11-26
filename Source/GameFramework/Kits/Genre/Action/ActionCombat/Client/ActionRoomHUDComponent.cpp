@@ -4,7 +4,6 @@
 
 #include "Core/Event/EventDispatcher.h"
 
-#include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -156,10 +155,4 @@ namespace sw
         _viewModel->setClearedShown( _notification == Notification::Cleared );
         _viewModel->setDefeatedShown( _notification == Notification::Defeated );
     }
-} // namespace sw
-
-namespace sw
-{
-    SW_AUTOMATION_GETTER_WATCH( actionRoomHUDNotification, "ActionCombat.HUDNotification", "Room notification on the HUD: 0 none, 1 cleared, 2 defeated", ActionRoomHUDComponent, &ActionRoomHUDComponent::getNotificationValue );
-    SW_AUTOMATION_GETTER_WATCH( actionRoomHUDGate, "ActionCombat.HUDGateLocked", "1 while the HUD shows the locked clear gate", ActionRoomHUDComponent, &ActionRoomHUDComponent::getGateLockedValue );
 } // namespace sw

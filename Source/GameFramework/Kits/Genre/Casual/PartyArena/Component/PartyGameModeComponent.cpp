@@ -3,8 +3,6 @@
 #include "GameFramework/Kits/Genre/Casual/PartyArena/Component/PartyGameModeComponent.h"
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
-#include "Engine/Automation/Watch/AutomationComponentWatch.h"
-#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Serialization/Format/Archive.h"
@@ -84,11 +82,6 @@ namespace sw
             }
         };
     } // namespace
-
-    SW_AUTOMATION_GETTER_WATCH( partyArenaPhase, "PartyArena.Phase", "Party phase (0 round, 1 intermission, 2 finished)", PartyGameModeComponent, &PartyGameModeComponent::getPhase );
-    SW_AUTOMATION_GETTER_WATCH( partyArenaRound, "PartyArena.Round", "Round number (0 = first)", PartyGameModeComponent, &PartyGameModeComponent::getRound );
-    SW_AUTOMATION_GETTER_WATCH( partyArenaTotal, "PartyArena.PlayerTotal", "Placement points of the local player", PartyGameModeComponent, &PartyGameModeComponent::getPlayerTotal );
-    SW_AUTOMATION_GETTER_WATCH( partyArenaRingOuts, "PartyArena.PlayerRingOuts", "Times the local player fell off the arena", PartyGameModeComponent, &PartyGameModeComponent::getPlayerRingOutCount );
 
     PartyGameModeComponent::PartyGameModeComponent()
         : _items{}

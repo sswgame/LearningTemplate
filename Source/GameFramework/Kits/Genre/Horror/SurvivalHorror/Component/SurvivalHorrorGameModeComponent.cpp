@@ -6,8 +6,6 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
-#include "Engine/Automation/Watch/AutomationComponentWatch.h"
-#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
@@ -101,17 +99,6 @@ namespace sw
             }
         };
     } // namespace
-
-    SW_AUTOMATION_GETTER_WATCH( survivalHorrorResult, "SurvivalHorror.Result", "Result (0 ongoing, 1 win, 2 lose)", SurvivalHorrorGameModeComponent, &SurvivalHorrorGameModeComponent::getResult );
-    SW_AUTOMATION_GETTER_WATCH( survivalHorrorPlayerX, "SurvivalHorror.PlayerX", "Absolute X of the player (m)", SurvivalHorrorGameModeComponent, &SurvivalHorrorGameModeComponent::getPlayerX );
-    SW_AUTOMATION_GETTER_WATCH( survivalHorrorItems, "SurvivalHorror.Items", "Stacks in the bag", SurvivalHorrorGameModeComponent, &SurvivalHorrorGameModeComponent::getItemCount );
-    SW_AUTOMATION_GETTER_WATCH( survivalHorrorSanity, "SurvivalHorror.Sanity", "Sanity of the player", SurvivalHorrorGameModeComponent, &SurvivalHorrorGameModeComponent::getSanity );
-    SW_AUTOMATION_GETTER_WATCH( survivalHorrorHealth, "SurvivalHorror.Health", "Health of the player", SurvivalHorrorGameModeComponent, &SurvivalHorrorGameModeComponent::getHealth );
-    SW_AUTOMATION_GETTER_WATCH( survivalHorrorFlashlight, "SurvivalHorror.Flashlight", "1 while the flashlight is on", SurvivalHorrorGameModeComponent,
-                                &SurvivalHorrorGameModeComponent::isFlashlightOn );
-    SW_AUTOMATION_GETTER_WATCH( survivalHorrorDark, "SurvivalHorror.Dark", "1 while the player is in a dark room", SurvivalHorrorGameModeComponent, &SurvivalHorrorGameModeComponent::isInDarkness );
-    SW_AUTOMATION_GETTER_WATCH( survivalHorrorFighting, "SurvivalHorror.Fighting", "1 during a fight", SurvivalHorrorGameModeComponent, &SurvivalHorrorGameModeComponent::isFighting );
-    SW_AUTOMATION_GETTER_WATCH( survivalHorrorMonsters, "SurvivalHorror.Monsters", "Monsters left", SurvivalHorrorGameModeComponent, &SurvivalHorrorGameModeComponent::countMonsters );
 
     SurvivalHorrorGameModeComponent::SurvivalHorrorGameModeComponent()
         : _areaGraph{}
