@@ -33,8 +33,8 @@ SW_TEST_CASE( ServerPickerRowTest, ReusedRowShowsTheServerItIsBoundTo )
 {
     LocalizationManager localization; // 엔진 표(engine.strings.xml)와 같은 원문 서식
     localization.setString( "en", hashed_string( "ServerPicker.Row" ), "{region}  {fill}%  {state}" );
-    localization.setString( "en", hashed_string( "ServerPicker.StateOpen" ), "open" );
-    localization.setString( "en", hashed_string( "ServerPicker.StateMaintenance" ), "maintenance" );
+    localization.setString( "en", hashed_string( "Enum.ServerState.Open" ), "open" );
+    localization.setString( "en", hashed_string( "Enum.ServerState.Maintenance" ), "maintenance" );
     SW_REQUIRE_TRUE( localization.setCurrentLanguage( "en" ) );
     unique_ptr<Widget>  row    = ServerPickerScreen::makeRow();
     const ButtonWidget& button = static_cast<const ButtonWidget&>( *row );

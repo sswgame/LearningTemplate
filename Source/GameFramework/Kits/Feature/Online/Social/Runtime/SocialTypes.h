@@ -90,11 +90,11 @@ namespace sw
     ENUM()
     enum class SocialPresenceStatus : uint8
     {
-        Offline = 0,
-        Online,
-        Away,
-        Busy,
-        InGame,
+        Offline ENUMERATOR( DisplayName = "offline" ) = 0,
+        Online  ENUMERATOR( DisplayName = "online" ),
+        Away    ENUMERATOR( DisplayName = "away" ),
+        Busy    ENUMERATOR( DisplayName = "busy" ),
+        InGame  ENUMERATOR( DisplayName = "in game" ),
         Count
     };
 } // namespace sw

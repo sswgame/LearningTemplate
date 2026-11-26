@@ -36,11 +36,6 @@ msgid "Cancel"
 msgstr "キャンセル"
 
 #: Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp
-msgctxt "Chat.Blocked"
-msgid "Message was blocked by the word filter"
-msgstr "メッセージは単語フィルターでブロックされました"
-
-#: Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp
 msgctxt "Chat.Failed"
 msgid "Chat failed"
 msgstr "チャットに失敗しました"
@@ -51,54 +46,14 @@ msgid "Message is empty or not valid"
 msgstr "メッセージが空か正しくありません"
 
 #: Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp
-msgctxt "Chat.Muted"
-msgid "You are muted ({seconds} s left)"
-msgstr "チャットが禁止されています(残り{seconds}秒)"
-
-#: Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp
-msgctxt "Chat.NotFound"
-msgid "Message not found"
-msgstr "メッセージが見つかりません"
-
-#: Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp
-msgctxt "Chat.NotJoinable"
-msgid "This channel cannot be joined"
-msgstr "このチャンネルには参加できません"
-
-#: Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp
-msgctxt "Chat.NotMember"
-msgid "You have not joined this channel"
-msgstr "このチャンネルに参加していません"
-
-#: Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp
-msgctxt "Chat.Repeated"
-msgid "You already said that"
-msgstr "同じ発言は繰り返せません"
-
-#: Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp
 msgctxt "Chat.SignIn"
 msgid "Sign in to chat"
 msgstr "チャットするにはサインインしてください"
 
 #: Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp
-msgctxt "Chat.TargetOffline"
-msgid "That player is offline"
-msgstr "相手はオフラインです"
-
-#: Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp
 msgctxt "Chat.TooFast"
 msgid "Too fast, try again soon"
 msgstr "速すぎます。少し待ってください"
-
-#: Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp
-msgctxt "Chat.TooFastWait"
-msgid "Too fast, wait {milliseconds} ms"
-msgstr "速すぎます。{milliseconds}ms待ってください"
-
-#: Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp
-msgctxt "Chat.TooManyChannels"
-msgid "Too many channels"
-msgstr "チャンネルが多すぎます"
 
 #: Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp
 msgctxt "Chat.Unavailable"
@@ -2286,6 +2241,201 @@ msgctxt "EditorTip.ZoneRevertParam"
 msgid "Use the preset's value for this parameter again."
 msgstr "このパラメーターにプリセットの値を再び使います。"
 
+#: Source/GameFramework/Kits/Feature/Online/Chat/Runtime/ChatTypes.h
+msgctxt "Enum.ChatResult.Muted"
+msgid "You are muted ({seconds} s left)"
+msgstr "チャットが禁止されています(残り{seconds}秒)"
+
+#: Source/GameFramework/Kits/Feature/Online/Chat/Runtime/ChatTypes.h
+msgctxt "Enum.ChatResult.NotFound"
+msgid "Message not found"
+msgstr "メッセージが見つかりません"
+
+#: Source/GameFramework/Kits/Feature/Online/Chat/Runtime/ChatTypes.h
+msgctxt "Enum.ChatResult.NotJoinable"
+msgid "This channel cannot be joined"
+msgstr "このチャンネルには参加できません"
+
+#: Source/GameFramework/Kits/Feature/Online/Chat/Runtime/ChatTypes.h
+msgctxt "Enum.ChatResult.NotMember"
+msgid "You have not joined this channel"
+msgstr "このチャンネルに参加していません"
+
+#: Source/GameFramework/Kits/Feature/Online/Chat/Runtime/ChatTypes.h
+msgctxt "Enum.ChatResult.RateLimited"
+msgid "Too fast, wait {milliseconds} ms"
+msgstr "速すぎます。{milliseconds}ms待ってください"
+
+#: Source/GameFramework/Kits/Feature/Online/Chat/Runtime/ChatTypes.h
+msgctxt "Enum.ChatResult.Rejected"
+msgid "Message was blocked by the word filter"
+msgstr "メッセージは単語フィルターでブロックされました"
+
+#: Source/GameFramework/Kits/Feature/Online/Chat/Runtime/ChatTypes.h
+msgctxt "Enum.ChatResult.Repeated"
+msgid "You already said that"
+msgstr "同じ発言は繰り返せません"
+
+#: Source/GameFramework/Kits/Feature/Online/Chat/Runtime/ChatTypes.h
+msgctxt "Enum.ChatResult.TargetOffline"
+msgid "That player is offline"
+msgstr "相手はオフラインです"
+
+#: Source/GameFramework/Kits/Feature/Online/Chat/Runtime/ChatTypes.h
+msgctxt "Enum.ChatResult.TooManyChannels"
+msgid "Too many channels"
+msgstr "チャンネルが多すぎます"
+
+#: Source/GameFramework/Runtime/Gameplay/Inventory/InventoryCommand.h
+msgctxt "Enum.InventoryCommandResult.EmptySlot"
+msgid "The slot is empty."
+msgstr "空きスロットです。"
+
+#: Source/GameFramework/Runtime/Gameplay/Inventory/InventoryCommand.h
+msgctxt "Enum.InventoryCommandResult.InvalidCount"
+msgid "That amount is not possible."
+msgstr "その数量は指定できません。"
+
+#: Source/GameFramework/Runtime/Gameplay/Inventory/InventoryCommand.h
+msgctxt "Enum.InventoryCommandResult.InvalidSlot"
+msgid "That slot cannot take it."
+msgstr "そのスロットには入れられません。"
+
+#: Source/GameFramework/Runtime/Gameplay/Inventory/InventoryCommand.h
+msgctxt "Enum.InventoryCommandResult.NoRoom"
+msgid "Your bag is full."
+msgstr "バッグがいっぱいです。"
+
+#: Source/GameFramework/Runtime/Gameplay/Inventory/InventoryCommand.h
+msgctxt "Enum.InventoryCommandResult.NotUsable"
+msgid "This cannot be used."
+msgstr "使用できません。"
+
+#: Source/GameFramework/Runtime/Gameplay/Inventory/InventoryCommand.h
+msgctxt "Enum.InventoryCommandResult.Ok"
+msgid "Done."
+msgstr "完了しました。"
+
+#: Source/GameFramework/Runtime/Gameplay/Inventory/InventoryCommand.h
+msgctxt "Enum.InventoryCommandResult.Refused"
+msgid "You cannot equip this there."
+msgstr "そこには装備できません。"
+
+#: Source/GameFramework/Runtime/Gameplay/Vehicle/MountMovementComponent.h
+msgctxt "Enum.MountGait.Canter"
+msgid "Canter"
+msgstr "キャンター"
+
+#: Source/GameFramework/Runtime/Gameplay/Vehicle/MountMovementComponent.h
+msgctxt "Enum.MountGait.Gallop"
+msgid "Gallop"
+msgstr "ギャロップ"
+
+#: Source/GameFramework/Runtime/Gameplay/Vehicle/MountMovementComponent.h
+msgctxt "Enum.MountGait.Idle"
+msgid "Standing"
+msgstr "停止"
+
+#: Source/GameFramework/Runtime/Gameplay/Vehicle/MountMovementComponent.h
+msgctxt "Enum.MountGait.Trot"
+msgid "Trot"
+msgstr "トロット"
+
+#: Source/GameFramework/Runtime/Gameplay/Vehicle/MountMovementComponent.h
+msgctxt "Enum.MountGait.Walk"
+msgid "Walk"
+msgstr "常歩"
+
+#: Source/GameFramework/Runtime/Online/Directory/ServerRecord.h
+msgctxt "Enum.ServerState.Draining"
+msgid "draining"
+msgstr "退出中"
+
+#: Source/GameFramework/Runtime/Online/Directory/ServerRecord.h
+msgctxt "Enum.ServerState.Maintenance"
+msgid "maintenance"
+msgstr "メンテナンス中"
+
+#: Source/GameFramework/Runtime/Online/Directory/ServerRecord.h
+msgctxt "Enum.ServerState.Open"
+msgid "open"
+msgstr "受付中"
+
+#: Source/GameFramework/Runtime/Online/Directory/ServerRecord.h
+msgctxt "Enum.ServerState.Starting"
+msgid "starting"
+msgstr "起動中"
+
+#: Source/GameFramework/Runtime/Gameplay/Inventory/ShopPurchase.h
+msgctxt "Enum.ShopPurchaseStatus.Busy"
+msgid "A purchase is still in progress."
+msgstr "購入処理中です。"
+
+#: Source/GameFramework/Runtime/Gameplay/Inventory/ShopPurchase.h
+msgctxt "Enum.ShopPurchaseStatus.LimitReached"
+msgid "You cannot buy this any more."
+msgstr "これ以上購入できません。"
+
+#: Source/GameFramework/Runtime/Gameplay/Inventory/ShopPurchase.h
+msgctxt "Enum.ShopPurchaseStatus.NoRoom"
+msgid "Your bag is full."
+msgstr "バッグがいっぱいです。"
+
+#: Source/GameFramework/Runtime/Gameplay/Inventory/ShopPurchase.h
+msgctxt "Enum.ShopPurchaseStatus.NotEnoughMoney"
+msgid "Not enough money."
+msgstr "お金が足りません。"
+
+#: Source/GameFramework/Runtime/Gameplay/Inventory/ShopPurchase.h
+msgctxt "Enum.ShopPurchaseStatus.OutOfStock"
+msgid "Sold out."
+msgstr "売り切れです。"
+
+#: Source/GameFramework/Runtime/Gameplay/Inventory/ShopPurchase.h
+msgctxt "Enum.ShopPurchaseStatus.Rejected"
+msgid "This cannot be bought now."
+msgstr "現在は購入できません。"
+
+#: Source/GameFramework/Runtime/Gameplay/Inventory/ShopPurchase.h
+msgctxt "Enum.ShopPurchaseStatus.ServerError"
+msgid "Could not reach the store. The wallet shows what the server holds."
+msgstr "ストアに接続できませんでした。ウォレットにはサーバーの値が表示されます。"
+
+#: Source/GameFramework/Runtime/Gameplay/Inventory/ShopPurchase.h
+msgctxt "Enum.ShopPurchaseStatus.Succeeded"
+msgid "Bought."
+msgstr "購入しました。"
+
+#: Source/GameFramework/Runtime/Gameplay/Inventory/ShopPurchase.h
+msgctxt "Enum.ShopPurchaseStatus.Unverified"
+msgid "The purchase reply did not match; your wallet was refreshed."
+msgstr "購入の応答が一致しなかったため、ウォレットを更新しました。"
+
+#: Source/GameFramework/Kits/Feature/Online/Social/Runtime/SocialTypes.h
+msgctxt "Enum.SocialPresenceStatus.Away"
+msgid "away"
+msgstr "離席中"
+
+#: Source/GameFramework/Kits/Feature/Online/Social/Runtime/SocialTypes.h
+msgctxt "Enum.SocialPresenceStatus.Busy"
+msgid "busy"
+msgstr "取り込み中"
+
+#: Source/GameFramework/Kits/Feature/Online/Social/Runtime/SocialTypes.h
+msgctxt "Enum.SocialPresenceStatus.InGame"
+msgid "in game"
+msgstr "ゲーム中"
+
+#: Source/GameFramework/Kits/Feature/Online/Social/Runtime/SocialTypes.h
+msgctxt "Enum.SocialPresenceStatus.Offline"
+msgid "offline"
+msgstr "オフライン"
+
+#: Source/GameFramework/Kits/Feature/Online/Social/Runtime/SocialTypes.h
+msgctxt "Enum.SocialPresenceStatus.Online"
+msgid "online"
+msgstr "オンライン"
+
 #: Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp
 msgctxt "FriendList.Idle"
 msgid "Press Refresh to list friends"
@@ -2312,36 +2462,6 @@ msgid "{title}  ({count, plural, one {# pending request} other {# pending reques
 msgstr "{title}  (保留中の申請 {count}件)"
 
 #: Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp
-msgctxt "FriendList.PresenceAway"
-msgid "away"
-msgstr "離席中"
-
-#: Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp
-msgctxt "FriendList.PresenceBusy"
-msgid "busy"
-msgstr "取り込み中"
-
-#: Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp
-msgctxt "FriendList.PresenceInGame"
-msgid "in game"
-msgstr "ゲーム中"
-
-#: Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp
-msgctxt "FriendList.PresenceOffline"
-msgid "offline"
-msgstr "オフライン"
-
-#: Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp
-msgctxt "FriendList.PresenceOnline"
-msgid "online"
-msgstr "オンライン"
-
-#: Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp
-msgctxt "FriendList.PresenceUnknown"
-msgid "unknown"
-msgstr "不明"
-
-#: Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp
 msgctxt "FriendList.Row"
 msgid "#{account}  {presence}"
 msgstr "#{account}  {presence}"
@@ -2357,19 +2477,9 @@ msgid "Friends"
 msgstr "フレンド"
 
 #: Source/GameFramework/Client/Inventory/InventoryScreen.cpp
-msgctxt "Inventory.Done"
-msgid "Done."
-msgstr "完了しました。"
-
-#: Source/GameFramework/Client/Inventory/InventoryScreen.cpp
 msgctxt "Inventory.DropTitle"
 msgid "Drop how many?"
 msgstr "いくつ捨てますか?"
-
-#: Source/GameFramework/Client/Inventory/InventoryScreen.cpp
-msgctxt "Inventory.EmptySlot"
-msgid "The slot is empty."
-msgstr "空きスロットです。"
 
 #: Source/GameFramework/Client/Inventory/InventoryScreen.cpp
 msgctxt "Inventory.EquipLine"
@@ -2377,39 +2487,14 @@ msgid "{slot}: {item}"
 msgstr "{slot}: {item}"
 
 #: Source/GameFramework/Client/Inventory/InventoryScreen.cpp
-msgctxt "Inventory.InvalidCount"
-msgid "That amount is not possible."
-msgstr "その数量は指定できません。"
-
-#: Source/GameFramework/Client/Inventory/InventoryScreen.cpp
-msgctxt "Inventory.InvalidSlot"
-msgid "That slot cannot take it."
-msgstr "そのスロットには入れられません。"
-
-#: Source/GameFramework/Client/Inventory/InventoryScreen.cpp
 msgctxt "Inventory.ItemCount"
 msgid "{item} x{count}"
 msgstr "{item} x{count}"
 
 #: Source/GameFramework/Client/Inventory/InventoryScreen.cpp
-msgctxt "Inventory.NoRoom"
-msgid "Your bag is full."
-msgstr "バッグがいっぱいです。"
-
-#: Source/GameFramework/Client/Inventory/InventoryScreen.cpp
-msgctxt "Inventory.NotUsable"
-msgid "This cannot be used."
-msgstr "使用できません。"
-
-#: Source/GameFramework/Client/Inventory/InventoryScreen.cpp
 msgctxt "Inventory.Picked"
 msgid "Choose where to put it."
 msgstr "置く場所を選んでください。"
-
-#: Source/GameFramework/Client/Inventory/InventoryScreen.cpp
-msgctxt "Inventory.Refused"
-msgid "You cannot equip this there."
-msgstr "そこには装備できません。"
 
 #: Source/GameFramework/Client/Inventory/InventoryScreen.cpp
 msgctxt "Inventory.SplitTitle"
@@ -2599,45 +2684,10 @@ msgctxt "ServerPicker.Row"
 msgid "{region}  {fill}%  {state}"
 msgstr "{region}  {fill}%  {state}"
 
-#: Source/GameFramework/Kits/Feature/Online/ServerDirectory/Client/ServerPickerScreen.cpp
-msgctxt "ServerPicker.StateDraining"
-msgid "draining"
-msgstr "退出中"
-
-#: Source/GameFramework/Kits/Feature/Online/ServerDirectory/Client/ServerPickerScreen.cpp
-msgctxt "ServerPicker.StateMaintenance"
-msgid "maintenance"
-msgstr "メンテナンス中"
-
-#: Source/GameFramework/Kits/Feature/Online/ServerDirectory/Client/ServerPickerScreen.cpp
-msgctxt "ServerPicker.StateOpen"
-msgid "open"
-msgstr "受付中"
-
-#: Source/GameFramework/Kits/Feature/Online/ServerDirectory/Client/ServerPickerScreen.cpp
-msgctxt "ServerPicker.StateStarting"
-msgid "starting"
-msgstr "起動中"
-
-#: Source/GameFramework/Kits/Feature/Online/ServerDirectory/Client/ServerPickerScreen.cpp
-msgctxt "ServerPicker.StateUnknown"
-msgid "unknown"
-msgstr "不明"
-
 #: Source/GameFramework/Client/Shop/ShopScreen.cpp
 msgctxt "Shop.BalanceLine"
 msgid "{amount} {currency}"
 msgstr "{amount} {currency}"
-
-#: Source/GameFramework/Client/Shop/ShopScreen.cpp
-msgctxt "Shop.Bought"
-msgid "Bought."
-msgstr "購入しました。"
-
-#: Source/GameFramework/Client/Shop/ShopScreen.cpp
-msgctxt "Shop.Busy"
-msgid "A purchase is still in progress."
-msgstr "購入処理中です。"
 
 #: Source/GameFramework/Client/Shop/ShopScreen.cpp
 msgctxt "Shop.ConfirmAccept"
@@ -2660,21 +2710,6 @@ msgid "Confirm Purchase"
 msgstr "購入の確認"
 
 #: Source/GameFramework/Client/Shop/ShopScreen.cpp
-msgctxt "Shop.LimitReached"
-msgid "You cannot buy this any more."
-msgstr "これ以上購入できません。"
-
-#: Source/GameFramework/Client/Shop/ShopScreen.cpp
-msgctxt "Shop.NoRoom"
-msgid "Your bag is full."
-msgstr "バッグがいっぱいです。"
-
-#: Source/GameFramework/Client/Shop/ShopScreen.cpp
-msgctxt "Shop.NotEnoughMoney"
-msgid "Not enough money."
-msgstr "お金が足りません。"
-
-#: Source/GameFramework/Client/Shop/ShopScreen.cpp
 msgctxt "Shop.OfferRow"
 msgid "{item}  {price} {currency}"
 msgstr "{item}  {price} {currency}"
@@ -2685,29 +2720,9 @@ msgid "{offer}  ({stock})"
 msgstr "{offer}  ({stock})"
 
 #: Source/GameFramework/Client/Shop/ShopScreen.cpp
-msgctxt "Shop.OutOfStock"
-msgid "Sold out."
-msgstr "売り切れです。"
-
-#: Source/GameFramework/Client/Shop/ShopScreen.cpp
 msgctxt "Shop.Purchasing"
 msgid "Purchasing..."
 msgstr "購入中..."
-
-#: Source/GameFramework/Client/Shop/ShopScreen.cpp
-msgctxt "Shop.Rejected"
-msgid "This cannot be bought now."
-msgstr "現在は購入できません。"
-
-#: Source/GameFramework/Client/Shop/ShopScreen.cpp
-msgctxt "Shop.ServerError"
-msgid "Could not reach the store. The wallet shows what the server holds."
-msgstr "ストアに接続できませんでした。ウォレットにはサーバーの値が表示されます。"
-
-#: Source/GameFramework/Client/Shop/ShopScreen.cpp
-msgctxt "Shop.Unverified"
-msgid "The purchase reply did not match; your wallet was refreshed."
-msgstr "購入の応答が一致しなかったため、ウォレットを更新しました。"
 
 #. Context: TextWidget._text
 #: engine/ui/options.ui.xml
@@ -2757,31 +2772,6 @@ msgstr "懸賞金 ${amount}"
 msgctxt "Western.Carcasses"
 msgid "Carcasses {count}"
 msgstr "獲物 {count}"
-
-#: Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp
-msgctxt "Western.GaitCanter"
-msgid "Canter"
-msgstr "キャンター"
-
-#: Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp
-msgctxt "Western.GaitGallop"
-msgid "Gallop"
-msgstr "ギャロップ"
-
-#: Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp
-msgctxt "Western.GaitStanding"
-msgid "Standing"
-msgstr "停止"
-
-#: Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp
-msgctxt "Western.GaitTrot"
-msgid "Trot"
-msgstr "トロット"
-
-#: Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp
-msgctxt "Western.GaitWalk"
-msgid "Walk"
-msgstr "常歩"
 
 #: Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp
 msgctxt "Western.Honor"

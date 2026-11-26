@@ -24,37 +24,9 @@ namespace sw
             static constexpr const utf8* kRefreshCommand = "Refresh";
             static constexpr const utf8* kCloseCommand   = "Close";
 
-            static const utf8* getStateText( ServerState state )
-            {
-                switch ( state )
-                {
-                    case ServerState::Starting:
-                    {
-                        return SW_LOCKEYREF( "ServerPicker", "StateStarting" );
-                    }
-                    case ServerState::Open:
-                    {
-                        return SW_LOCKEYREF( "ServerPicker", "StateOpen" );
-                    }
-                    case ServerState::Draining:
-                    {
-                        return SW_LOCKEYREF( "ServerPicker", "StateDraining" );
-                    }
-                    case ServerState::Maintenance:
-                    {
-                        return SW_LOCKEYREF( "ServerPicker", "StateMaintenance" );
-                    }
-                    case ServerState::Count:
-                    {
-                        break;
-                    }
-                }
-                return SW_LOCKEYREF( "ServerPicker", "StateUnknown" );
-            }
-
             static string makeRowText( const ServerListEntry& server )
             {
-                return SW_LOCALIZED_MESSAGE( "ServerPicker", "Row" ).addKey( "region", server._region ).addInteger( "fill", static_cast<int64>( server._fillPercent ) ).addKey( "state", getStateText( server._state ) ).str();
+                return SW_LOCALIZED_MESSAGE( "ServerPicker", "Row" ).addKey( "region", server._region ).addInteger( "fill", static_cast<int64>( server._fillPercent ) ).addKey( "state", LocalizedText::makeEnumKey( server._state ) ).str();
             }
         };
     } // namespace

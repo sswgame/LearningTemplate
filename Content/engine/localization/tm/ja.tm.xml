@@ -732,9 +732,9 @@
 		       text="スロット {slotsCount} 個、セット {setsCount} 個、プリセット {presetsCount} 個" />
 		<entry source="{slotsCount} slots, {setsCount} sets, {presetsCount} presets"
 		       text="スロット {slotsCount} 個、セット {setsCount} 個、プリセット {presetsCount} 個" />
+		<entry source="{slot}: {item}" text="{slot}: {item}" />
+		<entry source="{stat} {value}" text="{stat} {value}" />
 		<entry source="{title}  ({count, plural, one {# pending request} other {# pending requests}})"
 		       text="{title}  (保留中の申請 {count}件)" />
-		<entry source="{stat} {value}" text="{stat} {value}" />
-		<entry source="{slot}: {item}" text="{slot}: {item}" />
 	</entries>
 </TranslationMemory>

@@ -756,9 +756,9 @@
 		       text="칸 {slotsCount}개, 세트 {setsCount}개, 프리셋 {presetsCount}개" />
 		<entry source="{slotsCount} slots, {setsCount} sets, {presetsCount} presets"
 		       text="칸 {slotsCount}개, 세트 {setsCount}개, 프리셋 {presetsCount}개" />
+		<entry source="{slot}: {item}" text="{slot}: {item}" />
+		<entry source="{stat} {value}" text="{stat} {value}" />
 		<entry source="{title}  ({count, plural, one {# pending request} other {# pending requests}})"
 		       text="{title}  (받은 요청 {count}건)" />
-		<entry source="{stat} {value}" text="{stat} {value}" />
-		<entry source="{slot}: {item}" text="{slot}: {item}" />
 	</entries>
 </TranslationMemory>

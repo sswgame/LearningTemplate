@@ -17,15 +17,16 @@
 
 namespace sw
 {
-    /** @brief 네발 탈것의 걸음새입니다. 애니메이터 `Gait` 파라미터 값이 이 순서와 같습니다. */
+    /** @brief 네발 탈것의 걸음새입니다. 애니메이터 `Gait` 파라미터 값이 이 순서와 같습니다. HUD 에 보이는 이름은 `DisplayName` 입니다. */
     ENUM()
     enum class MountGait : uint8
     {
-        Idle = 0, ///< 서 있다. 제자리에서 돈다
-        Walk,     ///< 평보
-        Trot,     ///< 속보
-        Canter,   ///< 구보
-        Gallop,   ///< 습보(질주). 질주 버튼을 누르고 앞 방향 입력이 절반 이상이며 허용될 때만 쓴다(스태미나)
+        Idle   ENUMERATOR( DisplayName = "Standing" ) = 0, ///< 서 있다. 제자리에서 돈다
+        Walk   ENUMERATOR( DisplayName = "Walk" ),         ///< 평보
+        Trot   ENUMERATOR( DisplayName = "Trot" ),         ///< 속보
+        Canter ENUMERATOR( DisplayName = "Canter" ),       ///< 구보
+        /// 습보(질주). 질주 버튼을 누르고 앞 방향 입력이 절반 이상이며 허용될 때만 쓴다(스태미나)
+        Gallop ENUMERATOR( DisplayName = "Gallop" ),
     };
 } // namespace sw
 
