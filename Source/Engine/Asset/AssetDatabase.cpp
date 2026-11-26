@@ -14,10 +14,10 @@
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Content/AssetRegistry.h"
 #include "Engine/Content/AssetScanCache.h"
-#include "Engine/Serialization/Format/XMLSerializer.h"
 #include "Engine/Serialization/Inherit/AssetRedirect.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 #include "Engine/Serialization/JSON/JSONFields.h"
+#include "Engine/Serialization/Serializer/XMLSerializer.h"
 
 namespace sw
 {

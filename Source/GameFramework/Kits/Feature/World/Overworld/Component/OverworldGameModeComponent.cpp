@@ -9,9 +9,9 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
-#include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/FormatDef.h"
-#include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
+#include "Engine/Serialization/Serializer/Archive.h"
+#include "Engine/Serialization/Serializer/StateIO.h"
 #include "Engine/TileMap/TileMapComponent.h"
 
 #include "GameFramework/Runtime/Character/Control/Intent/ControlIntent.h"
@@ -22,7 +22,7 @@ namespace sw
 {
     namespace
     {
-        constexpr FormatDef kGameModeStateFormat{ "TOWN" }; // 게임에서 키트로 옮기기 전 태그 그대로(바꿀 까닭이 없다)
+        constexpr FormatDesc kGameModeStateFormat{ "TOWN" }; // 게임에서 키트로 옮기기 전 태그 그대로(바꿀 까닭이 없다)
     } // namespace
 } // namespace sw
 

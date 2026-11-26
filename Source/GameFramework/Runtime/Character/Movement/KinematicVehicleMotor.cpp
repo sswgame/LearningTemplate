@@ -6,9 +6,9 @@
 
 #include "Engine/Module/ModuleSharedAssetCache.h"
 #include "Engine/Reflection/TypeFqn.h"
-#include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/ReflectedXMLFile.h"
-#include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Serializer/Archive.h"
+#include "Engine/Serialization/Serializer/StateIO.h"
+#include "Engine/Serialization/XML/ReflectedXMLFile.h"
 
 #include "GameFramework/Runtime/World/Spline/SplinePath.h"
 

@@ -7,7 +7,7 @@
 
 #include "Engine/Behavior/ActionRegistry.h"
 #include "Engine/Reflection/TypeFqn.h"
-#include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Serializer/Archive.h"
 
 namespace sw
 {

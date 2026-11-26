@@ -24,7 +24,7 @@
 #include "Engine/Object/GameObject/GameObjectEvents.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
-#include "Engine/Serialization/Format/FormatDef.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
 #include "Engine/VFX/VFXComponent.h"
 #include "Engine/Visual/Component/DirectionalLightComponent.h"
 #include "Engine/Visual/Component/LightComponent.h"
@@ -41,11 +41,11 @@ namespace sw
     {
         struct CharacterBodyDynamicsInternal
         {
-            static constexpr uint32    kAllLayers = 0xFFFFFFFFu;
-            static constexpr FormatDef kStateFormat{ "BDYN" };
-            static constexpr uint16    kSmearResolution = 64;    ///< 번짐 격자(굽기 텍스처보다 성기다 — 번짐은 부드럽다)
-            static constexpr float32   kSmearDilution   = 0.5f;  ///< 흐름 한 번이 세기 대비 묽히는 비율
-            static constexpr float32   kWipeRadius      = 0.08f; ///< 닦기가 끄는 UV 반지름
+            static constexpr uint32     kAllLayers = 0xFFFFFFFFu;
+            static constexpr FormatDesc kStateFormat{ "BDYN" };
+            static constexpr uint16     kSmearResolution = 64;    ///< 번짐 격자(굽기 텍스처보다 성기다 — 번짐은 부드럽다)
+            static constexpr float32    kSmearDilution   = 0.5f;  ///< 흐름 한 번이 세기 대비 묽히는 비율
+            static constexpr float32    kWipeRadius      = 0.08f; ///< 닦기가 끄는 UV 반지름
         };
     } // namespace
 } // namespace sw

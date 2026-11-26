@@ -540,7 +540,7 @@ SW_TEST_CASE( HousingReplicationTest, LargePlotTravelsInChunksThenAsDeltas )
 }
 
 /**
- * @brief [HousingReplicationTest] 고정 배치형 본문 — 판정의 등록 밖 결과 · 잘린 상태 조각 · 전체 밖 조각은 깨진 메시지이고 쌓이지 않는다
+ * @brief [HousingReplicationTest] 스키마 결합형 본문 — 판정의 등록 밖 결과 · 잘린 상태 조각 · 전체 밖 조각은 깨진 메시지이고 쌓이지 않는다
  */
 SW_TEST_CASE( HousingReplicationTest, BodyMessagesRejectUnknownValuesAndTruncation )
 {

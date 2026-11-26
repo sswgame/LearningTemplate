@@ -24,7 +24,7 @@ namespace sw
     {
         NestedContainer, ///< 원소가 또 컨테이너입니다(`NestedContainerInfo::_elementNested`).
         OwnedPointer,    ///< 다형 소유 포인터(`T*`) — 런타임 타입 + 본문. 시퀀스 원소만입니다.
-        ValueObject,     ///< 반사된 값 구조체(`SerializerUtil::findNestedObjectType`).
+        ValueObject,     ///< 반사된 값 구조체(`ValueSerializer::findNestedObjectType`).
         Scalar,          ///< 그 밖의 값(텍스트 · 바이너리 핸들러 · enum).
     };
 

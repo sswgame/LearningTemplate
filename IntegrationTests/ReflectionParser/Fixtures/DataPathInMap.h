@@ -4,7 +4,7 @@
 #include "Core/Container/unordered_map.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Serialization/Serializer/DataPath.h"
+#include "Engine/Serialization/Reference/DataPath.h"
 
 namespace sw::fixture
 {

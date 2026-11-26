@@ -23,12 +23,13 @@
 #include "Engine/Reflection/ReflectedValueVisitor.h"
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/TypeRegistry.h"
-#include "Engine/Serialization/Format/BinarySerializer.h"
-#include "Engine/Serialization/Format/JSONSerializer.h"
-#include "Engine/Serialization/Format/XMLSerializer.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
+#include "Engine/Serialization/Serializer/BinarySerializer.h"
+#include "Engine/Serialization/Serializer/JSONSerializer.h"
+#include "Engine/Serialization/Serializer/PropertyConstraints.h"
+#include "Engine/Serialization/Serializer/PropertySerializer.h"
 #include "Engine/Serialization/Serializer/SerializeContext.h"
-#include "Engine/Serialization/Serializer/SerializerUtil.h"
+#include "Engine/Serialization/Serializer/XMLSerializer.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw
@@ -54,7 +55,7 @@ namespace sw
             /**
              * @brief 상태 글에서 빠졌거나 빈 필수 칸(`PROPERTY( Required )`)의 경로를 모읍니다. 읽지 못하는 글은 빈 목록이다(역직렬화가 알린다).
              * @details 컴포넌트 목록 원소는 런타임 타입의 칸으로 본다(`XMLSerializer` · `JSONSerializer::collectMissingRequired`). 읽기와 저장이 이 하나를 쓰고,
-             *          형식은 문서를 여는 법만 가른다 — 빠짐 · 빈 이름 판정은 `SerializerUtil::isRequiredValueMissing` 하나다.
+             *          형식은 문서를 여는 법만 가른다 — 빠짐 · 빈 이름 판정은 `PropertyConstraints::isRequiredValueMissing` 하나다.
              */
             template <typename TSerializer>
             static vector<string> collectMissingRequired( const TypeInfo& typeInfo, string_view stateText, string& outObjectName )
@@ -980,7 +981,7 @@ namespace sw
         // 읽지 않은 필드(Transient, 저작 읽기의 RuntimeState)는 현재 실행의 값이다 — 읽기와 같은 판정(`shouldSerializeProperty`)으로 거른다.
         const SerializeContext& context = SerializeContext::getDefault( *entry._loadedPurpose );
         auto                    filter  = [&context]( const TypeInfo& owner, const PropertyInfo& prop )
-        { return SerializerUtil::shouldSerializeProperty( owner, prop, context ); };
+        { return PropertySerializer::shouldSerializeProperty( owner, prop, context ); };
         const TypeRegistry& registry = context.getTypeRegistry();
         auto                remap    = [this, &entry]( const GameObjectHandle& savedHandle, const PropertyInfo& )
         { return resolveObjectReference( savedHandle, entry._savedIDScope ); };

@@ -19,12 +19,12 @@
 #include "Engine/Object/Prefab/PrefabInstanceRegistry.h"
 #include "Engine/Object/Prefab/PrefabOverrides.h"
 #include "Engine/Object/Prefab/PrefabPathStack.h"
-#include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/FormatDef.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
 #include "Engine/Serialization/Inherit/ResourceComposer.h"
 #include "Engine/Serialization/Inherit/ResourceComposition.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
+#include "Engine/Serialization/Serializer/Archive.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
 
@@ -74,7 +74,7 @@ namespace sw
             }
             static constexpr const utf8* kVariantOverrides = "overrides"; ///< JSON 변형의 다른 점(글 하나 — 중첩 노드의 `overrides` 와 같다)
             /** @brief 상태 뒤에 중첩 인스턴스 노드(부품 경로 `_partPath` · 고정 지역 id `_localID` — 감사 A-2)가 붙는다. 다른 버전은 읽지 않는다(쿠킹본은 다시 쿠킹한다). */
-            static constexpr FormatDef kBinFormat{ "SWPF" };
+            static constexpr FormatDesc kBinFormat{ "SWPF" };
 
             static void collectPrefabRefsFromText( const utf8* pText, vector<string>& outListPath )
             {

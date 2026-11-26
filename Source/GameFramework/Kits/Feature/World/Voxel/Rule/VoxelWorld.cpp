@@ -8,8 +8,8 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Profiling/FrameProfiler.h"
-#include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/FormatUpgrade.h"
+#include "Engine/Serialization/Serializer/Archive.h"
 
 namespace sw
 {

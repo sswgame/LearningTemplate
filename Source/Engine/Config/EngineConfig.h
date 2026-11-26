@@ -7,7 +7,7 @@
 #include "Engine/Config/IConfig.h"
 #include "Engine/Config/RHIBackendType.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Serialization/Serializer/DataPath.h"
+#include "Engine/Serialization/Reference/DataPath.h"
 
 #include "sw/config/CookContract.gen.h"
 

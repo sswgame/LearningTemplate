@@ -4,8 +4,8 @@
 
 #include "Editor/Common/Workspace/EditorSubsystems.h"
 
-#include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/FormatDef.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
+#include "Engine/Serialization/Serializer/Archive.h"
 
 #include "ModuleAPI/Service/IModuleStateStore.h"
 
@@ -18,7 +18,7 @@ namespace sw::editor
             /** @brief 맡김 칸의 키입니다. */
             static constexpr string_view kStoreKey = "editor.objectCopyBuffer";
             /** @brief 맡긴 형식의 판입니다. 항목 모양이 바뀌면 올린다(옛 판은 버린다). */
-            static constexpr FormatDef kFormat{ "EDCP" };
+            static constexpr FormatDesc kFormat{ "EDCP" };
         };
     } // namespace
 

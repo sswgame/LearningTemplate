@@ -7,11 +7,11 @@
 #include "Core/Log/Logger.h"
 #include "Core/Time/MonotonicClock.h"
 
-#include "Programs/ReflectionParser/ParserDefines.h"
-#include "Programs/ReflectionParser/ParserOptions.h"
-#include "Programs/ReflectionParser/ParserSession.h"
-#include "Programs/ReflectionParser/ReflectBuiltinsLoader.h"
-#include "Programs/ReflectionParser/ReflectionPipeline.h"
+#include "Programs/ReflectionParser/Config/ParserConfigKeys.h"
+#include "Programs/ReflectionParser/Config/ParserOptions.h"
+#include "Programs/ReflectionParser/Run/ParserSession.h"
+#include "Programs/ReflectionParser/Run/ReflectionPipeline.h"
+#include "Programs/ReflectionParser/TypeMap/ReflectBuiltinsLoader.h"
 
 namespace sw
 {

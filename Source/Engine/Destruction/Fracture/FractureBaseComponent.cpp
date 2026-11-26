@@ -28,7 +28,7 @@
 #include "Engine/Physics/Scene/ScenePhysics.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Reflection/ReflectionCast.h"
-#include "Engine/Serialization/Format/FormatDef.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
 #include "Engine/Visual/Component/MeshComponent.h"
 
 namespace sw
@@ -138,7 +138,7 @@ namespace sw
                     outListAnchor[leaf] = bAnchored ? 1 : 0;
                 }
             }
-            static constexpr FormatDef kStateFormat{ "FRST" };
+            static constexpr FormatDesc kStateFormat{ "FRST" };
 
             /// `_listRuntime` 은 그룹 번호 오름차순이다(그룹 변경 뒤 정렬, 복원은 상태의 오름차순 그룹 순서). 그 순서로 이분 탐색한다 — 사건 · 충돌마다 부르는 곳이라 선형이면 그룹 수만큼 든다.
             static bool isGroupBefore( const FractureGroupRuntime& lhs, const FractureGroupRuntime& rhs ) { return lhs._groupID < rhs._groupID; }

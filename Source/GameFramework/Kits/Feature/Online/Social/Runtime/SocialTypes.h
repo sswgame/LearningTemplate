@@ -70,7 +70,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 관계 한 줄입니다. 응답(`SocialLinksReply`)에 고정 배치형으로 실립니다. */
+    /** @brief 관계 한 줄입니다. 응답(`SocialLinksReply`)에 스키마 결합형으로 실립니다. */
     REFLECT()
     struct SocialLink
     {
@@ -103,7 +103,7 @@ namespace sw
 {
     /**
      * @brief 한 계정의 접속 상태입니다. 친구에게 보이는 값입니다.
-     * @details 응답과 알림에는 고정 배치형(B)으로, 서버 버스(`SocialBus::kPresenceTopic`)에는 자기 기술형(A)으로 실립니다.
+     * @details 응답과 알림에는 스키마 결합형으로, 서버 버스(`SocialBus::kPresenceTopic`)에는 자기 기술형으로 실립니다.
      *          캐시 값(시한 있는 접속 상태)은 배포 중에 다른 빌드의 서버가 읽을 수 있으므로 자기 기술형(A, `CacheRecordTable<SocialPresence>`)입니다.
      */
     REFLECT()
@@ -198,7 +198,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 길드 정보입니다. 조회는 멤버 목록까지 담고, 만들기 응답은 id 와 이름만 담습니다. 응답(`GuildInfoReply`)에 고정 배치형으로 실립니다. */
+    /** @brief 길드 정보입니다. 조회는 멤버 목록까지 담고, 만들기 응답은 id 와 이름만 담습니다. 응답(`GuildInfoReply`)에 스키마 결합형으로 실립니다. */
     REFLECT()
     struct GuildInfo
     {

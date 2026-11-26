@@ -193,7 +193,7 @@ namespace sw
 
         /**
          * @brief 타입 · enum 을 찾을 레지스트리를 정합니다. nullptr 이면 엔진 전역 레지스트리입니다(기본).
-         * @details 직렬화의 깊은 경로(`SerializerUtil`)는 전역을 직접 부르지 않고 이 컨텍스트에게 묻는다. 테스트는 자기 레지스트리를
+         * @details 직렬화의 깊은 경로(`ValueSerializer`)는 전역을 직접 부르지 않고 이 컨텍스트에게 묻는다. 테스트는 자기 레지스트리를
          *          넣어 전역 등록 상태와 떨어진 채로 직렬화를 돌린다. 레지스트리는 이 컨텍스트로 직렬화하는 동안 살아 있어야 한다.
          */
         SerializeContext& setTypeRegistry( const TypeRegistry* pTypeRegistry )

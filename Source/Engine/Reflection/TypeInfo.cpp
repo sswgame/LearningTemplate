@@ -118,7 +118,7 @@ namespace sw
         _addComponent         = desc._pAddComponent;
         _pValidate            = desc._pValidate;
         _pReadValidate        = desc._pReadValidate;
-        _pFixedCodec          = desc._pFixedCodec;
+        _pLayoutSchema        = desc._pLayoutSchema;
         _bAbstract            = toFlag( TypeDescFlag::kAbstract );
         _bStatic              = toFlag( TypeDescFlag::kStatic );
         _bPrimitive           = toFlag( TypeDescFlag::kPrimitive );
@@ -195,7 +195,7 @@ namespace sw
         , _addComponent{ nullptr }
         , _pValidate{ nullptr }
         , _pReadValidate{ nullptr }
-        , _pFixedCodec{ nullptr }
+        , _pLayoutSchema{ nullptr }
         , _name{}
         , _fullyQualifiedName{}
         , _parentFQN{}
@@ -330,7 +330,7 @@ namespace sw
         _addComponent         = other._addComponent;
         _pValidate            = other._pValidate;
         _pReadValidate        = other._pReadValidate;
-        _pFixedCodec          = other._pFixedCodec;
+        _pLayoutSchema        = other._pLayoutSchema;
         _name                 = other._name;
         _fullyQualifiedName   = other._fullyQualifiedName;
         _parentFQN            = other._parentFQN;
@@ -363,7 +363,7 @@ namespace sw
         _addComponent         = other._addComponent;
         _pValidate            = other._pValidate;
         _pReadValidate        = other._pReadValidate;
-        _pFixedCodec          = other._pFixedCodec;
+        _pLayoutSchema        = other._pLayoutSchema;
         _name                 = other._name;
         _fullyQualifiedName   = other._fullyQualifiedName;
         _parentFQN            = other._parentFQN;
@@ -638,7 +638,7 @@ namespace sw
         _derived._inheritedProperties.publish( make_unique<TypeInheritedPropertySlot::Snapshot>() ); // 묘비는 빈 목록이 답이다 — 든 포인터로 물어도 멈추지 않는다
         _pValidate     = nullptr;
         _pReadValidate = nullptr;
-        _pFixedCodec   = nullptr;
+        _pLayoutSchema = nullptr;
     }
 
     bool TypeInfo::computeAncestorDisplay() const

@@ -68,7 +68,7 @@ namespace sw
             return beginDescribed( TTable::template getKindOf<TMessage>(), channel, TTable::kWorldScoped );
         }
         /**
-         * @brief 비우고 표 @p TTable 의 메시지 @p TMessage 의 종류 바이트와 본문(고정 배치형, `NetMessageBodyDef`)을 씁니다.
+         * @brief 비우고 표 @p TTable 의 메시지 @p TMessage 의 종류 바이트와 본문(스키마 결합형, `NetMessageBodyDef`)을 씁니다.
          * @return 범위 밖 값이 있으면 오류를 남기고 false 입니다 — 쓰다 만 바이트이므로 보내지 않는다.
          */
         template <typename TTable, typename TMessage>

@@ -104,7 +104,7 @@ namespace sw
          * @details 경계가 실행 시간에 정해지므로 숫자(`_minRange`) 하나로는 담지 못한다. 생성기가 같은 타입의 필드 하나를 가리키는 경계에만 만든다.
          *          이름을 실행 시간에 찾지 않고 컴파일된 멤버 읽기라, 이름이 틀리면 생성된 코드가 컴파일되지 않는다. 숫자 경계(`_bHasMinRange`)와 함께 있지 않다.
          *          읽기 공통 끝도 이 경계를 지키므로 Shipping 에도 있다(`computeAllowedRange`).
-         *          바깥 타입의 필드를 가리키는 경계와 성분 목록(`"-_a, 0, -_a"`)은 고정 배치형 코덱만 쓴다(인스펙터는 바깥 인스턴스를 모르고 벡터 성분에 범위를 두지 않는다).
+         *          바깥 타입의 필드를 가리키는 경계와 성분 목록(`"-_a, 0, -_a"`)은 레이아웃 스키마만 쓴다(인스펙터는 바깥 인스턴스를 모르고 벡터 성분에 범위를 두지 않는다).
          */
         PropertyRangeReadFunction _pReadMinRange;
         PropertyRangeReadFunction _pReadMaxRange;
@@ -118,7 +118,7 @@ namespace sw
         float32                       _maxRange;
         /**
          * @brief 문자열 · 컨테이너 최대 길이입니다(`PROPERTY( MaxCount = 32 )`, `MaxCount = kMaxSlotCount`). 적지 않았으면 0 입니다.
-         * @details 고정 배치형 코덱이 쓰기와 읽기에서 지키는 상한과 같은 값입니다. 상수 이름으로 적으면 생성기가 그 상수의 값을 넣으므로
+         * @details 레이아웃 스키마이 쓰기와 읽기에서 지키는 상한과 같은 값입니다. 상수 이름으로 적으면 생성기가 그 상수의 값을 넣으므로
          *          상한을 C++ 상수와 애노테이션 두 곳에 숫자로 적지 않습니다.
          */
         uint32 _maxCount;
@@ -167,13 +167,13 @@ namespace sw
         uint8 _bInterp : 1;
         /**
          * @brief 플레이 중에만 의미가 있는 상태입니다(`RuntimeState`). 저작 저장(`SerializePurpose::Authoring`)은 쓰지 않고, 스냅샷과 세이브는 씁니다.
-         * @details 판정 표는 `SerializerUtil::shouldSerializeProperty` 한 곳이다. 저작 파일을 읽을 때 이 칸이 있으면 로드 오류다(옛 데이터를 다시 쓴다).
+         * @details 판정 표는 `PropertySerializer::shouldSerializeProperty` 한 곳이다. 저작 파일을 읽을 때 이 칸이 있으면 로드 오류다(옛 데이터를 다시 쓴다).
          *          `Transient` · `Required` 와 함께 붙이면 파서가 멈춘다.
          */
         uint8 _bRuntimeState : 1;
         /**
          * @brief 부모가 없는 원소만 반드시 적는 칸입니다(`PROPERTY( RequiredAtRoot )`). 부모를 가리키는 칸(`_bInheritParent`)이 적힌 원소는 물려받은 값을 쓴다.
-         * @details 판정은 `SerializerUtil::isRequiredValueMissing` 한 곳이다 — 손 읽기가 "부모가 없으면 이 칸 필수" 를 따로 적지 않는다(문화권 표의 `digits`).
+         * @details 판정은 `PropertyConstraints::isRequiredValueMissing` 한 곳이다 — 손 읽기가 "부모가 없으면 이 칸 필수" 를 따로 적지 않는다(문화권 표의 `digits`).
          */
         uint8 _bRequiredAtRoot : 1;
         /** @brief 이 칸이 같은 표의 부모 원소를 가리킵니다(`PROPERTY( InheritParent )`). 비어 있지 않게 적히면 그 원소는 상속한다. */
@@ -193,7 +193,7 @@ namespace sw
 
         /**
          * @brief 이 프로퍼티를 가진 객체 @p pOwner 에서 허용 범위를 풉니다. 숫자 경계는 그 값, 필드 경계는 그 필드의 지금 값입니다.
-         * @details 인스펙터의 막기와 읽기 공통 끝(`SerializerUtil::isWithinDeclaredRanges`)이 이 함수 하나로 범위를 얻는다 — 둘이 따로 풀면 필드 경계를 한쪽만 지킨다.
+         * @details 인스펙터의 막기와 읽기 공통 끝(`PropertyConstraints::isWithinDeclaredRanges`)이 이 함수 하나로 범위를 얻는다 — 둘이 따로 풀면 필드 경계를 한쪽만 지킨다.
          *          필드 경계가 있으면 @p pOwner 가 있어야 한다.
          */
         PropertyAllowedRange computeAllowedRange( const void* pOwner ) const noexcept;

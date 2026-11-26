@@ -8,7 +8,7 @@
 #include "Editor/Panels/ContentBrowser/Model/ContentBrowserFavorite.h"
 
 #include "Engine/Content/AssetID.h"
-#include "Engine/Serialization/Format/XMLSerializer.h"
+#include "Engine/Serialization/Serializer/XMLSerializer.h"
 
 using namespace sw;
 using namespace sw::editor;

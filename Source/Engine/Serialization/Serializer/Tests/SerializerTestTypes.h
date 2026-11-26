@@ -10,7 +10,7 @@
 
 #include "Engine/EngineMinimal.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Serialization/Serializer/DataPath.h"
+#include "Engine/Serialization/Reference/DataPath.h"
 #include "Engine/Serialization/Serializer/SecretValue.h"
 
 namespace sw
@@ -83,7 +83,7 @@ namespace sw
         DataPath _path;
     };
 
-    /** @brief 이름이 같은 칸 옮기기(`SerializerUtil::copySameNamedProperties`)의 받는 쪽 샘플입니다 — `_count` · `_name` 만 `SerializerSample` 과 이름이 같다. */
+    /** @brief 이름이 같은 칸 옮기기(`PropertySerializer::copySameNamedProperties`)의 받는 쪽 샘플입니다 — `_count` · `_name` 만 `SerializerSample` 과 이름이 같다. */
     REFLECT()
     struct SerializerSamplePart
     {

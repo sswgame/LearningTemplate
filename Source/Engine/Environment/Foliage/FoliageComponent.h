@@ -19,8 +19,8 @@
 #include "Engine/Graphics/Mesh/MeshCache.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Serialization/Format/FormatDef.h"
-#include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
+#include "Engine/Serialization/Serializer/StateIO.h"
 
 namespace sw
 {
@@ -227,7 +227,7 @@ namespace sw
             uint32                                _layerIndex{ 0 };
             uint32                                _instanceCount{ 0 };
         };
-        static constexpr FormatDef kStateFormat{ "FOLC" };
+        static constexpr FormatDesc kStateFormat{ "FOLC" };
 
         /**
          * @brief 레이어 하나의 머티리얼들입니다. 바람 · 페이드 값이 레이어 값이라 레이어마다 자기 인스턴스를 가진다.

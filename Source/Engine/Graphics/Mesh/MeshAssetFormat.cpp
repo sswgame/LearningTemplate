@@ -12,7 +12,7 @@
 #include "Core/Serialization/LittleEndianUtil.h"
 
 #include "Engine/Content/AssetIO.h"
-#include "Engine/Serialization/Format/FormatDef.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
 
 namespace sw
 {
@@ -24,7 +24,7 @@ namespace sw
          */
         struct MeshAssetFormatInternal
         {
-            static constexpr FormatDef kFormat{ "SWMS", MeshAssetFormat::kVersion };
+            static constexpr FormatDesc kFormat{ "SWMS", MeshAssetFormat::kVersion };
 
             /** @brief 파일 머리의 매직(`SWMS`)입니다. */
             /** @brief 정점 플래그의 비트 0 입니다 — 바이탄젠트 부호가 -1 이면 켭니다(탄젠트 w). */

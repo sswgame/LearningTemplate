@@ -6,8 +6,8 @@
 #include "Core/String/formatString.h"
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
-#include "Engine/Serialization/Format/FormatDef.h"
-#include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
+#include "Engine/Serialization/Serializer/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Strategy/TacticsSRPG/SRPGCombat.h"
 
@@ -17,8 +17,8 @@ namespace sw
     {
         struct SRPGGameModeComponentInternal
         {
-            static constexpr FormatDef kStateFormat{ "KDTS" };
-            static constexpr int32     kNoSelection = -1;
+            static constexpr FormatDesc kStateFormat{ "KDTS" };
+            static constexpr int32      kNoSelection = -1;
 
             // 사운드 이벤트 이름 — 클립 · 범위 · 상한은 게임의 사운드 이벤트 데이터(audioevents.xml)가 정한다.
             static constexpr const utf8* kEventPhase     = "SRPGPhase";

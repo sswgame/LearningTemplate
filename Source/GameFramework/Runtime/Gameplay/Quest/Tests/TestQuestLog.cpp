@@ -5,7 +5,7 @@
 
 #include "Engine/Console/DebugHUDRegistry.h"
 #include "Engine/Object/GameObject/Tests/SceneIterationTestAccess.h"
-#include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Serializer/Archive.h"
 
 #include "GameFramework/Runtime/Gameplay/Quest/QuestCatalog.h"
 #include "GameFramework/Runtime/Gameplay/Quest/QuestLog.h"

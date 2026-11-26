@@ -19,7 +19,7 @@
 #include "Engine/Physics/Component/CharacterControllerComponent.h"
 #include "Engine/Physics/IPhysicsScene.h"
 #include "Engine/Physics/Scene/ScenePhysics.h"
-#include "Engine/Serialization/Format/FormatDef.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
 
 namespace sw
 {
@@ -27,7 +27,7 @@ namespace sw
     {
         struct RagdollComponentInternal
         {
-            static constexpr FormatDef kStateFormat{ "RAGD" };
+            static constexpr FormatDesc kStateFormat{ "RAGD" };
 
             static void decompose( const float4x4& matrix, float3& outPosition, quaternion& outRotation )
             {

@@ -31,7 +31,7 @@
 #include "Engine/Physics/Asset/PhysicsRagdoll.h"
 #include "Engine/Physics/Component/PhysicsComponent.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Serializer/StateIO.h"
 
 namespace sw
 {

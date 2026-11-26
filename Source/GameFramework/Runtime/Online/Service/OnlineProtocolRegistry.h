@@ -10,17 +10,17 @@
  *            키트가 해시용 목록을 따로 적는 곳은 없습니다.
  *          - 키트 서비스(클라이언트 `OnlineClientService` · 서버 `IOnlineServerService`)는 `getProtocol` 로 이 항목을 돌려줘야 합니다.
  *            그래서 항목 없이는 서비스를 만들 수 없고, 서비스를 가진 키트는 빠짐없이 해시에 섞입니다.
- *          - 해시는 이 빌드에 올라온 항목 전부의 영역, 메서드 테이블의 이름 순서, 메시지 타입마다의 스키마 해시(`FixedLayout::getSchemaHash`)를 섞습니다.
+ *          - 해시는 이 빌드에 올라온 항목 전부의 영역, 메서드 테이블의 이름 순서, 메시지 타입마다의 스키마 해시(`LayoutSerializer::getSchemaHash`)를 섞습니다.
  *            필드, 순서, 범위 키, 열거자가 바뀌면 손 버전 없이 해시가 바뀝니다. 클라이언트가 키트 일부만 올려도 서버와 같은 값이 나와야 하므로 빌드 전체를 섞습니다.
  *            서버와 클라이언트는 같은 빌드로 배포하므로 같은 키트 모듈이 오르고 같은 해시가 나옵니다.
  *            한쪽만 키트 모듈을 끄거나(`EditorModuleOverrides`) 핫 리로드로 바꾸면 그쪽 해시만 달라져 접속이 `kVersionMismatch` 로 거절됩니다. 의도한 동작입니다.
  *          - 메서드와 알림 번호는 메서드 테이블의 열거자 순서이고, 그 이름 순서가 해시에 섞입니다. 같은 타입을 받는 두 메서드(`TradeIDRequest` 를 받는 Lock 과 Cancel)의
  *            번호를 맞바꾸면 이름 순서가 바뀌어 해시가 달라지므로, 빌드가 다른 서버와 클라이언트는 접속 때 갈립니다.
- *          - 메시지마다 머리에 싣는 타입 스키마 해시(`FixedLayout::write`)는 메서드와 타입의 짝을 확인합니다. 테이블은 메서드의 이름과 번호만 담고 그 메서드가 받는 타입은
+ *          - 메시지마다 머리에 싣는 타입 스키마 해시(`LayoutSerializer::write`)는 메서드와 타입의 짝을 확인합니다. 테이블은 메서드의 이름과 번호만 담고 그 메서드가 받는 타입은
  *            담지 않으므로, 한 메서드가 받는 타입을 목록 안의 다른 타입으로 바꾼 빌드는 해시가 같습니다. 그 어긋남은 읽기가 `SchemaMismatch` 로 거절합니다.
  *          - 프로토콜 표(`OnlineProtocolTable`)로 선 키트는 메시지 목록을 따로 적지 않고 표의 메서드 · 알림 서술자에서 끌어냅니다. 그 해시는 메서드마다 (요청, 응답, 호출 규칙)을 차례로 섞으므로
  *            위 문단의 어긋남(받는 타입을 목록 안의 다른 타입으로 바꾼 빌드)도 접속에서 갈립니다.
- *          - 메시지 타입에 코덱이 없으면(적격이 아니면) 해시를 계산하는 기동 때 이유와 함께 프로세스가 멈춥니다(`FixedLayout::getSchemaHash`).
+ *          - 메시지 타입에 코덱이 없으면(적격이 아니면) 해시를 계산하는 기동 때 이유와 함께 프로세스가 멈춥니다(`LayoutSerializer::getSchemaHash`).
  *          언리얼 `FNetworkVersion::GetLocalNetworkVersion`(빌드에서 나온 값 하나를 접속 때 비교)에 해당합니다(기억에 의존).
  */
 #pragma once
@@ -31,7 +31,7 @@
 #include "Core/Registry/FactoryRegistrationList.h"
 #include "Core/Serialization/BitStream.h"
 
-#include "Engine/Serialization/Fixed/FixedLayout.h"
+#include "Engine/Serialization/Layout/LayoutSerializer.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Online/Service/OnlineProtocol.h"
@@ -43,7 +43,7 @@ namespace sw
 {
     /**
      * @brief 키트 하나가 와이어에 싣는 메시지 타입 목록입니다. 메시지를 쓰고 읽는 길은 이것뿐이며, 같은 목록의 스키마 해시가 등록 항목에 섞입니다.
-     * @details 메시지는 고정 배치형(B, `FixedLayout`)입니다. 타입은 `REFLECT` 와 `PROPERTY` 만 가지며, 범위와 길이는 `Min`, `Max`, `MaxCount` 로 적습니다.
+     * @details 메시지는 스키마 결합형(B, `LayoutSerializer`)입니다. 타입은 `REFLECT` 와 `PROPERTY` 만 가지며, 범위와 길이는 `Min`, `Max`, `MaxCount` 로 적습니다.
      *          범위 밖 값은 잘라 쓰지 않고 쓰기가 실패합니다. 중첩 타입(목록의 원소, 필드 구조체)은 바깥 타입의 해시에 섞이므로 목록에 적지 않습니다.
      * @tparam TMessage 요청, 응답, 알림 본문의 최상위 타입들(클라이언트와 주고받는 것만 넣는다. 서버 버스 본문은 `ServerBusTopic`)
      */
@@ -66,7 +66,7 @@ namespace sw
             }
             else
             {
-                if ( FixedLayout::write( message, outWriter ) )
+                if ( LayoutSerializer::write( message, outWriter ) )
                     return true;
                 SW_LOG_ERROR_ID( "OnlineProtocol.MessageOutOfRange", "Online message '%#' has a value outside its declared range and was not written", typeFqn<T>().c_str() );
                 return false;
@@ -75,18 +75,18 @@ namespace sw
 
         /** @brief @p reader 에 남은 비트 전체를 메시지 하나로 읽습니다. `Ok` 일 때만 @p inoutMessage 를 바꿉니다. 받은 바이트라 로그는 부르는 쪽이 정합니다. */
         template <typename T>
-        [[nodiscard]] static FixedReadResult read( BitReader& reader, T& inoutMessage )
+        [[nodiscard]] static LayoutReadResult read( BitReader& reader, T& inoutMessage )
         {
             static_assert( kContains<T>, "the type is not in this kit's OnlineMessageTypes - add it there so its schema hash joins the online schema hash" );
             if constexpr ( std::is_same_v<T, OnlineNoBody> )
             {
                 (void)reader;
                 (void)inoutMessage;
-                return FixedReadResult::Ok;
+                return LayoutReadResult::Ok;
             }
             else
             {
-                return FixedLayout::read( reader, inoutMessage );
+                return LayoutSerializer::read( reader, inoutMessage );
             }
         }
 
@@ -94,7 +94,7 @@ namespace sw
         static uint64 computeSchemaHash()
         {
             uint64 hash = 0;
-            ( ( hash = HashUtil::combine( hash, FixedLayout::getSchemaHash<TMessage>() ) ), ... );
+            ( ( hash = HashUtil::combine( hash, LayoutSerializer::getSchemaHash<TMessage>() ) ), ... );
             return hash;
         }
     };
@@ -176,7 +176,7 @@ namespace sw
             if constexpr ( std::is_same_v<TBody, OnlineNoBody> )
                 return 0;
             else
-                return FixedLayout::getSchemaHash<TBody>();
+                return LayoutSerializer::getSchemaHash<TBody>();
         }
 
         static constexpr bool isInEnumeratorOrder()

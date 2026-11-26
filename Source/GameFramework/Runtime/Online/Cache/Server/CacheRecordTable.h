@@ -1,7 +1,7 @@
 /**
  * @file CacheRecordTable.h
  * @brief 휘발 저장소 값의 형식입니다. 서비스는 이 형식으로만 값을 짓고 읽는다(`CacheValue` 바이트는 비공개 — 저장소 레코드 표 `ServiceRecordTable` 과 같은 규칙).
- * @details - `CacheRecordTable<T>`: `REFLECT` 레코드 하나(고정 배치형 코덱이 있는 형식). 쓰기는 판 머리 + 자기 기술형(A), 읽기는 빌드가 섞인 서버끼리의 읽기
+ * @details - `CacheRecordTable<T>`: `REFLECT` 레코드 하나(레이아웃 스키마가 있는 형식). 쓰기는 판 머리 + 자기 기술형, 읽기는 빌드가 섞인 서버끼리의 읽기
  *            (`MixedBuildCodec` — 다른 판 · 읽지 못한 아는 칸은 없는 것). 다시 만들 수 있는 캐시라 깨진 값은 없는 것으로 보고 로그를 남기지 않는다(`ServiceRecordUtil::readCache`).
  *          - `CacheValueUtil`: id 하나(0 · 깨짐은 없는 것) · 있음 표시 · 정수 셈(Increment 가 쓴 글)의 값.
  */

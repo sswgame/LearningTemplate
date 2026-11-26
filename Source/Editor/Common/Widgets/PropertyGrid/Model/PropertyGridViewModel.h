@@ -225,7 +225,7 @@ namespace sw::editor
         /** @brief 숫자 행 @p rowID 에 저장 단위 값 @p storedValue 를 허용 범위(`Min` · `Max`)로 자른 뒤 씁니다. 되돌리기는 `setRowValue` 와 같다. */
         void setRowNumber( uint32 rowID, float64 storedValue );
         /**
-         * @brief 행 @p rowID 에 텍스트 값(`SerializerUtil::formatPropertyText` 형식)을 적용하고 편집으로 기록합니다.
+         * @brief 행 @p rowID 에 텍스트 값(`PropertySerializer::formatPropertyText` 형식)을 적용하고 편집으로 기록합니다.
          * @details Reset, Paste Value, 그리기 확장(`IPropertyDrawer`)의 팝업 편집기 · 선택기가 함께 쓴다.
          *          다중 선택은 편집이 닿는 컴포넌트 전부의 값 글을 찍고(`_collectEditTargets`), `_onEdited` 가 값을 나머지에도 입힌다.
          */
@@ -234,12 +234,12 @@ namespace sw::editor
         bool setAssetPath( uint32 rowID, string_view path );
         /** @brief 행 @p rowID 를 기본값으로 되돌립니다. 기본값은 대상 컴포넌트의 기본 인스턴스(CDO)이고, 없으면 메타 텍스트입니다. */
         void resetToDefault( uint32 rowID );
-        /** @brief 행 @p rowID 의 값 글(`SerializerUtil::formatPropertyText`)입니다 — Copy Value 가 부른다. 없는 행은 빈 글입니다. */
+        /** @brief 행 @p rowID 의 값 글(`PropertySerializer::formatPropertyText`)입니다 — Copy Value 가 부른다. 없는 행은 빈 글입니다. */
         string formatPropertyText( uint32 rowID ) const;
         /**
          * @brief 글 @p text 를 행 @p rowID 에 붙여 넣을 수 있으면 true 입니다(R13 — Paste Value 의 켜짐). 값은 바꾸지 않는다.
          * @details 내장 값(수 · 벡터 · bool …)과 열거형은 그 타입의 빈 사본에 읽혀야 한다 — 읽히지 않는 글을 켜 두면 눌러도 아무 일이 없다(유니티의 타입 있는 클립보드가 회색으로 두는 것).
-         *          글 칸(`string` · `hashed_string`)은 어떤 글이든 받는다. 그 밖의 타입(구조체 · 컨테이너 · 에셋 참조)은 적용(`SerializerUtil::applyPropertyText`)이 거르고 값은 그대로다.
+         *          글 칸(`string` · `hashed_string`)은 어떤 글이든 받는다. 그 밖의 타입(구조체 · 컨테이너 · 에셋 참조)은 적용(`PropertySerializer::applyPropertyText`)이 거르고 값은 그대로다.
          *          타입 핸들은 선택기만이 입력 길이라 false 다(`PropertyValueRow::_bPasteAllowed`).
          */
         [[nodiscard]] bool canPasteText( uint32 rowID, string_view text ) const;

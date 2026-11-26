@@ -1,10 +1,10 @@
 /**
  * @file ServerDirectoryProtocol.h
  * @brief 서버 디렉터리의 메서드, 알림, 키트 오류 번호와 본문 형식, 저장소 레코드 코덱을 정의합니다.
- * @details 요청과 응답은 `REFLECT` 구조체 하나씩이고 본문은 고정 배치형(B)이다. 바이트 배치는 `PROPERTY` 선언 순서와 키가 정한다.
+ * @details 요청과 응답은 `REFLECT` 구조체 하나씩이고 본문은 스키마 결합형이다. 바이트 배치는 `PROPERTY` 선언 순서와 키가 정한다.
  *          배정 응답은 결과(`ServerDirectoryResult`)를 본문에 싣는다. 점검과 빈 서버는 오류가 아니라 정상 응답이며 클라이언트가 화면에 그린다.
  *          모르는 서버 종류만 키트 오류(`ServerDirectoryError::kUnknownKind`)이다.
- *          점검 창과 공지의 저장소 레코드는 다른 빌드가 읽으므로 자기 기술형(A)이다.
+ *          점검 창과 공지의 저장소 레코드는 다른 빌드가 읽으므로 자기 기술형이다.
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -88,7 +88,7 @@ namespace sw
 {
     /**
      * @struct ServerDirectoryProtocol
-     * @brief 서버 디렉터리의 메시지 타입 목록, 등록 항목, 저장소 레코드 코덱입니다. 본문은 고정 배치형(B)이며 `MessageTypes::write` · `read` 로만 쓰고 읽습니다.
+     * @brief 서버 디렉터리의 메시지 타입 목록, 등록 항목, 저장소 레코드 코덱입니다. 본문은 스키마 결합형이며 `MessageTypes::write` · `read` 로만 쓰고 읽습니다.
      * @details 상태 응답과 상태 알림의 본문은 `ServerDirectoryStatus` 입니다.
      */
     struct SW_KIT_API ServerDirectoryProtocol

@@ -8,9 +8,9 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Log/Logger.h"
 
-#include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/FormatDef.h"
-#include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
+#include "Engine/Serialization/Serializer/Archive.h"
+#include "Engine/Serialization/Serializer/StateIO.h"
 
 namespace sw
 {
@@ -35,7 +35,7 @@ namespace sw
         }
 
         /**
-         * @brief 구간 하나를 사본에 읽고 끝까지 맞으면 반영합니다. 옛 판은 형식이 든 단계(`FormatDef`)로 올려 읽습니다(감사 A-6).
+         * @brief 구간 하나를 사본에 읽고 끝까지 맞으면 반영합니다. 옛 판은 형식이 든 단계(`FormatDesc`)로 올려 읽습니다(감사 A-6).
          *        올릴 단계가 없거나 깨졌으면 경고를 남기고 그대로 둔 채 false 입니다(부르는 쪽이 로드 전체를 실패시킨다).
          */
         template <typename TState>
@@ -57,7 +57,7 @@ namespace sw
 
         /** @brief 머리(@p format), 구간 수 @p sectionCount, 구간들을 씁니다. */
         template <typename TForEach>
-        static void write( Archive& archive, const FormatDef& format, uint32 sectionCount, const TForEach& forEachSection )
+        static void write( Archive& archive, const FormatDesc& format, uint32 sectionCount, const TForEach& forEachSection )
         {
             format.write( archive );
             archive << sectionCount;
@@ -70,7 +70,7 @@ namespace sw
          * @param pOwnerName 거절 오류에 적을 이름(예 "the session state")
          */
         template <typename TForEach>
-        [[nodiscard]] static bool read( StateIO& io, const FormatDef& format, uint32 sectionCount, const TForEach& forEachSection, const utf8* pOwnerName )
+        [[nodiscard]] static bool read( StateIO& io, const FormatDesc& format, uint32 sectionCount, const TForEach& forEachSection, const utf8* pOwnerName )
         {
             io.header( format );
             Archive& archive    = io.getArchive(); // 머리 뒤에 받는다 — 옛 판이면 올린 바이트다

@@ -15,7 +15,7 @@
 #pragma once
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Serialization/Serializer/AssetRefBase.h"
+#include "Engine/Serialization/Reference/AssetRefBase.h"
 
 namespace sw
 {

@@ -77,25 +77,25 @@ namespace sw
     bool GimmickStateBundle::write( vector<uint8>& outBytes ) const
     {
         BitWriter                   writer{ std::move( outBytes ) };
-        [[maybe_unused]] const bool bWritten = FixedLayout::write( *this, writer );
+        [[maybe_unused]] const bool bWritten = LayoutSerializer::write( *this, writer );
         outBytes                             = writer.releaseBytes();
         if ( bWritten == false )
             outBytes.clear();
         return bWritten;
     }
 
-    FixedReadResult GimmickStateBundle::read( const uint8* pData, size_t size )
+    LayoutReadResult GimmickStateBundle::read( const uint8* pData, size_t size )
     {
         // BitReader 는 int32 바이트 수를 받는다. 그보다 큰 입력은 항목 상한으로도 나올 수 없는 크기다.
         if ( pData == nullptr || size > static_cast<size_t>( std::numeric_limits<int32>::max() ) )
-            return FixedReadResult::Truncated;
-        return FixedLayout::read( pData, static_cast<int32>( size ), *this );
+            return LayoutReadResult::Truncated;
+        return LayoutSerializer::read( pData, static_cast<int32>( size ), *this );
     }
 
     uint64 GimmickStateBundle::computeHash() const
     {
         BitWriter                   writer;
-        [[maybe_unused]] const bool bWritten = FixedLayout::write( *this, writer );
+        [[maybe_unused]] const bool bWritten = LayoutSerializer::write( *this, writer );
         SW_ASSERT( bWritten ); // 항목 수는 kMaxEntryCount, 회로 상태는 populate · registerKind 가 상한 안으로 막았다
         return HashUtil::appendBytes64( HashUtil::kFNVOffset64, writer.getBytes().data(), static_cast<size_t>( writer.getByteCount() ) );
     }

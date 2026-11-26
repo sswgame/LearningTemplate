@@ -39,9 +39,9 @@
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Inherit/DataCatalogReferences.h"
-#include "Engine/Serialization/Serializer/AssetRefBase.h"
-#include "Engine/Serialization/Serializer/CatalogKey.h"
-#include "Engine/Serialization/Serializer/SerializerUtil.h"
+#include "Engine/Serialization/Reference/AssetRefBase.h"
+#include "Engine/Serialization/Reference/CatalogKey.h"
+#include "Engine/Serialization/Serializer/ValueSerializer.h"
 
 #include <imgui.h>
 #include <imgui_internal.h>
@@ -621,7 +621,7 @@ namespace sw::editor
                 {
                     // `picked` 는 값 자체라 값 주소 쪽 변환(`formatValueText`)으로 쓴다. 객체 주소 쪽(`formatPropertyText`)은 오프셋을 한 번 더 더한다.
                     const string undoLabel = PropertyGridLayout::makeUndoLabel( row._label.c_str() );
-                    model.setPropertyText( row._rowID, SerializerUtil::formatValueText( ValueAddress{ &picked }, row._typeName, SerializeContext::getDefault( SerializePurpose::Authoring ) ),
+                    model.setPropertyText( row._rowID, ValueSerializer::formatValueText( ValueAddress{ &picked }, row._typeName, SerializeContext::getDefault( SerializePurpose::Authoring ) ),
                                            undoLabel.c_str() );
                 }
                 showTooltipIfHovered( row );

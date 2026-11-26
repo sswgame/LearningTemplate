@@ -62,8 +62,8 @@
     },
     "_nameHashKey": {
         "Source/Engine/Reflection/TypeRegistry.cpp": "기반 자신이다 — 해시 표는 NameHashIndex(find 로 종류 · 지운 이름을 먼저 본다)이고, tryFindNameHashClash 는 열거자 해시 충돌을 찾는 검사 표다",
-        "Source/Engine/Serialization/Format/BinarySerializer.cpp": "LogOnce 키(경고를 필드마다 한 번)다 — 겹치면 경고 한 줄이 빠질 뿐 데이터는 바뀌지 않는다",
-        "Source/Engine/Serialization/Serializer/SerializerUtil.cpp": "LogOnce 키(모르는 열거자 경고를 한 번)다 — 겹쳐도 데이터는 바뀌지 않는다",
+        "Source/Engine/Serialization/Serializer/BinarySerializer.cpp": "LogOnce 키(경고를 필드마다 한 번)다 — 겹치면 경고 한 줄이 빠질 뿐 데이터는 바뀌지 않는다",
+        "Source/Engine/Serialization/Serializer/ValueSerializer.cpp": "LogOnce 키(모르는 열거자 경고를 한 번)다 — 겹쳐도 데이터는 바뀌지 않는다",
         "Source/GameFramework/Runtime/Online/Bus/ServerBus.cpp": "LogOnce 키(버린 메시지 경고를 한 번)다 — 겹쳐도 거절 수는 그대로 센다",
         "Source/GameFramework/Runtime/Gameplay/Appearance/CharacterAppearance.cpp": "무작위 씨앗에 섞는 값이다(pickUnit) — 겹쳐도 같은 씨앗일 뿐 표가 아니다",
         "Source/GameFramework/Runtime/Gameplay/Gimmick/Circuit/GimmickCircuit.cpp": "저장 상태의 노드 id 해시다 — 만들기(populateNodes)가 NameHashIndex 로 같은 해시의 두 id 를 거절해 회로 안에서는 하나로 정해진다",

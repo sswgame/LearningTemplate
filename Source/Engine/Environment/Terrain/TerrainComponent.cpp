@@ -26,8 +26,8 @@
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
 #include "Engine/Profiling/FrameProfiler.h"
-#include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/FormatDef.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
+#include "Engine/Serialization/Serializer/Archive.h"
 #include "Engine/Visual/MeshInstanceBatch.h"
 
 namespace sw
@@ -39,8 +39,8 @@ namespace sw
             /** @brief 청크 메시 정점 만들기를 워커로 나누는 최소 청크 수입니다. 청크 하나가 디스패치 비용(수십 us)보다 훨씬 크다. */
             static constexpr uint32 kParallelChunkMeshCount = 2;
             /** @brief `findEditedArea` 가 바뀐 청크 둘레로 더 넓히는 칸 수입니다. 높이 질의는 셀의 두 샘플을, 노멀은 그 이웃 샘플을 읽는다. */
-            static constexpr uint32    kEditedAreaMarginCells = 2;
-            static constexpr FormatDef kStateFormat{ "TERS" };
+            static constexpr uint32     kEditedAreaMarginCells = 2;
+            static constexpr FormatDesc kStateFormat{ "TERS" };
 
             static const hashed_string& getLayerColorName( uint32 layerIndex )
             {

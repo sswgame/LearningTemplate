@@ -6,7 +6,7 @@
  *          (가린 글이 값으로 돌아오지 않는다). 값은 `reveal` 로만 꺼낸다 — 검색 한 번으로 비밀을 만지는 곳이 모두 나온다. 사라질 때 바이트를 지운다.
  *          Rust `secrecy::SecretBox`(Debug 는 가리고 꺼내기는 `expose_secret`) · Kubernetes `Secret` 값 형식과 같은 규칙이다. 언리얼 · 유니티 · Godot 엔진엔 이 자리가 없다.
  *
- *          바이너리(`BinarySerializer` · `FixedLayout`)는 값을 싣는다 — 저장 레코드와 암호화된 연결의 메시지가 쓴다.
+ *          바이너리(`BinarySerializer` · `LayoutSerializer`)는 값을 싣는다 — 저장 레코드와 암호화된 연결의 메시지가 쓴다.
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -54,7 +54,7 @@ namespace sw
         uint8 _arrByte[kSize]{};
     };
 
-    /** @brief 글 비밀(비밀번호)입니다. 넣기는 자유이고 꺼내기는 `reveal` 뿐입니다. 길이 상한은 받는 쪽 규칙이 정하고, 고정 배치형은 `kMaxWireSize` 까지만 싣습니다. */
+    /** @brief 글 비밀(비밀번호)입니다. 넣기는 자유이고 꺼내기는 `reveal` 뿐입니다. 길이 상한은 받는 쪽 규칙이 정하고, 스키마 결합형은 `kMaxWireSize` 까지만 싣습니다. */
     REFLECT()
     class SW_API SecretText
     {

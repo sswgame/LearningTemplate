@@ -8,9 +8,9 @@
 
 #include "Engine/Module/ModuleSharedAssetCache.h"
 #include "Engine/Reflection/EnumName.h"
-#include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/FormatDef.h"
-#include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
+#include "Engine/Serialization/Serializer/Archive.h"
+#include "Engine/Serialization/Serializer/StateIO.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
@@ -23,7 +23,7 @@ namespace sw
     {
         struct PlayerStatsInternal
         {
-            static constexpr FormatDef kStateFormat{ "STAT" };
+            static constexpr FormatDesc kStateFormat{ "STAT" };
         };
     } // namespace
 } // namespace sw

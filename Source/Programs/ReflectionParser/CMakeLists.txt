@@ -70,7 +70,7 @@ set_target_properties(ReflectionParser PROPERTIES
 )
 
 # 어노테이션 매크로 표 — IDE 에서 보이게 소스로 단다.
-target_sources(ReflectionParser PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/PredefinedReflectAnnotation.xxx")
+target_sources(ReflectionParser PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/Parse/PredefinedReflectAnnotation.xxx")
 
 # ------------------------------------------------------------------------------
 # 3) libclang.dll — ReflectionParser 옆(BuildTools)으로 복사

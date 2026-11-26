@@ -162,7 +162,7 @@ namespace sw
 
     /**
      * @brief 파괴 키트의 메시지 표입니다. 종류 · 마스크 · 와이어 버전은 표에서 나온다(`NetMessageTable`).
-     * @details 스냅숏 · 해시 · 요청 본문은 고정 배치형(`NetMessageBodyDef`)이다. 이벤트(있으면 덩어리 자세)와 자세(예산에 맞춘 개수 · 멈춤 여부에 따른 양자화)는
+     * @details 스냅숏 · 해시 · 요청 본문은 스키마 결합형(`NetMessageBodyDef`)이다. 이벤트(있으면 덩어리 자세)와 자세(예산에 맞춘 개수 · 멈춤 여부에 따른 양자화)는
      *          값마다 인코딩을 고르는 손 본문이고, 칸은 선언(`DestructionEventNetState` · `DestructionExactPoseNetState` · `DestructionMovingPoseNetState`)이다.
      */
     struct NetDestructionMessage

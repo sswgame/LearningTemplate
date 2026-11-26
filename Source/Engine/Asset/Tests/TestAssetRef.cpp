@@ -8,10 +8,11 @@
 #include "Engine/Presentation/AudioPlayableAsset.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/TypeInfo.h"
-#include "Engine/Serialization/Format/BinarySerializer.h"
-#include "Engine/Serialization/Format/JSONSerializer.h"
+#include "Engine/Serialization/Serializer/BinarySerializer.h"
+#include "Engine/Serialization/Serializer/JSONSerializer.h"
+#include "Engine/Serialization/Serializer/PropertyConstraints.h"
 #include "Engine/Serialization/Serializer/SerializeContext.h"
-#include "Engine/Serialization/Serializer/SerializerUtil.h"
+#include "Engine/Serialization/Serializer/ValueSerializer.h"
 
 using namespace sw;
 
@@ -48,9 +49,9 @@ SW_TEST_CASE( AssetRefTest, AcceptsItsKindAndEmptyText )
     SW_EXPECT_TRUE( reference.empty() );
     SW_EXPECT_TRUE( reference.getTargetType()._name == AssetRefSampleTarget::kAssetType._name );
     const hashed_string typeName( AssetRefBase::kTypeName );
-    SW_REQUIRE_TRUE( SerializerUtil::parseTextValue( MutableValueAddress{ &reference }, typeName, "  common/data/a.REFTARGET.xml \t", XTestUtil::getContext() ) );
+    SW_REQUIRE_TRUE( ValueSerializer::parseTextValue( MutableValueAddress{ &reference }, typeName, "  common/data/a.REFTARGET.xml \t", XTestUtil::getContext() ) );
     SW_EXPECT_TRUE( reference == "common/data/a.REFTARGET.xml" );
-    SW_REQUIRE_TRUE( SerializerUtil::parseTextValue( MutableValueAddress{ &reference }, typeName, "", XTestUtil::getContext() ) );
+    SW_REQUIRE_TRUE( ValueSerializer::parseTextValue( MutableValueAddress{ &reference }, typeName, "", XTestUtil::getContext() ) );
     SW_EXPECT_TRUE( reference.empty() );
 }
 
@@ -62,7 +63,7 @@ SW_TEST_CASE( AssetRefTest, WrongKindIsALoadError )
     SW_REQUIRE_TRUE( reference == "common/data/kept.reftarget.xml" );
 
     SW_EXPECT_LOG( "AssetRef.WrongType" );
-    SW_EXPECT_FALSE( SerializerUtil::parseTextValue( MutableValueAddress{ &reference }, hashed_string( AssetRefBase::kTypeName ), "common/materials/a.material", XTestUtil::getContext() ) );
+    SW_EXPECT_FALSE( ValueSerializer::parseTextValue( MutableValueAddress{ &reference }, hashed_string( AssetRefBase::kTypeName ), "common/materials/a.material", XTestUtil::getContext() ) );
     SW_EXPECT_TRUE( reference == "common/data/kept.reftarget.xml" );
 
     SW_EXPECT_LOG( "AssetRef.WrongType" );
@@ -197,10 +198,10 @@ SW_TEST_CASE( AssetRefTest, GUIDReferenceResolvesThroughTheIndexAndWritesTheGUID
     const hashed_string typeName( AssetRefBase::kTypeName );
 
     AssetRef<AssetRefSampleTarget> reference;
-    SW_REQUIRE_TRUE( SerializerUtil::parseTextValue( MutableValueAddress{ &reference }, typeName, "guid:0000000000000000000000000000a5e1", XTestUtil::getContext() ) );
+    SW_REQUIRE_TRUE( ValueSerializer::parseTextValue( MutableValueAddress{ &reference }, typeName, "guid:0000000000000000000000000000a5e1", XTestUtil::getContext() ) );
     SW_EXPECT_TRUE( reference == "common/data/moved/g.reftarget.xml" );
     SW_EXPECT_TRUE( reference.getGUID() == guid );
-    SW_EXPECT_EQUAL( string( "guid:0000000000000000000000000000a5e1" ), SerializerUtil::formatValueText( ValueAddress{ &reference }, typeName, XTestUtil::getContext() ) );
+    SW_EXPECT_EQUAL( string( "guid:0000000000000000000000000000a5e1" ), ValueSerializer::formatValueText( ValueAddress{ &reference }, typeName, XTestUtil::getContext() ) );
 
     (void)AssetRegistry::install( std::move( previous ) );
 }
@@ -212,12 +213,12 @@ SW_TEST_CASE( AssetRefTest, UnknownOrMalformedGUIDIsALoadError )
     AssetRegistry                  previous = XTestUtil::installOne( guid, "common/data/k.reftarget.xml" );
     const hashed_string            typeName( AssetRefBase::kTypeName );
     AssetRef<AssetRefSampleTarget> reference;
-    SW_REQUIRE_TRUE( SerializerUtil::parseTextValue( MutableValueAddress{ &reference }, typeName, "guid:0000000000000000000000000000a5e2", XTestUtil::getContext() ) );
+    SW_REQUIRE_TRUE( ValueSerializer::parseTextValue( MutableValueAddress{ &reference }, typeName, "guid:0000000000000000000000000000a5e2", XTestUtil::getContext() ) );
 
     SW_EXPECT_LOG( "AssetRef.UnknownGUID" );
-    SW_EXPECT_FALSE( SerializerUtil::parseTextValue( MutableValueAddress{ &reference }, typeName, "guid:0000000000000000000000000000dead", XTestUtil::getContext() ) );
+    SW_EXPECT_FALSE( ValueSerializer::parseTextValue( MutableValueAddress{ &reference }, typeName, "guid:0000000000000000000000000000dead", XTestUtil::getContext() ) );
     SW_EXPECT_LOG( "AssetRef.InvalidGUID" );
-    SW_EXPECT_FALSE( SerializerUtil::parseTextValue( MutableValueAddress{ &reference }, typeName, "guid:0000000000000000000000000000A5E2", XTestUtil::getContext() ) );
+    SW_EXPECT_FALSE( ValueSerializer::parseTextValue( MutableValueAddress{ &reference }, typeName, "guid:0000000000000000000000000000A5E2", XTestUtil::getContext() ) );
     SW_EXPECT_TRUE( reference == "common/data/k.reftarget.xml" );
     SW_EXPECT_TRUE( reference.getGUID() == guid );
 
@@ -231,7 +232,7 @@ SW_TEST_CASE( AssetRefTest, GUIDOfAnotherKindIsALoadError )
     AssetRegistry                  previous = XTestUtil::installOne( guid, "common/materials/m.material" );
     AssetRef<AssetRefSampleTarget> reference;
     SW_EXPECT_LOG( "AssetRef.WrongType" );
-    SW_EXPECT_FALSE( SerializerUtil::parseTextValue( MutableValueAddress{ &reference }, hashed_string( AssetRefBase::kTypeName ), "guid:0000000000000000000000000000a5e3", XTestUtil::getContext() ) );
+    SW_EXPECT_FALSE( ValueSerializer::parseTextValue( MutableValueAddress{ &reference }, hashed_string( AssetRefBase::kTypeName ), "guid:0000000000000000000000000000a5e3", XTestUtil::getContext() ) );
     SW_EXPECT_TRUE( reference.empty() );
     (void)AssetRegistry::install( std::move( previous ) );
 }
@@ -246,7 +247,7 @@ SW_TEST_CASE( AssetRefTest, PathTextFindsItsGUIDSoTheNextSaveWritesTheGUID )
     const hashed_string typeName( AssetRefBase::kTypeName );
 
     AssetRef<AssetRefSampleTarget> reference;
-    SW_REQUIRE_TRUE( SerializerUtil::parseTextValue( MutableValueAddress{ &reference }, typeName, "common/data/p.reftarget.xml", XTestUtil::getContext() ) );
+    SW_REQUIRE_TRUE( ValueSerializer::parseTextValue( MutableValueAddress{ &reference }, typeName, "common/data/p.reftarget.xml", XTestUtil::getContext() ) );
     SW_EXPECT_TRUE( reference.getGUID() == guid );
     SW_EXPECT_EQUAL( string( "guid:0000000000000000000000000000a5e4" ), reference.toText() );
 
@@ -270,7 +271,7 @@ SW_TEST_CASE( AssetRefTest, EmptyRequiredReferenceIsMissing )
 {
     const PropertyInfo& prop = XTestUtil::getReference();
     SW_REQUIRE_TRUE( prop._typeName == hashed_string( AssetRefBase::kTypeName ) );
-    SW_EXPECT_TRUE( SerializerUtil::isNameValueType( prop._typeName ) );
+    SW_EXPECT_TRUE( PropertyConstraints::isNameValueType( prop._typeName ) );
 }
 
 /**

@@ -17,8 +17,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Registry/RegistrationList.h"
 
-#include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Serializer/Archive.h"
+#include "Engine/Serialization/Serializer/StateIO.h"
 
 #include <type_traits>
 #include <utility>

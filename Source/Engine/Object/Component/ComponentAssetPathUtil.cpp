@@ -14,10 +14,10 @@
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Reflection/TypeRegistry.h"
-#include "Engine/Serialization/Serializer/AssetRefBase.h"
-#include "Engine/Serialization/Serializer/DataPath.h"
+#include "Engine/Serialization/Reference/AssetRefBase.h"
+#include "Engine/Serialization/Reference/DataPath.h"
 #include "Engine/Serialization/Serializer/SerializeContext.h"
-#include "Engine/Serialization/Serializer/SerializerUtil.h"
+#include "Engine/Serialization/Serializer/ValueSerializer.h"
 
 namespace sw
 {
@@ -111,7 +111,7 @@ namespace sw
             case AssetPathValueKind::AssetRef:
                 return static_cast<AssetRefBase*>( _pValue )->assign( path ); // 종류가 맞지 않으면 이유를 남긴다
             case AssetPathValueKind::DataPath:                                // 데이터 읽기와 같은 처리기가 넣는다 — 코드는 값을 대입하지 못한다
-                return SerializerUtil::parseTextValue( MutableValueAddress{ _pValue }, ComponentAssetPathUtilInternal::getDataPathType(), path, SerializeContext::getDefault( SerializePurpose::Authoring ) );
+                return ValueSerializer::parseTextValue( MutableValueAddress{ _pValue }, ComponentAssetPathUtilInternal::getDataPathType(), path, SerializeContext::getDefault( SerializePurpose::Authoring ) );
         }
         return false;
     }

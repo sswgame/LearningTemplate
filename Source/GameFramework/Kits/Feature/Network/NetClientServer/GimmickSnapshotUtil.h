@@ -3,7 +3,7 @@
  * @brief 기믹 회로 상태 묶음(`GimmickStateBundle`)을 네트워크 스냅샷(`NetSnapshot`)의 엔티티로 싣고 푸는 도우미입니다.
  * @details 스냅샷은 엔티티 하나의 상태가 `NetSnapshot::kMaxEntityBytes`(255) 바이트까지라서, 회로 하나의 상태가 그보다 크면 조각으로 나눠 연속한 엔티티 여럿에 싣는다.
  *          회로 `n`(키 순 번호)의 조각 `c` 는 엔티티 id `firstEntityID + n * kMaxChunksPerCircuit + c` 에 들어가고, 바이트는
- *          `u64 ownerKey  u8 chunkIndex  u8 chunkCount  payload[...]` 이다. 조각을 이은 바이트는 그 회로의 `GimmickCircuitState` 를 고정 배치형(`FixedLayout::write`,
+ *          `u64 ownerKey  u8 chunkIndex  u8 chunkCount  payload[...]` 이다. 조각을 이은 바이트는 그 회로의 `GimmickCircuitState` 를 스키마 결합형(`LayoutSerializer::write`,
  *          스키마 해시 64 비트 머리 포함)으로 쓴 것이다. 넷 채널이 핸드셰이크에서 해시를 섞기 전에는 이 머리가 다른 빌드의 바이트를 거절하는 유일한 장치다.
  *          varuint 인코딩이라 상태 값에 따라 길이와 조각 수가 바뀔 수 있다(Delay 의 절대 스텝 번호). 델타 복제는 바뀐 엔티티만 보내므로 상태가 변하지 않은 회로는 대역폭을 쓰지 않는다.
  *          받는 쪽은 `extractBundle` 로 조각을 모아 읽고(`SchemaMismatch` 를 포함한 실패는 그 회로만 건너뛴다) `GimmickStateBundle::apply` 로 씬에 적용한다. 조각이 하나라도 빠진 회로는 이번 스냅샷에서 건너뛴다(델타가 못 실은 조각은 다음에 온다).

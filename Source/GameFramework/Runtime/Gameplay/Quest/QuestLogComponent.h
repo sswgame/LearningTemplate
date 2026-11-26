@@ -11,8 +11,8 @@
 #include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Serialization/Format/FormatDef.h"
-#include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
+#include "Engine/Serialization/Serializer/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Gameplay/GameState/PlayerComponentUtil.h"
@@ -42,7 +42,7 @@ namespace sw
         REFLECT_BODY();
         SW_REGISTERED_COMPONENT( QuestLogComponent );
 
-        static constexpr FormatDef kStateFormat{ "QLGC" };
+        static constexpr FormatDesc kStateFormat{ "QLGC" };
         /** @brief 자동으로 세는 목표 종류 — 퀘스트 데이터의 `<Objective kind="…">` 와 같은 글자다. */
         static constexpr const utf8* kDefeatKind   = "Defeat";
         static constexpr const utf8* kInteractKind = "Interact";

@@ -14,7 +14,7 @@
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Foundation/EngineDefines.h"
-#include "Engine/Serialization/Format/XMLSerializer.h"
+#include "Engine/Serialization/Serializer/XMLSerializer.h"
 
 namespace sw::editor
 {

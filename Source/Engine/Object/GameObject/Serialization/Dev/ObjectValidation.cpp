@@ -16,7 +16,8 @@
 #include "Engine/Object/GameObject/Subsystem/SceneSubsystemRegistry.h"
 #include "Engine/Reflection/ReflectionValidation.h"
 #include "Engine/Reflection/TypeInfo.h"
-#include "Engine/Serialization/Serializer/SerializerUtil.h"
+#include "Engine/Serialization/Serializer/PropertyConstraints.h"
+#include "Engine/Serialization/Serializer/ValueSerializer.h"
 
 namespace sw
 {
@@ -26,7 +27,7 @@ namespace sw
         {
             /**
              * @brief 빈 필수 이름 칸(`PROPERTY( Required )` 의 이름 · 경로 형식)마다 @p onEmpty 를 부르고 그 수를 돌려줍니다.
-             * @details 에디터 저장은 빈 칸도 속성으로 적어 "적힌" 것이 되지만, 다음 로드의 필수 칸 검사(`SerializerUtil::isRequiredValueMissing`)는 빈 이름을 빠진 것으로 본다.
+             * @details 에디터 저장은 빈 칸도 속성으로 적어 "적힌" 것이 되지만, 다음 로드의 필수 칸 검사(`PropertyConstraints::isRequiredValueMissing`)는 빈 이름을 빠진 것으로 본다.
              *          저장 · 인스펙터 · 맵 점검이 같은 검증을 지나므로 여기서 미리 알린다. 판정은 로드와 같은 형식 목록(`isNameValueType`)이다.
              */
             template <typename TOnEmpty>
@@ -38,12 +39,12 @@ namespace sw
                 const SerializeContext& serialize  = SerializeContext::getDefault( SerializePurpose::Authoring );
                 for ( const PropertyInfo& prop : typeInfo.getPropertiesWithBase() )
                 {
-                    if ( prop._metadata->_bRequired == SW_FALSE || prop._bIsContainer == SW_TRUE || SerializerUtil::isNameValueType( prop._typeName ) == false )
+                    if ( prop._metadata->_bRequired == SW_FALSE || prop._bIsContainer == SW_TRUE || PropertyConstraints::isNameValueType( prop._typeName ) == false )
                         continue;
                     StringBuilder<constant::buffer::kMax8192> text;
-                    SerializerUtil::valueToText( text, ValueAddress{ prop.getRawPtr( static_cast<const void*>( pComp ) ) }, prop._typeName, serialize );
+                    ValueSerializer::valueToText( text, ValueAddress{ prop.getRawPtr( static_cast<const void*>( pComp ) ) }, prop._typeName, serialize );
                     const string_view written = text.view();
-                    if ( SerializerUtil::isRequiredValueMissing( prop, true, &written, RequiredScope::Root ) == false )
+                    if ( PropertyConstraints::isRequiredValueMissing( prop, true, &written, RequiredScope::Root ) == false )
                         continue;
                     onEmpty( prop );
                     ++issueCount;

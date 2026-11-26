@@ -1,4 +1,4 @@
-// EXPECT-ERROR: Replicated field is not in the fixed layout encoding table
+// EXPECT-ERROR: Replicated field is not in the layout encoding table
 #pragma once
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"

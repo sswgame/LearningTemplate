@@ -4,8 +4,8 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 
-#include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/FormatDef.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
+#include "Engine/Serialization/Serializer/Archive.h"
 
 namespace sw
 {
@@ -14,7 +14,7 @@ namespace sw
         struct CommandStackInternal
         {
             /** @brief 기록 형식의 판입니다. 명령 · 단계의 모양이 바뀌면 올린다(옛 판의 기록은 버린다). */
-            static constexpr FormatDef kSaveFormat{ "EDUN" };
+            static constexpr FormatDesc kSaveFormat{ "EDUN" };
 
             static void writeStep( Archive& archive, const editor::UndoStep& step )
             {

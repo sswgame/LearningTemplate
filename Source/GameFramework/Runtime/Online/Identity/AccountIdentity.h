@@ -23,7 +23,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 계정 하나의 공개 정보입니다. 온라인 메시지(계정 발급 응답, 관리자 조회 응답)에 고정 배치형으로 실립니다. 이름 상한은 `OnlineLimit::kMaxDisplayNameSize` 와 같은 값입니다. */
+    /** @brief 계정 하나의 공개 정보입니다. 온라인 메시지(계정 발급 응답, 관리자 조회 응답)에 스키마 결합형으로 실립니다. 이름 상한은 `OnlineLimit::kMaxDisplayNameSize` 와 같은 값입니다. */
     REFLECT()
     struct AccountIdentity
     {

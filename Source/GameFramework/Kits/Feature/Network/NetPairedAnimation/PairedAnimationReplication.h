@@ -85,7 +85,7 @@ namespace sw
     /**
      * @brief 페어드 애니메이션 키트의 메시지 표입니다. 종류 · 마스크 · 와이어 버전은 표에서 나온다(`NetMessageTable`).
      * @details 세션 상태는 롤백 소유 상태에도 실리는 공개 형식(`PairedAnimationNetState::write`)이라 손 본문이고 바이트는 칸 선언(`PairedAnimationSessionStateBody`)이다.
-     *          세션 끝은 고정 배치형(`NetMessageBodyDef`)이다.
+     *          세션 끝은 스키마 결합형(`NetMessageBodyDef`)이다.
      */
     struct NetPairedAnimationMessage
     {

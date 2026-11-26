@@ -10,7 +10,7 @@
 #include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Serialization/Format/FormatDef.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
 
 #include "GameFramework/Kits/Genre/Action/ActionCombat/ActionCombatRoom.h"
 #include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
@@ -47,7 +47,7 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        static constexpr FormatDef kStateFormat{ "VLEN" };
+        static constexpr FormatDesc kStateFormat{ "VLEN" };
 
         VelmoraEncounterGameModeComponent();
         virtual ~VelmoraEncounterGameModeComponent() override;

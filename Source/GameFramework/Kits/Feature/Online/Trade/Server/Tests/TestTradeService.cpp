@@ -138,7 +138,7 @@ namespace
         void                       onServicePush( uint16 kind, BitReader& body ) override
         {
             TradeNotification reply;
-            SW_EXPECT_TRUE( TradeSessionRecord::MessageTypes::read( body, reply ) == FixedReadResult::Ok );
+            SW_EXPECT_TRUE( TradeSessionRecord::MessageTypes::read( body, reply ) == LayoutReadResult::Ok );
             _listKind.push_back( kind );
             _listReply.push_back( std::move( reply ) );
         }
@@ -171,7 +171,7 @@ namespace
             TradeReply reply;
             BitReader  reader( _bodyBytes.data(), static_cast<int32>( _bodyBytes.size() ) );
             SW_EXPECT_TRUE( _bOk == SW_TRUE );
-            SW_EXPECT_TRUE( TradeSessionRecord::MessageTypes::read( reader, reply ) == FixedReadResult::Ok );
+            SW_EXPECT_TRUE( TradeSessionRecord::MessageTypes::read( reader, reply ) == LayoutReadResult::Ok );
             return reply;
         }
     };

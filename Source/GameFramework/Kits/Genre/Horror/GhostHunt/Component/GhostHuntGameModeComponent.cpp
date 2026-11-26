@@ -6,8 +6,8 @@
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Serialization/Format/FormatDef.h"
-#include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
+#include "Engine/Serialization/Serializer/StateIO.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/DepletingValue.h"
 #include "GameFramework/Runtime/Foundation/Minigame/MinigameStack.h"
@@ -19,11 +19,11 @@ namespace sw
     {
         struct GhostHuntGameModeComponentInternal
         {
-            static constexpr FormatDef kStateFormat{ "GHGM" };
-            static constexpr float32   kFurnitureSpacing = 2.0f;  ///< 안쪽 벽을 따라 놓은 가구 사이(m)
-            static constexpr float32   kFurnitureWallGap = 1.0f;  ///< 안쪽 벽에서 가구까지(m)
-            static constexpr float32   kGhostDepthRatio  = 0.25f; ///< 유령이 처음 숨는 자리 — 방 가운데에서 방 깊이의 이 비율만큼 안쪽
-            static constexpr float32   kGhostWallGap     = 0.5f;  ///< 유령은 방의 벽에서 이만큼 안쪽에만 있다(m)
+            static constexpr FormatDesc kStateFormat{ "GHGM" };
+            static constexpr float32    kFurnitureSpacing = 2.0f;  ///< 안쪽 벽을 따라 놓은 가구 사이(m)
+            static constexpr float32    kFurnitureWallGap = 1.0f;  ///< 안쪽 벽에서 가구까지(m)
+            static constexpr float32    kGhostDepthRatio  = 0.25f; ///< 유령이 처음 숨는 자리 — 방 가운데에서 방 깊이의 이 비율만큼 안쪽
+            static constexpr float32    kGhostWallGap     = 0.5f;  ///< 유령은 방의 벽에서 이만큼 안쪽에만 있다(m)
 
             // 사운드 이벤트 이름 — 클립 · 범위 · 상한은 게임의 사운드 이벤트 데이터(audioevents.xml)가 정한다.
             static constexpr const utf8* kEventAppeared   = "GhostHuntAppeared";

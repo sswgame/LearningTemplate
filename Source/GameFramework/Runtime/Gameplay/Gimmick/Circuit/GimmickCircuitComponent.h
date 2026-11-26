@@ -13,7 +13,7 @@
  *
  *          고정 스텝으로 돈다(`_stepTime`). 스텝을 실행한 틱마다 회로 상태를 `_state`(PROPERTY, `GimmickCircuitState`)에 써 두므로, 레벨 세이브와 핫 리로드와 플레이 복원이
  *          그 상태에서 이어진다(자기 기술형 A). 체크포인트는 `captureCheckpoint` 와 `restoreCheckpoint` 로, 처음 상태로의 복귀는 `resetCircuit` 으로 한다.
- *          체크포인트는 프로세스 밖으로 나가지 않으므로 바이트가 아니라 값으로 둔다. 롤백 · 넷 스냅샷은 `GimmickStateBundle` 이 고정 배치형(B)으로 싣는다.
+ *          체크포인트는 프로세스 밖으로 나가지 않으므로 바이트가 아니라 값으로 둔다. 롤백 · 넷 스냅샷은 `GimmickStateBundle` 이 스키마 결합형으로 싣는다.
  *
  *          저장 상태를 회로에 적용하는 경로는 `applySavedState` 하나다(로드, 플레이 시작, 체크포인트). 상태는 노드 id 로 짝짓고(`GimmickCircuit::loadState`),
  *          노드가 늘거나 준 것은 경고 뒤 이어 가며, 같은 id 인데 종류나 상태 버전이 바뀐 노드가 있으면 오류를 남기고 회로를 돌리지 않는다. 조용히 처음 상태로 바꾸지 않는다.

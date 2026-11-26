@@ -78,7 +78,7 @@ namespace sw
 
     /**
      * @brief 반사 함수 호출의 메시지 표입니다. 종류 · 마스크 · 와이어 버전은 표에서 나온다(`NetMessageTable`).
-     * @details 호출 본문은 함수마다 인자 형식이 달라 손 본문이다. 거절은 고정 배치형(`NetMessageBodyDef`)이다.
+     * @details 호출 본문은 함수마다 인자 형식이 달라 손 본문이다. 거절은 스키마 결합형(`NetMessageBodyDef`)이다.
      */
     struct NetRemoteCallMessage
     {

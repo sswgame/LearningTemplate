@@ -40,7 +40,7 @@
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Sequencer/SequenceAsset.h"
-#include "Engine/Serialization/Serializer/SerializerUtil.h"
+#include "Engine/Serialization/Serializer/PropertySerializer.h"
 #include "Engine/TileMap/TileMapXML.h"
 #include "Engine/TileMap/TileSetAsset.h"
 
@@ -375,9 +375,9 @@ namespace sw::editor
                 item._componentKey    = key;
                 item._propertyName    = prop._name.c_str();
                 item._propertyLabel   = EditorDisplayNameUtil::chooseLabel( prop._metadata->getEditor()._displayName, prop._name.c_str() );
-                item._defaultValue    = SerializerUtil::formatPropertyText( prop, ObjectAddress{ pCdoComp }, context );
-                item._overriddenValue = SerializerUtil::formatPropertyText( prop, ObjectAddress{ pInstanceComponent }, context );
-                item._bModified       = ( SerializerUtil::arePropertyValuesEqual( prop, ObjectAddress{ pCdoComp }, ObjectAddress{ pInstanceComponent }, context ) == false );
+                item._defaultValue    = PropertySerializer::formatPropertyText( prop, ObjectAddress{ pCdoComp }, context );
+                item._overriddenValue = PropertySerializer::formatPropertyText( prop, ObjectAddress{ pInstanceComponent }, context );
+                item._bModified       = ( PropertySerializer::arePropertyValuesEqual( prop, ObjectAddress{ pCdoComp }, ObjectAddress{ pInstanceComponent }, context ) == false );
                 outListOverride.push_back( std::move( item ) );
             },
                 true );
@@ -423,7 +423,7 @@ namespace sw::editor
 
         const ObjectSnapshot beforeSnapshot = EditorTransaction::captureSnapshot( pInstance );
         // 값을 옮기지 못했으면 되돌렸다고 표시하지 않고 되돌리기 기록도 남기지 않는다.
-        if ( SerializerUtil::copyPropertyValue( *pProp, ObjectAddress{ pCdoComp }, MutableObjectAddress{ pInstanceComponent }, SerializeContext::getDefault( SerializePurpose::Authoring ) ) == false )
+        if ( PropertySerializer::copyPropertyValue( *pProp, ObjectAddress{ pCdoComp }, MutableObjectAddress{ pInstanceComponent }, SerializeContext::getDefault( SerializePurpose::Authoring ) ) == false )
         {
             SW_LOG_WARNING_ID( "EditorToolAssetCommands.PrefabOverrideCouldNot", "Prefab override '%#.%#' could not be reverted", item._componentKey.c_str(), item._propertyName.c_str() );
             return false;

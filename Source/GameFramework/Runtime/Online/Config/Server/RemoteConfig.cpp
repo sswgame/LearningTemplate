@@ -8,7 +8,7 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Observability/MetricRegistry.h"
-#include "Engine/Serialization/Format/FormatDef.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
 
 #include "GameFramework/Runtime/Online/Audit/Server/ServiceAuditLog.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceCommitRunner.h"
@@ -22,12 +22,12 @@ namespace sw
     {
         struct RemoteConfigInternal
         {
-            static constexpr FormatDef kFormat{ "RCFW" };
-            static constexpr int32     kTypeBitCount    = 3;
-            static constexpr int32     kMaxVariantCount = 16;
-            static constexpr int32     kListPageSize    = 256;
-            static constexpr int32     kMaxKeySize      = 128;
-            static constexpr int32     kMaxSnapshotKeys = 4096;
+            static constexpr FormatDesc kFormat{ "RCFW" };
+            static constexpr int32      kTypeBitCount    = 3;
+            static constexpr int32      kMaxVariantCount = 16;
+            static constexpr int32      kListPageSize    = 256;
+            static constexpr int32      kMaxKeySize      = 128;
+            static constexpr int32      kMaxSnapshotKeys = 4096;
 
             static void writeValue( BitWriter& outWriter, const RemoteConfigValue& value )
             {

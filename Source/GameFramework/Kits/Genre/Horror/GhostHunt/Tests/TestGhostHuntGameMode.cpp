@@ -11,9 +11,9 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/TypeInfo.h"
-#include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/Tests/StateBytesTestUtil.h"
-#include "Engine/Serialization/Serializer/SerializerUtil.h"
+#include "Engine/Serialization/Serializer/Archive.h"
+#include "Engine/Serialization/Serializer/PropertySerializer.h"
+#include "Engine/Serialization/Serializer/Tests/StateBytesTestUtil.h"
 
 #include "GameFramework/Kits/Genre/Horror/GhostHunt/Component/GhostHuntGameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Minigame/MinigameStack.h"
@@ -58,7 +58,7 @@ namespace
         static bool setProperty( GhostHuntGameModeComponent& director, const utf8* pName, const string& text )
         {
             const PropertyInfo* const pProperty = GhostHuntGameModeComponent::StaticType()->findPropertyInHierarchy( hashed_string( pName ) );
-            return pProperty != nullptr && SerializerUtil::applyPropertyText( *pProperty, MutableObjectAddress{ &director }, text, SerializeContext::getDefault( SerializePurpose::Authoring ) );
+            return pProperty != nullptr && PropertySerializer::applyPropertyText( *pProperty, MutableObjectAddress{ &director }, text, SerializeContext::getDefault( SerializePurpose::Authoring ) );
         }
 
         static GhostHuntGameModeComponent* addDirector( GameObjectManager& manager, const utf8* pStartRoom )

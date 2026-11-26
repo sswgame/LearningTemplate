@@ -2,7 +2,7 @@
 
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSCommand.h"
 
-#include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Serializer/Archive.h"
 
 namespace sw
 {

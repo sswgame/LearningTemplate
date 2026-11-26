@@ -8,8 +8,8 @@
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Serialization/Format/FormatDef.h"
-#include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
+#include "Engine/Serialization/Serializer/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Gameplay/GameState/PlayerComponentUtil.h"
@@ -32,7 +32,7 @@ namespace sw
         REFLECT_BODY();
         SW_REGISTERED_COMPONENT( WalletComponent );
 
-        static constexpr FormatDef kStateFormat{ "WLTC" };
+        static constexpr FormatDesc kStateFormat{ "WLTC" };
 
         WalletComponent();
         ~WalletComponent() override;

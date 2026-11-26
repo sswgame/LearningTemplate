@@ -6,9 +6,9 @@
 #include "Engine/Console/DebugHUDRegistry.h"
 #include "Engine/Object/GameObject/Tests/SceneIterationTestAccess.h"
 #include "Engine/Reflection/TypeFqn.h"
-#include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/StateIO.h"
-#include "Engine/Serialization/Format/Tests/StateBytesTestUtil.h"
+#include "Engine/Serialization/Serializer/Archive.h"
+#include "Engine/Serialization/Serializer/StateIO.h"
+#include "Engine/Serialization/Serializer/Tests/StateBytesTestUtil.h"
 
 #include "GameFramework/Kits/Genre/RPG/MonsterHuntRPG/MonsterHuntAlchemy.h"
 #include "GameFramework/Kits/Genre/RPG/MonsterHuntRPG/MonsterHuntBestiary.h"

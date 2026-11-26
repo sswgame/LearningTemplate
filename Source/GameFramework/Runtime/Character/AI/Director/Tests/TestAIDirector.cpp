@@ -8,8 +8,8 @@
 
 #include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
-#include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/Tests/StateIOTestUtil.h"
+#include "Engine/Serialization/Serializer/Archive.h"
+#include "Engine/Serialization/Serializer/Tests/StateIOTestUtil.h"
 
 #include "GameFramework/Runtime/Character/AI/Director/AIDirector.h"
 #include "GameFramework/Runtime/Character/AI/Director/AIDirectorProfile.h"

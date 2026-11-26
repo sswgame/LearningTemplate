@@ -10,7 +10,7 @@
 #include "Engine/Reflection/PropertyRoleUtil.h"
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Serialization/Serializer/SerializeContext.h"
-#include "Engine/Serialization/Serializer/SerializerUtil.h"
+#include "Engine/Serialization/Serializer/ValueSerializer.h"
 #include "Engine/Visual/Component/PostProcessVolumeComponent.h"
 
 using namespace sw;
@@ -35,8 +35,8 @@ namespace
         PostProcessBlendable blendable;
         blendable._weight   = weight;
         blendable._location = location;
-        const bool bParsed  = SerializerUtil::parseTextValue( MutableValueAddress{ &blendable._materialPath }, hashed_string( AssetRefBase::kTypeName ), pPath,
-                                                              SerializeContext::getDefault( SerializePurpose::Authoring ) );
+        const bool bParsed  = ValueSerializer::parseTextValue( MutableValueAddress{ &blendable._materialPath }, hashed_string( AssetRefBase::kTypeName ), pPath,
+                                                               SerializeContext::getDefault( SerializePurpose::Authoring ) );
         SW_EXPECT_TRUE( bParsed );
         return blendable;
     }
@@ -45,8 +45,8 @@ namespace
     PostProcessValues makeLUTValues( const char* pPath )
     {
         PostProcessValues values;
-        const bool        bParsed = SerializerUtil::parseTextValue( MutableValueAddress{ &values._colorGradingLUT }, hashed_string( "DataPath" ), pPath,
-                                                                    SerializeContext::getDefault( SerializePurpose::Authoring ) );
+        const bool        bParsed = ValueSerializer::parseTextValue( MutableValueAddress{ &values._colorGradingLUT }, hashed_string( "DataPath" ), pPath,
+                                                                     SerializeContext::getDefault( SerializePurpose::Authoring ) );
         SW_EXPECT_TRUE( bParsed );
         return values;
     }

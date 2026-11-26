@@ -8,7 +8,7 @@
 #include "Engine/Object/Component/ComponentAssetPathUtil.h"
 #include "Engine/Reflection/PropertyInfo.h"
 #include "Engine/Reflection/TypeInfo.h"
-#include "Engine/Serialization/Format/XMLSerializer.h"
+#include "Engine/Serialization/Serializer/XMLSerializer.h"
 
 using namespace sw;
 

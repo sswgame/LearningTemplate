@@ -10,10 +10,10 @@
 #include "Engine/Localization/LocText.h"
 #include "Engine/Presentation/IPlayerNotificationSink.h"
 #include "Engine/Reflection/EnumName.h"
-#include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/FormatDef.h"
-#include "Engine/Serialization/Format/StateIO.h"
-#include "Engine/Serialization/Serializer/SerializerUtil.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
+#include "Engine/Serialization/Serializer/Archive.h"
+#include "Engine/Serialization/Serializer/PropertyConstraints.h"
+#include "Engine/Serialization/Serializer/StateIO.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
 
@@ -32,7 +32,7 @@ namespace sw
     {
         struct AutosaveInternal
         {
-            static constexpr FormatDef   kInfoFormat{ "ASAV" };
+            static constexpr FormatDesc  kInfoFormat{ "ASAV" };
             static constexpr const utf8* kInfoExtension = ".info";
         };
     } // namespace
@@ -127,7 +127,7 @@ namespace sw
 
     bool AutosaveController::initialize( const AutosaveSettings& settings, GameLocalStore& store, const SaveLock& saveLock, const SaveDelegate& onSave, const LoadDelegate& onLoad )
     {
-        const bool bRangesValid = SerializerUtil::isWithinDeclaredRanges( *AutosaveSettings::StaticType(), ObjectAddress{ &settings } ); // AutosaveSettings 의 PROPERTY( Min · Max )
+        const bool bRangesValid = PropertyConstraints::isWithinDeclaredRanges( *AutosaveSettings::StaticType(), ObjectAddress{ &settings } ); // AutosaveSettings 의 PROPERTY( Min · Max )
         // 가장 긴 이름(마지막 슬롯의 기록)이 규칙을 지키면 모든 슬롯 이름이 지킨다.
         const bool bNamesValid = bRangesValid && ILocalStore::isValidSlotName( settings.makeInfoSlotName( settings._slotCount - 1 ) );
         if ( bNamesValid == false )

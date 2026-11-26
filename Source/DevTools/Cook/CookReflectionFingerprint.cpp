@@ -15,7 +15,8 @@
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Reflection/TypeRegistry.h"
-#include "Engine/Serialization/Serializer/SerializerUtil.h"
+#include "Engine/Serialization/Serializer/PropertySerializer.h"
+#include "Engine/Serialization/Serializer/ValueSerializer.h"
 
 namespace sw
 {
@@ -42,11 +43,11 @@ namespace sw
                 {
                     const PropertyInfo& prop       = field._property;
                     const bool          bContainer = prop._bIsContainer == SW_TRUE;
-                    if ( prop._metadata->isAuthored() == false || ( bContainer && SerializerUtil::isOwnedPointerElementType( prop._elementTypeName ) ) )
+                    if ( prop._metadata->isAuthored() == false || ( bContainer && ValueSerializer::isOwnedPointerElementType( prop._elementTypeName ) ) )
                         return ReflectVisitFlow::SkipChildren;
                     const uint64 path = HashUtil::combine( HashUtil::combine( field._depth, field._owner._fullyQualifiedName.getHash() ), prop.getNameHash() );
                     // 처리기가 없는 구조체 값은 안쪽 칸이 값이다. 구조체 원소의 시퀀스는 개수를 접고 안쪽 칸으로 내려간다.
-                    const bool                       bStructValue = SerializerUtil::findNestedObjectType( bContainer ? prop._elementTypeName : prop._typeName, bContainer ? prop.findElementBinding() : prop.findValueBinding(), context ) != nullptr;
+                    const bool                       bStructValue = ValueSerializer::findNestedObjectType( bContainer ? prop._elementTypeName : prop._typeName, bContainer ? prop.findElementBinding() : prop.findValueBinding(), context ) != nullptr;
                     const ISequenceContainerWrapper* pSequence    = bContainer && prop._containerWrapper != nullptr ? prop._containerWrapper->asSequence() : nullptr;
                     if ( bStructValue && bContainer == false && prop._bIsBitField == SW_FALSE )
                         return ReflectVisitFlow::Continue;
@@ -56,7 +57,7 @@ namespace sw
                         return ReflectVisitFlow::Continue;
                     }
                     bytes.clear();
-                    if ( SerializerUtil::canCarryProperty( prop, context ) && SerializerUtil::writePropertyBinary( prop, ObjectAddress{ field._pObject }, bytes, context ) )
+                    if ( PropertySerializer::canCarryProperty( prop, context ) && PropertySerializer::writePropertyBinary( prop, ObjectAddress{ field._pObject }, bytes, context ) )
                         outListValue.push_back( DefaultValue{ path, HashUtil::computeStringHash64( reinterpret_cast<const utf8*>( bytes.data() ), bytes.size(), false ) } );
                     return ReflectVisitFlow::SkipChildren;
                 } );

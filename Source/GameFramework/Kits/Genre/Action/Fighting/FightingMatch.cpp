@@ -9,10 +9,10 @@
 
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Reflection/ReflectionValidation.h"
-#include "Engine/Serialization/Fixed/FixedLayout.h"
-#include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/BinarySerializer.h"
-#include "Engine/Serialization/Serializer/SerializerUtil.h"
+#include "Engine/Serialization/Layout/LayoutSerializer.h"
+#include "Engine/Serialization/Serializer/Archive.h"
+#include "Engine/Serialization/Serializer/BinarySerializer.h"
+#include "Engine/Serialization/Serializer/PropertyConstraints.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/ConfigRangeUtil.h"
 #include "GameFramework/Runtime/Foundation/GameData/DepletingValue.h"
@@ -1142,7 +1142,7 @@ namespace sw
     {
         // 롤백은 프레임마다, 되감아 다시 돌 때마다 상태를 저장한다. 링 슬롯의 버퍼를 이어받아 쓰고 돌려주므로 새로 할당하지 않는다.
         BitWriter  writer{ std::move( outBuffer ) };
-        const bool bWritten = FixedLayout::write( *this, writer );
+        const bool bWritten = LayoutSerializer::write( *this, writer );
         outBuffer           = writer.releaseBytes();
         if ( bWritten == false )
         {
@@ -1155,8 +1155,8 @@ namespace sw
 
     bool FightingMatch::loadState( const vector<uint8>& buffer )
     {
-        const FixedReadResult result = FixedLayout::read( buffer.data(), static_cast<int32>( buffer.size() ), *this );
-        if ( result != FixedReadResult::Ok )
+        const LayoutReadResult result = LayoutSerializer::read( buffer.data(), static_cast<int32>( buffer.size() ), *this );
+        if ( result != LayoutReadResult::Ok )
         {
             SW_LOG_WARNING_ID( "FightingMatch.FightingRollbackStateRejected", "Fighting rollback state was rejected (%#) - the match keeps its current state", getEnumName( result ) );
             return false;
@@ -1173,7 +1173,7 @@ namespace sw
             (void)BinarySerializer::serializeVersioned( StaticType()->_metadata->getVersion(), this, *StaticType(), io.getArchive() );
             return;
         }
-        // 세이브에 없는 필드(정의 포인터, 설정)는 사본에서 이어진다. 선언된 `Min` · `Max` 는 읽기 공통 끝이 두 캐릭터 배열 · 고리 버퍼 원소까지 본다(`SerializerUtil::isWithinDeclaredRanges`).
+        // 세이브에 없는 필드(정의 포인터, 설정)는 사본에서 이어진다. 선언된 `Min` · `Max` 는 읽기 공통 끝이 두 캐릭터 배열 · 고리 버퍼 원소까지 본다(`PropertyConstraints::isWithinDeclaredRanges`).
         if ( io.check( BinarySerializer::deserializeVersioned( this, *StaticType(), io.getArchive(), StaticType()->_metadata->getVersion() ) ) == false )
             return;
         // 롤백 읽기와 같은 검증(이 타입과 값으로 든 고리 버퍼 · 라운드 시리즈의 `Validate`)을 돌린다.

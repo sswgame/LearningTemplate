@@ -81,7 +81,7 @@ namespace sw
         uint32 _playID{ 0 };
     };
 
-    /** @brief 컷씬 재생 키트의 메시지 표입니다. 종류 · 마스크 · 와이어 버전은 표에서 나온다(`NetMessageTable`). 본문은 모두 고정 배치형이다. */
+    /** @brief 컷씬 재생 키트의 메시지 표입니다. 종류 · 마스크 · 와이어 버전은 표에서 나온다(`NetMessageTable`). 본문은 모두 스키마 결합형이다. */
     struct NetSequenceMessage
     {
         using Start       = NetMessageBodyDef<0, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, SequenceNetStartBody>;

@@ -42,7 +42,7 @@ namespace
         {
             ++_requestCount;
             ServerListRequest request;
-            if ( context._method != ServerDirectoryMethod::ListServers::kID || ServerDirectoryProtocol::MessageTypes::read( body, request ) != FixedReadResult::Ok )
+            if ( context._method != ServerDirectoryMethod::ListServers::kID || ServerDirectoryProtocol::MessageTypes::read( body, request ) != LayoutReadResult::Ok )
             {
                 (void)host.respondError( context._token, OnlineError::kInvalidRequest );
                 return;

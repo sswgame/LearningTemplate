@@ -10,7 +10,7 @@
 #include "Editor/Common/Workspace/Layout/EditorStateStore.h"
 
 #include "Engine/Content/AssetID.h"
-#include "Engine/Serialization/Format/XMLSerializer.h"
+#include "Engine/Serialization/Serializer/XMLSerializer.h"
 
 namespace sw::editor
 {

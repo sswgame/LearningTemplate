@@ -10,7 +10,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/TypeInfo.h"
-#include "Engine/Serialization/Serializer/SerializerUtil.h"
+#include "Engine/Serialization/Serializer/PropertySerializer.h"
 
 namespace sw::editor
 {
@@ -55,10 +55,10 @@ namespace sw::editor
     {
         const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring );
         if ( defaultInstance.get() != nullptr )
-            return SerializerUtil::canCarryProperty( prop, context ) == false || SerializerUtil::arePropertyValuesEqual( prop, instance, defaultInstance, context );
+            return PropertySerializer::canCarryProperty( prop, context ) == false || PropertySerializer::arePropertyValuesEqual( prop, instance, defaultInstance, context );
         if ( prop._metadata->_defaultValue.empty() )
             return true;
-        const string current = SerializerUtil::formatPropertyText( prop, instance, context );
+        const string current = PropertySerializer::formatPropertyText( prop, instance, context );
         // 메타 글은 사람이 쓴 꼴이라("1.0" 과 "1") 숫자는 값으로 비교한다.
         float64 currentNumber{ 0.0 };
         float64 defaultNumber{ 0.0 };

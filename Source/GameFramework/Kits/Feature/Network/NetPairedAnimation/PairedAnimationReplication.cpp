@@ -14,7 +14,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Subsystem/NetObjectTable.h"
-#include "Engine/Serialization/Fixed/ReplicatedLayout.h"
+#include "Engine/Serialization/Layout/ReplicatedLayout.h"
 
 #include <algorithm>
 
@@ -71,7 +71,7 @@ namespace sw
     {
         outState = PairedAnimationNetState{};
         PairedAnimationSessionStateBody body;
-        if ( ReplicatedLayout::readFull( reader, body, nullptr ) != FixedReadResult::Ok || body._assetPath.empty() )
+        if ( ReplicatedLayout::readFull( reader, body, nullptr ) != LayoutReadResult::Ok || body._assetPath.empty() )
             return false;
         PairedAnimationNetState state{};
         if ( PairedAnimationSessionSnapshot::readBytes( body._snapshotBytes, state._snapshot ) != PairedAnimationSessionSnapshot::ReadResult::Success )

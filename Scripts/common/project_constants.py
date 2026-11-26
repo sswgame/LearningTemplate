@@ -93,7 +93,7 @@ SHADER_SOURCE_EXTENSIONS: set[str] = {".hlsl", ".hlsli"}
 MINIMUM_PYTHON_VERSION: tuple[int, int] = (3, 10)
 
 DIR_TOOLS_CACHE = "Tools/_cache"
-DIR_TOOLS_REFLECTION_TEMPLATES = "Source/Programs/ReflectionParser/Templates"
+DIR_TOOLS_REFLECTION_TEMPLATES = "Source/Programs/ReflectionParser/Emit/Templates"
 
 # =============================================================================
 # --- 4. Script Entry Points (스크립트 실행 진입점 경로) ------------------------

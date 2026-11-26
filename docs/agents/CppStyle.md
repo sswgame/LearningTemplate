@@ -53,7 +53,7 @@ C++ 를 쓸 때의 규칙. 린트 · 컴파일이 강제하는 줄은 "강제" �
 - No aliases of another constant; a local name only when it adds meaning.
 - **Tuning values are data** (`PROPERTY` defaulted in the constructor, or the kit's settings · catalog); performance thresholds are named constants next to their use (`gv_*` if they must change without a rebuild); asset paths are data. Format, protocol and math tables stay in code.
 - A missing required value stops with an error — no fallback (`*OrDefault`, `fallback` parameters, discarded load results).
-- `kPascalCase` with the unit unless the type says it. Byte formats (save, state, cooked asset, cache, store record) declare one `static constexpr FormatDef kFormat{ "TAGS" };` (state sections `kStateFormat`) and `kExtension` on their owning type: an upgradable format passes its step array (the version is the step count), others raise the number. `FormatDef` writes, checks and refuses the head — no hand-written magic / version compare.
+- `kPascalCase` with the unit unless the type says it. Byte formats (save, state, cooked asset, cache, store record) declare one `static constexpr FormatDesc kFormat{ "TAGS" };` (state sections `kStateFormat`) and `kExtension` on their owning type: an upgradable format passes its step array (the version is the step count), others raise the number. `FormatDesc` writes, checks and refuses the head — no hand-written magic / version compare.
 - Literals stay literal in obvious `0` · `1` · `-1` · `2`, test expectations, table rows, log · assert strings, reflection metadata, all-bits masks.
 - **The ratchet** (`Config/Rules/Lint/MagicLiteralsBaseline.json`): grown → name it or move it to data; shrunk → `py -3 -m Scripts lint magic-literals --ratchet`; raise only with `--accept <file…>`; a false positive gets a `--self-check` case.
 - 프로세스 종료 코드는 `Config/Engine/ProcessExitCodes.json` 한 곳 + 생성기.
@@ -198,5 +198,5 @@ Change the type or API so the shape cannot be written.
 2. **One fact known in two places.** One owner; the other side reads it.
 3. **Failure or truncation not returned as a value.** `sw::expected` / `[[nodiscard]]`.
 4. **Platform hooks that still compile when left out.** Pure virtual.
-5. **Saves and settings with no version upgrade.** `REFLECT( Version = N )` + `SW_TYPE_VERSION_PATCH`, `FormatDef` steps, `SW_ASSET_FORMAT_UPGRADE` (from release on; before release every version stays 0 — `format-release` only reports); runtime state is `PROPERTY( RuntimeState )` via `StateIO::reflected`.
+5. **Saves and settings with no version upgrade.** `REFLECT( Version = N )` + `SW_TYPE_VERSION_PATCH`, `FormatDesc` steps, `SW_ASSET_FORMAT_UPGRADE` (from release on; before release every version stays 0 — `format-release` only reports); runtime state is `PROPERTY( RuntimeState )` via `StateIO::reflected`.
 6. **State changes handled by call-order rules.** Put the state in a value the next step reads.

@@ -135,7 +135,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 순위 한 줄입니다. 응답(`LeaderboardEntriesReply` · `LeaderboardSeasonReply`)에 고정 배치형으로 실립니다. 이름 상한은 `OnlineLimit::kMaxDisplayNameSize` 와 같은 값입니다. */
+    /** @brief 순위 한 줄입니다. 응답(`LeaderboardEntriesReply` · `LeaderboardSeasonReply`)에 스키마 결합형으로 실립니다. 이름 상한은 `OnlineLimit::kMaxDisplayNameSize` 와 같은 값입니다. */
     REFLECT()
     struct LeaderboardEntry
     {

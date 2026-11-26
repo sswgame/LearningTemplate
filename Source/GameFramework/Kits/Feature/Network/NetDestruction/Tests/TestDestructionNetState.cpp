@@ -6,7 +6,7 @@
 #include "Core/Serialization/BitStream.h"
 #include "Core/TestFramework/TestFramework.h"
 
-#include "Engine/Serialization/Fixed/ReplicatedLayout.h"
+#include "Engine/Serialization/Layout/ReplicatedLayout.h"
 
 #include "GameFramework/Kits/Feature/Network/NetDestruction/DestructionReplication.h"
 
@@ -31,7 +31,7 @@ SW_TEST_CASE( DestructionNetStateTest, EventRoundTripsBitExactAndRejectsUnknownK
 
     BitReader                reader( writer.getBytes().data(), static_cast<int32>( writer.getBytes().size() ) );
     DestructionEventNetState received;
-    SW_REQUIRE_TRUE( ReplicatedLayout::readFull( reader, received, nullptr ) == FixedReadResult::Ok );
+    SW_REQUIRE_TRUE( ReplicatedLayout::readFull( reader, received, nullptr ) == LayoutReadResult::Ok );
     SW_EXPECT_EQUAL( sent._kind, received._kind );
     SW_EXPECT_EQUAL( sent._leafHint, received._leafHint );
     SW_EXPECT_EQUAL( sent._groupID, received._groupID );
@@ -66,7 +66,7 @@ SW_TEST_CASE( DestructionNetStateTest, MovingPoseQuantizesWithinStepAndRangeMatc
 
     BitReader                     reader( writer.getBytes().data(), static_cast<int32>( writer.getBytes().size() ) );
     DestructionMovingPoseNetState received;
-    SW_REQUIRE_TRUE( ReplicatedLayout::readFull( reader, received, nullptr ) == FixedReadResult::Ok );
+    SW_REQUIRE_TRUE( ReplicatedLayout::readFull( reader, received, nullptr ) == LayoutReadResult::Ok );
     SW_EXPECT_TRUE( ( received._position - sent._position ).getLength() <= 0.002f );
     SW_EXPECT_TRUE( MathUtil::abs( received._position._z - range ) <= 0.001f ); // 경계 위 값은 잘리지 않는다
     SW_EXPECT_TRUE( MathUtil::abs( received._rotation._y - sent._rotation._y ) <= 1.0f / 32767.0f );
@@ -78,7 +78,7 @@ SW_TEST_CASE( DestructionNetStateTest, MovingPoseQuantizesWithinStepAndRangeMatc
     SW_REQUIRE_TRUE( ReplicatedLayout::writeFull( outside, outsideWriter ) );
     BitReader                     outsideReader( outsideWriter.getBytes().data(), static_cast<int32>( outsideWriter.getBytes().size() ) );
     DestructionMovingPoseNetState clamped;
-    SW_REQUIRE_TRUE( ReplicatedLayout::readFull( outsideReader, clamped, nullptr ) == FixedReadResult::Ok );
+    SW_REQUIRE_TRUE( ReplicatedLayout::readFull( outsideReader, clamped, nullptr ) == LayoutReadResult::Ok );
     SW_EXPECT_TRUE( MathUtil::abs( clamped._position._x - range ) <= 0.001f ); // 선언 `Max` 가 `kPositionRange` 다
 
     DestructionExactPoseNetState infinite;

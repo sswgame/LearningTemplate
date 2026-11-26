@@ -31,7 +31,7 @@ namespace sw
 
             /**
              * @brief 만들기 요청이 `PROPERTY` 로 적을 수 없는 규칙(이름 있음, 정원 하한, 모드 id, 설정 키 글자)을 지키는지입니다.
-             * @details 상한(이름 · 설정 수 · 값 길이 · 정원 위)은 `LobbySnapshot` 의 `PROPERTY( Max · MaxCount )` 가 원본이고, 요청 본문을 읽는 고정 배치형 코덱이 막는다(`MatchmakingService`).
+             * @details 상한(이름 · 설정 수 · 값 길이 · 정원 위)은 `LobbySnapshot` 의 `PROPERTY( Max · MaxCount )` 가 원본이고, 요청 본문을 읽는 레이아웃 스키마가 막는다(`MatchmakingService`).
              *          여기 다시 적으면 범위가 두 곳이 된다. 정원 하한은 와이어 범위(`Min = 0`)가 와이어 형식이라 바꾸지 않고 여기서 본다.
              */
             static bool isValidLobbyRequest( const LobbySnapshot& request )

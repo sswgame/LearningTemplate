@@ -8,8 +8,8 @@
 #include "Core/Task/TaskManager.h"
 #include "Core/Time/TimeRolloverUtil.h"
 
-#include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Serializer/Archive.h"
+#include "Engine/Serialization/Serializer/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSCommand.h"
 #include "GameFramework/Runtime/Foundation/GameData/ConfigRangeUtil.h"

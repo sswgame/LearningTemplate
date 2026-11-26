@@ -207,7 +207,7 @@ namespace sw
         if ( errorCode == OnlineError::kUpdateRequired )
         {
             AccountUpdateDetail updateDetail;
-            if ( errorDetail.empty() == false && AccountProtocol::MessageTypes::read( detail, updateDetail ) == FixedReadResult::Ok )
+            if ( errorDetail.empty() == false && AccountProtocol::MessageTypes::read( detail, updateDetail ) == LayoutReadResult::Ok )
                 reply._grant._storeURL = std::move( updateDetail._storeURL ); // 상세가 없거나 깨졌으면 상점 주소만 빈다(스키마 해시가 다를 때도 그렇다)
         }
         else if ( errorCode == OnlineError::kRateLimited && errorDetail.empty() == false )

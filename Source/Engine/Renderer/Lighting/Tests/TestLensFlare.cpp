@@ -7,7 +7,7 @@
 
 #include "Engine/Renderer/Lighting/LensFlareSpriteBuffer.h"
 #include "Engine/Serialization/Serializer/SerializeContext.h"
-#include "Engine/Serialization/Serializer/SerializerUtil.h"
+#include "Engine/Serialization/Serializer/ValueSerializer.h"
 
 using namespace sw;
 
@@ -152,8 +152,8 @@ SW_TEST_CASE( LensFlareTest, GroupsImageSpritesByTexture )
         element._axisPosition = 0.5f;
         element._size         = 0.05f;
         element._color        = float3{ 1.0f, 1.0f, 1.0f };
-        const bool bParsed    = SerializerUtil::parseTextValue( MutableValueAddress{ &element._texture }, hashed_string( "DataPath" ), pPath,
-                                                                SerializeContext::getDefault( SerializePurpose::Authoring ) );
+        const bool bParsed    = ValueSerializer::parseTextValue( MutableValueAddress{ &element._texture }, hashed_string( "DataPath" ), pPath,
+                                                                 SerializeContext::getDefault( SerializePurpose::Authoring ) );
         SW_EXPECT_TRUE( bParsed );
         return element;
     };

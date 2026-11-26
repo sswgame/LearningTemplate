@@ -17,8 +17,8 @@
 #include "Engine/Reflection/ReflectVisit.h"
 #include "Engine/Reflection/ReflectedInstance.h"
 #include "Engine/Reflection/TypeFqn.h"
-#include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Serializer/SerializerUtil.h"
+#include "Engine/Serialization/Serializer/Archive.h"
+#include "Engine/Serialization/Serializer/PropertySerializer.h"
 
 #include "GameFramework/Runtime/Foundation/Minigame/MinigameFlow.h"
 #include "GameFramework/Runtime/Foundation/Minigame/MinigameStack.h"
@@ -151,8 +151,8 @@ namespace sw
         {
             if ( fresh.isValid() == false )
                 fresh = ReflectedInstance::create( *pType );
-            const bool bReset = fresh.isValid() && SerializerUtil::copyPropertyValue( field._property, ObjectAddress{ fresh.get() }, MutableObjectAddress{ this },
-                                                                                      SerializeContext::getDefault( SerializePurpose::Snapshot ) );
+            const bool bReset = fresh.isValid() && PropertySerializer::copyPropertyValue( field._property, ObjectAddress{ fresh.get() }, MutableObjectAddress{ this },
+                                                                                          SerializeContext::getDefault( SerializePurpose::Snapshot ) );
             if ( bReset == false )
                 reportFatalError( "state field '%#::%#' cannot be reset to its default before a game opens", pType->_fullyQualifiedName.c_str(), field._property._name.c_str() );
             return ReflectVisitFlow::Continue;

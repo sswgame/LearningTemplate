@@ -14,7 +14,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Serialization/Format/FormatDef.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
 
 #include "GameFramework/Runtime/Character/AI/BehaviorTreeAsset.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
@@ -28,8 +28,8 @@ namespace sw
         struct AIControllerComponentInternal
         {
             /** @brief 이보다 짧은 이동 방향은 "서 있다" 로 봅니다(바라보기를 바꾸지 않는다). */
-            static constexpr float32   kMinMoveLength = 1.0e-3f;
-            static constexpr FormatDef kStateFormat{ "AICS" };
+            static constexpr float32    kMinMoveLength = 1.0e-3f;
+            static constexpr FormatDesc kStateFormat{ "AICS" };
 
             /** @brief 방금 한 판단(상태 이름 · 행동 트리의 머문 잎)을 비주얼 로거에 적습니다. 로거가 꺼져 있으면 하는 일이 없다. */
             static void logDecision( const AIControllerComponent& controller, const PawnComponent& pawn )

@@ -2,9 +2,9 @@
 
 #include "Games/NileCity/NileGameModeComponent.h"
 
-#include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/FormatDef.h"
-#include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
+#include "Engine/Serialization/Serializer/Archive.h"
+#include "Engine/Serialization/Serializer/StateIO.h"
 
 namespace sw
 {
@@ -12,8 +12,8 @@ namespace sw
     {
         struct NileGameModeComponentInternal
         {
-            static constexpr FormatDef kStateFormat{ "NILE" };
-            static constexpr float32   kPercent = 100.0f; ///< 비율 → 백분율(로그)
+            static constexpr FormatDesc kStateFormat{ "NILE" };
+            static constexpr float32    kPercent = 100.0f; ///< 비율 → 백분율(로그)
         };
     } // namespace
 } // namespace sw

@@ -15,12 +15,12 @@
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
-#include "Engine/Serialization/Format/JSONSerializer.h"
-#include "Engine/Serialization/Format/XMLSerializer.h"
+#include "Engine/Serialization/Format/SchemaMigrate.h"
 #include "Engine/Serialization/Inherit/ResourceComposer.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
-#include "Engine/Serialization/Serializer/SchemaMigrate.h"
-#include "Engine/Serialization/Serializer/SerializerUtil.h"
+#include "Engine/Serialization/Serializer/JSONSerializer.h"
+#include "Engine/Serialization/Serializer/PropertyConstraints.h"
+#include "Engine/Serialization/Serializer/XMLSerializer.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "sw/config/ConfigConstants.h"
@@ -172,7 +172,7 @@ namespace sw
             return false;
         }
         vector<SchemaOrphanValue> listOrphan;
-        // 본문은 위에서 객체로 읽혔으므로 `Read` 가 아니면 범위 밖 값이다 — 읽기 공통 끝(`SerializerUtil::isWithinDeclaredRanges`)이 칸마다 이미 알렸다.
+        // 본문은 위에서 객체로 읽혔으므로 `Read` 가 아니면 범위 밖 값이다 — 읽기 공통 끝(`PropertyConstraints::isWithinDeclaredRanges`)이 칸마다 이미 알렸다.
         const bool bWithinRange = JSONSerializer::deserializeSoft( pInstance, typeInfo, jsonStr, &listOrphan, nullptr, context ) == SoftReadResult::Read;
         for ( const SchemaOrphanValue& orphan : listOrphan )
         {

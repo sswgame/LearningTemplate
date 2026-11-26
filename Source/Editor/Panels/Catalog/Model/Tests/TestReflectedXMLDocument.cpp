@@ -7,8 +7,8 @@
 #include "Editor/Panels/Catalog/Model/ReflectedXMLDocument.h"
 
 #include "Engine/Reflection/TypeInfo.h"
-#include "Engine/Serialization/Format/XMLSerializer.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
+#include "Engine/Serialization/Serializer/XMLSerializer.h"
 #include "Engine/VFX/VFXEffectDef.h"
 
 using namespace sw;

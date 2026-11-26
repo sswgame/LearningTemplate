@@ -14,8 +14,8 @@
 #include "Core/String/Name/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Serialization/Format/FormatDef.h"
-#include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
+#include "Engine/Serialization/Serializer/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSSimulation.h"
@@ -42,8 +42,8 @@ namespace sw
      */
     struct SW_KIT_API RTSCommand
     {
-        static constexpr FormatDef kFormat{ "RTSC" };
-        static constexpr int32     kMaxUnitCount = 64; ///< 명령 하나가 담는 유닛 상한(락스텝 입력 한 틱 상한 `NetLockstepMessage::kMaxInputBytes` 안에 든다)
+        static constexpr FormatDesc kFormat{ "RTSC" };
+        static constexpr int32      kMaxUnitCount = 64; ///< 명령 하나가 담는 유닛 상한(락스텝 입력 한 틱 상한 `NetLockstepMessage::kMaxInputBytes` 안에 든다)
 
         vector<RTSUnitID> _listUnit{};
         float3            _target{};

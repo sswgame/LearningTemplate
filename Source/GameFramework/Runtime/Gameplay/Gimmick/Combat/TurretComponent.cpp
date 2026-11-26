@@ -15,7 +15,7 @@
 #include "Engine/Object/GameObject/Tick/TickContext.h"
 #include "Engine/Object/GameObject/Tick/TickInterval.h"
 #include "Engine/Physics/PhysicsSystem.h"
-#include "Engine/Serialization/Format/FormatDef.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
 
 #include "GameFramework/Runtime/Character/Combat/Projectile/ResolvedShot.h"
 #include "GameFramework/Runtime/Character/Combat/TargetFilter.h"
@@ -31,7 +31,7 @@ namespace sw
     {
         struct TurretComponentInternal
         {
-            static constexpr FormatDef kStateFormat{ "TURT" };
+            static constexpr FormatDesc kStateFormat{ "TURT" };
         };
 
         const StatefulComponentRegistrar<TurretComponent> s_turretComponentStateRegistration{ "TurretComponent" };

@@ -50,7 +50,7 @@ namespace sw
      * @struct ObjectSaveOptions
      * @brief 오브젝트 상태를 쓰는 목적(`SerializePurpose`, 필수)과, 다른 오브젝트를 가리키는 참조(부착의 부모, `GameObjectHandle` PROPERTY)를 어떻게 적을지 정합니다.
      * @details 목적은 만들 때만 정한다(기본 생성자가 없다). 저작(씬 · 프리팹 · 쿠킹 · 에디터의 복사 · 복제 · 되돌리기)은 `RuntimeState` 필드를 쓰지 않고,
-     *          스냅샷(플레이 세션 복원 · 핫 리로드 · 씬 넘김)은 모두 쓰며, 세이브는 옵트인 타입의 `SaveGame` 필드만 쓴다(`SerializerUtil::shouldSerializeProperty`).
+     *          스냅샷(플레이 세션 복원 · 핫 리로드 · 씬 넘김)은 모두 쓰며, 세이브는 옵트인 타입의 `SaveGame` 필드만 쓴다(`PropertySerializer::shouldSerializeProperty`).
      */
     struct ObjectSaveOptions
     {

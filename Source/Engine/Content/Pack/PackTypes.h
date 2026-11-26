@@ -23,7 +23,7 @@
 #include "Core/Math/BitUtil.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Serialization/Format/FormatDef.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
 
 #include <cstddef>
 
@@ -106,7 +106,7 @@ namespace sw
      *          헤더는 파일 끝(96B)이고 CRC 는 블록마다다(블록 표). 다른 판은 리더가 거절하고 쿠커가 다시 쓴다
      *          (판은 팩 쿠킹 설정 해시에 들어가 옛 산출물을 재사용하지 않는다).
      */
-    inline constexpr FormatDef kPackFormat{ "SWPK" };
+    inline constexpr FormatDesc kPackFormat{ "SWPK" };
 
     /** @brief 블록 크기(압축 전)의 형식 한계입니다. 쓰는 쪽은 이 안의 2 의 거듭제곱만 쓰고(`PackConfig` 의 `_blockSize`) 리더는 밖의 값을 거절합니다. */
     inline constexpr uint32 kPackMinBlockSize = 64 * constant::memory::kBytesPerKilobyte;

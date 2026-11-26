@@ -10,8 +10,8 @@
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/XMLSerializer.h"
+#include "Engine/Serialization/Serializer/Archive.h"
+#include "Engine/Serialization/Serializer/XMLSerializer.h"
 
 #include "GameFramework/Runtime/Gameplay/Gimmick/Element/ElementGrid.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/Element/ElementRuleCatalog.h"

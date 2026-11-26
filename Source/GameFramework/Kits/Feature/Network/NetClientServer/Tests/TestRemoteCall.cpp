@@ -583,7 +583,7 @@ SW_TEST_CASE( RemoteCallTest, ReliableCallWaitsForItsTarget )
 }
 
 /**
- * @brief [RemoteCallTest] 거절 본문은 고정 배치형이다 — 옛 형식(까닭 1 바이트) · 잘린 본문은 깨진 메시지이고 알림이 쌓이지 않는다. 온전한 거절은 쌓인다
+ * @brief [RemoteCallTest] 거절 본문은 스키마 결합형이다 — 옛 형식(까닭 1 바이트) · 잘린 본문은 깨진 메시지이고 알림이 쌓이지 않는다. 온전한 거절은 쌓인다
  */
 SW_TEST_CASE( RemoteCallTest, RejectedBodyRefusesOldLayoutAndTruncation )
 {

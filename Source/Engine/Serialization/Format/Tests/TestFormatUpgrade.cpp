@@ -4,7 +4,7 @@
 #include "Core/Serialization/ByteStream.h"
 #include "Core/TestFramework/TestFramework.h"
 
-#include "Engine/Serialization/Format/FormatDef.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
 #include "Engine/Serialization/Format/FormatUpgrade.h"
 
 namespace sw
@@ -77,18 +77,18 @@ SW_TEST_CASE( FormatUpgradeTest, MissingNewerAndFailingStepsAreErrors )
  */
 SW_TEST_CASE( FormatUpgradeTest, HeadIsWrittenReadAndRefusedInOnePlace )
 {
-    constexpr sw::FormatDef kFormat{ "TFMT", 1 };
-    sw::vector<uint8>       bytes;
+    constexpr sw::FormatDesc kFormat{ "TFMT", 1 };
+    sw::vector<uint8>        bytes;
     kFormat.write( bytes );
-    const auto check = [&bytes]( const sw::FormatDef& format )
+    const auto check = [&bytes]( const sw::FormatDesc& format )
     {
         sw::ByteReader reader{ bytes.data(), bytes.size() };
         return format.check( reader );
     };
     SW_EXPECT_TRUE( check( kFormat ).has_value() );
-    SW_EXPECT_FALSE( check( sw::FormatDef{ "TFMT", 0 } ).has_value() ); // 새 판
-    SW_EXPECT_FALSE( check( sw::FormatDef{ "TFMT", 2 } ).has_value() ); // 옛 판
-    SW_EXPECT_FALSE( check( sw::FormatDef{ "OTHR", 1 } ).has_value() );
+    SW_EXPECT_FALSE( check( sw::FormatDesc{ "TFMT", 0 } ).has_value() ); // 새 판
+    SW_EXPECT_FALSE( check( sw::FormatDesc{ "TFMT", 2 } ).has_value() ); // 옛 판
+    SW_EXPECT_FALSE( check( sw::FormatDesc{ "OTHR", 1 } ).has_value() );
     SW_EXPECT_LOG( "Format.HeadRefused" );
     sw::ByteReader cut{ bytes.data(), bytes.size() - 1 };
     SW_EXPECT_FALSE( kFormat.read( cut, "cut" ) );

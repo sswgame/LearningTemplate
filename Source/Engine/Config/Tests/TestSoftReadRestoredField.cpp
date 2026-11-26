@@ -1,5 +1,5 @@
 // 소프트 읽기의 되돌린 칸: 세 형식(JSON · XML · 바이너리)이 읽지 못한 칸을 읽기 전 값으로 되돌려도 그 값(바탕 층 형식의 새 객체, 0, Min 밖)이
-// 범위 오류로 덧나지 않고 orphan 하나로 끝나는지 본다(`SerializerUtil::isWithinDeclaredRanges` 의 되돌린 칸 목록, nogpu).
+// 범위 오류로 덧나지 않고 orphan 하나로 끝나는지 본다(`PropertyConstraints::isWithinDeclaredRanges` 의 되돌린 칸 목록, nogpu).
 // 표본은 기본값 없이 Min 이 있는 칸을 가진 실제 형식 `RenderConfig`(구조체 칸 `_textureStreaming` 포함)다.
 #include "pch.h"
 
@@ -8,10 +8,10 @@
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Reflection/TypeInfo.h"
-#include "Engine/Serialization/Format/BinarySerializer.h"
-#include "Engine/Serialization/Format/JSONSerializer.h"
-#include "Engine/Serialization/Format/XMLSerializer.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
+#include "Engine/Serialization/Serializer/BinarySerializer.h"
+#include "Engine/Serialization/Serializer/JSONSerializer.h"
+#include "Engine/Serialization/Serializer/XMLSerializer.h"
 
 #include "sw/config/ShippingHostDefaults.h"
 

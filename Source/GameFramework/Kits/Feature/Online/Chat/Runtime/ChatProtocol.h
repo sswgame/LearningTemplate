@@ -1,7 +1,7 @@
 /**
  * @file ChatProtocol.h
  * @brief 채팅 키트의 와이어 형식입니다. 메서드와 알림 번호(영역 `OnlineMethodRange::kChat`), 요청과 응답 본문, 메시지 형식, 서버 버스 주제를 정의하며 클라이언트와 서버가 함께 씁니다.
- * @details - 요청과 응답은 `REFLECT` 구조체 하나씩이고 본문은 고정 배치형(B)이다. 바이트 배치는 `PROPERTY` 선언 순서와 키가 정한다.
+ * @details - 요청과 응답은 `REFLECT` 구조체 하나씩이고 본문은 스키마 결합형이다. 바이트 배치는 `PROPERTY` 선언 순서와 키가 정한다.
  *            응답은 메서드마다 따로이다(`ChatResultReply` · `ChatSendReply` · `ChatHistoryReply`). 업무 결과(`ChatResult`)는 도메인 값만이고, 기다릴 시간(ms)이 함께 온다.
  *            말하기와 귓속말은 필터를 거친 메시지를 되울림으로 돌려주고, 기록은 메시지 목록과 다음 커서를 돌려준다.
  *            공통 범주(`OnlineError`)는 로그인 없음, 범위 밖 요청, 일시 장애, 버전이다.
@@ -213,7 +213,7 @@ namespace sw
 {
     /**
      * @struct ChatProtocol
-     * @brief 채팅 키트의 메시지 타입 목록, 등록 항목, 기록 레코드 코덱입니다. 본문은 고정 배치형(B)이며 `MessageTypes::write` · `read` 로만 쓰고 읽습니다.
+     * @brief 채팅 키트의 메시지 타입 목록, 등록 항목, 기록 레코드 코덱입니다. 본문은 스키마 결합형이며 `MessageTypes::write` · `read` 로만 쓰고 읽습니다.
      * @details 알림과 서버 버스의 본문은 `ChatMessage` 하나입니다. 버스는 B 가 아니라 주제 정의(`ChatBus`)로 씁니다.
      */
     struct SW_KIT_API ChatProtocol

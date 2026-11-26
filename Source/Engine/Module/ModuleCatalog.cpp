@@ -11,7 +11,7 @@
 
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Reflection/TypeRegistry.h"
-#include "Engine/Serialization/Format/JSONSerializer.h"
+#include "Engine/Serialization/Serializer/JSONSerializer.h"
 
 #include "sw/config/ConfigConstants.h"
 

@@ -7,8 +7,10 @@
 
 #include "Engine/Reflection/ReflectionContainers.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
+#include "Engine/Serialization/Serializer/PropertyConstraints.h"
+#include "Engine/Serialization/Serializer/PropertySerializer.h"
 #include "Engine/Serialization/Serializer/SerializeContext.h"
-#include "Engine/Serialization/Serializer/SerializerUtil.h"
+#include "Engine/Serialization/Serializer/ValueSerializer.h"
 #include "Engine/Serialization/XML/XMLFields.h"
 
 namespace sw
@@ -20,13 +22,13 @@ namespace sw
             /** @brief 칸 하나에 글 하나를 씁니다. 목록 칸이면 뒤에 더합니다. */
             [[nodiscard]] static bool applyToken( const PropertyInfo& prop, void* pInstance, string_view token, const SerializeContext& context )
             {
-                const ISequenceContainerWrapper* const pList = SerializerUtil::findTextList( prop, context );
+                const ISequenceContainerWrapper* const pList = PropertySerializer::findTextList( prop, context );
                 if ( pList == nullptr )
-                    return SerializerUtil::applyPropertyText( prop, MutableObjectAddress{ pInstance }, token, context );
+                    return PropertySerializer::applyPropertyText( prop, MutableObjectAddress{ pInstance }, token, context );
                 void* const pContainer = prop.getRawPtr( pInstance );
                 pList->addElementDefault( pContainer );
                 void* const pElement = pList->getElement( pContainer, pList->getSize( pContainer ) - 1 );
-                return SerializerUtil::parseTextValue( MutableValueAddress{ pElement }, prop._elementTypeName, token, context );
+                return ValueSerializer::parseTextValue( MutableValueAddress{ pElement }, prop._elementTypeName, token, context );
             }
 
             /** @brief 목록 칸의 글입니다. 원소를 쉼표로 잇습니다. */
@@ -38,7 +40,7 @@ namespace sw
                 for ( size_t index = 0; index < count; ++index )
                 {
                     text += index == 0 ? "" : ", ";
-                    text += SerializerUtil::formatValueText( ValueAddress{ list.getElement( pContainer, index ) }, prop._elementTypeName, context );
+                    text += ValueSerializer::formatValueText( ValueAddress{ list.getElement( pContainer, index ) }, prop._elementTypeName, context );
                 }
                 return text;
             }
@@ -125,7 +127,7 @@ namespace sw
                 propIndex = nextPositional;
                 if ( propIndex >= listProperty.size() )
                     return unexpected( Error{ ErrorKind::InvalidArgument, "too many arguments", typeInfo._name.c_str() }.appendDetail( " at '" ).appendDetail( token ).appendDetail( "'" ) );
-                if ( SerializerUtil::findTextList( listProperty[propIndex], context ) == nullptr )
+                if ( PropertySerializer::findTextList( listProperty[propIndex], context ) == nullptr )
                     ++nextPositional;
             }
             if ( Internal::applyToken( listProperty[propIndex], pInstance, value, context ) == false )
@@ -141,9 +143,9 @@ namespace sw
         for ( size_t index = 0; index < listProperty.size(); ++index )
         {
             if ( listWritten[index] != 0 )
-                SerializerUtil::collectPropertyRangeErrors( listProperty[index], ObjectAddress{ pInstance }, string(), listRangeError );
+                PropertyConstraints::collectPropertyRangeErrors( listProperty[index], ObjectAddress{ pInstance }, string(), listRangeError );
             // 판정은 직렬화기 · XMLFields 와 한 함수다 — 빠졌거나, 이름 · 경로 형식인데 빈 글이다.
-            if ( SerializerUtil::isRequiredValueMissing( listProperty[index], listWritten[index] != 0, listWritten[index] != 0 ? &listWrittenText[index] : nullptr, RequiredScope::Root ) )
+            if ( PropertyConstraints::isRequiredValueMissing( listProperty[index], listWritten[index] != 0, listWritten[index] != 0 ? &listWrittenText[index] : nullptr, RequiredScope::Root ) )
                 return unexpected( Error{ ErrorKind::InvalidArgument, "a required field is missing", typeInfo._name.c_str() }.appendDetail( "." ).appendDetail( XMLFields::getAttributeName( listProperty[index] ).c_str() ) );
         }
         if ( listRangeError.empty() == false )
@@ -158,11 +160,11 @@ namespace sw
         string                  text;
         for ( const PropertyInfo& prop : typeInfo.getPropertiesWithBase() )
         {
-            const ISequenceContainerWrapper* const pList = SerializerUtil::findTextList( prop, context );
-            if ( pList == nullptr && ( prop._bIsContainer == SW_TRUE || SerializerUtil::canCarryValueType( prop._typeName, context ) == false ) )
+            const ISequenceContainerWrapper* const pList = PropertySerializer::findTextList( prop, context );
+            if ( pList == nullptr && ( prop._bIsContainer == SW_TRUE || ValueSerializer::canCarryValueType( prop._typeName, context ) == false ) )
                 continue;
-            const string value        = pList != nullptr ? Internal::formatList( prop, *pList, pInstance, context ) : SerializerUtil::formatPropertyText( prop, ObjectAddress{ pInstance }, context );
-            const string defaultValue = pList != nullptr ? Internal::formatList( prop, *pList, pDefaults, context ) : SerializerUtil::formatPropertyText( prop, ObjectAddress{ pDefaults }, context );
+            const string value        = pList != nullptr ? Internal::formatList( prop, *pList, pInstance, context ) : PropertySerializer::formatPropertyText( prop, ObjectAddress{ pInstance }, context );
+            const string defaultValue = pList != nullptr ? Internal::formatList( prop, *pList, pDefaults, context ) : PropertySerializer::formatPropertyText( prop, ObjectAddress{ pDefaults }, context );
             if ( prop._metadata->_bRequired == SW_FALSE && value == defaultValue )
                 continue;
             text += text.empty() ? "" : ", ";

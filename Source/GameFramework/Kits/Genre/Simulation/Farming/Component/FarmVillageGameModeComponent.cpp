@@ -13,11 +13,11 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Physics/Component/RigidBodyComponent.h"
-#include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/BinarySerializer.h"
-#include "Engine/Serialization/Format/FormatDef.h"
-#include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
+#include "Engine/Serialization/Serializer/Archive.h"
+#include "Engine/Serialization/Serializer/BinarySerializer.h"
 #include "Engine/Serialization/Serializer/SerializeContext.h"
+#include "Engine/Serialization/Serializer/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Simulation/Farming/Component/FarmVillagerComponent.h"
 #include "GameFramework/Runtime/Character/AI/Schedule/NPCScheduleComponent.h"
@@ -31,7 +31,7 @@ namespace sw
     {
         struct FarmVillageGameModeComponentInternal
         {
-            static constexpr FormatDef kStateFormat{ "FVIL" };
+            static constexpr FormatDesc kStateFormat{ "FVIL" };
 
             /** @brief 시계의 지금 시각을 0 일 0:00 부터 센 분으로 바꿉니다(일정 시스템의 시간 축). */
             static int32 computeAbsoluteMinute( const WorldClock& clock )

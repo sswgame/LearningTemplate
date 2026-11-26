@@ -55,7 +55,7 @@ namespace sw::editor
     {
         SetValue,            ///< 내장 값 사본 `_value`(비트필드는 bool)
         SetNumber,           ///< 숫자 `_number` — 허용 범위(`Min` · `Max`)로 자른다
-        SetText,             ///< 값 글 `_text`(`SerializerUtil::formatPropertyText` 꼴)
+        SetText,             ///< 값 글 `_text`(`PropertySerializer::formatPropertyText` 꼴)
         SetEnum,             ///< 열거형 값 `_integer`
         AddElement,          ///< 시퀀스 끝에 기본값 원소
         ClearElements,       ///< 시퀀스 비우기

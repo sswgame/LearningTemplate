@@ -106,7 +106,7 @@ namespace sw::editor
     /**
      * @struct EditorPreferencesStore
      * @brief `Saved/Editor/EditorPreferences.json` 을 읽고 씁니다. 섹션 id 마다 JSON 오브젝트 하나이고, 기본값과 다른 프로퍼티만 담습니다.
-     * @details 값은 프로퍼티의 텍스트 형식(`SerializerUtil::formatPropertyText`)이다. 모르는 섹션과 키는 경고하고 건너뛴다. 사용자 파일이므로 기동을 막지 않는다.
+     * @details 값은 프로퍼티의 텍스트 형식(`PropertySerializer::formatPropertyText`)이다. 모르는 섹션과 키는 경고하고 건너뛴다. 사용자 파일이므로 기동을 막지 않는다.
      *          사람이 커밋하는 설정 파일처럼 엄격하게 읽지 않는 이유는, 확장 모듈을 끄면 그 섹션이 사라지기 때문이다.
      */
     struct SW_EDITOR_API EditorPreferencesStore

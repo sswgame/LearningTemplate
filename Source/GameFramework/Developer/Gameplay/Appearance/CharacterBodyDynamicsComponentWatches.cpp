@@ -28,7 +28,7 @@
 #include "Engine/Object/GameObject/GameObjectEvents.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
-#include "Engine/Serialization/Format/FormatDef.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
 #include "Engine/VFX/VFXComponent.h"
 #include "Engine/Visual/Component/DirectionalLightComponent.h"
 #include "Engine/Visual/Component/LightComponent.h"

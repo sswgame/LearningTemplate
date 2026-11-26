@@ -1,11 +1,11 @@
 /**
  * @file MixedBuildCodec.h
- * @brief 배포 중에 빌드가 다른 서버가 읽는 값(서버 버스 본문, 캐시 레코드)의 자기 기술형(A) 코덱입니다.
+ * @brief 배포 중에 빌드가 다른 서버가 읽는 값(서버 버스 본문, 캐시 레코드)의 자기 기술형 코덱입니다.
  * @details
  *          - 버전 머리가 기대한 버전과 다르면 거절합니다. 이관 레지스트리를 보지 않습니다(`BinarySerializer::deserializeExactVersion`).
  *          - 타입에 없는 이름의 필드는 건너뛰고(한 번 경고), 타입에 있는데 읽지 못한 필드(모르는 열거자)는 거절합니다. 중첩 구조체까지 같은 정책입니다.
- *          - 읽은 값과 쓸 값이 선언된 범위(`Min`, `Max`, `MaxCount`)를 지키는지 고정 배치형 쓰기 검사로 봅니다. A 는 `MaxCount` 를 보지 않기 때문입니다.
- *            타입에 고정 배치형 코덱이 없으면 `FixedLayout::write` 가 이유와 함께 프로세스를 멈춥니다(대신 쓸 검사가 없습니다).
+ *          - 읽은 값과 쓸 값이 선언된 범위(`Min`, `Max`, `MaxCount`)를 지키는지 스키마 결합형 쓰기 검사로 봅니다. A 는 `MaxCount` 를 보지 않기 때문입니다.
+ *            타입에 레이아웃 스키마이 없으면 `LayoutSerializer::write` 가 이유와 함께 프로세스를 멈춥니다(대신 쓸 검사가 없습니다).
  *          영속 레코드는 이 코덱을 쓰지 않습니다. 옛 빌드가 모르는 필드를 버리고 다시 쓰면 새 빌드의 값이 지워지기 때문입니다(`ServiceRecordUtil::readDurable`).
  */
 #pragma once
@@ -15,8 +15,8 @@
 #include "Core/String/Name/hashed_string.h"
 
 #include "Engine/Reflection/TypeInfo.h"
-#include "Engine/Serialization/Fixed/FixedLayout.h"
-#include "Engine/Serialization/Format/BinarySerializer.h"
+#include "Engine/Serialization/Layout/LayoutSerializer.h"
+#include "Engine/Serialization/Serializer/BinarySerializer.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -41,7 +41,7 @@ namespace sw
 
 namespace sw
 {
-    /** @struct MixedBuildCodec @brief 혼합 빌드 사이의 A 코덱입니다. @p T 는 `REFLECT_BODY()` 와 고정 배치형 코덱을 가진 타입입니다. */
+    /** @struct MixedBuildCodec @brief 혼합 빌드 사이의 A 코덱입니다. @p T 는 `REFLECT_BODY()` 와 레이아웃 스키마을 가진 타입입니다. */
     struct SW_GF_API MixedBuildCodec
     {
         /** @brief 모르는 이름만 건너뛰는 읽기 컨텍스트입니다(`setSkipUnknownProperties( true )`, `setSkipUnreadableProperties( false )`). */
@@ -53,7 +53,7 @@ namespace sw
         {
             outBytes.clear();
             BitWriter  scratch;
-            const bool bInRange = FixedLayout::write( value, scratch );
+            const bool bInRange = LayoutSerializer::write( value, scratch );
             if ( bInRange && BinarySerializer::serializeVersioned( version, &value, *T::StaticType(), outBytes ) )
                 return true;
             outBytes.clear();
@@ -77,7 +77,7 @@ namespace sw
                     return { MixedBuildReadResult::Unreadable, read._readVersion };
             }
             BitWriter scratch;
-            if ( FixedLayout::write( decoded, scratch ) == false )
+            if ( LayoutSerializer::write( decoded, scratch ) == false )
                 return { MixedBuildReadResult::OutOfRange, read._readVersion };
             outValue = std::move( decoded );
             return { MixedBuildReadResult::Read, read._readVersion };

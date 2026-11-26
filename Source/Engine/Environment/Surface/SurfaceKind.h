@@ -45,7 +45,7 @@
 #include "Engine/Environment/Surface/SurfaceStamp.h"
 #include "Engine/Environment/Surface/ZoneProfileAssetKind.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Serialization/Serializer/DataPath.h"
+#include "Engine/Serialization/Reference/DataPath.h"
 
 namespace sw
 {

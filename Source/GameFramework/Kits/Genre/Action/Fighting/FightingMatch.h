@@ -17,7 +17,7 @@
 #include "Core/String/Name/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Serializer/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Action/Fighting/FighterCatalog.h"
@@ -156,7 +156,7 @@ namespace sw
 namespace sw
 {
     /**
-     * @brief 캐릭터 하나의 실행 상태입니다. `PROPERTY` 필드가 롤백(고정 배치형)과 세이브(자기 기술형)에 들어갑니다.
+     * @brief 캐릭터 하나의 실행 상태입니다. `PROPERTY` 필드가 롤백(스키마 결합형)과 세이브(자기 기술형)에 들어갑니다.
      * @details `_pDef` 는 빌려 온 정의라서 싣지 않습니다. 읽기는 대상의 복사본에 읽으므로 정의 포인터가 그대로 이어지고,
      *          기술 · 자세 인덱스가 그 정의 안에 있는지는 `FightingMatch::validateState` 가 봅니다. 필드 순서가 롤백 바이트의 순서입니다.
      */
@@ -262,7 +262,7 @@ namespace sw
      *          둘이 함께 선승 조건에 닿으면 대전이 무승부다.
      *
      *          상태는 `PROPERTY` 필드(두 캐릭터, 라운드 시리즈, 프레임, 지난 라운드 결과) 한 벌이고, 형식은 쓰는 곳이 고른다.
-     *          롤백(`saveState` · `loadState`)은 같은 빌드끼리만 읽는 고정 배치형(`FixedLayout`)이고, 세이브(`writeState` · `readState`)는
+     *          롤백(`saveState` · `loadState`)은 같은 빌드끼리만 읽는 스키마 결합형(`LayoutSerializer`)이고, 세이브(`writeState` · `readState`)는
      *          버전 머리가 붙은 자기 기술형(`BinarySerializer`)이다. 롤백 바이트를 세이브에 싣지 않으므로 빌드가 바뀌어도 세이브는 마이그레이션 경로로 읽힌다.
      *          설정, 이벤트, 판정 임시 버퍼는 상태가 아니라서 싣지 않는다.
      */
@@ -283,7 +283,7 @@ namespace sw
         /** @brief 롤백 어댑터용 `advanceFrame` 입니다. 플레이어 순서대로 1바이트 입력(`encodeInput`)을 받고, 모자란 플레이어는 중립으로 처리합니다. */
         void advanceFrame( const vector<uint8>& listInput );
 
-        /** @brief 이벤트를 뺀 전체 상태를 롤백 바이트(고정 배치형)로 씁니다. 범위 밖 값이 있으면 결함이므로 오류를 남기고 단언하며, @p outBuffer 는 빈 채입니다. */
+        /** @brief 이벤트를 뺀 전체 상태를 롤백 바이트(스키마 결합형)로 씁니다. 범위 밖 값이 있으면 결함이므로 오류를 남기고 단언하며, @p outBuffer 는 빈 채입니다. */
         void saveState( vector<uint8>& outBuffer ) const;
         /** @brief `saveState` 가 쓴 바이트로 상태를 되돌립니다. 같은 캐릭터로 `initialize` 한 대전이어야 하고, 바이트가 깨졌거나 맞지 않으면 상태를 바꾸지 않고 false 를 반환합니다. */
         [[nodiscard]] bool loadState( const vector<uint8>& buffer );

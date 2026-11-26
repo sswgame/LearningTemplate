@@ -75,7 +75,7 @@ EDITOR_SCAN_PATTERN = re.compile(r"\bFileUtil::collect(?:Files|Folders)\(\s*((?:
 NAME_HASH_KEY_PATTERN = re.compile(r"\[\s*[^\[\]\n]*\bgetHash\(\s*\)\s*\]|\b(?:emplace|try_emplace|insert|insert_or_assign|find|count|contains|tryClaim)\(\s*[^;\n]*?\bgetHash\(\s*\)|\b\w*(?:[Kk]ey|_id)\s*=\s*[^;=\n]*\bgetHash\(\s*\)")
 ASSET_ENTRANCE_NAME = re.compile(r"\w+::load\w*")   # 리소스 입구 이름(정의는 FunctionSpans 가 찾는다)
 ASSET_CARRIER_PATTERN = re.compile(r"withAsset\(|parseResourceText\(|parseResourceRoot\(|loadResource\w*\(|loadFromAsset\(")
-STATE_ENTRY_FILE = "Source/Engine/Serialization/Format/StateIO.h"   # 입구 자신
+STATE_ENTRY_FILE = "Source/Engine/Serialization/Serializer/StateIO.h"   # 입구 자신
 STATE_SIGNATURE = re.compile(r"\b(?:(\w+)\s*::\s*)?(writeState|readState)\s*\(\s*(?:sw::|::sw::)?Archive\s*&[^)]*\)\s*(?:const\s*)?(?:override\s*)?(?:=\s*0\s*)?([;{])")
 STATE_ENTRY_CALL = re.compile(r"\bStateIO\s+\w+\s*\(|\bStateIO::(?:writeObject|readAtomic|readInPlace)\s*\(")
 FRAME_FUNCTION_NAME = re.compile(r"(?:\w+::)+(onTick|tick\w*|update\w*|paint\w*)")   # 프레임 함수 정의 이름(정의는 FunctionSpans 가 찾는다)

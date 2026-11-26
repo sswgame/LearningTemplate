@@ -23,7 +23,7 @@
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Environment/Placement/SurfaceLayerWeights.h"
-#include "Engine/Serialization/Format/FormatDef.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
 
 namespace sw
 {
@@ -33,7 +33,7 @@ namespace sw
      */
     struct SW_API LayerWeightsAsset
     {
-        static constexpr FormatDef   kFormat{ "SWLW" };
+        static constexpr FormatDesc  kFormat{ "SWLW" };
         static constexpr string_view kExtension = ".layerweights";
         /** @brief 이 에셋 종류의 접미사입니다(종류 표 `AssetTypeRegistry`). */
         static constexpr AssetSuffix kArrAssetSuffix[] = {

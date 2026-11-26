@@ -22,7 +22,7 @@ namespace sw
      */
     struct BitMath
     {
-        /** @brief `writeBits` · `readBits` 한 번에 다루는 비트 수의 상한입니다. 더 긴 값은 부르는 쪽이 나눠 씁니다(`FixedCodecUtil::writeRawBits`). */
+        /** @brief `writeBits` · `readBits` 한 번에 다루는 비트 수의 상한입니다. 더 긴 값은 부르는 쪽이 나눠 씁니다(`LayoutFieldCodec::writeRawBits`). */
         static constexpr int32 kMaxBitsPerCall = 32;
 
         /** @brief [@p minValue, @p maxValue] 를 담는 데 필요한 비트 수입니다. */
@@ -160,7 +160,7 @@ namespace sw
         [[nodiscard]] float32 readFiniteFloat();
         /**
          * @brief `writeFloat` 로 쓴 32 비트를 검사 없이 그대로 읽습니다(NaN · 무한대 포함). 비트가 모자라면 0 이고 `hasOverflowed` 가 섭니다.
-         * @details 쓴 비트와 같은 비트가 필요한 곳(범위 없는 `FixedLayout` 필드, 범위를 따로 보는 `FixedCodecUtil::readBoundedFloat32`)만 씁니다.
+         * @details 쓴 비트와 같은 비트가 필요한 곳(범위 없는 `LayoutSerializer` 필드, 범위를 따로 보는 `LayoutFieldCodec::readBoundedFloat32`)만 씁니다.
          */
         [[nodiscard]] float32 readFloatBits();
         /** @brief `writeQuantizedFloat` 로 쓴 값을 읽습니다. 실패하면 @p minValue 이고 `hasOverflowed` 가 섭니다(`readInt` 와 같은 규칙). */
@@ -213,7 +213,7 @@ namespace sw
         [[nodiscard]] uint32 readCount( uint32 maxCount );
         /**
          * @brief 본문을 다 읽었는지 봅니다. 넘쳤거나, 8 비트 이상 남았거나, 마지막 채움 비트가 0 이 아니면 false 이고 `hasOverflowed` 를 세웁니다.
-         * @details 고정 배치형 본문의 남는 비트 규칙(`FixedReadResult::TrailingData`)과 같다 — 손 본문도 끝에서 부른다.
+         * @details 스키마 결합형 본문의 남는 비트 규칙(`LayoutReadResult::TrailingData`)과 같다 — 손 본문도 끝에서 부른다.
          */
         [[nodiscard]] bool readEnd();
 

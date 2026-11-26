@@ -6,7 +6,7 @@
 #include "Core/Log/Logger.h"
 
 #include "Engine/Content/AssetRegistry.h"
-#include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Serializer/Archive.h"
 
 #include "GameFramework/Runtime/Foundation/Save/GameStateSnapshot.h"
 #include "GameFramework/Runtime/Foundation/Save/SaveLock.h"

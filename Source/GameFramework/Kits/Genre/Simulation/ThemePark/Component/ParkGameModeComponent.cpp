@@ -11,9 +11,9 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Physics/Component/RigidBodyComponent.h"
-#include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/FormatDef.h"
-#include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
+#include "Engine/Serialization/Serializer/Archive.h"
+#include "Engine/Serialization/Serializer/StateIO.h"
 
 #include "GameFramework/Runtime/Character/Navigation/NavGridObstacle.h"
 
@@ -23,7 +23,7 @@ namespace sw
     {
         struct ParkGameModeComponentInternal
         {
-            static constexpr FormatDef kStateFormat{ "PARK" };
+            static constexpr FormatDesc kStateFormat{ "PARK" };
 
             // 사운드 이벤트 이름 — 클립 · 범위 · 상한은 게임의 사운드 이벤트 라이브러리(`*.audioevents.xml`)가 정한다.
             static constexpr const utf8* kEventBlocked = "ParkBlocked";

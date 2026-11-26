@@ -1,0 +1,929 @@
+#include "pch.h"
+
+#include "Engine/Serialization/Serializer/Archive.h"
+
+#include "Core/Compression/CompressionStream.h"
+#include "Core/File/FileUtil.h"
+#include "Core/Hash/HashUtil.h"
+#include "Core/Math/MathUtil.h"
+#include "Core/Math/MatrixMath.h"
+#include "Core/Math/VectorMath.h"
+#include "Core/Memory/Memory.h"
+#include "Core/Serialization/ByteStream.h"
+#include "Core/Serialization/VarIntUtil.h"
+#include "Core/String/StringUtil.h"
+
+#include "Engine/Content/AssetIO.h"
+#include "Engine/Reflection/TypeInfo.h"
+#include "Engine/Serialization/Format/SchemaMigrate.h"
+#include "Engine/Serialization/Serializer/BinarySerializer.h"
+#include "Engine/Serialization/Serializer/JSONSerializer.h"
+#include "Engine/Serialization/Serializer/SerializerTranscode.h"
+#include "Engine/Serialization/Serializer/XMLSerializer.h"
+
+namespace sw
+{
+    Archive::Archive()
+        : _stringPool{}
+        , _bytes{}
+        , _pData{ nullptr }
+        , _dataSize{ 0 }
+        , _offset{ 0 }
+        , _bReadMode{ SW_FALSE }
+        , _bError{ SW_FALSE }
+        , _reserved{ 0 }
+    {
+    }
+
+    Archive::Archive( const AbsolutePath& fileName, bool bReadMode )
+        : _stringPool{}
+        , _bytes{}
+        , _pData{ nullptr }
+        , _dataSize{ 0 }
+        , _offset{ 0 }
+        , _bReadMode{ bReadMode ? static_cast<uint8>( SW_TRUE ) : static_cast<uint8>( SW_FALSE ) }
+        , _bError{ SW_FALSE }
+        , _reserved{ 0 }
+    {
+        if ( bReadMode )
+        {
+            // 파일 입구는 디스크 경로만 받는다 — `saveToFile` 이 쓴 곳과 같은 규칙이다. 리소스 id 는 부르는 쪽이 `AssetIO::readBinaryAsset`
+            // 로 바이트를 읽어 버퍼 생성자로 넘긴다. 예전에는 디스크를 먼저 보고 없으면 리소스 id 로 다시 찾아, 두 종류의 경로가 한 입구로 들어왔다.
+            const bool bLoaded = fileName.empty() == false && AssetIO::readBinaryFile( fileName, _bytes );
+            if ( bLoaded )
+            {
+                _pData    = _bytes.data();
+                _dataSize = _bytes.size();
+            }
+            else
+            {
+                _bError = SW_TRUE;
+            }
+        }
+    }
+
+    Archive::Archive( const uint8* pData, uint64 size )
+        : _stringPool{}
+        , _bytes{}
+        , _pData{ pData }
+        , _dataSize{ size }
+        , _offset{ 0 }
+        , _bReadMode{ SW_TRUE }
+        , _bError{ SW_FALSE }
+        , _reserved{ 0 }
+    {
+    }
+
+    Archive::~Archive() = default;
+
+    void Archive::writeData( vector<uint8>& outListDestination ) const
+    {
+        outListDestination.assign( _bytes.begin(), _bytes.end() );
+    }
+
+    bool Archive::setOffset( uint64 offset )
+    {
+        if ( offset > _dataSize )
+            return false;
+        _offset = offset;
+        return true;
+    }
+
+    void Archive::setReadModeAndResetPosition( const bool bSetReadMode )
+    {
+        _bReadMode = bSetReadMode ? SW_TRUE : SW_FALSE;
+        _bError    = SW_FALSE;
+        _offset    = 0;
+    }
+
+    bool Archive::saveToFile( const AbsolutePath& fileName ) const
+    {
+        if ( _bytes.empty() == false )
+            return FileUtil::writeFile( fileName, _bytes.data(), _bytes.size() );
+        return false;
+    }
+
+    void Archive::writeBytes( const void* pBuffer, uint64 byteSize )
+    {
+        if ( pBuffer == nullptr || byteSize == 0 )
+            return;
+
+        const uint8* pBytes = static_cast<const uint8*>( pBuffer );
+        _bytes.insert( _bytes.end(), pBytes, pBytes + byteSize );
+        _pData    = _bytes.data();
+        _dataSize = _bytes.size();
+    }
+
+    bool Archive::readBytes( void* pOutBuffer, uint64 byteSize )
+    {
+        const bool bInvalidReadRequest = pOutBuffer == nullptr || byteSize == 0 || _pData == nullptr;
+        if ( bInvalidReadRequest )
+        {
+            if ( byteSize > 0 )
+                _bError = SW_TRUE;
+            return false;
+        }
+
+        // 뺄셈으로 비교한다. `_offset + byteSize` 는 `byteSize` 가 클 때 넘쳐서 작아지고
+        // 그대로 검사를 통과한다. `_offset <= _dataSize` 는 항상 참이다(위치는 검사를 통과한
+        // 뒤에만 나아간다). 길이가 `uint32` 인 경로들은 넘칠 수 없지만 이 함수는 `uint64` 를 받는다.
+        if ( byteSize > _dataSize - _offset )
+        {
+            _bError = SW_TRUE;
+            return false;
+        }
+
+        Memory::copy( pOutBuffer, _pData + _offset, byteSize );
+        _offset += byteSize;
+        return true;
+    }
+
+    const uint8* Archive::readBytesView( uint64 byteSize )
+    {
+        // 뺄셈으로 비교한다. `readBytes` · `readSubArchive` 와 같은 이유다. `_offset + byteSize` 는 `byteSize` 가 클 때 **넘쳐서
+        // 작아지고** 그대로 검사를 통과하며, 그러면 부르는 쪽이 버퍼 밖을 `byteSize` 만큼 읽는다.
+        // 길이가 `uint32` 인 경로들은 넘칠 수 없지만 이 함수는 `uint64` 를 받는다.
+        if ( _pData == nullptr || byteSize > _dataSize - _offset )
+        {
+            _bError = SW_TRUE;
+            return nullptr;
+        }
+
+        const uint8* pResult = _pData + _offset;
+        _offset += byteSize;
+        return pResult;
+    }
+
+    void Archive::writeString( string_view str )
+    {
+        *this << str;
+    }
+
+    string Archive::readString()
+    {
+        string text;
+        *this >> text;
+        return text;
+    }
+
+    string_view Archive::readStringView()
+    {
+        uint32 len{ 0 };
+        ( *this ) >> len;
+        if ( _bError == SW_TRUE || len == 0 )
+            return {};
+        if ( _pData == nullptr || len > _dataSize - _offset )
+        {
+            _bError = SW_TRUE;
+            return {};
+        }
+        const string_view view{ reinterpret_cast<const utf8*>( _pData + _offset ), len };
+        _offset += len;
+        return view;
+    }
+
+    Archive Archive::readSubArchive( uint64 byteSize )
+    {
+        if ( _pData == nullptr || byteSize > _dataSize - _offset )
+        {
+            _bError = SW_TRUE;
+            Archive failedArchive( nullptr, 0 );
+            failedArchive.setError();
+            return failedArchive;
+        }
+
+        const uint8* pSubData = _pData + _offset;
+        _offset += byteSize;
+        return Archive( pSubData, byteSize );
+    }
+
+    uint32 Archive::readCount( uint32 minBytesPerElement )
+    {
+        uint32 count = 0;
+        ( *this ) >> count;
+        if ( _bError == SW_TRUE )
+            return 0;
+        if ( ByteReader::canHoldCount( count, minBytesPerElement, getRemainingBytes() ) == false )
+        {
+            _bError = SW_TRUE;
+            return 0;
+        }
+        return count;
+    }
+
+    void Archive::writeSection( const void* pData, uint32 byteSize )
+    {
+        ( *this ) << byteSize;
+        if ( pData != nullptr && byteSize > 0 )
+            writeBytes( pData, byteSize );
+    }
+
+    bool Archive::readSection( vector<uint8>& outBytes )
+    {
+        uint32 size = 0;
+        ( *this ) >> size;
+        if ( _bError == SW_TRUE )
+            return false;
+
+        if ( size == 0 )
+        {
+            outBytes.clear();
+            return true;
+        }
+
+        if ( size > _dataSize - _offset )
+        {
+            _bError = SW_TRUE;
+            outBytes.clear();
+            return false;
+        }
+
+        outBytes.resize( size );
+        return readBytes( outBytes.data(), size );
+    }
+
+    uint32 Archive::computeChecksum() const
+    {
+        if ( _pData == nullptr || _dataSize == 0 )
+            return 0;
+
+        return HashUtil::computeCRC32( _pData, _dataSize );
+    }
+
+    void Archive::writeChecksum()
+    {
+        uint32 checksum = computeChecksum();
+        ( *this ) << checksum;
+    }
+
+    bool Archive::validateChecksum() const
+    {
+        if ( _dataSize < sizeof( uint32 ) || _pData == nullptr )
+            return false;
+
+        uint32 storedChecksum = 0;
+        Memory::copy( &storedChecksum, _pData + _dataSize - sizeof( uint32 ), sizeof( uint32 ) );
+        const uint32 computed = HashUtil::computeCRC32( _pData, _dataSize - sizeof( uint32 ) );
+        return storedChecksum == computed;
+    }
+
+    Archive& Archive::operator<<( bool data )
+    {
+        writeBytes( &data, sizeof( bool ) );
+        return *this;
+    }
+
+    Archive& Archive::operator<<( uint8 data )
+    {
+        writeBytes( &data, sizeof( uint8 ) );
+        return *this;
+    }
+
+    Archive& Archive::operator<<( uint16 data )
+    {
+        writeBytes( &data, sizeof( uint16 ) );
+        return *this;
+    }
+
+    Archive& Archive::operator<<( uint32 data )
+    {
+        writeBytes( &data, sizeof( uint32 ) );
+        return *this;
+    }
+
+    Archive& Archive::operator<<( uint64 data )
+    {
+        writeBytes( &data, sizeof( uint64 ) );
+        return *this;
+    }
+
+    Archive& Archive::operator<<( int8 data )
+    {
+        writeBytes( &data, sizeof( int8 ) );
+        return *this;
+    }
+
+    Archive& Archive::operator<<( int16 data )
+    {
+        writeBytes( &data, sizeof( int16 ) );
+        return *this;
+    }
+
+    Archive& Archive::operator<<( int32 data )
+    {
+        writeBytes( &data, sizeof( int32 ) );
+        return *this;
+    }
+
+    Archive& Archive::operator<<( int64 data )
+    {
+        writeBytes( &data, sizeof( int64 ) );
+        return *this;
+    }
+
+    Archive& Archive::operator<<( float32 data )
+    {
+        writeBytes( &data, sizeof( float32 ) );
+        return *this;
+    }
+
+    Archive& Archive::operator<<( float64 data )
+    {
+        writeBytes( &data, sizeof( float64 ) );
+        return *this;
+    }
+
+    Archive& Archive::operator<<( string_view data )
+    {
+        const uint32 len = static_cast<uint32>( data.length() );
+        ( *this ) << len;
+        if ( len > 0 )
+            writeBytes( data.data(), len );
+        return *this;
+    }
+
+    Archive& Archive::operator<<( const vector<uint8>& bytes )
+    {
+        const uint32 len = static_cast<uint32>( bytes.size() );
+        ( *this ) << len;
+        if ( len > 0 )
+            writeBytes( bytes.data(), len );
+        return *this;
+    }
+
+    Archive& Archive::operator<<( const float2& data )
+    {
+        writeBytes( &data, sizeof( float2 ) );
+        return *this;
+    }
+
+    Archive& Archive::operator<<( const float3& data )
+    {
+        writeBytes( &data, sizeof( float3 ) );
+        return *this;
+    }
+
+    Archive& Archive::operator<<( const float4& data )
+    {
+        writeBytes( &data, sizeof( float4 ) );
+        return *this;
+    }
+
+    Archive& Archive::operator<<( const float4x4& data )
+    {
+        writeBytes( &data, sizeof( float4x4 ) );
+        return *this;
+    }
+
+    void Archive::readLatched( void* pOutBuffer, uint64 byteSize )
+    {
+        (void)readBytes( pOutBuffer, byteSize ); // 실패는 _bError 에 남는다 — 이 함수가 결과를 버리는 유일한 자리다(선언 설명)
+    }
+
+    // 아래 읽기 연산자들은 `readLatched` 로 읽는다 — 실패는 끈적한 오류 상태(`isError`)에 남는다.
+    Archive& Archive::operator>>( bool& outData )
+    {
+        readLatched( &outData, sizeof( bool ) );
+        return *this;
+    }
+
+    Archive& Archive::operator>>( uint8& outData )
+    {
+        readLatched( &outData, sizeof( uint8 ) );
+        return *this;
+    }
+
+    Archive& Archive::operator>>( uint16& outData )
+    {
+        readLatched( &outData, sizeof( uint16 ) );
+        return *this;
+    }
+
+    Archive& Archive::operator>>( uint32& outData )
+    {
+        readLatched( &outData, sizeof( uint32 ) );
+        return *this;
+    }
+
+    Archive& Archive::operator>>( uint64& outData )
+    {
+        readLatched( &outData, sizeof( uint64 ) );
+        return *this;
+    }
+
+    Archive& Archive::operator>>( int8& outData )
+    {
+        readLatched( &outData, sizeof( int8 ) );
+        return *this;
+    }
+
+    Archive& Archive::operator>>( int16& outData )
+    {
+        readLatched( &outData, sizeof( int16 ) );
+        return *this;
+    }
+
+    Archive& Archive::operator>>( int32& outData )
+    {
+        readLatched( &outData, sizeof( int32 ) );
+        return *this;
+    }
+
+    Archive& Archive::operator>>( int64& outData )
+    {
+        readLatched( &outData, sizeof( int64 ) );
+        return *this;
+    }
+
+    void Archive::readFiniteFloats( float32* pOutValue, uint32 count )
+    {
+        if ( readBytes( pOutValue, sizeof( float32 ) * count ) == false )
+            return;
+        for ( uint32 index = 0; index < count; ++index )
+        {
+            if ( MathUtil::isFinite( pOutValue[index] ) )
+                continue;
+            for ( uint32 clearIndex = 0; clearIndex < count; ++clearIndex )
+            {
+                pOutValue[clearIndex] = 0.0f;
+            }
+            _bError = SW_TRUE;
+            return;
+        }
+    }
+
+    Archive& Archive::operator>>( float32& outData )
+    {
+        readFiniteFloats( &outData, 1 );
+        return *this;
+    }
+
+    Archive& Archive::operator>>( float64& outData )
+    {
+        readLatched( &outData, sizeof( float64 ) );
+        if ( _bError == SW_FALSE && std::isfinite( outData ) == false )
+        {
+            outData = 0.0;
+            _bError = SW_TRUE;
+        }
+        return *this;
+    }
+
+    Archive& Archive::operator>>( string& outData )
+    {
+        uint32 len{ 0 };
+        ( *this ) >> len;
+        if ( _bError == SW_TRUE )
+        {
+            outData.clear();
+            return *this;
+        }
+
+        if ( len > 0 )
+        {
+            if ( _pData == nullptr || len > _dataSize - _offset )
+            {
+                _bError = SW_TRUE;
+                outData.clear();
+                return *this;
+            }
+            outData.resize( len );
+            readLatched( outData.data(), len ); // 남은 길이를 위에서 확인했다 — 실패하지 않는다
+        }
+        else
+        {
+            outData.clear();
+        }
+        return *this;
+    }
+
+    Archive& Archive::operator>>( vector<uint8>& outBytes )
+    {
+        uint32 len{ 0 };
+        ( *this ) >> len;
+        if ( _bError == SW_TRUE )
+        {
+            outBytes.clear();
+            return *this;
+        }
+
+        if ( len > 0 )
+        {
+            if ( _pData == nullptr || len > _dataSize - _offset )
+            {
+                _bError = SW_TRUE;
+                outBytes.clear();
+                return *this;
+            }
+            outBytes.resize( len );
+            readLatched( outBytes.data(), len ); // 남은 길이를 위에서 확인했다 — 실패하지 않는다
+        }
+        else
+        {
+            outBytes.clear();
+        }
+        return *this;
+    }
+
+    Archive& Archive::operator>>( float2& outData )
+    {
+        readFiniteFloats( &outData._x, 2 );
+        return *this;
+    }
+
+    Archive& Archive::operator>>( float3& outData )
+    {
+        readFiniteFloats( &outData._x, 3 );
+        return *this;
+    }
+
+    Archive& Archive::operator>>( float4& outData )
+    {
+        readFiniteFloats( &outData._x, 4 );
+        return *this;
+    }
+
+    Archive& Archive::operator>>( float4x4& outData )
+    {
+        static_assert( sizeof( float4x4 ) == sizeof( float32 ) * 16, "the matrix is read as sixteen floats" );
+        readFiniteFloats( reinterpret_cast<float32*>( &outData ), 16 );
+        return *this;
+    }
+
+    bool Archive::serializeObject( void* pInstance, const TypeInfo& typeInfo, const SerializeContext& context )
+    {
+        if ( pInstance == nullptr )
+        {
+            _bError = SW_TRUE;
+            return false;
+        }
+
+        // 실패하면 반쯤 쓴 바이트를 걷어 낸다. 남기면 뒤에 쓴 값이 그 바이트 뒤에 붙어 읽는 쪽이 어긋난다.
+        const size_t startSize = _bytes.size();
+        const bool   bWritten  = BinarySerializer::serialize( pInstance, typeInfo, _bytes, context );
+        if ( bWritten == false )
+        {
+            _bytes.resize( startSize );
+            _bError = SW_TRUE;
+        }
+        _pData    = _bytes.data();
+        _dataSize = _bytes.size();
+        return bWritten;
+    }
+
+    bool Archive::deserializeObject( void* pInstance, const TypeInfo& typeInfo, const SerializeContext& context )
+    {
+        if ( pInstance == nullptr || _pData == nullptr )
+        {
+            _bError = SW_TRUE;
+            return false;
+        }
+
+        if ( _offset >= _dataSize )
+        {
+            _bError = SW_TRUE;
+            return false;
+        }
+
+        // 객체 끝까지만 읽고 읽기 자리를 옮긴다 — 뒤에 이어 쓴 값을 다음 읽기가 읽는다.
+        return BinarySerializer::deserialize( pInstance, typeInfo, *this, context );
+    }
+
+    bool Archive::writeCompressedSection( const void* pData, uint32 byteSize, CompressionCodecKind codecType )
+    {
+        if ( pData == nullptr || byteSize == 0 )
+        {
+            writeSection( nullptr, 0 );
+            return true;
+        }
+
+        vector<uint8> compressedBytes;
+        if ( CompressionStream::compressBuffer( pData, byteSize, compressedBytes, codecType ) == false )
+        {
+            _bError = SW_TRUE;
+            return false;
+        }
+
+        writeSection( compressedBytes.data(), static_cast<uint32>( compressedBytes.size() ) );
+        return true;
+    }
+
+    bool Archive::readCompressedSection( vector<uint8>& outBytes )
+    {
+        vector<uint8> compressedBytes;
+        if ( readSection( compressedBytes ) == false )
+            return false;
+
+        if ( compressedBytes.empty() )
+        {
+            outBytes.clear();
+            return true;
+        }
+
+        if ( CompressionStream::decompressBuffer( compressedBytes.data(), compressedBytes.size(), outBytes ) == false )
+        {
+            _bError = SW_TRUE;
+            outBytes.clear();
+            return false;
+        }
+
+        return true;
+    }
+
+    bool Archive::serializeCompressedObject( const void* pInstance, const TypeInfo& typeInfo, CompressionCodecKind codecType )
+    {
+        if ( pInstance == nullptr )
+        {
+            _bError = SW_TRUE;
+            return false;
+        }
+
+        vector<uint8> rawBytes;
+        if ( BinarySerializer::serialize( pInstance, typeInfo, rawBytes ) == false )
+        {
+            _bError = SW_TRUE;
+            return false;
+        }
+        return writeCompressedSection( rawBytes.data(), static_cast<uint32>( rawBytes.size() ), codecType );
+    }
+
+    bool Archive::deserializeCompressedObject( void* pInstance, const TypeInfo& typeInfo )
+    {
+        if ( pInstance == nullptr )
+        {
+            _bError = SW_TRUE;
+            return false;
+        }
+
+        vector<uint8> rawBytes;
+        if ( readCompressedSection( rawBytes ) == false || rawBytes.empty() )
+            return false;
+
+        return BinarySerializer::deserialize( pInstance, typeInfo, rawBytes.data(), rawBytes.size() );
+    }
+
+    bool Archive::serializeVersionedObject( uint32 version, const void* pInstance, const TypeInfo& typeInfo )
+    {
+        if ( pInstance == nullptr )
+        {
+            _bError = SW_TRUE;
+            return false;
+        }
+
+        vector<uint8> versionedBytes;
+        if ( BinarySerializer::serializeVersioned( version, pInstance, typeInfo, versionedBytes ) == false )
+        {
+            _bError = SW_TRUE;
+            return false;
+        }
+        writeSection( versionedBytes.data(), static_cast<uint32>( versionedBytes.size() ) );
+        return true;
+    }
+
+    bool Archive::deserializeVersionedObject( void* pInstance, const TypeInfo& typeInfo, uint32 currentVersion )
+    {
+        if ( pInstance == nullptr )
+        {
+            _bError = SW_TRUE;
+            return false;
+        }
+
+        vector<uint8> versionedBytes;
+        if ( readSection( versionedBytes ) == false || versionedBytes.empty() )
+            return false;
+
+        return BinarySerializer::deserializeVersioned( pInstance, typeInfo,
+                                                       versionedBytes.data(), versionedBytes.size(),
+                                                       currentVersion );
+    }
+
+    bool Archive::serializeJSONObject( const void* pInstance, const TypeInfo& typeInfo, bool bPretty )
+    {
+        if ( pInstance == nullptr )
+        {
+            _bError = SW_TRUE;
+            return false;
+        }
+
+        const expected<string> jsonStr = bPretty ? JSONSerializer::serializePretty( pInstance, typeInfo )
+                                                 : JSONSerializer::serialize( pInstance, typeInfo );
+        if ( jsonStr.has_value() == false )
+        {
+            SW_LOG_ERROR_ID( "Archive.JSONNotWritable", "Archive JSON object could not be written: %# (%#)", jsonStr.error().message(), jsonStr.error().detail() );
+            _bError = SW_TRUE;
+            return false;
+        }
+        ( *this ) << *jsonStr;
+        return true;
+    }
+
+    bool Archive::deserializeJSONObject( void* pInstance, const TypeInfo& typeInfo )
+    {
+        if ( pInstance == nullptr )
+        {
+            _bError = SW_TRUE;
+            return false;
+        }
+
+        string jsonStr;
+        ( *this ) >> jsonStr;
+        if ( _bError == SW_TRUE || jsonStr.empty() )
+            return false;
+
+        return JSONSerializer::deserialize( pInstance, typeInfo, jsonStr );
+    }
+
+    bool Archive::convertJSONToBinary( string_view jsonStr, const TypeInfo& typeInfo )
+    {
+        if ( jsonStr.empty() || typeInfo._size == 0 )
+        {
+            _bError = SW_TRUE;
+            return false;
+        }
+
+        vector<uint8> outBytes;
+        if ( SerializerTranscode::transcodeJSONToBinary( jsonStr, typeInfo, outBytes ) == false )
+        {
+            _bError = SW_TRUE;
+            return false;
+        }
+
+        writeBytes( outBytes.data(), outBytes.size() );
+        return true;
+    }
+
+    string Archive::convertBinaryToJSON( const TypeInfo& typeInfo, bool bPretty )
+    {
+        const bool bNothingToConvert = _pData == nullptr || _offset >= _dataSize || typeInfo._size == 0;
+        if ( bNothingToConvert )
+            return {};
+
+        return SerializerTranscode::transcodeBinaryToJSON( _pData + _offset, _dataSize - _offset, typeInfo, bPretty );
+    }
+
+    bool Archive::serializeXMLObject( const void* pInstance, const TypeInfo& typeInfo )
+    {
+        if ( pInstance == nullptr )
+        {
+            _bError = SW_TRUE;
+            return false;
+        }
+
+        const string xmlStr = XMLSerializer::serialize( pInstance, typeInfo );
+        ( *this ) << xmlStr;
+        return true;
+    }
+
+    bool Archive::deserializeXMLObject( void* pInstance, const TypeInfo& typeInfo )
+    {
+        if ( pInstance == nullptr )
+        {
+            _bError = SW_TRUE;
+            return false;
+        }
+
+        string xmlStr;
+        ( *this ) >> xmlStr;
+        if ( _bError == SW_TRUE || xmlStr.empty() )
+            return false;
+
+        return XMLSerializer::deserialize( pInstance, typeInfo, xmlStr );
+    }
+
+    bool Archive::convertXMLToBinary( string_view xmlStr, const TypeInfo& typeInfo )
+    {
+        if ( xmlStr.empty() || typeInfo._size == 0 )
+        {
+            _bError = SW_TRUE;
+            return false;
+        }
+
+        vector<uint8> outBytes;
+        if ( SerializerTranscode::transcodeXMLToBinary( xmlStr, typeInfo, outBytes ) == false )
+        {
+            _bError = SW_TRUE;
+            return false;
+        }
+
+        writeBytes( outBytes.data(), outBytes.size() );
+        return true;
+    }
+
+    void Archive::writeVarUint( uint64 value )
+    {
+        VarIntUtil::encodeVarUint64( value, _bytes );
+        _pData    = _bytes.data();
+        _dataSize = _bytes.size();
+        _offset   = _dataSize;
+    }
+
+    void Archive::writeVarInt( int64 value )
+    {
+        VarIntUtil::encodeVarInt64( value, _bytes );
+        _pData    = _bytes.data();
+        _dataSize = _bytes.size();
+        _offset   = _dataSize;
+    }
+
+    uint64 Archive::readVarUint()
+    {
+        uint64 value = 0;
+        if ( _bError == SW_TRUE || _pData == nullptr || _offset >= _dataSize ) // 실패는 끈적하다 — 실패 뒤의 읽기도 0 이다(`ByteReader` 와 같다)
+        {
+            _bError = SW_TRUE;
+            return 0;
+        }
+        size_t inoutOffset = static_cast<size_t>( _offset );
+        if ( VarIntUtil::decodeVarUint64( _pData, static_cast<size_t>( _dataSize ), inoutOffset, value ) == false )
+        {
+            _bError = SW_TRUE;
+            return 0;
+        }
+        _offset = inoutOffset;
+        return value;
+    }
+
+    uint32 Archive::readVarUint32()
+    {
+        // 범위 밖을 조용히 자르지 않는다. 자르면 망가진 아카이브가 **거부되는 대신 엉뚱하게
+        // 읽힌다.** readPooledString 의 `poolID >= getCount()` 검사는 0x1'0000'0000+n 이 n 으로
+        // 잘린 뒤라 통과해 버린다. 되감을 오프셋이 있으므로 읽기 전 자리를 기억해 둔다.
+        const uint64 startOffset = _offset;
+        const uint64 val64       = readVarUint();
+        if ( _bError == SW_TRUE )
+            return 0;
+        uint32 value = 0;
+        if ( VarIntUtil::narrowToUint32( val64, value ) == false )
+        {
+            _offset = startOffset;
+            _bError = SW_TRUE;
+            return 0;
+        }
+        return value;
+    }
+
+    int64 Archive::readVarInt()
+    {
+        int64 value = 0;
+        if ( _bError == SW_TRUE || _pData == nullptr || _offset >= _dataSize ) // 실패는 끈적하다 — 실패 뒤의 읽기도 0 이다(`ByteReader` 와 같다)
+        {
+            _bError = SW_TRUE;
+            return 0;
+        }
+        size_t inoutOffset = static_cast<size_t>( _offset );
+        if ( VarIntUtil::decodeVarInt64( _pData, static_cast<size_t>( _dataSize ), inoutOffset, value ) == false )
+        {
+            _bError = SW_TRUE;
+            return 0;
+        }
+        _offset = inoutOffset;
+        return value;
+    }
+
+    int32 Archive::readVarInt32()
+    {
+        const uint64 startOffset = _offset;
+        const int64  val64       = readVarInt();
+        if ( _bError == SW_TRUE )
+            return 0;
+        int32 value = 0;
+        if ( VarIntUtil::narrowToInt32( val64, value ) == false )
+        {
+            _offset = startOffset;
+            _bError = SW_TRUE;
+            return 0;
+        }
+        return value;
+    }
+
+    void Archive::writePooledString( string_view str )
+    {
+        const uint32 poolID = _stringPool.internString( str );
+        writeVarUint( static_cast<uint64>( poolID ) );
+    }
+
+    string Archive::readPooledString()
+    {
+        const uint64 poolID = readVarUint();
+        if ( _bError == SW_TRUE || poolID >= _stringPool.getCount() )
+        {
+            _bError = SW_TRUE;
+            return {};
+        }
+        const string_view text = _stringPool.getString( static_cast<uint32>( poolID ) );
+        return string{ text.data(), text.size() };
+    }
+
+    void Archive::saveStringPool()
+    {
+        _stringPool.saveToArchive( *this );
+    }
+
+    bool Archive::loadStringPool()
+    {
+        const bool bOk = _stringPool.loadFromArchive( *this );
+        if ( bOk == false )
+            _bError = SW_TRUE;
+        return bOk;
+    }
+} // namespace sw

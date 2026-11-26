@@ -21,7 +21,7 @@
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetTypeRegistry.h"
-#include "Engine/Serialization/Format/FormatDef.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
 
 namespace sw
 {
@@ -31,7 +31,7 @@ namespace sw
      */
     struct SW_API HeightfieldAsset
     {
-        static constexpr FormatDef   kFormat{ "SWHF" };
+        static constexpr FormatDesc  kFormat{ "SWHF" };
         static constexpr string_view kExtension = ".heightfield";
         /** @brief 이 에셋 종류의 접미사입니다(종류 표 `AssetTypeRegistry`). */
         static constexpr AssetSuffix kArrAssetSuffix[] = {

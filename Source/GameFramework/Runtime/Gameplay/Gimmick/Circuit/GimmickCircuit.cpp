@@ -13,7 +13,7 @@
 
 #include "Engine/Console/DebugHUDRegistry.h"
 #include "Engine/Console/DebugHUDSectionFormat.h"
-#include "Engine/Serialization/Fixed/FixedLayout.h"
+#include "Engine/Serialization/Layout/LayoutSerializer.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
 namespace sw
@@ -692,7 +692,7 @@ namespace sw
         GimmickCircuitState state;
         saveState( state );
         BitWriter  writer;
-        const bool bWritten = FixedLayout::write( state, writer );
+        const bool bWritten = LayoutSerializer::write( state, writer );
         if ( bWritten == false )
         {
             // 개수는 populate 와 registerKind 가 막았고 누적 시간은 음수가 될 수 없다. 남는 것은 실행의 결함이다.

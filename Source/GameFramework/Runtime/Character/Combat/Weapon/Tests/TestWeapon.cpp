@@ -4,7 +4,7 @@
 #include "Core/Subsystem/SubsystemScope.h"
 #include "Core/TestFramework/TestFramework.h"
 
-#include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Serializer/Archive.h"
 
 #include "GameFramework/Runtime/Character/Combat/Damage/DamageMath.h"
 #include "GameFramework/Runtime/Character/Combat/Weapon/Weapon.h"

@@ -11,7 +11,7 @@
 
 namespace sw
 {
-    struct FixedCodec;
+    struct LayoutSchema;
     struct ReflectEventOps;
     struct ReflectTypeOps;
 

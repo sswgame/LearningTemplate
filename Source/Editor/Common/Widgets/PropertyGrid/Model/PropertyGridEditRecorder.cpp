@@ -19,7 +19,7 @@
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
-#include "Engine/Serialization/Serializer/SerializerUtil.h"
+#include "Engine/Serialization/Serializer/PropertySerializer.h"
 
 namespace sw::editor
 {
@@ -83,7 +83,7 @@ namespace sw::editor
                 const void* pInstance = pComponent != nullptr ? static_cast<const void*>( pComponent ) : static_cast<const void*>( &owner );
                 span._listTarget.push_back( PropertyEditTarget::make( owner, pComponent ) );
                 span._listPath.push_back( string{ prop._name.c_str() } );
-                span._listBefore.push_back( SerializerUtil::formatPropertyText( prop, ObjectAddress{ pInstance }, SerializeContext::getDefault( SerializePurpose::Authoring ) ) );
+                span._listBefore.push_back( PropertySerializer::formatPropertyText( prop, ObjectAddress{ pInstance }, SerializeContext::getDefault( SerializePurpose::Authoring ) ) );
             }
 
             /** @brief 단계 하나의 값 글 표 — 같은 글은 한 벌만 든다(다중 선택은 대개 값이 하나다). */
@@ -284,7 +284,7 @@ namespace sw::editor
         const PropertyEditStepInternal::Slot slot = PropertyEditStepInternal::findSlot( object, *this, propertyPath );
         if ( slot._pProp == nullptr )
             return false;
-        if ( SerializerUtil::applyPropertyText( *slot._pProp, MutableObjectAddress{ slot._pInstance }, valueText, SerializeContext::getDefault( SerializePurpose::Authoring ) ) == false )
+        if ( PropertySerializer::applyPropertyText( *slot._pProp, MutableObjectAddress{ slot._pInstance }, valueText, SerializeContext::getDefault( SerializePurpose::Authoring ) ) == false )
         {
             SW_LOG_WARNING_ID( "PropertyEditStep.CouldNotApply", "Undo/redo could not apply '%#' to %# of '%#'", string{ valueText }.c_str(), string{ propertyPath }.c_str(),
                                object.getName().c_str() );
@@ -304,7 +304,7 @@ namespace sw::editor
         const PropertyEditStepInternal::Slot slot = PropertyEditStepInternal::findSlot( object, *this, propertyPath );
         if ( slot._pProp == nullptr )
             return false;
-        outText = SerializerUtil::formatPropertyText( *slot._pProp, ObjectAddress{ slot._pInstance }, SerializeContext::getDefault( SerializePurpose::Authoring ) );
+        outText = PropertySerializer::formatPropertyText( *slot._pProp, ObjectAddress{ slot._pInstance }, SerializeContext::getDefault( SerializePurpose::Authoring ) );
         return true;
     }
 

@@ -16,7 +16,7 @@
 #include "Core/Time/FixedStepTimer.h"
 #include "Core/Time/TimeSeconds.h"
 
-#include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Serializer/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Foundation/Grid/GridTopology.h"

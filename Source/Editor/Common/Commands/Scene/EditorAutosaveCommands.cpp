@@ -35,8 +35,8 @@
 #include "Engine/Content/ContentHash.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
-#include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/FormatDef.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
+#include "Engine/Serialization/Serializer/Archive.h"
 
 #include "ModuleAPI/Service/IModuleStateStore.h"
 
@@ -51,7 +51,7 @@ namespace sw::editor
             static constexpr const utf8* kMetaSuffix  = ".meta";
             /** @brief 맡김 칸(`IModuleStateStore`)에 둘 세션 id 의 키와 형식 판입니다. */
             static constexpr string_view kSessionStoreKey = "editor.autosaveSession";
-            static constexpr FormatDef   kSessionFormat{ "EDAS" };
+            static constexpr FormatDesc  kSessionFormat{ "EDAS" };
 
             /** @brief 세션 하나의 자동 저장 상태입니다. 에디터 상태 저장소가 소유한다(UI 스레드만). */
             struct State

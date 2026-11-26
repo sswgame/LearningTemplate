@@ -24,8 +24,8 @@
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
-#include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/FormatDef.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
+#include "Engine/Serialization/Serializer/Archive.h"
 
 #include "GameFramework/Runtime/Character/Camera/CameraCollisionProbe.h"
 #include "GameFramework/Runtime/Character/Camera/CameraManagerComponent.h"
@@ -43,7 +43,7 @@ namespace sw
             /** @brief 덮어쓴 시점 프리셋의 id 입니다. 카탈로그에 없으므로 저장하면 고정 포즈로 돌아온다. */
             /** @brief 포토 모드 동안 게임 입력 레이어를 막는 칸의 이름입니다(액션이 없는 빈 레이어). */
             static constexpr const utf8* kPhotoModeLayer = "PhotoMode";
-            static constexpr FormatDef   kStateFormat{ "CAMC" };
+            static constexpr FormatDesc  kStateFormat{ "CAMC" };
             static constexpr const utf8* kOverridePresetID = "__viewOverride";
             /** @brief 덮어쓴 원근 시점의 가까운 면(m)입니다. 탑승 카메라가 바로 앞 레일을 자르지 않게 짧게 둔다. */
             static constexpr float32 kOverrideNearPlane = 0.1f;

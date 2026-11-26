@@ -3,8 +3,8 @@
 #include "GameFramework/Kits/Genre/Strategy/CityBuilder/Component/CityGameModeComponent.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Serializer/Archive.h"
+#include "Engine/Serialization/Serializer/StateIO.h"
 
 #include "GameFramework/Runtime/Gameplay/GameState/GameStateComponent.h"
 #include "GameFramework/Runtime/Gameplay/GameState/PlayerComponentUtil.h"

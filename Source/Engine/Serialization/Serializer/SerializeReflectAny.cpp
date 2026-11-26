@@ -6,7 +6,7 @@
 
 #include "Engine/Reflection/ReflectedAny.h"
 #include "Engine/Reflection/TypeInfo.h"
-#include "Engine/Serialization/Format/BinarySerializer.h"
+#include "Engine/Serialization/Serializer/BinarySerializer.h"
 #include "Engine/Serialization/Serializer/SerializeContext.h"
 
 namespace sw

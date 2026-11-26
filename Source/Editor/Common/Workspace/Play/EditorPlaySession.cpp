@@ -22,8 +22,8 @@
 #include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
-#include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/FormatDef.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
+#include "Engine/Serialization/Serializer/Archive.h"
 
 #include "ModuleAPI/Service/IModuleStateStore.h"
 
@@ -35,7 +35,7 @@ namespace sw::editor
         {
             /** @brief 맡김 칸(`IModuleStateStore`)에 둘 세션의 키와 형식 판입니다. */
             static constexpr string_view kCarryStoreKey = "editor.playSession";
-            static constexpr FormatDef   kCarryFormat{ "EDPS" };
+            static constexpr FormatDesc  kCarryFormat{ "EDPS" };
 
             /**
              * @brief 월드의 플레이 상태를 바꿉니다. 활성 씬의 시작과 끝은 `SceneManager` 가 처리하며, 플레이 중에 씬을 바꾸면 새 씬도 시작합니다.

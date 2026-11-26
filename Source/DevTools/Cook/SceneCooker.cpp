@@ -33,7 +33,8 @@
 #include "Engine/Scene/SceneCellSplitter.h"
 #include "Engine/Scene/SceneDocument.h"
 #include "Engine/Scene/ScenePreloadList.h"
-#include "Engine/Serialization/Serializer/SerializerUtil.h"
+#include "Engine/Serialization/Serializer/PropertySerializer.h"
+#include "Engine/Serialization/Serializer/ValueSerializer.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw
@@ -597,7 +598,7 @@ namespace sw
 
         const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring );
         const float4            zeroData{};
-        const string            zeroDataText = SerializerUtil::formatValueText( ValueAddress{ &zeroData }, arrMeshProp[kCustomData0]->_typeName, context );
+        const string            zeroDataText = ValueSerializer::formatValueText( ValueAddress{ &zeroData }, arrMeshProp[kCustomData0]->_typeName, context );
         struct PackGroup
         {
             uint64         _ownerFileID{ 0 };
@@ -626,7 +627,7 @@ namespace sw
             const Component* pMesh = pObject->getComponents()[0];
             for ( uint32 keyIndex = 0; keyIndex < kMeshKeyCount; ++keyIndex )
             {
-                arrText[keyIndex] = SerializerUtil::formatPropertyText( *arrMeshProp[keyIndex], ObjectAddress{ pMesh }, context );
+                arrText[keyIndex] = PropertySerializer::formatPropertyText( *arrMeshProp[keyIndex], ObjectAddress{ pMesh }, context );
             }
             // 묶은 인스턴스는 정적 그리기만 싣는다 — 움직이는 메시 · 사용자 값(인스턴스마다 다른 셰이더 값)은 그대로 둔다.
             if ( arrText[kStatic] != "true" || arrText[kCustomData0] != zeroDataText || arrText[kCustomData1] != zeroDataText )

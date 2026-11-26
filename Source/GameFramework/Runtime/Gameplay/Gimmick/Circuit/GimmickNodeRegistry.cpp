@@ -575,7 +575,7 @@ namespace sw
     {
         const bool bTooManyPorts = kind._listInput.size() > GimmickNodeRegistryInternal::kMaxPortCount ||
                                    kind._listOutput.size() > GimmickNodeRegistryInternal::kMaxPortCount;
-        // 상태 슬롯 상한은 회로 상태의 고정 배치형 상한이다. 여기서 막아 두면 만들어진 회로의 상태는 늘 쓸 수 있다.
+        // 상태 슬롯 상한은 회로 상태의 스키마 결합형 상한이다. 여기서 막아 두면 만들어진 회로의 상태는 늘 쓸 수 있다.
         const bool bTooManySlots = kind._floatStateCount > GimmickNodeState::kMaxSlotCount || kind._intStateCount > GimmickNodeState::kMaxSlotCount;
         const bool bInvalidKind  = bTooManyPorts || bTooManySlots || kind._pStep == nullptr;
         if ( bInvalidKind )

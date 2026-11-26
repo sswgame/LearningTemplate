@@ -10,8 +10,8 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
-#include "Engine/Serialization/Format/FormatDef.h"
-#include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
+#include "Engine/Serialization/Serializer/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/World/Voxel/Catalog/VoxelBlock.h"
@@ -64,7 +64,7 @@ namespace sw
     class SW_KIT_API VoxelWorld
     {
     public:
-        static constexpr FormatDef kStateFormat{ "VXWL" };
+        static constexpr FormatDesc kStateFormat{ "VXWL" };
 
         VoxelWorld();
 

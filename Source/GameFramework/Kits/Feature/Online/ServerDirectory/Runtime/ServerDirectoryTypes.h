@@ -2,7 +2,7 @@
  * @file ServerDirectoryTypes.h
  * @brief 서버 디렉터리의 타입입니다. 결과, 점검 창, 공지, 배정 요청과 응답, 서버 목록 항목을 정의합니다.
  * @details 시각은 모두 UTC 유닉스 밀리초(`WallClock`)이다. 끝이 0이면 해제할 때까지이다.
- *          와이어 타입(`ServerDirectoryProtocol::MessageTypes`)은 고정 배치형(B)이고, 저장소 레코드(점검 창, 공지)는 자기 기술형(A)이다.
+ *          와이어 타입(`ServerDirectoryProtocol::MessageTypes`)은 스키마 결합형이고, 저장소 레코드(점검 창, 공지)는 자기 기술형이다.
  *          점검 창의 허용 목록은 클라이언트에 보내지 않으므로, 와이어에는 허용 목록이 없는 타입(`MaintenanceView`)만 싣는다.
  */
 #pragma once
@@ -74,7 +74,7 @@ namespace sw
 {
     /**
      * @brief 점검 창 하나입니다. 범위가 `all` 이면 모든 서버 종류이고, 그 밖은 서버 종류 이름입니다.
-     * @details 서버만 씁니다. 저장소 레코드는 자기 기술형(A)이며 와이어에는 싣지 않습니다. 클라이언트에는 `MaintenanceView` 로 보냅니다.
+     * @details 서버만 씁니다. 저장소 레코드는 자기 기술형이며 와이어에는 싣지 않습니다. 클라이언트에는 `MaintenanceView` 로 보냅니다.
      */
     REFLECT()
     struct SW_KIT_API MaintenanceWindow

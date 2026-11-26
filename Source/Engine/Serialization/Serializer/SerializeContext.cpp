@@ -19,9 +19,9 @@
 #include "Engine/Reflection/ReflectedAny.h"
 #include "Engine/Reflection/ReflectedValue.h"
 #include "Engine/Reflection/TypeRegistry.h"
-#include "Engine/Serialization/Serializer/AssetRefBase.h"
-#include "Engine/Serialization/Serializer/CatalogKey.h"
-#include "Engine/Serialization/Serializer/DataPath.h"
+#include "Engine/Serialization/Reference/AssetRefBase.h"
+#include "Engine/Serialization/Reference/CatalogKey.h"
+#include "Engine/Serialization/Reference/DataPath.h"
 #include "Engine/Serialization/Serializer/SecretValue.h"
 
 #include <cmath>
@@ -263,7 +263,7 @@ namespace sw
             /**
              * @brief 필드 타입의 범위를 넘는 정수 글자를 거절합니다. 값은 그대로 둡니다(대개 멤버 초기값) — 읽는 쪽이 orphan 으로 남기거나 실패로 알립니다.
              * @details 64 비트로 읽은 뒤 잘라 넣으면 "300" 이 uint8 44, "4000000000" 이 int32 음수가 된다. 쓰는 쪽은 늘 범위 안의 값을 적으므로
-             *          왕복은 그대로다(모르는 enum 이름을 다루는 `SerializerUtil::parseTextValue` 와 같은 규칙).
+             *          왕복은 그대로다(모르는 enum 이름을 다루는 `ValueSerializer::parseTextValue` 와 같은 규칙).
              */
             static bool rejectOutOfRange( string_view token, size_t byteSize )
             {

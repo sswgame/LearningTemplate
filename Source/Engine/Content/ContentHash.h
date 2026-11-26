@@ -23,7 +23,7 @@
 #include "Core/Subsystem/Subsystem.h"
 #include "Core/Subsystem/SubsystemSlot.h"
 
-#include "Engine/Serialization/Format/FormatDef.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
 
 namespace sw
 {
@@ -98,7 +98,7 @@ namespace sw
         /** @brief `ContentHash::computeFile` 의 본문입니다. */
         uint64 computeFile( const DiskPath& absPath ) SW_EXCLUDES_LOCK( _mutex );
         /** @brief 영속 캐시 파일의 판입니다. 항목 모양이나 해시 규칙을 바꾸면 올린다 — 다른 판의 파일은 빈 캐시로 읽는다. */
-        static constexpr FormatDef kCacheFormat{ "SWHC" };
+        static constexpr FormatDesc kCacheFormat{ "SWHC" };
         /** @brief 로컬 영속 캐시 파일(`<프로젝트>/Saved/ContentHashCache.bin`)입니다. */
         static AbsolutePath makeLocalCachePath();
         /**

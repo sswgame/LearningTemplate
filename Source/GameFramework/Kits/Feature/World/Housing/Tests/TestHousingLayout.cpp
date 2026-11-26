@@ -4,7 +4,7 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/TestFramework/TestFramework.h"
 
-#include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Serializer/Archive.h"
 
 #include "GameFramework/Kits/Feature/World/Housing/HousingLayout.h"
 #include "GameFramework/Kits/Feature/World/Housing/HousingPart.h"

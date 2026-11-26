@@ -15,9 +15,9 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Presentation/ISoundPlayer.h"
 #include "Engine/Reflection/TypeInfo.h"
-#include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/StateIO.h"
-#include "Engine/Serialization/Serializer/SerializerUtil.h"
+#include "Engine/Serialization/Serializer/Archive.h"
+#include "Engine/Serialization/Serializer/PropertySerializer.h"
+#include "Engine/Serialization/Serializer/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/Component/ParkGameModeComponent.h"
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/Tests/ThemeParkTestRules.h"
@@ -84,8 +84,8 @@ SW_TEST_CASE( ParkGameModeTest, LayoutIsPlacedAtTheDirectorObject )
     SW_REQUIRE_NOT_NULL( pGameMode );
     const PropertyInfo* const pPath = ParkGameModeComponent::StaticType()->findPropertyInHierarchy( hashed_string( "_parkDataPath" ) );
     SW_REQUIRE_NOT_NULL( pPath );
-    SW_REQUIRE_TRUE( SerializerUtil::applyPropertyText( *pPath, MutableObjectAddress{ pGameMode }, test::ScopedScratchDomain::makeID( "park/data/rides.xml" ).str(),
-                                                        SerializeContext::getDefault( SerializePurpose::Authoring ) ) );
+    SW_REQUIRE_TRUE( PropertySerializer::applyPropertyText( *pPath, MutableObjectAddress{ pGameMode }, test::ScopedScratchDomain::makeID( "park/data/rides.xml" ).str(),
+                                                            SerializeContext::getDefault( SerializePurpose::Authoring ) ) );
     if ( game::findSubsystem<ISoundPlayer>() != nullptr )
         SW_EXPECT_LOG( "AudioEngine.UnknownAudioEvent" ); // 지은 소리를 내려 한다 — 이벤트 라이브러리는 게임이 설 때 싣는다
     manager.beginPlay();
