@@ -1,0 +1,16 @@
+/**
+ * @file Core/Process/ShutdownCauseList.xxx
+ * @brief `ShutdownCause`(프로세스 종료 요청의 원인)의 열거자 단일 표입니다(X-macro). 열거형과 이름 표(로그 · 지표가 읽는 철자 = 열거자 이름)가 이 한 벌에서 나옵니다.
+ * @details include 하기 전에 `SW_SHUTDOWN_CAUSE( Name )` 를 정의합니다(#pragma once 없음). 줄 차례가 열거자 값입니다 — 값을 저장하거나 보내는 쪽이 있으면 끝에만 더합니다.
+ *          Core 는 리플렉션(Engine)을 볼 수 없고, 리플렉션 파서가 Core 를 링크해 생성 이름 표는 빌드 순환이 된다 — 그래서 손 switch 대신 이 표다(`CommandLineManager` 의 `ArgumentList.xxx` 와 같은 꼴).
+ */
+
+SW_SHUTDOWN_CAUSE( None )           // 요청 없음
+SW_SHUTDOWN_CAUSE( Interrupt )      // SIGINT · Ctrl+C · Ctrl+Break
+SW_SHUTDOWN_CAUSE( Terminate )      // SIGTERM(systemd · docker stop · kill)
+SW_SHUTDOWN_CAUSE( Hangup )         // SIGHUP(터미널이 닫힘)
+SW_SHUTDOWN_CAUSE( ConsoleClose )   // Windows 콘솔 창 닫기
+SW_SHUTDOWN_CAUSE( SystemShutdown ) // Windows 로그오프 · 시스템 종료
+SW_SHUTDOWN_CAUSE( ServiceStop )    // Windows 서비스 정지 · 사전 종료
+SW_SHUTDOWN_CAUSE( ConsoleCommand ) // 서버 콘솔의 quit · stop
+SW_SHUTDOWN_CAUSE( TickLimit )      // 테스트용 틱 상한(`-gv_serverExitAfterTicks`)

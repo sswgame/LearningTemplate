@@ -48,34 +48,14 @@ namespace sw
 {
     const utf8* toString( NetDisconnectReason reason )
     {
-        switch ( reason )
-        {
-            case NetDisconnectReason::None:
-                return "None";
-            case NetDisconnectReason::Requested:
-                return "Requested";
-            case NetDisconnectReason::Remote:
-                return "Remote";
-            case NetDisconnectReason::Timeout:
-                return "Timeout";
-            case NetDisconnectReason::ServerFull:
-                return "ServerFull";
-            case NetDisconnectReason::Rejected:
-                return "Rejected";
-            case NetDisconnectReason::VersionMismatch:
-                return "VersionMismatch";
-            case NetDisconnectReason::SecurityMismatch:
-                return "SecurityMismatch";
-            case NetDisconnectReason::AuthenticationFailed:
-                return "AuthenticationFailed";
-            case NetDisconnectReason::ReceiveOverflow:
-                return "ReceiveOverflow";
-            case NetDisconnectReason::ReliableOverflow:
-                return "ReliableOverflow";
-            case NetDisconnectReason::Count:
-                break;
-        }
-        return "Unknown";
+        // 열거자 이름 그대로다(표 `NetDisconnectReasonList.xxx` 한 벌). 범위 밖 값은 "Unknown" 이다.
+        static constexpr const utf8* kArrName[] = {
+#define SW_NET_DISCONNECT_REASON( Name ) #Name,
+#include "Core/Network/NetDisconnectReasonList.xxx"
+#undef SW_NET_DISCONNECT_REASON
+        };
+        const size_t index = static_cast<size_t>( reason );
+        return index < SW_COUNT_OF( kArrName ) ? kArrName[index] : "Unknown";
     }
 
     NetConnection::NetConnection()

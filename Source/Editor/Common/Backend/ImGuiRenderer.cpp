@@ -2,6 +2,10 @@
 
 #include "Editor/Common/Backend/ImGuiRenderer.h"
 
+#include "Core/Concurrency/atomic.h"
+#include "Core/Concurrency/mutex.h"
+#include "Core/Container/IndexFreeList.h"
+#include "Core/Container/unordered_map.h"
 #include "Core/Log/LogOnce.h"
 #include "Core/Log/ScopedDeferredLog.h"
 #include "Core/Math/BitUtil.h"
@@ -10,13 +14,17 @@
 #include "Editor/Common/Backend/DrawSnapshotHandoff.h"
 #include "Editor/Common/Backend/EditorDrawDataSnapshot.h"
 #include "Editor/Common/Backend/IImGuiPlatformBackend.h"
+#include "Editor/Common/Backend/Model/EditorDrawReleaseQueue.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Graphics/RHI/IRHICommandContext.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/RHI/IRHISwapChain.h"
+#include "Engine/Graphics/RHI/RHIPipelineState.h"
 #include "Engine/Graphics/RHI/RHIPipelineStateDesc.h"
+#include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
+#include "Engine/Graphics/RHI/RHITextureSlot.h"
 #include "Engine/Graphics/RHI/Transfer/RHITransferUtil.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Window/GenericWindow.h"
@@ -134,20 +142,94 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    ImGuiRenderer::ImGuiRenderer()
-        : _pDevice{ nullptr }
-        , _pDrawHandoff{ nullptr }
-        , _pso{}
-        , _wordBuffer{}
-        , _listWord{}
-        , _mapListBase{}
-        , _listFrameSRV{}
+    struct ImGuiRenderer::Impl
     {
-    }
+        /** @brief 그리기 목록 하나가 버퍼에서 시작하는 칸(uint 번호)입니다. */
+        struct ListBase
+        {
+            uint32 _vertexWord{ 0 };
+            uint32 _indexHalf{ 0 }; ///< 첫 인덱스의 16비트 칸 번호(uint 칸 번호 × 2)
+        };
+        /** @brief 텍스처 칸 하나입니다. ImGui 텍스처 ID 는 칸 번호 + 1 이다(0 은 ImGui 의 무효 ID). */
+        struct TextureSlot
+        {
+            RHITextureSlot     _ownedTexture{}; ///< `_bOwned` 일 때 이 렌더러가 만든 텍스처(`_texture` · `_srv` 가 이것을 가리킨다)
+            RHITextureHandle   _texture{ 0 };
+            RHITextureSRVIndex _srv{ kInvalidDescriptorIndex }; ///< 렌더 스레드가 등록한 bindless 번호(아직이면 무효)
+            bool               _bInUse{ false };
+            bool               _bOwned{ SW_FALSE }; ///< ImGui 동적 텍스처라 RHI 텍스처도 이 렌더러가 만들고 놓는다
+        };
+        /** @brief UI 스레드가 낸 ImGui 동적 텍스처 연산 하나입니다(`queueTextureUpdates`). 픽셀은 RGBA8 로 넓혀 복사해 두었다. */
+        struct TextureOp
+        {
+            enum class Kind : uint8
+            {
+                Create,  ///< 칸 `_slot` 에 `_width` × `_height` 텍스처를 만들어 `_listByte` 를 올린다
+                Update,  ///< 칸 `_slot` 텍스처의 (`_x`, `_y`) 구간에 `_listByte` 를 올린다
+                Destroy, ///< 칸 `_slot` 을 비운다(텍스처 · 번호는 GPU 사용 뒤 놓인다)
+            };
+            Kind          _kind{ Kind::Create };
+            uint32        _slot{ 0 };
+            uint32        _x{ 0 };
+            uint32        _y{ 0 };
+            uint32        _width{ 0 };
+            uint32        _height{ 0 };
+            vector<uint8> _listByte;
+        };
 
-    ImGuiRenderer::~ImGuiRenderer() = default;
+        IRHIDevice*                                _pDevice{ nullptr };
+        const DrawSnapshotHandoff*                 _pDrawHandoff{ nullptr }; ///< 보조 창 스왑체인을 바꾸기 전에 낸 스냅샷이 다 그려지기를 기다린다
+        RHIPipelineState                           _pso{};                   ///< 백버퍼 포맷의 PSO(캡처 텍스처 · 보조 창도 같은 포맷이다)
+        RHIStructuredBuffer                        _wordBuffer{};            ///< 이번 프레임의 정점 · 인덱스(uint 칸)
+        vector<uint32>                             _listWord;                ///< 올릴 칸 모으기(프레임마다 비운다)
+        unordered_map<const ImDrawList*, ListBase> _mapListBase;             ///< 이번 프레임에 올린 목록의 시작 칸
+        vector<RHITextureSRVIndex>                 _listFrameSRV;            ///< 이번 프레임의 칸별 bindless 번호(그리기가 잠금 없이 읽는다 — `prepareFrame` 이 채운다)
+        /// @brief 패널이 등록한(이 렌더러가 만들지 않은) 텍스처마다 한 번 받은 bindless 번호입니다(렌더 스레드 전용). 번호는 텍스처 주인의 파괴가 놓는다 — 이 렌더러는
+        ///        해제하지 않는다(늦은 해제가 다시 발급된 번호를 놓지 않게). 핸들은 세대가 있어 다시 쓰이지 않으므로 사라진 텍스처의 항목은 읽히지 않는다.
+        unordered_map<RHITextureHandle, RHITextureSRVIndex> _mapForeignSRV;
+        atomic<uint32>                                      _platformWindowFrames{ 0 }; ///< 보조 창에 그린 횟수(감시 값 `Editor.PlatformWindowFrames`) — 렌더 스레드가 올리고 게임 스레드가 읽는다
 
-    bool ImGuiRenderer::initialize( IRHIDevice* pRHIDevice, const DrawSnapshotHandoff& drawHandoff )
+        mutable mutex                        _textureMutex; ///< 칸 표 — UI 스레드(등록 · 해제 예약)와 렌더 스레드(번호 등록 · 반환)가 함께 쓴다
+        vector<TextureSlot> _listTextureSlot SW_GUARDED_BY( _textureMutex );
+        IndexFreeList _freeSlot              SW_GUARDED_BY( _textureMutex );
+        vector<TextureOp> _listTextureOp     SW_GUARDED_BY( _textureMutex ); ///< UI 스레드가 낸 텍스처 연산(낸 순서) — 렌더 스레드의 `prepareFrame` 이 비운다
+        vector<TextureOp>                    _listApplyingOp;                ///< 렌더 스레드가 적용 중인 연산(잠금 밖에서 쓰려고 바꿔 받는다 — 저장소를 다시 쓴다)
+        EditorDrawReleaseQueue               _drawReleaseQueue;
+
+        /** @brief ImGui 렌더러 칸(`BackendRendererUserData`)에 건 렌더러의 상태입니다. 창 훅이 찾는다. 없으면 nullptr 입니다. */
+        static Impl* findImpl()
+        {
+            ImGuiRenderer* const pRenderer = ImGuiRendererInternal::findRenderer();
+            return pRenderer != nullptr ? pRenderer->_impl.get() : nullptr;
+        }
+
+        [[nodiscard]] bool initialize( ImGuiRenderer& owner, IRHIDevice* pRHIDevice, const DrawSnapshotHandoff& drawHandoff );
+        void               shutdown();
+        void               queueTextureUpdates();
+        void               prepareFrame( IRHIDevice& device, const vector<ImDrawData*>& listDrawData );
+        void               render( IRHIDevice& device, const ImDrawData& drawData, span<const uint64> listExcludedTexture = {} );
+        void               renderPlatformWindows( IRHIDevice& device, EditorDrawDataSnapshot& snapshot );
+        void*              registerTexture( RHITextureHandle texture );
+        void               unregisterTexture( void* pTextureID );
+
+        /** @brief 빈 칸을 잡습니다(`_textureMutex` 안). */
+        uint32 acquireSlot( RHITextureHandle texture, bool bOwned ) SW_REQUIRES_LOCK( _textureMutex );
+        /** @brief 칸을 비웁니다. 이 렌더러가 만든 텍스처면 번호와 텍스처도 놓습니다(렌더 스레드). 패널 텍스처의 번호는 텍스처 주인의 파괴가 놓는다. */
+        void releaseSlot( IRHIDevice& device, uint32 slotIndex );
+        /** @brief 텍스처 연산 하나를 적용합니다(렌더 스레드, 패스 기록 밖). 스테이징이 차 다음 프레임에 다시 내야 하면 false 입니다(구간 갱신의 `Busy`). */
+        [[nodiscard]] bool applyTextureOp( IRHIDevice& device, TextureOp& op );
+        /** @brief 보조 창의 스왑체인을 만들거나 바꾸거나 부수기 전에 낸 스냅샷이 다 그려지기를 기다립니다(UI 스레드, ImGui 창 훅). */
+        void waitDrawnBeforeWindowChange() const;
+        /** @brief 그리기 명령의 텍스처 ID 를 이번 프레임의 bindless 번호로 풉니다. 아직 없으면 무효입니다. */
+        RHITextureSRVIndex resolveTexture( uint64 textureID ) const;
+
+        // ImGui 플랫폼 창 훅(UI 스레드). 창마다 RHI 스왑체인 하나(`ImGuiViewport::RendererUserData`).
+        static void createWindowSwapChain( ImGuiViewport* pViewport );
+        static void destroyWindowSwapChain( ImGuiViewport* pViewport );
+        static void resizeWindowSwapChain( ImGuiViewport* pViewport, ImVec2 size );
+    };
+
+    bool ImGuiRenderer::Impl::initialize( ImGuiRenderer& owner, IRHIDevice* pRHIDevice, const DrawSnapshotHandoff& drawHandoff )
     {
         using Internal = ImGuiRendererInternal;
         if ( pRHIDevice == nullptr || pRHIDevice->getResourceFactory() == nullptr )
@@ -174,21 +256,21 @@ namespace sw::editor
         }
 
         ImGuiIO& io                = ImGui::GetIO();
-        io.BackendRendererUserData = this;
+        io.BackendRendererUserData = &owner; // 감시 값은 공개 접근자로, 창 훅은 `findImpl` 로 읽는다
         io.BackendRendererName     = "sw_rhi";
         io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset | ImGuiBackendFlags_RendererHasTextures | ImGuiBackendFlags_RendererHasViewports;
 
         // 보조 창은 RHI 스왑체인이다. 그리기는 렌더 스레드가 한다(`renderPlatformWindows`) — ImGui 의 RenderPlatformWindowsDefault 를 부르지 않으므로 그리기 · 표시 훅은 비운다.
         ImGuiPlatformIO& platformIO       = ImGui::GetPlatformIO();
-        platformIO.Renderer_CreateWindow  = &ImGuiRenderer::createWindowSwapChain;
-        platformIO.Renderer_DestroyWindow = &ImGuiRenderer::destroyWindowSwapChain;
-        platformIO.Renderer_SetWindowSize = &ImGuiRenderer::resizeWindowSwapChain;
+        platformIO.Renderer_CreateWindow  = &Impl::createWindowSwapChain;
+        platformIO.Renderer_DestroyWindow = &Impl::destroyWindowSwapChain;
+        platformIO.Renderer_SetWindowSize = &Impl::resizeWindowSwapChain;
         platformIO.Renderer_RenderWindow  = nullptr;
         platformIO.Renderer_SwapBuffers   = nullptr;
         return true;
     }
 
-    void ImGuiRenderer::shutdown()
+    void ImGuiRenderer::Impl::shutdown()
     {
         if ( _pDevice == nullptr )
             return;
@@ -245,7 +327,7 @@ namespace sw::editor
         _pDevice = nullptr;
     }
 
-    void ImGuiRenderer::prepareFrame( IRHIDevice& device, const vector<ImDrawData*>& listDrawData )
+    void ImGuiRenderer::Impl::prepareFrame( IRHIDevice& device, const vector<ImDrawData*>& listDrawData )
     {
         using Internal = ImGuiRendererInternal;
         // 1) UI 스레드가 낸 ImGui 동적 텍스처 연산(글꼴 아틀라스) — 낸 순서로, 그리기 전에 적용한다. 그 ID 를 그리는 스냅샷은 연산보다 늦게 나왔다.
@@ -340,7 +422,7 @@ namespace sw::editor
         _wordBuffer.upload( &device, _listWord.data(), wordCount * static_cast<uint32>( sizeof( uint32 ) ) );
     }
 
-    void ImGuiRenderer::render( IRHIDevice& device, const ImDrawData& drawData, span<const uint64> listExcludedTexture )
+    void ImGuiRenderer::Impl::render( IRHIDevice& device, const ImDrawData& drawData, span<const uint64> listExcludedTexture )
     {
         using Internal                           = ImGuiRendererInternal;
         IRHICommandContext* const pCmd           = device.getFrameStreamContext();
@@ -420,7 +502,7 @@ namespace sw::editor
         pCmd->setScissorRect( RHIScissorRect{ 0, 0, static_cast<uint32>( framebufferW ), static_cast<uint32>( framebufferH ) } );
     }
 
-    void ImGuiRenderer::renderPlatformWindows( IRHIDevice& device, EditorDrawDataSnapshot& snapshot )
+    void ImGuiRenderer::Impl::renderPlatformWindows( IRHIDevice& device, EditorDrawDataSnapshot& snapshot )
     {
         IRHICommandContext* const pCmd = device.getFrameStreamContext();
         if ( pCmd == nullptr )
@@ -440,7 +522,7 @@ namespace sw::editor
         }
     }
 
-    void* ImGuiRenderer::registerTexture( RHITextureHandle texture )
+    void* ImGuiRenderer::Impl::registerTexture( RHITextureHandle texture )
     {
         if ( texture == 0 )
             return nullptr;
@@ -448,7 +530,7 @@ namespace sw::editor
         return reinterpret_cast<void*>( static_cast<uintptr_t>( ImGuiRendererInternal::makeTextureID( acquireSlot( texture, false ) ) ) );
     }
 
-    void ImGuiRenderer::unregisterTexture( void* pTextureID )
+    void ImGuiRenderer::Impl::unregisterTexture( void* pTextureID )
     {
         uint32 slotIndex{ 0 };
         if ( ImGuiRendererInternal::tryGetSlotIndex( static_cast<uint64>( reinterpret_cast<uintptr_t>( pTextureID ) ), slotIndex ) == false )
@@ -461,7 +543,7 @@ namespace sw::editor
         } ) );
     }
 
-    uint32 ImGuiRenderer::acquireSlot( RHITextureHandle texture, bool bOwned )
+    uint32 ImGuiRenderer::Impl::acquireSlot( RHITextureHandle texture, bool bOwned )
     {
         uint32 slotIndex{ 0 };
         if ( _freeSlot.tryPop( slotIndex ) == false )
@@ -477,7 +559,7 @@ namespace sw::editor
         return slotIndex;
     }
 
-    void ImGuiRenderer::releaseSlot( IRHIDevice& device, uint32 slotIndex )
+    void ImGuiRenderer::Impl::releaseSlot( IRHIDevice& device, uint32 slotIndex )
     {
         TextureSlot slot{};
         {
@@ -495,7 +577,7 @@ namespace sw::editor
         slot._ownedTexture.release( &device );
     }
 
-    void ImGuiRenderer::queueTextureUpdates()
+    void ImGuiRenderer::Impl::queueTextureUpdates()
     {
         using Internal = ImGuiRendererInternal;
         if ( ImGui::GetCurrentContext() == nullptr )
@@ -552,7 +634,7 @@ namespace sw::editor
         }
     }
 
-    bool ImGuiRenderer::applyTextureOp( IRHIDevice& device, TextureOp& op )
+    bool ImGuiRenderer::Impl::applyTextureOp( IRHIDevice& device, TextureOp& op )
     {
         IRHIResourceFactory* const pFactory = device.getResourceFactory();
         if ( pFactory == nullptr )
@@ -611,7 +693,7 @@ namespace sw::editor
         return true;
     }
 
-    RHITextureSRVIndex ImGuiRenderer::resolveTexture( uint64 textureID ) const
+    RHITextureSRVIndex ImGuiRenderer::Impl::resolveTexture( uint64 textureID ) const
     {
         uint32 slotIndex{ 0 };
         if ( ImGuiRendererInternal::tryGetSlotIndex( textureID, slotIndex ) == false || slotIndex >= _listFrameSRV.size() )
@@ -619,10 +701,10 @@ namespace sw::editor
         return _listFrameSRV[slotIndex];
     }
 
-    void ImGuiRenderer::createWindowSwapChain( ImGuiViewport* pViewport )
+    void ImGuiRenderer::Impl::createWindowSwapChain( ImGuiViewport* pViewport )
     {
-        using Internal                 = ImGuiRendererInternal;
-        ImGuiRenderer* const pRenderer = Internal::findRenderer();
+        using Internal        = ImGuiRendererInternal;
+        Impl* const pRenderer = findImpl();
         if ( pRenderer == nullptr || pRenderer->_pDevice == nullptr || pViewport == nullptr )
             return;
         // 창 핸들은 플랫폼 백엔드가 아는 종류만 읽는다(Win32 HWND · X11 창) — Wayland 보조 창은 표면이 없어 만들지 않는다(다른 핸들로 대신하지 않는다).
@@ -650,9 +732,9 @@ namespace sw::editor
         pViewport->RendererUserData = pRenderer->_pDevice->createSwapChain( desc ); // 실패는 디바이스가 남긴다 — 그 창은 그리지 않는다
     }
 
-    void ImGuiRenderer::destroyWindowSwapChain( ImGuiViewport* pViewport )
+    void ImGuiRenderer::Impl::destroyWindowSwapChain( ImGuiViewport* pViewport )
     {
-        ImGuiRenderer* const pRenderer = ImGuiRendererInternal::findRenderer();
+        Impl* const pRenderer = findImpl();
         if ( pViewport == nullptr || pViewport->RendererUserData == nullptr )
             return;
         if ( pRenderer != nullptr && pRenderer->_pDevice != nullptr )
@@ -663,10 +745,10 @@ namespace sw::editor
         pViewport->RendererUserData = nullptr;
     }
 
-    void ImGuiRenderer::resizeWindowSwapChain( ImGuiViewport* pViewport, ImVec2 size )
+    void ImGuiRenderer::Impl::resizeWindowSwapChain( ImGuiViewport* pViewport, ImVec2 size )
     {
-        using Internal                 = ImGuiRendererInternal;
-        ImGuiRenderer* const pRenderer = Internal::findRenderer();
+        using Internal        = ImGuiRendererInternal;
+        Impl* const pRenderer = findImpl();
         if ( pRenderer == nullptr || pRenderer->_pDevice == nullptr || pViewport == nullptr || pViewport->RendererUserData == nullptr )
             return;
         pRenderer->waitDrawnBeforeWindowChange();
@@ -674,10 +756,58 @@ namespace sw::editor
                                               Internal::toPixels( size.y, pViewport->FramebufferScale.y ) );
     }
 
-    void ImGuiRenderer::waitDrawnBeforeWindowChange() const
+    void ImGuiRenderer::Impl::waitDrawnBeforeWindowChange() const
     {
         // 렌더 스레드는 낸 스냅샷의 보조 창 스왑체인에 그린다(`renderPlatformWindows`) — 그 스냅샷이 다 그려진 뒤에 바꾼다. 드문 일(창을 띄우고 · 옮기고 · 닫을 때)이다.
         if ( _pDrawHandoff != nullptr )
             _pDrawHandoff->waitForIdle();
+    }
+
+    ImGuiRenderer::ImGuiRenderer()
+        : _impl{ make_unique<Impl>() }
+    {
+    }
+
+    ImGuiRenderer::~ImGuiRenderer() = default;
+
+    bool ImGuiRenderer::initialize( IRHIDevice* pRHIDevice, const DrawSnapshotHandoff& drawHandoff )
+    {
+        return _impl->initialize( *this, pRHIDevice, drawHandoff );
+    }
+    void ImGuiRenderer::shutdown()
+    {
+        _impl->shutdown();
+    }
+    void ImGuiRenderer::queueTextureUpdates()
+    {
+        _impl->queueTextureUpdates();
+    }
+    void ImGuiRenderer::prepareFrame( IRHIDevice& device, const vector<ImDrawData*>& listDrawData )
+    {
+        _impl->prepareFrame( device, listDrawData );
+    }
+    void ImGuiRenderer::render( IRHIDevice& device, const ImDrawData& drawData, span<const uint64> listExcludedTexture )
+    {
+        _impl->render( device, drawData, listExcludedTexture );
+    }
+    void ImGuiRenderer::renderPlatformWindows( IRHIDevice& device, EditorDrawDataSnapshot& snapshot )
+    {
+        _impl->renderPlatformWindows( device, snapshot );
+    }
+    uint32 ImGuiRenderer::getPlatformWindowFrames() const
+    {
+        return _impl->_platformWindowFrames.load( std::memory_order_relaxed );
+    }
+    void* ImGuiRenderer::registerTexture( RHITextureHandle texture )
+    {
+        return _impl->registerTexture( texture );
+    }
+    void ImGuiRenderer::unregisterTexture( void* pTextureID )
+    {
+        _impl->unregisterTexture( pTextureID );
+    }
+    EditorDrawReleaseQueue& ImGuiRenderer::getDrawReleaseQueue()
+    {
+        return _impl->_drawReleaseQueue;
     }
 } // namespace sw::editor

@@ -15,6 +15,7 @@ namespace sw
         vector<AbsolutePath> _listInputFile;       ///< --input (여러 번)
         vector<string>       _listIncludePath;     ///< --include (여러 번)
         vector<string>       _listTargetArg;       ///< --target-arg (여러 번): 빌드 대상을 그리는 clang 인자(타깃 매크로 `-D` · `--target=` · `--sysroot=` · `-isystem`). CMake 가 대상 빌드의 값으로 넘긴다 — 파서가 자기(호스트) 빌드로 추측하지 않는다(교차 빌드)
+        vector<string>       _listTargetOption;    ///< --target-option (여러 번): 그 타깃의 컴파일 옵션 그대로(CMake 의 COMPILE_OPTIONS). 설정의 `target_options` 표가 libclang 인자로 바꾸고, 표에 없는 것은 파싱에 뜻이 없어 버린다
         AbsolutePath         _outputDir;           ///< --output
         AbsolutePath         _builtinsPath;        ///< --builtins
         AbsolutePath         _configPath;          ///< --config: 커밋된 parser_config.defaults.json 의 절대 경로(로컬 · 툴체인 설정은 그 옆)

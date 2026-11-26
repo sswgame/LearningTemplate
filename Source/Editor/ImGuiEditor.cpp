@@ -16,6 +16,7 @@
 #include "Editor/Common/Backend/IImGuiPlatformBackend.h"
 #include "Editor/Common/Backend/ImGuiOSInputFilter.h"
 #include "Editor/Common/Backend/ImGuiRenderer.h"
+#include "Editor/Common/Backend/Model/EditorDrawReleaseQueue.h"
 #include "Editor/Common/Commands/Play/EditorPlayCommands.h"
 #include "Editor/Common/Commands/Scene/EditorAutosaveCommands.h"
 #include "Editor/Common/Commands/Scene/EditorLightProbeBakeSession.h"
