@@ -320,13 +320,24 @@ namespace sw
         return string( builder.view() );
     }
 
-    string AssetMeta::makeText( string_view sourcePath, const AssetGUID& guid, const vector<AssetImportOverride>& listOverride )
+    string AssetMeta::makeText( string_view sourcePath, const AssetGUID& guid, const vector<AssetImportOverride>& listOverride, const vector<AssetImportOutput>& listOutput )
     {
         AssetMeta meta;
         meta._guid               = guid.toString();
         meta._source             = FileUtil::getFileNamePart( sourcePath );
         meta._listImportOverride = listOverride;
+        meta._listOutput         = listOutput;
         return meta.toXML();
+    }
+
+    optional<AssetGUID> AssetMeta::findOutputGUID( string_view outputName ) const
+    {
+        for ( const AssetImportOutput& output : _listOutput )
+        {
+            if ( StringUtil::equals( output._name, outputName, true ) )
+                return AssetGUID::tryParse( output._guid );
+        }
+        return nullopt;
     }
 
     bool AssetMeta::saveBeside( const AbsolutePath& sourcePath, const AssetGUID& guid, const vector<AssetImportOverride>& listOverride )
@@ -446,6 +457,9 @@ namespace sw
             case AssetIdentityIssueKind::OrphanMeta:
                 builder.appendFormat( "%#: its source file is missing - move the .meta with the file or let asset-ids --fix reattach it", _assetID );
                 return string( builder.view() );
+            case AssetIdentityIssueKind::UnlistedOutput:
+                builder.appendFormat( "%#: an import output that the .meta of its source does not list - import the source again", _assetID );
+                return string( builder.view() );
             case AssetIdentityIssueKind::InvalidMeta:
                 builder.appendFormat( "%#: the .meta is unreadable or names another source file", _assetID );
                 return string( builder.view() );
@@ -478,8 +492,9 @@ namespace sw
         VectorUtil::sort( listSorted, []( const AssetIdentityFile* pLeft, const AssetIdentityFile* pRight )
         { return pLeft->_assetID < pRight->_assetID; } );
 
-        AssetDatabase         database;
-        vector<const string*> listOutputID; // 임포트 산출물 — 원본이 모두 오른 뒤에 줄을 적는다
+        AssetDatabase                    database;
+        vector<const string*>            listOutputID;  // 임포트 산출물 — 원본이 모두 오른 뒤에 줄을 적는다
+        unordered_map<string, AssetMeta> mapSourceMeta; // 원본 리소스 id(소문자) → 그 `.meta`(산출물 표를 본다)
         for ( const AssetIdentityFile* pFile : listSorted )
         {
             const string& assetID = pFile->_assetID;
@@ -531,6 +546,7 @@ namespace sw
                         break;
                     }
                     Internal::registerGUID( database._mapGUIDToPath, database._mapPathToGUID, *guid, sourceID, outListIssue );
+                    mapSourceMeta.insert_or_assign( Internal::toLowerID( sourceID ), std::move( meta ) );
                     break;
                 }
                 case AssetIdentityKind::Source:
@@ -550,10 +566,15 @@ namespace sw
             rules.collectImportedSources( *pOutputID, listSource );
             for ( const AssetImportedSource& source : listSource )
             {
-                const optional<AssetGUID> sourceGUID = database.findGUID( source._sourceID );
-                if ( sourceGUID.has_value() == false )
+                const auto itMeta = mapSourceMeta.find( source._sourceID ); // 후보 id 는 소문자다(`collectImportedSources`)
+                if ( itMeta == mapSourceMeta.end() )
                     continue;
-                Internal::registerGUID( database._mapGUIDToPath, database._mapPathToGUID, AssetGUID::fromName( *sourceGUID, source._outputName ), *pOutputID, outListIssue );
+                // 표의 줄이 정체성이다. 없으면 이름으로 짐작하지 않고 결함이다 — 표를 쓰기 전의 산출물이거나 임포트가 표를 맞추지 못했다.
+                const optional<AssetGUID> guid = itMeta->second.findOutputGUID( source._outputName );
+                if ( guid.has_value() )
+                    Internal::registerGUID( database._mapGUIDToPath, database._mapPathToGUID, *guid, *pOutputID, outListIssue );
+                else
+                    outListIssue.push_back( AssetIdentityIssue{ AssetIdentityIssueKind::UnlistedOutput, *pOutputID, {} } );
                 break;
             }
         }
@@ -644,9 +665,8 @@ namespace sw
             const AbsolutePath sourceMetaPath = AssetMeta::makePath( contentRoot.join( source._sourceID ) );
             if ( FileUtil::isRegularFile( sourceMetaPath ) == false || FileUtil::readTextFile( sourceMetaPath, text ) == false )
                 continue;
-            AssetMeta                 meta;
-            const optional<AssetGUID> sourceGUID = meta.parseXML( text, AssetMeta::makePath( source._sourceID ) );
-            return sourceGUID.has_value() ? optional<AssetGUID>{ AssetGUID::fromName( *sourceGUID, source._outputName ) } : nullopt;
+            AssetMeta meta;
+            return meta.parseXML( text, AssetMeta::makePath( source._sourceID ) ).has_value() ? meta.findOutputGUID( source._outputName ) : nullopt;
         }
         return nullopt;
     }

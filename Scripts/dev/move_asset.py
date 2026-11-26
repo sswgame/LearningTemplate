@@ -269,7 +269,7 @@ def git_move(root: Path, old_path: str, new_path: str) -> None:
 
 
 def move_sidecar(root: Path, old_path: str, new_path: str) -> None:
-    """원본 곁의 `.meta` 를 원본과 함께 옮기고 원본 이름 칸을 새 이름으로 쓴다(GUID · 내용 주소는 그대로)."""
+    """원본 곁의 `.meta` 를 원본과 함께 옮기고 원본 이름 칸을 새 이름으로 쓴다(GUID · 내용 주소 · 임포트 예외 · 산출물 표는 그대로 — 표의 이름은 원본 기준이다)."""
     old_meta, new_meta = old_path + META_EXTENSION, new_path + META_EXTENSION
     if not (root / old_meta).is_file():
         return
@@ -277,7 +277,7 @@ def move_sidecar(root: Path, old_path: str, new_path: str) -> None:
     if meta is None:
         raise RuntimeError(f"{old_meta} 를 읽지 못했다 — 손으로 고친 뒤 다시 옮긴다")
     git_move(root, old_meta, new_meta)
-    (root / new_meta).write_bytes(make_meta_text(new_path, meta[0], meta[2], meta[1]).encode("utf-8"))
+    (root / new_meta).write_bytes(make_meta_text(new_path, meta[0], meta[2], meta[1], meta[3]).encode("utf-8"))
     result = run_git(["add", new_meta], cwd=root)
     if not result.succeeded:
         raise RuntimeError(f"git add {new_meta} 실패: {result.stderr.strip()}")

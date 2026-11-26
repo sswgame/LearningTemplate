@@ -923,8 +923,8 @@ namespace sw
                     const AbsolutePath sourceMetaAbs = AssetMeta::makePath( contentRoot.join( source._sourceID ) );
                     if ( FileUtil::isRegularFile( sourceMetaAbs ) == false )
                         continue;
-                    const optional<AssetGUID> sourceGUID = AssetIO::readTextFile( sourceMetaAbs, text ) ? meta.parseXML( text, AssetMeta::makePath( source._sourceID ) ) : optional<AssetGUID>{};
-                    return sourceGUID.has_value() ? optional<AssetGUID>{ AssetGUID::fromName( *sourceGUID, source._outputName ) } : nullopt;
+                    const bool bRead = AssetIO::readTextFile( sourceMetaAbs, text ) && meta.parseXML( text, AssetMeta::makePath( source._sourceID ) ).has_value();
+                    return bRead ? meta.findOutputGUID( source._outputName ) : nullopt; // 산출물 표의 줄이 정체성이다(`AssetMeta::_listOutput`)
                 }
                 return nullopt;
             }

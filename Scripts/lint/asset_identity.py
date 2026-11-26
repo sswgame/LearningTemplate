@@ -8,7 +8,9 @@ Scripts/lint/asset_identity.py
   py -3 -m Scripts asset-ids --redirect <지울 id> <남길 id>  # 두 에셋을 합친다 — 지울 쪽을 가리키던 참조가 남길 쪽으로 풀리는 줄을 리다이렉트 표에 적는다(그 뒤 지울 쪽을 지운다)
 
 - 우리 형식 글(`listHeaderSuffix` — XML)은 맨 앞 처리 지시 `<?asset guid="…"?>`(XML 선언 바로 뒤)에, 원본(png · ogg · glb …)은 곁의 `<파일>.meta`
-  (`<AssetMeta _guid="…" _source="<파일 이름>" />`, 원본이 저장소 밖에 있으면 `_source="store:<SHA-256>/<파일 이름>"`, 그 에셋만의 임포트 예외는 자식 `<_listImportOverride>` 의 `<AssetImportOverride _key _value/>`)에 정체성을 든다. GUID 는 소문자 16진 32 자 하나의 철자다.
+  (`<AssetMeta _guid="…" _source="<파일 이름>" />`, 원본이 저장소 밖에 있으면 `_source="store:<SHA-256>/<파일 이름>"`, 그 에셋만의 임포트 예외는 자식 `<_listImportOverride>` 의 `<AssetImportOverride _key _value/>`,
+  임포트 산출물 표는 자식 `<_listOutput>` 의 `<AssetImportOutput _name _guid/>`)에 정체성을 든다. GUID 는 소문자 16진 32 자 하나의 철자다.
+  임포트 산출물(커밋하지 않는다)의 GUID 는 원본 `.meta` 의 산출물 표 줄이다(유니티 `.meta` 의 하위 에셋 표 자리) — 임포터가 결과에 맞춰 쓰고, 표에 없는 산출물은 정체성이 없다.
 - `--fix` 는 조용히 새 GUID 를 만들지 않는다: 머리를 잃은 글은 HEAD 의 같은 경로에 있던 GUID 를 되살리고, 짝 잃은 `.meta` 는 원본을 내용(HEAD 의 블롭 해시)
   · 이름으로 찾아 다시 붙인다. 붙일 곳이 하나로 정해지지 않으면 오류다. 새 GUID 는 정체성이 처음 생기는 파일(새 글 · 새 원본)과 복사본에만 준다.
 - 커밋 훅(린트 규칙 `asset-ids`, `asset_ids.py`): 바뀐 파일과 그 짝의 머리 없음 · 짝 없음, 새 GUID 와 인덱스의 겹침(`git grep`), 그리고 HEAD 에 있던
@@ -82,7 +84,7 @@ class Issue:
             "invalid-header": f"{path}: 머리 `<?asset guid?>` 를 읽지 못했다(꼴 · GUID 표기) — 손으로 고친다",
             "missing-meta": f"{path}: 곁에 .meta 가 없다(`asset-ids --fix`)",
             "orphan-meta": f"{path}: 원본이 없다 — 원본과 함께 옮기거나 지운다(`asset-ids --fix` 가 옮긴 원본을 내용 · 이름으로 찾아 다시 붙인다)",
-            "invalid-meta": f"{path}: .meta 를 읽지 못했거나 다른 원본을 적었다 — 손으로 고친다",
+            "invalid-meta": f"{path}: .meta 를 읽지 못했거나 다른 원본을 적었다(임포트하지 않는 자리의 원본에 산출물 표가 있어도 그렇다) — 손으로 고친다",
             "kept-in-derived": f"{path}: 임포트 산출물 폴더에 손으로 적은 파일을 두지 않는다(산출물을 지울 때 함께 사라진다) — 산출물 폴더 밖(data/ 등)으로 옮긴다. 옮길 수 없으면 {RULES_PATH} 의 listKeptDerived 와 .gitignore 예외에 함께 올린다",
             "unreadable": f"{path}: 읽지 못했다(UTF-8 이 아니다)",
             "changed": f"{path}: HEAD 의 GUID {self.other} 가 바뀌었다 — 같은 경로를 지우고 다시 만들었나? 내용 바꾸기는 GUID 를 지킨다(`asset-ids --fix` 는 바뀐 GUID 를 되돌리지 않는다 — HEAD 의 머리 · .meta 를 되살린다)",
@@ -165,16 +167,24 @@ def make_name_guid(name: str) -> str:
 
 
 def make_output_guid(source_guid: str, output_name: str) -> str:
-    """임포트 산출물의 GUID — C++ `AssetGUID::fromName( 원본 GUID, 산출물 이름 )`."""
+    """산출물 표에 처음 드는 이름의 GUID — C++ 임포터가 새 줄에 주는 `AssetGUID::fromName( 원본 GUID, 산출물 이름 )`. 있던 줄은 표의 GUID 가 그대로 정체성이다."""
     return make_name_guid(source_guid + output_name)
 
 
-def find_output_guid(output_id: str, map_path_to_guid: dict[str, str], list_imported: tuple[ImportedFolder, ...]) -> str | None:
-    """산출물 자리의 GUID — 원본이 색인(소문자 리소스 id → GUID)에 있으면 그 원본과 산출물 이름에서, 없으면 None. 산출물이 디스크에 없어도 된다."""
-    for source_id, output_name in iterate_imported_sources(output_id, list_imported):
-        source_guid = map_path_to_guid.get(source_id)
-        if source_guid is not None:
-            return make_output_guid(source_guid, output_name)
+def make_output_id(source_id: str, output_name: str, list_imported: tuple[ImportedFolder, ...]) -> str | None:
+    """원본 리소스 id 와 산출물 표의 이름이 가리키는 산출물 자리(소문자) — `iterate_imported_sources` 의 짝이다. 그 원본에서 나올 수 없는 이름(접미사 · 자리)이면 None.
+
+    `<…>/models_raw/a/b.glb` + `/materials/x.material` → `<…>/models/a/b/materials/x.material`. 산출물이 디스크에 없어도 된다."""
+    lowered = source_id.lower()
+    for imported in list_imported:
+        marker = f"/{imported.source_folder}/"
+        position = lowered.rfind(marker)
+        extension = next((extension for extension in imported.list_source_extension if lowered.endswith(extension)), None)
+        if position < 0 or extension is None:
+            continue
+        output_id = f"{lowered[:position]}/{imported.folder}/{lowered[position + len(marker):-len(extension)]}{output_name.lower()}"
+        if (lowered, output_name.lower()) in iterate_imported_sources(output_id, (imported,)):
+            return output_id
     return None
 
 
@@ -273,6 +283,7 @@ def write_header(text: str, guid: str) -> str:
 
 
 Overrides = tuple[tuple[str, str], ...]   # 임포트 예외 (칸 이름, 값 글) — C++ `AssetImportOverride`
+Outputs = tuple[tuple[str, str], ...]     # 임포트 산출물 표 (산출물 이름, GUID) — C++ `AssetImportOutput`
 
 # 원본의 자리 — C++ `AssetSourceAddress` 와 같은 두 꼴: 곁의 파일 이름, 저장소 밖 원본의 내용 주소 `store:<SHA-256>/<이름>`.
 SOURCE_ADDRESS = re.compile(r"(store:[0-9a-f]{64}/)?([^/\\:]+)")
@@ -286,32 +297,47 @@ def split_source(source: str) -> tuple[str, str] | None:
     return match.group(1) or "", match.group(2)
 
 
-def make_meta_text(source_id: str, guid: str, overrides: Overrides = (), old_source: str = "") -> str:
-    """C++ `AssetMeta::toXML`(리플렉션 직렬화)과 같은 글. 예외가 없으면 칸을 쓰지 않는다(`SkipIfEmpty`). `old_source` 를 주면 그 내용 주소를 지키고 이름만 바꾼다(C++ `renameSource`)."""
+def make_meta_text(source_id: str, guid: str, overrides: Overrides = (), old_source: str = "", outputs: Outputs = ()) -> str:
+    """C++ `AssetMeta::toXML`(리플렉션 직렬화)과 같은 글. 빈 목록은 칸을 쓰지 않는다(`SkipIfEmpty`). `old_source` 를 주면 그 내용 주소를 지키고 이름만 바꾼다(C++ `renameSource`)."""
     address = split_source(old_source) if old_source else None
     head = f"<AssetMeta _guid={quoteattr(guid)} _source={quoteattr((address[0] if address else '') + source_id.rsplit('/', 1)[-1])}"
-    if not overrides:
+    if not overrides and not outputs:
         return head + " />"
-    items = "".join(f"\t\t<AssetImportOverride _key={quoteattr(key)} _value={quoteattr(value)} />\n" for key, value in overrides)
-    return f"{head}>\n\t<_listImportOverride>\n{items}\t</_listImportOverride>\n</AssetMeta>"
+    blocks = ""
+    if overrides:
+        items = "".join(f"\t\t<AssetImportOverride _key={quoteattr(key)} _value={quoteattr(value)} />\n" for key, value in overrides)
+        blocks += f"\t<_listImportOverride>\n{items}\t</_listImportOverride>\n"
+    if outputs:
+        items = "".join(f"\t\t<AssetImportOutput _name={quoteattr(name)} _guid={quoteattr(output_guid)} />\n" for name, output_guid in outputs)
+        blocks += f"\t<_listOutput>\n{items}\t</_listOutput>\n"
+    return f"{head}>\n{blocks}</AssetMeta>"
 
 
-def parse_meta(text: str) -> tuple[str, str, Overrides] | None:
-    """(GUID, 원본, 임포트 예외) — 다른 꼴(모르는 속성 · 자식 · 틀린 GUID · 틀린 원본 자리)이면 None(C++ 은 엄격한 리플렉션 읽기)."""
+def parse_meta(text: str) -> tuple[str, str, Overrides, Outputs] | None:
+    """(GUID, 원본, 임포트 예외, 산출물 표) — 다른 꼴(모르는 속성 · 자식 · 순서 · 틀린 GUID · 틀린 원본 자리 · 겹친 산출물 이름)이면 None(C++ 은 엄격한 리플렉션 읽기)."""
     try:
         root = ElementTree.fromstring(text)
     except ElementTree.ParseError:
         return None
     if root.tag != "AssetMeta" or set(root.attrib) != {"_guid", "_source"} or not is_guid(root.attrib["_guid"]) or split_source(root.attrib["_source"]) is None:
         return None
-    if len(root) == 0:
-        return root.attrib["_guid"], root.attrib["_source"], ()
-    block = root[0]
-    if len(root) != 1 or block.tag != "_listImportOverride" or block.attrib:
+    list_block = list(root)
+    if [block.tag for block in list_block] not in ([], ["_listImportOverride"], ["_listOutput"], ["_listImportOverride", "_listOutput"]) or any(block.attrib for block in list_block):
         return None
-    if any(item.tag != "AssetImportOverride" or set(item.attrib) != {"_key", "_value"} or len(item) for item in block):
-        return None
-    return root.attrib["_guid"], root.attrib["_source"], tuple((item.attrib["_key"], item.attrib["_value"]) for item in block)
+    overrides: Overrides = ()
+    outputs: Outputs = ()
+    for block in list_block:
+        if block.tag == "_listImportOverride":
+            if any(item.tag != "AssetImportOverride" or set(item.attrib) != {"_key", "_value"} or len(item) for item in block):
+                return None
+            overrides = tuple((item.attrib["_key"], item.attrib["_value"]) for item in block)
+        else:
+            if any(item.tag != "AssetImportOutput" or set(item.attrib) != {"_name", "_guid"} or len(item) or not item.attrib["_name"] or not is_guid(item.attrib["_guid"]) for item in block):
+                return None
+            outputs = tuple((item.attrib["_name"], item.attrib["_guid"]) for item in block)
+            if len({name.lower() for name, _ in outputs}) != len(outputs):
+                return None
+    return root.attrib["_guid"], root.attrib["_source"], overrides, outputs
 
 
 def read_identity(asset_id: str, text: str | None, rules: Rules) -> str | None:
@@ -364,10 +390,13 @@ def collect_issues(map_text: dict[str, str | None], rules: Rules) -> tuple[list[
             if classify(source_id, rules) != SOURCE or (address is not None and not address[0] and not beside):
                 list_issue.append(Issue("orphan-meta", asset_id))
                 continue
-            if meta is None or address is None or address[1] != source_id.rsplit("/", 1)[-1] or bool(address[0]) == beside:
+            list_output_id = [make_output_id(source_id, name, rules.list_imported) for name, _ in meta[3]] if meta else []
+            if meta is None or address is None or address[1] != source_id.rsplit("/", 1)[-1] or bool(address[0]) == beside or None in list_output_id:
                 list_issue.append(Issue("invalid-meta", asset_id))
                 continue
             register(meta[0], source_id)
+            for (_, output_guid), output_id in zip(meta[3], list_output_id):   # 산출물 표의 줄 — 산출물이 디스크에 없어도 정체성이다(C++ 색인은 디스크의 산출물만 적는다)
+                register(output_guid, output_id)
         elif (asset_id + META_EXTENSION).lower() not in set_sidecar:
             list_issue.append(Issue("missing-meta", asset_id))
     return list_issue, map_guid
@@ -576,7 +605,7 @@ def fix_worktree(project_root: Path) -> int:
             _write(content_root / asset_id, text)
             map_text[asset_id] = text
         else:
-            copied = parse_meta(map_text.get(asset_id + META_EXTENSION) or "")   # 복사본은 베낀 임포트 예외를 지킨다(C++ `assignNewIdentity` 와 같다)
+            copied = parse_meta(map_text.get(asset_id + META_EXTENSION) or "")   # 복사본은 베낀 임포트 예외를 지키고 산출물 표는 비운다(C++ `assignNewIdentity` 와 같다 — 다시 임포트하면 새 GUID 로 찬다)
             _write(content_root / (asset_id + META_EXTENSION), make_meta_text(asset_id, guid, copied[2] if copied else (), copied[1] if copied else ""))
         set_used.add(guid)
 
@@ -589,7 +618,10 @@ def fix_worktree(project_root: Path) -> int:
         return asset_id if classify(asset_id, rules) == HEADER else asset_id + META_EXTENSION
 
     for first, list_copy in map_duplicate.items():
-        list_holder = [first] + list_copy
+        # 산출물 표 줄의 겹침은 그 표를 든 원본 .meta 가 함께 겹친다(베낀 .meta) — 원본 쪽을 고치면 표가 비워진다. 정체성을 든 파일만 고친다.
+        list_holder = [holder for holder in [first] + list_copy if carrier_of(holder) in map_text]
+        if len(list_holder) < 2:
+            continue
         guid = read_identity(carrier_of(first), map_text.get(carrier_of(first)), rules)
         list_owner = [holder for holder in list_holder if map_head.get(carrier_of(holder)) == guid]
         keep = list_owner[0] if len(list_owner) == 1 else first
@@ -625,7 +657,7 @@ def fix_worktree(project_root: Path) -> int:
             list_unattached.append(orphan)
             continue
         target = list_match[0]
-        _write(content_root / (target + META_EXTENSION), make_meta_text(target, meta[0], meta[2]))
+        _write(content_root / (target + META_EXTENSION), make_meta_text(target, meta[0], meta[2], outputs=meta[3]))   # 옮긴 원본 — 산출물 표도 그대로(이름은 원본 기준이다)
         (content_root / orphan).unlink()
         list_lonely.remove(target)
         counts["meta-reattached"] += 1
