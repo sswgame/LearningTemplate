@@ -1304,7 +1304,7 @@ namespace sw
         // VK_EXT_device_fault(진단 전용): 디바이스를 잃었을 때 결함 주소 · 공급사 코드를 읽는다(reportDeviceFaultInternal). 기능 비트까지 있어야 켠다.
         VkPhysicalDeviceFaultFeaturesEXT faultFeatures{};
         faultFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FAULT_FEATURES_EXT;
-        if ( build::kShipping == false && VulkanRHIUtil::hasExtension( listAvailableExt, VK_EXT_DEVICE_FAULT_EXTENSION_NAME ) )
+        if ( build::kGraphicsDeviceFaultReport && VulkanRHIUtil::hasExtension( listAvailableExt, VK_EXT_DEVICE_FAULT_EXTENSION_NAME ) )
         {
             VkPhysicalDeviceFeatures2 faultQuery{};
             faultQuery.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
