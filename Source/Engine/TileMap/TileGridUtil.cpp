@@ -3,6 +3,7 @@
 #include "Engine/TileMap/TileGridUtil.h"
 
 #include "Core/Foundation/Constants.h"
+#include "Core/Math/MathUtil.h"
 
 #include "Engine/TileMap/TileSetAsset.h"
 
@@ -179,5 +180,29 @@ namespace sw
             const TileBrush& brush = listBrush[brushNumber - 1u];
             outListCost[cellIndex] = ( brush._bSolid != SW_FALSE ) ? kBlocked : brush._navCost;
         }
+    }
+
+    float4 TileGridUtil::computeCellUVRect( int32 cell, int32 columnCount, int32 rowCount )
+    {
+        const int32   columns = MathUtil::max( 1, columnCount );
+        const int32   rows    = MathUtil::max( 1, rowCount );
+        const int32   safe    = columnCount > 0 ? MathUtil::max( 0, cell ) : 0;
+        const int32   column  = safe % columns;
+        const int32   row     = safe / columns;
+        const float32 width   = 1.0f / static_cast<float32>( columns );
+        const float32 height  = 1.0f / static_cast<float32>( rows );
+        return float4{ static_cast<float32>( column ) * width, static_cast<float32>( row ) * height, width, height };
+    }
+
+    optional<int32> TileGridUtil::findCellAtUV( float32 u, float32 v, int32 columnCount, int32 rowCount )
+    {
+        const bool bUVOutsideAtlas = u < 0.0f || v < 0.0f || u >= 1.0f || v >= 1.0f;
+        if ( bUVOutsideAtlas )
+            return nullopt;
+        const int32 columns = MathUtil::max( 1, columnCount );
+        const int32 rows    = MathUtil::max( 1, rowCount );
+        const int32 column  = MathUtil::min( columns - 1, static_cast<int32>( u * static_cast<float32>( columns ) ) );
+        const int32 row     = MathUtil::min( rows - 1, static_cast<int32>( v * static_cast<float32>( rows ) ) );
+        return row * columns + column;
     }
 } // namespace sw

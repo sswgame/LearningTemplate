@@ -70,14 +70,6 @@ namespace sw
 
         /** @brief @p type 의 `Replicated` 칸만으로 복제 스키마를 계획합니다. 생성 오류가 있으면 알리고 false 입니다. */
         [[nodiscard]] bool planReplicated( const ParsedTypeInfo& type, TypePlan& outPlan ) const;
-        /**
-         * @brief 서술자 표 · 의존 표를 @p pTablePrefix 이름(`s_arrFixedField` · `s_arrFixedDependency` 꼴)으로 쓰고, 코덱 생성자의 (표, 개수) · (의존 표, 개수) 인자 글을 돌려줍니다.
-         * @param listEmittedEnum 이 등록 함수 안에서 이미 낸 열거자 값 표입니다(같은 이름을 두 번 정의하지 않는다).
-         */
-        static pair<string, string> emitTables( CodeEmit& emit, const vector<FixedCodecNode>& listRootNode, const vector<const ParsedFixedEnum*>& listEnum,
-                                                const vector<pair<string, string>>& listDependency, const string& tablePrefix, vector<string>& listEmittedEnum );
-        /** @brief 칸 트리를 평평한 표 글로 폅니다. 묶음의 자식은 이어진 칸이고, 부모 칸 글 뒤에 첫 칸 번호(묶음이면 개수도)가 붙습니다. */
-        static void flattenNodes( const vector<FixedCodecNode>& listNode, vector<string>& outListEntry );
 
     private:
         const ParsedHeader& _header;

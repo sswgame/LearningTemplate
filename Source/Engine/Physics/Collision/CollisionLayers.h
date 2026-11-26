@@ -18,9 +18,9 @@ namespace sw
     ENUM()
     enum class CollisionResponse : uint8
     {
-        Ignore = 0, ///< 서로 보지 않는다 — 막지도 겹침 이벤트도 없다
-        Overlap,    ///< 막지 않고 겹침 이벤트만 낸다
-        Block       ///< 막는다(접촉 이벤트)
+        Ignore  ENUMERATOR( DisplayName = "Ignore" ) = 0, ///< 서로 보지 않는다 — 막지도 겹침 이벤트도 없다
+        Overlap ENUMERATOR( DisplayName = "Overlap" ),    ///< 막지 않고 겹침 이벤트만 낸다
+        Block   ENUMERATOR( DisplayName = "Block" )       ///< 막는다(접촉 이벤트)
     };
 
     /** @brief 두 응답 중 약한 쪽입니다(무시 < 겹침 < 막음). */

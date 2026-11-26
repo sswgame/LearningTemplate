@@ -1,6 +1,6 @@
 /**
  * @file TestAssetReloadCascade.cpp
- * @brief 연쇄 리로드의 계획(`AssetReloadCascade::planDependents`)이 펼쳐 넣는 참조자만 의존 순서로 고르고, 순환은 오류로 멈추는지 봅니다.
+ * @brief 연쇄 리로드의 계획(`EditorAssetIndex::planDependents`)이 펼쳐 넣는 참조자만 의존 순서로 고르고, 순환은 오류로 멈추는지 봅니다.
  *        부모 머티리얼을 고친 뒤 계획대로 다시 읽으면 로드된 자식이 새 값을 갖는지도 봅니다.
  */
 #include "pch.h"
@@ -15,14 +15,12 @@
 #include "Editor/Common/Asset/Tests/EditorScratchDomain.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorSubsystems.h"
-#include "Editor/Common/Workspace/HotReload/AssetReloadCascade.h"
 
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Graphics/Material/Material.h"
 
 namespace
 {
-    using sw::editor::AssetReloadCascade;
     using sw::editor::EditorAssetReference;
     using sw::editor::EditorAssetIndex;
     using sw::editor::EditorAssetIndexData;
@@ -113,7 +111,7 @@ SW_TEST_CASE( AssetReloadCascadeTest, ParentChangeReloadsLoadedChildWithNewValue
     SW_EXPECT_EQUAL( sw::string( "0.5" ), readRoughness( *child ) ); // 다시 읽기 전에는 옛 부모 값이다
 
     sw::vector<sw::string> listOrder;
-    SW_REQUIRE_TRUE( AssetReloadCascade::planDependents( index, parentID, &shouldInlineMaterial, listOrder ) );
+    SW_REQUIRE_TRUE( index.planDependents( parentID, &shouldInlineMaterial, listOrder ) );
     SW_REQUIRE_EQUAL( size_t{ 1 }, listOrder.size() );
     SW_EXPECT_EQUAL( sw::FileUtil::normalizePath( childID ).str(), listOrder[0] );
     SW_REQUIRE_TRUE( child->loadFromAsset( sw::AssetID{ listOrder[0] } ) );
@@ -134,13 +132,13 @@ SW_TEST_CASE( AssetReloadCascadeTest, ThreeLevelChainReloadsInDependencyOrder )
                            {  "game/t/statue.mesh.xml",    "game/t/grand.material"},
     } );
     sw::vector<sw::string> listOrder;
-    SW_REQUIRE_TRUE( AssetReloadCascade::planDependents( index, "game/t/grand.material", &shouldInlineMaterial, listOrder ) );
+    SW_REQUIRE_TRUE( index.planDependents( "game/t/grand.material", &shouldInlineMaterial, listOrder ) );
     SW_REQUIRE_EQUAL( size_t{ 2 }, listOrder.size() );
     SW_EXPECT_EQUAL( sw::string( "game/t/z_parent.material" ), listOrder[0] );
     SW_EXPECT_EQUAL( sw::string( "game/t/a_child.material" ), listOrder[1] );
 
     // 중간 고리만 바뀌면 그 아래만 다시 읽는다.
-    SW_REQUIRE_TRUE( AssetReloadCascade::planDependents( index, "game/t/z_parent.material", &shouldInlineMaterial, listOrder ) );
+    SW_REQUIRE_TRUE( index.planDependents( "game/t/z_parent.material", &shouldInlineMaterial, listOrder ) );
     SW_REQUIRE_EQUAL( size_t{ 1 }, listOrder.size() );
     SW_EXPECT_EQUAL( sw::string( "game/t/a_child.material" ), listOrder[0] );
 }
@@ -156,7 +154,7 @@ SW_TEST_CASE( AssetReloadCascadeTest, ReferenceCycleIsAnError )
     } );
     sw::vector<sw::string> listOrder{ "stale" };
     SW_EXPECT_LOG( "AssetReloadCascade.ReferenceCycle" );
-    SW_EXPECT_FALSE( AssetReloadCascade::planDependents( index, "game/t/base.material", &shouldInlineMaterial, listOrder ) );
+    SW_EXPECT_FALSE( index.planDependents( "game/t/base.material", &shouldInlineMaterial, listOrder ) );
     SW_EXPECT_TRUE( listOrder.empty() );
 }
 
@@ -227,7 +225,7 @@ SW_TEST_CASE( AssetReloadCascadeTest, CatalogFollowsOnlyBaseReferences )
                 { { "game/t/quests.xml", "game/t/z_child.xml" },
                   { "game/t/z_child.xml", "game/t/quests.xml" } } );
     sw::vector<sw::string> listOrder;
-    SW_REQUIRE_TRUE( AssetReloadCascade::planDependents( index, "common/data/base.xml", inlinesCatalog, listOrder ) );
+    SW_REQUIRE_TRUE( index.planDependents( "common/data/base.xml", inlinesCatalog, listOrder ) );
     SW_REQUIRE_EQUAL( size_t{ 2 }, listOrder.size() );
     SW_EXPECT_EQUAL( sw::string( "game/t/z_child.xml" ), listOrder[0] );
     SW_EXPECT_EQUAL( sw::string( "game/t/a_grand.xml" ), listOrder[1] );
@@ -246,6 +244,6 @@ SW_TEST_CASE( AssetReloadCascadeTest, CatalogBaseCycleIsAnError )
     } );
     sw::vector<sw::string> listOrder;
     SW_EXPECT_LOG( "AssetReloadCascade.ReferenceCycle" );
-    SW_EXPECT_FALSE( AssetReloadCascade::planDependents( index, "common/data/base.xml", inlinesCatalog, listOrder ) );
+    SW_EXPECT_FALSE( index.planDependents( "common/data/base.xml", inlinesCatalog, listOrder ) );
     SW_EXPECT_TRUE( listOrder.empty() );
 }

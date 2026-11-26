@@ -291,15 +291,8 @@ namespace sw
          * @details 로그는 잠금 밖에서 남긴다(`reportWireTypeNameClash`) — 리스너가 레지스트리를 다시 물어도 멈추지 않게.
          */
         void assignWireTypeNameLocked( const hashed_string& name, const hashed_string& wireName, WireTypeKind kind, string& inoutClash ) SW_REQUIRES_LOCK( _mutex );
-        /** @brief 해시 표 충돌을 오류로 남깁니다(잠금 밖). 비어 있으면 아무것도 하지 않습니다. */
-        static void reportWireTypeNameClash( string_view clash );
         /** @brief @p listType 마다 상속 포함 필드 이름 · 옛 이름의 32 비트 해시가 겹치는지 보고 겹치면 오류를 남깁니다(잠금 밖, 상속 목록을 지은 뒤). */
         static void reportFieldNameHashClashes( const vector<TypeInfo*>& listType );
-        /**
-         * @brief 사슬(조상 포함)에서 같은 인터페이스를 두 번 내보내거나 인터페이스가 상한(`kMaxInterfaceCount`)을 넘는 형식을 오류로 알립니다(`Reflection.InterfaceExportedTwice` · `Reflection.InterfaceTableFull`).
-         * @details 상속 병합(`TypeInfo::rebuildDerivedCaches`)은 독점 잠금 안이라 앞의 것을 두고 조용히 넘는다 — 찾기가 어느 포트를 고를지 정하지 못하는 모양을 여기서 멈춘다.
-         */
-        static void reportInterfaceProblems( const vector<TypeInfo*>& listType );
 
         /** @brief 살아 있는 타입입니다(`forEachType`). 부르는 쪽이 잠금 밖에서 돈다 — 방문 안에서 레지스트리를 다시 찾아도 잠금이 겹치지 않고, 포인터는 레지스트리 수명 동안 산다(묘비). */
         vector<const TypeInfo*> collectAliveTypes() const;

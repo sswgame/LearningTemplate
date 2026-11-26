@@ -37,28 +37,13 @@ namespace sw::editor
             /** @brief 색 역할을 이번 테마의 색으로 풉니다(값에는 테마가 없다). 역할 색에는 값의 알파를 곱한다. */
             static ImU32 resolveColor( EditorVisualizerColorRole role, EditorThemeColorKey themeKey, const float4& color )
             {
-                switch ( role )
-                {
-                    case EditorVisualizerColorRole::ThemeToken:
-                        return withAlpha( EditorThemeUtil::findColor( themeKey ), color );
-                    case EditorVisualizerColorRole::ColliderWire:
-                        return withAlpha( SW_THEME_COLOR( "Viewport", "ColliderWire" ), color );
-                    case EditorVisualizerColorRole::CameraWire:
-                        return withAlpha( SW_THEME_COLOR( "Viewport", "CameraWire" ), color );
-                    case EditorVisualizerColorRole::SelectionOutline:
-                        return withAlpha( SW_THEME_COLOR( "Viewport", "SelectionOutline" ), color );
-                    case EditorVisualizerColorRole::Hover:
-                        return withAlpha( EditorThemeUtil::getViewportHoverColor(), color );
-                    case EditorVisualizerColorRole::AxisX:
-                        return withAlpha( SW_THEME_COLOR( "Viewport", "AxisX" ), color );
-                    case EditorVisualizerColorRole::AxisY:
-                        return withAlpha( SW_THEME_COLOR( "Viewport", "AxisY" ), color );
-                    case EditorVisualizerColorRole::AxisZ:
-                        return withAlpha( SW_THEME_COLOR( "Viewport", "AxisZ" ), color );
-                    case EditorVisualizerColorRole::Explicit:
-                        break;
-                }
-                return EditorColorUtil::toImU32( Color::fromFloat4( color ) );
+                if ( role == EditorVisualizerColorRole::Explicit )
+                    return EditorColorUtil::toImU32( Color::fromFloat4( color ) );
+                if ( role == EditorVisualizerColorRole::ThemeToken )
+                    return withAlpha( EditorThemeUtil::findColor( themeKey ), color );
+                if ( role == EditorVisualizerColorRole::Hover )
+                    return withAlpha( EditorThemeUtil::getViewportHoverColor(), color );
+                return withAlpha( EditorThemeUtil::findEnumColor( role ), color ); // 토큰 하나로 정해지는 역할(열거자의 `Color`)
             }
 
             static ImU32 withAlpha( const Color& theme, const float4& color )

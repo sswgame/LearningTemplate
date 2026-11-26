@@ -21,20 +21,24 @@
 
 namespace sw
 {
-    /** @brief 채팅 요청의 결과입니다. 응답 본문의 첫 값이며 0은 성공입니다. 와이어 형식이므로 순서를 바꾸지 않고 새 값은 끝에만 추가합니다. */
+    /**
+     * @brief 채팅 요청의 결과입니다. 응답 본문의 첫 값이며 0은 성공입니다. 와이어 형식이므로 순서를 바꾸지 않고 새 값은 끝에만 추가합니다.
+     * @details 채팅 화면의 상태 줄은 `DisplayName` 이다. 글은 인자 `{seconds}` · `{milliseconds}`(다시 보낼 수 있을 때까지)를 쓸 수 있다(`ChatScreen::makeStatusText`).
+     */
     ENUM()
     enum class ChatResult : uint8
     {
-        Ok = 0,
-        NotMember,     ///< 들어가지 않은 채널에 말했다
-        NotJoinable,   ///< 클라이언트가 들어갈 수 없는 채널이다. 길드와 파티 채널은 서버가 멤버를 넣는다
-        Muted,         ///< 채팅 금지(제재) 상태이다
-        RateLimited,   ///< 도배이다. 기다릴 시간(ms)이 함께 온다
-        Repeated,      ///< 같은 글을 반복했다
-        Rejected,      ///< 금칙어이다. 거절 방식일 때 나온다
-        TargetOffline, ///< 귓속말 상대가 없다
-        TooManyChannels,
-        NotFound, ///< 신고한 메시지가 기록에 없다(아직 쓰이지 않았거나 보존 기간이 지났다)
+        Ok        ENUMERATOR( Hidden ) = 0,                                       ///< 보일 글이 없다
+        NotMember ENUMERATOR( DisplayName = "You have not joined this channel" ), ///< 들어가지 않은 채널에 말했다
+        /// 클라이언트가 들어갈 수 없는 채널이다. 길드와 파티 채널은 서버가 멤버를 넣는다
+        NotJoinable     ENUMERATOR( DisplayName = "This channel cannot be joined" ),
+        Muted           ENUMERATOR( DisplayName = "You are muted ({seconds} s left)" ),       ///< 채팅 금지(제재) 상태이다
+        RateLimited     ENUMERATOR( DisplayName = "Too fast, wait {milliseconds} ms" ),       ///< 도배이다. 기다릴 시간(ms)이 함께 온다
+        Repeated        ENUMERATOR( DisplayName = "You already said that" ),                  ///< 같은 글을 반복했다
+        Rejected        ENUMERATOR( DisplayName = "Message was blocked by the word filter" ), ///< 금칙어이다. 거절 방식일 때 나온다
+        TargetOffline   ENUMERATOR( DisplayName = "That player is offline" ),                 ///< 귓속말 상대가 없다
+        TooManyChannels ENUMERATOR( DisplayName = "Too many channels" ),
+        NotFound        ENUMERATOR( DisplayName = "Message not found" ), ///< 신고한 메시지가 기록에 없다(아직 쓰이지 않았거나 보존 기간이 지났다)
         Count
     };
 

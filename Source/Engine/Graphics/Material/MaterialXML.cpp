@@ -20,7 +20,6 @@
 #include "Engine/Serialization/Inherit/DataInheritanceSchemaRegistry.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
-#include "Engine/Serialization/XML/XMLNameCheck.h"
 
 namespace sw
 {

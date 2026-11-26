@@ -22,31 +22,6 @@
 
 namespace sw
 {
-    namespace
-    {
-        struct WesternRiderViewComponentInternal
-        {
-            /** @brief HUD 에 보이는 걸음새 이름입니다(`MountGait` 순서). */
-            static const utf8* findGaitName( MountGait gait )
-            {
-                switch ( gait )
-                {
-                    case MountGait::Idle:
-                        return SW_LOCKEYREF( "Western", "GaitStanding" );
-                    case MountGait::Walk:
-                        return SW_LOCKEYREF( "Western", "GaitWalk" );
-                    case MountGait::Trot:
-                        return SW_LOCKEYREF( "Western", "GaitTrot" );
-                    case MountGait::Canter:
-                        return SW_LOCKEYREF( "Western", "GaitCanter" );
-                    case MountGait::Gallop:
-                        return SW_LOCKEYREF( "Western", "GaitGallop" );
-                }
-                return "?";
-            }
-        };
-    } // namespace
-
     WesternRiderViewComponent::WesternRiderViewComponent()
         : GameModeViewComponent( GameModeViewBinding::of<&WesternRiderViewComponent::updateView>() )
         , _cameraRig{}
@@ -131,7 +106,7 @@ namespace sw
         const WesternHorse*           pHorse          = pHorseComponent != nullptr ? pHorseComponent->findHorse() : nullptr;
         const MountGait               gait            = pMovement != nullptr ? pMovement->getGait() : MountGait::Idle;
         const float32                 speed           = pMovement != nullptr ? pMovement->getForwardSpeed() : 0.0f;
-        pViewModel->setRideStatus( SW_LOCALIZED_MESSAGE( "Western", "Riding" ).addText( "horse", pHorseObject->getName().c_str() ).addKey( "gait", WesternRiderViewComponentInternal::findGaitName( gait ) ).addDecimal( "speed", static_cast<float64>( speed ), 1 ).str() );
+        pViewModel->setRideStatus( SW_LOCALIZED_MESSAGE( "Western", "Riding" ).addText( "horse", pHorseObject->getName().c_str() ).addKey( "gait", LocalizedText::makeEnumKey( gait ) ).addDecimal( "speed", static_cast<float64>( speed ), 1 ).str() );
         pViewModel->setStamina( pHorse != nullptr ? pHorse->getStamina().getValue() : 0.0f, pHorse != nullptr ? pHorse->getStamina().getRatio() : 0.0f );
     }
 } // namespace sw

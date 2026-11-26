@@ -1,13 +1,31 @@
 #include "pch.h"
 
-#include "GameFramework/Runtime/World/Lifetime/PersistAcrossScenesComponent.h"
-
+#include "Engine/Object/Component/Component.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Scene/SceneManager.h"
 
+#include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 
 namespace sw
 {
+    REFLECT()
+    class PersistAcrossScenesComponent : public Component
+    {
+    public:
+        REFLECT_BODY();
+
+        static constexpr TickGroup kTickGroup = TickGroup::PrePhysics;
+        PersistAcrossScenesComponent();
+        virtual ~PersistAcrossScenesComponent() override = default;
+
+        void onBeginPlay() override;
+
+    private:
+        PROPERTY()
+        bool _bPersistent;
+    };
+
     PersistAcrossScenesComponent::PersistAcrossScenesComponent()
         : _bPersistent{ true }
     {
@@ -26,3 +44,5 @@ namespace sw
             pSceneManager->markPersistent( pOwner );
     }
 } // namespace sw
+
+#include "PersistAcrossScenesComponent.cpp.gen.inl"

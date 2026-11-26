@@ -10,6 +10,8 @@
 #include "Editor/Viewport/Model/EditorCanvasProjection.h"
 #include "Editor/Viewport/Model/EditorViewportRayPick.h"
 
+#include "Engine/Graphics/View/SceneViewQuery.h"
+
 #include <imgui.h>
 
 namespace sw::editor
@@ -61,7 +63,7 @@ namespace sw::editor
     {
         float2 screenA{};
         float2 screenB{};
-        if ( EditorCanvasProjection::projectSegment( viewProj, worldA, worldB, canvasPos, canvasSize, screenA, screenB ) == false )
+        if ( SceneViewQuery::projectSegment( viewProj, worldA, worldB, canvasPos, canvasSize, screenA, screenB ) == false )
             return false;
         outScreenA = ImVec2{ screenA._x, screenA._y };
         outScreenB = ImVec2{ screenB._x, screenB._y };

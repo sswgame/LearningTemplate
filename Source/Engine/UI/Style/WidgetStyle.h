@@ -17,6 +17,8 @@
 
 namespace sw
 {
+    enum class UIStyleField : uint8;
+
     /**
      * @struct WidgetStyle
      * @brief 스타일 시트 규칙이 쓰는 겉모습 필드입니다. 규칙(`<Rule _selector="…" _backgroundColor="…" />`)의 속성 이름이 곧 이 PROPERTY 이름입니다.
@@ -61,6 +63,13 @@ namespace sw
         string _transition{};
         PROPERTY( DisplayName = "Size", Tooltip = "Width, height of the widget (0 = sized by its content; the slot override wins) or of a widget part in the engine widget skin (check box, slider thumb)", Meta = "Units=ui" )
         float2 _size{};
+
+        /** @brief 수치 필드의 값을 성분으로 읽습니다. 성분 수 뒤의 칸과 수치가 아닌 필드는 건드리지 않습니다(성분 수는 `UIStyleFieldTable::getComponentCount`). */
+        void readComponents( UIStyleField field, float32 ( &outArr )[4] ) const;
+        /** @brief 성분을 수치 필드에 씁니다. 수치가 아닌 필드는 건드리지 않습니다. */
+        void writeComponents( UIStyleField field, const float32 ( &arr )[4] );
+        /** @brief 필드 하나의 값을 @p source 에서 이 스타일로 옮깁니다(수치 필드는 표의 성분으로, 폰트 · 전환은 값째). 상속(`UIStyleSet`)이 씁니다. */
+        void copyFieldFrom( const WidgetStyle& source, UIStyleField field );
     };
 } // namespace sw
 
@@ -98,7 +107,7 @@ namespace sw
      * @struct UIStyleFieldTable
      * @brief 필드마다 바뀌면 무엇을 다시 하는지, 물려받는지를 정의한 서술자 표입니다(CSS 의 상속 속성과 레이아웃에 닿는 속성에 해당).
      * @details 이름은 표에 두지 않는다 — `WidgetStyle` 리플렉션의 PROPERTY 이름을 읽는다(`tryFindField`).
-     *          줄마다 플래그 · 멤버 오프셋 · 성분 수가 있어 수치 필드의 읽기 · 쓰기 · 같음 · 성분 수는 표에서 나온다. 수치가 아닌 필드(폰트 · 전환)는 성분 수가 0 이다.
+     *          줄마다 플래그 · 멤버 오프셋 · 성분 수가 있어 수치 필드의 읽기 · 쓰기(`WidgetStyle::readComponents` · `writeComponents`) · 같음 · 성분 수는 표에서 나온다. 수치가 아닌 필드(폰트 · 전환)는 성분 수가 0 이다.
      */
     struct SW_API UIStyleFieldTable
     {
@@ -110,14 +119,8 @@ namespace sw
         static uint32 getFlags( UIStyleField field );
         /** @brief 필드의 float32 성분 수입니다(4 · 2 · 1, 보간되지 않는 필드는 0). */
         static uint32 getComponentCount( UIStyleField field );
-        /** @brief 수치 필드의 값을 성분으로 읽습니다. 성분 수 뒤의 칸과 수치가 아닌 필드는 건드리지 않습니다. */
-        static void readComponents( const WidgetStyle& style, UIStyleField field, float32 ( &outArr )[4] );
-        /** @brief 성분을 수치 필드에 씁니다. 수치가 아닌 필드는 건드리지 않습니다. */
-        static void writeComponents( WidgetStyle& style, UIStyleField field, const float32 ( &arr )[4] );
         /** @brief `WidgetStyle` 의 PROPERTY 이름(`_backgroundColor`, 철자 그대로)에 해당하는 필드를 찾습니다. 없으면 false 입니다. */
         [[nodiscard]] static bool tryFindField( string_view name, UIStyleField& outField );
-        /** @brief 필드 하나의 값을 @p source 에서 @p outTarget 으로 옮깁니다(수치 필드는 표의 성분으로, 폰트 · 전환은 값째). 상속(`UIStyleSet`)이 씁니다. */
-        static void copyField( const WidgetStyle& source, UIStyleField field, WidgetStyle& outTarget );
         /** @brief 비트 하나(칸 하나)입니다. */
         static constexpr uint32 makeBit( UIStyleField field ) { return 1u << static_cast<uint32>( field ); }
     };

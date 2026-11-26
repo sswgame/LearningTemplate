@@ -14,17 +14,24 @@
 
 namespace sw::editor
 {
-    /** @brief 표본 하나의 필드입니다. 그래프 하나에 해당합니다. */
+    /** @brief 표본 하나의 필드입니다. 그래프 하나에 해당합니다(제목 `DisplayName`, 오버레이 단위 `Unit`). */
     ENUM()
     enum class EditorNetProfilerChannel : uint8
     {
-        SentBytesPerSecond = 0,   ///< 최근 1 초 보낸 바이트(연결 대역폭의 합)
-        ReceivedBytesPerSecond,   ///< 최근 1 초 받은 바이트
-        SentPacketsPerSecond,     ///< 두 보고 사이에 보낸 패킷 / 초
-        ReceivedPacketsPerSecond, ///< 두 보고 사이에 받은 패킷 / 초
-        ResentMessagesPerSecond,  ///< 두 보고 사이에 다시 보낸 신뢰 메시지 / 초
-        RttMilliseconds,          ///< 연결들의 평활 RTT 중 가장 큰 값
-        LossPercent,              ///< 연결들이 측정한 손실 중 가장 큰 값
+        /// 최근 1 초 보낸 바이트(연결 대역폭의 합)
+        SentBytesPerSecond ENUMERATOR( DisplayName = "Sent bytes per second (last second, all connections)", Unit = "B/s" ) = 0,
+        /// 최근 1 초 받은 바이트
+        ReceivedBytesPerSecond ENUMERATOR( DisplayName = "Received bytes per second (last second, all connections)", Unit = "B/s" ),
+        /// 두 보고 사이에 보낸 패킷 / 초
+        SentPacketsPerSecond ENUMERATOR( DisplayName = "Sent packets per second", Unit = "pkt/s" ),
+        /// 두 보고 사이에 받은 패킷 / 초
+        ReceivedPacketsPerSecond ENUMERATOR( DisplayName = "Received packets per second", Unit = "pkt/s" ),
+        /// 두 보고 사이에 다시 보낸 신뢰 메시지 / 초
+        ResentMessagesPerSecond ENUMERATOR( DisplayName = "Reliable messages resent per second", Unit = "msg/s" ),
+        /// 연결들의 평활 RTT 중 가장 큰 값
+        RttMilliseconds ENUMERATOR( DisplayName = "Round-trip time (highest connection, ms)", Unit = "ms" ),
+        /// 연결들이 측정한 손실 중 가장 큰 값
+        LossPercent ENUMERATOR( DisplayName = "Packet loss (highest connection, %)", Unit = "%" ),
         Count
     };
 } // namespace sw::editor

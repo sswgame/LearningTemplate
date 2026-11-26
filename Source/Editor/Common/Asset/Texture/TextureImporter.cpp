@@ -629,7 +629,7 @@ namespace sw::editor
         }
 
         // `.hdr`(Radiance RGBE)은 1 을 넘는 값을 가진다. 8비트 디코더(stb)를 거치지 않고 부동소수점으로 읽어 HDR 포맷으로만 임포트한다.
-        if ( FileUtil::hasExtension( sourcePath.str(), ".hdr" ) )
+        if ( FileUtil::hasExtension( sourcePath.str(), TextureImporter::kHDRSourceExtension ) )
             return importHDRTextureInternal( sourcePath, outputPath, rule, pTaskManager, pOutResult );
 
         // 1) RawImageData 로 소스 이미지를 디코딩한다
@@ -710,7 +710,7 @@ namespace sw::editor
         {
             AssetSourceBatchItem& item = batch._listItem[itemIndex];
             item._bRan                 = true;
-            if ( FileUtil::hasExtension( item._relativePath, ".dds" ) )
+            if ( FileUtil::hasExtension( item._relativePath, TextureImporter::kImportedExtension ) )
                 continue; // 원본이 아니다 — 캐시가 다시 읽는다
             item._bHandled                = true;
             const AbsolutePath sourcePath = batch._pAssetPaths->getRootFolderPathFor( item._relativePath ).join( item._relativePath ); // 워커다 — 잡을 올린 에디터 스레드가 넘긴 경로 상태를 쓴다. 작업 도메인 사본은 실행 뿌리 아래다
@@ -766,20 +766,20 @@ namespace sw::editor
 
     string TextureImporter::resolveTextureAsset( string_view path )
     {
-        const string imported = FileUtil::getExtension( path ) == ".dds" ? string{} : makeImportedTexturePath( path );
+        const string imported = string_view( FileUtil::getExtension( path ) ) == TextureImporter::kImportedExtension ? string{} : makeImportedTexturePath( path );
         return imported.empty() ? string( path ) : imported;
     }
 
     string TextureImporter::makeImportedTexturePath( string_view rawTexturePath )
     {
         return AssetImportStampUtil::makeImportedPath( rawTexturePath, TextureImporter::kRawFolder, TextureImporterInternal::kImportedTextureFolder,
-                                                       ".dds" );
+                                                       TextureImporter::kImportedExtension );
     }
 
     AbsolutePath TextureImporter::makeImportedTexturePath( const AbsolutePath& rawTexturePath )
     {
         return AssetImportStampUtil::makeImportedPath( rawTexturePath, TextureImporter::kRawFolder, TextureImporterInternal::kImportedTextureFolder,
-                                                       ".dds" );
+                                                       TextureImporter::kImportedExtension );
     }
 
     uint64 TextureImporter::computeSourceHash( const AbsolutePath& sourcePath, const TextureImportRule& rule )

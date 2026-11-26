@@ -1,20 +1,55 @@
 #include "pch.h"
 
-#include "GameFramework/Runtime/Character/Camera/FollowCameraComponent.h"
-
+#include "Core/Foundation/Types.h"
+#include "Core/Math/Math.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/Component/CameraComponent.h"
+#include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
+#include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Visual/Component/MeshComponent.h"
 
+#include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Character/Camera/CameraMode.h"
 #include "GameFramework/Runtime/Character/Camera/CameraPose.h"
 #include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
 
 namespace sw
 {
+    /**
+     * @class FollowCameraComponent
+     * @brief 같은 오브젝트의 `CameraComponent` 를 `TickGroup::PostUpdate` 에서 둡니다(디렉터가 `PrePhysics` 에서 초점을 적은 뒤). 자기 카메라에만 씁니다.
+     */
+    REFLECT( Category = "Camera", DisplayName = "Follow Camera", Tooltip = "Follows the game director focus from a fixed offset" )
+    class FollowCameraComponent : public Component
+    {
+    public:
+        REFLECT_BODY();
+
+        static constexpr TickGroup kTickGroup = TickGroup::PostUpdate; ///< 플레이어 컨트롤러(DuringPhysics)가 옮긴 자리가 적용된 뒤(물리 뒤 단계)에 읽는다.
+
+        FollowCameraComponent();
+        virtual ~FollowCameraComponent() override = default;
+
+        void onBeginPlay() override;
+        void onTick( TickContext& context ) override;
+
+    private:
+        /** @brief 초점에 오프셋을 더한 자리에서 초점을 보게 둡니다. */
+        void applyToCamera( const float3& focus );
+
+    private:
+        PROPERTY( Category = "Camera", DisplayName = "Director", Tooltip = "Object with the game director that answers the camera focus" )
+        GameObjectHandle _gameMode;
+        PROPERTY( Category = "Camera", DisplayName = "Offset", Tooltip = "Camera position relative to the focus", Units = m )
+        float3 _offset;
+        PROPERTY( Category = "Camera", DisplayName = "Min Far Plane", Tooltip = "Far plane is at least this far", Min = 1.0, Units = m )
+        float32 _minFarPlane;
+    };
+
     FollowCameraComponent::FollowCameraComponent()
         : _gameMode{}
         , _offset{ 0.0f, 15.0f, -11.0f }
@@ -68,3 +103,5 @@ namespace sw
         CameraPose::applyToCamera( *pCamera, evaluatePreset( def, target ) );
     }
 } // namespace sw
+
+#include "FollowCameraComponent.cpp.gen.inl"

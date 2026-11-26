@@ -27,6 +27,30 @@ namespace sw
                 const utf8 lower = StringUtil::toLowerChar( character );
                 return lower == 'a' || lower == 'e' || lower == 'i' || lower == 'o' || lower == 'u';
             }
+
+            /** @brief 표기가 없는 글 조각의 ASCII 글자를 바꿉니다. */
+            static string accentPlainText( string_view plainText )
+            {
+                string result;
+                result.reserve( plainText.size() * 3 );
+                for ( const utf8 character : plainText )
+                {
+                    uint32 codepoint{ 0 };
+                    if ( 'A' <= character && character <= 'Z' )
+                        codepoint = PseudoLocalizerInternal::kArrUpper[character - 'A'];
+                    else if ( 'a' <= character && character <= 'z' )
+                        codepoint = PseudoLocalizerInternal::kArrLower[character - 'a'];
+                    if ( codepoint == 0 )
+                    {
+                        result.push_back( character );
+                        continue;
+                    }
+                    StringUtil::appendUTF8( result, codepoint );
+                    if ( PseudoLocalizerInternal::isVowel( character ) )
+                        StringUtil::appendUTF8( result, codepoint );
+                }
+                return result;
+            }
         };
     } // namespace
 } // namespace sw
@@ -47,30 +71,7 @@ namespace sw
                 result.append( token._text.data(), token._text.size() );
                 continue;
             }
-            result.append( accentPlainText( token._text ) );
-        }
-        return result;
-    }
-
-    string PseudoLocalizer::accentPlainText( string_view plainText )
-    {
-        string result;
-        result.reserve( plainText.size() * 3 );
-        for ( const utf8 character : plainText )
-        {
-            uint32 codepoint{ 0 };
-            if ( 'A' <= character && character <= 'Z' )
-                codepoint = PseudoLocalizerInternal::kArrUpper[character - 'A'];
-            else if ( 'a' <= character && character <= 'z' )
-                codepoint = PseudoLocalizerInternal::kArrLower[character - 'a'];
-            if ( codepoint == 0 )
-            {
-                result.push_back( character );
-                continue;
-            }
-            StringUtil::appendUTF8( result, codepoint );
-            if ( PseudoLocalizerInternal::isVowel( character ) )
-                StringUtil::appendUTF8( result, codepoint );
+            result.append( PseudoLocalizerInternal::accentPlainText( token._text ) );
         }
         return result;
     }

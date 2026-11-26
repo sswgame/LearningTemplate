@@ -21,6 +21,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
+#include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Object/Prefab/PrefabInstanceRegistry.h"
 #include "Engine/Object/Prefab/PrefabOverrides.h"
 #include "Engine/Object/Prefab/PrefabPathStack.h"
@@ -198,12 +199,16 @@ namespace sw
         // 다른 철자 · GUID 참조 글도 한 칸이다(`AssetRegistry::toCacheKey` — 두 벌 올리지 않고, 순환 검사도 같은 키로 본다).
         string key = AssetRegistry::toCacheKey( assetRelativePath );
 
-        // 확장자 길이를 손으로 쓰지 않는다 — 숫자와 문자열이 떨어져 있으면 어긋난다.
-        for ( const string_view extension : { ".bin", ".xml", ".json" } )
+        // 원본 · 쿠킹본(`.prefab.xml` · `.prefab.json` · `.prefab.bin`)은 확장자 없는 이름(`.prefab`) 한 칸이다. 접미사는 종류의 표(`PrefabAssetKind::kArrAssetSuffix`)가 정한다.
+        const AssetSuffix* pSuffix = PrefabAsset::kAssetType.findSuffix( key );
+        if ( pSuffix == nullptr || pSuffix->_role == AssetSuffixRole::CookedAlias )
+            return key;
+        for ( const AssetSuffix& alias : PrefabAssetKind::kArrAssetSuffix )
         {
-            if ( FileUtil::hasExtension( key, extension ) )
+            if ( alias._role == AssetSuffixRole::CookedAlias )
             {
-                key.resize( key.size() - extension.size() );
+                key.resize( key.size() - pSuffix->_text.size() );
+                key.append( alias._text.data(), alias._text.size() );
                 break;
             }
         }
@@ -393,8 +398,7 @@ namespace sw
         {
             // 소스를 읽는 구성은 소스(XML/JSON)만 본다. 소스가 없을 때 옆에 남은 쿠킹본(.bin)을 대신 읽으면 옮기거나 지운 프리팹이
             // 낡은 내용으로 살아나 실패가 가려진다(언리얼 · 유니티의 에디터도 쿠킹 데이터를 보지 않는다).
-            const bool bJSON         = FileUtil::hasExtension( resolvedPath, ".json" );
-            const bool bSourceLoaded = bJSON ? asset->loadFromJSONFile( AssetID{ resolvedPath } ) : asset->loadFromXMLFile( AssetID{ resolvedPath } );
+            const bool bSourceLoaded = asset->loadFromSourceFile( AssetID{ resolvedPath } );
             if ( bSourceLoaded == false )
             {
                 SW_LOG_ERROR_ID( "PrefabAsset.PrefabSourceCouldNot", "Prefab source could not be loaded: %#", resolvedPath );
@@ -569,7 +573,7 @@ namespace sw
         string_view baseState = pSource->getStateData();
         if ( pSource->getStateFormat() != PrefabStateFormat::XML )
         {
-            if ( PrefabOverrides::makeBaseState( *pSource, convertedBase ) == false )
+            if ( pSource->makeBaseState( convertedBase ) == false )
             {
                 SW_LOG_WARNING_ID( "PrefabAsset.NestedPrefabCouldNot4", "Nested prefab '%#' could not be built as a base state - instance '%#' is skipped", node._prefabPath, node._name );
                 return false;
@@ -826,7 +830,7 @@ namespace sw
                 return false;
             }
             string baseState;
-            if ( PrefabOverrides::makeBaseState( *pSource, baseState ) == false )
+            if ( pSource->makeBaseState( baseState ) == false )
             {
                 SW_LOG_ERROR_ID( "PrefabAsset.NestedPrefabCouldNot6", "Nested prefab '%#' could not be built as a base state - '%#' is not flattened", sourcePath, asset.getName() );
                 return false;
@@ -897,7 +901,7 @@ namespace sw
         if ( bCached && AssetIO::usesSource() )
         {
             const shared_ptr<PrefabAsset> probe   = sw::make_shared<PrefabAsset>();
-            const bool                    bLoaded = FileUtil::hasExtension( assetRelativePath, ".json" ) ? probe->loadFromJSONFile( assetID ) : probe->loadFromXMLFile( assetID );
+            const bool                    bLoaded = probe->loadFromSourceFile( assetID );
             if ( bLoaded == false )
             {
                 SW_LOG_ERROR_ID( "PrefabCache.HotReloadFailed", "Hot-Reload failed for Prefab %# - keeping the previous version", cacheKey.c_str() );

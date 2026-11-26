@@ -63,6 +63,9 @@ namespace sw
     {
         TileNeighborRule _arrNeighbor[8]{};
         TileVisual       _visual;
+
+        /** @brief 이웃 조건 하나의 패턴 글자(`.` · `o` · `x`)입니다. 파일 읽기 · 쓰기와 에디터 단추가 이 하나를 쓴다 — 파일과 화면이 같은 글자다. */
+        SW_API static utf8 getPatternCharacter( TileNeighborRule rule );
     };
 } // namespace sw
 
@@ -256,10 +259,6 @@ namespace sw
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         /** @brief 형식 뒤의 규칙(`collectIssues`)을 보고 통과하면 내용을 들인다. 실패하면 오류를 남기고 내용은 바뀌지 않는다. */
         [[nodiscard]] bool applyContent( TileSetContent&& loaded, string_view sourceName );
-        /** @brief 노드의 `cell` 또는 `frames` 와 `fps` 를 읽습니다. 둘 다 없으면 오류입니다. 값의 규칙(셀 범위 · fps)은 `collectIssues` 가 본다. */
-        [[nodiscard]] static bool parseVisual( const XMLNode& node, string_view sourceName, TileVisual& outVisual );
-        /** @brief `<Tile>` 또는 `<RuleTile>` 하나를 읽습니다(형식만 — 이름 겹침 · 셀 범위는 `collectIssues`). 잘못되었으면 오류를 남기고 false 입니다. */
-        [[nodiscard]] static bool parseBrush( const XMLNode& node, string_view sourceName, TileBrush& outBrush );
 
     private:
         TileSetContent _content;

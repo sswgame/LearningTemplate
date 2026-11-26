@@ -47,7 +47,7 @@ namespace sw::editor
      *          엔진 캐시는 자기 런타임 파일을 그 즉시 다시 읽을 뿐이고(로드), 소스 임포트, 감시, 씬 알림은 여기(에디터)에 있다.
      *          새 에셋 종류를 추가해도 이 파일은 고치지 않는다.
      *          연쇄 리로드: 바뀐 에셋을 로드할 때 펼쳐 넣은 에셋(표의 칸 `AssetReloadRoute::_referenceUse`)이 로드돼 있으면 같은 프레임에 의존 순서로 다시 읽는다
-     *          (`AssetReloadCascade`). 누가 무엇을 쓰는지는 에디터 전역의 참조 역색인(`AssetReferenceTracker`, 이 서브시스템이 소유)이 답한다.
+     *          (`EditorAssetIndex::planDependents`). 누가 무엇을 쓰는지는 에디터 전역의 참조 역색인(`AssetReferenceTracker`, 이 서브시스템이 소유)이 답한다.
      */
     class AssetHotReload : public EditorSubsystem
     {

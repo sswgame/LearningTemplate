@@ -12,7 +12,6 @@
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
-#include "Engine/Serialization/XML/XMLNameCheck.h"
 
 namespace sw
 {
@@ -115,17 +114,17 @@ namespace sw
         bool                      bValid    = XMLFields::readProperties( root, rootParams, sourceName );
         vector<TelemetryEventDef> listEvent = _listEvent;
         TelemetryPipelineConfig   settings  = _settings;
-        bValid                              = XMLNameCheck::reportUnknownChildren( root, Internal::kArrRootChild, sourceName ) && bValid;
+        bValid                              = root.reportUnknownChildren( Internal::kArrRootChild, sourceName ) && bValid;
         // 적지 않은 칸은 정의 구조체의 초기값이다. 깨진 값 · 범위 밖 값은 자르지 않고 오류이며, 파일 전체를 받지 않는다(칸 · 범위는 PROPERTY 가 정본이다).
         for ( XMLNode node = root.findChild( "Pipeline" ); node; node = node.findNextSibling( "Pipeline" ) )
         {
-            bValid = XMLFields::readProperties( node, settings, sourceName ) && XMLNameCheck::reportUnknownChildren( node, nullptr, 0, sourceName ) && bValid;
+            bValid = XMLFields::readProperties( node, settings, sourceName ) && node.reportUnknownChildren( nullptr, 0, sourceName ) && bValid;
         }
         for ( XMLNode node = root.findChild( "Event" ); node; node = node.findNextSibling( "Event" ) )
         {
             TelemetryEventDef event;
             bValid = XMLFields::readProperties( node, event, sourceName ) && bValid;
-            bValid = XMLNameCheck::reportUnknownChildren( node, Internal::kArrEventChild, sourceName ) && bValid;
+            bValid = node.reportUnknownChildren( Internal::kArrEventChild, sourceName ) && bValid;
             if ( event._id.empty() )
             {
                 bValid = false;

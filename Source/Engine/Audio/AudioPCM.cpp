@@ -2,10 +2,10 @@
 
 #include "Engine/Audio/AudioPCM.h"
 
-#include "Core/File/FileUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Serialization/ByteStream.h"
 
+#include "Engine/Audio/AudioClip.h"
 #include "Engine/Audio/AudioVorbisDecoder.h"
 
 namespace sw
@@ -110,15 +110,20 @@ namespace sw
 
     bool AudioPCM::isSupportedExtension( string_view path )
     {
-        return FileUtil::hasExtension( path, ".wav" ) || FileUtil::hasExtension( path, ".ogg" );
+        return AudioClipData::findFileFormat( path ) != AudioFileFormat::Other;
     }
 
     bool AudioPCM::decode( string_view path, const uint8* pBytes, size_t byteCount, AudioPCM& outPCM )
     {
-        if ( FileUtil::hasExtension( path, ".wav" ) )
-            return decodeWAV( pBytes, byteCount, outPCM );
-        if ( FileUtil::hasExtension( path, ".ogg" ) )
-            return AudioVorbisDecoder::decode( pBytes, byteCount, outPCM );
+        switch ( AudioClipData::findFileFormat( path ) ) // 코덱은 접미사 칸이 정한다(`AudioClipData::kArrAssetSuffix`)
+        {
+            case AudioFileFormat::WAV:
+                return decodeWAV( pBytes, byteCount, outPCM );
+            case AudioFileFormat::Vorbis:
+                return AudioVorbisDecoder::decode( pBytes, byteCount, outPCM );
+            case AudioFileFormat::Other:
+                return false;
+        }
         return false;
     }
 } // namespace sw

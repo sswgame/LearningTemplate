@@ -7,7 +7,6 @@
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/UI/Document/UIDocument.h"
-#include "Engine/UI/Document/UIDocumentLoader.h"
 
 namespace sw
 {
@@ -16,7 +15,7 @@ namespace sw
         expected<shared_ptr<const void>> parseDocument( string_view text, string_view path, const ResourceContext& context )
         {
             shared_ptr<UIDocumentAsset> document = make_shared<UIDocumentAsset>();
-            if ( expected<void> parsed = UIDocumentLoader::parse( text, path, context, *document ); parsed.has_value() == false )
+            if ( expected<void> parsed = UIDocumentAsset::parse( text, path, context, *document ); parsed.has_value() == false )
                 return unexpected( parsed.error() );
             return shared_ptr<const void>( std::move( document ) );
         }

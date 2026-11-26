@@ -66,20 +66,6 @@ namespace sw::editor
             static constexpr int32 kMaxTableColumn  = 64; ///< ImGui 표 열의 상한 — 채널 · 프로필은 32 이하라 넘지 않는다
             static constexpr int32 kNameColumnCount = 1;
             static constexpr int32 kPanelOrder      = 1345; ///< Tool 메뉴 차례 — Ragdoll Preview(1340) 다음  ///< 표 맨 앞의 프로필 이름 열
-
-            static const utf8* getResponseLabel( CollisionResponse response )
-            {
-                switch ( response )
-                {
-                    case CollisionResponse::Ignore:
-                        return SW_LOCTEXT( "EditorCollision", "Ignore", "Ignore" );
-                    case CollisionResponse::Overlap:
-                        return SW_LOCTEXT( "EditorCollision", "Overlap", "Overlap" );
-                    case CollisionResponse::Block:
-                        return SW_LOCTEXT( "EditorCollision", "Block", "Block" );
-                }
-                return "";
-            }
         };
     } // namespace
 
@@ -174,7 +160,7 @@ namespace sw::editor
                 const bool bDefault = _model.isDefaultResponse( profileIndex, channelIndex ); // 채널 기본은 흐리게 — 적힌 줄만 진하다
                 if ( bDefault )
                     ImGui::PushStyleColor( ImGuiCol_Text, mutedColor );
-                const bool bClicked = ImGui::Selectable( Internal::getResponseLabel( _model.getResponse( profileIndex, channelIndex ) ) );
+                const bool bClicked = ImGui::Selectable( LocalizedText::findEnum( _model.getResponse( profileIndex, channelIndex ) ) );
                 const bool bReset   = bDefault == false && EditorInputGUI::wasItemResetRequested(); // R10 — 휠클릭은 채널 기본으로
                 const bool bHovered = ImGui::IsItemHovered();
                 EditorSelfTestMarks::recordFormat( "collisionResponses.cell.%#.%#", profileIndex, channelIndex );
@@ -225,9 +211,9 @@ namespace sw::editor
                 ImGui::TableNextColumn();
                 const CollisionResponse response = layers.getResponse( static_cast<uint8>( row ), static_cast<uint8>( column ) );
                 if ( response == CollisionResponse::Ignore )
-                    EditorThemeUtil::textMuted( Internal::getResponseLabel( response ) );
+                    EditorThemeUtil::textMuted( LocalizedText::findEnum( response ) );
                 else
-                    ImGui::TextUnformatted( Internal::getResponseLabel( response ) );
+                    ImGui::TextUnformatted( LocalizedText::findEnum( response ) );
             }
         }
         ImGui::EndTable();

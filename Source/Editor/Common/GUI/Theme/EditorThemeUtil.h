@@ -11,6 +11,9 @@
 #include "Editor/Common/Config/EditorThemeKey.h"
 #include "Editor/Common/EditorExports.h"
 
+#include "Engine/Reflection/EnumName.h"
+#include "Engine/Reflection/ReflectionEditorMetadata.h"
+
 struct ImDrawList;
 
 // `sw::Color` 와 ImGui 색 값(`ImVec4` · `ImU32`) 사이의 변환을 한곳에 둡니다. 에디터 코드는 색을 `Color` 로 보관하고, ImGui 에 넘기는 지점에서만 여기를 거칩니다. `toImU32` 는 `IM_COL32` 와 같은 값(`Color::toAbgr`)입니다.
@@ -124,6 +127,12 @@ namespace sw::editor
         static const Color& findColor( const hashed_string& key );
         /** @brief 키 형으로 찾습니다(`SW_THEME_COLOR_KEY` — 등록 줄 · 값 목록이 든 키). 빈 키는 없는 색이다(마젠타와 오류). */
         static const Color& findColor( EditorThemeColorKey key ) { return findColor( key.isEmpty() ? hashed_string{} : hashed_string{ key.c_str() } ); }
+        /** @brief 열거값의 색(`ENUMERATOR( Color = "Signal.Error" )`)입니다. 값마다 색을 고르는 switch 를 두지 않는다. 적지 않은 값은 빈 키라 오류와 자홍색이다(대조: `EditorThemeKeys` 테스트). */
+        template <typename E>
+        static const Color& findEnumColor( E value )
+        {
+            return findColor( getEnumeratorEditorMetadata( value )._color );
+        }
         /** @brief 지금 테마의 수치 토큰 @p key 입니다(96 DPI 픽셀 · 비율, DPI 배율은 곱하지 않은 값). 없으면 키마다 한 번 오류를 남기고 0 입니다. `SW_THEME_METRIC` 을 쓴다. */
         static float32 findMetric( const hashed_string& key );
         /** @brief 씬 뷰 호버 강조 색입니다. 강조색을 밝고 반투명하게 만든 색이며 선택 주황보다 약하고 테마를 따릅니다. */

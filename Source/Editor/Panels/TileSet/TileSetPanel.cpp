@@ -1,16 +1,21 @@
 #include "pch.h"
 
-#include "Editor/Panels/TileSet/TileSetPanel.h"
-
+#include "Core/Container/string.h"
+#include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
 
 #include "Editor/Common/GUI/EditorChrome.h"
+#include "Editor/Common/GUI/EditorThumbnailCache.h"
+#include "Editor/Common/GUI/Panel/EditorDocumentPanel.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
+#include "Editor/Panels/TileSet/Model/TileSetEditModel.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
@@ -22,6 +27,58 @@
 
 namespace sw::editor
 {
+    /**
+     * @class TileSetPanel
+     * @brief 타일셋 편집 창입니다. 파일 머리말 참고.
+     */
+    class TileSetPanel : public EditorDocumentPanel
+    {
+    public:
+        /** @brief 패널 id 입니다. 등록(`SW_EDITOR_PANEL`)과 조회가 모두 이 상수에서 온다. */
+        static constexpr const utf8* kPanelID = "tileset_editor";
+
+        TileSetPanel();
+
+        const utf8*        getPanelTitle() const override { return "Tile Set Editor"; }
+        void               drawDocumentContent() override;
+        [[nodiscard]] bool saveDocument( AssetWriter& writer ) override;
+        void               shutdown() override;
+
+        bool                    isTileSetDocumentLoaded() const { return isDocumentLoaded(); }
+        const TileSetEditModel& getModel() const { return _model; }
+        /** @brief 지난 그리기의 규칙 위반 수입니다(감시 값 `Editor.TileSetIssueCount`). */
+        uint32 getIssueCount() const { return static_cast<uint32>( _listIssue.size() ); }
+
+    private:
+        ToolAssetLoadResult loadDocument() override;
+        string              captureDocumentText() const override { return _model.captureText(); }
+        void                applyDocumentText( string_view text ) override { _model.applyText( text ); }
+
+        /** @brief 저장 · 다시 읽기 단추와 아틀라스 경로 · 격자 · 타일 크기 칸입니다. */
+        void drawAtlasRows();
+        /** @brief 브러시 목록(위반이 있는 브러시는 빨간 표시 하나)과 더하기 · 지우기 단추입니다. */
+        void drawBrushList();
+        /** @brief 고른 브러시의 이름 · solid · 이동 비용 · 맵 밖 칸입니다. */
+        void drawBrushDetail( const TileBrush& brush );
+        /** @brief 고른 브러시의 기본 모습과 규칙 목록, 고른 규칙의 이웃 패턴(3 × 3) · 결과 셀입니다. */
+        void drawRuleSection( const TileBrush& brush );
+        /** @brief 고친 대상인 모습의 프레임 · fps 줄입니다. */
+        void drawVisualRow( const TileVisual& visual );
+        /** @brief 아틀라스 격자입니다. 누른 셀이 고른 모습이 되고 Shift 는 프레임으로 덧붙입니다. 고른 모습의 셀은 강조색 틀입니다. */
+        void drawAtlasGrid();
+        /** @brief 셀 하나의 아틀라스 그림입니다(@p side 픽셀 정사각형). 아틀라스가 없으면 셀 번호 글입니다. */
+        void drawCellImage( int32 cell, float32 side );
+        /** @brief 고른 브러시 · 규칙의 위반을 그 자리에서 보입니다. @p ruleIndex 가 비어 있으면 브러시 자체의 위반입니다. */
+        void drawIssues( optional<int32> brushIndex, optional<int32> ruleIndex );
+
+    private:
+        TileSetEditModel     _model;
+        EditorThumbnailCache _atlasThumbnail;
+        vector<TileSetIssue> _listIssue;  ///< 그리기마다 다시 모은 규칙 위반
+        string               _nameBuffer; ///< 고른 브러시 이름 칸(칸을 떠날 때 옮긴다)
+        int32                _nameBrush;  ///< `_nameBuffer` 를 채운 브러시 번호 — 고른 것이 바뀌면 다시 채운다
+    };
+
     namespace
     {
         struct TileSetPanelInternal
@@ -83,21 +140,6 @@ namespace sw::editor
                     return false;
                 outValue = static_cast<float64>( pPanel->getIssueCount() );
                 return true;
-            }
-
-            /** @brief 이웃 조건의 단추 글자입니다 — 파일의 패턴 글자 그대로(`. o x`)라 파일과 화면이 같은 말이다. */
-            static const utf8* getNeighborLabel( TileNeighborRule rule )
-            {
-                switch ( rule )
-                {
-                    case TileNeighborRule::Any:
-                        return ".";
-                    case TileNeighborRule::Same:
-                        return "o";
-                    case TileNeighborRule::Other:
-                        return "x";
-                }
-                return ".";
             }
         };
     } // namespace
@@ -358,7 +400,8 @@ namespace sw::editor
                 continue;
             }
             ImGui::PushID( 2000 + neighbor );
-            if ( ImGui::Button( Internal::getNeighborLabel( rule._arrNeighbor[neighbor] ), ImVec2{ buttonSide, buttonSide } ) )
+            const utf8 arrLabel[2] = { TileRule::getPatternCharacter( rule._arrNeighbor[neighbor] ), 0 }; // 파일의 패턴 글자 그대로라 파일과 화면이 같은 말이다
+            if ( ImGui::Button( arrLabel, ImVec2{ buttonSide, buttonSide } ) )
                 (void)_model.cycleNeighbor( neighbor ); // 바꿨으면 모델이 되돌리기 이름으로 알린다(감사 E-16)
             EditorSelfTestMarks::recordFormat( "tileSet.neighbor.%#", neighbor );
             ImGui::PopID();

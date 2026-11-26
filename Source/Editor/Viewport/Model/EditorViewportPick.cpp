@@ -14,6 +14,7 @@
 #include "Editor/Viewport/Model/EditorViewportRayPick.h"
 #include "Editor/Viewport/Model/EditorVisualizerDrawList.h"
 
+#include "Engine/Graphics/View/SceneViewQuery.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -62,7 +63,7 @@ namespace sw::editor
                 }
                 float2 screenMin{};
                 float2 screenMax{};
-                if ( EditorCanvasProjection::projectBoxRect( input._viewProj, box, input._canvasPos, input._canvasSize, screenMin, screenMax ) == false )
+                if ( SceneViewQuery::projectBoxRect( input._viewProj, box, input._canvasPos, input._canvasSize, screenMin, screenMax ) == false )
                     return false;
                 return screenMin._x <= maxPos._x && minPos._x <= screenMax._x && screenMin._y <= maxPos._y && minPos._y <= screenMax._y;
             }

@@ -94,15 +94,19 @@ namespace sw
             entry._listPrevious.assign( listPrevious.begin(), listPrevious.end() );
     }
 
-    float32 MeleeSweepHistory::computeDistanceSquaredToSegment( const float3& point, const float3& from, const float3& to )
+    namespace
     {
-        const float3  segment       = to - from;
-        const float32 segmentLength = segment.getLengthSquared();
-        float32       along         = 0.0f;
-        if ( segmentLength > MathUtil::kEpsilon * MathUtil::kEpsilon )
-            along = MathUtil::clamp( ( point - from ).dot( segment ) / segmentLength, 0.0f, 1.0f );
-        return ( point - ( from + segment * along ) ).getLengthSquared();
-    }
+        /** @brief 점 @p point 에서 선분 @p from → @p to 까지의 거리 제곱입니다. */
+        float32 computeDistanceSquaredToSegment( const float3& point, const float3& from, const float3& to )
+        {
+            const float3  segment       = to - from;
+            const float32 segmentLength = segment.getLengthSquared();
+            float32       along         = 0.0f;
+            if ( segmentLength > MathUtil::kEpsilon * MathUtil::kEpsilon )
+                along = MathUtil::clamp( ( point - from ).dot( segment ) / segmentLength, 0.0f, 1.0f );
+            return ( point - ( from + segment * along ) ).getLengthSquared();
+        }
+    } // namespace
 
     bool MeleeSweepHistory::containsSphere( const SweepRecord& record, const float3& center, float32 radius )
     {

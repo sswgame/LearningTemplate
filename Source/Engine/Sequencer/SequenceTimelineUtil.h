@@ -30,14 +30,15 @@ namespace sw
     class SequencePlayer;
 
     /** @brief 시퀀스가 카메라 쪽에 내는 신호의 종류입니다. 듣는 쪽(게임 프레임워크의 카메라)이 블렌드 · 흔들림 · 대기 뷰로 바꿉니다. */
+    ENUM()
     enum class SequenceCameraSignalKind : uint8
     {
-        CutBegin = 0,   ///< 덮는 카메라 컷이 바뀌었다 — 대상 카메라의 디렉터가 `_preset` 을 켠다
-        CinematicBegin, ///< 컷이 없던 때 첫 컷이 시작했다 — 게임 카메라 화면에서 `_blendSeconds` 동안 섞어 들어간다
-        CinematicEnd,   ///< 덮던 컷이 모두 끝났다(재생을 멈춘 때 포함) — 마지막 컷 화면에서 게임 카메라로 `_blendSeconds` 동안 섞어 나온다
-        CutPrewarm,     ///< 컷이 `_framesUntil` 프레임 뒤에 시작한다 — 그 카메라를 "곧 볼 시점(대기 뷰)" 으로 등록할 때(언리얼 preroll)
-        PlaybackEnd,    ///< 재생이 끝났다(끝 · 멈춤 — 컷이 덮고 있었으면 `CinematicEnd` 다음). 항목 · 대상이 없다
-        Shake,          ///< 카메라 흔들림 항목이 시작했다 — 대상 카메라를 구간 길이만큼 흔든다
+        CutBegin       ENUMERATOR( DisplayName = "cut" ) = 0,      ///< 덮는 카메라 컷이 바뀌었다 — 대상 카메라의 디렉터가 `_preset` 을 켠다
+        CinematicBegin ENUMERATOR( DisplayName = "blend in" ),     ///< 컷이 없던 때 첫 컷이 시작했다 — 게임 카메라 화면에서 `_blendSeconds` 동안 섞어 들어간다
+        CinematicEnd   ENUMERATOR( DisplayName = "blend out" ),    ///< 덮던 컷이 모두 끝났다(재생을 멈춘 때 포함) — 마지막 컷 화면에서 게임 카메라로 `_blendSeconds` 동안 섞어 나온다
+        CutPrewarm     ENUMERATOR( DisplayName = "standby view" ), ///< 컷이 `_framesUntil` 프레임 뒤에 시작한다 — 그 카메라를 "곧 볼 시점(대기 뷰)" 으로 등록할 때(언리얼 preroll)
+        PlaybackEnd    ENUMERATOR( DisplayName = "playback end" ), ///< 재생이 끝났다(끝 · 멈춤 — 컷이 덮고 있었으면 `CinematicEnd` 다음). 항목 · 대상이 없다
+        Shake          ENUMERATOR( DisplayName = "shake" ),        ///< 카메라 흔들림 항목이 시작했다 — 대상 카메라를 구간 길이만큼 흔든다
     };
 } // namespace sw
 

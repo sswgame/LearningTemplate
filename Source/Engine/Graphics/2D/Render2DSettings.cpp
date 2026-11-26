@@ -13,7 +13,6 @@
 #include "Engine/Content/Pack/AssetCookRoot.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
-#include "Engine/Serialization/XML/XMLNameCheck.h"
 
 namespace sw
 {
@@ -121,7 +120,7 @@ namespace sw
     bool Render2DSettings::readTransparencySort( const XMLNode& node, string_view sourceName )
     {
         Render2DTransparencySortParams params;
-        if ( XMLFields::readProperties( node, params, sourceName ) == false || XMLNameCheck::reportUnknownChildren( node, nullptr, 0, sourceName ) == false )
+        if ( XMLFields::readProperties( node, params, sourceName ) == false || node.reportUnknownChildren( nullptr, 0, sourceName ) == false )
             return false;
         if ( params._axis.getLengthSquared() <= MathUtil::kEpsilon )
         {

@@ -17,6 +17,7 @@
 #include "DevTools/AssetReload/ReloadTracker.h"
 #include "DevTools/Client/Automation/Scenario/AutomationScratchWorkspace.h"
 
+#include "Editor/Common/Asset/EditorAssetIndex.h"
 #include "Editor/Common/Config/EditorToolDefaults.h"
 #include "Editor/Common/EditorSceneIterationAccess.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetImportJob.h"
@@ -24,7 +25,6 @@
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorSubsystems.h"
 #include "Editor/Common/Workspace/HotReload/AssetReferenceTracker.h"
-#include "Editor/Common/Workspace/HotReload/AssetReloadCascade.h"
 #include "Editor/Common/Workspace/Undo/UndoStep.h"
 
 #include "Engine/Asset/AssetDatabase.h"
@@ -583,7 +583,7 @@ namespace sw::editor
             return;
         }
         vector<string> listDependent;
-        if ( AssetReloadCascade::planDependents( index, assetID, &AssetHotReload::shouldInlineReferences, listDependent ) == false )
+        if ( index.planDependents( assetID, &AssetHotReload::shouldInlineReferences, listDependent ) == false )
             return; // 순환 — 계획이 오류를 남겼다
         for ( const string& dependentID : listDependent )
         {

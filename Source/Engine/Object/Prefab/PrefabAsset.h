@@ -94,6 +94,10 @@ namespace sw
         [[nodiscard]] bool loadFromXMLFile( const AssetID& assetID );
         /** @brief JSON 에서 프리팹을 로드합니다(GameObject 상태 JSON 에 중첩 인스턴스 배열 `_listPrefabInstance` 를 더한 것이며, `saveToJSONFile` 이 쓰는 형태 하나만 받습니다). */
         [[nodiscard]] bool loadFromJSONFile( const AssetID& assetID );
+        /** @brief 저작 원본을 접미사의 형식(`PrefabAssetKind::kArrAssetSuffix`)으로 골라 읽습니다. `.prefab.json` 은 JSON, 그 밖(GUID 참조 포함)은 XML 입니다. */
+        [[nodiscard]] bool loadFromSourceFile( const AssetID& assetID );
+        /** @brief @p path 의 파일 형식입니다(접미사 칸). 프리팹 접미사가 아니면 비어 있습니다. */
+        [[nodiscard]] static optional<PrefabFileFormat> findFileFormat( string_view path );
         /**
          * @brief 디스크 파일에서 프리팹 원본을 로드합니다(형식은 확장자 `.prefab.xml` · `.prefab.json`). 리소스 id 로 풀지 않고 팩을 보지 않습니다.
          * @details 소스 트리를 디스크로 훑은 쿠커 · 테스트용입니다 — 리소스 루트 안 절대 경로를 `loadFromXMLFile` 에 넣으면 팩 전용 구성이 거절합니다.
@@ -161,6 +165,12 @@ namespace sw
         [[nodiscard]] bool applySpawnTemplateTo( GameObject* pTarget ) const;
         /** @brief 펼친 중첩 노드 @p nodeIndex 의 스폰 원형으로 읽습니다. 원형이 없는 노드(저작본 노드, 캐시 밖 자산)면 오류와 함께 false 입니다. */
         [[nodiscard]] bool applyNestedSpawnTemplateTo( GameObject* pTarget, size_t nodeIndex ) const;
+        /**
+         * @brief 프리팹의 기준 상태(원형 — 언리얼 CDO 자리)를 오브젝트 상태 XML 로 만듭니다.
+         * @details 프리팹을 씬 밖 임시 매니저의 오브젝트에 읽어 다시 씁니다 — 저장된 본문(XML · JSON · 쿠킹본)의 형식과 무관하게 같은 글이 나오고,
+         *          프리팹 본문에 남은 다른 오브젝트로의 부착 · 핸들은 적지 않습니다. 읽지 못하면 false 입니다.
+         */
+        [[nodiscard]] bool makeBaseState( string& outStateXML ) const;
         /** @brief 로드에 성공했으면 true 입니다. */
         bool isValid() const { return _bValid == SW_TRUE; }
         /**

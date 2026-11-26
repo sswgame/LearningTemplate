@@ -268,7 +268,7 @@ namespace sw
         // 1) 모델 공간 회전 차이를 옮긴다.
         for ( const BonePair& pair : _listPair )
         {
-            const quaternion delta = ( _sourceBuffer.getModelRotation( pair._source ) * RigIKSolver::makeInverse( pair._sourceReferenceRotation ) ).normalize();
+            const quaternion delta = ( _sourceBuffer.getModelRotation( pair._source ) * pair._sourceReferenceRotation.inverse() ).normalize();
             _targetBuffer.setModelRotation( pair._target, delta * pair._targetReferenceRotation );
         }
 

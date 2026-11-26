@@ -6,6 +6,8 @@
 
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 
+#include "Engine/Reflection/EnumName.h"
+
 #include "GameFramework/Runtime/Character/AI/Schedule/ScheduleCatalog.h"
 #include "GameFramework/Runtime/Character/AI/Schedule/ScheduleSystem.h"
 
@@ -147,9 +149,9 @@ namespace sw::editor
             row._activity = string( segment._activity.c_str() );
             StringBuilder<constant::buffer::kMax256> source;
             if ( segment._sourceID.empty() )
-                source.append( toString( segment._source ) );
+                source.append( getEnumName( segment._source ) );
             else
-                source.appendFormat( "%# '%#'", toString( segment._source ), segment._sourceID.c_str() );
+                source.appendFormat( "%# '%#'", getEnumName( segment._source ), segment._sourceID.c_str() );
             row._source       = string( source.c_str() );
             row._segmentIndex = segmentIndex;
             row._bActive      = activeIndex == segmentIndex;

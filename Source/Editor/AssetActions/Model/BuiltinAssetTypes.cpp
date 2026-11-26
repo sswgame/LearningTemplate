@@ -5,6 +5,7 @@
 // 옛 맨 접미사(`.seq` · `.sprite` · `.dialogue` · `.tilemap`)는 두지 않는다.
 #include "pch.h"
 
+#include "Editor/Common/Asset/EditorContentScan.h"
 #include "Editor/Common/Asset/Texture/HeightfieldImporter.h"
 #include "Editor/Common/Asset/Texture/TextureImporter.h"
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
@@ -40,7 +41,7 @@ namespace sw::editor
         struct BuiltinAssetTypesInternal
         {
             /** @brief 시트로 열 수 있는 텍스처 원본입니다 — HDR(`.hdr`)은 밝기 원본(하늘 · 조명)이라 스프라이트 색이 아니다. */
-            static bool isSheetSource( string_view path ) { return FileUtil::hasExtension( path, ".hdr" ) == false; }
+            static bool isSheetSource( string_view path ) { return FileUtil::hasExtension( path, TextureImporter::kHDRSourceExtension ) == false; }
             /** @brief 에디터 테마 토큰 파일입니다. 바뀌면 그 자리에서 테마를 다시 적용한다. */
             static constexpr string_view kArrThemeTokenSuffix[] = { EditorThemeTokens::kExtension };
             /** @brief 모듈이 로드한 데이터 테이블 캐시입니다(GameFramework 의 상호작용 테이블과 원소 규칙 테이블). 에디터는 GameFramework 를 모른다. */
@@ -50,8 +51,6 @@ namespace sw::editor
              * @details XML 은 그 경로를 가진 캐시가 다시 읽고, 항목 · 파일 `_base` 로 부모를 펼쳐 넣으므로 부모가 바뀌면 연쇄한다(`AssetReloadCascade`). 부모만 고쳐도 감시가 알려야 하므로 캐시에 없는 파일도 감시 대상이다.
              *          JSON 은 상속이 없고(`DataInheritance.md`) 다시 읽는 캐시도 없어 감시하지 않는다.
              */
-            static constexpr string_view kArrDataXMLExt[]  = { ".xml" };
-            static constexpr string_view kArrDataJSONExt[] = { ".json" };
 
             /** @brief 스프라이트 시트로 쓰는 이미지 규칙들입니다 — 텍스처가 먼저 가져가고(`Fallback`), 스프라이트 클립 패널이 시트로 열 때만 이 종류로 본다. 텍스처의 원본(HDR 빼고)과 임포트한 텍스처다. */
             static EditorAssetMatchRule makeSheetSourceRule()
@@ -116,9 +115,9 @@ namespace sw::editor
                                             EditorAssetMatchPriority::Suffix, { AssetReloadRoute::kAnyCacheHoldingPath, nullptr, nullptr, AssetReferenceUse::InlinedAtLoad } ),
             EditorAssetMatchRule::engineType( AudioMixerDef::kAssetType, { AssetReloadRoute::kAnyCacheHoldingPath } ),
             EditorAssetMatchRule::engineType( AudioEventLibrary::kAssetType, { AssetReloadRoute::kAnyCacheHoldingPath } ),
-            EditorAssetMatchRule::suffixes( EditorAssetMatchMode::Extension, BuiltinAssetTypesInternal::kArrDataXMLExt, SW_COUNT_OF( BuiltinAssetTypesInternal::kArrDataXMLExt ),
+            EditorAssetMatchRule::suffixes( EditorAssetMatchMode::Extension, EditorContentScan::kArrDataXMLExtension, SW_COUNT_OF( EditorContentScan::kArrDataXMLExtension ),
                                             EditorAssetMatchPriority::Catchall, { AssetReloadRoute::kAnyCacheHoldingPath, nullptr, nullptr, AssetReferenceUse::InlinedAtLoad } ),
-            EditorAssetMatchRule::suffixes( EditorAssetMatchMode::Extension, BuiltinAssetTypesInternal::kArrDataJSONExt, SW_COUNT_OF( BuiltinAssetTypesInternal::kArrDataJSONExt ),
+            EditorAssetMatchRule::suffixes( EditorAssetMatchMode::Extension, EditorContentScan::kArrDataJSONExtension, SW_COUNT_OF( EditorContentScan::kArrDataJSONExtension ),
                                             EditorAssetMatchPriority::Catchall ),
         };
     } // namespace

@@ -37,7 +37,7 @@ namespace sw
      */
     struct SW_API XMLFields
     {
-        /** @brief 속성 이름을 다른 읽기가 맡는지 답하는 함수입니다(`XMLNameCheck::AcceptNameFunction` 과 같은 모양). */
+        /** @brief 속성 이름을 다른 읽기가 맡는지 답하는 함수입니다(`XMLNode::AcceptNameFunction` 과 같은 모양). */
         using AcceptAttributeFunction = bool ( * )( const utf8* pName );
         /** @brief 칸 @p prop 의 속성 이름입니다(`readProperties` 의 이름 규칙 — 직접 적은 `Name` 은 그대로, C++ 이름은 앞의 `_` · 불리언 `b` 를 뗀다). */
         static string getAttributeName( const PropertyInfo& prop );

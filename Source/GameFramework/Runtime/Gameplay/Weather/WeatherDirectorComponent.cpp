@@ -1,19 +1,58 @@
 #include "pch.h"
 
-#include "GameFramework/Runtime/Gameplay/Weather/WeatherDirectorComponent.h"
-
+#include "Core/Foundation/Types.h"
 #include "Core/Math/DeterministicRandom.h"
+#include "Core/Memory/Memory.h"
+#include "Core/String/Name/hashed_string.h"
 
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Asset/Cache/SharedAssetCache.h"
+#include "Engine/Asset/Cache/SharedAssetRef.h"
+#include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Serializer/CatalogKey.h"
 
+#include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Gameplay/GameState/GameStateComponent.h"
 #include "GameFramework/Runtime/Gameplay/Weather/DecalRainWashSystem.h"
 #include "GameFramework/Runtime/World/Environment/WeatherSystem.h"
 
 namespace sw
 {
+    struct WeatherDef;
+    class WeatherCatalog;
+
+    /**
+     * @class WeatherDirectorComponent
+     * @brief 판 상태를 날씨 카탈로그로 열고, 새 판이면 시작 날씨를 곧바로 정합니다(파일 머리말 참고).
+     */
+    REFLECT( Category = "Environment", DisplayName = "Weather Director", Tooltip = "Opens the session state on this object with a weather catalog (scenes without a kit director)" )
+    class WeatherDirectorComponent : public Component
+    {
+    public:
+        REFLECT_BODY();
+
+        WeatherDirectorComponent();
+        virtual ~WeatherDirectorComponent() override;
+
+        /** @brief 카탈로그를 받아 판 상태를 엽니다. 카탈로그를 읽지 못하거나 판 상태가 없으면 오류를 남기고 열지 않습니다. 날씨가 열리면 비가 데칼을 씻는다(`DecalRainWashSystem`). */
+        void onBeginPlay() override;
+        /** @brief 데칼 비 씻김을 뗍니다. */
+        void onEndPlay() override;
+
+    private:
+        PROPERTY( Category = "Weather", DisplayName = "Weather Data", Tooltip = "Weather catalog (*.weather.xml)" )
+        AssetRef<WeatherCatalog> _weatherDataPath;
+        PROPERTY( Category = "Weather", DisplayName = "Start Weather", Tooltip = "Weather set at once on a fresh game (empty: the catalog picks by season weights)" )
+        CatalogKey<WeatherDef> _startWeather;
+        PROPERTY( Category = "Weather", DisplayName = "Seed", Min = 1, Tooltip = "Seed of the weather sequence" )
+        uint32 _seed;
+
+        SharedAssetRef<WeatherCatalog> _pCatalog; ///< 판 상태가 빌려 쓴다 — 이 컴포넌트가 쥐고 있어야 한다
+    };
+
     WeatherDirectorComponent::WeatherDirectorComponent()
         : _weatherDataPath{}
         , _startWeather{}
@@ -59,3 +98,5 @@ namespace sw
         Component::onEndPlay();
     }
 } // namespace sw
+
+#include "WeatherDirectorComponent.cpp.gen.inl"

@@ -277,6 +277,26 @@ namespace sw
         {
             return earlier._type == pass._type && earlier._resolvedMaterialFilter == pass._resolvedMaterialFilter;
         }
+
+        struct FramePSOManagerInternal
+        {
+            /**
+             * @brief 이 패스 종류의 컬러 포맷을 정할 근거(표의 고정 포맷 · 컬러 없음 · @p pTargetDesc 의 출력 선언)가 있는지 반환합니다. 없으면 이 파이프라인에서 실행되지 않는 패스입니다.
+             * @param pTargetDesc 컬러 출력을 정하는 서술입니다. 파이프라인 패스는 자기 서술, 내부 슬롯은 대신 그리는 패스(`_targetSourceType`)의 서술입니다.
+             */
+            static bool hasRenderTargetFormatSource( const RenderPassKindInfo& info, const RenderGraphPassDesc* pTargetDesc )
+            {
+                const bool bDeclared = pTargetDesc != nullptr && pTargetDesc->_listOutput.empty() == false;
+                return info._pColorFormat != nullptr || info._colorTargetCount == 0 || bDeclared;
+            }
+
+            /** @brief 이 패스가 변형을 두는 보기 모드 비트입니다(보기 모드를 적용하지 않는 패스는 Lit 하나). */
+            static uint32 getPassViewModeMask( const RenderPassKindInfo& passInfo, uint32 viewModeMask )
+            {
+                // 보기 모드를 적용하지 않는 패스(그림자 · 깊이)는 모드마다 같은 PSO 다 — Lit 한 벌만 둔다(모드를 키에 섞으면 같은 PSO 를 또 만들고, 머티리얼 없는 배치는 찾는 키가 없어 그려지지 않았다).
+                return passInfo.shouldApplyViewMode() ? viewModeMask : ( 1u << static_cast<uint32>( RenderViewMode::Lit ) );
+            }
+        };
     } // namespace
 
     void FramePSOManager::applyPassRenderState( RHIPipelineStateDesc& desc, RenderPassKind passType, const RenderGraphPassDesc* pPassDesc )
@@ -332,7 +352,7 @@ namespace sw
                 continue;
             // 컬러 포맷을 정할 근거(표의 고정 포맷 · 대신 그리는 패스의 출력 선언)가 없는 그래픽스 슬롯은 이 파이프라인에서 실행되지 않는다. RGBA8 로 짐작해 만들지 않는다.
             const RenderGraphPassDesc* pTargetDesc = info._targetSourceType != RenderPassKind::Invalid ? _pipeline.findUniquePass( info._targetSourceType ) : nullptr;
-            if ( bGraphics && hasRenderTargetFormatSource( info, pTargetDesc ) == false )
+            if ( bGraphics && FramePSOManagerInternal::hasRenderTargetFormatSource( info, pTargetDesc ) == false )
                 continue;
 
             if ( bGraphics )
@@ -373,7 +393,7 @@ namespace sw
             // 표에 기본 셰이더가 없는 종류(Fullscreen)는 패스가 고른 셰이더로 만든다 — 둘 다 없으면 검증이 로드 오류로 알렸다.
             const bool bHasShader = info._pDefaultShader != nullptr || pass._shaderPath.empty() == false;
             const bool bSkipped   = bHasShader == false || info.hasFlag( RenderPassTraitFlag::kCompute ) || shouldCreatePassPSO( pass._type, caps ) == false ||
-                                  hasRenderTargetFormatSource( info, &pass ) == false;
+                                  FramePSOManagerInternal::hasRenderTargetFormatSource( info, &pass ) == false;
             if ( bSkipped )
                 continue;
             PassPSOJob job;
@@ -973,12 +993,6 @@ namespace sw
         return desc._numRenderTargets == 0;
     }
 
-    bool FramePSOManager::hasRenderTargetFormatSource( const RenderPassKindInfo& info, const RenderGraphPassDesc* pTargetDesc )
-    {
-        const bool bDeclared = pTargetDesc != nullptr && pTargetDesc->_listOutput.empty() == false;
-        return info._pColorFormat != nullptr || info._colorTargetCount == 0 || bDeclared;
-    }
-
     bool FramePSOManager::shouldCreatePassPSO( RenderPassKind passType, const RHICapabilities& caps ) const
     {
         const RenderPassKindInfo& info = getRenderPassKindInfo( passType );
@@ -1181,7 +1195,7 @@ namespace sw
                     const bool bTransparentPass = getRenderPassKindInfo( passType ).hasFlag( RenderPassTraitFlag::kDrawsTransparentBatch );
                     if ( bTransparentPass != bTransparentMaterial || filter.shouldDraw( &permutation._listDefine ) == false )
                         return;
-                    const uint32 passModeMask = getPassViewModeMask( getRenderPassKindInfo( passType ), viewModeMask );
+                    const uint32 passModeMask = FramePSOManagerInternal::getPassViewModeMask( getRenderPassKindInfo( passType ), viewModeMask );
                     for ( uint32 modeIndex = 0; modeIndex < static_cast<uint32>( RenderViewMode::Count ); ++modeIndex )
                     {
                         if ( ( passModeMask & ( 1u << modeIndex ) ) == 0 )
@@ -1222,7 +1236,7 @@ namespace sw
             ( request._shaderPermutation == kInvalidShaderPermutation ) ? nullptr : _gpuScene.findShaderPermutation( request._shaderPermutation );
         if ( filter.shouldDraw( pRequestPermutation != nullptr ? &pRequestPermutation->_listDefine : nullptr ) == false )
             return;
-        const uint32 passModeMask = getPassViewModeMask( getRenderPassKindInfo( passType ), viewModeMask );
+        const uint32 passModeMask = FramePSOManagerInternal::getPassViewModeMask( getRenderPassKindInfo( passType ), viewModeMask );
         for ( uint32 modeIndex = 0; modeIndex < static_cast<uint32>( RenderViewMode::Count ); ++modeIndex )
         {
             if ( ( passModeMask & ( 1u << modeIndex ) ) == 0 )
@@ -1371,7 +1385,7 @@ namespace sw
             const RenderPassKindInfo&         passInfo         = getRenderPassKindInfo( passType );
             const bool                        bTransparentPass = passInfo.hasFlag( RenderPassTraitFlag::kDrawsTransparentBatch );
             const vector<MaterialPSORequest>& listRequest      = bTransparentPass ? _listTransparentPSORequestScratch : _listOpaquePSORequestScratch;
-            const uint32                      passModeMask     = getPassViewModeMask( passInfo, viewModeMask );
+            const uint32                      passModeMask     = FramePSOManagerInternal::getPassViewModeMask( passInfo, viewModeMask );
             for ( uint32 modeIndex = 0; modeIndex < static_cast<uint32>( RenderViewMode::Count ); ++modeIndex )
             {
                 if ( ( passModeMask & ( 1u << modeIndex ) ) == 0 )
@@ -1407,12 +1421,6 @@ namespace sw
             return true;
         }
         return false;
-    }
-
-    uint32 FramePSOManager::getPassViewModeMask( const RenderPassKindInfo& passInfo, uint32 viewModeMask )
-    {
-        // 보기 모드를 적용하지 않는 패스(그림자 · 깊이)는 모드마다 같은 PSO 다 — Lit 한 벌만 둔다(모드를 키에 섞으면 같은 PSO 를 또 만들고, 머티리얼 없는 배치는 찾는 키가 없어 그려지지 않았다).
-        return passInfo.shouldApplyViewMode() ? viewModeMask : ( 1u << static_cast<uint32>( RenderViewMode::Lit ) );
     }
 
 } // namespace sw

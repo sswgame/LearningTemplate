@@ -12,6 +12,7 @@
 
 #include "Editor/Common/Workspace/EditorSubsystems.h"
 
+#include "Engine/Localization/LocText.h"
 #include "Engine/Localization/LocalizationDocuments.h"
 #include "Engine/Localization/TextFormatter.h"
 #include "Engine/Reflection/ReflectValueBinding.h"
@@ -26,9 +27,29 @@ namespace sw
 {
     namespace
     {
+        /** @brief 열거형 본문에서 읽은 열거자 하나입니다(`ENUMERATOR( … )` 의 보일 글 · 툴팁 · 숨김). */
+        struct GatheredEnumerator
+        {
+            string_view            _name;
+            string                 _displayName;
+            string                 _tooltip;
+            uint32                 _line{ 0 };
+            uint8                  _bHasDisplayName : 1;
+            uint8                  _bHidden         : 1;
+            [[maybe_unused]] uint8 _reserved        : 6;
+
+            GatheredEnumerator()
+                : _bHasDisplayName{ SW_FALSE }
+                , _bHidden{ SW_FALSE }
+                , _reserved{ 0 }
+            {
+            }
+        };
+
         /**
          * @class TextGathererCodeScanner
          * @brief C++ 텍스트를 한 번 훑으며 주석, 문자열, 전처리 줄을 건너뛰고 매크로 호출의 문자열 리터럴 인자를 읽습니다.
+         * @details `ENUM()` 열거형 본문의 `ENUMERATOR( DisplayName = "…" )` 도 읽어 키 `Enum.<열거형>.<열거자>` 로 모은다(`LocalizedText::makeEnumKey`).
          */
         class TextGathererCodeScanner
         {
@@ -44,6 +65,7 @@ namespace sw
                 , _line{ 1 }
                 , _bLineStart{ SW_TRUE }
                 , _bPreprocessorLine{ SW_FALSE }
+                , _bEnumMacroPending{ SW_FALSE }
             {
             }
 
@@ -98,8 +120,14 @@ namespace sw
                             ++_position;
                         }
                         const string_view identifier = _text.substr( start, _position - start );
-                        if ( isCodeMacro( identifier ) && _bPreprocessorLine == false )
+                        if ( _bPreprocessorLine != SW_FALSE )
+                            continue;
+                        if ( isCodeMacro( identifier ) )
                             readMacroCall( identifier );
+                        else if ( identifier == kEnumMacro )
+                            _bEnumMacroPending = SW_TRUE;
+                        else if ( identifier == kEnumKeyword )
+                            readEnumDeclaration();
                         continue;
                     }
                     ++_position;
@@ -107,6 +135,10 @@ namespace sw
             }
 
         private:
+            static constexpr string_view kEnumMacro       = "ENUM";
+            static constexpr string_view kEnumKeyword     = "enum";
+            static constexpr string_view kEnumeratorMacro = "ENUMERATOR";
+
             static bool isIdentifierStart( utf8 character ) { return ( 'a' <= character && character <= 'z' ) || ( 'A' <= character && character <= 'Z' ) || character == '_'; }
             static bool isIdentifierCharacter( utf8 character ) { return isIdentifierStart( character ) || ( '0' <= character && character <= '9' ); }
 
@@ -383,6 +415,230 @@ namespace sw
                 _pGatherer->addKeyedText( SourceTextEntry::makeFullKey( arrArgument[0], arrArgument[1] ), arrArgument[2], {}, _originName );
             }
 
+            string_view readIdentifier()
+            {
+                const size_t start = _position;
+                while ( _position < _text.size() && isIdentifierCharacter( _text[_position] ) )
+                {
+                    ++_position;
+                }
+                return _text.substr( start, _position - start );
+            }
+
+            /** @brief 전처리 줄 하나를 건너뜁니다(X 매크로로 열거자를 펼치는 본문). 줄 끝의 `\` 는 줄을 잇는다. */
+            void skipPreprocessorLine()
+            {
+                while ( _position < _text.size() )
+                {
+                    if ( _text[_position] != '\n' )
+                    {
+                        ++_position;
+                        continue;
+                    }
+                    const bool bContinued = _position > 0 && _text[_position - 1] == '\\';
+                    ++_line;
+                    ++_position;
+                    if ( bContinued == false )
+                        return;
+                }
+            }
+
+            /**
+             * @brief `enum [class] 이름 [: 형] { … }` 을 읽습니다. 앞 선언(`;`)이면 아무것도 하지 않습니다.
+             * @details 바로 앞에 `ENUM()` 이 있었는지는 `_bEnumMacroPending` 이 든다 — 리플렉션이 없는 열거형은 실행 중에 키를 만들 이름이 없다.
+             */
+            void readEnumDeclaration()
+            {
+                const bool   bReflected = _bEnumMacroPending != SW_FALSE;
+                const uint32 line       = _line;
+                _bEnumMacroPending      = SW_FALSE;
+                string_view enumName;
+                bool        bAfterColon{ false };
+                while ( true )
+                {
+                    skipSpaceAndComments();
+                    if ( _position >= _text.size() )
+                        return;
+                    const utf8 character = _text[_position];
+                    if ( character == '{' )
+                        break;
+                    const bool bNotDefinition = character == ';' || character == ')' || character == ',' || character == '>' || character == '=';
+                    if ( bNotDefinition )
+                        return;
+                    if ( isIdentifierStart( character ) )
+                    {
+                        const string_view word = readIdentifier();
+                        if ( bAfterColon == false && enumName.empty() && word != "class" && word != "struct" )
+                            enumName = word;
+                        continue;
+                    }
+                    bAfterColon = bAfterColon || character == ':';
+                    ++_position;
+                }
+                ++_position; // '{'
+                vector<GatheredEnumerator> listEnumerator;
+                readEnumBody( listEnumerator );
+                addEnumTexts( enumName, bReflected, line, listEnumerator );
+            }
+
+            /** @brief 열거형 본문을 닫는 `}` 까지 읽어 열거자를 모읍니다. 값 식 · 매크로 인자는 괄호 깊이를 세며 건너뜁니다. */
+            void readEnumBody( vector<GatheredEnumerator>& outListEnumerator )
+            {
+                while ( true )
+                {
+                    skipSpaceAndComments();
+                    if ( _position >= _text.size() )
+                        return;
+                    const utf8 character = _text[_position];
+                    if ( character == '}' )
+                    {
+                        ++_position;
+                        return;
+                    }
+                    if ( character == '#' )
+                    {
+                        skipPreprocessorLine();
+                        continue;
+                    }
+                    if ( isIdentifierStart( character ) == false )
+                    {
+                        ++_position; // 쉼표
+                        continue;
+                    }
+                    GatheredEnumerator& enumerator = outListEnumerator.emplace_back();
+                    enumerator._line               = _line;
+                    enumerator._name               = readIdentifier();
+                    skipSpaceAndComments();
+                    if ( startsWith( kEnumeratorMacro ) )
+                    {
+                        (void)readIdentifier();
+                        readEnumeratorArguments( enumerator );
+                    }
+                    skipEnumeratorValue();
+                }
+            }
+
+            /** @brief `ENUMERATOR( DisplayName = "…", Tooltip = "…", Hidden, Meta = "…" )` 의 인자를 읽습니다. 글이 아닌 값은 건너뜁니다. */
+            void readEnumeratorArguments( GatheredEnumerator& outEnumerator )
+            {
+                skipSpaceAndComments();
+                if ( _position >= _text.size() || _text[_position] != '(' )
+                    return;
+                ++_position;
+                while ( true )
+                {
+                    skipSpaceAndComments();
+                    if ( _position >= _text.size() )
+                        return;
+                    const utf8 character = _text[_position];
+                    if ( character == ')' )
+                    {
+                        ++_position;
+                        return;
+                    }
+                    if ( isIdentifierStart( character ) == false )
+                    {
+                        ++_position; // 쉼표
+                        continue;
+                    }
+                    const string_view key = readIdentifier();
+                    skipSpaceAndComments();
+                    string value;
+                    bool   bText{ false };
+                    if ( _position < _text.size() && _text[_position] == '=' )
+                    {
+                        ++_position;
+                        bText = readConcatenatedLiteral( value );
+                        if ( bText == false )
+                            value = string( readIdentifier() ); // `Hidden = false` 처럼 글이 아닌 값
+                    }
+                    if ( key == "DisplayName" && bText )
+                    {
+                        outEnumerator._displayName     = std::move( value );
+                        outEnumerator._bHasDisplayName = SW_TRUE;
+                    }
+                    else if ( key == "Tooltip" && bText )
+                        outEnumerator._tooltip = std::move( value );
+                    else if ( key == "Hidden" )
+                        outEnumerator._bHidden = value != "false" ? SW_TRUE : SW_FALSE;
+                }
+            }
+
+            /** @brief 열거자의 나머지(`= 값`, 매크로 인자)를 다음 쉼표나 본문을 닫는 `}` 앞까지 건너뜁니다. */
+            void skipEnumeratorValue()
+            {
+                uint32 depth{ 0 };
+                while ( true )
+                {
+                    skipSpaceAndComments();
+                    if ( _position >= _text.size() )
+                        return;
+                    const utf8 character = _text[_position];
+                    if ( depth == 0 && ( character == ',' || character == '}' ) )
+                        return;
+                    if ( character == kDoubleQuote || character == kSingleQuote )
+                    {
+                        string ignored;
+                        (void)readLiteral( ignored ); // 닫히지 않은 리터럴은 그 줄 끝에서 멈춘다
+                        continue;
+                    }
+                    if ( character == '(' )
+                        ++depth;
+                    else if ( character == ')' && depth > 0 )
+                        --depth;
+                    ++_position;
+                }
+            }
+
+            /**
+             * @brief 열거형 하나의 보일 글을 모읍니다. 한 열거자라도 `DisplayName` 을 적었으면 숨기지 않은 열거자 모두가 적어야 한다(`Count` 표식 제외).
+             * @details 실행 중 조회(`LocalizedText::findEnum`)는 값마다 키를 찾는다. 빠진 열거자는 배포에서 이름 글자가 그대로 보이므로 수집 오류로 막는다.
+             */
+            void addEnumTexts( string_view enumName, bool bReflected, uint32 line, const vector<GatheredEnumerator>& listEnumerator )
+            {
+                bool bAnyDisplayName{ false };
+                for ( const GatheredEnumerator& enumerator : listEnumerator )
+                {
+                    bAnyDisplayName = bAnyDisplayName || enumerator._bHasDisplayName != SW_FALSE;
+                }
+                if ( bAnyDisplayName == false )
+                    return;
+                if ( bReflected == false || enumName.empty() )
+                {
+                    fixed_string<constant::buffer::kMax256> issueText;
+                    formatstring( issueText.data(), issueText.capacity(), "enum '%#' has ENUMERATOR( DisplayName ) but no ENUM() - the runtime has no name to build the key from", enumName );
+                    _pGatherer->addIssue( makeLocation( line ), issueText, true );
+                    return;
+                }
+                for ( const GatheredEnumerator& enumerator : listEnumerator )
+                {
+                    const string key = LocalizedText::makeEnumKey( enumName, enumerator._name );
+                    if ( enumerator._bHasDisplayName == SW_FALSE )
+                    {
+                        if ( enumerator._bHidden != SW_FALSE || enumerator._name == "Count" )
+                            continue;
+                        fixed_string<constant::buffer::kMax512> issueText;
+                        formatstring( issueText.data(), issueText.capacity(), "enumerator '%#::%#' has no DisplayName while others in the enum do - add one (key %#) or mark it Hidden", enumName,
+                                      enumerator._name, key );
+                        _pGatherer->addIssue( makeLocation( enumerator._line ), issueText, true );
+                        continue;
+                    }
+                    if ( const expected<void> valid = TextFormatter::validatePattern( enumerator._displayName ); valid.has_value() == false )
+                    {
+                        fixed_string<constant::buffer::kMax512> issueText;
+                        formatstring( issueText.data(), issueText.capacity(), "DisplayName of '%#' is not a valid message pattern: %#", key, valid.error().detail() );
+                        _pGatherer->addIssue( makeLocation( enumerator._line ), issueText, true );
+                    }
+                    _pGatherer->addKeyedText( key, enumerator._displayName, {}, _originName );
+                    if ( enumerator._tooltip.empty() == false )
+                    {
+                        StringBuilder<constant::buffer::kMax256> tooltipKey;
+                        tooltipKey.appendFormat( "%#.%#", key, LocalizedText::kEnumTooltipSuffix );
+                        _pGatherer->addKeyedText( tooltipKey.view(), enumerator._tooltip, {}, _originName );
+                    }
+                }
+            }
+
         private:
             string_view   _text;
             string_view   _originName;
@@ -391,6 +647,7 @@ namespace sw
             uint32        _line;
             uint8         _bLineStart        : 1;
             uint8         _bPreprocessorLine : 1;
+            uint8         _bEnumMacroPending : 1; ///< 바로 앞에 `ENUM(` 이 있었다 — 다음 `enum` 이 리플렉션 열거형이다
         };
 
         struct TextGathererInternal

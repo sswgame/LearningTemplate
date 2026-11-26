@@ -46,6 +46,12 @@ namespace sw
             const utf8* const pKindName = pCache != nullptr ? pCache->getAssetKindName() : nullptr;
             return pKindName != nullptr ? string_view{ pKindName } : string_view{};
         }
+
+        /** @brief 읽기가 싣는 설정 사본(데이터 상속 깊이 상한 — `ResourceComposition::setInheritanceMaxDepth`)을 뜹니다. 게임 스레드(기동 · 다시 읽기 알림)만 부른다. */
+        void publishLoadPolicy()
+        {
+            engine::getSubsystem<ResourceComposition>().setInheritanceMaxDepth( engine::getSubsystem<EngineConfig>()._dataInheritanceMaxDepth );
+        }
     } // namespace
 } // namespace sw
 
@@ -417,11 +423,6 @@ namespace sw
         if ( installAssetRegistry( source ) == false )
             return SubsystemInitResult::Failed;
         return SubsystemInitResult::Succeeded;
-    }
-
-    void AssetManager::publishLoadPolicy()
-    {
-        engine::getSubsystem<ResourceComposition>().setInheritanceMaxDepth( engine::getSubsystem<EngineConfig>()._dataInheritanceMaxDepth );
     }
 
     void AssetManager::onConfigReloaded( const hashed_string& configTypeName )

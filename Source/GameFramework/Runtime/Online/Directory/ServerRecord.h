@@ -31,10 +31,10 @@ namespace sw
     ENUM()
     enum class ServerState : uint8
     {
-        Starting = 0, ///< 기동 중이라 아직 받지 않는다
-        Open,
-        Draining,    ///< 새 손님은 받지 않고 있는 손님은 둔다(종료 전)
-        Maintenance, ///< 점검 중이라 허용 계정만 받는다
+        Starting    ENUMERATOR( DisplayName = "starting" ) = 0, ///< 기동 중이라 아직 받지 않는다
+        Open        ENUMERATOR( DisplayName = "open" ),
+        Draining    ENUMERATOR( DisplayName = "draining" ),    ///< 새 손님은 받지 않고 있는 손님은 둔다(종료 전)
+        Maintenance ENUMERATOR( DisplayName = "maintenance" ), ///< 점검 중이라 허용 계정만 받는다
         Count
     };
 } // namespace sw

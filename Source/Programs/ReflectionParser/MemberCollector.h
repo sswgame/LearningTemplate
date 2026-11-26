@@ -49,16 +49,6 @@ namespace sw
          *          베이스가 `REFLECT()` 인지와 상관없이 둘째 베이스와 가상 베이스를 생성 오류로 막습니다. 인터페이스는 컴포넌트로 나눠 조합합니다.
          */
         void collectBase( CXCursor cursor );
-        /** @brief 인자 이름 · 정규 타입 · 기본 인자를 채웁니다. */
-        static void fillParameters( CXCursor cursor, ParsedFunctionInfo& method, const ParserSession& session );
-        /** @brief 필드 타입이 리플렉션 이벤트(멀티캐스트 델리게이트)인지 봅니다. */
-        static bool isEventType( CXType fieldType );
-        /**
-         * @brief 이벤트 필드 타입의 함수 타입(`void( int32, const string& )`)을 적힌 꼴로 찾습니다.
-         * @details 정규 타입에서 꺼내면 인자 타입이 펼쳐진 철자(`sw::basic_string<char>`)라 정규 이름(`string`)이 되지 않는다. 별칭
-         *          (`using ScoreEvent = …`)은 벗겨 적힌 템플릿 인자를 읽고, 그래도 못 찾으면 정규 타입으로 물러선다.
-         */
-        static CXType findEventFunctionType( CXType fieldType );
         /** @brief `PROPERTY()` 가 붙은 멀티캐스트 델리게이트 필드를 이벤트로 수집합니다. */
         void collectEvent( CXCursor cursor, const string& spelling, CXType fieldType );
         /** @brief 필드 선언에서 PROPERTY 메타를 수집합니다. 멀티캐스트 델리게이트면 이벤트로 수집합니다. */
@@ -73,9 +63,6 @@ namespace sw
          *          값으로 돌려주면 쓸 자리가 없습니다. 비트필드 · 컨테이너는 받지 않습니다(컨테이너 래퍼 코드젠이 필드 이름을 씁니다).
          */
         void collectAccessorProperty( CXCursor cursor, const string& spelling );
-        /** @brief 메서드 · 생성자에 붙은 애노테이션 셋을 한 번의 자식 순회로 봅니다. */
-        struct MethodAnnotation;
-        static CXChildVisitResult methodAnnotationVisitor( CXCursor cursor, CXCursor, CXClientData data );
         /** @brief REFLECT 타입은 사용자 · 암시 생성자를 자동 등록합니다(FUNCTION 불필요). 복사 · 이동 · 삭제된 것은 뺍니다. */
         void collectConstructor( CXCursor cursor, const string& functionSpelling );
         /** @brief FUNCTION 이 붙은 메서드를 수집합니다. */
@@ -89,8 +76,6 @@ namespace sw
          *        내보내기는 같은 인터페이스를 두 번 적지 않으며 포트 멤버의 형식이 그 인터페이스를 이어야 합니다(포트 기반에서 정규 이름을 찾는다).
          */
         [[nodiscard]] bool validateInterfaces();
-        /** @brief 포트 형식 @p portType 의 기반 가운데 @p interfaceSpelling 으로 끝나는 것의 정규 이름입니다. 없으면 빈 글입니다. */
-        static string findPortInterface( CXType portType, const string& interfaceSpelling );
         /** @brief 데이터 멤버 하나의 상태 선언입니다(`SW_TRANSIENT` · `SW_CODEC_STATE` · `PROPERTY`). */
         enum class StateDeclaration : uint8
         {
@@ -116,12 +101,6 @@ namespace sw
          *          기반에 `serializeState` · `serializeGameState` 가 있어야 하고, 상태를 싣지 않는 형식에는 어느 선언도 적지 않는다(뜻이 없는 선언이 남지 않게).
          */
         [[nodiscard]] bool validateStateDeclarations( CXCursor recordCursor );
-        /** @brief @p type 이 싣고 되살릴 값을 드는 형식인지 봅니다. 포인터 · 참조 · const 값 · `typeidentity::kArrNonStateType` 은 아니다. 배열은 원소로 본다. */
-        static bool hasStateValue( CXType type );
-        struct StateCodecSearch;
-        /** @brief @p recordCursor 나 그 기반이 `serializeState` · `serializeGameState` 를 선언했는지 봅니다. */
-        static bool               hasStateCodec( CXCursor recordCursor );
-        static CXChildVisitResult stateCodecVisitor( CXCursor cursor, CXCursor, CXClientData data );
         /** @brief 함수 꼴 멤버 하나 — 마커 · 생성자 · 메서드로 나눕니다. */
         void collectFunctionMember( CXCursor cursor, CXCursorKind kind );
         /**
@@ -130,9 +109,6 @@ namespace sw
          *          넣기 전에 돌아오므로 반쯤 찬 DTO 가 코드젠에 들어가지 않고, `_bHasError` 가 헤더를 실패로 만든다.
          */
         static CXChildVisitResult memberCollectVisitor( CXCursor cursor, CXCursor, CXClientData data );
-        struct ComponentSearch;
-        /** @brief 기반 목록(`ComponentSearch::_pListBaseType`)의 파생인지 베이스 체인을 검사합니다. */
-        static CXChildVisitResult componentBaseVisitor( CXCursor cursor, CXCursor, CXClientData clientData );
 
     private:
         ParsedTypeInfo*               _pType;

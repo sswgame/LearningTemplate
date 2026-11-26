@@ -5,10 +5,12 @@
  */
 #pragma once
 #include "Core/Container/string.h"
+#include "Core/Container/vector.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Log/LogTypes.h"
 #include "Core/Path/AbsolutePath.h"
 #include "Core/String/StringBuilder.h"
 
@@ -103,6 +105,57 @@ namespace sw
 
         /** @brief 비어 있지 않은 자식 텍스트를 dst 에 복사합니다. 복사했으면 true 입니다. */
         bool tryCopyChildText( const utf8* pName, string& dst ) const;
+
+        // ------------------------------------------------------------------------------
+        // 1-0) 모르는 이름 검사 — 원소가 받는 속성 · 자식 원소 표에 없는 이름을 찾고 알립니다.
+        //      데이터 로더마다 적던 "표에 없는 속성이면 알림" 을 한 곳에 둬서, 모르는 이름이 조용히 기본값이 되지 않게 합니다.
+        //      이름 비교는 철자 그대로이고, 알림 문구는 하나라 로그를 같은 말로 거를 수 있습니다
+        //      (`<원소> has unknown attribute '이름'` · `<원소> has unknown element <이름>`).
+        // ------------------------------------------------------------------------------
+        /** @brief 표 말고도 받을 이름인지 답하는 함수입니다(일정 조건 속성처럼 열린 이름). */
+        using AcceptNameFunction = bool ( * )( const utf8* pName );
+
+        /** @brief @p pName 이 @p ppKnown 에 있는지입니다. */
+        static bool isKnownName( const utf8* pName, const utf8* const* ppKnown, uint32 knownCount );
+
+        /** @brief 이 노드의 속성 중 표(와 @p pfnAlsoKnown)에 없는 이름을 @p outListName 뒤에 붙입니다. 붙인 수입니다. */
+        uint32 collectUnknownAttributes( const utf8* const* ppKnown, uint32 knownCount, vector<const utf8*>& outListName, AcceptNameFunction pfnAlsoKnown = nullptr ) const;
+        /** @brief 이 노드의 자식 원소 중 표에 없는 이름을 @p outListName 뒤에 붙입니다. 붙인 수입니다. */
+        uint32 collectUnknownChildren( const utf8* const* ppKnown, uint32 knownCount, vector<const utf8*>& outListName ) const;
+
+        /**
+         * @brief 표에 없는 속성마다 `<sourceName>: <원소> has unknown attribute '이름'` 을 @p level 로 남깁니다.
+         * @return 모두 알면 true 입니다. 첫 것에서 멈추지 않고 모두 알립니다.
+         */
+        [[nodiscard]] bool reportUnknownAttributes( const utf8* const* ppKnown, uint32 knownCount, string_view sourceName, LogLevel level = LogLevel::Error,
+                                                    AcceptNameFunction pfnAlsoKnown = nullptr ) const;
+        /** @brief 표에 없는 자식 원소마다 `<sourceName>: <원소> has unknown element <이름>` 을 @p level 로 남깁니다. 모두 알면 true 입니다. */
+        [[nodiscard]] bool reportUnknownChildren( const utf8* const* ppKnown, uint32 knownCount, string_view sourceName, LogLevel level = LogLevel::Error ) const;
+
+        template <size_t Count>
+        static bool isKnownName( const utf8* pName, const utf8* const ( &arrKnown )[Count] )
+        {
+            return isKnownName( pName, arrKnown, static_cast<uint32>( Count ) );
+        }
+
+        template <size_t Count>
+        uint32 collectUnknownAttributes( const utf8* const ( &arrKnown )[Count], vector<const utf8*>& outListName, AcceptNameFunction pfnAlsoKnown = nullptr ) const
+        {
+            return collectUnknownAttributes( arrKnown, static_cast<uint32>( Count ), outListName, pfnAlsoKnown );
+        }
+
+        template <size_t Count>
+        [[nodiscard]] bool reportUnknownAttributes( const utf8* const ( &arrKnown )[Count], string_view sourceName, LogLevel level = LogLevel::Error,
+                                                    AcceptNameFunction pfnAlsoKnown = nullptr ) const
+        {
+            return reportUnknownAttributes( arrKnown, static_cast<uint32>( Count ), sourceName, level, pfnAlsoKnown );
+        }
+
+        template <size_t Count>
+        [[nodiscard]] bool reportUnknownChildren( const utf8* const ( &arrKnown )[Count], string_view sourceName, LogLevel level = LogLevel::Error ) const
+        {
+            return reportUnknownChildren( arrKnown, static_cast<uint32>( Count ), sourceName, level );
+        }
 
         // ------------------------------------------------------------------------------
         // 1-1) 값 읽기 — 폴백 인자 없이. 폴백을 받던 `getAttributeInt` · `getChildFloat` 같은 읽기는 지웠다(D9).

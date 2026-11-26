@@ -36,44 +36,9 @@ msgid "Cancel"
 msgstr "취소"
 
 #: Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp
-msgctxt "Chat.Blocked"
-msgid "Message was blocked by the word filter"
-msgstr "단어 거르기에 걸려 메시지를 보내지 못했습니다"
-
-#: Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp
-msgctxt "Chat.Failed"
-msgid "Chat failed"
-msgstr "채팅을 보내지 못했습니다"
-
-#: Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp
 msgctxt "Chat.InvalidMessage"
 msgid "Message is empty or not valid"
 msgstr "메시지가 비었거나 올바르지 않습니다"
-
-#: Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp
-msgctxt "Chat.Muted"
-msgid "You are muted ({seconds} s left)"
-msgstr "채팅이 금지되어 있습니다({seconds}초 남음)"
-
-#: Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp
-msgctxt "Chat.NotFound"
-msgid "Message not found"
-msgstr "메시지를 찾을 수 없습니다"
-
-#: Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp
-msgctxt "Chat.NotJoinable"
-msgid "This channel cannot be joined"
-msgstr "참여할 수 없는 채널입니다"
-
-#: Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp
-msgctxt "Chat.NotMember"
-msgid "You have not joined this channel"
-msgstr "참여하지 않은 채널입니다"
-
-#: Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp
-msgctxt "Chat.Repeated"
-msgid "You already said that"
-msgstr "이미 한 말입니다"
 
 #: Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp
 msgctxt "Chat.SignIn"
@@ -81,24 +46,9 @@ msgid "Sign in to chat"
 msgstr "채팅하려면 로그인하세요"
 
 #: Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp
-msgctxt "Chat.TargetOffline"
-msgid "That player is offline"
-msgstr "상대가 접속해 있지 않습니다"
-
-#: Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp
 msgctxt "Chat.TooFast"
 msgid "Too fast, try again soon"
 msgstr "너무 빠릅니다. 잠시 뒤에 다시 시도하세요"
-
-#: Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp
-msgctxt "Chat.TooFastWait"
-msgid "Too fast, wait {milliseconds} ms"
-msgstr "너무 빠릅니다. {milliseconds}ms 기다리세요"
-
-#: Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp
-msgctxt "Chat.TooManyChannels"
-msgid "Too many channels"
-msgstr "채널이 너무 많습니다"
 
 #: Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp
 msgctxt "Chat.Unavailable"
@@ -129,16 +79,6 @@ msgid "Discard"
 msgstr "버리기"
 
 #: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp
-msgctxt "EdAbilityCatalog.Abilities"
-msgid "Abilities"
-msgstr "어빌리티"
-
-#: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp
-msgctxt "EdAbilityCatalog.AbilitySets"
-msgid "Ability sets"
-msgstr "어빌리티 세트"
-
-#: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp
 msgctxt "EdAbilityCatalog.AddAbility"
 msgid "Add ability"
 msgstr "어빌리티 더하기"
@@ -167,11 +107,6 @@ msgstr "이펙트 더하기"
 msgctxt "EdAbilityCatalog.Duplicate"
 msgid "Duplicate"
 msgstr "복제"
-
-#: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp
-msgctxt "EdAbilityCatalog.Effects"
-msgid "Effects"
-msgstr "이펙트"
 
 #: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp
 msgctxt "EdAbilityCatalog.File"
@@ -212,11 +147,6 @@ msgstr "(없음)"
 msgctxt "EdAbilityCatalog.PickEntryHint"
 msgid "Pick an entry on the left to see what it uses and what uses it."
 msgstr "왼쪽에서 항목을 고르면 그 항목이 쓰는 것과 그것을 쓰는 곳을 봅니다."
-
-#: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp
-msgctxt "EdAbilityCatalog.Presentations"
-msgid "Cue presentations"
-msgstr "큐 연출"
 
 #: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp
 msgctxt "EdAbilityCatalog.Redo"
@@ -399,34 +329,9 @@ msgid "Revert"
 msgstr "되돌리기"
 
 #: Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp
-msgctxt "EdLabel.ZoneAdded"
-msgid "added here"
-msgstr "여기서 더함"
-
-#: Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp
-msgctxt "EdLabel.ZoneChanged"
-msgid "changed here"
-msgstr "여기서 바꿈"
-
-#: Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp
 msgctxt "EdLabel.ZoneCondition"
 msgid "When"
 msgstr "조건"
-
-#: Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp
-msgctxt "EdLabel.ZoneInherited"
-msgid "inherited"
-msgstr "물려받음"
-
-#: Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp
-msgctxt "EdLabel.ZoneRemoved"
-msgid "removed here"
-msgstr "여기서 뺌"
-
-#: Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp
-msgctxt "EdLabel.ZoneReplaced"
-msgid "replaced here"
-msgstr "여기서 갈아끼움"
 
 #: Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.AddItem"
@@ -2286,6 +2191,576 @@ msgctxt "EditorTip.ZoneRevertParam"
 msgid "Use the preset's value for this parameter again."
 msgstr "이 매개변수에 프리셋 값을 다시 씁니다."
 
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/Model/AbilityCatalogEditModel.h
+msgctxt "Enum.AbilityEntryKind.Ability"
+msgid "Abilities"
+msgstr "어빌리티"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/Model/AbilityCatalogEditModel.h
+msgctxt "Enum.AbilityEntryKind.AbilitySet"
+msgid "Ability sets"
+msgstr "어빌리티 세트"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/Model/AbilityCatalogEditModel.h
+msgctxt "Enum.AbilityEntryKind.Effect"
+msgid "Effects"
+msgstr "이펙트"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/Model/AbilityCatalogEditModel.h
+msgctxt "Enum.AbilityEntryKind.Presentation"
+msgid "Cue presentations"
+msgstr "큐 연출"
+
+#: Source/GameFramework/Kits/Feature/Online/Chat/Runtime/ChatTypes.h
+msgctxt "Enum.ChatResult.Muted"
+msgid "You are muted ({seconds} s left)"
+msgstr "채팅이 금지되어 있습니다({seconds}초 남음)"
+
+#: Source/GameFramework/Kits/Feature/Online/Chat/Runtime/ChatTypes.h
+msgctxt "Enum.ChatResult.NotFound"
+msgid "Message not found"
+msgstr "메시지를 찾을 수 없습니다"
+
+#: Source/GameFramework/Kits/Feature/Online/Chat/Runtime/ChatTypes.h
+msgctxt "Enum.ChatResult.NotJoinable"
+msgid "This channel cannot be joined"
+msgstr "참여할 수 없는 채널입니다"
+
+#: Source/GameFramework/Kits/Feature/Online/Chat/Runtime/ChatTypes.h
+msgctxt "Enum.ChatResult.NotMember"
+msgid "You have not joined this channel"
+msgstr "참여하지 않은 채널입니다"
+
+#: Source/GameFramework/Kits/Feature/Online/Chat/Runtime/ChatTypes.h
+msgctxt "Enum.ChatResult.RateLimited"
+msgid "Too fast, wait {milliseconds} ms"
+msgstr "너무 빠릅니다. {milliseconds}ms 기다리세요"
+
+#: Source/GameFramework/Kits/Feature/Online/Chat/Runtime/ChatTypes.h
+msgctxt "Enum.ChatResult.Rejected"
+msgid "Message was blocked by the word filter"
+msgstr "단어 거르기에 걸려 메시지를 보내지 못했습니다"
+
+#: Source/GameFramework/Kits/Feature/Online/Chat/Runtime/ChatTypes.h
+msgctxt "Enum.ChatResult.Repeated"
+msgid "You already said that"
+msgstr "이미 한 말입니다"
+
+#: Source/GameFramework/Kits/Feature/Online/Chat/Runtime/ChatTypes.h
+msgctxt "Enum.ChatResult.TargetOffline"
+msgid "That player is offline"
+msgstr "상대가 접속해 있지 않습니다"
+
+#: Source/GameFramework/Kits/Feature/Online/Chat/Runtime/ChatTypes.h
+msgctxt "Enum.ChatResult.TooManyChannels"
+msgid "Too many channels"
+msgstr "채널이 너무 많습니다"
+
+#: Source/Engine/Physics/Collision/CollisionLayers.h
+msgctxt "Enum.CollisionResponse.Block"
+msgid "Block"
+msgstr "막기"
+
+#: Source/Engine/Physics/Collision/CollisionLayers.h
+msgctxt "Enum.CollisionResponse.Ignore"
+msgid "Ignore"
+msgstr "무시"
+
+#: Source/Engine/Physics/Collision/CollisionLayers.h
+msgctxt "Enum.CollisionResponse.Overlap"
+msgid "Overlap"
+msgstr "겹침"
+
+#: Source/Engine/Renderer/Frame/PostProcess/FrameFog.h
+msgctxt "Enum.FogVolumeState.Active"
+msgid "Volumetric fog is on: the light-scattering volume is drawn in the main view."
+msgstr "볼륨 안개가 켜졌습니다. 주 화면에 빛 산란 볼륨을 그립니다."
+
+#: Source/Engine/Renderer/Frame/PostProcess/FrameFog.h
+msgctxt "Enum.FogVolumeState.BufferFailed"
+msgid "Volumetric fog is on but its buffers could not be created, so plain fog is drawn. See the log."
+msgstr "볼륨 안개를 켰지만 버퍼를 만들지 못해 평범한 안개를 그립니다. 로그를 보세요."
+
+#: Source/Engine/Renderer/Frame/PostProcess/FrameFog.h
+msgctxt "Enum.FogVolumeState.Disabled"
+msgid "Volumetric fog is off in the fog settings, so plain fog is drawn. Turn on Volumetric in the Fog component."
+msgstr "안개 설정에서 볼륨 안개가 꺼져 평범한 안개를 그립니다. Fog 컴포넌트에서 Volumetric 을 켜세요."
+
+#: Source/Engine/Renderer/Frame/PostProcess/FrameFog.h
+msgctxt "Enum.FogVolumeState.MissingPipeline"
+msgid "Volumetric fog is on but its compute shader is missing, so plain fog is drawn. Check the shader cook log."
+msgstr "볼륨 안개를 켰지만 컴퓨트 셰이더가 없어 평범한 안개를 그립니다. 셰이더 쿠킹 로그를 보세요."
+
+#: Source/Engine/Renderer/Frame/PostProcess/FrameFog.h
+msgctxt "Enum.FogVolumeState.NoDevice"
+msgid "The renderer has no device this frame, so nothing is drawn."
+msgstr "이번 프레임에 렌더러의 디바이스가 없어 그리지 않습니다."
+
+#: Source/Engine/Renderer/Frame/PostProcess/FrameFog.h
+msgctxt "Enum.FogVolumeState.NoFog"
+msgid "No fog in this scene. Add a Fog component to see volumetric fog."
+msgstr "이 씬에 안개가 없습니다. 볼륨 안개를 보려면 Fog 컴포넌트를 더하세요."
+
+#: Source/Engine/Renderer/Frame/PostProcess/FrameFog.h
+msgctxt "Enum.FogVolumeState.Underwater"
+msgid "The camera is under water. Underwater fog has no volume."
+msgstr "카메라가 물속입니다. 물속 안개에는 볼륨이 없습니다."
+
+#: Source/Engine/Input/Devices/GamepadDevice.h
+msgctxt "Enum.GamepadBatteryLevel.Empty"
+msgid "Empty"
+msgstr "없음"
+
+#: Source/Engine/Input/Devices/GamepadDevice.h
+msgctxt "Enum.GamepadBatteryLevel.Full"
+msgid "Full (100%)"
+msgstr "가득(100%)"
+
+#: Source/Engine/Input/Devices/GamepadDevice.h
+msgctxt "Enum.GamepadBatteryLevel.Low"
+msgid "Low"
+msgstr "낮음"
+
+#: Source/Engine/Input/Devices/GamepadDevice.h
+msgctxt "Enum.GamepadBatteryLevel.Medium"
+msgid "Medium"
+msgstr "중간"
+
+#: Source/Engine/Input/InputGlyphStyle.h
+msgctxt "Enum.InputGlyphStyle.GamepadPlayStation"
+msgid "PlayStation Gamepad"
+msgstr "PlayStation 게임패드"
+
+#: Source/Engine/Input/InputGlyphStyle.h
+msgctxt "Enum.InputGlyphStyle.GamepadSwitch"
+msgid "Nintendo Switch Gamepad"
+msgstr "Nintendo Switch 게임패드"
+
+#: Source/Engine/Input/InputGlyphStyle.h
+msgctxt "Enum.InputGlyphStyle.GamepadXbox"
+msgid "Xbox Gamepad"
+msgstr "Xbox 게임패드"
+
+#: Source/Engine/Input/InputGlyphStyle.h
+msgctxt "Enum.InputGlyphStyle.KeyboardMouse"
+msgid "Keyboard & Mouse"
+msgstr "키보드와 마우스"
+
+#: Source/GameFramework/Runtime/Gameplay/Inventory/InventoryCommand.h
+msgctxt "Enum.InventoryCommandResult.EmptySlot"
+msgid "The slot is empty."
+msgstr "빈 칸입니다."
+
+#: Source/GameFramework/Runtime/Gameplay/Inventory/InventoryCommand.h
+msgctxt "Enum.InventoryCommandResult.InvalidCount"
+msgid "That amount is not possible."
+msgstr "그 수량은 안 됩니다."
+
+#: Source/GameFramework/Runtime/Gameplay/Inventory/InventoryCommand.h
+msgctxt "Enum.InventoryCommandResult.InvalidSlot"
+msgid "That slot cannot take it."
+msgstr "그 칸에는 넣을 수 없습니다."
+
+#: Source/GameFramework/Runtime/Gameplay/Inventory/InventoryCommand.h
+msgctxt "Enum.InventoryCommandResult.NoRoom"
+msgid "Your bag is full."
+msgstr "가방이 가득 찼습니다."
+
+#: Source/GameFramework/Runtime/Gameplay/Inventory/InventoryCommand.h
+msgctxt "Enum.InventoryCommandResult.NotUsable"
+msgid "This cannot be used."
+msgstr "사용할 수 없습니다."
+
+#: Source/GameFramework/Runtime/Gameplay/Inventory/InventoryCommand.h
+msgctxt "Enum.InventoryCommandResult.Ok"
+msgid "Done."
+msgstr "완료했습니다."
+
+#: Source/GameFramework/Runtime/Gameplay/Inventory/InventoryCommand.h
+msgctxt "Enum.InventoryCommandResult.Refused"
+msgid "You cannot equip this there."
+msgstr "그 자리에는 장착할 수 없습니다."
+
+#: Source/Engine/Module/ModuleCatalog.h
+msgctxt "Enum.ModuleKind.Editor"
+msgid "Editor"
+msgstr "에디터"
+
+#: Source/Engine/Module/ModuleCatalog.h
+msgctxt "Enum.ModuleKind.EditorExtension"
+msgid "Editor extensions"
+msgstr "에디터 확장"
+
+#: Source/Engine/Module/ModuleCatalog.h
+msgctxt "Enum.ModuleKind.Game"
+msgid "Game"
+msgstr "게임"
+
+#: Source/Engine/Module/ModuleCatalog.h
+msgctxt "Enum.ModuleKind.GameFramework"
+msgid "GameFramework"
+msgstr "GameFramework"
+
+#: Source/Engine/Module/ModuleCatalog.h
+msgctxt "Enum.ModuleKind.Kit"
+msgid "Kits"
+msgstr "키트"
+
+#: Source/Engine/Module/ModuleCatalog.h
+msgctxt "Enum.ModuleKind.RHI"
+msgid "RHI backends"
+msgstr "RHI 백엔드"
+
+#: Source/GameFramework/Runtime/Gameplay/Vehicle/MountMovementComponent.h
+msgctxt "Enum.MountGait.Canter"
+msgid "Canter"
+msgstr "구보"
+
+#: Source/GameFramework/Runtime/Gameplay/Vehicle/MountMovementComponent.h
+msgctxt "Enum.MountGait.Gallop"
+msgid "Gallop"
+msgstr "질주"
+
+#: Source/GameFramework/Runtime/Gameplay/Vehicle/MountMovementComponent.h
+msgctxt "Enum.MountGait.Idle"
+msgid "Standing"
+msgstr "서 있음"
+
+#: Source/GameFramework/Runtime/Gameplay/Vehicle/MountMovementComponent.h
+msgctxt "Enum.MountGait.Trot"
+msgid "Trot"
+msgstr "속보"
+
+#: Source/GameFramework/Runtime/Gameplay/Vehicle/MountMovementComponent.h
+msgctxt "Enum.MountGait.Walk"
+msgid "Walk"
+msgstr "평보"
+
+#: Source/Engine/Graphics/View/RenderViewMode.h
+msgctxt "Enum.RenderViewMode.Depth"
+msgid "Depth"
+msgstr "깊이"
+
+#: Source/Engine/Graphics/View/RenderViewMode.h
+msgctxt "Enum.RenderViewMode.LODFadeCode"
+msgid "LOD Fade Code"
+msgstr "LOD 페이드 코드"
+
+#: Source/Engine/Graphics/View/RenderViewMode.h
+msgctxt "Enum.RenderViewMode.LODLevel"
+msgid "LOD Level"
+msgstr "LOD 단계"
+
+#: Source/Engine/Graphics/View/RenderViewMode.h
+msgctxt "Enum.RenderViewMode.LightComplexity"
+msgid "Light Complexity"
+msgstr "조명 복잡도"
+
+#: Source/Engine/Graphics/View/RenderViewMode.h
+msgctxt "Enum.RenderViewMode.LightingOnly"
+msgid "Lighting Only"
+msgstr "조명만"
+
+#: Source/Engine/Graphics/View/RenderViewMode.h
+msgctxt "Enum.RenderViewMode.Lit"
+msgid "Lit"
+msgstr "조명"
+
+#: Source/Engine/Graphics/View/RenderViewMode.h
+msgctxt "Enum.RenderViewMode.MarkerSlots"
+msgid "Marker Slots"
+msgstr "표지 칸"
+
+#: Source/Engine/Graphics/View/RenderViewMode.h
+msgctxt "Enum.RenderViewMode.Metallic"
+msgid "Metallic"
+msgstr "금속성"
+
+#: Source/Engine/Graphics/View/RenderViewMode.h
+msgctxt "Enum.RenderViewMode.Mipmaps"
+msgid "Mipmaps"
+msgstr "밉맵"
+
+#: Source/Engine/Graphics/View/RenderViewMode.h
+msgctxt "Enum.RenderViewMode.Normals"
+msgid "Normals"
+msgstr "노멀"
+
+#: Source/Engine/Graphics/View/RenderViewMode.h
+msgctxt "Enum.RenderViewMode.Overdraw"
+msgid "Overdraw"
+msgstr "오버드로"
+
+#: Source/Engine/Graphics/View/RenderViewMode.h
+msgctxt "Enum.RenderViewMode.Roughness"
+msgid "Roughness"
+msgstr "거칠기"
+
+#: Source/Engine/Graphics/View/RenderViewMode.h
+msgctxt "Enum.RenderViewMode.ShadedWireframe"
+msgid "Shaded Wireframe"
+msgstr "셰이드 와이어프레임"
+
+#: Source/Engine/Graphics/View/RenderViewMode.h
+msgctxt "Enum.RenderViewMode.ShadingPath"
+msgid "Shading Path"
+msgstr "셰이딩 경로"
+
+#: Source/Engine/Graphics/View/RenderViewMode.h
+msgctxt "Enum.RenderViewMode.Unlit"
+msgid "Unlit"
+msgstr "조명 없음"
+
+#: Source/Engine/Graphics/View/RenderViewMode.h
+msgctxt "Enum.RenderViewMode.Wireframe"
+msgid "Wireframe"
+msgstr "와이어프레임"
+
+#: Source/Engine/Sequencer/SequenceTimelineUtil.h
+msgctxt "Enum.SequenceCameraSignalKind.CinematicBegin"
+msgid "blend in"
+msgstr "블렌드 인"
+
+#: Source/Engine/Sequencer/SequenceTimelineUtil.h
+msgctxt "Enum.SequenceCameraSignalKind.CinematicEnd"
+msgid "blend out"
+msgstr "블렌드 아웃"
+
+#: Source/Engine/Sequencer/SequenceTimelineUtil.h
+msgctxt "Enum.SequenceCameraSignalKind.CutBegin"
+msgid "cut"
+msgstr "컷"
+
+#: Source/Engine/Sequencer/SequenceTimelineUtil.h
+msgctxt "Enum.SequenceCameraSignalKind.CutPrewarm"
+msgid "standby view"
+msgstr "대기 뷰"
+
+#: Source/Engine/Sequencer/SequenceTimelineUtil.h
+msgctxt "Enum.SequenceCameraSignalKind.PlaybackEnd"
+msgid "playback end"
+msgstr "재생 끝"
+
+#: Source/Engine/Sequencer/SequenceTimelineUtil.h
+msgctxt "Enum.SequenceCameraSignalKind.Shake"
+msgid "shake"
+msgstr "흔들림"
+
+#: Source/Engine/Sequencer/SequenceDiagnostics.h
+msgctxt "Enum.SequenceHistoryKind.CameraSignal"
+msgid "Camera"
+msgstr "카메라"
+
+#: Source/Engine/Sequencer/SequenceDiagnostics.h
+msgctxt "Enum.SequenceHistoryKind.Event"
+msgid "Event"
+msgstr "사건"
+
+#: Source/Engine/Sequencer/SequenceDiagnostics.h
+msgctxt "Enum.SequenceHistoryKind.Finished"
+msgid "Finished"
+msgstr "끝남"
+
+#: Source/Engine/Sequencer/SequenceDiagnostics.h
+msgctxt "Enum.SequenceHistoryKind.Span"
+msgid "Span"
+msgstr "구간"
+
+#: Source/Engine/Sequencer/SequenceDiagnostics.h
+msgctxt "Enum.SequenceHistoryKind.Started"
+msgid "Started"
+msgstr "시작"
+
+#: Source/Engine/Sequencer/SequenceDiagnostics.h
+msgctxt "Enum.SequenceHistoryKind.Stopped"
+msgid "Stopped"
+msgstr "멈춤"
+
+#: Source/Engine/Sequencer/SequenceDiagnostics.h
+msgctxt "Enum.SequenceHistoryKind.UnboundBinding"
+msgid "Unbound"
+msgstr "묶이지 않음"
+
+#: Source/Engine/Sequencer/SequenceAsset.h
+msgctxt "Enum.SequenceItemField.Clip"
+msgid "Clip"
+msgstr "클립"
+
+#: Source/Engine/Sequencer/SequenceAsset.h
+msgctxt "Enum.SequenceItemField.Clip.Tooltip"
+msgid "Animation clip blended over the bound object's animation during the span. Type a resource id or drop one from the Content Browser."
+msgstr "구간 동안 바인딩된 오브젝트의 애니메이션 위에 섞을 애니메이션 클립입니다. 리소스 id 를 치거나 콘텐츠 브라우저에서 끌어다 놓습니다."
+
+#: Source/Engine/Sequencer/SequenceAsset.h
+msgctxt "Enum.SequenceItemField.Prefab"
+msgid "Prefab"
+msgstr "프리팹"
+
+#: Source/Engine/Sequencer/SequenceAsset.h
+msgctxt "Enum.SequenceItemField.Prefab.Tooltip"
+msgid "Prefab spawned for this span. Type its resource id or drop it from the content browser."
+msgstr "이 구간 동안 스폰할 프리팹입니다. 리소스 id 를 치거나 콘텐츠 브라우저에서 끌어다 놓습니다."
+
+#: Source/Engine/Sequencer/SequenceAsset.h
+msgctxt "Enum.SequenceItemField.Preset"
+msgid "Preset"
+msgstr "프리셋"
+
+#: Source/Engine/Sequencer/SequenceAsset.h
+msgctxt "Enum.SequenceItemField.Preset.Tooltip"
+msgid "Id of the appearance preset the target object wears."
+msgstr "대상 오브젝트가 입을 외형 프리셋의 id 입니다."
+
+#: Source/Engine/Sequencer/SequenceAsset.h
+msgctxt "Enum.SequenceItemField.Scenario"
+msgid "Scenario"
+msgstr "시나리오"
+
+#: Source/Engine/Sequencer/SequenceAsset.h
+msgctxt "Enum.SequenceItemField.Scenario.Tooltip"
+msgid "Scenario played when the start frame is crossed. Type its resource id or drop it from the content browser."
+msgstr "시작 프레임을 지날 때 재생할 시나리오입니다. 리소스 id 를 치거나 콘텐츠 브라우저에서 끌어다 놓습니다."
+
+#: Source/Engine/Sequencer/SequenceAsset.h
+msgctxt "Enum.SequenceItemField.Sound"
+msgid "Sound"
+msgstr "소리"
+
+#: Source/Engine/Sequencer/SequenceAsset.h
+msgctxt "Enum.SequenceItemField.Sound.Tooltip"
+msgid "Audio event posted when the start frame is crossed and stopped when the span ends."
+msgstr "시작 프레임을 지날 때 보내고 구간이 끝나면 멈추는 오디오 이벤트입니다."
+
+#: Source/Engine/Sequencer/SequenceAsset.h
+msgctxt "Enum.SequenceItemField.Text"
+msgid "Text"
+msgstr "글"
+
+#: Source/Engine/Sequencer/SequenceAsset.h
+msgctxt "Enum.SequenceItemField.Text.Tooltip"
+msgid "Localization key (Namespace.Key) of the subtitle line shown for the span."
+msgstr "구간 동안 보일 자막 줄의 현지화 키(Namespace.Key)입니다."
+
+#: Source/GameFramework/Runtime/Online/Directory/ServerRecord.h
+msgctxt "Enum.ServerState.Draining"
+msgid "draining"
+msgstr "비우는 중"
+
+#: Source/GameFramework/Runtime/Online/Directory/ServerRecord.h
+msgctxt "Enum.ServerState.Maintenance"
+msgid "maintenance"
+msgstr "점검 중"
+
+#: Source/GameFramework/Runtime/Online/Directory/ServerRecord.h
+msgctxt "Enum.ServerState.Open"
+msgid "open"
+msgstr "열림"
+
+#: Source/GameFramework/Runtime/Online/Directory/ServerRecord.h
+msgctxt "Enum.ServerState.Starting"
+msgid "starting"
+msgstr "시작 중"
+
+#: Source/GameFramework/Runtime/Gameplay/Inventory/ShopPurchase.h
+msgctxt "Enum.ShopPurchaseStatus.Busy"
+msgid "A purchase is still in progress."
+msgstr "구매가 아직 진행 중입니다."
+
+#: Source/GameFramework/Runtime/Gameplay/Inventory/ShopPurchase.h
+msgctxt "Enum.ShopPurchaseStatus.LimitReached"
+msgid "You cannot buy this any more."
+msgstr "더 이상 구매할 수 없습니다."
+
+#: Source/GameFramework/Runtime/Gameplay/Inventory/ShopPurchase.h
+msgctxt "Enum.ShopPurchaseStatus.NoRoom"
+msgid "Your bag is full."
+msgstr "가방이 가득 찼습니다."
+
+#: Source/GameFramework/Runtime/Gameplay/Inventory/ShopPurchase.h
+msgctxt "Enum.ShopPurchaseStatus.NotEnoughMoney"
+msgid "Not enough money."
+msgstr "돈이 부족합니다."
+
+#: Source/GameFramework/Runtime/Gameplay/Inventory/ShopPurchase.h
+msgctxt "Enum.ShopPurchaseStatus.OutOfStock"
+msgid "Sold out."
+msgstr "품절입니다."
+
+#: Source/GameFramework/Runtime/Gameplay/Inventory/ShopPurchase.h
+msgctxt "Enum.ShopPurchaseStatus.Rejected"
+msgid "This cannot be bought now."
+msgstr "지금은 구매할 수 없습니다."
+
+#: Source/GameFramework/Runtime/Gameplay/Inventory/ShopPurchase.h
+msgctxt "Enum.ShopPurchaseStatus.ServerError"
+msgid "Could not reach the store. The wallet shows what the server holds."
+msgstr "상점에 연결하지 못했습니다. 지갑에는 서버가 가진 값이 보입니다."
+
+#: Source/GameFramework/Runtime/Gameplay/Inventory/ShopPurchase.h
+msgctxt "Enum.ShopPurchaseStatus.Succeeded"
+msgid "Bought."
+msgstr "구매했습니다."
+
+#: Source/GameFramework/Runtime/Gameplay/Inventory/ShopPurchase.h
+msgctxt "Enum.ShopPurchaseStatus.Unverified"
+msgid "The purchase reply did not match; your wallet was refreshed."
+msgstr "구매 응답이 맞지 않아 지갑을 새로 고쳤습니다."
+
+#: Source/GameFramework/Kits/Feature/Online/Social/Runtime/SocialTypes.h
+msgctxt "Enum.SocialPresenceStatus.Away"
+msgid "away"
+msgstr "자리 비움"
+
+#: Source/GameFramework/Kits/Feature/Online/Social/Runtime/SocialTypes.h
+msgctxt "Enum.SocialPresenceStatus.Busy"
+msgid "busy"
+msgstr "바쁨"
+
+#: Source/GameFramework/Kits/Feature/Online/Social/Runtime/SocialTypes.h
+msgctxt "Enum.SocialPresenceStatus.InGame"
+msgid "in game"
+msgstr "게임 중"
+
+#: Source/GameFramework/Kits/Feature/Online/Social/Runtime/SocialTypes.h
+msgctxt "Enum.SocialPresenceStatus.Offline"
+msgid "offline"
+msgstr "오프라인"
+
+#: Source/GameFramework/Kits/Feature/Online/Social/Runtime/SocialTypes.h
+msgctxt "Enum.SocialPresenceStatus.Online"
+msgid "online"
+msgstr "온라인"
+
+#: Source/Engine/Localization/LocText.cpp
+msgctxt "Enum.Unknown"
+msgid "unknown"
+msgstr "알 수 없음"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneModuleOrigin.h
+msgctxt "Enum.ZoneModuleOrigin.Added"
+msgid "added here"
+msgstr "여기서 더함"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneModuleOrigin.h
+msgctxt "Enum.ZoneModuleOrigin.Changed"
+msgid "changed here"
+msgstr "여기서 바꿈"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneModuleOrigin.h
+msgctxt "Enum.ZoneModuleOrigin.Inherited"
+msgid "inherited"
+msgstr "물려받음"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneModuleOrigin.h
+msgctxt "Enum.ZoneModuleOrigin.Removed"
+msgid "removed here"
+msgstr "여기서 뺌"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneModuleOrigin.h
+msgctxt "Enum.ZoneModuleOrigin.Replaced"
+msgid "replaced here"
+msgstr "여기서 갈아끼움"
+
 #: Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp
 msgctxt "FriendList.Idle"
 msgid "Press Refresh to list friends"
@@ -2312,36 +2787,6 @@ msgid "{title}  ({count, plural, one {# pending request} other {# pending reques
 msgstr "{title}  (받은 요청 {count}건)"
 
 #: Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp
-msgctxt "FriendList.PresenceAway"
-msgid "away"
-msgstr "자리 비움"
-
-#: Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp
-msgctxt "FriendList.PresenceBusy"
-msgid "busy"
-msgstr "바쁨"
-
-#: Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp
-msgctxt "FriendList.PresenceInGame"
-msgid "in game"
-msgstr "게임 중"
-
-#: Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp
-msgctxt "FriendList.PresenceOffline"
-msgid "offline"
-msgstr "오프라인"
-
-#: Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp
-msgctxt "FriendList.PresenceOnline"
-msgid "online"
-msgstr "온라인"
-
-#: Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp
-msgctxt "FriendList.PresenceUnknown"
-msgid "unknown"
-msgstr "알 수 없음"
-
-#: Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp
 msgctxt "FriendList.Row"
 msgid "#{account}  {presence}"
 msgstr "#{account}  {presence}"
@@ -2357,19 +2802,9 @@ msgid "Friends"
 msgstr "친구"
 
 #: Source/GameFramework/Client/Inventory/InventoryScreen.cpp
-msgctxt "Inventory.Done"
-msgid "Done."
-msgstr "완료했습니다."
-
-#: Source/GameFramework/Client/Inventory/InventoryScreen.cpp
 msgctxt "Inventory.DropTitle"
 msgid "Drop how many?"
 msgstr "몇 개를 버릴까요?"
-
-#: Source/GameFramework/Client/Inventory/InventoryScreen.cpp
-msgctxt "Inventory.EmptySlot"
-msgid "The slot is empty."
-msgstr "빈 칸입니다."
 
 #: Source/GameFramework/Client/Inventory/InventoryScreen.cpp
 msgctxt "Inventory.EquipLine"
@@ -2377,39 +2812,14 @@ msgid "{slot}: {item}"
 msgstr "{slot}: {item}"
 
 #: Source/GameFramework/Client/Inventory/InventoryScreen.cpp
-msgctxt "Inventory.InvalidCount"
-msgid "That amount is not possible."
-msgstr "그 수량은 안 됩니다."
-
-#: Source/GameFramework/Client/Inventory/InventoryScreen.cpp
-msgctxt "Inventory.InvalidSlot"
-msgid "That slot cannot take it."
-msgstr "그 칸에는 넣을 수 없습니다."
-
-#: Source/GameFramework/Client/Inventory/InventoryScreen.cpp
 msgctxt "Inventory.ItemCount"
 msgid "{item} x{count}"
 msgstr "{item} x{count}"
 
 #: Source/GameFramework/Client/Inventory/InventoryScreen.cpp
-msgctxt "Inventory.NoRoom"
-msgid "Your bag is full."
-msgstr "가방이 가득 찼습니다."
-
-#: Source/GameFramework/Client/Inventory/InventoryScreen.cpp
-msgctxt "Inventory.NotUsable"
-msgid "This cannot be used."
-msgstr "사용할 수 없습니다."
-
-#: Source/GameFramework/Client/Inventory/InventoryScreen.cpp
 msgctxt "Inventory.Picked"
 msgid "Choose where to put it."
 msgstr "놓을 곳을 고르세요."
-
-#: Source/GameFramework/Client/Inventory/InventoryScreen.cpp
-msgctxt "Inventory.Refused"
-msgid "You cannot equip this there."
-msgstr "그 자리에는 장착할 수 없습니다."
 
 #: Source/GameFramework/Client/Inventory/InventoryScreen.cpp
 msgctxt "Inventory.SplitTitle"
@@ -2599,45 +3009,10 @@ msgctxt "ServerPicker.Row"
 msgid "{region}  {fill}%  {state}"
 msgstr "{region}  {fill}%  {state}"
 
-#: Source/GameFramework/Kits/Feature/Online/ServerDirectory/Client/ServerPickerScreen.cpp
-msgctxt "ServerPicker.StateDraining"
-msgid "draining"
-msgstr "비우는 중"
-
-#: Source/GameFramework/Kits/Feature/Online/ServerDirectory/Client/ServerPickerScreen.cpp
-msgctxt "ServerPicker.StateMaintenance"
-msgid "maintenance"
-msgstr "점검 중"
-
-#: Source/GameFramework/Kits/Feature/Online/ServerDirectory/Client/ServerPickerScreen.cpp
-msgctxt "ServerPicker.StateOpen"
-msgid "open"
-msgstr "열림"
-
-#: Source/GameFramework/Kits/Feature/Online/ServerDirectory/Client/ServerPickerScreen.cpp
-msgctxt "ServerPicker.StateStarting"
-msgid "starting"
-msgstr "시작 중"
-
-#: Source/GameFramework/Kits/Feature/Online/ServerDirectory/Client/ServerPickerScreen.cpp
-msgctxt "ServerPicker.StateUnknown"
-msgid "unknown"
-msgstr "알 수 없음"
-
 #: Source/GameFramework/Client/Shop/ShopScreen.cpp
 msgctxt "Shop.BalanceLine"
 msgid "{amount} {currency}"
 msgstr "{amount} {currency}"
-
-#: Source/GameFramework/Client/Shop/ShopScreen.cpp
-msgctxt "Shop.Bought"
-msgid "Bought."
-msgstr "구매했습니다."
-
-#: Source/GameFramework/Client/Shop/ShopScreen.cpp
-msgctxt "Shop.Busy"
-msgid "A purchase is still in progress."
-msgstr "구매가 아직 진행 중입니다."
 
 #: Source/GameFramework/Client/Shop/ShopScreen.cpp
 msgctxt "Shop.ConfirmAccept"
@@ -2660,21 +3035,6 @@ msgid "Confirm Purchase"
 msgstr "구매 확인"
 
 #: Source/GameFramework/Client/Shop/ShopScreen.cpp
-msgctxt "Shop.LimitReached"
-msgid "You cannot buy this any more."
-msgstr "더 이상 구매할 수 없습니다."
-
-#: Source/GameFramework/Client/Shop/ShopScreen.cpp
-msgctxt "Shop.NoRoom"
-msgid "Your bag is full."
-msgstr "가방이 가득 찼습니다."
-
-#: Source/GameFramework/Client/Shop/ShopScreen.cpp
-msgctxt "Shop.NotEnoughMoney"
-msgid "Not enough money."
-msgstr "돈이 부족합니다."
-
-#: Source/GameFramework/Client/Shop/ShopScreen.cpp
 msgctxt "Shop.OfferRow"
 msgid "{item}  {price} {currency}"
 msgstr "{item}  {price} {currency}"
@@ -2685,29 +3045,9 @@ msgid "{offer}  ({stock})"
 msgstr "{offer}  ({stock})"
 
 #: Source/GameFramework/Client/Shop/ShopScreen.cpp
-msgctxt "Shop.OutOfStock"
-msgid "Sold out."
-msgstr "품절입니다."
-
-#: Source/GameFramework/Client/Shop/ShopScreen.cpp
 msgctxt "Shop.Purchasing"
 msgid "Purchasing..."
 msgstr "구매 중..."
-
-#: Source/GameFramework/Client/Shop/ShopScreen.cpp
-msgctxt "Shop.Rejected"
-msgid "This cannot be bought now."
-msgstr "지금은 구매할 수 없습니다."
-
-#: Source/GameFramework/Client/Shop/ShopScreen.cpp
-msgctxt "Shop.ServerError"
-msgid "Could not reach the store. The wallet shows what the server holds."
-msgstr "상점에 연결하지 못했습니다. 지갑에는 서버가 가진 값이 보입니다."
-
-#: Source/GameFramework/Client/Shop/ShopScreen.cpp
-msgctxt "Shop.Unverified"
-msgid "The purchase reply did not match; your wallet was refreshed."
-msgstr "구매 응답이 맞지 않아 지갑을 새로 고쳤습니다."
 
 #. Context: TextWidget._text
 #: engine/ui/options.ui.xml
@@ -2757,31 +3097,6 @@ msgstr "현상금 ${amount}"
 msgctxt "Western.Carcasses"
 msgid "Carcasses {count}"
 msgstr "사체 {count}"
-
-#: Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp
-msgctxt "Western.GaitCanter"
-msgid "Canter"
-msgstr "구보"
-
-#: Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp
-msgctxt "Western.GaitGallop"
-msgid "Gallop"
-msgstr "질주"
-
-#: Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp
-msgctxt "Western.GaitStanding"
-msgid "Standing"
-msgstr "서 있음"
-
-#: Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp
-msgctxt "Western.GaitTrot"
-msgid "Trot"
-msgstr "속보"
-
-#: Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp
-msgctxt "Western.GaitWalk"
-msgid "Walk"
-msgstr "평보"
 
 #: Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp
 msgctxt "Western.Honor"

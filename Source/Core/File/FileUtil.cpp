@@ -1118,22 +1118,31 @@ namespace sw
     }
 
     template <typename PathType>
-    bool FileUtil::collectFilesInto( const DiskPath& directory, string_view filterExtension, vector<PathType>& outListFilePath, const bool bRecursive, const StopToken& stopToken )
+    bool FileUtil::collectFilesInto( const DiskPath& directory, const string_view* pFilterExtension, const size_t filterCount, vector<PathType>& outListFilePath, const bool bRecursive,
+                                     const StopToken& stopToken )
     {
         if ( isDirectory( directory ) == false )
             return false;
 
-        const bool bHasFilter = filterExtension.empty() == false;
-        const bool bWalked    = forEachDirectoryEntry( directory, bRecursive, [&outListFilePath, filterExtension, bHasFilter, stopToken]( const DirectoryEntry& entry )
-           {
+        const auto isWanted = [pFilterExtension, filterCount]( string_view path )
+        {
+            for ( size_t index = 0; index < filterCount; ++index )
+            {
+                if ( hasExtension( path, pFilterExtension[index] ) )
+                    return true;
+            }
+            return filterCount == 0;
+        };
+        const bool bWalked  = forEachDirectoryEntry( directory, bRecursive, [&outListFilePath, &isWanted, stopToken]( const DirectoryEntry& entry )
+         {
             if ( stopToken.isStopRequested() )
                 return false;
-            if ( entry._bDirectory || ( bHasFilter && hasExtension( entry._path, filterExtension ) == false ) )
+            if ( entry._bDirectory || isWanted( entry._path ) == false )
                 return true;
             outListFilePath.push_back( PathType{ string( entry._path ) } ); // 절대 폴더 아래의 `/` 구분 항목이라 다시 검사하지 않는다
             return true;
         } );
-        const bool bStopped   = stopToken.isStopRequested();
+        const bool bStopped = stopToken.isStopRequested();
         if ( bWalked == false && bStopped == false )
             SW_LOG_WARNING_ID( "FileUtil.CollectingFilesUnderStopped", "Collecting files under '%#' stopped partway - the list is incomplete", directory.str() );
         return bWalked;
@@ -1158,12 +1167,24 @@ namespace sw
 
     bool FileUtil::collectFiles( const AbsolutePath& directory, string_view filterExtension, vector<AbsolutePath>& outListFilePath, const bool bRecursive, const StopToken& stopToken )
     {
-        return collectFilesInto( directory, filterExtension, outListFilePath, bRecursive, stopToken );
+        return collectFilesInto( directory, &filterExtension, filterExtension.empty() ? 0u : 1u, outListFilePath, bRecursive, stopToken );
     }
 
     bool FileUtil::collectFiles( const DiskPath& directory, string_view filterExtension, vector<DiskPath>& outListFilePath, const bool bRecursive, const StopToken& stopToken )
     {
-        return collectFilesInto( directory, filterExtension, outListFilePath, bRecursive, stopToken );
+        return collectFilesInto( directory, &filterExtension, filterExtension.empty() ? 0u : 1u, outListFilePath, bRecursive, stopToken );
+    }
+
+    bool FileUtil::collectFiles( const AbsolutePath& directory, const string_view* pFilterExtension, const size_t filterCount, vector<AbsolutePath>& outListFilePath, const bool bRecursive,
+                                 const StopToken& stopToken )
+    {
+        return collectFilesInto( directory, pFilterExtension, filterCount, outListFilePath, bRecursive, stopToken );
+    }
+
+    bool FileUtil::collectFiles( const DiskPath& directory, const string_view* pFilterExtension, const size_t filterCount, vector<DiskPath>& outListFilePath, const bool bRecursive,
+                                 const StopToken& stopToken )
+    {
+        return collectFilesInto( directory, pFilterExtension, filterCount, outListFilePath, bRecursive, stopToken );
     }
 
     bool FileUtil::collectFolders( const AbsolutePath& directory, vector<AbsolutePath>& outListFolder, const bool bRecursive )

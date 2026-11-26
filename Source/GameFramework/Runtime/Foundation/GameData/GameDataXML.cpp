@@ -10,7 +10,6 @@
 #include "Engine/Serialization/Serializer/SerializeContext.h"
 #include "Engine/Serialization/Serializer/SerializerUtil.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
-#include "Engine/Serialization/XML/XMLNameCheck.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
 namespace sw
@@ -37,10 +36,10 @@ namespace sw
     bool GameDataXML::readFloatCurveElement( const XMLNode& curveNode, float32 minValue, FloatCurve& outCurve, string_view sourceName )
     {
         outCurve._listKey.clear();
-        bool bValid = XMLNameCheck::reportUnknownChildren( curveNode, GameDataXMLInternal::kArrCurveChild, sourceName );
+        bool bValid = curveNode.reportUnknownChildren( GameDataXMLInternal::kArrCurveChild, sourceName );
         for ( XMLNode keyNode = curveNode.findChild( "Key" ); keyNode; keyNode = keyNode.findNextSibling( "Key" ) )
         {
-            bValid = XMLNameCheck::reportUnknownAttributes( keyNode, GameDataXMLInternal::kArrCurveKeyAttribute, sourceName ) && bValid;
+            bValid = keyNode.reportUnknownAttributes( GameDataXMLInternal::kArrCurveKeyAttribute, sourceName ) && bValid;
             // 키의 시간과 값은 필수다. 값은 @p minValue 아래면 자르지 않고 오류다.
             const auto time  = keyNode.readRequiredAttribute<float32>( "time" );
             const auto value = keyNode.readRequiredAttribute<float32>( "value" );

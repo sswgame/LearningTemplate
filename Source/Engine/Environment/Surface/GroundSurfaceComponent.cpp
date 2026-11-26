@@ -14,6 +14,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Physics/Component/CharacterControllerComponent.h"
+#include "Engine/Reflection/EnumName.h"
 #include "Engine/Scene/SceneManager.h"
 
 namespace sw
@@ -87,7 +88,7 @@ namespace sw
                 }
                 StringBuilder<constant::buffer::kMax256> replyBuilder;
                 replyBuilder.appendFormat( "surface %# kind=%# source=%# material=%# layer=%# point=%#,%#,%# normal=%#,%#,%# velocity=%#,%#,%# water=%# wetness=%# moveScale=%#", listArgument[0],
-                                           sample._pKind->_name.c_str(), SurfaceSample::getSourceName( sample._source ), sample._material.c_str(),
+                                           sample._pKind->_name.c_str(), getEnumName( sample._source ), sample._material.c_str(),
                                            sample._terrainLayer == SurfaceSample::kNoTerrainLayer ? -1 : static_cast<int32>( sample._terrainLayer ), sample._point._x, sample._point._y,
                                            sample._point._z, sample._normal._x, sample._normal._y, sample._normal._z, sample._surfaceVelocity._x, sample._surfaceVelocity._y,
                                            sample._surfaceVelocity._z, sample._waterDepth, sample._wetness, sample._pKind->_moveScale );

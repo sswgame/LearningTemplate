@@ -23,42 +23,10 @@ namespace sw
             static constexpr const utf8* kRefreshCommand = "Refresh";
             static constexpr const utf8* kCloseCommand   = "Close";
 
-            static const utf8* getPresenceText( SocialPresenceStatus status )
-            {
-                switch ( status )
-                {
-                    case SocialPresenceStatus::Offline:
-                    {
-                        return SW_LOCKEYREF( "FriendList", "PresenceOffline" );
-                    }
-                    case SocialPresenceStatus::Online:
-                    {
-                        return SW_LOCKEYREF( "FriendList", "PresenceOnline" );
-                    }
-                    case SocialPresenceStatus::Away:
-                    {
-                        return SW_LOCKEYREF( "FriendList", "PresenceAway" );
-                    }
-                    case SocialPresenceStatus::Busy:
-                    {
-                        return SW_LOCKEYREF( "FriendList", "PresenceBusy" );
-                    }
-                    case SocialPresenceStatus::InGame:
-                    {
-                        return SW_LOCKEYREF( "FriendList", "PresenceInGame" );
-                    }
-                    case SocialPresenceStatus::Count:
-                    {
-                        break;
-                    }
-                }
-                return SW_LOCKEYREF( "FriendList", "PresenceUnknown" );
-            }
-
             static string makeRowText( const FriendEntry& entry )
             {
                 LocalizedMessage row = entry._activity.empty() ? SW_LOCALIZED_MESSAGE( "FriendList", "Row" ) : SW_LOCALIZED_MESSAGE( "FriendList", "RowActivity" );
-                (void)row.addText( "account", to_string( entry._accountID ) ).addKey( "presence", getPresenceText( entry._status ) );
+                (void)row.addText( "account", to_string( entry._accountID ) ).addKey( "presence", LocalizedText::makeEnumKey( entry._status ) );
                 if ( entry._activity.empty() == false )
                     (void)row.addText( "activity", entry._activity );
                 return row.str();

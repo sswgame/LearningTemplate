@@ -40,33 +40,5 @@ namespace sw
          * @return 컨테이너인데 인자를 clang 형식으로 읽지 못했으면(인자 수 부족 · 형식이 아닌 인자) 알리고 false 입니다 — 철자로 이어 가지 않습니다.
          */
         [[nodiscard]] static bool fillContainerDetails( ParsedPropertyInfo& prop, CXType fieldType, const ParserSession& session );
-
-    private:
-        /** @brief 컨테이너 어노테이션을 찾을 기본 템플릿 · 레코드 커서입니다. 선언이 없으면 null 커서입니다. */
-        static CXCursor findContainerDeclaration( CXType type );
-        /**
-         * @brief 타입 선언의 REFLECT_CONTAINER(Kind [, WrapperStem]) 를 조회합니다.
-         * @return 어노테이션된 컨테이너 메타를 찾으면 true
-         */
-        [[nodiscard]] static bool findReflectContainer( CXType type, ContainerKind& outKind, string& outWrapperStem );
-        /** @brief 노드를 그 종류 · 래퍼의 컨테이너로 표시합니다. */
-        static void markContainer( ParsedContainerNode& node, ContainerKind kind, const string& wrapperStem, const ParserSession& session );
-        /** @brief 원소 · 값 인자 형식이 컨테이너면 그 중첩 노드, 아니면 nullptr 입니다(인자를 읽지 못한 노드는 그대로 돌려 오류가 트리에 남는다). */
-        static shared_ptr<ParsedContainerNode> makeNestedContainer( CXType argType, const ParserSession& session );
-        /**
-         * @brief 템플릿 인자 하나(원소 · 키)의 타입 이름입니다. 인자 안의 사용자 별칭을 벗깁니다(`tryResolveAliasSpelling`).
-         * @details 적힌 이름만 쓰면 `vector<AccountID>` 의 원소가 모르는 이름 `AccountID` 로 등록되고, 자기 기술형 바이너리가 그 원소를 읽지 못합니다.
-         *          별칭이 없는 인자는 clang 의 철자 그대로입니다.
-         */
-        static string resolveTemplateArgName( CXType argType, const ParserSession& session );
-        /** @brief 맵 · 시퀀스의 키 · 원소 · 중첩 노드를 clang 형식 인자로 채웁니다. 인자를 읽지 못하면 알리고 노드를 무효로 둡니다. */
-        static void fillContainerArgs( ParsedContainerNode& node, CXType type, const ParserSession& session );
-        /** @brief 트리 어디에도 무효 노드가 없으면 true 입니다. */
-        static bool isTreeValid( const ParsedContainerNode& node );
-        /**
-         * @brief clang 타입으로 컨테이너 트리를 만듭니다.
-         * @details 타입 선언의 `REFLECT_CONTAINER` 가 이기고, 없으면 ReflectBuiltins 의 표기 규칙을 봅니다.
-         */
-        static shared_ptr<ParsedContainerNode> makeContainerFromType( CXType type, const ParserSession& session );
     };
 } // namespace sw

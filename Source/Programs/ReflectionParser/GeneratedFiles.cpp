@@ -126,6 +126,17 @@ namespace sw
                 return bHasInput && bHasArgs;
             }
 
+            /**
+             * @brief 출력 디렉터리 + 입력 이름(확장자를 뺀 것) + @p extension 으로 헤더 입력의 산출물 경로를 만듭니다.
+             * @note FileUtil::normalizePath 는 Windows 에서 소문자로 바꾸므로, CMake OUTPUT 과 맞추려고 쓰지 않습니다.
+             */
+            static AbsolutePath makeGeneratedPath( const AbsolutePath& outputDir, const AbsolutePath& sourceFilePath, const string_view extension )
+            {
+                string fileName = FileUtil::removeExtension( FileUtil::getFileNamePart( sourceFilePath.str() ) );
+                fileName += extension;
+                return outputDir.join( fileName );
+            }
+
             /** @brief @p hash 에 글 하나를 섞습니다. 길이도 섞어 `"ab","c"` 와 `"a","bc"` 가 갈리게 한다. */
             [[nodiscard]] static uint64 combineText( uint64 hash, string_view text )
             {
@@ -138,7 +149,7 @@ namespace sw
 
 namespace sw
 {
-    GeneratedPaths GeneratedFileUtil::makePaths( const AbsolutePath& outputDir, const AbsolutePath& inputFile )
+    GeneratedPaths GeneratedPaths::make( const AbsolutePath& outputDir, const AbsolutePath& inputFile )
     {
         GeneratedPaths paths;
         if ( FileUtil::hasExtension( inputFile.str(), "cpp" ) )
@@ -150,9 +161,9 @@ namespace sw
             paths._stampPath = paths._cppPath.appendSuffix( sw::config::kExtReflectionStamp );
             return paths;
         }
-        paths._cppPath            = ParserUtil::makeGeneratedPath( outputDir, inputFile, sw::config::kExtReflectionGenCpp );
-        paths._headerPath         = ParserUtil::makeGeneratedPath( outputDir, inputFile, sw::config::kExtReflectionGenHeader );
-        paths._editorMetadataPath = ParserUtil::makeGeneratedPath( outputDir, inputFile, sw::config::kExtReflectionGenMetaCpp );
+        paths._cppPath            = GeneratedFilesInternal::makeGeneratedPath( outputDir, inputFile, sw::config::kExtReflectionGenCpp );
+        paths._headerPath         = GeneratedFilesInternal::makeGeneratedPath( outputDir, inputFile, sw::config::kExtReflectionGenHeader );
+        paths._editorMetadataPath = GeneratedFilesInternal::makeGeneratedPath( outputDir, inputFile, sw::config::kExtReflectionGenMetaCpp );
         paths._stampPath          = paths._cppPath.appendSuffix( sw::config::kExtReflectionStamp );
         return paths;
     }
@@ -174,26 +185,26 @@ namespace sw
         return true;
     }
 
-    bool GeneratedFileUtil::writeStamp( const AbsolutePath& stampPath, const GeneratedStamp& stamp )
+    bool GeneratedStamp::write( const AbsolutePath& stampPath ) const
     {
         StringBuilder<constant::buffer::kMax4096> stampText;
-        stampText.appendFormat( "%#\n%# %#\n%# %#\n", stamp._sourcePath.str(), GeneratedFilesInternal::kStampInputTimeKey, stamp._inputWriteTime, GeneratedFilesInternal::kStampArgsKey,
-                                stamp._argsHash );
-        if ( stamp._bHasBitFlagEnum )
+        stampText.appendFormat( "%#\n%# %#\n%# %#\n", _sourcePath.str(), GeneratedFilesInternal::kStampInputTimeKey, _inputWriteTime, GeneratedFilesInternal::kStampArgsKey,
+                                _argsHash );
+        if ( _bHasBitFlagEnum )
             stampText.appendFormat( "%#\n", GeneratedFilesInternal::kStampBitFlagLine );
-        for ( const string& typeFqn : stamp._listTypeFqn )
+        for ( const string& typeFqn : _listTypeFqn )
         {
             stampText.appendFormat( "%# %#\n", GeneratedFilesInternal::kStampTypeKey, typeFqn );
         }
-        for ( const string& schemaLine : stamp._listFixedSchema )
+        for ( const string& schemaLine : _listFixedSchema )
         {
             stampText.appendFormat( "%# %#\n", GeneratedFilesInternal::kStampFixedSchemaKey, schemaLine );
         }
-        for ( const string& assetField : stamp._listAssetField )
+        for ( const string& assetField : _listAssetField )
         {
             stampText.appendFormat( "%# %#\n", GeneratedFilesInternal::kStampAssetFieldKey, assetField );
         }
-        for ( const StampDependency& dependency : stamp._listDependency )
+        for ( const StampDependency& dependency : _listDependency )
         {
             stampText.appendFormat( "%# %# %#\n", GeneratedFilesInternal::kStampDependencyKey, dependency._writeTime, dependency._path.str() );
         }
@@ -214,7 +225,7 @@ namespace sw
         return stamp._writeTime;
     }
 
-    bool GeneratedFileUtil::readStamp( const AbsolutePath& stampPath, GeneratedStamp& outStamp )
+    bool GeneratedStamp::read( const AbsolutePath& stampPath, GeneratedStamp& outStamp )
     {
         outStamp = GeneratedStamp{};
         string stampText;
@@ -281,9 +292,9 @@ namespace sw
             _newestToolWriteTime = MathUtil::kMaxUInt64;
     }
 
-    bool IncrementalCheck::isUpToDate( const AbsolutePath& inputFile, const GeneratedPaths& paths ) const
+    bool IncrementalCheck::isUpToDate( const AbsolutePath& inputFile, const GeneratedPaths& paths, const GeneratedStamp* pStamp ) const
     {
-        const uint64 stampTime     = GeneratedFileUtil::getWriteTime( paths._stampPath );
+        const uint64 stampTime     = pStamp != nullptr ? GeneratedFileUtil::getWriteTime( paths._stampPath ) : 0;
         const bool   bStampMissing = stampTime == 0 || FileUtil::exists( paths._cppPath ) == false ||
                                    ( paths.isInline() == false && ( FileUtil::exists( paths._headerPath ) == false || FileUtil::exists( paths._editorMetadataPath ) == false ) );
         if ( bStampMissing )
@@ -299,8 +310,8 @@ namespace sw
         // 헤더를 옮기기만 하면 내용도 시각도 그대로라 시각 비교는 "최신" 이라고 답한다. 그런데 .gen.cpp 는 원본을 절대
         // 경로로 #include 하므로 그대로 두면 없는 경로를 가리켜 빌드가 깨진다. 스탬프에 적힌 원본 경로를 대조해 이동을 잡는다.
         // 시각을 읽지 못하는 스탬프는 최신이 아니다 — 다시 만든다.
-        GeneratedStamp record;
-        if ( GeneratedFileUtil::readStamp( paths._stampPath, record ) == false || ( record._sourcePath == inputFile ) == false )
+        const GeneratedStamp& record = *pStamp;
+        if ( ( record._sourcePath == inputFile ) == false )
             return false;
         // 명령줄이 바뀌었으면(`--module` · `-D…` · `--include`) 파일 시각이 그대로여도 산출물이 달라진다.
         if ( record._argsHash != _argsHash )

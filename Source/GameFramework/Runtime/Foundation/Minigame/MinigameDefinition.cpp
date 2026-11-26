@@ -9,7 +9,6 @@
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
-#include "Engine/Serialization/XML/XMLNameCheck.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
 #include "GameFramework/Runtime/Foundation/GameData/XMLCatalogRoot.h"
@@ -62,7 +61,7 @@ namespace sw
     {
         // 루트 속성은 스키마(빠진 필수 · 모르는 속성 · 깨진 값은 오류)다. 자식 원소는 없다 — 적힌 것은 모두 오타로 알린다.
         const bool bValid = root.readProperties( *this, sourceName );
-        return XMLNameCheck::reportUnknownChildren( root.getRawNode(), nullptr, 0, sourceName ) && bValid;
+        return root.getRawNode().reportUnknownChildren( nullptr, 0, sourceName ) && bValid;
     }
 
     bool MinigameDefinition::validate( const GameFeatureRegistry& features, string_view sourceName ) const

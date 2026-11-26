@@ -5,14 +5,17 @@
 #pragma once
 #include "Core/Foundation/Types.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 namespace sw
 {
     /** @brief 지금 활성인 입력 장치 타입입니다(UI 글리프 자동 전환용). */
+    ENUM()
     enum class InputGlyphStyle : uint8
     {
-        KeyboardMouse = 0,
-        GamepadXbox,
-        GamepadPlayStation,
-        GamepadSwitch
+        KeyboardMouse      ENUMERATOR( DisplayName = "Keyboard & Mouse" ) = 0,
+        GamepadXbox        ENUMERATOR( DisplayName = "Xbox Gamepad" ),
+        GamepadPlayStation ENUMERATOR( DisplayName = "PlayStation Gamepad" ),
+        GamepadSwitch      ENUMERATOR( DisplayName = "Nintendo Switch Gamepad" )
     };
 } // namespace sw

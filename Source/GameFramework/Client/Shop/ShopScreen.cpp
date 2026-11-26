@@ -23,57 +23,6 @@
 
 namespace sw
 {
-    namespace
-    {
-        struct ShopScreenInternal
-        {
-            /** @brief 결과 상태의 보일 글 키입니다(원문은 engine.strings.xml 의 `Shop.*`). */
-            static const utf8* getStatusKey( ShopPurchaseStatus status )
-            {
-                switch ( status )
-                {
-                    case ShopPurchaseStatus::Succeeded:
-                    {
-                        return SW_LOCKEYREF( "Shop", "Bought" );
-                    }
-                    case ShopPurchaseStatus::NotEnoughMoney:
-                    {
-                        return SW_LOCKEYREF( "Shop", "NotEnoughMoney" );
-                    }
-                    case ShopPurchaseStatus::OutOfStock:
-                    {
-                        return SW_LOCKEYREF( "Shop", "OutOfStock" );
-                    }
-                    case ShopPurchaseStatus::LimitReached:
-                    {
-                        return SW_LOCKEYREF( "Shop", "LimitReached" );
-                    }
-                    case ShopPurchaseStatus::NoRoom:
-                    {
-                        return SW_LOCKEYREF( "Shop", "NoRoom" );
-                    }
-                    case ShopPurchaseStatus::Rejected:
-                    {
-                        return SW_LOCKEYREF( "Shop", "Rejected" );
-                    }
-                    case ShopPurchaseStatus::ServerError:
-                    {
-                        return SW_LOCKEYREF( "Shop", "ServerError" );
-                    }
-                    case ShopPurchaseStatus::Unverified:
-                    {
-                        return SW_LOCKEYREF( "Shop", "Unverified" );
-                    }
-                    case ShopPurchaseStatus::Busy:
-                    {
-                        return SW_LOCKEYREF( "Shop", "Busy" );
-                    }
-                }
-                return SW_LOCKEYREF( "Shop", "Rejected" );
-            }
-        };
-    } // namespace
-
     ShopScreen::ShopScreen( const UIScreenDef& desc, unique_ptr<Widget> root )
         : UIScreen{ desc, std::move( root ) }
         , _listOffer{}
@@ -145,13 +94,13 @@ namespace sw
         int64            total = 0;
         if ( offer.computeTotal( 1, total ) == false )
         {
-            setStatus( ShopScreenInternal::getStatusKey( ShopPurchaseStatus::Rejected ) );
+            setStatus( LocalizedText::makeEnumKey( ShopPurchaseStatus::Rejected ) );
             return true;
         }
         // 잔액은 공급자의 것(온라인이면 서버 원장의 사본)이다 — 모자라면 확인 창 없이 알린다. 정본 판정은 그래도 공급자가 한다.
         if ( _pProvider->getBalance( offer._currency ) < total )
         {
-            setStatus( ShopScreenInternal::getStatusKey( ShopPurchaseStatus::NotEnoughMoney ) );
+            setStatus( LocalizedText::makeEnumKey( ShopPurchaseStatus::NotEnoughMoney ) );
             SW_LOG_INFO_ID( "ShopScreen.NotEnoughMoney", "Shop: not enough %# for '%#' (price %#)", offer._currency.c_str(), offer._offerID.c_str(), total );
             return true;
         }
@@ -205,7 +154,7 @@ namespace sw
         _lastReceipt = receipt;
         ++_finishedCount;
         _bBusy = SW_FALSE;
-        setStatus( ShopScreenInternal::getStatusKey( receipt._status ) );
+        setStatus( LocalizedText::makeEnumKey( receipt._status ) );
         rebuild();
     }
 

@@ -29,12 +29,12 @@ namespace sw
     ENUM()
     enum class ModuleKind : uint8
     {
-        GameFramework,   ///< 장르 공통 게임플레이 프레임워크(공유 모듈이며 리로드하지 않는다)
-        Kit,             ///< 장르 키트(`GF_*`)
-        Game,            ///< 게임 모듈(`SWGame`)이며 프로젝트다
-        Editor,          ///< 에디터 모듈(Dev 전용)
-        RHI,             ///< RHI 백엔드(`RHI_*`, Dev 에서만 모듈)
-        EditorExtension, ///< 에디터 확장(`GF_EditorPlugin_<이름>`, `SWGameEditor`)이다. Dev 전용이며 `-EnableEditor` 일 때만 로드한다
+        GameFramework   ENUMERATOR( DisplayName = "GameFramework" ),     ///< 장르 공통 게임플레이 프레임워크(공유 모듈이며 리로드하지 않는다)
+        Kit             ENUMERATOR( DisplayName = "Kits" ),              ///< 장르 키트(`GF_*`)
+        Game            ENUMERATOR( DisplayName = "Game" ),              ///< 게임 모듈(`SWGame`)이며 프로젝트다
+        Editor          ENUMERATOR( DisplayName = "Editor" ),            ///< 에디터 모듈(Dev 전용)
+        RHI             ENUMERATOR( DisplayName = "RHI backends" ),      ///< RHI 백엔드(`RHI_*`, Dev 에서만 모듈)
+        EditorExtension ENUMERATOR( DisplayName = "Editor extensions" ), ///< 에디터 확장(`GF_EditorPlugin_<이름>`, `SWGameEditor`)이다. Dev 전용이며 `-EnableEditor` 일 때만 로드한다
     };
 
     /** @brief 모듈이 도는 플랫폼 비트입니다(매니페스트 `_listExcludedPlatform` 의 낱말이 열거자 이름이다). */

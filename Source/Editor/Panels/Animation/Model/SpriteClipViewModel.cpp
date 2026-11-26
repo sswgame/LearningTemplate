@@ -18,6 +18,7 @@
 #include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
+#include "Engine/TileMap/TileGridUtil.h"
 
 namespace sw::editor
 {
@@ -214,7 +215,7 @@ namespace sw::editor
         for ( int32 cell = 0; cell < cellCount; ++cell )
         {
             SpriteClipFrame frame{};
-            frame._uvRect = AtlasGridUtil::computeCellUVRect( cell, _sliceColumns, _sliceRows );
+            frame._uvRect = TileGridUtil::computeCellUVRect( cell, _sliceColumns, _sliceRows );
             _clip._listFrame.push_back( frame );
         }
         _selectedFrame = _clip.getFrameCount() - 1;
@@ -354,13 +355,13 @@ namespace sw::editor
 
     SpriteClipViewModel::AtlasPickResult SpriteClipViewModel::applyPickAtlasCell( float32 u, float32 v, bool bAddFrame )
     {
-        const optional<int32> cell = AtlasGridUtil::findCellAtUV( u, v, _sliceColumns, _sliceRows );
+        const optional<int32> cell = TileGridUtil::findCellAtUV( u, v, _sliceColumns, _sliceRows );
         if ( cell.has_value() == false )
             return AtlasPickResult::None;
         const bool bAdded = bAddFrame || SpriteClipViewModelInternal::isValidIndex( _clip._listFrame, _selectedFrame ) == false;
         if ( bAdded )
             appendFrame();
-        _clip._listFrame[static_cast<size_t>( _selectedFrame )]._uvRect = AtlasGridUtil::computeCellUVRect( *cell, _sliceColumns, _sliceRows );
+        _clip._listFrame[static_cast<size_t>( _selectedFrame )]._uvRect = TileGridUtil::computeCellUVRect( *cell, _sliceColumns, _sliceRows );
         return bAdded ? AtlasPickResult::AddedFrame : AtlasPickResult::EditedFrame;
     }
 

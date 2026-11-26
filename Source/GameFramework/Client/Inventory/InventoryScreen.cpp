@@ -48,42 +48,6 @@ namespace sw
             /** @brief 버린 조각이 놓이는 자리(캐릭터 기준, m) — 발 앞 한 걸음 */
             static constexpr float32 kDropForward = 1.0f;
 
-            static const utf8* getResultKey( InventoryCommandResult result )
-            {
-                switch ( result )
-                {
-                    case InventoryCommandResult::Ok:
-                    {
-                        return SW_LOCKEYREF( "Inventory", "Done" );
-                    }
-                    case InventoryCommandResult::InvalidSlot:
-                    {
-                        return SW_LOCKEYREF( "Inventory", "InvalidSlot" );
-                    }
-                    case InventoryCommandResult::EmptySlot:
-                    {
-                        return SW_LOCKEYREF( "Inventory", "EmptySlot" );
-                    }
-                    case InventoryCommandResult::InvalidCount:
-                    {
-                        return SW_LOCKEYREF( "Inventory", "InvalidCount" );
-                    }
-                    case InventoryCommandResult::NoRoom:
-                    {
-                        return SW_LOCKEYREF( "Inventory", "NoRoom" );
-                    }
-                    case InventoryCommandResult::Refused:
-                    {
-                        return SW_LOCKEYREF( "Inventory", "Refused" );
-                    }
-                    case InventoryCommandResult::NotUsable:
-                    {
-                        return SW_LOCKEYREF( "Inventory", "NotUsable" );
-                    }
-                }
-                return SW_LOCKEYREF( "Inventory", "Refused" );
-            }
-
             static unique_ptr<TextWidget> makeLabel()
             {
                 unique_ptr<TextWidget> label = make_unique<TextWidget>();
@@ -291,7 +255,7 @@ namespace sw
                     SW_LOG_ERROR_ID( "InventoryScreen.DroppedItemLost", "Dropped %# x%# could neither be placed in the world nor returned to the bag", dropped._itemID.c_str(), dropped._count );
             }
         }
-        setStatus( InventoryScreenInternal::getResultKey( _lastResult ) );
+        setStatus( LocalizedText::makeEnumKey( _lastResult ) );
         refresh();
         return _lastResult;
     }

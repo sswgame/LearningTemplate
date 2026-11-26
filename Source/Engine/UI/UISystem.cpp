@@ -40,7 +40,6 @@
 #include "Engine/UI/Binding/UIBindingSet.h"
 #include "Engine/UI/Document/UIDocument.h"
 #include "Engine/UI/Document/UIDocumentCache.h"
-#include "Engine/UI/Document/UIDocumentLoader.h"
 #include "Engine/UI/Layout/ScrollPanel.h"
 #include "Engine/UI/Menu/PauseMenuScreen.h"
 #include "Engine/UI/Overlay/UISubtitleSubsystem.h"
@@ -491,7 +490,7 @@ namespace sw
             return root;
         }
         const shared_ptr<const UIDocumentAsset>& document = *loaded;
-        expected<unique_ptr<Widget>>             built    = UIDocumentLoader::instantiate( *document, *_pDocumentCache, tagOverride, outListBinding );
+        expected<unique_ptr<Widget>>             built    = ( *document ).instantiate( *_pDocumentCache, tagOverride, outListBinding );
         if ( built.has_value() == false )
         {
             SW_LOG_ERROR_ID( "UISystem.ScreenDocumentCannotBuilt", "[UI] Screen document cannot be built: %# (%#)", built.error().message(), built.error().detail() );

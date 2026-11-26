@@ -14,15 +14,18 @@
 
 #include "Editor/Panels/Catalog/Model/CatalogDocument.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 namespace sw::editor
 {
     /** @brief 카탈로그 항목의 종류입니다(루트 아래 원소 이름). */
+    ENUM()
     enum class AbilityEntryKind : uint8
     {
-        Effect = 0,   ///< `<AbilityEffect id>`
-        Ability,      ///< `<Ability id class>`
-        AbilitySet,   ///< `<AbilitySet id>`
-        Presentation, ///< `<AbilityPresentation tag>`
+        Effect       ENUMERATOR( DisplayName = "Effects" ) = 0,       ///< `<AbilityEffect id>`
+        Ability      ENUMERATOR( DisplayName = "Abilities" ),         ///< `<Ability id class>`
+        AbilitySet   ENUMERATOR( DisplayName = "Ability sets" ),      ///< `<AbilitySet id>`
+        Presentation ENUMERATOR( DisplayName = "Cue presentations" ), ///< `<AbilityPresentation tag>`
         Count
     };
 

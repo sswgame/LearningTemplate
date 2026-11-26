@@ -16,6 +16,8 @@
 #include "Core/Math/Math.h"
 #include "Core/String/Name/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 namespace sw
 {
     struct CharacterRayHit;
@@ -24,7 +26,8 @@ namespace sw
 
     class GameObjectManager;
 
-    /** @brief 표면 종류를 정한 형식입니다(진단 표시용). */
+    /** @brief 표면 종류를 정한 형식입니다(진단 표시용 — 이름은 `getEnumName`). */
+    ENUM()
     enum class SurfaceSource : uint8
     {
         Collider = 0, ///< 맞은 셰이프의 물리 재질
@@ -58,8 +61,6 @@ namespace sw
                                                SurfaceSample& outSample );
         /** @brief 이미 맞은 것(@p hit)의 표면을 고릅니다. 실패 규칙은 `sampleBelow` 와 같습니다. */
         [[nodiscard]] static bool resolveHit( GameObjectManager& manager, const shared_ptr<const SurfaceKindTable>& pTable, const CharacterRayHit& hit, SurfaceSample& outSample );
-        /** @brief 형식의 이름입니다(진단 줄 · 감시 값). */
-        static const utf8* getSourceName( SurfaceSource source );
     };
 
 } // namespace sw

@@ -14,7 +14,6 @@
 #include "Engine/Serialization/Inherit/ResourceComposer.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
-#include "Engine/Serialization/XML/XMLNameCheck.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 #include "Engine/TileMap/TileSetAsset.h"
 
@@ -183,7 +182,7 @@ namespace sw
                 for ( XMLNode tileNode = tiles.findChild( "t" ); tileNode && index < static_cast<int32>( count ); tileNode = tileNode.findNextSibling( "t" ), ++index )
                 {
                     const size_t elementIndex = static_cast<size_t>( index );
-                    inoutValid                = XMLNameCheck::reportUnknownAttributes( tileNode, kArrKnownTileAttribute, data._name, LogLevel::Error, &isFlagLayerAttribute ) && inoutValid;
+                    inoutValid                = tileNode.reportUnknownAttributes( kArrKnownTileAttribute, data._name, LogLevel::Error, &isFlagLayerAttribute ) && inoutValid;
                     for ( const TileFlagLayerInfo& info : kArrTileFlagLayerInfo )
                     {
                         inoutValid = readFlag( tileNode, info, data.getFlagLayer( info._layer )[elementIndex] ) && inoutValid;
@@ -268,7 +267,7 @@ namespace sw
             {
                 TileLayerParams layerParams;
                 const bool      bKnownAttributes = XMLFields::readProperties( tileLayer, layerParams, data._name );
-                if ( ( XMLNameCheck::reportUnknownChildren( tileLayer, kArrKnownTileLayerChild, data._name ) && bKnownAttributes ) == false )
+                if ( ( tileLayer.reportUnknownChildren( kArrKnownTileLayerChild, data._name ) && bKnownAttributes ) == false )
                     return false;
                 data._tileSetPath     = layerParams._tileSet.path();
                 const XMLNode palette = tileLayer.findChild( "palette" );
@@ -495,7 +494,7 @@ namespace sw
             *this = {};
             return false;
         }
-        if ( XMLNameCheck::reportUnknownChildren( root, TileMapXMLInternal::kArrKnownRootChild, _name ) == false )
+        if ( root.reportUnknownChildren( TileMapXMLInternal::kArrKnownRootChild, _name ) == false )
         {
             *this = {};
             return false;

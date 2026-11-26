@@ -294,7 +294,7 @@ namespace sw
             void evaluate( RigEvaluateContext& context ) override
             {
                 RigPoseBuffer&   pose  = *context._pPose;
-                const quaternion delta = ( RigIKSolver::makeInverse( _reference ) * pose.getLocalRotation( _bone ) ).normalize();
+                const quaternion delta = ( _reference.inverse() * pose.getLocalRotation( _bone ) ).normalize();
                 const float3     euler = delta.getEulerAngles();
                 const float3     low   = _params._min.radians();
                 const float3     high  = _params._max.radians();
@@ -372,11 +372,11 @@ namespace sw
             void evaluate( RigEvaluateContext& context ) override
             {
                 RigPoseBuffer&   pose  = *context._pPose;
-                const quaternion delta = ( RigIKSolver::makeInverse( _sourceReference ) * pose.getLocalRotation( _source ) ).normalize();
+                const quaternion delta = ( _sourceReference.inverse() * pose.getLocalRotation( _source ) ).normalize();
                 quaternion       swing{};
                 quaternion       twist{};
-                RigIKSolver::decomposeSwingTwist( delta, _axis, swing, twist );
-                const float32 angle = RigIKSolver::computeTwistAngle( twist, _axis );
+                delta.toSwingTwist( _axis, swing, twist );
+                const float32 angle = twist.getTwistAngle( _axis );
                 for ( const TwistBone& entry : _listTwist )
                 {
                     const quaternion share = quaternion::makeFromAxisAngle( _axis, angle * entry._weight );

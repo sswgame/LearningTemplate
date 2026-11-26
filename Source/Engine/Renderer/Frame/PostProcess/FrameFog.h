@@ -36,13 +36,13 @@ namespace sw
     ENUM()
     enum class FogVolumeState : uint8
     {
-        NoFog,           ///< 씬에 안개(`FogComponent` · 물속)가 없다
-        Disabled,        ///< 안개 설정이 볼륨 안개를 켜지 않았다
-        Underwater,      ///< 물속 안개는 볼륨이 없다
-        NoDevice,        ///< 디바이스가 없다(그리지 않는 프레임)
-        MissingPipeline, ///< 볼륨 안개 컴퓨트 PSO 가 없다(셰이더 쿠킹 · 백엔드 컴퓨트 지원)
-        BufferFailed,    ///< froxel 버퍼나 입력 버퍼를 만들지 못했다
-        Active,          ///< 컴퓨트가 돌고 안개 패스가 볼륨을 읽는다
+        NoFog           ENUMERATOR( DisplayName = "No fog in this scene. Add a Fog component to see volumetric fog." ),                                           ///< 씬에 안개(`FogComponent` · 물속)가 없다
+        Disabled        ENUMERATOR( DisplayName = "Volumetric fog is off in the fog settings, so plain fog is drawn. Turn on Volumetric in the Fog component." ), ///< 안개 설정이 볼륨 안개를 켜지 않았다
+        Underwater      ENUMERATOR( DisplayName = "The camera is under water. Underwater fog has no volume." ),                                                   ///< 물속 안개는 볼륨이 없다
+        NoDevice        ENUMERATOR( DisplayName = "The renderer has no device this frame, so nothing is drawn." ),                                                ///< 디바이스가 없다(그리지 않는 프레임)
+        MissingPipeline ENUMERATOR( DisplayName = "Volumetric fog is on but its compute shader is missing, so plain fog is drawn. Check the shader cook log." ),  ///< 볼륨 안개 컴퓨트 PSO 가 없다(셰이더 쿠킹 · 백엔드 컴퓨트 지원)
+        BufferFailed    ENUMERATOR( DisplayName = "Volumetric fog is on but its buffers could not be created, so plain fog is drawn. See the log." ),             ///< froxel 버퍼나 입력 버퍼를 만들지 못했다
+        Active          ENUMERATOR( DisplayName = "Volumetric fog is on: the light-scattering volume is drawn in the main view." ),                               ///< 컴퓨트가 돌고 안개 패스가 볼륨을 읽는다
     };
 
     /**

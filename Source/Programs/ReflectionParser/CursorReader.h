@@ -70,9 +70,5 @@ namespace sw
          * @details 등록기(`AstVisitor`)와 고정 배치 코덱(`FixedTypeAnalyzer`)이 같은 규칙을 쓰도록 한 곳에 둔다 — 갈리면 한쪽만 개수를 안다.
          */
         static string resolveCountEnumerator( string_view annotatedCount, const vector<ParsedEnumeratorInfo>& listEnumerator, bool bIsBitFlag );
-
-    private:
-        /** @brief enumerator 이름·값을 수집합니다. */
-        static CXChildVisitResult enumeratorCollectorVisitor( CXCursor cursor, CXCursor parent, CXClientData data );
     };
 } // namespace sw

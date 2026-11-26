@@ -64,15 +64,16 @@ namespace sw
     };
 
     /** @brief 항목의 칸 하나입니다(`SequenceItemKindInfo` 의 필수 · 허용 칸 표가 이 순번의 비트입니다). */
+    ENUM()
     enum class SequenceItemField : uint8
     {
-        Binding = 0, ///< `_binding` — 대상 오브젝트(스폰: 만들 오브젝트의 바인딩)
-        Prefab,      ///< `_spawnPrefab`
-        Preset,      ///< `_preset`
-        Scenario,    ///< `_scenario`
-        Clip,        ///< `_clip`
-        Sound,       ///< `_sound`
-        Text,        ///< `_text`
+        Binding  ENUMERATOR( Hidden ) = 0,                                                                                                                                                           ///< `_binding` — 대상 오브젝트(스폰: 만들 오브젝트의 바인딩)
+        Prefab   ENUMERATOR( DisplayName = "Prefab", Tooltip = "Prefab spawned for this span. Type its resource id or drop it from the content browser." ),                                          ///< `_spawnPrefab`
+        Preset   ENUMERATOR( DisplayName = "Preset", Tooltip = "Id of the appearance preset the target object wears." ),                                                                             ///< `_preset`
+        Scenario ENUMERATOR( DisplayName = "Scenario", Tooltip = "Scenario played when the start frame is crossed. Type its resource id or drop it from the content browser." ),                     ///< `_scenario`
+        Clip     ENUMERATOR( DisplayName = "Clip", Tooltip = "Animation clip blended over the bound object's animation during the span. Type a resource id or drop one from the Content Browser." ), ///< `_clip`
+        Sound    ENUMERATOR( DisplayName = "Sound", Tooltip = "Audio event posted when the start frame is crossed and stopped when the span ends." ),                                                ///< `_sound`
+        Text     ENUMERATOR( DisplayName = "Text", Tooltip = "Localization key (Namespace.Key) of the subtitle line shown for the span." ),                                                          ///< `_text`
         Count
     };
 

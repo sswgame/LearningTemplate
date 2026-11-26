@@ -15,6 +15,7 @@
 #include "Editor/Common/EditorExports.h"
 
 #include "Engine/Physics/IPhysicsSceneFwd.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
 {
@@ -23,13 +24,14 @@ namespace sw
 
 namespace sw::editor
 {
-    /** @brief 놓을 자리를 준 표면의 종류입니다. 고스트 글과 감시 값(`Editor.PlacementSurface`)이 같은 번호를 쓴다. */
+    /** @brief 놓을 자리를 준 표면의 종류입니다. 고스트 글(`DisplayName`)과 감시 값(`Editor.PlacementSurface`)이 같은 번호를 쓴다. */
+    ENUM()
     enum class EditorPlacementSurface : uint8
     {
-        None,        ///< 표면을 찾지 못했다 — 놓지 않는다
-        Collider,    ///< 정적 콜라이더 · 지형(편집 중 정적 물리 사본의 레이캐스트)
-        Bounds,      ///< 콜라이더가 없는 오브젝트의 피킹 경계(메시 · 스프라이트 — `EditorViewportRayPick`)
-        GroundPlane, ///< 바닥 평면(3D 는 Y = 0, 2D 는 Z = 0)
+        None        ENUMERATOR( DisplayName = "none" ),          ///< 표면을 찾지 못했다(놓지 않는다)
+        Collider    ENUMERATOR( DisplayName = "collider" ),      ///< 정적 콜라이더 · 지형(편집 중 정적 물리 사본의 레이캐스트)
+        Bounds      ENUMERATOR( DisplayName = "object bounds" ), ///< 콜라이더가 없는 오브젝트의 피킹 경계(메시 · 스프라이트, `EditorViewportRayPick`)
+        GroundPlane ENUMERATOR( DisplayName = "ground plane" ),  ///< 바닥 평면(3D 는 Y = 0, 2D 는 Z = 0)
     };
 
     /** @brief 놓을 자리 하나입니다. */
@@ -45,7 +47,7 @@ namespace sw::editor
     struct EditorPlacementGhost
     {
         EditorPlacementHit _hit{};
-        const utf8*        _pSurfaceName{ "" }; ///< 표면 종류의 영어 이름(고스트 글 — `EditorAssetPlacement::getSurfaceName`)
+        const utf8*        _pSurfaceName{ "" }; ///< 표면 종류의 보일 글(고스트 글, `LocalizedText::findEnum`)
         bool               _bPlaceable{ false };
         bool               _bFound{ false };
     };
