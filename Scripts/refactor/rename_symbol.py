@@ -70,7 +70,7 @@ def count_words(name: str) -> int:
     return len([part for chunk in name.strip("_").split("_") for part in WORD_SPLIT.findall(chunk)])
 
 
-def check_pair(old: str, new: str, scope: str | None = None, allow_common_name: bool = False) -> str | None:
+def validate_pair(old: str, new: str, scope: str | None = None, allow_common_name: bool = False) -> str | None:
     """바꿀 수 없는 쌍이면 그 까닭입니다."""
     if IDENTIFIER.fullmatch(old) is None or IDENTIFIER.fullmatch(new) is None:
         return "식별자가 아니다"
@@ -179,7 +179,7 @@ def format_changed(root: Path, list_path: list[Path]) -> int:
     return run_clang_format_batch(list_cpp, cwd=root) if list_cpp else ExitCode.PASSED
 
 
-def check_pairs(root: Path, list_pair: Sequence[dict], map_text: dict[Path, str], options: argparse.Namespace) -> tuple[int, dict[str, tuple[str, str]]]:
+def validate_pairs(root: Path, list_pair: Sequence[dict], map_text: dict[Path, str], options: argparse.Namespace) -> tuple[int, dict[str, tuple[str, str]]]:
     """쌍마다 안전 규칙을 본다. (문제 수, 옛 멤버 이름 → 함께 바꿀 직렬화 이름 쌍)."""
     problems = 0
     map_relative = {path.relative_to(root).as_posix(): text for path, text in map_text.items()}
@@ -188,7 +188,7 @@ def check_pairs(root: Path, list_pair: Sequence[dict], map_text: dict[Path, str]
     serialized_pairs: dict[str, tuple[str, str]] = {}
     for pair in list_pair:
         old, new = pair.get("old", ""), pair.get("new", "")
-        reason = check_pair(old, new, pair.get("scope"), options.allow_common_name)
+        reason = validate_pair(old, new, pair.get("scope"), options.allow_common_name)
         if reason is not None:
             print(f"{TAG} 거절 {old} → {new}: {reason}", file=sys.stderr)
             problems += 1
@@ -213,7 +213,7 @@ def check_pairs(root: Path, list_pair: Sequence[dict], map_text: dict[Path, str]
 def rename_all(root: Path, list_pair: Sequence[dict], options: argparse.Namespace) -> int:
     list_file = list_tracked_text(root, RENAME_TEXT_SUFFIX)
     map_text = {path: read_text(path) for path in list_file}
-    problems, serialized_pairs = check_pairs(root, list_pair, map_text, options)
+    problems, serialized_pairs = validate_pairs(root, list_pair, map_text, options)
     if problems:
         return ExitCode.FAILURE
 

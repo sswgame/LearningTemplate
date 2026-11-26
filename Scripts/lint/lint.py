@@ -11,7 +11,7 @@ Scripts/lint/lint.py
 커밋 훅은 저장소 크기에 비례하지 않는다: 규칙은 스테이지된 파일만 보고, 여러 파일을 보는 규칙은 내용 해시 색인(`index_cache`)을 바뀐 파일만
 다시 계산해 쓴다. 규칙의 표 · 예외 · 모듈(그 규칙만 쓰는 도우미 포함)이 스테이지에 있으면 그 규칙만 저장소 전체를 보고(`LintRule.list_own_inputs`),
 여러 규칙이 함께 쓰는 도우미만 바뀌었으면 그것을 쓰는 규칙의 자체 검사를 돈다(`LintRule.list_inputs`). `--all` 은 모든 규칙의 자체 검사도 돈다.
-이 모양은 시간이 아니라 연 파일 수로 지킨다(`check_read_bound` — 린트 코드가 바뀐 커밋과 `--all` 이 돈다): 파일 하나를 스테이지하면 모든 규칙을 통틀어
+이 모양은 시간이 아니라 연 파일 수로 지킨다(`find_read_bound_problems` — 린트 코드가 바뀐 커밋과 `--all` 이 돈다): 파일 하나를 스테이지하면 모든 규칙을 통틀어
 그 파일을 한 번만 연다. 규칙은 파일 글을 `SourceFile` · `lint_scope.read_text` · `index_cache` 로만 얻는다.
 통과한 것은 찍지 않는다. 통과는 한 줄, 실패만 상세를 찍는다. 고치는 것은 `py -3 -m Scripts format` 하나다(clang-format — include 순서 포함, vcpkg format-manifest).
 """
@@ -69,7 +69,7 @@ def list_blob_reads(list_argument: Sequence[str], input_data: bytes | str | None
     return [(spec.partition(":")[0], spec.partition(":")[2]) for spec in list_spec if ":" in spec and spec.partition(":")[2]]
 
 
-def check_read_bound(project_root: Path) -> list[str]:
+def find_read_bound_problems(project_root: Path) -> list[str]:
     """
     커밋 훅이 저장소 크기에 비례하지 않는다는 것을 형식으로 지킨다(시간을 재지 않는다): 파일 하나를 스테이지한 범위로 모든 규칙을 차례로 돌 때
     연 파일이 그 파일 한 번뿐이어야 한다. 사실 캐시(`index_cache`)를 먼저 데우므로 캐시 미스는 0 이다 — 넘으면 어떤 규칙이 스테이지 밖 파일을 읽거나
@@ -204,7 +204,7 @@ def run_lint(project_root: Path, scope: LintScope) -> int:
 
     # 린트 코드(규칙 · 도우미 · 이 파일) · 린트 표 폴더가 바뀌면 커밋 훅의 모양(스테이지 비례 읽기)과 린트 표마다 읽는 규칙이 하나인지를 다시 본다 — 시간을 재지 않고 연 파일을 센다.
     if scope.whole_repo or scope.touches(roots=("Scripts/lint/", "Config/Rules/Lint/", *sorted({path for rule in map_rule.values() for path in rule.list_inputs() if path.startswith("Scripts/")}))):
-        list_shape = check_read_bound(project_root) + find_orphan_tables(project_root)
+        list_shape = find_read_bound_problems(project_root) + find_orphan_tables(project_root)
         if list_shape:
             has_errors = True
             print(f"[lint-shape] FAIL — 커밋 훅의 모양 {len(list_shape)}건")

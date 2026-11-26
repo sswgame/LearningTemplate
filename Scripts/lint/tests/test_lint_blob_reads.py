@@ -1,5 +1,5 @@
 """
-커밋 훅 읽기 한도(`pre_commit.check_read_bound`)가 세는 git 블롭 읽기 — `cat-file --batch` 표준 입력의 `<판>:<경로>` 줄과 `show <판>:<경로>`.
+커밋 훅 읽기 한도(`lint.find_read_bound_problems`)가 세는 git 블롭 읽기 — `cat-file --batch` 표준 입력의 `<판>:<경로>` 줄과 `show <판>:<경로>`.
 
 실행: python -X utf8 Scripts/lint/tests/test_lint_blob_reads.py (CTest `Scripts.PreCommitBlobReads`). git 을 띄우지 않는다.
 """

@@ -142,7 +142,7 @@ def find_problems(pack_root: str, pack_folder: Path, set_module: set[str], map_o
     return list_problem
 
 
-def check_content_modules(project_root: Path, inputs_path: Path) -> int:
+def require_content_modules(project_root: Path, inputs_path: Path) -> int:
     """어긋남이 있으면 `GeneratorError`. 본 팩 수를 돌려줍니다.
 
     도메인마다 쓸 수 있는 모듈: `game/<팩>` 은 그 게임이 가진 것, `common/` 은 모든 게임이 가진 것(어느 게임이 쓸지 정적으로 알 수 없다 — 기믹 프리팹은
@@ -188,7 +188,7 @@ class ContentModulesCommand(Command):
         parser.add_argument("--stamp", type=Path, required=True, help="검사가 통과하면 쓰는 스탬프(빌드 단계의 산출물)")
 
     def run(self, context: ScriptContext, args: argparse.Namespace) -> int:
-        pack_count = check_content_modules(context.root, args.inputs)
+        pack_count = require_content_modules(context.root, args.inputs)
         args.stamp.write_text(f"{pack_count} game packs checked\n", encoding="utf-8")
         print(f"[{TAG}] {pack_count} game packs · common · editor · engine: content uses only modules its domain has")
         return ExitCode.PASSED

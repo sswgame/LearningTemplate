@@ -121,12 +121,12 @@ def write_server(out_dir: Path, name: str, game_port: int, service_port: int, on
     return server_path
 
 
-def _check_counts(process: ChildProcess, *expected: tuple[str, int]) -> list[str]:
+def _find_count_problems(process: ChildProcess, *expected: tuple[str, int]) -> list[str]:
     """@p process 의 로그에 id 마다 정한 수만큼 줄이 있는지."""
     return [f"the {process.name} log has {process.count_log(log_id)} '{log_id}' line(s) - expected {count}" for log_id, count in expected if process.count_log(log_id) != count]
 
 
-def _check_same_spot(rider: ChildProcess, rider_watches: tuple[str, str], viewer: ChildProcess, viewer_watches: tuple[str, str]) -> list[str]:
+def _find_same_spot_problems(rider: ChildProcess, rider_watches: tuple[str, str], viewer: ChildProcess, viewer_watches: tuple[str, str]) -> list[str]:
     """움직이는 바닥 위에 선 쪽의 자기 자리와 다른 쪽이 본 자리(둘 다 바닥 기준 X · Z)가 같은지."""
     own, seen = rider.records(), viewer.records()
     if any(name not in own for name in rider_watches) or any(name not in seen for name in viewer_watches):
@@ -205,8 +205,8 @@ def _run_mmo(argument: argparse.Namespace) -> int:
             client.wait(_SCENARIO_TIMEOUT_SECONDS)
         server.stop()
     # 접속 넷(처음 · 재접속 · 걷는 둘) — 첫 접속이 새 계정이고 재접속이 저장된 진행이라는 것은 시나리오가 값(레벨 · 경험)으로 본다.
-    problems = _check_counts(server, (_HUB_ENTERED_ID, 2 + len(_MMO_PAWN_CLIENTS)))
-    problems += _check_same_spot(south, ("Hub.PawnFloorX", "Hub.PawnFloorZ"), north, ("Hub.RemotePawnFloorX", "Hub.RemotePawnFloorZ"))
+    problems = _find_count_problems(server, (_HUB_ENTERED_ID, 2 + len(_MMO_PAWN_CLIENTS)))
+    problems += _find_same_spot_problems(south, ("Hub.PawnFloorX", "Hub.PawnFloorZ"), north, ("Hub.RemotePawnFloorX", "Hub.RemotePawnFloorZ"))
     return _finish([server], [*list_client, north, south], problems,
                    "hub server login -> combat/gathering -> level 2 -> leave (saved) -> return with the same progress -> two predicted pawns see each other, no errors or warnings")
 
@@ -477,8 +477,8 @@ def _run_match(argument: argparse.Namespace) -> int:
         client.wait(_SCENARIO_TIMEOUT_SECONDS)
         _stop_servers(list_server)
     hub, match = list_server
-    problems = _check_counts(hub, (_HUB_ENTERED_ID, 2))  # 처음 · 매치에서 돌아옴
-    problems += _check_counts(match, (_CONNECTED_ID, 1))
+    problems = _find_count_problems(hub, (_HUB_ENTERED_ID, 2))  # 처음 · 매치에서 돌아옴
+    problems += _find_count_problems(match, (_CONNECTED_ID, 1))
     problems += [f"the match server log has no '{log_id}' line" for log_id in ("Shooter.MatchScoreReported", "Leaderboard.ServerScoreStored") if match.count_log(log_id) == 0]  # 점수의 값(처치 1 이상)은 시나리오가 순위표에서 본다
     return _finish(list_server, [client], problems, "hub join -> queue -> match server -> server-submitted score -> back in the hub, no errors or warnings")
 
@@ -504,9 +504,9 @@ def _run_two_players(argument: argparse.Namespace, mode: str, scenarios: tuple[s
     if len(list_client) == 1:
         return _finish(list_server, list_client, ["the first player did not enter the match server"], "")
     hub, match = list_server
-    problems = _check_counts(hub, (_HUB_ENTERED_ID, 4)) + _check_counts(match, (_CONNECTED_ID, 2), *match_counts)  # 허브: 두 사람의 들어옴 · 돌아옴
+    problems = _find_count_problems(hub, (_HUB_ENTERED_ID, 4)) + _find_count_problems(match, (_CONNECTED_ID, 2), *match_counts)  # 허브: 두 사람의 들어옴 · 돌아옴
     if first_watches is not None and second_watches is not None:
-        problems += _check_same_spot(list_client[0], first_watches, list_client[1], second_watches)
+        problems += _find_same_spot_problems(list_client[0], first_watches, list_client[1], second_watches)
     return _finish(list_server, list_client, problems, ok_message)
 
 

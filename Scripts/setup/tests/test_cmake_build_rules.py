@@ -327,8 +327,8 @@ class ModuleEnumNamesTest(unittest.TestCase):
         self.assertEqual(names["SW_MODULE_TARGETS"], ["Client", "Server"])
 
 
-def rhi_backend_table(check_name: str | None = None) -> dict[str, str]:
-    """configure 와 같은 생성기로 CookContract.cmake 를 쓰고 RHIBackends.cmake 와 함께 include 한 백엔드 칸. `check_name` 이 있으면 `sw_check_rhi_backend_name` 에 넘긴다."""
+def rhi_backend_table(backend_name: str | None = None) -> dict[str, str]:
+    """configure 와 같은 생성기로 CookContract.cmake 를 쓰고 RHIBackends.cmake 와 함께 include 한 백엔드 칸. `backend_name` 이 있으면 `sw_check_rhi_backend_name` 에 넘긴다."""
     with tempfile.TemporaryDirectory() as folder:
         cmake_path = Path(folder) / "CookContract.cmake"
         generate_cook_contract(Path(folder) / "CookContract.gen.h", cmake_path)
@@ -341,8 +341,8 @@ def rhi_backend_table(check_name: str | None = None) -> dict[str, str]:
             '\tmessage(NOTICE "${name}=[${SW_RHI_BACKEND_${name}_MODULE}|${SW_RHI_BACKEND_${name}_SOURCE_FOLDER}|${SW_RHI_BACKEND_${name}_COMMAND_LINE_NAME}]")',
             "endforeach()",
         ]
-        if check_name is not None:
-            lines.append(f"sw_check_rhi_backend_name({check_name})")
+        if backend_name is not None:
+            lines.append(f"sw_check_rhi_backend_name({backend_name})")
         return run_cmake_script("\n".join(lines) + "\n")
 
 

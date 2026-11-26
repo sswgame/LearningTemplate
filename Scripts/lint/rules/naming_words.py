@@ -299,13 +299,13 @@ class NamingWordsRule(LintRule):
         return list_problems(list_row) + table.list_problems(scope.whole_repo, stale_sections=())
 
     def self_check(self) -> None:
-        def check_code(code: str, table: Mapping, path: str = "a.h") -> dict[str, set[str]]:
+        def find_code_problems(code: str, table: Mapping, path: str = "a.h") -> dict[str, set[str]]:
             map_name: dict[str, set[str]] = {rule: set() for rule in (*NAME_RULES, "banned")}
             for rule, name, _ in NameTable(table).classify_code(path, strip_comments_and_strings(code)):
                 map_name[rule].add(name)
             return map_name
 
-        def check_words(list_name: Iterable[tuple[str, str, str]], table: Mapping) -> dict[str, str]:
+        def find_word_problems(list_name: Iterable[tuple[str, str, str]], table: Mapping) -> dict[str, str]:
             names = NameTable({"_banned": {}, **table})
             return {name: problem for kind, name, path in list_name if (problem := names.find_word_problem(kind, name, path)) is not None}
 
@@ -313,31 +313,31 @@ class NamingWordsRule(LintRule):
                  "_bannedTerms": {"Verdict": "Result", "Work": "Job"}, "_keepTerms": ["WorkArea"], "_predicateWords": ["is", "has", "uses", "starts"], "_lookupWords": ["get", "find"],
                  "_keep": {"MailboxServiceResult": "이유"}}
         clean = 'struct FooComponent : Component {}; int getValue( int x ); struct MailboxServiceResult {}; // drainEvents() hasWork\nconst char* s = "drainEvents() Verdict"; bool hasValue(); bool setAxisTags(); bool focusPanel(); bool startsWith(); RECT readWorkArea; int getSlotFor( int x );'
-        found = check_code(clean, table)
+        found = find_code_problems(clean, table)
         assert not any(found.values()), found
         bad = 'void drainEvents( int x ); struct FooVerdict {}; bool hasPendingWork(); bool drawsBatch(); int materialGroupFor( int x ); int _verdictCount;'
-        found = check_code(bad, table)
+        found = find_code_problems(bad, table)
         assert found["verb"] == {"drainEvents"}, found
         assert found["term"] == {"FooVerdict", "hasPendingWork", "_verdictCount"}, found
         assert found["predicate"] == {"drawsBatch"}, found
         assert found["lookup"] == {"materialGroupFor"}, found
-        assert check_code("enum class PacketType : uint8 { A }; enum class PacketKind { A }; enum OldType { B }; struct ValueType {};", table)["kind"] == {"PacketType"}   # enum class 만 본다 — 구조체 · 옛 enum 은 다른 규칙 몫
+        assert find_code_problems("enum class PacketType : uint8 { A }; enum class PacketKind { A }; enum OldType { B }; struct ValueType {};", table)["kind"] == {"PacketType"}   # enum class 만 본다 — 구조체 · 옛 enum 은 다른 규칙 몫
         shape_code = ("class SW_API FooComponent : public SceneComponent {}; struct BarMover final : public sw::Component {}; struct BazComponent : public Widget<Component> {};"
                                 "class ComponentHandle {}; class SW_API Component {}; struct QuxComponent; REFLECT( Interface ) struct IGood { }; REFLECT( Interface ) struct Bad { };")
-        shape_found = check_code(shape_code, table)
+        shape_found = find_code_problems(shape_code, table)
         assert shape_found["component"] == {"BarMover", "BazComponent"}, shape_found   # 양성: 접미 없는 컴포넌트 · 컴포넌트가 아닌 Component 끝말. 음성: FooComponent · ComponentHandle · 기반 Component · 전방 선언
         assert shape_found["interface"] == {"Bad"}, shape_found   # 양성: I 없는 인터페이스. 음성: IGood
         timing_table = dict(table, _timingAccessorKeep={"getElapsedMicroseconds": "시계 형식"})
         timing_code = ("int64 getLastStepMicroseconds() const { return watch.getElapsedMicroseconds(); } int64 getElapsedMicroseconds() const; uint64 Foo::getPeakNanoseconds();")
-        assert check_code(timing_code, timing_table, "Source/GameFramework/a.h")["timing"] == {"getLastStepMicroseconds"}   # 양성: 배포 헤더의 선언. 음성: 부르기 · 예외 표 · `A::` 정의
+        assert find_code_problems(timing_code, timing_table, "Source/GameFramework/a.h")["timing"] == {"getLastStepMicroseconds"}   # 양성: 배포 헤더의 선언. 음성: 부르기 · 예외 표 · `A::` 정의
         for path in ("Source/Editor/a.h", "Source/Engine/Tests/a.h", "Source/DevTools/a.h", "Source/Engine/a.cpp"):
-            assert check_code(timing_code, timing_table, path)["timing"] == set(), path   # 음성: 배포에 없는 모듈 · 테스트 · .cpp
+            assert find_code_problems(timing_code, timing_table, path)["timing"] == set(), path   # 음성: 배포에 없는 모듈 · 테스트 · .cpp
         assert find_first_base("public sw::Map<Key, Value>, private Other") == "Map" and find_first_base(None) == ""
         name_problems = list_problems(NameTable(table).classify_code("a.h", strip_comments_and_strings(bad)))
         assert len(name_problems) == 6 and "[verb] a.h: " in "".join(name_problems) and any("materialGroupFor" in line for line in name_problems), name_problems
         table_names = dict(table, _bannedNames={"CombatHealth": "HealthStateMachine"})
-        assert check_code("// CombatHealth\nconst char* s = \"CombatHealth\";", table_names)["banned"] == set(), "주석 · 문자열의 옛 이름은 본다고 하지 않는다"
-        assert check_code("CombatHealth health; int getCombatHealthRatio();", table_names)["banned"] == {"CombatHealth"}, "통째 이름만 막는다"
+        assert find_code_problems("// CombatHealth\nconst char* s = \"CombatHealth\";", table_names)["banned"] == set(), "주석 · 문자열의 옛 이름은 본다고 하지 않는다"
+        assert find_code_problems("CombatHealth health; int getCombatHealthRatio();", table_names)["banned"] == {"CombatHealth"}, "통째 이름만 막는다"
         overlap = dict(table, _bannedNames={"YawUtil": "a", "YawUtil::fromWorld": "b", "Gone": "c", "new-names": "d"})
         assert NameTable(overlap).find_banned_names("x = YawUtil::fromWorld( v ); new-names;") == ["YawUtil", "new-names"], "표 차례로 엮은 것과 같다 — 앞 이름(YawUtil)이 이기고, 글에 없는 이름은 엮지 않는다"
 
@@ -352,18 +352,18 @@ class NamingWordsRule(LintRule):
         assert collect_path_names("Source/Games/Walk/WalkPath.h") == [("folder", "Games"), ("folder", "Walk"), ("file", "WalkPath")]
         table_words = {"_words": {"a": ["scene", "key", "speed", "area", "mark", "hover", "rc", "at"], "b": ["ghost"]}, "_keep": {},
                       "_scopedWords": {"walk": {"paths": ["Source/Games"], "hint": "순회는 iterate"}}, "_externalPatterns": [r"^PFN_"], "_externalPaths": [".claude/skills/ponytail"], "_keepTerms": ["WorkArea"]}
-        found = check_words([("type", "SceneWalkKey", "Source/Engine/a.h"), ("member", "_walkSpeed", "Source/Games/b.h"), ("member", "_ghostKey", "Source/a.h"),
+        found = find_word_problems([("type", "SceneWalkKey", "Source/Engine/a.h"), ("member", "_walkSpeed", "Source/Games/b.h"), ("member", "_ghostKey", "Source/a.h"),
                                ("variable", "rcWorkArea", "Source/a.h"), ("alias", "PFN_vkWeirdo", "Source/a.h"), ("function", "aimAtMark", "Source/a.h"),
                                ("folder", "Walk", "Source/Games/Walk/x.h")], table_words)
         assert set(found) == {"SceneWalkKey", "aimAtMark"} and "iterate" in found["SceneWalkKey"] and "'aim'" in found["aimAtMark"], found
         script = "MAX_SCENE = 1\nkSceneKey = 2\nclass SceneKey:\n    def hover_mark(self) -> None: ...\n    def hoverScene(self) -> None: ...\n"
-        found = check_words([(kind, name, "Scripts/lint/scene_key.py") for kind, name in collect_script_declarations("Scripts/lint/scene_key.py", script)]
+        found = find_word_problems([(kind, name, "Scripts/lint/scene_key.py") for kind, name in collect_script_declarations("Scripts/lint/scene_key.py", script)]
                                + [("file", "SceneKey", "Scripts/lint/SceneKey.py"), ("file", "SceneKey", "cmake/SceneKey.cmake")], table_words | {"_words": {"a": ["max", "scene", "key", "hover", "mark"], "b": []}})
         assert set(found) == {"kSceneKey", "hoverScene", "SceneKey"} and "Scripts/lint/SceneKey.py" in found["SceneKey"], found   # PEP 8 꼴 — CMake 파일 이름은 보지 않는다
-        found = check_words([("file", "scene_key", "Scripts/verify/scene_key.py"), ("command", "scene-key", "Scripts/__main__.py")],
+        found = find_word_problems([("file", "scene_key", "Scripts/verify/scene_key.py"), ("command", "scene-key", "Scripts/__main__.py")],
                                table_words | {"_words": {"a": ["scene", "key"], "b": []}, "_bannedNames": {"scene_key": "key_scene", "scene-key": "key-scene"}})
         assert set(found) == {"scene_key", "scene-key"} and "key_scene" in found["scene_key"], found   # 스크립트의 옛 이름
-        found = check_words([("function", "sw_scene_key", "cmake/a.cmake"), ("function", "sw_sceneKey", "cmake/a.cmake"), ("function", "scene_key", "Source/CMakeLists.txt")],
+        found = find_word_problems([("function", "sw_scene_key", "cmake/a.cmake"), ("function", "sw_sceneKey", "cmake/a.cmake"), ("function", "scene_key", "Source/CMakeLists.txt")],
                                table_words | {"_words": {"a": ["sw", "scene", "key"], "b": []}})
         assert set(found) == {"sw_sceneKey", "scene_key"} and all("sw_snake_case" in hint for hint in found.values()), found   # CMake 함수 꼴
         acronyms = {"ID", "JSON", "UV", "PSO", "UI"}

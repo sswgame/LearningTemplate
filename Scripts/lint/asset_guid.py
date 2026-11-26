@@ -508,7 +508,7 @@ def _find_guid_owners(project_root: Path, list_guid: list[str], rules: Rules) ->
     return map_holder
 
 
-def check_staged_asset_identity(project_root: Path, scope: LintScope | None = None) -> list[str] | None:
+def find_staged_asset_guid_problems(project_root: Path, scope: LintScope | None = None) -> list[str] | None:
     """
     커밋 전 검사: 스테이지에 Content 변경이 없으면 None. 있으면 바뀐 파일과 그 짝만 본다(인덱스 전체를 읽지 않으므로 에셋 수가 수십만이 되어도 커밋마다 돈다):
     머리 없음 · 깨짐, 원본만 지우거나 옮겨 남은 .meta, .meta 없는 새 원본, 새 GUID 가 인덱스의 다른 파일과 겹침(`git grep`), HEAD 에 있던 경로의 GUID 가 바뀜.

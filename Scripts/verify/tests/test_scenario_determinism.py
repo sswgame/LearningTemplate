@@ -14,7 +14,7 @@ from typing import Sequence
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
-from verify.scenario_determinism import check_determinism, make_sequence_command, make_stage_runs  # noqa: E402
+from verify.scenario_determinism import find_determinism_problems, make_sequence_command, make_stage_runs  # noqa: E402
 
 
 class FakeApp:
@@ -42,7 +42,7 @@ class ScenarioDeterminismTest(unittest.TestCase):
     def check(self, contents: list[bytes | None]) -> list[str]:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
-            return check_determinism(["before", "target"], 1, "name", root, FakeApp(root, contents).run)
+            return find_determinism_problems(["before", "target"], 1, "name", root, FakeApp(root, contents).run)
 
     def test_stage_runs_put_the_chain_neighbor_first(self) -> None:
         self.assertEqual([stages for _, stages in make_stage_runs(["a", "b", "c"], 1)], [["b"], ["a", "b"], ["b", "b"]])
@@ -70,7 +70,7 @@ class ScenarioDeterminismTest(unittest.TestCase):
 
     def test_failed_run_is_not_compared(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
-            self.assertIn("GoldenMismatch", check_determinism(["target"], 0, "name", Path(temporary), lambda list_stage: "GoldenMismatch")[0])
+            self.assertIn("GoldenMismatch", find_determinism_problems(["target"], 0, "name", Path(temporary), lambda list_stage: "GoldenMismatch")[0])
 
 
 if __name__ == "__main__":

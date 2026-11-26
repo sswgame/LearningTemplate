@@ -196,7 +196,7 @@ def collect_test_variable_names(project_root: Path) -> list[str]:
     return sorted(setName)
 
 
-def check_no_test_variables(project_root: Path) -> SmokeResult:
+def validate_no_test_variables(project_root: Path) -> SmokeResult:
     """배포 실행 파일(App · Server)에 테스트용 전역 변수 이름이 남지 않았는지 본다."""
     list_name = collect_test_variable_names(project_root)
     list_left: list[str] = []
@@ -239,7 +239,7 @@ def find_missing_redirect_tables(content_root: Path, pack_dir: Path, list_pack_n
     return table_count, list_missing
 
 
-def check_redirect_tables(project_root: Path) -> SmokeResult:
+def validate_redirect_tables(project_root: Path) -> SmokeResult:
     """배포 프리셋 둘의 팩에 배포 도메인의 리다이렉트 표가 모두 들었는지 본다."""
     list_problem: list[str] = []
     table_count = 0
@@ -295,7 +295,7 @@ class ShippingCheckCommand(Command):
                 return ExitCode.FAILURE
 
         all_passed = True
-        for check in (check_no_test_variables, check_redirect_tables):
+        for check in (validate_no_test_variables, validate_redirect_tables):
             result = check(project_root)
             print(f"[shipping-check] {result.name}: {'PASS' if result.passed else 'FAIL'} - {result.reason}", flush=True)
             all_passed = all_passed and result.passed

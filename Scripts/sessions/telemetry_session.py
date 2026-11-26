@@ -77,7 +77,7 @@ def _make_handler(sink: Sink) -> type[BaseHTTPRequestHandler]:
     return Handler
 
 
-def check_run(sink: Sink, list_log_text: list[str]) -> list[str]:
+def find_run_problems(sink: Sink, list_log_text: list[str]) -> list[str]:
     """받은 요청과 두 로그를 판정한다. 규칙은 파일 머리말을 본다."""
     problems: list[str] = []
     list_telemetry = sink.find("/telemetry")
@@ -166,7 +166,7 @@ def _run(argument: argparse.Namespace) -> int:
             server.shutdown()
             if bundle is not None:
                 shutil.rmtree(bundle, ignore_errors=True)
-    return report("telemetry-session", check_run(sink, [read_log(log) for log in list_log]), list_log, "telemetry spool file and queued crash bundle reached the loopback sink over HTTP")
+    return report("telemetry-session", find_run_problems(sink, [read_log(log) for log in list_log]), list_log, "telemetry spool file and queued crash bundle reached the loopback sink over HTTP")
 
 
 class TelemetrySessionCommand(Command):

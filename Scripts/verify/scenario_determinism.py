@@ -93,7 +93,7 @@ def make_runner(chain_command: Sequence[str], target_name: str, backend: str, bu
     return run
 
 
-def check_determinism(list_path: Sequence[str], target_index: int, scenario_name: str, automation_dir: Path, run: SequenceRunner) -> list[str]:
+def find_determinism_problems(list_path: Sequence[str], target_index: int, scenario_name: str, automation_dir: Path, run: SequenceRunner) -> list[str]:
     """시나리오 하나의 문제 목록(없으면 통과). 진 실행 · 사진이 하나도 없는 시나리오도 문제다 — 견줄 것이 없는 통과는 통과가 아니다."""
     list_run: list[tuple[str, dict[str, str]]] = []
     for run_name, list_stage in make_stage_runs(list_path, target_index):

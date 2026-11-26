@@ -21,7 +21,7 @@ from common.exit_code import ExitCode
 
 def install_pre_commit_hook(project_root: Path | None = None) -> bool:
     """
-    .git/hooks/pre-commit 훅을 설치하여 커밋 시 pre_commit.py 가 자동 실행되도록 합니다.
+    .git/hooks/pre-commit 훅을 설치하여 커밋 시 lint 명령(Scripts/lint/lint.py)이 자동 실행되도록 합니다.
     """
     root = project_root or get_project_root()
     git_dir = root / ".git"

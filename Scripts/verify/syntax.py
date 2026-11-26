@@ -142,7 +142,7 @@ def select_units(list_file: list[Path], units: dict[str, SyntaxUnit], main_root:
     return selected, list_unbuilt
 
 
-def check_unit(unit: SyntaxUnit) -> list[str]:
+def find_unit_problems(unit: SyntaxUnit) -> list[str]:
     """TU 하나의 오류 줄(앞 몇 줄). 통과면 빈 목록이다."""
     # 경고는 보지 않되 DB 가 오류로 올린 것(-Werror=…)은 그대로 오류다.
     result = run_process([*split_command(unit.arguments), "-fsyntax-only", "--", str(unit.file)], cwd=Path(unit.directory))
@@ -213,7 +213,7 @@ class SyntaxCommand(Command):
         print(f"[syntax] TU {len(selected)}개 · 동시 {args.jobs}", flush=True)
         failed_count = 0
         with ThreadPoolExecutor(args.jobs) as pool:
-            for done_count, (key, list_error) in enumerate(zip(selected, pool.map(check_unit, selected.values())), start=1):
+            for done_count, (key, list_error) in enumerate(zip(selected, pool.map(find_unit_problems, selected.values())), start=1):
                 if list_error:
                     failed_count += 1
                     print(f"  {key}", *(f"    {line}" for line in list_error), sep="\n", flush=True)

@@ -273,7 +273,7 @@ def collect_classes(code: str) -> list[ClassInfo]:
 # ------------------------------------------------------------------------------
 # 2) 검사
 # ------------------------------------------------------------------------------
-def check_declaration_order(info: ClassInfo) -> list[tuple[int, str]]:
+def find_declaration_order_problems(info: ClassInfo) -> list[tuple[int, str]]:
     problems: list[tuple[int, str]] = []
     first_function = None
     for kind, access, line, _ in info.items:
@@ -311,7 +311,7 @@ def has_constructor(info: ClassInfo) -> bool:
     return any(kind == "ctor" and "~" not in statement.split("(", 1)[0] for kind, _, _, statement in info.items)
 
 
-def check_bool_flags(info: ClassInfo, raw_lines: list[str]) -> list[tuple[int, str]]:
+def find_bool_flag_problems(info: ClassInfo, raw_lines: list[str]) -> list[tuple[int, str]]:
     problems: list[tuple[int, str]] = []
     if not has_constructor(info):
         return problems   # 생성자가 없으면 비트필드에 기본값을 줄 자리가 없다(C++17) — `bool _bX{ false }` 가 맞다
@@ -330,7 +330,7 @@ def check_bool_flags(info: ClassInfo, raw_lines: list[str]) -> list[tuple[int, s
     return problems
 
 
-def check_bit_field_runs(info: ClassInfo, raw_lines: list[str]) -> list[tuple[int, str]]:
+def find_bit_field_run_problems(info: ClassInfo, raw_lines: list[str]) -> list[tuple[int, str]]:
     """같은 접근 구역의 비트필드가 다른 칸으로 끊기면 묶음마다 바이트(와 다음 칸의 정렬)를 따로 먹는다. 사이에 전처리 갈래가 있으면 구성마다 칸이 달라 보지 않는다."""
     problems: list[tuple[int, str]] = []
     last_bit_line: dict[str, int] = {}
@@ -353,7 +353,7 @@ def check_bit_field_runs(info: ClassInfo, raw_lines: list[str]) -> list[tuple[in
     return problems
 
 
-def check_anonymous_namespaces(code: str) -> list[tuple[int, str]]:
+def find_anonymous_namespace_problems(code: str) -> list[tuple[int, str]]:
     problems: list[tuple[int, str]] = []
     blocks = list(re.finditer(r"\bnamespace\s*\{", code))
     for match in blocks:
@@ -421,7 +421,7 @@ def collect_static_only_types(code: str) -> tuple[dict[str, tuple[int, list[str]
     return static_only, owners
 
 
-def check_static_owner(code: str, relative: str) -> list[Finding]:
+def find_static_owner_problems(code: str, relative: str) -> list[Finding]:
     """
     주인 우선(`docs/agents/CppStyle.md Helpers`): 헤더의 static 함수만 든 타입이 같은 헤더의 타입 하나를 함수 서명 절반 이상에서 받으면 그 함수들은 그 타입의 (static) 멤버다.
     이름(`XUtil` · `XScanner` · `XRules` …)은 보지 않는다 — 2026-11-08 `MarkupTagScanner`(데이터 `MarkupToken` 옆)처럼 Util 이 아닌 이름으로 같은 모양이 남았다.
@@ -449,7 +449,7 @@ def check_static_owner(code: str, relative: str) -> list[Finding]:
 INCLUDE_LINE = re.compile(r'^[ \t]*#[ \t]*include[ \t]*[<"]([^>"]+)[>"]', re.M)
 
 
-def check_includes_inside_braces(raw: str, code: str) -> list[tuple[int, str]]:
+def find_include_inside_brace_problems(raw: str, code: str) -> list[tuple[int, str]]:
     problems: list[tuple[int, str]] = []
     depth = 0
     position = 0
@@ -461,7 +461,7 @@ def check_includes_inside_braces(raw: str, code: str) -> list[tuple[int, str]]:
     return problems
 
 
-def check_shared_temp_in_tests(code: str, relative: str) -> list[tuple[int, str]]:
+def find_shared_test_temp_problems(code: str, relative: str) -> list[tuple[int, str]]:
     """테스트의 임시 파일은 케이스별 폴더에 둔다 — 공용 임시 폴더의 고정 이름은 백엔드별 자식 프로세스끼리 부딪힌다."""
     if "/Tests/" not in relative.replace("\\", "/"):
         return []
@@ -477,12 +477,12 @@ MANUAL_DEPLETION = re.compile(r"\b(_\w*(?:hp|health|durability|sanity)\w*)\s*(?:
 INLINE_BROWSER_JS = re.compile(r"\b(EM_JS|EM_ASYNC_JS|EM_ASM\w*|MAIN_THREAD_(?:ASYNC_)?EM_ASM\w*)\s*\(")
 
 
-def check_inline_browser_js(code: str) -> list[tuple[int, str]]:
+def find_inline_browser_js_problems(code: str) -> list[tuple[int, str]]:
     """브라우저 JS 를 C++ 매크로 본문에 쓰지 않는다 — 포맷터가 JS 연산자를 띄운다. `Web/*.js` 라이브러리로 옮긴다(규칙 11)."""
     return [(get_line_of(code, match.start()), f"`{match.group(1)}` — 브라우저 JS 는 기능 옆 Web/*.js(addToLibrary)에 두고 C++ 는 extern \"C\" 로 선언한다") for match in INLINE_BROWSER_JS.finditer(code)]
 
 
-def check_manual_depletion(code: str, relative: str) -> list[tuple[int, str]]:
+def find_manual_depletion_problems(code: str, relative: str) -> list[tuple[int, str]]:
     """게임 수치(체력 · 내구도 · 정신력)는 `DepletingValue::take` 로 깎는다 — 0 고정과 소진 판정을 손으로 적으면 곳마다 갈린다(음수 체력이 저장 검사에 걸린다)."""
     is_game_code = relative.startswith(("Source/GameFramework/", "Source/Games/")) and "/Tests/" not in relative
     if not is_game_code:
@@ -490,7 +490,7 @@ def check_manual_depletion(code: str, relative: str) -> list[tuple[int, str]]:
     return [(get_line_of(code, match.start()), f"`{match.group(1)}` 를 손으로 깎는다 — DepletingValue::take 를 쓴다") for match in MANUAL_DEPLETION.finditer(code)]
 
 
-def check_online_protocol_table(code: str, relative: str) -> list[tuple[int, str]]:
+def find_online_protocol_table_problems(code: str, relative: str) -> list[tuple[int, str]]:
     """온라인 키트의 서버 · 클라이언트는 프로토콜 표로 선다 — 손 switch 와 메서드마다 다른 지표 · 보존이 되돌아오지 않게 한다."""
     normalized = relative.replace("\\", "/")
     if normalized.startswith(ONLINE_KIT_FOLDER) is False or normalized.startswith(ONLINE_CORE_FOLDER) or "/Tests/" in normalized:
@@ -509,7 +509,7 @@ MANUAL_NET_MESSAGE_PATTERNS = (
 )
 
 
-def check_net_message_table(code: str, relative: str) -> list[tuple[int, str]]:
+def find_net_message_table_problems(code: str, relative: str) -> list[tuple[int, str]]:
     """게임 넷 메시지는 서술자 표로 선다 — 손 종류 상수 · 손 마스크 · 손 디스패치가 되돌아오지 않게 한다."""
     normalized = relative.replace("\\", "/")
     if normalized.startswith(NET_MESSAGE_FOLDERS) is False or "/Tests/" in normalized:
@@ -537,7 +537,7 @@ def load_delegate_names(project_root: str) -> frozenset[str]:
     return frozenset(names)
 
 
-def check_bare_delegate_create(code: str, relative: str, names: frozenset[str] | None = None) -> list[tuple[int, str]]:
+def find_bare_delegate_create_problems(code: str, relative: str, names: frozenset[str] | None = None) -> list[tuple[int, str]]:
     """델리게이트형의 맨 create 를 막는다(규칙 12). 이름 표는 맨 create 모양이 있는 파일에서만 모은다."""
     if relative.startswith(DELEGATE_FOLDER):
         return []
@@ -553,7 +553,7 @@ def count_bases(info: ClassInfo) -> list[str]:
     return [base for base in info.bases if not base.endswith(UNCOUNTED_BASES)]
 
 
-def check_multiple_bases(info: ClassInfo, relative: str) -> list[Finding]:
+def find_multiple_base_problems(info: ClassInfo, relative: str) -> list[Finding]:
     """기반이 둘 이상인 클래스를 찾는다 — 서브시스템 · 구현은 창구를 멤버로 들어 건다(`exposeMember` · `SW_MODULE_PART`)."""
     counted = count_bases(info)
     if len(counted) < 2:
@@ -611,7 +611,7 @@ def find_state_mutators(code: str) -> dict[str, tuple[int, str, int]]:
     return result
 
 
-def check_state_mutators(code: str, relative: str, minimum: int) -> list[Finding]:
+def find_state_mutator_problems(code: str, relative: str, minimum: int) -> list[Finding]:
     """
     상태와 그것을 바꾸는 논리는 한 타입(`docs/agents/CppStyle.md Helpers` 주인 우선): `.cpp` 의 상태 구조체 공개 칸을 따로 선 `…Internal` 의 static 함수 여럿이
     차례로 바꾸면, 상태를 비공개 칸 + 그 함수들을 멤버로 든 클래스로 합친다(`TerrainBrushToolState`). 규칙 4 는 헤더만 보아 이 모양이 `.cpp` 에 남았다(2026-11-09).
@@ -647,21 +647,21 @@ class CppStyleRule(LintRule):
         list_plain: list[tuple[int, str]] = []
         list_finding: list[Finding] = []
         for info in collect_classes(code):
-            list_finding += check_multiple_bases(info, file.path)
-            list_plain += check_declaration_order(info)
-            list_plain += check_bool_flags(info, file.lines)
-            list_plain += check_bit_field_runs(info, file.lines)
+            list_finding += find_multiple_base_problems(info, file.path)
+            list_plain += find_declaration_order_problems(info)
+            list_plain += find_bool_flag_problems(info, file.lines)
+            list_plain += find_bit_field_run_problems(info, file.lines)
         if file.path.endswith(".cpp"):
-            list_plain += check_anonymous_namespaces(code)
-            list_finding += check_state_mutators(code, file.path, self.state_mutator_minimum)
-        list_finding += check_static_owner(code, file.path)
-        list_plain += check_includes_inside_braces(file.text, code)
-        list_plain += check_shared_temp_in_tests(code, file.path)
-        list_plain += check_manual_depletion(code, file.path)
-        list_plain += check_inline_browser_js(code)
-        list_plain += check_online_protocol_table(code, file.path)
-        list_plain += check_net_message_table(code, file.path)
-        list_plain += check_bare_delegate_create(code, file.path)
+            list_plain += find_anonymous_namespace_problems(code)
+            list_finding += find_state_mutator_problems(code, file.path, self.state_mutator_minimum)
+        list_finding += find_static_owner_problems(code, file.path)
+        list_plain += find_include_inside_brace_problems(file.text, code)
+        list_plain += find_shared_test_temp_problems(code, file.path)
+        list_plain += find_manual_depletion_problems(code, file.path)
+        list_plain += find_inline_browser_js_problems(code)
+        list_plain += find_online_protocol_table_problems(code, file.path)
+        list_plain += find_net_message_table_problems(code, file.path)
+        list_plain += find_bare_delegate_create_problems(code, file.path)
         return list_finding + [(line, message, "", "") for line, message in list_plain]
 
     def evaluate(self, scope: LintScope, found: Mapping[str, list[Finding]]) -> list[str]:
@@ -675,18 +675,18 @@ class CppStyleRule(LintRule):
                   "struct FooInternal\n{\n    static void group( CapState& inoutState ) { inoutState._listGroup.push_back( 1 ); }\n"
                   "    static void count( CapState* pState ) { pState->_count += 1; }\n"
                   "    static int32 read( const CapState& state ) { return state._count; }\n};\n")
-        assert len(check_state_mutators(helper, "Source/Engine/Foo.cpp", 2)) == 1, "two Internal statics mutating a .cpp state's public fields are flagged"
-        assert check_state_mutators(helper, "Source/Engine/Foo.h", 2) == [], "headers are rule 4's job"
-        assert check_state_mutators(helper, "Source/Engine/Foo.cpp", 3) == [], "the threshold is data"
+        assert len(find_state_mutator_problems(helper, "Source/Engine/Foo.cpp", 2)) == 1, "two Internal statics mutating a .cpp state's public fields are flagged"
+        assert find_state_mutator_problems(helper, "Source/Engine/Foo.h", 2) == [], "headers are rule 4's job"
+        assert find_state_mutator_problems(helper, "Source/Engine/Foo.cpp", 3) == [], "the threshold is data"
         readers = helper.replace("CapState& inoutState ) { inoutState._listGroup.push_back( 1 ); }", "const CapState& state ) { use( state._listGroup ); }")
-        assert check_state_mutators(readers, "Source/Engine/Foo.cpp", 2) == [], "const readers are not counted"
+        assert find_state_mutator_problems(readers, "Source/Engine/Foo.cpp", 2) == [], "const readers are not counted"
         factory = helper.replace("CapState& inoutState ) { inoutState.", "CapState& outState ) { outState.")
-        assert check_state_mutators(factory, "Source/Engine/Foo.cpp", 2) == [], "an outX fill (parser · factory record) is not counted"
+        assert find_state_mutator_problems(factory, "Source/Engine/Foo.cpp", 2) == [], "an outX fill (parser · factory record) is not counted"
         owned = ("class CapState\n{\npublic:\n    void group();\nprivate:\n    vector<int32> _listGroup;\n};\n"
                  "struct FooInternal\n{\n    static void a( CapState& s ) { s._listGroup.clear(); }\n    static void b( CapState& s ) { s._listGroup.clear(); }\n};\n")
-        assert check_state_mutators(owned, "Source/Engine/Foo.cpp", 2) == [], "private fields are not counted"
+        assert find_state_mutator_problems(owned, "Source/Engine/Foo.cpp", 2) == [], "private fields are not counted"
         names = frozenset({"Delegate", "DoneDelegate"})
         bare = "void f()\n{\n    auto d = DoneDelegate::create<&Foo::bar>( this );\n    auto e = sw::Delegate<void( int32 )>::template create( []( int32 ) {} );\n}\n"
-        assert len(check_bare_delegate_create(strip_code(bare), "Source/Engine/Foo.cpp", names)) == 2, "a bare delegate create is flagged"
+        assert len(find_bare_delegate_create_problems(strip_code(bare), "Source/Engine/Foo.cpp", names)) == 2, "a bare delegate create is flagged"
         wrapped = "void f()\n{\n    auto d = SW_DELEGATE_METHOD( DoneDelegate, &Foo::bar, this );\n    auto m = Mesh::create( desc );\n}\n"
-        assert check_bare_delegate_create(strip_code(wrapped), "Source/Engine/Foo.cpp", names) == [], "the macro form and a non-delegate factory pass"
+        assert find_bare_delegate_create_problems(strip_code(wrapped), "Source/Engine/Foo.cpp", names) == [], "the macro form and a non-delegate factory pass"

@@ -36,7 +36,7 @@ from common.command import Command, ScriptContext
 from common.exit_code import ExitCode
 from common.git import run_git
 from lint.asset_guid import META_EXTENSION, make_meta_text, parse_meta
-from lint.asset_reference_scan import FieldConfig, check_working_tree, extract_references, is_referrer, CONTENT_FOLDER, REDIRECT_FILE_NAME, list_index_files, load_config, make_redirect_table_id
+from lint.asset_reference_scan import FieldConfig, find_working_tree_reference_problems, extract_references, is_referrer, CONTENT_FOLDER, REDIRECT_FILE_NAME, list_index_files, load_config, make_redirect_table_id
 
 NAME_CHARACTERS = set("abcdefghijklmnopqrstuvwxyz0123456789_.-/")
 # 옮긴 뒤 옛 경로가 칸 밖에 남았는지 훑는 글 파일 — 경로 칸의 글 에셋 · 문서 · 출처 표 · 테스트 CMake.
@@ -318,7 +318,7 @@ class MoveAssetCommand(Command):
         if args.dry_run:
             return ExitCode.PASSED
 
-        list_problem = check_working_tree(root)
+        list_problem = find_working_tree_reference_problems(root)
         for problem in list_problem:
             print(f"  - {problem}")
         if list_problem:

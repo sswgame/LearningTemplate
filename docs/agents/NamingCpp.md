@@ -215,7 +215,9 @@ PEP 8. Python names do not mirror C++ names; a JSON key or C++ name read as data
 | Classes, exceptions, `TypeVar`s | `PascalCase` |
 | Module and class constants, enum members | `UPPER_CASE`; a function-local constant is a `snake_case` local |
 | Overrides of an outside API | the outside spelling (`setUp`, `do_POST`), listed in `NamingWords.json` `_keep` |
-| CLI subcommands and lint rule ids | `kebab-case` |
+| CLI subcommands and lint rule ids | `kebab-case`; a command's file stem is its name (`lint.py` → `lint`, `linux_verify.py` → `linux-verify`) |
+| Checks | returns problems → `find_<what>_problems`, stops → `require_<what>`, returns its error or verdict → `validate_<what>`, bool → `is_` · `has_`; no `check_` (CMake `CheckXXX`-style probing only) |
+| Exceptions | an error ends in `Error` (`StageFailedError`); a stop signal that is not an error does not (`RunStop`) |
 | JSON keys of Python-owned contracts (`CookContract.json`, hand-read import configs) | `snake_case`; keys read through reflection keep the C++ member name (`_width`) |
 | Shell scripts and functions | `snake_case` |
 
@@ -226,7 +228,7 @@ Shape (Python 3.10):
 - Text I/O names `encoding="utf-8"` (bytes: `"rb"` · `read_bytes()`).
 - `pathlib.Path`; `os.path` only for `normpath`, `relpath`, `commonpath`, `commonprefix`, `expandvars`, `splitext`.
 - `sys.exit(…main())` as the single `__main__` line, never `raise SystemExit(…)` (tests: `unittest.main()`).
-- Under `Scripts/`, a command is one `Command` subclass in one file (`common/command.py`): one-line literal `name` · `help`, `run` returns `ExitCode`, a failure raises `CommandError`. Adding or deleting the file adds or removes the command — no list names it. A lint rule is likewise one `LintRule` subclass in one file (`lint/lint_rule.py`): `inspect` sees one file, `evaluate` turns the findings into problem lines. Commands and rules share code only through a library module, never by importing each other; only a file run by path ends with `sys.exit(XCommand.main())`.
+- Under `Scripts/`, a command is one `Command` subclass in one file (`common/command.py`): one-line literal `name` · `help`, `run` returns `ExitCode`, a failure raises `CommandError`. Adding or deleting the file adds or removes the command — no list names it. A lint rule is likewise one `LintRule` subclass in one file under `lint/rules/` (`lint/lint_rule.py`): `inspect` sees one file, `evaluate` turns the findings into problem lines. Commands and rules share code only through a library module, never by importing each other; only a file run by path ends with `sys.exit(XCommand.main())`.
 - Output is plain `print`. Catch only expected exceptions; `except Exception` only at a boundary that must keep going and reports what it swallowed. A missing required setting stops with `sys.exit`, never `os.environ.get( "X", "<default>" )`.
 
 ### HLSL

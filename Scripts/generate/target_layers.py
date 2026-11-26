@@ -47,7 +47,7 @@ DEV_OPEN_FOLDER_NAME = "devopen"   # `[devopen]` 의 잇는 파일이 사는 껍
 HEADER_TOKEN = "@HEADER@"   # 껍데기 내용 안에서 헤더 경로가 들어갈 자리
 
 
-def check_server_guard_covers_excluded_folders(list_prefix: list[str], list_excluded_folder: Sequence[str]) -> None:
+def require_server_guard_covers_excluded_folders(list_prefix: list[str], list_excluded_folder: Sequence[str]) -> None:
     """서버 게이트가 서버가 짓지 않는 엔진 폴더를 모두 막는지 본다 — 빠지면 서버 구성이 짓지 않는 헤더를 읽어 링크에서야 드러난다."""
     list_missing = [f"Engine/{folder}" for folder in list_excluded_folder if f"Engine/{folder}" not in list_prefix]
     if list_missing:
@@ -157,7 +157,7 @@ def write_guard_stubs(stub_dir: Path, gate_name: str, list_header: list[str], co
     stamp_path.write_text("\n".join([content_digest, *sorted(set_current)]) + "\n", encoding="utf-8")
 
 
-def check_allow_closure(source_dir: Path, gate_name: str, list_allowed: list[str], set_denied: set[str]) -> None:
+def require_allow_closure(source_dir: Path, gate_name: str, list_allowed: list[str], set_denied: set[str]) -> None:
     """연 헤더가 막힌 헤더를 include 하면 멈춘다 — 컴파일 오류가 아니라 표를 고칠 자리로 알린다. 연 헤더마다 보므로 전이도 잡힌다."""
     list_problem: list[str] = []
     for header in list_allowed:
@@ -194,7 +194,7 @@ def collect_guards(source_dir: Path, map_rule: dict[str, list[str]], map_allow: 
         list_denied = [header for header in list_header
                       if (any(header.startswith(prefix + "/") for prefix in list_prefix) or is_under_folder_name(header, set_folder_name)) and header not in set_allowed]
         if set_allowed:
-            check_allow_closure(source_dir, gate_name, sorted(set_allowed), set(list_denied))
+            require_allow_closure(source_dir, gate_name, sorted(set_allowed), set(list_denied))
         if gate_name == SERVER_GUARD_NAME:
             message = f"Target gate '{gate_name}' forbids this header (Config/Rules/Layers/TargetLayers.toml): a dedicated server does not build client-only code (Engine Audio/Renderer/UI, Client/ folders). Call it through a seam (GameSound, IHUDViewModelBinder, IGameClientPart, IEngineRenderDriver ...) or move the caller into a Client/ folder."
         elif gate_name == CLIENT_GUARD_NAME:
@@ -241,7 +241,7 @@ def generate_target_layers(output_path: Path) -> None:
     except (OSError, tomllib.TOMLDecodeError, KeyError) as exception:
         raise GeneratorError(f"{RULE_FILE.name}: 읽지 못했다 ({exception!r}) — [gate] · [gatefolder] · [devopen] · [allow] 표와 [gate] {SERVER_GUARD_NAME} · {CLIENT_GUARD_NAME} 가 있어야 한다") from exception
     project_root = get_project_root()
-    check_server_guard_covers_excluded_folders(list_server_prefix, SERVER_EXCLUDED_ENGINE_FOLDERS)
+    require_server_guard_covers_excluded_folders(list_server_prefix, SERVER_EXCLUDED_ENGINE_FOLDERS)
     source_dir = project_root / "Source"
     map_gate = collect_guards(source_dir, map_rule, map_allow, map_folder)
     stub_dir = output_path.parents[3] / STUB_FOLDER_NAME   # <빌드>/generated/sw/config/TargetLayers.cmake → <빌드>/gates

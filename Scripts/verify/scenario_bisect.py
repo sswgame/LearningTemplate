@@ -30,7 +30,7 @@ from common import app_arguments  # noqa: E402
 from common.command import Command, ScriptContext  # noqa: E402
 from common.paths import get_build_dir  # noqa: E402
 from common.run_process import build_preset_or_exit  # noqa: E402
-from verify.scenario_determinism import check_determinism, make_runner  # noqa: E402
+from verify.scenario_determinism import find_determinism_problems, make_runner  # noqa: E402
 from verify.history_store import DEFAULT_DATABASE, open_database  # noqa: E402
 from verify.scenario_reports import REPO, collect_expected_stages, describe_code_change, describe_stage_failures, find_first_bad_step, find_latest_per_backend_folder, make_run_report_folder, minimize_stages, print_advance_steps, print_golden_coverage, print_golden_margins, read_backend_chain_order, read_backend_reports, read_run_reports, read_scenario_name, record_rerun, resolve_target, retry_failed_stages, select_failed_stages, stage_failed_in_reports  # noqa: E402
 
@@ -125,7 +125,7 @@ class ScenarioBisectCommand(Command):
         target_index, target_name = resolve_target({index: read_scenario_name(path) for index, path in enumerate(paths)}, args.stage)
         if args.determinism:
             runner = make_runner(command, target_name, args.backend, build_dir, build_dir / 'Bin')
-            list_problem = check_determinism(paths, target_index, target_name, build_dir / 'Bin' / 'Saved' / 'Automation', runner)
+            list_problem = find_determinism_problems(paths, target_index, target_name, build_dir / 'Bin' / 'Saved' / 'Automation', runner)
             for problem in list_problem:
                 print(f'{args.backend} {target_name}: {problem}')
             print(f'{args.backend} {target_name}: {"앞 단계에 따라 다르다" if list_problem else "세 실행의 사진이 바이트까지 같다"}')

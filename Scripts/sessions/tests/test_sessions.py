@@ -39,8 +39,8 @@ class NetChecks(unittest.TestCase):
         rider = SimpleNamespace(name="first", records=lambda: {"F.X": -1.4305115e-06, "F.Z": 2.0})
         near = SimpleNamespace(name="second", records=lambda: {"R.X": 0.1, "R.Z": 2.1})
         far = SimpleNamespace(name="second", records=lambda: {"R.X": 0.1, "R.Z": 2.5})
-        self.assertEqual(login_connect_session._check_same_spot(rider, ("F.X", "F.Z"), near, ("R.X", "R.Z")), [])
-        self.assertEqual(len(login_connect_session._check_same_spot(rider, ("F.X", "F.Z"), far, ("R.X", "R.Z"))), 1)
+        self.assertEqual(login_connect_session._find_same_spot_problems(rider, ("F.X", "F.Z"), near, ("R.X", "R.Z")), [])
+        self.assertEqual(len(login_connect_session._find_same_spot_problems(rider, ("F.X", "F.Z"), far, ("R.X", "R.Z"))), 1)
 
     def test_server_config_copy_takes_free_ports(self) -> None:
         with tempfile.TemporaryDirectory() as folder:

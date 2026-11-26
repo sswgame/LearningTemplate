@@ -41,13 +41,13 @@ def run_rename(root: Path, list_argument: list[str]) -> int:
 class RenameRuleTest(unittest.TestCase):
     def test_pair_and_text_rules(self) -> None:
         # 예시 이름은 이 도구의 치환이 다시 바꾸지 않게 표지를 단다.
-        assert rename_symbol.check_pair("isCursorCaptured", "shouldShowCursor") is None  # keep-old-name
-        assert rename_symbol.check_pair("reads", "uses") is not None, "낱말 하나는 거절"
-        assert rename_symbol.check_pair("reads", "uses", allow_common_name=True) is None
-        assert rename_symbol.check_pair("When", "Condition") is not None, "흔한 이름은 거절"
-        assert rename_symbol.check_pair("_bNot", "_bNegate") is None, "멤버 머리 이름은 낱말 하나여도 받는다"
-        assert rename_symbol.check_pair("swText", "text", rename_symbol.CMAKE_SCOPE) is None, "CMake 낙타 지역 변수는 짧아도 받는다"
-        assert rename_symbol.check_pair("target", "goal", rename_symbol.CMAKE_SCOPE) is not None, "CMake 소문자 한 낱말은 명령 · 키워드와 겹친다"
+        assert rename_symbol.validate_pair("isCursorCaptured", "shouldShowCursor") is None  # keep-old-name
+        assert rename_symbol.validate_pair("reads", "uses") is not None, "낱말 하나는 거절"
+        assert rename_symbol.validate_pair("reads", "uses", allow_common_name=True) is None
+        assert rename_symbol.validate_pair("When", "Condition") is not None, "흔한 이름은 거절"
+        assert rename_symbol.validate_pair("_bNot", "_bNegate") is None, "멤버 머리 이름은 낱말 하나여도 받는다"
+        assert rename_symbol.validate_pair("swText", "text", rename_symbol.CMAKE_SCOPE) is None, "CMake 낙타 지역 변수는 짧아도 받는다"
+        assert rename_symbol.validate_pair("target", "goal", rename_symbol.CMAKE_SCOPE) is not None, "CMake 소문자 한 낱말은 명령 · 키워드와 겹친다"
         text, count = rename_symbol.replace_word("isCursorCaptured(); bool isCursorCapturedLater; x.isCursorCaptured", "isCursorCaptured", "shouldShowCursor")  # keep-old-name
         assert count == 2 and "isCursorCapturedLater" in text, (text, count)
         source = 'Ogg a; // Ogg "x\nf( "Ogg", R"(Ogg)", \'"\' ); /* Ogg */ Ogg b;\n#include "A/Ogg.h"\nOgg c; // keep-old-name\n'

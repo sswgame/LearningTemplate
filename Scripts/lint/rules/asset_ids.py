@@ -16,7 +16,7 @@ from typing import Mapping
 from common.command import Command, ScriptContext
 from common.exit_code import ExitCode
 from lint.asset_guid import (
-    CONTENT_FOLDER, FOUND, GUID_LENGTH, INVALID, MISSING, add_identity_redirect, check_staged_asset_identity, collect_issues, create_guid,
+    CONTENT_FOLDER, FOUND, GUID_LENGTH, INVALID, MISSING, add_identity_redirect, find_staged_asset_guid_problems, collect_issues, create_guid,
     fix_worktree, is_guid, iterate_imported_sources, list_worktree_ids, load_rules, make_meta_text, make_output_guid, make_output_id, parse_meta,
     read_header, read_worktree_texts, redirect_identity, write_header,
 )
@@ -34,7 +34,7 @@ class AssetIdsRule(LintRule):
     def evaluate(self, scope: LintScope, found: Mapping[str, object]) -> list[str]:
         """커밋 훅은 스테이지의 바뀐 파일과 그 짝만, 저장소 전체면 작업 트리 전체."""
         if not scope.whole_repo:
-            return check_staged_asset_identity(self.root, scope) or []
+            return find_staged_asset_guid_problems(self.root, scope) or []
         rules = load_rules(self.root)
         list_issue, _ = collect_issues(read_worktree_texts(self.root, list_worktree_ids(self.root), rules), rules)
         return [str(issue) for issue in list_issue]

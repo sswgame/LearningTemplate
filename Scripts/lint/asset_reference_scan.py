@@ -341,7 +341,7 @@ def collect_reference_problems(map_reference: dict[str, list[Reference]], assets
     return list_problem
 
 
-def check_working_tree(project_root: Path) -> list[str]:
+def find_working_tree_reference_problems(project_root: Path) -> list[str]:
     """작업 트리 전체 검사(손으로 돌릴 때) — 인덱스의 파일 목록, 작업 트리의 내용."""
     config = load_config(project_root)
     list_index = [path for path in list_index_files(project_root) if (project_root / path).is_file()]

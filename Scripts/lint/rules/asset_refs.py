@@ -12,7 +12,7 @@ from typing import Any, Mapping
 from common.command import Command, ScriptContext
 from common.exit_code import ExitCode
 from lint.asset_guid import RULES_PATH
-from lint.asset_reference_scan import AssetSet, CONFIG_PATH, CONTENT_FOLDER, GENERATED_PATH, Reference, check_working_tree, collect_reference_problems, extract_references, is_checked_path, is_referrer, load_config, read_index_blobs, resolves
+from lint.asset_reference_scan import AssetSet, CONFIG_PATH, CONTENT_FOLDER, GENERATED_PATH, Reference, find_working_tree_reference_problems, collect_reference_problems, extract_references, is_checked_path, is_referrer, load_config, read_index_blobs, resolves
 from lint.index_cache import Facts, get_index_keys, open_facts
 from lint.lint_rule import LintRule
 from lint.lint_scope import LintScope
@@ -58,7 +58,7 @@ class AssetRefsCommand(Command):
     help = "작업 트리의 에셋 참조가 모두 있는지 본다(커밋 전 검사 · App --check-asset-refs 와 같은 칸 목록)"
 
     def run(self, context: ScriptContext, args: argparse.Namespace) -> int:
-        list_problem = check_working_tree(context.root)
+        list_problem = find_working_tree_reference_problems(context.root)
         for problem in list_problem:
             print(f"  - {problem}")
         print(f"[AssetReferences] {'FAIL' if list_problem else 'OK'} — 끊어진 참조 {len(list_problem)}건")

@@ -464,7 +464,7 @@ def run_new_scenario_determinism(list_item: Sequence[CtestItem], map_scenario: d
 
     바뀐 시나리오는 빼고 새것만, 백엔드 하나에서 돈다 — 앞 단계에 달린 값은 게임 쪽에서 생겨 백엔드와 무관하고, 시나리오 하나에 기동 셋 · 단계 다섯이 든다.
     나머지 시나리오는 체인이 위치를 섞어 돌므로 골든이 본다."""
-    from verify.scenario_determinism import check_determinism, make_runner
+    from verify.scenario_determinism import find_determinism_problems, make_runner
     from verify.scenario_reports import read_scenario_name
     list_row: list[ChangedRow] = []
     for scenario, list_changed in sorted(map_scenario.items()):
@@ -478,7 +478,7 @@ def run_new_scenario_determinism(list_item: Sequence[CtestItem], map_scenario: d
         working = Path(item.working_directory) if item.working_directory else build_dir
         runner = make_runner(item.command, name, DETERMINISM_BACKEND, build_dir, working)
         print(f"[Changed] run {scenario}: determinism ({DETERMINISM_BACKEND})", flush=True)
-        list_problem = check_determinism(list_path, list_path.index(scenario), name, working / "Saved" / "Automation", runner)
+        list_problem = find_determinism_problems(list_path, list_path.index(scenario), name, working / "Saved" / "Automation", runner)
         list_row.append(ChangedRow(f"{scenario} (결정성)", describe_change(list_changed), "Determinism" if list_problem else "",
                                    "; ".join(list_problem) or "통과", find_branch(list_changed[0].path)))
     return list_row
