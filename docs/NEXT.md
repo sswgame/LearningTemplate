@@ -15,7 +15,7 @@
 ### 통합 중(main, push 전)
 
 - 합친 것: .cpp 리플렉션 · 헤더만 읽던 도구, Core 정리(C1 · normalize 제자리 판 삭제), 렌더 데이터 R1~R4, E1 · E2a · E2b · P2, E3 · E5 · H1~H4 · D1a · D1b, G2 · E4, ReflectionParser 정리 · 최적화 2 개.
-- 남은 검증: Release · Server · Shipping 빌드 → 단위 테스트 → ReflectionParser 단계 시간(기준 106 회 · 165 초 · 최대 7.4 초)으로 최적화 2 개 유지 여부 → preflight(렌더 골든 네 백엔드) → push.
+- 남은 검증: 단위 테스트 두 실패(렌더 XML 도우미 · 현지화 테스트 표) 수정 확인 → preflight(렌더 골든 네 백엔드) → push. ReflectionParser 최적화는 재서 정했다(이름공간 건너뛰기 되돌림, 스탬프 한 번 읽기는 정리로 남김).
 - 그림 확인: 카메라 흔들림 · 메시 모디파이어 노이즈(Core 결정성 TU 로 합침), RigIK 정반대 방향(-q), TAA · 구름 기록 칸, 파이프라인 선택 경로.
 - 판단 남음: TAA 출력의 앨리어싱 제외를 지울지(`-gv_transientAliasing=0` 비교), `--gather-text --check` 가 지면 수집기를 다시 돌려 커밋.
 
@@ -34,6 +34,7 @@
 
 ### 아직 아무도 맡지 않은 몫 [코드]
 
+- ReflectionParser 파싱 단계: 104 회 CPU 합 약 290 초 중 libclang parse 가 95 % 다(GameFramework 한 실행 parse 42~53 초, Engine 23~25 초). 모듈 안 입력이 같은 앞부분(pch · 엔진 헤더)을 매번 파싱한다 — 모듈마다 앞부분을 한 번 파싱해 나눠 쓰기(언리얼 UHT 는 파싱 자체가 가볍고, libclang 은 preamble · PCH 재사용이 정본)를 측정과 함께.
 - 보류(조사 먼저): ReflectionValidation → TypeInfo, PROPERTY 검증기를 개발 전용으로 빼도 배포 안전이 지켜지는가.
 - AssertDialog 합치기 — 사용자에게 물을 것.
 - 나머지 `sw_*` CMake 함수(모듈 매니페스트 · 층 문지기 · 쿠킹 표)의 구성 단계 경로 테스트.
