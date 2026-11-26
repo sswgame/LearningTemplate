@@ -23,18 +23,18 @@
 
 | 갈래 · 워크트리 | 몫 |
 | --- | --- |
-| w-cpp-reflect · LT-wt/cppreflect | 파서 정의 · include 를 타깃 속성에서(671f8c8988 · fd2dac7d65 끝), 컴파일 옵션 · 옵션 표 엄격화 · 구성 경로 ctest(9d9872a619 · 4de5136b58 · 1f9504d287 끝), Core (c) 열거 이름 6 개(9d545b213c 끝), 남은 (a) 열거 이름 23 건 |
+| w-cpp-reflect · LT-wt/cppreflect | 파서 정의 · include 를 타깃 속성에서(671f8c8988 · fd2dac7d65 끝), 컴파일 옵션 · 옵션 표 엄격화 · 구성 경로 ctest(9d9872a619 · 4de5136b58 · 1f9504d287 끝), Core (c) 열거 이름 · (a) 23 건(9d545b213c · 8214df6dac · 7b6953c4d2 끝 — 바꿈 2 · 이미 됨 8 · 데이터 철자라 둠 13), 파싱 단계 앞부분 재사용 |
 | w-enum-meta · LT-wt/enummeta | ENUM 잎 헤더 · 열거형 둘(2898146f6c 끝), 키트별 현지화 표(모듈 단위 탑재 · 수집 대상 · 쿠킹 · 표 이전), AssetTypeDef 접미사 중복(AudioPlayableAsset) |
 | w-gf-dev · LT-wt/gfdev | 배포 매크로 오류 · 확장자 글 · 내비 베이크(1994afb762 · 300285e7e5 · d46c67287a 끝), 에디터 `.hlsl` · `.hlsli` 글 셋, 개발 구성에서도 등록 자리 막기 |
 | w-pimpl · LT-wt/pimpl | P1 · P3 · P4(bf52a2d679 · 32ac84a437 · ac9a1f1bf7 끝), 렌더 R4 나머지(쿠킹 컴파일 스트리핑 · 패치 팩 색인 합치기 · 색인 첫 사용처) |
-| w-devtools-merge · LT-wt/devtoolsmerge | T1(605e855120 · 1eeddfc3ae 끝), PE 헤더 · 단일 헤더 4 개(7cd17031ac · 432e884715 · 7049625e66 끝), 리플렉션 형식 단일 .cpp 헤더 약 45 개, VulkanRHISamplerPreset |
+| w-devtools-merge · LT-wt/devtoolsmerge | T1(605e855120 · 1eeddfc3ae 끝), PE 헤더 · 단일 헤더 43 개 · VulkanRHISamplerPreset(…7049625e66 · 68412caa1e~2a4f7ba666 끝), 남은 단일 헤더 7 개 |
 | w-server-subsystem · LT-wt/serversub | 6 절 서버 서비스를 모듈 서브시스템으로 |
 | w-shaderreload · LT-wt/shaderreload | 셰이더 리로드 · shortcut · 노이즈 대조(끝), 나머지 sw_* CMake 함수 구성 경로 테스트 |
 | w-engine-owner · LT-wt/engineowner | 끝남(3c5d1c924a 까지) — 다음 묶음에 합친다 |
 
 ### 아직 아무도 맡지 않은 몫 [코드]
 
-- ReflectionParser 파싱 단계: 104 회 CPU 합 약 290 초 중 libclang parse 가 95 % 다(GameFramework 한 실행 parse 42~53 초, Engine 23~25 초). 모듈 안 입력이 같은 앞부분(pch · 엔진 헤더)을 매번 파싱한다 — 모듈마다 앞부분을 한 번 파싱해 나눠 쓰기(언리얼 UHT 는 파싱 자체가 가볍고, libclang 은 preamble · PCH 재사용이 정본)를 측정과 함께.
+- 소문자 데이터 철자 열거 7 건(PairedAnimationAlign · FracturePattern · FractureVolume · SubLevelState · FacingDirection · AppearancePartKind · CookInputKind): 데이터를 열거자 철자로 다시 쓰면 이름 switch 를 걷을 수 있다.
 - 보류(조사 먼저): ReflectionValidation → TypeInfo, PROPERTY 검증기를 개발 전용으로 빼도 배포 안전이 지켜지는가.
 - AssertDialog 합치기 — 사용자에게 물을 것.
 
