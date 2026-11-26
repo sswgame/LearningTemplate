@@ -86,7 +86,7 @@ EXPLICIT_NAME = re.compile(r'\bName\s*=\s*"([^"]+)"')
 
 def make_serialized_name(member: str) -> str:
     """멤버 이름의 XML 속성 · JSON 키 이름 — `XMLFields::getAttributeName`(Source/Engine/Serialization/XML/XMLFields.cpp) ·
-    `makeXMLAttributeName`(ReflectionParser/ReflectionPipeline.cpp)과 같은 규칙이다. 규칙을 바꾸면 셋을 함께 고친다."""
+    `makeXMLAttributeName`(ReflectionParser/Run/ReflectionPipeline.cpp)과 같은 규칙이다. 규칙을 바꾸면 셋을 함께 고친다."""
     if not member.startswith("_"):
         return member
     name = member[1:]

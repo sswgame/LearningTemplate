@@ -1,0 +1,192 @@
+#include "pch.h"
+
+#include "Programs/ReflectionParser/TypeMap/TypeNameMap.h"
+
+#include "Core/String/StringBuilder.h"
+#include "Core/String/StringUtil.h"
+
+#include "Programs/ReflectionParser/TypeMap/TypeSpelling.h"
+
+namespace sw
+{
+    TypeNameMap::TypeNameMap()
+        : _mapAliasToCanonical{}
+        , _listStripPrefix{}
+        , _mapTraits{}
+        , _bLoaded{ SW_FALSE }
+        , _reserved{ 0 }
+    {
+    }
+
+    void TypeNameMap::clear()
+    {
+        _mapAliasToCanonical.clear();
+        _mapTraits.clear();
+        _bLoaded = SW_FALSE;
+    }
+
+    void TypeNameMap::registerTraits( const string& canonical, const BuiltinTypeTraits& traits )
+    {
+        _mapTraits.insert_or_assign( canonical, traits );
+    }
+
+    const BuiltinTypeTraits* TypeNameMap::findTraits( const string& canonical ) const
+    {
+        const auto it = _mapTraits.find( canonical );
+        return it != _mapTraits.end() ? &it->second : nullptr;
+    }
+
+    bool TypeNameMap::isPacked( const string& canonical ) const
+    {
+        const BuiltinTypeTraits* pTraits = findTraits( canonical );
+        return pTraits != nullptr && pTraits->_bPacked == SW_TRUE;
+    }
+
+    void TypeNameMap::addKey( const string& key, const string& canonical )
+    {
+        if ( key.empty() )
+            return;
+        _mapAliasToCanonical.insert_or_assign( key, canonical );
+    }
+
+    void TypeNameMap::registerEntry( const string& canonical, const string& nameSpace,
+                                     const vector<string>& aliases )
+    {
+        if ( canonical.empty() )
+            return;
+
+        addKey( canonical, canonical );
+        if ( nameSpace.empty() == false )
+        {
+            StringBuilder<constant::buffer::kMax128> qualified;
+            qualified.appendFormat( "%#::%#", nameSpace, canonical );
+            addKey( string( qualified.view() ), canonical );
+        }
+
+        for ( const string& alias : aliases )
+        {
+            addKey( alias, canonical );
+            if ( nameSpace.empty() == false )
+            {
+                StringBuilder<constant::buffer::kMax128> qualified;
+                qualified.appendFormat( "%#::%#", nameSpace, alias );
+                addKey( string( qualified.view() ), canonical );
+            }
+        }
+    }
+
+    string_view TypeNameMap::stripDecorations( string_view spelling ) const
+    {
+        spelling = StringUtil::trim( spelling );
+
+        bool bStripped{ true };
+        while ( bStripped && spelling.empty() == false )
+        {
+            bStripped = false;
+            for ( const string& prefix : _listStripPrefix )
+            {
+                if ( StringUtil::startsWith( spelling, prefix ) )
+                {
+                    spelling.remove_prefix( prefix.size() );
+                    spelling  = StringUtil::trim( spelling );
+                    bStripped = true;
+                }
+            }
+        }
+
+        while ( spelling.empty() == false && spelling.back() == '&' )
+        {
+            spelling.remove_suffix( 1 );
+            spelling = StringUtil::trim( spelling );
+        }
+        return spelling;
+    }
+
+    bool TypeNameMap::isKnown( const string& clangSpelling ) const
+    {
+        string_view key = stripDecorations( clangSpelling );
+        if ( _mapAliasToCanonical.find( string( key ) ) != _mapAliasToCanonical.end() )
+            return true;
+        constexpr string_view kSwPrefix = "sw::";
+        if ( StringUtil::startsWith( key, kSwPrefix ) )
+            key = key.substr( kSwPrefix.size() );
+        return _mapAliasToCanonical.find( string( key ) ) != _mapAliasToCanonical.end();
+    }
+
+    string TypeNameMap::normalize( const string& clangSpelling ) const
+    {
+        // 반환 대상은 이 하나다. 이름 있는 반환 객체가 여럿이면 NRVO 가 걸리지 않아
+        // 재귀 호출마다 string 이 복사된다(이 함수는 템플릿 인자마다 자기를 다시 부른다).
+        string result( stripDecorations( clangSpelling ) );
+        if ( result.empty() )
+            return result;
+
+        // 1) std::__cxx11:: 인라인 네임스페이스 제거 (Linux Clang libstdc++ 대응)
+        constexpr string_view kCxx11Prefix = "std::__cxx11::";
+        if ( StringUtil::startsWith( result, kCxx11Prefix ) )
+        {
+            StringBuilder<constant::buffer::kMax256> stripped;
+            stripped.appendFormat( "std::%#", string_view( result ).substr( kCxx11Prefix.size() ) );
+            result = string( stripped.view() );
+        }
+
+        // 2) 템플릿 타입(예: map<K, V>, vector<T>)이면 재귀적으로 정규화
+        const size_t openAngle             = result.find( '<' );
+        const size_t closeAngle            = result.rfind( '>' );
+        const bool   bHasTemplateArguments = openAngle != string::npos && closeAngle != string::npos && openAngle < closeAngle;
+        if ( bHasTemplateArguments )
+        {
+            const string stem  = string{ StringUtil::trim( string_view{ result }.substr( 0, openAngle ) ) };
+            const string inner = string{ StringUtil::trim( string_view{ result }.substr( openAngle + 1, closeAngle - openAngle - 1 ) ) };
+
+            const string         normStem = normalize( stem );
+            const vector<string> listArg  = TypeSpelling::splitCommaRespectingAngles( inner );
+
+            StringBuilder<constant::buffer::kMax256> rebuilt;
+            rebuilt.append( normStem );
+            rebuilt.append( '<' );
+            for ( size_t index = 0; index < listArg.size(); ++index )
+            {
+                if ( index > 0 )
+                    rebuilt.append( ", " );
+                rebuilt.append( normalize( listArg[index] ) );
+            }
+            rebuilt.append( '>' );
+            return string( rebuilt.view() );
+        }
+
+        // 3) 사전(ReflectBuiltins 등)에서 직접 일치 확인
+        const auto it = _mapAliasToCanonical.find( result );
+        if ( it != _mapAliasToCanonical.end() )
+        {
+            result = it->second;
+            return result;
+        }
+
+        // 4) sw:: 로 시작하면 엔진 타입이다. libclang 16 미만(리눅스 CI)은 한정 없이 적은 타입도 FQN(`sw::editor::Foo`)으로 내보내고,
+        //    16 이상은 적힌 그대로(`Foo`)다. 런타임은 FQN 과 짧은 이름만 찾으므로 하위 네임스페이스가 남으면(`editor::Foo`) 잎 이름으로 맞춘다.
+        constexpr string_view kSwPrefix = "sw::";
+        if ( StringUtil::startsWith( result, kSwPrefix ) )
+        {
+            result                = result.substr( kSwPrefix.size() );
+            const auto itStripped = _mapAliasToCanonical.find( result );
+            if ( itStripped != _mapAliasToCanonical.end() )
+                result = itStripped->second;
+            else
+                result = string{ TypeSpelling::scopeLeaf( result ) };
+            return result;
+        }
+
+        // 5) 마지막으로 scopeLeaf 로 다시 찾는다
+        const string_view bare = TypeSpelling::scopeLeaf( result );
+        if ( bare != result )
+        {
+            const auto itBare = _mapAliasToCanonical.find( string{ bare } );
+            if ( itBare != _mapAliasToCanonical.end() )
+                result = itBare->second;
+        }
+
+        return result;
+    }
+
+} // namespace sw

@@ -97,5 +97,6 @@
   {"old": "_fixedCodec", "new": "_layoutSchema", "why": "LayoutSchema"},
   {"old": "fixedCodec", "new": "layoutSchema", "why": "LayoutSchema"},
   {"old": "bFixedPlanned", "new": "bLayoutPlanned", "why": "LayoutSchema"},
-  {"old": "FormatDef", "new": "FormatDesc", "why": "코드 상수로 등록하는 서술이라 Desc(D3D12 _DESC) — Def 는 데이터 파일 저작 정의만"}
+  {"old": "FormatDef", "new": "FormatDesc", "why": "코드 상수로 등록하는 서술이라 Desc(D3D12 _DESC) — Def 는 데이터 파일 저작 정의만"},
+  {"old": "ParserUtil", "new": "TypeSpelling", "why": "형식 철자 다루기 — 하는 일의 이름(TypeMap/TypeSpelling.h)", "allowExisting": true}
 ]

@@ -905,10 +905,10 @@
     "Source/Programs/OnlineLoadBot/LoadBot.cpp": {"float": 1},
     "Source/Programs/OnlineLoadBot/LoadBotMain.cpp": {"minus-one": 1},
     "Source/Programs/OnlineLoadBot/LoadBotMetrics.cpp": {"integer": 2},
-    "Source/Programs/ReflectionParser/EmitTemplateStore.cpp": {"integer": 1},
-    "Source/Programs/ReflectionParser/PropertyResolver.cpp": {"integer": 1},
+    "Source/Programs/ReflectionParser/Emit/EmitTemplateStore.cpp": {"integer": 1},
+    "Source/Programs/ReflectionParser/Parse/PropertyResolver.cpp": {"integer": 1},
     "Source/Programs/ReflectionParser/ReflectionParser.cpp": {"float": 1},
-    "Source/Programs/ReflectionParser/SourceTokens.cpp": {"minus-one": 1},
+    "Source/Programs/ReflectionParser/Parse/SourceTokens.cpp": {"minus-one": 1},
     "Source/Server/Windows/WindowsServiceHost.cpp": {"minus-one": 1}
   }
 }
