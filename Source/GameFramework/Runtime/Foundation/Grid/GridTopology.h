@@ -1,6 +1,6 @@
 /**
  * @file GridTopology.h
- * @brief 2D 셀 격자의 모양(셀 번호, 경계, 이웃 순서)과, 너비 우선 탐색과 표시에 쓰는 재사용 스크래치를 정의합니다.
+ * @brief 2D 셀 격자의 모양(셀 번호, 경계, 이웃 순서)과, 너비 우선 탐색과 표시에 쓰는 재사용 스크래치, A* · 다익스트라의 열린 목록 항목(`GridOpenEntry`)을 정의합니다.
  */
 #pragma once
 #include "Core/Container/vector.h"
@@ -183,5 +183,20 @@ namespace sw
         vector<int32>  _listQueue;  ///< 본 순서. `_head` 앞은 이미 꺼냈다
         size_t         _head{ 0 };
         uint32         _generation{ 0u };
+    };
+
+    /**
+     * @struct GridOpenEntry
+     * @brief 열린 목록 항목입니다. 비용이 작은 것이 위에 오는 최소 힙으로 쓴다(`std::push_heap` · `std::pop_heap` 에 `isWorse` 를 넘긴다).
+     * @tparam TCost 비용 형식(경로 찾기와 흐름장은 float32, 이동 범위는 int32)
+     */
+    template <typename TCost>
+    struct GridOpenEntry
+    {
+        TCost _cost;
+        int32 _index;
+
+        /** @brief @p lhs 가 @p rhs 보다 비싸면 true 입니다(최소 힙 비교자). */
+        static bool isWorse( const GridOpenEntry& lhs, const GridOpenEntry& rhs ) { return lhs._cost > rhs._cost; }
     };
 } // namespace sw

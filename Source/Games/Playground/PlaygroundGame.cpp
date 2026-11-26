@@ -31,7 +31,7 @@
 #include "GameFramework/Kits/Feature/Content/ModSupport/ModSession.h"
 #include "GameFramework/Runtime/Foundation/Flow/GameInstance.h"
 #include "GameFramework/Runtime/Foundation/Flow/IContentConfiguration.h"
-#include "GameFramework/Runtime/Foundation/Flow/IGameClientPart.h"
+#include "GameFramework/Runtime/Foundation/Flow/IGame.h"
 #include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Minigame/IMinigameMatchmaking.h"
 #include "GameFramework/Runtime/Foundation/Save/GameStateSnapshot.h"

@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Runtime/Foundation/Random/WorldSeed.h"
+#include "GameFramework/Runtime/Foundation/Random/GameRandom.h"
 
 #include "Core/Serialization/ByteStream.h"
 #include "Core/UUID/UUID.h"

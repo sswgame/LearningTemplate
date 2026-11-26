@@ -14,7 +14,7 @@
 #include "Engine/Serialization/Inherit/ResourceComposition.h"
 
 #include "GameFramework/Runtime/Foundation/Flow/GameInstance.h"
-#include "GameFramework/Runtime/Foundation/Flow/IGameDevPart.h"
+#include "GameFramework/Runtime/Foundation/Flow/IGame.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameSettings.h"
 #include "GameFramework/Runtime/Foundation/Save/GameLocalStore.h"
 #include "GameFramework/Runtime/Foundation/Save/GameSaveSlots.h"

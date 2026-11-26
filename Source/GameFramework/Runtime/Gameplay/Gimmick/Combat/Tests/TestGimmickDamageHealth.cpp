@@ -12,7 +12,7 @@
 #include "GameFramework/Runtime/Gameplay/Ability/AbilitySystemComponent.h"
 #include "GameFramework/Runtime/Gameplay/Ability/Tests/CombatAttributeTestUtil.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/Combat/ExplosiveBarrelComponent.h"
-#include "GameFramework/Runtime/Gameplay/Gimmick/Combat/GimmickDamageUtil.h"
+#include "GameFramework/Runtime/Gameplay/Gimmick/GimmickUtil.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/Trigger/GimmickSensorComponent.h"
 
 using namespace sw;
@@ -48,10 +48,10 @@ SW_TEST_CASE( GimmickDamageHealthTest, HealthSourceAndSensorBothReceive )
     SW_REQUIRE_NOT_NULL( pSensor );
     manager.beginPlay();
 
-    GimmickDamageUtil::applyDamage( *pStats->getOwner(), pCrate, hashed_string( "Hazard" ), 25.0f );
+    GimmickUtil::applyDamage( *pStats->getOwner(), pCrate, hashed_string( "Hazard" ), 25.0f );
     SW_EXPECT_NEAR( 75.0f, Internal::getHealth( *pStats ), 1.0e-4f );
 
-    GimmickDamageUtil::applyDamage( *pCrate, nullptr, hashed_string( "Hazard" ), 10.0f ); // 체력 원천이 없는 센서 대상 — 센서만 받고 조용히 지나간다
+    GimmickUtil::applyDamage( *pCrate, nullptr, hashed_string( "Hazard" ), 10.0f ); // 체력 원천이 없는 센서 대상 — 센서만 받고 조용히 지나간다
     SW_EXPECT_EQUAL( 10.0f, pSensor->consumeDamage() );
     SW_EXPECT_NEAR( 75.0f, Internal::getHealth( *pStats ), 1.0e-4f );
 }

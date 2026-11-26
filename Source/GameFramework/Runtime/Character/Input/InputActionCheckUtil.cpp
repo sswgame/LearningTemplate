@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Runtime/Character/Control/InputActionCheckUtil.h"
+#include "GameFramework/Runtime/Character/Input/InputActionCheckUtil.h"
 
 #include "Engine/Input/Map/InputMap.h"
 
