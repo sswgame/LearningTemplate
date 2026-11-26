@@ -100,3 +100,15 @@ SW_TEST_CASE( AudioClipCacheTest, EvictionWalksRecencyOrderSkippingPlaying )
     SW_EXPECT_TRUE( cache.findLoadState( hashed_string( "c.wav" ) ).has_value() );
     SW_EXPECT_EQUAL( uint64{ 1000 }, cache.getCachedBytes() );
 }
+
+/**
+ * @brief [AudioClipCacheTest] 소리 파일의 코덱은 종류의 접미사 칸이 정한다(대소문자 무시) — 디코더 고르기가 확장자 글을 다시 비교하지 않는다
+ * @details 음성 대조: `.wav` 줄의 형식 칸을 빠뜨리면 기본값(Vorbis)이 되어 WAV 기대가 진다. 접미사 찾기가 대소문자를 가리면 `.OGG` 기대가 진다.
+ */
+SW_TEST_CASE( AudioClipCacheTest, FileFormatComesFromTheSuffixRow )
+{
+    SW_EXPECT_TRUE( AudioClipData::findFileFormat( "game/sfx/step.OGG" ) == AudioFileFormat::Vorbis );
+    SW_EXPECT_TRUE( AudioClipData::findFileFormat( "game/sfx/step.wav" ) == AudioFileFormat::WAV );
+    SW_EXPECT_TRUE( AudioClipData::findFileFormat( "game/music/theme.mp3" ) == AudioFileFormat::Other );
+    SW_EXPECT_TRUE( AudioClipData::findFileFormat( "game/sfx/step.txt" ) == AudioFileFormat::Other );
+}

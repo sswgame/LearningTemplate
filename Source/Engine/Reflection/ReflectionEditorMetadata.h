@@ -89,8 +89,10 @@ namespace sw
     /** @brief 열거자 하나 뒤에 적은 `ENUMERATOR( … )` 의 에디터 메타데이터입니다(언리얼 `UMETA` — DisplayName · ToolTip · Hidden). 멤버 이름은 생성기 DTO(`ParsedEnumeratorInfo`)와 같다. */
     struct SW_API EnumeratorEditorMetadata
     {
-        string                               _displayName;
+        string                               _displayName; ///< 현지화 원문이다. 그릴 글은 `LocalizedText::findEnum` 이 표에서 찾는다
         string                               _tooltip;
+        hashed_string                        _color; ///< 테마 색 토큰 이름(`Signal.Error`). 그릴 때 해시로 찾으므로 해시 이름으로 든다
+        string                               _unit;  ///< 값 옆에 붙는 단위 글(`B/s`)
         unordered_map<hashed_string, string> _mapCustomMeta;
         uint8                                _bHidden       : 1; ///< 에디터 선택지에서 숨긴다. 값은 그대로 읽고 쓴다
         [[maybe_unused]] uint8               _reservedFlags : 7;
@@ -149,6 +151,8 @@ namespace sw
         CallInEditor,
         Exec,
         Hidden,
+        Color,
+        Unit,
         UIMinRange, ///< 숫자 칸
         UIMaxRange, ///< 숫자 칸
     };

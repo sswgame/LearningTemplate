@@ -10,6 +10,8 @@
 #include "Editor/Common/Commands/Diagnostics/EditorModuleOverrides.h"
 #include "Editor/Panels/Settings/Model/ModulesViewModel.h"
 
+#include "Engine/Localization/LocText.h"
+
 #include "sw/config/ConfigConstants.h"
 
 using namespace sw;
@@ -209,7 +211,7 @@ SW_TEST_CASE( ModulesViewModelLoadTest, EveryListedKindHasANameAndOnlyEditorAndG
 {
     for ( const ModuleKind kind : ModulesViewModel::kArrKindOrder )
     {
-        SW_EXPECT_FALSE( string_view( ModulesViewModel::getKindName( kind ) ).empty() );
+        SW_EXPECT_FALSE( string_view( LocalizedText::findEnum( kind ) ).empty() );
         SW_EXPECT_TRUE( ( kind == ModuleKind::Editor || kind == ModuleKind::Game ) == ModulesViewModel::isLocked( kind ) );
     }
 }

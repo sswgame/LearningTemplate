@@ -13,6 +13,7 @@
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 #include "Editor/Viewport/Model/EditorAssetPlacement.h"
 
+#include "Engine/Localization/LocText.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Physics/IPhysicsScene.h"
@@ -69,7 +70,7 @@ namespace sw::editor
             query._b2DMode     = b2DMode ? SW_TRUE : SW_FALSE;
             outGhost._bFound   = EditorAssetPlacement::findSurface( query, *pRay, outGhost._hit );
         }
-        outGhost._pSurfaceName = EditorAssetPlacement::getSurfaceName( outGhost._hit._surface );
+        outGhost._pSurfaceName = LocalizedText::findEnum( outGhost._hit._surface );
         return true;
     }
 

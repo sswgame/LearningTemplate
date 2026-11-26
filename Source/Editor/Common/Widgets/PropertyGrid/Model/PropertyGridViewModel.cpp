@@ -605,14 +605,14 @@ namespace sw::editor
             row._kind      = pEnumInfo->_bIsBitFlag ? PropertyRowKind::BitFlagEnum : PropertyRowKind::Enum;
             row._enumValue = pEnumInfo->readValueFromMemory( pEnumMemory );
             Internal::formatEnumPreview( registry, *pEnumInfo, prop, row._enumValue, row._valueText );
-            // 선언 순서로 보이고 `Count` 표식은 선택지가 아니다(`EnumInfo::_listEnumerator`). `ENUMERATOR( Hidden )` 은 숨기고 표시 이름을 쓴다.
+            // 선언 순서로 보이고 `Count` 표식은 선택지가 아니다(`EnumInfo::_listEnumerator`). `ENUMERATOR( Hidden )` 은 숨기고 표시 이름은 현지화한 글이다.
             for ( const EnumeratorInfo& enumerator : pEnumInfo->_listEnumerator )
             {
                 const EnumeratorEditorMetadata& display = pEnumInfo->findEnumeratorEditorMetadata( enumerator._name );
                 if ( display._bHidden != SW_FALSE )
                     continue;
-                const string label = display._displayName.empty() ? string( enumerator._name.toString() ) : display._displayName;
-                row._listChoice.push_back( PropertyEnumChoice{ enumerator._name, label, display._tooltip, enumerator._value } );
+                const string label = display._displayName.empty() ? string( enumerator._name.toString() ) : string( LocalizedText::findEnum( pEnumInfo, enumerator._value ) );
+                row._listChoice.push_back( PropertyEnumChoice{ enumerator._name, label, LocalizedText::findEnumTooltip( pEnumInfo, enumerator._value ), enumerator._value } );
             }
             return;
         }
@@ -1410,7 +1410,7 @@ namespace sw::editor
         // (언리얼 임시 마운트 지점의 패키지도 에셋 레지스트리에 오른다). 폴더가 없으면 고를 것이 없다.
         vector<AbsolutePath> listScratchFile;
         const AbsolutePath&  scratchFolder = AssetPaths::getScratchFolderPath();
-        if ( FileUtil::isDirectory( scratchFolder ) && EditorContentScan::collectFiles( scratchFolder, ".xml", listScratchFile, true ) )
+        if ( FileUtil::isDirectory( scratchFolder ) && EditorContentScan::collectFiles( scratchFolder, EditorContentScan::kArrDataXMLExtension, SW_COUNT_OF( EditorContentScan::kArrDataXMLExtension ), listScratchFile, true ) )
         {
             for ( const AbsolutePath& filePath : listScratchFile )
             {
@@ -1424,7 +1424,7 @@ namespace sw::editor
         for ( const string& assetID : listAssetID )
         {
             string text;
-            if ( StringUtil::endsWith( assetID, ".xml", true ) == false || AssetIO::readTextAsset( AssetID{ assetID }, text ) == false ||
+            if ( EditorContentScan::isDataXMLPath( assetID ) == false || AssetIO::readTextAsset( AssetID{ assetID }, text ) == false ||
                  ( text.find( opening.view() ) == string::npos && text.find( entryOpening.view() ) == string::npos ) )
                 continue;
             XMLDocument doc;

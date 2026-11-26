@@ -26,13 +26,13 @@ namespace sw
     ENUM()
     enum class SequenceHistoryKind : uint8
     {
-        Started = 0,    ///< 재생을 시작했다
-        Finished,       ///< 끝 프레임에 닿아 끝났다(루프가 아닐 때)
-        Stopped,        ///< 끝나기 전에 멈췄다(`stop` · 씬 나감 · 다시 틀기)
-        Event,          ///< 시작 프레임을 지난 항목(이벤트 · 외형 · 시나리오)
-        CameraSignal,   ///< 카메라 신호(`_detail` 이 `SequenceCameraSignalKind`)
-        UnboundBinding, ///< 묶이지 않은 바인딩 때문에 틀지 않았다(`_binding`)
-        Span,           ///< 구간 항목(애니메이션 · 소리 · 자막)에 들어갔다
+        Started        ENUMERATOR( DisplayName = "Started" ) = 0, ///< 재생을 시작했다
+        Finished       ENUMERATOR( DisplayName = "Finished" ),    ///< 끝 프레임에 닿아 끝났다(루프가 아닐 때)
+        Stopped        ENUMERATOR( DisplayName = "Stopped" ),     ///< 끝나기 전에 멈췄다(`stop` · 씬 나감 · 다시 틀기)
+        Event          ENUMERATOR( DisplayName = "Event" ),       ///< 시작 프레임을 지난 항목(이벤트 · 외형 · 시나리오)
+        CameraSignal   ENUMERATOR( DisplayName = "Camera" ),      ///< 카메라 신호(`_detail` 이 `SequenceCameraSignalKind`)
+        UnboundBinding ENUMERATOR( DisplayName = "Unbound" ),     ///< 묶이지 않은 바인딩 때문에 틀지 않았다(`_binding`)
+        Span           ENUMERATOR( DisplayName = "Span" ),        ///< 구간 항목(애니메이션 · 소리 · 자막)에 들어갔다
     };
 
     /** @brief 기록 한 줄입니다. 이름은 고정 길이로 잘라 담는다(할당 없음). */

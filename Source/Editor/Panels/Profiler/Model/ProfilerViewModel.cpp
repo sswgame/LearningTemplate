@@ -13,6 +13,7 @@
 #include "Editor/Panels/Profiler/Model/EditorTracyLauncher.h"
 
 #include "Engine/Graphics/RHI/IRHIDevice.h"
+#include "Engine/Localization/LocText.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Scene/Scene.h"
 
@@ -89,6 +90,6 @@ namespace sw::editor
     void ProfilerViewModel::openTracyViewer()
     {
         const EditorTracyLaunchResult result = EditorTracyLauncher::openViewer();
-        _tracyError                          = result == EditorTracyLaunchResult::Launched ? string{} : string{ EditorTracyLauncher::describeResult( result ) };
+        _tracyError                          = result == EditorTracyLaunchResult::Launched ? string{} : string{ LocalizedText::findEnum( result ) };
     }
 } // namespace sw::editor

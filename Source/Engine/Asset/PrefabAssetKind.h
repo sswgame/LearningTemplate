@@ -13,15 +13,23 @@ namespace sw
 {
     class PrefabAsset;
 
+    /** @brief 프리팹 파일의 형식입니다. 접미사 칸(`AssetSuffix::_format`)이 정한다. */
+    enum class PrefabFileFormat : uint8
+    {
+        XML = 0, ///< 저작 원본 `.prefab.xml`
+        JSON,    ///< 저작 원본 `.prefab.json`
+        Cooked,  ///< 쿠킹본(PFB2) `.prefab.bin` · 확장자 없는 이름
+    };
+
     /** @brief 프리팹 에셋 종류입니다(파일 머리말). */
     struct PrefabAssetKind
     {
         /** @brief 프리팹 파일의 접미사입니다 — 저작 소스 둘(XML · JSON), 쿠킹본, 확장자 없는 이름(쿠킹본으로 읽는다). */
         static constexpr AssetSuffix kArrAssetSuffix[] = {
-            { ".prefab.xml",  AssetSuffixRole::CookSource},
-            {".prefab.json",  AssetSuffixRole::CookSource},
-            { ".prefab.bin",      AssetSuffixRole::Cooked},
-            {     ".prefab", AssetSuffixRole::CookedAlias},
+            { ".prefab.xml",  AssetSuffixRole::CookSource,    AssetSuffix::makeFormat( PrefabFileFormat::XML )},
+            {".prefab.json",  AssetSuffixRole::CookSource,   AssetSuffix::makeFormat( PrefabFileFormat::JSON )},
+            { ".prefab.bin",      AssetSuffixRole::Cooked, AssetSuffix::makeFormat( PrefabFileFormat::Cooked )},
+            {     ".prefab", AssetSuffixRole::CookedAlias, AssetSuffix::makeFormat( PrefabFileFormat::Cooked )},
         };
         /** @brief 프리팹 에셋 종류입니다(등록은 `PrefabAsset.cpp` 의 `SW_ASSET_TYPE`, 캐시 등록은 `PrefabCache.cpp`). 판 0. */
         static constexpr AssetTypeDef kAssetType{ "Prefab", kArrAssetSuffix, static_cast<uint32>( SW_COUNT_OF( kArrAssetSuffix ) ), ".prefab.bin", 0, {} };

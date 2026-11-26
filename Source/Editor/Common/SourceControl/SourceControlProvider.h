@@ -8,6 +8,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Process/Process.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 namespace sw::editor
 {
     /** @brief 잠긴 파일 하나입니다. 경로는 저장소 루트 기준 `/` 구분입니다. */
@@ -22,14 +24,15 @@ namespace sw::editor
 namespace sw::editor
 {
     /** @brief 작업 트리의 바뀐 파일 하나의 상태입니다(git porcelain 의 두 글자를 뜻으로 바꾼 것). */
+    ENUM()
     enum class SourceControlChangeKind : uint8
     {
-        Modified,  ///< 고쳤다
-        Added,     ///< 새로 더했다(색인에 올렸다)
-        Deleted,   ///< 지웠다
-        Renamed,   ///< 이름을 바꿨다(`_originalPath` 가 옛 경로)
-        Untracked, ///< 버전 관리 밖의 새 파일 — 되돌리기는 파일을 지우는 일이라 하지 않는다
-        Conflicted ///< 병합 충돌 — 손으로 푼다
+        Modified   ENUMERATOR( DisplayName = "Modified" ),        ///< 고쳤다
+        Added      ENUMERATOR( DisplayName = "Added" ),           ///< 새로 더했다(색인에 올렸다)
+        Deleted    ENUMERATOR( DisplayName = "Deleted" ),         ///< 지웠다
+        Renamed    ENUMERATOR( DisplayName = "Renamed" ),         ///< 이름을 바꿨다(`_originalPath` 가 옛 경로)
+        Untracked  ENUMERATOR( DisplayName = "New (untracked)" ), ///< 버전 관리 밖의 새 파일 — 되돌리기는 파일을 지우는 일이라 하지 않는다
+        Conflicted ENUMERATOR( DisplayName = "Conflict" )         ///< 병합 충돌 — 손으로 푼다
     };
 
     /** @brief 바뀐 파일 하나입니다. 경로는 저장소 루트 기준 `/` 구분입니다. */

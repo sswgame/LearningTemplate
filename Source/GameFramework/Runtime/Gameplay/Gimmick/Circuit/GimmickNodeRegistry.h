@@ -27,9 +27,9 @@ namespace sw
     ENUM()
     enum class GimmickNodeCategory : uint8
     {
-        Sensor = 0,
-        Operator,
-        Actuator
+        Sensor   ENUMERATOR( Color = "Graph.Sensor" ) = 0,
+        Operator ENUMERATOR( Color = "Graph.Operator" ),
+        Actuator ENUMERATOR( Color = "Graph.Actuator" )
     };
 
     /** @brief 매개변수 값의 형식입니다. */

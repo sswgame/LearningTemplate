@@ -9,6 +9,7 @@
 #include "Editor/Common/EditorSceneIterationAccess.h"
 #include "Editor/Common/Workspace/EditorSubsystems.h"
 
+#include "Engine/Localization/LocText.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
@@ -39,48 +40,6 @@ namespace sw::editor
                 { return pPlayer->getOwner()->getComponent<SequencePlayerComponent>() != pPlayer; } ); // 오브젝트마다 하나 — 고른 것은 오브젝트 핸들이다
                 VectorUtil::sort( outListPlayer, []( const SequencePlayerComponent* pLeft, const SequencePlayerComponent* pRight )
                 { return pLeft->getOwner()->getObjectID() < pRight->getOwner()->getObjectID(); } );
-            }
-
-            static const utf8* getHistoryKindLabel( SequenceHistoryKind kind )
-            {
-                switch ( kind )
-                {
-                    case SequenceHistoryKind::Started:
-                        return "Started";
-                    case SequenceHistoryKind::Finished:
-                        return "Finished";
-                    case SequenceHistoryKind::Stopped:
-                        return "Stopped";
-                    case SequenceHistoryKind::Event:
-                        return "Event";
-                    case SequenceHistoryKind::CameraSignal:
-                        return "Camera";
-                    case SequenceHistoryKind::UnboundBinding:
-                        return "Unbound";
-                    case SequenceHistoryKind::Span:
-                        return "Span";
-                }
-                return "?";
-            }
-
-            static const utf8* getSignalLabel( uint8 detail )
-            {
-                switch ( static_cast<SequenceCameraSignalKind>( detail ) )
-                {
-                    case SequenceCameraSignalKind::CutBegin:
-                        return "cut";
-                    case SequenceCameraSignalKind::CinematicBegin:
-                        return "blend in";
-                    case SequenceCameraSignalKind::CinematicEnd:
-                        return "blend out";
-                    case SequenceCameraSignalKind::CutPrewarm:
-                        return "standby view";
-                    case SequenceCameraSignalKind::PlaybackEnd:
-                        return "playback end";
-                    case SequenceCameraSignalKind::Shake:
-                        return "shake";
-                }
-                return "?";
             }
         };
     } // namespace
@@ -163,12 +122,12 @@ namespace sw::editor
             const SequenceHistoryEntry& entry = history.getEntry( index - 1 );
             SequenceDebuggerHistoryRow& row   = outState._listHistory.emplace_back();
             row._frame                        = entry._frame;
-            row._pKindLabel                   = Internal::getHistoryKindLabel( entry._kind );
+            row._pKindLabel                   = LocalizedText::findEnum( entry._kind );
             row._what                         = entry._name.c_str();
             if ( entry._kind == SequenceHistoryKind::CameraSignal )
             {
                 row._what += " - ";
-                row._what += Internal::getSignalLabel( entry._detail );
+                row._what += LocalizedText::findEnum( static_cast<SequenceCameraSignalKind>( entry._detail ) );
             }
         }
 

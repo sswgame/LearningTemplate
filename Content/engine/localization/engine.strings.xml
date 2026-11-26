@@ -24,42 +24,7 @@
 				<item>engine/ui/quantity.ui.xml</item>
 			</origins>
 		</entry>
-		<entry key="Chat.Blocked" source="Message was blocked by the word filter">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp</item>
-			</origins>
-		</entry>
-		<entry key="Chat.Failed" source="Chat failed">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp</item>
-			</origins>
-		</entry>
 		<entry key="Chat.InvalidMessage" source="Message is empty or not valid">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp</item>
-			</origins>
-		</entry>
-		<entry key="Chat.Muted" source="You are muted ({seconds} s left)">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp</item>
-			</origins>
-		</entry>
-		<entry key="Chat.NotFound" source="Message not found">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp</item>
-			</origins>
-		</entry>
-		<entry key="Chat.NotJoinable" source="This channel cannot be joined">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp</item>
-			</origins>
-		</entry>
-		<entry key="Chat.NotMember" source="You have not joined this channel">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp</item>
-			</origins>
-		</entry>
-		<entry key="Chat.Repeated" source="You already said that">
 			<origins>
 				<item>Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp</item>
 			</origins>
@@ -69,22 +34,7 @@
 				<item>Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp</item>
 			</origins>
 		</entry>
-		<entry key="Chat.TargetOffline" source="That player is offline">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp</item>
-			</origins>
-		</entry>
 		<entry key="Chat.TooFast" source="Too fast, try again soon">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp</item>
-			</origins>
-		</entry>
-		<entry key="Chat.TooFastWait" source="Too fast, wait {milliseconds} ms">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp</item>
-			</origins>
-		</entry>
-		<entry key="Chat.TooManyChannels" source="Too many channels">
 			<origins>
 				<item>Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp</item>
 			</origins>
@@ -114,16 +64,6 @@
 				<item>engine/ui/confirm_unsaved.ui.xml</item>
 			</origins>
 		</entry>
-		<entry key="EdAbilityCatalog.Abilities" source="Abilities">
-			<origins>
-				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdAbilityCatalog.AbilitySets" source="Ability sets">
-			<origins>
-				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp</item>
-			</origins>
-		</entry>
 		<entry key="EdAbilityCatalog.AddAbility" source="Add ability">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp</item>
@@ -150,11 +90,6 @@
 			</origins>
 		</entry>
 		<entry key="EdAbilityCatalog.Duplicate" source="Duplicate">
-			<origins>
-				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdAbilityCatalog.Effects" source="Effects">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp</item>
 			</origins>
@@ -197,11 +132,6 @@
 			</origins>
 		</entry>
 		<entry key="EdAbilityCatalog.PickEntryHint" source="Pick an entry on the left to see what it uses and what uses it.">
-			<origins>
-				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdAbilityCatalog.Presentations" source="Cue presentations">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp</item>
 			</origins>
@@ -389,32 +319,7 @@
 				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EdLabel.ZoneAdded" source="added here">
-			<origins>
-				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdLabel.ZoneChanged" source="changed here">
-			<origins>
-				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp</item>
-			</origins>
-		</entry>
 		<entry key="EdLabel.ZoneCondition" source="When">
-			<origins>
-				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdLabel.ZoneInherited" source="inherited">
-			<origins>
-				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdLabel.ZoneRemoved" source="removed here">
-			<origins>
-				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdLabel.ZoneReplaced" source="replaced here">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp</item>
 			</origins>
@@ -2330,6 +2235,586 @@
 				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp</item>
 			</origins>
 		</entry>
+		<entry key="Enum.AbilityEntryKind.Ability" source="Abilities">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Ability/Model/AbilityCatalogEditModel.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.AbilityEntryKind.AbilitySet" source="Ability sets">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Ability/Model/AbilityCatalogEditModel.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.AbilityEntryKind.Effect" source="Effects">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Ability/Model/AbilityCatalogEditModel.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.AbilityEntryKind.Presentation" source="Cue presentations">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Ability/Model/AbilityCatalogEditModel.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.ChatResult.Muted" source="You are muted ({seconds} s left)">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Chat/Runtime/ChatTypes.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.ChatResult.NotFound" source="Message not found">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Chat/Runtime/ChatTypes.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.ChatResult.NotJoinable" source="This channel cannot be joined">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Chat/Runtime/ChatTypes.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.ChatResult.NotMember" source="You have not joined this channel">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Chat/Runtime/ChatTypes.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.ChatResult.RateLimited" source="Too fast, wait {milliseconds} ms">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Chat/Runtime/ChatTypes.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.ChatResult.Rejected" source="Message was blocked by the word filter">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Chat/Runtime/ChatTypes.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.ChatResult.Repeated" source="You already said that">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Chat/Runtime/ChatTypes.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.ChatResult.TargetOffline" source="That player is offline">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Chat/Runtime/ChatTypes.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.ChatResult.TooManyChannels" source="Too many channels">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Chat/Runtime/ChatTypes.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.CollisionResponse.Block" source="Block">
+			<origins>
+				<item>Source/Engine/Physics/Collision/CollisionLayers.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.CollisionResponse.Ignore" source="Ignore">
+			<origins>
+				<item>Source/Engine/Physics/Collision/CollisionLayers.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.CollisionResponse.Overlap" source="Overlap">
+			<origins>
+				<item>Source/Engine/Physics/Collision/CollisionLayers.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.FogVolumeState.Active"
+		       source="Volumetric fog is on: the light-scattering volume is drawn in the main view.">
+			<origins>
+				<item>Source/Engine/Renderer/Frame/PostProcess/FrameFog.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.FogVolumeState.BufferFailed"
+		       source="Volumetric fog is on but its buffers could not be created, so plain fog is drawn. See the log.">
+			<origins>
+				<item>Source/Engine/Renderer/Frame/PostProcess/FrameFog.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.FogVolumeState.Disabled"
+		       source="Volumetric fog is off in the fog settings, so plain fog is drawn. Turn on Volumetric in the Fog component.">
+			<origins>
+				<item>Source/Engine/Renderer/Frame/PostProcess/FrameFog.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.FogVolumeState.MissingPipeline"
+		       source="Volumetric fog is on but its compute shader is missing, so plain fog is drawn. Check the shader cook log.">
+			<origins>
+				<item>Source/Engine/Renderer/Frame/PostProcess/FrameFog.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.FogVolumeState.NoDevice" source="The renderer has no device this frame, so nothing is drawn.">
+			<origins>
+				<item>Source/Engine/Renderer/Frame/PostProcess/FrameFog.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.FogVolumeState.NoFog" source="No fog in this scene. Add a Fog component to see volumetric fog.">
+			<origins>
+				<item>Source/Engine/Renderer/Frame/PostProcess/FrameFog.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.FogVolumeState.Underwater" source="The camera is under water. Underwater fog has no volume.">
+			<origins>
+				<item>Source/Engine/Renderer/Frame/PostProcess/FrameFog.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.GamepadBatteryLevel.Empty" source="Empty">
+			<origins>
+				<item>Source/Engine/Input/Devices/GamepadDevice.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.GamepadBatteryLevel.Full" source="Full (100%)">
+			<origins>
+				<item>Source/Engine/Input/Devices/GamepadDevice.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.GamepadBatteryLevel.Low" source="Low">
+			<origins>
+				<item>Source/Engine/Input/Devices/GamepadDevice.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.GamepadBatteryLevel.Medium" source="Medium">
+			<origins>
+				<item>Source/Engine/Input/Devices/GamepadDevice.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.InputGlyphStyle.GamepadPlayStation" source="PlayStation Gamepad">
+			<origins>
+				<item>Source/Engine/Input/InputGlyphStyle.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.InputGlyphStyle.GamepadSwitch" source="Nintendo Switch Gamepad">
+			<origins>
+				<item>Source/Engine/Input/InputGlyphStyle.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.InputGlyphStyle.GamepadXbox" source="Xbox Gamepad">
+			<origins>
+				<item>Source/Engine/Input/InputGlyphStyle.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.InputGlyphStyle.KeyboardMouse" source="Keyboard &amp; Mouse">
+			<origins>
+				<item>Source/Engine/Input/InputGlyphStyle.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.InventoryCommandResult.EmptySlot" source="The slot is empty.">
+			<origins>
+				<item>Source/GameFramework/Runtime/Gameplay/Inventory/InventoryCommand.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.InventoryCommandResult.InvalidCount" source="That amount is not possible.">
+			<origins>
+				<item>Source/GameFramework/Runtime/Gameplay/Inventory/InventoryCommand.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.InventoryCommandResult.InvalidSlot" source="That slot cannot take it.">
+			<origins>
+				<item>Source/GameFramework/Runtime/Gameplay/Inventory/InventoryCommand.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.InventoryCommandResult.NoRoom" source="Your bag is full.">
+			<origins>
+				<item>Source/GameFramework/Runtime/Gameplay/Inventory/InventoryCommand.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.InventoryCommandResult.NotUsable" source="This cannot be used.">
+			<origins>
+				<item>Source/GameFramework/Runtime/Gameplay/Inventory/InventoryCommand.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.InventoryCommandResult.Ok" source="Done.">
+			<origins>
+				<item>Source/GameFramework/Runtime/Gameplay/Inventory/InventoryCommand.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.InventoryCommandResult.Refused" source="You cannot equip this there.">
+			<origins>
+				<item>Source/GameFramework/Runtime/Gameplay/Inventory/InventoryCommand.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.ModuleKind.Editor" source="Editor">
+			<origins>
+				<item>Source/Engine/Module/ModuleCatalog.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.ModuleKind.EditorExtension" source="Editor extensions">
+			<origins>
+				<item>Source/Engine/Module/ModuleCatalog.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.ModuleKind.Game" source="Game">
+			<origins>
+				<item>Source/Engine/Module/ModuleCatalog.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.ModuleKind.GameFramework" source="GameFramework">
+			<origins>
+				<item>Source/Engine/Module/ModuleCatalog.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.ModuleKind.Kit" source="Kits">
+			<origins>
+				<item>Source/Engine/Module/ModuleCatalog.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.ModuleKind.RHI" source="RHI backends">
+			<origins>
+				<item>Source/Engine/Module/ModuleCatalog.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.MountGait.Canter" source="Canter">
+			<origins>
+				<item>Source/GameFramework/Runtime/Gameplay/Vehicle/MountMovementComponent.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.MountGait.Gallop" source="Gallop">
+			<origins>
+				<item>Source/GameFramework/Runtime/Gameplay/Vehicle/MountMovementComponent.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.MountGait.Idle" source="Standing">
+			<origins>
+				<item>Source/GameFramework/Runtime/Gameplay/Vehicle/MountMovementComponent.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.MountGait.Trot" source="Trot">
+			<origins>
+				<item>Source/GameFramework/Runtime/Gameplay/Vehicle/MountMovementComponent.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.MountGait.Walk" source="Walk">
+			<origins>
+				<item>Source/GameFramework/Runtime/Gameplay/Vehicle/MountMovementComponent.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.RenderViewMode.Depth" source="Depth">
+			<origins>
+				<item>Source/Engine/Graphics/View/RenderViewMode.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.RenderViewMode.LODFadeCode" source="LOD Fade Code">
+			<origins>
+				<item>Source/Engine/Graphics/View/RenderViewMode.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.RenderViewMode.LODLevel" source="LOD Level">
+			<origins>
+				<item>Source/Engine/Graphics/View/RenderViewMode.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.RenderViewMode.LightComplexity" source="Light Complexity">
+			<origins>
+				<item>Source/Engine/Graphics/View/RenderViewMode.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.RenderViewMode.LightingOnly" source="Lighting Only">
+			<origins>
+				<item>Source/Engine/Graphics/View/RenderViewMode.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.RenderViewMode.Lit" source="Lit">
+			<origins>
+				<item>Source/Engine/Graphics/View/RenderViewMode.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.RenderViewMode.MarkerSlots" source="Marker Slots">
+			<origins>
+				<item>Source/Engine/Graphics/View/RenderViewMode.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.RenderViewMode.Metallic" source="Metallic">
+			<origins>
+				<item>Source/Engine/Graphics/View/RenderViewMode.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.RenderViewMode.Mipmaps" source="Mipmaps">
+			<origins>
+				<item>Source/Engine/Graphics/View/RenderViewMode.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.RenderViewMode.Normals" source="Normals">
+			<origins>
+				<item>Source/Engine/Graphics/View/RenderViewMode.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.RenderViewMode.Overdraw" source="Overdraw">
+			<origins>
+				<item>Source/Engine/Graphics/View/RenderViewMode.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.RenderViewMode.Roughness" source="Roughness">
+			<origins>
+				<item>Source/Engine/Graphics/View/RenderViewMode.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.RenderViewMode.ShadedWireframe" source="Shaded Wireframe">
+			<origins>
+				<item>Source/Engine/Graphics/View/RenderViewMode.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.RenderViewMode.ShadingPath" source="Shading Path">
+			<origins>
+				<item>Source/Engine/Graphics/View/RenderViewMode.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.RenderViewMode.Unlit" source="Unlit">
+			<origins>
+				<item>Source/Engine/Graphics/View/RenderViewMode.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.RenderViewMode.Wireframe" source="Wireframe">
+			<origins>
+				<item>Source/Engine/Graphics/View/RenderViewMode.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.SequenceCameraSignalKind.CinematicBegin" source="blend in">
+			<origins>
+				<item>Source/Engine/Sequencer/SequenceTimelineUtil.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.SequenceCameraSignalKind.CinematicEnd" source="blend out">
+			<origins>
+				<item>Source/Engine/Sequencer/SequenceTimelineUtil.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.SequenceCameraSignalKind.CutBegin" source="cut">
+			<origins>
+				<item>Source/Engine/Sequencer/SequenceTimelineUtil.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.SequenceCameraSignalKind.CutPrewarm" source="standby view">
+			<origins>
+				<item>Source/Engine/Sequencer/SequenceTimelineUtil.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.SequenceCameraSignalKind.PlaybackEnd" source="playback end">
+			<origins>
+				<item>Source/Engine/Sequencer/SequenceTimelineUtil.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.SequenceCameraSignalKind.Shake" source="shake">
+			<origins>
+				<item>Source/Engine/Sequencer/SequenceTimelineUtil.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.SequenceHistoryKind.CameraSignal" source="Camera">
+			<origins>
+				<item>Source/Engine/Sequencer/SequenceDiagnostics.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.SequenceHistoryKind.Event" source="Event">
+			<origins>
+				<item>Source/Engine/Sequencer/SequenceDiagnostics.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.SequenceHistoryKind.Finished" source="Finished">
+			<origins>
+				<item>Source/Engine/Sequencer/SequenceDiagnostics.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.SequenceHistoryKind.Span" source="Span">
+			<origins>
+				<item>Source/Engine/Sequencer/SequenceDiagnostics.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.SequenceHistoryKind.Started" source="Started">
+			<origins>
+				<item>Source/Engine/Sequencer/SequenceDiagnostics.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.SequenceHistoryKind.Stopped" source="Stopped">
+			<origins>
+				<item>Source/Engine/Sequencer/SequenceDiagnostics.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.SequenceHistoryKind.UnboundBinding" source="Unbound">
+			<origins>
+				<item>Source/Engine/Sequencer/SequenceDiagnostics.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.SequenceItemField.Clip" source="Clip">
+			<origins>
+				<item>Source/Engine/Sequencer/SequenceAsset.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.SequenceItemField.Clip.Tooltip"
+		       source="Animation clip blended over the bound object's animation during the span. Type a resource id or drop one from the Content Browser.">
+			<origins>
+				<item>Source/Engine/Sequencer/SequenceAsset.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.SequenceItemField.Prefab" source="Prefab">
+			<origins>
+				<item>Source/Engine/Sequencer/SequenceAsset.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.SequenceItemField.Prefab.Tooltip"
+		       source="Prefab spawned for this span. Type its resource id or drop it from the content browser.">
+			<origins>
+				<item>Source/Engine/Sequencer/SequenceAsset.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.SequenceItemField.Preset" source="Preset">
+			<origins>
+				<item>Source/Engine/Sequencer/SequenceAsset.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.SequenceItemField.Preset.Tooltip" source="Id of the appearance preset the target object wears.">
+			<origins>
+				<item>Source/Engine/Sequencer/SequenceAsset.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.SequenceItemField.Scenario" source="Scenario">
+			<origins>
+				<item>Source/Engine/Sequencer/SequenceAsset.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.SequenceItemField.Scenario.Tooltip"
+		       source="Scenario played when the start frame is crossed. Type its resource id or drop it from the content browser.">
+			<origins>
+				<item>Source/Engine/Sequencer/SequenceAsset.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.SequenceItemField.Sound" source="Sound">
+			<origins>
+				<item>Source/Engine/Sequencer/SequenceAsset.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.SequenceItemField.Sound.Tooltip"
+		       source="Audio event posted when the start frame is crossed and stopped when the span ends.">
+			<origins>
+				<item>Source/Engine/Sequencer/SequenceAsset.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.SequenceItemField.Text" source="Text">
+			<origins>
+				<item>Source/Engine/Sequencer/SequenceAsset.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.SequenceItemField.Text.Tooltip"
+		       source="Localization key (Namespace.Key) of the subtitle line shown for the span.">
+			<origins>
+				<item>Source/Engine/Sequencer/SequenceAsset.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.ServerState.Draining" source="draining">
+			<origins>
+				<item>Source/GameFramework/Runtime/Online/Directory/ServerRecord.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.ServerState.Maintenance" source="maintenance">
+			<origins>
+				<item>Source/GameFramework/Runtime/Online/Directory/ServerRecord.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.ServerState.Open" source="open">
+			<origins>
+				<item>Source/GameFramework/Runtime/Online/Directory/ServerRecord.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.ServerState.Starting" source="starting">
+			<origins>
+				<item>Source/GameFramework/Runtime/Online/Directory/ServerRecord.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.ShopPurchaseStatus.Busy" source="A purchase is still in progress.">
+			<origins>
+				<item>Source/GameFramework/Runtime/Gameplay/Inventory/ShopPurchase.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.ShopPurchaseStatus.LimitReached" source="You cannot buy this any more.">
+			<origins>
+				<item>Source/GameFramework/Runtime/Gameplay/Inventory/ShopPurchase.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.ShopPurchaseStatus.NoRoom" source="Your bag is full.">
+			<origins>
+				<item>Source/GameFramework/Runtime/Gameplay/Inventory/ShopPurchase.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.ShopPurchaseStatus.NotEnoughMoney" source="Not enough money.">
+			<origins>
+				<item>Source/GameFramework/Runtime/Gameplay/Inventory/ShopPurchase.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.ShopPurchaseStatus.OutOfStock" source="Sold out.">
+			<origins>
+				<item>Source/GameFramework/Runtime/Gameplay/Inventory/ShopPurchase.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.ShopPurchaseStatus.Rejected" source="This cannot be bought now.">
+			<origins>
+				<item>Source/GameFramework/Runtime/Gameplay/Inventory/ShopPurchase.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.ShopPurchaseStatus.ServerError"
+		       source="Could not reach the store. The wallet shows what the server holds.">
+			<origins>
+				<item>Source/GameFramework/Runtime/Gameplay/Inventory/ShopPurchase.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.ShopPurchaseStatus.Succeeded" source="Bought.">
+			<origins>
+				<item>Source/GameFramework/Runtime/Gameplay/Inventory/ShopPurchase.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.ShopPurchaseStatus.Unverified" source="The purchase reply did not match; your wallet was refreshed.">
+			<origins>
+				<item>Source/GameFramework/Runtime/Gameplay/Inventory/ShopPurchase.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.SocialPresenceStatus.Away" source="away">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Social/Runtime/SocialTypes.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.SocialPresenceStatus.Busy" source="busy">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Social/Runtime/SocialTypes.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.SocialPresenceStatus.InGame" source="in game">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Social/Runtime/SocialTypes.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.SocialPresenceStatus.Offline" source="offline">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Social/Runtime/SocialTypes.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.SocialPresenceStatus.Online" source="online">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Social/Runtime/SocialTypes.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.Unknown" source="unknown">
+			<origins>
+				<item>Source/Engine/Localization/LocText.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Enum.ZoneModuleOrigin.Added" source="added here">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneModuleOrigin.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.ZoneModuleOrigin.Changed" source="changed here">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneModuleOrigin.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.ZoneModuleOrigin.Inherited" source="inherited">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneModuleOrigin.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.ZoneModuleOrigin.Removed" source="removed here">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneModuleOrigin.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.ZoneModuleOrigin.Replaced" source="replaced here">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneModuleOrigin.h</item>
+			</origins>
+		</entry>
 		<entry key="FriendList.Idle" source="Press Refresh to list friends">
 			<origins>
 				<item>Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp</item>
@@ -2356,36 +2841,6 @@
 				<item>Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp</item>
 			</origins>
 		</entry>
-		<entry key="FriendList.PresenceAway" source="away">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp</item>
-			</origins>
-		</entry>
-		<entry key="FriendList.PresenceBusy" source="busy">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp</item>
-			</origins>
-		</entry>
-		<entry key="FriendList.PresenceInGame" source="in game">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp</item>
-			</origins>
-		</entry>
-		<entry key="FriendList.PresenceOffline" source="offline">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp</item>
-			</origins>
-		</entry>
-		<entry key="FriendList.PresenceOnline" source="online">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp</item>
-			</origins>
-		</entry>
-		<entry key="FriendList.PresenceUnknown" source="unknown">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp</item>
-			</origins>
-		</entry>
 		<entry key="FriendList.Row" source="#{account}  {presence}">
 			<origins>
 				<item>Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp</item>
@@ -2401,17 +2856,7 @@
 				<item>Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp</item>
 			</origins>
 		</entry>
-		<entry key="Inventory.Done" source="Done.">
-			<origins>
-				<item>Source/GameFramework/Client/Inventory/InventoryScreen.cpp</item>
-			</origins>
-		</entry>
 		<entry key="Inventory.DropTitle" source="Drop how many?">
-			<origins>
-				<item>Source/GameFramework/Client/Inventory/InventoryScreen.cpp</item>
-			</origins>
-		</entry>
-		<entry key="Inventory.EmptySlot" source="The slot is empty.">
 			<origins>
 				<item>Source/GameFramework/Client/Inventory/InventoryScreen.cpp</item>
 			</origins>
@@ -2421,37 +2866,12 @@
 				<item>Source/GameFramework/Client/Inventory/InventoryScreen.cpp</item>
 			</origins>
 		</entry>
-		<entry key="Inventory.InvalidCount" source="That amount is not possible.">
-			<origins>
-				<item>Source/GameFramework/Client/Inventory/InventoryScreen.cpp</item>
-			</origins>
-		</entry>
-		<entry key="Inventory.InvalidSlot" source="That slot cannot take it.">
-			<origins>
-				<item>Source/GameFramework/Client/Inventory/InventoryScreen.cpp</item>
-			</origins>
-		</entry>
 		<entry key="Inventory.ItemCount" source="{item} x{count}">
 			<origins>
 				<item>Source/GameFramework/Client/Inventory/InventoryScreen.cpp</item>
 			</origins>
 		</entry>
-		<entry key="Inventory.NoRoom" source="Your bag is full.">
-			<origins>
-				<item>Source/GameFramework/Client/Inventory/InventoryScreen.cpp</item>
-			</origins>
-		</entry>
-		<entry key="Inventory.NotUsable" source="This cannot be used.">
-			<origins>
-				<item>Source/GameFramework/Client/Inventory/InventoryScreen.cpp</item>
-			</origins>
-		</entry>
 		<entry key="Inventory.Picked" source="Choose where to put it.">
-			<origins>
-				<item>Source/GameFramework/Client/Inventory/InventoryScreen.cpp</item>
-			</origins>
-		</entry>
-		<entry key="Inventory.Refused" source="You cannot equip this there.">
 			<origins>
 				<item>Source/GameFramework/Client/Inventory/InventoryScreen.cpp</item>
 			</origins>
@@ -2633,42 +3053,7 @@
 				<item>Source/GameFramework/Kits/Feature/Online/ServerDirectory/Client/ServerPickerScreen.cpp</item>
 			</origins>
 		</entry>
-		<entry key="ServerPicker.StateDraining" source="draining">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/ServerDirectory/Client/ServerPickerScreen.cpp</item>
-			</origins>
-		</entry>
-		<entry key="ServerPicker.StateMaintenance" source="maintenance">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/ServerDirectory/Client/ServerPickerScreen.cpp</item>
-			</origins>
-		</entry>
-		<entry key="ServerPicker.StateOpen" source="open">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/ServerDirectory/Client/ServerPickerScreen.cpp</item>
-			</origins>
-		</entry>
-		<entry key="ServerPicker.StateStarting" source="starting">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/ServerDirectory/Client/ServerPickerScreen.cpp</item>
-			</origins>
-		</entry>
-		<entry key="ServerPicker.StateUnknown" source="unknown">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/ServerDirectory/Client/ServerPickerScreen.cpp</item>
-			</origins>
-		</entry>
 		<entry key="Shop.BalanceLine" source="{amount} {currency}">
-			<origins>
-				<item>Source/GameFramework/Client/Shop/ShopScreen.cpp</item>
-			</origins>
-		</entry>
-		<entry key="Shop.Bought" source="Bought.">
-			<origins>
-				<item>Source/GameFramework/Client/Shop/ShopScreen.cpp</item>
-			</origins>
-		</entry>
-		<entry key="Shop.Busy" source="A purchase is still in progress.">
 			<origins>
 				<item>Source/GameFramework/Client/Shop/ShopScreen.cpp</item>
 			</origins>
@@ -2693,21 +3078,6 @@
 				<item>Source/GameFramework/Client/Shop/ShopScreen.cpp</item>
 			</origins>
 		</entry>
-		<entry key="Shop.LimitReached" source="You cannot buy this any more.">
-			<origins>
-				<item>Source/GameFramework/Client/Shop/ShopScreen.cpp</item>
-			</origins>
-		</entry>
-		<entry key="Shop.NoRoom" source="Your bag is full.">
-			<origins>
-				<item>Source/GameFramework/Client/Shop/ShopScreen.cpp</item>
-			</origins>
-		</entry>
-		<entry key="Shop.NotEnoughMoney" source="Not enough money.">
-			<origins>
-				<item>Source/GameFramework/Client/Shop/ShopScreen.cpp</item>
-			</origins>
-		</entry>
 		<entry key="Shop.OfferRow" source="{item}  {price} {currency}">
 			<origins>
 				<item>Source/GameFramework/Client/Shop/ShopScreen.cpp</item>
@@ -2718,27 +3088,7 @@
 				<item>Source/GameFramework/Client/Shop/ShopScreen.cpp</item>
 			</origins>
 		</entry>
-		<entry key="Shop.OutOfStock" source="Sold out.">
-			<origins>
-				<item>Source/GameFramework/Client/Shop/ShopScreen.cpp</item>
-			</origins>
-		</entry>
 		<entry key="Shop.Purchasing" source="Purchasing...">
-			<origins>
-				<item>Source/GameFramework/Client/Shop/ShopScreen.cpp</item>
-			</origins>
-		</entry>
-		<entry key="Shop.Rejected" source="This cannot be bought now.">
-			<origins>
-				<item>Source/GameFramework/Client/Shop/ShopScreen.cpp</item>
-			</origins>
-		</entry>
-		<entry key="Shop.ServerError" source="Could not reach the store. The wallet shows what the server holds.">
-			<origins>
-				<item>Source/GameFramework/Client/Shop/ShopScreen.cpp</item>
-			</origins>
-		</entry>
-		<entry key="Shop.Unverified" source="The purchase reply did not match; your wallet was refreshed.">
 			<origins>
 				<item>Source/GameFramework/Client/Shop/ShopScreen.cpp</item>
 			</origins>
@@ -2787,31 +3137,6 @@
 			</origins>
 		</entry>
 		<entry key="Western.Carcasses" source="Carcasses {count}">
-			<origins>
-				<item>Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp</item>
-			</origins>
-		</entry>
-		<entry key="Western.GaitCanter" source="Canter">
-			<origins>
-				<item>Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp</item>
-			</origins>
-		</entry>
-		<entry key="Western.GaitGallop" source="Gallop">
-			<origins>
-				<item>Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp</item>
-			</origins>
-		</entry>
-		<entry key="Western.GaitStanding" source="Standing">
-			<origins>
-				<item>Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp</item>
-			</origins>
-		</entry>
-		<entry key="Western.GaitTrot" source="Trot">
-			<origins>
-				<item>Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp</item>
-			</origins>
-		</entry>
-		<entry key="Western.GaitWalk" source="Walk">
 			<origins>
 				<item>Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp</item>
 			</origins>

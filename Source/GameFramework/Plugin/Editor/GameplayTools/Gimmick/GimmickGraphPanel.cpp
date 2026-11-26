@@ -52,20 +52,6 @@ namespace sw::editor
             static int32 decodeNode( int32 pinID ) { return pinID / kPinsPerNode; }
             static bool  isOutputPin( int32 pinID ) { return pinID % kPinsPerNode >= kOutputPinBase; }
             static int32 decodePort( int32 pinID ) { return pinID % kOutputPinBase; }
-
-            static ImVec4 getCategoryColor( GimmickNodeCategory category )
-            {
-                switch ( category )
-                {
-                    case GimmickNodeCategory::Sensor:
-                        return EditorColorUtil::toImVec4( SW_THEME_COLOR( "Graph", "Sensor" ) );
-                    case GimmickNodeCategory::Operator:
-                        return EditorColorUtil::toImVec4( SW_THEME_COLOR( "Graph", "Operator" ) );
-                    case GimmickNodeCategory::Actuator:
-                        return EditorColorUtil::toImVec4( SW_THEME_COLOR( "Graph", "Actuator" ) );
-                }
-                return EditorColorUtil::toImVec4( SW_THEME_COLOR( "Base", "Text" ) );
-            }
         };
     } // namespace
 } // namespace sw::editor
@@ -285,7 +271,7 @@ namespace sw::editor
     {
         const GimmickNodeKind* pKind = _model.findKind( node );
         _nodeGraph.beginNode( node._graphID );
-        ImGui::TextColored( pKind != nullptr ? GimmickGraphPanelInternal::getCategoryColor( pKind->_category ) : EditorColorUtil::toImVec4( SW_THEME_COLOR( "Signal", "Error" ) ), "%s", node._id.c_str() );
+        ImGui::TextColored( pKind != nullptr ? EditorColorUtil::toImVec4( EditorThemeUtil::findEnumColor( pKind->_category ) ) : EditorColorUtil::toImVec4( SW_THEME_COLOR( "Signal", "Error" ) ), "%s", node._id.c_str() );
         ImGui::SameLine();
         ImGui::TextDisabled( "%s", node._kind.c_str() );
         if ( pKind == nullptr )

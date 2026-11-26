@@ -32,17 +32,17 @@ namespace sw
         Sort      ///< 가방을 정렬하고 겹칠 수 있는 것을 합친다
     };
 
-    /** @brief 명령 검사 · 적용의 결과입니다. */
+    /** @brief 명령 검사 · 적용의 결과입니다. 가방 화면의 상태 줄은 `DisplayName` 이다(`LocalizedText::makeEnumKey`). */
     ENUM()
     enum class InventoryCommandResult : uint8
     {
-        Ok = 0,
-        InvalidSlot,  ///< 범위 밖 칸, 같은 칸으로의 이동, 없는 장비 칸
-        EmptySlot,    ///< 빈 칸을 옮기거나 쓰려 했다
-        InvalidCount, ///< 0 이하이거나 가진 것보다 많은 수량(복제 요청), 나누기에 전부를 적음
-        NoRoom,       ///< 빈 칸 · 무게가 모자라다
-        Refused,      ///< 장비 조건 · 종류가 맞지 않는다
-        NotUsable     ///< 쓰임이 없는 아이템이다
+        Ok           ENUMERATOR( DisplayName = "Done." ) = 0,
+        InvalidSlot  ENUMERATOR( DisplayName = "That slot cannot take it." ),    ///< 범위 밖 칸, 같은 칸으로의 이동, 없는 장비 칸
+        EmptySlot    ENUMERATOR( DisplayName = "The slot is empty." ),           ///< 빈 칸을 옮기거나 쓰려 했다
+        InvalidCount ENUMERATOR( DisplayName = "That amount is not possible." ), ///< 0 이하이거나 가진 것보다 많은 수량(복제 요청), 나누기에 전부를 적음
+        NoRoom       ENUMERATOR( DisplayName = "Your bag is full." ),            ///< 빈 칸 · 무게가 모자라다
+        Refused      ENUMERATOR( DisplayName = "You cannot equip this there." ), ///< 장비 조건 · 종류가 맞지 않는다
+        NotUsable    ENUMERATOR( DisplayName = "This cannot be used." )          ///< 쓰임이 없는 아이템이다
     };
 
     /**

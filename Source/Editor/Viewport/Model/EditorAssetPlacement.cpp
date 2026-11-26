@@ -91,20 +91,4 @@ namespace sw::editor
             snapped._z = MathUtil::round( position._z / step ) * step;
         return snapped;
     }
-
-    const utf8* EditorAssetPlacement::getSurfaceName( EditorPlacementSurface surface )
-    {
-        switch ( surface )
-        {
-            case EditorPlacementSurface::None:
-                return "none";
-            case EditorPlacementSurface::Collider:
-                return "collider";
-            case EditorPlacementSurface::Bounds:
-                return "object bounds";
-            case EditorPlacementSurface::GroundPlane:
-                return "ground plane";
-        }
-        return "none";
-    }
 } // namespace sw::editor

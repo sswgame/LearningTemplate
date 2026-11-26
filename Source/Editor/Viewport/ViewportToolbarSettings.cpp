@@ -81,52 +81,6 @@ namespace sw::editor
             ImGui::SameLine();
     }
 
-    namespace
-    {
-        /** @brief 콤보에 보일 보기 모드 이름(지금 언어)입니다. 표의 `_pName` 은 로그 · 테스트 표지가 쓰는 식별자라 그대로 둔다. */
-        const utf8* getViewModeDisplayName( RenderViewMode mode )
-        {
-            switch ( mode )
-            {
-                case RenderViewMode::Lit:
-                    return SW_LOCKEY( "EdViewMode", "Lit" );
-                case RenderViewMode::Unlit:
-                    return SW_LOCKEY( "EdViewMode", "Unlit" );
-                case RenderViewMode::Wireframe:
-                    return SW_LOCKEY( "EdViewMode", "Wireframe" );
-                case RenderViewMode::Normals:
-                    return SW_LOCKEY( "EdViewMode", "Normals" );
-                case RenderViewMode::Depth:
-                    return SW_LOCKEY( "EdViewMode", "Depth" );
-                case RenderViewMode::Overdraw:
-                    return SW_LOCKEY( "EdViewMode", "Overdraw" );
-                case RenderViewMode::LightingOnly:
-                    return SW_LOCKEY( "EdViewMode", "LightingOnly" );
-                case RenderViewMode::Roughness:
-                    return SW_LOCKEY( "EdViewMode", "Roughness" );
-                case RenderViewMode::Metallic:
-                    return SW_LOCKEY( "EdViewMode", "Metallic" );
-                case RenderViewMode::Mipmaps:
-                    return SW_LOCKEY( "EdViewMode", "Mipmaps" );
-                case RenderViewMode::LightComplexity:
-                    return SW_LOCKEY( "EdViewMode", "LightComplexity" );
-                case RenderViewMode::ShadedWireframe:
-                    return SW_LOCKEY( "EdViewMode", "ShadedWireframe" );
-                case RenderViewMode::LODLevel:
-                    return SW_LOCKEY( "EdViewMode", "LODLevel" );
-                case RenderViewMode::LODFadeCode:
-                    return SW_LOCKEY( "EdViewMode", "LODFadeCode" );
-                case RenderViewMode::MarkerSlots:
-                    return SW_LOCKEY( "EdViewMode", "MarkerSlots" );
-                case RenderViewMode::ShadingPath:
-                    return SW_LOCKEY( "EdViewMode", "ShadingPath" );
-                case RenderViewMode::Count:
-                    break;
-            }
-            return RenderViewModeUtil::getInfo( mode )._pName;
-        }
-    } // namespace
-
     void ViewportToolbarSettings::drawViewBar( ViewportToolbarSettings& settings, bool bVertical, const ViewportToolbarState& state )
     {
         {
@@ -138,7 +92,7 @@ namespace sw::editor
 
             ImGui::BeginDisabled( bHasRenderer == false );
             EditorChrome::setNextItemWidthColumns( 13.0f );
-            const bool bOpen = EditorWidgets::beginCombo( "##ViewMode", getViewModeDisplayName( currentMode ) );
+            const bool bOpen = EditorWidgets::beginCombo( "##ViewMode", LocalizedText::findEnum( currentMode ) );
             EditorSelfTestMarks::record( "viewport.viewMode" ); // 시나리오가 콤보를 열고 항목(`viewport.viewMode.<이름>`)을 누른다
             if ( bOpen )
             {
@@ -146,7 +100,7 @@ namespace sw::editor
                 {
                     const RenderViewMode mode  = static_cast<RenderViewMode>( modeIndex );
                     const utf8*          pName = RenderViewModeUtil::getInfo( mode )._pName;
-                    if ( ImGui::Selectable( EditorThemeUtil::makeStableLabel( getViewModeDisplayName( mode ), pName ), mode == currentMode ) && bHasRenderer )
+                    if ( ImGui::Selectable( EditorThemeUtil::makeStableLabel( LocalizedText::findEnum( mode ), pName ), mode == currentMode ) && bHasRenderer )
                         settings._requestedViewMode = mode;
                     EditorSelfTestMarks::recordFormat( "viewport.viewMode.%#", StringUtil::toLower( pName ) );
                 }

@@ -13,6 +13,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 namespace sw
 {
     class CameraComponent;
@@ -25,12 +27,13 @@ namespace sw
 namespace sw::editor
 {
     /** @brief 게임 카메라 자리에서 본 셀의 상태입니다(`SceneStreamingSubsystem::update` 의 규칙). */
+    ENUM()
     enum class StreamingCellPreviewState : uint8
     {
-        Load,   ///< 로딩 반경 안 — 올린다
-        Keep,   ///< 반경 밖, 반경 + 여유 안 — 올라 있으면 둔다
-        Unload, ///< 반경 + 여유 밖 — 내린다
-        NoCamera
+        Load     ENUMERATOR( DisplayName = "Load" ),   ///< 로딩 반경 안 — 올린다
+        Keep     ENUMERATOR( DisplayName = "Keep" ),   ///< 반경 밖, 반경 + 여유 안 — 올라 있으면 둔다
+        Unload   ENUMERATOR( DisplayName = "Unload" ), ///< 반경 + 여유 밖 — 내린다
+        NoCamera ENUMERATOR( DisplayName = "-" )
     };
 
     /** @brief 창이 그릴 내용의 종류입니다. */
@@ -104,8 +107,6 @@ namespace sw::editor
 
         /** @brief 게임 카메라 @p pCamera 에서 본 셀 @p cell 의 상태입니다. 카메라가 없으면 `NoCamera` 입니다. */
         static StreamingCellPreviewState computeState( const StreamingCellGrid& grid, const SceneSettings& settings, const StreamingCellCoord& cell, const CameraComponent* pCamera );
-        /** @brief 상태 열의 글입니다. */
-        static const utf8* getStateLabel( StreamingCellPreviewState state );
 
     private:
         /** @brief @p listObjectID 의 오브젝트를 활성 씬에서 찾아 고릅니다. 없는 id(0 · 지운 것)는 건너뜁니다. */

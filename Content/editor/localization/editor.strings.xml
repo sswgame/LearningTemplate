@@ -2872,21 +2872,6 @@
 				<item>Source/Editor/Panels/Catalog/CatalogTableEditor.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EdNetMode.DedicatedServer" source="Dedicated Server">
-			<origins>
-				<item>Source/Editor/Common/Widgets/EditorNetModeCombo.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdNetMode.ListenHost" source="Listen Host">
-			<origins>
-				<item>Source/Editor/Common/Widgets/EditorNetModeCombo.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdNetMode.Standalone" source="Standalone">
-			<origins>
-				<item>Source/Editor/Common/Widgets/EditorNetModeCombo.cpp</item>
-			</origins>
-		</entry>
 		<entry key="EdPhysicsAsset.DuplicateBodyTip"
 		       source="Copy this body below it. The copy needs the name of a bone in the skeleton before it can stand.">
 			<origins>
@@ -4647,86 +4632,6 @@
 				<item>Source/Editor/Panels/Catalog/CatalogPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EdViewMode.Depth" source="Depth">
-			<origins>
-				<item>Source/Editor/Viewport/ViewportToolbarSettings.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdViewMode.LODFadeCode" source="LOD Fade Code">
-			<origins>
-				<item>Source/Editor/Viewport/ViewportToolbarSettings.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdViewMode.LODLevel" source="LOD Level">
-			<origins>
-				<item>Source/Editor/Viewport/ViewportToolbarSettings.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdViewMode.LightComplexity" source="Light Complexity">
-			<origins>
-				<item>Source/Editor/Viewport/ViewportToolbarSettings.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdViewMode.LightingOnly" source="Lighting Only">
-			<origins>
-				<item>Source/Editor/Viewport/ViewportToolbarSettings.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdViewMode.Lit" source="Lit">
-			<origins>
-				<item>Source/Editor/Viewport/ViewportToolbarSettings.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdViewMode.MarkerSlots" source="Marker Slots">
-			<origins>
-				<item>Source/Editor/Viewport/ViewportToolbarSettings.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdViewMode.Metallic" source="Metallic">
-			<origins>
-				<item>Source/Editor/Viewport/ViewportToolbarSettings.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdViewMode.Mipmaps" source="Mipmaps">
-			<origins>
-				<item>Source/Editor/Viewport/ViewportToolbarSettings.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdViewMode.Normals" source="Normals">
-			<origins>
-				<item>Source/Editor/Viewport/ViewportToolbarSettings.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdViewMode.Overdraw" source="Overdraw">
-			<origins>
-				<item>Source/Editor/Viewport/ViewportToolbarSettings.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdViewMode.Roughness" source="Roughness">
-			<origins>
-				<item>Source/Editor/Viewport/ViewportToolbarSettings.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdViewMode.ShadedWireframe" source="Shaded Wireframe">
-			<origins>
-				<item>Source/Editor/Viewport/ViewportToolbarSettings.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdViewMode.ShadingPath" source="Shading Path">
-			<origins>
-				<item>Source/Editor/Viewport/ViewportToolbarSettings.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdViewMode.Unlit" source="Unlit">
-			<origins>
-				<item>Source/Editor/Viewport/ViewportToolbarSettings.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdViewMode.Wireframe" source="Wireframe">
-			<origins>
-				<item>Source/Editor/Viewport/ViewportToolbarSettings.cpp</item>
-			</origins>
-		</entry>
 		<entry key="EdVisualizer.BillboardLabel" source="Icons">
 			<origins>
 				<item>Source/Editor/Viewport/Model/Visualizers/BillboardVisualizer.cpp</item>
@@ -5260,26 +5165,6 @@
 		</entry>
 		<entry key="EditorAnimationGraph.MaskSkeletonTip"
 		       source="Skeleton to check and paint this mask against. It is not saved in the graph.">
-			<origins>
-				<item>Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EditorAnimationGraph.MaskSourceBone" source="Set on this bone only.">
-			<origins>
-				<item>Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EditorAnimationGraph.MaskSourceInherited" source="Inherited from a parent bone.">
-			<origins>
-				<item>Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EditorAnimationGraph.MaskSourceNone" source="No entry reaches this bone, so its weight is 0.">
-			<origins>
-				<item>Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EditorAnimationGraph.MaskSourceSubtree" source="Set on this bone and spread to its children.">
 			<origins>
 				<item>Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp</item>
 			</origins>
@@ -5998,21 +5883,6 @@
 		<entry key="EditorCatalog.UseInherited" source="Use inherited">
 			<origins>
 				<item>Source/Editor/Panels/Catalog/CatalogTableEditor.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EditorCollision.Block" source="Block">
-			<origins>
-				<item>Source/Editor/Panels/Physics/CollisionResponsePanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EditorCollision.Ignore" source="Ignore">
-			<origins>
-				<item>Source/Editor/Panels/Physics/CollisionResponsePanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EditorCollision.Overlap" source="Overlap">
-			<origins>
-				<item>Source/Editor/Panels/Physics/CollisionResponsePanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorCollision.PairsTitle" source="Resulting response between profiles">
@@ -7712,11 +7582,6 @@
 				<item>Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorMultiplayer.ProfilerLoss" source="Packet loss (highest connection, %)">
-			<origins>
-				<item>Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp</item>
-			</origins>
-		</entry>
 		<entry key="EditorMultiplayer.ProfilerNoKinds" source="No messages received yet">
 			<origins>
 				<item>Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp</item>
@@ -7734,17 +7599,6 @@
 				<item>Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorMultiplayer.ProfilerReceivedBytes"
-		       source="Received bytes per second (last second, all connections)">
-			<origins>
-				<item>Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EditorMultiplayer.ProfilerReceivedPackets" source="Received packets per second">
-			<origins>
-				<item>Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp</item>
-			</origins>
-		</entry>
 		<entry key="EditorMultiplayer.ProfilerRecordHidden"
 		       source="Keep asking the processes for net.stats while another tab is shown (off by default - every child process logs a line at 2 Hz)">
 			<origins>
@@ -7758,26 +7612,6 @@
 		</entry>
 		<entry key="EditorMultiplayer.ProfilerReplicasHelp"
 		       source="Updates and bytes a replication kit counted per second, from the difference of the last two net.stats reports; the share is of the listed bytes">
-			<origins>
-				<item>Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EditorMultiplayer.ProfilerResent" source="Reliable messages resent per second">
-			<origins>
-				<item>Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EditorMultiplayer.ProfilerRtt" source="Round-trip time (highest connection, ms)">
-			<origins>
-				<item>Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EditorMultiplayer.ProfilerSentBytes" source="Sent bytes per second (last second, all connections)">
-			<origins>
-				<item>Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EditorMultiplayer.ProfilerSentPackets" source="Sent packets per second">
 			<origins>
 				<item>Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp</item>
 			</origins>
@@ -8718,17 +8552,6 @@
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorSequencer.ClipLabel" source="Clip">
-			<origins>
-				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EditorSequencer.ClipTip"
-		       source="Animation clip blended over the bound object's animation during the span. Type a resource id or drop one from the Content Browser.">
-			<origins>
-				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
-			</origins>
-		</entry>
 		<entry key="EditorSequencer.CopyItem" source="Copy item">
 			<origins>
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
@@ -8957,17 +8780,6 @@
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorSequencer.PrefabTip"
-		       source="Prefab spawned for this span. Type its resource id or drop it from the content browser.">
-			<origins>
-				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EditorSequencer.PresetTip" source="Id of the appearance preset the target object wears.">
-			<origins>
-				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
-			</origins>
-		</entry>
 		<entry key="EditorSequencer.PreviousKeyTip" source="Go to the previous key">
 			<origins>
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
@@ -9016,17 +8828,6 @@
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorSequencer.ScenarioLabel" source="Scenario">
-			<origins>
-				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EditorSequencer.ScenarioTip"
-		       source="Scenario played when the start frame is crossed. Type its resource id or drop it from the content browser.">
-			<origins>
-				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
-			</origins>
-		</entry>
 		<entry key="EditorSequencer.ScrubTip"
 		       source="Drag to move the current frame; the viewport follows so you can check any moment of the sequence.">
 			<origins>
@@ -9054,17 +8855,6 @@
 			</origins>
 		</entry>
 		<entry key="EditorSequencer.ShotStartColumn" source="Start">
-			<origins>
-				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EditorSequencer.SoundLabel" source="Sound">
-			<origins>
-				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EditorSequencer.SoundTip"
-		       source="Audio event posted when the start frame is crossed and stopped when the span ends.">
 			<origins>
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
@@ -9097,47 +8887,6 @@
 			</origins>
 		</entry>
 		<entry key="EditorSequencer.TargetNotFound" source="Target object not found">
-			<origins>
-				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EditorSequencer.TextLabel" source="Text">
-			<origins>
-				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EditorSequencer.TextTip"
-		       source="Localization key (Namespace.Key) of the subtitle line shown for the span.">
-			<origins>
-				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EditorSequencer.TrackIssueChannelCount"
-		       source="Wrong channel count for the kind. The file will not load; delete and add the track again.">
-			<origins>
-				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EditorSequencer.TrackIssueKeysOutsideTimeline"
-		       source="Some keys are outside the timeline and never play. Move them inside or widen the timeline.">
-			<origins>
-				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EditorSequencer.TrackIssueMissingBinding"
-		       source="The track's binding is not in this sequence. The file will not load; delete the track.">
-			<origins>
-				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EditorSequencer.TrackIssueMissingPropertyPath"
-		       source="No target path. Playback drives nothing; enter the property or rig slot.">
-			<origins>
-				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EditorSequencer.TrackIssueUnknownKind"
-		       source="Unknown track kind. The file will not load; delete the track.">
 			<origins>
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
@@ -10587,45 +10336,6 @@
 				<item>Source/Editor/Panels/Fog/VolumetricFogPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorVolumetricFog.StateActive"
-		       source="Volumetric fog is on: the light-scattering volume is drawn in the main view.">
-			<origins>
-				<item>Source/Editor/Panels/Fog/Model/VolumetricFogStatus.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EditorVolumetricFog.StateBufferFailed"
-		       source="Volumetric fog is on but its buffers could not be created, so plain fog is drawn. See the log.">
-			<origins>
-				<item>Source/Editor/Panels/Fog/Model/VolumetricFogStatus.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EditorVolumetricFog.StateDisabled"
-		       source="Volumetric fog is off in the fog settings, so plain fog is drawn. Turn on Volumetric in the Fog component.">
-			<origins>
-				<item>Source/Editor/Panels/Fog/Model/VolumetricFogStatus.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EditorVolumetricFog.StateMissingPipeline"
-		       source="Volumetric fog is on but its compute shader is missing, so plain fog is drawn. Check the shader cook log.">
-			<origins>
-				<item>Source/Editor/Panels/Fog/Model/VolumetricFogStatus.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EditorVolumetricFog.StateNoDevice" source="The renderer has no device this frame, so nothing is drawn.">
-			<origins>
-				<item>Source/Editor/Panels/Fog/Model/VolumetricFogStatus.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EditorVolumetricFog.StateNoFog" source="No fog in this scene. Add a Fog component to see volumetric fog.">
-			<origins>
-				<item>Source/Editor/Panels/Fog/Model/VolumetricFogStatus.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EditorVolumetricFog.StateUnderwater" source="The camera is under water. Underwater fog has no volume.">
-			<origins>
-				<item>Source/Editor/Panels/Fog/Model/VolumetricFogStatus.cpp</item>
-			</origins>
-		</entry>
 		<entry key="EditorVolumetricFog.ViewCompare" source="Compare">
 			<origins>
 				<item>Source/Editor/Panels/Fog/VolumetricFogPanel.cpp</item>
@@ -10649,6 +10359,210 @@
 		<entry key="Eject / Possess" source="Eject / Possess" context="Editor command name">
 			<origins>
 				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Enum.BoneMaskWeightSource.Bone" source="Set on this bone only.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/Model/BoneMaskHierarchy.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.BoneMaskWeightSource.Inherited" source="Inherited from a parent bone.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/Model/BoneMaskHierarchy.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.BoneMaskWeightSource.None" source="No entry reaches this bone, so its weight is 0.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/Model/BoneMaskHierarchy.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.BoneMaskWeightSource.Subtree" source="Set on this bone and spread to its children.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/Model/BoneMaskHierarchy.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.EditorGameViewAspect.Free" source="Free Aspect">
+			<origins>
+				<item>Source/Editor/Common/Workspace/EditorViewTargetUtil.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.EditorGameViewAspect.Ratio16x9" source="16:9">
+			<origins>
+				<item>Source/Editor/Common/Workspace/EditorViewTargetUtil.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.EditorNetMode.DedicatedServer" source="Dedicated Server">
+			<origins>
+				<item>Source/Editor/Common/Workspace/NetPlay/EditorNetPlaySettings.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.EditorNetMode.ListenHost" source="Listen Host">
+			<origins>
+				<item>Source/Editor/Common/Workspace/NetPlay/EditorNetPlaySettings.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.EditorNetMode.Standalone" source="Standalone">
+			<origins>
+				<item>Source/Editor/Common/Workspace/NetPlay/EditorNetPlaySettings.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.EditorNetProfilerChannel.LossPercent" source="Packet loss (highest connection, %)">
+			<origins>
+				<item>Source/Editor/Common/Workspace/NetPlay/EditorNetProfilerSample.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.EditorNetProfilerChannel.ReceivedBytesPerSecond"
+		       source="Received bytes per second (last second, all connections)">
+			<origins>
+				<item>Source/Editor/Common/Workspace/NetPlay/EditorNetProfilerSample.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.EditorNetProfilerChannel.ReceivedPacketsPerSecond" source="Received packets per second">
+			<origins>
+				<item>Source/Editor/Common/Workspace/NetPlay/EditorNetProfilerSample.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.EditorNetProfilerChannel.ResentMessagesPerSecond" source="Reliable messages resent per second">
+			<origins>
+				<item>Source/Editor/Common/Workspace/NetPlay/EditorNetProfilerSample.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.EditorNetProfilerChannel.RttMilliseconds" source="Round-trip time (highest connection, ms)">
+			<origins>
+				<item>Source/Editor/Common/Workspace/NetPlay/EditorNetProfilerSample.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.EditorNetProfilerChannel.SentBytesPerSecond"
+		       source="Sent bytes per second (last second, all connections)">
+			<origins>
+				<item>Source/Editor/Common/Workspace/NetPlay/EditorNetProfilerSample.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.EditorNetProfilerChannel.SentPacketsPerSecond" source="Sent packets per second">
+			<origins>
+				<item>Source/Editor/Common/Workspace/NetPlay/EditorNetProfilerSample.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.EditorPlacementSurface.Bounds" source="object bounds">
+			<origins>
+				<item>Source/Editor/Viewport/Model/EditorPlacementDrag.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.EditorPlacementSurface.Collider" source="collider">
+			<origins>
+				<item>Source/Editor/Viewport/Model/EditorPlacementDrag.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.EditorPlacementSurface.GroundPlane" source="ground plane">
+			<origins>
+				<item>Source/Editor/Viewport/Model/EditorPlacementDrag.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.EditorPlacementSurface.None" source="none">
+			<origins>
+				<item>Source/Editor/Viewport/Model/EditorPlacementDrag.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.EditorTracyLaunchResult.Launched" source="Tracy viewer launched and connecting to 127.0.0.1">
+			<origins>
+				<item>Source/Editor/Panels/Profiler/Model/EditorTracyLauncher.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.EditorTracyLaunchResult.TracyNotCompiled"
+		       source="Tracy is not linked into this build (SW_ENABLE_TRACY=OFF or Shipping)">
+			<origins>
+				<item>Source/Editor/Panels/Profiler/Model/EditorTracyLauncher.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.EditorTracyLaunchResult.ViewerLaunchFailed" source="Failed to launch the Tracy viewer (see the log)">
+			<origins>
+				<item>Source/Editor/Panels/Profiler/Model/EditorTracyLauncher.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.EditorTracyLaunchResult.ViewerNotFound"
+		       source="Tracy viewer not found at gv_tracyViewerPath: put tracy-profiler (0.14.1) there or point the variable at it">
+			<origins>
+				<item>Source/Editor/Panels/Profiler/Model/EditorTracyLauncher.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.SequenceTrackIssue.ChannelCount"
+		       source="Wrong channel count for the kind. The file will not load; delete and add the track again.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/Model/SequenceEditModel.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.SequenceTrackIssue.KeysOutsideTimeline"
+		       source="Some keys are outside the timeline and never play. Move them inside or widen the timeline.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/Model/SequenceEditModel.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.SequenceTrackIssue.MissingBinding"
+		       source="The track's binding is not in this sequence. The file will not load; delete the track.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/Model/SequenceEditModel.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.SequenceTrackIssue.MissingPropertyPath"
+		       source="No target path. Playback drives nothing; enter the property or rig slot.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/Model/SequenceEditModel.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.SequenceTrackIssue.UnknownKind"
+		       source="Unknown track kind. The file will not load; delete the track.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/Model/SequenceEditModel.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.SourceControlChangeKind.Added" source="Added">
+			<origins>
+				<item>Source/Editor/Common/SourceControl/SourceControlProvider.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.SourceControlChangeKind.Conflicted" source="Conflict">
+			<origins>
+				<item>Source/Editor/Common/SourceControl/SourceControlProvider.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.SourceControlChangeKind.Deleted" source="Deleted">
+			<origins>
+				<item>Source/Editor/Common/SourceControl/SourceControlProvider.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.SourceControlChangeKind.Modified" source="Modified">
+			<origins>
+				<item>Source/Editor/Common/SourceControl/SourceControlProvider.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.SourceControlChangeKind.Renamed" source="Renamed">
+			<origins>
+				<item>Source/Editor/Common/SourceControl/SourceControlProvider.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.SourceControlChangeKind.Untracked" source="New (untracked)">
+			<origins>
+				<item>Source/Editor/Common/SourceControl/SourceControlProvider.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.StreamingCellPreviewState.Keep" source="Keep">
+			<origins>
+				<item>Source/Editor/Panels/Scene/Model/StreamingCellsViewModel.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.StreamingCellPreviewState.Load" source="Load">
+			<origins>
+				<item>Source/Editor/Panels/Scene/Model/StreamingCellsViewModel.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.StreamingCellPreviewState.NoCamera" source="-">
+			<origins>
+				<item>Source/Editor/Panels/Scene/Model/StreamingCellsViewModel.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.StreamingCellPreviewState.Unload" source="Unload">
+			<origins>
+				<item>Source/Editor/Panels/Scene/Model/StreamingCellsViewModel.h</item>
 			</origins>
 		</entry>
 		<entry key="Evenly space selected objects on X"

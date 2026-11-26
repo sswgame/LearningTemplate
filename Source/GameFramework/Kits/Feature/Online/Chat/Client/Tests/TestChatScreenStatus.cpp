@@ -23,6 +23,8 @@ SW_TEST_CASE( ChatScreenStatusTest, EveryResultHasItsOwnText )
     }
     SW_EXPECT_TRUE( StringUtil::contains( ChatScreen::makeStatusText( ChatServiceResult{ ChatResult::Muted }, 12000 ), "12" ) );
     SW_EXPECT_TRUE( StringUtil::contains( ChatScreen::makeStatusText( ChatServiceResult{ ChatResult::RateLimited }, 250 ), "250" ) );
+    // 와이어에서 온 모르는 값은 모든 열거형이 함께 쓰는 키로 간다. 음성 대조: 범위 밖 값이 열거자 이름을 지어내면 이 키가 없어 진다.
+    SW_EXPECT_TRUE( StringUtil::contains( ChatScreen::makeStatusText( ChatServiceResult{ static_cast<ChatResult>( 200 ) }, 0 ), "Enum.Unknown" ) );
 }
 
 /** @brief [ChatScreenStatusTest] 공통 오류는 업무 결과와 무관한 글이고, 판이 다르면 갱신하라고, 모르는 오류는 쓸 수 없다고 한다 */

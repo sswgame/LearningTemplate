@@ -56,6 +56,8 @@ namespace sw
         int64                        _value;
         string                       _displayName;
         string                       _tooltip;
+        string                       _color; ///< 테마 색 토큰 이름(`ENUMERATOR( Color = "Signal.Error" )`)
+        string                       _unit;
         vector<pair<string, string>> _listCustomMeta;
         uint8                        _bHidden  : 1; ///< 에디터 선택지에서 숨긴다(`ENUMERATOR( Hidden )`)
         [[maybe_unused]] uint8       _reserved : 7;
@@ -65,6 +67,8 @@ namespace sw
             , _value{ 0 }
             , _displayName{}
             , _tooltip{}
+            , _color{}
+            , _unit{}
             , _listCustomMeta{}
             , _bHidden{ SW_FALSE }
             , _reserved{ 0 }

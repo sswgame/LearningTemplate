@@ -39,11 +39,27 @@ namespace sw
         CookedAlias, ///< 확장자 없는 이름(`.scene`) — 쿠킹본 이름(`.scene.bin`)으로 읽는다
     };
 
-    /** @struct AssetSuffix @brief 종류의 접미사 하나(소문자, 점 포함)와 그 역할입니다. */
+    /** @struct AssetSuffix @brief 종류의 접미사 하나(소문자, 점 포함)와 그 역할 · 파일 형식입니다. */
     struct AssetSuffix
     {
         string_view     _text;
         AssetSuffixRole _role;
+        /**
+         * @brief 종류가 정하는 파일 형식 번호입니다(소리의 코덱 · 프리팹 원본의 XML/JSON). 읽는 쪽은 확장자 글을 다시 비교하지 않고 이 칸으로 디코더 · 읽기 함수를 고른다.
+         * @details 언리얼 `UFactory::Formats` · Godot `ResourceFormatLoader::get_recognized_extensions` 처럼 확장자와 형식을 종류의 등록 데이터 한 곳에 둔다. 번호의 뜻은 종류의 열거형이다(`makeFormat` · `getFormat`).
+         */
+        uint8 _format{ 0 };
+
+        template <typename E>
+        [[nodiscard]] static constexpr uint8 makeFormat( E format )
+        {
+            return static_cast<uint8>( format );
+        }
+        template <typename E>
+        [[nodiscard]] constexpr E getFormat() const
+        {
+            return static_cast<E>( _format );
+        }
     };
 } // namespace sw
 
@@ -158,6 +174,8 @@ namespace sw
             copy._builtinNameCount = Count;
             return copy;
         }
+        /** @brief @p path 끝에 맞는 이 종류의 접미사입니다(가장 긴 것, 대소문자 무시). 없으면 nullptr 입니다. 표에 올라오지 않은 정의도 읽는다(도구 · 테스트). */
+        [[nodiscard]] SW_API const AssetSuffix* findSuffix( string_view path ) const;
         /** @brief @p name 이 이 종류의 내장 에셋 이름이면 true 입니다(철자 그대로). */
         [[nodiscard]] constexpr bool isBuiltinName( string_view name ) const
         {

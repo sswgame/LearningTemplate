@@ -35,18 +35,4 @@ namespace sw::editor
         rect._offset                = float2{ MathUtil::floor( ( width - fitWidth ) * 0.5f ), MathUtil::floor( ( height - fitHeight ) * 0.5f ) };
         return rect;
     }
-
-    const utf8* EditorViewTargetUtil::getAspectLabel( EditorGameViewAspect aspect )
-    {
-        switch ( aspect )
-        {
-            case EditorGameViewAspect::Free:
-                return "Free Aspect";
-            case EditorGameViewAspect::Ratio16x9:
-                return "16:9";
-            case EditorGameViewAspect::Count:
-                break;
-        }
-        return "?";
-    }
 } // namespace sw::editor

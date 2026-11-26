@@ -18,8 +18,10 @@
 		<entry source="+ Add Speaker" text="+ 화자 추가" />
 		<entry source="+ Create" text="+ 만들기" />
 		<entry source="+ Node" text="+ 노드" />
+		<entry source="-" text="-" />
 		<entry source="0 means none" text="0 은 덮어쓰지 않음" />
 		<entry source="0 means unbounded" text="0 은 제한 없음" />
+		<entry source="16:9" text="16:9" />
 		<entry source="236P = down, down-right, right + punch (the map's command history, 0.8 s window)"
 		       text="236P = 아래, 오른쪽 아래, 오른쪽 + 펀치(맵의 커맨드 기록, 0.8초 창)" />
 		<entry source="2D view (XY plane grid). Click to switch to 3D."
@@ -126,6 +128,7 @@
 		<entry source="Add to Favorites" text="즐겨찾기에 추가" />
 		<entry source="Add up the message kinds every process received instead of only the selected one"
 		       text="고른 프로세스 대신 모든 프로세스가 받은 메시지 종류를 합쳐 봅니다" />
+		<entry source="Added" text="더함" />
 		<entry source="Adjust the tile thumbnail size (64px to 160px)"
 		       text="타일 썸네일의 크기를 조절합니다 (64px ~ 160px)" />
 		<entry source="Advance" text="진행" />
@@ -453,6 +456,7 @@
 		<entry source="Condition" text="조건" />
 		<entry source="Configure, build, cook and stage the selected game into the output folder"
 		       text="고른 게임을 구성 · 빌드 · 쿠킹해 출력 폴더에 스테이징합니다" />
+		<entry source="Conflict" text="충돌" />
 		<entry source="Conflicts" text="충돌" />
 		<entry source="Connect" text="연결" />
 		<entry source="Connect a disconnected client to the server again"
@@ -573,6 +577,7 @@
 		       text="이 컬렉션을 지웁니다. 에셋은 제자리에 남습니다" />
 		<entry source="Delete this saved layout." text="저장된 레이아웃을 지웁니다." />
 		<entry source="Delete..." text="삭제..." />
+		<entry source="Deleted" text="지움" />
 		<entry source="Delta: ({dx}, {dy})" text="변화량: ({dx}, {dy})" />
 		<entry source="Depends on" text="의존 모듈" />
 		<entry source="Depth" text="깊이" />
@@ -729,6 +734,8 @@
 		       text="애니메이션 그래프 편집기 컨텍스트를 만들지 못했습니다." />
 		<entry source="Failed to create Dialogue Node Editor context."
 		       text="대화 노드 편집기 컨텍스트를 만들지 못했습니다." />
+		<entry source="Failed to launch the Tracy viewer (see the log)"
+		       text="Tracy 뷰어를 띄우지 못했습니다(로그를 보세요)" />
 		<entry source="Failed to open the scene" text="씬을 열지 못했습니다" />
 		<entry source="Failed to write the preset file" text="프리셋 파일을 쓰지 못했습니다" />
 		<entry source="Falloff" text="감쇠" />
@@ -819,6 +826,7 @@
 		<entry source="Frames (u,v,w,h,durationMs)" text="프레임(u,v,w,h,durationMs)" />
 		<entry source="Frames per second" text="초당 프레임" />
 		<entry source="Frames:" text="프레임:" />
+		<entry source="Free Aspect" text="자유 비율" />
 		<entry source="Free-form notes saved with the sequence. It does not affect playback."
 		       text="시퀀스와 함께 저장되는 자유 메모입니다. 재생에는 영향을 주지 않습니다." />
 		<entry source="Freeze" text="멈추기" />
@@ -1122,6 +1130,7 @@
 		<entry source="Mode" text="모드" />
 		<entry source="Model-space axis that runs left to right; the pose is reflected across the plane normal to it. Bone pairs come from the skeleton's mirror table."
 		       text="좌우로 놓인 모델 공간 축입니다. 그 축에 수직인 면으로 포즈를 비춥니다. 본 짝은 스켈레톤의 미러 표에서 옵니다." />
+		<entry source="Modified" text="고침" />
 		<entry source="Modified only" text="바뀐 것만" />
 		<entry source="Module" text="모듈" />
 		<entry source="Module set changed - build to apply, then restart the editor."
@@ -1213,6 +1222,7 @@
 		       text="Net Mode — Standalone 은 에디터 안에서 재생하고, 나머지는 서버와 클라이언트를 따로 띄운다 (Window > Multiplayer)" />
 		<entry source="Network presets could not be read - see the log"
 		       text="네트워크 프리셋을 읽지 못했습니다 — 로그를 보세요" />
+		<entry source="New (untracked)" text="새 파일(추적 안 함)" />
 		<entry source="New Action Name" text="새 액션 이름" />
 		<entry source="New Collection" text="새 컬렉션" />
 		<entry source="New Folder" text="새 폴더" />
@@ -1866,6 +1876,7 @@
 		<entry source="Removes the event from the edited copy; saving writes the library file"
 		       text="고치는 사본에서 이벤트를 지웁니다. 저장하면 라이브러리 파일에 씁니다" />
 		<entry source="Rename" text="이름 바꾸기" />
+		<entry source="Renamed" text="이름 바꿈" />
 		<entry source="Render Debugger" text="렌더 디버거" />
 		<entry source="Render Graph" text="렌더 그래프" />
 		<entry source="Render Targets" text="렌더 타깃" />
@@ -2591,6 +2602,12 @@
 		<entry source="Tracked Memory By Kind" text="종류별 추적 메모리" />
 		<entry source="Tracked: {bytesBuf}  (+ {unknownSizeCount} of unknown size)"
 		       text="추적: {bytesBuf}  (+ 크기 모름 {unknownSizeCount})" />
+		<entry source="Tracy is not linked into this build (SW_ENABLE_TRACY=OFF or Shipping)"
+		       text="이 빌드에는 Tracy 가 링크되지 않았습니다(SW_ENABLE_TRACY=OFF 또는 Shipping)" />
+		<entry source="Tracy viewer launched and connecting to 127.0.0.1"
+		       text="Tracy 뷰어를 띄웠고 127.0.0.1 에 연결하는 중입니다" />
+		<entry source="Tracy viewer not found at gv_tracyViewerPath: put tracy-profiler (0.14.1) there or point the variable at it"
+		       text="gv_tracyViewerPath 에서 Tracy 뷰어를 찾지 못했습니다. 그 자리에 tracy-profiler(0.14.1)를 두거나 변수가 뷰어를 가리키게 하세요" />
 		<entry source="Tracy: not in this build" text="Tracy: 이 빌드에 없음" />
 		<entry source="Tracy: off" text="Tracy: 꺼짐" />
 		<entry source="Tracy: on (port {tracyPort}, viewer {viewerConnected, select, connected {connected} other {waiting}})"
@@ -2839,12 +2856,14 @@
 		<entry source="client arguments (e.g. -vulkan -width=960 -height=540)"
 		       text="클라이언트 인자 (예: -vulkan -width=960 -height=540)" />
 		<entry source="cmd: {actionCommand}" text="명령: {actionCommand}" />
+		<entry source="collider" text="콜라이더" />
 		<entry source="depth" text="깊이" />
 		<entry source="expected by test" text="테스트가 예상함" />
 		<entry source="first frame" text="첫 프레임" />
 		<entry source="frame count" text="프레임 수" />
 		<entry source="git was not found on PATH, so changes cannot be listed. Install git and restart the editor."
 		       text="PATH 에서 git 을 찾지 못해 변경을 나열할 수 없습니다. git 을 설치하고 에디터를 다시 시작하세요." />
+		<entry source="ground plane" text="바닥 평면" />
 		<entry source="if ({condition})" text="조건({condition})" />
 		<entry source="items" text="항목" />
 		<entry source="layout name" text="레이아웃 이름" />
@@ -2858,6 +2877,8 @@
 		       text="검토 필요(번역 메모리 제안 또는 퍼지 가져오기)" />
 		<entry source="new element (Enter)" text="새 요소 (Enter)" />
 		<entry source="new key (Enter)" text="새 키 (Enter)" />
+		<entry source="none" text="없음" />
+		<entry source="object bounds" text="오브젝트 경계" />
 		<entry source="preset name" text="프리셋 이름" />
 		<entry source="range {snapshotDepthRangeX} .. {snapshotDepthRangeY}"
 		       text="범위 {snapshotDepthRangeX} .. {snapshotDepthRangeY}" />

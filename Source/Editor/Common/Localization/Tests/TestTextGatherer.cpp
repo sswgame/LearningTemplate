@@ -89,6 +89,60 @@ SW_TEST_CASE( TextGathererTest, CodeScannerReadsLiteralMacroCalls )
 }
 
 /**
+ * @brief [TextGathererTest] `ENUM()` 열거형의 `ENUMERATOR( DisplayName · Tooltip )` 을 키 `Enum.<열거형>.<열거자>` 로 모은다 — 값 식 · X 매크로 줄 · 앞 선언은 건너뛴다
+ * @details 음성 대조: 스캐너가 열거형 본문을 읽지 않으면 `Enum.ProbeStatus.Ok` 가 없어 첫 요구가 지고, 빠진 DisplayName 을 세지 않으면 오류 기대가 진다.
+ */
+SW_TEST_CASE( TextGathererTest, EnumeratorDisplayNamesAreGatheredUnderEnumKeys )
+{
+    const sw::string_view kSource = R"code(
+        enum class ProbeForward : uint8;
+        ENUM()
+        enum class ProbeStatus : uint8
+        {
+            Ok ENUMERATOR( DisplayName = "Bought " "it.", Tooltip = "The purchase went through" ) = 0,
+            Busy ENUMERATOR( DisplayName = "Still {verb}" ) = ( 1 << 0 ),
+            Legacy ENUMERATOR( Hidden ),
+            Count,
+        };
+        ENUM()
+        enum class ProbePartial : uint8
+        {
+            Named ENUMERATOR( DisplayName = "Named" ),
+#define PROBE_ROW( name ) name,
+            Missing, // DisplayName 이 없다
+        };
+        enum class ProbeUnreflected : uint8
+        {
+            Shown ENUMERATOR( DisplayName = "Shown" ),
+        };
+    )code";
+
+    sw::TextGatherer gatherer;
+    gatherer.gatherCodeText( kSource, "Source/Test/ProbeTypes.h" );
+
+    const sw::GatheredText* pOk = TextGathererTestInternal::findText( gatherer, "Enum.ProbeStatus.Ok" );
+    SW_REQUIRE_NOT_NULL( pOk );
+    SW_EXPECT_TRUE( pOk->_kind == sw::GatheredTextKind::Keyed );
+    SW_EXPECT_EQUAL( sw::string( "Bought it." ), pOk->_source );
+    const sw::GatheredText* pTip = TextGathererTestInternal::findText( gatherer, "Enum.ProbeStatus.Ok.Tooltip" );
+    SW_REQUIRE_NOT_NULL( pTip );
+    SW_EXPECT_EQUAL( sw::string( "The purchase went through" ), pTip->_source );
+    const sw::GatheredText* pBusy = TextGathererTestInternal::findText( gatherer, "Enum.ProbeStatus.Busy" );
+    SW_REQUIRE_NOT_NULL( pBusy );
+    SW_EXPECT_EQUAL( sw::string( "Still {verb}" ), pBusy->_source );
+    SW_EXPECT_NULL( TextGathererTestInternal::findText( gatherer, "Enum.ProbeStatus.Legacy" ) ); // 숨긴 열거자 · Count 표식은 글이 없어도 된다
+    SW_EXPECT_NULL( TextGathererTestInternal::findText( gatherer, "Enum.ProbeStatus.Count" ) );
+    SW_EXPECT_NOT_NULL( TextGathererTestInternal::findText( gatherer, "Enum.ProbePartial.Named" ) );
+
+    // 한 열거자라도 글을 적었으면 나머지도 적어야 한다 — 빠진 줄을 짚는다(16 번째 줄). ENUM() 없는 열거형은 키를 만들 이름이 없어 오류다.
+    SW_EXPECT_TRUE( TextGathererTestInternal::hasIssueContaining( gatherer.getIssues(), "ProbePartial::Missing", true ) );
+    SW_EXPECT_TRUE( TextGathererTestInternal::hasIssueContaining( gatherer.getIssues(), "ProbeTypes.h:16", true ) );
+    SW_EXPECT_TRUE( TextGathererTestInternal::hasIssueContaining( gatherer.getIssues(), "'ProbeUnreflected' has ENUMERATOR( DisplayName ) but no ENUM()", true ) );
+    SW_EXPECT_NULL( TextGathererTestInternal::findText( gatherer, "Enum.ProbeUnreflected.Shown" ) );
+    SW_EXPECT_EQUAL( size_t( 2 ), gatherer.getIssues().size() );
+}
+
+/**
  * @brief [TextGathererTest] UI 문서의 글은 `_bLocalized="false"` 면 모으지 않고, 적지 않았거나 참이면 모은다
  */
 SW_TEST_CASE( TextGathererTest, TextThatIsNotLocalizedIsNotGathered )

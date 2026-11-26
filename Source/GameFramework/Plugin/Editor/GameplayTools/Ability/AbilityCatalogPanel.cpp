@@ -61,25 +61,6 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief 종류의 목록 제목입니다. */
-            static const utf8* getKindTitle( AbilityEntryKind kind )
-            {
-                switch ( kind )
-                {
-                    case AbilityEntryKind::Effect:
-                        return SW_LOCKEY( "EdAbilityCatalog", "Effects" );
-                    case AbilityEntryKind::Ability:
-                        return SW_LOCKEY( "EdAbilityCatalog", "Abilities" );
-                    case AbilityEntryKind::AbilitySet:
-                        return SW_LOCKEY( "EdAbilityCatalog", "AbilitySets" );
-                    case AbilityEntryKind::Presentation:
-                        return SW_LOCKEY( "EdAbilityCatalog", "Presentations" );
-                    case AbilityEntryKind::Count:
-                        break;
-                }
-                return "";
-            }
-
             static void recordIndexedMark( const utf8* pPrefix, int32 index )
             {
                 if ( EditorSelfTestMarks::isEnabled() == false )
@@ -315,7 +296,7 @@ namespace sw::editor
             for ( uint32 kindIndex = 0; kindIndex < static_cast<uint32>( AbilityEntryKind::Count ); ++kindIndex )
             {
                 const AbilityEntryKind kind = static_cast<AbilityEntryKind>( kindIndex );
-                ImGui::SeparatorText( Internal::getKindTitle( kind ) );
+                ImGui::SeparatorText( LocalizedText::findEnum( kind ) );
                 for ( int32 entryIndex = 0; entryIndex < static_cast<int32>( list.size() ); ++entryIndex )
                 {
                     const AbilityCatalogEntry& entry = list[static_cast<size_t>( entryIndex )];
