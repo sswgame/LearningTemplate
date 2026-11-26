@@ -20,6 +20,7 @@
 #include "Engine/Content/AssetRegistry.h"
 #include "Engine/Content/AssetScanCache.h"
 #include "Engine/Content/ContentHash.h"
+#include "Engine/Graphics/Shader/ShaderSourceAssetKind.h"
 #include "Engine/Serialization/Inherit/AssetRedirect.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
 
@@ -35,7 +36,7 @@ namespace sw::editor
              */
             static constexpr const utf8* kArrDomainPrefix[] = { "engine/", "common/", "game/", "editor/", "scratch/" };
             /** @brief 참조를 훑는 텍스트 에셋의 확장자입니다. 바이너리(dds, mesh, 셰이더 바이너리)는 글이 아니다. */
-            static constexpr const utf8* kArrTextExtension[] = { ".xml", ".json", ".material", ".hlsl", ".hlsli" };
+            static constexpr const utf8* kArrTextExtension[] = { ".xml", ".json", ".material" }; ///< 셰이더 원본 · 조각은 셰이더 종류 표가 고른다(`ShaderSourceAsset::isRawSource`)
             /** @brief 텍스트지만 에셋이 아닌 것입니다 — 자동화 시나리오는 테스트 입력이라 참조자로 세지 않는다(세면 이름 바꾸기가 시나리오를 고쳐 쓴다). */
             static constexpr const utf8* kScenarioSuffix = ".scenario.xml";
             /** @brief `.meta` 의 GUID 칸 머리입니다(`AssetMeta::_guid`). 서술의 엄격한 읽기 · 결함 알림은 `asset-ids` · `AssetDatabase` 가 한다 — 여기는 줄만 찾는다. */
@@ -273,6 +274,8 @@ namespace sw::editor
         // 리다이렉트 표는 옛 id 와 새 id 를 적는 글이라 참조자가 아니다(엔진 규칙 `AssetReferenceFields::isReferrer` 와 같다).
         if ( AssetRedirect::isTable( lowerPath ) )
             return false;
+        if ( ShaderSourceAsset::isRawSource( lowerPath ) )
+            return true;
         return std::any_of( std::begin( EditorAssetIndexInternal::kArrTextExtension ), std::end( EditorAssetIndexInternal::kArrTextExtension ),
                             [&lowerPath]( const utf8* pExtension )
         { return StringUtil::endsWith( lowerPath, pExtension ); } );
