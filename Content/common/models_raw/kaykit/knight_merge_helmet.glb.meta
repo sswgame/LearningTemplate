@@ -1,1 +1,6 @@
-<AssetMeta _guid="6f332917329bf06e059cca3986148f79" _source="knight_merge_helmet.glb" />
+<AssetMeta _guid="6f332917329bf06e059cca3986148f79" _source="knight_merge_helmet.glb">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="2ad5dd228d5be23bdeebe382449c84a5" />
+		<AssetImportOutput _name="/knight_merge_helmet.skeleton.xml" _guid="3f0e5e8ed01cbf47b789ab1c5cb56bc7" />
+	</_listOutput>
+</AssetMeta>

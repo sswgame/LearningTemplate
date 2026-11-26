@@ -1,1 +1,5 @@
-<AssetMeta _guid="a9ff47826812f69845acef7358107f13" _source="spark_04.png" />
+<AssetMeta _guid="a9ff47826812f69845acef7358107f13" _source="spark_04.png">
+	<_listOutput>
+		<AssetImportOutput _name=".dds" _guid="8a6e4c71163601825d18d19b21fdfc7c" />
+	</_listOutput>
+</AssetMeta>

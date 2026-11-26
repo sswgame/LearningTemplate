@@ -1,1 +1,6 @@
-<AssetMeta _guid="c08c63e348a586b77dbae10a43985ad6" _source="bush_common.gltf" />
+<AssetMeta _guid="c08c63e348a586b77dbae10a43985ad6" _source="bush_common.gltf">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="36bfc48ea645f79c4ee1f9cbd562db6d" />
+		<AssetImportOutput _name="/materials/leaves_twistedtree.material" _guid="cbbed3f30b9876a4336b9d01dbf93adf" />
+	</_listOutput>
+</AssetMeta>

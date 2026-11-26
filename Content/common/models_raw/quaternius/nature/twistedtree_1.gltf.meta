@@ -1,1 +1,8 @@
-<AssetMeta _guid="a56472b8292a88181c6866d04f60f3b8" _source="twistedtree_1.gltf" />
+<AssetMeta _guid="a56472b8292a88181c6866d04f60f3b8" _source="twistedtree_1.gltf">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="47a3f943732900b2e15caeaed75c98c0" />
+		<AssetImportOutput _name="/materials/bark_twistedtree.material" _guid="ae34a520a7043fa6dbffa1efa726e46d" />
+		<AssetImportOutput _name="/materials/leaves_twistedtree.material" _guid="934b812fb615516ec4635385da367cd6" />
+		<AssetImportOutput _name="/twistedtree_1.prefab.xml" _guid="b50667ed2d9d9f633f691f998d465c82" />
+	</_listOutput>
+</AssetMeta>

@@ -1,1 +1,6 @@
-<AssetMeta _guid="db1248824f69e9f306920d74b0bb9d3a" _source="terrain_slope_inner_corner.gltf" />
+<AssetMeta _guid="db1248824f69e9f306920d74b0bb9d3a" _source="terrain_slope_inner_corner.gltf">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="0f43b011c3e3f251534ceafcd76e5759" />
+		<AssetImportOutput _name="/materials/spacebits_texture.material" _guid="af23d66fdfdb79ef6d2d45492f7dfeea" />
+	</_listOutput>
+</AssetMeta>

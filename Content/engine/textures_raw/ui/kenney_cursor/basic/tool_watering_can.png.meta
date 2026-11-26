@@ -1,1 +1,5 @@
-<AssetMeta _guid="2ccb242684dd2d67ba005ddbec0c6956" _source="tool_watering_can.png" />
+<AssetMeta _guid="2ccb242684dd2d67ba005ddbec0c6956" _source="tool_watering_can.png">
+	<_listOutput>
+		<AssetImportOutput _name=".dds" _guid="b650398acbceb88bac78ec9746855444" />
+	</_listOutput>
+</AssetMeta>

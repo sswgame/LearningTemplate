@@ -1,1 +1,5 @@
-<AssetMeta _guid="c9a406741bcfd0580eef935fdb5339dc" _source="twirl_02.png" />
+<AssetMeta _guid="c9a406741bcfd0580eef935fdb5339dc" _source="twirl_02.png">
+	<_listOutput>
+		<AssetImportOutput _name=".dds" _guid="af3074e0a2d0fef98312c867f7df4d96" />
+	</_listOutput>
+</AssetMeta>

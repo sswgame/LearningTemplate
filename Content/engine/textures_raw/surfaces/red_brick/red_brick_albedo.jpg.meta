@@ -1,1 +1,5 @@
-<AssetMeta _guid="5421cc3a827f76fdce169e1ebc2e2c23" _source="red_brick_albedo.jpg" />
+<AssetMeta _guid="5421cc3a827f76fdce169e1ebc2e2c23" _source="red_brick_albedo.jpg">
+	<_listOutput>
+		<AssetImportOutput _name=".dds" _guid="e555e3a1df7fd3059c8c9535784f32ee" />
+	</_listOutput>
+</AssetMeta>

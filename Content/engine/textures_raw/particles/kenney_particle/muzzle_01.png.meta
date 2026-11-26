@@ -1,1 +1,5 @@
-<AssetMeta _guid="de0603b1687505083ea7ae6f48a9ac34" _source="muzzle_01.png" />
+<AssetMeta _guid="de0603b1687505083ea7ae6f48a9ac34" _source="muzzle_01.png">
+	<_listOutput>
+		<AssetImportOutput _name=".dds" _guid="0f98bbdfa2df6c257064161e6b70de47" />
+	</_listOutput>
+</AssetMeta>

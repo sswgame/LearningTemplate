@@ -1,1 +1,8 @@
-<AssetMeta _guid="ea8225c2bb71369e2b86c262ae4286cd" _source="bush_common_flowers.gltf" />
+<AssetMeta _guid="ea8225c2bb71369e2b86c262ae4286cd" _source="bush_common_flowers.gltf">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="b34f4e586a11b4e6738529a9c60faeb9" />
+		<AssetImportOutput _name="/bush_common_flowers.prefab.xml" _guid="25ce8c2200dc441948ae8fa629a24905" />
+		<AssetImportOutput _name="/materials/flowers.material" _guid="451183a49602986f9f64d40f9589ee1b" />
+		<AssetImportOutput _name="/materials/leaves_normaltree.material" _guid="284b35ec9a775d35485612fbd25fbfe7" />
+	</_listOutput>
+</AssetMeta>

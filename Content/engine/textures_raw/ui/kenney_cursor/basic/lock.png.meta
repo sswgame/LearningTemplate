@@ -1,1 +1,5 @@
-<AssetMeta _guid="29fe1d0b4a434786b2e1b9d50a8cd58d" _source="lock.png" />
+<AssetMeta _guid="29fe1d0b4a434786b2e1b9d50a8cd58d" _source="lock.png">
+	<_listOutput>
+		<AssetImportOutput _name=".dds" _guid="698b659112602ecfb1f6bd5c8f76954c" />
+	</_listOutput>
+</AssetMeta>

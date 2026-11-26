@@ -1,1 +1,5 @@
-<AssetMeta _guid="0de02f66f0f995ff8ea0dfc01c7fd064" _source="t_hair_2_normal.png" />
+<AssetMeta _guid="0de02f66f0f995ff8ea0dfc01c7fd064" _source="t_hair_2_normal.png">
+	<_listOutput>
+		<AssetImportOutput _name=".dds" _guid="c265b2da7225162a5752da1f81cd0357" />
+	</_listOutput>
+</AssetMeta>

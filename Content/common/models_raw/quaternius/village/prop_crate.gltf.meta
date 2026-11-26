@@ -1,1 +1,6 @@
-<AssetMeta _guid="e86e2d1dbf67d0c40616de2b7821ca12" _source="prop_crate.gltf" />
+<AssetMeta _guid="e86e2d1dbf67d0c40616de2b7821ca12" _source="prop_crate.gltf">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="3e31a6f15a5a1557f1244f1b89821979" />
+		<AssetImportOutput _name="/materials/mi_woodtrim.material" _guid="f1e51153e7a64752a0a877378a59172e" />
+	</_listOutput>
+</AssetMeta>

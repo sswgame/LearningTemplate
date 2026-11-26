@@ -1,1 +1,6 @@
-<AssetMeta _guid="f7e6b04b2ce182b8fccd48669a4d86a2" _source="prop_wagon.gltf" />
+<AssetMeta _guid="f7e6b04b2ce182b8fccd48669a4d86a2" _source="prop_wagon.gltf">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="fcf5995a170542fcb13dfef77727314c" />
+		<AssetImportOutput _name="/materials/mi_woodtrim_wear.material" _guid="7caceebf921424288a4e865bf2246012" />
+	</_listOutput>
+</AssetMeta>

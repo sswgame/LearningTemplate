@@ -1,1 +1,5 @@
-<AssetMeta _guid="5d712c413edf73a7ddc148c55721dd49" _source="playstation_button_triangle.png" />
+<AssetMeta _guid="5d712c413edf73a7ddc148c55721dd49" _source="playstation_button_triangle.png">
+	<_listOutput>
+		<AssetImportOutput _name=".dds" _guid="a60afe637d2f7f542ea7f2e432af421f" />
+	</_listOutput>
+</AssetMeta>

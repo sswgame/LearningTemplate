@@ -1,1 +1,6 @@
-<AssetMeta _guid="edf97acce8fe0bbdc2ad47f3a033e94b" _source="coaster_train_front.glb" />
+<AssetMeta _guid="edf97acce8fe0bbdc2ad47f3a033e94b" _source="coaster_train_front.glb">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="daf4fea5a215e3b51b7bcdf663679d04" />
+		<AssetImportOutput _name="/materials/colormap.material" _guid="e1634b5db467b90584ffdaebd93ce7be" />
+	</_listOutput>
+</AssetMeta>

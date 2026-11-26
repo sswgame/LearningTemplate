@@ -1,1 +1,5 @@
-<AssetMeta _guid="9165e652f03fb6d5cfb30c31a189bab5" _source="craft_cargo_a.glb" />
+<AssetMeta _guid="9165e652f03fb6d5cfb30c31a189bab5" _source="craft_cargo_a.glb">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="dc84bb83a197996158cce168eb5b0e93" />
+	</_listOutput>
+</AssetMeta>

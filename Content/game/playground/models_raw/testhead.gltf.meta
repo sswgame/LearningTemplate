@@ -1,1 +1,7 @@
-<AssetMeta _guid="270c07f577591471294520bc1c6292c8" _source="testhead.gltf" />
+<AssetMeta _guid="270c07f577591471294520bc1c6292c8" _source="testhead.gltf">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="a8bed4f48f809671826186595f09b437" />
+		<AssetImportOutput _name="/testhead.animset.xml" _guid="d4ddca312858dace9209badaee5f303d" />
+		<AssetImportOutput _name="/testhead.skeleton.xml" _guid="5a218b04c1623225764b811a57430d35" />
+	</_listOutput>
+</AssetMeta>

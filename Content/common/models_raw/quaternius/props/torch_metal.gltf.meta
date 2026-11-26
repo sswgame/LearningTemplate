@@ -1,1 +1,6 @@
-<AssetMeta _guid="81f0c389a8a542fa520276a544e9046e" _source="torch_metal.gltf" />
+<AssetMeta _guid="81f0c389a8a542fa520276a544e9046e" _source="torch_metal.gltf">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="bdcc9f4b9cabf458a849c4638835ea9b" />
+		<AssetImportOutput _name="/materials/mi_trim_metal.material" _guid="121e949381dd20a1e7e710c6998105d4" />
+	</_listOutput>
+</AssetMeta>

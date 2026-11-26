@@ -1,1 +1,5 @@
-<AssetMeta _guid="e0e74b1306fa9767c108234d675252fc" _source="coaster_colormap.png" />
+<AssetMeta _guid="e0e74b1306fa9767c108234d675252fc" _source="coaster_colormap.png">
+	<_listOutput>
+		<AssetImportOutput _name=".dds" _guid="11c9f8f5b508e1ccdf1b1b69914f1eb8" />
+	</_listOutput>
+</AssetMeta>

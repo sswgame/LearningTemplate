@@ -1,1 +1,8 @@
-<AssetMeta _guid="d06507b34ea78f284028c55507650e47" _source="bucket_wooden_1.gltf" />
+<AssetMeta _guid="d06507b34ea78f284028c55507650e47" _source="bucket_wooden_1.gltf">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="5db80f68bbdc22ddc577a8f20879e91b" />
+		<AssetImportOutput _name="/bucket_wooden_1.prefab.xml" _guid="35e111495301f8cc8fd8008ed2bc5120" />
+		<AssetImportOutput _name="/materials/mi_trim_furniture.material" _guid="2ddc6e659179e0dfd12a3f66a8e40311" />
+		<AssetImportOutput _name="/materials/mi_trim_metal.material" _guid="9fb50ebefc510a4c98bd4de1d90845ac" />
+	</_listOutput>
+</AssetMeta>

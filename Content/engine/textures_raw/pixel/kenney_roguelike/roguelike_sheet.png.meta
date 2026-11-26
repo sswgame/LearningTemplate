@@ -1,1 +1,5 @@
-<AssetMeta _guid="0b74aea881adea70b4653e5776d5a8b6" _source="roguelike_sheet.png" />
+<AssetMeta _guid="0b74aea881adea70b4653e5776d5a8b6" _source="roguelike_sheet.png">
+	<_listOutput>
+		<AssetImportOutput _name=".dds" _guid="1f808c39f91a22b3a5b3079d8c9b5a8a" />
+	</_listOutput>
+</AssetMeta>

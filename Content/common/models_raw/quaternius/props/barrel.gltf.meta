@@ -1,1 +1,8 @@
-<AssetMeta _guid="85debf4d17966e66e349821cf3f301e2" _source="barrel.gltf" />
+<AssetMeta _guid="85debf4d17966e66e349821cf3f301e2" _source="barrel.gltf">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="f0de3fb9ab5ad0a204e25a8eb5757678" />
+		<AssetImportOutput _name="/barrel.prefab.xml" _guid="c8a5197681ade1fb83ccb64266955bd9" />
+		<AssetImportOutput _name="/materials/mi_trim_furniture.material" _guid="d1d221af4d9f2a497e21f33acf59ef27" />
+		<AssetImportOutput _name="/materials/mi_trim_metal.material" _guid="836d537119fe4551eb4e019371b6ea91" />
+	</_listOutput>
+</AssetMeta>

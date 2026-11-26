@@ -1,1 +1,5 @@
-<AssetMeta _guid="3c721c98bd3494e10a266056cff34705" _source="leaves_normaltree_c.png" />
+<AssetMeta _guid="3c721c98bd3494e10a266056cff34705" _source="leaves_normaltree_c.png">
+	<_listOutput>
+		<AssetImportOutput _name=".dds" _guid="eeb623460ae3bb7442c775751c6d6540" />
+	</_listOutput>
+</AssetMeta>

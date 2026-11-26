@@ -1,1 +1,6 @@
-<AssetMeta _guid="d125297b54a6e317e2a7e73ea15a1cc4" _source="wooden_crate_01.gltf" />
+<AssetMeta _guid="d125297b54a6e317e2a7e73ea15a1cc4" _source="wooden_crate_01.gltf">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="6af190870e0fae6cbcebf85dd5f15286" />
+		<AssetImportOutput _name="/materials/wooden_crate_01.material" _guid="7d8d7737abb8b89751cb6a1fbe61d0d9" />
+	</_listOutput>
+</AssetMeta>

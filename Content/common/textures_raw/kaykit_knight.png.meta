@@ -1,1 +1,5 @@
-<AssetMeta _guid="ec94865f8e82bbe3061abe80afd4e8d2" _source="kaykit_knight.png" />
+<AssetMeta _guid="ec94865f8e82bbe3061abe80afd4e8d2" _source="kaykit_knight.png">
+	<_listOutput>
+		<AssetImportOutput _name=".dds" _guid="887e9b5c653e21bc77edc7e35a35b2ed" />
+	</_listOutput>
+</AssetMeta>

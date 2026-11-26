@@ -1,1 +1,9 @@
-<AssetMeta _guid="f987255fb866b4b98988567e992d1ec2" _source="female_ranger_arms.gltf" />
+<AssetMeta _guid="f987255fb866b4b98988567e992d1ec2" _source="female_ranger_arms.gltf">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="3f46ae3a8fdbb15fe2e2bedcaa9c2ade" />
+		<AssetImportOutput _name="/female_ranger_arms.prefab.xml" _guid="35aa152c8cf5250fdba36b87e29b12c9" />
+		<AssetImportOutput _name="/female_ranger_arms.skeleton.xml" _guid="d36577a302bf9a73df790f11db88e4cb" />
+		<AssetImportOutput _name="/materials/mi_ranger.material" _guid="f602fda0b80ad520cd938db5debf9de7" />
+		<AssetImportOutput _name="/materials/mi_regular_female.material" _guid="160d915c8e92f97669f3a5020ffa1baa" />
+	</_listOutput>
+</AssetMeta>

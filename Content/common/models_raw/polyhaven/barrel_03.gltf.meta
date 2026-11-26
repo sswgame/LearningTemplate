@@ -1,1 +1,6 @@
-<AssetMeta _guid="82abf1204db8779cd8f6fd9dd308795f" _source="barrel_03.gltf" />
+<AssetMeta _guid="82abf1204db8779cd8f6fd9dd308795f" _source="barrel_03.gltf">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="d687e9ad1468083b43a5853e622571bf" />
+		<AssetImportOutput _name="/materials/barrel_03.material" _guid="8019c36c607865404f18b442ea604cc2" />
+	</_listOutput>
+</AssetMeta>

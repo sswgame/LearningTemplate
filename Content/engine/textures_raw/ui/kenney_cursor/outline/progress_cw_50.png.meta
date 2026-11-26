@@ -1,1 +1,5 @@
-<AssetMeta _guid="f12564432588cf13734365cb5b19f6d2" _source="progress_cw_50.png" />
+<AssetMeta _guid="f12564432588cf13734365cb5b19f6d2" _source="progress_cw_50.png">
+	<_listOutput>
+		<AssetImportOutput _name=".dds" _guid="03a36e3071b89a8f9907028840826ee7" />
+	</_listOutput>
+</AssetMeta>

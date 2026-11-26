@@ -1,1 +1,5 @@
-<AssetMeta _guid="63b378ab06c4b542abff7464126414d7" _source="belfast_sunset_puresky.hdr" />
+<AssetMeta _guid="63b378ab06c4b542abff7464126414d7" _source="belfast_sunset_puresky.hdr">
+	<_listOutput>
+		<AssetImportOutput _name=".dds" _guid="5fceea740b9d17a7479ce287d5ca4db4" />
+	</_listOutput>
+</AssetMeta>

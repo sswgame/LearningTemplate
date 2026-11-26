@@ -1,1 +1,5 @@
-<AssetMeta _guid="92b63c7d6d7f36620a05285ac7795ec0" _source="coast_sand_rocks_02_normal.jpg" />
+<AssetMeta _guid="92b63c7d6d7f36620a05285ac7795ec0" _source="coast_sand_rocks_02_normal.jpg">
+	<_listOutput>
+		<AssetImportOutput _name=".dds" _guid="d6c02773c6c03738dc7603833cd72cab" />
+	</_listOutput>
+</AssetMeta>

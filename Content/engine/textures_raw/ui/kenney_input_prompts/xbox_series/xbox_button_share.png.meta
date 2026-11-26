@@ -1,1 +1,5 @@
-<AssetMeta _guid="577386e1473f120c64ffdf01a7cb59bb" _source="xbox_button_share.png" />
+<AssetMeta _guid="577386e1473f120c64ffdf01a7cb59bb" _source="xbox_button_share.png">
+	<_listOutput>
+		<AssetImportOutput _name=".dds" _guid="b16215b31ad3d318b294e8a308370045" />
+	</_listOutput>
+</AssetMeta>

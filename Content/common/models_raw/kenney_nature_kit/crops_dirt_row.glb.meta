@@ -1,1 +1,5 @@
-<AssetMeta _guid="289846fb108a99adb03081e0a0aa9020" _source="crops_dirt_row.glb" />
+<AssetMeta _guid="289846fb108a99adb03081e0a0aa9020" _source="crops_dirt_row.glb">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="7cb5552e291b37173b5b8c894fda3ea6" />
+	</_listOutput>
+</AssetMeta>

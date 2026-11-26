@@ -1,1 +1,6 @@
-<AssetMeta _guid="9ee739b4ceea9e5b537f773934b6aa85" _source="potion_1.gltf" />
+<AssetMeta _guid="9ee739b4ceea9e5b537f773934b6aa85" _source="potion_1.gltf">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="92b23446b6875e214829f67115322b9f" />
+		<AssetImportOutput _name="/materials/mi_trim_props_vertex.material" _guid="608801423cfd98637a1c08c2837c3599" />
+	</_listOutput>
+</AssetMeta>

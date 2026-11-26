@@ -1,1 +1,5 @@
-<AssetMeta _guid="0d6870759c79f3e6e602ec3089bc956d" _source="flare_01.png" />
+<AssetMeta _guid="0d6870759c79f3e6e602ec3089bc956d" _source="flare_01.png">
+	<_listOutput>
+		<AssetImportOutput _name=".dds" _guid="4081149cf084c19153d87c0ab9cd34cf" />
+	</_listOutput>
+</AssetMeta>

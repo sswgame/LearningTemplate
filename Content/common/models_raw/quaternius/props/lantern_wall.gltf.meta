@@ -1,1 +1,6 @@
-<AssetMeta _guid="3836ad9838587a6a6fcba05808c784d0" _source="lantern_wall.gltf" />
+<AssetMeta _guid="3836ad9838587a6a6fcba05808c784d0" _source="lantern_wall.gltf">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="c2cde520e32114473cb101e083d222b2" />
+		<AssetImportOutput _name="/materials/mi_trim_metal.material" _guid="3552f9c48e6ebd6473c390768656693d" />
+	</_listOutput>
+</AssetMeta>

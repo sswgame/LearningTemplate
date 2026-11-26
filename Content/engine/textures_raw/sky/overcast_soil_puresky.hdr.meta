@@ -1,1 +1,5 @@
-<AssetMeta _guid="b022ff9506533ff978f9eed90222f22d" _source="overcast_soil_puresky.hdr" />
+<AssetMeta _guid="b022ff9506533ff978f9eed90222f22d" _source="overcast_soil_puresky.hdr">
+	<_listOutput>
+		<AssetImportOutput _name=".dds" _guid="d685b860defa2c5d8ea22d92264e7f6f" />
+	</_listOutput>
+</AssetMeta>

@@ -1,1 +1,8 @@
-<AssetMeta _guid="53b9ad4319b9ea32890c69387673c6f5" _source="flower_4_group.gltf" />
+<AssetMeta _guid="53b9ad4319b9ea32890c69387673c6f5" _source="flower_4_group.gltf">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="0e5fb9ab48b8041b172fe5127ba3ea93" />
+		<AssetImportOutput _name="/flower_4_group.prefab.xml" _guid="bb326e7b624d3588ed9d449a345043c6" />
+		<AssetImportOutput _name="/materials/flowers.material" _guid="218f5aa27a71b06717376361a6263cd7" />
+		<AssetImportOutput _name="/materials/leaves.material" _guid="8ef90c7ea84948491d573d870c976936" />
+	</_listOutput>
+</AssetMeta>

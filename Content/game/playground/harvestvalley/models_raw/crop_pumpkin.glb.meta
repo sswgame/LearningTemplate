@@ -1,1 +1,5 @@
-<AssetMeta _guid="3dd9f3b800581127bc7456018b6599e9" _source="crop_pumpkin.glb" />
+<AssetMeta _guid="3dd9f3b800581127bc7456018b6599e9" _source="crop_pumpkin.glb">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="fea2c8c7f627888b8a490bc52434a597" />
+	</_listOutput>
+</AssetMeta>

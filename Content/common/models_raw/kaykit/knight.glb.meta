@@ -1,1 +1,16 @@
-<AssetMeta _guid="0643ff10d66692d2f695563704af3f66" _source="knight.glb" />
+<AssetMeta _guid="0643ff10d66692d2f695563704af3f66" _source="knight.glb">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="0a55fa69f6f749e88ca135bc3d803483" />
+		<AssetImportOutput _name="/knight.animset.xml" _guid="5cdc50168836caff61298efe87d056fc" />
+		<AssetImportOutput _name="/knight.skeleton.xml" _guid="03273c012fee9c977aa7fb87663429b1" />
+		<AssetImportOutput _name="/parts/1h_sword.mesh" _guid="d192901ab6b4f08ce54eaba61f284977" />
+		<AssetImportOutput _name="/parts/1h_sword_offhand.mesh" _guid="405cb9371c30ec553c89534c738c629f" />
+		<AssetImportOutput _name="/parts/2h_sword.mesh" _guid="c195405522946a50d4e1d59d28a8fcb5" />
+		<AssetImportOutput _name="/parts/badge_shield.mesh" _guid="e1198034918e509737ca4d0a37564681" />
+		<AssetImportOutput _name="/parts/knight_cape.mesh" _guid="1d3efc667a508f4ac80f370484e573e3" />
+		<AssetImportOutput _name="/parts/knight_helmet.mesh" _guid="54faed3f05c28536635708047238f3df" />
+		<AssetImportOutput _name="/parts/rectangle_shield.mesh" _guid="ec9b201722ef45207592c15c5651e1cd" />
+		<AssetImportOutput _name="/parts/round_shield.mesh" _guid="727a077bb916736ea59c8852cbfdf0b1" />
+		<AssetImportOutput _name="/parts/spike_shield.mesh" _guid="a90a19822ff5565d3170c1d6ccb2e030" />
+	</_listOutput>
+</AssetMeta>

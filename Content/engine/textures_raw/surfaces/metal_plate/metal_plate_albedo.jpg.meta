@@ -1,1 +1,5 @@
-<AssetMeta _guid="fbc98d21e1764f2e4e0a0b60f6707c03" _source="metal_plate_albedo.jpg" />
+<AssetMeta _guid="fbc98d21e1764f2e4e0a0b60f6707c03" _source="metal_plate_albedo.jpg">
+	<_listOutput>
+		<AssetImportOutput _name=".dds" _guid="a87178c9cde079f5b8d67033c92d3696" />
+	</_listOutput>
+</AssetMeta>

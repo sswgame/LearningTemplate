@@ -1,1 +1,5 @@
-<AssetMeta _guid="624c0b4b4cb6f59026470ce722b7af49" _source="playstation_trigger_l2.png" />
+<AssetMeta _guid="624c0b4b4cb6f59026470ce722b7af49" _source="playstation_trigger_l2.png">
+	<_listOutput>
+		<AssetImportOutput _name=".dds" _guid="6b1d43f29ab730c439b34ac755b89991" />
+	</_listOutput>
+</AssetMeta>

@@ -1,1 +1,6 @@
-<AssetMeta _guid="741d3df5eec363a0821e772bdb919f40" _source="mushroom_common.gltf" />
+<AssetMeta _guid="741d3df5eec363a0821e772bdb919f40" _source="mushroom_common.gltf">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="2f0328f1b48d28075cc51d1b09309f6d" />
+		<AssetImportOutput _name="/materials/mushrooms.material" _guid="c17b3c5712e6b7018e862a6eb92dcc14" />
+	</_listOutput>
+</AssetMeta>

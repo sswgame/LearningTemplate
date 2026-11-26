@@ -1,1 +1,5 @@
-<AssetMeta _guid="93e837e635df0147478a27905922dc00" _source="machine_wireless.glb" />
+<AssetMeta _guid="93e837e635df0147478a27905922dc00" _source="machine_wireless.glb">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="926106397615ab451a341c7361381600" />
+	</_listOutput>
+</AssetMeta>

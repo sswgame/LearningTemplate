@@ -1,5 +1,11 @@
 <AssetMeta _guid="8e8d5e8bfe6b81b942f673408c83d5f5" _source="skeleton_minion.glb">
 	<_listImportOverride>
-		<AssetImportOverride _key="lods" _value='[{"triangleRatio": 0.5, "screenSize": 0.3, "maxError": 0.01}, {"triangleRatio": 0.25, "screenSize": 0.12, "maxError": 0.02}]' />
+		<AssetImportOverride _key="lods"
+		                     _value="[{&quot;triangleRatio&quot;: 0.5, &quot;screenSize&quot;: 0.3, &quot;maxError&quot;: 0.01}, {&quot;triangleRatio&quot;: 0.25, &quot;screenSize&quot;: 0.12, &quot;maxError&quot;: 0.02}]" />
 	</_listImportOverride>
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="856b0fd05101fd718f434ea3541798bd" />
+		<AssetImportOutput _name="/skeleton_minion.animset.xml" _guid="1c6ee4fa920f615b5fe64876c6250db0" />
+		<AssetImportOutput _name="/skeleton_minion.skeleton.xml" _guid="c076ebfb891cd0f193e835d52eca1898" />
+	</_listOutput>
 </AssetMeta>

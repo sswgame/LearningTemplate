@@ -1,1 +1,5 @@
-<AssetMeta _guid="70cb89cda8aae5a3100e76d9d7e534f9" _source="mark_exclamation.png" />
+<AssetMeta _guid="70cb89cda8aae5a3100e76d9d7e534f9" _source="mark_exclamation.png">
+	<_listOutput>
+		<AssetImportOutput _name=".dds" _guid="d7facdbb6b45400acfd679a75bc78ce6" />
+	</_listOutput>
+</AssetMeta>

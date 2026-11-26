@@ -1,1 +1,5 @@
-<AssetMeta _guid="16cfd011d06622b628571672bdefa68a" _source="barrier_half.glb" />
+<AssetMeta _guid="16cfd011d06622b628571672bdefa68a" _source="barrier_half.glb">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="05ed6b84bc1298e443564670fb6205ac" />
+	</_listOutput>
+</AssetMeta>

@@ -2,4 +2,7 @@
 	<_listImportOverride>
 		<AssetImportOverride _key="generateMips" _value="false" />
 	</_listImportOverride>
+	<_listOutput>
+		<AssetImportOutput _name=".dds" _guid="39d32f473bf64b98ea29bcf3b57a046e" />
+	</_listOutput>
 </AssetMeta>

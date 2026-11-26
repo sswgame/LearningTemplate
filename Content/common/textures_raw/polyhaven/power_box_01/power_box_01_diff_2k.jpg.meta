@@ -1,1 +1,5 @@
-<AssetMeta _guid="4bfacb80419adc596a162833b83a6add" _source="power_box_01_diff_2k.jpg" />
+<AssetMeta _guid="4bfacb80419adc596a162833b83a6add" _source="power_box_01_diff_2k.jpg">
+	<_listOutput>
+		<AssetImportOutput _name=".dds" _guid="ba8137898220a4a1995e50fe9cf73cb1" />
+	</_listOutput>
+</AssetMeta>

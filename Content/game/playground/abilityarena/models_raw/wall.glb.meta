@@ -1,1 +1,6 @@
-<AssetMeta _guid="8760453dce206f6d09ff73f4357c6568" _source="wall.glb" />
+<AssetMeta _guid="8760453dce206f6d09ff73f4357c6568" _source="wall.glb">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="1dd44ac070532343aca5fb28b537f1d0" />
+		<AssetImportOutput _name="/materials/colormap.material" _guid="05a1d11a8d4f940202b75bbc4286ba7b" />
+	</_listOutput>
+</AssetMeta>

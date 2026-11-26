@@ -1,1 +1,6 @@
-<AssetMeta _guid="0db348ed2e2a836908f6705e3e8a3ff0" _source="industrial_pastic_container.gltf" />
+<AssetMeta _guid="0db348ed2e2a836908f6705e3e8a3ff0" _source="industrial_pastic_container.gltf">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="5dc84b0be15d28e8c72c5d2d3450d3b0" />
+		<AssetImportOutput _name="/materials/industrial_pastic_container.material" _guid="632f3252acf21ae3a348722b098fb613" />
+	</_listOutput>
+</AssetMeta>

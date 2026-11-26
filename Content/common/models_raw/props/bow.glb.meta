@@ -1,1 +1,7 @@
-<AssetMeta _guid="402fe9442c0b9aa4d6a6aca339a04b5a" _source="bow.glb" />
+<AssetMeta _guid="402fe9442c0b9aa4d6a6aca339a04b5a" _source="bow.glb">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="3c24e2f6ce9838fbe20d7d168845e45a" />
+		<AssetImportOutput _name="/bow.animset.xml" _guid="fa0311628483579e2bef4594f26749cf" />
+		<AssetImportOutput _name="/bow.skeleton.xml" _guid="fca30cf4114de0c2d1501df3ea6e88b1" />
+	</_listOutput>
+</AssetMeta>

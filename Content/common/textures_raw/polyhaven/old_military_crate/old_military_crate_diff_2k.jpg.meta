@@ -1,1 +1,5 @@
-<AssetMeta _guid="21ff6326ecf74cfcd462fc3fec1cf28e" _source="old_military_crate_diff_2k.jpg" />
+<AssetMeta _guid="21ff6326ecf74cfcd462fc3fec1cf28e" _source="old_military_crate_diff_2k.jpg">
+	<_listOutput>
+		<AssetImportOutput _name=".dds" _guid="fc73cabd32b8232d4938296164ebcb23" />
+	</_listOutput>
+</AssetMeta>

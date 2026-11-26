@@ -1,1 +1,8 @@
-<AssetMeta _guid="6268897c88e5487a5900c7d08b13fc31" _source="character_orc.glb" />
+<AssetMeta _guid="6268897c88e5487a5900c7d08b13fc31" _source="character_orc.glb">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="9deba0b6b9ccc92386ad59e3b326a763" />
+		<AssetImportOutput _name="/character_orc.animset.xml" _guid="a91f5b4b2b4383a07d7d65f2bc1968fb" />
+		<AssetImportOutput _name="/character_orc.skeleton.xml" _guid="b6e49311dd98dc4e933bae2012860fc2" />
+		<AssetImportOutput _name="/materials/colormap.material" _guid="14723f8677b9e86ab95c271ef5c347ad" />
+	</_listOutput>
+</AssetMeta>

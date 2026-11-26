@@ -1,1 +1,5 @@
-<AssetMeta _guid="a0bea70c3cd22d4b0f714517df4ed533" _source="perlin.png" />
+<AssetMeta _guid="a0bea70c3cd22d4b0f714517df4ed533" _source="perlin.png">
+	<_listOutput>
+		<AssetImportOutput _name=".dds" _guid="e139e77851493cbb8e759026bd0a3fae" />
+	</_listOutput>
+</AssetMeta>

@@ -1,1 +1,5 @@
-<AssetMeta _guid="99ae1d95322d99b84772e0849f1c4edb" _source="t_enemies_normal.png" />
+<AssetMeta _guid="99ae1d95322d99b84772e0849f1c4edb" _source="t_enemies_normal.png">
+	<_listOutput>
+		<AssetImportOutput _name=".dds" _guid="9a7e16bf404a34770bbf4f1827217e28" />
+	</_listOutput>
+</AssetMeta>

@@ -1,1 +1,5 @@
-<AssetMeta _guid="cd2fc34862ed823babb1b018c5e61250" _source="button_rectangle_depth_flat.png" />
+<AssetMeta _guid="cd2fc34862ed823babb1b018c5e61250" _source="button_rectangle_depth_flat.png">
+	<_listOutput>
+		<AssetImportOutput _name=".dds" _guid="8368857c141a9b07aa872863e8d172bd" />
+	</_listOutput>
+</AssetMeta>

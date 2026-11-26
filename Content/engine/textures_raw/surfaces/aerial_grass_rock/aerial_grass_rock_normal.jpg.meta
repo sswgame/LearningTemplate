@@ -1,1 +1,5 @@
-<AssetMeta _guid="00265f602edaeed40cfe0a641c3ed633" _source="aerial_grass_rock_normal.jpg" />
+<AssetMeta _guid="00265f602edaeed40cfe0a641c3ed633" _source="aerial_grass_rock_normal.jpg">
+	<_listOutput>
+		<AssetImportOutput _name=".dds" _guid="be087d549861a43cdbbaff4118e05b05" />
+	</_listOutput>
+</AssetMeta>

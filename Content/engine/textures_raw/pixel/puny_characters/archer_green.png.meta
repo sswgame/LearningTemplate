@@ -1,1 +1,5 @@
-<AssetMeta _guid="e8a60df08131e5fc29469c5b71e10549" _source="archer_green.png" />
+<AssetMeta _guid="e8a60df08131e5fc29469c5b71e10549" _source="archer_green.png">
+	<_listOutput>
+		<AssetImportOutput _name=".dds" _guid="131944d5ea8dbd1442fdd92f922277e8" />
+	</_listOutput>
+</AssetMeta>

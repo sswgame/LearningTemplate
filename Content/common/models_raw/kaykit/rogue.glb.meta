@@ -1,1 +1,13 @@
-<AssetMeta _guid="6cab097e9d1b5e063184f8a0933394b9" _source="rogue.glb" />
+<AssetMeta _guid="6cab097e9d1b5e063184f8a0933394b9" _source="rogue.glb">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="280e04fea2b71b78b96d6d5cfc90a04c" />
+		<AssetImportOutput _name="/parts/1h_crossbow.mesh" _guid="6571b20780cbe989a1d9b1913e58cdda" />
+		<AssetImportOutput _name="/parts/2h_crossbow.mesh" _guid="bcddec722161684d5d68d9bdff60c866" />
+		<AssetImportOutput _name="/parts/knife.mesh" _guid="9ff7999fdc3e611c8c342dd74c520521" />
+		<AssetImportOutput _name="/parts/knife_offhand.mesh" _guid="f1f981e8b0f8dd6ce4e8844233fa5a12" />
+		<AssetImportOutput _name="/parts/rogue_cape.mesh" _guid="b258ba4ceddc4eb3d8617be894c30db7" />
+		<AssetImportOutput _name="/parts/throwable.mesh" _guid="f23408e566e86cb2b63d5b8d48c361b4" />
+		<AssetImportOutput _name="/rogue.animset.xml" _guid="0890a390ebbfedf85104f7440cb1f98b" />
+		<AssetImportOutput _name="/rogue.skeleton.xml" _guid="da44ca46ec3e5fa38917b725d5eb227d" />
+	</_listOutput>
+</AssetMeta>

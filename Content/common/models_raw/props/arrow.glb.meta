@@ -1,1 +1,7 @@
-<AssetMeta _guid="471a50aef0370988d86abacd437f344d" _source="arrow.glb" />
+<AssetMeta _guid="471a50aef0370988d86abacd437f344d" _source="arrow.glb">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="08ddb9e7d9057c05276a03daedcc2340" />
+		<AssetImportOutput _name="/arrow.animset.xml" _guid="b7578d41c1e7979c7454ca14437b0b2f" />
+		<AssetImportOutput _name="/arrow.skeleton.xml" _guid="d858550453588095bd58f353d5db529c" />
+	</_listOutput>
+</AssetMeta>

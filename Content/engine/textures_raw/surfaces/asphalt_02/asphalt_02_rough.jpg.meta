@@ -1,1 +1,5 @@
-<AssetMeta _guid="5d963377137b21524a6baa010da9662a" _source="asphalt_02_rough.jpg" />
+<AssetMeta _guid="5d963377137b21524a6baa010da9662a" _source="asphalt_02_rough.jpg">
+	<_listOutput>
+		<AssetImportOutput _name=".dds" _guid="8a3e356f9f61bbd203894597d7ef607a" />
+	</_listOutput>
+</AssetMeta>

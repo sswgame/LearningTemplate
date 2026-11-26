@@ -1,1 +1,5 @@
-<AssetMeta _guid="727c83f9902b73729ffc295ff93d4b0b" _source="playstation5_button_options.png" />
+<AssetMeta _guid="727c83f9902b73729ffc295ff93d4b0b" _source="playstation5_button_options.png">
+	<_listOutput>
+		<AssetImportOutput _name=".dds" _guid="e50d04efe2f5a8a0c1f792174a7f6367" />
+	</_listOutput>
+</AssetMeta>

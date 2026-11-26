@@ -1,1 +1,10 @@
-<AssetMeta _guid="ec5e782b5ec165c8063cf30cb12f17fb" _source="superhero_female_fullbody.gltf" />
+<AssetMeta _guid="ec5e782b5ec165c8063cf30cb12f17fb" _source="superhero_female_fullbody.gltf">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="c06746431c4c955088274303d347eb01" />
+		<AssetImportOutput _name="/materials/mi_eyes.material" _guid="ebf75801bbc740b0b7be96afd829c2d8" />
+		<AssetImportOutput _name="/materials/mi_hair_2.material" _guid="9ae37fb8f5fedcf4a3a4d6a79a97d85d" />
+		<AssetImportOutput _name="/materials/mi_superhero_female.material" _guid="90b0ddf55b8dc21c0db135947d5c40dd" />
+		<AssetImportOutput _name="/superhero_female_fullbody.prefab.xml" _guid="b4e96157194ee4d6c6589cbad704fade" />
+		<AssetImportOutput _name="/superhero_female_fullbody.skeleton.xml" _guid="e0076f23e62ad574c908eecd007c8e72" />
+	</_listOutput>
+</AssetMeta>

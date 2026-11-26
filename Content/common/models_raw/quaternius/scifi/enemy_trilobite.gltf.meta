@@ -1,1 +1,8 @@
-<AssetMeta _guid="6e92e899624c9442167d12557dacd022" _source="enemy_trilobite.gltf" />
+<AssetMeta _guid="6e92e899624c9442167d12557dacd022" _source="enemy_trilobite.gltf">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="20238087668992581c760d907e22092f" />
+		<AssetImportOutput _name="/enemy_trilobite.animset.xml" _guid="d60286faccb88466c2706ca7f67ef038" />
+		<AssetImportOutput _name="/enemy_trilobite.skeleton.xml" _guid="60469180c7958015c8c043aa9e648a96" />
+		<AssetImportOutput _name="/materials/mi_enemies_large.material" _guid="2ee2cc5a8c5ef91df95775000145e476" />
+	</_listOutput>
+</AssetMeta>

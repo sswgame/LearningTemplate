@@ -1,1 +1,5 @@
-<AssetMeta _guid="588153a6b7b5a78bbaacfedd1873cacf" _source="button_square_gradient.png" />
+<AssetMeta _guid="588153a6b7b5a78bbaacfedd1873cacf" _source="button_square_gradient.png">
+	<_listOutput>
+		<AssetImportOutput _name=".dds" _guid="b9e3722d0df516005c27effc7ae371d5" />
+	</_listOutput>
+</AssetMeta>

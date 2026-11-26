@@ -1,1 +1,6 @@
-<AssetMeta _guid="d48c8ad884289c619f6fbe1045edfb70" _source="gun_sniper.gltf" />
+<AssetMeta _guid="d48c8ad884289c619f6fbe1045edfb70" _source="gun_sniper.gltf">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="6a33c08e38edc74e5c06f0fcf3d2eb95" />
+		<AssetImportOutput _name="/materials/mi_guns_batch2.material" _guid="3b29f27eff1aa823d20409f24e0f8020" />
+	</_listOutput>
+</AssetMeta>

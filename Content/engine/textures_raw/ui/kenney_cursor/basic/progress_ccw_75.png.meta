@@ -1,1 +1,5 @@
-<AssetMeta _guid="d799d95b4e4e9459ce061abbf81aa7e2" _source="progress_ccw_75.png" />
+<AssetMeta _guid="d799d95b4e4e9459ce061abbf81aa7e2" _source="progress_ccw_75.png">
+	<_listOutput>
+		<AssetImportOutput _name=".dds" _guid="bb7e72e2f61acdc57bb17f8a488c6cb1" />
+	</_listOutput>
+</AssetMeta>

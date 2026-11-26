@@ -1,1 +1,5 @@
-<AssetMeta _guid="6392bf47cba2fb840e03a378714b771b" _source="crop_carrot.glb" />
+<AssetMeta _guid="6392bf47cba2fb840e03a378714b771b" _source="crop_carrot.glb">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="ecb6be71d2c788b70c4a4d5d2e7414b9" />
+	</_listOutput>
+</AssetMeta>

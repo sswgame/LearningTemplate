@@ -1,1 +1,5 @@
-<AssetMeta _guid="3217ce3d4650e9d6e08f82c2d23fafdf" _source="valley.png" />
+<AssetMeta _guid="3217ce3d4650e9d6e08f82c2d23fafdf" _source="valley.png">
+	<_listOutput>
+		<AssetImportOutput _name=".heightfield" _guid="75518446e6f8ea20de63ef832da69631" />
+	</_listOutput>
+</AssetMeta>

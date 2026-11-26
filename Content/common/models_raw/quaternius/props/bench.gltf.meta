@@ -1,1 +1,8 @@
-<AssetMeta _guid="36062da6a5fb444b60bbebeec59e4c53" _source="bench.gltf" />
+<AssetMeta _guid="36062da6a5fb444b60bbebeec59e4c53" _source="bench.gltf">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="815dbc7a5ad29d216d5f84067ac16901" />
+		<AssetImportOutput _name="/bench.prefab.xml" _guid="8a4087d3694cc1c6927f70e1b391185e" />
+		<AssetImportOutput _name="/materials/mi_trim_furniture.material" _guid="61df2202da4688bdf715764e631cab92" />
+		<AssetImportOutput _name="/materials/mi_trim_metal.material" _guid="5e5ffa666fcfe078a22595c607480c5a" />
+	</_listOutput>
+</AssetMeta>

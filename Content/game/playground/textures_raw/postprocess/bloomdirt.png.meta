@@ -1,1 +1,5 @@
-<AssetMeta _guid="139208b1ae6441de0268c05f5cadce3b" _source="bloomdirt.png" />
+<AssetMeta _guid="139208b1ae6441de0268c05f5cadce3b" _source="bloomdirt.png">
+	<_listOutput>
+		<AssetImportOutput _name=".dds" _guid="15d8c349a3828d7ef149b8d00fef0a42" />
+	</_listOutput>
+</AssetMeta>

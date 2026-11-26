@@ -1,1 +1,6 @@
-<AssetMeta _guid="aeec4ba73bc0869437b0d330f961a477" _source="grass_common_tall.gltf" />
+<AssetMeta _guid="aeec4ba73bc0869437b0d330f961a477" _source="grass_common_tall.gltf">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="66a9e1db6dfcd54925f475adcb572cb2" />
+		<AssetImportOutput _name="/materials/grass.material" _guid="e837681008a7f34e9fbfa496776fa4fb" />
+	</_listOutput>
+</AssetMeta>

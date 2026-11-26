@@ -1,1 +1,5 @@
-<AssetMeta _guid="2503792352bd6fad7e1d126468572509" _source="concrete_road_barrier_diff_2k.jpg" />
+<AssetMeta _guid="2503792352bd6fad7e1d126468572509" _source="concrete_road_barrier_diff_2k.jpg">
+	<_listOutput>
+		<AssetImportOutput _name=".dds" _guid="1617cae094e16e1cb21d523a635a0967" />
+	</_listOutput>
+</AssetMeta>

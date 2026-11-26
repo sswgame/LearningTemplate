@@ -1,1 +1,5 @@
-<AssetMeta _guid="688172278f3414fff2257e3a0b7a468d" _source="concrete_floor_worn_001_diff_2k.jpg" />
+<AssetMeta _guid="688172278f3414fff2257e3a0b7a468d" _source="concrete_floor_worn_001_diff_2k.jpg">
+	<_listOutput>
+		<AssetImportOutput _name=".dds" _guid="89a6329de80c6b0446d30123da8c1138" />
+	</_listOutput>
+</AssetMeta>

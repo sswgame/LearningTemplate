@@ -1,1 +1,5 @@
-<AssetMeta _guid="52d136033134ad27491f646a8c3ffbfa" _source="propane_tank_arm_2k.jpg" />
+<AssetMeta _guid="52d136033134ad27491f646a8c3ffbfa" _source="propane_tank_arm_2k.jpg">
+	<_listOutput>
+		<AssetImportOutput _name=".dds" _guid="6f8467753ce58910e8be6c87b27a5e25" />
+	</_listOutput>
+</AssetMeta>

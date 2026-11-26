@@ -1,1 +1,5 @@
-<AssetMeta _guid="4d0b5e4d1dc25c3ead4f5b207f4d9c14" _source="keyboard_capslock.png" />
+<AssetMeta _guid="4d0b5e4d1dc25c3ead4f5b207f4d9c14" _source="keyboard_capslock.png">
+	<_listOutput>
+		<AssetImportOutput _name=".dds" _guid="4605ec72c204360e2287ce65cfdaed6f" />
+	</_listOutput>
+</AssetMeta>

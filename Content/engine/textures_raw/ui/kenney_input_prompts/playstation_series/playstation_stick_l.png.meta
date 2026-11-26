@@ -1,1 +1,5 @@
-<AssetMeta _guid="7af59f165651584b7cdc221355093e62" _source="playstation_stick_l.png" />
+<AssetMeta _guid="7af59f165651584b7cdc221355093e62" _source="playstation_stick_l.png">
+	<_listOutput>
+		<AssetImportOutput _name=".dds" _guid="691ac274a687ef5d7f6bc5a8bde6be8e" />
+	</_listOutput>
+</AssetMeta>

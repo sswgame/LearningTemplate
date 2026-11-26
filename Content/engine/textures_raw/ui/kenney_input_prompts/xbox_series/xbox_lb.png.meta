@@ -1,1 +1,5 @@
-<AssetMeta _guid="ce31eed8996ec32ddbeea947d1ff311d" _source="xbox_lb.png" />
+<AssetMeta _guid="ce31eed8996ec32ddbeea947d1ff311d" _source="xbox_lb.png">
+	<_listOutput>
+		<AssetImportOutput _name=".dds" _guid="ca2e86d9fbf582fa40518e85f19dc562" />
+	</_listOutput>
+</AssetMeta>

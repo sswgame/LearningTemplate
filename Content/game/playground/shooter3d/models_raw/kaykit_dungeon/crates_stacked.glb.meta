@@ -1,1 +1,5 @@
-<AssetMeta _guid="53dec941a52375db8df2eb58f53e55ca" _source="crates_stacked.glb" />
+<AssetMeta _guid="53dec941a52375db8df2eb58f53e55ca" _source="crates_stacked.glb">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="a0f151db8021a9af35c5248879c8af9f" />
+	</_listOutput>
+</AssetMeta>

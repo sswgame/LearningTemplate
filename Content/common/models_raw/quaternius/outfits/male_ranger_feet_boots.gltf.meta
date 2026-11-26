@@ -1,1 +1,7 @@
-<AssetMeta _guid="d8ee65774756f4b4c17c84e2d2202172" _source="male_ranger_feet_boots.gltf" />
+<AssetMeta _guid="d8ee65774756f4b4c17c84e2d2202172" _source="male_ranger_feet_boots.gltf">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="c7e1c96a7e8001b775cd7c719d718360" />
+		<AssetImportOutput _name="/male_ranger_feet_boots.skeleton.xml" _guid="f1281edbe7dee8592ce95b8a0d36b4be" />
+		<AssetImportOutput _name="/materials/mi_ranger.material" _guid="f6d2490be388ad586da2d74866f2b025" />
+	</_listOutput>
+</AssetMeta>

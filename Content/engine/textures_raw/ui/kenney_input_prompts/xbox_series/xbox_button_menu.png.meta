@@ -1,1 +1,5 @@
-<AssetMeta _guid="692dca79e369dbb511d4b18c385cf9c5" _source="xbox_button_menu.png" />
+<AssetMeta _guid="692dca79e369dbb511d4b18c385cf9c5" _source="xbox_button_menu.png">
+	<_listOutput>
+		<AssetImportOutput _name=".dds" _guid="a56015f45c6359deb547824f94d6e33a" />
+	</_listOutput>
+</AssetMeta>

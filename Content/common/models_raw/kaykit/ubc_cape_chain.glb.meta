@@ -1,1 +1,6 @@
-<AssetMeta _guid="00170b7eb23bddeae1fd75b241378c6c" _source="ubc_cape_chain.glb" />
+<AssetMeta _guid="00170b7eb23bddeae1fd75b241378c6c" _source="ubc_cape_chain.glb">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="021a9870d88a4b63b530413ad0f55b93" />
+		<AssetImportOutput _name="/ubc_cape_chain.skeleton.xml" _guid="64e0ce68188bacaf35fd124d2c1c39ed" />
+	</_listOutput>
+</AssetMeta>

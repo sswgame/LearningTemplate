@@ -1,1 +1,5 @@
-<AssetMeta _guid="0f96fcbd675260ec4d44723a483f3780" _source="rotate_ccw.png" />
+<AssetMeta _guid="0f96fcbd675260ec4d44723a483f3780" _source="rotate_ccw.png">
+	<_listOutput>
+		<AssetImportOutput _name=".dds" _guid="5a6c17bed832e4f35757d66e8fe46bd0" />
+	</_listOutput>
+</AssetMeta>

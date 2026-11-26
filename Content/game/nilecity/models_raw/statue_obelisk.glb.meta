@@ -1,1 +1,5 @@
-<AssetMeta _guid="3bcc93179f38eb1ab8315053f8cbacb3" _source="statue_obelisk.glb" />
+<AssetMeta _guid="3bcc93179f38eb1ab8315053f8cbacb3" _source="statue_obelisk.glb">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="f4febe5b942b6181a7c516f83f3023a1" />
+	</_listOutput>
+</AssetMeta>

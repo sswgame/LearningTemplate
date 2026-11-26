@@ -1,1 +1,6 @@
-<AssetMeta _guid="42dd61e906bb106e2618f3862f933bdd" _source="power_box_01.gltf" />
+<AssetMeta _guid="42dd61e906bb106e2618f3862f933bdd" _source="power_box_01.gltf">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="4c680031b8b67419161950a43191a08b" />
+		<AssetImportOutput _name="/materials/power_box_01.material" _guid="91108e848cda3caac31371996b31ad75" />
+	</_listOutput>
+</AssetMeta>

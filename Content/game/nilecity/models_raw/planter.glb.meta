@@ -1,1 +1,6 @@
-<AssetMeta _guid="1d24c1e8861a989da7f5a60f5ca2521d" _source="planter.glb" />
+<AssetMeta _guid="1d24c1e8861a989da7f5a60f5ca2521d" _source="planter.glb">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="695c333b6dddf799f725463e3f4cef9b" />
+		<AssetImportOutput _name="/materials/colormap.material" _guid="9525f952c4b06937709b5c09a33f2c2b" />
+	</_listOutput>
+</AssetMeta>

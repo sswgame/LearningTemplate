@@ -1,1 +1,6 @@
-<AssetMeta _guid="eab301c45749cf963911115d94d3e5af" _source="old_military_crate.gltf" />
+<AssetMeta _guid="eab301c45749cf963911115d94d3e5af" _source="old_military_crate.gltf">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="d78f939cf9354e97d87c5c6215bfe636" />
+		<AssetImportOutput _name="/materials/military_crate_m_01.material" _guid="d5984388bcc17434b2db8739412931df" />
+	</_listOutput>
+</AssetMeta>

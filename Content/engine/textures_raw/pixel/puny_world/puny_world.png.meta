@@ -1,1 +1,5 @@
-<AssetMeta _guid="fcd185d39b7b3004b3f91248d51ac594" _source="puny_world.png" />
+<AssetMeta _guid="fcd185d39b7b3004b3f91248d51ac594" _source="puny_world.png">
+	<_listOutput>
+		<AssetImportOutput _name=".dds" _guid="6e2be27eb232f43689a3ba977463b9bd" />
+	</_listOutput>
+</AssetMeta>

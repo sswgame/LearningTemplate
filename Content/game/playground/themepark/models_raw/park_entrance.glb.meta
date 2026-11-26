@@ -1,1 +1,6 @@
-<AssetMeta _guid="8c05bb30d568bd91322b825f08ad9aaf" _source="park_entrance.glb" />
+<AssetMeta _guid="8c05bb30d568bd91322b825f08ad9aaf" _source="park_entrance.glb">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="37a0a2029a98877360ae3952ffc8f79f" />
+		<AssetImportOutput _name="/materials/colormap.material" _guid="f8dcafc4b8d420ace2345df54c1dc9ca" />
+	</_listOutput>
+</AssetMeta>

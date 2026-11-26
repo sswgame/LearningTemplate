@@ -1,1 +1,5 @@
-<AssetMeta _guid="836e5e6dfabfaecd7c2490a6dabd50d9" _source="playstation_button_circle.png" />
+<AssetMeta _guid="836e5e6dfabfaecd7c2490a6dabd50d9" _source="playstation_button_circle.png">
+	<_listOutput>
+		<AssetImportOutput _name=".dds" _guid="8153fde1b2636455059a9b7ee18e1064" />
+	</_listOutput>
+</AssetMeta>

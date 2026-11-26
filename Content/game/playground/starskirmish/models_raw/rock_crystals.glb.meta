@@ -1,1 +1,5 @@
-<AssetMeta _guid="133dbe9145e70437addfe43c5f799fab" _source="rock_crystals.glb" />
+<AssetMeta _guid="133dbe9145e70437addfe43c5f799fab" _source="rock_crystals.glb">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="9668340d974716f2cafd3193e676d92a" />
+	</_listOutput>
+</AssetMeta>

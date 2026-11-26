@@ -1,1 +1,5 @@
-<AssetMeta _guid="f97754de3be366f18c46837c8259ce5a" _source="t_ranger_orm.png" />
+<AssetMeta _guid="f97754de3be366f18c46837c8259ce5a" _source="t_ranger_orm.png">
+	<_listOutput>
+		<AssetImportOutput _name=".dds" _guid="1a769a0ac029f076cc594bdbcc851ff7" />
+	</_listOutput>
+</AssetMeta>

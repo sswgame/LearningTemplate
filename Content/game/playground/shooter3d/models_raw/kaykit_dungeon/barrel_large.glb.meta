@@ -1,1 +1,5 @@
-<AssetMeta _guid="b55a829c6833ae6443908c78b7b28838" _source="barrel_large.glb" />
+<AssetMeta _guid="b55a829c6833ae6443908c78b7b28838" _source="barrel_large.glb">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="ef1d90eb24fc2c860a1fbc1ec7f7233b" />
+	</_listOutput>
+</AssetMeta>

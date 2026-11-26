@@ -1,1 +1,5 @@
-<AssetMeta _guid="9a479d466629a167304f63136525e3cd" _source="pathrocks_diffuse.png" />
+<AssetMeta _guid="9a479d466629a167304f63136525e3cd" _source="pathrocks_diffuse.png">
+	<_listOutput>
+		<AssetImportOutput _name=".dds" _guid="617ddbabd8f6f6059dee8f0186d074f8" />
+	</_listOutput>
+</AssetMeta>

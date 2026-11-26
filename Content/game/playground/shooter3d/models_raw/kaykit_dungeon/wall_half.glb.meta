@@ -1,1 +1,5 @@
-<AssetMeta _guid="834faa1b2a6aae153559924191ee3188" _source="wall_half.glb" />
+<AssetMeta _guid="834faa1b2a6aae153559924191ee3188" _source="wall_half.glb">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="fb02107615e625ef3c7b2ce1a95bc256" />
+	</_listOutput>
+</AssetMeta>

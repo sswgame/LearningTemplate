@@ -1,1 +1,6 @@
-<AssetMeta _guid="3073d3a852e0c575aab829e741647242" _source="pebble_round_1.gltf" />
+<AssetMeta _guid="3073d3a852e0c575aab829e741647242" _source="pebble_round_1.gltf">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="0d4673596eaa24a2cb5a535093b479a9" />
+		<AssetImportOutput _name="/materials/pathrocks.material" _guid="0c45d84a5613d5e77d9f43e540407f6e" />
+	</_listOutput>
+</AssetMeta>

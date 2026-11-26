@@ -1,1 +1,6 @@
-<AssetMeta _guid="1cbd4b55f35877f20fed6e2535624e00" _source="rocks_a.gltf" />
+<AssetMeta _guid="1cbd4b55f35877f20fed6e2535624e00" _source="rocks_a.gltf">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="ad558d45104fd24119392b314f47b442" />
+		<AssetImportOutput _name="/materials/spacebits_texture.material" _guid="c5ecfdada7ac43be48775136af0c1298" />
+	</_listOutput>
+</AssetMeta>

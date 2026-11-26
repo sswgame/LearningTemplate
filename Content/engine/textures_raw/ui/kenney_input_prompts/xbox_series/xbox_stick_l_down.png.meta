@@ -1,1 +1,5 @@
-<AssetMeta _guid="a5fbccd9741fc9dccc310d128de76904" _source="xbox_stick_l_down.png" />
+<AssetMeta _guid="a5fbccd9741fc9dccc310d128de76904" _source="xbox_stick_l_down.png">
+	<_listOutput>
+		<AssetImportOutput _name=".dds" _guid="37c9ea95e8a0d334fa5cbb2463add8a6" />
+	</_listOutput>
+</AssetMeta>

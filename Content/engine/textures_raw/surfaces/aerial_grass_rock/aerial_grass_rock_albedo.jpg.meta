@@ -1,1 +1,5 @@
-<AssetMeta _guid="efafc5fddff8f6f8630b16c83c3a0e3e" _source="aerial_grass_rock_albedo.jpg" />
+<AssetMeta _guid="efafc5fddff8f6f8630b16c83c3a0e3e" _source="aerial_grass_rock_albedo.jpg">
+	<_listOutput>
+		<AssetImportOutput _name=".dds" _guid="b3152c06d74740f68b66f80032639704" />
+	</_listOutput>
+</AssetMeta>

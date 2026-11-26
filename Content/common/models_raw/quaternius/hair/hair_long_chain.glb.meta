@@ -1,1 +1,6 @@
-<AssetMeta _guid="c363751bd3334dfa8b344d66ec821cfc" _source="hair_long_chain.glb" />
+<AssetMeta _guid="c363751bd3334dfa8b344d66ec821cfc" _source="hair_long_chain.glb">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="615467a7c84ab1e862e39d2da0c55003" />
+		<AssetImportOutput _name="/hair_long_chain.skeleton.xml" _guid="2ac18b821d19869af07eb7fdf08ecd96" />
+	</_listOutput>
+</AssetMeta>

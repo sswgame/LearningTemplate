@@ -1,1 +1,5 @@
-<AssetMeta _guid="18d8e31dd8c7373733e224decdba57b4" _source="ground_river_tile.glb" />
+<AssetMeta _guid="18d8e31dd8c7373733e224decdba57b4" _source="ground_river_tile.glb">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="accd6fc6d0f3a002329b94338c4d733c" />
+	</_listOutput>
+</AssetMeta>

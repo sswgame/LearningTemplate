@@ -1,1 +1,5 @@
-<AssetMeta _guid="96e89a36258026917bab79129771864e" _source="crops_corn_stage_d.glb" />
+<AssetMeta _guid="96e89a36258026917bab79129771864e" _source="crops_corn_stage_d.glb">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="651e5d557727b26cf46d08c55cc3e88c" />
+	</_listOutput>
+</AssetMeta>

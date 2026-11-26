@@ -1,1 +1,5 @@
-<AssetMeta _guid="8510fbab1eb7756c3f77287e144158e1" _source="skeleton_shield_small_a.glb" />
+<AssetMeta _guid="8510fbab1eb7756c3f77287e144158e1" _source="skeleton_shield_small_a.glb">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="31256153b4816675598fb786dc5ed8b2" />
+	</_listOutput>
+</AssetMeta>

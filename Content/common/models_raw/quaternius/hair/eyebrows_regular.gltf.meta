@@ -1,1 +1,7 @@
-<AssetMeta _guid="c8e0d46009cbb934c6b70278fdcd7594" _source="eyebrows_regular.gltf" />
+<AssetMeta _guid="c8e0d46009cbb934c6b70278fdcd7594" _source="eyebrows_regular.gltf">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="a246f98be0cd21d85e751f83b86ba32b" />
+		<AssetImportOutput _name="/eyebrows_regular.skeleton.xml" _guid="8bc1330261a18e3b30a79961d6a38bef" />
+		<AssetImportOutput _name="/materials/mi_hair_1.material" _guid="53bc46c67eaf9d254b27c00cd31ac275" />
+	</_listOutput>
+</AssetMeta>

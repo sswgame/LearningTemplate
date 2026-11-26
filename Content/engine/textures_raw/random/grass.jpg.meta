@@ -1,1 +1,5 @@
-<AssetMeta _guid="5f594a6f24a7686a6492644e3131bd2a" _source="grass.jpg" />
+<AssetMeta _guid="5f594a6f24a7686a6492644e3131bd2a" _source="grass.jpg">
+	<_listOutput>
+		<AssetImportOutput _name=".dds" _guid="966dc25dd4d5eb3af5ff5ad1ad3fcacf" />
+	</_listOutput>
+</AssetMeta>

@@ -1,1 +1,5 @@
-<AssetMeta _guid="b5faca4a84ac073a019ad300565fcbe9" _source="tool_wrench.png" />
+<AssetMeta _guid="b5faca4a84ac073a019ad300565fcbe9" _source="tool_wrench.png">
+	<_listOutput>
+		<AssetImportOutput _name=".dds" _guid="0386a9b65c016b58ff533ad8d1194ad1" />
+	</_listOutput>
+</AssetMeta>

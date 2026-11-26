@@ -1,1 +1,5 @@
-<AssetMeta _guid="bf0217d9caf9276b5edfb42c0c83079a" _source="terrain_detail.png" />
+<AssetMeta _guid="bf0217d9caf9276b5edfb42c0c83079a" _source="terrain_detail.png">
+	<_listOutput>
+		<AssetImportOutput _name=".dds" _guid="8cb5719f760f68154b72860300cc8b8d" />
+	</_listOutput>
+</AssetMeta>

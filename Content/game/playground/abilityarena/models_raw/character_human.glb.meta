@@ -1,1 +1,8 @@
-<AssetMeta _guid="83fd664547852d99db0ea475ff6250ce" _source="character_human.glb" />
+<AssetMeta _guid="83fd664547852d99db0ea475ff6250ce" _source="character_human.glb">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="29d96fad084c461263603103acb96bf4" />
+		<AssetImportOutput _name="/character_human.animset.xml" _guid="26e773aedf9d61619b7798177bc5987f" />
+		<AssetImportOutput _name="/character_human.skeleton.xml" _guid="1526917f1f450f4be4b2cf41f59a5321" />
+		<AssetImportOutput _name="/materials/colormap.material" _guid="d81236e889d223c8d7fe25eefa44a848" />
+	</_listOutput>
+</AssetMeta>

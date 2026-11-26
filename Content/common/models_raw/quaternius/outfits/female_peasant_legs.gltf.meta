@@ -1,1 +1,7 @@
-<AssetMeta _guid="e4d66a6d126dc5decf55b7f64881a9eb" _source="female_peasant_legs.gltf" />
+<AssetMeta _guid="e4d66a6d126dc5decf55b7f64881a9eb" _source="female_peasant_legs.gltf">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="9039fc5f4ee84be0b6fcc5c905fb17b7" />
+		<AssetImportOutput _name="/female_peasant_legs.skeleton.xml" _guid="aa182c58ccd5c88d4e50b0f3bd0db252" />
+		<AssetImportOutput _name="/materials/mi_peasant.material" _guid="ddea6dddee84eab955eeda04f19a5d46" />
+	</_listOutput>
+</AssetMeta>

@@ -1,1 +1,5 @@
-<AssetMeta _guid="efb383052268fd756f84fec1d028246d" _source="overworld.png" />
+<AssetMeta _guid="efb383052268fd756f84fec1d028246d" _source="overworld.png">
+	<_listOutput>
+		<AssetImportOutput _name=".dds" _guid="34ec60d1eac19e63b2f4ef6838b8dab1" />
+	</_listOutput>
+</AssetMeta>

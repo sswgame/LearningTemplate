@@ -1,1 +1,5 @@
-<AssetMeta _guid="92558947c83df0bddd7871f961868ec8" _source="t_trim_cloth_orm.png" />
+<AssetMeta _guid="92558947c83df0bddd7871f961868ec8" _source="t_trim_cloth_orm.png">
+	<_listOutput>
+		<AssetImportOutput _name=".dds" _guid="3acc92ce3f47cce79b1bb0d60ae5e352" />
+	</_listOutput>
+</AssetMeta>

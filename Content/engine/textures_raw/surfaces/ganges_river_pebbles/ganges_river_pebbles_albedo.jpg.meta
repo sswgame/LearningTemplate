@@ -1,1 +1,5 @@
-<AssetMeta _guid="e331b85644337a59f1443dc592309de4" _source="ganges_river_pebbles_albedo.jpg" />
+<AssetMeta _guid="e331b85644337a59f1443dc592309de4" _source="ganges_river_pebbles_albedo.jpg">
+	<_listOutput>
+		<AssetImportOutput _name=".dds" _guid="7784dd6b3ba76bb2d9c1215a592a53b1" />
+	</_listOutput>
+</AssetMeta>

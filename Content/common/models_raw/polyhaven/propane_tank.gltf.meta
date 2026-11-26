@@ -1,1 +1,6 @@
-<AssetMeta _guid="50d9fd99036bd8a1e0238334f06131e6" _source="propane_tank.gltf" />
+<AssetMeta _guid="50d9fd99036bd8a1e0238334f06131e6" _source="propane_tank.gltf">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="b51b00e9ade33bfd129f43c246bc6c55" />
+		<AssetImportOutput _name="/materials/propane_tank.material" _guid="795b84a1a681b8bd8762d04cd83e255b" />
+	</_listOutput>
+</AssetMeta>

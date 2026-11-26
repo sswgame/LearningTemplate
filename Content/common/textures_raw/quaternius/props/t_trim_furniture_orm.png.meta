@@ -1,1 +1,5 @@
-<AssetMeta _guid="98e315242681780ea6a944ff50d2f803" _source="t_trim_furniture_orm.png" />
+<AssetMeta _guid="98e315242681780ea6a944ff50d2f803" _source="t_trim_furniture_orm.png">
+	<_listOutput>
+		<AssetImportOutput _name=".dds" _guid="3c6ec30313ad2b4ac62a99a1d74ef998" />
+	</_listOutput>
+</AssetMeta>

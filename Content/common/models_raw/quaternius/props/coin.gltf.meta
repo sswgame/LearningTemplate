@@ -1,1 +1,6 @@
-<AssetMeta _guid="d2d8957d16d456f6eb7334ce527dfdcf" _source="coin.gltf" />
+<AssetMeta _guid="d2d8957d16d456f6eb7334ce527dfdcf" _source="coin.gltf">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="4d64d6e19427035204b364e2eac9d178" />
+		<AssetImportOutput _name="/materials/mi_trim_metal_vertex.material" _guid="7960ac538ef98c1159f2e73374969706" />
+	</_listOutput>
+</AssetMeta>

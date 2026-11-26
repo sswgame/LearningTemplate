@@ -1,1 +1,8 @@
-<AssetMeta _guid="e7b2bb35aba53bcb3c7cf1b1638181c7" _source="commontree_2.gltf" />
+<AssetMeta _guid="e7b2bb35aba53bcb3c7cf1b1638181c7" _source="commontree_2.gltf">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="ae149e071f6ac062c3df46adab584c11" />
+		<AssetImportOutput _name="/commontree_2.prefab.xml" _guid="5401b5508499fd6800b39135c07dc22a" />
+		<AssetImportOutput _name="/materials/bark_normaltree.material" _guid="033e0e56e282fe539fc8009e94f288b2" />
+		<AssetImportOutput _name="/materials/leaves_normaltree.material" _guid="9b2bd000096b5fffacca672cf9174791" />
+	</_listOutput>
+</AssetMeta>

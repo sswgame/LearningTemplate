@@ -1,1 +1,5 @@
-<AssetMeta _guid="47d9ab31113f9f918e5dbb981442db2d" _source="floor_tile_small.glb" />
+<AssetMeta _guid="47d9ab31113f9f918e5dbb981442db2d" _source="floor_tile_small.glb">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="158d085c74791240cf14e80f5e435078" />
+	</_listOutput>
+</AssetMeta>

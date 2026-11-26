@@ -1,1 +1,5 @@
-<AssetMeta _guid="1762df6e2a8c46320f43fb523dc09bb5" _source="scorch_02.png" />
+<AssetMeta _guid="1762df6e2a8c46320f43fb523dc09bb5" _source="scorch_02.png">
+	<_listOutput>
+		<AssetImportOutput _name=".dds" _guid="cb06bb7a005f085be1644ad95afe8c4a" />
+	</_listOutput>
+</AssetMeta>

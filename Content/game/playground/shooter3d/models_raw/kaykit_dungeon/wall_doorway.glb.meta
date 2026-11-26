@@ -1,1 +1,5 @@
-<AssetMeta _guid="e59182036d50288fe97f7f83fc119d90" _source="wall_doorway.glb" />
+<AssetMeta _guid="e59182036d50288fe97f7f83fc119d90" _source="wall_doorway.glb">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="a500f05355a7d157a774854bd5be5c17" />
+	</_listOutput>
+</AssetMeta>

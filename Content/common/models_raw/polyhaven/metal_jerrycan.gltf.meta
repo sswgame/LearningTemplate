@@ -1,1 +1,6 @@
-<AssetMeta _guid="30042882a3f2b52f099a757d4133a952" _source="metal_jerrycan.gltf" />
+<AssetMeta _guid="30042882a3f2b52f099a757d4133a952" _source="metal_jerrycan.gltf">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="33d0e585ab3d132244a95d129e5aa17f" />
+		<AssetImportOutput _name="/materials/metal_jerrycan.material" _guid="01cf48fed3b5a2839345a3d84a70742d" />
+	</_listOutput>
+</AssetMeta>

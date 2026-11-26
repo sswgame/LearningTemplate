@@ -1,1 +1,5 @@
-<AssetMeta _guid="daf4b5dfb3842b601257d400aece1fbe" _source="bark_twistedtree_normal.png" />
+<AssetMeta _guid="daf4b5dfb3842b601257d400aece1fbe" _source="bark_twistedtree_normal.png">
+	<_listOutput>
+		<AssetImportOutput _name=".dds" _guid="c382960a865b5d69e74c135adedc5abe" />
+	</_listOutput>
+</AssetMeta>

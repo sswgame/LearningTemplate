@@ -1,1 +1,7 @@
-<AssetMeta _guid="52dd0b6d5dd3583f3905c293df163559" _source="male_ranger_acc_pauldron.gltf" />
+<AssetMeta _guid="52dd0b6d5dd3583f3905c293df163559" _source="male_ranger_acc_pauldron.gltf">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="d803893b6817ad6f7c89299f74641626" />
+		<AssetImportOutput _name="/male_ranger_acc_pauldron.skeleton.xml" _guid="b9314215250c537657fb991028a855ae" />
+		<AssetImportOutput _name="/materials/mi_ranger.material" _guid="dfc239d735a2910a8f286f214d82075a" />
+	</_listOutput>
+</AssetMeta>

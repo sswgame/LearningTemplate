@@ -1,1 +1,9 @@
-<AssetMeta _guid="d4421bdef89d4d4dea0fd4cfcf48d811" _source="skeleton_rogue.glb" />
+<AssetMeta _guid="d4421bdef89d4d4dea0fd4cfcf48d811" _source="skeleton_rogue.glb">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="bd00d0714b3d7788269776f432ede6a5" />
+		<AssetImportOutput _name="/parts/skeleton_rogue_cape.mesh" _guid="999376b5addbb5019902ff3948dd1339" />
+		<AssetImportOutput _name="/parts/skeleton_rogue_hood.mesh" _guid="83e919aea9c2ab765e5286497bc3877b" />
+		<AssetImportOutput _name="/skeleton_rogue.animset.xml" _guid="368aba84bca47c21cdcaebdb18193e37" />
+		<AssetImportOutput _name="/skeleton_rogue.skeleton.xml" _guid="90e44a76905d59eaa6a1316b83fc769b" />
+	</_listOutput>
+</AssetMeta>

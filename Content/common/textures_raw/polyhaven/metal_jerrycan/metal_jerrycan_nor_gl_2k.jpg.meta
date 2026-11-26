@@ -1,1 +1,5 @@
-<AssetMeta _guid="134e070c983cfd547a8993c35f491d41" _source="metal_jerrycan_nor_gl_2k.jpg" />
+<AssetMeta _guid="134e070c983cfd547a8993c35f491d41" _source="metal_jerrycan_nor_gl_2k.jpg">
+	<_listOutput>
+		<AssetImportOutput _name=".dds" _guid="5ddff7ba41a143745934819dcc5864fb" />
+	</_listOutput>
+</AssetMeta>

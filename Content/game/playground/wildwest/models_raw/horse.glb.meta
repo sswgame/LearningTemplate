@@ -1,1 +1,7 @@
-<AssetMeta _guid="d1dc69f9ce644c795940fe74ce70807d" _source="horse.glb" />
+<AssetMeta _guid="d1dc69f9ce644c795940fe74ce70807d" _source="horse.glb">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="623724c33e7fd32bfb1f7cac410166da" />
+		<AssetImportOutput _name="/horse.animset.xml" _guid="2f1635b5966e9397c2e51755334ac99b" />
+		<AssetImportOutput _name="/horse.skeleton.xml" _guid="95c92d73528ec4b31949aedf5d679245" />
+	</_listOutput>
+</AssetMeta>

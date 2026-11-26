@@ -1,1 +1,6 @@
-<AssetMeta _guid="f1b6d3b15fa214c6717374815540bb0f" _source="stall_toilets.glb" />
+<AssetMeta _guid="f1b6d3b15fa214c6717374815540bb0f" _source="stall_toilets.glb">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="d54b569a1b4c9638cf55558c0acf7556" />
+		<AssetImportOutput _name="/materials/colormap.material" _guid="9a0180764c78eed5c23231dab341be50" />
+	</_listOutput>
+</AssetMeta>

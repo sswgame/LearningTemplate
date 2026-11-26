@@ -1,1 +1,5 @@
-<AssetMeta _guid="4f743d390e79c4a34644966f1a882ac6" _source="dungeon_colormap.png" />
+<AssetMeta _guid="4f743d390e79c4a34644966f1a882ac6" _source="dungeon_colormap.png">
+	<_listOutput>
+		<AssetImportOutput _name=".dds" _guid="65bf7cfb2183c92dc9e62998faee73c9" />
+	</_listOutput>
+</AssetMeta>

@@ -1,1 +1,5 @@
-<AssetMeta _guid="e605504af5beca685569e59912e8c261" _source="playstation_dpad.png" />
+<AssetMeta _guid="e605504af5beca685569e59912e8c261" _source="playstation_dpad.png">
+	<_listOutput>
+		<AssetImportOutput _name=".dds" _guid="b977ec8426ce06a3c8a641513cf0f7d1" />
+	</_listOutput>
+</AssetMeta>

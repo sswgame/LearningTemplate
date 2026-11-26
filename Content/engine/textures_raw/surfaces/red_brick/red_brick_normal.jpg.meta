@@ -1,1 +1,5 @@
-<AssetMeta _guid="29b21212696ec02505865bb6a1e67dd6" _source="red_brick_normal.jpg" />
+<AssetMeta _guid="29b21212696ec02505865bb6a1e67dd6" _source="red_brick_normal.jpg">
+	<_listOutput>
+		<AssetImportOutput _name=".dds" _guid="b7db5187d928e712c4da67bb9a9c65bb" />
+	</_listOutput>
+</AssetMeta>

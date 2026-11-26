@@ -1,1 +1,6 @@
-<AssetMeta _guid="9efdb800f7ac1c56388a6848c735eb23" _source="fern_1.gltf" />
+<AssetMeta _guid="9efdb800f7ac1c56388a6848c735eb23" _source="fern_1.gltf">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="cff4e247b7d279713c7ad2e1e5c72e8b" />
+		<AssetImportOutput _name="/materials/leaves.material" _guid="706509f6249f39af567bbfe6925cafe7" />
+	</_listOutput>
+</AssetMeta>

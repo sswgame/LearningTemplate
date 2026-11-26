@@ -1,1 +1,5 @@
-<AssetMeta _guid="33d1d78ac9af8aa3fe6a3335257fe39b" _source="ground_path_tile.glb" />
+<AssetMeta _guid="33d1d78ac9af8aa3fe6a3335257fe39b" _source="ground_path_tile.glb">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="aa34350264b198234648ca9e44fc5180" />
+	</_listOutput>
+</AssetMeta>

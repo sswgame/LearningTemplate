@@ -1,1 +1,8 @@
-<AssetMeta _guid="7ea57e3cd3846831eb59a5d444b9de5b" _source="crate_wooden.gltf" />
+<AssetMeta _guid="7ea57e3cd3846831eb59a5d444b9de5b" _source="crate_wooden.gltf">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="3ff6edd29f2c6c595a9c95ede561c530" />
+		<AssetImportOutput _name="/crate_wooden.prefab.xml" _guid="14ae53d9ee4277fb1f6859f3a425a324" />
+		<AssetImportOutput _name="/materials/mi_trim_furniture.material" _guid="e7d1fd11ba36a40facee951f7b7fab63" />
+		<AssetImportOutput _name="/materials/mi_trim_metal.material" _guid="e91aef8bab59cbc982419c0c51e3e371" />
+	</_listOutput>
+</AssetMeta>

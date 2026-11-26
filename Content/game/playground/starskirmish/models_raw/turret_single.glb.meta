@@ -1,1 +1,5 @@
-<AssetMeta _guid="16ac3c642c88c364d5109f180a7b367d" _source="turret_single.glb" />
+<AssetMeta _guid="16ac3c642c88c364d5109f180a7b367d" _source="turret_single.glb">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="145ca1976496a42d47e1890f463b02f1" />
+	</_listOutput>
+</AssetMeta>

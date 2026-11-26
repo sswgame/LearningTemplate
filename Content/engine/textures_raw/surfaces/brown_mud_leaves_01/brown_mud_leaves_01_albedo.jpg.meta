@@ -1,1 +1,5 @@
-<AssetMeta _guid="e50987b3881829f597b9de907f1c7c0a" _source="brown_mud_leaves_01_albedo.jpg" />
+<AssetMeta _guid="e50987b3881829f597b9de907f1c7c0a" _source="brown_mud_leaves_01_albedo.jpg">
+	<_listOutput>
+		<AssetImportOutput _name=".dds" _guid="10914b9991d26e39a108766518682b33" />
+	</_listOutput>
+</AssetMeta>

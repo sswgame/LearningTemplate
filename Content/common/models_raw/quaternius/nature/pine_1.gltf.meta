@@ -1,1 +1,8 @@
-<AssetMeta _guid="b88bc2ec5364dc8c5bafbfba08845176" _source="pine_1.gltf" />
+<AssetMeta _guid="b88bc2ec5364dc8c5bafbfba08845176" _source="pine_1.gltf">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="db37905794be27aea29a047e1bf1324d" />
+		<AssetImportOutput _name="/materials/bark_normaltree.material" _guid="6583b116852fbc490bf37b45c9447ffa" />
+		<AssetImportOutput _name="/materials/leaves_pine.material" _guid="c1e5a10484a1efd970721266a0f96b23" />
+		<AssetImportOutput _name="/pine_1.prefab.xml" _guid="8d86fc594309400ee6223f9f7e029bfd" />
+	</_listOutput>
+</AssetMeta>

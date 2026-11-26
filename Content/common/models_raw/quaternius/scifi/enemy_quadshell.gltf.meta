@@ -1,1 +1,8 @@
-<AssetMeta _guid="bfe99bbf6d455d90090c69689023271b" _source="enemy_quadshell.gltf" />
+<AssetMeta _guid="bfe99bbf6d455d90090c69689023271b" _source="enemy_quadshell.gltf">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="bad1c6ff17aa64d3fb7e312980333ba3" />
+		<AssetImportOutput _name="/enemy_quadshell.animset.xml" _guid="6a37f6de775cf77e1340fb3451314631" />
+		<AssetImportOutput _name="/enemy_quadshell.skeleton.xml" _guid="ec39c97e9a8959def26b9b64f43a2bba" />
+		<AssetImportOutput _name="/materials/mi_enemies.material" _guid="7faeeb1c61b3e8ab295021e7a9f66b42" />
+	</_listOutput>
+</AssetMeta>

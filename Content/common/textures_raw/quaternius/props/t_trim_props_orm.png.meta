@@ -1,1 +1,5 @@
-<AssetMeta _guid="270e0675718985f47769ac64035088e7" _source="t_trim_props_orm.png" />
+<AssetMeta _guid="270e0675718985f47769ac64035088e7" _source="t_trim_props_orm.png">
+	<_listOutput>
+		<AssetImportOutput _name=".dds" _guid="1ba57968996b4f4065ca6c2cae4e8b92" />
+	</_listOutput>
+</AssetMeta>

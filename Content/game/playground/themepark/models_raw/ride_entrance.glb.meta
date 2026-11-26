@@ -1,1 +1,6 @@
-<AssetMeta _guid="0d52e17ea42a245e342b778b01f08c5f" _source="ride_entrance.glb" />
+<AssetMeta _guid="0d52e17ea42a245e342b778b01f08c5f" _source="ride_entrance.glb">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="4431b1be3ba47a7ba5ab9eaa0510ee63" />
+		<AssetImportOutput _name="/materials/colormap.material" _guid="fe5d848fe3ad001ec82202b858fd327a" />
+	</_listOutput>
+</AssetMeta>

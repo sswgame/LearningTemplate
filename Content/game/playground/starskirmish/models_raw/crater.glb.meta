@@ -1,1 +1,5 @@
-<AssetMeta _guid="ecdf6ff251d131994ff9a1b6fd71860c" _source="crater.glb" />
+<AssetMeta _guid="ecdf6ff251d131994ff9a1b6fd71860c" _source="crater.glb">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="d117ab416e077478560f5bbdcbc7c03c" />
+	</_listOutput>
+</AssetMeta>

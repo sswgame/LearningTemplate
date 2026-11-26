@@ -1,1 +1,5 @@
-<AssetMeta _guid="14de1a6a8b9b1bb86acdaed9af9f2df8" _source="tool_torch.png" />
+<AssetMeta _guid="14de1a6a8b9b1bb86acdaed9af9f2df8" _source="tool_torch.png">
+	<_listOutput>
+		<AssetImportOutput _name=".dds" _guid="7a3a0e10ac3f66c27c249e13ad6ba299" />
+	</_listOutput>
+</AssetMeta>

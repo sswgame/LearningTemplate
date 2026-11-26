@@ -1,1 +1,5 @@
-<AssetMeta _guid="2eb45c8c44a91c2415fc632972526365" _source="statue_block.glb" />
+<AssetMeta _guid="2eb45c8c44a91c2415fc632972526365" _source="statue_block.glb">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="19efbbac93e6f9f1b63f9edb8b4de168" />
+	</_listOutput>
+</AssetMeta>

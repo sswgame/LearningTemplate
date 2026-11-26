@@ -1,5 +1,10 @@
 <AssetMeta _guid="54c6729c87c6e28ec55f6ec295ba4cc6" _source="crate_medium.glb">
 	<_listImportOverride>
-		<AssetImportOverride _key="fracture" _value='{"volume": "Bounds", "pattern": "Uniform", "pieces": 24, "seed": 3, "levels": [4], "interiorColor": "0.62, 0.45, 0.28, 1.0"}' />
+		<AssetImportOverride _key="fracture"
+		                     _value="{&quot;volume&quot;: &quot;Bounds&quot;, &quot;pattern&quot;: &quot;Uniform&quot;, &quot;pieces&quot;: 24, &quot;seed&quot;: 3, &quot;levels&quot;: [4], &quot;interiorColor&quot;: &quot;0.62, 0.45, 0.28, 1.0&quot;}" />
 	</_listImportOverride>
+	<_listOutput>
+		<AssetImportOutput _name=".fracture" _guid="a885637b6e3b0500b6e10be76ff47c39" />
+		<AssetImportOutput _name=".mesh" _guid="1f79f21f159aa1fe92a32c26754644dd" />
+	</_listOutput>
 </AssetMeta>

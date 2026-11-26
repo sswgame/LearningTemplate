@@ -1,1 +1,5 @@
-<AssetMeta _guid="295726d32d3b268add927a75e68bc37a" _source="craft_miner.glb" />
+<AssetMeta _guid="295726d32d3b268add927a75e68bc37a" _source="craft_miner.glb">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="f4885382ce9e08ebbe6b436e4bfaaa7b" />
+	</_listOutput>
+</AssetMeta>

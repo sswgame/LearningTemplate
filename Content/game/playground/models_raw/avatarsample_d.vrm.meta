@@ -1,1 +1,32 @@
-<AssetMeta _guid="c47969cc5fd9fd8573c9be9013ac2006" _source="avatarsample_d.vrm" />
+<AssetMeta _guid="c47969cc5fd9fd8573c9be9013ac2006" _source="avatarsample_d.vrm">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="472404ec29dbede52399419dc35fb91f" />
+		<AssetImportOutput _name="/avatarsample_d.avatar.xml" _guid="c3b7afb18855e2687c361f8c5e35f5bc" />
+		<AssetImportOutput _name="/avatarsample_d.facial.xml" _guid="0f28dfb9566f4529515eef4248352be7" />
+		<AssetImportOutput _name="/avatarsample_d.prefab.xml" _guid="3928abe28f7413facee92014afda67f5" />
+		<AssetImportOutput _name="/avatarsample_d.rig.xml" _guid="43b7c296cf42faf53313fa2ed88eeacc" />
+		<AssetImportOutput _name="/avatarsample_d.skeleton.xml" _guid="fbe8881f43d0c77c487e7cfe51f1bf6e" />
+		<AssetImportOutput _name="/materials/f00_000_00_eyeextra_01_eye.material" _guid="e227f67cb1fff8eb3c4cf5c6b7614644" />
+		<AssetImportOutput _name="/materials/f00_000_00_eyehighlight_00_eye.material"
+		                   _guid="bfdbcb2ffbe5b4d725d31ee32d9054cb" />
+		<AssetImportOutput _name="/materials/f00_000_00_eyeiris_00_eye.material" _guid="8e86b7097aa7802747a909fc9c880fc2" />
+		<AssetImportOutput _name="/materials/f00_000_00_eyewhite_00_eye.material" _guid="b75ee0683cf9bc01a0310d40979fb969" />
+		<AssetImportOutput _name="/materials/f00_000_00_face_00_skin.material" _guid="84022b7f1f5fb5648e2256d9aed9ce30" />
+		<AssetImportOutput _name="/materials/f00_000_00_facebrow_00_face.material" _guid="6a86fc439a9df70a76edfa08ca528f24" />
+		<AssetImportOutput _name="/materials/f00_000_00_faceeyelash_00_face.material"
+		                   _guid="ea32d6d4be5a00725fef71e2b6a47c70" />
+		<AssetImportOutput _name="/materials/f00_000_00_faceeyeline_00_face.material"
+		                   _guid="70ab92827ab502ba41a3c04b82fbf93b" />
+		<AssetImportOutput _name="/materials/f00_000_00_facemouth_00_face.material"
+		                   _guid="8be0ec4d756146a443be854bde6961c1" />
+		<AssetImportOutput _name="/materials/f00_000_hair_00_hair_01.material" _guid="f07b0a9bf0a08fa858c7fdb09575e8ed" />
+		<AssetImportOutput _name="/materials/f00_000_hair_00_hair_02.material" _guid="606259ac3326a63c96b7f66cbdae91dd" />
+		<AssetImportOutput _name="/materials/f00_000_hairback_00_hair.material" _guid="4e0a8cf06e3f8fd51a63d2e224c1fc7f" />
+		<AssetImportOutput _name="/materials/f00_001_01_accessory_01_cloth.material"
+		                   _guid="7acce828811467d55125aa67b491c0a1" />
+		<AssetImportOutput _name="/materials/f00_001_01_body_00_skin.material" _guid="134be9831d7adf74d607bc1cff42f252" />
+		<AssetImportOutput _name="/materials/f00_001_01_bottoms_01_cloth.material" _guid="b830ce8c366df0b384e39d64c8af2d85" />
+		<AssetImportOutput _name="/materials/f00_001_01_shoes_01_cloth.material" _guid="746bdcea1bcc94e54808c7cf3838c867" />
+		<AssetImportOutput _name="/materials/f00_001_01_tops_01_cloth.material" _guid="5086a0ef349930c9f85c97bccd62b561" />
+	</_listOutput>
+</AssetMeta>

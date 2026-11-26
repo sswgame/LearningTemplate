@@ -1,1 +1,6 @@
-<AssetMeta _guid="fad47d676794ccbfce921e31c7881537" _source="prop_woodenfence_extension1.gltf" />
+<AssetMeta _guid="fad47d676794ccbfce921e31c7881537" _source="prop_woodenfence_extension1.gltf">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="e3ccca56d9ac8b1099710c6a0389d7ee" />
+		<AssetImportOutput _name="/materials/mi_woodtrim.material" _guid="6c7554d26d2cc379d0ec86714a6d08b3" />
+	</_listOutput>
+</AssetMeta>

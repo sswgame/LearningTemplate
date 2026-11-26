@@ -1,1 +1,8 @@
-<AssetMeta _guid="43f966cab669330630a840fd51730aad" _source="skeleton_warrior.glb" />
+<AssetMeta _guid="43f966cab669330630a840fd51730aad" _source="skeleton_warrior.glb">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="0cc992c7d9fd8f937dae3b221b7660a5" />
+		<AssetImportOutput _name="/parts/skeleton_warrior_helmet.mesh" _guid="27d632d1066b2527bea3be2868773f47" />
+		<AssetImportOutput _name="/skeleton_warrior.animset.xml" _guid="f16f0881b585be5590c84b56aa39346f" />
+		<AssetImportOutput _name="/skeleton_warrior.skeleton.xml" _guid="1dc4e94180a5227a8cfb7e4234ff232d" />
+	</_listOutput>
+</AssetMeta>

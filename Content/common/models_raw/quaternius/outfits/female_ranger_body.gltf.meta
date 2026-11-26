@@ -1,1 +1,7 @@
-<AssetMeta _guid="3ad9d7b78aa302b1f152b7daca85d555" _source="female_ranger_body.gltf" />
+<AssetMeta _guid="3ad9d7b78aa302b1f152b7daca85d555" _source="female_ranger_body.gltf">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="419cb73cc46cf9e06e6d4e0cc8624314" />
+		<AssetImportOutput _name="/female_ranger_body.skeleton.xml" _guid="1343da44e14b033768a3134e4c32195b" />
+		<AssetImportOutput _name="/materials/mi_ranger.material" _guid="32612638c30b4e32b913612104b88417" />
+	</_listOutput>
+</AssetMeta>

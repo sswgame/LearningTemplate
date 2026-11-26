@@ -1,1 +1,5 @@
-<AssetMeta _guid="0677d7ab534968c02db7b4fdf7ac3625" _source="slide_horizontal_grey_section_wide.png" />
+<AssetMeta _guid="0677d7ab534968c02db7b4fdf7ac3625" _source="slide_horizontal_grey_section_wide.png">
+	<_listOutput>
+		<AssetImportOutput _name=".dds" _guid="dff1926a9716a2b8a5a5381ea0c3198a" />
+	</_listOutput>
+</AssetMeta>

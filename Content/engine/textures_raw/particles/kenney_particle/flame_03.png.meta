@@ -1,1 +1,5 @@
-<AssetMeta _guid="8ffdb869a9bff657f233938e0fd0a4fc" _source="flame_03.png" />
+<AssetMeta _guid="8ffdb869a9bff657f233938e0fd0a4fc" _source="flame_03.png">
+	<_listOutput>
+		<AssetImportOutput _name=".dds" _guid="fb467982fd12532bfa58696f1a6ebcd8" />
+	</_listOutput>
+</AssetMeta>

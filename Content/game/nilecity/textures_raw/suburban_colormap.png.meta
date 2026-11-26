@@ -1,1 +1,5 @@
-<AssetMeta _guid="164885d554b9f34eb17217b29b2423f5" _source="suburban_colormap.png" />
+<AssetMeta _guid="164885d554b9f34eb17217b29b2423f5" _source="suburban_colormap.png">
+	<_listOutput>
+		<AssetImportOutput _name=".dds" _guid="08e634b51d7c635a2a78c2d56d985e9e" />
+	</_listOutput>
+</AssetMeta>

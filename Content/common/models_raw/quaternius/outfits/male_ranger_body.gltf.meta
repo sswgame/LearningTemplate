@@ -1,1 +1,7 @@
-<AssetMeta _guid="9f4824913071d61da3338c18e5c02c07" _source="male_ranger_body.gltf" />
+<AssetMeta _guid="9f4824913071d61da3338c18e5c02c07" _source="male_ranger_body.gltf">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="c9688c3dd8d7ade8705d1ebb2a6508fe" />
+		<AssetImportOutput _name="/male_ranger_body.skeleton.xml" _guid="be26de126d3ab10359b0e531f9983d4d" />
+		<AssetImportOutput _name="/materials/mi_ranger.material" _guid="626a46ad23b7ee492dd56868879a8bda" />
+	</_listOutput>
+</AssetMeta>

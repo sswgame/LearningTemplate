@@ -1,1 +1,5 @@
-<AssetMeta _guid="ff50928e76e02b7235d97eac74e55821" _source="craft_speeder_b.glb" />
+<AssetMeta _guid="ff50928e76e02b7235d97eac74e55821" _source="craft_speeder_b.glb">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="351d9d3fc1c6c4fc58ef8ac0dbc991c0" />
+	</_listOutput>
+</AssetMeta>

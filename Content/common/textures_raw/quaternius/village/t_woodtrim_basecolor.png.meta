@@ -1,1 +1,5 @@
-<AssetMeta _guid="c4eb4afafb309fb5d06209d2e91b4be7" _source="t_woodtrim_basecolor.png" />
+<AssetMeta _guid="c4eb4afafb309fb5d06209d2e91b4be7" _source="t_woodtrim_basecolor.png">
+	<_listOutput>
+		<AssetImportOutput _name=".dds" _guid="1833f6f39d18c6870b2e4d48c4c445f6" />
+	</_listOutput>
+</AssetMeta>

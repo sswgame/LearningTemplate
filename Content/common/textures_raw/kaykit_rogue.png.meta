@@ -1,1 +1,5 @@
-<AssetMeta _guid="7cb271473f7c609adcaf60de37324739" _source="kaykit_rogue.png" />
+<AssetMeta _guid="7cb271473f7c609adcaf60de37324739" _source="kaykit_rogue.png">
+	<_listOutput>
+		<AssetImportOutput _name=".dds" _guid="45ff141f99d3f2477b12482a56bae6be" />
+	</_listOutput>
+</AssetMeta>

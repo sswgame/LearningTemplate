@@ -1,1 +1,7 @@
-<AssetMeta _guid="8502864c7f8724a388f9c87444514907" _source="female_ranger_head_hood.gltf" />
+<AssetMeta _guid="8502864c7f8724a388f9c87444514907" _source="female_ranger_head_hood.gltf">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="c5cd45e0b3cb9c94ae5b954543710a46" />
+		<AssetImportOutput _name="/female_ranger_head_hood.skeleton.xml" _guid="143365761ad35ab0343478d9e630abf3" />
+		<AssetImportOutput _name="/materials/mi_ranger.material" _guid="6cc61dbaae321983cf799b15ad21c876" />
+	</_listOutput>
+</AssetMeta>

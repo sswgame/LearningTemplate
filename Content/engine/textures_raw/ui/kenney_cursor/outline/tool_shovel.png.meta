@@ -1,1 +1,5 @@
-<AssetMeta _guid="78e12df9e7c30b3ddcfff017fbfa6573" _source="tool_shovel.png" />
+<AssetMeta _guid="78e12df9e7c30b3ddcfff017fbfa6573" _source="tool_shovel.png">
+	<_listOutput>
+		<AssetImportOutput _name=".dds" _guid="4b38278dece6c12f631a3115cf946919" />
+	</_listOutput>
+</AssetMeta>

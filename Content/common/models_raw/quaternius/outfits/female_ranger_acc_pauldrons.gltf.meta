@@ -1,1 +1,7 @@
-<AssetMeta _guid="842e8e19ff6f9816eb20e47e95e3bf9e" _source="female_ranger_acc_pauldrons.gltf" />
+<AssetMeta _guid="842e8e19ff6f9816eb20e47e95e3bf9e" _source="female_ranger_acc_pauldrons.gltf">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="a7398cac61cd82ca3d591cd351600343" />
+		<AssetImportOutput _name="/female_ranger_acc_pauldrons.skeleton.xml" _guid="b66c2eac9c0d76b42f8ed377200ad073" />
+		<AssetImportOutput _name="/materials/mi_ranger.material" _guid="2e1fd527323b881e4e952382b7e9dbe8" />
+	</_listOutput>
+</AssetMeta>

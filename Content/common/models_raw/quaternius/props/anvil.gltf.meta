@@ -1,1 +1,6 @@
-<AssetMeta _guid="d20bd958e5ead91c2e045c2ac485ca2d" _source="anvil.gltf" />
+<AssetMeta _guid="d20bd958e5ead91c2e045c2ac485ca2d" _source="anvil.gltf">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="8991cab8ce0c364618a37dafdbddbfdc" />
+		<AssetImportOutput _name="/materials/mi_trim_metal.material" _guid="873352dc34b637e68c363a18957afbad" />
+	</_listOutput>
+</AssetMeta>

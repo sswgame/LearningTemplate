@@ -1,1 +1,7 @@
-<AssetMeta _guid="e0918d11aad9edffb575776cd736126a" _source="ual2_standard.glb" />
+<AssetMeta _guid="e0918d11aad9edffb575776cd736126a" _source="ual2_standard.glb">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="c4608f0f11367fb27f1b7e45c0e6b6c3" />
+		<AssetImportOutput _name="/ual2_standard.animset.xml" _guid="562aef3e795f6045bad18597d272e5af" />
+		<AssetImportOutput _name="/ual2_standard.skeleton.xml" _guid="a75347603b2159d9d7b9d52e5b902bd9" />
+	</_listOutput>
+</AssetMeta>

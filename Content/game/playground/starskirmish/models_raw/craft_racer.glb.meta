@@ -1,1 +1,5 @@
-<AssetMeta _guid="dc4610c3285f2d4f3f1188113763ebee" _source="craft_racer.glb" />
+<AssetMeta _guid="dc4610c3285f2d4f3f1188113763ebee" _source="craft_racer.glb">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="4f53d7513052a01df8e527a0abc6ed50" />
+	</_listOutput>
+</AssetMeta>

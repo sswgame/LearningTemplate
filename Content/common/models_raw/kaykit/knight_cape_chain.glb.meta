@@ -1,1 +1,6 @@
-<AssetMeta _guid="0b357b88adae5d9224d50892b3b3ee65" _source="knight_cape_chain.glb" />
+<AssetMeta _guid="0b357b88adae5d9224d50892b3b3ee65" _source="knight_cape_chain.glb">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="19c26666376db6e9d283eac6160c83ea" />
+		<AssetImportOutput _name="/knight_cape_chain.skeleton.xml" _guid="ef6acd4d5ee530ef4d93e24cc321c018" />
+	</_listOutput>
+</AssetMeta>

@@ -1,1 +1,5 @@
-<AssetMeta _guid="bcb74d84f75be92630ef80cb2e3111f3" _source="wall_broken.glb" />
+<AssetMeta _guid="bcb74d84f75be92630ef80cb2e3111f3" _source="wall_broken.glb">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="12b2d6ec53be0fec1c398c3aae566b5a" />
+	</_listOutput>
+</AssetMeta>

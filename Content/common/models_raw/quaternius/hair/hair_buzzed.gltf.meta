@@ -1,1 +1,7 @@
-<AssetMeta _guid="b013a09be1f9a110f0377aa4d4cd1bf7" _source="hair_buzzed.gltf" />
+<AssetMeta _guid="b013a09be1f9a110f0377aa4d4cd1bf7" _source="hair_buzzed.gltf">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="ab0308bfe24bef5176054038b6875733" />
+		<AssetImportOutput _name="/hair_buzzed.skeleton.xml" _guid="41baa5e1767ddb0dc30e2a386833945e" />
+		<AssetImportOutput _name="/materials/mi_hair_1.material" _guid="3c2c093721f3b9152c458ec3886ba3f8" />
+	</_listOutput>
+</AssetMeta>

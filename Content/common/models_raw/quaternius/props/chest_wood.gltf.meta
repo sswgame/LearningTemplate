@@ -1,1 +1,10 @@
-<AssetMeta _guid="4597c8b3400d8eaa1834161b3343f8c7" _source="chest_wood.gltf" />
+<AssetMeta _guid="4597c8b3400d8eaa1834161b3343f8c7" _source="chest_wood.gltf">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="d1ddbc530969a4385914608582d8071d" />
+		<AssetImportOutput _name="/chest_wood.animset.xml" _guid="f9f6b20c497efe875ec6666822277d54" />
+		<AssetImportOutput _name="/chest_wood.prefab.xml" _guid="7acd27be78e0cd7df9d0bd9c34429c98" />
+		<AssetImportOutput _name="/chest_wood.skeleton.xml" _guid="413dcd50aaabc4ac3d6f64dd586525a2" />
+		<AssetImportOutput _name="/materials/mi_trim_furniture.material" _guid="7c6034caef28451de80f57fd3164644a" />
+		<AssetImportOutput _name="/materials/mi_trim_metal.material" _guid="c7d9c60004a1c28567bc3a5dff44a8ad" />
+	</_listOutput>
+</AssetMeta>

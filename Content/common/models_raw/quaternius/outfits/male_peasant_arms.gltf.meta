@@ -1,1 +1,9 @@
-<AssetMeta _guid="27f8fbd6221ee7f321facf020af75a80" _source="male_peasant_arms.gltf" />
+<AssetMeta _guid="27f8fbd6221ee7f321facf020af75a80" _source="male_peasant_arms.gltf">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="3c583f57407c477c49fe377ca04a7454" />
+		<AssetImportOutput _name="/male_peasant_arms.prefab.xml" _guid="a1198092a20754815fb2d0c6b3944e92" />
+		<AssetImportOutput _name="/male_peasant_arms.skeleton.xml" _guid="cb599f39380affe177c73accc1c5f994" />
+		<AssetImportOutput _name="/materials/mi_peasant.material" _guid="e11f5981adbe050594d06aa67a58cf54" />
+		<AssetImportOutput _name="/materials/mi_regular_male.material" _guid="35a35db46913f29732b2759f6819e7b8" />
+	</_listOutput>
+</AssetMeta>

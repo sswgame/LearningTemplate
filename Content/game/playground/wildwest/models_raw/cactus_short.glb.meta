@@ -1,1 +1,5 @@
-<AssetMeta _guid="02ca05ed8cfb04710ec26a9008462f7e" _source="cactus_short.glb" />
+<AssetMeta _guid="02ca05ed8cfb04710ec26a9008462f7e" _source="cactus_short.glb">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="2ddfa838f88dd9eb1672e150832c5148" />
+	</_listOutput>
+</AssetMeta>

@@ -1,1 +1,6 @@
-<AssetMeta _guid="0844a80d6518a3b6408e00237eefd830" _source="deadtree_1.gltf" />
+<AssetMeta _guid="0844a80d6518a3b6408e00237eefd830" _source="deadtree_1.gltf">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="f8463905ef1186d1af7a236b45f01f6b" />
+		<AssetImportOutput _name="/materials/bark_deadtree.material" _guid="883b306e850bd96bd67e8ecf8f9ec095" />
+	</_listOutput>
+</AssetMeta>

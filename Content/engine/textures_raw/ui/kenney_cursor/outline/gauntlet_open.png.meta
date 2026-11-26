@@ -1,1 +1,5 @@
-<AssetMeta _guid="85d4b941f100b43f4e337d3621e514d9" _source="gauntlet_open.png" />
+<AssetMeta _guid="85d4b941f100b43f4e337d3621e514d9" _source="gauntlet_open.png">
+	<_listOutput>
+		<AssetImportOutput _name=".dds" _guid="b41446c71a89dba26327e5f3778a4367" />
+	</_listOutput>
+</AssetMeta>

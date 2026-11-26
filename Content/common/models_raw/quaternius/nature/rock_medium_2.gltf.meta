@@ -1,1 +1,6 @@
-<AssetMeta _guid="8fd053823ff1d8d8f00b8f534b979e93" _source="rock_medium_2.gltf" />
+<AssetMeta _guid="8fd053823ff1d8d8f00b8f534b979e93" _source="rock_medium_2.gltf">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="d4b357c19593fe0ddc44d8cfaf1532d2" />
+		<AssetImportOutput _name="/materials/rocks.material" _guid="d5fb66477eae656c339f27cf29c9a982" />
+	</_listOutput>
+</AssetMeta>

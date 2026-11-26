@@ -1,1 +1,5 @@
-<AssetMeta _guid="25d08ea0837a8955f6d923a0dc3331a6" _source="barrier_corner.glb" />
+<AssetMeta _guid="25d08ea0837a8955f6d923a0dc3331a6" _source="barrier_corner.glb">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="0259a8d9fcd659e15d3ee8dab59fbd1f" />
+	</_listOutput>
+</AssetMeta>

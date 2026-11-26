@@ -1,1 +1,5 @@
-<AssetMeta _guid="b3c1a501f57671d7530b2c1e21130e37" _source="busy_hourglass_outline.png" />
+<AssetMeta _guid="b3c1a501f57671d7530b2c1e21130e37" _source="busy_hourglass_outline.png">
+	<_listOutput>
+		<AssetImportOutput _name=".dds" _guid="78486b8ef79da2ecc8ab090ed3d8342a" />
+	</_listOutput>
+</AssetMeta>

@@ -1,1 +1,5 @@
-<AssetMeta _guid="9c4e13649d48c4b90825d6dfef84cec0" _source="fence_gate.glb" />
+<AssetMeta _guid="9c4e13649d48c4b90825d6dfef84cec0" _source="fence_gate.glb">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="ef93000a2dc5a958d11e8d9d26aaee54" />
+	</_listOutput>
+</AssetMeta>

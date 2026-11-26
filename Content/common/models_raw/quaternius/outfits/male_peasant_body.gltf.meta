@@ -1,1 +1,7 @@
-<AssetMeta _guid="65bd184cc7692ebb5ea137429c9dff3b" _source="male_peasant_body.gltf" />
+<AssetMeta _guid="65bd184cc7692ebb5ea137429c9dff3b" _source="male_peasant_body.gltf">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="fe1d53f46218cf772de342f1552bd23d" />
+		<AssetImportOutput _name="/male_peasant_body.skeleton.xml" _guid="78c1b2f833082963efe9884a7776ad5d" />
+		<AssetImportOutput _name="/materials/mi_peasant.material" _guid="6ca05c83e5458b538fbe4849a0a15ec3" />
+	</_listOutput>
+</AssetMeta>

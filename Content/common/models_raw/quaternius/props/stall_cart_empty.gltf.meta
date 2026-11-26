@@ -1,1 +1,9 @@
-<AssetMeta _guid="46133ff93bc36835eb7681ee56feda3d" _source="stall_cart_empty.gltf" />
+<AssetMeta _guid="46133ff93bc36835eb7681ee56feda3d" _source="stall_cart_empty.gltf">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="1a0809fcbc1cc07d2c5f6f5397ee8b7d" />
+		<AssetImportOutput _name="/materials/mi_banner.material" _guid="f481bbd2299204603d4961fef6a0e312" />
+		<AssetImportOutput _name="/materials/mi_trim_furniture.material" _guid="980541e3112efeed902325fafbe77198" />
+		<AssetImportOutput _name="/materials/mi_trim_metal.material" _guid="08f7b33fa59df013029ad76b20f51b9b" />
+		<AssetImportOutput _name="/stall_cart_empty.prefab.xml" _guid="a11b53832fdc449312365fb92a9f7d4d" />
+	</_listOutput>
+</AssetMeta>

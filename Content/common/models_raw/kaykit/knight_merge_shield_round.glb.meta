@@ -1,1 +1,6 @@
-<AssetMeta _guid="5e9e51fc79fc006607e32524d268def9" _source="knight_merge_shield_round.glb" />
+<AssetMeta _guid="5e9e51fc79fc006607e32524d268def9" _source="knight_merge_shield_round.glb">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="8a36a6fb0d440cd579f6b5e5a909436a" />
+		<AssetImportOutput _name="/knight_merge_shield_round.skeleton.xml" _guid="74cc1b8ac5b8d99f860e7f2615ef4255" />
+	</_listOutput>
+</AssetMeta>

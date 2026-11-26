@@ -1,1 +1,5 @@
-<AssetMeta _guid="e7201cc43e3c40ea2132ade8def777ef" _source="autumn_field_puresky.hdr" />
+<AssetMeta _guid="e7201cc43e3c40ea2132ade8def777ef" _source="autumn_field_puresky.hdr">
+	<_listOutput>
+		<AssetImportOutput _name=".dds" _guid="c9194ee823e0fd30b705d9c7c97ed456" />
+	</_listOutput>
+</AssetMeta>

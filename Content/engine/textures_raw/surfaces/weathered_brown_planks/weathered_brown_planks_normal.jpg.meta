@@ -1,1 +1,5 @@
-<AssetMeta _guid="6756969da8b919f66bdab2a89f8ac5de" _source="weathered_brown_planks_normal.jpg" />
+<AssetMeta _guid="6756969da8b919f66bdab2a89f8ac5de" _source="weathered_brown_planks_normal.jpg">
+	<_listOutput>
+		<AssetImportOutput _name=".dds" _guid="8013a2bb7deedc0daee58118dfee5961" />
+	</_listOutput>
+</AssetMeta>

@@ -1,1 +1,5 @@
-<AssetMeta _guid="6f7c39c27cd5902dccff6cda05539d6f" _source="mushrooms.png" />
+<AssetMeta _guid="6f7c39c27cd5902dccff6cda05539d6f" _source="mushrooms.png">
+	<_listOutput>
+		<AssetImportOutput _name=".dds" _guid="27675715ddb8b630063a18493ce637de" />
+	</_listOutput>
+</AssetMeta>

@@ -1,1 +1,6 @@
-<AssetMeta _guid="cc96ab7655fc4fb4491b6796a1a40efa" _source="building_type_a.glb" />
+<AssetMeta _guid="cc96ab7655fc4fb4491b6796a1a40efa" _source="building_type_a.glb">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="07679fcf34b7323d0628b013620b7118" />
+		<AssetImportOutput _name="/materials/colormap.material" _guid="c2ac1e62b25cb53172ab3efd1c8d4d56" />
+	</_listOutput>
+</AssetMeta>

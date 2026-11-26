@@ -1,1 +1,5 @@
-<AssetMeta _guid="f0a6ee3916f91fe2d643e52fa905a0d8" _source="lock_unlocked.png" />
+<AssetMeta _guid="f0a6ee3916f91fe2d643e52fa905a0d8" _source="lock_unlocked.png">
+	<_listOutput>
+		<AssetImportOutput _name=".dds" _guid="0b119c94ca529d478e5fe719700a8194" />
+	</_listOutput>
+</AssetMeta>

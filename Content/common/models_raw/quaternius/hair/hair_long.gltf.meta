@@ -1,1 +1,7 @@
-<AssetMeta _guid="c97ef3abadf8152ca7989136ab4e6b1a" _source="hair_long.gltf" />
+<AssetMeta _guid="c97ef3abadf8152ca7989136ab4e6b1a" _source="hair_long.gltf">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="42e9e184fc86eeac849da37e4a7a14ef" />
+		<AssetImportOutput _name="/hair_long.skeleton.xml" _guid="4e55214327594832dea9964a338420d7" />
+		<AssetImportOutput _name="/materials/mi_hair_2.material" _guid="8e423f66de9d62fe0c86567520814889" />
+	</_listOutput>
+</AssetMeta>

@@ -1,1 +1,5 @@
-<AssetMeta _guid="ec32ca4a3b98f223fb1af11d4fc046b6" _source="ground_grass.glb" />
+<AssetMeta _guid="ec32ca4a3b98f223fb1af11d4fc046b6" _source="ground_grass.glb">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="811e68baaf0b497b1f7058288a1d253a" />
+	</_listOutput>
+</AssetMeta>

@@ -1,1 +1,9 @@
-<AssetMeta _guid="005eab0e0a402644c434583f2f28276f" _source="farmcrate_apple.gltf" />
+<AssetMeta _guid="005eab0e0a402644c434583f2f28276f" _source="farmcrate_apple.gltf">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="2f7c3905e9ecb93da92c5e62b4d733ac" />
+		<AssetImportOutput _name="/farmcrate_apple.prefab.xml" _guid="872b0ca8ac5dc6cc13d3d4edb6254142" />
+		<AssetImportOutput _name="/materials/mi_trim_furniture.material" _guid="a7afd5f0c6401c77ae995841a910e7e1" />
+		<AssetImportOutput _name="/materials/mi_trim_metal.material" _guid="576f39472ab1e07a906555f2c5759a57" />
+		<AssetImportOutput _name="/materials/mi_trim_props_vertex.material" _guid="bc4760d37b62abe6af2eaabf999b1680" />
+	</_listOutput>
+</AssetMeta>

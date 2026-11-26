@@ -1,1 +1,5 @@
-<AssetMeta _guid="4641110b4fa81bf14596b7e5e9b1660a" _source="hangar_large_a.glb" />
+<AssetMeta _guid="4641110b4fa81bf14596b7e5e9b1660a" _source="hangar_large_a.glb">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="4e78f6abcbe900a118e3e6cb1c5c16c8" />
+	</_listOutput>
+</AssetMeta>

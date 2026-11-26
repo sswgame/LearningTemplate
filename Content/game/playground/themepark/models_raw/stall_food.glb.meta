@@ -1,1 +1,6 @@
-<AssetMeta _guid="53b3b622db5341f1731545d67abb8f34" _source="stall_food.glb" />
+<AssetMeta _guid="53b3b622db5341f1731545d67abb8f34" _source="stall_food.glb">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="b7c2834fe563aaab5ed0e7208dc50c92" />
+		<AssetImportOutput _name="/materials/colormap.material" _guid="e9d062905afe4570c63edbf126c1ad15" />
+	</_listOutput>
+</AssetMeta>

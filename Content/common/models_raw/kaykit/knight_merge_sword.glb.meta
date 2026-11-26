@@ -1,1 +1,6 @@
-<AssetMeta _guid="3fb7623b8acf5e1d9d09f1bdc9327726" _source="knight_merge_sword.glb" />
+<AssetMeta _guid="3fb7623b8acf5e1d9d09f1bdc9327726" _source="knight_merge_sword.glb">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="e01c8c987be2f59b584fa37db3dc558b" />
+		<AssetImportOutput _name="/knight_merge_sword.skeleton.xml" _guid="673546f56bb41272625086f69f1e0fad" />
+	</_listOutput>
+</AssetMeta>

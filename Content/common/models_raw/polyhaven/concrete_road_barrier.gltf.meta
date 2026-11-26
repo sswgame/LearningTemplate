@@ -1,1 +1,6 @@
-<AssetMeta _guid="85673274302baf834c05dc2fdfa2d330" _source="concrete_road_barrier.gltf" />
+<AssetMeta _guid="85673274302baf834c05dc2fdfa2d330" _source="concrete_road_barrier.gltf">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="7c2aec7992f38bfe2711ee6735319ea8" />
+		<AssetImportOutput _name="/materials/concrete_road_barrier.material" _guid="b859dd90e58e900f2c07cad6bb977a25" />
+	</_listOutput>
+</AssetMeta>

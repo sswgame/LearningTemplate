@@ -1,1 +1,7 @@
-<AssetMeta _guid="0ab79f81a9b06b3ab8839946bb0e4f08" _source="male_ranger_head_hood.gltf" />
+<AssetMeta _guid="0ab79f81a9b06b3ab8839946bb0e4f08" _source="male_ranger_head_hood.gltf">
+	<_listOutput>
+		<AssetImportOutput _name=".mesh" _guid="b73666b1083d8186d22c3ff63426b3e8" />
+		<AssetImportOutput _name="/male_ranger_head_hood.skeleton.xml" _guid="3a0251ff3bfbf5392e7c4233e207a8d0" />
+		<AssetImportOutput _name="/materials/mi_ranger.material" _guid="9cf071b68aa42c5b9bb8e51277a5c8d5" />
+	</_listOutput>
+</AssetMeta>

@@ -1,1 +1,5 @@
-<AssetMeta _guid="260582085eb5c10d70bef65cc497a676" _source="t_guns_batch1_normal.png" />
+<AssetMeta _guid="260582085eb5c10d70bef65cc497a676" _source="t_guns_batch1_normal.png">
+	<_listOutput>
+		<AssetImportOutput _name=".dds" _guid="26e8e100ca472378c2e7c43292403150" />
+	</_listOutput>
+</AssetMeta>
