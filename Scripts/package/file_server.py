@@ -1,8 +1,8 @@
 """
 Fileserve — PC 의 쿠킹한 팩 폴더를 읽기 전용 HTTP 로 장치에 내준다(개발 전용). 장치는 APK 를 다시 묶지 않고 다시 구운 팩을 받는다.
 
-  py -3 -m Scripts fileserve --root build/Android-Release/Bin/Packs          # 127.0.0.1:1112 — USB 는 `adb reverse tcp:1112 tcp:1112`
-  py -3 -m Scripts fileserve --root <팩 폴더> --bind 0.0.0.0                 # 같은 망의 장치(경고: 같은 망 누구나 이 폴더를 읽는다)
+  py -3 -m Scripts file-server --root build/Android-Release/Bin/Packs          # 127.0.0.1:1112 — USB 는 `adb reverse tcp:1112 tcp:1112`
+  py -3 -m Scripts file-server --root <팩 폴더> --bind 0.0.0.0                 # 같은 망의 장치(경고: 같은 망 누구나 이 폴더를 읽는다)
 
 장치 쪽은 `App -fileserve=http://127.0.0.1:1112` 로 띄운다(`FileServeContentSource` — 받은 파일은 앱 전용 폴더의 거울에 두고, 크기 · 수정 시각이 같으면 다시 받지 않는다).
 ezEngine Fileserve · 언리얼 쿡 데이터 스트리밍(Zen)과 같은 자리다.
@@ -37,7 +37,7 @@ MAX_PATH_CHARS = 1024
 _WINDOWS_DEVICE_NAMES = frozenset({"CON", "PRN", "AUX", "NUL", *(f"COM{n}" for n in range(1, 10)), *(f"LPT{n}" for n in range(1, 10))})
 
 
-class FileServeError(Exception):
+class FileServerError(Exception):
     """요청을 거절하는 까닭(HTTP 상태와 짧은 글)."""
 
     def __init__(self, status: int, text: str):
@@ -47,12 +47,12 @@ class FileServeError(Exception):
 
 
 def resolve_request_path(root: Path, relative: str) -> Path:
-    """상대 경로 `relative` 를 루트 아래 실제 경로로 바꾼다. 루트 밖 · 모양이 틀린 경로는 FileServeError(400 · 404)."""
+    """상대 경로 `relative` 를 루트 아래 실제 경로로 바꾼다. 루트 밖 · 모양이 틀린 경로는 FileServerError(400 · 404)."""
     if len(relative) > MAX_PATH_CHARS or "\x00" in relative or "\\" in relative or ":" in relative or relative.startswith("/"):
-        raise FileServeError(400, "bad path")
+        raise FileServerError(400, "bad path")
     parts = [part for part in relative.split("/") if part != ""]
     if any(part in (".", "..") or part.split(".")[0].upper() in _WINDOWS_DEVICE_NAMES for part in parts):
-        raise FileServeError(400, "bad path")
+        raise FileServerError(400, "bad path")
     real_root = os.path.realpath(root)
     candidate = os.path.realpath(os.path.join(real_root, *parts)) if parts else real_root
     # 심볼릭 링크를 따른 뒤에도 루트 아래여야 한다 — 링크로 루트 밖을 가리키면 없는 것이다.
@@ -62,7 +62,7 @@ def resolve_request_path(root: Path, relative: str) -> Path:
     except ValueError:
         inside = False
     if inside is False:
-        raise FileServeError(404, "not found")
+        raise FileServerError(404, "not found")
     return Path(candidate)
 
 
@@ -74,29 +74,29 @@ def describe(root: Path, relative: str) -> str:
     if path.is_file():
         info = path.stat()
         return f"file {info.st_size} {info.st_mtime_ns}"
-    raise FileServeError(404, "not found")
+    raise FileServerError(404, "not found")
 
 
 def list_files(root: Path, relative: str) -> str:
     """`/list` 응답 글 — 바로 아래 파일 이름(이름 순)."""
     path = resolve_request_path(root, relative)
     if path.is_dir() is False:
-        raise FileServeError(404, "not found")
+        raise FileServerError(404, "not found")
     names = sorted(entry.name for entry in path.iterdir() if entry.is_file())
     if len(names) > MAX_LIST_ENTRIES:
-        raise FileServeError(413, "too many files")
+        raise FileServerError(413, "too many files")
     return "".join(f"{name}\n" for name in names)
 
 
 def read_range(root: Path, relative: str, offset: int, size: int) -> bytes:
     """`/file` 응답 바이트 — 구간 [offset, offset+size)."""
     if offset < 0 or size <= 0 or size > MAX_CHUNK_BYTES:
-        raise FileServeError(400, "bad range")
+        raise FileServerError(400, "bad range")
     path = resolve_request_path(root, relative)
     if path.is_file() is False:
-        raise FileServeError(404, "not found")
+        raise FileServerError(404, "not found")
     if offset + size > path.stat().st_size:
-        raise FileServeError(416, "range outside the file")
+        raise FileServerError(416, "range outside the file")
     with path.open("rb") as stream:
         stream.seek(offset)
         return stream.read(size)
@@ -105,14 +105,14 @@ def read_range(root: Path, relative: str, offset: int, size: int) -> bytes:
 def _read_int(query: dict[str, list[str]], name: str) -> int:
     values = query.get(name, [])
     if len(values) != 1 or values[0].isdecimal() is False or values[0].isascii() is False:
-        raise FileServeError(400, f"bad {name}")
+        raise FileServerError(400, f"bad {name}")
     return int(values[0])
 
 
 def make_handler(root: Path) -> type[BaseHTTPRequestHandler]:
     """루트 `root` 를 내주는 요청 처리기 형식."""
 
-    class FileServeHandler(BaseHTTPRequestHandler):
+    class FileServerHandler(BaseHTTPRequestHandler):
         server_version = "SWFileServe"
         sys_version = ""
 
@@ -122,7 +122,7 @@ def make_handler(root: Path) -> type[BaseHTTPRequestHandler]:
             paths = query.get("path", [""])
             try:
                 if len(paths) != 1:
-                    raise FileServeError(400, "bad path")
+                    raise FileServerError(400, "bad path")
                 if split.path == "/stat":
                     self._send(200, describe(root, paths[0]).encode("utf-8"), "text/plain; charset=utf-8")
                 elif split.path == "/list":
@@ -131,8 +131,8 @@ def make_handler(root: Path) -> type[BaseHTTPRequestHandler]:
                     body = read_range(root, paths[0], _read_int(query, "offset"), _read_int(query, "size"))
                     self._send(200, body, "application/octet-stream")
                 else:
-                    raise FileServeError(404, "not found")
-            except FileServeError as error:
+                    raise FileServerError(404, "not found")
+            except FileServerError as error:
                 self._send(error.status, error.text.encode("utf-8"), "text/plain; charset=utf-8")
             except OSError:
                 self._send(500, b"read failed", "text/plain; charset=utf-8")
@@ -150,7 +150,7 @@ def make_handler(root: Path) -> type[BaseHTTPRequestHandler]:
         def log_message(self, format: str, *args: object) -> None:  # noqa: A002 — http.server 의 서명
             sys.stderr.write(f"[fileserve] {self.address_string()} {format % args}\n")
 
-    return FileServeHandler
+    return FileServerHandler
 
 
 def make_server(root: Path, bind: str, port: int) -> ThreadingHTTPServer:
@@ -162,8 +162,8 @@ def make_server(root: Path, bind: str, port: int) -> ThreadingHTTPServer:
     return server
 
 
-class FileserveCommand(Command):
-    name = "fileserve"
+class FileServerCommand(Command):
+    name = "file-server"
     help = "장치 대상으로 쿠킹한 팩 폴더를 읽기 전용 HTTP 로 내준다(개발 전용 — 장치는 App -fileserve=<주소>, 기본 127.0.0.1:1112 + adb reverse)"
 
     def add_arguments(self, parser: argparse.ArgumentParser) -> None:
@@ -177,7 +177,7 @@ class FileserveCommand(Command):
             server = make_server(root, args.bind, args.port)
         except (ValueError, OSError) as error:
             print(f"[fileserve] {error}", file=sys.stderr)
-            return ExitCode.CHECK_INVALID
+            return ExitCode.USAGE_ERROR
         if args.bind not in ("127.0.0.1", "::1", "localhost"):
             print(f"[fileserve] warning: bound to {args.bind} - anyone on this network can read {root}", file=sys.stderr)
         print(f"[fileserve] serving {root} on http://{args.bind}:{server.server_address[1]} (read-only, development only)", flush=True)

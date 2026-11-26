@@ -22,10 +22,10 @@
 언리얼 `FCustomVersion` 은 판을 사람이 올리고 Serialize 분기를 손으로 쓰며, 유니티는 `FormerlySerializedAs` 를 손으로 단다 — 둘 다 빠뜨리면 조용히 값을 잃는다.
 
 사용법:
-    py -3 -m Scripts format-release                        # check — 꾸미기 스키마(쿠킹이 먼저 돈다)
-    py -3 -m Scripts format-release --layouts <파일>       # check — 상태 배치도
-    py -3 -m Scripts format-release --fix                  # 추론할 수 있는 단계(제거)를 소스에 적고, 남은 오류가 있으면 실패
-    py -3 -m Scripts format-release accept --layouts <파일> # 출시: 지금 스키마 · 배치를 스냅숏으로 쓴다
+    py -3 -m Scripts serialization-compat                        # check — 꾸미기 스키마(쿠킹이 먼저 돈다)
+    py -3 -m Scripts serialization-compat --layouts <파일>       # check — 상태 배치도
+    py -3 -m Scripts serialization-compat --fix                  # 추론할 수 있는 단계(제거)를 소스에 적고, 남은 오류가 있으면 실패
+    py -3 -m Scripts serialization-compat accept --layouts <파일> # 출시: 지금 스키마 · 배치를 스냅숏으로 쓴다
 """
 
 from __future__ import annotations
@@ -202,7 +202,7 @@ def load_snapshot(path: Path) -> Snapshot:
 
 def write_snapshot(path: Path, snapshot: Snapshot) -> None:
     data = {
-        "_comment": "저장 형식 출시 스냅숏 — `py -3 -m Scripts format-release accept` 가 쓴다. released 가 false(출시 전)면 대조는 알리기만 하고, true 면 판을 올리지 않은 바뀜이 실패한다.",
+        "_comment": "저장 형식 출시 스냅숏 — `py -3 -m Scripts serialization-compat accept` 가 쓴다. released 가 false(출시 전)면 대조는 알리기만 하고, true 면 판을 올리지 않은 바뀜이 실패한다.",
         "released": snapshot.released,
         "customization": {schema_id: {"version": info.version, "parameters": dict(sorted(info.parameters.items()))} for schema_id, info in sorted(snapshot.schemas.items())},
         "states": dict(sorted(snapshot.states.items())),
@@ -275,7 +275,7 @@ def run(project_root: Path, mode: str, fix: bool, layouts_path: Path | None = No
     files = find_content_files(project_root)
     snapshot_path = project_root / SNAPSHOT_PATH
     if not snapshot_path.exists():
-        print(f"[format-release] {SNAPSHOT_PATH} is missing", file=sys.stderr)
+        print(f"[serialization-compat] {SNAPSHOT_PATH} is missing", file=sys.stderr)
         return 1
     released = load_snapshot(snapshot_path)
     states, records = load_layouts(layouts_path)
@@ -285,11 +285,11 @@ def run(project_root: Path, mode: str, fix: bool, layouts_path: Path | None = No
             merged.update(parse_catalog(path.read_text(encoding="utf-8")))
         refused = compare_states(released.states, states) + compare_records(released.records, records) if released.released else []
         for message in refused:
-            print(f"[format-release] not accepted: {message}", file=sys.stderr)
+            print(f"[serialization-compat] not accepted: {message}", file=sys.stderr)
         if refused:
             return 1
         write_snapshot(snapshot_path, Snapshot(released.released, merged, {**released.states, **states}, {**released.records, **records}))   # 이 빌드에 없는 타입(다른 타깃)은 남긴다
-        print(f"[format-release] wrote {SNAPSHOT_PATH} ({len(merged)} schemas, {len(states)} states, {len(records)} records)")
+        print(f"[serialization-compat] wrote {SNAPSHOT_PATH} ({len(merged)} schemas, {len(states)} states, {len(records)} records)")
         return 0
     list_message = compare_states(released.states, states) + compare_records(released.records, records)
     for path in files:
@@ -303,18 +303,18 @@ def run(project_root: Path, mode: str, fix: bool, layouts_path: Path | None = No
                     by_schema.setdefault(issue.schema, []).append(issue.removable)
             for schema_id, names in by_schema.items():
                 text = apply_removals(text, schema_id, released.schemas[schema_id].version, current[schema_id].version, names)
-                print(f"[format-release] {path.relative_to(project_root)}: schema '{schema_id}' - wrote <Remove> for {', '.join(names)} (commit this change)")
+                print(f"[serialization-compat] {path.relative_to(project_root)}: schema '{schema_id}' - wrote <Remove> for {', '.join(names)} (commit this change)")
             if by_schema:
                 path.write_text(text, encoding="utf-8", newline="\n")
                 issues = compare(released.schemas, parse_catalog(text))
         list_message += [f"{path.relative_to(project_root)}: {issue.message}" for issue in issues]
     for message in list_message:
-        print(f"[format-release] {'' if released.released else '(not released yet - no version step needed) '}{message}", file=sys.stderr if released.released else sys.stdout)
+        print(f"[serialization-compat] {'' if released.released else '(not released yet - no version step needed) '}{message}", file=sys.stderr if released.released else sys.stdout)
     return 1 if list_message and released.released else 0
 
 
-class FormatReleaseCommand(Command):
-    name = "format-release"
+class SerializationCompatCommand(Command):
+    name = "serialization-compat"
     help = "저장 형식(꾸미기 스키마 · 상태 배치 · 레코드 형식)을 출시 스냅숏과 견준다 — 출시 뒤 판을 올리지 않은 바뀜은 실패(쿠킹이 먼저 돈다), --fix 는 추론할 수 있는 제거 단계를 적고, accept 는 스냅숏을 쓴다"
 
     def add_arguments(self, parser: argparse.ArgumentParser) -> None:
@@ -328,4 +328,4 @@ class FormatReleaseCommand(Command):
 
 
 if __name__ == "__main__":
-    sys.exit(FormatReleaseCommand.main())
+    sys.exit(SerializationCompatCommand.main())

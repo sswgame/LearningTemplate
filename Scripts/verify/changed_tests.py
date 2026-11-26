@@ -489,7 +489,7 @@ def run_changed(project_root: Path, preset: str, base: str) -> int:
     if not build_dir.is_dir():
         print(f"[Changed] {build_dir} 가 없다 — 빌드 뒤에 돈다")
         print("CHANGED_FAILED")
-        return ExitCode.CHECK_INVALID
+        return ExitCode.USAGE_ERROR
     sha = run_git_or_raise(["rev-parse", "HEAD"], cwd=project_root).strip()
     list_changed = parse_name_status(run_git_or_raise(["diff", "--name-status", "--no-renames", f"{base}...HEAD"], cwd=project_root))
     list_test_file = [path for path in run_git_or_raise(["ls-files", "--", "Source"], cwd=project_root).splitlines() if "/Tests/" in path and path.endswith(".cpp")]
@@ -516,12 +516,12 @@ def run_changed(project_root: Path, preset: str, base: str) -> int:
     except SystemExit as problem:
         print(f"[Changed] {problem}")
         print("CHANGED_FAILED")
-        return ExitCode.VIOLATION
+        return ExitCode.FAILURE
     shown = run_process(["ctest", "--show-only=json-v1"], cwd=build_dir)
     if not shown.succeeded:
         print(f"[Changed] ctest 항목을 읽지 못했다: {make_one_line(shown.stderr or shown.stdout)}")
         print("CHANGED_FAILED")
-        return ExitCode.VIOLATION
+        return ExitCode.FAILURE
     list_item = parse_ctest_items(shown.stdout)
     output = build_dir / CHANGED_OUTPUT
     shutil.rmtree(output, ignore_errors=True)
@@ -533,7 +533,7 @@ def run_changed(project_root: Path, preset: str, base: str) -> int:
         for problem in list_quarantine_problem:
             print(f"[Changed] {problem}")
         print("CHANGED_FAILED")
-        return ExitCode.VIOLATION
+        return ExitCode.FAILURE
     map_quarantine = {entry.test: entry for entry in list_quarantine}
     map_net = {scenario: item.test_name for item in read_net_items() for scenario in item.scenarios}
     list_scenario_run, list_row = make_scenario_runs(list_item, map_scenario, build_dir, output, find_branch, map_quarantine, map_net,
@@ -567,4 +567,4 @@ def run_changed(project_root: Path, preset: str, base: str) -> int:
             print(f"  {path}")
     final = decide_changed(list_row, list_recorded, sha)
     print(final)
-    return ExitCode.PASSED if final.startswith("CHANGED_OK=") else ExitCode.VIOLATION
+    return ExitCode.PASSED if final.startswith("CHANGED_OK=") else ExitCode.FAILURE

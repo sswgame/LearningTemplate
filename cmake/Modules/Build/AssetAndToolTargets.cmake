@@ -33,7 +33,7 @@ endif()
 # `Scripts/verify/shipping_check.py` 가 실패할 때 이 로그의 오류 · 경고를 함께 찍는다(같은 자리 이름 `COOK_LOG_NAME`).
 # 꾸미기 스키마와 상태 배치(굽는 실행 파일이 쓴다)를 출시 스냅숏과 먼저 견준다(Scripts/verify/serialization_compat.py) — 출시 뒤에는 옛 세이브 · 공유 코드를 올릴 단계가 빠진 바뀜을 굽지 않는다.
 # 빌드는 검사만 한다 — 소스 트리에 쓰지 않는다(빌드 뒤 작업 트리가 깨끗해야 검증한 커밋이 곧 지은 것이다). 추론할 수 있는 것(매개변수 제거)은
-# 오류가 `py -3 -m Scripts format-release --fix` 를 안내하고(그 명령이 Remove 단계 · 판 올림을 적는다), 이름 · 종류 바꾸기는 적을 줄을 안내하고 멈춘다.
+# 오류가 `py -3 -m Scripts serialization-compat --fix` 를 안내하고(그 명령이 Remove 단계 · 판 올림을 적는다), 이름 · 종류 바꾸기는 적을 줄을 안내하고 멈춘다.
 set(format_release_check "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/verify/serialization_compat.py" check --layouts "${CMAKE_BINARY_DIR}/StateLayouts.json")
 set(cook_args --cook-all "--cooked-dir=${CMAKE_BINARY_DIR}/Cooked" "--pack-dir=${pack_output_dir}" "-log-file=${CMAKE_BINARY_DIR}/Testing/Logs/Cook.log")
 # 정적 모듈 구성(Shipping · 웹 · Android 개발)은 활성 게임(SW_ACTIVE_GAME)의 팩만 굽는다 — 링크한 게임이 하나라 다른 팩은 쓰이지 않는다(`Pack` 도 그 게임의 팩만 고른다).

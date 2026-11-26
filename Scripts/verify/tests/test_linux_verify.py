@@ -20,7 +20,7 @@ from verify import linux_verify  # noqa: E402
 from verify.linux_verify import ACTIONS, evaluate_fuzz_log, parse_chain_stage, read_result_line  # noqa: E402
 
 
-class LinuxScenariosTest(unittest.TestCase):
+class LinuxVerifyTest(unittest.TestCase):
     def test_log_checks(self) -> None:
         assert evaluate_fuzz_log('INFO: Loaded 3 modules\n==1==ERROR: AddressSanitizer: heap-buffer-overflow') == 'ERROR: AddressSanitizer'
         assert evaluate_fuzz_log('INFO: Loaded 1 modules   (10 inline 8-bit counters)').startswith('coverage reaches only')

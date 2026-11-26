@@ -17,10 +17,10 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
-from package.file_server import FileServeError, MAX_CHUNK_BYTES, describe, list_files, make_server, read_range, resolve_request_path  # noqa: E402
+from package.file_server import FileServerError, MAX_CHUNK_BYTES, describe, list_files, make_server, read_range, resolve_request_path  # noqa: E402
 
 
-class FileServeTest(unittest.TestCase):
+class FileServerTest(unittest.TestCase):
     def setUp(self) -> None:
         self._temp = tempfile.TemporaryDirectory()
         self.base = Path(self._temp.name)
@@ -36,7 +36,7 @@ class FileServeTest(unittest.TestCase):
     def test_paths_outside_the_root_are_refused(self) -> None:
         for bad in ("../secret.txt", "sub/../../secret.txt", "/etc/passwd", "C:/Windows", "sub\\..\\..\\secret.txt", "a\x00b", "./a.pack", "NUL", "CON/x"):
             with self.subTest(bad=bad):
-                with self.assertRaises(FileServeError):
+                with self.assertRaises(FileServerError):
                     resolve_request_path(self.root, bad)
 
     def test_symlink_out_of_the_root_is_missing(self) -> None:
@@ -45,7 +45,7 @@ class FileServeTest(unittest.TestCase):
             os.symlink(self.base / "secret.txt", link)
         except (OSError, NotImplementedError):
             self.skipTest("symlinks are not available here")
-        with self.assertRaises(FileServeError) as caught:
+        with self.assertRaises(FileServerError) as caught:
             describe(self.root, "escape.txt")
         self.assertEqual(404, caught.exception.status)
 
@@ -58,7 +58,7 @@ class FileServeTest(unittest.TestCase):
         self.assertEqual(bytes(range(10, 20)), read_range(self.root, "a.pack", 10, 10))
         for offset, size in ((0, 0), (0, MAX_CHUNK_BYTES + 1), (1020, 10)):
             with self.subTest(offset=offset, size=size):
-                with self.assertRaises(FileServeError):
+                with self.assertRaises(FileServerError):
                     read_range(self.root, "a.pack", offset, size)
 
     def test_server_round_trip(self) -> None:

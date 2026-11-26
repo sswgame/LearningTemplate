@@ -160,11 +160,11 @@ class ChildProcess:
             self.process.wait()
 
 
-class ProcessGroup:
+class MultiProcessSession:
     """
-    한 실행의 프로세스 묶음 — `with ProcessGroup(...) as group:` 안에서 띄우고, 블록을 나가면 남은 프로세스를 멈추고 로그 파일을 닫는다.
+    한 실행의 프로세스 묶음 — `with MultiProcessSession(...) as group:` 안에서 띄우고, 블록을 나가면 남은 프로세스를 멈추고 로그 파일을 닫는다.
 
-    - `tag`      : 메시지 머리(`[net-pair]`).
+    - `tag`      : 메시지 머리(`[login-connect-session]`).
     - `preset`   : 실행 파일을 찾는 빌드 프리셋(`build/<프리셋>/Bin`).
     - `out_name` : 로그 · 설정을 쓰는 폴더(`Saved/<out_name>`). `clean` 이면 비우고 시작한다.
     """
@@ -180,7 +180,7 @@ class ProcessGroup:
         self._list_process: list[ChildProcess] = []
         self._list_log_file: list = []
 
-    def __enter__(self) -> ProcessGroup:
+    def __enter__(self) -> MultiProcessSession:
         return self
 
     def __exit__(self, *_exc: object) -> None:
@@ -213,7 +213,7 @@ class ProcessGroup:
         """
         @p command 를 `Bin` 에서 띄운다. 출력은 `<out_dir>/<name>.log`, @p environment 는 이 프로세스의 환경 위에 더한다.
         사용자 데이터 폴더를 주지 않으면 프로세스마다 빈 제 폴더(`Bin/Saved/Automation/UserData/<out_name>/<name>`)를 준다. 공용 폴더를 쓰면 앞선 실행(다른 판의 빌드)이
-        남긴 세이브를 읽어 결과가 앞선 실행에 달린다(online-local 서버가 옛 자동 저장 칸을 Corrupt 로 읽었다).
+        남긴 세이브를 읽어 결과가 앞선 실행에 달린다(online-service-session 서버가 옛 자동 저장 칸을 Corrupt 로 읽었다).
         """
         environment = dict(environment or {})
         if USER_DATA_ROOT_ENVIRONMENT not in environment:
@@ -234,7 +234,7 @@ class ProcessGroup:
 
     def fail(self, message: str) -> int:
         print(f"[{self.tag}] FAIL: {message}")
-        return int(ExitCode.VIOLATION)
+        return int(ExitCode.FAILURE)
 
 
 def report(tag: str, problems: Sequence[str], logs: Sequence[Path], ok_message: str) -> int:
@@ -244,6 +244,6 @@ def report(tag: str, problems: Sequence[str], logs: Sequence[Path], ok_message: 
     if logs:
         print(f"[{tag}] logs: {' '.join(str(log) for log in logs)}")
     if problems:
-        return int(ExitCode.VIOLATION)
+        return int(ExitCode.FAILURE)
     print(f"[{tag}] OK: {ok_message}")
     return int(ExitCode.PASSED)

@@ -95,7 +95,7 @@ class Facts:
     summary: collections.Counter[str]          # `contribute` 토큰의 수(0 은 없다)
 
 
-class CacheBroken(Exception):
+class CacheBrokenError(Exception):
     """조각과 manifest 가 어긋났다 — 처음부터 다시 뽑는다."""
 
 
@@ -126,7 +126,7 @@ def open_facts(project_root: Path, name: str, list_version_file: Sequence[str], 
     """
     try:
         return _open_facts(project_root, name, list_version_file, list(list_relative), extract, errors, map_key, read_texts, want, contribute, shard_of, False)
-    except CacheBroken:
+    except CacheBrokenError:
         return _open_facts(project_root, name, list_version_file, list(list_relative), extract, errors, map_key, read_texts, want, contribute, shard_of, True)
 
 
@@ -173,9 +173,9 @@ def _open_facts(project_root: Path, name: str, list_version_file: Sequence[str],
                 try:
                     shard = json.loads((folder / shard_name).read_text(encoding="utf-8"))
                 except (OSError, ValueError):
-                    raise CacheBroken(name) from None
+                    raise CacheBrokenError(name) from None
                 if digest_shard((path, entry[0]) for path, entry in shard.items()) != map_old_digest[shard_name]:
-                    raise CacheBroken(name)   # 조각과 manifest 가 어긋났다(쓰다 멈췄다)
+                    raise CacheBrokenError(name)   # 조각과 manifest 가 어긋났다(쓰다 멈췄다)
             map_shard[shard_name] = shard
         return map_shard[shard_name]
 
@@ -183,7 +183,7 @@ def _open_facts(project_root: Path, name: str, list_version_file: Sequence[str],
         for token in contribute(relative, fact) if contribute is not None else ():
             summary[token] += sign
             if summary[token] < 0:
-                raise CacheBroken(name)
+                raise CacheBrokenError(name)
             if summary[token] == 0:
                 del summary[token]
 

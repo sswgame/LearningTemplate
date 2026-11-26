@@ -21,13 +21,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 from common import process_session  # noqa: E402
 from common.exit_code import ExitCode  # noqa: E402
 from common.log_lines import count_id, payloads, problem_lines  # noqa: E402
-from common.process_session import ChildProcess, ProcessGroup, free_port, report  # noqa: E402
+from common.process_session import ChildProcess, MultiProcessSession, free_port, report  # noqa: E402
 
 # 준비 줄을 찍고 표준 입력 줄을 되울리다 quit 에 0 으로 끝나는 자식.
 _ECHO_CHILD = "import sys\nprint('[t] [x] [Info] - [id:Child.Ready] ready', flush=True)\nfor line in sys.stdin:\n    print('[t] [x] [Info] - [id:Child.Got] ' + line.strip(), flush=True)\n    if line.strip() == 'quit':\n        sys.exit(0)\n"
 
 
-class ProcessGroupTest(unittest.TestCase):
+class MultiProcessSessionTest(unittest.TestCase):
     def setUp(self) -> None:
         self._folder = tempfile.TemporaryDirectory()
         root = Path(self._folder.name)
@@ -47,7 +47,7 @@ class ProcessGroupTest(unittest.TestCase):
         stale.parent.mkdir(parents=True)
         stale.write_text("old build", encoding="utf-8")   # 앞선 실행이 남긴 세이브
         printer = "import os\nprint(os.environ['SW_USER_DATA_ROOT'])\nprint(len(os.listdir(os.environ['SW_USER_DATA_ROOT'])))"
-        with ProcessGroup("test", "Preset", "Run") as group:
+        with MultiProcessSession("test", "Preset", "Run") as group:
             first = group.start("child", [sys.executable, "-c", printer], stdin=False)
             second = group.start("other", [sys.executable, "-c", printer], stdin=False)
             first.process.wait(30)
@@ -59,7 +59,7 @@ class ProcessGroupTest(unittest.TestCase):
         self.assertNotEqual(first_lines[0], second_lines[0])
 
     def test_wait_send_and_quit(self) -> None:
-        with ProcessGroup("test", "Preset", "Run") as group:
+        with MultiProcessSession("test", "Preset", "Run") as group:
             child = group.start("child", [sys.executable, "-c", _ECHO_CHILD])
             self.assertTrue(child.wait_for_log("Child.Ready", 30))
             child.send("hello")
@@ -72,13 +72,13 @@ class ProcessGroupTest(unittest.TestCase):
         self.assertEqual(child.log, Path(self._folder.name) / "Saved" / "Run" / "child.log")
 
     def test_wait_for_stops_when_the_process_exits(self) -> None:
-        with ProcessGroup("test", "Preset", "Run") as group:
+        with MultiProcessSession("test", "Preset", "Run") as group:
             child = group.start("child", [sys.executable, "-c", "print('bye')"], stdin=False)
             self.assertFalse(child.wait_for_log("Child.Never", 30))
             self.assertTrue(child.wait(30))
 
     def test_waiting_stops_at_once_when_a_peer_fails(self) -> None:
-        with ProcessGroup("test", "Preset", "Run") as group:
+        with MultiProcessSession("test", "Preset", "Run") as group:
             failed = group.start("failed", [sys.executable, "-c", "import sys\nsys.exit(3)"], stdin=False, report_path=group.out_dir / "failed.report.json")
             waiting = group.start("waiting", [sys.executable, "-c", "import time\ntime.sleep(600)"], stdin=False, report_path=group.out_dir / "waiting.report.json")
             started = time.monotonic()
@@ -89,7 +89,7 @@ class ProcessGroupTest(unittest.TestCase):
             self.assertEqual(waiting.scenario_problems(), [f"waiting was stopped because failed ended first with code 3 (log: {failed.log})"])
 
     def test_passed_scenario_peer_is_not_lost(self) -> None:
-        with ProcessGroup("test", "Preset", "Run") as group:
+        with MultiProcessSession("test", "Preset", "Run") as group:
             passed = group.start("passed", [sys.executable, "-c", "print('bye')"], stdin=False, report_path=group.out_dir / "passed.report.json")
             server = group.start("server", [sys.executable, "-c", _ECHO_CHILD])
             self.assertTrue(passed.wait(60))
@@ -99,26 +99,26 @@ class ProcessGroupTest(unittest.TestCase):
             self.assertFalse(server.ended_early())   # 실행기가 멈췄다
 
     def test_server_ending_by_itself_is_lost(self) -> None:
-        with ProcessGroup("test", "Preset", "Run") as group:
+        with MultiProcessSession("test", "Preset", "Run") as group:
             server = group.start("server", [sys.executable, "-c", "print('bye')"], stdin=False)
             client = group.start("client", [sys.executable, "-c", "import time\ntime.sleep(600)"], stdin=False, report_path=group.out_dir / "client.report.json")
             self.assertFalse(client.wait(300))
             self.assertIs(client.lost_peer, server)
 
     def test_leaving_the_block_stops_running_processes(self) -> None:
-        with ProcessGroup("test", "Preset", "Run") as group:
+        with MultiProcessSession("test", "Preset", "Run") as group:
             child = group.start("child", [sys.executable, "-c", "import time\ntime.sleep(600)"], stdin=False)
         self.assertIsNotNone(child.return_code)
 
     def test_missing_executable_is_rejected(self) -> None:
-        with ProcessGroup("test", "Preset", "Run") as group:
+        with MultiProcessSession("test", "Preset", "Run") as group:
             self.assertIsNone(group.require("NoSuchProgram"))
 
     def test_problem_lines_and_report(self) -> None:
         text = "[t] [s] [Info] - fine\n[t] [s] [Warning] - [id:A.Allowed] one\n[t] [s] [Error] [tick=3] - [id:A.Broken] two - dash\n[Error] [id:A.Assert] f.cpp:3: x\n -> f.cpp:4\n"
         problems = problem_lines("server", text, frozenset({"A.Allowed"}))
         self.assertEqual(problems, ["server log: [Error] A.Broken: two - dash", "server log: [Error] A.Assert: f.cpp:3: x"])
-        self.assertEqual(report("test", problems, [], "ok"), ExitCode.VIOLATION)
+        self.assertEqual(report("test", problems, [], "ok"), ExitCode.FAILURE)
         self.assertEqual(report("test", [], [], "ok"), ExitCode.PASSED)
 
     def test_ids_and_json_payloads(self) -> None:
@@ -129,7 +129,7 @@ class ProcessGroupTest(unittest.TestCase):
             payloads(text, "A.Other")
 
     def test_scenario_report_records_and_failure(self) -> None:
-        with ProcessGroup("test", "Preset", "Run") as group:
+        with MultiProcessSession("test", "Preset", "Run") as group:
             child = group.start("child", [sys.executable, "-c", "raise SystemExit(10)"], stdin=False)
             child.report_path = group.out_dir / "child.report.json"
             child.report_path.write_text(json.dumps({"records": ["frame 3 Hub.PawnFloorX = -1.4305115e-06", "frame 4 Object.X(Player) = 2"],

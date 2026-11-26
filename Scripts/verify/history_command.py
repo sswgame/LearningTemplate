@@ -85,7 +85,7 @@ class TestHistoryCommand(Command):
                 print(f"  - {problem}")
             if args.ctest_exclude and not list_problem:
                 print(make_ctest_exclude(list_entry))
-            return ExitCode.VIOLATION if list_problem else ExitCode.PASSED
+            return ExitCode.FAILURE if list_problem else ExitCode.PASSED
         if args.command == "changed":
             return run_changed(project_root, args.preset, args.base)
         connection = open_database(project_root / DEFAULT_DATABASE)
@@ -104,13 +104,13 @@ class TestHistoryCommand(Command):
             list_entry, list_problem = read_quarantine(project_root, datetime.date.today())
             if list_problem:
                 print("\n".join(f"  - {problem}" for problem in list_problem))
-                return ExitCode.VIOLATION
+                return ExitCode.FAILURE
             list_flaky, group_count = find_flaky(connection, commit_window, {entry.test for entry in list_entry})
             for name, backend, sha in list_flaky[:40]:
                 print(f"  흔들림: {name} [{backend}] {sha[:10]}")
             passed, final = decide_flaky(list_flaky, group_count, read_verify_config(project_root, "_flakyRateLimit"), commit_window)
             print(final)
-            return ExitCode.PASSED if passed else ExitCode.VIOLATION
+            return ExitCode.PASSED if passed else ExitCode.FAILURE
         if args.command == "stage":
             warning = record_stage(connection, args.name, args.commit, args.result, args.seconds,
                                    int(datetime.datetime.now().timestamp() * 1000), read_verify_config(project_root, "_slowFactor"))
@@ -121,7 +121,7 @@ class TestHistoryCommand(Command):
             map_cost = compute_scenario_costs(connection)
             if not map_cost:
                 print("[TestHistory] 통과한 실행이 없다 — 시간표를 쓰지 않는다")
-                return ExitCode.VIOLATION
+                return ExitCode.FAILURE
             if args.write:
                 (project_root / SCENARIO_COSTS_PATH).write_text(make_scenario_costs_text(map_cost), encoding="utf-8", newline="\n")
                 print(f"[TestHistory] {SCENARIO_COSTS_PATH} 에 {len(map_cost)} 시나리오를 썼다")

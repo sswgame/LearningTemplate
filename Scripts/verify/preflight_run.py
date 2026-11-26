@@ -4,8 +4,8 @@ Scripts/verify/preflight_run.py
 묶음 검증의 실행기 — 차례 · 겹침 · 통과 기록 · 실패 처리만 안다. 무엇을 도는지는 `preflight_stages.py` 의 단계 클래스가 적는다(언리얼 BuildGraph 의 노드,
 Buildkite 의 step 과 같은 자리).
 
-- `PreflightShell` : 명령 하나를 돌리는 자리(`--dry-run` 은 찍기만) — 빌드 · ctest · 로그 요약처럼 단계가 함께 쓰는 모양.
-- `Stage` · `BackgroundStage` · `Job` · `BuildInput` : 단계의 형식. 단계 하나 = 클래스 하나, 차례는 파일에 적은 차례다.
+- `StageContext` : 명령 하나를 돌리는 자리(`--dry-run` 은 찍기만) — 빌드 · ctest · 로그 요약처럼 단계가 함께 쓰는 모양.
+- `Stage` · `BackgroundStage` · `Job` · `Prerequisite` : 단계의 형식. 단계 하나 = 클래스 하나, 차례는 파일에 적은 차례다.
 - `PreflightRun` : 단계를 차례로 돌고, 갈래를 겹치고 합류하고, 통과 · 시간을 적고, 지면 끝 줄을 찍고 멈춘다.
 """
 
@@ -34,11 +34,11 @@ MAX_SHOWN_LINES = 30
 MAX_RESULT_LINES = 40
 
 
-class StageFailed(Exception):
+class StageFailedError(Exception):
     """단계가 졌다 — 글은 끝 줄의 괄호 안 까닭이다."""
 
 
-class RunStopped(Exception):
+class RunStop(Exception):
     """검증을 멈춘다 — 글은 찍을 끝 줄이다."""
 
 
@@ -73,7 +73,7 @@ class PreflightOptions:
     record: bool = False   # --record
 
 
-class PreflightShell:
+class StageContext:
     """명령을 돌리고 로그에서 볼 줄을 찍는다 — 갈래(스레드)도 부르므로 상태를 두지 않는다."""
 
     def __init__(self, root: Path, sha: str, options: PreflightOptions, quarantine_exclude: str) -> None:
@@ -131,10 +131,10 @@ class PreflightShell:
         # 재압축이 바깥 프로세스(백신 검사)에 막혀 지면 — 이 문구일 때만 한 번 더 구성한다. 구성 시작이 기록을 제자리에 돌린다(cmake/Modules/Build/NinjaBuildLogs.cmake).
         if self.run(configure, f"{logs}/verify.configure.log") != 0 and not (
                 any(NINJA_DENIED_TEXT in line for line in read_lines(self.root / logs / "verify.configure.log")) and self.run(configure, f"{logs}/verify.configure.log") == 0):
-            raise StageFailed(f"{preset} configure")
+            raise StageFailedError(f"{preset} configure")
         if self.run(["cmake", "--build", "--preset", preset, "--", "-k", "0"], f"{logs}/verify.build.log") != 0:
             self.show_matches(f"{logs}/verify.build.log", "error|FAILED", MAX_SHOWN_LINES)
-            raise StageFailed(f"{preset} build")
+            raise StageFailedError(f"{preset} build")
         if not self.options.dry_run:
             self.write_line(f"build warnings: {sum('warning:' in line for line in read_lines(self.root / logs / 'verify.build.log'))}")
 
@@ -162,12 +162,12 @@ class PreflightShell:
         return code == 0
 
 
-class BuildInput(abc.ABC):
+class Prerequisite(abc.ABC):
     """단계가 도는 데 있어야 하는 것 — 이것을 만드는 단계를 건너뛰면 실행기가 뒤 단계에 필요한 것만 다시 마련한다."""
 
     @abc.abstractmethod
-    def prepare(self, shell: PreflightShell) -> None:
-        """마련한다 — 지면 `StageFailed`."""
+    def prepare(self, shell: StageContext) -> None:
+        """마련한다 — 지면 `StageFailedError`."""
 
 
 class Job(abc.ABC):
@@ -176,7 +176,7 @@ class Job(abc.ABC):
     name: str
 
     @abc.abstractmethod
-    def run(self, shell: PreflightShell) -> bool:
+    def run(self, shell: StageContext) -> bool:
         """통과했나."""
 
 
@@ -188,13 +188,13 @@ class Stage(abc.ABC):
     record: str | None = None                       # 통과 기록 · 단계 시간의 이름(없으면 적지 않는다)
     runs_with: str | None = None                    # 제 기록 없이 이 이름의 기록을 따라 돈다
     blocks_push: bool = True                        # 거짓이면 WINDOWS_OK 뒤에 돌고, 져도 다음 단계를 돈다(끝에서 진다)
-    inputs: tuple[BuildInput, ...] = ()             # 있어야 하는 것
-    prepares: tuple[BuildInput, ...] = ()           # 이 단계가 만드는 것
-    steps: tuple[BuildInput | Job, ...] = ()        # 차례 — 입력은 앞에서 마련하고 갈래는 뒤에서 띄운다(단계 끝에서 모두 합류)
+    inputs: tuple[Prerequisite, ...] = ()             # 있어야 하는 것
+    prepares: tuple[Prerequisite, ...] = ()           # 이 단계가 만드는 것
+    steps: tuple[Prerequisite | Job, ...] = ()        # 차례 — 입력은 앞에서 마련하고 갈래는 뒤에서 띄운다(단계 끝에서 모두 합류)
     standing_jobs: tuple[Job, ...] = ()             # 통과 기록으로 건너뛰는 단계여도 도는 갈래
 
-    def run(self, shell: PreflightShell) -> None:
-        """갈래를 띄운 뒤 앞에서 도는 일 — 지면 `StageFailed`."""
+    def run(self, shell: StageContext) -> None:
+        """갈래를 띄운 뒤 앞에서 도는 일 — 지면 `StageFailedError`."""
 
     def make_skip_note(self, options: PreflightOptions) -> str | None:
         """실행 인자 때문에 건너뛰면 그 까닭(그러면 통과 기록도 남기지 않는다)."""
@@ -215,14 +215,14 @@ class BackgroundStage(Stage):
 
 
 class PreflightRun:
-    def __init__(self, shell: PreflightShell, stages: Sequence[Stage]) -> None:
+    def __init__(self, shell: StageContext, stages: Sequence[Stage]) -> None:
         self.shell = shell
         self.stages = stages
         self._start_names = list_start_names(stages)
         self._selected: list[Stage] = []
         self._executor = ThreadPoolExecutor(max_workers=16)   # 갈래는 자식을 기다리기만 한다 — 한 번에 도는 갈래 수보다 많으면 된다
         self._jobs: list[tuple[Job, Future[bool]]] = []
-        self._prepared: set[BuildInput] = set()
+        self._prepared: set[Prerequisite] = set()
         self._background: dict[str, tuple[Future[str | None] | None, float]] = {}   # 뜬 것 — 이름 → (까닭을 줄 일, 시작 시각)
         self._deferred: dict[str, str] = {}   # 진 뒤쪽 단계 — 이름 → 까닭
         self._current: tuple[str, float] | None = None
@@ -240,11 +240,11 @@ class PreflightRun:
                     self._run_stage(stage)
             self._write_ok()
             return self._run_after_push()
-        except RunStopped as stopped:
+        except RunStop as stopped:
             if self._current is not None:
                 self._record_time(self._current[0], "failed", self._current[1])
             self.shell.write_line(str(stopped))
-            return ExitCode.VIOLATION
+            return ExitCode.FAILURE
         finally:
             # 겹쳐 돌던 갈래(배포 빌드 · 쿠킹 · clang-tidy 등)를 끝까지 기다린다 — 두고 나가면 다음 실행과 같은 빌드 폴더를 다퉈 구성이
             # "failed recompaction: Permission denied" 로 진다(2026-11-17). clang-tidy 는 끝까지 돌면 통과한 TU 가 캐시에 남아 다음 실행이 빠르다.
@@ -293,16 +293,16 @@ class PreflightRun:
                     self._prepare(step)
             stage.run(self.shell)
             self._join_jobs()
-        except StageFailed as failed:
-            raise RunStopped(stage.make_failure(str(failed), self.shell.sha, self._make_suffix())) from failed
+        except StageFailedError as failed:
+            raise RunStop(stage.make_failure(str(failed), self.shell.sha, self._make_suffix())) from failed
         if self._current is not None:
             self._pass(self._current[0], "passed", self._current[1])
 
     def _make_suffix(self) -> str:
         return "".join(f" + {stage.title}" for stage in self.stages if isinstance(stage, BackgroundStage) and stage.name in self._deferred)
 
-    def _stop(self, reason: str) -> RunStopped:
-        return RunStopped(make_windows_failure(reason, self.shell.sha, self._make_suffix()))
+    def _stop(self, reason: str) -> RunStop:
+        return RunStop(make_windows_failure(reason, self.shell.sha, self._make_suffix()))
 
     def _write_ok(self) -> None:
         if self._dry:
@@ -336,12 +336,12 @@ class PreflightRun:
                 map_started.setdefault(stage.record, time.monotonic())
             try:
                 stage.run(self.shell)
-            except StageFailed as failed:
+            except StageFailedError as failed:
                 list_failure.append(stage.make_failure(str(failed), sha, ""))
         self.shell.announce("done")
         if list_failure:
             self.shell.write_line("\n".join(list_failure))
-            return ExitCode.VIOLATION
+            return ExitCode.FAILURE
         if not list_skipped:
             for record, started in map_started.items():
                 self._pass(record, "passed", started)
@@ -351,7 +351,7 @@ class PreflightRun:
 
     # --- 겹침
 
-    def _prepare(self, item: BuildInput) -> None:
+    def _prepare(self, item: Prerequisite) -> None:
         item.prepare(self.shell)
         self._prepared.add(item)
         for stage in self._selected:
@@ -368,7 +368,7 @@ class PreflightRun:
     def _run_job(self, job: Job) -> bool:
         try:
             return job.run(self.shell)
-        except StageFailed as failed:
+        except StageFailedError as failed:
             self.shell.write_line(make_windows_failure(str(failed), self.shell.sha))   # 까닭을 그 자리에서 — 갈래 이름은 합류가 찍는다
         except Exception:   # 갈래의 예외가 합류 전까지 묻히지 않게
             self.shell.write_line(traceback.format_exc())
@@ -378,7 +378,7 @@ class PreflightRun:
         list_failed = [job.name for job, future in self._jobs if not future.result()]
         self._jobs = []
         if list_failed:
-            raise StageFailed(" ".join(list_failed))
+            raise StageFailedError(" ".join(list_failed))
 
     def _start_background(self, stage: BackgroundStage) -> None:
         future: Future[str | None] | None = None
@@ -395,7 +395,7 @@ class PreflightRun:
         """진 까닭(통과면 None)."""
         try:
             stage.run(self.shell)
-        except StageFailed as failed:
+        except StageFailedError as failed:
             return str(failed)
         except Exception:
             self.shell.write_line(traceback.format_exc())

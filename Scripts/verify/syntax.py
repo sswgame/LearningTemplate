@@ -17,7 +17,7 @@ TU 마다 구문만 확인한다(clang-cl `-fsyntax-only`) — 빌드하지 않�
 보지 못하는 것: 생성 코드(`.gen.cpp`)와 생성 헤더는 본 트리 것이다. 워크트리에서는 모듈 의존 문지기(`build/…/gates`, 본 트리의 모듈 그래프로 만든 금지 헤더)를 뺀다:
 이 트리가 더한 의존을 옛 문지기가 거절한다. 링크 · 다른 구성(서버 · Shipping · 웹)은 실제 빌드가 본다.
 
-종료 코드: 오류가 난 TU 가 있으면 VIOLATION.
+종료 코드: 오류가 난 TU 가 있으면 FAILURE.
 """
 
 from __future__ import annotations
@@ -161,7 +161,7 @@ def split_command(command: str) -> list[str]:
     return list_argument
 
 
-class SyntaxCheckCommand(Command):
+class SyntaxCommand(Command):
     name = "syntax"
     help = "유니티를 푼 구문 확인(clang-cl -fsyntax-only, 본 트리 컴파일 DB 를 읽기만 한다) — --changed [기준]: 바뀐 파일이 닿는 TU, --all: 전부, --files: 지정 파일, --direct: 헤더를 넓히지 않음, --define: 더할 매크로, --jobs: 동시 수"
 
@@ -183,14 +183,14 @@ class SyntaxCheckCommand(Command):
             self.parser.error("--rest 는 --changed · --files 와 쓴다")
         if not is_windows_host():
             print("[syntax] Windows 의 clang-cl 컴파일 DB 만 읽는다")
-            return ExitCode.CHECK_INVALID
+            return ExitCode.USAGE_ERROR
 
         tree_root = context.root
         main_root = context.main_root
         database_path = main_root / "build" / args.preset / "compile_commands.json"
         if not database_path.is_file():
             print(f"[syntax] {database_path} 가 없다 — 본 트리를 구성한 뒤 돌린다(이 명령은 빌드하지 않는다)")
-            return ExitCode.CHECK_INVALID
+            return ExitCode.USAGE_ERROR
         units = make_units(json.loads(database_path.read_text(encoding="utf-8")), main_root, tree_root)
         selected, list_unbuilt = units, []
         if not args.all:
@@ -220,4 +220,4 @@ class SyntaxCheckCommand(Command):
                 if done_count % PROGRESS_STEP == 0:
                     print(f"[syntax] {done_count}/{len(selected)} ({time.monotonic() - started:.0f} s)", flush=True)
         print(f"[syntax] {'FAIL' if failed_count else 'OK'} — TU {len(selected)}개 가운데 오류 {failed_count}개 ({time.monotonic() - started:.0f} s)")
-        return ExitCode.VIOLATION if failed_count else ExitCode.PASSED
+        return ExitCode.FAILURE if failed_count else ExitCode.PASSED

@@ -62,7 +62,7 @@ def run_clang_format_batch(files: Sequence[Path | str],
             "[FormatClangFormat] clang-format을 찾을 수 없습니다. "
             "'py -3 Scripts/setup/setup_environment.py'를 먼저 실행해주세요.\n"
         )
-        return ExitCode.VIOLATION
+        return ExitCode.FAILURE
 
     file_path_strings = [str(f) for f in files]
     batches = [
@@ -100,7 +100,7 @@ def run_vcpkg_manifest_format(files: Sequence[Path], *, check_only: bool, vcpkg_
         executable = find_vcpkg_executable()
         if executable is None:
             print("[FormatVcpkgManifest] vcpkg 실행 파일을 찾지 못했습니다 — 'py -3 -m Scripts vcpkg --install' 로 설치하십시오.", file=sys.stderr)
-            return ExitCode.VIOLATION
+            return ExitCode.FAILURE
         vcpkg_command = [executable]
 
     has_difference = False
@@ -115,7 +115,7 @@ def run_vcpkg_manifest_format(files: Sequence[Path], *, check_only: bool, vcpkg_
         if not result.succeeded:
             names = ", ".join(str(path) for path in files)
             print(f"[FormatVcpkgManifest] vcpkg format-manifest 실패({names}): {result.stderr.strip() or result.stdout.strip()}", file=sys.stderr)
-            return ExitCode.VIOLATION
+            return ExitCode.FAILURE
         for path, copy in map_copy.items():
             formatted = copy.read_bytes()
             if formatted == path.read_bytes():
@@ -125,4 +125,4 @@ def run_vcpkg_manifest_format(files: Sequence[Path], *, check_only: bool, vcpkg_
                 print(f"[FormatVcpkgManifest] {path} 가 vcpkg format-manifest 모양과 다릅니다.", file=sys.stderr)
             else:
                 path.write_bytes(formatted)
-    return ExitCode.VIOLATION if has_difference and check_only else ExitCode.PASSED
+    return ExitCode.FAILURE if has_difference and check_only else ExitCode.PASSED

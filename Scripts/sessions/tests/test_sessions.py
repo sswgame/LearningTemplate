@@ -57,7 +57,7 @@ class NetChecks(unittest.TestCase):
 
     def test_every_item_names_existing_scenarios_once(self) -> None:
         list_item = read_items()
-        self.assertEqual(len({item.name for item in list_item}), len(list_item))
+        self.assertEqual(len({item.test_name for item in list_item}), len(list_item))
         list_scenario = [scenario for item in list_item for scenario in item.scenarios]
         self.assertEqual(len(set(list_scenario)), len(list_scenario))
         for scenario in list_scenario:

@@ -198,5 +198,5 @@ Change the type or API so the shape cannot be written.
 2. **One fact known in two places.** One owner; the other side reads it.
 3. **Failure or truncation not returned as a value.** `sw::expected` / `[[nodiscard]]`.
 4. **Platform hooks that still compile when left out.** Pure virtual.
-5. **Saves and settings with no version upgrade.** `REFLECT( Version = N )` + `SW_TYPE_VERSION_PATCH`, `FormatDef` steps, `SW_ASSET_FORMAT_UPGRADE` (from release on; before release every version stays 0 — `format-release` only reports); runtime state is `PROPERTY( RuntimeState )` via `StateIO::reflected`.
+5. **Saves and settings with no version upgrade.** `REFLECT( Version = N )` + `SW_TYPE_VERSION_PATCH`, `FormatDef` steps, `SW_ASSET_FORMAT_UPGRADE` (from release on; before release every version stays 0 — `serialization-compat` only reports); runtime state is `PROPERTY( RuntimeState )` via `StateIO::reflected`.
 6. **State changes handled by call-order rules.** Put the state in a value the next step reads.

@@ -292,7 +292,7 @@ class ShippingCheckCommand(Command):
                 print(f"[shipping-check] FAILED build: {', '.join(list_failed_build)}", flush=True)
                 for preset in list_failed_build:
                     report_cook_log(project_root, preset)
-                return ExitCode.VIOLATION
+                return ExitCode.FAILURE
 
         all_passed = True
         for check in (check_no_test_variables, check_redirect_tables):
@@ -309,4 +309,4 @@ class ShippingCheckCommand(Command):
                 list_failed_preset.append(preset)
         for preset in dict.fromkeys(list_failed_preset):
             report_cook_log(project_root, preset)  # 실행이 진 까닭이 팩(빠진 셰이더 · 데이터)이면 굽기 로그에 그 줄이 있다
-        return ExitCode.PASSED if all_passed else ExitCode.VIOLATION
+        return ExitCode.PASSED if all_passed else ExitCode.FAILURE

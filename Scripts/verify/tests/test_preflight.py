@@ -20,7 +20,7 @@ from unittest import mock
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from verify import preflight_stages  # noqa: E402
-from verify.preflight_run import NINJA_DENIED_TEXT, BackgroundStage, PreflightOptions, PreflightRun, PreflightShell, Stage, StageFailed, collect_results, list_start_names  # noqa: E402
+from verify.preflight_run import NINJA_DENIED_TEXT, BackgroundStage, PreflightOptions, PreflightRun, StageContext, Stage, StageFailedError, collect_results, list_start_names  # noqa: E402
 from verify.preflight_stages import (  # noqa: E402
     ChangedStage, CpuStage, FlakyStage, GpuReleaseStage, ImportedAssets, LintJob, LinuxStage, LoadStage, SanitizeStage, SanitizerCpuJob, ServerToolsJob, ShaderWarmJob,
     ShippingBuildJob, StdContainerJob, TidyStage, TreeStage, list_stages,
@@ -30,7 +30,7 @@ SHA = "a" * 40
 Fails = Callable[[str], bool]
 
 
-class FakeShell(PreflightShell):
+class FakeShell(StageContext):
     """자식을 띄우지 않고 부른 줄을 모은다 — `fails` 가 참인 줄은 진다. 기록 판정(`verify-record skip`)은 `skipped` 의 이름만 건너뛴다."""
 
     def __init__(self, root: Path, fails: Fails = lambda line: False, skipped: Sequence[str] = (), **options: object) -> None:
@@ -76,7 +76,7 @@ class StageTest(PreflightTest):
     """단계 · 갈래 클래스 하나씩."""
 
     def check_failure(self, stage: Stage, failing: str, want: str) -> None:
-        with self.assertRaises(StageFailed) as raised:
+        with self.assertRaises(StageFailedError) as raised:
             stage.run(self.shell(failing))
         self.assertEqual(stage.make_failure(str(raised.exception), SHA, ""), want)
 
@@ -96,7 +96,7 @@ class StageTest(PreflightTest):
         shell.build("P")
         self.assertEqual(shell.list_call, ["cmake --preset P", "cmake --build --preset P -- -k 0"])
         for failing, reason in (("cmake --preset P", "P configure"), ("cmake --build", "P build")):
-            with self.assertRaisesRegex(StageFailed, f"^{reason}$"):
+            with self.assertRaisesRegex(StageFailedError, f"^{reason}$"):
                 self.shell(failing).build("P")
 
     def test_configure_is_retried_only_for_denied_log_rewrite(self) -> None:
@@ -119,7 +119,7 @@ class StageTest(PreflightTest):
         shell = self.shell()
         ImportedAssets().prepare(shell)
         self.assertIn("ctest -j6 --output-on-failure -L import", shell.list_call)
-        with self.assertRaisesRegex(StageFailed, "^Ninja-Release import$"):
+        with self.assertRaisesRegex(StageFailedError, "^Ninja-Release import$"):
             ImportedAssets().prepare(self.shell("-L import"))
 
     def test_jobs(self) -> None:
@@ -195,7 +195,7 @@ class StageTest(PreflightTest):
                 if reason is None:
                     TreeStage().run(self.shell())
                 else:
-                    with self.assertRaisesRegex(StageFailed, reason):
+                    with self.assertRaisesRegex(StageFailedError, reason):
                         TreeStage().run(self.shell())
                 TreeStage().run(self.shell(dry_run=True))
 
@@ -206,7 +206,7 @@ class StageTest(PreflightTest):
         self.check_failure(LoadStage(), "-L ^load$", f"LOAD_FAILED sha={SHA} - build/Ninja-Release/Testing/Logs/verify.ctest.load.log")
 
     def test_linux(self) -> None:
-        for record, want in ((False, "py -3 -m Scripts linux-scenarios all"), (True, "py -3 -m Scripts linux-scenarios all --record")):
+        for record, want in ((False, "py -3 -m Scripts linux-verify all"), (True, "py -3 -m Scripts linux-verify all --record")):
             shell = self.shell(record=record)
             LinuxStage().run(shell)
             self.assertEqual(shell.list_call, [want])
@@ -215,7 +215,7 @@ class StageTest(PreflightTest):
     def test_sanitize(self) -> None:
         shell = self.shell()
         SanitizeStage().run(shell)
-        self.assertEqual(shell.list_call, ["py -3 -m Scripts linux-scenarios sanitize address"])
+        self.assertEqual(shell.list_call, ["py -3 -m Scripts linux-verify sanitize address"])
         self.check_failure(SanitizeStage(), "sanitize", f"SANITIZE_FAILED (address) sha={SHA} - build/verify.sanitize.log")
         self.assertIsNone(SanitizeStage().make_skip_note(shell.options))
         self.assertIsNotNone(SanitizeStage().make_skip_note(self.shell(record=True).options))
@@ -234,7 +234,7 @@ class RunTest(PreflightTest):
     BUILD = ["lint --all", "--preset Ninja-Release", "-L import", "--preset Ninja-Shipping", "--preset Ninja-Release-Server", "--preset Ninja-Shipping-Server", "shipping-check --skip-build",
              "syntax", "--preset Ninja-Release-ASan", "tidy"]
     REST = ["test-history changed", "-L nogpu", "Server.exe", "ExtensionTool", "--cook-shaders", "-LE ^load$", "flaky"]
-    AFTER = ["-L ^load$", "linux-scenarios all", "sanitize address"]
+    AFTER = ["-L ^load$", "linux-verify all", "sanitize address"]
 
     def order(self, **options: object) -> list[str]:
         """--dry-run 이 찍는 명령 차례 — 알아볼 낱말로 줄인다."""
@@ -317,7 +317,7 @@ class RunTest(PreflightTest):
         self.assertEqual(sorted(position, key=position.get), list(position))
 
     def test_after_push_failures_run_the_rest_and_keep_windows_ok(self) -> None:
-        for failing, want in (("-L ^load$", "LOAD_FAILED"), ("linux-scenarios all", "LINUX_FAILED"), ("sanitize address", "SANITIZE_FAILED (address)")):
+        for failing, want in (("-L ^load$", "LOAD_FAILED"), ("linux-verify all", "LINUX_FAILED"), ("sanitize address", "SANITIZE_FAILED (address)")):
             with self.subTest(failing=failing):
                 shell = self.shell(failing)
                 self.assertEqual(self.run_all(shell), 1)

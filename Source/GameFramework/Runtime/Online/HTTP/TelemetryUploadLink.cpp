@@ -133,7 +133,7 @@ namespace sw
         const uint32 sentCount = CrashReportSubsystem::runReporter( job._reportsFolder, *_pCrashUploader );
         string       folder;
         StringUtil::appendJSONEscaped( folder, job._reportsFolder.str() );
-        // 본문은 JSON 이다 — `Scripts telemetry-local` 이 묶음 폴더를 읽는다.
+        // 본문은 JSON 이다 — `Scripts telemetry-session` 이 묶음 폴더를 읽는다.
         SW_LOG_INFO_ID( "TelemetryUploadLink.CrashReportsSent", "{\"sent\":%#,\"folder\":\"%#\"}", sentCount, folder.c_str() );
     }
 } // namespace sw

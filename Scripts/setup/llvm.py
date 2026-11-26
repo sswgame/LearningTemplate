@@ -555,7 +555,7 @@ class LlvmCommand(Command):
             print(path)
             return ExitCode.PASSED
         sys.stderr.write("[Llvm Error] LLVM kit not available\n")
-        return ExitCode.VIOLATION
+        return ExitCode.FAILURE
 
 
 if __name__ == "__main__":

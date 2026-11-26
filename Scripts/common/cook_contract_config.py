@@ -26,7 +26,7 @@ _LOWER_NAME_PATTERN = re.compile(r"^[a-z0-9_]+$")
 
 
 @dataclass(frozen=True)
-class RhiBackendSpec:
+class RHIBackendSpec:
     """RHI 백엔드 한 줄. 줄 순서가 `RHIBackend` 열거값이다."""
 
     name: str
@@ -57,7 +57,7 @@ class CookContractSpec:
     _map_cached: dict[Path, CookContractSpec] = {}
 
     def __init__(self, spec: dict) -> None:
-        self.list_backend: list[RhiBackendSpec] = [_make_backend(row) for row in spec["rhi_backends"]]
+        self.list_backend: list[RHIBackendSpec] = [_make_backend(row) for row in spec["rhi_backends"]]
         #: 빌드 타깃 → 그 타깃이 빼는 제외 묶음 이름(표 순서, 엔진 `AssetTypeDef::_excludeGroup`).
         self.map_excluded_kind_by_target: dict[str, tuple[str, ...]] = {
             str(row["target"]): tuple(str(kind) for kind in row["kinds"]) for row in spec["target_excluded_asset_kinds"]
@@ -79,7 +79,7 @@ class CookContractSpec:
             if not list_scenario or any(name not in list_name for name in list_scenario):
                 raise ValueError(f"platform_rhi_backends '{platform}': scenario_backends 는 그 플랫폼 backends 의 비지 않은 부분집합이어야 합니다 {list_scenario}")
         default_name = str(spec["default_rhi_backend"])
-        self.default_backend: RhiBackendSpec = next(
+        self.default_backend: RHIBackendSpec = next(
             (backend for backend in self.list_backend if backend.name == default_name), None
         )
         if self.default_backend is None:
@@ -97,8 +97,8 @@ class CookContractSpec:
         return cls._map_cached[root]
 
 
-def _make_backend(row: dict) -> RhiBackendSpec:
-    backend = RhiBackendSpec(
+def _make_backend(row: dict) -> RHIBackendSpec:
+    backend = RHIBackendSpec(
         name=str(row["name"]),
         shader_folder=str(row["shader_folder"]),
         shader_target=str(row["shader_target"]),

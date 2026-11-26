@@ -25,7 +25,7 @@ description: "이 저장소의 묶음 끝 전체 검증과 push 절차: Windows 
 3. **로그 분류:** `build/<프리셋>/Testing/Logs/*.log` 의 Error · Warning 을 id 별로 모아 테스트가 선언한 것인지 본다. 통과만 보지 않는다.
 4. **push:** Windows 단계가 모두 통과하면 끝 줄 `WINDOWS_OK=<sha>` 의 sha 를 Linux 를 기다리지 않고 `git push origin <sha>:main`. pre-push 훅(`py -3 -m Scripts setup` 이 깐다)이 `build/verify.ok` 와 다른 sha 를 막는다 — 막히면 검증하지 않은 커밋이다. Linux 가 지면 고친 커밋을 다음 검증에서 push 한다.
 
-실패하면 `scenario-debug` 로 고치고 **진 테스트만** 다시 돌린다. 체인의 진 단계는 `py -3 -m Scripts scenario-bisect <체인> --rerun-failed --preset <프리셋>`(Linux `py -3 -m Scripts linux-scenarios rerun <체인>`)이 마지막 보고에서 골라 혼자 → 앞을 붙여 → 이분 탐색으로 돈다. 고친 것이 공통 코드여도 통과한 단계를 처음부터 다시 돌리지 않는다. 진 테스트가 통과하면 다음 단계부터 `--from` 으로 잇는다(ASan nogpu 에서 졌으면 그 테스트만 ASan 으로 돌리고 `--from gpu-release`, Release 체인이면 그 체인만 돌리고 `--from linux`). 시나리오 · 테스트 한 곳만 고쳤고 남은 단계가 없으면 그 체인만 통과해도 push 한다.
+실패하면 `scenario-debug` 로 고치고 **진 테스트만** 다시 돌린다. 체인의 진 단계는 `py -3 -m Scripts scenario-bisect <체인> --rerun-failed --preset <프리셋>`(Linux `py -3 -m Scripts linux-verify rerun <체인>`)이 마지막 보고에서 골라 혼자 → 앞을 붙여 → 이분 탐색으로 돈다. 고친 것이 공통 코드여도 통과한 단계를 처음부터 다시 돌리지 않는다. 진 테스트가 통과하면 다음 단계부터 `--from` 으로 잇는다(ASan nogpu 에서 졌으면 그 테스트만 ASan 으로 돌리고 `--from gpu-release`, Release 체인이면 그 체인만 돌리고 `--from linux`). 시나리오 · 테스트 한 곳만 고쳤고 남은 단계가 없으면 그 체인만 통과해도 push 한다.
 
 ## 파이썬 도구
 
@@ -36,7 +36,7 @@ description: "이 저장소의 묶음 끝 전체 검증과 push 절차: Windows 
 | `api-diff --base <묶음 시작> [브랜치 …]` | 1 단계 새 이름 검토 · 갈래 사이 겹침 |
 | `test-history report` · `flaky` | 흔들림 · p95 추세(격리 근거), 흔들림 판정(끝 줄 `FLAKY=`) |
 | `scenario-bisect <체인> --rerun-failed --preset <프리셋>` | 진 체인 단계만 다시 |
-| `linux-scenarios rerun <체인>` | Linux 진 단계만 다시 |
+| `linux-verify rerun <체인>` | Linux 진 단계만 다시 |
 | `verify-record skip <단계> <sha>` | 단계 기록으로 건너뛸지 미리 본다 |
 | `shipping-check [--skip-build]` · `tidy --changed origin/main` | 배포 기동 · 바뀐 파일 clang-tidy 를 따로 볼 때 |
 

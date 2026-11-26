@@ -215,7 +215,7 @@ def rename_all(root: Path, list_pair: Sequence[dict], options: argparse.Namespac
     map_text = {path: read_text(path) for path in list_file}
     problems, serialized_pairs = check_pairs(root, list_pair, map_text, options)
     if problems:
-        return ExitCode.VIOLATION
+        return ExitCode.FAILURE
 
     stamp = datetime.date.today().isoformat()
     set_changed: set[Path] = set()

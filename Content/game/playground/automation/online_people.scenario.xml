@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="c2718a87658df286089430651b308219"?>
 <!--
-  허브 사람들(소셜 · 거래 키트) — 프로세스 안 서버(Config/Server/Online/Playground.json)에 혼자 붙어 거절 길과 화면을 본다. 두 계정의 친구 · 거래 정산은 py -3 -m Scripts online-local people.
+  허브 사람들(소셜 · 거래 키트) — 프로세스 안 서버(Config/Server/Online/Playground.json)에 혼자 붙어 거절 길과 화면을 본다. 두 계정의 친구 · 거래 정산은 py -3 -m Scripts online-service-session people.
   ① 없는 이름의 친구 신청은 서버가 거절한다(PeopleRefusedCount 1).
   ② 접속하지 않은 상대에게 거는 거래는 서버가 거절한다(2).
   ③ 친구 목록 화면(FriendListScreen — 게임 범위의 FriendList 모델)이 열리고 닫힌다.

@@ -1,7 +1,7 @@
 /**
  * @file OnlinePeople.cpp
  * @brief 허브 사람들(친구 · 거래)의 개발 명령과 감시 값입니다. 규칙은 서버 키트(소셜 · 거래)가 정하고, 흐름(`PlaygroundOnlineFlow`)이 요청과 답을 잇습니다.
- * @details 시나리오: `game/playground/automation/online_people.scenario.xml`(거절 길), 두 계정의 친구 · 거래는 `game/playground/automation/netpair/people_first.scenario.xml` · `people_second`(`py -3 -m Scripts online-local people`).
+ * @details 시나리오: `game/playground/automation/online_people.scenario.xml`(거절 길), 두 계정의 친구 · 거래는 `game/playground/automation/netpair/people_first.scenario.xml` · `people_second`(`py -3 -m Scripts online-service-session people`).
  */
 #include "pch.h"
 

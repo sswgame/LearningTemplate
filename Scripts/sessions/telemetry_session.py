@@ -1,8 +1,8 @@
 """
-텔레메트리 · 크래시 업로드 로컬 실행(ctest `Net.telemetry`) — 루프백 HTTP 수신기를 띄우고 게임을 두 번 띄워, 동의한 텔레메트리 스풀 파일과 보낼 줄의 크래시 묶음이 실제 HTTP 로 오는지 본다(H1).
+텔레메트리 · 크래시 업로드 로컬 실행(ctest `Net.telemetry.run`) — 루프백 HTTP 수신기를 띄우고 게임을 두 번 띄워, 동의한 텔레메트리 스풀 파일과 보낼 줄의 크래시 묶음이 실제 HTTP 로 오는지 본다(H1).
 
-  py -3 -m Scripts telemetry-local run                 # 기본: Playground, Ninja-Release
-  py -3 -m Scripts telemetry-local run --game NileCity
+  py -3 -m Scripts telemetry-session run                 # 기본: Playground, Ninja-Release
+  py -3 -m Scripts telemetry-session run --game NileCity
 
 끝점은 gamesettings 칸(`_telemetryUploadEndpoint` · `_crashUploadEndpoint`)이고 저장소의 팩은 적지 않는다 - 이 스크립트는 `-gv_telemetryUploadEndpoint` ·
 `-gv_crashUploadEndpoint` 로 수신기를 가리킨다. 사용자 설정은 `-gv_userSettingsFile` 로 출력 폴더에 따로 두어 사람의 동의 설정을 바꾸지 않는다.
@@ -27,10 +27,10 @@ from common.command import Command, ScriptContext
 from common import app_arguments
 from common.exit_code import ExitCode
 from common.log_lines import count_id, payloads, problem_lines, read_log
-from common.process_session import DEFAULT_PRESET, USER_DATA_ROOT_ENVIRONMENT, ProcessGroup, report
+from common.process_session import DEFAULT_PRESET, USER_DATA_ROOT_ENVIRONMENT, MultiProcessSession, report
 from sessions.ctest_items import CtestItem
 
-CTEST_ITEMS = (CtestItem("telemetry", ("telemetry-local", "run"), 400),)
+CTEST_ITEMS = (CtestItem(("telemetry-session", "run"), 400),)
 
 _TELEMETRY_LINKED_ID = "TelemetryUploadLink.TelemetryLinked"
 _CRASH_SENT_ID = "TelemetryUploadLink.CrashReportsSent"  # 본문 JSON: sent · folder
@@ -114,7 +114,7 @@ def _write_fake_bundle(reports_folder: Path) -> Path:
     return bundle
 
 
-def _run_once(argument: argparse.Namespace, group: ProcessGroup, app_exe: Path, port: int, index: int, consent: bool, environment: dict[str, str]) -> Path:
+def _run_once(argument: argparse.Namespace, group: MultiProcessSession, app_exe: Path, port: int, index: int, consent: bool, environment: dict[str, str]) -> Path:
     client = group.start(f"run{index}", [
         app_exe,
         app_arguments.option("game", argument.game),
@@ -131,20 +131,20 @@ def _run_once(argument: argparse.Namespace, group: ProcessGroup, app_exe: Path, 
             client.send("settings.apply telemetry.enabled=true")
             time.sleep(2.0)  # 동의가 session.start 를 남길 때까지
     except OSError:
-        print(f"[telemetry-local] FAIL: run {index} exited before it took the commands (log: {client.log})")
+        print(f"[telemetry-session] FAIL: run {index} exited before it took the commands (log: {client.log})")
     client.stop()
     return client.log
 
 
 def _run(argument: argparse.Namespace) -> int:
-    with ProcessGroup("telemetry-local", argument.preset, "TelemetryLocalRun", clean=True) as group:
+    with MultiProcessSession("telemetry-session", argument.preset, "TelemetryLocalRun", clean=True) as group:
         list_exe = group.require("App")
         if list_exe is None:
-            return int(ExitCode.CHECK_INVALID)
+            return int(ExitCode.USAGE_ERROR)
         app_exe = list_exe[0]
         # 무인 실행(-unattended)의 사용자 데이터 뿌리 — 두 실행이 같은 크래시 묶음 폴더를 봐야 하므로 프로세스마다 새 폴더(기본)가 아니라 하나를 함께 쓴다.
         # 뿌리는 `<Bin>/Saved/Automation/UserData/` 아래여야 한다(App 이 밖이면 거절한다 `AutomationUserDataRoot`, 순서 시나리오의 `RunStateDirPair.cmake` 와 같다).
-        user_data_root = group.bin_dir / "Saved" / "Automation" / "UserData" / "telemetry-local"
+        user_data_root = group.bin_dir / "Saved" / "Automation" / "UserData" / "telemetry-session"
         if user_data_root.exists():
             shutil.rmtree(user_data_root)
         user_data_root.mkdir(parents=True)
@@ -166,11 +166,11 @@ def _run(argument: argparse.Namespace) -> int:
             server.shutdown()
             if bundle is not None:
                 shutil.rmtree(bundle, ignore_errors=True)
-    return report("telemetry-local", check_run(sink, [read_log(log) for log in list_log]), list_log, "telemetry spool file and queued crash bundle reached the loopback sink over HTTP")
+    return report("telemetry-session", check_run(sink, [read_log(log) for log in list_log]), list_log, "telemetry spool file and queued crash bundle reached the loopback sink over HTTP")
 
 
-class TelemetryLocalCommand(Command):
-    name = "telemetry-local"
+class TelemetrySessionCommand(Command):
+    name = "telemetry-session"
     help = "텔레메트리 · 크래시 업로드 로컬 실행 — 루프백 HTTP 수신기와 게임 두 번으로 동의한 스풀 파일 · 보낼 줄의 크래시 묶음이 HTTP 로 오는지 본다(run)"
 
     def add_arguments(self, parser: argparse.ArgumentParser) -> None:

@@ -22,7 +22,7 @@ PCH 사용 플래그(/Yu · /Fp)는 뺀다 — clang-tidy 가 남이 짓는 중�
 넘치게 잡는다)이다. 하나라도 바뀌면 다시 돈다. 오래 쓰지 않은 항목은 실행 끝에 지운다(`prune_cache`). 풀지 못하는 매크로 포함(`#include MACRO`)이 닫힘에 있는 TU 는 캐시하지 않는다.
 clang-tidy 는 낮은 우선순위로 돈다 — 묶음 검증이 changed · cpu 단계와 겹쳐 띄운다(Scripts/verify/preflight.sh).
 
-종료 코드: clang-tidy 오류(WarningsAsErrors 로 오른 검사 · 컴파일 오류)가 하나라도 있으면 VIOLATION.
+종료 코드: clang-tidy 오류(WarningsAsErrors 로 오른 검사 · 컴파일 오류)가 하나라도 있으면 FAILURE.
 """
 
 from __future__ import annotations
@@ -292,7 +292,7 @@ def run_one(clang_tidy: Path, database_dir: Path, file_path: str, list_extra: li
     return file_path, result.return_code, result.stdout + result.stderr
 
 
-class ClangTidyCommand(Command):
+class TidyCommand(Command):
     name = "tidy"
     help = "clang-tidy 병렬 실행 · 검사별 집계(본 트리 컴파일 DB 를 읽기만 한다) — 인자 없음: 전체, --changed [기준]: 바뀐 파일만(묶음 검증), --files: 지정 파일"
 
@@ -377,4 +377,4 @@ class ClangTidyCommand(Command):
             print(f"{count:6d}  {check}{'  (오류 ' + str(errors[check]) + ')' if errors[check] else ''}")
         print(f"[tidy] TU {len(list_entry)}, 진단 {len(list_diagnostic)}(오류 {sum(errors.values())}), 실패한 TU {error_count}, "
               f"{time.monotonic() - started:.0f} 초")
-        return ExitCode.VIOLATION if error_count else ExitCode.PASSED
+        return ExitCode.FAILURE if error_count else ExitCode.PASSED

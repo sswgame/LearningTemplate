@@ -1,6 +1,6 @@
 /**
  * @file FileServeContentSource.h
- * @brief 장치가 PC 의 쿠킹한 팩 폴더를 HTTP 로 받아 읽는 콘텐츠 소스입니다(개발 전용 — `py -3 -m Scripts fileserve`).
+ * @brief 장치가 PC 의 쿠킹한 팩 폴더를 HTTP 로 받아 읽는 콘텐츠 소스입니다(개발 전용 — `py -3 -m Scripts file-server`).
  * @details 다시 구운 팩을 APK 를 다시 묶지 않고 장치에서 읽는다 — ezEngine Fileserve · 언리얼 쿡 데이터 스트리밍(Zen)과 같은 자리다.
  *          받은 파일은 앱 전용 폴더의 거울(`mirrorRoot`)에 두고 디스크 소스로 읽는다. 거울 곁 도장(`<파일>.fsstamp` — 크기와 PC 의 수정 시각)이 서버의 것과 같으면 다시 받지 않는다.
  *          상태를 기억하지 않고 열 때마다 서버에 묻는다 — 실행 중 다시 구운 팩은 다음 열기가 받는다(이미 연 핸들은 원자 교체 전의 파일을 끝까지 읽는다).

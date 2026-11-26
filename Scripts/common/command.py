@@ -27,7 +27,7 @@ LITERAL_ROW = re.compile(r'^    (name|help) = "((?:[^"\\]|\\.)*)"$', re.M)
 
 
 class CommandError(Exception):
-    """일이 실패했다 — 트레이스백 대신 `[명령] FAILED 까닭` 한 줄과 VIOLATION 으로 끝난다."""
+    """일이 실패했다 — 트레이스백 대신 `[명령] FAILED 까닭` 한 줄과 FAILURE 으로 끝난다."""
 
 
 @dataclass(frozen=True)
@@ -65,7 +65,7 @@ class Command(abc.ABC):
             return command.run(ScriptContext(get_project_root()), args)
         except CommandError as error:
             print(f"[{cls.name}] FAILED {error}", file=sys.stderr, flush=True)
-            return ExitCode.VIOLATION
+            return ExitCode.FAILURE
 
 
 @dataclass(frozen=True)

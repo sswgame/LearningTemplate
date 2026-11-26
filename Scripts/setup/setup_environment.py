@@ -257,8 +257,8 @@ class EnvironmentSetupManager:
         )
 
 
-class EnvironmentCommand(Command):
-    name = "setup"
+class SetupEnvironmentCommand(Command):
+    name = "setup-environment"
     help = "개발 환경 및 도구체인 탐색/설정"
 
     def add_arguments(self, parser: argparse.ArgumentParser) -> None:
@@ -281,4 +281,4 @@ class EnvironmentCommand(Command):
 
 
 if __name__ == "__main__":
-    sys.exit(EnvironmentCommand.main())
+    sys.exit(SetupEnvironmentCommand.main())

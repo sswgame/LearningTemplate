@@ -5,7 +5,7 @@ description: "이 저장소의 Linux 검증 절차: WSL 클론 빌드, Xvfb 에�
 
 # linux-verify
 
-입구는 `py -3 -m Scripts linux-scenarios <명령>` 하나다(`Scripts/verify/linux_verify.py`). Windows 에서 부르면 WSL 에서 다시 뜬다. 임시 스크립트를 새로 만들지 말고 여기에 더한다.
+입구는 `py -3 -m Scripts linux-verify <명령>` 하나다(`Scripts/verify/linux_verify.py`). Windows 에서 부르면 WSL 에서 다시 뜬다. 임시 스크립트를 새로 만들지 말고 여기에 더한다.
 
 ## 순서
 

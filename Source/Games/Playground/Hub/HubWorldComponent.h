@@ -7,7 +7,7 @@
  *          티켓 없는 설정 — `NetLinkValue::_bTicketRequired`)에는 계정이 없으므로 허브 서버를 세우지 않고, 접속한 클라이언트는 아바타 없이 같은 씬에 있기만 한다. 클라이언트가 매치 서버로 옮기면(온라인 흐름)
  *          링크가 먼저 떨어져 클라이언트 링크를 내리고, 허브로 돌아와 다시 걸리면 새로 세운다.
  *          서버 링크는 서버 전용 코드라 공장(`IHubServerFactory`)으로 세운다. 진행 저장소는 전용 서버의 온라인 조립 저장소(저장소 계약 `ServiceStore`)다 — 두 프로세스
- *          시나리오는 서버 설정의 메모리 저장소라 실행마다 새로 시작하고, 한 번의 서버 실행 안에서 저장 → 재접속 읽기는 그대로 지난다(`py -3 -m Scripts net-pair mmo`).
+ *          시나리오는 서버 설정의 메모리 저장소라 실행마다 새로 시작하고, 한 번의 서버 실행 안에서 저장 → 재접속 읽기는 그대로 지난다(`py -3 -m Scripts login-connect-session mmo`).
  *          개발 명령 `hub.*` 과 감시 값 `Hub.*` 가 시나리오의 손이다(`game/playground/automation/hubserver_* · netpair/`).
  */
 #pragma once

@@ -7,5 +7,5 @@ from enum import IntEnum
 
 class ExitCode(IntEnum):
     PASSED = 0
-    VIOLATION = 1  # 일이 실패했거나 위반이 있다
-    CHECK_INVALID = 2  # 인자 · 전제가 틀려 일을 시작하지 못했다
+    FAILURE = 1  # 일이 실패했거나 위반이 있다
+    USAGE_ERROR = 2  # 인자 · 전제가 틀려 일을 시작하지 못했다

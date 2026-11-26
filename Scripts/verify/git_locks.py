@@ -97,4 +97,4 @@ class GitLocksCommand(Command):
             removed = is_leftover and args.remove
             left += 0 if removed else 1
             print(f"[git-locks] {'지웠다' if removed else '남아 있다'}: {path} — {reason}{'' if removed or not is_leftover else ' (--remove 로 지운다)'}")
-        return ExitCode.VIOLATION if left else ExitCode.PASSED
+        return ExitCode.FAILURE if left else ExitCode.PASSED

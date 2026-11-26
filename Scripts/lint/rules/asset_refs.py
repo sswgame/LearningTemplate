@@ -62,4 +62,4 @@ class AssetRefsCommand(Command):
         for problem in list_problem:
             print(f"  - {problem}")
         print(f"[AssetReferences] {'FAIL' if list_problem else 'OK'} — 끊어진 참조 {len(list_problem)}건")
-        return ExitCode.VIOLATION if list_problem else ExitCode.PASSED
+        return ExitCode.FAILURE if list_problem else ExitCode.PASSED

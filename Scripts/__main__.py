@@ -33,7 +33,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     list_argument = list(sys.argv[1:] if argv is None else argv)
     if not list_argument:
         parser.print_help()
-        return ExitCode.VIOLATION
+        return ExitCode.FAILURE
     return map_command[parser.parse_args(list_argument[:1]).command].run(list_argument[1:])
 
 

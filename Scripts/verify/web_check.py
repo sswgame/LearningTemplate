@@ -260,7 +260,7 @@ def print_result(game: str, list_failure: list[str], out_dir: Path) -> int:
         print(f"[web-check] {failure}")
     status = "FAILED" if list_failure else "PASSED"
     print(f"[web-check] {status} {game} — logs in {out_dir}")
-    return ExitCode.VIOLATION if list_failure else ExitCode.PASSED
+    return ExitCode.FAILURE if list_failure else ExitCode.PASSED
 
 
 def run_until_adapter(browser: str, profile: Path, url: str, headed: bool, timeout_seconds: int) -> tuple[RunReport, bool]:
@@ -293,11 +293,11 @@ class WebCheckCommand(Command):
             make_web_package(args.game, build_dir, build_dir / "Bin" / PACK_FOLDER_NAME, folder, project_root)
         elif (folder / "App.wasm").is_file() is False:
             print(f"[web-check] FAILED {folder} has no package - run without --skip-package")
-            return ExitCode.CHECK_INVALID
+            return ExitCode.USAGE_ERROR
         browser = find_browser()
         if browser is None:
             print("[web-check] FAILED Chrome or Edge not found (BROWSER_CANDIDATES)")
-            return ExitCode.CHECK_INVALID
+            return ExitCode.USAGE_ERROR
 
         token = secrets.token_hex(8)
         if args.scenario:

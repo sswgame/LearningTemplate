@@ -91,7 +91,7 @@ class CommitMessageCommand(Command):
         for problem in problems:
             print(f"  - {problem}", file=sys.stderr)
         print(SAMPLE_MESSAGE, file=sys.stderr)
-        return ExitCode.VIOLATION
+        return ExitCode.FAILURE
 
 
 if __name__ == "__main__":

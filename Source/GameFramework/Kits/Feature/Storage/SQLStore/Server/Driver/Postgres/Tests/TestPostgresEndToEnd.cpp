@@ -36,7 +36,7 @@ namespace
 
 // PostgresEndToEndTest — 서버 설정이 고른 `postgres` 저장소: 조립(`OnlineServerRuntime`)이 드라이버 키트로 저장소를 만들고, 실제 libpq 가 실제 TCP 로 로컬 가짜 서버에 붙어 비밀번호 인증(환경 변수) · 마이그레이션 · 준비된 문장 · 이진 결과를 끝까지 돈다.
 // 가짜 서버는 PostgreSQL 와이어 프로토콜 3.0 을 말하고 `SQLServiceStore` · `SQLMigrationRunner` 가 쓰는 문장만 값으로 흉내 낸다. 모르는 문장은 SQL 오류로 답해 케이스가 진다 - 문장을 더하면 여기에도 더한다.
-// 실제 서버의 SQL 해석 · 직렬화 격리는 보지 않는다 - 그것은 실제 Postgres 를 가리키는 `online-local run --server-config` 의 몫이다(nogpu).
+// 실제 서버의 SQL 해석 · 직렬화 격리는 보지 않는다 - 그것은 실제 Postgres 를 가리키는 `online-service-session run --server-config` 의 몫이다(nogpu).
 
 using namespace sw;
 

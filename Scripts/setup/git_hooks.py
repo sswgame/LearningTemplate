@@ -117,5 +117,5 @@ class GitHooksCommand(Command):
     def run(self, context: ScriptContext, args: argparse.Namespace) -> int:
         if not install_pre_commit_hook():
             print("[GitHooks] .git 디렉터리를 찾을 수 없습니다.", file=sys.stderr)
-            return ExitCode.VIOLATION
+            return ExitCode.FAILURE
         return ExitCode.PASSED

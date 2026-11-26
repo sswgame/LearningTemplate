@@ -42,7 +42,7 @@ namespace sw
 {
     /** @brief `-gv_shooterAutoMelee=1`: 자동 플레이 AI 가 닿는 거리의 적을 근접으로도 칩니다(네트 근접 시나리오 — 기본 꺼짐이라 자동 플레이 골든은 그대로다). */
     SW_TEST_GLOBAL_VARIABLE( int32, gv_shooterAutoMelee, 0, "Playground shooter3d: 자동 플레이 AI 가 가까운 적을 근접으로도 (1=켜기)" );
-    /** @brief `-gv_shooterNoEnemies=1`: 감독이 적을 내지 않습니다(두 사람이 서로 쓰러뜨리는 `net-pair respawn` 의 매치 서버). */
+    /** @brief `-gv_shooterNoEnemies=1`: 감독이 적을 내지 않습니다(두 사람이 서로 쓰러뜨리는 `login-connect-session respawn` 의 매치 서버). */
     SW_TEST_GLOBAL_VARIABLE( int32, gv_shooterNoEnemies, 0, "Playground shooter3d: 적 없는 판 (1=켜기)" );
     /** @brief `-gv_shooterMotionTrace=<경로>`: 프레임마다 플레이어 몸, 본, 카메라, 적의 그려진 위치를 CSV 로 남깁니다(튐 진단용이며 게임이 내려갈 때 씁니다). */
     SW_TEST_GLOBAL_VARIABLE( sw::GlobalDiskPath, gv_shooterMotionTrace, "", "Playground shooter3d: 프레임마다 몸 · 본 · 카메라 · 적 자리를 CSV 로 (경로, 비면 끔)" );

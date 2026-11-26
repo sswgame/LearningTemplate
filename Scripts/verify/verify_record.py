@@ -97,7 +97,7 @@ def run_pre_push(project_root: Path, list_line: Sequence[str]) -> int:
     list_problem = find_unverified_pushes(list_line, verified_sha, read_verify_config(main_tree, "_verifiedPushRefs"))
     for problem in list_problem:
         print(f"[pre-push] {problem} — `bash Scripts/verify/preflight.sh --no-linux` 의 끝 줄 WINDOWS_OK=<sha> 를 push 한다({ok_path})", file=sys.stderr)
-    return ExitCode.VIOLATION if list_problem else ExitCode.PASSED
+    return ExitCode.FAILURE if list_problem else ExitCode.PASSED
 
 
 def run_skip(project_root: Path, stage: str, sha: str) -> int:
@@ -110,7 +110,7 @@ def run_skip(project_root: Path, stage: str, sha: str) -> int:
         list_changed = [line.strip() for line in result.stdout.splitlines() if line.strip()] if result.return_code == 0 else None
     skip, reason = decide_skip(stage, sha, map_stage, list_changed, read_verify_config(project_root, "_nonInputPaths"))
     print(f"[VerifyRecord] {'건너뜀' if skip else '돈다'} — {reason}")
-    return ExitCode.PASSED if skip else ExitCode.VIOLATION
+    return ExitCode.PASSED if skip else ExitCode.FAILURE
 
 
 def write_stage(project_root: Path, stage: str, sha: str) -> int:

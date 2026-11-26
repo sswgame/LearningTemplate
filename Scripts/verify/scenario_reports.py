@@ -1,5 +1,5 @@
 """
-시나리오 체인 실행의 보고 읽기 · 진 단계 고르기 · 앞 단계 이분 탐색 — Windows(`scenario-bisect`) · Linux(`linux-scenarios`) · 결정성 검사가 함께 쓴다.
+시나리오 체인 실행의 보고 읽기 · 진 단계 고르기 · 앞 단계 이분 탐색 — Windows(`scenario-bisect`) · Linux(`linux-verify`) · 결정성 검사가 함께 쓴다.
 골든 여유 · 골든 수 · 진행 목록처럼 체인을 돌리지 않는 보고도 여기다.
 """
 

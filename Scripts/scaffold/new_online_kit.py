@@ -391,7 +391,7 @@ class NewOnlineKitCommand(Command):
         reason = describe_invalid_request(root, name)
         if reason is not None:
             print(f"[new-online-kit] {reason}", file=sys.stderr)
-            return ExitCode.CHECK_INVALID
+            return ExitCode.USAGE_ERROR
         # 파일을 하나라도 쓰기 전에 중앙 표 두 곳의 자리를 확인한다 — 표가 옮겨졌으면 반쯤 만든 키트를 남기지 않는다.
         list_table: list[tuple[str, str, str]] = []
         for relative, add_row in ((RANGE_HEADER, add_method_range), (KIT_NAME_HEADER, add_kit_name)):

@@ -23,7 +23,7 @@ def make_request(platform: str, target: str = "Client", rhi: str = "") -> Packag
     return PackageRequest(target=target, game="Playground", rhi=rhi, output_root=Path("out"), platform=platform)
 
 
-class PackPlatformTest(unittest.TestCase):
+class PackagePlatformTest(unittest.TestCase):
     def test_preset_and_folder_of_each_platform(self) -> None:
         root = Path("out")
         self.assertEqual("Ninja-Shipping-Server", find_preset(make_request(DESKTOP_PLATFORM, "Server")))

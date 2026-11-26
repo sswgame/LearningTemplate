@@ -12,7 +12,7 @@ import inspect
 import json
 from dataclasses import dataclass
 
-from verify.preflight_run import SCRIPTS, BackgroundStage, BuildInput, Job, PreflightOptions, PreflightShell, Stage, StageFailed, list_tree_changes
+from verify.preflight_run import SCRIPTS, BackgroundStage, Prerequisite, Job, PreflightOptions, StageContext, Stage, StageFailedError, list_tree_changes
 from common.git import run_git_or_raise
 
 MAX_TREE_LINES = 20
@@ -23,23 +23,23 @@ STL_TEST_GLOBS = ("Source/Core/Container/Tests/*.cpp", "Source/Core/String/Tests
 # 입력
 # ------------------------------------------------------------------------------
 @dataclass(frozen=True)
-class PresetBuild(BuildInput):
+class PresetBuild(Prerequisite):
     """증분 빌드한 프리셋 — 짓지 않으면 고친 커밋 대신 옛 바이너리가 돌아 고친 테스트가 다시 진다(2026-11-13 --from cpu 의 Release 단위). 바뀐 것이 없으면 몇 초다."""
 
     preset: str
 
-    def prepare(self, shell: PreflightShell) -> None:
+    def prepare(self, shell: StageContext) -> None:
         shell.build(self.preset)
 
 
 @dataclass(frozen=True)
-class ImportedAssets(BuildInput):
+class ImportedAssets(Prerequisite):
     """임포트 산출물 — 낡은 산출물을 Content 에 다시 쓰는 일이라 배포 빌드의 쿠킹이 그 파일을 읽는 동안 돌지 않게 먼저 끝낸다(ctest 의 고정 단계 ImportedAssets 는 그 뒤 곧바로
     끝난다). 최적화 App 으로 임포트한다 — Debug 의 BC7 · BC6H 압축기는 큰 텍스처 하나에 몇 분이다(AssetImportEntry.TextureImportDebugBuild). 산출물은 구성과 무관하게 Content 하나다."""
 
-    def prepare(self, shell: PreflightShell) -> None:
+    def prepare(self, shell: StageContext) -> None:
         if not shell.run_tests(RELEASE.preset, "import", "-L", "import"):
-            raise StageFailed(f"{RELEASE.preset} import")
+            raise StageFailedError(f"{RELEASE.preset} import")
 
 
 RELEASE = PresetBuild("Ninja-Release")
@@ -56,11 +56,11 @@ class LintJob(Job):
 
     name = "lint --all"
 
-    def run(self, shell: PreflightShell) -> bool:
+    def run(self, shell: StageContext) -> bool:
         return shell.run_logged("lint --all", [*SCRIPTS, "lint", "--all"], "build/verify.lint.log", 20, exit_name="lint") == 0
 
 
-def run_shipping_check(shell: PreflightShell, *arguments: str) -> bool:
+def run_shipping_check(shell: StageContext, *arguments: str) -> bool:
     """배포 구성의 기동 · 종료(shipping_check.py) — `--skip-build` 면 지어 둔 산출물만 띄운다."""
     return shell.run_logged("shipping-check", [*SCRIPTS, "shipping-check", *arguments], "build/verify.shipping.log", 8, exit_name="shipping-check") == 0
 
@@ -73,7 +73,7 @@ class ShippingBuildJob(Job):
     # 서버 개발 빌드도 이 갈래가 서버 배포 앞에서 짓는다(Ninja-Release 는 이 갈래보다 먼저 끝났다).
     presets = ("Ninja-Shipping", SERVER.preset, "Ninja-Shipping-Server")
 
-    def run(self, shell: PreflightShell) -> bool:
+    def run(self, shell: StageContext) -> bool:
         for preset in self.presets:
             shell.build(preset)
         # 기동 · 종료 확인을 빌드 갈래 끝에서 바로 — 살아 있음 판정이라 다른 빌드와 겹쳐도 되고, 실패가 cpu 단계 끝(2026-11-21 시작 74 분 뒤)이 아니라 배포 빌드 직후에 나온다.
@@ -85,7 +85,7 @@ class StdContainerJob(Job):
 
     name = "std container syntax"
 
-    def run(self, shell: PreflightShell) -> bool:
+    def run(self, shell: StageContext) -> bool:
         list_test = [path.relative_to(shell.root).as_posix() for pattern in STL_TEST_GLOBS for path in sorted(shell.root.glob(pattern))]
         command = [*SCRIPTS, "syntax", "--changed", "origin/main", "--direct", "--define", "SW_ENABLE_STL_CONTAINER", "--files", *list_test]
         return shell.run_logged(self.name, command, "build/verify.stl.log", 20, exit_name=self.name) == 0
@@ -96,7 +96,7 @@ class SanitizerCpuJob(Job):
 
     name = "ASan nogpu"
 
-    def run(self, shell: PreflightShell) -> bool:
+    def run(self, shell: StageContext) -> bool:
         if not shell.run_tests(SANITIZER.preset, "nogpu", "-L", "nogpu"):
             return False
         if not shell.options.dry_run:
@@ -104,7 +104,7 @@ class SanitizerCpuJob(Job):
         return True
 
     @staticmethod
-    def _report_case_counts(shell: PreflightShell) -> None:
+    def _report_case_counts(shell: StageContext) -> None:
         """App --test 의 케이스 수(보고에 적는다) — 보고 JSON 에서 읽는다(엔진 로그 파일에는 요약 줄이 없다). 판정을 바꾸지 않는다. 단위 테스트는 몫(`UnitTests.<i>`,
         SW_UNIT_TEST_SHARDS)으로 나눠 돌므로 몫 보고를 모두 더한다(게임 항목 `UnitTests.<게임>` 은 뺀다)."""
         list_path = [path for path in (shell.root / f"build/{SANITIZER.preset}/Testing/Reports").glob("UnitTests*.json")
@@ -122,7 +122,7 @@ class SanitizerCpuJob(Job):
 class ServerToolsJob(Job):
     name = "server · tools · shipping"
 
-    def run(self, shell: PreflightShell) -> bool:
+    def run(self, shell: StageContext) -> bool:
         log = f"build/{SERVER.preset}/Testing/Logs/verify.unit.log"
         shell.announce("server unit")
         code = shell.run([f"build/{SERVER.preset}/Bin/Server.exe", "--test", "-unattended"], log)
@@ -153,7 +153,7 @@ class ShaderWarmJob(Job):
     name = "shader warm"
     folder = f"build/{RELEASE.preset}/Testing/ShaderRequests"
 
-    def run(self, shell: PreflightShell) -> bool:
+    def run(self, shell: StageContext) -> bool:
         logs = f"build/{RELEASE.preset}/Testing/Logs"
         shell.announce(self.name)
         if not shell.options.dry_run and not any((shell.root / self.folder).glob("*.shaderrequests")):
@@ -196,9 +196,9 @@ class TidyStage(BackgroundStage):
     joined_before = "gpu-release"
     failed_before = "flaky"
 
-    def run(self, shell: PreflightShell) -> None:
+    def run(self, shell: StageContext) -> None:
         if shell.run_logged("tidy", [*SCRIPTS, "tidy", "--changed", "origin/main"], self.log, 25, exit_name="tidy") != 0:
-            raise StageFailed(f"clang-tidy - {self.log}")
+            raise StageFailedError(f"clang-tidy - {self.log}")
 
 
 class ChangedStage(Stage):
@@ -211,12 +211,12 @@ class ChangedStage(Stage):
     inputs = (RELEASE, IMPORTED)   # ctest 고정 단계 없이 App 을 바로 띄운다
     log = "build/verify.changed.log"
 
-    def run(self, shell: PreflightShell) -> None:
+    def run(self, shell: StageContext) -> None:
         shell.announce("changed")
         code = shell.run([*SCRIPTS, "test-history", "changed", "--preset", RELEASE.preset], self.log)
         shell.show_matches(self.log, r"^(?!\[Changed\] run )")
         if code != 0:
-            raise StageFailed("changed")
+            raise StageFailedError("changed")
 
     def make_failure(self, reason: str, sha: str, suffix: str) -> str:
         return f"CHANGED_FAILED sha={sha} - {self.log} (cpu · gpu-release 를 시작하지 않는다)"
@@ -240,9 +240,9 @@ class GpuReleaseStage(Stage):
     record = "gpu-release"
     inputs = (RELEASE,)
 
-    def run(self, shell: PreflightShell) -> None:
+    def run(self, shell: StageContext) -> None:
         if not shell.run_tests(RELEASE.preset, "all", "-LE", "^load$"):
-            raise StageFailed(f"{RELEASE.preset} ctest")
+            raise StageFailedError(f"{RELEASE.preset} ctest")
 
 
 class FlakyStage(Stage):
@@ -251,9 +251,9 @@ class FlakyStage(Stage):
     name = "flaky"
     last_start = "linux"
 
-    def run(self, shell: PreflightShell) -> None:
+    def run(self, shell: StageContext) -> None:
         if shell.run_logged("flaky", [*SCRIPTS, "test-history", "flaky"], "build/verify.flaky.log", 20) != 0:
-            raise StageFailed("흔들림이 문턱을 넘었다 - build/verify.flaky.log")
+            raise StageFailedError("흔들림이 문턱을 넘었다 - build/verify.flaky.log")
 
 
 class TreeStage(Stage):
@@ -262,16 +262,16 @@ class TreeStage(Stage):
     name = "tree"
     last_start = "linux"
 
-    def run(self, shell: PreflightShell) -> None:
+    def run(self, shell: StageContext) -> None:
         if shell.options.dry_run:
             return
         head = run_git_or_raise(["rev-parse", "HEAD"], cwd=shell.root).strip()
         if head != shell.sha:
-            raise StageFailed(f"HEAD 가 검증 중에 바뀌었다 {shell.sha} -> {head}")
+            raise StageFailedError(f"HEAD 가 검증 중에 바뀌었다 {shell.sha} -> {head}")
         list_change = list_tree_changes(shell.root)
         if list_change:
             shell.write_line("\n".join(list_change[:MAX_TREE_LINES]))
-            raise StageFailed("검증 중에 추적 파일이 바뀌었다(빌드 · 테스트가 소스 트리를 고쳤다)")
+            raise StageFailedError("검증 중에 추적 파일이 바뀌었다(빌드 · 테스트가 소스 트리를 고쳤다)")
 
 
 class LoadStage(Stage):
@@ -283,28 +283,28 @@ class LoadStage(Stage):
     runs_with = "linux"
     blocks_push = False
 
-    def run(self, shell: PreflightShell) -> None:
+    def run(self, shell: StageContext) -> None:
         if not shell.run_tests(RELEASE.preset, "load", "-L", "^load$"):
-            raise StageFailed("load")
+            raise StageFailedError("load")
 
     def make_failure(self, reason: str, sha: str, suffix: str) -> str:
         return f"LOAD_FAILED sha={sha} - build/{RELEASE.preset}/Testing/Logs/verify.ctest.load.log"
 
 
 class LinuxStage(Stage):
-    """Linux 빌드 · 단위 · 체인(`linux-scenarios all`) — 묶음마다가 아니라 모아서 돈다(--no-linux)."""
+    """Linux 빌드 · 단위 · 체인(`linux-verify all`) — 묶음마다가 아니라 모아서 돈다(--no-linux)."""
 
     name = "linux"
     last_start = "linux"
     record = "linux"
     blocks_push = False
 
-    def run(self, shell: PreflightShell) -> None:
+    def run(self, shell: StageContext) -> None:
         shell.announce("linux 시작")
-        code = shell.run([*SCRIPTS, "linux-scenarios", "all", *(["--record"] if shell.options.record else [])], "build/verify.linux.log", utf8=True)
+        code = shell.run([*SCRIPTS, "linux-verify", "all", *(["--record"] if shell.options.record else [])], "build/verify.linux.log", utf8=True)
         shell.show_tail("build/verify.linux.log", 40)
         if code != 0:
-            raise StageFailed("linux")
+            raise StageFailedError("linux")
 
     def make_failure(self, reason: str, sha: str, suffix: str) -> str:
         return f"LINUX_FAILED sha={sha}"
@@ -322,12 +322,12 @@ class SanitizeStage(Stage):
         # sanitize 도 클론을 HEAD 로 되돌려(reset --hard · clean) 아직 옮기지 않은 기록 골든을 지운다.
         return "--record — goldens 로 옮긴 뒤 linux_verify.py sanitize 를 따로 돌린다" if options.record else None
 
-    def run(self, shell: PreflightShell) -> None:
+    def run(self, shell: StageContext) -> None:
         shell.announce("sanitize address")
-        code = shell.run([*SCRIPTS, "linux-scenarios", "sanitize", "address"], "build/verify.sanitize.log", utf8=True)
+        code = shell.run([*SCRIPTS, "linux-verify", "sanitize", "address"], "build/verify.sanitize.log", utf8=True)
         shell.show_tail("build/verify.sanitize.log", 20)
         if code != 0:
-            raise StageFailed("address")
+            raise StageFailedError("address")
 
     def make_failure(self, reason: str, sha: str, suffix: str) -> str:
         return f"SANITIZE_FAILED ({reason}) sha={sha} - build/verify.sanitize.log"

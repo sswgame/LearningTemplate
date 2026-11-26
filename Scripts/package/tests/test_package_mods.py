@@ -16,7 +16,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 from package.package import PackageError, MOD_EXPORT_FOLDER, select_staged_mods  # noqa: E402
 
 
-class PackModsTest(unittest.TestCase):
+class PackageModsTest(unittest.TestCase):
     def test_packed_mod_is_staged_with_its_two_files(self) -> None:
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)

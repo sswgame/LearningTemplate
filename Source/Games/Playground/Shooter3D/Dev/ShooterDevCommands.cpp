@@ -316,7 +316,7 @@ namespace sw
 {
     namespace
     {
-        // 바닥 기준의 자리 — 두 클라이언트 시나리오가 `<Record>` 로 보고에 남기고 `Scripts net-pair match` 가 견준다. 바닥 위가 아니면 값이 없다.
+        // 바닥 기준의 자리 — 두 클라이언트 시나리오가 `<Record>` 로 보고에 남기고 `Scripts login-connect-session match` 가 견준다. 바닥 위가 아니면 값이 없다.
         struct ShooterNetPawnWatches
         {
             [[nodiscard]] static bool readFloorX( const ShooterNetPawnComponent& component, float64& outValue )

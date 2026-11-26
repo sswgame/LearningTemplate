@@ -25,8 +25,8 @@ from generate.generator_output import find_generators, record_read_files, write_
 INPUT_LIST_FILE_NAME = "ConfigureFiles.deps"   # GenerateConfigConstants.cmake 가 읽어 CMAKE_CONFIGURE_DEPENDS 에 넣는다
 
 
-class ConfigureFilesCommand(Command):
-    name = "configure-files"
+class RunGeneratorsCommand(Command):
+    name = "run-generators"
     help = "configure 생성기를 모두 돌고 읽은 입력 목록을 쓴다(GenerateConfigConstants.cmake 가 부른다)"
 
     def add_arguments(self, parser: argparse.ArgumentParser) -> None:
@@ -42,4 +42,4 @@ class ConfigureFilesCommand(Command):
 
 
 if __name__ == "__main__":
-    sys.exit(ConfigureFilesCommand.main())
+    sys.exit(RunGeneratorsCommand.main())

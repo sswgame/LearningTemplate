@@ -227,7 +227,7 @@ def run_lint(project_root: Path, scope: LintScope) -> int:
         print(time_line)
     if has_errors:
         print("\n[lint] FAIL — 고친 뒤 다시 git add 하고 커밋한다.")
-        return ExitCode.VIOLATION
+        return ExitCode.FAILURE
     what = "저장소 전체" if scope.whole_repo else f"스테이지 {len(scope.list_file) + len(scope.list_removed)}개"
     whole = f"(표가 바뀌어 전체: {', '.join(list_whole)})" if list_whole else ""
     print(f"[lint] OK — {what}, 규칙 {len(map_rule)}개{whole} · 포맷")
@@ -263,7 +263,7 @@ class LintCommand(Command):
         if list_partial:
             print(f"[lint] FAIL — 스테이지한 파일에 스테이지 안 된 변경이 더 있다(린트는 작업 폴더 글을 본다): {', '.join(list_partial)}\n"
                   "  남은 변경도 git add 하거나 되돌린 뒤 커밋한다(git stash 는 쓰지 않는다).")
-            return ExitCode.VIOLATION
+            return ExitCode.FAILURE
         return run_lint(context.root, scope)
 
     def run_rule(self, context: ScriptContext, args: argparse.Namespace) -> int:
@@ -281,4 +281,4 @@ class LintCommand(Command):
         for problem in list_problem:
             print(f"  - {problem}")
         print(f"[{rule.id}] {'FAIL' if list_problem else 'OK'} ({len(list_problem)}건)")
-        return ExitCode.VIOLATION if list_problem else ExitCode.PASSED
+        return ExitCode.FAILURE if list_problem else ExitCode.PASSED

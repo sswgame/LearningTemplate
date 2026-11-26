@@ -30,7 +30,7 @@ from common.exit_code import ExitCode
 from common.git import run_git_or_raise
 from common.host_platform import is_windows_host
 from common.run_process import run_process
-from verify.preflight_run import SCRIPTS, PreflightOptions, PreflightRun, PreflightShell, list_start_names, list_tree_changes, make_windows_failure
+from verify.preflight_run import SCRIPTS, PreflightOptions, PreflightRun, StageContext, list_start_names, list_tree_changes, make_windows_failure
 from verify.preflight_stages import MAX_TREE_LINES, list_stages
 from verify.history_store import read_verify_config
 
@@ -65,7 +65,7 @@ class PreflightCommand(Command):
         list_name = list_start_names(list_stage)
         parser.add_argument("--from", dest="start", choices=list_name, default=list_name[0], help="앞 단계를 건너뛰고 이 단계부터")
         parser.add_argument("--no-linux", action="store_true", help="Windows 까지만(Linux 골든이 곧 바뀌는 묶음 사이)")
-        parser.add_argument("--record", action="store_true", help="Linux 골든을 기록한다(linux-scenarios all --record — 통과 기록을 남기지 않는다)")
+        parser.add_argument("--record", action="store_true", help="Linux 골든을 기록한다(linux-verify all --record — 통과 기록을 남기지 않는다)")
         parser.add_argument("--show", action="store_true", help="게임 · 에디터 테스트 창을 화면에 띄우고 테스트를 하나씩 돌린다(사람이 지켜볼 때 — 판정 · 골든은 같다)")
         parser.add_argument("--dry-run", action="store_true", help="돌릴 명령만 차례대로 찍는다")
 
@@ -76,16 +76,16 @@ class PreflightCommand(Command):
             ctest_jobs = int(read_verify_config(root, "_ctestJobs"))
         except SystemExit as error:
             print(error)
-            return ExitCode.CHECK_INVALID
+            return ExitCode.USAGE_ERROR
         # 빌드 · 구성 · ctest 는 메인 작업 폴더 하나에서만(공용 vcpkg · 디스크, 사용자 지시 2026-11-12) — 연결된 워크트리는 .git 이 파일이다.
         if (root / ".git").is_file() and not args.dry_run:
             print(f"워크트리({root})에서 묶음 검증을 시작하지 않는다 — 메인 작업 폴더에서 돌린다(--dry-run 은 된다)")
-            return ExitCode.CHECK_INVALID
+            return ExitCode.USAGE_ERROR
         # 같은 작업 폴더에서 두 검증이 겹치면 구성 · ctest · Changed 결과 폴더를 서로 덮어 가짜 실패가 난다(2026-11-26). OS 파일 잠금이라 프로세스가 죽으면 풀린다.
         lock_file = None if args.dry_run else hold_verify_lock(root / "build" / "verify.lock")
         if lock_file is False:
             print("다른 묶음 검증이 이 작업 폴더에서 돌고 있다(build/verify.lock) — 그것이 끝난 뒤 돌린다")
-            return ExitCode.CHECK_INVALID
+            return ExitCode.USAGE_ERROR
         if args.show:
             os.environ["SW_SHOW_WINDOWS"] = "1"   # 무인 실행의 창 숨김만 끈다(App 이 본다)
             ctest_jobs = 1
@@ -93,14 +93,14 @@ class PreflightCommand(Command):
         list_change = list_tree_changes(root)
         if list_change and not args.dry_run:
             print("작업 트리가 깨끗하지 않다 — 커밋한 뒤 돌린다(검증한 SHA 와 트리가 달라진다):", *list_change[:MAX_TREE_LINES], sep="\n")
-            return ExitCode.CHECK_INVALID
+            return ExitCode.USAGE_ERROR
         if list_change:
             print("[dry] 작업 트리가 깨끗하지 않다 — 실제 실행은 여기서 멈춘다", flush=True)
 
-        shell = PreflightShell(root, sha, PreflightOptions(args.start, ctest_jobs, args.dry_run, args.no_linux, args.record), "")
+        shell = StageContext(root, sha, PreflightOptions(args.start, ctest_jobs, args.dry_run, args.no_linux, args.record), "")
         # 끝났다고 적힌 할 일 줄(커밋 꼬리말 `NEXT: <줄 앞말> 끝`)이 docs/NEXT.md 에 남아 있으면 여기서 멈춘다 — 줄을 지운 커밋이 검증할 sha 여야 한다.
         if not shell.run_record_command("next-done") and not args.dry_run:
-            return ExitCode.CHECK_INVALID
+            return ExitCode.USAGE_ERROR
         # 강제로 끝난 git 의 찌꺼기 잠금을 먼저 알린다 — 검증이 끝난 뒤의 커밋 · 병합이 거기서 멈춘다. 검증 자체는 막지 않는다.
         if not shell.run_record_command("git-locks"):
             shell.write_line("git 잠금 파일이 남아 있다(위 줄) - 도는 git 이 없으면 py -3 -m Scripts git-locks --remove")
@@ -109,7 +109,7 @@ class PreflightCommand(Command):
         if not quarantine.succeeded:
             shell.write_line(quarantine.stdout.strip())
             shell.write_line(make_windows_failure("quarantine table", sha))
-            return ExitCode.VIOLATION
+            return ExitCode.FAILURE
         shell.quarantine_exclude = quarantine.stdout.strip()
         if shell.quarantine_exclude:
             shell.write_line(f"격리로 뺀다: {shell.quarantine_exclude}")

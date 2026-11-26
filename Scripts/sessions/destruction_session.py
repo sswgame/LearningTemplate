@@ -1,8 +1,8 @@
 """
-파괴 복제의 실제 세션 확인 — 전용 서버와 클라이언트를 한 기계에서 두 프로세스로 띄워 구조 해시 로그를 맞댄다(ctest `Net.destruction`).
+파괴 복제의 실제 세션 확인 — 전용 서버와 클라이언트를 한 기계에서 두 프로세스로 띄워 구조 해시 로그를 맞댄다(ctest `Net.destruction.run`).
 
-  py -3 -m Scripts destruction-net run --preset Ninja-Release
-  py -3 -m Scripts destruction-net compare <서버 로그> <클라이언트 로그>   # 다른 기계(다른 컴파일러 · 플랫폼)에서 띄운 두 로그를 맞댄다
+  py -3 -m Scripts destruction-session run --preset Ninja-Release
+  py -3 -m Scripts destruction-session compare <서버 로그> <클라이언트 로그>   # 다른 기계(다른 컴파일러 · 플랫폼)에서 띄운 두 로그를 맞댄다
 
 해시 로그 한 줄은 id 가 `DestructionNetSession.HashLine` 이고 본문이 JSON(`side` · `id` · `events` · `hash` · `name`)이다(`DestructionNetSession::formatHashLine`).
 같은 그래프에 같은 사건을 같은 순서로 적용하면 같은 해시이므로, 서버와 클라이언트가 같은 (번호, 사건 수) 에서 같은 해시를 남겨야 한다.
@@ -22,10 +22,10 @@ from common.command import Command, ScriptContext
 from common import app_arguments
 from common.exit_code import ExitCode
 from common.log_lines import payloads, read_log
-from common.process_session import DEFAULT_PRESET, NET_LISTENING_ID, ProcessGroup, free_port, report
+from common.process_session import DEFAULT_PRESET, NET_LISTENING_ID, MultiProcessSession, free_port, report
 from sessions.ctest_items import CtestItem
 
-CTEST_ITEMS = (CtestItem("destruction", ("destruction-net", "run"), 480),)
+CTEST_ITEMS = (CtestItem(("destruction-session", "run"), 480),)
 
 _HASH_LOG_ID = "DestructionNetSession.HashLine"
 _SCENE = "game/playground/maps/destructionnet.scene.xml"
@@ -98,14 +98,14 @@ def compare_logs(server_text: str, client_text: str) -> CompareResult:
 
 
 def _report(result: CompareResult, logs: list[Path]) -> int:
-    return report("destruction-net", result.problems, logs, f"{result.matched} (id, events) pairs matched between server and client")
+    return report("destruction-session", result.problems, logs, f"{result.matched} (id, events) pairs matched between server and client")
 
 
 def _run(preset: str) -> int:
-    with ProcessGroup("destruction-net", preset, "DestructionNetPair") as group:
+    with MultiProcessSession("destruction-session", preset, "DestructionNetPair") as group:
         list_exe = group.require("Server", "App")
         if list_exe is None:
-            return int(ExitCode.CHECK_INVALID)
+            return int(ExitCode.USAGE_ERROR)
         server_exe, client_exe = list_exe
         port = free_port(socket.SOCK_DGRAM)
         scene = app_arguments.variable("gv_firstScene", _SCENE)
@@ -124,8 +124,8 @@ def _run(preset: str) -> int:
     return _report(compare_logs(server.text(), client.text()), [server.log, client.log])
 
 
-class DestructionNetCommand(Command):
-    name = "destruction-net"
+class DestructionSessionCommand(Command):
+    name = "destruction-session"
     help = "파괴 복제 실제 세션 확인 — 서버 · 클라이언트 두 프로세스의 구조 해시 맞대기(run · compare)"
 
     def add_arguments(self, parser: argparse.ArgumentParser) -> None:

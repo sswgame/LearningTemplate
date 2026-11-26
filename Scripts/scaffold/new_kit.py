@@ -384,7 +384,7 @@ class NewKitCommand(Command):
         reason = describe_invalid_request(root, args.name, args.group)
         if reason is not None:
             print(f"[new-kit] {reason}", file=sys.stderr)
-            return ExitCode.CHECK_INVALID
+            return ExitCode.USAGE_ERROR
         table_path = root / REFERENCE_TABLE
         table_text = table_path.read_bytes().decode("utf-8")
         new_table_text = add_reference_rows(table_text, args.name)  # 파일을 하나라도 쓰기 전에 표의 자리를 확인한다

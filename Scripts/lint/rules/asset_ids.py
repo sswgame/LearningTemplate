@@ -127,10 +127,10 @@ class AssetIdsCommand(Command):
         if args.fix:
             left = fix_worktree(project_root)
             print(f"[asset-ids] {'FAIL' if left else 'OK'} — 남은 결함 {left}건")
-            return ExitCode.VIOLATION if left else ExitCode.PASSED
+            return ExitCode.FAILURE if left else ExitCode.PASSED
         rules = load_rules(project_root)
         list_issue, map_guid = collect_issues(read_worktree_texts(project_root, list_worktree_ids(project_root), rules), rules)
         for issue in list_issue:
             print(f"  - {issue}")
         print(f"[asset-ids] {'FAIL' if list_issue else 'OK'} — 정체성 {len(map_guid)}개, 결함 {len(list_issue)}건")
-        return ExitCode.VIOLATION if list_issue else ExitCode.PASSED
+        return ExitCode.FAILURE if list_issue else ExitCode.PASSED

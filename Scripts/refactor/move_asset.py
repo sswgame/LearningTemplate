@@ -323,23 +323,23 @@ class MoveAssetCommand(Command):
             print(f"  - {problem}")
         if list_problem:
             print(f"[move-asset] 끊어진 참조 {len(list_problem)}건이 남았습니다 — 목록에 없는 칸이면 그 칸을 AssetRef<T> · DataPath 로 선언한다(Config/Dev/AssetReferenceFields.generated.json)")
-            return ExitCode.VIOLATION
+            return ExitCode.FAILURE
         return ExitCode.PASSED
 
 
 def move_one(root: Path, config: FieldConfig, old_id: str, new_id: str, dry_run: bool, resume: bool) -> ExitCode:
-    """한 쌍을 옮기고 참조 · 이름 · 옛 경로 표를 고칩니다(끊어진 참조 검사는 부르는 쪽이 끝에 한 번). 옮길 수 없으면 까닭을 찍고 CHECK_INVALID."""
+    """한 쌍을 옮기고 참조 · 이름 · 옛 경로 표를 고칩니다(끊어진 참조 검사는 부르는 쪽이 끝에 한 번). 옮길 수 없으면 까닭을 찍고 USAGE_ERROR."""
     old_path, new_path = f"{CONTENT_FOLDER}/{old_id}", f"{CONTENT_FOLDER}/{new_id}"
     if not set(new_id) <= NAME_CHARACTERS:
         print(f"[move-asset] '{new_id}' 는 리소스 이름 규칙(소문자 · 숫자 · '_' · '-' · '.' · '/')에 맞지 않습니다")
-        return ExitCode.CHECK_INVALID
+        return ExitCode.USAGE_ERROR
     moved_path = new_path if resume else old_path   # 다시 돌기면 옮긴 자리가 있고 옛 자리가 없어야 한다
     if not (root / moved_path).exists() or (resume and (root / old_path).exists()):
         print(f"[move-asset] '{moved_path}' 가 없습니다" + (f"(또는 옛 자리 '{old_path}' 가 아직 있습니다)" if resume else "") + " — 아무것도 바꾸지 않았습니다")
-        return ExitCode.CHECK_INVALID
+        return ExitCode.USAGE_ERROR
     if not resume and ((root / new_path).exists() or (root / (new_path + META_EXTENSION)).exists()):
         print(f"[move-asset] '{new_path}'(또는 그 .meta)가 이미 있습니다 — 아무것도 옮기지 않았습니다")
-        return ExitCode.CHECK_INVALID
+        return ExitCode.USAGE_ERROR
     is_folder = (root / moved_path).is_dir()
     list_rule = make_rules(old_id, new_id, is_folder, config)
     rename = get_pack_rename(old_id, new_id)
@@ -349,7 +349,7 @@ def move_one(root: Path, config: FieldConfig, old_id: str, new_id: str, dry_run:
     is_root_move = is_folder and is_domain_root(old_id)
     if is_root_move and not is_domain_root(new_id) and (root / moved_path / REDIRECT_FILE_NAME).is_file():
         print(f"[move-asset] '{moved_path}/{REDIRECT_FILE_NAME}' 는 옮긴 뒤 아무 검색 순서도 읽지 않는다 — 그 줄을 {make_redirect_table_id(new_id)} 에 먼저 합친 뒤 지우고 다시 옮긴다")
-        return ExitCode.CHECK_INVALID
+        return ExitCode.USAGE_ERROR
 
     if not dry_run and not resume:
         git_move(root, old_path, new_path)

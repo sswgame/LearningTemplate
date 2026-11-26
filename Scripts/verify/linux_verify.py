@@ -710,8 +710,8 @@ ACTIONS = {
 }
 
 
-class LinuxScenariosCommand(Command):
-    name = "linux-scenarios"
+class LinuxVerifyCommand(Command):
+    name = "linux-verify"
     help = "Linux(WSL 클론) 빌드 · 체인 · 새니타이저 · 골든 입구(setup · all · build · chain · stages · rerun · sanitize · goldens …)"
 
     def add_arguments(self, parser: argparse.ArgumentParser) -> None:
@@ -732,4 +732,4 @@ class LinuxScenariosCommand(Command):
 
 
 if __name__ == '__main__':
-    sys.exit(LinuxScenariosCommand.main())
+    sys.exit(LinuxVerifyCommand.main())

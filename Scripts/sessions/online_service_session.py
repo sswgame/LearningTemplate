@@ -1,9 +1,9 @@
 """
-온라인 로컬 실행(ctest `Net.onlineRun` · `Net.people`) — 전용 서버와 게임 클라이언트를 여러 프로세스로 띄워 TLS 서비스 연결 · 공지(로그인 전) · 로그인 · 라이브 이벤트 · 우편함 호출 · 매칭 배정 · 순위표 제출과 조회를 끝까지 돌린다(온라인 조사 단계 1, K4).
+온라인 로컬 실행(ctest `Net.onlineService.run` · `Net.onlineService.people`) — 전용 서버와 게임 클라이언트를 여러 프로세스로 띄워 TLS 서비스 연결 · 공지(로그인 전) · 로그인 · 라이브 이벤트 · 우편함 호출 · 매칭 배정 · 순위표 제출과 조회를 끝까지 돌린다(온라인 조사 단계 1, K4).
 
-  py -3 -m Scripts online-local run                                   # 기본: Playground, 메모리 저장소
-  py -3 -m Scripts online-local run --server-config <서버 설정 경로>   # 저장소 · 캐시 · 키트 · 제공자를 그 설정이 고른다(sqlite · postgres · resp 도 같은 길)
-  py -3 -m Scripts online-local people                                 # 서버 하나 · 클라이언트 둘: 친구 신청 → 수락, 금화 거래 정산 → 모자란 거래는 잠글 때 거절
+  py -3 -m Scripts online-service-session run                                   # 기본: Playground, 메모리 저장소
+  py -3 -m Scripts online-service-session run --server-config <서버 설정 경로>   # 저장소 · 캐시 · 키트 · 제공자를 그 설정이 고른다(sqlite · postgres · resp 도 같은 길)
+  py -3 -m Scripts online-service-session people                                 # 서버 하나 · 클라이언트 둘: 친구 신청 → 수락, 금화 거래 정산 → 모자란 거래는 잠글 때 거절
 
 설정은 코드가 만들지 않고 파일을 쓴다(`Config/Server/Online/<게임>.json` 과 옆 `.online.json`) — 포트만 빈 것으로 바꾼 사본을 출력 폴더에 쓴다. 저장 키트(`GF_Server_SQLStore` · `GF_Server_CacheStore`)는 Playground 매니페스트가 켠다(`_listModuleOverride`).
 `Config/Server/Online/Playground.external.json` 이 Postgres · RESP · 영수증 · 푸시를 모두 고른 견본이다 - 끝점과 환경 변수의 값은 운영자가 준다. 없으면 서버가 까닭을 남기고 기동하지 못한다.
@@ -25,7 +25,7 @@ from common import app_arguments
 from common.exit_code import ExitCode
 from common.log_lines import problem_lines
 from common.paths import get_project_root
-from common.process_session import DEFAULT_PRESET, ChildProcess, ProcessGroup, free_port, report
+from common.process_session import DEFAULT_PRESET, ChildProcess, MultiProcessSession, free_port, report
 from sessions.ctest_items import CtestItem
 
 _DEFAULT_CONFIG = "Config/Server/Online/Playground.json"
@@ -39,8 +39,8 @@ _SCENARIO_TIMEOUT_SECONDS = 400.0  # 시나리오 하나가 끝나기를 기다�
 _ALLOWED_IDS = frozenset({"LoginTicketKey.AccountKitNoTicketKeySecretEnvironment"})
 
 CTEST_ITEMS = (
-    CtestItem("onlineRun", ("online-local", "run"), 900, (_RUN_SCENARIO,)),
-    CtestItem("people", ("online-local", "people"), 900, _PEOPLE_SCENARIOS),
+    CtestItem(("online-service-session", "run"), 900, (_RUN_SCENARIO,)),
+    CtestItem(("online-service-session", "people"), 900, _PEOPLE_SCENARIOS),
 )
 
 
@@ -56,7 +56,7 @@ def write_server_config(out_dir: Path, server_config: Path) -> tuple[Path, int]:
     return copied, config["_servicePort"]
 
 
-def _start_server(group: ProcessGroup, server_exe: Path, server_config: str, *extra: str) -> tuple[ChildProcess, int] | None:
+def _start_server(group: MultiProcessSession, server_exe: Path, server_config: str, *extra: str) -> tuple[ChildProcess, int] | None:
     copied, service_port = write_server_config(group.out_dir, (get_project_root() / server_config).resolve())
     server = group.start("server", [server_exe, app_arguments.option("game", _GAME), app_arguments.option("server-config", copied), *extra])
     if not server.wait_for_log("OnlineServerRuntime.OnlineServicesListeningPort", _TIMEOUT_SECONDS):
@@ -72,18 +72,18 @@ def _finish(server: ChildProcess, list_client: list[ChildProcess], problems: lis
         problems.append(f"the server exited with code {server.return_code} (log: {server.log})")
     for process in (server, *list_client):
         problems += problem_lines(process.name, process.text(), _ALLOWED_IDS)
-    return report("online-local", problems, [server.log, *(client.log for client in list_client)], ok_message)
+    return report("online-service-session", problems, [server.log, *(client.log for client in list_client)], ok_message)
 
 
 def _run(argument: argparse.Namespace) -> int:
     problems: list[str] = []
-    with ProcessGroup("online-local", argument.preset, "OnlineLocalRun") as group:
+    with MultiProcessSession("online-service-session", argument.preset, "OnlineLocalRun") as group:
         list_exe = group.require("Server", "App")
         if list_exe is None:
-            return int(ExitCode.CHECK_INVALID)
+            return int(ExitCode.USAGE_ERROR)
         started = _start_server(group, list_exe[0], argument.server_config, app_arguments.variable("gv_firstMinigame", _MATCH_MINIGAME))
         if started is None:
-            return int(ExitCode.VIOLATION)
+            return int(ExitCode.FAILURE)
         server, service_port = started
         client = group.start_scenario("client", list_exe[1], _GAME, _RUN_SCENARIO, {"gv_onlineServerAddress": f"127.0.0.1:{service_port}"}, stdin=True)
         # 서버가 점수를 저장한 뒤라야 순위표에 있다 — 그 사건을 보고 순위표를 읽게 한다(값은 시나리오가 본다). 클라이언트가 먼저 끝났으면 기다리지 않는다.
@@ -101,13 +101,13 @@ def _run(argument: argparse.Namespace) -> int:
 
 def _run_people(argument: argparse.Namespace) -> int:
     problems: list[str] = []
-    with ProcessGroup("online-local", argument.preset, "OnlineLocalRun/people") as group:
+    with MultiProcessSession("online-service-session", argument.preset, "OnlineLocalRun/people") as group:
         list_exe = group.require("Server", "App")
         if list_exe is None:
-            return int(ExitCode.CHECK_INVALID)
+            return int(ExitCode.USAGE_ERROR)
         started = _start_server(group, list_exe[0], argument.server_config)
         if started is None:
-            return int(ExitCode.VIOLATION)
+            return int(ExitCode.FAILURE)
         server, service_port = started
         variables = {"gv_onlineServerAddress": f"127.0.0.1:{service_port}"}
         first = group.start_scenario("client1", list_exe[1], _GAME, _PEOPLE_SCENARIOS[0], variables, stdin=True)
@@ -125,8 +125,8 @@ def _run_people(argument: argparse.Namespace) -> int:
     return _finish(server, [first, second], problems, "friend request -> accept -> list, gold trade settled, short trade refused, no unexpected errors or warnings")
 
 
-class OnlineLocalCommand(Command):
-    name = "online-local"
+class OnlineServiceSessionCommand(Command):
+    name = "online-service-session"
     help = "온라인 로컬 실행 — 전용 서버와 게임 클라이언트를 띄워 로그인 → 키트 호출까지 돈다. 저장소 · 키트 · 제공자는 --server-config 가 고른다(run · people)"
 
     def add_arguments(self, parser: argparse.ArgumentParser) -> None:

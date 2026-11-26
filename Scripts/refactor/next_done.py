@@ -74,4 +74,4 @@ class NextDoneCommand(Command):
             print(f"[next-done] 알림: {warning}")
         for line in list_remaining:
             print(f"[next-done] 끝났다고 적힌 줄이 {NEXT_PATH} 에 그대로다 — 지우거나 남은 몫으로 고친다: {line}")
-        return ExitCode.VIOLATION if list_remaining else ExitCode.PASSED
+        return ExitCode.FAILURE if list_remaining else ExitCode.PASSED

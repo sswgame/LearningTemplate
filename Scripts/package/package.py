@@ -309,8 +309,8 @@ def make_package(request: PackageRequest, project_root: Path) -> Path:
     return staging_dir
 
 
-class PackCommand(Command):
-    name = "pack"
+class PackageCommand(Command):
+    name = "package"
     help = "Shipping 빌드 · 쿠킹 · 스테이징으로 배포 패키지 하나를 만든다"
 
     def add_arguments(self, parser: argparse.ArgumentParser) -> None:
@@ -332,10 +332,10 @@ class PackCommand(Command):
             staging_dir = make_package(request, context.root)
         except (PackageError, OSError) as error:
             print(f"[package] FAILED {request.current_step} {error}", flush=True)   # 에디터 패키징 창이 이 줄을 읽는다
-            return ExitCode.VIOLATION
+            return ExitCode.FAILURE
         print(f"[package] done {staging_dir} {measure_bytes(staging_dir)}", flush=True)
         return ExitCode.PASSED
 
 
 if __name__ == "__main__":
-    sys.exit(PackCommand.main())
+    sys.exit(PackageCommand.main())

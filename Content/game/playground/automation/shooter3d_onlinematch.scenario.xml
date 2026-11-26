@@ -2,7 +2,7 @@
 <?asset guid="e5ae2dfa3c63d559c560c62c499bd64f"?>
 <!--
   사격장 온라인 매치(K4)의 거절 길 — 프로세스 안 서버(Config/Server/Online/Playground.json, 전용 서버와 같은 파일)에 붙어 값으로 본다. 판을 끝까지 도는 길은 두 · 세 프로세스가 본다
-  (py -3 -m Scripts online-local run 은 매치 서버 하나, net-pair match 는 접속한 허브 → 매치 서버 → 허브).
+  (py -3 -m Scripts online-service-session run 은 매치 서버 하나, login-connect-session match 는 접속한 허브 → 매치 서버 → 허브).
   ① 허브(시작 맵)에서 매치형 미니게임 shooter3d_match 로 들어가면 매칭 모드 arena_solo(data/playground.matchmodes.xml)에 줄을 서고, 디렉터리에 등록한 이 서버(_publicAddress)로 배정된다
      (OnlineMatchFound). 그 게임 포트에는 서버가 없어 붙지 못하고 허브에 남는다(MatchNotConnected · MatchState 0) — 매치를 이 프로세스에서 대신 돌지 않는다.
   ② 순위표 arena_kills(data/playground.leaderboards.xml)는 매치 서버의 점수만 받는다 — 클라이언트가 낸 점수는 거절된다(OnlineRefusedScoreCount).

@@ -1,10 +1,10 @@
 """
-여러 프로세스 온라인 접속 시나리오 — 전용 서버와 클라이언트를 띄워 로그인 → 게임 접속 티켓 → 암호화 UDP 게임 접속을 끝까지 돌린다(OnlineKits F5, ctest `Net.mmo` · `Net.match` · `Net.floor` · `Net.respawn`).
+여러 프로세스 온라인 접속 시나리오 — 전용 서버와 클라이언트를 띄워 로그인 → 게임 접속 티켓 → 암호화 UDP 게임 접속을 끝까지 돌린다(OnlineKits F5, ctest `Net.loginConnect.mmo` · `.match` · `.floor` · `.respawn`).
 
-  py -3 -m Scripts net-pair mmo --preset Ninja-Release      # 허브 서버(Playground): 첫 접속 → 나감(서버 저장) → 재접속(같은 진행) → 두 클라이언트 함께(폰 복제 · 예측, 회선 흉내)
-  py -3 -m Scripts net-pair match --preset Ninja-Release    # 접속한 허브 → 매칭 배정 → 매치 서버 → 서버가 점수 제출 → 허브 재접속(서버 둘 · 클라이언트 하나)
-  py -3 -m Scripts net-pair floor --preset Ninja-Release    # 두 사람이 움직이는 바닥 맵의 매치에서 서로 보고 쏜다(서버 둘 · 클라이언트 둘)
-  py -3 -m Scripts net-pair respawn --preset Ninja-Release  # 두 사람이 한 매치 서버에서 동시에 둔다: 서로 쏘아(서버 판정) 쓰러짐 → 같은 매치에서 다시 태어남(서버 둘 · 클라이언트 둘)
+  py -3 -m Scripts login-connect-session mmo --preset Ninja-Release      # 허브 서버(Playground): 첫 접속 → 나감(서버 저장) → 재접속(같은 진행) → 두 클라이언트 함께(폰 복제 · 예측, 회선 흉내)
+  py -3 -m Scripts login-connect-session match --preset Ninja-Release    # 접속한 허브 → 매칭 배정 → 매치 서버 → 서버가 점수 제출 → 허브 재접속(서버 둘 · 클라이언트 하나)
+  py -3 -m Scripts login-connect-session floor --preset Ninja-Release    # 두 사람이 움직이는 바닥 맵의 매치에서 서로 보고 쏜다(서버 둘 · 클라이언트 둘)
+  py -3 -m Scripts login-connect-session respawn --preset Ninja-Release  # 두 사람이 한 매치 서버에서 동시에 둔다: 서로 쏘아(서버 판정) 쓰러짐 → 같은 매치에서 다시 태어남(서버 둘 · 클라이언트 둘)
 
 준비(`Saved/NetPairRun/` 아래에 쓴다): 서버 설정(빈 게임 포트 · 서비스 포트 · `_bGameConnectTicket`)과 옆 온라인 설정(계정 키트의 개발용 시드 계정 설정 `_listSeedTestAccount`, 게임 접속 조립 `gameConnect`).
 서버는 `-server-config=<경로>` 로 그 설정을 읽고, 클라이언트 시나리오는 주소를 `{gv_onlineServerAddress}`(로그인) · `{gv_gameServerAddress}`(게임)로 받는다.
@@ -29,7 +29,7 @@ from common.command import Command, ScriptContext
 from common import app_arguments
 from common.exit_code import ExitCode
 from common.log_lines import problem_lines
-from common.process_session import DEFAULT_PRESET, NET_LISTENING_ID, USER_DATA_ROOT_ENVIRONMENT, ChildProcess, ProcessGroup, free_port, report
+from common.process_session import DEFAULT_PRESET, NET_LISTENING_ID, USER_DATA_ROOT_ENVIRONMENT, ChildProcess, MultiProcessSession, free_port, report
 from sessions.ctest_items import CtestItem
 
 _GAME = "Playground"
@@ -146,7 +146,7 @@ def _finish(list_server: list[ChildProcess], list_client: list[ChildProcess], pr
             problems.append(f"the {server.name} server exited with code {server.return_code} (log: {server.log})")
     for process in (*list_server, *list_client):
         problems += problem_lines(process.name, process.text())
-    return report("net-pair", problems, [process.log for process in (*list_server, *list_client)], ok_message)
+    return report("login-connect-session", problems, [process.log for process in (*list_server, *list_client)], ok_message)
 
 
 # Playground 허브 서버와 클라이언트(T10) — 시작 맵이 허브(maps/hub)다. 계정 · 서버 이름은 클라이언트 시나리오의 `net.ticketconnect` 줄과 같아야 한다.
@@ -161,10 +161,10 @@ _MMO_SUBLEVEL_ENTER, _MMO_SUBLEVEL_LEAVE = "minigame.enter cardtable CardTableGa
 
 
 def _run_mmo(argument: argparse.Namespace) -> int:
-    with ProcessGroup("net-pair", argument.preset, "NetPairRun/mmo") as group:
+    with MultiProcessSession("login-connect-session", argument.preset, "NetPairRun/mmo") as group:
         list_exe = group.require("Server", "App")
         if list_exe is None:
-            return int(ExitCode.CHECK_INVALID)
+            return int(ExitCode.USAGE_ERROR)
         server_exe, client_exe = list_exe
         game_port, service_port = free_port(socket.SOCK_DGRAM), free_port(socket.SOCK_STREAM)
         accounts = (_MMO_ACCOUNT, *((account, f"{account}_pw_1") for _, account in _MMO_PAWN_CLIENTS))
@@ -223,10 +223,10 @@ _RESPAWN_SCENARIOS = (_scenario("match_respawn_first"), _scenario("match_respawn
 _FLOOR_SCENARIOS = (_scenario("match_floor_first"), _scenario("match_floor_second"))
 
 CTEST_ITEMS = (
-    CtestItem("mmo", ("net-pair", "mmo"), 1500, (*_MMO_SCENARIOS, *(scenario for scenario, _ in _MMO_PAWN_CLIENTS))),
-    CtestItem("match", ("net-pair", "match"), 900, (_MATCH_SCENARIO,)),
-    CtestItem("floor", ("net-pair", "floor"), 1200, _FLOOR_SCENARIOS),
-    CtestItem("respawn", ("net-pair", "respawn"), 1200, _RESPAWN_SCENARIOS),
+    CtestItem(("login-connect-session", "mmo"), 1500, (*_MMO_SCENARIOS, *(scenario for scenario, _ in _MMO_PAWN_CLIENTS))),
+    CtestItem(("login-connect-session", "match"), 900, (_MATCH_SCENARIO,)),
+    CtestItem(("login-connect-session", "floor"), 1200, _FLOOR_SCENARIOS),
+    CtestItem(("login-connect-session", "respawn"), 1200, _RESPAWN_SCENARIOS),
 )
 
 
@@ -419,7 +419,7 @@ class _CacheServer(socketserver.ThreadingTCPServer):
         super().__exit__(*exc)
 
 
-def _start_match_servers(group: ProcessGroup, server_exe: Path, cache_server: _CacheServer, accounts: tuple[tuple[str, str], ...], match_arguments: tuple[str, ...] = (),
+def _start_match_servers(group: MultiProcessSession, server_exe: Path, cache_server: _CacheServer, accounts: tuple[tuple[str, str], ...], match_arguments: tuple[str, ...] = (),
                          minigame: str = _MATCH_MINIGAME, server_kind: str = "game") -> tuple[list[ChildProcess], dict[str, str]] | None:
     """허브 서버와 매치 서버를 띄운다(저장소 SQLite 파일 하나 · 캐시 하나를 나눠 가진다). (서버들, 클라이언트에 줄 주소 변수)이고, 게임 포트를 열지 못하면 까닭을 찍고 None."""
     store = {"_driver": "sqlite", "_connection": (group.out_dir / "match.sqlite").as_posix()}
@@ -465,13 +465,13 @@ def _stop_servers(list_server: list[ChildProcess]) -> None:
 
 
 def _run_match(argument: argparse.Namespace) -> int:
-    with _CacheServer() as cache_server, ProcessGroup("net-pair", argument.preset, "NetPairRun/match", clean=True) as group:
+    with _CacheServer() as cache_server, MultiProcessSession("login-connect-session", argument.preset, "NetPairRun/match", clean=True) as group:
         list_exe = group.require("Server", "App")
         if list_exe is None:
-            return int(ExitCode.CHECK_INVALID)
+            return int(ExitCode.USAGE_ERROR)
         started = _start_match_servers(group, list_exe[0], cache_server, _MATCH_ACCOUNTS[:1])
         if started is None:
-            return int(ExitCode.VIOLATION)
+            return int(ExitCode.FAILURE)
         list_server, addresses = started
         client = group.start_scenario("client", list_exe[1], _GAME, _MATCH_SCENARIO, addresses)
         client.wait(_SCENARIO_TIMEOUT_SECONDS)
@@ -486,13 +486,13 @@ def _run_match(argument: argparse.Namespace) -> int:
 def _run_two_players(argument: argparse.Namespace, mode: str, scenarios: tuple[str, str], minigame: str, server_kind: str, match_arguments: tuple[str, ...],
                      match_counts: tuple[tuple[str, int], ...], first_watches: tuple[str, str] | None, second_watches: tuple[str, str] | None, ok_message: str) -> int:
     """허브 · 매치 서버와 두 클라이언트를 돌린다 — 첫 사람이 매치에 들어간 뒤 둘째가 같은 서버의 빈 자리로 들어간다. 바닥 감시 값을 주면 첫 사람의 자기 자리와 둘째가 본 자리를 견준다."""
-    with _CacheServer() as cache_server, ProcessGroup("net-pair", argument.preset, f"NetPairRun/{mode}", clean=True) as group:
+    with _CacheServer() as cache_server, MultiProcessSession("login-connect-session", argument.preset, f"NetPairRun/{mode}", clean=True) as group:
         list_exe = group.require("Server", "App")
         if list_exe is None:
-            return int(ExitCode.CHECK_INVALID)
+            return int(ExitCode.USAGE_ERROR)
         started = _start_match_servers(group, list_exe[0], cache_server, _MATCH_ACCOUNTS, match_arguments, minigame, server_kind)
         if started is None:
-            return int(ExitCode.VIOLATION)
+            return int(ExitCode.FAILURE)
         list_server, addresses = started
         first = group.start_scenario("first", list_exe[1], _GAME, scenarios[0], addresses)
         list_client = [first]
@@ -525,8 +525,8 @@ def _run_floor(argument: argparse.Namespace) -> int:
 _MODES = {"mmo": _run_mmo, "match": _run_match, "floor": _run_floor, "respawn": _run_respawn}
 
 
-class NetPairCommand(Command):
-    name = "net-pair"
+class LoginConnectSessionCommand(Command):
+    name = "login-connect-session"
     help = "두 프로세스 온라인 접속 시나리오 — 서버 · 클라이언트로 로그인 → 게임 접속 티켓 → 암호화 UDP 접속(mmo · match · floor · respawn)"
 
     def add_arguments(self, parser: argparse.ArgumentParser) -> None:

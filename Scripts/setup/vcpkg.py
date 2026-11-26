@@ -280,7 +280,7 @@ class VcpkgCommand(Command):
             print(resolved_path.as_posix())
             return ExitCode.PASSED
         sys.stderr.write("[Vcpkg Error] vcpkg not found\n")
-        return ExitCode.VIOLATION
+        return ExitCode.FAILURE
 
 
 if __name__ == "__main__":

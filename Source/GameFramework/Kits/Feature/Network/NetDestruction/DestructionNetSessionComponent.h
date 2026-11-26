@@ -4,7 +4,7 @@
  * @details 씬에 오브젝트 하나로 둔다. 역할은 실행 인자가 정한다(`GameNetSession` 머리말): 전용 서버 · `-gv_netListenPort` 면 서버,
  *          `-gv_netConnectAddress` 면 클라이언트, 세션이 없으면(혼자 하는 게임) 아무것도 하지 않는다. 복제와 해시 로그는 `DestructionNetSession` 이 맡는다.
  *          예: 서버 `Server -gv_firstScene=<씬> -gv_netListenPort=7777`, 클라이언트 `App -gv_firstScene=<같은 씬> -gv_netConnectAddress=127.0.0.1:7777`.
- *          두 로그를 `py -3 -m Scripts destruction-net compare` 로(두 프로세스를 띄우는 것까지는 `run`) 맞대면 컴파일러 · 플랫폼을 넘어 구조 해시가 같은지 본다.
+ *          두 로그를 `py -3 -m Scripts destruction-session compare` 로(두 프로세스를 띄우는 것까지는 `run`) 맞대면 컴파일러 · 플랫폼을 넘어 구조 해시가 같은지 본다.
  *
  *          틱은 마지막 그룹(`PostUpdate`)이다 — 서버는 이번 틱의 물리가 만든 사건을 같은 틱에 보낸다. 사건 · 자세의 시각은 월드의 서버 틱(`NetClock`)이라
  *          서버의 프레임 길이와 무관하다(예전에는 프레임마다 하나씩 세어 서버 틱 빈도가 설정과 다르면 복제를 멈췄다).
@@ -19,7 +19,7 @@
  *            폭발 드럼통(`ExplosiveBarrelComponent`)처럼 피해를 내는 기믹은 서버의 게임플레이라 클라이언트에서 끈다.
  *          - 해시 로그: 오브젝트의 사건 수가 바뀔 때마다 id 가 `DestructionNetSession.HashLine` 인 로그 줄 하나를 JSON 본문(`side` · `id` · `events` · `hash` · `name`)으로 남긴다.
  *            같은 그래프에 같은 사건을 같은 순서로 적용하면 같은 해시다(`DestructionState::computeStateHash`) — 다른 컴파일러 · 플랫폼의 서버와 클라이언트
- *            로그를 `py -3 -m Scripts destruction-net compare`(`Scripts/sessions/destruction_session.py`)가 (번호, 사건 수) 로 맞대어 본다. 클라이언트가 스냅숏으로 건너뛴 사건 수는 그 줄이 없다.
+ *            로그를 `py -3 -m Scripts destruction-session compare`(`Scripts/sessions/destruction_session.py`)가 (번호, 사건 수) 로 맞대어 본다. 클라이언트가 스냅숏으로 건너뛴 사건 수는 그 줄이 없다.
  *            로그 매크로를 쓰므로 Shipping 에는 줄이 없다.
  */
 #pragma once

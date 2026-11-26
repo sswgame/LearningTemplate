@@ -90,7 +90,7 @@
 |---|---|
 | `Scenario.<팩>` | 구성이 짓는 게임마다(활성 게임 + `SW_GAMES`, Release 는 `ALL`) `Content/game/<팩>/automation/*.scenario.xml` 체인. 팩 이름은 `Config/Game/<게임>.json` 의 `_packRoot`, 활성 게임이 아니면 `-game=<게임>`. 엔진 시나리오(`engine/automation/`)는 활성 게임 체인에 든다 |
 | `Scenario.engine.rhiswap.<이름>` | `rhiswap/` — 네 백엔드가 있는 Windows |
-| `Net.<이름>` | `netpair/`(라벨 `net`) — 실행기(`Scripts/sessions`)의 `CTEST_ITEMS` |
+| `Net.<세션>.<하위 명령>` | `netpair/`(라벨 `net`) — 실행기(`Scripts/sessions`)의 `CTEST_ITEMS` |
 | `Scenario.<팩>.showcase` | `showcase/`(골든 `showcase/golden/`) |
 | `Scenario.<팩>.desktop.<이름>` | `desktop/` — OS 전역 상태를 쓰거나 프로세스를 끝낸다, 하나씩 혼자. `desktop/editor/` 는 편집기로 빌드 트리 · 모듈 · `Config/Editor` 를 바꾼다(`…desktop.editor.<이름>`) |
 | `Scenario.<팩>.sequence.<묶음>` | `sequence/<묶음>.1` · `.2` — 같은 사용자 설정 파일로 두 번 기동 |

@@ -72,7 +72,7 @@ class ToolPolicyTest(unittest.TestCase):
         self.assertGreater(p95, 0.0)
 
     def test_tool_rules_anchor_on_the_command_position(self):
-        for command in ("py -3 -m Scripts linux-scenarios all", "cd x && py -3 Scripts/verify/linux_verify.py chain a", "python3 Scripts/verify/linux_verify.py build"):
+        for command in ("py -3 -m Scripts linux-verify all", "cd x && py -3 Scripts/verify/linux_verify.py chain a", "python3 Scripts/verify/linux_verify.py build"):
             self.assertIn("linux-verify-before-linux", self.pre("Bash", {"command": command})["hookSpecificOutput"]["permissionDecisionReason"])
         for command in ("git -C D:/P push origin abc:main", "cd x && bash Scripts/verify/preflight.sh --no-linux"):
             self.assertIn("preflight-before-push", self.pre("Bash", {"command": command})["hookSpecificOutput"]["permissionDecisionReason"])

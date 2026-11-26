@@ -151,5 +151,5 @@ class ApiDiffCommand(Command):
             print(f"[api-diff] 겹침 {kind} '{name}': " + ", ".join(f"{ref} ({where})" for ref, where in owners))
         if overlaps:
             print(f"[api-diff] 갈래 사이 같은 새 이름 {len(overlaps)}개 — 병합 전에 한 갈래로 모은다")
-            return ExitCode.VIOLATION
+            return ExitCode.FAILURE
         return ExitCode.PASSED
