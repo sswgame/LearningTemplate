@@ -12,9 +12,9 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Subsystem/Subsystem.h"
 
-#include "Engine/Graphics/Display/DisplayOutput.h"
 #include "Engine/Graphics/RHI/RHIInitResult.h"
 #include "Engine/Graphics/RHI/RHIWaitIdleReason.h"
+#include "Engine/Graphics/View/DisplayOutput.h"
 #include "Engine/Presentation/IEngineRenderDriver.h"
 
 #include "sw/config/ProcessExitCodes.gen.h"

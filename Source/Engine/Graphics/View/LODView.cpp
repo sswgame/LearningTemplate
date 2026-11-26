@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Graphics/LOD/LODView.h"
+#include "Engine/Graphics/View/LODView.h"
 
 #include "Core/Math/MathUtil.h"
 

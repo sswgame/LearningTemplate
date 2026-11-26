@@ -4,7 +4,7 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/TestFramework/TestFramework.h"
 
-#include "Engine/Graphics/LOD/LODView.h"
+#include "Engine/Graphics/View/LODView.h"
 
 using namespace sw;
 

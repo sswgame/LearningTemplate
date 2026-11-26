@@ -14,7 +14,7 @@
 #include "Core/Registry/RegistrationList.h"
 
 #include "Engine/Graphics/Debug/RenderDiagnostics.h"
-#include "Engine/Graphics/Display/DisplayOutput.h"
+#include "Engine/Graphics/View/DisplayOutput.h"
 #include "Engine/Renderer/Frame/FrameMeshDeformState.h"
 
 namespace sw
