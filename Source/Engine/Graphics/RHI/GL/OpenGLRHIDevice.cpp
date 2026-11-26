@@ -438,8 +438,8 @@ namespace sw
             }
 
             // GL 오류를 로그로. 드라이버는 디버그 컨텍스트(WGL_CONTEXT_DEBUG_BIT_ARB)에서만 메시지를 만들 의무가 있다.
-            // 그 비트는 플랫폼 컨텍스트(WGL · GLX)가 진단을 켜는 빌드에서 켠다(`build::kShipping` 가 아닌 구성). SYNCHRONOUS 라 메시지가 원인 호출 안에서 나온다.
-            const bool bDebugOutput = build::kShipping == false; // 배포본은 디버그 컨텍스트가 없어 메시지도 없다
+            // 그 비트는 플랫폼 컨텍스트(WGL · GLX · EGL)가 켠다(`IOpenGLPlatformContext::kDebugContext`). SYNCHRONOUS 라 메시지가 원인 호출 안에서 나온다.
+            const bool bDebugOutput = IOpenGLPlatformContext::kDebugContext; // 배포본은 디버그 컨텍스트가 없어 메시지도 없다
             const bool bHasDebugAPI = glad_glDebugMessageCallback != nullptr && glad_glDebugMessageControl != nullptr;
             if ( bDebugOutput && bHasDebugAPI )
             {
