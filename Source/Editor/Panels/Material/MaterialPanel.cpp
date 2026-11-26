@@ -115,7 +115,7 @@ namespace sw::editor
                 formatstring( id.data(), id.capacity(), "##%#", label );
                 const utf8*          pLabel   = label.c_str();
                 const EditorWidgetID widgetID = EditorWidgetID::fromString( id.c_str() );
-                const utf8*          pID      = id.c_str(); // 이름표는 왼쪽 열(`drawPropertyRowLabel`)에 둔다 — 셰이더 · 텍스처 슬롯과 같은 쪽이다(예전에는 값 오른쪽에 붙었다)
+                const utf8*          pID      = id.c_str(); // 이름표는 왼쪽 열(`drawPropertyRowLabel`)에 둔다 — 셰이더 · 텍스처 슬롯과 같은 쪽이다
                 if ( prop._value.empty() )
                     prop._value = prop._defaultValue;
 
