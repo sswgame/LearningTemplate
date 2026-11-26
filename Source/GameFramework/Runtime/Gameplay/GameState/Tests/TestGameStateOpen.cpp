@@ -2,17 +2,39 @@
 
 #include "Core/TestFramework/TestFramework.h"
 
+#include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
+#include "GameFramework/Runtime/Foundation/Condition/GameFlags.h"
 #include "GameFramework/Runtime/Foundation/Condition/IGameFlagsOwner.h"
 #include "GameFramework/Runtime/Gameplay/GameState/GameStateComponent.h"
 #include "GameFramework/Runtime/Gameplay/GameState/StateSectionTableUtil.h"
-#include "GameFramework/Runtime/Gameplay/GameState/Tests/FlagsOwnerTestComponent.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Wallet.h"
+
+namespace sw
+{
+    /** @brief 늘 열린 자기 플래그를 내는 플래그 주인입니다. */
+    REFLECT( HideInMenu )
+    struct FlagsOwnerTestComponent : public Component
+    {
+        REFLECT_BODY();
+        REFLECT_INTERFACE( IGameFlagsOwner, _gameFlagsOwnerPort );
+
+        /** @brief 주인의 `_flags` 를 내는 포트입니다. */
+        struct GameFlagsOwnerPort final : IGameFlagsOwner
+        {
+            GameFlags* findOpenFlags() override { return &getPortOwner<FlagsOwnerTestComponent>( *this, offsetof( FlagsOwnerTestComponent, _gameFlagsOwnerPort ) )._flags; }
+        };
+
+        GameFlags          _flags;
+        GameFlagsOwnerPort _gameFlagsOwnerPort;
+    };
+} // namespace sw
 
 using namespace sw;
 
@@ -69,3 +91,5 @@ SW_TEST_CASE( GameStateOpenTest, SecondOpenFlagsOwnerIsAnError )
     SW_REQUIRE_TRUE( pLevel->removeComponent( pLoose ) );
     SW_EXPECT_TRUE( IGameFlagsOwner::findOpen( &manager ) == &pScene->getFlags() );
 }
+
+#include "TestGameStateOpen.cpp.gen.inl"

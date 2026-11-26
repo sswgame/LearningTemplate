@@ -1,22 +1,58 @@
 // LootGrantTest: 아이템 상자가 받을 가방(IItemReceiver: 폰을 쥔 조종자 쪽 · 테스트 받는 쪽)에 아이템을 넣는지, 받는 쪽이 없거나 거절하면 열리지 않는지 본다(nogpu, 헤드리스).
 #include "pch.h"
 
+#include "Core/Foundation/Types.h"
 #include "Core/String/Name/hashed_string.h"
 #include "Core/TestFramework/TestFramework.h"
 
+#include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Runtime/Character/Control/Controller/PlayerControllerComponent.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/Loot/GatheringNodeComponent.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/Loot/ItemBoxComponent.h"
-#include "GameFramework/Runtime/Gameplay/Gimmick/Loot/Tests/ItemReceiverTestComponent.h"
 #include "GameFramework/Runtime/Gameplay/Interaction/InteractableComponent.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/IItemReceiver.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/InventoryComponent.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/PickupComponent.h"
+
+namespace sw
+{
+    /** @brief `_room` 개까지 받아 세고, 넘치면 `NoRoom` 으로 거절합니다. */
+    REFLECT( HideInMenu )
+    struct ItemReceiverTestComponent : public Component
+    {
+        REFLECT_BODY();
+        REFLECT_INTERFACE( IItemReceiver, _itemReceiverPort );
+
+        /** @brief 주인에게 넘기는 포트입니다. */
+        struct ItemReceiverPort final : IItemReceiver
+        {
+            [[nodiscard]] ItemGrantResult receiveItem( const hashed_string& item, int32 count ) override
+            {
+                ItemReceiverTestComponent& owner = getPortOwner<ItemReceiverTestComponent>( *this, offsetof( ItemReceiverTestComponent, _itemReceiverPort ) );
+                if ( owner._received + count > owner._room )
+                    return ItemGrantResult::NoRoom;
+                owner._received += count;
+                owner._lastItem = item;
+                return ItemGrantResult::Granted;
+            }
+
+            [[nodiscard]] ItemGrantResult receiveStack( const InventorySlot& stack ) override { return receiveItem( stack._itemID, stack._count ); }
+        };
+
+        int32            _room{ 0 };
+        int32            _received{ 0 };
+        hashed_string    _lastItem{};
+        ItemReceiverPort _itemReceiverPort;
+    };
+} // namespace sw
 
 using namespace sw;
 
@@ -201,3 +237,5 @@ SW_TEST_CASE( LootGrantTest, GatheringRunsOnTheCompletedInteraction )
     SW_EXPECT_TRUE( pNode->isDepleted() );
     SW_EXPECT_FALSE( pInteractable->isEnabled() );
 }
+
+#include "TestLootGrants.cpp.gen.inl"

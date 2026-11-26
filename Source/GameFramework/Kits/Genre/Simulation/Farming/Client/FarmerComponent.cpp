@@ -1,18 +1,55 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Genre/Simulation/Farming/Client/FarmerComponent.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Animation/Component/SkeletalAnimatorComponent.h"
 #include "Engine/Foundation/WorldOrigin.h"
+#include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Tick/TickContext.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Visual/Component/MeshComponent.h"
 
+#include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Simulation/Farming/Component/FarmGameModeComponent.h"
+#include "GameFramework/Runtime/Foundation/GameMode/GameFrameworkComponent.h"
 
 namespace sw
 {
+    /** @brief 농부 뷰가 따라가는 것입니다. */
+    ENUM()
+    enum class FarmerViewKind : uint8
+    {
+        Farmer = 0, ///< 농부 자리
+        Target,     ///< 농부가 바라보는 칸(밭 밖이면 숨긴다)
+    };
+
+    /**
+     * @class FarmerComponent
+     * @brief `TickGroup::PostUpdate` 에서 디렉터를 읽기만 하고 자기 오브젝트의 메시에만 씁니다. 디렉터는 핸들(씬의 PROPERTY)로 들고 매 프레임 풉니다.
+     */
+    REFLECT( Category = "Farming", DisplayName = "Farmer View", Tooltip = "Follows the farm game mode farmer or the tile the farmer faces" )
+    class FarmerComponent : public GameFrameworkComponent
+    {
+    public:
+        REFLECT_BODY();
+
+        static constexpr TickGroup kTickGroup = TickGroup::PostUpdate; ///< 디렉터(PrePhysics)가 이 프레임의 이동을 끝낸 뒤에 읽는다.
+
+        FarmerComponent();
+        virtual ~FarmerComponent() override = default;
+
+        void onTick( TickContext& context ) override;
+
+    private:
+        PROPERTY( Category = "Farmer", DisplayName = "Height Offset", Tooltip = "Lift above the ground point", Units = m )
+        float32 _heightOffset;
+        PROPERTY( Category = "Farmer", DisplayName = "Kind", Tooltip = "Follow the farmer or the faced tile" )
+        FarmerViewKind      _kind;
+        SW_TRANSIENT uint32 _lastToolUseCount; ///< 몸이 동작으로 옮긴 마지막 도구 사용 수(디렉터의 수가 오르면 그 도구의 트리거를 건다)
+    };
+
     namespace
     {
         /**
@@ -73,3 +110,5 @@ namespace sw
             pMesh->setLocalPosition( context.getManager().getWorldOrigin().toLocal( FarmGameModeComponent::computeTileCenter( x, y ) + lift ) );
     }
 } // namespace sw
+
+#include "FarmerComponent.cpp.gen.inl"
