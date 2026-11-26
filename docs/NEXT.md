@@ -24,7 +24,7 @@
 
 | 갈래 · 워크트리 | 몫 |
 | --- | --- |
-| w-shaderreload · LT-wt/shaderreload | 손으로 쓴 열거 이름 함수(`getKindName` 류 · 열거형 위 문자열 switch)를 `ENUM()` · `getEnumName` 으로 |
+| w-shaderreload · LT-wt/shaderreload | 끝(b58d3c91df — 열거형 여섯을 `ENUM()` 으로) — 다음 묶음에 합친다 |
 | w-pimpl · LT-wt/pimpl | 8 절 임포트 산출물 이름을 원본 .meta 에 적기(코드 몫 — 다시 임포트는 통합) |
 | w-cpp-reflect · LT-wt/cppreflect | ReflectionValidation 나누기(조사 끝 — 타입 검증은 배포에 남기고 프로퍼티 검증 · ObjectValidation · 기록 표는 개발 전용으로, 관문 타입의 `PROPERTY( Validate )` 는 파서가 거절) |
 
@@ -32,6 +32,7 @@
 
 ### 아직 아무도 맡지 않은 몫 [코드]
 
+- Core 층 열거 이름: `getEnumName` 은 Engine 리플렉션이라 Core 의 손 이름 표 7 곳(AsyncFileIO · NetConnection · ShutdownSignal · MemoryTag 등)이 남았다. Core 에서 쓸 열거 이름 장치를 둘지, 리플렉션 열거 메타를 Core 로 내릴지 정한다.
 - AssertDialog 합치기 — 사용자에게 물을 것.
 
 ## 1. 다음 순서
