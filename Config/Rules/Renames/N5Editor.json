@@ -138,5 +138,20 @@
   {"old": "EditorNetLinkSettings", "new": "EditorNetEmulationSettings", "why": "망 상태 흉내는 NetEmulation 하나로 부른다(Link 는 관계만)"},
   {"old": "EditorNetLinkDirection", "new": "NetEmulationDirection", "why": "망 상태 흉내는 NetEmulation 하나로 부른다(Link 는 관계만)"},
   {"old": "EditorNetConditions", "new": "EditorNetEmulationSettings", "why": "파일 이름을 주 형식 EditorNetEmulationSettings 에 맞춘다"},
-  {"old": "EditorNetConditionsInternal", "new": "EditorNetEmulationSettingsInternal", "why": "EditorNetConditions → EditorNetEmulationSettings 를 따른다"}
+  {"old": "EditorNetConditionsInternal", "new": "EditorNetEmulationSettingsInternal", "why": "EditorNetConditions → EditorNetEmulationSettings 를 따른다"},
+  {"old": "EditorBakeRunState", "new": "EditorBakeSession", "why": "파일 이름(EditorBakeSession.h) · 옆 형식(EditorLightProbeBakeSession)과 맞춘다", "allowExisting": true},
+  {"old": "PhysicsShapeGatherer", "new": "PhysicsShapeVisualizer", "why": "다른 시각화 파일처럼 형식 이름을 파일 이름(Visualizer)에 맞춘다", "allowExisting": true},
+  {"old": "RenderFrameSwitches", "new": "RenderFrameVariables", "why": "gv_ 개발 변수 정의 파일은 …Variables(언리얼 CVar 묶음)"},
+  {"old": "RenderFrameSwitchesInternal", "new": "RenderFrameVariablesInternal", "why": "RenderFrameSwitches → RenderFrameVariables 를 따른다"},
+  {"old": "RenderFrameSwitchesTest", "new": "RenderFrameVariablesTest", "why": "RenderFrameSwitches → RenderFrameVariables 를 따른다"},
+  {"old": "RenderDiagnosticsSwitches", "new": "RenderDiagnosticsVariables", "why": "gv_ 개발 변수 정의 파일은 …Variables(언리얼 CVar 묶음)"},
+  {"old": "RenderDiagnosticsSwitchesInternal", "new": "RenderDiagnosticsVariablesInternal", "why": "RenderDiagnosticsSwitches → RenderDiagnosticsVariables 를 따른다"},
+  {"old": "DevToolsSwitches", "new": "DevToolsVariables", "why": "RenderFrameSwitches → RenderFrameVariables 를 따른다(등록 이름)"},
+  {"old": "DeviceLostPolicySwitch", "new": "DeviceLostPolicySubsystem", "why": "Subsystem 을 상속한 형식은 …Subsystem 끝말(언리얼 USubsystem). 파일 이름도 주 형식"},
+  {"old": "EnvironmentFreezeSwitch", "new": "EnvironmentFreezeSubsystem", "why": "Subsystem 을 상속한 형식은 …Subsystem 끝말(언리얼 USubsystem). 파일 이름도 주 형식"},
+  {"old": "EnvironmentFreezeSwitchInternal", "new": "EnvironmentFreezeSubsystemInternal", "why": "EnvironmentFreezeSwitch → EnvironmentFreezeSubsystem 을 따른다"},
+  {"old": "FixedFrameDeltaSwitch", "new": "FixedFrameDeltaSubsystem", "why": "Subsystem 을 상속한 형식은 …Subsystem 끝말(언리얼 USubsystem). 파일 이름도 주 형식"},
+  {"old": "FixedFrameDeltaSwitchInternal", "new": "FixedFrameDeltaSubsystemInternal", "why": "FixedFrameDeltaSwitch → FixedFrameDeltaSubsystem 을 따른다"},
+  {"old": "GameAutoplaySwitch", "new": "GameAutoplaySubsystem", "why": "파일 이름을 주 형식 GameAutoplaySubsystem 에 맞춘다", "allowExisting": true},
+  {"old": "GameAutoplaySwitchInternal", "new": "GameAutoplaySubsystemInternal", "why": "GameAutoplaySwitch → GameAutoplaySubsystem 을 따른다"}
 ]

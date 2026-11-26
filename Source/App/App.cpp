@@ -56,8 +56,8 @@
 #include "Engine/Window/SplashWindow.h"
 
 #include "ModuleManager/GameModuleManager.h"
-#include "ModuleManager/Host/HostDevLayer.h"
 #include "ModuleManager/Host/HostLaunch.h"
+#include "ModuleManager/Host/IHostDevLayer.h"
 #include "ModuleManager/ModuleLoaderSubsystem.h"
 
 #if defined( SW_PLATFORM_WEB )

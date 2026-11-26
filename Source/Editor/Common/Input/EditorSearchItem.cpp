@@ -12,8 +12,8 @@
 #include "Editor/Common/EditorSceneIterationAccess.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorSubsystems.h"
+#include "Editor/Common/Workspace/Selection/EditorSelection.h"
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/TagSystem.h"

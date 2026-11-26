@@ -8,7 +8,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Path/AbsolutePath.h"
 
-#include "Editor/Common/Workspace/EditorPanelVisibility.h"
+#include "Editor/Common/Workspace/Layout/EditorPanelVisibility.h"
 
 struct ImGuiDockNode;
 

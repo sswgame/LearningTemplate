@@ -9,7 +9,7 @@
 
 #include "Editor/Common/Asset/AssetWriter.h"
 #include "Editor/Common/Config/EditorPaths.h"
-#include "Editor/Common/Workspace/EditorTransaction.h"
+#include "Editor/Common/Workspace/Undo/EditorTransaction.h"
 
 #include "Engine/Animation/Rig/RigAsset.h"
 #include "Engine/Animation/Rig/RigInstance.h"

@@ -1,7 +1,5 @@
 #include "pch.h"
 
-#include "ModuleManager/Host/HostDevLayer.h"
-
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/Diagnostics/PhaseTimings.h"
 #include "Core/File/PlatformFileUtil.h"
@@ -23,6 +21,7 @@
 
 #include "ModuleManager/GameModuleManager.h"
 #include "ModuleManager/Host/HostLaunch.h"
+#include "ModuleManager/Host/IHostDevLayer.h"
 
 #if SW_WITH_DYNAMIC_MODULES
     #include "DevTools/ModuleReload/HotReload/ModuleHotReloadManager.h"

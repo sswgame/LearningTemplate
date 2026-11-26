@@ -6,7 +6,7 @@
 #include "Core/String/StringUtil.h"
 #include "Core/Time/MonotonicClock.h"
 
-#include "Editor/Common/Workspace/EditorStateStore.h"
+#include "Editor/Common/Workspace/Layout/EditorStateStore.h"
 #include "Editor/Common/Workspace/NetPlay/EditorNetPlaySession.h"
 #include "Editor/Common/Workspace/NetPlay/EditorNetProfilerHistory.h"
 #include "Editor/Panels/Multiplayer/Model/MultiplayerSessionViewModel.h"

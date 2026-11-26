@@ -9,7 +9,7 @@
 #include "Core/Foundation/Types.h"
 
 #include "Editor/Common/EditorSubsystem.h"
-#include "Editor/Viewport/Model/EditorVisualizerGeometry.h"
+#include "Editor/Viewport/Model/Visualizers/EditorVisualizerGeometry.h"
 
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/Editor/Model/ParkLayoutViewModel.h"
 

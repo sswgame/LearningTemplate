@@ -4,7 +4,7 @@
 #include "Core/TestFramework/TestFramework.h"
 
 #include "Editor/Viewport/Model/EditorViewportPickViewModel.h"
-#include "Editor/Viewport/Model/EditorVisualizerDrawList.h"
+#include "Editor/Viewport/Model/Visualizers/EditorVisualizerDrawList.h"
 
 namespace
 {

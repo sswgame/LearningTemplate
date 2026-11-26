@@ -13,7 +13,7 @@
 
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Widgets/PropertyGrid/Model/PropertyGridObjectEdit.h"
-#include "Editor/Common/Workspace/EditorTransaction.h"
+#include "Editor/Common/Workspace/Undo/EditorTransaction.h"
 #include "Editor/Panels/Inspector/IComponentInspector.h"
 #include "Editor/Panels/Inspector/Model/InspectorComponentEdit.h"
 #include "Editor/Panels/Inspector/Model/InspectorComponentManager.h"

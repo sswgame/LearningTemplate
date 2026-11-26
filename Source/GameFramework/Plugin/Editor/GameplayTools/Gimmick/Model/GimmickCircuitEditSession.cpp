@@ -4,9 +4,9 @@
 
 #include "Core/Foundation/Types.h"
 
-#include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorSubsystems.h"
-#include "Editor/Common/Workspace/EditorTransaction.h"
+#include "Editor/Common/Workspace/Selection/EditorSelection.h"
+#include "Editor/Common/Workspace/Undo/EditorTransaction.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Reflection/TypeInfo.h"

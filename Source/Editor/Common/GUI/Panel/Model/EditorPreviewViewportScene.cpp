@@ -7,9 +7,9 @@
 
 #include "Editor/Common/GUI/Panel/EditorPreviewViewport.h"
 #include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorRenderViews.h"
 #include "Editor/Common/Workspace/EditorSubsystems.h"
-#include "Editor/Common/Workspace/EditorUICommandQueue.h"
+#include "Editor/Common/Workspace/Undo/EditorUICommandQueue.h"
+#include "Editor/Common/Workspace/View/EditorRenderViews.h"
 
 #include "Engine/Environment/Sky/SkyComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"

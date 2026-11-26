@@ -62,6 +62,7 @@ CMake(`cmake/` — 폴더 하나에 파일 종류 하나): `Modules/<Build·Envi
 | 키트 폴더는 평평하게: 장르 키트는 카탈로그 · 규칙 파일(엔진 시계 · 렌더를 모른다)을 키트 바로 아래, 하위 폴더는 `Component/`(디렉터 · 컴포넌트) · `Client/`(뷰 · 입력 · HUD — 따로 짓는 `GF_Client_<X>`, 디렉터의 명령 · 읽기 API 만 쓴다) · `Editor/` · `Tests/` 와 하위 게임만. 뼈대는 `new-kit`. 온라인 키트는 `Runtime/` · `Server/` 바로 아래(뼈대 `new-online-kit`) | 키트는 파일 10 ~ 20 개 |
 | 개발 기능은 `Source/DevTools/`. `Dev/` 폴더는 `Config/Rules/Layers/DevFolders.json` 에 까닭과 함께 적은 자리만(configure 강제) | DevTools 는 GF · 게임 · ModuleManager · App 을 못 본다 — 엔진이 확장점을 내고 DevTools 가 붙는다 |
 | 실행 중 바꾸기 · 핫스왑은 개발, 기동 때 고르기는 제품 | 언리얼도 RHI · 모듈 교체는 재시작 |
+| 에디터 작업 공간(`Editor/Common/Workspace`)은 일마다 하위 폴더(`Selection` · `Notification` · `Layout` · `View` · `Undo` · `Play` · `NetPlay` · `HotReload` · `Asset`)에 두고 뿌리에는 에디터 컨텍스트 · 작업 공간(`EditorWorkspace`) · 서브시스템 창구만 둔다. 뷰포트 Model 은 `Gizmo/` · `Visualizers/`, 설정 계열 창은 창마다 폴더(`Panels/Preferences` · `UserSettings` · `Modules` · `GlobalVariables`). 짝을 이루는 기능(시나리오 재생기 · 녹화기)은 한 폴더 | 층은 `Common/<하위 폴더>` 단위라 하위 폴더를 나눠도 층 표가 그대로다. 언리얼 UnrealEd 도 기능마다 폴더 |
 | 층 경계는 실제 순환 · 독립 배포 요구가 확인된 층만 별도 링크 타깃으로 나눈다 | 타깃 수만 는다 |
 | 옮기지 않는 것: `Core/Foundation/BitFlagTrait.h`(생성 헤더가 include 하는 잎), `Engine/UI/Screen/UIScreenSwitch`(확장점 자체), `Core/Diagnostics/SubsystemTimingReport` · `Engine/Profiling/FrameProfileReport`(보고 값 형식) | |
 

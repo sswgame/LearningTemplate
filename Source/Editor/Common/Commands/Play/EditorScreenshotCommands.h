@@ -6,7 +6,7 @@
 #pragma once
 #include "Core/Foundation/Types.h"
 
-#include "Editor/Common/Workspace/EditorViewTargetUtil.h"
+#include "Editor/Common/Workspace/View/EditorViewTargetUtil.h"
 
 namespace sw::editor
 {

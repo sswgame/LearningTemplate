@@ -9,7 +9,7 @@
 #include "Core/String/Name/hashed_string.h"
 
 #include "Editor/Common/EditorExports.h"
-#include "Editor/Common/Workspace/EditorSelection.h"
+#include "Editor/Common/Workspace/Selection/EditorSelection.h"
 
 namespace sw
 {

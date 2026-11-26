@@ -9,8 +9,8 @@
 #include "Editor/Common/Backend/ImGuiRenderer.h"
 #include "Editor/Common/Backend/Model/EditorDrawReleaseQueue.h"
 #include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorRenderViews.h"
 #include "Editor/Common/Workspace/EditorSubsystems.h"
+#include "Editor/Common/Workspace/View/EditorRenderViews.h"
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"

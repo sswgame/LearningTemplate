@@ -6,7 +6,7 @@
 #include "Editor/Common/EditorExports.h"
 #include "Editor/Viewport/EditorViewportGizmo.h"
 #include "Editor/Viewport/EditorViewportOverlayBars.h"
-#include "Editor/Viewport/Model/EditorGizmoViewModel.h"
+#include "Editor/Viewport/Model/Gizmo/EditorGizmoViewModel.h"
 
 namespace sw
 {

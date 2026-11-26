@@ -10,7 +10,7 @@ namespace sw::editor
     struct EditorVisualizerDrawList;
 
     /** @brief 강체(RigidBody · RigidBody2D)의 충돌 셰이프를 와이어프레임 도형 값으로 모읍니다(편집 중 · 플레이 중 같은 셰이프 목록). */
-    struct PhysicsShapeGatherer
+    struct PhysicsShapeVisualizer
     {
         static void gather( const EditorViewportVisualizerArgs& args, EditorVisualizerDrawList& outDrawList );
     };

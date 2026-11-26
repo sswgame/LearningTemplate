@@ -2,8 +2,8 @@
 
 #include "Editor/Panels/Scene/Model/StreamingCellsViewModel.h"
 
-#include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorSubsystems.h"
+#include "Editor/Common/Workspace/Selection/EditorSelection.h"
 
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"

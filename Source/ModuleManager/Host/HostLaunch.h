@@ -18,7 +18,7 @@
 #include "Engine/Engine.h"
 #include "Engine/Module/ModuleCatalog.h"
 
-#include "ModuleManager/Host/HostDevLayer.h"
+#include "ModuleManager/Host/IHostDevLayer.h"
 #include "ModuleManager/ModuleLoaderSubsystem.h"
 
 namespace sw

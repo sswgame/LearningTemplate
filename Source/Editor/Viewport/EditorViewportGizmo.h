@@ -8,7 +8,7 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 
-#include "Editor/Viewport/Model/EditorGizmoViewModel.h"
+#include "Editor/Viewport/Model/Gizmo/EditorGizmoViewModel.h"
 
 namespace sw::editor
 {

@@ -6,8 +6,8 @@
 
 #include "Editor/Common/Config/EditorDefaultAssets.h"
 #include "Editor/Common/Localization/EditorDataLocalization.h"
-#include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/Common/Workspace/EditorSubsystems.h"
+#include "Editor/Common/Workspace/Layout/EditorStateStore.h"
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"

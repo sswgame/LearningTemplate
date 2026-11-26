@@ -35,7 +35,7 @@
         "Source/DevTools/Client/Automation/Runner/AutomationPerBackend.cpp": "백엔드 자식은 늘 -scenario 로 뜬다 — 그 인자가 곧 자동화 판정이다(CommandLineManager::isAutomatedRun). 실행 파일은 실행기 옵션이 준다",
         "Source/Engine/Telemetry/CrashReportSubsystem.cpp": "크래시 보고 업로더(보고 폴더 하나만 받는 업로드 전용 실행)다 — 게임 · 에디터 실행이 아니라 사용자 설정 · 품질을 읽지 않는다",
         "Source/Engine/Graphics/Shader/Compile/ShaderCompilerBackend.cpp": "엔진이 아닌 도구(tint — SPIR-V 를 WGSL 로)다",
-        "Source/Editor/Panels/Console/Model/EditorSourceLocation.cpp": "엔진이 아닌 도구(사람이 고른 소스 편집기)다",
+        "Source/Editor/Panels/OutputLog/Model/EditorSourceLocation.cpp": "엔진이 아닌 도구(사람이 고른 소스 편집기)다",
         "Source/Editor/Panels/Profiler/Model/EditorTracyLauncher.cpp": "엔진이 아닌 도구(Tracy 프로파일러)다"
     },
     "_editorContentScan": {
@@ -48,7 +48,7 @@
         "Source/Editor/Common/Commands/Asset/EditorDocumentAutosave.cpp|Internal::makeFolder( sessionFolder )": "자동 저장 세션 폴더의 문서 사본 칸(Saved 아래)이다 — 리소스 트리 밖",
         "Source/Editor/Common/Commands/Asset/EditorSaveFileLock.cpp|EditorSaveFileLockInternal::getLedgerFolder()": "파일 잠금 장부 폴더(자동화 출력 아래)다 — 리소스 트리 밖",
         "Source/Editor/Panels/BugReport/Model/BugReportViewModel.cpp|_rootFolder": "버그 보고 폴더(Saved/BugReports 또는 실행 뿌리 아래)다 — 리소스 트리 밖",
-        "Source/Editor/Common/Workspace/EditorLayoutStore.cpp|folder": "에디터 배치 ini 폴더(에디터 상태 폴더)다 — 리소스 트리 밖",
+        "Source/Editor/Common/Workspace/Layout/EditorLayoutStore.cpp|folder": "에디터 배치 ini 폴더(에디터 상태 폴더)다 — 리소스 트리 밖",
         "Source/Editor/Panels/Packaging/Model/PackagingViewModel.cpp|ProcessRoots::get()._project.join( \"Config/Game\" )": "게임 설정 폴더(Config/Game)다 — 리소스 트리 밖",
         "Source/Editor/Common/Localization/LocalizationTools.cpp|codeFolder": "소스 코드 폴더(Source)다 — 리소스 트리 밖",
         "Source/Editor/Common/Localization/LocalizationTools.cpp|gameFolder": "게임 팩 하나의 현지화 폴더(game/<팩>/data/localization, 재귀 아님)다 — scratch 를 지나지 않는다",

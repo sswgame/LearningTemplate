@@ -7,7 +7,7 @@
 
 #include "Editor/Viewport/EditorViewportProjectionUtil.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"
-#include "Editor/Viewport/Model/RigTargetGizmoViewModel.h"
+#include "Editor/Viewport/Model/Gizmo/RigTargetGizmoViewModel.h"
 
 #include "Engine/Localization/LocText.h"
 

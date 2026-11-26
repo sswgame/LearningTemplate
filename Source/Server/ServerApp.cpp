@@ -68,9 +68,9 @@
 #include "ModuleAPI/Service/IServerKitLocator.h"
 
 #include "ModuleManager/GameModuleManager.h"
-#include "ModuleManager/Host/HostDevLayer.h"
 #include "ModuleManager/Host/HostLaunch.h"
-#include "ModuleManager/Host/ServerDebugControl.h"
+#include "ModuleManager/Host/IHostDevLayer.h"
+#include "ModuleManager/Host/IServerDebugControl.h"
 #include "ModuleManager/ModuleLoaderSubsystem.h"
 
 #include "Server/ServerEntry.h"

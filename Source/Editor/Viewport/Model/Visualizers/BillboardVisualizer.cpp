@@ -6,11 +6,11 @@
  */
 #include "pch.h"
 
-#include "Editor/Common/EditorProfile.h"
+#include "Editor/Common/EditorProfileScope.h"
 #include "Editor/Common/GUI/Theme/EditorComponentIconRow.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"
 #include "Editor/Viewport/Model/EditorViewportProjection.h"
-#include "Editor/Viewport/Model/EditorVisualizerDrawList.h"
+#include "Editor/Viewport/Model/Visualizers/EditorVisualizerDrawList.h"
 
 #include "Engine/Environment/Wind/WindComponent.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"

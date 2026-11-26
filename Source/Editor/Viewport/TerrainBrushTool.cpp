@@ -17,7 +17,7 @@
 #include "Editor/Viewport/EditorViewportProjectionUtil.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"
 #include "Editor/Viewport/Model/EditorViewportMouseCapture.h"
-#include "Editor/Viewport/Model/TerrainBrushViewModel.h"
+#include "Editor/Viewport/Model/Gizmo/TerrainBrushViewModel.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Localization/LocText.h"

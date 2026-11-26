@@ -8,7 +8,7 @@
 
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Panels/RenderDebugger/RenderDebuggerPanel.h"
-#include "Editor/SelfTest/EditorWatchSupport.h"
+#include "Editor/SelfTest/EditorWatchState.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Renderer/Frame/View/RenderStability.h"

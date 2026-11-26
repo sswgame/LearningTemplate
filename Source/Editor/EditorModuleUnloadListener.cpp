@@ -4,7 +4,7 @@
 
 #include "Editor/Common/EditorExtensionRegistry.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
-#include "Editor/Common/Input/EditorPopupManager.h"
+#include "Editor/Common/GUI/Popup/EditorPopupManager.h"
 #include "Editor/Common/Widgets/PropertyGrid/PropertyDrawerRegistry.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorDefaultObjects.h"

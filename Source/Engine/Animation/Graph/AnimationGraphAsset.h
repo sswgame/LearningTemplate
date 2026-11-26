@@ -260,7 +260,7 @@ namespace sw
     public:
         /** @brief 읽는 동안의 할당 태그입니다 — 그래프는 공유 캐시 로더 없이 컴포넌트 · 에디터가 직접 읽는다. */
         static constexpr MemoryTag kMemoryTag = MemoryTag::Animation;
-        /** @brief 애니메이션 그래프 파일의 접미사입니다. 에디터 종류 등록(`Editor/AssetActions`)이 이 값을 씁니다. */
+        /** @brief 애니메이션 그래프 파일의 접미사입니다. 에디터 종류 등록(`Editor/AssetTypeActions`)이 이 값을 씁니다. */
         static constexpr string_view kExtension = ".animgraph.xml";
         /** @brief 이 에셋 종류의 접미사입니다(종류 표 `AssetTypeRegistry`). */
         static constexpr AssetSuffix kArrAssetSuffix[] = {

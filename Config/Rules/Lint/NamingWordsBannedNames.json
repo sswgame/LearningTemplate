@@ -2663,6 +2663,21 @@
     "EditorNetLinkSettings": "EditorNetEmulationSettings — 망 상태 흉내는 NetEmulation 하나로 부른다(Link 는 관계만)(2026-11-27)",
     "EditorNetLinkDirection": "NetEmulationDirection — 망 상태 흉내는 NetEmulation 하나로 부른다(Link 는 관계만)(2026-11-27)",
     "EditorNetConditions": "EditorNetEmulationSettings — 파일 이름을 주 형식 EditorNetEmulationSettings 에 맞춘다(2026-11-27)",
-    "EditorNetConditionsInternal": "EditorNetEmulationSettingsInternal — EditorNetConditions → EditorNetEmulationSettings 를 따른다(2026-11-27)"
+    "EditorNetConditionsInternal": "EditorNetEmulationSettingsInternal — EditorNetConditions → EditorNetEmulationSettings 를 따른다(2026-11-27)",
+    "EditorBakeRunState": "EditorBakeSession — 파일 이름(EditorBakeSession.h) · 옆 형식(EditorLightProbeBakeSession)과 맞춘다(2026-11-27)",
+    "PhysicsShapeGatherer": "PhysicsShapeVisualizer — 다른 시각화 파일처럼 형식 이름을 파일 이름(Visualizer)에 맞춘다(2026-11-27)",
+    "RenderFrameSwitches": "RenderFrameVariables — gv_ 개발 변수 정의 파일은 …Variables(언리얼 CVar 묶음)(2026-11-27)",
+    "RenderFrameSwitchesInternal": "RenderFrameVariablesInternal — RenderFrameSwitches → RenderFrameVariables 를 따른다(2026-11-27)",
+    "RenderFrameSwitchesTest": "RenderFrameVariablesTest — RenderFrameSwitches → RenderFrameVariables 를 따른다(2026-11-27)",
+    "RenderDiagnosticsSwitches": "RenderDiagnosticsVariables — gv_ 개발 변수 정의 파일은 …Variables(언리얼 CVar 묶음)(2026-11-27)",
+    "RenderDiagnosticsSwitchesInternal": "RenderDiagnosticsVariablesInternal — RenderDiagnosticsSwitches → RenderDiagnosticsVariables 를 따른다(2026-11-27)",
+    "DevToolsSwitches": "DevToolsVariables — RenderFrameSwitches → RenderFrameVariables 를 따른다(등록 이름)(2026-11-27)",
+    "DeviceLostPolicySwitch": "DeviceLostPolicySubsystem — Subsystem 을 상속한 형식은 …Subsystem 끝말(언리얼 USubsystem). 파일 이름도 주 형식(2026-11-27)",
+    "EnvironmentFreezeSwitch": "EnvironmentFreezeSubsystem — Subsystem 을 상속한 형식은 …Subsystem 끝말(언리얼 USubsystem). 파일 이름도 주 형식(2026-11-27)",
+    "EnvironmentFreezeSwitchInternal": "EnvironmentFreezeSubsystemInternal — EnvironmentFreezeSwitch → EnvironmentFreezeSubsystem 을 따른다(2026-11-27)",
+    "FixedFrameDeltaSwitch": "FixedFrameDeltaSubsystem — Subsystem 을 상속한 형식은 …Subsystem 끝말(언리얼 USubsystem). 파일 이름도 주 형식(2026-11-27)",
+    "FixedFrameDeltaSwitchInternal": "FixedFrameDeltaSubsystemInternal — FixedFrameDeltaSwitch → FixedFrameDeltaSubsystem 을 따른다(2026-11-27)",
+    "GameAutoplaySwitch": "GameAutoplaySubsystem — 파일 이름을 주 형식 GameAutoplaySubsystem 에 맞춘다(2026-11-27)",
+    "GameAutoplaySwitchInternal": "GameAutoplaySubsystemInternal — GameAutoplaySwitch → GameAutoplaySubsystem 을 따른다(2026-11-27)"
   }
 }

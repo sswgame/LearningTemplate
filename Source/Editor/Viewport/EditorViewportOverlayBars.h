@@ -5,7 +5,7 @@
 #include "Core/Math/VectorMath.h"
 
 #include "Editor/Common/EditorExports.h"
-#include "Editor/Viewport/Model/EditorVisualizerToggles.h"
+#include "Editor/Viewport/Model/Visualizers/EditorVisualizerToggles.h"
 
 #include "Engine/Graphics/View/RenderViewMode.h"
 

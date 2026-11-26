@@ -10,9 +10,9 @@
 #include "Editor/Common/Commands/Asset/RigSaveParams.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorSubsystems.h"
-#include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
-#include "Editor/Viewport/Model/RigTargetGizmoViewModel.h"
+#include "Editor/Common/Workspace/Undo/EditorTransaction.h"
+#include "Editor/Viewport/Model/Gizmo/RigTargetGizmoViewModel.h"
 
 #include "Engine/Animation/Component/SkeletalMeshComponent.h"
 #include "Engine/Animation/Rig/RigAsset.h"

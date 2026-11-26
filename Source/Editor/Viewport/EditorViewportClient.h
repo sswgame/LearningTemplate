@@ -13,7 +13,7 @@
 #include "Editor/Viewport/EditorViewportPicker.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"
 #include "Editor/Viewport/Model/EditorDebugHUDViewModel.h"
-#include "Editor/Viewport/Model/EditorVisualizerDrawList.h"
+#include "Editor/Viewport/Model/Visualizers/EditorVisualizerDrawList.h"
 
 namespace sw::editor
 {

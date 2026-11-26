@@ -4,15 +4,15 @@
 
 #include "Core/Math/AABB.h"
 
-#include "Editor/Common/EditorProfile.h"
+#include "Editor/Common/EditorProfileScope.h"
 #include "Editor/Common/EditorSceneIterationAccess.h"
 #include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorSubsystems.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
+#include "Editor/Common/Workspace/Selection/EditorSelection.h"
 #include "Editor/Viewport/Model/EditorViewportProjection.h"
 #include "Editor/Viewport/Model/EditorViewportRayPick.h"
-#include "Editor/Viewport/Model/EditorVisualizerDrawList.h"
+#include "Editor/Viewport/Model/Visualizers/EditorVisualizerDrawList.h"
 
 #include "Engine/Graphics/View/SceneViewQuery.h"
 #include "Engine/Object/Component/Component.h"

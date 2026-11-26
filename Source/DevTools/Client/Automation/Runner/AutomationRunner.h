@@ -14,10 +14,10 @@
 #include "Core/Task/TaskFuture.h"
 
 #include "DevTools/Client/Automation/Runner/AutomationEvaluator.h"
-#include "DevTools/Client/Automation/Runner/AutomationHangWatch.h"
+#include "DevTools/Client/Automation/Runner/AutomationHangWatchdog.h"
 #include "DevTools/Client/Automation/Runner/AutomationReportWriter.h"
 #include "DevTools/Client/Automation/Runner/AutomationRunPolicy.h"
-#include "DevTools/Client/Automation/Runner/AutomationRunTitle.h"
+#include "DevTools/Client/Automation/Runner/AutomationRunTitleTracker.h"
 #include "DevTools/Client/Automation/Scenario/AutomationFrameStats.h"
 #include "DevTools/Client/Automation/Scenario/AutomationTimeline.h"
 #include "DevTools/DevToolsAPI.h"

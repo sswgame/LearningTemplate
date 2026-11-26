@@ -31,7 +31,7 @@
 
 #include "Editor/Common/EditorExports.h"
 #include "Editor/Panels/Scene/Model/PropertyShape.h"
-#include "Editor/Viewport/Model/EditorHandleDrag.h"
+#include "Editor/Viewport/Model/Gizmo/EditorHandleDragTracker.h"
 
 #include "Engine/Foundation/GameObjectHandle.h"
 
@@ -110,7 +110,7 @@ namespace sw::editor
         bool                        _bAvailable{ false };
     };
 
-    /** @brief 모양 손잡이 명령 · 순서 — 콜라이더 손잡이와 같은 공통 틀(`EditorHandleDrag.h`)에 손잡이 값 `PropertyShapeHandle` 을 넣은 것이다. */
+    /** @brief 모양 손잡이 명령 · 순서 — 콜라이더 손잡이와 같은 공통 틀(`EditorHandleDragTracker.h`)에 손잡이 값 `PropertyShapeHandle` 을 넣은 것이다. */
     using PropertyShapeHandleCommandKind = EditorHandleDragCommandKind;
     using PropertyShapeHandleCommand     = EditorHandleDragCommand<PropertyShapeHandle>;
     using PropertyShapeHandleDragTracker = EditorHandleDragTracker<PropertyShapeHandle>;

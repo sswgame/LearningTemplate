@@ -6,7 +6,7 @@
 
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Panels/Memory/MemoryPanel.h"
-#include "Editor/SelfTest/EditorWatchSupport.h"
+#include "Editor/SelfTest/EditorWatchState.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 

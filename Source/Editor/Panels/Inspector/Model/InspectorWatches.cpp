@@ -3,7 +3,7 @@
  * @brief 인스펙터가 고치는 주 선택 오브젝트의 프로퍼티 · 컴포넌트 감시 값입니다 — `Editor.SelectedProperty*` · `Editor.SelectedCurveKeyCount` · `Editor.SelectedHandle` · `Editor.SelectedSceneReference` · `Editor.SelectedComponentCount`.
  * @details ImGui 없이 선택 오브젝트 · 컴포넌트 · 씬만 읽으므로 인스펙터 Model 에 둔다(MVVM — 모델을 읽는 코드는 Model 쪽, `docs/agents/EditorUI.md`).
  *          감시 값 레지스트리(`Engine/Automation/Watch`)가 기능 층보다 아래라 기능이 자기 감시 값을 등록합니다. 등록은 이 .cpp 의 정적 등록자가 하며 대상 id 를 정하는 시나리오용 전역 변수는
- *          `EditorWatchSupport.h` 에 있습니다.
+ *          `EditorWatchState.h` 에 있습니다.
  */
 #include "pch.h"
 
@@ -13,9 +13,9 @@
 #include "Editor/Common/Widgets/PropertyGrid/Model/PropertyGridComponentPicker.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorDefaultObjects.h"
-#include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorSubsystems.h"
-#include "Editor/SelfTest/EditorWatchSupport.h"
+#include "Editor/Common/Workspace/Selection/EditorSelection.h"
+#include "Editor/SelfTest/EditorWatchState.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Curve/FloatCurve.h"

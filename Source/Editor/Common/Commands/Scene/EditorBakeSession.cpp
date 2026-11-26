@@ -12,7 +12,7 @@
 
 namespace sw::editor
 {
-    EditorBakeRunState::EditorBakeRunState()
+    EditorBakeSession::EditorBakeSession()
         : _sceneGeneration{ 0 }
         , _finishedRunSceneGeneration{ 0 }
         , _heldEditCount{ 0 }
@@ -22,9 +22,9 @@ namespace sw::editor
     {
     }
 
-    EditorBakeRunState::~EditorBakeRunState() = default; // 돌던 중이면 `_hold` 가 사라지며 막기를 푼다
+    EditorBakeSession::~EditorBakeSession() = default; // 돌던 중이면 `_hold` 가 사라지며 막기를 푼다
 
-    void EditorBakeRunState::begin( EditorPlaySessionWriteKey key, uint64 sceneGeneration )
+    void EditorBakeSession::begin( EditorPlaySessionWriteKey key, uint64 sceneGeneration )
     {
         _sceneGeneration = sceneGeneration;
         _heldEditCount   = EditorPlaySession::getHeldSceneEditCount();
@@ -32,7 +32,7 @@ namespace sw::editor
         _hold            = EditorPlaySession::holdSceneEdits( key );
     }
 
-    void EditorBakeRunState::end()
+    void EditorBakeSession::end()
     {
         _bRunning = SW_FALSE;
         if ( _finishedRunSceneGeneration != _sceneGeneration )
@@ -44,7 +44,7 @@ namespace sw::editor
         _hold.release();
     }
 
-    const utf8* EditorBakeRunState::findStopReason() const
+    const utf8* EditorBakeSession::findStopReason() const
     {
         const SceneManager* pSceneManager = editor::findSubsystem<SceneManager>();
         const Scene*        pScene        = editor::getActiveScene();

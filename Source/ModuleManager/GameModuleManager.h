@@ -171,7 +171,7 @@ namespace sw
         const FrameViewports& getViews() const { return _views; }
         /**
          * @brief 클라이언트 호스트(App)의 기동입니다 — 콜백을 등록하고 게임 인스턴스를 만듭니다(게임 모듈 라이브러리는 `loadModuleLibraries` 가 이미 로드했습니다).
-         * @details 에디터 구성(`DevTools/Host/Client/EditorGameModuleManager` — 개발 계층이 만든다)은 게임 다음에 에디터를 세운다. 전용 서버는 `initializeDedicatedServer` 다.
+         * @details 에디터 구성(`DevTools/Host/Editor/EditorGameModuleManager` — 개발 계층이 만든다)은 게임 다음에 에디터를 세운다. 전용 서버는 `initializeDedicatedServer` 다.
          */
         [[nodiscard]] virtual bool initializeClient( IModuleHotReloadManager* pModuleHotReloadManager, RHI* pRHI, GenericWindow* pWindow, IEngineRenderDriver* pRenderDriver )
         {

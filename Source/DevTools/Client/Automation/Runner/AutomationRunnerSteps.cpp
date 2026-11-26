@@ -13,7 +13,7 @@
 
 #include "DevTools/Client/Automation/Runner/AutomationExitCode.h"
 #include "DevTools/Client/Automation/Runner/AutomationImage.h"
-#include "DevTools/Client/Automation/Runner/AutomationRunTitle.h"
+#include "DevTools/Client/Automation/Runner/AutomationRunTitleTracker.h"
 #include "DevTools/Client/Automation/Runner/AutomationRunner.h"
 #include "DevTools/Client/Automation/Runner/AutomationStepArgs.h"
 #include "DevTools/Client/Automation/Scenario/AutomationEnvironmentSteps.h"

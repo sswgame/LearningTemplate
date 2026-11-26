@@ -12,7 +12,7 @@
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 #include "Editor/Viewport/EditorViewportProjectionUtil.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"
-#include "Editor/Viewport/Model/EditorColliderHandleViewModel.h"
+#include "Editor/Viewport/Model/Gizmo/EditorColliderHandleViewModel.h"
 #include "Editor/Viewport/Model/Visualizers/PhysicsShapeVisualizer.h"
 
 #include "Engine/Localization/LocText.h"
@@ -123,7 +123,7 @@ namespace sw::editor
         return session._bCapturing && session._frame == ImGui::GetFrameCount();
     }
 
-    // 물리 셰이프 시각화와 같은 토글이다 — 셰이프 선은 Model 의 모으기(`PhysicsShapeGatherer`), 손잡이는 이 화면 도구.
+    // 물리 셰이프 시각화와 같은 토글이다 — 셰이프 선은 Model 의 모으기(`PhysicsShapeVisualizer`), 손잡이는 이 화면 도구.
     SW_EDITOR_VISUALIZER_TOOL( PhysicsShapes, "physics_shapes", EditorColliderHandleToolInternal::kPhysicsShapesOrder, SW_EDITOR_ICON_NAME( "Collider" ), SW_LOCKEYREF( "EdVisualizer", "PhysicsShapesLabel" ),
-                               SW_LOCKEYREF( "EdVisualizer", "PhysicsShapesTip" ), false, &EditorColliderHandleTool::process, &PhysicsShapeGatherer::gather );
+                               SW_LOCKEYREF( "EdVisualizer", "PhysicsShapesTip" ), false, &EditorColliderHandleTool::process, &PhysicsShapeVisualizer::gather );
 } // namespace sw::editor

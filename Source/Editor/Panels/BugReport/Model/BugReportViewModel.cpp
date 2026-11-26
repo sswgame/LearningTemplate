@@ -11,8 +11,8 @@
 
 #include "Editor/Common/Commands/Asset/EditorAssetFileCommands.h"
 #include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorNotificationManager.h"
 #include "Editor/Common/Workspace/EditorSubsystems.h"
+#include "Editor/Common/Workspace/Notification/EditorNotificationManager.h"
 
 #include "Engine/Localization/LocText.h"
 #include "Engine/Scene/SceneManager.h"

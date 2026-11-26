@@ -2,13 +2,13 @@
  * @file RenderTargetWatches.cpp
  * @brief 렌더 타깃 패널의 자동화 감시 값입니다 — `Editor.RenderTarget*`.
  * @details 감시 값 레지스트리(`Engine/Automation/Watch`)가 기능 층보다 아래라 기능이 자기 감시 값을 등록합니다. 등록은 이 .cpp 의 정적 등록자가 하며 대상 id 를 정하는 시나리오용 전역 변수는
- *          `EditorWatchSupport.h` 에 있습니다.
+ *          `EditorWatchState.h` 에 있습니다.
  */
 #include "pch.h"
 
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Panels/RenderTarget/RenderTargetPanel.h"
-#include "Editor/SelfTest/EditorWatchSupport.h"
+#include "Editor/SelfTest/EditorWatchState.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Renderer/Frame/View/RenderStability.h"

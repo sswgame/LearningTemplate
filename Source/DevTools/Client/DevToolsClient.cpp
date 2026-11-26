@@ -14,7 +14,7 @@
 #include "Core/Subsystem/Subsystem.h"
 #include "Core/Subsystem/SubsystemScope.h"
 
-#include "DevTools/Client/Audio/AudioDumpListener.h"
+#include "DevTools/Client/Audio/AudioDumpBuffer.h"
 #include "DevTools/Client/Automation/Scenario/AutomationScratchWorkspace.h"
 #include "DevTools/Client/Automation/Scenario/AutomationUserDataRoot.h"
 #include "DevTools/Client/Capture/StartupCaptureSubsystem.h"
@@ -23,8 +23,8 @@
 #include "DevTools/Client/Shader/ShaderRecompiler.h"
 #include "DevTools/Console/DevConsoleController.h"
 #include "DevTools/DevToolsClientPart.h"
-#include "DevTools/Diagnostics/CrashInjection.h"
-#include "DevTools/Host/Client/EditorGameModuleManager.h"
+#include "DevTools/Diagnostics/CrashInjector.h"
+#include "DevTools/Host/Editor/EditorGameModuleManager.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Engine.h"

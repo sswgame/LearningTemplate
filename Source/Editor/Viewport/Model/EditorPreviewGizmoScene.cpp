@@ -4,7 +4,7 @@
 #include "Core/Math/Ray.h"
 
 #include "Editor/Common/GUI/Panel/EditorPreviewPanel.h"
-#include "Editor/Common/Workspace/EditorSelection.h"
+#include "Editor/Common/Workspace/Selection/EditorSelection.h"
 #include "Editor/Viewport/EditorPreviewGizmo.h"
 #include "Editor/Viewport/Model/EditorViewportRayPick.h"
 

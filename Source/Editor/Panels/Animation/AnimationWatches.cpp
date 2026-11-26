@@ -2,7 +2,7 @@
  * @file AnimationWatches.cpp
  * @brief 애니메이션 그래프 · 시퀀서 패널의 자동화 감시 값입니다 — `Editor.AnimationGraph*Count` · `Editor.SequencerKeyFrameCount` · `Editor.ObjectPositionX`(시퀀서 키 트랙 미리보기가 옮긴 값).
  * @details 감시 값 레지스트리(`Engine/Automation/Watch`)가 기능 층보다 아래라 기능이 자기 감시 값을 등록합니다. 등록은 이 .cpp 의 정적 등록자가 하며 대상 id 를 정하는 시나리오용 전역 변수는
- *          `EditorWatchSupport.h` 에 있습니다.
+ *          `EditorWatchState.h` 에 있습니다.
  */
 #include "pch.h"
 
@@ -12,7 +12,7 @@
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Panels/Animation/AnimationGraphPanel.h"
 #include "Editor/Panels/Animation/SequencerPanel.h"
-#include "Editor/SelfTest/EditorWatchSupport.h"
+#include "Editor/SelfTest/EditorWatchState.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 

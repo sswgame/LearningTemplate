@@ -124,7 +124,7 @@ namespace sw
     struct SW_API AudioGraphDef
     {
         REFLECT_BODY();
-        /** @brief 소리 그래프 파일의 접미사입니다. 클립 캐시와 에디터 종류 등록(`Editor/AssetActions`)이 이 값을 씁니다. */
+        /** @brief 소리 그래프 파일의 접미사입니다. 클립 캐시와 에디터 종류 등록(`Editor/AssetTypeActions`)이 이 값을 씁니다. */
         static constexpr string_view kExtension = AudioGraphAssetKind::kExtension;
         /** @brief 소리 그래프 에셋 종류입니다(정의는 `AudioGraphAssetKind`, 등록은 `AudioGraphDef.cpp` 의 `SW_ASSET_TYPE`). */
         static constexpr const AssetTypeDef& kAssetType = AudioGraphAssetKind::kAssetType;

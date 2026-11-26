@@ -11,7 +11,7 @@
 #include "Core/Memory/MemoryTag.h"
 #include "Core/String/StringBuilder.h"
 
-#include "DevTools/Client/Automation/Runner/AutomationRunTitle.h"
+#include "DevTools/Client/Automation/Runner/AutomationRunTitleTracker.h"
 #include "DevTools/DebugDraw/DebugDrawQueue.h"
 
 #include "Engine/Audio/AudioEngine.h"

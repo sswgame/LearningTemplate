@@ -1,12 +1,12 @@
 /**
  * @file EditorLightProbeBakeSession.h
  * @brief 라이트 프로브 베이크를 에디터 프레임에 나눠 진행하는 세션입니다. 커맨드 `lighting.bakeProbes` 가 시작합니다.
- * @details 세션은 프레임마다 정해진 시간(`EditorBakeRunState::kFrameBudgetMilliseconds`) 안에서 프로브를 베이크하고(`LightProbeBakeJob::step`), 상태줄 항목(`EditorStatusBarItems.cpp`)이
+ * @details 세션은 프레임마다 정해진 시간(`EditorBakeSession::kFrameBudgetMilliseconds`) 안에서 프로브를 베이크하고(`LightProbeBakeJob::step`), 상태줄 항목(`EditorStatusBarItems.cpp`)이
  *          진행과 Cancel 단추를 보인다. 에디터는 베이크하는 동안 멈추지 않는다.
  *          레이는 볼륨마다 씬의 정적 콜라이더로 새로 세운 가림 씬(`_pOccluders`, `LightProbeBakeInput::collectInput`)에 쏜다 — 편집 중에는 플레이 물리 씬이 없다.
  *          베이크하는 동안 씬 편집을 막는다(`EditorPlaySession::holdSceneEdits` — 인스펙터 · 기즈모 · Undo 가 잠긴다). 베이크하는 볼륨과 결과를 받을 오브젝트가 그대로여야 하고,
  *          세운 뒤의 편집은 가림 씬에 들지 않기 때문이다. 가림 씬은 베이크의 사본이라 게임 스레드가 갱신하지 않는다(작업 스레드로 옮기는 일은 남음).
- *          씬이 바뀌거나(세대) 플레이가 시작되면 베이크하던 볼륨을 버리고 멈춘다(`EditorBakeRunState` — 반사 프로브 세션과 같은 규칙). 볼륨마다 끝나면 파일을 쓰고 볼륨에 넘긴다(앞서 끝난 볼륨은 취소해도 남는다).
+ *          씬이 바뀌거나(세대) 플레이가 시작되면 베이크하던 볼륨을 버리고 멈춘다(`EditorBakeSession` — 반사 프로브 세션과 같은 규칙). 볼륨마다 끝나면 파일을 쓰고 볼륨에 넘긴다(앞서 끝난 볼륨은 취소해도 남는다).
  *          결과 파일은 씬 파일 옆 `<씬 이름>.<오브젝트 이름(소문자)>.probes` 이고 볼륨의 `_probeDataPath` 에 적는다 — 씬을 저장해야 경로가 남으므로 씬을 고친 것으로 표시한다.
  */
 #pragma once
@@ -58,7 +58,7 @@ namespace sw::editor
         /** @brief 지금 베이크하는 볼륨의 진행(0 ~ 1)입니다. */
         float32 getVolumeProgress() const;
         /**
-         * @brief 씬 세대 @p sceneGeneration 에서 끝난(취소 포함) 베이크 횟수입니다(감시 값 `Editor.LightProbeBakeCount`). 다른 세대의 베이크는 세지 않는다(`EditorBakeRunState`).
+         * @brief 씬 세대 @p sceneGeneration 에서 끝난(취소 포함) 베이크 횟수입니다(감시 값 `Editor.LightProbeBakeCount`). 다른 세대의 베이크는 세지 않는다(`EditorBakeSession`).
          */
         uint32 getFinishedRunCount( uint64 sceneGeneration ) const { return _run.getFinishedRunCount( sceneGeneration ); }
 
@@ -79,7 +79,7 @@ namespace sw::editor
         unique_ptr<IPhysicsScene3D> _pOccluders;   ///< 베이크하는 볼륨의 가림 씬 — `_job` 이 빌리므로 `_job` 보다 앞에 둔다(뒤에 사라진다)
         LightProbeBakeJob           _job;
         string                      _lastError;
-        EditorBakeRunState          _run; ///< 돌고 있는가 · 편집 잠금 · 멈출 이유 · 끝난 횟수 (반사 프로브 세션과 같은 틀)
+        EditorBakeSession           _run; ///< 돌고 있는가 · 편집 잠금 · 멈출 이유 · 끝난 횟수 (반사 프로브 세션과 같은 틀)
         uint32                      _nextVolumeIndex;
         uint32                      _bakedCount;
         atomic<bool>                _startRequested; ///< UI 가 남긴 시작 요청(`requestStart`) — 게임 단계가 받는다

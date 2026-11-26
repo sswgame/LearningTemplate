@@ -609,7 +609,7 @@ msgctxt "EdButton.ResetDefaultLayout"
 msgid "Reset Default Layout"
 msgstr "기본 레이아웃으로 되돌리기"
 
-#: Source/Editor/Panels/Settings/PreferencesPanel.cpp
+#: Source/Editor/Panels/Preferences/PreferencesPanel.cpp
 msgctxt "EdButton.ResetSection"
 msgid "Reset Section"
 msgstr "섹션 되돌리기"
@@ -735,7 +735,7 @@ msgctxt "EdCommon.CameraSpeed"
 msgid "Camera fly speed (0.5 to 20). Turning the mouse wheel while holding the right mouse button also changes it."
 msgstr "카메라 비행 속도(0.5 ~ 20)입니다. 오른쪽 마우스 단추를 누른 채 휠을 돌려도 바뀝니다."
 
-#: Source/Editor/Common/Input/CommandPalettePopup.cpp
+#: Source/Editor/Common/GUI/Popup/CommandPalettePopup.cpp
 msgctxt "EdCommon.CommandPaletteHint"
 msgid "Type a command or search objects... (Esc to close)"
 msgstr "명령을 입력하거나 오브젝트를 검색합니다... (Esc 로 닫기)"
@@ -1105,12 +1105,12 @@ msgctxt "EdCommon.NotifyEditorTitle"
 msgid "Editor"
 msgstr "에디터"
 
-#: Source/Editor/Common/Workspace/EditorUICommandQueue.cpp
+#: Source/Editor/Common/Workspace/Undo/EditorUICommandQueue.cpp
 msgctxt "EdCommon.NotifyKeepSimulation"
 msgid "The selected objects keep their state after Stop"
 msgstr "선택한 오브젝트는 Stop 뒤에도 상태를 유지합니다"
 
-#: Source/Editor/Common/Workspace/EditorUICommandQueue.cpp
+#: Source/Editor/Common/Workspace/Undo/EditorUICommandQueue.cpp
 msgctxt "EdCommon.NotifyKeepSimulationTitle"
 msgid "Keep Simulation Changes"
 msgstr "시뮬레이션 변경 유지"
@@ -1382,19 +1382,19 @@ msgctxt "EdCommon.PreviewStepTip"
 msgid "While paused, advance the preview by one frame"
 msgstr "멈춘 동안 미리보기를 한 프레임 나아가게 합니다"
 
-#: Source/Editor/Common/Input/QuickLauncherPopup.cpp
+#: Source/Editor/Common/GUI/Popup/QuickLauncherPopup.cpp
 msgctxt "EdCommon.QuickOpenHint"
 msgid "Type to search assets, scenes, game objects (ESC to cancel)..."
 msgstr "에셋 · 씬 · 게임 오브젝트를 검색합니다(ESC 로 취소)..."
 
-#: Source/Editor/Common/Input/CommandPalettePopup.cpp
-#: Source/Editor/Common/Input/QuickLauncherPopup.cpp
+#: Source/Editor/Common/GUI/Popup/CommandPalettePopup.cpp
+#: Source/Editor/Common/GUI/Popup/QuickLauncherPopup.cpp
 msgctxt "EdCommon.QuickOpenIndexing"
 msgid "Indexing assets..."
 msgstr "에셋을 인덱싱하는 중..."
 
-#: Source/Editor/Common/Input/CommandPalettePopup.cpp
-#: Source/Editor/Common/Input/QuickLauncherPopup.cpp
+#: Source/Editor/Common/GUI/Popup/CommandPalettePopup.cpp
+#: Source/Editor/Common/GUI/Popup/QuickLauncherPopup.cpp
 msgctxt "EdCommon.QuickOpenNoMatches"
 msgid "No matching assets or game objects found."
 msgstr "일치하는 에셋이나 게임 오브젝트가 없습니다."
@@ -2046,7 +2046,7 @@ msgctxt "EdFormat.InheritsFrom"
 msgid "Inherits from {base}"
 msgstr "{base} 에서 물려받음"
 
-#: Source/Editor/Panels/Settings/UserSettingsPanel.cpp
+#: Source/Editor/Panels/UserSettings/UserSettingsPanel.cpp
 msgctxt "EdFormat.KeepDisplaySettings"
 msgid "Keep these display settings? Reverting in {seconds} s"
 msgstr "이 화면 설정을 유지할까요? {seconds} 초 뒤 되돌립니다"
@@ -2096,7 +2096,7 @@ msgctxt "EdFormat.Max"
 msgid "{name}  {blend, select, additive {Additive} other {Alpha}}{looping, select, yes {  looping} other {}}  max {maxParticles}  {texturePath}"
 msgstr "{name}  {blend, select, additive {가산} other {알파}}{looping, select, yes {  반복} other {}}  최대 {maxParticles}  {texturePath}"
 
-#: Source/Editor/Panels/Settings/ModulesPanel.cpp
+#: Source/Editor/Panels/Modules/ModulesPanel.cpp
 msgctxt "EdFormat.ModuleOff"
 msgid "Off - {reason}"
 msgstr "꺼짐 — {reason}"
@@ -2479,7 +2479,7 @@ msgctxt "EdLabel.AutoRange"
 msgid "Auto range"
 msgstr "자동 범위"
 
-#: Source/Editor/Panels/Console/OutputLogPanel.cpp
+#: Source/Editor/Panels/OutputLog/OutputLogPanel.cpp
 msgctxt "EdLabel.AutoScroll"
 msgid "Auto-scroll"
 msgstr "자동 스크롤"
@@ -2499,7 +2499,7 @@ msgctxt "EdLabel.BoneMarkers"
 msgid "Bone Markers"
 msgstr "뼈 표시"
 
-#: Source/Editor/Panels/Console/OutputLogPanel.cpp
+#: Source/Editor/Panels/OutputLog/OutputLogPanel.cpp
 msgctxt "EdLabel.ClearOnPlay"
 msgid "Clear on Play"
 msgstr "플레이 때 지우기"
@@ -2514,12 +2514,12 @@ msgctxt "EdLabel.Collect"
 msgid "Collect"
 msgstr "모으기"
 
-#: Source/Editor/Panels/Console/OutputLogPanel.cpp
+#: Source/Editor/Panels/OutputLog/OutputLogPanel.cpp
 msgctxt "EdLabel.CopyFullLogLine"
 msgid "Copy Full Log Line"
 msgstr "로그 줄 전체 복사"
 
-#: Source/Editor/Panels/Console/OutputLogPanel.cpp
+#: Source/Editor/Panels/OutputLog/OutputLogPanel.cpp
 msgctxt "EdLabel.CopyMessage"
 msgid "Copy Message"
 msgstr "메시지 복사"
@@ -2534,7 +2534,7 @@ msgctxt "EdLabel.CopyValue"
 msgid "Copy Value"
 msgstr "값 복사"
 
-#: Source/Editor/Panels/Console/OutputLogPanel.cpp
+#: Source/Editor/Panels/OutputLog/OutputLogPanel.cpp
 msgctxt "EdLabel.CopyVisibleLines"
 msgid "Copy Visible Lines"
 msgstr "보이는 줄 복사"
@@ -2595,7 +2595,7 @@ msgctxt "EdLabel.Freeze"
 msgid "Freeze"
 msgstr "멈춤"
 
-#: Source/Editor/Panels/Settings/GlobalVariablesPanel.cpp
+#: Source/Editor/Panels/GlobalVariables/GlobalVariablesPanel.cpp
 msgctxt "EdLabel.GroupByModule"
 msgid "Group by Module"
 msgstr "모듈별로 묶기"
@@ -2636,7 +2636,7 @@ msgctxt "EdLabel.Max"
 msgid "Max"
 msgstr "최대"
 
-#: Source/Editor/Panels/Settings/PreferencesPanel.cpp
+#: Source/Editor/Panels/Preferences/PreferencesPanel.cpp
 msgctxt "EdLabel.ModifiedOnly"
 msgid "Modified only"
 msgstr "바뀐 것만"
@@ -2681,12 +2681,12 @@ msgctxt "EdLabel.OpenAVfxXmlEffectToPlayIt"
 msgid "Open a .vfx.xml effect to play it here. Edit effects in the Catalog Editor."
 msgstr ".vfx.xml 효과를 열어 여기서 재생합니다. 효과 편집은 카탈로그 편집기에서 합니다."
 
-#: Source/Editor/Panels/Console/OutputLogPanel.cpp
+#: Source/Editor/Panels/OutputLog/OutputLogPanel.cpp
 msgctxt "EdLabel.OpenInIDE"
 msgid "Open in IDE"
 msgstr "IDE 에서 열기"
 
-#: Source/Editor/Panels/Console/OutputLogPanel.cpp
+#: Source/Editor/Panels/OutputLog/OutputLogPanel.cpp
 msgctxt "EdLabel.OpenLogFile"
 msgid "Open Log File"
 msgstr "로그 파일 열기"
@@ -2706,7 +2706,7 @@ msgctxt "EdLabel.PauseGraph"
 msgid "Pause Graph"
 msgstr "그래프 멈춤"
 
-#: Source/Editor/Panels/Console/OutputLogPanel.cpp
+#: Source/Editor/Panels/OutputLog/OutputLogPanel.cpp
 msgctxt "EdLabel.PauseOnError"
 msgid "Pause on Error"
 msgstr "오류에서 멈춤"
@@ -2797,7 +2797,7 @@ msgctxt "EdLabel.Show2DStickTriggerGauges"
 msgid "Show 2D Stick & Trigger Gauges"
 msgstr "2D 스틱 · 트리거 게이지 보이기"
 
-#: Source/Editor/Panels/Console/OutputLogPanel.cpp
+#: Source/Editor/Panels/OutputLog/OutputLogPanel.cpp
 msgctxt "EdLabel.ShowAll"
 msgid "Show All"
 msgstr "모두 보이기"
@@ -3091,7 +3091,7 @@ msgctxt "EdSection.PerformanceScene"
 msgid "Performance & Scene"
 msgstr "성능과 씬"
 
-#: Source/Editor/Panels/Settings/GlobalVariablesPanel.cpp
+#: Source/Editor/Panels/GlobalVariables/GlobalVariablesPanel.cpp
 msgctxt "EdSection.PinnedFavorites"
 msgid "Pinned / Favorites"
 msgstr "고정 · 즐겨찾기"
@@ -3316,7 +3316,7 @@ msgctxt "EdText.Broadcast"
 msgid "Broadcast"
 msgstr "방송"
 
-#: Source/Editor/Panels/Settings/ModulesPanel.cpp
+#: Source/Editor/Panels/Modules/ModulesPanel.cpp
 msgctxt "EdText.Build"
 msgid "Build"
 msgstr "빌드"
@@ -3475,7 +3475,7 @@ msgctxt "EdText.ExitIsolation"
 msgid "Exit Isolation"
 msgstr "격리 나가기"
 
-#: Source/Editor/Panels/Console/OutputLogPanel.cpp
+#: Source/Editor/Panels/OutputLog/OutputLogPanel.cpp
 msgctxt "EdText.ExpectedByTest"
 msgid "expected by test"
 msgstr "테스트가 예상함"
@@ -3515,7 +3515,7 @@ msgctxt "EdText.GeometryRounding"
 msgid "Geometry & Rounding"
 msgstr "모양 · 둥글기"
 
-#: Source/Editor/Panels/Settings/GlobalVariablesPanel.cpp
+#: Source/Editor/Panels/GlobalVariables/GlobalVariablesPanel.cpp
 msgctxt "EdText.GlobalVariablePresets"
 msgid "Global Variable Presets"
 msgstr "전역 변수 프리셋"
@@ -3581,7 +3581,7 @@ msgctxt "EdText.Invoke"
 msgid "Invoke"
 msgstr "부르기"
 
-#: Source/Editor/Panels/Settings/UserSettingsPanel.cpp
+#: Source/Editor/Panels/UserSettings/UserSettingsPanel.cpp
 msgctxt "EdText.Keep"
 msgid "Keep"
 msgstr "남기기"
@@ -3764,7 +3764,7 @@ msgctxt "EdText.Preset"
 msgid "Preset"
 msgstr "프리셋"
 
-#: Source/Editor/Panels/Settings/GlobalVariablesPanel.cpp
+#: Source/Editor/Panels/GlobalVariables/GlobalVariablesPanel.cpp
 msgctxt "EdText.Presets"
 msgid "Presets..."
 msgstr "프리셋..."
@@ -3854,7 +3854,7 @@ msgctxt "EdText.RenderDocCapture"
 msgid "RenderDoc Capture"
 msgstr "RenderDoc 캡처"
 
-#: Source/Editor/Panels/Settings/ShortcutsPanel.cpp
+#: Source/Editor/Panels/Preferences/ShortcutsPanel.cpp
 msgctxt "EdText.Replace"
 msgid "Replace"
 msgstr "바꾸기"
@@ -3864,8 +3864,8 @@ msgctxt "EdText.ReplayServer"
 msgid "Replay server"
 msgstr "재생 서버"
 
-#: Source/Editor/Panels/Settings/GlobalVariablesPanel.cpp
-#: Source/Editor/Panels/Settings/ShortcutsPanel.cpp
+#: Source/Editor/Panels/GlobalVariables/GlobalVariablesPanel.cpp
+#: Source/Editor/Panels/Preferences/ShortcutsPanel.cpp
 msgctxt "EdText.ResetAll"
 msgid "Reset All"
 msgstr "모두 초기화"
@@ -3880,7 +3880,7 @@ msgctxt "EdText.ResetStickToCenter"
 msgid "Reset Stick to Center"
 msgstr "스틱을 가운데로"
 
-#: Source/Editor/Panels/Settings/UserSettingsPanel.cpp
+#: Source/Editor/Panels/UserSettings/UserSettingsPanel.cpp
 msgctxt "EdText.ResetTab"
 msgid "Reset Tab"
 msgstr "탭 초기화"
@@ -3923,7 +3923,7 @@ msgctxt "EdText.RevertAllToDefault"
 msgid "Revert All to Default"
 msgstr "모두 기본으로 되돌리기"
 
-#: Source/Editor/Panels/Settings/UserSettingsPanel.cpp
+#: Source/Editor/Panels/UserSettings/UserSettingsPanel.cpp
 msgctxt "EdText.RevertNow"
 msgid "Revert Now"
 msgstr "지금 되돌리기"
@@ -3983,7 +3983,7 @@ msgctxt "EdText.SaveReplay"
 msgid "Save Replay"
 msgstr "재생 저장"
 
-#: Source/Editor/Panels/Settings/GlobalVariablesPanel.cpp
+#: Source/Editor/Panels/GlobalVariables/GlobalVariablesPanel.cpp
 msgctxt "EdText.SaveSession"
 msgid "Save Session"
 msgstr "세션 저장"
@@ -3998,7 +3998,7 @@ msgctxt "EdText.SaveTrace"
 msgid "Save Trace"
 msgstr "추적 저장"
 
-#: Source/Editor/Panels/Settings/GlobalVariablesPanel.cpp
+#: Source/Editor/Panels/GlobalVariables/GlobalVariablesPanel.cpp
 msgctxt "EdText.SavedPresets"
 msgid "Saved Presets:"
 msgstr "저장한 프리셋:"
@@ -4028,7 +4028,7 @@ msgctxt "EdText.SessionServer"
 msgid "Session server"
 msgstr "세션 서버"
 
-#: Source/Editor/Panels/Settings/ShortcutsPanel.cpp
+#: Source/Editor/Panels/Preferences/ShortcutsPanel.cpp
 msgctxt "EdText.Set"
 msgid "Set"
 msgstr "정하기"
@@ -4402,8 +4402,8 @@ msgctxt "EdVFX.TargetTip"
 msgid "Prefab of an animated character. The effect rides on it at chest height while it walks a circle, so trails and afterimages show their motion."
 msgstr "움직이는 캐릭터의 프리팹입니다. 효과가 가슴 높이에 붙어 원을 따라 걸어, 꼬리 · 잔상이 움직임을 보입니다."
 
-#: Source/Editor/Panels/Settings/ModulesPanel.cpp
-#: Source/Editor/Panels/Settings/UserSettingsPanel.cpp
+#: Source/Editor/Panels/Modules/ModulesPanel.cpp
+#: Source/Editor/Panels/UserSettings/UserSettingsPanel.cpp
 #: Source/Editor/Panels/TileMap/TileMapPanel.cpp
 msgctxt "EdVerb.Apply"
 msgid "Apply"
@@ -4415,15 +4415,15 @@ msgstr "적용"
 #: Source/Editor/Panels/Animation/SequencerPanel.cpp
 #: Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp
 #: Source/Editor/Panels/InputMap/InputMapPanel.cpp
-#: Source/Editor/Panels/Settings/ModulesPanel.cpp
-#: Source/Editor/Panels/Settings/ShortcutsPanel.cpp
+#: Source/Editor/Panels/Modules/ModulesPanel.cpp
+#: Source/Editor/Panels/Preferences/ShortcutsPanel.cpp
 #: Source/Editor/Panels/SourceControl/SourceControlChangesPanel.cpp
 msgctxt "EdVerb.Cancel"
 msgid "Cancel"
 msgstr "취소"
 
 #: Source/Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.cpp
-#: Source/Editor/Panels/Console/OutputLogPanel.cpp
+#: Source/Editor/Panels/OutputLog/OutputLogPanel.cpp
 #: Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp
 #: Source/Editor/Panels/Multiplayer/MultiplayerSyncTab.cpp
 #: Source/Editor/Panels/Profiler/ProfilerPanel.cpp
@@ -4481,7 +4481,7 @@ msgstr "다시 실행"
 #: Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp
 #: Source/Editor/Panels/Multiplayer/MultiplayerInspectorTab.cpp
 #: Source/Editor/Panels/RenderTarget/RenderTargetPanel.cpp
-#: Source/Editor/Panels/Settings/ModulesPanel.cpp
+#: Source/Editor/Panels/Modules/ModulesPanel.cpp
 #: Source/Editor/Panels/SourceControl/SourceControlChangesPanel.cpp
 #: Source/Editor/SelfTest/TestRunnerPanel.cpp
 msgctxt "EdVerb.Refresh"
@@ -4516,8 +4516,8 @@ msgstr "제거"
 
 #: Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp
 #: Source/Editor/Panels/Physics/RagdollPreviewPanel.cpp
-#: Source/Editor/Panels/Settings/GlobalVariablesPanel.cpp
-#: Source/Editor/Panels/Settings/ShortcutsPanel.cpp
+#: Source/Editor/Panels/GlobalVariables/GlobalVariablesPanel.cpp
+#: Source/Editor/Panels/Preferences/ShortcutsPanel.cpp
 msgctxt "EdVerb.Reset"
 msgid "Reset"
 msgstr "초기화"
@@ -4526,7 +4526,7 @@ msgstr "초기화"
 #: Source/Editor/Panels/DataTable/DataTablePanel.cpp
 #: Source/Editor/Panels/ProjectSettings/ProjectSettingsPanel.cpp
 #: Source/Editor/Panels/Scene/PrefabOverridesPanel.cpp
-#: Source/Editor/Panels/Settings/UserSettingsPanel.cpp
+#: Source/Editor/Panels/UserSettings/UserSettingsPanel.cpp
 msgctxt "EdVerb.Revert"
 msgid "Revert"
 msgstr "되돌리기"
@@ -4546,7 +4546,7 @@ msgstr "되돌리기"
 #: Source/Editor/Panels/Prefab/PrefabEditorPanel.cpp
 #: Source/Editor/Panels/Profiler/ProfilerPanel.cpp
 #: Source/Editor/Panels/ProjectSettings/ProjectSettingsPanel.cpp
-#: Source/Editor/Panels/Settings/GlobalVariablesPanel.cpp
+#: Source/Editor/Panels/GlobalVariables/GlobalVariablesPanel.cpp
 #: Source/Editor/Panels/TileMap/TileMapPanel.cpp
 #: Source/Editor/Panels/TileSet/TileSetPanel.cpp
 #: Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp
@@ -4696,7 +4696,7 @@ msgctxt "EdWidget.Clip"
 msgid "Clip"
 msgstr "클립"
 
-#: Source/Editor/Panels/Console/OutputLogPanel.cpp
+#: Source/Editor/Panels/OutputLog/OutputLogPanel.cpp
 msgctxt "EdWidget.Collapse"
 msgid "Collapse"
 msgstr "접기"
@@ -4761,7 +4761,7 @@ msgctxt "EdWidget.LeftStick"
 msgid "Left Stick"
 msgstr "왼쪽 스틱"
 
-#: Source/Editor/Panels/Console/OutputLogPanel.cpp
+#: Source/Editor/Panels/OutputLog/OutputLogPanel.cpp
 msgctxt "EdWidget.Lines"
 msgid "lines"
 msgstr "줄"
@@ -4865,7 +4865,7 @@ msgctxt "EdWidget.Resolution"
 msgid "Resolution"
 msgstr "해상도"
 
-#: Source/Editor/Panels/Settings/UserSettingsPanel.cpp
+#: Source/Editor/Panels/UserSettings/UserSettingsPanel.cpp
 msgctxt "EdWidget.RestartRequired"
 msgid "Restart required"
 msgstr "다시 시작 필요"
@@ -4910,7 +4910,7 @@ msgctxt "EdWidget.Starting"
 msgid "Starting"
 msgstr "시작 중"
 
-#: Source/Editor/Panels/Console/OutputLogPanel.cpp
+#: Source/Editor/Panels/OutputLog/OutputLogPanel.cpp
 msgctxt "EdWidget.TagFilter"
 msgid "Tags"
 msgstr "태그"
@@ -4930,7 +4930,7 @@ msgctxt "EdWidget.Tiles"
 msgid "Tiles"
 msgstr "타일"
 
-#: Source/Editor/Panels/Settings/GlobalVariablesPanel.cpp
+#: Source/Editor/Panels/GlobalVariables/GlobalVariablesPanel.cpp
 msgctxt "EdWidget.Variables"
 msgid "variables"
 msgstr "변수"
@@ -5786,97 +5786,97 @@ msgctxt "EditorCollision.ResponsesTitle"
 msgid "Responses by profile and channel"
 msgstr "프로필 · 채널별 응답"
 
-#: Source/Editor/Panels/Console/OutputLogPanel.cpp
+#: Source/Editor/Panels/OutputLog/OutputLogPanel.cpp
 msgctxt "EditorConsole.AllLevelsHidden"
 msgid "All log levels are hidden. Re-enable one in the toolbar."
 msgstr "모든 로그 수준이 숨겨져 있습니다. 툴바에서 하나를 다시 켜세요."
 
-#: Source/Editor/Panels/Console/OutputLogPanel.cpp
+#: Source/Editor/Panels/OutputLog/OutputLogPanel.cpp
 msgctxt "EditorConsole.AutoScroll"
 msgid "Follow new logs while scrolled to the bottom. Scrolling up to read pauses it; scrolling back to the bottom resumes it"
 msgstr "맨 아래에 있을 때 새 로그를 따라 내려갑니다. 위로 올려 읽는 동안은 멈추고, 맨 아래로 내리면 다시 따라갑니다"
 
-#: Source/Editor/Panels/Console/OutputLogPanel.cpp
+#: Source/Editor/Panels/OutputLog/OutputLogPanel.cpp
 msgctxt "EditorConsole.Clear"
 msgid "Clear all console log output"
 msgstr "콘솔 로그 출력을 모두 지웁니다"
 
-#: Source/Editor/Panels/Console/OutputLogPanel.cpp
+#: Source/Editor/Panels/OutputLog/OutputLogPanel.cpp
 msgctxt "EditorConsole.ClearOnPlay"
 msgid "Clear the log when Play starts"
 msgstr "Play 를 시작하면 로그를 지웁니다"
 
-#: Source/Editor/Panels/Console/OutputLogPanel.cpp
+#: Source/Editor/Panels/OutputLog/OutputLogPanel.cpp
 msgctxt "EditorConsole.Collapse"
 msgid "Fold identical log lines into one and show the count in front"
 msgstr "같은 로그 줄을 한 줄로 접고 앞에 횟수를 적습니다"
 
-#: Source/Editor/Panels/Console/OutputLogPanel.cpp
+#: Source/Editor/Panels/OutputLog/OutputLogPanel.cpp
 msgctxt "EditorConsole.CommandHint"
 msgid "> command or gv_name [value] (Tab completes, Up/Down history, help)"
 msgstr "> 명령 또는 gv_name [value] (Tab 자동 완성, 위/아래 기록, help)"
 
-#: Source/Editor/Panels/Console/OutputLogPanel.cpp
+#: Source/Editor/Panels/OutputLog/OutputLogPanel.cpp
 msgctxt "EditorConsole.CopyAll"
 msgid "Copy every filtered console log to the clipboard"
 msgstr "필터링된 모든 콘솔 로그를 클립보드에 복사합니다"
 
-#: Source/Editor/Panels/Console/OutputLogPanel.cpp
+#: Source/Editor/Panels/OutputLog/OutputLogPanel.cpp
 msgctxt "EditorConsole.EntrySource"
 msgid "{file}({line}) - double-click to open in IDE"
 msgstr "{file}({line}) - 더블클릭하면 IDE 에서 엽니다"
 
-#: Source/Editor/Panels/Console/OutputLogPanel.cpp
+#: Source/Editor/Panels/OutputLog/OutputLogPanel.cpp
 msgctxt "EditorConsole.ErrorPause"
 msgid "Pause Play when an error log appears during Play"
 msgstr "Play 중 오류 로그가 나오면 Play 를 멈춥니다(Pause)"
 
-#: Source/Editor/Panels/Console/OutputLogPanel.cpp
+#: Source/Editor/Panels/OutputLog/OutputLogPanel.cpp
 msgctxt "EditorConsole.FilterHint"
 msgid "Filter (tag / message / file)"
 msgstr "필터 (태그 / 메시지 / 파일)"
 
-#: Source/Editor/Panels/Console/OutputLogPanel.cpp
+#: Source/Editor/Panels/OutputLog/OutputLogPanel.cpp
 msgctxt "EditorConsole.FilterTooltip"
 msgid "Filter by log message, module tag or file name"
 msgstr "로그 메시지, 모듈 태그, 파일명으로 필터링하여 검색합니다"
 
-#: Source/Editor/Panels/Console/OutputLogPanel.cpp
+#: Source/Editor/Panels/OutputLog/OutputLogPanel.cpp
 msgctxt "EditorConsole.NoLogOutput"
 msgid "No log output yet."
 msgstr "아직 로그 출력이 없습니다."
 
-#: Source/Editor/Panels/Console/OutputLogPanel.cpp
+#: Source/Editor/Panels/OutputLog/OutputLogPanel.cpp
 msgctxt "EditorConsole.OpenLogFile"
 msgid "Open the most recent saved log file in the file explorer"
 msgstr "저장된 로그 파일(가장 최근)을 파일 탐색기에서 엽니다"
 
-#: Source/Editor/Panels/Console/OutputLogPanel.cpp
+#: Source/Editor/Panels/OutputLog/OutputLogPanel.cpp
 msgctxt "EditorConsole.Options"
 msgid "Log options: auto-scroll, clear on Play, pause on error, copy and open the log file"
 msgstr "로그 옵션: 자동 스크롤, Play 때 지우기, 오류에서 멈추기, 복사, 로그 파일 열기"
 
-#: Source/Editor/Panels/Console/OutputLogPanel.cpp
+#: Source/Editor/Panels/OutputLog/OutputLogPanel.cpp
 msgctxt "EditorConsole.ShowErrors"
 msgid "Toggle showing Error-level logs"
 msgstr "오류(Error) 수준 로그 표시 여부를 토글합니다"
 
-#: Source/Editor/Panels/Console/OutputLogPanel.cpp
+#: Source/Editor/Panels/OutputLog/OutputLogPanel.cpp
 msgctxt "EditorConsole.ShowInfo"
 msgid "Toggle showing Info-level logs"
 msgstr "정보(Info) 수준 로그 표시 여부를 토글합니다"
 
-#: Source/Editor/Panels/Console/OutputLogPanel.cpp
+#: Source/Editor/Panels/OutputLog/OutputLogPanel.cpp
 msgctxt "EditorConsole.ShowTrace"
 msgid "Toggle showing Trace-level logs"
 msgstr "상세(Trace) 수준 로그 표시 여부를 토글합니다"
 
-#: Source/Editor/Panels/Console/OutputLogPanel.cpp
+#: Source/Editor/Panels/OutputLog/OutputLogPanel.cpp
 msgctxt "EditorConsole.ShowWarnings"
 msgid "Toggle showing Warning-level logs"
 msgstr "경고(Warning) 수준 로그 표시 여부를 토글합니다"
 
-#: Source/Editor/Panels/Console/OutputLogPanel.cpp
+#: Source/Editor/Panels/OutputLog/OutputLogPanel.cpp
 msgctxt "EditorConsole.TagFilter"
 msgid "Show or hide each log tag (category)"
 msgstr "로그 태그(카테고리)마다 보이기를 켜고 끕니다"
@@ -8634,252 +8634,252 @@ msgctxt "EditorSequencer.ZoomOutTip"
 msgid "Show more frames."
 msgstr "프레임을 더 많이 봅니다."
 
-#: Source/Editor/Panels/Settings/ModulesPanel.cpp
+#: Source/Editor/Panels/Modules/ModulesPanel.cpp
 msgctxt "EditorSettings.BuildModules"
 msgid "Compile every module with the changed module set"
 msgstr "바뀐 모듈 구성으로 모든 모듈을 컴파일합니다"
 
-#: Source/Editor/Panels/Settings/GlobalVariablesPanel.cpp
+#: Source/Editor/Panels/GlobalVariables/GlobalVariablesPanel.cpp
 msgctxt "EditorSettings.FilterVariablesHint"
 msgid "Filter variables..."
 msgstr "변수 필터..."
 
-#: Source/Editor/Panels/Settings/GlobalVariablesPanel.cpp
+#: Source/Editor/Panels/GlobalVariables/GlobalVariablesPanel.cpp
 msgctxt "EditorSettings.GroupByModule"
 msgid "Group the variables by the module that defines them"
 msgstr "변수를 정의한 모듈별로 묶습니다"
 
-#: Source/Editor/Panels/Settings/ModulesPanel.cpp
+#: Source/Editor/Panels/Modules/ModulesPanel.cpp
 msgctxt "EditorSettings.ModuleChangeNoCascade"
 msgid "No other modules change."
 msgstr "다른 모듈은 바뀌지 않습니다."
 
-#: Source/Editor/Panels/Settings/ModulesPanel.cpp
+#: Source/Editor/Panels/Modules/ModulesPanel.cpp
 msgctxt "EditorSettings.ModuleChangeTarget"
 msgid "Module"
 msgstr "모듈"
 
-#: Source/Editor/Panels/Settings/ModulesPanel.cpp
+#: Source/Editor/Panels/Modules/ModulesPanel.cpp
 msgctxt "EditorSettings.ModuleChangeTurnsOff"
 msgid "Also turns off"
 msgstr "함께 꺼짐"
 
-#: Source/Editor/Panels/Settings/ModulesPanel.cpp
+#: Source/Editor/Panels/Modules/ModulesPanel.cpp
 msgctxt "EditorSettings.ModuleChangeTurnsOn"
 msgid "Also turns on"
 msgstr "함께 켜짐"
 
-#: Source/Editor/Panels/Settings/ModulesPanel.cpp
+#: Source/Editor/Panels/Modules/ModulesPanel.cpp
 msgctxt "EditorSettings.ModuleDefaultState"
 msgid "Default"
 msgstr "기본값"
 
-#: Source/Editor/Panels/Settings/ModulesPanel.cpp
+#: Source/Editor/Panels/Modules/ModulesPanel.cpp
 msgctxt "EditorSettings.ModuleDependencies"
 msgid "Depends on"
 msgstr "의존 모듈"
 
-#: Source/Editor/Panels/Settings/ModulesPanel.cpp
+#: Source/Editor/Panels/Modules/ModulesPanel.cpp
 msgctxt "EditorSettings.ModuleDependents"
 msgid "Required by"
 msgstr "이 모듈에 의존하는 모듈"
 
-#: Source/Editor/Panels/Settings/ModulesPanel.cpp
+#: Source/Editor/Panels/Modules/ModulesPanel.cpp
 msgctxt "EditorSettings.ModuleKindAll"
 msgid "All categories"
 msgstr "모든 종류"
 
-#: Source/Editor/Panels/Settings/ModulesPanel.cpp
+#: Source/Editor/Panels/Modules/ModulesPanel.cpp
 msgctxt "EditorSettings.ModuleKindFilter"
 msgid "Show only one module category"
 msgstr "한 종류의 모듈만 보입니다"
 
-#: Source/Editor/Panels/Settings/ModulesPanel.cpp
+#: Source/Editor/Panels/Modules/ModulesPanel.cpp
 msgctxt "EditorSettings.ModuleLocked"
 msgid "Editor and game modules cannot be turned off here"
 msgstr "에디터 · 게임 모듈은 여기서 끌 수 없습니다"
 
-#: Source/Editor/Panels/Settings/ModulesPanel.cpp
+#: Source/Editor/Panels/Modules/ModulesPanel.cpp
 msgctxt "EditorSettings.ModuleOverride"
 msgid "Project override"
 msgstr "프로젝트 오버라이드"
 
-#: Source/Editor/Panels/Settings/ModulesPanel.cpp
+#: Source/Editor/Panels/Modules/ModulesPanel.cpp
 msgctxt "EditorSettings.ModuleOverrideNone"
 msgid "None (uses default)"
 msgstr "없음(기본값 사용)"
 
-#: Source/Editor/Panels/Settings/ModulesPanel.cpp
+#: Source/Editor/Panels/Modules/ModulesPanel.cpp
 msgctxt "EditorSettings.ModuleResetOverride"
 msgid "Reset to default"
 msgstr "기본값으로 되돌리기"
 
-#: Source/Editor/Panels/Settings/ModulesPanel.cpp
+#: Source/Editor/Panels/Modules/ModulesPanel.cpp
 msgctxt "EditorSettings.ModuleResetOverrideTip"
 msgid "Remove this module's line from the project manifest (previews the change first)"
 msgstr "프로젝트 매니페스트에서 이 모듈 줄을 지웁니다(먼저 변경을 미리 보여 줍니다)"
 
-#: Source/Editor/Panels/Settings/ModulesPanel.cpp
+#: Source/Editor/Panels/Modules/ModulesPanel.cpp
 msgctxt "EditorSettings.ModuleSetChanged"
 msgid "Module set changed - build to apply, then restart the editor."
 msgstr "모듈 구성이 바뀌었습니다 - 빌드해 적용한 뒤 에디터를 다시 시작하세요."
 
-#: Source/Editor/Panels/Settings/ModulesPanel.cpp
+#: Source/Editor/Panels/Modules/ModulesPanel.cpp
 msgctxt "EditorSettings.ModuleStateAll"
 msgid "On and off"
 msgstr "켜짐과 꺼짐"
 
-#: Source/Editor/Panels/Settings/ModulesPanel.cpp
+#: Source/Editor/Panels/Modules/ModulesPanel.cpp
 msgctxt "EditorSettings.ModuleStateFilter"
 msgid "Filter modules by whether they are on"
 msgstr "켜짐 여부로 모듈을 거릅니다"
 
-#: Source/Editor/Panels/Settings/ModulesPanel.cpp
+#: Source/Editor/Panels/Modules/ModulesPanel.cpp
 msgctxt "EditorSettings.ModuleStateOff"
 msgid "Off only"
 msgstr "꺼진 것만"
 
-#: Source/Editor/Panels/Settings/ModulesPanel.cpp
+#: Source/Editor/Panels/Modules/ModulesPanel.cpp
 msgctxt "EditorSettings.ModuleStateOn"
 msgid "On only"
 msgstr "켜진 것만"
 
-#: Source/Editor/Panels/Settings/ModulesPanel.cpp
+#: Source/Editor/Panels/Modules/ModulesPanel.cpp
 msgctxt "EditorSettings.ModuleToggle"
 msgid "Turn this module on or off (the affected modules are shown before it applies)"
 msgstr "이 모듈을 켜거나 끕니다(적용하기 전에 영향받는 모듈을 보여 줍니다)"
 
-#: Source/Editor/Panels/Settings/ModulesPanel.cpp
+#: Source/Editor/Panels/Modules/ModulesPanel.cpp
 msgctxt "EditorSettings.ModuleVersion"
 msgid "Version"
 msgstr "버전"
 
-#: Source/Editor/Panels/Settings/GlobalVariablesPanel.cpp
+#: Source/Editor/Panels/GlobalVariables/GlobalVariablesPanel.cpp
 msgctxt "EditorSettings.NoDescription"
 msgid "(no description)"
 msgstr "(설명 없음)"
 
-#: Source/Editor/Panels/Settings/GlobalVariablesPanel.cpp
+#: Source/Editor/Panels/GlobalVariables/GlobalVariablesPanel.cpp
 msgctxt "EditorSettings.NoGlobalVariables"
 msgid "No global variables registered."
 msgstr "등록된 전역 변수가 없습니다."
 
-#: Source/Editor/Panels/Settings/GlobalVariablesPanel.cpp
+#: Source/Editor/Panels/GlobalVariables/GlobalVariablesPanel.cpp
 msgctxt "EditorSettings.NoPresets"
 msgid "No presets found."
 msgstr "프리셋이 없습니다."
 
-#: Source/Editor/Panels/Settings/PreferencesPanel.cpp
+#: Source/Editor/Panels/Preferences/PreferencesPanel.cpp
 msgctxt "EditorSettings.NoSectionMatches"
 msgid "No section matches the search."
 msgstr "검색어에 맞는 섹션이 없습니다."
 
-#: Source/Editor/Panels/Settings/GlobalVariablesPanel.cpp
+#: Source/Editor/Panels/GlobalVariables/GlobalVariablesPanel.cpp
 msgctxt "EditorSettings.PinVariable"
 msgid "Pin to favorites"
 msgstr "즐겨찾기에 고정"
 
-#: Source/Editor/Panels/Settings/GlobalVariablesPanel.cpp
+#: Source/Editor/Panels/GlobalVariables/GlobalVariablesPanel.cpp
 msgctxt "EditorSettings.PresetNameHint"
 msgid "Preset Name..."
 msgstr "프리셋 이름..."
 
-#: Source/Editor/Panels/Settings/GlobalVariablesPanel.cpp
+#: Source/Editor/Panels/GlobalVariables/GlobalVariablesPanel.cpp
 msgctxt "EditorSettings.Presets"
 msgid "Save or load named sets of global variable values"
 msgstr "이름 붙인 전역 변수 값 묶음을 저장하거나 불러옵니다"
 
-#: Source/Editor/Panels/Settings/ShortcutsPanel.cpp
+#: Source/Editor/Panels/Preferences/ShortcutsPanel.cpp
 msgctxt "EditorSettings.PressKeyCombo"
 msgid "Press a key combo (Esc cancels, Backspace clears)"
 msgstr "키 조합을 누르세요 (Esc 취소, Backspace 지우기)"
 
-#: Source/Editor/Panels/Settings/ModulesPanel.cpp
+#: Source/Editor/Panels/Modules/ModulesPanel.cpp
 msgctxt "EditorSettings.ReadingModules"
 msgid "Reading modules..."
 msgstr "모듈을 읽는 중..."
 
-#: Source/Editor/Panels/Settings/ModulesPanel.cpp
+#: Source/Editor/Panels/Modules/ModulesPanel.cpp
 msgctxt "EditorSettings.RefreshModules"
 msgid "Read the module catalog from the module folder again"
 msgstr "모듈 폴더에서 모듈 카탈로그를 다시 읽습니다"
 
-#: Source/Editor/Panels/Settings/ShortcutsPanel.cpp
+#: Source/Editor/Panels/Preferences/ShortcutsPanel.cpp
 msgctxt "EditorSettings.ReplaceShortcut"
 msgid "Give this combo to the selected command and remove it from the other command"
 msgstr "이 조합을 고른 명령에 주고 다른 명령에서는 지웁니다"
 
-#: Source/Editor/Panels/Settings/ShortcutsPanel.cpp
+#: Source/Editor/Panels/Preferences/ShortcutsPanel.cpp
 msgctxt "EditorSettings.ResetAllShortcuts"
 msgid "Restore every shortcut to its default binding"
 msgstr "모든 단축키를 기본 바인딩으로 되돌립니다"
 
-#: Source/Editor/Panels/Settings/GlobalVariablesPanel.cpp
+#: Source/Editor/Panels/GlobalVariables/GlobalVariablesPanel.cpp
 msgctxt "EditorSettings.ResetAllVariables"
 msgid "Reset every global variable to its default value"
 msgstr "모든 전역 변수를 기본값으로 되돌립니다"
 
-#: Source/Editor/Panels/Settings/PreferencesPanel.cpp
+#: Source/Editor/Panels/Preferences/PreferencesPanel.cpp
 msgctxt "EditorSettings.ResetSection"
 msgid "Reset every value in this section to its default"
 msgstr "이 섹션의 값을 모두 기본값으로 되돌립니다"
 
-#: Source/Editor/Panels/Settings/ShortcutsPanel.cpp
+#: Source/Editor/Panels/Preferences/ShortcutsPanel.cpp
 msgctxt "EditorSettings.ResetShortcut"
 msgid "Restore this command's default shortcut"
 msgstr "이 명령의 기본 단축키로 되돌립니다"
 
-#: Source/Editor/Panels/Settings/GlobalVariablesPanel.cpp
+#: Source/Editor/Panels/GlobalVariables/GlobalVariablesPanel.cpp
 msgctxt "EditorSettings.ResetVariable"
 msgid "Reset this variable to its default value"
 msgstr "이 변수를 기본값으로 되돌립니다"
 
-#: Source/Editor/Panels/Settings/GlobalVariablesPanel.cpp
+#: Source/Editor/Panels/GlobalVariables/GlobalVariablesPanel.cpp
 msgctxt "EditorSettings.SaveSession"
 msgid "Save the current values to the session file"
 msgstr "지금 값을 세션 파일에 저장합니다"
 
-#: Source/Editor/Panels/Settings/GlobalVariablesPanel.cpp
+#: Source/Editor/Panels/GlobalVariables/GlobalVariablesPanel.cpp
 msgctxt "EditorSettings.ScanningPresets"
 msgid "Scanning presets..."
 msgstr "프리셋을 찾는 중..."
 
-#: Source/Editor/Panels/Settings/ModulesPanel.cpp
+#: Source/Editor/Panels/Modules/ModulesPanel.cpp
 msgctxt "EditorSettings.SearchModulesHint"
 msgid "Search modules..."
 msgstr "모듈 검색..."
 
-#: Source/Editor/Panels/Settings/ShortcutsPanel.cpp
+#: Source/Editor/Panels/Preferences/ShortcutsPanel.cpp
 msgctxt "EditorSettings.SearchShortcutsHint"
 msgid "Search commands or keys (Ctrl+S)..."
 msgstr "명령 또는 키 검색 (Ctrl+S)..."
 
-#: Source/Editor/Panels/Settings/ShortcutsPanel.cpp
+#: Source/Editor/Panels/Preferences/ShortcutsPanel.cpp
 msgctxt "EditorSettings.SetShortcut"
 msgid "Record a new shortcut for this command"
 msgstr "이 명령의 새 단축키를 입력받습니다"
 
-#: Source/Editor/Panels/Settings/ShortcutsPanel.cpp
+#: Source/Editor/Panels/Preferences/ShortcutsPanel.cpp
 msgctxt "EditorSettings.ShortcutInUse"
 msgid "This combo is already used. Replace clears it from the other command."
 msgstr "이미 쓰이는 조합입니다. Replace 를 누르면 다른 명령에서 지웁니다."
 
-#: Source/Editor/Panels/Settings/GlobalVariablesPanel.cpp
+#: Source/Editor/Panels/GlobalVariables/GlobalVariablesPanel.cpp
 msgctxt "EditorSettings.UnpinVariable"
 msgid "Unpin from favorites"
 msgstr "즐겨찾기 고정 해제"
 
-#: Source/Editor/Panels/Settings/UserSettingsPanel.cpp
+#: Source/Editor/Panels/UserSettings/UserSettingsPanel.cpp
 msgctxt "EditorSettings.UserSettingsNotLoaded"
 msgid "User settings are not loaded."
 msgstr "사용자 설정을 불러오지 않았습니다."
 
-#: Source/Editor/Panels/Settings/GlobalVariablesPanel.cpp
+#: Source/Editor/Panels/GlobalVariables/GlobalVariablesPanel.cpp
 msgctxt "EditorSettings.VariableDescription"
 msgid "Description: {description}"
 msgstr "설명: {description}"
 
-#: Source/Editor/Panels/Settings/GlobalVariablesPanel.cpp
+#: Source/Editor/Panels/GlobalVariables/GlobalVariablesPanel.cpp
 msgctxt "EditorSettings.VariableModule"
 msgid "Module: {module}"
 msgstr "모듈: {module}"
@@ -10000,12 +10000,12 @@ msgctxt "Enum.BoneMaskWeightSource.Subtree"
 msgid "Set on this bone and spread to its children."
 msgstr "이 본에 적었고 자식 본에 퍼집니다."
 
-#: Source/Editor/Common/Workspace/EditorViewTargetUtil.h
+#: Source/Editor/Common/Workspace/View/EditorViewTargetUtil.h
 msgctxt "Enum.EditorGameViewAspect.Free"
 msgid "Free Aspect"
 msgstr "자유 비율"
 
-#: Source/Editor/Common/Workspace/EditorViewTargetUtil.h
+#: Source/Editor/Common/Workspace/View/EditorViewTargetUtil.h
 msgctxt "Enum.EditorGameViewAspect.Ratio16x9"
 msgid "16:9"
 msgstr "16:9"

@@ -13,7 +13,7 @@
 
 #include "Engine/EngineHooks.h"
 
-#include "ModuleManager/Host/HostDevLayer.h"
+#include "ModuleManager/Host/IHostDevLayer.h"
 
 namespace sw
 {

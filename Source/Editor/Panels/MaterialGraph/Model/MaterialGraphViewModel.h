@@ -10,8 +10,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
-#include "DevTools/Material/MaterialGraph.h"
 #include "DevTools/Material/MaterialGraphCompileResult.h"
+#include "DevTools/Material/MaterialGraphDef.h"
 
 #include "Editor/Common/Widgets/EditorNodeGraphRules.h"
 #include "Editor/Panels/Material/Model/MaterialViewModel.h"

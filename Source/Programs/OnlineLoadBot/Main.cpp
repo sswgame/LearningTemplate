@@ -21,8 +21,8 @@
 #include "Engine/Module/EngineABIStamp.h"
 #include "Engine/Module/ModuleTypeRegistry.h"
 
-#include "ModuleManager/Host/HostDevLayer.h"
 #include "ModuleManager/Host/HostLaunch.h"
+#include "ModuleManager/Host/IHostDevLayer.h"
 #include "ModuleManager/ModuleLoaderSubsystem.h"
 
 #include "Programs/OnlineLoadBot/LoadBotModuleEntry.h"

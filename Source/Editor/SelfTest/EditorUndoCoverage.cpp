@@ -17,10 +17,10 @@
 #include "Editor/Common/Widgets/PropertyGrid/Model/PropertyGridBuiltinValue.h"
 #include "Editor/Common/Widgets/PropertyGrid/Model/PropertyGridViewModel.h"
 #include "Editor/Common/Widgets/PropertyGrid/Model/PropertyGridViewState.h"
-#include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorSubsystems.h"
+#include "Editor/Common/Workspace/Selection/EditorSelection.h"
 #include "Editor/Common/Workspace/Undo/CommandStack.h"
-#include "Editor/SelfTest/EditorWatchSupport.h"
+#include "Editor/SelfTest/EditorWatchState.h"
 
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Object/Component/SceneComponent.h"

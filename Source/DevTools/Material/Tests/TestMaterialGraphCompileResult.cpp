@@ -4,8 +4,8 @@
 #include "Core/String/StringUtil.h"
 #include "Core/TestFramework/TestFramework.h"
 
-#include "DevTools/Material/MaterialGraph.h"
 #include "DevTools/Material/MaterialGraphCompileResult.h"
+#include "DevTools/Material/MaterialGraphDef.h"
 #include "DevTools/Material/MaterialGraphGeneratedPaths.h"
 #include "DevTools/Material/MaterialGraphNodeRegistry.h"
 
