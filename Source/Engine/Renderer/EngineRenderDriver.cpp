@@ -8,7 +8,6 @@
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Asset/AssetManager.h"
-#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Foundation/DeterministicRun.h"
@@ -51,20 +50,8 @@ namespace sw
     {
         struct EngineRenderDriverInternal
         {
-            /** @brief 감시 값 `Display.SDRFallback` 입니다 — 마지막 화면 출력 요청이 HDR 인데 백엔드 · 모니터가 받지 않아 SDR 로 떨어졌으면 1 입니다. */
-            [[nodiscard]] static bool readDisplaySDRFallback( const GameObjectManager* /*pManager*/, float64& outValue )
-            {
-                EngineRenderDriverSubsystem* const pSubsystem = engine::areEngineSubsystemsBound() ? engine::findSubsystem<EngineRenderDriverSubsystem>() : nullptr;
-                if ( pSubsystem == nullptr )
-                    return false;
-                outValue = pSubsystem->getRenderDriver().isDisplayOutputFallenBackToSDR() ? 1.0 : 0.0;
-                return true;
-            }
         };
     } // namespace
-
-    SW_AUTOMATION_WATCH( displaySDRFallback, "Display.SDRFallback", "1 when the requested HDR display output (-gv_displayOutput, display.hdr) fell back to SDR because the backend or monitor does not take it",
-                         &EngineRenderDriverInternal::readDisplaySDRFallback );
 
     EngineRenderDriver::EngineRenderDriver( SubsystemScope& startupScope, RHISubsystem& rhiSubsystem, FrameRendererSubsystem& frameRendererSubsystem, RenderThreadSubsystem& renderThreadSubsystem )
         : _startupScope{ startupScope }

@@ -7,6 +7,9 @@
  */
 #include "pch.h"
 
+#include "Core/Math/MathUtil.h"
+
+#include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Renderer/Frame/View/RenderStability.h"
 
@@ -72,4 +75,74 @@ namespace sw
     SW_AUTOMATION_WATCH( renderExposureAdaptation, "Render.ExposureAdaptation",
                          "Read-back |current EV - target EV| of auto exposure on the main view (a few frames late; 0 = adapted or fixed exposure)", &readExposureAdaptation );
     SW_AUTOMATION_WATCH( renderGIError, "Render.GIError", "Share of the old realtime probe GI history that is still mixed in (1 = just restarted, no value without a realtime volume)", &readGIError );
+} // namespace sw
+
+// Engine/Renderer/Frame/View/RenderStability.cpp 에서 옮긴 사진 앞 렌더 정착 조건(배포 엔진에 컴파일되지 않게).
+namespace sw
+{
+    namespace
+    {
+        /** @brief 문턱이 없을 때의 진행 중입니다 — 기본값으로 지나가지 않고 정지 시한에 이 까닭으로 진다. */
+        constexpr const utf8* kNoThresholdWhat = "no threshold - Config/Dev/ScenarioRun.json _mapConditionThreshold was not loaded";
+
+        /** @brief 조건 `RenderTemporalAccumulation` 입니다(`RenderStabilitySample::evaluateTemporalAccumulation`). */
+        AutomationReadiness readTemporalAccumulation()
+        {
+            const optional<uint32> minStillFrames = RenderStabilitySample::getMinStillFramesThreshold();
+            if ( minStillFrames.has_value() == false )
+                return AutomationReadiness::waiting( 0, kNoThresholdWhat );
+            return RenderStabilitySample::readPublished().evaluateTemporalAccumulation( *minStillFrames );
+        }
+
+        /** @brief 조건 `RenderAutoExposure` 입니다(`RenderStabilitySample::evaluateAutoExposure`). */
+        AutomationReadiness readAutoExposure()
+        {
+            const optional<float32> maxErrorEv = RenderStabilitySample::getMaxExposureErrorThreshold();
+            if ( maxErrorEv.has_value() == false )
+                return AutomationReadiness::waiting( 0, kNoThresholdWhat );
+            return RenderStabilitySample::readPublished().evaluateAutoExposure( *maxErrorEv );
+        }
+
+        /** @brief 조건 `RenderRealtimeGI` 입니다(`RenderStabilitySample::evaluateRealtimeGI`). */
+        AutomationReadiness readRealtimeGI()
+        {
+            const float32 maxError = RenderStabilitySample::readMaxGIError();
+            if ( maxError <= 0.0f )
+                return AutomationReadiness::waiting( 0, kNoThresholdWhat );
+            return RenderStabilitySample::readPublished().evaluateRealtimeGI( maxError );
+        }
+
+        /** @brief `RenderTemporalAccumulation` 의 문턱 — 가만히 있던 프레임 수(1 이상 정수, TAA 기록 섞는 비율의 역수 몇 배). */
+        expected<void> configureTemporalAccumulation( float64 threshold )
+        {
+            const uint32 minStillFrames = threshold >= 1.0 && threshold <= static_cast<float64>( MathUtil::kMaxInt32 ) ? static_cast<uint32>( threshold ) : 0u;
+            if ( minStillFrames == 0 || static_cast<float64>( minStillFrames ) != threshold )
+                return unexpected( Error{ ErrorKind::InvalidArgument, "the threshold is a frame count (a whole number, 1 or more)", "RenderTemporalAccumulation" } );
+            RenderStabilitySample::setMinStillFramesThreshold( minStillFrames );
+            return {};
+        }
+
+        /** @brief `RenderAutoExposure` 의 문턱 — 남은 노출 오차(0 이상, EV). */
+        expected<void> configureAutoExposure( float64 threshold )
+        {
+            if ( threshold < 0.0 )
+                return unexpected( Error{ ErrorKind::InvalidArgument, "the threshold is an exposure error (0 or more, EV)", "RenderAutoExposure" } );
+            RenderStabilitySample::setMaxExposureErrorThreshold( static_cast<float32>( threshold ) );
+            return {};
+        }
+
+        /** @brief `RenderRealtimeGI` 의 문턱 — 옛 기록의 남은 몫(0 보다 크고 1 보다 작다). */
+        expected<void> configureRealtimeGI( float64 threshold )
+        {
+            if ( threshold <= 0.0 || threshold >= 1.0 )
+                return unexpected( Error{ ErrorKind::InvalidArgument, "the threshold is the share of the old history left (between 0 and 1)", "RenderRealtimeGI" } );
+            RenderStabilitySample::setMaxGIErrorThreshold( static_cast<float32>( threshold ) );
+            return {};
+        }
+    } // namespace
+
+    // 사진 앞 렌더 정착 — 이력을 든 렌더러 곁에서 등록한다(실행기는 조건 이름만 안다).
+    SW_AUTOMATION_STABILITY_CONDITION( renderTemporalAccumulation, "RenderTemporalAccumulation", &readTemporalAccumulation, &configureTemporalAccumulation );
+    SW_AUTOMATION_STABILITY_CONDITION( renderAutoExposure, "RenderAutoExposure", &readAutoExposure, &configureAutoExposure );
+    SW_AUTOMATION_STABILITY_CONDITION( renderRealtimeGI, "RenderRealtimeGI", &readRealtimeGI, &configureRealtimeGI );
 } // namespace sw
