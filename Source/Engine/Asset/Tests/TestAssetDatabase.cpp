@@ -112,7 +112,14 @@ SW_TEST_CASE( AssetDatabaseTest, ImportedOutputsGetLinesFromTheirSource )
     const AssetIdentityRules rules  = AssetDatabaseTestUtil::makeRules();
     const AssetGUID          source = AssetGUID::create();
     const AssetGUID          mirror = AssetGUID::create();
-    const auto               scan   = [&]( const utf8* pStem, vector<AssetIdentityIssue>& outListIssue )
+    // 표의 GUID 가 정체성이다 — 이름에서 만든 값(`fromName`)과 다른 무작위 값으로 표가 이기는지 본다.
+    const AssetGUID                 mesh = AssetGUID::create();
+    const AssetGUID                 eyes = AssetGUID::create();
+    const vector<AssetImportOutput> listOutput{
+        {                      ".mesh", mesh.toString()},
+        {"/materials/mi_eyes.material", eyes.toString()}
+    };
+    const auto scan = [&]( const utf8* pStem, vector<AssetIdentityIssue>& outListIssue )
     {
         StringBuilder<constant::buffer::kMax256> builder;
         const auto                               makeID = [&builder, pStem]( const utf8* pPrefix, const utf8* pTail )
@@ -123,7 +130,7 @@ SW_TEST_CASE( AssetDatabaseTest, ImportedOutputsGetLinesFromTheirSource )
         };
         const vector<AssetIdentityFile> listFile{
             { makeID( "models_raw", ".glb" ), {} },
-            { makeID( "models_raw", ".glb.meta" ), AssetMeta::makeText( makeID( "models_raw", ".glb" ), source ) },
+            { makeID( "models_raw", ".glb.meta" ), AssetMeta::makeText( makeID( "models_raw", ".glb" ), source, {}, listOutput ) },
             { makeID( "models", ".mesh" ), {} },
             { makeID( "models", "/materials/mi_eyes.material" ), "<MaterialDef/>" },
             { makeID( "models", "/mirrors.xml" ), AssetDatabaseTestUtil::makeHeaderText( mirror ) },
@@ -136,9 +143,10 @@ SW_TEST_CASE( AssetDatabaseTest, ImportedOutputsGetLinesFromTheirSource )
     const AssetDatabase        moved    = scan( "people/hero", listIssue );
     SW_EXPECT_TRUE( listIssue.empty() );
     SW_EXPECT_EQUAL( size_t{ 4 }, database.getCount() ); // 원본 · 산출물 둘 · 손으로 커밋한 표
-    SW_EXPECT_EQUAL( string( "common/models/kaykit/knight.mesh" ), database.findPath( AssetGUID::fromName( source, ".mesh" ) ).value_or( string{} ) );
-    SW_EXPECT_EQUAL( string( "common/models/kaykit/knight/materials/mi_eyes.material" ), database.findPath( AssetGUID::fromName( source, "/materials/mi_eyes.material" ) ).value_or( string{} ) );
-    SW_EXPECT_EQUAL( string( "common/models/people/hero.mesh" ), moved.findPath( AssetGUID::fromName( source, ".mesh" ) ).value_or( string{} ) );
+    SW_EXPECT_EQUAL( string( "common/models/kaykit/knight.mesh" ), database.findPath( mesh ).value_or( string{} ) );
+    SW_EXPECT_EQUAL( string( "common/models/kaykit/knight/materials/mi_eyes.material" ), database.findPath( eyes ).value_or( string{} ) );
+    SW_EXPECT_EQUAL( string( "common/models/people/hero.mesh" ), moved.findPath( mesh ).value_or( string{} ) );
+    SW_EXPECT_FALSE( database.findPath( AssetGUID::fromName( source, ".mesh" ) ).has_value() ); // 이름에서 짐작하지 않는다
     SW_EXPECT_EQUAL( string( "common/models/kaykit/knight/mirrors.xml" ), database.findPath( mirror ).value_or( string{} ) );
     SW_EXPECT_FALSE( database.findGUID( "common/models/_shared/materials/00ff.material" ).has_value() );
 }
@@ -170,18 +178,46 @@ SW_TEST_CASE( AssetDatabaseTest, IdentityRedirectRowsJoinTheRegistryLayer )
     SW_EXPECT_TRUE( AssetDatabaseTestUtil::hasIssue( listIssue, AssetIdentityIssueKind::InvalidRedirect, "game/x/redirects.xml" ) );
 }
 
-/** @brief [AssetDatabaseTest] 디스크의 산출물 하나의 정체성(파일 감시 · 쿠킹)도 색인의 줄과 같다 */
+/**
+ * @brief [AssetDatabaseTest] 원본 `.meta` 의 산출물 표에 없는 산출물은 정체성이 없고 결함이다 — 이름에서 GUID 를 짐작하지 않는다(표를 쓰기 전의 옛 산출물)
+ * @details 음성 대조: 색인이 표에 없는 이름을 `fromName` 으로 메우면 결함 단언과 GUID 없음 단언이 진다.
+ */
+SW_TEST_CASE( AssetDatabaseTest, OutputMissingFromTheTableHasNoIdentity )
+{
+    const AssetIdentityRules        rules  = AssetDatabaseTestUtil::makeRules();
+    const AssetGUID                 source = AssetGUID::create();
+    const vector<AssetImportOutput> listOutput{
+        { ".mesh", AssetGUID::create().toString() }
+    };
+    const vector<AssetIdentityFile> listFile{
+        { "common/models_raw/tree.glb", {} },
+        { "common/models_raw/tree.glb.meta", AssetMeta::makeText( "common/models_raw/tree.glb", source, {}, listOutput ) },
+        { "common/models/tree.mesh", {} },
+        { "common/models/tree.skeleton.xml", {} }, // 표에 없다
+    };
+    vector<AssetIdentityIssue> listIssue;
+    const AssetDatabase        database = AssetDatabase::build( listFile, rules, listIssue );
+    SW_EXPECT_TRUE( AssetDatabaseTestUtil::hasIssue( listIssue, AssetIdentityIssueKind::UnlistedOutput, "common/models/tree.skeleton.xml" ) );
+    SW_EXPECT_EQUAL( size_t{ 1 }, listIssue.size() );
+    SW_EXPECT_FALSE( database.findGUID( "common/models/tree.skeleton.xml" ).has_value() );
+    SW_EXPECT_TRUE( database.findGUID( "common/models/tree.mesh" ).has_value() );
+}
+
+/** @brief [AssetDatabaseTest] 디스크의 산출물 하나의 정체성(파일 감시 · 쿠킹)도 원본 `.meta` 의 산출물 표 줄이다 */
 SW_TEST_CASE( AssetDatabaseTest, OutputOnDiskReadsTheIdentityOfItsSource )
 {
     const AssetIdentityRules rules      = AssetDatabaseTestUtil::makeRules();
     const AssetGUID          source     = AssetGUID::create();
+    const AssetGUID          meshGUID   = AssetGUID::create();
     const AbsolutePath       sourceMeta = sw::test::makeScratchPath( "common/models_raw/rock.glb.meta" );
     const AbsolutePath       mesh       = sw::test::makeScratchPath( "common/models/rock.mesh" );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( sourceMeta, AssetMeta::makeText( "common/models_raw/rock.glb", source ) ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( sourceMeta, AssetMeta::makeText( "common/models_raw/rock.glb", source, {
+    },
+                                                                               { { ".mesh", meshGUID.toString() } } ) ) );
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( mesh, "mesh" ) );
     const optional<AssetGUID> guid = rules.readIdentity( mesh, "common/models/rock.mesh" );
     SW_REQUIRE_TRUE( guid.has_value() );
-    SW_EXPECT_TRUE( *guid == AssetGUID::fromName( source, ".mesh" ) );
+    SW_EXPECT_TRUE( *guid == meshGUID );
     SW_EXPECT_FALSE( rules.readIdentity( mesh, "common/models/gone.mesh" ).has_value() );
 }
 

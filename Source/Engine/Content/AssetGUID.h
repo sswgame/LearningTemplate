@@ -37,8 +37,8 @@ namespace sw
         [[nodiscard]] static AssetGUID fromName( string_view name );
         /**
          * @brief 정체성 @p nameSpace 안의 이름 @p name 에서 결정적으로 만든 정체성입니다(UUID v5 의 이름공간 + 이름).
-         * @details 커밋하지 않는 임포트 산출물의 정체성이다 — 원본 GUID 와 산출물 이름(`.mesh` · `/materials/mi_eyes.material`)에서 나오므로 다시 임포트해도 · 다른 컴퓨터에서도 · 원본을 옮겨도 같다.
-         *          유니티가 하위 에셋을 (원본 guid, 이름에서 만든 fileID)로 가리키는 것을 GUID 하나로 접은 것이다. 파이썬 도구(`asset_identity.py` 의 `make_output_guid`)가 같은 규칙이다.
+         * @details 임포트 산출물 표(`AssetMeta::_listOutput`)에 처음 드는 이름의 GUID 다 — 원본 GUID 와 산출물 이름(`.mesh` · `/materials/mi_eyes.material`)에서 나오므로 다른 컴퓨터에서 처음 임포트해도 같다.
+         *          그 뒤로는 표의 줄이 정체성이다(유니티 `.meta` 의 하위 에셋 표 — 이름에서 만든 fileID 를 표에 적는다). 파이썬 도구(`asset_identity.py` 의 `make_output_guid`)가 같은 규칙이다.
          */
         [[nodiscard]] static AssetGUID fromName( const AssetGUID& nameSpace, string_view name );
         /** @brief 글 표기 @p text 를 읽습니다. 소문자 16진 32 자가 아니거나 모두 0 이면 없음입니다(대소문자 · 하이픈을 고쳐 읽지 않는다). */

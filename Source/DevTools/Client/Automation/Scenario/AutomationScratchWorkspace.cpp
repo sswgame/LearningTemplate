@@ -53,7 +53,8 @@ namespace sw
 
             /**
              * @brief 원본 파일들의 GUID 마다 사본의 GUID 를 정해 @p outMapGUID(원본 → 사본) · @p outListIdentity(사본 → 사본 id)에 담습니다.
-             * @details 자기 정체성(머리 · `.meta`)은 사본 폴더 id 를 이름으로, 임포트 산출물은 사본 원본의 GUID 와 산출물 이름으로 — 사본을 디스크에서 읽을 때(`readIdentity`)와 같은 규칙이다.
+             * @details 사본 GUID 는 원본 GUID 와 사본 폴더 id 에서 난다(`AssetGUID::fromName`). 원본 `.meta` 의 산출물 표 줄도 같은 규칙으로 바꾼다 — 사본 `.meta` 의 글을 이 표로
+             *          다시 쓰므로(`rebaseIdentities`) 사본 산출물을 디스크에서 읽을 때(`readIdentity`)와 같은 GUID 이고, 산출물이 사본 폴더에 없어도 원본 산출물과 GUID 가 겹치지 않는다.
              */
             static void collectIdentities( const AssetIdentityRules& rules, const AbsolutePath& sourceDir, const vector<AbsolutePath>& listSourceFile, const AutomationScratchFolder& folder,
                                            unordered_map<AssetGUID, AssetGUID>& outMapGUID, vector<CopiedIdentity>& outListIdentity )
@@ -67,22 +68,21 @@ namespace sw
                     const optional<AssetGUID> guid     = rules.readIdentity( sourceFile, sourceID );
                     if ( guid.has_value() == false )
                         continue;
-                    AssetGUID                   copy = AssetGUID::fromName( *guid, folder._scratchID );
-                    vector<AssetImportedSource> listSource;
-                    if ( rules.isUnderDerivedFolder( sourceID ) )
-                        rules.collectImportedSources( sourceID, listSource );
-                    for ( const AssetImportedSource& source : listSource )
-                    {
-                        // 산출물이면 사본 원본의 GUID 에서 난다. 원본이 사본 폴더 밖이면 산출물 사본은 새 원본 없는 파일이라 자기 이름을 갖는다.
-                        string                    sourceRelative;
-                        const bool                bCopiedSource = FileUtil::tryMakePathUnderRoot( folder._sourceID, source._sourceID, sourceRelative );
-                        const optional<AssetGUID> owner         = bCopiedSource ? rules.readIdentity( sourceDir.join( sourceRelative ), source._sourceID ) : optional<AssetGUID>{};
-                        if ( owner.has_value() == false || AssetGUID::fromName( *owner, source._outputName ) != *guid )
-                            continue;
-                        copy = AssetGUID::fromName( AssetGUID::fromName( *owner, folder._scratchID ), source._outputName );
-                        break;
-                    }
+                    const AssetGUID copy = AssetGUID::fromName( *guid, folder._scratchID );
                     outMapGUID.insert_or_assign( *guid, copy );
+                    // 원본이면 그 `.meta` 의 산출물 표 줄도 — 사본 `.meta` 를 다시 쓰는 표에 든다(산출물 사본은 디스크에서 이 줄을 읽는다).
+                    string    metaText;
+                    AssetMeta meta;
+                    if ( rules.classify( sourceID ) == AssetIdentityKind::Source && FileUtil::readTextFile( AssetMeta::makePath( sourceFile ), metaText ) &&
+                         meta.parseXML( metaText, AssetMeta::makePath( sourceID ) ).has_value() )
+                    {
+                        for ( const AssetImportOutput& output : meta._listOutput )
+                        {
+                            const optional<AssetGUID> outputGUID = AssetGUID::tryParse( output._guid );
+                            if ( outputGUID.has_value() )
+                                outMapGUID.insert_or_assign( *outputGUID, AssetGUID::fromName( *outputGUID, folder._scratchID ) );
+                        }
+                    }
                     outListIdentity.push_back( CopiedIdentity{ copy, FileUtil::joinPath( folder._scratchID, FileUtil::normalizeSeparators( relative ) ) } );
                 }
             }
