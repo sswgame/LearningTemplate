@@ -934,7 +934,8 @@ namespace sw
             /** @brief 도메인 리다이렉트 표의 정체성 대체 줄을 팩 색인에 더합니다. 읽지 못했거나 틀렸으면 이유가 남고 false 입니다. */
             /**
              * @brief 도메인에 담는 머티리얼마다 태그 줄(셰이더 경로 · define)을 만든 색인 글입니다. 셰이더가 없는 구성(전용 서버)은 빈 색인이다(그리지 않는다).
-             * @details 줄은 런타임 소스 실행과 같은 함수로 만든다(`MaterialTagIndex::makeEntry` — 머티리얼을 읽은 define). 정체성이 없거나 읽지 못한 머티리얼은 건너뛰지 않고 오류다.
+             * @details 줄은 런타임 소스 실행과 같은 함수로 만든다(`MaterialTagIndex::makeEntry` — 머티리얼을 읽은 define). 열쇠는 팩 색인과 같은 규칙의 참조 글이다
+             *          (`AssetIdentityRules::makeIdentityReference` — GUID, 원본 없는 산출물은 경로). 정체성이 없는데 산출물도 아니거나 읽지 못한 머티리얼은 건너뛰지 않고 오류다.
              */
             [[nodiscard]] static expected<string> makeMaterialTagIndexText( const AssetIdentityRules& rules, const string& domain, const PackCookParams& params, const vector<PackItem>& listItem )
             {
@@ -943,14 +944,14 @@ namespace sw
                 {
                     if ( params._shaderFolder.empty() || item._source != PackItemSource::Source || StringUtil::endsWith( item._relativePath, ".material", true ) == false )
                         continue;
-                    const string              assetID = makeAssetID( domain, item._relativePath );
-                    const optional<AssetGUID> guid    = readPackedIdentity( rules, rules.classify( assetID ), assetID, item._absPath );
-                    if ( guid.has_value() == false )
-                        return unexpected( Error{ ErrorKind::NotFound, "a packed material has no asset identity", assetID } );
+                    const string     assetID   = makeAssetID( domain, item._relativePath );
+                    expected<string> reference = rules.makeIdentityReference( assetID, readPackedIdentity( rules, rules.classify( assetID ), assetID, item._absPath ) );
+                    if ( reference.has_value() == false )
+                        return unexpected( reference.error() );
                     const shared_ptr<Material> material = Material::create();
                     if ( material->loadFromDiskFile( item._absPath ) == false )
                         return unexpected( Error{ ErrorKind::InvalidArgument, "a packed material could not be read", assetID } );
-                    index._listEntry.push_back( MaterialTagIndex::makeEntry( *guid, *material ) );
+                    index._listEntry.push_back( MaterialTagIndex::makeEntry( std::move( *reference ), *material ) );
                 }
                 return index.makeText();
             }

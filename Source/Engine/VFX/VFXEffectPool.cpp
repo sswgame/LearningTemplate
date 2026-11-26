@@ -4,7 +4,6 @@
 
 #include "Core/Foundation/BuildInfo.h"
 
-#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Subsystem/SceneSubsystemRegistry.h"
@@ -18,30 +17,8 @@ namespace sw
         {
             /** @brief 풀 오브젝트의 이름입니다(씬 목록에서 무엇인지 보이게). */
             static constexpr const utf8* kObjectName = "VFXPooledEffect";
-
-            /** @brief 감시 값 `VFX.PoolPlayed` 입니다. 효과 `key`(경로)를 이 씬에서 튼 수(누적)입니다. */
-            [[nodiscard]] static bool readPlayed( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
-            {
-                if ( query._pManager == nullptr )
-                    return false;
-                outValue.setNumber( static_cast<float64>( query._pManager->getSubsystem<VFXEffectPool>().getPlayCount( hashed_string( query._key ) ) ) );
-                return true;
-            }
-
-            /** @brief 감시 값 `VFX.PoolSize` 입니다. 효과 `key`(경로)의 풀이 만든 오브젝트 수입니다. */
-            [[nodiscard]] static bool readPoolSize( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
-            {
-                if ( query._pManager == nullptr )
-                    return false;
-                outValue.setNumber( static_cast<float64>( query._pManager->getSubsystem<VFXEffectPool>().getPoolSize( hashed_string( query._key ) ) ) );
-                return true;
-            }
         };
     } // namespace
-
-    SW_AUTOMATION_QUERY_WATCH( vfxPoolPlayed, "VFX.PoolPlayed", "Times the pooled one-shot effect at path key played in this scene (cumulative)", &VFXEffectPoolInternal::readPlayed, false,
-                               true );
-    SW_AUTOMATION_QUERY_WATCH( vfxPoolSize, "VFX.PoolSize", "Objects the pool of the one-shot effect at path key has made", &VFXEffectPoolInternal::readPoolSize, false, true );
 } // namespace sw
 
 namespace sw

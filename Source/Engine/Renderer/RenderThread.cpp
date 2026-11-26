@@ -15,8 +15,6 @@
 
 #include "Engine/Asset/Image/ImageFileWriter.h"
 #include "Engine/Foundation/EngineSubsystems.h"
-#include "Engine/Graphics/Debug/GPUPixelInspector.h"
-#include "Engine/Graphics/Debug/RenderTargetRegistry.h"
 #include "Engine/Graphics/RHI/IRHICommandContext.h"
 #include "Engine/Graphics/RHI/IRHIContextThreadBinding.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
@@ -25,6 +23,7 @@
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Profiling/ProfilerBackend.h"
 #include "Engine/Renderer/Capture/RenderTargetImageFile.h"
+#include "Engine/Renderer/Debug/RenderDebugRegistry.h"
 #include "Engine/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Renderer/Frame/OffscreenSceneRenderers.h"
 #include "Engine/Renderer/Frame/PostProcess/FrameFog.h"
@@ -134,30 +133,6 @@ namespace sw
 #endif
     SW_GLOBAL_VARIABLE( bool, gv_useRenderThread, kUseRenderThreadByDefault, "전용 RenderThread 사용 (false = 게임 스레드 인라인 submit)" );
 
-    /** @brief 받은 렌더 타깃 읽기 하나입니다. 티켓을 직접 쥐고 소멸할 때 버립니다 — `PendingReadback` 은 쥔 동안 같은 스레드의 `...AndWait`(스크린샷)를 단언으로 막아 쓰지 않는다. */
-    struct RenderThread::PendingRenderTargetRead
-    {
-        IRHIResourceFactory* _pFactory{ nullptr };
-        RHITransferTicket    _ticket{};   ///< 제출했으면 유효하다(`Busy` 로 아직 못 냈으면 무효)
-        RenderTargetReadback _readback{}; ///< 요청의 텍스처 · 번호와, 제출할 때 받은 행 배치
-        uint8                _bSubmitted : 1;
-
-        PendingRenderTargetRead()
-            : _bSubmitted{ SW_FALSE }
-        {
-        }
-        ~PendingRenderTargetRead() { discardTicket(); }
-        PendingRenderTargetRead( const PendingRenderTargetRead& )            = delete;
-        PendingRenderTargetRead& operator=( const PendingRenderTargetRead& ) = delete;
-
-        void discardTicket()
-        {
-            if ( _pFactory != nullptr && _ticket.isValid() )
-                _pFactory->discardTextureReadback( _ticket );
-            _ticket = RHITransferTicket{};
-        }
-    };
-
     RenderThread::RenderThread()
         : _pDevice{ nullptr }
         , _pFrameRenderer{ nullptr }
@@ -183,7 +158,6 @@ namespace sw
         , _requestedScreenshot{}
         , _requestedScreenshotWaitFrames{ 0 }
         , _pRequestedScreenshotWritesInFlight{ make_shared<atomic<uint32>>( 0u ) }
-        , _pPendingTargetRead{}
         , _arrRingBuffer{}
         , _head{ 0 }
         , _tail{ 0 }
@@ -788,13 +762,9 @@ namespace sw
 
         // 실행 중 요청(`requestScreenshot`: 개발 명령 screenshot, 에디터 버튼)을 처리한다.
         writeRequestedScreenshot( bGraphDrew );
-        // 에디터 렌더 타깃 창의 CPU 읽기 요청이다. 스크린샷과 같은 위치에서 처리하며, endFrame 뒤라 이 프레임이 그린 내용이 들어 있다.
-        readRequestedRenderTarget();
-        // 개발 명령 `gpu.inspect x y` 의 첨부 값 읽기(한 번 — GPU 를 기다린다). 같은 이유로 endFrame 뒤다.
-        GPUPixelInspector* const    pInspector = engine::findSubsystem<GPUPixelInspector>();
-        const RenderTargetRegistry* pRegistry  = engine::findSubsystem<RenderTargetRegistry>();
-        if ( pInspector != nullptr && pRegistry != nullptr && _pDevice != nullptr && _pDevice->getResourceFactory() != nullptr )
-            pInspector->serviceAttachmentDump( *_pDevice->getResourceFactory(), *pRegistry );
+        // 에디터 렌더 타깃 창의 CPU 읽기와 `gpu.inspect x y` 의 첨부 값 읽기(개발 도구 — 배포는 검사 셋이 없다). 스크린샷과 같은 위치라 endFrame 뒤, 이 프레임이 그린 내용이 들어 있다.
+        if ( IRenderDebugChecks* const pChecks = findDebugChecks(); pChecks != nullptr && _pDevice != nullptr && _pDevice->getResourceFactory() != nullptr )
+            pChecks->serviceAfterFrameEnd( *_pDevice->getResourceFactory() );
 
         return true;
     }
@@ -957,84 +927,13 @@ namespace sw
 
     void RenderThread::discardPendingRenderTargetRead()
     {
-        _pPendingTargetRead.reset();
+        if ( IRenderDebugChecks* const pChecks = findDebugChecks() )
+            pChecks->discardRenderTargetRead();
     }
 
-    void RenderThread::readRequestedRenderTarget()
+    IRenderDebugChecks* RenderThread::findDebugChecks() const
     {
-        RenderTargetRegistry* pRegistry             = engine::findSubsystem<RenderTargetRegistry>();
-        const bool            bNoRenderTargetSource = pRegistry == nullptr || _pDevice == nullptr || _pDevice->getResourceFactory() == nullptr;
-        if ( bNoRenderTargetSource )
-            return;
-        IRHIResourceFactory& factory = *_pDevice->getResourceFactory();
-
-        // 읽는 중이 아니면 새 요청을 받는다. 읽는 중이면 새 요청은 레지스트리에 둔 채 이 읽기부터 끝낸다.
-        if ( _pPendingTargetRead == nullptr )
-        {
-            RHITextureHandle texture = 0;
-            uint32           mip     = 0;
-            uint32           serial  = 0;
-            if ( pRegistry->takeReadbackRequest( texture, mip, serial ) == false )
-                return;
-            _pPendingTargetRead                     = make_unique<PendingRenderTargetRead>();
-            _pPendingTargetRead->_pFactory          = &factory;
-            _pPendingTargetRead->_readback._texture = texture;
-            _pPendingTargetRead->_readback._mip     = mip;
-            _pPendingTargetRead->_readback._serial  = serial;
-        }
-
-        SW_PROFILE_SCOPE( "RT.ReadRenderTarget" );
-        PendingRenderTargetRead& pending = *_pPendingTargetRead;
-        // 실패는 조용히 돌려 UI 가 새 핸들로 다시 요청하게 한다.
-        const auto publishFailure = [&]()
-        {
-            RenderTargetReadback readback = std::move( pending._readback );
-            readback._byte.clear();
-            readback._bSucceeded = SW_FALSE;
-            _pPendingTargetRead.reset(); // 티켓이 남았으면 버린다
-            pRegistry->publishReadback( std::move( readback ) );
-        };
-
-        if ( pending._bSubmitted == false )
-        {
-            // 요청한 뒤 트랜지언트가 다시 만들어졌으면(창 크기 변경) 핸들이 죽었다 — 읽지 않는다.
-            if ( pRegistry->isPublished( pending._readback._texture ) == false )
-            {
-                publishFailure();
-                return;
-            }
-            const RHITransferSubmit submit = factory.submitTextureReadback( pending._readback._texture, pending._readback._mip, 0, pending._readback._layout );
-            if ( submit._result == RHISubmitResult::Busy )
-                return; // 스테이징이 찼다 — 같은 요청을 다음 프레임에 다시 낸다
-            if ( submit.isAccepted() == false )
-            {
-                publishFailure();
-                return;
-            }
-            pending._ticket     = submit._ticket;
-            pending._bSubmitted = SW_TRUE;
-            return; // 끝남은 이후 프레임이 폴링한다(요청한 프레임에는 기다리지 않는다)
-        }
-
-        const RHITransferStatus status = factory.pollTransfer( pending._ticket );
-        if ( status == RHITransferStatus::Pending )
-            return;
-        bool bTaken = false;
-        if ( status == RHITransferStatus::Complete )
-        {
-            bTaken = factory.takeTextureReadback( pending._ticket, pending._readback._byte );
-            if ( bTaken )
-                pending._ticket = RHITransferTicket{}; // 가져갔다 — 소멸자가 버리지 않는다
-        }
-        if ( bTaken == false )
-        {
-            publishFailure();
-            return;
-        }
-        RenderTargetReadback readback = std::move( pending._readback );
-        readback._bSucceeded          = SW_TRUE;
-        _pPendingTargetRead.reset();
-        pRegistry->publishReadback( std::move( readback ) );
+        return _pFrameRenderer != nullptr ? _pFrameRenderer->findDebugChecks() : nullptr;
     }
 
     bool RenderThread::ensureContextOnCurrentThread()

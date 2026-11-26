@@ -26,6 +26,7 @@
 #include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/Debug/GPUBreadcrumbs.h"
 #include "Engine/Graphics/Debug/GPUPixelInspector.h"
+#include "Engine/Graphics/Debug/RenderDiagnostics.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
@@ -50,8 +51,7 @@
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Renderer/Capture/FrameCapture.h"
-#include "Engine/Renderer/Debug/MeshVertexCheck.h"
-#include "Engine/Renderer/Debug/RHIContractCheck.h"
+#include "Engine/Renderer/Debug/RenderDebugRegistry.h"
 #include "Engine/Renderer/Extension/FrameExtensionHost.h"
 #include "Engine/Renderer/Extension/RenderExtensionRegistry.h"
 #include "Engine/Renderer/Frame/Execute/ViewGraphResource.h"
@@ -128,8 +128,6 @@ namespace sw
         , _pCmd{ nullptr }
         , _listPassContext{}
         , _graphContext{}
-        , _nanCheck{}
-        , _nanCheckCommandList{}
         , _frameEndCommandList{}
         , _pLastSwapchainWriter{ nullptr }
         , _pMainOutputCanvasView{ nullptr }
@@ -142,26 +140,22 @@ namespace sw
         , _bMissingColorTargetLogged{ 0 }
         , _bHasExecutedDepthPrepass{ 0 }
     {
+        _pDebugChecks = IRenderDebugChecks::create(); // 개발 도구가 등록한 만들기 함수가 없으면(배포 · 전용 서버) 비어 있다
     }
 
     void FramePassExecutor::ensureResources()
     {
         _frameGraphExecutor.ensureResources();
-        if ( _nanCheck.initialize( _pDevice ) == false )
+        if ( _pDebugChecks != nullptr && _pDebugChecks->initializeNanCheck( _pDevice ) == false )
             reportFatalError( "The NaN check is on but its counters could not be created - see the log above" );
     }
 
     void FramePassExecutor::releaseResources()
     {
         _frameGraphExecutor.releaseResources();
-        _bufferInspector.release();
-        if ( _meshVertexCheck != nullptr )
-            _meshVertexCheck->release( _pDevice );
-        if ( _rhiContractCheck != nullptr )
-            _rhiContractCheck->release( _pDevice );
-        _nanCheckCommandList.reset();
+        if ( _pDebugChecks != nullptr )
+            _pDebugChecks->release( _pDevice );
         _frameEndCommandList.reset();
-        _nanCheck.shutdown();
     }
 
     void FramePassExecutor::clearDevice()
@@ -241,17 +235,12 @@ namespace sw
         _state._gpuScene.recordFrameUploads( *_pCmd, *pDevice );
         // 실시간 프로브의 복셀 칠하기가 읽을 위치 흐름의 GPU 복사도 같은 단계다.
         _state._probeUpdater.recordUploads( *_pCmd );
-#if !defined( SW_SHIPPING )
+        // 개발 검사(정점 대조 · RHI 계약)는 우편함이 있는 주 렌더러만 든다. 개발 도구를 짓지 않은 구성은 `create` 가 비어 늘 건너뛴다.
         if ( _state._pRenderDebug != nullptr )
         {
-            if ( _meshVertexCheck == nullptr )
-                _meshVertexCheck = make_unique<MeshVertexCheck>();
-            _meshVertexCheck->service( *_pCmd, *pDevice, _state._gpuScene, *_state._pRenderDebug );
-            if ( _rhiContractCheck == nullptr )
-                _rhiContractCheck = make_unique<RHIContractCheck>();
-            _rhiContractCheck->service( *_pCmd, *pDevice, *_state._pRenderDebug );
+            if ( _pDebugChecks != nullptr )
+                _pDebugChecks->recordAfterFrameUploads( *_pCmd, *pDevice, _state._gpuScene, *_state._pRenderDebug );
         }
-#endif
 #if SW_PROFILE_COMPILED
         // 프레임 그래프 구간은 프로파일러 기록 중일 때만 쓴다. 게이트는 패스 타임스탬프와 같다(`onGraphPassExecute`).
         const IRHITimestampProvider* pTimestamps   = pDevice->findTimestampProvider();
@@ -263,7 +252,8 @@ namespace sw
 
         // 프레임 그래프(파이프라인 XML 의 `_listFramePass`) — 깊이 히스토리 · 입자 · 변형 · 컬링 · 라이트 그리드 등, 이번 프레임에 그리는 모든 뷰의 몫이다.
         // 순서는 XML 의 자원 읽기 · 쓰기가 정한다. 앞 프레임들의 셰이더 assert · NaN 기록이 도착했으면 로그로 낸다(몇 프레임 늦다).
-        _nanCheck.poll();
+        if ( _pDebugChecks != nullptr )
+            _pDebugChecks->pollNanCheck();
         recordFrameGraph( pDevice );
         drawRainOcclusion(); // 컬링 뒤 · 모든 뷰 앞 — 이번 프레임의 뷰가 같은 맵을 읽는다
         // 월드 공간 UI 의 렌더 텍스처다. 장면 뷰가 그 텍스처를 읽기 전에 먼저 제출하는 프리패스 리스트(같은 큐)로 그린다.
@@ -723,42 +713,9 @@ namespace sw
 
     void FramePassExecutor::scanPassOutputsForNan( IRHIDevice* pDevice )
     {
-        if ( _nanCheck.isActive() == false || pDevice == nullptr )
+        if ( _pDebugChecks == nullptr || pDevice == nullptr || _pDebugChecks->isNanCheckActive() == false )
             return;
-        const ComputePipeline pipeline = _psoManager.getComputePSO( RenderPassKind::NanCheck );
-        if ( pipeline.isValid() == false )
-        {
-            SW_LOG_ERROR_ONCE_ID( "FramePassExecutor.GvNanCheckButNaN", "The NaN check is on but its PSO is missing (shader not cooked?) - no output is scanned" );
-            return;
-        }
-        if ( _nanCheckCommandList == nullptr )
-            _nanCheckCommandList = pDevice->createCommandList();
-        IRHICommandList* pCmd = _nanCheckCommandList.get();
-        if ( pCmd == nullptr )
-            return;
-
-        pCmd->beginCommandList();
-        frame_vector<RHITextureHandle> listScanned{ FrameAllocator<RHITextureHandle>{ _frameArena } }; // 같은 텍스처를 가리키는 출력은 한 번만 훑는다
-        for ( const RenderGraphPassDesc& pass : _pipelineResource.getGraphPass() )
-        {
-            for ( const RenderGraphPassDesc::ResolvedAttachment& output : pass._listResolvedColorOutput )
-            {
-                const TransientAttachmentPool::Attachment attachment = _state.getMainView()._transientPool.find( output._attachment );
-                const bool                                bScannable = attachment._texture != 0 && attachment._srv != kInvalidDescriptorIndex && GPUNanCheck::isScannableFormat( attachment._format );
-                if ( bScannable == false || VectorUtil::contains( listScanned, attachment._texture ) )
-                    continue;
-                listScanned.push_back( attachment._texture );
-
-                utf8 arrName[constant::buffer::kMax64];
-                formatstring( arrName, sizeof( arrName ), "%#:%#", pass._name, output._attachment.view() );
-                // 컴퓨트가 엔진 텍스처로 읽도록 셰이더 읽기 상태로 옮기고, 다음 프레임의 패스가 쓰도록 렌더 타깃 상태로 돌려 둔다.
-                pCmd->prepareTextureForShaderRead( attachment._texture );
-                _nanCheck.scan( *pCmd, pipeline, arrName, attachment._srv, attachment._width, attachment._height );
-                pCmd->prepareTextureForRenderTarget( attachment._texture );
-            }
-        }
-        _nanCheck.requestReadback( *pCmd );
-        pDevice->executeCommandList( pCmd->closeCommandList() );
+        _pDebugChecks->recordNanCheck( *pDevice, _pipelineResource.getGraphPass(), _state.getMainView()._transientPool, _psoManager.getComputePSO( RenderPassKind::NanCheck ) );
     }
 
     bool FramePassExecutor::bindPassCallbacks()
@@ -967,7 +924,7 @@ namespace sw
         ++_state._transientAliasGeneration; // 뷰 풀이 다음 셋업에서 새 계획으로 다시 만든다
         _state._transientAliasPlan = RenderGraphAliasPlan{};
         // NaN 감시는 그래프가 끝난 뒤 모든 패스 출력을 다시 읽는다 — 나눠 쓴 텍스처는 앞 첨부의 내용이 이미 덮였다. 감시를 켠 실행은 나누지 않는다.
-        if ( _state._settings._bAliasTransients == SW_FALSE || GPUNanCheck::isRequested() )
+        if ( _state._settings._bAliasTransients == SW_FALSE || RenderDiagnostics::get()._bNanCheck != SW_FALSE )
             return;
 
         const RenderGraph&                   graph    = _state._graph;
@@ -1001,7 +958,8 @@ namespace sw
         }
 
         // 꺼진 효과는 출력 이름이 원본을 가리킨다(`kBypassesToSource`) — 그 출력을 읽는 패스가 원본을 읽으므로 원본의 수명이 출력의 끝까지 늘어난다. 둘을 한 구간으로 묶는다.
-        // TAA 출력은 셋업이 기록 형식으로 읽어 프레임 밖에서도 쓴다 — 나누지 않는다.
+        // 기록 출력은 나눠도 안전하다. 기록 복사가 그 패스 끝(`copyOutputHistories`)에서 끝나고 셋업은 출력의 서술(형식 · 크기 — 서술 키가 같다)만 읽는다(볼륨 구름 · Fullscreen 출력은 나눈다).
+        // 꺼지면 원본으로 우회하는 패스의 기록 출력(TAA)만 옛 계획대로 나누지 않는다. 후보에는 남겨 꺼진 효과의 원본 수명 묶음(아래)이 그 출력을 본다.
         vector<uint8>                listExcluded( listCandidate.size(), 0 );
         vector<RenderGraphAliasJoin> listJoin;
         for ( const RenderGraphPassDesc& pass : listPass )
@@ -1012,10 +970,10 @@ namespace sw
                 const auto outputIt = mapCandidateIndex.find( output._attachment );
                 if ( outputIt == mapCandidateIndex.end() )
                     continue;
-                if ( pass._type == RenderPassKind::TAA )
-                    listExcluded[outputIt->second] = 1;
                 if ( info.hasFlag( RenderPassTraitFlag::kBypassesToSource ) == false )
                     continue;
+                if ( output._historyResource.empty() == false )
+                    listExcluded[outputIt->second] = 1;
                 for ( const RenderGraphPassDesc::ResolvedAttachment& input : pass._listResolvedInput )
                 {
                     const auto inputIt = mapCandidateIndex.find( input._attachment );
@@ -1099,11 +1057,9 @@ namespace sw
         }
         if ( bOk == false )
             SW_LOG_ERROR_ONCE_ID( "FramePassExecutor.FrameGraphExecuteFailed", "Frame graph could not run - culling, light grid and skinning results are stale this frame" );
-#if !defined( SW_SHIPPING )
-        // 버퍼 보기: 그래프가 되돌려 둔 접근(등록 접근)에서 읽고 그 상태로 되돌린다(`RenderBufferInspector`).
-        if ( _state._pRenderDebug != nullptr )
-            _bufferInspector.service( *_pCmd, pDevice, _frameBufferTable, _frameGraphContext, _psoManager.getCache(), *_state._pRenderDebug );
-#endif
+        // 버퍼 보기: 그래프가 되돌려 둔 접근(등록 접근)에서 읽고 그 상태로 되돌린다.
+        if ( _pDebugChecks != nullptr && _state._pRenderDebug != nullptr )
+            _pDebugChecks->recordAfterFrameGraph( *_pCmd, pDevice, _frameBufferTable, _frameGraphContext, _psoManager.getCache(), *_state._pRenderDebug );
         _frameGraphExecutor.endFrame( *_pCmd );
     }
 

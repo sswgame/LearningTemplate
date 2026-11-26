@@ -17,6 +17,7 @@
 
 namespace sw
 {
+    class GameObject;
     class GameObjectManager;
 
     /**
@@ -42,6 +43,8 @@ namespace sw
         void sampleGroundOnce( GameObjectManager& manager );
         /** @brief 표면 서비스의 이번 프레임 차례입니다. 먼저 읽혔으면 깃발만 내리고, 아니면 읽습니다. */
         void finishFrameSample( GameObjectManager& manager );
+        /** @brief @p object 의 발(주 씬 컴포넌트 자리) 아래 @p probeLength 까지의 표면을 읽습니다 — 이 컴포넌트의 틱과 개발 명령 `surface.probe` 가 같은 규칙으로 본다. 씬 · 표 · 맞은 것이 없으면 false 입니다. */
+        [[nodiscard]] static bool sampleUnder( GameObject& object, float32 probeLength, SurfaceSample& outSample );
 
     private:
         /** @brief 발 아래를 읽고 이동 계수를 넘깁니다(틱 뒤 게임 스레드). */

@@ -17,9 +17,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/Name/hashed_string.h"
 
-#include "Engine/Graphics/Debug/GPUNanCheck.h"
 #include "Engine/Graphics/RHI/RHIBufferTransitionBatch.h"
-#include "Engine/Renderer/Debug/RenderBufferInspector.h"
 #include "Engine/Renderer/Extension/RenderExtension.h"
 #include "Engine/Renderer/Frame/Execute/FrameGraphExecutor.h"
 #include "Engine/Renderer/Frame/FramePassContext.h"
@@ -47,8 +45,7 @@ namespace sw
     struct GPUMeshBatchPSO;
     class IRHICommandList;
     class IRHIDevice;
-    class MeshVertexCheck;
-    class RHIContractCheck;
+    class IRenderDebugChecks;
     class RenderPipelineAsset;
 
     /**
@@ -64,6 +61,9 @@ namespace sw
     class SW_API FramePassExecutor
     {
     public:
+        /** @brief 개발 검사 셋입니다(렌더 타깃 목록 공개 · 렌더 스레드 프레임 끝). 개발 도구가 없는 구성은 nullptr 입니다. */
+        [[nodiscard]] IRenderDebugChecks* findDebugChecks() const { return _pDebugChecks.get(); }
+
         FramePassExecutor( IRHIDevice* const& pDevice, const RenderPipelineAsset& pipeline, FrameRenderState& state, FramePSOManager& psoManager,
                            FrameAutoExposure& autoExposure, FrameUpscale& upscale, FrameFog& fog, FrameExtensionHost& extensionHost, FrameCapture& capture,
                            const FrameScreenRotation& screenRotation, const FrameDisplayEncode& displayEncode );
@@ -233,7 +233,7 @@ namespace sw
         void selectGraphPlan();
         /**
          * @brief 컴파일한 뷰 그래프의 수명(레벨)으로 트랜지언트 앨리어싱 계획을 세워 `FrameRenderState::_transientAliasPlan` 에 두고 세대를 올립니다.
-         * @details 깊이 · `Load` 첨부 · TAA 출력은 나누지 않고, 꺼지면 원본을 가리키는 효과(`kBypassesToSource`)는 원본과 출력을 한 구간으로 묶는다. NaN 감시를 켠 실행은 나누지 않는다.
+         * @details 깊이 · `Load` 첨부 · 꺼지면 원본으로 우회하는 패스의 기록 출력(TAA)은 나누지 않고, 꺼지면 원본을 가리키는 효과(`kBypassesToSource`)는 원본과 출력을 한 구간으로 묶는다. NaN 감시를 켠 실행은 나누지 않는다.
          */
         void rebuildTransientAliasPlan();
         /**
@@ -513,7 +513,7 @@ namespace sw
         bool drawExtensionElements( FramePassContext& context, const ExtensionFramePass& pass, vector_reference<const ExtensionConstant> listConstant );
 
         /**
-         * @brief 그래프가 끝난 뒤 주 시점의 부동소수 컬러 패스 출력을 NaN · Inf 감시 컴퓨트로 훑습니다(`GPUNanCheck`). 꺼져 있으면(`-gv_nanCheck` 없음 · 에뮬 백엔드) 아무것도 하지 않는다.
+         * @brief 그래프가 끝난 뒤 주 시점의 부동소수 컬러 패스 출력을 NaN · Inf 감시 컴퓨트로 훑게 합니다(`IRenderDebugChecks::recordNanCheck`). 꺼져 있으면(`-gv_nanCheck` 없음 · 에뮬 백엔드 · 개발 도구 없음) 아무것도 하지 않는다.
          * @details 패스 이름 + 첨부 이름이 로그의 이름이다. 같은 텍스처를 가리키는 출력은 한 번만 훑는다. 텍스처는 훑기 위해 셰이더 읽기 상태로 옮기고 렌더 타깃 상태로 되돌린다.
          */
         void scanPassOutputsForNan( IRHIDevice* pDevice );
@@ -601,12 +601,8 @@ namespace sw
         FrameBufferTable _viewResourceTable;
         /// @brief 지금 뷰의 패스 상태입니다(`selectGraphPlan` 의 실행 계획 열쇠). 용량을 뷰 · 프레임 사이에 다시 쓴다.
         vector<uint8> _listScratchPassState;
-        /// @brief 버퍼 보기(에디터 렌더 디버거 · 개발 명령)가 요청한 `_frameBufferTable` 버퍼를 프레임 그래프 끝에서 읽는다(`RenderDebugRegistry`). 읽기 버퍼는 장치 자원이라 여기서 놓는다.
-        RenderBufferInspector _bufferInspector;
-        /// @brief 자동화가 요청한 메시 정점 대조입니다(`RenderDebugRegistry::requestMeshVertexCheck`). 첫 프레임에 만들고, 되읽기 버퍼는 요청 때만 있다.
-        unique_ptr<MeshVertexCheck> _meshVertexCheck;
-        /// @brief 개발 명령이 요청한 RHI 계약 검사입니다(`RenderDebugRegistry::requestRHIContractCheck`). 첫 프레임에 만들고, 장치 자원은 요청 때만 있다.
-        unique_ptr<RHIContractCheck> _rhiContractCheck;
+        /// @brief 개발 검사입니다(NaN 감시, 주 렌더러는 우편함 요청의 정점 대조 · RHI 계약 · 버퍼 보기 — `IRenderDebugChecks`). 만들 때 하나 받는다. 개발 도구가 없는 구성은 비어 있다.
+        unique_ptr<IRenderDebugChecks> _pDebugChecks;
         /// @brief 레벨 콜백이 모은 버퍼 전이입니다(`transitionBuffers` 한 번). 레벨 콜백은 한 스레드에서만 돈다 — 용량을 프레임 사이에 다시 쓴다.
         RHIBufferTransitionBatch _levelBufferTransitions;
         /// @brief 이번 프레임에 레벨 콜백이 낸 전이 · UAV 배리어 수입니다(지표 `RT.Graph.transitions` — 그래프로 옮긴 단계가 이 수를 늘리지 않아야 한다).
@@ -630,9 +626,6 @@ namespace sw
         vector<FramePassContext> _listPassContext;
         /// @brief 그래프 실행 상태(이름별 리소스 상태 추적)입니다. 디바이스가 바뀌면 버린다(`clearDevice`).
         RenderGraphExecutionContext _graphContext;
-        /// @brief 패스 출력 NaN · Inf 감시(`-gv_nanCheck`). 그래프가 끝난 뒤 `scanPassOutputsForNan` 이 자기 리스트(`_nanCheckCommandList`)에 기록한다. 꺼져 있으면 비어 있다.
-        GPUNanCheck                 _nanCheck;
-        unique_ptr<IRHICommandList> _nanCheckCommandList;
         /// @brief 프레임 끝 타임스탬프(`GPUFrameClock::writeFrameEnd`)만 기록하는 리스트입니다. 모든 뷰를 낸 뒤에 제출한다. 시계가 재지 않으면 만들지 않는다.
         unique_ptr<IRHICommandList> _frameEndCommandList;
         /// @brief Swapchain 을 쓰는 마지막 패스입니다. 선언 순서 기준이며, 그래프가 같은 출력에 대한 쓰기를 선언 순서로 연결합니다. 콜백을 바인딩할 때 정합니다.

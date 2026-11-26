@@ -149,13 +149,13 @@ namespace sw
         return true;
     }
 
-    void BindlessIndexReportLog::recordBufferStride( RHIBufferSRVIndex buffer, uint32 stride )
+    void BindlessIndexReportLog::recordBufferStrideInternal( RHIBufferSRVIndex buffer, uint32 stride )
     {
         ScopedLock<shared_mutex> lock{ _pState->_strideMutex };
         _pState->_mapBufferStride[buffer] = stride;
     }
 
-    void BindlessIndexReportLog::removeBufferStride( RHIBufferSRVIndex buffer )
+    void BindlessIndexReportLog::removeBufferStrideInternal( RHIBufferSRVIndex buffer )
     {
         ScopedLock<shared_mutex> lock{ _pState->_strideMutex };
         _pState->_mapBufferStride.erase( buffer );

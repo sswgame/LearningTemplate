@@ -13,6 +13,7 @@
  *       디바이스 헤더로 새지 않습니다.
  */
 #pragma once
+#include "Core/Foundation/BuildConfig.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
@@ -44,6 +45,12 @@ namespace sw
     class IOpenGLPlatformContext
     {
     public:
+        /**
+         * @brief 디버그 컨텍스트(WGL · GLX `CONTEXT_DEBUG_BIT` · EGL `OPENGL_DEBUG`)를 만들고 KHR_debug 출력을 거는 구성이면 true 입니다. 배포 구성은 검증 비용을 부담하지 않는다.
+         * @details 드라이버는 디버그 컨텍스트에서만 메시지를 만들 의무가 있어, 컨텍스트 세 구현과 장치의 콜백 등록이 이 값 하나를 함께 본다.
+         */
+        static constexpr bool kDebugContext = build::kShipping == false;
+
         /**
          * @brief 이 플랫폼 · 표면 종류의 구현을 만듭니다. 지원하지 않는 조합이면 이유를 로그로 남기고 nullptr 입니다.
          * @param surfaceKind 창 시스템입니다. 리눅스에서 X11 은 GLX, Wayland 는 EGL 입니다(Windows 는 값을 보지 않는다).

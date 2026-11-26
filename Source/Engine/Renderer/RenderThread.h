@@ -25,6 +25,7 @@ namespace sw
 {
 
     class FrameRenderer;
+    class IRenderDebugChecks;
     class OffscreenSceneRenderers;
     class IRHICommandContext;
     class IRHIDevice;
@@ -200,14 +201,10 @@ namespace sw
         void writeRequestedScreenshot( bool bGraphDrew );
         /** @brief 패킷이 실은 사진을 쓰지 못했다고 알리고 기다리는 쪽을 깨웁니다 — 이 프레임을 그리지 않았거나 읽지 못했다. */
         void reportPacketScreenshotNotWritten( const RenderFramePacket& packet ) const;
-        /**
-         * @brief 에디터 렌더 타깃 창이 `RenderTargetRegistry::requestReadback` 으로 요청한 타깃을 CPU 로 읽어 레지스트리에 보관합니다. `endFrame` 뒤에 부릅니다.
-         * @details 읽기 티켓은 요청한 프레임에 기다리지 않고(RHIAsyncUploads U9) 이후 프레임의 호출이 `pollTransfer` 로 보고 `Complete` 일 때 가져갑니다. 읽는 중에는 새 요청을
-         *          레지스트리에 둔 채 받지 않고(레지스트리가 최신 요청 하나만 쥔다), 스테이징이 차서 `Busy` 면 같은 요청을 다음 프레임에 다시 냅니다.
-         */
-        void readRequestedRenderTarget();
         /** @brief 아직 끝나지 않은 렌더 타깃 읽기를 버립니다(백엔드 교체 · 정지 전에 — 티켓이 팩토리보다 오래 살지 않게). */
         void discardPendingRenderTargetRead();
+        /** @brief 주 렌더러의 개발 검사 셋입니다(렌더 타깃 창 읽기 · 픽셀 덤프). 개발 도구가 없는 구성 · 렌더러가 없으면 nullptr 입니다. */
+        [[nodiscard]] IRenderDebugChecks* findDebugChecks() const;
         /** @brief 지금 스레드에 그래픽스 컨텍스트가 있는지 확인합니다. 없으면 붙입니다. */
         [[nodiscard]] bool ensureContextOnCurrentThread();
         /** @brief `IRHIDevice::setRenderThreadFlush` 에 설정하는 함수입니다(`pContext` 는 이 객체입니다). */
@@ -246,8 +243,6 @@ namespace sw
         ScreenshotRequest                                _requestedScreenshot;                ///< 받은 `requestScreenshot` 요청(렌더 스레드만 쓴다). 표(`_ticket`)가 0 이면 요청이 없다. `_texture` 가 0 이면 Present 캡처다
         uint32                                           _requestedScreenshotWaitFrames;      ///< 쓰기 전에 더 그릴 프레임 수(캡처를 켠 프레임은 비어 있을 수 있다)
         shared_ptr<atomic<uint32>>                       _pRequestedScreenshotWritesInFlight; ///< 워커가 쓰는 중인 실행 중 요청 수(잡이 같이 들어 이 객체보다 오래 살 수 있다). 0 이 아니면 다음 요청을 꺼내지 않는다
-        struct PendingRenderTargetRead;
-        unique_ptr<PendingRenderTargetRead> _pPendingTargetRead; ///< 요청을 받았고 읽기가 끝나지 않은 렌더 타깃 읽기(렌더 스레드만 쓴다). 없으면 비어 있다
 
         static constexpr uint32 _s_kRingCapacity{ constant::render::kRenderFrameQueueDepth };
         /// @brief 드라이버 GPU 메모리 값(`IRHIDevice::refreshGPUMemoryBudget`)을 묻는 간격입니다. DXGI 질의는 커널을 거치므로 프레임마다 묻지 않습니다.

@@ -10,8 +10,6 @@
 #include "Core/Subsystem/Subsystem.h"
 #include "Core/Subsystem/SubsystemSlot.h"
 
-#include "Engine/Console/DebugHUDRegistry.h"
-#include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Reflection/EnumName.h"
@@ -154,8 +152,6 @@ namespace sw
     {
         struct ActionTraceInternal
         {
-            static constexpr uint32 kSectionLines = 24; ///< 섹션 하나가 쓰는 줄의 상한
-
             struct TraceState
             {
                 mutable mutex    _mutex{};
@@ -165,52 +161,6 @@ namespace sw
 
             /** @brief 상태입니다 — 엔진 범위의 `ActionTraceState` 가 든다. */
             static TraceState& getState();
-
-            /** @brief `action.trace on|off|clear` — 범용 Action 추적(HUD 섹션 `action`). */
-            static bool runTrace( const vector<string>& listArgument, string& outReply )
-            {
-                if ( listArgument.size() != 1 )
-                    return false;
-                if ( listArgument[0] == "clear" )
-                {
-                    ActionTrace::clear();
-                    outReply = "action.trace cleared";
-                    return true;
-                }
-                bool bEnabled = false;
-                if ( StringUtil::tryParseBool( listArgument[0], bEnabled ) == false )
-                    return false;
-                ActionTrace::setEnabled( bEnabled );
-                outReply = bEnabled ? "action.trace on" : "action.trace off";
-                return true;
-            }
-
-            /** @brief HUD 섹션 `action` — 최근 동작 호출(늦은 것부터): 이름 · 결과 · 시작/중단. */
-            static void writeSection( DebugHUDSectionWriter& writer )
-            {
-                if ( ActionTrace::isEnabled() == false )
-                {
-                    writer.addLine( "trace", "off (action.trace on)" );
-                    return;
-                }
-                vector<ActionTraceEntry> listEntry;
-                ActionTrace::collect( listEntry );
-                if ( listEntry.empty() )
-                    writer.addLine( "trace", "on, no call yet" );
-                uint32 lineCount = 0;
-                for ( auto it = listEntry.rbegin(); it != listEntry.rend() && lineCount < kSectionLines; ++it, ++lineCount )
-                {
-                    StringBuilder<constant::buffer::kMax128> value;
-                    value.appendFormat( "%# %#", it->_arrName, getEnumName( it->_result ) );
-                    if ( it->_bAborted == SW_TRUE )
-                        value.append( " (aborted)" );
-                    else if ( it->_bJustStarted == SW_TRUE )
-                        value.append( " (started)" );
-                    fixed_string<constant::buffer::kMax32> label;
-                    formatstring( label.data(), label.capacity(), "#%#", it->_sequence );
-                    writer.addLine( label, value.view() );
-                }
-            }
         };
     } // namespace
 
@@ -302,10 +252,6 @@ namespace sw
         ScopedLock<mutex>                lock{ state._mutex };
         state._count = 0;
     }
-
-    SW_DEV_COMMAND( ActionTraceCommand, "action.trace", "action.trace on|off|clear",
-                    "Record every game action call (dialogue, schedule, reward, behavior tree) for the action debugger (hud.print action)", &ActionTraceInternal::runTrace );
-    SW_DEBUG_HUD_SECTION( action, "action", "Action calls", 260, DebugHUDSectionFlag::kNone, &ActionTraceInternal::writeSection );
 } // namespace sw
 
 namespace sw

@@ -9,7 +9,6 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Asset/AssetManager.h"
-#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Environment/EnvironmentUtil.h"
 #include "Engine/Environment/SceneEnvironment.h"
 #include "Engine/Environment/Surface/SurfaceKind.h"
@@ -17,127 +16,6 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Subsystem/SceneSubsystemRegistry.h"
-
-namespace sw
-{
-    namespace
-    {
-        struct SurfaceDeformSystemInternal
-        {
-
-            static const SurfaceDeformSystem* findSystem( const AutomationWatchQuery& query )
-            {
-                return query._pManager != nullptr ? &query._pManager->getSubsystem<SurfaceDeformSystem>() : nullptr;
-            }
-
-            /** @brief 감시 값 `Surface.DeformDepth` 입니다. 키 "x z"(월드 m) 자리가 꺼진 깊이(m, 솟았으면 음수)입니다. */
-            [[nodiscard]] static bool readDepth( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
-            {
-                const SurfaceDeformSystem* pSystem = findSystem( query );
-                float32                    arrPoint[2]{};
-                if ( pSystem == nullptr || StringUtil::parseExactFloats( query._key, " ", arrPoint, 2 ) == false )
-                {
-                    outValue.setText( "key must be 'x z' (world meters)" );
-                    return false;
-                }
-                outValue.setNumber( static_cast<float64>( -pSystem->findHeightAt( arrPoint[0], arrPoint[1] ) ) );
-                return true;
-            }
-
-            /** @brief 감시 값 `Surface.DeformActiveTexels` 입니다. 높이가 0 이 아닌(아직 메워지지 않은) 칸 수입니다. */
-            [[nodiscard]] static bool readActiveTexels( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
-            {
-                const SurfaceDeformSystem* pSystem = findSystem( query );
-                if ( pSystem == nullptr )
-                    return false;
-                outValue.setNumber( static_cast<float64>( pSystem->getGrid().countActiveTexels() ) );
-                return true;
-            }
-
-            /** @brief 감시 값 `Surface.DeformDeepest` 입니다. 창 안에서 가장 깊이 꺼진 깊이(m)입니다. */
-            [[nodiscard]] static bool readDeepest( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
-            {
-                const SurfaceDeformSystem* pSystem = findSystem( query );
-                if ( pSystem == nullptr )
-                    return false;
-                outValue.setNumber( static_cast<float64>( pSystem->getGrid().computeMaxDepth() ) );
-                return true;
-            }
-
-            /** @brief 감시 값 `Surface.DeformDeepestNear` 입니다. 키 "x z r"(월드 m) — (x, z) 둘레 한 변 2r 정사각형 안에서 가장 깊이 꺼진 깊이(m)입니다. */
-            [[nodiscard]] static bool readDeepestNear( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
-            {
-                const SurfaceDeformSystem* pSystem = findSystem( query );
-                float32                    arrArea[3]{};
-                if ( pSystem == nullptr || StringUtil::parseExactFloats( query._key, " ", arrArea, 3 ) == false || arrArea[2] < 0.0f )
-                {
-                    outValue.setText( "key must be 'x z r' (world meters, r >= 0)" );
-                    return false;
-                }
-                outValue.setNumber( static_cast<float64>( pSystem->getGrid().computeMaxDepthNear( arrArea[0], arrArea[1], arrArea[2] ) ) );
-                return true;
-            }
-
-            /** @brief 감시 값 `Surface.DeformStamps` 입니다. 이 씬에서 찍은 도장 수(누적)입니다. */
-            [[nodiscard]] static bool readStamps( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
-            {
-                const SurfaceDeformSystem* pSystem = findSystem( query );
-                if ( pSystem == nullptr )
-                    return false;
-                outValue.setNumber( static_cast<float64>( pSystem->getStampCount() ) );
-                return true;
-            }
-
-            /** @brief 감시 값 `Surface.DeformWetTexels` 입니다. 젖은 자국이 아직 마르지 않은 칸 수입니다. */
-            [[nodiscard]] static bool readWetTexels( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
-            {
-                const SurfaceDeformSystem* pSystem = findSystem( query );
-                if ( pSystem == nullptr )
-                    return false;
-                outValue.setNumber( static_cast<float64>( pSystem->getGrid().countWetTexels() ) );
-                return true;
-            }
-
-            /** @brief 감시 값 `Surface.DeformWetness` 입니다. 키 "x z"(월드 m) 자리의 젖은 자국 젖음(0..1)입니다. */
-            [[nodiscard]] static bool readWetness( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
-            {
-                const SurfaceDeformSystem* pSystem = findSystem( query );
-                float32                    arrPoint[2]{};
-                if ( pSystem == nullptr || StringUtil::parseExactFloats( query._key, " ", arrPoint, 2 ) == false )
-                {
-                    outValue.setText( "key must be 'x z' (world meters)" );
-                    return false;
-                }
-                outValue.setNumber( static_cast<float64>( pSystem->getGrid().findWetnessAt( arrPoint[0], arrPoint[1] ) ) );
-                return true;
-            }
-
-            /** @brief 감시 값 `Surface.DeformHeld` 입니다. 지금 붙잡힌 도장 수입니다. */
-            [[nodiscard]] static bool readHeld( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
-            {
-                const SurfaceDeformSystem* pSystem = findSystem( query );
-                if ( pSystem == nullptr )
-                    return false;
-                outValue.setNumber( static_cast<float64>( pSystem->getPersistentStampCount() ) );
-                return true;
-            }
-        };
-    } // namespace
-
-    SW_AUTOMATION_QUERY_WATCH( surfaceDeformDepth, "Surface.DeformDepth", "Depth (m) the surface deform layer sank at key 'x z' (negative: raised)", &SurfaceDeformSystemInternal::readDepth, false,
-                               true );
-    SW_AUTOMATION_QUERY_WATCH( surfaceDeformActiveTexels, "Surface.DeformActiveTexels", "Texels of the surface deform layer not yet filled back", &SurfaceDeformSystemInternal::readActiveTexels,
-                               false, false );
-    SW_AUTOMATION_QUERY_WATCH( surfaceDeformDeepest, "Surface.DeformDeepest", "Deepest sink (m) in the surface deform window", &SurfaceDeformSystemInternal::readDeepest, false, false );
-    SW_AUTOMATION_QUERY_WATCH( surfaceDeformDeepestNear, "Surface.DeformDeepestNear", "Deepest sink (m) within the square of half side r around key 'x z r'",
-                               &SurfaceDeformSystemInternal::readDeepestNear, false, true );
-    SW_AUTOMATION_QUERY_WATCH( surfaceDeformStamps, "Surface.DeformStamps", "Stamps put on the surface deform layer in this scene (cumulative)", &SurfaceDeformSystemInternal::readStamps, false,
-                               false );
-    SW_AUTOMATION_QUERY_WATCH( surfaceDeformHeld, "Surface.DeformHeld", "Stamps held on the surface deform layer now", &SurfaceDeformSystemInternal::readHeld, false, false );
-    SW_AUTOMATION_QUERY_WATCH( surfaceDeformWetTexels, "Surface.DeformWetTexels", "Texels of the surface deform layer still wet from wet footprints", &SurfaceDeformSystemInternal::readWetTexels,
-                               false, false );
-    SW_AUTOMATION_QUERY_WATCH( surfaceDeformWetness, "Surface.DeformWetness", "Wetness (0..1) of the wet footprint layer at key 'x z'", &SurfaceDeformSystemInternal::readWetness, false, true );
-} // namespace sw
 
 namespace sw
 {

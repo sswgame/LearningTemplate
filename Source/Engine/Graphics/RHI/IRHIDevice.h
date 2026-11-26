@@ -13,7 +13,6 @@
 #include "Engine/Config/RHIBackendType.h"
 #include "Engine/Graphics/RHI/Backend/RHIFrameFenceRing.h"
 #include "Engine/Graphics/RHI/Backend/RHIReleaseQueue.h"
-#include "Engine/Graphics/RHI/Diagnostics/RHIConstantBufferWriteLog.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIDrawDiagnostics.h"
 #include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/RHICapabilities.h"
@@ -40,11 +39,9 @@ namespace sw
     class IRHITimestampProvider;
     class BindlessIndexReportLog;
     class RHIComputeBindingLog;
+    class RHIContractValidator;
     class ConstantBufferPagePool;
     enum class ShaderTargetFormat : uint8;
-
-    template <typename THandle>
-    class RHIUploadLog;
 
     enum class RHIHandleKind : uint8; // 미룬 해제 줄의 칸 종류(IRHIDevice.cpp 안 — 부르는 쪽은 핸들 형식으로 오버로드를 고른다)
 
@@ -490,12 +487,8 @@ namespace sw
         virtual const utf8* getBackendName() const = 0;
         /** @brief 이 디바이스의 드로우 기록 진단입니다(잘못된 바인딩 알림과 그 횟수 — 문맥 · 지오메트리 바인딩이 여기로 알린다). */
         const RHIDrawDiagnostics& getDrawDiagnostics() const { return _drawDiagnostics; }
-        /** @brief 이번 프레임에 쓴 상수 버퍼 구간입니다(`IRHICommandContext::updateConstantBuffer` · `ConstantBufferPagePool::write` 가 두 번째 쓰기를 알린다 — 개발 구성). `beginFrame` 이 비운다. */
-        RHIConstantBufferWriteLog& getConstantBufferWriteLog() { return _constantBufferWriteLog; }
-        /** @brief 지금 기록하는 프레임이 쓰는 버퍼입니다(`beginBufferUpload` 가 다른 스레드의 갱신을 본다 — 개발 구성). */
-        RHIUploadLog<RHIBufferHandle>& getBufferUploadLog() { return *_pBufferUploadLog; }
-        /** @brief 지금 기록하는 프레임이 쓰는 텍스처입니다(`beginTextureUpload` · `beginTextureReadback` 이 본다 — 개발 구성). */
-        RHIUploadLog<RHITextureHandle>& getTextureUploadLog() { return *_pTextureUploadLog; }
+        /** @brief 공통 입구의 개발 구성 계약 검사입니다(업로드 · 되읽기 차례, 상수 버퍼 이중 쓰기). 입구는 사실 하나를 한 줄로 넘긴다. 아무 스레드에서 불러도 된다. */
+        RHIContractValidator& getContractValidator() { return *_pContractValidator; }
 
         // ------------------------------------------------------------------------------
         // 3) 네이티브 핸들: 디바이스, 컨텍스트, 스왑체인, 큐
@@ -903,16 +896,12 @@ namespace sw
         unique_ptr<BindlessIndexReportLog> _pBindlessIndexReportLog;
         /// @brief 컴퓨트 디스패치가 건 버퍼의 기록입니다(getComputeBindingLog 참고).
         unique_ptr<RHIComputeBindingLog> _pComputeBindingLog;
-        /// @brief 지금 기록하는 프레임이 쓰는 버퍼입니다(`getBufferUploadLog`).
-        unique_ptr<RHIUploadLog<RHIBufferHandle>> _pBufferUploadLog;
-        /// @brief 지금 기록하는 프레임이 쓰는 텍스처입니다(`getTextureUploadLog`).
-        unique_ptr<RHIUploadLog<RHITextureHandle>> _pTextureUploadLog;
+        /// @brief 공통 입구의 계약 검사입니다(`getContractValidator`).
+        unique_ptr<RHIContractValidator> _pContractValidator;
         /// @brief 마지막 `initialize` 의 단계별 시간입니다(`markInitPhase`).
         PhaseTimings _initPhaseTimings;
         /// @brief 드로우 기록 진단입니다(`getDrawDiagnostics`). 장치와 함께 생기고 사라진다 — 백엔드를 바꾸면 횟수가 다시 시작한다.
         RHIDrawDiagnostics _drawDiagnostics;
-        /// @brief 이번 프레임의 상수 버퍼 쓰기입니다(`getConstantBufferWriteLog`).
-        RHIConstantBufferWriteLog _constantBufferWriteLog;
         /// @brief 지난 경계 수입니다(`getHandleReuseCount`).
         atomic<uint64> _handleReuseCount{ 0 };
         uint64         _frameNumber{ 0 }; ///< 연 프레임 수(`getFrameNumber`)

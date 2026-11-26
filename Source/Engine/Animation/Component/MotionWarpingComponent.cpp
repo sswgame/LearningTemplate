@@ -182,8 +182,3 @@ namespace sw
         }
     }
 } // namespace sw
-
-namespace sw
-{
-    SW_AUTOMATION_GETTER_WATCH( motionWarpingOpenWindows, "MotionWarping.OpenWindows", "Warp windows open on the first motion warping component", MotionWarpingComponent, &MotionWarpingComponent::getOpenWindowCount );
-} // namespace sw

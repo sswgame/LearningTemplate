@@ -139,7 +139,7 @@ namespace sw
         void writeTimestamp( uint32 slotIndex ) override { _context.writeTimestamp( slotIndex ); }
         /** @brief 닫은 커맨드 버퍼를 넘깁니다(디바이스가 제출 목록에 넣는다). */
         [[nodiscard]] WGPUCommandBuffer takeFinishedCommandBuffer() { return _context.takeFinishedCommandBuffer(); }
-        /** @brief 디바이스가 먼저 내려갔다 — 리스트의 객체를 놓습니다(`RHILiveCommandListUtil::detachAll`). */
+        /** @brief 디바이스가 먼저 내려갔다 — 리스트의 객체를 놓습니다(`RHILiveCommandListSet::detachAll`). */
         void detachFromDevice();
 
     private:

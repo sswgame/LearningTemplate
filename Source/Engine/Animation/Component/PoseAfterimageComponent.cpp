@@ -15,13 +15,6 @@
 
 namespace sw
 {
-    SW_AUTOMATION_GETTER_WATCH( afterimageVisible, "Afterimage.Visible", "Afterimages the first pose afterimage component shows now", PoseAfterimageComponent, &PoseAfterimageComponent::countVisibleGhosts );
-    SW_AUTOMATION_GETTER_WATCH( afterimageCaptureCount, "Afterimage.CaptureCount", "Afterimages the first pose afterimage component has left so far", PoseAfterimageComponent,
-                                &PoseAfterimageComponent::getCaptureCount );
-} // namespace sw
-
-namespace sw
-{
     PoseAfterimageComponent::PoseAfterimageComponent()
         : _materialPath{}
         , _opacityOverLife{}

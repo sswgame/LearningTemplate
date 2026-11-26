@@ -9,10 +9,8 @@
 #include "Core/Subsystem/Subsystem.h"
 #include "Core/Subsystem/SubsystemSlot.h"
 
-#include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Foundation/EngineSubsystems.h"
-#include "Engine/Serialization/JSON/JSONDocument.h"
 
 namespace sw
 {
@@ -179,6 +177,31 @@ namespace sw
         return engine::getSubsystem<RenderStabilityStatusHolder>().getMaxGIError();
     }
 
+    void RenderStabilitySample::setMinStillFramesThreshold( uint32 minStillFrames )
+    {
+        engine::getSubsystem<RenderStabilityStatusHolder>().setMinStillFrames( minStillFrames );
+    }
+
+    void RenderStabilitySample::setMaxExposureErrorThreshold( float32 maxErrorEv )
+    {
+        engine::getSubsystem<RenderStabilityStatusHolder>().setMaxExposureErrorEv( maxErrorEv );
+    }
+
+    void RenderStabilitySample::setMaxGIErrorThreshold( float32 maxError )
+    {
+        engine::getSubsystem<RenderStabilityStatusHolder>().setMaxGIError( maxError );
+    }
+
+    optional<uint32> RenderStabilitySample::getMinStillFramesThreshold()
+    {
+        return engine::getSubsystem<RenderStabilityStatusHolder>().getMinStillFrames();
+    }
+
+    optional<float32> RenderStabilitySample::getMaxExposureErrorThreshold()
+    {
+        return engine::getSubsystem<RenderStabilityStatusHolder>().getMaxExposureErrorEv();
+    }
+
     void RenderPresentCounter::addOne()
     {
         engine::getSubsystem<RenderStabilityStatusHolder>().addPresentedFrame();
@@ -190,76 +213,4 @@ namespace sw
     }
 
     SW_ENGINE_SUBSYSTEM_WITH_SLOT( RenderStabilityStatusHolder, HostOnly, Process, Shared, (), SW_ENGINE_DEFAULT_FACTORY( RenderStabilityStatusHolder ) );
-} // namespace sw
-
-namespace sw
-{
-    namespace
-    {
-        /** @brief 문턱이 없을 때의 진행 중입니다 — 기본값으로 지나가지 않고 정지 시한에 이 까닭으로 진다. */
-        constexpr const utf8* kNoThresholdWhat = "no threshold - Config/Dev/ScenarioRun.json _mapConditionThreshold was not loaded";
-
-        /** @brief 조건 `RenderTemporalAccumulation` 입니다(`RenderStabilitySample::evaluateTemporalAccumulation`). */
-        AutomationReadiness readTemporalAccumulation()
-        {
-            const RenderStabilityStatusHolder& holder         = engine::getSubsystem<RenderStabilityStatusHolder>();
-            const optional<uint32>&            minStillFrames = holder.getMinStillFrames();
-            if ( minStillFrames.has_value() == false )
-                return AutomationReadiness::waiting( 0, kNoThresholdWhat );
-            return holder.load().evaluateTemporalAccumulation( *minStillFrames );
-        }
-
-        /** @brief 조건 `RenderAutoExposure` 입니다(`RenderStabilitySample::evaluateAutoExposure`). */
-        AutomationReadiness readAutoExposure()
-        {
-            const RenderStabilityStatusHolder& holder     = engine::getSubsystem<RenderStabilityStatusHolder>();
-            const optional<float32>&           maxErrorEv = holder.getMaxExposureErrorEv();
-            if ( maxErrorEv.has_value() == false )
-                return AutomationReadiness::waiting( 0, kNoThresholdWhat );
-            return holder.load().evaluateAutoExposure( *maxErrorEv );
-        }
-
-        /** @brief 조건 `RenderRealtimeGI` 입니다(`RenderStabilitySample::evaluateRealtimeGI`). */
-        AutomationReadiness readRealtimeGI()
-        {
-            const RenderStabilityStatusHolder& holder   = engine::getSubsystem<RenderStabilityStatusHolder>();
-            const float32                      maxError = holder.getMaxGIError();
-            if ( maxError <= 0.0f )
-                return AutomationReadiness::waiting( 0, kNoThresholdWhat );
-            return holder.load().evaluateRealtimeGI( maxError );
-        }
-
-        /** @brief `RenderTemporalAccumulation` 의 문턱 — 가만히 있던 프레임 수(1 이상 정수, TAA 기록 섞는 비율의 역수 몇 배). */
-        expected<void> configureTemporalAccumulation( float64 threshold )
-        {
-            const uint32 minStillFrames = threshold >= 1.0 && threshold <= static_cast<float64>( MathUtil::kMaxInt32 ) ? static_cast<uint32>( threshold ) : 0u;
-            if ( minStillFrames == 0 || static_cast<float64>( minStillFrames ) != threshold )
-                return unexpected( Error{ ErrorKind::InvalidArgument, "the threshold is a frame count (a whole number, 1 or more)", "RenderTemporalAccumulation" } );
-            engine::getSubsystem<RenderStabilityStatusHolder>().setMinStillFrames( minStillFrames );
-            return {};
-        }
-
-        /** @brief `RenderAutoExposure` 의 문턱 — 남은 노출 오차(0 이상, EV). */
-        expected<void> configureAutoExposure( float64 threshold )
-        {
-            if ( threshold < 0.0 )
-                return unexpected( Error{ ErrorKind::InvalidArgument, "the threshold is an exposure error (0 or more, EV)", "RenderAutoExposure" } );
-            engine::getSubsystem<RenderStabilityStatusHolder>().setMaxExposureErrorEv( static_cast<float32>( threshold ) );
-            return {};
-        }
-
-        /** @brief `RenderRealtimeGI` 의 문턱 — 옛 기록의 남은 몫(0 보다 크고 1 보다 작다). */
-        expected<void> configureRealtimeGI( float64 threshold )
-        {
-            if ( threshold <= 0.0 || threshold >= 1.0 )
-                return unexpected( Error{ ErrorKind::InvalidArgument, "the threshold is the share of the old history left (between 0 and 1)", "RenderRealtimeGI" } );
-            engine::getSubsystem<RenderStabilityStatusHolder>().setMaxGIError( static_cast<float32>( threshold ) );
-            return {};
-        }
-    } // namespace
-
-    // 사진 앞 렌더 정착 — 이력을 든 렌더러 곁에서 등록한다(실행기는 조건 이름만 안다).
-    SW_AUTOMATION_STABILITY_CONDITION( renderTemporalAccumulation, "RenderTemporalAccumulation", &readTemporalAccumulation, &configureTemporalAccumulation );
-    SW_AUTOMATION_STABILITY_CONDITION( renderAutoExposure, "RenderAutoExposure", &readAutoExposure, &configureAutoExposure );
-    SW_AUTOMATION_STABILITY_CONDITION( renderRealtimeGI, "RenderRealtimeGI", &readRealtimeGI, &configureRealtimeGI );
 } // namespace sw

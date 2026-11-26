@@ -1,6 +1,7 @@
 {
     "_comment": "개발 전용 단위 폴더(`Dev/`)를 둘 수 있는 자리 — 읽는 곳은 cmake/Modules/Build/ExcludedSources.cmake. 배포 구성은 여기 적은 자리의 `Dev/` 만 짓지 않고(`SW_DEV_ONLY_SOURCE_PATTERNS`), 표 밖 `Source/` 에 `Dev/` 폴더가 있으면 configure 가 멈춘다. 개발 기능은 Source/DevTools/(언리얼 Developer 모듈 자리)로 — DevTools 가 볼 수 없는 모듈 안만 까닭과 함께 적는다. 값이 `Dev/` 로 끝나면 그 폴더 하나, 아니면 그 아래 어느 `Dev/` 든이다. 옮기고 나면 줄을 지운다.",
     "_devFolderAllowed": {
+        "Source/Engine/Graphics/RHI/Vulkan/Dev/": "Vulkan 백엔드의 할당 구간 기록(VulkanPlacementLog) — 백엔드 모듈 안 VMA 할당 정보를 읽어 DevTools 창구로는 닿지 않는다. 입구는 헤더의 인라인 함수라 배포는 빈 함수이고 이 폴더를 짓지 않는다",
         "Source/Engine/Network/Dev/": "Fileserve 장치 전송의 평문 HTTP 클라이언트 — 콘텐츠 소스는 엔진 · 모듈이 서기 전(android_main)에 걸어야 해 DevTools(모듈)가 붙을 자리가 없다. 배포는 짓지 않는다",
         "Source/GameFramework/Kits/": "키트 모듈의 개발 명령 · 자동화 감시 값 · 디버그 HUD — 키트는 따로 짓는 모듈이라 DevTools(GameFramework 를 못 본다)도 GameFrameworkDev(GameFramework 만 링크한다)도 키트 내부를 보지 못한다. 같은 키트 타깃의 개발 전용 소스로 두면 내보내기 없이 키트 내부를 쓴다(게임과 같은 처지)",
         "Source/Games/": "게임 모듈의 자동 플레이 · 스트레스 시험 — DevTools 가 게임을 알면 의존이 거꾸로다(게임은 DevTools 를 못 본다)"

@@ -7,9 +7,8 @@
 #include "Core/Time/BusyClock.h"
 
 #include "Engine/Foundation/EngineSubsystems.h"
-#include "Engine/Graphics/RHI/Backend/RHIBufferSizeUtil.h"
+#include "Engine/Graphics/RHI/Diagnostics/RHIContractValidator.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
-#include "Engine/Graphics/RHI/Diagnostics/RHIUploadLog.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHICapabilities.h"
 #include "Engine/Graphics/RHI/RHICompiledShaderStages.h"
@@ -31,11 +30,19 @@ namespace sw
                 SW_LOG_ERROR_ID( "RHI.BufferSizeZero", "%#: a resource of zero bytes cannot be created", pCaller );
                 return false;
             }
-            /** @brief 원소 크기 × 개수가 0 이 아니고 32비트에 담기는지 봅니다(`RHIBufferSizeUtil` 이 넘침을 알린다). */
+            /**
+             * @brief 원소 크기 × 개수가 0 이 아니고 32비트에 담기는지 봅니다. 백엔드는 이 검사를 지난 서술만 받는다.
+             * @details uint32 로 곱하면 넘쳐서 조용히 작은 버퍼가 생기고 셰이더는 원래 개수만큼 쓴다. DX11 · GL · Vulkan 은 API 가 32비트 크기를 받는다.
+             */
             static bool isValidElements( uint32 elementSize, uint32 elementCount, const utf8* pCaller )
             {
-                uint32 totalBytes{ 0 };
-                return RHIBufferSizeUtil::computeStructuredBytes( elementSize, elementCount, totalBytes ) && isValidBytes( totalBytes, pCaller );
+                const uint64 totalBytes = static_cast<uint64>( elementSize ) * static_cast<uint64>( elementCount );
+                if ( totalBytes > static_cast<uint64>( ~uint32{ 0 } ) )
+                {
+                    SW_LOG_ERROR_ID( "RHI.BufferSizeOverflow", "%#: the structured buffer does not fit in a 32-bit size (%# x %# = %# bytes)", pCaller, elementSize, elementCount, totalBytes );
+                    return false;
+                }
+                return isValidBytes( totalBytes, pCaller );
             }
             static bool isValidContent( const void* pData, uint32 sizeBytes, const utf8* pCaller )
             {
@@ -364,11 +371,8 @@ namespace sw
 
     RHIBufferHandle IRHIResourceFactory::recordContent( RHIBufferHandle buffer, const void* pContent )
     {
-        if constexpr ( build::kShipping == false )
-        {
-            if ( _pUploadDevice != nullptr && pContent != nullptr )
-                _pUploadDevice->getBufferUploadLog().recordContent( buffer );
-        }
+        if ( _pUploadDevice != nullptr && pContent != nullptr )
+            _pUploadDevice->getContractValidator().recordBufferContent( buffer );
         return buffer;
     }
 

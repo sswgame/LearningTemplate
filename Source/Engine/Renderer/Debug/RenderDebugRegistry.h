@@ -5,6 +5,7 @@
  *          그래프 밖 버퍼 읽기(`FrameBufferTable` 등록분 — `RenderBufferInspector` 가 렌더 쪽에서 읽는다), 메시 정점 대조 요청(`MeshVertexCheck`). `RenderTargetRegistry` 와 같은 꼴이다: 값만 복사해 넘기고
  *          공개 번호(`get…Serial`)로 다시 읽을지 안다. 렌더러는 호스트(`FrameRendererHost::_pRenderDebug`)로만 이것을 받아 화면 밖 렌더러는 기록하지 않는다.
  *          렌더러 쪽 훅은 배포 구성(`SW_SHIPPING`)에서 빠진다 — 그때 이 객체는 아무도 채우지 않는다.
+ *          요청을 처리하는 렌더 스레드 검사(정점 대조 · RHI 계약 · 버퍼 보기)는 개발 도구(`DevTools/Client/Render`)가 `IRenderDebugChecks` 로 붙인다. 배포 구성은 그 코드를 짓지 않는다.
  */
 #pragma once
 #include "Core/Concurrency/atomic.h"
@@ -15,6 +16,8 @@
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Memory/Memory.h"
+#include "Core/Registry/RegistrationList.h"
 #include "Core/String/Name/hashed_string.h"
 #include "Core/Subsystem/Subsystem.h"
 #include "Core/Subsystem/SubsystemSlot.h"
@@ -23,7 +26,86 @@
 
 namespace sw
 {
+    class FrameBufferTable;
+    class GPUScene;
+    class IRHICommandList;
+    class IRHIDevice;
+    class IRHIResourceFactory;
+    class RenderDebugRegistry;
+    class RenderTargetRegistry;
+    struct RenderTargetInfo;
+    class RenderPSOCache;
     class ShaderBindingLayout;
+    class TransientAttachmentPool;
+    struct ComputePipeline;
+    struct RenderGraphExecutionContext;
+    struct RenderGraphPassDesc;
+
+    /**
+     * @class IRenderDebugChecks
+     * @brief 렌더 스레드의 개발 검사(패스 출력 NaN 감시, 주 렌더러는 우편함 요청의 메시 정점 대조 · RHI 계약 · 그래프 밖 버퍼 읽기)를 실행기에 붙이는 창구입니다.
+     * @details 구현은 개발 도구(`DevTools/Client/Render`)가 정적 등록자(`Registrar`)로 만들기 함수를 건다. 배포 구성 · 전용 서버는 그 소스를 짓지 않아 `create` 가 nullptr 이고,
+     *          실행기는 아무것도 부르지 않는다. 실행기 하나가 하나를 만들어 든다(장치 자원을 렌더러 수명에 맞춘다). 언리얼 Gameplay Debugger 처럼 디버그 구현이 따로 된 모듈에 있다.
+     */
+    class SW_API IRenderDebugChecks
+    {
+    public:
+        virtual ~IRenderDebugChecks() = default;
+
+        /** @brief 프레임 업로드 단계 바로 뒤(렌더 패스 · 병렬 기록 밖)입니다. 정점 대조 · RHI 계약 검사가 요청을 꺼내 @p cmd 에 기록한다. */
+        virtual void recordAfterFrameUploads( IRHICommandList& cmd, IRHIDevice& device, const GPUScene& scene, RenderDebugRegistry& registry ) = 0;
+        /** @brief 프레임 그래프를 다 기록한 뒤입니다. 버퍼 보기가 그래프가 둔 접근에서 읽고 되돌린다. */
+        virtual void recordAfterFrameGraph( IRHICommandList& cmd, IRHIDevice* pDevice, const FrameBufferTable& table, const RenderGraphExecutionContext& context, RenderPSOCache& psoCache,
+                                            RenderDebugRegistry& registry ) = 0;
+        /**
+         * @brief 패스 출력 NaN · Inf 감시(`-gv_nanCheck`, 언리얼 `r.CheckNaN`)의 카운터 · 되읽기를 만듭니다(렌더러가 장치 자원을 만들 때). 정책이 끄면 아무것도 하지 않고 true 다.
+         * @return 켜졌고 쓸 수 있는 백엔드인데 만들지 못하면 false 입니다(이유는 로그).
+         */
+        [[nodiscard]] virtual bool initializeNanCheck( IRHIDevice* pDevice ) = 0;
+        /** @brief NaN 감시가 켜져 카운터가 갖춰졌는가. */
+        [[nodiscard]] virtual bool isNanCheckActive() const = 0;
+        /** @brief 그래프가 끝난 뒤 @p listPass 의 부동소수 컬러 출력(@p pool 의 첨부)을 @p pipeline(`RenderPassKind::NanCheck`)으로 훑고 카운터 되읽기를 요청합니다. 자기 명령 리스트로 낸다. */
+        virtual void recordNanCheck( IRHIDevice& device, const vector<RenderGraphPassDesc>& listPass, const TransientAttachmentPool& pool, const ComputePipeline& pipeline ) = 0;
+        /** @brief 도착한 NaN 카운터 사본을 읽어 늘어난 출력을 로그로 냅니다(프레임 그래프 앞). */
+        virtual void pollNanCheck() = 0;
+        /**
+         * @brief 주 시점 첨부 목록을 렌더 타깃 창 우편함(@p registry)에 싣습니다 — 패스의 생산자 · 소비자 · 수명을 붙이고 이름순으로 정렬한다. 첨부를 만들거나 다시 가리킬 때만 부른다.
+         * @param presented 화면에 나가는 첨부(꺼진 효과의 출력이면 그 원본으로 푼 이름)
+         * @param listExtraTarget 패스가 아닌 그래프 밖 출력(HDR 표시 인코딩의 장면 · UI RT) — 그대로 싣는다
+         */
+        virtual void publishRenderTargets( RenderTargetRegistry& registry, const TransientAttachmentPool& pool, const vector<RenderGraphPassDesc>& listPass, hashed_string presented,
+                                           vector<RenderTargetInfo> listExtraTarget ) = 0;
+        /**
+         * @brief 렌더 스레드 프레임 끝(endFrame 뒤 — 그 프레임이 그린 내용이 들어 있다)입니다. 렌더 타깃 창의 CPU 읽기 요청과 `gpu.inspect` 의 첨부 값 덤프를 처리한다.
+         * @details 렌더 타깃 읽기는 기다리지 않는 전송(다음 프레임들이 폴링), 픽셀 덤프는 개발 명령 한 번에 한 번 GPU 를 기다린다.
+         */
+        virtual void serviceAfterFrameEnd( IRHIResourceFactory& factory ) = 0;
+        /** @brief 진행 중인 렌더 타깃 읽기의 전송 티켓을 버립니다 — 팩토리보다 오래 살지 않게 렌더 스레드를 멈출 때 부른다. */
+        virtual void discardRenderTargetRead() = 0;
+        /** @brief 장치 자원을 놓습니다(렌더러가 장치 자원을 놓을 때). 여러 번 불러도 된다. */
+        virtual void release( IRHIDevice* pDevice ) = 0;
+
+        /** @brief 만드는 함수입니다(등록 칸에 거는 값). */
+        struct Factory
+        {
+            unique_ptr<IRenderDebugChecks> ( *_pCreate )();
+        };
+        /** @brief 걸린 만들기 함수로 하나 만듭니다. 걸린 것이 없으면(배포 · 전용 서버) nullptr 입니다. */
+        [[nodiscard]] static unique_ptr<IRenderDebugChecks> create();
+        /** @brief 만들기 함수를 겁니다(정적 등록자가 부른다). 이미 다른 것이 걸려 있으면 공용 거절 로그를 남기고 false 입니다 — 이미지에 하나다. */
+        [[nodiscard]] static bool attach( const Factory* pFactory );
+        /** @brief 걸린 만들기 함수를 뗍니다(건 이미지가 내려갈 때). */
+        static void detach( const Factory* pFactory );
+
+        /** @struct Registrar @brief 개발 도구가 정적 객체로 만들기 함수를 겁니다 — 공통 틀 `StaticRegistrar` 라 건 이미지가 내려가면 뗀다. */
+        struct Registrar final : StaticRegistrar<const Factory*>
+        {
+            explicit Registrar( const Factory& factory )
+                : StaticRegistrar{ &factory, &IRenderDebugChecks::attach, &IRenderDebugChecks::detach }
+            {
+            }
+        };
+    };
 
     /** @brief 프레임 디버거의 멈춤 지점입니다. 주 시점의 씬 드로우에만 듣는다(렌더 타깃 창이 보는 풀과 같다). */
     struct FrameDebuggerSettings

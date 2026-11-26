@@ -20,7 +20,6 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Asset/AssetManager.h"
-#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Foundation/EngineParallel.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
@@ -63,24 +62,6 @@ namespace sw
         vector<TextureStreamingDemand>                         _listMeshDemand;    ///< 프리미티브 목록(`PrimitiveRegistry::getAll`)과 같은 순서의 요구(재사용). 워커는 자기 칸에만 쓴다
         vector<string>                                         _listPathScratch;   ///< 머티리얼 하나의 텍스처 경로(재사용)
     };
-
-    namespace
-    {
-        /** @brief 감시 값 `Texture.StreamingQueueCount` 입니다. 위쪽 밉을 기다리거나 읽는 중이거나 업로드 중인 텍스처 요청 수(텍스처 로드 큐 — `TextureCache::captureStreamingQueue`)입니다. */
-        [[nodiscard]] bool readTextureStreamingQueueCount( const GameObjectManager* pManager, float64& outValue )
-        {
-            AssetManager* pAssets = pManager != nullptr ? pManager->findAssetManager() : nullptr;
-            if ( pAssets == nullptr )
-                return false;
-            const TextureStreamingQueueSnapshot snapshot = pAssets->getAssetCache<TextureCache>().captureStreamingQueue();
-            outValue                                     = static_cast<float64>( snapshot._listWaiting.size() + snapshot._readingCount + snapshot._uploadingCount );
-            return true;
-        }
-    } // namespace
-
-    SW_AUTOMATION_WATCH( textureStreamingQueueCount, "Texture.StreamingQueueCount",
-                         "Texture mip requests waiting, reading or uploading (the texture load queue, ordered by streaming priority then screen size; world.streamqueue lists them)",
-                         &readTextureStreamingQueueCount );
 
     SW_SCENE_SUBSYSTEM( TextureStreamingSystem, FlushEnd, makeSceneFrameAccess( SceneDataKindSet{}, SceneDataKindSet{}, SceneDataKindSet{ SceneDataKind::Structure, SceneDataKind::Transform } ) )
 

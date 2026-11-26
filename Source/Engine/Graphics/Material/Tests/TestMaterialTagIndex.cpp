@@ -3,6 +3,8 @@
 #include "Core/String/StringUtil.h"
 #include "Core/TestFramework/TestFramework.h"
 
+#include "Engine/Asset/AssetDatabase.h"
+#include "Engine/Content/AssetRegistry.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialTagIndex.h"
 
@@ -43,14 +45,14 @@ SW_TEST_CASE( MaterialTagIndexTest, QueriesMatchTheMaterialAndSurviveText )
     shared_ptr<Material> plain  = Material::create();
     SW_REQUIRE_TRUE( detail->loadFromXML( MaterialTagIndexTestUtil::makeMaterialXML( true ) ) );
     SW_REQUIRE_TRUE( plain->loadFromXML( MaterialTagIndexTestUtil::makeMaterialXML( false ) ) );
-    const AssetGUID detailGUID = AssetGUID::fromName( "test/detail.material" );
-    const AssetGUID plainGUID  = AssetGUID::fromName( "test/plain.material" );
+    const string detailGUID = AssetRegistry::makeReferenceText( AssetGUID::fromName( "test/detail.material" ) );
+    const string plainGUID  = AssetRegistry::makeReferenceText( AssetGUID::fromName( "test/plain.material" ) );
 
     MaterialTagIndex index;
     index._listEntry.push_back( MaterialTagIndex::makeEntry( detailGUID, *detail ) );
     index._listEntry.push_back( MaterialTagIndex::makeEntry( plainGUID, *plain ) );
 
-    const vector<AssetGUID> listDetail = index.findByKeyword( "MATERIAL_DETAIL" );
+    const vector<string> listDetail = index.findByKeyword( "MATERIAL_DETAIL" );
     SW_REQUIRE_EQUAL( size_t( 1 ), listDetail.size() );
     SW_EXPECT_TRUE( listDetail[0] == detailGUID );
     SW_EXPECT_EQUAL( detail->isKeywordEnabled( "MATERIAL_DETAIL" ), true );
@@ -58,8 +60,8 @@ SW_TEST_CASE( MaterialTagIndexTest, QueriesMatchTheMaterialAndSurviveText )
     SW_EXPECT_TRUE( index.findByShaderPath( "engine/shaders/unlit.hlsl" ).empty() );
 
     MaterialPassFilter excludeDetail;
-    excludeDetail._excludedDefine     = "MATERIAL_DETAIL";
-    const vector<AssetGUID> listDrawn = index.findDrawnByPass( excludeDetail );
+    excludeDetail._excludedDefine  = "MATERIAL_DETAIL";
+    const vector<string> listDrawn = index.findDrawnByPass( excludeDetail );
     SW_REQUIRE_EQUAL( size_t( 1 ), listDrawn.size() );
     SW_EXPECT_TRUE( listDrawn[0] == plainGUID );
     SW_EXPECT_EQUAL( plain->isDrawnByPass( excludeDetail ), true );
@@ -76,4 +78,37 @@ SW_TEST_CASE( MaterialTagIndexTest, QueriesMatchTheMaterialAndSurviveText )
     duplicated._listEntry.push_back( MaterialTagIndex::makeEntry( plainGUID, *plain ) );
     SW_EXPECT_FALSE( duplicated.makeText().has_value() );
     SW_EXPECT_FALSE( MaterialTagIndex::parseText( "<MaterialIndex formatVersion=\"1\"/>", "newer" ).has_value() );
+}
+
+/**
+ * @brief [MaterialTagIndexTest] 정체성(GUID)이 없는 임포트 산출물 머티리얼(`models/_shared/materials/*.material`)은 팩과 같은 키인 경로 글로 색인에 들고, 산출물이 아닌데 정체성이 없으면 오류다
+ * @details 팩 색인(`AssetPackIndex`)은 원본 없는 산출물에 GUID 줄을 두지 않고 경로로 싣는다 — 색인이 GUID 만 받으면 쿠킹이 진다(PackCookMaterialIndexInvalid).
+ *          음성 대조: `makeIdentityReference` 가 산출물 폴더를 보지 않으면 첫 단언이, 정체성 없는 손 글도 경로로 받으면 마지막 단언이 진다. 글 읽기가 경로 글을 거절하면 다시 읽은 색인의 단언이 진다.
+ */
+SW_TEST_CASE( MaterialTagIndexTest, ImportOutputWithoutGUIDIsKeyedByPath )
+{
+    AssetIdentityRules rules;
+    rules._listImportedFolder.push_back( AssetImportedFolder{ "models", "models_raw", { ".glb" }, { ".material" }, true } );
+    const string sharedID = "common/models/_shared/materials/1764b6b037118896.material";
+
+    const expected<string> sharedReference = rules.makeIdentityReference( sharedID, nullopt );
+    SW_REQUIRE_TRUE( sharedReference.has_value() );
+    SW_EXPECT_TRUE( *sharedReference == sharedID );
+    const expected<string> guidReference = rules.makeIdentityReference( sharedID, AssetGUID::fromName( sharedID ) );
+    SW_REQUIRE_TRUE( guidReference.has_value() );
+    SW_EXPECT_TRUE( AssetRegistry::parseReferenceText( *guidReference ).has_value() );
+
+    shared_ptr<Material> shared = Material::create();
+    SW_REQUIRE_TRUE( shared->loadFromXML( MaterialTagIndexTestUtil::makeMaterialXML( true ) ) );
+    MaterialTagIndex index;
+    index._listEntry.push_back( MaterialTagIndex::makeEntry( *sharedReference, *shared ) );
+    const expected<string> text = index.makeText();
+    SW_REQUIRE_TRUE( text.has_value() );
+    const expected<MaterialTagIndex> read = MaterialTagIndex::parseText( *text, "test" );
+    SW_REQUIRE_TRUE( read.has_value() );
+    const vector<string> listFound = read->findByKeyword( "MATERIAL_DETAIL" );
+    SW_REQUIRE_EQUAL( size_t( 1 ), listFound.size() );
+    SW_EXPECT_TRUE( listFound[0] == sharedID );
+
+    SW_EXPECT_FALSE( rules.makeIdentityReference( "common/materials/handwritten.material", nullopt ).has_value() );
 }

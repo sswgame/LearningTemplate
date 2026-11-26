@@ -14,6 +14,8 @@
 #include "Core/String/formatString.h"
 
 #include "DevTools/Console/DebugHUDSectionLines.h"
+#include "DevTools/DebugDraw/DebugDrawQueue.h"
+#include "DevTools/DebugDraw/VisualLogger.h"
 #include "DevTools/Diagnostics/DevSceneIterationAccess.h"
 
 #include "Engine/Automation/AutomationRuntime.h"
@@ -22,8 +24,6 @@
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/Canvas/CanvasPainter.h"
-#include "Engine/Graphics/Debug/VisualLogger.h"
-#include "Engine/Graphics/DebugDraw/DebugDrawQueue.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Profiling/FrameProfiler.h"
@@ -985,14 +985,14 @@ namespace sw
         for ( const DebugHUDSectionRegistration* pSection : _listShownSection )
         {
             if ( pSection->_pDrawFunc != nullptr && ( bShown || pSection->hasFlag( DebugHUDSectionFlag::kDrawsWhileHidden ) ) )
-                pSection->_pDrawFunc( DebugHUDSectionDraw{ *pScene, *pQueue, bShown } );
+                pSection->_pDrawFunc( DebugHUDSectionDraw{ *pScene, pQueue->getEngineView(), bShown } );
             if ( bShown && visualLogger.isEnabled() )
                 (void)visualLogger.replayFrame( *pQueue, pScene->getObjectManager()->getWorldOrigin(), visualLogger.getFrame(), 0, hashed_string( pSection->_pName ) );
         }
         for ( const DebugHUDSectionRegistration* pSection : _listHiddenSection )
         {
             if ( pSection->_pDrawFunc != nullptr )
-                pSection->_pDrawFunc( DebugHUDSectionDraw{ *pScene, *pQueue, false } );
+                pSection->_pDrawFunc( DebugHUDSectionDraw{ *pScene, pQueue->getEngineView(), false } );
         }
     }
 
