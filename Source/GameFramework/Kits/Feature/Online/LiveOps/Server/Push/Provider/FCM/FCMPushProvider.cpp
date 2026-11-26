@@ -68,8 +68,8 @@ namespace sw
 
     string FCMPushProvider::makeMessageJSON( string_view token, string_view topic, const PushNotificationMessage& message )
     {
-        const int32 argumentCount = PushPayloadUtil::countArguments( message );
-        const bool  bHasAlert     = PushPayloadUtil::hasAlert( message );
+        const int32 argumentCount = message.countArguments();
+        const bool  bHasAlert     = message.hasAlert();
         const bool  bHasData      = bHasAlert || message._deepLink.empty() == false || argumentCount > 0;
         string      json;
         JSONWriter  writer{ json };

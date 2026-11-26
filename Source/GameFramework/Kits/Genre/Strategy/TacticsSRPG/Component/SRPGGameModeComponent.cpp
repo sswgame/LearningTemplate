@@ -164,7 +164,7 @@ namespace sw
             if ( bUsable == false )
                 continue;
             SRPGCombatResult result;
-            if ( SRPGCombat::executeAttack( _field, _selectedUnit, weaponIndex, targetIndex, result ) != SRPGWeaponStatus::Ok )
+            if ( _field.executeAttack( _selectedUnit, weaponIndex, targetIndex, result ) != SRPGWeaponStatus::Ok )
                 return false;
             _field.endUnitAction( _selectedUnit );
             _selectedUnit = SRPGGameModeComponentInternal::kNoSelection;

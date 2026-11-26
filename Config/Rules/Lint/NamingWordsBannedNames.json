@@ -2498,6 +2498,8 @@
     "EditorBackgroundTask": "EditorBackgroundJob — 에디터 백그라운드 잡은 TaskManager 실행 단위(Task)와 뜻이 달라(최신 요청 · 결과 칸) 같은 폴더의 EditorExternalToolJob 처럼 Job 으로 가른다(2026-11-26)(2026-11-26)",
     "EditorTaskPoll": "EditorJobPoll — 에디터 백그라운드 잡은 TaskManager 실행 단위(Task)와 뜻이 달라(최신 요청 · 결과 칸) 같은 폴더의 EditorExternalToolJob 처럼 Job 으로 가른다(2026-11-26)(2026-11-26)",
     "GimmickDamageUtil": "GimmickUtil — 기믹 도구는 GimmickUtil 하나로 합쳤다(피해 · 파괴도 같은 주인 없는 도구)(2026-11-26)",
-    "sw_scan_reflection_headers": "sw_scan_reflection_inputs — 헤더와 함께 REFLECT · ENUM 이 든 .cpp 도 훑는다(2026-11-26)"
+    "sw_scan_reflection_headers": "sw_scan_reflection_inputs — 헤더와 함께 REFLECT · ENUM 이 든 .cpp 도 훑는다(2026-11-26)",
+    "SRPGCombat": "SRPGBattlefield::computeStrike · computeForecast · computeForecastFrom · findCounterWeapon · executeAttack · executeMapAttack — 전투 계산은 전장의 멤버다(2026-11-26)",
+    "FeatureDemoCommandUtil": "FeatureDemo/Dev/FeatureDemoDevCommands.cpp 의 내부 구조 — 시연 개발 명령만 쓴다(2026-11-26)"
   }
 }

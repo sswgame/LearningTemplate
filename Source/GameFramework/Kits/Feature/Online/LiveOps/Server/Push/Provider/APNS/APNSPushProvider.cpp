@@ -68,13 +68,13 @@ namespace sw
 
     string APNSPushProvider::makePayloadJSON( const PushNotificationMessage& message )
     {
-        const int32 argumentCount = PushPayloadUtil::countArguments( message );
+        const int32 argumentCount = message.countArguments();
         string      json;
         JSONWriter  writer{ json };
         writer.beginObject();
         writer.key( "aps" );
         writer.beginObject();
-        if ( PushPayloadUtil::hasAlert( message ) )
+        if ( message.hasAlert() )
             PushPayloadUtil::writeAlert( writer, message, argumentCount );
         else
         {
@@ -154,7 +154,7 @@ namespace sw
                 complete( deliveryID, PushDeliveryStatus::Rejected );
             return;
         }
-        const bool        bAlert = PushPayloadUtil::hasAlert( message );
+        const bool        bAlert = message.hasAlert();
         HTTPClientRequest request;
         request._method = HTTPMethod::Post;
         StringBuilder<constant::buffer::kMax512> url;
