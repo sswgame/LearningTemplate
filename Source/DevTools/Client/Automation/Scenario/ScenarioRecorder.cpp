@@ -9,6 +9,7 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Automation/Scenario/AutomationScenario.h"
+#include "Engine/Automation/Scenario/AutomationStepParams.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Foundation/EngineSubsystems.h"
@@ -17,6 +18,7 @@
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Input/RawInputEvent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Reflection/EnumName.h"
 #include "Engine/Serialization/XML/XMLWriter.h"
 
 namespace sw
@@ -75,17 +77,17 @@ namespace sw
                 return nullptr;
             }
 
-            /** @brief 액션 단계의 `device` 값입니다. 액션 단계가 받지 않는 장치면 nullptr 입니다. */
+            /** @brief 액션 단계의 `device` 값입니다. 재생이 읽는 `AutomationActionDevice` 의 열거자 이름을 쓴다. 액션 단계가 받지 않는 장치면 nullptr 입니다. */
             static const utf8* toDeviceName( InputDeviceKind kind )
             {
                 switch ( kind )
                 {
                     case InputDeviceKind::Keyboard:
-                        return "Keyboard";
+                        return getEnumName( AutomationActionDevice::Keyboard );
                     case InputDeviceKind::Mouse:
-                        return "Mouse";
+                        return getEnumName( AutomationActionDevice::Mouse );
                     case InputDeviceKind::Gamepad:
-                        return "Gamepad";
+                        return getEnumName( AutomationActionDevice::Gamepad );
                     default:
                         return nullptr;
                 }
@@ -182,7 +184,7 @@ namespace sw
                 writeFloatAttribute( writer, "x", inoutTrack._arrValue[0] );
                 writeFloatAttribute( writer, "y", inoutTrack._arrValue[1] );
                 writer.attributeInt( "frames", endFrame > inoutTrack._runStart ? endFrame - inoutTrack._runStart : 1u );
-                writer.attribute( "device", "Gamepad" );
+                writer.attribute( "device", getEnumName( AutomationActionDevice::Gamepad ) );
                 writer.endElement();
                 ++outResult._writtenStepCount;
             }
