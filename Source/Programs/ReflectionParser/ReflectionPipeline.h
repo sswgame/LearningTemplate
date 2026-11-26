@@ -23,6 +23,7 @@ namespace sw
     {
         Setup, ///< 명령줄 · 설정 · 표 · 템플릿 읽기와 도구 시각 측정(파이프라인을 세우기까지, `main` 이 잰다)
         Check, ///< 입력마다 증분 판정 · 내용 읽기 · 키워드 거르기
+        Pch,   ///< 모듈 공통 앞부분(`pch.h`)의 PCH 굽기. 번역 단위가 둘 이상이고 .cpp 입력이 있을 때만 한다
         Parse, ///< clang 이 번역 단위를 만든다(공통 include 가 거의 전부)
         Visit, ///< AST 를 돌며 리플렉션 사실을 모은다
         Emit,  ///< 코드젠 · 산출물 쓰기 · 스탬프
@@ -65,18 +66,34 @@ namespace sw
             uint64       _inputWriteTime; /**< 내용을 읽기 전에 측정한 입력의 쓰기 시각 — 스탬프에 적는다(`GeneratedStamp::write`) */
         };
 
-        /** @brief 파싱할 입력들을 처리합니다 — 둘 이상이면 한 번역 단위로 묶고, 그것이 안 되면 하나씩. 실패한 수를 돌려줍니다. */
-        int32 parsePending( const vector<PendingInput>& listPending ) const;
+        /**
+         * @brief 이번 실행의 번역 단위들이 함께 읽는 PCH 입니다. 원본은 출력 폴더의 `ReflectionParser.pch.h`(`pch.h` 하나를 include)다.
+         * @details 언리얼 UBT 가 모듈의 공유 PCH 를 쓰는 자리다. 실행마다 새로 굽고 실행 끝에 지운다(다음 실행의 인자 · 헤더와 맞는다는 보장이 없다).
+         */
+        struct ModulePch
+        {
+            AbsolutePath            _pchPath;
+            vector<StampDependency> _listDependency; ///< PCH 를 구울 때 include 한 프로젝트 헤더. PCH 를 읽은 번역 단위의 의존에 더한다
+        };
+
+        /**
+         * @brief 파싱할 헤더 입력들을 처리합니다. 둘 이상이거나 PCH 를 쓰면 한 번역 단위로 묶고, 묶음이 깨지면 하나씩(PCH 없이). 실패한 수를 돌려줍니다.
+         * @param pPch 함께 읽을 PCH(없으면 nullptr)
+         */
+        int32 parsePending( const vector<PendingInput>& listPending, const ModulePch* pPch ) const;
         /**
          * @brief 헤더 여럿을 한 번역 단위로 파싱해 헤더마다 코드젠합니다.
+         * @param pPch 함께 읽을 PCH(없으면 nullptr). 있으면 입력 헤더를 내용으로 넘기지 않고 디스크에서 읽는다(PCH 안의 파일을 덮으면 clang 이 거절한다)
          * @param outErrorCount 수집 · 코드젠에 실패한 헤더 수
          * @return clang 이 묶음을 파싱하지 못했으면 false(헤더마다 다시 해 본다)
          */
-        [[nodiscard]] bool parseBatch( const vector<PendingInput>& listPending, int32& outErrorCount ) const;
-        /** @brief 헤더 하나를 파싱 · 수집 · 코드젠합니다. */
-        [[nodiscard]] bool parseAndGenerate( const PendingInput& pending ) const;
+        [[nodiscard]] bool parseBatch( const vector<PendingInput>& listPending, const ModulePch* pPch, int32& outErrorCount ) const;
+        /** @brief 입력 하나를 주 파일로 파싱 · 수집 · 코드젠합니다. @p pPch 는 .cpp 입력만 받는다(헤더를 주 파일로 읽으면 PCH 안의 같은 헤더와 겹친다). */
+        [[nodiscard]] bool parseAndGenerate( const PendingInput& pending, const ModulePch* pPch ) const;
         /** @brief 입력마다 따로 파싱합니다(워커 풀). 실패한 수를 돌려줍니다. */
-        int32 parseEachInParallel( const vector<PendingInput>& listPending ) const;
+        int32 parseEachInParallel( const vector<PendingInput>& listPending, const ModulePch* pPch ) const;
+        /** @brief `pch.h` 를 PCH 로 굽습니다. 굽지 못하면 오류를 남기고 false 입니다(PCH 없이 다시 하지 않는다 — .cpp 입력도 같은 `pch.h` 로 시작한다). */
+        [[nodiscard]] bool bakeModulePch( ModulePch& outPch ) const;
         /**
          * @brief 모은 것을 산출물로 씁니다 — 이름 충돌 검사 → 내용이 다를 때만 쓰기 → 스탬프.
          * @param inputWriteTime 읽기 전에 측정한 입력 시각.

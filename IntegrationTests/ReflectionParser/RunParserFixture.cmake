@@ -88,6 +88,7 @@ foreach(line IN LISTS list_option_line)
 endforeach()
 
 # 빌드의 인자(`sw_make_reflection_parser_args`)와 같은 모양이다. 파서 로그 파일이 소스 트리에 남지 않게 작업 폴더를 옮긴다.
+# `pch.h` 진입 폴더도 빌드의 타깃처럼 넘긴다. .cpp 사례는 묶음 헤더와 함께 번역 단위가 둘이라 파서가 `pch.h` 를 PCH 로 굽는다.
 execute_process(
 	COMMAND "${PARSER}"
 		--input "${FIXTURE}"
@@ -99,6 +100,7 @@ execute_process(
 		--module-local
 		--config "${CONFIG}"
 		--include "${GENERATED_DIR}"
+		--include "${GENERATED_DIR}/sw/pchentry/engine"
 		--include "${SOURCE_ROOT}/Content/engine/shaders"
 		--include "${SOURCE_ROOT}/Source"
 		${list_target_arg}

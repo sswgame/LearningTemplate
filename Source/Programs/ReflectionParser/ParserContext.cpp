@@ -30,8 +30,15 @@ namespace sw
         }
     }
 
+    bool ParserContext::save( const string& path ) const
+    {
+        if ( _translationUnit == nullptr )
+            return false;
+        return clang_saveTranslationUnit( _translationUnit, path.c_str(), clang_defaultSaveOptions( _translationUnit ) ) == CXSaveError_None;
+    }
+
     bool ParserContext::parse( const string& filePath, const vector<string>& listIncludePath, const vector<ParserUnsavedFile>& listUnsaved,
-                               const bool bReportErrors )
+                               const bool bReportErrors, const vector<string>& listExtraArg, const uint32 extraFlags )
     {
         if ( _index == nullptr )
         {
@@ -45,8 +52,9 @@ namespace sw
             _translationUnit = nullptr;
         }
 
-        const vector<string> listArgString = _pConfig->makeArgs( listIncludePath );
-        vector<const utf8*>  listArgPtr;
+        vector<string> listArgString = _pConfig->makeArgs( listIncludePath );
+        listArgString.insert( listArgString.end(), listExtraArg.begin(), listExtraArg.end() );
+        vector<const utf8*> listArgPtr;
         listArgPtr.reserve( listArgString.size() );
         for ( const string& arg : listArgString )
         {
@@ -68,7 +76,7 @@ namespace sw
         constexpr uint32 kParseFlags = CXTranslationUnit_SkipFunctionBodies | CXTranslationUnit_Incomplete;
         _translationUnit             = clang_parseTranslationUnit(
             _index, filePath.c_str(), listArgPtr.data(), static_cast<int32>( listArgPtr.size() ),
-            listCxUnsaved.empty() ? nullptr : listCxUnsaved.data(), static_cast<uint32>( listCxUnsaved.size() ), kParseFlags );
+            listCxUnsaved.empty() ? nullptr : listCxUnsaved.data(), static_cast<uint32>( listCxUnsaved.size() ), kParseFlags | extraFlags );
 
         if ( _translationUnit == nullptr )
         {
