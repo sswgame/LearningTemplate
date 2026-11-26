@@ -196,6 +196,68 @@ namespace sw
             return string( escaped.view() );
         }
 
+        // ------------------------------------------------------------------------------
+        // 4) emit — C++ 식 조각(실수 리터럴 · 플래그 OR 식 · 집합체 칸 · 글 표)
+        // ------------------------------------------------------------------------------
+        /**
+         * @brief 범위 경계 하나를 float32 글(`1.5f`)로 냅니다. 등록 단위의 허용 범위와 개발 전용 단위의 슬라이더 범위가 함께 쓴다.
+         * @details 접미사 f 가 없으면 `0.100000` 은 double 이라, float32 멤버에 넣을 때 정밀도 손실 경고가 생성된 파일마다 난다.
+         *          경계는 float32 가 되돌아오는 자릿수(9)로 낸다. 6 자리로 자르면 `Max = 6.2831853` 이 6.283185f 가 되어 2π 를 담은 값이 범위 밖이 된다.
+         */
+        static string floatLiteral( const float32 value )
+        {
+            utf8 arrBuffer[constant::buffer::kMax64]{};
+            formatstring( arrBuffer, sizeof( arrBuffer ), "%.9g", static_cast<float64>( value ) );
+            StringBuilder<constant::buffer::kMax64> literal;
+            literal.append( arrBuffer );
+            if ( literal.view().find_first_of( ".eE" ) == string_view::npos )
+                literal.append( ".0" );
+            literal.append( 'f' );
+            return string( literal.view() );
+        }
+
+        /** @brief 이름들로 문자열 리터럴 표 `static constexpr const ::utf8* <이름>[]` 을 씁니다(옛 이름 · 지운 이름). */
+        void textTable( const string_view tableName, const vector<string>& listText )
+        {
+            StringBuilder<constant::buffer::kMax256> texts;
+            for ( const string& text : listText )
+            {
+                texts.append( texts.size() > 0 ? ", " : "" );
+                texts.append( quoted( text ) );
+            }
+            linef( "static constexpr const ::utf8* %#[] = { %# };", tableName, texts.view() );
+        }
+
+        /** @brief 플래그 이름들을 엔진 상수의 OR 식(`PropertyMetadataFlag::kReadOnly | …`)으로 만듭니다. 없으면 `0u` 입니다. */
+        static string flagExpr( const vector<string>& listFlag, const utf8* pFlagStruct )
+        {
+            if ( listFlag.empty() )
+                return string( "0u" );
+            StringBuilder<constant::buffer::kMax256> b;
+            for ( const string& flag : listFlag )
+            {
+                b.appendFormat( "%#%#::k%#", b.size() > 0 ? " | " : "", pFlagStruct, flag );
+            }
+            return string( b.view() );
+        }
+
+        /** @brief 집합체 칸(식, 엔진 쪽 기본값) 목록을 초기화 목록 글로 잇습니다. 뒤에서부터 기본값과 같은 칸은 뺀다 — 모두 기본값이면 빈 글입니다. */
+        static string cellList( std::initializer_list<pair<string, string_view>> listCell )
+        {
+            size_t count = listCell.size();
+            while ( count > 0 && string_view( ( listCell.begin() + ( count - 1 ) )->first ) == ( listCell.begin() + ( count - 1 ) )->second )
+            {
+                --count;
+            }
+            StringBuilder<constant::buffer::kMax512> b;
+            for ( size_t index = 0; index < count; ++index )
+            {
+                b.append( index > 0 ? ", " : "" );
+                b.append( ( listCell.begin() + index )->first );
+            }
+            return string( b.view() );
+        }
+
     private:
         /** @brief 현재 들여쓰기만큼 탭을 출력합니다. */
         void writeIndent()

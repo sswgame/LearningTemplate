@@ -1,8 +1,9 @@
 /**
  * @file CodeGenerator.h
- * @brief 헤더 하나에서 모은 타입 · 열거형으로 .gen.cpp / .gen.h 의 내용을 만듭니다(골격은 .tpl, 분기는 CodeEmit).
+ * @brief 입력 하나에서 모은 타입 · 열거형으로 산출물(.gen.cpp · .gen.h · .gen.meta.cpp · .cpp.gen.inl)의 내용을 만듭니다(골격은 .tpl, 분기는 CodeEmit).
  * @details 파일에 쓰는 일(내용이 같으면 건너뛰기 · 이름 충돌 검사 · 스탬프)은 `ReflectionPipeline` 이 합니다. 여기는 DTO 를
- *          텍스트로 바꾸기만 하므로 파일 없이 불러 볼 수 있습니다.
+ *          텍스트로 바꾸기만 하므로 파일 없이 불러 볼 수 있습니다. 등록 코드는 CodeGenerator.cpp, 프로퍼티 서술자 표는
+ *          CodeGeneratorProperty.cpp, 에디터 메타데이터는 CodeGeneratorEditorMetadata.cpp 가 만든다.
  */
 #pragma once
 #include "Engine/EngineMinimal.h"
@@ -95,6 +96,11 @@ namespace sw
         // 3) maps — enumerator·식별자 표기
         // ------------------------------------------------------------------------------
 
+        // 아래 둘은 이 클래스의 소스 여럿(CodeGenerator.cpp · CodeGeneratorProperty.cpp · CodeGeneratorEditorMetadata.cpp)이 함께 쓴다.
+        /** @brief 생성자 검색을 위한 고유 식별자 문자열(예: `$ctor(int32,float32)`)을 구성합니다. 메서드 표와 에디터 메타데이터가 같은 이름을 쓴다. */
+        static string makeCtorLookupName( const ParsedFunctionInfo& method, const ParserSession& session );
+        /** @brief 검증 함수 @p name 을 부르는 `ReflectValidateFunction` 람다입니다. const 든 아니든 부를 수 있게 인스턴스를 그 타입으로 돌려 부른다. */
+        static string makeValidateLambda( const string& name );
         /** @brief 로드된 EmitTemplateStore 골격을 렌더해 버퍼에 붙입니다. */
         void appendTemplate( CodeEmitBuffer& outBuffer, EmitTemplate kind, const EmitTemplateStore::TemplateVars vars ) const;
 
