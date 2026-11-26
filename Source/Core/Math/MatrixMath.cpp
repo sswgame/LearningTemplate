@@ -237,16 +237,6 @@ namespace sw
         return ( _x * _x ) + ( _y * _y ) + ( _z * _z ) + ( _w * _w );
     }
 
-    quaternion& quaternion::normalize() noexcept
-    {
-        const float32 invNorm = MathUtil::invSqrt( normSquared() );
-        if ( invNorm > 0.f )
-            ( *this ) *= invNorm;
-        else
-            ( *this ) = Identity;
-        return *this;
-    }
-
     quaternion quaternion::normalize() const noexcept
     {
         const float32 invNorm = MathUtil::invSqrt( normSquared() );

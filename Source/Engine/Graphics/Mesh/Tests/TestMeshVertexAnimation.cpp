@@ -147,7 +147,7 @@ SW_TEST_CASE( MeshVertexAnimationTest, NormalRoundTripsThroughOctahedral )
     for ( uint32 index = 0; index < directionCount; ++index )
     {
         float3 expected = arrDirection[index];
-        expected.normalize();
+        expected        = expected.normalize();
         Util::expectNear( expected, MeshVertexAnimation::unpackNormal( animation._listFrameVertex[index] ), 0.03f );
     }
 }

@@ -373,7 +373,7 @@ namespace sw
         float3 unitDirection = direction;
         if ( unitDirection.getLengthSquared() <= MathUtil::kEpsilon )
             return;
-        unitDirection.normalize();
+        unitDirection = unitDirection.normalize();
 
         auto rayIntersects = [&]( const AABB& box ) -> bool
         {

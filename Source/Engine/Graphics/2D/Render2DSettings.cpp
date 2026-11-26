@@ -130,7 +130,7 @@ namespace sw
         }
         _sortMode = params._mode;
         _sortAxis = params._axis;
-        _sortAxis.normalize();
+        _sortAxis = _sortAxis.normalize();
         return true;
     }
 

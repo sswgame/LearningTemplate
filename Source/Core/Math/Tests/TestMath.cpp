@@ -80,7 +80,7 @@ SW_TEST_CASE( MathTest, Float2FullTest )
     SW_EXPECT_NEAR( 0.8f, vNormalized._y, 1e-4f );
 
     sw::float2 vMutable = vComp;
-    vMutable.normalize();
+    vMutable            = vMutable.normalize();
     SW_EXPECT_NEAR( 1.0f, vMutable.getLength(), 1e-4f );
 
     SW_EXPECT_NEAR( 11.0f, vComp.dot( sw::float2( 1.0f, 2.0f ) ), 1e-4f );
@@ -507,7 +507,7 @@ SW_TEST_CASE( MathTest, Double3VectorOperations )
     sw::double3 v1( 3.0, 4.0, 0.0 );
     SW_EXPECT_NEAR( 5.0, v1.getLength(), 1e-6 );
 
-    v1.normalize();
+    v1 = v1.normalize();
     SW_EXPECT_NEAR( 0.6, v1._x, 1e-6 );
     SW_EXPECT_NEAR( 0.8, v1._y, 1e-6 );
 

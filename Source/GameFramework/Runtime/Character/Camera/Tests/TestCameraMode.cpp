@@ -70,7 +70,7 @@ SW_TEST_CASE( CameraModeTest, LookAnglesPointTheCameraAtTheTarget )
     const float3 to{ -4.0f, -1.0f, 9.0f };
     const float2 angles = computeLookAngles( from, to );
     float3       toward = to - from;
-    toward.normalize();
+    toward              = toward.normalize();
     CameraModeTestUtil::expectPoint( float3::transform( float3{ 0.0f, 0.0f, 1.0f }, quaternion::makeFromYawPitchRoll( angles._x, angles._y, 0.0f ) ), toward );
 
     const float2 same = computeLookAngles( from, from );

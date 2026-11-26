@@ -23,7 +23,7 @@ namespace sw
                     outPosition = matrix.getTranslation();
                     outRotation = quaternion{};
                 }
-                outRotation.normalize();
+                outRotation = outRotation.normalize();
             }
 
             static bool isSkeletonValid( const PhysicsSkeletonView& skeleton )

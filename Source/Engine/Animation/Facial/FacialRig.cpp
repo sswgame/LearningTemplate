@@ -54,7 +54,7 @@ namespace sw
         // 키는 대소문자까지 맞아야 하고, 모르는 속성 · 자식 · 읽지 못한 값 · 범위 밖 숫자는 오류다(`readComposedXMLDocument` 가 로그로 알린다).
         if ( ConfigManager::readComposedXMLDocument( this, *StaticType(), xml, sourceLabel, context ) && validateFile( sourceLabel ) )
         {
-            _gaze._forwardAxis.normalize();
+            _gaze._forwardAxis = _gaze._forwardAxis.normalize();
             return true;
         }
         *this = FacialRig{};

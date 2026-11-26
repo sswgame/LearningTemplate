@@ -104,7 +104,7 @@ namespace sw
                     return false;
                 outPosition = state._position;
                 outRotation = state._rotation;
-                outRotation.normalize();
+                outRotation = outRotation.normalize();
                 return true;
             }
 

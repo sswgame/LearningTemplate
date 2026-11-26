@@ -100,10 +100,11 @@ namespace sw
         /** @brief 노름의 제곱을 반환합니다. */
         float32 normSquared() const noexcept;
 
-        /** @brief 길이 1 로 정규화하고 자신을 반환합니다. 길이가 0 이면 단위 쿼터니언이 됩니다. */
-        quaternion& normalize() noexcept;
-        /** @brief 정규화한 사본을 반환합니다. 길이가 0 이면 단위 쿼터니언입니다. */
-        quaternion normalize() const noexcept;
+        /**
+         * @brief 정규화한 사본을 반환합니다. 길이가 0 이면 단위 쿼터니언입니다.
+         * @details 제자리 판을 두지 않는다(`float3::normalize` 와 같은 까닭, 제자리로 쓸 때는 `q = q.normalize()`). 언리얼 `FQuat::GetNormalized` 자리다.
+         */
+        [[nodiscard]] quaternion normalize() const noexcept;
 
         /**
          * @brief 켤레를 반환합니다(허수부의 부호를 뒤집습니다).
