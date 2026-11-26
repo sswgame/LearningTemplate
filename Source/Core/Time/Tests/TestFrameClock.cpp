@@ -55,7 +55,7 @@ SW_TEST_CASE( FrameClockTest, VariableDeltaIsClampedAndSplitIntoFixedSteps )
 }
 
 /**
- * @brief [FrameClockTest] 스텝 수는 상한에서 잘리고, **넘친 잔액은 버린다**
+ * @brief [FrameClockTest] 스텝 수는 상한에서 잘리고, 넘친 잔액은 버린다
  * @details 상한만 두고 잔액을 남기면 다음 프레임이 더 많은 스텝을 요구한다 — 상한이 있어도
  *          빚이 쌓여 영영 못 따라잡는다. 시뮬레이션이 실시간보다 느려지는 쪽을 택한 자리다.
  *          두 번째 호출 전에는 시계를 밀지 않는다 — 잔액을 남겼다면 경과 없이도 스텝이 나온다.
@@ -130,7 +130,7 @@ SW_TEST_CASE( FrameClockTest, UnconfiguredTimelineWaitsForTheConfiguredPolicy )
  * @brief [FrameClockTest] 만들어 두고 한참 뒤에 start 해도 첫 델타는 "방금" 부터다
  * @details `App` 은 이 객체를 멤버로 만들어 두고 창·RHI·모듈을 다 세운 뒤에야 `start()` 를
  *          부른다. 그 사이의 시간이 첫 델타에 섞이면 첫 프레임이 상한 가득한 고정 스텝을 돌아
- *          **시작하자마자 한 박자 건너뛴 것처럼** 보인다. 옛 프레임 타이머의 "첫 델타가 부팅 이후
+ *          시작하자마자 한 박자 건너뛴 것처럼 보인다. 옛 프레임 타이머의 "첫 델타가 부팅 이후
  *          시간" 함정과 같은 자리를 이 층에서도 막아 둔다.
  */
 SW_TEST_CASE( FrameClockTest, StartRewindsTheTimerBeforeTheFirstFrame )

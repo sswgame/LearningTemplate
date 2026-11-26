@@ -43,11 +43,11 @@ namespace sw
     };
 
     /**
-     * @brief 서브시스템이 든 상태의 수명입니다. 등록 줄(`SW_ENGINE_SUBSYSTEM` · `SW_MODULE_SUBSYSTEM` …)이 **꼭 고른다** — 기본값이 없다.
+     * @brief 서브시스템이 든 상태의 수명입니다. 등록 줄(`SW_ENGINE_SUBSYSTEM` · `SW_MODULE_SUBSYSTEM` …)이 꼭 고른다 — 기본값이 없다.
      * @details 예전에는 엔진 서브시스템이 모두 프로세스 수명이라 떠 있는 자막 · 알림 · 재생 중인 소리 · 열린 화면이 게임을 다시 시작해도 남았고, 샐 때마다 하나씩 자동화 되돌리기로 등록했다.
      *          언리얼이 `UEngineSubsystem` 과 `UGameInstanceSubsystem` 을 형식으로 가르는 자리다. 여기서는 객체를 다시 만들지 않고 상태만 비운다 —
      *          서브시스템을 빌려 든 쪽(칸 · 다른 서브시스템)이 많고, 장치 · 구독처럼 게임을 넘어 남을 것과 한 객체에 있다.
-     *          `GameInstance` 는 `Subsystem` 의 두 함수를 **재정의해야 하고** `Process` 는 재정의하면 안 된다(`kSubsystemLifetimeMatches` — 컴파일 오류).
+     *          `GameInstance` 는 `Subsystem` 의 두 함수를 재정의해야 하고 `Process` 는 재정의하면 안 된다(`kSubsystemLifetimeMatches` — 컴파일 오류).
      */
     enum class SubsystemLifetime : uint8
     {
@@ -63,7 +63,7 @@ namespace sw
     };
 
     /**
-     * @brief 서브시스템이 제 범위 밖의 **모듈 서브시스템 범위**에 보이는지입니다. 형식 상수 `kModuleVisibility` 로 서브시스템이 스스로 선언한다(`SubsystemScope::addSubsystem` 이 칸에 옮긴다).
+     * @brief 서브시스템이 제 범위 밖의 모듈 서브시스템 범위에 보이는지입니다. 형식 상수 `kModuleVisibility` 로 서브시스템이 스스로 선언한다(`SubsystemScope::addSubsystem` 이 칸에 옮긴다).
      * @details 호스트가 모듈에 넘기는 범위가 손 목록으로 빌려 걸던 자리다 — 목록에서 빠지면 모듈이 조용히 못 찾았다. 이 길로는 게임 모듈에 닿을 수 없다:
      *          게임 모듈에 보이는 것은 엔진 서브시스템 칸(`GameVisible`)과 모듈이 공개한 서브시스템(`SW_MODULE_SUBSYSTEM`)뿐이다 — 호스트 전용의 경계가 형식으로 선다.
      *          언리얼 `UEditorSubsystem`(에디터만 찾는 서브시스템)과 같은 자리다. 서브시스템이 드러낸 멤버(`SubsystemScope::exposeMember`)도 그 멤버의 형식이 같은 상수로 선언한다

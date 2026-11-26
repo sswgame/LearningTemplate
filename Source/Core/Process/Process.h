@@ -2,7 +2,7 @@
  * @file Process.h
  * @brief 프로세스 한 헤더입니다 — 자식 프로세스(띄우기 · 출력 스트리밍 · 제어 · 종료, 엔진 자식 명령)와 이 프로세스의 값(환경 변수 · 세션 ID · 스레드 크래시 스택 · 표준 출력).
  * @details 언리얼 `FPlatformProcess` · Godot `OS` 처럼 프로세스의 일을 한 형식 묶음에 두고, 플랫폼 구현은 플랫폼마다 한 파일(`Windows/WindowsProcess.cpp` ·
- *          `Posix/PosixProcess.cpp` · `Web/WebProcess.cpp`)이다. 표준 입력 읽기(`StandardInputReader.h` — 읽기 스레드를 쥔다)와 종료 신호(`ShutdownSignal.h` — 서버 메인 루프)는 따로 둔다.
+ *          `Posix/PosixProcess.cpp` · `Web/WebProcess.cpp`)이다. 표준 입력 읽기(`StandardInputReader.h`, 읽기 스레드를 쥔다)와 종료 신호(`ShutdownSignal.h`, 서버 메인 루프)는 따로 둔다.
  */
 #pragma once
 #include "Core/Concurrency/atomic.h"
@@ -345,7 +345,7 @@ namespace sw
 //   - `tryRead`: 빈 값도 "정해져 있음"으로 읽는다. 사용자가 일부러 비워 정한 값을 존중해야 하는 변수(허용 목록 · 비밀 · 명시적 선택)가 쓴다.
 //   - `tryReadNonEmpty`: 없음과 빈 값을 같게 읽는다. 경로 · 포트처럼 빈 글이 쓸모없는 변수가 쓴다(빈 `HOME` 으로 상대 경로를 만들지 않는다).
 //   Windows 는 `GetEnvironmentVariableW` 로 읽어 UTF-8 로 돌려준다(CRT 의 `getenv` 는 ANSI 코드 페이지라 한글 사용자 이름이 든 `LOCALAPPDATA` 가 깨진다). 정하기는 OS 환경과
-//   CRT 복사본을 함께 바꾼다(CRT 를 쓰는 서드파티 코드 — Tracy 클라이언트 — 가 `getenv` 로 읽는다). 메인 스레드 설정 단계에서 쓰는 것을 전제로 한다(`setenv` 는 스레드 안전하지 않다).
+//   CRT 복사본을 함께 바꾼다(CRT 를 쓰는 서드파티 코드인 Tracy 클라이언트가 `getenv` 로 읽는다). 메인 스레드 설정 단계에서 쓰는 것을 전제로 한다(`setenv` 는 스레드 안전하지 않다).
 // ------------------------------------------------------------------------------
 namespace sw
 {
@@ -399,7 +399,7 @@ namespace sw
     struct SW_API ThreadCrashStack
     {
         /**
-         * @brief **이 스레드**에서 스택 오버플로가 나도 리포트를 쓸 수 있게 준비합니다. 엔진이 만드는 스레드는 시작할 때 부릅니다.
+         * @brief 이 스레드에서 스택 오버플로가 나도 리포트를 쓸 수 있게 준비합니다. 엔진이 만드는 스레드는 시작할 때 부릅니다.
          * @details 스택 오버플로는 스택이 바닥난 채로 핸들러에 들어옵니다. 준비가 없으면 핸들러가 첫 호출에서 다시 넘쳐 **아무것도 남기지
          *          못합니다**(실측: 덤프 파일 0 바이트). Windows 는 `SetThreadStackGuarantee` 로 넘친 뒤에 쓸 영역을 남겨 두고, POSIX 는
          *          이 스레드 전용 대체 시그널 스택을 깝니다 — `sigaltstack` 은 스레드마다라, `CrashHandler::install` 을 부른 스레드만으로는 덮이지 않습니다.

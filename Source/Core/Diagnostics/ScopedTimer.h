@@ -32,7 +32,7 @@ namespace sw
 
         /**
          * @brief 생성 이후 경과한 시간(초)입니다. 읽기만 한다 — 몇 번 불러도 스코프 시작부터의 시간이다.
-         * @details 예전에는 프레임 타이머의 델타를 읽어(부를 때마다 기준을 옮겼다) 두 번 부르면 두 번째가 0 이었다. 이제 기준을 옮길 수 없다(const).
+         * @details 기준을 옮길 수 없다(const). 프레임 타이머의 델타를 읽으면 부를 때마다 기준이 옮겨 두 번째 읽기가 0 이 된다.
          */
         float64 getElapsedSeconds() const noexcept { return _stopwatch.getElapsedSeconds(); }
         /** @brief 복사를 금지합니다. */

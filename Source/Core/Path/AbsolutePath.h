@@ -16,7 +16,7 @@ namespace sw
 {
     /**
      * @class AbsolutePath
-     * @brief 검증을 지난, **쓸 수 있는** 절대 경로 글입니다. 쓰기(`FileUtil::writeFile` · `removeFile` …)는 이 형식만, 읽기는 기반 `DiskPath` 를 받는다.
+     * @brief 검증을 지난, 쓸 수 있는 절대 경로 글입니다. 쓰기(`FileUtil::writeFile` · `removeFile` …)는 이 형식만, 읽기는 기반 `DiskPath` 를 받는다.
      * @details 문자열에서 만드는 길은 `tryMake` · `tryResolve`(빈 값을 돌려준다)와 `FileUtil::toDiskPath`(I/O 인자 자리 — 거절한 글은 빈 경로) 셋이다.
      *          빈 경로는 기본 생성과 `toDiskPath` 가 빈 글 · 상대 경로를 받았을 때만 생기고, 그 값을 받은 I/O 는 실패한다. 글에서 암시적으로 바뀌지 않는다(아래 static_assert).
      */

@@ -224,7 +224,7 @@ namespace sw
          *          부모 폴더는 만든다. @p maxAttempt 개를 다 써도 못 잡거나 쓰기 게이트가 막으면 이유를 남기고 빈 경로입니다.
          */
         [[nodiscard]] static AbsolutePath reserveUniquePath( const AbsolutePath& basePath, string_view extension, bool bDirectory, uint32 maxAttempt = 1000, string_view numberSeparator = "-" );
-        /** @brief 경로에 **항목(파일 또는 디렉터리)** 이 있는지 반환합니다. 디렉터리인지는 `isDirectory` 로 묻습니다. */
+        /** @brief 경로에 항목(파일 또는 디렉터리) 이 있는지 반환합니다. 디렉터리인지는 `isDirectory` 로 묻습니다. */
         static bool exists( const DiskPath& path );
         /** @brief 경로에 디렉터리가 있는지 반환합니다. */
         static bool isDirectory( const DiskPath& path );
