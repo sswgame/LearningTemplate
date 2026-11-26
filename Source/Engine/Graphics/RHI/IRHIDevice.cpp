@@ -20,9 +20,9 @@
 #include "Engine/Graphics/RHI/ConstantBufferPagePool.h"
 #include "Engine/Graphics/RHI/Diagnostics/BindlessIndexValidator.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIComputeBindingLog.h"
+#include "Engine/Graphics/RHI/Diagnostics/RHIContractValidator.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIDrawDiagnostics.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
-#include "Engine/Graphics/RHI/Diagnostics/RHIUploadLog.h"
 #include "Engine/Graphics/RHI/IRHICommandContext.h"
 #include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
@@ -73,8 +73,7 @@ namespace sw
             }
             case RHIHandleKind::Buffer:
             {
-                if constexpr ( build::kShipping == false )
-                    _pBufferUploadLog->remove( RHIBufferHandle{ packed } );
+                _pContractValidator->removeBuffer( RHIBufferHandle{ packed } );
                 RHIReleasedResource released;
                 bLive = factory.destroyBufferNative( RHIBufferHandle{ packed }, released );
                 if ( bLive )
@@ -83,8 +82,7 @@ namespace sw
             }
             case RHIHandleKind::Texture:
             {
-                if constexpr ( build::kShipping == false )
-                    _pTextureUploadLog->remove( RHITextureHandle{ packed } );
+                _pContractValidator->removeTexture( RHITextureHandle{ packed } );
                 RHIReleasedResource released;
                 bLive = factory.destroyTextureNative( RHITextureHandle{ packed }, released );
                 if ( bLive )
@@ -256,15 +254,7 @@ namespace sw
         activateReservedBindlessTextures(); // 예약한 번호를 그려지기 전에 살린다(R-6)
         reportResourceCounts();
         beginFrameInternal();
-        if constexpr ( build::kShipping == false )
-        {
-            _constantBufferWriteLog.beginFrame();
-            if ( isFrameStarted() )
-            {
-                _pBufferUploadLog->beginFrame();
-                _pTextureUploadLog->beginFrame();
-            }
-        }
+        _pContractValidator->beginFrame( isFrameStarted() );
     }
 
     void IRHIDevice::endFrame( bool vsync, bool bPresent )
@@ -273,67 +263,34 @@ namespace sw
         if ( IRHICommandContext* const pFrameStream = getFrameStreamContext() )
             pFrameStream->endRenderPass();
         endFrameInternal( vsync, bPresent );
-        if constexpr ( build::kShipping == false )
-        {
-            _pBufferUploadLog->endFrame();
-            _pTextureUploadLog->endFrame();
-        }
+        _pContractValidator->endFrame();
     }
 
     void IRHIDevice::beginBufferUpload( RHIBufferHandle buffer, const utf8* pWhat )
     {
-        if constexpr ( build::kShipping == false )
-        {
-            if ( _pBufferUploadLog->isUsedByFrameOnOtherThread( buffer ) )
-                reportFatalError( "%# of buffer %# from another thread while the render thread records a frame that uses it - the copy has no order against that frame's reads and transitions. "
-                                  "Send the update to the render thread",
-                                  pWhat, buffer.getPacked() );
-            _pBufferUploadLog->recordContent( buffer );
-        }
+        _pContractValidator->recordBufferUpload( buffer, pWhat );
         requireUploadOutsidePass( pWhat );
     }
 
     void IRHIDevice::beginTextureUpload( RHITextureHandle texture, const utf8* pWhat )
     {
-        if constexpr ( build::kShipping == false )
+        _pContractValidator->recordTextureUpload( texture, pWhat, [this]()
         {
-            if ( _pTextureUploadLog->hasRecordedUse( texture ) )
-                reportFatalError( "%# of texture %# after this frame recorded a transition or a render pass of it - the transfer runs before those commands, against a state they have not set. "
-                                  "Upload before the frame records (FrameRenderer::updateTextureUploads)",
-                                  pWhat, texture.getPacked() );
-            if ( _pTextureUploadLog->isUsedByFrameOnOtherThread( texture ) )
-                reportFatalError( "%# of texture %# from another thread while the render thread records a frame that can read it - the transfer has no order against that frame. "
-                                  "Queue the update for the render thread (TextureCache::requestRegionUpdate)",
-                                  pWhat, texture.getPacked() );
-            const bool bRecordingPasses = _bPassRecording.load( std::memory_order_relaxed ) && std::this_thread::get_id() == _renderThreadID.load( std::memory_order_relaxed );
-            if ( bRecordingPasses && _pTextureUploadLog->hasEarlierContent( texture ) )
-                reportFatalError( "%# of texture %# on the render thread while it records the render graph - the transfer runs before the pass lists already recorded. Upload before the graph (a prepare step)",
-                                  pWhat, texture.getPacked() );
-            _pTextureUploadLog->recordContent( texture );
-        }
+            return _bPassRecording.load( std::memory_order_relaxed ) && std::this_thread::get_id() == _renderThreadID.load( std::memory_order_relaxed );
+        } );
     }
 
     void IRHIDevice::beginTextureReadback( RHITextureHandle texture, const utf8* pWhat )
     {
-        if constexpr ( build::kShipping == false )
-        {
-            if ( _pTextureUploadLog->hasRecordedUse( texture ) )
-                reportFatalError( "%# of texture %# after this frame recorded a transition or a render pass of it - the copy runs before those commands and reads the previous content. Read back after endFrame",
-                                  pWhat, texture.getPacked() );
-        }
+        _pContractValidator->assertTextureReadbackOrder( texture, pWhat );
     }
 
     void IRHIDevice::requireUploadOutsidePass( const utf8* pWhat )
     {
         if ( std::this_thread::get_id() != _renderThreadID.load( std::memory_order_relaxed ) )
             return;
-        if constexpr ( build::kShipping == false )
-        {
-            if ( _bPassRecording.load( std::memory_order_relaxed ) )
-                reportFatalError( "%# on the render thread while it records the render graph - the copy runs before the pass lists already recorded, against the states they transitioned. "
-                                  "Upload before the graph (a prepare step)",
-                                  pWhat );
-        }
+        _pContractValidator->assertUploadOutsidePassRecording( pWhat, [this]()
+        { return _bPassRecording.load( std::memory_order_relaxed ); } );
         IRHICommandContext* const pFrameStream = getFrameStreamContext();
         if ( pFrameStream == nullptr || pFrameStream->isRenderPassOpen() == false )
             return;
@@ -684,8 +641,7 @@ namespace sw
         , _pBindlessReservationQueue{ make_unique<RHIBindlessReservationQueue>() }
         , _pBindlessIndexReportLog{ make_unique<BindlessIndexReportLog>() }
         , _pComputeBindingLog{ make_unique<RHIComputeBindingLog>() }
-        , _pBufferUploadLog{ make_unique<RHIUploadLog<RHIBufferHandle>>() }
-        , _pTextureUploadLog{ make_unique<RHIUploadLog<RHITextureHandle>>() }
+        , _pContractValidator{ make_unique<RHIContractValidator>() }
         , _initPhaseTimings{}
         , _drawDiagnostics{ *this }
     {

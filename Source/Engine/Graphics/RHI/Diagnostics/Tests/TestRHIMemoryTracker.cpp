@@ -285,8 +285,7 @@ SW_TEST_CASE( RHIMemoryTrackerTest, CollectsAllocatorStatsNamesOnly )
         "{ \"General\": { \"API\": \"Vulkan\", \"GPU\": \"Any\" }, \"DefaultPools\": { \"Type 0\": { \"Blocks\": { \"0\": { \"Suballocations\": ["
         "{\"Offset\": 0, \"Type\": \"BUFFER\", \"Size\": 256, \"Usage\": 18, \"Name\": \"ConstantBuffer\"},"
         "{\"Offset\": 256, \"Type\": \"FREE\", \"Size\": 1024}] } }, \"DedicatedAllocations\": ["
-        "{\"Type\": \"IMAGE_OPTIMAL\", \"Size\": 8294400, \"Usage\": 23},
-        "
+        "{\"Type\": \"IMAGE_OPTIMAL\", \"Size\": 8294400, \"Usage\": 23},\n"
         "{\"Type\": \"IMAGE_OPTIMAL\", \"Size\": 8294400, \"Usage\": 23, \"Name\" : \"RenderTarget\"}] } } }";
     const vector<string> listName = RHIMemoryTracker::collectAllocatorStatsNames( pStats );
     SW_REQUIRE_EQUAL( size_t( 2 ), listName.size() );

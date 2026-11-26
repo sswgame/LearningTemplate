@@ -7,8 +7,8 @@
 #include "Core/Time/BusyClock.h"
 
 #include "Engine/Foundation/EngineSubsystems.h"
+#include "Engine/Graphics/RHI/Diagnostics/RHIContractValidator.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
-#include "Engine/Graphics/RHI/Diagnostics/RHIUploadLog.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHICapabilities.h"
 #include "Engine/Graphics/RHI/RHICompiledShaderStages.h"
@@ -371,11 +371,8 @@ namespace sw
 
     RHIBufferHandle IRHIResourceFactory::recordContent( RHIBufferHandle buffer, const void* pContent )
     {
-        if constexpr ( build::kShipping == false )
-        {
-            if ( _pUploadDevice != nullptr && pContent != nullptr )
-                _pUploadDevice->getBufferUploadLog().recordContent( buffer );
-        }
+        if ( _pUploadDevice != nullptr && pContent != nullptr )
+            _pUploadDevice->getContractValidator().recordBufferContent( buffer );
         return buffer;
     }
 

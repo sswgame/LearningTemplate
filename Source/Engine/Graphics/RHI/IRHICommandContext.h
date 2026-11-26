@@ -105,7 +105,7 @@ namespace sw
         void beginTextureAlias( RHITextureHandle texture ) final;
 
         // ------------------------------------------------------------------------------
-        // 기록 경로의 상수 버퍼 쓰기 — 한 프레임에 한 버퍼는 한 번(`IRHIDevice::getConstantBufferWriteLog`)
+        // 기록 경로의 상수 버퍼 쓰기 — 한 프레임에 한 버퍼는 한 번(`RHIContractValidator::recordConstantBufferWrite`)
         // ------------------------------------------------------------------------------
         /** @brief 이번 프레임에 이미 쓴 버퍼를 다시 쓰면 진단 오류를 남깁니다(DX12 · Vulkan · GL 은 앞 드로우도 마지막 값을 읽는다 — R-12). 쓰기는 그대로 낸다. */
         void updateConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size ) final;
