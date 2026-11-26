@@ -76,6 +76,8 @@
 - 렌더 상태 칸은 `Engine/Graphics/RenderState/RenderState.h` 하나와 각 백엔드 읽기에 더한다. 조합 규칙은 `findInvalidReason`, 머티리얼에 내주지 않을 칸은 `RenderStateOverride::applyTo`. RHI ABI 는 손으로 올리지 않는다(빌드가 스탬프를 다시 만든다).
 - 그 밖의 패스 칸은 PSO(`makePassPSODesc`) · 쿠커(`ShaderCookRequestCollector`) · 검증(`validate`)을 함께 고친다 — 실행이 읽지 않는 칸은 XML 이 거짓말을 한다. 그림을 바꾸는지는 `<ExpectImagesDiffer>` 시나리오로 확인한다.
 - 쿠커 코드를 고쳐도 번호를 올리지 않는다(쿠킹 키 = 소스 지문). 새 쿠커는 `Config/Dev/CookCodeInputs.json` 에 폴더를 적는다.
+- 셰이더 변형은 모두 굽고(DDC), 팩은 요청한 출처(파이프라인 · 머티리얼)가 하나라도 다 닿은 변형만 싣는다(`PackCooker::isStrippedShaderVariant`, 유니티 variant stripping 자리). 런타임이 쓰는 조합은 요청 출처에 적혀야 한다. 코드가 경로 글로 고르는 파이프라인 · 머티리얼은 참조 칸 표(`AssetReferenceFields`)에 들어야 팩에 남는다.
+- 실행에서 기록하는 PSO 번들(언리얼 FShaderPipelineCache · 유니티 GraphicsStateCollection)은 두지 않는다. 머티리얼을 읽을 때 변형 PSO 를 짓고(`FramePSOManager::warmPinnedMaterialPSOs`, 언리얼 5 PSO 프리캐싱) 드라이버 블롭(`RHIPipelineCacheFile`)이 다음 실행을 덮는다.
 
 ## 머티리얼 그래프
 

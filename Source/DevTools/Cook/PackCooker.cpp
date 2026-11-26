@@ -966,6 +966,7 @@ namespace sw
                 vector<string>    _listStale;
                 DroppedShaderList _droppedRequested; ///< 닿은 출처가 요청했는데 원본이 닿지 않아 뺀 것 — 런타임이 찾을 셰이더가 팩에 없다(경고)
                 DroppedShaderList _droppedOther;     ///< 닿지 않은 출처만 요청했거나 요청 밖(낡은 잔재 등) — 정보 줄
+                DroppedShaderList _strippedVariant;  ///< 원본은 닿았지만 요청한 출처가 하나도 닿지 않은 변형(`PackCooker::isStrippedShaderVariant`) — 정보 줄
             };
 
             /**
@@ -1013,12 +1014,18 @@ namespace sw
                     if ( PackCooker::shouldIncludeStagedFile( relativePath, params._shaderFolder, params._buildTarget ) == false )
                         continue;
                     // 산출물은 그 원본(같은 줄기의 원본 · 셰이더 원본)이 쓰일 때만 담는다 - 쓰지 않는 씬의 쿠킹본 · 쓰지 않는 셰이더의 바이너리를 싣지 않는다.
+                    const string assetID = makeAssetID( domain, relativePath );
                     if ( selection._staged.isSelected( domain, relativePath ) == false )
                     {
-                        const string assetID = makeAssetID( domain, relativePath );
                         if ( StringUtil::contains( assetID, "/shaders/bin/" ) )
                             ( PackCooker::isRequestedByReachedOrigin( params._mapRequestedShaderBinary, selection._setIncluded, assetID ) ? outListing._droppedRequested : outListing._droppedOther )
                                 .add( relativePath );
+                        continue;
+                    }
+                    // 원본 셰이더가 닿아도 그 변형을 낸 파이프라인 · 머티리얼이 팩에 없으면 싣지 않는다(유니티 variant stripping 자리).
+                    if ( PackCooker::isStrippedShaderVariant( params._mapRequestedShaderBinary, selection._setIncluded, assetID ) )
+                    {
+                        outListing._strippedVariant.add( relativePath );
                         continue;
                     }
                     addItem( relativePath, absPath, PackItemSource::Staged );
@@ -1039,6 +1046,9 @@ namespace sw
                 if ( listing._droppedOther._count > 0 )
                     SW_LOG_INFO_ID( "PackCooker.PackCookDroppedShaderBinaries", "Pack cook: %# drops %# %# shader binaries outside the cook requests (first: %#)", domain,
                                     listing._droppedOther._count, params._shaderFolder, listing._droppedOther._names );
+                if ( listing._strippedVariant._count > 0 )
+                    SW_LOG_INFO_ID( "PackCooker.PackCookStrippedShaderVariants", "Pack cook: %# strips %# %# shader variants whose pipeline or material is not in the pack (first: %#)", domain,
+                                    listing._strippedVariant._count, params._shaderFolder, listing._strippedVariant._names );
             }
 
             /** @brief 팩 몫 작업의 설정 해시입니다 — 도메인의 고르기 해시에 청크 · 번호 · 담을 경로 해시를 섞는다(경계가 옮겨지면 다시 굽는다). */
@@ -1414,6 +1424,11 @@ namespace sw
             listPart.push_back( std::move( part ) );
         }
         return listPart;
+    }
+
+    bool PackCooker::isStrippedShaderVariant( const unordered_map<string, vector<vector<string>>>& mapRequested, const unordered_set<string>& setIncluded, const string& assetID )
+    {
+        return mapRequested.find( assetID ) != mapRequested.end() && isRequestedByReachedOrigin( mapRequested, setIncluded, assetID ) == false;
     }
 
     bool PackCooker::isRequestedByReachedOrigin( const unordered_map<string, vector<vector<string>>>& mapRequested, const unordered_set<string>& setIncluded, const string& assetID )

@@ -1158,6 +1158,8 @@ namespace sw
 
     void FramePSOManager::warmPinnedMaterialPSOs( MaterialCache& pinnedMaterials, uint32 viewModeMask )
     {
+        // 머티리얼이 읽힐 때 그 변형 PSO 를 미리 짓는다(언리얼 5 PSO 프리캐싱 자리). 실행에서 기록한 PSO 번들(언리얼 FShaderPipelineCache · 유니티 GraphicsStateCollection)은 두지 않는다:
+        // 키가 머티리얼 · 패스 서술에서 나오므로 기록 없이 같은 집합을 얻고, 드라이버 컴파일은 디스크 블롭(`RHIPipelineCacheFile`)이 다음 실행에 덮는다.
         // 줄은 하나라 호스트가 건 렌더러만 부른다(`FrameRendererHost::_pPinnedMaterials`) — 화면 밖 렌더러가 꺼내 가면 주 렌더러가 만들지 못한다.
         if ( _pDevice == nullptr )
             return;

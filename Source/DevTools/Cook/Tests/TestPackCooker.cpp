@@ -96,6 +96,14 @@ SW_TEST_CASE( PackCookerTest, DroppedShaderIsNeededOnlyWhenAnOriginIsReached )
     SW_EXPECT_FALSE( PackCooker::isRequestedByReachedOrigin( mapRequested, setIncluded, "engine/shaders/bin/dx12/unknown_ps.dxil" ) ); // 요청 밖
     const unordered_set<string> setBoth = { "engine/pipeline/forward.xml", "game/playground/materials/rock.material" };
     SW_EXPECT_TRUE( PackCooker::isRequestedByReachedOrigin( mapRequested, setBoth, "engine/shaders/bin/dx12/lit_ps.dxil" ) );
+
+    // 스트리핑: 요청에 든 변형만, 출처 묶음이 하나도 다 닿지 않았을 때 뺀다. 요청 밖 바이너리는 원본 규칙에 맡긴다.
+    // 음성 대조: `isStrippedShaderVariant` 가 요청 밖(unknown)까지 빼면 넷째 단언이, 닿은 출처를 보지 않으면 셋째 · 다섯째 단언이 진다.
+    SW_EXPECT_TRUE( PackCooker::isStrippedShaderVariant( mapRequested, setIncluded, "engine/shaders/bin/dx12/gtao_ps.dxil" ) );
+    SW_EXPECT_TRUE( PackCooker::isStrippedShaderVariant( mapRequested, setIncluded, "engine/shaders/bin/dx12/lit_ps.dxil" ) );
+    SW_EXPECT_FALSE( PackCooker::isStrippedShaderVariant( mapRequested, setIncluded, "engine/shaders/bin/dx12/sprite_ps.dxil" ) ); // 표 요청은 늘 싣는다
+    SW_EXPECT_FALSE( PackCooker::isStrippedShaderVariant( mapRequested, setIncluded, "engine/shaders/bin/dx12/unknown_ps.dxil" ) );
+    SW_EXPECT_FALSE( PackCooker::isStrippedShaderVariant( mapRequested, setBoth, "engine/shaders/bin/dx12/lit_ps.dxil" ) );
 }
 
 /**
