@@ -152,7 +152,8 @@ SW_TEST_CASE( ServiceMailTest, SentRecordExpiresByRetentionRule )
     SW_EXPECT_TRUE( sw::ServiceMail::readSentTimeMs( sent, sentMs ) );
     SW_EXPECT_EQUAL( kNowMs, sentMs );
 
-    sw::ServiceTransaction broken; // 값이 우편 키 모양이 아닌 기록은 시각을 읽지 못해 지우지 않는다
+    SW_EXPECT_LOG( "ServiceRecordUtil.DurableRecordVersionBytes" ); // 쓸기가 깨진 기록을 읽을 때 표가 남기는 손상 오류다
+    sw::ServiceTransaction broken;                                  // 값이 우편 키 모양이 아닌 기록은 시각을 읽지 못해 지우지 않는다
     sw::ServiceStoreTestAccess::putBytes( broken, sw::ServiceMail::getSentTable(), "0000000000000016/broken", sw::vector<uint8>{ 'x' }, sw::ServiceRecord::kAbsentVersion );
     SW_REQUIRE_TRUE( database.commit( broken ) == sw::ServiceStoreResult::Ok );
 

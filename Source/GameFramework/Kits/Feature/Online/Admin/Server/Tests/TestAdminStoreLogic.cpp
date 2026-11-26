@@ -230,7 +230,7 @@ SW_TEST_CASE( AdminStoreLogicTest, DemotionBetweenReadAndCommitRefusesTheCommand
     SW_EXPECT_EQUAL( 1, countDeniedOf( fixture.database, kOperator ) );
 }
 
-/** @brief [AdminStoreLogicTest] 라이브 운영 쓰기의 등급 가드는 쓰는 일 안에서 등급을 읽어 커밋 조건으로 건다 — 읽기와 커밋 사이에 강등되면 커밋이 지고, 다시 하면 Forbidden 이다(감사 "다음 할 일" 5 번) */
+/** @brief [AdminStoreLogicTest] 라이브 운영 쓰기의 등급 가드는 쓰는 일 안에서 등급을 읽어 커밋 조건으로 건다 — 읽기와 커밋 사이에 강등되면 커밋이 충돌하고, 실행기의 다음 시도가 강등된 등급을 읽어 Forbidden 이다(감사 "다음 할 일" 5 번) */
 SW_TEST_CASE( AdminStoreLogicTest, OperatorWriteFailsWhenDemotedBeforeCommit )
 {
     Fixture             fixture;
@@ -245,8 +245,8 @@ SW_TEST_CASE( AdminStoreLogicTest, OperatorWriteFailsWhenDemotedBeforeCommit )
 
     InterleavingConnection   interleaving( fixture.database, kOperator );
     ServiceReadSetConnection readSet( interleaving ); // 저장소 입구(`ServiceStoreJob::execute`)가 거는 것과 같은 포장
-    SW_EXPECT_TRUE( write.commit( readSet ) == ServiceAuditedWriteResult::Unavailable );
+    SW_EXPECT_TRUE( write.commit( readSet ) == ServiceAuditedWriteResult::Forbidden );
     SW_EXPECT_TRUE( write.commit( fixture.database ) == ServiceAuditedWriteResult::Forbidden );
     ServiceRecord record;
-    SW_EXPECT_TRUE( fixture.database.readRecord( hashed_string( "liveops_event" ), "spring.sale", record ) == ServiceStoreResult::NotFound );
+    SW_EXPECT_TRUE( fixture.database.readRecord( AdminStoreLogic::getRoleTable(), "spring.sale", record ) == ServiceStoreResult::NotFound );
 }

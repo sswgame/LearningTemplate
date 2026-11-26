@@ -127,6 +127,7 @@ SW_TEST_CASE( AutomationGoldenTest, PolicyNeedsEveryField )
     SW_EXPECT_EQUAL( 16u, policy->_advanceDrawnFrames );
 
     SW_EXPECT_LOG( "Config.KeyMissing" );
+    SW_EXPECT_LOG( "Serialization.ValueOutOfRange" ); // 빠진 칸은 초기값 0 으로 남아 범위 검사에도 걸린다
     SW_EXPECT_FALSE( ConfigManager::parseConfig<AutomationGoldenPolicy>( R"({ "_measure": { "_differingMinDistance": 12 } })", "test" ).has_value() );
     SW_EXPECT_LOG( "Config.KeyUnknown" );
     SW_EXPECT_FALSE( ConfigManager::parseConfig<AutomationGoldenPolicy>( R"({ "_nearLimitRato": 0.5 })", "test" ).has_value() ); // 오타가 조용히 지나가지 않는다

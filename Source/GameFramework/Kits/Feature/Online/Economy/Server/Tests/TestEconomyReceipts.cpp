@@ -4,7 +4,6 @@
 #include "pch.h"
 
 #include "Core/Foundation/Constants.h"
-#include "Core/Serialization/BitStream.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "GameFramework/Kits/Feature/Online/Economy/Runtime/CurrencyCatalog.h"
@@ -623,7 +622,7 @@ SW_TEST_CASE( EconomyReceiptsTest, RedeemStaysSpentAfterTheJournalIsSwept )
 /**
  * @brief [EconomyReceiptsTest] 구매 → 계정 삭제 → 감사 균형이 맞고 영수증에 계정 id 가 없다. 뒤에 온 환불은 회수 없이 상태만 바꾼다(감사 P0-7)
  * @details 계정 삭제는 탈퇴 정리(`LoginStoreLogic::purgeAccount`)와 같은 원장 길이다 — 계정 지우기 트랜잭션의 묘비 · 소각 대기, 그 뒤 소각.
- *          변이: 소각을 빼면 지운 계정의 잔액 레코드가 남고, 영수증에 계정을 다시 담으면 값이 `[판][상태]` 와 달라지고,
+ *          변이: 소각을 빼면 지운 계정의 잔액 레코드가 남고, 영수증에 계정을 다시 담으면 값이 상태만 든 레코드의 바이트와 달라지고,
  *          환불의 AccountDeleted 처리를 빼면 환불이 InvalidRequest 로 져 영수증이 환불로 바뀌지 않는다.
  */
 SW_TEST_CASE( EconomyReceiptsTest, AccountDeletionKeepsAuditBalancedAndReceiptAnonymous )
@@ -645,14 +644,16 @@ SW_TEST_CASE( EconomyReceiptsTest, AccountDeletionKeepsAuditBalancedAndReceiptAn
     SW_REQUIRE_TRUE( LedgerAuditReport::computeReport( rig._database, audit ) == ServiceStoreResult::Ok );
     SW_EXPECT_TRUE( audit.isBalanced() );
 
-    // 영수증은 남지만(다시 내면 AlreadyRedeemed) 값은 [판][상태] 뿐이다
+    // 영수증은 남지만(다시 내면 AlreadyRedeemed) 값은 상태 하나뿐이다 — 상태만 든 레코드를 인코딩한 바이트와 같다
     vector<ServiceRecord> listMark;
     SW_REQUIRE_TRUE( rig._database.listRecords( EconomyStoreLogic::getReceiptTable(), "", "", 10, false, listMark ) == ServiceStoreResult::Ok );
     SW_REQUIRE_EQUAL( size_t( 1 ), listMark.size() );
-    BitWriter expected;
-    expected.writeVarUint( 0 ); // 판
-    expected.writeVarUint( 1 ); // Redeemed
-    SW_EXPECT_TRUE( ServiceStoreTestAccess::getBytes( listMark[0] ) == expected.getBytes() );
+    EconomyReceiptRecord mark;
+    SW_REQUIRE_TRUE( EconomyStoreLogic::getReceiptTable().decode( listMark[0], mark ) );
+    SW_EXPECT_TRUE( mark._state == EconomyReceiptState::Redeemed );
+    vector<uint8> expected;
+    SW_REQUIRE_TRUE( EconomyStoreLogic::getReceiptTable().encode( EconomyReceiptRecord{ EconomyReceiptState::Redeemed, {} }, expected ) );
+    SW_EXPECT_TRUE( ServiceStoreTestAccess::getBytes( listMark[0] ) == expected );
     SW_EXPECT_TRUE( rig.redeem( kOther )._result == EconomyResult::AlreadyRedeemed );
 
     // 지운 계정의 환불: 거둘 이가 없어 회수하지 않고 영수증만 환불로 바꾼다 — 지운 계정에 빚 레코드가 생기지 않는다
