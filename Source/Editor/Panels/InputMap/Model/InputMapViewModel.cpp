@@ -33,22 +33,6 @@ namespace sw::editor
     {
         struct InputMapViewModelInternal
         {
-            /** @brief 게임패드 배터리 잔량의 표시 이름입니다. */
-            static const utf8* batteryLevelName( GamepadBatteryLevel level )
-            {
-                switch ( level )
-                {
-                    case GamepadBatteryLevel::Empty:
-                        return "Empty";
-                    case GamepadBatteryLevel::Low:
-                        return "Low";
-                    case GamepadBatteryLevel::Medium:
-                        return "Medium";
-                    case GamepadBatteryLevel::Full:
-                        return "Full (100%)";
-                }
-                return "Unknown";
-            }
         };
     } // namespace
 
@@ -688,7 +672,7 @@ namespace sw::editor
         outState._bMouseMiddleDown  = input.isMouseButtonDown( MouseButton::Middle );
         const GamepadDevice* pPad   = input.getGamepad( 0 );
         outState._bGamepadConnected = pPad != nullptr && pPad->isConnected();
-        outState._pBatteryName      = outState._bGamepadConnected ? InputMapViewModelInternal::batteryLevelName( pPad->getBatteryInfo()._level ) : "";
+        outState._pBatteryName      = outState._bGamepadConnected ? LocalizedText::findEnum( pPad->getBatteryInfo()._level ) : "";
         outState._leftStick         = outState._bGamepadConnected ? pPad->getLeftStick() : float2{};
         outState._rightStick        = outState._bGamepadConnected ? pPad->getRightStick() : float2{};
         outState._leftTrigger       = outState._bGamepadConnected ? pPad->getLeftTrigger() : 0.0f;

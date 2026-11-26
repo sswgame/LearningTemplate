@@ -41,28 +41,6 @@ namespace sw::editor
                 VectorUtil::sort( outListPlayer, []( const SequencePlayerComponent* pLeft, const SequencePlayerComponent* pRight )
                 { return pLeft->getOwner()->getObjectID() < pRight->getOwner()->getObjectID(); } );
             }
-
-            static const utf8* getHistoryKindLabel( SequenceHistoryKind kind )
-            {
-                switch ( kind )
-                {
-                    case SequenceHistoryKind::Started:
-                        return "Started";
-                    case SequenceHistoryKind::Finished:
-                        return "Finished";
-                    case SequenceHistoryKind::Stopped:
-                        return "Stopped";
-                    case SequenceHistoryKind::Event:
-                        return "Event";
-                    case SequenceHistoryKind::CameraSignal:
-                        return "Camera";
-                    case SequenceHistoryKind::UnboundBinding:
-                        return "Unbound";
-                    case SequenceHistoryKind::Span:
-                        return "Span";
-                }
-                return "?";
-            }
         };
     } // namespace
 
@@ -144,7 +122,7 @@ namespace sw::editor
             const SequenceHistoryEntry& entry = history.getEntry( index - 1 );
             SequenceDebuggerHistoryRow& row   = outState._listHistory.emplace_back();
             row._frame                        = entry._frame;
-            row._pKindLabel                   = Internal::getHistoryKindLabel( entry._kind );
+            row._pKindLabel                   = LocalizedText::findEnum( entry._kind );
             row._what                         = entry._name.c_str();
             if ( entry._kind == SequenceHistoryKind::CameraSignal )
             {

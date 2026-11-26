@@ -700,6 +700,10 @@
 		<entry key="Enum.FogVolumeState.Underwater"
 		       text="カメラが水中にあります。水中フォグにはボリュームがありません。"
 		       sourceHash="19a2cac2b1c44306" />
+		<entry key="Enum.GamepadBatteryLevel.Empty" text="空" sourceHash="500fd71a4232050e" />
+		<entry key="Enum.GamepadBatteryLevel.Full" text="満タン(100%)" sourceHash="26f4fbf61672bfcd" />
+		<entry key="Enum.GamepadBatteryLevel.Low" text="低" sourceHash="24f3a319b88552c1" />
+		<entry key="Enum.GamepadBatteryLevel.Medium" text="中" sourceHash="ac6bdc71f750ac96" />
 		<entry key="Enum.InputGlyphStyle.GamepadPlayStation"
 		       text="PlayStation ゲームパッド"
 		       sourceHash="ca581e548d6ef12e" />
@@ -758,6 +762,13 @@
 		<entry key="Enum.SequenceCameraSignalKind.CutPrewarm" text="待機ビュー" sourceHash="af29d929d5327b73" />
 		<entry key="Enum.SequenceCameraSignalKind.PlaybackEnd" text="再生終了" sourceHash="99639487ced1e979" />
 		<entry key="Enum.SequenceCameraSignalKind.Shake" text="シェイク" sourceHash="6ddba2493a836a55" />
+		<entry key="Enum.SequenceHistoryKind.CameraSignal" text="カメラ" sourceHash="54d1b2a64667e32e" />
+		<entry key="Enum.SequenceHistoryKind.Event" text="イベント" sourceHash="d0ea7366ebc403ff" />
+		<entry key="Enum.SequenceHistoryKind.Finished" text="終了" sourceHash="bb99d4ec27fbb263" />
+		<entry key="Enum.SequenceHistoryKind.Span" text="区間" sourceHash="b60bc1250aad44c1" />
+		<entry key="Enum.SequenceHistoryKind.Started" text="開始" sourceHash="3fd6bd99e3f6a5be" />
+		<entry key="Enum.SequenceHistoryKind.Stopped" text="停止" sourceHash="c5fcb9351a03ab2e" />
+		<entry key="Enum.SequenceHistoryKind.UnboundBinding" text="未バインド" sourceHash="e7a38a6492965c7a" />
 		<entry key="Enum.SequenceItemField.Clip" text="クリップ" sourceHash="3e092e9d1ee2c5bb" />
 		<entry key="Enum.SequenceItemField.Clip.Tooltip"
 		       text="区間の間、バインドしたオブジェクトのアニメーションに重ねてブレンドするアニメーションクリップです。リソース ID を入力するか、コンテンツブラウザーからドロップしてください。"

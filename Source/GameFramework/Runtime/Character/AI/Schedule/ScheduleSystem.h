@@ -62,7 +62,8 @@ namespace sw
         Interrupted    ///< 끼어들기(말 걸기, 전투, 경보) 중. 일정 시계는 그대로 흐른다
     };
 
-    /** @brief 계획 구간의 출처입니다. */
+    /** @brief 계획 구간의 출처입니다. 진단 글의 이름은 `getEnumName` 입니다. */
+    ENUM()
     enum class ScheduleSegmentSource : uint8
     {
         Idle = 0, ///< 어느 블록도 없는 시간. NPC 의 `idle` 활동(집)을 한다
@@ -71,7 +72,6 @@ namespace sw
         Appointment
     };
 
-    SW_GF_API const utf8* toString( ScheduleSegmentSource source );
 } // namespace sw
 
 namespace sw

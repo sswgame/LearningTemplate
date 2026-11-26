@@ -15,6 +15,7 @@
 #include "Engine/Physics/IPhysicsScene.h"
 #include "Engine/Physics/PhysicsSettings.h"
 #include "Engine/Physics/Scene/ScenePhysics.h"
+#include "Engine/Reflection/EnumName.h"
 
 namespace sw
 {
@@ -122,24 +123,10 @@ namespace sw
         {
             const string_view name( sample._material.c_str() );
             SW_LOG_ERROR_ONCE_FOR_ID( "Surface.KindMissing", name, "Surface '%#' (%#) has no surface kind in the surface kinds table - add one (footsteps and footprints skip it)",
-                                      sample._material.c_str(), getSourceName( sample._source ) );
+                                      sample._material.c_str(), getEnumName( sample._source ) );
             return false;
         }
         outSample = sample;
         return true;
-    }
-
-    const utf8* SurfaceSample::getSourceName( SurfaceSource source )
-    {
-        switch ( source )
-        {
-            case SurfaceSource::Collider:
-                return "collider";
-            case SurfaceSource::TerrainLayer:
-                return "terrain layer";
-            case SurfaceSource::Water:
-                return "water";
-        }
-        return "?";
     }
 } // namespace sw

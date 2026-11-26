@@ -148,22 +148,6 @@ namespace sw::editor
         return distanceSquared <= keepRadius * keepRadius ? StreamingCellPreviewState::Keep : StreamingCellPreviewState::Unload;
     }
 
-    const utf8* StreamingCellsViewModel::getStateLabel( StreamingCellPreviewState state )
-    {
-        switch ( state )
-        {
-            case StreamingCellPreviewState::Load:
-                return "Load";
-            case StreamingCellPreviewState::Keep:
-                return "Keep";
-            case StreamingCellPreviewState::Unload:
-                return "Unload";
-            case StreamingCellPreviewState::NoCamera:
-                return "-";
-        }
-        return "-";
-    }
-
     void StreamingCellsViewModel::selectObjects( const vector<uint64>& listObjectID )
     {
         GameObjectManager* pManager = editor::getActiveObjectManager();

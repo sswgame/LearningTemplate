@@ -18,6 +18,7 @@
 		<entry source="+ Add Speaker" text="+ 화자 추가" />
 		<entry source="+ Create" text="+ 만들기" />
 		<entry source="+ Node" text="+ 노드" />
+		<entry source="-" text="-" />
 		<entry source="0 means none" text="0 은 덮어쓰지 않음" />
 		<entry source="0 means unbounded" text="0 은 제한 없음" />
 		<entry source="16:9" text="16:9" />
@@ -127,6 +128,7 @@
 		<entry source="Add to Favorites" text="즐겨찾기에 추가" />
 		<entry source="Add up the message kinds every process received instead of only the selected one"
 		       text="고른 프로세스 대신 모든 프로세스가 받은 메시지 종류를 합쳐 봅니다" />
+		<entry source="Added" text="더함" />
 		<entry source="Adjust the tile thumbnail size (64px to 160px)"
 		       text="타일 썸네일의 크기를 조절합니다 (64px ~ 160px)" />
 		<entry source="Advance" text="진행" />
@@ -454,6 +456,7 @@
 		<entry source="Condition" text="조건" />
 		<entry source="Configure, build, cook and stage the selected game into the output folder"
 		       text="고른 게임을 구성 · 빌드 · 쿠킹해 출력 폴더에 스테이징합니다" />
+		<entry source="Conflict" text="충돌" />
 		<entry source="Conflicts" text="충돌" />
 		<entry source="Connect" text="연결" />
 		<entry source="Connect a disconnected client to the server again"
@@ -574,6 +577,7 @@
 		       text="이 컬렉션을 지웁니다. 에셋은 제자리에 남습니다" />
 		<entry source="Delete this saved layout." text="저장된 레이아웃을 지웁니다." />
 		<entry source="Delete..." text="삭제..." />
+		<entry source="Deleted" text="지움" />
 		<entry source="Delta: ({dx}, {dy})" text="변화량: ({dx}, {dy})" />
 		<entry source="Depends on" text="의존 모듈" />
 		<entry source="Depth" text="깊이" />
@@ -1126,6 +1130,7 @@
 		<entry source="Mode" text="모드" />
 		<entry source="Model-space axis that runs left to right; the pose is reflected across the plane normal to it. Bone pairs come from the skeleton's mirror table."
 		       text="좌우로 놓인 모델 공간 축입니다. 그 축에 수직인 면으로 포즈를 비춥니다. 본 짝은 스켈레톤의 미러 표에서 옵니다." />
+		<entry source="Modified" text="고침" />
 		<entry source="Modified only" text="바뀐 것만" />
 		<entry source="Module" text="모듈" />
 		<entry source="Module set changed - build to apply, then restart the editor."
@@ -1217,6 +1222,7 @@
 		       text="Net Mode — Standalone 은 에디터 안에서 재생하고, 나머지는 서버와 클라이언트를 따로 띄운다 (Window > Multiplayer)" />
 		<entry source="Network presets could not be read - see the log"
 		       text="네트워크 프리셋을 읽지 못했습니다 — 로그를 보세요" />
+		<entry source="New (untracked)" text="새 파일(추적 안 함)" />
 		<entry source="New Action Name" text="새 액션 이름" />
 		<entry source="New Collection" text="새 컬렉션" />
 		<entry source="New Folder" text="새 폴더" />
@@ -1870,6 +1876,7 @@
 		<entry source="Removes the event from the edited copy; saving writes the library file"
 		       text="고치는 사본에서 이벤트를 지웁니다. 저장하면 라이브러리 파일에 씁니다" />
 		<entry source="Rename" text="이름 바꾸기" />
+		<entry source="Renamed" text="이름 바꿈" />
 		<entry source="Render Debugger" text="렌더 디버거" />
 		<entry source="Render Graph" text="렌더 그래프" />
 		<entry source="Render Targets" text="렌더 타깃" />

@@ -71,27 +71,6 @@ namespace sw::editor
 
             static EditorSourceControl& getSourceControl() { return SourceControlChangesViewModel::getSourceControl(); }
 
-            /** @brief 상태 열의 짧은 글입니다(색이 아니라 글로 알린다). */
-            static const utf8* describeKind( SourceControlChangeKind kind )
-            {
-                switch ( kind )
-                {
-                    case SourceControlChangeKind::Modified:
-                        return "Modified";
-                    case SourceControlChangeKind::Added:
-                        return "Added";
-                    case SourceControlChangeKind::Deleted:
-                        return "Deleted";
-                    case SourceControlChangeKind::Renamed:
-                        return "Renamed";
-                    case SourceControlChangeKind::Untracked:
-                        return "New (untracked)";
-                    case SourceControlChangeKind::Conflicted:
-                        return "Conflict";
-                }
-                return "?";
-            }
-
             static const SourceControlChange* findChange( string_view path )
             {
                 for ( const SourceControlChange& change : getSourceControl().getChanges() )
@@ -211,7 +190,7 @@ namespace sw::editor
                 ImGui::PushID( static_cast<int32>( rowIndex ) );
                 ImGui::TableNextRow();
                 ImGui::TableSetColumnIndex( 0 );
-                if ( ImGui::Selectable( Internal::describeKind( change._kind ), change._path == _selectedPath, ImGuiSelectableFlags_SpanAllColumns ) )
+                if ( ImGui::Selectable( LocalizedText::findEnum( change._kind ), change._path == _selectedPath, ImGuiSelectableFlags_SpanAllColumns ) )
                 {
                     _selectedPath = change._path;
                     (void)sourceControl.requestDiff( change._path );

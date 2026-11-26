@@ -2354,6 +2354,26 @@
 				<item>Source/Engine/Renderer/Frame/PostProcess/FrameFog.h</item>
 			</origins>
 		</entry>
+		<entry key="Enum.GamepadBatteryLevel.Empty" source="Empty">
+			<origins>
+				<item>Source/Engine/Input/Devices/GamepadDevice.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.GamepadBatteryLevel.Full" source="Full (100%)">
+			<origins>
+				<item>Source/Engine/Input/Devices/GamepadDevice.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.GamepadBatteryLevel.Low" source="Low">
+			<origins>
+				<item>Source/Engine/Input/Devices/GamepadDevice.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.GamepadBatteryLevel.Medium" source="Medium">
+			<origins>
+				<item>Source/Engine/Input/Devices/GamepadDevice.h</item>
+			</origins>
+		</entry>
 		<entry key="Enum.InputGlyphStyle.GamepadPlayStation" source="PlayStation Gamepad">
 			<origins>
 				<item>Source/Engine/Input/InputGlyphStyle.h</item>
@@ -2572,6 +2592,41 @@
 		<entry key="Enum.SequenceCameraSignalKind.Shake" source="shake">
 			<origins>
 				<item>Source/Engine/Sequencer/SequenceTimelineUtil.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.SequenceHistoryKind.CameraSignal" source="Camera">
+			<origins>
+				<item>Source/Engine/Sequencer/SequenceDiagnostics.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.SequenceHistoryKind.Event" source="Event">
+			<origins>
+				<item>Source/Engine/Sequencer/SequenceDiagnostics.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.SequenceHistoryKind.Finished" source="Finished">
+			<origins>
+				<item>Source/Engine/Sequencer/SequenceDiagnostics.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.SequenceHistoryKind.Span" source="Span">
+			<origins>
+				<item>Source/Engine/Sequencer/SequenceDiagnostics.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.SequenceHistoryKind.Started" source="Started">
+			<origins>
+				<item>Source/Engine/Sequencer/SequenceDiagnostics.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.SequenceHistoryKind.Stopped" source="Stopped">
+			<origins>
+				<item>Source/Engine/Sequencer/SequenceDiagnostics.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.SequenceHistoryKind.UnboundBinding" source="Unbound">
+			<origins>
+				<item>Source/Engine/Sequencer/SequenceDiagnostics.h</item>
 			</origins>
 		</entry>
 		<entry key="Enum.SequenceItemField.Clip" source="Clip">

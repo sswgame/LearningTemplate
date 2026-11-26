@@ -3892,6 +3892,16 @@
 		<entry key="Enum.SequenceTrackIssue.UnknownKind"
 		       text="모르는 트랙 종류입니다. 파일이 읽히지 않습니다 — 트랙을 지우세요."
 		       sourceHash="1e0032aecb9020f0" />
+		<entry key="Enum.SourceControlChangeKind.Added" text="더함" sourceHash="e871c20e39ace2a5" />
+		<entry key="Enum.SourceControlChangeKind.Conflicted" text="충돌" sourceHash="4e4bf859a9914e0f" />
+		<entry key="Enum.SourceControlChangeKind.Deleted" text="지움" sourceHash="44a9ac9dd7567f4a" />
+		<entry key="Enum.SourceControlChangeKind.Modified" text="고침" sourceHash="7f47cec3e840a432" />
+		<entry key="Enum.SourceControlChangeKind.Renamed" text="이름 바꿈" sourceHash="a0327e0c415aa4d5" />
+		<entry key="Enum.SourceControlChangeKind.Untracked" text="새 파일(추적 안 함)" sourceHash="4aaea49de7cffbaf" />
+		<entry key="Enum.StreamingCellPreviewState.Keep" text="남기기" sourceHash="d60a7dde73859828" />
+		<entry key="Enum.StreamingCellPreviewState.Load" text="불러오기" sourceHash="4f20edb48a6287c9" />
+		<entry key="Enum.StreamingCellPreviewState.NoCamera" text="-" sourceHash="af63a04c86018698" />
+		<entry key="Enum.StreamingCellPreviewState.Unload" text="내리기" sourceHash="5d3714bc882df1b2" />
 		<entry key="Evenly space selected objects on X"
 		       text="선택한 오브젝트를 X 로 고르게 띄웁니다"
 		       sourceHash="0cd9d9c0bec20cf6" />

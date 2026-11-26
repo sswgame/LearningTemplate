@@ -2306,6 +2306,26 @@ msgctxt "Enum.FogVolumeState.Underwater"
 msgid "The camera is under water. Underwater fog has no volume."
 msgstr "카메라가 물속입니다. 물속 안개에는 볼륨이 없습니다."
 
+#: Source/Engine/Input/Devices/GamepadDevice.h
+msgctxt "Enum.GamepadBatteryLevel.Empty"
+msgid "Empty"
+msgstr "없음"
+
+#: Source/Engine/Input/Devices/GamepadDevice.h
+msgctxt "Enum.GamepadBatteryLevel.Full"
+msgid "Full (100%)"
+msgstr "가득(100%)"
+
+#: Source/Engine/Input/Devices/GamepadDevice.h
+msgctxt "Enum.GamepadBatteryLevel.Low"
+msgid "Low"
+msgstr "낮음"
+
+#: Source/Engine/Input/Devices/GamepadDevice.h
+msgctxt "Enum.GamepadBatteryLevel.Medium"
+msgid "Medium"
+msgstr "중간"
+
 #: Source/Engine/Input/InputGlyphStyle.h
 msgctxt "Enum.InputGlyphStyle.GamepadPlayStation"
 msgid "PlayStation Gamepad"
@@ -2525,6 +2545,41 @@ msgstr "재생 끝"
 msgctxt "Enum.SequenceCameraSignalKind.Shake"
 msgid "shake"
 msgstr "흔들림"
+
+#: Source/Engine/Sequencer/SequenceDiagnostics.h
+msgctxt "Enum.SequenceHistoryKind.CameraSignal"
+msgid "Camera"
+msgstr "카메라"
+
+#: Source/Engine/Sequencer/SequenceDiagnostics.h
+msgctxt "Enum.SequenceHistoryKind.Event"
+msgid "Event"
+msgstr "사건"
+
+#: Source/Engine/Sequencer/SequenceDiagnostics.h
+msgctxt "Enum.SequenceHistoryKind.Finished"
+msgid "Finished"
+msgstr "끝남"
+
+#: Source/Engine/Sequencer/SequenceDiagnostics.h
+msgctxt "Enum.SequenceHistoryKind.Span"
+msgid "Span"
+msgstr "구간"
+
+#: Source/Engine/Sequencer/SequenceDiagnostics.h
+msgctxt "Enum.SequenceHistoryKind.Started"
+msgid "Started"
+msgstr "시작"
+
+#: Source/Engine/Sequencer/SequenceDiagnostics.h
+msgctxt "Enum.SequenceHistoryKind.Stopped"
+msgid "Stopped"
+msgstr "멈춤"
+
+#: Source/Engine/Sequencer/SequenceDiagnostics.h
+msgctxt "Enum.SequenceHistoryKind.UnboundBinding"
+msgid "Unbound"
+msgstr "묶이지 않음"
 
 #: Source/Engine/Sequencer/SequenceAsset.h
 msgctxt "Enum.SequenceItemField.Clip"

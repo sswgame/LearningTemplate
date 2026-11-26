@@ -91,6 +91,7 @@
 		<entry source="Buy {item} for {price} {currency}?" text="{item}을(를) {price} {currency}에 구매할까요?" />
 		<entry source="CPU only (Recompute Normals)" text="CPU 전용(법선 다시 계산)" />
 		<entry source="CPU only:" text="CPU 전용:" />
+		<entry source="Camera" text="카메라" />
 		<entry source="Camera Shake" text="카메라 흔들림" />
 		<entry source="Camera View" text="카메라 시점" />
 		<entry source="Cancel" text="취소" />
@@ -181,6 +182,7 @@
 		<entry source="Effects" text="이펙트" />
 		<entry source="Effects Quality" text="효과 품질" />
 		<entry source="Effects Volume" text="효과음 음량" />
+		<entry source="Empty" text="없음" />
 		<entry source="Empty - add modifiers to group them." text="비어 있음 - 모디파이어를 더해 묶습니다." />
 		<entry source="End maintenance" text="점검 끝내기" />
 		<entry source="Enter / exit blend (s)" text="들어감 · 나감 섞기(초)" />
@@ -200,6 +202,7 @@
 		<entry source="Fight: 1/2 moves, Enter=Move0, Esc=Run" text="싸운다: 1/2 기술, Enter=기술0, Esc=도망" />
 		<entry source="File" text="파일" />
 		<entry source="Filter by id" text="id 로 거르기" />
+		<entry source="Finished" text="끝남" />
 		<entry source="Fit check (view only)" text="맞춤 검사(보기만)" />
 		<entry source="Fit to Bounds" text="경계 상자에 맞추기" />
 		<entry source="Fluid paths" text="체액 경로" />
@@ -209,6 +212,7 @@
 		<entry source="Foot lift (m)" text="발 들림(m)" />
 		<entry source="Friends" text="친구" />
 		<entry source="From" text="보내는 곳" />
+		<entry source="Full (100%)" text="가득(100%)" />
 		<entry source="GM connection: {stateText}" text="GM 연결: {stateText}" />
 		<entry source="GM password" text="GM 비밀번호" />
 		<entry source="Gallop" text="질주" />
@@ -584,6 +588,7 @@
 		<entry source="Sound" text="소리" />
 		<entry source="Source" text="출처" />
 		<entry source="Source bones" text="원본 뼈" />
+		<entry source="Span" text="구간" />
 		<entry source="Spatial" text="공간" />
 		<entry source="Speaker Setup" text="스피커 구성" />
 		<entry source="Splines" text="스플라인" />
@@ -598,10 +603,12 @@
 		       text="이 리소스 id 에 빈 프로필을 시작합니다(파일이 있으면 그것을 엽니다)" />
 		<entry source="Start in process" text="한 프로세스로 시작" />
 		<entry source="Start maintenance" text="점검 시작" />
+		<entry source="Started" text="시작" />
 		<entry source="Stereo" text="스테레오" />
 		<entry source="Stick Dead Zone" text="스틱 데드존" />
 		<entry source="Stop" text="정지" />
 		<entry source="Stop picking" text="집기 끄기" />
+		<entry source="Stopped" text="멈춤" />
 		<entry source="Stores the Preview tab's picture in the user data slot of the preset of this name (save the preset first)"
 		       text="미리보기 탭의 그림을 이 이름 프리셋의 사용자 데이터 칸에 담습니다(프리셋을 먼저 저장하세요)" />
 		<entry source="Subject prefix" text="주체 접두어" />
@@ -679,6 +686,7 @@
 		<entry source="UI Scale" text="UI 배율" />
 		<entry source="UI Theme" text="UI 테마" />
 		<entry source="Ultra" text="최고" />
+		<entry source="Unbound" text="묶이지 않음" />
 		<entry source="Undo" text="실행 취소" />
 		<entry source="Undo appearance" text="외형 실행 취소" />
 		<entry source="Undo body edit" text="몸 편집 되돌리기" />

@@ -10515,6 +10515,56 @@
 				<item>Source/Editor/Panels/Animation/Model/SequenceEditModel.h</item>
 			</origins>
 		</entry>
+		<entry key="Enum.SourceControlChangeKind.Added" source="Added">
+			<origins>
+				<item>Source/Editor/Common/SourceControl/SourceControlProvider.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.SourceControlChangeKind.Conflicted" source="Conflict">
+			<origins>
+				<item>Source/Editor/Common/SourceControl/SourceControlProvider.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.SourceControlChangeKind.Deleted" source="Deleted">
+			<origins>
+				<item>Source/Editor/Common/SourceControl/SourceControlProvider.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.SourceControlChangeKind.Modified" source="Modified">
+			<origins>
+				<item>Source/Editor/Common/SourceControl/SourceControlProvider.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.SourceControlChangeKind.Renamed" source="Renamed">
+			<origins>
+				<item>Source/Editor/Common/SourceControl/SourceControlProvider.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.SourceControlChangeKind.Untracked" source="New (untracked)">
+			<origins>
+				<item>Source/Editor/Common/SourceControl/SourceControlProvider.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.StreamingCellPreviewState.Keep" source="Keep">
+			<origins>
+				<item>Source/Editor/Panels/Scene/Model/StreamingCellsViewModel.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.StreamingCellPreviewState.Load" source="Load">
+			<origins>
+				<item>Source/Editor/Panels/Scene/Model/StreamingCellsViewModel.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.StreamingCellPreviewState.NoCamera" source="-">
+			<origins>
+				<item>Source/Editor/Panels/Scene/Model/StreamingCellsViewModel.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.StreamingCellPreviewState.Unload" source="Unload">
+			<origins>
+				<item>Source/Editor/Panels/Scene/Model/StreamingCellsViewModel.h</item>
+			</origins>
+		</entry>
 		<entry key="Evenly space selected objects on X"
 		       source="Evenly space selected objects on X"
 		       context="Editor command palette detail">

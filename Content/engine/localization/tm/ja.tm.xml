@@ -87,6 +87,7 @@
 		<entry source="Buy {item} for {price} {currency}?" text="{item}を{price} {currency}で購入しますか?" />
 		<entry source="CPU only (Recompute Normals)" text="CPU のみ (法線の再計算)" />
 		<entry source="CPU only:" text="CPU のみ:" />
+		<entry source="Camera" text="カメラ" />
 		<entry source="Camera Shake" text="カメラの揺れ" />
 		<entry source="Camera View" text="カメラ視点" />
 		<entry source="Cancel" text="キャンセル" />
@@ -177,6 +178,7 @@
 		<entry source="Effects" text="エフェクト" />
 		<entry source="Effects Quality" text="エフェクト品質" />
 		<entry source="Effects Volume" text="効果音の音量" />
+		<entry source="Empty" text="空" />
 		<entry source="Empty - add modifiers to group them."
 		       text="空です。モディファイアを追加してグループにします。" />
 		<entry source="End maintenance" text="メンテナンス終了" />
@@ -194,6 +196,7 @@
 		<entry source="Field of View" text="視野角" />
 		<entry source="File" text="ファイル" />
 		<entry source="Filter by id" text="id で絞り込み" />
+		<entry source="Finished" text="終了" />
 		<entry source="Fit check (view only)" text="フィットチェック(表示のみ)" />
 		<entry source="Fit to Bounds" text="境界に合わせる" />
 		<entry source="Fluid paths" text="体液の経路" />
@@ -203,6 +206,7 @@
 		<entry source="Foot lift (m)" text="足の持ち上げ(m)" />
 		<entry source="Friends" text="フレンド" />
 		<entry source="From" text="送信元" />
+		<entry source="Full (100%)" text="満タン(100%)" />
 		<entry source="GM connection: {stateText}" text="GM 接続: {stateText}" />
 		<entry source="GM password" text="GM パスワード" />
 		<entry source="Gallop" text="ギャロップ" />
@@ -576,6 +580,7 @@
 		<entry source="Sound" text="サウンド" />
 		<entry source="Source" text="出典" />
 		<entry source="Source bones" text="ソースボーン" />
+		<entry source="Span" text="区間" />
 		<entry source="Spatial" text="空間" />
 		<entry source="Speaker Setup" text="スピーカー構成" />
 		<entry source="Splines" text="スプライン" />
@@ -590,10 +595,12 @@
 		       text="このリソース id で空のプロファイルを開始します(既存のファイルがあればそれを開きます)" />
 		<entry source="Start in process" text="インプロセスで開始" />
 		<entry source="Start maintenance" text="メンテナンス開始" />
+		<entry source="Started" text="開始" />
 		<entry source="Stereo" text="ステレオ" />
 		<entry source="Stick Dead Zone" text="スティックのデッドゾーン" />
 		<entry source="Stop" text="停止" />
 		<entry source="Stop picking" text="選択をやめる" />
+		<entry source="Stopped" text="停止" />
 		<entry source="Stores the Preview tab's picture in the user data slot of the preset of this name (save the preset first)"
 		       text="プレビュータブの画像をこの名前のプリセットのユーザーデータ枠に保存します(先にプリセットを保存してください)" />
 		<entry source="Subject prefix" text="サブジェクト接頭辞" />
@@ -670,6 +677,7 @@
 		<entry source="UI Scale" text="UI の拡大率" />
 		<entry source="UI Theme" text="UI テーマ" />
 		<entry source="Ultra" text="最高" />
+		<entry source="Unbound" text="未バインド" />
 		<entry source="Undo" text="元に戻す" />
 		<entry source="Undo appearance" text="外見を元に戻す" />
 		<entry source="Undo body edit" text="ボディ編集を元に戻す" />

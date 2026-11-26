@@ -10125,6 +10125,56 @@ msgctxt "Enum.SequenceTrackIssue.UnknownKind"
 msgid "Unknown track kind. The file will not load; delete the track."
 msgstr "모르는 트랙 종류입니다. 파일이 읽히지 않습니다 — 트랙을 지우세요."
 
+#: Source/Editor/Common/SourceControl/SourceControlProvider.h
+msgctxt "Enum.SourceControlChangeKind.Added"
+msgid "Added"
+msgstr "더함"
+
+#: Source/Editor/Common/SourceControl/SourceControlProvider.h
+msgctxt "Enum.SourceControlChangeKind.Conflicted"
+msgid "Conflict"
+msgstr "충돌"
+
+#: Source/Editor/Common/SourceControl/SourceControlProvider.h
+msgctxt "Enum.SourceControlChangeKind.Deleted"
+msgid "Deleted"
+msgstr "지움"
+
+#: Source/Editor/Common/SourceControl/SourceControlProvider.h
+msgctxt "Enum.SourceControlChangeKind.Modified"
+msgid "Modified"
+msgstr "고침"
+
+#: Source/Editor/Common/SourceControl/SourceControlProvider.h
+msgctxt "Enum.SourceControlChangeKind.Renamed"
+msgid "Renamed"
+msgstr "이름 바꿈"
+
+#: Source/Editor/Common/SourceControl/SourceControlProvider.h
+msgctxt "Enum.SourceControlChangeKind.Untracked"
+msgid "New (untracked)"
+msgstr "새 파일(추적 안 함)"
+
+#: Source/Editor/Panels/Scene/Model/StreamingCellsViewModel.h
+msgctxt "Enum.StreamingCellPreviewState.Keep"
+msgid "Keep"
+msgstr "남기기"
+
+#: Source/Editor/Panels/Scene/Model/StreamingCellsViewModel.h
+msgctxt "Enum.StreamingCellPreviewState.Load"
+msgid "Load"
+msgstr "불러오기"
+
+#: Source/Editor/Panels/Scene/Model/StreamingCellsViewModel.h
+msgctxt "Enum.StreamingCellPreviewState.NoCamera"
+msgid "-"
+msgstr "-"
+
+#: Source/Editor/Panels/Scene/Model/StreamingCellsViewModel.h
+msgctxt "Enum.StreamingCellPreviewState.Unload"
+msgid "Unload"
+msgstr "내리기"
+
 #. Context: Editor command palette detail
 #: editor/commands/editor.commands.xml
 msgctxt "Evenly space selected objects on X"

@@ -684,6 +684,10 @@
 		<entry key="Enum.FogVolumeState.Underwater"
 		       text="카메라가 물속입니다. 물속 안개에는 볼륨이 없습니다."
 		       sourceHash="19a2cac2b1c44306" />
+		<entry key="Enum.GamepadBatteryLevel.Empty" text="없음" sourceHash="500fd71a4232050e" />
+		<entry key="Enum.GamepadBatteryLevel.Full" text="가득(100%)" sourceHash="26f4fbf61672bfcd" />
+		<entry key="Enum.GamepadBatteryLevel.Low" text="낮음" sourceHash="24f3a319b88552c1" />
+		<entry key="Enum.GamepadBatteryLevel.Medium" text="중간" sourceHash="ac6bdc71f750ac96" />
 		<entry key="Enum.InputGlyphStyle.GamepadPlayStation" text="PlayStation 게임패드" sourceHash="ca581e548d6ef12e" />
 		<entry key="Enum.InputGlyphStyle.GamepadSwitch" text="Nintendo Switch 게임패드" sourceHash="3283503dabc4228f" />
 		<entry key="Enum.InputGlyphStyle.GamepadXbox" text="Xbox 게임패드" sourceHash="33f8c6dd16d1b80b" />
@@ -734,6 +738,13 @@
 		<entry key="Enum.SequenceCameraSignalKind.CutPrewarm" text="대기 뷰" sourceHash="af29d929d5327b73" />
 		<entry key="Enum.SequenceCameraSignalKind.PlaybackEnd" text="재생 끝" sourceHash="99639487ced1e979" />
 		<entry key="Enum.SequenceCameraSignalKind.Shake" text="흔들림" sourceHash="6ddba2493a836a55" />
+		<entry key="Enum.SequenceHistoryKind.CameraSignal" text="카메라" sourceHash="54d1b2a64667e32e" />
+		<entry key="Enum.SequenceHistoryKind.Event" text="사건" sourceHash="d0ea7366ebc403ff" />
+		<entry key="Enum.SequenceHistoryKind.Finished" text="끝남" sourceHash="bb99d4ec27fbb263" />
+		<entry key="Enum.SequenceHistoryKind.Span" text="구간" sourceHash="b60bc1250aad44c1" />
+		<entry key="Enum.SequenceHistoryKind.Started" text="시작" sourceHash="3fd6bd99e3f6a5be" />
+		<entry key="Enum.SequenceHistoryKind.Stopped" text="멈춤" sourceHash="c5fcb9351a03ab2e" />
+		<entry key="Enum.SequenceHistoryKind.UnboundBinding" text="묶이지 않음" sourceHash="e7a38a6492965c7a" />
 		<entry key="Enum.SequenceItemField.Clip" text="클립" sourceHash="3e092e9d1ee2c5bb" />
 		<entry key="Enum.SequenceItemField.Clip.Tooltip"
 		       text="구간 동안 바인딩된 오브젝트의 애니메이션 위에 섞을 애니메이션 클립입니다. 리소스 id 를 치거나 콘텐츠 브라우저에서 끌어다 놓습니다."

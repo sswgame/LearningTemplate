@@ -166,7 +166,7 @@ namespace sw::editor
             const Color stateColor = cell._state == StreamingCellPreviewState::Load ? SW_THEME_COLOR( "Signal", "Success" )
                                    : cell._state == StreamingCellPreviewState::Keep ? SW_THEME_COLOR( "Signal", "Warning" )
                                                                                     : SW_THEME_COLOR( "Base", "TextMuted" );
-            ImGui::TextColored( EditorColorUtil::toImVec4( stateColor ), "%s", StreamingCellsViewModel::getStateLabel( cell._state ) );
+            ImGui::TextColored( EditorColorUtil::toImVec4( stateColor ), "%s", LocalizedText::findEnum( cell._state ) );
             ImGui::PopID();
         }
         ImGui::EndTable();
