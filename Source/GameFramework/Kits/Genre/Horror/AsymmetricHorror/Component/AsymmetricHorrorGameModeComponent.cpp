@@ -215,7 +215,7 @@ namespace sw
                              AsymmetricHorrorGameModeComponentInternal::kMaxSurvivors );
             return false;
         }
-        if ( _match.initialize( makeSettings(), _pCatalog.get() ) == false )
+        if ( _match.initialize( makeSettings(), *_pCatalog ) == false )
         {
             SW_LOG_ERROR_ID( "AsymmetricHorror.MatchRefused", "Asymmetric horror game mode: the match refused killer '%#' or the fixed step %# - the match does not open", _killer.c_str(), _fixedStep );
             return false;
@@ -325,18 +325,19 @@ namespace sw
             interact( survivor );
     }
 
-    void AsymmetricHorrorGameModeComponent::updateMatch( float32 deltaTime )
+    void AsymmetricHorrorGameModeComponent::updateMatch( GameSeconds frameTime )
     {
+        const float32 deltaTime = frameTime.count();
         for ( int32 survivor = 0; survivor < _match.getSurvivorCount(); ++survivor )
         {
             AsymmetricHorrorCommand& pending = _listCommand[static_cast<size_t>( survivor )];
             applyCommand( survivor, isHuman( survivor ) ? pending : _bot.decideSurvivor( _match, _stage, survivor ), deltaTime );
             pending._bUseTriggered = SW_FALSE; // 쓴 누름이다(봇이 움직인 걸음의 누름은 버린다)
         }
-        (void)_killerRelease.update( deltaTime ); // 풀려난 뒤의 첫 걸음을 따로 알리지 않는다
+        (void)_killerRelease.update( frameTime ); // 풀려난 뒤의 첫 걸음을 따로 알리지 않는다
         if ( _killerRelease.isActive() == false )
             _bot.stepKiller( _match, _stage, deltaTime );
-        _match.update( deltaTime );
+        _match.update( frameTime );
         settle();
     }
 
@@ -440,7 +441,7 @@ namespace sw
         // 판은 같은 카탈로그 · 설정으로 `initialize` 한 뒤에 읽는다(키트 계약). 무대와 생존자는 바이트가 정한다. 사람 비트 · 결과는 상태 칸이다(`GameModeComponent::serializeState`).
         const bool bMatch = io.valueOpened( _match, [this]( AsymmetricHorrorMatch& match )
         {
-            if ( _pCatalog != nullptr && match.initialize( makeSettings(), _pCatalog.get() ) )
+            if ( _pCatalog != nullptr && match.initialize( makeSettings(), *_pCatalog ) )
                 return true;
             SW_LOG_ERROR_ID( "AsymmetricHorror.StateNeedsCatalog", "Asymmetric horror game mode: state read before the rules catalog is bound - refused" );
             return false;

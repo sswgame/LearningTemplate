@@ -2,7 +2,7 @@
 
 #include "Core/Log/Logger.h"
 #include "Core/Log/ScopedDeferredLog.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "DevTools/Client/Automation/Runner/AutomationLogCapture.h"
 

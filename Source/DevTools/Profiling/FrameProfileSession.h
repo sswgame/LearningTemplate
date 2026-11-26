@@ -11,7 +11,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Subsystem/Subsystem.h"
 
-#include "Engine/EngineFrameHooks.h"
+#include "Engine/EngineHooks.h"
 #include "Engine/Profiling/FrameProfileReport.h"
 
 namespace sw

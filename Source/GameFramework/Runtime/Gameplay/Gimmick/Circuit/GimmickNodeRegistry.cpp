@@ -11,7 +11,7 @@
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
-#include "GameFramework/Runtime/Foundation/Service/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/Circuit/GimmickCircuitState.h"
 
 #include <cstdlib>

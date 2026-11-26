@@ -2,7 +2,7 @@
 
 #include "Core/Network/Connection/NetEndpoint.h"
 #include "Core/Network/Tests/LoopbackCluster.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "GameFramework/Kits/Feature/Network/NetClientServer/ReplicationClient.h"
 #include "GameFramework/Kits/Feature/Network/NetClientServer/ReplicationServer.h"

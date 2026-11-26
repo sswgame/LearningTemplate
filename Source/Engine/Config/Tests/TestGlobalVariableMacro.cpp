@@ -5,10 +5,10 @@
 #include "pch.h"
 
 #include "Core/GlobalVariable/GlobalVariableManager.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Config/RHIBackendType.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 
 enum class TestGlobalVariableMode : uint8
 {

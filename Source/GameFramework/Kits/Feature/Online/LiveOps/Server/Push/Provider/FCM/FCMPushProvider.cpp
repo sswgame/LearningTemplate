@@ -113,28 +113,25 @@ namespace sw
         return json;
     }
 
-    PushDeliveryStatus FCMPushProvider::mapStatus( int32 statusCode, bool bTransportFailed, string_view body )
+    PushDeliveryStatus FCMPushProvider::mapStatus( const HTTPClientResponse& response )
     {
-        if ( bTransportFailed )
-            return PushDeliveryStatus::Transient;
-        if ( 200 <= statusCode && statusCode <= 299 )
+        const HTTPResponseKind kind = response.getKind();
+        if ( kind == HTTPResponseKind::Success )
             return PushDeliveryStatus::Delivered;
         // 기기를 지우는 것은 FCM 이 토큰이 죽었다고 밝힌 때(`errorCode == "UNREGISTERED"`)뿐이다 — 404 만으로 지우면 끝점 · 프로젝트 설정이 틀린 한 번에 등록이 모두 지워진다(감사 O-15).
-        if ( FCMPushProviderInternal::findErrorCode( body ) == "UNREGISTERED" )
+        if ( kind != HTTPResponseKind::TransportFailed && FCMPushProviderInternal::findErrorCode( response.getBodyText() ) == "UNREGISTERED" )
             return PushDeliveryStatus::InvalidToken;
-        if ( statusCode == HTTPConstant::kStatusTooManyRequests )
+        if ( kind == HTTPResponseKind::RateLimited )
             return PushDeliveryStatus::RateLimited;
-        if ( statusCode >= HTTPConstant::kStatusServerError )
-            return PushDeliveryStatus::Transient;
-        return PushDeliveryStatus::Rejected; // 401 · 403 과 그 밖의 4xx
+        return response.isTransientFailure() ? PushDeliveryStatus::Transient : PushDeliveryStatus::Rejected; // 401 · 403 과 그 밖의 4xx 는 다시 보내지 않는다
     }
 
-    int64 FCMPushProvider::computeRetryAfterMs( int32 statusCode, string_view retryAfterHeader )
+    int64 FCMPushProvider::computeRetryAfterMs( const HTTPClientResponse& response, UnixMilliseconds nowMs )
     {
-        int64 seconds = 0;
-        if ( StringUtil::parseInt64( retryAfterHeader, seconds ) && seconds > 0 )
-            return seconds * constant::time::kMillisecondsPerSecond;
-        return statusCode == HTTPConstant::kStatusTooManyRequests ? FCMPushProviderInternal::kQuotaMinimumRetryMs : 0;
+        const int64 retryAfterMs = response.getRetryAfterMs( nowMs );
+        if ( retryAfterMs > 0 )
+            return retryAfterMs;
+        return response.getKind() == HTTPResponseKind::RateLimited ? FCMPushProviderInternal::kQuotaMinimumRetryMs : 0;
     }
 
     void FCMPushProvider::send( uint64 deliveryID, const string& deviceToken, const string& locale, const PushNotificationMessage& message, UnixMilliseconds nowMs )
@@ -197,19 +194,15 @@ namespace sw
         }
     }
 
-    void FCMPushProvider::finishSend( uint64 deliveryID, const HTTPClientResponse& response )
+    void FCMPushProvider::finishSend( uint64 deliveryID, const HTTPClientResponse& response, UnixMilliseconds nowMs )
     {
-        const PushDeliveryStatus status       = mapStatus( response._statusCode, response._bTransportFailed == SW_TRUE, response.getBodyText() );
-        const HTTPHeader*        pRetryAfter  = response.findHeader( "Retry-After" );
-        const int64              retryAfterMs = computeRetryAfterMs( response._statusCode, pRetryAfter != nullptr ? string_view( pRetryAfter->_value ) : string_view{} );
-        const bool               bAuthFailed  = response._statusCode == HTTPConstant::kStatusUnauthorized || response._statusCode == HTTPConstant::kStatusForbidden;
-        if ( bAuthFailed )
+        if ( response.getKind() == HTTPResponseKind::Denied )
         {
             // 토큰이 거절됐다 — 버려서 다음 배달이 새로 받게 한다.
             _tokenSource.invalidate();
-            SW_LOG_WARNING_ID( "FcmPushProvider.FCMRejectedAccessToken", "FCM rejected the access token (status %#) - it will be requested again", response._statusCode );
+            SW_LOG_WARNING_ID( "FcmPushProvider.FCMRejectedAccessToken", "FCM rejected the access token (status %#) - it will be requested again", response.getStatusCode() );
         }
-        complete( deliveryID, status, retryAfterMs );
+        complete( deliveryID, mapStatus( response ), computeRetryAfterMs( response, nowMs ) );
     }
 
     void FCMPushProvider::complete( uint64 deliveryID, PushDeliveryStatus status, int64 retryAfterMs )
@@ -235,7 +228,7 @@ namespace sw
                 continue;
             const uint64 deliveryID = requestIt->second;
             _mapRequestToDelivery.erase( requestIt );
-            finishSend( deliveryID, response );
+            finishSend( deliveryID, response, nowMs );
         }
     }
 

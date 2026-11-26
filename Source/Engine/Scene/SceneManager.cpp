@@ -20,9 +20,10 @@
 #include "Engine/Asset/PreloadSet.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetPaths.h"
+#include "Engine/Content/AssetWriteAccess.h"
 #include "Engine/Foundation/DeterministicRun.h"
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Object/Component/ComponentStateCodec.h"
 #include "Engine/Object/Component/SceneComponent.h"
@@ -66,7 +67,7 @@ namespace sw
         , _bRestartLoad{ SW_FALSE }
         , _sceneGeneration{ 0 }
         , _pRenderBinding{ nullptr }
-        , _services{ SceneEngineServices::makeFromBoundEngine() }
+        , _services{ SceneEngineSubsystems::makeFromBoundEngine() }
         , _asyncLoad{ sw::make_shared<AsyncLoadSlot>() }
         , _queuedPath{}
         , _inFlightPath{}
@@ -113,7 +114,7 @@ namespace sw
      */
     SubsystemInitResult SceneManager::initializeSubsystem()
     {
-        _services = SceneEngineServices::makeFromBoundEngine();
+        _services = SceneEngineSubsystems::makeFromBoundEngine();
         if ( _asyncLoad == nullptr )
             _asyncLoad = sw::make_shared<AsyncLoadSlot>();
         _asyncLoad->_services = _services;
@@ -619,8 +620,8 @@ namespace sw
         const string sourceID = AssetCookPath::toSourcePath( pScene->getSourcePath(), SceneDocument::kAssetType );
         if ( sourceID != pScene->getSourcePath() )
             SW_LOG_WARNING_ID( "SceneManager.ScenePathNotName", "Scene path '%#' is not a name the cooker cooks - saving as '%#'", pScene->getSourcePath(), sourceID );
-        const optional<AbsolutePath> absPath = engine::getSubsystem<AssetPaths>().toDiskPath( sourceID );
-        return absPath.has_value() && writeActiveScene( *absPath, sourceID );
+        const optional<DiskPath> absPath = engine::getSubsystem<AssetPaths>().toDiskPath( sourceID );
+        return absPath.has_value() && writeActiveScene( AssetWriteAccess::toWritablePath( *absPath ), sourceID );
     }
 
     bool SceneManager::saveActiveSceneAs( const AbsolutePath& absPath )
@@ -683,7 +684,7 @@ namespace sw
             bool          bParentMade = false;
             {
                 ScopedTimer parentTimer{ "Scene.save.base" };
-                Scene       parentScene{ "SceneSave.Base", pScene->getEngineServices() };
+                Scene       parentScene{ "SceneSave.Base", pScene->getSceneEngineSubsystems() };
                 parentScene.setBuildAllDataLayers();
                 bParentMade = parentSource.loadXML( AssetID{ doc._baseScenePath } ) && parentScene.instantiate( parentSource ) && parentScene.serializeToDocument( parent );
             }
@@ -989,7 +990,7 @@ namespace sw
         return nullptr;
     }
 
-    void SceneManager::updatePreviewScenes( float32 deltaTime, vector_reference<const uint32> listDrawnSceneKey )
+    void SceneManager::updatePreviewScenes( RealSeconds unscaledDeltaTime, vector_reference<const uint32> listDrawnSceneKey )
     {
         if ( _listPreviewScene.empty() )
             return;
@@ -999,7 +1000,7 @@ namespace sw
             const bool bManagerTicks = entry._policy._tick == ScenePreviewTick::WhenDrawn;
             if ( bManagerTicks == false || VectorUtil::contains( listDrawnSceneKey, entry._key ) == false )
                 continue;
-            entry._scene->update( deltaTime * entry._policy._timeScale );
+            entry._scene->update( unscaledDeltaTime.count() * entry._policy._timeScale ); // 미리보기 씬의 게임 시간 = 실제 시간 × 정책 배율
             ++entry._tickCount;
         }
     }
@@ -1273,7 +1274,7 @@ namespace sw
     span<const utf8* const> SceneManager::getSubsystemDependencies() const
     {
         // 오디오 · 물리는 그쪽이 `getSubsystemDependents` 로 씬 매니저를 자기 뒤에 둔다(씬은 기능 이름을 모른다).
-        // 엔진 기본 에셋: 초기화가 씬 서비스 묶음(`SceneEngineServices::makeFromBoundEngine`)에 그 표를 담는다.
+        // 엔진 기본 에셋: 초기화가 씬 서브시스템 묶음(`SceneEngineSubsystems::makeFromBoundEngine`)에 그 표를 담는다.
         static constexpr const utf8* kArrDependency[] = { AssetStreamingQueue::kSubsystemName, AsyncFileIO::kSubsystemName, InputManager::kSubsystemName,
                                                           AssetManager::kSubsystemName, EngineDefaultAssetsSubsystem::kSubsystemName, TaskManager::kSubsystemName };
         return kArrDependency;
@@ -1301,5 +1302,5 @@ namespace sw
 namespace sw
 {
     // 씬 매니저가 서브시스템이다 — 씬이 바뀌면 되돌리기 기록을 비우는 구독도 그것이 건다.
-    SW_ENGINE_SERVICE_SUBSYSTEM( SceneManager, GameVisible, GameInstance, Startup, (), SW_ENGINE_DEFAULT_FACTORY( SceneManager ) );
+    SW_ENGINE_SUBSYSTEM_WITH_SLOT( SceneManager, GameVisible, GameInstance, Startup, (), SW_ENGINE_DEFAULT_FACTORY( SceneManager ) );
 } // namespace sw

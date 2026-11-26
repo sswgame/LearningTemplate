@@ -24,7 +24,7 @@
 #include "GameFramework/Runtime/Character/AI/Schedule/ScheduleSystem.h"
 #include "GameFramework/Runtime/Foundation/Condition/GameConditions.h"
 #include "GameFramework/Runtime/Foundation/Condition/GameFlags.h"
-#include "GameFramework/Runtime/Foundation/Service/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 #include "GameFramework/Runtime/Gameplay/Dialogue/DialogueRunnerComponent.h"
 
 namespace sw
@@ -93,7 +93,7 @@ namespace sw
                 ScheduleSystem schedules;
                 schedules.setFlags( &flags );
                 schedules.setActionContext( world );
-                if ( schedules.initialize( pCatalog.get(), ScheduleSystemSettings{}, 7 * kMinutesPerHour ) == false )
+                if ( schedules.initialize( *pCatalog, ScheduleSystemSettings{}, 7 * kMinutesPerHour ) == false )
                 {
                     outReply = "the schedule system did not start";
                     return false;

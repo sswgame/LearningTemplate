@@ -10,7 +10,9 @@
 #pragma once
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
+#include "Core/Time/Countdown.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -101,7 +103,7 @@ namespace sw
     protected:
         [[nodiscard]] bool startGame() override;
         void               onGameStarted() override;
-        void               updateMatch( float32 deltaTime ) override;
+        void               updateMatch( GameSeconds frameTime ) override;
         /** @brief 남긴 이익 합을 돈으로 냅니다. */
         void collectMinigameResult( vector<MinigameResultValue>& outListValue ) const override;
 

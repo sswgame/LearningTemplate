@@ -1,7 +1,7 @@
 // CharacterSurfaceState::clear — 풀 반환(외형 되돌리기)이 피 · 흙의 영역 값과 마스크를 모두 0 으로 돌리고, 바뀌었으면 번호를 올린다(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Character/Fit/SurfaceState.h"
 

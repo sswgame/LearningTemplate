@@ -7,13 +7,16 @@
 #include "Core/String/formatString.h"
 #include "Core/Time/MonotonicClock.h"
 
+#include "Editor/Common/Asset/AssetWriter.h"
+#include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Commands/Scene/EditorBakeSession.h"
+#include "Editor/Common/Config/EditorIconGlyphTable.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorExtensionSubsystems.h"
 #include "Editor/Common/Workspace/EditorFrameStep.h"
 #include "Editor/Common/Workspace/EditorNotificationManager.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
@@ -243,12 +246,17 @@ namespace sw::editor
             reportFailure( string( failureBuilder.view() ) );
             return;
         }
-        const optional<AbsolutePath> gridPath = editor::getSubsystem<AssetPaths>().toDiskPath( assetPath );
-        if ( gridPath.has_value() == false || grid.saveToFile( *gridPath ) == false )
+        const optional<DiskPath> gridPath = editor::getSubsystem<AssetPaths>().toDiskPath( assetPath );
+        AssetWriter              writer;
+        const AssetWriteResult   written = gridPath.has_value() ? writer.saveAsset( *gridPath, grid ) : AssetWriteResult::Failed;
+        if ( written != AssetWriteResult::Written )
         {
             StringBuilder<constant::buffer::kMax512> failureBuilder;
             failureBuilder.appendFormat( "could not write %#", assetPath );
-            reportFailure( string( failureBuilder.view() ) );
+            if ( written == AssetWriteResult::Refused )
+                _lastError = string( failureBuilder.view() ); // 문이 이미 경고로 알렸다 — 끝 알림에만 싣는다
+            else
+                reportFailure( string( failureBuilder.view() ) );
             return;
         }
         const uint32 probeCount = static_cast<uint32>( grid._listProbe.size() );
@@ -294,4 +302,25 @@ namespace sw::editor
             notification.push( "Bake Light Probes", arrMessage, NotificationKind::Success );
         }
     }
+
+    /**
+     * @brief 에디터 커맨드 "Bake Light Probes"(`lighting.bakeProbes`) — Build 메뉴와 커맨드 팔레트에서 활성 씬의 라이트 프로브 볼륨을 베이크합니다.
+     * @details 선택한 오브젝트 중 볼륨이 있으면 그것만, 없으면 씬의 모든 볼륨을 베이크한다(언리얼 Build Lighting 의 선택 베이크와 같은 구분).
+     *          커맨드는 베이크 세션(`EditorLightProbeBakeSession`)을 시작만 한다 — 베이크는 에디터 프레임에 나눠 돌고(나눠 베이크하는 규칙은 그 헤더), 진행은 상태줄에 보인다.
+     */
+    namespace
+    {
+        struct EditorLightProbeBakeCommandInternal
+        {
+            static void runBake()
+            {
+                editor::getSubsystem<EditorLightProbeBakeSession>().requestStart(); // 필수 - 에디터 서브시스템이다
+            }
+
+            /** @brief 씬이 있을 때 켠다. 편집 허용 답(플레이 중 · 베이크 중이면 꺼진다)은 레지스트리가 함께 묻는다(`EditorCommandEdit::SceneUnrecorded`). */
+            static bool isEnabled() { return editor::getActiveObjectManager() != nullptr; }
+        };
+    } // namespace
+
+    SW_EDITOR_COMMAND( LightProbeBake, "lighting.bakeProbes", &EditorLightProbeBakeCommandInternal::runBake, &EditorLightProbeBakeCommandInternal::isEnabled, SceneUnrecorded ); // 굽기 작업을 시작한다 — 씬 기록이 아니다
 } // namespace sw::editor

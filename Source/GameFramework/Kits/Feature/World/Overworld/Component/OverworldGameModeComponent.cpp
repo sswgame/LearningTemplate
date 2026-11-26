@@ -12,7 +12,7 @@
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
-#include "Engine/TileMap/Component/TileMapComponent.h"
+#include "Engine/TileMap/TileMapComponent.h"
 
 #include "GameFramework/Runtime/Character/Control/Intent/ControlIntent.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
@@ -222,8 +222,9 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 규칙(PrePhysics, 워커)
     // ------------------------------------------------------------------------------
-    void OverworldGameModeComponent::updateGame( float32 deltaTime )
+    void OverworldGameModeComponent::updateGame( GameSeconds frameTime )
     {
+        const float32 deltaTime = frameTime.count();
         if ( deltaTime <= 0.0f )
             return;
         const PawnComponent* pHero = findHeroPawn();
@@ -240,7 +241,7 @@ namespace sw
         }
 
         const int2 tileBefore{ _mover.getTileX(), _mover.getTileY() };
-        _mover.update( deltaTime, intent, interactButton );
+        _mover.update( frameTime, intent, interactButton );
         if ( _mover.consumeMovedFlag() )
         {
             _stepFromTile = tileBefore;

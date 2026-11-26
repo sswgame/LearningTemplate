@@ -14,7 +14,7 @@
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Content/CookJob.h"
 #include "Engine/Content/Pack/PackManager.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Serialization/Inherit/ResourceRemap.h"
 
 namespace sw
@@ -22,7 +22,7 @@ namespace sw
     namespace
     {
         /**
-         * @brief 마운트된 팩을 든 매니저입니다. 에셋 매니저가 소유하고 엔진 범위에 건 것을 서비스 칸으로 읽는다(선택 칸, `AssetManager.cpp` 의 등록).
+         * @brief 마운트된 팩을 든 매니저입니다 — 에셋 매니저가 소유하고 엔진 범위에 건 것을 서브시스템 칸으로 읽는다(선택 칸 — `AssetManager.cpp` 의 등록).
          *        엔진 범위가 없으면(엔진 없이 도는 도구 · 쿠커 · 테스트) nullptr 이고, 그때는 마운트된 팩이 없다.
          * @details 낱개 파일 정책은 이 함수와 `isLooseFileAllowed` 한 곳에서만 본다 — 부르는 쪽이 `AssetIO` 가 실패한 뒤 디스크를 다시 읽지 않게.
          */
@@ -117,8 +117,8 @@ namespace sw
                         return true;
                     }
                 }
-                const optional<AbsolutePath> looseFile = engine::getSubsystem<AssetPaths>().findLooseFile( relativePath );
-                const string                 loosePath = looseFile.has_value() ? looseFile->str() : string{};
+                const optional<DiskPath> looseFile = engine::getSubsystem<AssetPaths>().findLooseFile( relativePath );
+                const string             loosePath = looseFile.has_value() ? looseFile->str() : string{};
                 if ( loosePath.empty() == false && ContentFileSource::getCurrent().isFile( loosePath ) )
                 {
                     if ( pOutAbsPath != nullptr )
@@ -179,7 +179,7 @@ namespace sw
         return CookJob::recordReadInput( id, reinterpret_cast<const uint8*>( outText.data() ), outText.size() );
     }
 
-    bool AssetIO::readTextFile( const AbsolutePath& filePath, string& outText )
+    bool AssetIO::readTextFile( const DiskPath& filePath, string& outText )
     {
         if ( FileUtil::readTextFile( filePath, outText ) == false )
         {
@@ -333,7 +333,7 @@ namespace sw
         if ( isLooseFileAllowed( pPackManager ) || bDiskDomain )
         {
             // 읽기와 같은 판정이다(R7) - 읽기는 파일만 읽으므로 폴더는 "있음" 이 아니다(예전에는 `exists` 라 폴더에도 true 였다).
-            const optional<AbsolutePath> absPath = engine::getSubsystem<AssetPaths>().findLooseFile( relativePath );
+            const optional<DiskPath> absPath = engine::getSubsystem<AssetPaths>().findLooseFile( relativePath );
             if ( absPath.has_value() && ContentFileSource::getCurrent().isFile( absPath->str() ) )
                 return true;
         }
@@ -363,9 +363,9 @@ namespace sw
         if ( isLooseFileAllowed( pPackManager ) || engine::getSubsystem<AssetPaths>().isMountedDiskDomainID( folder ) )
         {
             // 검색 순서의 모든 도메인 폴더를 합친다 — 팩 나열과 같은 합집합(같은 이름은 아래 정렬에서 앞선 표기가 남는다).
-            vector<AbsolutePath> listDiskFolder;
+            vector<DiskPath> listDiskFolder;
             engine::getSubsystem<AssetPaths>().collectLooseFolders( folder, listDiskFolder );
-            for ( const AbsolutePath& diskFolder : listDiskFolder )
+            for ( const DiskPath& diskFolder : listDiskFolder )
             {
                 vector<string> listDiskFile;
                 if ( ContentFileSource::getCurrent().collectFiles( diskFolder.str(), listDiskFile ) == false )

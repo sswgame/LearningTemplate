@@ -18,6 +18,8 @@
 
 namespace sw::editor
 {
+    class AssetWriter;
+
     /** @brief 원소 경로의 한 칸입니다 — 이름과(있으면) 가르는 속성 · 값. 속성이 비면 그 이름의 첫 자식입니다. */
     struct BodyDataElementKey
     {
@@ -40,18 +42,18 @@ namespace sw::editor
         BodyDataEditModel();
 
         /** @brief 글 @p text 를 문서로 엽니다(기록을 비우고 "저장된 상태" 로 맞춘다). 읽지 못하면 false 이고 이유는 `getError` 입니다. @p diskPath 는 저장할 곳(비면 저장하지 않는다). */
-        [[nodiscard]] bool openText( string_view text, const AbsolutePath& diskPath );
+        [[nodiscard]] bool openText( string_view text, const DiskPath& diskPath );
         /** @brief 디스크 파일 @p diskPath 를 엽니다. 같은 파일이 이미 열려 있고 고치지 않았으면 다시 읽지 않습니다. */
-        [[nodiscard]] bool openFile( const AbsolutePath& diskPath );
+        [[nodiscard]] bool openFile( const DiskPath& diskPath );
         /** @brief 지금 글을 연 파일에 씁니다. 성공하면 "저장된 상태" 로 맞춥니다. */
-        [[nodiscard]] bool save();
+        [[nodiscard]] bool save( AssetWriter& writer );
         void               close();
 
-        bool                isOpen() const { return _doc.getRoot().isValid(); }
-        bool                isDirty() const { return _state.isDirty( _text ); }
-        const string&       getText() const { return _text; }
-        const AbsolutePath& getDiskPath() const { return _diskPath; }
-        const string&       getError() const { return _error; }
+        bool            isOpen() const { return _doc.getRoot().isValid(); }
+        bool            isDirty() const { return _state.isDirty( _text ); }
+        const string&   getText() const { return _text; }
+        const DiskPath& getDiskPath() const { return _diskPath; }
+        const string&   getError() const { return _error; }
         /** @brief 편집 · 되돌리기마다 오르는 번호입니다(화면이 다시 읽을지 가른다). */
         uint32 getRevision() const { return _revision; }
 
@@ -85,9 +87,13 @@ namespace sw::editor
         static string      makeCoalesceKey( vector_reference<const BodyDataElementKey> path, const utf8* pAttribute );
 
     private:
+        using CaptureDelegate = EditorDocumentState<string>::CaptureDelegate;
+        using ApplyDelegate   = EditorDocumentState<string>::ApplyDelegate;
+
+    private:
         XMLDocument                 _doc;
         string                      _text;
-        AbsolutePath                _diskPath;
+        DiskPath                    _diskPath;
         string                      _error;
         EditorDocumentState<string> _state;
         uint32                      _revision;

@@ -6,7 +6,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Task/TaskManager.h"
 
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 
 namespace sw
 {
@@ -25,7 +25,7 @@ namespace sw
          */
         inline void runParallel( uint32 count, uint32 serialThreshold, const ParallelBlockDelegate& body )
         {
-            if ( areEngineServicesBound() )
+            if ( areEngineSubsystemsBound() )
             {
                 getSubsystem<TaskManager>().runParallel( count, serialThreshold, body );
                 return;
@@ -41,7 +41,7 @@ namespace sw
          */
         inline void runParallelByCost( uint32 count, const ParallelBlockDelegate& body )
         {
-            if ( areEngineServicesBound() )
+            if ( areEngineSubsystemsBound() )
             {
                 getSubsystem<TaskManager>().runParallelByCost( count, body );
                 return;
@@ -123,7 +123,7 @@ namespace sw
          */
         inline uint32 getParallelScratchSlotCount()
         {
-            return areEngineServicesBound() ? getSubsystem<TaskManager>().getScratchSlotCount() : 1;
+            return areEngineSubsystemsBound() ? getSubsystem<TaskManager>().getScratchSlotCount() : 1;
         }
 
         /**
@@ -133,13 +133,13 @@ namespace sw
          */
         inline bool isOnPoolWorker()
         {
-            return areEngineServicesBound() && getSubsystem<TaskManager>().isWorkerThread();
+            return areEngineSubsystemsBound() && getSubsystem<TaskManager>().isWorkerThread();
         }
 
         /** @brief 지금 스레드의 스크래치 슬롯입니다. 워커면 그 번호, 아니면 그 스레드가 처음 물을 때 받은 고유한 도우미 칸입니다. */
         inline uint32 getParallelScratchSlot()
         {
-            if ( areEngineServicesBound() == false )
+            if ( areEngineSubsystemsBound() == false )
                 return 0;
             return getSubsystem<TaskManager>().getCurrentThreadScratchSlot();
         }

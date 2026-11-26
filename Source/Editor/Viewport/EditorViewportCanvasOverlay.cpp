@@ -11,7 +11,7 @@
 #include "Core/Math/Ray.h"
 #include "Core/String/fixed_string.h"
 
-#include "Editor/Common/GUI/Theme/EditorColorUtil.h"
+#include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorInputActionNames.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Viewport/EditorViewportCamera.h"

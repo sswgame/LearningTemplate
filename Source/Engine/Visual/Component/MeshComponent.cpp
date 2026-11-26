@@ -8,7 +8,7 @@
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Content/AssetIO.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
@@ -80,7 +80,7 @@ namespace sw
     void MeshComponent::resolveMaterialAsset()
     {
         const hashed_string path = _materialPath.empty() ? getDefaultMaterialPath() : hashed_string( _materialPath.c_str() );
-        if ( path == _requestedMaterialPath || engine::areEngineServicesBound() == false )
+        if ( path == _requestedMaterialPath || engine::areEngineSubsystemsBound() == false )
             return;
         _requestedMaterialPath = path;
 
@@ -406,7 +406,7 @@ namespace sw
         if ( _acquiredMaterialPath.empty() == false )
         {
             _pMaterial = nullptr;
-            if ( engine::areEngineServicesBound() )
+            if ( engine::areEngineSubsystemsBound() )
                 engine::getSubsystem<AssetManager>().getAssetCache<MaterialCache>().release( _acquiredMaterialPath.view() );
             _acquiredMaterialPath = hashed_string{};
         }

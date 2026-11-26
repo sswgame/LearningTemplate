@@ -9,13 +9,13 @@
 #include "Core/Hash/HashUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Content/Pack/PackReader.h"
 #include "Engine/Content/Pack/PackWriter.h"
 #include "Engine/Content/Pack/Tests/PackTestUtil.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 
 #include <algorithm>
 

@@ -14,7 +14,7 @@
 #include "DevTools/Diagnostics/DevSceneStreamingAccess.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -83,7 +83,7 @@ namespace sw
         /** @brief 감시 값 `Scene.WorldOriginX` · `Scene.WorldOriginZ` 입니다. 활성 씬의 월드 원점(절대 = 로컬 + 원점)입니다 — 원점 이동 시나리오가 옮긴 뒤 본다. */
         [[nodiscard]] bool readSceneWorldOrigin( bool bZ, float64& outValue )
         {
-            if ( engine::areEngineServicesBound() == false )
+            if ( engine::areEngineSubsystemsBound() == false )
                 return false;
             const Scene* pScene = engine::getSubsystem<SceneManager>().getActiveScene();
             if ( pScene == nullptr )
@@ -133,7 +133,7 @@ namespace sw
          */
         [[nodiscard]] bool readSceneTransitioning( const GameObjectManager* /*pManager*/, float64& outValue )
         {
-            if ( engine::areEngineServicesBound() == false )
+            if ( engine::areEngineSubsystemsBound() == false )
                 return false;
             outValue = engine::getSubsystem<SceneManager>().isTransitioning() ? 1.0 : 0.0;
             return true;
@@ -145,7 +145,7 @@ namespace sw
          */
         [[nodiscard]] bool readSceneCameraYaw( const GameObjectManager* /*pManager*/, float64& outValue )
         {
-            if ( engine::areEngineServicesBound() == false )
+            if ( engine::areEngineSubsystemsBound() == false )
                 return false;
             const Scene*           pScene  = engine::getSubsystem<SceneManager>().getActiveScene();
             const CameraComponent* pCamera = pScene != nullptr ? pScene->getActiveGameCamera() : nullptr;

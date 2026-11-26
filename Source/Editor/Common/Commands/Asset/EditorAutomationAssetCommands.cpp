@@ -10,13 +10,14 @@
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
 #include "Core/Math/MatrixMath.h"
-#include "Core/Name/TagID.h"
 #include "Core/Path/AbsolutePath.h"
+#include "Core/String/Name/TagID.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
 
+#include "Editor/Common/Asset/AssetWriter.h"
 #include "Editor/Common/Commands/Asset/EditorAssetCommands.h"
 #include "Editor/Common/Commands/Asset/EditorAssetFileCommands.h"
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
@@ -26,8 +27,8 @@
 #include "Editor/Common/Workspace/EditorCamera.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
-#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorStateStore.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/HotReload/AssetHotReload.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
@@ -148,8 +149,8 @@ namespace sw::editor
                     outReply = string( replyBuilder.view() );
                     return false;
                 }
-                const optional<AbsolutePath> scratchPath  = editor::getSubsystem<AssetPaths>().findLooseFile( FileUtil::normalizePath( listArgument[0] ).str() );
-                const string                 absolutePath = scratchPath.has_value() ? scratchPath->str() : string{};
+                const optional<DiskPath> scratchPath  = editor::getSubsystem<AssetPaths>().findLooseFile( FileUtil::normalizePath( listArgument[0] ).str() );
+                const string             absolutePath = scratchPath.has_value() ? scratchPath->str() : string{};
                 if ( absolutePath.empty() )
                 {
                     StringBuilder<constant::buffer::kMax256> replyBuilder;
@@ -188,10 +189,10 @@ namespace sw::editor
                     outReply = string( replyBuilder.view() );
                     return false;
                 }
-                const AssetPaths&            assetPaths = editor::getSubsystem<AssetPaths>();
-                const optional<AbsolutePath> sourcePath = assetPaths.findLooseFile( FileUtil::normalizePath( listArgument[0] ).str() );
-                const optional<AbsolutePath> targetPath = assetPaths.findLooseFile( FileUtil::normalizePath( listArgument[1] ).str() );
-                string                       text;
+                const AssetPaths&        assetPaths = editor::getSubsystem<AssetPaths>();
+                const optional<DiskPath> sourcePath = assetPaths.findLooseFile( FileUtil::normalizePath( listArgument[0] ).str() );
+                const optional<DiskPath> targetPath = assetPaths.findLooseFile( FileUtil::normalizePath( listArgument[1] ).str() );
+                string                   text;
                 if ( sourcePath.has_value() == false || targetPath.has_value() == false || FileUtil::readTextFile( *sourcePath, text ) == false )
                 {
                     StringBuilder<constant::buffer::kMax256> replyBuilder;
@@ -200,14 +201,15 @@ namespace sw::editor
                     return false;
                 }
                 // 덮어써도 대상의 정체성은 그대로다(편집 저장처럼) — 원본의 GUID 머리까지 옮기면 대상을 GUID 로 가리키던 참조가 끊긴다.
-                string targetText;
-                if ( FileUtil::readTextFile( *targetPath, targetText ) )
+                string      targetText;
+                AssetWriter writer;
+                if ( writer.readText( *targetPath, targetText ) )
                 {
                     const AssetGUIDHeader identity = AssetGUIDHeader::read( targetText );
                     if ( identity._state == AssetGUIDHeaderState::Found )
                         text = AssetGUIDHeader::write( text, *identity._guid );
                 }
-                if ( FileUtil::writeTextFile( *targetPath, text ) == false )
+                if ( writer.writeText( *targetPath, text ) != AssetWriteResult::Written )
                 {
                     StringBuilder<constant::buffer::kMax256> replyBuilder;
                     replyBuilder.appendFormat( "could not write '%#'", targetPath->str() );
@@ -228,8 +230,8 @@ namespace sw::editor
                 const bool bBadID = listArgument.size() != 1 || StringUtil::startsWith( listArgument[0], scratchPrefix ) == false || AssetPaths::hasParentDirectoryComponent( listArgument[0] );
                 if ( bBadID )
                     return unexpected( Error{ ErrorKind::InvalidArgument, "the command takes one resource id under the scratch folder", pCommand }.appendDetail( " " ).appendDetail( scratchPrefix ) );
-                const optional<AbsolutePath> scratchPath = editor::getSubsystem<AssetPaths>().findLooseFile( FileUtil::normalizePath( listArgument[0] ).str() );
-                string                       text;
+                const optional<DiskPath> scratchPath = editor::getSubsystem<AssetPaths>().findLooseFile( FileUtil::normalizePath( listArgument[0] ).str() );
+                string                   text;
                 if ( scratchPath.has_value() == false || FileUtil::readTextFile( *scratchPath, text ) == false )
                     return unexpected( Error{ ErrorKind::NotFound, "no scratch asset (does the scenario declare <Scratch>?)", listArgument[0] } );
                 return text;
@@ -296,7 +298,7 @@ namespace sw::editor
                     outReply = "asset.select takes one resource id";
                     return false;
                 }
-                const optional<AbsolutePath> diskPath = editor::getSubsystem<AssetPaths>().toDiskPath( listArgument[0] );
+                const optional<DiskPath> diskPath = editor::getSubsystem<AssetPaths>().toDiskPath( listArgument[0] );
                 if ( diskPath.has_value() == false || FileUtil::isRegularFile( *diskPath ) == false )
                 {
                     StringBuilder<constant::buffer::kMax256> replyBuilder;
@@ -375,9 +377,8 @@ namespace sw::editor
                 { return StringUtil::startsWith( id, scratchPrefix ) && AssetPaths::hasParentDirectoryComponent( id ) == false; };
                 if ( listArgument.size() != argumentCount || isScratchID( listArgument[0] ) == false || isScratchID( listArgument[1] ) == false )
                     return unexpected( Error{ ErrorKind::InvalidArgument, "wrong arguments - see the command's usage (two resource ids under the scratch folder first)", pCommand } );
-                const AssetPaths&            assetPaths      = editor::getSubsystem<AssetPaths>();
-                const optional<AbsolutePath> sourcePath      = assetPaths.findLooseFile( FileUtil::normalizePath( listArgument[0] ).str() );
-                const optional<AbsolutePath> destinationPath = assetPaths.toDiskPath( FileUtil::normalizePath( listArgument[1] ).str() );
+                const optional<AbsolutePath> sourcePath      = EditorAssetFileCommands::findOperationPath( FileUtil::normalizePath( listArgument[0] ).str() );
+                const optional<AbsolutePath> destinationPath = EditorAssetFileCommands::makeOperationPath( FileUtil::normalizePath( listArgument[1] ).str() );
                 if ( sourcePath.has_value() == false )
                     return unexpected( Error{ ErrorKind::NotFound, "no scratch asset (does the scenario declare <Scratch>?)", listArgument[0] } );
                 if ( destinationPath.has_value() == false )
@@ -512,7 +513,7 @@ namespace sw::editor
                 if ( bOutsideTempArea )
                     return unexpected( Error{ ErrorKind::InvalidArgument, "imports go under the temporary resource folder", kImportTempFolder }.appendDetail( "/: " ).appendDetail( folderID ) );
                 // 작업 도메인은 실행 뿌리 아래다(`AssetPaths::getScratchFolderPath`) — 리소스 루트에 id 를 붙이지 않고 도메인 규칙으로 푼다.
-                const optional<AbsolutePath> folder = editor::getSubsystem<AssetPaths>().toDiskPath( folderKey.str() );
+                const optional<AbsolutePath> folder = EditorAssetFileCommands::makeOperationPath( folderKey.str() );
                 if ( folder.has_value() == false )
                     return unexpected( Error{ ErrorKind::InvalidArgument, "the import folder does not resolve to a disk folder", folderID } );
                 return *folder;
@@ -566,7 +567,7 @@ namespace sw::editor
                     outReply = string( replyBuilder.view() );
                     return false;
                 }
-                const optional<AbsolutePath> targetPath = editor::getSubsystem<AssetPaths>().findLooseFile( targetID );
+                const optional<AbsolutePath> targetPath = EditorAssetFileCommands::findOperationPath( targetID );
                 AssetIdentityRules           rules;
                 if ( targetPath.has_value() == false || rules.load( ProcessRoots::get()._project ) == false )
                 {
@@ -660,7 +661,6 @@ namespace sw::editor
                     outReply = "select the object to turn into a prefab first";
                     return false;
                 }
-                (void)FileUtil::ensureDirectoryExists( absolutePath.getParent() );                                                    // 못 만들면 ensure 가 폴더와 이유를 남기고 뒤따르는 쓰기가 실패로 답한다
                 const EditorInspectorCommands::AttachResult applied = EditorInspectorCommands::attachChildPrefabInstances( pObject ); // 옮긴 수는 로그가 알린다
                 if ( applied.isRejected() )
                 {

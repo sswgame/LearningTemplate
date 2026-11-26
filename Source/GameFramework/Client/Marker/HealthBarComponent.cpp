@@ -105,11 +105,11 @@ namespace sw
         if ( _targetRatio < _hpRatio )
             _hpRatio = _targetRatio;
         else
-            _hpRatio = approach( _hpRatio, _targetRatio, _lerpSpeed, context.getDeltaTime() );
+            _hpRatio = approach( _hpRatio, _targetRatio, _lerpSpeed, context.getDeltaTime().count() );
         if ( _remainRatio < _hpRatio )
             _remainRatio = _hpRatio;
         else
-            _remainRatio = approach( _remainRatio, _hpRatio, _lerpSpeed, context.getDeltaTime() );
+            _remainRatio = approach( _remainRatio, _hpRatio, _lerpSpeed, context.getDeltaTime().count() );
 
         scheduleRefresh();
     }

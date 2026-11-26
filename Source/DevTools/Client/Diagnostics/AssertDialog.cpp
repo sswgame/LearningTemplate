@@ -10,7 +10,7 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 
 namespace sw
 {
@@ -78,7 +78,7 @@ namespace sw
 
 #if defined( SW_DO_CHECKS ) && defined( SW_PLATFORM_WINDOWS )
         /** @brief 건 대화상자의 등록입니다. 프로세스 끝까지 쥔다(대화형 실행 한 번에 한 번 건다). 상수 초기화된다. */
-        internal::AssertDialogRegistration s_assertDialogRegistration{};
+        internal::AssertDialogSubscription s_assertDialogRegistration{};
 #endif
     } // namespace
 

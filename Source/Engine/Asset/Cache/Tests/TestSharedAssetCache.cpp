@@ -1,7 +1,7 @@
 #include "pch.h"
 
 #include "Core/File/FileUtil.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Asset/Cache/AssetReloadWatch.h"
@@ -10,7 +10,7 @@
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 
 using namespace sw;
 

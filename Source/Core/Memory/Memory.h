@@ -130,9 +130,9 @@ namespace sw
         static bool isInCRTHeap();
 
         /** @brief 할당 관찰자 등록 토큰입니다. 토큰이 사라지면 관찰자를 뗍니다. */
-        using AllocationObserverRegistration = ObserverSlot<const MemoryAllocationObserver>::Registration;
+        using AllocationObserverSubscription = ObserverSlot<const MemoryAllocationObserver>::Subscription;
         /** @brief 할당 기록기 등록 토큰입니다. 토큰이 사라지면 기록기를 뗍니다. */
-        using AllocationTrackerRegistration = ObserverSlot<AllocationTracker>::Registration;
+        using AllocationTrackerSubscription = ObserverSlot<AllocationTracker>::Subscription;
 
         /**
          * @brief 할당 · 해제를 밖(외부 프로파일러)에 알리는 관찰자를 겁니다. 배포본은 블록 헤더가 없어 알리지 않습니다.
@@ -140,13 +140,13 @@ namespace sw
          *          알리면 받는 쪽(Tracy)은 짝 없는 해제로 기록을 멈춥니다. 관찰자는 하나이고 이미 걸려 있으면 이중 등록 단언입니다(덮어쓰지 않는다).
          *          @p pObserver 는 돌려준 토큰이 사라질 때까지 살아 있어야 합니다.
          */
-        [[nodiscard]] static AllocationObserverRegistration registerAllocationObserver( const MemoryAllocationObserver* pObserver );
+        [[nodiscard]] static AllocationObserverSubscription registerAllocationObserver( const MemoryAllocationObserver* pObserver );
 
         /**
          * @brief 할당 기록기를 겁니다. 먼저 건 기록기가 주인이라 이미 걸려 있으면 빈 토큰입니다(`isActive()` 가 false — 엔진 기록기가 걸린 뒤 테스트의 지역 기록기).
          * @param pTracker 돌려준 토큰이 사라질 때까지 살아 있어야 합니다.
          */
-        [[nodiscard]] static AllocationTrackerRegistration registerAllocationTracker( AllocationTracker* pTracker );
+        [[nodiscard]] static AllocationTrackerSubscription registerAllocationTracker( AllocationTracker* pTracker );
 
         /**
          * @brief 이 스레드가 지금까지 한 sw 할당 횟수입니다. 배포본은 블록 헤더 경로가 없어 늘 0 입니다.

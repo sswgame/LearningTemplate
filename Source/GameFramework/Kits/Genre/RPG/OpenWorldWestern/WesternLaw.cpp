@@ -119,14 +119,15 @@ namespace sw
             record._unseenTime = 0.0f;
     }
 
-    void WesternLawState::update( float32 deltaTime )
+    void WesternLawState::update( GameSeconds frameTime )
     {
+        const float32 deltaTime = frameTime.count();
         if ( deltaTime <= 0.0f || _pCatalog == nullptr )
             return;
         // 먼저 도착한 목격자가 신고하면 같은 사건의 나머지는 지운다. 넣은 순서대로 확인하므로 결과가 항상 같다.
         for ( PendingReport& report : _listPending )
         {
-            report._remaining.update( deltaTime );
+            report._remaining.update( frameTime );
         }
         for ( size_t index = 0; index < _listPending.size(); )
         {

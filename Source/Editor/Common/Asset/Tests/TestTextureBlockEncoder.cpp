@@ -6,12 +6,12 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Task/TaskManager.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Editor/Common/Asset/Texture/TextureBlockEncoder.h"
 #include "Editor/Common/Asset/Texture/TextureImportConfig.h"
 #include "Editor/Common/Asset/Texture/TextureImporter.h"
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 
 #include "Engine/Asset/Image/DDSLoader.h"
 #include "Engine/Graphics/RHI/RHIDescriptors.h"
@@ -239,7 +239,7 @@ SW_TEST_CASE( TextureBlockEncoderTest, CookedVariantLoadsWithTheFamilyFormat )
     const AbsolutePath root       = test::makeScratchPath( "TextureVariantCook" );
     const AbsolutePath sourcePath = root.join( "textures_raw/odd.tga" );
     const AbsolutePath outputPath = root.join( "textures/odd.astc.dds" );
-    SW_REQUIRE_TRUE( FileUtil::ensureParentDirectoryExists( sourcePath ) && FileUtil::writeFile( sourcePath, bytes.data(), bytes.size() ) );
+    SW_REQUIRE_TRUE( FileUtil::writeFile( sourcePath, bytes.data(), bytes.size() ) );
 
     TextureFormatFamily family;
     family._name   = "ASTC";

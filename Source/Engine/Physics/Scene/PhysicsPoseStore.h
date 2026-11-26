@@ -7,8 +7,8 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Subsystem/Subsystem.h"
+#include "Core/Subsystem/SubsystemSlot.h"
 
 #include "Engine/Object/Component/ComponentDataStore.h"
 #include "Engine/Physics/IPhysicsBodyScene.h"
@@ -301,6 +301,6 @@ namespace sw
         CommandStore<CharacterCommand2D> _commandStore2D;
         CommandStore<VehicleDriverInput> _vehicleInputStore;
 
-        SW_SERVICE_SLOT( PhysicsPoseStore, Required );
+        SW_SUBSYSTEM_SLOT( PhysicsPoseStore, Required );
     };
 } // namespace sw

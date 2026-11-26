@@ -1,7 +1,5 @@
 #include "pch.h"
 
-#include "Core/Network/Transport/LinuxKernel/EpollStreamTransport.h"
-
 #include "Core/Concurrency/OnceInit.h"
 #include "Core/Concurrency/StopToken.h"
 #include "Core/Concurrency/ThreadName.h"
@@ -10,7 +8,11 @@
 #include "Core/Concurrency/thread.h"
 #include "Core/Container/IndexFreeList.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
 #include "Core/Foundation/PlatformOSHeaders.h"
+#include "Core/Foundation/Types.h"
+#include "Core/Memory/Memory.h"
+#include "Core/Network/Transport/IStreamTransport.h"
 #include "Core/Network/Transport/NativeSocketAddress.h"
 #include "Core/Network/Transport/StreamSendQueue.h"
 #include "Core/Time/MonotonicClock.h"
@@ -28,6 +30,37 @@
 #include <sys/uio.h>
 #include <thread>
 #include <unistd.h>
+
+namespace sw
+{
+    /**
+     * @brief 리눅스 epoll 스트림 전송 — I/O 스레드마다 epoll 하나(에지 트리거)와 eventfd 하나, 연결은 돌림차례로 한 루프가 소유합니다.
+     * @details `StreamTransportFactory::createPlatformTransport` 는 이 파일 끝에 있다(플랫폼 폴더라 이 플랫폼에서만 지어진다). OS 타입은 .cpp 의 `State` 에만 있다.
+     */
+    class EpollStreamTransport final : public IStreamTransport
+    {
+    public:
+        EpollStreamTransport();
+        ~EpollStreamTransport() override;
+
+        [[nodiscard]] bool     initialize( IStreamHandler* pHandler, const StreamTransportConfig& settings ) override;
+        void                   shutdown() override;
+        [[nodiscard]] bool     listen( const NetAddress& bindAddress ) override;
+        uint16                 getListenPort() const override;
+        StreamConnectionHandle connect( const NetAddress& remote ) override;
+        StreamSendResult       send( StreamConnectionHandle handle, const uint8* pData, int32 size ) override;
+        void                   close( StreamConnectionHandle handle, StreamCloseMode mode ) override;
+        void                   setReceivePaused( StreamConnectionHandle handle, bool bPaused ) override;
+        int32                  pollIO( int32 timeoutMilli ) override;
+        NetAddress             getRemoteAddress( StreamConnectionHandle handle ) const override;
+        StreamTransportStats   getStats() const override;
+
+        struct State;
+
+    private:
+        unique_ptr<State> _state;
+    };
+} // namespace sw
 
 namespace sw
 {
@@ -1048,5 +1081,13 @@ namespace sw
         stats._sendCallCount    = state._sendCallCount.load();
         stats._openCount        = state._openCount.load();
         return stats;
+    }
+} // namespace sw
+
+namespace sw
+{
+    unique_ptr<IStreamTransport> StreamTransportFactory::createPlatformTransport()
+    {
+        return make_unique<EpollStreamTransport>();
     }
 } // namespace sw

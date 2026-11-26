@@ -9,7 +9,7 @@ Scripts/generate/target_layers.py
 위반하면(헤더를 거쳐 닿는 전이 include 도) 컴파일이 멈춘다 — `module_layers.py` · `editor_layers.py` 와 같은 틀이고, 그쪽이 폴더 층을 보면 이쪽은 타깃 경계를 본다.
 
 `[gatefolder]` 는 경로 접두어 대신 폴더 이름으로 막는다 — 서버 구성이 짓지 않는 `Client/`, 클라이언트 구성이 짓지 않는 `Server/` 가 모듈 · 게임마다 있어서다.
-`serverbuild` 는 서버가 짓지 않는 엔진 폴더(`cmake/Modules/Build/BuildLayout.cmake` 의 `SW_EXCLUDED_ENGINE_FOLDERS`)를 모두 막아야 한다 — 대조해 빠지면 멈춘다.
+`serverbuild` 는 서버가 짓지 않는 엔진 폴더(`project_constants.py` 의 `SERVER_EXCLUDED_ENGINE_FOLDERS`)를 모두 막아야 한다 — 대조해 빠지면 멈춘다.
 
 `[devopen]` 은 게이트가 막는 접두어를 그 타깃의 개발 전용 `Dev/` 소스에만 연다 — 진짜 헤더를 잇는 파일을 `<빌드>/gates/devopen/<게이트>/` 에 놓고 CMake(`sw_open_dev_headers`)가 그 소스의
 include 자리 맨 앞에 둔다.
@@ -26,10 +26,12 @@ import re
 import shutil
 import tomllib
 from pathlib import Path
+from typing import Sequence
 
 from common.file_collect import list_files_under
 from common.host_platform import is_windows_host
 from common.paths import get_project_root
+from common.project_constants import SERVER_EXCLUDED_ENGINE_FOLDERS
 from generate.generator_output import Generator, GeneratorError, write_generated_file
 
 TAG = "TargetLayers"
@@ -43,21 +45,9 @@ SERVER_GUARD_NAME = "serverbuild"
 CLIENT_GUARD_NAME = "clientbuild"
 DEV_OPEN_FOLDER_NAME = "devopen"   # `[devopen]` 의 잇는 파일이 사는 껍데기 하위 폴더
 HEADER_TOKEN = "@HEADER@"   # 껍데기 내용 안에서 헤더 경로가 들어갈 자리
-EXCLUDED_FOLDER_LINE = re.compile(r'list\(APPEND SW_EXCLUDED_ENGINE_FOLDERS ([^)]*)\)')
 
 
-def read_server_excluded_folders(project_root: Path) -> list[str]:
-    """전용 서버가 짓지 않는 엔진 폴더(`Source/Engine/` 기준) — 정본은 `cmake/Modules/Build/BuildLayout.cmake` 의 `SW_EXCLUDED_ENGINE_FOLDERS` 한 곳이다."""
-    text = (project_root / "cmake/Modules/Build/BuildLayout.cmake").read_text(encoding="utf-8")
-    list_folder: list[str] = []
-    for match in EXCLUDED_FOLDER_LINE.finditer(text):
-        list_folder.extend(name.strip('"') for name in match.group(1).split())
-    if not list_folder:
-        raise GeneratorError("cmake/Modules/Build/BuildLayout.cmake: SW_EXCLUDED_ENGINE_FOLDERS 를 읽지 못했다")
-    return list_folder
-
-
-def check_server_guard_covers_excluded_folders(list_prefix: list[str], list_excluded_folder: list[str]) -> None:
+def check_server_guard_covers_excluded_folders(list_prefix: list[str], list_excluded_folder: Sequence[str]) -> None:
     """서버 게이트가 서버가 짓지 않는 엔진 폴더를 모두 막는지 본다 — 빠지면 서버 구성이 짓지 않는 헤더를 읽어 링크에서야 드러난다."""
     list_missing = [f"Engine/{folder}" for folder in list_excluded_folder if f"Engine/{folder}" not in list_prefix]
     if list_missing:
@@ -251,7 +241,7 @@ def generate_target_layers(output_path: Path) -> None:
     except (OSError, tomllib.TOMLDecodeError, KeyError) as exception:
         raise GeneratorError(f"{RULE_FILE.name}: 읽지 못했다 ({exception!r}) — [gate] · [gatefolder] · [devopen] · [allow] 표와 [gate] {SERVER_GUARD_NAME} · {CLIENT_GUARD_NAME} 가 있어야 한다") from exception
     project_root = get_project_root()
-    check_server_guard_covers_excluded_folders(list_server_prefix, read_server_excluded_folders(project_root))
+    check_server_guard_covers_excluded_folders(list_server_prefix, SERVER_EXCLUDED_ENGINE_FOLDERS)
     source_dir = project_root / "Source"
     map_gate = collect_guards(source_dir, map_rule, map_allow, map_folder)
     stub_dir = output_path.parents[3] / STUB_FOLDER_NAME   # <빌드>/generated/sw/config/TargetLayers.cmake → <빌드>/gates

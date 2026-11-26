@@ -11,7 +11,8 @@
 
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Config/ConfigManager.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 
 namespace sw
 {
@@ -22,7 +23,7 @@ namespace sw
             /** @brief 남은 쓰기를 시나리오 끝(`<Pass/>`)과 에디터 정지 대기가 기다린다 — 쓰기가 끝나기 전에 파일을 읽는 단계가 오지 않게. */
             static AutomationReadiness readPendingWrites()
             {
-                const MemoryExportSubsystem* pExport = engine::areEngineServicesBound() ? engine::findSubsystem<MemoryExportSubsystem>() : nullptr;
+                const MemoryExportSubsystem* pExport = engine::areEngineSubsystemsBound() ? engine::findSubsystem<MemoryExportSubsystem>() : nullptr;
                 if ( pExport == nullptr )
                     return AutomationReadiness::notApplicable();
                 const uint32 pendingCount = pExport->getPendingWriteCount();
@@ -95,7 +96,7 @@ namespace sw
         AbsolutePath              root;
         if ( pCommandLine == nullptr || pCommandLine->getArgument( CommandLineArgument::MEMORY_EXPORT, root ) == false )
             return;
-        const expected<MemorySnapshotPolicy> policy = MemorySnapshotPolicy::load();
+        const expected<MemorySnapshotPolicy> policy = ConfigManager::readConfig( MemorySnapshotPolicy::kConfigFile );
         if ( policy.has_value() == false )
         {
             SW_LOG_ERROR_ID( "MemoryExport.NoPolicy", "-memory-export: %# (%#)", policy.error().message(), policy.error().detail() );

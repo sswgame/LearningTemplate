@@ -38,7 +38,7 @@ namespace sw::editor
          * @brief InputMap XML 을 씁니다.
          * @details dirty 비트는 기반 클래스가 보관한다. 그래서 Ctrl+S(`saveFocusedOrScene`)와 종료 확인이 이 패널의 편집을 본다.
          */
-        [[nodiscard]] bool saveDocument() override;
+        [[nodiscard]] bool saveDocument( AssetWriter& writer ) override;
 
         /** @brief 감시 값용입니다. 선택한 액션의 바인딩 수를 반환합니다. 선택한 액션이 없으면 false 입니다. */
         [[nodiscard]] bool readSelectedBindingCount( uint32& outCount ) const { return _document.readSelectedBindingCount( outCount ); }

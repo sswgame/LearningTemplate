@@ -34,8 +34,7 @@ namespace sw::editor
                 string resourceID;
                 if ( EditorWidgets::findAssetPayload( assetID, resourceID ) == false )
                     return {};
-                const optional<AbsolutePath> diskPath = EditorPaths::getAssetPaths().findLooseFile( resourceID );
-                return diskPath.has_value() ? *diskPath : AbsolutePath{};
+                return ContentBrowserViewModel::findAssetFile( resourceID );
             }
 
             /** @brief 대상 에셋의 절대 경로입니다. 누른 항목 → 선택 스냅숏 → 창의 지금 선택 순서로 고릅니다. 없으면 빈 문자열입니다. */
@@ -115,8 +114,7 @@ namespace sw::editor
             {
                 if ( listArgument.size() != 1 )
                     return false;
-                const optional<AbsolutePath> folderPath = EditorPaths::getAssetPaths().findLooseFile( FileUtil::normalizePath( listArgument[0] ).str() );
-                const AbsolutePath           folderAbs  = folderPath.has_value() ? *folderPath : AbsolutePath{};
+                const AbsolutePath folderAbs = ContentBrowserViewModel::findAssetFile( FileUtil::normalizePath( listArgument[0] ).str() );
                 if ( FileUtil::isDirectory( folderAbs ) == false )
                     return false;
                 ContentBrowserViewModel::postRequest( ContentBrowserRequestKind::OpenFolder, folderAbs );

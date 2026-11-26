@@ -40,7 +40,7 @@ namespace sw
         string _teamID{};        ///< 팀 id(JWT `iss`)
         string _topic{};         ///< 번들 id(`apns-topic`)
         string _baseURL{ kDefaultBaseURL };
-        int64  _requestTimeoutMs{ 10000 };
+        int64  _requestTimeoutMs{ HTTPConstant::kDefaultTimeoutMs };
         int64  _tokenRefreshMinMs{ 0 }; ///< 필수 — 403 뒤 다시 서명하기까지의 최소 간격(제공자 파일 `tokenRefreshMinSeconds`). 0 이면 생성자가 멈춘다
 
         /** @brief 인증 키를 지웁니다(`Memory::wipe`) — 만든 함수가 중간에 돌아가도 · 제공자가 옮겨 가진 사본이 풀려도 비밀이 남지 않는다. */
@@ -78,9 +78,9 @@ namespace sw
         /** @brief 기기 토큰 규칙(16진 글자 1..200 자)입니다. */
         static bool isValidDeviceToken( string_view token );
         /** @brief 응답을 배달 결과로 바꿉니다(`Retry-After` 는 따로 읽는다). */
-        static PushDeliveryStatus mapStatus( int32 statusCode, bool bTransportFailed );
+        static PushDeliveryStatus mapStatus( const HTTPClientResponse& response );
         /** @brief 다시 보내기 전에 기다릴 시간입니다. `retry-after`(초)를 따르고, 없는데 5xx 면 애플 문서가 정한 15 분입니다. 그 밖에는 0(발송기의 백오프)입니다. */
-        static int64 computeRetryAfterMs( int32 statusCode, string_view retryAfterHeader );
+        static int64 computeRetryAfterMs( const HTTPClientResponse& response, UnixMilliseconds nowMs );
 
     private:
         /**
@@ -88,7 +88,7 @@ namespace sw
          *        403 으로 버린 뒤 최소 간격이 지나지 않았으면 서명하지 않고 남은 밀리초(양수)를 돌려준다.
          */
         [[nodiscard]] int64 ensureProviderToken( UnixMilliseconds nowMs );
-        void                finishSend( uint64 deliveryID, const HTTPClientResponse& response );
+        void                finishSend( uint64 deliveryID, const HTTPClientResponse& response, UnixMilliseconds nowMs );
         void                complete( uint64 deliveryID, PushDeliveryStatus status, int64 retryAfterMs = 0 );
 
     private:

@@ -55,31 +55,26 @@ namespace sw
     {
     }
 
-    bool WesternOutlaw::initialize( const WesternCatalog* pCatalog, const LootCatalog* pLoot, Wallet& wallet, ReputationState& reputation, WorldClock& clock, GameFlags& flags,
+    bool WesternOutlaw::initialize( const WesternCatalog& catalog, const LootCatalog* pLoot, Wallet& wallet, ReputationState& reputation, WorldClock& clock, GameFlags& flags,
                                     WeatherSystem& weather, Inventory* pInventory, const hashed_string& regionID, float32 regionBaseTemperature,
                                     const AIPerceptionSettings& sight )
     {
-        if ( pCatalog == nullptr )
-        {
-            SW_LOG_ERROR_ID( "WesternOutlaw.MissingCatalog", "[Western] the outlaw needs a western catalog" );
-            return false;
-        }
-        if ( pCatalog->findRegion( regionID ) == nullptr )
+        if ( catalog.findRegion( regionID ) == nullptr )
         {
             SW_LOG_ERROR_ID( "WesternOutlaw.RegionNotInCatalog", "[Western] region '%#' is not in the western catalog", regionID.c_str() );
             return false;
         }
-        const WesternAnimalDef* const pLootAnimal = pCatalog->findAnimalWithLoot();
+        const WesternAnimalDef* const pLootAnimal = catalog.findAnimalWithLoot();
         if ( pLootAnimal != nullptr && ( pLoot == nullptr || pInventory == nullptr ) )
         {
             SW_LOG_ERROR_ID( "WesternOutlaw.LootWithoutCatalogOrBag", "[Western] animal '%#' names loot table '%#' but the outlaw has no loot catalog or bag - the outlaw does not start", pLootAnimal->_id.c_str(),
                              pLootAnimal->_lootTable.c_str() );
             return false;
         }
-        if ( _survival.initialize( pCatalog ) == false )
+        if ( _survival.initialize( catalog ) == false )
             return false; // 까닭은 생존이 남겼다
-        _honor.initialize( *pCatalog, reputation );
-        _law.initialize( *pCatalog );
+        _honor.initialize( catalog, reputation );
+        _law.initialize( catalog );
         _sight                 = WesternPerceptionSight{ sight, nullptr };
         _pWallet               = &wallet;
         _pReputation           = &reputation;
@@ -88,7 +83,7 @@ namespace sw
         _pWeather              = &weather;
         _pInventory            = pInventory;
         _regionID              = regionID;
-        _pCatalog              = pCatalog;
+        _pCatalog              = &catalog;
         _pLoot                 = pLoot;
         _regionBaseTemperature = regionBaseTemperature;
         _bClockSeen            = SW_FALSE;
@@ -114,7 +109,7 @@ namespace sw
         return _pWallet != nullptr && _pCatalog != nullptr ? _pWallet->getBalance( _pCatalog->getCurrency() ) : 0;
     }
 
-    void WesternOutlaw::update( float32 deltaTime )
+    void WesternOutlaw::update( GameSeconds frameTime )
     {
         using Internal = WesternOutlawInternal;
         if ( _pCatalog == nullptr )
@@ -126,12 +121,12 @@ namespace sw
         _lastClockHours          = clockHours;
         _bClockSeen              = SW_TRUE;
 
-        _survival.update( deltaTime, gameHours, computeAirTemperature() );
+        _survival.update( frameTime, gameHours, computeAirTemperature() );
         for ( WesternCarcass& carcass : _listCarcass )
         {
             WesternCarcass::ageCarcass( carcass, gameHours );
         }
-        _law.update( deltaTime );
+        _law.update( frameTime );
         for ( int32 dayIndex = 0; dayIndex < dayCount; ++dayIndex )
         {
             _law.advanceDay();
@@ -316,7 +311,7 @@ namespace sw
             _law = WesternLawState{};
             _law.initialize( *_pCatalog );
             _survival = WesternSurvival{};
-            if ( io.check( _survival.initialize( _pCatalog ) ) == false )
+            if ( io.check( _survival.initialize( *_pCatalog ) ) == false )
                 return;
         }
         io.value( _law ); // 법 · 생존은 제 본문(리플렉션 칸 + 손 값)으로 싣는다

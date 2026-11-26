@@ -4,7 +4,7 @@
 
 #include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 
 #include "Engine/Graphics/Canvas/CanvasPainter.h"
 #include "Engine/Localization/LocText.h"

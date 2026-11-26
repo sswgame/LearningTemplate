@@ -7,6 +7,7 @@
 #pragma once
 #include "Core/Foundation/Types.h"
 #include "Core/Time/Countdown.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/FormatDef.h"
@@ -66,7 +67,7 @@ namespace sw
 
     protected:
         [[nodiscard]] bool startGame() override;
-        void               updateGame( float32 deltaTime ) override;
+        void               updateGame( GameSeconds frameTime ) override;
 
     private:
         /** @brief 지역 표의 전투 종이 모두 몬스터 표에 있는지 봅니다. 없는 종마다 오류를 남기고 false 입니다. */

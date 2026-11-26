@@ -12,8 +12,8 @@
 #include "GameFramework/Kits/Feature/Online/Economy/Server/EconomyStoreLogic.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/ReceiptProviderManager.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/ReceiptValidator.h"
-#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Identity/AccountPresence.h"
-#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Provider/OnlineProviderFile.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/AccountPresence.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/OnlineProviderFile.h"
 #include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerConfig.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerKit.h"
@@ -85,7 +85,7 @@ namespace sw
                 static_cast<EconomyPolicy&>( settings ) = kitConfig._policy;
                 settings._bAcceptSandboxReceipts        = kitConfig._bAcceptSandboxReceipts ? SW_TRUE : SW_FALSE;
                 settings._refundRecovery                = kitConfig._refundRecovery;
-                if ( _service.initialize( context._pStore, settings ) == false )
+                if ( _service.initialize( *context._pStore, settings ) == false )
                 {
                     _receiptRegistry.shutdown();
                     shutdown();

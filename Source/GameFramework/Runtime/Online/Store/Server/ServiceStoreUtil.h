@@ -7,6 +7,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Time/MonotonicClock.h"
 
+#include "GameFramework/Runtime/Online/Store/Server/ServiceCommitRunner.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceRecordReader.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
 
@@ -60,7 +61,7 @@ namespace sw
                 {
                     transaction.erase( table, record._key, record._version );
                 }
-                const ServiceStoreResult committed = connection.commit( transaction );
+                const ServiceStoreResult committed = ServiceCommitRunner::commitOnce( connection, transaction );
                 if ( committed != ServiceStoreResult::Ok )
                     return committed;
             }

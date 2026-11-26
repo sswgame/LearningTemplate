@@ -3,8 +3,8 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/thread.h"
 #include "Core/Container/vector.h"
-#include "Core/Testing/TestFramework.h"
-#include "Core/Testing/ThreadTestAccess.h"
+#include "Core/TestFramework/TestFramework.h"
+#include "Core/TestFramework/ThreadTestAccess.h"
 
 #include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Asset/Cache/SharedAssetTable.h"

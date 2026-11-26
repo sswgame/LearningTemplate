@@ -7,7 +7,7 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Delegate/Subscription.h"
 #include "Core/Log/Logger.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
 #include "Engine/Graphics/RHI/RHIDescriptors.h"

@@ -9,7 +9,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Foundation/ComponentHandle.h"
-#include "Engine/Object/GameObject/Service/SceneEngineServices.h"
+#include "Engine/Object/GameObject/Subsystem/SceneEngineSubsystems.h"
 #include "Engine/Scene/SceneDataLayerTypes.h"
 #include "Engine/Scene/SceneDocument.h"
 #include "Engine/Scene/SceneSubLevelTypes.h"
@@ -73,8 +73,8 @@ namespace sw
          * @brief 이름과 엔진 서비스 묶음으로 씬을 만듭니다. 씬 매니저가 자기 묶음을 넘깁니다.
          * @details 묶음은 씬이 들고(기본 머티리얼 · 프리팹 캐시) 자기 오브젝트 매니저에 그대로 넘깁니다(물리 · 오디오 · 에셋). 빈 칸의 일은 건너뜁니다.
          */
-        Scene( string_view name, const SceneEngineServices& services );
-        /** @brief 이름으로 씬을 만듭니다. 서비스 묶음은 바인딩된 표에서 한 번 읽습니다(`SceneEngineServices::makeFromBoundEngine`) — 테스트용입니다. 엔진 · 게임 프레임워크 코드(쿠커 · 초상화 · 넷 시뮬레이션 하니스)는 묶음을 받는 생성자를 씁니다. */
+        Scene( string_view name, const SceneEngineSubsystems& services );
+        /** @brief 이름으로 씬을 만듭니다. 서비스 묶음은 바인딩된 표에서 한 번 읽습니다(`SceneEngineSubsystems::makeFromBoundEngine`) — 테스트용입니다. 엔진 · 게임 프레임워크 코드(쿠커 · 초상화 · 넷 시뮬레이션 하니스)는 묶음을 받는 생성자를 씁니다. */
         explicit Scene( string_view name );
         /** @brief 씬을 해제합니다. 붙들고 있던 GPU · 머티리얼 자원과 오브젝트 · 스트리밍 셀을 여기서 놓습니다(정리하는 길은 소멸 하나). */
         virtual ~Scene();
@@ -236,7 +236,7 @@ namespace sw
          */
         const double3& getWorldOrigin() const;
         /**
-         * @brief 월드 원점을 @p newOrigin 으로 옮깁니다(XZ 만 — Y 는 그대로 둔다). 모든 루트 오브젝트를 (옛 원점 − 새 원점)만큼 순간이동(속도는 잇는다)하고 씬 서비스에 알린다(`ISceneService::onWorldOriginShifted`).
+         * @brief 월드 원점을 @p newOrigin 으로 옮깁니다(XZ 만 — Y 는 그대로 둔다). 모든 루트 오브젝트를 (옛 원점 − 새 원점)만큼 순간이동(속도는 잇는다)하고 씬 서브시스템에 알린다(`ISceneSubsystem::onWorldOriginShifted`).
          * @details 게임 스레드 · 틱 밖에서 부른다(`Scene::update` 의 앞 — 자동 옮기기, 개발 명령 `world.origin`). 떠 둔 상태 · 세이브는 엔티티마다 적힌 원점을 들어 지을 때 맞춘다(`finishNodeBuild`).
          * @return 오브젝트 매니저가 없으면 false 입니다.
          */
@@ -259,7 +259,7 @@ namespace sw
         /** @brief 씬이 소유한 GameObjectManager 를 반환합니다. */
         GameObjectManager* getObjectManager() const { return _objectManager.get(); }
         /** @brief 만들 때 받은 엔진 서비스 묶음입니다. */
-        const SceneEngineServices& getEngineServices() const { return _services; }
+        const SceneEngineSubsystems& getSceneEngineSubsystems() const { return _services; }
         /** @brief 씬 기본 머티리얼입니다(MaterialCache 에서 빌린 포인터, 소유하지 않음). */
         Material* getMaterial() const { return _pMaterial; }
         /** @brief 활성 게임 카메라를 반환합니다. */
@@ -377,7 +377,7 @@ namespace sw
         string                        _sourcePath;
         string                        _defaultMaterialPath;
         SceneSettings                 _sceneSettings; ///< 씬 파일의 월드 설정(`instantiate` 가 읽고 `serializeToDocument` 가 쓴다)
-        SceneEngineServices           _services;      ///< 만들 때 받은 엔진 서비스(빌림). 오브젝트 매니저도 같은 묶음으로 만든다
+        SceneEngineSubsystems         _services;      ///< 만들 때 받은 엔진 서비스(빌림). 오브젝트 매니저도 같은 묶음으로 만든다
         unique_ptr<GameObjectManager> _objectManager;
         Material*                     _pMaterial;
         unordered_map<uint64, string> _mapPrefabSource;

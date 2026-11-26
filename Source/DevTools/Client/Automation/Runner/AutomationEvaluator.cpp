@@ -25,10 +25,12 @@
 #include "Engine/Automation/Scenario/AutomationScenario.h"
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
+#include "Engine/Config/ConfigManager.h"
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetPaths.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Content/AssetWriteAccess.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Input/IInputDevice.h"
 #include "Engine/Input/InputManager.h"
@@ -672,7 +674,7 @@ namespace sw
                 text.appendFormat( "differs from its golden: %#", line );
                 addFailure( step, text.view(), AutomationFailureKind::GoldenMismatch );
                 // 그림이 어긋난 자리에서 GPU 정점을 CPU 정점과 견준다(결과는 로그) — 깨진 정점은 그 메시가 사라질 때까지만 남는다.
-                if ( RenderDebugRegistry* const pRenderDebug = engine::areEngineServicesBound() ? engine::findSubsystem<RenderDebugRegistry>() : nullptr )
+                if ( RenderDebugRegistry* const pRenderDebug = engine::areEngineSubsystemsBound() ? engine::findSubsystem<RenderDebugRegistry>() : nullptr )
                     pRenderDebug->requestMeshVertexCheck();
                 return;
             }
@@ -709,10 +711,15 @@ namespace sw
         meta._height                  = image._height;
         vector<uint8> listEncoded;
         AutomationImage::encodePpm( image, listEncoded );
-        const optional<AbsolutePath> imagePath = engine::getSubsystem<AssetPaths>().toDiskPath( goldenID );
-        const optional<AbsolutePath> metaPath  = engine::getSubsystem<AssetPaths>().toDiskPath( AutomationGoldenUtil::makeMetaID( goldenID ) );
-        const bool                   bWritten  = imagePath.has_value() && metaPath.has_value() && FileUtil::ensureParentDirectoryExists( *imagePath ) &&
-                              FileUtil::writeFile( *imagePath, listEncoded.data(), listEncoded.size() ) && FileUtil::writeTextFile( *metaPath, AutomationGoldenUtil::makeMetaText( meta ) );
+        const optional<DiskPath> imagePath = engine::getSubsystem<AssetPaths>().toDiskPath( goldenID );
+        const optional<DiskPath> metaPath  = engine::getSubsystem<AssetPaths>().toDiskPath( AutomationGoldenUtil::makeMetaID( goldenID ) );
+        bool                     bWritten  = imagePath.has_value() && metaPath.has_value();
+        if ( bWritten )
+        {
+            const AbsolutePath writableImage = AssetWriteAccess::toWritablePath( *imagePath );
+            bWritten                         = FileUtil::writeFile( writableImage, listEncoded.data(), listEncoded.size() ) &&
+                       FileUtil::writeTextFile( AssetWriteAccess::toWritablePath( *metaPath ), AutomationGoldenUtil::makeMetaText( meta ) );
+        }
         if ( bWritten == false )
         {
             StringBuilder<constant::buffer::kMax256> text;
@@ -727,7 +734,7 @@ namespace sw
     optional<string> AutomationEvaluator::applyLogCheck( AutomationResult result )
     {
         AutomationLogCheckResult evaluation = _logCapture.evaluateLines( *_pLogPolicy );
-        if ( engine::areEngineServicesBound() )
+        if ( engine::areEngineSubsystemsBound() )
         {
             for ( const string& key : engine::getSubsystem<LocalizationManager>().getMissingKeys() )
             {
@@ -786,7 +793,7 @@ namespace sw
         _listNearLimitGolden.clear();
         _listGoldenSample.clear();
         _recordingCommit.clear();
-        _goldenPolicy = AutomationGoldenUtil::loadPolicy(); // 이미지 단언이 없는 시나리오는 오류를 쓰지 않는다 — 단언이 그 이유로 진다
+        _goldenPolicy = ConfigManager::readConfig( AutomationGoldenPolicy::kConfigFile ); // 이미지 단언이 없는 시나리오는 오류를 쓰지 않는다 — 단언이 그 이유로 진다
         StringBuilder<constant::buffer::kMax1024> goldenFolder;
         goldenFolder.appendFormat( "%#/%#", FileUtil::getDirectoryPart( scenario.getSourcePath() ), kAutomationGoldenFolder );
         _goldenFolderID  = string( goldenFolder.view() );

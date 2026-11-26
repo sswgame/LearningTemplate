@@ -6,9 +6,9 @@
 #include "Core/Container/string.h"
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Math/Color.h"
 #include "Core/String/fixed_string.h"
 
-#include "Editor/Common/EditorColor.h"
 #include "Editor/Common/EditorExports.h"
 #include "Editor/Common/Workspace/Play/EditorSessionPolicy.h"
 
@@ -68,7 +68,7 @@ namespace sw
 namespace sw::editor
 {
     // ------------------------------------------------------------------------------
-    // 1) 공유 위젯 클래스(색 타입 Color 와 style 은 EditorColor.h). 에셋 끌어 놓기는 `{Asset, id}` 한 형식(`EditorInputGUI`)이다
+    // 1) 공유 위젯 클래스(색 타입은 Core 의 Color). 에셋 끌어 놓기는 `{Asset, id}` 한 형식(`EditorInputGUI`)이다
     // ------------------------------------------------------------------------------
     // 2) 공유 위젯 클래스: Vec3, 컴포넌트 카드, 헤더, 칩, 프로퍼티 행
     // ------------------------------------------------------------------------------

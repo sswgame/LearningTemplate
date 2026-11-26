@@ -11,8 +11,8 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Subsystem/Subsystem.h"
+#include "Core/Subsystem/SubsystemSlot.h"
 
 #include "Engine/Presentation/FrameDrawMode.h"
 
@@ -67,6 +67,6 @@ namespace sw
         atomic<uint64> _skippedSerial{ 0 };   ///< 그리지 않은 프레임 수(누적 — 번호로 쓴다)
         atomic<uint64> _completedSerial{ 0 }; ///< 다 따라잡은 마지막 건너뛴 번호
 
-        SW_SERVICE_SLOT( SimulationOnlyFrameQueue, Optional );
+        SW_SUBSYSTEM_SLOT( SimulationOnlyFrameQueue, Optional );
     };
 } // namespace sw

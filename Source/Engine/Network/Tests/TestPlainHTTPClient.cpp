@@ -2,7 +2,7 @@
 // 닫힘까지 본문, 머리말 · 본문 · 원시 바이트 상한, 끝나기 전 닫힘, 그리고 URL 나누기(요청 줄에 CR · LF · 공백이 들어가지 않는다). 소켓 없이 바이트 열로 본다(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Network/Dev/PlainHTTPClient.h"
 

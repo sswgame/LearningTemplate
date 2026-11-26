@@ -2,7 +2,7 @@
 #include "pch.h"
 
 #include "Core/File/AsyncFileIO.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Asset/StreamingSourcePriority.h"
 #include "Engine/Graphics/Texture/TextureCache.h"

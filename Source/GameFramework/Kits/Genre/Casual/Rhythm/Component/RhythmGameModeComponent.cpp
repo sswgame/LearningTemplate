@@ -129,8 +129,9 @@ namespace sw
         }
     }
 
-    void RhythmGameModeComponent::updateMatch( float32 deltaTime )
+    void RhythmGameModeComponent::updateMatch( GameSeconds frameTime )
     {
+        const float32 deltaTime = frameTime.count();
         if ( _clock == RhythmClock::Simulation )
             _musicTime += deltaTime;
         _session.update( _musicTime );

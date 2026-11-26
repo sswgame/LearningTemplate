@@ -6,7 +6,7 @@
 #include "pch.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Input/Devices/MouseDevice.h"
 #include "Engine/Input/InputManager.h"
 
@@ -18,7 +18,7 @@ namespace sw
         [[nodiscard]] bool readOSDeviceInputBlocked( const GameObjectManager* pManager, float64& outValue )
         {
             (void)pManager;
-            if ( engine::areEngineServicesBound() == false )
+            if ( engine::areEngineSubsystemsBound() == false )
                 return false;
             outValue = engine::getSubsystem<InputManager>().isOSDeviceInputBlocked() ? 1.0 : 0.0;
             return true;
@@ -28,7 +28,7 @@ namespace sw
         [[nodiscard]] bool readVirtualCursorEnabled( const GameObjectManager* pManager, float64& outValue )
         {
             (void)pManager;
-            if ( engine::areEngineServicesBound() == false )
+            if ( engine::areEngineSubsystemsBound() == false )
                 return false;
             outValue = engine::getSubsystem<InputManager>().getVirtualCursor().isEnabled() ? 1.0 : 0.0;
             return true;
@@ -37,7 +37,7 @@ namespace sw
         /** @brief 감시 값 `Input.MouseX` · `Input.MouseY` 입니다. 마우스(가상 커서가 옮긴 것 포함)의 창 클라이언트 픽셀 위치입니다. */
         [[nodiscard]] bool readMousePosition( bool bX, float64& outValue )
         {
-            if ( engine::areEngineServicesBound() == false )
+            if ( engine::areEngineSubsystemsBound() == false )
                 return false;
             const MouseDevice* pMouse = engine::getSubsystem<InputManager>().getMouse();
             if ( pMouse == nullptr )
@@ -60,7 +60,7 @@ namespace sw
         /** @brief 감시 값 `Input.RawMouseEvents` 입니다. OS 에서 받은 원시 마우스 이동 보고 수입니다(Win32 WM_INPUT — 커서 잠금 중에만 등록한다). 늘기만 한다. */
         [[nodiscard]] bool readRawMouseEvents( const GameObjectManager* /*pManager*/, float64& outValue )
         {
-            if ( engine::areEngineServicesBound() == false )
+            if ( engine::areEngineSubsystemsBound() == false )
                 return false;
             outValue = static_cast<float64>( engine::getSubsystem<InputManager>().getRawMouseEventCount().get() );
             return true;
@@ -69,7 +69,7 @@ namespace sw
         /** @brief 감시 값 `Input.MouseLockActive` 입니다. 엔진이 지금 OS 에 마우스 잠금을 걸려는 상태(`InputManager::isMouseLockActive`)면 1 입니다 — 시나리오가 잠금 · 풀림을 고정 대기 없이 기다린다. */
         [[nodiscard]] bool readMouseLockActive( const GameObjectManager* /*pManager*/, float64& outValue )
         {
-            if ( engine::areEngineServicesBound() == false )
+            if ( engine::areEngineSubsystemsBound() == false )
                 return false;
             outValue = engine::getSubsystem<InputManager>().isMouseLockActive() ? 1.0 : 0.0;
             return true;
@@ -78,7 +78,7 @@ namespace sw
         /** @brief 감시 값 `Input.WindowFocused` 입니다. 입력 관리자가 받은 창 포커스 상태(포커스 메시지로 갱신)면 1 입니다 — 보낸 포커스 메시지가 처리됐는지 기다린다. */
         [[nodiscard]] bool readWindowFocused( const GameObjectManager* /*pManager*/, float64& outValue )
         {
-            if ( engine::areEngineServicesBound() == false )
+            if ( engine::areEngineSubsystemsBound() == false )
                 return false;
             outValue = engine::getSubsystem<InputManager>().isWindowFocused() ? 1.0 : 0.0;
             return true;

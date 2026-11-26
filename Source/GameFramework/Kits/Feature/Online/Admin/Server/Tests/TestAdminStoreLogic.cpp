@@ -2,7 +2,7 @@
 // 회수는 잔액 아래로 내려가지 않으며(InsufficientFunds), 상태를 바꾸는 명령은 메모와 멱등 키가 필수다. 온라인 키트라 `UnitTests.OnlineKits` 가 돌린다(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "GameFramework/Kits/Feature/Online/Admin/Server/AdminStoreLogic.h"
 #include "GameFramework/Runtime/Online/Audit/Server/ServiceAuditLog.h"
@@ -10,6 +10,7 @@
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceReadSetConnection.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordTable.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
 using namespace sw;
@@ -85,7 +86,7 @@ namespace
     void setRoleToViewer( MemoryServiceDatabase& database, AccountID adminID )
     {
         ServiceTransaction transaction;
-        transaction.put( AdminStoreLogic::getRoleTable(), ServiceKeyUtil::makeHex64( adminID ), vector<uint8>{ static_cast<uint8>( AdminRole::Viewer ) } );
+        transaction.put( AdminStoreLogic::getRoleTable(), ServiceKeyUtil::makeHex64( adminID ), AdminRoleRecord{ AdminRole::Viewer, {} } );
         SW_EXPECT_TRUE( database.commit( transaction ) == ServiceStoreResult::Ok );
     }
 
@@ -191,8 +192,8 @@ SW_TEST_CASE( AdminStoreLogicTest, AccountDeletionErasesTheRole )
 {
     MemoryServiceDatabase database;
     ServiceTransaction    seed;
-    seed.put( AdminStoreLogic::getRoleTable(), ServiceKeyUtil::makeHex64( 7 ), vector<uint8>{ 1 } );
-    seed.put( AdminStoreLogic::getRoleTable(), ServiceKeyUtil::makeHex64( 8 ), vector<uint8>{ 1 } );
+    seed.put( AdminStoreLogic::getRoleTable(), ServiceKeyUtil::makeHex64( 7 ), AdminRoleRecord{ AdminRole::Viewer, {} } );
+    seed.put( AdminStoreLogic::getRoleTable(), ServiceKeyUtil::makeHex64( 8 ), AdminRoleRecord{ AdminRole::Viewer, {} } );
     SW_REQUIRE_TRUE( database.commit( seed ) == ServiceStoreResult::Ok );
     SW_REQUIRE_TRUE( AdminStoreLogic::eraseAccount( database, 7, 0 ) == ServiceStoreResult::Ok );
     ServiceRecord record;
@@ -229,15 +230,13 @@ SW_TEST_CASE( AdminStoreLogicTest, DemotionBetweenReadAndCommitRefusesTheCommand
     SW_EXPECT_EQUAL( 1, countDeniedOf( fixture.database, kOperator ) );
 }
 
-/** @brief [AdminStoreLogicTest] 라이브 운영 쓰기의 등급 가드는 쓰는 일 안에서 등급을 읽어 커밋 조건으로 건다 — 읽기와 커밋 사이에 강등되면 커밋이 지고, 다시 하면 Forbidden 이다(감사 "다음 할 일" 5 번) */
+/** @brief [AdminStoreLogicTest] 라이브 운영 쓰기의 등급 가드는 쓰는 일 안에서 등급을 읽어 커밋 조건으로 건다 — 읽기와 커밋 사이에 강등되면 커밋이 충돌하고, 실행기의 다음 시도가 강등된 등급을 읽어 Forbidden 이다(감사 "다음 할 일" 5 번) */
 SW_TEST_CASE( AdminStoreLogicTest, OperatorWriteFailsWhenDemotedBeforeCommit )
 {
     Fixture             fixture;
     ServiceAuditedWrite write;
-    write._pGuard              = AdminStoreLogic::makeRoleGuard( kOperator, AdminRole::Operator );
-    write._table               = hashed_string( "liveops_event" );
-    write._key                 = "spring.sale";
-    write._bytes               = vector<uint8>{ 1 };
+    write._pGuard = AdminStoreLogic::makeRoleGuard( kOperator, AdminRole::Operator );
+    write._change.put( AdminStoreLogic::getRoleTable(), "spring.sale", AdminRoleRecord{ AdminRole::Viewer, {} } ); // 가드 판정만 본다 — 어느 표의 값이든 같다
     write._auditEntry._actor   = ServiceAuditLog::makeOperatorActor( kOperator );
     write._auditEntry._action  = "liveops.event.put";
     write._auditEntry._subject = "liveops/spring.sale";
@@ -246,8 +245,8 @@ SW_TEST_CASE( AdminStoreLogicTest, OperatorWriteFailsWhenDemotedBeforeCommit )
 
     InterleavingConnection   interleaving( fixture.database, kOperator );
     ServiceReadSetConnection readSet( interleaving ); // 저장소 입구(`ServiceStoreJob::execute`)가 거는 것과 같은 포장
-    SW_EXPECT_TRUE( write.commit( readSet ) == ServiceAuditedWriteResult::Unavailable );
+    SW_EXPECT_TRUE( write.commit( readSet ) == ServiceAuditedWriteResult::Forbidden );
     SW_EXPECT_TRUE( write.commit( fixture.database ) == ServiceAuditedWriteResult::Forbidden );
     ServiceRecord record;
-    SW_EXPECT_TRUE( fixture.database.readRecord( hashed_string( "liveops_event" ), "spring.sale", record ) == ServiceStoreResult::NotFound );
+    SW_EXPECT_TRUE( fixture.database.readRecord( AdminStoreLogic::getRoleTable(), "spring.sale", record ) == ServiceStoreResult::NotFound );
 }

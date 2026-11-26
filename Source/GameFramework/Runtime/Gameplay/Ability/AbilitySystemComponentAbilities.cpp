@@ -433,14 +433,14 @@ namespace sw
         _abilityEndedMulticast.broadcast( ability, bWasCancelled );
     }
 
-    void AbilitySystemComponent::updateActiveAbilities( float32 deltaTime )
+    void AbilitySystemComponent::updateActiveAbilities( GameSeconds frameTime )
     {
         const size_t specCount = _abilitySpecs.size();
         for ( size_t specIndex = 0; specIndex < specCount && specIndex < _abilitySpecs.size(); ++specIndex )
         {
             AbilitySpec& spec = *_abilitySpecs[specIndex];
             if ( spec._bPendingRemove == SW_FALSE && spec._pAbility->isActive() )
-                spec._pAbility->updateAbility( deltaTime );
+                spec._pAbility->updateAbility( frameTime );
         }
     }
 

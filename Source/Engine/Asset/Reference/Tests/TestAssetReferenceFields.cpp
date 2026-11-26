@@ -3,7 +3,7 @@
 #include "pch.h"
 
 #include "Core/File/ProcessRoots.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Asset/Reference/AssetReferenceFields.h"
 #include "Engine/Content/AssetRegistry.h"

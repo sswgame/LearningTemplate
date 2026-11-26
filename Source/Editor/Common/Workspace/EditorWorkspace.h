@@ -14,10 +14,10 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
+#include "Editor/Common/Asset/AssetWriter.h"
 #include "Editor/Common/EditorExports.h"
 #include "Editor/Common/EditorSubsystem.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetTypeID.h"
-#include "Editor/Common/Workspace/Asset/EditorDiskBaseline.h"
 #include "Editor/Common/Workspace/EditorPanelOpenRequest.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/Play/EditorSessionPolicy.h"
@@ -114,8 +114,8 @@ namespace sw::editor
         void selectComponent( GameObject* pObj, Component* pComp );
         /** @brief 활성 씬의 원본 파일 내용을 지금 디스크로 적습니다(씬을 연 · 저장한 · 옮긴 직후). 원본이 없으면 아무것도 하지 않습니다. */
         void captureSceneDiskBaseline();
-        /** @brief 활성 씬을 @p path 에 쓰기 직전에 묻습니다 — 연 뒤 밖에서 바뀌었으면 알리고 false 입니다(`EditorDiskBaseline::validateOverwrite`). */
-        [[nodiscard]] bool validateSceneDiskOverwrite( const AbsolutePath& path );
+        /** @brief 활성 씬 원본 파일의 읽은(쓴) 때 내용을 든 쓰기 문입니다 — 씬 저장이 쓰기 직전에 묻는다(`AssetWriter::validateSave`). */
+        AssetWriter& getSceneWriter() { return _sceneWriter; }
         /** @brief 씬 오브젝트가 원래 id 로 되돌아온 뒤(Stop) 선택을 잇습니다 — 사라진 것만 빼고(여러 선택 유지), 고른 컴포넌트는 키로 다시 찾습니다. */
         void refreshSelectionAfterRestore();
 
@@ -260,7 +260,7 @@ namespace sw::editor
         string                                                 _copiedComponentXML;
         string                                                 _copiedComponentTypeName;
         mutex                                                  _pendingSceneMutex;
-        EditorDiskBaseline                                     _sceneDiskBaseline; ///< 활성 씬 원본 파일의 읽은(쓴) 때 내용(`captureSceneDiskBaseline`)
+        AssetWriter                                            _sceneWriter; ///< 활성 씬 원본 파일의 읽은(쓴) 때 내용(`captureSceneDiskBaseline`)
         array<CameraBookmark, 9>                               _arrCameraBookmark;
         unordered_set<uint64>                                  _uniqueLockedObjectID; ///< 뷰포트 선택을 잠근 오브젝트 id. 계층 행 · 피킹 후보마다 묻는다 — 목록이면 오브젝트 수 × 잠근 수다
         int32                                                  _gizmoOperation;

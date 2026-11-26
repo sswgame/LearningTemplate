@@ -4,6 +4,7 @@
 
 #include "Core/Serialization/BitStream.h"
 
+#include "GameFramework/Runtime/Online/Cache/Server/EphemeralRecordTable.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
 namespace sw
@@ -44,60 +45,17 @@ namespace sw
         return ServiceKeyUtil::isTokenText( name, kMaxNameSize, "_-" );
     }
 
-    void ServerRecord::writeStatus( BitWriter& outWriter, const ServerStatus& status )
+    bool ServerRecord::makeValue( const ServerStatus& status, EphemeralValue& outValue )
     {
-        const ServerDescriptor& descriptor = status._descriptor;
-        outWriter.writeVarUint( descriptor._serverID );
-        ServiceKeyUtil::writeString( outWriter, descriptor._kind );
-        ServiceKeyUtil::writeString( outWriter, descriptor._region );
-        ServiceKeyUtil::writeString( outWriter, descriptor._address );
-        outWriter.writeBits( descriptor._port, 16 );
-        outWriter.writeBits( descriptor._portCount, 8 );
-        outWriter.writeVarUint( descriptor._buildVersion );
-        outWriter.writeVarInt( descriptor._capacity );
-        outWriter.writeVarInt( status._heartbeatMs );
-        outWriter.writeVarInt( status._load );
-        outWriter.writeBits( static_cast<uint32>( status._state ), 8 );
+        return EphemeralRecordTable<ServerStatus>{}.makeValue( status, outValue );
     }
 
-    bool ServerRecord::readStatus( BitReader& reader, ServerStatus& outStatus )
+    bool ServerRecord::decode( const EphemeralReply& reply, ServerStatus& outStatus )
     {
-        ServerDescriptor& descriptor = outStatus._descriptor;
-        descriptor._serverID         = reader.readVarUint();
-        const bool bTextOk           = ServiceKeyUtil::readString( reader, kMaxNameSize, descriptor._kind ) &&
-                             ServiceKeyUtil::readString( reader, kMaxNameSize, descriptor._region ) &&
-                             ServiceKeyUtil::readString( reader, kMaxAddressSize, descriptor._address );
-        if ( bTextOk == false )
+        ServerStatus status;
+        if ( EphemeralRecordTable<ServerStatus>{}.decode( reply, status ) == false || status._state == ServerState::Count )
             return false;
-        descriptor._port         = static_cast<uint16>( reader.readBits( 16 ) );
-        descriptor._portCount    = static_cast<uint8>( reader.readBits( 8 ) );
-        descriptor._buildVersion = reader.readVarUint32();
-        descriptor._capacity     = reader.readVarInt32();
-        outStatus._heartbeatMs   = reader.readVarInt();
-        outStatus._load          = reader.readVarInt32();
-        const uint32 state       = reader.readBits( 8 );
-        // 포트 수 0 이나 상한 밖은 배정이 없는 포트를 알리게 된다 — 1 로 맞추지 않고 기록을 거절한다.
-        const bool bPortCountInRange = 1 <= descriptor._portCount && descriptor._portCount <= ServerDescriptor::kMaxPortCount;
-        const bool bRejected         = reader.hasOverflowed() || state >= static_cast<uint32>( ServerState::Count ) || bPortCountInRange == false;
-        if ( bRejected )
-            return false;
-        outStatus._state = static_cast<ServerState>( state );
+        outStatus = std::move( status );
         return true;
-    }
-
-    vector<uint8> ServerRecord::encode( const ServerStatus& status )
-    {
-        BitWriter writer;
-        kFormat.writeVersion( writer );
-        writeStatus( writer, status );
-        return writer.releaseBytes();
-    }
-
-    bool ServerRecord::decode( const vector<uint8>& bytes, ServerStatus& outStatus )
-    {
-        BitReader reader( bytes.data(), static_cast<int32>( bytes.size() ) );
-        if ( kFormat.readVersion( reader ) == false )
-            return false;
-        return readStatus( reader, outStatus );
     }
 } // namespace sw

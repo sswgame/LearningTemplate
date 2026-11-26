@@ -1,7 +1,7 @@
 // ServerPickerRowTest — 서버 고르기 화면의 줄 위젯: 받지 않는 서버의 단추는 꺼지고 글에 지역 · 혼잡 · 상태가 보이며, 같은 줄을 다른 서버에 다시 이어도 앞 값이 남지 않는다(가상 목록이 줄을 다시 쓴다). 온라인 키트라 `UnitTests.OnlineKits` 가 돌린다(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/LocalizationManager.h"

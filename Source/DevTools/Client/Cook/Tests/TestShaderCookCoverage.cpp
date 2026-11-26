@@ -3,13 +3,13 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/File/FileUtil.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "DevTools/Client/Cook/ShaderCookRequestCollector.h"
 
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Content/AssetPaths.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Reflection/TypeInfo.h"
 
 using namespace sw;

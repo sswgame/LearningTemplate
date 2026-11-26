@@ -9,7 +9,7 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Kits/Feature/Online/Chat/Server/ChatSpamGuard.h"
+#include "GameFramework/Kits/Feature/Online/Chat/Server/ChatModeration.h"
 #include "GameFramework/Runtime/Online/Report/ServiceReport.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerConfig.h"
 

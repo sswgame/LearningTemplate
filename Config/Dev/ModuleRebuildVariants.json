@@ -1,5 +1,5 @@
 {
-    "_variants": {
+    "_mapVariant": {
         "probe-next": {
             "_header": "sw/dev/HotReloadProbeVariant.h",
             "_text": "#pragma once\n#define SW_HOTRELOAD_PROBE_STEP 1\n"

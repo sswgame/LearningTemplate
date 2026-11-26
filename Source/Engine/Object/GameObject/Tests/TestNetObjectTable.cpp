@@ -1,10 +1,10 @@
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/Service/NetObjectTable.h"
+#include "Engine/Object/GameObject/Subsystem/NetObjectTable.h"
 #include "Engine/Object/GameObject/Tests/SceneIterationTestAccess.h"
 
 using namespace sw;

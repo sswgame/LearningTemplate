@@ -3,11 +3,11 @@
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 
 #include "Core/Log/Logger.h"
-#include "Core/Name/TagID.h"
+#include "Core/String/Name/TagID.h"
 
 #include "Editor/Common/EditorSceneIterationAccess.h"
 #include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/Play/EditorSessionPolicy.h"

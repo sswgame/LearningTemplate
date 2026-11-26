@@ -20,7 +20,7 @@
 #include "Editor/Common/Asset/AssetSourceLocator.h"
 #include "Editor/Common/Asset/EditorContentScan.h"
 #include "Editor/Common/Asset/ImportedAssetStore.h"
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 
 #include "Engine/Asset/Cook/CookRecord.h"
 #include "Engine/Content/AssetPaths.h"
@@ -341,7 +341,7 @@ namespace sw::editor
                     const uint8*       pBytes = payload.data() + entry._offset;
                     const bool         bWritten =
                         isSharedStorePath( path.str() ) ? ImportedAssetStore::writeIfAbsent( path, pBytes, entry._size )
-                                                                : FileUtil::ensureParentDirectoryExists( path ) && FileUtil::writeFile( path, pBytes, entry._size );
+                                                                : FileUtil::writeFile( path, pBytes, entry._size );
                     if ( bWritten == false )
                         return false;
                 }
@@ -1011,7 +1011,7 @@ namespace sw::editor
         return FileUtil::toDiskPath( rawFolder ).getParent().join( importedFolderName ).join( relativePath ).removeExtension().appendSuffix( importedExtension );
     }
 
-    uint64 AssetImportStampUtil::computeFileHash( const AbsolutePath& path )
+    uint64 AssetImportStampUtil::computeFileHash( const DiskPath& path )
     {
         FileStamp  stamp{};
         const bool bMissingOrEmpty = FileUtil::getFileStamp( path, stamp ) == false || stamp._sizeBytes == 0;

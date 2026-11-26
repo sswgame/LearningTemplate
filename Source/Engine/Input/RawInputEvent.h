@@ -8,7 +8,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/BitUtil.h"
 #include "Core/Memory/Memory.h"
-#include "Core/String/UTF8Util.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Input/GamepadButtonUtil.h"
 #include "Engine/Input/IInputDevice.h"
@@ -336,7 +336,7 @@ namespace sw
             if ( len < text.size() )
             {
                 // 잘리는 위치가 연속 바이트(10xxxxxx)면 그 글자의 선두 바이트 앞까지 물러난다.
-                len = UTF8Util::backOffToCharacterStart( text.data(), len );
+                len = StringUtil::backOffToUTF8CharacterStart( text.data(), len );
             }
             if ( len > 0 )
                 Memory::copy( outEvent._payload._textData._arrUTF8, text.data(), len );

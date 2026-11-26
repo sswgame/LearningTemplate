@@ -55,7 +55,7 @@ namespace sw
             _listGoal[0] = goal;
             _agent.followPath( _listGoal );
             pGameMode->collectNeighborPositions( _npcIndex, _listNeighbor );
-            _agent.update( pGameMode->getNavGrid(), _listNeighbor, context.getDeltaTime() );
+            _agent.update( pGameMode->getNavGrid(), _listNeighbor, context.getDeltaTime().count() );
         }
         pMesh->setLocalPosition( context.getManager().getWorldOrigin().toLocal( _agent.getPosition() + float3{ 0.0f, _heightOffset, 0.0f } ) );
     }

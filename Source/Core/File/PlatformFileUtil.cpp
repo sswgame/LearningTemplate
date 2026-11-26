@@ -8,7 +8,7 @@
 #include "Core/Container/unordered_set.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Path/AbsolutePath.h"
-#include "Core/Process/ProcessEnvironment.h"
+#include "Core/Process/Process.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
@@ -238,7 +238,7 @@ namespace sw
             pObserver->recordFileOpenedForRead( filePath, byteCount );
     }
 
-    PlatformFileUtil::ReadObserverRegistration PlatformFileUtil::bindReadObserver( IFileReadObserver* pObserver )
+    PlatformFileUtil::ReadObserverSubscription PlatformFileUtil::bindReadObserver( IFileReadObserver* pObserver )
     {
         return PlatformFileUtilInternal::s_readObserverSlot.bind( pObserver );
     }
@@ -254,7 +254,7 @@ namespace sw
             pObserver->recordFileWritten( filePath );
     }
 
-    PlatformFileUtil::WriteObserverRegistration PlatformFileUtil::bindWriteObserver( IFileWriteObserver* pObserver )
+    PlatformFileUtil::WriteObserverSubscription PlatformFileUtil::bindWriteObserver( IFileWriteObserver* pObserver )
     {
         return PlatformFileUtilInternal::s_writeObserverSlot.bind( pObserver );
     }

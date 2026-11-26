@@ -6,8 +6,8 @@
 #include "Core/Concurrency/SpinLock.h"
 #include "Core/Container/vector.h"
 
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 
 namespace sw
 {
@@ -36,5 +36,5 @@ namespace sw
         registry._listFree.push_back( _slot );
     }
 
-    SW_ENGINE_SERVICE_SUBSYSTEM( AnimationSkinSlotRegistry, HostOnly, Process, Services, (), SW_ENGINE_DEFAULT_FACTORY( AnimationSkinSlotRegistry ) );
+    SW_ENGINE_SUBSYSTEM_WITH_SLOT( AnimationSkinSlotRegistry, HostOnly, Process, Shared, (), SW_ENGINE_DEFAULT_FACTORY( AnimationSkinSlotRegistry ) );
 } // namespace sw

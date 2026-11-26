@@ -1,7 +1,7 @@
 // SpriteClipAssetTest — 스프라이트 클립의 읽기 규칙(구간 자르기 · 테두리 · 이름)과 시간 계산, 재생 구간(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Animation/Sprite/SpriteClipAsset.h"
 #include "Engine/Animation/Sprite/SpriteClipPlayable.h"

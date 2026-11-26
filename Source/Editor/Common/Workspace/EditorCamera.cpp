@@ -3,7 +3,7 @@
 #include "Editor/Common/Workspace/EditorCamera.h"
 
 #include "Core/Math/MathUtil.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"

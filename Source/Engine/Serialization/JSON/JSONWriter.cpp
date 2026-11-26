@@ -2,7 +2,6 @@
 
 #include "Engine/Serialization/JSON/JSONWriter.h"
 
-#include "Core/String/JSONStringUtil.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Serialization/JSON/JSONDocument.h"
@@ -230,7 +229,7 @@ namespace sw
     {
         if ( prepareValue() == false )
             return;
-        append( value.describe() ); // 이 작성기의 규칙대로 잘못된 UTF-8 은 U+FFFD 다(`JSONStringUtil` 과 같은 바꿈)
+        append( value.describe() ); // 이 작성기의 규칙대로 잘못된 UTF-8 은 U+FFFD 다(`StringUtil::escapeJSON` 과 같은 바꿈)
     }
 
     bool JSONWriter::isComplete() const
@@ -274,7 +273,7 @@ namespace sw
 
     void JSONWriter::appendEscaped( string_view text )
     {
-        JSONStringUtil::escape( text, &JSONWriter::appendPiece, this );
+        StringUtil::escapeJSON( text, &JSONWriter::appendPiece, this );
     }
 
     void JSONWriter::appendPiece( void* pWriter, string_view piece )

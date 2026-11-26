@@ -23,8 +23,8 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/Radians.h"
 #include "Core/Math/VectorMath.h"
-#include "Core/Name/hashed_string.h"
 #include "Core/Path/AbsolutePath.h"
+#include "Core/String/Name/hashed_string.h"
 
 #include "Engine/Character/CharacterIssue.h"
 #include "Engine/Content/AssetID.h"

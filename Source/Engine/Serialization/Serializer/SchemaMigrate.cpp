@@ -4,10 +4,10 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Concurrency/atomic.h"
-#include "Core/Name/TagID.h"
+#include "Core/String/Name/TagID.h"
 #include "Core/String/StringBuilder.h"
 
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Reflection/ReflectValueBinding.h"
 #include "Engine/Reflection/ReflectVisit.h"
 #include "Engine/Reflection/ReflectedValue.h"

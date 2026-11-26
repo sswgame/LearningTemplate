@@ -8,7 +8,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
 #include "GameFramework/Runtime/Foundation/GameFeature/GameFeatureComponents.h"
-#include "GameFramework/Runtime/Foundation/Service/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 
 namespace sw
 {

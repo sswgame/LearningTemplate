@@ -1,7 +1,7 @@
 // PoseAfterimageTest — 잔상의 투명도 곡선과 사본 풀(nogpu, 메시 에셋 없음).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Animation/Component/PoseAfterimageComponent.h"
 #include "Engine/Animation/Component/SkeletalMeshComponent.h"
@@ -46,7 +46,7 @@ SW_TEST_CASE( PoseAfterimageTest, PoolIsPreparedAndReleased )
 
     pAfterimage->startCapturing();
     {
-        TickContext context{ *pAfterimage->getOwner(), 0.5f };
+        TickContext context{ *pAfterimage->getOwner(), GameSeconds{ 0.5f } };
         pAfterimage->onTick( context );
     }
     SW_EXPECT_TRUE( pAfterimage->isCapturing() );

@@ -9,7 +9,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Registry/ServiceFactoryList.h"
+#include "Core/Registry/FactoryRegistrationList.h"
 #include "Core/Subsystem/SubsystemScope.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -27,7 +27,7 @@ namespace sw
     };
 
     /** @brief 키트 클라이언트 팩토리입니다. 등록기가 가진 정적 객체이며 이름은 노드에 있습니다. */
-    struct OnlineClientFactory : ServiceFactoryNode
+    struct OnlineClientFactory : FactoryRegistration
     {
         using CreateFunction = unique_ptr<OnlineClientService> ( * )( OnlineServiceClient& client, const OnlineSessionInfo& info );
 

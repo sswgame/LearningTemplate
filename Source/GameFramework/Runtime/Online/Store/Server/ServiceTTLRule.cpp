@@ -6,7 +6,9 @@
 #include "Core/Serialization/BitStream.h"
 
 #include "GameFramework/Runtime/Online/Service/OnlineLimit.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceCommitRunner.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceRecordReader.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordTable.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
 #include <algorithm>
@@ -17,39 +19,7 @@ namespace sw
     {
         struct ServiceTTLRuleInternal
         {
-            static constexpr uint64 kBackfillRunning = 1; ///< 이 바퀴가 도는 중이다
-            static constexpr uint64 kBackfillDone    = 2; ///< 이 판은 끝났다 — 판이 오르기 전에는 다시 훑지 않는다
-
-            /** @brief 백필 진행 한 줄입니다(`ServiceTTLRule::getBackfillTable`). */
-            struct BackfillProgress
-            {
-                string _cursor{};
-                int64  _activatedMs{ 0 }; ///< 이 판을 처음 본 시각 — 배포 창을 잰다
-                int64  _passStartMs{ 0 }; ///< 이 바퀴를 시작한 시각
-                uint64 _version{ 0 };
-                uint64 _state{ kBackfillRunning };
-            };
-
-            static vector<uint8> encodeProgress( const BackfillProgress& progress )
-            {
-                BitWriter writer;
-                writer.writeVarUint( progress._version );
-                writer.writeVarUint( progress._state );
-                writer.writeVarInt( progress._activatedMs );
-                writer.writeVarInt( progress._passStartMs );
-                ServiceKeyUtil::writeString( writer, progress._cursor );
-                return writer.releaseBytes();
-            }
-
-            [[nodiscard]] static bool decodeProgress( const vector<uint8>& bytes, BackfillProgress& outProgress )
-            {
-                BitReader reader( bytes.data(), static_cast<int32>( bytes.size() ) );
-                outProgress._version     = reader.readVarUint();
-                outProgress._state       = reader.readVarUint();
-                outProgress._activatedMs = reader.readVarInt();
-                outProgress._passStartMs = reader.readVarInt();
-                return ServiceKeyUtil::readString( reader, OnlineLimit::kMaxKeySize, outProgress._cursor ) && reader.hasOverflowed() == false;
-            }
+            using BackfillProgress = ServiceTTLBackfillRecord;
         };
     } // namespace
 } // namespace sw
@@ -122,7 +92,7 @@ namespace sw
                         break;
                     count = ( count + 1 ) / 2; // 함께 넣는 쓰기가 상한을 넘었다. 묶음을 줄여 다시 짠다
                 }
-                const ServiceStoreResult committed = connection.commit( transaction );
+                const ServiceStoreResult committed = ServiceCommitRunner::commitOnce( connection, transaction );
                 if ( committed == ServiceStoreResult::Ok )
                     outReport._deletedCount += static_cast<int32>( count );
                 else if ( committed != ServiceStoreResult::Conflict )
@@ -147,9 +117,9 @@ namespace sw
         return isValid() && _maxScanPerSweep > 0 && _maxDeletePerSweep > 0;
     }
 
-    const hashed_string& ServiceTTLRule::getBackfillTable()
+    const ServiceRecordTable<ServiceTTLBackfillRecord>& ServiceTTLRule::getBackfillTable()
     {
-        static const hashed_string s_table{ "service_ttl_backfill" };
+        static const ServiceRecordTable<ServiceTTLBackfillRecord> s_table{ "service_ttl_backfill" };
         return s_table;
     }
 
@@ -163,13 +133,13 @@ namespace sw
         int32  scannedCount = 0;
         while ( scannedCount < maxScanCount )
         {
-            ServiceRecord            progressRecord;
-            const ServiceStoreResult read = connection.readRecord( getBackfillTable(), progressKey, progressRecord );
-            if ( read != ServiceStoreResult::Ok && read != ServiceStoreResult::NotFound )
-                return read;
             Internal::BackfillProgress progress;
-            const bool                 bKnown = read == ServiceStoreResult::Ok && Internal::decodeProgress( progressRecord._bytes, progress );
-            if ( bKnown && progress._version >= *rule._backfillVersion && progress._state == Internal::kBackfillDone )
+            uint64                     progressVersion = ServiceRecord::kAbsentVersion;
+            const ServiceStoreResult   read            = getBackfillTable().read( connection, progressKey, progress, &progressVersion );
+            if ( read != ServiceStoreResult::Ok && read != ServiceStoreResult::NotFound && read != ServiceStoreResult::Corrupt )
+                return read;
+            const bool bKnown = read == ServiceStoreResult::Ok; // 깨진 진행(표가 오류 로그를 남긴다)은 처음부터 다시 훑는다 — 겹쳐 넣어도 같은 줄이다
+            if ( bKnown && progress._version >= *rule._backfillVersion && progress._state == ServiceTTLBackfillState::Done )
                 return ServiceStoreResult::Ok; // 이 판은 끝났다
             if ( bKnown == false || progress._version < *rule._backfillVersion )
             {
@@ -195,7 +165,7 @@ namespace sw
                     continue; // 기준 시각이 아직 없는 레코드(열린 거래 · 열린 신고)다. 시각이 생기는 쓰기가 줄을 넣는다
                 if ( std::find( listIndexKey.begin(), listIndexKey.end(), indexKey ) != listIndexKey.end() )
                     continue;
-                transaction.put( rule._ttlIndexTable, indexKey, vector<uint8>{}, ServiceRecord::kAnyVersion );
+                transaction.put( rule._ttlIndexTable, indexKey, ServiceRecord::kAnyVersion );
                 listIndexKey.push_back( std::move( indexKey ) );
                 ++indexedCount;
             }
@@ -205,15 +175,15 @@ namespace sw
             if ( bPassEnded == false )
                 progress._cursor = listRecord.back()._key;
             else if ( progress._passStartMs >= progress._activatedMs + rule._backfillRolloutMs )
-                progress._state = Internal::kBackfillDone; // 배포 창이 지난 뒤 시작한 바퀴다 - 옛 판 서버가 쓴 레코드까지 주웠다
+                progress._state = ServiceTTLBackfillState::Done; // 배포 창이 지난 뒤 시작한 바퀴다 - 옛 판 서버가 쓴 레코드까지 주웠다
             else
             {
                 progress._cursor.clear(); // 창 안에 끝난 바퀴다. 아직 옛 판으로 쓰는 서버가 있을 수 있어 처음부터 다시 돈다
                 progress._passStartMs = nowMs;
                 bNewPass              = true;
             }
-            transaction.put( getBackfillTable(), progressKey, Internal::encodeProgress( progress ), progressRecord._version ); // 없으면 "없어야 함"이다
-            const ServiceStoreResult committed = connection.commit( transaction );
+            transaction.put( getBackfillTable(), progressKey, progress, progressVersion ); // 없으면 "없어야 함"이다
+            const ServiceStoreResult committed = ServiceCommitRunner::commitOnce( connection, transaction );
             if ( committed == ServiceStoreResult::Conflict )
                 return ServiceStoreResult::Ok; // 다른 쓸기가 같은 진행을 옮겼다. 다음 회차가 이어 간다
             if ( committed != ServiceStoreResult::Ok )
@@ -276,7 +246,7 @@ namespace sw
                     // 색인 형식이 틀린 줄이다. 데이터가 아니라 색인이므로 지워도 잃는 것이 없고, 남기면 앞자리를 막는다
                     ServiceTransaction drop;
                     drop.erase( rule._ttlIndexTable, entry._key, entry._version );
-                    const ServiceStoreResult dropped = connection.commit( drop );
+                    const ServiceStoreResult dropped = ServiceCommitRunner::commitOnce( connection, drop );
                     if ( dropped != ServiceStoreResult::Ok && dropped != ServiceStoreResult::Conflict )
                         return dropped;
                     continue;
@@ -352,7 +322,7 @@ namespace sw
         }
         if ( transaction.isEmpty() )
             return ServiceStoreResult::Ok;
-        const ServiceStoreResult committed = connection.commit( transaction );
+        const ServiceStoreResult committed = ServiceCommitRunner::commitOnce( connection, transaction );
         if ( committed == ServiceStoreResult::Ok )
             inoutReport._deletedCount += static_cast<int32>( listErased.size() );
         outbEntryDone = bEntryDone;

@@ -13,9 +13,14 @@
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Serialization/Format/FormatDef.h"
 
 #include "GameFramework/GameFrameworkExports.h"
+
+namespace sw
+{
+    class EphemeralValue;
+    struct EphemeralReply;
+} // namespace sw
 
 namespace sw
 {
@@ -40,23 +45,33 @@ namespace sw
      * @brief 서버 하나의 설명(띄울 때 정해진다)입니다.
      * @details 게임 포트는 `_port` 부터 `_portCount` 개다(포트 샤딩 — `ServerConfig::_gamePortShardCount`, 한 포트를 나누면 1). 배정은 `pickPort` 로 계정마다 한 포트를 고른다.
      */
+    REFLECT()
     struct ServerDescriptor
     {
+        REFLECT_BODY();
         /** @brief 게임 포트 수의 상한입니다. `ServerConfig::_gamePortShardCount` 의 상한과 같습니다. */
         static constexpr int32 kMaxPortCount = 64;
 
-        string _kind{};
+        PROPERTY( MaxCount = 16 )
+        string _kind{}; ///< `ServerRecord::kMaxNameSize`
+        PROPERTY( MaxCount = 16 )
         string _region{};
-        string _address{};
+        PROPERTY( MaxCount = 128 )
+        string _address{}; ///< `ServerRecord::kMaxAddressSize`
+        PROPERTY()
         uint64 _serverID{ 0 };
+        PROPERTY()
         uint32 _buildVersion{ 0 };
-        int32  _capacity{ 0 };
+        PROPERTY()
+        int32 _capacity{ 0 };
+        PROPERTY()
         uint16 _port{ 0 };
-        uint8  _portCount{ 1 }; ///< 1 ~ `kMaxPortCount`. 기록을 읽을 때 범위 밖은 거절한다
+        PROPERTY( Min = 1, Max = ServerDescriptor::kMaxPortCount )
+        uint8 _portCount{ 1 }; ///< 기록을 읽을 때 범위 밖은 거절한다 — 배정이 없는 포트를 알리게 된다
 
         /**
          * @brief @p accountID 가 붙을 게임 포트입니다. 계정마다 늘 같은 샤드라 다시 배정받아도 같은 포트이고, 계정이 고르게 퍼진다(나머지 연산).
-         * @details 포트 수 0 은 만들 수 없는 값이다 — 기록을 읽을 때 거절하고(`ServerRecord::readStatus`), 서버는 설정의 1 이상을 싣는다.
+         * @details 포트 수 0 은 만들 수 없는 값이다 — 기록을 짓고 읽을 때 거절하고(`PROPERTY( Min = 1 )`), 서버는 설정의 1 이상을 싣는다.
          */
         uint16 pickPort( uint64 accountID ) const { return pickShardPort( _port, _portCount, accountID ); }
         /** @brief 첫 포트 @p firstPort 부터 @p portCount 개인 서버에서 @p accountID 의 포트입니다. 배정(디렉터리 · 매칭 · 백필)이 모두 이 규칙 하나를 쓴다. */
@@ -71,12 +86,18 @@ namespace sw
 namespace sw
 {
     /** @brief 서버 하나의 상태입니다. */
+    REFLECT()
     struct ServerStatus
     {
+        REFLECT_BODY();
+        PROPERTY()
         ServerDescriptor _descriptor{};
-        int64            _heartbeatMs{ 0 }; ///< 마지막으로 기록을 쓴 UTC 밀리초
-        int32            _load{ 0 };        ///< 지금 손님 수(정원과 같은 단위 — 게임 포트를 연 서버는 게임 접속 수)
-        ServerState      _state{ ServerState::Starting };
+        PROPERTY()
+        int64 _heartbeatMs{ 0 }; ///< 마지막으로 기록을 쓴 UTC 밀리초
+        PROPERTY()
+        int32 _load{ 0 }; ///< 지금 손님 수(정원과 같은 단위 — 게임 포트를 연 서버는 게임 접속 수)
+        PROPERTY()
+        ServerState _state{ ServerState::Starting };
     };
 } // namespace sw
 
@@ -88,9 +109,8 @@ namespace sw
      */
     struct SW_GF_API ServerRecord
     {
-        static constexpr int32     kMaxNameSize    = 16;
-        static constexpr int32     kMaxAddressSize = 128;
-        static constexpr FormatDef kFormat{ "SRVR" };
+        static constexpr int32 kMaxNameSize    = 16;
+        static constexpr int32 kMaxAddressSize = 128;
 
         static string makeRecordKey( uint64 serverID );
         /**
@@ -105,9 +125,9 @@ namespace sw
         /** @brief 종류 · 지역 이름 규칙(`[0-9a-z_-]`, 1..16 바이트)을 지키는가입니다. */
         static bool isValidName( string_view name );
 
-        static void               writeStatus( BitWriter& outWriter, const ServerStatus& status );
-        [[nodiscard]] static bool readStatus( BitReader& reader, ServerStatus& outStatus );
-        static vector<uint8>      encode( const ServerStatus& status );
-        [[nodiscard]] static bool decode( const vector<uint8>& bytes, ServerStatus& outStatus );
+        /** @brief 서버 기록의 휘발 값입니다(`EphemeralRecordTable<ServerStatus>`). 선언 범위 밖이면 오류 로그를 남기고 false 입니다. */
+        [[nodiscard]] static bool makeValue( const ServerStatus& status, EphemeralValue& outValue );
+        /** @brief 서버 기록을 읽습니다. 없거나 다른 판 · 깨진 값 · 누구도 가질 수 없는 상태면 false 입니다. */
+        [[nodiscard]] static bool decode( const EphemeralReply& reply, ServerStatus& outStatus );
     };
 } // namespace sw

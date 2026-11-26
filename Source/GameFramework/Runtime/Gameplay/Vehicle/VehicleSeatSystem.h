@@ -9,7 +9,7 @@
  *          - 자리: 좌석은 `PostPhysics` 에서 잰다. 예전 반응은 같은 프레임 `ApplyPostPhysics` 비우기에서 돌아 카메라 시스템(그 비우기의 맨 앞)보다 늦었다 — 킥은 늘 다음 프레임
  *            카메라 계산에 들었다. 다음 프레임 `ApplyPrePhysics` 맨 앞도 그 프레임 카메라 계산(`ApplyPostPhysics`)보다 앞이라 킥 시점은 같고, 붙인 순서에 기대지 않는다.
  *            기울임은 한 프레임 늦게 든다(다음 프레임 탑승자 틱이 읽는다) — 경합을 없애는 값이다.
- *          - 왜 씬 서비스가 아닌가: 씬 서비스 표(`SW_SCENE_SERVICE`)는 Engine 이미지 안에서만 채운다. 첫 좌석의 `onRegister` 가 붙이고 마지막의 `onUnregister` 가 뗀다.
+ *          - 왜 씬 서브시스템이 아닌가: 씬 서브시스템 표(`SW_SCENE_SUBSYSTEM`)는 Engine 이미지 안에서만 채운다. 첫 좌석의 `onRegister` 가 붙이고 마지막의 `onUnregister` 가 뗀다.
  */
 #pragma once
 #include "Core/Container/vector.h"

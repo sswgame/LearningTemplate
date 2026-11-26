@@ -3,7 +3,7 @@
 #include "pch.h"
 
 #include "Core/File/FileUtil.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #define SW_TEST_INTERNAL // 임시 리소스 도메인 픽스처(`ScopedScratchDomain`)가 엔진 서비스를 직접 쓴다
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
@@ -50,7 +50,7 @@ namespace
     protected:
         void serializeGameState( StateIO& io ) override { (void)io; }
         bool startGame() override { return true; }
-        void updateMatch( float32 deltaTime ) override { (void)deltaTime; }
+        void updateMatch( GameSeconds frameTime ) override { (void)frameTime; }
     };
 
     constexpr string_view kValidXML = R"(<Minigame name="arcade" map="testproject/minigame/arcade.scene.xml" entry="SceneSwitch" features="TestFeature"
@@ -126,7 +126,7 @@ SW_TEST_CASE( MinigameTest, ValidatesFeaturesAndMap )
     for ( const utf8* pFile : { "minigame/arcade.scene.xml", "minigame/hud.ui.xml" } )
     {
         const AbsolutePath path = domain.makeDiskPath( pFile );
-        SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( path.getParent() ) && FileUtil::writeTextFile( path, "<Scene/>" ) );
+        SW_REQUIRE_TRUE( FileUtil::writeTextFile( path, "<Scene/>" ) );
     }
     GameFeatureRegistry                  features;
     static const GameFeatureRegistration s_testFeature{ "TestFeature", &activateTestFeature };
@@ -229,7 +229,7 @@ SW_TEST_CASE( MinigameTest, MatchSettingsComeTogether )
 {
     const test::ScopedScratchDomain domain;
     const AbsolutePath              path = domain.makeDiskPath( "minigame/arena.scene.xml" );
-    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( path.getParent() ) && FileUtil::writeTextFile( path, "<Scene/>" ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( path, "<Scene/>" ) );
     const GameFeatureRegistry features;
 
     MinigameDefinition match;

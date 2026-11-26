@@ -16,8 +16,8 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Subsystem/Subsystem.h"
+#include "Core/Subsystem/SubsystemSlot.h"
 #include "Core/Task/TaskTypes.h"
 
 namespace sw
@@ -726,6 +726,6 @@ namespace sw
         atomic<uint32>           _clearEpoch;
         unique_ptr<TaskNodePool> _nodePool; ///< 태스크 노드 · 스테이지 · 병렬 그룹 풀
 
-        SW_SERVICE_SLOT( TaskManager, Required );
+        SW_SUBSYSTEM_SLOT( TaskManager, Required );
     };
 } // namespace sw

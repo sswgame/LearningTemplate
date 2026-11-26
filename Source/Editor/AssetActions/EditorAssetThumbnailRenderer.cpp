@@ -6,7 +6,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/VectorMath.h"
 
-#include "Editor/Common/GUI/Theme/EditorColorUtil.h"
+#include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 
 #include <imgui.h>
 

@@ -8,16 +8,16 @@
 #include "Core/File/ProcessRoots.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/Process/EngineChildProcess.h"
+#include "Core/Process/Process.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
-#include "Editor/Common/Commands/Asset/EditorContentWrite.h"
+#include "Editor/Common/Asset/AssetWriter.h"
 #include "Editor/Common/Commands/Asset/EditorDataTableCommands.h"
+#include "Editor/Common/Job/EditorExternalToolJob.h"
 #include "Editor/Common/Localization/LocalizationTools.h"
-#include "Editor/Common/Task/EditorExternalToolJob.h"
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 #include "Editor/Common/Workspace/Undo/DocumentEditRecorder.h"
 #include "Editor/Common/Workspace/Undo/EditorStateTextHistory.h"
 #include "Editor/Common/Workspace/Undo/EditorUndoHistory.h"
@@ -208,7 +208,7 @@ namespace sw::editor
         StringBuilder<constant::buffer::kMax1024> project;
         project.appendFormat( "-loc-project=%#", _localizationSheet._projectPath.str() );
         listArgument.push_back( string( project.view() ) );
-        ProcessCommand command = EngineChildProcess::makeCommand( editor::getSubsystem<CommandLineManager>(), FileUtil::getExecutablePath(), std::move( listArgument ) );
+        ProcessCommand command = ProcessCommand::forEngineChild( editor::getSubsystem<CommandLineManager>(), FileUtil::getExecutablePath(), std::move( listArgument ) );
         if ( _pLocalizationToolJob->request( std::move( command ), ProcessRoots::get()._project.str() ) == false )
             return false;
         _runningTool            = tool;
@@ -219,7 +219,7 @@ namespace sw::editor
     void DataTableViewModel::collectLocalizationToolResult()
     {
         EditorExternalToolResult result{};
-        if ( _pLocalizationToolJob->take( result ) != EditorTaskPoll::Ready )
+        if ( _pLocalizationToolJob->take( result ) != EditorJobPoll::Ready )
             return;
         const bool bSucceeded = result._exitCode.has_value() && *result._exitCode == 0;
         string     lastLine;
@@ -243,13 +243,13 @@ namespace sw::editor
     void DataTableViewModel::pollBackgroundJobs()
     {
         collectLocalizationToolResult();
-        LocalizationSheet    loadedSheet;
-        const EditorTaskPoll localizationPoll = _localizationJob.take( loadedSheet );
-        if ( localizationPoll == EditorTaskPoll::Ready )
+        LocalizationSheet   loadedSheet;
+        const EditorJobPoll localizationPoll = _localizationJob.take( loadedSheet );
+        if ( localizationPoll == EditorJobPoll::Ready )
         {
             (void)acceptLoadedSheet( _requestedProjectIndex, std::move( loadedSheet ) ); // 버렸으면 아직 읽지 않은 상태라 다음 그리기가 고른 프로젝트를 다시 읽는다
         }
-        else if ( _bLocalizationLoaded == false && localizationPoll == EditorTaskPoll::Idle )
+        else if ( _bLocalizationLoaded == false && localizationPoll == EditorJobPoll::Idle )
         {
             vector<string> listProject;
             LocalizationTools::collectProjectPaths( listProject ); // 현지화 도구와 같은 목록(엔진 · 에디터 UI · 활성 게임)
@@ -264,23 +264,23 @@ namespace sw::editor
         }
 
         vector<GameDataFileEntry> listGameData;
-        const EditorTaskPoll      gameDataPoll = _gameDataJob.take( listGameData );
-        if ( gameDataPoll == EditorTaskPoll::Ready )
+        const EditorJobPoll       gameDataPoll = _gameDataJob.take( listGameData );
+        if ( gameDataPoll == EditorJobPoll::Ready )
         {
             setGameDataFiles( std::move( listGameData ) );
         }
-        else if ( _bGameDataLoaded == false && gameDataPoll == EditorTaskPoll::Idle )
+        else if ( _bGameDataLoaded == false && gameDataPoll == EditorJobPoll::Idle )
             _gameDataJob.request();
     }
 
-    bool DataTableViewModel::saveDocument()
+    bool DataTableViewModel::saveDocument( AssetWriter& writer )
     {
-        saveLocalization(); // 고친 것이 있을 때만 쓴다
-        const bool bGameDataSaved = _gameDataPath.empty() || saveGameDataFile();
+        saveLocalization( writer ); // 고친 것이 있을 때만 쓴다
+        const bool bGameDataSaved = _gameDataPath.empty() || saveGameDataFile( writer );
         return bGameDataSaved && isAnyDirty() == false;
     }
 
-    void DataTableViewModel::collectFilesToSave( vector<AbsolutePath>& outListPath ) const
+    void DataTableViewModel::collectFilesToSave( vector<DiskPath>& outListPath ) const
     {
         if ( _bLocalizationDirty )
             EditorDataTableCommands::collectLocalizationFiles( _localizationSheet, outListPath );
@@ -426,13 +426,13 @@ namespace sw::editor
         _bLocalizationLoaded = SW_FALSE;
     }
 
-    void DataTableViewModel::saveLocalization()
+    void DataTableViewModel::saveLocalization( AssetWriter& writer )
     {
         // 고친 것이 없으면 쓰지 않는다 — 읽는 중의 빈 표나 그대로인 표로 파일을 다시 쓰고 실행 중인 게임을 다시 읽게 할 까닭이 없다.
         if ( _bLocalizationDirty == false )
             return;
         // 하나라도 쓰지 못했으면 dirty 를 지우지 않는다 — 저장 확인이 다시 묻는다.
-        if ( EditorDataTableCommands::saveLocalizationProject( _localizationSheet ) == false )
+        if ( EditorDataTableCommands::saveLocalizationProject( writer, _localizationSheet ) == false )
             return;
         _bLocalizationDirty = SW_FALSE;
     }
@@ -443,12 +443,12 @@ namespace sw::editor
         _bGameDataLoaded  = SW_TRUE;
     }
 
-    string DataTableViewModel::makeGameDataAssetID( const AbsolutePath& absolutePath )
+    string DataTableViewModel::makeGameDataAssetID( const DiskPath& absolutePath )
     {
         return editor::getSubsystem<AssetPaths>().toAssetID( absolutePath );
     }
 
-    bool DataTableViewModel::openGameDataFile( const AbsolutePath& absolutePath )
+    bool DataTableViewModel::openGameDataFile( const DiskPath& absolutePath )
     {
         // 읽지 못하면 아무 파일도 열지 않는다 — 앞 파일의 글을 그대로 들고 열면, 저장할 때 앞 파일의 내용을 이 파일에 쓴다.
         string text;
@@ -473,7 +473,7 @@ namespace sw::editor
         _bGameDataDirty = SW_FALSE;
     }
 
-    bool DataTableViewModel::saveGameDataFile()
+    bool DataTableViewModel::saveGameDataFile( AssetWriter& writer )
     {
         if ( _gameDataPath.empty() )
             return false;
@@ -483,9 +483,10 @@ namespace sw::editor
             SW_LOG_ERROR_ID( "DataTablePanel.GameDataNotValidXML", "Game data table '%#' is not saved - the text is not valid XML: %#", fileName.c_str(), _gameDataDocument.getError().c_str() );
             return false;
         }
-        if ( EditorContentWrite::warnIfReadOnly( _gameDataPath, EditorContentWriteKind::Save ) ) // Save File 단추는 패널 저장을 지나지 않는다 — 같은 확인을 여기서도
-            return false;
-        if ( FileUtil::writeTextFile( _gameDataPath, _selectedGameDataRawText ) == false )
+        const AssetWriteResult written = writer.writeText( _gameDataPath, _selectedGameDataRawText );
+        if ( written == AssetWriteResult::Refused )
+            return false; // 문이 이미 알렸다
+        if ( written == AssetWriteResult::Failed )
         {
             SW_LOG_ERROR_ID( "DataTablePanel.CouldNotWriteGame", "Could not write game data table '%#'", _gameDataPath.c_str() );
             return false;

@@ -3,20 +3,22 @@
 #include "pch.h"
 
 #include "Core/Serialization/BitStream.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Observability/MetricRegistry.h"
 
 #include "GameFramework/Kits/Feature/Online/Mailbox/Runtime/MailboxClient.h"
 #include "GameFramework/Kits/Feature/Online/Mailbox/Runtime/MailboxProtocol.h"
 #include "GameFramework/Kits/Feature/Online/Mailbox/Server/MailboxService.h"
-#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Mail/ServiceMailCampaign.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/ServiceMailCampaign.h"
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
 #include "GameFramework/Runtime/Online/Mail/Server/ServiceMail.h"
 #include "GameFramework/Runtime/Online/Server/Tests/OnlineRuntimeTestUtil.h"
 #include "GameFramework/Runtime/Online/Service/Server/Tests/OnlineHostTestUtil.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordTable.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceTTLRule.h"
+#include "GameFramework/Runtime/Online/Store/Server/Tests/ServiceStoreEntryTestUtil.h"
 
 using namespace sw;
 
@@ -36,7 +38,7 @@ namespace
 
         explicit MailboxFixture( MailboxServiceConfig settings, bool bLogin = true )
         {
-            SW_EXPECT_TRUE( _service.initialize( &_rig._server._store, settings ) );
+            SW_EXPECT_TRUE( _service.initialize( _rig._server._store, settings ) );
             SW_EXPECT_TRUE( _rig._server._host.registerServerService( &_service ) );
             _rig._server.start();
             _clientIndex = _rig._clients.connect( _rig._server._port, { &_client } );
@@ -279,9 +281,9 @@ SW_TEST_CASE( MailboxServiceTest, EndedCampaignsAndClaimsExpire )
     SW_REQUIRE_TRUE( ServiceMailCampaign::stageCreate( campaign, created ) );
     SW_REQUIRE_TRUE( database.commit( created ) == ServiceStoreResult::Ok );
     ServiceTransaction claims; // 받은 계정의 표식 둘과, 색인보다 먼저 지운 캠페인의 옛 표식 하나
-    claims.put( ServiceMailCampaign::getClaimTable(), ServiceMailCampaign::makeClaimKey( 1, 100 ), vector<uint8>{}, ServiceRecord::kAbsentVersion );
-    claims.put( ServiceMailCampaign::getClaimTable(), ServiceMailCampaign::makeClaimKey( 1, 101 ), vector<uint8>{}, ServiceRecord::kAbsentVersion );
-    claims.put( ServiceMailCampaign::getClaimTable(), ServiceMailCampaign::makeClaimKey( 9, 100 ), vector<uint8>{}, ServiceRecord::kAbsentVersion );
+    ServiceStoreTestAccess::putBytes( claims, ServiceMailCampaign::getClaimTable(), ServiceMailCampaign::makeClaimKey( 1, 100 ), vector<uint8>{}, ServiceRecord::kAbsentVersion );
+    ServiceStoreTestAccess::putBytes( claims, ServiceMailCampaign::getClaimTable(), ServiceMailCampaign::makeClaimKey( 1, 101 ), vector<uint8>{}, ServiceRecord::kAbsentVersion );
+    ServiceStoreTestAccess::putBytes( claims, ServiceMailCampaign::getClaimTable(), ServiceMailCampaign::makeClaimKey( 9, 100 ), vector<uint8>{}, ServiceRecord::kAbsentVersion );
     SW_REQUIRE_TRUE( database.commit( claims ) == ServiceStoreResult::Ok );
 
     ServiceTTLRule        claimRule    = ServiceMailCampaign::makeClaimTTLRule( 1000 );
@@ -309,14 +311,6 @@ SW_TEST_CASE( MailboxServiceTest, SweepRemovesExpiredMail )
     SW_EXPECT_EQUAL( int64( 0 ), rig.getBalanceOf( kPlayer ) ); // 발행한 재원은 받지 않으면 사라진다
 }
 
-/** @brief [MailboxServiceTest] 시작: 저장소가 없으면 서지 않는다 */
-SW_TEST_CASE( MailboxServiceTest, NeedsStore )
-{
-    SW_EXPECT_LOG( "MailboxService.MailboxServiceNeedsStore" );
-    MailboxService service;
-    SW_EXPECT_FALSE( service.initialize( nullptr, MailboxServiceTestUtil::makeQuietSettings() ) );
-}
-
 /** @brief [MailboxServiceTest] 시작: 받은 우편의 보관 기간이 없으면 서지 않는다(설정 필수 값, 기본값으로 메우지 않는다) */
 SW_TEST_CASE( MailboxServiceTest, NeedsClaimedRetention )
 {
@@ -326,7 +320,7 @@ SW_TEST_CASE( MailboxServiceTest, NeedsClaimedRetention )
     MailboxServiceConfig  settings = MailboxServiceTestUtil::makeQuietSettings();
     settings._claimedRetentionMs   = 0;
     MailboxService service;
-    SW_EXPECT_FALSE( service.initialize( &store, settings ) );
+    SW_EXPECT_FALSE( service.initialize( store, settings ) );
 }
 
 /** @brief [MailboxServiceTest] 정리: 받은 우편은 받은 뒤 보관 기간이 지나면 정리가 지운다 — 우편 레코드가 0 이 되고 받은 재화는 그대로다 */

@@ -8,12 +8,13 @@
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Name/hashed_string.h"
 #include "Core/Path/AbsolutePath.h"
+#include "Core/String/Name/hashed_string.h"
 
 #include "Engine/Animation/AnimationPlayback.h"
 #include "Engine/Animation/Codec/AnimationCodec.h"
 #include "Engine/Animation/Skeletal/Pose.h"
+#include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Serialization/Format/FormatDef.h"
@@ -176,4 +177,7 @@ namespace sw
         AnimationCodecID            _codecID;
         uint8                       _bLoop;
     };
+
+    /** @brief 애니메이션 클립을 경로로 나눠 줍니다("AnimationClip"). 같은 클립을 쓰는 캐릭터 백 명이 파일을 백 번 읽지 않습니다. */
+    SW_DECLARE_SHARED_ASSET_CACHE( SW_API_EXTERN_TEMPLATE, AnimationClip );
 } // namespace sw

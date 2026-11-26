@@ -10,13 +10,102 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
-
-#include "Editor/Panels/RenderDebugger/Model/BufferViewLayout.h"
-#include "Editor/Panels/RenderDebugger/Model/RenderGraphLayout.h"
 
 #include "Engine/Renderer/Debug/OcclusionDebugStats.h"
 #include "Engine/Renderer/Debug/RenderDebugRegistry.h"
+#include "Engine/Renderer/Graph/RenderGraphSnapshot.h"
+
+// 렌더 그래프 사본(`RenderGraphSnapshot`)을 노드 그래프 배치로 옮깁니다 — 레벨 = 열, 같은 레벨의 패스 = 행, 쓴 패스 → 읽는 패스 = 링크(언리얼 RDG Insights 의 패스 그림). ImGui 를 모른다(MVVM — 창은 이 값으로 `EditorNodeGraph` 에 노드 · 핀 · 링크를 그린다). 노드 id · 핀 id 는 이 배치가 정해 링크와 어긋나지 않는다.
+// 구조 버퍼 바이트를 표 행으로 푸는 규칙입니다 — 원소 보폭(등록 크기 `RenderBufferEntry::_elementSize`)마다 한 행, 4 바이트 칸마다 한 열(언리얼 RDG Insights 의 버퍼 보기 · RenderDoc Buffer Viewer 의 형식 지정 자리). 칸의 해석은 버퍼를 거는 컴퓨트 셰이더의 멤버(`RenderBufferEntry::_listMember`)이고, 모르거나 다르게 보려면 사람이 고른다(실수 · 부호 없는 정수 · 정수 · 16 진수).
+namespace sw::editor
+{
+    /** @brief 4 바이트 칸 하나를 어떻게 읽을지입니다. */
+    enum class BufferViewScalar : uint8
+    {
+        Shader, ///< 그 버퍼를 거는 컴퓨트 셰이더의 멤버 형식(모르는 칸은 16 진수)
+        Float,  ///< float32(HZB 깊이 · 가림 타일)
+        Uint,   ///< uint32(간접 인자 · 번호)
+        Int,    ///< int32
+        Hex,    ///< 날 비트(16 진수)
+        Count,
+    };
+
+    /**
+     * @struct BufferViewLayout
+     * @brief 파일 머리말 참고.
+     */
+    struct BufferViewLayout
+    {
+        static constexpr uint32 kCellBytes      = 4;    ///< 칸 하나의 바이트
+        static constexpr uint32 kMaxColumnCount = 16;   ///< 표가 보이는 칸 수의 위 한계(보폭 64 B) — 넘는 칸은 자른다
+        static constexpr uint32 kMaxRowCount    = 4096; ///< 한 번에 표로 만드는 행 수의 위 한계(큰 피라미드를 통째로 글로 만들지 않는다)
+
+        uint32                   _stride{ 0 };      ///< 원소 바이트(0 이면 풀 수 없다)
+        uint32                   _columnCount{ 0 }; ///< 보이는 칸 수
+        BufferViewScalar         _scalar{ BufferViewScalar::Shader };
+        vector<string>           _listColumnName;   ///< 칸마다의 이름 — 멤버를 알면 `멤버.x`, 모르면 바이트 오프셋(`+4`)
+        vector<BufferViewScalar> _listColumnScalar; ///< `Shader` 로 볼 때 칸마다의 해석
+
+        /** @brief 원소 @p elementSize 바이트 · 칸 해석 @p scalar 의 배치입니다. 4 의 배수가 아닌 끝 바이트는 칸이 되지 못한다. */
+        static BufferViewLayout make( uint32 elementSize, BufferViewScalar scalar, const vector<RenderBufferEntry::Member>& listMember = {} );
+        /** @brief @p byteCount 바이트에 든 행 수입니다(`kMaxRowCount` 에서 자른다). */
+        uint32 getRowCount( size_t byteCount ) const;
+        /** @brief 행 @p row 의 칸을 글로 @p outListCell 에 채웁니다(버퍼를 다시 쓴다). 행이 바이트 밖이면 false 입니다. */
+        [[nodiscard]] bool formatRow( const vector<uint8>& byte, uint32 row, vector<string>& outListCell ) const;
+        /** @brief 칸 해석의 표시 이름입니다("float" · "uint" · "int" · "hex"). */
+        static const utf8* getScalarLabel( BufferViewScalar scalar );
+    };
+} // namespace sw::editor
+
+namespace sw::editor
+{
+    /** @brief 패스 노드 하나입니다. */
+    struct RenderGraphLayoutNode
+    {
+        float2 _position{};  ///< 캔버스 좌표(왼쪽 위)
+        uint32 _pass{ 0 };   ///< `RenderGraphSnapshot::_listPass` 번호
+        uint32 _column{ 0 }; ///< 레벨
+        uint32 _row{ 0 };    ///< 레벨 안 차례
+    };
+
+    /** @brief 링크 하나입니다 — 쓴 패스에서 그 자원을 다음에 읽는 패스로. 같은 두 패스 사이는 한 번만 잇는다(첫 자원을 이름으로 단다). */
+    struct RenderGraphLayoutLink
+    {
+        uint32 _fromPass{ 0 };
+        uint32 _toPass{ 0 };
+        uint32 _resource{ 0 }; ///< `RenderGraphSnapshot::_listResource` 번호
+    };
+
+    /**
+     * @struct RenderGraphLayout
+     * @brief 파일 머리말 참고.
+     */
+    struct RenderGraphLayout
+    {
+        static constexpr float32 kColumnSpacing = 280.0f; ///< 열 사이(캔버스 px) — 노드 폭(패스 이름 · 전이 · GPU 시간 줄)보다 넓게
+        static constexpr float32 kRowSpacing    = 110.0f; ///< 행 사이
+        static constexpr int32   kNodeIDBase    = 100000; ///< 노드 id 의 시작 — 링크 id(1 부터)와 겹치지 않게
+        static constexpr int32   kIDsPerNode    = 4;      ///< 노드 하나가 쓰는 id 수(노드 · 입력 핀 · 출력 핀)
+
+        vector<RenderGraphLayoutNode> _listNode; ///< 실행 순서(패스 번호 순)
+        vector<RenderGraphLayoutLink> _listLink;
+        uint32                        _columnCount{ 0 };
+
+        /** @brief @p snapshot 의 배치를 만듭니다. */
+        static RenderGraphLayout make( const RenderGraphSnapshot& snapshot );
+
+        /** @brief 패스 @p pass 노드의 id 입니다. */
+        static int32 getNodeID( uint32 pass ) { return kNodeIDBase + static_cast<int32>( pass ) * kIDsPerNode; }
+        /** @brief 패스 @p pass 의 입력 핀 id 입니다. */
+        static int32 getInputPinID( uint32 pass ) { return getNodeID( pass ) + 1; }
+        /** @brief 패스 @p pass 의 출력 핀 id 입니다. */
+        static int32 getOutputPinID( uint32 pass ) { return getNodeID( pass ) + 2; }
+        /** @brief 링크 @p link 번호의 id 입니다(1 부터). */
+        static int32 getLinkID( uint32 link ) { return static_cast<int32>( link ) + 1; }
+    };
+} // namespace sw::editor
 
 namespace sw
 {

@@ -15,7 +15,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Process/ShutdownSignal.h"
-#include "Core/Registry/ServiceFactoryList.h"
+#include "Core/Registry/FactoryRegistrationList.h"
 #include "Core/Time/TimePoint.h"
 
 #include "Engine/Server/ServerKitDirectory.h"
@@ -95,8 +95,8 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 서버 서비스 팩토리 하나입니다. 등록기가 가진 정적 객체입니다. 이름과 시작 순서는 노드에 있습니다. */
-    struct ServerServiceFactory : ServiceFactoryNode
+    /** @brief 서버 서비스의 등록 기록 하나입니다(만들기 함수를 든다). 등록기가 가진 정적 객체입니다. 이름과 시작 순서는 노드에 있습니다. */
+    struct ServerServiceRegistration : FactoryRegistration
     {
         using CreateFunction = unique_ptr<IServerService> ( * )();
 
@@ -113,11 +113,11 @@ namespace sw
     struct SW_API ServerServiceRegistry
     {
         /** @brief 팩토리를 올립니다. 만들기 함수가 없거나 같은 이름이 있으면(오류 로그) 올리지 않고 false 입니다. */
-        [[nodiscard]] static bool registerFactory( ServerServiceFactory* pFactory );
+        [[nodiscard]] static bool registerFactory( ServerServiceRegistration* pFactory );
         /** @brief 팩토리를 내립니다. 없으면 아무것도 하지 않습니다. */
-        static void unregisterFactory( ServerServiceFactory* pFactory );
+        static void unregisterFactory( ServerServiceRegistration* pFactory );
         /** @brief 올라온 팩토리를 시작 순서(같으면 이름 순)로 @p outListFactory 에 담습니다. 비운 뒤 채웁니다. */
-        static void collectFactories( vector<ServerServiceFactory*>& outListFactory );
+        static void collectFactories( vector<ServerServiceRegistration*>& outListFactory );
     };
 } // namespace sw
 
@@ -142,17 +142,17 @@ namespace sw
 
     private:
         static unique_ptr<IServerService> create() { return make_unique<TService>(); }
-        static ServerServiceFactory       makeFactory( const utf8* pName, int32 startOrder )
+        static ServerServiceRegistration  makeFactory( const utf8* pName, int32 startOrder )
         {
-            ServerServiceFactory factory;
+            ServerServiceRegistration factory;
             factory._pName   = pName;
             factory._order   = startOrder;
             factory._pCreate = &ServerServiceRegistrar::create;
             return factory;
         }
 
-        ServerServiceFactory                   _factory;   ///< 목록에 오르는 줄(이 등록자와 수명이 같다)
-        StaticRegistrar<ServerServiceFactory*> _registrar; ///< 줄 다음에 만들어 줄보다 먼저 사라진다
+        ServerServiceRegistration                   _factory;   ///< 목록에 오르는 줄(이 등록자와 수명이 같다)
+        StaticRegistrar<ServerServiceRegistration*> _registrar; ///< 줄 다음에 만들어 줄보다 먼저 사라진다
     };
 } // namespace sw
 

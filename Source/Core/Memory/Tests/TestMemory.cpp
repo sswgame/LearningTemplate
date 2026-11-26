@@ -6,7 +6,7 @@
 #include "Core/Memory/LinearAllocator.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Memory/PoolAllocator.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include <mutex>
 #include <thread>
@@ -569,7 +569,7 @@ SW_TEST_CASE( MemoryTest, AllocationObserverSeesOnlyBlocksAllocatedWhileAttached
     void* pBefore = sw::Memory::allocate( Record::kProbeSize );
     SW_REQUIRE_NOT_NULL( pBefore );
 
-    sw::Memory::AllocationObserverRegistration registration = sw::Memory::registerAllocationObserver( &kObserver );
+    sw::Memory::AllocationObserverSubscription registration = sw::Memory::registerAllocationObserver( &kObserver );
     Record::s_pWatchedFree.store( pBefore );
     sw::Memory::free( pBefore );
     [[maybe_unused]] const uint32 freeOfUnobserved = Record::s_freeCount.load();

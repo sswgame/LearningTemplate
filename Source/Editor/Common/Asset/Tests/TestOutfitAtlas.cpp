@@ -1,7 +1,7 @@
 // OutfitAtlas — 아틀라스 굽기의 순수 계산: 배치(선반 채우기) · UV 를 옮기는 병합 훅 · 텍스처 합성(가장자리 번짐).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Editor/Common/Asset/OutfitAtlas.h"
 

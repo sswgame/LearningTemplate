@@ -5,8 +5,8 @@
 #include "Core/Path/AbsolutePath.h"
 #include "Core/Process/Process.h"
 #include "Core/String/StringBuilder.h"
-#include "Core/Testing/ScopedAssertCapture.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/ScopedAssertCapture.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "GameFramework/Runtime/Foundation/Save/Local/FileLocalSlotStorage.h"
 #include "GameFramework/Runtime/Foundation/Save/Local/LocalDeviceKeyProvider.h"
@@ -165,7 +165,6 @@ namespace
     {
         OpenSSLNetSecurityProvider provider;
         const AbsolutePath         keyPath = test::makeScratchPath( caseName ).join( LocalDeviceKeyProvider::kKeyFileName );
-        SW_REQUIRE_TRUE( FileUtil::ensureParentDirectoryExists( keyPath ) );
         SW_REQUIRE_TRUE( FileUtil::writeTextFile( keyPath, keyBytes ) );
 
         uint8 arrKey[ILocalStoreKeyProvider::kKeySize]{};

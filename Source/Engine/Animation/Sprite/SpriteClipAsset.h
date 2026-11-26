@@ -14,6 +14,7 @@
 
 #include "Engine/Animation/AnimationPlayback.h"
 #include "Engine/Asset/AssetRef.h"
+#include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -149,8 +150,8 @@ namespace sw
 
         /** @brief 리소스 id 의 클립을 읽습니다. OS 경로는 받지 않습니다(`loadFromDiskFile`). 읽지 못하면 false 를 반환하고 내용은 비어 있습니다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
-        /** @brief 디스크 파일의 클립을 읽습니다. 리소스 id 로 풀지 않습니다(에디터 문서 · 도구 · 테스트용). 실패 규칙은 `loadFromAsset` 과 같습니다. */
-        [[nodiscard]] bool loadFromDiskFile( const AbsolutePath& diskPath );
+        /** @brief **디스크 파일**의 클립을 읽습니다. 리소스 id 로 풀지 않습니다(에디터 문서 · 도구 · 테스트용). 실패 규칙은 `loadFromAsset` 과 같습니다. */
+        [[nodiscard]] bool loadFromDiskFile( const DiskPath& diskPath );
         /** @brief 파일로 씁니다(부모 폴더를 만듭니다). */
         [[nodiscard]] bool saveToFile( const AbsolutePath& absPath ) const;
         /** @brief XML 본문을 읽습니다. 구문이 틀렸거나, 모르는 속성 · 자식 · 읽지 못한 값이 있으면 false 이고 내용은 비어 있습니다. */
@@ -215,4 +216,7 @@ namespace sw
         /** @brief 합친 글을 클립으로 옮깁니다(`ConfigManager::readComposedXMLDocument`). 리소스 id 로 읽으면(`loadFromFile`) @p context 에 `withAsset` 이 실린다. */
         [[nodiscard]] bool loadComposed( string_view text, string_view sourceLabel, const ResourceContext& context );
     };
+
+    /** @brief 경로별로 나눠 주는 캐시입니다(`SharedAssetCache<SpriteClipAsset>` — 같은 클립을 쓰는 스프라이트 백 개가 파일을 백 번 읽지 않는다). 약한 참조라 마지막 사용자가 놓으면 사라진다. */
+    SW_DECLARE_SHARED_ASSET_CACHE( SW_API_EXTERN_TEMPLATE, SpriteClipAsset );
 } // namespace sw

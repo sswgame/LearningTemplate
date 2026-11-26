@@ -11,8 +11,8 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
-#include "Engine/Graphics/Display/DisplayOutput.h"
 #include "Engine/Graphics/RHI/RHITextureSlot.h"
+#include "Engine/Graphics/View/DisplayOutput.h"
 
 namespace sw
 {

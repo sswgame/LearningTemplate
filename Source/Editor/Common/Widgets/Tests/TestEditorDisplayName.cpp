@@ -1,7 +1,7 @@
 // EditorDisplayNameUtil — 멤버 이름을 인스펙터 · 환경설정 표시 이름으로: 접두어를 떼고 낱말을 나누고, 약어는 대문자로 둔다.
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Editor/Common/Widgets/Model/EditorDisplayNameUtil.h"
 

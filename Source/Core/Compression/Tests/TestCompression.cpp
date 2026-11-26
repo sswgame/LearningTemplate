@@ -8,7 +8,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Subscription.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 // 압축 — Null · RLE 코덱 왕복, 레지스트리 조회, 활성 레지스트리에 등록한 코덱을 스트림이 쓰는가, 스트림 헤더 · 체크섬,
 // 없는 코덱 · 모르는 코덱 · 넘치는 크기 · 터무니없는 해제 크기 · 퍼저 입력을 할당 전에 거절.

@@ -6,9 +6,11 @@
  */
 #pragma once
 #include "Core/Container/string.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
+#include "Engine/Config/ConfigFileID.h"
 #include "Engine/Config/IConfig.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -24,7 +26,7 @@ namespace sw
         REFLECT_BODY();
 
         /** @brief 설정 파일의 위치입니다(프로젝트 폴더 기준). */
-        static constexpr const utf8* kConfigFile = "Config/Engine/OcclusionCulling.json";
+        static constexpr ConfigFileID<OcclusionCullingConfig> kConfigFile{ "Config/Engine/OcclusionCulling.json" };
         /// 판정이 한 축에 읽는 HZB 텍셀 상한의 최댓값입니다 — 스레드 하나가 최대 4 x 4 = 16 번 읽는다(gpu_cull.hlsl `kMaxHZBFootprint`).
         static constexpr uint32 kMaxFootprintTexels = 4;
 
@@ -35,14 +37,14 @@ namespace sw
         PROPERTY( Required, Tooltip = "NDC depth bias, >= 0 - an instance is occluded only when its nearest depth is farther than the HZB max depth plus this" )
         float32 _depthBias{ -1.0f };
 
-        /** @brief 값이 맞으면 빈 글, 틀리면 이유입니다. */
-        string validate() const
+        /** @brief 칸의 범위를 봅니다(`ConfigManager::readConfig` 가 부른다). */
+        [[nodiscard]] expected<void> validate() const
         {
             if ( _footprintTexels < 1u || _footprintTexels > kMaxFootprintTexels )
-                return "_footprintTexels must be in [1, 4]";
+                return unexpected( Error{ ErrorKind::InvalidArgument, "_footprintTexels must be in [1, 4]", kConfigFile.getPath() } );
             if ( _depthBias < 0.0f )
-                return "_depthBias must be >= 0";
-            return string{};
+                return unexpected( Error{ ErrorKind::InvalidArgument, "_depthBias must be >= 0", kConfigFile.getPath() } );
+            return {};
         }
     };
 } // namespace sw

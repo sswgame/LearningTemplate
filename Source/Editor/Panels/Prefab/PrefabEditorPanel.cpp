@@ -95,7 +95,7 @@ namespace sw::editor
 
     bool PrefabEditorPanel::exitIsolation( bool bSaveToPrefab )
     {
-        const PrefabFrameExit result = _viewModel.exitFrame( getPreviewScene(), getPreviewSelection(), bSaveToPrefab );
+        const PrefabFrameExit result = _viewModel.exitFrame( getAssetWriter(), getPreviewScene(), getPreviewSelection(), bSaveToPrefab );
         if ( result == PrefabFrameExit::Failed )
             return false;
         if ( bSaveToPrefab )
@@ -114,9 +114,9 @@ namespace sw::editor
         return true;
     }
 
-    bool PrefabEditorPanel::saveDocument()
+    bool PrefabEditorPanel::saveDocument( AssetWriter& writer )
     {
-        if ( _viewModel.saveFrame( getPreviewScene() ) == false )
+        if ( _viewModel.saveFrame( writer, getPreviewScene() ) == false )
             return false;
         acknowledgePreviewEdits();
         return true;

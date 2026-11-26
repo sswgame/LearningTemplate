@@ -2,7 +2,7 @@
  * @file MemoryExportSubsystem.h
  * @brief 메모리 스냅숏 내보내기의 주인입니다 — 워커 쓰기(개발 명령 `memory.export`)의 태스크 단계와 실행 인자 `-memory-export=<폴더>` 의 루프 끝 쓰기.
  * @details 개발 도구가 기동 단계 범위에 하나 둔다(`DevToolsHost::addStartupSubsystems`). 낸 쓰기는 이 단계에 들고, 종료는 이 단계만 기다리며, 시나리오의 끝 차단
- *          (`<Pass/>` · `<EditorWaitStable/>`)이 남은 쓰기를 기다린다. 에디터 Memory 창은 자기 백그라운드 잡(`EditorBackgroundTask`)으로 쓴다.
+ *          (`<Pass/>` · `<EditorWaitStable/>`)이 남은 쓰기를 기다린다. 에디터 Memory 창은 자기 백그라운드 잡(`EditorBackgroundJob`)으로 쓴다.
  */
 #pragma once
 #include "Core/Container/string.h"

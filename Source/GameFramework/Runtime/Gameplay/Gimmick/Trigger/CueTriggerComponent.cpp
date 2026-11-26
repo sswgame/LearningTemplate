@@ -26,7 +26,7 @@ namespace sw
     void CueTriggerComponent::onTick( TickContext& context )
     {
         TriggerComponent::onTick( context );
-        _cooldownLeft = MathUtil::max( 0.0f, _cooldownLeft - context.getDeltaTime() );
+        _cooldownLeft = MathUtil::max( 0.0f, _cooldownLeft - context.getDeltaTime().count() );
     }
 
     bool CueTriggerComponent::onVolumeActivated( const GameObject& activator )

@@ -10,7 +10,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Foundation/EngineParallel.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/SceneTransformHierarchy.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -330,7 +330,7 @@ namespace sw
         }
 
         // Task 모드: 오브젝트마다 태스크 하나를 먼저 띄운다 — 파도 장벽에 묶이지 않고 파도와 겹쳐 돈다. 작업 풀이 없으면(엔진 없는 테스트) 파도 뒤에 차례로 돈다.
-        const bool      bAsyncTask  = taskCount > 0 && engine::areEngineServicesBound() && engine::getSubsystem<TaskManager>().getWorkerCount() > 0;
+        const bool      bAsyncTask  = taskCount > 0 && engine::areEngineSubsystemsBound() && engine::getSubsystem<TaskManager>().getWorkerCount() > 0;
         const uint32    taskOrdinal = ++_dispatchOrdinal;
         TaskStageHandle taskStage{};
         if ( bAsyncTask )
@@ -482,7 +482,7 @@ namespace sw
         }
 
         // 작업 풀이 없으면(엔진 없는 테스트) 위상 순으로 이 스레드가 돈다.
-        const bool bAsync = engine::areEngineServicesBound() && engine::getSubsystem<TaskManager>().getWorkerCount() > 0;
+        const bool bAsync = engine::areEngineSubsystemsBound() && engine::getSubsystem<TaskManager>().getWorkerCount() > 0;
         if ( bAsync == false )
         {
             for ( const uint32 index : listOrder )

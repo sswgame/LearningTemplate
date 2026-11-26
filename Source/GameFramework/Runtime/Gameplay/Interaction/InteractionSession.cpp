@@ -93,8 +93,9 @@ namespace sw
         beginStep();
     }
 
-    void InteractionSession::update( float32 deltaTime, bool bHeld, bool bPressed )
+    void InteractionSession::update( GameSeconds frameTime, bool bHeld, bool bPressed )
     {
+        const float32 deltaTime = frameTime.count();
         if ( _state != InteractionSessionState::Active )
             return;
         const InteractionStepDef& step = _pDef->_listStep[static_cast<size_t>( _stepIndex )];
@@ -115,7 +116,7 @@ namespace sw
                     cancel();
                     break;
                 }
-                _holdProgress.update( deltaTime );
+                _holdProgress.update( frameTime );
                 _listHoldEvent.clear();
                 _holdProgress.pollEvents( _listHoldEvent );
                 if ( _holdProgress.isCompleted() )

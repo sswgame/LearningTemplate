@@ -66,9 +66,9 @@ namespace sw
             SW_LOG_ERROR_ID( "FrontierSkirmish.PlayerStartOffLand", "[Frontier] _playerStart (%#, %#) is not on the %#x%# land - the skirmish cannot start", _playerStart._x, _playerStart._z, land._width, land._height );
             return false;
         }
-        if ( findCatalog() == nullptr || outWorld.initialize( findCatalog(), land._width, land._height ) == false )
+        if ( findCatalog() == nullptr || outWorld.initialize( *findCatalog(), land._width, land._height ) == false )
             return false;
-        outWorld.bindLand( &state.getLand(), int2{ 0, 0 } );
+        outWorld.bindLand( state.getLand(), int2{ 0, 0 } );
         (void)outWorld.addPlayer( 0, wallet.getWallet(), _playerStart ); // 플레이어 0 이 플레이어 지갑을 쓴다
         return true;
     }
@@ -126,12 +126,12 @@ namespace sw
         (void)_world.issueMove( _soldier, _bPatrolToB == SW_TRUE ? _patrolB : _patrolA ); // 경로가 막혀 거절되면 다음 틱에 반대쪽으로 다시 해 본다
     }
 
-    void FrontierSkirmishGameModeComponent::updateGame( float32 deltaTime )
+    void FrontierSkirmishGameModeComponent::updateGame( GameSeconds frameTime )
     {
         if ( ++_tickCount == 2 )
             issueOpeningOrders();
         else if ( _tickCount > 2 )
             continuePatrol();
-        (void)_world.update( deltaTime, 1.0f ); // 배속 없는 시연 — 진행한 시간은 쓰지 않는다
+        (void)_world.update( frameTime, 1.0f ); // 배속 없는 시연 — 진행한 시간은 쓰지 않는다
     }
 } // namespace sw

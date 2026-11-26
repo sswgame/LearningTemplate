@@ -1,7 +1,7 @@
 // UIAnimationPlayerTest — UI 애니메이션 재생기: 키 보간, 반복, 거꾸로, 멈춤 · 찾아가기, 이벤트(시각 · 곡선 지나감), 트윈 대체, 움직임 줄이기, 잘못된 트랙(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Reflection/Tests/ReflectionTestTypes.h"
 #include "Engine/UI/Animation/UIAnimatedProperty.h"

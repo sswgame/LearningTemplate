@@ -1,7 +1,7 @@
 // TileGridUtilTest — 타일 격자에서 충돌 사각형 병합 · 외곽선 · 청크 배치(nogpu). 이동 비용을 경로 찾기에 넣는 케이스는 GameFramework 의 `TileNavCostTest` 가 본다.
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/TileMap/TileGridUtil.h"
 

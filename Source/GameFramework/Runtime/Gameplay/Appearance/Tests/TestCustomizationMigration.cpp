@@ -2,7 +2,7 @@
 // 더 새 판 거절(원본을 덮지 않는다), 공유 코드 자리 이름 맞춤, 값 넣기 · 정규화의 판 찍기, 스키마 읽기 오류(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Serialization/XML/XMLDocument.h"
 

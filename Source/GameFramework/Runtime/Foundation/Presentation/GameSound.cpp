@@ -2,7 +2,7 @@
 
 #include "GameFramework/Runtime/Foundation/Presentation/GameSound.h"
 
-#include "GameFramework/Runtime/Foundation/Service/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 
 namespace sw
 {
@@ -58,13 +58,13 @@ namespace sw
     SoundPlayingID GameSound::postEvent( const hashed_string& eventName )
     {
         ISoundPlayer* pPlayer = game::findSubsystem<ISoundPlayer>();
-        return pPlayer != nullptr ? pPlayer->postEvent( eventName ) : 0;
+        return pPlayer != nullptr ? pPlayer->postEvent( eventName ) : SoundPlayingID{};
     }
 
     SoundPlayingID GameSound::postEventAt( const hashed_string& eventName, const float3& position )
     {
         ISoundPlayer* pPlayer = game::findSubsystem<ISoundPlayer>();
-        return pPlayer != nullptr ? pPlayer->postEventAt( eventName, position ) : 0;
+        return pPlayer != nullptr ? pPlayer->postEventAt( eventName, position ) : SoundPlayingID{};
     }
 
     void GameSound::setObjectParameter( const GameObject& object, const hashed_string& name, float32 value )

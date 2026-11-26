@@ -5,12 +5,12 @@
 
 #include "Core/Delegate/Delegate.h"
 #include "Core/File/FileUtil.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Config/ConfigManager.h"
+#include "Engine/Config/ConfigOverride.h"
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/GameConfig.h"
-#include "Engine/Config/PlatformConfigOverride.h"
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Serialization/Format/JSONSerializer.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"

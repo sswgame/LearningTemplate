@@ -9,7 +9,7 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/String/StringBuilder.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "Editor/Common/Asset/EditorAssetIndex.h"
@@ -53,8 +53,7 @@ namespace
             for ( uint32 fileIndex = 0; fileIndex < fileCount; ++fileIndex )
             {
                 const AbsolutePath absPath = root.join( makeAssetID( fileIndex ) );
-                if ( ( fileIndex % kFilePerFolder == 0 && FileUtil::ensureParentDirectoryExists( absPath ) == false ) ||
-                     FileUtil::writeTextFile( absPath, makeText( fileIndex, fileCount ) ) == false )
+                if ( FileUtil::writeTextFile( absPath, makeText( fileIndex, fileCount ) ) == false )
                     return false;
             }
             return true;

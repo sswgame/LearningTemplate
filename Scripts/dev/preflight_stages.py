@@ -146,7 +146,7 @@ class ServerToolsJob(Job):
 
 
 class ShaderWarmJob(Job):
-    """지난 Release 체인의 셰이더 요청 기록(체인 자식마다 하나 — Test/Scenario/CMakeLists.txt 의 `-shader-request-log`)만 컴파일해 그 빌드 폴더의 셰이더 DDC 를 네 백엔드 모두 데운다
+    """지난 Release 체인의 셰이더 요청 기록(체인 자식마다 하나 — IntegrationTests/Scenario/CMakeLists.txt 의 `-shader-request-log`)만 컴파일해 그 빌드 폴더의 셰이더 DDC 를 네 백엔드 모두 데운다
     (언리얼 Shader Pipeline Cache 의 미리 컴파일 자리). 셰이더 · 공용 hlsli 를 고친 묶음도 GPU 단계가 캐시 미스 컴파일을 떠안지 않는다(2026-11-19: dx11 empty 체인 19 분 중
     FXC 559 개 — 캐시가 차면 74 초). 전체 굽기는 5 만 개를 넘어 넣지 않는다."""
 

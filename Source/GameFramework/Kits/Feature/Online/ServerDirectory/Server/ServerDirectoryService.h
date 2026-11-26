@@ -22,8 +22,8 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Directory/ServerDirectoryControl.h"
-#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Directory/ServerRegistryReader.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/ServerDirectoryControl.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/ServerRegistryReader.h"
 #include "GameFramework/Kits/Feature/Online/ServerDirectory/Runtime/ServerDirectoryTypes.h"
 #include "GameFramework/Kits/Feature/Online/ServerDirectory/Server/ServerDirectoryKitConfig.h"
 #include "GameFramework/Runtime/Online/Audit/Server/ServiceAuditLog.h"

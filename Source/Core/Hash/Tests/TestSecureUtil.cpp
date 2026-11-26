@@ -1,7 +1,7 @@
 #include "pch.h"
 
 #include "Core/Hash/SecureUtil.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 /**
  * @brief [SecureUtilTest] SipHash-2-4 가 참고 구현의 테스트 벡터와 같다(키 00..0f, 입력 00..0e · 빈 입력 · 8 바이트 경계)

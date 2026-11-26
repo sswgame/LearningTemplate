@@ -14,8 +14,8 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Subsystem/Subsystem.h"
+#include "Core/Subsystem/SubsystemSlot.h"
 
 #include "Engine/Serialization/XML/XMLDocument.h"
 
@@ -142,6 +142,6 @@ namespace sw
          */
         atomic<bool> _bLoadAttempted;
 
-        SW_SERVICE_SLOT( ComponentDefaults, Required );
+        SW_SUBSYSTEM_SLOT( ComponentDefaults, Required );
     };
 } // namespace sw

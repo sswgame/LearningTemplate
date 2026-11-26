@@ -4,7 +4,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Editor/Common/Asset/ImportedAssetStore.h"
 #include "Editor/Common/Asset/ModelImport/ModelImportConfig.h"
@@ -226,7 +226,6 @@ SW_TEST_CASE( ImportedAssetStoreTest, RemovesOnlyUnreferencedFiles )
     SW_REQUIRE_TRUE( ImportedAssetStore::writeIfAbsent( kept, content.data(), content.size() ) );
     SW_REQUIRE_TRUE( ImportedAssetStore::writeIfAbsent( stale, content.data(), content.size() ) );
     const AbsolutePath setPath = root.join( "common/models/knight/knight.animset.xml" );
-    SW_REQUIRE_TRUE( FileUtil::ensureParentDirectoryExists( setPath ) );
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( setPath, R"(<AnimationSet formatVersion="0"><clip name="a" path="common/models/_shared/clips/aaaa.animclip"/></AnimationSet>)" ) );
 
     vector<string> listProblem;

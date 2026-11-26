@@ -2,11 +2,11 @@
 
 #include "Core/Container/unordered_map.h"
 #include "Core/File/FileUtil.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Content/AssetRegistry.h"
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
 #include "Engine/Serialization/Inherit/ResourceComposition.h"
 #include "Engine/Serialization/XML/XMLDocument.h"

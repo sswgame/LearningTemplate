@@ -12,8 +12,10 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
+#include "Core/Time/Countdown.h"
 #include "Core/Time/FixedStepTimer.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -74,7 +76,7 @@ namespace sw
     protected:
         [[nodiscard]] bool startGame() override;
         void               onGameStarted() override;
-        void               updateMatch( float32 deltaTime ) override;
+        void               updateMatch( GameSeconds frameTime ) override;
         /** @brief 이겼으면 결과 값 `money`(`_victoryMoney`)를 냅니다. 지거나 비기면 넘길 값이 없다. */
         void collectMinigameResult( vector<MinigameResultValue>& outListValue ) const override;
 

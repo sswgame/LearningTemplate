@@ -14,8 +14,8 @@
 
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Foundation/EngineDefines.h"
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Localization/PseudoLocalizer.h"
 #include "Engine/Localization/StringTable.h"
 #include "Engine/Localization/TextFormatter.h"
@@ -585,7 +585,7 @@ namespace sw
         }
 
         string preferredLanguage;
-        if ( engine::areEngineServicesBound() )
+        if ( engine::areEngineSubsystemsBound() )
             engine::getSubsystem<CommandLineManager>().getArgument( CommandLineArgument::LANGUAGE, preferredLanguage );
         if ( preferredLanguage.empty() || hasLanguage( preferredLanguage ) == false )
             preferredLanguage = string( defaultLanguage );
@@ -1260,5 +1260,5 @@ namespace sw
 
 namespace sw
 {
-    SW_ENGINE_SERVICE_SUBSYSTEM( LocalizationManager, GameVisible, GameInstance, Services, (), SW_ENGINE_DEFAULT_FACTORY( LocalizationManager ) );
+    SW_ENGINE_SUBSYSTEM_WITH_SLOT( LocalizationManager, GameVisible, GameInstance, Shared, (), SW_ENGINE_DEFAULT_FACTORY( LocalizationManager ) );
 } // namespace sw

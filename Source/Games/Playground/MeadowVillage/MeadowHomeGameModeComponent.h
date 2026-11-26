@@ -7,7 +7,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Radians.h"
 #include "Core/Math/VectorMath.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/FormatDef.h"
@@ -58,7 +59,7 @@ namespace sw
 
     protected:
         [[nodiscard]] bool startGame() override;
-        void               updateGame( float32 deltaTime ) override;
+        void               updateGame( GameSeconds frameTime ) override;
 
     private:
         HousingPlotComponent* findPlot() const;

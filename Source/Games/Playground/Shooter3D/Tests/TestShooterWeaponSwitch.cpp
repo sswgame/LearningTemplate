@@ -2,7 +2,7 @@
 // 입력 층에서 한 번 누름이 한 칸인지는 시나리오 game.playground.shooter3d_weaponswitch 가 본다.
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"

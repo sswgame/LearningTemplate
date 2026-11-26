@@ -3,9 +3,10 @@
 #include "Editor/Panels/Inspector/Model/InspectorViewModel.h"
 
 #include "Core/Algorithm/VectorUtil.h"
-#include "Core/Name/TagID.h"
+#include "Core/String/Name/TagID.h"
 #include "Core/String/StringUtil.h"
 
+#include "Editor/Common/Asset/AssetWriter.h"
 #include "Editor/Common/Commands/Diagnostics/EditorGlobalVariableCommands.h"
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Commands/Scene/EditorInspectorCommands.h"
@@ -17,7 +18,7 @@
 #include "Editor/Common/Widgets/PropertyGrid/Model/InspectorObjectEdit.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
@@ -495,21 +496,21 @@ namespace sw::editor
     void InspectorViewModel::gatherPresets( const EditorCommandTarget& target, vector<InspectorPresetRow>& outListPreset )
     {
         outListPreset.clear();
-        vector<AbsolutePath> listNewPresetFile;
-        const EditorTaskPoll presetPoll = _presetJob.take( listNewPresetFile );
-        if ( presetPoll == EditorTaskPoll::Ready )
+        vector<DiskPath>    listNewPresetFile;
+        const EditorJobPoll presetPoll = _presetJob.take( listNewPresetFile );
+        if ( presetPoll == EditorJobPoll::Ready )
         {
             _listPresetFile = std::move( listNewPresetFile );
             _bPresetDirty   = SW_FALSE;
         }
-        else if ( _bPresetDirty == SW_TRUE && presetPoll == EditorTaskPoll::Idle )
+        else if ( _bPresetDirty == SW_TRUE && presetPoll == EditorJobPoll::Idle )
         {
             _presetJob.request( EditorGlobalVariableCommands::getComponentPresetFolderPath(), ".preset.xml", false );
         }
         Component* pComp = InspectorViewModelInternal::findTargetComponent( target );
         if ( pComp == nullptr )
             return;
-        for ( const AbsolutePath& presetFile : _listPresetFile )
+        for ( const DiskPath& presetFile : _listPresetFile )
         {
             string displayName = EditorTransformCommands::getComponentPresetName( pComp, presetFile.str() );
             if ( displayName.empty() == false )
@@ -519,8 +520,11 @@ namespace sw::editor
 
     bool InspectorViewModel::saveComponentPreset( const EditorCommandTarget& target, string_view presetName )
     {
-        Component* pComp = InspectorViewModelInternal::findTargetComponent( target );
-        if ( pComp == nullptr || EditorTransformCommands::saveComponentPreset( pComp, string( presetName ).c_str() ) == false )
+        Component*             pComp = InspectorViewModelInternal::findTargetComponent( target );
+        const AssetWriteResult saved = pComp != nullptr ? EditorTransformCommands::saveComponentPreset( pComp, string( presetName ).c_str() ) : AssetWriteResult::Failed;
+        if ( saved == AssetWriteResult::Refused )
+            return false; // 문이 이미 알렸다
+        if ( saved == AssetWriteResult::Failed )
         {
             SW_LOG_ERROR_ID( "InspectorPanel.CouldNotSaveComponent", "Could not save component preset '%#'", presetName );
             return false;
@@ -529,7 +533,7 @@ namespace sw::editor
         return true;
     }
 
-    void InspectorViewModel::loadComponentPreset( const EditorCommandTarget& target, const AbsolutePath& presetFile )
+    void InspectorViewModel::loadComponentPreset( const EditorCommandTarget& target, const DiskPath& presetFile )
     {
         Component*        pComp = InspectorViewModelInternal::findTargetComponent( target );
         EditorTransaction transaction; // 하위 메뉴(`inspector.component.presets`)가 고른 끝 — 씬을 바꾸는 여기서 거래를 연다

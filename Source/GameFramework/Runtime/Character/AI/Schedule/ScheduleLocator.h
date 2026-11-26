@@ -10,7 +10,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Character/AI/Schedule/SchedulePathing.h"
@@ -72,7 +72,7 @@ namespace sw
     public:
         ScheduleSpotLocator();
 
-        void initialize( const ScheduleCatalog* pCatalog );
+        void initialize( const ScheduleCatalog& catalog );
         void clear();
 
         [[nodiscard]] bool reserve( const ScheduleReserveRequest& request, ScheduleLocation& outLocation, uint32& outReservationID ) override;

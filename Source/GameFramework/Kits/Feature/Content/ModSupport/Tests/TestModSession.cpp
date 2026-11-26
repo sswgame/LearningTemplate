@@ -2,7 +2,7 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/String/StringBuilder.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #define SW_TEST_INTERNAL // 임시 리소스 도메인 픽스처가 엔진 서비스(`AssetPaths`)를 직접 쓴다
 #include "Engine/Asset/AssetManager.h"
@@ -14,7 +14,7 @@
 #include "Engine/Content/Pack/PackReader.h"
 #include "Engine/Content/Pack/Tests/PackTestUtil.h"
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Serialization/Inherit/ResourceComposition.h"
 
 #include "GameFramework/Kits/Feature/Content/ModSupport/ModAllowList.h"
@@ -56,7 +56,7 @@ namespace
 
         static bool writeText( const AbsolutePath& path, string_view text )
         {
-            return FileUtil::ensureDirectoryExists( path.getParent() ) && FileUtil::writeTextFile( path, text );
+            return FileUtil::writeTextFile( path, text );
         }
 
         /** @brief 설치 폴더에 매니페스트를 씁니다(덮어쓰기는 기본 리소스 하나). */

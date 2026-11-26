@@ -36,7 +36,7 @@ namespace sw::editor
         void drawAnimationToolbar();
         /** @brief 노드 그래프 캔버스를 그립니다. */
         void               drawAnimationCanvas();
-        [[nodiscard]] bool saveDocument() override;
+        [[nodiscard]] bool saveDocument( AssetWriter& writer ) override;
         /** @brief 조건이 있는 전이 수를 반환합니다. 감시 값 `Editor.AnimationGraphConditionCount` 가 읽습니다. */
         uint32 countConditionLinks() const;
         /** @brief 전이 수를 반환합니다. 감시 값 `Editor.AnimationGraphLinkCount` 가 읽습니다. */
@@ -68,7 +68,6 @@ namespace sw::editor
         /** @brief 되돌리기 글은 펼친 그래프라 부모를 적지 않는다. 문서의 부모(`_baseID`)를 지켜 저장이 계속 차이만 쓰게 합니다. */
         void applyDocumentText( string_view text ) override;
         /** @brief 그래프 데이터를 저장합니다. */
-        [[nodiscard]] bool saveGraphData();
         /** @brief 주어진 이름의 노드를 추가하고 그 id 를 반환합니다. */
         int32 addNamedNode( const utf8* pName );
         /**

@@ -15,15 +15,34 @@
 #include "Core/Container/vector.h"
 #include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Time/ExponentialBackoff.h"
 #include "Core/Time/TimePoint.h"
+
+#include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/LiveOps/Runtime/LiveOpsTypes.h"
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/LiveOpsKitConfig.h"
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/Push/PushNotificationProvider.h"
 #include "GameFramework/Runtime/Online/Guard/Server/TokenBucketMap.h"
+#include "GameFramework/Runtime/Online/Service/OnlineLimit.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStoreTracker.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceTTLRule.h"
+#include "GameFramework/Runtime/Online/Store/ServiceRecordUnknownFields.h"
+
+namespace sw
+{
+    /** @brief 토큰 → 기기 레코드 역색인(`liveops_device_owner`, 키 `<제공자>.<토큰 해시>`)의 값 — 그 토큰을 가진 기기 레코드의 키입니다. */
+    REFLECT()
+    struct PushDeviceOwnerRecord
+    {
+        REFLECT_BODY();
+        PROPERTY( MaxCount = OnlineLimit::kMaxKeySize )
+        string _deviceKey{};
+
+        ServiceRecordUnknownFields _unknownProperties{};
+    };
+} // namespace sw
 
 namespace sw
 {
@@ -113,7 +132,8 @@ namespace sw
 
     private:
         /** @brief 기기 등록 · 해지(@p bytes 가 비었다) 일을 맡깁니다. */
-        void submitWrite( AccountID accountID, string&& key, string&& ownerKey, vector<uint8>&& bytes, uint64 requestTag );
+        /** @brief 기기 등록(@p registration 이 있다)이나 해지(없다)를 저장 일로 맡깁니다. */
+        void submitWrite( AccountID accountID, string&& key, string&& ownerKey, optional<PushDeviceRegistration>&& registration, uint64 requestTag );
         /** @brief 저장소 일의 완료입니다. */
         void applyDevices( AccountID accountID, const PushNotificationMessage& message, vector<PushDeviceRegistration>&& listDevice, UnixMilliseconds nowMs );
         void applyWrite( uint64 requestTag, LiveOpsServiceResult result );
@@ -122,8 +142,9 @@ namespace sw
         struct Delivery
         {
             PushNotificationMessage _message{};
-            PushDeviceRegistration  _device{}; ///< 토픽 배달이면 제공자 id 만 채운다
-            string                  _topic{};  ///< 토픽 배달의 토픽 이름
+            PushDeviceRegistration  _device{};             ///< 토픽 배달이면 제공자 id 만 채운다
+            string                  _topic{};              ///< 토픽 배달의 토픽 이름
+            ExponentialBackoff      _retryBackoff{ 0, 1 }; ///< 첫 실패에 씨앗을 운영체제 난수로 바꾼다
             AccountID               _accountID{ kInvalidAccountID };
             int64                   _nextAttemptMs{ 0 };
             int32                   _attempt{ 0 }; ///< 실패한 횟수이다

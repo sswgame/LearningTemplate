@@ -1,8 +1,8 @@
 #include "pch.h"
 
 #include "Core/GlobalVariable/GlobalVariableManager.h"
-#include "Core/Testing/TestFramework.h"
-#include "Core/Testing/ThreadTestAccess.h"
+#include "Core/TestFramework/TestFramework.h"
+#include "Core/TestFramework/ThreadTestAccess.h"
 
 #include "Engine/Graphics/Debug/RenderDiagnostics.h"
 #include "Engine/Renderer/Frame/Packet/RenderFrameSettings.h"

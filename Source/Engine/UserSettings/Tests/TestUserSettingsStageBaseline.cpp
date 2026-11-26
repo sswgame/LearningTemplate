@@ -1,7 +1,7 @@
 // UserSettingsStageBaselineTest — 자동화 단계 경계의 사용자 설정 되돌리기(핸들러 대상 · 대상 없는 값)와 언어 설정 빈 값("게임 기본")으로 돌아가기(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/UserSettings/UserSettingsManager.h"

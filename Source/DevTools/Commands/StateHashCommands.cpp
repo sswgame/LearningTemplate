@@ -1,12 +1,12 @@
 #include "pch.h"
 
 #include "Core/Foundation/Expected.h"
-#include "Core/Network/DebugReplyLine.h"
+#include "Core/Log/DebugReplyLine.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Console/DevCommandRegistry.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Scene/SceneObjectHash.h"

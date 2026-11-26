@@ -1,7 +1,7 @@
 #include "pch.h"
 
 #include "Core/Network/Replication/NetPrioritizer.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 // 누적 우선도 — 늘 같은 순서, 보낸 것만 0 으로, 잃은 비신뢰 몫은 되돌린다.
 

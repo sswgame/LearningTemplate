@@ -9,7 +9,7 @@
 #include "DevTools/Client/Automation/Runner/AutomationSession.h"
 
 #include "Editor/Common/Commands/Asset/EditorAssetFileCommands.h"
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 #include "Editor/Common/Workspace/EditorUICommandQueue.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 

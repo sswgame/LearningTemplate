@@ -7,8 +7,8 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Path/AbsolutePath.h"
 #include "Core/String/StringBuilder.h"
-#include "Core/Testing/TestFramework.h"
-#include "Core/Testing/ThreadTestAccess.h"
+#include "Core/TestFramework/TestFramework.h"
+#include "Core/TestFramework/ThreadTestAccess.h"
 #include "Core/Time/MonotonicClock.h"
 
 namespace

@@ -3,8 +3,8 @@
 // 서버 단위(`Server --test`)에도 그대로 돈다 — 전용 서버도 Engine(물리)을 싣는다.
 #include "pch.h"
 
-#include "Core/Name/hashed_string.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/String/Name/hashed_string.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"

@@ -5,7 +5,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 using namespace sw;
 

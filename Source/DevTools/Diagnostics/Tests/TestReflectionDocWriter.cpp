@@ -1,11 +1,11 @@
 #include "pch.h"
 
 #include "Core/File/FileUtil.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "DevTools/Diagnostics/ReflectionDocWriter.h"
 
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Reflection/Tests/ReflectionTestTypes.h"
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Reflection/TypeRegistry.h"

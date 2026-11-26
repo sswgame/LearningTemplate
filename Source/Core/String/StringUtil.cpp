@@ -64,7 +64,7 @@ namespace sw
              */
             static constexpr UTF8LeadInfo classifyUTF8LeadByte( const uint8 leadByte ) noexcept
             {
-                switch ( UTF8Util::getSequenceLength( leadByte ) ) // 길이 규칙은 UTF8Util 하나, 여기는 길이별 초기 비트와 최소 코드 포인트만
+                switch ( StringUtil::getUTF8SequenceLength( leadByte ) ) // 길이 규칙은 StringUtil 하나, 여기는 길이별 초기 비트와 최소 코드 포인트만
                 {
                     case 1:
                         return { 1, leadByte, 0x0 };
@@ -165,7 +165,7 @@ namespace sw
                 {
                     // 잘렸거나 연속 바이트가 아니면 거기까지를 한 글자로 치고, 그 바이트부터 다시 읽는다(삼키지 않는다).
                     const bool bTruncated = byteIndex >= remaining;
-                    if ( bTruncated || UTF8Util::isContinuation( pData[byteIndex] ) == false )
+                    if ( bTruncated || StringUtil::isUTF8Continuation( pData[byteIndex] ) == false )
                         return { kReplacementCodepoint, byteIndex, false };
                     codepoint = ( codepoint << 6 ) | ( static_cast<uint8>( pData[byteIndex] ) & 0x3F );
                 }
@@ -1235,7 +1235,7 @@ namespace sw
                 ++line;
                 column = 1;
             }
-            else if ( UTF8Util::isContinuation( byte ) == false ) // 이어지는 바이트(10xxxxxx)는 세지 않는다 — 열은 글자 수다
+            else if ( StringUtil::isUTF8Continuation( byte ) == false ) // 이어지는 바이트(10xxxxxx)는 세지 않는다 — 열은 글자 수다
             {
                 ++column;
             }
@@ -1361,4 +1361,98 @@ namespace sw
         return result;
     }
 
+} // namespace sw
+
+// ------------------------------------------------------------------------------
+// JSON 문자열 이스케이프
+// ------------------------------------------------------------------------------
+namespace sw
+{
+    namespace
+    {
+        struct StringUtilJSONInternal
+        {
+            /** @brief 잘못된 UTF-8 바이트를 대신하는 글자(U+FFFD)입니다. */
+            static constexpr string_view kReplacement = "\\ufffd";
+
+            /** @brief 따로 적는 이스케이프가 있는 제어 문자이면 그 글자(`n` 등), 없으면 0 입니다. */
+            static utf8 getShortEscape( utf8 character )
+            {
+                switch ( character )
+                {
+                    case '\b':
+                        return 'b';
+                    case '\f':
+                        return 'f';
+                    case '\n':
+                        return 'n';
+                    case '\r':
+                        return 'r';
+                    case '\t':
+                        return 't';
+                    case '"':
+                        return '"';
+                    case '\\':
+                        return '\\';
+                    default:
+                        return 0;
+                }
+            }
+
+            static void appendToString( void* pContext, string_view piece ) { static_cast<string*>( pContext )->append( piece ); }
+        };
+    } // namespace
+} // namespace sw
+
+namespace sw
+{
+    void StringUtil::escapeJSON( string_view text, JSONAppendFunction pAppend, void* pContext )
+    {
+        using Internal  = StringUtilJSONInternal;
+        size_t runBegin = 0;
+        size_t offset   = 0;
+        while ( offset < text.size() )
+        {
+            const uint8 byte   = static_cast<uint8>( text[offset] );
+            const bool  bPlain = byte >= 0x20 && byte < 0x80 && byte != '"' && byte != '\\';
+            if ( bPlain )
+            {
+                ++offset;
+                continue;
+            }
+            if ( byte >= 0x80 )
+            {
+                // 여러 바이트 글자: 올바르면 그대로 둔 채 지나가고, 잘못된 바이트만 U+FFFD 로 바꾼다.
+                const size_t charBegin = offset;
+                uint32       codepoint = 0;
+                if ( tryDecodeUTF8( text, offset, codepoint ) )
+                    continue;
+                pAppend( pContext, text.substr( runBegin, charBegin - runBegin ) );
+                pAppend( pContext, Internal::kReplacement );
+                runBegin = offset;
+                continue;
+            }
+            pAppend( pContext, text.substr( runBegin, offset - runBegin ) );
+            const utf8 shortEscape = Internal::getShortEscape( static_cast<utf8>( byte ) );
+            if ( shortEscape != 0 )
+            {
+                const utf8 arrEscape[2]{ '\\', shortEscape };
+                pAppend( pContext, string_view{ arrEscape, 2 } );
+            }
+            else
+            {
+                utf8 arrEscape[6]{ '\\', 'u', '0', '0', 0, 0 };
+                HexDigitUtil::writeDigits( arrEscape + 4, byte, 2, HexCase::Lower );
+                pAppend( pContext, string_view{ arrEscape, 6 } );
+            }
+            ++offset;
+            runBegin = offset;
+        }
+        pAppend( pContext, text.substr( runBegin ) );
+    }
+
+    void StringUtil::appendJSONEscaped( string& inoutText, string_view text )
+    {
+        escapeJSON( text, &StringUtilJSONInternal::appendToString, &inoutText );
+    }
 } // namespace sw

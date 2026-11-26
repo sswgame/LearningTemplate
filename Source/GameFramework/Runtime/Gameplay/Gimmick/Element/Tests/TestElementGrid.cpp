@@ -5,7 +5,7 @@
 
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -58,7 +58,7 @@ namespace
         /** @brief 모든 칸이 @p pName 재질인 격자를 세웁니다. */
         [[nodiscard]] bool makeGrid( int32 width, int32 height, const utf8* pName, ElementGrid& outGrid ) const
         {
-            if ( outGrid.initialize( width, height, &_table ) == false )
+            if ( outGrid.initialize( width, height, _table ) == false )
                 return false;
             for ( int32 y = 0; y < height; ++y )
             {
@@ -72,16 +72,15 @@ namespace
     };
 } // namespace
 
-/** @brief [ElementGridTest] 표가 없거나 재질이 없거나 크기가 1 보다 작으면 세우지 않고, 표에 없는 재질은 칸에 놓지 않는다 */
+/** @brief [ElementGridTest] 재질이 없거나 크기가 1 보다 작으면 세우지 않고, 표에 없는 재질은 칸에 놓지 않는다 */
 SW_TEST_CASE( ElementGridTest, RefusesBadSizeTableAndMaterial )
 {
     const ElementGridTestTable rules;
     ElementGrid                grid;
     SW_EXPECT_LOG( "ElementGrid.ElementGridRefusedSizeX" );
-    SW_EXPECT_FALSE( grid.initialize( 0, 3, &rules._table ) );
-    SW_EXPECT_FALSE( grid.initialize( 3, 3, nullptr ) );
+    SW_EXPECT_FALSE( grid.initialize( 0, 3, rules._table ) );
     const ElementRuleCatalog empty{};
-    SW_EXPECT_FALSE( grid.initialize( 3, 3, &empty ) );
+    SW_EXPECT_FALSE( grid.initialize( 3, 3, empty ) );
     SW_REQUIRE_TRUE( rules.makeGrid( 2, 1, "Grass", grid ) );
     SW_EXPECT_LOG( "ElementGrid.MaterialNotInTable" );
     grid.setMaterial( int2{ 0, 0 }, 6 ); // 재질은 여섯 개(0 ~ 5)
@@ -182,9 +181,9 @@ SW_TEST_CASE( ElementGridTest, FixedStepAndHash )
     const ElementGridTestTable rules;
     ElementGrid                grid;
     SW_REQUIRE_TRUE( rules.makeGrid( 3, 1, "Wood", grid ) );
-    SW_EXPECT_EQUAL( 0, grid.update( 0.2f ) );
+    SW_EXPECT_EQUAL( 0, grid.update( GameSeconds{ 0.2f } ) );
     const uint32 still = grid.computeStateHash();
-    SW_EXPECT_EQUAL( 1, grid.update( 0.1f ) );
+    SW_EXPECT_EQUAL( 1, grid.update( GameSeconds{ 0.1f } ) );
     SW_EXPECT_EQUAL( 1u, grid.getStepCount() );
     const uint32 stepped = grid.computeStateHash();
     SW_EXPECT_NOT_EQUAL( still, stepped );
@@ -201,7 +200,7 @@ SW_TEST_CASE( ElementGridTest, StateRoundTripAndRejects )
     original.setWind( int2{ 1, 0 } );
     original.setMaterial( int2{ 3, 1 }, rules.material( "Water" ) );
     SW_REQUIRE_EQUAL( 1, original.applyStimulus( int2{ 0, 0 }, rules._fire ) );
-    SW_EXPECT_EQUAL( 1, original.update( 0.3f ) );
+    SW_EXPECT_EQUAL( 1, original.update( GameSeconds{ 0.3f } ) );
     Archive written;
     original.writeState( written );
 
@@ -210,7 +209,7 @@ SW_TEST_CASE( ElementGridTest, StateRoundTripAndRejects )
     Archive reading( written.getData(), written.getSize() );
     SW_REQUIRE_TRUE( restored.readState( reading ) );
     SW_EXPECT_EQUAL( original.computeStateHash(), restored.computeStateHash() );
-    SW_EXPECT_EQUAL( original.update( 0.2f ), restored.update( 0.2f ) ); // 남은 시간도 이어진다
+    SW_EXPECT_EQUAL( original.update( GameSeconds{ 0.2f } ), restored.update( GameSeconds{ 0.2f } ) ); // 남은 시간도 이어진다
     SW_EXPECT_EQUAL( original.computeStateHash(), restored.computeStateHash() );
 
     ElementGrid other;
@@ -227,7 +226,7 @@ SW_TEST_CASE( ElementGridTest, StateRoundTripAndRejects )
     ElementRuleCatalog small;
     SW_REQUIRE_TRUE( small.loadFromXMLText( R"(<ElementRules><Material id="Empty"/></ElementRules>)", "small" ) );
     ElementGrid reduced;
-    SW_REQUIRE_TRUE( reduced.initialize( 4, 2, &small ) );
+    SW_REQUIRE_TRUE( reduced.initialize( 4, 2, small ) );
     Archive forReduced( written.getData(), written.getSize() );
     SW_EXPECT_FALSE( reduced.readState( forReduced ) ); // 풀 · 물 번호가 이 표에 없다
 }

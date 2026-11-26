@@ -29,13 +29,13 @@ namespace sw
 
         void attach( const ISubsystemLocator& scope ) override
         {
-            _bRegistered = requireSubsystem<TRegistry>( scope ).registerEntry( _entry ) ? SW_TRUE : SW_FALSE;
+            _bRegistered = getSubsystemFrom<TRegistry>( scope ).registerEntry( _entry ) ? SW_TRUE : SW_FALSE;
         }
 
         void detach( const ISubsystemLocator& scope ) override
         {
             if ( _bRegistered == SW_TRUE )
-                requireSubsystem<TRegistry>( scope ).unregisterEntry( _entry );
+                getSubsystemFrom<TRegistry>( scope ).unregisterEntry( _entry );
             _bRegistered = SW_FALSE;
         }
 

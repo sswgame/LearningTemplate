@@ -1,7 +1,7 @@
 // KillcamTest — 킬캠 기록(관통 다중 명중 · 상한 · 투사체 사건)과 연출 시간표, 재생 컴포넌트의 컷 카메라(nogpu, 에셋 없음).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -136,7 +136,7 @@ SW_TEST_CASE( KillcamTest, ComponentCutsToItsCameraAndReleases )
     for ( int32 tickIndex = 0; tickIndex < 400 && pKillcam->isPlaying(); ++tickIndex )
     {
         {
-            TickContext context{ *pKillcam->getOwner(), 0.05f };
+            TickContext context{ *pKillcam->getOwner(), GameSeconds{ 0.05f } };
             pKillcam->onTick( context );
         }
     }

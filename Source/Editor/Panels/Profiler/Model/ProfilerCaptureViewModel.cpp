@@ -6,7 +6,7 @@
 #include "Core/File/ProcessRoots.h"
 #include "Core/Log/Logger.h"
 
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 #include "Editor/Common/Workspace/EditorUICommandQueue.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 
@@ -54,7 +54,7 @@ namespace sw::editor
     bool ProfilerCaptureViewModel::saveCapture() const
     {
         const AbsolutePath path = getCaptureFilePath();
-        if ( FileUtil::ensureParentDirectoryExists( path ) && _scopeHistory.saveToFile( path ) )
+        if ( _scopeHistory.saveToFile( path ) )
         {
             SW_LOG_INFO_ID( "ProfilerCaptureViewModel.ProfilerCaptureSaved", "Profiler capture saved: %#", path.c_str() );
             return true;

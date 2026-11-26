@@ -45,7 +45,7 @@ namespace sw
 
         void onTick( TickContext& context ) override
         {
-            _value += context.getDeltaTime() * _speed;
+            _value += context.getDeltaTime().count() * _speed;
             writeOwnPosition( float3{ _value, 0.0f, 0.0f } );
             if ( _pShared != nullptr )
                 _pShared->setLocalPosition( float3{ 0.0f, 0.0f, _value } );
@@ -158,7 +158,7 @@ namespace sw
             (void)subTickID;
             ++_frame;
             const float32 previous = _pPrev != nullptr ? _pPrev->_value : static_cast<float32>( _frame );
-            _value                 = previous * 0.5f + _gain + context.getDeltaTime();
+            _value                 = previous * 0.5f + _gain + context.getDeltaTime().count();
         }
     };
 
@@ -239,7 +239,7 @@ namespace sw
         void onTick( TickContext& context ) override
         {
             ++_tickCount;
-            _tickSeconds += context.getDeltaTime();
+            _tickSeconds += context.getDeltaTime().count();
             for ( int32 index = 0; index < context.getIntervalCount(); ++index )
             {
                 _listTickFrame.push_back( *_pFrame );

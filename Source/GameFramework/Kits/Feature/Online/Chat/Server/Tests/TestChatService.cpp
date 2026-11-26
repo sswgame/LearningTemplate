@@ -4,11 +4,11 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "GameFramework/Kits/Feature/Online/Chat/Server/ChatKitConfig.h"
 #include "GameFramework/Kits/Feature/Online/Chat/Server/ChatService.h"
-#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Identity/AccountPresence.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/AccountPresence.h"
 #include "GameFramework/Runtime/Online/Bus/Server/LocalServerBus.h"
 #include "GameFramework/Runtime/Online/Bus/ServerBus.h"
 #include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"

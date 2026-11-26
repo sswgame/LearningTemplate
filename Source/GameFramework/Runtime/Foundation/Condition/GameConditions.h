@@ -9,8 +9,8 @@
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Name/TagID.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/TagID.h"
+#include "Core/String/Name/hashed_string.h"
 
 #include "Engine/Behavior/ConditionExpr.h"
 #include "Engine/Behavior/GameActionCall.h"

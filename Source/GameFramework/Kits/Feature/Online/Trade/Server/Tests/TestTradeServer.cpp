@@ -4,9 +4,9 @@
 #include "pch.h"
 
 #include "Core/String/StringUtil.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
-#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Identity/AccountPresence.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/AccountPresence.h"
 #include "GameFramework/Kits/Feature/Online/Trade/Runtime/TradeSessionRecord.h"
 #include "GameFramework/Kits/Feature/Online/Trade/Server/TradeServer.h"
 #include "GameFramework/Kits/Feature/Online/Trade/Server/TradeService.h"
@@ -199,7 +199,7 @@ namespace
             TradeServiceConfig settings;
             settings._inviteTimeoutMs = 30000; // 키트 설정의 필수 칸 — 견본 값
             settings._idleTimeoutMs   = 300000;
-            _tradeService.initialize( &_pRig->_server._store, &_policy, nullptr, kServerID, settings );
+            _tradeService.initialize( _pRig->_server._store, &_policy, nullptr, kServerID, settings );
             _tradeServer.initialize( &_tradeService, &_directory, bWithPresence ? &_presence : nullptr );
             _directory.add( "alice", kAlice );
             _directory.add( "bob", kBob );

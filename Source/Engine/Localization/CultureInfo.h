@@ -24,6 +24,32 @@
  */
 namespace sw
 {
+    /** @brief 표의 `<numberingSystem id digits>` 한 줄입니다. */
+    REFLECT()
+    struct SW_API CultureNumberingSystemDef
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        string _id;
+        PROPERTY( Required )
+        string _digits; ///< 숫자 글자 열 개(0 ~ 9 순서, 글자마다 여러 바이트여도 된다)
+    };
+
+    /** @brief 표의 `<currency code symbol digits>` 한 줄입니다. */
+    REFLECT()
+    struct SW_API CultureCurrencyDef
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        string _code;
+        PROPERTY( Required )
+        string _symbol;
+        PROPERTY( Required, Min = 0, Max = 4 )
+        int32 _digits{ 0 };
+    };
+
     /** @brief 통화 한 줄입니다. */
     struct CurrencyInfo
     {

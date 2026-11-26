@@ -9,9 +9,9 @@
 #include "Core/Foundation/ObserverSlot.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Testing/ScopedAllocationCount.h"
-#include "Core/Testing/ScopedAssertCapture.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/ScopedAllocationCount.h"
+#include "Core/TestFramework/ScopedAssertCapture.h"
+#include "Core/TestFramework/TestFramework.h"
 
 namespace
 {
@@ -38,7 +38,7 @@ SW_TEST_CASE( ObserverSlotTest, BindThenReleaseOnDestruction )
     ObserverSlotTestInternal                   observer;
     SW_EXPECT_NULL( slot.get() );
     {
-        const sw::ObserverSlot<ObserverSlotTestInternal>::Registration registration = slot.bind( &observer );
+        const sw::ObserverSlot<ObserverSlotTestInternal>::Subscription registration = slot.bind( &observer );
         SW_EXPECT_TRUE( registration.isActive() );
         SW_EXPECT_TRUE( slot.get() == &observer );
     }
@@ -106,7 +106,7 @@ SW_TEST_CASE( ObserverSlotTest, AllocationCounterLeavesObserverBound )
     static constexpr sw::MemoryAllocationObserver kObserver{ &Counter::onAllocate, &Counter::onFree };
     Counter::s_allocateCount.store( 0 );
 
-    sw::Memory::AllocationObserverRegistration registration = sw::Memory::registerAllocationObserver( &kObserver );
+    sw::Memory::AllocationObserverSubscription registration = sw::Memory::registerAllocationObserver( &kObserver );
     {
         const sw::test::ScopedAllocationCount counter;
         void*                                 pBlock = sw::Memory::allocate( 64 );

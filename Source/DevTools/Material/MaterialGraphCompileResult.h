@@ -10,11 +10,29 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
+#include "DevTools/DevToolsAPI.h"
 #include "DevTools/Material/MaterialGraph.h"
 #include "DevTools/Material/MaterialGraphNodeRegistry.h"
 
+#include "Engine/Config/ConfigFileID.h"
+#include "Engine/Reflection/ReflectionMacros.h"
+
 namespace sw
 {
+    /** @struct MaterialGraphLayerLimits @brief 머티리얼 층의 상한입니다. 층마다 칸 · 텍스처 표본 · 섞기 줄이 늘어 셰이더 비용의 상한을 데이터로 둔다. */
+    REFLECT()
+    struct SW_DEVTOOLS_API MaterialGraphLayerLimits
+    {
+        REFLECT_BODY();
+
+        static constexpr ConfigFileID<MaterialGraphLayerLimits> kConfigFile{ "Config/Dev/MaterialLayers.json" };
+
+        PROPERTY( Required, Min = 1 )
+        uint32 _maxLayerCount{ 0 }; ///< 머티리얼 하나의 층 수
+        PROPERTY( Required, Min = 1, Max = 4 )
+        uint32 _maxMaskChannelCount{ 0 }; ///< 마스크 텍스처(`_layerMask`)에서 쓸 수 있는 채널 수(R 부터)
+    };
+
     /** @brief 컴파일 문제 하나입니다. 어느 노드인지 늘 적습니다(하위 그래프 안이면 `바깥/안`). */
     struct MaterialGraphIssue
     {

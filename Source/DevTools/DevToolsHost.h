@@ -10,8 +10,7 @@
 #include "DevTools/DevToolsAPI.h"
 #include "DevTools/Profiling/FrameStall.h"
 
-#include "Engine/EngineFrameHooks.h"
-#include "Engine/EngineStartupExtension.h"
+#include "Engine/EngineHooks.h"
 
 namespace sw
 {
@@ -26,7 +25,7 @@ namespace sw
      * @details 엔진 확장점은 상속하지 않고 델리게이트로 붙는다 —
      *          - 기동 확장(`EngineStartupExtensionDelegate`): 셰이더 라이브 리로드(`LiveShaderSubsystem`, 렌더러가 있을 때)와 설정 파일 리로드(`ConfigReloadSubsystem`), 디버그 HUD(`DebugHUD`, UI 가 있을 때)를 기동 단계 범위에 더한다.
      *          - 파일 읽기 관찰자(`FileReadDiagnostics`): 만들 때 걸어 기동 첫 읽기부터 디스크 흉내 · 읽기 기록을 한다(호스트 범위 수명).
-     *          - 누수 기준선 질의(`LeakBaselineDetailSwitch`): 만들 때 걸어 기동 기준선 창의 기록 수준(`-gv_leakWindowFullStacks`)을 답한다.
+     *          - 누수 기준선 질의(`gv_leakWindowFullStacks` — `MemoryProfiler::setLeakBaselineDetailQuery`): 만들 때 걸어 기동 기준선 창의 기록 수준을 답한다.
      *          - 프레임 훅(`EngineFrameHooks`): 씬 틱 뒤에 HUD 를 돌리고, 프레임 끝에 셰이더 재컴파일을 돌리고(Debug) 강제 리로드 단축키를 읽고, 설정 파일 변화를 반영한다.
      *          언리얼의 개발 모듈(HotReload · DirectoryWatcher · ShaderCompiler 의 재컴파일)이 엔진 바깥에서 엔진 확장점에 붙는 모양과 같다. 게임 스레드에서만 쓴다.
      */
@@ -47,7 +46,7 @@ namespace sw
         const utf8*         getSubsystemName() const override { return kSubsystemName; }
 
         /**
-         * @brief 게임 창 개발 콘솔과 표준 입력 명령 채널을 세웁니다(App 이 호스트 서비스 `DevConsole` 자리에서 부른다). @p bEnableEditor 면 입력은 받지 않고 시작 명령만 돌린다.
+         * @brief 게임 창 개발 콘솔과 표준 입력 명령 채널을 세웁니다(App 이 호스트 서브시스템 `DevConsole` 자리에서 부른다). @p bEnableEditor 면 입력은 받지 않고 시작 명령만 돌린다.
          * @details 이후 프레임마다 관찰자 훅이 돌린다 — 프레임 앞에 시작 명령, 씬 틱 뒤에 콘솔 키, 프레임 끝에 표준 입력(종료 낱말이면 종료 코드 0).
          */
         void startConsole( bool bEnableEditor );

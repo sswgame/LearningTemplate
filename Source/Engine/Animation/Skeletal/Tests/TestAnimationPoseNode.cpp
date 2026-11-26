@@ -2,7 +2,7 @@
 #include "pch.h"
 
 #include "Core/Math/MathUtil.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Animation/AnimationPlayer.h"
 #include "Engine/Animation/Component/SkeletalMeshComponent.h"
@@ -10,7 +10,7 @@
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Animation/Skeletal/SkeletonMirrorTable.h"
 #include "Engine/Animation/Tests/AnimationTestUtil.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 

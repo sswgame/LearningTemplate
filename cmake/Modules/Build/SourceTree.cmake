@@ -1,6 +1,6 @@
 # ==============================================================================
 # @file cmake/Modules/Build/SourceTree.cmake
-# @brief 뿌리(`Source/` · `Test/` · 시나리오 폴더)를 구성마다 한 번 훑은 파일 목록과, 거기서 `file(GLOB)` 과 같은 결과를 걸러 내는 `sw_glob_source_tree`
+# @brief 뿌리(`Source/` · `IntegrationTests/` · 시나리오 폴더)를 구성마다 한 번 훑은 파일 목록과, 거기서 `file(GLOB)` 과 같은 결과를 걸러 내는 `sw_glob_source_tree`
 # ==============================================================================
 
 # ------------------------------------------------------------------------------
@@ -12,7 +12,7 @@
 # 훑고(CONFIGURE_DEPENDS — 빌드마다 훑기 한 번), 소스 · 헤더 목록은 모두 이 목록을 걸러 얻는다. 언리얼 UBT 도 모듈 폴더를 한 번 훑어
 # 캐시(DirectoryItem)한 것을 나눠 쓴다. 대가는 뿌리 아래 아무 파일(.md 등)을 더하거나 지워도 다시 구성한다는 것이다.
 #
-# 뿌리는 `Source/` · `Test/` 와, 부르는 쪽이 `sw_add_source_tree_root` 로 더한 폴더(시나리오의 `Content/<팩>/automation` — `Content/` 전체는
+# 뿌리는 `Source/` · `IntegrationTests/` 와, 부르는 쪽이 `sw_add_source_tree_root` 로 더한 폴더(시나리오의 `Content/<팩>/automation` — `Content/` 전체는
 # 에셋이라 훑지 않는다)다. `Source/` 는 include 때 훑고(ExcludedSources 가 목록을 바로 읽는다) 나머지는 처음 걸러 낼 때 훑는다.
 # 이 뿌리들 아래를 `file(GLOB … CONFIGURE_DEPENDS)` 로 직접 훑는 코드는 빌드가 멈춘다(`sw_check_configure_globs` — 생성된 VerifyGlobs.cmake 를 본다).
 # ------------------------------------------------------------------------------
@@ -20,7 +20,7 @@ include_guard(GLOBAL)
 
 set(SW_SOURCE_TREE_ROOT "${CMAKE_SOURCE_DIR}/Source")
 file(GLOB_RECURSE SW_SOURCE_TREE_FILES CONFIGURE_DEPENDS "${SW_SOURCE_TREE_ROOT}/*")
-set_property(GLOBAL PROPERTY SW_SOURCE_TREE_ROOTS "${SW_SOURCE_TREE_ROOT}" "${CMAKE_SOURCE_DIR}/Test")
+set_property(GLOBAL PROPERTY SW_SOURCE_TREE_ROOTS "${SW_SOURCE_TREE_ROOT}" "${CMAKE_SOURCE_DIR}/IntegrationTests")
 set_property(GLOBAL PROPERTY "SW_SOURCE_TREE_FILES:${SW_SOURCE_TREE_ROOT}" "${SW_SOURCE_TREE_FILES}")
 
 # 훑을 뿌리를 더한다(절대 경로). 이미 있는 뿌리 안이나 위면 구성이 선다 — 같은 파일을 두 뿌리가 훑지 않게.

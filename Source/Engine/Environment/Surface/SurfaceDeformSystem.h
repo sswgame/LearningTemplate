@@ -13,7 +13,7 @@
  *          격자 크기 · 창 너비 · 깊이 범위는 표면 종류 표(`SurfaceKindTable::_deformResolution` · `_deformExtent` · `_deformDepthRange`)다. 창은 처음 찍을 때 생기고
  *          카메라 앞(`kFocusAheadRatio`)을 따라 창 너비의 일부(`kRecenterRatio`)만큼 벗어나면 칸 단위로 옮겨 간다.
  *          전용 서버(`build::kWithClientCode` 가 거짓)는 그리는 것이 없어 찍지 않는다.
- *          씬 서비스(`ISceneService`)이고 `SW_SCENE_SERVICE` 줄로 매니저마다 하나 생긴다(`manager.getSubsystem<sw::SurfaceDeformSystem>()`).
+ *          씬 서브시스템(`ISceneSubsystem`)이고 `SW_SCENE_SUBSYSTEM` 줄로 매니저마다 하나 생긴다(`manager.getSubsystem<sw::SurfaceDeformSystem>()`).
  */
 #pragma once
 #include "Core/Container/SlotHandleTable.h"
@@ -26,7 +26,7 @@
 #include "Engine/Environment/Surface/SurfaceDeformBinding.h"
 #include "Engine/Environment/Surface/SurfaceDeformGrid.h"
 #include "Engine/Environment/Surface/SurfaceStamp.h"
-#include "Engine/Object/GameObject/Service/ISceneService.h"
+#include "Engine/Object/GameObject/Subsystem/ISceneSubsystem.h"
 
 namespace sw
 {
@@ -36,13 +36,13 @@ namespace sw
      * @class SurfaceDeformSystem
      * @brief 씬마다 하나 있는 표면 변형 층입니다(파일 머리말 참고).
      */
-    class SW_API SurfaceDeformSystem final : public ISceneService
+    class SW_API SurfaceDeformSystem final : public ISceneSubsystem
     {
     public:
-        /** @brief 이 서비스의 등록 줄입니다(`SW_SCENE_SERVICE` 가 정의한다). */
-        static const SceneServiceRegistration& getSceneServiceRegistration();
-        static constexpr const utf8*           kSubsystemName = "SurfaceDeformSystem";
-        const utf8*                            getSubsystemName() const override { return kSubsystemName; }
+        /** @brief 이 서비스의 등록 줄입니다(`SW_SCENE_SUBSYSTEM` 가 정의한다). */
+        static const SceneSubsystemRegistration& getSceneSubsystemRegistration();
+        static constexpr const utf8*             kSubsystemName = "SurfaceDeformSystem";
+        const utf8*                              getSubsystemName() const override { return kSubsystemName; }
 
         /** @brief 창의 중심을 카메라에서 앞으로 얼마나 내미는지(창 너비의 비율)입니다 — 창이 카메라 자리에서 앞으로 펼쳐져 뒤(안 보이는 땅)에 칸을 쓰지 않는다. */
         static constexpr float32 kFocusAheadRatio = 0.5f;

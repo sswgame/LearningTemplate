@@ -12,7 +12,7 @@
 #include "Core/Path/AbsolutePath.h"
 
 #include "Engine/EngineMinimal.h"
-#include "Engine/Object/GameObject/Service/SceneEngineServices.h"
+#include "Engine/Object/GameObject/Subsystem/SceneEngineSubsystems.h"
 #include "Engine/Renderer/Capture/SceneCapture.h"
 
 namespace sw
@@ -69,7 +69,7 @@ namespace sw
          * @brief 이 디바이스로 스튜디오 렌더러(포워드 파이프라인)를 만듭니다.
          * @param services 스튜디오 씬을 지을 엔진 서비스 묶음(씬 매니저의 것)입니다. 에셋 매니저와 기본 에셋 칸이 비면 false 입니다 — 전역 표를 다시 찾지 않습니다.
          */
-        [[nodiscard]] bool initialize( RenderThread& renderThread, const SceneEngineServices& services );
+        [[nodiscard]] bool initialize( RenderThread& renderThread, const SceneEngineSubsystems& services );
         void               shutdown();
 
         /**
@@ -83,7 +83,7 @@ namespace sw
          * @details 스튜디오 하나를 세워 장마다 `renderPrefab` 으로 그리고 읽으며(@p renderThread 의 명령), 옮기기 · 인코딩 · 쓰기는 워커가 한다. 게임 스레드에서, 모듈(게임 컴포넌트 타입)이 로드된 뒤에 부릅니다.
          *          @p size 는 16 ~ 4096 으로 제한합니다. @p services 는 스튜디오 씬을 지을 묶음입니다.
          */
-        [[nodiscard]] static bool renderPrefabList( RenderThread& renderThread, const SceneEngineServices& services, string_view prefabList, const AbsolutePath& outputDirectory,
+        [[nodiscard]] static bool renderPrefabList( RenderThread& renderThread, const SceneEngineSubsystems& services, string_view prefabList, const AbsolutePath& outputDirectory,
                                                     uint32 size );
 
     private:
@@ -91,7 +91,7 @@ namespace sw
         static string_view makeFileStem( string_view prefabPath );
 
     private:
-        SceneCapture        _capture;  ///< 그리기 · 읽기(렌더 스레드 명령)
-        SceneEngineServices _services; ///< `initialize` 가 받은 묶음(빌림). 스튜디오 씬과 프리팹 · 머티리얼 캐시를 이것으로 찾는다
+        SceneCapture          _capture;  ///< 그리기 · 읽기(렌더 스레드 명령)
+        SceneEngineSubsystems _services; ///< `initialize` 가 받은 묶음(빌림). 스튜디오 씬과 프리팹 · 머티리얼 캐시를 이것으로 찾는다
     };
 } // namespace sw

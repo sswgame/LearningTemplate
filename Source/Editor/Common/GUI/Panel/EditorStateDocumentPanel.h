@@ -40,18 +40,18 @@ namespace sw::editor
         }
 
         /** @brief 지금 저장하면 파일 @p absolutePath(`collectFilesToSave` 가 낸 것)에 쓸 글입니다. */
-        [[nodiscard]] virtual expected<string> tryMakeFileText( const AbsolutePath& absolutePath ) const = 0;
+        [[nodiscard]] virtual expected<string> tryMakeFileText( const DiskPath& absolutePath ) const = 0;
         /** @brief 지금 이 패널이 파일 @p absolutePath 를 고치고 있으면 true 입니다(복원할 사본의 주인인지). */
-        [[nodiscard]] virtual bool isEditingFile( const AbsolutePath& absolutePath ) = 0;
+        [[nodiscard]] virtual bool isEditingFile( const DiskPath& absolutePath ) = 0;
         /** @brief `isEditingFile` 이 참인 파일의 사본 글 @p text 를 저장하지 않은 편집으로 적용합니다. 글을 읽지 못하면 false 이고 상태는 그대로입니다. */
-        [[nodiscard]] virtual bool applyFileText( const AbsolutePath& absolutePath, const string& text ) = 0;
+        [[nodiscard]] virtual bool applyFileText( const DiskPath& absolutePath, const string& text ) = 0;
 
         /** @brief 복원을 청한 사본이 이 패널의 파일이면 적용하고, 저장 · 되돌리기로 깨끗해졌으면 사본을 지웁니다. */
         void flushDocumentInteraction() final;
 
     private:
         /** @brief 낸 사본 가운데 @p listPath 에 없는 파일의 사본을 지웁니다. */
-        void removeStaleCopies( const vector<AbsolutePath>& listPath );
+        void removeStaleCopies( const vector<DiskPath>& listPath );
 
     private:
         unordered_map<string, uint64> _mapCopyTextHash; ///< 사본을 낸 파일 → 그 글의 해시(같은 글을 다시 내지 않고, 깨끗해지면 지울 사본을 안다)

@@ -4,7 +4,7 @@
  */
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Content/AssetRegistry.h"
 #include "Engine/Object/GameObject/GameObject.h"

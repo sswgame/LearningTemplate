@@ -132,7 +132,7 @@ namespace sw
         [[nodiscard]] static expected<SubsystemGraph> computeGraph( const vector<SubsystemNode>& listNode );
 
         /**
-         * @brief 이 스레드에서 초기화 중인 서브시스템이 범위 조회 · 엔진 서비스 칸으로 @p target 을 얻었음을 알립니다(`SubsystemScope` 의 조회가 소유한 칸을 돌려줄 때, `engine::getSubsystem` · `findSubsystem` 이 소유자가 있는 칸을 읽을 때 부른다).
+         * @brief 이 스레드에서 초기화 중인 서브시스템이 범위 조회 · 엔진 서브시스템 칸으로 @p target 을 얻었음을 알립니다(`SubsystemScope` 의 조회가 소유한 칸을 돌려줄 때, `engine::getSubsystem` · `findSubsystem` 이 소유자가 있는 칸을 읽을 때 부른다).
          * @details @p target 이 지금 초기화 중인 목록(가장 안쪽)의 것인데 그 서브시스템 자신도, 선언한 의존(간접 포함 — 역방향 의존 칸으로 생긴 것도)도 아니면 그 초기화는 진다:
          *          `initializeAt` 이 종료를 부르고 `Failed` 로 바꾸며 `getError` 에 두 이름을 적는다. 의존을 빼먹은 조회는 이름 순서가 우연히 맞으면 지나가다가
          *          서브시스템 하나를 더하는 순간 아직 서지 않은 객체를 읽는다 — 그 모양을 기동에서 바로 멈춘다(언리얼 `InitializeDependency` 가 맡는 자리).
@@ -141,18 +141,18 @@ namespace sw
         static void recordInitializeLookup( const Subsystem& target );
 
         /**
-         * @class HostedTaskScope
+         * @class HostedCommandletScope
          * @brief 초기화 안에서 그 서브시스템의 것이 아닌 일(단위 테스트 실행 · 쿠킹 같은 헤드리스 작업)을 도는 동안 초기화 조회 기록을 내려 둡니다. 소멸이 되돌립니다.
          * @details 그 일의 조회는 초기화하는 서브시스템의 의존이 아니다 — 언리얼 커맨드릿처럼 엔진을 빌려 쓰는 다른 프로그램이다. 기록을 그대로 두면 테스트 본문이
          *          찾은 서브시스템(UI 등)이 `Headless` 의 빠진 의존으로 잡혀 기동이 졌다. 작업을 엔진 초기화 뒤로 옮기는 것이 상용 구조지만, 작업이 기동 단계 사이(의존 뒤 · 피의존 앞)에 서야 하는 지금은 이 경계로 가른다.
          */
-        class HostedTaskScope
+        class HostedCommandletScope
         {
         public:
-            HostedTaskScope();
-            ~HostedTaskScope();
-            HostedTaskScope( const HostedTaskScope& )            = delete;
-            HostedTaskScope& operator=( const HostedTaskScope& ) = delete;
+            HostedCommandletScope();
+            ~HostedCommandletScope();
+            HostedCommandletScope( const HostedCommandletScope& )            = delete;
+            HostedCommandletScope& operator=( const HostedCommandletScope& ) = delete;
 
         private:
             void* _pSaved; ///< 내려 둔 프레임(`SubsystemCollection.cpp` 의 내부 형식 — 헤더에 드러내지 않는다)

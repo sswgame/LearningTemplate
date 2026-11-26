@@ -16,7 +16,7 @@
  *   - 상태 선언: 컴포넌트와 상태 칸(RuntimeState · SaveGame)을 가진 형식의 값 멤버는 PROPERTY · SW_CODEC_STATE · SW_TRANSIENT 중 하나를 적습니다.
  */
 #pragma once
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 
 #include "Engine/Reflection/TypeLookupCache.h"
 

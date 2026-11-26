@@ -1,7 +1,7 @@
 // SceneTeleportCursorTest — 순간이동은 아래에 붙은 컴포넌트까지 한 번씩 알려지고, 그냥 옮기기는 알려지지 않는다(nogpu, 헤드리스).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/Component/SceneTeleportCursor.h"

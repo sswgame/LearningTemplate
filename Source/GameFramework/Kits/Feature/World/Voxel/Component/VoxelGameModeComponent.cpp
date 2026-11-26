@@ -17,7 +17,7 @@
 #include "GameFramework/Kits/Feature/World/Voxel/Rule/VoxelTerrain.h"
 #include "GameFramework/Runtime/Character/Control/ControlSystem.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
-#include "GameFramework/Runtime/Foundation/Service/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 
 namespace sw
 {
@@ -57,8 +57,9 @@ namespace sw
         SW_LOG_INFO_ID( "VoxelGameMode.WorldReadyWASDMove", "[Voxel] world is ready - WASD move, mouse look, Space jump, Shift sprint, LMB hold to break, RMB place, 1-9 or wheel hotbar, Esc mouse" );
     }
 
-    void VoxelGameModeComponent::updateGame( float32 deltaTime )
+    void VoxelGameModeComponent::updateGame( GameSeconds frameTime )
     {
+        const float32 deltaTime = frameTime.count();
         updateResidency();
         SW_PROFILE_COUNT( "GT.VoxelWorld.residentChunks", _world.getResidentChunkCount() ); // 감사 K-12 전후 비교
         SW_PROFILE_COUNT( "GT.VoxelWorld.storedChunks", _world.getStoredChunkCount() );
@@ -189,7 +190,7 @@ namespace sw
         } );
         if ( bBlocksKnown == false )
             return false;
-        if ( _world.initialize( _chunkCountX, _chunkCountZ, _pCatalog.get() ) == false )
+        if ( _world.initialize( _chunkCountX, _chunkCountZ, *_pCatalog ) == false )
             return false;
         // 지형은 청크를 올릴 때 생성한다(생성 훅). 처음에는 스폰 자리를 찾는 월드 가운데 둘레를 한 번에 올린다 — 몸을 놓기 전이다.
         _world.setChunkGenerator( VoxelTerrainSettings::makeChunkGenerator( _terrain ) );

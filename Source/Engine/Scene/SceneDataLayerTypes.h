@@ -1,6 +1,6 @@
 /**
  * @file SceneDataLayerTypes.h
- * @brief 데이터 레이어 서비스(`SceneDataLayerSubsystem`)의 값 형식입니다. 씬의 조립 기록(`Scene::AssemblySnapshot`)이 값으로 들어 따로 둔다 — 서비스 헤더는 씬 서비스 기반(`ISceneService.h`)을 끌어온다.
+ * @brief 데이터 레이어 서비스(`SceneDataLayerSubsystem`)의 값 형식입니다. 씬의 조립 기록(`Scene::AssemblySnapshot`)이 값으로 들어 따로 둔다 — 서비스 헤더는 씬 서브시스템 기반(`ISceneSubsystem.h`)을 끌어온다.
  */
 #pragma once
 #include "Core/Container/string.h"

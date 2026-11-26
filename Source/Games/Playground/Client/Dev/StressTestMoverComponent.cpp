@@ -31,7 +31,7 @@ namespace sw
     void StressTestMoverComponent::onTick( TickContext& context )
     {
         Component::onTick( context );
-        _elapsed += context.getDeltaTime();
+        _elapsed += context.getDeltaTime().count();
         if ( _bWritesTransform == SW_FALSE || _pTarget == nullptr )
             return;
 

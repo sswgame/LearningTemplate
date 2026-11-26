@@ -5,7 +5,7 @@
 #include "pch.h"
 
 #include "Core/Math/Math.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Audio/AudioMixerDef.h"
 #include "Engine/Audio/AudioSnapshotMixer.h"
@@ -79,7 +79,7 @@ SW_TEST_CASE( SceneAudioReleaseTest, OriginShiftMovesPositionsHeldByTheEngine )
     GameObjectManager        manager;
     SceneAudio&              sceneAudio = manager.getSubsystem<SceneAudio>();
     sceneAudio.setAudioEngine( &offline.getEngine() );
-    constexpr AudioEmitterID kEmitter = 7;
+    constexpr AudioEmitterID kEmitter{ 7 };
     offline.getEngine().setEmitter( kEmitter, float3{ 1.0f, 2.0f, 3.0f }, float3{} );
     AudioListenerState listener{};
     listener._bActive = SW_TRUE;

@@ -5,7 +5,7 @@
 #include "Core/Network/Connection/NetEndpoint.h"
 #include "Core/Network/Tests/FakeNetPeers.h"
 #include "Core/Serialization/BitStream.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "GameFramework/Kits/Feature/Network/NetTurnRelay/TurnRelay.h"
 

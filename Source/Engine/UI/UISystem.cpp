@@ -16,12 +16,12 @@
 
 #include "Engine/Asset/PackEngineSettingsSubsystem.h"
 #include "Engine/Audio/AudioEngine.h"
-#include "Engine/Audio/AudioService.h"
+#include "Engine/Audio/AudioSubsystem.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/GameTimeScale.h"
 #include "Engine/Config/PackEngineSettings.h"
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/Canvas/CanvasPainter.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
@@ -31,7 +31,7 @@
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Inherit/ResourceTags.h"
-#include "Engine/Text/FontService.h"
+#include "Engine/Text/FontSubsystem.h"
 #include "Engine/Text/GlyphAtlas.h"
 #include "Engine/Text/GlyphCache.h"
 #include "Engine/Text/TextLayout.h"
@@ -43,9 +43,9 @@
 #include "Engine/UI/Document/UIDocumentLoader.h"
 #include "Engine/UI/Layout/ScrollPanel.h"
 #include "Engine/UI/Menu/PauseMenuScreen.h"
+#include "Engine/UI/Overlay/UISubtitleSubsystem.h"
 #include "Engine/UI/Screen/UIScreen.h"
 #include "Engine/UI/Screen/UIScreenSwitch.h"
-#include "Engine/UI/Service/UISubtitleService.h"
 #include "Engine/UI/Style/UIStylePass.h"
 #include "Engine/UI/Style/UIStyleSet.h"
 #include "Engine/UI/Style/UIStyleSheet.h"
@@ -169,6 +169,33 @@ namespace sw
 
 namespace sw
 {
+    UIEngineDocuments UIEngineDocuments::makeFromDefaultAssets( const EngineDefaultAssets& assets )
+    {
+        UIEngineDocuments documents;
+        documents._optionsMenu          = assets._uiOptionsMenu.get();
+        documents._optionsRowBool       = assets._uiOptionsRowBool.get();
+        documents._optionsRowInt        = assets._uiOptionsRowInt.get();
+        documents._optionsRowFloat      = assets._uiOptionsRowFloat.get();
+        documents._optionsRowEnum       = assets._uiOptionsRowEnum.get();
+        documents._optionsRowEnumPad    = assets._uiOptionsRowEnumPad.get();
+        documents._optionsRowKeyBinding = assets._uiOptionsRowKeyBinding.get();
+        documents._optionsRowString     = assets._uiOptionsRowString.get();
+        documents._settingsConfirm      = assets._uiSettingsConfirm.get();
+        documents._settingsUnsaved      = assets._uiSettingsUnsaved.get();
+        documents._confirmDialog        = assets._uiConfirmDialog.get();
+        documents._screenFade           = assets._uiScreenFade.get();
+        documents._objectiveMarker      = assets._uiObjectiveMarker.get();
+        documents._quantityDialog       = assets._uiQuantityDialog.get();
+        documents._mainMenu             = assets._uiMainMenu.get();
+        documents._keyRebind            = assets._uiKeyRebind.get();
+        documents._notifications        = assets._uiNotifications.get();
+        documents._notificationEntry    = assets._uiNotificationEntry.get();
+        documents._subtitles            = assets._uiSubtitles.get();
+        documents._tooltip              = assets._uiTooltip.get();
+        documents._debugHUD             = assets._uiDebugHUD.get();
+        return documents;
+    }
+
     UISystem::UISystem()
         : _inputCaptureQuery{ *this }
         , _layerVisibility{ *this }
@@ -189,7 +216,7 @@ namespace sw
         , _onPointerProcessed{}
         , _actionGlyphs{}
         , _input{}
-        , _pFontService{ nullptr }
+        , _pFontSubsystem{ nullptr }
         , _pLocalization{ nullptr }
         , _pUserSettings{ nullptr }
         , _textLayout{}
@@ -225,9 +252,9 @@ namespace sw
         shutdown();
     }
 
-    bool UISystem::initialize( InputManager& inputManager, FontService* pFontService, const AssetID& assetID )
+    bool UISystem::initialize( InputManager& inputManager, FontSubsystem* pFontSubsystem, const AssetID& assetID )
     {
-        _pFontService                   = pFontService;
+        _pFontSubsystem                 = pFontSubsystem;
         _actionGlyphs._pInput           = &inputManager;
         _actionGlyphs._pUIInputMap      = nullptr;
         _pDocumentCache                 = &engine::getSubsystem<UIDocumentCache>();
@@ -237,7 +264,7 @@ namespace sw
         _widgetSkinChangedSubscription  = engine::getSubsystem<UIWidgetSkinService>().onSkinChanged().add( SW_DELEGATE_METHOD( Delegate<void()>, &UISystem::onWidgetSkinChanged, this ) );
         _pThemes                        = &engine::getSubsystem<UIThemeController>();
         _themeChangedSubscription       = _pThemes->onThemeChanged().add( SW_DELEGATE_METHOD( Delegate<void()>, &UISystem::onThemeChanged, this ) );
-        _textLayout                     = pFontService != nullptr ? make_unique<TextLayoutEngine>( *pFontService ) : nullptr;
+        _textLayout                     = pFontSubsystem != nullptr ? make_unique<TextLayoutEngine>( *pFontSubsystem ) : nullptr;
         if ( _input.initialize( inputManager, assetID ) == false )
             return false; // 오류는 UIInputRouter::initialize 가 남겼다
         _actionGlyphs._pUIInputMap = _input.getUIInputMap();
@@ -263,12 +290,12 @@ namespace sw
         _input.shutdown();
         _paintState.releasePaintScratch(); // 종료 누수 보고는 이 시스템의 소멸보다 먼저다 — 기동 뒤 자란 스크래치를 지금 놓는다
         _textLayout.reset();
-        _pFontService = nullptr;
+        _pFontSubsystem = nullptr;
     }
 
     span<const utf8* const> UISystem::getSubsystemDependencies() const
     {
-        static constexpr const utf8* kArrDependency[] = { FontService::kSubsystemName, InputManager::kSubsystemName, PackEngineSettingsSubsystem::kSubsystemName,
+        static constexpr const utf8* kArrDependency[] = { FontSubsystem::kSubsystemName, InputManager::kSubsystemName, PackEngineSettingsSubsystem::kSubsystemName,
                                                           UserSettingsManager::kSubsystemName, UIBindingConverterRegistry::kSubsystemName,
                                                           UIDocumentCache::kSubsystemName, UIStyleSheetCache::kSubsystemName, UIThemeController::kSubsystemName, UIWidgetSkinService::kSubsystemName };
         return kArrDependency;
@@ -284,7 +311,7 @@ namespace sw
             return SubsystemInitResult::Failed;
         setScaleSettings( scaleSettings );
         // UI 행동 맵(탐색 · 확인 · 뒤로)을 못 읽으면 메뉴를 패드로 다룰 수 없다 — 데이터 오류라 기동 실패다.
-        if ( initialize( engine::getSubsystem<InputManager>(), &engine::getSubsystem<FontService>(), AssetID{ defaultAssets._uiInputMap.get() } ) == false )
+        if ( initialize( engine::getSubsystem<InputManager>(), &engine::getSubsystem<FontSubsystem>(), AssetID{ defaultAssets._uiInputMap.get() } ) == false )
             return SubsystemInitResult::Failed;
         // 문화권 · 설정 출처는 기동 때 한 번 받아 든다(언리얼 `InitializeDependency`) — 프레임마다 전역 표로 물러나 찾지 않는다.
         UserSettingsManager& userSettings = engine::getSubsystem<UserSettingsManager>();
@@ -317,8 +344,9 @@ namespace sw
         setUserSettings( nullptr );
     }
 
-    void UISystem::processInput( float32 deltaSeconds )
+    void UISystem::processInput( const RealSeconds unscaledDeltaTime )
     {
+        const float32         deltaSeconds = unscaledDeltaTime.count();
         const ScopedMemoryTag uiMemoryTag{ MemoryTag::UI };
         if ( _input.getInputManager() == nullptr )
             return;
@@ -329,7 +357,7 @@ namespace sw
         if ( _bOnScreenSuppressed == SW_FALSE )
         {
             _input.processPointer( _listScreen, _viewport );
-            _onPointerProcessed.broadcast( deltaSeconds ); // World 위젯 광선(위젯 컴포넌트 서비스)
+            _onPointerProcessed.broadcast( unscaledDeltaTime ); // World 위젯 광선(위젯 컴포넌트 서비스)
         }
         // 액션: 화면이 없으면 일시정지 메뉴를 먼저 연다. 활성 화면은 여기서 한 번 정하며, 방금 연 메뉴는 다음 프레임부터 액션을 받는다.
         UIScreen* pActive = getActiveScreen();
@@ -340,17 +368,18 @@ namespace sw
         _input.updateKeyboardFocus( _viewport );
     }
 
-    void UISystem::update( float32 deltaSeconds, const UIViewport& viewport )
+    void UISystem::update( const RealSeconds unscaledDeltaTime, const UIViewport& viewport )
     {
+        const float32         deltaSeconds = unscaledDeltaTime.count();
         const ScopedMemoryTag uiMemoryTag{ MemoryTag::UI }; // 그리기 캐시, 그리기 목록, 텍스트 배치, 글리프 아틀라스가 프레임 안에서 커진다
         _viewport = viewport;
         syncScreenTags( viewport );
         _pThemes->syncSetting(); // 사용자 설정의 테마를 따라간다 — 바뀌면 `onThemeChanged` 가 모든 화면을 다시 맞춘다
         syncScreenSwitches();
         reopenClosedScreens();
-        _onUpdateBeforeScreens.broadcast( deltaSeconds ); // 자막 · 툴팁(서브시스템 — 기동에서 건 순서)
+        _onUpdateBeforeScreens.broadcast( unscaledDeltaTime ); // 자막 · 툴팁(서브시스템 — 기동에서 건 순서)
         updateScreens( deltaSeconds );
-        _onUpdateAfterScreens.broadcast( deltaSeconds ); // 알림
+        _onUpdateAfterScreens.broadcast( unscaledDeltaTime ); // 알림
         applyPendingCloses();
         updateBindings();
         // 애니메이션: 문서 애니메이션과 트윈이 프로퍼티를 쓴다(스타일과 레이아웃 앞이라, 쓴 필드의 무효화를 이번 프레임에 처리한다). 실제 프레임 시간을 쓴다(일시정지 메뉴도 움직인다).
@@ -377,7 +406,7 @@ namespace sw
             SW_PROFILE_COUNT( "UI.StyleWidgets", restyledCount );
         }
         // 레이아웃 앞 칸: 화면 마커가 게임 틱과 트랜스폼 적용 뒤의 월드 점을 이번 뷰포트로 투영한다(같은 프레임에 배치된다).
-        _onUpdateBeforeLayout.broadcast( deltaSeconds );
+        _onUpdateBeforeLayout.broadcast( unscaledDeltaTime );
         // 레이아웃: 화면 트리마다 더티한 루트만 다시 측정한다. 화면마다 뷰포트 전체가 루트 사각형이다.
         {
             SW_PROFILE_SCOPE( "GT.UI.Layout" );
@@ -391,7 +420,7 @@ namespace sw
         }
         // 그리기: 더티한 위젯만 다시 칠하고 화면마다 캐시를 이어 붙인다(스타일 순회(5-2) 전까지는 그리기가 kStyle 도 비운다).
         paintScreens();
-        _onUpdateAfterPaint.broadcast( deltaSeconds ); // 화면 마커 앵커 · World 위젯 렌더 텍스처 · 스택 밖 화면(오프스크린 — 에디터 미리보기)
+        _onUpdateAfterPaint.broadcast( unscaledDeltaTime ); // 화면 마커 앵커 · World 위젯 렌더 텍스처 · 스택 밖 화면(오프스크린 — 에디터 미리보기)
     }
 
     UIScreenHandle UISystem::openScreen( string_view documentPath )
@@ -406,7 +435,7 @@ namespace sw
         SW_ASSERT( screen->_pUISystem == nullptr );
         screen->_pUISystem = this;
         rebuildStyleSet( *screen );
-        screen->_handle    = _nextScreenHandle++;
+        screen->_handle    = UIScreenHandle{ _nextScreenHandle++ };
         screen->_pushOrder = _nextPushOrder++;
         screen->_bClosing  = SW_FALSE;
         // 숨김 요청이 걸린 레이어에 열리는 화면도 숨긴다(포토 모드 중에 뜬 알림이 그려지지 않게).
@@ -443,12 +472,12 @@ namespace sw
 
     Subscription UISystem::ownScreen( UIScreenHandle handle )
     {
-        return _screenCloseSubscriptions->issue( handle );
+        return _screenCloseSubscriptions->issue( handle.getValue() );
     }
 
     void UISystem::releaseOwnedScreen( uint64 handle )
     {
-        closeScreen( static_cast<UIScreenHandle>( handle ) );
+        closeScreen( UIScreenHandle{ static_cast<uint32>( handle ) } );
     }
 
     unique_ptr<Widget> UISystem::instantiateDocument( string_view documentPath, const ResourceTagSet& tagOverride, UIScreenDef& outDesc, vector<UIBindingDef>& outListBinding,
@@ -558,7 +587,7 @@ namespace sw
         screen->_documentPath       = FileUtil::normalizePath( documentPath ).str();
         screen->_listBinding        = std::move( listBinding );
         screen->_listStyleSheet     = std::move( listStyleSheet );
-        screen->_handle             = _nextScreenHandle++;
+        screen->_handle             = UIScreenHandle{ _nextScreenHandle++ };
         applyDocumentAnimations( *screen ); // 등록만 한다 — `Open` 은 스택에 올릴 때(`pushScreen`) 튼다
         rebuildStyleSet( *screen );
         return screen;
@@ -767,7 +796,7 @@ namespace sw
             if ( UISystemInternal::usesTypeOfModule( *_listScreen[index - 1], moduleName ) == false )
                 continue;
             const UIScreen& screen = *_listScreen[index - 1];
-            SW_LOG_WARNING_ID( "UI.ScreenClosedForModuleReload", "[UI] Screen %# closed for module reload - it holds types of module %#", screen._handle, moduleName );
+            SW_LOG_WARNING_ID( "UI.ScreenClosedForModuleReload", "[UI] Screen %# closed for module reload - it holds types of module %#", screen._handle.getValue(), moduleName );
             // 문서로 연 기본 화면은 문서 경로로 다시 연다(새 이미지의 위젯 타입으로). 화면 클래스가 모듈의 것이면 다시 열 수 없다.
             const bool bScreenClassInModule = UISystemInternal::isTypeOfModule( screen.getTypeInfo(), moduleName );
             if ( screen._documentPath.empty() == false && bScreenClassInModule == false )
@@ -792,9 +821,9 @@ namespace sw
         const uint32 textRevision = context._pLocalization != nullptr ? context._pLocalization->getTextRevision() : 0;
         if ( _bTextRevisionKnown == SW_TRUE && textRevision != _textRevision )
         {
-            if ( _pFontService != nullptr && _pFontService->isInitialized() )
-                _pFontService->invalidateFaceChains(); // 문화권의 대체 폰트 패밀리가 바뀐다
-            context._bTextRevisionChanged = true;      // 위젯에는 트리마다의 레이아웃이 알린다(`UILayoutPass::update`)
+            if ( _pFontSubsystem != nullptr && _pFontSubsystem->isInitialized() )
+                _pFontSubsystem->invalidateFaceChains(); // 문화권의 대체 폰트 패밀리가 바뀐다
+            context._bTextRevisionChanged = true;        // 위젯에는 트리마다의 레이아웃이 알린다(`UILayoutPass::update`)
         }
         _textRevision       = textRevision;
         _bTextRevisionKnown = SW_TRUE;
@@ -982,9 +1011,9 @@ namespace sw
         context._pLocalization = findLocalization();
         context._textRevision  = context._pLocalization != nullptr ? context._pLocalization->getTextRevision() : 0;
         context._pActionGlyphs = &_actionGlyphs;
-        if ( _pFontService != nullptr && _pFontService->isInitialized() )
+        if ( _pFontSubsystem != nullptr && _pFontSubsystem->isInitialized() )
         {
-            context._pGlyphCache = &_pFontService->getGlyphCache();
+            context._pGlyphCache = &_pFontSubsystem->getGlyphCache();
             context._frameIndex  = context._pGlyphCache->getFrameIndex(); // 글리프 캐시의 시계다(프로파일러 프레임 수는 꺼지면 늘 0 이라 예산이 되살아나지 않는다)
             context._pGlyphCache->setRasterBudgetNanoseconds( static_cast<int64>( gv_uiGlyphRasterBudgetMicros ) * constant::time::kNanosecondsPerMicrosecond );
             context._atlasGeneration = context._pGlyphCache->getAtlas().getGeneration();
@@ -1023,10 +1052,10 @@ namespace sw
         return _pUserSettings;
     }
 
-    void UISystem::processFrameInput( const float32 unscaledDeltaSeconds )
+    void UISystem::processFrameInput( const RealSeconds unscaledDeltaTime )
     {
         if ( isInitialized() )
-            processInput( unscaledDeltaSeconds ); // 정지 메뉴의 탐색 반복은 실제 시간
+            processInput( unscaledDeltaTime ); // 정지 메뉴의 탐색 반복은 실제 시간
     }
 
     void UISystem::updateFrame( const EngineUIFrame& frame )
@@ -1037,9 +1066,9 @@ namespace sw
         UIViewport viewport     = computeViewport( float2{ static_cast<float32>( frame._width ), static_cast<float32>( frame._height ) }, frame._contentScale, frame._safeInsets );
         viewport._pointerOrigin = frame._pointerOrigin; // 백버퍼면 빈 출력이라 0 이다
         // 음성 이벤트의 자막 — 오디오 스레드가 시작한 클립의 자막 키를 쌓아 두고, 가져가는 곳은 여기 하나다.
-        AudioService* const pAudio      = engine::findSubsystem<AudioService>();
-        const bool          bAudioReady = pAudio != nullptr && pAudio->isInitialized();
-        UISubtitleService&  subtitles   = engine::getSubsystem<UISubtitleService>();
+        AudioSubsystem* const pAudio      = engine::findSubsystem<AudioSubsystem>();
+        const bool            bAudioReady = pAudio != nullptr && pAudio->isInitialized();
+        UISubtitleSubsystem&  subtitles   = engine::getSubsystem<UISubtitleSubsystem>();
         if ( bAudioReady )
         {
             vector<AudioSubtitleCue> listCue;
@@ -1049,7 +1078,7 @@ namespace sw
         // 음성이 낸 줄은 그 음성이 끝날 때까지 남는다 — 오디오가 내려갔으면 모두 끝난 것으로 본다(줄이 영원히 남지 않는다).
         subtitles.refreshVoiceState( bAudioReady ? &pAudio->getEngine() : nullptr );
         subtitles.setGamePaused( frame._bGamePaused );
-        update( frame._unscaledDeltaSeconds, viewport ); // 애니메이션 · 알림은 정지 메뉴 아래서도 흐른다. 자막은 게임 소리와 같이 선다
+        update( frame._unscaledDeltaTime, viewport ); // 애니메이션 · 알림은 정지 메뉴 아래서도 흐른다. 자막은 게임 소리와 같이 선다
     }
 
     Subscription UISystem::addLayerHideRequest( UILayerMask layers )
@@ -1204,7 +1233,7 @@ namespace sw
 namespace sw
 {
     // 화면 스택 — 위의 UI 서비스가 이것에 의존하고 UI 갱신의 칸(`onUpdateBeforeScreens` · `onUpdateAfterScreens` …)에 건다.
-    SW_ENGINE_SERVICE_SUBSYSTEM( UISystem, GameVisible, GameInstance, Startup, (), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
+    SW_ENGINE_SUBSYSTEM_WITH_SLOT( UISystem, GameVisible, GameInstance, Startup, (), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
     {
         UISystem& uiSystem = scope.emplaceSubsystem<UISystem>();
         (void)build;

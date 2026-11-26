@@ -27,6 +27,8 @@ namespace sw
 
 namespace sw::editor
 {
+    class AssetWriter;
+
     /**
      * @class EditorToolAssetCommands
      * @brief 도구 패널의 파일 입출력을 ImGui 없이 수행합니다.
@@ -40,22 +42,22 @@ namespace sw::editor
         /** @brief 애니메이션 그래프 JSON 을 읽습니다. path 가 비어 있으면 에디터 설정의 기본 파일을 씁니다. */
         static ToolAssetLoadResult loadAnimationGraph( AnimationGraphAsset& outData, string_view path = {} );
         /** @brief 애니메이션 그래프 JSON 을 씁니다. */
-        [[nodiscard]] static bool saveAnimationGraph( const AnimationGraphAsset& data, string_view path = {} );
+        [[nodiscard]] static bool saveAnimationGraph( AssetWriter& writer, const AnimationGraphAsset& data, string_view path = {} );
         /** @brief 대화 그래프 JSON 을 읽습니다. path 가 비어 있으면 기본 대화 파일을 씁니다. */
         static ToolAssetLoadResult loadDialogueGraph( DialogueGraphAsset& outData, string_view path = {} );
         /** @brief 대화 그래프 JSON 을 씁니다. */
-        [[nodiscard]] static bool saveDialogueGraph( const DialogueGraphAsset& data, string_view path = {} );
+        [[nodiscard]] static bool saveDialogueGraph( AssetWriter& writer, const DialogueGraphAsset& data, string_view path = {} );
         /** @brief Resource 상대 경로의 TileMap XML 을 읽습니다. 파일이 없으면 `Missing`(새 문서)이고, 있는데 읽지 못하면 `Malformed` 입니다. */
         static ToolAssetLoadResult loadTileMap( string_view assetRelativePath, TileMapXMLData& outData, string& outStatus );
         /** @brief Resource 상대 경로로 TileMap XML 을 씁니다. */
-        [[nodiscard]] static bool saveTileMap( string_view assetRelativePath, const TileMapXMLData& data );
+        [[nodiscard]] static bool saveTileMap( AssetWriter& writer, string_view assetRelativePath, const TileMapXMLData& data );
         /**
          * @brief 타일셋(`.tileset.xml`)을 읽습니다. 결과는 `loadTileMap` 과 같은 세 가지입니다.
          * @details 형식과 규칙은 런타임 읽기(`TileSetAsset::loadFromXMLText`) 하나다 — 에디터가 따로 파서를 두지 않는다. 저장도 그 읽기로 사본을 되읽은 뒤에만 원본을 덮는다.
          */
         static ToolAssetLoadResult loadTileSet( string_view path, TileSetContent& outData, string& outStatus );
         /** @brief 타일셋을 씁니다(`TileSetContent::saveToXMLText`). 되읽지 못하는 내용이면 원본을 덮지 않고 false 입니다. */
-        [[nodiscard]] static bool saveTileSet( string_view path, const TileSetContent& data );
+        [[nodiscard]] static bool saveTileSet( AssetWriter& writer, string_view path, const TileSetContent& data );
         /** @brief 도구 문서 경로(리소스 id 또는 절대 경로)에 파일이 있으면 true 입니다. 읽기(`load*`)와 같은 해석이다(R7) - 입력란의 "불러오기 전에 있나" 확인이 쓴다. */
         [[nodiscard]] static bool hasToolDocument( string_view path );
         /**
@@ -66,11 +68,11 @@ namespace sw::editor
          */
         static ToolAssetLoadResult loadSpriteClip( SpriteClipAsset& outData, string& outStatus, string_view path = {} );
         /** @brief SpriteClip JSON 을 씁니다. */
-        [[nodiscard]] static bool saveSpriteClip( const SpriteClipAsset& data, string_view path = {} );
+        [[nodiscard]] static bool saveSpriteClip( AssetWriter& writer, const SpriteClipAsset& data, string_view path = {} );
         /** @brief 시퀀서 JSON 을 읽습니다. 결과는 `loadTileMap` 과 같은 세 가지입니다. */
         static ToolAssetLoadResult loadSequence( sw::SequenceAsset& outAsset, string_view path );
         /** @brief 시퀀서 JSON 을 씁니다. */
-        [[nodiscard]] static bool saveSequence( const sw::SequenceAsset& asset, string_view path );
+        [[nodiscard]] static bool saveSequence( AssetWriter& writer, const sw::SequenceAsset& asset, string_view path );
         /**
          * @brief 선택한 오브젝트가 프리팹 인스턴스면 그 프리팹의 CDO 와 비교해 오버라이드 목록을 채웁니다.
          * @details 인스턴스의 프리팹은 인스턴스가 정한다 — 포커스된 에셋(@p focusedPrefabPath)은 인스턴스가 없을 때 그 프리팹의 중첩 목록을 보이는 데만 쓰고 비교하지 않는다.

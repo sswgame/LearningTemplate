@@ -666,7 +666,7 @@ namespace sw
     bool TickRegistry::refresh( GameObjectManager& manager )
     {
         // 일괄 틱 타입이 등록 · 해제됐으면(모듈 적재 · 해제) 모두 다시 훑는다 — 오브젝트가 어느 목록에 갈지가 바뀌었고, 내려간 함수를 들고 있으면 안 된다.
-        TickBatchRegistry* const pBatchRegistry  = manager.getSceneEngineServices()._pTickBatchRegistry;
+        TickBatchRegistry* const pBatchRegistry  = manager.getSceneEngineSubsystems()._pTickBatchRegistry;
         const uint32             batchGeneration = pBatchRegistry != nullptr ? pBatchRegistry->getGeneration() : 0;
         if ( batchGeneration != _batchGeneration )
         {
@@ -716,7 +716,7 @@ namespace sw
         else
             flushStageEdits();
         if ( bStageChanged )
-            refreshStageBatches( manager.getSceneEngineServices()._pTickBatchRegistry );
+            refreshStageBatches( manager.getSceneEngineSubsystems()._pTickBatchRegistry );
         return bRefreshedAny;
     }
 
@@ -784,7 +784,7 @@ namespace sw
         // 계층에서 꺼진 오브젝트는 목록에 두지 않는다(언리얼 · 유니티가 꺼진 것의 틱을 목록에서 빼는 것과 같다). 켜지고 꺼질 때
         // `GameObject::refreshActiveInHierarchy` 가 표시하므로 다음 틱 전에 여기로 다시 온다. 항목 버퍼가 다시 지어졌으므로 칸도 새로 쓴다.
         const bool         bActive        = pObj->isActiveInHierarchy();
-        TickBatchRegistry* pBatchRegistry = manager.getSceneEngineServices()._pTickBatchRegistry;
+        TickBatchRegistry* pBatchRegistry = manager.getSceneEngineSubsystems()._pTickBatchRegistry;
         uint32             cursor         = 0;
         for ( uint32 group = 0; group < kGroupCount; ++group )
         {

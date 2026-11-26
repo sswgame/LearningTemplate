@@ -1,7 +1,7 @@
 #include "pch.h"
 
 #include "Core/Math/MathUtil.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Character/Fit/CharacterGeometry.h"
 #include "Engine/Character/Socket/ResolvedSocketTable.h"

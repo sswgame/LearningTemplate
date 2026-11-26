@@ -52,8 +52,9 @@ namespace sw
                                                             "P auto plan, Space pause, - = speed, F1 status" );
     }
 
-    void NileGameModeComponent::updateGame( float32 deltaTime )
+    void NileGameModeComponent::updateGame( GameSeconds frameTime )
     {
+        const float32 deltaTime = frameTime.count();
         if ( deltaTime > 0.0f )
         {
             if ( isAutoPlanOn() && _planner.advance( getMutableCity(), _wallet, findCatalog()->getRoadCost() ) > 0 )
@@ -61,7 +62,7 @@ namespace sw
             if ( getSpeed().isPaused() == false )
             {
                 // 시계는 도시가 진행한 시간으로 민다 — 따로 곱하면 프레임 상한에 잘린 도시와 어긋난다(감사 K-6). 배속은 디렉터가 쥔다(시계 배율은 1).
-                _clock.update( getMutableCity().update( deltaTime, getSpeed().getTimeScale() ) );
+                _clock.update( getMutableCity().update( frameTime, getSpeed().getTimeScale() ) );
                 settleMonths();
             }
         }
@@ -101,7 +102,7 @@ namespace sw
             listTerrain.push_back( terrain.key() );
         }
         CitySimulation& city = getMutableCity();
-        if ( city.initialize( findCatalog(), tileMap._width, tileMap._height, _wallet ) == false )
+        if ( findCatalog() == nullptr || city.initialize( *findCatalog(), tileMap._width, tileMap._height, _wallet ) == false )
             return false; // 범위 밖 도시 설정은 도시가 오류를 남겼다
         if ( NileCityPlanner::paintTerrain( city, tileMap, listTerrain ) == false )
             return false; // 모자란 땅 · 레이어는 플래너가 남겼다
@@ -160,7 +161,7 @@ namespace sw
         if ( io.isOk() == false )
             return;
         const bool bCity = io.valueOpened( getMutableCity(), [this]( CitySimulation& city )
-        { return city.initialize( findCatalog(), getCity().getWidth(), getCity().getHeight(), _wallet ); } );
+        { return findCatalog() != nullptr && city.initialize( *findCatalog(), getCity().getWidth(), getCity().getHeight(), _wallet ); } );
         const bool bRead = bCity && io.valueOpened( _planner, [this]( NileCityPlanner& planner )
         { return planner.reset( makeCityLayout(), AssetID{ _autoPlanPath.isSet() ? string_view{ _autoPlanPath.get() } : string_view{} } ); } ); // 자동 계획을 읽지 못하면 이유는 플래너가 남겼다
         if ( bRead == false )

@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Serialization/Format/BinarySerializer.h"
 #include "Engine/Serialization/Format/FormatUpgrade.h"

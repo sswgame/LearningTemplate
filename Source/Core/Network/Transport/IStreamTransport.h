@@ -89,7 +89,10 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 이 플랫폼의 실제 스트림 전송(Windows IOCP · 리눅스 epoll)을 만듭니다. 구현이 없는 플랫폼이면 nullptr 입니다. */
+    /**
+     * @brief 이 플랫폼의 실제 스트림 전송(Windows IOCP · 리눅스 · Android epoll · 웹 WebSocket)을 만듭니다.
+     * @details 정의는 플랫폼 폴더의 전송 .cpp 끝에 하나씩 있다(`Windows/` · `LinuxKernel/` · `Web/` — 그 플랫폼에서만 지어진다). 구현이 없는 플랫폼은 링크에서 멈춘다.
+     */
     struct SW_API StreamTransportFactory
     {
         static unique_ptr<IStreamTransport> createPlatformTransport();

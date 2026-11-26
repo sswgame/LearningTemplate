@@ -7,9 +7,9 @@
 
 #include "Core/Diagnostics/CrashHandler.h"
 #include "Core/String/StringBuilder.h"
-#include "Core/Testing/TestRunner.h"
+#include "Core/TestFramework/TestRunner.h"
 
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 #include "Editor/SelfTest/EditorSelfTest.h"
 
 namespace sw::editor

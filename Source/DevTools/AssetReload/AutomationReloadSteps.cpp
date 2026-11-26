@@ -18,7 +18,7 @@
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 #include "Engine/Automation/Scenario/IAutomationStepContext.h"
 #include "Engine/Content/AssetPaths.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
 namespace sw
@@ -61,7 +61,7 @@ namespace sw
                 string text = original; // from 이 비면 바꾸지 않은 저장이다 — 감시가 같은 글을 다시 읽는다
                 if ( params._from.isSet() )
                 {
-                    const optional<AbsolutePath> sourcePath = engine::getSubsystem<AssetPaths>().findLooseFile( params._from.get() );
+                    const optional<DiskPath> sourcePath = engine::getSubsystem<AssetPaths>().findLooseFile( params._from.get() );
                     if ( sourcePath.has_value() == false || FileUtil::readTextFile( *sourcePath, text ) == false )
                     {
                         fixed_string<constant::buffer::kMax2048> message;
@@ -90,22 +90,24 @@ namespace sw
         };
     } // namespace
 
-    expected<ModuleRebuildVariant> AutomationReloadSteps::parseVariant( string_view jsonText, string_view sourceName, string_view variantName )
+    expected<void> ModuleRebuildVariantTable::validate() const
     {
-        JSONDocument document;
-        if ( document.parse( jsonText, sourceName ) == false || document.getRoot().isObject() == false )
-            return unexpected( Error{ ErrorKind::InvalidArgument, "the module rebuild variant table is not a JSON object", sourceName } );
-        const JSONValue variants = document.getRoot().get( "_variants" );
-        const JSONValue entry    = variants.isObject() ? variants.get( variantName ) : JSONValue{};
-        if ( entry.isObject() == false )
-            return unexpected( Error{ ErrorKind::NotFound, "the module rebuild variant table has no such variant under _variants", variantName } );
-        const optional<string> header = entry.readRequired<string>( "_header" );
-        const optional<string> text   = entry.readRequired<string>( "_text" );
-        if ( header.has_value() == false || text.has_value() == false || text->empty() )
-            return unexpected( Error{ ErrorKind::InvalidArgument, "a module rebuild variant needs _header and a non-empty _text", variantName } );
-        if ( AutomationReloadStepsInternal::isPlainRelativePath( *header ) == false )
-            return unexpected( Error{ ErrorKind::InvalidArgument, "a module rebuild variant _header is a relative path under the build tree's generated/ folder", *header } );
-        return ModuleRebuildVariant{ *header, *text };
+        for ( const auto& [name, variant] : _mapVariant )
+        {
+            if ( variant._text.empty() )
+                return unexpected( Error{ ErrorKind::InvalidArgument, "a module rebuild variant needs a non-empty _text", name } );
+            if ( AutomationReloadStepsInternal::isPlainRelativePath( variant._header ) == false )
+                return unexpected( Error{ ErrorKind::InvalidArgument, "a module rebuild variant _header is a relative path under the build tree's generated/ folder", variant._header } );
+        }
+        return {};
+    }
+
+    expected<ModuleRebuildVariant> ModuleRebuildVariantTable::find( string_view variantName ) const
+    {
+        const auto variantIt = _mapVariant.find( string( variantName ) );
+        if ( variantIt == _mapVariant.end() )
+            return unexpected( Error{ ErrorKind::NotFound, "the module rebuild variant table has no such variant", variantName } );
+        return variantIt->second;
     }
 
     bool AutomationReloadSteps::isPlainRelativePath( string_view path )

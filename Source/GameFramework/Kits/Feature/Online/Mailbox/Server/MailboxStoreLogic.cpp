@@ -6,8 +6,10 @@
 
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
 #include "GameFramework/Runtime/Online/Mail/Server/ServiceMail.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceCommitRunner.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceReadSetConnection.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceRecordReader.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordTable.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStoreUtil.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
@@ -51,7 +53,7 @@ namespace sw
                 const ServiceStoreResult read = connection.readRecord( ServiceMail::getMailTable(), mailKey, record );
                 if ( read == ServiceStoreResult::NotFound )
                     return MailboxResult::NotFound;
-                if ( read != ServiceStoreResult::Ok || ServiceMail::decodeRecord( record._bytes, outRecord ) == false )
+                if ( read != ServiceStoreResult::Ok || ServiceMail::decodeRecord( record, outRecord ) == false )
                     return MailboxServiceResult::fail( OnlineError::kUnavailable );
                 outRecord._mailKey = string( mailKey );
                 outRecord._version = record._version;
@@ -103,16 +105,15 @@ namespace sw
             static MailboxServiceResult claimCampaign( IServiceStoreConnection& connection, uint64 campaignID, const MailboxClaimInput& input, MailboxClaimReply& outReply )
             {
                 const string claimKey = ServiceMailCampaign::makeClaimKey( campaignID, input._accountID );
-                for ( int32 attempt = 0; attempt < LedgerConstant::kMaxRetryCount; ++attempt )
+                return ServiceCommitRunner::run<MailboxServiceResult>( connection, "Mailbox.ClaimCampaign", [&]( ServiceCommitAttempt& attempt ) -> optional<MailboxServiceResult>
                 {
                     // 캠페인은 시도마다 읽고 그 버전을 커밋 조건으로 건다 — 읽기와 커밋 사이에 운영자가 끝내거나 첨부를 바꾼 캠페인으로 지급하지 않는다.
-                    ServiceReadSetConnection readSet( connection );
                     ServiceRecord            campaignRecord;
-                    const ServiceStoreResult read = readSet.readRecord( ServiceMailCampaign::getCampaignTable(), ServiceKeyUtil::makeHex64( campaignID ), campaignRecord );
+                    const ServiceStoreResult read = attempt.readRecord( ServiceMailCampaign::getCampaignTable(), ServiceKeyUtil::makeHex64( campaignID ), campaignRecord );
                     if ( read == ServiceStoreResult::NotFound )
                         return MailboxResult::NotFound;
                     ServiceMailCampaign campaign;
-                    if ( read != ServiceStoreResult::Ok || ServiceMailCampaign::decode( campaignRecord._bytes, campaign ) == false )
+                    if ( read != ServiceStoreResult::Ok || ServiceMailCampaign::decode( campaignRecord, campaign ) == false )
                         return MailboxServiceResult::fail( OnlineError::kUnavailable );
                     if ( campaign.isActive( input._nowMs ) == false )
                         return MailboxResult::Expired;
@@ -131,26 +132,23 @@ namespace sw
                     }
                     ServiceTransaction   transaction;
                     LedgerTransferResult serviceResult;
-                    const LedgerResult   staged = Ledger::stageTransfer( readSet, request, transaction, serviceResult );
+                    const LedgerResult   staged = Ledger::stageTransfer( attempt, request, transaction, serviceResult );
                     if ( staged != LedgerResult::Ok )
                         return toResult( staged );
                     if ( serviceResult._bReplayed == SW_TRUE )
                         return MailboxResult::AlreadyClaimed;
-                    transaction.put( ServiceMailCampaign::getClaimTable(), claimKey, vector<uint8>{}, ServiceRecord::kAbsentVersion );
-                    const ServiceStoreResult committed = readSet.commit( transaction );
-                    if ( committed == ServiceStoreResult::Ok )
-                    {
-                        collectAccountBalances( serviceResult, input._accountID, outReply._listBalance );
-                        ++outReply._claimedCount;
-                        return MailboxResult::Ok;
-                    }
-                    const LedgerResult resolved = Ledger::resolveConflict( connection, request, serviceResult );
-                    if ( resolved == LedgerResult::Ok )
+                    transaction.put( ServiceMailCampaign::getClaimTable(), claimKey, ServiceRecord::kAbsentVersion );
+                    const LedgerResult committed = Ledger::commitTransfer( attempt, transaction, request, serviceResult );
+                    if ( committed == LedgerResult::Conflict )
+                        return nullopt;
+                    if ( committed != LedgerResult::Ok )
+                        return toResult( committed );
+                    if ( serviceResult._bReplayed == SW_TRUE )
                         return MailboxResult::AlreadyClaimed;
-                    if ( resolved != LedgerResult::Conflict || committed == ServiceStoreResult::Unavailable )
-                        return MailboxServiceResult::fail( OnlineError::kUnavailable );
-                }
-                return MailboxServiceResult::fail( OnlineError::kBusy );
+                    collectAccountBalances( serviceResult, input._accountID, outReply._listBalance );
+                    ++outReply._claimedCount;
+                    return MailboxServiceResult{ MailboxResult::Ok };
+                } );
             }
 
             /** @brief 이동으로 바뀐 계정 보유자의 잔액을 모읍니다. */
@@ -175,7 +173,7 @@ namespace sw
                 if ( read != ServiceStoreResult::Ok && read != ServiceStoreResult::NotFound )
                     return false;
                 ServiceMailRecord mail;
-                if ( read == ServiceStoreResult::NotFound || ServiceMail::decodeRecord( record._bytes, mail ) == false )
+                if ( read == ServiceStoreResult::NotFound || ServiceMail::decodeRecord( record, mail ) == false )
                     return true; // 없는 우편이므로 인덱스만 지운다
                 if ( mail._state == ServiceMailState::Claimed )
                 {
@@ -231,7 +229,7 @@ namespace sw
             {
                 inoutTransaction.erase( ServiceMail::getMailTable(), record._key, record._version );
                 ServiceMailRecord mail;
-                if ( ServiceMail::decodeRecord( record._bytes, mail ) == false )
+                if ( ServiceMail::decodeRecord( record, mail ) == false )
                 {
                     SW_LOG_WARNING_ID( "MailboxStoreLogic.ErasedMailUnreadable", "The mail '%#' of a deleted account is unreadable - it is erased without its indexes", record._key.c_str() );
                     return true;
@@ -302,7 +300,7 @@ namespace sw
         for ( const ServiceRecord& record : listRecord )
         {
             ServiceMailRecord mail;
-            if ( ServiceMail::decodeRecord( record._bytes, mail ) == false )
+            if ( ServiceMail::decodeRecord( record, mail ) == false )
             {
                 SW_LOG_ERROR_ID( "MailboxStoreLogic.MailUnreadable", "Mail '%#' is unreadable", record._key );
                 continue;
@@ -326,7 +324,7 @@ namespace sw
         mail._state = ServiceMailState::Read;
         ServiceTransaction transaction;
         transaction.put( ServiceMail::getMailTable(), mail._mailKey, ServiceMail::encodeRecord( mail ), mail._version );
-        const ServiceStoreResult committed = connection.commit( transaction );
+        const ServiceStoreResult committed = ServiceCommitRunner::commitOnce( connection, transaction );
         if ( committed == ServiceStoreResult::Conflict )
             return MailboxResult::Ok; // 그사이 받았거나 읽었으므로 읽음 표시는 덮어쓰지 않는다
         return committed == ServiceStoreResult::Ok ? MailboxServiceResult{ MailboxResult::Ok } : MailboxServiceResult::fail( OnlineError::kUnavailable );
@@ -342,10 +340,10 @@ namespace sw
                 return MailboxResult::NotFound;
             return MailboxStoreLogicInternal::claimCampaign( connection, campaignID, input, outReply );
         }
-        for ( int32 attempt = 0; attempt < LedgerConstant::kMaxRetryCount; ++attempt )
+        return ServiceCommitRunner::run<MailboxServiceResult>( connection, "Mailbox.Claim", [&]( ServiceCommitAttempt& attempt ) -> optional<MailboxServiceResult>
         {
             ServiceMailRecord          mail;
-            const MailboxServiceResult read = MailboxStoreLogicInternal::readMail( connection, input._accountID, mailKey, mail );
+            const MailboxServiceResult read = MailboxStoreLogicInternal::readMail( attempt, input._accountID, mailKey, mail );
             if ( read != MailboxResult::Ok )
                 return read;
             if ( mail._state == ServiceMailState::Claimed )
@@ -375,7 +373,7 @@ namespace sw
                 {
                     request._listPosting.push_back( LedgerPosting{ funding, LedgerHolder::makeAccount( input._accountID ), attachment._assetID, attachment._amount } );
                 }
-                const LedgerResult staged = Ledger::stageTransfer( connection, request, transaction, serviceResult );
+                const LedgerResult staged = Ledger::stageTransfer( attempt, request, transaction, serviceResult );
                 if ( staged != LedgerResult::Ok )
                 {
                     if ( staged == LedgerResult::InsufficientFunds )
@@ -391,39 +389,32 @@ namespace sw
             {
                 if ( mail._message._expiresMs > 0 )
                     transaction.erase( ServiceMail::getExpiryTable(), ServiceMail::makeExpiryKey( mail._message._expiresMs, mailKey ) );
-                transaction.put( ServiceMail::getExpiryTable(), ServiceMail::makeExpiryKey( purgeMs, mailKey ), vector<uint8>{}, ServiceRecord::kAbsentVersion );
+                transaction.put( ServiceMail::getExpiryTable(), ServiceMail::makeExpiryKey( purgeMs, mailKey ), ServiceRecord::kAbsentVersion );
             }
             mail._state              = ServiceMailState::Claimed;
             mail._message._expiresMs = purgeMs;
             transaction.put( ServiceMail::getMailTable(), mail._mailKey, ServiceMail::encodeRecord( mail ), mail._version );
-            const ServiceStoreResult committed = connection.commit( transaction );
-            if ( committed == ServiceStoreResult::Ok )
-            {
-                MailboxStoreLogicInternal::collectAccountBalances( serviceResult, input._accountID, outReply._listBalance );
-                ++outReply._claimedCount;
-                return MailboxResult::Ok;
-            }
-            if ( committed == ServiceStoreResult::Invalid )
-                return MailboxServiceResult::fail( OnlineError::kInvalidRequest );
             if ( bHasAttachment )
             {
-                const LedgerResult resolved = Ledger::resolveConflict( connection, request, serviceResult );
-                if ( resolved == LedgerResult::Ok )
-                {
-                    // 응답만 잃었거나(이번 수령이 들어갔다) 다른 기기가 먼저 받았다. 어느 쪽이든 원장은 한 번만 움직인다.
-                    MailboxStoreLogicInternal::collectAccountBalances( serviceResult, input._accountID, outReply._listBalance );
-                    return MailboxResult::Ok;
-                }
-                if ( resolved == LedgerResult::Unavailable || committed == ServiceStoreResult::Unavailable )
-                    return MailboxServiceResult::fail( OnlineError::kUnavailable );
+                const LedgerResult committed = Ledger::commitTransfer( attempt, transaction, request, serviceResult );
+                if ( committed == LedgerResult::Conflict )
+                    return nullopt; // 그사이 읽음 표시 등으로 버전이 바뀌었다
+                if ( committed == LedgerResult::Invalid )
+                    return MailboxServiceResult::fail( OnlineError::kInvalidRequest );
+                if ( committed != LedgerResult::Ok )
+                    return MailboxStoreLogicInternal::toResult( committed );
+                MailboxStoreLogicInternal::collectAccountBalances( serviceResult, input._accountID, outReply._listBalance );
+                outReply._claimedCount += serviceResult._bReplayed == SW_FALSE ? 1 : 0; // 응답만 잃었거나 다른 기기가 먼저 받았으면 원장은 이미 한 번 움직였다
+                return MailboxServiceResult{ MailboxResult::Ok };
             }
-            else if ( committed == ServiceStoreResult::Unavailable )
-            {
-                return MailboxServiceResult::fail( OnlineError::kUnavailable );
-            }
-            // Conflict 이다. 그사이 읽음 표시 등으로 버전이 바뀌었으므로 다시 읽고 다시 시도한다
-        }
-        return MailboxServiceResult::fail( OnlineError::kBusy );
+            const ServiceStoreResult committed = attempt.commit( transaction );
+            if ( committed == ServiceStoreResult::Conflict )
+                return nullopt; // 그사이 읽음 표시 등으로 버전이 바뀌었다
+            if ( committed != ServiceStoreResult::Ok )
+                return MailboxServiceResult::fail( committed == ServiceStoreResult::Invalid ? OnlineError::kInvalidRequest : OnlineError::kUnavailable );
+            ++outReply._claimedCount;
+            return MailboxServiceResult{ MailboxResult::Ok };
+        } );
     }
 
     MailboxServiceResult MailboxStoreLogic::claimAll( IServiceStoreConnection& connection, uint64 accountID, int64 nowMs, int64 claimedRetentionMs, int32 maxClaimCount, int32 maxScanCount,
@@ -464,7 +455,7 @@ namespace sw
                                       const ILedgerPolicy* pPolicy, MailboxClaimReply& inoutReply, MailboxServiceResult& inoutFirstFailure )
     {
         ServiceMailRecord mail;
-        const bool        bClaimable = ServiceMail::decodeRecord( record._bytes, mail ) && mail._state != ServiceMailState::Claimed && mail._message._listAttachment.empty() == false &&
+        const bool        bClaimable = ServiceMail::decodeRecord( record, mail ) && mail._state != ServiceMailState::Claimed && mail._message._listAttachment.empty() == false &&
                                 MailboxStoreLogicInternal::isExpired( mail._message, nowMs ) == false;
         if ( bClaimable == false )
             return;
@@ -482,20 +473,23 @@ namespace sw
 
     MailboxServiceResult MailboxStoreLogic::deleteMail( IServiceStoreConnection& connection, uint64 accountID, string_view mailKey )
     {
-        ServiceMailRecord          mail;
-        const MailboxServiceResult read = MailboxStoreLogicInternal::readMail( connection, accountID, mailKey, mail );
-        if ( read != MailboxResult::Ok )
-            return read;
-        if ( mail._state != ServiceMailState::Claimed && mail._message._listAttachment.empty() == false )
-            return MailboxResult::HasAttachments;
-        ServiceTransaction transaction;
-        transaction.erase( ServiceMail::getMailTable(), mail._mailKey, mail._version );
-        if ( mail._message._expiresMs > 0 ) // 받은 우편도 보관 기간 만료 인덱스가 있다
-            transaction.erase( ServiceMail::getExpiryTable(), ServiceMail::makeExpiryKey( mail._message._expiresMs, mailKey ) );
-        const ServiceStoreResult committed = connection.commit( transaction );
-        if ( committed == ServiceStoreResult::Conflict )
-            return MailboxServiceResult::fail( OnlineError::kBusy );
-        return committed == ServiceStoreResult::Ok ? MailboxServiceResult{ MailboxResult::Ok } : MailboxServiceResult::fail( OnlineError::kUnavailable );
+        return ServiceCommitRunner::run<MailboxServiceResult>( connection, "Mailbox.Delete", [&]( ServiceCommitAttempt& attempt ) -> optional<MailboxServiceResult>
+        {
+            ServiceMailRecord          mail;
+            const MailboxServiceResult read = MailboxStoreLogicInternal::readMail( attempt, accountID, mailKey, mail );
+            if ( read != MailboxResult::Ok )
+                return read;
+            if ( mail._state != ServiceMailState::Claimed && mail._message._listAttachment.empty() == false )
+                return MailboxServiceResult{ MailboxResult::HasAttachments };
+            ServiceTransaction transaction;
+            transaction.erase( ServiceMail::getMailTable(), mail._mailKey, mail._version );
+            if ( mail._message._expiresMs > 0 ) // 받은 우편도 보관 기간 만료 인덱스가 있다
+                transaction.erase( ServiceMail::getExpiryTable(), ServiceMail::makeExpiryKey( mail._message._expiresMs, mailKey ) );
+            const ServiceStoreResult committed = attempt.commit( transaction );
+            if ( committed == ServiceStoreResult::Conflict )
+                return nullopt;
+            return committed == ServiceStoreResult::Ok ? MailboxServiceResult{ MailboxResult::Ok } : MailboxServiceResult::fail( OnlineError::kUnavailable );
+        } );
     }
 
     ServiceStoreResult MailboxStoreLogic::eraseAccount( IServiceStoreConnection& connection, AccountID accountID, int64 nowMs )
@@ -517,7 +511,7 @@ namespace sw
                 ServiceTransaction transaction;
                 if ( Internal::stageEraseMail( connection, record, nowMs, transaction ) == false )
                     return ServiceStoreResult::Conflict; // 맡김 이동을 짜지 못했다 — 다음 회차가 다시 읽는다
-                const ServiceStoreResult committed = connection.commit( transaction );
+                const ServiceStoreResult committed = ServiceCommitRunner::commitOnce( connection, transaction );
                 if ( committed != ServiceStoreResult::Ok )
                     return committed;
             }
@@ -533,11 +527,11 @@ namespace sw
             claims.erase( ServiceMailCampaign::getClaimTable(), ServiceMailCampaign::makeClaimKey( campaign._campaignID, accountID ) );
             if ( claims.getWrites().size() < static_cast<size_t>( ServiceTransaction::kMaxWriteCount ) )
                 continue;
-            if ( const ServiceStoreResult committed = connection.commit( claims ); committed != ServiceStoreResult::Ok )
+            if ( const ServiceStoreResult committed = ServiceCommitRunner::commitOnce( connection, claims ); committed != ServiceStoreResult::Ok )
                 return committed;
             claims = ServiceTransaction{};
         }
-        return claims.getWrites().empty() ? ServiceStoreResult::Ok : connection.commit( claims );
+        return claims.getWrites().empty() ? ServiceStoreResult::Ok : ServiceCommitRunner::commitOnce( connection, claims );
     }
 
     void MailboxStoreLogic::sweepExpired( IServiceStoreConnection& connection, int64 nowMs, int32 maxCount, MailboxSweepStats& outStats )
@@ -566,7 +560,7 @@ namespace sw
             bool                         bDiscarded = false;
             vector<MailboxBalanceChange> listChange;
             if ( MailboxStoreLogicInternal::stageExpiry( connection, index, mailKey, nowMs, transaction, bReturned, bDiscarded, listChange ) == false ||
-                 connection.commit( transaction ) != ServiceStoreResult::Ok )
+                 ServiceCommitRunner::commitOnce( connection, transaction ) != ServiceStoreResult::Ok )
             {
                 ++outStats._failedCount;
                 continue;

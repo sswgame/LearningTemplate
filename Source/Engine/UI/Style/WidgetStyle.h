@@ -10,7 +10,7 @@
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Text/FontService.h"
+#include "Engine/Text/FontSubsystem.h"
 
 #include <cstddef>
 #include <type_traits>

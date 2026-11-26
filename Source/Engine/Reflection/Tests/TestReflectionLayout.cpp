@@ -1,8 +1,8 @@
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Reflection/ReflectionContainers.h"
 #include "Engine/Reflection/Tests/ReflectionTestTypes.h"
 #include "Engine/Reflection/TypeInfo.h"
@@ -10,7 +10,6 @@
 #include "Engine/Serialization/Format/BinarySerializer.h"
 #include "Engine/Serialization/Format/JSONSerializer.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
-#include "Engine/Serialization/Serializer/Serializer.h"
 
 // ReflectionContainersTest · ReflectionInnerTypesTest · ReflectionBitfieldTest — 리플렉션이 보는 메모리 배치(컨테이너 래퍼 · 중첩 타입 · 비트필드).
 

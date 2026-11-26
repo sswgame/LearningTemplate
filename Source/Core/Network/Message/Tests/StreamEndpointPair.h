@@ -9,8 +9,8 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Network/Message/StreamMessageEndpoint.h"
 #include "Core/Network/NetTypes.h"
+#include "Core/Network/Tests/LoopbackStreamTransport.h"
 #include "Core/Network/Transport/IStreamTransport.h"
-#include "Core/Network/Transport/LoopbackStreamTransport.h"
 
 namespace sw::test
 {

@@ -10,6 +10,7 @@
 #pragma once
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Time/TimeSeconds.h"
 
 namespace sw
 {
@@ -51,9 +52,9 @@ namespace sw
         /** @brief 이 물리 프레임을 도는 씬 물리입니다. */
         ScenePhysics& getPhysics() const { return *_pPhysics; }
         /** @brief 이 물리 프레임의 게임 시간(초)입니다 — 시간이 서면 0. */
-        float32 getFrameDeltaTime() const { return _frameDeltaTime; }
+        GameSeconds getFrameDeltaTime() const { return GameSeconds{ _frameDeltaTime }; }
         /** @brief 고정 스텝 길이(초)입니다. */
-        float32 getFixedDeltaTime() const { return _fixedDeltaTime; }
+        StepSeconds getFixedDeltaTime() const { return StepSeconds{ _fixedDeltaTime }; }
         /** @brief 이 프레임의 몇 번째 스텝인지입니다(0 부터). */
         uint32 getStepIndex() const { return _stepIndex; }
         /** @brief 이 프레임의 스텝 수입니다. */

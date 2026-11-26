@@ -5,7 +5,7 @@
 
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
 #include "Editor/Common/Config/EditorThemeKey.h"
-#include "Editor/Common/GUI/Theme/EditorColorUtil.h"
+#include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 
 #include "Engine/Content/AssetPaths.h"

@@ -6,7 +6,6 @@
 
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Status/Model/EditorStatusViewModel.h"
-#include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 

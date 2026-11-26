@@ -8,9 +8,9 @@
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/SelfTest/EditorSelfTest.h"
 
-#include "GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphEditModel.h"
 #include "GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.h"
-#include "GameFramework/Runtime/Foundation/Service/GameService.h"
+#include "GameFramework/Plugin/Editor/GameplayTools/Gimmick/Model/GimmickGraphEditModel.h"
+#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 
 #include <imgui.h>
 #include <imgui_internal.h>

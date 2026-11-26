@@ -10,11 +10,11 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/MemoryBlock.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 #include "Core/String/StringBuilder.h"
-#include "Core/Time/GameTimer.h"
+#include "Core/Time/MonotonicClock.h"
 
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/ReflectionConstants.h"
@@ -415,11 +415,9 @@ namespace sw
     {
         SW_PROFILE_SCOPE( "Reflection.registerPendingTypes" );
         // 감시 값: 배치 하나의 등록 시간과 수(서술자 표에서 리플렉션 정보를 짓는 몫).
-        GameTimer batchTimer;
-        batchTimer.resetTimer();
-        batchTimer.startTimer();
-        uint32 classCount = 0;
-        uint32 enumCount  = 0;
+        Stopwatch batchTimer;
+        uint32    classCount = 0;
+        uint32    enumCount  = 0;
         {
             UniqueLock<shared_mutex> lock{ _mutex };
             ++_batchDepth;
@@ -453,10 +451,9 @@ namespace sw
             }
         }
         rebuildAffected( listAffected );
-        batchTimer.updateTimer();
         if ( classCount + enumCount > 0 )
             SW_LOG_INFO_ID( "Reflection.RegisterBatchTime", "Registered %# type(s) and %# enum(s) in %# ms (relinked %#).", classCount, enumCount,
-                            batchTimer.getDeltaTime() * constant::time::kMillisecondsPerSecond, static_cast<uint32>( listAffected.size() ) );
+                            batchTimer.getElapsedSeconds() * constant::time::kMillisecondsPerSecond, static_cast<uint32>( listAffected.size() ) );
     }
 
     TypeInfo* TypeRegistry::findTypeLocked( const hashed_string& nameOrFqn, const bool bIncludeDead ) const
@@ -1028,7 +1025,7 @@ namespace sw
     const TypeInfo* TypeLookupCache::findSlow( const hashed_string& fqn ) const
     {
         // 레지스트리가 아직 없으면 칸을 건드리지 않고 nullptr 를 반환한다(다음 호출이 다시 본다).
-        if ( engine::areEngineServicesBound() == false )
+        if ( engine::areEngineSubsystemsBound() == false )
             return nullptr;
         // 세대는 찾기 전에 읽는다. 찾는 사이 등록이 끼면 옛 세대가 남아 다음 호출이 다시 찾는다(그 반대는 없다).
         _pGenerationCounter.store( &s_typeTableGeneration, std::memory_order_release );

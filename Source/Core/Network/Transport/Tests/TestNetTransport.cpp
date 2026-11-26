@@ -3,7 +3,7 @@
 #include "Core/Network/Transport/NetTransport.h"
 #include "Core/Network/Transport/PlatformSocketUtil.h"
 #include "Core/Network/Transport/UDPNetTransport.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 #include "Core/Time/MonotonicClock.h"
 
 // 전송 — 실제 UDP 소켓(포트 0 · 시한 있는 대기), 주소 풀기, 루프백 망의 배달 순서.

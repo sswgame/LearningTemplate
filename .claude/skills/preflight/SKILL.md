@@ -20,7 +20,7 @@ description: "이 저장소의 묶음 끝 전체 검증과 push 절차: Windows 
    - `lint --all` 이 지면(낡은 예외 · 기준선 줄은 여기서 처음 걸린다) 표를 고쳐 커밋하고 다시 돌린다. clang-tidy 경고는 집계만 찍히니 읽고 고칠 것은 고친다.
    - clang-tidy 는 ASan 빌드 직후 뒤에서 띄워 changed · cpu 와 겹쳐 돌고 gpu-release 앞에서 합류한다 — 지면 gpu-release 는 돌고 끝(WINDOWS_OK 앞)에서 진다. 통과 기록이 단계와 따로(`tidy`)라 `--from` 으로 다시 돌려도 tidy 가 통과한 sha 가 아니면 다시 돈다(통과한 TU 는 `Saved/TidyCache` 에서 바로 나온다).
    - `changed` 표의 줄마다 실패 종류 · 까닭 · 그 파일을 더한 갈래가 있으니 그 갈래 몫으로 고친다(`전제` 는 시나리오의 가정이 틀렸다, `백엔드 <이름>` 은 그 백엔드만). `MissingBaseline` 은 없던 골든 · 스냅숏을 처음 쓴 것이다 — 그림 · 글을 보고 맞으면 커밋하고 `--from changed` 로 기록 없이 통과시킨다(`-scenario-update-golden` · `--update-snapshots` 로 다시 뜨지 않는다 — 진 기준 파일까지 덮어 회귀를 가린다).
-   - 격리 표(`Config/Rules/Test/Quarantine.json`)의 만료가 지났으면 처음에 진다 — 고쳐서 빼거나 사유 · 새 만료를 적는다. 끝 줄 `FLAKY=` 가 지면(격리 표 밖 흔들림이 문턱을 넘었다) 다시 돌려 넘기지 않는다: `py -3 -m Scripts test-history report` 의 줄을 근거로 고치거나 격리 표에 적는다. 느려짐 경고 줄은 판정을 바꾸지 않지만 원인을 본다.
+   - 격리 표(`Config/Rules/TestSelection/Quarantine.json`)의 만료가 지났으면 처음에 진다 — 고쳐서 빼거나 사유 · 새 만료를 적는다. 끝 줄 `FLAKY=` 가 지면(격리 표 밖 흔들림이 문턱을 넘었다) 다시 돌려 넘기지 않는다: `py -3 -m Scripts test-history report` 의 줄을 근거로 고치거나 격리 표에 적는다. 느려짐 경고 줄은 판정을 바꾸지 않지만 원인을 본다.
    - 한 단계가 지면 고친 뒤 처음부터 돌리지 않는다: 고친 것이 앞 단계에 영향을 주지 않으면 `--from changed|cpu|gpu-release|linux` 로 그 단계부터 돌린다.
 3. **로그 분류:** `build/<프리셋>/Testing/Logs/*.log` 의 Error · Warning 을 id 별로 모아 테스트가 선언한 것인지 본다. 통과만 보지 않는다.
 4. **push:** Windows 단계가 모두 통과하면 끝 줄 `WINDOWS_OK=<sha>` 의 sha 를 Linux 를 기다리지 않고 `git push origin <sha>:main`(사용자 결정 2026-11-09). git pre-push 훅(`py -3 -m Scripts setup` 이 깐다)이 main 으로 가는 sha 가 `build/verify.ok`(그 통과 기록)와 다르면 막는다 — 막히면 검증하지 않은 커밋이다. Linux 가 지면 고친 커밋을 다음 검증에서 다시 push 한다. 검증 뒤에 코드를 고쳤으면 그 커밋은 아직 검증되지 않았다.

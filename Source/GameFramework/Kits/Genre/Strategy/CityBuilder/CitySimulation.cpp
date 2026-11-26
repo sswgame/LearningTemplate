@@ -182,14 +182,9 @@ namespace sw
     {
     }
 
-    bool CitySimulation::initialize( const CityCatalog* pCatalog, int32 width, int32 height, Wallet& wallet )
+    bool CitySimulation::initialize( const CityCatalog& catalog, int32 width, int32 height, Wallet& wallet )
     {
-        if ( pCatalog == nullptr )
-        {
-            SW_LOG_ERROR_ID( "CitySimulation.CitySimulationNeedsCatalog", "CitySimulation: no city catalog - the rules are read from its <Rules>" );
-            return false;
-        }
-        const CitySettings& settings = pCatalog->getRules();
+        const CitySettings& settings = catalog.getRules();
         if ( width < 1 || height < 1 )
         {
             SW_LOG_ERROR_ID( "CitySimulation.CitySimulationRefusedMapSize", "CitySimulation: refused map size %#x%# (needs >= 1 in both)", width, height );
@@ -201,7 +196,7 @@ namespace sw
             SW_LOG_ERROR_ID( "CitySimulation.CitySimulationRefusedSettings", "CitySimulation: refused settings - %#", rangeError.c_str() );
             return false;
         }
-        _pCatalog = pCatalog;
+        _pCatalog = &catalog;
         _pWallet  = &wallet;
         _settings = settings;
         _topology = GridTopology{ width, height };
@@ -279,9 +274,9 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 건설
     // ------------------------------------------------------------------------------
-    void CitySimulation::bindLand( LandRegistry* pLand, const int2& origin )
+    void CitySimulation::bindLand( LandRegistry& land, const int2& origin )
     {
-        _land.bind( pLand, origin, hashed_string( "CityBuilder" ) );
+        _land.bind( land, origin, hashed_string( "CityBuilder" ) );
     }
 
     CityPlaceResult CitySimulation::placeRoad( int32 x, int32 y )
@@ -526,14 +521,14 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 시간
     // ------------------------------------------------------------------------------
-    float32 CitySimulation::update( float32 deltaTime, float32 timeScale )
+    float32 CitySimulation::update( GameSeconds frameTime, float32 timeScale )
     {
-        const int32 stepCount = _stepTimer.consumeScaled( deltaTime, timeScale );
+        const int32 stepCount = _stepTimer.consumeScaled( frameTime, timeScale );
         for ( int32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
         {
             stepFixed( _stepTimer.getStep() );
         }
-        return static_cast<float32>( stepCount ) * _stepTimer.getStep();
+        return static_cast<float32>( stepCount ) * _stepTimer.getStep().count();
     }
 
     void CitySimulation::pollEvents( const ConsumerLease& lease, vector<CityEvent>& outListEvent )
@@ -541,8 +536,9 @@ namespace sw
         _eventBuffer.moveAllTo( lease, outListEvent );
     }
 
-    void CitySimulation::stepFixed( float32 deltaTime )
+    void CitySimulation::stepFixed( StepSeconds step )
     {
+        const float32 deltaTime = step.count();
         _time += deltaTime;
         // 시각은 서비스 만료(차이)만 본다 — float32 걸음을 지키려 기준을 옮기고, 비교하는 서비스 시각도 같이 옮긴다(감사 K-5).
         if ( TimeRolloverUtil::rebase( _time ) )

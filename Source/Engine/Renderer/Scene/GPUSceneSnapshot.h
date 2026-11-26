@@ -12,7 +12,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Hash/HashUtil.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 
 #include "Engine/Animation/Scene/AnimationSkinSlot.h"
 #include "Engine/EngineMinimal.h"

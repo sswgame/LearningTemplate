@@ -9,7 +9,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
@@ -133,7 +133,7 @@ namespace sw
 
         MonsterHuntHaggle();
 
-        [[nodiscard]] bool      initialize( const MonsterHuntCatalog* pCatalog, const hashed_string& contractID );
+        [[nodiscard]] bool      initialize( const MonsterHuntCatalog& catalog, const hashed_string& contractID );
         MonsterHuntHaggleResult propose( int32 askReward );
         /** @brief 지금 제안을 그대로 받습니다. */
         int32 acceptOffer();

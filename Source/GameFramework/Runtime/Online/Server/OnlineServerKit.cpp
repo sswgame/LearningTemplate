@@ -12,7 +12,7 @@ namespace sw
         struct OnlineServerKitFactoryList
         {
             /** @brief 등록 목록입니다(함수 정적 — 정적 초기화 순서와 상관없이 처음 쓸 때 선다). */
-            static SW_DEFINE_SERVICE_FACTORY_LIST( getList, "Online server kit" )
+            static SW_DEFINE_FACTORY_REGISTRATION_LIST( getList, "Online server kit" )
         };
     } // namespace
 } // namespace sw
@@ -48,7 +48,7 @@ namespace sw
     {
         if ( pFactory == nullptr || pFactory->_pCreate == nullptr )
             return false;
-        return ServiceFactoryNode::addTo( OnlineServerKitFactoryList::getList(), pFactory );
+        return FactoryRegistration::addTo( OnlineServerKitFactoryList::getList(), pFactory );
     }
 
     void OnlineServerKitRegistry::unregisterFactory( OnlineServerKitFactory* pFactory )
@@ -58,7 +58,7 @@ namespace sw
 
     void OnlineServerKitRegistry::collectFactories( vector<OnlineServerKitFactory*>& outListFactory )
     {
-        ServiceFactoryNode::collectAs( OnlineServerKitFactoryList::getList(), outListFactory );
+        FactoryRegistration::collectAs( OnlineServerKitFactoryList::getList(), outListFactory );
     }
 
     OnlineServerKitFactory* OnlineServerKitRegistry::findFactory( string_view name )

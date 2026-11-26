@@ -2,12 +2,12 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Asset/AssetFormat.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialTypes.h"
 #include "Engine/Graphics/Material/MaterialXML.h"

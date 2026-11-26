@@ -17,7 +17,6 @@
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
 #include "Editor/Common/EditorExports.h"
 #include "Editor/Common/GUI/EditorChrome.h"
-#include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Workspace/EditorContext.h"

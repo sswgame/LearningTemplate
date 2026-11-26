@@ -46,7 +46,7 @@ namespace sw
     struct LocalizationGatherResult
     {
         string                            _projectName;
-        AbsolutePath                      _gatherTablePath;
+        DiskPath                          _gatherTablePath;
         TextGatherReport                  _report;
         vector<LocalizationCultureReport> _listCulture;
         uint32                            _fileCount{ 0 };
@@ -60,13 +60,13 @@ namespace sw
     /** @brief PO 내보내기나 가져오기 한 번의 결과입니다. */
     struct LocalizationExchangeResult
     {
-        string       _culture;
-        AbsolutePath _path;
-        uint32       _entryCount{ 0 };      ///< PO 항목 수
-        uint32       _translatedCount{ 0 }; ///< 번역이 있는 항목 수
-        uint32       _staleCount{ 0 };      ///< 이전 원문의 번역이다. 내보내기에서는 fuzzy 와 `#|` 로 표시하고, 가져오기에서는 그 원문 해시로 넣는다
-        uint32       _fuzzyCount{ 0 };      ///< 검토 표시가 붙은 항목 수
-        uint32       _unknownKeyCount{ 0 }; ///< 가져오기에서 원문 테이블에 없는 키의 수다. 건너뛴다
+        string   _culture;
+        DiskPath _path;
+        uint32   _entryCount{ 0 };      ///< PO 항목 수
+        uint32   _translatedCount{ 0 }; ///< 번역이 있는 항목 수
+        uint32   _staleCount{ 0 };      ///< 이전 원문의 번역이다. 내보내기에서는 fuzzy 와 `#|` 로 표시하고, 가져오기에서는 그 원문 해시로 넣는다
+        uint32   _fuzzyCount{ 0 };      ///< 검토 표시가 붙은 항목 수
+        uint32   _unknownKeyCount{ 0 }; ///< 가져오기에서 원문 테이블에 없는 키의 수다. 건너뛴다
     };
 } // namespace sw
 
@@ -89,7 +89,7 @@ namespace sw
          * @brief 프로젝트 하나를 수집합니다. @p bWrite 이면 바뀐 원문 테이블과 번역 테이블을 쓰고, 아니면 다르다는 것만 기록합니다(`_bOutOfDate`).
          * @return 프로젝트나 테이블을 읽지 못했으면 false 입니다. 수집 오류는 결과의 보고에 있습니다.
          */
-        [[nodiscard]] static bool gatherProject( string_view projectPath, const AbsolutePath& repositoryRoot, bool bWrite, LocalizationGatherResult& outResult );
+        [[nodiscard]] static bool gatherProject( string_view projectPath, const DiskPath& repositoryRoot, bool bWrite, LocalizationGatherResult& outResult );
         /** @brief 리소스 파일 하나를 프로젝트 규칙으로 스캔합니다. 대화, 규칙 XML, 리플렉션 XML 이 대상입니다. */
         static void gatherAssetFile( const LocalizationProject& project, TextGatherer& gatherer, string_view fileText, string_view origin );
         /** @brief 결과를 로그로 남깁니다. 사람이 읽는 보고입니다. */
@@ -111,10 +111,10 @@ namespace sw
          * @brief PO 하나를 프로젝트의 번역 테이블로 가져옵니다. 문화권은 PO 헤더의 `Language` 이고, 번역의 해시는 그 msgid(번역가가 본 원문)의 해시입니다.
          *        그 사이 원문이 바뀌었으면 가져온 번역은 오래된 것으로 남습니다. `#, fuzzy` 는 검토 표시이고, `# ` 줄은 번역가 메모입니다.
          */
-        [[nodiscard]] static bool importPo( string_view projectPath, const AbsolutePath& poPath, LocalizationExchangeResult& outResult );
+        [[nodiscard]] static bool importPo( string_view projectPath, const DiskPath& poPath, LocalizationExchangeResult& outResult );
         /** @brief `--export-po` 의 본문입니다. */
         static bool runExportCommand( string_view projectArgument );
         /** @brief `--import-po=<파일>` 의 본문입니다. 프로젝트는 `-loc-project` 로 고르고, 없으면 PO 헤더의 `X-Localization-Project` 이름으로 고릅니다. */
-        static bool runImportCommand( const AbsolutePath& poPath, string_view projectArgument );
+        static bool runImportCommand( const DiskPath& poPath, string_view projectArgument );
     };
 } // namespace sw

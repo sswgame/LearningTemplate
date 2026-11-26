@@ -11,10 +11,15 @@
 
 #include "DevTools/DevToolsAPI.h"
 
-#include "Engine/EngineFrameHooks.h"
+#include "Engine/EngineHooks.h"
+
+#include "ModuleManager/Host/HostDevLayer.h"
 
 namespace sw
 {
+    class CommandLineManager;
+    class Engine;
+    class GameModuleManager;
     class IDevConsoleView;
     class InputMap;
     class SubsystemScope;
@@ -33,6 +38,10 @@ namespace sw
         [[nodiscard]] virtual EngineFrameExit onFrameEnd() = 0;
         /** @brief 콘솔의 그리는 쪽(런타임 UI 오버레이)입니다. UI 가 없으면 nullptr 입니다. */
         [[nodiscard]] virtual unique_ptr<IDevConsoleView> createConsoleView() = 0;
+        /** @brief 초상화 굽기(`--render-portraits=a.prefab.xml,b.prefab.xml`)입니다. 인자가 없으면 NotRequested 입니다(개발 계층 `runAfterHostSubsystems`). */
+        [[nodiscard]] virtual HostTaskResult runPortraitBake( Engine& engine, const CommandLineManager& commandLine ) = 0;
+        /** @brief 에디터 인스턴스를 드는 모듈 관리자(`-EnableEditor`)를 만듭니다(개발 계층 `makeEditorModuleManager`). */
+        [[nodiscard]] virtual unique_ptr<GameModuleManager> makeEditorModuleManager( Engine& engine ) = 0;
 
         /** @brief 등록된 창구입니다. 클라이언트 전용 소스가 없으면(전용 서버) nullptr 입니다. */
         [[nodiscard]] static IDevToolsClientPart* find();
@@ -42,10 +51,10 @@ namespace sw
         /** @brief 걸린 창구를 뗍니다(건 이미지가 내려갈 때). 걸려 있지 않으면 할 일이 없다. */
         static void detach( IDevToolsClientPart* pPart );
 
-        /** @struct Registration @brief 클라이언트 전용 소스가 정적 객체로 창구를 겁니다(이미지에 하나) — 공통 틀 `StaticRegistrar` 라 건 이미지가 내려가면 뗀다. */
-        struct Registration final : StaticRegistrar<IDevToolsClientPart*>
+        /** @struct Registrar @brief 클라이언트 전용 소스가 정적 객체로 창구를 겁니다(이미지에 하나) — 공통 틀 `StaticRegistrar` 라 건 이미지가 내려가면 뗀다. */
+        struct Registrar final : StaticRegistrar<IDevToolsClientPart*>
         {
-            explicit Registration( IDevToolsClientPart& part )
+            explicit Registrar( IDevToolsClientPart& part )
                 : StaticRegistrar{ &part, &IDevToolsClientPart::attach, &IDevToolsClientPart::detach }
             {
             }

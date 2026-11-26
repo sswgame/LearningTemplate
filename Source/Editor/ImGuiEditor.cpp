@@ -35,21 +35,20 @@
 #include "Editor/Common/GUI/EditorUIContextState.h"
 #include "Editor/Common/GUI/Panel/EditorPanelDump.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
-#include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorComponentIconRow.h"
 #include "Editor/Common/GUI/Theme/EditorFontSetup.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorCommandGUI.h"
 #include "Editor/Common/Input/EditorFileDrop.h"
 #include "Editor/Common/Input/EditorInputActions.h"
-#include "Editor/Common/Task/EditorBackgroundTask.h"
+#include "Editor/Common/Job/EditorBackgroundJob.h"
 #include "Editor/Common/Workspace/EditorCamera.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorFrameStep.h"
 #include "Editor/Common/Workspace/EditorNotificationManager.h"
 #include "Editor/Common/Workspace/EditorRenderViews.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorUICommandQueue.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
@@ -1159,7 +1158,7 @@ namespace sw::editor
         _dockLayout.applyPendingNamedLayout();
         // 플랫폼 백엔드는 io.DeltaTime 에 벽시계 경과를 적는다. 패널이 각자 우회하지 않도록 ImGui 경과를 엔진 경과로 맞춘다.
         // 자동화에서는 엔진 경과가 고정 프레임 시간이라 녹화와 재생이 같은 시간을 읽는다. 벽시계가 필요한 프로파일러 성능 탭은 자기 시계를 읽는다.
-        ImGui::GetIO().DeltaTime = MathUtil::max( editor::getSubsystem<GameTimeScale>().getUnscaledDeltaTime(), ImGuiEditorInternal::kMinDeltaTime );
+        ImGui::GetIO().DeltaTime = MathUtil::max( editor::getSubsystem<GameTimeScale>().getUnscaledDeltaTime().count(), ImGuiEditorInternal::kMinDeltaTime );
         ImGui::NewFrame();
         // 모니터를 옮기면 ImGui 가 글자 배율(FontScaleDpi)만 새 DPI 로 덮어쓴다(ConfigDpiScaleFonts). 테마의 여백과 둥글기는 이전 배율이 남으므로 따라가게 한다.
         // 그러지 않으면 150 % 모니터에서 글자만 커지고 위젯 크기는 그대로다. 배율을 직접 정했으면(gv_editorUiScale) ImGui 가 덮어쓰지 않으므로 여기서도 건드리지 않는다.

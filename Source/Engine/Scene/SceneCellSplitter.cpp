@@ -227,7 +227,7 @@ namespace sw
              * @brief 대리 형식을 타입 표에서 찾습니다. 나누기 전에 불러 실패하면 문서를 건드리지 않는다.
              * @return 형식 · 칸이 표에 없으면 오류를 남기고 false 입니다(조용히 대리 없이 넘어가지 않는다).
              */
-            [[nodiscard]] static bool resolveHLODMeshTypes( const SceneEngineServices& services, string_view scenePath, HLODMeshTypes& outTypes )
+            [[nodiscard]] static bool resolveHLODMeshTypes( const SceneEngineSubsystems& services, string_view scenePath, HLODMeshTypes& outTypes )
             {
                 static constexpr const utf8* kMeshTypeName      = "MeshComponent";
                 static constexpr const utf8* kInstancedTypeName = "InstancedMeshComponent";
@@ -500,7 +500,7 @@ namespace sw
              * @details 쿠킹된 문서를 한 번 더 지어 오브젝트마다 자리 · 플래그 · 참조를 읽는다. 셀을 넘는 참조(`StreamingCellGrid::findCrossCellReferences`)나
              *          프리팹을 찾지 못한 엔티티가 있으면 오류를 남기고 false 다 — 런타임에 조용히 끊기는 참조 · 빠지는 엔티티를 쿠킹본에 싣지 않는다.
              */
-            static bool partitionStreamingCells( const SceneEngineServices& services, SceneDocument& inoutDoc, string_view scenePath,
+            static bool partitionStreamingCells( const SceneEngineSubsystems& services, SceneDocument& inoutDoc, string_view scenePath,
                                                  vector<StreamingCellReference>* pOutListViolation )
             {
                 StreamingCellGrid grid;
@@ -557,7 +557,7 @@ namespace sw
 
 namespace sw
 {
-    bool SceneCellSplitter::split( const SceneEngineServices& services, SceneDocument& inoutDoc, string_view sceneName,
+    bool SceneCellSplitter::split( const SceneEngineSubsystems& services, SceneDocument& inoutDoc, string_view sceneName,
                                    vector<StreamingCellReference>* pOutListViolation )
     {
         if ( pOutListViolation != nullptr )
@@ -602,7 +602,7 @@ namespace sw
         };
 
         vector<StreamingCellReference> listViolation;
-        if ( SceneCellSplitter::split( scene.getEngineServices(), doc, scene.getName(), &listViolation ) == false )
+        if ( SceneCellSplitter::split( scene.getSceneEngineSubsystems(), doc, scene.getName(), &listViolation ) == false )
         {
             if ( listViolation.empty() )
                 return false; // 나누지 못한 이유는 쿠커가 로그에 남겼다

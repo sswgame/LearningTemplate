@@ -1,7 +1,7 @@
 // QuestLogTest — 퀘스트 일지: 받기 조건, 목표 세기(선택 목표 · 개수 정하기), 단계 사슬 · 선택지 · 시간 제한, 저장과 데이터가 바뀐 뒤의 복원, 카탈로그 검사(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Console/DebugHUDRegistry.h"
 #include "Engine/Object/GameObject/Tests/SceneIterationTestAccess.h"

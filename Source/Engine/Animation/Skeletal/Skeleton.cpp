@@ -11,6 +11,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringUtil.h"
 
+#include "Engine/Asset/Cache/SharedAssetCacheDefinition.h"
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
@@ -439,8 +440,6 @@ namespace sw
 
     bool Skeleton::saveToFile( const AbsolutePath& absPath ) const
     {
-        if ( FileUtil::ensureParentDirectoryExists( absPath ) == false )
-            return false;
         return ResourceComposer::saveText( absPath, ResourceSaveText::makeComplete( toXML() ) ); // 칸을 빼지 않고 쓴다
     }
 } // namespace sw
@@ -448,4 +447,9 @@ namespace sw
 namespace sw
 {
     SW_DATA_INHERITANCE_MERGE( SkeletonVariant, &Skeleton::mergeVariantText );
+} // namespace sw
+
+namespace sw
+{
+    SW_SHARED_ASSET_CACHE( Skeleton, Skeleton, Skeleton::kAssetType.withLoader( AssetTypeLoader::of<Skeleton>( MemoryTag::Animation ) ) );
 } // namespace sw

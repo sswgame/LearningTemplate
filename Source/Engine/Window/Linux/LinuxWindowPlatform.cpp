@@ -1,7 +1,7 @@
 #include "pch.h"
 
 #include "Core/Log/Logger.h"
-#include "Core/Process/ProcessEnvironment.h"
+#include "Core/Process/Process.h"
 
 #include "Engine/Window/Linux/LinuxWindowBackend.h"
 #include "Engine/Window/Linux/Wayland/WaylandSplashWindow.h"

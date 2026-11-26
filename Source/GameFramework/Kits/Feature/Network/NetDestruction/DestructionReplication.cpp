@@ -190,8 +190,6 @@ namespace sw
     NetHandleResult DestructionReplicationServer::receive( NetDestructionMessage::SnapshotRequest, const NetMessageContext& context, const DestructionSnapshotRequestBody& body )
     {
         const NetObjectID netID = body._netID;
-        if ( context._connectionID < 0 )
-            return NetHandleResult::Malformed;
         if ( findEntry( netID ) != nullptr )
             queueRequest( context._connectionID, netID );
         return NetHandleResult::Handled;

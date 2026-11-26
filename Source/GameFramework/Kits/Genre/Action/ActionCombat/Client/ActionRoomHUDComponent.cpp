@@ -19,7 +19,7 @@
 #include "GameFramework/Runtime/Character/Combat/Damage/DamageEvents.h"
 #include "GameFramework/Runtime/Foundation/Presentation/IHUDViewModelBinder.h"
 #include "GameFramework/Runtime/Foundation/Service/GameEvents.h"
-#include "GameFramework/Runtime/Foundation/Service/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 
 namespace sw
 {

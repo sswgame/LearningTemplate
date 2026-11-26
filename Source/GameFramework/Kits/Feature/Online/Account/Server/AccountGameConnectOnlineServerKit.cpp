@@ -1,17 +1,16 @@
 #include "pch.h"
 
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 
 #include "Engine/Network/GameConnectSecurity.h"
 #include "Engine/Network/GameNetSession.h"
 
+#include "GameFramework/Kits/Feature/Online/Account/Server/AccountConnectAuthenticator.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/AccountKitConfig.h"
+#include "GameFramework/Kits/Feature/Online/Account/Server/LoginTicketAuthority.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/NetSecurityLoginCrypto.h"
-#include "GameFramework/Kits/Feature/Online/Account/Server/Service/AccountConnectAuthenticator.h"
-#include "GameFramework/Kits/Feature/Online/Account/Server/Service/LoginTicketAuthority.h"
-#include "GameFramework/Kits/Feature/Online/Account/Server/Service/LoginTicketKey.h"
-#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Identity/ConnectAdmission.h"
-#include "GameFramework/Runtime/Foundation/Service/GameService.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/ConnectAdmission.h"
+#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 #include "GameFramework/Runtime/Online/Security/NetSecurity.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerConfig.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerKit.h"
@@ -53,7 +52,7 @@ namespace sw
                     return unexpected( Error{ ErrorKind::InvalidArgument, "gameConnect needs _serverName - the name game tickets are issued for" } );
                 _serverName = std::move( kitConfig._serverName );
                 uint8 arrTicketKey[LoginTicketAuthority::kMasterKeySize];
-                if ( expected<void> result = LoginTicketKey::readFromEnvironment( kitConfig._ticketKeySecretEnvironment, arrTicketKey ); result.has_value() == false )
+                if ( expected<void> result = LoginTicketAuthority::readMasterKey( kitConfig._ticketKeySecretEnvironment, arrTicketKey ); result.has_value() == false )
                     return result;
                 _ticketAuthority.initialize( &_crypto, arrTicketKey );
                 Memory::wipe( arrTicketKey, sizeof( arrTicketKey ) );

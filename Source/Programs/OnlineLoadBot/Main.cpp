@@ -18,6 +18,7 @@
 #include "Core/Subsystem/SubsystemScope.h"
 
 #include "Engine/Engine.h"
+#include "Engine/Module/EngineABIStamp.h"
 #include "Engine/Module/ModuleTypeRegistry.h"
 
 #include "ModuleManager/Host/HostDevLayer.h"
@@ -50,7 +51,7 @@ namespace sw
 
             ~ToolHostScope()
             {
-                _launch.stopHostServices();
+                _launch.stopHostSubsystems();
                 _launch.shutdownEngine();
             }
 
@@ -72,7 +73,7 @@ namespace sw
                     return false;
                 }
                 // 엔진 종료의 모듈 내리기 자리(`ModuleUnloadStage`)에서 등록을 역순으로 거둔다 — 모듈 서브시스템(GameFramework · 키트의 캐시)이 엔진보다 먼저 내려간다.
-                _unloadSubscription             = requireSubsystem<ModuleLoaderSubsystem>( _launch.getHostScope() ).bindScenesReleasedHook( SW_DELEGATE_METHOD( Delegate<void()>, &ToolHostScope::unregisterModules, this ) );
+                _unloadSubscription             = getSubsystemFrom<ModuleLoaderSubsystem>( _launch.getHostScope() ).bindScenesReleasedHook( SW_DELEGATE_METHOD( Delegate<void()>, &ToolHostScope::unregisterModules, this ) );
                 const int32 engineArgumentCount = static_cast<int32>( listEngineArgument.size() );
                 listEngineArgument.push_back( nullptr );
                 // 진 헤드리스 작업도 Failed 다 — 그 결과는 `runBot` 이 종료 코드로 낸다. 엔진이 서지 못한 것만 여기서 멈춘다.
@@ -93,7 +94,7 @@ namespace sw
             [[nodiscard]] int32 runBot( vector<utf8*>& listBotArgument )
             {
                 if ( _launch.getEngine().isHeadless() )
-                    return _launch.getEngine().didHeadlessTaskFail() ? LoadBotModuleEntry::kExitErrorRate : LoadBotModuleEntry::kExitOk;
+                    return _launch.getEngine().didCommandletFail() ? LoadBotModuleEntry::kExitErrorRate : LoadBotModuleEntry::kExitOk;
                 const auto pfnRun = reinterpret_cast<PFN_RunOnlineLoadBot>( ModuleLibraryUtil::getDynamicSymbol( _pBotModule, LoadBotModuleEntry::kEntrySymbol ) );
                 if ( pfnRun == nullptr )
                 {
@@ -128,6 +129,8 @@ namespace sw
                         return false;
                     }
                     _listLoadedModule.push_back( pModule ); // 올렸으면 등록이 일부 실패해도 내릴 때 거둔다
+                    if ( engine::isModuleBuiltWithThisEngine( pHandle, pModule ) == false )
+                        return false;
                     if ( engine::registerModuleTypes( pModule ) == false )
                         return false;
                     if ( string_view{ pModule } == LoadBotModuleEntry::kModuleName )

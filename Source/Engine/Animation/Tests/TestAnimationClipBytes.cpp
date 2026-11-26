@@ -3,10 +3,10 @@
 
 #include "Core/Memory/Memory.h"
 #include "Core/Serialization/ByteStream.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Animation/AnimationClip.h"
-#include "Engine/Animation/Codec/Raw/RawAnimationCodec.h"
+#include "Engine/Animation/Codec/RawAnimationCodec.h"
 #include "Engine/Animation/Skeletal/Pose.h"
 
 using namespace sw;

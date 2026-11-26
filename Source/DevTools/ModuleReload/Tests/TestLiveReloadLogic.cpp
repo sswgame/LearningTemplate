@@ -6,7 +6,7 @@
 #include "Core/File/ProcessRoots.h"
 #include "Core/Module/ModuleLibraryUtil.h"
 #include "Core/String/StringBuilder.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "DevTools/ModuleReload/LiveReload/DeferredLibraryUnloadQueue.h"
 #include "DevTools/ModuleReload/LiveReload/ModuleCompiler.h"

@@ -12,9 +12,9 @@
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Foundation/DeterministicRun.h"
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemHost.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Foundation/QuitRequest.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
@@ -40,7 +40,7 @@
 #include "Engine/Renderer/SceneRHISubsystem.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
-#include "Engine/Text/FontService.h"
+#include "Engine/Text/FontSubsystem.h"
 #include "Engine/UI/UISystem.h"
 #include "Engine/Window/GenericWindow.h"
 #include "Engine/Window/MainWindowSubsystem.h"
@@ -54,7 +54,7 @@ namespace sw
             /** @brief 감시 값 `Display.SDRFallback` 입니다 — 마지막 화면 출력 요청이 HDR 인데 백엔드 · 모니터가 받지 않아 SDR 로 떨어졌으면 1 입니다. */
             [[nodiscard]] static bool readDisplaySDRFallback( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                EngineRenderDriverSubsystem* const pSubsystem = engine::areEngineServicesBound() ? engine::findSubsystem<EngineRenderDriverSubsystem>() : nullptr;
+                EngineRenderDriverSubsystem* const pSubsystem = engine::areEngineSubsystemsBound() ? engine::findSubsystem<EngineRenderDriverSubsystem>() : nullptr;
                 if ( pSubsystem == nullptr )
                     return false;
                 outValue = pSubsystem->getRenderDriver().isDisplayOutputFallenBackToSDR() ? 1.0 : 0.0;
@@ -77,7 +77,7 @@ namespace sw
         , _pPacketBuilder{ nullptr }
         , _pSceneManager{ nullptr }
         , _pUISystem{ nullptr }
-        , _pFontService{ nullptr }
+        , _pFontSubsystem{ nullptr }
         , _mainWindowResizeSubscription{}
         , _mainWindowLifecycleSubscription{}
         , _deviceLostPolicy{ RHIDeviceLostPolicy::None }
@@ -114,9 +114,9 @@ namespace sw
         _pRenderThread  = _renderThreadSubsystem.findRenderThread();
         _pFrameRenderer = &_frameRendererSubsystem.getFrameRenderer();
         _pPacketBuilder = &_frameRendererSubsystem.getPacketBuilder();
-        _pSceneManager  = locateSubsystem<SceneManager>( &_startupScope );
-        _pUISystem      = locateSubsystem<UISystem>( &_startupScope );
-        _pFontService   = locateSubsystem<FontService>( &_startupScope );
+        _pSceneManager  = findSubsystemFrom<SceneManager>( &_startupScope );
+        _pUISystem      = findSubsystemFrom<UISystem>( &_startupScope );
+        _pFontSubsystem = findSubsystemFrom<FontSubsystem>( &_startupScope );
         // 렌더 스레드가 앞 패킷을 그리며 엔진 설정(`_render`)을 읽는다 — 설정을 제자리에서 덮는 길(품질 옵션 · 파일 다시 읽기)은 받은 패킷을 끝낸 뒤에 덮는다.
         if ( ConfigManager* const pConfigManager = engine::findSubsystem<ConfigManager>() )
             pConfigManager->setWriteFence( SW_DELEGATE_METHOD( ConfigWriteFenceDelegate, &EngineRenderDriver::flushSubmittedPackets, this ) );
@@ -374,7 +374,7 @@ namespace sw
             // 미리보기 씬(에디터 툴 창)은 씬마다 자기 스냅샷 · 렌더 타깃으로 — 활성 씬과 섞이지 않는다.
             if ( _pSceneManager != nullptr )
                 _pPacketBuilder->populateScenePreviews( packet, views, *_pSceneManager );
-            _pPacketBuilder->populateCanvas( packet, views.isSceneViewMain(), _pUISystem, _pFontService, _pRHI );
+            _pPacketBuilder->populateCanvas( packet, views.isSceneViewMain(), _pUISystem, _pFontSubsystem, _pRHI );
             _pPacketBuilder->resolveMarkerInstanceSlots( packet, _pUISystem, pActiveScene );
 
             if ( _pRenderThread != nullptr )

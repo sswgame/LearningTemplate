@@ -36,7 +36,7 @@ namespace sw
         ~ServiceTTLMonitor();
 
         /** @brief 작업을 @p minuteOfDay(UTC 분)에 등록합니다. 규칙이 없으면 등록하지 않고 true 입니다. 예약 쓸기에 올릴 수 없는 규칙(`isSchedulable`)이 있거나 일정이 틀리면 false 입니다. */
-        [[nodiscard]] bool initialize( ServiceStore* pStore, ServiceScheduler* pScheduler, vector<ServiceTTLRule> listRule, int32 minuteOfDay );
+        [[nodiscard]] bool initialize( ServiceStore& store, ServiceScheduler& scheduler, vector<ServiceTTLRule> listRule, int32 minuteOfDay );
         /** @brief 맡긴 일이 끝나기를 기다린 뒤 비웁니다. */
         void shutdown();
 

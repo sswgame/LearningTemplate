@@ -1,7 +1,7 @@
 // ConstantBufferSlotAllocator — 작은 상수 버퍼를 64 KiB 페이지의 등급 칸으로 모은다: 등급 고르기, 페이지를 채운 뒤 새 페이지, 돌려준 칸 재사용, 빈 페이지 닫기와 번호 재사용(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Graphics/RHI/ConstantBufferSlotAllocator.h"
 

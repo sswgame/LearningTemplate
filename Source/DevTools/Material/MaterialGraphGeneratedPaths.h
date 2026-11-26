@@ -48,6 +48,10 @@ namespace sw
          * @return 하나라도 실패하면 false 입니다(나머지는 계속 본다). 쿠킹은 이것을 실패로 센다.
          */
         [[nodiscard]] static bool refreshAll( const AssetPaths& assetPaths, const AbsolutePath& contentRoot, uint32* pOutWrittenCount );
+
+    private:
+        /** @brief 생성물 @p assetID 를 쓸 자리입니다(`AssetWriteAccess`). 풀지 못하면 빈 값입니다. */
+        [[nodiscard]] static optional<AbsolutePath> openForWrite( const AssetPaths& assetPaths, string_view assetID );
     };
 
 } // namespace sw

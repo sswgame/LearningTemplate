@@ -2,7 +2,7 @@
 // App 이 ModuleManager 를 통째로 링크해 이 등록이 남는다(`Source/App/CMakeLists.txt` 의 `sw_link_whole_archive`) — Server 는 이 스위트를 돌리지 않는다.
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "ModuleManager/ModuleCatalogLoader.h"
 

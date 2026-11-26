@@ -207,18 +207,5 @@ namespace sw
         using ResultName   = MatchmakingResult;
 
         static const OnlineProtocolEntry kOnlineEntry; ///< 온라인 스키마 해시에 섞이는 이 키트의 등록 항목. 정의가 `.cpp` 에 있어 모듈이 오를 때 등록된다
-
-        /**
-         * @brief 캐시 기록을 읽고 씁니다. 배포 중에 다른 빌드의 서버가 읽을 수 있으므로 자기 기술형(A)이며 기록 버전을 머리에 둡니다.
-         * @details 다시 만들 수 있는 캐시이므로 `ServiceRecordUtil::readCache` 로 읽습니다. 다른 버전이거나 모르는 필드가 있거나 선언된 범위(멤버 수 같은)를
-         *          벗어나면 로그 없이 false 이고, 읽는 쪽은 그 파티나 로비가 없는 것으로 봅니다.
-         */
-        [[nodiscard]] static bool encodeParty( const PartySnapshot& party, vector<uint8>& outBytes );
-        [[nodiscard]] static bool decodeParty( const vector<uint8>& bytes, PartySnapshot& outParty );
-        [[nodiscard]] static bool encodeLobby( const LobbySnapshot& lobby, vector<uint8>& outBytes );
-        [[nodiscard]] static bool decodeLobby( const vector<uint8>& bytes, LobbySnapshot& outLobby );
-        /** @brief 캐시 값 하나에 포함된 id(16진 문자열)입니다. 계정에서 파티로 가는 인덱스와 임대 주인이 쓰는 값입니다. */
-        static vector<uint8>      encodeID( uint64 id );
-        [[nodiscard]] static bool decodeID( const vector<uint8>& bytes, uint64& outID );
     };
 } // namespace sw

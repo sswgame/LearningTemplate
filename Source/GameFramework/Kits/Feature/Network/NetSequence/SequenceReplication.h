@@ -85,7 +85,7 @@ namespace sw
     {
         using Start       = NetMessageBodyDef<0, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, SequenceNetStartBody>;
         using End         = NetMessageBodyDef<1, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, SequenceNetEndBody>; ///< 시작 뒤에 닿아야 한다(같은 순서 채널)
-        using SkipRequest = NetMessageBodyDef<2, NetMessageDirection::ToServer, NetChannelKind::ReliableOrdered, SequenceNetSkipRequestBody>;
+        using SkipRequest = NetLimitedMessageDef<NetMessageBodyDef<2, NetMessageDirection::ToServer, NetChannelKind::ReliableOrdered, SequenceNetSkipRequestBody>, NetRequestLimit::kCommand>;
         using Table       = NetWorldMessageTable<NetKitMessageRange::kSequence, Start, End, SkipRequest>;
 
         static constexpr uint8 kStart       = Table::getKindOf<Start>();

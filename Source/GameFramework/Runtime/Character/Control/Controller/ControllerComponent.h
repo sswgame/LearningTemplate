@@ -6,6 +6,7 @@
 #pragma once
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Foundation/ComponentHandle.h"
 #include "Engine/Foundation/GameObjectHandle.h"
@@ -24,9 +25,9 @@ namespace sw
     /** @brief 조종 시스템이 조종자에게 넘기는 이번 틱의 문맥입니다. */
     struct ControlFrameContext
     {
-        InputManager*             _pInput{ nullptr };        ///< 플레이어 조종자가 읽는 입력. 서버와 헤드리스에서는 없을 수 있다
-        const IInputCaptureQuery* _pInputCapture{ nullptr }; ///< 입력을 먼저 가져간 쪽(런타임 UI). 플레이어 조종자가 소비한 입력, 게임 입력 막기, 커서를 본다. 없을 수 있다
-        float32                   _deltaTime{ 0.0f };
+        InputManager*             _pInput{ nullptr };                          ///< 플레이어 조종자가 읽는 입력. 서버와 헤드리스에서는 없을 수 있다
+        const IInputCaptureQuery* _pInputCapture{ nullptr };                   ///< 입력을 먼저 가져간 쪽(런타임 UI). 플레이어 조종자가 소비한 입력, 게임 입력 막기, 커서를 본다. 없을 수 있다
+        GameSeconds               _deltaTime{};                                ///< 이번 조종 프레임의 게임 시간(정지면 0)
         uint32                    _tick{ 0 };                                  ///< 조종 시스템이 센 틱(기록 · 네트워크 창의 틱 번호)
         ControlViewTick           _viewTick{ ControlViewTick::makePresent() }; ///< 이 프레임의 입력을 낸 사람이 보던 시각(`ControlSystem::publishViewTick`) — 발동 사건에 싣는다
     };
@@ -38,16 +39,16 @@ namespace sw
      */
     struct ControlFrameInterval
     {
-        float32 _elapsed{ 0.0f }; ///< 지난 차례 뒤 모은 프레임 시간
+        GameSeconds _elapsed{}; ///< 지난 차례 뒤 모은 프레임 시간
 
         /** @brief 이번 프레임의 시간을 모으고, 차례면 모은 시간을 @p outDeltaTime 에 내고 비운 뒤 true 입니다. */
-        bool advance( const ControlFrameContext& context, uint32 interval, uint32 phase, float32& outDeltaTime )
+        bool advance( const ControlFrameContext& context, uint32 interval, uint32 phase, GameSeconds& outDeltaTime )
         {
             _elapsed += context._deltaTime;
             if ( interval > 1 && ( context._tick + phase ) % interval != 0 )
                 return false;
             outDeltaTime = _elapsed;
-            _elapsed     = 0.0f;
+            _elapsed     = GameSeconds{};
             return true;
         }
     };

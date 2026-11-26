@@ -116,5 +116,5 @@ namespace sw
 namespace sw
 {
     // 트랜스폼 칸 저장소 — 서비스 범위라 엔진 범위의 어느 컴포넌트보다 나중에 내려간다(범위 안의 순서는 서브시스템이 선언한 의존이 정한다).
-    SW_ENGINE_SERVICE_SUBSYSTEM( SceneTransformStorage, HostOnly, Process, Services, (), SW_ENGINE_DEFAULT_FACTORY( SceneTransformStorage ) );
+    SW_ENGINE_SUBSYSTEM_WITH_SLOT( SceneTransformStorage, HostOnly, Process, Shared, (), SW_ENGINE_DEFAULT_FACTORY( SceneTransformStorage ) );
 } // namespace sw

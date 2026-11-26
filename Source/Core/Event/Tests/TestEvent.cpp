@@ -5,8 +5,8 @@
 #include "Core/Concurrency/thread.h"
 #include "Core/Event/EventDispatcher.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Testing/TestFramework.h"
-#include "Core/Testing/ThreadTestAccess.h"
+#include "Core/TestFramework/TestFramework.h"
+#include "Core/TestFramework/ThreadTestAccess.h"
 
 namespace
 {

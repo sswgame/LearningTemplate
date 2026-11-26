@@ -147,10 +147,10 @@ namespace sw
         if ( pController != nullptr && pController->isGrounded() )
         {
             MountMoveState turned = state;
-            advance( turned, pPawn->getIntent(), 0.0f, context.getDeltaTime(), turn );
+            advance( turned, pPawn->getIntent(), 0.0f, context.getDeltaTime().count(), turn );
             slopeSin = -pController->getGroundNormal().dot( float3{ MathUtil::sin( turned._facingYaw ), 0.0f, MathUtil::cos( turned._facingYaw ) } );
         }
-        advance( state, pPawn->getIntent(), slopeSin, context.getDeltaTime(), turn );
+        advance( state, pPawn->getIntent(), slopeSin, context.getDeltaTime().count(), turn );
         _gait         = state.getGait();
         _facingYaw    = state._facingYaw;
         _forwardSpeed = state._forwardSpeed;
@@ -162,7 +162,7 @@ namespace sw
         if ( pController != nullptr )
             pController->setMoveVelocity( _bUseRootMotion ? float3{} : velocity );
         else if ( bMoveRootDirectly )
-            pRoot->setWorldPosition( pRoot->getWorldPosition() + velocity * context.getDeltaTime() );
+            pRoot->setWorldPosition( pRoot->getWorldPosition() + velocity * context.getDeltaTime().count() );
         applyAnimatorParameters( turn );
         if ( pRoot != nullptr && turn != 0.0f )
         {

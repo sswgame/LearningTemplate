@@ -2,8 +2,8 @@
 #include "Core/Container/deque.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/File/AsyncFileIO.h"
-#include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Subsystem/Subsystem.h"
+#include "Core/Subsystem/SubsystemSlot.h"
 #include "Core/Task/TaskFuture.h"
 #include "Core/Task/TaskTypes.h"
 
@@ -211,6 +211,6 @@ namespace sw
         deque<CompletedItem> _listCompleted;
         bool _bInitialized   SW_GUARDED_BY( _mutex );
 
-        SW_SERVICE_SLOT( AssetStreamingQueue, Required );
+        SW_SUBSYSTEM_SLOT( AssetStreamingQueue, Required );
     };
 } // namespace sw

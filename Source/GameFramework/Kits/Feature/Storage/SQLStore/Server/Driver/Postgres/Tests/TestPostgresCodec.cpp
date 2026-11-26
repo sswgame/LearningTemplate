@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "GameFramework/Kits/Feature/Storage/SQLStore/Runtime/SQL/SQLDriverRegistry.h"
 #include "GameFramework/Kits/Feature/Storage/SQLStore/Server/Driver/Postgres/PostgresCodec.h"

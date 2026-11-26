@@ -3,7 +3,7 @@
 
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Expected.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include <type_traits>
 

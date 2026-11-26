@@ -19,7 +19,7 @@
 #include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Subsystem/ServiceSlot.h"
+#include "Core/Subsystem/SubsystemSlot.h"
 
 #include "Engine/Behavior/ConditionExpr.h"
 
@@ -193,6 +193,6 @@ namespace sw
         ResourceTagSet _tags                   SW_GUARDED_BY( _mutex ); ///< 켜진 태그 — 위 둘의 합집합
         uint64 _nextContributionID             SW_GUARDED_BY( _mutex );
 
-        SW_SERVICE_SLOT( ResourceTags, Required );
+        SW_SUBSYSTEM_SLOT( ResourceTags, Required );
     };
 } // namespace sw

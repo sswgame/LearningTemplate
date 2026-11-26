@@ -6,7 +6,7 @@
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/Asset/AssetManager.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Graphics/Material/MaterialPacking.h"
@@ -334,7 +334,7 @@ namespace sw
 
     bool MaterialInstance::syncTextureOverrides( IRHIDevice* pRHI )
     {
-        if ( _listTextureOverride.empty() || engine::areEngineServicesBound() == false )
+        if ( _listTextureOverride.empty() || engine::areEngineSubsystemsBound() == false )
             return false;
         TextureCache& textures = engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>();
         bool          bChanged{ false };

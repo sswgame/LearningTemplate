@@ -3,14 +3,14 @@
 
 #define SW_TEST_INTERNAL // 세션을 직접 세우느라 엔진 서비스(`ResourceComposition`)를 찾는다
 #include "Core/Subsystem/SubsystemScope.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Config/ServerConfig.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Network/GameNetSession.h"
 #include "Engine/Serialization/Inherit/ResourceComposition.h"
 
-#include "GameFramework/Runtime/Foundation/Service/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 
 #include "Games/Playground/StarSkirmish/SkirmishLockstepLink.h"
 

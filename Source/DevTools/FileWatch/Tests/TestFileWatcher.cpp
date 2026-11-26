@@ -8,7 +8,7 @@
 
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "DevTools/FileWatch/FileWatcher.h"
 
@@ -21,7 +21,7 @@ namespace
         /** @brief 감시 루트를 정해 둡니다. 합성 리스캔 이벤트가 이 값을 답니다. */
         explicit StubFileWatcher( const sw::AbsolutePath& watchRoot ) { _directoryPath = watchRoot; }
 
-        [[nodiscard]] bool startWatching( const sw::AbsolutePath&, bool ) override { return true; }
+        [[nodiscard]] bool startWatching( const sw::DiskPath&, bool ) override { return true; }
         void               stopWatching() override {}
         bool               isWatching() const override { return true; }
 

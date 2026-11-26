@@ -1,6 +1,6 @@
 /**
  * @file NetTestUtil.h
- * @brief 네트워크 단위 테스트가 함께 쓰는 도우미 — 주소마다 오간 바이트를 세는 전송, 손으로 만든 패킷, 번호를 담은 메시지, 자리마다 다른 바이트 덩어리, 서버가 받은 메시지 꺼내기. 조건 대기는 `test::waitUntil`(Core/Testing/TestWait.h).
+ * @brief 네트워크 단위 테스트가 함께 쓰는 도우미 — 주소마다 오간 바이트를 세는 전송, 손으로 만든 패킷, 번호를 담은 메시지, 자리마다 다른 바이트 덩어리, 서버가 받은 메시지 꺼내기. 조건 대기는 `test::waitUntil`(Core/TestFramework/TestWait.h).
  */
 #pragma once
 #include "Core/Container/vector.h"

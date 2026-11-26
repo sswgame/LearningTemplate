@@ -20,7 +20,7 @@
 
 #include "Engine/Automation/AutomationResult.h"
 #include "Engine/Automation/AutomationRuntime.h"
-#include "Engine/EngineFrameHooks.h"
+#include "Engine/EngineHooks.h"
 
 namespace sw
 {
@@ -120,7 +120,7 @@ namespace sw
 
             [[nodiscard]] bool                                 start( Engine& engine, SubsystemScope& host, const CommandLineManager& commandLine ) override;
             bool                                               isBusy() const override;
-            void                                               runPerBackend( string_view backends, CommandLineManager& commandLine, HeadlessTaskState& inoutState ) override;
+            void                                               runPerBackend( string_view backends, CommandLineManager& commandLine, CommandletState& inoutState ) override;
             const AutomationRunStatus*                         findRunStatus() const override;
             [[nodiscard]] unique_ptr<IAutomationShutdownWatch> watchShutdown() override;
             /** @brief 재생기를 호스트 범위에서 풀어 내리고 세션을 엔진 프레임에서 뗍니다(세션 종료가 부른다). 시작하지 않았으면 아무것도 하지 않습니다. */
@@ -136,7 +136,7 @@ namespace sw
          * @brief 체인의 지금 단계 시나리오를 새 실행기로 시작합니다.
          * @details 둘째 단계부터는 앞 단계의 상태를 이어받지 않는다(언리얼 PIE 가 플레이마다 새 GameInstance 를 만들고 CVar 를 되돌리는 것과 같다) — 전역 변수를 세션 시작의
          *          값으로 되돌리고(`restoreStartVariables`), `<Launch>` 값을 건 뒤 게임을 처음부터 다시 세운다(`IGameRestarter`). 새 게임이 기동 때처럼 첫 씬(`gv_firstScene`)을
-         *          열거나 벤치를 세우므로 단계는 첫 단계와 같은 길로 선다 — 그래서 CTest 는 시나리오 모두를 한 체인으로 돌린다(`Test/Scenario/CMakeLists.txt`).
+         *          열거나 벤치를 세우므로 단계는 첫 단계와 같은 길로 선다 — 그래서 CTest 는 시나리오 모두를 한 체인으로 돌린다(`IntegrationTests/Scenario/CMakeLists.txt`).
          */
         void startStage( uint32 completedScreenshotCount );
         /**

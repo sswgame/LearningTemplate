@@ -1,7 +1,7 @@
 // RetargetProfileEditModelTest — 리타깃 프로파일 창의 편집 연산은 모델이 이름과 함께 알린다(감사 E-16): 연산 한 번 → 알림 한 번, 문서 바꾸기(replace)는 알리지 않는다.
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Editor/Common/Workspace/Undo/DocumentEditRecorder.h"
 #include "Editor/Common/Workspace/Undo/DocumentEditSpan.h"

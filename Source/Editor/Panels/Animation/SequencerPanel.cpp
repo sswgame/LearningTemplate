@@ -10,7 +10,6 @@
 
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
-#include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
@@ -304,7 +303,7 @@ namespace sw::editor
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "LoadTip" ) );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Save" ) ) );
             if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Save" ) ) )
-                saveToLoadedPath();
+                (void)saveDocumentAndClearDirty(); // 실패는 저장 커맨드가 알린다
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "SaveTip" ) );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Play" ) ) );
             if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Play" ) ) )
@@ -1196,22 +1195,9 @@ namespace sw::editor
         return result;
     }
 
-    void SequencerPanel::saveToLoadedPath()
+    bool SequencerPanel::saveDocument( AssetWriter& writer )
     {
-        if ( getLoadedAssetPath().empty() )
-            return;
-        if ( SequencerViewModel::saveSequence( captureAsset(), getLoadedAssetPath() ) == false )
-            return;
-        clearDocumentDirty();
-        syncDocumentUndoBaseline();
-    }
-
-    bool SequencerPanel::saveDocument()
-    {
-        if ( getLoadedAssetPath().empty() )
-            return false;
-        saveToLoadedPath();
-        return isDocumentDirty() == false;
+        return getLoadedAssetPath().empty() == false && SequencerViewModel::saveSequence( writer, captureAsset(), getLoadedAssetPath() );
     }
 
     SequenceAsset SequencerPanel::captureAsset() const

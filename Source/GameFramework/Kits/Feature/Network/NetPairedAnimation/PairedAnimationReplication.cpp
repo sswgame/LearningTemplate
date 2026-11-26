@@ -13,7 +13,7 @@
 #include "Engine/Character/PairedAnimation/PairedAnimationSystem.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
-#include "Engine/Object/GameObject/Service/NetObjectTable.h"
+#include "Engine/Object/GameObject/Subsystem/NetObjectTable.h"
 #include "Engine/Serialization/Fixed/ReplicatedLayout.h"
 
 #include <algorithm>

@@ -2,7 +2,7 @@
 // 다시 읽기 일정(주기 · 알림 · 쓰기 뒤), 보이는 상태의 바뀜 표시, GM 창구의 결과 변환. 온라인 키트라 `UnitTests.OnlineKits` 가 돌린다(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 #include "Core/Time/Clock.h"
 
 #include "GameFramework/Kits/Feature/Online/ServerDirectory/Runtime/ServerDirectoryProtocol.h"
@@ -12,6 +12,7 @@
 #include "GameFramework/Runtime/Online/Cache/Server/MemoryEphemeralStore.h"
 #include "GameFramework/Runtime/Online/Directory/Server/ServerRegistration.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordTable.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
 using namespace sw;
@@ -108,7 +109,7 @@ namespace
             , _registration{}
             , _service{}
         {
-            _router.initialize( &_cache );
+            _router.initialize( _cache );
             ServerDirectoryDependencies dependencies;
             dependencies._pStore  = &_store;
             dependencies._pRouter = &_router;
@@ -201,10 +202,9 @@ namespace
         /** @brief 다른 서버가 쓴 것처럼 서비스를 거치지 않고 점검을 넣습니다. */
         void writeMaintenanceDirectly( const MaintenanceWindow& window )
         {
-            vector<uint8> bytes;
-            SW_REQUIRE_TRUE( ServerDirectoryProtocol::encodeMaintenance( window, bytes ) );
-            ServiceTransaction transaction;
-            transaction.put( hashed_string{ "sd_maintenance" }, window._scope, bytes, 0 );
+            static const ServiceRecordTable<MaintenanceWindow> s_maintenanceTable{ "sd_maintenance" };
+            ServiceTransaction                                 transaction;
+            transaction.put( s_maintenanceTable, window._scope, window, 0 );
             SW_REQUIRE_TRUE( _database.commit( transaction ) == ServiceStoreResult::Ok );
         }
     };

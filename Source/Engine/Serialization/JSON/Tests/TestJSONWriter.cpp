@@ -1,8 +1,8 @@
 // JSONWriter — 이스케이프 · 잘못된 UTF-8 · 중첩 · 빈 컨테이너 · 들여쓰기 · 수 표기 · 고정 버퍼 · 순서 위반 · 완성된 글만 꺼내기(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/ScopedAssertCapture.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/ScopedAssertCapture.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Serialization/JSON/JSONDocument.h"
 #include "Engine/Serialization/JSON/JSONWriter.h"
@@ -23,7 +23,7 @@ namespace
 } // namespace
 
 /**
- * @brief [JSONWriterTest] 따옴표 · 역슬래시 · 제어 문자는 이스케이프하고 UTF-8 은 그대로 두며, 규칙은 `JSONStringUtil` 하나다
+ * @brief [JSONWriterTest] 따옴표 · 역슬래시 · 제어 문자는 이스케이프하고 UTF-8 은 그대로 두며, 규칙은 `StringUtil::escapeJSON` 하나다
  */
 SW_TEST_CASE( JSONWriterTest, EscapesQuotesBackslashesAndControlCharacters )
 {

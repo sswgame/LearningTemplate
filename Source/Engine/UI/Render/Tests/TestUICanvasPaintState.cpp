@@ -1,7 +1,7 @@
 // UICanvasPaintStateTest — 화면 UI 그리기 목록의 공유 출력(내용이 바뀔 때만 새 목록 · 번호), 레이어 숨김 요청 수, 지난 목록 재사용 판정(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/UI/Render/UICanvasPaintState.h"
 #include "Engine/UI/WidgetTree/WidgetTree.h"

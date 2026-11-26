@@ -2,7 +2,7 @@
 // 두 규칙은 '.' 하나가 다르다(키만 점 계층을 쓴다).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "GameFramework/Kits/Feature/Online/LiveOps/Runtime/LiveOpsTypes.h"
 

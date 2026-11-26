@@ -131,27 +131,17 @@ namespace sw
                 return {};
             }
 
-            /**
-             * @brief 항목 속성을 리플렉션 스키마 @p outDef 로 읽습니다(`XMLFields::readProperties` — 필수 칸 · 값 꼴 · 모르는 속성). 틀리면 첫 문제를 담은 오류입니다.
-             * @details 표 읽기는 오류를 돌려주는 API 라 XMLFields 의 문제 보고를 받아(첫 줄) 오류의 자세한 글로 옮긴다.
-             */
+            /** @brief 항목 속성을 리플렉션 스키마 @p outDef 로 읽습니다(`XMLFields::tryReadProperties`). 틀리면 첫 문제를 담은 오류입니다. */
             template <typename TDef>
             [[nodiscard]] static expected<void> readEntryProperties( const XMLNode& entryNode, string_view sourceName, string_view key, TDef& outDef )
             {
-                string                   firstIssue;
-                const XMLFieldsIssueSink sink{ []( void* pContext, const utf8* /*pID*/, string_view text )
-                {
-                    string& first = *static_cast<string*>( pContext );
-                    if ( first.empty() )
-                        first = string( text );
-                },
-                                               &firstIssue };
-                if ( XMLFields::readProperties( entryNode, &outDef, *TDef::StaticType(), sourceName, {}, nullptr, sink ) )
+                const expected<void> read = XMLFields::tryReadProperties( entryNode, outDef, sourceName );
+                if ( read.has_value() )
                     return {};
-                return unexpected( atSource( Error{ ErrorKind::InvalidArgument, "an entry field is missing or unreadable", key }.appendDetail( ": " ).appendDetail( firstIssue ), sourceName ) );
+                return unexpected( atSource( Error{ ErrorKind::InvalidArgument, "an entry field is missing or unreadable", key }.appendDetail( ": " ).appendDetail( read.error().detail() ), sourceName ) );
             }
 
-            [[nodiscard]] static expected<void> readTextFile( const AbsolutePath& absolutePath, string& outText )
+            [[nodiscard]] static expected<void> readTextFile( const DiskPath& absolutePath, string& outText )
             {
                 if ( FileUtil::readTextFile( absolutePath, outText ) )
                     return {};
@@ -166,7 +156,7 @@ namespace sw
                 const string textToWrite = bExisting ? AssetGUIDHeader::carryOver( existing, text ) : text;
                 if ( bExisting && existing == textToWrite )
                     return true;
-                return FileUtil::ensureParentDirectoryExists( absolutePath ) && FileUtil::writeTextFile( absolutePath, textToWrite );
+                return FileUtil::writeTextFile( absolutePath, textToWrite );
             }
         };
     } // namespace
@@ -244,7 +234,7 @@ namespace sw
         return {};
     }
 
-    expected<void> SourceStringTable::loadFromFile( const AbsolutePath& absolutePath )
+    expected<void> SourceStringTable::loadFromFile( const DiskPath& absolutePath )
     {
         string text;
         return LocalizationDocumentsInternal::readTextFile( absolutePath, text ).and_then( [&]()
@@ -336,7 +326,7 @@ namespace sw
         return {};
     }
 
-    expected<void> TranslationTable::loadFromFile( const AbsolutePath& absolutePath )
+    expected<void> TranslationTable::loadFromFile( const DiskPath& absolutePath )
     {
         string text;
         return LocalizationDocumentsInternal::readTextFile( absolutePath, text ).and_then( [&]()
@@ -469,7 +459,7 @@ namespace sw
         return {};
     }
 
-    expected<void> LocalizationProject::loadFromFile( const AbsolutePath& absolutePath )
+    expected<void> LocalizationProject::loadFromFile( const DiskPath& absolutePath )
     {
         string text;
         return LocalizationDocumentsInternal::readTextFile( absolutePath, text ).and_then( [&]()
@@ -481,7 +471,7 @@ namespace sw
         return FileUtil::joinPath( FileUtil::getDirectoryPart( projectPath ), fileName );
     }
 
-    AbsolutePath LocalizationProject::makeSiblingPath( const AbsolutePath& projectPath, string_view fileName )
+    DiskPath LocalizationProject::makeSiblingPath( const DiskPath& projectPath, string_view fileName )
     {
         return projectPath.getParent().join( fileName );
     }
@@ -517,7 +507,7 @@ namespace sw
         return makeSiblingPath( projectPath, fileName.view() );
     }
 
-    AbsolutePath LocalizationProject::makeTranslationPath( const AbsolutePath& projectPath, string_view culture )
+    DiskPath LocalizationProject::makeTranslationPath( const DiskPath& projectPath, string_view culture )
     {
         StringBuilder<constant::buffer::kMax256> fileName;
         fileName.appendFormat( "%#%#", CultureTable::normalizeCode( culture ), TranslationTable::kExtension );

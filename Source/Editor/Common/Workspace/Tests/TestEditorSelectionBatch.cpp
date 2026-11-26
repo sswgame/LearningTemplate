@@ -8,10 +8,10 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Editor/Common/Workspace/EditorSelection.h"
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/Undo/CommandStack.h"
 

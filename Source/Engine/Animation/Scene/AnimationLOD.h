@@ -15,7 +15,7 @@
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/Content/AssetID.h"
-#include "Engine/Graphics/LOD/LODView.h"
+#include "Engine/Graphics/View/LODView.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw

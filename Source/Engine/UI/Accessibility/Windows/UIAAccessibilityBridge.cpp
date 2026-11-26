@@ -14,8 +14,8 @@
 
 #include "Engine/UI/Accessibility/IUIAccessibilityBridge.h"
 #include "Engine/UI/Accessibility/UIAccessibilityActions.h"
-#include "Engine/UI/Accessibility/UIAccessibilityService.h"
 #include "Engine/UI/Accessibility/UIAccessibilitySnapshot.h"
+#include "Engine/UI/Accessibility/UIAccessibilitySubsystem.h"
 #include "Engine/UI/Accessibility/UIAccessibilityTypes.h"
 #include "Engine/UI/UISystem.h"
 #include "Engine/Window/GenericWindow.h"
@@ -92,7 +92,7 @@ namespace sw
                         return nullptr;
                     if ( _bSnapshotValid == false )
                     {
-                        UIAccessibilityService::populateSnapshot( *_pUI, _snapshot );
+                        UIAccessibilitySubsystem::populateSnapshot( *_pUI, _snapshot );
                         _bSnapshotValid = SW_TRUE;
                     }
                     return &_snapshot;

@@ -4,7 +4,7 @@
 
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Subsystem/SubsystemScope.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Object/Component/TagComponent.h"
@@ -17,7 +17,7 @@
 #include "GameFramework/Runtime/Foundation/GameFeature/GameFeatureReceiverComponent.h"
 #include "GameFramework/Runtime/Foundation/GameFeature/GameFeatureRegistry.h"
 #include "GameFramework/Runtime/Foundation/GameFeature/GameFeatureScope.h"
-#include "GameFramework/Runtime/Foundation/Service/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 
 using namespace sw;
 

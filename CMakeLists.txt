@@ -115,10 +115,10 @@ if(NOT SW_SHIPPING_BUILD AND SW_TARGET_TYPE STREQUAL "Game" AND (SW_BUILD_GAMEFR
 	add_subdirectory(Source/Programs/OnlineLoadBot)
 endif()
 
-# 단위 테스트(Test/ — 링크하는 것마다 실행 파일 하나, 각각 CTest 항목). 배포 구성은 짓지 않는다. 시나리오(Content/**/automation/)는 App 이 돌린다.
+# CTest 항목(IntegrationTests/ — 단위 테스트 실행 · 시나리오 체인 · 넷 · 퍼즈 · 팩 · 셰이더 · 도구). 배포 구성은 짓지 않는다. 시나리오(Content/**/automation/)는 App 이 돌린다.
 if(NOT SW_SHIPPING_BUILD)
 	enable_testing()
-	add_subdirectory(Test)
+	add_subdirectory(IntegrationTests)
 endif()
 
 # 여기까지 오면 동적 모듈이 전부 만들어졌다 — 레지스트리에 빠진 것이 없는지 먼저 확인한다.
@@ -142,5 +142,5 @@ sw_verify_built_sources()
 # 모든 타깃이 선 뒤 — `Source/` 아래 폴더를 include 경로로 준 타깃이 있으면 구성을 세운다(접두 없는 include 가 층 게이트를 비껴가는 길).
 sw_verify_source_include_roots()
 
-# 뿌리(`Source/` · `Test/` · 시나리오 폴더) 아래를 sw_glob_source_tree 밖에서 빌드마다 훑는 글롭이 있으면 빌드가 멈춘다(생성된 VerifyGlobs.cmake 를 본다).
+# 뿌리(`Source/` · `IntegrationTests/` · 시나리오 폴더) 아래를 sw_glob_source_tree 밖에서 빌드마다 훑는 글롭이 있으면 빌드가 멈춘다(생성된 VerifyGlobs.cmake 를 본다).
 sw_check_configure_globs()

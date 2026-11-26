@@ -18,7 +18,7 @@
 #include "Engine/Audio/AudioPCM.h"
 #include "Engine/Audio/AudioRenderListener.h"
 #include "Engine/Audio/AudioTypes.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 
 namespace sw
 {
@@ -66,10 +66,10 @@ namespace sw
                 listSample.clear();
                 if ( FileUtil::writeFile( path, bytes.data(), bytes.size() ) == false )
                 {
-                    SW_LOG_ERROR_ID( "AudioService.CouldNotWriteAudio", "Could not write the audio dump '%#'", path.str() );
+                    SW_LOG_ERROR_ID( "AudioSubsystem.CouldNotWriteAudio", "Could not write the audio dump '%#'", path.str() );
                     return;
                 }
-                SW_LOG_INFO_ID( "AudioService.AudioDumpWrittenChannels", "Audio dump written: %# (%# channels)", path.str(), channelCount );
+                SW_LOG_INFO_ID( "AudioSubsystem.AudioDumpWrittenChannels", "Audio dump written: %# (%# channels)", path.str(), channelCount );
             }
         };
 

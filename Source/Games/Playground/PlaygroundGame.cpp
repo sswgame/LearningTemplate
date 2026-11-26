@@ -31,11 +31,11 @@
 #include "GameFramework/Kits/Feature/Content/ModSupport/ModSession.h"
 #include "GameFramework/Runtime/Foundation/Flow/GameInstance.h"
 #include "GameFramework/Runtime/Foundation/Flow/IContentConfiguration.h"
-#include "GameFramework/Runtime/Foundation/Flow/IGameClientPart.h"
+#include "GameFramework/Runtime/Foundation/Flow/IGame.h"
 #include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Minigame/IMinigameMatchmaking.h"
 #include "GameFramework/Runtime/Foundation/Save/GameStateSnapshot.h"
-#include "GameFramework/Runtime/Foundation/Service/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 #include "GameFramework/Runtime/Online/Service/OnlineSession.h"
 
 #include "Games/Playground/Hub/HubNetLink.h"
@@ -70,7 +70,7 @@ namespace sw
 
     private:
         /**
-         * @brief 이 세션의 모드(`-gv_modList`, 시연 모드 `Test/Mods/demo_lantern` · 벨모라 확장 팩 `Test/Mods/velmora_tidecaves`)입니다. 첫 씬을 열기 전에 적용하고 인스턴스와 함께 뗀다(시나리오 체인의 다음 단계에 남지 않는다).
+         * @brief 이 세션의 모드(`-gv_modList`, 시연 모드 `IntegrationTests/Mods/demo_lantern` · 벨모라 확장 팩 `IntegrationTests/Mods/velmora_tidecaves`)입니다. 첫 씬을 열기 전에 적용하고 인스턴스와 함께 뗀다(시나리오 체인의 다음 단계에 남지 않는다).
          *        서버 구성에도 있다 — 서버도 같은 모드 구성으로 서야 클라이언트와 구성 해시가 맞는다.
          */
         unique_ptr<ModSession> _mods;
@@ -106,7 +106,7 @@ namespace sw
 
     bool PlaygroundGame::onInitialize()
     {
-        return bindScopedService( &_onlineFlow ) && bindScopedService<IMinigameMatchmaking>( &_onlineFlow ) && bindScopedService( &_onlineFlow.getFriends() );
+        return bindScopedSubsystem( &_onlineFlow ) && bindScopedSubsystem<IMinigameMatchmaking>( &_onlineFlow ) && bindScopedSubsystem( &_onlineFlow.getFriends() );
     }
 
     void PlaygroundGame::startFirstScene()

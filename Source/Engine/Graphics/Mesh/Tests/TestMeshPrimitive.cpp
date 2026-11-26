@@ -3,7 +3,7 @@
 
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringUtil.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Graphics/Material/Material.h"

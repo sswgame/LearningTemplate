@@ -3,9 +3,9 @@
 
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Name/hashed_string.h"
 #include "Core/Serialization/ByteStream.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/String/Name/hashed_string.h"
+#include "Core/TestFramework/TestFramework.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Navigation/INavMesh.h"

@@ -14,8 +14,8 @@
 
 #include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Environment/Sky/SkyLight.h"
-#include "Engine/Graphics/LOD/LODView.h"
 #include "Engine/Graphics/Lighting/LensFlareAsset.h"
+#include "Engine/Graphics/View/LODView.h"
 #include "Engine/Graphics/View/RenderViewSettings.h"
 #include "Engine/Renderer/Lighting/GPULightBuffer.h"
 

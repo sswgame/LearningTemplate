@@ -5,7 +5,7 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/File/FileUtil.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "DevTools/Cook/PackCooker.h"
 #include "DevTools/Cook/PackSceneChunkPlan.h"

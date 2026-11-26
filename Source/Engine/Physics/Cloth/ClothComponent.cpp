@@ -443,8 +443,8 @@ namespace sw
         WindSettings wind;
         if ( WindComponent::findWind( *pManager, wind ) == false )
             return;
-        _windTime += context.getFixedDeltaTime();
-        pScene->applySoftBodyWind( _softBody, wind.computeVelocity( getWorldPosition(), _windTime ), WindSettings::kAirDensity * _windDrag, context.getFixedDeltaTime() );
+        _windTime += context.getFixedDeltaTime().count();
+        pScene->applySoftBodyWind( _softBody, wind.computeVelocity( getWorldPosition(), _windTime ), WindSettings::kAirDensity * _windDrag, context.getFixedDeltaTime().count() );
     }
 
     void ClothComponent::applySkinningPose( ScenePhysics& physics, bool bHardSkinAll )

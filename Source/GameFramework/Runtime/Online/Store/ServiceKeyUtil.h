@@ -33,14 +33,6 @@ namespace sw
          */
         [[nodiscard]] static bool isTokenText( string_view text, int32 maxSize, string_view extraCharacters );
 
-        /** @brief id 하나를 레코드 값(가변 정수)으로 씁니다. 다른 표의 레코드를 가리키는 연결 레코드(게스트 → 계정, 계정 → 세션)가 쓴다. */
-        static vector<uint8> encodeVarID( uint64 id );
-        /**
-         * @brief `encodeVarID` 의 값을 읽습니다. 깨졌으면 0 입니다.
-         * @details 서비스 id(계정 · 세션 · 거래)는 0 을 내지 않는다 — 0 은 "없음" 이라 부르는 쪽이 같은 검사로 "없음 · 깨짐" 을 함께 거른다(대체값이 아니라 형식의 약속).
-         */
-        static uint64 decodeVarID( const vector<uint8>& bytes );
-
         /** @brief 길이 + UTF-8 바이트를 씁니다. */
         static void writeString( BitWriter& outWriter, string_view text );
         /** @brief `writeString` 으로 쓴 것을 읽습니다. 길이가 @p maxSize 를 넘거나 모자라면 false 입니다. */

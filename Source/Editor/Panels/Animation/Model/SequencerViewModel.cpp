@@ -8,7 +8,7 @@
 #include "Editor/Common/Commands/Scene/EditorViewportPreview.h"
 #include "Editor/Common/EditorSceneIterationAccess.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
@@ -163,8 +163,36 @@ namespace sw::editor
         return EditorToolAssetCommands::loadSequence( outAsset, path );
     }
 
-    bool SequencerViewModel::saveSequence( const SequenceAsset& asset, string_view path )
+    bool SequencerViewModel::saveSequence( AssetWriter& writer, const SequenceAsset& asset, string_view path )
     {
-        return EditorToolAssetCommands::saveSequence( asset, path );
+        return EditorToolAssetCommands::saveSequence( writer, asset, path );
+    }
+} // namespace sw::editor
+
+namespace sw::editor
+{
+    void SequenceClipTiming::captureTiming( const vector<SequenceTrackItem>& listItem, vector<SequenceClipTiming>& outListTiming )
+    {
+        outListTiming.clear();
+        outListTiming.reserve( listItem.size() );
+        for ( const SequenceTrackItem& item : listItem )
+        {
+            outListTiming.push_back( SequenceClipTiming{ item._start, item._end, item._kind } );
+        }
+    }
+
+    bool SequenceClipTiming::hasTimingChanged( const vector<SequenceClipTiming>& listTimingBefore, const vector<SequenceTrackItem>& listItem )
+    {
+        if ( listTimingBefore.size() != listItem.size() )
+            return true;
+        for ( size_t itemIndex = 0; itemIndex < listItem.size(); ++itemIndex )
+        {
+            const SequenceClipTiming& before = listTimingBefore[itemIndex];
+            const SequenceTrackItem&  after  = listItem[itemIndex];
+            const bool                bSame  = before._start == after._start && before._end == after._end && before._kind == after._kind;
+            if ( bSame == false )
+                return true;
+        }
+        return false;
     }
 } // namespace sw::editor

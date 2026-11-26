@@ -2,7 +2,7 @@
 // 스트리밍 셀이 내려가도 남고, 게임이 끝나면 다음 게임으로 옮기지 않는다.
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Object/Component/ComponentStateCodec.h"
 #include "Engine/Object/Component/SceneComponent.h"

@@ -1,4 +1,4 @@
-// 리그 대상 오프셋 기즈모의 Model 쪽(모으기 · 적용, ImGui 없음)입니다. 그리기와 조작은 `Visualizers/RigTargetGizmoVisualizer.cpp`(MVVM View)다.
+// 리그 대상 오프셋 기즈모의 Model 쪽(모으기 · 적용, ImGui 없음)입니다. 그리기와 조작은 `Viewport/RigTargetGizmoVisualizer.cpp`(MVVM View)다.
 #include "pch.h"
 
 #include "Editor/Viewport/Model/RigTargetGizmoEdit.h"
@@ -9,8 +9,8 @@
 
 #include "Editor/Common/Commands/Asset/RigSaveParams.h"
 #include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorStateStore.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Viewport/Model/EditorViewportMouseCapture.h"
 

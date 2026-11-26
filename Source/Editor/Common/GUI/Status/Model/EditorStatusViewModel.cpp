@@ -5,7 +5,7 @@
 #include "Editor/Common/Commands/Asset/EditorAssetFileCommands.h"
 #include "Editor/Common/Commands/Scene/EditorLightProbeBakeSession.h"
 #include "Editor/Common/Commands/Scene/EditorReflectionProbeBakeSession.h"
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 #include "Editor/Common/Workspace/HotReload/AssetHotReload.h"
 
 namespace sw::editor

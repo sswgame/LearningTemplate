@@ -320,7 +320,7 @@ namespace sw
             case EphemeralOperation::Set:
             {
                 RESPCommand command{ "SET" };
-                command.addText( key ).addBytes( request._value );
+                command.addText( key ).addBytes( accessValue( request ) );
                 if ( request._ttlMs > 0 )
                     command.addText( "PX" ).addInteger( request._ttlMs );
                 if ( request._condition == EphemeralCondition::IfAbsent )
@@ -400,7 +400,7 @@ namespace sw
             }
             case EphemeralOperation::Publish:
             {
-                sendCommand( operation, RESPCommand{ "PUBLISH" }.addText( key ).addBytes( request._value ), RESPEphemeralStoreInternal::kStepFirst );
+                sendCommand( operation, RESPCommand{ "PUBLISH" }.addText( key ).addBytes( accessValue( request ) ), RESPEphemeralStoreInternal::kStepFirst );
                 break;
             }
         }
@@ -435,7 +435,7 @@ namespace sw
                 else if ( value._type != RespType::BulkString )
                     reply._result = EphemeralResult::Invalid;
                 else
-                    reply._value = value._bytes;
+                    accessValue( reply ) = value._bytes;
                 break;
             }
             case EphemeralOperation::Set:
@@ -582,7 +582,7 @@ namespace sw
         }
         if ( step == RESPEphemeralStoreInternal::kStepSecond ) // GET 의 답이다. 다음 명령을 정한다
         {
-            const bool bMatches = value._type == RespType::BulkString && value._bytes == operation._request._expected;
+            const bool bMatches = value._type == RespType::BulkString && value._bytes == accessExpected( operation._request );
             if ( reply._result == EphemeralResult::Ok && bMatches == false )
                 reply._result = EphemeralResult::Conflict;
             if ( reply._result != EphemeralResult::Ok )
@@ -596,7 +596,7 @@ namespace sw
                 if ( operation._request._operation == EphemeralOperation::CompareAndSet )
                 {
                     RESPCommand command{ "SET" };
-                    command.addText( key ).addBytes( operation._request._value );
+                    command.addText( key ).addBytes( accessValue( operation._request ) );
                     if ( operation._request._ttlMs > 0 )
                         command.addText( "PX" ).addInteger( operation._request._ttlMs );
                     sendCommand( operation, command, RESPEphemeralStoreInternal::kStepCompareWrite );
@@ -633,7 +633,7 @@ namespace sw
 
     void RESPEphemeralStore::failOperation( Operation& operation )
     {
-        operation._reply._value.clear();
+        accessValue( operation._reply ).clear();
         operation._reply._listMember.clear();
         finishOperation( operation, EphemeralResult::Unavailable );
         if ( _blockingRequestID == operation._reply._requestID )
@@ -738,7 +738,7 @@ namespace sw
         _messageBuffer.push( EphemeralMessage{} );
         EphemeralMessage& message = _messageBuffer.getLast();
         message._channel          = string( channel.substr( _settings->_keyPrefix.size() ) );
-        message._bytes            = value._listElement[2]._bytes;
+        accessBytes( message )    = value._listElement[2]._bytes;
     }
 
     void RESPEphemeralStore::waitForSubscriptionAck()

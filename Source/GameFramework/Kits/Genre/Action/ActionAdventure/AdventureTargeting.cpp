@@ -61,13 +61,14 @@ namespace sw
     }
 
     AdventureTargetingState AdventureTargeting::update( const float3& eye, const vector<LockOnCandidate>& listCandidate, const float2& moveInput, bool bJumpPressed,
-                                                        float32 deltaTime )
+                                                        GameSeconds frameTime )
     {
-        _invulnerable.update( deltaTime );
+        const float32 deltaTime = frameTime.count();
+        _invulnerable.update( frameTime );
         if ( _selector.hasTarget() && _selector.update( eye, listCandidate, deltaTime ) )
             refreshTargetPosition( listCandidate );
         // 회피 동작은 끝날 때까지 입력을 받지 않는다(공중에서 방향을 바꿀 수 없다).
-        if ( _evade.isActive() && _evade.update( deltaTime ) == false )
+        if ( _evade.isActive() && _evade.update( frameTime ) == false )
             return _state;
         if ( _bHeld == SW_FALSE )
         {

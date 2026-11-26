@@ -51,7 +51,7 @@
 #include "Engine/Visual/MeshInstanceBatch.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/GamePackDataUtil.h"
-#include "GameFramework/Runtime/Foundation/Service/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterAppearanceComponent.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/MaterialTintCache.h"
 

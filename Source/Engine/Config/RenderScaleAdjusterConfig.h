@@ -4,9 +4,11 @@
  * @details 설정 층(1)에 두어 설정 파일 검사(`ConfigFileSchemaTest`)가 렌더러 층 없이 읽는다.
  */
 #pragma once
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
+#include "Engine/Config/ConfigFileID.h"
 #include "Engine/Config/IConfig.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -22,7 +24,7 @@ namespace sw
         REFLECT_BODY();
 
         /** @brief 설정 파일의 위치입니다(프로젝트 폴더 기준). */
-        static constexpr const utf8* kConfigFile = "Config/Engine/RenderScale.json";
+        static constexpr ConfigFileID<RenderScaleAdjusterConfig> kConfigFile{ "Config/Engine/RenderScale.json" };
 
         PROPERTY( Required, Tooltip = "GPU frame time budget in ms (> 0)" )
         float32 _budgetMs{ 0.0f };
@@ -42,5 +44,25 @@ namespace sw
         uint32 _upFrames{ 0 };
         PROPERTY( Required, Tooltip = "Samples ignored after a step - they were drawn at the old scale (readback ring + 1)" )
         uint32 _discardSamples{ 0 };
+
+        /** @brief 칸의 범위와 칸 사이의 규칙을 봅니다(`ConfigManager::readConfig` · `RenderScaleAdjuster::configure` 가 부른다). */
+        [[nodiscard]] expected<void> validate() const
+        {
+            if ( _budgetMs <= 0.0f )
+                return unexpected( Error{ ErrorKind::InvalidArgument, "_budgetMs must be > 0", kConfigFile.getPath() } );
+            if ( _minScale <= 0.0f || _minScale > 1.0f )
+                return unexpected( Error{ ErrorKind::InvalidArgument, "_minScale must be in (0, 1]", kConfigFile.getPath() } );
+            if ( _stepDown <= 0.0f || _stepUp <= 0.0f )
+                return unexpected( Error{ ErrorKind::InvalidArgument, "_stepDown and _stepUp must be > 0", kConfigFile.getPath() } );
+            if ( _stepUp >= _stepDown )
+                return unexpected( Error{ ErrorKind::InvalidArgument, "_stepUp must be smaller than _stepDown (otherwise the scale oscillates)", kConfigFile.getPath() } );
+            if ( _overRatio < 1.0f )
+                return unexpected( Error{ ErrorKind::InvalidArgument, "_overRatio must be >= 1", kConfigFile.getPath() } );
+            if ( _headroomRatio <= 0.0f || _headroomRatio >= 1.0f )
+                return unexpected( Error{ ErrorKind::InvalidArgument, "_headroomRatio must be in (0, 1)", kConfigFile.getPath() } );
+            if ( _downFrames == 0 || _upFrames == 0 )
+                return unexpected( Error{ ErrorKind::InvalidArgument, "_downFrames and _upFrames must be >= 1", kConfigFile.getPath() } );
+            return {};
+        }
     };
 } // namespace sw

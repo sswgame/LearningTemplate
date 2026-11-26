@@ -210,7 +210,7 @@ namespace sw
 
     float32 FightingGameModeComponent::computeSecondsRemaining() const
     {
-        return static_cast<float32>( _match.getRoundFramesRemaining() ) * _timer.getStep();
+        return static_cast<float32>( _match.getRoundFramesRemaining() ) * _timer.getStep().count();
     }
 
     InputFrame FightingGameModeComponent::consumePlayerInput()
@@ -293,10 +293,10 @@ namespace sw
         }
     }
 
-    void FightingGameModeComponent::updateMatch( float32 deltaTime )
+    void FightingGameModeComponent::updateMatch( GameSeconds frameTime )
     {
         const bool  bAutoPlay = isAutoPlayOn();
-        const int32 stepCount = _timer.consume( deltaTime );
+        const int32 stepCount = _timer.consume( frameTime );
         for ( int32 step = 0; step < stepCount; ++step )
         {
             const InputFrame playerInput = bAutoPlay ? makeCPUInput( kPlayer ) : consumePlayerInput();

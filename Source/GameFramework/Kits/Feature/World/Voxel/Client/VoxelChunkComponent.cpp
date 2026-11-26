@@ -3,7 +3,6 @@
 #include "GameFramework/Kits/Feature/World/Voxel/Client/VoxelChunkComponent.h"
 
 #include "Engine/Graphics/Mesh/Mesh.h"
-#include "Engine/Graphics/Mesh/MeshBuildVertex.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"

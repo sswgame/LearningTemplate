@@ -17,7 +17,7 @@
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/GUI/Panel/EditorPreviewPanel.h"
@@ -56,7 +56,7 @@ namespace sw::editor
         const utf8*        getPanelTitle() const override { return "Retarget Profile"; }
         EditorTextExtent   getInitialPanelSize() const override { return EditorTextExtent::ofText( 120.0f, 47.0f ); }
         void               drawDocumentContent() override;
-        [[nodiscard]] bool saveDocument() override;
+        [[nodiscard]] bool saveDocument( AssetWriter& writer ) override;
 
         const RetargetProfile&           getProfile() const { return _model.getProfile(); }
         const RetargetProfileInspection& getInspection() const { return _inspection; }

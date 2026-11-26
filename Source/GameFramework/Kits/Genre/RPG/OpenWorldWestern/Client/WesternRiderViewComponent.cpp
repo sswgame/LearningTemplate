@@ -18,7 +18,7 @@
 #include "GameFramework/Runtime/Character/Camera/CameraDirectorComponent.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Runtime/Foundation/Presentation/IHUDViewModelBinder.h"
-#include "GameFramework/Runtime/Foundation/Service/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 #include "GameFramework/Runtime/Gameplay/Vehicle/MountMovementComponent.h"
 #include "GameFramework/Runtime/Gameplay/Vehicle/VehicleSeatComponent.h"
 

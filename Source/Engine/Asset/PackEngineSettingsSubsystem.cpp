@@ -6,8 +6,9 @@
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Config/PackEngineSettings.h"
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
+#include "Engine/Foundation/EngineSubsystems.h"
+#include "Engine/Serialization/Inherit/AssetRedirect.h"
 #include "Engine/Serialization/Inherit/ResourceComposition.h"
 #include "Engine/Serialization/Inherit/ResourceRemap.h"
 
@@ -61,6 +62,6 @@ namespace sw
         (void)scope.exposeMember( packSettings, packSettings.getSettings() ); // 새 범위 — 겹치지 않는다
     } );
 
-    // 위 공장이 건 팩 설정의 서비스 칸(읽기 전용). 엔진과 에디터가 읽는다 — 게임은 자기 `GameSettings` 를 읽는다.
-    SW_ENGINE_SERVICE( PackEngineSettings, HostOnly );
+    // 위 공장이 건 팩 설정의 서브시스템 칸(읽기 전용). 엔진과 에디터가 읽는다 — 게임은 자기 `GameSettings` 를 읽는다.
+    SW_ENGINE_SUBSYSTEM_SLOT( PackEngineSettings, HostOnly );
 } // namespace sw

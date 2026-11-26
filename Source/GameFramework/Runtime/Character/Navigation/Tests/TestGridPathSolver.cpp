@@ -1,11 +1,10 @@
 // GridPathSolverTest — 격자 경로 요청 줄(`PathRequestQueue<GridPathSolver>`)이 동기 길(`NavAgent::planPath`)과 같은 경로를 내고, 구간을 나눠도 결과가 같다(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Navigation/PathRequestQueue.h"
 
-#include "GameFramework/Runtime/Character/Navigation/GridPathSolver.h"
 #include "GameFramework/Runtime/Character/Navigation/GridPathfinder.h"
 #include "GameFramework/Runtime/Character/Navigation/NavAgent.h"
 #include "GameFramework/Runtime/Character/Navigation/NavGrid.h"

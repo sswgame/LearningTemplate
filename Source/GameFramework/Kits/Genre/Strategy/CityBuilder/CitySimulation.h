@@ -10,8 +10,9 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 #include "Core/Time/FixedStepTimer.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/FormatDef.h"
@@ -165,7 +166,7 @@ namespace sw
          * @details 지갑이 없으면 알리고, 건설과 도로 놓기는 모두 돈 부족으로 거절된다. 달 결산에서 돈이 모자라면 지갑이 빚(`Wallet::charge`)을 진다.
          * @return 규칙은 카탈로그의 `<Rules>`(`CityCatalog::getRules`)이다 — 게임이 C++ 값으로 주는 길은 없다(감사 K-4). 카탈로그가 있고 크기가 1 이상이고 규칙이 범위 안이면 true 입니다. 밖이면 오류를 남기고 false 이며 상태를 바꾸지 않습니다(값을 조용히 맞추지 않는다).
          */
-        [[nodiscard]] bool initialize( const CityCatalog* pCatalog, int32 width, int32 height, Wallet& wallet );
+        [[nodiscard]] bool initialize( const CityCatalog& catalog, int32 width, int32 height, Wallet& wallet );
         /** @brief 칸의 땅을 정합니다. @p terrainIndex 는 카탈로그의 땅 행 번호다(`findTerrainIndex` — 행 밖이면 단언). */
         void setTerrain( int32 x, int32 y, int32 terrainIndex );
         void fillTerrain( int32 minX, int32 minY, int32 maxX, int32 maxY, int32 terrainIndex );
@@ -173,9 +174,9 @@ namespace sw
         optional<int32> findTerrainIndex( const hashed_string& id ) const;
         /**
          * @brief 공유 땅을 빌립니다. 도시 셀 (0, 0) 이 땅 셀 @p origin 에 해당합니다. 이후 도로와 건물은 놓기 전에 땅을 얻고(건물은 막힘, 도로는 막히지 않음) 허물면 반납합니다.
-         * @details 지형(`setTerrain`)은 땅 테이블과 무관하다. 이미 놓인 도로와 건물은 땅을 얻지 않으므로 건설하기 전에 호출해야 한다. @p pLand 가 nullptr 이면 빌린 땅을 반납한다.
+         * @details 지형(`setTerrain`)은 땅 테이블과 무관하다. 이미 놓인 도로와 건물은 땅을 얻지 않으므로 건설하기 전에 호출해야 한다.
          */
-        void bindLand( LandRegistry* pLand, const int2& origin );
+        void bindLand( LandRegistry& land, const int2& origin );
 
         /**
          * @brief 한 달을 결산합니다. 물자를 먹고, 세리가 다녀간 집이 세금을 내고, 일꾼 임금을 냅니다. 돈이 모자라면 지갑이 빚을 집니다. @p bNewYear 가 true 이면 범람이 다음 해의 비옥함을 정합니다.
@@ -196,7 +197,7 @@ namespace sw
          * @brief 실제 프레임 시간 @p deltaTime 을 배속 @p timeScale 로 진행합니다. 내부에서는 고정 걸음으로 나눠 처리합니다.
          * @return 이번에 진행한 도시 시간(걸음 수 × 걸음)입니다. 도시와 같이 도는 시계는 이 값으로 돌려 어긋나지 않게 한다(감사 K-6).
          */
-        float32 update( float32 deltaTime, float32 timeScale );
+        float32 update( GameSeconds frameTime, float32 timeScale );
         /** @brief 쌓인 이벤트를 꺼낼 쪽을 정합니다(둘째 쪽은 false). 꺼내기는 이 표가 있어야 한다 — 같은 월드를 붙인 화면 · 시스템이 서로의 이벤트를 가져가지 못한다. */
         [[nodiscard]] bool claimEvents( ConsumerLease& outLease ) { return _eventBuffer.claim( outLease ); }
         void               pollEvents( const ConsumerLease& lease, vector<CityEvent>& outListEvent );
@@ -235,7 +236,7 @@ namespace sw
         SW_DECLARE_STATE_IO();
 
     private:
-        void stepFixed( float32 deltaTime );
+        void stepFixed( StepSeconds step );
         void assignLabor();
         void updateBuildings( float32 deltaTime );
         void updateWalkers( float32 deltaTime );

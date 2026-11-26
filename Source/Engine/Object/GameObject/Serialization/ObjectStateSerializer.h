@@ -12,7 +12,7 @@
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 
 #include "Engine/Foundation/ComponentHandle.h"
 #include "Engine/Foundation/GameObjectHandle.h"

@@ -1,7 +1,7 @@
 #include "pch.h"
 
 #include "Core/Algorithm/VectorUtil.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
@@ -556,7 +556,7 @@ SW_TEST_CASE_F( ScavengerFacilityTest, LockedDoorsUseBorrowedFlags )
     SW_REQUIRE_TRUE( locked.loadFromXMLText( kScavengerLockedXML, "ScavengerTest" ) );
     sw::GameFlags flags;
     flags.setFlag( "story.beat" );
-    _facility.bindFlags( flags );
+    _facility.initialize( locked, flags );
     SW_REQUIRE_TRUE( _facility.createLayout( locked, *locked.findMoon( "rust" ), 7u, 1.0f ) );
     SW_EXPECT_EQUAL( 2, _facility.getLockedDoorCount() );
 
@@ -615,8 +615,9 @@ SW_TEST_CASE_F( ScavengerFacilityTest, StateRoundTripRebuildsGraph )
     sw::Archive written;
     _facility.writeState( written );
 
+    sw::GameFlags         flags;
     sw::ScavengerFacility restored;
-    restored.bindCatalog( &_catalog );
+    restored.initialize( _catalog, flags );
     sw::Archive reading( written.getData(), written.getSize() );
     SW_REQUIRE_TRUE( restored.readState( reading ) );
     SW_EXPECT_EQUAL( 3, restored.getRoomCount() );
@@ -634,8 +635,9 @@ SW_TEST_CASE_F( ScavengerFacilityTest, StateRoundTripRebuildsGraph )
  */
 SW_TEST_CASE_F( ScavengerFacilityTest, ReadStateRefusesBrokenScrap )
 {
+    sw::GameFlags         flags;
     sw::ScavengerFacility restored;
-    restored.bindCatalog( &_catalog );
+    restored.initialize( _catalog, flags );
     const sw::ScavengerScrap good = ScavengerTestUtil::makeScrap( 4, 10, 5.0f, false );
     SW_REQUIRE_TRUE( readFixture( restored, 7u, good, 5 ) ); // 형식은 맞다
     SW_EXPECT_EQUAL( 10, restored.computeGroundValue() );
@@ -743,20 +745,20 @@ SW_TEST_CASE_F( ScavengerExpeditionTest, DayRunsToAutomaticDeparture )
     SW_REQUIRE_TRUE( walk( _expedition, 0, "ship" ) );
     SW_REQUIRE_TRUE( walk( _expedition, 1, "outside" ) );
 
-    _expedition.update( 0.0f );
-    _expedition.update( -10.0f );
+    _expedition.update( sw::GameSeconds{ 0.0f } );
+    _expedition.update( sw::GameSeconds{ -10.0f } );
     SW_EXPECT_NEAR( 0.0f, _expedition.getHoursOnMoon(), kScavengerTolerance );
 
-    _expedition.update( 100.0f ); // 10 시간 — 16 시
+    _expedition.update( sw::GameSeconds{ 100.0f } ); // 10 시간 — 16 시
     SW_EXPECT_NEAR( 10.0f, _expedition.getHoursOnMoon(), kScavengerTolerance );
     SW_EXPECT_EQUAL( 0, countEvents( sw::ScavengerEvent::Kind::Dusk ) );
-    _expedition.update( 20.0f ); // 18 시 — 경계에서 알린다
+    _expedition.update( sw::GameSeconds{ 20.0f } ); // 18 시 — 경계에서 알린다
     SW_EXPECT_EQUAL( 1, countEvents( sw::ScavengerEvent::Kind::Dusk ) );
-    _expedition.update( 10.0f );
+    _expedition.update( sw::GameSeconds{ 10.0f } );
     SW_EXPECT_EQUAL( 1, countEvents( sw::ScavengerEvent::Kind::Dusk ) );
     SW_EXPECT_EQUAL( sw::ScavengerPhase::Landed, _expedition.getPhase() );
 
-    _expedition.update( 50.0f ); // 24 시 — 떠난다
+    _expedition.update( sw::GameSeconds{ 50.0f } ); // 24 시 — 떠난다
     SW_EXPECT_EQUAL( sw::ScavengerPhase::InOrbit, _expedition.getPhase() );
     SW_EXPECT_EQUAL( 1, countEvents( sw::ScavengerEvent::Kind::ShipDeparted ) );
     SW_EXPECT_EQUAL( 1, countEvents( sw::ScavengerEvent::Kind::PlayerDied ) );
@@ -766,7 +768,7 @@ SW_TEST_CASE_F( ScavengerExpeditionTest, DayRunsToAutomaticDeparture )
     SW_EXPECT_EQUAL( 2, _expedition.countAlive() );
     SW_EXPECT_EQUAL( sw::hashed_string( "ship" ), _expedition.findCrewMember( 1 )->_areaID );
 
-    _expedition.update( 10000.0f ); // 궤도에서는 시간이 흐르지 않는다
+    _expedition.update( sw::GameSeconds{ 10000.0f } ); // 궤도에서는 시간이 흐르지 않는다
     SW_EXPECT_EQUAL( 1, countEvents( sw::ScavengerEvent::Kind::ShipDeparted ) );
 }
 
@@ -950,7 +952,7 @@ SW_TEST_CASE_F( ScavengerExpeditionTest, StateRoundTripsWhileLanded )
     const sw::ScavengerScrap scrap = _expedition.getFacility().getGroundScrap().front();
     SW_REQUIRE_TRUE( walk( _expedition, 0, scrap._areaID ) );
     SW_REQUIRE_EQUAL( sw::ScavengerPickupResult::Ok, _expedition.pickUp( 0, scrap._uid ) );
-    _expedition.update( 100.0f );
+    _expedition.update( sw::GameSeconds{ 100.0f } );
 
     sw::Archive written;
     _expedition.writeState( written );
@@ -966,9 +968,9 @@ SW_TEST_CASE_F( ScavengerExpeditionTest, StateRoundTripsWhileLanded )
     SW_EXPECT_EQUAL( _expedition.getFacility().computeGroundValue(), restored.getFacility().computeGroundValue() );
     SW_EXPECT_TRUE( restored.getFacility().canTraverse( "outside", "entrance" ) );
 
-    restored.update( 70.0f ); // 내린 지 17 시간
+    restored.update( sw::GameSeconds{ 70.0f } ); // 내린 지 17 시간
     SW_EXPECT_EQUAL( sw::ScavengerPhase::Landed, restored.getPhase() );
-    restored.update( 10.0f ); // 18 시간 — 6 시에 내렸으니 자정이다
+    restored.update( sw::GameSeconds{ 10.0f } ); // 18 시간 — 6 시에 내렸으니 자정이다
     SW_EXPECT_EQUAL( sw::ScavengerPhase::InOrbit, restored.getPhase() );
 
     sw::ScavengerExpedition solo;
@@ -1103,7 +1105,7 @@ SW_TEST_CASE_F( ScavengerExpeditionTest, ExpeditionDeterminism )
             (void)expedition.movePlayer( 0, sw::hashed_string{ sw::ScavengerExpedition::kShipAreaID } );
             (void)expedition.depositToShip( 0 );
         }
-        expedition.update( 2.0f ); // 하루 240 초 — 내린 지 90 걸음에 자정이라 저절로 뜬다
+        expedition.update( sw::GameSeconds{ 2.0f } ); // 하루 240 초 — 내린 지 90 걸음에 자정이라 저절로 뜬다
     };
     SW_EXPECT_TRUE( sw::StateBytesTestUtil::isDeterministic<ScavengerDeterminismRun>( setup, step, 160 ) );
 }

@@ -14,8 +14,9 @@
 #include "Core/Math/Math.h"
 #include "Core/Math/Radians.h"
 #include "Core/Math/Ray.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 #include "Core/Time/Countdown.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Behavior/ConditionExpr.h"
@@ -25,10 +26,9 @@
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Character/Combat/Projectile/ProjectileDef.h"
 #include "GameFramework/Runtime/Character/Combat/Projectile/ResolvedShot.h"
-#include "GameFramework/Runtime/Character/Combat/Weapon/WeaponMath.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameCatalog.h"
 #include "GameFramework/Runtime/Foundation/GameData/XMLCatalog.h"
-#include "GameFramework/Runtime/Foundation/Random/WorldSeed.h"
+#include "GameFramework/Runtime/Foundation/Random/GameRandom.h"
 
 namespace sw
 {
@@ -215,7 +215,7 @@ namespace sw
          */
         [[nodiscard]] bool loadProjectile( const ProjectileDef& projectile, const vector<ShotModifierDef>& listAttachment );
         /** @brief 시간을 흘립니다. 쿨다운, 재장전, 퍼짐 회복이 진행됩니다. */
-        void update( float32 deltaTime );
+        void update( GameSeconds frameTime );
         /**
          * @brief 방아쇠를 당깁니다(누른 동안 매 프레임). 쏘면 @p outShot 에 알마다 광선을 채웁니다.
          * @param bTriggerJustPressed 이번 프레임에 눌렀는지 나타낸다. 반자동 총은 이때만 쏜다.

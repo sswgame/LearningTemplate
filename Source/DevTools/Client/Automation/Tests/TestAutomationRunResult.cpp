@@ -2,7 +2,7 @@
 #include "pch.h"
 
 #include "Core/String/StringUtil.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "DevTools/Client/Automation/Runner/AutomationExitCode.h"
 #include "DevTools/Client/Automation/Runner/AutomationPerBackend.h"

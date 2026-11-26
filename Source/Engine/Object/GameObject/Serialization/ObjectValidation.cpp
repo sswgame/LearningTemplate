@@ -8,7 +8,7 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/Service/SceneServiceRegistry.h"
+#include "Engine/Object/GameObject/Subsystem/SceneSubsystemRegistry.h"
 #include "Engine/Reflection/ReflectionValidation.h"
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Serialization/Serializer/SerializerUtil.h"
@@ -102,7 +102,7 @@ namespace sw
         } );
     }
 
-    SW_SCENE_SERVICE( SceneValidationIssues, DestroyPost, makeSceneFrameAccess( SceneDataKindSet{}, SceneDataKindSet{}, SceneDataKindSet{ SceneDataKind::Structure } ) )
+    SW_SCENE_SUBSYSTEM( SceneValidationIssues, DestroyPost, makeSceneFrameAccess( SceneDataKindSet{}, SceneDataKindSet{}, SceneDataKindSet{ SceneDataKind::Structure } ) )
 
     SceneValidationIssues::SceneValidationIssues( GameObjectManager& /*manager*/ )
         : _log{}

@@ -19,8 +19,8 @@
 #include "Engine/Presentation/InstanceHighlight.h"
 #include "Engine/Visual/Component/MeshComponent.h"
 
-#include "GameFramework/Kits/Feature/Network/NetSimulation/Editor/Sample/NetSimSampleMessages.h"
-#include "GameFramework/Runtime/Foundation/Service/GameService.h"
+#include "GameFramework/Kits/Feature/Network/NetSimulation/NetSimGameRegistry.h"
+#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 
 namespace sw
 {
@@ -36,7 +36,7 @@ namespace sw
             static constexpr float32 kSmoothing      = 0.5f;   ///< 클라이언트가 받은 위치로 틱마다 다가가는 비율
             static constexpr float32 kSnapDistance   = 0.001f; ///< 이 거리 안이면 받은 위치로 붙는다(멈춘 뒤 서버와 같은 값이 되게)
             /** @brief 클라이언트 → 서버: 이동 입력(`NetSimSampleInputBody`). */
-            using InputMessage = NetMessageBodyDef<0, NetMessageDirection::ToServer, NetChannelKind::Unreliable, NetSimSampleInputBody>;
+            using InputMessage = NetLimitedMessageDef<NetMessageBodyDef<0, NetMessageDirection::ToServer, NetChannelKind::Unreliable, NetSimSampleInputBody>, NetRequestLimit::kPerTick>;
             /** @brief 서버 → 클라이언트: 아바타 목록(`NetSimSampleStateBody`). */
             using StateMessage = NetMessageBodyDef<1, NetMessageDirection::ToClient, NetChannelKind::Unreliable, NetSimSampleStateBody>;
             using MessageTable = NetMessageTable<NetMessageRange::kGame, InputMessage, StateMessage>;
@@ -198,6 +198,7 @@ namespace sw
                 uint8                   getMessageRangeBase() const override { return _owner.getMessageRangeBase(); }
                 uint16                  getMessageKindMask() const override { return _owner.getMessageKindMask(); }
                 NetMessageDirectionMask getMessageDirectionMask() const override { return _owner.getMessageDirectionMask(); }
+                uint32                  getMaxPerPoll( uint8 kind ) const override { return NetSimSampleGameInternal::MessageTable::getMaxPerPollOf( kind ); }
                 uint32                  getWireVersion() const override { return NetSimSampleGameInternal::MessageTable::computeWireVersion(); }
                 NetHandleResult         handleNetMessage( const NetMessageContext& context, BitReader& body ) override { return _owner.handleNetMessage( context, body ); }
                 void                    onConnectionOpened( int32 connectionID ) override { _owner.onConnectionOpened( connectionID ); }
@@ -502,3 +503,12 @@ namespace sw
         return world.getObjectManager().findGameObjectByName( hashed_string( NetSimSampleGameInternal::makeAvatarName( entityID ) ) );
     }
 } // namespace sw
+
+namespace sw::editor
+{
+    namespace
+    {
+        /** @brief 이 확장 모듈이 로드된 동안 본보기 게임을 한 프로세스 재생의 게임 목록에 등록합니다. 실제 게임은 자기 모듈에서 같은 줄로 등록한다. */
+        const NetSimGameRegistrar s_netSimSampleRegistrar{ NetSimSampleGame::kName, &NetSimSampleGame::create };
+    } // namespace
+} // namespace sw::editor

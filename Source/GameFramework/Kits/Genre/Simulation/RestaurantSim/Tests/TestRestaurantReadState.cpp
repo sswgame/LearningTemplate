@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Reflection/TypeFqn.h"
 #include "Engine/Serialization/Format/Archive.h"
@@ -304,7 +304,7 @@ SW_TEST_CASE_F( RestaurantReadStateTest, RestaurantDeterminism )
             (void)simulation.addIngredient( "noodle", 10, 3 );
             simulation.openDay( "rain" );
         }
-        simulation.update( 3.0f );
+        simulation.update( sw::GameSeconds{ 3.0f }, 1.0f ); // 3 분
     };
     SW_EXPECT_TRUE( sw::StateBytesTestUtil::isDeterministic<RestaurantRun>( setup, step, 200 ) );
 }

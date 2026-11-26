@@ -5,7 +5,6 @@
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
-#include "Core/Process/EngineChildProcess.h"
 #include "Core/Process/Process.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
@@ -18,10 +17,10 @@
 #include "Editor/Common/Workspace/EditorExtensionSubsystems.h"
 #include "Editor/Common/Workspace/EditorNotificationManager.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 #include "Editor/Common/Workspace/EditorUICommandQueue.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
-#include "Editor/Common/Workspace/IEditorPanelService.h"
+#include "Editor/Common/Workspace/IEditorPanelSubsystem.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 
 #include "Engine/Console/DevCommandRegistry.h"
@@ -96,7 +95,7 @@ namespace sw::editor
         if ( pContext == nullptr || pLayout == nullptr )
             return;
         EditorPlayLayoutState&        layout = *pLayout;
-        IEditorPanelService&          panels = pContext->getSubsystem<IEditorPanelService>();
+        IEditorPanelSubsystem&        panels = pContext->getSubsystem<IEditorPanelSubsystem>();
         const EditorPlayStateSnapshot play   = EditorPlaySession::getUIState(); // UI 쪽 — 게임 스레드가 넘긴 세션 전이를 본다
         if ( play.isStopped() )
         {
@@ -178,7 +177,7 @@ namespace sw::editor
         const vector<string> listExtraArgument = StringUtil::splitQuotedTokens( extraArguments );
         listArgument.insert( listArgument.end(), listExtraArgument.begin(), listExtraArgument.end() );
         // 자동화 실행이 띄운 새 창은 사람의 설정 · 세이브를 건드리지 않는다. 경로가 절대 경로가 아니면 빈 명령 - 띄우기가 실패로 알린다
-        return EngineChildProcess::makeCommand( parent, executablePath, std::move( listArgument ) );
+        return ProcessCommand::forEngineChild( parent, executablePath, std::move( listArgument ) );
     }
 } // namespace sw::editor
 

@@ -8,7 +8,7 @@
 
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Content/AssetIO.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
 #include "Engine/Serialization/Inherit/ResourceComposer.h"
 
@@ -133,7 +133,7 @@ namespace sw
         return readText( text, path, ResourceContext::forType( *StaticType() ).withAsset( assetID ) );
     }
 
-    bool DialogueGraphAsset::loadFromDiskFile( const AbsolutePath& diskPath )
+    bool DialogueGraphAsset::loadFromDiskFile( const DiskPath& diskPath )
     {
         const ScopedMemoryTag memoryScope{ kMemoryTag };
         _listSpeaker.clear();

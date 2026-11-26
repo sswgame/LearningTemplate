@@ -1,8 +1,8 @@
 // UIBindingValueKind — UI 바인딩의 값 종류는 내장 타입 표의 갈래에서 나온다. 성분이 하나인 압축 타입은 숫자 바인딩이고 여럿이면 그 밖이다(nogpu).
 #include "pch.h"
 
-#include "Core/Name/hashed_string.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/String/Name/hashed_string.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Reflection/ReflectedValue.h"
 #include "Engine/UI/Binding/UIBindingValue.h"

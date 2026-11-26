@@ -11,7 +11,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -19,6 +19,12 @@
 #include "GameFramework/Runtime/Online/Ledger/LedgerTypes.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
 #include "GameFramework/Runtime/Online/Store/ServiceRecordUnknownFields.h"
+
+namespace sw
+{
+    template <typename TRecord>
+    class ServiceRecordTable;
+} // namespace sw
 
 namespace sw
 {
@@ -50,7 +56,7 @@ namespace sw
         static constexpr int32 kMaxDefIDSize    = 24; ///< `item.` + 정의 + `-` + 16진 16자가 자산 id 상한(48) 안에 들어간다
         static constexpr int32 kMaxEnhanceLevel = 100;
 
-        static const hashed_string& getStateTable(); ///< "item_state"
+        static const ServiceRecordTable<LedgerItemState>& getStateTable(); ///< "item_state"
 
         /** @brief 정의 @p defID(`[0-9a-z_]`, 24자 이하)와 고유 번호 @p instanceID 로 자산 id 를 만듭니다. 규칙 밖이면 false 입니다. */
         [[nodiscard]] static bool makeAssetID( string_view defID, uint64 instanceID, string& outAssetID );

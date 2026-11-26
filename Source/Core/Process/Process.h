@@ -1,6 +1,8 @@
 /**
  * @file Process.h
- * @brief 외부 프로세스를 만들고, 출력을 스트리밍하고, 제어 · 종료하는 크로스 플랫폼 유틸리티입니다.
+ * @brief 프로세스 한 헤더입니다 — 자식 프로세스(띄우기 · 출력 스트리밍 · 제어 · 종료, 엔진 자식 명령)와 이 프로세스의 값(환경 변수 · 세션 ID · 스레드 크래시 스택 · 표준 출력).
+ * @details 언리얼 `FPlatformProcess` · Godot `OS` 처럼 프로세스의 일을 한 형식 묶음에 두고, 플랫폼 구현은 플랫폼마다 한 파일(`Windows/WindowsProcess.cpp` ·
+ *          `Posix/PosixProcess.cpp` · `Web/WebProcess.cpp`)이다. 표준 입력 읽기(`StandardInputReader.h` — 읽기 스레드를 쥔다)와 종료 신호(`ShutdownSignal.h` — 서버 메인 루프)는 따로 둔다.
  */
 #pragma once
 #include "Core/Concurrency/atomic.h"
@@ -14,6 +16,8 @@
 
 namespace sw
 {
+    class CommandLineManager;
+
     /**
      * @struct ProcessCommand
      * @brief 띄울 실행 파일과 인자 목록입니다. `Process` 는 명령을 글 하나로 받지 않습니다 — 인자를 인용하는 일은 `Process` 안 한 곳만 합니다.
@@ -37,6 +41,15 @@ namespace sw
         [[nodiscard]] static ProcessCommand at( const AbsolutePath& executable, vector<string> listArgument );
         /** @brief 이름 @p executableName(`git` · `py`)을 검색 경로(PATH)에서 찾아 띄우는 명령입니다. 이름에 구분자가 있으면 띄울 때 실패한다(경로는 `at`). */
         [[nodiscard]] static ProcessCommand fromSearchPath( string_view executableName, vector<string> listArgument );
+        /**
+         * @brief 엔진 실행 파일(App · Server) @p executablePath 를 @p listArgument 로 띄우는 명령입니다. @p parent 가 자동화 실행이면 `-unattended` 를 더합니다(이미 있으면 그대로).
+         * @details 자동화 실행(`-unattended` · `-scenario` — `CommandLineManager::isAutomatedRun`)의 자식도 자동화 실행이어야 한다. 빠지면 자식이 사람의 실행으로 떠
+         *          사용자 설정을 읽고 사양으로 품질을 골라(WSL 의 클라이언트가 low) 서버와 합성이 갈렸고, 사람의 설정 · 세이브를 건드렸다.
+         *          엔진 자식은 이것으로만 만든다 — 엔진 자식에 `at` 을 직접 부르는 모양은 린트(common-shapes 의 engineChildCommand)가 막고, 자기 자신을 띄울 때는
+         *          `FileUtil::getExecutablePath()` 를 넘긴다(File 은 위 티어라 여기서 부르지 않는다). 엔진이 아닌 도구(Tracy · tint · 편집기)는 그 예외 표에 까닭과 함께 있다.
+         * @return 경로가 비었으면 빈 명령입니다 — 띄우기가 실패로 알린다.
+         */
+        [[nodiscard]] static ProcessCommand forEngineChild( const CommandLineManager& parent, const AbsolutePath& executablePath, vector<string> listArgument );
 
         /** @brief 실행 파일을 포함해 CommandLineToArgvW 규칙으로 인용한 명령줄입니다. Windows 가 `CreateProcessW` 에 넘기는 글이고, 양쪽 모두 로그에 씁니다. */
         [[nodiscard]] string toCommandLine() const;
@@ -322,5 +335,97 @@ namespace sw
         ProcessReleaseMode _releaseMode;      ///< 아직 도는 자식을 놓을 때 할 일(`launch` 의 옵션)
         bool               _bNewProcessGroup; ///< `requestStop` 이 보낼 수 있는 자식인가(Windows) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         bool               _bEndWithParent;   ///< 놓을 때 자식 트리를 끝낸다(`ProcessOptions::_bEndWithParent` — POSIX 의 shutdown 이 본다) NOLINT(sw-bool-flag): 위 칸과 같은 형식으로 둔다(이동 생성이 칸마다 옮긴다)
+    };
+} // namespace sw
+
+// ------------------------------------------------------------------------------
+// ProcessEnvironment — 프로세스의 환경 변수를 읽고 정하는 유일한 자리입니다. `std::getenv` · `GetEnvironmentVariable` 을 부르는 곳은 플랫폼 Process 구현 파일의 이 절뿐입니다.
+//   환경 변수에는 세 상태가 있다 — 없음(unset), 빈 값(`FOO=`), 값 있음. 곳곳에서 `getenv` 를 직접 부르면 빈 값을 없음으로 읽는 곳과 있음으로 읽는 곳이 갈린다.
+//   그래서 읽기를 두 함수로 나눠 호출 쪽이 정책을 이름으로 고른다.
+//   - `tryRead`: 빈 값도 "정해져 있음"으로 읽는다. 사용자가 일부러 비워 정한 값을 존중해야 하는 변수(허용 목록 · 비밀 · 명시적 선택)가 쓴다.
+//   - `tryReadNonEmpty`: 없음과 빈 값을 같게 읽는다. 경로 · 포트처럼 빈 글이 쓸모없는 변수가 쓴다(빈 `HOME` 으로 상대 경로를 만들지 않는다).
+//   Windows 는 `GetEnvironmentVariableW` 로 읽어 UTF-8 로 돌려준다(CRT 의 `getenv` 는 ANSI 코드 페이지라 한글 사용자 이름이 든 `LOCALAPPDATA` 가 깨진다). 정하기는 OS 환경과
+//   CRT 복사본을 함께 바꾼다(CRT 를 쓰는 서드파티 코드 — Tracy 클라이언트 — 가 `getenv` 로 읽는다). 메인 스레드 설정 단계에서 쓰는 것을 전제로 한다(`setenv` 는 스레드 안전하지 않다).
+// ------------------------------------------------------------------------------
+namespace sw
+{
+    /** @struct ProcessEnvironment @brief 환경 변수 읽기 · 정하기입니다(모두 정적). 씬 환경(`EnvironmentUtil`)과 무관합니다. */
+    struct SW_API ProcessEnvironment
+    {
+        /**
+         * @brief 변수 @p name 이 정해져 있으면 값을 @p outValue 에 담고 true 입니다. 빈 값도 true 이며 @p outValue 는 빈 글입니다.
+         * @return 변수가 없으면 false 이고 @p outValue 는 비어 있습니다.
+         */
+        [[nodiscard]] static bool tryRead( string_view name, string& outValue );
+        /** @brief `tryRead` 와 같지만 빈 값을 없음으로 읽습니다 — 값이 있을 때만 true 입니다. */
+        [[nodiscard]] static bool tryReadNonEmpty( string_view name, string& outValue );
+        /** @brief 변수 @p name 을 @p value 로 정합니다(이미 있으면 바꿉니다). 이름이 비었거나 `=` 를 품었거나 OS 가 거절하면 false 입니다. */
+        [[nodiscard]] static bool trySet( string_view name, string_view value );
+        /** @brief 변수 @p name 이 정해져 있는지(빈 값 포함)만 묻습니다 — 값이 필요 없는 "자식 역할이다" 같은 표식 검사용입니다. */
+        [[nodiscard]] static bool isSet( string_view name );
+        /** @brief 변수 @p name 을 지웁니다(없던 변수도 true). 이름이 비었거나 `=` 를 품었거나 OS 가 거절하면 false 입니다. */
+        [[nodiscard]] static bool tryUnset( string_view name );
+    };
+} // namespace sw
+
+// ------------------------------------------------------------------------------
+// ProcessSession — 이 실행을 다른 실행과 가르는 세션 ID 입니다. 로그 파일 이름 · 크래시 파일 이름 · 텔레메트리가 같은 값을 써서 서로 짝지어집니다.
+//   프로세스 ID 처럼 실행마다 하나이고 한 번 정해지면 바뀌지 않는 값이라 프로세스 값입니다(크래시 처리기의 상태가 아니다 — 로그가 크래시 모듈에 기대지 않게 여기에 둔다).
+// ------------------------------------------------------------------------------
+namespace sw
+{
+    /** @struct ProcessSession @brief 이 실행의 세션 ID 입니다. */
+    struct SW_API ProcessSession
+    {
+        /**
+         * @brief 16 자리 16진수 세션 ID 입니다. 처음 부를 때 시각과 난수를 섞어 정하고, 그 뒤로는 같은 값입니다.
+         * @details 처음 부르는 스레드가 여럿일 수 있다(로그 워커가 파일을 여는 순간과 크래시 보고 스레드가 덤프 경로를 만드는 순간). 함수 지역 정적 초기화(스레드 안전)로
+         *          한 값만 보이게 한다. 크래시 처리기는 설치할 때 미리 불러 크래시 경로에서 만들지 않는다. 할당하지 않는다.
+         */
+        static const utf8* getID();
+    };
+} // namespace sw
+
+// ------------------------------------------------------------------------------
+// ThreadCrashStack — 스레드마다 크래시 보고가 쓸 스택 영역을 준비합니다(스택 오버플로 대비).
+// ------------------------------------------------------------------------------
+namespace sw
+{
+    // ------------------------------------------------------------------------------
+    // 1) ThreadCrashStack — 스레드 시작 때 부르는 준비. 크래시 보고(`CrashHandler`, Diagnostics)보다 아래층이라
+    //    작업 스레드를 띄우는 곳(로그 싱크 · 파일 · 태스크)이 보고기를 몰라도 부를 수 있다
+    // ------------------------------------------------------------------------------
+    /** @brief 스레드별 크래시 스택 준비입니다. */
+    struct SW_API ThreadCrashStack
+    {
+        /**
+         * @brief **이 스레드**에서 스택 오버플로가 나도 리포트를 쓸 수 있게 준비합니다. 엔진이 만드는 스레드는 시작할 때 부릅니다.
+         * @details 스택 오버플로는 스택이 바닥난 채로 핸들러에 들어옵니다. 준비가 없으면 핸들러가 첫 호출에서 다시 넘쳐 **아무것도 남기지
+         *          못합니다**(실측: 덤프 파일 0 바이트). Windows 는 `SetThreadStackGuarantee` 로 넘친 뒤에 쓸 영역을 남겨 두고, POSIX 는
+         *          이 스레드 전용 대체 시그널 스택을 깝니다 — `sigaltstack` 은 스레드마다라, `CrashHandler::install` 을 부른 스레드만으로는 덮이지 않습니다.
+         *          핸들러 설치 전에 불러도 됩니다(로거 작업 스레드가 그렇다). 두 번 불러도 됩니다.
+         */
+        static void initializeCurrentThread();
+
+        /**
+         * @brief 이 스레드의 준비를 정리합니다(POSIX 는 대체 스택을 끄고 돌려줍니다, Windows 는 할 일이 없습니다).
+         * @details `CrashHandler::uninstall`(마지막 처리기)이 부른 스레드의 것을 정리합니다. 다른 스레드의 것은 그 스레드가 끝날 때 돌려줍니다.
+         */
+        static void releaseCurrentThread();
+    };
+} // namespace sw
+
+// ------------------------------------------------------------------------------
+// StandardOutput — 명령줄 도구의 결과 글(도움말 · 목록)을 표준 출력에 그대로 씁니다.
+//   로그(`SW_LOG_*`)는 시각 · 범주 머리를 붙이고 로그 수준에 따라 사라지므로, 사람이나 스크립트가 그대로 읽는 출력(`-help` 의 인자 목록)은 이것으로 씁니다.
+//   실패 알림은 이것이 아니라 로그이고, 로거가 서기 전이면 `SW_LOW_LEVEL_ERROR` 입니다. 표준 출력을 직접 부르는 자리는 `Process.cpp` 의 이 절 하나입니다.
+// ------------------------------------------------------------------------------
+namespace sw
+{
+    /** @brief 표준 출력 쓰기입니다(전부 static). */
+    struct SW_API StandardOutput
+    {
+        /** @brief @p text 를 그대로 쓰고 바로 비웁니다(줄바꿈을 붙이지 않습니다). 다 썼으면 true 입니다. */
+        [[nodiscard]] static bool write( string_view text );
     };
 } // namespace sw

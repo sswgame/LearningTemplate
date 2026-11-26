@@ -9,7 +9,7 @@
 #include "Engine/Asset/AssetLoadProfiler.h"
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Content/CookJob.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Profiling/FrameProfiler.h"
 
 namespace sw
@@ -95,7 +95,7 @@ namespace sw
     bool AssetLoadOperation::canLoadOnWorker()
     {
         // 쿠킹 중에는 요청한 스레드(그 작업 범위 안)에서 읽는다 — 워커에서 읽으면 작업의 입력에서 빠지고 쿠킹 세션이 그 읽기를 실패시킨다.
-        return engine::areEngineServicesBound() && CookJob::requiresCallingThreadRead() == false;
+        return engine::areEngineSubsystemsBound() && CookJob::requiresCallingThreadRead() == false;
     }
 
     void AssetLoadOperation::startLoad( const shared_ptr<AssetLoadOperation>& pOperation, AssetLoadStart start )
@@ -107,7 +107,7 @@ namespace sw
         {
             // 동기 로드 공용 진입점이다(프리팹 · 머티리얼 · 텍스처 · 메시 · 셰이더의 `OnCallingThread` 요청이 모두 여기를 지난다).
             // 서비스가 묶이기 전(도구 · 테스트)에는 프로파일러가 없어 계측 없이 읽는다.
-            if ( engine::areEngineServicesBound() )
+            if ( engine::areEngineSubsystemsBound() )
             {
                 SW_PROFILE_SCOPE( "GT.Load.sync" );
                 const Stopwatch watch;

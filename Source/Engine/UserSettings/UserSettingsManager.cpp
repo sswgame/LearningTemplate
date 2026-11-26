@@ -17,8 +17,8 @@
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Config/PackEngineSettings.h"
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Input/IInputDevice.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputGlyphResolver.h"
@@ -302,11 +302,6 @@ namespace sw
     {
         if ( filePath.empty() )
             return false;
-        if ( FileUtil::ensureParentDirectoryExists( filePath ) == false )
-        {
-            SW_LOG_WARNING_ID( "UserSettings.CannotCreateFolderUser", "Cannot create the folder for user settings '%#'", filePath.str() );
-            return false;
-        }
         // 글을 못 만들면(잘못된 UTF-8 값) 있던 파일을 덮지 않는다.
         const expected<string> text = makeUserJSON();
         if ( text.has_value() == false )
@@ -317,7 +312,7 @@ namespace sw
         // 교체 재시도 sleep 이 이 안에 있다(`FileUtil::writeAtomically`, Core 라 프로파일러를 못 쓴다). 서비스가 묶이기 전 호출은 계측 없이 쓴다.
         const bool bWritten = [&]()
         {
-            if ( engine::areEngineServicesBound() == false )
+            if ( engine::areEngineSubsystemsBound() == false )
                 return FileUtil::writeTextFileDurable( filePath, *text );
             SW_PROFILE_SCOPE( "GT.Settings.save" );
             return FileUtil::writeTextFileDurable( filePath, *text );
@@ -1243,7 +1238,7 @@ namespace sw
 
     span<const utf8* const> UserSettingsManager::getSubsystemDependencies() const
     {
-        // 오디오는 이 뒤에 서지 않는다 — 오디오가 스스로 앞에 선다고 적는다(`AudioService::getSubsystemDependents`, 서버는 오디오를 짓지 않는다).
+        // 오디오는 이 뒤에 서지 않는다 — 오디오가 스스로 앞에 선다고 적는다(`AudioSubsystem::getSubsystemDependents`, 서버는 오디오를 짓지 않는다).
         static constexpr const utf8* kArrDependency[] = { InputManager::kSubsystemName, AssetManager::kSubsystemName, PackEngineSettingsSubsystem::kSubsystemName };
         return kArrDependency;
     }
@@ -1251,5 +1246,5 @@ namespace sw
 
 namespace sw
 {
-    SW_ENGINE_SERVICE_SUBSYSTEM( UserSettingsManager, GameVisible, Process, Startup, (), SW_ENGINE_DEFAULT_FACTORY( UserSettingsManager ) );
+    SW_ENGINE_SUBSYSTEM_WITH_SLOT( UserSettingsManager, GameVisible, Process, Startup, (), SW_ENGINE_DEFAULT_FACTORY( UserSettingsManager ) );
 } // namespace sw

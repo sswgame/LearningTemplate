@@ -3,12 +3,12 @@
 #include "pch.h"
 
 #include "Core/Hash/HashUtil.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
+#include "GameFramework/Kits/Feature/Online/Account/Server/AccountConnectAuthenticator.h"
+#include "GameFramework/Kits/Feature/Online/Account/Server/LoginTicketAuthority.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/LoginTypes.h"
-#include "GameFramework/Kits/Feature/Online/Account/Server/Service/AccountConnectAuthenticator.h"
-#include "GameFramework/Kits/Feature/Online/Account/Server/Service/LoginTicketAuthority.h"
-#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Identity/ConnectAdmission.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/ConnectAdmission.h"
 
 using namespace sw;
 
@@ -118,7 +118,7 @@ SW_TEST_CASE( AccountConnectAuthenticatorTest, IssuedTicketFindsSecretAndAccount
     SW_EXPECT_EQUAL( kAccount, principalID );
     for ( int32 index = 0; index < NetGameTicket::kSecretSize; ++index )
     {
-        SW_EXPECT_EQUAL( rig._ticket._arrSecret[index], secret._arrByte[index] );
+        SW_EXPECT_EQUAL( rig._ticket._secret.reveal()[index], secret._arrByte[index] );
     }
 }
 

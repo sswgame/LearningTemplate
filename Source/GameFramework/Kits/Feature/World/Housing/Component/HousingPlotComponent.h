@@ -16,6 +16,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Path/AbsolutePath.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Foundation/GameObjectHandle.h"
@@ -23,8 +24,8 @@
 #include "Engine/Serialization/Format/FormatDef.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Kits/Feature/World/Housing/Network/HousingReplication.h"
-#include "GameFramework/Kits/Feature/World/Housing/Rule/HousingLayout.h"
+#include "GameFramework/Kits/Feature/World/Housing/HousingLayout.h"
+#include "GameFramework/Kits/Feature/World/Housing/HousingReplication.h"
 #include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
 #include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Wallet.h"
@@ -112,7 +113,7 @@ namespace sw
     protected:
         [[nodiscard]] bool startGame() override;
         void               onEndPlay() override;
-        void               updateGame( float32 deltaTime ) override { (void)deltaTime; }
+        void               updateGame( GameSeconds frameTime ) override { (void)frameTime; }
         void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
         void               onViewsDespawned() override;
         bool               hasPendingSpawn() const override;

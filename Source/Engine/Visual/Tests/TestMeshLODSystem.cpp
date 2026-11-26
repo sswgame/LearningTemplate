@@ -4,10 +4,10 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
-#include "Engine/Graphics/LOD/LODView.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
+#include "Engine/Graphics/View/LODView.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"

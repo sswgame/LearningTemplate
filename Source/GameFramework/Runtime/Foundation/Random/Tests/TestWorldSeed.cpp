@@ -1,13 +1,13 @@
 // WorldSeedTest — 서버 월드의 씨앗은 클라이언트가 아는 값이 아니고, 혼자 하는 판 · 클라이언트 · 결정적 시뮬레이션의 씨앗은 되풀이된다(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
-#include "GameFramework/Runtime/Foundation/Random/WorldSeed.h"
+#include "GameFramework/Runtime/Foundation/Random/GameRandom.h"
 #include "GameFramework/Runtime/Foundation/Service/Tests/SceneNetLinkTestBinding.h"
 
 using namespace sw;

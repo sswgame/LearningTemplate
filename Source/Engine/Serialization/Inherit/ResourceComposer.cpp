@@ -11,7 +11,7 @@
 #include "Engine/Content/AssetGUID.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetPaths.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Reflection/ReflectedValue.h"
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Reflection/TypeRegistry.h"
@@ -907,8 +907,6 @@ namespace sw
                 return false;
             }
         }
-        if ( FileUtil::ensureParentDirectoryExists( absPath ) == false )
-            return false;
         string sourceText;
         switch ( FileUtil::readOptionalTextFile( absPath, sourceText ) )
         {

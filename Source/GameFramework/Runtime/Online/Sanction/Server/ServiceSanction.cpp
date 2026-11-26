@@ -4,8 +4,7 @@
 
 #include "Core/Serialization/BitStream.h"
 
-#include "Engine/Serialization/Format/FormatDef.h"
-
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordTable.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
 namespace sw
@@ -14,8 +13,7 @@ namespace sw
     {
         struct ServiceSanctionInternal
         {
-            static constexpr FormatDef kFormat{ "SANC" };
-            static constexpr int32     kKindCount = static_cast<int32>( ServiceSanctionKind::Count );
+            static constexpr int32 kKindCount = static_cast<int32>( ServiceSanctionKind::Count );
 
             static bool isEmpty( const ServiceSanctionState& state )
             {
@@ -32,9 +30,9 @@ namespace sw
 
 namespace sw
 {
-    const hashed_string& ServiceSanction::getTable()
+    const ServiceRecordTable<ServiceSanctionState>& ServiceSanction::getTable()
     {
-        static const hashed_string s_table{ "service_sanction" };
+        static const ServiceRecordTable<ServiceSanctionState> s_table{ "service_sanction" };
         return s_table;
     }
 
@@ -43,23 +41,13 @@ namespace sw
         outState = ServiceSanctionState{};
         if ( accountID == 0 )
             return ServiceStoreResult::Invalid;
-        ServiceRecord            record;
-        const ServiceStoreResult read = connection.readRecord( getTable(), ServiceKeyUtil::makeHex64( accountID ), record );
+        uint64                   version = ServiceRecord::kAbsentVersion;
+        const ServiceStoreResult read    = getTable().read( connection, ServiceKeyUtil::makeHex64( accountID ), outState, &version );
         if ( read == ServiceStoreResult::NotFound )
             return ServiceStoreResult::Ok;
         if ( read != ServiceStoreResult::Ok )
-            return read;
-        BitReader reader( record._bytes.data(), static_cast<int32>( record._bytes.size() ) );
-        if ( ServiceSanctionInternal::kFormat.readVersion( reader ) == false )
-            return ServiceStoreResult::Unavailable;
-        for ( int64& untilMs : outState._arrUntilMs ) // 레코드는 열거자 순서의 값 나열이다
-        {
-            untilMs = reader.readVarInt();
-        }
-        // 쓰는 쪽(관리자 프로토콜의 MaxCount)과 같은 상한 하나다 — 따로 두면 그 사이 길이의 사유가 쓰이고 다시는 읽히지 않는다.
-        if ( ServiceKeyUtil::readString( reader, ServiceSanctionState::kMaxReasonCodeSize, outState._reasonCode ) == false || reader.hasOverflowed() )
-            return ServiceStoreResult::Unavailable;
-        outState._version = record._version;
+            return read == ServiceStoreResult::Corrupt ? ServiceStoreResult::Unavailable : read; // 깨진 제재를 없음으로 읽지 않는다 — 로그인 · 채팅이 막힌다
+        outState._version = version;
         return ServiceStoreResult::Ok;
     }
 
@@ -90,13 +78,6 @@ namespace sw
                 inoutTransaction.erase( getTable(), key, state._version );
             return;
         }
-        BitWriter writer;
-        ServiceSanctionInternal::kFormat.writeVersion( writer );
-        for ( const int64 untilMs : state._arrUntilMs )
-        {
-            writer.writeVarInt( untilMs );
-        }
-        ServiceKeyUtil::writeString( writer, state._reasonCode );
-        inoutTransaction.put( getTable(), key, writer.releaseBytes(), state._version );
+        inoutTransaction.put( getTable(), key, state, state._version );
     }
 } // namespace sw

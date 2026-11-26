@@ -6,7 +6,7 @@
 -->
 <ModSupportSettings contentVersion="0" maxModCount="16" maxManifestBytes="16384" maxPackBytes="67108864" maxEntryCount="2048" maxEntryBytes="16777216" packBlockSize="131072">
 	<Overridable prefix="game/playground/data/mods/"/>
-	<!-- 액션 어드벤처 미니게임(minigames/velmora)의 확장 팩이 층으로 항목을 더하는 표 셋(Test/Mods/velmora_tidecaves) -->
+	<!-- 액션 어드벤처 미니게임(minigames/velmora)의 확장 팩이 층으로 항목을 더하는 표 셋(IntegrationTests/Mods/velmora_tidecaves) -->
 	<Overridable path="guid:8059e7a6ebaa444e5fba17a13f2ee967"/>
 	<Overridable path="guid:303ab1f11945fa0218a42f1f1f910801"/>
 	<Overridable path="guid:c9af8efa8d9ae611e85c423caa3f34e1"/>

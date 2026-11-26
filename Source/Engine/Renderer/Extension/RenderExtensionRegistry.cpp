@@ -70,9 +70,9 @@ namespace sw
     ExtensionSceneProxyID RenderExtensionRegistry::addProxy( unique_ptr<IExtensionSceneProxy> pProxy )
     {
         if ( pProxy == nullptr )
-            return 0;
+            return ExtensionSceneProxyID{};
         ScopedLock<mutex>           lock{ _mutex };
-        const ExtensionSceneProxyID id = _nextProxyID++;
+        const ExtensionSceneProxyID id{ _nextProxyID++ };
         ProxyEntry                  entry;
         entry._id     = id;
         entry._pProxy = std::move( pProxy );
@@ -207,13 +207,13 @@ namespace sw
 
     ExtensionSceneProxyRegistration::~ExtensionSceneProxyRegistration()
     {
-        if ( _id != 0 )
+        if ( _id.isValid() )
             _registry.removeProxy( _id );
     }
 
     bool ExtensionSceneProxyRegistration::update( ExtensionProxyUpdateFn update )
     {
-        if ( _id == 0 )
+        if ( _id.isValid() == false )
             return false;
         return _registry.enqueueProxyUpdate( _id, std::move( update ) );
     }
@@ -222,5 +222,5 @@ namespace sw
 namespace sw
 {
     // 렌더러 폴더와 같이 클라이언트에만 있다(Server 타깃은 이 폴더를 짓지 않아 이 등록도 없다).
-    SW_ENGINE_SERVICE_SUBSYSTEM( RenderExtensionRegistry, GameVisible, Process, Services, (), SW_ENGINE_DEFAULT_FACTORY( RenderExtensionRegistry ) );
+    SW_ENGINE_SUBSYSTEM_WITH_SLOT( RenderExtensionRegistry, GameVisible, Process, Shared, (), SW_ENGINE_DEFAULT_FACTORY( RenderExtensionRegistry ) );
 } // namespace sw

@@ -1,9 +1,9 @@
 /**
  * @file IAudioOutputDevice.h
  * @brief 플랫폼 오디오 출력 장치(XAudio2 · ALSA · AAudio · AudioWorklet)의 계약입니다 — 장치를 열고, 서비스가 정한 레이아웃으로 엔진을 당기고, 닫는 일만 합니다.
- * @details 예전에는 백엔드가 724 줄 구현을 가진 서비스(`AudioService`)를 상속해 가상 넷만 바꿨다 — 백엔드가 서비스의 모든 상태와 공개 API 를 물려받아 이름만
- *          인터페이스였다. 이제 서비스(`AudioService`, final)가 장치를 멤버로 든다(합성 — 언리얼 `FAudioMixerPlatformInterface` 가 `FMixerDevice` 에 들린 자리).
- *          장치는 만들 때 받은 서비스로 엔진을 당기고(`AudioService::getEngine().render`) 유실을 알린다(`AudioService::notifyOutputLost`).
+ * @details 예전에는 백엔드가 724 줄 구현을 가진 서비스(`AudioSubsystem`)를 상속해 가상 넷만 바꿨다 — 백엔드가 서비스의 모든 상태와 공개 API 를 물려받아 이름만
+ *          인터페이스였다. 이제 서비스(`AudioSubsystem`, final)가 장치를 멤버로 든다(합성 — 언리얼 `FAudioMixerPlatformInterface` 가 `FMixerDevice` 에 들린 자리).
+ *          장치는 만들 때 받은 서비스로 엔진을 당기고(`AudioSubsystem::getEngine().render`) 유실을 알린다(`AudioSubsystem::notifyOutputLost`).
  *          장치가 없는 구성(전용 서버 · 테스트)은 장치를 두지 않는다 — 서비스가 `update` 에서 오프라인으로 렌더한다.
  */
 #pragma once

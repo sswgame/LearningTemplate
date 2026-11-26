@@ -8,8 +8,8 @@
 #include "Core/File/FileUtil.h"
 
 #include "Editor/Common/Asset/EditorContentScan.h"
-#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorStateStore.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 
 #include "Engine/Asset/Cook/AssetCompanion.h"
 #include "Engine/Content/AssetPaths.h"

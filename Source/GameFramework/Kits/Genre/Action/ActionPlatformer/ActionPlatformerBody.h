@@ -12,6 +12,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/Time/Countdown.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
@@ -119,7 +120,7 @@ namespace sw
         /** @brief 움직임 규칙(`<Motor>`)과 몸 설정(`<Body>`)을 @p catalog 에서만 받습니다(감사 K-4 — 기본 생성한 설정으로 몸을 열 길이 없다). */
         void initialize( const ActionPlatformerCatalog& catalog );
         void setPosition( const float2& position );
-        void update( const PlatformTileMap& map, const ActionTerrainGrid& terrain, const ActionBodyInput& input, float32 deltaTime );
+        void update( const PlatformTileMap& map, const ActionTerrainGrid& terrain, const ActionBodyInput& input, GameSeconds frameTime );
 
         ActionMoveMode           getMode() const { return _mode; }
         float2                   getPosition() const;
@@ -145,9 +146,9 @@ namespace sw
         [[nodiscard]] bool tryAttachGrapple( const ActionTerrainGrid& terrain );
         [[nodiscard]] bool tryEnterDrill( const ActionTerrainGrid& terrain, const ActionBodyInput& input );
         void               updateGrapple( const PlatformTileMap& map, const ActionBodyInput& input, float32 deltaTime );
-        void               updateDrill( const PlatformTileMap& map, const ActionTerrainGrid& terrain, const ActionBodyInput& input, float32 deltaTime );
+        void               updateDrill( const PlatformTileMap& map, const ActionTerrainGrid& terrain, const ActionBodyInput& input, GameSeconds frameTime );
         /** @brief 흙에 닿기를 기다리는 시간을 흘리고, 다 되면 드릴을 그만둡니다. */
-        void updateDrillSearch( float32 deltaTime );
+        void updateDrillSearch( GameSeconds frameTime );
         /** @brief 직접 움직이던 위치와 속도를 기반 몸에 돌려주고 일반 모드로 돌아갑니다. */
         void returnToMotor( const float2& velocity );
 

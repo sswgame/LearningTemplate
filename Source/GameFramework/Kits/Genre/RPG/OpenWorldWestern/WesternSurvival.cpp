@@ -41,14 +41,9 @@ namespace sw
         }
     }
 
-    bool WesternSurvival::initialize( const WesternCatalog* pCatalog )
+    bool WesternSurvival::initialize( const WesternCatalog& catalog )
     {
-        if ( pCatalog == nullptr )
-        {
-            SW_LOG_ERROR_ID( "WesternSurvival.WesternSurvivalRefusedNoCatalog", "WesternSurvival: refused - no catalog (the survival numbers come from the catalog, there is no default set)" );
-            return false;
-        }
-        const WesternSurvivalDef& survival = pCatalog->getSurvival();
+        const WesternSurvivalDef& survival = catalog.getSurvival();
         ResourceGaugeSettings     healthSettings;
         healthSettings._max        = survival._health;
         healthSettings._regenRate  = survival._healthRegen;
@@ -73,7 +68,7 @@ namespace sw
         const bool    bAllAccepted     = bHealthAccepted && bStaminaAccepted && bDeadEyeAccepted;
         if ( bAllAccepted == false )
             return false;
-        _pCatalog                                              = pCatalog;
+        _pCatalog                                              = &catalog;
         _arrGauge[static_cast<size_t>( WesternCore::Health )]  = health;
         _arrGauge[static_cast<size_t>( WesternCore::Stamina )] = stamina;
         _arrGauge[static_cast<size_t>( WesternCore::DeadEye )] = deadEye;
@@ -88,8 +83,9 @@ namespace sw
         return true;
     }
 
-    void WesternSurvival::update( float32 deltaTime, float32 gameHours, float32 airTemperature )
+    void WesternSurvival::update( GameSeconds frameTime, float32 gameHours, float32 airTemperature )
     {
+        const float32 deltaTime = frameTime.count();
         if ( _pCatalog == nullptr )
             return;
         const WesternSurvivalDef& survival = _pCatalog->getSurvival();
@@ -116,7 +112,7 @@ namespace sw
             if ( index == static_cast<size_t>( WesternCore::DeadEye ) && _bDeadEyeActive != SW_FALSE )
                 continue; // 켜 둔 동안은 차지 않는다
             _arrGauge[index].setRegenScale( computeRegenScale( static_cast<WesternCore>( index ) ) );
-            _arrGauge[index].update( deltaTime );
+            _arrGauge[index].update( frameTime );
         }
     }
 

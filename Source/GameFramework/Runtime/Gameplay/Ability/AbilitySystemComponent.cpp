@@ -14,7 +14,7 @@
 #include "Engine/Reflection/TypeRegistry.h"
 
 #include "GameFramework/Runtime/Foundation/Presentation/IDamageNumberSink.h"
-#include "GameFramework/Runtime/Foundation/Service/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 #include "GameFramework/Runtime/Gameplay/Ability/Ability.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityCatalog.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityEvents.h"
@@ -222,15 +222,16 @@ namespace sw
         setCanEverTick( wantsTick == SW_TRUE );
     }
 
-    void AbilitySystemComponent::advanceTime( float32 deltaTime )
+    void AbilitySystemComponent::advanceTime( GameSeconds frameTime )
     {
+        const float32 deltaTime = frameTime.count();
         if ( deltaTime <= 0.0f )
             return;
 
         const ScopedListLock lock{ *this };
         _time += deltaTime;
         updateActiveEffects( deltaTime );
-        updateActiveAbilities( deltaTime );
+        updateActiveAbilities( frameTime );
     }
 
     const AbilityCatalog* AbilitySystemComponent::findCatalog() const

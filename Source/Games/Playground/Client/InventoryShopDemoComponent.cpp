@@ -15,7 +15,7 @@
 
 #include "GameFramework/Client/Inventory/InventoryScreen.h"
 #include "GameFramework/Client/Shop/ShopScreen.h"
-#include "GameFramework/Runtime/Foundation/Service/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceDatabase.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterEquipmentComponent.h"
 
@@ -124,8 +124,9 @@ namespace sw
         return true;
     }
 
-    void InventoryShopDemoComponent::updateGame( float32 deltaTime )
+    void InventoryShopDemoComponent::updateGame( GameSeconds frameTime )
     {
+        const float32 deltaTime = frameTime.count();
         (void)deltaTime;
         _listShopEvent.clear();
         _shop.pollEvents( _listShopEvent );

@@ -187,6 +187,21 @@ namespace sw
         return bOk;
     }
 
+    expected<void> XMLFields::tryReadProperties( const XMLNode& node, void* pInstance, const TypeInfo& typeInfo, string_view sourceName )
+    {
+        string                   firstIssue;
+        const XMLFieldsIssueSink sink{ []( void* pContext, const utf8* /*pID*/, string_view text )
+        {
+            string& first = *static_cast<string*>( pContext );
+            if ( first.empty() )
+                first = string( text );
+        },
+                                       &firstIssue };
+        if ( readProperties( node, pInstance, typeInfo, sourceName, {}, nullptr, sink ) )
+            return {};
+        return unexpected( Error{ ErrorKind::InvalidArgument, "a field is unknown, missing or unreadable", firstIssue } );
+    }
+
     void XMLFields::writeProperties( const XMLNode& node, const void* pInstance, const void* pDefaults, const TypeInfo& typeInfo )
     {
         const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring );

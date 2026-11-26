@@ -3,7 +3,7 @@
 #include "pch.h"
 
 #include "Core/Delegate/Subscription.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Animation/Component/SkeletalAnimatorComponent.h"
 #include "Engine/Character/Hit/CharacterHit.h"

@@ -3,11 +3,11 @@
 #include "Core/Delegate/Delegate.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/Task/TaskTypes.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "DevTools/Cook/CookReflectionFingerprint.h"
 
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Reflection/FunctionInfo.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/Tests/ScopedTestModule.h"

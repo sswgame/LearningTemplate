@@ -3,16 +3,15 @@
 #include "Editor/Panels/AudioEvents/AudioEventBrowserPanel.h"
 
 #include "Core/Log/LogOnce.h"
+#include "Core/Math/Color.h"
 #include "Core/String/StringUtil.h"
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
 
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
-#include "Editor/Common/EditorColor.h"
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
-#include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
@@ -153,9 +152,9 @@ namespace sw::editor
         return _edit.begin( library, eventName ) ? ToolAssetLoadResult::Loaded : ToolAssetLoadResult::Malformed;
     }
 
-    bool AudioEventBrowserPanel::saveDocument()
+    bool AudioEventBrowserPanel::saveDocument( AssetWriter& writer )
     {
-        return _edit.saveDocument();
+        return _edit.saveDocument( writer );
     }
 
     void AudioEventBrowserPanel::drawLibraryEditor()

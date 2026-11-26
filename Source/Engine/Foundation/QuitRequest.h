@@ -7,8 +7,8 @@
 #pragma once
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Subsystem/Subsystem.h"
+#include "Core/Subsystem/SubsystemSlot.h"
 
 #include "sw/config/ProcessExitCodes.gen.h"
 
@@ -39,6 +39,6 @@ namespace sw
         ProcessExitCode _exitCode;
         uint8           _bRequested : 1;
 
-        SW_SERVICE_SLOT( QuitRequest, Required );
+        SW_SUBSYSTEM_SLOT( QuitRequest, Required );
     };
 } // namespace sw

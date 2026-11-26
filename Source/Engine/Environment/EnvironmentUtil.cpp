@@ -3,7 +3,7 @@
 #include "Engine/Environment/EnvironmentUtil.h"
 
 #include "Engine/Asset/AssetManager.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
@@ -47,7 +47,7 @@ namespace sw
     bool EnvironmentMaterial::acquire( string_view path )
     {
         release();
-        if ( path.empty() || engine::areEngineServicesBound() == false )
+        if ( path.empty() || engine::areEngineSubsystemsBound() == false )
             return false;
         const hashed_string hashedPath( string{ path }.c_str() );
         MaterialCache&      cache = engine::getSubsystem<AssetManager>().getAssetCache<MaterialCache>();
@@ -70,7 +70,7 @@ namespace sw
         _pMaterial = nullptr;
         if ( _acquiredPath.empty() )
             return;
-        if ( engine::areEngineServicesBound() )
+        if ( engine::areEngineSubsystemsBound() )
             engine::getSubsystem<AssetManager>().getAssetCache<MaterialCache>().release( _acquiredPath.view() );
         _acquiredPath = hashed_string{};
     }

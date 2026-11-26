@@ -16,15 +16,15 @@
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
 
+#include "Editor/Common/Asset/AssetWriter.h"
 #include "Editor/Common/Asset/EditorAssetIndex.h"
-#include "Editor/Common/Commands/Asset/EditorContentWrite.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorNotificationManager.h"
-#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorStateStore.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
-#include "Editor/Common/Workspace/IEditorPanelService.h"
+#include "Editor/Common/Workspace/IEditorPanelSubsystem.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 
 #include "Engine/Asset/AssetDatabase.h"
@@ -35,6 +35,7 @@
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Content/AssetRegistry.h"
+#include "Engine/Content/AssetWriteAccess.h"
 #include "Engine/Foundation/EngineDefines.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
@@ -129,10 +130,10 @@ namespace sw::editor
             /** @brief 참조 파일 하나에 쓸 글입니다. 적용 전에 모두 만들고, 쓰기가 하나라도 지면 `_originalText` 로 되돌린다. */
             struct PreparedRewrite
             {
-                string       _referrerID;  ///< 옮긴 뒤의 리소스 id(참조자도 함께 옮기면 새 id)
-                AbsolutePath _referrerAbs; ///< 옮긴 뒤의 디스크 경로
-                string       _originalText;
-                string       _rewrittenText;
+                string   _referrerID;  ///< 옮긴 뒤의 리소스 id(참조자도 함께 옮기면 새 id)
+                DiskPath _referrerAbs; ///< 옮긴 뒤의 디스크 경로
+                string   _originalText;
+                string   _rewrittenText;
             };
 
             /** @brief 리소스 id 의 도메인입니다(`game/<팩>` · `common` · `engine` …). 옮기기 미리보기가 바깥 참조를 도메인별로 묶는다. */
@@ -182,9 +183,9 @@ namespace sw::editor
                 for ( const string& referrerID : listReferrerID )
                 {
                     if ( AssetRedirect::isTable( referrerID ) )
-                        continue;                                                                                               // 리다이렉트 표의 옛 경로 줄은 고칠 참조가 아니다
-                    const optional<AbsolutePath> referrerFile = editor::getSubsystem<AssetPaths>().findLooseFile( referrerID ); // 해석 하나(붙인 도메인 · 대소문자 규칙)
-                    PreparedRewrite              rewrite{};
+                        continue;                                                                                           // 리다이렉트 표의 옛 경로 줄은 고칠 참조가 아니다
+                    const optional<DiskPath> referrerFile = editor::getSubsystem<AssetPaths>().findLooseFile( referrerID ); // 해석 하나(붙인 도메인 · 대소문자 규칙)
+                    PreparedRewrite          rewrite{};
                     if ( referrerFile.has_value() == false || FileUtil::readTextFile( *referrerFile, rewrite._originalText ) == false )
                     {
                         StringBuilder<constant::buffer::kMax256> failureBuilder;
@@ -321,10 +322,10 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief @p absolutePath 가 읽기 전용(`EditorContentWrite::findReadOnlyAtOrUnder`)이면 계획의 실패 이유를 적고 true 입니다 — 옮기기 계획은 알림 대신 `_failure` 로 이유를 돌려준다. */
-            [[nodiscard]] static bool failOnReadOnly( const AbsolutePath& absolutePath, EditorAssetMovePlan& inoutPlan )
+            /** @brief @p absolutePath 가 읽기 전용(`AssetWriter::findReadOnlyAtOrUnder`)이면 계획의 실패 이유를 적고 true 입니다 — 옮기기 계획은 알림 대신 `_failure` 로 이유를 돌려준다. */
+            [[nodiscard]] static bool failOnReadOnly( const DiskPath& absolutePath, EditorAssetMovePlan& inoutPlan )
             {
-                const optional<string> readOnlyPath = EditorContentWrite::findReadOnlyAtOrUnder( absolutePath );
+                const optional<string> readOnlyPath = AssetWriter::findReadOnlyAtOrUnder( absolutePath );
                 if ( readOnlyPath.has_value() == false )
                     return false;
                 StringBuilder<constant::buffer::kMax256> failureBuilder;
@@ -333,10 +334,10 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief 지우기 전 확인 둘이다 — 열린 문서(`refuseOpenDocumentDelete`)와 읽기 전용(`EditorContentWrite::warnIfReadOnly`, 저장 · 옮기기와 같은 확인). 거절하면 이유를 알리고 true 입니다. */
+            /** @brief 지우기 전 확인 둘이다 — 열린 문서(`refuseOpenDocumentDelete`)와 읽기 전용(`AssetWriter::warnIfReadOnly`, 저장 · 옮기기와 같은 확인). 거절하면 이유를 알리고 true 입니다. */
             [[nodiscard]] static bool refuseDelete( const AbsolutePath& absolutePath )
             {
-                return refuseOpenDocumentDelete( absolutePath ) || EditorContentWrite::warnIfReadOnly( absolutePath, EditorContentWriteKind::Delete );
+                return refuseOpenDocumentDelete( absolutePath ) || AssetWriter::warnIfReadOnly( absolutePath, AssetWriteKind::Delete );
             }
 
             /**
@@ -390,6 +391,18 @@ namespace sw::editor
         }
         outStem   = string{ fileName.substr( 0, dot ) };
         outSuffix = string{ fileName.substr( dot ) };
+    }
+
+    optional<AbsolutePath> EditorAssetFileCommands::findOperationPath( string_view resourceID )
+    {
+        const optional<DiskPath> diskPath = editor::getSubsystem<AssetPaths>().findLooseFile( resourceID );
+        return diskPath.has_value() ? optional<AbsolutePath>{ AssetWriteAccess::toWritablePath( *diskPath ) } : nullopt;
+    }
+
+    optional<AbsolutePath> EditorAssetFileCommands::makeOperationPath( string_view resourceID )
+    {
+        const optional<DiskPath> diskPath = editor::getSubsystem<AssetPaths>().toDiskPath( resourceID );
+        return diskPath.has_value() ? optional<AbsolutePath>{ AssetWriteAccess::toWritablePath( *diskPath ) } : nullopt;
     }
 
     AbsolutePath EditorAssetFileCommands::makeUniquePath( const AbsolutePath& folderAbs, string_view stem, string_view suffix )
@@ -468,11 +481,14 @@ namespace sw::editor
             (void)replaceReference( text, assetTemplate._pNameAttribute, nameAttribute ); // 이름 속성이 없으면 템플릿 이름 그대로다
         }
         // 틀은 그 자신의 정체성(머리 GUID)을 든 에셋이다 — 새 에셋은 새 GUID 를 받는다.
-        if ( FileUtil::writeTextFile( outAssetAbs, text ) && EditorAssetFileCommandsInternal::assignNewIdentity( outAssetAbs ) )
+        const AssetWriteResult written = AssetWriter{}.writeText( outAssetAbs, text );
+        if ( written == AssetWriteResult::Written && EditorAssetFileCommandsInternal::assignNewIdentity( outAssetAbs ) )
         {
             SW_LOG_INFO_ID( "Asset.Created", "Created '%#'", editor::getSubsystem<AssetPaths>().toAssetID( outAssetAbs ) );
             return true;
         }
+        if ( written == AssetWriteResult::Refused )
+            return false; // 문이 이미 알렸다
         SW_LOG_ERROR_ID( "EditorAssetFileCommands.CouldNotWriteNew", "Could not write the new asset '%#'", outAssetAbs.str() );
         return false;
     }
@@ -612,9 +628,9 @@ namespace sw::editor
 
     void EditorAssetFileCommands::collectOpenDocuments( vector<EditorOpenDocument>& outList )
     {
-        const IEditorPanelService* const pPanelService = editor::findSubsystem<IEditorPanelService>(); // 셸 없는 테스트 호스트에는 패널이 없다
-        if ( pPanelService != nullptr )
-            pPanelService->collectOpenDocuments( outList );
+        const IEditorPanelSubsystem* const pPanelSubsystem = editor::findSubsystem<IEditorPanelSubsystem>(); // 셸 없는 테스트 호스트에는 패널이 없다
+        if ( pPanelSubsystem != nullptr )
+            pPanelSubsystem->collectOpenDocuments( outList );
         const Scene* const pScene = editor::getActiveScene();
         if ( pScene == nullptr || pScene->getSourcePath().empty() )
             return;
@@ -694,13 +710,14 @@ namespace sw::editor
         }
 
         // ② 참조 파일을 쓴다. 하나라도 지면 쓴 것을 원래 글로 되돌린다.
-        size_t writtenCount = 0;
+        AssetWriter writer;
+        size_t      writtenCount = 0;
         if ( bFailed == false )
         {
             for ( ; writtenCount < listRewrite.size(); ++writtenCount )
             {
                 const EditorAssetFileCommandsInternal::PreparedRewrite& rewrite = listRewrite[writtenCount];
-                if ( FileUtil::writeTextFile( rewrite._referrerAbs, rewrite._rewrittenText ) == false )
+                if ( writer.writeText( rewrite._referrerAbs, rewrite._rewrittenText ) != AssetWriteResult::Written )
                 {
                     bFailed = true;
                     StringBuilder<constant::buffer::kMax256> failureBuilder;
@@ -718,7 +735,7 @@ namespace sw::editor
             for ( size_t index = 0; index < writtenCount; ++index )
             {
                 const EditorAssetFileCommandsInternal::PreparedRewrite& rewrite = listRewrite[index];
-                if ( FileUtil::writeTextFile( rewrite._referrerAbs, rewrite._originalText ) == false )
+                if ( writer.writeText( rewrite._referrerAbs, rewrite._originalText ) != AssetWriteResult::Written ) // 방금 쓴 글이 그대로일 때만 되돌린다
                     listStuck.push_back( rewrite._referrerID );
             }
             for ( size_t index = movedCount; index > 0; --index )
@@ -872,7 +889,7 @@ namespace sw::editor
     {
         if ( AbsolutePath::isStrictAbsolute( argument ) )
             return DevCommandRegistry::readDiskPathArgument( argument, outAbsolutePath, outReply );
-        const optional<AbsolutePath> diskPath = editor::getSubsystem<AssetPaths>().findLooseFile( argument );
+        const optional<AbsolutePath> diskPath = findOperationPath( argument );
         if ( diskPath.has_value() == false || FileUtil::isRegularFile( *diskPath ) == false )
         {
             StringBuilder<constant::buffer::kMax256> replyBuilder;

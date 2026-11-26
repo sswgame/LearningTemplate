@@ -8,8 +8,8 @@
 #include "Editor/Common/Config/EditorDefaultAssets.h"
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/Localization/EditorDataText.h"
-#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorStateStore.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 #include "Editor/Panels/ContentBrowser/Model/ContentBrowserViewModel.h"
 
 #include "Engine/Content/AssetID.h"
@@ -32,7 +32,7 @@ namespace sw::editor
     AbsolutePath ContentBrowserFavorite::findFolder() const
     {
         const string packRoot = _pack == ContentBrowserFavoritePack::Engine ? string( constant::path::kEnginePack ) : ContentBrowserViewModel::getGamePackRoot();
-        return EditorPaths::findContentFolder( FileUtil::joinPath( packRoot, _folder ) );
+        return ContentBrowserViewModel::findAssetFile( FileUtil::joinPath( packRoot, _folder ) );
     }
 
     const vector<ContentBrowserFavorite>& ContentBrowserFavorite::getFavorites()

@@ -3,10 +3,11 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "DevTools/Maintenance/SavedCleanupSubsystem.h"
 
+#include "Engine/Config/ConfigManager.h"
 #include "Engine/Serialization/Format/JSONSerializer.h"
 
 using namespace sw;
@@ -23,11 +24,10 @@ namespace sw
 /** @brief [SavedCleanupSettingsTest] 저장소의 규칙 파일이 읽히고, 쓴 글을 다시 읽어 쓰면 같은 바이트다 */
 SW_TEST_CASE( SavedCleanupSettingsTest, ProjectFileReadsAndRoundTrips )
 {
-    using Settings = SavedCleanupTestAccess::Settings;
-    string text;
-    SW_REQUIRE_TRUE( FileUtil::readTextFile( ProcessRoots::get()._project.join( "Config/Dev/SavedCleanup.json" ), text ) );
-    Settings settings;
-    SW_REQUIRE_TRUE( JSONSerializer::deserialize( &settings, *Settings::StaticType(), text ) );
+    using Settings                  = SavedCleanupTestAccess::Settings;
+    const expected<Settings> loaded = ConfigManager::readConfig( Settings::kConfigFile );
+    SW_REQUIRE_TRUE( loaded.has_value() );
+    const Settings& settings = *loaded;
     SW_EXPECT_TRUE( settings._minAgeSeconds > 0 );
     SW_EXPECT_FALSE( settings._trashFolder.empty() );
     SW_REQUIRE_FALSE( settings._listRule.empty() );
@@ -46,8 +46,6 @@ SW_TEST_CASE( SavedCleanupSettingsTest, ProjectFileReadsAndRoundTrips )
 SW_TEST_CASE( SavedCleanupSettingsTest, MissingRequiredFieldFails )
 {
     using Settings = SavedCleanupTestAccess::Settings;
-    Settings settings;
-    SW_EXPECT_LOG( "Serialization.RequiredMissing" );
-    SW_EXPECT_FALSE( JSONSerializer::deserialize( &settings, *Settings::StaticType(),
-                                                  R"({ "_minAgeSeconds": 1, "_trashFolder": ".Trash", "_listRule": [ { "_folder": "Logs", "_keepCount": 3, "_bPerChild": false } ] })" ) );
+    SW_EXPECT_LOG( "Config.KeyMissing" );
+    SW_EXPECT_FALSE( ConfigManager::parseConfig<Settings>( R"({ "_minAgeSeconds": 1, "_trashFolder": ".Trash", "_listRule": [ { "_folder": "Logs", "_keepCount": 3, "_bPerChild": false } ] })", "test" ).has_value() );
 }

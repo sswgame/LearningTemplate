@@ -9,7 +9,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/Radians.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Automation/Scenario/AutomationScenario.h"

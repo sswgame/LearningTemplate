@@ -109,7 +109,7 @@
 - Locks are `sw::mutex` · `sw::shared_mutex` · `SpinLock` with `ScopedLock.h` guards, never `std::` locks; contracts `SW_GUARDED_BY` · `SW_REQUIRES_LOCK` · `SW_EXCLUDES_LOCK`, "this thread only" is a `ThreadRole`. Leaf locks: never log or call out while holding one.
 - `SpinLock` only for a leaf lock taking no other lock. No new lock-free structures. A fixed-capacity queue never stands in for an unbounded list.
 - Services: `getSubsystem<T>()` / `findSubsystem<T>()` on `engine::` · `game::` · `editor::`; no named accessors or `getInstance()`. One Engine and one GameInstance per process.
-- A new engine service declares `SW_SERVICE_SLOT` and registers with one `SW_ENGINE_SERVICE_SUBSYSTEM` · `SW_ENGINE_SUBSYSTEM` · `SW_ENGINE_SERVICE` line; a dynamic module uses `SW_MODULE_SUBSYSTEM`. Tests inject through scopes (`game::ScopedGameScope`).
+- A new engine service declares `SW_SUBSYSTEM_SLOT` and registers with one `SW_ENGINE_SUBSYSTEM_WITH_SLOT` · `SW_ENGINE_SUBSYSTEM` · `SW_ENGINE_SUBSYSTEM_SLOT` line; a dynamic module uses `SW_MODULE_SUBSYSTEM`. Tests inject through scopes (`game::ScopedGameScope`).
 - Online protocols build on `OnlineProtocolService`.
 - Placement construction is `sw_placement_new`; heap allocation goes through an owning type.
 - **Borrow with a pointer, keep with a handle:** a `GameObject*` / `Component*` you do not own is valid only in the current call; keep `GameObjectHandle` / `ComponentHandle`. Saved state refers to other objects by id, never by name.

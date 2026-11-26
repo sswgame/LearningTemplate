@@ -4,7 +4,7 @@
 
 #include "Core/Math/BitUtil.h"
 #include "Core/Serialization/BitStream.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Serialization/Fixed/FixedLayout.h"
 #include "Engine/Serialization/Fixed/Tests/FixedLayoutTestTypes.h"

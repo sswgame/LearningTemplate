@@ -1,7 +1,7 @@
 // RigPoseBufferTest — 부모 표로 조상을 묻는다: 자기 · 부모 · 조부모는 조상이고, 형제 가지 · 자손 · 없는 본(-1)은 아니다(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Animation/Rig/RigPoseBuffer.h"
 #include "Engine/Animation/Skeletal/Pose.h"

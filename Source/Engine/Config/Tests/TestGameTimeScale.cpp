@@ -1,7 +1,7 @@
 // GameTimeScaleTest — 정지 요청의 소유 · 겹침과, 시간을 함께 쓰는 동안 플레이어 정지가 듣지 않는 것(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Config/GameTimeScale.h"
 

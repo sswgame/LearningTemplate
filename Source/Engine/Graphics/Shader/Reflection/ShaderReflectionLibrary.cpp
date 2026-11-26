@@ -14,7 +14,7 @@
 
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetPaths.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
@@ -297,7 +297,7 @@ namespace sw
             return false;
 
         const AbsolutePath outPath = absDirectory.join( getManifestFileName() );
-        if ( FileUtil::ensureDirectoryExists( absDirectory ) == false || FileUtil::writeFile( outPath, bytes.data(), bytes.size() ) == false )
+        if ( FileUtil::writeFile( outPath, bytes.data(), bytes.size() ) == false )
         {
             SW_LOG_ERROR_ID( "ShaderReflectionLibrary.FailedWriteReflectionManifest", "Failed to write the reflection manifest: %#", outPath.c_str() );
             return false;

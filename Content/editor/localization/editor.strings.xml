@@ -711,12 +711,12 @@
 		<entry key="EdCommon.ContentChangedOnDisk"
 		       source="{path} changed on disk after it was opened - reopen it to keep that version, or save again to overwrite it">
 			<origins>
-				<item>Source/Editor/Common/Workspace/Asset/EditorDiskBaseline.cpp</item>
+				<item>Source/Editor/Common/Asset/AssetWriter.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.ContentReadOnly" source="{path} is read-only - Check Out (lock) it in the Content Browser first">
 			<origins>
-				<item>Source/Editor/Common/Commands/Asset/EditorContentWrite.cpp</item>
+				<item>Source/Editor/Common/Asset/AssetWriter.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.CurveEditorHint" source="Click a key to edit it. Right-click to add a key. F fits the view.">
@@ -768,8 +768,8 @@
 		</entry>
 		<entry key="EdCommon.DeleteRefusedTitle" source="Delete refused">
 			<origins>
+				<item>Source/Editor/Common/Asset/AssetWriter.cpp</item>
 				<item>Source/Editor/Common/Commands/Asset/EditorAssetFileCommands.cpp</item>
-				<item>Source/Editor/Common/Commands/Asset/EditorContentWrite.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.DocumentOpen"
@@ -955,7 +955,7 @@
 		</entry>
 		<entry key="EdCommon.MoveRefusedTitle" source="Move refused">
 			<origins>
-				<item>Source/Editor/Common/Commands/Asset/EditorContentWrite.cpp</item>
+				<item>Source/Editor/Common/Asset/AssetWriter.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.NetMode"
@@ -1421,8 +1421,7 @@
 		</entry>
 		<entry key="EdCommon.SaveRefusedTitle" source="Save refused">
 			<origins>
-				<item>Source/Editor/Common/Commands/Asset/EditorContentWrite.cpp</item>
-				<item>Source/Editor/Common/Workspace/Asset/EditorDiskBaseline.cpp</item>
+				<item>Source/Editor/Common/Asset/AssetWriter.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.ScaleSnap" source="Scale snap: scaling jumps in steps of the value on the right.">
@@ -4490,8 +4489,7 @@
 		<entry key="EdVerb.Cancel" source="Cancel">
 			<origins>
 				<item>Source/Editor/Common/GUI/EditorPlayToolbar.cpp</item>
-				<item>Source/Editor/Common/GUI/Status/EditorLightProbeBakeStatus.cpp</item>
-				<item>Source/Editor/Common/GUI/Status/EditorReflectionProbeBakeStatus.cpp</item>
+				<item>Source/Editor/Common/GUI/Status/EditorStatusBarItems.cpp</item>
 				<item>Source/Editor/Common/Widgets/EditorWidgets.cpp</item>
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
@@ -4806,13 +4804,13 @@
 		</entry>
 		<entry key="EdVisualizer.RigTargetGizmoLabel" source="Rig Target">
 			<origins>
-				<item>Source/Editor/Viewport/Visualizers/RigTargetGizmoVisualizer.cpp</item>
+				<item>Source/Editor/Viewport/RigTargetGizmoVisualizer.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdVisualizer.RigTargetGizmoTip"
 		       source="Gizmo on the rig target picked in the Rig Debug window; releasing a drag writes the target offset into the rig asset">
 			<origins>
-				<item>Source/Editor/Viewport/Visualizers/RigTargetGizmoVisualizer.cpp</item>
+				<item>Source/Editor/Viewport/RigTargetGizmoVisualizer.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdVisualizer.SelectionBoundsLabel" source="Sel">
@@ -4828,13 +4826,13 @@
 		</entry>
 		<entry key="EdVisualizer.TerrainBrushLabel" source="Terrain">
 			<origins>
-				<item>Source/Editor/Viewport/Visualizers/TerrainBrushVisualizer.cpp</item>
+				<item>Source/Editor/Viewport/TerrainBrushTool.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdVisualizer.TerrainBrushTip"
 		       source="Terrain tool: drag on the terrain to sculpt or paint layers (brush settings window, Ctrl+Z undoes one drag)">
 			<origins>
-				<item>Source/Editor/Viewport/Visualizers/TerrainBrushVisualizer.cpp</item>
+				<item>Source/Editor/Viewport/TerrainBrushTool.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdWidget.AllProcesses" source="All processes">

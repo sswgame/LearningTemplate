@@ -10,11 +10,11 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/LogOnce.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Process/ThreadCrashStack.h"
+#include "Core/Process/Process.h"
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Asset/Image/ImageFileWriter.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/Debug/GPUPixelInspector.h"
 #include "Engine/Graphics/Debug/RenderTargetRegistry.h"
 #include "Engine/Graphics/RHI/IRHICommandContext.h"
@@ -95,7 +95,6 @@ namespace sw
                     --*write._pInFlight;
                     return;
                 }
-                (void)FileUtil::ensureParentDirectoryExists( write._path ); // 실패하면 아래 쓰기가 경로와 함께 알린다
                 const bool bWritten = RenderTargetImageFile::writeImageFile( write._bytes, write._layout, write._format, write._path );
                 if ( write._kind == ScreenshotWriteKind::Packet )
                 {
@@ -446,7 +445,7 @@ namespace sw
             if ( _stop.isStopRequested() && currentTail == _head.load( std::memory_order_acquire ) )
             {
                 // 이 스레드가 태스크를 기다리며 받은 도우미 슬롯을 반환한다. 렌더 스레드는 백엔드 교체와 토글마다 새로 만들어진다.
-                if ( engine::areEngineServicesBound() )
+                if ( engine::areEngineSubsystemsBound() )
                     engine::getSubsystem<TaskManager>().releaseCurrentThreadHelperSlot();
                 break;
             }

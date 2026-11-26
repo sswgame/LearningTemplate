@@ -1,7 +1,7 @@
 // PickupStateTest — 바닥의 아이템이 개체 상태(내구도)까지 상태 코덱으로 실리는지 본다(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"

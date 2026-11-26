@@ -9,7 +9,6 @@
 #include "Core/File/UserDataPath.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Process/Process.h"
-#include "Core/Process/StandardOutput.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 #include "Core/Time/MonotonicClock.h"
@@ -331,7 +330,7 @@ namespace sw
                     writer.valueString( line );
                 writer.endArray();
                 writer.endObject();
-                if ( FileUtil::ensureParentDirectoryExists( options._reportPath ) == false || FileUtil::writeTextFile( options._reportPath, json ) == false )
+                if ( FileUtil::writeTextFile( options._reportPath, json ) == false )
                     SW_LOG_ERROR_ID( "ScenarioPerBackend.PerBackendCouldNot", "[Scenario] per-backend: could not write the report %#", options._reportPath.c_str() );
             }
         };

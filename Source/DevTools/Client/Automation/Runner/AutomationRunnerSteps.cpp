@@ -26,7 +26,7 @@
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Console/DevCommandRegistry.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/RHI/RHIDescriptors.h"
 #include "Engine/Input/IInputDevice.h"
@@ -96,7 +96,7 @@ namespace sw
             /** @brief `name` 이 등록된 전역 변수인지 봅니다. 아니면 그 이름이 대상인 오류입니다(`Variable` · `ExpectVariable` 이 함께 씁니다). */
             static expected<GlobalVariableInfo*> findRegisteredVariable( const string& name )
             {
-                GlobalVariableInfo* pInfo = engine::areEngineServicesBound() ? engine::getSubsystem<GlobalVariableManager>().findVariable( name ) : nullptr;
+                GlobalVariableInfo* pInfo = engine::areEngineSubsystemsBound() ? engine::getSubsystem<GlobalVariableManager>().findVariable( name ) : nullptr;
                 if ( pInfo == nullptr )
                     return unexpected( Error{ ErrorKind::NotFound, "unknown global variable", name } );
                 return pInfo;
@@ -523,12 +523,9 @@ namespace sw
 
         static bool runScreenshot( IAutomationStepContext& context, const AutomationStep& step )
         {
-            AutomationRunner&  runner    = asRunner( context );
-            const AbsolutePath path      = runner.resolveOutputPath( step.readValidatedProperties<AutomationScreenshotParams>()._file );
-            const AbsolutePath directory = path.getParent();
-            if ( directory.empty() == false )
-                (void)FileUtil::ensureDirectoryExists( directory ); // 못 만들면 ensure 가 폴더와 이유를 남기고 뒤따르는 쓰기가 실패로 답한다
-            (void)FileUtil::tryRemoveFile( path );                  // 지난 실행의 이미지를 읽지 않게 지운다
+            AutomationRunner&  runner = asRunner( context );
+            const AbsolutePath path   = runner.resolveOutputPath( step.readValidatedProperties<AutomationScreenshotParams>()._file );
+            (void)FileUtil::tryRemoveFile( path ); // 지난 실행의 이미지를 읽지 않게 지운다
             if ( path.empty() )
             {
                 SW_LOG_ERROR_ID( "Automation.ScreenshotPathNotAbsolute", "Screenshot '%#' was not taken: the output path is not absolute", step.readValidatedProperties<AutomationScreenshotParams>()._file );

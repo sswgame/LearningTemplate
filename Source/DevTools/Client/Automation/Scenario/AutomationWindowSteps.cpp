@@ -23,7 +23,7 @@
 #include "Engine/Automation/Scenario/AutomationStepParams.h"
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 #include "Engine/Automation/Scenario/IAutomationStepContext.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Window/GenericWindow.h"
 #include "Engine/Window/MainWindowSubsystem.h"
 
@@ -400,8 +400,7 @@ namespace sw
                     }
                 }
                 const AbsolutePath path = runner.resolveOutputPath( step.readValidatedProperties<AutomationFileStepParams>()._file );
-                if ( FileUtil::ensureParentDirectoryExists( path ) == false ||
-                     ImageFileWriter::writePNGRGBA8( path, bytes, static_cast<uint32>( width ), static_cast<uint32>( height ) ) == false )
+                if ( ImageFileWriter::writePNGRGBA8( path, bytes, static_cast<uint32>( width ), static_cast<uint32>( height ) ) == false )
                 {
                     StringBuilder<constant::buffer::kMax1024> reason;
                     reason.appendFormat( "%#: could not write %#", step.describe(), path.str() );

@@ -4,7 +4,7 @@
 
 #include "Core/Container/string.h"
 
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Physics/PhysicsSettings.h"
 #include "Engine/Physics/PhysicsSystem.h"
 #include "Engine/Reflection/ReflectionValidation.h"
@@ -31,7 +31,7 @@ namespace sw
             /** @brief 런타임이 쓰는 물리 표 — 초기화된 `PhysicsSystem` 이 있으면 그것, 없으면 파일을 한 번(스레드 안전하게) 읽은 것입니다. */
             static const PhysicsSettings& getSettings()
             {
-                const PhysicsSystem* pSystem = engine::areEngineServicesBound() ? engine::findSubsystem<PhysicsSystem>() : nullptr;
+                const PhysicsSystem* pSystem = engine::areEngineSubsystemsBound() ? engine::findSubsystem<PhysicsSystem>() : nullptr;
                 if ( pSystem != nullptr && pSystem->isInitialized() )
                     return pSystem->getSettings();
                 static const PhysicsSettings s_settingsFromFile = loadSettingsFromFile();

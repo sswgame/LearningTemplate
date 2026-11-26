@@ -270,7 +270,7 @@ namespace sw
         record._build = string( build );
         if ( collectBuildEntries( packsDirectory, record._listEntry ) == false )
             return false;
-        if ( FileUtil::ensureDirectoryExists( recordPath.getParent() ) == false || FileUtil::writeTextFile( recordPath, PackBuildRecord::makeText( record ) ) == false )
+        if ( FileUtil::writeTextFile( recordPath, PackBuildRecord::makeText( record ) ) == false )
         {
             SW_LOG_ERROR_ID( "PackPatchBuilder.BuildRecordCouldNot", "Build record '%#' could not be written", recordPath.str() );
             return false;
@@ -283,7 +283,7 @@ namespace sw
     {
         PackBuildRecord record;
         record._patching = PackPatching::None;
-        if ( FileUtil::ensureDirectoryExists( recordPath.getParent() ) == false || FileUtil::writeTextFile( recordPath, PackBuildRecord::makeText( record ) ) == false )
+        if ( FileUtil::writeTextFile( recordPath, PackBuildRecord::makeText( record ) ) == false )
         {
             SW_LOG_ERROR_ID( "PackPatchBuilder.BuildRecordCouldNot", "Build record '%#' could not be written", recordPath.str() );
             return false;

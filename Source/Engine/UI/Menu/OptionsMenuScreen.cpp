@@ -5,7 +5,7 @@
 #include "Core/Container/string.h"
 #include "Core/Log/Logger.h"
 
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Serialization/Inherit/ResourceTags.h"
@@ -13,7 +13,7 @@
 #include "Engine/UI/Document/UIDocumentLoader.h"
 #include "Engine/UI/Menu/KeyRebindScreen.h"
 #include "Engine/UI/Menu/SettingsConfirmScreen.h"
-#include "Engine/UI/Service/UINotificationService.h"
+#include "Engine/UI/Overlay/UINotificationSubsystem.h"
 #include "Engine/UI/UISystem.h"
 #include "Engine/UI/WidgetTree/PanelWidget.h"
 #include "Engine/UI/WidgetTree/UIEvents.h"
@@ -259,7 +259,7 @@ namespace sw
             notification._text            = SW_LOCALIZED_MESSAGE( "Notification", "RestartRequired" ).str();
             notification._durationSeconds = 6.0f;
             notification._kind            = UINotificationKind::Warning;
-            engine::getSubsystem<UINotificationService>().post( notification );
+            engine::getSubsystem<UINotificationSubsystem>().post( notification );
         }
         refreshRestartNotification();
     }

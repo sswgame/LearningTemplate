@@ -6,16 +6,19 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/String/formatString.h"
 
+#include "Editor/Common/Asset/AssetWriter.h"
+#include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Commands/Scene/EditorBakeSession.h"
 #include "Editor/Common/Commands/Scene/ReflectionProbeBaker.h"
-#include "Editor/Common/Task/EditorBackgroundTask.h"
+#include "Editor/Common/Config/EditorIconGlyphTable.h"
+#include "Editor/Common/Job/EditorBackgroundJob.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorExtensionSubsystems.h"
 #include "Editor/Common/Workspace/EditorFrameStep.h"
 #include "Editor/Common/Workspace/EditorNotificationManager.h"
 #include "Editor/Common/Workspace/EditorRenderViews.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
@@ -112,7 +115,7 @@ namespace sw::editor
     struct EditorReflectionProbeFilterInput
     {
         shared_ptr<const ReflectionProbeCapture> _pCapture{};
-        optional<AbsolutePath>                   _dataPath{}; ///< 쓸 파일(UI 스레드가 `AssetPaths` 로 정했다)
+        optional<DiskPath>                       _dataPath{}; ///< 쓸 파일(UI 스레드가 `AssetPaths` 로 정했다)
         string                                   _assetPath{};
         uint64                                   _objectID{ 0 };
     };
@@ -125,13 +128,14 @@ namespace sw::editor
         string               _assetPath{};
         uint64               _objectID{ 0 };
         bool                 _bSucceeded{ false };
+        bool                 _bWriteRefused{ false }; ///< 쓰기 문이 거절했다(경고는 이미 남았다) — 알림에만 까닭을 싣는다
     };
 
     /**
      * @class EditorReflectionProbeFilterJob
      * @brief 찍은 면을 풀고(half → float) 접고 거르고 `.reflprobe` 로 쓰는 에디터 백그라운드 잡입니다. 프로브에 넘기기(컴포넌트)는 결과를 받은 UI 스레드가 한다.
      */
-    class EditorReflectionProbeFilterJob final : public EditorBackgroundTask<EditorReflectionProbeFilterInput, EditorReflectionProbeFilterResult>
+    class EditorReflectionProbeFilterJob final : public EditorBackgroundJob<EditorReflectionProbeFilterInput, EditorReflectionProbeFilterResult>
     {
     public:
         /** @brief 잡을 냅니다(UI 스레드). */
@@ -162,10 +166,15 @@ namespace sw::editor
                 result._bSucceeded = false;
                 result._error      = "the baker produced no reflection data";
             }
-            if ( result._bSucceeded && ( input._dataPath.has_value() == false || result._data.saveToFile( *input._dataPath ) == false ) )
+            AssetWriter      writer;
+            AssetWriteResult written = AssetWriteResult::Written; // 접기가 졌으면 쓰지 않는다 — 까닭은 위에서 정했다
+            if ( result._bSucceeded )
+                written = input._dataPath.has_value() ? writer.saveAsset( *input._dataPath, result._data ) : AssetWriteResult::Failed;
+            if ( written != AssetWriteResult::Written )
             {
-                result._bSucceeded = false;
-                result._error      = EditorReflectionProbeBakeSessionInternal::makeWriteError( input._assetPath );
+                result._bSucceeded    = false;
+                result._bWriteRefused = written == AssetWriteResult::Refused;
+                result._error         = EditorReflectionProbeBakeSessionInternal::makeWriteError( input._assetPath );
             }
             publish( pState, generation, std::move( result ) );
         }
@@ -265,10 +274,10 @@ namespace sw::editor
         }
         // 앞 프로브의 접기 · 쓰기(워커)가 끝났으면 넘기고, 아직이면 이 프레임은 기다린다 - 잡은 한 번에 하나다.
         EditorReflectionProbeFilterResult result;
-        const EditorTaskPoll              poll = _pFilterJob->take( result );
-        if ( poll == EditorTaskPoll::Running )
+        const EditorJobPoll               poll = _pFilterJob->take( result );
+        if ( poll == EditorJobPoll::Running )
             return;
-        if ( poll == EditorTaskPoll::Ready )
+        if ( poll == EditorJobPoll::Ready )
             applyResult( result );
         if ( _nextProbeIndex >= _listObjectID.size() )
         {
@@ -283,7 +292,10 @@ namespace sw::editor
     {
         if ( result._bSucceeded == false )
         {
-            reportFailure( result._error );
+            if ( result._bWriteRefused )
+                _lastError = result._error; // 문이 이미 경고로 알렸다
+            else
+                reportFailure( result._error );
             return;
         }
         ReflectionProbeComponent* pProbe = EditorReflectionProbeBakeSessionInternal::findProbe( result._objectID );
@@ -335,7 +347,7 @@ namespace sw::editor
             reportFailure( string( failureBuilder.view() ) );
             return;
         }
-        optional<AbsolutePath> dataPath = editor::getSubsystem<AssetPaths>().toDiskPath( assetPath );
+        optional<DiskPath> dataPath = editor::getSubsystem<AssetPaths>().toDiskPath( assetPath );
         if ( dataPath.has_value() == false )
         {
             reportFailure( EditorReflectionProbeBakeSessionInternal::makeWriteError( assetPath ) );
@@ -389,4 +401,26 @@ namespace sw::editor
             notification.push( "Bake Reflection Probes", arrMessage, NotificationKind::Success );
         }
     }
+
+    /**
+     * @brief 에디터 커맨드 "Bake Reflection Probes"(`lighting.bakeReflectionProbes`) — Build 메뉴와 커맨드 팔레트에서 활성 씬의 반사 프로브를 GPU 로 베이크합니다.
+     * @details 선택한 오브젝트 중 반사 프로브가 있으면 그것만, 없으면 씬의 모든 반사 프로브를 베이크한다(`lighting.bakeProbes` 와 같은 나눔).
+     *          커맨드는 베이크 세션(`EditorReflectionProbeBakeSession`)을 시작만 한다 — 베이크는 에디터 프레임에 프로브 단위로 나눠 돌고(그 규칙은 세션 헤더),
+     *          진행은 상태줄에 보인다. 결과는 씬 파일 옆 `<씬 이름>.<오브젝트 이름(소문자)>.reflprobe` 에 쓰고 프로브의 `_probeDataPath` 에 적는다.
+     */
+    namespace
+    {
+        struct EditorReflectionProbeBakeCommandInternal
+        {
+            static void runBake()
+            {
+                editor::getSubsystem<EditorReflectionProbeBakeSession>().requestStart(); // 필수 - 에디터 서브시스템이다
+            }
+
+            /** @brief 편집 상태에서만 켠다 — 플레이 중에 구우면 플레이가 움직인 오브젝트를 찍는다. 편집 허용 답(플레이 중 · 베이크 중)은 레지스트리가 함께 묻는다(`EditorCommandEdit::SceneUnrecorded`). */
+            static bool isEnabled() { return editor::getActiveObjectManager() != nullptr; }
+        };
+    } // namespace
+
+    SW_EDITOR_COMMAND( ReflectionProbeBake, "lighting.bakeReflectionProbes", &EditorReflectionProbeBakeCommandInternal::runBake, &EditorReflectionProbeBakeCommandInternal::isEnabled, SceneUnrecorded ); // 굽기 작업을 시작한다 — 씬 기록이 아니다
 } // namespace sw::editor

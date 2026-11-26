@@ -9,7 +9,7 @@
     #include "Core/Concurrency/ThreadName.h"
     #include "Core/Log/Logger.h"
     #include "Core/Memory/Memory.h"
-    #include "Core/Process/ThreadCrashStack.h"
+    #include "Core/Process/Process.h"
 
     #include <cerrno>
     #include <sys/syscall.h>

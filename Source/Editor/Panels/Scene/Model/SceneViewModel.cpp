@@ -8,8 +8,8 @@
 
 #include "Editor/Common/Workspace/EditorCamera.h"
 #include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorStateStore.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Viewport/Model/SceneViewOverlayLayoutStore.h"
 
@@ -119,7 +119,7 @@ namespace sw::editor
 
     float32 SceneViewModel::getUnscaledDeltaTime()
     {
-        return editor::getSubsystem<GameTimeScale>().getUnscaledDeltaTime();
+        return editor::getSubsystem<GameTimeScale>().getUnscaledDeltaTime().count();
     }
 
     void SceneViewModel::gatherDebugCategories( vector<SceneViewDebugCategoryRow>& outListRow )

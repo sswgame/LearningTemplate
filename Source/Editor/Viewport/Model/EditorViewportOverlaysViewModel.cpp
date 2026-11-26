@@ -2,7 +2,7 @@
 
 #include "Editor/Viewport/Model/EditorViewportOverlaysViewModel.h"
 
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 #include "Editor/Viewport/Model/SceneViewOverlayLayoutStore.h"
 
 namespace sw::editor

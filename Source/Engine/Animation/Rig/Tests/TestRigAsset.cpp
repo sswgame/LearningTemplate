@@ -3,7 +3,7 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/Path/AbsolutePath.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Animation/Retarget/RetargetProfile.h"
 #include "Engine/Animation/Rig/RigAsset.h"
@@ -11,7 +11,7 @@
 #include "Engine/Animation/Rig/RigNode.h"
 #include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 
 using namespace sw;
 

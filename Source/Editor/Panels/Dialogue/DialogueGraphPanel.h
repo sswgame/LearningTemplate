@@ -30,7 +30,7 @@ namespace sw::editor
         void shutdown() override;
         /** @brief 대화 노드 그래프 UI 를 그립니다. */
         void               drawDocumentContent() override;
-        [[nodiscard]] bool saveDocument() override;
+        [[nodiscard]] bool saveDocument( AssetWriter& writer ) override;
 
     private:
         /** @brief 노드 추가, 저장, 줌 등 그래프 툴바를 그립니다. */
@@ -67,7 +67,6 @@ namespace sw::editor
         /** @brief 문서를 읽어 내용을 채웁니다. 읽음 표시는 기반 클래스가 결과를 보고 합니다(`EditorDocumentPanel::reloadDocument`). */
         ToolAssetLoadResult loadDocument() override;
         /** @brief 대화 그래프를 JSON 파일로 저장합니다. */
-        [[nodiscard]] bool saveGraphData();
 
         /** @brief 지정한 타입의 노드를 특성 테이블의 기본값으로 추가하고 그 id 를 반환합니다. */
         int32 addNode( DialogueAssetNodeKind type );

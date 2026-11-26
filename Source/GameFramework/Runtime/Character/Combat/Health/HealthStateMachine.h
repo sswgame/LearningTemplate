@@ -14,6 +14,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Time/Countdown.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Reflection/TypeFqn.h"
@@ -168,7 +169,7 @@ namespace sw
         /** @brief 실드를 최대까지 채웁니다(실드 전지). 살아 있을 때만 채우며, 실제로 찬 양을 반환합니다. */
         float32 addShield( float32 amount );
         /** @brief 시간을 흘립니다. 무적 시간, 실드, 체력, 경직이 재생하고, 기절 중이면 출혈과 부활이 진행됩니다. */
-        void update( float32 deltaTime );
+        void update( GameSeconds frameTime );
 
         /**
          * @brief 기절한 개체를 살리기 시작합니다. 기절 상태가 아니면 false 입니다.

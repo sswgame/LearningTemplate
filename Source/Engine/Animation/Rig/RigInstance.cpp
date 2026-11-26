@@ -7,7 +7,6 @@
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Animation/AnimationAssetCache.h"
 #include "Engine/Animation/Rig/RigAsset.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Foundation/EngineDefines.h"

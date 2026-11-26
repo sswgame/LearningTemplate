@@ -4,7 +4,7 @@
 #include "Core/Hash/HashUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Network/Security/Tests/FakeNetSecurityProvider.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Content/Pack/PackManager.h"
 #include "Engine/Content/Pack/PackReader.h"

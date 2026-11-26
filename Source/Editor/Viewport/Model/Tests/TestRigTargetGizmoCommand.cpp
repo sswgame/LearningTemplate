@@ -1,7 +1,7 @@
 // 리그 대상 기즈모 명령 순서(`RigTargetGizmoCommand::step`) — 옮긴 프레임은 끌기, 쥐지 않으면 놓기, 옮긴 프레임에 바로 놓으면 끌기 다음 놓기, 끌지 않던 쥐지 않은 프레임은 아무것도 내지 않는다.
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Editor/Viewport/Model/RigTargetGizmoEdit.h"
 

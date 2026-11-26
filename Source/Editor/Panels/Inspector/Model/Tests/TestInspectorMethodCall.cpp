@@ -1,10 +1,9 @@
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Editor/Common/Widgets/PropertyGrid/Model/InspectorBuiltinValue.h"
 #include "Editor/Common/Widgets/PropertyGrid/Model/InspectorFavorites.h"
-#include "Editor/Common/Widgets/PropertyGrid/Model/InspectorInvokeResult.h"
 #include "Editor/Common/Widgets/PropertyGrid/Model/PropertyGridViewModel.h"
 
 #include "Engine/Reflection/ReflectionInvoke.h"

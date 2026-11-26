@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Foundation/Types.h"
 #include "Core/Time/Countdown.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
@@ -44,7 +45,7 @@ namespace sw
         /** @brief 이동 상태를 설정합니다. */
         void setState( LocomotionState state );
         /** @brief 상태 타이머를 갱신합니다. */
-        void update( float32 deltaTime );
+        void update( GameSeconds frameTime );
         /** @brief 타일 스텝이 시작됐음을 알립니다. */
         void notifyStepStarted( float32 stepSeconds );
         /**

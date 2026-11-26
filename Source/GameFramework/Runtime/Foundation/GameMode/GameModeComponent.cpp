@@ -12,7 +12,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
-#include "Engine/Object/GameObject/Service/SceneNetLink.h"
+#include "Engine/Object/GameObject/Subsystem/SceneNetLink.h"
 #include "Engine/Object/Prefab/PrefabCache.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Reflection/ReflectVisit.h"
@@ -21,8 +21,9 @@
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Serializer/SerializerUtil.h"
 
+#include "GameFramework/Runtime/Foundation/Minigame/MinigameFlow.h"
 #include "GameFramework/Runtime/Foundation/Minigame/MinigameStack.h"
-#include "GameFramework/Runtime/Foundation/Service/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 
 namespace sw
 {
@@ -75,7 +76,7 @@ namespace sw
         , _pendingStateBytes{}
         , _soundQueue{}
         , _compactThreshold{ GameModeComponentInternal::kMinCompactThreshold }
-        , _pendingRuleDeltaTime{ 0.0f }
+        , _pendingRuleDeltaTime{}
         , _bStarted{ SW_FALSE }
         , _bViewsSpawned{ SW_FALSE }
         , _bFlushScheduled{ SW_FALSE }
@@ -230,11 +231,11 @@ namespace sw
 
     void GameModeComponent::runPendingRules()
     {
-        const float32 deltaTime = _pendingRuleDeltaTime;
-        _pendingRuleDeltaTime   = 0.0f;
+        const GameSeconds frameTime = _pendingRuleDeltaTime;
+        _pendingRuleDeltaTime       = GameSeconds{};
         if ( _bStarted == SW_TRUE )
             applyReloadedAssets();
-        runRules( deltaTime );
+        runRules( frameTime );
     }
 
     void GameModeComponent::foldStateHash( StateHashBuilder& inoutBuilder ) const
@@ -275,7 +276,7 @@ namespace sw
         _bRuleOnSubTick = SW_TRUE;
     }
 
-    void GameModeComponent::runRules( float32 deltaTime )
+    void GameModeComponent::runRules( GameSeconds frameTime )
     {
         if ( _bStarted == SW_FALSE )
             return;
@@ -284,7 +285,7 @@ namespace sw
         // 디렉터 계약 ① 의 재는 자리 — 걸음 시간을 모든 디렉터가 줄 추가 없이 낸다.
         {
             SW_PROFILE_SCOPE( kStepScopeName );
-            updateGame( deltaTime );
+            updateGame( frameTime );
         }
         if ( _soundQueue.isEmpty() == false || hasPendingSpawn() )
             scheduleFlush();

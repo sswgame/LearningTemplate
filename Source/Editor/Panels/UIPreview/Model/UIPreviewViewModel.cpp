@@ -6,8 +6,9 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/formatString.h"
 
+#include "Editor/Common/Asset/AssetWriter.h"
 #include "Editor/Common/Config/EditorToolDefaults.h"
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/Undo/UndoStep.h"
 
@@ -387,7 +388,7 @@ namespace sw::editor
         return _bMutated == false && _screen != kInvalidUIScreenHandle && _openedDocument.empty() == false;
     }
 
-    bool UIPreviewViewModel::saveDocument()
+    bool UIPreviewViewModel::saveDocument( AssetWriter& writer )
     {
         UIOffscreenScreens* pOffscreen = editor::findSubsystem<UIOffscreenScreens>();
         UIDocumentCache*    pDocuments = editor::findSubsystem<UIDocumentCache>();
@@ -402,9 +403,14 @@ namespace sw::editor
                              ( text.has_value() ? completeText : text ).error().detail() );
             return false;
         }
-        const optional<AbsolutePath> path = editor::getSubsystem<AssetPaths>().toDiskPath( _openedDocument );
+        const optional<DiskPath> path = editor::getSubsystem<AssetPaths>().toDiskPath( _openedDocument );
         // 미리보기 사본은 기기 견본의 태그로 합친 변형이다 — 그 태그로 원본의 조건(`_when`)을 되돌려 쓴다(FileUtil 로 바로 쓰면 푼 변형이 파일에 박힌다).
-        if ( path.has_value() == false || ResourceComposer::saveText( *path, ResourceSaveText::makeWithComplete( *text, *completeText ), &pScreen->getResourceTagOverride() ) == false )
+        const AssetWriteResult saved = path.has_value() ? writer.save( *path, [&]( const AbsolutePath& writable )
+        { return ResourceComposer::saveText( writable, ResourceSaveText::makeWithComplete( *text, *completeText ), &pScreen->getResourceTagOverride() ); } )
+                                                        : AssetWriteResult::Failed;
+        if ( saved == AssetWriteResult::Refused )
+            return false; // 문이 이미 알렸다
+        if ( saved == AssetWriteResult::Failed )
         {
             SW_LOG_ERROR_ID( "UIPreviewViewModel.UIPreviewCouldNot", "UI Preview: '%#' could not be written", _openedDocument.c_str() );
             return false;

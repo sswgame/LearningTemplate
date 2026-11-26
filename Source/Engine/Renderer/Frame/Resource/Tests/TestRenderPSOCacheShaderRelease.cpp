@@ -6,8 +6,8 @@
 #include "pch.h"
 
 #include "Core/Algorithm/VectorUtil.h"
-#include "Core/Name/hashed_string.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/String/Name/hashed_string.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Graphics/RHI/Tests/RHIFakeDevice.h"
 #include "Engine/Renderer/Frame/Resource/RenderPSOCache.h"

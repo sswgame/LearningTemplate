@@ -16,7 +16,7 @@
 #include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
-#include "GameFramework/Runtime/Foundation/Service/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 
 #include "Games/Playground/FeatureDemo/FeatureDemoCommandUtil.h"
 
@@ -78,7 +78,7 @@ namespace sw
         }
         _locator.initialize( pScene );
         _schedule.setActivityLocator( &_locator );
-        if ( _schedule.initialize( _pCatalog.get(), ScheduleSystemSettings{}, _startMinute ) == false )
+        if ( _schedule.initialize( *_pCatalog, ScheduleSystemSettings{}, _startMinute ) == false )
             return false; // 일정 시스템이 까닭을 남겼다
         _minute = _startMinute;
         _listClaim.assign( static_cast<size_t>( _schedule.getNPCCount() ), 0 );
@@ -162,8 +162,9 @@ namespace sw
         inoutClaim = 0;
     }
 
-    void SmartObjectDemoComponent::updateGame( float32 deltaTime )
+    void SmartObjectDemoComponent::updateGame( GameSeconds frameTime )
     {
+        const float32 deltaTime = frameTime.count();
         (void)deltaTime; // 시각은 명령으로만 흐른다
     }
 

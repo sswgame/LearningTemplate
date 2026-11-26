@@ -4,7 +4,7 @@
  */
 #pragma once
 #include "Core/Math/VectorMath.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 

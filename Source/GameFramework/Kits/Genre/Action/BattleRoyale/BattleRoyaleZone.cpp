@@ -5,6 +5,8 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Serialization/BitStream.h"
 
+#include "Engine/Reflection/TypeFqn.h"
+#include "Engine/Serialization/Fixed/ReplicatedLayout.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
@@ -14,8 +16,6 @@ namespace sw
     {
         struct BattleRoyaleZoneInternal
         {
-            static constexpr int32 kMaxPhaseBits = 1024; ///< 직렬화할 단계 번호의 상한
-
             static float32 computeDistance( const float2& lhs, const float2& rhs )
             {
                 const float32 dx = lhs._x - rhs._x;
@@ -41,16 +41,16 @@ namespace sw
         , _eventBuffer{}
         , _pTerrain{ nullptr }
         , _random{}
-        , _center{}
-        , _fromCenter{}
-        , _nextCenter{}
-        , _radius{ 0.0f }
-        , _fromRadius{ 0.0f }
-        , _nextRadius{ 0.0f }
         , _mapSize{ 1.0f }
-        , _stageRemaining{ 0.0f }
         , _phaseIndex{ 0 }
         , _stage{ BattleRoyaleZoneStage::Final }
+        , _stageRemaining{ 0.0f }
+        , _center{}
+        , _radius{ 0.0f }
+        , _fromCenter{}
+        , _fromRadius{ 0.0f }
+        , _nextCenter{}
+        , _nextRadius{ 0.0f }
     {
     }
 
@@ -154,94 +154,25 @@ namespace sw
 
     bool BattleRoyaleZone::writeState( BitWriter& writer ) const
     {
-        const bool bHeadWritten = writer.writeInt( _phaseIndex, 0, BattleRoyaleZoneInternal::kMaxPhaseBits ) && writer.writeInt( static_cast<int32>( _stage ), 0, 2 );
-        if ( bHeadWritten == false )
-            return false;
-        writer.writeFloat( _stageRemaining );
-        writer.writeFloat( _center._x );
-        writer.writeFloat( _center._y );
-        writer.writeFloat( _radius );
-        writer.writeFloat( _fromCenter._x );
-        writer.writeFloat( _fromCenter._y );
-        writer.writeFloat( _fromRadius );
-        writer.writeFloat( _nextCenter._x );
-        writer.writeFloat( _nextCenter._y );
-        writer.writeFloat( _nextRadius );
-        return true;
+        return ReplicatedLayout::writeFull( *this, writer );
     }
 
     bool BattleRoyaleZone::readState( BitReader& reader )
     {
-        int32 phaseIndex{ 0 };
-        int32 stage{ 0 };
-        phaseIndex = reader.readInt( 0, BattleRoyaleZoneInternal::kMaxPhaseBits );
-        stage      = reader.readInt( 0, 2 );
-        if ( reader.hasOverflowed() )
+        BattleRoyaleZone loaded = *this; // 단계 검사까지 지난 뒤에만 옮긴다
+        if ( ReplicatedLayout::readFull( reader, loaded, nullptr ) != FixedReadResult::Ok || loaded.isPhaseValid() == false )
             return false;
-        float32 stageRemaining{ 0.0f };
-        float32 centerX{ 0.0f };
-        float32 centerY{ 0.0f };
-        float32 radius{ 0.0f };
-        float32 fromX{ 0.0f };
-        float32 fromY{ 0.0f };
-        float32 fromRadius{ 0.0f };
-        float32 nextX{ 0.0f };
-        float32 nextY{ 0.0f };
-        float32 nextRadius{ 0.0f };
-        stageRemaining     = reader.readFiniteFloat();
-        centerX            = reader.readFiniteFloat();
-        centerY            = reader.readFiniteFloat();
-        radius             = reader.readFiniteFloat();
-        fromX              = reader.readFiniteFloat();
-        fromY              = reader.readFiniteFloat();
-        fromRadius         = reader.readFiniteFloat();
-        nextX              = reader.readFiniteFloat();
-        nextY              = reader.readFiniteFloat();
-        nextRadius         = reader.readFiniteFloat();
-        const bool bFinite = reader.hasOverflowed() == false;
-        if ( bFinite == false )
-            return false;
-        // 음수 남은 시간은 `update` 의 시간을 늘리고, 음수 반지름은 모두를 원 밖으로 만든다. 마지막이 아닌 단계는 그 단계의 정의가 있어야 한다.
-        const int32 phaseCount    = static_cast<int32>( _settings._listPhase.size() );
-        const bool  bFinalStage   = stage == static_cast<int32>( BattleRoyaleZoneStage::Final );
-        const bool  bPhaseValid   = phaseIndex <= phaseCount && ( bFinalStage || phaseIndex < phaseCount );
-        const bool  bAmountsValid = 0.0f <= stageRemaining && 0.0f <= radius && 0.0f <= fromRadius && 0.0f <= nextRadius;
-        if ( bPhaseValid == false || bAmountsValid == false )
-            return false;
-        _phaseIndex     = phaseIndex;
-        _stage          = static_cast<BattleRoyaleZoneStage>( stage );
-        _stageRemaining = stageRemaining;
-        _center         = float2{ centerX, centerY };
-        _radius         = radius;
-        _fromCenter     = float2{ fromX, fromY };
-        _fromRadius     = fromRadius;
-        _nextCenter     = float2{ nextX, nextY };
-        _nextRadius     = nextRadius;
+        *this = std::move( loaded );
         return true;
     }
 
-    // 세이브(Archive)는 넷 스냅숏 코덱의 바이트를 그대로 싣는다(같은 상태를 두 형식으로 따로 쓰지 않는다).
-    // 넷 코덱은 시드를 양쪽이 같다고 보고 난수를 싣지 않는다. 그래서 다음 원을 같은 수열로 고를 수 있도록 난수 상태만 뒤에 붙인다.
     void BattleRoyaleZone::serializeState( StateIO& io )
     {
-        // 세이브는 넷 코덱의 바이트를 길이가 붙은 본문으로 싣는다 — 한 상태의 칸 순서는 넷 코덱 한 곳이 정한다.
-        vector<uint8> bytes;
-        if ( io.isWriting() )
-        {
-            BitWriter writer;
-            if ( writeState( writer ) == false )
-            {
-                io.fail();
-                return;
-            }
-            bytes = writer.getBytes();
-        }
-        io.value( bytes );
+        io.reflected( *this );
         io.value( _random );
         if ( io.isReading() && io.isOk() )
         {
-            BitReader reader( bytes.data(), static_cast<int32>( bytes.size() ) );
-            io.check( readState( reader ) );
+            io.check( isPhaseValid() );
             _eventBuffer.clear();
         }
     }
@@ -283,6 +214,12 @@ namespace sw
         _stage          = BattleRoyaleZoneStage::Waiting;
         _stageRemaining = phase._waitTime;
         pushEvent( BattleRoyaleZoneEvent::Kind::NextZoneRevealed );
+    }
+
+    bool BattleRoyaleZone::isPhaseValid() const
+    {
+        const int32 phaseCount = static_cast<int32>( _settings._listPhase.size() );
+        return _phaseIndex <= phaseCount && ( _stage == BattleRoyaleZoneStage::Final || _phaseIndex < phaseCount );
     }
 
     const BattleRoyaleZonePhaseDef* BattleRoyaleZone::findPhase() const

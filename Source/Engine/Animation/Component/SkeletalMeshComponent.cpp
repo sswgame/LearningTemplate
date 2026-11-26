@@ -10,13 +10,13 @@
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Animation/AnimationAssetCache.h"
 #include "Engine/Animation/Scene/AnimationSystem.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Animation/Skeletal/SkeletonBoneLOD.h"
+#include "Engine/Animation/Skeletal/SkeletonMirrorTable.h"
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Content/AssetIO.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectEvents.h"
@@ -615,7 +615,7 @@ namespace sw
 
     SkeletalMeshComponent* SkeletalMeshComponent::findLeaderPose() const
     {
-        const bool bNoLeader = _leader.isValid() == false || getOwner() == nullptr || getOwner()->getMutableManager() == nullptr;
+        const bool bNoLeader = _leader.isValid() == false || getOwner() == nullptr || getOwner()->getManager() == nullptr;
         if ( bNoLeader )
             return nullptr;
         return getOwner()->getMutableManager()->resolveComponent( _leader );

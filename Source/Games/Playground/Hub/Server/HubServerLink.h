@@ -1,7 +1,7 @@
 /**
  * @file HubServerLink.h
  * @brief 허브의 서버 쪽 망 잇기입니다 — 허브 규칙 · 원격 호출 · MMO 복제 · 진행 저장을 묶습니다. 서버 전용 코드라 이 폴더(`Server/`)에 둔다.
- * @details 공유 쪽(`HubNetLink.h`)은 창구(`IHubServer` · `IHubServerFactory`)만 알고, 공장은 모듈 부분으로 공개한다(`HubServerFactory.cpp`).
+ * @details 공유 쪽(`HubNetLink.h`)은 창구(`IHubServer` · `IHubServerFactory`)만 알고, 공장은 모듈 부분으로 공개한다(`HubServerFactory` — `HubServerLink.cpp` 끝).
  *          진행 저장소는 전용 서버의 온라인 조립 저장소다(`HubProfileStore` — 저장소 계약 `ServiceStore`).
  */
 #pragma once
@@ -12,6 +12,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Network/Message/NetMessage.h"
 #include "Core/Time/Countdown.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Scene/StreamingCellGrid.h"
 
@@ -75,7 +76,7 @@ namespace sw
         /** @brief 규칙 · 저장 · 복제를 한 틱 돌립니다. */
         void            update( float32 deltaSeconds ) override;
         void            collectAvatars( vector<HubAvatarSession>& outListSession ) const override;
-        HubActionResult moveAvatar( uint32 avatarID, const AbsolutePosition& position, float32 stepSeconds, bool bRiding ) override { return _world.moveAvatar( avatarID, position, stepSeconds, bRiding ); }
+        HubActionResult moveAvatar( uint32 avatarID, const AbsolutePosition& position, StepSeconds stepSeconds, bool bRiding ) override { return _world.moveAvatar( avatarID, position, stepSeconds, bRiding ); }
 
         /**
          * @brief 연결을 계정 @p accountID 로 들입니다 — 진행 읽기를 맡기고, 읽히면 아바타를 세운다. 계정이 0 이면 받지 않고 끊습니다.

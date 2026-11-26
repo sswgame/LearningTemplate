@@ -12,7 +12,7 @@
 #include "ModuleAPI/ABI/GameAPI.h"
 #include "ModuleAPI/ABI/ModuleABI.h"
 #include "ModuleAPI/Export/ModuleForwardUtil.h"
-#include "ModuleAPI/Service/GameServiceBinding.h"
+#include "ModuleAPI/Service/GameSubsystemBinding.h"
 
 namespace sw
 {
@@ -35,10 +35,6 @@ namespace sw
 // 주석을 넣을 수 없으므로 정의 전체를 범위로 덮는다.
 // NOLINTBEGIN(bugprone-macro-parentheses)
 #define SW_IMPLEMENT_GAME_MODULE( GameClass )                                                                                                                                                      \
-    extern "C" SW_MODULE_API uint64 getGameModuleABIStamp()                                                                                                                                        \
-    {                                                                                                                                                                                              \
-        return sw::kGameModuleABIStamp;                                                                                                                                                            \
-    }                                                                                                                                                                                              \
     extern "C" SW_MODULE_API bool exportGameAPI( sw::GameAPI* pOutAPI )                                                                                                                            \
     {                                                                                                                                                                                              \
         if ( pOutAPI == nullptr )                                                                                                                                                                  \
@@ -53,9 +49,9 @@ namespace sw
         pOutAPI->bindService = []( const sw::ISubsystemLocator* pService )                                                                                                                         \
         {                                                                                                                                                                                          \
             if ( pService != nullptr )                                                                                                                                                             \
-                sw::game::bindGameService( *pService );                                                                                                                                            \
+                sw::game::bindGameSubsystems( *pService );                                                                                                                                         \
             else                                                                                                                                                                                   \
-                sw::game::unbindGameService();                                                                                                                                                     \
+                sw::game::unbindGameSubsystems();                                                                                                                                                  \
         };                                                                                                                                                                                         \
         pOutAPI->serializeState = []( sw::GameHandle gameHandle, const sw::StateBufferSink* pSink ) -> bool                                                                                        \
         {                                                                                                                                                                                          \

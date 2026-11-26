@@ -12,7 +12,7 @@
 #include "GameFramework/Client/Shop/ShopScreen.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Runtime/EconomyShopPurchaseProvider.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameSettings.h"
-#include "GameFramework/Runtime/Foundation/Service/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 #include "GameFramework/Runtime/Online/Service/OnlineSession.h"
 
 #include "Games/Playground/Online/PlaygroundOnlineFlow.h"

@@ -5,13 +5,14 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Editor/Common/Config/EditorComponentIconTable.h"
 #include "Editor/Common/Config/EditorDefaultAssets.h"
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
 #include "Editor/Common/Config/EditorIconName.h"
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Config/EditorPaths.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Reflection/TypeRegistry.h"

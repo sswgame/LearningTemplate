@@ -2,7 +2,7 @@
 
 #include "Core/Network/Connection/NetChallenge.h"
 #include "Core/Network/NetTypes.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 // NetChallenge — 같은 시드는 같은 솔트 수열과 같은 챌린지 값을 낸다. 값은 주소 · 클라이언트 솔트 · 시간 윈도우에 묶이고,
 // 만든 윈도우와 그다음 윈도우에서만 유효하며 0 이 되지 않는다.

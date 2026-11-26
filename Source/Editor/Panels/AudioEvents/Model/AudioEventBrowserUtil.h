@@ -6,7 +6,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 
 #include "Engine/Audio/AudioEngineState.h"
 
@@ -16,7 +16,7 @@ namespace sw
     struct AudioEventDef;
     struct AudioEventLibrary;
 
-    class AudioService;
+    class AudioSubsystem;
 } // namespace sw
 
 namespace sw::editor
@@ -103,8 +103,8 @@ namespace sw::editor
 
     private:
         /** @brief 에디터의 오디오 서비스입니다. 없으면(에디터 밖) nullptr 입니다. Model 안에서만 찾는다. */
-        static AudioService* findAudioService();
+        static AudioSubsystem* findAudioSubsystem();
         /** @brief 에디터의 오디오 서비스입니다(에디터는 오디오를 짓는 구성이라 늘 있다 — 전용 서버 구성만 오디오를 짓지 않는다). 없으면 멈춘다. */
-        static AudioService& getAudioService();
+        static AudioSubsystem& getAudioSubsystem();
     };
 } // namespace sw::editor

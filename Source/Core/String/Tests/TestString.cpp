@@ -9,16 +9,16 @@
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
 #include "Core/String/string_splitter.h"
-#include "Core/Testing/ScopedAllocationCount.h"
-#include "Core/Testing/ScopedAssertCapture.h"
-#include "Core/Testing/TestFramework.h"
-#include "Core/Testing/ThreadTestAccess.h"
+#include "Core/TestFramework/ScopedAllocationCount.h"
+#include "Core/TestFramework/ScopedAssertCapture.h"
+#include "Core/TestFramework/TestFramework.h"
+#include "Core/TestFramework/ThreadTestAccess.h"
 
 #include <sstream>
 

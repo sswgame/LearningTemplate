@@ -14,7 +14,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Path/AbsolutePath.h"
 
-#include "Editor/Common/Task/EditorBackgroundTask.h"
+#include "Editor/Common/Job/EditorBackgroundJob.h"
 
 namespace sw
 {
@@ -71,7 +71,7 @@ namespace sw::editor
      * @brief 문서 사본 묶음을 워커에서 쓰고 쓴 수를 게임 스레드에 돌려줍니다(감사 E-1 — 쓰기를 UI 스레드에서 뗀다).
      * @details 낸 잡이 끝나기 전에는 새로 내지 않는다(`take` 가 Running 이면 다음 주기로 미룬다) — 새 세대가 앞 묶음을 버려 사본이 빠지지 않게.
      */
-    class EditorDocumentAutosaveWriteJob final : public EditorBackgroundTask<EditorDocumentAutosaveBatch, uint32>
+    class EditorDocumentAutosaveWriteJob final : public EditorBackgroundJob<EditorDocumentAutosaveBatch, uint32>
     {
     public:
         /** @brief 묶음 @p batch 를 쓰게 냅니다. */

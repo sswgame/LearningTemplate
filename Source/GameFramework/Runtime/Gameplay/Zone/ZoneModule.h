@@ -14,8 +14,8 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
-#include "Core/Name/hashed_string.h"
 #include "Core/Registry/NamedEntryRegistry.h"
+#include "Core/String/Name/hashed_string.h"
 
 #include "Engine/Behavior/ConditionExpr.h"
 #include "Engine/Behavior/GameActionCall.h"

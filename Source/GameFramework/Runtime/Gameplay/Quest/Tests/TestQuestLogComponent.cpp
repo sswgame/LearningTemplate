@@ -3,9 +3,9 @@
 
 #include "Core/Event/EventDispatcher.h"
 #include "Core/File/FileUtil.h"
-#include "Core/Name/TagID.h"
+#include "Core/String/Name/TagID.h"
 #include "Core/Subsystem/SubsystemScope.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #define SW_TEST_INTERNAL // 임시 리소스 도메인 픽스처(`ScopedScratchDomain`)가 엔진 서비스를 직접 쓴다
@@ -15,8 +15,8 @@
 
 #include "GameFramework/Runtime/Character/Control/Controller/PlayerControllerComponent.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
-#include "GameFramework/Runtime/Foundation/Service/GameEventUtil.h"
-#include "GameFramework/Runtime/Foundation/Service/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameEvents.h"
+#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityEvents.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/GimmickEvents.h"
 #include "GameFramework/Runtime/Gameplay/Interaction/InteractionAuthority.h"

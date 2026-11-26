@@ -52,6 +52,6 @@ namespace sw
         (void)scope.exposeMember( render2DSettings, render2DSettings.getSettings() ); // 새 범위 — 겹치지 않는다
     } );
 
-    // 위 공장이 건 2D 렌더 설정의 서비스 칸(읽기 전용) — 렌더러 · 2D 컴포넌트 검증 · 서버가 같이 읽는다(정적 활성본 `Render2DSettings::getActive()` 를 대신한다).
-    SW_ENGINE_SERVICE( Render2DSettings, HostOnly );
+    // 위 공장이 건 2D 렌더 설정의 서브시스템 칸(읽기 전용) — 렌더러 · 2D 컴포넌트 검증 · 서버가 같이 읽는다(정적 활성본 `Render2DSettings::getActive()` 를 대신한다).
+    SW_ENGINE_SUBSYSTEM_SLOT( Render2DSettings, HostOnly );
 } // namespace sw

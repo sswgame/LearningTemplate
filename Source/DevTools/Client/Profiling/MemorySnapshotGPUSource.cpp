@@ -6,7 +6,7 @@
 
 #include "DevTools/Profiling/Memory/MemorySnapshotSources.h"
 
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Presentation/IEngineRenderDriver.h"
 

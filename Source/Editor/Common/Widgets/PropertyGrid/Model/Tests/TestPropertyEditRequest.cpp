@@ -1,10 +1,9 @@
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Editor/Common/Widgets/PropertyGrid/Model/InspectorEditRecorder.h"
 #include "Editor/Common/Widgets/PropertyGrid/Model/PropertyEditRequest.h"
-#include "Editor/Common/Widgets/PropertyGrid/Model/PropertyEditStep.h"
 #include "Editor/Common/Widgets/PropertyGrid/Model/PropertyGridViewModel.h"
 
 #include "Engine/Object/Component/CameraComponent.h"

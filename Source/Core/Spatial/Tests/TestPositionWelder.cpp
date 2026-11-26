@@ -2,7 +2,7 @@
 
 #include "Core/Container/vector.h"
 #include "Core/Spatial/PositionWelder.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 // PositionWelder — 허용 오차 안의 위치 합치기, 셀 경계, 대칭 꼭짓점, 같은 입력의 같은 출력(결정성).
 

@@ -11,7 +11,7 @@
 
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Foundation/EngineParallel.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Foundation/WorkerReadFence.h"
 #include "Engine/Graphics/DebugDraw/DebugDrawQueue.h"
 #include "Engine/Object/Component/Component.h"
@@ -19,9 +19,9 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectEvents.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/Service/SceneEngineServices.h"
-#include "Engine/Object/GameObject/Service/ScenePreviewPolicy.h"
-#include "Engine/Object/GameObject/Service/SceneServiceRegistry.h"
+#include "Engine/Object/GameObject/Subsystem/SceneEngineSubsystems.h"
+#include "Engine/Object/GameObject/Subsystem/ScenePreviewPolicy.h"
+#include "Engine/Object/GameObject/Subsystem/SceneSubsystemRegistry.h"
 #include "Engine/Object/GameObject/Tick/FixedStepContext.h"
 #include "Engine/Physics/Collision/PhysicsQuery.h"
 #include "Engine/Physics/Component/BoxCollider2DComponent.h"
@@ -131,8 +131,8 @@ namespace sw
 
 namespace sw
 {
-    SW_SCENE_SERVICE( ScenePhysics, Physics, makeSceneFrameAccess( SceneDataKindSet{ SceneDataKind::Transform }, SceneDataKindSet{}, SceneDataKindSet{ SceneDataKind::Structure } ) )
-    SW_SCENE_SERVICE( ScenePhysicsEvents, FlushPostPhysics, makeSceneFrameAccess( SceneDataKindSet{ SceneDataKind::Structure, SceneDataKind::Transform, SceneDataKind::AnimatorState, SceneDataKind::Navigation }, SceneDataKindSet{}, SceneDataKindSet{} ) )
+    SW_SCENE_SUBSYSTEM( ScenePhysics, Physics, makeSceneFrameAccess( SceneDataKindSet{ SceneDataKind::Transform }, SceneDataKindSet{}, SceneDataKindSet{ SceneDataKind::Structure } ) )
+    SW_SCENE_SUBSYSTEM( ScenePhysicsEvents, FlushPostPhysics, makeSceneFrameAccess( SceneDataKindSet{ SceneDataKind::Structure, SceneDataKind::Transform, SceneDataKind::AnimatorState, SceneDataKind::Navigation }, SceneDataKindSet{}, SceneDataKindSet{} ) )
 
     struct ScenePhysics::FloorTracking
     {
@@ -150,7 +150,7 @@ namespace sw
 
     ScenePhysics::ScenePhysics( GameObjectManager& manager )
         : _manager{ manager }
-        , _pPhysicsSystem{ locateSubsystem<PhysicsSystem>( manager.getSceneEngineServices()._pEngineSubsystems ) }
+        , _pPhysicsSystem{ findSubsystemFrom<PhysicsSystem>( manager.getSceneEngineSubsystems()._pEngineSubsystems ) }
         , _listCollider2D{}
         , _listMovedCollider2D{}
         , _listSweptOverlap2D{}
@@ -206,7 +206,7 @@ namespace sw
             return;
         SW_PROFILE_SCOPE( "GT.Scene.tick.physics" );
         updateStreamingHolds();
-        step( deltaTime );
+        step( GameSeconds{ deltaTime } ); // 씬 갱신의 시간은 씬의 게임 시간이다
     }
 
     void ScenePhysics::updateStreamingHolds()
@@ -804,8 +804,9 @@ namespace sw
         _listStepEventEnd2D.push_back( _listFrameEvent2D.size() );
     }
 
-    void ScenePhysics::step( float32 deltaTime )
+    void ScenePhysics::step( GameSeconds frameTime )
     {
+        const float32 deltaTime = frameTime.count();
         _listFrameEvent3D.clear();
         _listFrameEvent2D.clear();
         _listStepEventEnd3D.clear();
@@ -822,8 +823,8 @@ namespace sw
         (void)_manager.tickFixedStepGroup( FixedStepGroup::FrameBegin, FixedStepContext{ *this, deltaTime, 0.0f, 0, 0, 0.0f } );
         sweepContinuousColliders2D();
 
-        const uint32  stepCount = static_cast<uint32>( _stepTimer.consume( deltaTime ) );
-        const float32 fixedStep = _stepTimer.getStep();
+        const uint32  stepCount = static_cast<uint32>( _stepTimer.consume( frameTime ) );
+        const float32 fixedStep = _stepTimer.getStep().count();
         for ( uint32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
         {
             const FixedStepContext stepContext{ *this, deltaTime, fixedStep, stepIndex, stepCount, 0.0f };

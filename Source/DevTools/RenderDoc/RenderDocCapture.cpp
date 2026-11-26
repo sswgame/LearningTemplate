@@ -7,7 +7,7 @@
 #include "Core/File/ProcessRoots.h"
 #include "Core/Module/ModuleLibraryUtil.h"
 #include "Core/Path/AbsolutePath.h"
-#include "Core/Process/ProcessEnvironment.h"
+#include "Core/Process/Process.h"
 
 #include "Engine/Console/DevCommandRegistry.h"
 

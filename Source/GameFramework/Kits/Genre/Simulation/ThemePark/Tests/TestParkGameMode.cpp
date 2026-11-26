@@ -7,7 +7,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
 #include "Engine/Object/Component/SceneComponent.h"
@@ -21,7 +21,7 @@
 
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/Component/ParkGameModeComponent.h"
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/Tests/ThemeParkTestRules.h"
-#include "GameFramework/Runtime/Foundation/Service/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 
 using namespace sw;
 

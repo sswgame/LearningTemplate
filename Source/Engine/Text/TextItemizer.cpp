@@ -4,7 +4,7 @@
 
 #include "Core/String/StringUtil.h"
 
-#include "Engine/Text/FontService.h"
+#include "Engine/Text/FontSubsystem.h"
 
 namespace sw
 {
@@ -55,7 +55,7 @@ namespace sw
         return isFormatControl( codepoint ) || bCombiningMark;
     }
 
-    void TextItemizer::itemize( FontService& fontService, const FontFaceChain& chain, string_view text, vector<ShapingRun>& outListRun )
+    void TextItemizer::itemize( FontSubsystem& fontService, const FontFaceChain& chain, string_view text, vector<ShapingRun>& outListRun )
     {
         outListRun.clear();
         if ( chain._faceCount == 0 )

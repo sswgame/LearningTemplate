@@ -16,7 +16,7 @@
 #include "Engine/Graphics/Texture/TextureCache.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/Service/SceneServiceRegistry.h"
+#include "Engine/Object/GameObject/Subsystem/SceneSubsystemRegistry.h"
 
 namespace sw
 {
@@ -141,7 +141,7 @@ namespace sw
 
 namespace sw
 {
-    SW_SCENE_SERVICE( SurfaceDeformSystem, FlushEnd, makeSceneFrameAccess( SceneDataKindSet{}, SceneDataKindSet{}, SceneDataKindSet{ SceneDataKind::Structure, SceneDataKind::Transform } ) )
+    SW_SCENE_SUBSYSTEM( SurfaceDeformSystem, FlushEnd, makeSceneFrameAccess( SceneDataKindSet{}, SceneDataKindSet{}, SceneDataKindSet{ SceneDataKind::Structure, SceneDataKind::Transform } ) )
 
     SurfaceDeformSystem::PersistentStamp::PersistentStamp()
         : _def{}

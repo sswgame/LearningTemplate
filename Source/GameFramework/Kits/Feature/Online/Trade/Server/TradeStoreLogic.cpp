@@ -9,7 +9,9 @@
 #include "GameFramework/Kits/Feature/Online/Trade/Runtime/TradeSessionRecord.h"
 #include "GameFramework/Runtime/Online/Audit/Server/ServiceAuditLog.h"
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceCommitRunner.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceRecordReader.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordTable.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceTTLRule.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
@@ -32,14 +34,12 @@ namespace sw
             /** @brief 거래 레코드를 써 @p inoutTransaction 에 넣습니다. 못 쓰면 오류 로그를 남기고 false 이며 아무것도 넣지 않습니다. */
             [[nodiscard]] static bool stageSession( const TradeSnapshot& snapshot, uint64 ownerServerID, uint64 expectedVersion, ServiceTransaction& inoutTransaction )
             {
-                vector<uint8> bytes;
-                if ( TradeSessionRecord::encodeSession( TradeSessionRecord{ snapshot, ownerServerID }, bytes ) == false )
-                    return false;
                 const string sessionKey = ServiceKeyUtil::makeHex64( snapshot._tradeID );
+                if ( inoutTransaction.tryPut( TradeStoreLogic::getSessionTable(), sessionKey, TradeSessionRecord{ snapshot, ownerServerID }, expectedVersion ) == false )
+                    return false;
                 if ( snapshot.isClosed() ) // 닫는 모든 경로가 이 함수를 지나므로 색인 줄을 빠뜨리는 경로가 없다
-                    inoutTransaction.put( TradeStoreLogic::getSessionExpiryTable(), ServiceTTLRule::makeTTLIndexKey( snapshot._updatedMs, sessionKey ), vector<uint8>{},
+                    inoutTransaction.put( TradeStoreLogic::getSessionExpiryTable(), ServiceTTLRule::makeTTLIndexKey( snapshot._updatedMs, sessionKey ),
                                           ServiceRecord::kAnyVersion );
-                inoutTransaction.put( TradeStoreLogic::getSessionTable(), sessionKey, std::move( bytes ), expectedVersion );
                 return true;
             }
 
@@ -48,16 +48,16 @@ namespace sw
             {
                 TradeSnapshot snapshot;
                 uint64        ownerServerID = 0;
-                if ( decodeSession( record._key, record._bytes, snapshot, ownerServerID ) == false || snapshot.isClosed() == false )
+                if ( decodeSession( record, snapshot, ownerServerID ) == false || snapshot.isClosed() == false )
                     return false;
                 outTimeMs = snapshot._updatedMs;
                 return true;
             }
 
-            [[nodiscard]] static bool decodeSession( const string_view key, const vector<uint8>& bytes, TradeSnapshot& outSnapshot, uint64& outOwnerServerID )
+            [[nodiscard]] static bool decodeSession( const ServiceRecord& raw, TradeSnapshot& outSnapshot, uint64& outOwnerServerID )
             {
                 TradeSessionRecord record;
-                if ( TradeSessionRecord::decodeSession( key, bytes, record ) == false )
+                if ( TradeStoreLogic::getSessionTable().decode( raw, record ) == false )
                     return false;
                 outSnapshot      = std::move( record._snapshot );
                 outOwnerServerID = record._ownerServerID;
@@ -125,21 +125,21 @@ namespace sw
     {
     }
 
-    const hashed_string& TradeStoreLogic::getSessionTable()
+    const ServiceRecordTable<TradeSessionRecord>& TradeStoreLogic::getSessionTable()
     {
-        static const hashed_string s_table{ "trade_session" };
+        static const ServiceRecordTable<TradeSessionRecord> s_table{ "trade_session" };
         return s_table;
     }
 
-    const hashed_string& TradeStoreLogic::getActiveTable()
+    const ServiceLinkTable& TradeStoreLogic::getActiveTable()
     {
-        static const hashed_string s_table{ "trade_active" };
+        static const ServiceLinkTable s_table{ "trade_active" };
         return s_table;
     }
 
-    const hashed_string& TradeStoreLogic::getSessionExpiryTable()
+    const ServiceIndexTable& TradeStoreLogic::getSessionExpiryTable()
     {
-        static const hashed_string s_table{ "trade_session_expiry" };
+        static const ServiceIndexTable s_table{ "trade_session_expiry" };
         return s_table;
     }
 
@@ -155,9 +155,9 @@ namespace sw
         return rule;
     }
 
-    const hashed_string& TradeStoreLogic::getOwnerTable()
+    const ServiceIndexTable& TradeStoreLogic::getOwnerTable()
     {
-        static const hashed_string s_table{ "trade_owner" };
+        static const ServiceIndexTable s_table{ "trade_owner" };
         return s_table;
     }
 
@@ -176,7 +176,7 @@ namespace sw
         if ( bInvalidTradeParticipants )
             return TradeServiceResult::fail( OnlineError::kInvalidRequest );
         uint64 candidate = seed;
-        for ( int32 attempt = 0; attempt < LedgerConstant::kMaxRetryCount; ++attempt )
+        return ServiceCommitRunner::run<TradeServiceResult>( _connection, "Trade.Invite", [&]( ServiceCommitAttempt& attempt ) -> optional<TradeServiceResult>
         {
             candidate                      = Internal::mixSeed( candidate );
             const uint64       tradeID     = candidate == 0 ? 1 : candidate;
@@ -193,8 +193,11 @@ namespace sw
                 if ( linkRead != ServiceStoreResult::Ok )
                     return TradeServiceResult::fail( OnlineError::kUnavailable );
                 // 남은 링크가 있고 그 거래가 닫혔거나 시한이 지났으면 정리하고 이어 간다. 지연 만료이다.
+                uint64 linkedTradeID = 0;
+                if ( getActiveTable().decode( ServiceKeyUtil::makeHex64( arrParty[sideIndex] ), linkRaw, linkedTradeID ) == false )
+                    return TradeServiceResult::fail( OnlineError::kUnavailable );
                 SessionRead              stale;
-                const TradeServiceResult staleRead = readSession( ServiceKeyUtil::decodeVarID( linkRaw._bytes ), stale );
+                const TradeServiceResult staleRead = readSession( linkedTradeID, stale );
                 const bool               bOrphan   = staleRead == TradeResult::NotFound;
                 const bool               bExpired  = staleRead == TradeResult::Ok && ( stale._snapshot.isClosed() || isIdleExpired( stale._snapshot, _settings, nowMs ) );
                 if ( bOrphan == false && bExpired == false )
@@ -220,13 +223,13 @@ namespace sw
             trade._arrSide[0]._accountID = fromID;
             trade._arrSide[1]._accountID = toID;
             // 쓰기 번호 0과 1이 두 활성 링크이다. Conflict 번호로 누가 바쁜지 구분한다
-            transaction.put( getActiveTable(), ServiceKeyUtil::makeHex64( fromID ), ServiceKeyUtil::encodeVarID( tradeID ), arrLinkVersion[0] );
-            transaction.put( getActiveTable(), ServiceKeyUtil::makeHex64( toID ), ServiceKeyUtil::encodeVarID( tradeID ), arrLinkVersion[1] );
+            transaction.put( getActiveTable(), ServiceKeyUtil::makeHex64( fromID ), tradeID, arrLinkVersion[0] );
+            transaction.put( getActiveTable(), ServiceKeyUtil::makeHex64( toID ), tradeID, arrLinkVersion[1] );
             if ( Internal::stageSession( trade, _serverID, ServiceRecord::kAbsentVersion, transaction ) == false )
                 return TradeServiceResult::fail( OnlineError::kInvalidRequest );
-            transaction.put( getOwnerTable(), Internal::makeOwnerKey( _serverID, tradeID ), vector<uint8>{}, ServiceRecord::kAbsentVersion );
+            transaction.put( getOwnerTable(), Internal::makeOwnerKey( _serverID, tradeID ), ServiceRecord::kAbsentVersion );
             ServiceCommitInfo        info;
-            const ServiceStoreResult committed = _connection.commit( transaction, &info );
+            const ServiceStoreResult committed = attempt.commit( transaction, &info );
             if ( committed == ServiceStoreResult::Ok )
             {
                 outSnapshot = trade;
@@ -234,16 +237,15 @@ namespace sw
             }
             if ( committed != ServiceStoreResult::Conflict )
                 return TradeServiceResult::fail( OnlineError::kUnavailable );
-            // 그사이 다른 서버가 링크를 넣었거나 거래 id 가 겹쳤다. 링크를 넣었으면 다시 읽을 때 바쁨으로 나오고, id 가 겹쳤으면 다음 id 를 쓴다. 어느 쪽이든 다시 시도한다.
-        }
-        return TradeServiceResult::fail( OnlineError::kUnavailable );
+            return nullopt; // 그사이 다른 서버가 링크를 넣었거나 거래 id 가 겹쳤다. 링크를 넣었으면 다시 읽을 때 바쁨으로 나오고, id 가 겹쳤으면 다음 id 를 쓴다. 어느 쪽이든 다시 시도한다.
+        } );
     }
 
     TradeServiceResult TradeStoreLogic::applyCommand( uint64 tradeID, const TradeCommand& command, int64 nowMs, TradeSnapshot& outSnapshot, LedgerTransferResult& outLedger )
     {
         using Internal = TradeStoreLogicInternal;
         outLedger      = LedgerTransferResult{};
-        for ( int32 attempt = 0; attempt < LedgerConstant::kMaxRetryCount; ++attempt )
+        return ServiceCommitRunner::run<TradeServiceResult>( _connection, "Trade.Command", [&]( ServiceCommitAttempt& attempt ) -> optional<TradeServiceResult>
         {
             SessionRead              session;
             const TradeServiceResult read = readSession( tradeID, session );
@@ -261,12 +263,10 @@ namespace sw
 
             if ( isIdleExpired( session._snapshot, _settings, nowMs ) )
             {
-                TradeSnapshot     closed;
-                const CloseResult serviceResult = commitClose( session, TradeCloseReason::Timeout, nowMs, closed );
-                if ( serviceResult._bRetry )
-                    continue;
-                if ( serviceResult._result != TradeResult::Ok )
-                    return serviceResult._result;
+                TradeSnapshot                      closed;
+                const optional<TradeServiceResult> serviceResult = commitClose( attempt, session, TradeCloseReason::Timeout, nowMs, closed );
+                if ( serviceResult.has_value() == false || *serviceResult != TradeResult::Ok )
+                    return serviceResult;
                 outSnapshot = closed;
                 return TradeResult::WrongState;
             }
@@ -305,7 +305,7 @@ namespace sw
                 return TradeServiceResult::fail( OnlineError::kInvalidRequest );
             }
 
-            const ServiceStoreResult committed = _connection.commit( transaction );
+            const ServiceStoreResult committed = attempt.commit( transaction );
             if ( committed == ServiceStoreResult::Ok )
             {
                 outSnapshot = next;
@@ -315,19 +315,18 @@ namespace sw
             {
                 // 다른 서버나 앞선 시도가 같은 분개로 이미 정산했는지 원장이 가려 준다. 응답이 유실된 경우도 포함한다. 분개가 있으면 다음 반복의 읽기가 Settled 이다.
                 if ( settlement._bStaged && Ledger::resolveConflict( _connection, settlement._request, outLedger ) == LedgerResult::Ok )
-                    continue;
+                    return nullopt;
                 if ( committed == ServiceStoreResult::Unavailable )
                     return TradeServiceResult::fail( OnlineError::kUnavailable );
-                continue; // 상대가 그사이 바꿨으므로 다시 읽고 다시 시도한다
+                return nullopt; // 상대가 그사이 바꿨으므로 다시 읽고 다시 시도한다
             }
             return TradeServiceResult::fail( OnlineError::kInvalidRequest );
-        }
-        return TradeServiceResult::fail( OnlineError::kUnavailable );
+        } );
     }
 
     TradeServiceResult TradeStoreLogic::closeIfIdle( uint64 tradeID, int64 nowMs, TradeSnapshot& outSnapshot )
     {
-        for ( int32 attempt = 0; attempt < LedgerConstant::kMaxRetryCount; ++attempt )
+        return ServiceCommitRunner::run<TradeServiceResult>( _connection, "Trade.CloseIfIdle", [&]( ServiceCommitAttempt& attempt ) -> optional<TradeServiceResult>
         {
             SessionRead              session;
             const TradeServiceResult read = readSession( tradeID, session );
@@ -336,21 +335,18 @@ namespace sw
             outSnapshot = session._snapshot;
             if ( isIdleExpired( session._snapshot, _settings, nowMs ) == false )
                 return TradeResult::WrongState;
-            TradeSnapshot     closed;
-            const CloseResult serviceResult = commitClose( session, TradeCloseReason::Timeout, nowMs, closed );
-            if ( serviceResult._bRetry )
-                continue;
-            if ( serviceResult._result != TradeResult::Ok )
-                return serviceResult._result;
+            TradeSnapshot                      closed;
+            const optional<TradeServiceResult> serviceResult = commitClose( attempt, session, TradeCloseReason::Timeout, nowMs, closed );
+            if ( serviceResult.has_value() == false || *serviceResult != TradeResult::Ok )
+                return serviceResult;
             outSnapshot = closed;
             return TradeResult::Ok;
-        }
-        return TradeServiceResult::fail( OnlineError::kUnavailable );
+        } );
     }
 
     TradeServiceResult TradeStoreLogic::closeForAccount( AccountID accountID, TradeCloseReason reason, int64 nowMs, TradeSnapshot& outSnapshot )
     {
-        for ( int32 attempt = 0; attempt < LedgerConstant::kMaxRetryCount; ++attempt )
+        return ServiceCommitRunner::run<TradeServiceResult>( _connection, "Trade.CloseForAccount", [&]( ServiceCommitAttempt& attempt ) -> optional<TradeServiceResult>
         {
             ServiceRecord            linkRaw;
             const ServiceStoreResult linkRead = _connection.readRecord( getActiveTable(), ServiceKeyUtil::makeHex64( accountID ), linkRaw );
@@ -358,23 +354,23 @@ namespace sw
                 return TradeResult::NotFound;
             if ( linkRead != ServiceStoreResult::Ok )
                 return TradeServiceResult::fail( OnlineError::kUnavailable );
+            uint64 linkedTradeID = 0;
+            if ( getActiveTable().decode( ServiceKeyUtil::makeHex64( accountID ), linkRaw, linkedTradeID ) == false )
+                return TradeServiceResult::fail( OnlineError::kUnavailable );
             SessionRead              session;
-            const TradeServiceResult read = readSession( ServiceKeyUtil::decodeVarID( linkRaw._bytes ), session );
+            const TradeServiceResult read = readSession( linkedTradeID, session );
             if ( read != TradeResult::Ok )
                 return read;
             outSnapshot = session._snapshot;
             if ( session._snapshot.isClosed() )
                 return TradeResult::WrongState;
-            TradeSnapshot     closed;
-            const CloseResult serviceResult = commitClose( session, reason, nowMs, closed );
-            if ( serviceResult._bRetry )
-                continue;
-            if ( serviceResult._result != TradeResult::Ok )
-                return serviceResult._result;
+            TradeSnapshot                      closed;
+            const optional<TradeServiceResult> serviceResult = commitClose( attempt, session, reason, nowMs, closed );
+            if ( serviceResult.has_value() == false || *serviceResult != TradeResult::Ok )
+                return serviceResult;
             outSnapshot = closed;
             return TradeResult::Ok;
-        }
-        return TradeServiceResult::fail( OnlineError::kUnavailable );
+        } );
     }
 
     TradeServiceResult TradeStoreLogic::recoverOwned( int64 nowMs, vector<TradeSnapshot>& outListClosed )
@@ -407,7 +403,7 @@ namespace sw
         uint64 tradeID = 0;
         if ( ServiceKeyUtil::parseHex64( string_view( owned._key ).substr( prefix.size() ), tradeID ) == false )
             return TradeResult::Ok;
-        for ( int32 attempt = 0; attempt < LedgerConstant::kMaxRetryCount; ++attempt )
+        return ServiceCommitRunner::run<TradeServiceResult>( _connection, "Trade.Recover", [&]( ServiceCommitAttempt& attempt ) -> optional<TradeServiceResult>
         {
             SessionRead              session;
             const TradeServiceResult read = readSession( tradeID, session );
@@ -415,21 +411,20 @@ namespace sw
             {
                 ServiceTransaction transaction;
                 transaction.erase( getOwnerTable(), owned._key );
-                (void)_connection.commit( transaction );
-                return TradeResult::Ok;
+                const ServiceStoreResult committed = attempt.commit( transaction );
+                if ( committed == ServiceStoreResult::Conflict )
+                    return nullopt;
+                return committed == ServiceStoreResult::Ok ? TradeServiceResult{ TradeResult::Ok } : TradeServiceResult::fail( OnlineError::kUnavailable );
             }
             if ( read != TradeResult::Ok )
                 return read;
-            TradeSnapshot     closed;
-            const CloseResult serviceResult = commitClose( session, TradeCloseReason::ServerRestart, nowMs, closed );
-            if ( serviceResult._bRetry )
-                continue;
-            if ( serviceResult._result != TradeResult::Ok )
-                return serviceResult._result;
+            TradeSnapshot                      closed;
+            const optional<TradeServiceResult> serviceResult = commitClose( attempt, session, TradeCloseReason::ServerRestart, nowMs, closed );
+            if ( serviceResult.has_value() == false || *serviceResult != TradeResult::Ok )
+                return serviceResult;
             outListClosed.push_back( closed );
             return TradeResult::Ok;
-        }
-        return TradeResult::Ok;
+        } );
     }
 
     TradeServiceResult TradeStoreLogic::readSession( uint64 tradeID, SessionRead& outSession )
@@ -440,23 +435,23 @@ namespace sw
             return TradeResult::NotFound;
         if ( read != ServiceStoreResult::Ok )
             return TradeServiceResult::fail( OnlineError::kUnavailable );
-        if ( TradeStoreLogicInternal::decodeSession( ServiceKeyUtil::makeHex64( tradeID ), raw._bytes, outSession._snapshot, outSession._ownerServerID ) == false )
+        if ( TradeStoreLogicInternal::decodeSession( raw, outSession._snapshot, outSession._ownerServerID ) == false )
             return TradeServiceResult::fail( OnlineError::kUnavailable ); // 손상은 읽기가 오류 로그로 남겼다
         outSession._version = raw._version;
         return TradeResult::Ok;
     }
 
-    TradeStoreLogic::CloseResult TradeStoreLogic::commitClose( const SessionRead& session, TradeCloseReason reason, int64 nowMs, TradeSnapshot& outClosed )
+    optional<TradeServiceResult> TradeStoreLogic::commitClose( ServiceCommitAttempt& attempt, const SessionRead& session, TradeCloseReason reason, int64 nowMs, TradeSnapshot& outClosed )
     {
         outClosed = session._snapshot;
         TradeStateMachine::close( outClosed, TradeState::Cancelled, reason, nowMs );
         ServiceTransaction transaction;
         if ( stageClose( session, outClosed, transaction ) == false )
-            return CloseResult{ TradeServiceResult::fail( OnlineError::kInvalidRequest ), false };
-        const ServiceStoreResult committed = _connection.commit( transaction );
+            return TradeServiceResult::fail( OnlineError::kInvalidRequest );
+        const ServiceStoreResult committed = attempt.commit( transaction );
         if ( committed == ServiceStoreResult::Conflict )
-            return CloseResult{ TradeResult::Ok, true };
-        return CloseResult{ committed == ServiceStoreResult::Ok ? TradeResult::Ok : TradeServiceResult::fail( OnlineError::kUnavailable ), false };
+            return nullopt;
+        return committed == ServiceStoreResult::Ok ? TradeServiceResult{ TradeResult::Ok } : TradeServiceResult::fail( OnlineError::kUnavailable );
     }
 
     TradeServiceResult TradeStoreLogic::stageSettlement( uint64 tradeID, const TradeCommand& command, int64 nowMs, TradeSnapshot& inoutNext, ServiceTransaction& inoutTransaction,

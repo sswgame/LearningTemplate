@@ -129,7 +129,7 @@ namespace sw
         return readText( text, path, ResourceContext::forType( *StaticType() ).withAsset( assetID ) );
     }
 
-    bool SequenceAsset::loadFromDiskFile( const AbsolutePath& diskPath )
+    bool SequenceAsset::loadFromDiskFile( const DiskPath& diskPath )
     {
         *this = SequenceAsset{};
         if ( diskPath.empty() )

@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Editor/Common/Commands/Scene/EditorSiblingOrder.h"
 #include "Editor/Common/Commands/Scene/SiblingOrderKey.h"

@@ -6,7 +6,6 @@
 #include "Core/Math/MatrixMath.h"
 
 #include "Engine/Animation/Sprite/SpriteClipAsset.h"
-#include "Engine/Animation/Sprite/SpriteClipCache.h"
 #include "Engine/Animation/Sprite/SpriteLibrary.h"
 #include "Engine/Graphics/2D/Render2DSettings.h"
 #include "Engine/Graphics/2D/SlicedSpriteDef.h"

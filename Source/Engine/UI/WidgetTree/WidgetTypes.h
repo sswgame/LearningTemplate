@@ -45,7 +45,7 @@ namespace sw
 
     /**
      * @brief 포인터가 위젯 위에 있을 때의 커서 모양입니다(UMG 의 Cursor, Godot 의 mouse_default_cursor_shape). `Inherit` 는 부모를 따르고, 루트까지 그러면 화살표입니다.
-     * @details OS 커서로 옮기는 것은 `UITooltipService::toCursorShape`(→ `CursorShape`)다. `Inherit` 를 뺀 값은 `CursorShape` 와 같은 순서로 둔다.
+     * @details OS 커서로 옮기는 것은 `UITooltipSubsystem::toCursorShape`(→ `CursorShape`)다. `Inherit` 를 뺀 값은 `CursorShape` 와 같은 순서로 둔다.
      */
     ENUM()
     enum class UICursorShape : uint8

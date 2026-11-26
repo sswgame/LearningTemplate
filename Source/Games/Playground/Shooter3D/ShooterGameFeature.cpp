@@ -9,13 +9,13 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Log/Logger.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 
 #include "GameFramework/Runtime/Character/Combat/Projectile/ProjectileDef.h"
 #include "GameFramework/Runtime/Character/Combat/Weapon/Weapon.h"
 #include "GameFramework/Runtime/Foundation/GameFeature/GameFeatureRegistry.h"
 #include "GameFramework/Runtime/Foundation/GameFeature/GameFeatureScope.h"
-#include "GameFramework/Runtime/Foundation/Service/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
 
 #include "Games/Playground/Shooter3D/ShooterAutoAimControllerComponent.h"
