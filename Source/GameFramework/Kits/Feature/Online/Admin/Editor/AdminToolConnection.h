@@ -17,12 +17,15 @@
 #include "Core/Network/Transport/IStreamTransport.h"
 #include "Core/Time/TimePoint.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/Kits/Feature/Online/Admin/Runtime/AdminClient.h"
 #include "GameFramework/Runtime/Online/Service/OnlineServiceClient.h"
 
 namespace sw::editor
 {
     /** @brief GM 연결의 상태입니다. */
+    ENUM()
     enum class AdminToolConnectionState : uint8
     {
         Disconnected = 0,
