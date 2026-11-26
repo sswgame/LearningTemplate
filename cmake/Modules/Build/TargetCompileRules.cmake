@@ -153,7 +153,8 @@ function(sw_use_shared_pch TARGET_NAME OWNER_NAME)
 		target_compile_options(${TARGET_NAME} BEFORE PRIVATE "/Yu${pch_header}" "/Fp${pch_dir}/cmake_pch.cxx.pch" "/FI${pch_header}")
 	elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 		set(pch_output "${pch_dir}/cmake_pch.hxx.pch")
-		target_compile_options(${TARGET_NAME} BEFORE PRIVATE "$<$<COMPILE_LANGUAGE:CXX>:-include-pch>" "$<$<COMPILE_LANGUAGE:CXX>:${pch_output}>")
+		# 옵션과 값을 한 항목(SHELL:)으로 둔다. 둘로 나누면 CMake 의 옵션 중복 제거가 값만 떼어 낼 수 있고, 리플렉션 파서가 받는 옵션 목록에서 값이 홀로 남는다.
+		target_compile_options(${TARGET_NAME} BEFORE PRIVATE "$<$<COMPILE_LANGUAGE:CXX>:SHELL:-include-pch ${pch_output}>")
 	else()
 		message(FATAL_ERROR "sw_use_shared_pch(${TARGET_NAME}): shared PCH needs clang (clang-cl or the GNU driver), got ${CMAKE_CXX_COMPILER_ID}")
 	endif()
@@ -200,7 +201,7 @@ function(sw_set_target_defs_header TARGET_NAME)
 	if(MSVC)
 		target_compile_options(${TARGET_NAME} PRIVATE "/FI${header}")
 	else()
-		target_compile_options(${TARGET_NAME} PRIVATE -include "${header}")
+		target_compile_options(${TARGET_NAME} PRIVATE "-include${header}") # 붙여 쓴 꼴 — clang-cl 의 /FI 처럼 한 항목이다
 	endif()
 endfunction()
 

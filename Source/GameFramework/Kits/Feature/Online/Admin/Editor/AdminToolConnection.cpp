@@ -5,6 +5,8 @@
 #include "Core/Network/NetTypes.h"
 #include "Core/Network/Transport/IStreamTransport.h"
 
+#include "Engine/Reflection/EnumName.h"
+
 #include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 #include "GameFramework/Runtime/Online/Security/NetSecurity.h"
 
@@ -110,25 +112,8 @@ namespace sw::editor
 
     const utf8* AdminToolConnection::getStateText() const
     {
-        switch ( _state )
-        {
-            case AdminToolConnectionState::Disconnected:
-            {
-                return "Disconnected";
-            }
-            case AdminToolConnectionState::Connecting:
-            {
-                return "Connecting";
-            }
-            case AdminToolConnectionState::Ready:
-            {
-                return _onReady.isBound() ? "Ready (login hook ran)" : "Ready (no login hook - GM commands are refused as not logged in)";
-            }
-            case AdminToolConnectionState::Failed:
-            {
-                return "Failed";
-            }
-        }
-        return "Unknown";
+        if ( _state == AdminToolConnectionState::Ready )
+            return _onReady.isBound() ? "Ready (login hook ran)" : "Ready (no login hook - GM commands are refused as not logged in)";
+        return getEnumName( _state );
     }
 } // namespace sw::editor
