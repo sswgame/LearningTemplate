@@ -929,6 +929,16 @@ namespace sw
         return nullptr;
     }
 
+    bool Material::isKeywordEnabled( string_view keyword ) const
+    {
+        return MaterialPermutation::hasDefineName( getCachedShaderDefines(), keyword );
+    }
+
+    bool Material::isDrawnByPass( const MaterialPassFilter& filter ) const
+    {
+        return filter.shouldDraw( &getCachedShaderDefines() );
+    }
+
     const vector<string>& Material::getCachedShaderDefines() const
     {
         if ( _bDefinesDirty != SW_FALSE )

@@ -287,6 +287,38 @@ SW_TEST_CASE( MaterialInstanceTest, KeywordsMustBeDeclaredByParent )
     SW_EXPECT_FALSE( MaterialInstanceTestUtil::hasDefine( instance->getCachedShaderDefines(), "MATERIAL_DETAIL" ) );
 }
 
+/**
+ * @brief [MaterialInstanceTest] 질의 API 는 변형의 define 으로 답한다 — 켜진 키워드(유니티 `IsKeywordEnabled`)와 패스가 이 머티리얼을 그리는지(`FindPass` 자리, 드로우 · 쿠커와 같은 판정)
+ * @details 변이: 인스턴스 질의가 부모 define 을 보면 런타임으로 켠 `MATERIAL_DETAIL` 이 꺼짐으로 나와 둘째 묶음이 진다. 거르기 판정이 제외 define 을 보지 않으면 셋째 묶음이 진다.
+ *          이름 규칙이 앞부분 일치면 마지막 단언이 진다.
+ */
+SW_TEST_CASE( MaterialInstanceTest, QueriesAnswerFromTheVariantDefines )
+{
+    shared_ptr<Material> material = Material::create();
+    SW_REQUIRE_TRUE( material->loadFromXML( MaterialInstanceSwitchTestUtil::kSwitchMaterial ) );
+    SW_EXPECT_FALSE( material->isKeywordEnabled( "MATERIAL_DETAIL" ) );
+    SW_EXPECT_FALSE( material->isKeywordEnabled( "Detail" ) ); // 스위치 이름은 키워드가 아니다
+
+    shared_ptr<MaterialInstance> instance = MaterialInstance::create( material.get() );
+    SW_REQUIRE_TRUE( instance->enableKeyword( hashed_string( "Detail" ) ) );
+    SW_EXPECT_TRUE( instance->isKeywordEnabled( "MATERIAL_DETAIL" ) );
+    SW_EXPECT_FALSE( material->isKeywordEnabled( "MATERIAL_DETAIL" ) ); // 부모는 그대로다
+
+    MaterialPassFilter required;
+    required._requiredDefine = "MATERIAL_DETAIL";
+    MaterialPassFilter excluded;
+    excluded._excludedDefine = "MATERIAL_DETAIL";
+    SW_EXPECT_TRUE( instance->isDrawnByPass( required ) );
+    SW_EXPECT_FALSE( material->isDrawnByPass( required ) );
+    SW_EXPECT_FALSE( instance->isDrawnByPass( excluded ) );
+    SW_EXPECT_TRUE( material->isDrawnByPass( excluded ) );
+    SW_EXPECT_TRUE( material->isDrawnByPass( MaterialPassFilter{} ) );
+
+    const vector<string> listDefine{ "MATERIAL_TEXTURE_COUNT=3", "MATERIAL_X" };
+    SW_EXPECT_TRUE( MaterialPermutation::hasDefineName( listDefine, kMaterialTextureCountDefine ) ); // NAME=VALUE 는 이름으로 본다
+    SW_EXPECT_FALSE( MaterialPermutation::hasDefineName( listDefine, "MATERIAL_TEXTURE" ) );         // 앞부분만 같은 이름은 다른 키워드다
+}
+
 namespace
 {
     struct MaterialInstanceKeywordValueTestUtil
