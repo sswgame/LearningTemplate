@@ -206,7 +206,7 @@ namespace sw
         fillOwnStyle( styleStates, own );
         if ( own.has( field ) == false )
             return false;
-        UIStyleFieldTable::readComponents( own.getValue(), field, outArr );
+        own.getValue().readComponents( field, outArr );
         return true;
     }
 

@@ -32,8 +32,6 @@ namespace sw
         static constexpr uint32 kNameCapacity = 64;
 
     private:
-        /** @brief 고르지 않았을 때의 게임입니다 — Dev 는 빌드의 활성 게임(`Bin/Modules/ActiveGame.txt`), Shipping 은 베이크한 게임입니다. 없으면 빈 문자열입니다. */
-        static string readDefaultName();
         /** @brief 고른 이름을 적어 둡니다(`select` 가 기동 스레드에서 한 번). */
         static void storeName( string_view name );
     };

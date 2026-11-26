@@ -4,6 +4,7 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Concurrency/atomic.h"
+#include "Core/Container/unordered_set.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Log/Logger.h"
@@ -15,144 +16,15 @@
 #include "Programs/ReflectionParser/AstVisitor.h"
 #include "Programs/ReflectionParser/CodeEmit.h"
 #include "Programs/ReflectionParser/CodeGenerator.h"
+#include "Programs/ReflectionParser/ParsedHeaderDump.h"
 #include "Programs/ReflectionParser/ParserConfig.h"
+#include "Programs/ReflectionParser/ParserContext.h"
 #include "Programs/ReflectionParser/ParserDefines.h"
 #include "Programs/ReflectionParser/ParserOptions.h"
 #include "Programs/ReflectionParser/ParserSession.h"
 #include "Programs/ReflectionParser/ParserUtil.h"
 
 #include <clang-c/Index.h>
-
-namespace sw
-{
-    /** @brief 디스크 대신 넘길 파일 내용입니다. 이미 읽은 헤더, 또는 디스크에 없는 묶음 TU 원본에 씁니다. */
-    struct ParserUnsavedFile
-    {
-        const string* _pPath;
-        const string* _pContent;
-    };
-
-    /** @class ParserContext @brief libclang CXIndex / CXTranslationUnit 수명을 쥡니다. clang 인자는 `ParserConfig` 가 만듭니다. */
-    class ParserContext
-    {
-    public:
-        explicit ParserContext( const ParserConfig& config );
-        ~ParserContext();
-
-        ParserContext( const ParserContext& )            = delete;
-        ParserContext& operator=( const ParserContext& ) = delete;
-
-        /**
-         * @brief 파일 하나를 파싱해 AST(CXTranslationUnit)를 만듭니다.
-         * @param filePath 파싱할 주 파일 경로
-         * @param listIncludePath 추가 include 경로 목록
-         * @param listUnsaved 디스크 대신 넘길 내용(키워드 스캔과 이중 I/O 방지 · 디스크에 없는 주 파일)
-         * @param bReportErrors 거짓이면 clang 오류를 오류 로그 대신 추적 로그로 남깁니다(실패하면 다시 해 볼 시도용)
-         * @return 파싱 성공 여부(clang 오류가 하나라도 있으면 실패)
-         */
-        [[nodiscard]] bool parse( const string& filePath, const vector<string>& listIncludePath, const vector<ParserUnsavedFile>& listUnsaved,
-                                  bool bReportErrors = true );
-
-        /** @brief 생성된 clang TranslationUnit을 반환합니다. */
-        CXTranslationUnit getTranslationUnit() const { return _translationUnit; }
-
-    private:
-        const ParserConfig* _pConfig;
-        CXIndex             _index;
-        CXTranslationUnit   _translationUnit;
-    };
-
-    ParserContext::ParserContext( const ParserConfig& config )
-        : _pConfig{ &config }
-        , _index{ nullptr }
-        , _translationUnit{ nullptr }
-    {
-        _index = clang_createIndex( 0, 0 );
-    }
-
-    ParserContext::~ParserContext()
-    {
-        if ( _translationUnit != nullptr )
-        {
-            clang_disposeTranslationUnit( _translationUnit );
-            _translationUnit = nullptr;
-        }
-        if ( _index != nullptr )
-        {
-            clang_disposeIndex( _index );
-            _index = nullptr;
-        }
-    }
-
-    bool ParserContext::parse( const string& filePath, const vector<string>& listIncludePath, const vector<ParserUnsavedFile>& listUnsaved,
-                               const bool bReportErrors )
-    {
-        if ( _index == nullptr )
-        {
-            SW_LOG_ERROR_ID( "ParserContext.FailedCreateCXIndex", "Failed to create CXIndex." );
-            return false;
-        }
-
-        if ( _translationUnit != nullptr )
-        {
-            clang_disposeTranslationUnit( _translationUnit );
-            _translationUnit = nullptr;
-        }
-
-        const vector<string> listArgString = _pConfig->makeArgs( listIncludePath );
-        vector<const utf8*>  listArgPtr;
-        listArgPtr.reserve( listArgString.size() );
-        for ( const string& arg : listArgString )
-        {
-            listArgPtr.push_back( arg.c_str() );
-        }
-
-        vector<CXUnsavedFile> listCxUnsaved;
-        listCxUnsaved.reserve( listUnsaved.size() );
-        for ( const ParserUnsavedFile& unsaved : listUnsaved )
-        {
-            CXUnsavedFile cxUnsaved{};
-            cxUnsaved.Filename = unsaved._pPath->c_str();
-            cxUnsaved.Contents = unsaved._pContent->c_str();
-            cxUnsaved.Length   = static_cast<uint32>( unsaved._pContent->size() );
-            listCxUnsaved.push_back( cxUnsaved );
-        }
-
-        // DetailedPreprocessingRecord 는 annotate 매크로 경로에 필요 없고 TU 비용만 크다
-        constexpr uint32 kParseFlags = CXTranslationUnit_SkipFunctionBodies | CXTranslationUnit_Incomplete;
-        _translationUnit             = clang_parseTranslationUnit(
-            _index, filePath.c_str(), listArgPtr.data(), static_cast<int32>( listArgPtr.size() ),
-            listCxUnsaved.empty() ? nullptr : listCxUnsaved.data(), static_cast<uint32>( listCxUnsaved.size() ), kParseFlags );
-
-        if ( _translationUnit == nullptr )
-        {
-            SW_LOG_ERROR_ID( "ParserContext.ClangParseTranslationUnitFailed", "clang_parseTranslationUnit failed for: %#", filePath );
-            return false;
-        }
-
-        bool         bHasError       = false;
-        const uint32 diagnosticCount = clang_getNumDiagnostics( _translationUnit );
-        for ( uint32 diagnosticIndex = 0; diagnosticIndex < diagnosticCount; ++diagnosticIndex )
-        {
-            const CXDiagnostic diagnostic = clang_getDiagnostic( _translationUnit, diagnosticIndex );
-            if ( clang_getDiagnosticSeverity( diagnostic ) >= CXDiagnostic_Error )
-            {
-                const CXString message = clang_formatDiagnostic( diagnostic, clang_defaultDiagnosticDisplayOptions() );
-                if ( bReportErrors )
-                    SW_LOG_ERROR_ID( "ParserContext.ClangError", "%#", clang_getCString( message ) );
-                else
-                    SW_LOG_TRACE_ID( "ParserContext.ClangNote", "%#", clang_getCString( message ) );
-                clang_disposeString( message );
-                bHasError = true;
-            }
-            clang_disposeDiagnostic( diagnostic );
-        }
-
-        if ( bHasError && bReportErrors )
-            SW_LOG_ERROR_ID( "ParserContext.ParsingFailedErrorsCheck", "Parsing failed with errors. Check include paths with --include." );
-        return bHasError == false;
-    }
-} // namespace sw
 
 namespace sw
 {
@@ -203,149 +75,6 @@ namespace sw
                     bUnique = false;
                 }
                 return bUnique;
-            }
-
-            /** @brief `타입 이름 = 기본값` 꼴로 인자 목록을 씁니다. */
-            static void appendParameterList( StringBuilder<constant::buffer::kMax8192>& out, const vector<ParsedParameterInfo>& listParameter )
-            {
-                for ( size_t paramIndex = 0; paramIndex < listParameter.size(); ++paramIndex )
-                {
-                    const ParsedParameterInfo& parameter = listParameter[paramIndex];
-                    out.appendFormat( "%#%#", paramIndex == 0 ? "" : ", ", parameter._typeName );
-                    if ( parameter._name.empty() == false )
-                        out.appendFormat( " %#", parameter._name );
-                    if ( parameter._defaultValue.empty() == false )
-                        out.appendFormat( " = %#", parameter._defaultValue );
-                }
-            }
-
-            /**
-             * @brief `--dump` — 헤더 하나에서 뽑은 것을 사람이 읽는 꼴로 표준 출력에 한 번에 씁니다.
-             * @details "왜 이 프로퍼티가 인스펙터에 없나 · 왜 이 컴포넌트를 씬이 못 찾나" 를 묻는 자리다 — 파서가 무엇을 봤는지 보여 준다.
-             *          타입(부모 · 팩토리 · 추상), 프로퍼티(타입 · 값 자리 · 컨테이너 · 범위 ·
-             *          플래그), 함수, enum 값까지 적는다. 헤더 여럿을 동시에 쓸 수 있어 한 덩어리로 내보낸다.
-             */
-            static void printParsedHeader( const string& inputFile, const ParsedHeader& parsed, const FixedCodecGenerator& fixedCodec )
-            {
-                StringBuilder<constant::buffer::kMax8192> out;
-                out.appendFormat( "== %#\n", inputFile );
-                for ( size_t typeIndex = 0; typeIndex < parsed._listType.size(); ++typeIndex )
-                {
-                    const ParsedTypeInfo& type = parsed._listType[typeIndex];
-                    out.appendFormat( "REFLECT %#", type._fullyQualifiedName );
-                    if ( type._parentFQN.empty() == false )
-                        out.appendFormat( " : %#", type._parentFQN );
-                    if ( type._bComponentFactory == SW_TRUE )
-                        out.append( "  [component factory]" );
-                    if ( type._bAbstract == SW_TRUE )
-                        out.append( "  [abstract]" );
-                    if ( type._bStatic == SW_TRUE )
-                        out.append( "  [static]" );
-                    if ( type._validate.empty() == false )
-                        out.appendFormat( "  Validate=%#", type._validate );
-                    out.append( "\n" );
-                    for ( const ParsedPropertyInfo& prop : type._listProperty )
-                    {
-                        out.appendFormat( "  PROPERTY %# : %#", prop._name, prop._typeName );
-                        if ( prop._bIsBitField == SW_TRUE )
-                            out.append( "  [bit field - located at runtime]" );
-                        else if ( prop._bIsAccessor == SW_TRUE )
-                            out.appendFormat( "  [accessor %#()]", prop._memberName );
-                        if ( prop._bIsContainer == SW_TRUE )
-                        {
-                            out.appendFormat( "  [container %#", prop._containerType );
-                            if ( prop._keyTypeName.empty() == false )
-                                out.appendFormat( " key=%#", prop._keyTypeName );
-                            if ( prop._elementTypeName.empty() == false )
-                                out.appendFormat( " element=%#", prop._elementTypeName );
-                            out.append( "]" );
-                        }
-                        if ( prop._bHasMinRange == SW_TRUE )
-                            out.appendFormat( "  Min=%#", prop._minRange );
-                        if ( prop._bHasMaxRange == SW_TRUE )
-                            out.appendFormat( "  Max=%#", prop._maxRange );
-                        if ( prop._bHasMaxCount == SW_TRUE )
-                            out.appendFormat( "  MaxCount=%#", prop._maxCount );
-                        if ( prop._defaultValue.empty() == false )
-                            out.appendFormat( "  Default=\"%#\"", prop._defaultValue );
-                        if ( prop._bAssetPath == SW_TRUE )
-                            out.appendFormat( "  [asset %#]", prop._assetType.empty() ? "any" : prop._assetType.c_str() );
-                        const pair<uint8, const utf8*> arrFlag[] = {
-                            {       prop._bReadOnly,        "ReadOnly"},
-                            {      prop._bTransient,       "Transient"},
-                            {   prop._bXMLAttribute,    "XMLAttribute"},
-                            {    prop._bSkipIfEmpty,     "SkipIfEmpty"},
-                            {       prop._bRequired,        "Required"},
-                            {     prop._bInheritKey,      "InheritKey"},
-                            {prop._bHideInInspector, "HideInInspector"},
-                            {     prop._bReplicated,      "Replicated"},
-                            {       prop._bSaveGame,        "SaveGame"},
-                            {   prop._bRuntimeState,    "RuntimeState"},
-                            {         prop._bInterp,          "Interp"},
-                            {       prop._bColorHDR,        "ColorHDR"},
-                            {      prop._bMultiline,       "Multiline"},
-                        };
-                        for ( const auto& [bSet, pFlagName] : arrFlag )
-                        {
-                            if ( bSet == SW_TRUE )
-                                out.appendFormat( "  [%#]", pFlagName );
-                        }
-                        if ( prop._bHasUIMinRange == SW_TRUE )
-                            out.appendFormat( "  UIMin=%#", prop._uiMinRange );
-                        if ( prop._bHasUIMaxRange == SW_TRUE )
-                            out.appendFormat( "  UIMax=%#", prop._uiMaxRange );
-                        if ( prop._units.empty() == false )
-                            out.appendFormat( "  Units=%#", prop._units );
-                        if ( prop._editCondition.empty() == false )
-                            out.appendFormat( "  EditCondition=\"%#\"%#", prop._editCondition, prop._bEditConditionHides == SW_TRUE ? "(hides)" : "" );
-                        if ( prop._fileFilter.empty() == false )
-                            out.appendFormat( "  FileFilter=\"%#\"", prop._fileFilter );
-                        if ( prop._validate.empty() == false )
-                            out.appendFormat( "  Validate=%#", prop._validate );
-                        if ( prop._repNotify.empty() == false )
-                            out.appendFormat( "  RepNotify=%#%#", prop._repNotify, prop._bRepNotifyTakesOldValue == SW_TRUE ? "(old)" : "()" );
-                        for ( const string& alias : prop._listAlias )
-                        {
-                            out.appendFormat( "  alias=%#", alias );
-                        }
-                        out.append( "\n" );
-                    }
-                    for ( const ParsedFunctionInfo& method : type._listMethod )
-                    {
-                        out.appendFormat( "  FUNCTION %#(", method._name );
-                        appendParameterList( out, method._listParameter );
-                        out.appendFormat( ") -> %#", method._returnTypeName.empty() ? "void" : method._returnTypeName.c_str() );
-                        if ( method._bStatic == SW_TRUE )
-                            out.append( "  [static]" );
-                        if ( method._bCallInEditor == SW_TRUE )
-                            out.append( "  [CallInEditor]" );
-                        if ( method._bExec == SW_TRUE )
-                            out.append( "  [Exec]" );
-                        if ( method._editorPreview.empty() == false )
-                            out.appendFormat( "  [EditorPreview=%#]", method._editorPreview );
-                        if ( method._bConstructor == SW_TRUE )
-                            out.append( "  [constructor]" );
-                        out.append( "\n" );
-                    }
-                    for ( const ParsedEventInfo& event : type._listEvent )
-                    {
-                        out.appendFormat( "  EVENT %#(", event._annotation._name );
-                        appendParameterList( out, event._listParameter );
-                        out.append( ")\n" );
-                    }
-                    out.appendFormat( "%#\n", fixedCodec.makeDumpLine( typeIndex ) );
-                }
-                for ( const ParsedEnumInfo& enumInfo : parsed._listEnum )
-                {
-                    out.appendFormat( "ENUM %# : %#%#\n", enumInfo._fullyQualifiedName, enumInfo._underlyingType,
-                                      enumInfo._bIsBitFlag == SW_TRUE ? "  [Flags]" : "" );
-                    for ( const ParsedEnumeratorInfo& enumerator : enumInfo._listEnumerator )
-                    {
-                        out.appendFormat( "  %# = %#\n", enumerator._name, enumerator._value );
-                    }
-                }
-                std::fwrite( out.c_str(), 1, out.size(), stdout );
-                std::fflush( stdout );
             }
 
             /** @brief `clang_getInclusions` 가 넘기는 것을 모으는 자리입니다. */
@@ -492,8 +221,11 @@ namespace sw
         }
     }
 
-    int32 ReflectionPipeline::run()
+    int32 ReflectionPipeline::run( const float32 setupSeconds )
     {
+        Stopwatch runTimer;
+        Stopwatch phaseTimer;
+        addPhaseTime( ParsePhase::Setup, setupSeconds );
         int32                   errorCount = 0;
         [[maybe_unused]] uint32 upToDate   = 0;
         [[maybe_unused]] uint32 noReflect  = 0;
@@ -501,26 +233,31 @@ namespace sw
         // 이번 실행의 시작을 먼저 적는다 — 이 뒤에 바뀐 의존은 0 으로 적혀 다음 실행이 다시 본다(`GeneratedFileUtil::markRunStart`).
         _runStartTime = GeneratedFileUtil::markRunStart( _pOptions->_outputDir );
 
-        vector<PendingInput> listPending;       // 헤더 입력(한 TU 로 묶는다)
-        vector<PendingInput> listPendingSource; // .cpp 입력(하나씩 파싱한다)
-        vector<AbsolutePath> listVisitedInput;
+        // 기록은 입력 수만큼 먼저 잡는다. 파싱 대기 입력이 기록을 가리키므로 자라며 옮겨지면 안 된다.
+        vector<InputRecord> listInput;
+        listInput.reserve( _pOptions->_listInputFile.size() );
+        vector<PendingInput>  listPending;       // 헤더 입력(한 TU 로 묶는다)
+        vector<PendingInput>  listPendingSource; // .cpp 입력(하나씩 파싱한다)
+        unordered_set<string> setVisitedInput;
         for ( const AbsolutePath& inputFile : _pOptions->_listInputFile )
         {
             // 같은 헤더가 두 번 오면 한 번만 처리한다. 묶음 TU 에서는 둘째 대상이 선언을 하나도 못 받아 빈 산출물로 첫째를 덮는다.
-            if ( std::find( listVisitedInput.begin(), listVisitedInput.end(), inputFile ) != listVisitedInput.end() )
+            if ( setVisitedInput.insert( inputFile.str() ).second == false )
                 continue;
-            listVisitedInput.push_back( inputFile );
 
-            GeneratedPaths paths = GeneratedFileUtil::makePaths( _pOptions->_outputDir, inputFile );
+            listInput.push_back( InputRecord{ &inputFile, GeneratedPaths::make( _pOptions->_outputDir, inputFile ), GeneratedStamp{}, SW_FALSE, 0 } );
+            InputRecord&          record = listInput.back();
+            const GeneratedPaths& paths  = record._paths;
+            record._bHasStamp            = GeneratedStamp::read( paths._stampPath, record._stamp ) ? SW_TRUE : SW_FALSE;
             // `--dump` 는 무엇을 뽑았는지 보려는 실행이라 최신이어도 다시 파싱한다.
-            if ( _pOptions->_bDump == false && _incrementalCheck.isUpToDate( inputFile, paths ) )
+            if ( _pOptions->_bDump == false && _incrementalCheck.isUpToDate( inputFile, paths, record._bHasStamp == SW_TRUE ? &record._stamp : nullptr ) )
             {
                 SW_LOG_TRACE_ID( "ReflectionPipeline.UpDateSkippingAST", "Up-to-date, skipping AST parsing: %#", inputFile.str() );
                 ++upToDate;
                 continue;
             }
 
-            // 시각을 읽기 전에 측정한다. 읽은 뒤에 저장한 편집은 이 값과 달라 다음 실행이 다시 파싱한다(`writeStamp` 설명).
+            // 시각을 읽기 전에 측정한다. 읽은 뒤에 저장한 편집은 이 값과 달라 다음 실행이 다시 파싱한다(`GeneratedStamp::write` 설명).
             const uint64 inputWriteTime = GeneratedFileUtil::getWriteTime( inputFile );
             string       content;
             if ( FileUtil::readTextFile( inputFile, content ) == false )
@@ -535,7 +272,7 @@ namespace sw
             {
                 SW_LOG_TRACE_ID( "ReflectionPipeline.NoReflectionAnnotationsFound", "No reflection annotations found, emitting empty output: %#", inputFile.str() );
                 ++noReflect;
-                if ( writeOutputs( inputFile, paths, ParsedHeader{}, inputWriteTime, {} ) == false )
+                if ( writeOutputs( record, ParsedHeader{}, inputWriteTime, {} ) == false )
                     ++errorCount;
                 continue;
             }
@@ -550,27 +287,30 @@ namespace sw
             }
 
             vector<PendingInput>& listTarget = paths.isInline() ? listPendingSource : listPending;
-            listTarget.push_back( PendingInput{ &inputFile, std::move( content ), std::move( paths ), inputWriteTime } );
+            listTarget.push_back( PendingInput{ &record, std::move( content ), inputWriteTime } );
         }
 
+        addPhaseTime( ParsePhase::Check, static_cast<float32>( phaseTimer.lapSeconds() ) );
         SW_LOG_INFO_ID( "ReflectionPipeline.ParsingInputUpDate", "Parsing %# of %# input(s) (%# up to date, %# without annotations).", listPending.size() + listPendingSource.size(),
                         _pOptions->_listInputFile.size(), upToDate, noReflect );
         errorCount += parsePending( listPending );
         // .cpp 는 한 TU 로 묶지 않는다. 내부 연결 이름(익명 이름공간 · static)과 using 지시문이 .cpp 끼리 부딪힌다(헤더만 읽는 UHT 는 없는 문제다).
         errorCount += parseEachInParallel( listPendingSource );
         logEmitBytes();
-        logPhaseTimes( listPending.size() + listPendingSource.size() );
+        static_cast<void>( phaseTimer.lapSeconds() ); // 파싱 · 방문 · 쓰기는 입력마다 더했다
 
-        if ( writeFlagOpsUmbrella() == false )
+        if ( writeFlagOpsUmbrella( listInput ) == false )
             ++errorCount;
-        if ( writeReflectedTypesList() == false )
+        if ( writeReflectedTypesList( listInput ) == false )
             ++errorCount;
-        if ( writeAssetFieldList() == false )
+        if ( writeAssetFieldList( listInput ) == false )
             ++errorCount;
-        if ( writeFixedSchemaList() == false )
+        if ( writeFixedSchemaList( listInput ) == false )
             ++errorCount;
-        if ( writeDepfile() == false )
+        if ( writeDepfile( listInput ) == false )
             ++errorCount;
+        addPhaseTime( ParsePhase::Lists, static_cast<float32>( phaseTimer.lapSeconds() ) );
+        logPhaseTimes( listPending.size() + listPendingSource.size(), static_cast<float64>( setupSeconds ) + runTimer.getElapsedSeconds() );
         return errorCount;
     }
 
@@ -609,9 +349,10 @@ namespace sw
         StringBuilder<constant::buffer::kMax8192> batchSourceText;
         for ( const PendingInput& pending : listPending )
         {
-            batchSourceText.appendFormat( "#include \"%#\"\n", pending._pInputFile->str() );
-            listTargetFile.push_back( pending._pInputFile->str() );
-            listUnsaved.push_back( ParserUnsavedFile{ &pending._pInputFile->str(), &pending._content } );
+            const AbsolutePath& inputFile = *pending._pRecord->_pInputFile;
+            batchSourceText.appendFormat( "#include \"%#\"\n", inputFile.str() );
+            listTargetFile.push_back( inputFile.str() );
+            listUnsaved.push_back( ParserUnsavedFile{ &inputFile.str(), &pending._content } );
         }
         batchSource = string( batchSourceText.view() );
 
@@ -633,14 +374,14 @@ namespace sw
             ReflectionPipelineInternal::collectDependencies( context.getTranslationUnit(), _pOptions->_outputDir, _runStartTime );
         for ( size_t index = 0; index < listPending.size(); ++index )
         {
-            const AbsolutePath& inputFile = *listPending[index]._pInputFile;
+            const AbsolutePath& inputFile = *listPending[index]._pRecord->_pInputFile;
             if ( index >= listHeader.size() || listHeader[index]._bHasError == SW_TRUE )
             {
                 SW_LOG_ERROR_ID( "ReflectionPipeline.ASTAnalysisFailed", "AST analysis failed: %#", inputFile.str() );
                 ++outErrorCount;
                 continue;
             }
-            if ( writeOutputs( inputFile, listPending[index]._paths, listHeader[index], listPending[index]._inputWriteTime, listDependency ) == false )
+            if ( writeOutputs( *listPending[index]._pRecord, listHeader[index], listPending[index]._inputWriteTime, listDependency ) == false )
                 ++outErrorCount;
         }
         addPhaseTime( ParsePhase::Emit, static_cast<float32>( phaseTimer.lapSeconds() ) );
@@ -649,12 +390,13 @@ namespace sw
 
     bool ReflectionPipeline::parseAndGenerate( const PendingInput& pending ) const
     {
-        const AbsolutePath& inputFile = *pending._pInputFile;
+        const AbsolutePath&   inputFile = *pending._pRecord->_pInputFile;
+        const GeneratedPaths& paths     = pending._pRecord->_paths;
         SW_LOG_TRACE_ID( "ReflectionPipeline.Parsing", "── Parsing: %#", inputFile.str() );
 
         ParserContext                   context( _pSession->_config );
         const vector<ParserUnsavedFile> listUnsaved{
-            ParserUnsavedFile{ &pending._pInputFile->str(), &pending._content }
+            ParserUnsavedFile{ &inputFile.str(), &pending._content }
         };
         Stopwatch  phaseTimer;
         const bool bParsed = context.parse( inputFile.str(), _listIncludePath, listUnsaved );
@@ -678,14 +420,14 @@ namespace sw
         // 글자를 찾지 않고 번역 단위가 그 파일을 실제로 읽었는지 본다(주석 · `#if 0` 아래의 include 는 읽지 않은 것이다).
         const ParsedHeader& parsed         = visitor.getParsedHeaders().front();
         const bool          bHasReflection = parsed._listType.empty() == false || parsed._listEnum.empty() == false;
-        if ( pending._paths.isInline() && bHasReflection && ReflectionPipelineInternal::includesFile( context.getTranslationUnit(), pending._paths._cppPath ) == false )
+        if ( paths.isInline() && bHasReflection && ReflectionPipelineInternal::includesFile( context.getTranslationUnit(), paths._cppPath ) == false )
         {
             SW_LOG_ERROR_ID( "ReflectionPipeline.InlineNotIncluded", "%# has reflected types but does not include \"%#\" - add that include at the end of the file, at global scope (the registrars are generated there)",
-                             inputFile.str(), FileUtil::getFileNamePart( pending._paths._cppPath.str() ) );
+                             inputFile.str(), FileUtil::getFileNamePart( paths._cppPath.str() ) );
             return false;
         }
 
-        const bool bWritten = writeOutputs( inputFile, pending._paths, parsed, pending._inputWriteTime,
+        const bool bWritten = writeOutputs( *pending._pRecord, parsed, pending._inputWriteTime,
                                             ReflectionPipelineInternal::collectDependencies( context.getTranslationUnit(), _pOptions->_outputDir, _runStartTime ) );
         addPhaseTime( ParsePhase::Emit, static_cast<float32>( phaseTimer.lapSeconds() ) );
         return bWritten;
@@ -734,13 +476,14 @@ namespace sw
         return errorCount.load();
     }
 
-    bool ReflectionPipeline::writeOutputs( const AbsolutePath& inputFile, const GeneratedPaths& paths, const ParsedHeader& parsed, uint64 inputWriteTime,
-                                           const vector<StampDependency>& listDependency ) const
+    bool ReflectionPipeline::writeOutputs( InputRecord& record, const ParsedHeader& parsed, uint64 inputWriteTime, const vector<StampDependency>& listDependency ) const
     {
-        FixedCodecGenerator fixedCodec( parsed, inputFile.str() );
-        const bool          bFixedPlanned = fixedCodec.makePlan();
+        const AbsolutePath&   inputFile = *record._pInputFile;
+        const GeneratedPaths& paths     = record._paths;
+        FixedCodecGenerator   fixedCodec( parsed, inputFile.str() );
+        const bool            bFixedPlanned = fixedCodec.makePlan();
         if ( _pOptions->_bDump && ( parsed._listType.empty() == false || parsed._listEnum.empty() == false ) )
-            ReflectionPipelineInternal::printParsedHeader( inputFile.str(), parsed, fixedCodec );
+            printParsedHeaderDump( inputFile.str(), parsed, fixedCodec );
         if ( bFixedPlanned == false )
         {
             SW_LOG_ERROR_ID( "ReflectionPipeline.CodeGenerationFailedFixed", "Code generation failed (fixed layout annotations): %#", inputFile.str() );
@@ -756,17 +499,16 @@ namespace sw
         }
 
         // 다른 헤더가 이미 이 이름으로 썼는가. 생성 파일 이름은 소스의 파일 이름만 으로 짓는다
-        // (`ParserUtil::makeGeneratedPath`). 그래서 한 모듈 안에 같은 이름의 헤더가 둘 있으면 나중에 도는 쪽이 앞의 것을
+        // (`GeneratedPaths::make`). 그래서 한 모듈 안에 같은 이름의 헤더가 둘 있으면 나중에 도는 쪽이 앞의 것을
         // 덮고, 앞 헤더의 타입들은 아무 말 없이 등록되지 않는다. 증상은 한참 뒤 "씬이 그 컴포넌트를 못 찾는다" 로
         // 나타나서 원인을 여기서 찾기 어렵다. 머리에 적어 둔 소스 경로로 그 상황을 잡는다.
         //
         // 헤더를 옮긴 경우(옛 경로가 더는 없다)는 정상이므로 조용히 덮어쓴다. 그러지 않으면 파일을 옮길 때마다 빌드가 막힌다.
         // 앞 주인은 그 산출물의 스탬프가 안다(스탬프가 없으면 자리 표시자 - 주인이 없다).
-        GeneratedStamp existingStamp;
-        if ( GeneratedFileUtil::readStamp( paths._stampPath, existingStamp ) )
+        if ( record._bHasStamp == SW_TRUE )
         {
             // 대소문자만 바뀐 폴더 이름(`GUI` → `GUI`)은 같은 파일이다 — Windows 에서는 옛 철자로도 exists 가 참이다.
-            const AbsolutePath& recordedSource = existingStamp._sourcePath;
+            const AbsolutePath& recordedSource = record._stamp._sourcePath;
             const bool          bOtherOwner    = recordedSource.empty() == false && FileUtil::isSameDiskPath( recordedSource.str(), inputFile.str() ) == false &&
                                      FileUtil::exists( recordedSource );
             if ( bOtherOwner )
@@ -835,10 +577,17 @@ namespace sw
         const bool bWritten = GeneratedFileUtil::writeIfChanged( paths._cppPath, sourceText ) &&
                               ( paths.isInline() || ( GeneratedFileUtil::writeIfChanged( paths._headerPath, headerText ) &&
                                                       GeneratedFileUtil::writeIfChanged( paths._editorMetadataPath, generator.makeEditorMetadataText() ) ) ) &&
-                              GeneratedFileUtil::writeStamp( paths._stampPath, stamp );
+                              stamp.write( paths._stampPath );
         if ( bWritten == false )
+        {
             SW_LOG_ERROR_ID( "ReflectionPipeline.CodeGenerationFailed", "Code generation failed: %#", inputFile.str() );
-        return bWritten;
+            // 스탬프를 쓰기 전에 멈췄을 수 있다. 디스크에 남은 것을 다시 본다(목록은 디스크와 같은 사실을 쓴다).
+            record._bHasStamp = GeneratedStamp::read( paths._stampPath, record._stamp ) ? SW_TRUE : SW_FALSE;
+            return false;
+        }
+        record._stamp     = std::move( stamp );
+        record._bHasStamp = SW_TRUE;
+        return true;
     }
 
     /**
@@ -846,26 +595,25 @@ namespace sw
      *          보여야 하기 때문입니다. 그래서 원본 헤더는 절대 들이지 않습니다 — 들이면 그 헤더가 끌어오는 것이 모든 TU 에 들어가
      *          다른 헤더들의 include 누락을 통째로 가립니다. `.gen.h` 자신이 열거형을 전방 선언하므로 그것 하나만 모으면 됩니다.
      */
-    bool ReflectionPipeline::writeDepfile() const
+    bool ReflectionPipeline::writeDepfile( const vector<InputRecord>& listInput ) const
     {
         if ( _pOptions->_depfilePath.empty() )
             return true;
 
         vector<string> listTarget;
         vector<string> listDependency;
-        for ( const AbsolutePath& inputFile : _pOptions->_listInputFile )
+        for ( const InputRecord& record : listInput )
         {
-            const GeneratedPaths paths = GeneratedFileUtil::makePaths( _pOptions->_outputDir, inputFile );
+            const GeneratedPaths& paths = record._paths;
             listTarget.push_back( paths._cppPath.str() );
             if ( paths.isInline() == false )
             {
                 listTarget.push_back( paths._headerPath.str() );
                 listTarget.push_back( paths._editorMetadataPath.str() );
             }
-            GeneratedStamp stamp;
-            if ( GeneratedFileUtil::readStamp( paths._stampPath, stamp ) == false )
+            if ( record._bHasStamp == SW_FALSE )
                 continue; // 스탬프가 없으면(이번 실행에 실패한 입력) 더할 의존이 없다 - 실패는 이미 오류로 셌다
-            for ( const StampDependency& dependency : stamp._listDependency )
+            for ( const StampDependency& dependency : record._stamp._listDependency )
             {
                 listDependency.push_back( dependency._path.str() );
             }
@@ -899,20 +647,18 @@ namespace sw
      * @details 진단 파일입니다. 빌드는 읽지 않으므로 CMake 산출물 목록에 넣지 않습니다. 스키마 해시가 왜 바뀌었는지 빌드 두 개의 이 파일을
      *          비교해 봅니다. 판정 줄은 생성기가 스탬프에 적은 사실이다(이번 실행에 최신이라 다시 쓰지 않은 입력도 스탬프에 남아 있다).
      */
-    bool ReflectionPipeline::writeFixedSchemaList() const
+    bool ReflectionPipeline::writeFixedSchemaList( const vector<InputRecord>& listInput ) const
     {
         StringBuilder<constant::buffer::kMax8192> text;
-        for ( const AbsolutePath& inputFile : _pOptions->_listInputFile )
+        for ( const InputRecord& record : listInput )
         {
-            const AbsolutePath stampPath = GeneratedFileUtil::makePaths( _pOptions->_outputDir, inputFile )._stampPath;
-            GeneratedStamp     stamp;
             // 입력마다 스탬프가 있다(애노테이션이 없는 헤더도 빈 산출물과 스탬프를 쓴다). 없으면 목록이 조용히 빠지므로 실패로 알린다.
-            if ( GeneratedFileUtil::readStamp( stampPath, stamp ) == false )
+            if ( record._bHasStamp == SW_FALSE )
             {
-                SW_LOG_ERROR_ID( "ReflectionPipeline.FixedSchemaListNot", "Fixed schema list is not written - '%#' has no stamp (it failed above)", stampPath.str() );
+                SW_LOG_ERROR_ID( "ReflectionPipeline.FixedSchemaListNot", "Fixed schema list is not written - '%#' has no stamp (it failed above)", record._paths._stampPath.str() );
                 return false;
             }
-            for ( const string& schemaLine : stamp._listFixedSchema )
+            for ( const string& schemaLine : record._stamp._listFixedSchema )
             {
                 text.append( schemaLine );
                 text.append( '\n' );
@@ -921,20 +667,19 @@ namespace sw
         return GeneratedFileUtil::writeIfChanged( _pOptions->_outputDir.join( fixedlayout::kSchemaListFile ), text.view() );
     }
 
-    bool ReflectionPipeline::writeReflectedTypesList() const
+    bool ReflectionPipeline::writeReflectedTypesList( const vector<InputRecord>& listInput ) const
     {
         vector<string> listLine;
         bool           bComplete = true;
-        for ( const AbsolutePath& inputFile : _pOptions->_listInputFile )
+        for ( const InputRecord& record : listInput )
         {
-            GeneratedStamp stamp;
-            if ( GeneratedFileUtil::readStamp( GeneratedFileUtil::makePaths( _pOptions->_outputDir, inputFile )._stampPath, stamp ) == false )
+            if ( record._bHasStamp == SW_FALSE )
             {
                 // 목록에서 조용히 빠지면 콘텐츠 검사가 그 타입을 "엔진 것" 으로 본다 - 쓰지 않는다.
                 bComplete = false;
                 continue;
             }
-            for ( const string& typeFqn : stamp._listTypeFqn )
+            for ( const string& typeFqn : record._stamp._listTypeFqn )
             {
                 StringBuilder<constant::buffer::kMax256> textBuilder;
                 textBuilder.appendFormat( "%#\t%#", typeFqn, _pOptions->_moduleName );
@@ -958,19 +703,18 @@ namespace sw
         return GeneratedFileUtil::writeIfChanged( _pOptions->_outputDir.join( sw::config::kFileReflectedTypesList ), text.view() );
     }
 
-    bool ReflectionPipeline::writeAssetFieldList() const
+    bool ReflectionPipeline::writeAssetFieldList( const vector<InputRecord>& listInput ) const
     {
         vector<string> listLine;
-        for ( const AbsolutePath& inputFile : _pOptions->_listInputFile )
+        for ( const InputRecord& record : listInput )
         {
-            GeneratedStamp stamp;
             // 빠진 입력의 칸을 "경로가 아니다" 로 보면 끊어진 경로를 못 잡는다 - 쓰지 않는다.
-            if ( GeneratedFileUtil::readStamp( GeneratedFileUtil::makePaths( _pOptions->_outputDir, inputFile )._stampPath, stamp ) == false )
+            if ( record._bHasStamp == SW_FALSE )
             {
                 SW_LOG_ERROR_ID( "ReflectionPipeline.AssetFieldListNot", "%# is not written - some inputs have no stamp (they failed above)", sw::config::kFileAssetReferenceFieldsList );
                 return false;
             }
-            listLine.insert( listLine.end(), stamp._listAssetField.begin(), stamp._listAssetField.end() );
+            listLine.insert( listLine.end(), record._stamp._listAssetField.begin(), record._stamp._listAssetField.end() );
         }
         VectorUtil::sortUnique( listLine );
         StringBuilder<constant::buffer::kMax8192> text;
@@ -1008,19 +752,18 @@ namespace sw
         _arrPhaseMicroseconds[static_cast<size_t>( phase )].fetch_add( microseconds > 0.0 ? static_cast<uint64>( microseconds ) : 0u, std::memory_order_relaxed );
     }
 
-    void ReflectionPipeline::logPhaseTimes( const size_t parsedCount ) const
+    void ReflectionPipeline::logPhaseTimes( const size_t parsedCount, const float64 totalSeconds ) const
     {
-        if ( parsedCount == 0 )
-            return;
         const auto toMs = [this]( const ParsePhase phase )
         { return static_cast<float64>( _arrPhaseMicroseconds[static_cast<size_t>( phase )].load( std::memory_order_relaxed ) ) / static_cast<float64>( constant::time::kMicrosecondsPerMillisecond ); };
-        SW_LOG_INFO_ID( "ReflectionParser.PhaseTime", "Module %# (%# input(s)): parse %# ms, visit %# ms, emit %# ms", _pOptions->_moduleName, parsedCount, toMs( ParsePhase::Parse ),
-                        toMs( ParsePhase::Visit ), toMs( ParsePhase::Emit ) );
+        SW_LOG_INFO_ID( "ReflectionParser.PhaseTime", "Module %# (%# of %# input(s) parsed): total %# ms, setup %# ms, check %# ms, parse %# ms, visit %# ms, emit %# ms, lists %# ms",
+                        _pOptions->_moduleName, parsedCount, _pOptions->_listInputFile.size(), totalSeconds * static_cast<float64>( constant::time::kMillisecondsPerSecond ),
+                        toMs( ParsePhase::Setup ), toMs( ParsePhase::Check ), toMs( ParsePhase::Parse ), toMs( ParsePhase::Visit ), toMs( ParsePhase::Emit ),
+                        toMs( ParsePhase::Lists ) );
     }
 
-    bool ReflectionPipeline::writeFlagOpsUmbrella() const
+    bool ReflectionPipeline::writeFlagOpsUmbrella( const vector<InputRecord>& listInput ) const
     {
-
         CodeEmitBuffer buffer;
         CodeEmit       emit( buffer );
         emit.line( sw::config::kTextReflectionBanner );
@@ -1030,15 +773,13 @@ namespace sw
 
         // 입력마다 Flags 여부는 스탬프가 안다 - 생성 글에서 표식 글자를 찾지 않는다. 스탬프가 없는 입력은 이번 실행에 실패한 것이다(이미 오류로 셌다).
         bool bAnyFlags = false;
-        for ( const AbsolutePath& inputFile : _pOptions->_listInputFile )
+        for ( const InputRecord& record : listInput )
         {
-            const GeneratedPaths paths = GeneratedFileUtil::makePaths( _pOptions->_outputDir, inputFile );
-            GeneratedStamp       stamp;
-            if ( GeneratedFileUtil::readStamp( paths._stampPath, stamp ) == false || stamp._bHasBitFlagEnum == false )
+            if ( record._bHasStamp == SW_FALSE || record._stamp._bHasBitFlagEnum == false )
                 continue;
 
             bAnyFlags = true;
-            emit.linef( "#include \"%#\"", FileUtil::getFileNamePart( paths._headerPath.str() ) );
+            emit.linef( "#include \"%#\"", FileUtil::getFileNamePart( record._paths._headerPath.str() ) );
         }
 
         if ( bAnyFlags == false )

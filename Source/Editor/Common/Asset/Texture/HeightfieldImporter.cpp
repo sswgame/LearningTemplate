@@ -43,7 +43,7 @@ namespace sw::editor
             /** @brief 원본 옆의 구멍 마스크 경로(`x.png` → `x_holes.png`)입니다. */
             static AbsolutePath makeHolePath( const AbsolutePath& sourcePath )
             {
-                return sourcePath.removeExtension().appendSuffix( kHoleSuffix ).appendSuffix( ".png" );
+                return sourcePath.removeExtension().appendSuffix( kHoleSuffix ).appendSuffix( HeightfieldImporter::kImageSourceExtension );
             }
 
             /** @brief 스플랫 원본 옆의 레이어 4..7 파일 경로(`x_splat.png` → `x_splat1.png`)입니다. */
@@ -231,7 +231,7 @@ namespace sw::editor
     bool HeightfieldImporter::isSourceLayerWeights( string_view path )
     {
         using Internal = HeightfieldImporterInternal;
-        return FileUtil::hasExtension( path, ".png" ) && StringUtil::endsWith( FileUtil::removeExtension( path ), Internal::kSplatSuffix, true );
+        return FileUtil::hasExtension( path, HeightfieldImporter::kImageSourceExtension ) && StringUtil::endsWith( FileUtil::removeExtension( path ), Internal::kSplatSuffix, true );
     }
 
     AbsolutePath HeightfieldImporter::makeImportedLayerWeightsPath( const AbsolutePath& rawPath )
@@ -360,7 +360,7 @@ namespace sw::editor
             SW_LOG_ERROR_ID( "HeightfieldImporter.FailedReadHeightfieldSource", "Failed to read heightfield source '%#'", sourcePath.str() );
             return false;
         }
-        if ( FileUtil::hasExtension( sourcePath.str(), ".r16" ) )
+        if ( FileUtil::hasExtension( sourcePath.str(), HeightfieldImporter::kRaw16SourceExtension ) )
         {
             if ( Internal::readRaw16( bytes, sourcePath.str(), outData ) == false )
                 return false;

@@ -789,7 +789,7 @@ namespace sw
                 float3     spacePosition{};
                 quaternion spaceRotation{};
                 PoseModifierComponentInternal::decomposeRigid( listOwnModel[*external._spaceBone], spacePosition, spaceRotation );
-                const quaternion inverse = RigIKSolver::makeInverse( spaceRotation );
+                const quaternion inverse = spaceRotation.inverse();
                 value._position          = float3::transform( value._position - spacePosition, inverse );
                 value._rotation          = ( inverse * value._rotation ).normalize();
                 value._relativeBone      = external._spaceBone;

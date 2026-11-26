@@ -1,25 +1,91 @@
 #include "pch.h"
 
-#include "Games/Playground/FeatureDemo/CraftingDemoComponent.h"
-
+#include "Core/Foundation/Expected.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Log/Logger.h"
+#include "Core/String/Name/hashed_string.h"
 #include "Core/String/StringUtil.h"
+#include "Core/Time/TimeSeconds.h"
 
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/EnumName.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
+#include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
+#include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterEquipmentComponent.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/Crafting.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 
 #include "Games/Playground/FeatureDemo/FeatureDemoCommandUtil.h"
 
 namespace sw
 {
+    class CharacterEquipmentComponent;
+    class Inventory;
+
+    /**
+     * @class CraftingDemoComponent
+     * @brief 작업대 하나의 대기열을 프레임마다 흘립니다. 결과를 넣을 자리가 없으면 그 작업은 기다립니다.
+     */
+    REFLECT( Category = "FeatureDemo", DisplayName = "Crafting Demo", Tooltip = "Crafting queue of one station over a character's bag" )
+    class CraftingDemoComponent : public GameModeComponent
+    {
+    public:
+        REFLECT_BODY();
+
+        CraftingDemoComponent();
+        virtual ~CraftingDemoComponent() override;
+
+        /** @brief 레시피를 @p count 번 대기열에 넣습니다. 재료는 지금 가방에서 나갑니다. 캐릭터가 없으면 비어 있습니다. */
+        optional<CraftResult> enqueue( const hashed_string& recipeID, int32 count );
+        /** @brief 대기열 @p index 를 빼고 재료를 돌려받습니다. 돌려줄 자리가 없거나 없는 자리면 false 입니다. */
+        [[nodiscard]] bool cancel( int32 index );
+        /** @brief 레시피를 배웁니다. */
+        void learn( const hashed_string& recipeID ) { _crafter.learnRecipe( recipeID ); }
+        /** @brief 제작 레벨을 정합니다. */
+        void setLevel( int32 level ) { _level = level; }
+
+        const hashed_string& getLastResult() const { return _lastResult; }
+
+    protected:
+        void               serializeGameState( StateIO& io ) override;
+        [[nodiscard]] bool startGame() override;
+        void               updateGame( GameSeconds frameTime ) override;
+
+    private:
+        /** @brief 같은 씬 캐릭터의 가방입니다(장비 컴포넌트가 시작했을 때만). */
+        [[nodiscard]] Inventory* findBag() const;
+
+    private:
+        PROPERTY( Category = "Data", DisplayName = "Recipes", Tooltip = "Recipe catalog (*.recipes.xml)" )
+        AssetRef<RecipeCatalog> _recipePath;
+        PROPERTY( Category = "Data", DisplayName = "Station", Tooltip = "Station id recipes ask for" )
+        hashed_string _station;
+        PROPERTY( Category = "Data", DisplayName = "Start Level", Min = 1 )
+        int32 _startLevel;
+        PROPERTY( Category = "Scene", DisplayName = "Character", Tooltip = "Object with the CharacterEquipmentComponent whose bag is used" )
+        hashed_string _characterName;
+
+        PROPERTY( RuntimeState, Min = 0 )
+        int32 _level;
+        PROPERTY( RuntimeState, Min = 0 )
+        int32 _finishedCount;
+        PROPERTY( RuntimeState, Min = 0 )
+        int32 _queueCount;
+        PROPERTY( RuntimeState )
+        hashed_string _lastResult; ///< 마지막 명령의 `CraftResult` 이름
+
+        BoundAssetRef<RecipeCatalog> _pRecipes; ///< 제작이 빌려 쓴다
+        SW_CODEC_STATE Crafter       _crafter;
+    };
+
     namespace
     {
         struct CraftingDemoComponentInternal
@@ -165,3 +231,5 @@ namespace sw
         } ); // 실패는 아카이브에 남는다
     }
 } // namespace sw
+
+#include "CraftingDemoComponent.cpp.gen.inl"

@@ -69,6 +69,10 @@ namespace sw::editor
     {
         /** @brief 원본 이미지를 두는 폴더 이름입니다. 쿠킹은 이 폴더를 팩에서 뺍니다(정체성 규칙 `AssetIdentity.json` 의 원본 폴더). 원본 확장자는 `AssetIdentityRules::isImportSource( kRawFolder, … )` 가 답한다. */
         static constexpr string_view kRawFolder = "textures_raw";
+        /** @brief 임포트한 텍스처의 확장자입니다(DDS). 이 확장자인 파일은 원본이 아니라 임포트 결과다. */
+        static constexpr string_view kImportedExtension = ".dds";
+        /** @brief Radiance RGBE 원본의 확장자입니다. 1 을 넘는 값을 가져 부동소수점으로 읽고 HDR 포맷으로만 임포트하며, 시트 원본이 아니다. */
+        static constexpr string_view kHDRSourceExtension = ".hdr";
 
         /**
          * @brief 텍스처 파일 하나를 주어진 임포트 규칙에 따라 DDS 로 임포트합니다.

@@ -72,6 +72,12 @@
     "SpriteClipCache": "SpriteClipAsset · SpriteLibrary — 공유 캐시는 각 에셋 헤더에 선언한다(2026-11-26)",
     "AnimationAssetCache": "각 에셋 헤더(Skeleton · AnimationClip …) — 공유 캐시는 그 에셋 헤더에 선언한다(2026-11-26)",
     "FractureRenderUtil": "FractureRenderUnits — 조각 그리기 static 함수는 렌더 유닛 형식에 둔다(2026-11-26)",
+    "XMLNameCheck": "XMLNode::reportUnknownAttributes · reportUnknownChildren · collectUnknown… — 모르는 이름 검사는 XMLNode 멤버다(2026-11-26)",
+    "UIDocumentLoader": "UIDocumentAsset::parse · instantiate · createWidget — 읽기 · 트리 만들기는 문서 에셋 멤버다(유니티 VisualTreeAsset.Instantiate, 2026-11-26)",
+    "AtlasGridUtil": "TileGridUtil::computeCellUVRect · findCellAtUV — 격자 → UV 식은 엔진 한 곳이다(2026-11-26)",
+    "decomposeSwingTwist": "quaternion::toSwingTwist(Core, 2026-11-26)",
+    "computeTwistAngle": "quaternion::getTwistAngle(Core, 2026-11-26)",
+    "makeFromToRotation": "quaternion::fromToRotation(Core, 2026-11-26)",
     "FractureAnchorUtil": "FractureComponentBaseInternal — 쓰는 곳이 FractureBaseComponent.cpp 하나다(2026-11-26)",
     "IFacialLiveSource": "LiveLinkFaceSource — 구현 · 받는 곳이 하나라 구체 형식으로 받는다(2026-11-26)",
     "RecastAreaUtil": "RecastUtil — Recast 경계 규칙 하나로 합쳤다(2026-11-26)",
@@ -2502,6 +2508,8 @@
     "EditorBackgroundTask": "EditorBackgroundJob — 에디터 백그라운드 잡은 TaskManager 실행 단위(Task)와 뜻이 달라(최신 요청 · 결과 칸) 같은 폴더의 EditorExternalToolJob 처럼 Job 으로 가른다(2026-11-26)(2026-11-26)",
     "EditorTaskPoll": "EditorJobPoll — 에디터 백그라운드 잡은 TaskManager 실행 단위(Task)와 뜻이 달라(최신 요청 · 결과 칸) 같은 폴더의 EditorExternalToolJob 처럼 Job 으로 가른다(2026-11-26)(2026-11-26)",
     "GimmickDamageUtil": "GimmickUtil — 기믹 도구는 GimmickUtil 하나로 합쳤다(피해 · 파괴도 같은 주인 없는 도구)(2026-11-26)",
-    "sw_scan_reflection_headers": "sw_scan_reflection_inputs — 헤더와 함께 REFLECT · ENUM 이 든 .cpp 도 훑는다(2026-11-26)"
+    "sw_scan_reflection_headers": "sw_scan_reflection_inputs — 헤더와 함께 REFLECT · ENUM 이 든 .cpp 도 훑는다(2026-11-26)",
+    "makePaths": "GeneratedPaths::make — 리플렉션 산출물 경로는 주인 형식의 멤버다(GeneratedFileUtil 은 주인 없는 파일 쓰기 · 시각만)(2026-11-26)",
+    "writeStamp": "GeneratedStamp::write — 스탬프 쓰기 · 읽기(GeneratedStamp::read)는 스탬프 형식의 멤버다(2026-11-26)"
   }
 }

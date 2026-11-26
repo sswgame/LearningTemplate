@@ -4,7 +4,7 @@
  * @details LOD l 은 샘플을 2^l 셀마다 쓴다. 이웃 청크가 더 거친 LOD L 이면 맞닿은 변의 정점 가운데 L 격자에 없는 것을
  *          아래쪽 L 격자 점으로 접는다(정점 위치를 그 점으로 옮기고, 넓이가 0 이 된 삼각형은 버린다). 그러면 그 변에 쓰인 정점
  *          집합이 이웃 쪽 변과 똑같아 T 접합도 틈도 없다(스커트나 인덱스 변형 테이블이 필요 없다). 거친 쪽은 손대지 않는다.
- *          정점은 청크 중심 기준 로컬 좌표이고, 월드 위치 = 로컬 + 청크 이동(`computeChunkTranslation`)이다. 셀 크기와 원점이 이진 소수로
+ *          정점은 청크 중심 기준 로컬 좌표이고, 월드 위치 = 로컬 + 청크 이동(`TerrainChunkLayout::computeChunkTranslation`)이다. 셀 크기와 원점이 이진 소수로
  *          정확히 나타나면(예: 1 m 와 0.5 m 셀, 정수 원점) 이웃 청크의 같은 정점이 비트까지 같다.
  */
 #pragma once
@@ -32,7 +32,7 @@ namespace sw
 namespace sw
 {
     /** @brief 높이장을 청크로 나눈 형태입니다. */
-    struct TerrainChunkLayout
+    struct SW_API TerrainChunkLayout
     {
         uint32 _chunkCells{ 0 }; ///< 청크 한 변의 셀 수다(2 의 거듭제곱이다).
         uint32 _chunkCountX{ 0 };
@@ -40,6 +40,11 @@ namespace sw
         uint32 _maxLOD{ 0 }; ///< log2( _chunkCells ) 이며, 그 LOD 에서 청크가 셀 하나가 된다.
 
         uint32 getChunkCount() const { return _chunkCountX * _chunkCountZ; }
+
+        /** @brief 청크의 이동(월드)을 반환합니다. x 와 z 는 청크 중심이고, y 는 지형 원점의 높이입니다. 메시 정점은 이 점 기준입니다. */
+        float3 computeChunkTranslation( const TerrainHeightfield& heightfield, uint32 chunkX, uint32 chunkZ ) const;
+        /** @brief 청크의 정점 전부를 담는 구의 반지름입니다(중심은 `computeChunkTranslation`). */
+        float32 computeChunkBoundsRadius( const TerrainHeightfield& heightfield, uint32 chunkX, uint32 chunkZ ) const;
     };
 } // namespace sw
 
@@ -56,11 +61,6 @@ namespace sw
          * @return @p chunkCells 가 2 의 거듭제곱이 아니거나 (해상도 - 1) 이 그것으로 나눠떨어지지 않으면 false 를 반환합니다.
          */
         [[nodiscard]] static bool makeLayout( uint32 resolution, uint32 chunkCells, TerrainChunkLayout& outLayout );
-
-        /** @brief 청크의 이동(월드)을 반환합니다. x 와 z 는 청크 중심이고, y 는 지형 원점의 높이입니다. 메시 정점은 이 점 기준입니다. */
-        static float3 computeChunkTranslation( const TerrainHeightfield& heightfield, const TerrainChunkLayout& layout, uint32 chunkX, uint32 chunkZ );
-        /** @brief 청크의 정점 전부를 담는 구의 반지름입니다(중심은 `computeChunkTranslation`). */
-        static float32 computeChunkBoundsRadius( const TerrainHeightfield& heightfield, const TerrainChunkLayout& layout, uint32 chunkX, uint32 chunkZ );
 
         /**
          * @brief 거리로 LOD 를 고릅니다. 거리 < @p lodDistance 이면 0, 그 두 배까지 1, 네 배까지 2 … 이고 @p maxLOD 에서 멈춥니다.

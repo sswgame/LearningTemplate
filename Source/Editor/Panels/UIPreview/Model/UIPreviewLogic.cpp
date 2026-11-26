@@ -22,7 +22,6 @@
 #include "Engine/UI/Animation/UIAnimationPlayer.h"
 #include "Engine/UI/Document/UIDocument.h"
 #include "Engine/UI/Document/UIDocumentCache.h"
-#include "Engine/UI/Document/UIDocumentLoader.h"
 #include "Engine/UI/Document/UIDocumentWriter.h"
 #include "Engine/UI/Layout/BoxPanel.h"
 #include "Engine/UI/Layout/CanvasPanel.h"
@@ -407,7 +406,7 @@ namespace sw::editor
         PanelWidget* pParent = findPanelByOrdinal( tree, parentOrdinal );
         if ( pParent == nullptr )
             return nullptr;
-        unique_ptr<Widget> widget = UIDocumentLoader::createWidget( type );
+        unique_ptr<Widget> widget = UIDocumentAsset::createWidget( type );
         if ( widget == nullptr )
             return nullptr;
         return pParent->insertChild( index, std::move( widget ) );

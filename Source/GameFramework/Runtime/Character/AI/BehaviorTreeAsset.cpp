@@ -13,7 +13,6 @@
 #include "Engine/Serialization/Inherit/ResourceComposer.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
-#include "Engine/Serialization/XML/XMLNameCheck.h"
 
 #include "GameFramework/Runtime/Character/AI/BehaviorTreeNodeParams.h"
 #include "GameFramework/Runtime/Foundation/GameData/XMLCatalogRoot.h"
@@ -430,7 +429,7 @@ namespace sw
         _tree = BehaviorTree{};
         // 손 읽기: 트리는 원소 이름이 노드 종류인 재귀 구조라 원소 표로 적을 수 없다 — 루트 아래 노드 하나를 읽기 도구(`BehaviorTreeReader`)에 넘긴다.
         const XMLNode& rootNode = root.getRawNode();
-        bool           bValid   = XMLNameCheck::reportUnknownAttributes( rootNode, nullptr, 0, sourceName, LogLevel::Error );
+        bool           bValid   = rootNode.reportUnknownAttributes( nullptr, 0, sourceName, LogLevel::Error );
         const XMLNode  first    = rootNode.findChild();
         if ( first.isValid() == false )
         {

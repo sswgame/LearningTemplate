@@ -569,7 +569,7 @@ namespace sw
         string_view baseState = pSource->getStateData();
         if ( pSource->getStateFormat() != PrefabStateFormat::XML )
         {
-            if ( PrefabOverrides::makeBaseState( *pSource, convertedBase ) == false )
+            if ( pSource->makeBaseState( convertedBase ) == false )
             {
                 SW_LOG_WARNING_ID( "PrefabAsset.NestedPrefabCouldNot4", "Nested prefab '%#' could not be built as a base state - instance '%#' is skipped", node._prefabPath, node._name );
                 return false;
@@ -826,7 +826,7 @@ namespace sw
                 return false;
             }
             string baseState;
-            if ( PrefabOverrides::makeBaseState( *pSource, baseState ) == false )
+            if ( pSource->makeBaseState( baseState ) == false )
             {
                 SW_LOG_ERROR_ID( "PrefabAsset.NestedPrefabCouldNot6", "Nested prefab '%#' could not be built as a base state - '%#' is not flattened", sourcePath, asset.getName() );
                 return false;

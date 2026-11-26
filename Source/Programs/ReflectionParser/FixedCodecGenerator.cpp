@@ -9,17 +9,6 @@
 
 namespace sw
 {
-    namespace
-    {
-        struct FixedCodecGeneratorInternal
-        {
-            static constexpr const utf8* kBaseFieldName = "(base)";
-        };
-    } // namespace
-} // namespace sw
-
-namespace sw
-{
     FixedCodecGenerator::TypePlan::TypePlan() noexcept
         : _canonical{}
         , _reason{}
@@ -44,6 +33,98 @@ namespace sw
         , _listPlan{}
     {
     }
+
+    namespace
+    {
+        struct FixedCodecGeneratorInternal
+        {
+            static constexpr const utf8* kBaseFieldName = "(base)";
+
+            /** @brief 칸 트리를 평평한 표 글로 폅니다. 묶음의 자식은 이어진 칸이고, 부모 칸 글 뒤에 첫 칸 번호(묶음이면 개수도)가 붙습니다. */
+            static void flattenNodes( const vector<FixedCodecNode>& listNode, vector<string>& outListEntry )
+            {
+                const size_t first = outListEntry.size();
+                outListEntry.resize( first + listNode.size() );
+                for ( size_t index = 0; index < listNode.size(); ++index )
+                {
+                    const FixedCodecNode&                     node       = listNode[index];
+                    const size_t                              childFirst = outListEntry.size();
+                    StringBuilder<constant::buffer::kMax2048> entry;
+                    entry.append( node._call );
+                    if ( node._childArgs == FixedCodecNode::ChildArgs::Element )
+                        entry.appendFormat( ", %#u", static_cast<int64>( childFirst ) );
+                    else if ( node._childArgs == FixedCodecNode::ChildArgs::Group )
+                        entry.appendFormat( ", %#u, %#u", static_cast<int64>( childFirst ), static_cast<int64>( node._listChild.size() ) );
+                    entry.append( " )" );
+                    outListEntry[first + index] = string( entry.view() );
+                    flattenNodes( node._listChild, outListEntry );
+                }
+            }
+
+            /**
+             * @brief 서술자 표 · 의존 표를 @p pTablePrefix 이름(`s_arrFixedField` · `s_arrFixedDependency` 꼴)으로 쓰고, 코덱 생성자의 (표, 개수) · (의존 표, 개수) 인자 글을 돌려줍니다.
+             * @param listEmittedEnum 이 등록 함수 안에서 이미 낸 열거자 값 표입니다(같은 이름을 두 번 정의하지 않는다).
+             */
+            static pair<string, string> emitTables( CodeEmit& emit, const vector<FixedCodecNode>& listRootNode, const vector<const ParsedFixedEnum*>& listEnum,
+                                                    const vector<pair<string, string>>& listDependency, const string& tablePrefix, vector<string>& listEmittedEnum )
+            {
+                // 플래그가 아닌 열거형의 등록 값(`Count` · 겹친 값 제외)입니다. 읽은 값이 이 안에 없으면 OutOfRange 입니다.
+                for ( const ParsedFixedEnum* pEnum : listEnum )
+                {
+                    const string tableName = FixedCodecEmitState::makeEnumValueTableName( *pEnum );
+                    if ( std::find( listEmittedEnum.begin(), listEmittedEnum.end(), tableName ) != listEmittedEnum.end() )
+                        continue;
+                    listEmittedEnum.push_back( tableName );
+                    emit.linef( "static constexpr int64 %#[] =", tableName );
+                    emit.line( "{" ).push();
+                    vector<int64> listSeen;
+                    for ( const ParsedEnumeratorInfo& enumerator : pEnum->_listEnumerator )
+                    {
+                        const bool bDuplicate = std::find( listSeen.begin(), listSeen.end(), enumerator._value ) != listSeen.end();
+                        if ( enumerator._name == pEnum->_countEnumerator || bDuplicate )
+                            continue;
+                        listSeen.push_back( enumerator._value );
+                        emit.linef( "static_cast<int64>( ::%#::%# ),", pEnum->_fullyQualifiedName, enumerator._name );
+                    }
+                    emit.pop().line( "};" );
+                }
+
+                // 서술자 표입니다. 최상위 필드가 앞 칸들이고, 묶음의 자식은 그 뒤에 이어진 칸이다(`FixedFieldDesc`).
+                vector<string> listEntry;
+                flattenNodes( listRootNode, listEntry );
+                string fieldArgs = "nullptr, 0u";
+                if ( listEntry.empty() == false )
+                {
+                    emit.linef( "static constexpr ::sw::FixedFieldDesc %#Field[] =", tablePrefix );
+                    emit.line( "{" ).push();
+                    for ( const string& entry : listEntry )
+                    {
+                        emit.linef( "%#,", entry );
+                    }
+                    emit.pop().line( "};" );
+                    StringBuilder<constant::buffer::kMax128> args;
+                    args.appendFormat( "%#Field, %#u", tablePrefix, static_cast<int64>( listRootNode.size() ) );
+                    fieldArgs = string( args.view() );
+                }
+
+                string dependencyArgs = "nullptr, 0u";
+                if ( listDependency.empty() == false )
+                {
+                    emit.linef( "static const ::sw::FixedCodec::Dependency %#Dependency[] =", tablePrefix );
+                    emit.line( "{" ).push();
+                    for ( const pair<string, string>& dependency : listDependency )
+                    {
+                        emit.linef( "{ %#, %# },", CodeEmit::quoted( dependency.first ), CodeEmit::quoted( dependency.second ) );
+                    }
+                    emit.pop().line( "};" );
+                    StringBuilder<constant::buffer::kMax128> args;
+                    args.appendFormat( "%#Dependency, %#u", tablePrefix, static_cast<int64>( listDependency.size() ) );
+                    dependencyArgs = string( args.view() );
+                }
+                return { fieldArgs, dependencyArgs };
+            }
+        };
+    } // namespace
 
     bool FixedCodecGenerator::makePlan()
     {
@@ -156,85 +237,6 @@ namespace sw
         return true;
     }
 
-    void FixedCodecGenerator::flattenNodes( const vector<FixedCodecNode>& listNode, vector<string>& outListEntry )
-    {
-        const size_t first = outListEntry.size();
-        outListEntry.resize( first + listNode.size() );
-        for ( size_t index = 0; index < listNode.size(); ++index )
-        {
-            const FixedCodecNode&                     node       = listNode[index];
-            const size_t                              childFirst = outListEntry.size();
-            StringBuilder<constant::buffer::kMax2048> entry;
-            entry.append( node._call );
-            if ( node._childArgs == FixedCodecNode::ChildArgs::Element )
-                entry.appendFormat( ", %#u", static_cast<int64>( childFirst ) );
-            else if ( node._childArgs == FixedCodecNode::ChildArgs::Group )
-                entry.appendFormat( ", %#u, %#u", static_cast<int64>( childFirst ), static_cast<int64>( node._listChild.size() ) );
-            entry.append( " )" );
-            outListEntry[first + index] = string( entry.view() );
-            flattenNodes( node._listChild, outListEntry );
-        }
-    }
-
-    pair<string, string> FixedCodecGenerator::emitTables( CodeEmit& emit, const vector<FixedCodecNode>& listRootNode, const vector<const ParsedFixedEnum*>& listEnum,
-                                                          const vector<pair<string, string>>& listDependency, const string& tablePrefix, vector<string>& listEmittedEnum )
-    {
-        // 플래그가 아닌 열거형의 등록 값(`Count` · 겹친 값 제외)입니다. 읽은 값이 이 안에 없으면 OutOfRange 입니다.
-        for ( const ParsedFixedEnum* pEnum : listEnum )
-        {
-            const string tableName = FixedCodecEmitState::makeEnumValueTableName( *pEnum );
-            if ( std::find( listEmittedEnum.begin(), listEmittedEnum.end(), tableName ) != listEmittedEnum.end() )
-                continue;
-            listEmittedEnum.push_back( tableName );
-            emit.linef( "static constexpr int64 %#[] =", tableName );
-            emit.line( "{" ).push();
-            vector<int64> listSeen;
-            for ( const ParsedEnumeratorInfo& enumerator : pEnum->_listEnumerator )
-            {
-                const bool bDuplicate = std::find( listSeen.begin(), listSeen.end(), enumerator._value ) != listSeen.end();
-                if ( enumerator._name == pEnum->_countEnumerator || bDuplicate )
-                    continue;
-                listSeen.push_back( enumerator._value );
-                emit.linef( "static_cast<int64>( ::%#::%# ),", pEnum->_fullyQualifiedName, enumerator._name );
-            }
-            emit.pop().line( "};" );
-        }
-
-        // 서술자 표입니다. 최상위 필드가 앞 칸들이고, 묶음의 자식은 그 뒤에 이어진 칸이다(`FixedFieldDesc`).
-        vector<string> listEntry;
-        flattenNodes( listRootNode, listEntry );
-        string fieldArgs = "nullptr, 0u";
-        if ( listEntry.empty() == false )
-        {
-            emit.linef( "static constexpr ::sw::FixedFieldDesc %#Field[] =", tablePrefix );
-            emit.line( "{" ).push();
-            for ( const string& entry : listEntry )
-            {
-                emit.linef( "%#,", entry );
-            }
-            emit.pop().line( "};" );
-            StringBuilder<constant::buffer::kMax128> args;
-            args.appendFormat( "%#Field, %#u", tablePrefix, static_cast<int64>( listRootNode.size() ) );
-            fieldArgs = string( args.view() );
-        }
-
-        string dependencyArgs = "nullptr, 0u";
-        if ( listDependency.empty() == false )
-        {
-            emit.linef( "static const ::sw::FixedCodec::Dependency %#Dependency[] =", tablePrefix );
-            emit.line( "{" ).push();
-            for ( const pair<string, string>& dependency : listDependency )
-            {
-                emit.linef( "{ %#, %# },", CodeEmit::quoted( dependency.first ), CodeEmit::quoted( dependency.second ) );
-            }
-            emit.pop().line( "};" );
-            StringBuilder<constant::buffer::kMax128> args;
-            args.appendFormat( "%#Dependency, %#u", tablePrefix, static_cast<int64>( listDependency.size() ) );
-            dependencyArgs = string( args.view() );
-        }
-        return { fieldArgs, dependencyArgs };
-    }
-
     void FixedCodecGenerator::emitRegistration( CodeEmit& emit, const size_t typeIndex ) const
     {
         const TypePlan& plan = _listPlan[typeIndex];
@@ -246,7 +248,7 @@ namespace sw
         if ( plan._replicatedCanonical.empty() == false )
         {
             const pair<string, string> tableArgs =
-                emitTables( emit, plan._replicated._listRootNode, plan._replicated._listEnum, plan._replicated._listDependency, "s_arrReplicated", listEmittedEnum );
+                FixedCodecGeneratorInternal::emitTables( emit, plan._replicated._listRootNode, plan._replicated._listEnum, plan._replicated._listDependency, "s_arrReplicated", listEmittedEnum );
             emit.linef( "static ::sw::FixedCodec s_replicatedCodec( %#, %#, %#, nullptr, nullptr, nullptr );", tableArgs.first, CodeEmit::quoted( plan._replicatedCanonical ), tableArgs.second );
             pReplicated = "&s_replicatedCodec";
         }
@@ -258,7 +260,7 @@ namespace sw
         else
         {
             const ParsedTypeInfo&      type      = _header._listType[typeIndex];
-            const pair<string, string> tableArgs = emitTables( emit, plan._listRootNode, plan._listEnum, plan._listDependency, "s_arrFixed", listEmittedEnum );
+            const pair<string, string> tableArgs = FixedCodecGeneratorInternal::emitTables( emit, plan._listRootNode, plan._listEnum, plan._listDependency, "s_arrFixed", listEmittedEnum );
 
             string baseCast = "nullptr";
             if ( plan._bHasBase == SW_TRUE )

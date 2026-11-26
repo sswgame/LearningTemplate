@@ -1,19 +1,54 @@
 #include "pch.h"
 
-#include "Games/Playground/Dev/ScenarioTest/CharacterCrowdSpawnerComponent.h"
-
+#include "Core/Foundation/Types.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/Name/hashed_string.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
+#include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Physics/Component/CharacterControllerComponent.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
 {
+    /**
+     * @class CharacterCrowdSpawnerComponent
+     * @brief 캐릭터 N 개를 이 오브젝트 둘레의 상자에 세워 가운데로 걷게 합니다. 파일 머리말 참고.
+     */
+    REFLECT()
+    class CharacterCrowdSpawnerComponent : public Component
+    {
+    public:
+        REFLECT_BODY();
+        SW_REGISTERED_COMPONENT( CharacterCrowdSpawnerComponent );
+
+        CharacterCrowdSpawnerComponent();
+        ~CharacterCrowdSpawnerComponent() override = default;
+
+        void onBeginPlay() override;
+
+        /** @brief 세운 캐릭터 수입니다(부하 시나리오가 측정 경로를 탔는지 본다). */
+        uint32 getSpawnedCount() const { return _spawnedCount; }
+
+    private:
+        /** @brief 캐릭터를 격자로 세웁니다(구조 변경 — 틱 밖에서 돈다). */
+        void spawnCharacters( GameObjectManager& manager );
+
+    private:
+        PROPERTY( Category = "Crowd", Min = 0, Tooltip = "How many character controllers to spawn" )
+        uint32 _characterCount;
+        PROPERTY( Category = "Crowd", Min = 0.0, Tooltip = "Half size of the box the characters spawn in, around this object", Units = m )
+        float32 _halfExtent;
+        PROPERTY( Category = "Crowd", Min = 0.0, Tooltip = "Walking speed toward the center", Units = "m/s" )
+        float32 _walkSpeed;
+
+        SW_TRANSIENT uint32 _spawnedCount;
+    };
+
     namespace
     {
         struct CharacterCrowdSpawnerInternal
@@ -83,3 +118,5 @@ namespace sw
     SW_AUTOMATION_WATCH( playgroundCrowdCharacters, "PlaygroundLoad.CrowdCharacters", "Character controllers the crowd spawners placed (all spawners)",
                          &CharacterCrowdSpawnerInternal::sumSpawned );
 } // namespace sw
+
+#include "CharacterCrowdSpawnerComponent.cpp.gen.inl"

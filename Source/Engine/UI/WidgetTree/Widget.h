@@ -151,7 +151,7 @@ namespace sw
         /**
          * @brief 리플렉션으로 쓴 필드 값에서 파생 상태를 맞춥니다 — 값의 제한(범위 · 비율)과 보이는 글(고른 항목 · 힌트)처럼 세터가 함께 만드는 것입니다.
          *        무효화는 `onBoundPropertyChanged` 의 몫입니다(언리얼 `UWidget::SynchronizeProperties` 자리).
-         * @details 부르는 자리는 둘뿐이다 — 문서의 값을 모두 읽은 뒤(`UIDocumentLoader`)와 필드 하나를 쓴 뒤(`notifyPropertyWritten`). 몇 번을 불러도 결과가 같아야 한다.
+         * @details 부르는 자리는 둘뿐이다 — 문서의 값을 모두 읽은 뒤(`UIDocumentAsset::instantiate`)와 필드 하나를 쓴 뒤(`notifyPropertyWritten`). 몇 번을 불러도 결과가 같아야 한다.
          *          재정의는 부모의 것을 먼저 부른다.
          */
         virtual void synchronizeProperties();
@@ -231,7 +231,7 @@ namespace sw
          * @brief 계산된 스타일이 필드 @p field 를 정하지 않았을 때 이 위젯이 상태 @p styleStates(`UIStyleState` 비트)에서 자기 필드로 그리는 값을 @p outArr 에 읽습니다
          *        (성분 수는 필드가 정합니다). 그런 값이 없으면 false 입니다.
          * @details 스타일 전환이 "한쪽만 정한 필드"(위젯 자기 겉모습 ↔ 시트 값)를 옮기려고 묻습니다. 값은 `fillOwnStyle` 이 채운 `UIOwnStyle` 에서
-         *          서술자 표(`UIStyleFieldTable::readComponents`)로 읽는다 — 위젯은 성분 배치를 알지 않는다. 수치가 아닌 필드는 false 입니다.
+         *          서술자 표(`WidgetStyle::readComponents`)로 읽는다 — 위젯은 성분 배치를 알지 않는다. 수치가 아닌 필드는 false 입니다.
          */
         [[nodiscard]] bool tryGetOwnStyleField( UIStyleField field, uint32 styleStates, float32 ( &outArr )[4] ) const;
         /**

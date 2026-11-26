@@ -209,6 +209,6 @@ namespace sw
         const float3 desired      = newChildPosition - bonePosition;
         if ( current.getLengthSquared() <= MathUtil::kEpsilonSquared || desired.getLengthSquared() <= MathUtil::kEpsilonSquared )
             return;
-        rotateModel( boneIndex, RigIKSolver::makeFromToRotation( current, desired ) );
+        rotateModel( boneIndex, quaternion::fromToRotation( current, desired ) );
     }
 } // namespace sw

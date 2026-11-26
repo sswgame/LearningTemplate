@@ -392,7 +392,7 @@ namespace sw
             void evaluate( RigEvaluateContext& context ) override
             {
                 RigPoseBuffer&   pose      = *context._pPose;
-                const quaternion current   = ( RigIKSolver::makeInverse( _driverReference ) * pose.getLocalRotation( _driver ) ).normalize();
+                const quaternion current   = ( _driverReference.inverse() * pose.getLocalRotation( _driver ) ).normalize();
                 const uint32     poseCount = static_cast<uint32>( _listPose.size() );
                 for ( uint32 index = 0; index < poseCount; ++index )
                 {

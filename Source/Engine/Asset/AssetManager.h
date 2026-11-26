@@ -229,8 +229,6 @@ namespace sw
         [[nodiscard]] bool installAssetRegistry( ContentSource source );
         /** @brief 바닥 층(쿠킹 도메인마다 `assetindex.xml`, 소스면 저작 스캔 한 층)을 지어 @p outListLayer 에 담습니다. 못 지으면 오류를 남기고 false 입니다. */
         [[nodiscard]] bool buildBaseRegistryLayers( ContentSource source, const vector<string>& listDomain, vector<AssetRegistryLayer>& outListLayer ) const;
-        /** @brief 읽기가 싣는 설정 사본(데이터 상속 깊이 상한 — `ResourceComposition::setInheritanceMaxDepth`)을 뜹니다. 게임 스레드(기동 · 다시 읽기 알림)만 부른다. */
-        static void publishLoadPolicy();
         /** @brief 설정 다시 읽기 알림입니다. 엔진 설정이면 사본을 다시 뜹니다. */
         void onConfigReloaded( const hashed_string& configTypeName );
 

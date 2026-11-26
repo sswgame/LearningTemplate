@@ -1,16 +1,71 @@
 #include "pch.h"
 
-#include "Engine/Animation/Component/LiveLinkFaceComponent.h"
-
+#include "Core/Container/string.h"
+#include "Core/Container/vector.h"
+#include "Core/Delegate/Subscription.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Log/Logger.h"
+#include "Core/Memory/Memory.h"
 #include "Core/Network/Transport/UDPNetTransport.h"
 
 #include "Engine/Animation/Component/FacialAnimationComponent.h"
+#include "Engine/Animation/Facial/LiveLinkFace.h"
+#include "Engine/Asset/AssetRef.h"
+#include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/Tick/TickContext.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
 {
+    class UDPNetTransport;
+
+    /** @class LiveLinkFaceComponent @brief 파일 머리말 참고. */
+    REFLECT( Category = "Animation 3D", DisplayName = "Live Link Face", Tooltip = "Receives Live Link Face (ARKit) packets over UDP and drives the sibling facial animation's expressions" )
+    class LiveLinkFaceComponent : public Component
+    {
+    public:
+        REFLECT_BODY();
+
+        /** @brief Live Link Face 앱의 기본 대상 포트입니다. */
+        static constexpr int32 kDefaultPort = 11111;
+
+        LiveLinkFaceComponent();
+        virtual ~LiveLinkFaceComponent() override;
+
+        void onBeginPlay() override;
+        void onEndPlay() override;
+        /** @brief 쌓인 패킷을 읽어 마지막 것을 표정 값으로 옮깁니다. */
+        void onTick( TickContext& context ) override;
+
+        void setMappingPath( string_view path ) { _mappingPath = path; }
+        /** @brief 받을 포트입니다(0 이면 운영체제가 고른다 — 테스트). 시작 전에 정합니다. */
+        void setPort( int32 port ) { _port = port; }
+        /** @brief 이 기계(127.0.0.1)에서 온 패킷만 받습니다(같은 PC 의 송신기 · 테스트). 시작 전에 정합니다. */
+        void setLoopbackOnly( bool bLoopbackOnly ) { _bLoopbackOnly = bLoopbackOnly ? SW_TRUE : SW_FALSE; }
+        /** @brief 실제로 연 포트입니다. 열지 못했으면 0 입니다. */
+        uint16                    getBoundPort() const;
+        const LiveLinkFaceSource& getSource() const { return _source; }
+
+    private:
+        PROPERTY( Category = "Live Link Face", DisplayName = "Mapping", Tooltip = "Channel to expression mapping of this head (*.livelinkface.xml)" )
+        AssetRef<LiveLinkFaceMapping> _mappingPath;
+        PROPERTY( Category = "Live Link Face", DisplayName = "Port", Min = 0, Max = 65535, Tooltip = "UDP port the Live Link Face app sends to (0 lets the OS pick)" )
+        int32 _port;
+
+        SW_TRANSIENT LiveLinkFaceLayout _layout;
+        SW_TRANSIENT LiveLinkFaceSource _source;
+        SW_TRANSIENT LiveLinkFaceFrame  _frame;
+        SW_TRANSIENT vector<uint8> _listReceive;
+        SW_TRANSIENT unique_ptr<UDPNetTransport> _transport;
+        Subscription                             _faceRegistration; ///< 얼굴에 건 입력의 구독(`onBeginPlay` 가 받고 `onEndPlay` 가 놓는다)
+        PROPERTY( Category = "Live Link Face", DisplayName = "Loopback Only", Tooltip = "Accept packets from this machine only (local sender, tests)" )
+        uint8                  _bLoopbackOnly  : 1;
+        SW_TRANSIENT uint8     _bReportedError : 1; ///< 깨진 패킷을 알렸다(한 번만)
+        [[maybe_unused]] uint8 _reserved       : 6;
+    };
+
     LiveLinkFaceComponent::LiveLinkFaceComponent()
         : _mappingPath{}
         , _port{ kDefaultPort }
@@ -90,3 +145,5 @@ namespace sw
         return _transport != nullptr ? _transport->getLocalAddress()._port : 0;
     }
 } // namespace sw
+
+#include "LiveLinkFaceComponent.cpp.gen.inl"

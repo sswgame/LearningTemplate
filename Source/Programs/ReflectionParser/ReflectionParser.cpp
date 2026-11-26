@@ -77,6 +77,8 @@ namespace sw
  */
 int32 main( int32 argc, utf8* argv[] )
 {
+    // 단계 시간 로그(`ReflectionParser.PhaseTime`)의 setup 과 끝 로그의 전체 시간은 프로세스 시작부터 잰다(실행마다 치르는 비용이다).
+    const sw::Stopwatch timer;
     // Core STATIC 을 링크하므로 보고기의 정적 등록 목적 파일이 빠질 수 있다 — 직접 건다.
     sw::DataRaceReporter::install();
     const sw::LoggerScope loggerScope;
@@ -106,10 +108,8 @@ int32 main( int32 argc, utf8* argv[] )
     if ( session._config.load( options._configPath, options._listTargetArg ) == false || sw::ReflectionParserInternal::loadTables( options, session ) == false )
         return 1;
 
-    sw::Stopwatch timer;
-
     sw::ReflectionPipeline pipeline( options, session );
-    const int32            errorCount = pipeline.run();
+    const int32            errorCount = pipeline.run( static_cast<float32>( timer.getElapsedSeconds() ) );
 
     [[maybe_unused]] const float32 elapsedMs = static_cast<float32>( timer.getElapsedSeconds() ) * 1000.0f;
     if ( errorCount == 0 )

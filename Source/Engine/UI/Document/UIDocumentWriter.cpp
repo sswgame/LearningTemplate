@@ -14,7 +14,6 @@
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/UI/Animation/UIAnimation.h"
 #include "Engine/UI/Document/UIDocument.h"
-#include "Engine/UI/Document/UIDocumentLoader.h"
 #include "Engine/UI/Screen/UIScreen.h"
 #include "Engine/UI/WidgetTree/PanelWidget.h"
 #include "Engine/UI/WidgetTree/Widget.h"
@@ -115,7 +114,7 @@ namespace sw
                 XMLDocument defaultDocument;
                 if ( currentDocument.parse( XMLSerializer::serialize( &widget, *pType ) ) )
                 {
-                    const unique_ptr<Widget> defaults  = UIDocumentLoader::createWidget( *pType );
+                    const unique_ptr<Widget> defaults  = UIDocumentAsset::createWidget( *pType );
                     const bool               bDefaults = fieldWrite == ResourceFieldWrite::OmitDefaults && defaults != nullptr && defaultDocument.parse( XMLSerializer::serialize( defaults.get(), *pType ) );
                     // 다른 필드가 없어도 위젯 요소는 남긴다(타입이 곧 내용이다). 적었는지는 반환하지 않는다
                     (void)writeDifference( currentDocument.getRoot(), bDefaults ? defaultDocument.getRoot() : XMLNode{}, element, *pType );

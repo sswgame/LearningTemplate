@@ -117,7 +117,7 @@ namespace sw
                 if ( ( UIStyleFieldTable::getFlags( field ) & UIStyleFieldTable::kInherited ) == 0 || pParentStyle->has( field ) == false )
                     continue;
                 style->_setMask |= UIStyleFieldTable::makeBit( field );
-                UIStyleFieldTable::copyField( pParentStyle->_value, field, style->_value ); // 어느 필드를 물려받는지는 표의 kInherited 하나가 정한다
+                style->_value.copyFieldFrom( pParentStyle->_value, field ); // 어느 필드를 물려받는지는 표의 kInherited 하나가 정한다
             }
         }
         for ( const uint32 ruleIndex : _listMatchScratch )

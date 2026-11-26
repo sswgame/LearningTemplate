@@ -40,7 +40,7 @@ namespace sw::editor
         struct BuiltinAssetTypesInternal
         {
             /** @brief 시트로 열 수 있는 텍스처 원본입니다 — HDR(`.hdr`)은 밝기 원본(하늘 · 조명)이라 스프라이트 색이 아니다. */
-            static bool isSheetSource( string_view path ) { return FileUtil::hasExtension( path, ".hdr" ) == false; }
+            static bool isSheetSource( string_view path ) { return FileUtil::hasExtension( path, TextureImporter::kHDRSourceExtension ) == false; }
             /** @brief 에디터 테마 토큰 파일입니다. 바뀌면 그 자리에서 테마를 다시 적용한다. */
             static constexpr string_view kArrThemeTokenSuffix[] = { EditorThemeTokens::kExtension };
             /** @brief 모듈이 로드한 데이터 테이블 캐시입니다(GameFramework 의 상호작용 테이블과 원소 규칙 테이블). 에디터는 GameFramework 를 모른다. */

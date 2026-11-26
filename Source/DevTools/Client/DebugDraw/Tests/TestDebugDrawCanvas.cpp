@@ -7,6 +7,7 @@
 #include "DevTools/DebugDraw/DebugDrawQueue.h"
 
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
+#include "Engine/Graphics/View/SceneViewQuery.h"
 
 using namespace sw;
 
@@ -18,7 +19,7 @@ SW_TEST_CASE( DebugDrawCanvasTest, ProjectSegmentMapsClipSpaceToTopLeftPixels )
     const float4x4 viewProj{};
     float2         from;
     float2         to;
-    SW_REQUIRE_TRUE( DebugDrawCanvasUtil::projectSegment( viewProj, float3{ 0.0f, 0.0f, 0.5f }, float3{ 1.0f, 1.0f, 0.5f }, float2{ 200.0f, 100.0f }, from, to ) );
+    SW_REQUIRE_TRUE( SceneViewQuery::projectSegment( viewProj, float3{ 0.0f, 0.0f, 0.5f }, float3{ 1.0f, 1.0f, 0.5f }, float2{ 200.0f, 100.0f }, from, to ) );
     SW_EXPECT_NEAR( 100.0f, from._x, 0.001f );
     SW_EXPECT_NEAR( 50.0f, from._y, 0.001f );
     SW_EXPECT_NEAR( 200.0f, to._x, 0.001f );

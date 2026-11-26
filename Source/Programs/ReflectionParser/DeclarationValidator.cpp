@@ -16,27 +16,108 @@
 
 namespace sw
 {
-    bool DeclarationValidator::isValidatorDeclared( const vector<ParsedMethodSignature>& listMethodSignature, const string_view name )
+    namespace
     {
-        for ( const ParsedMethodSignature& signature : listMethodSignature )
+        struct DeclarationValidatorInternal
         {
-            const bool bMatchesValidationSignature = signature._name == name && signature._listParameterTypeName.size() == 1 &&
-                                                     signature._listParameterTypeName[0] == annotation::kValidationContextTypeName;
-            if ( bMatchesValidationSignature )
-                return true;
-        }
-        return false;
-    }
+            /** @brief 검증 함수(`void fn( ValidationContext& )`)가 그 이름으로 선언됐는지 봅니다. */
+            static bool isValidatorDeclared( const vector<ParsedMethodSignature>& listMethodSignature, const string_view name )
+            {
+                for ( const ParsedMethodSignature& signature : listMethodSignature )
+                {
+                    const bool bMatchesValidationSignature = signature._name == name && signature._listParameterTypeName.size() == 1 &&
+                                                             signature._listParameterTypeName[0] == annotation::kValidationContextTypeName;
+                    if ( bMatchesValidationSignature )
+                        return true;
+                }
+                return false;
+            }
 
-    const ParsedMethodSignature* DeclarationValidator::findMethodSignature( const vector<ParsedMethodSignature>& listMethodSignature, const string_view name, const size_t maxParameterCount )
-    {
-        for ( const ParsedMethodSignature& signature : listMethodSignature )
-        {
-            if ( signature._name == name && signature._listParameterTypeName.size() <= maxParameterCount )
-                return &signature;
-        }
-        return nullptr;
-    }
+            /** @brief 이름이 같은 메서드 중 인자 수가 @p maxParameterCount 이하인 첫 것입니다. 없으면 nullptr 입니다. */
+            static const ParsedMethodSignature* findMethodSignature( const vector<ParsedMethodSignature>& listMethodSignature, const string_view name, const size_t maxParameterCount )
+            {
+                for ( const ParsedMethodSignature& signature : listMethodSignature )
+                {
+                    if ( signature._name == name && signature._listParameterTypeName.size() <= maxParameterCount )
+                        return &signature;
+                }
+                return nullptr;
+            }
+
+            /** @brief 열거자 목록에서 이름(대소문자 무시)이 같은 열거자입니다. 없으면 nullptr 입니다. */
+            static const ParsedEnumeratorInfo* findEnumeratorIgnoreCase( const ParsedEnumInfo& enumInfo, const string_view name )
+            {
+                for ( const ParsedEnumeratorInfo& enumerator : enumInfo._listEnumerator )
+                {
+                    if ( StringUtil::equals( enumerator._name, name, true ) )
+                        return &enumerator;
+                }
+                return nullptr;
+            }
+
+            /** @brief 식별자(영문 · 숫자 · `_`, 숫자로 시작하지 않는다)인지 봅니다. */
+            static bool isIdentifier( const string_view text ) noexcept
+            {
+                if ( text.empty() || ( '0' <= text.front() && text.front() <= '9' ) )
+                    return false;
+                for ( const utf8 character : text )
+                {
+                    const bool bWord = ( 'a' <= character && character <= 'z' ) || ( 'A' <= character && character <= 'Z' ) || ( '0' <= character && character <= '9' ) ||
+                                       character == '_';
+                    if ( bWord == false )
+                        return false;
+                }
+                return true;
+            }
+
+            /** @brief `name` · `!name` · `name == Value` · `name != Value` 꼴인지 봅니다(값은 식별자 · 정수 · `Enum::Value`). */
+            static bool isEditConditionWellFormed( const string_view text )
+            {
+                const string_view trimmed = StringUtil::trim( text );
+                const size_t      opPos   = trimmed.find( "==" ) != string_view::npos ? trimmed.find( "==" ) : trimmed.find( "!=" );
+                if ( opPos == string_view::npos )
+                {
+                    const string_view name = ( trimmed.empty() == false && trimmed.front() == '!' ) ? StringUtil::trim( trimmed.substr( 1 ) ) : trimmed;
+                    return isIdentifier( name );
+                }
+                const string_view name  = StringUtil::trim( trimmed.substr( 0, opPos ) );
+                string_view       value = StringUtil::trim( trimmed.substr( opPos + 2 ) );
+                const size_t      scope = value.rfind( "::" );
+                if ( scope != string_view::npos )
+                    value = value.substr( scope + 2 );
+                int64 number{ 0 };
+                return isIdentifier( name ) && ( isIdentifier( value ) || StringUtil::parseInt64( value, number ) );
+            }
+
+            /** @brief 조건식이 보는 이름이 @p type 이 선언한 프로퍼티(C++ 이름)인지 봅니다. */
+            static bool hasEditConditionSubject( const ParsedTypeInfo& type, const string_view text )
+            {
+                const string_view trimmed = StringUtil::trim( text );
+                const size_t      opPos   = trimmed.find( "==" ) != string_view::npos ? trimmed.find( "==" ) : trimmed.find( "!=" );
+                string_view       name    = opPos == string_view::npos ? trimmed : trimmed.substr( 0, opPos );
+                if ( name.empty() == false && name.front() == '!' )
+                    name = name.substr( 1 );
+                name = StringUtil::trim( name );
+                for ( const ParsedPropertyInfo& prop : type._listProperty )
+                {
+                    if ( string_view( prop._memberName ) == name )
+                        return true;
+                }
+                return false;
+            }
+
+            /** @brief @p type 이 부모를 가리키는 칸(`InheritParent`)을 선언했는지 봅니다. */
+            static bool hasInheritParent( const ParsedTypeInfo& type )
+            {
+                for ( const ParsedPropertyInfo& prop : type._listProperty )
+                {
+                    if ( prop._bInheritParent == SW_TRUE )
+                        return true;
+                }
+                return false;
+            }
+        };
+    } // namespace
 
     bool DeclarationValidator::validateTickMode( const ParsedTypeInfo& type )
     {
@@ -49,7 +130,7 @@ namespace sw
     bool DeclarationValidator::validateMemberFunctions( ParsedTypeInfo& type, const vector<ParsedMethodSignature>& listMethodSignature )
     {
         bool bValid = true;
-        if ( type._validate.empty() == false && isValidatorDeclared( listMethodSignature, type._validate ) == false )
+        if ( type._validate.empty() == false && DeclarationValidatorInternal::isValidatorDeclared( listMethodSignature, type._validate ) == false )
         {
             SW_LOG_ERROR_ID( "AstVisitor.ERRORREFLECTValidateNeeds", "ERROR: REFLECT( Validate = %# ) on '%#' needs a method of the same type: void %#( ValidationContext& context ) [const].",
                              type._validate, type._fullyQualifiedName, type._validate );
@@ -57,7 +138,7 @@ namespace sw
         }
         for ( ParsedPropertyInfo& prop : type._listProperty )
         {
-            if ( prop._validate.empty() == false && isValidatorDeclared( listMethodSignature, prop._validate ) == false )
+            if ( prop._validate.empty() == false && DeclarationValidatorInternal::isValidatorDeclared( listMethodSignature, prop._validate ) == false )
             {
                 SW_LOG_ERROR_ID( "AstVisitor.ERRORPROPERTYValidateNeeds", "ERROR: PROPERTY( Validate = %# ) on '%#' needs a method of the same type: void %#( ValidationContext& context ) [const].",
                                  prop._validate, CursorReader::makeMemberOwnerName( type._fullyQualifiedName, prop._name ), prop._validate );
@@ -66,7 +147,7 @@ namespace sw
             if ( prop._repNotify.empty() )
                 continue;
             const string                 owner      = CursorReader::makeMemberOwnerName( type._fullyQualifiedName, prop._name );
-            const ParsedMethodSignature* pSignature = findMethodSignature( listMethodSignature, prop._repNotify, 1 );
+            const ParsedMethodSignature* pSignature = DeclarationValidatorInternal::findMethodSignature( listMethodSignature, prop._repNotify, 1 );
             const bool                   bTakesOld  = pSignature != nullptr && pSignature->_listParameterTypeName.size() == 1;
             if ( pSignature == nullptr || ( bTakesOld && pSignature->_listParameterTypeName[0] != prop._typeName ) )
             {
@@ -95,7 +176,7 @@ namespace sw
                 bValid = false;
             }
             // 기반이 없으면 조건식의 이름은 이 타입의 프로퍼티여야 한다. 기반이 있으면 생성된 판정의 멤버 접근이 컴파일에서 본다.
-            if ( prop._editCondition.empty() == false && type._baseCount == 0 && hasEditConditionSubject( type, prop._editCondition ) == false )
+            if ( prop._editCondition.empty() == false && type._baseCount == 0 && DeclarationValidatorInternal::hasEditConditionSubject( type, prop._editCondition ) == false )
             {
                 SW_LOG_ERROR_ID( "AstVisitor.ERRORPROPERTYEditConditionName", "ERROR: PROPERTY( EditCondition = \"%#\" ) on '%#' - names a property '%#' does not declare.", prop._editCondition,
                                  owner, type._fullyQualifiedName );
@@ -124,7 +205,7 @@ namespace sw
                 bValid = false;
             }
             // 부모를 가리키는 칸이 없으면 "부모가 없을 때만" 은 늘 참이다 — Required 로 적는다(기반 타입의 칸은 등록이 합쳐 보므로 기반이 있으면 넘긴다).
-            if ( prop._bRequiredAtRoot == SW_TRUE && type._baseCount == 0 && hasInheritParent( type ) == false )
+            if ( prop._bRequiredAtRoot == SW_TRUE && type._baseCount == 0 && DeclarationValidatorInternal::hasInheritParent( type ) == false )
             {
                 SW_LOG_ERROR_ID( "AstVisitor.ERRORPROPERTYRequiredAtRootNoParent", "ERROR: PROPERTY( RequiredAtRoot ) on '%#' - '%#' has no PROPERTY( InheritParent ) field, so every element is a root. Write Required.",
                                  owner, type._fullyQualifiedName );
@@ -184,16 +265,6 @@ namespace sw
         return bValid;
     }
 
-    const ParsedEnumeratorInfo* DeclarationValidator::findEnumeratorIgnoreCase( const ParsedEnumInfo& enumInfo, const string_view name )
-    {
-        for ( const ParsedEnumeratorInfo& enumerator : enumInfo._listEnumerator )
-        {
-            if ( StringUtil::equals( enumerator._name, name, true ) )
-                return &enumerator;
-        }
-        return nullptr;
-    }
-
     bool DeclarationValidator::validateEnumeratorRedirects( const ParsedEnumInfo& enumInfo )
     {
         bool                                      bValid       = true;
@@ -211,14 +282,14 @@ namespace sw
                     bValid = false;
                     continue;
                 }
-                const ParsedEnumeratorInfo* pTarget = findEnumeratorIgnoreCase( enumInfo, targetName );
+                const ParsedEnumeratorInfo* pTarget = DeclarationValidatorInternal::findEnumeratorIgnoreCase( enumInfo, targetName );
                 if ( pTarget == nullptr || pTarget->_name != targetName )
                 {
                     SW_LOG_ERROR_ID( "AstVisitor.ERRORENUMNotEnumerator", "ERROR: ENUM( %# = \"%#:%#\" ) on '%#' - '%#' is not an enumerator of it (spell it as declared).", pKey, oldName, targetName,
                                      enumInfo._fullyQualifiedName, targetName );
                     bValid = false;
                 }
-                const ParsedEnumeratorInfo* pCurrent = findEnumeratorIgnoreCase( enumInfo, oldName );
+                const ParsedEnumeratorInfo* pCurrent = DeclarationValidatorInternal::findEnumeratorIgnoreCase( enumInfo, oldName );
                 if ( pCurrent != nullptr )
                 {
                     SW_LOG_ERROR_ID( "AstVisitor.ERRORENUMStillEnumerator", "ERROR: ENUM( %# = \"%#:%#\" ) on '%#' - '%#' is still an enumerator; an old name must be one that no longer exists.", pKey,
@@ -277,7 +348,7 @@ namespace sw
             // 아는 단위는 커스텀 메타 글이 아니라 런타임 메타데이터의 열거로 싣는다(`CodeGenerator::emitPropertyMetadata`).
         }
 
-        if ( prop._editCondition.empty() == false && isEditConditionWellFormed( prop._editCondition ) == false )
+        if ( prop._editCondition.empty() == false && DeclarationValidatorInternal::isEditConditionWellFormed( prop._editCondition ) == false )
         {
             SW_LOG_ERROR_ID( "AstVisitor.ERRORPROPERTYEditConditionUse", "ERROR: PROPERTY( EditCondition = \"%#\" ) on '%#' - use name, !name, name == Value or name != Value.", prop._editCondition, owner );
             return false;
@@ -290,64 +361,6 @@ namespace sw
             return false;
         }
         return true;
-    }
-
-    bool DeclarationValidator::isIdentifier( const string_view text ) noexcept
-    {
-        if ( text.empty() || ( '0' <= text.front() && text.front() <= '9' ) )
-            return false;
-        for ( const utf8 character : text )
-        {
-            const bool bWord = ( 'a' <= character && character <= 'z' ) || ( 'A' <= character && character <= 'Z' ) || ( '0' <= character && character <= '9' ) ||
-                               character == '_';
-            if ( bWord == false )
-                return false;
-        }
-        return true;
-    }
-
-    bool DeclarationValidator::hasInheritParent( const ParsedTypeInfo& type )
-    {
-        for ( const ParsedPropertyInfo& prop : type._listProperty )
-        {
-            if ( prop._bInheritParent == SW_TRUE )
-                return true;
-        }
-        return false;
-    }
-
-    bool DeclarationValidator::hasEditConditionSubject( const ParsedTypeInfo& type, const string_view text )
-    {
-        const string_view trimmed = StringUtil::trim( text );
-        const size_t      opPos   = trimmed.find( "==" ) != string_view::npos ? trimmed.find( "==" ) : trimmed.find( "!=" );
-        string_view       name    = opPos == string_view::npos ? trimmed : trimmed.substr( 0, opPos );
-        if ( name.empty() == false && name.front() == '!' )
-            name = name.substr( 1 );
-        name = StringUtil::trim( name );
-        for ( const ParsedPropertyInfo& prop : type._listProperty )
-        {
-            if ( string_view( prop._memberName ) == name )
-                return true;
-        }
-        return false;
-    }
-
-    bool DeclarationValidator::isEditConditionWellFormed( const string_view text )
-    {
-        const string_view trimmed = StringUtil::trim( text );
-        const size_t      opPos   = trimmed.find( "==" ) != string_view::npos ? trimmed.find( "==" ) : trimmed.find( "!=" );
-        if ( opPos == string_view::npos )
-        {
-            const string_view name = ( trimmed.empty() == false && trimmed.front() == '!' ) ? StringUtil::trim( trimmed.substr( 1 ) ) : trimmed;
-            return isIdentifier( name );
-        }
-        const string_view name  = StringUtil::trim( trimmed.substr( 0, opPos ) );
-        string_view       value = StringUtil::trim( trimmed.substr( opPos + 2 ) );
-        const size_t      scope = value.rfind( "::" );
-        if ( scope != string_view::npos )
-            value = value.substr( scope + 2 );
-        int64 number{ 0 };
-        return isIdentifier( name ) && ( isIdentifier( value ) || StringUtil::parseInt64( value, number ) );
     }
 
     bool DeclarationValidator::isInterpAllowed( const ParsedPropertyInfo& prop, const TypeNameMap& typeNameMap, const string_view owner )

@@ -117,6 +117,48 @@ namespace sw
                 return qualified;
             }
         };
+
+        struct TypeRegistryInternal
+        {
+            /** @brief 해시 표 충돌을 오류로 남깁니다(잠금 밖). 비어 있으면 아무것도 하지 않습니다. */
+            static void reportWireTypeNameClash( string_view clash )
+            {
+                if ( clash.empty() )
+                    return;
+                SW_LOG_ERROR_ID( "Reflection.TypeNameHashClash", "Reflected type or enum names '%#' share a 32-bit name hash - binary tags record that hash, so the later name is not registered "
+                                                                 "for it and its saved fields cannot be converted; rename one",
+                                 clash );
+            }
+
+            /**
+             * @brief 사슬(조상 포함)에서 같은 인터페이스를 두 번 내보내거나 인터페이스가 상한(`kMaxInterfaceCount`)을 넘는 형식을 오류로 알립니다(`Reflection.InterfaceExportedTwice` · `Reflection.InterfaceTableFull`).
+             * @details 상속 병합(`TypeInfo::rebuildDerivedCaches`)은 독점 잠금 안이라 앞의 것을 두고 조용히 넘는다 — 찾기가 어느 포트를 고를지 정하지 못하는 모양을 여기서 멈춘다.
+             */
+            static void reportInterfaceProblems( const vector<TypeInfo*>& listType )
+            {
+                for ( const TypeInfo* pType : listType )
+                {
+                    TypeInterfaceTable merged;
+                    for ( const TypeInfo* pDeclaring : pType->getTypeChain() )
+                    {
+                        for ( const TypeInterfaceEntry& entry : pDeclaring->_ownInterfaces )
+                        {
+                            if ( merged.find( entry._interfaceName ) != nullptr )
+                            {
+                                SW_LOG_ERROR_ID( "Reflection.InterfaceExportedTwice", "'%#' exports interface '%#' twice (through '%#') - findInterface cannot choose a port; keep one REFLECT_INTERFACE line in the chain",
+                                                 pType->_fullyQualifiedName.c_str(), entry._interfaceName.c_str(), pDeclaring->_fullyQualifiedName.c_str() );
+                                continue;
+                            }
+                            if ( merged.add( entry._interfaceName, entry._portOffset ) == false )
+                            {
+                                SW_LOG_ERROR_ID( "Reflection.InterfaceTableFull", "'%#' exports more than %# interfaces - '%#' is not found by findInterface; raise constant::reflection::kMaxInterfaceCount",
+                                                 pType->_fullyQualifiedName.c_str(), constant::reflection::kMaxInterfaceCount, entry._interfaceName.c_str() );
+                            }
+                        }
+                    }
+                }
+            }
+        };
     } // namespace
 
     namespace generated
@@ -256,7 +298,7 @@ namespace sw
         // 로그는 잠금 밖에서 남긴다. 리스너가 레지스트리를 다시 물어도 멈추지 않게 하려는 것이다.
         lock.unlock();
         rebuildAffected( listAffected );
-        reportWireTypeNameClash( wireNameClash );
+        TypeRegistryInternal::reportWireTypeNameClash( wireNameClash );
         if ( shadowedFqn.empty() == false )
             SW_LOG_WARNING_ID( "Reflection.TypeShortNameCollision", "Reflected type name '%#' now means %# and no longer %# - short names must be unique (scenes, prefabs and "
                                                                     "addComponentByName look types up by them)",
@@ -294,16 +336,7 @@ namespace sw
         VectorUtil::addUnique( _listRetiredTypeName, retiredName );
         assignWireTypeNameLocked( retiredName, hashed_string{}, WireTypeKind::Retired, wireNameClash );
         lock.unlock();
-        reportWireTypeNameClash( wireNameClash );
-    }
-
-    void TypeRegistry::reportWireTypeNameClash( string_view clash )
-    {
-        if ( clash.empty() )
-            return;
-        SW_LOG_ERROR_ID( "Reflection.TypeNameHashClash", "Reflected type or enum names '%#' share a 32-bit name hash - binary tags record that hash, so the later name is not registered "
-                                                         "for it and its saved fields cannot be converted; rename one",
-                         clash );
+        TypeRegistryInternal::reportWireTypeNameClash( wireNameClash );
     }
 
     void TypeRegistry::registerEnum( const EnumInfo& info )
@@ -355,7 +388,7 @@ namespace sw
         const string  enumName( pEnumInfo->_fullyQualifiedName.c_str() );
 
         lock.unlock();
-        reportWireTypeNameClash( wireNameClash );
+        TypeRegistryInternal::reportWireTypeNameClash( wireNameClash );
         if ( shadowedFqn.empty() == false )
             SW_LOG_WARNING_ID( "Reflection.EnumShortNameCollision", "Reflected enum name '%#' now means %# and no longer %# - short names must be unique",
                                pEnumInfo->_name.c_str(), pEnumInfo->_fullyQualifiedName.c_str(), shadowedFqn.c_str() );
@@ -542,32 +575,7 @@ namespace sw
                 SW_LOG_ERROR_ID( "Reflection.ParentChainLoop", "Reflection parent chain loops at '%#' - returning own properties only.", pType->_fullyQualifiedName.c_str() );
         }
         reportFieldNameHashClashes( listType );
-        reportInterfaceProblems( listType );
-    }
-
-    void TypeRegistry::reportInterfaceProblems( const vector<TypeInfo*>& listType )
-    {
-        for ( const TypeInfo* pType : listType )
-        {
-            TypeInterfaceTable merged;
-            for ( const TypeInfo* pDeclaring : pType->getTypeChain() )
-            {
-                for ( const TypeInterfaceEntry& entry : pDeclaring->_ownInterfaces )
-                {
-                    if ( merged.find( entry._interfaceName ) != nullptr )
-                    {
-                        SW_LOG_ERROR_ID( "Reflection.InterfaceExportedTwice", "'%#' exports interface '%#' twice (through '%#') - findInterface cannot choose a port; keep one REFLECT_INTERFACE line in the chain",
-                                         pType->_fullyQualifiedName.c_str(), entry._interfaceName.c_str(), pDeclaring->_fullyQualifiedName.c_str() );
-                        continue;
-                    }
-                    if ( merged.add( entry._interfaceName, entry._portOffset ) == false )
-                    {
-                        SW_LOG_ERROR_ID( "Reflection.InterfaceTableFull", "'%#' exports more than %# interfaces - '%#' is not found by findInterface; raise constant::reflection::kMaxInterfaceCount",
-                                         pType->_fullyQualifiedName.c_str(), constant::reflection::kMaxInterfaceCount, entry._interfaceName.c_str() );
-                    }
-                }
-            }
-        }
+        TypeRegistryInternal::reportInterfaceProblems( listType );
     }
 
     void TypeRegistry::reportFieldNameHashClashes( const vector<TypeInfo*>& listType )
@@ -883,7 +891,7 @@ namespace sw
         s_typeTableGeneration.fetch_add( 1, std::memory_order_acq_rel );
         lock.unlock();
         rebuildAffected( listAffected );
-        reportWireTypeNameClash( wireNameClash );
+        TypeRegistryInternal::reportWireTypeNameClash( wireNameClash );
     }
 
     void TypeRegistry::registerTypeAlias( const utf8* pAliasName, const utf8* pCanonicalName )
@@ -958,7 +966,7 @@ namespace sw
         }
         lock.unlock();
         rebuildAffected( listAffected );
-        reportWireTypeNameClash( wireNameClash );
+        TypeRegistryInternal::reportWireTypeNameClash( wireNameClash );
     }
 
     void TypeRegistry::registerEnumAlias( const utf8* pAliasName, const utf8* pCanonicalName )
@@ -990,7 +998,7 @@ namespace sw
         // 별칭이 생기면 같은 이름의 답이 nullptr 에서 열거형으로 바뀔 수 있다(타입 별칭과 같은 규칙).
         s_typeTableGeneration.fetch_add( 1, std::memory_order_acq_rel );
         lock.unlock();
-        reportWireTypeNameClash( wireNameClash );
+        TypeRegistryInternal::reportWireTypeNameClash( wireNameClash );
     }
 
     const TypeInfo* TypeRegistry::findType( const hashed_string& nameOrFqn ) const

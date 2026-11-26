@@ -267,7 +267,7 @@ namespace sw
         _heightfield.setOrigin( getWorldPosition() );            // 루트는 이미 옮겨졌다
         for ( uint32 chunkIndex = 0; chunkIndex < _listChunk.size(); ++chunkIndex )
         {
-            const float3 translation = TerrainMeshBuilder::computeChunkTranslation( _heightfield, _layout, chunkIndex % _layout._chunkCountX, chunkIndex / _layout._chunkCountX );
+            const float3 translation = _layout.computeChunkTranslation( _heightfield, chunkIndex % _layout._chunkCountX, chunkIndex / _layout._chunkCountX );
             if ( _listChunk[chunkIndex]._batch != nullptr )
                 _listChunk[chunkIndex]._batch->setWorld( 0, float4x4::makeTranslation( translation ) );
         }
@@ -447,7 +447,7 @@ namespace sw
             {
                 const uint32 chunkIndex = chunkZ * _layout._chunkCountX + chunkX;
                 Chunk&       chunk      = _listChunk[chunkIndex];
-                chunk._batch->setBoundsRadius( 0, TerrainMeshBuilder::computeChunkBoundsRadius( _heightfield, _layout, chunkX, chunkZ ) );
+                chunk._batch->setBoundsRadius( 0, _layout.computeChunkBoundsRadius( _heightfield, chunkX, chunkZ ) );
                 if ( chunk._bMeshStale == false )
                     _listStaleChunk.push_back( chunkIndex );
                 chunk._bMeshStale = true;
@@ -896,8 +896,8 @@ namespace sw
             placeholder->setVertexFormat( RHIMeshVertexFormat::HighPrecision ); // 청크 메시와 같은 형식(아래 setMesh)
             chunk._batch = sw::make_unique<MeshInstanceBatch>( std::move( placeholder ), _material.getMaterial(), _material.getInstance(), 1u, MeshInstanceWriter::CPU );
             chunk._batch->setOwnerComponent( this );
-            chunk._batch->setWorld( 0, float4x4::makeTranslation( TerrainMeshBuilder::computeChunkTranslation( _heightfield, _layout, chunkX, chunkZ ) ) );
-            chunk._batch->setBoundsRadius( 0, TerrainMeshBuilder::computeChunkBoundsRadius( _heightfield, _layout, chunkX, chunkZ ) );
+            chunk._batch->setWorld( 0, float4x4::makeTranslation( _layout.computeChunkTranslation( _heightfield, chunkX, chunkZ ) ) );
+            chunk._batch->setBoundsRadius( 0, _layout.computeChunkBoundsRadius( _heightfield, chunkX, chunkZ ) );
             listAllChunk[chunkIndex] = chunkIndex;
         }
         // 메시를 모두 채운 뒤에 등록한다 — 빈 메시 배치가 레지스트리에 한 번도 보이지 않는다.

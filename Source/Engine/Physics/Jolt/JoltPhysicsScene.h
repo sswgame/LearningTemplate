@@ -482,8 +482,6 @@ namespace sw
 
         /** @brief 셰이프 서술자 여럿을 Jolt 셰이프 하나로 만듭니다(둘 이상이면 정적 컴파운드). 실패하면 오류를 남기고 nullptr 를 반환합니다. */
         JPH::RefConst<JPH::Shape> createJoltShape( span<const PhysicsShapeDesc3D> listShape, const hashed_string& defaultMaterial, bool bAllowMesh ) const;
-        /** @brief 캐릭터 캡슐 셰이프입니다(바닥이 원점 — 발). 지을 수 없으면 오류를 남기고 nullptr 입니다. */
-        static JPH::RefConst<JPH::Shape> createCharacterShape( float32 radius, float32 halfHeight );
         /** @brief 캐릭터 캡슐의 엔진 서술자입니다(속 바디 기록 — `createCharacterShape` 와 같은 모양). */
         static PhysicsShapeDesc3D makeCharacterShapeDesc( float32 radius, float32 halfHeight );
         /** @brief 셰이프 하나를 로컬 위치와 회전 없이 만듭니다. */

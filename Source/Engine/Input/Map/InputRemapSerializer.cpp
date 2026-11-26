@@ -8,7 +8,6 @@
 #include "Engine/Input/Map/InputMapXML.h"
 #include "Engine/Input/RawInputEvent.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
-#include "Engine/Serialization/XML/XMLNameCheck.h"
 
 /**
  * @file InputRemapSerializer.cpp
@@ -71,7 +70,7 @@ namespace sw
             return false;
 
         bool bCursorConflict = false;
-        bool bValid          = XMLNameCheck::reportUnknownChildren( root, InputRemapSerializerInternal::kArrRootChild, filePath.str() ); // 깨진 칸이 있는 바인딩은 넣지 않고 읽기를 실패로 돌린다
+        bool bValid          = root.reportUnknownChildren( InputRemapSerializerInternal::kArrRootChild, filePath.str() ); // 깨진 칸이 있는 바인딩은 넣지 않고 읽기를 실패로 돌린다
         for ( XMLNode actionNode = root.findChild( "action" ); actionNode.isValid(); actionNode = actionNode.findNextSibling( "action" ) )
         {
             const hashed_string actionName( actionNode.getAttributeText( "name" ) );

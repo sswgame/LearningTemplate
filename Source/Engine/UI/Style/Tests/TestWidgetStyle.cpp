@@ -113,9 +113,9 @@ SW_TEST_CASE( UIStyleTest, ComponentsReadAndWriteTheirOwnMember )
             continue;
         WidgetStyle   style;
         const float32 arrWrite[4] = { 11.0f, 22.0f, 33.0f, 44.0f };
-        UIStyleFieldTable::writeComponents( style, field, arrWrite );
+        style.writeComponents( field, arrWrite );
         float32 arrRead[4] = { -1.0f, -1.0f, -1.0f, -1.0f };
-        UIStyleFieldTable::readComponents( style, field, arrRead );
+        style.readComponents( field, arrRead );
         for ( uint32 component = 0; component < 4; ++component )
         {
             // 성분 수 뒤의 칸은 건드리지 않는다.
@@ -130,8 +130,8 @@ SW_TEST_CASE( UIStyleTest, ComponentsReadAndWriteTheirOwnMember )
                 continue;
             float32 arrActual[4]{ 0.0f, 0.0f, 0.0f, 0.0f };
             float32 arrDefault[4]{ 0.0f, 0.0f, 0.0f, 0.0f };
-            UIStyleFieldTable::readComponents( style, Util::toField( other ), arrActual );
-            UIStyleFieldTable::readComponents( defaults, Util::toField( other ), arrDefault );
+            style.readComponents( Util::toField( other ), arrActual );
+            defaults.readComponents( Util::toField( other ), arrDefault );
             for ( uint32 component = 0; component < otherCount; ++component )
             {
                 SW_EXPECT_NEAR( arrDefault[component], arrActual[component], 0.0f );
@@ -145,12 +145,12 @@ SW_TEST_CASE( UIStyleTest, ComponentsMapToNamedMembers )
 {
     WidgetStyle   style;
     const float32 arrWrite[4] = { 0.25f, 0.5f, 0.75f, 1.5f };
-    UIStyleFieldTable::writeComponents( style, UIStyleField::ShadowOffset, arrWrite );
+    style.writeComponents( UIStyleField::ShadowOffset, arrWrite );
     SW_EXPECT_NEAR( 0.25f, style._shadowOffset._x, 0.0f );
     SW_EXPECT_NEAR( 0.5f, style._shadowOffset._y, 0.0f );
-    UIStyleFieldTable::writeComponents( style, UIStyleField::Opacity, arrWrite );
+    style.writeComponents( UIStyleField::Opacity, arrWrite );
     SW_EXPECT_NEAR( 0.25f, style._opacity, 0.0f );
-    UIStyleFieldTable::writeComponents( style, UIStyleField::FocusRingColor, arrWrite );
+    style.writeComponents( UIStyleField::FocusRingColor, arrWrite );
     SW_EXPECT_NEAR( 0.25f, style._focusRingColor._x, 0.0f );
     SW_EXPECT_NEAR( 1.5f, style._focusRingColor._w, 0.0f );
 }
@@ -162,14 +162,14 @@ SW_TEST_CASE( UIStyleTest, NonNumericPropertiesIgnoreComponents )
     style._transition         = "Opacity 1 Linear";
     style._font._family       = "Roboto";
     const float32 arrWrite[4] = { 1.0f, 2.0f, 3.0f, 4.0f };
-    UIStyleFieldTable::writeComponents( style, UIStyleField::Transition, arrWrite );
-    UIStyleFieldTable::writeComponents( style, UIStyleField::Font, arrWrite );
+    style.writeComponents( UIStyleField::Transition, arrWrite );
+    style.writeComponents( UIStyleField::Font, arrWrite );
     SW_EXPECT_TRUE( style._transition == "Opacity 1 Linear" );
     SW_EXPECT_TRUE( style._font._family == "Roboto" );
 
     float32 arrRead[4] = { -1.0f, -1.0f, -1.0f, -1.0f };
-    UIStyleFieldTable::readComponents( style, UIStyleField::Transition, arrRead );
-    UIStyleFieldTable::readComponents( style, UIStyleField::Font, arrRead );
+    style.readComponents( UIStyleField::Transition, arrRead );
+    style.readComponents( UIStyleField::Font, arrRead );
     SW_EXPECT_NEAR( -1.0f, arrRead[0], 0.0f );
 }
 
@@ -184,21 +184,21 @@ SW_TEST_CASE( UIStyleTest, CopyFieldMovesOnlyThatField )
     source._transition   = "Opacity 1 Linear";
 
     WidgetStyle target;
-    UIStyleFieldTable::copyField( source, UIStyleField::FontSize, target );
+    target.copyFieldFrom( source, UIStyleField::FontSize );
     SW_EXPECT_NEAR( 42.0f, target._fontSize, 0.0f );
     SW_EXPECT_NEAR( 0.0f, target._padding._x, 0.0f );
     SW_EXPECT_TRUE( target._font._family.empty() );
     SW_EXPECT_TRUE( target._transition.empty() );
 
-    UIStyleFieldTable::copyField( source, UIStyleField::Padding, target );
+    target.copyFieldFrom( source, UIStyleField::Padding );
     SW_EXPECT_NEAR( 4.0f, target._padding._w, 0.0f );
 
-    UIStyleFieldTable::copyField( source, UIStyleField::Font, target );
+    target.copyFieldFrom( source, UIStyleField::Font );
     SW_EXPECT_TRUE( target._font._family == "Roboto" );
     SW_EXPECT_TRUE( target._font._weight == FontWeight::Bold );
     SW_EXPECT_TRUE( target._transition.empty() );
 
-    UIStyleFieldTable::copyField( source, UIStyleField::Transition, target );
+    target.copyFieldFrom( source, UIStyleField::Transition );
     SW_EXPECT_TRUE( target._transition == "Opacity 1 Linear" );
 }
 
@@ -244,9 +244,9 @@ SW_TEST_CASE( UIStyleTest, ChangedPropertiesCompareEachFieldByValue )
         {
             UIComputedStyle changed = Util::makeAllSet();
             float32         arrValue[4]{ 0.0f, 0.0f, 0.0f, 0.0f };
-            UIStyleFieldTable::readComponents( changed._value, field, arrValue );
+            changed._value.readComponents( field, arrValue );
             arrValue[component] += 1.0f;
-            UIStyleFieldTable::writeComponents( changed._value, field, arrValue );
+            changed._value.writeComponents( field, arrValue );
             SW_EXPECT_EQUAL( UIStyleFieldTable::makeBit( field ), UIComputedStyle::computeChangedProperties( &base, &changed ) );
         }
     }

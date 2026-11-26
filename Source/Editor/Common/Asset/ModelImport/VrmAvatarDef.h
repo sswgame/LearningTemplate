@@ -141,6 +141,11 @@ namespace sw::editor
     };
 } // namespace sw::editor
 
+namespace sw
+{
+    class Skeleton;
+} // namespace sw
+
 namespace sw::editor
 {
     struct VrmGltfNames;
@@ -162,12 +167,47 @@ namespace sw::editor
         /** @brief humanoid 본 이름(1.0)의 스켈레톤 본 이름입니다. 없으면 빈 문자열입니다. */
         string findBone( string_view humanBone ) const;
 
+        // VRM 아바타 정보를 런타임이 이미 읽는 형식으로 옮기는 함수들입니다(아래 네 함수). 런타임에 VRM 전용 타입을 두지 않는다:
+        // 표정은 얼굴 리그(`<이름>.facial.xml`, `FacialRig`), 스프링 본은 후처리 리그(`<이름>.rig.xml`, `RigAsset` 의 `SpringChain` 노드)다.
+        // 옮기지 못하는 값: 표정의 override · isBinary, 깜빡임 표정의 가중치, 스프링의 center 본(리그 사슬은 월드 기준).
+        // 스프링 물성은 three-vrm `VRMSpringBoneJoint.update` 와 항마다 같다. 남는 차이: 리그는 고정 스텝(1/60 초)이고 VRM 은 프레임 시간이다.
+        /** @brief 비즘으로 옮기는 VRM 프리셋과 립싱크 표(`engine/animation/lipsync.xml`)의 비즘 이름입니다. 나머지 입 모양(ih · oh)은 표정으로 남습니다. */
+        struct VisemeMapping
+        {
+            string_view _vrmPreset;
+            string_view _viseme;
+        };
+        static constexpr VisemeMapping kArrVisemeMapping[] = {
+            {"aa", "AA"},
+            {"ee", "EE"},
+            {"ou", "OO"},
+        };
+        /** @brief 립싱크 표의 무음 비즘입니다(타깃 없음). */
+        static constexpr string_view kSilenceViseme = "sil";
+
+        /** @brief 표정이 하나라도 있으면 얼굴 리그가 있다 — 없으면 파일을 쓰지 않습니다. */
+        bool hasFacialRig() const;
+        /**
+         * @brief 얼굴 리그 XML(`FacialRig` 의 리플렉션 형식)을 만듭니다. 모든 VRM 표정이 같은 이름의 표정이고, aa · ee · ou 는 비즘으로도, blink 는 깜빡임으로도 옮깁니다.
+         * @details 깜빡임 타깃은 blink 표정의 타깃, 없으면 blinkLeft · blinkRight 의 타깃을 모은다. 시선(눈 본)은 넣지 않는다(VRM 시선은 옮기지 않는다).
+         *          옮기지 못한 값의 이름은 @p pOutListIgnored 에 모은다(부르는 쪽이 경고로 알린다).
+         */
+        string makeFacialRigXML( vector<string>* pOutListIgnored ) const;
+        /** @brief 두 본 이상의 스프링 사슬이 하나라도 나오면 리그가 있다 — 없으면 파일을 쓰지 않습니다. */
+        bool hasSpringRig( const Skeleton& skeleton ) const;
+        /**
+         * @brief 후처리 리그 XML(`RigAsset` 형식, `SpringChain` 노드만)을 만듭니다.
+         * @details 사슬은 스켈레톤 부모를 따라 끊는다. 두 본 미만의 사슬과 스켈레톤에 없는 본은 넣지 않고 무시 목록에 모은다.
+         *          충돌체는 그 스프링의 충돌체 묶음 전부다(구는 offset, 캡슐은 offset → tail).
+         */
+        string makeSpringRigXML( const Skeleton& skeleton, vector<string>* pOutListIgnored ) const;
+
         // VRM 아바타 정보 읽기와 `.avatar.xml` 쓰기를 담당합니다. 모든 함수가 static 입니다.
         // 번호가 범위를 벗어나면(없는 노드 · 메시 · 모프 타깃) 오류다. 모르는 키와, 알지만 옮기지 않는 값(시선 · 머티리얼 표정 · humanoid 관절 한계)은
         /** @brief 모델 옆 폴더에 쓰는 아바타 파일의 접미사입니다(`<이름>.avatar.xml`). */
         static constexpr string_view kExtension = ".avatar.xml";
         /** @brief 아바타 파일의 형식과 읽기 규칙 버전입니다. 바꾸면 올립니다. VRM 원본의 해시에 섞여 다시 임포트하게 합니다. */
-        static constexpr uint32 kVersion = 3; // 2: 얼굴 리그 · 후처리 리그도 쓴다(VrmRuntimeAssets), 3: 아바타 파일이 XML(`.avatar.xml`)
+        static constexpr uint32 kVersion = 3; // 2: 얼굴 리그 · 후처리 리그도 쓴다(`VrmAvatarDef::makeFacialRigXML` · `makeSpringRigXML`), 3: 아바타 파일이 XML(`.avatar.xml`)
 
         /**
          * @brief VRM 0.x 의 `extensions.VRM` 을 읽습니다.

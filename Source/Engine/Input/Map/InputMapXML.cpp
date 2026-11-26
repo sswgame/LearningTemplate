@@ -13,7 +13,6 @@
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
-#include "Engine/Serialization/XML/XMLNameCheck.h"
 
 namespace sw
 {
@@ -69,7 +68,7 @@ namespace sw
             [[nodiscard]] static bool readLeaf( const XMLNode& element, TParams& outParams, const ActionContext& context )
             {
                 const bool bProperties = XMLFields::readProperties( element, outParams, context._sourceName );
-                const bool bChildren   = XMLNameCheck::reportUnknownChildren( element, nullptr, 0, context._sourceName );
+                const bool bChildren   = element.reportUnknownChildren( nullptr, 0, context._sourceName );
                 context._bValid        = bProperties && bChildren && context._bValid;
                 return bProperties && bChildren;
             }
@@ -373,7 +372,7 @@ namespace sw
         InputMapActionParams           params;
         optional<InputActionValueType> valueType;
         const bool                     bProperties = XMLFields::readProperties( actionNode, params, sourceName, { "valueType" } ) && XMLFields::readOptionalEnum( actionNode, "valueType", valueType, sourceName );
-        const bool                     bChildren   = XMLNameCheck::reportUnknownChildren( actionNode, Internal::kArrBindingElement, sourceName );
+        const bool                     bChildren   = actionNode.reportUnknownChildren( Internal::kArrBindingElement, sourceName );
         if ( bProperties == false || bChildren == false )
         {
             inoutbValid = false;

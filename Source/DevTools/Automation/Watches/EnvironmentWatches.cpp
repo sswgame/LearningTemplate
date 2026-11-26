@@ -45,7 +45,6 @@
 #include "Engine/Environment/Terrain/TerrainMeshBuilder.h"
 #include "Engine/Environment/Water/BoatComponent.h"
 #include "Engine/Environment/Water/BuoyancyComponent.h"
-#include "Engine/Environment/Water/BuoyancyVolumeComponent.h"
 #include "Engine/Environment/Water/WaterBodyComponent.h"
 #include "Engine/Environment/Wind/WindComponent.h"
 #include "Engine/Foundation/DeterministicRun.h"
@@ -467,13 +466,6 @@ namespace sw
     } // namespace
 
     SW_AUTOMATION_QUERY_WATCH( waterRiverPointCount, "Water.RiverPointCount", "River path points of the target's water body", &WaterBodyWatchesInternal::readRiverPointCount, true, false );
-} // namespace sw
-
-// Engine/Environment/Water/BuoyancyVolumeComponent.cpp 에서 옮긴 개발 등록(배포 엔진에 컴파일되지 않게).
-namespace sw
-{
-    SW_AUTOMATION_GETTER_WATCH( buoyancyVolumeSubmergedBodies, "BuoyancyVolume.SubmergedBodies", "Bodies the first water box floated in the last fixed step", BuoyancyVolumeComponent,
-                                &BuoyancyVolumeComponent::getSubmergedBodyCount );
 } // namespace sw
 
 // Engine/Environment/Water/BuoyancyComponent.cpp 에서 옮긴 개발 등록(배포 엔진에 컴파일되지 않게).
