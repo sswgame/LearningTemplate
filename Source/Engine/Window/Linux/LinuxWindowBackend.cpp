@@ -10,7 +10,7 @@ namespace sw
     bool tryReadLinuxWindowBackend( LinuxWindowBackend& outBackend )
     {
         string backend;
-        if ( ProcessEnvironment::tryRead( "SW_WINDOW_BACKEND", backend ) == false || backend == "x11" )
+        if ( Process::tryReadEnvironment( "SW_WINDOW_BACKEND", backend ) == false || backend == "x11" )
         {
             outBackend = LinuxWindowBackend::X11;
             return true;

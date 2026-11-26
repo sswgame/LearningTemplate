@@ -260,13 +260,13 @@ namespace sw
                 bool         bLayerPathSet = true;
                 if ( FileUtil::exists( execDir.join( "VkLayer_khronos_validation.json" ) ) )
                 {
-                    bLayerPathSet = ProcessEnvironment::trySet( "VK_ADD_LAYER_PATH", execDir.str() ) && ProcessEnvironment::trySet( "VK_LAYER_PATH", execDir.str() );
+                    bLayerPathSet = Process::trySetEnvironment( "VK_ADD_LAYER_PATH", execDir.str() ) && Process::trySetEnvironment( "VK_LAYER_PATH", execDir.str() );
                 }
                 else
                 {
                     string vulkanSdkEnv;
-                    if ( ProcessEnvironment::tryReadNonEmpty( "VULKAN_SDK", vulkanSdkEnv ) )
-                        bLayerPathSet = ProcessEnvironment::trySet( "VK_ADD_LAYER_PATH", FileUtil::toDiskPath( vulkanSdkEnv ).join( "Bin" ).str() );
+                    if ( Process::tryReadEnvironmentNonEmpty( "VULKAN_SDK", vulkanSdkEnv ) )
+                        bLayerPathSet = Process::trySetEnvironment( "VK_ADD_LAYER_PATH", FileUtil::toDiskPath( vulkanSdkEnv ).join( "Bin" ).str() );
                 }
                 if ( bLayerPathSet == false )
                     SW_LOG_WARNING_ID( "Vulkan.CouldNotPointVulkan", "Could not point the Vulkan loader at the validation layer - the layer check below decides" );

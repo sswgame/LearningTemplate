@@ -39,7 +39,7 @@ namespace sw
             static bool runHelpTask( CommandletContext& context )
             {
                 // 로거를 거치지 않는다 — 도움말은 로그 줄(시각 · 범주 머리)이 아니라 그대로 읽을 글이고, 로그 수준을 낮춘 실행에서도 나와야 한다.
-                if ( StandardOutput::write( context._commandLine.makeUsageText() ) == false )
+                if ( Process::writeStandardOutput( context._commandLine.makeUsageText() ) == false )
                 {
                     SW_LOG_ERROR_ID( "Headless.CouldNotWriteHelp", "Could not write the -help text to standard output" );
                     return false;

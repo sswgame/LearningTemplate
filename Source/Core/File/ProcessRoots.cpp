@@ -45,7 +45,7 @@ namespace sw
             static AbsolutePath findBinaryFolder()
             {
                 string appFolder;
-                if ( ProcessEnvironment::tryReadNonEmpty( kAndroidAppFolderVariable, appFolder ) == false )
+                if ( Process::tryReadEnvironmentNonEmpty( kAndroidAppFolderVariable, appFolder ) == false )
                     reportFatalError( "ProcessRoots: %# is not set - AndroidMain must pass the app folder before anything asks for the roots", kAndroidAppFolderVariable );
                 return FileUtil::toDiskPath( appFolder );
             }
@@ -63,7 +63,7 @@ namespace sw
             static AbsolutePath findRunRoot( const AbsolutePath& binary, bool& bOutFromParent )
             {
                 string run;
-                bOutFromParent = ProcessEnvironment::tryReadNonEmpty( kRunRootVariable, run );
+                bOutFromParent = Process::tryReadEnvironmentNonEmpty( kRunRootVariable, run );
                 if ( bOutFromParent )
                     return requireAbsolute( run, "run" );
                 StringBuilder<constant::buffer::kMax64> runName;

@@ -246,24 +246,24 @@ namespace sw
 } // namespace sw
 
 // ------------------------------------------------------------------------------
-// ProcessEnvironment
+// Process — 환경 변수
 // ------------------------------------------------------------------------------
 namespace sw
 {
-    bool ProcessEnvironment::isSet( string_view name )
+    bool Process::hasEnvironment( string_view name )
     {
         string ignoredValue;
-        return tryRead( name, ignoredValue );
+        return tryReadEnvironment( name, ignoredValue );
     }
 
-    bool ProcessEnvironment::tryReadNonEmpty( string_view name, string& outValue )
+    bool Process::tryReadEnvironmentNonEmpty( string_view name, string& outValue )
     {
-        return tryRead( name, outValue ) && outValue.empty() == false;
+        return tryReadEnvironment( name, outValue ) && outValue.empty() == false;
     }
 } // namespace sw
 
 // ------------------------------------------------------------------------------
-// ProcessSession
+// Process — 세션 ID
 // ------------------------------------------------------------------------------
 namespace sw
 {
@@ -291,7 +291,7 @@ namespace sw
         }
     } // namespace
 
-    const utf8* ProcessSession::getID()
+    const utf8* Process::getSessionID()
     {
         static const ProcessSessionText s_session = makeProcessSessionText();
         return s_session._arrText;
@@ -299,11 +299,11 @@ namespace sw
 } // namespace sw
 
 // ------------------------------------------------------------------------------
-// StandardOutput
+// Process — 표준 출력
 // ------------------------------------------------------------------------------
 namespace sw
 {
-    bool StandardOutput::write( string_view text )
+    bool Process::writeStandardOutput( string_view text )
     {
         const size_t written = std::fwrite( text.data(), 1, text.size(), stdout );
         return written == text.size() && std::fflush( stdout ) == 0;

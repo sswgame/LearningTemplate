@@ -128,8 +128,8 @@ namespace sw
                 // Tracy 는 DLL 이 올라올 때 모든 인터페이스에서 연결을 기다려 Windows 방화벽 허용 창이 뜬다. 같은 PC 의 뷰어만 받도록 loopback 에 묶는다.
                 // 다른 PC 의 뷰어를 받으려면 실행 전에 환경 변수 TRACY_ONLY_LOCALHOST=0 을 정한다(빈 값도 사용자가 정한 값이다). Tracy 클라이언트가 CRT 환경 복사본을 읽으므로 `trySet` 이 복사본도 바꾼다.
                 string tracyOnlyLocalhost;
-                if ( ProcessEnvironment::tryRead( "TRACY_ONLY_LOCALHOST", tracyOnlyLocalhost ) == false )
-                    (void)ProcessEnvironment::trySet( "TRACY_ONLY_LOCALHOST", "1" ); // 못 정해도 방화벽 허용 창이 뜰 뿐이다
+                if ( Process::tryReadEnvironment( "TRACY_ONLY_LOCALHOST", tracyOnlyLocalhost ) == false )
+                    (void)Process::trySetEnvironment( "TRACY_ONLY_LOCALHOST", "1" ); // 못 정해도 방화벽 허용 창이 뜰 뿐이다
                 // 엔진 DLL 과 같은 폴더(`Bin`)에 빌드가 둔다. 없으면(Tracy 를 끈 배포) 빈 표다 - 선택 구성 요소라 로드 실패 경고를 내지 않게 먼저 묻는다.
                 const AbsolutePath clientText = ProcessRoots::get()._binary.join( "TracyClient.dll" );
                 if ( FileUtil::isRegularFile( clientText ) == false )
@@ -251,7 +251,7 @@ namespace sw
     {
         // Tracy 클라이언트와 같은 규칙이다(TracyProfiler.cpp — TRACY_PORT 환경 변수가 있으면 그 값).
         string portText;
-        if ( ProcessEnvironment::tryReadNonEmpty( "TRACY_PORT", portText ) == false )
+        if ( Process::tryReadEnvironmentNonEmpty( "TRACY_PORT", portText ) == false )
             return TracyProfilerBackendInternal::kDefaultDataPort;
         int32      port{ 0 };
         const bool bParsed  = StringUtil::parseInt( portText, port );

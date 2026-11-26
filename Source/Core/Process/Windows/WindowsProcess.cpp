@@ -61,7 +61,7 @@ namespace sw
                 if ( fileName.find( L'.' ) == wstring::npos )
                     candidate += L".exe";
                 string pathValue;
-                if ( ProcessEnvironment::tryReadNonEmpty( "PATH", pathValue ) == false )
+                if ( Process::tryReadEnvironmentNonEmpty( "PATH", pathValue ) == false )
                     return {};
                 const wstring widePath = StringUtil::utf8ToUTF16( pathValue.c_str() );
                 size_t        start    = 0;
@@ -645,7 +645,7 @@ namespace sw
 } // namespace sw
 
 // ------------------------------------------------------------------------------
-// ProcessEnvironment
+// Process — 환경 변수
 // ------------------------------------------------------------------------------
 
 namespace sw
@@ -661,7 +661,7 @@ namespace sw
         };
     } // namespace
 
-    bool ProcessEnvironment::tryRead( string_view name, string& outValue )
+    bool Process::tryReadEnvironment( string_view name, string& outValue )
     {
         using Internal = WindowsProcessEnvironmentInternal;
         outValue.clear();
@@ -689,7 +689,7 @@ namespace sw
         return false;
     }
 
-    bool ProcessEnvironment::trySet( string_view name, string_view value )
+    bool Process::trySetEnvironment( string_view name, string_view value )
     {
         if ( WindowsProcessEnvironmentInternal::isValidName( name ) == false )
             return false;
@@ -702,7 +702,7 @@ namespace sw
         return bCRTSet && bOSSet;
     }
 
-    bool ProcessEnvironment::tryUnset( string_view name )
+    bool Process::tryUnsetEnvironment( string_view name )
     {
         if ( WindowsProcessEnvironmentInternal::isValidName( name ) == false )
             return false;

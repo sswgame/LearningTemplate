@@ -117,7 +117,7 @@ namespace sw
         ScopedLock<mutex>       lock{ getChainMutex() };
         if ( _bInstalled == SW_TRUE )
             return;
-        (void)ProcessSession::getID(); // 크래시 경로에서 만들지 않게 지금 만든다(`ProcessSession::getID` 설명)
+        (void)Process::getSessionID(); // 크래시 경로에서 만들지 않게 지금 만든다(`Process::getSessionID` 설명)
         _pOuter = _s_pInstalled.load();
         if ( _pOuter == nullptr )
             CrashHandlerProcessHook::install();
@@ -207,7 +207,7 @@ namespace sw
             return;
         const utf8* pFolder = _reportFolder.c_str();
         const utf8* pPrefix = ( pFolder[0] != '\0' ) ? pFolder : ".";
-        formatstring( pOutPath, outSize, "%#/crash_%#.%#", pPrefix, ProcessSession::getID(), ( pExtension != nullptr ) ? pExtension : "txt" );
+        formatstring( pOutPath, outSize, "%#/crash_%#.%#", pPrefix, Process::getSessionID(), ( pExtension != nullptr ) ? pExtension : "txt" );
     }
 
     void CrashHandler::writeContextFile( const utf8* pReason, const void* pFaultAddress, uint64 processID, uint64 threadID )
@@ -219,7 +219,7 @@ namespace sw
         // 도중에 죽으면 반쯤 쓰인 파일이 남는다.
         utf8   arrReport[constant::buffer::kMax8192]{};
         uint32 length{ 0 };
-        appendCrashLine( arrReport, constant::buffer::kMax8192, length, "session   : %#\n", ProcessSession::getID() );
+        appendCrashLine( arrReport, constant::buffer::kMax8192, length, "session   : %#\n", Process::getSessionID() );
         appendCrashLine( arrReport, constant::buffer::kMax8192, length, "reason    : %#\n", ( pReason != nullptr ) ? pReason : "unknown" );
         // 주소는 16진수여야 맵 파일 · 디스어셈블리와 맞춰 볼 수 있다(CallStackCapture 도 같은 형식이다).
         appendCrashLine( arrReport, constant::buffer::kMax8192, length, "address   : 0x%#\n", Fmt( reinterpret_cast<uint64>( pFaultAddress ), Format().hex() ) );

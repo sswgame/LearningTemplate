@@ -477,7 +477,7 @@ SW_TEST_CASE( ProcessTest, EnvironmentOverrideReachesOnlyTheChild )
     }
     SW_EXPECT_TRUE( process.waitForExit() == 0 ); // 기다리지 못하면 값이 없어 진다
     SW_EXPECT_TRUE( bFound );
-    SW_EXPECT_FALSE( sw::ProcessEnvironment::isSet( kName ) );
+    SW_EXPECT_FALSE( sw::Process::hasEnvironment( kName ) );
 
     SW_EXPECT_LOG( "Process.InvalidEnvironmentName" );
     SW_EXPECT_LOG( "Process.DetachedEnvironment" );

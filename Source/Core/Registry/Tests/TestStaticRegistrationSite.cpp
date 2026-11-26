@@ -48,7 +48,7 @@ SW_TEST_CHILD_ROLE( StaticRegistrationTest, DuplicateRegistrarChild )
     SW_EXPECT_TRUE( DuplicateProbeRegistry::getList().findByName( "probe" ) == &first ); // 먼저 것을 둔다
     StringBuilder<constant::buffer::kMax512> output;
     output.appendFormat( "SW_REJECTED:%#\n", listRejected.front() );
-    SW_EXPECT_TRUE( StandardOutput::write( output.view() ) );
+    SW_EXPECT_TRUE( Process::writeStandardOutput( output.view() ) );
 }
 
 /**

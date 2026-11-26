@@ -113,7 +113,7 @@ namespace sw::editor
         if ( config->_root.empty() == false )
             return ProcessRoots::get()._derivedData.join( config->_root );
         string environmentRoot;
-        if ( ProcessEnvironment::tryReadNonEmpty( config->_rootEnvironment, environmentRoot ) == false )
+        if ( Process::tryReadEnvironmentNonEmpty( config->_rootEnvironment, environmentRoot ) == false )
             return unexpected( Error{ ErrorKind::NotFound, "the source store environment variable is not set", config->_rootEnvironment } );
         const optional<AbsolutePath> environmentPath = FileUtil::requireAbsolutePath( environmentRoot );
         if ( environmentPath.has_value() == false )

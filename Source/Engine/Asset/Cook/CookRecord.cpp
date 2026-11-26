@@ -365,7 +365,7 @@ namespace sw
         for ( const DerivedDataLayerConfig& entry : config->_listLayer )
         {
             string environmentRoot;
-            if ( entry._root.empty() && ProcessEnvironment::tryReadNonEmpty( entry._rootEnvironment, environmentRoot ) == false )
+            if ( entry._root.empty() && Process::tryReadEnvironmentNonEmpty( entry._rootEnvironment, environmentRoot ) == false )
             {
                 SW_LOG_INFO_ID( "DDC.SharedLayerOff", "DDC layer '%#' is off - environment variable %# is not set", entry._name, entry._rootEnvironment );
                 continue;

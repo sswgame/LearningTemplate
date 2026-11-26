@@ -23,12 +23,12 @@ namespace sw
             static AbsolutePath makeUnderEnvironment( const utf8* pRootEnvironment, const utf8* pHomeRelative, const utf8* pVendor, string_view gameName )
             {
                 string root;
-                if ( ProcessEnvironment::tryReadNonEmpty( pRootEnvironment, root ) )
+                if ( Process::tryReadEnvironmentNonEmpty( pRootEnvironment, root ) )
                     return FileUtil::toDiskPath( root ).join( pVendor ).join( makeFolderName( gameName ) );
                 if ( pHomeRelative == nullptr )
                     return {};
                 string home;
-                if ( ProcessEnvironment::tryReadNonEmpty( "HOME", home ) == false )
+                if ( Process::tryReadEnvironmentNonEmpty( "HOME", home ) == false )
                     return {};
                 return FileUtil::toDiskPath( home ).join( pHomeRelative ).join( pVendor ).join( makeFolderName( gameName ) );
             }
@@ -43,7 +43,7 @@ namespace sw
             static AbsolutePath makeUnderRootOverride( string_view gameName )
             {
                 string root;
-                if ( ProcessEnvironment::tryReadNonEmpty( kUserDataRootVariable, root ) == false )
+                if ( Process::tryReadEnvironmentNonEmpty( kUserDataRootVariable, root ) == false )
                     return {};
                 return FileUtil::toDiskPath( root ).join( makeFolderName( gameName ) );
             }

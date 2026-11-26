@@ -1,4 +1,4 @@
-// ProcessEnvironment — 환경 변수의 세 상태(없음 · 빈 값 · 값)를 가르고, 덮어쓰기 · 지우기 · UTF-8 값 왕복, 잘못된 이름 거절.
+// Process 환경 변수 — 환경 변수의 세 상태(없음 · 빈 값 · 값)를 가르고, 덮어쓰기 · 지우기 · UTF-8 값 왕복, 잘못된 이름 거절.
 #include "pch.h"
 
 #include "Core/Process/Process.h"
@@ -14,16 +14,16 @@ namespace
     public:
         explicit ScopedEnvironmentVariable( string name )
             : _name{ std::move( name ) }
-            , _bHadValue{ ProcessEnvironment::tryRead( _name, _previous ) }
+            , _bHadValue{ Process::tryReadEnvironment( _name, _previous ) }
         {
         }
 
         ~ScopedEnvironmentVariable()
         {
             if ( _bHadValue )
-                (void)ProcessEnvironment::trySet( _name, _previous ); // 소멸자에서는 알릴 길이 없다 - 이름은 읽을 때 검증된 유효한 이름이다
+                (void)Process::trySetEnvironment( _name, _previous ); // 소멸자에서는 알릴 길이 없다 - 이름은 읽을 때 검증된 유효한 이름이다
             else
-                (void)ProcessEnvironment::tryUnset( _name ); // 위와 같다
+                (void)Process::tryUnsetEnvironment( _name ); // 위와 같다
         }
 
         ScopedEnvironmentVariable( const ScopedEnvironmentVariable& )            = delete;
@@ -46,21 +46,21 @@ SW_TEST_CASE( ProcessEnvironmentTest, DistinguishesUnsetEmptyAndSet )
     ScopedEnvironmentVariable restore{ kProcessEnvironmentTestVariable };
     string                    value{ "stale" };
 
-    SW_REQUIRE_TRUE( ProcessEnvironment::tryUnset( kProcessEnvironmentTestVariable ) );
-    SW_EXPECT_FALSE( ProcessEnvironment::tryRead( kProcessEnvironmentTestVariable, value ) );
+    SW_REQUIRE_TRUE( Process::tryUnsetEnvironment( kProcessEnvironmentTestVariable ) );
+    SW_EXPECT_FALSE( Process::tryReadEnvironment( kProcessEnvironmentTestVariable, value ) );
     SW_EXPECT_TRUE( value.empty() ); // 없으면 출력도 비운다
-    SW_EXPECT_FALSE( ProcessEnvironment::tryReadNonEmpty( kProcessEnvironmentTestVariable, value ) );
+    SW_EXPECT_FALSE( Process::tryReadEnvironmentNonEmpty( kProcessEnvironmentTestVariable, value ) );
 
-    SW_REQUIRE_TRUE( ProcessEnvironment::trySet( kProcessEnvironmentTestVariable, "" ) );
+    SW_REQUIRE_TRUE( Process::trySetEnvironment( kProcessEnvironmentTestVariable, "" ) );
     value = "stale";
-    SW_EXPECT_TRUE( ProcessEnvironment::tryRead( kProcessEnvironmentTestVariable, value ) ); // 빈 값은 정해진 값이다
+    SW_EXPECT_TRUE( Process::tryReadEnvironment( kProcessEnvironmentTestVariable, value ) ); // 빈 값은 정해진 값이다
     SW_EXPECT_TRUE( value.empty() );
-    SW_EXPECT_FALSE( ProcessEnvironment::tryReadNonEmpty( kProcessEnvironmentTestVariable, value ) ); // 빈 값은 값이 아니다
+    SW_EXPECT_FALSE( Process::tryReadEnvironmentNonEmpty( kProcessEnvironmentTestVariable, value ) ); // 빈 값은 값이 아니다
 
-    SW_REQUIRE_TRUE( ProcessEnvironment::trySet( kProcessEnvironmentTestVariable, "value 1" ) );
-    SW_EXPECT_TRUE( ProcessEnvironment::tryRead( kProcessEnvironmentTestVariable, value ) );
+    SW_REQUIRE_TRUE( Process::trySetEnvironment( kProcessEnvironmentTestVariable, "value 1" ) );
+    SW_EXPECT_TRUE( Process::tryReadEnvironment( kProcessEnvironmentTestVariable, value ) );
     SW_EXPECT_EQUAL( string( "value 1" ), value );
-    SW_EXPECT_TRUE( ProcessEnvironment::tryReadNonEmpty( kProcessEnvironmentTestVariable, value ) );
+    SW_EXPECT_TRUE( Process::tryReadEnvironmentNonEmpty( kProcessEnvironmentTestVariable, value ) );
 }
 
 /**
@@ -71,22 +71,22 @@ SW_TEST_CASE( ProcessEnvironmentTest, SetOverwritesUnsetRemovesAndKeepsUTF8 )
     ScopedEnvironmentVariable restore{ kProcessEnvironmentTestVariable };
     string                    value;
 
-    SW_REQUIRE_TRUE( ProcessEnvironment::trySet( kProcessEnvironmentTestVariable, "first" ) );
-    SW_REQUIRE_TRUE( ProcessEnvironment::trySet( kProcessEnvironmentTestVariable, "second" ) );
-    SW_REQUIRE_TRUE( ProcessEnvironment::tryRead( kProcessEnvironmentTestVariable, value ) );
+    SW_REQUIRE_TRUE( Process::trySetEnvironment( kProcessEnvironmentTestVariable, "first" ) );
+    SW_REQUIRE_TRUE( Process::trySetEnvironment( kProcessEnvironmentTestVariable, "second" ) );
+    SW_REQUIRE_TRUE( Process::tryReadEnvironment( kProcessEnvironmentTestVariable, value ) );
     SW_EXPECT_EQUAL( string( "second" ), value );
 
-    SW_REQUIRE_TRUE( ProcessEnvironment::trySet( kProcessEnvironmentTestVariable, "" ) ); // 값이 있던 변수를 빈 값으로 — 옛 값이 남지 않는다
-    SW_REQUIRE_TRUE( ProcessEnvironment::tryRead( kProcessEnvironmentTestVariable, value ) );
+    SW_REQUIRE_TRUE( Process::trySetEnvironment( kProcessEnvironmentTestVariable, "" ) ); // 값이 있던 변수를 빈 값으로 — 옛 값이 남지 않는다
+    SW_REQUIRE_TRUE( Process::tryReadEnvironment( kProcessEnvironmentTestVariable, value ) );
     SW_EXPECT_TRUE( value.empty() );
 
-    SW_REQUIRE_TRUE( ProcessEnvironment::tryUnset( kProcessEnvironmentTestVariable ) );
-    SW_EXPECT_FALSE( ProcessEnvironment::tryRead( kProcessEnvironmentTestVariable, value ) );
-    SW_EXPECT_TRUE( ProcessEnvironment::tryUnset( kProcessEnvironmentTestVariable ) ); // 없던 변수를 지워도 성공이다
+    SW_REQUIRE_TRUE( Process::tryUnsetEnvironment( kProcessEnvironmentTestVariable ) );
+    SW_EXPECT_FALSE( Process::tryReadEnvironment( kProcessEnvironmentTestVariable, value ) );
+    SW_EXPECT_TRUE( Process::tryUnsetEnvironment( kProcessEnvironmentTestVariable ) ); // 없던 변수를 지워도 성공이다
 
     const utf8* const pKoreanValue = "경로/폴더";
-    SW_REQUIRE_TRUE( ProcessEnvironment::trySet( kProcessEnvironmentTestVariable, pKoreanValue ) );
-    SW_REQUIRE_TRUE( ProcessEnvironment::tryRead( kProcessEnvironmentTestVariable, value ) );
+    SW_REQUIRE_TRUE( Process::trySetEnvironment( kProcessEnvironmentTestVariable, pKoreanValue ) );
+    SW_REQUIRE_TRUE( Process::tryReadEnvironment( kProcessEnvironmentTestVariable, value ) );
     SW_EXPECT_EQUAL( string( pKoreanValue ), value );
 }
 
@@ -96,10 +96,10 @@ SW_TEST_CASE( ProcessEnvironmentTest, SetOverwritesUnsetRemovesAndKeepsUTF8 )
 SW_TEST_CASE( ProcessEnvironmentTest, RejectsInvalidNames )
 {
     string value{ "stale" };
-    SW_EXPECT_FALSE( ProcessEnvironment::tryRead( "", value ) );
+    SW_EXPECT_FALSE( Process::tryReadEnvironment( "", value ) );
     SW_EXPECT_TRUE( value.empty() );
-    SW_EXPECT_FALSE( ProcessEnvironment::tryRead( "A=B", value ) );
-    SW_EXPECT_FALSE( ProcessEnvironment::trySet( "", "x" ) );
-    SW_EXPECT_FALSE( ProcessEnvironment::trySet( "A=B", "x" ) );
-    SW_EXPECT_FALSE( ProcessEnvironment::tryUnset( "" ) );
+    SW_EXPECT_FALSE( Process::tryReadEnvironment( "A=B", value ) );
+    SW_EXPECT_FALSE( Process::trySetEnvironment( "", "x" ) );
+    SW_EXPECT_FALSE( Process::trySetEnvironment( "A=B", "x" ) );
+    SW_EXPECT_FALSE( Process::tryUnsetEnvironment( "" ) );
 }

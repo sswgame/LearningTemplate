@@ -1,6 +1,9 @@
 {
   "_comment": "전수 개명한 옛 이름 → 새 이름 · 까닭(Scripts/lint/naming_words.py 의 naming-words 규칙이 되살린 옛 이름을 막는다). 언리얼 CoreRedirects 의 옛 이름 → 새 이름 자리이되 고쳐 주지 않고 막는다. 개명 도구(py -3 -m Scripts rename-symbol)가 줄을 더한다 — 키(옛 이름)는 개명 도구가 바꾸지 않는다.",
   "_bannedNames": {
+    "ProcessEnvironment": "Process::tryReadEnvironment · tryReadEnvironmentNonEmpty · trySetEnvironment · hasEnvironment · tryUnsetEnvironment — 이 프로세스의 값은 Process 정적 함수다(2026-11-26)",
+    "ProcessSession": "Process::getSessionID(2026-11-26)",
+    "StandardOutput": "Process::writeStandardOutput(2026-11-26)",
     "NamedValueUtil": "NamedValue<T>::find — 표 찾기는 줄 형식의 정적 멤버다(2026-11-26)",
     "ContentFileSource": "IContentFileSource::getCurrent · bindCurrent — 콘텐츠 소스 자리는 그 인터페이스의 정적 멤버다(2026-11-26)",
     "UnitStatsComponent": "지움 — 체력 · 피해는 AbilitySystemComponent + CombatAttributeSet(2026-11-26)",

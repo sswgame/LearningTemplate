@@ -658,7 +658,7 @@ namespace sw
         {
             NetAddress opsAddress;
             string     opsToken;
-            (void)ProcessEnvironment::tryReadNonEmpty( config._opsTokenEnvironment, opsToken ); // 없으면 인증 없이 — 그때는 루프백 · 사설 바인드만
+            (void)Process::tryReadEnvironmentNonEmpty( config._opsTokenEnvironment, opsToken ); // 없으면 인증 없이 — 그때는 루프백 · 사설 바인드만
             if ( NetAddress::parse( config._opsListenAddress, static_cast<uint16>( config._opsPort ), opsAddress ) == false )
             {
                 SW_LOG_ERROR_ID( "Server.CheckOpsListenAddress", "Server config _opsListenAddress '%#' is not an IP address", config._opsListenAddress.c_str() );
@@ -681,7 +681,7 @@ namespace sw
             }
         }
         string adminToken;
-        if ( config._adminChannelPort > 0 && ProcessEnvironment::tryReadNonEmpty( config._adminChannelTokenEnvironment, adminToken ) == false )
+        if ( config._adminChannelPort > 0 && Process::tryReadEnvironmentNonEmpty( config._adminChannelTokenEnvironment, adminToken ) == false )
         {
             SW_LOG_ERROR_ID( "Server.CheckAdminChannelToken", "Server config enables the admin channel (_adminChannelPort=%#) but the token environment variable '%#' is not set",
                              config._adminChannelPort, config._adminChannelTokenEnvironment.c_str() );
@@ -711,7 +711,7 @@ namespace sw
             return true;
         CrashReportSubsystem& crashReports  = engine::getSubsystem<CrashReportSubsystem>();
         const AbsolutePath    reportsFolder = crashFolder.getParent().join( CrashReportSubsystem::kReportsFolderName );
-        crashReports.initialize( crashFolder, reportsFolder, ProcessSession::getID() );
+        crashReports.initialize( crashFolder, reportsFolder, Process::getSessionID() );
         // 서버의 보내기 동의는 플레이어 설정이 아니라 운영 설정(`ServerConfig::_crashReportConsent`)의 몫이다 — 기본은 기계 안에만(`local`).
         // 서버에는 "보낼까요?" 를 물을 사람이 없어 `ask` 는 받지 않고, 모르는 값은 오류로 기동을 멈춘다(보내지 않는 쪽으로 조용히 바꾸지 않는다).
         CrashReportConsent consent{ CrashReportConsent::Local };

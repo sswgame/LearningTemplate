@@ -62,7 +62,7 @@ SW_TEST_CHILD_ROLE( TestFrameworkTest, ChildEchoesOrHangs, ._timeoutSeconds = 60
         MonotonicClock::sleepUntilNanoseconds( MonotonicClock::nowNanoseconds() + 600 * constant::time::kNanosecondsPerSecond );
     StringBuilder<constant::buffer::kMax256> output;
     output.appendFormat( "SW_CHILD_ECHO:%#\n", argument );
-    SW_EXPECT_TRUE( StandardOutput::write( output.view() ) );
+    SW_EXPECT_TRUE( Process::writeStandardOutput( output.view() ) );
 }
 
 /**
