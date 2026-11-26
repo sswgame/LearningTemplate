@@ -4,21 +4,16 @@
     ".claude/hooks/agent_prompt_check.py": {"verb:check": 1},
     "Scripts/common/cook_contract_config.py": {"word:spec": 2},
     "Scripts/common/project_constants.py": {"term:Fields": 1, "word:stamp": 2},
-    "Scripts/generate/module_layers.py": {"word:tier": 2, "word:tiers": 1},
-    "Scripts/generate/target_layers.py": {"word:stub": 1, "word:stubs": 1},
     "Scripts/generate/tests/test_shipping_host_defaults.py": {"word:tier": 1},
-    "Scripts/generate/tests/test_target_layers.py": {"word:stub": 1},
     "Scripts/lint/lint_rule.py": {"verb:check": 1},
-    "Scripts/lint/rules/layer_includes.py": {"verb:check": 1, "word:tier": 4},
+    "Scripts/lint/rules/layer_includes.py": {"verb:check": 1},
     "Scripts/lint/rules/thread_owners.py": {"verb:check": 1},
     "Scripts/setup/llvm.py": {"word:resource": 1, "word:spec": 1},
     "Scripts/setup/toolchain_detect.py": {"word:spec": 1},
     "Scripts/setup/vcpkg.py": {"word:spec": 1},
-    "Scripts/verify/syntax.py": {"word:stub": 1},
     "Scripts/verify/tests/test_preflight.py": {"verb:check": 1},
     "Scripts/verify/tests/test_scenario_determinism.py": {"verb:check": 1},
     "Scripts/verify/tests/test_serialization_compat.py": {"verb:check": 1},
-    "Scripts/verify/tests/test_syntax.py": {"word:stubs": 1},
     "Source/App/Resources/App.rc": {"word:resources": 1},
     "Source/App/Resources/app.ico": {"word:resources": 1},
     "Source/Core/Compression/CompressionCodecRegistry.h": {"suffix:Subsystem": 1},
@@ -425,6 +420,6 @@
     "Source/Programs/ReflectionParser/Run/ReflectionPipeline.cpp": {"word:stamp": 1},
     "Source/Programs/ReflectionParser/Run/ReflectionPipeline.h": {"word:stamp": 2},
     "cmake/Modules/Build/SourceTree.cmake": {"cmake-verb:require": 1},
-    "cmake/Modules/Build/TargetCompileRules.cmake": {"cmake-verb:require": 2, "word:stub": 1, "word:stubs": 2}
+    "cmake/Modules/Build/TargetCompileRules.cmake": {"cmake-verb:require": 2}
   }
 }
