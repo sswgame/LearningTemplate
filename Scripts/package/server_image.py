@@ -33,6 +33,7 @@ from pathlib import Path, PurePosixPath
 from common.command import Command, CommandError, ScriptContext
 from common.exit_code import ExitCode
 from common.host_platform import is_windows_host
+from common.wsl_path import to_wsl_path
 from common.paths import get_project_root
 
 SERVER_EXECUTABLE = "Server"
@@ -98,11 +99,6 @@ def make_service_user_text() -> str:
 def make_writable_folder_text(game: str) -> str:
     """쓰기 폴더를 서비스 사용자 것으로 만드는 tmpfiles.d 조각. https://www.freedesktop.org/software/systemd/man/latest/tmpfiles.d.html"""
     return f"d {INSTALL_ROOT / game / 'Saved'} 0750 {SERVICE_USER} {SERVICE_USER} -\n"
-
-
-def to_wsl_path(path: Path) -> str:
-    drive, rest = path.resolve().drive, path.resolve().as_posix()[2:]
-    return f"/mnt/{drive[0].lower()}{rest}"
 
 
 def run_config_check(package_dir: Path, config_path: Path) -> None:

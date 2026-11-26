@@ -30,19 +30,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 from common.command import Command, ScriptContext  # noqa: E402
 from common.exit_code import ExitCode  # noqa: E402
 from common.git import get_main_working_tree, run_git  # noqa: E402
+from common.verify_config import read_verify_list  # noqa: E402
 
-VERIFY_CONFIG = Path("Config") / "Dev" / "Verify.json"
 STAGES_FILE = Path("build") / "verify.stages.json"
 OK_FILE = Path("build") / "verify.ok"
 ZERO_SHA_CHARACTERS = frozenset("0")
-
-
-def read_verify_config(project_root: Path, key: str) -> list[str]:
-    """`Verify.json` 의 목록 값 — 없으면 멈춘다(폴백 없음)."""
-    value = json.loads((project_root / VERIFY_CONFIG).read_text(encoding="utf-8")).get(key)
-    if not isinstance(value, list) or not all(isinstance(item, str) for item in value):
-        raise SystemExit(f"[VerifyRecord] {VERIFY_CONFIG} 의 {key} 가 글 목록이 아니다")
-    return value
 
 
 def is_non_input(path: str, list_prefix: Sequence[str]) -> bool:
@@ -94,7 +86,7 @@ def run_pre_push(project_root: Path, list_line: Sequence[str]) -> int:
     main_tree = get_main_working_tree(project_root)
     ok_path = main_tree / OK_FILE
     verified_sha = ok_path.read_text(encoding="utf-8").strip() if ok_path.is_file() else ""
-    list_problem = find_unverified_pushes(list_line, verified_sha, read_verify_config(main_tree, "_verifiedPushRefs"))
+    list_problem = find_unverified_pushes(list_line, verified_sha, read_verify_list("_verifiedPushRefs", main_tree))
     for problem in list_problem:
         print(f"[pre-push] {problem} — `bash Scripts/verify/preflight.sh --no-linux` 의 끝 줄 WINDOWS_OK=<sha> 를 push 한다({ok_path})", file=sys.stderr)
     return ExitCode.FAILURE if list_problem else ExitCode.PASSED
@@ -108,7 +100,7 @@ def run_skip(project_root: Path, stage: str, sha: str) -> int:
     if recorded and recorded != sha:
         result = run_git(["diff", "--name-only", "--no-renames", recorded, sha], cwd=project_root)
         list_changed = [line.strip() for line in result.stdout.splitlines() if line.strip()] if result.return_code == 0 else None
-    skip, reason = decide_skip(stage, sha, map_stage, list_changed, read_verify_config(project_root, "_nonInputPaths"))
+    skip, reason = decide_skip(stage, sha, map_stage, list_changed, read_verify_list("_nonInputPaths", project_root))
     print(f"[VerifyRecord] {'건너뜀' if skip else '돈다'} — {reason}")
     return ExitCode.PASSED if skip else ExitCode.FAILURE
 

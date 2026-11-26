@@ -46,7 +46,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 from common.command import Command, ScriptContext  # noqa: E402
 from common.exit_code import ExitCode  # noqa: E402
 from verify.changed_tests import run_changed  # noqa: E402
-from verify.history_store import DEFAULT_DATABASE, RUN_KINDS, SCENARIO_COSTS_PATH, STAGE_RESULTS, compute_scenario_costs, compute_stats, decide_flaky, find_flaky, find_slow_runs, ingest, make_ctest_exclude, make_scenario_costs_text, open_database, read_quarantine, read_reports, read_verify_config, record_stage  # noqa: E402
+from verify.history_store import DEFAULT_DATABASE, RUN_KINDS, SCENARIO_COSTS_PATH, STAGE_RESULTS, compute_scenario_costs, compute_stats, decide_flaky, find_flaky, find_slow_runs, ingest, make_ctest_exclude, make_scenario_costs_text, open_database, read_quarantine, read_reports, record_stage  # noqa: E402
+from common.verify_config import read_verify_number  # noqa: E402
 
 
 class VerifyHistoryCommand(Command):
@@ -93,14 +94,14 @@ class VerifyHistoryCommand(Command):
             list_report = read_reports(args.roots)
             since_unix_ms = int(args.since.stat().st_mtime * 1000) if args.since is not None else None
             list_fresh = [report for report in list_report if since_unix_ms is None or int(report["startedAtUnixMs"]) >= since_unix_ms]
-            list_slow = find_slow_runs(connection, list_fresh, read_verify_config(project_root, "_slowFactor")) if args.kind == "verify" else []
+            list_slow = find_slow_runs(connection, list_fresh, read_verify_number("_slowFactor", project_root)) if args.kind == "verify" else []
             added = ingest(connection, list_report, args.commit, args.kind, since_unix_ms)
             print(f"[TestHistory] {added} 보고를 더했다")
             for warning in list_slow[:20]:
                 print(f"[TestHistory] 느려짐: {warning}")
             return ExitCode.PASSED
         if args.command == "flaky":
-            commit_window = int(read_verify_config(project_root, "_flakyCommitWindow"))
+            commit_window = int(read_verify_number("_flakyCommitWindow", project_root))
             list_entry, list_problem = read_quarantine(project_root, datetime.date.today())
             if list_problem:
                 print("\n".join(f"  - {problem}" for problem in list_problem))
@@ -108,12 +109,12 @@ class VerifyHistoryCommand(Command):
             list_flaky, group_count = find_flaky(connection, commit_window, {entry.test for entry in list_entry})
             for name, backend, sha in list_flaky[:40]:
                 print(f"  흔들림: {name} [{backend}] {sha[:10]}")
-            passed, final = decide_flaky(list_flaky, group_count, read_verify_config(project_root, "_flakyRateLimit"), commit_window)
+            passed, final = decide_flaky(list_flaky, group_count, read_verify_number("_flakyRateLimit", project_root), commit_window)
             print(final)
             return ExitCode.PASSED if passed else ExitCode.FAILURE
         if args.command == "stage":
             warning = record_stage(connection, args.name, args.commit, args.result, args.seconds,
-                                   int(datetime.datetime.now().timestamp() * 1000), read_verify_config(project_root, "_slowFactor"))
+                                   int(datetime.datetime.now().timestamp() * 1000), read_verify_number("_slowFactor", project_root))
             if warning:
                 print(f"[TestHistory] 느려짐: {warning}")
             return ExitCode.PASSED

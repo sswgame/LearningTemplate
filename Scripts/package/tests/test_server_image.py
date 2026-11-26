@@ -14,8 +14,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
-from common.host_platform import is_windows_host  # noqa: E402
-from package.server_image import SERVER_EXECUTABLE, ServerImageError, make_unit_text, read_stop_seconds, to_wsl_path, write_archive  # noqa: E402
+from package.server_image import SERVER_EXECUTABLE, ServerImageError, make_unit_text, read_stop_seconds, write_archive  # noqa: E402
 
 
 class ServerImageTest(unittest.TestCase):
@@ -43,7 +42,6 @@ class ServerImageTest(unittest.TestCase):
             raise AssertionError("빠진 칸은 멈춘다")
         except ServerImageError:
             pass
-        assert is_windows_host() is False or to_wsl_path(Path("C:/a/b")) == "/mnt/c/a/b"
 
 
 if __name__ == "__main__":

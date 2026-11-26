@@ -30,7 +30,8 @@ from common.git import run_git, run_git_or_raise
 from common.paths import get_build_dir
 from common.run_process import ProcessResult, run_process
 from common.cmake_build import build_preset_or_exit
-from verify.history_store import PASSED_RESULTS, QuarantineEntry, read_quarantine, read_reports, read_verify_config
+from common.verify_config import read_verify_number
+from verify.history_store import PASSED_RESULTS, QuarantineEntry, read_quarantine, read_reports
 from verify.affected_scenarios import read_reach, select_reached
 from lint.cpp_code import is_reflection_input
 from sessions.ctest_items import read_items as read_net_items
@@ -500,7 +501,7 @@ def run_changed(project_root: Path, preset: str, base: str) -> int:
     map_scenario = select_scenarios(list_changed, list_scenario_file)
     # 시나리오 · 골든이 그대로여도 그 시나리오가 여는 에셋 · 쓰는 감시 값이 바뀌었으면 돈다(affected_scenarios).
     map_reached, list_reach_line = select_reached(read_reach(project_root, [changed.path for changed in list_changed], list_content_file), set(map_scenario),
-                                                  int(read_verify_config(project_root, "_changedReachPerFile")), int(read_verify_config(project_root, "_changedReachTotal")))
+                                                  int(read_verify_number("_changedReachPerFile", project_root)), int(read_verify_number("_changedReachTotal", project_root)))
     for line in list_reach_line:
         print(f"[Changed] {line}")
     map_changed_file = {changed.path: changed for changed in list_changed}
