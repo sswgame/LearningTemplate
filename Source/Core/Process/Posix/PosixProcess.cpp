@@ -728,6 +728,7 @@ namespace sw
         return childPid > 0 && ( kill( -childPid, SIGTERM ) == 0 || kill( childPid, SIGTERM ) == 0 );
     }
 
+        #if !defined( SW_SHIPPING )
     expected<string> Process::requestDump( string_view dumpPath )
     {
         (void)dumpPath; // 남의 프로세스를 할당 없이 덤프할 길이 없다 — 자식의 크래시 처리기가 제 보고를 쓴다(헤더 설명)
@@ -745,6 +746,7 @@ namespace sw
             MonotonicClock::sleepUntilNanoseconds( MonotonicClock::nowNanoseconds() + kPollMilliseconds * constant::time::kNanosecondsPerMillisecond );
         return string( "the child's crash report (SIGABRT - see its CrashReports folder and log)" );
     }
+        #endif
 
     bool Process::isRunning() const
     {
@@ -792,6 +794,7 @@ namespace sw
         return errno == EPERM;
     }
 
+        #if !defined( SW_SHIPPING )
     bool Process::isDebuggerPresent()
     {
         // ptrace 로 붙은 디버거(gdb · lldb)는 /proc/self/status 의 TracerPid 에 pid 를 남긴다. 0 이면 아무도 붙지 않았다.
@@ -811,6 +814,7 @@ namespace sw
         cursor = text.find_first_not_of( " \t", cursor + kField.size() );
         return cursor != string_view::npos && text[cursor] != '0' && text[cursor] != '\n';
     }
+        #endif
 } // namespace sw
 
     #endif

@@ -216,6 +216,8 @@ namespace sw
          */
         [[nodiscard]] bool requestStop();
 
+#if !defined( SW_SHIPPING )
+        // 개발 전용이다. 부르는 곳은 DevTools 자동화 실행기 하나다(배포 크래시 보고는 자기 덤프 `CrashHandler` 를 쓴다).
         /**
          * @brief 죽이기 전에 자식의 모든 스레드 스택을 남깁니다 — 멈춘 자식을 시한으로 죽이는 부모가 부른다(`AutomationPerBackend`, 언리얼 Gauntlet 의 시한 덤프 자리).
          * @details Windows 는 자식 핸들로 미니덤프(모든 스레드의 스택 · 스레드 정보)를 @p dumpPath 에 쓴다 — 쓰는 동안 자식의 스레드가 멈추고 다 쓰면 다시 돈다.
@@ -224,6 +226,7 @@ namespace sw
          * @return 남긴 자리(Windows 는 @p dumpPath, POSIX 는 자식의 크래시 보고)를 적은 글입니다. 띄우지 않았거나 쓰지 못하면 그 까닭입니다.
          */
         [[nodiscard]] expected<string> requestDump( string_view dumpPath );
+#endif
 
         /**
          * @brief 프로세스가 아직 실행 중인지 반환합니다.
@@ -307,12 +310,15 @@ namespace sw
          */
         static bool isProcessAlive( int32 processID );
 
+#if !defined( SW_SHIPPING )
+        // 개발 전용이다. 부르는 곳은 넷 디버거 대기(`NetEndpoint` 의 개발 갈래)와 테스트 실행기뿐이다.
         /**
          * @brief 이 프로세스에 디버거가 붙어 있는지 OS 에 묻습니다.
          * @details Windows 는 `IsDebuggerPresent`(PEB 를 읽어 싸다), Linux 는 `/proc/self/status` 의 `TracerPid`(파일을 읽는다 — 자주 부르는
          *          쪽은 답을 잠시 들고 있는다). 중단점에 멈춘 동안 시간 초과를 늦추는 데 쓴다(`NetEndpoint` 디버거 대기).
          */
         static bool isDebuggerPresent();
+#endif
 
         // --- 환경 변수 ---
         // 프로세스의 환경 변수를 읽고 정하는 유일한 자리입니다. `std::getenv` · `GetEnvironmentVariable` 을 부르는 곳은 플랫폼 Process 구현 파일의 이 절뿐입니다.

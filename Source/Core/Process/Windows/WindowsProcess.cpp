@@ -568,6 +568,7 @@ namespace sw
         return _bNewProcessGroup && processID > 0 && GenerateConsoleCtrlEvent( CTRL_BREAK_EVENT, static_cast<DWORD>( processID ) ) != FALSE;
     }
 
+    #if !defined( SW_SHIPPING )
     expected<string> Process::requestDump( string_view dumpPath )
     {
         const int32 processID = _processID.load();
@@ -591,6 +592,7 @@ namespace sw
         }
         return path;
     }
+    #endif
 
     bool Process::isRunning() const
     {
@@ -623,10 +625,12 @@ namespace sw
         return StringUtil::utf16ToUTF8( arrBuffer );
     }
 
+    #if !defined( SW_SHIPPING )
     bool Process::isDebuggerPresent()
     {
         return IsDebuggerPresent() != FALSE;
     }
+    #endif
 
     bool Process::isProcessAlive( int32 processID )
     {
