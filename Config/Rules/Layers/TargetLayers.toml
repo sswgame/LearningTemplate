@@ -64,6 +64,7 @@ reflectionparser = [
 	"Engine/Reflection/ReflectionAnnotationKeys.h",
 	"Engine/Reflection/ReflectionConstants.h",
 	"Engine/Reflection/ReflectionContainers.h",
+	"Engine/Reflection/ReflectionEnumMacros.h",
 	"Engine/Reflection/ReflectionEnumNames.h",
 	"Engine/Reflection/ReflectionIntellisense.h",
 	"Engine/Reflection/ReflectionMacros.h",
