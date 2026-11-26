@@ -20,6 +20,7 @@
 #include "GameFramework/Kits/Feature/Content/ModSupport/ModAllowList.h"
 #include "GameFramework/Kits/Feature/Content/ModSupport/ModPackBuilder.h"
 #include "GameFramework/Kits/Feature/Content/ModSupport/ModSession.h"
+#include "GameFramework/Runtime/Foundation/Flow/Tests/ContentPreparationTestToken.h"
 #include "GameFramework/Runtime/Gameplay/Quest/QuestCatalog.h"
 
 // 모드 세션 — 엔진 팩 VFS 에 올리고 · 덮어쓰기가 낱개 파일 위에 서고 · 세션이 끝나면 내려간다. 바깥 폴더의 잘못된 모드는 하나도 올리지 않고 거절한다.

@@ -134,6 +134,18 @@ function(sw_collect_reflection_target_args OUT_VAR)
 		endforeach()
 	endforeach()
 	list(REMOVE_DUPLICATES list_arg)
+	# MSVC 꼴 컴파일러(cl · clang-cl)는 드라이버가 MS 호환을 켠다. 타깃 옵션에 나오지 않으므로 그 판(major.minor)으로 libclang 에 같은 호환을 켠다.
+	if(CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
+		if(CMAKE_CXX_SIMULATE_ID STREQUAL "MSVC")
+			set(msvc_version "${CMAKE_CXX_SIMULATE_VERSION}")
+		else()
+			set(msvc_version "${CMAKE_CXX_COMPILER_VERSION}")
+		endif()
+		if(NOT msvc_version MATCHES "^([0-9]+)\\.([0-9]+)")
+			message(FATAL_ERROR "[Reflection] cannot read the MSVC version for -fms-compatibility-version (got '${msvc_version}')")
+		endif()
+		list(APPEND list_arg "-fms-compatibility" "-fms-extensions" "-fms-compatibility-version=${CMAKE_MATCH_1}.${CMAKE_MATCH_2}")
+	endif()
 	if(CMAKE_CROSSCOMPILING)
 		if(CMAKE_CXX_COMPILER_TARGET)
 			list(APPEND list_arg "--target=${CMAKE_CXX_COMPILER_TARGET}")
@@ -195,18 +207,7 @@ function(sw_make_reflection_parser_args OUT_VAR TARGET_NAME)
 		list(APPEND parser_args "--include" "${CMAKE_BINARY_DIR}/generated")
 	endif()
 
-	# 셰이더 바인딩 계약(binding_slots.hlsli)은 Engine 의 PUBLIC include 자리다 — 계약 수(shaderslot::k*)를 배열 크기로 쓰는 반사 헤더
-	# (WaterBodyComponent 등)를 파서도 컴파일러와 같은 자리에서 읽게 한다.
-	list(APPEND parser_args "--include" "${CMAKE_SOURCE_DIR}/Content/engine/shaders")
-	# .cpp 입력의 첫 줄 `#include "pch.h"` 는 컴파일러처럼 Engine 의 PCH 진입 폴더(PUBLIC)에서 푼다. 리플렉션 대상은 모두 Engine 이거나 Engine 을 링크한다.
-	get_property(engine_pch_entry_dir GLOBAL PROPERTY SW_PCH_ENTRY_DIR_engine)
-	if(NOT engine_pch_entry_dir)
-		message(FATAL_ERROR "[Reflection] ${TARGET_NAME}: the Engine PCH entry directory is not declared yet (sw_add_pch_entry_directory in Source/Engine/CMakeLists.txt must run first)")
-	endif()
-	list(APPEND parser_args "--include" "${engine_pch_entry_dir}")
-	foreach(inc IN LISTS ARG_INCLUDES)
-		list(APPEND parser_args "--include" "${inc}")
-	endforeach()
+	# 나머지 include 자리(`Source/` · 셰이더 바인딩 계약 · `pch.h` 진입 폴더 · 서드파티)는 타깃의 INCLUDE_DIRECTORIES 그대로다(아래 ReflectionParser.target.rsp).
 	set(${OUT_VAR} ${parser_args} PARENT_SCOPE)
 endfunction()
 
@@ -331,16 +332,35 @@ function(sw_add_reflection_candidate_check TARGET_NAME OUTPUT_DIR)
 	add_custom_target(${TARGET_NAME}_ReflectionCandidateCheck ALL DEPENDS "${reflect_scan_stamp}")
 endfunction()
 
+# TARGET_NAME 의 컴파일 정의와 include 자리 전부(자기 것 + 링크한 타깃의 INTERFACE)를 파서 인자 줄(`--target-arg -D…` · `--include <폴더>`)로 OUTPUT_FILE 에 쓴다.
+# 둘 다 생성 때 정해지므로 생성기 식으로 쓴다(file(GENERATE) 는 내용이 같으면 파일을 건드리지 않는다). 인자 꼴은 구성 때만 드러나 파서 사례가 지나지 않는다 —
+# ctest `ReflectionParser.TargetArgs` 가 작은 프로젝트를 구성해 이 함수의 산출물을 본다(IntegrationTests/ReflectionParser/TargetArgs).
+function(sw_write_reflection_target_args TARGET_NAME OUTPUT_FILE)
+	set(target_definitions "$<FILTER:$<TARGET_PROPERTY:${TARGET_NAME},COMPILE_DEFINITIONS>,EXCLUDE,^$>")
+	set(target_includes "$<FILTER:$<TARGET_PROPERTY:${TARGET_NAME},INCLUDE_DIRECTORIES>,EXCLUDE,^$>")
+	# 언어 판과 컴파일 옵션도 타깃 것이다. 옵션은 그대로 넘기고 파서가 설정의 `target_options` 표로 libclang 인자로 바꾼다(clang-cl 의 `/GR-` 등).
+	set(target_standard "$<TARGET_PROPERTY:${TARGET_NAME},CXX_STANDARD>")
+	set(target_options "$<FILTER:$<TARGET_PROPERTY:${TARGET_NAME},COMPILE_OPTIONS>,EXCLUDE,^$>")
+	string(CONCAT target_args_text
+		"$<$<BOOL:${target_definitions}>:--target-arg\n-D$<JOIN:${target_definitions},\n--target-arg\n-D>\n>"
+		"$<$<BOOL:${target_standard}>:--target-arg\n-std=c++${target_standard}\n>"
+		"$<$<BOOL:${target_options}>:--target-option\n$<JOIN:${target_options},\n--target-option\n>\n>"
+		"$<$<BOOL:${target_includes}>:--include\n$<JOIN:${target_includes},\n--include\n>\n>")
+	file(GENERATE OUTPUT "${OUTPUT_FILE}"
+		CONTENT "${target_args_text}"
+		TARGET ${TARGET_NAME})
+endfunction()
+
 # ------------------------------------------------------------------------------
 # 1) sw_add_reflection_step — REFLECT · ENUM 헤더 → .gen.cpp / .gen.h / .gen.meta.cpp, REFLECT · ENUM .cpp → .cpp.gen.inl(그 .cpp 끝에서 include)
-# HEADERS / INCLUDES / OUTPUT_DIR. .gen.cpp는 Unity 배치에서 제외 (ODR)
+# HEADERS / OUTPUT_DIR. 정의 · include 자리는 타깃 속성에서 온다(ReflectionParser.target.rsp). .gen.cpp는 Unity 배치에서 제외 (ODR)
 # 루트가 Tools(ReflectionParser) 이후 Engine을 호출해야 이 스텝이 살아 있음
 # MODULE_LOCAL: 이 타깃의 타입을 다른 모듈이 링크하지 않는다(게임 모듈). 실행 파일 타깃은 저절로 이렇게 본다.
 # MODULE(필수): 타입이 오르는 런타임 모듈 이름 — 런타임이 이 이름으로 타입을 올리고 내린다. 경로 글자로 추측하지 않는다(타입 → 모듈 판정은 여기 하나).
 # CONTENT_OWNER: 콘텐츠 모듈 검사(`sw_add_content_module_check`)에서 이 타입들의 주인 — 비우면 모든 호스트가 가진 것(엔진 · 실행 파일), 게임은 `game:<폴더>`.
 # ------------------------------------------------------------------------------
 function(sw_add_reflection_step TARGET_NAME)
-	cmake_parse_arguments(ARG "MODULE_LOCAL" "OUTPUT_DIR;EXCLUDE_REGEX;MODULE;CONTENT_OWNER" "HEADERS;INCLUDES" ${ARGN})
+	cmake_parse_arguments(ARG "MODULE_LOCAL" "OUTPUT_DIR;EXCLUDE_REGEX;MODULE;CONTENT_OWNER" "HEADERS" ${ARGN})
 
 	sw_skip_without_reflection_parser(${TARGET_NAME} skip)
 	if(skip)
@@ -433,21 +453,18 @@ function(sw_add_reflection_step TARGET_NAME)
 	set(reflect_response_args ${parser_args} "--depfile" "${reflect_depfile}")
 	string(REPLACE ";" "\n" reflect_response_text "${reflect_response_args}")
 	sw_write_if_changed("${reflect_response_file}" "${reflect_response_text}")
-	# 그 타깃의 컴파일 정의 전부(자기 것 + 링크한 타깃의 INTERFACE — 내보내기 매크로 · SW_REGISTRAR_MODULE · SW_LOG_TAG)를 파서도 같은 값으로 받는다.
-	# .cpp 입력은 그 타깃의 TU 그대로라 정의가 없으면 파싱되지 않는다(`GlobalVariableManager.h` 가 SW_REGISTRAR_MODULE 을 쓴다). 매크로를 하나씩 손으로 적지 않는다.
-	# 정의는 생성 때 정해지므로 생성기 식으로 둘째 응답 파일에 쓴다(내용이 같으면 file(GENERATE) 가 파일을 건드리지 않는다).
-	set(reflect_definition_file "${ARG_OUTPUT_DIR}/ReflectionParser.definitions.rsp")
-	set(target_definitions "$<FILTER:$<TARGET_PROPERTY:${TARGET_NAME},COMPILE_DEFINITIONS>,EXCLUDE,^$>")
-	file(GENERATE OUTPUT "${reflect_definition_file}"
-		CONTENT "$<$<BOOL:${target_definitions}>:--target-arg\n-D$<JOIN:${target_definitions},\n--target-arg\n-D>\n>"
-		TARGET ${TARGET_NAME})
+	# 그 타깃의 컴파일 정의와 include 자리 전부(자기 것 + 링크한 타깃의 INTERFACE)를 파서도 컴파일러와 같은 값으로 받는다. .cpp 입력은 그 타깃의 TU 그대로라
+	# 정의(`GlobalVariableManager.h` 가 쓰는 SW_REGISTRAR_MODULE)나 include 자리(서드파티 헤더)가 빠지면 파싱되지 않는다. 하나씩 손으로 적지 않는다.
+	# 둘 다 생성 때 정해지므로 생성기 식으로 둘째 응답 파일에 쓴다(내용이 같으면 file(GENERATE) 가 파일을 건드리지 않는다).
+	set(reflect_target_file "${ARG_OUTPUT_DIR}/ReflectionParser.target.rsp")
+	sw_write_reflection_target_args(${TARGET_NAME} "${reflect_target_file}")
 
 	add_custom_command(
 		OUTPUT ${generated_files}
 		COMMAND ${CMAKE_COMMAND} -E make_directory "${ARG_OUTPUT_DIR}"
-		COMMAND "$<TARGET_FILE:ReflectionParser>" "@${reflect_response_file}" "@${reflect_definition_file}"
+		COMMAND "$<TARGET_FILE:ReflectionParser>" "@${reflect_response_file}" "@${reflect_target_file}"
 		DEPFILE "${reflect_depfile}"
-		DEPENDS ${ARG_HEADERS} "${reflect_input_list}" "${reflect_response_file}" "${reflect_definition_file}" ReflectionParser "$<TARGET_FILE:ReflectionParser>"
+		DEPENDS ${ARG_HEADERS} "${reflect_input_list}" "${reflect_response_file}" "${reflect_target_file}" ReflectionParser "$<TARGET_FILE:ReflectionParser>"
 		"${reflect_builtins}" ${emit_tpls}
 		${parser_configs}
 		COMMENT "[Reflection] Running ReflectionParser for target: ${TARGET_NAME}"

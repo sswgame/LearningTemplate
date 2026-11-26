@@ -5,8 +5,6 @@
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Automation/Watch/AutomationComponentWatch.h"
-#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/GameInputView.h"
@@ -42,37 +40,8 @@ namespace sw
             static constexpr const utf8* kSoundBuilt    = "RTSBuilt";
             static constexpr const utf8* kSoundBlocked  = "RTSBlocked";
             static constexpr const utf8* kSoundUnitDied = "RTSUnitDied";
-
-            /** @brief 감시 값 `Skirmish.SelectedCount` 입니다. */
-            [[nodiscard]] static bool readSelectedCount( const RTSCommandInputComponent& commandInput, float64& outValue )
-            {
-                outValue = static_cast<float64>( commandInput.getSelection().getSelected().size() );
-                return true;
-            }
-
-            /** @brief 감시 값 `Skirmish.SelectedMovingCount` 입니다. 고른 유닛 가운데 앞 명령이 이동인 수입니다. */
-            [[nodiscard]] static bool readSelectedMovingCount( const RTSCommandInputComponent& commandInput, float64& outValue )
-            {
-                const SkirmishGameModeComponent* const pDirector = commandInput.findGameMode();
-                if ( pDirector == nullptr )
-                    return false;
-                int32 count = 0;
-                for ( const RTSUnitID unitID : commandInput.getSelection().getSelected() )
-                {
-                    const RTSUnit* const  pUnit  = pDirector->getWorld().findUnit( unitID );
-                    const RTSOrder* const pOrder = pUnit != nullptr ? pUnit->findOrder() : nullptr;
-                    if ( pOrder != nullptr && pOrder->_type == RTSOrderKind::Move )
-                        ++count;
-                }
-                outValue = static_cast<float64>( count );
-                return true;
-            }
         };
     } // namespace
-
-    SW_AUTOMATION_COMPONENT_WATCH( skirmishSelectedCount, "Skirmish.SelectedCount", "Units in the human selection", RTSCommandInputComponent, &RTSCommandInputComponentInternal::readSelectedCount );
-    SW_AUTOMATION_COMPONENT_WATCH( skirmishSelectedMovingCount, "Skirmish.SelectedMovingCount", "Selected units whose current order is a move", RTSCommandInputComponent,
-                                   &RTSCommandInputComponentInternal::readSelectedMovingCount );
 } // namespace sw
 
 namespace sw

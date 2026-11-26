@@ -9,8 +9,6 @@
 #include "Core/Time/MonotonicClock.h"
 #include "Core/UUID/UUID.h"
 
-#include "Engine/Automation/Watch/AutomationComponentWatch.h"
-#include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
@@ -29,44 +27,14 @@ namespace sw
 {
     namespace
     {
-        /** @brief 개발 명령입니다. 탁자는 활성 씬에서 찾습니다. */
         struct HubCardTableInternal
         {
-            [[nodiscard]] static HubCardTableComponent* findTable()
-            {
-                const SceneManager* const pScenes  = game::findSubsystem<SceneManager>();
-                const Scene* const        pScene   = pScenes != nullptr ? pScenes->getActiveScene() : nullptr;
-                GameObjectManager* const  pManager = pScene != nullptr ? pScene->getObjectManager() : nullptr;
-                return pManager != nullptr ? HubCardTableComponent::findClientTable( *pManager ) : nullptr;
-            }
-
             /** @brief 섞기의 비밀 키입니다(운영체제 난수 16 바이트). */
             static SipHashKey makeShuffleKey()
             {
                 const UUID uuid = UUID::generate();
                 ByteReader reader( uuid._arrBytes, sizeof( uuid._arrBytes ) );
                 return SipHashKey{ reader.readUint64(), reader.readUint64() }; // 중괄호 초기화는 왼쪽부터 평가한다
-            }
-
-            static bool runCards( const vector<string>& listArgument, string& outReply )
-            {
-                if ( listArgument.size() != 1 || ( listArgument[0] != "join" && listArgument[0] != "leave" && listArgument[0] != "play" && listArgument[0] != "draw" ) )
-                    return false;
-                HubCardTableComponent* const pTable = findTable();
-                if ( pTable == nullptr )
-                {
-                    outReply = "hub.cards: no connected card table in the active scene";
-                    return true;
-                }
-                bool bSent = false;
-                if ( listArgument[0] == "join" )
-                    bSent = pTable->requestSeat();
-                else if ( listArgument[0] == "leave" )
-                    bSent = pTable->requestLeave();
-                else
-                    bSent = pTable->requestPlay( listArgument[0] == "draw" );
-                outReply = bSent ? "hub.cards: sent" : "hub.cards: refused - already seated, not seated, or no game yet";
-                return true;
             }
         };
     } // namespace
@@ -361,17 +329,4 @@ namespace sw
         const bool bPlaying = _role == Role::Client && _client.isStarted() && _client.getView().empty() == false;
         return bPlaying && _view._winner < 0 && _view._currentSeat == _client.getSeat() ? 1 : 0;
     }
-} // namespace sw
-
-namespace sw
-{
-    SW_DEV_COMMAND( HubCards, "hub.cards", "hub.cards join | leave | play | draw", "Sit at or leave a card table of the connected hub, play the first legal card (draw without one), or draw", &HubCardTableInternal::runCards );
-    SW_AUTOMATION_GETTER_WATCH( hubCardsSeat, "Hub.CardsSeat", "Seat at the card table (-1 without one)", HubCardTableComponent, &HubCardTableComponent::getSeat );
-    SW_AUTOMATION_GETTER_WATCH( hubCardsStarted, "Hub.CardsStarted", "1 once both seats of the card table are taken", HubCardTableComponent, &HubCardTableComponent::getStartedValue );
-    SW_AUTOMATION_GETTER_WATCH( hubCardsMyTurn, "Hub.CardsMyTurn", "1 while it is this client's turn at the card table", HubCardTableComponent, &HubCardTableComponent::getMyTurnValue );
-    SW_AUTOMATION_GETTER_WATCH( hubCardsHand, "Hub.CardsHand", "Cards in this client's hand as dealt by the server", HubCardTableComponent, &HubCardTableComponent::getHandCount );
-    SW_AUTOMATION_GETTER_WATCH( hubCardsOpponentHand, "Hub.CardsOpponentHand", "Number of cards the other seat holds (the cards themselves never reach this client)", HubCardTableComponent, &HubCardTableComponent::getOpponentCardCount );
-    SW_AUTOMATION_GETTER_WATCH( hubCardsHUDShown, "Hub.CardsHUDShown", "1 while the HUD shows the hand dealt by the server", HubCardTableComponent, &HubCardTableComponent::getHUDShownValue );
-    SW_AUTOMATION_GETTER_WATCH( hubCardsActions, "Hub.CardsActions", "Actions the server applied at this client's card table", HubCardTableComponent, &HubCardTableComponent::getActionCount );
-    SW_AUTOMATION_GETTER_WATCH( hubCardsRejected, "Hub.CardsRejected", "Actions of this client the card table refused", HubCardTableComponent, &HubCardTableComponent::getRejectedCount );
 } // namespace sw

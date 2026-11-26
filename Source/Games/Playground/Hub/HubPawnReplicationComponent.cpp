@@ -11,8 +11,6 @@
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Asset/AssetManager.h"
-#include "Engine/Automation/Watch/AutomationComponentWatch.h"
-#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -1049,46 +1047,4 @@ namespace sw
             return left._ride._gait == right._ride._gait && left._ride._bGallopAllowed == right._ride._bGallopAllowed && left._ride._maxGait == right._ride._maxGait;
         return left._walk._motion._movementMode == right._walk._motion._movementMode && left._walk._bClimbing == right._walk._bClimbing;
     }
-} // namespace sw
-
-namespace sw
-{
-    namespace
-    {
-        struct HubPawnReplicationDevInternal
-        {
-            // 바닥 기준의 자리 — 두 클라이언트 시나리오가 `<Record>` 로 보고에 남기고 `Scripts net-pair mmo` 가 견준다(한쪽의 자기 자리와 다른 쪽이 본 자리). 바닥 위가 아니면 값이 없다.
-            [[nodiscard]] static bool readFloorX( const HubPawnReplicationComponent& component, float64& outValue )
-            {
-                outValue = static_cast<float64>( component.getFloorLocalPosition()._x );
-                return component.getFloorNumber() != 0;
-            }
-            [[nodiscard]] static bool readFloorZ( const HubPawnReplicationComponent& component, float64& outValue )
-            {
-                outValue = static_cast<float64>( component.getFloorLocalPosition()._z );
-                return component.getFloorNumber() != 0;
-            }
-            [[nodiscard]] static bool readRemoteFloorX( const HubPawnReplicationComponent& component, float64& outValue )
-            {
-                outValue = static_cast<float64>( component.getRemoteFloorLocalPosition()._x );
-                return component.getRemoteFloorNumber() != 0;
-            }
-            [[nodiscard]] static bool readRemoteFloorZ( const HubPawnReplicationComponent& component, float64& outValue )
-            {
-                outValue = static_cast<float64>( component.getRemoteFloorLocalPosition()._z );
-                return component.getRemoteFloorNumber() != 0;
-            }
-        };
-    } // namespace
-
-    SW_AUTOMATION_GETTER_WATCH( hubPawnFloorSlip, "Hub.PawnFloorSlip", "Distance the own pawn slid on the moving floor it stands on (metres)", HubPawnReplicationComponent, &HubPawnReplicationComponent::getFloorSlip );
-    SW_AUTOMATION_GETTER_WATCH( hubPawnFloor, "Hub.PawnFloor", "Number of the moving floor the own pawn stands on (0 none)", HubPawnReplicationComponent, &HubPawnReplicationComponent::getFloorNumber );
-    SW_AUTOMATION_GETTER_WATCH( hubRemotePawnFloor, "Hub.RemotePawnFloor", "Number of the moving floor another player's pawn is shown standing on (0 none)", HubPawnReplicationComponent, &HubPawnReplicationComponent::getRemoteFloorNumber );
-    SW_AUTOMATION_COMPONENT_WATCH( hubPawnFloorX, "Hub.PawnFloorX", "Own pawn's X on the moving floor it stands on (floor space; no value off the floor)", HubPawnReplicationComponent, &HubPawnReplicationDevInternal::readFloorX );
-    SW_AUTOMATION_COMPONENT_WATCH( hubPawnFloorZ, "Hub.PawnFloorZ", "Own pawn's Z on the moving floor it stands on (floor space; no value off the floor)", HubPawnReplicationComponent, &HubPawnReplicationDevInternal::readFloorZ );
-    SW_AUTOMATION_COMPONENT_WATCH( hubRemotePawnFloorX, "Hub.RemotePawnFloorX", "Another player's shown X on the moving floor (floor space; no value off the floor)", HubPawnReplicationComponent, &HubPawnReplicationDevInternal::readRemoteFloorX );
-    SW_AUTOMATION_COMPONENT_WATCH( hubRemotePawnFloorZ, "Hub.RemotePawnFloorZ", "Another player's shown Z on the moving floor (floor space; no value off the floor)", HubPawnReplicationComponent, &HubPawnReplicationDevInternal::readRemoteFloorZ );
-    SW_AUTOMATION_GETTER_WATCH( hubPawnPredicted, "Hub.PawnPredicted", "1 while this client predicts its own pawn", HubPawnReplicationComponent, &HubPawnReplicationComponent::getPredictedValue );
-    SW_AUTOMATION_GETTER_WATCH( hubPawnCorrections, "Hub.PawnCorrections", "Times the server state rewound the predicted pawn", HubPawnReplicationComponent,
-                                &HubPawnReplicationComponent::getCorrectionCount );
 } // namespace sw

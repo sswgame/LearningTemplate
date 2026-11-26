@@ -4,30 +4,11 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 
-#include "Engine/Automation/Watch/AutomationWatch.h"
-
 #include "GameFramework/Runtime/Foundation/GameFeature/GameFeatureReceiverComponent.h"
 #include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 
 namespace sw
 {
-    namespace
-    {
-        struct GameFeatureComponentsInternal
-        {
-            [[nodiscard]] static bool readAddedComponents( const GameObjectManager* /*pManager*/, float64& outValue )
-            {
-                const GameFeatureComponents* const pComponents = game::findSubsystem<GameFeatureComponents>();
-                if ( pComponents == nullptr )
-                    return false;
-                outValue = static_cast<float64>( pComponents->countAddedComponents() );
-                return true;
-            }
-        };
-    } // namespace
-
-    SW_AUTOMATION_WATCH( gameFeatureAddedComponents, "GameFeature.AddedComponents", "Components the active game features added to their receivers", &GameFeatureComponentsInternal::readAddedComponents );
-
     GameFeatureComponents::GameFeatureComponents()
         : _listRule{}
         , _listReceiver{}

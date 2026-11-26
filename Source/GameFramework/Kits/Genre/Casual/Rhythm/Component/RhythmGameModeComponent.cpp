@@ -5,8 +5,6 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
-#include "Engine/Automation/Watch/AutomationComponentWatch.h"
-#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
@@ -25,13 +23,6 @@ namespace sw
             static constexpr const utf8* kEventEmptyPress = "RhythmEmptyPress";
         };
     } // namespace
-
-    SW_AUTOMATION_GETTER_WATCH( rhythmState, "Rhythm.State", "Song state (0 playing, 1 cleared, 2 failed)", RhythmGameModeComponent, &RhythmGameModeComponent::getState );
-    SW_AUTOMATION_GETTER_WATCH( rhythmMusicTime, "Rhythm.MusicTime", "Music time the song is judged at (s)", RhythmGameModeComponent, &RhythmGameModeComponent::getMusicTime );
-    SW_AUTOMATION_GETTER_WATCH( rhythmJudged, "Rhythm.Judged", "Judgments so far (long notes count twice)", RhythmGameModeComponent, &RhythmGameModeComponent::getJudged );
-    SW_AUTOMATION_GETTER_WATCH( rhythmMissed, "Rhythm.Missed", "Missed judgments", RhythmGameModeComponent, &RhythmGameModeComponent::getMissed );
-    SW_AUTOMATION_GETTER_WATCH( rhythmMaxCombo, "Rhythm.MaxCombo", "Longest combo", RhythmGameModeComponent, &RhythmGameModeComponent::getMaxCombo );
-    SW_AUTOMATION_GETTER_WATCH( rhythmScore, "Rhythm.Score", "Score", RhythmGameModeComponent, &RhythmGameModeComponent::getScore );
 
     RhythmGameModeComponent::RhythmGameModeComponent()
         : _chart{}

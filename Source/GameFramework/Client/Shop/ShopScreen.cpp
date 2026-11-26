@@ -6,7 +6,6 @@
 #include "Core/Log/Logger.h"
 #include "Core/String/StringBuilder.h"
 
-#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
 #include "Engine/Reflection/EnumName.h"
@@ -24,68 +23,6 @@
 
 namespace sw
 {
-    namespace
-    {
-        struct ShopScreenInternal
-        {
-            /** @brief 맨 위의 상점 화면입니다(닫는 중 제외). 없으면 @p outValue 에 까닭을 적고 nullptr 입니다. */
-            static const ShopScreen* findTopShop( AutomationWatchValue& outValue )
-            {
-                const UISystem* pUI = game::findSubsystem<UISystem>();
-                if ( pUI != nullptr )
-                {
-                    const vector<unique_ptr<UIScreen>>& listScreen = pUI->getScreens();
-                    for ( auto iter = listScreen.rbegin(); iter != listScreen.rend(); ++iter )
-                    {
-                        const ShopScreen* pShop = castTo<ShopScreen>( iter->get() );
-                        if ( pShop != nullptr && pShop->isClosing() == false )
-                            return pShop;
-                    }
-                }
-                outValue.setText( "no shop screen is open" );
-                return nullptr;
-            }
-
-            /** @brief 감시 값 `Shop.PurchaseCount` 입니다. 열린 상점 화면에서 끝난 구매 수(성공 · 실패 모두)입니다. */
-            [[nodiscard]] static bool readPurchaseCount( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
-            {
-                (void)query;
-                const ShopScreen* pShop = findTopShop( outValue );
-                if ( pShop == nullptr )
-                    return false;
-                outValue.setNumber( static_cast<float64>( pShop->getFinishedCount() ) );
-                return true;
-            }
-
-            /** @brief 감시 값 `Shop.LastStatus` 입니다. 마지막 구매 결과 이름(`ShopPurchaseStatus`)이고, 아직 없으면 `none` 입니다. */
-            [[nodiscard]] static bool readLastStatus( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
-            {
-                (void)query;
-                const ShopScreen* pShop = findTopShop( outValue );
-                if ( pShop == nullptr )
-                    return false;
-                outValue.setText( pShop->getFinishedCount() == 0 ? "none" : getEnumName( pShop->getLastReceipt()._status ) );
-                return true;
-            }
-
-            /** @brief 감시 값 `Shop.Busy` 입니다. 구매 확인 · 답을 기다리는 동안 1 입니다. */
-            [[nodiscard]] static bool readBusy( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
-            {
-                (void)query;
-                const ShopScreen* pShop = findTopShop( outValue );
-                if ( pShop == nullptr )
-                    return false;
-                outValue.setNumber( pShop->isBusy() ? 1.0 : 0.0 );
-                return true;
-            }
-        };
-    } // namespace
-
-    SW_AUTOMATION_QUERY_WATCH( shopPurchaseCount, "Shop.PurchaseCount", "Finished purchases (succeeded or failed) of the open shop screen", &ShopScreenInternal::readPurchaseCount, false, false );
-    SW_AUTOMATION_QUERY_WATCH( shopLastStatus, "Shop.LastStatus", "Status name of the last purchase of the open shop screen (ShopPurchaseStatus); none before the first", &ShopScreenInternal::readLastStatus,
-                               false, false );
-    SW_AUTOMATION_QUERY_WATCH( shopBusy, "Shop.Busy", "1 while the open shop screen waits for a purchase confirmation or answer", &ShopScreenInternal::readBusy, false, false );
-
     ShopScreen::ShopScreen( const UIScreenDef& desc, unique_ptr<Widget> root )
         : UIScreen{ desc, std::move( root ) }
         , _listOffer{}

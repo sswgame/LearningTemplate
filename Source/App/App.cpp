@@ -27,7 +27,6 @@
 
 #include "Engine/Audio/AudioSubsystem.h"
 #include "Engine/Automation/AutomationRuntime.h"
-#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/GameTimeScale.h"
@@ -269,46 +268,10 @@ namespace sw
                 return params;
             }
 
-            /** @brief 감시 값 `Engine.FramePacingState` — 앱 루프가 이번 프레임에 고른 페이싱 상태 번호입니다. 주 창 서비스가 없으면(헤드리스) 값이 없습니다. */
-            [[nodiscard]] static bool readFramePacingState( const GameObjectManager* /*pManager*/, float64& outValue )
-            {
-                const MainWindowSubsystem* pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
-                if ( pWindowHost == nullptr )
-                    return false;
-                outValue = static_cast<float64>( static_cast<uint32>( pWindowHost->getFramePacer().getState() ) );
-                return true;
-            }
-
             /** @brief 표면이 없거나 앱이 멈춘 동안 창 메시지를 기다리는 최대 시간입니다. 메시지(수명 이벤트)가 오면 곧 깬다(`GenericWindow::waitForMessages`). */
             static constexpr uint32 kPausedWaitMilliseconds = 10;
-
-            /** @brief 감시 값 `Window.RenderPausedTicks` — 표면을 잃거나 앱이 멈춰 프레임을 돌지 않은 메인 루프 틱의 누적입니다. 주 창이 없으면(헤드리스) 값이 없습니다. */
-            [[nodiscard]] static bool readWindowRenderPausedTicks( const GameObjectManager* /*pManager*/, float64& outValue )
-            {
-                const GenericWindow* pWindow = MainWindowSubsystem::findMainWindow();
-                if ( pWindow == nullptr )
-                    return false;
-                outValue = static_cast<float64>( pWindow->getRenderPausedTickCount().get() );
-                return true;
-            }
-
-            /** @brief 감시 값 `Window.Minimized` — 주 창이 최소화돼 있으면 1 입니다(플랫폼 통보 기준). 주 창이 없으면(헤드리스) 값이 없습니다. */
-            [[nodiscard]] static bool readWindowMinimized( const GameObjectManager* /*pManager*/, float64& outValue )
-            {
-                const GenericWindow* pWindow = MainWindowSubsystem::findMainWindow();
-                if ( pWindow == nullptr )
-                    return false;
-                outValue = pWindow->isMinimized() ? 1.0 : 0.0;
-                return true;
-            }
         };
     } // namespace
-
-    SW_AUTOMATION_WATCH( engineFramePacingState, "Engine.FramePacingState",
-                         "App loop pacing this frame: 0 Foreground, 1 Background (gv_backgroundFrameRate), 2 Minimized, 3 Automation, 4 Server, 5 FullSpeed (gv_framePacing), 6 EditorIdle",
-                         &AppInternal::readFramePacingState );
-    SW_AUTOMATION_WATCH( windowRenderPausedTicks, "Window.RenderPausedTicks", "Main loop ticks that ran no frame because the surface was lost or the app was suspended", &AppInternal::readWindowRenderPausedTicks );
-    SW_AUTOMATION_WATCH( windowMinimized, "Window.Minimized", "1 while the main window is minimized (as the platform reported it)", &AppInternal::readWindowMinimized );
 } // namespace sw
 
 namespace sw
@@ -871,7 +834,6 @@ namespace sw
         // Win32 OS 수준의 포커스와 활성화(DefWindowProc)가 정상적으로 동작하도록 false 를 반환한다.
         return false;
     }
-
 } // namespace sw
 
 namespace sw

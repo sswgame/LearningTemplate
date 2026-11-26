@@ -2,8 +2,6 @@
 
 #include "Games/NileCity/NileGameModeComponent.h"
 
-#include "Engine/Automation/Watch/AutomationComponentWatch.h"
-#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
@@ -18,8 +16,6 @@ namespace sw
             static constexpr float32   kPercent = 100.0f; ///< 비율 → 백분율(로그)
         };
     } // namespace
-
-    SW_AUTOMATION_GETTER_WATCH( nileMonth, "Nile.Month", "Months the city has run", NileGameModeComponent, &NileGameModeComponent::getMonthCount );
 } // namespace sw
 
 namespace sw

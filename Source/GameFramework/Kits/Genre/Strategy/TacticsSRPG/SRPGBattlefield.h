@@ -28,6 +28,9 @@ namespace sw
 {
     class Archive;
     class GridReachability;
+    struct SRPGCombatResult;
+    struct SRPGForecast;
+    struct SRPGStrikePreview;
 
     /** @brief 팀입니다. 다른 팀끼리는 모두 적이며, 제3세력은 양쪽 모두와 싸웁니다. */
     ENUM()
@@ -115,7 +118,7 @@ namespace sw
 {
     /**
      * @class SRPGBattlefield
-     * @brief 엔진 없이 도는 전장 상태입니다. 전투 계산은 `SRPGCombat`, 적 AI 는 `SRPGCommanderAI`, 승패는 `SRPGMissionRule` 이 이 클래스를 사용해 처리합니다.
+     * @brief 엔진 없이 도는 전장 상태입니다. 전투 계산은 이 클래스의 `compute*` · `execute*`(결과 형식은 `SRPGCombat.h`, 공식은 `SRPGCombat.cpp`), 적 AI 는 `SRPGCommanderAI`, 승패는 `SRPGMissionRule` 이 이 클래스를 사용해 처리합니다.
      * @details 카탈로그는 전장보다 오래 살아야 한다(유닛이 정의 포인터를 보관한다). 결과는 결정적이다. 같은 시드와 같은 명령이면 같은 결과가 나온다.
      */
     REFLECT()
@@ -229,6 +232,30 @@ namespace sw
         GameRandom&             getRandom() { return _random; }
         int32                   getWidth() const { return _topology._width; }
         int32                   getHeight() const { return _topology._height; }
+
+        static constexpr int32 kFullDamagePercent = 100; ///< 깎지 않은 피해 비율(지원 방어 · 동기 공격만 낮춘다)
+        // ---- 전투 계산(구현은 `SRPGCombat.cpp`, 결과 형식은 `SRPGCombat.h`). 모두 정수 계산이며 나눗셈은 버림이다 ----
+        // - 공격력 = 위력 x (100 + 능력치) / 100 x 적성 / 100 x 기력 / 100. 능력치는 무기에 따라 사격, 격투, 각성 중 하나이다.
+        // - 방어력 = (장갑 + 수비) x (100 + 지형 방어) / 100
+        // - 피해 = max( 최소 피해, 공격력 - 방어력 ) x 비율 / 100. 비율은 지원 방어와 동기 공격에서 100 미만이고, 크리티컬이면 크리티컬 배율 / 100 을 곱한다.
+        // - 명중 = ( 기본 + 무기 명중 + 반응 차 + 크기 차 x 크기 단계 - 지형 회피 - 운동성 - 이동 회피 ) x 적성 / 100 이며 0..100 으로 자른다.
+        // - 크리티컬 = 기본 + 무기 크리티컬 + max( 0, 각성 차 ) / 2 이며 0..100 으로 자른다.
+        // 실제 전투 순서는 주 공격, 동기 공격, 지원 공격, 반격(방어자가 살아 있을 때)이다. 판정 순서가 항상 같으므로 같은 시드이면 같은 결과가 나온다.
+        /** @brief 한 번의 타격을 예측합니다(사거리와 차례는 보지 않습니다). @p damagePercent 는 피해 비율입니다. */
+        SRPGStrikePreview computeStrike( int32 attackerIndex, const int2& attackerCell, int32 weaponIndex, int32 defenderIndex,
+                                         const int2& defenderCell, int32 damagePercent = kFullDamagePercent ) const;
+        /** @brief 지금 위치에서의 예측을 계산합니다. */
+        SRPGWeaponStatus computeForecast( int32 attackerIndex, int32 weaponIndex, int32 defenderIndex, SRPGForecast& outForecast ) const;
+        /** @brief @p attackerCell 로 옮겼다고 가정하고 예측합니다(AI 와 이동 전 미리 보기용). */
+        SRPGWeaponStatus computeForecastFrom( int32 attackerIndex, const int2& attackerCell, int32 weaponIndex, int32 defenderIndex,
+                                              bool bAfterMove, SRPGForecast& outForecast ) const;
+        /** @brief 방어자가 @p attackerCell 의 공격자에게 반격할 무기(기대 피해가 가장 큰 것)를 반환합니다. 없으면 비어 있습니다. */
+        optional<int32> findCounterWeapon( int32 defenderIndex, int32 attackerIndex, const int2& attackerCell ) const;
+
+        /** @brief 공격합니다. 실패하면 상태만 담고 아무것도 바꾸지 않습니다. 행동 끝내기(`endUnitAction`)는 호출하는 쪽이 합니다. */
+        SRPGWeaponStatus executeAttack( int32 attackerIndex, int32 weaponIndex, int32 defenderIndex, SRPGCombatResult& outResult );
+        /** @brief MAP 병기를 씁니다. 범위 안의 적마다 한 번씩 타격하며 반격과 지원은 없습니다. 맞을 유닛이 없으면 쏘지 않습니다(`InvalidTarget`). */
+        SRPGWeaponStatus executeMapAttack( int32 attackerIndex, int32 weaponIndex, const int2& aimCell, SRPGCombatResult& outResult );
 
     private:
         void startPhase( SRPGTeam team );

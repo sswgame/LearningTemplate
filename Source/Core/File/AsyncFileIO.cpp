@@ -858,40 +858,26 @@ namespace sw
 
     const utf8* AsyncFileIO::getBackendName( AsyncIOBackendKind kind )
     {
-        switch ( kind )
-        {
-            case AsyncIOBackendKind::Auto:
-                return "Auto";
-            case AsyncIOBackendKind::ThreadPool:
-                return "ThreadPool";
-            case AsyncIOBackendKind::Iocp:
-                return "Iocp";
-            case AsyncIOBackendKind::IOUring:
-                return "IOUring";
-        }
-        return "Unknown";
+        // 열거자 이름 그대로다(표 `AsyncIOBackendKindList.xxx` 한 벌). 범위 밖 값은 "Unknown" 이다.
+        static constexpr const utf8* kArrName[] = {
+#define SW_ASYNC_IO_BACKEND_KIND( Name ) #Name,
+#include "Core/File/AsyncIOBackendKindList.xxx"
+#undef SW_ASYNC_IO_BACKEND_KIND
+        };
+        const size_t index = static_cast<size_t>( kind );
+        return index < SW_COUNT_OF( kArrName ) ? kArrName[index] : "Unknown";
     }
 
     const utf8* AsyncFileIO::getStatusName( AsyncIOStatus status )
     {
-        switch ( status )
-        {
-            case AsyncIOStatus::Pending:
-                return "Pending";
-            case AsyncIOStatus::Succeeded:
-                return "Succeeded";
-            case AsyncIOStatus::Canceled:
-                return "Canceled";
-            case AsyncIOStatus::FileNotFound:
-                return "FileNotFound";
-            case AsyncIOStatus::OutOfRange:
-                return "OutOfRange";
-            case AsyncIOStatus::ReadFailed:
-                return "ReadFailed";
-            case AsyncIOStatus::ShutDown:
-                return "ShutDown";
-        }
-        return "Unknown";
+        // 열거자 이름 그대로다(표 `AsyncIOStatusList.xxx` 한 벌). 범위 밖 값은 "Unknown" 이다.
+        static constexpr const utf8* kArrName[] = {
+#define SW_ASYNC_IO_STATUS( Name ) #Name,
+#include "Core/File/AsyncIOStatusList.xxx"
+#undef SW_ASYNC_IO_STATUS
+        };
+        const size_t index = static_cast<size_t>( status );
+        return index < SW_COUNT_OF( kArrName ) ? kArrName[index] : "Unknown";
     }
 
 } // namespace sw

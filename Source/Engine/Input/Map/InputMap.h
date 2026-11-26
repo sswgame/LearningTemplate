@@ -441,8 +441,16 @@ namespace sw
         /** @brief 클릭과 끌기를 가르는 포인터 이동 거리(픽셀)입니다. `Click` · `Drag` 트리거가 씁니다. [0, `kDragThresholdMax`] 밖이면 거절합니다. */
         [[nodiscard]] bool setDragThreshold( float32 pixels );
         /** @brief true 면 키보드 포커스가 도구(`InputKeyboardFocus::Tool`)인 동안에도 키를 읽습니다(에디터 입력 맵). */
-        void               setToolKeyboardReader( bool bReads ) { _bReadsToolKeyboard = bReads ? SW_TRUE : SW_FALSE; }
-        bool               isToolKeyboardReader() const { return _bReadsToolKeyboard == SW_TRUE; }
+        void setToolKeyboardReader( bool bReads ) { _bReadsToolKeyboard = bReads ? SW_TRUE : SW_FALSE; }
+        bool isToolKeyboardReader() const { return _bReadsToolKeyboard == SW_TRUE; }
+        /**
+         * @brief true 면 키보드 포커스를 무시하는 맵(`setKeyboardFocusIgnored`)이 도구 포커스 동안에도 Ctrl · Alt 단축키 바인딩은 읽습니다(셸 디버그 키 맵의 리로드 단축키).
+         * @details 도구 포커스가 가리는 것은 패널에 친 글자다. Ctrl · Alt 조합은 글자가 아니어서 에디터가 키보드를 쥔 편집 모드에서도 Ctrl+F8 이 발동해야 한다.
+         *          맨 키(콘솔 여는 `~`)와 Shift 조합은 그대로 가린다. 언리얼 Slate 도 글 상자가 처리하지 않은 조합 키를 전역 명령 목록으로 올려 보낸다.
+         *          에디터 맵에 같은 조합이 있으면 둘이 함께 발동하므로 셸 맵의 조합은 에디터 맵과 겹치지 않게 둔다.
+         */
+        void               setToolShortcutReader( bool bReads ) { _bReadsToolShortcut = bReads ? SW_TRUE : SW_FALSE; }
+        bool               isToolShortcutReader() const { return _bReadsToolShortcut == SW_TRUE; }
         void               setDoubleTapTime( float32 seconds ) { _triggerRules._doubleTapTime = seconds; }
         [[nodiscard]] bool setHoldThreshold( float32 seconds );
         void               setNavRepeatTiming( float32 delaySeconds, float32 rateSeconds )
@@ -855,7 +863,8 @@ namespace sw
         uint8                                _bSuppressBaseActionOnChord : 1;
         uint8                                _bKeyboardFocusIgnored      : 1; /**< 키보드 포커스와 상관없이 키를 읽습니다(디버그 키 맵). */
         uint8                                _bReadsToolKeyboard         : 1; /**< 도구 포커스 동안에도 키를 읽습니다(에디터 맵). */
-        [[maybe_unused]] uint8               _reservedFlags              : 5;
+        uint8                                _bReadsToolShortcut         : 1; /**< 도구 포커스 동안에도 Ctrl · Alt 단축키는 읽습니다(셸 디버그 키 맵). */
+        [[maybe_unused]] uint8               _reservedFlags              : 4;
         SubscriptionList                     _layerSubscriptions; ///< 칸 · 켜기 요청의 구독입니다
     };
 } // namespace sw

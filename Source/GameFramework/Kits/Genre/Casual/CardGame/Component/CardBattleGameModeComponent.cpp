@@ -3,8 +3,6 @@
 #include "GameFramework/Kits/Genre/Casual/CardGame/Component/CardBattleGameModeComponent.h"
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
-#include "Engine/Automation/Watch/AutomationComponentWatch.h"
-#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
@@ -28,13 +26,6 @@ namespace sw
             static constexpr const utf8* kEventLost    = "CardBattleLost";
         };
     } // namespace
-
-    SW_AUTOMATION_GETTER_WATCH( cardBattlePhase, "CardBattle.Phase", "Deck battle phase (0 player turn, 1 won, 2 lost)", CardBattleGameModeComponent, &CardBattleGameModeComponent::getPhase );
-    SW_AUTOMATION_GETTER_WATCH( cardBattleTurn, "CardBattle.Turn", "Deck battle turn (1 = first)", CardBattleGameModeComponent, &CardBattleGameModeComponent::getTurn );
-    SW_AUTOMATION_GETTER_WATCH( cardBattlePlayerHP, "CardBattle.PlayerHP", "Player HP", CardBattleGameModeComponent, &CardBattleGameModeComponent::getPlayerHP );
-    SW_AUTOMATION_GETTER_WATCH( cardBattleEnemyHP, "CardBattle.EnemyHP", "Enemy HP", CardBattleGameModeComponent, &CardBattleGameModeComponent::getEnemyHP );
-    SW_AUTOMATION_GETTER_WATCH( cardBattleHand, "CardBattle.HandCount", "Cards in hand", CardBattleGameModeComponent, &CardBattleGameModeComponent::getHandCount );
-    SW_AUTOMATION_GETTER_WATCH( cardBattleEnergy, "CardBattle.Energy", "Energy left this turn", CardBattleGameModeComponent, &CardBattleGameModeComponent::getEnergy );
 
     CardBattleGameModeComponent::CardBattleGameModeComponent()
         : _deckID{}

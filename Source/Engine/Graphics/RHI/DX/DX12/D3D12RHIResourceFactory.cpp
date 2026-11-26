@@ -27,6 +27,10 @@
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
+    #include <D3D12MemAlloc.h> // Windows SDK 의 d3d12.h 뒤다(ThirdParty/d3d12-memory-allocator — HEADERS_ALREADY_INCLUDED)
+#endif
+
+#if defined( SW_PLATFORM_WINDOWS )
 namespace sw
 {
     namespace
@@ -61,6 +65,18 @@ namespace sw
             }
         };
     } // namespace
+
+    D3D12RHIResourceFactory::D3D12RHIResourceFactory( D3D12RHIDevice* pDevice )
+        : _pDevice{ pDevice }
+    {
+    }
+
+    D3D12RHIResourceFactory::~D3D12RHIResourceFactory() = default;
+
+    void D3D12RHIResourceFactory::releaseTransientHeaps()
+    {
+        _mapTransientHeap.clear();
+    }
 
     RHIBufferHandle D3D12RHIResourceFactory::createConstantBufferNative( uint32 size )
     {

@@ -37,6 +37,7 @@
 #include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialTagIndex.h"
+#include "Engine/Graphics/Shader/ShaderSourceAssetKind.h"
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Serialization/Format/JSONSerializer.h"
 #include "Engine/Serialization/Inherit/AssetRedirect.h"
@@ -345,7 +346,7 @@ namespace sw
                 {
                     for ( const PackCandidateFile& file : candidates._listFile )
                     {
-                        if ( StringUtil::endsWith( file._assetID, ".xml", true ) == false )
+                        if ( XMLDocument::isDocumentPath( file._assetID ) == false )
                             continue;
                         string text;
                         if ( AssetIO::readTextFile( file._absolutePath, text ) == false || check.isMentioned( text ) == false )
@@ -392,7 +393,7 @@ namespace sw
                             bValid = false;
                             continue;
                         }
-                        if ( StringUtil::endsWith( file._assetID, ".xml", true ) == false )
+                        if ( XMLDocument::isDocumentPath( file._assetID ) == false )
                             continue;
                         string         text;
                         string         resolvedText;
@@ -823,7 +824,7 @@ namespace sw
                         }
                     }
                     // 읽지 못한 카탈로그를 글로 담지 않는다 — 배포본에서야 드러난다. 루트가 다른 글(이름이 글 속에 나왔을 뿐이다)은 그대로 담는다.
-                    if ( StringUtil::endsWith( relativePath, ".xml", true ) && ( bParsed == false || bCatalog ) )
+                    if ( XMLDocument::isDocumentPath( relativePath ) && ( bParsed == false || bCatalog ) )
                     {
                         SW_LOG_ERROR_ID( "PackCooker.CatalogNotCooked", "Pack cook: catalog '%#' could not be cooked to binary (%#)", absPath.str(), doc.getLastError() );
                         return false;
@@ -1530,7 +1531,7 @@ namespace sw
                 return false;
         }
 
-        if ( config._bExcludeRawShaderSource && PackConfig::isRawShaderSource( fileName ) )
+        if ( config._bExcludeRawShaderSource && ShaderSourceAsset::isRawSource( fileName ) )
             return false;
 
         return PackCookerInternal::isOtherBackendShaderBinary( normalized, listDirectory, shaderFolder ) == false;

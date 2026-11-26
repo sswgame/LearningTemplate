@@ -15,7 +15,7 @@
 ### 통합 중(main, push 전)
 
 - 합친 것: .cpp 리플렉션 · 헤더만 읽던 도구, Core 정리(C1 · normalize 제자리 판 삭제), 렌더 데이터 R1~R4, E1 · E2a · E2b · P2, E3 · E5 · H1~H4 · D1a · D1b, G2 · E4, ReflectionParser 정리 · 최적화 2 개.
-- 남은 검증: Release · Server · Shipping 빌드 → 단위 테스트 → ReflectionParser 단계 시간(기준 106 회 · 165 초 · 최대 7.4 초)으로 최적화 2 개 유지 여부 → preflight(렌더 골든 네 백엔드) → push.
+- 남은 검증: 단위 테스트 두 실패(렌더 XML 도우미 · 현지화 테스트 표) 수정 확인 → preflight(렌더 골든 네 백엔드) → push. ReflectionParser 최적화는 재서 정했다(이름공간 건너뛰기 되돌림, 스탬프 한 번 읽기는 정리로 남김).
 - 그림 확인: 카메라 흔들림 · 메시 모디파이어 노이즈(Core 결정성 TU 로 합침), RigIK 정반대 방향(-q), TAA · 구름 기록 칸, 파이프라인 선택 경로.
 - 판단 남음: TAA 출력의 앨리어싱 제외를 지울지(`-gv_transientAliasing=0` 비교), `--gather-text --check` 가 지면 수집기를 다시 돌려 커밋.
 
@@ -29,15 +29,14 @@
 | w-pimpl · LT-wt/pimpl | P1 · P3 · P4(bf52a2d679 · 32ac84a437 · ac9a1f1bf7 끝), 렌더 R4 나머지(쿠킹 컴파일 스트리핑 · 패치 팩 색인 합치기 · 색인 첫 사용처) |
 | w-devtools-merge · LT-wt/devtoolsmerge | T1(605e855120 · 1eeddfc3ae 끝), PE 헤더 · 단일 헤더 4 개(7cd17031ac · 432e884715 · 7049625e66 끝), 리플렉션 형식 단일 .cpp 헤더 약 45 개, VulkanRHISamplerPreset |
 | w-server-subsystem · LT-wt/serversub | 6 절 서버 서비스를 모듈 서브시스템으로 |
-| w-shaderreload · LT-wt/shaderreload | 3 절 셰이더 리로드 시나리오(개발 빌드에서 켜기 · Ctrl+F8 단축키 경로 · 격리 해제), 10 절 `shortcut:` 정리 |
+| w-shaderreload · LT-wt/shaderreload | 셰이더 리로드 · shortcut · 노이즈 대조(끝), 나머지 sw_* CMake 함수 구성 경로 테스트 |
 | w-engine-owner · LT-wt/engineowner | 끝남(3c5d1c924a 까지) — 다음 묶음에 합친다 |
 
 ### 아직 아무도 맡지 않은 몫 [코드]
 
-- `mesh_modifier.hlsli` 노이즈 복사본이 CPU(Core ValueNoise)와 비트가 같은지.
+- ReflectionParser 파싱 단계: 104 회 CPU 합 약 290 초 중 libclang parse 가 95 % 다(GameFramework 한 실행 parse 42~53 초, Engine 23~25 초). 모듈 안 입력이 같은 앞부분(pch · 엔진 헤더)을 매번 파싱한다 — 모듈마다 앞부분을 한 번 파싱해 나눠 쓰기(언리얼 UHT 는 파싱 자체가 가볍고, libclang 은 preamble · PCH 재사용이 정본)를 측정과 함께.
 - 보류(조사 먼저): ReflectionValidation → TypeInfo, PROPERTY 검증기를 개발 전용으로 빼도 배포 안전이 지켜지는가.
 - AssertDialog 합치기 — 사용자에게 물을 것.
-- 나머지 `sw_*` CMake 함수(모듈 매니페스트 · 층 문지기 · 쿠킹 표)의 구성 단계 경로 테스트.
 
 ## 1. 다음 순서
 
@@ -57,7 +56,6 @@
 
 ## 3. 알려진 실패 · 흔들림
 
-- 셰이더 리로드 시나리오(`desktop/editor/shaderreload`)가 묶음 검증에서 한 번도 돌지 않았다 — 재컴파일기가 Debug 전용이다. 개발 빌드에서 켤 수 있게(시나리오가 `<Launch>` 로 켬) 하고, 켰을 때 Ctrl+F8 이 재컴파일 묶음을 끝내지 않는 단축키 경로(편집 모드의 디버그 키)를 고친 뒤 격리(만료 2026-12-10)를 뺀다.
 
 - **Linux:** sequencercuts · sequencerkeys `SequencerUnboundCount`(`--gpu software chain editor`), netresourcedigest, 에디터 체인 약 18 단계(입력 초점), themepark 체인 멈춤, lavapipe `blendEnable` + `R16G16_SNORM`(재현 안 되면 지운다), `editor.screenrectview` 1.09375 %(`all` 에서만 — 사진 앞 대기를 정착 조건으로). 빈 골든은 `scenario_bisect.py --golden-coverage` 로 찾아 채운다.
 - 흔들리는 게임 골든: 다시 지면 단계 · 백엔드 · 직전 `Assets.Pending` 을 적는다.
@@ -97,6 +95,8 @@
 
 ## 8. 에셋 정체성(GUID)
 
+- 임포트 산출물 이름을 원본 .meta 에 적기(유니티 .meta 하위 에셋 표 자리) — 임포터 · .meta 형식 · EditorAssetIndex · asset_identity.py 를 함께 바꾸고 모델 전체 다시 임포트. 그러면 Scripts/dev/scenario_reach.py 의 `shortcut:` 이 풀린다.
+
 - **3 단계 원본 저장소 떼기:** 코드(`store:<SHA-256>` · `AssetSourceLocator`)는 있다. 데이터는 원본 2 GB 또는 LFS 비용이 문제일 때.
 
 ## 9. 감사 열린 항목
@@ -106,10 +106,6 @@
 - **P-4 [14] Android IME 조합:** 실기기(4 절).
 - **O-12 [30] 원장 경로 부하:** PostgreSQL · RESP 로 `OnlineLoadBot` `ledger_mix`(`--store-config=Config/Server/Online/Playground.external.json`) — 재시도 · busy · 버린 도착 수. 종료 코드 5 는 재화 보존 깨짐.
 - **A-13 [36] · K-11 [50]:** 2 절.
-
-## 10. 코드 `shortcut:` 정리
-
-정본 모양이 있으면 크기와 무관하게 고친다. 문턱이 규모인 것(`PackWriter` · `LinkJobPool` · `AssetAndToolTargets` · `GPUSceneBuilder` 둘 · `SceneVoxelizer`)만 남긴다.
 
 ## 11. 리소스
 

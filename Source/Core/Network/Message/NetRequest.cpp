@@ -40,28 +40,14 @@ namespace sw
 {
     const utf8* toString( NetRequestStatus status )
     {
-        switch ( status )
-        {
-            case NetRequestStatus::Ok:
-                return "Ok";
-            case NetRequestStatus::ApplicationError:
-                return "ApplicationError";
-            case NetRequestStatus::DeadlineExceeded:
-                return "DeadlineExceeded";
-            case NetRequestStatus::Cancelled:
-                return "Cancelled";
-            case NetRequestStatus::ConnectionLost:
-                return "ConnectionLost";
-            case NetRequestStatus::UnknownMethod:
-                return "UnknownMethod";
-            case NetRequestStatus::Malformed:
-                return "Malformed";
-            case NetRequestStatus::Overloaded:
-                return "Overloaded";
-            case NetRequestStatus::Count:
-                break;
-        }
-        return "Unknown";
+        // 열거자 이름 그대로다(표 `NetRequestStatusList.xxx` 한 벌). 범위 밖 값은 "Unknown" 이다.
+        static constexpr const utf8* kArrName[] = {
+#define SW_NET_REQUEST_STATUS( Name ) #Name,
+#include "Core/Network/Message/NetRequestStatusList.xxx"
+#undef SW_NET_REQUEST_STATUS
+        };
+        const size_t index = static_cast<size_t>( status );
+        return index < SW_COUNT_OF( kArrName ) ? kArrName[index] : "Unknown";
     }
 
     NetIdempotencyKey NetIdempotencyKey::makeRandom()

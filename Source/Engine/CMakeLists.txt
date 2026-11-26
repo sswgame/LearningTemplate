@@ -332,7 +332,6 @@ sw_mark_deterministic_sources(Engine ${deterministic_physics_sources} Environmen
 # 짓지 않는 폴더의 리플렉션 타입(렌더 패스 · 파이프라인 에셋)은 코드젠도 하지 않는다 — 그 구현이 빠졌다.
 sw_add_reflection_step(Engine
 	MODULE Engine
-	INCLUDES "${CMAKE_SOURCE_DIR}/Source"
 	EXCLUDE_REGEX "${excluded_folder_regex}"
 )
 sw_add_reflect_builtins_gen(Engine)

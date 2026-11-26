@@ -5,8 +5,6 @@
 #include "Core/Foundation/BuildInfo.h"
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
-#include "Engine/Automation/Watch/AutomationWatch.h"
-#include "Engine/Automation/Watch/AutomationWatchComponent.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Object/GameObject/Tick/TickContext.h"
@@ -22,16 +20,6 @@ namespace sw
     {
         /** @brief 가방을 모든 게임의 상태 스냅샷에 싣습니다(게임마다 올리지 않는다 — 형제 `PlayerStateComponent` 와 같다). */
         const StatefulComponentRegistrar<InventoryComponent> s_inventoryStateRegistration{ "InventoryComponent" };
-
-        /** @brief 감시 값 `Inventory.ItemCount` — 가방(target = 조종자 오브젝트)에 든 아이템 key 의 수입니다. */
-        [[nodiscard]] bool readInventoryItemCount( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
-        {
-            const InventoryComponent* pBag = query.findTargetComponent<InventoryComponent>( "inventory", outValue );
-            if ( pBag == nullptr )
-                return false;
-            outValue.setNumber( static_cast<float64>( pBag->getInventory().getItemCount( hashed_string( query._key ) ) ) );
-            return true;
-        }
     } // namespace
 
     InventoryComponent::InventoryComponent()
@@ -128,9 +116,4 @@ namespace sw
         Inventory& bag = getPortOwner<InventoryComponent>( *this, offsetof( InventoryComponent, _itemReceiverPort ) )._inventory;
         return bag.addStack( stack ) ? ItemGrantResult::Granted : ItemGrantResult::NoRoom;
     }
-} // namespace sw
-
-namespace sw
-{
-    SW_AUTOMATION_QUERY_WATCH( inventoryItemCount, "Inventory.ItemCount", "Count of the item (key) in the bag of the InventoryComponent on target", &readInventoryItemCount, true, true );
 } // namespace sw

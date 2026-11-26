@@ -5,7 +5,6 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
-#include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/TagIndex.h"
@@ -77,107 +76,4 @@ namespace sw
             return unexpected( loaded.error() );
         return start( manager, history, bReturnWhenDone, 0 );
     }
-
-    namespace
-    {
-        /**
-         * @brief 개발 명령 `intent.record` · `intent.save` · `intent.play` — 활성 씬의 의도 기록을 켜고, 끄며 `.swintent` 로 쓰고, 파일을 재생합니다.
-         * @details 콘솔(에디터 콘솔 패널 포함)과 명령줄의 개발 명령으로 부른다. 재생은 기록과 같은 씬을 처음부터 같은 고정 프레임 시간으로 돌릴 때만 같은 궤적이다
-         *          (`ControlIntentHistory`). 경로는 디스크 경로이며 이 명령이 고르지 않는다(빠지면 명령 사용법 오류).
-         */
-        struct IntentDevCommandsInternal
-        {
-            static GameObjectManager* findActiveManager()
-            {
-                SceneManager* pSceneManager = game::findSubsystem<SceneManager>();
-                if ( pSceneManager == nullptr )
-                    return nullptr;
-                Scene* pScene = pSceneManager->getActiveScene();
-                return pScene != nullptr ? pScene->getObjectManager() : nullptr;
-            }
-
-            static bool runRecord( const vector<string>& listArgument, string& outReply )
-            {
-                if ( listArgument.size() > 1 )
-                    return false;
-                int32 capacityTicks = ControlIntentHistory::kDefaultCapacityTicks;
-                if ( listArgument.size() == 1 )
-                {
-                    const bool bParsed = StringUtil::parseInt( string_view( listArgument[0].c_str(), listArgument[0].size() ), capacityTicks );
-                    if ( bParsed == false || capacityTicks <= 0 )
-                        return false;
-                }
-                GameObjectManager* pManager = findActiveManager();
-                if ( pManager == nullptr )
-                {
-                    outReply = "intent: no active scene";
-                    return true;
-                }
-                ControlSystem::getOrCreate( *pManager ).setRecording( true, capacityTicks );
-                StringBuilder<constant::buffer::kMax256> replyBuilder;
-                replyBuilder.appendFormat( "intent: recording every pawn (%# ticks per pawn)", capacityTicks );
-                outReply = string( replyBuilder.view() );
-                return true;
-            }
-
-            static bool runSave( const vector<string>& listArgument, string& outReply )
-            {
-                if ( listArgument.size() != 1 )
-                    return false;
-                GameObjectManager* pManager = findActiveManager();
-                ControlSystem*     pControl = pManager != nullptr ? ControlSystem::find( *pManager ) : nullptr;
-                if ( pControl == nullptr )
-                {
-                    outReply = "intent: no control system in the active scene (nothing recorded)";
-                    return true;
-                }
-                AbsolutePath path;
-                if ( DevCommandRegistry::readDiskPathArgument( listArgument[0], path, outReply ) == false )
-                    return true;
-                pControl->setRecording( false );
-                if ( pControl->getHistory().saveToFile( path ) == false )
-                {
-                    StringBuilder<constant::buffer::kMax256> replyBuilder;
-                    replyBuilder.appendFormat( "intent: could not write '%#'", path.c_str() );
-                    outReply = string( replyBuilder.view() );
-                    return true;
-                }
-                StringBuilder<constant::buffer::kMax256> replyBuilder;
-                replyBuilder.appendFormat( "intent: recording stopped, %# track(s) written to '%#'", pControl->getHistory().getTrackCount(), path.c_str() );
-                outReply = string( replyBuilder.view() );
-                return true;
-            }
-
-            static bool runPlay( const vector<string>& listArgument, string& outReply )
-            {
-                if ( listArgument.size() != 1 )
-                    return false;
-                GameObjectManager* pManager = findActiveManager();
-                if ( pManager == nullptr )
-                {
-                    outReply = "intent: no active scene";
-                    return true;
-                }
-                AbsolutePath path;
-                if ( DevCommandRegistry::readDiskPathArgument( listArgument[0], path, outReply ) == false )
-                    return true;
-                const expected<uint32> startedCount = IntentPlayback::startFromFile( *pManager, path, true );
-                if ( startedCount.has_value() == false )
-                {
-                    StringBuilder<constant::buffer::kMax256> replyBuilder;
-                    replyBuilder.appendFormat( "intent: could not read '%#': %# (%#)", path.c_str(), startedCount.error().message(), startedCount.error().detail() );
-                    outReply = string( replyBuilder.view() );
-                    return true;
-                }
-                StringBuilder<constant::buffer::kMax256> replyBuilder;
-                replyBuilder.appendFormat( "intent: playing %# track(s) from '%#'", *startedCount, path.c_str() );
-                outReply = string( replyBuilder.view() );
-                return true;
-            }
-        };
-    } // namespace
-
-    SW_DEV_COMMAND( IntentRecord, "intent.record", "intent.record [ticksPerPawn]", "Record every pawn's control intent in the active scene", &IntentDevCommandsInternal::runRecord );
-    SW_DEV_COMMAND( IntentSave, "intent.save", "intent.save <file.swintent>", "Stop recording and write the intents to a .swintent file", &IntentDevCommandsInternal::runSave );
-    SW_DEV_COMMAND( IntentPlay, "intent.play", "intent.play <file.swintent>", "Replay a .swintent file on the pawns of the active scene", &IntentDevCommandsInternal::runPlay );
 } // namespace sw

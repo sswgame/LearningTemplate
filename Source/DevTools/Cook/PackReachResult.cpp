@@ -13,6 +13,7 @@
 #include "Engine/Asset/Reference/AssetReferenceFields.h"
 #include "Engine/Content/AssetRegistry.h"
 #include "Engine/Content/Pack/PackConfig.h"
+#include "Engine/Graphics/Shader/ShaderSourceAssetKind.h"
 #include "Engine/Serialization/Inherit/AssetRedirect.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
@@ -656,8 +657,8 @@ namespace sw
                 const bool bUsed     = reach._setIncluded.contains( assetID ) || reach._setReferencedExcluded.contains( assetID );
                 bool&      bStemUsed = _mapSourceStem.try_emplace( PackReachabilityInternal::makeSourceStemKey( assetID ), false ).first->second;
                 bStemUsed            = bStemUsed || bUsed;
-                if ( StringUtil::endsWith( assetID, ".hlsl" ) == false )
-                    continue; // 바이너리는 `.hlsl` 마다 나온다(`.hlsli` 는 포함 파일이다)
+                if ( ShaderSourceAsset::kAssetType.findSuffix( assetID ) == nullptr )
+                    continue; // 바이너리는 원본(`ShaderSourceAsset`)마다 나온다 — include 조각(`ShaderIncludeAsset`)은 쿠킹 입력일 뿐이다
                 const string_view fileName    = PackReachabilityInternal::getFileName( assetID );
                 bool&             bShaderUsed = _mapShaderStem.try_emplace( PackReachabilityInternal::makeTabKey( domain, PackReachabilityInternal::getFirstStem( fileName ) ), false ).first->second;
                 bShaderUsed                   = bShaderUsed || bUsed;

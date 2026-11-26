@@ -8,8 +8,6 @@
 
 #include "Engine/Animation/Component/SkeletalMeshComponent.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
-#include "Engine/Automation/Watch/AutomationWatch.h"
-#include "Engine/Automation/Watch/AutomationWatchComponent.h"
 #include "Engine/Character/CharacterDataCache.h"
 #include "Engine/Character/Fit/CharacterGeometry.h"
 #include "Engine/Character/Fit/CharacterMeshUtil.h"
@@ -239,66 +237,8 @@ namespace sw
                 }
                 return center;
             }
-
-            /** @brief 질의 대상의 절단 컴포넌트입니다. 없으면 까닭을 적고 nullptr 입니다. */
-            static const SkeletalSeveringComponent* findTarget( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
-            {
-                return query.findTargetComponent<SkeletalSeveringComponent>( "severing", outValue );
-            }
-
-            /** @brief 감시 값 `SkeletalSevering.SeveredCount` 입니다. 대상에서 잘린 영역 수입니다. */
-            [[nodiscard]] static bool readSeveredCount( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
-            {
-                const SkeletalSeveringComponent* pFound = findTarget( query, outValue );
-                if ( pFound == nullptr )
-                    return false;
-                outValue.setNumber( static_cast<float64>( pFound->getSeveredRegions().size() ) );
-                return true;
-            }
-
-            /** @brief 감시 값 `SkeletalSevering.MeshLODCount` 입니다. 대상 몸 메시(같은 오브젝트의 SkeletalMeshComponent)의 LOD 단계 수(LOD 0 포함)입니다 — 자른 뒤에도 원본과 같아야 한다. */
-            [[nodiscard]] static bool readMeshLODCount( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
-            {
-                const SkeletalSeveringComponent* pFound = findTarget( query, outValue );
-                const SkeletalMeshComponent*     pUnit  = pFound != nullptr ? pFound->getOwner()->getComponent<SkeletalMeshComponent>() : nullptr;
-                if ( pUnit == nullptr || pUnit->getMesh() == nullptr )
-                {
-                    if ( pFound != nullptr )
-                        outValue.setText( "no skinned body mesh yet" );
-                    return false;
-                }
-                outValue.setNumber( static_cast<float64>( pUnit->getMesh()->getLODCount() ) );
-                return true;
-            }
-
-            /** @brief 감시 값 `SkeletalSevering.RegionSurfaceValue` 입니다. 영역 `key` 의 표면 상태에 오른 잘린 면 채널(_severedSurfaceChannel) 값입니다. 표에 없는 영역이면 값이 없습니다. */
-            [[nodiscard]] static bool readRegionSurfaceValue( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
-            {
-                const SkeletalSeveringComponent* pFound = findTarget( query, outValue );
-                if ( pFound == nullptr )
-                    return false;
-                const optional<uint32> regionIndex = pFound->findRegionIndex( hashed_string{ query._key } );
-                if ( regionIndex.has_value() == false )
-                {
-                    outValue.setText( "no such body region" );
-                    return false;
-                }
-                const CharacterSurfaceState* pSurface = pFound->findSurfaceState();
-                if ( pSurface == nullptr )
-                {
-                    outValue.setText( "no appearance surface state" );
-                    return false;
-                }
-                outValue.setNumber( static_cast<float64>( pSurface->getRegionValue( *regionIndex, pFound->getSeveredSurfaceChannel() ) ) );
-                return true;
-            }
         };
     } // namespace
-
-    SW_AUTOMATION_QUERY_WATCH( severingSeveredCount, "SkeletalSevering.SeveredCount", "Body regions severed from the target", &SkeletalSeveringComponentInternal::readSeveredCount, true, false );
-    SW_AUTOMATION_QUERY_WATCH( severingMeshLODCount, "SkeletalSevering.MeshLODCount", "LOD levels of the target's body mesh (LOD 0 included); a cut keeps the count", &SkeletalSeveringComponentInternal::readMeshLODCount, true,
-                               false );
-    SW_AUTOMATION_QUERY_WATCH( severingRegionSurfaceValue, "SkeletalSevering.RegionSurfaceValue", "Severed surface channel value of the target's body region named key", &SkeletalSeveringComponentInternal::readRegionSurfaceValue, true, true );
 } // namespace sw
 
 namespace sw

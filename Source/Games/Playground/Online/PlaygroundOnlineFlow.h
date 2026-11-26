@@ -71,7 +71,7 @@ namespace sw
         [[nodiscard]] bool isLocalPlayer( const GameObject& activator ) const override;
 
         void requestLogin( OnlineSession& session, string_view loginName, string_view password );
-        // 허브 사람들 — 친구(소셜 키트)와 거래(거래 키트). 개발 명령은 `OnlinePeople.cpp` 다.
+        // 허브 사람들 — 친구(소셜 키트)와 거래(거래 키트). 개발 명령은 `Dev/OnlinePeople.cpp` 다.
         /** @brief 친구 목록 모델입니다 — 게임이 게임 범위에 걸어 친구 화면(`social.friendlist`)이 빌린다. 세션의 친구 클라이언트가 서면 `update` 가 붙인다. */
         FriendList&       getFriends() { return _friends; }
         const FriendList& getFriends() const { return _friends; }
@@ -99,7 +99,7 @@ namespace sw
         static void requestLiveEvents( OnlineSession& session );
         /** @brief 서비스 공지와 점검 창을 받습니다(로그인 전에도 된다). 상태는 세션의 서버 디렉터리 클라이언트가 든다. */
         static void requestServiceStatus( OnlineSession& session );
-        /** @brief 프로세스 안 서버의 저장소에 넣은 금화 우편이 끝났을 때 부릅니다. 넣기는 서버 코드(`Server/OnlineSelfMail.cpp`)의 개발 명령이라 클라이언트 구성에는 없습니다. */
+        /** @brief 프로세스 안 서버의 저장소에 넣은 금화 우편이 끝났을 때 부릅니다. 넣기는 서버 개발 코드(`Server/Dev/OnlineSelfMail.cpp`)의 명령이라 클라이언트 · 배포 구성에는 없습니다. */
         void  recordSelfMailSent() { ++_selfMailSentCount; }
         int32 getSelfMailSentCount() const { return _selfMailSentCount; }
         /**

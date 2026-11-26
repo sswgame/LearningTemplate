@@ -3,7 +3,6 @@
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
-#include "Core/Foundation/BuildInfo.h"
 #include "Core/Foundation/Types.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
@@ -319,18 +318,15 @@ namespace sw
                     if ( commandLine.getArgument( CommandLineArgument::ENABLE_EDITOR, bEditor ) && bEditor )
                         AssertDialog::installForInteractiveRun( commandLine );
                 }
-                if constexpr ( build::kDebug )
+                // 셰이더 재컴파일 · 강제 리로드 단축키(`ReloadShaders`)는 재컴파일기가 선 실행만(`gv_liveShaderRecompile`). 단축키의 뜻은 재컴파일기를 가진 이쪽이 읽는다(디버그 키 맵은 입력 사실만 낸다).
+                LiveShaderSubsystem* const pLiveShader = engine::findSubsystem<LiveShaderSubsystem>();
+                if ( ShaderRecompiler* const pRecompiler = pLiveShader != nullptr ? pLiveShader->findShaderRecompiler() : nullptr )
                 {
-                    // 셰이더 재컴파일 · 강제 리로드 단축키(`ReloadShaders`)는 Debug 클라이언트만 — 단축키의 뜻은 재컴파일기를 가진 이쪽이 읽는다(디버그 키 맵은 입력 사실만 낸다).
-                    LiveShaderSubsystem* const pLiveShader = engine::findSubsystem<LiveShaderSubsystem>();
-                    if ( ShaderRecompiler* const pRecompiler = pLiveShader != nullptr ? pLiveShader->findShaderRecompiler() : nullptr )
+                    pRecompiler->update();
+                    if ( engine::getSubsystem<DebugKeyActions>().wasActionTriggered( hashed_string( InputMapDefaults::kReloadShadersAction ) ) )
                     {
-                        pRecompiler->update();
-                        if ( engine::getSubsystem<DebugKeyActions>().wasActionTriggered( hashed_string( InputMapDefaults::kReloadShadersAction ) ) )
-                        {
-                            pRecompiler->triggerReloadAll();
-                            SW_LOG_INFO_ID( "DevTools.ForceShaderReload", "%#: force shader reload", InputMapDefaults::kReloadShadersAction );
-                        }
+                        pRecompiler->triggerReloadAll();
+                        SW_LOG_INFO_ID( "DevTools.ForceShaderReload", "%#: force shader reload", InputMapDefaults::kReloadShadersAction );
                     }
                 }
                 // 시작 인자 사진(`-gv_screenshot`)의 차례 · 결과와 `-gv_screenshotQuit` 의 종료 — 렌더러가 있는 실행만 섰다.
