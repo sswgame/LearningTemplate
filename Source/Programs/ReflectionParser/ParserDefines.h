@@ -159,6 +159,7 @@ namespace sw
         inline constexpr const utf8* kDepfile         = "--depfile";
         inline constexpr const utf8* kModuleLocal     = "--module-local";
         inline constexpr const utf8* kTargetArg       = "--target-arg";
+        inline constexpr const utf8* kTargetOption    = "--target-option";
     } // namespace cli
 
     // 5) emit — *.tpl 골격 이름은 `EmitTemplate`(EmitTemplateStore.h) 열거형 하나다.
@@ -178,6 +179,7 @@ namespace sw
         inline constexpr const utf8* kClangFlags        = "clang_flags";
         inline constexpr const utf8* kParsing           = "parsing";
         inline constexpr const utf8* kTuning            = "tuning";
+        inline constexpr const utf8* kTargetOptionMap   = "target_options";
 
         // paths.*
         inline constexpr const utf8* kLlvmClangRel     = "llvm_clang_rel";

@@ -314,6 +314,8 @@ if(TARGET ReflectionParser)
 	if(NOT list_parser_test_target_arg)
 		message(FATAL_ERROR "[ReflectionParser tests] no target macros found on sw_global_options / SW_FLAG_LIBRARIES")
 	endif()
+	# 언어 판은 빌드에서는 타깃 속성(CXX_STANDARD)이 넘긴다(ReflectionParser.target.rsp). 사례는 타깃이 없어 같은 값을 여기서 준다.
+	list(APPEND list_parser_test_target_arg "-std=c++${CMAKE_CXX_STANDARD}")
 	string(JOIN "|" parser_test_target_args ${list_parser_test_target_arg})
 	# 사례 파일은 리플렉션 입력 확장자 전부다(`sw_get_reflection_input_globs`). .cpp 사례는 .cpp 입력의 길(`<이름>.cpp.gen.inl`)을 지난다. 사례 이름(확장자를 뺀 것)은 서로 겹치지 않게 짓는다.
 	sw_get_reflection_input_globs(list_parser_fixture_glob "${CMAKE_CURRENT_SOURCE_DIR}/ReflectionParser/Fixtures")

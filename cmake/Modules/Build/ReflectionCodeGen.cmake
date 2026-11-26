@@ -134,6 +134,18 @@ function(sw_collect_reflection_target_args OUT_VAR)
 		endforeach()
 	endforeach()
 	list(REMOVE_DUPLICATES list_arg)
+	# MSVC 꼴 컴파일러(cl · clang-cl)는 드라이버가 MS 호환을 켠다. 타깃 옵션에 나오지 않으므로 그 판(major.minor)으로 libclang 에 같은 호환을 켠다.
+	if(CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
+		if(CMAKE_CXX_SIMULATE_ID STREQUAL "MSVC")
+			set(msvc_version "${CMAKE_CXX_SIMULATE_VERSION}")
+		else()
+			set(msvc_version "${CMAKE_CXX_COMPILER_VERSION}")
+		endif()
+		if(NOT msvc_version MATCHES "^([0-9]+)\\.([0-9]+)")
+			message(FATAL_ERROR "[Reflection] cannot read the MSVC version for -fms-compatibility-version (got '${msvc_version}')")
+		endif()
+		list(APPEND list_arg "-fms-compatibility" "-fms-extensions" "-fms-compatibility-version=${CMAKE_MATCH_1}.${CMAKE_MATCH_2}")
+	endif()
 	if(CMAKE_CROSSCOMPILING)
 		if(CMAKE_CXX_COMPILER_TARGET)
 			list(APPEND list_arg "--target=${CMAKE_CXX_COMPILER_TARGET}")
@@ -326,8 +338,16 @@ endfunction()
 function(sw_write_reflection_target_args TARGET_NAME OUTPUT_FILE)
 	set(target_definitions "$<FILTER:$<TARGET_PROPERTY:${TARGET_NAME},COMPILE_DEFINITIONS>,EXCLUDE,^$>")
 	set(target_includes "$<FILTER:$<TARGET_PROPERTY:${TARGET_NAME},INCLUDE_DIRECTORIES>,EXCLUDE,^$>")
+	# 언어 판과 컴파일 옵션도 타깃 것이다. 옵션은 그대로 넘기고 파서가 설정의 `target_options` 표로 libclang 인자로 바꾼다(clang-cl 의 `/GR-` 등).
+	set(target_standard "$<TARGET_PROPERTY:${TARGET_NAME},CXX_STANDARD>")
+	set(target_options "$<FILTER:$<TARGET_PROPERTY:${TARGET_NAME},COMPILE_OPTIONS>,EXCLUDE,^$>")
+	string(CONCAT target_args_text
+		"$<$<BOOL:${target_definitions}>:--target-arg\n-D$<JOIN:${target_definitions},\n--target-arg\n-D>\n>"
+		"$<$<BOOL:${target_standard}>:--target-arg\n-std=c++${target_standard}\n>"
+		"$<$<BOOL:${target_options}>:--target-option\n$<JOIN:${target_options},\n--target-option\n>\n>"
+		"$<$<BOOL:${target_includes}>:--include\n$<JOIN:${target_includes},\n--include\n>\n>")
 	file(GENERATE OUTPUT "${OUTPUT_FILE}"
-		CONTENT "$<$<BOOL:${target_definitions}>:--target-arg\n-D$<JOIN:${target_definitions},\n--target-arg\n-D>\n>$<$<BOOL:${target_includes}>:--include\n$<JOIN:${target_includes},\n--include\n>\n>"
+		CONTENT "${target_args_text}"
 		TARGET ${TARGET_NAME})
 endfunction()
 

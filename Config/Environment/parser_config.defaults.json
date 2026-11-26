@@ -1,7 +1,6 @@
 {
     "parser_args": {
         "default": [
-            "-std=c++17",
             "-D__REFLECT_PARSER__",
             "-DSW_TOOL_INTERNAL",
             "-DSW_API=",
@@ -12,9 +11,6 @@
         ],
         "platform": {
             "windows": [
-                "-fms-compatibility",
-                "-fms-compatibility-version=19",
-                "-fms-extensions",
                 "-DSW_GF_IMPORTS",
                 "-DSW_KIT_IMPORTS"
             ],
@@ -68,5 +64,29 @@
     },
     "tuning": {
         "max_parallel_parses": 8
+    },
+    "target_options": {
+        "/GR-": [
+            "-fno-rtti"
+        ],
+        "-fno-rtti": [
+            "-fno-rtti"
+        ],
+        "/EHsc": [
+            "-fcxx-exceptions",
+            "-fexceptions"
+        ],
+        "/utf-8": [
+            "-finput-charset=UTF-8"
+        ],
+        "-finput-charset=UTF-8": [
+            "-finput-charset=UTF-8"
+        ],
+        "-clang:-fno-delayed-template-parsing": [
+            "-fno-delayed-template-parsing"
+        ],
+        "-fno-delayed-template-parsing": [
+            "-fno-delayed-template-parsing"
+        ]
     }
 }

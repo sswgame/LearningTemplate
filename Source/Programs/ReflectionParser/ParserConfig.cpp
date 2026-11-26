@@ -329,6 +329,34 @@ namespace sw
                 return outList;
             }
 
+            /** @brief 타깃 컴파일 옵션을 표(`target_options`: 옵션 → libclang 인자 목록)로 바꿔 @p outListArg 에 더합니다. 표가 없거나 꼴이 틀리면 알리고 false. */
+            [[nodiscard]] static bool appendTargetOptions( const nlohmann::json& defaultsDoc, const vector<string>& listTargetOption, vector<string>& outListArg )
+            {
+                const auto mapIt = defaultsDoc.find( jsonkey::kTargetOptionMap );
+                if ( mapIt == defaultsDoc.end() || mapIt->is_object() == false )
+                {
+                    SW_LOG_ERROR_ID( "ParserConfig.NoTargetOptionMap", "parser config has no '%#' object (target compile option -> clang arguments)", jsonkey::kTargetOptionMap );
+                    return false;
+                }
+                for ( const string& targetOption : listTargetOption )
+                {
+                    const auto rowIt = mapIt->find( targetOption );
+                    if ( rowIt == mapIt->end() )
+                    {
+                        SW_LOG_TRACE_ID( "ParserConfig.TargetOptionDropped", "Target compile option '%#' does not change parsing; dropped.", targetOption );
+                        continue;
+                    }
+                    if ( rowIt->is_array() == false )
+                    {
+                        SW_LOG_ERROR_ID( "ParserConfig.BadTargetOptionRow", "'%#.%#' must be an array of clang arguments", jsonkey::kTargetOptionMap, targetOption );
+                        return false;
+                    }
+                    for ( const string& arg : collectStringArray( *rowIt ) )
+                        outListArg.push_back( arg );
+                }
+                return true;
+            }
+
             static vector<string> loadForceIncludeFromDocument( const nlohmann::json& doc )
             {
                 const auto itArgs = doc.find( jsonkey::kParserArgsSection );
@@ -392,7 +420,7 @@ namespace sw
     {
     }
 
-    bool ParserConfig::load( const AbsolutePath& defaultsPath, const vector<string>& listTargetArg )
+    bool ParserConfig::load( const AbsolutePath& defaultsPath, const vector<string>& listTargetArg, const vector<string>& listTargetOption )
     {
         _listBaseArg.clear();
         _listForceInclude.clear();
@@ -481,6 +509,10 @@ namespace sw
             // 파서 자신의 매크로를 쓰지 않는다 — 교차 빌드(웹 · Android)는 호스트에서 지은 파서가 다른 대상을 읽는다. libclang 은 언제나 clang 이다.
             for ( const string& targetArg : listTargetArg )
                 _listBaseArg.push_back( targetArg );
+            // 타깃의 컴파일 옵션(clang-cl 의 `/GR-` · `/EHsc` · `-clang:…` 등)은 표 `target_options` 가 libclang 이 받는 꼴로 바꾼다. 표에 없는 옵션
+            // (경고 · 최적화 · 코드 생성 · `/FI`)은 파싱 뜻이 없어 버린다 — 옵션마다 손으로 파서 설정에 다시 적지 않는다.
+            if ( ParserConfigInternal::appendTargetOptions( defaultsDoc, listTargetOption, _listBaseArg ) == false )
+                return false;
             _listBaseArg.emplace_back( "-DSW_COMPILER_CLANG" );
         }
 
