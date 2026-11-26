@@ -1,10 +1,14 @@
 #include "pch.h"
 
+#include "Core/File/FileUtil.h"
 #include "Core/String/StringUtil.h"
 #include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Asset/AssetDatabase.h"
+#include "Engine/Content/AssetGUID.h"
+#include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetRegistry.h"
+#include "Engine/Content/Tests/ScopedScratchDomain.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialTagIndex.h"
 
@@ -111,4 +115,27 @@ SW_TEST_CASE( MaterialTagIndexTest, ImportOutputWithoutGUIDIsKeyedByPath )
     SW_EXPECT_TRUE( listFound[0] == sharedID );
 
     SW_EXPECT_FALSE( rules.makeIdentityReference( "common/materials/handwritten.material", nullopt ).has_value() );
+}
+
+/**
+ * @brief [MaterialTagIndexTest] 소스 실행의 색인은 도메인 뿌리 밑 하위 폴더의 머티리얼까지 든다 — 쿠킹 색인(팩에 담은 머티리얼마다 한 줄)과 같은 줄이다
+ * @details 음성 대조: 도메인을 바로 아래만 나열하면(`AssetIO::collectAssets` — 예전 길) 줄이 하나도 없어 개수 단언이 진다(`game.playground.materialswitch` 의 `matfind` 가 0 개로 졌다).
+ *          정체성을 런타임 색인에서 찾으면 이 케이스 도메인의 머리 GUID 가 색인에 없어 오류가 난다 — 정체성은 파일이 든 머리다.
+ */
+SW_TEST_CASE( MaterialTagIndexTest, SourceIndexWalksTheWholeDomain )
+{
+    SW_REQUIRE_TRUE( AssetIO::getContentSource() == ContentSource::Source );
+    test::ScopedScratchDomain domain;
+    const AssetGUID           nested = AssetGUID::create();
+    const AssetGUID           plain  = AssetGUID::create();
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "materials/sub/nested.material" ), AssetGUIDHeader::write( MaterialTagIndexTestUtil::makeMaterialXML( true ), nested ) ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "materials/plain.material" ), AssetGUIDHeader::write( MaterialTagIndexTestUtil::makeMaterialXML( false ), plain ) ) );
+
+    const expected<MaterialTagIndex> index = MaterialTagIndex::loadMounted( { test::ScopedScratchDomain::kDomain } );
+    SW_REQUIRE_TRUE( index.has_value() );
+    SW_REQUIRE_EQUAL( size_t( 2 ), index->_listEntry.size() );
+    const vector<string> listDetail = index->findByKeyword( "MATERIAL_DETAIL" );
+    SW_REQUIRE_EQUAL( size_t( 1 ), listDetail.size() );
+    SW_EXPECT_TRUE( listDetail[0] == AssetRegistry::makeReferenceText( nested ) );
+    SW_EXPECT_EQUAL( size_t( 1 ), index->findByKeyword( "MATERIAL_PLAIN" ).size() );
 }

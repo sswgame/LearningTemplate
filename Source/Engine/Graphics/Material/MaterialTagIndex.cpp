@@ -9,6 +9,7 @@
 
 #include "Engine/Asset/AssetDatabase.h"
 #include "Engine/Content/AssetIO.h"
+#include "Engine/Content/AssetPaths.h"
 #include "Engine/Content/AssetRegistry.h"
 #include "Engine/Content/Pack/PackManager.h"
 #include "Engine/Foundation/EngineSubsystems.h"
@@ -66,21 +67,28 @@ namespace sw
                 }
             }
 
-            /** @brief 소스 콘텐츠의 도메인 @p domain 에 든 머티리얼을 모두 읽어 줄을 만듭니다(팩 쿠킹이 쓰는 줄과 같은 `makeEntry`). */
+            /**
+             * @brief 소스 콘텐츠의 도메인 @p domain 아래(하위 폴더까지) 든 머티리얼을 모두 읽어 줄을 만듭니다(팩 쿠킹이 쓰는 줄과 같은 `makeEntry`).
+             * @details 도메인 폴더는 `AssetPaths::toDiskPath` 로 푼다(붙인 디스크 도메인도 같은 길). 리소스 폴더 나열(`AssetIO::collectAssets`)은 바로 아래만 보므로 쓰지 않는다 —
+             *          머티리얼은 `materials/` · `models/<모델>/materials/` 처럼 도메인 뿌리 밑에 있어 그 나열로는 늘 비었다. 정체성은 파일이 든 것(`AssetIdentityRules::readIdentity`)이다.
+             */
             [[nodiscard]] static expected<vector<MaterialTagEntry>> buildDomainFromSource( const string& domain )
             {
-                vector<AssetID>          listMaterial;
-                const AssetFolderListing listing = AssetIO::collectAssets( AssetID{ domain }, ".material", listMaterial );
-                if ( listing == AssetFolderListing::FolderMissing )
+                const optional<DiskPath> domainFolder = engine::getSubsystem<AssetPaths>().toDiskPath( domain );
+                if ( domainFolder.has_value() == false || FileUtil::isDirectory( *domainFolder ) == false )
                     return vector<MaterialTagEntry>{};
-                if ( listing != AssetFolderListing::Listed )
-                    return unexpected( Error{ ErrorKind::ExternalFailure, "the material folder of a domain could not be listed", domain } );
+                vector<DiskPath> listMaterialFile;
+                if ( FileUtil::collectFiles( *domainFolder, Material::kExtension, listMaterialFile, true ) == false )
+                    return unexpected( Error{ ErrorKind::ExternalFailure, "the materials of a domain could not be listed", domain } );
+                VectorUtil::sort( listMaterialFile, []( const DiskPath& left, const DiskPath& right )
+                { return left.str() < right.str(); } );
                 const AssetIdentityRules& rules = AssetIdentityRules::getProjectRules(); // 소스 콘텐츠는 개발 실행에만 있다 — 규칙 파일이 곁에 있다
                 vector<MaterialTagEntry>  listEntry;
-                listEntry.reserve( listMaterial.size() );
-                for ( const AssetID& materialID : listMaterial )
+                listEntry.reserve( listMaterialFile.size() );
+                for ( const DiskPath& materialFile : listMaterialFile )
                 {
-                    expected<string> reference = rules.makeIdentityReference( materialID.view(), AssetRegistry::resolveGUID( materialID.view() ) );
+                    const AssetID    materialID{ FileUtil::joinPath( domain, FileUtil::normalizeSeparators( string_view( materialFile.str() ).substr( domainFolder->str().size() + 1 ) ) ) };
+                    expected<string> reference = rules.makeIdentityReference( materialID.view(), rules.readIdentity( materialFile, materialID.view() ) );
                     if ( reference.has_value() == false )
                         return unexpected( reference.error() );
                     const shared_ptr<Material> material = Material::create();
