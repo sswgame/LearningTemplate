@@ -1001,8 +1001,8 @@ namespace sw
         }
 
         // 꺼진 효과는 출력 이름이 원본을 가리킨다(`kBypassesToSource`) — 그 출력을 읽는 패스가 원본을 읽으므로 원본의 수명이 출력의 끝까지 늘어난다. 둘을 한 구간으로 묶는다.
-        // 기록 첨부(`_bHistory`)는 셋업이 그 출력의 서술로 기록을 만들고 프레임을 넘겨 쓴다 — 패스 종류와 상관없이 나누지 않는다(언리얼 RDG 도 추출하는 텍스처는 앨리어싱하지 않는다).
-        // 후보에서는 빼지 않는다 — 꺼진 TAA 의 원본 수명을 늘리는 묶음(아래)이 그 출력을 본다.
+        // 기록 출력은 나눠도 안전하다. 기록 복사가 그 패스 끝(`copyOutputHistories`)에서 끝나고 셋업은 출력의 서술(형식 · 크기 — 서술 키가 같다)만 읽는다(볼륨 구름 · Fullscreen 출력은 나눈다).
+        // 꺼지면 원본으로 우회하는 패스의 기록 출력(TAA)만 옛 계획대로 나누지 않는다. 후보에는 남겨 꺼진 효과의 원본 수명 묶음(아래)이 그 출력을 본다.
         vector<uint8>                listExcluded( listCandidate.size(), 0 );
         vector<RenderGraphAliasJoin> listJoin;
         for ( const RenderGraphPassDesc& pass : listPass )
@@ -1013,10 +1013,10 @@ namespace sw
                 const auto outputIt = mapCandidateIndex.find( output._attachment );
                 if ( outputIt == mapCandidateIndex.end() )
                     continue;
-                if ( output._historyResource.empty() == false )
-                    listExcluded[outputIt->second] = 1;
                 if ( info.hasFlag( RenderPassTraitFlag::kBypassesToSource ) == false )
                     continue;
+                if ( output._historyResource.empty() == false )
+                    listExcluded[outputIt->second] = 1;
                 for ( const RenderGraphPassDesc::ResolvedAttachment& input : pass._listResolvedInput )
                 {
                     const auto inputIt = mapCandidateIndex.find( input._attachment );

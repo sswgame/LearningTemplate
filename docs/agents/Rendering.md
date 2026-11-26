@@ -65,7 +65,7 @@
 - `_listResource` 는 순서만 정한다(버퍼 주인은 서브시스템). `Persistent` = 프레임을 넘는 히스토리, `External` = 서브시스템이 채우는 버퍼. `Transient` 는 적지 않는다(첨부의 몫).
 - 선언하지 않은 종류는 PSO 도, 준비 작업도 없다(`FramePSOManager::getEnginePSO`). 각 패스는 자기 버퍼 배리어를 스스로 건다.
 - `_queue="AsyncCompute"` 는 컴퓨트 프레임 패스에만. 능력 `_bAsyncCompute` 가 없으면 그래픽스 큐에서 같은 차례로 돈다(비교 `-gv_asyncCompute=0`). 이득이 없으면 그 줄을 지운다.
-- 트랜지언트 앨리어싱은 적을 칸이 없다 — 수명은 패스 입출력 선언이 정하고, 기록 첨부(`_bHistory`)는 나누지 않는다(비교 `-gv_transientAliasing=0`). 렌더 → 출력 공간을 넘기는 패스는 지터 패스(`_bTemporalJitter`)뿐이다.
+- 트랜지언트 앨리어싱은 적을 칸이 없다 — 수명은 패스 입출력 선언이 정하고, 꺼지면 원본으로 우회하는 패스의 기록 출력(TAA)만 나누지 않는다(비교 `-gv_transientAliasing=0`). 렌더 → 출력 공간을 넘기는 패스는 지터 패스(`_bTemporalJitter`)뿐이다.
 
 ### 선택 스테이지 · 변위
 
