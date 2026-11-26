@@ -88,7 +88,7 @@ def get_main_working_tree(project_root: Path) -> Path:
 
 def run_git_in_hook_repository(args: Sequence[str], *, cwd: Path) -> ProcessResult:
     """
-    물려받은 git 환경 변수를 **그대로 둔** git — 커밋 훅 린트가 지금 커밋하는 인덱스를 볼 때만 쓴다. `git commit -a` · `git commit <경로>` 는 임시 인덱스를
+    물려받은 git 환경 변수를 그대로 둔 git — 커밋 훅 린트가 지금 커밋하는 인덱스를 볼 때만 쓴다. `git commit -a` · `git commit <경로>` 는 임시 인덱스를
     `GIT_INDEX_FILE` 로 넘기므로, 빼면 스테이지 목록 · 블롭이 커밋 내용과 어긋난다. 훅 밖에서는 `run_git` 과 같다.
     """
     git_exe = resolve_git_executable() or "git"

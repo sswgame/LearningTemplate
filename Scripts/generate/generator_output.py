@@ -1,10 +1,10 @@
 """
 생성 파일을 쓰는 자리 — configure · 빌드가 부르는 생성기(`Scripts/generate/`)가 같이 쓴다.
 
-- **바뀌었을 때만 쓴다.** 같은 내용으로 다시 쓰면 파일 시각이 바뀌어 Ninja 가 그 헤더에 기대는 TU 를 다시 짓고(restat 이 막는 것은 같은 시각뿐이다),
+- 바뀌었을 때만 쓴다. 같은 내용으로 다시 쓰면 파일 시각이 바뀌어 Ninja 가 그 헤더에 기대는 TU 를 다시 짓고(restat 이 막는 것은 같은 시각뿐이다),
   CMake 가 include 하는 파일이면 configure 가 다시 돈다. 비교는 읽은 글끼리(줄끝을 맞춘 뒤)다.
-- **줄끝은 생성기가 고른다.** 기본은 플랫폼 것(텍스트 모드 — Windows CRLF), `newline="\\n"` 이면 어디서나 LF(바이트를 해시하는 스탬프 · 고지).
-- **CMake 값은 이스케이프한다.** 윈도우 경로(`C:\\Program Files`)를 그대로 넣으면 CMake 가 `\\P` 를 이스케이프로 읽어 조용히 다른 경로가 된다.
+- 줄끝은 생성기가 고른다. 기본은 플랫폼 것(텍스트 모드 — Windows CRLF), `newline="\\n"` 이면 어디서나 LF(바이트를 해시하는 스탬프 · 고지).
+- CMake 값은 이스케이프한다. 윈도우 경로(`C:\\Program Files`)를 그대로 넣으면 CMake 가 `\\P` 를 이스케이프로 읽어 조용히 다른 경로가 된다.
 - 생성기의 기반 — configure 생성기는 `Generator`, 빌드 단계가 부르는 것은 `Command`(`common/command.py`)다.
 """
 
@@ -62,7 +62,7 @@ def record_read_files(root: Path, output_dir: Path) -> Iterator[set[Path]]:
     """
     이 구간에서 `root` 아래 읽은 파일(데이터 · 생성기 모듈)을 모은다 — configure 생성기의 `.deps` 목록.
 
-    CMake 가 이 목록을 CMAKE_CONFIGURE_DEPENDS 에 넣어 **생성기 코드나 그것이 읽은 표가 바뀌면** configure 가 다시 돈다. 손으로 적은
+    CMake 가 이 목록을 CMAKE_CONFIGURE_DEPENDS 에 넣어 생성기 코드나 그것이 읽은 표가 바뀌면 configure 가 다시 돈다. 손으로 적은
     입력 목록은 새 입력을 빠뜨린다(층 표 · 매니페스트 · 생성기 .py). 읽기는 감사 훅의 `open` 사건으로 보고, 쓰는 출력 폴더는 뺀다.
     """
     root_prefix = os.path.normcase(str(root.resolve())) + os.sep

@@ -4,8 +4,8 @@ Scripts/lint/header_include_limits.py
 헤더 포함 상한(래칫) — 다이어트한 헤더(docs/agents/CppStyle.md Includes and layers)가 pch 밖에서 (전이적으로) 끌어오는 헤더 수를
 표(`Config/Rules/Lint/HeaderIncludeLimits.json` 의 `_limits` — 헤더 → 상한 · 까닭)의 상한과 견준다.
 pch(`Engine/pch.h` · `Core/pch.h`)가 끄는 헤더는 TU 마다 이미 읽히므로 세지 않고, include 는 `#include "..."` 만 본다(조건부 포함은 모두 포함한 것으로 센다).
-- 수가 상한보다 **늘면** 진다 — 전방 선언(`Engine/Object/ObjectFwd.h` · `Engine/Reflection/ReflectionFwd.h`)이나 `.inl` · .cpp 로 옮긴다.
-- 수가 **줄면** 표도 같이 낮춰야 선다 — 옮긴 자리에 포함이 다시 들어오지 못한다(`magic-literals` 래칫과 같은 꼴).
+- 수가 상한보다 늘면 진다 — 전방 선언(`Engine/Object/ObjectFwd.h` · `Engine/Reflection/ReflectionFwd.h`)이나 `.inl` · .cpp 로 옮긴다.
+- 수가 줄면 표도 같이 낮춰야 선다 — 옮긴 자리에 포함이 다시 들어오지 못한다(`magic-literals` 래칫과 같은 꼴).
 
     py -3 -m Scripts lint header-include-limits [--self-check]
 """

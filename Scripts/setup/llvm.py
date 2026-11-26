@@ -45,7 +45,7 @@ from setup.toolchain_detect import ToolSpec, find_tool_root
 from common.exit_code import ExitCode  # noqa: E402
 from common.run_process import run_process  # noqa: E402
 
-# llvm-lib / llvm-ar 는 **LTO 때문에** 필요하다. clang 이 -flto 로 내는 .obj 는 LLVM 비트코드라
+# llvm-lib / llvm-ar 는 LTO 때문에 필요하다. clang 이 -flto 로 내는 .obj 는 LLVM 비트코드라
 # MSVC lib.exe 가 못 읽고(LNK1107), 그러면 CMake 의 `check_ipo_supported` 가 실패해 IPO 가 통째로
 # 꺼진다 — `SW_ENABLE_LTO=ON` 인데도 -flto 가 한 TU 에도 안 걸리고, 아무 오류도 나지 않는다.
 _WIN_KEEP_BIN_EXES: set[str] = {
@@ -164,7 +164,7 @@ def is_minimal_llvm_root(path: str) -> bool:
         if not (bin_dir / "clang-cl.exe").is_file():
             return False
         # llvm-lib 도 "최소 유효" 의 일부다. 없으면 LTO 가 통째로 꺼진다 — 그것도 조용히
-        # (자세한 이유는 _WIN_KEEP_BIN_EXES 주석). 이 검사에 넣어야 **이미 설치된 트리도 복구된다**.
+        # (자세한 이유는 _WIN_KEEP_BIN_EXES 주석). 이 검사에 넣어야 이미 설치된 트리도 복구된다.
         if not (bin_dir / "llvm-lib.exe").is_file():
             return False
         if not find_lib_clang_dll_path(str(root)):
@@ -275,7 +275,7 @@ def _invalidate_precompiled_headers(project_root: Path) -> int:
 
     LLVM 을 새로 깔면 `lib/clang/<major>/include` 의 헤더가 바뀌고, 그 순간 기존 PCH 는 전부
     쓸 수 없게 된다. 그런데 컴파일러 메시지는 "has been modified since the precompiled header
-    was built" 뿐이라 원인도 조치도 안 알려 준다. 그래서 **툴체인을 바꾼 쪽이 치운다.**
+    was built" 뿐이라 원인도 조치도 안 알려 준다. 그래서 툴체인을 바꾼 쪽이 치운다.
 
     `.pch` 만 지우면 안 된다 — ninja 는 짝이 되는 `cmake_pch.cxx.obj` 가 최신이면 PCH 를 다시
     만들지 않고, 그것을 필요로 하는 TU 만 컴파일하다 "PCH file not found" 로 진다. 둘 다 지운다.
@@ -393,7 +393,7 @@ def _prune_lib_include(root: Path) -> None:
 
 def _ensure_bin_from_archive(root: Path, search: dict, file_name: str) -> None:
     """
-    키트의 bin 에 `file_name` 이 없으면 키트를 만든 같은 압축본(캐시)에서 그 한 파일만 꺼낸다 — **이미 설치된 트리도 복구된다.**
+    키트의 bin 에 `file_name` 이 없으면 키트를 만든 같은 압축본(캐시)에서 그 한 파일만 꺼낸다 — 이미 설치된 트리도 복구된다.
     최소 키트 검사에 넣지 않는 까닭: 그 검사가 지면 키트를 통째로 다시 풀고 build/ 의 PCH 를 모두 버린다(빠진 도구 하나로 치르기엔 비싸다).
     """
     target = root / "bin" / file_name

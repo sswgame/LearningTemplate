@@ -2,7 +2,7 @@
 """
 Scripts/setup/git_hooks.py
 
-Git 훅을 .git/hooks/ 디렉터리에 설치합니다 — pre-commit(커밋 시 린트 · 포맷 검사), commit-msg(메시지 양식 — 원인 → 조치 → 결과),
+Git 훅을 .git/hooks/ 디렉터리에 설치합니다. pre-commit(커밋 시 린트 · 포맷 검사), commit-msg(메시지 양식: 원인 → 조치 → 결과),
 pre-push(보호 ref 로 가는 sha 가 묶음 검증이 통과한 sha 인지 — Scripts/dev/verify_record.py, 이어서 Git LFS 의 pre-push).
 """
 

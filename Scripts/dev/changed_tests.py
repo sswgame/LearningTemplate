@@ -1,14 +1,14 @@
 """
 새로 들어온 · 바뀐 테스트 · 시나리오를 먼저 도는 단계(`test-history changed`, 묶음 검증의 `changed`).
 
-**`changed`.** push 는 검증한 커밋만 하므로 `origin/main` 에 있는 것은 돈 적이 있고, 그 뒤에 더해지거나 바뀐 것은 돈 적이 없다 — 상태 파일 없이
+`changed`. push 는 검증한 커밋만 하므로 `origin/main` 에 있는 것은 돈 적이 있고, 그 뒤에 더해지거나 바뀐 것은 돈 적이 없다 — 상태 파일 없이
 `git diff --name-status <base>...HEAD` 로 가른다(이력 DB 는 기계마다 달라 쓰지 않는다). 묶음 검증이 build 와 cpu 사이에 부른다(`preflight.sh` 의 `changed` 단계).
   (a) 바뀐 소스 · 테스트 파일의 기능 폴더(`…/Tests/…` 는 `Tests` 앞, 아니면 그 파일의 폴더 — 테스트가 없으면 한 단계 위)를 그 폴더를 싣는 단위 항목
       (`UnitTests` · `UnitTests.<게임>` · `UnitTests.OnlineKits` — ctest 의 명령을 `ctest --show-only=json-v1` 에서 읽는다)에 `--test-source=` 로 좁혀 돈다.
-      에디터 쪽(`/Editor/` 소스 · 편집기 시나리오 · `Content/editor` 데이터)이나 리플렉션 선언(`REFLECT` 이 있는 헤더 — 메타 `Icon=` · 분류 · 표시 이름)이 바뀌었으면 에디터 단위 테스트(`UnitTests.Editor` — 창 · GPU 없는 `App --test-editor`)를 돈다. 단위라 시나리오보다 먼저다.
+      에디터 쪽(`/Editor/` 소스 · 편집기 시나리오 · `Content/editor` 데이터)이나 리플렉션 선언(`REFLECT` 이 있는 헤더: 메타 `Icon=` · 분류 · 표시 이름)이 바뀌었으면 에디터 단위 테스트(`UnitTests.Editor`, 창 · GPU 없는 `App --test-editor`)를 돈다. 단위라 시나리오보다 먼저다.
   (b) 더해지거나 바뀐 `*.scenario.xml`(골든이 바뀌면 그 시나리오)을 하나씩 제 프로세스로, 그 시나리오가 든 ctest 항목의 백엔드마다 돈다.
   돌 것이 있으면 먼저 프리셋을 증분 빌드한다 — HEAD 와 다른 옛 바이너리로 판정하지 않는다(지면 `CHANGED_FAILED`).
-  둘 다 **없는 기준 파일만 쓴다**(`--record-missing-snapshots` · `-scenario-record-missing-golden`) — 쓴 케이스 · 시나리오는 `MissingBaseline` 으로 지고, 쓴 파일(추적 안 된
+  둘 다 없는 기준 파일만 쓴다(`--record-missing-snapshots` · `-scenario-record-missing-golden`) — 쓴 케이스 · 시나리오는 `MissingBaseline` 으로 지고, 쓴 파일(추적 안 된
   `golden/` · `Snapshots/`)이 있으면 목록을 내고 멈춘다. 통합 담당이 보고 커밋한 뒤 `--from changed` 로 다시 돌려 기록 없이 통과해야 한다.
   출력은 표 하나(항목 · 새것/바뀐 것 · 실패 종류 · 까닭 · 그 파일을 더한 갈래)이고, 끝 줄은 `CHANGED_OK=<sha>` 또는 `CHANGED_FAILED` 다. 새 시나리오가 모든 백엔드에서
   같은 단언으로 지면 `전제`, 한 백엔드만 지면 `백엔드 <이름>` 으로 묶는다.
@@ -44,7 +44,7 @@ PAIR_SUFFIX = re.compile(r"\.[12]\.scenario\.xml$")   # 두 번 기동 쌍(`sequ
 MERGE_SUBJECT = re.compile(r"^Merge (?:remote-tracking )?branch '(?:origin/)?([^']+)'")
 SOURCE_PATH = re.compile(r"(?:^|/)(Source/.+)$")
 # 시한은 ctest 항목의 TIMEOUT 속성이다(없으면 ctest 의 기본 1500 초). 단계가 여럿인 체인에서 꺼낸 시나리오 하나만 체인 시한(단계 초 × 단계 수 × 물결)을 나눠 쓸 수 없어
-# — 단계 몫에는 기동 · 종료가 없다 — App 의 단일 시나리오 프로세스 시한(`AutomationTimeLimits::getChainKillSeconds( 1 )` 545 초) 위에 기동 · 셰이더 여유를 둔 값을 쓴다.
+# 단계 몫에는 기동 · 종료가 없다. App 의 단일 시나리오 프로세스 시한(`AutomationTimeLimits::getChainKillSeconds( 1 )` 545 초) 위에 기동 · 셰이더 여유를 둔 값을 쓴다.
 CTEST_DEFAULT_TIMEOUT_SECONDS = 1500
 # 새 시나리오의 결정성 검사를 도는 백엔드 — 앞 단계에 달린 값은 게임 쪽에서 생겨 하나면 드러난다.
 DETERMINISM_BACKEND = "dx12"
@@ -407,7 +407,7 @@ def read_scenario_rows(run: ChangedRun, find_branch: Callable[[str], str]) -> li
 
 
 def fold_scenario_rows(item: str, change: str, branch: str, by_backend: dict[str, dict]) -> list[ChangedRow]:
-    """백엔드별 보고를 표 줄로 — 모든 백엔드가 건너뛰었으면 `NotRun`(새 · 바뀐 시나리오가 한 번도 돌지 않았다 — 통과로 적으면 거짓 통과다), 일부만이면 통과 줄에 건너뛴 백엔드를 적는다."""
+    """백엔드별 보고를 표 줄로 만든다. 모든 백엔드가 건너뛰었으면 `NotRun`(새 · 바뀐 시나리오가 한 번도 돌지 않았으므로 통과로 적으면 거짓 통과다), 일부만이면 통과 줄에 건너뛴 백엔드를 적는다."""
     list_report = list(by_backend.values())
     list_skipped = sorted(backend for backend, report in by_backend.items() if report.get("result") == "Skipped")
     if len(list_skipped) == len(list_report):
@@ -462,7 +462,7 @@ def run_new_scenario_determinism(list_item: Sequence[CtestItem], map_scenario: d
                                  find_branch: Callable[[str], str], map_quarantine: dict[str, QuarantineEntry]) -> list[ChangedRow]:
     """새 시나리오마다 혼자 · 앞 단계 하나 · 두 번 이어 돌려 사진을 바이트로 견준 줄(사진을 찍지 않는 시나리오는 통과 줄).
 
-    바뀐 시나리오는 빼고 **새것만**, 백엔드 하나에서 돈다 — 앞 단계에 달린 값은 게임 쪽에서 생겨 백엔드와 무관하고, 시나리오 하나에 기동 셋 · 단계 다섯이 든다.
+    바뀐 시나리오는 빼고 새것만, 백엔드 하나에서 돈다 — 앞 단계에 달린 값은 게임 쪽에서 생겨 백엔드와 무관하고, 시나리오 하나에 기동 셋 · 단계 다섯이 든다.
     나머지 시나리오는 체인이 위치를 섞어 돌므로 골든이 본다."""
     from dev.scenario_determinism import check_determinism, make_runner
     from dev.scenario_runs import read_scenario_name

@@ -6,7 +6,7 @@ Scripts/generate/module_layers.py
 모듈 층 표(`Config/Rules/Layers/<모듈>Layers.toml`)를 CMake 가 읽는 `<모듈>Layers.cmake` 로 옮긴다. 표 하나가 모듈 폴더 하나를 맡는다(`LIST_LAYER_TABLE`):
 Engine(`Source/Engine`)과 GameFramework 런타임(`Source/GameFramework/Runtime`).
 
-**왜 린트가 아니라 빌드인가.** include 는 글자라 예전에는 린트 게이트가 `#include "Engine/..."` 줄을 읽어 막았다(직접 include 만 보였다).
+왜 린트가 아니라 빌드인가. include 는 글자라 예전에는 린트 게이트가 `#include "Engine/..."` 줄을 읽어 막았다(직접 include 만 보였다).
 지금은 모듈의 CMakeLists 가 층마다 부분(OBJECT 라이브러리 — 오브젝트는 모듈 이미지 안)을 짓고, 부분마다 자기 층보다 위 층의
 모든 헤더 자리에 `#error` 껍데기를 먼저 놓는다(`sw_add_layer_stubs`) — 위 층 헤더를 include 하면 컴파일이 멈춘다(헤더를 거쳐 닿는 전이 include 도 같다).
 에디터 층(`editor_layers.py`)과 같은 방식이다.

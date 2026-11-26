@@ -5,12 +5,12 @@ Scripts/generate/toolchain_cmake.py
 
 `Config/Environment/toolchain_config.json` 을 CMake 가 바로 읽을 수 있는 `set()` 목록으로 찍습니다.
 
-**왜 CMake 가 JSON 을 직접 파싱하지 않나.** 이 JSON 은 `environment.py` 가 **쓰는** 파일이다. CMake 여러 곳이
+왜 CMake 가 JSON 을 직접 파싱하지 않나. 이 JSON 은 `environment.py` 가 쓰는 파일이다. CMake 여러 곳이
 각자 파싱하면 같은 키를 상수와 리터럴 두 가지로 적게 되고, 한쪽만 바뀌는 날이 온다. 쓰는 쪽이 파이썬이니 **읽는 모양도
 파이썬이 준다** — 이 저장소가 `project_constants.py` → `ConfigVars.cmake`
 로 하고 있는 것과 같다.
 
-**키 목록을 여기서도 들지 않는다** — JSON 에 있는 키를 그대로 `SW_TOOLCHAIN_<KEY 대문자>` 로 찍는다.
+키 목록을 여기서도 들지 않는다 — JSON 에 있는 키를 그대로 `SW_TOOLCHAIN_<KEY 대문자>` 로 찍는다.
 `environment.py` 가 키를 하나 더하면 CMake 에서 바로 쓸 수 있다.
 
 (`FindLlvmBin.cmake` 는 그대로 둔다 — vcpkg 오버레이 생성(`VcpkgTriplets.cmake`)이 `project()` 앞에서 불러

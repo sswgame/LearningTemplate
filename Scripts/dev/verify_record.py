@@ -5,7 +5,7 @@ Scripts/dev/verify_record.py
 
 묶음 검증(`preflight.sh`)의 통과 기록과 push 게이트. 기록은 메인 작업 폴더의 `build/` 에 둔다(빌드 · 검증은 그 폴더 하나).
 
-- `build/verify.stages.json`: 단계 → 마지막으로 통과한 sha. 다음 실행에서 그 sha 뒤 바뀐 파일이 **모두** 입력이 아닌 경로(`Config/Dev/Verify.json` 의
+- `build/verify.stages.json`: 단계 → 마지막으로 통과한 sha. 다음 실행에서 그 sha 뒤 바뀐 파일이 모두 입력이 아닌 경로(`Config/Dev/Verify.json` 의
   `_nonInputPaths`)면 그 단계를 건너뛴다. 거꾸로 적는 목록이다 — 단계마다 입력 경로를 적으면 git 밖 입력(도구 · 드라이버 · 임포트 산출물 · 셰이더 요청 기록)까지
   닫지 못해 빠진 경로가 "검증 안 된 단계 건너뛰기" 가 된다. 이 목록에서 빠뜨리면 더 돌 뿐이다(Bazel 은 샌드박스가 입력을 강제하지만 여기는 강제할 것이 없다).
 - `build/verify.ok`: Windows 단계가 모두 통과한 sha 한 줄. git `pre-push` 훅(`setup/git_hooks.py`)이 보호 ref(`_verifiedPushRefs`)로 가는 sha 가 이것과 같은지

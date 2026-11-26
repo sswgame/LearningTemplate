@@ -3,7 +3,7 @@ Scripts/lint/shader_kill_order.py
 
 픽셀 버리기(`clip` · `discard` · `SW_APPEARANCE_CLIP`) 뒤에 미분을 쓰는 읽기(암묵 밉 `Sample` · `SampleBias` · `SampleCmp`, `ddx` · `ddy` · `fwidth`)가 오는 함수를 막는다.
 Vulkan 1.2 타깃의 `clip` 은 OpKill 이라 버린 픽셀이 쿼드 이웃의 미분에서 빠져 이웃의 밉 선택이 틀린다(binding.hlsli 8-1 절). 1.3 의 demote 를 요구하지 않으려고 순서로 막는다.
-**왜 형식이 아니라 린트인가.** HLSL 에는 "이 함수는 미분을 쓴다" 를 형식으로 적을 자리가 없고, 순서는 한 함수 본문 안의 문장 순서다.
+왜 형식이 아니라 린트인가. HLSL 에는 "이 함수는 미분을 쓴다" 를 형식으로 적을 자리가 없고, 순서는 한 함수 본문 안의 문장 순서다.
 
 - 미분을 쓰는 함수: 본문에 위 읽기가 있거나 그런 함수를 부르는 함수(셰이더 전체의 호출 닫힘). 이름은 `::` 뒤의 마지막 이름으로 본다 — 같은 이름의 정의가 여럿(`#if` 갈래)이면 하나라도 쓰면 쓴다고 본다.
 - 버리는 함수: 본문에 버리기가 있거나 그런 함수를 부르는 함수(`Appearance::clipDither`). `SW_APPEARANCE_CLIP(` 는 그 자체로 버리기다.

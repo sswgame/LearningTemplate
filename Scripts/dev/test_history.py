@@ -4,7 +4,7 @@ Scripts/dev/test_history.py
 시나리오 보고 JSON(`AutomationReportWriter` — `name` · `result` · `backend` · `game` · `startedAtUnixMs` · `wallMilliseconds`)을 sqlite 에 쌓고,
 테스트마다 흔들림 지수와 걸린 시간 p95 추세를 낸다. 격리 표(`Config/Rules/Test/Quarantine.json`)는 사유 · 만료가 필수이고 지난 만료는 오류다.
 
-**왜 따로 쌓는가.** 한 번의 실행 보고는 "졌다" 만 말한다. 같은 테스트가 실행마다 이겼다 졌다 하는지(흔들림), 점점 느려지는지(p95 추세)는
+왜 따로 쌓는가. 한 번의 실행 보고는 "졌다" 만 말한다. 같은 테스트가 실행마다 이겼다 졌다 하는지(흔들림), 점점 느려지는지(p95 추세)는
 여러 묶음 검증을 모아야 보인다 — 언리얼 Gauntlet · Horde 의 테스트 이력, 크로미움 Flakiness Dashboard 와 같은 자리를 저장소 안 sqlite 하나로 둔다.
 흔들림 지수 = 연속 두 실행의 결과가 바뀐 횟수 / (실행 수 - 1). 0 은 늘 같음, 1 은 매번 바뀜.
 
@@ -18,20 +18,20 @@ Scripts/dev/test_history.py
 
 묶음 검증(`Scripts/dev/preflight.sh`)이 ctest 마다 보고 폴더를 ingest 하고, ctest 에 격리 표를 `-E` 로 넘긴다.
 
-**실행 종류(`runKind`).** 보고 폴더(`build/<프리셋>/Bin/Saved/Automation`)는 손으로 돌린 실행 · 다시 돌리기 도구(`scenario_bisect.py`)도 함께 쓴다 — 예전에는 다음 묶음
+실행 종류(`runKind`). 보고 폴더(`build/<프리셋>/Bin/Saved/Automation`)는 손으로 돌린 실행 · 다시 돌리기 도구(`scenario_bisect.py`)도 함께 쓴다. 예전에는 다음 묶음
 검증의 ingest 가 그 보고를 그때의 sha 로 넣어, 다른 코드로 돈 실행이 같은 커밋으로 적혔다(흔들림 상한값이 부풀었다). 그래서 ingest 는 `--since <표지 파일>`(단계가 시작할 때
 만드는 `verify.ctest.<이름>.log.start`) 뒤에 시작한 보고에만 `--commit` 과 `--kind` 를 붙이고, 그 앞 보고는 sha 없이 `manual` 로 넣는다. 흔들림 판정(`flaky`)은 `verify` 만 본다.
 실행기에 표지 인자를 주는 길도 있지만 그러면 손 실행도 같은 값을 줄 수 있다 — 시각 표지는 검증 스크립트만 만든다.
 
-**흔들림 판정(`flaky`).** 최근 검증 커밋 `_flakyCommitWindow` 개에서 같은 (테스트, 백엔드, 커밋)에 통과와 실패가 함께 있는 묶음을 센다. 격리 표에 없는 것의 비율이
+흔들림 판정(`flaky`). 최근 검증 커밋 `_flakyCommitWindow` 개에서 같은 (테스트, 백엔드, 커밋)에 통과와 실패가 함께 있는 묶음을 센다. 격리 표에 없는 것의 비율이
 `_flakyRateLimit`(`Config/Dev/Verify.json`)를 넘으면 진다 — 흔들리는 테스트는 "다시 돌리니 통과" 로 넘기지 않고 격리 + 만료로 다룬다(Google 의 흔들림 격리, 자동 재시도는
 대리물을 통과시키는 모양이라 하지 않는다). 격리 표의 `test` 는 ctest 이름이고 보고의 `name` 은 시나리오 이름이라, 흔들림 줄의 이름을 그대로 격리 표에 적어도 이 판정에서 빠진다.
 
-**느려짐 경고.** ingest 는 새로 넣은 검증 실행이 같은 (테스트, 백엔드)의 지난 통과 실행 p95 의 `_slowFactor` 배를 넘으면 경고 줄을, `stage` 는 같은 단계의 지난 통과 시간 p95 와
+느려짐 경고. ingest 는 새로 넣은 검증 실행이 같은 (테스트, 백엔드)의 지난 통과 실행 p95 의 `_slowFactor` 배를 넘으면 경고 줄을, `stage` 는 같은 단계의 지난 통과 시간 p95 와
 견줘 경고 줄을 찍는다(판정을 바꾸지 않는다 — 시한은 실행기가 따로 끊는다). 표본이 `SLOW_MIN_SAMPLES` 보다 적으면 견주지 않는다.
 
-**시간표(`costs`).** 러너를 나눌 때(docs/NEXT.md T3 샤드 균형)의 입력이다 — 언리얼 Horde · 크로미움 Swarming 처럼 지난 실행 시간으로 나눈다.
-표는 `--write` 로 갱신하고 **사람이 커밋할 때만 바뀐다**(실행마다 다시 나누면 앞 단계가 가리던 결함이 실행마다 드러났다 숨는다). 표에 없는 시나리오는 표의 중앙값이다.
+시간표(`costs`). 러너를 나눌 때(docs/NEXT.md T3 샤드 균형)의 입력이다 — 언리얼 Horde · 크로미움 Swarming 처럼 지난 실행 시간으로 나눈다.
+표는 `--write` 로 갱신하고 사람이 커밋할 때만 바뀐다(실행마다 다시 나누면 앞 단계가 가리던 결함이 실행마다 드러났다 숨는다). 표에 없는 시나리오는 표의 중앙값이다.
 """
 
 from __future__ import annotations

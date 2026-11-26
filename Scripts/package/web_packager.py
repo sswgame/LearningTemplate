@@ -13,7 +13,7 @@
 
 `serve` 는 교차 출처 격리 헤더(COOP `same-origin` · COEP `require-corp`)를 주는 정적 서버다 — 엔진이 pthread(SharedArrayBuffer)라 그 헤더가 없으면 기동하지 못한다.
 배포 서버도 같은 두 헤더를 줘야 한다. 유니티 WebGL 의 Build 폴더(.data + 로더 + .wasm)와 같은 모양이다(기억).
-첫 화면은 기동 필수 팩만 받는다 — 나머지는 언리얼 청크 pak · 유니티 Addressables 처럼 씬을 열 때 받는다(쿠커가 씬 단위로 나눈다 — `PackSceneChunkPlan`).
+첫 화면은 기동 필수 팩만 받는다. 나머지는 언리얼 청크 pak · 유니티 Addressables 처럼 씬을 열 때 받는다(쿠커가 씬 단위로 나눈다, `PackSceneChunkPlan`).
 
 사용법:
     py -3 -m Scripts web-package --game Playground
@@ -91,7 +91,7 @@ class WebPackageError(CommandError):
 
 
 def read_deferred_pack_names(list_manifest: list[Path]) -> set[str]:
-    """청크 목록들(`PackChunkManifest` — 도메인마다)이 적은 팩 이름(소문자)입니다 — 첫 받기에 넣지 않고 씬을 열 때 받는다. 목록이 없으면 빈 집합(모두 기동 필수)."""
+    """청크 목록들(`PackChunkManifest`, 도메인마다)이 적은 팩 이름(소문자)입니다. 첫 받기에 넣지 않고 씬을 열 때 받는다. 목록이 없으면 빈 집합(모두 기동 필수)."""
     set_name: set[str] = set()
     for manifest in list_manifest:
         try:

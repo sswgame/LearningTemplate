@@ -453,7 +453,7 @@ def _pair_of(asset_id: str, rules: Rules) -> str | None:
 
 
 def _find_guid_owners(project_root: Path, list_guid: list[str], rules: Rules) -> dict[str, list[str]]:
-    """인덱스에서 GUID 들을 든 파일 — GUID → 정체성을 든 리소스 id 목록. `git grep` 이 인덱스를 훑는다(전체 블롭을 읽지 않는다 — 에셋이 수십만이어도 커밋마다 돈다)."""
+    """인덱스에서 GUID 들을 든 파일: GUID → 정체성을 든 리소스 id 목록. `git grep` 이 인덱스를 훑는다(전체 블롭을 읽지 않으므로 에셋이 수십만이어도 커밋마다 돈다)."""
     if not list_guid:
         return {}
     # 패턴은 파일로 넘긴다 — 한 커밋의 GUID 가 수천이면 명령줄 길이(Windows 32K)를 넘는다.
@@ -481,7 +481,7 @@ def _find_guid_owners(project_root: Path, list_guid: list[str], rules: Rules) ->
 
 def check_staged_asset_identity(project_root: Path, scope: LintScope | None = None) -> list[str] | None:
     """
-    커밋 전 검사 — 스테이지에 Content 변경이 없으면 None. 있으면 **바뀐 파일과 그 짝**만 본다(인덱스 전체를 읽지 않는다 — 에셋 수가 수십만이 되어도 커밋마다 돈다):
+    커밋 전 검사: 스테이지에 Content 변경이 없으면 None. 있으면 바뀐 파일과 그 짝만 본다(인덱스 전체를 읽지 않으므로 에셋 수가 수십만이 되어도 커밋마다 돈다):
     머리 없음 · 깨짐, 원본만 지우거나 옮겨 남은 .meta, .meta 없는 새 원본, 새 GUID 가 인덱스의 다른 파일과 겹침(`git grep`), HEAD 에 있던 경로의 GUID 가 바뀜.
     저장소 전체는 `py -3 -m Scripts asset-ids` 가 본다(묶음 검증).
     """
@@ -491,7 +491,7 @@ def check_staged_asset_identity(project_root: Path, scope: LintScope | None = No
     prefix = CONTENT_FOLDER + "/"
     list_change = [line.split("\t", 1) for line in status.stdout.splitlines() if "\t" in line]
     list_change = [(code.strip(), path.strip().replace("\\", "/")) for code, path in list_change]
-    # 범위가 주어지면 그 파일만 — 변경 종류(A · M · D)는 인덱스에서 읽고, 판정 대상은 커밋 훅이 넘긴 범위다(범위 밖 스테이지 파일을 읽지 않는다 — lint-shape 의 읽기 상한).
+    # 범위가 주어지면 그 파일만 본다. 변경 종류(A · M · D)는 인덱스에서 읽고, 판정 대상은 커밋 훅이 넘긴 범위다(범위 밖 스테이지 파일을 읽지 않는다, lint-shape 의 읽기 상한).
     if scope is not None:
         set_scope = {*scope.list_file, *scope.list_removed}
         list_change = [(code, path) for code, path in list_change if path in set_scope]

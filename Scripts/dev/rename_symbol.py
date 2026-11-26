@@ -1,5 +1,5 @@
 """
-식별자 이름을 저장소 전체에서 한 번에 바꾼다 — 코드(Source · Test · Scripts · Tools) · 데이터(Content — 리플렉션 칸 · 감시 값 · 개발 명령 이름이 글로 든다) ·
+식별자 이름을 저장소 전체에서 한 번에 바꾼다. 코드(Source · Test · Scripts · Tools) · 데이터(Content: 리플렉션 칸 · 감시 값 · 개발 명령 이름이 글로 든다) ·
 설정(Config) · 문서(docs · 스킬). IDE 의 "Rename Symbol"(VS Code F2 · Visual Studio Ctrl+R,R) 자리다. 언리얼은 CoreRedirects 로 옛 이름을 읽어 주지만
 이 저장소는 옛 이름을 남기지 않고 데이터까지 한 번에 옮긴다.
 

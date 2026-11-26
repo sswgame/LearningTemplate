@@ -2,7 +2,7 @@
 Scripts/lint/common_shapes.py
 
 공통 기반이 있는데 손으로 다시 적은 모양을 막는다. 기반을 만들어 일부만 옮겨 태우면 옛 모양이 남아 복사되는 것이 근본 원인이었다(2026-11-07 조사 `refactor_common.md`).
-**린트는 최후의 수단이다.** 접근 제어 · 선언 막기로 막을 수 있는 모양은 코드로 옮겼다(2026-11-12): 다시 읽기 횟수 손 대조(`SharedAssetCache::getReloadCount` 비공개,
+린트는 최후의 수단이다. 접근 제어 · 선언 막기로 막을 수 있는 모양은 코드로 옮겼다(2026-11-12): 다시 읽기 횟수 손 대조(`SharedAssetCache::getReloadCount` 비공개,
 `AssetReloadWatch` 만 friend), 캔버스 지우기 손 구간(`ed::BeginDelete` 를 `EditorInputBan.h` 가 사용 중단으로 선언, 입구 `EditorNodeGraph.cpp` 만 받지 않는다),
 타입 부모 사슬 손 걷기(`TypeInfo::getParentType` 비공개), 에디터 자동화 포인터 손 옮기기(`EditorSelfTestInput::moveMouse` 비공개, 끌기는 `moveByOffset`).
 남은 열은 항목마다 적은 까닭으로 형식이 말하지 못한다 — 합법인 C++ 의 글자 · 칸 이름 · 인자의 뜻이거나, 정당한 사용처가 여러 층에 걸쳐 friend 로 묶을 수 없다.
@@ -18,7 +18,7 @@ Scripts/lint/common_shapes.py
 5. id 를 버리는 리소스 입구: 이름이 `load…` 인 입구(`loadFromAsset` · `loadFromFile` · `loadFromPack` · `load` …)가 리소스 글(`AssetIO::readTextAsset`)을 읽은 뒤
    id 없이 글 입구로 넘기면 덮어쓰기 층 · 다시 읽기 기록 · 접속 대조를 받지 못한다(조용히 빠진다). id 를 싣는 길(`ResourceContext::withAsset` ·
    `XMLDocument::parseResourceText` · `XMLReadUtil::parseResourceRoot` · `loadResource…`)을 지나거나, 읽은 id 변수를 그대로 다음 함수에 넘겨야 한다.
-   예전에는 이름 둘(`loadFromAsset` · `loadFromFile( const AssetID& )`)만 보아 다른 이름의 입구(타일맵 `load`)가 빠졌다 — 입구는 이름이 아니라 "load 로 시작하고 리소스 글을 읽는다" 로 고른다.
+   예전에는 이름 둘(`loadFromAsset` · `loadFromFile( const AssetID& )`)만 보아 다른 이름의 입구(타일맵 `load`)가 빠졌다. 입구는 이름이 아니라 "load 로 시작하고 리소스 글을 읽는다" 로 고른다.
    형식으로 못 막는 까닭: 읽은 글과 id 가 같은 함수 안에서 이어지는지(자료 흐름)다.
 6. 엔진 자식 손 명령: `ProcessCommand::at(` 은 `EngineChildProcess::makeCommand` 가 맡는다 — 자동화 실행의 자식에 `-unattended` 를 넘긴다.
    빠지면 넷 플레이 클라이언트가 사람의 실행으로 떠 사양으로 품질을 골라 서버와 합성이 갈렸다. 엔진이 아닌 도구(Tracy · tint · 편집기)는 예외 표에 까닭과 함께.

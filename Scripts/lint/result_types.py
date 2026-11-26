@@ -10,8 +10,8 @@ Scripts/lint/result_types.py
 - `out-text-on-failure`: 이름은 달라도(`outReply` · `outUnknown` · `outFailureText` …) 실패 갈래에서만 쓰는 글 출력 인자 — 함수 본문의 모든 쓰기 바로 뒤가
   `return false` · `nullptr` · `nullopt` · `unexpected` 이고 그 인자를 다른 함수에 넘기지 않는 정의만 센다(넘기면 성공 쪽 쓰기를 볼 수 없어 세지 않는다).
 
-**왜 린트인가.** 형식(`sw::expected`)은 새 함수가 옛 모양을 쓰지 못하게 막지 못한다 — `std::optional` 도 `string&` 도 언어가 준다. 그래서 모든 파일이
-**0** 이어야 하고, 예외는 `Config/Rules/Lint/ResultTypes.json` 의 `_exemptions`(`경로|종류` → 까닭)에만 둔다. 예전에는 Core 밖 파일마다 종류별 수를
+왜 린트인가. 형식(`sw::expected`)은 새 함수가 옛 모양을 쓰지 못하게 막지 못한다 — `std::optional` 도 `string&` 도 언어가 준다. 그래서 모든 파일이
+0 이어야 하고, 예외는 `Config/Rules/Lint/ResultTypes.json` 의 `_exemptions`(`경로|종류` → 까닭)에만 둔다. 예전에는 Core 밖 파일마다 종류별 수를
 기준선에 두는 래칫이었다 — 옮김이 끝나 기준선이 비었으므로(2026-11-21) 기준선 · `--ratchet` · `--accept` 를 지우고 Core 와 같은 규칙 하나로 둔다.
 
     py -3 -m Scripts lint result-types [--self-check]

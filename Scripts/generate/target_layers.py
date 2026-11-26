@@ -128,7 +128,7 @@ def find_owner(header: str, list_folder: list[str]) -> str | None:
 
 
 def write_guard_stubs(stub_dir: Path, gate_name: str, list_header: list[str], content: str) -> None:
-    """게이트 하나의 껍데기를 맞춘다. 껍데기의 내용은 @p content 이고, 안의 `HEADER_TOKEN` 은 그 헤더 경로가 된다. 스탬프(문구 해시 + 지난 헤더 목록)와 대조해 **바뀐 껍데기만** 더하고 지운다.
+    """게이트 하나의 껍데기를 맞춘다. 껍데기의 내용은 @p content 이고, 안의 `HEADER_TOKEN` 은 그 헤더 경로가 된다. 스탬프(문구 해시 + 지난 헤더 목록)와 대조해 바뀐 껍데기만 더하고 지운다.
 
     헤더 하나가 늘거나 옮겨질 때마다 그 폴더를 막는 게이트 전부가 폴더째 지우고 다시 쓰면(게이트 101 개 · 껍데기 5 만여 개) 재구성 46 초 중 31 초가
     이 생성기였다. 문구가 바뀌었거나 스탬프 · 폴더가 없을 때만 통째로 다시 쓴다(사라진 헤더의 껍데기가 옮겨 온 헤더를 가리지 않게 지우는 것은 같다).

@@ -5,12 +5,12 @@ Scripts/dev/git_locks.py
 
 강제로 끝난 git 이 남긴 잠금 파일(`index.lock` 등)을 찾아 알린다. `--remove` 는 확실히 찌꺼기인 것만 지운다.
 
-**왜 남는가.** git 은 `index.lock` 을 빈 파일로 만들어 열어 둔 채 작업 트리를 훑고, 다 훑은 뒤에 쓴다. 그 사이 강제로 끝나면(도구 시한 · TaskStop · 훅 중단 — Windows 의
+왜 남는가. git 은 `index.lock` 을 빈 파일로 만들어 열어 둔 채 작업 트리를 훑고, 다 훑은 뒤에 쓴다. 그 사이 강제로 끝나면(도구 시한 · TaskStop · 훅 중단 — Windows 의
 TerminateProcess 는 정리를 부르지 않는다) 0 바이트 파일이 남아 다음 커밋 · 병합이 `Unable to create index.lock` 으로 멈춘다. 읽기만 하는 `git status` · `git diff` 도
 색인을 새로 쓰려고 같은 잠금을 잡는다(git 2.x, 잠금이 선 순간 끝내면 6 번 중 6 번 남았다). 그래서 Scripts 가 띄우는 git 은 `GIT_OPTIONAL_LOCKS=0` 으로 그 잠금을 잡지 않고
 (`common/__init__.py` · `common/git.sh`), 쓰는 git(add · commit · merge)이 남긴 것은 이 명령이 찾는다.
 
-**찌꺼기 판정.** 빈 파일이고, 어느 프로세스도 열고 있지 않고, 만든 지 `MIN_AGE_SECONDS` 가 지났다. 살아 있는 git 은 빈 잠금을 늘 열고 있으므로 열린 빈 파일은 지우지 않는다.
+찌꺼기 판정. 빈 파일이고, 어느 프로세스도 열고 있지 않고, 만든 지 `MIN_AGE_SECONDS` 가 지났다. 살아 있는 git 은 빈 잠금을 늘 열고 있으므로 열린 빈 파일은 지우지 않는다.
 내용이 든 잠금(`git commit -a` 의 훅 구간처럼 닫아 두는 때가 있다)은 알리기만 한다.
 
   py -3 -m Scripts git-locks              # 찾아 알린다(남은 것이 있으면 1)

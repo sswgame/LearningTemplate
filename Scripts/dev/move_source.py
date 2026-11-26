@@ -98,7 +98,7 @@ def list_renamed_file_stem(source: Path, map_file: dict[str, str]) -> list[tuple
 
 def make_path_rule(map_file: dict[str, str], list_folder_prefix: list[tuple[str, str]], root_base: bool = False,
                    list_stem: list[tuple[str, str]] = ()) -> tuple[re.Pattern[str], object]:
-    """파일 경로 · 폴더 접두어를 **한 번 훑기** 규칙 하나로 묶는다(긴 것 먼저).
+    """파일 경로 · 폴더 접두어를 한 번 훑기 규칙 하나로 묶는다(긴 것 먼저).
     차례로 적용하면 앞 규칙이 바꾼 글을 뒤 규칙이 다시 바꿨다 — 폴더를 자기 아래로 옮기면(`A=A/Server`) 파일 규칙이 만든 `A/Server/X.h` 를
     폴더 규칙 `A/` 가 다시 `A/Server/Server/X.h` 로 바꿨다. 정규식 하나의 sub 는 바꾼 자리를 다시 보지 않는다.
     전체 경로는 낱말 경계로 — `Engine/A/B.h` 가 `MyEngine/A/B.h` 안에서 바뀌지 않게(`Source/Engine/A/B.h` 처럼 앞에 `/` 가 오는 것은 바꾼다)."""

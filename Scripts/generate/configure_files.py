@@ -1,11 +1,11 @@
 """
 Scripts/generate/configure_files.py
 
-configure 생성기(`Generator` 하위 클래스 — `Scripts/generate/*.py`)를 **한 프로세스**로 모두 돈다 — 생성기 하나마다 파이썬 시작 값을 따로 내면 configure 시간의
+configure 생성기(`Generator` 하위 클래스, `Scripts/generate/*.py`)를 한 프로세스로 모두 돈다. 생성기 하나마다 파이썬 시작 값을 따로 내면 configure 시간의
 3 할 가까이가 파이썬이었다(Ninja-Debug 실측: 생성기 일곱 1007 ms / configure 3486 ms). 무엇을 쓰는지는 각 생성기 파일이 정한다.
 도는 동안 읽은 파일을 `ConfigureFiles.deps` 로 적어 CMake 가 configure 의존으로 삼는다.
 
-ToolchainVars.cmake(toolchain_cmake)는 여기 없다 — Environment 가 toolchain_config.json 을 쓴 **뒤**에 돌아야 한다.
+ToolchainVars.cmake(toolchain_cmake)는 여기 없다 — Environment 가 toolchain_config.json 을 쓴 뒤에 돌아야 한다.
 
   python Scripts/generate/configure_files.py <출력 폴더> --game <게임 이름>
 """

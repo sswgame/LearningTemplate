@@ -3,7 +3,7 @@
 lldb(Tools/LLVM — `Scripts/setup/llvm.py` 가 둔다) 아래에서 Playground 의 확인 시나리오(`game/playground/automation/debugger/hotreload<변형>.scenario.xml`)를 띄우고:
 1. `HotReloadTestComponent::computeVersion` 브레이크포인트가 처음 멈추면(리로드 전 모듈) 소스를 바꿔 SWGame 만 다시 짓는다 — 디버거가 PDB 를 쥔 채 링크가 되는지.
    변형 code 는 `.cpp` 의 판 숫자만, layout 은 헤더에 PROPERTY 칸 하나와 그 생성자 값 7 을 더한다(리로드가 리플렉션 칸으로 상태를 옮기는지 — 시나리오가 본다).
-2. 이어서 시나리오가 `module.reload SWGame` 을 하고, 같은 브레이크포인트가 **다른 모듈 파일**(새 섀도 복사본)에서 멈추고 소스 줄이 풀리는지 본다.
+2. 이어서 시나리오가 `module.reload SWGame` 을 하고, 같은 브레이크포인트가 다른 모듈 파일(새 섀도 복사본)에서 멈추고 소스 줄이 풀리는지 본다.
 3. 시나리오 종료 코드(0 = 통과)를 함께 보고, 끝나면 소스를 되돌려 다시 짓는다.
 VS 의 vsdbg 는 DAP 시작 때 핸드셰이크 서명을 요구하고 "VS Code · Visual Studio 와 함께만" 이라는 라이선스라 쓰지 않는다.
 """

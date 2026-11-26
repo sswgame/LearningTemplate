@@ -24,7 +24,7 @@ FILE_RUNTIME_ENGINE_CONFIG = "Config/Engine/EngineConfig.json"
 FILE_RUNTIME_RENDER_QUALITY = "Config/Engine/RenderQuality.json"
 # 에디터가 쓰는 상태(도킹 · 레이아웃 · 캔버스 · 테마 · gv 프리셋) — 사람이 쓰는 설정(Config/)과 폴더를 나눈다. git 무시(/Saved/).
 DIR_SAVED_EDITOR = "Saved/Editor"
-# 게임 프리셋 폴더 — 게임마다 `<게임>.json` 하나(팩 루트 — 시작 씬은 팩의 gamesettings). Dev 는 실행할 때 고른 게임(`-game=`), Shipping 은 구운 게임의 것을 쓴다.
+# 게임 프리셋 폴더: 게임마다 `<게임>.json` 하나(팩 루트, 시작 씬은 팩의 gamesettings). Dev 는 실행할 때 고른 게임(`-game=`), Shipping 은 구운 게임의 것을 쓴다.
 DIR_RUNTIME_GAME_PRESET = "Config/Game"
 # 호스트 설정의 플랫폼 덮어쓰기 폴더 — `<플랫폼>/EngineConfig.json`(플랫폼 이름은 SW_PLATFORM_NAME: Windows · Linux · Android · Web). 없으면 덮어쓰기가 없다.
 # 언리얼의 플랫폼 ini 층(`Config/<Platform>/<Platform>Engine.ini` 가 DefaultEngine.ini 를 덮는다)과 같은 자리. 정적 구성은 configure 가 굽는다.
@@ -55,7 +55,7 @@ FILE_TPL_BUILTIN_FOOTER = "BuiltinFileFooter.tpl"
 FILE_REFLECTED_TYPES_LIST = "ReflectedTypes.list"
 # 리플렉션 대상마다 파서가 쓰는 경로 칸 목록(`<이름>\t<대상>` 줄) — Scripts/generate/asset_reference_field_list.py 가 모은다
 FILE_ASSET_REFERENCE_FIELDS_LIST = "AssetReferenceFields.list"
-# 리플렉션 생성 계약 — 파서(`sw::config`) · CMake(`SW_*`) · 템플릿(`$Banner`)이 이 표 하나를 쓴다(예전에는 JSON `emit` · 파서 기본값 · CMake 글자 · 템플릿 네 곳).
+# 리플렉션 생성 계약: 파서(`sw::config`) · CMake(`SW_*`) · 템플릿(`$Banner`)이 이 표 하나를 쓴다(JSON `emit` · 파서 기본값 · CMake 글자 · 템플릿 네 곳에 나눠 두지 않는다).
 # 자리 표시자는 "스탬프 없음" 하나로 알아본다 — CMake 가 자리 표시자를 심을 때 스탬프(`<.gen.cpp><kExtReflectionStamp>`)를 지운다.
 EXT_REFLECTION_GEN_CPP = ".gen.cpp"
 # 헤더마다의 개발 전용 단위 — 에디터 메타데이터(표시 · 편집 필드)를 채워 올린다. 배포 구성은 짓지 않는다(`sw_add_reflection_step`, 언리얼 WITH_METADATA 자리)
@@ -151,7 +151,7 @@ ENV_SW_VCPKG_AUTO_BOOTSTRAP = "SW_VCPKG_AUTO_BOOTSTRAP"
 #:. 프로그램(리플렉션 파서 · 부하 봇)도 `Source/Programs` 아래라 따로 적지 않는다.
 LINT_TARGET_REL_DIRS: tuple[str, ...] = ("Source",)
 
-#: 저장소 안에 있어도 **우리 코드가 아닌** 폴더 이름입니다(빌드 산출물 · 받아 온 외부 도구). 포맷이 이 폴더 아래의 셰이더를 고치지 않습니다.
+#: 저장소 안에 있어도 우리 코드가 아닌 폴더 이름입니다(빌드 산출물 · 받아 온 외부 도구). 포맷이 이 폴더 아래의 셰이더를 고치지 않습니다.
 NOT_OUR_DIR_NAMES: frozenset[str] = frozenset({
     "build",
     "generated",
