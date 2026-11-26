@@ -4,8 +4,8 @@
 #include "Core/String/StringUtil.h"
 #include "Core/Time/WallClock.h"
 
-#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Identity/AccountPresence.h"
-#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Ledger/IBalanceChangedListener.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/AccountPresence.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/IBalanceChangedListener.h"
 #include "GameFramework/Kits/Feature/Online/Trade/Server/TradeKitConfig.h"
 #include "GameFramework/Kits/Feature/Online/Trade/Server/TradeServer.h"
 #include "GameFramework/Kits/Feature/Online/Trade/Server/TradeService.h"

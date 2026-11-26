@@ -8,8 +8,8 @@
 #include "Core/TestFramework/TestFramework.h"
 #include "Core/Time/Clock.h"
 
+#include "GameFramework/Kits/Feature/Online/Account/Server/LoginService.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/FakePlatformLoginProvider.h"
-#include "GameFramework/Kits/Feature/Online/Account/Server/Service/LoginService.h"
 #include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 #include "GameFramework/Runtime/Online/Audit/Server/ServiceAuditLog.h"
 #include "GameFramework/Runtime/Online/Cache/Server/EphemeralStoreRouter.h"

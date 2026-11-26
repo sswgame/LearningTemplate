@@ -7,7 +7,7 @@
 #include "GameFramework/Kits/Feature/Online/Leaderboard/Server/LeaderboardScoreSender.h"
 #include "GameFramework/Kits/Feature/Online/Leaderboard/Server/LeaderboardServer.h"
 #include "GameFramework/Kits/Feature/Online/Leaderboard/Server/LeaderboardService.h"
-#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Identity/AccountPresence.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/AccountPresence.h"
 #include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerConfig.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerKit.h"

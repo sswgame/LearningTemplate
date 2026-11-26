@@ -164,8 +164,6 @@ namespace sw
  * @brief {name} 키트의 클라이언트입니다. 요청 · 응답 규칙은 `OnlineProtocolClient` 에 있다(`call<{name}Method::Echo>`).
  */
 #pragma once
-#include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Kits/Feature/Online/{name}/Runtime/{name}Protocol.h"
 #include "GameFramework/Runtime/Online/Service/OnlineProtocolClient.h"
 
 namespace sw
@@ -220,9 +218,7 @@ sw_add_game_framework_kit(GF_Server_{name})
  * @details 저장소 왕복은 `_store.submit( 일 람다, 완료 람다 )` 로 맡기고, 완료에서 `finish( call, outcome, reply )` 로 끝낸다. 맡긴 일 수는 기반이 센다(`isIdle` · `getOpenJobCount`).
  */
 #pragma once
-#include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Service/OnlineProtocolService.h"
-#include "GameFramework/Kits/Feature/Online/{name}/Runtime/{name}Protocol.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/OnlineProtocolService.h"
 
 namespace sw
 {{
@@ -280,7 +276,6 @@ namespace sw
 '''
     files[f"Server/{name}OnlineServerKit.cpp"] = f'''#include "pch.h"
 
-#include "GameFramework/Kits/Feature/Online/{name}/Server/{name}Service.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerKit.h"
 #include "GameFramework/Runtime/Online/Service/Server/OnlineServiceHost.h"
 
@@ -332,7 +327,6 @@ namespace sw
 
 #include "Core/TestFramework/TestFramework.h"
 
-#include "GameFramework/Kits/Feature/Online/{name}/Runtime/{name}Protocol.h"
 
 /**
  * @brief [{name}ProtocolTest] 메서드 번호가 키트 영역 안에 있다

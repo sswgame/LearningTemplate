@@ -17,7 +17,7 @@
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Content/AssetTypeRegistry.h"
 
-#include "GameFramework/Kits/Feature/World/Housing/Catalog/HousingPart.h"
+#include "GameFramework/Kits/Feature/World/Housing/HousingPart.h"
 
 namespace sw::editor
 {
