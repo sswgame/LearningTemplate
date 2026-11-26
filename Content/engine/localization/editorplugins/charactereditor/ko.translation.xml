@@ -1,0 +1,265 @@
+<?asset guid="328cd46d03f74c4c89565a9b8e3ac44d"?>
+<TranslationTable culture="ko">
+	<entries>
+		<entry key="EdPlugin.ASceneSCharacterAppearanceComponentNamesThis"
+		       text="씬의 캐릭터 외형 컴포넌트가 이 id 를 가리킵니다."
+		       sourceHash="5163a04480efea53" />
+		<entry key="EdPlugin.ActionTagTest" text="태그 시험:" sourceHash="114e1a832281c618" />
+		<entry key="EdPlugin.AddBoneTurn" text="뼈 회전 추가" sourceHash="9f9084fadd906ced" />
+		<entry key="EdPlugin.AddChain" text="사슬 추가" sourceHash="057853bcd1500705" />
+		<entry key="EdPlugin.AddNotifyAtT" text="t 에 알림 추가" sourceHash="d03b0ab100cbc98e" />
+		<entry key="EdPlugin.AddPair" text="짝 추가" sourceHash="93345f519ff98430" />
+		<entry key="EdPlugin.AddSkinLayer" text="층 더하기" sourceHash="b546e48af5e5c359" />
+		<entry key="EdPlugin.AddSlot" text="칸 추가" sourceHash="02c64e6a6306c0b0" />
+		<entry key="EdPlugin.Appearance" text="외형" sourceHash="f0e261e04eda82ff" />
+		<entry key="EdPlugin.BodyChannelMapped" text="매핑됨" sourceHash="2cdab23ce325f812" />
+		<entry key="EdPlugin.BodyChannelMissing" text="매핑 없음" sourceHash="aaefc6231966ac60" />
+		<entry key="EdPlugin.BodyChannelUnsupported" text="받지 않음" sourceHash="64eda1185891f750" />
+		<entry key="EdPlugin.BodyChannels" text="몸 채널" sourceHash="7329a594bdde30c7" />
+		<entry key="EdPlugin.BodyChannelsEmpty"
+		       text="몸 채널이 없습니다. 슬라이더 · 몸 프로필 · 장비가 정합니다."
+		       sourceHash="7dd37a8fd548b4d1" />
+		<entry key="EdPlugin.BodyDataRedo" text="몸 편집 다시 하기" sourceHash="984528c8e15932ed" />
+		<entry key="EdPlugin.BodyDataSave" text="몸 데이터 저장" sourceHash="1a83df7467a459f4" />
+		<entry key="EdPlugin.BodyDataUndo" text="몸 편집 되돌리기" sourceHash="7d89dc2aec85ac3b" />
+		<entry key="EdPlugin.BodyDataUnsaved"
+		       text="몸 데이터에 저장하지 않은 편집이 있습니다"
+		       sourceHash="ad37f816f371f7e8" />
+		<entry key="EdPlugin.BodyDynamics" text="몸 동작 미리보기" sourceHash="3169d3c412ac2c39" />
+		<entry key="EdPlugin.BodyDynamicsNoProfile"
+		       text="미리보기 몸에 몸 프로필이 없습니다. bodyProfile 이 있는 프리셋을 고르세요."
+		       sourceHash="d3d1c1d74795cc76" />
+		<entry key="EdPlugin.BodySlotVisibility" text="슬롯 보이기" sourceHash="d898acb1cad85187" />
+		<entry key="EdPlugin.BodyTab" text="몸" sourceHash="f7dbe8a7c839a675" />
+		<entry key="EdPlugin.ChannelMap" text="축 더하기" sourceHash="1e187919b52639f1" />
+		<entry key="EdPlugin.ChannelUnsupported" text="받지 않음" sourceHash="0e7c76ab41da08b0" />
+		<entry key="EdPlugin.Check" text="검사" sourceHash="42cbd8dca939a9c7" />
+		<entry key="EdPlugin.ClearSmears" text="번짐 지우기" sourceHash="ffe87947b7ce6927" />
+		<entry key="EdPlugin.ColumnAlias" text="별칭" sourceHash="123effcb9f1a2c17" />
+		<entry key="EdPlugin.ColumnDyeChannels" text="염색 채널" sourceHash="87e693298327f96b" />
+		<entry key="EdPlugin.ColumnDyeable" text="염색" sourceHash="d81c9173bb716ee1" />
+		<entry key="EdPlugin.ColumnGroups" text="묶음" sourceHash="9f26843287bb592d" />
+		<entry key="EdPlugin.ColumnSection" text="구간" sourceHash="cc1db59d292cbc4c" />
+		<entry key="EdPlugin.CustomizationValues" text="꾸미기 값" sourceHash="fb5d3ccc0d692148" />
+		<entry key="EdPlugin.CustomizeReleaseASliderToRefit"
+		       text="꾸미기(슬라이더를 놓으면 다시 맞춘다)"
+		       sourceHash="d4d2e4af15f5a303" />
+		<entry key="EdPlugin.DataPresetSceneUse" text="데이터 프리셋(씬에서 씀)" sourceHash="b0eca8332d850996" />
+		<entry key="EdPlugin.DyeSections" text="염색 구간" sourceHash="d764e534223785af" />
+		<entry key="EdPlugin.DyeSectionsEmpty"
+		       text="메시 구간이 없습니다. 아이템 외형에 별칭과 함께 구간을 적으세요."
+		       sourceHash="fb04825228d546fe" />
+		<entry key="EdPlugin.ExportDataPreset" text="데이터 프리셋 내보내기" sourceHash="64b8de7de2582e1c" />
+		<entry key="EdPlugin.EyeLight" text="눈에 닿는 빛" sourceHash="5290a415808505be" />
+		<entry key="EdPlugin.FitCheckViewOnly" text="맞춤 검사(보기만)" sourceHash="7b272a466c1e8140" />
+		<entry key="EdPlugin.FluidAddPoint" text="점 더하기" sourceHash="bd0d53e79eb92a92" />
+		<entry key="EdPlugin.FluidPaths" text="체액 경로" sourceHash="9c59b497c702ff93" />
+		<entry key="EdPlugin.FluidRemovePoint" text="점 빼기" sourceHash="f48356f4d161499f" />
+		<entry key="EdPlugin.FluidWetness" text="눈물 · 침" sourceHash="183947aee59fc5ab" />
+		<entry key="EdPlugin.FootLift" text="발 들림(m)" sourceHash="ada836515dd9f6b0" />
+		<entry key="EdPlugin.HighlightDrive" text="강조할 드라이브" sourceHash="ff3f63497344e3d7" />
+		<entry key="EdPlugin.HighlightNone" text="(없음)" sourceHash="8c36545f724b9460" />
+		<entry key="EdPlugin.IKGoal" text="IK 목표" sourceHash="1d84f0c6c37ff4e8" />
+		<entry key="EdPlugin.JiggleDisplacement" text="흔들림(m)" sourceHash="971a1a1f6fa2b62b" />
+		<entry key="EdPlugin.JiggleGroups" text="지글" sourceHash="b36c723d74bc6b8d" />
+		<entry key="EdPlugin.LayerMirror" text="좌우 대칭" sourceHash="1e5ff0f50c741122" />
+		<entry key="EdPlugin.LayerOffset" text="위치" sourceHash="f0257bb5b7130aaa" />
+		<entry key="EdPlugin.LayerOffsetTooltip" text="층 가운데의 피부 UV" sourceHash="710f5d2585243409" />
+		<entry key="EdPlugin.LayerOpacity" text="불투명도" sourceHash="ba64d8954d027206" />
+		<entry key="EdPlugin.LayerOpacityTooltip" text="층이 피부를 덮는 정도" sourceHash="eb5b4aaa8a250c39" />
+		<entry key="EdPlugin.LayerRotation" text="회전" sourceHash="cde2e53f46beac7f" />
+		<entry key="EdPlugin.LayerRotationTooltip" text="층의 회전(도)" sourceHash="d6e16a6a13328f94" />
+		<entry key="EdPlugin.LayerScale" text="크기" sourceHash="2706a162264c46f1" />
+		<entry key="EdPlugin.LayerScaleTooltip" text="층 하나가 덮는 피부 UV 크기" sourceHash="6b3806797b35e05b" />
+		<entry key="EdPlugin.Load" text="불러오기" sourceHash="4f20edb48a6287c9" />
+		<entry key="EdPlugin.LoadASkeletonToSeeItsBonesThe"
+		       text="스켈레톤을 불러오면 뼈가 보입니다. 스켈레톤은 읽기 전용이고 편집은 기준 포즈 파일에 들어갑니다."
+		       sourceHash="3dbbd81826b0e7db" />
+		<entry key="EdPlugin.LoadAppearanceDataToSeeWhichRulesHid"
+		       text="외형 데이터를 불러오면 어떤 규칙이 무엇을 감추거나 바꿨는지 보입니다."
+		       sourceHash="f83cdb5227cb0389" />
+		<entry key="EdPlugin.LoadData" text="데이터 불러오기" sourceHash="5832611c2fec6e73" />
+		<entry key="EdPlugin.LoadPose" text="포즈 불러오기" sourceHash="4ffadf807e14435a" />
+		<entry key="EdPlugin.LoadPresets" text="프리셋 불러오기" sourceHash="53d40ec6baa0fdcd" />
+		<entry key="EdPlugin.LoadSkeleton" text="스켈레톤 불러오기" sourceHash="e6eb1c155d2b9c24" />
+		<entry key="EdPlugin.LoadTheAppearanceDataAppearanceTabToDress"
+		       text="외형 데이터(외형 탭)를 불러오면 미리보기 몸에 입힙니다."
+		       sourceHash="8d8f91e2d7e6e6df" />
+		<entry key="EdPlugin.LoadTheItemsFileAndTheAppearanceFolder"
+		       text="항목 파일과 외형 폴더를 불러오면 항목을 고르고 규칙 설명을 봅니다."
+		       sourceHash="cf5d0a507c2be420" />
+		<entry key="EdPlugin.MapSameNames" text="같은 이름끼리 잇기" sourceHash="18af1bfc89304055" />
+		<entry key="EdPlugin.Mirror" text="대칭" sourceHash="1e5ff0f50c741122" />
+		<entry key="EdPlugin.MirrorBone" text="뼈 대칭" sourceHash="76a77b2d4eb713d0" />
+		<entry key="EdPlugin.MoveDown" text="아래로" sourceHash="032c13736048bf35" />
+		<entry key="EdPlugin.MoveUp" text="위로" sourceHash="09313a07b5c3ab60" />
+		<entry key="EdPlugin.New" text="새로" sourceHash="3741f519c32ac391" />
+		<entry key="EdPlugin.NoCustomizationSchemaForThisSelectionLoadThe"
+		       text="이 선택에는 꾸미기 스키마가 없습니다(외형 데이터를 불러오고 스키마가 있는 기준 프리셋을 고르세요)."
+		       sourceHash="a15d48c44f912810" />
+		<entry key="EdPlugin.NoFitResultYetThePreviewSceneSolves"
+		       text="아직 맞춤 결과가 없습니다. 슬라이더를 놓으면 미리보기 씬이 맞춥니다."
+		       sourceHash="792e9f927dc4d186" />
+		<entry key="EdPlugin.NoPenetration" text="뚫림 없음." sourceHash="15c1344dcefbbe6b" />
+		<entry key="EdPlugin.NoRuleFired" text="발동한 규칙이 없습니다." sourceHash="74ccb053330e02d2" />
+		<entry key="EdPlugin.OpenAPairedanimXmlToScrubItsRoles"
+		       text=".pairedanim.xml 을 열어 역할을 한 시계로 훑고 맞춤 오프셋을 옮기고 공유 알림을 편집합니다."
+		       sourceHash="0e0fa96ad3b8101a" />
+		<entry key="EdPlugin.OpenARetargetXmlOrTypeANew"
+		       text=".retarget.xml 을 열거나 새 경로를 적고 새로를 눌러 두 스켈레톤의 사슬을 짝짓고 묶임을 확인합니다."
+		       sourceHash="e35d453f7963c6c1" />
+		<entry key="EdPlugin.PickABasePresetToSeeWhichRules"
+		       text="기준 프리셋을 고르면 어떤 규칙이 무엇을 감추거나 바꿨는지 보입니다."
+		       sourceHash="b8d45b1a743fb251" />
+		<entry key="EdPlugin.PickActiveHint"
+		       text="뷰포트에서 몸을 누르세요(Esc 로 끕니다)"
+		       sourceHash="1a30265440bdba53" />
+		<entry key="EdPlugin.PickCancel" text="집기 끄기" sourceHash="ea93412d8284f2ae" />
+		<entry key="EdPlugin.PickPlaceLayer" text="미리보기에서 배치" sourceHash="05eac8bfa956f1ab" />
+		<entry key="EdPlugin.PickSection" text="미리보기에서 구간 집기" sourceHash="a88a406ac7c8db0e" />
+		<entry key="EdPlugin.PresetsUserData" text="프리셋(사용자 데이터)" sourceHash="5f4339cfe94334b7" />
+		<entry key="EdPlugin.Preview" text="미리보기" sourceHash="417b90913e05bc17" />
+		<entry key="EdPlugin.PreviewConstraintRig" text="제약 리그 미리보기" sourceHash="ca9d7f72602ecd10" />
+		<entry key="EdPlugin.PreviewHit" text="맞기" sourceHash="497c4819cdbf8d0a" />
+		<entry key="EdPlugin.PupilSize" text="동공 크기" sourceHash="91a6a17a04158724" />
+		<entry key="EdPlugin.Redo" text="다시 실행" sourceHash="7417792bbe720149" />
+		<entry key="EdPlugin.RedoAppearance" text="외형 다시 실행" sourceHash="90c27634b30aba49" />
+		<entry key="EdPlugin.RedoPose" text="포즈 다시 실행" sourceHash="c78d384206df3fda" />
+		<entry key="EdPlugin.ReloadFromDiskDiscardEdits"
+		       text="디스크에서 다시 읽기(편집 버림)"
+		       sourceHash="1a5da284e88aa713" />
+		<entry key="EdPlugin.RemoveSkinLayer" text="지우기" sourceHash="ea4f08110bb8f15d" />
+		<entry key="EdPlugin.Rename" text="이름 바꾸기" sourceHash="60320a18282b2b33" />
+		<entry key="EdPlugin.ResetBone" text="뼈 초기화" sourceHash="559f9c3dcb23c44e" />
+		<entry key="EdPlugin.Roles" text="역할" sourceHash="6b2beba7ab637e9e" />
+		<entry key="EdPlugin.SaveAsPreset" text="프리셋으로 저장" sourceHash="c62bf7298fcf87d7" />
+		<entry key="EdPlugin.SavePose" text="포즈 저장" sourceHash="4ff1503133a9ec95" />
+		<entry key="EdPlugin.SaveThumbnail" text="썸네일 저장" sourceHash="a7a44b23c1b690f4" />
+		<entry key="EdPlugin.SelectABoneToEditItsReferencePose"
+		       text="뼈를 고르면 기준 포즈를 편집합니다."
+		       sourceHash="21ed70f813fce439" />
+		<entry key="EdPlugin.SelectionBasePresetBodySlotsCustomizationValues"
+		       text="선택(기준 프리셋 · 몸 · 칸 · 꾸미기 값)"
+		       sourceHash="da54eecc567a86ac" />
+		<entry key="EdPlugin.SetTheSourceAndTargetSkeletonsToSee"
+		       text="원본 · 대상 스켈레톤을 정하면 여기서 겹쳐 보입니다."
+		       sourceHash="69fb10c2693ccadf" />
+		<entry key="EdPlugin.SharedNotifies" text="공유 알림" sourceHash="d954714e8a7eefe9" />
+		<entry key="EdPlugin.Skeleton" text="스켈레톤" sourceHash="73c6ad85b7235b4e" />
+		<entry key="EdPlugin.SkinLayers" text="피부 층" sourceHash="ab6c6ecbcb15a7ea" />
+		<entry key="EdPlugin.SkinLayersEmpty"
+		       text="피부 층이 없습니다. 위 목록에서 화장이나 문신을 더하세요."
+		       sourceHash="381d0cf2f415161e" />
+		<entry key="EdPlugin.SlidersColoursAndChoicesOfTheSchemaAre"
+		       text="스키마의 슬라이더 · 색 · 선택은 미리보기 탭에 있습니다(슬라이더를 놓으면 몸이 바뀝니다)."
+		       sourceHash="58ea5f3287f882b9" />
+		<entry key="EdPlugin.Slots" text="칸" sourceHash="f96b15cd3921d4a6" />
+		<entry key="EdPlugin.SmearDilution" text="화장 번짐" sourceHash="10eccc5d89713996" />
+		<entry key="EdPlugin.Sockets" text="소켓" sourceHash="295e56d2a3af242d" />
+		<entry key="EdPlugin.Undo" text="실행 취소" sourceHash="8f4be9f086eb530f" />
+		<entry key="EdPlugin.UndoAppearance" text="외형 실행 취소" sourceHash="f80092870a6bfd27" />
+		<entry key="EdPlugin.UndoPose" text="포즈 실행 취소" sourceHash="d192bb423fa30a2c" />
+		<entry key="EdPlugin.ViewportGizmoEditingNeedsThePreviewSceneEditorMultiWorld"
+		       text="뷰포트 기즈모 편집은 미리보기 씬(EditorMultiWorld)이 필요합니다."
+		       sourceHash="4da4e8c3ea94daf6" />
+		<entry key="EdPlugin.WhyDoesItLookLikeThisRules"
+		       text="왜 이렇게 보이나(규칙)"
+		       sourceHash="aa54935a9461505e" />
+		<entry key="EdPlugin.WrinkleIntensity" text="주름 세기" sourceHash="1b33b65bfb5319d6" />
+		<entry key="EdPlugin.Wrinkles" text="주름" sourceHash="95d81f16550e1cd8" />
+		<entry key="EdPluginField.Anchor" text="기준" sourceHash="beff9ac02dc2c474" />
+		<entry key="EdPluginField.BasePreset" text="기준 프리셋" sourceHash="fb4ae1042ef82b97" />
+		<entry key="EdPluginField.BodyShape" text="체형" sourceHash="c02e72b17896e8d8" />
+		<entry key="EdPluginField.BodyType" text="몸 종류" sourceHash="abd94a00726e12d7" />
+		<entry key="EdPluginField.BoneRotation" text="뼈 회전" sourceHash="ea1eb9c73bf6b097" />
+		<entry key="EdPluginField.BoneScale" text="뼈 크기" sourceHash="e007d2837c41ae09" />
+		<entry key="EdPluginField.BoneTranslation" text="뼈 이동" sourceHash="21b2e5272efd0fe4" />
+		<entry key="EdPluginField.DurationS" text="길이(초)" sourceHash="094748f07458f069" />
+		<entry key="EdPluginField.EnterExitBlendS" text="들어감 · 나감 섞기(초)" sourceHash="ef5314c2253430db" />
+		<entry key="EdPluginField.Face" text="얼굴" sourceHash="19b15a8518073d5c" />
+		<entry key="EdPluginField.HeightRatio0Pelvis" text="높이 비(0 = 골반)" sourceHash="f9434060c23b8cc4" />
+		<entry key="EdPluginField.OffsetM" text="오프셋(m)" sourceHash="5ec26a29745a2dfc" />
+		<entry key="EdPluginField.Parent" text="부모" sourceHash="4eb514ebcb80553d" />
+		<entry key="EdPluginField.PreviewMesh" text="미리보기 메시" sourceHash="bf80308374d5e32c" />
+		<entry key="EdPluginField.Rotation" text="회전" sourceHash="cde2e53f46beac7f" />
+		<entry key="EdPluginField.Scale" text="크기" sourceHash="2706a162264c46f1" />
+		<entry key="EdPluginField.SourceBones" text="원본 뼈" sourceHash="c823f98fd9ceabff" />
+		<entry key="EdPluginField.StartS" text="시작(초)" sourceHash="27b317f471f59517" />
+		<entry key="EdPluginField.TargetBones" text="대상 뼈" sourceHash="51e1bd58d0eb254f" />
+		<entry key="EdPluginField.Translation" text="이동" sourceHash="bef9e1084e69480c" />
+		<entry key="EdPluginField.WarpEndS" text="워프 끝(초)" sourceHash="930b0d61f8e2d3b6" />
+		<entry key="EdPluginField.YawDeg" text="방향(도)" sourceHash="00cfa817171bc367" />
+		<entry key="EdPluginFormat.BindsOfTargetBones"
+		       text="묶음: 대상 본 {targetBoneCount}개 중 {mappedTargetBoneCount}개가 원본을 따름, 키 비율 {heightRatio}"
+		       sourceHash="5a16acb977de891e" />
+		<entry key="EdPluginFormat.BonesOverridden"
+		       text="본 {boneCount}개, 덮어씀 {overridesCount}개{dirty}"
+		       sourceHash="707eff48e4e0e751" />
+		<entry key="EdPluginFormat.Clamped" text="범위로 자름: {clamped}" sourceHash="cc1c67ea126eb653" />
+		<entry key="EdPluginFormat.ClipS"
+		       text="{role, select, anchor {기준} required {필수} other {선택}}  클립 {clip}  {stage} {clipSeconds}초{clipLength, select, unknown {  (클립 길이 모름 - 프리팹을 고르세요)} other {}}"
+		       sourceHash="602e53c08e343113" />
+		<entry key="EdPluginFormat.CutVertsMovedMax"
+		       text="{name}: 자름 {cutTriangleCount}/{triangleCount}({cutRatio}%), 정점 {movedVertexCount}개 옮김, 최대 밀기 {maxDelta}"
+		       sourceHash="123a644d3007c563" />
+		<entry key="EdPluginFormat.Dropped" text="빠짐: {dropped}" sourceHash="ce2449119803e99d" />
+		<entry key="EdPluginFormat.NoAnimationClipsIn"
+		       text="''{clipFolder}'' 에 애니메이션 클립이 없습니다"
+		       sourceHash="6df3686b5c16e734" />
+		<entry key="EdPluginFormat.PenetrationPointsDepth"
+		       text="뚫음 {partA} / {partB}: 점 {vertexCount}개, 깊이 {maxDepth}"
+		       sourceHash="696849e3606b5dd4" />
+		<entry key="EdPluginFormat.Slot"
+		       text="칸 {slot}: {requestedItem} -> {fallbackItem}({reason})"
+		       sourceHash="67f88b40b318c4e9" />
+		<entry key="EdPluginFormat.SlotsSetsPresets"
+		       text="칸 {slotsCount}개, 세트 {setsCount}개, 프리셋 {presetsCount}개"
+		       sourceHash="483ef1387dcbd383" />
+		<entry key="EdPluginFormat.SourceMTargetM"
+		       text="{name}: 원본 {sourceLength} m, 대상 {targetLength} m(x{ratio})"
+		       sourceHash="6f441d4b39cd8ee2" />
+		<entry key="EdPluginFormat.WearingOnBasePreset"
+		       text="기준 프리셋 ''{basePresetID}'' 위에 {wearing, select, none {칸 아이템 없음} other {선택한 것}} 착용(조립 {appearance}번)"
+		       sourceHash="b22e4cfc02026c5c" />
+		<entry key="EdPluginTip.AnchorRelativeRootPositionAndYawAt"
+		       text="맞춤 시각의 기준 상대 뿌리 위치 · 방향 — 뷰포트에서 역할 오브젝트를 골라 기즈모로 옮깁니다"
+		       sourceHash="0d52b634e78c2b8a" />
+		<entry key="EdPluginTip.HowRootAndPelvisMovementIsCarried"
+		       text="뿌리 · 골반 움직임을 옮기는 방법(골반 높이 비로 늘림 · 그대로 · 제자리)"
+		       sourceHash="679389adc6c5bb01" />
+		<entry key="EdPluginTip.ReadTheEditedContentWithTheRuntime"
+		       text="편집한 내용을 실행 시간 로더로 읽어 모든 규칙을 확인합니다"
+		       sourceHash="a9c25ce37dd168cc" />
+		<entry key="EdPluginTip.SolveTheEndOntoTheSourceEnd"
+		       text="끝을 원본 끝 위치로 풉니다(미끄러지지 않고 딛는 발)"
+		       sourceHash="7e4e3458c1a7fcd3" />
+		<entry key="EdPluginTip.StartAnEmptyProfileAtThisResource"
+		       text="이 리소스 id 에 빈 프로필을 시작합니다(파일이 있으면 그것을 엽니다)"
+		       sourceHash="610a400c46431280" />
+		<entry key="EdPluginTip.StoresThePreviewTabSPictureIn"
+		       text="미리보기 탭의 그림을 이 이름 프리셋의 사용자 데이터 칸에 담습니다(프리셋을 먼저 저장하세요)"
+		       sourceHash="43a11465aaf3fad7" />
+		<entry key="EdPluginTip.TurnATargetBoneInItsParent"
+		       text="대상 기준 자세가 원본 기준 자세와 맞게 대상 뼈를 부모 공간에서 돌립니다(도) — 예: T 자세 원본을 A 자세 대상에 맞게 팔을 내린다"
+		       sourceHash="513b712b24165aff" />
+		<entry key="EdPluginWidget.BasePreset" text="기준 프리셋" sourceHash="fb4ae1042ef82b97" />
+		<entry key="EdPluginWidget.BoneMap" text="본 매핑" sourceHash="4b8920f82d776b69" />
+		<entry key="EdPluginWidget.Chains" text="체인" sourceHash="3a6771172abb34bf" />
+		<entry key="EdPluginWidget.Check" text="검사" sourceHash="42cbd8dca939a9c7" />
+		<entry key="EdPluginWidget.EquipmentSet" text="장비 세트" sourceHash="647fb99b02fe02df" />
+		<entry key="EdPluginWidget.Kind" text="종류" sourceHash="70af97de3ad8fb23" />
+		<entry key="EdPluginWidget.Loop" text="반복" sourceHash="4efee5b48a4593cb" />
+		<entry key="EdPluginWidget.Options" text="옵션" sourceHash="463b8c4e92751ba5" />
+		<entry key="EdPluginWidget.Play" text="재생" sourceHash="cd105819b5a10243" />
+		<entry key="EdPluginWidget.Preview" text="미리보기" sourceHash="417b90913e05bc17" />
+		<entry key="EdPluginWidget.RetargetPose" text="리타깃 포즈" sourceHash="53c8b9621d796bca" />
+		<entry key="EdPluginWidget.RootAndPelvis" text="루트와 골반" sourceHash="e01e5ada837b1395" />
+		<entry key="EdPluginWidget.Skeletons" text="스켈레톤" sourceHash="ddf41736311408a7" />
+		<entry key="EdPluginWidget.Stop" text="정지" sourceHash="d9ad53251f2330a5" />
+		<entry key="EditorCharacterEditor.AddSocketButton" text="추가" sourceHash="f9aee319a006c9b4" />
+		<entry key="EditorCharacterEditor.NewSocketHint" text="새 소켓 이름" sourceHash="d60dbc5a471e4bc5" />
+		<entry key="EditorCharacterEditor.SocketNoSelection"
+		       text="목록에서 소켓을 골라 편집합니다."
+		       sourceHash="b4fb8b5bd632d035" />
+	</entries>
+</TranslationTable>

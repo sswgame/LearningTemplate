@@ -1,0 +1,62 @@
+<?asset guid="e0d852e917d046d388f043874e60cee7"?>
+<TranslationMemory culture="ko">
+	<entries>
+		<entry source="(CPU only)" text="(CPU 전용)" />
+		<entry source="(None)" text="(없음)" />
+		<entry source="Add Item" text="항목 추가" />
+		<entry source="Add Modifier" text="모디파이어 추가" />
+		<entry source="Axis" text="축" />
+		<entry source="Bake" text="굽기" />
+		<entry source="CPU only (Recompute Normals)" text="CPU 전용(법선 다시 계산)" />
+		<entry source="CPU only:" text="CPU 전용:" />
+		<entry source="Center" text="중심" />
+		<entry source="Click to edit the curve" text="눌러서 곡선 편집" />
+		<entry source="Control Points" text="제어점" />
+		<entry source="Deformation preview lines of the mesh modifier stack, gizmos and range display with drag editing, picking and dragging lattice control points"
+		       text="메시 모디파이어 스택의 변형 미리보기 선, 기즈모 · 범위 표시와 끌기 편집, 격자 제어점 고르기 · 끌기" />
+		<entry source="Depth" text="깊이" />
+		<entry source="Duplicate row" text="행 복제" />
+		<entry source="Edit this group's nested stack" text="이 묶음의 하위 스택 편집" />
+		<entry source="Empty - add modifiers to group them." text="비어 있음 - 모디파이어를 더해 묶습니다." />
+		<entry source="Export as World Warp" text="월드 워프로 내보내기" />
+		<entry source="Fit to Bounds" text="경계 상자에 맞추기" />
+		<entry source="Mirror" text="대칭" />
+		<entry source="Modifiers" text="모디파이어" />
+		<entry source="Move row down" text="행을 아래로" />
+		<entry source="Move row up" text="행을 위로" />
+		<entry source="Name" text="이름" />
+		<entry source="Nested Stack" text="하위 스택" />
+		<entry source="No object has component:" text="이 컴포넌트를 가진 오브젝트가 없습니다:" />
+		<entry source="No target" text="대상 없음" />
+		<entry source="Overlays, in another color, the result with only the modifiers up to the selected one applied (deformation influence preview)"
+		       text="고른 모디파이어까지만 건 결과를 다른 색 선으로 겹쳐 그립니다(변형 영향 미리보기)" />
+		<entry source="Play" text="재생" />
+		<entry source="Point" text="점" />
+		<entry source="Position" text="위치" />
+		<entry source="Preview Time" text="미리보기 시간" />
+		<entry source="Recompute Normals" text="법선 다시 계산" />
+		<entry source="Redo" text="다시 실행" />
+		<entry source="Reference Object" text="기준 오브젝트" />
+		<entry source="Reload Stack" text="스택 다시 읽기" />
+		<entry source="Remove row" text="행 삭제" />
+		<entry source="Reset Lattice" text="격자 초기화" />
+		<entry source="Reset Parameters" text="매개변수 초기화" />
+		<entry source="Rotation" text="회전" />
+		<entry source="Save Stack" text="스택 저장" />
+		<entry source="Save or reload the modifier stack before picking another mesh"
+		       text="다른 메시를 고르기 전에 모디파이어 스택을 저장하거나 다시 불러오세요" />
+		<entry source="Select a modifier in the stack." text="스택에서 모디파이어를 고르세요." />
+		<entry source="Select an object whose mesh component uses a .mesh asset, then press Use Selection."
+		       text=".mesh 에셋을 쓰는 메시 컴포넌트가 있는 오브젝트를 고른 뒤 선택 사용을 누르세요." />
+		<entry source="Shade the target mesh with the stack result. Runs on a compute shader when every enabled modifier supports it, otherwise the CPU result is uploaded as vertices. Off leaves the original mesh and the wire preview."
+		       text="대상 메시를 스택 결과로 셰이딩해 보입니다. 켜진 모디파이어가 모두 지원하면 컴퓨트 셰이더로, 아니면 CPU 결과를 정점으로 올립니다. 끄면 원래 메시와 와이어 미리보기만 남습니다." />
+		<entry source="Shaded Preview" text="셰이딩 미리보기" />
+		<entry source="Stage" text="단계" />
+		<entry source="The target object no longer exists." text="대상 오브젝트가 더 이상 없습니다." />
+		<entry source="Undo" text="실행 취소" />
+		<entry source="Up" text="위" />
+		<entry source="Use Selection" text="선택 사용" />
+		<entry source="Warp File (.mfwarp)" text="워프 파일(.mfwarp)" />
+		<entry source="World Space" text="월드 공간" />
+	</entries>
+</TranslationMemory>

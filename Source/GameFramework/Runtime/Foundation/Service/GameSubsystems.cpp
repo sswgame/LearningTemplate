@@ -9,7 +9,7 @@
 
 namespace sw
 {
-    // GameFramework 의 Runtime · Client · Plugin 글(엔진 현지화 폴더의 `kits/gameframework/`) — 이 모듈이 올라온 동안 조회 사슬에 든다(언리얼 플러그인 현지화 타깃)
+    // GameFramework 의 Runtime · Client 글(엔진 현지화 폴더의 `kits/gameframework/`) — 이 모듈이 올라온 동안 조회 사슬에 든다(언리얼 플러그인 현지화 타깃)
     SW_LOCALIZATION_PROJECT( GameFrameworkText, "engine/localization/kits/gameframework/gameframework.locproject.xml" );
 } // namespace sw
 

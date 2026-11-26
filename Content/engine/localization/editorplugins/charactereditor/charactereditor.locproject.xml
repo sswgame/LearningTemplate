@@ -1,0 +1,22 @@
+<?asset guid="dc78caf6a2e6457ba633297923b87a3e"?>
+<LocalizationProject name="charactereditor" sourceCulture="en">
+	<!-- 에디터 확장 GF_EditorPlugin_CharacterEditor 의 글 — 이 모듈이 올라온 동안만 붙는다(SW_LOCALIZATION_PROJECT). 배포 팩에 담지 않는다. 엔진 · GameFramework 키는 의존 프로젝트에서 빌려 쓴다. -->
+	<cultures>
+		<item>ko</item>
+		<item>ja</item>
+	</cultures>
+	<stagedCultures>
+		<item>ko</item>
+		<item>ja</item>
+	</stagedCultures>
+	<stringTables>
+		<item>charactereditor.strings.xml</item>
+	</stringTables>
+	<codeRoots>
+		<item>Source/GameFramework/Plugin/Editor/CharacterEditor</item>
+	</codeRoots>
+	<dependencies>
+		<item>guid:b29adbb3a89cf7dce07cdd2d4213515c</item> <!-- engine/localization/engine.locproject.xml -->
+		<item>guid:3c30841d0b324411be8283d492895ab1</item> <!-- engine/localization/kits/gameframework/gameframework.locproject.xml -->
+	</dependencies>
+</LocalizationProject>

@@ -9,8 +9,16 @@
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 
+#include "Engine/Localization/LocalizationManager.h"
+
 #include "GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.h"
 #include "GameFramework/Plugin/Editor/CharacterEditor/PairedAnimationPanel.h"
+
+namespace sw
+{
+    // 에디터 확장 CharacterEditor 의 글(엔진 현지화 폴더의 `editorplugins/charactereditor/`) — 이 모듈이 올라온 동안만 조회 사슬에 든다. 배포 팩에 담지 않는다.
+    SW_LOCALIZATION_PROJECT( EditorPluginCharacterEditorText, "engine/localization/editorplugins/charactereditor/charactereditor.locproject.xml" );
+} // namespace sw
 
 namespace sw::editor
 {

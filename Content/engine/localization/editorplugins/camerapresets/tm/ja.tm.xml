@@ -1,0 +1,16 @@
+<?asset guid="077387913fab46d39c6233fc801d86ca"?>
+<TranslationMemory culture="ja">
+	<entries>
+		<entry source="Direction the target faces - Follow, FirstPerson and ThirdPerson presets turn with it"
+		       text="ターゲットの向き — Follow・FirstPerson・ThirdPerson プリセットが追従して回ります" />
+		<entry source="Open a .cameras.xml preset file to see its cameras here. Edit presets in the Catalog Editor."
+		       text=".cameras.xml プリセットファイルを開くとここにカメラが表示されます。プリセットの編集はカタログエディタで行います。" />
+		<entry source="Orthographic preset - the preview draws it in perspective."
+		       text="平行投影プリセット — プレビューは透視で描きます。" />
+		<entry source="Read the preset file again (after saving it in the Catalog Editor)"
+		       text="プリセットファイルを再読み込みします(カタログエディタで保存した後)" />
+		<entry source="Target yaw" text="ターゲットのヨー" />
+		<entry source="offset {offsetX}, {offsetY}, {offsetZ}  distance {distance}  pitch {pitch}  yaw {yaw}  fov {computeFieldOfViewY}"
+		       text="オフセット {offsetX}, {offsetY}, {offsetZ}  距離 {distance}  ピッチ {pitch}  ヨー {yaw}  視野角 {computeFieldOfViewY}" />
+	</entries>
+</TranslationMemory>

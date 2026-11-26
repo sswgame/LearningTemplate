@@ -1,0 +1,22 @@
+<?asset guid="483daddbd0614cefb0c9f1c613d3bee0"?>
+<LocalizationProject name="camerapresets" sourceCulture="en">
+	<!-- 에디터 확장 GF_EditorPlugin_CameraPresets 의 글 — 이 모듈이 올라온 동안만 붙는다(SW_LOCALIZATION_PROJECT). 배포 팩에 담지 않는다. 엔진 · GameFramework 키는 의존 프로젝트에서 빌려 쓴다. -->
+	<cultures>
+		<item>ko</item>
+		<item>ja</item>
+	</cultures>
+	<stagedCultures>
+		<item>ko</item>
+		<item>ja</item>
+	</stagedCultures>
+	<stringTables>
+		<item>camerapresets.strings.xml</item>
+	</stringTables>
+	<codeRoots>
+		<item>Source/GameFramework/Plugin/Editor/CameraPresets</item>
+	</codeRoots>
+	<dependencies>
+		<item>guid:b29adbb3a89cf7dce07cdd2d4213515c</item> <!-- engine/localization/engine.locproject.xml -->
+		<item>guid:3c30841d0b324411be8283d492895ab1</item> <!-- engine/localization/kits/gameframework/gameframework.locproject.xml -->
+	</dependencies>
+</LocalizationProject>

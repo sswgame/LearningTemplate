@@ -1,0 +1,211 @@
+<?asset guid="8846dd66b45d4d92b03f16d76ece4ab3"?>
+<TranslationMemory culture="ko">
+	<entries>
+		<entry source="(none)" text="(없음)" />
+		<entry source="A scene's Character Appearance component names this id."
+		       text="씬의 캐릭터 외형 컴포넌트가 이 id 를 가리킵니다." />
+		<entry source="Add" text="추가" />
+		<entry source="Add bone turn" text="뼈 회전 추가" />
+		<entry source="Add chain" text="사슬 추가" />
+		<entry source="Add layer" text="층 더하기" />
+		<entry source="Add notify at t" text="t 에 알림 추가" />
+		<entry source="Add pair" text="짝 추가" />
+		<entry source="Add point" text="점 더하기" />
+		<entry source="Add slot" text="칸 추가" />
+		<entry source="Alias" text="별칭" />
+		<entry source="Anchor" text="기준" />
+		<entry source="Anchor-relative root position and yaw at alignment time; select the role object in the viewport to move it with the gizmo"
+		       text="맞춤 시각의 기준 상대 뿌리 위치 · 방향 — 뷰포트에서 역할 오브젝트를 골라 기즈모로 옮깁니다" />
+		<entry source="Appearance" text="외형" />
+		<entry source="Base preset" text="기준 프리셋" />
+		<entry source="Binds: {mappedTargetBoneCount} of {targetBoneCount} target bones follow the source, height ratio {heightRatio}"
+		       text="묶음: 대상 본 {targetBoneCount}개 중 {mappedTargetBoneCount}개가 원본을 따름, 키 비율 {heightRatio}" />
+		<entry source="Body" text="몸" />
+		<entry source="Body channels" text="몸 채널" />
+		<entry source="Body data has unsaved edits" text="몸 데이터에 저장하지 않은 편집이 있습니다" />
+		<entry source="Body dynamics preview" text="몸 동작 미리보기" />
+		<entry source="Body shape" text="체형" />
+		<entry source="Body type" text="몸 종류" />
+		<entry source="Bone map" text="본 매핑" />
+		<entry source="Bone rotation" text="뼈 회전" />
+		<entry source="Bone scale" text="뼈 크기" />
+		<entry source="Bone translation" text="뼈 이동" />
+		<entry source="Chains" text="체인" />
+		<entry source="Check" text="검사" />
+		<entry source="Clamped to range: {clamped}" text="범위로 자름: {clamped}" />
+		<entry source="Clear smears" text="번짐 지우기" />
+		<entry source="Click the body in the viewport (Esc cancels)"
+		       text="뷰포트에서 몸을 누르세요(Esc 로 끕니다)" />
+		<entry source="Customization values" text="꾸미기 값" />
+		<entry source="Customize (release a slider to refit)" text="꾸미기(슬라이더를 놓으면 다시 맞춘다)" />
+		<entry source="Data preset (scene use)" text="데이터 프리셋(씬에서 씀)" />
+		<entry source="Down" text="아래로" />
+		<entry source="Dropped: {dropped}" text="빠짐: {dropped}" />
+		<entry source="Duration (s)" text="길이(초)" />
+		<entry source="Dye channels" text="염색 채널" />
+		<entry source="Dye sections" text="염색 구간" />
+		<entry source="Dyeable" text="염색" />
+		<entry source="Enter / exit blend (s)" text="들어감 · 나감 섞기(초)" />
+		<entry source="Equip set" text="장비 세트" />
+		<entry source="Export data preset" text="데이터 프리셋 내보내기" />
+		<entry source="Face" text="얼굴" />
+		<entry source="Fit check (view only)" text="맞춤 검사(보기만)" />
+		<entry source="Fluid paths" text="체액 경로" />
+		<entry source="Foot lift (m)" text="발 들림(m)" />
+		<entry source="Groups" text="묶음" />
+		<entry source="Height ratio (0 = pelvis)" text="높이 비(0 = 골반)" />
+		<entry source="Highlight drive" text="강조할 드라이브" />
+		<entry source="Hit" text="맞기" />
+		<entry source="How root and pelvis movement is carried over (scaled by the pelvis height ratio, copied, or kept in place)"
+		       text="뿌리 · 골반 움직임을 옮기는 방법(골반 높이 비로 늘림 · 그대로 · 제자리)" />
+		<entry source="How strongly the layer covers the skin" text="층이 피부를 덮는 정도" />
+		<entry source="IK goal" text="IK 목표" />
+		<entry source="Jiggle" text="지글" />
+		<entry source="Jiggle (m)" text="흔들림(m)" />
+		<entry source="Kind" text="종류" />
+		<entry source="Light at the eye" text="눈에 닿는 빛" />
+		<entry source="Load" text="불러오기" />
+		<entry source="Load a skeleton to see its bones. The skeleton is read-only; edits go to the reference pose file."
+		       text="스켈레톤을 불러오면 뼈가 보입니다. 스켈레톤은 읽기 전용이고 편집은 기준 포즈 파일에 들어갑니다." />
+		<entry source="Load appearance data to see which rules hid or changed what."
+		       text="외형 데이터를 불러오면 어떤 규칙이 무엇을 감추거나 바꿨는지 보입니다." />
+		<entry source="Load data" text="데이터 불러오기" />
+		<entry source="Load pose" text="포즈 불러오기" />
+		<entry source="Load presets" text="프리셋 불러오기" />
+		<entry source="Load skeleton" text="스켈레톤 불러오기" />
+		<entry source="Load the appearance data (Appearance tab) to dress the preview body."
+		       text="외형 데이터(외형 탭)를 불러오면 미리보기 몸에 입힙니다." />
+		<entry source="Load the items file and the appearance folder to pick items and see rule explanations."
+		       text="항목 파일과 외형 폴더를 불러오면 항목을 고르고 규칙 설명을 봅니다." />
+		<entry source="Loop" text="반복" />
+		<entry source="Makeup smear" text="화장 번짐" />
+		<entry source="Map" text="축 더하기" />
+		<entry source="Map same names" text="같은 이름끼리 잇기" />
+		<entry source="Mirror" text="대칭" />
+		<entry source="Mirror bone" text="뼈 대칭" />
+		<entry source="New" text="새로" />
+		<entry source="New socket name" text="새 소켓 이름" />
+		<entry source="No animation clips in ''{clipFolder}''"
+		       text="''{clipFolder}'' 에 애니메이션 클립이 없습니다" />
+		<entry source="No body channels. Sliders, body profiles and equipment set them."
+		       text="몸 채널이 없습니다. 슬라이더 · 몸 프로필 · 장비가 정합니다." />
+		<entry source="No customization schema for this selection (load the appearance data and pick a base preset with a schema)."
+		       text="이 선택에는 꾸미기 스키마가 없습니다(외형 데이터를 불러오고 스키마가 있는 기준 프리셋을 고르세요)." />
+		<entry source="No fit result yet. The preview scene solves the fit when a slider is released."
+		       text="아직 맞춤 결과가 없습니다. 슬라이더를 놓으면 미리보기 씬이 맞춥니다." />
+		<entry source="No mesh sections. List sections with aliases in the item visual."
+		       text="메시 구간이 없습니다. 아이템 외형에 별칭과 함께 구간을 적으세요." />
+		<entry source="No penetration." text="뚫림 없음." />
+		<entry source="No rule fired." text="발동한 규칙이 없습니다." />
+		<entry source="No skin layers. Add makeup or a tattoo from the list above."
+		       text="피부 층이 없습니다. 위 목록에서 화장이나 문신을 더하세요." />
+		<entry source="Offset" text="위치" />
+		<entry source="Offset (m)" text="오프셋(m)" />
+		<entry source="Opacity" text="불투명도" />
+		<entry source="Open a .pairedanim.xml to scrub its roles on one clock, move alignment offsets and edit shared notifies."
+		       text=".pairedanim.xml 을 열어 역할을 한 시계로 훑고 맞춤 오프셋을 옮기고 공유 알림을 편집합니다." />
+		<entry source="Open a .retarget.xml, or type a new path and press New, to pair the chains of two skeletons and check how they bind."
+		       text=".retarget.xml 을 열거나 새 경로를 적고 새로를 눌러 두 스켈레톤의 사슬을 짝짓고 묶임을 확인합니다." />
+		<entry source="Options" text="옵션" />
+		<entry source="Parent" text="부모" />
+		<entry source="Penetration {partA} / {partB}: {vertexCount} points, depth {maxDepth}"
+		       text="뚫음 {partA} / {partB}: 점 {vertexCount}개, 깊이 {maxDepth}" />
+		<entry source="Pick a base preset to see which rules hid or changed what."
+		       text="기준 프리셋을 고르면 어떤 규칙이 무엇을 감추거나 바꿨는지 보입니다." />
+		<entry source="Pick section in Preview" text="미리보기에서 구간 집기" />
+		<entry source="Place in Preview" text="미리보기에서 배치" />
+		<entry source="Play" text="재생" />
+		<entry source="Presets (user data)" text="프리셋(사용자 데이터)" />
+		<entry source="Preview" text="미리보기" />
+		<entry source="Preview constraint rig" text="제약 리그 미리보기" />
+		<entry source="Preview mesh" text="미리보기 메시" />
+		<entry source="Pupil size" text="동공 크기" />
+		<entry source="Read the edited content with the runtime loader to check every rule"
+		       text="편집한 내용을 실행 시간 로더로 읽어 모든 규칙을 확인합니다" />
+		<entry source="Redo" text="다시 실행" />
+		<entry source="Redo appearance" text="외형 다시 실행" />
+		<entry source="Redo body edit" text="몸 편집 다시 하기" />
+		<entry source="Redo pose" text="포즈 다시 실행" />
+		<entry source="Reload from disk (discard edits)" text="디스크에서 다시 읽기(편집 버림)" />
+		<entry source="Remove" text="지우기" />
+		<entry source="Remove point" text="점 빼기" />
+		<entry source="Rename" text="이름 바꾸기" />
+		<entry source="Reset bone" text="뼈 초기화" />
+		<entry source="Retarget pose" text="리타깃 포즈" />
+		<entry source="Roles" text="역할" />
+		<entry source="Root and pelvis" text="루트와 골반" />
+		<entry source="Rotation" text="회전" />
+		<entry source="Rotation of the layer in degrees" text="층의 회전(도)" />
+		<entry source="Save as preset" text="프리셋으로 저장" />
+		<entry source="Save body data" text="몸 데이터 저장" />
+		<entry source="Save pose" text="포즈 저장" />
+		<entry source="Save thumbnail" text="썸네일 저장" />
+		<entry source="Scale" text="크기" />
+		<entry source="Section" text="구간" />
+		<entry source="Select a bone to edit its reference pose." text="뼈를 고르면 기준 포즈를 편집합니다." />
+		<entry source="Select a socket in the list to edit it." text="목록에서 소켓을 골라 편집합니다." />
+		<entry source="Selection (base preset, body, slots, customization values)"
+		       text="선택(기준 프리셋 · 몸 · 칸 · 꾸미기 값)" />
+		<entry source="Set the source and target skeletons to see them overlaid here."
+		       text="원본 · 대상 스켈레톤을 정하면 여기서 겹쳐 보입니다." />
+		<entry source="Shared notifies" text="공유 알림" />
+		<entry source="Skeleton" text="스켈레톤" />
+		<entry source="Skeletons" text="스켈레톤" />
+		<entry source="Skin UV of the layer centre" text="층 가운데의 피부 UV" />
+		<entry source="Skin UV size one layer covers" text="층 하나가 덮는 피부 UV 크기" />
+		<entry source="Skin layers" text="피부 층" />
+		<entry source="Sliders, colours and choices of the schema are in the Preview tab (the body updates when you release a slider)."
+		       text="스키마의 슬라이더 · 색 · 선택은 미리보기 탭에 있습니다(슬라이더를 놓으면 몸이 바뀝니다)." />
+		<entry source="Slot visibility" text="슬롯 보이기" />
+		<entry source="Slot {slot}: {requestedItem} -> {fallbackItem} ({reason})"
+		       text="칸 {slot}: {requestedItem} -> {fallbackItem}({reason})" />
+		<entry source="Slots" text="칸" />
+		<entry source="Sockets" text="소켓" />
+		<entry source="Solve the end onto the source end position (feet that plant without sliding)"
+		       text="끝을 원본 끝 위치로 풉니다(미끄러지지 않고 딛는 발)" />
+		<entry source="Source bones" text="원본 뼈" />
+		<entry source="Start (s)" text="시작(초)" />
+		<entry source="Start an empty profile at this resource id (an existing file is opened instead)"
+		       text="이 리소스 id 에 빈 프로필을 시작합니다(파일이 있으면 그것을 엽니다)" />
+		<entry source="Stop" text="정지" />
+		<entry source="Stop picking" text="집기 끄기" />
+		<entry source="Stores the Preview tab's picture in the user data slot of the preset of this name (save the preset first)"
+		       text="미리보기 탭의 그림을 이 이름 프리셋의 사용자 데이터 칸에 담습니다(프리셋을 먼저 저장하세요)" />
+		<entry source="Target bones" text="대상 뼈" />
+		<entry source="Tears and saliva" text="눈물 · 침" />
+		<entry source="Test tags:" text="태그 시험:" />
+		<entry source="The preview body has no body profile. Pick a preset with bodyProfile."
+		       text="미리보기 몸에 몸 프로필이 없습니다. bodyProfile 이 있는 프리셋을 고르세요." />
+		<entry source="Translation" text="이동" />
+		<entry source="Turn a target bone in its parent space (degrees) so the target reference matches the source reference, e.g. lower the arms of a T-pose source onto an A-pose target"
+		       text="대상 기준 자세가 원본 기준 자세와 맞게 대상 뼈를 부모 공간에서 돌립니다(도) — 예: T 자세 원본을 A 자세 대상에 맞게 팔을 내린다" />
+		<entry source="Undo" text="실행 취소" />
+		<entry source="Undo appearance" text="외형 실행 취소" />
+		<entry source="Undo body edit" text="몸 편집 되돌리기" />
+		<entry source="Undo pose" text="포즈 실행 취소" />
+		<entry source="Unsupported" text="받지 않음" />
+		<entry source="Up" text="위" />
+		<entry source="Viewport gizmo editing needs the preview scene (EditorMultiWorld)."
+		       text="뷰포트 기즈모 편집은 미리보기 씬(EditorMultiWorld)이 필요합니다." />
+		<entry source="Warp end (s)" text="워프 끝(초)" />
+		<entry source="Wearing {wearing, select, none {no slot items} other {the selection}} on base preset ''{basePresetID}'' (assembled {appearance} times)"
+		       text="기준 프리셋 ''{basePresetID}'' 위에 {wearing, select, none {칸 아이템 없음} other {선택한 것}} 착용(조립 {appearance}번)" />
+		<entry source="Why does it look like this? (rules)" text="왜 이렇게 보이나(규칙)" />
+		<entry source="Wrinkle intensity" text="주름 세기" />
+		<entry source="Wrinkles" text="주름" />
+		<entry source="Yaw (deg)" text="방향(도)" />
+		<entry source="mapped" text="매핑됨" />
+		<entry source="no mapping" text="매핑 없음" />
+		<entry source="unsupported" text="받지 않음" />
+		<entry source="{boneCount, plural, one {# bone} other {# bones}}, {overridesCount} overridden{dirty}"
+		       text="본 {boneCount}개, 덮어씀 {overridesCount}개{dirty}" />
+		<entry source="{name}: cut {cutTriangleCount}/{triangleCount} ({cutRatio}%), {movedVertexCount} verts moved, max push {maxDelta}"
+		       text="{name}: 자름 {cutTriangleCount}/{triangleCount}({cutRatio}%), 정점 {movedVertexCount}개 옮김, 최대 밀기 {maxDelta}" />
+		<entry source="{name}: source {sourceLength} m, target {targetLength} m (x{ratio})"
+		       text="{name}: 원본 {sourceLength} m, 대상 {targetLength} m(x{ratio})" />
+		<entry source="{role, select, anchor {anchor} required {required} other {optional}}  clip {clip}  {stage} {clipSeconds} s{clipLength, select, unknown {  (clip length unknown - pick a prefab)} other {}}"
+		       text="{role, select, anchor {기준} required {필수} other {선택}}  클립 {clip}  {stage} {clipSeconds}초{clipLength, select, unknown {  (클립 길이 모름 - 프리팹을 고르세요)} other {}}" />
+		<entry source="{slotsCount, plural, one {# slot} other {# slots}}, {setsCount, plural, one {# set} other {# sets}}, {presetsCount, plural, one {# preset} other {# presets}}"
+		       text="칸 {slotsCount}개, 세트 {setsCount}개, 프리셋 {presetsCount}개" />
+	</entries>
+</TranslationMemory>

@@ -1,456 +1,61 @@
 <?asset guid="4e81e8ddd1ad4891912bc40864042aa4"?>
 <TranslationMemory culture="ja">
 	<entries>
-		<entry source="(CPU only)" text="(CPU のみ)" />
-		<entry source="(None)" text="(なし)" />
-		<entry source="(none)" text="(なし)" />
 		<entry source="A purchase is still in progress." text="購入処理中です。" />
-		<entry source="A scene's Character Appearance component names this id."
-		       text="シーンのキャラクター外見コンポーネントがこの id を指します。" />
-		<entry source="Abilities" text="アビリティ" />
-		<entry source="Ability sets" text="アビリティセット" />
-		<entry source="Active" text="有効" />
-		<entry source="Active Effects" text="有効なエフェクト" />
-		<entry source="Activity" text="行動" />
-		<entry source="Add" text="追加" />
-		<entry source="Add Item" text="項目を追加" />
-		<entry source="Add Modifier" text="モディファイアを追加" />
-		<entry source="Add ability" text="アビリティを追加" />
-		<entry source="Add bone turn" text="ボーン回転を追加" />
-		<entry source="Add chain" text="チェーンを追加" />
-		<entry source="Add effect" text="エフェクトを追加" />
-		<entry source="Add layer" text="レイヤーを追加" />
-		<entry source="Add node" text="ノードを追加" />
-		<entry source="Add notify at t" text="t に通知を追加" />
-		<entry source="Add pair" text="ペアを追加" />
-		<entry source="Add point" text="点を追加" />
-		<entry source="Add set" text="セットを追加" />
-		<entry source="Add slot" text="スロットを追加" />
-		<entry source="Alias" text="エイリアス" />
-		<entry source="An entry other entries use is not removed. Change those references first."
-		       text="他の項目が使う項目は削除しません。先にその参照を変えてください。" />
-		<entry source="Anchor" text="アンカー" />
-		<entry source="Anchor-relative root position and yaw at alignment time; select the role object in the viewport to move it with the gizmo"
-		       text="位置合わせ時点のアンカー基準のルート位置とヨー — ビューポートで役割オブジェクトを選びギズモで動かします" />
-		<entry source="Appearance" text="外見" />
-		<entry source="Attributes" text="アトリビュート" />
-		<entry source="Auto layout" text="自動レイアウト" />
-		<entry source="Axis" text="軸" />
-		<entry source="Bake" text="ベイク" />
-		<entry source="Base" text="基本値" />
-		<entry source="Base preset" text="基準プリセット" />
-		<entry source="Binds: {mappedTargetBoneCount} of {targetBoneCount} target bones follow the source, height ratio {heightRatio}"
-		       text="バインド: ターゲットボーン {targetBoneCount} 個中 {mappedTargetBoneCount} 個がソースに追従、身長比 {heightRatio}" />
-		<entry source="Body" text="ボディ" />
-		<entry source="Body channels" text="ボディチャンネル" />
-		<entry source="Body data has unsaved edits" text="ボディデータに未保存の編集があります" />
-		<entry source="Body dynamics preview" text="ボディダイナミクスのプレビュー" />
-		<entry source="Body shape" text="体型" />
-		<entry source="Body type" text="体の種類" />
-		<entry source="Bone map" text="ボーンマップ" />
-		<entry source="Bone rotation" text="ボーン回転" />
-		<entry source="Bone scale" text="ボーンスケール" />
-		<entry source="Bone translation" text="ボーン移動" />
 		<entry source="Bought." text="購入しました。" />
 		<entry source="Buy" text="購入" />
 		<entry source="Buy {item} for {price} {currency}?" text="{item}を{price} {currency}で購入しますか?" />
-		<entry source="CPU only (Recompute Normals)" text="CPU のみ (法線の再計算)" />
-		<entry source="CPU only:" text="CPU のみ:" />
 		<entry source="Cancel" text="キャンセル" />
 		<entry source="Canter" text="キャンター" />
-		<entry source="Center" text="中心" />
-		<entry source="Chains" text="チェーン" />
-		<entry source="Check" text="チェック" />
 		<entry source="Choose where to put it." text="置く場所を選んでください。" />
-		<entry source="Clamped to range: {clamped}" text="範囲に収めた: {clamped}" />
-		<entry source="Clear smears" text="にじみを消す" />
-		<entry source="Clear target" text="ターゲットを解除" />
-		<entry source="Click a node to edit it" text="ノードをクリックして編集" />
-		<entry source="Click the body in the viewport (Esc cancels)"
-		       text="ビューポートでボディをクリックしてください(Esc で取り消し)" />
-		<entry source="Click to edit the curve" text="クリックしてカーブを編集" />
 		<entry source="Confirm Purchase" text="購入の確認" />
-		<entry source="Connect" text="接続" />
-		<entry source="Control Points" text="制御点" />
-		<entry source="Cooldown" text="クールダウン" />
 		<entry source="Could not reach the store. The wallet shows what the server holds."
 		       text="ストアに接続できませんでした。ウォレットにはサーバーの値が表示されます。" />
-		<entry source="Count" text="数" />
-		<entry source="Cue presentations" text="キュー演出" />
-		<entry source="Current" text="現在値" />
-		<entry source="Curve of every spline in the scene - drag the control point handles of the selected one (Shapes)"
-		       text="シーンの各スプラインの曲線 - 選択中のスプラインは制御点のハンドルをドラッグ（Shapes）" />
-		<entry source="Customization values" text="カスタマイズ値" />
-		<entry source="Customize (release a slider to refit)"
-		       text="カスタマイズ(スライダーを離すと再フィット)" />
-		<entry source="Data preset (scene use)" text="データプリセット(シーン用)" />
-		<entry source="Default: {hasDefault, select, yes {{value}} other {(none)}}"
-		       text="デフォルト: {hasDefault, select, yes {{value}} other {(なし)}}" />
-		<entry source="Deformation preview lines of the mesh modifier stack, gizmos and range display with drag editing, picking and dragging lattice control points"
-		       text="メッシュモディファイアスタックの変形プレビュー線、ギズモと範囲表示のドラッグ編集、ラティス制御点の選択とドラッグ" />
-		<entry source="Delete" text="削除" />
-		<entry source="Delete node" text="ノードを削除" />
-		<entry source="Depth" text="深さ" />
-		<entry source="Direction the target faces - Follow, FirstPerson and ThirdPerson presets turn with it"
-		       text="ターゲットの向き — Follow・FirstPerson・ThirdPerson プリセットが追従して回ります" />
 		<entry source="Done." text="完了しました。" />
-		<entry source="Down" text="下へ" />
 		<entry source="Drop how many?" text="いくつ捨てますか?" />
-		<entry source="Drop this placement override and use the preset again."
-		       text="この配置の上書きを削除してプリセットを再び使います。" />
-		<entry source="Dropped: {dropped}" text="除外: {dropped}" />
-		<entry source="Duplicate" text="複製" />
-		<entry source="Duplicate row" text="行を複製" />
-		<entry source="Duration (s)" text="長さ(秒)" />
-		<entry source="Dye channels" text="染色チャンネル" />
-		<entry source="Dye sections" text="染色セクション" />
-		<entry source="Dyeable" text="染色可" />
-		<entry source="Edit this group's nested stack" text="このグループのネストされたスタックを編集" />
-		<entry source="Effects" text="エフェクト" />
-		<entry source="Empty - add modifiers to group them."
-		       text="空です。モディファイアを追加してグループにします。" />
-		<entry source="Enter / exit blend (s)" text="入り・出のブレンド(秒)" />
-		<entry source="Enter an ability catalog file (game/&lt;game>/data/abilities.xml) to edit it."
-		       text="編集するアビリティカタログファイル(game/&lt;ゲーム>/data/abilities.xml)を入力してください。" />
-		<entry source="Equip set" text="装備セット" />
-		<entry source="Event" text="イベント" />
-		<entry source="Export as World Warp" text="ワールドワープとして書き出す" />
-		<entry source="Export data preset" text="データプリセットを書き出す" />
-		<entry source="Face" text="顔" />
-		<entry source="File" text="ファイル" />
-		<entry source="Filter by id" text="id で絞り込み" />
-		<entry source="Fit check (view only)" text="フィットチェック(表示のみ)" />
-		<entry source="Fit to Bounds" text="境界に合わせる" />
-		<entry source="Fluid paths" text="体液の経路" />
-		<entry source="Follow game clock" text="ゲーム時計に合わせる" />
-		<entry source="Foot lift (m)" text="足の持ち上げ(m)" />
-		<entry source="From" text="送信元" />
 		<entry source="Gallop" text="ギャロップ" />
 		<entry source="Game saved" text="ゲームを保存しました" />
-		<entry source="Game time" text="ゲーム時刻" />
-		<entry source="Go" text="移動" />
-		<entry source="Granted Abilities" text="付与されたアビリティ" />
-		<entry source="Groups" text="グループ" />
-		<entry source="Height ratio (0 = pelvis)" text="高さ比(0 = 骨盤)" />
-		<entry source="Highlight drive" text="ハイライトするドライブ" />
-		<entry source="Hit" text="被弾" />
-		<entry source="How root and pelvis movement is carried over (scaled by the pelvis height ratio, copied, or kept in place)"
-		       text="ルートと骨盤の動きの移し方(骨盤の高さ比で拡縮・コピー・その場)" />
-		<entry source="How strongly the layer covers the skin" text="レイヤーが肌を覆う強さ" />
-		<entry source="IK goal" text="IK ゴール" />
-		<entry source="Infinite" text="無限" />
-		<entry source="Inherited from the base entry. Picking a value writes it on this entry."
-		       text="親項目から継承した値です。選ぶとこの項目に書き込みます。" />
-		<entry source="Invert" text="反転" />
-		<entry source="Jiggle" text="揺れ" />
-		<entry source="Jiggle (m)" text="揺れ(m)" />
-		<entry source="Kind" text="種類" />
-		<entry source="Light at the eye" text="目に届く光" />
-		<entry source="Live: {liveRunnerName}" text="実行中: {liveRunnerName}" />
-		<entry source="Load" text="読み込み" />
 		<entry source="Load Failed" text="ロード失敗" />
-		<entry source="Load a skeleton to see its bones. The skeleton is read-only; edits go to the reference pose file."
-		       text="スケルトンを読み込むとボーンが見えます。スケルトンは読み取り専用で、編集は基準ポーズファイルに入ります。" />
-		<entry source="Load appearance data to see which rules hid or changed what."
-		       text="外見データを読み込むと、どのルールが何を隠した・変えたかが見えます。" />
-		<entry source="Load data" text="データを読み込む" />
-		<entry source="Load pose" text="ポーズを読み込む" />
-		<entry source="Load presets" text="プリセットを読み込む" />
-		<entry source="Load skeleton" text="スケルトンを読み込む" />
-		<entry source="Load the appearance data (Appearance tab) to dress the preview body."
-		       text="外見データ(外見タブ)を読み込むとプレビューの体に着せます。" />
-		<entry source="Load the items file and the appearance folder to pick items and see rule explanations."
-		       text="アイテムファイルと外見フォルダを読み込むと、アイテムを選んでルールの説明を見られます。" />
 		<entry source="Loading Failed" text="読み込み失敗" />
-		<entry source="Loop" text="ループ" />
-		<entry source="Makeup smear" text="メイクのにじみ" />
-		<entry source="Map" text="軸を追加" />
-		<entry source="Map same names" text="同名同士をつなぐ" />
-		<entry source="Mirror" text="ミラー" />
-		<entry source="Mirror bone" text="ボーンをミラー" />
-		<entry source="Modifiers" text="モディファイア" />
-		<entry source="Move row down" text="行を下へ移動" />
-		<entry source="Move row up" text="行を上へ移動" />
-		<entry source="NPCs" text="NPC" />
 		<entry source="Name" text="名前" />
-		<entry source="Nested Stack" text="ネストされたスタック" />
-		<entry source="New" text="新規" />
-		<entry source="New socket name" text="新しいソケット名" />
-		<entry source="No AbilitySystemComponent in the active scene"
-		       text="アクティブなシーンに AbilitySystemComponent がありません" />
-		<entry source="No animation clips in ''{clipFolder}''"
-		       text="''{clipFolder}'' にアニメーションクリップがありません" />
-		<entry source="No body channels. Sliders, body profiles and equipment set them."
-		       text="ボディチャンネルがありません。スライダー・ボディプロファイル・装備が設定します。" />
-		<entry source="No customization schema for this selection (load the appearance data and pick a base preset with a schema)."
-		       text="この選択にはカスタマイズスキーマがありません(外見データを読み込み、スキーマのある基準プリセットを選んでください)。" />
-		<entry source="No effect applied, rejected or removed yet."
-		       text="適用・拒否・削除されたエフェクトはまだありません。" />
-		<entry source="No entry uses this one." text="この項目を使う項目はありません。" />
-		<entry source="No fit result yet. The preview scene solves the fit when a slider is released."
-		       text="まだフィット結果がありません。スライダーを離すとプレビューシーンがフィットします。" />
-		<entry source="No mesh sections. List sections with aliases in the item visual."
-		       text="メッシュセクションがありません。アイテム外観にエイリアス付きでセクションを記述してください。" />
-		<entry source="No object has component:"
-		       text="次のコンポーネントを持つオブジェクトがありません:" />
-		<entry source="No penetration." text="貫通なし。" />
-		<entry source="No plan for today" text="今日の予定はありません" />
-		<entry source="No rule fired." text="発動したルールはありません。" />
-		<entry source="No schedule system is running. Start play with NPCs that have schedules."
-		       text="スケジュールシステムが動いていません。スケジュールを持つ NPC でプレイを始めてください。" />
-		<entry source="No skin layers. Add makeup or a tattoo from the list above."
-		       text="スキンレイヤーがありません。上のリストからメイクやタトゥーを追加してください。" />
-		<entry source="No target" text="対象なし" />
 		<entry source="Not enough money." text="お金が足りません。" />
-		<entry source="Offset" text="位置" />
-		<entry source="Offset (m)" text="オフセット(m)" />
-		<entry source="Opacity" text="不透明度" />
-		<entry source="Open a .cameras.xml preset file to see its cameras here. Edit presets in the Catalog Editor."
-		       text=".cameras.xml プリセットファイルを開くとここにカメラが表示されます。プリセットの編集はカタログエディタで行います。" />
-		<entry source="Open a .pairedanim.xml to scrub its roles on one clock, move alignment offsets and edit shared notifies."
-		       text=".pairedanim.xml を開いて役割を一つの時計でスクラブし、位置合わせオフセットを動かし、共有通知を編集します。" />
-		<entry source="Open a .retarget.xml, or type a new path and press New, to pair the chains of two skeletons and check how they bind."
-		       text=".retarget.xml を開くか、新しいパスを入力して新規を押し、二つのスケルトンのチェーンを対にして結び付きを確認します。" />
-		<entry source="Open a behavior tree file (*.bt.xml) with Open..."
-		       text="Open... でビヘイビアツリーファイル(*.bt.xml)を開きます" />
-		<entry source="Options" text="オプション" />
-		<entry source="Orthographic preset - the preview draws it in perspective."
-		       text="平行投影プリセット — プレビューは透視で描きます。" />
-		<entry source="Overlays, in another color, the result with only the modifiers up to the selected one applied (deformation influence preview)"
-		       text="選択したモディファイアまでを適用した結果を別色の線で重ねて描きます(変形の影響プレビュー)" />
-		<entry source="Override zone parameter" text="ゾーンパラメーターを上書き" />
-		<entry source="Owned Tags" text="所有タグ" />
-		<entry source="Parent" text="親" />
 		<entry source="Pause" text="一時停止" />
-		<entry source="Penetration {partA} / {partB}: {vertexCount} points, depth {maxDepth}"
-		       text="貫通 {partA} / {partB}: 点 {vertexCount} 個、深さ {maxDepth}" />
-		<entry source="Pick a base preset to see which rules hid or changed what."
-		       text="基準プリセットを選ぶと、どのルールが何を隠した・変えたかが見えます。" />
-		<entry source="Pick a zone profile (*.zone.xml) to see its modules."
-		       text="モジュールを見るにはゾーンプロファイル(*.zone.xml)を選んでください。" />
-		<entry source="Pick an ability system..." text="アビリティシステムを選択..." />
-		<entry source="Pick an entry on the left to see what it uses and what uses it."
-		       text="左で項目を選ぶと、その項目が使うものと使われている場所が見えます。" />
-		<entry source="Pick section in Preview" text="プレビューで区間を選ぶ" />
-		<entry source="Place" text="場所" />
-		<entry source="Place in Preview" text="プレビューで配置" />
 		<entry source="Play" text="再生" />
-		<entry source="Point" text="点" />
-		<entry source="Position" text="位置" />
-		<entry source="Presets (user data)" text="プリセット(ユーザーデータ)" />
-		<entry source="Preview" text="プレビュー" />
-		<entry source="Preview Time" text="プレビュー時間" />
-		<entry source="Preview constraint rig" text="拘束リグをプレビュー" />
-		<entry source="Preview mesh" text="プレビューメッシュ" />
-		<entry source="Problems" text="問題" />
-		<entry source="Pupil size" text="瞳孔サイズ" />
 		<entry source="Purchasing..." text="購入中..." />
-		<entry source="Raw timeline" text="生のタイムライン" />
-		<entry source="Read the edited content with the runtime loader to check every rule"
-		       text="編集内容をランタイムローダーで読み、すべてのルールを確認します" />
-		<entry source="Read the preset file again (after saving it in the Catalog Editor)"
-		       text="プリセットファイルを再読み込みします(カタログエディタで保存した後)" />
-		<entry source="Recent effects" text="最近のエフェクト" />
-		<entry source="Recompute Normals" text="法線の再計算" />
-		<entry source="Redo" text="やり直し" />
-		<entry source="Redo appearance" text="外見をやり直し" />
-		<entry source="Redo body edit" text="ボディ編集をやり直す" />
-		<entry source="Redo pose" text="ポーズをやり直し" />
-		<entry source="Reference Object" text="参照オブジェクト" />
 		<entry source="Reload" text="再読み込み" />
-		<entry source="Reload Stack" text="スタックを再読み込み" />
-		<entry source="Reload from disk (discard edits)" text="ディスクから再読み込み(編集を破棄)" />
-		<entry source="Remaining" text="残り" />
 		<entry source="Remove" text="削除" />
-		<entry source="Remove broken wires" text="切れた配線を削除" />
-		<entry source="Remove point" text="点を削除" />
-		<entry source="Remove row" text="行を削除" />
-		<entry source="Rename" text="名前を変更" />
-		<entry source="Reset Lattice" text="ラティスをリセット" />
-		<entry source="Reset Parameters" text="パラメーターをリセット" />
-		<entry source="Reset bone" text="ボーンをリセット" />
-		<entry source="Retarget pose" text="リターゲットポーズ" />
-		<entry source="Revert" text="元に戻す" />
-		<entry source="Revert zone module" text="ゾーンモジュールを元に戻す" />
-		<entry source="Revert zone parameter" text="ゾーンパラメーターを元に戻す" />
-		<entry source="Roles" text="役割" />
-		<entry source="Root and pelvis" text="ルートと骨盤" />
-		<entry source="Rotation" text="回転" />
-		<entry source="Rotation of the layer in degrees" text="レイヤーの回転(度)" />
-		<entry source="Runtime ability state exists only during play. Press Play to inspect it."
-		       text="実行中のアビリティ状態はプレイ中にのみ存在します。プレイを押して確認してください。" />
 		<entry source="Save" text="保存" />
 		<entry source="Save Failed" text="セーブ失敗" />
-		<entry source="Save Stack" text="スタックを保存" />
-		<entry source="Save as preset" text="プリセットとして保存" />
-		<entry source="Save body data" text="ボディデータを保存" />
-		<entry source="Save or reload the modifier stack before picking another mesh"
-		       text="ほかのメッシュを選ぶ前にモディファイアスタックを保存するか再読み込みしてください" />
-		<entry source="Save pose" text="ポーズを保存" />
-		<entry source="Save thumbnail" text="サムネイルを保存" />
-		<entry source="Scale" text="スケール" />
-		<entry source="Schedule system" text="スケジュールシステム" />
-		<entry source="Section" text="セクション" />
-		<entry source="Select a bone to edit its reference pose."
-		       text="ボーンを選ぶと基準ポーズを編集します。" />
-		<entry source="Select a modifier in the stack."
-		       text="スタックからモディファイアを選択してください。" />
-		<entry source="Select a node to edit it. Right-click the canvas to add one."
-		       text="ノードを選ぶと編集します。キャンバスを右クリックして追加します。" />
-		<entry source="Select a socket in the list to edit it."
-		       text="一覧からソケットを選んで編集します。" />
-		<entry source="Select an NPC on the left" text="左で NPC を選択してください" />
-		<entry source="Select an object that has a Gimmick Circuit component"
-		       text="ギミック回路コンポーネントを持つオブジェクトを選びます" />
-		<entry source="Select an object whose mesh component uses a .mesh asset, then press Use Selection."
-		       text="メッシュコンポーネントが .mesh アセットを使うオブジェクトを選択し、「選択を使用」を押してください。" />
-		<entry source="Select an object with an AbilitySystemComponent, or pick one above."
-		       text="AbilitySystemComponent を持つオブジェクトを選択するか、上で選んでください。" />
-		<entry source="Selection (base preset, body, slots, customization values)"
-		       text="選択(基準プリセット・体・スロット・カスタマイズ値)" />
-		<entry source="Set the source and target skeletons to see them overlaid here."
-		       text="ソースとターゲットのスケルトンを設定するとここに重ねて表示されます。" />
-		<entry source="Shade the target mesh with the stack result. Runs on a compute shader when every enabled modifier supports it, otherwise the CPU result is uploaded as vertices. Off leaves the original mesh and the wire preview."
-		       text="スタックの結果で対象メッシュをシェーディングします。有効なモディファイアがすべて対応していればコンピュートシェーダーで実行し、そうでなければ CPU の結果を頂点としてアップロードします。オフにすると元のメッシュとワイヤープレビューのままです。" />
-		<entry source="Shaded Preview" text="シェーディングプレビュー" />
-		<entry source="Shared notifies" text="共有通知" />
-		<entry source="Skeleton" text="スケルトン" />
-		<entry source="Skeletons" text="スケルトン" />
-		<entry source="Skin UV of the layer centre" text="レイヤー中心の肌UV" />
-		<entry source="Skin UV size one layer covers" text="レイヤーが覆う肌UVのサイズ" />
-		<entry source="Skin layers" text="スキンレイヤー" />
-		<entry source="Sliders, colours and choices of the schema are in the Preview tab (the body updates when you release a slider)."
-		       text="スキーマのスライダー・色・選択はプレビュータブにあります(スライダーを離すと体が更新されます)。" />
-		<entry source="Slot visibility" text="スロットの表示" />
-		<entry source="Slot {slot}: {requestedItem} -> {fallbackItem} ({reason})"
-		       text="スロット {slot}: {requestedItem} -> {fallbackItem}({reason})" />
-		<entry source="Slots" text="スロット" />
-		<entry source="Sockets" text="ソケット" />
 		<entry source="Sold out." text="売り切れです。" />
-		<entry source="Solve the end onto the source end position (feet that plant without sliding)"
-		       text="末端をソースの末端位置へ解きます(滑らずに接地する足)" />
-		<entry source="Source" text="出典" />
-		<entry source="Source bones" text="ソースボーン" />
-		<entry source="Splines" text="スプライン" />
 		<entry source="Split how many?" text="いくつ分けますか?" />
-		<entry source="Stacks" text="スタック" />
-		<entry source="Stage" text="ステージ" />
 		<entry source="Standing" text="停止" />
-		<entry source="Start (s)" text="開始(秒)" />
-		<entry source="Start an empty profile at this resource id (an existing file is opened instead)"
-		       text="このリソース id で空のプロファイルを開始します(既存のファイルがあればそれを開きます)" />
-		<entry source="Stop" text="停止" />
-		<entry source="Stop picking" text="選択をやめる" />
-		<entry source="Stores the Preview tab's picture in the user data slot of the preset of this name (save the preset first)"
-		       text="プレビュータブの画像をこの名前のプリセットのユーザーデータ枠に保存します(先にプリセットを保存してください)" />
-		<entry source="Tag" text="タグ" />
-		<entry source="Target bones" text="ターゲットボーン" />
-		<entry source="Target object" text="対象オブジェクト" />
-		<entry source="Target yaw" text="ターゲットのヨー" />
-		<entry source="Task" text="タスク" />
-		<entry source="Tears and saliva" text="涙・唾液" />
-		<entry source="Test tags:" text="タグのテスト:" />
 		<entry source="That amount is not possible." text="その数量は指定できません。" />
 		<entry source="That slot cannot take it." text="そのスロットには入れられません。" />
-		<entry source="The catalog file the game reads. Edits keep its comments and layout."
-		       text="ゲームが読むカタログファイルです。編集してもコメントと配置は残ります。" />
 		<entry source="The game could not be saved. Try again, or keep playing without saving."
 		       text="ゲームをセーブできませんでした。もう一度試すか、セーブせずに続けてください。" />
-		<entry source="The node editor could not be created" text="ノードエディタを作成できませんでした" />
-		<entry source="The overrides do not apply to this profile - see the log for the module name."
-		       text="上書きがこのプロファイルに合いません - モジュール名はログを見てください。" />
-		<entry source="The preview body has no body profile. Pick a preset with bodyProfile."
-		       text="プレビューのボディにボディプロファイルがありません。bodyProfile のあるプリセットを選んでください。" />
 		<entry source="The purchase reply did not match; your wallet was refreshed."
 		       text="購入の応答が一致しなかったため、ウォレットを更新しました。" />
-		<entry source="The runtime loader could not read the saved file. See the log for the reason."
-		       text="ランタイムローダーが保存したファイルを読み込めませんでした。理由はログを確認してください。" />
-		<entry source="The runtime loader reads the saved file."
-		       text="ランタイムローダーが保存したファイルを読み込みます。" />
 		<entry source="The saved game could not be loaded. Try again, or stay here."
 		       text="セーブデータを読み込めませんでした。もう一度試すか、このまま続けてください。" />
 		<entry source="The scene could not be opened. Try again, or stay here."
 		       text="シーンを開けませんでした。もう一度試すか、このまま続けてください。" />
 		<entry source="The slot is empty." text="空きスロットです。" />
-		<entry source="The target object no longer exists."
-		       text="対象のオブジェクトはもう存在しません。" />
 		<entry source="This cannot be bought now." text="現在は購入できません。" />
 		<entry source="This cannot be used." text="使用できません。" />
-		<entry source="This file could not be opened: {statusText}"
-		       text="このファイルを開けません: {statusText}" />
-		<entry source="Time" text="時刻" />
-		<entry source="To" text="宛先" />
-		<entry source="Translation" text="移動" />
-		<entry source="Travel" text="移動" />
 		<entry source="Trot" text="トロット" />
 		<entry source="Try Again" text="もう一度試す" />
-		<entry source="Turn a target bone in its parent space (degrees) so the target reference matches the source reference, e.g. lower the arms of a T-pose source onto an A-pose target"
-		       text="ターゲットの基準ポーズがソースと合うよう、ターゲットのボーンを親空間で回します(度) — 例: T ポーズのソースを A ポーズのターゲットに合わせて腕を下げる" />
-		<entry source="Undo" text="元に戻す" />
-		<entry source="Undo appearance" text="外見を元に戻す" />
-		<entry source="Undo body edit" text="ボディ編集を元に戻す" />
-		<entry source="Undo pose" text="ポーズを元に戻す" />
-		<entry source="Unsupported" text="非対応" />
-		<entry source="Up" text="上" />
-		<entry source="Use Selection" text="選択を使用" />
-		<entry source="Use selected object" text="選択中のオブジェクトを使う" />
-		<entry source="Use the preset's value for this parameter again."
-		       text="このパラメーターにプリセットの値を再び使います。" />
-		<entry source="Used by" text="使われている場所" />
-		<entry source="Uses" text="使うもの" />
-		<entry source="Uses no other entry." text="他の項目を使いません。" />
-		<entry source="Viewport gizmo editing needs the preview scene (EditorMultiWorld)."
-		       text="ビューポートギズモ編集にはプレビューシーン(EditorMultiWorld)が必要です。" />
 		<entry source="Walk" text="常歩" />
-		<entry source="Warp File (.mfwarp)" text="ワープファイル (.mfwarp)" />
-		<entry source="Warp end (s)" text="ワープ終了(秒)" />
-		<entry source="Wearing {wearing, select, none {no slot items} other {the selection}} on base preset ''{basePresetID}'' (assembled {appearance} times)"
-		       text="基準プリセット ''{basePresetID}'' に {wearing, select, none {スロットアイテムなし} other {選択中のもの}} を装着(組み立て {appearance} 回)" />
-		<entry source="When" text="条件" />
-		<entry source="Why does it look like this? (rules)" text="なぜこう見えるか(ルール)" />
-		<entry source="Why this activity now" text="今この行動をする理由" />
-		<entry source="Wires" text="ワイヤー" />
-		<entry source="World Space" text="ワールド空間" />
-		<entry source="Wrinkle intensity" text="しわの強さ" />
-		<entry source="Wrinkles" text="しわ" />
-		<entry source="Yaw (deg)" text="ヨー(度)" />
 		<entry source="You cannot buy this any more." text="これ以上購入できません。" />
 		<entry source="You cannot equip this there." text="そこには装備できません。" />
 		<entry source="Your bag is full." text="バッグがいっぱいです。" />
-		<entry source="Zone modules" text="ゾーンモジュール" />
-		<entry source="added here" text="ここで追加" />
-		<entry source="changed here" text="ここで変更" />
 		<entry source="draining" text="退出中" />
-		<entry source="inherited" text="継承" />
 		<entry source="maintenance" text="メンテナンス中" />
-		<entry source="mapped" text="マップ済み" />
-		<entry source="no mapping" text="マッピングなし" />
-		<entry source="offset {offsetX}, {offsetY}, {offsetZ}  distance {distance}  pitch {pitch}  yaw {yaw}  fov {computeFieldOfViewY}"
-		       text="オフセット {offsetX}, {offsetY}, {offsetZ}  距離 {distance}  ピッチ {pitch}  ヨー {yaw}  視野角 {computeFieldOfViewY}" />
 		<entry source="open" text="受付中" />
-		<entry source="removed here" text="ここで削除" />
-		<entry source="replaced here" text="ここで置換" />
 		<entry source="starting" text="起動中" />
-		<entry source="unsupported" text="非対応" />
 		<entry source="{amount} {currency}" text="{amount} {currency}" />
-		<entry source="{boneCount, plural, one {# bone} other {# bones}}, {overridesCount} overridden{dirty}"
-		       text="ボーン {boneCount} 個、上書き {overridesCount} 個{dirty}" />
-		<entry source="{issueCount, plural, one {# problem} other {# problems}}" text="問題 {issueCount} 個" />
 		<entry source="{item}  {price} {currency}" text="{item}  {price} {currency}" />
 		<entry source="{item} x{count}" text="{item} x{count}" />
-		<entry source="{name} - {nodesCount, plural, one {# node} other {# nodes}}, {wiresCount, plural, one {# wire} other {# wires}}, {issueCount, plural, one {# problem} other {# problems}}"
-		       text="{name} - ノード {nodesCount} 個、ワイヤー {wiresCount} 本、問題 {issueCount} 個" />
-		<entry source="{name}: cut {cutTriangleCount}/{triangleCount} ({cutRatio}%), {movedVertexCount} verts moved, max push {maxDelta}"
-		       text="{name}: カット {cutTriangleCount}/{triangleCount}({cutRatio}%)、頂点 {movedVertexCount} 個移動、最大押し出し {maxDelta}" />
-		<entry source="{name}: source {sourceLength} m, target {targetLength} m (x{ratio})"
-		       text="{name}: ソース {sourceLength} m、ターゲット {targetLength} m(x{ratio})" />
-		<entry source="{nodeCount, plural, one {# node} other {# nodes}} | {issueCount, plural, one {# problem} other {# problems}}"
-		       text="ノード {nodeCount} 個 | 問題 {issueCount} 個" />
 		<entry source="{offer}  ({stock})" text="{offer}  ({stock})" />
-		<entry source="{role, select, anchor {anchor} required {required} other {optional}}  clip {clip}  {stage} {clipSeconds} s{clipLength, select, unknown {  (clip length unknown - pick a prefab)} other {}}"
-		       text="{role, select, anchor {アンカー} required {必須} other {任意}}  クリップ {clip}  {stage} {clipSeconds} 秒{clipLength, select, unknown {  (クリップの長さ不明 - プレハブを選んでください)} other {}}" />
-		<entry source="{slotsCount, plural, one {# slot} other {# slots}}, {setsCount, plural, one {# set} other {# sets}}, {presetsCount, plural, one {# preset} other {# presets}}"
-		       text="スロット {slotsCount} 個、セット {setsCount} 個、プリセット {presetsCount} 個" />
 		<entry source="{slot}: {item}" text="{slot}: {item}" />
 		<entry source="{stat} {value}" text="{stat} {value}" />
 	</entries>
