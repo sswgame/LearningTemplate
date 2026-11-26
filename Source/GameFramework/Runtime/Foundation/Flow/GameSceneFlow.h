@@ -12,7 +12,7 @@
 #include "Core/Task/TaskFuture.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Runtime/Foundation/Service/GameInstanceSubsystem.h"
+#include "GameFramework/Runtime/Foundation/Subsystem/GameInstanceSubsystem.h"
 
 namespace sw
 {
@@ -22,7 +22,7 @@ namespace sw
     class SaveLock;
     class Scene;
     struct SceneHandle;
-    class ScreenTransitionManager;
+    class ScreenTransitionController;
     class Widget;
     enum class SceneLoadKind : uint8; // Engine/Scene/SceneManager.h
 
@@ -47,7 +47,7 @@ namespace sw
          * @brief @p settings 는 게임 인스턴스의 gamesettings 이고 이 서브시스템보다 오래 산다. 화면 전환 · 로딩 화면은 같은 게임 범위의 형제다(먼저 선다). 로딩 화면은 없을 수 있다(전용 서버 — `IGameInstanceClientHook` 이 없다).
          * @param saveLock 게임 인스턴스의 세이브 막기 문(빌림 — 이 범위보다 먼저 서고 늦게 진다). 맡긴 씬 로드마다 막기를 든다.
          */
-        GameSceneFlow( const GameSettings& settings, ScreenTransitionManager& screenTransition, ILoadingScreen* pLoadingScreen, SaveLock& saveLock );
+        GameSceneFlow( const GameSettings& settings, ScreenTransitionController& screenTransition, ILoadingScreen* pLoadingScreen, SaveLock& saveLock );
         ~GameSceneFlow() override;
 
         GameSceneFlow( const GameSceneFlow& )            = delete;
@@ -151,22 +151,22 @@ namespace sw
         void onSceneLoadRequested( const string& scenePath, SceneLoadKind kind, const TaskFuture<SceneHandle>& future );
         /** @brief 활성 씬 @p scenePath 가 타이틀 씬이면 세이브를 막고, 아니면 풉니다 — 타이틀은 게임 진행이 아니라 저장하면 이어 하기가 타이틀을 연다. */
         void updateTitleSaveBlock( const string& scenePath );
-        /** @brief 하던 진행을 잊게 합니다 — 타이틀로 · 시작이 부른다(`AutosaveManager::beginNewGame`). */
+        /** @brief 하던 진행을 잊게 합니다 — 타이틀로 · 시작이 부른다(`AutosaveController::beginNewGame`). */
         static void resetRunningProgress();
         /** @brief 끝난 씬 로드마다 `SceneLoadCompletedEvent` 를 내고 묶인 함수를 부릅니다(요청 순서). 받는 쪽이 새 로드를 요청해도 된다 — 끝난 것을 먼저 목록에서 뺀 뒤 알린다. */
         void publishFinishedSceneLoads();
 
     private:
-        const GameSettings&      _settings;                       ///< 게임 인스턴스의 gamesettings(빌림 — 인스턴스가 이 범위보다 오래 든다)
-        ScreenTransitionManager& _screenTransition;               ///< 같은 게임 범위의 화면 전환(빌림)
-        ILoadingScreen*          _pLoadingScreen;                 ///< 같은 게임 범위의 로딩 화면(빌림, 없으면 nullptr — 전용 서버)
-        SaveLock&                _saveLock;                       ///< 게임 인스턴스의 세이브 막기 문(빌림)
-        vector<PendingSceneLoad> _listPendingSceneLoad;           ///< 맡겼지만 아직 끝을 알리지 않은 씬 로드
-        Subscription             _titleSaveBlock;                 ///< 활성 씬이 타이틀인 동안 세이브를 막는다(`updateTitleSaveBlock`)
-        Subscription             _sceneLoadRequestedSubscription; ///< 씬 로드 받아들임 알림의 구독(초기화가 걸고 종료가 푼다)
-        vector<Subscription>     _listSessionCommandRegistration; ///< UI 전역 명령(StartGame · ReturnToTitle)의 등록 구독(`holdSessionCommand` 가 받는다)
-        uint32                   _openSessionTravel;              ///< 열려 있는 플레이어의 이동(`kGameplayTravel` 이면 없음)
-        uint32                   _lastSessionTravel;              ///< 마지막으로 매긴 번호
-        uint8                    _bResumingWorld;                 ///< 초기화 때 이미 활성 씬이 있었다(다시 선 인스턴스) — 첫 씬을 요청하지 않는다
+        const GameSettings&         _settings;                       ///< 게임 인스턴스의 gamesettings(빌림 — 인스턴스가 이 범위보다 오래 든다)
+        ScreenTransitionController& _screenTransition;               ///< 같은 게임 범위의 화면 전환(빌림)
+        ILoadingScreen*             _pLoadingScreen;                 ///< 같은 게임 범위의 로딩 화면(빌림, 없으면 nullptr — 전용 서버)
+        SaveLock&                   _saveLock;                       ///< 게임 인스턴스의 세이브 막기 문(빌림)
+        vector<PendingSceneLoad>    _listPendingSceneLoad;           ///< 맡겼지만 아직 끝을 알리지 않은 씬 로드
+        Subscription                _titleSaveBlock;                 ///< 활성 씬이 타이틀인 동안 세이브를 막는다(`updateTitleSaveBlock`)
+        Subscription                _sceneLoadRequestedSubscription; ///< 씬 로드 받아들임 알림의 구독(초기화가 걸고 종료가 푼다)
+        vector<Subscription>        _listSessionCommandRegistration; ///< UI 전역 명령(StartGame · ReturnToTitle)의 등록 구독(`holdSessionCommand` 가 받는다)
+        uint32                      _openSessionTravel;              ///< 열려 있는 플레이어의 이동(`kGameplayTravel` 이면 없음)
+        uint32                      _lastSessionTravel;              ///< 마지막으로 매긴 번호
+        uint8                       _bResumingWorld;                 ///< 초기화 때 이미 활성 씬이 있었다(다시 선 인스턴스) — 첫 씬을 요청하지 않는다
     };
 } // namespace sw

@@ -274,12 +274,12 @@ SW_TEST_CASE( OverworldTileMoverTest, TruncatedOrBadFlagBytesLeaveTheStateAlone 
 // 결함: 걷는 중인데 남은 시간이 없는 상태는 다시 깨어날 길이 없다.
 SW_TEST_CASE( OverworldLocomotionTest, BusyStateWithoutATimerIsRefused )
 {
-    PlayerLocomotion stuck;
+    TileStepLocomotion stuck;
     stuck.setState( LocomotionState::Walk );
     Archive writing;
     stuck.writeState( writing );
-    Archive          reading( writing.getData(), writing.getSize() );
-    PlayerLocomotion target;
+    Archive            reading( writing.getData(), writing.getSize() );
+    TileStepLocomotion target;
     SW_EXPECT_FALSE( target.readState( reading ) );
     SW_EXPECT_TRUE( target.getState() == LocomotionState::Idle );
 }

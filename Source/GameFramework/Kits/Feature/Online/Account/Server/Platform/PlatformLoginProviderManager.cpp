@@ -4,7 +4,7 @@
 
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/Provider/Apple/AppleLoginProvider.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/OnlineProviderFile.h"
-#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
+#include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
 #include "GameFramework/Runtime/Online/HTTP/OwnedHTTPClient.h"
 #include "GameFramework/Runtime/Online/Security/NetSecurity.h"
 

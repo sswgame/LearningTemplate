@@ -10,7 +10,7 @@
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Foundation/Save/Autosave.h"
-#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
+#include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
 #include "GameFramework/Runtime/Gameplay/GameState/GameStateComponent.h"
 #include "GameFramework/Runtime/Gameplay/GameState/PlayerComponentUtil.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/WalletComponent.h"
@@ -352,7 +352,7 @@ namespace sw
         // 모습은 디버그 그리기뿐이라 세울 오브젝트가 없다. 자동 저장 관리자는 게임 스레드 전용이라 틱에서 쌓은 요청을 여기서 낸다.
         (void)manager;
         (void)bRespawnViews;
-        if ( AutosaveManager* const pAutosave = game::findSubsystem<AutosaveManager>() )
+        if ( AutosaveController* const pAutosave = game::findSubsystem<AutosaveController>() )
         {
             if ( _pendingArea.empty() == false )
                 pAutosave->notifyAreaChanged( _pendingArea );

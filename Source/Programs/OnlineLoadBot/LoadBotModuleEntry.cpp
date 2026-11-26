@@ -33,7 +33,7 @@
 #include "Engine/Config/ServerConfig.h"
 #include "Engine/Reflection/TypeInfo.h"
 
-#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
+#include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
 #include "GameFramework/Runtime/Online/Security/NetSecurity.h"
 #include "GameFramework/Runtime/Online/Service/OnlineProtocol.h"
 

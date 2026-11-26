@@ -139,7 +139,7 @@ namespace sw
         GameStateComponent* pState = GameStateComponent::findOnOwner( *this );
         if ( pState == nullptr )
             return;
-        // 첫 틱에 놓는다 — 땅을 나누는 다른 디렉터는 시작할 때 땅을 칠했으므로 땅 리비전으로 다시 칠해야 보인다(RTSWorld::bindLand).
+        // 첫 틱에 놓는다 — 땅을 나누는 다른 디렉터는 시작할 때 땅을 칠했으므로 땅 리비전으로 다시 칠해야 보인다(RTSSimulation::bindLand).
         if ( _bLaidOut == SW_FALSE )
             layOutTown();
         const bool bFastForward = isAutoPlayOn() || _bFastForward == SW_TRUE;

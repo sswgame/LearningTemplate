@@ -4,18 +4,18 @@
 #include "Core/Time/Clock.h"
 
 #include "GameFramework/Runtime/Online/Bus/MixedBuildCodec.h"
-#include "GameFramework/Runtime/Online/Bus/Server/EphemeralServerBus.h"
+#include "GameFramework/Runtime/Online/Bus/Server/CacheServerBus.h"
 #include "GameFramework/Runtime/Online/Bus/Server/LocalServerBus.h"
 #include "GameFramework/Runtime/Online/Bus/ServerBus.h"
 #include "GameFramework/Runtime/Online/Bus/ServerBusTopic.h"
-#include "GameFramework/Runtime/Online/Cache/Server/EphemeralStore.h"
-#include "GameFramework/Runtime/Online/Cache/Server/EphemeralStoreRouter.h"
-#include "GameFramework/Runtime/Online/Cache/Server/MemoryEphemeralStore.h"
-#include "GameFramework/Runtime/Online/Cache/Server/Tests/EphemeralStoreTestUtil.h"
+#include "GameFramework/Runtime/Online/Cache/Server/CacheStore.h"
+#include "GameFramework/Runtime/Online/Cache/Server/CacheStoreRouter.h"
+#include "GameFramework/Runtime/Online/Cache/Server/MemoryCacheStore.h"
+#include "GameFramework/Runtime/Online/Cache/Server/Tests/CacheStoreTestUtil.h"
 #include "GameFramework/Runtime/Online/Sanction/Server/ServiceSanction.h"
 
 // ServerBusTest — 서버 간 버스: 주제 규칙, 프로세스 안 허브(LocalServerBus)의 구독 · 배달 · 순번, 주제 정의(ServerBusTopic · ServerBusTopicFamily)의
-// 쓰기 · 읽기와 거절(다른 주제 · 의미 버전 · 깨진 바이트), 캐시 발행/구독 위 버스(EphemeralServerBus)의 봉투와 라우터 묶기.
+// 쓰기 · 읽기와 거절(다른 주제 · 의미 버전 · 깨진 바이트), 캐시 발행/구독 위 버스(CacheServerBus)의 봉투와 라우터 묶기.
 // 본문 타입은 실제 버스 본문인 `ServiceSanctionChanged` 를 쓴다(nogpu).
 
 namespace
@@ -227,18 +227,18 @@ SW_TEST_CASE( ServerBusTest, TopicFamilyMatchesPrefixWithNonEmptySuffix )
 /**
  * @brief [ServerBusTest] 캐시 위 버스 둘(앞 둘이 데이터 하나): 봉투를 벗겨 보낸 서버 id · 순번 · 본문을 되살리고, 봉투가 아닌 채널 메시지는 버린 수로만 센다
  */
-SW_TEST_CASE( ServerBusTest, EphemeralBusCarriesEnvelopeAcrossServers )
+SW_TEST_CASE( ServerBusTest, CacheBusCarriesEnvelopeAcrossServers )
 {
-    sw::ManualClock             clock( sw::MonotonicMilliseconds{ 1000 } );
-    sw::MemoryEphemeralDatabase database( clock );
-    sw::MemoryEphemeralStore    storeA( &database );
-    sw::MemoryEphemeralStore    storeB( &database );
-    sw::EphemeralStoreRouter    routerA;
-    sw::EphemeralStoreRouter    routerB;
+    sw::ManualClock         clock( sw::MonotonicMilliseconds{ 1000 } );
+    sw::MemoryCacheDatabase database( clock );
+    sw::MemoryCacheStore    storeA( &database );
+    sw::MemoryCacheStore    storeB( &database );
+    sw::CacheStoreRouter    routerA;
+    sw::CacheStoreRouter    routerB;
     routerA.initialize( storeA );
     routerB.initialize( storeB );
-    sw::EphemeralServerBus busA( &routerA, kServerA );
-    sw::EphemeralServerBus busB( &routerB, kServerB );
+    sw::CacheServerBus busA( &routerA, kServerA );
+    sw::CacheServerBus busB( &routerB, kServerB );
     busB.subscribe( "test.cache" );
 
     sw::ServerBus bus( busA );
@@ -257,10 +257,10 @@ SW_TEST_CASE( ServerBusTest, EphemeralBusCarriesEnvelopeAcrossServers )
     SW_EXPECT_EQUAL( uint64( 77 ), read._accountID );
 
     // 같은 채널에 봉투가 아닌 바이트(짧다, 봉투 판이 다르다)가 오면 버린다
-    (void)storeA.submit( sw::EphemeralStoreTestAccess::makePublish( "bus:test.cache", { 1, 2, 3 } ) );
+    (void)storeA.submit( sw::CacheStoreTestAccess::makePublish( "bus:test.cache", { 1, 2, 3 } ) );
     sw::vector<uint8> listWrongVersion( 17, 0 );
     listWrongVersion[0] = 2;
-    (void)storeA.submit( sw::EphemeralStoreTestAccess::makePublish( "bus:test.cache", listWrongVersion ) );
+    (void)storeA.submit( sw::CacheStoreTestAccess::makePublish( "bus:test.cache", listWrongVersion ) );
     (void)routerB.poll();
     SW_EXPECT_EQUAL( uint64( 2 ), busB.getDroppedCount() );
     sw::vector<sw::ServerBusMessage> listAfterDrop;
@@ -275,17 +275,17 @@ SW_TEST_CASE( ServerBusTest, EphemeralBusCarriesEnvelopeAcrossServers )
 /**
  * @brief [ServerBusTest] 라우터 없이 만든 캐시 버스: 구독 · 발행은 경고로 버리고, 구독이 없을 때만 라우터를 묶으며 묶은 뒤에는 바꾸지 않는다
  */
-SW_TEST_CASE( ServerBusTest, EphemeralBusBindsRouterOnlyBeforeSubscribing )
+SW_TEST_CASE( ServerBusTest, CacheBusBindsRouterOnlyBeforeSubscribing )
 {
     SW_EXPECT_LOG( "ServerBus.NoRouter" );
-    sw::ManualClock             clock( sw::MonotonicMilliseconds{ 1000 } );
-    sw::MemoryEphemeralDatabase database( clock );
-    sw::MemoryEphemeralStore    store( &database );
-    sw::EphemeralStoreRouter    router;
+    sw::ManualClock         clock( sw::MonotonicMilliseconds{ 1000 } );
+    sw::MemoryCacheDatabase database( clock );
+    sw::MemoryCacheStore    store( &database );
+    sw::CacheStoreRouter    router;
     router.initialize( store );
-    sw::EphemeralStoreRouter otherRouter; // 묶기 거절만 본다(앞에 붙이지 않는다 — 앞 하나는 라우터 하나가 꺼낸다)
+    sw::CacheStoreRouter otherRouter; // 묶기 거절만 본다(앞에 붙이지 않는다 — 앞 하나는 라우터 하나가 꺼낸다)
 
-    sw::EphemeralServerBus bus( nullptr, kServerA );
+    sw::CacheServerBus bus( nullptr, kServerA );
     bus.subscribe( "test.late" );
     const uint8 arrPayload[] = { 1 };
     bus.publish( "test.late", arrPayload, 1 );

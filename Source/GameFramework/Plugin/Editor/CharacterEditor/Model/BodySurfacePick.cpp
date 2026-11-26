@@ -10,8 +10,8 @@
 
 namespace sw::editor
 {
-    void BodyPickSurface::build( vector_reference<const MeshVertex> listVertex, vector_reference<const MeshMorphTarget> listMorphTarget, vector_reference<const float32> listMorphWeight,
-                                 vector_reference<const MeshSkinVertex> listSkin, const vector<float4x4>& listPalette, const float4x4& world, BodyPickSurface& outSurface )
+    void BodySurfacePick::build( vector_reference<const MeshVertex> listVertex, vector_reference<const MeshMorphTarget> listMorphTarget, vector_reference<const float32> listMorphWeight,
+                                 vector_reference<const MeshSkinVertex> listSkin, const vector<float4x4>& listPalette, const float4x4& world, BodySurfacePick& outSurface )
     {
         const bool bSkinned    = listSkin.size() == listVertex.size() && listPalette.empty() == false;
         outSurface._listVertex = listVertex;
@@ -58,12 +58,12 @@ namespace sw::editor
         return nullopt;
     }
 
-    bool BodySurfaceHit::pick( vector_reference<const BodyPickSurface> listSurface, const float3& origin, const float3& direction, BodySurfaceHit& outHit )
+    bool BodySurfaceHit::pick( vector_reference<const BodySurfacePick> listSurface, const float3& origin, const float3& direction, BodySurfaceHit& outHit )
     {
         bool bHit = false;
         for ( uint32 surfaceIndex = 0; surfaceIndex < static_cast<uint32>( listSurface.size() ); ++surfaceIndex )
         {
-            const BodyPickSurface&                   surface      = listSurface[surfaceIndex];
+            const BodySurfacePick&                   surface      = listSurface[surfaceIndex];
             const vector<float3>&                    listPosition = surface._listPosition;
             const vector_reference<const MeshVertex> listVertex   = surface._listVertex;
             const vector_reference<const uint32>     listIndex    = surface._listIndex;

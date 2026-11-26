@@ -1,5 +1,5 @@
 // ServiceReportStoreTest — 신고 레코드: 코드 · 신고 규칙의 경계, 키 순서와 닫힌 키의 시각 읽기, 열기 → 처리(열린 키를 지우고 닫힌 키로 옮김)와
-// 두 GM 의 동시 처리, 잘못된 처리 요청 · 깨진 레코드 거절(건너뛰지 않는다)(nogpu). 채팅 신고 길은 ChatService 테스트가 본다.
+// 두 GM 의 동시 처리, 잘못된 처리 요청 · 깨진 레코드 거절(건너뛰지 않는다)(nogpu). 채팅 신고 길은 ChatLogic 테스트가 본다.
 #include "pch.h"
 
 #include "Core/TestFramework/TestFramework.h"

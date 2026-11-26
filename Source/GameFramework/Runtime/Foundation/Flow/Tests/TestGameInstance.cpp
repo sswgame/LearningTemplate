@@ -19,7 +19,7 @@
 #include "GameFramework/Runtime/Foundation/Save/GameLocalStore.h"
 #include "GameFramework/Runtime/Foundation/Save/GameSaveSlots.h"
 #include "GameFramework/Runtime/Foundation/Save/Local/MemoryLocalStore.h"
-#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
+#include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
 
 namespace
 {
@@ -42,7 +42,7 @@ namespace
     class LifecycleTestGame final : public sw::GameInstance
     {
     public:
-        LifecycleTestGame( sw::MemoryLocalDatabase& database, LifecycleTestStep step )
+        LifecycleTestGame( sw::MemoryLocalStoreBackend& database, LifecycleTestStep step )
             : GameInstance( sw::make_unique<sw::GameLocalStore>( sw::make_unique<sw::MemoryLocalStore>( &database, sw::LocalSealContext{} ) ) )
             , _service{ 7 }
             , _otherService{ 8 }
@@ -176,9 +176,9 @@ using namespace sw;
 /** @brief [GameInstanceTest] 선 인스턴스는 게임 범위를 지금 범위로 걸고, 종료는 그것을 되돌린다. 종료를 두 번 불러도 파생 훅은 한 번이다 */
 SW_TEST_CASE( GameInstanceTest, StartsAndShutsDownOnceAndRestoresTheProcess )
 {
-    const ProcessGameState before = ProcessGameState::capture();
-    MemoryLocalDatabase    database;
-    LifecycleTestGame      game{ database, LifecycleTestStep::Succeed };
+    const ProcessGameState  before = ProcessGameState::capture();
+    MemoryLocalStoreBackend database;
+    LifecycleTestGame       game{ database, LifecycleTestStep::Succeed };
     SW_REQUIRE_TRUE( game.initialize( nullptr ) );
     SW_EXPECT_TRUE( game::findGameScope() == &game.getOwnScope() );
     SW_EXPECT_NOT_NULL( game::findSubsystem<GameSettings>() );
@@ -196,9 +196,9 @@ SW_TEST_CASE( GameInstanceTest, StartsAndShutsDownOnceAndRestoresTheProcess )
 SW_TEST_CASE( GameInstanceTest, FailedDerivedInitializeRollsEverythingBack )
 {
     SW_EXPECT_LOG( "GameInstance.GameInstanceRolledBack" );
-    const ProcessGameState before = ProcessGameState::capture();
-    MemoryLocalDatabase    database;
-    LifecycleTestGame      game{ database, LifecycleTestStep::FailDerived };
+    const ProcessGameState  before = ProcessGameState::capture();
+    MemoryLocalStoreBackend database;
+    LifecycleTestGame       game{ database, LifecycleTestStep::FailDerived };
     SW_EXPECT_FALSE( game.initialize( nullptr ) );
     SW_EXPECT_EQUAL( 1u, game.getInitializeCount() );
     SW_EXPECT_EQUAL( 1u, game.getShutdownCount() );
@@ -217,9 +217,9 @@ SW_TEST_CASE( GameInstanceTest, FailureBeforeTheScopeTouchesNothing )
 {
     SW_EXPECT_LOG( "GameInstance.GameInstanceCannotStart4" );
     SW_EXPECT_LOG( "GameInstance.GameInstanceRolledBack" );
-    const ProcessGameState before = ProcessGameState::capture();
-    MemoryLocalDatabase    database;
-    LifecycleTestGame      game{ database, LifecycleTestStep::FailSettings };
+    const ProcessGameState  before = ProcessGameState::capture();
+    MemoryLocalStoreBackend database;
+    LifecycleTestGame       game{ database, LifecycleTestStep::FailSettings };
     SW_EXPECT_FALSE( game.initialize( nullptr ) );
     SW_EXPECT_EQUAL( 0u, game.getInitializeCount() );
     SW_EXPECT_EQUAL( 0u, game.getShutdownCount() );
@@ -231,9 +231,9 @@ SW_TEST_CASE( GameInstanceTest, ScopedSubsystemConflictFailsInitialize )
 {
     SW_EXPECT_LOG( "GameInstance.GameScopedServiceAlready" );
     SW_EXPECT_LOG( "GameInstance.GameInstanceRolledBack" );
-    const ProcessGameState before = ProcessGameState::capture();
-    MemoryLocalDatabase    database;
-    LifecycleTestGame      game{ database, LifecycleTestStep::BindTwice };
+    const ProcessGameState  before = ProcessGameState::capture();
+    MemoryLocalStoreBackend database;
+    LifecycleTestGame       game{ database, LifecycleTestStep::BindTwice };
     SW_EXPECT_FALSE( game.initialize( nullptr ) );
     SW_EXPECT_TRUE( ProcessGameState::capture().equals( before ) );
 }
@@ -242,10 +242,10 @@ SW_TEST_CASE( GameInstanceTest, ScopedSubsystemConflictFailsInitialize )
 SW_TEST_CASE( GameInstanceTest, SecondInstanceIsRejectedWhileOneRuns )
 {
     SW_EXPECT_LOG( "GameInstance.SecondGameInstance" );
-    const ProcessGameState before = ProcessGameState::capture();
-    MemoryLocalDatabase    database;
-    LifecycleTestGame      first{ database, LifecycleTestStep::Succeed };
-    LifecycleTestGame      second{ database, LifecycleTestStep::Succeed };
+    const ProcessGameState  before = ProcessGameState::capture();
+    MemoryLocalStoreBackend database;
+    LifecycleTestGame       first{ database, LifecycleTestStep::Succeed };
+    LifecycleTestGame       second{ database, LifecycleTestStep::Succeed };
     SW_REQUIRE_TRUE( first.initialize( nullptr ) );
     SW_EXPECT_FALSE( second.initialize( nullptr ) );
     SW_EXPECT_EQUAL( 0u, second.getInitializeCount() );
@@ -266,7 +266,7 @@ SW_TEST_CASE( GameInstanceTest, InstanceChainsOntoTheCurrentScopeAndRestoresIt )
     SubsystemScope       testScope;
     SW_REQUIRE_TRUE( testScope.bind( &outerService ) );
     const game::ScopedGameScope scoped{ testScope };
-    MemoryLocalDatabase         database;
+    MemoryLocalStoreBackend     database;
     LifecycleTestGame           game{ database, LifecycleTestStep::FailSettings }; // 범위를 걸기 전에 멈추는 길 — 테스트 범위가 그대로여야 한다
     SW_EXPECT_LOG( "GameInstance.GameInstanceCannotStart4" );
     SW_EXPECT_LOG( "GameInstance.GameInstanceRolledBack" );
@@ -285,8 +285,8 @@ SW_TEST_CASE( GameInstanceTest, InstanceChainsOntoTheCurrentScopeAndRestoresIt )
  */
 SW_TEST_CASE( GameInstanceTest, ContentIsPreparedBeforeDeclaredData )
 {
-    MemoryLocalDatabase database;
-    LifecycleTestGame   game{ database, LifecycleTestStep::Succeed };
+    MemoryLocalStoreBackend database;
+    LifecycleTestGame       game{ database, LifecycleTestStep::Succeed };
     SW_REQUIRE_TRUE( game.initialize( nullptr ) );
     SW_EXPECT_EQUAL( 1u, game.getPrepareOrder() );
     SW_EXPECT_EQUAL( 2u, game.getInitializeOrder() );
@@ -318,7 +318,7 @@ SW_TEST_CASE( GameInstanceTest, NetSessionRefusesLocalRestoreAndClientSaves )
     SW_REQUIRE_TRUE( testScope.bind( &timeScale ) );
     SW_REQUIRE_TRUE( testScope.bind( &session ) );
     const game::ScopedGameScope scoped{ testScope };
-    MemoryLocalDatabase         database;
+    MemoryLocalStoreBackend     database;
     LifecycleTestGame           game{ database, LifecycleTestStep::Succeed };
     SW_REQUIRE_TRUE( game.initialize( nullptr ) );
     // 답하지 않는 서버 자리 — 게임이 메시지를 등록하지 않은 세션이 답하면 와이어 판이 달라 거절된다(이 테스트의 일이 아니다).
@@ -358,7 +358,7 @@ SW_TEST_CASE( GameInstanceTest, UpdateOrder )
     SW_REQUIRE_TRUE( testScope.bind<IGameDevPartFactory>( &devFactory ) );
     SW_REQUIRE_TRUE( testScope.bind( &timeScale ) );
     const game::ScopedGameScope scoped{ testScope };
-    MemoryLocalDatabase         database;
+    MemoryLocalStoreBackend     database;
     LifecycleTestGame           game{ database, LifecycleTestStep::Succeed };
     game.recordUpdateOrder( &order );
     SW_REQUIRE_TRUE( game.initialize( nullptr ) );

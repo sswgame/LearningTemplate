@@ -15,8 +15,8 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Runtime/Character/Camera/CameraBlend.h"
 #include "GameFramework/Runtime/Character/Camera/CameraPose.h"
+#include "GameFramework/Runtime/Character/Camera/CameraPoseBlender.h"
 #include "GameFramework/Runtime/Character/Camera/CameraShake.h"
 
 namespace sw

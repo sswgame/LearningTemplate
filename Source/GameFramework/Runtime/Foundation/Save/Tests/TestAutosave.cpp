@@ -18,16 +18,16 @@ namespace
      */
     struct FakeGame
     {
-        sw::vector<sw::string>                        _listSavedState{};
-        sw::string                                    _loadedState{};
-        sw::SaveLock                                  _saveLock{};
-        sw::Subscription                              _brokenRestoreBlock{};
-        sw::vector<uint8>                             _deferredBytes{};
-        sw::Subscription                              _readRequest{};
-        float64                                       _playTime{ 0.0 };
-        sw::AutosaveManager::RestoreCompletedFunction _deferredCompleted{};
-        uint8                                         _bBreakRestore : 1;
-        uint8                                         _bDeferRestore : 1;
+        sw::vector<sw::string>                           _listSavedState{};
+        sw::string                                       _loadedState{};
+        sw::SaveLock                                     _saveLock{};
+        sw::Subscription                                 _brokenRestoreBlock{};
+        sw::vector<uint8>                                _deferredBytes{};
+        sw::Subscription                                 _readRequest{};
+        float64                                          _playTime{ 0.0 };
+        sw::AutosaveController::RestoreCompletedFunction _deferredCompleted{};
+        uint8                                            _bBreakRestore : 1;
+        uint8                                            _bDeferRestore : 1;
 
         FakeGame()
             : _bBreakRestore{ SW_FALSE }
@@ -35,9 +35,9 @@ namespace
         {
         }
 
-        sw::AutosaveManager::SaveDelegate makeSave()
+        sw::AutosaveController::SaveDelegate makeSave()
         {
-            return SW_DELEGATE_LAMBDA( sw::AutosaveManager::SaveDelegate, [this]( sw::vector<uint8>& outBytes, float64& outPlayTime )
+            return SW_DELEGATE_LAMBDA( sw::AutosaveController::SaveDelegate, [this]( sw::vector<uint8>& outBytes, float64& outPlayTime )
             {
                 outPlayTime = _playTime;
                 sw::StringBuilder<sw::constant::buffer::kMax256> stateBuilder;
@@ -49,9 +49,9 @@ namespace
             } );
         }
         /** @brief 게임처럼 슬롯을 읽어 적용하고 완료를 알린다. `_bDeferRestore` 면 씬을 옮기는 게임처럼 바이트를 들고 있다가 `finishDeferredRestore` 가 적용하고 알린다. */
-        sw::AutosaveManager::LoadDelegate makeLoad( sw::GameLocalStore& store )
+        sw::AutosaveController::LoadDelegate makeLoad( sw::GameLocalStore& store )
         {
-            return SW_DELEGATE_LAMBDA( sw::AutosaveManager::LoadDelegate, [this, &store]( const sw::string& slot, const sw::AutosaveManager::RestoreCompletedFunction& onCompleted )
+            return SW_DELEGATE_LAMBDA( sw::AutosaveController::LoadDelegate, [this, &store]( const sw::string& slot, const sw::AutosaveController::RestoreCompletedFunction& onCompleted )
             {
                 _deferredCompleted = onCompleted;
                 _readRequest       = store.submitRead( slot, SW_DELEGATE_METHOD( sw::GameLocalStore::CompletionFunction, &FakeGame::onSlotRead, this ) );
@@ -78,14 +78,14 @@ namespace
         /** @brief 들고 있던 되살리기를 적용하고(씬이 섰다) 완료를 알립니다. @p bSceneOpened 가 false 면 씬이 열리지 않은 실패다. */
         void finishDeferredRestore( bool bSceneOpened )
         {
-            const sw::AutosaveManager::RestoreCompletedFunction onCompleted = _deferredCompleted;
-            _deferredCompleted                                              = sw::AutosaveManager::RestoreCompletedFunction{};
+            const sw::AutosaveController::RestoreCompletedFunction onCompleted = _deferredCompleted;
+            _deferredCompleted                                                 = sw::AutosaveController::RestoreCompletedFunction{};
             onCompleted( bSceneOpened && apply( _deferredBytes ) );
         }
     };
 
     /** @brief 메모리 데이터 위의 게임 로컬 저장소입니다. 같은 데이터에 새로 만들면 "다시 켠 게임" 이다. */
-    sw::unique_ptr<sw::GameLocalStore> makeStore( sw::MemoryLocalDatabase& database )
+    sw::unique_ptr<sw::GameLocalStore> makeStore( sw::MemoryLocalStoreBackend& database )
     {
         return sw::make_unique<sw::GameLocalStore>( sw::make_unique<sw::MemoryLocalStore>( &database, sw::LocalSealContext{} ) );
     }
@@ -99,7 +99,7 @@ namespace
     }
 
     /** @brief 관리자 프레임 하나와 저장소 완료 넘기기 하나 - 게임 인스턴스의 프레임 순서(관리자는 게임 프레임, 저장소는 그 앞)를 흉내 낸다. */
-    void step( sw::AutosaveManager& manager, sw::GameLocalStore& store, float32 deltaTime )
+    void step( sw::AutosaveController& manager, sw::GameLocalStore& store, float32 deltaTime )
     {
         manager.update( deltaTime );
         store.update();
@@ -109,10 +109,10 @@ namespace
 /** @brief [AutosaveTest] 슬롯은 찍을 때의 플레이 시간을 들고, 되돌리면 앞 진행의 체크포인트 · 요청을 잊는다 — 되돌린 뒤 같은 체크포인트에 닿으면 다시 저장한다 */
 SW_TEST_CASE( AutosaveTest, RestoredProgressForgetsThePreviousRun )
 {
-    sw::MemoryLocalDatabase                  database;
+    sw::MemoryLocalStoreBackend              database;
     FakeGame                                 game;
     const sw::unique_ptr<sw::GameLocalStore> store = makeStore( database );
-    sw::AutosaveManager                      manager;
+    sw::AutosaveController                   manager;
     SW_REQUIRE_TRUE( manager.initialize( makeSettings(), *store, game._saveLock, game.makeSave(), game.makeLoad( *store ) ) );
     step( manager, *store, 0.0f );
     game._playTime = 100.0;
@@ -140,12 +140,12 @@ SW_TEST_CASE( AutosaveTest, RestoredProgressForgetsThePreviousRun )
  */
 SW_TEST_CASE( AutosaveTest, RotatesSlotsAndContinuesAcrossRuns )
 {
-    const sw::AutosaveSettings settings = makeSettings();
-    sw::MemoryLocalDatabase    database;
-    FakeGame                   game;
+    const sw::AutosaveSettings  settings = makeSettings();
+    sw::MemoryLocalStoreBackend database;
+    FakeGame                    game;
     {
         sw::unique_ptr<sw::GameLocalStore> store = makeStore( database );
-        sw::AutosaveManager                manager;
+        sw::AutosaveController             manager;
         SW_REQUIRE_TRUE( manager.initialize( settings, *store, game._saveLock, game.makeSave(), game.makeLoad( *store ) ) );
         manager.update( 0.0f ); // 첫 프레임이 슬롯 기록 읽기를 맡긴다
         SW_EXPECT_TRUE( manager.isScanning() );
@@ -164,7 +164,7 @@ SW_TEST_CASE( AutosaveTest, RotatesSlotsAndContinuesAcrossRuns )
     }
 
     sw::unique_ptr<sw::GameLocalStore> store = makeStore( database );
-    sw::AutosaveManager                next;
+    sw::AutosaveController             next;
     SW_REQUIRE_TRUE( next.initialize( settings, *store, game._saveLock, game.makeSave(), game.makeLoad( *store ) ) );
     next.update( 0.0f ); // 첫 프레임이 슬롯 기록 읽기를 맡긴다
     store->update();
@@ -187,10 +187,10 @@ SW_TEST_CASE( AutosaveTest, MergesWaitsAndBlocks )
 {
     sw::AutosaveSettings settings = makeSettings();
     settings._minimumGap          = 30.0f;
-    sw::MemoryLocalDatabase            database;
+    sw::MemoryLocalStoreBackend        database;
     sw::unique_ptr<sw::GameLocalStore> store = makeStore( database );
     FakeGame                           game;
-    sw::AutosaveManager                manager;
+    sw::AutosaveController             manager;
     SW_REQUIRE_TRUE( manager.initialize( settings, *store, game._saveLock, game.makeSave(), game.makeLoad( *store ) ) );
     manager.update( 0.0f ); // 첫 프레임이 슬롯 기록 읽기를 맡긴다
     store->update();
@@ -230,10 +230,10 @@ SW_TEST_CASE( AutosaveTest, RestoresTheLatestCheckpoint )
 {
     sw::AutosaveSettings settings = makeSettings();
     settings._minimumGap          = 0.0f;
-    sw::MemoryLocalDatabase            database;
+    sw::MemoryLocalStoreBackend        database;
     sw::unique_ptr<sw::GameLocalStore> store = makeStore( database );
     FakeGame                           game;
-    sw::AutosaveManager                manager;
+    sw::AutosaveController             manager;
     SW_REQUIRE_TRUE( manager.initialize( settings, *store, game._saveLock, game.makeSave(), game.makeLoad( *store ) ) );
     manager.update( 0.0f ); // 첫 프레임이 슬롯 기록 읽기를 맡긴다
     store->update();
@@ -264,12 +264,12 @@ SW_TEST_CASE( AutosaveTest, FailedWriteLeavesNoStaleSlotInfo )
 {
     SW_EXPECT_LOG( "Autosave.WriteFailed" );
 
-    const sw::AutosaveSettings settings = makeSettings();
-    sw::MemoryLocalDatabase    database;
-    FakeGame                   game;
+    const sw::AutosaveSettings  settings = makeSettings();
+    sw::MemoryLocalStoreBackend database;
+    FakeGame                    game;
     {
         sw::unique_ptr<sw::GameLocalStore> store = makeStore( database );
-        sw::AutosaveManager                manager;
+        sw::AutosaveController             manager;
         SW_REQUIRE_TRUE( manager.initialize( settings, *store, game._saveLock, game.makeSave(), game.makeLoad( *store ) ) );
         manager.update( 0.0f ); // 첫 프레임이 슬롯 기록 읽기를 맡긴다
         store->update();
@@ -281,7 +281,7 @@ SW_TEST_CASE( AutosaveTest, FailedWriteLeavesNoStaleSlotInfo )
         SW_EXPECT_TRUE( manager.findLatestSlot() == nullptr );
     }
     sw::unique_ptr<sw::GameLocalStore> store = makeStore( database );
-    sw::AutosaveManager                next;
+    sw::AutosaveController             next;
     SW_REQUIRE_TRUE( next.initialize( settings, *store, game._saveLock, game.makeSave(), game.makeLoad( *store ) ) );
     next.update( 0.0f ); // 첫 프레임이 슬롯 기록 읽기를 맡긴다
     store->update();
@@ -297,10 +297,10 @@ SW_TEST_CASE( AutosaveTest, FailedRestoreBlocksSaving )
     sw::AutosaveSettings settings = makeSettings();
     settings._interval            = 10.0f;
     settings._minimumGap          = 0.0f;
-    sw::MemoryLocalDatabase            database;
+    sw::MemoryLocalStoreBackend        database;
     sw::unique_ptr<sw::GameLocalStore> store = makeStore( database );
     FakeGame                           game;
-    sw::AutosaveManager                manager;
+    sw::AutosaveController             manager;
     SW_REQUIRE_TRUE( manager.initialize( settings, *store, game._saveLock, game.makeSave(), game.makeLoad( *store ) ) );
     manager.update( 0.0f ); // 첫 프레임이 슬롯 기록 읽기를 맡긴다
     store->update();
@@ -341,10 +341,10 @@ SW_TEST_CASE( AutosaveTest, DeferredRestoreMarksCheckpointOnCompletion )
 {
     sw::AutosaveSettings settings = makeSettings();
     settings._minimumGap          = 0.0f;
-    sw::MemoryLocalDatabase            database;
+    sw::MemoryLocalStoreBackend        database;
     sw::unique_ptr<sw::GameLocalStore> store = makeStore( database );
     FakeGame                           game;
-    sw::AutosaveManager                manager;
+    sw::AutosaveController             manager;
     SW_REQUIRE_TRUE( manager.initialize( settings, *store, game._saveLock, game.makeSave(), game.makeLoad( *store ) ) );
     manager.update( 0.0f ); // 첫 프레임이 슬롯 기록 읽기를 맡긴다
     store->update();

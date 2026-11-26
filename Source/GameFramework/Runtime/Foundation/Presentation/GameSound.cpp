@@ -2,7 +2,7 @@
 
 #include "GameFramework/Runtime/Foundation/Presentation/GameSound.h"
 
-#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
+#include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
 
 namespace sw
 {

@@ -30,12 +30,12 @@
 #include "GameFramework/Runtime/Character/Control/Controller/RemoteControllerComponent.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Runtime/Foundation/Minigame/MinigameFlow.h"
-#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
+#include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/Movement/InterpToMovementComponent.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/Movement/TickedFloorStep.h"
 #include "GameFramework/Runtime/Gameplay/Vehicle/VehicleSeatComponent.h"
 
-#include "Games/Playground/Hub/HubWorldComponent.h"
+#include "Games/Playground/Hub/HubSimulationComponent.h"
 
 namespace sw
 {
@@ -157,9 +157,9 @@ namespace sw
 
     void HubPawnReplicationComponent::runNetFrame( GameObjectManager& manager )
     {
-        const float32            seconds = consumeRealSeconds();
-        const NetLinkValue*      pLink   = SceneNetLink::findBoundFor( *this );
-        const HubWorldComponent* pHub    = getOwner() != nullptr ? getOwner()->getComponent<HubWorldComponent>() : nullptr;
+        const float32                 seconds = consumeRealSeconds();
+        const NetLinkValue*           pLink   = SceneNetLink::findBoundFor( *this );
+        const HubSimulationComponent* pHub    = getOwner() != nullptr ? getOwner()->getComponent<HubSimulationComponent>() : nullptr;
         if ( pLink == nullptr || pHub == nullptr )
         {
             stopRole( manager );
@@ -179,7 +179,7 @@ namespace sw
         _pFloorStep = nullptr;
     }
 
-    void HubPawnReplicationComponent::startRole( const NetLinkValue& link, const HubWorldComponent& hub )
+    void HubPawnReplicationComponent::startRole( const NetLinkValue& link, const HubSimulationComponent& hub )
     {
         const bool bServer   = link._role == NetLinkRole::Server;
         const bool bHubReady = bServer ? hub.findServer() != nullptr : hub.getClient().isActive();
@@ -290,7 +290,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 서버
     // ------------------------------------------------------------------------------
-    void HubPawnReplicationComponent::runServerFrame( GameObjectManager& manager, const HubWorldComponent& hub, const NetLinkValue& link, float32 seconds )
+    void HubPawnReplicationComponent::runServerFrame( GameObjectManager& manager, const HubSimulationComponent& hub, const NetLinkValue& link, float32 seconds )
     {
         if ( hub.findServer() == nullptr )
             return;
@@ -314,7 +314,7 @@ namespace sw
         }
     }
 
-    void HubPawnReplicationComponent::syncServerPawnList( GameObjectManager& manager, const HubWorldComponent& hub )
+    void HubPawnReplicationComponent::syncServerPawnList( GameObjectManager& manager, const HubSimulationComponent& hub )
     {
         hub.findServer()->collectAvatars( _listSession );
         for ( ServerPawn& pawn : _listServerPawn )
@@ -346,7 +346,7 @@ namespace sw
         }
     }
 
-    void HubPawnReplicationComponent::spawnServerPawn( GameObjectManager& manager, const HubWorldComponent& hub, const HubAvatarSession& session )
+    void HubPawnReplicationComponent::spawnServerPawn( GameObjectManager& manager, const HubSimulationComponent& hub, const HubAvatarSession& session )
     {
         ServerPawn pawn;
         pawn._acceptedPosition     = session._position;
@@ -410,7 +410,7 @@ namespace sw
         }
     }
 
-    void HubPawnReplicationComponent::stepServerPawn( GameObjectManager& manager, const HubWorldComponent& hub, ServerPawn& pawn )
+    void HubPawnReplicationComponent::stepServerPawn( GameObjectManager& manager, const HubSimulationComponent& hub, ServerPawn& pawn )
     {
         using Internal      = HubPawnReplicationComponentInternal;
         GameObject* pObject = manager.resolveGameObject( pawn._object );
@@ -510,7 +510,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 클라이언트
     // ------------------------------------------------------------------------------
-    void HubPawnReplicationComponent::runClientFrame( GameObjectManager& manager, const HubWorldComponent& hub, float32 seconds )
+    void HubPawnReplicationComponent::runClientFrame( GameObjectManager& manager, const HubSimulationComponent& hub, float32 seconds )
     {
         const uint32 avatarID = hub.getClient().getAgent()._avatarID;
         if ( avatarID == 0 )
@@ -571,7 +571,7 @@ namespace sw
         return true;
     }
 
-    void HubPawnReplicationComponent::stepClient( GameObjectManager& manager, const HubWorldComponent& hub, GameObject& pawnObject )
+    void HubPawnReplicationComponent::stepClient( GameObjectManager& manager, const HubSimulationComponent& hub, GameObject& pawnObject )
     {
         using Internal = HubPawnReplicationComponentInternal;
         ++_tick;
@@ -804,7 +804,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 공용
     // ------------------------------------------------------------------------------
-    HubPawnState HubPawnReplicationComponent::simulateTick( GameObjectManager& manager, const HubWorldComponent& hub, GameObject& pawnObject, const HubPawnState& state, const HubPawnInput& input,
+    HubPawnState HubPawnReplicationComponent::simulateTick( GameObjectManager& manager, const HubSimulationComponent& hub, GameObject& pawnObject, const HubPawnState& state, const HubPawnInput& input,
                                                             uint32 avatarID, CharacterMotionPass pass ) const
     {
         const WorldOrigin&    origin    = manager.getWorldOrigin();

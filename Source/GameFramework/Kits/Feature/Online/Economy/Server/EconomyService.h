@@ -38,8 +38,8 @@
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/AccountPresenceTracker.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/IBalanceChangedListener.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/OnlineProtocolService.h"
-#include "GameFramework/Runtime/Online/Schedule/Server/ServicePeriodicJob.h"
-#include "GameFramework/Runtime/Online/Schedule/Server/ServiceScheduler.h"
+#include "GameFramework/Runtime/Online/Scheduler/Server/ServicePeriodicJob.h"
+#include "GameFramework/Runtime/Online/Scheduler/Server/ServiceScheduler.h"
 #include "GameFramework/Runtime/Online/Service/Server/OnlineServiceHost.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
 

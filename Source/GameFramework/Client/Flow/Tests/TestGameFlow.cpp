@@ -13,14 +13,14 @@
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/UI/Screen/UIGlobalCommandRegistry.h"
 
-#include "GameFramework/Client/Flow/GameInstanceClient.h"
+#include "GameFramework/Client/Flow/GameSessionCommands.h"
 #include "GameFramework/Client/Flow/LoadingScreenController.h"
+#include "GameFramework/Runtime/Foundation/Event/GameEvents.h"
 #include "GameFramework/Runtime/Foundation/Flow/GameSceneFlow.h"
-#include "GameFramework/Runtime/Foundation/Flow/ScreenTransitionManager.h"
+#include "GameFramework/Runtime/Foundation/Flow/ScreenTransitionController.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameSettings.h"
 #include "GameFramework/Runtime/Foundation/Save/SaveLock.h"
-#include "GameFramework/Runtime/Foundation/Service/GameEvents.h"
-#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
+#include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
 
 using namespace sw;
 
@@ -54,7 +54,7 @@ SW_TEST_CASE( GameFlowTest, LoadingScreenWithoutUISystem )
     SW_EXPECT_FALSE( controller.isShowing() );
     SW_EXPECT_NULL( controller.findLoadingScreen() );
 
-    ScreenTransitionManager transition;
+    ScreenTransitionController transition;
     controller.update( 0.5f, false, sw::optional<float32>{ 0.5f }, transition );
     SW_EXPECT_NEAR( 0.0f, controller.getShownSeconds(), 1.0e-6f );
     SW_EXPECT_NEAR( 0.0f, transition.fade().getOverlayAlpha(), 1.0e-6f );
@@ -130,9 +130,9 @@ SW_TEST_CASE( GameFlowTest, SavingIsBlockedOnTheTitleScene )
     StringBuilder<constant::buffer::kMax512> settingsText;
     settingsText.appendFormat( "<GameSettings><startMap>%#</startMap><titleScene>%#</titleScene><defaultLanguage>ko_kr</defaultLanguage></GameSettings>", mapPath, titlePath );
     SW_REQUIRE_TRUE( settings.loadFromXMLText( settingsText.view(), "GameFlowTest" ) );
-    ScreenTransitionManager transition;
-    SaveLock                saveLock;
-    GameSceneFlow           flow( settings, transition, nullptr, saveLock );
+    ScreenTransitionController transition;
+    SaveLock                   saveLock;
+    GameSceneFlow              flow( settings, transition, nullptr, saveLock );
     SW_REQUIRE_TRUE( flow.initializeSubsystem() == SubsystemInitResult::Succeeded );
 
     const auto travel = [&]()
@@ -170,11 +170,11 @@ SW_TEST_CASE( GameFlowTest, SavingIsBlockedOnTheTitleScene )
 /** @brief [GameFlowTest] 타이틀 씬이 없는 게임은 타이틀 요청이 false 이고 "타이틀로" 명령을 걸지 않는다("시작" 은 건다) */
 SW_TEST_CASE( GameFlowTest, GameWithoutTitleScene )
 {
-    GameSettings            settings;
-    ScreenTransitionManager transition;
-    LoadingScreenController loading;
-    SaveLock                saveLock;
-    GameSceneFlow           flow( settings, transition, &loading.getLoadingScreen(), saveLock );
+    GameSettings               settings;
+    ScreenTransitionController transition;
+    LoadingScreenController    loading;
+    SaveLock                   saveLock;
+    GameSceneFlow              flow( settings, transition, &loading.getLoadingScreen(), saveLock );
     SW_EXPECT_FALSE( flow.requestTitleScene() );
 
     UIGlobalCommandRegistry commands;
@@ -205,10 +205,10 @@ SW_TEST_CASE( GameFlowTest, TitleEndsTheGameBeforeItRequestsTheScene )
     settingsText.appendFormat( "<GameSettings><startMap>%#</startMap><titleScene>%#</titleScene><defaultLanguage>ko_kr</defaultLanguage></GameSettings>",
                                test::ScopedScratchDomain::makeID( "title.scene.xml" ).str(), test::ScopedScratchDomain::makeID( "title.scene.xml" ).str() );
     SW_REQUIRE_TRUE( settings.loadFromXMLText( settingsText.view(), "GameFlowTest" ) );
-    ScreenTransitionManager transition;
-    LoadingScreenController loading;
-    SaveLock                saveLock;
-    GameSceneFlow           flow( settings, transition, &loading.getLoadingScreen(), saveLock );
+    ScreenTransitionController transition;
+    LoadingScreenController    loading;
+    SaveLock                   saveLock;
+    GameSceneFlow              flow( settings, transition, &loading.getLoadingScreen(), saveLock );
 
     EventDispatcher& dispatcher = engine::getSubsystem<EventDispatcher>();
     dispatcher.push( SceneLoadCompletedEvent{} ); // 하던 게임이 남긴 것

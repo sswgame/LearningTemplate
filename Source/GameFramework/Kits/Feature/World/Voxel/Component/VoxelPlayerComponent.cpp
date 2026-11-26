@@ -16,13 +16,13 @@
 #include "GameFramework/Kits/Feature/World/Voxel/Catalog/VoxelBlock.h"
 #include "GameFramework/Kits/Feature/World/Voxel/Component/VoxelAutoPlayControllerComponent.h"
 #include "GameFramework/Kits/Feature/World/Voxel/Component/VoxelGameModeComponent.h"
+#include "GameFramework/Runtime/Character/Camera/FirstPersonCameraComponent.h"
 #include "GameFramework/Runtime/Character/Control/Controller/PlayerControllerComponent.h"
-#include "GameFramework/Runtime/Character/Control/FirstPersonCameraComponent.h"
 #include "GameFramework/Runtime/Character/Control/Intent/ControlIntent.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Runtime/Foundation/Presentation/GameSound.h"
 #include "GameFramework/Runtime/Foundation/Save/StatefulComponentRegistrar.h"
-#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
+#include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
 
 namespace sw
 {

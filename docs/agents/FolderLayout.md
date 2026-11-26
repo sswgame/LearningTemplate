@@ -61,6 +61,7 @@ CMake(`cmake/` — 폴더 하나에 파일 종류 하나): `Modules/<Build·Envi
 | `<기능>/Component` 에는 `*Component` 만(린트 `folder-layout` 강제) | 씬 서브시스템 · 질의는 `<기능>/Scene` |
 | 키트 폴더는 평평하게: 장르 키트는 카탈로그 · 규칙 파일(엔진 시계 · 렌더를 모른다)을 키트 바로 아래, 하위 폴더는 `Component/`(디렉터 · 컴포넌트) · `Client/`(뷰 · 입력 · HUD — 따로 짓는 `GF_Client_<X>`, 디렉터의 명령 · 읽기 API 만 쓴다) · `Editor/` · `Tests/` 와 하위 게임만. 뼈대는 `new-kit`. 온라인 키트는 `Runtime/` · `Server/` 바로 아래(뼈대 `new-online-kit`) | 키트는 파일 10 ~ 20 개 |
 | 개발 기능은 `Source/DevTools/`. `Dev/` 폴더는 `Config/Rules/Layers/DevFolders.json` 에 까닭과 함께 적은 자리만(configure 강제) | DevTools 는 GF · 게임 · ModuleManager · App 을 못 본다 — 엔진이 확장점을 내고 DevTools 가 붙는다 |
+| 개발 전용 소스(`GameFramework/Developer` · 키트 `Dev/`)는 등록하는 것으로 이름 짓는다: 개발 명령 `<X>DevCommands`, 자동화 감시 값 `<X>Watches`, HUD 섹션 `<X>DebugSections`, 시나리오 단계 `<X>AutomationSteps`, 캡처 · 끝내기 차단 `<X>CaptureBlock` · `<X>FinishBlock` | 파일 이름으로 그 기능의 명령 · 감시를 찾는다 |
 | 실행 중 바꾸기 · 핫스왑은 개발, 기동 때 고르기는 제품 | 언리얼도 RHI · 모듈 교체는 재시작 |
 | 층 경계는 실제 순환 · 독립 배포 요구가 확인된 층만 별도 링크 타깃으로 나눈다 | 타깃 수만 는다 |
 | 옮기지 않는 것: `Core/Foundation/BitFlagTrait.h`(생성 헤더가 include 하는 잎), `Engine/UI/Screen/UIScreenSwitch`(확장점 자체), `Core/Diagnostics/SubsystemTimingReport` · `Engine/Profiling/FrameProfileReport`(보고 값 형식) | |

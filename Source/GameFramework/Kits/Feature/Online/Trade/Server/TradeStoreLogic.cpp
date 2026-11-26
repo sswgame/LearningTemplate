@@ -10,8 +10,8 @@
 #include "GameFramework/Runtime/Online/Audit/Server/ServiceAuditLog.h"
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceCommitRunner.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordCodec.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceRecordReader.h"
-#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordTable.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceTTLRule.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
@@ -116,7 +116,7 @@ namespace sw
 namespace sw
 {
     TradeStoreLogic::TradeStoreLogic( IServiceStoreConnection& connection, const ITradePolicy& policy, const ILedgerPolicy* pLedgerPolicy, uint64 serverID,
-                                      const TradeServiceConfig& settings )
+                                      const TradeLogicConfig& settings )
         : _connection{ connection }
         , _policy{ policy }
         , _pLedgerPolicy{ pLedgerPolicy }
@@ -161,7 +161,7 @@ namespace sw
         return s_table;
     }
 
-    bool TradeStoreLogic::isIdleExpired( const TradeSnapshot& trade, const TradeServiceConfig& settings, int64 nowMs )
+    bool TradeStoreLogic::isIdleExpired( const TradeSnapshot& trade, const TradeLogicConfig& settings, int64 nowMs )
     {
         if ( trade.isClosed() )
             return false;

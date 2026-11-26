@@ -2,270 +2,237 @@
 
 #include "GameFramework/Kits/Feature/Online/Trade/Server/TradeService.h"
 
-#include "Core/Hash/HashUtil.h"
+#include "Core/Serialization/BitStream.h"
 
-#include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
-
-namespace sw
-{
-    /** @brief 거래 요청 하나의 입력입니다. 저장소 스레드가 읽는 값 복사입니다. */
-    struct TradeCallInput
-    {
-        TradeCommand     _command{};
-        uint64           _tradeID{ 0 };
-        AccountID        _fromID{ kInvalidAccountID };
-        AccountID        _toID{ kInvalidAccountID };
-        uint64           _seed{ 0 };
-        uint64           _requestTag{ 0 };
-        UnixMilliseconds _nowMs{ 0 };
-        TradeOperation   _operation{ TradeOperation::Invite };
-    };
-
-    namespace
-    {
-        /** @brief 거래 일이 완료로 넘기는 값입니다. */
-        struct TradeCallResult
-        {
-            TradeCompletion       _completion{};
-            vector<TradeSnapshot> _listChanged{};
-        };
-
-        /** @brief 저장소 스레드에서 도는 거래 일입니다. 서비스 멤버를 만지지 않고 인자로 받은 값만 씁니다. */
-        struct TradeStoreRun
-        {
-            static TradeCallResult runCall( IServiceStoreConnection& connection, const ITradePolicy& policy, const ILedgerPolicy* pLedgerPolicy, uint64 serverID,
-                                            const TradeServiceConfig& settings, const TradeCallInput& input )
-            {
-                TradeCallResult  done;
-                TradeCompletion& completion = done._completion;
-                completion._operation       = input._operation;
-                completion._requestTag      = input._requestTag;
-                const int64     nowMs       = input._nowMs.count();
-                TradeStoreLogic logic{ connection, policy, pLedgerPolicy, serverID, settings };
-                switch ( input._operation )
-                {
-                    case TradeOperation::Invite:
-                    {
-                        completion._result = logic.invite( input._fromID, input._toID, input._seed, nowMs, completion._snapshot );
-                        break;
-                    }
-                    case TradeOperation::Expire:
-                    {
-                        completion._result = logic.closeIfIdle( input._tradeID, nowMs, completion._snapshot );
-                        break;
-                    }
-                    case TradeOperation::Leave:
-                    {
-                        completion._result = logic.closeForAccount( input._fromID, input._command._reason, nowMs, completion._snapshot );
-                        break;
-                    }
-                    case TradeOperation::Recover:
-                    {
-                        completion._result = logic.recoverOwned( nowMs, done._listChanged );
-                        break;
-                    }
-                    case TradeOperation::Respond:
-                    case TradeOperation::SetOffer:
-                    case TradeOperation::Lock:
-                    case TradeOperation::Confirm:
-                    case TradeOperation::Cancel:
-                    {
-                        completion._result = logic.applyCommand( input._tradeID, input._command, nowMs, completion._snapshot, completion._ledger );
-                        break;
-                    }
-                }
-                const bool bChanged = input._operation != TradeOperation::Recover && completion._snapshot._tradeID != 0 &&
-                                      ( completion._result == TradeResult::Ok || completion._snapshot.isClosed() );
-                if ( bChanged )
-                    done._listChanged.push_back( completion._snapshot );
-                return done;
-            }
-        };
-    } // namespace
-} // namespace sw
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/OnlinePushRelay.h"
+#include "GameFramework/Runtime/Online/Config/Server/RemoteConfig.h"
 
 namespace sw
 {
     TradeService::TradeService()
-        : _completionBuffer{}
-        , _updateBuffer{}
-        , _mapTradeToDeadline{}
-        , _settings{}
-        , _pPolicy{ nullptr }
-        , _pLedgerPolicy{ nullptr }
-        , _serverID{ 0 }
-        , _nextSeed{ 0 }
-        , _recoverAtMs{ 0 }
-        , _store{}
+        : _mapCallToAccount{}
+        , _mapTradeToLedger{}
+        , _listCompletionScratch{}
+        , _listUpdateScratch{}
+        , _listFound{}
+        , _listFoundScratch{}
+        , _pTradeLogic{ nullptr }
+        , _pDirectory{ nullptr }
+        , _pBalanceNotification{ nullptr }
+        , _presenceFinds{}
+        , _nowMs{ 0 }
     {
+        setReady( false );
     }
 
-    void TradeService::initialize( ServiceStore& store, const ITradePolicy* pPolicy, const ILedgerPolicy* pLedgerPolicy, uint64 serverID, const TradeServiceConfig& settings )
+    void TradeService::initialize( TradeLogic* pTradeLogic, const IAccountDirectory* pDirectory, AccountPresence* pPresence, MetricRegistry* pMetricRegistry )
     {
-        SW_ASSERT( settings._idleTimeoutMs > 0 && settings._inviteTimeoutMs > 0 ); // 거래 키트 설정의 필수 칸이다 — 0 이면 열리자마자 시한이 끝난다
-        _store.bindStore( &store );
-        _pPolicy       = pPolicy;
-        _pLedgerPolicy = pLedgerPolicy;
-        _serverID      = serverID;
-        _settings      = settings;
-        _nextSeed      = HashUtil::fnvStep64( HashUtil::kFNVOffset64, serverID );
+        _pTradeLogic = pTradeLogic;
+        _pDirectory  = pDirectory;
+        _presenceFinds.bind( pPresence );
+        initializeCalls( pMetricRegistry, "trade" );
+        setReady( pTradeLogic != nullptr );
     }
 
     void TradeService::shutdown()
     {
-        _mapTradeToDeadline.clear();
-        _store.bindStore( nullptr );
+        _calls.clear();
+        _presenceFinds.unbind(); // 맡긴 이름 찾기를 회수한다(호출 표를 비운 뒤라 취소 완료의 실패 답은 버려진다). 접속 상태 관리자가 이 객체보다 오래 살아도 이 객체를 부르지 않게 하려는 것이다
+        _mapCallToAccount.clear();
+        _listFound.clear();
+        _pTradeLogic = nullptr;
+        setReady( false );
     }
 
-    void TradeService::recoverOwnedTrades( UnixMilliseconds nowMs )
+    uint16 TradeService::validateRequest( OnlineServiceHost& host, const OnlineCallContext& context )
     {
-        _recoverAtMs       = 0;
-        TradeCallInput job = makeCallInput( TradeOperation::Recover, uint64{ 0 }, nowMs );
-        submitCall( std::move( job ) );
+        _nowMs                      = context._nowMs;
+        const RemoteConfig* pConfig = host.getRemoteConfig();
+        return pConfig != nullptr && pConfig->isFeatureEnabled( kFeatureFlag, context._accountID, true ) == false ? OnlineError::kFeatureDisabled : OnlineError::kOk;
     }
 
-    void TradeService::invite( AccountID fromID, AccountID toID, UnixMilliseconds nowMs, uint64 requestTag )
+    void TradeService::handleCall( OnlineServerCall<TradeMethod::Invite> call, const OnlineCallContext& context, const TradeInviteRequest& request )
     {
-        TradeCallInput job = makeCallInput( TradeOperation::Invite, requestTag, nowMs );
-        job._fromID        = fromID;
-        job._toID          = toID;
-        job._seed          = ++_nextSeed ^ static_cast<uint64>( nowMs.count() );
-        submitCall( std::move( job ) );
-    }
-
-    void TradeService::respondInvite( AccountID responderID, uint64 tradeID, bool bAccept, UnixMilliseconds nowMs, uint64 requestTag )
-    {
-        TradeCommand command;
-        command._actorID = responderID;
-        command._kind    = bAccept ? TradeCommandKind::Accept : TradeCommandKind::Decline;
-        submitCommand( TradeOperation::Respond, tradeID, command, nowMs, requestTag );
-    }
-
-    void TradeService::setOffer( AccountID actorID, uint64 tradeID, const vector<TradeLeg>& listLeg, UnixMilliseconds nowMs, uint64 requestTag )
-    {
-        TradeCommand command;
-        command._actorID = actorID;
-        command._kind    = TradeCommandKind::SetOffer;
-        command._listLeg = listLeg;
-        submitCommand( TradeOperation::SetOffer, tradeID, command, nowMs, requestTag );
-    }
-
-    void TradeService::lock( AccountID actorID, uint64 tradeID, UnixMilliseconds nowMs, uint64 requestTag )
-    {
-        TradeCommand command;
-        command._actorID = actorID;
-        command._kind    = TradeCommandKind::Lock;
-        submitCommand( TradeOperation::Lock, tradeID, command, nowMs, requestTag );
-    }
-
-    void TradeService::confirm( AccountID actorID, uint64 tradeID, uint32 seenOwnRevision, uint32 seenPeerRevision, UnixMilliseconds nowMs, uint64 requestTag )
-    {
-        TradeCommand command;
-        command._actorID          = actorID;
-        command._kind             = TradeCommandKind::Confirm;
-        command._seenOwnRevision  = seenOwnRevision;
-        command._seenPeerRevision = seenPeerRevision;
-        submitCommand( TradeOperation::Confirm, tradeID, command, nowMs, requestTag );
-    }
-
-    void TradeService::cancel( AccountID actorID, uint64 tradeID, UnixMilliseconds nowMs, uint64 requestTag )
-    {
-        TradeCommand command;
-        command._actorID = actorID;
-        command._kind    = TradeCommandKind::Cancel;
-        command._reason  = TradeCloseReason::CancelledByParty;
-        submitCommand( TradeOperation::Cancel, tradeID, command, nowMs, requestTag );
-    }
-
-    void TradeService::closeForAccount( AccountID accountID, TradeCloseReason reason, UnixMilliseconds nowMs )
-    {
-        TradeCallInput job   = makeCallInput( TradeOperation::Leave, uint64{ 0 }, nowMs );
-        job._fromID          = accountID;
-        job._command._reason = reason;
-        submitCall( std::move( job ) );
-    }
-
-    void TradeService::update( UnixMilliseconds nowMs )
-    {
-        if ( _recoverAtMs != 0 && nowMs.count() >= _recoverAtMs )
-            recoverOwnedTrades( nowMs );
-        for ( auto tradeIt = _mapTradeToDeadline.begin(); tradeIt != _mapTradeToDeadline.end(); )
+        AccountIdentity peer;
+        if ( _pDirectory != nullptr && _pDirectory->findIdentityByDisplayName( request._peerDisplayName, peer ) )
         {
-            if ( nowMs.count() < tradeIt->second )
+            _mapCallToAccount[call._callID] = context._accountID;
+            _pTradeLogic->invite( context._accountID, peer._accountID, context._nowMs, call._callID );
+            return;
+        }
+        const PendingLookup lookup{ call._callID, context._accountID, context._nowMs };
+        const bool          bFinding = _presenceFinds.findByDisplayName( request._peerDisplayName, context._accountID, [this, lookup]( const AccountPresenceResult& found, PendingRequestEnd end )
+                 {
+            if ( end == PendingRequestEnd::Cancelled )
+                (void)_calls.fail( lookup._callID, OnlineError::kUnavailable ); // 신청한 계정이 떠났다 — 호출을 표에 남기지 않는다. 닫힌 연결의 답은 호스트가 버린다
+            else
+                _listFound.push_back( FoundLookup{ lookup, found._identity._accountID } );
+        } );
+        if ( bFinding == false )
+            respondImmediately( call._callID, TradeResult::PeerOffline ); // 서버가 한 대이고 이 프로세스에 없다
+    }
+
+    void TradeService::handleCall( OnlineServerCall<TradeMethod::Respond> call, const OnlineCallContext& context, const TradeRespondRequest& request )
+    {
+        _mapCallToAccount[call._callID] = context._accountID;
+        _pTradeLogic->respondInvite( context._accountID, request._tradeID, request._bAccept == SW_TRUE, context._nowMs, call._callID );
+    }
+
+    void TradeService::handleCall( OnlineServerCall<TradeMethod::SetOffer> call, const OnlineCallContext& context, const TradeOfferRequest& request )
+    {
+        _mapCallToAccount[call._callID] = context._accountID;
+        _pTradeLogic->setOffer( context._accountID, request._tradeID, request._listLeg, context._nowMs, call._callID );
+    }
+
+    void TradeService::handleCall( OnlineServerCall<TradeMethod::Lock> call, const OnlineCallContext& context, const TradeIDRequest& request )
+    {
+        _mapCallToAccount[call._callID] = context._accountID;
+        _pTradeLogic->lock( context._accountID, request._tradeID, context._nowMs, call._callID );
+    }
+
+    void TradeService::handleCall( OnlineServerCall<TradeMethod::Confirm> call, const OnlineCallContext& context, const TradeConfirmRequest& request )
+    {
+        _mapCallToAccount[call._callID] = context._accountID;
+        _pTradeLogic->confirm( context._accountID, request._tradeID, request._seenOwnRevision, request._seenPeerRevision, context._nowMs, call._callID );
+    }
+
+    void TradeService::handleCall( OnlineServerCall<TradeMethod::Cancel> call, const OnlineCallContext& context, const TradeIDRequest& request )
+    {
+        _mapCallToAccount[call._callID] = context._accountID;
+        _pTradeLogic->cancel( context._accountID, request._tradeID, context._nowMs, call._callID );
+    }
+
+    void TradeService::onServiceTick( OnlineServiceHost& host, UnixMilliseconds nowMs )
+    {
+        _nowMs = nowMs;
+        if ( _pTradeLogic == nullptr )
+            return;
+        _calls.publishPendingCount();
+        _listFoundScratch.clear();
+        _listFoundScratch.swap( _listFound );
+        for ( const FoundLookup& found : _listFoundScratch )
+        {
+            const PendingLookup& lookup = found._lookup;
+            if ( found._peerID == kInvalidAccountID )
             {
-                ++tradeIt;
+                respondImmediately( lookup._callID, TradeResult::PeerOffline );
                 continue;
             }
-            TradeCallInput job = makeCallInput( TradeOperation::Expire, uint64{ 0 }, nowMs );
-            job._tradeID       = tradeIt->first;
-            tradeIt            = _mapTradeToDeadline.erase( tradeIt ); // 결과가 닫힘이면 그대로 두고, 아직이면 다시 넣는다
-            submitCall( std::move( job ) );
+            _mapCallToAccount[lookup._callID] = lookup._accountID;
+            _pTradeLogic->invite( lookup._accountID, found._peerID, lookup._nowMs, lookup._callID );
+        }
+        _pTradeLogic->update( nowMs );
+        _listCompletionScratch.clear();
+        _pTradeLogic->takeCompletions( _listCompletionScratch );
+        _mapTradeToLedger.clear();
+        for ( const TradeCompletion& completion : _listCompletionScratch )
+        {
+            if ( completion._snapshot._state == TradeState::Settled && completion._ledger._listHolderBalance.empty() == false )
+            {
+                _mapTradeToLedger[completion._snapshot._tradeID] = completion._ledger;
+                notifySettledBalances( completion._ledger );
+            }
+            const auto callIt = _mapCallToAccount.find( completion._requestTag );
+            if ( callIt == _mapCallToAccount.end() )
+                continue;
+            const AccountID accountID = callIt->second;
+            _mapCallToAccount.erase( callIt );
+            TradeReply reply;
+            reply._result   = completion._result._result;
+            reply._snapshot = completion._snapshot;
+            collectBalances( completion._ledger, accountID, reply._listBalance );
+            (void)finishCall( completion._requestTag, completion._result, reply ); // 규칙 밖 값 · 일시 장애는 공통 범주로 끝난다
+        }
+        _listUpdateScratch.clear();
+        _pTradeLogic->pollUpdates( _listUpdateScratch );
+        for ( const TradeSnapshot& snapshot : _listUpdateScratch )
+        {
+            pushSnapshot( host, snapshot );
         }
     }
 
-    TradeCallInput TradeService::makeCallInput( TradeOperation operation, uint64 requestTag, UnixMilliseconds nowMs )
+    void TradeService::onAccountLeft( OnlineServiceHost& host, AccountID accountID )
     {
-        TradeCallInput input;
-        input._operation  = operation;
-        input._requestTag = requestTag;
-        input._nowMs      = nowMs;
-        return input;
-    }
-
-    void TradeService::submitCall( TradeCallInput&& input )
-    {
-        const ITradePolicy*  pPolicy       = _pPolicy;
-        const ILedgerPolicy* pLedgerPolicy = _pLedgerPolicy;
-        const uint64         serverID      = _serverID;
-        _store.submit( [pPolicy, pLedgerPolicy, serverID, settings = _settings, input]( IServiceStoreConnection& connection )
-        { return TradeStoreRun::runCall( connection, *pPolicy, pLedgerPolicy, serverID, settings, input ); },
-                       [this, tradeID = input._tradeID, nowMs = input._nowMs]( TradeCallResult& done )
-        {
-            const bool bRetryLater = OnlineError::isRetryable( done._completion._result._errorCode ); // 저장소에 닿지 못했거나(kUnavailable) 충돌에 거듭 졌다(kBusy)
-            if ( bRetryLater && done._completion._operation == TradeOperation::Expire )
-                retryExpiry( tradeID, nowMs );
-            if ( bRetryLater && done._completion._operation == TradeOperation::Recover )
-                _recoverAtMs = nowMs.count() + TradeConstant::kExpiryRetryMs;
-            applyCompletion( std::move( done._completion ), done._listChanged );
-        } );
-    }
-
-    void TradeService::applyCompletion( TradeCompletion&& completion, const vector<TradeSnapshot>& listChanged )
-    {
-        for ( const TradeSnapshot& changed : listChanged )
-        {
-            trackTrade( changed );
-            _updateBuffer.push( changed );
-        }
-        if ( completion._operation == TradeOperation::Expire && completion._result == TradeResult::WrongState )
-            trackTrade( completion._snapshot ); // 아직 시한 전이다. 그사이 바뀌었으므로 새 시한으로 다시 확인한다
-        if ( completion._requestTag != 0 )
-            _completionBuffer.push( std::move( completion ) );
-    }
-
-    void TradeService::retryExpiry( uint64 tradeID, UnixMilliseconds nowMs )
-    {
-        _mapTradeToDeadline[tradeID] = nowMs.count() + TradeConstant::kExpiryRetryMs; // 잊으면 당사자가 시한을 알림으로 받지 못한다. 저장소가 돌아오면 닫힌다
-    }
-
-    void TradeService::submitCommand( TradeOperation operation, uint64 tradeID, const TradeCommand& command, UnixMilliseconds nowMs, uint64 requestTag )
-    {
-        TradeCallInput job = makeCallInput( operation, requestTag, nowMs );
-        job._tradeID       = tradeID;
-        job._command       = command;
-        submitCall( std::move( job ) );
-    }
-
-    void TradeService::trackTrade( const TradeSnapshot& snapshot )
-    {
-        if ( snapshot._tradeID == 0 )
+        (void)host;
+        if ( _pTradeLogic == nullptr )
             return;
-        if ( snapshot.isClosed() )
+        // 이름 찾기를 기다리던 신청도 함께 거둔다 — 찾기가 뒤에 끝나면 떠난 계정이 신청한 거래가 열려 아무도 닫지 않는다(초대 시한까지 양쪽이 "거래 중" 이다).
+        _presenceFinds.cancelOwnedBy( accountID ); // 답을 기다리는 찾기 — 취소 완료가 호출을 실패로 끝낸다
+        for ( auto foundIt = _listFound.begin(); foundIt != _listFound.end(); )
         {
-            _mapTradeToDeadline.erase( snapshot._tradeID );
-            return;
+            if ( foundIt->_lookup._accountID != accountID )
+            {
+                ++foundIt;
+                continue;
+            }
+            (void)_calls.fail( foundIt->_lookup._callID, OnlineError::kUnavailable ); // 답했지만 아직 잇지 않은 신청도 거둔다
+            foundIt = _listFound.erase( foundIt );
         }
-        const int64 timeoutMs                  = snapshot._state == TradeState::Invited ? _settings._inviteTimeoutMs : _settings._idleTimeoutMs;
-        _mapTradeToDeadline[snapshot._tradeID] = snapshot._updatedMs + timeoutMs;
+        _pTradeLogic->closeForAccount( accountID, TradeCloseReason::PartyLeft, _nowMs );
     }
+
+    void TradeService::pushSnapshot( OnlineServiceHost& host, const TradeSnapshot& snapshot )
+    {
+        uint16 kind = TradeMethod::Update::kKind;
+        if ( snapshot._state == TradeState::Invited )
+            kind = TradeMethod::Invited::kKind;
+        else if ( snapshot.isClosed() )
+            kind = TradeMethod::Closed::kKind;
+        const auto ledgerIt = _mapTradeToLedger.find( snapshot._tradeID );
+        for ( int32 sideIndex = 0; sideIndex < 2; ++sideIndex )
+        {
+            if ( kind == TradeMethod::Invited::kKind && sideIndex == 0 )
+                continue; // 신청한 쪽은 응답으로 알게 된다
+            const AccountID   accountID = snapshot._arrSide[sideIndex]._accountID;
+            TradeNotification push;
+            push._snapshot = snapshot;
+            if ( ledgerIt != _mapTradeToLedger.end() )
+                collectBalances( ledgerIt->second, accountID, push._listBalance );
+            BitWriter body;
+            if ( TradeSessionRecord::MessageTypes::write( body, push ) == false )
+                continue; // write 가 범위 밖 값을 로그에 남겼다
+            if ( host.sendPush( accountID, kind, body ) == false && _presenceFinds.hasPresence() )
+                (void)_presenceFinds.getPresence()->sendRemotePush( accountID, static_cast<TradePushName>( kind - TradeMethod::kFirstPush ), push ); // 상대가 다른 서버에 접속해 있다
+        }
+    }
+
+    void TradeService::respondImmediately( uint64 callID, TradeServiceResult result )
+    {
+        TradeReply reply;
+        reply._result = result._result;
+        (void)finishCall( callID, result, reply );
+    }
+
+    void TradeService::notifySettledBalances( const LedgerTransferResult& ledger )
+    {
+        if ( _pBalanceNotification == nullptr )
+            return;
+        unordered_map<AccountID, vector<LedgerBalance>> mapAccountToBalance;
+        for ( const LedgerTransferResult::HolderBalance& holderBalance : ledger._listHolderBalance )
+        {
+            if ( holderBalance._holder._kind == LedgerHolderKind::Account )
+                mapAccountToBalance[holderBalance._holder._accountID].push_back( holderBalance._balance );
+        }
+        for ( const auto& [accountID, listBalance] : mapAccountToBalance )
+        {
+            _pBalanceNotification->notifyBalancesChanged( accountID, listBalance ); // 지갑은 서버의 잔액 변경 알림으로 맞는다 — 게임이 정산 잔액을 옮기지 않는다
+        }
+    }
+
+    void TradeService::collectBalances( const LedgerTransferResult& ledger, AccountID accountID, vector<TradeBalance>& outListBalance )
+    {
+        for ( const LedgerTransferResult::HolderBalance& holderBalance : ledger._listHolderBalance )
+        {
+            if ( holderBalance._holder._kind == LedgerHolderKind::Account && holderBalance._holder._accountID == accountID )
+                outListBalance.push_back( TradeBalance{ holderBalance._balance._assetID, holderBalance._balance._amount } );
+        }
+    }
+} // namespace sw
+
+namespace sw
+{
+    // 다른 서버에 접속한 계정에게 가는 알림이다. 받는 서버가 이 항목으로 자기 빌드의 번호와 B 를 만든다(OnlinePushRelay.h).
+    const OnlinePushRelayEntry kTradeInvitedRelay{ "Trade.Invited", TradeMethod{}, TradePushName::Invited, TradeSessionRecord::MessageTypes{}, OnlinePushBody<TradeNotification>{} };
+    const OnlinePushRelayEntry kTradeUpdateRelay{ "Trade.Update", TradeMethod{}, TradePushName::Update, TradeSessionRecord::MessageTypes{}, OnlinePushBody<TradeNotification>{} };
+    const OnlinePushRelayEntry kTradeClosedRelay{ "Trade.Closed", TradeMethod{}, TradePushName::Closed, TradeSessionRecord::MessageTypes{}, OnlinePushBody<TradeNotification>{} };
 } // namespace sw

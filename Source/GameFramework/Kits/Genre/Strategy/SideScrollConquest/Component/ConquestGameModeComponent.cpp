@@ -247,7 +247,7 @@ namespace sw
         if ( io.isOk() == false )
             return;
         // 판은 같은 카탈로그로 `initialize` 한 뒤에 읽는다(키트 계약). 꺼내기 표는 대입이 옮기지 않아 이 디렉터의 표가 그대로다.
-        if ( io.valueOpened( _world, [this]( ConquestWorld& world )
+        if ( io.valueOpened( _world, [this]( ConquestSimulation& world )
         { return _pCatalog != nullptr && world.initialize( *_pCatalog ); } ) )
             io.end();
     }

@@ -38,7 +38,7 @@
 #include "GameFramework/Runtime/Foundation/Minigame/MinigameDefinition.h"
 #include "GameFramework/Runtime/Foundation/Minigame/MinigameReplication.h"
 #include "GameFramework/Runtime/Foundation/Minigame/MinigameStack.h"
-#include "GameFramework/Runtime/Foundation/Service/GameInstanceSubsystem.h"
+#include "GameFramework/Runtime/Foundation/Subsystem/GameInstanceSubsystem.h"
 
 namespace sw
 {

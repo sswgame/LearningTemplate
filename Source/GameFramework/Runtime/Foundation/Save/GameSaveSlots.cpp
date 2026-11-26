@@ -11,6 +11,7 @@
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 
+#include "GameFramework/Runtime/Foundation/Event/GameEvents.h"
 #include "GameFramework/Runtime/Foundation/Flow/GameInstance.h"
 #include "GameFramework/Runtime/Foundation/Flow/GameSceneFlow.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameSettings.h"
@@ -20,8 +21,7 @@
 #include "GameFramework/Runtime/Foundation/Save/GameLocalStore.h"
 #include "GameFramework/Runtime/Foundation/Save/GameStateSnapshot.h"
 #include "GameFramework/Runtime/Foundation/Save/SaveLock.h"
-#include "GameFramework/Runtime/Foundation/Service/GameEvents.h"
-#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
+#include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
 
 namespace sw
 {
@@ -303,7 +303,7 @@ namespace sw
         if ( bLoaded )
         {
             ++_counts._loaded;
-            if ( AutosaveManager* const pAutosave = game::findSubsystem<AutosaveManager>() )
+            if ( AutosaveController* const pAutosave = game::findSubsystem<AutosaveController>() )
                 pAutosave->resetProgress(); // 앞 진행의 체크포인트 · 요청으로 되돌린 진행을 저장하지 않는다(자동 저장 되돌리기는 아래 완료가 제 슬롯의 것으로 잇는다)
         }
         GameSceneFlow&      sceneFlow = _owner.getSubsystem<GameSceneFlow>();

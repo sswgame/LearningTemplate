@@ -11,11 +11,12 @@
 
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/AccountPresence.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/IBalanceChangedListener.h"
-#include "GameFramework/Kits/Feature/Online/Trade/Server/TradeServer.h"
+#include "GameFramework/Kits/Feature/Online/Trade/Server/TradeLogic.h"
 #include "GameFramework/Kits/Feature/Online/Trade/Server/TradeService.h"
 #include "GameFramework/Kits/Feature/Online/Trade/Server/TradeStateMachine.h"
 #include "GameFramework/Kits/Feature/Online/Trade/Server/TradeStoreLogic.h"
-#include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
+#include "GameFramework/Runtime/Online/Identity/Server/IAccountDirectory.h"
+#include "GameFramework/Runtime/Online/Identity/Server/IAfterDeleteAccount.h"
 #include "GameFramework/Runtime/Online/Ledger/LedgerTypes.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerConfig.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerKit.h"
@@ -142,10 +143,10 @@ namespace sw
             }
 
         private:
-            PrefixTradePolicy  _policy;
-            TradeServiceConfig _serviceSettings; ///< 키트 설정의 시한(필수)
-            TradeService       _service;
-            TradeServer        _server;
+            PrefixTradePolicy _policy;
+            TradeLogicConfig  _serviceSettings; ///< 키트 설정의 시한(필수)
+            TradeLogic        _service;
+            TradeService      _server;
         };
     } // namespace
 } // namespace sw

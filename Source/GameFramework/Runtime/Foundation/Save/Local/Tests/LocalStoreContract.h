@@ -1,7 +1,7 @@
 /**
  * @file LocalStoreContract.h
  * @brief `ILocalStore` 계약 테스트 — 메모리 · 파일(그리고 키트의 SQLite) 저장소가 같은 케이스를 같은 결과로 통과해야 합니다.
- * @details 픽스처는 `ILocalStore& getStore()` · `ILocalSlotStorage& getStorage()`(바닥 — 저장소가 쉬는 동안 봉투를 직접 고친다) ·
+ * @details 픽스처는 `ILocalStore& getStore()` · `ILocalStoreBackend& getStorage()`(바닥 — 저장소가 쉬는 동안 봉투를 직접 고친다) ·
  *          `LocalStoreTestKey& getKey()`(봉인 키, 바꾸면 WrongKey) · `void restart()`(앞을 내리고 같은 데이터로 다시 켠 게임)를 준다.
  *          봉인 케이스는 OpenSSL 암호 제공자를 픽스처가 가진다. 스위트 파일이 아니다 — 저장소마다 `SW_LOCAL_STORE_CONTRACT_SUITE` 한 줄을 둔다.
  */
@@ -14,8 +14,8 @@
 #include "Core/TestFramework/TestWait.h"
 
 #include "GameFramework/Runtime/Foundation/Save/Local/LocalSealContext.h"
-#include "GameFramework/Runtime/Foundation/Save/Local/LocalSlotStorage.h"
 #include "GameFramework/Runtime/Foundation/Save/Local/LocalStore.h"
+#include "GameFramework/Runtime/Foundation/Save/Local/LocalStoreBackend.h"
 #include "GameFramework/Runtime/Online/Security/OpenSSL/OpenSSLNetSecurityProvider.h"
 
 #include <algorithm>

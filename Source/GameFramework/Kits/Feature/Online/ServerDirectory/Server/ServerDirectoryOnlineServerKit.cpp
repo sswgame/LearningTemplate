@@ -3,7 +3,7 @@
 #include "Core/Foundation/Constants.h"
 
 #include "GameFramework/Kits/Feature/Online/ServerDirectory/Server/ServerDirectoryKitConfig.h"
-#include "GameFramework/Kits/Feature/Online/ServerDirectory/Server/ServerDirectoryServer.h"
+#include "GameFramework/Kits/Feature/Online/ServerDirectory/Server/ServerDirectoryLogic.h"
 #include "GameFramework/Kits/Feature/Online/ServerDirectory/Server/ServerDirectoryService.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerConfig.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerKit.h"
@@ -44,9 +44,9 @@ namespace sw
                     .and_then( [&]
                 { return exposeInterface<IServerDirectoryControl>( context, entry, _service ); } )
                     .and_then( [&]
-                { return addTTLRule( context, entry, ServerDirectoryService::makeAnnouncementTTLRule( announcementTTL.getExpireAfterMs() ), announcementTTL ); } )
+                { return addTTLRule( context, entry, ServerDirectoryLogic::makeAnnouncementTTLRule( announcementTTL.getExpireAfterMs() ), announcementTTL ); } )
                     .and_then( [&]
-                { return addTTLRule( context, entry, ServerDirectoryService::makeMaintenanceTTLRule( announcementTTL.getExpireAfterMs() ), announcementTTL ); } );
+                { return addTTLRule( context, entry, ServerDirectoryLogic::makeMaintenanceTTLRule( announcementTTL.getExpireAfterMs() ), announcementTTL ); } );
             }
 
             expected<void> start( OnlineServerKitContext& context, const Dependencies&, const UnorderedDependencies& ) override
@@ -78,9 +78,9 @@ namespace sw
             }
 
         private:
-            ServerDirectoryService       _service;
-            ServerDirectoryServer        _server;
-            ServerDirectoryServiceConfig _settings;
+            ServerDirectoryLogic       _service;
+            ServerDirectoryService     _server;
+            ServerDirectoryLogicConfig _settings;
         };
     } // namespace
 } // namespace sw

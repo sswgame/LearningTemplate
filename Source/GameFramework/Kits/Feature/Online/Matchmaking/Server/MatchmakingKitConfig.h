@@ -12,9 +12,9 @@
 
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Runtime/MatchmakingTypes.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/MatchModeCatalog.h"
-#include "GameFramework/Kits/Feature/Online/Matchmaking/Server/MatchQueueService.h"
+#include "GameFramework/Kits/Feature/Online/Matchmaking/Server/MatchQueueLogic.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/MatchServerAgent.h"
-#include "GameFramework/Kits/Feature/Online/Matchmaking/Server/PartyLobbyService.h"
+#include "GameFramework/Kits/Feature/Online/Matchmaking/Server/PartyLobbyLogic.h"
 
 namespace sw
 {

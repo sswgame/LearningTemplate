@@ -1,11 +1,13 @@
 #include "pch.h"
 
 #include "GameFramework/Kits/Feature/Online/Chat/Server/ChatKitConfig.h"
-#include "GameFramework/Kits/Feature/Online/Chat/Server/ChatServer.h"
+#include "GameFramework/Kits/Feature/Online/Chat/Server/ChatLogic.h"
 #include "GameFramework/Kits/Feature/Online/Chat/Server/ChatService.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/AccountPresence.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/GroupChannelMembership.h"
-#include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
+#include "GameFramework/Runtime/Online/Identity/Server/IAccountBlockList.h"
+#include "GameFramework/Runtime/Online/Identity/Server/IAccountDirectory.h"
+#include "GameFramework/Runtime/Online/Identity/Server/IAfterDeleteAccount.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerConfig.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerKit.h"
 #include "GameFramework/Runtime/Online/Service/Server/OnlineServiceHost.h"
@@ -42,7 +44,7 @@ namespace sw
             {
             }
 
-            void setService( ChatService* pService ) { _pService = pService; }
+            void setService( ChatLogic* pService ) { _pService = pService; }
 
             void addGroupMember( GroupChannelKind kind, uint64 groupID, AccountID accountID, UnixMilliseconds nowMs ) override
             {
@@ -67,7 +69,7 @@ namespace sw
                 return kind == GroupChannelKind::Guild ? ChatChannelID::makeGuild( groupID ) : ChatChannelID::makeParty( groupID );
             }
 
-            ChatService* _pService;
+            ChatLogic* _pService;
         };
 
         /**
@@ -106,9 +108,9 @@ namespace sw
                     .and_then( [&]
                 { return exposeInterface<IGroupChannelMembership>( context, entry, _groupChannels ); } )
                     .and_then( [&]
-                { return addTTLRule( context, entry, ChatService::makeTTLRule( kitConfig._historyTTL.getExpireAfterMs() ), kitConfig._historyTTL ); } )
+                { return addTTLRule( context, entry, ChatLogic::makeTTLRule( kitConfig._historyTTL.getExpireAfterMs() ), kitConfig._historyTTL ); } )
                     .and_then( [&]
-                { return addTTLRule( context, entry, ChatService::makeSenderTTLRule( kitConfig._historyTTL.getExpireAfterMs() ), kitConfig._historyTTL ); } );
+                { return addTTLRule( context, entry, ChatLogic::makeSenderTTLRule( kitConfig._historyTTL.getExpireAfterMs() ), kitConfig._historyTTL ); } );
             }
 
             expected<void> start( OnlineServerKitContext& context, const Dependencies& interfaces, const UnorderedDependencies& ) override
@@ -116,7 +118,7 @@ namespace sw
                 const IAccountBlockList* pBlockList = interfaces.find<const IAccountBlockList>();
                 if ( pBlockList != nullptr )
                     _policy = make_unique<ChatBlockPolicy>( pBlockList );
-                ChatServiceDependencies dependencies;
+                ChatLogicDependencies dependencies;
                 dependencies._pStore     = context._pStore;
                 dependencies._pBus       = context._pBus;
                 dependencies._pPresence  = interfaces.find<AccountPresence>();
@@ -130,7 +132,7 @@ namespace sw
                 return {};
             }
 
-            /** @brief 탈퇴한 계정이 보낸 기록과 그 계정의 귓속말 채널을 지운다(`ChatService::eraseAccount`, 보낸 사람 색인으로 찾는다). */
+            /** @brief 탈퇴한 계정이 보낸 기록과 그 계정의 귓속말 채널을 지운다(`ChatLogic::eraseAccount`, 보낸 사람 색인으로 찾는다). */
             const IAfterDeleteAccount* getAfterDeleteAccount() const override { return &_afterDeleteAccount; }
 
             /** @brief 종료 드레인이 기다릴 진행 중인 일 — 저장소에 맡긴 채팅 기록 · 접속 상태 조회. */
@@ -146,12 +148,12 @@ namespace sw
             }
 
         private:
-            ChatService                                            _service;
-            ChatServer                                             _server;
-            ChatGroupChannels                                      _groupChannels;
-            unique_ptr<ChatBlockPolicy>                            _policy;
-            ChatServiceConfig                                      _settings;
-            AfterDeleteAccountFunction<&ChatService::eraseAccount> _afterDeleteAccount;
+            ChatLogic                                            _service;
+            ChatService                                          _server;
+            ChatGroupChannels                                    _groupChannels;
+            unique_ptr<ChatBlockPolicy>                          _policy;
+            ChatLogicConfig                                      _settings;
+            AfterDeleteAccountFunction<&ChatLogic::eraseAccount> _afterDeleteAccount;
         };
     } // namespace
 } // namespace sw

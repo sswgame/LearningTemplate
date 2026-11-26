@@ -5,16 +5,16 @@
 
 #include "GameFramework/Kits/Feature/Online/Account/Server/AccountDevOptions.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/AccountKitConfig.h"
-#include "GameFramework/Kits/Feature/Online/Account/Server/AccountServer.h"
+#include "GameFramework/Kits/Feature/Online/Account/Server/AccountService.h"
+#include "GameFramework/Kits/Feature/Online/Account/Server/LoginLogic.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/LoginSecretVault.h"
-#include "GameFramework/Kits/Feature/Online/Account/Server/LoginService.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/LoginStoreLogic.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/LoginTicketAuthority.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/LoginTypes.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/NetSecurityLoginCrypto.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/PlatformLoginProviderManager.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/OnlineProviderFile.h"
-#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
+#include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerConfig.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerKit.h"
 #include "GameFramework/Runtime/Online/Service/Server/OnlineServiceHost.h"
@@ -43,8 +43,8 @@ namespace sw
                 , _hasher{ &game::getSubsystem<INetSecurityProvider>() }
                 , _secretVault{}
                 , _platformProviders{}
-                , _loginService{}
-                , _accountServer{}
+                , _loginLogic{}
+                , _accountService{}
                 , _nameIndex{}
                 , _externalLinks{ &_crypto }
             {
@@ -61,7 +61,7 @@ namespace sw
                 const expected<optional<AbsolutePath>> trustFile = entry.resolveFile( kitConfig._platformTrustFile, "_platformTrustFile" );
                 if ( trustFile.has_value() == false )
                     return unexpected( trustFile.error() );
-                LoginServiceConfig loginSettings;
+                LoginLogicConfig loginSettings;
                 static_cast<LoginPolicy&>( loginSettings ) = kitConfig._login;
                 loginSettings._attemptBurst                = kitConfig._attemptBurst;
                 loginSettings._maxConcurrentPasswordHashes = kitConfig._maxConcurrentPasswordHashes;
@@ -92,7 +92,7 @@ namespace sw
                 TaskManager* const pTaskManager = game::findSubsystem<TaskManager>();
                 if ( pTaskManager == nullptr )
                     return unexpected( Error{ ErrorKind::InvalidArgument, "the login service needs the task manager - password hashing does not run on store workers" } );
-                const expected<void> loginReady = _loginService.initialize( *context._pStore, _crypto, _hasher, *pTaskManager, loginSettings, arrTicketKey );
+                const expected<void> loginReady = _loginLogic.initialize( *context._pStore, _crypto, _hasher, *pTaskManager, loginSettings, arrTicketKey );
                 Memory::wipe( arrTicketKey, sizeof( arrTicketKey ) );
                 if ( loginReady.has_value() == false )
                     return loginReady;
@@ -111,10 +111,10 @@ namespace sw
             expected<void> start( OnlineServerKitContext& context, const Dependencies&, const UnorderedDependencies& ) override
             {
                 // 바인딩이 첫 틱에 호스트의 캐시 · 버스를 잇는다(접속 상태 · account.revoke). 탈퇴 정리에는 모든 키트의 훅을 넘긴다 — 모든 키트의 initialize 뒤다.
-                _loginService.setAfterDeleteAccount( context._listAfterDeleteAccount );
+                _loginLogic.setAfterDeleteAccount( context._listAfterDeleteAccount );
                 if ( context._pRouter == nullptr )
                     return unexpected( Error{ ErrorKind::InvalidArgument, "the account kit needs a cache (shared login attempt window and login nonces)" } );
-                _loginService.attachCache( context._pRouter );
+                _loginLogic.attachCache( context._pRouter );
                 return {};
             }
 
@@ -125,7 +125,7 @@ namespace sw
                     return;
                 for ( const LoginCredential& credential : _listSeedAccount )
                 {
-                    _loginService.seedAccount( credential, nowMs, AccountOnlineServerKitInternal::kSeedRequestTag );
+                    _loginLogic.seedAccount( credential, nowMs, AccountOnlineServerKitInternal::kSeedRequestTag );
                 }
                 SW_LOG_INFO_ID( "AccountOnlineServerKit.SeededTestAccountDevelopment", "Seeded %# test account(s) (development setting _listSeedTestAccount)", static_cast<uint32>( _listSeedAccount.size() ) );
                 _listSeedAccount.clear();
@@ -135,15 +135,15 @@ namespace sw
             const IAfterDeleteAccount* getAfterDeleteAccount() const override { return nullptr; }
 
             /** @brief 종료 드레인이 기다릴 진행 중인 일 — 맡긴 로그인 · 가입 · 티켓 요청(외부 확인 대기 포함). */
-            int32 getOpenJobCount() const override { return _loginService.getPendingCount(); }
+            int32 getOpenJobCount() const override { return _loginLogic.getPendingCount(); }
 
             void stop() override {}
 
             void shutdown() override
             {
                 // 저장소를 종료하고 남은 완료를 돌린 뒤다 — 로그인 계약의 종료 순서(저장소 → 완료 → 서비스).
-                _accountServer.shutdown();
-                _loginService.shutdown();
+                _accountService.shutdown();
+                _loginLogic.shutdown();
                 _platformProviders.shutdown(); // 로그인 서비스가 빌려 쓰던 제공자다 — 서비스 뒤에 종료한다
                 _secretVault.shutdown();       // 로그인 서비스가 빌려 쓰던 연동 비밀 도구다
             }
@@ -152,18 +152,18 @@ namespace sw
             /** @brief 바인딩을 호스트에 올리고 신원 · 접속 상태 · 세션 끊기 · 이름 찾기 · 외부 로그인 연동 조회를 문맥에 겁니다. */
             [[nodiscard]] expected<void> exposeAccount( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, const AccountKitConfig& kitConfig )
             {
-                _loginService.setRemoteConfig( context._pRemoteConfig );
-                AccountServerConfig serverSettings;
-                static_cast<AccountServerPolicy&>( serverSettings ) = kitConfig._server;
-                serverSettings._pMetricRegistry                     = context._pMetricRegistry;
-                _accountServer.initialize( &_loginService, serverSettings );
-                return registerServerService( context, entry, &_accountServer )
+                _loginLogic.setRemoteConfig( context._pRemoteConfig );
+                AccountServiceConfig serverSettings;
+                static_cast<AccountServicePolicy&>( serverSettings ) = kitConfig._server;
+                serverSettings._pMetricRegistry                      = context._pMetricRegistry;
+                _accountService.initialize( &_loginLogic, serverSettings );
+                return registerServerService( context, entry, &_accountService )
                     .and_then( [&]
-                { return exposeInterface<IAccountDirectory>( context, entry, _loginService ); } )
+                { return exposeInterface<IAccountDirectory>( context, entry, _loginLogic ); } )
                     .and_then( [&]
-                { return exposeInterface<AccountPresence>( context, entry, *_accountServer.getPresence() ); } )
+                { return exposeInterface<AccountPresence>( context, entry, *_accountService.getPresence() ); } )
                     .and_then( [&]
-                { return exposeInterface<IAccountSessionControl>( context, entry, _accountServer.getSessionControl() ); } )
+                { return exposeInterface<IAccountSessionControl>( context, entry, _accountService.getSessionControl() ); } )
                     .and_then( [&]
                 { return exposeInterface<IAccountNameIndex>( context, entry, _nameIndex ); } )
                     .and_then( [&]
@@ -184,7 +184,7 @@ namespace sw
                 bool bNeedsSecretVault = false;
                 for ( int32 index = 0; index < _platformProviders.getProviderCount(); ++index )
                 {
-                    if ( _loginService.registerPlatformProvider( _platformProviders.getProvider( index ) ) == false )
+                    if ( _loginLogic.registerPlatformProvider( _platformProviders.getProvider( index ) ) == false )
                         return unexpected( Error{ ErrorKind::InvalidArgument, "platform login provider names must be unique and valid" } );
                     bNeedsSecretVault = bNeedsSecretVault || _platformProviders.getProvider( index )->supportsRevocation();
                 }
@@ -198,7 +198,7 @@ namespace sw
                     return result;
                 _secretVault.initialize( &game::getSubsystem<INetSecurityProvider>(), arrVaultKey );
                 Memory::wipe( arrVaultKey, sizeof( arrVaultKey ) );
-                _loginService.setSecretVault( &_secretVault );
+                _loginLogic.setSecretVault( &_secretVault );
                 return {};
             }
 
@@ -207,8 +207,8 @@ namespace sw
             NetSecurityPasswordHasher    _hasher;
             LoginSecretVault             _secretVault;       ///< 로그인 서비스보다 오래 산다(먼저 선언)
             PlatformLoginProviderManager _platformProviders; ///< 로그인 서비스보다 오래 산다(먼저 선언)
-            LoginService                 _loginService;
-            AccountServer                _accountServer;
+            LoginLogic                   _loginLogic;
+            AccountService               _accountService;
             AccountNameIndex             _nameIndex;
             AccountExternalLinks         _externalLinks;
             vector<LoginCredential>      _listSeedAccount; ///< 첫 틱에 가입시킬 개발용 계정(`_listSeedTestAccount`)

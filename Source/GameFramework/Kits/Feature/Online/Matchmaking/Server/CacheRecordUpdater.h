@@ -16,11 +16,11 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Runtime/MatchmakingTypes.h"
-#include "GameFramework/Runtime/Online/Cache/Server/EphemeralStore.h"
+#include "GameFramework/Runtime/Online/Cache/Server/CacheStore.h"
 
 namespace sw
 {
-    class EphemeralStoreRouter;
+    class CacheStoreRouter;
 
     /**
      * @class ICacheRecordMutation
@@ -35,9 +35,9 @@ namespace sw
          * @param bExists 기록이 있었는지 나타냅니다.
          * @param outbErase 참이면 기록을 지웁니다. 비교 후 지우기로 처리합니다.
          */
-        virtual MatchmakingServiceResult mutate( bool bExists, const EphemeralValue& oldValue, EphemeralValue& outNewValue, bool& outbErase ) = 0;
+        virtual MatchmakingServiceResult mutate( bool bExists, const CacheValue& oldValue, CacheValue& outNewValue, bool& outbErase ) = 0;
         /** @brief 끝났을 때 불립니다. 결과와 마지막에 쓴 값을 받으며, 지웠으면 빈 값이고 규칙이 실패했으면 읽은 값입니다. */
-        virtual void onFinished( MatchmakingServiceResult result, const EphemeralValue& finalValue ) = 0;
+        virtual void onFinished( MatchmakingServiceResult result, const CacheValue& finalValue ) = 0;
     };
 } // namespace sw
 
@@ -58,7 +58,7 @@ namespace sw
         CacheRecordUpdater( const CacheRecordUpdater& )            = delete;
         CacheRecordUpdater& operator=( const CacheRecordUpdater& ) = delete;
 
-        void initialize( EphemeralStoreRouter* pRouter );
+        void initialize( CacheStoreRouter* pRouter );
         /** @brief 기다리던 캐시 요청을 취소하고 바꾸기 객체를 버립니다. 소유자가 종료되므로 `onFinished` 는 부르지 않습니다. */
         void shutdown();
 
@@ -71,8 +71,8 @@ namespace sw
         struct Operation
         {
             unique_ptr<ICacheRecordMutation> _mutation{};
-            EphemeralValue                   _oldValue{};
-            EphemeralValue                   _newValue{};
+            CacheValue                       _oldValue{};
+            CacheValue                       _newValue{};
             string                           _key{};
             int64                            _ttlMs{ 0 };
             int32                            _attempt{ 0 };
@@ -81,11 +81,11 @@ namespace sw
         };
 
         void startRead( unique_ptr<Operation> operation );
-        void onReadReply( unique_ptr<Operation> operation, const EphemeralReply& reply );
-        void onWriteReply( unique_ptr<Operation> operation, const EphemeralReply& reply );
+        void onReadReply( unique_ptr<Operation> operation, const CacheReply& reply );
+        void onWriteReply( unique_ptr<Operation> operation, const CacheReply& reply );
 
     private:
-        EphemeralStoreRouter* _pRouter;
-        Subscription          _replyOwner; ///< 라우터 답의 주인 몫(`initialize` 가 열고 `shutdown` 이 놓는다)
+        CacheStoreRouter* _pRouter;
+        Subscription      _replyOwner; ///< 라우터 답의 주인 몫(`initialize` 가 열고 `shutdown` 이 놓는다)
     };
 } // namespace sw

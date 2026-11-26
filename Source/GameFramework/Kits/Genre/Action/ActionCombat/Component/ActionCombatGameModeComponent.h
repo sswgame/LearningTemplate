@@ -1,7 +1,7 @@
 /**
  * @file ActionCombatGameModeComponent.h
- * @brief 액션 컴뱃 키트(`GF_ActionCombat`)의 디렉터 — 홀 → 보스 → 결과 한 판을 진행합니다. 키트의 `ActionRoom` 을 플레이어 입력 명령(`submitPlayerInput`)으로 돌립니다.
- * @details 키트 세 갈래의 가운데다: 규칙(키트 루트의 `ActionRoom`)을 들고 씬과 잇는다. 입력 읽기 · 모습 · HP 바는 클라이언트 모듈
+ * @brief 액션 컴뱃 키트(`GF_ActionCombat`)의 디렉터 — 홀 → 보스 → 결과 한 판을 진행합니다. 키트의 `ActionCombatRoom` 을 플레이어 입력 명령(`submitPlayerInput`)으로 돌립니다.
+ * @details 키트 세 갈래의 가운데다: 규칙(키트 루트의 `ActionCombatRoom`)을 들고 씬과 잇는다. 입력 읽기 · 모습 · HP 바는 클라이언트 모듈
  *          (`GF_Client_ActionCombat` 의 `ActionCombatAvatarComponent`)이 이 디렉터의 명령 · 읽기 API 로만 다룬다 — 전용 서버는 그 모듈을 짓지 않는다.
  *          룸은 전투만 안다. 플레이어 자리 · HP · 판의 단계(홀, 보스 대기, 보스, 승리, 패배)는 이 디렉터가 가진다(언리얼 GameMode 가 폰의 죽음을 받는 자리).
  *          적 배치는 씬 데이터(PROPERTY), 적 수치는 게임 서비스 `MonsterCatalog`(Playground 의 `data/monsters.xml`)이다.
@@ -20,7 +20,7 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Kits/Genre/Action/ActionCombat/ActionRoom.h"
+#include "GameFramework/Kits/Genre/Action/ActionCombat/ActionCombatRoom.h"
 #include "GameFramework/Runtime/Foundation/GameMode/MatchGameModeComponent.h"
 
 namespace sw
@@ -64,15 +64,15 @@ namespace sw
 
         // ---- 읽기(클라이언트 모듈 · 감시 값) ----
         /** @brief 판이 열렸고 승패가 나지 않아 입력 명령을 받으면 true 입니다. */
-        bool              isAcceptingInput() const override;
-        const ActionRoom& getRoom() const { return _room; }
-        ActionCombatPhase getCombatPhase() const { return _phase; }
-        int32             getPhase() const { return static_cast<int32>( _phase ); }
-        int32             getAliveEnemyCount() const { return _room.getAliveEnemyCount(); }
-        int32             getPlayerHP() const { return _playerHP; }
-        int32             getPlayerMaxHP() const { return _playerMaxHP; }
-        const float2&     getPlayerPosition() const { return _playerPosition; }
-        float32           getPlayerX() const { return _playerPosition._x; }
+        bool                    isAcceptingInput() const override;
+        const ActionCombatRoom& getRoom() const { return _room; }
+        ActionCombatPhase       getCombatPhase() const { return _phase; }
+        int32                   getPhase() const { return static_cast<int32>( _phase ); }
+        int32                   getAliveEnemyCount() const { return _room.getAliveEnemyCount(); }
+        int32                   getPlayerHP() const { return _playerHP; }
+        int32                   getPlayerMaxHP() const { return _playerMaxHP; }
+        const float2&           getPlayerPosition() const { return _playerPosition; }
+        float32                 getPlayerX() const { return _playerPosition._x; }
 
     protected:
         [[nodiscard]] bool startGame() override;
@@ -83,11 +83,11 @@ namespace sw
 
     private:
         /** @brief 씬 PROPERTY 의 종 · 자리 목록으로 룸 배치를 만듭니다. 두 목록의 길이가 다르면 오류를 남기고 false 입니다. */
-        [[nodiscard]] bool makeLayout( ActionRoomLayout& outLayout ) const;
+        [[nodiscard]] bool makeLayout( ActionCombatRoomLayout& outLayout ) const;
         /** @brief 받아 둔 입력 명령으로 플레이어를 움직이고 룸 입력을 만듭니다. 모은 누름은 여기서 비운다. */
-        ActionRoomFrameInput consumeInput( float32 deltaTime );
+        ActionCombatRoomFrameInput consumeInput( float32 deltaTime );
         /** @brief 룸 결과(피해 · 클리어)로 단계를 넘깁니다. */
-        void applyResult( const ActionRoomFrameResult& result );
+        void applyResult( const ActionCombatRoomFrameResult& result );
 
     private:
         PROPERTY( Category = "Room", DisplayName = "Hall Monsters", Tooltip = "Monster ids (MonsterCatalog) of the hall fight, one per position" )
@@ -99,7 +99,7 @@ namespace sw
         PROPERTY( Category = "Room", DisplayName = "Boss Positions", Tooltip = "Room-plane positions (m) of the boss monsters" )
         vector<float2> _listBossPosition;
         PROPERTY( Required, Category = "Player", DisplayName = "Room", Tooltip = "Dash, invulnerability, attack cooldown and damage of the player; every value is required" )
-        ActionRoomSettings _roomSettings;
+        ActionCombatRoomSettings _roomSettings;
         PROPERTY( Category = "Player", DisplayName = "Max HP", Min = 1 )
         int32 _playerMaxHP;
         PROPERTY( Category = "Player", DisplayName = "Move Speed", Min = 0.0, Units = "m/s" )
@@ -109,8 +109,8 @@ namespace sw
         PROPERTY( Category = "Result", DisplayName = "Victory Heal", Tooltip = "Result value 'heal' reported on victory (the hub turns it into an effect)", Min = 0 )
         int32 _victoryHeal;
 
-        SW_CODEC_STATE ActionRoom _room;
-        SW_CODEC_STATE Countdown  _bossDelay;
+        SW_CODEC_STATE ActionCombatRoom _room;
+        SW_CODEC_STATE Countdown        _bossDelay;
         PROPERTY( RuntimeState )
         float2                         _playerPosition;
         SW_CODEC_STATE FacingDirection _facing; ///< 손 본문(`serializeGameState`)이 싣는다

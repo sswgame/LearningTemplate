@@ -20,7 +20,7 @@
 #include "GameFramework/Kits/Genre/Strategy/SideScrollConquest/Component/ConquestGameModeComponent.h"
 #include "GameFramework/Kits/Genre/Strategy/SideScrollConquest/ConquestCatalog.h"
 #include "GameFramework/Runtime/Foundation/Presentation/IHUDViewModelBinder.h"
-#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
+#include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
 
 namespace sw
 {
@@ -180,8 +180,8 @@ namespace sw
 
     void ConquestViewComponent::showWorld( GameObjectManager& manager, const ConquestGameModeComponent& director )
     {
-        using Internal             = ConquestViewComponentInternal;
-        const ConquestWorld& world = director.getWorld();
+        using Internal                  = ConquestViewComponentInternal;
+        const ConquestSimulation& world = director.getWorld();
         _siteViews.begin();
         for ( const ConquestSite& site : world.getSites() )
         {
@@ -224,8 +224,8 @@ namespace sw
         // 같은 뷰모델이면 거는 일은 아무것도 하지 않는다. HUD 가 없는 씬이면 값만 들고 보일 곳이 없다.
         if ( IHUDViewModelBinder* const pBinder = game::findSubsystem<IHUDViewModelBinder>() )
             (void)pBinder->bindHUDViewModel( *pOwner, _hudViewModel.get() );
-        const ConquestWorld& world     = director.getWorld();
-        const float32        maxHealth = director.findCatalog()->getRules()._commanderHealth; // 열린 판은 카탈로그가 있다. 바닥은 카탈로그의 Min
+        const ConquestSimulation& world     = director.getWorld();
+        const float32             maxHealth = director.findCatalog()->getRules()._commanderHealth; // 열린 판은 카탈로그가 있다. 바닥은 카탈로그의 Min
         _hudViewModel->setTerritory( director.getTerritory() );
         _hudViewModel->setSiteCount( static_cast<int32>( world.getSites().size() ) );
         _hudViewModel->setSquad( director.getSquadSize() );

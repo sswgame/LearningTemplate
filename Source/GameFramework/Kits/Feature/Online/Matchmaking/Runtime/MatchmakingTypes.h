@@ -230,7 +230,7 @@ namespace sw
 {
     /**
      * @brief 파티 하나의 스냅샷입니다. 캐시 기록, 알림, 응답이 같은 형식을 씁니다. 실력은 두지 않으며, 줄을 설 때 모드의 실력 통계(`_ratingStat`)를 `IAccountStatSource` 에서 읽습니다.
-     * @details 알림과 응답은 고정 배치형(B)이고, 캐시 기록은 배포 중에 다른 빌드의 서버가 읽을 수 있으므로 자기 기술형(A, `EphemeralRecordTable<PartySnapshot>`)입니다.
+     * @details 알림과 응답은 고정 배치형(B)이고, 캐시 기록은 배포 중에 다른 빌드의 서버가 읽을 수 있으므로 자기 기술형(A, `CacheRecordTable<PartySnapshot>`)입니다.
      */
     REFLECT()
     struct SW_KIT_API PartySnapshot
@@ -335,7 +335,7 @@ namespace sw
     struct PartyLobbyLimit
     {
         static constexpr int32 kMaxPartySize        = 8;
-        static constexpr int32 kMinPartySize        = 2; ///< 서버 설정 파티 최대 인원(`PartyLobbyService::initialize`)의 하한
+        static constexpr int32 kMinPartySize        = 2; ///< 서버 설정 파티 최대 인원(`PartyLobbyLogic::initialize`)의 하한
         static constexpr int32 kMaxLobbySize        = 32;
         static constexpr int32 kMinLobbySize        = 2;
         static constexpr int32 kLobbyTeamCount      = 2; ///< 로비는 두 팀이며, 들어오면 인원이 적은 팀에 들어간다

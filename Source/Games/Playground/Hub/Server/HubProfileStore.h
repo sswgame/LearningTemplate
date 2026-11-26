@@ -20,7 +20,7 @@
 
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
 
-#include "Games/Playground/Hub/HubWorld.h"
+#include "Games/Playground/Hub/HubSimulation.h"
 
 namespace sw
 {

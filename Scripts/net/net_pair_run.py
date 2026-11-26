@@ -255,7 +255,7 @@ class _CacheState:
 
 
 class _CacheHandler(socketserver.StreamRequestHandler):
-    """RESP2 연결 하나 - `RESPEphemeralStore` 가 보내는 명령만 안다(모르는 명령은 오류로 답해 판정에 드러난다)."""
+    """RESP2 연결 하나 - `RESPCacheStore` 가 보내는 명령만 안다(모르는 명령은 오류로 답해 판정에 드러난다)."""
 
     state: _CacheState
 

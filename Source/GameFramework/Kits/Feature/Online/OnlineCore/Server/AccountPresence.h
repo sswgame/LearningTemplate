@@ -2,7 +2,7 @@
  * @file AccountPresence.h
  * @brief 서버 여럿에 걸친 접속 상태 인터페이스입니다. 계정이 지금 어느 서버에 접속해 있는지(계정 id 로)와 접속한 계정을 표시 이름으로 찾고(비동기, 캐시),
  *        다른 서버의 계정에게 알림을 보냅니다(버스).
- * @details - 계정 키트(서버)가 구현한다(`OnlinePresence`: 캐시 `presence:` 키, 버스 `push.<서버>`). 거래, 채팅, 친구, 매칭 같은 다른 키트는 이 인터페이스만 본다
+ * @details - 계정 키트(서버)가 구현한다(`CacheAccountPresence`: 캐시 `presence:` 키, 버스 `push.<서버>`). 거래, 채팅, 친구, 매칭 같은 다른 키트는 이 인터페이스만 본다
  *            (키트끼리 include 하지 못하며, 기록 형식은 구현 하나가 갖는다).
  *          - 찾기 결과는 등록한 델리게이트로 정확히 한 번 온다(`cancel` 한 것은 제외). 호스트 `tick` 안에서 오며, 요청 함수 안에서 바로 부르지 않는다.
  *            여러 서비스가 같이 찾아도 서로의 결과를 가져가지 않는다.
@@ -19,7 +19,7 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/OnlinePushRelay.h"
-#include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
+#include "GameFramework/Runtime/Online/Identity/Server/IAccountDirectory.h"
 #include "GameFramework/Runtime/Online/Service/OnlineServerKitName.h"
 
 namespace sw

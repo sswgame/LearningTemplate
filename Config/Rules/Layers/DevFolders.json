@@ -14,7 +14,7 @@
         "Source/Engine/Visual/2D/Dev/": "프로퍼티 검증 함수(PROPERTY( Validate = fn ))의 본문 — 컴포넌트 멤버라 DevTools · GameFrameworkDev(다른 모듈은 내보낸 클래스의 멤버를 정의하지 못한다)로 옮기지 못한다. 생성 코드가 SW_DEV_ONLY_FUNCTION 으로 등록해 배포는 참조하지 않고 이 폴더를 짓지 않는다(같은 폴더의 이름 검증 도우미 SortingLayerNameValidation 구현도 둔다)",
         "Source/Engine/Visual/Dev/": "프로퍼티 검증 함수(PROPERTY( Validate = fn ))의 본문 — 컴포넌트 멤버라 DevTools · GameFrameworkDev(다른 모듈은 내보낸 클래스의 멤버를 정의하지 못한다)로 옮기지 못한다. 생성 코드가 SW_DEV_ONLY_FUNCTION 으로 등록해 배포는 참조하지 않고 이 폴더를 짓지 않는다(Component/ 에는 컴포넌트만 두므로 기능 폴더에 둔다)",
         "Source/GameFramework/Kits/": "키트 모듈의 개발 명령 · 자동화 감시 값 · 디버그 HUD — 키트는 따로 짓는 모듈이라 DevTools(GameFramework 를 못 본다)도 GameFrameworkDev(GameFramework 만 링크한다)도 키트 내부를 보지 못한다. 같은 키트 타깃의 개발 전용 소스로 두면 내보내기 없이 키트 내부를 쓴다(게임과 같은 처지)",
-        "Source/GameFramework/Runtime/Gameplay/Severing/Dev/": "프로퍼티 검증 함수(PROPERTY( Validate = fn ))의 본문 — 컴포넌트 멤버라 DevTools · GameFrameworkDev(다른 모듈은 내보낸 클래스의 멤버를 정의하지 못한다)로 옮기지 못한다. 생성 코드가 SW_DEV_ONLY_FUNCTION 으로 등록해 배포는 참조하지 않고 이 폴더를 짓지 않는다",
+        "Source/GameFramework/Runtime/Gameplay/Dismemberment/Dev/": "프로퍼티 검증 함수(PROPERTY( Validate = fn ))의 본문 — 컴포넌트 멤버라 DevTools · GameFrameworkDev(다른 모듈은 내보낸 클래스의 멤버를 정의하지 못한다)로 옮기지 못한다. 생성 코드가 SW_DEV_ONLY_FUNCTION 으로 등록해 배포는 참조하지 않고 이 폴더를 짓지 않는다",
         "Source/Games/": "게임 모듈의 자동 플레이 · 스트레스 시험 — DevTools 가 게임을 알면 의존이 거꾸로다(게임은 DevTools 를 못 본다)"
     },
     "_devModuleRoots": {

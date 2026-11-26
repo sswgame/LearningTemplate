@@ -15,8 +15,8 @@ using namespace sw;
 
 namespace
 {
-    constexpr uint32 kNearCreatureID = HubWorld::kPlacementIDBase + 0;
-    constexpr uint32 kSideCreatureID = HubWorld::kPlacementIDBase + 1;
+    constexpr uint32 kNearCreatureID = HubSimulation::kPlacementIDBase + 0;
+    constexpr uint32 kSideCreatureID = HubSimulation::kPlacementIDBase + 1;
 
     /**
      * @brief 서버 엔드포인트를 그대로 넘기되 연결의 주체(계정)만 테스트가 정합니다. 루프백 연결은 티켓이 없어 주체가 0 이다 — 게임 접속 티켓 서버의 계정을 흉내 낸다.
@@ -166,8 +166,8 @@ namespace
     };
 } // namespace
 
-/** @brief [HubNetLinkTest] 계정으로 든 아바타가 반사 함수 호출로 짐승을 쓰러뜨리고, 서버가 판정한 결과 · 진행 · MMO 복제가 클라이언트에 온다. */
-SW_TEST_CASE( HubNetLinkTest, ServerAuthorityLoopReachesTheClient )
+/** @brief [HubNetSessionTest] 계정으로 든 아바타가 반사 함수 호출로 짐승을 쓰러뜨리고, 서버가 판정한 결과 · 진행 · MMO 복제가 클라이언트에 온다. */
+SW_TEST_CASE( HubNetSessionTest, ServerAuthorityLoopReachesTheClient )
 {
     HubLinkTestRig rig( 1 );
     SW_REQUIRE_TRUE( rig.startServer( rig._server ) );
@@ -197,8 +197,8 @@ SW_TEST_CASE( HubNetLinkTest, ServerAuthorityLoopReachesTheClient )
     SW_EXPECT_EQUAL( 1, rig._server.getOnlineCount() );
 }
 
-/** @brief [HubNetLinkTest] 가만히 있는 허브는 복제기에 다시 올리지 않고, 쓰러뜨린 짐승만 바뀐 것으로 올린다(감사 K-13). */
-SW_TEST_CASE( HubNetLinkTest, OnlyChangedEntitiesArePublished )
+/** @brief [HubNetSessionTest] 가만히 있는 허브는 복제기에 다시 올리지 않고, 쓰러뜨린 짐승만 바뀐 것으로 올린다(감사 K-13). */
+SW_TEST_CASE( HubNetSessionTest, OnlyChangedEntitiesArePublished )
 {
     HubLinkTestRig rig( 1 );
     SW_REQUIRE_TRUE( rig.startServer( rig._server ) );
@@ -214,8 +214,8 @@ SW_TEST_CASE( HubNetLinkTest, OnlyChangedEntitiesArePublished )
     SW_EXPECT_EQUAL( settledCount + 1u, rig._server.getStats()._publishCount );
 }
 
-/** @brief [HubNetLinkTest] 진행 저장소는 저장소 바이트(읽었거나 쓴 것)와 같은 진행을 다시 쓰지 않는다 — 자동 저장이 그대로인 진행을 쓰지 않는다(감사 K-13). */
-SW_TEST_CASE( HubNetLinkTest, UnchangedProfileIsNotWrittenAgain )
+/** @brief [HubNetSessionTest] 진행 저장소는 저장소 바이트(읽었거나 쓴 것)와 같은 진행을 다시 쓰지 않는다 — 자동 저장이 그대로인 진행을 쓰지 않는다(감사 K-13). */
+SW_TEST_CASE( HubNetSessionTest, UnchangedProfileIsNotWrittenAgain )
 {
     MemoryServiceDatabase  database;
     MemoryServiceStore     store( &database );
@@ -258,10 +258,10 @@ SW_TEST_CASE( HubNetLinkTest, UnchangedProfileIsNotWrittenAgain )
 }
 
 /**
- * @brief [HubNetLinkTest] 결함: 서버 종료에서 온라인 조립(저장소)이 먼저 내려가 접속자의 마지막 진행이 저장소에 닿지 않았다(`Hub.ProfileStoreMissing`)
+ * @brief [HubNetSessionTest] 결함: 서버 종료에서 온라인 조립(저장소)이 먼저 내려가 접속자의 마지막 진행이 저장소에 닿지 않았다(`Hub.ProfileStoreMissing`)
  * @details 저장소가 내려가기 직전의 알림에서 쓰는 중에 들어온 바이트까지 모두 닿을 때까지 기다리고, 그 뒤의 종료는 저장소를 찾지 않는다(바뀐 것이 없다).
  */
-SW_TEST_CASE( HubNetLinkTest, ProfilesReachTheStoreBeforeItStops )
+SW_TEST_CASE( HubNetSessionTest, ProfilesReachTheStoreBeforeItStops )
 {
     HubLinkTestRig rig( 1 );
     ServiceStore*  pStore = &rig._store;
@@ -281,8 +281,8 @@ SW_TEST_CASE( HubNetLinkTest, ProfilesReachTheStoreBeforeItStops )
     SW_EXPECT_EQUAL( savedCount, rig._server.getProfiles().getSavedCount() );
 }
 
-/** @brief [HubNetLinkTest] 서버 둘이 한 계정을 쓰면 뒤 서버의 쓰기는 판 조건에 걸려 앞 서버의 진행을 덮지 않는다(저장소 계약 — 서버 여럿이 DB 하나를 나눈다). */
-SW_TEST_CASE( HubNetLinkTest, SecondServerDoesNotOverwriteNewerProgress )
+/** @brief [HubNetSessionTest] 서버 둘이 한 계정을 쓰면 뒤 서버의 쓰기는 판 조건에 걸려 앞 서버의 진행을 덮지 않는다(저장소 계약 — 서버 여럿이 DB 하나를 나눈다). */
+SW_TEST_CASE( HubNetSessionTest, SecondServerDoesNotOverwriteNewerProgress )
 {
     MemoryServiceDatabase  database;
     MemoryServiceStore     storeA( &database );
@@ -321,8 +321,8 @@ SW_TEST_CASE( HubNetLinkTest, SecondServerDoesNotOverwriteNewerProgress )
     SW_EXPECT_EQUAL( 10, listLoad[0]._profile._coins );
 }
 
-/** @brief [HubNetLinkTest] 세션이 끝난 계정의 기억은 마지막 쓰기가 끝나면 지운다 — 들고 있는 바이트가 접속 중인 계정 수를 따른다 */
-SW_TEST_CASE( HubNetLinkTest, ReleasedAccountIsForgottenAfterItsLastWrite )
+/** @brief [HubNetSessionTest] 세션이 끝난 계정의 기억은 마지막 쓰기가 끝나면 지운다 — 들고 있는 바이트가 접속 중인 계정 수를 따른다 */
+SW_TEST_CASE( HubNetSessionTest, ReleasedAccountIsForgottenAfterItsLastWrite )
 {
     MemoryServiceDatabase  database;
     MemoryServiceStore     store( &database );
@@ -346,8 +346,8 @@ SW_TEST_CASE( HubNetLinkTest, ReleasedAccountIsForgottenAfterItsLastWrite )
     SW_EXPECT_EQUAL( size_t{ 0 }, profiles.getKnownAccountCount() );
 }
 
-/** @brief [HubNetLinkTest] 파티 초대 · 수락이 서버에서 서고, 쓰러뜨린 짐승의 경험을 두 클라이언트가 나눠 받는다. */
-SW_TEST_CASE( HubNetLinkTest, PartyIsServerAuthoritative )
+/** @brief [HubNetSessionTest] 파티 초대 · 수락이 서버에서 서고, 쓰러뜨린 짐승의 경험을 두 클라이언트가 나눠 받는다. */
+SW_TEST_CASE( HubNetSessionTest, PartyIsServerAuthoritative )
 {
     HubLinkTestRig rig( 2 );
     SW_REQUIRE_TRUE( rig.startServer( rig._server ) );
@@ -376,8 +376,8 @@ SW_TEST_CASE( HubNetLinkTest, PartyIsServerAuthoritative )
     SW_EXPECT_EQUAL( 1, member._shownPartySize );
 }
 
-/** @brief [HubNetLinkTest] 검증 짝이 지어낸 번호 · 자기 초대를 거르면 서버가 그 연결을 끊는다 — 몸(허브 규칙)은 돌지 않는다. */
-SW_TEST_CASE( HubNetLinkTest, CraftedTargetsAreDisconnected )
+/** @brief [HubNetSessionTest] 검증 짝이 지어낸 번호 · 자기 초대를 거르면 서버가 그 연결을 끊는다 — 몸(허브 규칙)은 돌지 않는다. */
+SW_TEST_CASE( HubNetSessionTest, CraftedTargetsAreDisconnected )
 {
     HubLinkTestRig rig( 1 );
     SW_REQUIRE_TRUE( rig.startServer( rig._server ) );
@@ -397,8 +397,8 @@ SW_TEST_CASE( HubNetLinkTest, CraftedTargetsAreDisconnected )
     SW_EXPECT_TRUE( rig._cluster.getServer().getConnectionState( connectionID ) != NetConnectionState::Connected );
 }
 
-/** @brief [HubNetLinkTest] 접속이 끝나면 진행을 저장하고, 같은 계정이 다시 들면(서버를 다시 세워도) 그 진행을 읽는다. */
-SW_TEST_CASE( HubNetLinkTest, ProgressSurvivesReconnectAndServerRestart )
+/** @brief [HubNetSessionTest] 접속이 끝나면 진행을 저장하고, 같은 계정이 다시 들면(서버를 다시 세워도) 그 진행을 읽는다. */
+SW_TEST_CASE( HubNetSessionTest, ProgressSurvivesReconnectAndServerRestart )
 {
     HubLinkTestRig rig( 1 );
     SW_REQUIRE_TRUE( rig.startServer( rig._server ) );
@@ -430,8 +430,8 @@ SW_TEST_CASE( HubNetLinkTest, ProgressSurvivesReconnectAndServerRestart )
     restarted.shutdown();
 }
 
-/** @brief [HubNetLinkTest] 주체(티켓의 계정)가 없는 연결은 경고하고 끊는다 — 계정이 있는 연결은 그대로 든다. */
-SW_TEST_CASE( HubNetLinkTest, ConnectionWithoutAccountIsDisconnected )
+/** @brief [HubNetSessionTest] 주체(티켓의 계정)가 없는 연결은 경고하고 끊는다 — 계정이 있는 연결은 그대로 든다. */
+SW_TEST_CASE( HubNetSessionTest, ConnectionWithoutAccountIsDisconnected )
 {
     HubLinkTestRig rig( 2 );
     const int32    accountConnectionID = rig.getConnectionID( 0 );

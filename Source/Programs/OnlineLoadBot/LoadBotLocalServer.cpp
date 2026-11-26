@@ -10,11 +10,12 @@
 #include "Engine/Config/ServerConfig.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
-#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/ServiceMailCampaign.h"
-#include "GameFramework/Runtime/Online/Server/IOnlineStoreDriver.h"
+#include "GameFramework/Runtime/Online/Cache/Server/ICacheStoreDriver.h"
+#include "GameFramework/Runtime/Online/Mail/Server/ServiceMailCampaign.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerConfig.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerKit.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerRuntime.h"
+#include "GameFramework/Runtime/Online/Store/Server/IServiceStoreDriver.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceCommitRunner.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStoreTracker.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStoreUtil.h"
@@ -147,8 +148,8 @@ namespace sw
         }
         else
         {
-            runtimeSettings._store._driver = kMemoryStoreDriverName; // 봇 서버는 부하를 재고 사라진다 - 저장을 남기지 않는다
-            runtimeSettings._cache._driver = kMemoryStoreDriverName;
+            runtimeSettings._store._driver = OnlineServerStoreConfig::kMemoryDriverName; // 봇 서버는 부하를 재고 사라진다 - 저장을 남기지 않는다
+            runtimeSettings._cache._driver = OnlineServerStoreConfig::kMemoryDriverName;
         }
         const UnixMilliseconds startMs = settings._startMs != UnixMilliseconds{ 0 } ? settings._startMs : WallClock::nowUnixMilliseconds();
         const expected<void>   started = _runtime->initialize( std::move( runtimeSettings ), startMs );

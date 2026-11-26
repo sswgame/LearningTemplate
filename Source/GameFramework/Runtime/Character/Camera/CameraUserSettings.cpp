@@ -7,7 +7,7 @@
 
 #include "Engine/UserSettings/UserSettingsManager.h"
 
-#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
+#include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
 
 namespace sw
 {

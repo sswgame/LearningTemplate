@@ -105,7 +105,7 @@ namespace sw
         Ok = 0,
     }};
 
-    using {name}Outcome = OnlineServiceResult<{name}Result>;
+    using {name}ServiceResult = OnlineServiceResult<{name}Result>;
 }} // namespace sw
 
 namespace sw
@@ -270,7 +270,7 @@ namespace sw
         (void)context;
         {name}EchoReply reply;
         reply._text = request._text;
-        (void)finish( call, {name}Outcome{{ {name}Result::Ok }}, reply );
+        (void)finish( call, {name}ServiceResult{{ {name}Result::Ok }}, reply );
     }}
 }} // namespace sw
 '''

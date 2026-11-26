@@ -22,7 +22,7 @@
 
 #include "GameFramework/Client/View/GameModeViewComponent.h"
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSWorld.h"
+#include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSSimulation.h"
 #include "GameFramework/Runtime/Foundation/GameMode/PrefabPool.h"
 #include "GameFramework/Runtime/Foundation/Presentation/RuleViewCatalog.h"
 #include "GameFramework/Runtime/Foundation/Presentation/SimulationViewSync.h"
@@ -71,8 +71,8 @@ namespace sw
         /** @brief 모델 표를 받아 유닛 카탈로그와 서로 같은 id 를 가지는지 보고, 모델을 워커로 미리 읽게 합니다. 어긋난 것은 모두 오류로 남기고 false 입니다. */
         [[nodiscard]] bool acquireUnitModels( const RTSGameModeComponent& director );
         /** @brief 막힌 지형 칸마다 절벽 프리팹 하나를 놓습니다 — 고르기 · 돌리기는 칸 자리의 해시라 판마다 같습니다. */
-        void             spawnCliffs( GameObjectManager& manager, const RTSWorld& world );
-        GameObjectHandle spawnUnit( GameObjectManager& manager, const RTSWorld& world, RTSUnitID unitID );
+        void             spawnCliffs( GameObjectManager& manager, const RTSSimulation& world );
+        GameObjectHandle spawnUnit( GameObjectManager& manager, const RTSSimulation& world, RTSUnitID unitID );
         /** @brief 유닛 모습 인스턴스(팀 또는 자원과 선택 여부 조합)를 만듭니다(유닛 뷰가 워커에서 고릅니다). */
         void prepareUnitLooks( Material* pMaterial );
 

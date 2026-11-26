@@ -18,9 +18,9 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Strategy/TacticsSRPG/SRPGCatalog.h"
-#include "GameFramework/Runtime/Character/Combat/TurnOrder.h"
 #include "GameFramework/Runtime/Foundation/Grid/GridTopology.h"
 #include "GameFramework/Runtime/Foundation/Random/GameRandom.h"
+#include "GameFramework/Runtime/Gameplay/Match/TurnOrder.h"
 #include "GameFramework/Runtime/Gameplay/Progression/LevelProgress.h"
 #include "GameFramework/Runtime/World/Land/LandRegistry.h"
 

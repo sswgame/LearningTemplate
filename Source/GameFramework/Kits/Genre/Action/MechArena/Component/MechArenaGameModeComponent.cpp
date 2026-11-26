@@ -140,7 +140,7 @@ namespace sw
 
     MechArenaGameModeComponent::~MechArenaGameModeComponent() = default;
 
-    bool MechArenaGameModeComponent::addPilot( MechArenaWorld& inoutWorld, const MechPilotConfig& config )
+    bool MechArenaGameModeComponent::addPilot( MechArenaSimulation& inoutWorld, const MechPilotConfig& config )
     {
         const expected<int32> added = inoutWorld.addPilot( config );
         if ( added.has_value() )
@@ -150,7 +150,7 @@ namespace sw
         return false;
     }
 
-    bool MechArenaGameModeComponent::openWorld( MechArenaWorld& outWorld ) const
+    bool MechArenaGameModeComponent::openWorld( MechArenaSimulation& outWorld ) const
     {
         const bool bAllyMatch  = _listAllyMech.size() == _listAllySpawn.size();
         const bool bEnemyMatch = _listEnemyMech.size() == _listEnemySpawn.size();
@@ -413,7 +413,7 @@ namespace sw
         if ( io.isOk() == false )
             return;
         // 판은 같은 설정 · 카탈로그로 연 뒤에 읽는다(키트 계약). 입력 명령은 싣지 않는다.
-        if ( io.valueOpened( _world, [this]( MechArenaWorld& world )
+        if ( io.valueOpened( _world, [this]( MechArenaSimulation& world )
         { return _pMechs != nullptr && _pMoves != nullptr && openWorld( world ); } ) == false )
             return;
         io.value( _timer );

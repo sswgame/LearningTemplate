@@ -15,7 +15,7 @@
 #include "Engine/UI/Widgets/TextWidget.h"
 
 #include "GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.h"
-#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
+#include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
 
 namespace sw
 {

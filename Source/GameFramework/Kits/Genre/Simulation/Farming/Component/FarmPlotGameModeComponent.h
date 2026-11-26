@@ -19,9 +19,9 @@
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Simulation/Farming/CropCatalog.h"
 #include "GameFramework/Kits/Genre/Simulation/Farming/FarmField.h"
-#include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
+#include "GameFramework/Runtime/Foundation/Flow/GameSpeedControl.h"
+#include "GameFramework/Runtime/Foundation/GameData/BoundAssetRef.h"
 #include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
-#include "GameFramework/Runtime/Foundation/GameMode/GameSpeedControl.h"
 #include "GameFramework/Runtime/Gameplay/GameState/GameStateComponent.h"
 
 namespace sw

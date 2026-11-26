@@ -16,6 +16,7 @@
 #include "GameFramework/Plugin/Editor/CharacterEditor/Model/AppearanceEditModel.h"
 #include "GameFramework/Plugin/Editor/CharacterEditor/Model/BodyDataEditModel.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceDatabase.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/AppearancePart.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/BodyProfile.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterAppearanceComponent.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterBodyDynamicsComponent.h"

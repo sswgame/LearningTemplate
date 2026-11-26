@@ -6,7 +6,7 @@
 
 #include "Engine/Serialization/XML/XMLDocument.h"
 
-#include "GameFramework/Runtime/Gameplay/Appearance/AppearanceTypes.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/AppearanceLoadReport.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CustomizationSchema.h"
 
 #include <algorithm>

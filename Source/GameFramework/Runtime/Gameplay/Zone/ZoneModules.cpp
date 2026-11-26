@@ -26,7 +26,8 @@
 #include "GameFramework/Runtime/Character/AI/Blackboard.h"
 #include "GameFramework/Runtime/Foundation/Trigger/TriggerComponent.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterAppearanceComponent.h"
-#include "GameFramework/Runtime/Gameplay/Zone/ZoneModule.h"
+#include "GameFramework/Runtime/Gameplay/Zone/IZoneModuleProcessor.h"
+#include "GameFramework/Runtime/Gameplay/Zone/ZoneCompiledModule.h"
 
 namespace sw
 {

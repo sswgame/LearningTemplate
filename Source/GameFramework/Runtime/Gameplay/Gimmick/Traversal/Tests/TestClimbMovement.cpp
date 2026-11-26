@@ -14,9 +14,9 @@
 
 #include "GameFramework/Runtime/Character/Control/Controller/IntentTrackControllerComponent.h"
 #include "GameFramework/Runtime/Character/Control/Intent/ControlIntent.h"
-#include "GameFramework/Runtime/Character/Control/Pawn/CharacterMovement2DComponent.h"
-#include "GameFramework/Runtime/Character/Control/Pawn/CharacterMovementComponent.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
+#include "GameFramework/Runtime/Character/Movement/CharacterMovement2DComponent.h"
+#include "GameFramework/Runtime/Character/Movement/CharacterMovementComponent.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/Traversal/ClimbZoneComponent.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/Trigger/GimmickSensorComponent.h"
 

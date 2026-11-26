@@ -37,7 +37,7 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Network/NetKitMessageRange.h"
-#include "GameFramework/Runtime/Character/Camera/SequenceTriggerComponent.h"
+#include "GameFramework/Runtime/Gameplay/Interaction/SequenceTriggerComponent.h"
 
 namespace sw
 {

@@ -10,7 +10,7 @@
 #include "Engine/Object/GameObject/GameObjectEvents.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
-#include "GameFramework/Runtime/Character/Control/Pawn/CharacterMovementComponent.h"
+#include "GameFramework/Runtime/Character/Movement/CharacterMovementComponent.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/Movement/TeleportTriggerComponent.h"
 
 using namespace sw;

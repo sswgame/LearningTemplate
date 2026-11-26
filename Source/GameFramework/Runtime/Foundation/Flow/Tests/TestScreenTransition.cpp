@@ -3,7 +3,7 @@
 
 #include "Core/TestFramework/TestFramework.h"
 
-#include "GameFramework/Runtime/Foundation/Flow/ScreenTransitionManager.h"
+#include "GameFramework/Runtime/Foundation/Flow/ScreenTransitionController.h"
 
 using namespace sw;
 
@@ -13,11 +13,11 @@ namespace
 
     struct TransitionProbe
     {
-        ScreenTransitionManager* _pManager{ nullptr };
-        int32                    _actionCount{ 0 };
-        int32                    _chainedCount{ 0 };
-        float32                  _alphaAtAction{ -1.0f };
-        int32                    _chainedAcceptedCount{ 0 };
+        ScreenTransitionController* _pManager{ nullptr };
+        int32                       _actionCount{ 0 };
+        int32                       _chainedCount{ 0 };
+        float32                     _alphaAtAction{ -1.0f };
+        int32                       _chainedAcceptedCount{ 0 };
 
         void onAction()
         {
@@ -83,21 +83,21 @@ SW_TEST_CASE( ScreenTransitionTest, FadeOutContinuesFromCurrentAlpha )
 /** @brief [ScreenTransitionTest] 전환: 까매진 뒤 액션을 한 번 부르고 밝아진 뒤 끝난다 */
 SW_TEST_CASE( ScreenTransitionTest, ActionRunsOnceAtBlack )
 {
-    ScreenTransitionManager manager;
-    TransitionProbe         probe;
+    ScreenTransitionController manager;
+    TransitionProbe            probe;
     probe._pManager = &manager;
     SW_EXPECT_FALSE( manager.isBusy() );
 
     SW_REQUIRE_TRUE( manager.beginTransition( SW_DELEGATE_METHOD( Delegate<void()>, &TransitionProbe::onAction, &probe ), 1.0f, 1.0f ).has_value() );
     SW_EXPECT_TRUE( manager.isBusy() );
-    SW_EXPECT_TRUE( manager.getPhase() == ScreenTransitionManager::Phase::FadeOut );
+    SW_EXPECT_TRUE( manager.getPhase() == ScreenTransitionController::Phase::FadeOut );
     manager.update( 0.5f );
     SW_EXPECT_EQUAL( 0, probe._actionCount );
 
     manager.update( 0.5f );
     SW_EXPECT_EQUAL( 1, probe._actionCount );
     SW_EXPECT_NEAR( 1.0f, probe._alphaAtAction, kTolerance );
-    SW_EXPECT_TRUE( manager.getPhase() == ScreenTransitionManager::Phase::FadeIn );
+    SW_EXPECT_TRUE( manager.getPhase() == ScreenTransitionController::Phase::FadeIn );
 
     manager.update( 0.5f );
     SW_EXPECT_TRUE( manager.isBusy() );
@@ -105,32 +105,32 @@ SW_TEST_CASE( ScreenTransitionTest, ActionRunsOnceAtBlack )
     manager.update( 0.01f );
     SW_EXPECT_EQUAL( 1, probe._actionCount );
     SW_EXPECT_FALSE( manager.isBusy() );
-    SW_EXPECT_TRUE( manager.getPhase() == ScreenTransitionManager::Phase::None );
+    SW_EXPECT_TRUE( manager.getPhase() == ScreenTransitionController::Phase::None );
 }
 
 /** @brief [ScreenTransitionTest] 액션 안에서 새 전환을 걸면 까만 채로 이어져 그 액션도 불린다(앞 전환의 밝아지기가 덮지 않는다) */
 SW_TEST_CASE( ScreenTransitionTest, ActionMayStartAnotherTransition )
 {
-    ScreenTransitionManager manager;
-    TransitionProbe         probe;
+    ScreenTransitionController manager;
+    TransitionProbe            probe;
     probe._pManager = &manager;
     SW_REQUIRE_TRUE( manager.beginTransition( SW_DELEGATE_METHOD( Delegate<void()>, &TransitionProbe::onActionStartingAnother, &probe ), 1.0f, 1.0f ).has_value() );
     manager.update( 1.0f );
     SW_EXPECT_EQUAL( 1, probe._actionCount );
     SW_EXPECT_EQUAL( 1, probe._chainedAcceptedCount );
-    SW_EXPECT_TRUE( manager.getPhase() == ScreenTransitionManager::Phase::FadeOut );
+    SW_EXPECT_TRUE( manager.getPhase() == ScreenTransitionController::Phase::FadeOut );
     SW_EXPECT_NEAR( 1.0f, manager.fade().getOverlayAlpha(), kTolerance ); // 번쩍이지 않는다
 
     manager.update( 0.01f );
     SW_EXPECT_EQUAL( 1, probe._chainedCount );
-    SW_EXPECT_TRUE( manager.getPhase() == ScreenTransitionManager::Phase::FadeIn );
+    SW_EXPECT_TRUE( manager.getPhase() == ScreenTransitionController::Phase::FadeIn );
 }
 
 /** @brief [ScreenTransitionTest] 초기화하면 액션을 부르지 않고 어둡기가 사라진다 */
 SW_TEST_CASE( ScreenTransitionTest, ResetDropsPendingAction )
 {
-    ScreenTransitionManager manager;
-    TransitionProbe         probe;
+    ScreenTransitionController manager;
+    TransitionProbe            probe;
     probe._pManager = &manager;
     SW_REQUIRE_TRUE( manager.beginTransition( SW_DELEGATE_METHOD( Delegate<void()>, &TransitionProbe::onAction, &probe ), 1.0f, 1.0f ).has_value() );
     manager.update( 0.5f );
@@ -144,8 +144,8 @@ SW_TEST_CASE( ScreenTransitionTest, ResetDropsPendingAction )
 /** @brief [ScreenTransitionTest] 어두워지는 중에 건 새 전환은 거절되고 앞 액션은 까만 화면에서 그대로 불린다 — 받으면 앞 액션을 덮어 잃는다(G-13) */
 SW_TEST_CASE( ScreenTransitionTest, SecondTransitionDuringFadeOutDoesNotDropFirstAction )
 {
-    ScreenTransitionManager manager;
-    TransitionProbe         probe;
+    ScreenTransitionController manager;
+    TransitionProbe            probe;
     probe._pManager = &manager;
     SW_REQUIRE_TRUE( manager.beginTransition( SW_DELEGATE_METHOD( Delegate<void()>, &TransitionProbe::onAction, &probe ), 1.0f, 1.0f ).has_value() );
     manager.update( 0.5f );
@@ -164,8 +164,8 @@ SW_TEST_CASE( ScreenTransitionTest, SecondTransitionDuringFadeOutDoesNotDropFirs
 /** @brief [ScreenTransitionTest] 어두워지는 중에 로딩 화면이 닫히며 밝히기를 청해도 전환의 액션은 까만 화면에서 불린다(옛 코드는 액션이 영영 불리지 않고 다음 전환도 거절됐다) */
 SW_TEST_CASE( ScreenTransitionTest, FadeInRequestDoesNotStallAFadeOut )
 {
-    ScreenTransitionManager manager;
-    TransitionProbe         probe;
+    ScreenTransitionController manager;
+    TransitionProbe            probe;
     probe._pManager = &manager;
     SW_REQUIRE_TRUE( manager.beginTransition( SW_DELEGATE_METHOD( Delegate<void()>, &TransitionProbe::onAction, &probe ), 1.0f, 1.0f ).has_value() );
     manager.update( 0.5f );

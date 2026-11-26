@@ -24,9 +24,9 @@
 #include "Engine/Serialization/Serializer/CatalogKey.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Runtime/Character/Camera/CameraBlend.h"
 #include "GameFramework/Runtime/Character/Camera/CameraDirector.h"
 #include "GameFramework/Runtime/Character/Camera/CameraPose.h"
+#include "GameFramework/Runtime/Character/Camera/CameraPoseBlender.h"
 #include "GameFramework/Runtime/Character/Camera/CameraPreset.h"
 #include "GameFramework/Runtime/Character/Camera/PhotoModeCamera.h"
 

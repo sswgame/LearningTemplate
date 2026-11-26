@@ -3,9 +3,9 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/TestFramework/TestFramework.h"
 
-#include "GameFramework/Runtime/Character/Camera/CameraBlend.h"
 #include "GameFramework/Runtime/Character/Camera/CameraCollisionProbe.h"
 #include "GameFramework/Runtime/Character/Camera/CameraMode.h"
+#include "GameFramework/Runtime/Character/Camera/CameraPoseBlender.h"
 
 using namespace sw;
 

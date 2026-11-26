@@ -10,12 +10,12 @@
 #include "Core/String/StringUtil.h"
 
 #include "GameFramework/Runtime/Online/Audit/Server/ServiceAuditLog.h"
-#include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
+#include "GameFramework/Runtime/Online/Identity/Server/IAfterDeleteAccount.h"
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
 #include "GameFramework/Runtime/Online/Sanction/Server/ServiceSanction.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceCommitRunner.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordCodec.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceRecordReader.h"
-#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordTable.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceTTLRule.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
@@ -390,7 +390,7 @@ namespace sw
 
 namespace sw
 {
-    LoginStoreLogic::LoginStoreLogic( IServiceStoreConnection& connection, ILoginCrypto& crypto, const LoginServiceConfig& settings,
+    LoginStoreLogic::LoginStoreLogic( IServiceStoreConnection& connection, ILoginCrypto& crypto, const LoginLogicConfig& settings,
                                       const LoginTicketAuthority& ticketAuthority, LoginStoreResult& outResult )
         : _connection{ connection }
         , _crypto{ crypto }

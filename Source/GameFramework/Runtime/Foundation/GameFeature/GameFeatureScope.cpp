@@ -11,7 +11,7 @@
 #include "GameFramework/Runtime/Foundation/GameData/GameSettings.h"
 #include "GameFramework/Runtime/Foundation/GameFeature/GameFeatureComponents.h"
 #include "GameFramework/Runtime/Foundation/GameFeature/GameFeatureRegistry.h"
-#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
+#include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
 
 #include <algorithm>
 

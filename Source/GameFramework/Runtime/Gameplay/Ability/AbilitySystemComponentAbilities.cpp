@@ -416,8 +416,8 @@ namespace sw
     void AbilitySystemComponent::handleAbilityActivated( Ability& ability )
     {
         const AbilityConfig& config = ability.getConfig();
-        _ownedTagCounts.updateCounts( config._activationOwnedTags, TagCountTable::kGrantDelta );
-        _blockedAbilityTagCounts.updateCounts( config._blockAbilitiesWithTags, TagCountTable::kGrantDelta );
+        _ownedTagCounts.updateCounts( config._activationOwnedTags, TagCountContainer::kGrantDelta );
+        _blockedAbilityTagCounts.updateCounts( config._blockAbilitiesWithTags, TagCountContainer::kGrantDelta );
         cancelAbilitiesWithTags( config._cancelAbilitiesWithTags, &ability );
         refreshTickEnabled();
         _abilityActivatedMulticast.broadcast( ability );
@@ -427,8 +427,8 @@ namespace sw
     {
         // 발동할 때 붙인 것을 그대로 뗀다. 실행 중에는 설정을 바꾸지 않는다는 `Ability::getConfig` 의 약속에 의존한다.
         const AbilityConfig& config = ability.getConfig();
-        _ownedTagCounts.updateCounts( config._activationOwnedTags, TagCountTable::kRevokeDelta );
-        _blockedAbilityTagCounts.updateCounts( config._blockAbilitiesWithTags, TagCountTable::kRevokeDelta );
+        _ownedTagCounts.updateCounts( config._activationOwnedTags, TagCountContainer::kRevokeDelta );
+        _blockedAbilityTagCounts.updateCounts( config._blockAbilitiesWithTags, TagCountContainer::kRevokeDelta );
         refreshTickEnabled();
         _abilityEndedMulticast.broadcast( ability, bWasCancelled );
     }

@@ -15,7 +15,7 @@
 #include "Engine/Serialization/Serializer/SerializePurpose.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Runtime/Foundation/Service/GameInstanceSubsystem.h"
+#include "GameFramework/Runtime/Foundation/Subsystem/GameInstanceSubsystem.h"
 
 namespace sw
 {
@@ -45,7 +45,7 @@ namespace sw
     public:
         static constexpr const utf8* kSubsystemName = "GameSaveSlots";
 
-        /** @brief 세이브 적용의 끝을 받습니다(성공이면 true) — 자동 저장 되돌리기의 완료(`AutosaveManager::RestoreCompletedFunction`)가 여기 온다. */
+        /** @brief 세이브 적용의 끝을 받습니다(성공이면 true) — 자동 저장 되돌리기의 완료(`AutosaveController::RestoreCompletedFunction`)가 여기 온다. */
         using AppliedFunction = Delegate<void( bool bRestored )>;
 
         /** @brief 셋 다 빌린다 — 게임 인스턴스가 이 서브시스템을 소유하고, 막기 문은 게임 범위보다 먼저 서고 늦게 진다. */

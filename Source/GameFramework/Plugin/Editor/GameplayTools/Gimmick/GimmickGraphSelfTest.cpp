@@ -10,7 +10,7 @@
 
 #include "GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.h"
 #include "GameFramework/Plugin/Editor/GameplayTools/Gimmick/Model/GimmickGraphEditModel.h"
-#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
+#include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
 
 #include <imgui.h>
 #include <imgui_internal.h>

@@ -21,9 +21,9 @@ namespace sw
     {
         if ( _lockstep.open() == false )
             return nullopt; // 까닭은 락스텝이 남겼다
-        if ( _lockstep.isActive() && getMap()._listPlayerStart.size() != static_cast<size_t>( SkirmishLockstepLink::kPlayerCount ) )
+        if ( _lockstep.isActive() && getMap()._listPlayerStart.size() != static_cast<size_t>( SkirmishLockstepSession::kPlayerCount ) )
         {
-            SW_LOG_ERROR_ID( "LockstepSkirmish.MapPlayerCount", "[Skirmish] a network match needs a map with %# player starts, this map has %#", SkirmishLockstepLink::kPlayerCount, getMap()._listPlayerStart.size() );
+            SW_LOG_ERROR_ID( "LockstepSkirmish.MapPlayerCount", "[Skirmish] a network match needs a map with %# player starts, this map has %#", SkirmishLockstepSession::kPlayerCount, getMap()._listPlayerStart.size() );
             return nullopt;
         }
         if ( bAutoPlay == false && _lockstep.isActive() )

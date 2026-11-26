@@ -1,0 +1,181 @@
+/**
+ * @file SocialLogic.h
+ * @brief 친구 로직입니다. 관계 바꾸기, 이 서버 계정의 관계 메모리(차단 조회), 접속 상태(캐시와 버스)를 처리합니다. 전송은 모릅니다.
+ * @details 관계 바꾸기는 저장소 작업이며, 양쪽 줄과 양쪽 개수를 버전 조건으로 묶은 한 트랜잭션이다. 충돌이 나면 다시 시도한다.
+ *          - 관계는 방향이 있는 레코드 둘(`social_link` 의 `<나>/<상대>`)과 사람마다의 개수(`social_count`)로 이루어진다.
+ *            두 사람이 동시에 서로 신청해도 하나만 이기고, 진 쪽은 다시 읽어 "상대가 이미 신청함" 을 보고 자동 수락한다. 상한은 경합이 나도 넘지 않는다.
+ *          - 이 서버에 접속한 계정의 관계는 메모리에 로드한다. 그 계정의 첫 요청에서 로드하며, 클라이언트는 로그인 뒤 `kListLinks` 를 먼저 부른다.
+ *            다른 서버가 관계를 바꾸면 버스 `social.links` 로 그 계정을 다시 읽는다.
+ *            `isBlockedLocal` 은 채팅 정책과 귓속말이 부른다. 키트끼리는 서로 모르므로 서버 조립(`SocialOnlineServerKit`)이 기반의 `IAccountBlockList` 로 내놓는다.
+ *          - 접속 상태는 캐시 `social/rp/<계정>` 에 시한 90초로 저장하고 30초마다 연장한다. 버스 `social.presence` 로 알리면 받은 서버마다 그 계정을 친구로 둔 이 서버의 계정에게 전달한다.
+ *          - 이름으로 친구 신청은 계정 이름 인덱스(`IAccountNameIndex`, 정식 계정만)를 같은 저장소 작업 안에서 읽는다. 찾기와 쓰기가 한 번의 왕복으로 끝난다.
+ *          - 서비스 스레드 하나에서 쓴다. 결과는 `takeCompletions` 로 회수하며 요청 태그 0은 내부에서 건 작업이라 완료가 없다. 알림은 `pollNotifications` 로 회수하며 받는 사람을 포함한다.
+ *
+ *          Nakama Friends(친구, 보낸 신청, 받은 신청, 막음 상태와 방향 있는 행 둘)와 같은 구조이다.
+ */
+#pragma once
+#include "Core/Container/IDAllocator.h"
+#include "Core/Container/string.h"
+#include "Core/Container/unordered_map.h"
+#include "Core/Container/unordered_set.h"
+#include "Core/Container/vector.h"
+#include "Core/Delegate/Subscription.h"
+#include "Core/Event/EventBuffer.h"
+#include "Core/Foundation/Types.h"
+#include "Core/Time/TimePoint.h"
+
+#include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Kits/Feature/Online/Social/Runtime/SocialProtocol.h"
+#include "GameFramework/Kits/Feature/Online/Social/Runtime/SocialTypes.h"
+#include "GameFramework/Kits/Feature/Online/Social/Server/SocialCounts.h"
+#include "GameFramework/Runtime/Online/Bus/ServerBusTopic.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceStoreTracker.h"
+
+namespace sw
+{
+    enum class SocialLinkOperation : uint8;
+
+    struct CacheReply;
+    struct SocialLinkDecision;
+
+    class CacheStoreRouter;
+    class IAccountNameIndex;
+    class ServiceStore;
+    class ServerBus;
+    class ServerBusMessage;
+
+    /** @brief 빌려 쓰는 객체들입니다. */
+    struct SocialLogicDependencies
+    {
+        ServiceStore*            _pStore{ nullptr };     ///< 필수이다
+        CacheStoreRouter*        _pRouter{ nullptr };    ///< 접속 상태에 쓴다. null 이면 이 서버의 계정만 다룬다
+        ServerBus*               _pBus{ nullptr };       ///< null 이면 서버가 한 대이다
+        const IAccountNameIndex* _pNameIndex{ nullptr }; ///< 이름으로 친구 신청할 때 쓴다. null 이면 NotFound 로 끝낸다
+        SocialLinkPolicy         _linkPolicy{};          ///< 필수이다 — 관계 수 상한(서버 설정 `SocialKitConfig::_links`)
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 요청 하나의 완료입니다. */
+    struct SocialCompletion
+    {
+        vector<SocialLink>     _listLink{};     ///< 관계 목록이다
+        vector<SocialPresence> _listPresence{}; ///< 친구의 접속 상태이다
+        uint64                 _requestTag{ 0 };
+        AccountID              _otherID{ kInvalidAccountID }; ///< 관계를 바꾼 상대이다. 이름으로 찾았으면 찾은 계정이다
+        SocialServiceResult    _result{ SocialResult::Ok };
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 버스 주제입니다. 내보내는 클래스의 정적 멤버로 두지 않습니다. 지연 로드 모듈에서는 데이터를 가져올 수 없기 때문입니다. */
+    struct SocialBus
+    {
+        static constexpr ServerBusTopic<SocialLinkChanged> kLinksTopic{ "social.links" };       ///< 관계가 바뀐 두 사람이다
+        static constexpr ServerBusTopic<SocialPresence>    kPresenceTopic{ "social.presence" }; ///< 접속 상태이다
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @class SocialLogic
+     * @brief 친구 로직입니다. 서비스 스레드에서 씁니다.
+     */
+    class SW_KIT_SERVER_API SocialLogic
+    {
+    public:
+        SocialLogic();
+        ~SocialLogic();
+
+        SocialLogic( const SocialLogic& )            = delete;
+        SocialLogic& operator=( const SocialLogic& ) = delete;
+
+        void initialize( const SocialLogicDependencies& dependencies );
+        /** @brief 기다리는 캐시 읽기를 취소하고 메모리를 비웁니다. 맡긴 저장소 작업은 호출하는 쪽이 먼저 회수해야 하며, 호스트와 저장소를 종료한 뒤에 합니다. */
+        void shutdown();
+        /** @brief 접속 상태의 시한을 연장합니다. */
+        void update( UnixMilliseconds nowMs );
+
+        /**
+         * @brief 탈퇴한 계정의 관계 레코드를 모두 지웁니다(친구 키트의 `IAfterDeleteAccount` 몫). 저장소 스레드에서 부릅니다.
+         * @details 내 줄(`<나>/<상대>`)과 상대 쪽 짝 줄을 지우고 상대 개수를 고친다. 내 쪽 줄이 없는 "나를 막은 사람" 은 역색인(`social_blocked_by`, `<막힌 사람>/<막은 사람>`)으로 찾는다.
+         *          마지막으로 내 개수를 지운다. 짝마다 커밋하고 멱등이다.
+         */
+        [[nodiscard]] static ServiceStoreResult eraseAccount( IServiceStoreConnection& connection, AccountID accountID, int64 nowMs );
+
+        // 관계 함수들은 비동기이며 완료는 요청 태그로 받는다
+        void changeLink( SocialLinkOperation operation, AccountID accountID, AccountID otherID, UnixMilliseconds nowMs, uint64 requestTag );
+        /** @brief 정식 계정의 표시 이름으로 친구 신청합니다. 완료의 `_otherID` 가 찾은 계정입니다. */
+        void requestFriendByName( AccountID accountID, string_view displayName, UnixMilliseconds nowMs, uint64 requestTag );
+        /** @brief 관계 목록을 저장소에서 읽습니다. 이 서버의 메모리도 그 결과로 바꿉니다. */
+        void listLinks( AccountID accountID, uint64 requestTag );
+
+        // 접속 상태
+        void setPresence( AccountID accountID, SocialPresenceStatus status, string_view activity, UnixMilliseconds nowMs, uint64 requestTag );
+        void queryFriendPresence( AccountID accountID, uint64 requestTag );
+        /** @brief 계정이 이 서버를 떠났을 때 부릅니다. 오프라인을 알리고 캐시와 메모리에서 뺍니다. */
+        void removeAccount( AccountID accountID );
+
+        /** @brief 이 서버에 접속한 @p ownerID 가 @p otherID 를 막았으면 true 입니다. 관계를 아직 읽지 않았으면 false 입니다. */
+        bool isBlockedLocal( AccountID ownerID, AccountID otherID ) const;
+        /** @brief 다른 서버가 낸 버스 메시지를 처리합니다. `SocialBus` 주제이며 자기 서버가 낸 것은 호출하는 쪽이 거릅니다. */
+        void handleBusMessage( const ServerBusMessage& message );
+
+        void  takeCompletions( vector<SocialCompletion>& outListCompletion ) { _completionBuffer.moveAllTo( outListCompletion ); }
+        void  pollNotifications( vector<SocialNotification>& outListNotification ) { _notificationBuffer.moveAllTo( outListNotification ); }
+        int32 getPendingCount() const { return _store.getOpenCount(); }
+
+    private:
+        /** @brief 저장소 일의 완료입니다. */
+        void applyLinkChange( uint64 requestTag, AccountID accountID, AccountID otherID, const SocialLinkDecision& decision );
+        void applyLinksLoaded( AccountID accountID, uint64 requestTag, bool bReadOk, vector<SocialLink>&& listLink );
+        struct LocalAccount
+        {
+            vector<SocialLink>   _listLink{}; ///< `replaceLinks` 로만 바꾼다(떠날 때는 `removeFriendWatcher` 뒤 항목째 지운다) — 친구 역색인이 함께 바뀐다
+            string               _activity{};
+            int64                _presenceWrittenMs{ 0 };
+            SocialPresenceStatus _status{ SocialPresenceStatus::Offline };
+            uint8                _bLoaded{ SW_FALSE };
+            uint8                _bLoading{ SW_FALSE };
+            uint8                _bReloadPending{ SW_FALSE }; ///< 읽는 도중 관계가 바뀌었다. 끝나면 다시 읽는다
+        };
+
+        struct PresenceQuery
+        {
+            vector<SocialPresence> _listPresence{};
+            uint64                 _requestTag{ 0 };
+            int32                  _outstandingCount{ 0 };
+        };
+
+        LocalAccount& ensureLocal( AccountID accountID );
+        void          startLoad( AccountID accountID, uint64 requestTag );
+        void          reloadIfLocal( AccountID accountID );
+        /** @brief 관계 목록을 바꾸고 친구 역색인을 함께 고칩니다. `_listLink` 를 쓰는 유일한 입구입니다. */
+        void replaceLinks( AccountID accountID, LocalAccount& local, const vector<SocialLink>& listLink );
+        void addFriendWatcher( AccountID accountID, const vector<SocialLink>& listLink );
+        void removeFriendWatcher( AccountID accountID, const vector<SocialLink>& listLink );
+        void submitLinkJob( SocialLinkOperation operation, AccountID accountID, AccountID otherID, string_view displayName, UnixMilliseconds nowMs, uint64 requestTag );
+        void publishPresence( AccountID accountID, const LocalAccount& local );
+        void notifyFriendsOfPresence( const SocialPresence& presence );
+        /** @brief 접속 상태 캐시 값을 씁니다. 값을 못 쓰면 오류 로그를 남기고 false 이며 캐시에 아무것도 보내지 않습니다. */
+        [[nodiscard]] bool writePresenceRecord( const SocialPresence& presence );
+        void               onPresenceReply( uint64 queryID, AccountID friendID, const CacheReply& reply );
+        void               pushCompletion( uint64 requestTag, SocialServiceResult result );
+
+    private:
+        unordered_map<AccountID, LocalAccount> _mapAccountToLocal;
+        /// 친구 id → 그를 친구(`Friend`)로 둔 이 서버 계정들이다. 접속 상태 한 건의 전달 비용을 그 계정의 관계 수에 맞춘다(Nakama status follow · EOS Presence 의 구독자 역색인).
+        /// 집합이라 관계 하나를 뺄 때 지켜보는 계정 수와 무관하다(유명한 계정 하나를 수천이 친구로 둬도 떠날 때마다 훑지 않는다)
+        unordered_map<AccountID, unordered_set<AccountID>> _mapFriendToWatchers;
+        unordered_map<uint64, PresenceQuery>               _mapQuery;
+        EventBuffer<SocialCompletion>                      _completionBuffer;
+        EventBuffer<SocialNotification>                    _notificationBuffer;
+        SocialLogicDependencies                            _dependencies;
+        Subscription                                       _replyOwner; ///< 라우터 답의 주인 몫(`initialize` 가 열고 `shutdown` 이 놓는다)
+        IDAllocator<uint64>                                _queryIDAllocator;
+        ServiceStoreTracker                                _store; ///< 저장소에 맡긴 일의 앞이다
+    };
+} // namespace sw

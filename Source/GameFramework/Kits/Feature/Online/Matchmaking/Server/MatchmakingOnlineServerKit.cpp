@@ -6,11 +6,11 @@
 
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/MatchBackfillSender.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/MatchModeCatalog.h"
-#include "GameFramework/Kits/Feature/Online/Matchmaking/Server/MatchQueueService.h"
+#include "GameFramework/Kits/Feature/Online/Matchmaking/Server/MatchQueueLogic.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/MatchServerAgent.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/MatchmakingKitConfig.h"
-#include "GameFramework/Kits/Feature/Online/Matchmaking/Server/MatchmakingServer.h"
-#include "GameFramework/Kits/Feature/Online/Matchmaking/Server/PartyLobbyService.h"
+#include "GameFramework/Kits/Feature/Online/Matchmaking/Server/MatchmakingService.h"
+#include "GameFramework/Kits/Feature/Online/Matchmaking/Server/PartyLobbyLogic.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/AccountPresence.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/AccountStatSource.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/GroupChannelMembership.h"
@@ -136,9 +136,9 @@ namespace sw
         private:
             SharedAssetRef<MatchModeCatalog> _pCatalog; ///< 설정 `_catalog` 의 공유 캐시 한 벌
             vector<MatchModeDef>             _listMode;
-            PartyLobbyService                _partyLobby;
-            MatchQueueService                _queue;
-            MatchmakingServer                _server;
+            PartyLobbyLogic                  _partyLobby;
+            MatchQueueLogic                  _queue;
+            MatchmakingService               _server;
             MatchServerAgent                 _agent;    ///< `gameServer` 일 때만 쓴다 — 배정받은 계정 목록(접속 인증기가 네트워크 스레드에서 묻는다)
             MatchBackfillSender              _backfill; ///< `gameServer` 일 때만 건다 — 경기 중 빈 슬롯을 맡기는 입구
             int32                            _maxPartySize;

@@ -14,7 +14,7 @@
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Fixed/ReplicatedLayout.h"
 
-#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
+#include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
 
 #include "ModuleAPI/Service/IServerKitLocator.h"
@@ -204,7 +204,7 @@ namespace sw
         if ( accountID == 0 )
         {
             ++_stats._refusedCount;
-            // 허브 서버는 티켓을 요구하는 세션에서만 선다(`HubWorldComponent`) — 여기까지 온 주체 없는 연결은 인증기가 걸렀어야 할 것이라 끊는다(심층 방어).
+            // 허브 서버는 티켓을 요구하는 세션에서만 선다(`HubSimulationComponent`) — 여기까지 온 주체 없는 연결은 인증기가 걸렀어야 할 것이라 끊는다(심층 방어).
             SW_LOG_WARNING_ID( "Hub.NoAccount", "[Hub] connection %# has no account - the hub needs a game connect ticket (server config _bGameConnectTicket); disconnecting it", connectionID );
             _pPeers->disconnect( connectionID, NetLinger::none() );
             return;

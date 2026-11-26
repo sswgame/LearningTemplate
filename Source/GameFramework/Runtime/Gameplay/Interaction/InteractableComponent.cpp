@@ -15,8 +15,8 @@
 #include "Engine/Presentation/InstanceHighlight.h"
 #include "Engine/Visual/Component/MeshComponent.h"
 
-#include "GameFramework/Runtime/Foundation/Service/GameEvents.h"
-#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
+#include "GameFramework/Runtime/Foundation/Event/GameEvents.h"
+#include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
 #include "GameFramework/Runtime/Gameplay/Interaction/InteractionAuthority.h"
 
 namespace sw

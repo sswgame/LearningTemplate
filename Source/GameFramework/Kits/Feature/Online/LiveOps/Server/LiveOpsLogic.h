@@ -1,0 +1,171 @@
+/**
+ * @file LiveOpsLogic.h
+ * @brief 라이브 운영 로직입니다. 이벤트 정의 다시 읽기(30초 주기와 버스), 계정별 열린 이벤트 계산(원격 설정 값 해석), 경계 알림 판정, 운영의 변경(감사 기록과 한 트랜잭션)을 처리합니다. 전송은 모릅니다.
+ * @details - 정의는 영속 테이블 `liveops_event` 에 있으며 키는 이벤트 id 이다. 운영 도구(GF_Admin, 게임 조립)가 `putEvent` 나 `removeEvent` 로 바꾸면 버스 `liveops.changed` 로 다른 서버가 바로 다시 읽는다.
+ *            버스는 최대 한 번만 배달하므로 주기적인 읽기가 놓친 변경을 메운다.
+ *          - 매개변수 값이 `@<설정 키>` 이면 원격 설정(`RemoteConfig`)의 문자열이나 정수로 해석한다. 이벤트를 다시 쓰지 않고 값을 운영 설정으로 바꿀 수 있다.
+ *            기능 플래그 `feature.liveops` 가 꺼지면 아무 이벤트도 보이지 않는다. 플래그가 없으면 켜진 것으로 본다. 긴급 스위치이다.
+ *          - 열린 이벤트 목록, 회차 끝, 원격 설정 번들의 해시가 바뀌면 `takeStateChange` 가 true 를 반환한다. 시작, 끝, 회차 경계, 다시 읽기가 해당한다. 바인딩이 모든 클라이언트에 "다시 받아라" 를 알린다.
+ *
+ *          PlayFab LiveOps(타이틀 데이터와 예약)와 Unity Remote Config(조건, 출시 비율, 일정)에 해당한다. 일정은 영속 테이블과 버스로, 값은 원격 설정으로 관리해서 두 원본을 섞지 않는다.
+ */
+#pragma once
+#include "Core/Container/string.h"
+#include "Core/Container/vector.h"
+#include "Core/Event/EventBuffer.h"
+#include "Core/Foundation/Types.h"
+#include "Core/Memory/Memory.h"
+#include "Core/Time/TimePoint.h"
+
+#include "Engine/Reflection/ReflectionMacros.h"
+
+#include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Kits/Feature/Online/LiveOps/Runtime/LiveOpsTypes.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/LiveEventControl.h"
+#include "GameFramework/Runtime/Online/Audit/Server/ServiceAuditLog.h"
+#include "GameFramework/Runtime/Online/Bus/ServerBusTopic.h"
+#include "GameFramework/Runtime/Online/Scheduler/Server/ServicePeriodicJob.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceStoreTracker.h"
+
+namespace sw
+{
+    class ServiceStore;
+    class RemoteConfig;
+    class ServerBus;
+
+    /** @brief 빌려 쓰는 객체들입니다. 로직보다 오래 살아야 합니다. */
+    struct LiveOpsDependencies
+    {
+        ServiceStore*       _pStore{ nullptr };        ///< 필수
+        ServerBus*          _pBus{ nullptr };          ///< 서버가 한 대이면 null 이다. 바꾼 뒤 알리기만 하며, 받기는 바인딩이 구독한다
+        const RemoteConfig* _pRemoteConfig{ nullptr }; ///< null 이면 '@' 값은 그대로 두고 긴급 스위치도 없다
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 변경 요청의 완료입니다. */
+    struct LiveOpsCompletion
+    {
+        uint64               _requestTag{ 0 };
+        LiveOpsServiceResult _result{ LiveOpsResult::Ok };
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 방금 열린 이벤트 창 하나의 시작 푸시입니다(`LiveOpsLogic::takeStartedEvents`). 문구는 이벤트 매개변수 `push.*` 를 풀어 채웁니다. */
+    struct LiveEventStart
+    {
+        PushNotificationMessage _message{};
+        vector<string>          _listRegion{}; ///< 비면 모든 지역(전체 토픽)이다
+        string                  _eventID{};
+        int64                   _windowEndMs{ 0 }; ///< 이 창을 가르는 값이다(같은 창은 서버 여럿이 한 번만 알린다)
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 라이브 운영 정의를 바꿨다는 버스 신호의 본문입니다. 필드가 없고 받는 서버가 다시 읽습니다. */
+    REFLECT()
+    struct SW_KIT_SERVER_API LiveOpsChanged
+    {
+        REFLECT_BODY();
+        static constexpr uint32 kBusVersion = 0; ///< 의미 버전
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 서버 간 버스 주제와 플래그입니다. 다른 모듈이 값으로 읽으므로 내보내는 클래스 밖에 둡니다. */
+    struct LiveOpsBus
+    {
+        static constexpr ServerBusTopic<LiveOpsChanged> kChangedTopic{ "liveops.changed" };  ///< 정의를 바꿨다는 알림이다. 받는 서버가 다시 읽는다
+        static constexpr const utf8*                    kKillSwitchFlag = "feature.liveops"; ///< 꺼지면 아무 이벤트도 보이지 않는다
+        static constexpr int64                          kReloadPeriodMs = 30000;
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @class LiveOpsLogic
+     * @brief 라이브 운영 로직입니다. 서비스 스레드 하나에서 씁니다.
+     */
+    class SW_KIT_SERVER_API LiveOpsLogic final : public ILiveEventControl
+    {
+    public:
+        LiveOpsLogic();
+        ~LiveOpsLogic() override;
+
+        LiveOpsLogic( const LiveOpsLogic& )            = delete;
+        LiveOpsLogic& operator=( const LiveOpsLogic& ) = delete;
+
+        void initialize( const LiveOpsDependencies& dependencies );
+        /** @brief 맡긴 저장소 작업은 저장소의 `shutdown` 과 `pollCompletions` 가 회수합니다. 이 객체는 그때까지 살아 있어야 합니다. */
+        void shutdown();
+        /** @brief 주기적인 다시 읽기와 경계 판정을 합니다. 저장소 완료는 호스트(또는 서버 루프)가 비웁니다. */
+        void update( UnixMilliseconds nowMs );
+        /** @brief 다른 서버가 바꿨음을 버스로 받았을 때 부릅니다. 다음 tick 에 다시 읽습니다. */
+        void notifyChanged() { _reloadJob.request(); }
+        /** @brief 열린 이벤트 목록이 지난번 이후 바뀌었으면 true 입니다. 읽으면 표시를 지웁니다. */
+        [[nodiscard]] bool takeStateChange();
+        /**
+         * @brief 지난번 이후 새로 열린 이벤트 창 중 시작 푸시를 달아 둔 것(`push.title` 또는 `push.body`)을 @p outListStart 뒤에 붙이고 비웁니다.
+         * @details 열린 지 `LiveOpsPush::kStartGraceMs` 가 지난 창은 알리지 않는다 — 서버가 다시 떠서 이미 열려 있던 이벤트를 새로 알리지 않는다.
+         *          같은 창을 서버 여럿이 보지 않게 하는 일은 부르는 쪽이다(발송기의 `notifyTopicOnce`).
+         */
+        void takeStartedEvents( vector<LiveEventStart>& outListStart );
+
+        /** @brief 이 계정에 지금 열린 이벤트를 반환합니다. @p bClientOnly 이면 클라이언트에 보이는 것만 반환합니다. */
+        void computeActiveEvents( AccountID accountID, string_view region, uint32 buildVersion, UnixMilliseconds nowMs, bool bClientOnly, vector<LiveEventState>& outListEvent ) const;
+        bool isEventActive( string_view eventID, AccountID accountID, string_view region, uint32 buildVersion, UnixMilliseconds nowMs ) const;
+        /** @brief 매개변수 값을 반환합니다. 원격 설정까지 해석한 값이며 이벤트나 키가 없으면 false 를 반환합니다. */
+        [[nodiscard]] bool findParameter( string_view eventID, string_view key, string& outValue ) const;
+
+        // 운영 함수들이다. GF_Admin 은 서버 조립 문맥의 `ILiveEventControl` 로 부르고 완료를 `takeControlCompletions` 로 받는다.
+        // 같은 프로세스의 코드와 테스트는 직접 부르고 `takeCompletions` 로 받는다. 한 서비스의 완료를 두 쪽이 함께 거두지 않는다. @p actorID 는 감사 기록의 GM 계정이며 0이면 system 이다.
+        void putEvent( const LiveEventDef& definition, const ServiceOperator& actor, string_view memo, UnixMilliseconds nowMs, uint64 requestTag );
+        void removeEvent( string_view eventID, const ServiceOperator& actor, string_view memo, UnixMilliseconds nowMs, uint64 requestTag ) override;
+        // ILiveEventControl
+        void putEventJSON( string_view definitionJSON, const ServiceOperator& actor, string_view memo, UnixMilliseconds nowMs, uint64 requestTag ) override;
+        void collectEventJSON( vector<string>& outListJSON ) const override;
+        void takeControlCompletions( vector<LiveEventControlCompletion>& outListCompletion ) override;
+        void takeCompletions( vector<LiveOpsCompletion>& outListCompletion ) { _completionBuffer.moveAllTo( outListCompletion ); }
+
+        const vector<LiveEventDef>& getEvents() const { return _listEvent; }
+        int32                       getPendingCount() const { return _store.getOpenCount(); }
+
+        /** @brief 저장소 작업의 `complete` 가 호출합니다. 키트 안에서만 씁니다. */
+        void applyReload( vector<LiveEventDef>&& listEvent, bool bReadOk, UnixMilliseconds nowMs );
+        void applyWrite( uint64 requestTag, LiveOpsServiceResult result );
+
+    private:
+        /** @brief 지난번에 열려 있던 이벤트 창 하나입니다. */
+        struct OpenWindow
+        {
+            string _eventID{};
+            int64  _windowEndMs{ 0 };
+        };
+
+        void                startReload( UnixMilliseconds nowMs );
+        void                markIfChanged( UnixMilliseconds nowMs );
+        void                collectStarts( UnixMilliseconds nowMs );
+        uint64              computeOpenHash( UnixMilliseconds nowMs ) const;
+        string              resolveValue( const string& value ) const;
+        bool                isKillSwitchOff() const;
+        const LiveEventDef* findEvent( string_view eventID ) const;
+        void                submitWrite( ServiceAuditedWrite&& job, uint64 requestTag );
+
+    private:
+        vector<LiveEventDef>           _listEvent;
+        vector<OpenWindow>             _listOpenWindow; ///< 지난번 판정에서 열려 있던 창
+        EventBuffer<LiveEventStart>    _startedBuffer;
+        EventBuffer<LiveOpsCompletion> _completionBuffer;
+        LiveOpsDependencies            _dependencies;
+        uint64                         _lastOpenHash;
+        ServicePeriodicJob             _reloadJob; ///< 다시 읽기 일정(요청 · 주기 · 읽는 중)
+        ServiceStoreTracker            _store;     ///< 저장소에 맡긴 일의 앞이다
+        uint8                          _bStateChanged;
+    };
+} // namespace sw

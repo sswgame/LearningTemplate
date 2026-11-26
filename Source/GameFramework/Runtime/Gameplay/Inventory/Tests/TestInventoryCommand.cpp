@@ -6,7 +6,7 @@
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/StatBlock.h"
-#include "GameFramework/Runtime/Gameplay/Appearance/AppearanceTypes.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/AppearanceLoadReport.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterEquipmentComponent.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/EquipmentSetCatalog.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Equipment.h"

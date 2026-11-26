@@ -14,14 +14,14 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSCatalog.h"
-#include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
+#include "GameFramework/Runtime/Foundation/GameData/BoundAssetRef.h"
 #include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
 
 #include <initializer_list>
 
 namespace sw
 {
-    class RTSWorld;
+    class RTSSimulation;
 
     /**
      * @class RTSGameModeComponent
@@ -37,7 +37,7 @@ namespace sw
         virtual ~RTSGameModeComponent() override;
 
         // ---- 읽기(클라이언트 모듈) ----
-        virtual const RTSWorld& getWorld() const = 0;
+        virtual const RTSSimulation& getWorld() const = 0;
         /** @brief 지금 쥔 유닛 카탈로그입니다. 판을 열기 전에는 nullptr 입니다. */
         const RTSCatalog* findCatalog() const { return _pCatalog.get(); }
         /** @brief 이 화면이 맡은 플레이어입니다. */

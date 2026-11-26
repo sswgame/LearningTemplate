@@ -22,7 +22,7 @@
 #include "GameFramework/Client/View/PrefabViewBatch.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/World/Voxel/Component/VoxelPlayerComponent.h"
-#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
+#include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/MaterialTintCache.h"
 
 namespace sw

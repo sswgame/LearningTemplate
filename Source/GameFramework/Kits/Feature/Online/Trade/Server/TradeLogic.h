@@ -1,0 +1,115 @@
+/**
+ * @file TradeLogic.h
+ * @brief 거래 서비스입니다. 상태 기계는 저장소 위의 거래 레코드에서 동작하고, 요청마다 저장 작업 하나를 만듭니다. 서버 프로세스마다 하나입니다.
+ * @details 저장 작업은 읽기, 상태 기계, 버전 조건 쓰기 순서로 진행하며 정산이면 원장 분개를 같은 커밋에 넣는다.
+ *          - 서비스 스레드 하나에서 부른다. 결과는 요청 태그와 함께 `takeCompletions` 로, 바뀐 거래는 `pollUpdates` 로 회수한다. 바인딩이 두 당사자에게 알리며 다른 서버의 상대에게는 버스로 알린다.
+ *          - 상태가 저장소에 있으므로 상대가 다른 서버에 접속해 있어도 그 서버의 서비스가 같은 레코드를 버전 조건으로 바꾼다. 주인 서버를 거치지 않는다.
+ *          - 기동할 때 `recoverOwnedTrades` 가 이 서버가 연 열린 거래를 ServerRestart 로 닫는다. 아무것도 움직이지 않았으므로 안전하다.
+ *          - 시한은 이 서비스가 본 거래의 마지막 변경 시각에 시한을 더한 값이다. 지나면 `tick` 이 닫기를 맡긴다. 다른 서버가 연 거래도 다음 신청 때 지연해서 닫힌다.
+ *
+ *          자체 MMO 서버가 거래 확정을 DB 트랜잭션 하나(두 인벤토리와 거래 기록)로 처리하는 것과 같은 구조이다. 언리얼에는 거래 시스템이 없다.
+ */
+#pragma once
+#include "Core/Container/unordered_map.h"
+#include "Core/Container/vector.h"
+#include "Core/Event/EventBuffer.h"
+#include "Core/Foundation/Types.h"
+#include "Core/Time/TimePoint.h"
+
+#include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Kits/Feature/Online/Trade/Server/TradeStoreLogic.h"
+#include "GameFramework/Runtime/Online/Ledger/LedgerTypes.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceStoreTracker.h"
+
+namespace sw
+{
+    struct TradeCallInput;
+
+    class ServiceStore;
+
+    /** @brief 거래 서비스의 작업 종류입니다. */
+    enum class TradeOperation : uint8
+    {
+        Invite = 0,
+        Respond,
+        SetOffer,
+        Lock,
+        Confirm,
+        Cancel,
+        Expire,
+        Leave,
+        Recover
+    };
+
+    /** @brief 끝난 요청 하나입니다. */
+    struct TradeCompletion
+    {
+        TradeSnapshot        _snapshot{};
+        LedgerTransferResult _ledger{}; ///< 정산 결과이다. 이동 뒤 잔액이며 게임이 미러에 넣는다
+        uint64               _requestTag{ 0 };
+        TradeServiceResult   _result{ TradeResult::Ok };
+        TradeOperation       _operation{ TradeOperation::Invite };
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @class TradeLogic
+     * @brief 거래 서비스입니다.
+     */
+    class SW_KIT_SERVER_API TradeLogic
+    {
+    public:
+        TradeLogic();
+
+        /** @brief 넘긴 객체는 모두 빌려 씁니다. @p serverID 는 이 서버 프로세스의 id 이며 0이 아니어야 합니다. 재시작 복구 인덱스에 씁니다. */
+        void initialize( ServiceStore& store, const ITradePolicy* pPolicy, const ILedgerPolicy* pLedgerPolicy, uint64 serverID, const TradeLogicConfig& settings );
+        void shutdown();
+        /** @brief 이 서버가 연 열린 거래를 모두 닫습니다. 기동할 때 한 번 부르며 닫힌 거래는 `pollUpdates` 로 회수합니다. 저장소 실패 · 충돌로 다 닫지 못하면 `update` 가 다시 합니다. */
+        void recoverOwnedTrades( UnixMilliseconds nowMs );
+
+        void invite( AccountID fromID, AccountID toID, UnixMilliseconds nowMs, uint64 requestTag );
+        void respondInvite( AccountID responderID, uint64 tradeID, bool bAccept, UnixMilliseconds nowMs, uint64 requestTag );
+        void setOffer( AccountID actorID, uint64 tradeID, const vector<TradeLeg>& listLeg, UnixMilliseconds nowMs, uint64 requestTag );
+        void lock( AccountID actorID, uint64 tradeID, UnixMilliseconds nowMs, uint64 requestTag );
+        void confirm( AccountID actorID, uint64 tradeID, uint32 seenOwnRevision, uint32 seenPeerRevision, UnixMilliseconds nowMs, uint64 requestTag );
+        void cancel( AccountID actorID, uint64 tradeID, UnixMilliseconds nowMs, uint64 requestTag );
+        /** @brief 계정이 떠나거나 제재됐을 때 부릅니다. 그 계정의 열린 거래를 닫으며 완료는 없고 변경만 발생합니다. */
+        void closeForAccount( AccountID accountID, TradeCloseReason reason, UnixMilliseconds nowMs );
+        /** @brief 아는 거래의 시한을 확인합니다. */
+        void update( UnixMilliseconds nowMs );
+
+        void takeCompletions( vector<TradeCompletion>& outListCompletion ) { _completionBuffer.moveAllTo( outListCompletion ); }
+        void pollUpdates( vector<TradeSnapshot>& outListUpdate ) { _updateBuffer.moveAllTo( outListUpdate ); }
+
+        int32 getPendingCount() const { return _store.getOpenCount(); }
+
+        /** @brief 이 서비스가 보고 있는 열린 거래 수입니다(시한 감시 대상). 서버 종료 드레인이 끝나기를 기다린다. */
+        int32                   getOpenTradeCount() const { return static_cast<int32>( _mapTradeToDeadline.size() ); }
+        const TradeLogicConfig& getSettings() const { return _settings; }
+
+    private:
+        static TradeCallInput makeCallInput( TradeOperation operation, uint64 requestTag, UnixMilliseconds nowMs );
+        /** @brief 거래 일 하나를 맡깁니다. 완료가 `applyCompletion` 으로 간다. */
+        void submitCall( TradeCallInput&& input );
+        /** @brief 저장소 일의 완료입니다. */
+        void applyCompletion( TradeCompletion&& completion, const vector<TradeSnapshot>& listChanged );
+        /** @brief 시한 처리가 저장소 실패로 졌습니다. 시한을 다시 넣는다. */
+        void retryExpiry( uint64 tradeID, UnixMilliseconds nowMs );
+        void submitCommand( TradeOperation operation, uint64 tradeID, const TradeCommand& command, UnixMilliseconds nowMs, uint64 requestTag );
+        void trackTrade( const TradeSnapshot& snapshot );
+
+    private:
+        EventBuffer<TradeCompletion> _completionBuffer;
+        EventBuffer<TradeSnapshot>   _updateBuffer;
+        unordered_map<uint64, int64> _mapTradeToDeadline; ///< 이 서비스가 본 열린 거래에서 시한으로 가는 맵이다
+        TradeLogicConfig             _settings;
+        const ITradePolicy*          _pPolicy;
+        const ILedgerPolicy*         _pLedgerPolicy;
+        uint64                       _serverID;
+        uint64                       _nextSeed;
+        int64                        _recoverAtMs; ///< 다 하지 못한 기동 복구를 다시 할 시각이다(0 이면 없다)
+        ServiceStoreTracker          _store;       ///< 저장소에 맡긴 일의 앞이다
+    };
+} // namespace sw

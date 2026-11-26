@@ -124,7 +124,7 @@ namespace sw
         PROPERTY( Max = 10 )
         int32 _onlineRequestRetryLimit{ kUnsetRetryLimit }; ///< 서버가 다시 하라고 답한 요청(kBusy · kRateLimited · 멱등 키 있는 kUnavailable)을 다시 보내는 최대 횟수(`OnlineRetryPolicy`). 온라인 서버를 적었으면 필수다 — 비면(-1) 연결하지 않는다
 
-        // 텔레메트리 · 크래시 보고를 받을 곳(`TelemetryUploadLink`). 운영자가 정하는 값이라 저장소의 팩은 적지 않는다 — 적지 않으면 동의해도 기계 밖으로 나가지 않는다.
+        // 텔레메트리 · 크래시 보고를 받을 곳(`TelemetryUploadAdapter`). 운영자가 정하는 값이라 저장소의 팩은 적지 않는다 — 적지 않으면 동의해도 기계 밖으로 나가지 않는다.
         // 언리얼 `DefaultEngine.ini` 의 `[Analytics]` · `[CrashReportClient] DataRouterUrl` 자리다(기억에 의존).
         PROPERTY()
         string _telemetryUploadEndpoint; ///< 텔레메트리 스풀 파일을 POST 할 주소(`http://` · `https://`). 개발 구성은 `-gv_telemetryUploadEndpoint` 가 덮어쓴다(`IGameSettingsOverride`)
@@ -145,7 +145,7 @@ namespace sw
         vector<hashed_string> _listGameFeature{}; ///< 게임 범위에 켤 게임 기능 이름(`SW_GAME_FEATURE`, 적은 순서). 게임 인스턴스가 `onInitialize` 뒤 첫 씬 전에 켜 인스턴스 내내 둔다(언리얼 Game Features 의 늘 켜진 기능). 켜지 못하면 게임 초기화가 실패한다. 그 기능이 읽는 카탈로그는 이 파일의 데이터 항목에 경로가 있으면 선언된 것이다
 
         PROPERTY()
-        DataPath _autosaveSettings; ///< 자동 저장 정책(`<팩>/data/autosave.xml`). 적으면 `GameInstance` 가 `AutosaveManager` 를 세워 게임 범위에 건다. 적었는데 못 읽으면 게임 초기화가 실패한다. 적지 않으면 자동 저장 없음
+        DataPath _autosaveSettings; ///< 자동 저장 정책(`<팩>/data/autosave.xml`). 적으면 `GameInstance` 가 `AutosaveController` 를 세워 게임 범위에 건다. 적었는데 못 읽으면 게임 초기화가 실패한다. 적지 않으면 자동 저장 없음
 
         /**
          * 필수 데이터를 이 게임 팩 밖에서 읽는 종류와 그 팩입니다 — `<RequiredData kind="items" pack="common"/>`, 종류 이름 → 팩 루트.

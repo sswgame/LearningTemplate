@@ -293,8 +293,8 @@ namespace sw
             releaseTransportSide();
             return unexpected( Error{ ErrorKind::ExternalFailure, "online service host could not listen for the admin port", settings._adminListenAddress.toString() } );
         }
-        if ( settings._pEphemeralStore != nullptr )
-            _ephemeralRouter.initialize( *settings._pEphemeralStore );
+        if ( settings._pCacheStore != nullptr )
+            _ephemeralRouter.initialize( *settings._pCacheStore );
         _bInitialized = SW_TRUE;
         return {};
     }
@@ -487,9 +487,9 @@ namespace sw
         return sentCount;
     }
 
-    EphemeralStoreRouter* OnlineServiceHost::getEphemeralRouter()
+    CacheStoreRouter* OnlineServiceHost::getCacheRouter()
     {
-        return _settings._pEphemeralStore != nullptr ? &_ephemeralRouter : nullptr;
+        return _settings._pCacheStore != nullptr ? &_ephemeralRouter : nullptr;
     }
 
     Subscription OnlineServiceHost::subscribeServerBus( string_view topic, IOnlineServerService* pService )

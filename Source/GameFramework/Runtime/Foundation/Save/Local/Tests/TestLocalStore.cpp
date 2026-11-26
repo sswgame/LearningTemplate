@@ -8,9 +8,9 @@
 #include "Core/TestFramework/ScopedAssertCapture.h"
 #include "Core/TestFramework/TestFramework.h"
 
-#include "GameFramework/Runtime/Foundation/Save/Local/FileLocalSlotStorage.h"
+#include "GameFramework/Runtime/Foundation/Save/Local/FileLocalStoreBackend.h"
 #include "GameFramework/Runtime/Foundation/Save/Local/LocalDeviceKeyProvider.h"
-#include "GameFramework/Runtime/Foundation/Save/Local/LocalStoreBackend.h"
+#include "GameFramework/Runtime/Foundation/Save/Local/LocalStoreFactory.h"
 #include "GameFramework/Runtime/Foundation/Save/Local/MemoryLocalStore.h"
 #include "GameFramework/Runtime/Foundation/Save/Local/Tests/LocalStoreContract.h"
 #include "GameFramework/Runtime/Foundation/Save/Local/ThreadedLocalStore.h"
@@ -26,13 +26,13 @@ namespace
     struct MemoryLocalFixture
     {
         test::LocalStoreSealParts    _seal{};
-        MemoryLocalDatabase          _database{};
+        MemoryLocalStoreBackend      _database{};
         unique_ptr<MemoryLocalStore> _store{};
 
         MemoryLocalFixture() { restart(); }
 
         ILocalStore&             getStore() { return *_store; }
-        ILocalSlotStorage&       getStorage() { return _database; }
+        ILocalStoreBackend&      getStorage() { return _database; }
         test::LocalStoreTestKey& getKey() { return _seal._key; }
         void                     restart() { _store = make_unique<MemoryLocalStore>( &_database, _seal.makeSealContext() ); }
     };
@@ -41,24 +41,24 @@ namespace
     {
         test::LocalStoreSealParts      _seal{};
         AbsolutePath                   _root{ test::makeScratchPath( "local_store_file" ) };
-        FileLocalSlotStorage           _directStorage{ _root }; ///< 같은 폴더의 두 번째 바닥 — 저장소가 쉬는 동안 봉투를 직접 본다
+        FileLocalStoreBackend          _directStorage{ _root }; ///< 같은 폴더의 두 번째 바닥 — 저장소가 쉬는 동안 봉투를 직접 본다
         unique_ptr<ThreadedLocalStore> _store{};
 
         FileLocalFixture() { restart(); }
 
         ILocalStore&             getStore() { return *_store; }
-        ILocalSlotStorage&       getStorage() { return _directStorage; }
+        ILocalStoreBackend&      getStorage() { return _directStorage; }
         test::LocalStoreTestKey& getKey() { return _seal._key; }
 
         void restart()
         {
             _store.reset();
-            _store = make_unique<ThreadedLocalStore>( make_unique<FileLocalSlotStorage>( _root ), _seal.makeSealContext() );
+            _store = make_unique<ThreadedLocalStore>( make_unique<FileLocalStoreBackend>( _root ), _seal.makeSealContext() );
         }
     };
 
     /** @brief 기반 이름을 덮으려는 등록에 쓰는 만들기 함수입니다. 등록이 거절되므로 불리지 않습니다. */
-    expected<unique_ptr<ILocalSlotStorage>> createNeverUsedLocalStorage( const LocalStoreLocation& /*location*/, string_view /*gameName*/ )
+    expected<unique_ptr<ILocalStoreBackend>> createNeverUsedLocalStorage( const LocalStoreLocation& /*location*/, string_view /*gameName*/ )
     {
         return sw::unexpected( Error{ ErrorKind::Unsupported, "never used" } );
     }
@@ -100,8 +100,8 @@ SW_TEST_CASE( LocalStoreFileTest, SlotIsAFileUnderTheRootAndLeftoverTempFilesAre
 {
     const AbsolutePath root = test::makeScratchPath( "local_store_layout" );
     {
-        FileLocalSlotStorage storage{ root };
-        const vector<uint8>  envelopeBytes{ 1, 2, 3 };
+        FileLocalStoreBackend storage{ root };
+        const vector<uint8>   envelopeBytes{ 1, 2, 3 };
         SW_REQUIRE_TRUE( storage.writeSlot( "save/slot0", envelopeBytes ) == LocalStoreResult::Ok );
         SW_EXPECT_TRUE( FileUtil::isRegularFile( root.join( "save/slot0.swls" ) ) );
     }
@@ -113,7 +113,7 @@ SW_TEST_CASE( LocalStoreFileTest, SlotIsAFileUnderTheRootAndLeftoverTempFilesAre
     const AbsolutePath inFlight = root.join( inFlightName.view() );
     SW_REQUIRE_TRUE( FileUtil::writeFile( inFlight, reinterpret_cast<const uint8*>( "y" ), 1 ) );
     SW_EXPECT_LOG( "LocalStore.LeftoverTempRemoved" );
-    FileLocalSlotStorage restarted{ root };
+    FileLocalStoreBackend restarted{ root };
     SW_EXPECT_FALSE( FileUtil::exists( leftover ) );
     SW_EXPECT_TRUE( FileUtil::exists( inFlight ) );
     SW_REQUIRE_TRUE( FileUtil::removeFile( inFlight ) );
@@ -132,30 +132,30 @@ SW_TEST_CASE( LocalStoreFileTest, FactoryBuildsFileAndMemoryAndRefusesUnknownBac
     const AbsolutePath           root     = test::makeScratchPath( "local_store_factory" );
     const optional<AbsolutePath> rootPath = AbsolutePath::tryMake( root.str() );
     SW_REQUIRE_TRUE( rootPath.has_value() );
-    LocalStoreConfig                  settings{ LocalStoreBackend::kFileBackendName, LocalStoreLocation::absolute( *rootPath ) };
-    expected<unique_ptr<ILocalStore>> fileStore = LocalStoreBackend::createLocalStore( "UnitGame", settings, context );
+    LocalStoreConfig                  settings{ LocalStoreFactory::kFileBackendName, LocalStoreLocation::absolute( *rootPath ) };
+    expected<unique_ptr<ILocalStore>> fileStore = LocalStoreFactory::createLocalStore( "UnitGame", settings, context );
     SW_REQUIRE_TRUE_MSG( fileStore.has_value(), fileStore.has_value() ? string_view{} : fileStore.error().message() );
     SW_EXPECT_TRUE( test::LocalStoreContract::write( **fileStore, "cfg/a", test::LocalStoreContract::makeText( "1" ) ) == LocalStoreResult::Ok );
     SW_EXPECT_TRUE( FileUtil::isRegularFile( root.join( "cfg/a.swls" ) ) );
 
-    LocalStoreConfig                  memorySettings{ LocalStoreBackend::kMemoryBackendName, LocalStoreLocation::memory() };
-    expected<unique_ptr<ILocalStore>> memoryStore = LocalStoreBackend::createLocalStore( "UnitGame", memorySettings, context );
+    LocalStoreConfig                  memorySettings{ LocalStoreFactory::kMemoryBackendName, LocalStoreLocation::memory() };
+    expected<unique_ptr<ILocalStore>> memoryStore = LocalStoreFactory::createLocalStore( "UnitGame", memorySettings, context );
     SW_REQUIRE_TRUE( memoryStore.has_value() );
     SW_EXPECT_TRUE( test::LocalStoreContract::read( **memoryStore, "cfg/a" )._result == LocalStoreResult::NotFound ); // 따로 사는 메모리
 
     LocalStoreConfig                        cloudSettings{ "cloud", LocalStoreLocation::memory() };
-    const expected<unique_ptr<ILocalStore>> cloudStore = LocalStoreBackend::createLocalStore( "UnitGame", cloudSettings, context );
+    const expected<unique_ptr<ILocalStore>> cloudStore = LocalStoreFactory::createLocalStore( "UnitGame", cloudSettings, context );
     SW_REQUIRE_FALSE( cloudStore.has_value() );
     SW_EXPECT_TRUE( cloudStore.error().detail() == "cloud" );
     {
         // 기반 이름은 키트가 덮지 못한다. 기반 백엔드도 같은 표에 있어 이름 중복으로 거절된다(정적 등록이면 시작 검사가 멈추고, 여기서는 손으로 올려 세지 않는다).
         SW_EXPECT_LOG( "Registration.DuplicateName" );
-        const LocalStoreBackend reserved{ LocalStoreBackend::kFileBackendName, &createNeverUsedLocalStorage };
-        SW_EXPECT_FALSE( LocalStoreBackend::registerBackend( &reserved ) );
-        SW_EXPECT_TRUE( LocalStoreBackend::createLocalStore( "UnitGame", settings, context ) ); // 기반 파일 백엔드가 그대로 만든다
-        LocalStoreBackend::unregisterBackend( &reserved );
+        const LocalStoreFactory reserved{ LocalStoreFactory::kFileBackendName, &createNeverUsedLocalStorage };
+        SW_EXPECT_FALSE( LocalStoreFactory::registerBackend( &reserved ) );
+        SW_EXPECT_TRUE( LocalStoreFactory::createLocalStore( "UnitGame", settings, context ) ); // 기반 파일 백엔드가 그대로 만든다
+        LocalStoreFactory::unregisterBackend( &reserved );
     }
-    SW_EXPECT_TRUE( LocalStoreBackend::createLocalStore( "UnitGame", settings, context ) ); // 거절된 등록이 풀려도 기반 백엔드는 남는다
+    SW_EXPECT_TRUE( LocalStoreFactory::createLocalStore( "UnitGame", settings, context ) ); // 거절된 등록이 풀려도 기반 백엔드는 남는다
 }
 
 namespace
@@ -212,7 +212,7 @@ SW_TEST_CASE( LocalStoreFileTest, CorruptSlotFallsBackToThePreviousGeneration )
 
     const AbsolutePath                       slotPath = fixture._directStorage.makeSlotPath( "save/slot0" );
     StringBuilder<constant::buffer::kMax512> previousPath;
-    previousPath.appendFormat( "%#%#", slotPath.str(), FileLocalSlotStorage::kPreviousGenerationSuffix );
+    previousPath.appendFormat( "%#%#", slotPath.str(), FileLocalStoreBackend::kPreviousGenerationSuffix );
     SW_REQUIRE_TRUE( FileUtil::isRegularFile( FileUtil::toDiskPath( previousPath.view() ) ) );
     const uint8 arrGarbage[4] = { 0xDE, 0xAD, 0xBE, 0xEF };
     SW_REQUIRE_TRUE( FileUtil::writeFile( slotPath, arrGarbage, sizeof( arrGarbage ) ) );

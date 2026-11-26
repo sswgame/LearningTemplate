@@ -1,7 +1,5 @@
 #include "pch.h"
 
-#include "GameFramework/Client/Flow/GameInstanceClient.h"
-
 #include "Core/Delegate/Subscription.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
@@ -12,13 +10,15 @@
 #include "Engine/UI/Screen/UIOwnedScreen.h"
 #include "Engine/UI/UISystem.h"
 
+#include "GameFramework/Client/Flow/GameSessionCommands.h"
 #include "GameFramework/Client/Flow/LoadingScreenController.h"
 #include "GameFramework/Runtime/Foundation/Flow/GameInstanceClientHook.h"
 #include "GameFramework/Runtime/Foundation/Flow/GameSceneFlow.h"
+#include "GameFramework/Runtime/Foundation/Flow/ILoadingScreen.h"
 #include "GameFramework/Runtime/Foundation/GameFeature/GameFeatureScope.h"
 #include "GameFramework/Runtime/Foundation/Minigame/MinigameDefinition.h"
 #include "GameFramework/Runtime/Foundation/Minigame/MinigameFlow.h"
-#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
+#include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
 
 namespace sw
 {

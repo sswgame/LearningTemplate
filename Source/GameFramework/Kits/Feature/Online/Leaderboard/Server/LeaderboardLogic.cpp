@@ -1,0 +1,1857 @@
+#include "pch.h"
+
+#include "GameFramework/Kits/Feature/Online/Leaderboard/Server/LeaderboardLogic.h"
+
+#include "Core/Algorithm/VectorUtil.h"
+#include "Core/Container/string.h"
+#include "Core/Foundation/Types.h"
+#include "Core/Math/MathUtil.h"
+#include "Core/Serialization/BitStream.h"
+#include "Core/String/StringUtil.h"
+
+#include "Engine/Reflection/ReflectionMacros.h"
+
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Store/ServiceIdempotency.h"
+#include "GameFramework/Runtime/Online/Cache/Server/CacheRecordTable.h"
+#include "GameFramework/Runtime/Online/Cache/Server/CacheStore.h"
+#include "GameFramework/Runtime/Online/Cache/Server/CacheStoreRouter.h"
+#include "GameFramework/Runtime/Online/Ledger/LedgerTypes.h"
+#include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
+#include "GameFramework/Runtime/Online/Mail/Server/ServiceMail.h"
+#include "GameFramework/Runtime/Online/Scheduler/Server/ServiceScheduler.h"
+#include "GameFramework/Runtime/Online/Service/OnlineLimit.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceCommitRunner.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordCodec.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordReader.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceStoreUtil.h"
+#include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
+#include "GameFramework/Runtime/Online/Store/ServiceRecordUnknownFields.h"
+
+#include <algorithm>
+#include <cstring>
+
+namespace sw
+{
+    /** @brief 값 하나와 그 시각(점수 `lb_score` · 통계 `lb_stat` · 업적 `lb_achievement` — 업적의 값은 달성 시각)입니다. */
+    REFLECT()
+    struct LeaderboardValueRecord
+    {
+        REFLECT_BODY();
+        PROPERTY()
+        int64 _value{ 0 };
+        PROPERTY()
+        int64 _updatedMs{ 0 };
+        PROPERTY( MaxCount = OnlineLimit::kMaxDisplayNameSize )
+        string _displayName{}; ///< 점수만 싣는다(계정 목록 조회)
+
+        ServiceRecordUnknownFields _unknownProperties{};
+    };
+
+    /** @brief 시즌 하나의 정산 결과(`lb_season_result`, 키 `<보드>/<시즌>/<계정>`)입니다. */
+    REFLECT()
+    struct LeaderboardSeasonResultRecord
+    {
+        REFLECT_BODY();
+        PROPERTY()
+        int64 _score{ 0 };
+        PROPERTY( Min = 1 )
+        int32 _rank{ 1 };
+
+        ServiceRecordUnknownFields _unknownProperties{};
+    };
+
+    /** @brief 순위표가 캐시에 둔 표시 이름(키 `lb.name:<계정>`)입니다. 다시 만들 수 있는 캐시라 판이 다르면 없는 것으로 본다. */
+    REFLECT()
+    struct LeaderboardNameCacheRecord
+    {
+        REFLECT_BODY();
+        PROPERTY( MaxCount = OnlineLimit::kMaxDisplayNameSize )
+        string _displayName{};
+    };
+
+    namespace
+    {
+        struct LeaderboardLogicInternal
+        {
+            static constexpr int32       kRebuildBatch         = 256;
+            static constexpr int32       kPlayersPerPage       = 600; ///< 정산 저장소 일 하나가 쓰는 사람 수(커밋 50 번). 페이지 사이에 다른 요청이 저장소 워커를 쓴다
+            static constexpr int64       kDayMs                = 86400000;
+            static constexpr int64       kWeekMs               = 604800000;
+            static constexpr int64       kRankRetentionGraceMs = 86400000;  ///< 기간이 끝난 뒤 캐시 순위를 남기는 시간(시계 차이와 경계 직후 읽기를 흡수한다)
+            static constexpr int64       kSettlementWindowMs   = 604800000; ///< 7일이다. 시즌이 끝난 뒤 이 안에 정산이 돈다
+            static constexpr int64       kSettlementLeaseMs    = 600000;    ///< 10분이다. 돌던 서버가 죽으면 다른 서버가 이어받는다
+            static constexpr const utf8* kSettlementJobPrefix  = "lb.settle.";
+            static constexpr const utf8* kAchievementSender    = "system.achievement";
+            static constexpr const utf8* kSeasonSender         = "system.season";
+
+            static const ServiceRecordTable<LeaderboardValueRecord>& getAchievementTable()
+            {
+                static const ServiceRecordTable<LeaderboardValueRecord> s_table{ "lb_achievement" };
+                return s_table;
+            }
+
+            static const ServiceRecordTable<LeaderboardSeasonResultRecord>& getSeasonResultTable()
+            {
+                static const ServiceRecordTable<LeaderboardSeasonResultRecord> s_table{ "lb_season_result" };
+                return s_table;
+            }
+
+            static const ServiceIndexTable& getSeasonResultExpiryTable()
+            {
+                static const ServiceIndexTable s_table{ "lb_season_result_expiry" };
+                return s_table;
+            }
+
+            static const ServiceIndexTable& getScoreExpiryTable()
+            {
+                static const ServiceIndexTable s_table{ "lb_score_expiry" };
+                return s_table;
+            }
+
+            /**
+             * @brief 기간 @p periodID 의 점수가 더 쓰이지 않게 되는 시각입니다(TTL 색인의 기준 시각). 0 이면 지우지 않습니다.
+             * @details 일간 · 주간은 다음 초기화(기간 id 가 기간 시작 시각이다), 시즌은 시즌 끝 + 정산 창이다 — 정산이 점수를 모두 읽은 뒤에야 지운다.
+             */
+            static int64 computeScoreExpiryBaseMs( const LeaderboardDef& definition, uint64 periodID )
+            {
+                switch ( definition._reset )
+                {
+                    case LeaderboardReset::Daily:
+                    {
+                        return static_cast<int64>( periodID ) + kDayMs;
+                    }
+                    case LeaderboardReset::Weekly:
+                    {
+                        return static_cast<int64>( periodID ) + kWeekMs;
+                    }
+                    case LeaderboardReset::Season:
+                    {
+                        for ( const LeaderboardSeason& season : definition._listSeason )
+                        {
+                            if ( season._seasonID == periodID )
+                                return season._endMs + kSettlementWindowMs;
+                        }
+                        return 0;
+                    }
+                    default:
+                    {
+                        return 0; // 초기화 없는 보드의 점수는 지우지 않는다
+                    }
+                }
+            }
+
+            /** @brief 점수 값의 갱신 시각을 읽습니다(보존 쓸기). 기간 끝보다 늦을 수 없으므로 색인 줄이 기간을 넘기면 레코드도 넘긴다. */
+            [[nodiscard]] static bool readScoreTimeMs( const ServiceRecord& record, int64& outTimeMs )
+            {
+                LeaderboardValueRecord value;
+                if ( getScoreTable().decode( record, value ) == false )
+                    return false;
+                outTimeMs = value._updatedMs;
+                return true;
+            }
+
+            /** @brief 시즌 id 를 16진 8자리 문자열로 만듭니다. 작업 id 와 우편 멱등 키를 64바이트 안에 두려는 것입니다. */
+            static string makeSeasonHex( uint32 seasonID ) { return ServiceKeyUtil::makeHex64( seasonID ).substr( 8 ); }
+
+            static string makeSeasonResultKey( string_view boardID, uint32 seasonID, AccountID accountID )
+            {
+                StringBuilder<constant::buffer::kMax128> key;
+                key.appendFormat( "%#/%#/%#", boardID, makeSeasonHex( seasonID ), ServiceKeyUtil::makeHex64( accountID ) );
+                return string( key.view() );
+            }
+
+            /** @brief 시즌 보드의 시즌 목록 규칙을 검사합니다. id 는 1 이상이고 유일해야 하며, 시작이 끝보다 앞서야 합니다. 보상 구간은 1 ≤ from ≤ to 이고 자산, 수량, 우편 제목이 있어야 합니다. */
+            static bool areSeasonsValid( const LeaderboardDef& definition )
+            {
+                if ( definition._reset != LeaderboardReset::Season )
+                    return definition._listSeason.empty();
+                for ( size_t seasonIndex = 0; seasonIndex < definition._listSeason.size(); ++seasonIndex )
+                {
+                    const LeaderboardSeason& season = definition._listSeason[seasonIndex];
+                    if ( season._seasonID == 0 || season._startMs >= season._endMs )
+                        return false;
+                    for ( size_t otherIndex = 0; otherIndex < seasonIndex; ++otherIndex )
+                    {
+                        if ( definition._listSeason[otherIndex]._seasonID == season._seasonID )
+                            return false;
+                    }
+                    for ( const LeaderboardRewardTier& tier : season._listRewardTier )
+                    {
+                        const bool bTierOk = 1 <= tier._rankFrom && tier._rankFrom <= tier._rankTo && tier._amount > 0 && tier._assetID.empty() == false &&
+                                             tier._mailTitleKey.empty() == false;
+                        if ( bTierOk == false )
+                            return false;
+                    }
+                }
+                return true;
+            }
+
+            /** @brief 보상 우편 하나를 트랜잭션에 붙입니다. 재원을 발행하며 30일 보관하고 만료되면 첨부가 사라집니다. */
+            static LedgerResult stageRewardMail( IServiceStoreConnection& connection, ServiceTransaction& inoutTransaction, AccountID accountID, string_view assetID,
+                                                 int64 amount, string_view titleKey, string_view senderName, string idempotencyKey, UnixMilliseconds nowMs )
+            {
+                ServiceMailMessage mail;
+                mail._listAttachment.push_back( ServiceMailAttachment{ string( assetID ), amount } );
+                mail._titleKey           = string( titleKey );
+                mail._senderName         = string( senderName );
+                mail._idempotencyKey     = std::move( idempotencyKey );
+                mail._fundingHolder      = LedgerHolder::makeMint();
+                mail._recipientAccountID = accountID;
+                mail._createdMs          = nowMs.count();
+                mail._expiresMs          = nowMs.count() + ServiceMailConstant::kDefaultRetentionMs;
+                mail._expiryAction       = ServiceMail::getDefaultExpiryAction( mail._fundingHolder );
+                string mailKey;
+                bool   bReplayed = false;
+                return ServiceMail::stageSend( connection, mail, inoutTransaction, mailKey, bReplayed );
+            }
+
+            static const ServiceRecordTable<LeaderboardValueRecord>& getScoreTable()
+            {
+                static const ServiceRecordTable<LeaderboardValueRecord> s_table{ "lb_score" };
+                return s_table;
+            }
+
+            static const ServiceRecordTable<LeaderboardValueRecord>& getStatTable()
+            {
+                static const ServiceRecordTable<LeaderboardValueRecord> s_table{ "lb_stat" };
+                return s_table;
+            }
+
+            static string makeScorePrefix( string_view boardID, uint64 periodID )
+            {
+                StringBuilder<constant::buffer::kMax128> prefix;
+                prefix.appendFormat( "%#/%#/", boardID, ServiceKeyUtil::makeHex64( periodID ) );
+                return string( prefix.view() );
+            }
+            static string makeNameKey( AccountID accountID )
+            {
+                StringBuilder<constant::buffer::kMax128> key;
+                key.appendFormat( "lb/name/%#", ServiceKeyUtil::makeHex64( accountID ) );
+                return string( key.view() );
+            }
+            static string makeReadyKey( const string& rankKey )
+            {
+                StringBuilder<constant::buffer::kMax128> key;
+                key.appendFormat( "%#/ready", rankKey );
+                return string( key.view() );
+            }
+            /** @brief 캐시 순위의 멤버입니다. 캐시가 같은 점수를 멤버 역순으로 세우므로 보수를 써서 계정 id 오름차순이 되게 합니다. */
+            static string             makeRankMember( AccountID accountID ) { return ServiceKeyUtil::makeHex64( ~accountID ); }
+            [[nodiscard]] static bool parseRankMember( string_view member, AccountID& outAccountID )
+            {
+                uint64     inverted = 0;
+                const bool bParsed  = ServiceKeyUtil::parseHex64( member, inverted );
+                outAccountID        = ~inverted;
+                return bParsed;
+            }
+
+            static LeaderboardValueRecord encodeScore( int64 score, int64 updatedMs, string_view displayName )
+            {
+                LeaderboardValueRecord record;
+                record._value       = score;
+                record._updatedMs   = updatedMs;
+                record._displayName = string( displayName );
+                return record;
+            }
+
+            static bool isAchievementIDLess( const OnlineAchievementDef& left, const OnlineAchievementDef& right ) { return left._achievementID < right._achievementID; }
+
+            /** @brief 점수와 표시 이름을 읽습니다. 계정 목록 조회가 씁니다. */
+            [[nodiscard]] static bool decodeScoreWithName( const ServiceRecord& raw, int64& outScore, string& outDisplayName )
+            {
+                LeaderboardValueRecord record;
+                if ( getScoreTable().decode( raw, record ) == false )
+                    return false;
+                outScore       = record._value;
+                outDisplayName = std::move( record._displayName );
+                return true;
+            }
+
+            /** @brief 점수 · 통계 · 업적 값을 읽습니다(세 표가 같은 레코드 형식이다). */
+            [[nodiscard]] static bool decodeScore( const ServiceRecord& raw, int64& outScore )
+            {
+                LeaderboardValueRecord record;
+                if ( getScoreTable().decode( raw, record ) == false )
+                    return false;
+                outScore = record._value;
+                return true;
+            }
+
+            /** @brief 갱신 방식에 따라 새 값을 정합니다. 쓸 필요가 없으면 @p outbChanged 가 false 입니다. */
+            static int64 applyUpdate( LeaderboardUpdate update, LeaderboardOrder order, bool bHasOld, int64 oldValue, int64 value, bool& outbChanged )
+            {
+                outbChanged = true;
+                if ( bHasOld == false )
+                    return value;
+                switch ( update )
+                {
+                    case LeaderboardUpdate::Latest:
+                    {
+                        outbChanged = oldValue != value;
+                        return value;
+                    }
+                    case LeaderboardUpdate::Sum:
+                    {
+                        return MathUtil::clamp( oldValue + value, -LeaderboardLimit::kMaxAbsScore, LeaderboardLimit::kMaxAbsScore );
+                    }
+                    default:
+                    {
+                        const bool bBetter = order == LeaderboardOrder::Descending ? value > oldValue : value < oldValue;
+                        outbChanged        = bBetter;
+                        return bBetter ? value : oldValue;
+                    }
+                }
+            }
+
+            /** @brief @p prefix 아래의 점수를 모두 읽습니다. 배치마다 커서를 씁니다. */
+            [[nodiscard]] static bool readAllScores( IServiceStoreConnection& connection, const string& prefix, vector<LeaderboardScoreRow>& outListScore )
+            {
+                string cursor;
+                while ( true )
+                {
+                    vector<ServiceRecord> listRecord;
+                    if ( ServiceRecordReader::readPage( connection, getScoreTable(), prefix, cursor, kRebuildBatch, false, listRecord )._result != ServiceStoreResult::Ok )
+                        return false;
+                    for ( const ServiceRecord& record : listRecord )
+                    {
+                        LeaderboardScoreRow row;
+                        const bool          bParsed = ServiceKeyUtil::parseHex64( string_view( record._key ).substr( prefix.size() ), row._accountID ) &&
+                                             decodeScore( record, row._score );
+                        if ( bParsed )
+                            outListScore.push_back( row );
+                    }
+                    if ( static_cast<int32>( listRecord.size() ) < kRebuildBatch )
+                        return true;
+                    cursor = listRecord.back()._key;
+                }
+            }
+        };
+
+        /** @brief 순위 규칙 하나입니다. 정렬 방향으로 세우고 같은 점수는 계정 id 오름차순입니다. 다시 돌아도 같은 순위여야 하고, 캐시 순위(`makeRankMember`)도 이 순서입니다. */
+        struct LeaderboardRankOrder
+        {
+            LeaderboardOrder _order{ LeaderboardOrder::Descending };
+
+            template <typename TRow>
+            bool operator()( const TRow& left, const TRow& right ) const
+            {
+                if ( left._score != right._score )
+                    return _order == LeaderboardOrder::Descending ? left._score > right._score : left._score < right._score;
+                return left._accountID < right._accountID;
+            }
+        };
+
+        /**
+         * @brief 보드 카탈로그의 불변 사본으로 색인보다 먼저 쓴 점수 · 시즌 결과의 TTL 색인 키를 만듭니다(백필).
+         * @details 줄의 시각(다음 초기화, 시즌 끝 + 정산 창)이 레코드가 아니라 보드 정의에서 나온다. 저장소 스레드가 읽으므로 만들 때 정의를 복사해 두고 바꾸지 않는다.
+         *          모르는 보드 · 초기화 없는 보드 · 모르는 시즌의 레코드는 줄을 만들지 않는다(남는 쪽으로 틀린다).
+         */
+        class LeaderboardBackfillSource final : public IServiceTTLBackfillSource
+        {
+        public:
+            enum class Kind : uint8
+            {
+                Score = 0,   ///< `<보드>/<기간 16 진 16>/<계정 16 진>`
+                SeasonResult ///< `<보드>/<시즌 16 진 8>/<계정 16 진>`
+            };
+
+            LeaderboardBackfillSource( vector<LeaderboardDef> listBoard, Kind kind )
+                : _listBoard{ std::move( listBoard ) }
+                , _kind{ kind }
+            {
+            }
+
+            [[nodiscard]] bool makeIndexKey( IServiceStoreConnection& connection, const ServiceRecord& record, string& outIndexKey ) const override
+            {
+                (void)connection;
+                constexpr size_t  kAccountWidth = static_cast<size_t>( ServiceKeyUtil::kHexWidth );
+                const size_t      periodWidth   = _kind == Kind::Score ? static_cast<size_t>( ServiceKeyUtil::kHexWidth ) : kSeasonHexWidth;
+                const size_t      tailSize      = 1 + periodWidth + 1 + kAccountWidth;
+                const string_view key           = record._key;
+                if ( key.size() <= tailSize || key[key.size() - kAccountWidth - 1] != '/' || key[key.size() - tailSize] != '/' )
+                    return false;
+                const string_view boardID  = key.substr( 0, key.size() - tailSize );
+                uint64            periodID = 0;
+                if ( parseHex( key.substr( key.size() - tailSize + 1, periodWidth ), periodID ) == false )
+                    return false;
+                const LeaderboardDef* pBoard = nullptr;
+                for ( const LeaderboardDef& board : _listBoard )
+                {
+                    if ( board._boardID == boardID )
+                        pBoard = &board;
+                }
+                if ( pBoard == nullptr )
+                    return false;
+                int64 baseMs = 0;
+                if ( _kind == Kind::Score )
+                    baseMs = LeaderboardLogicInternal::computeScoreExpiryBaseMs( *pBoard, periodID );
+                else
+                {
+                    for ( const LeaderboardSeason& season : pBoard->_listSeason )
+                    {
+                        if ( season._seasonID == periodID )
+                            baseMs = season._endMs + LeaderboardLogicInternal::kSettlementWindowMs; // 쓰는 쪽(`stageSeasonResult`)과 같은 시각이다
+                    }
+                }
+                if ( baseMs <= 0 )
+                    return false;
+                outIndexKey = ServiceTTLRule::makeTTLIndexKey( baseMs, key );
+                return true;
+            }
+
+        private:
+            static constexpr size_t kSeasonHexWidth  = 8;  ///< `makeSeasonHex` 의 자릿수
+            static constexpr uint64 kHexLetterValue  = 10; ///< 'a' · 'A' 의 값
+            static constexpr int32  kBitsPerHexDigit = 4;
+
+            [[nodiscard]] static bool parseHex( string_view text, uint64& outValue )
+            {
+                outValue = 0;
+                for ( const utf8 letter : text )
+                {
+                    const bool bDigit = letter >= '0' && letter <= '9';
+                    const bool bLower = letter >= 'a' && letter <= 'f';
+                    const bool bUpper = letter >= 'A' && letter <= 'F';
+                    if ( bDigit == false && bLower == false && bUpper == false )
+                        return false;
+                    const uint64 digit = bDigit ? static_cast<uint64>( letter - '0' ) : static_cast<uint64>( ( bLower ? letter - 'a' : letter - 'A' ) + kHexLetterValue );
+                    outValue           = ( outValue << kBitsPerHexDigit ) | digit;
+                }
+                return text.empty() == false;
+            }
+
+            vector<LeaderboardDef> _listBoard;
+            Kind                   _kind;
+        };
+    } // namespace
+
+    /** @brief 점수(또는 통계) 하나를 버전 조건으로 쓰는 일의 입력입니다. 저장소 스레드가 읽는 값 복사입니다(`LeaderboardLogic::submitWrite` 가 받으므로 이름 있는 이름공간에 둔다). */
+    struct LeaderboardWriteInput
+    {
+        const ServiceRecordTable<LeaderboardValueRecord>* _pTable{ nullptr };
+        string                                            _key{};
+        string                                            _displayName{};
+        int64                                             _value{ 0 };
+        UnixMilliseconds                                  _nowMs{ 0 };
+        LeaderboardUpdate                                 _update{ LeaderboardUpdate::Best };
+        LeaderboardOrder                                  _order{ LeaderboardOrder::Descending };
+        NetIdempotencyKey                                 _idempotencyKey{};  ///< Sum · Latest 쓰기의 멱등 기록 키. 비면(서버 안의 파생 쓰기) 기록하지 않는다
+        int64                                             _expiryBaseMs{ 0 }; ///< 0 이 아니면 레코드를 처음 만들 때 이 시각의 TTL 색인 줄(`lb_score_expiry`)을 함께 넣는다
+    };
+
+    namespace
+    {
+        /** @brief 쓰기 일이 완료로 넘기는 값입니다. */
+        struct LeaderboardWriteResult
+        {
+            string                   _displayName{}; ///< 점수와 함께 남긴 표시 이름이다(제출이 비웠으면 이름 색인이 채운 것)
+            int64                    _finalValue{ 0 };
+            LeaderboardServiceResult _result{ LeaderboardServiceResult::fail( OnlineError::kUnavailable ) };
+            uint8                    _bChanged{ SW_FALSE };
+        };
+
+        /** @brief 읽기 일이 완료로 넘기는 값과 결과입니다. */
+        template <typename TValue>
+        struct LeaderboardRead
+        {
+            TValue                   _value{};
+            LeaderboardServiceResult _result{ LeaderboardServiceResult::fail( OnlineError::kUnavailable ) };
+        };
+
+        /** @brief 통계 한 쪽과 다음 쪽 커서입니다(비면 끝). */
+        struct LeaderboardStatPage
+        {
+            vector<LeaderboardStat> _listStat{};
+            string                  _nextCursor{};
+        };
+
+        /** @brief 업적 한 쪽과 다음 쪽 커서입니다(비면 끝). */
+        struct LeaderboardAchievementPage
+        {
+            vector<AchievementState> _listAchievement{};
+            string                   _nextCursor{};
+        };
+
+        /** @brief 저장소 스레드에서 도는 일입니다. 서비스 멤버를 만지지 않고 인자로 받은 값만 씁니다. */
+        struct LeaderboardStoreRun
+        {
+            /** @brief 멱등 기록의 응답(적용한 뒤의 값)을 읽습니다. 처음 요청이면 NotFound 입니다. */
+            static ServiceStoreResult findReplayedValue( IServiceStoreConnection& connection, const LeaderboardWriteInput& input, int64& outValue )
+            {
+                vector<uint8>            listReply;
+                const ServiceStoreResult found = ServiceIdempotency::findReply( connection, input._key, input._idempotencyKey._high, input._idempotencyKey._low, listReply );
+                if ( found != ServiceStoreResult::Ok )
+                    return found;
+                if ( listReply.size() != sizeof( int64 ) )
+                    return ServiceStoreResult::Invalid;
+                std::memcpy( &outValue, listReply.data(), sizeof( int64 ) );
+                return ServiceStoreResult::Ok;
+            }
+
+            /** @brief 갱신 방식에 따라 새 값을 정하고 버전 조건으로 씁니다. 충돌이면 다시 읽어 다시 한다(`ServiceCommitRunner`). */
+            static LeaderboardWriteResult writeValue( IServiceStoreConnection& connection, const LeaderboardWriteInput& input )
+            {
+                using Internal = LeaderboardLogicInternal;
+                LeaderboardWriteResult write;
+                // 누적 · 덮어쓰기는 다시 적용하면 값이 달라진다 — 멱등 기록이 재시도를 가린다(Best 는 다시 해도 같다)
+                const bool bRecorded = input._idempotencyKey.isValid() && ( input._update == LeaderboardUpdate::Sum || input._update == LeaderboardUpdate::Latest );
+                write._result        = ServiceCommitRunner::run<LeaderboardServiceResult>( connection, "Leaderboard.Write", [&]( ServiceCommitAttempt& attempt ) -> optional<LeaderboardServiceResult>
+                       {
+                    if ( bRecorded )
+                    {
+                        const ServiceStoreResult replayed = findReplayedValue( attempt, input, write._finalValue );
+                        if ( replayed == ServiceStoreResult::Ok )
+                        {
+                            return LeaderboardServiceResult{ LeaderboardResult::Ok }; // 이미 적용했다 — 그때의 값을 돌려준다
+                        }
+                        if ( replayed != ServiceStoreResult::NotFound )
+                            return write._result;
+                    }
+                    ServiceRecord            record;
+                    const ServiceStoreResult readResult = attempt.readRecord( *input._pTable, input._key, record );
+                    if ( readResult != ServiceStoreResult::Ok && readResult != ServiceStoreResult::NotFound )
+                        return write._result;
+                    int64      oldValue = 0;
+                    const bool bHasOld  = readResult == ServiceStoreResult::Ok && Internal::decodeScore( record, oldValue );
+                    bool       bChanged = false;
+                    write._finalValue   = Internal::applyUpdate( input._update, input._order, bHasOld, oldValue, input._value, bChanged );
+                    if ( bChanged == false )
+                    {
+                        return LeaderboardServiceResult{ LeaderboardResult::Ok }; // 더 좋지 않으므로 쓰지 않는다
+                    }
+                    ServiceTransaction transaction;
+                    transaction.put( *input._pTable, input._key, Internal::encodeScore( write._finalValue, input._nowMs.count(), input._displayName ), record._version );
+                    if ( readResult == ServiceStoreResult::NotFound && input._expiryBaseMs > 0 ) // 계정 · 기간마다 한 번이다(같은 줄을 여럿이 쓰지 않는다)
+                        transaction.put( Internal::getScoreExpiryTable(), ServiceTTLRule::makeTTLIndexKey( input._expiryBaseMs, input._key ),
+                                                ServiceRecord::kAnyVersion );
+                    ServiceStoreResult committed = ServiceStoreResult::Ok;
+                    if ( bRecorded )
+                    {
+                        vector<uint8> listReply( sizeof( int64 ) );
+                        std::memcpy( listReply.data(), &write._finalValue, sizeof( int64 ) );
+                        committed = ServiceIdempotency::commit( attempt, transaction, input._key, input._idempotencyKey._high, input._idempotencyKey._low, std::move( listReply ) );
+                    }
+                    else
+                        committed = attempt.commit( transaction );
+                    if ( committed == ServiceStoreResult::Conflict )
+                        return nullopt;
+                    if ( committed != ServiceStoreResult::Ok )
+                        return LeaderboardServiceResult::fail( OnlineError::kUnavailable );
+                    write._bChanged = SW_TRUE;
+                    return LeaderboardServiceResult{ LeaderboardResult::Ok };
+                } );
+                return write;
+            }
+
+            /**
+             * @brief 계정 행(`<계정>/<이름>`)을 이름 @p cursor 다음부터 @p maxCount 개 읽어 레코드마다 @p decode 를 부릅니다. 쪽이 가득 차면 @p outNextCursor 가 마지막 이름입니다.
+             * @return 읽지 못했거나 @p decode 가 false 면 false 입니다.
+             */
+            template <typename Decode>
+            static bool readAccountPage( IServiceStoreConnection& connection, const hashed_string& table, AccountID accountID, string_view cursor, int32 maxCount, string& outNextCursor,
+                                         Decode&& decode )
+            {
+                vector<ServiceRecord>                    listRecord;
+                StringBuilder<constant::buffer::kMax128> prefixBuilder;
+                prefixBuilder.appendFormat( "%#/", ServiceKeyUtil::makeHex64( accountID ) );
+                const string                             prefix( prefixBuilder.view() );
+                StringBuilder<constant::buffer::kMax128> cursorBuilder;
+                if ( cursor.empty() == false )
+                    cursorBuilder.appendFormat( "%#%#", prefix, cursor );
+                const string            cursorKey( cursorBuilder.view() );
+                const ServiceRecordPage page = ServiceRecordReader::readPage( connection, table, prefix, cursorKey, maxCount, false, listRecord );
+                if ( page.isOk() == false )
+                    return false;
+                for ( const ServiceRecord& record : listRecord )
+                {
+                    if ( decode( string_view( record._key ).substr( prefix.size() ), record ) == false )
+                        return false;
+                }
+                outNextCursor = page.hasMore() ? page._nextCursor.substr( prefix.size() ) : string();
+                return true;
+            }
+
+            /** @brief 계정의 통계 한 쪽입니다. 손상된 통계는 건너뛰지 않고 이 읽기를 실패로 돌려준다. */
+            static LeaderboardRead<LeaderboardStatPage> readStats( IServiceStoreConnection& connection, AccountID accountID, const string& cursor, int32 maxCount )
+            {
+                LeaderboardRead<LeaderboardStatPage> read;
+                const bool                           bRead = readAccountPage( connection, LeaderboardLogicInternal::getStatTable(), accountID, cursor, maxCount, read._value._nextCursor,
+                                                                              [&]( string_view name, const ServiceRecord& record )
+                                          {
+                    LeaderboardStat stat;
+                    stat._name = string( name );
+                    if ( LeaderboardLogicInternal::decodeScore( record, stat._value ) == false )
+                        return false;
+                    read._value._listStat.push_back( std::move( stat ) );
+                    return true;
+                } );
+                if ( bRead == false )
+                {
+                    read._value = LeaderboardStatPage{};
+                    return read;
+                }
+                read._result = LeaderboardResult::Ok;
+                return read;
+            }
+
+            /** @brief 계정의 통계를 모두 읽습니다(매칭이 쓰는 캐시 — 쪽에서 자르면 뒤의 통계가 없는 것으로 보인다). 손상된 통계는 이 읽기를 실패로 돌려준다. */
+            static LeaderboardRead<vector<LeaderboardStat>> readAllStats( IServiceStoreConnection& connection, AccountID accountID )
+            {
+                LeaderboardRead<vector<LeaderboardStat>> read;
+                StringBuilder<constant::buffer::kMax128> prefixBuilder;
+                prefixBuilder.appendFormat( "%#/", ServiceKeyUtil::makeHex64( accountID ) );
+                const string             prefix( prefixBuilder.view() );
+                bool                     bDecode = true;
+                const ServiceStoreResult listed  = ServiceRecordReader::visitAll( connection, LeaderboardLogicInternal::getStatTable(), prefix, LeaderboardLimit::kMaxStatCount, [&]( const ServiceRecord& record )
+                 {
+                    LeaderboardStat stat;
+                    stat._name = record._key.substr( prefix.size() );
+                    bDecode    = LeaderboardLogicInternal::decodeScore( record, stat._value );
+                    if ( bDecode )
+                        read._value.push_back( std::move( stat ) );
+                    return bDecode;
+                } );
+                if ( listed != ServiceStoreResult::Ok || bDecode == false )
+                {
+                    read._value.clear();
+                    return read;
+                }
+                read._result = LeaderboardResult::Ok;
+                return read;
+            }
+
+            /** @brief 업적 하나를 "없어야 함" 조건으로 쓰고 보상 우편을 같은 트랜잭션에 넣습니다. 이미 있으면 아무것도 하지 않고 false 입니다. */
+            static bool unlockAchievement( IServiceStoreConnection& connection, const OnlineAchievementDef& definition, AccountID accountID, UnixMilliseconds nowMs )
+            {
+                using Internal = LeaderboardLogicInternal;
+                StringBuilder<constant::buffer::kMax128> keyBuilder;
+                keyBuilder.appendFormat( "%#/%#", ServiceKeyUtil::makeHex64( accountID ), definition._achievementID );
+                const string  key( keyBuilder.view() );
+                ServiceRecord existing;
+                if ( connection.readRecord( Internal::getAchievementTable(), key, existing ) != ServiceStoreResult::NotFound )
+                    return false; // 이미 달성했거나 저장소가 실패했다. 다음 통계 변화 때 다시 확인한다
+                ServiceTransaction transaction;
+                transaction.put( Internal::getAchievementTable(), key, Internal::encodeScore( nowMs.count(), nowMs.count(), string_view{} ), ServiceRecord::kAbsentVersion ); // 값은 달성 시각이다
+                if ( definition._rewardAssetID.empty() == false )
+                {
+                    StringBuilder<constant::buffer::kMax128> keyBuilder;
+                    keyBuilder.appendFormat( "ach.%#.%#", ServiceKeyUtil::makeHex64( accountID ), definition._achievementID );
+                    const string       idempotencyKey( keyBuilder.view() );
+                    const LedgerResult staged = Internal::stageRewardMail( connection, transaction, accountID, definition._rewardAssetID, definition._rewardAmount,
+                                                                           definition._mailTitleKey, Internal::kAchievementSender, idempotencyKey, nowMs );
+                    if ( staged != LedgerResult::Ok )
+                        return false; // 우편 규칙이나 저장소 때문에 실패했으므로 업적도 쓰지 않는다. 다음에 다시 시도한다
+                }
+                return ServiceCommitRunner::commitOnce( connection, transaction ) == ServiceStoreResult::Ok;
+            }
+
+            /** @brief 계정이 달성한 업적 한 쪽입니다. 읽을 수 없는 기록은 건너뛴다. */
+            static LeaderboardRead<LeaderboardAchievementPage> readAchievements( IServiceStoreConnection& connection, AccountID accountID, const string& cursor, int32 maxCount )
+            {
+                LeaderboardRead<LeaderboardAchievementPage> read;
+                const bool                                  bRead = readAccountPage( connection, LeaderboardLogicInternal::getAchievementTable(), accountID, cursor, maxCount, read._value._nextCursor,
+                                                                                     [&]( string_view achievementID, const ServiceRecord& record )
+                                                 {
+                    AchievementState achievement;
+                    achievement._achievementID = string( achievementID );
+                    if ( LeaderboardLogicInternal::decodeScore( record, achievement._unlockedMs ) )
+                        read._value._listAchievement.push_back( std::move( achievement ) );
+                    return true;
+                } );
+                if ( bRead == false )
+                {
+                    read._value = LeaderboardAchievementPage{};
+                    return read;
+                }
+                read._result = LeaderboardResult::Ok;
+                return read;
+            }
+
+            /** @brief 통계와 달성 기록을 읽어 등록한 업적(복사본)마다 진행률 한 줄을 만듭니다. 손상된 기록은 건너뛰지 않고 이 읽기를 실패로 돌려준다. */
+            static LeaderboardRead<vector<AchievementProgress>> readAchievementProgress( IServiceStoreConnection& connection, const vector<OnlineAchievementDef>& listDefinition, AccountID accountID )
+            {
+                using Internal = LeaderboardLogicInternal;
+                LeaderboardRead<vector<AchievementProgress>> read;
+                vector<ServiceRecord>                        listStatRecord;
+                vector<ServiceRecord>                        listAchievementRecord;
+                StringBuilder<constant::buffer::kMax128>     prefixBuilder;
+                prefixBuilder.appendFormat( "%#/", ServiceKeyUtil::makeHex64( accountID ) );
+                const string prefix( prefixBuilder.view() );
+                // 끝까지 읽는다 — 통계는 쓰기에 계정당 상한이 없어 한 쪽만 읽으면 뒤의 통계를 쓰는 업적의 진행률이 0 으로 보인다
+                const auto collectInto = [&]( const hashed_string& table, int32 pageSize, vector<ServiceRecord>& outList )
+                {
+                    return ServiceRecordReader::visitAll( connection, table, prefix, pageSize, [&]( const ServiceRecord& record )
+                    {
+                        outList.push_back( record );
+                        return true;
+                    } ) == ServiceStoreResult::Ok;
+                };
+                const bool bReadOk = collectInto( Internal::getStatTable(), LeaderboardLimit::kMaxStatCount, listStatRecord ) &&
+                                     collectInto( Internal::getAchievementTable(), LeaderboardLimit::kMaxAchievementCount, listAchievementRecord );
+                if ( bReadOk == false )
+                    return read;
+                for ( const OnlineAchievementDef& definition : listDefinition )
+                {
+                    AchievementProgress progress;
+                    if ( findValue( listAchievementRecord, prefix.size(), definition._achievementID, progress._unlockedMs ) == false )
+                    {
+                        read._value.clear();
+                        return read;
+                    }
+                    if ( definition._bHidden && progress._unlockedMs == 0 )
+                    {
+                        progress._bHidden = SW_TRUE;
+                        read._value.push_back( std::move( progress ) );
+                        continue;
+                    }
+                    if ( findValue( listStatRecord, prefix.size(), definition._statName, progress._progress ) == false )
+                    {
+                        read._value.clear();
+                        return read;
+                    }
+                    progress._achievementID = definition._achievementID;
+                    progress._threshold     = definition._threshold;
+                    progress._bHidden       = definition._bHidden ? SW_TRUE : SW_FALSE;
+                    read._value.push_back( std::move( progress ) );
+                }
+                read._result = LeaderboardResult::Ok;
+                return read;
+            }
+
+            /** @brief 계정 목록의 점수를 읽어 목록 안 순위를 매깁니다. 손상된 점수는 건너뛰지 않고 이 읽기를 실패로 돌려준다. */
+            static LeaderboardRead<vector<LeaderboardEntry>> readScoresOf( IServiceStoreConnection& connection, const string& prefix, const vector<AccountID>& listAccountID,
+                                                                           LeaderboardOrder order )
+            {
+                LeaderboardRead<vector<LeaderboardEntry>> read;
+                for ( const AccountID accountID : listAccountID )
+                {
+                    ServiceRecord                            record;
+                    StringBuilder<constant::buffer::kMax128> keyBuilder;
+                    keyBuilder.appendFormat( "%#%#", prefix, ServiceKeyUtil::makeHex64( accountID ) );
+                    const ServiceStoreResult readResult = connection.readRecord( LeaderboardLogicInternal::getScoreTable(), string( keyBuilder.view() ), record );
+                    if ( readResult == ServiceStoreResult::NotFound )
+                        continue; // 이 기간에 점수가 없다
+                    LeaderboardEntry entry;
+                    entry._accountID = accountID;
+                    if ( readResult != ServiceStoreResult::Ok || LeaderboardLogicInternal::decodeScoreWithName( record, entry._score, entry._displayName ) == false )
+                    {
+                        read._value.clear();
+                        return read;
+                    }
+                    read._value.push_back( std::move( entry ) );
+                }
+                VectorUtil::sort( read._value, LeaderboardRankOrder{ order } );
+                for ( size_t index = 0; index < read._value.size(); ++index )
+                {
+                    read._value[index]._rank = static_cast<int32>( index ) + 1;
+                }
+                read._result = LeaderboardResult::Ok;
+                return read;
+            }
+
+            /** @brief 시즌 결과 하나(점수와 순위)를 읽습니다. 없으면 NotRanked 입니다. */
+            static LeaderboardRead<LeaderboardEntry> readSeasonResult( IServiceStoreConnection& connection, const string& key, AccountID accountID )
+            {
+                LeaderboardRead<LeaderboardEntry> read;
+                read._value._accountID = accountID;
+                LeaderboardSeasonResultRecord record;
+                const ServiceStoreResult      readResult = LeaderboardLogicInternal::getSeasonResultTable().read( connection, key, record );
+                if ( readResult == ServiceStoreResult::NotFound )
+                {
+                    read._result = LeaderboardResult::NotRanked;
+                    return read;
+                }
+                if ( readResult != ServiceStoreResult::Ok )
+                    return read; // 깨진 결과(표가 오류 로그를 남긴다)도 실패다
+                read._value._score = record._score;
+                read._value._rank  = record._rank;
+                read._result       = LeaderboardResult::Ok;
+                return read;
+            }
+
+            /** @brief 정산의 첫 단계입니다. 시즌 점수를 모두 읽어 순위대로 정렬합니다. 쓰기는 하지 않는다. 못 읽었으면 결과가 실패다. */
+            static LeaderboardRead<vector<LeaderboardScoreRow>> readRanking( IServiceStoreConnection& connection, const string& scorePrefix, LeaderboardOrder order )
+            {
+                LeaderboardRead<vector<LeaderboardScoreRow>> read;
+                if ( LeaderboardLogicInternal::readAllScores( connection, scorePrefix, read._value ) == false )
+                    return read;
+                VectorUtil::sort( read._value, LeaderboardRankOrder{ order } );
+                read._result = LeaderboardResult::Ok;
+                return read;
+            }
+
+            /**
+             * @brief 정산 페이지 하나입니다. 순위가 정해진 사람 `kPlayersPerPage` 명까지 결과와 보상 우편을 트랜잭션 상한(`ServiceTransaction::kMaxWriteCount`)이 차는 만큼씩 묶어 씁니다. 다 썼으면 true 입니다.
+             * @details 결과가 있는 사람은 건너뛰므로 다시 돌아도 한 번만 처리된다. 실패하면 다음 실행(임대가 지나 다른 서버가 맡거나 다시 부름)이 남은 사람부터 잇는다.
+             *          한 사람의 쓰기 수는 세지 않고 따로 짜 본 뒤 넣는다 — 커밋당 사람 수를 상수로 두었더니 우편이 쓰기(보낸 기록 TTL 색인)를 하나 늘리자 모든 커밋이 상한을 넘어 정산이 멈췄다.
+             */
+            static bool writeSettlementPage( IServiceStoreConnection& connection, const LeaderboardDef& board, const LeaderboardSeason& season, const vector<LeaderboardScoreRow>& listPage,
+                                             int32 firstRank, UnixMilliseconds nowMs )
+            {
+                ServiceTransaction transaction;
+                for ( size_t index = 0; index < listPage.size(); ++index )
+                {
+                    ServiceTransaction player;
+                    if ( stagePlayer( connection, player, board, season, listPage[index], firstRank + static_cast<int32>( index ), nowMs ) == false )
+                        return false;
+                    const size_t writeCount = transaction.getWrites().size() + player.getWrites().size();
+                    if ( writeCount > static_cast<size_t>( ServiceTransaction::kMaxWriteCount ) )
+                    {
+                        if ( ServiceCommitRunner::commitOnce( connection, transaction ) != ServiceStoreResult::Ok )
+                            return false;
+                        transaction.clear();
+                    }
+                    Ledger::appendWrites( player, transaction );
+                }
+                return transaction.isEmpty() || ServiceCommitRunner::commitOnce( connection, transaction ) == ServiceStoreResult::Ok;
+            }
+
+        private:
+            /** @brief @p listRecord 에서 키 꼬리가 @p name 인 값을 읽습니다. 없으면 @p outValue 는 그대로이고 true, 있는데 읽지 못하면 false 입니다. */
+            [[nodiscard]] static bool findValue( const vector<ServiceRecord>& listRecord, size_t prefixSize, string_view name, int64& outValue )
+            {
+                for ( const ServiceRecord& record : listRecord )
+                {
+                    if ( string_view( record._key ).substr( prefixSize ) == name )
+                        return LeaderboardLogicInternal::decodeScore( record, outValue );
+                }
+                return true;
+            }
+
+            /** @brief 한 사람의 결과와 보상을 붙입니다. 이미 결과가 있으면 건너뜁니다. 저장소나 우편이 실패하면 false 를 반환합니다. */
+            static bool stagePlayer( IServiceStoreConnection& connection, ServiceTransaction& inoutTransaction, const LeaderboardDef& board, const LeaderboardSeason& season,
+                                     const LeaderboardScoreRow& row, int32 rank, UnixMilliseconds nowMs )
+            {
+                using Internal               = LeaderboardLogicInternal;
+                const string             key = Internal::makeSeasonResultKey( board._boardID, season._seasonID, row._accountID );
+                ServiceRecord            existing;
+                const ServiceStoreResult read = connection.readRecord( Internal::getSeasonResultTable(), key, existing );
+                if ( read == ServiceStoreResult::Ok )
+                    return true; // 앞선 실행이 이미 정산했다
+                if ( read != ServiceStoreResult::NotFound )
+                    return false;
+                inoutTransaction.put( Internal::getSeasonResultTable(), key, LeaderboardSeasonResultRecord{ row._score, rank, {} }, ServiceRecord::kAbsentVersion );
+                inoutTransaction.put( Internal::getSeasonResultExpiryTable(), ServiceTTLRule::makeTTLIndexKey( season._endMs + Internal::kSettlementWindowMs, key ),
+                                      ServiceRecord::kAnyVersion ); // 정산 창이 닫힌 뒤부터 잰다 - 창 안에서는 이 결과가 다시 돌기의 멱등이다
+                const LeaderboardRewardTier* pTier = findTier( season, rank );
+                if ( pTier == nullptr )
+                    return true;
+                StringBuilder<constant::buffer::kMax128> keyBuilder;
+                keyBuilder.appendFormat( "lb.%#.%#.%#", board._boardID, Internal::makeSeasonHex( season._seasonID ), ServiceKeyUtil::makeHex64( row._accountID ) );
+                const string idempotencyKey( keyBuilder.view() );
+                return Internal::stageRewardMail( connection, inoutTransaction, row._accountID, pTier->_assetID, pTier->_amount, pTier->_mailTitleKey, Internal::kSeasonSender,
+                                                  idempotencyKey, nowMs ) == LedgerResult::Ok;
+            }
+
+            static const LeaderboardRewardTier* findTier( const LeaderboardSeason& season, int32 rank )
+            {
+                for ( const LeaderboardRewardTier& tier : season._listRewardTier )
+                {
+                    if ( tier._rankFrom <= rank && rank <= tier._rankTo )
+                        return &tier;
+                }
+                return nullptr;
+            }
+        };
+    } // namespace
+} // namespace sw
+
+namespace sw
+{
+    LeaderboardLogic::LeaderboardLogic()
+        : _mapBoard{}
+        , _pastScoreRetentionMs{ 0 }
+        , _nameCacheTTLMs{ 0 }
+        , _maxAroundRadius{ 0 }
+        , _mapRankKeyToWaitingRead{}
+        , _mapRankKeyToLateWrite{}
+        , _mapQuery{}
+        , _mapAchievement{}
+        , _mapAccountStats{}
+        , _mapJobToRun{}
+        , _mapSettlement{}
+        , _uniqueExpiringRankKeys{}
+        , _unlockBuffer{}
+        , _completionBuffer{}
+        , _dependencies{}
+        , _pScheduler{ nullptr }
+        , _queryIDAllocator{}
+        , _settlementIDAllocator{}
+        , _store{}
+    {
+    }
+
+    LeaderboardLogic::~LeaderboardLogic()
+    {
+        shutdown();
+    }
+
+    void LeaderboardLogic::initialize( const LeaderboardLogicDependencies& dependencies )
+    {
+        SW_ASSERT( dependencies._pStore != nullptr && dependencies._pRouter != nullptr );
+        _dependencies = dependencies;
+        _replyOwner   = dependencies._pRouter->openReplyOwner();
+        _store.bindStore( dependencies._pStore );
+    }
+
+    void LeaderboardLogic::shutdown()
+    {
+        _replyOwner.reset(); // 기다리던 캐시 답이 이 객체를 부르지 않게 지운다
+        _mapQuery.clear();
+        _mapRankKeyToWaitingRead.clear();
+        _mapRankKeyToLateWrite.clear();
+        _mapJobToRun.clear();
+        _mapAccountStats.clear();
+        _mapSettlement.clear(); // 남은 페이지는 맡기지 않는다 — 결과가 있는 사람은 건너뛰므로 다음 실행이 이어서 처리한다
+        _uniqueExpiringRankKeys.clear();
+        _dependencies = LeaderboardLogicDependencies{};
+        _pScheduler   = nullptr;
+        _store.bindStore( nullptr );
+    }
+
+    bool LeaderboardLogic::registerBoard( const LeaderboardDef& definition )
+    {
+        const bool bValid = LeaderboardNameRule::isValidID( definition._boardID ) &&
+                            ( definition._sourceStat.empty() || LeaderboardNameRule::isValidID( definition._sourceStat ) ) &&
+                            definition._order < LeaderboardOrder::Count && definition._update < LeaderboardUpdate::Count && definition._reset < LeaderboardReset::Count;
+        // 통계에 연결된 보드는 통계의 누적값을 받는다 — Sum 이면 누적값을 또 더해 부풀린다.
+        const bool bSourceOk = definition._sourceStat.empty() || definition._update != LeaderboardUpdate::Sum;
+        if ( bValid == false || bSourceOk == false || LeaderboardLogicInternal::areSeasonsValid( definition ) == false )
+            return false;
+        const bool bAlreadyRegistered  = _mapBoard.find( definition._boardID ) != _mapBoard.end();
+        _mapBoard[definition._boardID] = definition;
+        const bool bSkipSeasonJobs     = definition._reset != LeaderboardReset::Season || _pScheduler == nullptr || bAlreadyRegistered;
+        if ( bSkipSeasonJobs )
+            return true; // 같은 보드를 다시 등록해도 정산 작업은 한 번만 만든다
+        for ( const LeaderboardSeason& season : definition._listSeason )
+        {
+            ScheduleDef job;
+            job._jobID         = makeSettlementJobID( definition._boardID, season._seasonID );
+            job._kind          = ScheduleKind::Window;
+            job._windowStartMs = season._endMs;
+            job._windowEndMs   = season._endMs + LeaderboardLogicInternal::kSettlementWindowMs;
+            job._leaseMs       = LeaderboardLogicInternal::kSettlementLeaseMs;
+            if ( _pScheduler->registerJob( job, SW_DELEGATE_METHOD( ScheduledJobFunction, &LeaderboardLogic::onScheduledRun, this ) ) == false )
+                return false;
+        }
+        return true;
+    }
+
+    bool LeaderboardLogic::registerAchievement( const OnlineAchievementDef& definition )
+    {
+        const bool bRewardOk = definition._rewardAssetID.empty() || ( definition._rewardAmount > 0 && definition._mailTitleKey.empty() == false );
+        const bool bValid    = LeaderboardNameRule::isValidID( definition._achievementID ) && LeaderboardNameRule::isValidID( definition._statName ) && bRewardOk;
+        if ( bValid == false )
+            return false;
+        _mapAchievement[definition._achievementID] = definition;
+        return true;
+    }
+
+    string LeaderboardLogic::makeSettlementJobID( string_view boardID, uint32 seasonID )
+    {
+        StringBuilder<constant::buffer::kMax128> jobID;
+        jobID.appendFormat( "%#%#.%#", LeaderboardLogicInternal::kSettlementJobPrefix, boardID, LeaderboardLogicInternal::makeSeasonHex( seasonID ) );
+        return string( jobID.view() );
+    }
+
+    const LeaderboardDef* LeaderboardLogic::findBoard( string_view boardID ) const
+    {
+        const auto boardIt = _mapBoard.find( string( boardID ) );
+        return boardIt != _mapBoard.end() ? &boardIt->second : nullptr;
+    }
+
+    ServiceStoreResult LeaderboardLogic::eraseAccount( IServiceStoreConnection& connection, AccountID accountID, int64 nowMs ) const
+    {
+        using Internal                                      = LeaderboardLogicInternal;
+        const string                             accountHex = ServiceKeyUtil::makeHex64( accountID );
+        StringBuilder<constant::buffer::kMax128> accountPrefixBuilder;
+        accountPrefixBuilder.appendFormat( "%#/", accountHex );
+        const string accountPrefix( accountPrefixBuilder.view() );
+        if ( const ServiceStoreResult stats = ServiceStoreUtil::erasePrefix( connection, Internal::getStatTable(), accountPrefix ); stats != ServiceStoreResult::Ok )
+            return stats;
+        if ( const ServiceStoreResult achievements = ServiceStoreUtil::erasePrefix( connection, Internal::getAchievementTable(), accountPrefix ); achievements != ServiceStoreResult::Ok )
+            return achievements;
+        // 점수 · 시즌 결과는 키가 보드 · 기간 앞이라 접두어로 찾지 못한다. 남아 있을 수 있는 기간마다 키를 만들어 지운다(없는 키 지우기는 할 일이 없다).
+        ServiceTransaction transaction;
+        auto               flush = [&connection, &transaction]() -> ServiceStoreResult
+        {
+            if ( transaction.getWrites().size() + 2 <= static_cast<size_t>( ServiceTransaction::kMaxWriteCount ) )
+                return ServiceStoreResult::Ok;
+            const ServiceStoreResult committed = ServiceCommitRunner::commitOnce( connection, transaction );
+            transaction                        = ServiceTransaction{};
+            return committed;
+        };
+        auto eraseScore = [&]( const LeaderboardDef& board, uint64 periodID ) -> ServiceStoreResult
+        {
+            StringBuilder<constant::buffer::kMax128> keyBuilder;
+            keyBuilder.appendFormat( "%#%#", Internal::makeScorePrefix( board._boardID, periodID ), accountHex );
+            const string key( keyBuilder.view() );
+            transaction.erase( Internal::getScoreTable(), key );
+            if ( const int64 expiryBaseMs = Internal::computeScoreExpiryBaseMs( board, periodID ); expiryBaseMs > 0 )
+                transaction.erase( Internal::getScoreExpiryTable(), ServiceTTLRule::makeTTLIndexKey( expiryBaseMs, key ) );
+            return flush();
+        };
+        for ( const auto& [boardID, board] : _mapBoard )
+        {
+            ServiceStoreResult erased = ServiceStoreResult::Ok;
+            switch ( board._reset )
+            {
+                case LeaderboardReset::Daily:
+                case LeaderboardReset::Weekly:
+                {
+                    // 기간 끝 + 보존 기간이 지나지 않은 기간을 지금부터 거꾸로 걷는다(기간 시작은 초기화 시각마다다)
+                    const int64 periodMs = board._reset == LeaderboardReset::Daily ? Internal::kDayMs : Internal::kWeekMs;
+                    for ( int64 periodStartMs = static_cast<int64>( computePeriodID( board, UnixMilliseconds{ nowMs } ) );
+                          periodStartMs > 0 && periodStartMs + periodMs + _pastScoreRetentionMs >= nowMs && erased == ServiceStoreResult::Ok; periodStartMs -= periodMs )
+                    {
+                        erased = eraseScore( board, static_cast<uint64>( periodStartMs ) );
+                    }
+                    break;
+                }
+                case LeaderboardReset::Season:
+                {
+                    for ( const LeaderboardSeason& season : board._listSeason )
+                    {
+                        if ( erased = eraseScore( board, season._seasonID ); erased != ServiceStoreResult::Ok )
+                            break;
+                        const string resultKey = Internal::makeSeasonResultKey( board._boardID, season._seasonID, accountID );
+                        transaction.erase( Internal::getSeasonResultTable(), resultKey );
+                        transaction.erase( Internal::getSeasonResultExpiryTable(), ServiceTTLRule::makeTTLIndexKey( season._endMs + Internal::kSettlementWindowMs, resultKey ) );
+                        erased = flush();
+                    }
+                    break;
+                }
+                default:
+                {
+                    erased = eraseScore( board, 0 ); // 초기화 없는 보드는 기간 id 가 0 하나다
+                    break;
+                }
+            }
+            if ( erased != ServiceStoreResult::Ok )
+                return erased;
+        }
+        return transaction.getWrites().empty() ? ServiceStoreResult::Ok : ServiceCommitRunner::commitOnce( connection, transaction );
+    }
+
+    uint64 LeaderboardLogic::computePeriodID( const LeaderboardDef& definition, UnixMilliseconds nowMs ) const
+    {
+        ScheduleDef schedule;
+        schedule._minuteOfDay = definition._resetMinuteOfDay;
+        schedule._dayOfWeek   = definition._resetDayOfWeek;
+        switch ( definition._reset )
+        {
+            case LeaderboardReset::Daily:
+            {
+                schedule._kind                     = ScheduleKind::Daily;
+                const optional<int64> occurrenceMs = ServiceScheduler::computeLatestOccurrence( schedule, nowMs.count() );
+                return occurrenceMs.has_value() ? static_cast<uint64>( *occurrenceMs ) : uint64{ 0 };
+            }
+            case LeaderboardReset::Weekly:
+            {
+                schedule._kind                     = ScheduleKind::Weekly;
+                const optional<int64> occurrenceMs = ServiceScheduler::computeLatestOccurrence( schedule, nowMs.count() );
+                return occurrenceMs.has_value() ? static_cast<uint64>( *occurrenceMs ) : uint64{ 0 };
+            }
+            case LeaderboardReset::Season:
+            {
+                for ( const LeaderboardSeason& season : definition._listSeason )
+                {
+                    if ( season._startMs <= nowMs.count() && nowMs.count() < season._endMs )
+                        return season._seasonID;
+                }
+                return 0; // 시즌 밖이므로 제출은 NotRanked 로 끝난다
+            }
+            default:
+            {
+                return 0;
+            }
+        }
+    }
+
+    string LeaderboardLogic::makeRankKey( string_view boardID, uint64 periodID )
+    {
+        StringBuilder<constant::buffer::kMax128> key;
+        key.appendFormat( "lb/%#/%#", boardID, ServiceKeyUtil::makeHex64( periodID ) );
+        return string( key.view() );
+    }
+
+    void LeaderboardLogic::submitScore( string_view boardID, AccountID accountID, string_view displayName, int64 score, const NetIdempotencyKey& idempotencyKey,
+                                        UnixMilliseconds nowMs, uint64 requestTag )
+    {
+        const LeaderboardDef* pBoard = findBoard( boardID );
+        if ( pBoard == nullptr )
+        {
+            pushCompletion( requestTag, LeaderboardOperation::Submit, LeaderboardResult::UnknownBoard );
+            return;
+        }
+        const bool bValid = -LeaderboardLimit::kMaxAbsScore <= score && score <= LeaderboardLimit::kMaxAbsScore &&
+                            displayName.size() <= static_cast<size_t>( OnlineLimit::kMaxDisplayNameSize ) && accountID != kInvalidAccountID;
+        if ( bValid == false )
+        {
+            pushCompletion( requestTag, LeaderboardOperation::Submit, LeaderboardServiceResult::fail( OnlineError::kInvalidRequest ) );
+            return;
+        }
+        const uint64 periodID = computePeriodID( *pBoard, nowMs );
+        if ( pBoard->_reset == LeaderboardReset::Season && periodID == 0 )
+        {
+            pushCompletion( requestTag, LeaderboardOperation::Submit, LeaderboardResult::NotRanked );
+            return;
+        }
+        LeaderboardWriteInput input;
+        input._pTable = &LeaderboardLogicInternal::getScoreTable();
+        StringBuilder<constant::buffer::kMax128> keyBuilder;
+        keyBuilder.appendFormat( "%#%#", LeaderboardLogicInternal::makeScorePrefix( pBoard->_boardID, periodID ), ServiceKeyUtil::makeHex64( accountID ) );
+        input._key            = string( keyBuilder.view() );
+        input._displayName    = string( displayName );
+        input._value          = score;
+        input._nowMs          = nowMs;
+        input._update         = pBoard->_update;
+        input._order          = pBoard->_order;
+        input._idempotencyKey = idempotencyKey;
+        input._expiryBaseMs   = LeaderboardLogicInternal::computeScoreExpiryBaseMs( *pBoard, periodID );
+        submitWrite( input, pBoard->_boardID, accountID, periodID, requestTag, LeaderboardOperation::Submit );
+    }
+
+    ServiceTTLRule LeaderboardLogic::makeScoreTTLRule( int64 expireAfterMs )
+    {
+        ServiceTTLRule rule;
+        rule._table         = LeaderboardLogicInternal::getScoreTable();
+        rule._ttlIndexTable = LeaderboardLogicInternal::getScoreExpiryTable();
+        rule._expireAfterMs = expireAfterMs;
+        rule._pfnReadTime   = &LeaderboardLogicInternal::readScoreTimeMs;
+        return rule;
+    }
+
+    shared_ptr<const IServiceTTLBackfillSource> LeaderboardLogic::makeScoreBackfillSource( const vector<LeaderboardDef>& listBoard )
+    {
+        return shared_ptr<const IServiceTTLBackfillSource>( make_shared<LeaderboardBackfillSource>( listBoard, LeaderboardBackfillSource::Kind::Score ) );
+    }
+
+    shared_ptr<const IServiceTTLBackfillSource> LeaderboardLogic::makeSeasonResultBackfillSource( const vector<LeaderboardDef>& listBoard )
+    {
+        return shared_ptr<const IServiceTTLBackfillSource>( make_shared<LeaderboardBackfillSource>( listBoard, LeaderboardBackfillSource::Kind::SeasonResult ) );
+    }
+
+    ServiceTTLRule LeaderboardLogic::makeSeasonResultTTLRule( int64 expireAfterMs )
+    {
+        ServiceTTLRule rule;
+        rule._table         = LeaderboardLogicInternal::getSeasonResultTable();
+        rule._ttlIndexTable = LeaderboardLogicInternal::getSeasonResultExpiryTable();
+        rule._expireAfterMs = expireAfterMs; // 시각 읽기를 두지 않는다 - 결과는 한 번 쓰고 바꾸지 않으므로 색인의 시각을 믿는다
+        return rule;
+    }
+
+    void LeaderboardLogic::submitWrite( const LeaderboardWriteInput& input, const string& boardID, AccountID accountID, uint64 periodID, uint64 requestTag,
+                                        LeaderboardOperation operation )
+    {
+        _store.submit( [input, accountID, pNameIndex = _dependencies._pNameIndex]( IServiceStoreConnection& connection )
+        {
+            LeaderboardWriteInput named = input;
+            AccountIdentity       identity;
+            if ( named._displayName.empty() && pNameIndex != nullptr && pNameIndex->readIdentity( connection, accountID, identity ) == ServiceStoreResult::Ok )
+                named._displayName = identity._displayName;
+            LeaderboardWriteResult write = LeaderboardStoreRun::writeValue( connection, named );
+            write._displayName           = std::move( named._displayName );
+            return write; },
+                       [this, boardID, nowMs = input._nowMs, accountID, periodID, requestTag, operation]( const LeaderboardWriteResult& write )
+        { applyScoreWrite( boardID, periodID, accountID, write._displayName, write._finalValue, write._bChanged == SW_TRUE, write._result, requestTag, operation, nowMs ); } );
+    }
+
+    void LeaderboardLogic::changeStat( AccountID accountID, string_view displayName, string_view statName, int64 value, LeaderboardUpdate update,
+                                       const NetIdempotencyKey& idempotencyKey, UnixMilliseconds nowMs, uint64 requestTag )
+    {
+        const bool bValid = LeaderboardNameRule::isValidID( statName ) && update < LeaderboardUpdate::Count && accountID != kInvalidAccountID &&
+                          -LeaderboardLimit::kMaxAbsScore <= value && value <= LeaderboardLimit::kMaxAbsScore;
+        if ( bValid == false )
+        {
+            pushCompletion( requestTag, LeaderboardOperation::StatChange, LeaderboardServiceResult::fail( OnlineError::kInvalidRequest ) );
+            return;
+        }
+        LeaderboardWriteInput input;
+        input._pTable = &LeaderboardLogicInternal::getStatTable();
+        StringBuilder<constant::buffer::kMax128> keyBuilder;
+        keyBuilder.appendFormat( "%#/%#", ServiceKeyUtil::makeHex64( accountID ), statName );
+        input._key            = string( keyBuilder.view() );
+        input._displayName    = string( displayName );
+        input._value          = value;
+        input._nowMs          = nowMs;
+        input._update         = update;
+        input._order          = LeaderboardOrder::Descending; // 통계의 Best 는 큰 값이다
+        input._idempotencyKey = idempotencyKey;
+        submitWrite( input, string( statName ), accountID, 0, requestTag, LeaderboardOperation::StatChange );
+    }
+
+    void LeaderboardLogic::applyScoreWrite( const string& boardID, uint64 periodID, AccountID accountID, const string& displayName, int64 finalScore, bool bChanged,
+                                            LeaderboardServiceResult result, uint64 requestTag, LeaderboardOperation operation, UnixMilliseconds nowMs )
+    {
+        if ( requestTag != 0 )
+        {
+            LeaderboardCompletion completion;
+            completion._requestTag = requestTag;
+            completion._operation  = operation;
+            completion._result     = result;
+            completion._score      = finalScore;
+            completion._periodID   = periodID;
+            _completionBuffer.push( std::move( completion ) );
+        }
+        if ( result != LeaderboardResult::Ok || bChanged == false )
+            return;
+        if ( operation == LeaderboardOperation::StatChange )
+        {
+            const auto statsIt = _mapAccountStats.find( accountID );
+            if ( statsIt != _mapAccountStats.end() && statsIt->second._bLoaded == SW_TRUE )
+                statsIt->second._mapValue[boardID] = finalScore; // 접속한 계정의 메모리 통계를 같이 고친다(매칭 실력)
+            for ( const auto& [id, board] : _mapBoard )          // 통계에 연결된 보드에 같은 값을 낸다. 요청 태그가 0이라 완료가 없다
+            {
+                if ( board._sourceStat == boardID )
+                    submitScore( board._boardID, accountID, displayName, finalScore, NetIdempotencyKey{}, nowMs, 0 ); // 통계 쓰기가 이미 멱등이다. 연결 보드는 Sum 일 수 없다
+            }
+            for ( const auto& [achievementID, achievement] : _mapAchievement ) // 임계값을 넘은 업적이다. 이미 달성했으면 작업은 아무것도 하지 않는다
+            {
+                if ( achievement._statName == boardID && finalScore >= achievement._threshold )
+                {
+                    _store.submit( [achievement = achievement, accountID, nowMs]( IServiceStoreConnection& connection )
+                    { return LeaderboardStoreRun::unlockAchievement( connection, achievement, accountID, nowMs ); },
+                                   [this, accountID, state = AchievementState{ achievement._achievementID, nowMs.count() }]( bool bUnlocked )
+                    { applyAchievementUnlock( accountID, state, bUnlocked ); } );
+                }
+            }
+            return;
+        }
+        const LeaderboardDef* pBoard = findBoard( boardID );
+        if ( pBoard == nullptr || _dependencies._pRouter == nullptr )
+            return;
+        const string rankKey = makeRankKey( boardID, periodID );
+        submitCacheScore( rankKey, accountID, toCacheScore( pBoard->_order, finalScore ) );
+        // 기간 보드의 정렬 집합은 기간이 끝나면 캐시가 지우게 한다. 기간마다 이 프로세스에서 한 번만 건다(점수 쓰기마다 요청이 늘지 않게).
+        const int64 expireAfterMs = computeRankRetentionMs( *pBoard, periodID, nowMs );
+        if ( expireAfterMs > 0 && _uniqueExpiringRankKeys.insert( rankKey ).second )
+            _dependencies._pRouter->submit( CacheRequest::makeExpire( rankKey, expireAfterMs ) );
+        if ( displayName.empty() == false )
+        {
+            CacheValue nameValue;
+            if ( CacheRecordTable<LeaderboardNameCacheRecord>{}.makeValue( LeaderboardNameCacheRecord{ string( displayName ) }, nameValue ) )
+                _dependencies._pRouter->submit( CacheRequest::makeSet( LeaderboardLogicInternal::makeNameKey( accountID ), std::move( nameValue ), _nameCacheTTLMs ) );
+        }
+    }
+
+    int64 LeaderboardLogic::computeRankRetentionMs( const LeaderboardDef& definition, uint64 periodID, UnixMilliseconds nowMs ) const
+    {
+        using Internal    = LeaderboardLogicInternal;
+        int64 periodEndMs = 0;
+        switch ( definition._reset )
+        {
+            case LeaderboardReset::Daily:
+            {
+                periodEndMs = static_cast<int64>( periodID ) + Internal::kDayMs; // 기간 id 는 기간 시작 시각이다
+                break;
+            }
+            case LeaderboardReset::Weekly:
+            {
+                periodEndMs = static_cast<int64>( periodID ) + Internal::kWeekMs;
+                break;
+            }
+            case LeaderboardReset::Season:
+            {
+                for ( const LeaderboardSeason& season : definition._listSeason )
+                {
+                    if ( season._seasonID == periodID )
+                        periodEndMs = season._endMs;
+                }
+                break;
+            }
+            default:
+            {
+                return 0; // 초기화가 없는 보드의 순위는 하나뿐이다 — 지우지 않는다
+            }
+        }
+        if ( periodEndMs <= 0 )
+            return 0;
+        return MathUtil::max<int64>( 1, periodEndMs + Internal::kRankRetentionGraceMs - nowMs.count() );
+    }
+
+    void LeaderboardLogic::submitCacheScore( const string& rankKey, AccountID accountID, int64 cacheScore )
+    {
+        const auto waitIt = _mapRankKeyToWaitingRead.find( rankKey );
+        if ( waitIt != _mapRankKeyToWaitingRead.end() )
+            _mapRankKeyToLateWrite[rankKey].push_back( LeaderboardScoreRow{ accountID, cacheScore } ); // 다시 채우는 중이므로 채운 뒤에 한 번 더 싣는다. 이전 값을 덮기 위해서이다
+        _dependencies._pRouter->submit( CacheRequest::makeScoreSet( rankKey, LeaderboardLogicInternal::makeRankMember( accountID ), cacheScore ) );
+    }
+
+    void LeaderboardLogic::readTop( string_view boardID, int32 offset, int32 count, UnixMilliseconds nowMs, uint64 requestTag )
+    {
+        PendingRead read;
+        read._boardID                = string( boardID );
+        read._requestTag             = requestTag;
+        read._offset                 = offset;
+        read._count                  = count;
+        read._operation              = LeaderboardOperation::Top;
+        const LeaderboardDef* pBoard = findBoard( boardID );
+        const bool            bRange = 0 <= offset && 1 <= count && count <= LeaderboardLimit::kMaxPage;
+        if ( pBoard == nullptr || bRange == false )
+        {
+            completeRead( read, pBoard == nullptr ? LeaderboardResult::UnknownBoard : LeaderboardServiceResult::fail( OnlineError::kInvalidRequest ) );
+            return;
+        }
+        read._periodID = computePeriodID( *pBoard, nowMs );
+        read._nowMs    = nowMs;
+        startRead( read );
+    }
+
+    void LeaderboardLogic::readAround( string_view boardID, AccountID accountID, int32 radius, UnixMilliseconds nowMs, uint64 requestTag )
+    {
+        PendingRead read;
+        read._boardID                = string( boardID );
+        read._accountID              = accountID;
+        read._requestTag             = requestTag;
+        read._count                  = radius;
+        read._operation              = LeaderboardOperation::Around;
+        const LeaderboardDef* pBoard = findBoard( boardID );
+        const bool            bRange = 0 <= radius && radius <= _maxAroundRadius;
+        if ( pBoard == nullptr || bRange == false )
+        {
+            completeRead( read, pBoard == nullptr ? LeaderboardResult::UnknownBoard : LeaderboardServiceResult::fail( OnlineError::kInvalidRequest ) );
+            return;
+        }
+        read._periodID = computePeriodID( *pBoard, nowMs );
+        read._nowMs    = nowMs;
+        startRead( read );
+    }
+
+    void LeaderboardLogic::startRead( const PendingRead& read )
+    {
+        const string rankKey = makeRankKey( read._boardID, read._periodID );
+        const auto   waitIt  = _mapRankKeyToWaitingRead.find( rankKey );
+        if ( waitIt != _mapRankKeyToWaitingRead.end() )
+        {
+            waitIt->second.push_back( read ); // 다시 채우는 중이므로 대기시킨다
+            return;
+        }
+        _dependencies._pRouter->submit( CacheRequest::makeGet( LeaderboardLogicInternal::makeReadyKey( rankKey ) ), _replyOwner, [this, read]( const CacheReply& reply )
+        { onReadyReply( read, reply ); } );
+    }
+
+    void LeaderboardLogic::onReadyReply( const PendingRead& read, const CacheReply& reply )
+    {
+        if ( reply._result == CacheResult::Unavailable || reply._result == CacheResult::Invalid )
+        {
+            completeRead( read, LeaderboardServiceResult::fail( OnlineError::kUnavailable ) );
+            return;
+        }
+        const string rankKey = makeRankKey( read._boardID, read._periodID );
+        if ( reply._result == CacheResult::NotFound ) // 캐시를 잃었거나 처음이므로 영속 저장소에서 다시 채운다
+        {
+            vector<PendingRead>& listWaiting = _mapRankKeyToWaitingRead[rankKey];
+            listWaiting.push_back( read );
+            if ( listWaiting.size() == 1 )
+            {
+                _store.submit( [scorePrefix = LeaderboardLogicInternal::makeScorePrefix( read._boardID, read._periodID )]( IServiceStoreConnection& connection )
+                {
+                    LeaderboardRead<vector<LeaderboardScoreRow>> rebuild;
+                    if ( LeaderboardLogicInternal::readAllScores( connection, scorePrefix, rebuild._value ) )
+                        rebuild._result = LeaderboardResult::Ok;
+                    return rebuild;
+                }, [this, rankKey]( LeaderboardRead<vector<LeaderboardScoreRow>>& rebuild )
+                { applyRebuildRead( rankKey, std::move( rebuild._value ), rebuild._result == LeaderboardResult::Ok ); } );
+            }
+            return;
+        }
+        const uint64 queryID = _queryIDAllocator.allocate();
+        RankQuery&   query   = _mapQuery[queryID];
+        query._read          = read;
+        if ( read._operation == LeaderboardOperation::Top )
+        {
+            _dependencies._pRouter->submit( CacheRequest::makeScoreRange( rankKey, read._offset, read._count ), _replyOwner, [this, queryID]( const CacheReply& rangeReply )
+            { onRangeReply( queryID, rangeReply ); } );
+            return;
+        }
+        _dependencies._pRouter->submit( CacheRequest::makeScoreRank( rankKey, LeaderboardLogicInternal::makeRankMember( read._accountID ) ), _replyOwner, [this, queryID]( const CacheReply& rankReply )
+        { onRankReply( queryID, rankReply ); } );
+    }
+
+    void LeaderboardLogic::applyRebuildRead( const string& rankKey, vector<LeaderboardScoreRow>&& listScore, bool bReadOk )
+    {
+        vector<PendingRead>         listWaiting;
+        vector<LeaderboardScoreRow> listLateWrite;
+        const auto                  waitIt = _mapRankKeyToWaitingRead.find( rankKey );
+        if ( waitIt != _mapRankKeyToWaitingRead.end() )
+        {
+            listWaiting.swap( waitIt->second );
+            _mapRankKeyToWaitingRead.erase( waitIt );
+        }
+        const auto lateIt = _mapRankKeyToLateWrite.find( rankKey );
+        if ( lateIt != _mapRankKeyToLateWrite.end() )
+        {
+            listLateWrite.swap( lateIt->second );
+            _mapRankKeyToLateWrite.erase( lateIt );
+        }
+        if ( bReadOk == false || _dependencies._pRouter == nullptr )
+        {
+            for ( const PendingRead& read : listWaiting )
+            {
+                completeRead( read, LeaderboardServiceResult::fail( OnlineError::kUnavailable ) );
+            }
+            return;
+        }
+        const LeaderboardDef*  pBoard = listWaiting.empty() ? nullptr : findBoard( listWaiting.front()._boardID );
+        const LeaderboardOrder order  = pBoard != nullptr ? pBoard->_order : LeaderboardOrder::Descending;
+        for ( const LeaderboardScoreRow& row : listScore )
+        {
+            _dependencies._pRouter->submit( CacheRequest::makeScoreSet( rankKey, LeaderboardLogicInternal::makeRankMember( row._accountID ), toCacheScore( order, row._score ) ) );
+        }
+        for ( const LeaderboardScoreRow& row : listLateWrite ) // 다시 채우는 동안 쓴 점수이다. 영속 저장소에서 읽은 이전 값을 덮으며 이미 캐시 점수이다
+        {
+            _dependencies._pRouter->submit( CacheRequest::makeScoreSet( rankKey, LeaderboardLogicInternal::makeRankMember( row._accountID ), row._score ) );
+        }
+        // 기간 보드면 다시 채운 집합과 준비 표시도 기간이 끝나면 사라지게 한다(0 이면 만료 없음).
+        const int64 expireAfterMs = pBoard != nullptr ? computeRankRetentionMs( *pBoard, listWaiting.front()._periodID, listWaiting.front()._nowMs ) : 0;
+        if ( expireAfterMs > 0 )
+            _dependencies._pRouter->submit( CacheRequest::makeExpire( rankKey, expireAfterMs ) );
+        _dependencies._pRouter->submit( CacheRequest::makeSet( LeaderboardLogicInternal::makeReadyKey( rankKey ), CacheValueUtil::makeMarker(), expireAfterMs ) );
+        // 캐시는 맡긴 순서대로 응답한다. 아래 읽기는 위 쓰기 뒤에 처리된다
+        for ( const PendingRead& read : listWaiting )
+        {
+            startRead( read );
+        }
+    }
+
+    void LeaderboardLogic::onRankReply( uint64 queryID, const CacheReply& reply )
+    {
+        const auto queryIt = _mapQuery.find( queryID );
+        if ( queryIt == _mapQuery.end() )
+            return;
+        RankQuery& query = queryIt->second;
+        if ( reply._result != CacheResult::Ok )
+        {
+            completeRead( query._read, reply._result == CacheResult::NotFound ? LeaderboardResult::NotRanked : LeaderboardServiceResult::fail( OnlineError::kUnavailable ) );
+            _mapQuery.erase( queryIt );
+            return;
+        }
+        const int32 myIndex = static_cast<int32>( reply._integer );
+        const int32 radius  = query._read._count;
+        const int32 offset  = MathUtil::max( 0, myIndex - radius );
+        const int32 count   = myIndex + radius + 1 - offset;
+        query._read._offset = offset;
+        _dependencies._pRouter->submit( CacheRequest::makeScoreRange( makeRankKey( query._read._boardID, query._read._periodID ), offset, count ), _replyOwner, [this, queryID]( const CacheReply& rangeReply )
+        { onRangeReply( queryID, rangeReply ); } );
+    }
+
+    void LeaderboardLogic::onRangeReply( uint64 queryID, const CacheReply& reply )
+    {
+        const auto queryIt = _mapQuery.find( queryID );
+        if ( queryIt == _mapQuery.end() )
+            return;
+        RankQuery& query = queryIt->second;
+        if ( reply._result != CacheResult::Ok && reply._result != CacheResult::NotFound )
+        {
+            completeRead( query._read, LeaderboardServiceResult::fail( OnlineError::kUnavailable ) );
+            _mapQuery.erase( queryIt );
+            return;
+        }
+        const LeaderboardDef*  pBoard = findBoard( query._read._boardID );
+        const LeaderboardOrder order  = pBoard != nullptr ? pBoard->_order : LeaderboardOrder::Descending;
+        for ( size_t memberIndex = 0; memberIndex < reply._listMember.size(); ++memberIndex )
+        {
+            LeaderboardEntry entry;
+            if ( LeaderboardLogicInternal::parseRankMember( reply._listMember[memberIndex]._member, entry._accountID ) == false )
+                continue;
+            entry._score = toCacheScore( order, reply._listMember[memberIndex]._score ); // 같은 함수로 부호를 되돌린다
+            entry._rank  = query._read._offset + static_cast<int32>( memberIndex ) + 1;
+            query._listEntry.push_back( std::move( entry ) );
+        }
+        if ( query._listEntry.empty() )
+        {
+            finishQuery( queryID );
+            return;
+        }
+        vector<AccountID> listAccount;
+        for ( const LeaderboardEntry& entry : query._listEntry )
+        {
+            listAccount.push_back( entry._accountID );
+        }
+        query._outstandingNameCount = static_cast<int32>( listAccount.size() ); // 먼저 다 세 둔다 — 맡기지 못한 요청은 그 자리에서 끝나 질의를 마칠 수 있다
+        for ( size_t entryIndex = 0; entryIndex < listAccount.size(); ++entryIndex )
+        {
+            _dependencies._pRouter->submit( CacheRequest::makeGet( LeaderboardLogicInternal::makeNameKey( listAccount[entryIndex] ) ), _replyOwner, [this, queryID, entryIndex]( const CacheReply& nameReply )
+            { onNameReply( queryID, entryIndex, nameReply ); } );
+        }
+    }
+
+    void LeaderboardLogic::onNameReply( uint64 queryID, size_t entryIndex, const CacheReply& reply )
+    {
+        const auto queryIt = _mapQuery.find( queryID );
+        if ( queryIt == _mapQuery.end() )
+            return;
+        RankQuery&                 query = queryIt->second;
+        LeaderboardNameCacheRecord name;
+        if ( CacheRecordTable<LeaderboardNameCacheRecord>{}.decode( reply, name ) )
+            query._listEntry[entryIndex]._displayName = std::move( name._displayName );
+        if ( --query._outstandingNameCount == 0 )
+            finishQuery( queryID );
+    }
+
+    void LeaderboardLogic::finishQuery( uint64 queryID )
+    {
+        const auto queryIt = _mapQuery.find( queryID );
+        if ( queryIt == _mapQuery.end() )
+            return;
+        LeaderboardCompletion completion;
+        completion._requestTag = queryIt->second._read._requestTag;
+        completion._operation  = queryIt->second._read._operation;
+        completion._periodID   = queryIt->second._read._periodID;
+        completion._listEntry  = std::move( queryIt->second._listEntry );
+        _completionBuffer.push( std::move( completion ) );
+        _mapQuery.erase( queryIt );
+    }
+
+    void LeaderboardLogic::completeRead( const PendingRead& read, LeaderboardServiceResult result )
+    {
+        LeaderboardCompletion completion;
+        completion._requestTag = read._requestTag;
+        completion._operation  = read._operation;
+        completion._periodID   = read._periodID;
+        completion._result     = result;
+        _completionBuffer.push( std::move( completion ) );
+    }
+
+    void LeaderboardLogic::pushCompletion( uint64 requestTag, LeaderboardOperation operation, LeaderboardServiceResult result )
+    {
+        if ( requestTag == 0 )
+            return;
+        LeaderboardCompletion completion;
+        completion._requestTag = requestTag;
+        completion._operation  = operation;
+        completion._result     = result;
+        _completionBuffer.push( std::move( completion ) );
+    }
+
+    void LeaderboardLogic::readStats( AccountID accountID, string_view cursor, int32 maxCount, uint64 requestTag )
+    {
+        if ( maxCount < 1 || ( cursor.empty() == false && LeaderboardNameRule::isValidID( cursor ) == false ) )
+        {
+            pushCompletion( requestTag, LeaderboardOperation::Stats, LeaderboardServiceResult::fail( OnlineError::kInvalidRequest ) );
+            return;
+        }
+        const int32 pageSize = std::min( maxCount, LeaderboardLimit::kMaxStatCount ); // 클라이언트가 정한 크기를 서버 상한으로 자른다
+        _store.submit( [accountID, cursorText = string( cursor ), pageSize]( IServiceStoreConnection& connection )
+        { return LeaderboardStoreRun::readStats( connection, accountID, cursorText, pageSize ); },
+                       [this, requestTag]( LeaderboardRead<LeaderboardStatPage>& read )
+        { applyStats( requestTag, read._result, std::move( read._value._listStat ), std::move( read._value._nextCursor ) ); } );
+    }
+
+    void LeaderboardLogic::retainStats( AccountID accountID )
+    {
+        AccountStats& stats = _mapAccountStats[accountID];
+        ++stats._retainCount;
+        if ( stats._bLoaded == SW_TRUE || stats._bLoading == SW_TRUE )
+            return;
+        stats._bLoading = SW_TRUE;
+        _store.submit( [accountID]( IServiceStoreConnection& connection )
+        { return LeaderboardStoreRun::readAllStats( connection, accountID ); },
+                       [this, accountID]( LeaderboardRead<vector<LeaderboardStat>>& read, ServiceStoreCompletion completion )
+        { applyStatCache( accountID, read._result == LeaderboardResult::Ok, completion, std::move( read._value ) ); } );
+    }
+
+    void LeaderboardLogic::releaseStats( AccountID accountID )
+    {
+        const auto statsIt = _mapAccountStats.find( accountID );
+        if ( statsIt != _mapAccountStats.end() && --statsIt->second._retainCount <= 0 )
+            _mapAccountStats.erase( statsIt );
+    }
+
+    void LeaderboardLogic::applyStatCache( AccountID accountID, bool bReadOk, ServiceStoreCompletion completion, vector<LeaderboardStat>&& listStat )
+    {
+        const auto statsIt = _mapAccountStats.find( accountID );
+        if ( statsIt == _mapAccountStats.end() )
+            return; // 그사이 떠났다
+        statsIt->second._bLoading = SW_FALSE;
+        if ( bReadOk == false )
+        {
+            if ( completion.isCancelled() == false ) // 종료 때문에 취소된 읽기는 경고하지 않는다
+                SW_LOG_WARNING_ID( "LeaderboardLogic.LeaderboardStatsAccountCould", "Leaderboard: stats of account %# could not be read - matchmaking reports RatingUnavailable until it reconnects", accountID );
+            return;
+        }
+        for ( LeaderboardStat& stat : listStat )
+        {
+            statsIt->second._mapValue[std::move( stat._name )] = stat._value;
+        }
+        statsIt->second._bLoaded = SW_TRUE;
+    }
+
+    AccountStatLookup LeaderboardLogic::findStat( AccountID accountID, string_view statName, int64& outValue ) const
+    {
+        const auto statsIt = _mapAccountStats.find( accountID );
+        if ( statsIt == _mapAccountStats.end() || statsIt->second._bLoaded == SW_FALSE )
+            return AccountStatLookup::NotLoaded;
+        const auto valueIt = statsIt->second._mapValue.find( string( statName ) );
+        if ( valueIt == statsIt->second._mapValue.end() )
+            return AccountStatLookup::Missing;
+        outValue = valueIt->second;
+        return AccountStatLookup::Found;
+    }
+
+    void LeaderboardLogic::applyStats( uint64 requestTag, LeaderboardServiceResult result, vector<LeaderboardStat>&& listStat, string&& nextCursor )
+    {
+        LeaderboardCompletion completion;
+        completion._requestTag = requestTag;
+        completion._operation  = LeaderboardOperation::Stats;
+        completion._result     = result;
+        completion._listStat   = std::move( listStat );
+        completion._nextCursor = std::move( nextCursor );
+        _completionBuffer.push( std::move( completion ) );
+    }
+
+    void LeaderboardLogic::readAchievements( AccountID accountID, string_view cursor, int32 maxCount, uint64 requestTag )
+    {
+        if ( maxCount < 1 || ( cursor.empty() == false && LeaderboardNameRule::isValidID( cursor ) == false ) )
+        {
+            pushCompletion( requestTag, LeaderboardOperation::Achievements, LeaderboardServiceResult::fail( OnlineError::kInvalidRequest ) );
+            return;
+        }
+        const int32 pageSize = std::min( maxCount, LeaderboardLimit::kMaxAchievementCount ); // 클라이언트가 정한 크기를 서버 상한으로 자른다
+        _store.submit( [accountID, cursorText = string( cursor ), pageSize]( IServiceStoreConnection& connection )
+        { return LeaderboardStoreRun::readAchievements( connection, accountID, cursorText, pageSize ); },
+                       [this, requestTag]( LeaderboardRead<LeaderboardAchievementPage>& read )
+        { applyAchievements( requestTag, read._result, std::move( read._value._listAchievement ), std::move( read._value._nextCursor ) ); } );
+    }
+
+    void LeaderboardLogic::applyAchievements( uint64 requestTag, LeaderboardServiceResult result, vector<AchievementState>&& listAchievement, string&& nextCursor )
+    {
+        LeaderboardCompletion completion;
+        completion._requestTag      = requestTag;
+        completion._operation       = LeaderboardOperation::Achievements;
+        completion._result          = result;
+        completion._listAchievement = std::move( listAchievement );
+        completion._nextCursor      = std::move( nextCursor );
+        _completionBuffer.push( std::move( completion ) );
+    }
+
+    void LeaderboardLogic::readAchievementProgress( AccountID accountID, uint64 requestTag )
+    {
+        vector<OnlineAchievementDef> listDefinition;
+        listDefinition.reserve( _mapAchievement.size() );
+        for ( const auto& [achievementID, definition] : _mapAchievement )
+        {
+            (void)achievementID;
+            listDefinition.push_back( definition );
+        }
+        VectorUtil::sort( listDefinition, LeaderboardLogicInternal::isAchievementIDLess );
+        _store.submit( [listDefinition = std::move( listDefinition ), accountID]( IServiceStoreConnection& connection )
+        { return LeaderboardStoreRun::readAchievementProgress( connection, listDefinition, accountID ); },
+                       [this, requestTag]( LeaderboardRead<vector<AchievementProgress>>& read )
+        { applyAchievementProgress( requestTag, read._result, std::move( read._value ) ); } );
+    }
+
+    void LeaderboardLogic::applyAchievementProgress( uint64 requestTag, LeaderboardServiceResult result, vector<AchievementProgress>&& listProgress )
+    {
+        LeaderboardCompletion completion;
+        completion._requestTag   = requestTag;
+        completion._operation    = LeaderboardOperation::AchievementProgress;
+        completion._result       = result;
+        completion._listProgress = std::move( listProgress );
+        _completionBuffer.push( std::move( completion ) );
+    }
+
+    void LeaderboardLogic::readScoresOf( string_view boardID, const vector<AccountID>& listAccountID, UnixMilliseconds nowMs, uint64 requestTag )
+    {
+        const LeaderboardDef* pBoard = findBoard( boardID );
+        if ( pBoard == nullptr )
+        {
+            pushCompletion( requestTag, LeaderboardOperation::ScoresOf, LeaderboardResult::UnknownBoard );
+            return;
+        }
+        if ( listAccountID.empty() || listAccountID.size() > static_cast<size_t>( LeaderboardLimit::kMaxScoresOfCount ) )
+        {
+            pushCompletion( requestTag, LeaderboardOperation::ScoresOf, LeaderboardServiceResult::fail( OnlineError::kInvalidRequest ) );
+            return;
+        }
+        vector<AccountID> listUnique = listAccountID;
+        VectorUtil::sortUnique( listUnique ); // 같은 계정을 두 번 세지 않는다
+        const uint64 periodID = computePeriodID( *pBoard, nowMs );
+        _store.submit( [prefix = LeaderboardLogicInternal::makeScorePrefix( boardID, periodID ), listUnique = std::move( listUnique ), order = pBoard->_order]( IServiceStoreConnection& connection )
+        { return LeaderboardStoreRun::readScoresOf( connection, prefix, listUnique, order ); },
+                       [this, requestTag, periodID]( LeaderboardRead<vector<LeaderboardEntry>>& read )
+        { applyScores( requestTag, periodID, read._result, std::move( read._value ) ); } );
+    }
+
+    void LeaderboardLogic::applyScores( uint64 requestTag, uint64 periodID, LeaderboardServiceResult result, vector<LeaderboardEntry>&& listEntry )
+    {
+        LeaderboardCompletion completion;
+        completion._requestTag = requestTag;
+        completion._operation  = LeaderboardOperation::ScoresOf;
+        completion._result     = result;
+        completion._periodID   = periodID;
+        completion._listEntry  = std::move( listEntry );
+        _completionBuffer.push( std::move( completion ) );
+    }
+
+    void LeaderboardLogic::applyAchievementUnlock( AccountID accountID, const AchievementState& achievement, bool bUnlocked )
+    {
+        if ( bUnlocked )
+            _unlockBuffer.push( AchievementUnlock{ achievement, accountID } );
+    }
+
+    void LeaderboardLogic::readSeasonResult( string_view boardID, uint32 seasonID, AccountID accountID, uint64 requestTag )
+    {
+        const LeaderboardDef* pBoard = findBoard( boardID );
+        if ( pBoard == nullptr || pBoard->_reset != LeaderboardReset::Season )
+        {
+            pushCompletion( requestTag, LeaderboardOperation::SeasonResult, pBoard == nullptr ? LeaderboardResult::UnknownBoard : LeaderboardServiceResult::fail( OnlineError::kInvalidRequest ) );
+            return;
+        }
+        _store.submit( [key = LeaderboardLogicInternal::makeSeasonResultKey( pBoard->_boardID, seasonID, accountID ), accountID]( IServiceStoreConnection& connection )
+        { return LeaderboardStoreRun::readSeasonResult( connection, key, accountID ); },
+                       [this, requestTag, seasonID]( const LeaderboardRead<LeaderboardEntry>& read )
+        { applySeasonResult( requestTag, seasonID, read._result, read._value ); } );
+    }
+
+    void LeaderboardLogic::applySeasonResult( uint64 requestTag, uint32 seasonID, LeaderboardServiceResult result, const LeaderboardEntry& entry )
+    {
+        LeaderboardCompletion completion;
+        completion._requestTag = requestTag;
+        completion._operation  = LeaderboardOperation::SeasonResult;
+        completion._result     = result;
+        completion._periodID   = seasonID;
+        if ( result == LeaderboardResult::Ok )
+            completion._listEntry.push_back( entry );
+        _completionBuffer.push( std::move( completion ) );
+    }
+
+    void LeaderboardLogic::settleSeason( string_view boardID, uint32 seasonID, UnixMilliseconds nowMs, const SettlementDelegate& onDone )
+    {
+        const LeaderboardDef*    pBoard  = findBoard( boardID );
+        const LeaderboardSeason* pSeason = nullptr;
+        if ( pBoard != nullptr )
+        {
+            for ( const LeaderboardSeason& season : pBoard->_listSeason )
+            {
+                if ( season._seasonID == seasonID )
+                    pSeason = &season;
+            }
+        }
+        if ( pSeason == nullptr )
+        {
+            if ( onDone.isBound() )
+                onDone( false );
+            return;
+        }
+        startSettlement( *pBoard, *pSeason, string{}, nowMs, onDone );
+    }
+
+    void LeaderboardLogic::onScheduledRun( const ScheduledRun& run )
+    {
+        // 작업 id 는 "lb.settle.<보드>.<시즌 16진 8자리>" 이다. 보드 id 에 '.' 가 없으므로 마지막 '.' 뒤가 시즌이다
+        const string_view jobID( run._jobID );
+        const string_view prefix( LeaderboardLogicInternal::kSettlementJobPrefix );
+        const size_t      lastDot  = jobID.rfind( '.' );
+        uint64            seasonID = 0;
+        const bool        bParsed  = StringUtil::startsWith( jobID, prefix ) && lastDot != string_view::npos && lastDot > prefix.size() &&
+                             StringUtil::parseUint64( jobID.substr( lastDot + 1 ), seasonID, 16 );
+        const LeaderboardDef*    pBoard  = bParsed ? findBoard( jobID.substr( prefix.size(), lastDot - prefix.size() ) ) : nullptr;
+        const LeaderboardSeason* pSeason = nullptr;
+        if ( pBoard != nullptr )
+        {
+            for ( const LeaderboardSeason& season : pBoard->_listSeason )
+            {
+                if ( season._seasonID == seasonID )
+                    pSeason = &season;
+            }
+        }
+        if ( pSeason == nullptr )
+        {
+            if ( _pScheduler != nullptr )
+                _pScheduler->completeRun( run, false );
+            return;
+        }
+        _mapJobToRun[run._jobID] = run; // 끝나면 completeRun 에 넘긴다. 작업마다 하나씩 두므로 보드 둘의 시즌이 같은 날 끝나도 섞이지 않는다
+        startSettlement( *pBoard, *pSeason, run._jobID, run._occurrenceMs, SettlementDelegate{} );
+    }
+
+    void LeaderboardLogic::startSettlement( const LeaderboardDef& board, const LeaderboardSeason& season, string jobID, UnixMilliseconds nowMs, const SettlementDelegate& onDone )
+    {
+        const uint64        settlementID = _settlementIDAllocator.allocate();
+        SettlementProgress& progress     = _mapSettlement[settlementID];
+        progress._board                  = board;
+        progress._season                 = season;
+        progress._jobID                  = std::move( jobID );
+        progress._onDone                 = onDone;
+        progress._nowMs                  = nowMs;
+        _store.submit( [scorePrefix = LeaderboardLogicInternal::makeScorePrefix( board._boardID, season._seasonID ), order = board._order]( IServiceStoreConnection& connection )
+        { return LeaderboardStoreRun::readRanking( connection, scorePrefix, order ); },
+                       [this, settlementID]( LeaderboardRead<vector<LeaderboardScoreRow>>& read )
+        { applySettlementRanking( settlementID, read._result == LeaderboardResult::Ok, std::move( read._value ) ); } );
+    }
+
+    void LeaderboardLogic::applySettlementRanking( uint64 settlementID, bool bReadOk, vector<LeaderboardScoreRow>&& listRanked )
+    {
+        const auto progressIt = _mapSettlement.find( settlementID );
+        if ( progressIt == _mapSettlement.end() )
+            return; // 서비스가 종료된 뒤 회수한 작업이다
+        if ( bReadOk == false )
+        {
+            finishSettlement( settlementID, false );
+            return;
+        }
+        progressIt->second._listRanked = std::move( listRanked );
+        submitNextSettlementPage( settlementID );
+    }
+
+    void LeaderboardLogic::applySettlementPage( uint64 settlementID, bool bCommitted )
+    {
+        if ( _mapSettlement.find( settlementID ) == _mapSettlement.end() )
+            return;
+        if ( bCommitted == false )
+        {
+            finishSettlement( settlementID, false );
+            return;
+        }
+        submitNextSettlementPage( settlementID );
+    }
+
+    void LeaderboardLogic::submitNextSettlementPage( uint64 settlementID )
+    {
+        SettlementProgress& progress = _mapSettlement[settlementID];
+        if ( progress._nextIndex >= progress._listRanked.size() || _store.hasStore() == false )
+        {
+            finishSettlement( settlementID, progress._nextIndex >= progress._listRanked.size() );
+            return;
+        }
+        const size_t                first = progress._nextIndex;
+        const size_t                last  = MathUtil::min( progress._listRanked.size(), first + static_cast<size_t>( LeaderboardLogicInternal::kPlayersPerPage ) );
+        vector<LeaderboardScoreRow> listPage( progress._listRanked.begin() + static_cast<ptrdiff_t>( first ), progress._listRanked.begin() + static_cast<ptrdiff_t>( last ) );
+        progress._nextIndex = last;
+        _store.submit( [board = progress._board, season = progress._season, listPage = std::move( listPage ), firstRank = static_cast<int32>( first ) + 1,
+                        nowMs = progress._nowMs]( IServiceStoreConnection& connection )
+        { return LeaderboardStoreRun::writeSettlementPage( connection, board, season, listPage, firstRank, nowMs ); },
+                       [this, settlementID]( bool bCommitted )
+        { applySettlementPage( settlementID, bCommitted ); } );
+    }
+
+    void LeaderboardLogic::finishSettlement( uint64 settlementID, bool bSucceeded )
+    {
+        const auto progressIt = _mapSettlement.find( settlementID );
+        if ( progressIt == _mapSettlement.end() )
+            return;
+        const string             jobID  = std::move( progressIt->second._jobID );
+        const SettlementDelegate onDone = progressIt->second._onDone;
+        _mapSettlement.erase( progressIt );
+        applySettlement( jobID, onDone, bSucceeded );
+    }
+
+    void LeaderboardLogic::applySettlement( const string& jobID, const SettlementDelegate& onDone, bool bSucceeded )
+    {
+        if ( onDone.isBound() )
+            onDone( bSucceeded );
+        if ( jobID.empty() )
+            return;
+        const auto runIt = _mapJobToRun.find( jobID );
+        if ( runIt == _mapJobToRun.end() )
+            return;
+        if ( _pScheduler != nullptr )
+            _pScheduler->completeRun( runIt->second, bSucceeded );
+        _mapJobToRun.erase( runIt );
+    }
+} // namespace sw
+
+#include "LeaderboardLogic.cpp.gen.inl"

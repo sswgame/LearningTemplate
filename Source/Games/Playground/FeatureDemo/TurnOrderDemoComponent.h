@@ -11,8 +11,8 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Runtime/Character/Combat/TurnOrder.h"
 #include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
+#include "GameFramework/Runtime/Gameplay/Match/TurnOrder.h"
 
 namespace sw
 {

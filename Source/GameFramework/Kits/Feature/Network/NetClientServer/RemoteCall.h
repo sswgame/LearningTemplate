@@ -45,7 +45,7 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Network/NetKitMessageRange.h"
-#include "GameFramework/Runtime/Online/Guard/TokenBucket.h"
+#include "GameFramework/Runtime/Online/RateLimit/TokenBucket.h"
 
 namespace sw
 {

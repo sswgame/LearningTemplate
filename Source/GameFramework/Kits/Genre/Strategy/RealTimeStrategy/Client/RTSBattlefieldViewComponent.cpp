@@ -19,7 +19,7 @@
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/Client/RTSUnitViewComponent.h"
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/Component/RTSGameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Save/StatefulComponentRegistrar.h"
-#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
+#include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
 
 namespace sw
 {
@@ -140,7 +140,7 @@ namespace sw
             despawnViews();
             _shownUnitModels = _pUnitModelCatalog.snapshot();
         }
-        const RTSWorld& world = director.getWorld();
+        const RTSSimulation& world = director.getWorld();
         if ( _bCliffsSpawned == SW_FALSE )
             spawnCliffs( manager, world );
 
@@ -150,7 +150,7 @@ namespace sw
         _unitViews.beginCollect();
         world.forEachUnit( [this, &world, bFog, localPlayer]( const RTSUnit& unit )
         {
-            const bool bHiddenByFog = bFog && unit._owner != localPlayer && unit._owner != RTSWorld::kNoOwner && world.isVisibleTo( localPlayer, unit._id ) == false;
+            const bool bHiddenByFog = bFog && unit._owner != localPlayer && unit._owner != RTSSimulation::kNoOwner && world.isVisibleTo( localPlayer, unit._id ) == false;
             if ( bHiddenByFog || _shownUnitModels->find( unit._pDef->_id ) == nullptr ) // 모든 유닛에 모델 줄이 있음은 처음에 보았다 — 없는 것은 다시 읽힌 카탈로그의 새 유닛이다
                 return;
             _unitViews.show( static_cast<size_t>( unit._id.index() ), unit._id );
@@ -201,7 +201,7 @@ namespace sw
         return true;
     }
 
-    void RTSBattlefieldViewComponent::spawnCliffs( GameObjectManager& manager, const RTSWorld& world )
+    void RTSBattlefieldViewComponent::spawnCliffs( GameObjectManager& manager, const RTSSimulation& world )
     {
         _bCliffsSpawned             = SW_TRUE;
         AssetManager* const pAssets = game::findSubsystem<AssetManager>();
@@ -233,7 +233,7 @@ namespace sw
         }
     }
 
-    GameObjectHandle RTSBattlefieldViewComponent::spawnUnit( GameObjectManager& manager, const RTSWorld& world, RTSUnitID unitID )
+    GameObjectHandle RTSBattlefieldViewComponent::spawnUnit( GameObjectManager& manager, const RTSSimulation& world, RTSUnitID unitID )
     {
         const RTSUnit* const     pUnit  = world.findUnit( unitID );
         const RuleViewDef* const pModel = pUnit != nullptr ? _shownUnitModels->find( pUnit->_pDef->_id ) : nullptr;

@@ -16,8 +16,8 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Runtime/Online/Guard/Server/TokenBucketMap.h"
-#include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
+#include "GameFramework/Runtime/Online/Identity/AccountIdentity.h"
+#include "GameFramework/Runtime/Online/RateLimit/Server/TokenBucketMap.h"
 
 namespace sw
 {
@@ -117,7 +117,7 @@ namespace sw
 namespace sw
 {
     /**
-     * @brief 도배 방지 설정입니다(채팅 키트 설정 `_spam`, 모든 칸 필수). 코드 기본값은 0 이라 채우지 않으면 `ChatService::initialize` 가 거절한다(감사 O-18 — 정책 값을 C++ 상수로 두지 않는다).
+     * @brief 도배 방지 설정입니다(채팅 키트 설정 `_spam`, 모든 칸 필수). 코드 기본값은 0 이라 채우지 않으면 `ChatLogic::initialize` 가 거절한다(감사 O-18 — 정책 값을 C++ 상수로 두지 않는다).
      */
     REFLECT()
     struct ChatSpamConfig

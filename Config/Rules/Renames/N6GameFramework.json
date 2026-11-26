@@ -1,0 +1,605 @@
+[
+  {
+    "old": "ActionRoom",
+    "new": "ActionCombatRoom",
+    "why": "키트 폴더 ActionCombat 이름을 접두로(ActionPlatformer 의 Action* 과 갈림)"
+  },
+  {
+    "old": "ActionRoomDebugDraw",
+    "new": "ActionCombatRoomDebugDraw",
+    "why": "키트 폴더 ActionCombat 이름을 접두로(ActionPlatformer 의 Action* 과 갈림)"
+  },
+  {
+    "old": "ActionRoomFrameInput",
+    "new": "ActionCombatRoomFrameInput",
+    "why": "키트 폴더 ActionCombat 이름을 접두로(ActionPlatformer 의 Action* 과 갈림)"
+  },
+  {
+    "old": "ActionRoomFrameResult",
+    "new": "ActionCombatRoomFrameResult",
+    "why": "키트 폴더 ActionCombat 이름을 접두로(ActionPlatformer 의 Action* 과 갈림)"
+  },
+  {
+    "old": "ActionRoomHUDComponent",
+    "new": "ActionCombatRoomHUDComponent",
+    "why": "키트 폴더 ActionCombat 이름을 접두로(ActionPlatformer 의 Action* 과 갈림)"
+  },
+  {
+    "old": "ActionRoomHUDComponentDevTools",
+    "new": "ActionCombatRoomHUDComponentDevTools",
+    "why": "키트 폴더 ActionCombat 이름을 접두로(ActionPlatformer 의 Action* 과 갈림)"
+  },
+  {
+    "old": "ActionRoomHUDTest",
+    "new": "ActionCombatRoomHUDTest",
+    "why": "키트 폴더 ActionCombat 이름을 접두로(ActionPlatformer 의 Action* 과 갈림)"
+  },
+  {
+    "old": "ActionRoomHUDViewModel",
+    "new": "ActionCombatRoomHUDViewModel",
+    "why": "키트 폴더 ActionCombat 이름을 접두로(ActionPlatformer 의 Action* 과 갈림)"
+  },
+  {
+    "old": "ActionRoomInternal",
+    "new": "ActionCombatRoomInternal",
+    "why": "키트 폴더 ActionCombat 이름을 접두로(ActionPlatformer 의 Action* 과 갈림)"
+  },
+  {
+    "old": "ActionRoomKind",
+    "new": "ActionCombatRoomKind",
+    "why": "키트 폴더 ActionCombat 이름을 접두로(ActionPlatformer 의 Action* 과 갈림)"
+  },
+  {
+    "old": "ActionRoomLayout",
+    "new": "ActionCombatRoomLayout",
+    "why": "키트 폴더 ActionCombat 이름을 접두로(ActionPlatformer 의 Action* 과 갈림)"
+  },
+  {
+    "old": "ActionRoomLook",
+    "new": "ActionCombatRoomLook",
+    "why": "키트 폴더 ActionCombat 이름을 접두로(ActionPlatformer 의 Action* 과 갈림)"
+  },
+  {
+    "old": "ActionRoomProjectileQuery",
+    "new": "ActionCombatRoomProjectileQuery",
+    "why": "키트 폴더 ActionCombat 이름을 접두로(ActionPlatformer 의 Action* 과 갈림)"
+  },
+  {
+    "old": "ActionRoomSettings",
+    "new": "ActionCombatRoomSettings",
+    "why": "키트 폴더 ActionCombat 이름을 접두로(ActionPlatformer 의 Action* 과 갈림)"
+  },
+  {
+    "old": "ActionRoomSite",
+    "new": "ActionCombatRoomSite",
+    "why": "키트 폴더 ActionCombat 이름을 접두로(ActionPlatformer 의 Action* 과 갈림)"
+  },
+  {
+    "old": "ActionRoomSpawnDef",
+    "new": "ActionCombatRoomSpawnDef",
+    "why": "키트 폴더 ActionCombat 이름을 접두로(ActionPlatformer 의 Action* 과 갈림)"
+  },
+  {
+    "old": "ActionRoomTest",
+    "new": "ActionCombatRoomTest",
+    "why": "키트 폴더 ActionCombat 이름을 접두로(ActionPlatformer 의 Action* 과 갈림)"
+  },
+  {
+    "old": "ActionRoomTestUtil",
+    "new": "ActionCombatRoomTestUtil",
+    "why": "키트 폴더 ActionCombat 이름을 접두로(ActionPlatformer 의 Action* 과 갈림)"
+  },
+  {
+    "old": "AutosaveManager",
+    "new": "AutosaveController",
+    "why": "FSM 하나는 Controller, Manager 는 집합의 수명 정책"
+  },
+  {
+    "old": "AutosaveManagerRefusedSettingsSlots",
+    "new": "AutosaveControllerRefusedSettingsSlots",
+    "why": "FSM 하나는 Controller, Manager 는 집합의 수명 정책"
+  },
+  {
+    "old": "ConquestWorld",
+    "new": "ConquestSimulation",
+    "why": "한 판의 규칙 · 상태는 Simulation, World 는 월드 공간만(CitySimulation 과 같게)"
+  },
+  {
+    "old": "ConquestWorldInternal",
+    "new": "ConquestSimulationInternal",
+    "why": "한 판의 규칙 · 상태는 Simulation, World 는 월드 공간만(CitySimulation 과 같게)"
+  },
+  {
+    "old": "EphemeralBusBindsRouterOnlyBeforeSubscribing",
+    "new": "CacheBusBindsRouterOnlyBeforeSubscribing",
+    "why": "휘발 키-값(TTL · 임대)은 Cache 하나로(키트 CacheStore · 폴더 Online/Cache 와 같게)"
+  },
+  {
+    "old": "EphemeralBusCarriesEnvelopeAcrossServers",
+    "new": "CacheBusCarriesEnvelopeAcrossServers",
+    "why": "휘발 키-값(TTL · 임대)은 Cache 하나로(키트 CacheStore · 폴더 Online/Cache 와 같게)"
+  },
+  {
+    "old": "EphemeralCondition",
+    "new": "CacheCondition",
+    "why": "휘발 키-값(TTL · 임대)은 Cache 하나로(키트 CacheStore · 폴더 Online/Cache 와 같게)"
+  },
+  {
+    "old": "EphemeralMessage",
+    "new": "CacheMessage",
+    "why": "휘발 키-값(TTL · 임대)은 Cache 하나로(키트 CacheStore · 폴더 Online/Cache 와 같게)"
+  },
+  {
+    "old": "EphemeralOperation",
+    "new": "CacheOperation",
+    "why": "휘발 키-값(TTL · 임대)은 Cache 하나로(키트 CacheStore · 폴더 Online/Cache 와 같게)"
+  },
+  {
+    "old": "EphemeralRecordTable",
+    "new": "CacheRecordTable",
+    "why": "휘발 키-값(TTL · 임대)은 Cache 하나로(키트 CacheStore · 폴더 Online/Cache 와 같게)"
+  },
+  {
+    "old": "EphemeralRepliesReachOnlyTheSubmittingService",
+    "new": "CacheRepliesReachOnlyTheSubmittingService",
+    "why": "휘발 키-값(TTL · 임대)은 Cache 하나로(키트 CacheStore · 폴더 Online/Cache 와 같게)"
+  },
+  {
+    "old": "EphemeralReply",
+    "new": "CacheReply",
+    "why": "휘발 키-값(TTL · 임대)은 Cache 하나로(키트 CacheStore · 폴더 Online/Cache 와 같게)"
+  },
+  {
+    "old": "EphemeralRequest",
+    "new": "CacheRequest",
+    "why": "휘발 키-값(TTL · 임대)은 Cache 하나로(키트 CacheStore · 폴더 Online/Cache 와 같게)"
+  },
+  {
+    "old": "EphemeralResult",
+    "new": "CacheResult",
+    "why": "휘발 키-값(TTL · 임대)은 Cache 하나로(키트 CacheStore · 폴더 Online/Cache 와 같게)"
+  },
+  {
+    "old": "EphemeralScoredMember",
+    "new": "CacheScoredMember",
+    "why": "휘발 키-값(TTL · 임대)은 Cache 하나로(키트 CacheStore · 폴더 Online/Cache 와 같게)"
+  },
+  {
+    "old": "EphemeralServerBus",
+    "new": "CacheServerBus",
+    "why": "휘발 키-값(TTL · 임대)은 Cache 하나로(키트 CacheStore · 폴더 Online/Cache 와 같게)"
+  },
+  {
+    "old": "EphemeralServerBusInternal",
+    "new": "CacheServerBusInternal",
+    "why": "휘발 키-값(TTL · 임대)은 Cache 하나로(키트 CacheStore · 폴더 Online/Cache 와 같게)"
+  },
+  {
+    "old": "EphemeralStore",
+    "new": "CacheStore",
+    "why": "휘발 키-값(TTL · 임대)은 Cache 하나로(키트 CacheStore · 폴더 Online/Cache 와 같게)",
+    "allowExisting": true
+  },
+  {
+    "old": "EphemeralStoreInternal",
+    "new": "CacheStoreInternal",
+    "why": "휘발 키-값(TTL · 임대)은 Cache 하나로(키트 CacheStore · 폴더 Online/Cache 와 같게)"
+  },
+  {
+    "old": "EphemeralStoreRouter",
+    "new": "CacheStoreRouter",
+    "why": "휘발 키-값(TTL · 임대)은 Cache 하나로(키트 CacheStore · 폴더 Online/Cache 와 같게)"
+  },
+  {
+    "old": "EphemeralStoreTest",
+    "new": "CacheStoreTest",
+    "why": "휘발 키-값(TTL · 임대)은 Cache 하나로(키트 CacheStore · 폴더 Online/Cache 와 같게)"
+  },
+  {
+    "old": "EphemeralStoreTestAccess",
+    "new": "CacheStoreTestAccess",
+    "why": "휘발 키-값(TTL · 임대)은 Cache 하나로(키트 CacheStore · 폴더 Online/Cache 와 같게)"
+  },
+  {
+    "old": "EphemeralStoreTestUtil",
+    "new": "CacheStoreTestUtil",
+    "why": "휘발 키-값(TTL · 임대)은 Cache 하나로(키트 CacheStore · 폴더 Online/Cache 와 같게)"
+  },
+  {
+    "old": "EphemeralValue",
+    "new": "CacheValue",
+    "why": "휘발 키-값(TTL · 임대)은 Cache 하나로(키트 CacheStore · 폴더 Online/Cache 와 같게)"
+  },
+  {
+    "old": "EphemeralValueUtil",
+    "new": "CacheValueUtil",
+    "why": "휘발 키-값(TTL · 임대)은 Cache 하나로(키트 CacheStore · 폴더 Online/Cache 와 같게)"
+  },
+  {
+    "old": "FileLocalSlotStorage",
+    "new": "FileLocalStoreBackend",
+    "why": "로컬 저장 백엔드는 Backend 하나로(인터페이스의 구현), 설정에서 앞면을 만드는 공장은 Factory"
+  },
+  {
+    "old": "HubNetLink",
+    "new": "HubNetSession",
+    "why": "게임과 망을 잇는 쪽은 Session(키트 LockstepSession 과 같게), Link 는 관계 뜻만"
+  },
+  {
+    "old": "HubNetLinkTest",
+    "new": "HubNetSessionTest",
+    "why": "게임과 망을 잇는 쪽은 Session(키트 LockstepSession 과 같게), Link 는 관계 뜻만"
+  },
+  {
+    "old": "HubWorld",
+    "new": "HubSimulation",
+    "why": "한 판의 규칙 · 상태는 Simulation, World 는 월드 공간만(CitySimulation 과 같게)"
+  },
+  {
+    "old": "HubWorldComponent",
+    "new": "HubSimulationComponent",
+    "why": "한 판의 규칙 · 상태는 Simulation, World 는 월드 공간만(CitySimulation 과 같게)"
+  },
+  {
+    "old": "HubWorldComponentDevInternal",
+    "new": "HubSimulationComponentDevInternal",
+    "why": "한 판의 규칙 · 상태는 Simulation, World 는 월드 공간만(CitySimulation 과 같게)"
+  },
+  {
+    "old": "HubWorldComponentTest",
+    "new": "HubSimulationComponentTest",
+    "why": "한 판의 규칙 · 상태는 Simulation, World 는 월드 공간만(CitySimulation 과 같게)"
+  },
+  {
+    "old": "HubWorldTest",
+    "new": "HubSimulationTest",
+    "why": "한 판의 규칙 · 상태는 Simulation, World 는 월드 공간만(CitySimulation 과 같게)"
+  },
+  {
+    "old": "IEphemeralStore",
+    "new": "ICacheStore",
+    "why": "휘발 키-값(TTL · 임대)은 Cache 하나로(키트 CacheStore · 폴더 Online/Cache 와 같게)"
+  },
+  {
+    "old": "IEphemeralStoreDriver",
+    "new": "ICacheStoreDriver",
+    "why": "휘발 키-값(TTL · 임대)은 Cache 하나로(키트 CacheStore · 폴더 Online/Cache 와 같게)"
+  },
+  {
+    "old": "ILocalSlotStorage",
+    "new": "ILocalStoreBackend",
+    "why": "로컬 저장 백엔드는 Backend 하나로(인터페이스의 구현), 설정에서 앞면을 만드는 공장은 Factory"
+  },
+  {
+    "old": "LocalSlotStorage",
+    "new": "LocalStoreBackend",
+    "why": "로컬 저장 백엔드는 Backend 하나로(인터페이스의 구현), 설정에서 앞면을 만드는 공장은 Factory",
+    "allowExisting": true
+  },
+  {
+    "old": "LocalSlotStorageCreateFunction",
+    "new": "LocalStoreBackendCreateFunction",
+    "why": "로컬 저장 백엔드는 Backend 하나로(인터페이스의 구현), 설정에서 앞면을 만드는 공장은 Factory"
+  },
+  {
+    "old": "LocalSlotStorageCreateSignature",
+    "new": "LocalStoreBackendCreateSignature",
+    "why": "로컬 저장 백엔드는 Backend 하나로(인터페이스의 구현), 설정에서 앞면을 만드는 공장은 Factory"
+  },
+  {
+    "old": "LocalStoreBackendRegistration",
+    "new": "LocalStoreFactoryRegistration",
+    "why": "로컬 저장 백엔드는 Backend 하나로(인터페이스의 구현), 설정에서 앞면을 만드는 공장은 Factory"
+  },
+  {
+    "old": "MechArenaWorld",
+    "new": "MechArenaSimulation",
+    "why": "한 판의 규칙 · 상태는 Simulation, World 는 월드 공간만(CitySimulation 과 같게)"
+  },
+  {
+    "old": "MechArenaWorldInternal",
+    "new": "MechArenaSimulationInternal",
+    "why": "한 판의 규칙 · 상태는 Simulation, World 는 월드 공간만(CitySimulation 과 같게)"
+  },
+  {
+    "old": "MechArenaWorldRefusedSettings",
+    "new": "MechArenaSimulationRefusedSettings",
+    "why": "한 판의 규칙 · 상태는 Simulation, World 는 월드 공간만(CitySimulation 과 같게)"
+  },
+  {
+    "old": "MemoryEphemeralDatabase",
+    "new": "MemoryCacheDatabase",
+    "why": "휘발 키-값(TTL · 임대)은 Cache 하나로(키트 CacheStore · 폴더 Online/Cache 와 같게)"
+  },
+  {
+    "old": "MemoryEphemeralStore",
+    "new": "MemoryCacheStore",
+    "why": "휘발 키-값(TTL · 임대)은 Cache 하나로(키트 CacheStore · 폴더 Online/Cache 와 같게)"
+  },
+  {
+    "old": "MemoryEphemeralStoreInternal",
+    "new": "MemoryCacheStoreInternal",
+    "why": "휘발 키-값(TTL · 임대)은 Cache 하나로(키트 CacheStore · 폴더 Online/Cache 와 같게)"
+  },
+  {
+    "old": "MemoryLocalDatabase",
+    "new": "MemoryLocalStoreBackend",
+    "why": "로컬 저장 백엔드는 Backend 하나로(인터페이스의 구현), 설정에서 앞면을 만드는 공장은 Factory"
+  },
+  {
+    "old": "OnlinePresence",
+    "new": "CacheAccountPresence",
+    "why": "AccountPresence 를 캐시 저장소에 두는 구현"
+  },
+  {
+    "old": "OnlinePresenceBus",
+    "new": "CacheAccountPresenceBus",
+    "why": "AccountPresence 를 캐시 저장소에 두는 구현"
+  },
+  {
+    "old": "OnlinePresenceConfig",
+    "new": "CacheAccountPresenceConfig",
+    "why": "AccountPresence 를 캐시 저장소에 두는 구현"
+  },
+  {
+    "old": "OnlinePresenceFindWithoutLive",
+    "new": "CacheAccountPresenceFindWithoutLive",
+    "why": "AccountPresence 를 캐시 저장소에 두는 구현"
+  },
+  {
+    "old": "OnlinePresenceInternal",
+    "new": "CacheAccountPresenceInternal",
+    "why": "AccountPresence 를 캐시 저장소에 두는 구현"
+  },
+  {
+    "old": "OnlinePresenceNameRecord",
+    "new": "CacheAccountPresenceNameRecord",
+    "why": "AccountPresence 를 캐시 저장소에 두는 구현"
+  },
+  {
+    "old": "OnlinePresenceTest",
+    "new": "CacheAccountPresenceTest",
+    "why": "AccountPresence 를 캐시 저장소에 두는 구현"
+  },
+  {
+    "old": "OnlinePresenceTestUtil",
+    "new": "CacheAccountPresenceTestUtil",
+    "why": "AccountPresence 를 캐시 저장소에 두는 구현"
+  },
+  {
+    "old": "PlayerLocomotion",
+    "new": "TileStepLocomotion",
+    "why": "타일 한 칸씩 걷는 Idle/Walk/Interact FSM — 일반 이동(CharacterMovementComponent)과 가른다"
+  },
+  {
+    "old": "RESPEphemeralStore",
+    "new": "RESPCacheStore",
+    "why": "휘발 키-값(TTL · 임대)은 Cache 하나로(키트 CacheStore · 폴더 Online/Cache 와 같게)"
+  },
+  {
+    "old": "RESPEphemeralStoreDriver",
+    "new": "RESPCacheStoreDriver",
+    "why": "휘발 키-값(TTL · 임대)은 Cache 하나로(키트 CacheStore · 폴더 Online/Cache 와 같게)"
+  },
+  {
+    "old": "RESPEphemeralStoreInternal",
+    "new": "RESPCacheStoreInternal",
+    "why": "휘발 키-값(TTL · 임대)은 Cache 하나로(키트 CacheStore · 폴더 Online/Cache 와 같게)"
+  },
+  {
+    "old": "RTSWorld",
+    "new": "RTSSimulation",
+    "why": "한 판의 규칙 · 상태는 Simulation, World 는 월드 공간만(CitySimulation 과 같게)"
+  },
+  {
+    "old": "RTSWorldCostCheckedBut",
+    "new": "RTSSimulationCostCheckedBut",
+    "why": "한 판의 규칙 · 상태는 Simulation, World 는 월드 공간만(CitySimulation 과 같게)"
+  },
+  {
+    "old": "RTSWorldInternal",
+    "new": "RTSSimulationInternal",
+    "why": "한 판의 규칙 · 상태는 Simulation, World 는 월드 공간만(CitySimulation 과 같게)"
+  },
+  {
+    "old": "RTSWorldRefusedSettings",
+    "new": "RTSSimulationRefusedSettings",
+    "why": "한 판의 규칙 · 상태는 Simulation, World 는 월드 공간만(CitySimulation 과 같게)"
+  },
+  {
+    "old": "RTSWorldRefusedSizeX",
+    "new": "RTSSimulationRefusedSizeX",
+    "why": "한 판의 규칙 · 상태는 Simulation, World 는 월드 공간만(CitySimulation 과 같게)"
+  },
+  {
+    "old": "RTSWorldTest",
+    "new": "RTSSimulationTest",
+    "why": "한 판의 규칙 · 상태는 Simulation, World 는 월드 공간만(CitySimulation 과 같게)"
+  },
+  {
+    "old": "RecordFaultEphemeralStore",
+    "new": "RecordFaultCacheStore",
+    "why": "휘발 키-값(TTL · 임대)은 Cache 하나로(키트 CacheStore · 폴더 Online/Cache 와 같게)"
+  },
+  {
+    "old": "RespEphemeralStore",
+    "new": "RespCacheStore",
+    "why": "휘발 키-값(TTL · 임대)은 Cache 하나로(키트 CacheStore · 폴더 Online/Cache 와 같게)"
+  },
+  {
+    "old": "RespEphemeralStoreDriver",
+    "new": "RespCacheStoreDriver",
+    "why": "휘발 키-값(TTL · 임대)은 Cache 하나로(키트 CacheStore · 폴더 Online/Cache 와 같게)"
+  },
+  {
+    "old": "SQLLocalSlotStorage",
+    "new": "SQLLocalStoreBackend",
+    "why": "로컬 저장 백엔드는 Backend 하나로(인터페이스의 구현), 설정에서 앞면을 만드는 공장은 Factory"
+  },
+  {
+    "old": "SQLLocalSlotStorageInternal",
+    "new": "SQLLocalStoreBackendInternal",
+    "why": "로컬 저장 백엔드는 Backend 하나로(인터페이스의 구현), 설정에서 앞면을 만드는 공장은 Factory"
+  },
+  {
+    "old": "SQLLocalSlotStorageTest",
+    "new": "SQLLocalStoreBackendTest",
+    "why": "로컬 저장 백엔드는 Backend 하나로(인터페이스의 구현), 설정에서 앞면을 만드는 공장은 Factory"
+  },
+  {
+    "old": "SQLLocalSlotStorageTestUtil",
+    "new": "SQLLocalStoreBackendTestUtil",
+    "why": "로컬 저장 백엔드는 Backend 하나로(인터페이스의 구현), 설정에서 앞면을 만드는 공장은 Factory"
+  },
+  {
+    "old": "ScreenTransitionManager",
+    "new": "ScreenTransitionController",
+    "why": "FSM 하나는 Controller, Manager 는 집합의 수명 정책"
+  },
+  {
+    "old": "ServerRegistryReader",
+    "new": "ServerDirectoryReader",
+    "why": "서버 목록은 Directory 하나로(Registry 는 코드 등록 표)"
+  },
+  {
+    "old": "SeverResult",
+    "new": "DismemberResult",
+    "why": "사지 절단의 업계 용어는 Dismemberment"
+  },
+  {
+    "old": "SkeletalSevering",
+    "new": "SkeletalDismemberment",
+    "why": "사지 절단의 업계 용어는 Dismemberment"
+  },
+  {
+    "old": "SkeletalSeveringComponent",
+    "new": "SkeletalDismembermentComponent",
+    "why": "사지 절단의 업계 용어는 Dismemberment"
+  },
+  {
+    "old": "SkeletalSeveringComponentDevInternal",
+    "new": "SkeletalDismembermentComponentDevInternal",
+    "why": "사지 절단의 업계 용어는 Dismemberment"
+  },
+  {
+    "old": "SkeletalSeveringComponentDevTools",
+    "new": "SkeletalDismembermentComponentDevTools",
+    "why": "사지 절단의 업계 용어는 Dismemberment"
+  },
+  {
+    "old": "SkeletalSeveringComponentInternal",
+    "new": "SkeletalDismembermentComponentInternal",
+    "why": "사지 절단의 업계 용어는 Dismemberment"
+  },
+  {
+    "old": "SkeletalSeveringComponentValidation",
+    "new": "SkeletalDismembermentComponentValidation",
+    "why": "사지 절단의 업계 용어는 Dismemberment"
+  },
+  {
+    "old": "SkeletalSeveringTest",
+    "new": "SkeletalDismembermentTest",
+    "why": "사지 절단의 업계 용어는 Dismemberment"
+  },
+  {
+    "old": "SkeletalSeveringTestUtil",
+    "new": "SkeletalDismembermentTestUtil",
+    "why": "사지 절단의 업계 용어는 Dismemberment"
+  },
+  {
+    "old": "SkirmishLockstepLink",
+    "new": "SkirmishLockstepSession",
+    "why": "게임과 망을 잇는 쪽은 Session(키트 LockstepSession 과 같게), Link 는 관계 뜻만"
+  },
+  {
+    "old": "SkirmishLockstepLinkTest",
+    "new": "SkirmishLockstepSessionTest",
+    "why": "게임과 망을 잇는 쪽은 Session(키트 LockstepSession 과 같게), Link 는 관계 뜻만"
+  },
+  {
+    "old": "TagCountTable",
+    "new": "TagCountContainer",
+    "why": "개수로 세는 태그 집합 — 언리얼 FGameplayTagCountContainer"
+  },
+  {
+    "old": "TelemetryUploadLink",
+    "new": "TelemetryUploadAdapter",
+    "why": "업로더를 엔진 텔레메트리에 붙이는 어댑터, Link 는 관계 뜻만"
+  },
+  {
+    "old": "TelemetryUploadLinkInternal",
+    "new": "TelemetryUploadAdapterInternal",
+    "why": "업로더를 엔진 텔레메트리에 붙이는 어댑터, Link 는 관계 뜻만"
+  },
+  {
+    "old": "TestRESPEphemeralStore",
+    "new": "TestRESPCacheStore",
+    "why": "휘발 키-값(TTL · 임대)은 Cache 하나로(키트 CacheStore · 폴더 Online/Cache 와 같게)"
+  },
+  {
+    "old": "_pEphemeralStore",
+    "new": "_pCacheStore",
+    "why": "휘발 키-값(TTL · 임대)은 Cache 하나로(키트 CacheStore · 폴더 Online/Cache 와 같게)"
+  },
+  {
+    "old": "createEphemeralStore",
+    "new": "createCacheStore",
+    "why": "휘발 키-값(TTL · 임대)은 Cache 하나로(키트 CacheStore · 폴더 Online/Cache 와 같게)"
+  },
+  {
+    "old": "getEphemeralRouter",
+    "new": "getCacheRouter",
+    "why": "휘발 키-값(TTL · 임대)은 Cache 하나로(키트 CacheStore · 폴더 Online/Cache 와 같게)"
+  },
+  {
+    "old": "getEphemeralStore",
+    "new": "getCacheStore",
+    "why": "휘발 키-값(TTL · 임대)은 Cache 하나로(키트 CacheStore · 폴더 Online/Cache 와 같게)"
+  },
+  {
+    "old": "pSevering",
+    "new": "pDismemberment",
+    "why": "사지 절단의 업계 용어는 Dismemberment"
+  },
+  {
+    "old": "s_sqliteLocalStoreBackendRegistration",
+    "new": "s_sqliteLocalStoreFactoryRegistration",
+    "why": "로컬 저장 백엔드는 Backend 하나로(인터페이스의 구현), 설정에서 앞면을 만드는 공장은 Factory"
+  },
+  {
+    "old": "AccountTicketConnectInternal",
+    "new": "AccountTicketConnectorInternal",
+    "why": "AccountTicketConnector 를 담은 파일 줄기를 형식 이름에 맞춘다"
+  },
+  {
+    "old": "AccountTicketConnectCommandDevInternal",
+    "new": "AccountTicketConnectorCommandDevInternal",
+    "why": "AccountTicketConnector 를 담은 파일 줄기를 형식 이름에 맞춘다"
+  },
+  {
+    "old": "AccountTicketConnectLoopbackTest",
+    "new": "AccountTicketConnectorLoopbackTest",
+    "why": "AccountTicketConnector 를 담은 파일 줄기를 형식 이름에 맞춘다"
+  },
+  {
+    "old": "AccountTicketConnectTest",
+    "new": "AccountTicketConnectorTest",
+    "why": "AccountTicketConnector 를 담은 파일 줄기를 형식 이름에 맞춘다"
+  },
+  {
+    "old": "AccountTicketConnect",
+    "new": "AccountTicketConnector",
+    "why": "AccountTicketConnector 를 담은 파일 줄기를 형식 이름에 맞춘다"
+  },
+  {
+    "old": "ServiceRecordTableTest",
+    "new": "ServiceRecordCodecTest",
+    "why": "파일 ServiceRecordTable.h 는 ServiceRecordCodec 만 담는다(표 형식은 ServiceStore.h)"
+  },
+  {
+    "old": "BodyPickSurface",
+    "new": "BodySurfacePick",
+    "why": "파일 BodySurfacePick.h 의 주 형식 — 낱말 순서를 파일 이름과 맞춘다",
+    "allowExisting": true
+  }
+]

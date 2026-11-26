@@ -9,7 +9,7 @@
 
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSCatalog.h"
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSCommanderAI.h"
-#include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSWorld.h"
+#include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSSimulation.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Wallet.h"
 
 #include <limits>
@@ -41,7 +41,7 @@ namespace
         static inline int32               s_thinkCount = 0;
 
         RTSCatalog             _catalog;
-        RTSWorld               _world;
+        RTSSimulation          _world;
         Wallet                 _wallet;
         Wallet                 _arrOtherWallet[3];
         RTSCommanderAI         _ai;
@@ -106,7 +106,7 @@ namespace
         void think() { _ai.update( GameSeconds{ _settings._thinkInterval } ); }
 
         RTSUnitID spawnDepot( int32 owner = 0 ) { return _world.spawnUnit( kDepot, owner, float3{ 4.5f, 0.0f, 4.5f } ); }
-        RTSUnitID spawnMinerals() { return _world.spawnUnit( kMinerals, RTSWorld::kNoOwner, float3{ 14.5f, 0.0f, 4.5f } ); }
+        RTSUnitID spawnMinerals() { return _world.spawnUnit( kMinerals, RTSSimulation::kNoOwner, float3{ 14.5f, 0.0f, 4.5f } ); }
         RTSUnitID spawnWorker( float32 z = 12.5f ) { return _world.spawnUnit( kWorker, 0, float3{ 10.5f, 0.0f, z } ); }
         RTSUnitID spawnMarine( float32 x = 12.5f ) { return _world.spawnUnit( kMarine, 0, float3{ x, 0.0f, 14.5f } ); }
 

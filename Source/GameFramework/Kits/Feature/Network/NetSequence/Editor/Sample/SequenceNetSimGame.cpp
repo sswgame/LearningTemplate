@@ -12,13 +12,13 @@
 
 #include "GameFramework/Kits/Feature/Network/NetSequence/SequenceNetSessionComponent.h"
 #include "GameFramework/Kits/Feature/Network/NetSimulation/NetSimGameRegistry.h"
-#include "GameFramework/Runtime/Character/Camera/SequenceTriggerComponent.h"
 #include "GameFramework/Runtime/Character/Control/Controller/PlayerControllerComponent.h"
 #include "GameFramework/Runtime/Character/Control/Controller/PlayerStateComponent.h"
 #include "GameFramework/Runtime/Character/Control/Controller/RemoteControllerComponent.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Runtime/Foundation/Condition/GameFlags.h"
 #include "GameFramework/Runtime/Gameplay/GameState/GameStateComponent.h"
+#include "GameFramework/Runtime/Gameplay/Interaction/SequenceTriggerComponent.h"
 
 namespace sw
 {

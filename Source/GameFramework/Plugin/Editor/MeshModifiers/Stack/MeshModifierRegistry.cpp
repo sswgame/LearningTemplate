@@ -13,7 +13,7 @@
 
 #include "Engine/Module/ModuleSubsystemRegistrar.h"
 
-#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
+#include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
 
 namespace sw::editor
 {

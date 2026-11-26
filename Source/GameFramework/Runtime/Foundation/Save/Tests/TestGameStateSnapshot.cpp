@@ -16,7 +16,7 @@
 
 #include "GameFramework/Runtime/Foundation/Flow/IContentConfiguration.h"
 #include "GameFramework/Runtime/Foundation/Save/GameStateSnapshot.h"
-#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
+#include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
 
 namespace
 {

@@ -19,9 +19,9 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Mailbox/Runtime/MailboxProtocol.h"
-#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/ServiceMailCampaign.h"
-#include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
+#include "GameFramework/Runtime/Online/Identity/Server/IAfterDeleteAccount.h"
 #include "GameFramework/Runtime/Online/Ledger/LedgerTypes.h"
+#include "GameFramework/Runtime/Online/Mail/Server/ServiceMailCampaign.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
 
 namespace sw

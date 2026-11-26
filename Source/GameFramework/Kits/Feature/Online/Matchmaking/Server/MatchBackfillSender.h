@@ -19,7 +19,7 @@
 
 namespace sw
 {
-    class MatchQueueService;
+    class MatchQueueLogic;
     class MatchServerAgent;
 } // namespace sw
 
@@ -35,15 +35,15 @@ namespace sw
         MatchBackfillSender();
 
         /** @brief 대기열 · 명단(빌려 쓴다, 필수)과 디렉터리에 올리는 이 서버의 설명(빌려 쓴다 — `setSeatCapacity` 가 정원을 바꾼다)을 받습니다. */
-        void initialize( MatchQueueService* pQueue, MatchServerAgent* pAgent, ServerDescriptor& descriptor );
+        void initialize( MatchQueueLogic* pQueue, MatchServerAgent* pAgent, ServerDescriptor& descriptor );
 
         [[nodiscard]] MatchmakingServiceResult submitBackfill( const MatchBackfillSlots& slots, UnixMilliseconds nowMs ) override;
         [[nodiscard]] MatchmakingServiceResult submitPlayerLeft( AccountID leftAccountID, UnixMilliseconds nowMs ) override;
         void                                   setSeatCapacity( int32 seatCount ) override;
 
     private:
-        ServerDescriptor*  _pDescriptor;
-        MatchQueueService* _pQueue;
-        MatchServerAgent*  _pAgent;
+        ServerDescriptor* _pDescriptor;
+        MatchQueueLogic*  _pQueue;
+        MatchServerAgent* _pAgent;
     };
 } // namespace sw

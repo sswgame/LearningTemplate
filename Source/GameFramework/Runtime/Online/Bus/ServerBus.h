@@ -7,7 +7,7 @@
  *            앞의 바이트 발행과 메시지의 본문 바이트는 주제 정의(`ServerBusTopic`, `ServerBusTopicFamily`)만 쓰고 읽는다. 키트가 바이트를 직접 쓰거나
  *            `BitReader` 로 읽는 코드는 컴파일되지 않는다.
  *          - 본문은 자기 기술형(A, 의미 버전 머리 + `BinarySerializer`)이다. 서버 사이에는 핸드셰이크가 없어 배포 중에 빌드가 섞이기 때문이다.
- *          구현은 `EphemeralServerBus`(캐시 발행/구독 위, 서버 여럿)와 `LocalServerBus`(프로세스 안, 서버 한 대와 테스트)다.
+ *          구현은 `CacheServerBus`(캐시 발행/구독 위, 서버 여럿)와 `LocalServerBus`(프로세스 안, 서버 한 대와 테스트)다.
  */
 #pragma once
 #include "Core/Container/string.h"

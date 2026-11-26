@@ -9,7 +9,9 @@
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/LiveEventControl.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/ServerDirectoryControl.h"
 #include "GameFramework/Runtime/Online/Bus/ServerBusTopic.h"
-#include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
+#include "GameFramework/Runtime/Online/Identity/AccountIdentity.h"
+#include "GameFramework/Runtime/Online/Identity/Server/IAccountDirectory.h"
+#include "GameFramework/Runtime/Online/Identity/Server/IAccountSessionControl.h"
 #include "GameFramework/Runtime/Online/Sanction/Server/ServiceSanction.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
 

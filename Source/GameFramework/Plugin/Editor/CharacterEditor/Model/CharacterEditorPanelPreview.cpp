@@ -69,10 +69,10 @@ namespace sw::editor
                 return count;
             }
             /**
-             * @brief 집기 오브젝트(첫 것이 몸)의 메시를 지금 포즈로 월드에 옮긴 표면을 짓습니다(`BodyPickSurface`). 스켈레탈 유닛이면 그 스킨 팔레트로 스키닝한다.
+             * @brief 집기 오브젝트(첫 것이 몸)의 메시를 지금 포즈로 월드에 옮긴 표면을 짓습니다(`BodySurfacePick`). 스켈레탈 유닛이면 그 스킨 팔레트로 스키닝한다.
              * @details 몸 메시가 없으면(조립 전) 첫 표면이 몸이 아니다 — 쓰는 쪽이 `_bSkin` 을 본다.
              */
-            static void buildPickSurfaces( const vector<const GameObject*>& listObject, vector<BodyPickSurface>& outListSurface )
+            static void buildPickSurfaces( const vector<const GameObject*>& listObject, vector<BodySurfacePick>& outListSurface )
             {
                 outListSurface.clear();
                 const vector<float4x4> listNoPalette{}; // 단단한 부품 — 스키닝하지 않는다
@@ -92,8 +92,8 @@ namespace sw::editor
                     }
                     if ( pMesh == nullptr || pScene == nullptr || pMesh->getVertexCount() == 0 )
                         continue;
-                    BodyPickSurface& surface = outListSurface.emplace_back();
-                    BodyPickSurface::build( pMesh->getCPUView().getVertices(), pMesh->getMorphTargets(), pUnit != nullptr ? pUnit->getMorphWeights() : listNoWeight, pMesh->getSkinVertices(),
+                    BodySurfacePick& surface = outListSurface.emplace_back();
+                    BodySurfacePick::build( pMesh->getCPUView().getVertices(), pMesh->getMorphTargets(), pUnit != nullptr ? pUnit->getMorphWeights() : listNoWeight, pMesh->getSkinVertices(),
                                             pUnit != nullptr ? pUnit->getSkinPalette() : listNoPalette, pScene->getWorldMatrix(), surface );
                     surface._listIndex   = pMesh->getIndices();
                     surface._listSection = pMesh->getSections();
@@ -253,10 +253,10 @@ namespace sw::editor
         bool bOutline = _bodySelectedSection.has_value() && *_bodySelectedSection < _bodyState._listSection.size();
         for ( const BodyCustomizationViewState::SectionRow& row : _bodyState._listSection )
             bOutline = bOutline || row._bHighlighted == SW_TRUE;
-        vector<BodyPickSurface> listSurface;
+        vector<BodySurfacePick> listSurface;
         if ( bOutline )
             Internal::buildPickSurfaces( listObject, listSurface );
-        for ( const BodyPickSurface& surface : listSurface )
+        for ( const BodySurfacePick& surface : listSurface )
         {
             for ( const MeshSection& section : surface._listSection )
             {
@@ -296,13 +296,13 @@ namespace sw::editor
             return;
         vector<const GameObject*> listObject;
         collectPickObjects( *pBody, listObject );
-        vector<BodyPickSurface> listSurface;
+        vector<BodySurfacePick> listSurface;
         Internal::buildPickSurfaces( listObject, listSurface );
         if ( listSurface.empty() || listSurface[0]._bSkin == SW_FALSE )
             return; // 몸 메시가 아직 없다(조립 전)
         // 층 배치는 피부(몸 표면)만 본다 — 옷 아래 피부에도 놓는다(층 UV 는 몸 UV 다). 구간 고르기는 부품까지 가장 가까운 것.
         const bool                                    bPlacingLayer = _bodyPickLayer != constant::invalid_index::kUint32;
-        const vector_reference<const BodyPickSurface> listCandidate = bPlacingLayer ? vector_reference<const BodyPickSurface>{ listSurface.data(), 1 } : vector_reference<const BodyPickSurface>{ listSurface };
+        const vector_reference<const BodySurfacePick> listCandidate = bPlacingLayer ? vector_reference<const BodySurfacePick>{ listSurface.data(), 1 } : vector_reference<const BodySurfacePick>{ listSurface };
         BodySurfaceHit                                hit{};
         if ( BodySurfaceHit::pick( listCandidate, ray._origin, ray._direction, hit ) == false )
             return;
@@ -316,7 +316,7 @@ namespace sw::editor
             _bBodyPickDrag = SW_TRUE;
             return;
         }
-        const BodyPickSurface& surface = listSurface[hit._surface];
+        const BodySurfacePick& surface = listSurface[hit._surface];
         if ( hit._section.has_value() && *hit._section < surface._listSection.size() )
             _bodySelectedSection = BodyCustomizationViewModel::findSectionRow( _bodyState, surface._listSection[*hit._section]._name );
     }

@@ -71,7 +71,7 @@ SW_TEST_CASE( MatchMakerTest, TicketsWithinTheWindowFormAMatch )
     SW_REQUIRE_EQUAL( size_t( 1 ), listMatch.size() );
     SW_EXPECT_EQUAL( size_t( 2 ), listMatch[0]._listTeam.size() );
     SW_EXPECT_EQUAL( string( "eu" ), listMatch[0]._region );
-    SW_EXPECT_EQUAL( uint64( 0 ), listMatch[0]._matchID ); // 경기 id 는 서버에 하나인 발급기(`MatchQueueService`)가 매긴다
+    SW_EXPECT_EQUAL( uint64( 0 ), listMatch[0]._matchID ); // 경기 id 는 서버에 하나인 발급기(`MatchQueueLogic`)가 매긴다
     SW_EXPECT_TRUE( maker.hasTicket( 3 ) );
     SW_EXPECT_FALSE( maker.hasTicket( 1 ) || maker.hasTicket( 2 ) );
     SW_EXPECT_TRUE( listTimedOut.empty() );
