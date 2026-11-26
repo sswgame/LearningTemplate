@@ -16,144 +16,15 @@
 #include "Programs/ReflectionParser/AstVisitor.h"
 #include "Programs/ReflectionParser/CodeEmit.h"
 #include "Programs/ReflectionParser/CodeGenerator.h"
+#include "Programs/ReflectionParser/ParsedHeaderDump.h"
 #include "Programs/ReflectionParser/ParserConfig.h"
+#include "Programs/ReflectionParser/ParserContext.h"
 #include "Programs/ReflectionParser/ParserDefines.h"
 #include "Programs/ReflectionParser/ParserOptions.h"
 #include "Programs/ReflectionParser/ParserSession.h"
 #include "Programs/ReflectionParser/ParserUtil.h"
 
 #include <clang-c/Index.h>
-
-namespace sw
-{
-    /** @brief 디스크 대신 넘길 파일 내용입니다. 이미 읽은 헤더, 또는 디스크에 없는 묶음 TU 원본에 씁니다. */
-    struct ParserUnsavedFile
-    {
-        const string* _pPath;
-        const string* _pContent;
-    };
-
-    /** @class ParserContext @brief libclang CXIndex / CXTranslationUnit 수명을 쥡니다. clang 인자는 `ParserConfig` 가 만듭니다. */
-    class ParserContext
-    {
-    public:
-        explicit ParserContext( const ParserConfig& config );
-        ~ParserContext();
-
-        ParserContext( const ParserContext& )            = delete;
-        ParserContext& operator=( const ParserContext& ) = delete;
-
-        /**
-         * @brief 파일 하나를 파싱해 AST(CXTranslationUnit)를 만듭니다.
-         * @param filePath 파싱할 주 파일 경로
-         * @param listIncludePath 추가 include 경로 목록
-         * @param listUnsaved 디스크 대신 넘길 내용(키워드 스캔과 이중 I/O 방지 · 디스크에 없는 주 파일)
-         * @param bReportErrors 거짓이면 clang 오류를 오류 로그 대신 추적 로그로 남깁니다(실패하면 다시 해 볼 시도용)
-         * @return 파싱 성공 여부(clang 오류가 하나라도 있으면 실패)
-         */
-        [[nodiscard]] bool parse( const string& filePath, const vector<string>& listIncludePath, const vector<ParserUnsavedFile>& listUnsaved,
-                                  bool bReportErrors = true );
-
-        /** @brief 생성된 clang TranslationUnit을 반환합니다. */
-        CXTranslationUnit getTranslationUnit() const { return _translationUnit; }
-
-    private:
-        const ParserConfig* _pConfig;
-        CXIndex             _index;
-        CXTranslationUnit   _translationUnit;
-    };
-
-    ParserContext::ParserContext( const ParserConfig& config )
-        : _pConfig{ &config }
-        , _index{ nullptr }
-        , _translationUnit{ nullptr }
-    {
-        _index = clang_createIndex( 0, 0 );
-    }
-
-    ParserContext::~ParserContext()
-    {
-        if ( _translationUnit != nullptr )
-        {
-            clang_disposeTranslationUnit( _translationUnit );
-            _translationUnit = nullptr;
-        }
-        if ( _index != nullptr )
-        {
-            clang_disposeIndex( _index );
-            _index = nullptr;
-        }
-    }
-
-    bool ParserContext::parse( const string& filePath, const vector<string>& listIncludePath, const vector<ParserUnsavedFile>& listUnsaved,
-                               const bool bReportErrors )
-    {
-        if ( _index == nullptr )
-        {
-            SW_LOG_ERROR_ID( "ParserContext.FailedCreateCXIndex", "Failed to create CXIndex." );
-            return false;
-        }
-
-        if ( _translationUnit != nullptr )
-        {
-            clang_disposeTranslationUnit( _translationUnit );
-            _translationUnit = nullptr;
-        }
-
-        const vector<string> listArgString = _pConfig->makeArgs( listIncludePath );
-        vector<const utf8*>  listArgPtr;
-        listArgPtr.reserve( listArgString.size() );
-        for ( const string& arg : listArgString )
-        {
-            listArgPtr.push_back( arg.c_str() );
-        }
-
-        vector<CXUnsavedFile> listCxUnsaved;
-        listCxUnsaved.reserve( listUnsaved.size() );
-        for ( const ParserUnsavedFile& unsaved : listUnsaved )
-        {
-            CXUnsavedFile cxUnsaved{};
-            cxUnsaved.Filename = unsaved._pPath->c_str();
-            cxUnsaved.Contents = unsaved._pContent->c_str();
-            cxUnsaved.Length   = static_cast<uint32>( unsaved._pContent->size() );
-            listCxUnsaved.push_back( cxUnsaved );
-        }
-
-        // DetailedPreprocessingRecord 는 annotate 매크로 경로에 필요 없고 TU 비용만 크다
-        constexpr uint32 kParseFlags = CXTranslationUnit_SkipFunctionBodies | CXTranslationUnit_Incomplete;
-        _translationUnit             = clang_parseTranslationUnit(
-            _index, filePath.c_str(), listArgPtr.data(), static_cast<int32>( listArgPtr.size() ),
-            listCxUnsaved.empty() ? nullptr : listCxUnsaved.data(), static_cast<uint32>( listCxUnsaved.size() ), kParseFlags );
-
-        if ( _translationUnit == nullptr )
-        {
-            SW_LOG_ERROR_ID( "ParserContext.ClangParseTranslationUnitFailed", "clang_parseTranslationUnit failed for: %#", filePath );
-            return false;
-        }
-
-        bool         bHasError       = false;
-        const uint32 diagnosticCount = clang_getNumDiagnostics( _translationUnit );
-        for ( uint32 diagnosticIndex = 0; diagnosticIndex < diagnosticCount; ++diagnosticIndex )
-        {
-            const CXDiagnostic diagnostic = clang_getDiagnostic( _translationUnit, diagnosticIndex );
-            if ( clang_getDiagnosticSeverity( diagnostic ) >= CXDiagnostic_Error )
-            {
-                const CXString message = clang_formatDiagnostic( diagnostic, clang_defaultDiagnosticDisplayOptions() );
-                if ( bReportErrors )
-                    SW_LOG_ERROR_ID( "ParserContext.ClangError", "%#", clang_getCString( message ) );
-                else
-                    SW_LOG_TRACE_ID( "ParserContext.ClangNote", "%#", clang_getCString( message ) );
-                clang_disposeString( message );
-                bHasError = true;
-            }
-            clang_disposeDiagnostic( diagnostic );
-        }
-
-        if ( bHasError && bReportErrors )
-            SW_LOG_ERROR_ID( "ParserContext.ParsingFailedErrorsCheck", "Parsing failed with errors. Check include paths with --include." );
-        return bHasError == false;
-    }
-} // namespace sw
 
 namespace sw
 {
@@ -204,149 +75,6 @@ namespace sw
                     bUnique = false;
                 }
                 return bUnique;
-            }
-
-            /** @brief `타입 이름 = 기본값` 꼴로 인자 목록을 씁니다. */
-            static void appendParameterList( StringBuilder<constant::buffer::kMax8192>& out, const vector<ParsedParameterInfo>& listParameter )
-            {
-                for ( size_t paramIndex = 0; paramIndex < listParameter.size(); ++paramIndex )
-                {
-                    const ParsedParameterInfo& parameter = listParameter[paramIndex];
-                    out.appendFormat( "%#%#", paramIndex == 0 ? "" : ", ", parameter._typeName );
-                    if ( parameter._name.empty() == false )
-                        out.appendFormat( " %#", parameter._name );
-                    if ( parameter._defaultValue.empty() == false )
-                        out.appendFormat( " = %#", parameter._defaultValue );
-                }
-            }
-
-            /**
-             * @brief `--dump` — 헤더 하나에서 뽑은 것을 사람이 읽는 꼴로 표준 출력에 한 번에 씁니다.
-             * @details "왜 이 프로퍼티가 인스펙터에 없나 · 왜 이 컴포넌트를 씬이 못 찾나" 를 묻는 자리다 — 파서가 무엇을 봤는지 보여 준다.
-             *          타입(부모 · 팩토리 · 추상), 프로퍼티(타입 · 값 자리 · 컨테이너 · 범위 ·
-             *          플래그), 함수, enum 값까지 적는다. 헤더 여럿을 동시에 쓸 수 있어 한 덩어리로 내보낸다.
-             */
-            static void printParsedHeader( const string& inputFile, const ParsedHeader& parsed, const FixedCodecGenerator& fixedCodec )
-            {
-                StringBuilder<constant::buffer::kMax8192> out;
-                out.appendFormat( "== %#\n", inputFile );
-                for ( size_t typeIndex = 0; typeIndex < parsed._listType.size(); ++typeIndex )
-                {
-                    const ParsedTypeInfo& type = parsed._listType[typeIndex];
-                    out.appendFormat( "REFLECT %#", type._fullyQualifiedName );
-                    if ( type._parentFQN.empty() == false )
-                        out.appendFormat( " : %#", type._parentFQN );
-                    if ( type._bComponentFactory == SW_TRUE )
-                        out.append( "  [component factory]" );
-                    if ( type._bAbstract == SW_TRUE )
-                        out.append( "  [abstract]" );
-                    if ( type._bStatic == SW_TRUE )
-                        out.append( "  [static]" );
-                    if ( type._validate.empty() == false )
-                        out.appendFormat( "  Validate=%#", type._validate );
-                    out.append( "\n" );
-                    for ( const ParsedPropertyInfo& prop : type._listProperty )
-                    {
-                        out.appendFormat( "  PROPERTY %# : %#", prop._name, prop._typeName );
-                        if ( prop._bIsBitField == SW_TRUE )
-                            out.append( "  [bit field - located at runtime]" );
-                        else if ( prop._bIsAccessor == SW_TRUE )
-                            out.appendFormat( "  [accessor %#()]", prop._memberName );
-                        if ( prop._bIsContainer == SW_TRUE )
-                        {
-                            out.appendFormat( "  [container %#", prop._containerType );
-                            if ( prop._keyTypeName.empty() == false )
-                                out.appendFormat( " key=%#", prop._keyTypeName );
-                            if ( prop._elementTypeName.empty() == false )
-                                out.appendFormat( " element=%#", prop._elementTypeName );
-                            out.append( "]" );
-                        }
-                        if ( prop._bHasMinRange == SW_TRUE )
-                            out.appendFormat( "  Min=%#", prop._minRange );
-                        if ( prop._bHasMaxRange == SW_TRUE )
-                            out.appendFormat( "  Max=%#", prop._maxRange );
-                        if ( prop._bHasMaxCount == SW_TRUE )
-                            out.appendFormat( "  MaxCount=%#", prop._maxCount );
-                        if ( prop._defaultValue.empty() == false )
-                            out.appendFormat( "  Default=\"%#\"", prop._defaultValue );
-                        if ( prop._bAssetPath == SW_TRUE )
-                            out.appendFormat( "  [asset %#]", prop._assetType.empty() ? "any" : prop._assetType.c_str() );
-                        const pair<uint8, const utf8*> arrFlag[] = {
-                            {       prop._bReadOnly,        "ReadOnly"},
-                            {      prop._bTransient,       "Transient"},
-                            {   prop._bXMLAttribute,    "XMLAttribute"},
-                            {    prop._bSkipIfEmpty,     "SkipIfEmpty"},
-                            {       prop._bRequired,        "Required"},
-                            {     prop._bInheritKey,      "InheritKey"},
-                            {prop._bHideInInspector, "HideInInspector"},
-                            {     prop._bReplicated,      "Replicated"},
-                            {       prop._bSaveGame,        "SaveGame"},
-                            {   prop._bRuntimeState,    "RuntimeState"},
-                            {         prop._bInterp,          "Interp"},
-                            {       prop._bColorHDR,        "ColorHDR"},
-                            {      prop._bMultiline,       "Multiline"},
-                        };
-                        for ( const auto& [bSet, pFlagName] : arrFlag )
-                        {
-                            if ( bSet == SW_TRUE )
-                                out.appendFormat( "  [%#]", pFlagName );
-                        }
-                        if ( prop._bHasUIMinRange == SW_TRUE )
-                            out.appendFormat( "  UIMin=%#", prop._uiMinRange );
-                        if ( prop._bHasUIMaxRange == SW_TRUE )
-                            out.appendFormat( "  UIMax=%#", prop._uiMaxRange );
-                        if ( prop._units.empty() == false )
-                            out.appendFormat( "  Units=%#", prop._units );
-                        if ( prop._editCondition.empty() == false )
-                            out.appendFormat( "  EditCondition=\"%#\"%#", prop._editCondition, prop._bEditConditionHides == SW_TRUE ? "(hides)" : "" );
-                        if ( prop._fileFilter.empty() == false )
-                            out.appendFormat( "  FileFilter=\"%#\"", prop._fileFilter );
-                        if ( prop._validate.empty() == false )
-                            out.appendFormat( "  Validate=%#", prop._validate );
-                        if ( prop._repNotify.empty() == false )
-                            out.appendFormat( "  RepNotify=%#%#", prop._repNotify, prop._bRepNotifyTakesOldValue == SW_TRUE ? "(old)" : "()" );
-                        for ( const string& alias : prop._listAlias )
-                        {
-                            out.appendFormat( "  alias=%#", alias );
-                        }
-                        out.append( "\n" );
-                    }
-                    for ( const ParsedFunctionInfo& method : type._listMethod )
-                    {
-                        out.appendFormat( "  FUNCTION %#(", method._name );
-                        appendParameterList( out, method._listParameter );
-                        out.appendFormat( ") -> %#", method._returnTypeName.empty() ? "void" : method._returnTypeName.c_str() );
-                        if ( method._bStatic == SW_TRUE )
-                            out.append( "  [static]" );
-                        if ( method._bCallInEditor == SW_TRUE )
-                            out.append( "  [CallInEditor]" );
-                        if ( method._bExec == SW_TRUE )
-                            out.append( "  [Exec]" );
-                        if ( method._editorPreview.empty() == false )
-                            out.appendFormat( "  [EditorPreview=%#]", method._editorPreview );
-                        if ( method._bConstructor == SW_TRUE )
-                            out.append( "  [constructor]" );
-                        out.append( "\n" );
-                    }
-                    for ( const ParsedEventInfo& event : type._listEvent )
-                    {
-                        out.appendFormat( "  EVENT %#(", event._annotation._name );
-                        appendParameterList( out, event._listParameter );
-                        out.append( ")\n" );
-                    }
-                    out.appendFormat( "%#\n", fixedCodec.makeDumpLine( typeIndex ) );
-                }
-                for ( const ParsedEnumInfo& enumInfo : parsed._listEnum )
-                {
-                    out.appendFormat( "ENUM %# : %#%#\n", enumInfo._fullyQualifiedName, enumInfo._underlyingType,
-                                      enumInfo._bIsBitFlag == SW_TRUE ? "  [Flags]" : "" );
-                    for ( const ParsedEnumeratorInfo& enumerator : enumInfo._listEnumerator )
-                    {
-                        out.appendFormat( "  %# = %#\n", enumerator._name, enumerator._value );
-                    }
-                }
-                std::fwrite( out.c_str(), 1, out.size(), stdout );
-                std::fflush( stdout );
             }
 
             /** @brief `clang_getInclusions` 가 넘기는 것을 모으는 자리입니다. */
@@ -755,7 +483,7 @@ namespace sw
         FixedCodecGenerator   fixedCodec( parsed, inputFile.str() );
         const bool            bFixedPlanned = fixedCodec.makePlan();
         if ( _pOptions->_bDump && ( parsed._listType.empty() == false || parsed._listEnum.empty() == false ) )
-            ReflectionPipelineInternal::printParsedHeader( inputFile.str(), parsed, fixedCodec );
+            printParsedHeaderDump( inputFile.str(), parsed, fixedCodec );
         if ( bFixedPlanned == false )
         {
             SW_LOG_ERROR_ID( "ReflectionPipeline.CodeGenerationFailedFixed", "Code generation failed (fixed layout annotations): %#", inputFile.str() );
