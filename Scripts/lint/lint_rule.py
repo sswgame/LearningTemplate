@@ -31,7 +31,7 @@ from lint.module_imports import get_module_file, list_imported_module_files
 from lint.parallel import flat_map_in_processes
 from lint.rule_tables import TABLE_FOLDER, ExceptionTable, get_table_path, read_rule_table
 
-LINT_FOLDER = Path(__file__).resolve().parent
+RULES_FOLDER = Path(__file__).resolve().parent / "rules"   # 규칙(`LintRule` 하위 클래스)만 둔다. 도우미 · 명령은 lint/ 에 남는다
 GROUPS = ("경계", "모양", "이름", "셰이더", "참조", "래칫")   # `--list` 와 도는 차례
 
 
@@ -127,11 +127,11 @@ class LintRule(abc.ABC):
 
 @functools.cache
 def find_rules(root: Path) -> dict[str, LintRule]:
-    """id → 규칙. `Scripts/lint/*.py` 의 `LintRule` 하위 클래스를 모은다(차례는 갈래 · id). id 가 겹치거나 갈래가 표에 없으면 멈춘다."""
-    for path in sorted(LINT_FOLDER.glob("*.py")):
+    """id → 규칙. `Scripts/lint/rules/*.py` 의 `LintRule` 하위 클래스를 모은다(차례는 갈래 · id). id 가 겹치거나 갈래가 표에 없으면 멈춘다."""
+    for path in sorted(RULES_FOLDER.glob("*.py")):
         if "(LintRule):" in path.read_text(encoding="utf-8"):
-            importlib.import_module(f"lint.{path.stem}")
-    list_rule = [rule_class(root) for rule_class in LintRule.__subclasses__() if rule_class.__module__.startswith("lint.")]
+            importlib.import_module(f"lint.rules.{path.stem}")
+    list_rule = [rule_class(root) for rule_class in LintRule.__subclasses__() if rule_class.__module__.startswith("lint.rules.")]
     list_bad = [rule.id for rule in list_rule if rule.group not in GROUPS]
     list_bad += [rule_id for rule_id, count in collections.Counter(rule.id for rule in list_rule).items() if count > 1]
     if list_bad:

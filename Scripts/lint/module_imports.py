@@ -35,7 +35,7 @@ def list_direct_imports(module_name: str) -> tuple[str, ...] | None:
 
 @functools.cache
 def list_imported_module_files(module_name: str) -> tuple[str, ...]:
-    """`moduleName`(`lint.cpp_shape`)과 그것이 거쳐서라도 import 하는 Scripts 안 모듈의 파일(저장소 기준) — 손으로 적은 의존 목록은 낡는다."""
+    """`moduleName`(`lint.rules.cpp_style`)과 그것이 거쳐서라도 import 하는 Scripts 안 모듈의 파일(저장소 기준) — 손으로 적은 의존 목록은 낡는다."""
     set_seen: set[str] = set()
     list_pending = [module_name]
     while list_pending:
@@ -53,5 +53,5 @@ def list_imported_module_files(module_name: str) -> tuple[str, ...]:
 
 
 def get_module_file(module_name: str) -> str:
-    """`lint.cpp_shape` → `Scripts/lint/cpp_shape.py`(저장소 기준)."""
+    """`lint.rules.cpp_style` → `Scripts/lint/rules/cpp_style.py`(저장소 기준)."""
     return (SCRIPTS_DIR / (module_name.replace(".", "/") + ".py")).relative_to(SCRIPTS_DIR.parent).as_posix()

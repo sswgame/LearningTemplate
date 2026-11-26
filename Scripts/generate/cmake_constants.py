@@ -6,7 +6,7 @@ Scripts/generate/cmake_constants.py
 `Scripts/common/project_constants.py` 의 상수를 CMake 가 그대로 읽는 `set(SW_...)` 목록으로 찍습니다.
 
 목록을 여기서 들지 않는다. `set(SW_...)` 줄을 손으로 적으면 CMake 변수 이름과 파이썬 상수 이름을 두 번
-철자하게 되고, 어느 상수가 왜 빠졌는지 알 수 없게 된다(옆 `toolchain_cmake.py` 도 같은 이유로 JSON 키를
+철자하게 되고, 어느 상수가 왜 빠졌는지 알 수 없게 된다(옆 `toolchain_variables.py` 도 같은 이유로 JSON 키를
 그대로 변환해 찍는다). `project_constants.py` 의 대문자 상수(PEP 8)는 전부 나간다. 이름은 `SW_` 만 붙는다:
 
     DIR_CONFIG_ENV        -> SW_DIR_CONFIG_ENV

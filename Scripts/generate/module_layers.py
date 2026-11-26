@@ -22,7 +22,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Sequence
 
-from common.file_collect import list_files_under
+from common.tool_search import list_files_under
 from common.paths import get_project_root
 from generate.generator_output import Generator, GeneratorError, write_generated_file
 

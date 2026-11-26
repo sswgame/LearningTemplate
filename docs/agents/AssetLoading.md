@@ -31,7 +31,7 @@
 - 다시 읽으면 새 판이 생긴다. 진행 중 세션 · 워커 일감 · 번호를 지어 둔 쪽은 `shared_ptr<const T>`(`.snapshot()`)로 쥐고, 지어 둔 것은 `AssetReloadWatch` 로 다시 짓는다.
 - **사본을 만들지 않는다**: `loadFromAsset` 은 비공개. 게임 범위 서비스는 `GameInstance::loadRequiredCatalog`, 테스트 · 미리 보기는 `loadFromXMLText`, 쿠커가 읽는 형식만 `loadCopyFromAsset`. 사본이 맞는 것은 기동 때 서비스 상태로 옮기는 엔진 설정, 쓰는 쪽이 고치는 입력(`InputMap` · `NavMeshAsset` 등), 도구 입력뿐.
 - 공유 객체는 `const`. 실행 상태가 섞인 카탈로그는 정의와 실행으로 나눈다(`BehaviorTree` · `BehaviorTreeRunner`).
-- **리소스는 id 로 읽는다**: `ConfigManager::readComposedXMLDocument` · `XMLReadUtil::parseResourceRoot` · `XMLDocument::loadResource` · `loadResourceAs` · `parseResourceText`. 읽은 글을 id 없이 글 입구로 넘기는 것은 린트 `common-shapes` `assetEntrance` 강제.
+- **리소스는 id 로 읽는다**: `ConfigManager::readComposedXMLDocument` · `XMLReadUtil::parseResourceRoot` · `XMLDocument::loadResource` · `loadResourceAs` · `parseResourceText`. 읽은 글을 id 없이 글 입구로 넘기는 것은 린트 `hand-written-patterns` `assetEntrance` 강제.
 - **다른 에셋을 가리키는 칸은 `AssetRef<T>`** — 스스로 읽지 않는다(`acquire()` · `request()`), 접미사가 다르면 로드 오류. 칸이 만들어지는 곳에서 `T` 는 완전해야 한다. 종류가 없는 파일 · 폴더는 `DataPath`, 한 칸이 두 종류를 가리키면 칸을 나눈다(글 칸에 `AssetPath` · `AssetType` 을 다는 것은 파서 오류). 경로 칸은 리플렉션 선언에서만 온다(생성 목록 `Config/Dev/AssetReferenceFields.generated.json`, 낡음은 `--check-asset-refs`).
 - **쿠킹은 닿는 것만 담는다**(`PackReachability`). 코드가 경로를 조립해 읽는 파일은 뿌리(`_cookRules` · `<RequiredData>` · `SW_ASSET_COOK_ROOT`)나 곁 파일(`SW_ASSET_COMPANION`)로 선언한다 — 아니면 배포에서 빠진다.
 - 에셋 정체성은 GUID, 내용 변경은 내용 해시 — 한 값에 두지 않는다. 형식 판 올림으로 GUID 를 넣지 않는다(`asset-ids --fix` 가 쓴다). 사람은 `.meta` · 머리를 만지지 않는다. 저장 입구를 지나지 않는 `FileUtil::writeTextFile` 쓰기는 머리를 잃으니, 생성물 바이트 비교 검사가 있는 도구는 `AssetGUIDHeader::carry` 를 쓴다.
@@ -41,5 +41,5 @@
 
 - 데이터 파일의 칸은 `PROPERTY` 구조체 + `XMLFields` · `JSONFields::readProperties` 로 읽는다. 손 XML 읽기는 `XMLReadUtil`(`loadRootOrWarn` · `findRequiredID` · `readRequiredName` · `parseNameList` · `parseFloat3` · `readOptionalNumber` · `readOptionalFlag`), 곡선 `GameDataXML::readFloatCurve`, 카탈로그 루트 원소 `XMLCatalogTable`(`readInDocumentOrder` · `readInTableOrder`) — 키트마다 읽기 사본을 두지 않는다. 직렬화는 `XMLSerializer` · `JSONSerializer` · `BinarySerializer` 를 리플렉션으로(Serialization 밖 pugixml · JSON 라이브러리 호출 금지).
 - 손으로 읽는 것은 다음뿐: 바깥 표준 · 원문을 지키는 것(VRM · glTF · TMX · JWT · 영수증 · 트레이스 · CSS 철자 스타일 시트 등), 양이 많거나 적었는지가 뜻인 칸(타일맵 타일, 문화권 표, `<Requires>` 같은 조건 원소), 고유 문법(`ScheduleCondition`, 이름=수 목록, 비트 합치는 낱말 칸, 격자 글), `TagContainer`(`addTag` 불변식), 키가 동적인 JSON, Core 층. 새로 손으로 읽으려면 이 목록 가운데 어디에 드는지 주석에 적는다.
-- 실행 상태 저장 · 복원은 `SW_DECLARE_STATE_IO()` + `serializeState( StateIO& io )` 하나(린트 `common-shapes` `statePair` 강제).
+- 실행 상태 저장 · 복원은 `SW_DECLARE_STATE_IO()` + `serializeState( StateIO& io )` 하나(린트 `hand-written-patterns` `statePair` 강제).
 - **카탈로그 참조 엄격도**: 같은 파일 필수 id 연결은 로드 · 쿠킹 실패, 다른 팩 · 코드가 채울 연결은 `optional="true"` 경고, 코드 등록 이름 오류는 로드 실패, 다른 파일 카탈로그 연결은 둘을 쥐는 쪽이 시작 때 검사, 원소 자기 칸 오류는 그 원소 제외. 참조 검사는 `Content/engine/settings/datacatalogreferences.xml` 의 `<Reference>` 줄 한 벌(로더 · 쿠커가 같은 줄을 돈다 — 카탈로그마다 `find( id ) == nullptr` 루프 금지). 카탈로그 항목을 가리키는 컴포넌트 · 씬 칸은 `CatalogKey<EntryDef>` + `<CatalogKey>` · `<Field>` 줄(테스트 `FieldTableMatchesReflection`).

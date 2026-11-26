@@ -4,9 +4,9 @@
  * @details 칸 이름은 파서가 낸 표(`kGeneratedFile`) 하나다 — 경로 칸은 모두 리플렉션 선언(`AssetRef<T>` · `DataPath`)이고 손으로 적는 이름 표는 없다
  *          (손으로 읽던 XML 칸은 `XMLFields` 로 읽는 스키마 구조체로 옮겼다 — 언리얼이 `FSoftObjectPath` 칸만 참조로 보는 것과 같다).
  *          참조 글은 GUID(`guid:<32자>`)이거나 경로다(정체성이 없는 폴더 · 작업 사본 · 임포트 산출물끼리 · 코드 · CMake). 둘 다 끊어지면 여기서 잡고, 같은 데이터 파일을
- *          다섯 곳이 읽는다: 커밋 전 검사(`Scripts/lint/asset_references.py`), `py -3 -m Scripts move-asset`, 헤드리스 검사(`App --check-asset-refs` — ctest
+ *          다섯 곳이 읽는다: 커밋 전 검사(`Scripts/lint/asset_reference_scan.py`), `py -3 -m Scripts move-asset`, 헤드리스 검사(`App --check-asset-refs` — ctest
  *          `ToolCheckAssetRefs`), 에디터 이름 바꾸기 · 옮기기(`EditorAssetFileCommands::moveAsset`), 팩 쿠킹의 참조 따라가기(`PackReachResult` — 쓰는 것만 담는다).
- *          뽑기 규칙은 파이썬 쪽(`asset_references.py` 의 `_extract*`)과 같은 것이다 — 하나를 고치면 다른 하나도 고친다(언어가 달라 코드를 나눌 수 없는 자리라 둘이다).
+ *          뽑기 규칙은 파이썬 쪽(`asset_reference_scan.py` 의 `_extract*`)과 같은 것이다 — 하나를 고치면 다른 하나도 고친다(언어가 달라 코드를 나눌 수 없는 자리라 둘이다).
  *          임포트 산출물 폴더는 정체성 규칙(`AssetIdentityRules` — `Config/Dev/AssetIdentity.json`)의 것을 쓴다.
  *          글 모양을 짐작해 찾지 않는다: 목록에 든 이름의 XML 속성 · XML 요소 글(`<_listX><item>…</item></_listX>` 포함) · JSON 키 · CMake 인자의 값만 보고,
  *          그 안에서도 도메인(`engine/` …)으로 시작하는 낱말만 경로다. 팩 쿠커가 쓰므로 엔진(`Engine/Asset/Reference`)에 둔다 — 배포 실행 파일도 패키징 때
@@ -72,7 +72,7 @@ namespace sw
         unordered_set<string> _setFolder;
     };
 
-    /** @brief 칸 목록 파일(`AssetReferenceFields::kConfigFile`)의 스키마입니다. `Scripts/lint/asset_references.py` 도 같은 키를 읽는다. */
+    /** @brief 칸 목록 파일(`AssetReferenceFields::kConfigFile`)의 스키마입니다. `Scripts/lint/asset_reference_scan.py` 도 같은 키를 읽는다. */
     REFLECT()
     struct AssetReferenceFieldsConfig
     {
@@ -129,7 +129,7 @@ namespace sw
 
         /**
          * @brief @p oldID 를 @p newID 로 옮길 때의 규칙입니다 — 그것 자신(폴더면 그 아래 전부)과, 원본(`models_raw/x.glb`)이면 그 산출물 자리(`models/x…`).
-         * @details `move-asset`(`Scripts/dev/move_asset.py` 의 `make_rules`)과 같은 규칙이다.
+         * @details `move-asset`(`Scripts/refactor/move_asset.py` 의 `make_rules`)과 같은 규칙이다.
          */
         vector<AssetReferenceRewriteRule> makeRewriteRules( string_view oldID, string_view newID, bool bFolder ) const;
         /** @brief @p inoutText 의 참조 가운데 규칙에 맞는 것만 바꿉니다(칸 밖의 글은 그대로). 반환은 바꾼 수입니다. */

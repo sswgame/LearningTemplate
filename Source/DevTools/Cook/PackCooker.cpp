@@ -1355,7 +1355,7 @@ namespace sw
     {
         string name = FileUtil::trimTrailingSlashes( FileUtil::normalizePath( domain ).str() );
         std::replace( name.begin(), name.end(), '/', '_' );
-        // 기본 청크 0 번은 예전 이름 그대로다 — 배포 스크립트(`Scripts/package/pack.py`) · 도구가 아는 이름이고 나누지 않는 도메인이 대부분이다.
+        // 기본 청크 0 번은 예전 이름 그대로다 — 배포 스크립트(`Scripts/package/package.py`) · 도구가 아는 이름이고 나누지 않는 도메인이 대부분이다.
         if ( chunk.empty() == false )
             name.append( "." ).append( chunk );
         if ( chunk.empty() == false || number > 0 )

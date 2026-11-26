@@ -1,7 +1,7 @@
 """
 Scripts/package/web_package.py
 
-Web-Shipping 빌드(App.js · App.wasm + 쿠킹한 팩)를 브라우저 폴더로 묶는 명령 — 묶는 일은 `web_packager.py` 가 한다.
+Web-Shipping 빌드(App.js · App.wasm + 쿠킹한 팩)를 브라우저 폴더로 묶는 명령 — 묶는 일은 `web_package_builder.py` 가 한다.
 """
 
 from __future__ import annotations
@@ -13,7 +13,7 @@ from common.command import Command, ScriptContext
 from common.exit_code import ExitCode
 from common.paths import get_build_dir
 from package.pack_files import PACK_FOLDER_NAME
-from package.web_packager import DEFAULT_PORT, PRESET_NAME, make_web_package, serve
+from package.web_package_builder import DEFAULT_PORT, PRESET_NAME, make_web_package, serve
 
 
 class WebPackageCommand(Command):

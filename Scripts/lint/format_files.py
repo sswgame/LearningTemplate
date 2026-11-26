@@ -60,7 +60,7 @@ def run_clang_format_batch(files: Sequence[Path | str],
     if not clang_format_exe:
         sys.stderr.write(
             "[FormatClangFormat] clang-format을 찾을 수 없습니다. "
-            "'py -3 Scripts/setup/environment.py'를 먼저 실행해주세요.\n"
+            "'py -3 Scripts/setup/setup_environment.py'를 먼저 실행해주세요.\n"
         )
         return ExitCode.VIOLATION
 

@@ -100,7 +100,7 @@ DIR_TOOLS_REFLECTION_TEMPLATES = "Source/Programs/ReflectionParser/Templates"
 # =============================================================================
 
 SCRIPT_SETUP_VCPKG = "Scripts/setup/vcpkg.py"
-SCRIPT_SETUP_ENVIRONMENT = "Scripts/setup/environment.py"
+SCRIPT_SETUP_ENVIRONMENT = "Scripts/setup/setup_environment.py"
 
 # =============================================================================
 # --- 5. JSON Schema Keys & Environment Variables (JSON 필드명 및 환경변수 심볼) -

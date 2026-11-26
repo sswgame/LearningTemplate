@@ -28,7 +28,7 @@ import tomllib
 from pathlib import Path
 from typing import Sequence
 
-from common.file_collect import list_files_under
+from common.tool_search import list_files_under
 from common.host_platform import is_windows_host
 from common.paths import get_project_root
 from common.project_constants import SERVER_EXCLUDED_ENGINE_FOLDERS

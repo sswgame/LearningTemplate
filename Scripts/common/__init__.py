@@ -31,7 +31,7 @@ REPOSITORY_ENVIRONMENT_NAMES = ("GIT_ALTERNATE_OBJECT_DIRECTORIES", "GIT_CONFIG"
                                 "GIT_PREFIX", "GIT_SHALLOW_FILE", "GIT_COMMON_DIR")
 HOOK_GIT_ENVIRONMENT: dict[str, str] = {_name: _os.environ.pop(_name) for _name in REPOSITORY_ENVIRONMENT_NAMES if _name in _os.environ}
 
-# 읽기만 하는 git(status · diff)도 색인을 새로 쓰려고 `index.lock` 을 잡는다 — 그때 강제로 끝나면(시한 · 중단) 빈 잠금이 남아 다음 커밋 · 병합이 멈춘다(`dev/git_locks.py`).
+# 읽기만 하는 git(status · diff)도 색인을 새로 쓰려고 `index.lock` 을 잡는다 — 그때 강제로 끝나면(시한 · 중단) 빈 잠금이 남아 다음 커밋 · 병합이 멈춘다(`verify/git_locks.py`).
 _os.environ["GIT_OPTIONAL_LOCKS"] = "0"
 
 # ------------------------------------------------------------------------------

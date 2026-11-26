@@ -598,8 +598,8 @@ function(sw_add_content_module_check)
 	set(stamp "${CMAKE_BINARY_DIR}/generated/ContentModules.stamp")
 	add_custom_command(
 		OUTPUT "${stamp}"
-		COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/generate/content_modules.py" --inputs "${inputs}" --stamp "${stamp}"
-		DEPENDS ${list_type_list} "${inputs}" "${CMAKE_SOURCE_DIR}/Scripts/generate/content_modules.py"
+		COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/verify/content_modules.py" --inputs "${inputs}" --stamp "${stamp}"
+		DEPENDS ${list_type_list} "${inputs}" "${CMAKE_SOURCE_DIR}/Scripts/verify/content_modules.py"
 		COMMENT "[Reflection] Checking that content uses only modules its domain has"
 		VERBATIM
 	)

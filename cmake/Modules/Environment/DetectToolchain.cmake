@@ -40,7 +40,7 @@ sw_execute_python_script(
 # 다른 철자(상수 · 리터럴)로 적게 된다.
 # 키는 Environment 가 늘 모두 쓴다. 값이 빈 것은 "이 호스트에 그 도구가 없다" 이다(리눅스의 Windows SDK 등) —
 # 그래서 아래는 `if(X AND EXISTS ...)` 로 묻는다. 파일 자체가 없으면 구성을 세운다.
-# 생성기는 `Scripts/generate/toolchain_cmake.py`(위 1) 의 Environment 가 부른다).
+# 생성기는 `Scripts/generate/toolchain_variables.py`(위 1) 의 Environment 가 부른다).
 include("${SW_GENERATED_TOOLCHAIN_VARS}")
 
 if(NOT SW_TOOLCHAIN_CONFIG_FOUND)

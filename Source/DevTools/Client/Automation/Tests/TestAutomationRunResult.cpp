@@ -59,7 +59,7 @@ SW_TEST_CASE( AutomationRunResultTest, UnhandledLogsBecomeTheReason )
 
 /**
  * @brief [AutomationRunResultTest] 체인 줄은 앞머리(`chain stage i/n <결과> (<이름>)`)를 지키고 `: <종류> - <까닭>` 을 붙인다. 진 단계는 체인 끝 표에 남는다
- * @details 앞머리는 `linux_scenarios.py` 의 정규식이 읽는다. `: <Pass/>` 로 끝나는 실패 줄은 없다(합격 문턱).
+ * @details 앞머리는 `linux_verify.py` 의 정규식이 읽는다. `: <Pass/>` 로 끝나는 실패 줄은 없다(합격 문턱).
  */
 SW_TEST_CASE( AutomationRunResultTest, ChainStageLineCarriesTheResult )
 {

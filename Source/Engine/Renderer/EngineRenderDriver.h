@@ -39,7 +39,7 @@ namespace sw
 
     /**
      * @class EngineRenderDriver
-     * @brief `IEngineRenderDriver` 의 구현입니다. 수명은 `EngineRenderDriverSubsystem` 이 맡는다(서브시스템과 창구를 함께 상속하지 않는다 — 린트 `cpp-shape`).
+     * @brief `IEngineRenderDriver` 의 구현입니다. 수명은 `EngineRenderDriverSubsystem` 이 맡는다(서브시스템과 창구를 함께 상속하지 않는다 — 린트 `cpp-style`).
      */
     class EngineRenderDriver final : public IEngineRenderDriver
     {

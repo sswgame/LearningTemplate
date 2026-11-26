@@ -12,7 +12,7 @@ description: "이 저장소의 묶음 끝 전체 검증과 push 절차: Windows 
 1. 커밋이 다 됐는지 `git status` 와 HEAD 로 본다. 훅이 커밋을 막을 수 있으니 메시지만 믿지 않는다.
    - **새 이름 검토:** `py -3 -m Scripts api-diff --base <묶음 시작 커밋> [작업자 브랜치 …]` 가 낸 새 함수 이름을 언리얼 · 유니티 · Godot 의 같은 일 이름과 대조한다. 이름만으로 하는 일을 모르는 것(`allowsOneMore` · `finishGraceFind`)은 검증 전에 바꾸고, 옛 이름은 `Config/Rules/Lint/NamingWordsBannedNames.json` 의 `_bannedNames` 에 올린다. `naming-words` 는 낱말이 표에 있는지만 보므로 이 단계를 건너뛰지 않는다. 브랜치를 둘 이상 주면 두 갈래가 각자 더한 같은 이름 · Config 키를 `겹침` 으로 내고 실패한다 — 병합 전에 한 갈래로 모은다. <!-- keep-old-name -->
    - **합칠 때마다 먼저:** 작업자 갈래를 하나 합칠 때마다 메인 작업 폴더에서 Release 증분 빌드를 하고, 그 갈래가 더하거나 바꾼 테스트 · 시나리오만 dx12 로 혼자 돌려 고친 뒤 다음 갈래를 합친다.
-2. **`bash Scripts/dev/preflight.sh --no-linux` 를 백그라운드로 한 번.** 단계 · 끝 줄 · 로그 자리의 정본은 `bash Scripts/dev/preflight.sh --help`(단계마다의 까닭은 `preflight_stages.py` 의 클래스)와 `--dry-run`(돌릴 명령 차례)이다. 여기에 다시 적지 않는다. 스크립트를 고치면 `--dry-run` 으로 순서를 본다. 판단할 것:
+2. **`bash Scripts/verify/preflight.sh --no-linux` 를 백그라운드로 한 번.** 단계 · 끝 줄 · 로그 자리의 정본은 `bash Scripts/verify/preflight.sh --help`(단계마다의 까닭은 `preflight_stages.py` 의 클래스)와 `--dry-run`(돌릴 명령 차례)이다. 여기에 다시 적지 않는다. 스크립트를 고치면 `--dry-run` 으로 순서를 본다. 판단할 것:
    - 작업 트리가 깨끗해야 시작하고, 끝에 HEAD 와 추적 파일이 그대로여야 통과다. 그동안 본 트리의 Source · Content 를 고치지 않는다.
    - 묶음마다는 `--no-linux` 로 Windows 까지만 돌린다. Linux(`linux-verify` 의 `all`, 이어서 `sanitize address`)는 여러 묶음을 push 한 뒤 모아서 한 번 — 할 일을 끝낼 때와 Linux 전용 코드를 고친 묶음일 때. Windows 가 지면 Linux 를 돌리지 않는다. Server 배포 구성은 묶음마다 돈다.
    - Debug 는 짓지 않는다(단언 · 검사는 `SW_DO_CHECKS` 로 Release 에 있다). Debug 프리셋은 사람이 디버거로 볼 때만.
@@ -29,7 +29,7 @@ description: "이 저장소의 묶음 끝 전체 검증과 push 절차: Windows 
 
 ## 파이썬 도구
 
-입구는 `bash Scripts/dev/preflight.sh` 하나, 도구는 `py -3 -m Scripts <명령>`(`--help`).
+입구는 `bash Scripts/verify/preflight.sh` 하나, 도구는 `py -3 -m Scripts <명령>`(`--help`).
 
 | 명령 | 쓰는 때 |
 | --- | --- |

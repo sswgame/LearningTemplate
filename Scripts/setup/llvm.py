@@ -40,7 +40,7 @@ from common.project_constants import (
 )
 from common.paths import get_project_root, normalize_path, platform_key, shared_library_names
 from common.host_platform import is_windows_host
-from common.file_collect import find_first_existing_file, find_first_existing_file_recursive
+from common.tool_search import find_first_existing_file, find_first_existing_file_recursive
 from setup.toolchain_detect import ToolSpec, find_tool_root
 from common.exit_code import ExitCode  # noqa: E402
 from common.run_process import run_process  # noqa: E402

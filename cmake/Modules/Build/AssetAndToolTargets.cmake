@@ -30,11 +30,11 @@ endif()
 # 쿠킹하는 호스트가 정한다(Server 가 구우면 서버 팩이다). 팩 설정은 Config/Engine/PackConfig.json 이다.
 # 셰이더도 같은 스테이징에 굽고(바뀐 것만) 소스와 맞는지 본 뒤 팩에 담는다(`cookShadersForPack`) — 따로 주는 인자가 없다.
 # 쿠킹 로그는 고정 자리(`<빌드>/Testing/Logs/Cook.log`)에 남긴다 — 빌드 출력에 섞이면 첫 굽기만 틀린 일(팩에 빠진 셰이더 바이너리)을 나중에 볼 수 없었다.
-# `Scripts/dev/shipping_check.py` 가 실패할 때 이 로그의 오류 · 경고를 함께 찍는다(같은 자리 이름 `COOK_LOG_NAME`).
-# 꾸미기 스키마와 상태 배치(굽는 실행 파일이 쓴다)를 출시 스냅숏과 먼저 견준다(Scripts/dev/format_release.py) — 출시 뒤에는 옛 세이브 · 공유 코드를 올릴 단계가 빠진 바뀜을 굽지 않는다.
+# `Scripts/verify/shipping_check.py` 가 실패할 때 이 로그의 오류 · 경고를 함께 찍는다(같은 자리 이름 `COOK_LOG_NAME`).
+# 꾸미기 스키마와 상태 배치(굽는 실행 파일이 쓴다)를 출시 스냅숏과 먼저 견준다(Scripts/verify/serialization_compat.py) — 출시 뒤에는 옛 세이브 · 공유 코드를 올릴 단계가 빠진 바뀜을 굽지 않는다.
 # 빌드는 검사만 한다 — 소스 트리에 쓰지 않는다(빌드 뒤 작업 트리가 깨끗해야 검증한 커밋이 곧 지은 것이다). 추론할 수 있는 것(매개변수 제거)은
 # 오류가 `py -3 -m Scripts format-release --fix` 를 안내하고(그 명령이 Remove 단계 · 판 올림을 적는다), 이름 · 종류 바꾸기는 적을 줄을 안내하고 멈춘다.
-set(format_release_check "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/dev/format_release.py" check --layouts "${CMAKE_BINARY_DIR}/StateLayouts.json")
+set(format_release_check "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/verify/serialization_compat.py" check --layouts "${CMAKE_BINARY_DIR}/StateLayouts.json")
 set(cook_args --cook-all "--cooked-dir=${CMAKE_BINARY_DIR}/Cooked" "--pack-dir=${pack_output_dir}" "-log-file=${CMAKE_BINARY_DIR}/Testing/Logs/Cook.log")
 # 정적 모듈 구성(Shipping · 웹 · Android 개발)은 활성 게임(SW_ACTIVE_GAME)의 팩만 굽는다 — 링크한 게임이 하나라 다른 팩은 쓰이지 않는다(`Pack` 도 그 게임의 팩만 고른다).
 # 동적 Dev 프리셋은 실행할 때 `-game=` 으로 게임을 고르므로 어느 팩이 필요할지 몰라 모두 굽는다.
@@ -79,7 +79,7 @@ if(CMAKE_CROSSCOMPILING OR SW_SHIPPING_BUILD)
 	endif()
 	# 굽는 실행 파일은 호스트 빌드(SW_HOST_BUILD_DIR — HostTools.cmake)의 것이고, 굽기 앞에 그 빌드를 다시 짓는다 — 형식(EngineConfig 스키마 등)이 바뀐 소스로
 	# 낡은 쿠커가 돌면 설정 읽기부터 멈췄다. 게임 모듈 · 에디터 모듈(텍스처 변형 굽기)도 함께라 대상 하나가 아니라 빌드 전체를 짓는다.
-	# 같은 호스트 빌드 폴더를 다른 빌드가 동시에 짓지 않게 하는 것은 부르는 쪽(Scripts/dev/preflight_stages.py `ShippingBuildJob`)이다 — ninja 는 폴더 잠금이 없다.
+	# 같은 호스트 빌드 폴더를 다른 빌드가 동시에 짓지 않게 하는 것은 부르는 쪽(Scripts/verify/preflight_stages.py `ShippingBuildJob`)이다 — ninja 는 폴더 잠금이 없다.
 	if(NOT SW_HOST_BUILD_DIR)
 		message(FATAL_ERROR "[Cook] SW_HOST_BUILD_DIR is empty - include cmake/Modules/Build/HostTools.cmake before this file (CMakeLists.txt)")
 	endif()

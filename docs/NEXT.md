@@ -88,7 +88,7 @@
 
 ## 8. 에셋 정체성(GUID)
 
-- 임포트 산출물 이름을 원본 .meta 에 적기(유니티 .meta 하위 에셋 표 자리) — 임포터 · .meta 형식 · EditorAssetIndex · asset_identity.py 를 함께 바꾸고 모델 전체 다시 임포트. 그러면 Scripts/dev/scenario_reach.py 의 `shortcut:` 이 풀린다.
+- 임포트 산출물 이름을 원본 .meta 에 적기(유니티 .meta 하위 에셋 표 자리) — 임포터 · .meta 형식 · EditorAssetIndex · asset_guid.py 를 함께 바꾸고 모델 전체 다시 임포트. 그러면 Scripts/verify/affected_scenarios.py 의 `shortcut:` 이 풀린다.
 
 - **3 단계 원본 저장소 떼기:** 코드(`store:<SHA-256>` · `AssetSourceLocator`)는 있다. 데이터는 원본 2 GB 또는 LFS 비용이 문제일 때.
 

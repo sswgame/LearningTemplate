@@ -32,7 +32,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(PROJECT_ROOT / "Scripts"))
 
 from common import project_constants  # noqa: E402
-from common.cook_table import COOK_CONTRACT_CONFIG_RELATIVE, CookContractSpec  # noqa: E402
+from common.cook_contract_config import COOK_CONTRACT_CONFIG_RELATIVE, CookContractSpec  # noqa: E402
 from generate.cmake_constants import generate_cmake_constants  # noqa: E402
 from generate.cook_contract import generate_cook_contract  # noqa: E402
 from generate.generator_output import format_cmake_set  # noqa: E402

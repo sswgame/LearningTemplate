@@ -155,7 +155,7 @@ namespace sw
         float3        _sunColor{};                         ///< 해 색(선형 RGB, 세기 곱하기 전). 0 이면 해가 없다
         hashed_string _hdriTexture{};                      ///< HDRI 모드의 등장방형 텍스처 경로
         float32       _hdriRotation{ 0.0f };               ///< HDRI 모드에서 하늘을 Y 축으로 돌리는 각(라디안)
-        SH9Color      _hdriAmbient{};                      ///< HDRI 모드의 저주파 빛(원본의 SH9 투영, `Scripts/dev/make_sky_hdri_prefabs.py`). CPU 는 텍스처를 읽지 않는다
+        SH9Color      _hdriAmbient{};                      ///< HDRI 모드의 저주파 빛(원본의 SH9 투영, `Scripts/content/make_sky_hdri_prefabs.py`). CPU 는 텍스처를 읽지 않는다
         hashed_string _hdriRadianceMap{};                  ///< HDRI 모드의 옥타헤드럴 원본(`.radiancemap` — `OctahedralRadianceMap`). 스카이 라이트가 읽어 반사를 거른다(같은 스크립트가 쓴다)
         uint64        _sourceID{ 0 };                      ///< 이 값을 낸 `SkyComponent` 의 번호(컴포넌트가 아니면 0). 스카이 라이트가 "다른 하늘" 과 "같은 하늘의 값이 바뀜" 을 가린다
 

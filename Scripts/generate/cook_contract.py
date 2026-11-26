@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from common.cook_table import CookContractSpec, COOK_CONTRACT_CONFIG_RELATIVE
+from common.cook_contract_config import CookContractSpec, COOK_CONTRACT_CONFIG_RELATIVE
 from generate.generator_output import Generator, GeneratorError, write_generated_file
 from common.paths import get_project_root
 

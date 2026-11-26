@@ -110,7 +110,7 @@ namespace sw
         [[nodiscard]] bool writeFlagOpsUmbrella( const vector<InputRecord>& listInput ) const;
         /**
          * @brief 대상의 타입 · 열거형을 `<FQN>\t<모듈>` 줄로 `ReflectedTypes.list` 에 씁니다(정렬, 내용이 같으면 쓰지 않음).
-         * @details 타입이 어느 모듈인지를 아는 곳은 CMake(`--module`) 하나다 - 콘텐츠 검사(`Scripts/generate/content_modules.py`)가 이 목록을 읽는다.
+         * @details 타입이 어느 모듈인지를 아는 곳은 CMake(`--module`) 하나다 - 콘텐츠 검사(`Scripts/verify/content_modules.py`)가 이 목록을 읽는다.
          */
         [[nodiscard]] bool writeReflectedTypesList( const vector<InputRecord>& listInput ) const;
         /**

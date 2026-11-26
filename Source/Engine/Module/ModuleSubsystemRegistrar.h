@@ -93,7 +93,7 @@ namespace sw
      * @class ModulePartSubsystem
      * @brief 세울 일이 없는 창구 구현 @p TPart 하나를 멤버로 들고 공개하는 모듈 서브시스템입니다(`SW_MODULE_PART`). 이름은 @p TPart 의 `kModulePartName` 입니다.
      *        수명은 늘 `Process` 다 — 게임 인스턴스 상태를 들게 되면 제 서브시스템(`SW_MODULE_SUBSYSTEM`)으로 옮긴다.
-     * @details 창구 구현이 `Subsystem` 과 인터페이스를 함께 상속하지 않게(다중 상속 금지 — 린트 `cpp-shape`) 수명 짝을 맡는다. 세우거나 내릴 일이 있으면 제 서브시스템을 두고
+     * @details 창구 구현이 `Subsystem` 과 인터페이스를 함께 상속하지 않게(다중 상속 금지 — 린트 `cpp-style`) 수명 짝을 맡는다. 세우거나 내릴 일이 있으면 제 서브시스템을 두고
      *          `getPublishedPart` 로 구현을 낸다(`OpenSSLNetSecuritySubsystem`).
      */
     template <class TPart>

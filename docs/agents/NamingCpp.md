@@ -171,7 +171,7 @@ Use a banned verb only when it is the domain's own term (`UUID::generate`, `Surf
 | 낮은 층 · 높은 층이 서로 알아야 하면 위가 아래에 건다 | 언리얼 FPlatformFileManager |
 | 키트 하나의 에디터 확장은 그 키트의 `Editor/`. `Plugin/Editor` 는 GameFramework 자체와 여러 키트를 잇는 확장만 | 언리얼 플러그인 <X>Editor |
 | 폴더 · 파일 이름은 내용으로([FolderLayout](FolderLayout.md)). 에셋 파일 형식은 `*Asset`, XML 정의는 `*Def` | |
-| 콘텐츠가 쓰는 형식의 모듈은 그 도메인이 가진다(`game/<팩>` · `common/` · `editor/` · `engine/`) — configure 가 멈춘다(`Scripts/generate/content_modules.py`) | 언리얼 .uproject Plugins |
+| 콘텐츠가 쓰는 형식의 모듈은 그 도메인이 가진다(`game/<팩>` · `common/` · `editor/` · `engine/`) — configure 가 멈춘다(`Scripts/verify/content_modules.py`) | 언리얼 .uproject Plugins |
 | 한 판의 규칙 · 상태 컴포넌트는 `GameMode`. `Director` 는 페이싱 · 카메라 연출만. 차지할 슬롯은 `SmartObject`, 장비는 `Equipment` | 언리얼 AGameModeBase, Lyra |
 | Def 여러 개를 담은 파일은 `<X>Catalog`. `Table` 은 가중 추첨 · 구간 표와 StringTable 만, `Set` 은 GAS 이름과 이름 → 항목 묶음만, 코드 등록 표는 `Registry` | 한 이름 |
 | 막고 끝내기 `flush`, 큐를 꺼내 처리 `poll`, 꺼내 넘기기 `take`. `drain` 은 서버 드레인 · 게임 수치 소모만 | 언리얼 FlushRenderingCommands |
@@ -241,7 +241,7 @@ Shaders follow the C++ rules wherever HLSL can express them.
 - A helper used in one `.hlsl` is a free function.
 - C++ function-name rules apply (`Bindless::loadRwTexture2D`, not `SW_LoadRWTex2D`). GPU verbs: `load` / `store` for buffer and RW-texture elements, `sample` / `gather` for texture reads.
 - Entry points stay `VSMain` / `PSMain` / `CSMain` (named as strings by the compiler and pipeline XML).
-- **Branch shapes NVIDIA OpenGL miscompiles** (DXC SPIR-V through ARB_gl_spirv): an early `return` in a function that must stay one expression, and an `else if` repeating a `&&` term of an earlier branch. Nest instead: `if ( a ) { if ( b ) { … } else { … } }`. Lint `shader-branch-shape` blocks the second.
+- **Branch shapes NVIDIA OpenGL miscompiles** (DXC SPIR-V through ARB_gl_spirv): an early `return` in a function that must stay one expression, and an `else if` repeating a `&&` term of an earlier branch. Nest instead: `if ( a ) { if ( b ) { … } else { … } }`. Lint `shader-branch-chain` blocks the second.
 - **A switch picks a definition, not a branch inside a body.** A step a pass or feature switch changes is a member function with one definition per case, chosen by a file-level `#if` (off = empty definition). A `#if` inside a body only for a backend macro.
 
 #### Types, fields, locals, constants

@@ -325,7 +325,7 @@ namespace sw
          */
         [[nodiscard]] Subscription addLayerHideRequest( UILayerMask layers );
         /**
-         * @brief 이 시스템이 공개하는 창구들입니다. 기동이 이 멤버를 그 타입으로 건다(`SubsystemScope::exposeMember`). 시스템이 창구 인터페이스를 함께 상속하지 않는다(다중 상속 금지, 린트 `cpp-shape`).
+         * @brief 이 시스템이 공개하는 창구들입니다. 기동이 이 멤버를 그 타입으로 건다(`SubsystemScope::exposeMember`). 시스템이 창구 인터페이스를 함께 상속하지 않는다(다중 상속 금지, 린트 `cpp-style`).
          * @details `IInputCaptureQuery` 는 게임 코드의 입력 판정, `IUILayerVisibility` 는 레이어 숨김 요청, `IEngineUIDriver` 는 엔진 루프의 프레임 단계다.
          */
         IInputCaptureQuery& getInputCaptureQuery() { return _inputCaptureQuery; }
