@@ -15,7 +15,7 @@ from typing import Iterable, Sequence
 
 
 DEFAULT_DATABASE = Path("Saved") / "TestHistory" / "history.sqlite"
-QUARANTINE_PATH = Path("Config") / "Rules" / "Test" / "Quarantine.json"
+QUARANTINE_PATH = Path("Config") / "Rules" / "TestSelection" / "Quarantine.json"
 VERIFY_CONFIG_PATH = Path("Config") / "Dev" / "Verify.json"
 RUN_KINDS = ("verify", "manual", "rerun")
 STAGE_RESULTS = ("passed", "failed", "skipped")

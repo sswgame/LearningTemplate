@@ -1,7 +1,7 @@
 // BlendPoses 포즈 노드 — 무게가 한쪽에 다 있으면 다른 입력을 샘플하지 않는다(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Animation/AnimationPlayer.h"
 #include "Engine/Animation/Skeletal/AnimationPoseNode.h"

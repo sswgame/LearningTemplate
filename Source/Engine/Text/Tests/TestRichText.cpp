@@ -1,7 +1,7 @@
 // RichTextTest — BBCode 꼴 리치 텍스트(굵게 · 기울임 · 색 · 크기 · [[) 파싱과 배치의 구간 경계(가짜 래스터라이저, nogpu). 액션 글리프는 입력 층이라 `Input/Map/Tests` 에 있다.
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Text/RichTextParser.h"
 #include "Engine/Text/Tests/FakeFontRasterizer.h"

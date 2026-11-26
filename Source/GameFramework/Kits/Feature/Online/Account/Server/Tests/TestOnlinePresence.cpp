@@ -3,7 +3,7 @@
 // 알림 중계(`relayRemotePush`)는 거래 · 우편 끝단 테스트의 몫이다. 온라인 키트라 `UnitTests.OnlineKits` 가 돌린다(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "GameFramework/Kits/Feature/Online/Account/Server/Service/OnlinePresence.h"
 #include "GameFramework/Runtime/Online/Service/Server/Tests/OnlineHostTestUtil.h"

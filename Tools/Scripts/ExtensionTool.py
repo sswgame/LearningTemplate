@@ -5,16 +5,16 @@
 VS Code 안에 든 Node 런타임(`ELECTRON_RUN_AS_NODE=1 Code.exe`)으로 테스트를 돌리고, VSIX(zip + 매니페스트)는 파이썬이 직접 씁니다.
 확장 폴더를 여럿 주면 차례로 하고, 하나라도 지면 0 이 아닌 코드로 끝납니다.
 
-  py -3 Tools/Scripts/ExtensionTool.py test Tools/launch-args Tools/comment-fold   # 단위 테스트(node:test, Test/*Test.js)
+  py -3 Tools/Scripts/ExtensionTool.py test Tools/launch-args Tools/comment-fold   # 단위 테스트(node:test, Tests/*Test.js)
   py -3 Tools/Scripts/ExtensionTool.py test --integration Tools/comment-fold       # + 격리된 VS Code 확장 호스트 통합 테스트
   py -3 Tools/Scripts/ExtensionTool.py package Tools/comment-fold                  # 테스트 뒤 dist/<이름>-<판>.vsix
   py -3 Tools/Scripts/ExtensionTool.py install Tools/comment-fold                  # 만든 VSIX 를 지금 VS Code 에 설치
 
 확장마다 다른 것은 확장 폴더의 데이터가 정합니다(vsce 와 같은 자리):
 - VSIX 에 담을 것: package.json `files`(폴더 · 파일 이름)와 package.json. README.md 는 있으면 담습니다.
-- 단위 테스트: `Test/*Test.js` 전부.
-- 통합 테스트: `Test/Integration/Runner.js`. 작업 폴더는 `Test/Integration/Fixture/` 사본(없으면 빈 폴더),
-  함께 띄울 사용자 확장은 `Test/Integration/RequiredExtensions.json`(확장 폴더 이름 접두사 배열, 파일이 없으면 없음).
+- 단위 테스트: `Tests/*Test.js` 전부.
+- 통합 테스트: `Tests/Integration/Runner.js`. 작업 폴더는 `Tests/Integration/Fixture/` 사본(없으면 빈 폴더),
+  함께 띄울 사용자 확장은 `Tests/Integration/RequiredExtensions.json`(확장 폴더 이름 접두사 배열, 파일이 없으면 없음).
 
 VS Code 위치는 `--code <Code.exe>` · 환경 변수 `VSCODE_EXECUTABLE` · 흔한 설치 경로 · PATH 의 `code` 순으로 찾습니다.
 """
@@ -87,11 +87,11 @@ def readPackageJsonInternal(extensionRoot: Path) -> dict:
 
 
 def runUnitTestInternal(codePath: Path, extensionRoot: Path) -> int:
-    """`Test/*Test.js` 를 VS Code 의 Node 로 돌립니다. 테스트가 하나도 없으면 실패입니다."""
+    """`Tests/*Test.js` 를 VS Code 의 Node 로 돌립니다. 테스트가 하나도 없으면 실패입니다."""
     environment = dict(makeCleanEnvironmentInternal(), ELECTRON_RUN_AS_NODE="1")
-    listTestPath = [str(path) for path in sorted((extensionRoot / "Test").glob("*Test.js"))]
+    listTestPath = [str(path) for path in sorted((extensionRoot / "Tests").glob("*Test.js"))]
     if len(listTestPath) == 0:
-        print(f"[unit] no Test/*Test.js in {extensionRoot}", file=sys.stderr)
+        print(f"[unit] no Tests/*Test.js in {extensionRoot}", file=sys.stderr)
         return 1
     print(f"[unit] {extensionRoot.name}: {codePath} --test ({len(listTestPath)} files)", flush=True)
     # Code.exe 는 GUI 실행 파일이라 콘솔을 물려주면 출력이 사라질 수 있다 — 받아서 직접 찍는다.
@@ -122,10 +122,10 @@ def findRequiredExtensionsInternal(integrationRoot: Path) -> list[Path] | None:
 
 
 def runIntegrationTestInternal(codePath: Path, extensionRoot: Path) -> int:
-    """임시 작업 폴더 · 사용자 폴더 · 확장 폴더(필요한 확장만)로 VS Code 를 띄워 `Test/Integration/Runner.js` 를 돌립니다."""
-    integrationRoot = extensionRoot / "Test" / "Integration"
+    """임시 작업 폴더 · 사용자 폴더 · 확장 폴더(필요한 확장만)로 VS Code 를 띄워 `Tests/Integration/Runner.js` 를 돌립니다."""
+    integrationRoot = extensionRoot / "Tests" / "Integration"
     if (integrationRoot / "Runner.js").is_file() is False:
-        print(f"[integration] no Test/Integration/Runner.js in {extensionRoot}", file=sys.stderr)
+        print(f"[integration] no Tests/Integration/Runner.js in {extensionRoot}", file=sys.stderr)
         return 1
     listRequired = findRequiredExtensionsInternal(integrationRoot)
     if listRequired is None:

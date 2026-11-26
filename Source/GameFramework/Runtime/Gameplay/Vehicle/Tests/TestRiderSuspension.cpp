@@ -2,7 +2,7 @@
 // 실제 3D 물리(캐릭터 컨트롤러), 디바이스 없음(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Character/Hit/RagdollComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"

@@ -7,7 +7,7 @@
 #include "Core/Network/Transport/IStreamTransport.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "GameFramework/Kits/Feature/Storage/SQLStore/Server/Driver/Postgres/PostgresCodec.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerKit.h"

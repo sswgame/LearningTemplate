@@ -2,7 +2,7 @@
 
 #include "Core/Concurrency/atomic.h"
 #include "Core/String/StringUtil.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Foundation/EngineSubsystems.h"

@@ -1,7 +1,7 @@
 // InventorySlotUpgradeTest — 아이템 슬롯의 꾸미기 스키마 판: 왕복, 더 새 판 거절, 판을 찍지 않은 값은 바이트에 실리지 않는다(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"

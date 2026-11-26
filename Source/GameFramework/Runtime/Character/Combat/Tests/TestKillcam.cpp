@@ -1,7 +1,7 @@
 // KillcamTest — 킬캠 기록(관통 다중 명중 · 상한 · 투사체 사건)과 연출 시간표, 재생 컴포넌트의 컷 카메라(nogpu, 에셋 없음).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"

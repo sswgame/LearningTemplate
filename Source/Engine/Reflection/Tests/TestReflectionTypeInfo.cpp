@@ -3,8 +3,8 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/thread.h"
 #include "Core/String/StringBuilder.h"
-#include "Core/Testing/TestFramework.h"
-#include "Core/Testing/ThreadTestAccess.h"
+#include "Core/TestFramework/TestFramework.h"
+#include "Core/TestFramework/ThreadTestAccess.h"
 
 #include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Reflection/PropertyHandle.h"
@@ -20,7 +20,7 @@
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
-#include "Engine/Serialization/Serializer/Serializer.h"
+#include "Engine/Serialization/Format/JSONSerializer.h"
 
 // 리플렉션 데이터 모델 — TypeInfo · TypeRegistry · PropertyInfo · 메타데이터.
 /**

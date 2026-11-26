@@ -1,7 +1,9 @@
 // 보존 규칙 파일(`Config/Dev/SavedCleanup.json`)을 리플렉션 스키마로 읽는다 — 손으로 읽던 키 이름 · 필수 칸이 그대로인지.
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/File/FileUtil.h"
+#include "Core/File/ProcessRoots.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "DevTools/Maintenance/SavedCleanupSubsystem.h"
 

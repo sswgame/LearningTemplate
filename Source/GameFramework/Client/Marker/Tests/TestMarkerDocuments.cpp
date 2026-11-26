@@ -1,7 +1,7 @@
 // MarkerDocumentTest — 화면 마커의 내용: 목표 마커가 엔진 문서에 칸(색 · 크기 · 글자 크기 · 이름)을 옮기고 필요한 위젯이 없는 문서를 거절한다, 데미지 숫자는 컴포넌트 기본값의 수명이 다하면 사라진다(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Object/GameObject/GameObject.h"

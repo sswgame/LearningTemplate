@@ -6,9 +6,8 @@
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Path/AbsolutePath.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
-#include "Engine/Animation/AnimationAssetCache.h"
 #include "Engine/Animation/Facial/LipSync.h"
 #include "Engine/Animation/Facial/LiveLinkFace.h"
 #include "Engine/Animation/Retarget/RetargetProfile.h"

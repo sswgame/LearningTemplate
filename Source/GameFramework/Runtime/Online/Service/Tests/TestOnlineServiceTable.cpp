@@ -1,7 +1,7 @@
 #include "pch.h"
 
 #include "Core/Hash/HashUtil.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Serialization/Fixed/FixedLayout.h"
 

@@ -6,7 +6,7 @@
 #include "Core/Diagnostics/CrashHandler.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/StringBuilder.h"
-#include "Core/Testing/TestRunner.h"
+#include "Core/TestFramework/TestRunner.h"
 
 #include "DevTools/Diagnostics/TestCaseStateProbe.h"
 

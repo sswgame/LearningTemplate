@@ -1,7 +1,7 @@
 #include "pch.h"
 
 #include "Core/GlobalVariable/GlobalVariableManager.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "DevTools/Client/Automation/Runner/AutomationStepArgs.h"
 

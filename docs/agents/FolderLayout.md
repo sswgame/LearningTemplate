@@ -49,7 +49,9 @@
 
 GameFramework 런타임(`GameFrameworkLayers.toml`): `Foundation`(0) 게임 서비스 창구 · 게임 채널 이벤트(`Service`) · 게임 모드 바탕 · 프리팹 풀(`GameMode`) · 게임 인스턴스 흐름(`Flow`) · 저장(`Save`) · 게임 데이터 · 격자 · 난수 · 조건 어휘 · 트리거 바탕(`Trigger`) · 디버그 HUD 섹션(`Debug`) → `Online`(1) 세션 · HTTP · 보안 제공자 → `World`(2) 땅 · 환경 값 · 월드 질의 → `Character`(3) 조종 · 이동 · AI · 전투 · 카메라 · 길찾기 → `Gameplay`(4) 어빌리티 · 외형 · 인벤토리 · 퀘스트 · 판 상태 · 연출 · 존 · 게임 인스턴스 조립.
 
-CMake(`cmake/` — 폴더 하나에 파일 종류 하나): `Modules/<Build·Environment·Config>/` 는 `include()` 만 하는 모듈, `Toolchain/` 플래그 · 툴체인, `Scripts/` 는 `cmake -P` 전용, `Templates/` 는 `configure_file` 입력, 빌드 정책 데이터는 `Config/Build/`, 테스트 전용 `cmake -P` 드라이버는 `Test/<영역>/Run*.cmake`.
+CMake(`cmake/` — 폴더 하나에 파일 종류 하나): `Modules/<Build·Environment·Config>/` 는 `include()` 만 하는 모듈, `Toolchain/` 플래그 · 툴체인, `Scripts/` 는 `cmake -P` 전용, `Templates/` 는 `configure_file` 입력, 빌드 정책 데이터는 `Config/Build/`, 테스트 전용 `cmake -P` 드라이버는 `IntegrationTests/<영역>/Run*.cmake`.
+
+테스트 폴더는 역할마다 이름 하나: 테스트 틀 `Source/Core/TestFramework/`, 모듈 옆 단위 테스트 `Tests/`(C++ · VS Code 확장 JS), 실행 파일을 띄워 보는 CTest 항목의 등록 · 드라이버 · 픽스처 `IntegrationTests/<영역>/`, 어느 테스트를 돌리고 빼는지의 표 `Config/Rules/TestSelection/`, 파이썬은 관례대로 `Scripts/<묶음>/tests/`. `Test` · `Testing` 폴더는 만들지 않는다(`Testing/` 은 CTest 빌드 출력 이름).
 
 ## 4 그 밖의 규칙
 

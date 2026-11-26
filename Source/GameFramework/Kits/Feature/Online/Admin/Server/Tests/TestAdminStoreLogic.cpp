@@ -2,7 +2,7 @@
 // 회수는 잔액 아래로 내려가지 않으며(InsufficientFunds), 상태를 바꾸는 명령은 메모와 멱등 키가 필수다. 온라인 키트라 `UnitTests.OnlineKits` 가 돌린다(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "GameFramework/Kits/Feature/Online/Admin/Server/AdminStoreLogic.h"
 #include "GameFramework/Runtime/Online/Audit/Server/ServiceAuditLog.h"

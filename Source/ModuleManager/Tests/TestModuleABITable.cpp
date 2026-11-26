@@ -1,7 +1,7 @@
 // ModuleABITableTest — 모듈 C-ABI 표의 구조체 멤버가 X 매크로 목록 그대로인지(nogpu). 판정은 컴파일 때(static_assert) 끝난다. 표가 바뀌었는지의 대조는 엔진 ABI 스탬프가 한다.
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "ModuleAPI/ABI/EditorAPI.h"
 #include "ModuleAPI/ABI/GameAPI.h"

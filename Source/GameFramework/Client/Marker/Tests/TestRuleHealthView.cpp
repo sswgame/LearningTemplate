@@ -1,7 +1,7 @@
 // RuleHealthViewTest — 키트 규칙 체력의 뷰(`RuleHealthViewComponent`): 디렉터가 넣은 스냅숏이 같은 오브젝트의 HP 바(공용 체력 소비자)에 체력 원천 계약으로 간다(nogpu, 마커 없음 — 플레이를 시작하지 않는다).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"

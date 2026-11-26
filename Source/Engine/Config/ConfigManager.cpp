@@ -7,11 +7,10 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/String/StringBuilder.h"
 
+#include "Engine/Config/ConfigOverride.h"
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Config/GameSelection.h"
-#include "Engine/Config/PlatformConfigOverride.h"
-#include "Engine/Config/RenderQualityOverride.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Foundation/EngineSubsystems.h"

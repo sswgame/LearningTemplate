@@ -4,8 +4,8 @@
 
 #include "Core/Algorithm/CompareUtil.h"
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/Log/DebugReplyLine.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/Network/DebugReplyLine.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 

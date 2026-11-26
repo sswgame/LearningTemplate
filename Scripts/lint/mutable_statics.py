@@ -178,7 +178,7 @@ class MutableStaticsRule(LintRule):
 
     def selects(self, path: str) -> bool:
         return (path.startswith("Source/") and path.endswith(EXTENSIONS) and "ThirdParty" not in path.split("/")
-                and "/Tests/" not in path and not path.startswith("Source/Core/Testing/"))   # 테스트 고정물은 프로세스 수명 상태를 흉내 낸다 — 엔진 범위가 아니다
+                and "/Tests/" not in path and not path.startswith("Source/Core/TestFramework/"))   # 테스트 고정물은 프로세스 수명 상태를 흉내 낸다 — 엔진 범위가 아니다
 
     def inspect(self, file: SourceFile) -> list[tuple[int, str, str, str]]:
         list_macro = [] if file.path in MACRO_ALLOWED_FILES else find_macro_statics(file.text)

@@ -1,7 +1,7 @@
 #include "pch.h"
 
 #include "Core/Foundation/Expected.h"
-#include "Core/Network/DebugReplyLine.h"
+#include "Core/Log/DebugReplyLine.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 

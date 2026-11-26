@@ -24,9 +24,9 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Network/Connection/NetConnection.h"
-#include "Core/Network/Connection/NetPacketSealer.h"
 #include "Core/Network/Connection/NetSendThrottle.h"
 #include "Core/Network/NetTypes.h"
+#include "Core/Network/Security/NetPacketSealer.h"
 
 namespace sw
 {

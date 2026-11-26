@@ -16,6 +16,7 @@
 #include "Core/Subsystem/SubsystemSlot.h"
 
 #include "Engine/Animation/Rig/RigNode.h"
+#include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetTypeRegistry.h"
 
@@ -131,4 +132,10 @@ namespace sw
         IdentityToken               _contentID;
         uint8                       _bPlanar;
     };
+
+    /**
+     * @brief 후처리 리그를 나눠 줍니다("RigAsset"). 다시 읽으면 내용 번호(`RigAsset::getContentID`)가 바뀌므로, 쓰는 `PoseModifierComponent` 가 다음 프레임에
+     *        다시 바인딩합니다.
+     */
+    SW_DECLARE_SHARED_ASSET_CACHE( SW_API_EXTERN_TEMPLATE, RigAsset );
 } // namespace sw

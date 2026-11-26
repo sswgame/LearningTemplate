@@ -2,8 +2,8 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
-#include "Core/Testing/TestFramework.h"
-#include "Core/Testing/TestWait.h"
+#include "Core/TestFramework/TestFramework.h"
+#include "Core/TestFramework/TestWait.h"
 
 #include "Editor/Common/Workspace/Undo/CommandStack.h"
 #include "Editor/Panels/Settings/Model/GlobalVariablesViewModel.h"

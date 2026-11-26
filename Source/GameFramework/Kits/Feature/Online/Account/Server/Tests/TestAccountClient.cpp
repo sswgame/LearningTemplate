@@ -5,7 +5,7 @@
 
 #include "Core/Container/unordered_map.h"
 #include "Core/Network/Connection/NetEndpointSecurity.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "GameFramework/Kits/Feature/Online/Account/Runtime/AccountClient.h"
 #include "GameFramework/Kits/Feature/Online/Account/Runtime/AccountProtocol.h"

@@ -1,7 +1,7 @@
 // AutomationReadinessTest — 붙잡는 조건의 세 값(준비됨 · 해당 없음 · 진행 중)과 정지 시계(진척이 그대로인 횟수 — `_stallFrames`, 벽시계 감시 값의 활동 수가 그대로인 초 — `_stallWallSeconds`).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Automation/Scenario/AutomationReadiness.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"

@@ -22,7 +22,7 @@
 #include "Core/Time/ExponentialBackoff.h"
 
 #include "Engine/Content/AssetID.h"
-#include "Engine/EngineFrameHooks.h"
+#include "Engine/EngineHooks.h"
 #include "Engine/Foundation/EngineSubsystemHost.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Telemetry/TelemetrySchema.h"

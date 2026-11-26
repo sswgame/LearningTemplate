@@ -1,6 +1,6 @@
 # ==============================================================================
 # @file cmake/Scripts/CheckConfigureGlobs.cmake
-# @brief `cmake -P` — 빌드마다 다시 훑는 글롭(VerifyGlobs.cmake) 가운데 뿌리(`Source/` · `Test/` · 시나리오 폴더) 아래를
+# @brief `cmake -P` — 빌드마다 다시 훑는 글롭(VerifyGlobs.cmake) 가운데 뿌리(`Source/` · `IntegrationTests/` · 시나리오 폴더) 아래를
 #        `sw_glob_source_tree` 밖에서 훑는 것이 있으면 멈춘다(`sw_check_configure_globs` 가 부른다, 까닭은 SourceTree.cmake 머리말).
 # 인자: -DVERIFY_GLOBS=<VerifyGlobs.cmake> -DROOTS=<뿌리|뿌리…> -DSOURCE_DIR=<저장소> -DSTAMP=<스탬프>
 # ==============================================================================

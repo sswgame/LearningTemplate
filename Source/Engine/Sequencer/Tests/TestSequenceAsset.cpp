@@ -1,7 +1,7 @@
 // 시퀀스 애셋(오브젝트 없이) — 종류 표, 칸 규칙, 바인딩 id, 키 트랙 키 찍기 · 지우기 · 옮기기, 읽기 실패 때 남는 것 없음, 프레임 번호 한도.
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Reflection/TypeRegistry.h"

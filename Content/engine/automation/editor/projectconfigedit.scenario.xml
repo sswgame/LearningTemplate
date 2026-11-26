@@ -50,9 +50,9 @@
 	<Expect watch="Editor.ProjectSettingsKeyCount" atLeast="1"/>
 	<Expect watch="Editor.ProjectSettingsDirtyPageCount" equals="0"/>
 	<CaptureEditorUI file="projectconfigedit/packenginesettings.png"/>
-	<!-- 형식 없는 표(Config/Rules/Test/Quarantine.json) — 범용 JSON 행으로 고친다. 빈 배열을 펼쳐 원소를 하나 더하면(객체 원소가 없어 빈 글) 바뀜 상태가 되고 Revert 로 돌아온다. -->
+	<!-- 형식 없는 표(Config/Rules/TestSelection/Quarantine.json) — 범용 JSON 행으로 고친다. 빈 배열을 펼쳐 원소를 하나 더하면(객체 원소가 없어 빈 글) 바뀜 상태가 되고 Revert 로 돌아온다. -->
 	<EditorWaitStable/>
-	<EditorClick mark="projectsettings.page.Rules/Test/Quarantine"/>
+	<EditorClick mark="projectsettings.page.Rules/TestSelection/Quarantine"/>
 	<EditorWaitStable/>
 	<Store watch="Editor.ProjectSettingsKeyCount" as="quarantineKeys"/> <!-- 표의 실제 항목 수에 기대지 않는다(격리 항목이 있으면 키가 는다) -->
 	<EditorClick mark="projectsettings.table._quarantined"/>

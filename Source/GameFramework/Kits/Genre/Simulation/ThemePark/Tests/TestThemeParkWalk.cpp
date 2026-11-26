@@ -1,7 +1,7 @@
 // ThemeParkWalkTest — 손님은 막힌 칸(가판 · 지을 땅)을 돌아 놀이기구 줄에 서고, 긴 줄도 막힌 칸을 돌아 늘어서며, 걷던 길이 상태로 왕복하며, 격자가 없으면 곧게 걷는다(nogpu, 에셋 없음).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Serialization/Format/Archive.h"
 

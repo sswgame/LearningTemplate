@@ -245,7 +245,7 @@ namespace sw
 '''
     files[f"Tests/Test{name}Catalog.cpp"] = f'''#include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "{include}/{name}Catalog.h"
 

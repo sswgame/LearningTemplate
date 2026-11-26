@@ -1,7 +1,7 @@
 // DebugKeyCommandsTest — 디버그 키 명령(`debugkeys.*`)은 등록돼 있고, 인자 수가 틀리거나 모르는 슬롯 · 액션이면 까닭을 답하고 바인딩을 건드리지 않는다(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Foundation/EngineSubsystems.h"

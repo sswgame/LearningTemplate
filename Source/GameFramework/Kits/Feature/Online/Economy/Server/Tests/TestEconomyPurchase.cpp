@@ -2,7 +2,7 @@
 // 계정당 한도 · 잔액 부족 · 판매 기간 밖은 아무것도 바꾸지 않는다. 온라인 키트라 `UnitTests.OnlineKits` 가 돌린다(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "GameFramework/Kits/Feature/Online/Economy/Runtime/CurrencyCatalog.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Runtime/OfferCatalog.h"

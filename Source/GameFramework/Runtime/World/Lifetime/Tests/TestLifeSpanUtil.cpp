@@ -1,7 +1,7 @@
 // LifeSpanUtilTest — 수명 계산의 경계(수명 이상에서 다함 · 수명 없음 · 흐림 1 → 0)를 본다(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "GameFramework/Runtime/World/Lifetime/LifeSpanUtil.h"
 

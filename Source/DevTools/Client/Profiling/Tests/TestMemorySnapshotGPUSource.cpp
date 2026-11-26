@@ -1,7 +1,7 @@
 // MemorySnapshotGPUSourceTest — 메모리 스냅숏의 GPU 원천은 지금 그리는 장치의 추적기를 싣고, 장치가 없으면 싣지 않는다(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "DevTools/Profiling/Memory/MemorySnapshotSources.h"
 

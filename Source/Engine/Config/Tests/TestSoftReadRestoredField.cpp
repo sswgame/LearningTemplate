@@ -3,7 +3,7 @@
 // 표본은 기본값 없이 Min 이 있는 칸을 가진 실제 형식 `RenderConfig`(구조체 칸 `_textureStreaming` 포함)다.
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/EngineConfig.h"

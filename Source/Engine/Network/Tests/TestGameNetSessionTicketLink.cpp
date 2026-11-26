@@ -3,7 +3,7 @@
 
 #include "Core/Concurrency/thread.h"
 #include "Core/Network/Security/Tests/FakeNetSecurityProvider.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Config/ServerConfig.h"
 #include "Engine/Foundation/EngineSubsystems.h"

@@ -1,7 +1,7 @@
 // ShaderCookDomainsTest — 쿠킹 검사가 보는 도메인은 쿠커의 요청에서 나온다(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "DevTools/Client/Cook/ShaderCookDriver.h"
 

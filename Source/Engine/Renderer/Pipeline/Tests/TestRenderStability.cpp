@@ -1,7 +1,7 @@
 // RenderStabilityTest — 사진 앞 정착(`RenderStabilityUtil`): 정지 프레임은 기록을 버리거나 움직이면 0 부터, 노출 오차 상한은 기록을 버리면 0 · 움직이면 범위 끝 · 정지면 지수로 준다. 정착 조건은 세 값이다.
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Renderer/Frame/View/RenderStability.h"
 

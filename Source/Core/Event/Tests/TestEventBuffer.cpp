@@ -1,7 +1,7 @@
 #include "pch.h"
 
 #include "Core/Event/EventBuffer.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 using namespace sw;
 

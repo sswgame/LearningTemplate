@@ -3,7 +3,7 @@
 #include "Core/Hash/HashUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/ValueNoise.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 // ValueNoiseTest — 좌표 해시(`HashUtil::hashCoord` — 상태 없음, 좌표 · 씨앗에 민감, constexpr)와 값 노이즈(격자점 = 해시, 0..1, 연속, 옥타브 1 미만은 1). nogpu.
 

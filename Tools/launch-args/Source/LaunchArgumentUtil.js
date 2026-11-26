@@ -8,7 +8,7 @@
  *          - 카탈로그에 없는 키라도 전역 변수 접두사(`name_prefix`)로 시작하면 전역 변수로 받습니다 — 늦게 등록되는 모듈 변수가 있기 때문입니다.
  *          - bool 은 `1 · 0 · true · false · yes · no · on · off`(대소문자 무시)를 받습니다.
  *          - 그 밖의 타입은 값이 반드시 있어야 하며, 읽지 못하는 값은 명령줄에 넣지 않고 알립니다.
- *          vscode 를 모르는 순수 모듈입니다(`Test/LaunchArgumentUtilTest.js`).
+ *          vscode 를 모르는 순수 모듈입니다(`Tests/LaunchArgumentUtilTest.js`).
  */
 
 const { ValueKind, kGeneralGroup } = require('./CatalogScanner');

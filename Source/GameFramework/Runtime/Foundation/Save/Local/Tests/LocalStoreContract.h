@@ -10,8 +10,8 @@
 #include "Core/Compression/ICompressionCodec.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
-#include "Core/Testing/TestFramework.h"
-#include "Core/Testing/TestWait.h"
+#include "Core/TestFramework/TestFramework.h"
+#include "Core/TestFramework/TestWait.h"
 
 #include "GameFramework/Runtime/Foundation/Save/Local/LocalSealContext.h"
 #include "GameFramework/Runtime/Foundation/Save/Local/LocalSlotStorage.h"

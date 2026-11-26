@@ -11,7 +11,6 @@
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorSubsystems.h"
 
-#include "Engine/Animation/AnimationAssetCache.h"
 #include "Engine/Animation/AnimationSet.h"
 #include "Engine/Asset/Cache/AssetReloadWatch.h"
 #include "Engine/Character/CharacterDataCache.h"

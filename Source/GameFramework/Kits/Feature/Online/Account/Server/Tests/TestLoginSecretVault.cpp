@@ -3,7 +3,7 @@
 #include "pch.h"
 
 #include "Core/Network/Security/Tests/FakeNetSecurityProvider.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "GameFramework/Kits/Feature/Online/Account/Server/Service/LoginSecretVault.h"
 

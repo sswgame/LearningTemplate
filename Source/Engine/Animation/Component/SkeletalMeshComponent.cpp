@@ -10,10 +10,10 @@
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Animation/AnimationAssetCache.h"
 #include "Engine/Animation/Scene/AnimationSystem.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Animation/Skeletal/SkeletonBoneLOD.h"
+#include "Engine/Animation/Skeletal/SkeletonMirrorTable.h"
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Foundation/EngineSubsystems.h"

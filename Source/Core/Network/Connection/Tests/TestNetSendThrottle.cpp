@@ -6,7 +6,7 @@
 #include "Core/Network/Tests/LoopbackCluster.h"
 #include "Core/Network/Tests/NetTestUtil.h"
 #include "Core/Network/Transport/NetEmulation.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 // 송신 속도 조절(AIMD, 감사 N-11) — 계수 검사, 손실 · 줄 지연에 곱셈 감소와 하한, 맑은 회선에 덧셈 증가와 상한,
 // 손실 20 % 회선에서 고정 버킷보다 적은 재전송과 하한 밑으로 내려가지 않는 처리량, 손실이 0 으로 돌아오면 상한까지 회복.

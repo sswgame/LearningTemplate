@@ -10,8 +10,8 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Network/Message/NetCompression.h"
 #include "Core/Network/Message/StreamFrame.h"
-#include "Core/Network/NetCompression.h"
 #include "Core/Network/Transport/IStreamTransport.h"
 
 namespace sw

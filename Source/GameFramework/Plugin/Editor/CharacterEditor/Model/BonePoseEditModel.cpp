@@ -8,7 +8,7 @@
 
 #include "Editor/Common/Asset/AssetWriter.h"
 
-#include "Engine/Animation/AnimationAssetCache.h"
+#include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Serialization/Inherit/ResourceComposer.h"
 

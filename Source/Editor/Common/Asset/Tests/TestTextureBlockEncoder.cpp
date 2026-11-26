@@ -6,7 +6,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Task/TaskManager.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Editor/Common/Asset/Texture/TextureBlockEncoder.h"
 #include "Editor/Common/Asset/Texture/TextureImportConfig.h"

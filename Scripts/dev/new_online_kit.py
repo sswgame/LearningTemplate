@@ -330,7 +330,7 @@ namespace sw
 '''
     files[f"Server/Tests/Test{name}Service.cpp"] = f'''#include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "GameFramework/Kits/Feature/Online/{name}/Runtime/{name}Protocol.h"
 

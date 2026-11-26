@@ -7,7 +7,7 @@
 #include "Core/Log/Logger.h"
 
 #include "Engine/Automation/AutomationResult.h"
-#include "Engine/EngineFrameHooks.h"
+#include "Engine/EngineHooks.h"
 
 #include "sw/config/ProcessExitCodes.gen.h"
 

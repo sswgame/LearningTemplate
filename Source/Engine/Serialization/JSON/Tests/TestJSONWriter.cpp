@@ -1,8 +1,8 @@
 // JSONWriter — 이스케이프 · 잘못된 UTF-8 · 중첩 · 빈 컨테이너 · 들여쓰기 · 수 표기 · 고정 버퍼 · 순서 위반 · 완성된 글만 꺼내기(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/ScopedAssertCapture.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/ScopedAssertCapture.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Serialization/JSON/JSONDocument.h"
 #include "Engine/Serialization/JSON/JSONWriter.h"

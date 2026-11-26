@@ -8,7 +8,7 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
-#include "Core/Testing/TestRunner.h"
+#include "Core/TestFramework/TestRunner.h"
 
 #include "Editor/Common/Asset/EditorContentScan.h"
 #include "Editor/Common/EditorExtensionRegistry.h"

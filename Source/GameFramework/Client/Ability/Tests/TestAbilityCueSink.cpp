@@ -1,7 +1,7 @@
 // AbilityCueSinkTest — 클라이언트의 어빌리티 큐 창구는 서비스로 찾히고, 프리팹도 소리도 없는 큐는 오브젝트를 만들지 않으며, 흔들림을 적은 큐는 씬의 흔들림 채널로 낸다(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"

@@ -2,7 +2,7 @@
 // 철자가 틀린 설정이 조용히 기본값이 되지 않는지 본다. 온라인 키트라 `UnitTests.OnlineKits` 가 돌린다(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Serialization/JSON/JSONDocument.h"
 

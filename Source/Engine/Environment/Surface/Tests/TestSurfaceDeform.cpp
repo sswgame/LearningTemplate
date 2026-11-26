@@ -4,7 +4,7 @@
 
 #include "Core/Foundation/BuildInfo.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Environment/Surface/SurfaceDeformGrid.h"
 #include "Engine/Environment/Surface/SurfaceDeformSystem.h"

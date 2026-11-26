@@ -1,7 +1,7 @@
 // EditorAssetImportPlanTest — 임포트 잡이 바뀐 원본을 임포터마다 한 묶음으로 나눈다(폴더로 쪼개지 않는다 — 스탬프와 원본 사이 순서 의존이 폴더를 넘는다).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Editor/Common/Asset/AssetImportStamp.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetImportJob.h"

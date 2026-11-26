@@ -1,7 +1,7 @@
 // AutomationScratchWorkspaceTest — 시나리오 사본의 정체성: 원본 GUID 글을 사본 GUID 로 바꾸는 규칙(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "DevTools/Client/Automation/Scenario/AutomationScratchWorkspace.h"
 

@@ -1,7 +1,7 @@
 // HubPawnStateTest — 허브 폰의 소유자 상태는 칸 선언이 바이트를 정한다: 왕복이 비트까지 같고, NaN · 잘린 바이트는 거절하며, 재조정 판정은 몸(걷기 · 말)과 자리를 본다(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Foundation/WorldOrigin.h"
 

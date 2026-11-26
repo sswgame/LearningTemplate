@@ -1,7 +1,7 @@
 // ObjectStateHierarchyTest — 부모의 상태를 다시 읽어도 자식의 로컬 변환은 그대로다(에디터 되돌리기가 부모 스냅샷을 다시 읽는다, nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"

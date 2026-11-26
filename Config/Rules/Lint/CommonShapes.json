@@ -31,7 +31,7 @@
     },
     "_engineChildCommand": {
         "Source/Core/Process/Process.cpp": "ProcessCommand::at 의 정의와 엔진 자식 입구(ProcessCommand::forEngineChild) 자신이다",
-        "Source/Core/Testing/TestRunner.cpp": "테스트 자식 역할(runChild)은 늘 -test · -unattended 로 뜬다 — Core 의 테스트 실행기라 부모 명령줄 서비스를 쥐지 않는다",
+        "Source/Core/TestFramework/TestRunner.cpp": "테스트 자식 역할(runChild)은 늘 -test · -unattended 로 뜬다 — Core 의 테스트 실행기라 부모 명령줄 서비스를 쥐지 않는다",
         "Source/DevTools/Client/Automation/Runner/AutomationPerBackend.cpp": "백엔드 자식은 늘 -scenario 로 뜬다 — 그 인자가 곧 자동화 판정이다(CommandLineManager::isAutomatedRun). 실행 파일은 실행기 옵션이 준다",
         "Source/Engine/Telemetry/CrashReportSubsystem.cpp": "크래시 보고 업로더(보고 폴더 하나만 받는 업로드 전용 실행)다 — 게임 · 에디터 실행이 아니라 사용자 설정 · 품질을 읽지 않는다",
         "Source/Engine/Graphics/Shader/Compile/ShaderCompilerBackend.cpp": "엔진이 아닌 도구(tint — SPIR-V 를 WGSL 로)다",

@@ -9,6 +9,7 @@
  *          (`getAccessibilitySettings`), 플레이어 리매핑 파일은 `InputRemapSerializer`, UI 글리프는 `InputGlyphResolver`.
  */
 #pragma once
+#include "Core/Container/RingBuffer.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
@@ -27,10 +28,114 @@
 #include "Engine/Input/IInputDevice.h"
 #include "Engine/Input/InputUserDevices.h"
 #include "Engine/Input/KeyCodeUtil.h"
-#include "Engine/Input/Map/InputAccessibilitySettings.h"
-#include "Engine/Input/Map/InputActionBuffer.h"
 #include "Engine/Input/Map/InputBinding.h"
 #include "Engine/Input/Map/InputTriggerRules.h"
+
+// 플레이어마다의 입력 설정(감도 · 축 반전 · 데드존 · 대각선 정규화 · 토글 액션)을 선언합니다.
+// `InputMap` 이 들고, 맵을 다시 읽어도 남는다(언리얼 Enhanced Input 의 `UEnhancedInputUserSettings` 자리).
+namespace sw
+{
+    enum class DeadzoneShape : uint8
+    {
+        Radial = 0, ///< 360도 원형 거리 기반 데드존(자유 이동).
+        Axial       ///< X/Y 독립 십자형 데드존(4방향 그리드, 플랫포머).
+    };
+
+    enum class DigitalNormalization : uint8
+    {
+        Circular = 0,   ///< 대각선 입력의 반경을 1.0 으로 정규화한다(표준 3D/FPS 액션).
+        IndependentAxes ///< X/Y 를 각각 독립적으로 1.0 까지 유지한다(2D 그리드, 탑다운).
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @class InputAccessibilitySettings
+     * @brief 플레이어마다의 입력 설정입니다. 값 칸은 그대로 읽고 쓰고, 토글 액션 목록만 함수로 바꿉니다.
+     */
+    class SW_API InputAccessibilitySettings
+    {
+    public:
+        float2               _mouseSensitivity;
+        float2               _gamepadSensitivity;
+        float32              _stickDeadzoneOverride; ///< 게임패드 스틱 바인딩의 안쪽 데드존을 덮어쓴다. 0 미만이면 바인딩마다의 값(`ActionBinding::_deadzone`)
+        DeadzoneShape        _deadzoneShape;
+        DigitalNormalization _digitalNormalization;
+        uint8                _bInvertX : 1;
+        uint8                _bInvertY : 1;
+
+    public:
+        InputAccessibilitySettings();
+
+        /**
+         * @brief 액션 @p action 을 토글 액션(한 번 눌러 켜고 다시 눌러 끈다 — 조준 · 달리기)으로 두거나 뺍니다.
+         * @details 액션이 아직 없어도 된다. 맵이 그 이름의 액션을 만들면 그때부터 토글로 평가한다(`InputMap::isActionToggled`).
+         */
+        void setToggleAction( const hashed_string& action, bool bToggle );
+        bool isToggleAction( const hashed_string& action ) const;
+
+    private:
+        vector<hashed_string> _listToggleAction; ///< 토글 액션 이름. 몇 개뿐이라 선형으로 찾는다
+    };
+} // namespace sw
+
+// 선입력 버퍼와 격투 게임식 커맨드 판정(최근 트리거된 액션 이력)을 담습니다. `InputMap` 이 한 개를 들고 프레임마다 진행합니다.
+// - `bufferAction` · `consumeBufferedAction`: 공격 버튼을 살짝 일찍 눌러도 인정해 주는 선입력 유예 링 버퍼입니다.
+// - `wasCommandSequenceTriggered`: 최근 트리거된 액션 이력에서 주어진 순서가 시간 창 안에 나왔는지 검사합니다.
+// - `wasCommandPatternTriggered`: "236P"(하, 우하, 우 + 펀치) 같은 넘패드 표기를 액션 이름 시퀀스로 바꿔 위 판정에 맡깁니다.
+// 매핑(바인딩 · 레이어 · 평가)과 갈라 둔 까닭은 상태와 수명이 다르기 때문입니다. 매핑은 데이터에서 오고, 이 버퍼는 게임플레이가 프레임마다 쓰고 비웁니다.
+// 언리얼은 Enhanced Input 이 매핑을 맡고 콤보 · 선입력은 게임플레이 쪽(GAS 의 입력 버퍼 등)이 맡는 것과 같은 나눔입니다.
+// 틱 단위로 결정적인 격투 커맨드(롤백 넷코드, 바라보는 쪽 뒤집기)는 GameFramework 의 `InputCommandBuffer` 가 맡습니다. 이 버퍼는 실시간 액션 이력입니다.
+namespace sw
+{
+    /**
+     * @class InputActionBuffer
+     * @brief 선입력 링 버퍼와 커맨드 이력 링 버퍼입니다.
+     */
+    class SW_API InputActionBuffer
+    {
+    public:
+        InputActionBuffer();
+
+        void clear();
+        /** @brief 시간을 진행하고, 만료된 선입력과 이력 보관 시간(`kHistorySeconds`)이 지난 커맨드를 지웁니다. */
+        void update( float32 deltaSeconds );
+        /** @brief 이번 프레임에 트리거된 액션을 이력에 남깁니다(`InputMap::update` 가 부른다). */
+        void recordTriggered( const hashed_string& action );
+
+        void bufferAction( const hashed_string& action, float32 expirationSeconds = kDefaultBufferSeconds );
+        bool consumeBufferedAction( const hashed_string& action );
+
+        /** @brief 지정한 시간 창 안에 커맨드 시퀀스(예: ["Down", "DownRight", "Right", "Attack"])가 이어서 입력됐는지 검사합니다. */
+        bool wasCommandSequenceTriggered( const vector<hashed_string>& listSequence, float32 maxWindowSeconds = kDefaultSequenceWindowSeconds ) const;
+        bool wasCommandPatternTriggered( const hashed_string& pattern, float32 maxWindowSeconds = kDefaultPatternWindowSeconds ) const;
+
+    private:
+        static constexpr uint32  kMaxBufferedActions           = 16;
+        static constexpr uint32  kMaxCommandHistory            = 32;
+        static constexpr float32 kHistorySeconds               = 2.0f;  ///< 이보다 오래된 커맨드 이력은 판정에 쓰지 않는다
+        static constexpr float32 kDefaultBufferSeconds         = 0.2f;  ///< `bufferAction` 의 기본 선입력 유예(초)
+        static constexpr float32 kDefaultSequenceWindowSeconds = 0.35f; ///< `wasCommandSequenceTriggered` 의 기본 시간 창(초)
+        static constexpr float32 kDefaultPatternWindowSeconds  = 0.8f;  ///< `wasCommandPatternTriggered` 의 기본 시간 창(초)
+
+        struct BufferedActionItem
+        {
+            hashed_string _action{};
+            float32       _remainingTime{ 0.0f };
+        };
+
+        struct CommandHistoryEntry
+        {
+            hashed_string _action{};
+            float32       _timestamp{ 0.0f };
+        };
+
+        RingBuffer<BufferedActionItem, kMaxBufferedActions> _listBufferedAction; ///< 가득 차면 가장 오래된 선입력을 덮는다
+        RingBuffer<CommandHistoryEntry, kMaxCommandHistory> _listCommandHistory; ///< 가득 차면 가장 오래된 이력을 덮는다
+        float32                                             _elapsedSeconds;
+    };
+} // namespace sw
 
 namespace sw
 {

@@ -3,16 +3,16 @@
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
 #include "Core/String/StringUtil.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Editor/Common/Asset/AssetWriter.h"
 #include "Editor/Panels/ProjectSettings/Model/ProjectSettingsDocument.h"
 #include "Editor/Panels/ProjectSettings/Model/ProjectSettingsJSONDocument.h"
 
 #include "Engine/Config/ConfigManager.h"
+#include "Engine/Config/ConfigOverride.h"
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/GameConfig.h"
-#include "Engine/Config/PlatformConfigOverride.h"
 #include "Engine/Reflection/TypeInfo.h"
 
 using namespace sw;

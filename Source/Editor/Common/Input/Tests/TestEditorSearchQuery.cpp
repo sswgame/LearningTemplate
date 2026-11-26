@@ -1,7 +1,7 @@
 // EditorSearchQueryTest — 통합 런타임 탐색의 칸 필터: `type:` · `tag:` · `is:` 낱말과 나머지 글로 나누기, 칸 필터는 모두 맞아야 하고 칸이 없는 항목은 빠진다(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Editor/Common/Input/EditorSearchItem.h"
 

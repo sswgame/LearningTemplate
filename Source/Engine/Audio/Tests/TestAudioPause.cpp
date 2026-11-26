@@ -1,7 +1,7 @@
 // AudioPauseTest — 일시정지는 소리와 시계(적응형 음악의 구간 위치 · 예약한 전환, 이벤트 인스턴스의 경과)를 함께 세우고 그 자리에서 잇는다. 멈춘 음악을 멈추면 보이스가 남지 않는다(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Audio/AudioMixerDef.h"
 #include "Engine/Audio/AudioMusic.h"

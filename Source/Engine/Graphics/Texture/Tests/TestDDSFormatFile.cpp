@@ -5,7 +5,7 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Asset/Image/DDSLoader.h"
 #include "Engine/Graphics/Texture/Texture2D.h"

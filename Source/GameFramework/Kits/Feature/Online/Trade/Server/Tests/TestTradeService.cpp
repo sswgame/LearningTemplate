@@ -2,7 +2,7 @@
 // 계정이 떠날 때, 시한 · 저장소 실패 뒤 다시 시도, 기동 복구, 알림. 상태 기계 표는 TradeStateMachineTest 가 본다. 온라인 키트라 `UnitTests.OnlineKits` 가 돌린다(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "GameFramework/Kits/Feature/Online/Trade/Server/TradeService.h"
 #include "GameFramework/Kits/Feature/Online/Trade/Server/TradeStateMachine.h"

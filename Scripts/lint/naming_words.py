@@ -27,7 +27,7 @@ Scripts/lint/naming_words.py
   (게임의 walk 는 맞고 엔진의 walk 는 순회다). 바깥 철자(`PFN_` · `VK_` · ImGui 깃발)는 `_externalPatterns`, 받아 온 스킬은 `_externalPaths` 가 뺀다.
   파이썬 이름의 PEP 8 꼴(모듈 · 함수 snake_case, 클래스 PascalCase, 상수 UPPER_CASE — docs/agents/NamingCpp.md)도 여기서 막는다.
   CMake 함수는 `sw_snake_case` 꼴만 받는다(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test). CMake 함수 꼴은 cmake 밖
-  (Source · Test · ThirdParty 감싸기 · 뿌리 CMakeLists, vcpkg 포트 제외)의 정의도 본다. 전수 집계는 `py -3 -m Scripts naming-census`.
+  (Source · IntegrationTests · ThirdParty 감싸기 · 뿌리 CMakeLists, vcpkg 포트 제외)의 정의도 본다. 전수 집계는 `py -3 -m Scripts naming-census`.
 - timing — 배포에 컴파일되는 헤더(`Source/Core` · `Engine` · `GameFramework` 의 `DevTools` · `Editor` · `Tests` · `Dev` 밖)에 `get…(Nanoseconds|Microseconds|Milliseconds)`
   꼴 접근자를 선언하면 실패한다 — 감시 값 재료로 프레임마다 시계를 읽어 칸에 쌓고 공개 접근자로 읽는 모양이 배포에 남았다(2026-11-21 `GameModeComponent::getLastStepMicroseconds`).
   시간은 프로파일러 구간(`SW_PROFILE_SCOPE`)으로 재고 감시 값이 그 구간을 읽는다. 시계 형식 자체 · 계산한 예산처럼 측정이 아닌 이름은 `_timingAccessorKeep` 에 까닭과 함께.

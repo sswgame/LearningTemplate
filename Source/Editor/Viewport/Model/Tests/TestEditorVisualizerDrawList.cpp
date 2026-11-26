@@ -2,7 +2,7 @@
 #include "pch.h"
 
 #include "Core/Math/AABB.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Editor/Viewport/Model/EditorVisualizerDrawList.h"
 

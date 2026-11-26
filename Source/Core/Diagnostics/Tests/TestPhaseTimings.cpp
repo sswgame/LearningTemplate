@@ -3,7 +3,7 @@
 
 #include "Core/Diagnostics/PhaseTimings.h"
 #include "Core/Diagnostics/ScopedTimer.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 using namespace sw;
 

@@ -2,7 +2,7 @@
 // 예전에는 패널 관리자가 그린 뒤 걸어 둔 스택을 썼다 — 포커스를 옮긴 바로 그 프레임의 Ctrl+Z 가 앞 창의 스택으로 갔다.
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Editor/Common/Workspace/IEditorPanelSubsystem.h"
 #include "Editor/Common/Workspace/Undo/CommandStack.h"

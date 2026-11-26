@@ -17,7 +17,7 @@ namespace sw
 {
     /**
      * @brief 내비메시 폴리곤 하나의 불투명 참조입니다. `Invalid`(0) 는 없음입니다. 타일을 다시 구우면 옛 참조는 무효가 됩니다.
-     * @details 정수가 아니라 형식이다 — 정수면 32 비트 칸에 말없이 잘려 담겼다(군중의 링크 폴리곤, 감사 S-6). 백엔드 경계(`RecastQueryUtil`)에서만 바꾼다.
+     * @details 정수가 아니라 형식이다 — 정수면 32 비트 칸에 말없이 잘려 담겼다(군중의 링크 폴리곤, 감사 S-6). 백엔드 경계(`RecastUtil`)에서만 바꾼다.
      *          언리얼 `NavNodeRef`(uint64) · Recast `dtPolyRef`(`DT_POLYREF64`) 와 같은 폭이다.
      */
     enum class NavPolyRef : uint64

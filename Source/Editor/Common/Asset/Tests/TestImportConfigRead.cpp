@@ -2,7 +2,7 @@
 #include "pch.h"
 
 #include "Core/File/FileUtil.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Editor/Common/Asset/ModelImport/ModelImportConfig.h"
 #include "Editor/Common/Asset/Texture/TextureImportConfig.h"

@@ -1,7 +1,7 @@
 // LockOnSelectorTest — 록온: 후보 고르기(거리 · 각 · 가림 · 우선도), 좌우 넘기기, 유지 · 해제(거리 · 사라짐 · 가림 유예), 저장(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/Tests/StateIOTestUtil.h"

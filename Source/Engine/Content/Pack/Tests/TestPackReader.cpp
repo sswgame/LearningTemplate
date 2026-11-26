@@ -4,7 +4,7 @@
 #include "Core/File/AsyncFileIO.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Hash/HashUtil.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Content/Pack/PackReader.h"
 #include "Engine/Content/Pack/Tests/PackTestUtil.h"

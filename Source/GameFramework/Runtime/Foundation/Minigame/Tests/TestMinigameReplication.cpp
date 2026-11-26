@@ -4,7 +4,7 @@
 
 #include "Core/Network/Tests/FakeNetPeers.h"
 #include "Core/Serialization/BitStream.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "GameFramework/Runtime/Foundation/Minigame/MinigameReplication.h"
 

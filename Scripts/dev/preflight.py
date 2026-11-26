@@ -12,7 +12,7 @@
 - 단계 기록: 단계가 통과하면 그 sha 를 build/verify.stages.json 에 적고, 다음 실행에서 그 sha 뒤 바뀐 파일이 모두 입력이 아닌 경로(Config/Dev/Verify.json 의 _nonInputPaths — 문서 ·
   스킬)면 그 단계를 건너뛴다. 거꾸로 적는 목록이라 빠뜨리면 더 돌 뿐이다. lint --all 은 문서 · 스킬도 읽어 build 범위면 늘 돈다.
 - 이력(Saved/TestHistory/history.sqlite): ctest 보고는 단계 시작 표지 뒤의 것만 이 sha · 검증 실행(verify)으로 쌓고, 단계마다 걸린 시간을 쌓아 지난 p95 보다 느리면 경고한다.
-- ctest 는 격리 표(Config/Rules/Test/Quarantine.json)를 -E 로 빼고 돈다(만료가 지났으면 처음에 진다). 슬롯 수는 Config/Dev/Verify.json 의 _ctestJobs.
+- ctest 는 격리 표(Config/Rules/TestSelection/Quarantine.json)를 -E 로 빼고 돈다(만료가 지났으면 처음에 진다). 슬롯 수는 Config/Dev/Verify.json 의 _ctestJobs.
 - Debug 는 짓지 않는다 — 단언 · 검사는 SW_DO_CHECKS 로 Release 에 있고, CPU 단위는 ASan(Release + clang-cl ASan)이 돈다(사용자 결정 2026-11-18).
 - 체인(부하 측정 제외)은 그래픽 API 검증 층(-rhi-validation) · 교착 탐지(-deadlock-detection) · bindless 죽은 번호 검사를 켠다 — 검증 층 오류 · 경고는 로그 게이트에서 진다.
 """

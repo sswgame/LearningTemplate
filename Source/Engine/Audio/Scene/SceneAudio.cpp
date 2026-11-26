@@ -12,7 +12,6 @@
 #include "Engine/Audio/Component/AudioEmitterComponent.h"
 #include "Engine/Audio/Component/AudioListenerComponent.h"
 #include "Engine/Audio/Component/AudioReverbZoneComponent.h"
-#include "Engine/Audio/Scene/Physics2DAudioOcclusionQuery.h"
 #include "Engine/Audio/Scene/PhysicsAudioOcclusionQuery.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Config/EngineConfig.h"
@@ -435,9 +434,8 @@ namespace sw
     void SceneAudio::updateOcclusion( AudioEngine& audioEngine, const IPhysicsQueryScene3D* pScene3D, const IPhysicsQueryScene2D* pScene2D )
     {
         // 가림 — 프레임마다 몇 개씩 돌아가며 측정한다(엔진이 부드럽게 따라간다).
-        PhysicsAudioOcclusionQuery   physicsQuery;
-        Physics2DAudioOcclusionQuery physics2DQuery;
-        const IAudioOcclusionQuery*  pQuery = _pOcclusionOverride;
+        PhysicsAudioOcclusionQuery  physicsQuery;
+        const IAudioOcclusionQuery* pQuery = _pOcclusionOverride;
         if ( pQuery == nullptr && pScene3D != nullptr )
         {
             physicsQuery.setScene( pScene3D, MathUtil::kMaxUInt32 );
@@ -445,8 +443,8 @@ namespace sw
         }
         else if ( pQuery == nullptr && pScene2D != nullptr )
         {
-            physics2DQuery.setScene( pScene2D, MathUtil::kMaxUInt32 );
-            pQuery = &physics2DQuery;
+            physicsQuery.setScene( pScene2D, MathUtil::kMaxUInt32 );
+            pQuery = &physicsQuery;
         }
         const uint32 emitterCount = static_cast<uint32>( _listEmitterSnapshot.size() );
         if ( pQuery != nullptr && emitterCount > 0 )

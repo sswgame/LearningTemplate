@@ -10,8 +10,7 @@
 #include "DevTools/DevToolsAPI.h"
 #include "DevTools/Profiling/FrameStall.h"
 
-#include "Engine/EngineFrameHooks.h"
-#include "Engine/EngineStartupExtension.h"
+#include "Engine/EngineHooks.h"
 
 namespace sw
 {

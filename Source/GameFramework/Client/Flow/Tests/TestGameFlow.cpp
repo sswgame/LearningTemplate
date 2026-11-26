@@ -3,8 +3,8 @@
 
 #include "Core/Event/EventDispatcher.h"
 #include "Core/Subsystem/SubsystemScope.h"
-#include "Core/Testing/TestFramework.h"
-#include "Core/Testing/TestWait.h"
+#include "Core/TestFramework/TestFramework.h"
+#include "Core/TestFramework/TestWait.h"
 
 #define SW_TEST_INTERNAL // 임시 리소스 도메인 픽스처(`ScopedScratchDomain`)와 엔진 서비스를 직접 쓴다
 #include "Engine/Config/GameTimeScale.h"

@@ -2,7 +2,7 @@
 // 쓰는 쪽: 아무 틱 워커(`setMoveVelocity` · `jump` · `addRootMotionDisplacement` …, 칸의 잠금 아래). 읽는 쪽: 게임 스레드의 물리 프레임(`onPhysicsFrameBegin` · `onPrePhysicsStep`).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"

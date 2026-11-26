@@ -3,7 +3,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Editor/Common/Asset/AssetWriter.h"
 #include "Editor/Common/Commands/Asset/EditorToolAssetCommands.h"

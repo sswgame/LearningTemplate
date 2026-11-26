@@ -4,7 +4,7 @@
 #include "Core/Math/Frustum.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 // FrustumTest — 절두체 평면 추출과 겹침 판정의 경계 사례: 걸친 상자 · 구는 남고(가짜 컬링 없음) 바깥 · 뒤 · 먼 면 너머는 빠진다.
 // 원근 · 직교 · 매우 넓은 시야각 · 퇴화 행렬(아무것도 거르지 않는다) · reversed-Z(평면 집합이 같다) · 회전한 상자를 다시 감싼 월드 상자(nogpu).

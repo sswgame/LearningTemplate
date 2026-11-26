@@ -1,7 +1,7 @@
 // git 작업 트리 질의 — porcelain 출력 해석(고침 · 더하기 · 지움 · 이름 바꾸기 · 추적 밖 · 충돌 · 따옴표 경로)과 되돌릴 수 있는 변경.
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Editor/Common/SourceControl/SourceControlProvider.h"
 

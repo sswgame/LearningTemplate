@@ -1,7 +1,7 @@
 #include "pch.h"
 
 #include "Core/Serialization/BitStream.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Character/Hit/MeleeSweepHistory.h"
 #include "Engine/Object/GameObject/GameObject.h"

@@ -1,9 +1,9 @@
 #include "pch.h"
 
 #include "Core/Log/Logger.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
-#include "Engine/EngineFrameHooks.h"
+#include "Engine/EngineHooks.h"
 #include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Network/GameNetSession.h"
 #include "Engine/Serialization/Inherit/ResourceComposition.h"

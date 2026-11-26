@@ -1,7 +1,7 @@
 // ShaderCookSampleTest — 표본 굽기(`-cook-shaders-sample`)가 규칙의 축마다 모든 값을 한 번씩 덮는 요청만 고르고, 규칙 파일의 틀린 값은 오류다(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "DevTools/Client/Cook/ShaderCookDriver.h"
 

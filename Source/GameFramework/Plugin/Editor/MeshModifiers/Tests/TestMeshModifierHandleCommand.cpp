@@ -1,7 +1,7 @@
 // Modifiers 화면 도구의 집기 판정(`MeshModifierHandleViewState::pick`)과 명령 순서(`MeshModifierHandleCommand::step` · `press`) — 씬 · ImGui 없이 값으로 본다.
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "GameFramework/Plugin/Editor/MeshModifiers/Model/MeshModifierHandleEdit.h"
 

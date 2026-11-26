@@ -3,9 +3,9 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/thread.h"
 #include "Core/Container/ChunkedArray.h"
-#include "Core/Testing/TestFramework.h"
-#include "Core/Testing/TestWait.h"
-#include "Core/Testing/ThreadTestAccess.h"
+#include "Core/TestFramework/TestFramework.h"
+#include "Core/TestFramework/TestWait.h"
+#include "Core/TestFramework/ThreadTestAccess.h"
 
 #include "GameFramework/Kits/Feature/Storage/SQLStore/Runtime/SQL/SQLConnectionPool.h"
 #include "GameFramework/Kits/Feature/Storage/SQLStore/Runtime/Tests/FakeSQLDriver.h"

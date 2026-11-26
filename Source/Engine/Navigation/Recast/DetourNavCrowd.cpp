@@ -6,7 +6,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Navigation/Recast/RecastNavMesh.h"
-#include "Engine/Navigation/Recast/RecastQueryUtil.h"
+#include "Engine/Navigation/Recast/RecastUtil.h"
 #include "Engine/Physics/PhysicsDebugDraw.h"
 
 #include <recastnavigation/DetourCommon.h>
@@ -164,7 +164,7 @@ namespace sw
             return false;
         _listTarget[static_cast<size_t>( agentID )] = target;
         float32         arrNearest[3]{};
-        const dtPolyRef targetRef = RecastQueryUtil::findPolyInBox( _pQuery, &target._x, _pCrowd->getQueryHalfExtents(), _pCrowd->getFilter( 0 ), arrNearest ); // 상자 밖이면 0 이다
+        const dtPolyRef targetRef = RecastUtil::findPolyInBox( _pQuery, &target._x, _pCrowd->getQueryHalfExtents(), _pCrowd->getFilter( 0 ), arrNearest ); // 상자 밖이면 0 이다
         if ( targetRef == 0 )
         {
             _pCrowd->resetMoveTarget( agentID );
@@ -192,7 +192,7 @@ namespace sw
         float32       arrNearest[3]{ position._x, position._y, position._z };
         // 못 찾거나 상자 밖이면 ref 0 이고 붙은 점 대신 요청한 위치를 쓴다.
         float32         arrFound[3]{};
-        const dtPolyRef polyRef = RecastQueryUtil::findPolyInBox( _pQuery, &position._x, _pCrowd->getQueryHalfExtents(), _pCrowd->getFilter( 0 ), arrFound );
+        const dtPolyRef polyRef = RecastUtil::findPolyInBox( _pQuery, &position._x, _pCrowd->getQueryHalfExtents(), _pCrowd->getFilter( 0 ), arrFound );
         if ( polyRef != 0 )
         {
             arrNearest[0] = arrFound[0];
@@ -248,7 +248,7 @@ namespace sw
             LinkTraversal&      traversal   = _listLink[agentIndex];
             const bool          bLastIsLink = pAgent->ncorners > 0 && ( pAgent->cornerFlags[pAgent->ncorners - 1] & DT_STRAIGHTPATH_OFFMESH_CONNECTION ) != 0;
             traversal._previousPosition     = float3( pAgent->npos );
-            traversal._pendingPoly          = bLastIsLink ? RecastQueryUtil::toNavPolyRef( pAgent->cornerPolys[pAgent->ncorners - 1] ) : NavigationConstant::kInvalidPolyRef;
+            traversal._pendingPoly          = bLastIsLink ? RecastUtil::toNavPolyRef( pAgent->cornerPolys[pAgent->ncorners - 1] ) : NavigationConstant::kInvalidPolyRef;
         }
         _pCrowd->update( deltaTime, nullptr );
         for ( uint32 agentIndex = 0; agentIndex < _maxAgentCount; ++agentIndex )
@@ -272,7 +272,7 @@ namespace sw
     void DetourNavCrowd::beginLinkTraversal( LinkTraversal& inoutTraversal ) const
     {
         const bool                 bPending = inoutTraversal._pendingPoly != NavigationConstant::kInvalidPolyRef;
-        const dtOffMeshConnection* pLink    = bPending ? _pNavMesh->getOffMeshConnectionByRef( RecastQueryUtil::toDetourPolyRef( inoutTraversal._pendingPoly ) ) : nullptr;
+        const dtOffMeshConnection* pLink    = bPending ? _pNavMesh->getOffMeshConnectionByRef( RecastUtil::toDetourPolyRef( inoutTraversal._pendingPoly ) ) : nullptr;
         if ( pLink == nullptr )
         {
             // 한 갱신 안에서 모퉁이를 찾고 바로 올랐다 — 링크는 모르지만 건너는 중이라는 것은 알린다.

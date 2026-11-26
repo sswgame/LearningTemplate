@@ -8,7 +8,7 @@
 #include "Core/File/AsyncFileIO.h"
 #include "Core/File/FileUtil.h"
 #include "Core/String/StringUtil.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Network/FileServe/FileServeContentSource.h"
 #include "Engine/Network/HTTPClient.h"

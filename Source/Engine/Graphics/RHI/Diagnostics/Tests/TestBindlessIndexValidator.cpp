@@ -6,7 +6,7 @@
 #include "pch.h"
 
 #include "Core/Concurrency/atomic.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Graphics/RHI/Diagnostics/BindlessIndexValidator.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"

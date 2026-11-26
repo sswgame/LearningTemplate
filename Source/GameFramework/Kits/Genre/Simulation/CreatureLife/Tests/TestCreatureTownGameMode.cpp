@@ -1,7 +1,7 @@
 // CreatureTownGameModeTest — 생물 마을 디렉터의 명령(`submitTalk`)은 판이 열린 동안만 받고, 카탈로그가 없으면 판을 열지 않는다(nogpu, 에셋 없음).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"

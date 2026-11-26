@@ -1,7 +1,7 @@
 // AudioSpatialTest — 공간화 계산(믹서 없이): 거리 감쇠 곡선 · 리스너 축 팬 · 도플러 · 2D 화면 팬 · 여러 리스너 합치기.
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Audio/AudioPanDirection.h"
 #include "Engine/Audio/AudioSpatial.h"

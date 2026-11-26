@@ -1,7 +1,7 @@
 // AudioReloadCacheTest — 오디오 데이터의 리로드 어댑터("AudioData")는 캐시 레지스트리에 있고, 오디오 서비스가 쓰지 않는 파일은 자기 것이 아니라고 답한다(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Asset/Cache/AssetCacheBase.h"

@@ -5,9 +5,9 @@
 
 #include "Core/Encoding/Base64Util.h"
 #include "Core/Network/Security/Tests/FakeNetSecurityProvider.h"
-#include "Core/Network/Transport/LoopbackStreamTransport.h"
+#include "Core/Network/Tests/LoopbackStreamTransport.h"
 #include "Core/Network/Transport/StreamTypes.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 #include "Core/Time/Clock.h"
 
 #include "GameFramework/Kits/Feature/Online/Account/Runtime/LoopbackPkceLoginClient.h"

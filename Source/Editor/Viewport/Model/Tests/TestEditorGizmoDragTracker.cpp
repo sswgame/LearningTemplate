@@ -1,7 +1,7 @@
 // 기즈모 명령 순서(`EditorGizmoDragTracker`) — 잡기 → 끌기 → 놓기, 끄는 중 대상이 바뀌면 앞 드래그를 닫고 새 대상을 잡는다, 잡기 없는 끌기 · 끌기 없는 잡기.
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Editor/Viewport/Model/EditorGizmoEdit.h"
 

@@ -5,7 +5,7 @@
 #include "pch.h"
 
 #include "Core/Container/string.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/TileMap/TileMapXML.h"

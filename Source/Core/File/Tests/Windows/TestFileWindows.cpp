@@ -4,7 +4,7 @@
 #include "Core/File/PlatformFileUtil.h"
 #include "Core/Foundation/PlatformOSHeaders.h"
 #include "Core/String/StringBuilder.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 // Windows 전용 파일 케이스 — 플랫폼 폴더(`Windows/`)라 Windows 에서만 짓는다(파일 안 `#if` 를 두지 않는다).
 

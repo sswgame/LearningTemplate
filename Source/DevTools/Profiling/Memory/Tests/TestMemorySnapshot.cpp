@@ -6,7 +6,7 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/String/StringUtil.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "DevTools/Profiling/Memory/MemoryDiffStatus.h"
 #include "DevTools/Profiling/Memory/MemorySnapshot.h"

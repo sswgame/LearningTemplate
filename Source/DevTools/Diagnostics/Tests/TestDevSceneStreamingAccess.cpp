@@ -2,7 +2,7 @@
 #include "pch.h"
 
 #include "Core/Container/span.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "DevTools/Diagnostics/DevSceneStreamingAccess.h"
 

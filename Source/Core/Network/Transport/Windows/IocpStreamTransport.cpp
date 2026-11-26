@@ -1,7 +1,5 @@
 #include "pch.h"
 
-#include "Core/Network/Transport/Windows/IocpStreamTransport.h"
-
 #include "Core/Concurrency/OnceInit.h"
 #include "Core/Concurrency/StopToken.h"
 #include "Core/Concurrency/ThreadName.h"
@@ -10,6 +8,10 @@
 #include "Core/Concurrency/thread.h"
 #include "Core/Container/IndexFreeList.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
+#include "Core/Memory/Memory.h"
+#include "Core/Network/Transport/IStreamTransport.h"
 #include "Core/Network/Transport/NativeSocketAddress.h"
 #include "Core/Network/Transport/PlatformSocketUtil.h"
 #include "Core/Network/Transport/StreamSendQueue.h"
@@ -21,6 +23,37 @@
 #include <cstring>
 #include <mutex>
 #include <thread>
+
+namespace sw
+{
+    /**
+     * @brief Windows IOCP 스트림 전송 — 완료 포트 하나를 I/O 스레드 N 개가 나눠 기다립니다. 연결마다 읽기 하나 · 쓰기 하나만 걸어 둡니다.
+     * @details `StreamTransportFactory::createPlatformTransport` 는 이 파일 끝에 있다(플랫폼 폴더라 이 플랫폼에서만 지어진다). OS 타입(SOCKET · OVERLAPPED)은 .cpp 의 `State` 에만 있다.
+     */
+    class IocpStreamTransport final : public IStreamTransport
+    {
+    public:
+        IocpStreamTransport();
+        ~IocpStreamTransport() override;
+
+        [[nodiscard]] bool     initialize( IStreamHandler* pHandler, const StreamTransportConfig& settings ) override;
+        void                   shutdown() override;
+        [[nodiscard]] bool     listen( const NetAddress& bindAddress ) override;
+        uint16                 getListenPort() const override;
+        StreamConnectionHandle connect( const NetAddress& remote ) override;
+        StreamSendResult       send( StreamConnectionHandle handle, const uint8* pData, int32 size ) override;
+        void                   close( StreamConnectionHandle handle, StreamCloseMode mode ) override;
+        void                   setReceivePaused( StreamConnectionHandle handle, bool bPaused ) override;
+        int32                  pollIO( int32 timeoutMilli ) override;
+        NetAddress             getRemoteAddress( StreamConnectionHandle handle ) const override;
+        StreamTransportStats   getStats() const override;
+
+        struct State;
+
+    private:
+        unique_ptr<State> _state;
+    };
+} // namespace sw
 
 namespace sw
 {
@@ -992,5 +1025,13 @@ namespace sw
         stats._sendCallCount    = state._sendCallCount.load();
         stats._openCount        = state._openCount.load();
         return stats;
+    }
+} // namespace sw
+
+namespace sw
+{
+    unique_ptr<IStreamTransport> StreamTransportFactory::createPlatformTransport()
+    {
+        return make_unique<IocpStreamTransport>();
     }
 } // namespace sw

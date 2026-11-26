@@ -43,7 +43,7 @@
         "Editor/Common/GUI/Panel/EditorPanel.h": {"_limit": 9, "_reason": "문서 종류는 값만 — 종류 등록 표(EditorAssetType.h) 대신 EditorAssetTypeID.h"},
         "GameFramework/Runtime/Online/Service/OnlineServiceClient.h": {"_limit": 18, "_reason": "프로토콜 항목은 참조로만 돌려준다 — OnlineProtocolRegistry.h(고정 배치 코덱 사슬) 대신 전방 선언"},
         "Engine/Graphics/Texture/TextureCache.h": {"_limit": 13, "_reason": "10 → 13(사용자 결정 2026-11-20): 밉 요청이 셀 로드와 같은 우선순위 형식(StreamingSourcePriority — 리플렉션 ENUM 이라 리플렉션 매크로 헤더 넷)을 든다. DevOnly.h · ReloadResult.h 는 빠졌다.AssetRefCache<Texture2D> 특수화는 기본 템플릿 선언만 있으면 된다 — AssetRef.h(공유 에셋 캐시 사슬)를 포함하지 않는다"},
-        "Engine/UI/UISystem.h": {"_limit": 47, "_reason": "화면은 unique_ptr · 참조로만 든다 — UIScreen.h 대신 UIScreenTypes.h(번호 · UIScreenDef) · ResourceTags.h · Widget.h(문서 열기 템플릿)"},
+        "Engine/UI/UISystem.h": {"_limit": 46, "_reason": "화면은 unique_ptr · 참조로만 든다 — UIScreen.h 대신 UIScreenTypes.h(번호 · UIScreenDef) · ResourceTags.h · Widget.h(문서 열기 템플릿)"},
         "GameFramework/Runtime/Foundation/Flow/GameInstance.h": {"_limit": 60, "_reason": "복제 채널은 가상 훅의 참조 인자로만 받는다 — NetMessageChannel.h(복제 배치 · 리플렉션 레지스트리 사슬) 대신 전방 선언"}
     }
 }

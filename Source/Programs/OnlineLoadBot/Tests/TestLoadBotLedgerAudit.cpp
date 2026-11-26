@@ -2,7 +2,7 @@
 // 저장소 앞의 커밋 · 충돌 수(Conflict 재시도율)가 일의 입구에서 세어지는지, 스냅샷 읽기 감사가 도중의 쓰기를 보지 않는지도 본다. 메모리 저장소(nogpu), `UnitTests.OnlineKits` 가 돌린다.
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Ledger/LedgerAuditReport.h"
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"

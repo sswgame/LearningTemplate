@@ -1,7 +1,7 @@
 // DisplayOutput — 화면 출력 장치 값을 능력에 맞춰 고른다: SDR 은 늘 받고, 받지 않는 HDR 요청은 로그 한 줄과 SDR(휘도 값은 그대로)(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Graphics/Display/DisplayOutput.h"
 

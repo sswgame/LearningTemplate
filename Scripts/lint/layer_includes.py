@@ -172,8 +172,8 @@ class LayerIncludesRule(LintRule):
         file_key = dict(map_source, **{"Low/b.h": '#include "Engine/Low/Up.h"\n'})
         assert len(check(engine, file_key)) == 1, "더 긴 파일 키가 층을 정한다"
 
-        core = LayerModule("Core", "Core", make_core_tier({"tier": {"Math": 1, "Testing": 10}}), frozenset())
-        core_source = {"Math/Tests/TestX.cpp": '#include "Core/Testing/T.h"\n', "Testing/T.h": "", "pch.h": "", "Math/m.h": '#include "Core/pch.h"\n'}
+        core = LayerModule("Core", "Core", make_core_tier({"tier": {"Math": 1, "TestFramework": 10}}), frozenset())
+        core_source = {"Math/Tests/TestX.cpp": '#include "Core/TestFramework/T.h"\n', "TestFramework/T.h": "", "pch.h": "", "Math/m.h": '#include "Core/pch.h"\n'}
         assert check(core, core_source) == [], "Core 테스트는 맨 위 부분, 바로 아래 헤더는 껍데기가 없다"
 
         editor = LayerModule("Editor", "Editor", make_editor_tier({"tier": {"Common": 0, "Common/Workspace": 2, "Panels": 6}}),

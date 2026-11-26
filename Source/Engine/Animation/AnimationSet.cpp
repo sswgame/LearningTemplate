@@ -10,6 +10,7 @@
 #include "Engine/Animation/AnimationClip.h"
 #include "Engine/Animation/Retarget/RetargetProfile.h"
 #include "Engine/Asset/AssetFormat.h"
+#include "Engine/Asset/Cache/SharedAssetCacheDefinition.h"
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Foundation/EngineSubsystems.h"
@@ -220,4 +221,9 @@ namespace sw
         return FileUtil::joinPath( FileUtil::joinPath( engine::getSubsystem<EngineConfig>()._retargetedClipFolder.get(), profileName ), FileUtil::getFileNamePart( sourceClipPath ) );
     }
 
+} // namespace sw
+
+namespace sw
+{
+    SW_SHARED_ASSET_CACHE( AnimationSet, AnimationSet, AnimationSet::kAssetType.withLoader( AssetTypeLoader::of<AnimationSet>( MemoryTag::Animation ) ) );
 } // namespace sw

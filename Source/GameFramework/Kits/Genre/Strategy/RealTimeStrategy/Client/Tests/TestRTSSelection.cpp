@@ -1,7 +1,7 @@
 // RTSSelectionTest — RTS 선택: 같은 종류 고르기, 겹친 유닛 · 상한을 넘는 상태 거절, 그리고 명령 입력 컴포넌트의 저장 계약(고른 유닛 · 부대는 이 컴포넌트의 구간이다). 키트 GF_Client_RealTimeStrategy(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"

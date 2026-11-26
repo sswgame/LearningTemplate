@@ -2,7 +2,7 @@
 // 점검 · 공지 · 라이브 이벤트 명령 넘기기와 완료 되받기, 첫 관리자 넣기, 종료 회수. 저장 규칙은 AdminStoreLogicTest 가 본다. 온라인 키트라 `UnitTests.OnlineKits` 가 돌린다(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "GameFramework/Kits/Feature/Online/Admin/Runtime/AdminProtocol.h"
 #include "GameFramework/Kits/Feature/Online/Admin/Server/AdminService.h"

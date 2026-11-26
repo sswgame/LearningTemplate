@@ -3,9 +3,9 @@
 #include "Core/Log/LogContext.h"
 #include "Core/Network/Message/NetRequest.h"
 #include "Core/Network/Message/StreamMessageEndpoint.h"
-#include "Core/Network/Transport/LoopbackStreamTransport.h"
+#include "Core/Network/Tests/LoopbackStreamTransport.h"
 #include "Core/Serialization/ByteStream.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 #include "Core/Time/Clock.h"
 
 #include "GameFramework/Runtime/Online/Bus/Server/LocalServerBus.h"

@@ -6,8 +6,8 @@
 #include "Core/Container/string.h"
 #include "Core/Foundation/LowLevelReporterSlot.h"
 #include "Core/Foundation/Macros.h"
-#include "Core/Testing/ScopedAssertCapture.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/ScopedAssertCapture.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include <cstdio>
 #include <cstring>

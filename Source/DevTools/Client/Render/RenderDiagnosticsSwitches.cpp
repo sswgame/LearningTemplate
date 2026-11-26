@@ -21,7 +21,7 @@ namespace sw
     {
         /**
          * @brief Debug 는 늘 죽은 번호를 검사하고, Release 는 성능 측정에 쓰는 빌드라 끈다(필요할 때 켠다). 선언을 하나로 두어 도구(launch-args)가 한 변수로 읽는다.
-         * @details 자동화 체인(ctest `Scenario.*`)은 구성과 무관하게 `-gv_validateBindlessIndex=DeadIndex` 로 켠다(Test/Scenario/CMakeLists.txt — 부하 측정은 빼고).
+         * @details 자동화 체인(ctest `Scenario.*`)은 구성과 무관하게 `-gv_validateBindlessIndex=DeadIndex` 로 켠다(IntegrationTests/Scenario/CMakeLists.txt — 부하 측정은 빼고).
          */
         constexpr BindlessIndexCheck kDefaultBindlessIndexCheck = build::kDebug ? BindlessIndexCheck::DeadIndex : BindlessIndexCheck::Off;
     } // namespace

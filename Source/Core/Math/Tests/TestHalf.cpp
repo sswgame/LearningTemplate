@@ -4,7 +4,7 @@
 #include "Core/Math/Half.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/XorShift32.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 namespace sw
 {

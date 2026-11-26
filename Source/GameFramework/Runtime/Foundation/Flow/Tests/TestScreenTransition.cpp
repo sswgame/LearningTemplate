@@ -1,7 +1,7 @@
 // ScreenTransitionTest — 화면 페이드와 전환 차례: 어둡기 곡선, 액션은 까만 화면에서 한 번, 액션 안의 새 전환, 초기화(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "GameFramework/Runtime/Foundation/Flow/ScreenTransitionManager.h"
 

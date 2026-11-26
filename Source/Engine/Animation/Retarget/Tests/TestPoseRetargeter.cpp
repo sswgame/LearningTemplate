@@ -2,7 +2,7 @@
 #include "pch.h"
 
 #include "Core/Math/MathUtil.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Animation/Retarget/PoseRetargeter.h"
 #include "Engine/Animation/Retarget/RetargetProfile.h"

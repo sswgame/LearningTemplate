@@ -1,7 +1,7 @@
 // CollisionResponseEditModelTest — 충돌 응답 격자 편집: 칸을 고치면 원문(주석 · 자산 줄 보존)에 기본과 다른 줄만 남고, 다시 읽은 표가 그 응답을 내며, 원문 단계로 되돌아간다.
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Editor/Panels/Physics/Model/CollisionResponseEditModel.h"
 

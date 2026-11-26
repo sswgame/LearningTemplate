@@ -1,7 +1,7 @@
 // InputMapChordTest — 같은 키의 맨 바인딩과 조합 바인딩이 함께 있을 때 지금 눌린 수정 키에 꼭 맞는 쪽만 발화한다(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Input/Devices/KeyboardDevice.h"
 #include "Engine/Input/InputManager.h"
