@@ -369,6 +369,17 @@ if(TARGET ReflectionParser)
 			"-DMAKE_PROGRAM=${CMAKE_MAKE_PROGRAM}"
 			-P "${CMAKE_CURRENT_SOURCE_DIR}/ReflectionParser/RunTargetArgsCheck.cmake")
 	set_tests_properties(ReflectionParser.TargetArgs PROPERTIES LABELS nogpu TIMEOUT 120)
+	# 리플렉션 단계의 구성 경로(자리 표시자 · .cpp 의 OBJECT_DEPENDS · 후보 검사 명령 · 응답 파일의 전이) — 작은 프로젝트를 같은 컴파일러로 구성해 본다(링크 없음).
+	add_test(NAME ReflectionParser.ReflectionStep
+		COMMAND ${CMAKE_COMMAND}
+			"-DSOURCE_ROOT=${CMAKE_SOURCE_DIR}"
+			"-DWORK_DIR=${CMAKE_BINARY_DIR}/Testing/ReflectionParser/ReflectionStep"
+			"-DGENERATED_CMAKE_VARS=${SW_GENERATED_CMAKE_VARS}"
+			"-DGENERATOR=${CMAKE_GENERATOR}"
+			"-DMAKE_PROGRAM=${CMAKE_MAKE_PROGRAM}"
+			"-DCXX_COMPILER=${CMAKE_CXX_COMPILER}"
+			-P "${CMAKE_CURRENT_SOURCE_DIR}/ReflectionParser/RunReflectionStepCheck.cmake")
+	set_tests_properties(ReflectionParser.ReflectionStep PROPERTIES LABELS nogpu TIMEOUT 180)
 	# 틀린 명령줄은 파서를 멈춘다 — 모르는 인자 · 필수 인자 빠짐. 입력을 읽기 전이라 사례 헤더가 필요 없다.
 	add_test(NAME ReflectionParser.RejectsUnknownArgument COMMAND $<TARGET_FILE:ReflectionParser> --no-such-argument)
 	add_test(NAME ReflectionParser.RejectsMissingOutput COMMAND $<TARGET_FILE:ReflectionParser> --input nothing.h)
