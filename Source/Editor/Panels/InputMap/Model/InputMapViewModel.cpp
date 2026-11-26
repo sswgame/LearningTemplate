@@ -20,7 +20,7 @@
 #include "Engine/Input/Devices/GamepadDevice.h"
 #include "Engine/Input/Devices/MouseDevice.h"
 #include "Engine/Input/InputManager.h"
-#include "Engine/Input/KeyCodeUtil.h"
+#include "Engine/Input/Key.h"
 #include "Engine/Input/Map/InputGlyphResolver.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Input/Map/InputMapBundle.h"
@@ -683,7 +683,7 @@ namespace sw::editor
     {
         const RawInputEvent event = bDown ? RawInputEvent::makeKeyDown( key ) : RawInputEvent::makeKeyUp( key );
         if ( getInputManager().postRawEvent( event ) == false )
-            SW_LOG_WARNING_ID( "InputMapViewModel.InjectQueueFull", "Input Map: the input queue is full - the injected key %# was dropped", KeyCodeUtil::toName( key ) );
+            SW_LOG_WARNING_ID( "InputMapViewModel.InjectQueueFull", "Input Map: the input queue is full - the injected key %# was dropped", getKeyName( key ) );
     }
 
     void InputMapViewModel::setVirtualStick( float2 stick )

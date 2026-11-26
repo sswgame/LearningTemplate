@@ -17,7 +17,7 @@
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
-#include "Engine/Input/KeyCodeUtil.h"
+#include "Engine/Input/Key.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Reflection/ReflectionCast.h"

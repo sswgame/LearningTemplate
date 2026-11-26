@@ -1,6 +1,6 @@
 /**
- * @file KeyCodeUtil.h
- * @brief 키보드와 마우스 바인드 ID 를 정의합니다. ENUM() 이 KeyCodeUtil.gen.cpp 에 등록합니다.
+ * @file Key.h
+ * @brief 키보드와 마우스 바인드 ID 를 정의합니다. ENUM() 이 Key.gen.cpp 에 등록합니다.
  */
 #pragma once
 #include "Core/Foundation/Types.h"
@@ -148,24 +148,15 @@ namespace sw
         Count
     };
 
-    /** @brief Key 이름 변환입니다. */
-    struct SW_API KeyCodeUtil
-    {
-        /** @brief 이름(열거자 철자 그대로)의 Key 입니다. 모르는 이름이거나 엔진 서비스가 없으면 `Key::Unknown` 입니다. */
-        static Key fromName( string_view name );
-        /** @brief Key 의 안정적인 이름을 반환합니다. 엔진 서비스가 바인딩되어 있지 않으면 "Unknown" 입니다. */
-        static const utf8* toName( Key key );
-    };
-} // namespace sw
+    // 열거형은 멤버를 가질 수 없어 이름 변환은 열거형 옆 자유 함수다(Godot keycode_get_string · find_keycode)
 
-namespace sw
-{
-    /** @brief MouseButton 이름 변환입니다. */
-    struct SW_API MouseButtonUtil
-    {
-        /** @brief 이름의 MouseButton 입니다. 모르는 이름이거나 엔진 서비스가 없으면 `MouseButton::Count` 입니다. */
-        static MouseButton fromName( string_view name );
-        /** @brief MouseButton 의 안정적인 이름을 반환합니다. */
-        static const utf8* toName( MouseButton button );
-    };
+    /** @brief Key 의 안정적인 이름을 반환합니다. 엔진 서비스가 바인딩되어 있지 않으면 "Unknown" 입니다. */
+    SW_API const utf8* getKeyName( Key key );
+    /** @brief 이름(열거자 철자 그대로)의 Key 입니다. 모르는 이름이거나 엔진 서비스가 없으면 `Key::Unknown` 입니다. */
+    SW_API Key findKeyByName( string_view name );
+
+    /** @brief MouseButton 의 안정적인 이름을 반환합니다. */
+    SW_API const utf8* getMouseButtonName( MouseButton button );
+    /** @brief 이름의 MouseButton 입니다. 모르는 이름이거나 엔진 서비스가 없으면 `MouseButton::Count` 입니다. */
+    SW_API MouseButton findMouseButtonByName( string_view name );
 } // namespace sw

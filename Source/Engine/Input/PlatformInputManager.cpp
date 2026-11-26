@@ -15,7 +15,7 @@
 #include "Engine/Input/Devices/MouseDevice.h"
 #include "Engine/Input/Devices/PlatformGamepadLayout.h"
 #include "Engine/Input/InputManager.h"
-#include "Engine/Input/KeyCodeUtil.h"
+#include "Engine/Input/Key.h"
 #include "Engine/Input/Map/InputKeyTable.h"
 #include "Engine/Input/RawInputEvent.h"
 #include "Engine/Window/GenericWindow.h"

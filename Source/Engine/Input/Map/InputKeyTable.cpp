@@ -284,11 +284,11 @@ namespace sw
         for ( const CodeName& entry : kArrCodeName )
         {
             if ( domCode == entry._pDomCode )
-                return KeyCodeUtil::fromName( entry._pKeyName );
+                return findKeyByName( entry._pKeyName );
         }
         constexpr string_view kLetterPrefix = "Key"; // "KeyA" → "A"
         if ( domCode.size() == kLetterPrefix.size() + 1 && domCode.substr( 0, kLetterPrefix.size() ) == kLetterPrefix )
-            return KeyCodeUtil::fromName( domCode.substr( kLetterPrefix.size() ) );
-        return KeyCodeUtil::fromName( domCode );
+            return findKeyByName( domCode.substr( kLetterPrefix.size() ) );
+        return findKeyByName( domCode );
     }
 } // namespace sw

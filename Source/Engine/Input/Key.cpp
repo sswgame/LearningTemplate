@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Input/KeyCodeUtil.h"
+#include "Engine/Input/Key.h"
 
 #include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Reflection/EnumName.h"
@@ -8,24 +8,24 @@
 
 namespace sw
 {
-    Key KeyCodeUtil::fromName( string_view name )
+    Key findKeyByName( string_view name )
     {
         return tryParseEnum<Key>( name ).value_or( Key::Unknown );
     }
 
-    const utf8* KeyCodeUtil::toName( Key key )
+    const utf8* getKeyName( Key key )
     {
         if ( engine::areEngineSubsystemsBound() )
             return engine::getSubsystem<TypeRegistry>().enumToString( key );
         return "Unknown";
     }
 
-    MouseButton MouseButtonUtil::fromName( string_view name )
+    MouseButton findMouseButtonByName( string_view name )
     {
         return tryParseEnum<MouseButton>( name ).value_or( MouseButton::Count );
     }
 
-    const utf8* MouseButtonUtil::toName( MouseButton button )
+    const utf8* getMouseButtonName( MouseButton button )
     {
         if ( engine::areEngineSubsystemsBound() )
             return engine::getSubsystem<TypeRegistry>().enumToString( button );

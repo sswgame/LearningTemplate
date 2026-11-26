@@ -3,7 +3,7 @@
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Foundation/StdHeaders.h"
 
-#include "Engine/Input/GamepadButtonUtil.h"
+#include "Engine/Input/GamepadButton.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Input/Map/InputMapParams.h"
 #include "Engine/Input/Map/InputMapXML.h"

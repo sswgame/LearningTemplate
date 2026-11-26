@@ -9,7 +9,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/String/Name/hashed_string.h"
 
-#include "Engine/Input/KeyCodeUtil.h"
+#include "Engine/Input/Key.h"
 
 namespace sw::editor
 {

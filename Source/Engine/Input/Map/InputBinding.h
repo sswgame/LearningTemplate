@@ -12,9 +12,9 @@
 #include "Core/Math/Math.h"
 #include "Core/String/Name/hashed_string.h"
 
-#include "Engine/Input/GamepadButtonUtil.h"
+#include "Engine/Input/GamepadButton.h"
 #include "Engine/Input/IInputDevice.h"
-#include "Engine/Input/KeyCodeUtil.h"
+#include "Engine/Input/Key.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
@@ -74,10 +74,10 @@ namespace sw
      * `Count` 와의 `static_assert` 가 빠진 줄을 컴파일 오류로 만듭니다.
      *
      * [왜 리플렉션을 쓰지 않는가]
-     * 같은 폴더의 `KeyCodeUtil` 과 `MouseButtonUtil` 은 리플렉션 레지스트리로 이름을 얻지만, 여기서는 쓰지 않습니다.
+     * `getKeyName` 과 `getMouseButtonName`(`Key.h`)은 리플렉션 레지스트리로 이름을 얻지만, 여기서는 쓰지 않습니다.
      * 첫째, XML 에 적히는 이름("single", "axis1d")은 파일 포맷이라 열거자 이름과 일부러 다릅니다.
      * 둘째, 레지스트리는 엔진 서비스가 바인딩되어 있어야 답합니다. 바인딩되지 않은 채 저장하면
-     * `KeyCodeUtil::toName` 이 "Unknown" 을 반환하듯 종류 이름도 "Unknown" 이 되어 저장이 조용히 망가집니다.
+     * `getKeyName` 이 "Unknown" 을 반환하듯 종류 이름도 "Unknown" 이 되어 저장이 조용히 망가집니다.
      * 저장 경로가 서비스 바인딩에 기대야 할 이유는 없고, 아홉 줄짜리 테이블이라 직접 두는 비용도 작습니다.
      */
     struct SW_API BindingKinds

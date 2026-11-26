@@ -10,7 +10,7 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/String/Name/hashed_string.h"
 
-#include "Engine/Input/KeyCodeUtil.h"
+#include "Engine/Input/Key.h"
 #include "Engine/UI/WidgetTree/WidgetTypes.h"
 
 namespace sw

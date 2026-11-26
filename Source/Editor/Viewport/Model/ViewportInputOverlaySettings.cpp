@@ -8,7 +8,7 @@
 #include "Editor/Viewport/ViewportInputOverlay.h"
 
 #include "Engine/Input/Devices/GamepadDevice.h"
-#include "Engine/Input/GamepadButtonUtil.h"
+#include "Engine/Input/GamepadButton.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputGlyphResolver.h"
 #include "Engine/Input/Map/InputMap.h"

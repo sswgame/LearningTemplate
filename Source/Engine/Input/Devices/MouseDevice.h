@@ -7,7 +7,7 @@
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Input/IInputDevice.h"
-#include "Engine/Input/KeyCodeUtil.h"
+#include "Engine/Input/Key.h"
 
 namespace sw
 {

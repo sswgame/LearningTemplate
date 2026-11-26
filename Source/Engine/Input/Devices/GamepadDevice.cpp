@@ -5,7 +5,7 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Input/Feedback/HapticEffect.h"
-#include "Engine/Input/GamepadButtonUtil.h"
+#include "Engine/Input/GamepadButton.h"
 
 namespace sw
 {
@@ -38,7 +38,7 @@ namespace sw
         };
     } // namespace
 
-    GamepadButton GamepadButtonUtil::fromName( string_view name )
+    GamepadButton findGamepadButtonByName( string_view name )
     {
         if ( name.empty() )
             return GamepadButton::Count;
@@ -50,7 +50,7 @@ namespace sw
         return GamepadButton::Count;
     }
 
-    const utf8* GamepadButtonUtil::toName( GamepadButton button )
+    const utf8* getGamepadButtonName( GamepadButton button )
     {
         for ( const GamepadDeviceInternal::GamepadNameEntry& entry : GamepadDeviceInternal::kArrGamepadNames )
         {

@@ -18,7 +18,7 @@
 
 #include "Engine/Input/DebugKeyActions.h"
 #include "Engine/Input/InputManager.h"
-#include "Engine/Input/KeyCodeUtil.h"
+#include "Engine/Input/Key.h"
 #include "Engine/Input/Map/InputRemapSerializer.h"
 
 namespace sw::editor
@@ -212,7 +212,7 @@ namespace sw::editor
                 outLabel += modifierText;
                 outLabel += "+";
             }
-            outLabel += KeyCodeUtil::toName( static_cast<Key>( pBinding->_arrSlot[0]._controlIndex ) );
+            outLabel += getKeyName( static_cast<Key>( pBinding->_arrSlot[0]._controlIndex ) );
         }
     }
 
