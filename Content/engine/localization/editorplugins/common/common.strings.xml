@@ -1,0 +1,11 @@
+<?asset guid="2b9596fe436c483384ed3ef0c8ee4bdb"?>
+<SourceStringTable culture="en">
+	<entries>
+		<entry key="EdPlugin.Connect" source="Connect" />
+		<entry key="EdPlugin.Name" source="Name" />
+		<entry key="EdPlugin.Reload" source="Reload" />
+		<entry key="EdPlugin.Remove" source="Remove" />
+		<entry key="EdPlugin.Save" source="Save" />
+		<entry key="EdPluginWidget.Kind" source="Kind" />
+	</entries>
+</SourceStringTable>

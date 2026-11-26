@@ -25,6 +25,13 @@
 #include "Engine/Foundation/EngineSubsystemHost.h"
 #include "Engine/Localization/LocalizationManager.h"
 
+namespace sw
+{
+    // 에디터 확장이 함께 쓰는 키(`EdPlugin.*` · `EdPluginWidget.*`)의 글(엔진 현지화 폴더의 `editorplugins/common/`) — 에디터 모듈이 올라온 동안 조회 사슬에 든다.
+    // 확장마다 같은 프로젝트를 등록하면 중복 등록이라, 확장들이 모두 기대는 에디터 모듈이 한 번 등록한다(언리얼 플러그인 현지화 타깃이 Editor 타깃에 기대는 자리). 배포 팩에 담지 않는다.
+    SW_LOCALIZATION_PROJECT( EditorPluginCommonText, "engine/localization/editorplugins/common/common.locproject.xml" );
+} // namespace sw
+
 namespace sw::editor
 {
     void EditorContext::setActive( EditorContext* pContext )

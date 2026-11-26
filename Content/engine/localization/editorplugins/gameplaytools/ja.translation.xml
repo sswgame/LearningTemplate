@@ -80,7 +80,6 @@
 		<entry key="EdPlugin.AutoLayout" text="自動レイアウト" sourceHash="4f4251e697a0d1dc" />
 		<entry key="EdPlugin.ClearTarget" text="ターゲットを解除" sourceHash="d18a85c948654d57" />
 		<entry key="EdPlugin.ClickANodeToEditIt" text="ノードをクリックして編集" sourceHash="3300dd9449098b38" />
-		<entry key="EdPlugin.Connect" text="接続" sourceHash="7a4f059aaa029719" />
 		<entry key="EdPlugin.Delete" text="削除" sourceHash="dc673e73b5c13aea" />
 		<entry key="EdPlugin.DeleteNode" text="ノードを削除" sourceHash="d9bdfc0f95188eea" />
 		<entry key="EdPlugin.Down" text="下" sourceHash="032c13736048bf35" />

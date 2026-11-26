@@ -281,11 +281,6 @@
 				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EdPlugin.Connect" source="Connect">
-			<origins>
-				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp</item>
-			</origins>
-		</entry>
 		<entry key="EdPlugin.Delete" source="Delete">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp</item>

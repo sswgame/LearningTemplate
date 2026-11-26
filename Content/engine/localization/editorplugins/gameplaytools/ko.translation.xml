@@ -82,7 +82,6 @@
 		<entry key="EdPlugin.AutoLayout" text="자동 배치" sourceHash="4f4251e697a0d1dc" />
 		<entry key="EdPlugin.ClearTarget" text="대상 지우기" sourceHash="d18a85c948654d57" />
 		<entry key="EdPlugin.ClickANodeToEditIt" text="노드를 누르면 편집합니다" sourceHash="3300dd9449098b38" />
-		<entry key="EdPlugin.Connect" text="연결" sourceHash="7a4f059aaa029719" />
 		<entry key="EdPlugin.Delete" text="삭제" sourceHash="dc673e73b5c13aea" />
 		<entry key="EdPlugin.DeleteNode" text="노드 삭제" sourceHash="d9bdfc0f95188eea" />
 		<entry key="EdPlugin.Down" text="아래" sourceHash="032c13736048bf35" />

@@ -1,32 +1,6 @@
 <?asset guid="af866f948ac946a688822358c517ba34"?>
 <SourceStringTable culture="en">
 	<entries>
-		<entry key="EdPlugin.Name" source="Name">
-			<origins>
-				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp</item>
-				<item>Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdPlugin.Reload" source="Reload">
-			<origins>
-				<item>Source/GameFramework/Plugin/Editor/CameraPresets/CameraPresetPanel.cpp</item>
-				<item>Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdPlugin.Remove" source="Remove">
-			<origins>
-				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
-				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/PairedAnimationPanel.cpp</item>
-				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp</item>
-				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdPlugin.Save" source="Save">
-			<origins>
-				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
-				<item>Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp</item>
-			</origins>
-		</entry>
 		<entry key="Enum.InventoryCommandResult.EmptySlot" source="The slot is empty.">
 			<origins>
 				<item>Source/GameFramework/Runtime/Gameplay/Inventory/InventoryCommand.h</item>
