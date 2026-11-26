@@ -875,7 +875,6 @@
     "Source/GameFramework/Runtime/Gameplay/Dialogue/DialogueRunnerComponent.h": {"minus-one": 1},
     "Source/GameFramework/Runtime/Gameplay/GameState/GameStateComponent.cpp": {"float": 1},
     "Source/GameFramework/Runtime/Gameplay/Gimmick/Circuit/GimmickCircuit.cpp": {"integer": 1},
-    "Source/GameFramework/Runtime/Gameplay/Gimmick/Circuit/GimmickCircuitComponent.cpp": {"integer": 1},
     "Source/GameFramework/Runtime/Gameplay/Gimmick/Circuit/GimmickNodeRegistry.cpp": {"float": 2},
     "Source/GameFramework/Runtime/Gameplay/Gimmick/Combat/ExplosiveBarrelComponent.cpp": {"minus-one": 1},
     "Source/GameFramework/Runtime/Gameplay/Gimmick/Combat/TurretComponent.cpp": {"float": 2},
