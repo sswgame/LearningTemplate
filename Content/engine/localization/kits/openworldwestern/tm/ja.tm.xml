@@ -1,0 +1,15 @@
+<?asset guid="a88535a837f7461a97619e0423622321"?>
+<TranslationMemory culture="ja">
+	<entries>
+		<entry source="${amount}" text="${amount}" />
+		<entry source="Bounty ${amount}" text="懸賞金 ${amount}" />
+		<entry source="Carcasses {count}" text="獲物 {count}" />
+		<entry source="Honor {honor} ({tier})" text="名誉 {honor}({tier})" />
+		<entry source="Hungry" text="空腹" />
+		<entry source="On foot - E: mount  F: whistle" text="徒歩 - E: 騎乗  F: 口笛" />
+		<entry source="Pelts {count}" text="毛皮 {count}" />
+		<entry source="Riding {horse} - {gait} {speed} m/s - E: dismount  Shift: gallop"
+		       text="{horse}に騎乗 - {gait} {speed} m/s - E: 降りる  Shift: ギャロップ" />
+		<entry source="Wanted {level}" text="手配 {level}" />
+	</entries>
+</TranslationMemory>

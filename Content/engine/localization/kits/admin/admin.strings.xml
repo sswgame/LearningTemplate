@@ -1,0 +1,257 @@
+<?asset guid="79c50b69982346079ee15bada22f3aa1"?>
+<SourceStringTable culture="en">
+	<entries>
+		<entry key="EdPlugin.ApplySanction" source="Apply sanction">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.ClosedReports" source="Closed reports">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.Disconnect" source="Disconnect">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.Dismiss" source="Dismiss">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.Edit" source="Edit">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.EndMaintenance" source="End maintenance">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.Grant" source="Grant">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.LiftSanction" source="Lift sanction">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.ListAudit" source="List audit">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.ListLiveEvents" source="List live events">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.LookUpAnAccountToSeeItsBalances" source="Look up an account to see its balances and sanctions">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.Lookup" source="Lookup">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.NoLoginHandlerIsBoundGMCommandsAre"
+		       source="No login handler is bound: GM commands are refused as not logged in">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.OpenReports" source="Open reports">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.PostAnnouncement" source="Post notice">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.PutLiveEvent" source="Put live event">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.RefundRevokeMayLeaveADebt" source="Refund revoke (may leave a debt)">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.RemoveAnnouncement" source="Remove notice">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.RemoveLiveEvent" source="Remove live event">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.Resolve" source="Resolve">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.Revoke" source="Revoke">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.StartMaintenance" source="Start maintenance">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginField.Amount" source="Amount">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginField.AnnouncementId" source="Notice id">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginField.AnnouncementSeconds0UntilRemoved" source="Notice seconds (0 = until removed)">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginField.GMPassword" source="GM password">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginField.MaintenanceSeconds0UntilCleared" source="Maintenance seconds (0 = until cleared)">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginField.Priority" source="Priority">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginField.Seconds" source="Seconds">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginFormat.GMConnection" source="GM connection: {stateText}">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginFormat.Id"
+		       source="{displayName}  (id {accountID})  {presence, select, online {online} other {offline}}">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginFormat.Provider" source="Provider: {providerName}">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginWidget.Account" source="Account">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginWidget.AccountIdHex" source="Account id (hex)">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginWidget.ActingRole" source="Acting role">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginWidget.AnnouncementText" source="Notice text">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginWidget.AssetId" source="Asset id">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginWidget.AuditLog" source="Audit log">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginWidget.EventId" source="Event id">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginWidget.EventJson" source="Event JSON">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginWidget.GrantRevoke" source="Grant / Revoke">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginWidget.LiveEvents" source="Live events">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginWidget.MaintenanceAnnouncement" source="Maintenance / Notice">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginWidget.MemoTicket" source="Memo (ticket)">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginWidget.MessageKey" source="Message key">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginWidget.ReasonCode" source="Reason code">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginWidget.Reports" source="Reports">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginWidget.Sanction" source="Sanction">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginWidget.ScopeAllOrServerKind" source="Scope (all or server kind)">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginWidget.SubjectPrefix" source="Subject prefix">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
+			</origins>
+		</entry>
+	</entries>
+</SourceStringTable>

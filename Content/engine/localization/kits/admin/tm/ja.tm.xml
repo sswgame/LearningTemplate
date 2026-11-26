@@ -1,0 +1,58 @@
+<?asset guid="7bf6526219b24efaa06fa366ba2aa876"?>
+<TranslationMemory culture="ja">
+	<entries>
+		<entry source="Account" text="アカウント" />
+		<entry source="Account id (hex)" text="アカウント id(16進数)" />
+		<entry source="Acting role" text="担当ロール" />
+		<entry source="Amount" text="量" />
+		<entry source="Apply sanction" text="制裁を適用" />
+		<entry source="Asset id" text="アセット id" />
+		<entry source="Audit log" text="監査ログ" />
+		<entry source="Closed reports" text="閉じた通報" />
+		<entry source="Disconnect" text="切断" />
+		<entry source="Dismiss" text="閉じる" />
+		<entry source="Edit" text="編集" />
+		<entry source="End maintenance" text="メンテナンス終了" />
+		<entry source="Event JSON" text="イベント JSON" />
+		<entry source="Event id" text="イベント id" />
+		<entry source="GM connection: {stateText}" text="GM 接続: {stateText}" />
+		<entry source="GM password" text="GM パスワード" />
+		<entry source="Grant" text="付与" />
+		<entry source="Grant / Revoke" text="付与 / 取り消し" />
+		<entry source="Lift sanction" text="制裁を解除" />
+		<entry source="List audit" text="監査ログ一覧" />
+		<entry source="List live events" text="ライブイベント一覧" />
+		<entry source="Live events" text="ライブイベント" />
+		<entry source="Look up an account to see its balances and sanctions"
+		       text="アカウントを検索すると残高と制裁が見えます" />
+		<entry source="Lookup" text="検索" />
+		<entry source="Maintenance / Notice" text="メンテナンス / お知らせ" />
+		<entry source="Maintenance seconds (0 = until cleared)" text="メンテナンス秒(0 = 解除まで)" />
+		<entry source="Memo (ticket)" text="メモ(チケット)" />
+		<entry source="Message key" text="メッセージキー" />
+		<entry source="No login handler is bound: GM commands are refused as not logged in"
+		       text="ログインハンドラがありません: GM コマンドは未ログインとして拒否されます" />
+		<entry source="Notice id" text="お知らせ id" />
+		<entry source="Notice seconds (0 = until removed)" text="お知らせ秒(0 = 削除まで)" />
+		<entry source="Notice text" text="お知らせ本文" />
+		<entry source="Open reports" text="未処理の通報" />
+		<entry source="Post notice" text="お知らせを掲示" />
+		<entry source="Priority" text="優先度" />
+		<entry source="Provider: {providerName}" text="プロバイダー: {providerName}" />
+		<entry source="Put live event" text="ライブイベントを登録" />
+		<entry source="Reason code" text="理由コード" />
+		<entry source="Refund revoke (may leave a debt)" text="返金回収(負債が残る場合がある)" />
+		<entry source="Remove live event" text="ライブイベントを削除" />
+		<entry source="Remove notice" text="お知らせを削除" />
+		<entry source="Reports" text="通報" />
+		<entry source="Resolve" text="処理" />
+		<entry source="Revoke" text="回収" />
+		<entry source="Sanction" text="制裁" />
+		<entry source="Scope (all or server kind)" text="範囲(all またはサーバー種別)" />
+		<entry source="Seconds" text="秒" />
+		<entry source="Start maintenance" text="メンテナンス開始" />
+		<entry source="Subject prefix" text="サブジェクト接頭辞" />
+		<entry source="{displayName}  (id {accountID})  {presence, select, online {online} other {offline}}"
+		       text="{displayName}  (id {accountID})  {presence, select, online {オンライン} other {オフライン}}" />
+	</entries>
+</TranslationMemory>

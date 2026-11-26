@@ -1,0 +1,17 @@
+<?asset guid="a4bc8abbc7b6482ab5e822c7b34ac3b4"?>
+<TranslationTable culture="ja">
+	<entries>
+		<entry key="EdPlugin.NoInProcessGameIsRegisteredNetSimGameRegistryOnly"
+		       text="インプロセスゲームが登録されていません(NetSimGameRegistry) — キットセッション(INetSimSession)のあるゲームだけがここで動きます。"
+		       sourceHash="89f0528658a0433b" />
+		<entry key="EdPlugin.StartInProcess" text="インプロセスで開始" sourceHash="a2fef448b6708fdf" />
+		<entry key="EdPlugin.Stop" text="停止" sourceHash="d9ad53251f2330a5" />
+		<entry key="EdPluginField.Clients" text="クライアント" sourceHash="8faea6e4533e9757" />
+		<entry key="EdPluginFormat.Client" text="{focused}クライアント {worldIndex}" sourceHash="9c2c41007f64608b" />
+		<entry key="EdPluginFormat.Server" text="{focused}サーバー" sourceHash="2ab8e57482d849f1" />
+		<entry key="EdPluginFormat.TickInputFocusWorld"
+		       text="ティック {tick}  入力フォーカス: ワールド {inputFocus}"
+		       sourceHash="73e089f72ca0df8f" />
+		<entry key="EdPluginWidget.Game" text="ゲーム" sourceHash="b568a67e05a19907" />
+	</entries>
+</TranslationTable>

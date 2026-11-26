@@ -1,0 +1,20 @@
+<?asset guid="a02a592820d349fe8e5a6bf26e3e7927"?>
+<TranslationMemory culture="ja">
+	<entries>
+		<entry source="#{account}  {presence}" text="#{account}  {presence}" />
+		<entry source="#{account}  {presence}  {activity}" text="#{account}  {presence}  {activity}" />
+		<entry source="Could not load the friend list (error {error})"
+		       text="フレンド一覧を読み込めませんでした(エラー {error})" />
+		<entry source="Friends" text="フレンド" />
+		<entry source="Loading friends..." text="フレンドを読み込み中..." />
+		<entry source="No friends yet" text="フレンドはまだいません" />
+		<entry source="Press Refresh to list friends" text="更新を押すとフレンド一覧を表示します" />
+		<entry source="away" text="離席中" />
+		<entry source="busy" text="取り込み中" />
+		<entry source="in game" text="ゲーム中" />
+		<entry source="offline" text="オフライン" />
+		<entry source="online" text="オンライン" />
+		<entry source="{title}  ({count, plural, one {# pending request} other {# pending requests}})"
+		       text="{title}  (保留中の申請 {count}件)" />
+	</entries>
+</TranslationMemory>

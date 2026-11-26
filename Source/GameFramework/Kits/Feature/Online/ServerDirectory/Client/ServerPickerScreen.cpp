@@ -7,11 +7,18 @@
 #include "Core/String/StringBuilder.h"
 
 #include "Engine/Localization/LocText.h"
+#include "Engine/Localization/LocalizationManager.h"
 #include "Engine/UI/UISystem.h"
 #include "Engine/UI/WidgetTree/WidgetTree.h"
 #include "Engine/UI/Widgets/ButtonWidget.h"
 #include "Engine/UI/Widgets/ListViewWidget.h"
 #include "Engine/UI/Widgets/TextWidget.h"
+
+namespace sw
+{
+    // ServerDirectory 키트의 글(엔진 현지화 폴더의 `kits/serverdirectory/`) — 이 모듈이 올라온 동안 조회 사슬에 든다(언리얼 플러그인 현지화 타깃)
+    SW_LOCALIZATION_PROJECT( ServerDirectoryKit, "engine/localization/kits/serverdirectory/serverdirectory.locproject.xml" );
+} // namespace sw
 
 namespace sw
 {

@@ -8,6 +8,7 @@
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Automation/Watch/AutomationWatchComponent.h"
 #include "Engine/Localization/LocText.h"
+#include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -21,6 +22,12 @@
 #include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 #include "GameFramework/Runtime/Gameplay/Vehicle/MountMovementComponent.h"
 #include "GameFramework/Runtime/Gameplay/Vehicle/VehicleSeatComponent.h"
+
+namespace sw
+{
+    // OpenWorldWestern 키트의 글(엔진 현지화 폴더의 `kits/openworldwestern/`) — 이 모듈이 올라온 동안 조회 사슬에 든다(언리얼 플러그인 현지화 타깃)
+    SW_LOCALIZATION_PROJECT( OpenWorldWesternKit, "engine/localization/kits/openworldwestern/openworldwestern.locproject.xml" );
+} // namespace sw
 
 namespace sw
 {

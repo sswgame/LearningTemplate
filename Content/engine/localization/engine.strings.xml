@@ -24,31 +24,6 @@
 				<item>engine/ui/quantity.ui.xml</item>
 			</origins>
 		</entry>
-		<entry key="Chat.InvalidMessage" source="Message is empty or not valid">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp</item>
-			</origins>
-		</entry>
-		<entry key="Chat.SignIn" source="Sign in to chat">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp</item>
-			</origins>
-		</entry>
-		<entry key="Chat.TooFast" source="Too fast, try again soon">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp</item>
-			</origins>
-		</entry>
-		<entry key="Chat.Unavailable" source="Chat is not available right now">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp</item>
-			</origins>
-		</entry>
-		<entry key="Chat.UpdateGame" source="Update the game to chat">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp</item>
-			</origins>
-		</entry>
 		<entry key="Close" source="Close" context="TextWidget._text">
 			<origins>
 				<item>engine/ui/options.ui.xml</item>
@@ -617,11 +592,6 @@
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EdPlugin.ApplySanction" source="Apply sanction">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
-			</origins>
-		</entry>
 		<entry key="EdPlugin.AutoLayout" source="Auto layout">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp</item>
@@ -723,11 +693,6 @@
 				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EdPlugin.ClosedReports" source="Closed reports">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
-			</origins>
-		</entry>
 		<entry key="EdPlugin.ColumnAlias" source="Alias">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
@@ -755,7 +720,6 @@
 		</entry>
 		<entry key="EdPlugin.Connect" source="Connect">
 			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
 				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp</item>
 			</origins>
 		</entry>
@@ -784,16 +748,6 @@
 				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EdPlugin.Disconnect" source="Disconnect">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdPlugin.Dismiss" source="Dismiss">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
-			</origins>
-		</entry>
 		<entry key="EdPlugin.Down" source="Down">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp</item>
@@ -812,16 +766,6 @@
 		<entry key="EdPlugin.DyeSectionsEmpty" source="No mesh sections. List sections with aliases in the item visual.">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdPlugin.Edit" source="Edit">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdPlugin.EndMaintenance" source="End maintenance">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdPlugin.ExportDataPreset" source="Export data preset">
@@ -862,11 +806,6 @@
 		<entry key="EdPlugin.FootLift" source="Foot lift (m)">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdPlugin.Grant" source="Grant">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdPlugin.HighlightDrive" source="Highlight drive">
@@ -944,21 +883,6 @@
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EdPlugin.LiftSanction" source="Lift sanction">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdPlugin.ListAudit" source="List audit">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdPlugin.ListLiveEvents" source="List live events">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
-			</origins>
-		</entry>
 		<entry key="EdPlugin.Load" source="Load">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
@@ -1006,16 +930,6 @@
 		       source="Load the items file and the appearance folder to pick items and see rule explanations.">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdPlugin.LookUpAnAccountToSeeItsBalances" source="Look up an account to see its balances and sanctions">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdPlugin.Lookup" source="Lookup">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdPlugin.MapSameNames" source="Map same names">
@@ -1067,18 +981,6 @@
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EdPlugin.NoInProcessGameIsRegisteredNetSimGameRegistryOnly"
-		       source="No in-process game is registered (NetSimGameRegistry) - only games with a kit session (INetSimSession) can run here.">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Network/NetSimulation/Editor/MultiplayerInProcessTab.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdPlugin.NoLoginHandlerIsBoundGMCommandsAre"
-		       source="No login handler is bound: GM commands are refused as not logged in">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
-			</origins>
-		</entry>
 		<entry key="EdPlugin.NoPenetration" source="No penetration.">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
@@ -1110,11 +1012,6 @@
 		       source="Open a .retarget.xml, or type a new path and press New, to pair the chains of two skeletons and check how they bind.">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdPlugin.OpenReports" source="Open reports">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdPlugin.OrthographicPresetThePreviewDrawsItInPerspective"
@@ -1149,11 +1046,6 @@
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EdPlugin.PostAnnouncement" source="Post notice">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
-			</origins>
-		</entry>
 		<entry key="EdPlugin.PresetsUserData" source="Presets (user data)">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
@@ -1179,11 +1071,6 @@
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EdPlugin.PutLiveEvent" source="Put live event">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
-			</origins>
-		</entry>
 		<entry key="EdPlugin.Redo" source="Redo">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
@@ -1198,11 +1085,6 @@
 		<entry key="EdPlugin.RedoPose" source="Redo pose">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdPlugin.RefundRevokeMayLeaveADebt" source="Refund revoke (may leave a debt)">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdPlugin.Reload" source="Reload">
@@ -1224,19 +1106,9 @@
 				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EdPlugin.RemoveAnnouncement" source="Remove notice">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
-			</origins>
-		</entry>
 		<entry key="EdPlugin.RemoveBrokenWires" source="Remove broken wires">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdPlugin.RemoveLiveEvent" source="Remove live event">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdPlugin.RemoveSkinLayer" source="Remove">
@@ -1252,16 +1124,6 @@
 		<entry key="EdPlugin.ResetBone" source="Reset bone">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdPlugin.Resolve" source="Resolve">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdPlugin.Revoke" source="Revoke">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdPlugin.Roles" source="Roles">
@@ -1360,21 +1222,6 @@
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EdPlugin.StartInProcess" source="Start in process">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Network/NetSimulation/Editor/MultiplayerInProcessTab.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdPlugin.StartMaintenance" source="Start maintenance">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdPlugin.Stop" source="Stop">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Network/NetSimulation/Editor/MultiplayerInProcessTab.cpp</item>
-			</origins>
-		</entry>
 		<entry key="EdPlugin.TargetObject" source="Target object">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp</item>
@@ -1438,29 +1285,9 @@
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EdPluginButton.Reload" source="Reload">
-			<origins>
-				<item>Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdPluginField.Amount" source="Amount">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
-			</origins>
-		</entry>
 		<entry key="EdPluginField.Anchor" source="Anchor">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdPluginField.AnnouncementId" source="Notice id">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdPluginField.AnnouncementSeconds0UntilRemoved" source="Notice seconds (0 = until removed)">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdPluginField.BasePreset" source="Base preset">
@@ -1493,11 +1320,6 @@
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EdPluginField.Clients" source="Clients">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Network/NetSimulation/Editor/MultiplayerInProcessTab.cpp</item>
-			</origins>
-		</entry>
 		<entry key="EdPluginField.DurationS" source="Duration (s)">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/PairedAnimationPanel.cpp</item>
@@ -1513,19 +1335,9 @@
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EdPluginField.GMPassword" source="GM password">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
-			</origins>
-		</entry>
 		<entry key="EdPluginField.HeightRatio0Pelvis" source="Height ratio (0 = pelvis)">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdPluginField.MaintenanceSeconds0UntilCleared" source="Maintenance seconds (0 = until cleared)">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdPluginField.OffsetM" source="Offset (m)">
@@ -1543,11 +1355,6 @@
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EdPluginField.Priority" source="Priority">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
-			</origins>
-		</entry>
 		<entry key="EdPluginField.Rotation" source="Rotation">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
@@ -1556,11 +1363,6 @@
 		<entry key="EdPluginField.Scale" source="Scale">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdPluginField.Seconds" source="Seconds">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdPluginField.SourceBones" source="Source bones">
@@ -1616,11 +1418,6 @@
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EdPluginFormat.Client" source="{focused}Client {worldIndex}">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Network/NetSimulation/Editor/MultiplayerInProcessTab.cpp</item>
-			</origins>
-		</entry>
 		<entry key="EdPluginFormat.ClipS"
 		       source="{role, select, anchor {anchor} required {required} other {optional}}  clip {clip}  {stage} {clipSeconds} s{clipLength, select, unknown {  (clip length unknown - pick a prefab)} other {}}">
 			<origins>
@@ -1636,17 +1433,6 @@
 		<entry key="EdPluginFormat.Dropped" source="Dropped: {dropped}">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdPluginFormat.GMConnection" source="GM connection: {stateText}">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdPluginFormat.Id"
-		       source="{displayName}  (id {accountID})  {presence, select, online {online} other {offline}}">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdPluginFormat.Live" source="Live: {liveRunnerName}">
@@ -1693,16 +1479,6 @@
 				<item>Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EdPluginFormat.Provider" source="Provider: {providerName}">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdPluginFormat.Server" source="{focused}Server">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Network/NetSimulation/Editor/MultiplayerInProcessTab.cpp</item>
-			</origins>
-		</entry>
 		<entry key="EdPluginFormat.Slot" source="Slot {slot}: {requestedItem} -> {fallbackItem} ({reason})">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
@@ -1725,87 +1501,10 @@
 				<item>Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EdPluginFormat.TickInputFocusWorld" source="tick {tick}  input focus: world {inputFocus}">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Network/NetSimulation/Editor/MultiplayerInProcessTab.cpp</item>
-			</origins>
-		</entry>
 		<entry key="EdPluginFormat.WearingOnBasePreset"
 		       source="Wearing {wearing, select, none {no slot items} other {the selection}} on base preset ''{basePresetID}'' (assembled {appearance} times)">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdPluginParkLayout.ColumnCapacity" source="Capacity">
-			<origins>
-				<item>Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdPluginParkLayout.ColumnCheck" source="Check">
-			<origins>
-				<item>Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdPluginParkLayout.ColumnCost" source="Cost">
-			<origins>
-				<item>Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdPluginParkLayout.ColumnPrice" source="Ticket">
-			<origins>
-				<item>Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdPluginParkLayout.ColumnRide" source="Ride">
-			<origins>
-				<item>Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdPluginParkLayout.ColumnTime" source="Time (s)">
-			<origins>
-				<item>Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdPluginParkLayout.FocusGate" source="Focus gate">
-			<origins>
-				<item>Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdPluginParkLayout.FocusGateTip" source="Move the scene view camera to the park gate">
-			<origins>
-				<item>Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdPluginParkLayout.IssueDuplicateID" source="Same id as {name}">
-			<origins>
-				<item>Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdPluginParkLayout.IssueEntrance" source="Entrance is inside the footprint">
-			<origins>
-				<item>Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdPluginParkLayout.IssueOverlap" source="Overlaps {name}">
-			<origins>
-				<item>Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdPluginParkLayout.NoLayoutHint" source="This game has no park layout data ({path})">
-			<origins>
-				<item>Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdPluginParkLayout.ReadFailedHint"
-		       source="The park layout could not be read ({path}). Fix the file (see the log) and press Reload.">
-			<origins>
-				<item>Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdPluginParkLayout.Summary"
-		       source="Total cost {cost}  ·  starting cash {cash}  ·  entry fee {fee}  ·  layout issues {issues}">
-			<origins>
-				<item>Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdPluginTip.AnchorRelativeRootPositionAndYawAt"
@@ -1868,17 +1567,6 @@
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EdPluginVisualizer.HousingPlotLabel" source="Plots">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/World/Housing/Editor/HousingPlotVisualizer.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdPluginVisualizer.HousingPlotTip"
-		       source="Bounds and cells of every housing plot in the scene, with its id and size">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/World/Housing/Editor/HousingPlotVisualizer.cpp</item>
-			</origins>
-		</entry>
 		<entry key="EdPluginVisualizer.MeshModifiersLabel" source="Modifiers">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersVisualizer.cpp</item>
@@ -1901,17 +1589,6 @@
 				<item>Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersVisualizer.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EdPluginVisualizer.ParkLayoutLabel" source="Park">
-			<origins>
-				<item>Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutVisualizer.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdPluginVisualizer.ParkLayoutTip"
-		       source="Ride footprints, entrances and coaster tracks of the ThemePark layout file (rides.xml)">
-			<origins>
-				<item>Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutVisualizer.cpp</item>
-			</origins>
-		</entry>
 		<entry key="EdPluginVisualizer.SplinesLabel" source="Splines">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/GameplayTools/World/SplineVisualizer.cpp</item>
@@ -1921,36 +1598,6 @@
 		       source="Curve of every spline in the scene - drag the control point handles of the selected one (Shapes)">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/GameplayTools/World/SplineVisualizer.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdPluginWidget.Account" source="Account">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdPluginWidget.AccountIdHex" source="Account id (hex)">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdPluginWidget.ActingRole" source="Acting role">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdPluginWidget.AnnouncementText" source="Notice text">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdPluginWidget.AssetId" source="Asset id">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdPluginWidget.AuditLog" source="Audit log">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdPluginWidget.BasePreset" source="Base preset">
@@ -1978,60 +1625,19 @@
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EdPluginWidget.EventId" source="Event id">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdPluginWidget.EventJson" source="Event JSON">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
-			</origins>
-		</entry>
 		<entry key="EdPluginWidget.From" source="From">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EdPluginWidget.Game" source="Game">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Network/NetSimulation/Editor/MultiplayerInProcessTab.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdPluginWidget.GrantRevoke" source="Grant / Revoke">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
-			</origins>
-		</entry>
 		<entry key="EdPluginWidget.Kind" source="Kind">
 			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdPluginWidget.LiveEvents" source="Live events">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdPluginWidget.Loop" source="Loop">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdPluginWidget.MaintenanceAnnouncement" source="Maintenance / Notice">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdPluginWidget.MemoTicket" source="Memo (ticket)">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdPluginWidget.MessageKey" source="Message key">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdPluginWidget.Options" source="Options">
@@ -2054,16 +1660,6 @@
 				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EdPluginWidget.ReasonCode" source="Reason code">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdPluginWidget.Reports" source="Reports">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
-			</origins>
-		</entry>
 		<entry key="EdPluginWidget.RetargetPose" source="Retarget pose">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp</item>
@@ -2074,16 +1670,6 @@
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EdPluginWidget.Sanction" source="Sanction">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdPluginWidget.ScopeAllOrServerKind" source="Scope (all or server kind)">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
-			</origins>
-		</entry>
 		<entry key="EdPluginWidget.Skeletons" source="Skeletons">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp</item>
@@ -2092,11 +1678,6 @@
 		<entry key="EdPluginWidget.Stop" source="Stop">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdPluginWidget.SubjectPrefix" source="Subject prefix">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdPluginWidget.To" source="To">
@@ -2253,51 +1834,6 @@
 		<entry key="Enum.AbilityEntryKind.Presentation" source="Cue presentations">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Ability/Model/AbilityCatalogEditModel.h</item>
-			</origins>
-		</entry>
-		<entry key="Enum.ChatResult.Muted" source="You are muted ({seconds} s left)">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Chat/Runtime/ChatTypes.h</item>
-			</origins>
-		</entry>
-		<entry key="Enum.ChatResult.NotFound" source="Message not found">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Chat/Runtime/ChatTypes.h</item>
-			</origins>
-		</entry>
-		<entry key="Enum.ChatResult.NotJoinable" source="This channel cannot be joined">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Chat/Runtime/ChatTypes.h</item>
-			</origins>
-		</entry>
-		<entry key="Enum.ChatResult.NotMember" source="You have not joined this channel">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Chat/Runtime/ChatTypes.h</item>
-			</origins>
-		</entry>
-		<entry key="Enum.ChatResult.RateLimited" source="Too fast, wait {milliseconds} ms">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Chat/Runtime/ChatTypes.h</item>
-			</origins>
-		</entry>
-		<entry key="Enum.ChatResult.Rejected" source="Message was blocked by the word filter">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Chat/Runtime/ChatTypes.h</item>
-			</origins>
-		</entry>
-		<entry key="Enum.ChatResult.Repeated" source="You already said that">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Chat/Runtime/ChatTypes.h</item>
-			</origins>
-		</entry>
-		<entry key="Enum.ChatResult.TargetOffline" source="That player is offline">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Chat/Runtime/ChatTypes.h</item>
-			</origins>
-		</entry>
-		<entry key="Enum.ChatResult.TooManyChannels" source="Too many channels">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Chat/Runtime/ChatTypes.h</item>
 			</origins>
 		</entry>
 		<entry key="Enum.CollisionResponse.Block" source="Block">
@@ -2760,31 +2296,6 @@
 				<item>Source/GameFramework/Runtime/Gameplay/Inventory/ShopPurchase.h</item>
 			</origins>
 		</entry>
-		<entry key="Enum.SocialPresenceStatus.Away" source="away">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Social/Runtime/SocialTypes.h</item>
-			</origins>
-		</entry>
-		<entry key="Enum.SocialPresenceStatus.Busy" source="busy">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Social/Runtime/SocialTypes.h</item>
-			</origins>
-		</entry>
-		<entry key="Enum.SocialPresenceStatus.InGame" source="in game">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Social/Runtime/SocialTypes.h</item>
-			</origins>
-		</entry>
-		<entry key="Enum.SocialPresenceStatus.Offline" source="offline">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Social/Runtime/SocialTypes.h</item>
-			</origins>
-		</entry>
-		<entry key="Enum.SocialPresenceStatus.Online" source="online">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Social/Runtime/SocialTypes.h</item>
-			</origins>
-		</entry>
 		<entry key="Enum.Unknown" source="unknown">
 			<origins>
 				<item>Source/Engine/Localization/LocText.cpp</item>
@@ -2813,47 +2324,6 @@
 		<entry key="Enum.ZoneModuleOrigin.Replaced" source="replaced here">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneModuleOrigin.h</item>
-			</origins>
-		</entry>
-		<entry key="FriendList.Idle" source="Press Refresh to list friends">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp</item>
-			</origins>
-		</entry>
-		<entry key="FriendList.LoadFailed" source="Could not load the friend list (error {error})">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp</item>
-			</origins>
-		</entry>
-		<entry key="FriendList.Loading" source="Loading friends...">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp</item>
-			</origins>
-		</entry>
-		<entry key="FriendList.None" source="No friends yet">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp</item>
-			</origins>
-		</entry>
-		<entry key="FriendList.PendingRequests"
-		       source="{title}  ({count, plural, one {# pending request} other {# pending requests}})">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp</item>
-			</origins>
-		</entry>
-		<entry key="FriendList.Row" source="#{account}  {presence}">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp</item>
-			</origins>
-		</entry>
-		<entry key="FriendList.RowActivity" source="#{account}  {presence}  {activity}">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp</item>
-			</origins>
-		</entry>
-		<entry key="FriendList.Title" source="Friends">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp</item>
 			</origins>
 		</entry>
 		<entry key="Inventory.DropTitle" source="Drop how many?">
@@ -3023,36 +2493,6 @@
 				<item>Source/GameFramework/Client/Flow/LoadingScreenController.cpp</item>
 			</origins>
 		</entry>
-		<entry key="ServerPicker.Idle" source="Press Refresh to list servers">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/ServerDirectory/Client/ServerPickerScreen.cpp</item>
-			</origins>
-		</entry>
-		<entry key="ServerPicker.LoadFailed" source="Could not load the server list (error {error})">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/ServerDirectory/Client/ServerPickerScreen.cpp</item>
-			</origins>
-		</entry>
-		<entry key="ServerPicker.Loading" source="Loading servers...">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/ServerDirectory/Client/ServerPickerScreen.cpp</item>
-			</origins>
-		</entry>
-		<entry key="ServerPicker.None" source="No server is available right now">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/ServerDirectory/Client/ServerPickerScreen.cpp</item>
-			</origins>
-		</entry>
-		<entry key="ServerPicker.Pick" source="Pick a server">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/ServerDirectory/Client/ServerPickerScreen.cpp</item>
-			</origins>
-		</entry>
-		<entry key="ServerPicker.Row" source="{region}  {fill}%  {state}">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/ServerDirectory/Client/ServerPickerScreen.cpp</item>
-			</origins>
-		</entry>
 		<entry key="Shop.BalanceLine" source="{amount} {currency}">
 			<origins>
 				<item>Source/GameFramework/Client/Shop/ShopScreen.cpp</item>
@@ -3129,51 +2569,6 @@
 		<entry key="UIMenu.QuitTitle" source="Quit Game">
 			<origins>
 				<item>Source/Engine/UI/Menu/MainMenuScreen.cpp</item>
-			</origins>
-		</entry>
-		<entry key="Western.Bounty" source="Bounty ${amount}">
-			<origins>
-				<item>Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp</item>
-			</origins>
-		</entry>
-		<entry key="Western.Carcasses" source="Carcasses {count}">
-			<origins>
-				<item>Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp</item>
-			</origins>
-		</entry>
-		<entry key="Western.Honor" source="Honor {honor} ({tier})">
-			<origins>
-				<item>Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp</item>
-			</origins>
-		</entry>
-		<entry key="Western.Hungry" source="Hungry">
-			<origins>
-				<item>Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp</item>
-			</origins>
-		</entry>
-		<entry key="Western.Money" source="${amount}">
-			<origins>
-				<item>Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp</item>
-			</origins>
-		</entry>
-		<entry key="Western.OnFoot" source="On foot - E: mount  F: whistle">
-			<origins>
-				<item>Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp</item>
-			</origins>
-		</entry>
-		<entry key="Western.Pelts" source="Pelts {count}">
-			<origins>
-				<item>Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp</item>
-			</origins>
-		</entry>
-		<entry key="Western.Riding" source="Riding {horse} - {gait} {speed} m/s - E: dismount  Shift: gallop">
-			<origins>
-				<item>Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp</item>
-			</origins>
-		</entry>
-		<entry key="Western.Wanted" source="Wanted {level}">
-			<origins>
-				<item>Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp</item>
 			</origins>
 		</entry>
 		<entry key="You have changes that are not applied."
