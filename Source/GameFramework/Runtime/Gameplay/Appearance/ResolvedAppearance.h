@@ -13,8 +13,8 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Runtime/Gameplay/Appearance/AppearanceTypes.h"
-#include "GameFramework/Runtime/Gameplay/Appearance/ItemVisual.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/AppearancePart.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/AppearancePlacement.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/SkinLayer.h"
 
 namespace sw

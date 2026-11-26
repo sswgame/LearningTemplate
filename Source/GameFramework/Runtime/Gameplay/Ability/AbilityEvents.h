@@ -19,7 +19,7 @@
 #include "Engine/Object/Component/TagSystem.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Runtime/Gameplay/Ability/AbilityTypes.h"
+#include "GameFramework/Runtime/Gameplay/Ability/AbilityEffectPolicy.h"
 
 namespace sw
 {

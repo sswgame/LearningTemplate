@@ -21,7 +21,7 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Runtime/Gameplay/Zone/ZoneModule.h"
+#include "GameFramework/Runtime/Gameplay/Zone/ZoneCompiledModule.h"
 #include "GameFramework/Runtime/Gameplay/Zone/ZoneTracker.h"
 
 namespace sw

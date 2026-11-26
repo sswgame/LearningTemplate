@@ -5,7 +5,9 @@
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceDatabase.h"
-#include "GameFramework/Runtime/Gameplay/Appearance/AppearanceTypes.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/AppearanceLoadReport.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/AppearancePart.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/AppearanceSlotRequest.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterAppearance.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/ItemVisual.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/ResolvedAppearance.h"

@@ -24,8 +24,10 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Character/Combat/Health/IHealthSource.h"
+#include "GameFramework/Runtime/Gameplay/Ability/AbilityActivationResult.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityEffect.h"
-#include "GameFramework/Runtime/Gameplay/Ability/AbilityTypes.h"
+#include "GameFramework/Runtime/Gameplay/Ability/AbilityEffectPolicy.h"
+#include "GameFramework/Runtime/Gameplay/Ability/AbilityHandles.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AttributeSet.h"
 #include "GameFramework/Runtime/Gameplay/Ability/TagCountContainer.h"
 

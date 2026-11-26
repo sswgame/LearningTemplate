@@ -15,8 +15,8 @@
 #include "Engine/Content/AssetID.h"
 
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/AppearanceLoadReport.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceRule.h"
-#include "GameFramework/Runtime/Gameplay/Appearance/AppearanceTypes.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/BodyProfile.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterAppearance.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CustomizationSchema.h"

@@ -1,7 +1,7 @@
 /**
  * @file BodySurfacePick.h
  * @brief 미리보기 캐릭터(몸과 부품 오브젝트)의 표면을 광선으로 집습니다 — 맞은 메시 구간(별칭 대응 · 강조)과 그 자리의 UV(문신 · 데칼 배치). 캐릭터 편집 창의 몸 탭이 쓴다.
- * @details 표면 하나(`BodyPickSurface`)는 오브젝트 하나의 메시를 지금 포즈로 월드에 옮긴 정점이다 — 먼저 모프 타깃 가중치(얼굴 표정 · 커브)만큼 레스트에 차이를 더하고
+ * @details 표면 하나(`BodySurfacePick`)는 오브젝트 하나의 메시를 지금 포즈로 월드에 옮긴 정점이다 — 먼저 모프 타깃 가중치(얼굴 표정 · 커브)만큼 레스트에 차이를 더하고
  *          (스키닝 컴퓨트와 같은 차례), 스킨 정점이면 그 유닛의 스킨 팔레트(GPU 스키닝과 같은 행렬)로 CPU 스키닝하고(`MeshSkinBinding::skinVertex`), 아니면 월드로만 옮긴다. 삼각형마다 광선과 맞추고(`Ray::intersectTriangle`, 양면)
  *          모든 표면 중 가장 가까운 맞음이 답이다. 언리얼의 스켈레탈 메시 라인 트레이스(스키닝된 정점 · 피직스 에셋) · 섹션 클릭 선택 · 데칼 배치와 같은 자리다.
  *          ImGui 와 씬을 모릅니다 — 표면은 창이 오브젝트에서 모아 짓는다.
@@ -29,7 +29,7 @@ namespace sw::editor
      * @brief 집을 표면 하나입니다 — 오브젝트 하나의 메시를 지금 포즈로 월드에 옮긴 정점과, 메시의 인덱스 · UV · 구간을 보는 칸입니다.
      * @details 보는 칸은 메시가 가진 목록이다 — 표면은 지은 프레임 안에서만 쓴다(메시가 바뀌면 다시 짓는다).
      */
-    struct BodyPickSurface
+    struct BodySurfacePick
     {
         vector<float3>                      _listPosition{}; ///< 정점마다 지금 포즈의 월드 자리(`_listVertex` 와 같은 순서)
         vector_reference<const RHIVertex>   _listVertex{};   ///< 메시 정점(UV 를 읽는다)
@@ -46,7 +46,7 @@ namespace sw::editor
          * @param world 오브젝트의 월드 행렬입니다(스킨 결과는 유닛 모델 공간이다).
          */
         static void build( vector_reference<const RHIVertex> listVertex, vector_reference<const MeshMorphTarget> listMorphTarget, vector_reference<const float32> listMorphWeight,
-                           vector_reference<const MeshSkinVertex> listSkin, const vector<float4x4>& listPalette, const float4x4& world, BodyPickSurface& outSurface );
+                           vector_reference<const MeshSkinVertex> listSkin, const vector<float4x4>& listPalette, const float4x4& world, BodySurfacePick& outSurface );
     };
 
     /** @brief 표면 집기의 결과입니다. */
@@ -60,7 +60,7 @@ namespace sw::editor
         uint32           _triangle{ 0 };    ///< 맞은 삼각형 번호(`pick` 이 참일 때만 읽는다)
 
         /** @brief 광선(@p origin, 단위 방향 @p direction)이 표면들과 처음 맞는 자리를 찾습니다. 맞지 않으면 false 입니다. */
-        [[nodiscard]] static bool pick( vector_reference<const BodyPickSurface> listSurface, const float3& origin, const float3& direction, BodySurfaceHit& outHit );
+        [[nodiscard]] static bool pick( vector_reference<const BodySurfacePick> listSurface, const float3& origin, const float3& direction, BodySurfaceHit& outHit );
         /** @brief 삼각형 @p triangle(인덱스 칸 triangle × 3)이 든 구간 번호입니다. 없으면 비어 있습니다. */
         static optional<uint32> findSection( vector_reference<const MeshSection> listSection, uint32 triangle );
     };

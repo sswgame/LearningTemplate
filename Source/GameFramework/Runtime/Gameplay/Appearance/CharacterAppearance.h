@@ -15,7 +15,9 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Foundation/GameData/CustomizationValueSet.h"
-#include "GameFramework/Runtime/Gameplay/Appearance/AppearanceTypes.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/AppearanceLoadReport.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/AppearancePlacement.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/AppearanceSlotRequest.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/SkinLayer.h"
 
 namespace sw

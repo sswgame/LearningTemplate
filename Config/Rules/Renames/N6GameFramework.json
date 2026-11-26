@@ -595,5 +595,11 @@
     "old": "ServiceRecordTableTest",
     "new": "ServiceRecordCodecTest",
     "why": "파일 ServiceRecordTable.h 는 ServiceRecordCodec 만 담는다(표 형식은 ServiceStore.h)"
+  },
+  {
+    "old": "BodyPickSurface",
+    "new": "BodySurfacePick",
+    "why": "파일 BodySurfacePick.h 의 주 형식 — 낱말 순서를 파일 이름과 맞춘다",
+    "allowExisting": true
   }
 ]

@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Runtime/Gameplay/Zone/ZoneModule.h"
+#include "GameFramework/Runtime/Gameplay/Zone/ZoneCompiledModule.h"
 
 #include "Core/Log/LogOnce.h"
 #include "Core/String/StringUtil.h"
@@ -11,6 +11,7 @@
 
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityActions.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilitySystemComponent.h"
+#include "GameFramework/Runtime/Gameplay/Zone/IZoneModuleProcessor.h"
 
 #include <cmath>
 
