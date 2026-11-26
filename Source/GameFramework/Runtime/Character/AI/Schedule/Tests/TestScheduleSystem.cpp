@@ -115,14 +115,14 @@ SW_TEST_CASE( ScheduleSystemTest, SaveRestoreKeepsTheDay )
     const sw::ScheduleSystemSettings settings;
 
     sw::ScheduleSystem original;
-    SW_REQUIRE_TRUE( original.initialize( &catalog, settings, 6 * kHour ) );
+    SW_REQUIRE_TRUE( original.initialize( catalog, settings, 6 * kHour ) );
     original.advanceTo( 12 * kHour + 17 );
 
     sw::ScheduleSaveState saved;
     original.fillSaveState( saved );
 
     sw::ScheduleSystem restored;
-    SW_REQUIRE_TRUE( restored.initialize( &catalog, settings, 0 ) );
+    SW_REQUIRE_TRUE( restored.initialize( catalog, settings, 0 ) );
     restored.restoreSaveState( saved );
     SW_EXPECT_EQUAL( original.getMinute(), restored.getMinute() );
     SW_EXPECT_EQUAL( original.computeStateHash(), restored.computeStateHash() );
@@ -146,7 +146,7 @@ SW_TEST_CASE( ScheduleSystemTest, RestoredAppointmentIsNotMetTwice )
     const sw::hashed_string          talk( "talk" );
 
     sw::ScheduleSystem original;
-    SW_REQUIRE_TRUE( original.initialize( &catalog, settings, 6 * kHour ) );
+    SW_REQUIRE_TRUE( original.initialize( catalog, settings, 6 * kHour ) );
     const int32 guest = original.findNPCIndex( sw::hashed_string( "a" ) ).value();
     original.advanceTo( 19 * kHour + 20 );
     SW_REQUIRE_EQUAL( 1, countEvents( original, sw::ScheduleEvent::Kind::AppointmentMet ) );
@@ -155,7 +155,7 @@ SW_TEST_CASE( ScheduleSystemTest, RestoredAppointmentIsNotMetTwice )
     sw::ScheduleSaveState saved;
     original.fillSaveState( saved );
     sw::ScheduleSystem restored;
-    SW_REQUIRE_TRUE( restored.initialize( &catalog, settings, 0 ) );
+    SW_REQUIRE_TRUE( restored.initialize( catalog, settings, 0 ) );
     restored.restoreSaveState( saved );
 
     SW_REQUIRE_TRUE( original.popInterruption( guest, talk ) );
@@ -177,8 +177,8 @@ SW_TEST_CASE( ScheduleSystemTest, SameInputsGiveTheSameState )
 
     sw::ScheduleSystem first;
     sw::ScheduleSystem second;
-    SW_REQUIRE_TRUE( first.initialize( &catalog, settings, 6 * kHour ) );
-    SW_REQUIRE_TRUE( second.initialize( &catalog, settings, 6 * kHour ) );
+    SW_REQUIRE_TRUE( first.initialize( catalog, settings, 6 * kHour ) );
+    SW_REQUIRE_TRUE( second.initialize( catalog, settings, 6 * kHour ) );
     first.advanceTo( 18 * kHour );
     second.advanceTo( 18 * kHour );
     SW_EXPECT_EQUAL( first.computeStateHash(), second.computeStateHash() );
@@ -219,7 +219,7 @@ SW_TEST_CASE( ScheduleSystemTest, NPCObjectIsFoundByItsComponentNotItsName )
     sw::ScheduleCatalog catalog;
     loadCatalog( catalog );
     sw::ScheduleSystem schedule;
-    SW_REQUIRE_TRUE( schedule.initialize( &catalog, sw::ScheduleSystemSettings{}, 6 * kHour ) );
+    SW_REQUIRE_TRUE( schedule.initialize( catalog, sw::ScheduleSystemSettings{}, 6 * kHour ) );
 
     sw::GameObjectManager manager;
     sw::GameObject*       pVillager = manager.createGameObject( sw::hashed_string( "Villager.b" ) );
@@ -243,7 +243,7 @@ SW_TEST_CASE( ScheduleSystemTest, WidenedReservationHoldsTheWholeWindow )
   <NPC id="a" home="home" speed="10"/><NPC id="b" home="home" speed="10"/></Schedules>)",
                                               "WidenedReservation" ) );
     sw::ScheduleSpotLocator locator;
-    locator.initialize( &catalog );
+    locator.initialize( catalog );
 
     sw::ScheduleReserveRequest request;
     request._npc         = sw::hashed_string( "a" );
@@ -289,7 +289,7 @@ SW_TEST_CASE( ScheduleSystemTest, SwappingTheLocatorReturnsReservationsToTheirOw
     RecordingLocator   second( 100 );
     sw::ScheduleSystem schedule;
     schedule.setActivityLocator( &first );
-    SW_REQUIRE_TRUE( schedule.initialize( &catalog, sw::ScheduleSystemSettings{}, 6 * kHour ) );
+    SW_REQUIRE_TRUE( schedule.initialize( catalog, sw::ScheduleSystemSettings{}, 6 * kHour ) );
     const uint32 heldID = first._nextID - 1;
 
     schedule.setActivityLocator( &second );
@@ -310,7 +310,7 @@ SW_TEST_CASE( ScheduleSystemTest, CustomLocatorReservationsRoundTrip )
     RecordingLocator   locator( 1 );
     sw::ScheduleSystem schedule;
     schedule.setActivityLocator( &locator );
-    SW_REQUIRE_TRUE( schedule.initialize( &catalog, sw::ScheduleSystemSettings{}, 6 * kHour ) );
+    SW_REQUIRE_TRUE( schedule.initialize( catalog, sw::ScheduleSystemSettings{}, 6 * kHour ) );
 
     sw::ScheduleSaveState saved;
     schedule.fillSaveState( saved );

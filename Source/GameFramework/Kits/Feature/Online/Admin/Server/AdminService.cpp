@@ -28,19 +28,14 @@ namespace sw
         SW_ASSERT( _calls.isEmpty() && _localCalls.isEmpty() );
     }
 
-    bool AdminService::initialize( ServiceStore* pStore, const AdminServiceConfig& settings )
+    bool AdminService::initialize( ServiceStore& store, const AdminServiceConfig& settings )
     {
-        if ( pStore == nullptr )
-        {
-            SW_LOG_ERROR_ID( "AdminService.AdminServiceNeedsStore", "AdminService needs a store" );
-            return false;
-        }
         if ( settings._sanctionLimit.isSet() == false )
         {
             SW_LOG_ERROR_ID( "AdminService.AdminServiceNeedsSanctionLimit", "AdminService needs the per-role sanction limits (_supportMaxSanctionDays, _operatorMaxSanctionDays)" );
             return false;
         }
-        _store.bindStore( pStore );
+        _store.bindStore( &store );
         _settings = settings;
         initializeCalls( settings._pMetricRegistry, "admin" );
         setReady( true );

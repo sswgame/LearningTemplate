@@ -12,6 +12,7 @@
 
 #include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Foundation/GameObjectHandle.h"
+#include "Engine/Presentation/ISoundPlayer.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Sequencer/SequenceAsset.h"
 
@@ -98,7 +99,7 @@ namespace sw
         SharedAssetRef<AnimationClip> _clip;             ///< 애니메이션: 들어갈 때 잡은 클립(머무는 동안 다시 찾지 않는다)
         Subscription                  _animatorOverride; ///< 애니메이션: 대상 애니메이터에 연 덮어쓰기 자리(놓으면 이 구간의 것만 사라진다)
         uint64                        _overrideID;       ///< 애니메이션: 그 자리의 번호
-        uint64                        _playingID;        ///< 소리: 낸 소리의 재생 id(엔진이 없으면 0)
+        SoundPlayingID                _playingID;        ///< 소리: 낸 소리의 재생 id(엔진이 없으면 0)
         uint32                        _subtitleLineID;   ///< 자막: 올린 줄 번호(`ISubtitleSink::postSubtitle`, 없으면 0) — 나갈 때(멈춤 · 되감기 · 건너뛰기) 내린다
         uint32                        _itemIndex;        ///< 시퀀스의 항목 번호
         uint8                         _bInside  : 1;

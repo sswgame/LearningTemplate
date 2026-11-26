@@ -438,7 +438,7 @@ namespace sw
         if ( pEvent == nullptr )
         {
             SW_LOG_ERROR_ID( "AudioEngine.UnknownAudioEvent", "Unknown audio event '%#'", eventName.c_str() );
-            return 0;
+            return AudioPlayingID{};
         }
         for ( const AudioClipEntry& clip : pEvent->_listClip )
         {
@@ -455,7 +455,7 @@ namespace sw
     AudioPlayingID AudioEngine::playClip( const hashed_string& path, const hashed_string& bus, const AudioClipPlayParams& params )
     {
         if ( path.empty() )
-            return 0;
+            return AudioPlayingID{};
         _clipStore.requestClip( path );
         Command command;
         command._type       = CommandKind::PlayClip;
@@ -525,7 +525,7 @@ namespace sw
     AudioPlayingID AudioEngine::startMusic( shared_ptr<const AudioMusicDef> pMusic, float32 fadeSeconds )
     {
         if ( pMusic == nullptr )
-            return 0;
+            return AudioPlayingID{};
         for ( const AudioMusicSegmentDef& segment : pMusic->_listSegment )
         {
             for ( const AudioMusicLayerDef& layer : segment._listLayer )
@@ -603,7 +603,7 @@ namespace sw
 
     void AudioEngine::setEmitterParameter( AudioEmitterID emitterID, const hashed_string& name, float32 value )
     {
-        if ( emitterID == 0 )
+        if ( emitterID.isValid() == false )
             return;
         Command command;
         command._type      = CommandKind::SetEmitterParameter;
@@ -651,7 +651,7 @@ namespace sw
 
     void AudioEngine::setEmitter( AudioEmitterID emitterID, const float3& position, const float3& velocity )
     {
-        if ( emitterID == 0 )
+        if ( emitterID.isValid() == false )
             return;
         Command command;
         command._type      = CommandKind::SetEmitter;
@@ -663,7 +663,7 @@ namespace sw
 
     void AudioEngine::setEmitterPropagation( AudioEmitterID emitterID, const AudioPropagation& propagation )
     {
-        if ( emitterID == 0 )
+        if ( emitterID.isValid() == false )
             return;
         Command command;
         command._type                     = CommandKind::SetEmitterPropagation;
@@ -692,7 +692,7 @@ namespace sw
 
     bool AudioEngine::isPlaying( AudioPlayingID playingID ) const
     {
-        if ( playingID == 0 )
+        if ( playingID.isValid() == false )
             return false;
         return _published.isPlaying( playingID, _nextPlayingID.load( std::memory_order_acquire ) );
     }
@@ -735,10 +735,10 @@ namespace sw
     AudioPlayingID AudioEngine::pushPlayCommand( Command&& command )
     {
         // id 는 대기 목록에 넣는 잠금 안에서 매긴다. 대기 목록은 순서 그대로 큐에 들어가므로 큐 순서와 id 순서가 같다 — "아직 처리되지 않은 id" 판정(`isPlaying`)이 맞다.
-        AudioPlayingID playingID = 0;
+        AudioPlayingID playingID;
         {
             ScopedLock<mutex> lock{ _stagingMutex };
-            playingID          = _nextPlayingID.fetch_add( 1 );
+            playingID          = AudioPlayingID{ _nextPlayingID.fetch_add( 1 ) };
             command._playingID = playingID;
             _listStagedCommand.push_back( std::move( command ) );
         }
@@ -843,7 +843,7 @@ namespace sw
 
     void AudioEngine::applyPlayClip( const Command& command )
     {
-        _appliedPlayingID               = MathUtil::max( _appliedPlayingID, command._playingID );
+        _appliedPlayingID               = MathUtil::max( _appliedPlayingID, command._playingID.getValue() );
         const optional<uint32> busIndex = resolveBusIndex( command._name );
         if ( busIndex.has_value() == false )
             return;
@@ -896,18 +896,18 @@ namespace sw
             }
             case CommandKind::PostEvent:
             {
-                _appliedPlayingID = MathUtil::max( _appliedPlayingID, command._playingID );
+                _appliedPlayingID = MathUtil::max( _appliedPlayingID, command._playingID.getValue() );
                 applyPostEvent( command );
                 break;
             }
             case CommandKind::Stop:
             {
-                stopVoices( command._playingID, 0, command._value );
+                stopVoices( command._playingID, AudioEmitterID{}, command._value );
                 break;
             }
             case CommandKind::StopEmitter:
             {
-                stopVoices( 0, command._emitterID, command._value );
+                stopVoices( AudioPlayingID{}, command._emitterID, command._value );
                 break;
             }
             case CommandKind::StopAll:
@@ -1037,7 +1037,7 @@ namespace sw
             }
             case CommandKind::StartMusic:
             {
-                _appliedPlayingID = MathUtil::max( _appliedPlayingID, command._playingID );
+                _appliedPlayingID = MathUtil::max( _appliedPlayingID, command._playingID.getValue() );
                 _musicPlayer.start( *this, command._pMusic, command._playingID, command._value );
                 break;
             }
@@ -1131,7 +1131,7 @@ namespace sw
         {
             if ( slot._bInUse == false )
                 continue;
-            const bool bMatches = ( playingID != 0 && slot._playingID == playingID ) || ( emitterID != 0 && slot._emitterID == emitterID );
+            const bool bMatches = ( playingID.isValid() && slot._playingID == playingID ) || ( emitterID.isValid() && slot._emitterID == emitterID );
             if ( bMatches == false )
                 continue;
             float32 seconds = fadeSeconds;
@@ -1233,7 +1233,7 @@ namespace sw
         float32           lowPassHz = audio::kFilterOpenHz;
         slot._distance              = 0.0f;
 
-        const bool bSpatial = slot._attenuationIndex.has_value() && slot._emitterID != 0;
+        const bool bSpatial = slot._attenuationIndex.has_value() && slot._emitterID.isValid();
         if ( bSpatial )
         {
             const auto it = _mapEmitter.find( slot._emitterID );
@@ -1725,7 +1725,7 @@ namespace sw
                 }
                 EventInstance& victim = _listInstance[*victimIndex];
                 victim._bStopping     = true;
-                stopVoices( victim._playingID, 0, event._fadeOutSeconds );
+                stopVoices( victim._playingID, AudioEmitterID{}, event._fadeOutSeconds );
             }
         }
         return true;
@@ -1863,7 +1863,7 @@ namespace sw
 
     float32 AudioEngine::findParameterValue( AudioEmitterID emitterID, const hashed_string& name ) const
     {
-        if ( emitterID != 0 )
+        if ( emitterID.isValid() )
         {
             const auto emitterIt = _mapEmitter.find( emitterID );
             if ( emitterIt != _mapEmitter.end() )

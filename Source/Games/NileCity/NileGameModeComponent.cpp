@@ -102,7 +102,7 @@ namespace sw
             listTerrain.push_back( terrain.key() );
         }
         CitySimulation& city = getMutableCity();
-        if ( city.initialize( findCatalog(), tileMap._width, tileMap._height, _wallet ) == false )
+        if ( findCatalog() == nullptr || city.initialize( *findCatalog(), tileMap._width, tileMap._height, _wallet ) == false )
             return false; // 범위 밖 도시 설정은 도시가 오류를 남겼다
         if ( NileCityPlanner::paintTerrain( city, tileMap, listTerrain ) == false )
             return false; // 모자란 땅 · 레이어는 플래너가 남겼다
@@ -161,7 +161,7 @@ namespace sw
         if ( io.isOk() == false )
             return;
         const bool bCity = io.valueOpened( getMutableCity(), [this]( CitySimulation& city )
-        { return city.initialize( findCatalog(), getCity().getWidth(), getCity().getHeight(), _wallet ); } );
+        { return findCatalog() != nullptr && city.initialize( *findCatalog(), getCity().getWidth(), getCity().getHeight(), _wallet ); } );
         const bool bRead = bCity && io.valueOpened( _planner, [this]( NileCityPlanner& planner )
         { return planner.reset( makeCityLayout(), AssetID{ _autoPlanPath.isSet() ? string_view{ _autoPlanPath.get() } : string_view{} } ); } ); // 자동 계획을 읽지 못하면 이유는 플래너가 남겼다
         if ( bRead == false )

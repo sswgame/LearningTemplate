@@ -326,7 +326,7 @@ namespace sw
         AudioRenderListenerRegistry::notifyStreamEnded( _pEngine->getChannelLayout() );
         _pEngine->shutdown();
         _musicPath.clear();
-        _musicPlayingID = 0;
+        _musicPlayingID = AudioPlayingID{};
         _bGamePaused    = SW_FALSE; // 다시 세운 엔진은 멈추지 않은 채 선다 — 다음 프레임이 지금 값을 넘긴다
         _bInitialized   = SW_FALSE;
         SW_LOG_INFO_ID( "AudioSubsystem.ShutDown", "Shut down." );
@@ -459,7 +459,7 @@ namespace sw
             SW_LOG_ERROR_ID( "AudioSubsystem.AudioResourceNotFound", "Audio resource not found: %#", path );
             return false;
         }
-        return _pEngine->playClip( hashed_string( path ), bus, AudioClipPlayParams{} ) != 0;
+        return _pEngine->playClip( hashed_string( path ), bus, AudioClipPlayParams{} ).isValid();
     }
 
     bool AudioSubsystem::preload( string_view path )
@@ -483,7 +483,7 @@ namespace sw
             SW_LOG_ERROR_ID( "AudioSubsystem.AudioResourceNotFound", "Audio resource not found: %#", path );
             return false;
         }
-        const bool bCrossfade = _musicPlayingID != 0;
+        const bool bCrossfade = _musicPlayingID.isValid();
         if ( bCrossfade )
         {
             _pEngine->stop( _musicPlayingID, _musicCrossfadeSeconds );
@@ -495,7 +495,7 @@ namespace sw
         params._fadeInSeconds = bCrossfade ? _musicCrossfadeSeconds : 0.0f;
         _musicPath            = string( path );
         _musicPlayingID       = _pEngine->playClip( hashed_string( path ), hashed_string( AudioBusNames::kMusic ), params );
-        return _musicPlayingID != 0;
+        return _musicPlayingID.isValid();
     }
 
     bool AudioSubsystem::playAdaptiveMusic( const AssetID& assetID )
@@ -508,19 +508,19 @@ namespace sw
         shared_ptr<AudioMusicDef> pMusic = make_shared<AudioMusicDef>();
         if ( pMusic->loadFromAsset( assetID ) == false )
             return false;
-        if ( _musicPlayingID != 0 )
+        if ( _musicPlayingID.isValid() )
             _pEngine->stop( _musicPlayingID, _musicCrossfadeSeconds );
         _musicPath      = string( path );
         _musicPlayingID = _pEngine->startMusic( std::move( pMusic ), _musicCrossfadeSeconds );
-        return _musicPlayingID != 0;
+        return _musicPlayingID.isValid();
     }
 
     void AudioSubsystem::stopMusic()
     {
-        if ( _musicPlayingID != 0 )
+        if ( _musicPlayingID.isValid() )
             _pEngine->stop( _musicPlayingID, 0.0f );
         _pEngine->stopMusic( 0.0f );
-        _musicPlayingID = 0;
+        _musicPlayingID = AudioPlayingID{};
         _musicPath.clear();
     }
 
@@ -539,13 +539,13 @@ namespace sw
 
     void AudioSubsystem::pauseMusic()
     {
-        if ( _musicPlayingID != 0 )
+        if ( _musicPlayingID.isValid() )
             _pEngine->setPaused( _musicPlayingID, true );
     }
 
     void AudioSubsystem::resumeMusic()
     {
-        if ( _musicPlayingID != 0 )
+        if ( _musicPlayingID.isValid() )
             _pEngine->setPaused( _musicPlayingID, false );
     }
 
@@ -788,16 +788,16 @@ namespace sw
     SoundPlayingID AudioSoundPlayer::postEvent( const hashed_string& eventName )
     {
         AudioEngine* pEngine = findEngine();
-        return pEngine != nullptr ? pEngine->postEvent( eventName, 0 ) : 0;
+        return pEngine != nullptr ? pEngine->postEvent( eventName ) : SoundPlayingID{};
     }
 
     SoundPlayingID AudioSoundPlayer::postEventAt( const hashed_string& eventName, const float3& position )
     {
         AudioEngine* pEngine = findEngine();
         if ( pEngine == nullptr )
-            return 0;
+            return SoundPlayingID{};
         // 한 번 쓰는 에미터 — 자리를 두고 내고 바로 지운다. 엔진은 그 자리의 소리가 끝날 때까지 자리를 남긴다.
-        const AudioEmitterID emitterID = kOneShotEmitterBase + _nextOneShotEmitter.fetch_add( 1 );
+        const AudioEmitterID emitterID{ kOneShotEmitterBase + _nextOneShotEmitter.fetch_add( 1 ) };
         pEngine->setEmitter( emitterID, position, float3{} );
         const AudioPlayingID playingID = pEngine->postEvent( eventName, emitterID );
         pEngine->removeEmitter( emitterID );
@@ -810,7 +810,7 @@ namespace sw
         if ( pEmitter == nullptr )
         {
             SW_LOG_ERROR_ID( "AudioSoundPlayer.NoEmitter", "Sound '%#' on '%#' - the object has no AudioEmitterComponent", eventName.c_str(), target.getName().c_str() );
-            return 0;
+            return SoundPlayingID{};
         }
         return pEmitter->post( eventName );
     }
@@ -831,7 +831,7 @@ namespace sw
     void AudioSoundPlayer::stop( SoundPlayingID playingID, float32 fadeSeconds )
     {
         AudioEngine* pEngine = findEngine();
-        if ( pEngine != nullptr && playingID != 0 )
+        if ( pEngine != nullptr && playingID.isValid() )
             pEngine->stop( playingID, fadeSeconds );
     }
 

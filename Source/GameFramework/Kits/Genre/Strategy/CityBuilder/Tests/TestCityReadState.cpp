@@ -192,7 +192,7 @@ namespace
 
         bool open( sw::CitySimulation& outCity )
         {
-            return outCity.initialize( &_catalog, kCitySize, kCitySize, _wallet );
+            return outCity.initialize( _catalog, kCitySize, kCitySize, _wallet );
         }
     };
 } // namespace
@@ -232,7 +232,7 @@ SW_TEST_CASE_F( CityReadStateTest, CityDeterminism )
     const auto      setup = [this]( CityRun& run )
     {
         run._wallet.add( _catalog.getRules()._currency, 1000 );
-        return run._city.initialize( &_catalog, kSize, kSize, run._wallet );
+        return run._city.initialize( _catalog, kSize, kSize, run._wallet );
     };
     const auto step = []( CityRun& run, int32 stepIndex )
     {
@@ -498,10 +498,6 @@ SW_TEST_CASE( CityCatalogTest, CatalogWithoutRulesIsRefused )
     SW_EXPECT_LOG( "CityCatalog.RulesMissing" );
     sw::CityCatalog bare;
     SW_EXPECT_FALSE( bare.loadFromXMLText( R"(<CityCatalog roadCost="1"><Building modelTint="1,1,1,1" blockColor="0.5,0.4,0.3,1" id="hut" name="Hut" kind="House" size="1" cost="1"/><HouseLevel name="Hut" population="5"/></CityCatalog>)", "CityCatalogTest" ) );
-    sw::CitySimulation city;
-    sw::Wallet         wallet;
-    SW_EXPECT_LOG( "CitySimulation.CitySimulationNeedsCatalog" );
-    SW_EXPECT_FALSE( city.initialize( nullptr, 4, 4, wallet ) );
 }
 
 namespace
@@ -555,7 +551,7 @@ SW_TEST_CASE( CityCatalogTest, TerrainAndServiceRowsAreData )
     sw::Wallet wallet;
     wallet.add( catalog.getRules()._currency, 100 );
     sw::CitySimulation city;
-    SW_REQUIRE_TRUE( city.initialize( &catalog, Util::kSize, Util::kSize, wallet ) );
+    SW_REQUIRE_TRUE( city.initialize( catalog, Util::kSize, Util::kSize, wallet ) );
     const sw::optional<int32> dirt = city.findTerrainIndex( sw::hashed_string( "Mud" ) );
     SW_REQUIRE_TRUE( dirt.has_value() );
     city.setTerrain( 5, 5, *dirt );
@@ -571,7 +567,7 @@ SW_TEST_CASE( CityCatalogTest, TerrainAndServiceRowsAreData )
     sw::CityCatalog plainCatalog;
     SW_REQUIRE_TRUE( plainCatalog.loadFromXMLText( Util::makeXML( plainRows ), "CityCatalogTest" ) );
     sw::CitySimulation plainCity;
-    SW_REQUIRE_TRUE( plainCity.initialize( &plainCatalog, Util::kSize, Util::kSize, wallet ) );
+    SW_REQUIRE_TRUE( plainCity.initialize( plainCatalog, Util::kSize, Util::kSize, wallet ) );
     Util::build( plainCity );
     SW_EXPECT_EQUAL( 1, plainCity.findBuildingAt( 0, 1 )->_level );
     SW_EXPECT_NEAR( 0.0f, plainCity.computeCultureCoverage(), 1.0e-5f );
@@ -608,7 +604,7 @@ SW_TEST_CASE( CityCatalogTest, SavedRowsFollowTheirIDs )
     sw::Wallet wallet;
     wallet.add( catalog.getRules()._currency, 100 );
     sw::CitySimulation city;
-    SW_REQUIRE_TRUE( city.initialize( &catalog, Util::kSize, Util::kSize, wallet ) );
+    SW_REQUIRE_TRUE( city.initialize( catalog, Util::kSize, Util::kSize, wallet ) );
     city.setTerrain( 5, 5, *catalog.findTerrainIndex( sw::hashed_string( "Mud" ) ) );
     Util::build( city );
     sw::Archive written;
@@ -623,7 +619,7 @@ SW_TEST_CASE( CityCatalogTest, SavedRowsFollowTheirIDs )
   <Service id="Shade" name="Shade" color="0.1,0.4,0.1,1" culture="true"/>)" ),
                                             "CityCatalogTest" ) );
     sw::CitySimulation restored;
-    SW_REQUIRE_TRUE( restored.initialize( &moved, Util::kSize, Util::kSize, wallet ) );
+    SW_REQUIRE_TRUE( restored.initialize( moved, Util::kSize, Util::kSize, wallet ) );
     sw::Archive reading( written.getData(), written.getSize() );
     SW_REQUIRE_TRUE( restored.readState( reading ) );
     SW_EXPECT_EQUAL( 0, static_cast<int32>( restored.findTile( 5, 5 )->_terrain ) );
@@ -639,7 +635,7 @@ SW_TEST_CASE( CityCatalogTest, SavedRowsFollowTheirIDs )
   <Service id="Shade" name="Shade" color="0.1,0.4,0.1,1" culture="true"/>)" ),
                                                   "CityCatalogTest" ) );
     sw::CitySimulation refused;
-    SW_REQUIRE_TRUE( refused.initialize( &withoutDirt, Util::kSize, Util::kSize, wallet ) );
+    SW_REQUIRE_TRUE( refused.initialize( withoutDirt, Util::kSize, Util::kSize, wallet ) );
     sw::Archive refusedReading( written.getData(), written.getSize() );
     SW_EXPECT_FALSE( refused.readState( refusedReading ) );
     SW_EXPECT_EQUAL( size_t( 0 ), refused.getBuildings().size() );

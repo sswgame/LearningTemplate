@@ -462,8 +462,8 @@ namespace sw
 
     bool AnimationNotifyComponent::castFromTo( const float3& from, const float3& to, float32 radius, uint32 layerMask, CharacterRayHit& outHit ) const
     {
-        GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
+        GameObject*              pOwner   = getOwner();
+        const GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         if ( pManager == nullptr )
             return false;
         const float3  delta    = to - from;

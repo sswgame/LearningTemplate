@@ -84,23 +84,23 @@ namespace sw::editor
         if ( isPreviewAudioReady() == false )
             return;
         AudioEngine& engine = editor::getSubsystem<AudioSubsystem>().getEngine();
-        if ( _previewID != 0 )
+        if ( _previewID.isValid() )
             engine.stop( _previewID, 0.0f );
         _previewID = engine.playClip( path, hashed_string( AudioBusNames::kUI ), AudioClipPlayParams{} );
     }
 
     void AudioGraphViewModel::stopPreview()
     {
-        if ( _previewID == 0 || isPreviewAudioReady() == false )
+        if ( _previewID.isValid() == false || isPreviewAudioReady() == false )
             return;
         editor::getSubsystem<AudioSubsystem>().getEngine().stop( _previewID, 0.05f );
-        _previewID = 0;
+        _previewID = AudioPlayingID{};
     }
 
     void AudioGraphViewModel::refreshPreview()
     {
-        if ( _previewID != 0 && isPreviewAudioReady() && editor::getSubsystem<AudioSubsystem>().getEngine().isPlaying( _previewID ) == false )
-            _previewID = 0;
+        if ( _previewID.isValid() && isPreviewAudioReady() && editor::getSubsystem<AudioSubsystem>().getEngine().isPlaying( _previewID ) == false )
+            _previewID = AudioPlayingID{};
     }
 
     void AudioGraphViewModel::beginCanvasFrame()

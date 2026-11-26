@@ -30,7 +30,7 @@ namespace sw
     {
         _pCatalog       = &catalog;
         _pRecipeCatalog = &recipeCatalog;
-        _crafter.initialize( &recipeCatalog );
+        _crafter.initialize( recipeCatalog );
         _listCharge.clear();
         _listEffect.clear();
         _oilID            = hashed_string{};

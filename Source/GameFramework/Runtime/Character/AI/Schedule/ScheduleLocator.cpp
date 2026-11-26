@@ -16,9 +16,9 @@ namespace sw
     {
     }
 
-    void ScheduleSpotLocator::initialize( const ScheduleCatalog* pCatalog )
+    void ScheduleSpotLocator::initialize( const ScheduleCatalog& catalog )
     {
-        _pCatalog = pCatalog;
+        _pCatalog = &catalog;
         clear();
     }
 

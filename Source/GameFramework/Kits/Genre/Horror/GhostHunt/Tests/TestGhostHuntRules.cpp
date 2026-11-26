@@ -129,7 +129,7 @@ namespace
         GhostHuntTest()
         {
             SW_REQUIRE_TRUE( _catalog.loadFromXMLText( kGhostHuntXML, "GhostHuntTest" ) );
-            SW_REQUIRE_TRUE( _encounter.initialize( &_catalog, 3u ) );
+            SW_REQUIRE_TRUE( _encounter.initialize( _catalog, 3u ) );
         }
 
         /** @brief 쌓인 이벤트를 `_listEvent` 뒤로 모으고 @p type 의 수를 셉니다. */
@@ -398,24 +398,13 @@ SW_TEST_CASE( GhostHuntTest, CatalogRefusesVacuumWithoutStages )
 // ── 싸움 ──────────────────────────────────────────────────────────────
 
 /**
- * @brief [GhostHuntTest] 시작 거절: 카탈로그 없음
- */
-SW_TEST_CASE( GhostHuntTest, EncounterRefusesNoCatalog )
-{
-    SW_EXPECT_LOG( "GhostEncounter.RefusedInitialize" );
-    GhostEncounter encounter;
-    SW_EXPECT_FALSE( encounter.initialize( nullptr, 1u ) );
-    SW_EXPECT_EQUAL( 0u, encounter.spawnGhost( "goob", float3{} ) );
-}
-
-/**
  * @brief [GhostHuntTest] 결함: 시드 0 은 난수의 단언에 걸렸다 — 오류로 거절한다
  */
 SW_TEST_CASE_F( GhostHuntTest, EncounterRefusesSeedZero )
 {
     SW_EXPECT_LOG( "GhostEncounter.RefusedInitialize" );
     GhostEncounter encounter;
-    SW_EXPECT_FALSE( encounter.initialize( &_catalog, 0u ) );
+    SW_EXPECT_FALSE( encounter.initialize( _catalog, 0u ) );
 }
 
 /**
@@ -630,7 +619,7 @@ SW_TEST_CASE_F( GhostHuntTest, VacuumStageClamps )
 SW_TEST_CASE_F( GhostHuntTest, SameSeedSameFight )
 {
     GhostEncounter other;
-    SW_REQUIRE_TRUE( other.initialize( &_catalog, 3u ) );
+    SW_REQUIRE_TRUE( other.initialize( _catalog, 3u ) );
     for ( GhostEncounter* pEncounter : { &_encounter, &other } )
     {
         const uint32 ghostID = pEncounter->spawnGhost( "goob", float3{ 0.0f, 0.0f, 2.0f } );
@@ -657,7 +646,7 @@ SW_TEST_CASE_F( GhostHuntTest, EncounterStateRoundTrip )
     _encounter.setVacuumStage( 1 );
 
     GhostEncounter restored;
-    SW_REQUIRE_TRUE( restored.initialize( &_catalog, 9u ) );
+    SW_REQUIRE_TRUE( restored.initialize( _catalog, 9u ) );
     SW_REQUIRE_TRUE( StateBytesTestUtil::roundTrips( _encounter, restored ) );
     SW_EXPECT_EQUAL( ghostID, restored.getSuctionTarget() );
     SW_EXPECT_EQUAL( 1, restored.getVacuumStage() );
@@ -1078,7 +1067,7 @@ SW_TEST_CASE_F( GhostHuntTest, EncounterDeterminism )
 {
     const auto setup = [this]( GhostEncounter& encounter ) -> bool
     {
-        if ( encounter.initialize( &_catalog, 3u ) == false )
+        if ( encounter.initialize( _catalog, 3u ) == false )
             return false;
         const bool bSpawned = encounter.spawnGhost( "goob", float3{ 0.0f, 0.0f, 2.0f } ) != 0 && encounter.spawnGhost( "goob", float3{ 1.0f, 0.0f, 3.0f } ) != 0 &&
                               encounter.spawnGhost( "shy", float3{ -1.0f, 0.0f, 2.0f } ) != 0;

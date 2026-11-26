@@ -59,7 +59,7 @@ namespace
             , _store{ &_database }
             , _router{}
         {
-            _router.initialize( &_store );
+            _router.initialize( _store );
         }
 
         /** @brief 답이 답을 낳는(색인 → 기록) 사슬이 끝날 때까지 나눠 줍니다. */

@@ -297,8 +297,8 @@ namespace sw
     {
         if ( acquireBoundCatalog( _pCatalog ) == false || acquireBoundCatalog( _pRecipes ) == false || acquireBoundCatalog( _pItemCatalog ) == false || acquireRequired( _elementChart.path(), _pChart ) == false || validateSetup() == false || openQuest() == false )
             return false;
-        const bool bOpened = _haggle.initialize( _pCatalog.get(), _contract.key() ) && _investigation.initialize( *_pCatalog, _contract.key(), _questLog ) &&
-                             _combat.initialize( _pCatalog.get(), _seed ) && openBag() && openSkills();
+        const bool bOpened = _haggle.initialize( *_pCatalog, _contract.key() ) && _investigation.initialize( *_pCatalog, _contract.key(), _questLog ) &&
+                             _combat.initialize( *_pCatalog, _seed ) && openBag() && openSkills();
         if ( bOpened == false )
             return false;
         _bestiary.initialize( *_pCatalog, *_pChart );
@@ -618,7 +618,7 @@ namespace sw
             return;
         }
         const bool bRead = io.valueOpened( _haggle, [this]( MonsterHuntHaggle& haggle )
-        { return haggle.initialize( _pCatalog.get(), _contract.key() ); } ) &&
+        { return haggle.initialize( *_pCatalog, _contract.key() ); } ) &&
                            io.valueOpened( _investigation, [this]( MonsterHuntInvestigation& investigation )
         { return investigation.initialize( *_pCatalog, _contract.key(), _questLog ); } ) &&
                            io.valueOpened( _questLog, [this]( QuestLog& questLog )
@@ -631,7 +631,7 @@ namespace sw
             bestiary.initialize( *_pCatalog, *_pChart );
             return true;
         } ) && io.valueOpened( _combat, [this]( MonsterHuntCombat& combat )
-        { return combat.initialize( _pCatalog.get(), _seed ); } ) &&
+        { return combat.initialize( *_pCatalog, _seed ); } ) &&
                            io.valueOpened( _alchemy, [this]( MonsterHuntAlchemy& alchemy )
         {
             alchemy.initialize( *_pCatalog, *_pRecipes );

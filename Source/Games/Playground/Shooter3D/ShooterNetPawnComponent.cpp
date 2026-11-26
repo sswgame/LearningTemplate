@@ -277,7 +277,7 @@ namespace sw
         _bSeatsReported   = SW_FALSE;
         pMovement->setNetDriven( true );
         // 클라이언트가 알리는 서버 틱을 읽는 바닥이 이 틱 뒤에 돌게 한다(바닥 서브틱의 선행 조건).
-        ControlSystem* pControl = _role == Role::Client ? ControlSystem::find( *getOwner()->getMutableManager() ) : nullptr;
+        ControlSystem* pControl = _role == Role::Client ? ControlSystem::find( *getOwner()->getManager() ) : nullptr;
         if ( pControl != nullptr )
             pControl->setServerTickSource( getTickHandle() );
         SW_LOG_INFO_ID( "ShooterNetPawn.ShooterNetPawnMovement", "Shooter net pawn: %# movement at %# Hz", _role == Role::Server ? "server-authoritative" : "predicted", static_cast<int32>( MathUtil::round( 1.0f / _tickInterval ) ) );
@@ -292,9 +292,9 @@ namespace sw
     void ShooterNetPawnComponent::stopRole()
     {
         _routerSubscription.reset();
-        if ( _role == Role::Server && getOwner() != nullptr && getOwner()->getMutableManager() != nullptr )
+        if ( _role == Role::Server && getOwner() != nullptr && getOwner()->getManager() != nullptr )
             MeleeSweepHistory::release( *getOwner()->getMutableManager() );
-        ControlSystem* pControl = getOwner() != nullptr && getOwner()->getMutableManager() != nullptr ? ControlSystem::find( *getOwner()->getMutableManager() ) : nullptr;
+        ControlSystem* pControl = getOwner() != nullptr && getOwner()->getManager() != nullptr ? ControlSystem::find( *getOwner()->getManager() ) : nullptr;
         if ( pControl != nullptr && pControl->getServerTickSource() == getTickHandle() )
             pControl->setServerTickSource( SubTickHandle{} );
         ShooterBodyMovementComponent* pMovement = findMovement();

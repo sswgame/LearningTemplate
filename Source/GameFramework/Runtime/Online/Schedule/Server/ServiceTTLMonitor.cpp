@@ -53,7 +53,7 @@ namespace sw
         shutdown();
     }
 
-    bool ServiceTTLMonitor::initialize( ServiceStore* pStore, ServiceScheduler* pScheduler, vector<ServiceTTLRule> listRule, int32 minuteOfDay )
+    bool ServiceTTLMonitor::initialize( ServiceStore& store, ServiceScheduler& scheduler, vector<ServiceTTLRule> listRule, int32 minuteOfDay )
     {
         if ( listRule.empty() )
             return true;
@@ -65,8 +65,8 @@ namespace sw
                 return false;
             }
         }
-        _store.bindStore( pStore );
-        _pScheduler = pScheduler;
+        _store.bindStore( &store );
+        _pScheduler = &scheduler;
         _listRule   = std::move( listRule );
         ScheduleDef schedule;
         schedule._jobID       = kJobID;

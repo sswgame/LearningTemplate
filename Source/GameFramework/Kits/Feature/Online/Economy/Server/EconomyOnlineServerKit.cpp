@@ -85,7 +85,7 @@ namespace sw
                 static_cast<EconomyPolicy&>( settings ) = kitConfig._policy;
                 settings._bAcceptSandboxReceipts        = kitConfig._bAcceptSandboxReceipts ? SW_TRUE : SW_FALSE;
                 settings._refundRecovery                = kitConfig._refundRecovery;
-                if ( _service.initialize( context._pStore, settings ) == false )
+                if ( _service.initialize( *context._pStore, settings ) == false )
                 {
                     _receiptRegistry.shutdown();
                     shutdown();

@@ -71,7 +71,7 @@ namespace
             SW_REQUIRE_TRUE( _clock.initialize( WorldClockSettings{} ) );
             SW_REQUIRE_TRUE( _loot.loadFromXMLText( kOutlawLootXML, "WesternOutlawTestLoot" ) );
             SW_REQUIRE_TRUE( _bag.initialize( _items, 4 ) );
-            SW_REQUIRE_TRUE( _outlaw.initialize( &_catalog, &_loot, _wallet, _reputation, _clock, _flags, _weather, &_bag, hashed_string( "frontier" ), 20.0f, AIPerceptionSettings{} ) );
+            SW_REQUIRE_TRUE( _outlaw.initialize( _catalog, &_loot, _wallet, _reputation, _clock, _flags, _weather, &_bag, hashed_string( "frontier" ), 20.0f, AIPerceptionSettings{} ) );
         }
 
         /** @brief 빌려 준 판 상태(시계 · 지갑 · 평판 · 플래그 · 가방)와 무법자를 함께 싣습니다 — 결정성 테스트가 판 전체로 쓴다. */
@@ -346,8 +346,8 @@ SW_TEST_CASE( WesternOutlawTest, LootAnimalsNeedALootCatalogAndABag )
     SW_EXPECT_LOG( "WesternOutlaw.LootWithoutCatalogOrBag" );
     OutlawRig     rig;
     WesternOutlaw outlaw;
-    SW_EXPECT_FALSE( outlaw.initialize( &rig._catalog, nullptr, rig._wallet, rig._reputation, rig._clock, rig._flags, rig._weather, &rig._bag, hashed_string( "frontier" ), 20.0f, AIPerceptionSettings{} ) );
-    SW_EXPECT_FALSE( outlaw.initialize( &rig._catalog, &rig._loot, rig._wallet, rig._reputation, rig._clock, rig._flags, rig._weather, nullptr, hashed_string( "frontier" ), 20.0f, AIPerceptionSettings{} ) );
+    SW_EXPECT_FALSE( outlaw.initialize( rig._catalog, nullptr, rig._wallet, rig._reputation, rig._clock, rig._flags, rig._weather, &rig._bag, hashed_string( "frontier" ), 20.0f, AIPerceptionSettings{} ) );
+    SW_EXPECT_FALSE( outlaw.initialize( rig._catalog, &rig._loot, rig._wallet, rig._reputation, rig._clock, rig._flags, rig._weather, nullptr, hashed_string( "frontier" ), 20.0f, AIPerceptionSettings{} ) );
 }
 
 /** @brief [WesternOutlawTest] 쓰러진 목격자는 모으지 않는다 — 시체가 신고하거나 법 쪽의 눈이 되지 않는다 */

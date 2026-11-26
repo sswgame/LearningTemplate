@@ -215,7 +215,7 @@ namespace sw
                              AsymmetricHorrorGameModeComponentInternal::kMaxSurvivors );
             return false;
         }
-        if ( _match.initialize( makeSettings(), _pCatalog.get() ) == false )
+        if ( _match.initialize( makeSettings(), *_pCatalog ) == false )
         {
             SW_LOG_ERROR_ID( "AsymmetricHorror.MatchRefused", "Asymmetric horror game mode: the match refused killer '%#' or the fixed step %# - the match does not open", _killer.c_str(), _fixedStep );
             return false;
@@ -441,7 +441,7 @@ namespace sw
         // 판은 같은 카탈로그 · 설정으로 `initialize` 한 뒤에 읽는다(키트 계약). 무대와 생존자는 바이트가 정한다. 사람 비트 · 결과는 상태 칸이다(`GameModeComponent::serializeState`).
         const bool bMatch = io.valueOpened( _match, [this]( AsymmetricHorrorMatch& match )
         {
-            if ( _pCatalog != nullptr && match.initialize( makeSettings(), _pCatalog.get() ) )
+            if ( _pCatalog != nullptr && match.initialize( makeSettings(), *_pCatalog ) )
                 return true;
             SW_LOG_ERROR_ID( "AsymmetricHorror.StateNeedsCatalog", "Asymmetric horror game mode: state read before the rules catalog is bound - refused" );
             return false;

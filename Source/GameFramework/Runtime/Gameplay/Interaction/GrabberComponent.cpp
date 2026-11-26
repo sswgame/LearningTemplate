@@ -144,9 +144,9 @@ namespace sw
 
     GameObject* GrabberComponent::findNearestGrabbable()
     {
-        GameObject*           pOwner   = getOwner();
-        GameObjectManager*    pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
-        const SceneComponent* pSelf    = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
+        GameObject*              pOwner   = getOwner();
+        const GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        const SceneComponent*    pSelf    = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
         if ( pManager == nullptr || pSelf == nullptr )
             return nullptr;
         // 후보는 태그 색인에서만 모은다(씬을 훑지 않는다 — 포탑 · 상호작용 고르기와 같다).

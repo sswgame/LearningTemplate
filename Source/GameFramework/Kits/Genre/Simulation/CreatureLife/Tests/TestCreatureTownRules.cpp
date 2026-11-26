@@ -51,7 +51,7 @@ namespace
         CreatureTownRulesTest()
         {
             SW_REQUIRE_TRUE( _catalog.loadFromXMLText( kRulesCatalogXML, "CreatureTownRulesTest" ) );
-            SW_REQUIRE_TRUE( _town.initialize( &_catalog, _reputation, _questLog, _clock, kRulesTownSize, kRulesTownSize ) );
+            SW_REQUIRE_TRUE( _town.initialize( _catalog, _reputation, _questLog, _clock, kRulesTownSize, kRulesTownSize ) );
         }
 
         void attractSprout()
@@ -160,7 +160,7 @@ namespace
 SW_TEST_CASE_F( CreatureTownRulesTest, TownDeterminism )
 {
     const auto setup = [this]( CreatureTownRun& run )
-    { return run._town.initialize( &_catalog, run._reputation, run._questLog, run._clock, kRulesTownSize, kRulesTownSize ); };
+    { return run._town.initialize( _catalog, run._reputation, run._questLog, run._clock, kRulesTownSize, kRulesTownSize ); };
     const auto step = []( CreatureTownRun& run, int32 stepIndex )
     {
         sw::CreatureTown& town = run._town;

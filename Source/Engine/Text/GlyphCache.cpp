@@ -96,7 +96,7 @@ namespace sw
             const uint32 paddedHeight = _scratchBitmap._height + GlyphAtlas::kPadding * 2;
             if ( paddedWidth > _atlas.getPageSize() || paddedHeight > _atlas.getPageSize() )
             {
-                SW_LOG_WARNING_ID( "GlyphCache.GlyphLargerThanAtlasPage", "[Text] Glyph %# of face %# (%#x%#) is larger than a glyph atlas page (%#) - it is not drawn", glyphIndex, face,
+                SW_LOG_WARNING_ID( "GlyphCache.GlyphLargerThanAtlasPage", "[Text] Glyph %# of face %# (%#x%#) is larger than a glyph atlas page (%#) - it is not drawn", glyphIndex, face.getValue(),
                                    _scratchBitmap._width, _scratchBitmap._height, _atlas.getPageSize() );
                 return GlyphLookup{};
             }
@@ -119,7 +119,7 @@ namespace sw
         for ( const auto& [key, glyph] : _mapGlyph )
         {
             (void)glyph;
-            if ( static_cast<FontFaceID>( key >> 32 ) == face )
+            if ( FontFaceID{ key >> 32 } == face )
                 listKey.push_back( key );
         }
         for ( const uint64 key : listKey )

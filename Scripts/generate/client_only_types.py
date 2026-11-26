@@ -25,7 +25,7 @@ from typing import Sequence
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 
-from common.command import Command, ScriptContext  # noqa: E402
+from common.command import Command, CommandError, ScriptContext  # noqa: E402
 from common.exit_code import ExitCode  # noqa: E402
 
 #: 실행 파일 옆 표 이름 — `ClientOnlyTypeTable::kTableFile` · `pack.py` 의 `CLIENT_ONLY_TYPE_TABLE` 과 같은 이름이다.
@@ -34,9 +34,22 @@ TABLE_FILE_NAME = "ClientOnlyTypes.json"
 REFLECTED_TYPE = re.compile(r"^\s*REFLECT\s*\((?:[^()]|\([^()]*\))*\)\s*\n\s*(?:class|struct)\s+(?:SW_\w+\s+)?(\w+)", re.M)
 
 
+#: 줄 머리의 `REFLECT(` — 이것마다 형식 이름이 하나 나와야 한다. 못 읽은 선언을 조용히 빼면 서버가 그 형식을 모르는 형식으로 보아 쿠킹 · 씬 읽기에서야 진다.
+REFLECT_LINE = re.compile(r"^[ 	]*REFLECT\s*\(", re.M)
+
+
 def collect_type_names(list_header: Sequence[Path]) -> list[str]:
-    """헤더들의 리플렉션 형식 이름(글자 순, 겹침 없음)입니다. 읽지 못하는 헤더는 예외로 멈춘다(빈 표로 대신하지 않는다)."""
-    return sorted({name for header in list_header for name in REFLECTED_TYPE.findall(header.read_text(encoding="utf-8"))})
+    """헤더들의 리플렉션 형식 이름(글자 순, 겹침 없음)입니다. 읽지 못하는 헤더 · 이름을 읽지 못한 `REFLECT(` 는 멈춘다(빠진 표로 대신하지 않는다)."""
+    set_name: set[str] = set()
+    for header in list_header:
+        text = header.read_text(encoding="utf-8")
+        list_match = list(REFLECTED_TYPE.finditer(text))
+        set_read = {match.start() + len(match.group()) - len(match.group().lstrip()) for match in list_match}
+        for match in REFLECT_LINE.finditer(text):
+            if match.start() + len(match.group()) - len(match.group().lstrip()) not in set_read:
+                raise CommandError(f"{header}:{text.count(chr(10), 0, match.start()) + 1} 의 REFLECT 다음에서 형식 이름을 읽지 못했다 - client_only_types.py 의 REFLECTED_TYPE 이 아는 꼴로 적거나 꼴을 더한다")
+        set_name.update(match.group(1) for match in list_match)
+    return sorted(set_name)
 
 
 def make_table_text(list_name: list[str]) -> str:

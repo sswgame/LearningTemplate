@@ -72,7 +72,7 @@ namespace sw
     public:
         ScheduleSpotLocator();
 
-        void initialize( const ScheduleCatalog* pCatalog );
+        void initialize( const ScheduleCatalog& catalog );
         void clear();
 
         [[nodiscard]] bool reserve( const ScheduleReserveRequest& request, ScheduleLocation& outLocation, uint32& outReservationID ) override;

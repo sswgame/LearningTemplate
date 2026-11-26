@@ -194,7 +194,7 @@ namespace sw
 
     bool MonsterCollectorGameModeComponent::openStorage()
     {
-        if ( _storage.initialize( _pCatalog.get(), _boxCapacity ) == false )
+        if ( _storage.initialize( *_pCatalog, _boxCapacity ) == false )
             return false;
         for ( const CatalogKey<MonsterSpeciesDef>& starter : _listStarter )
         {
@@ -481,7 +481,7 @@ namespace sw
         // 전투는 전투 중일 때만 싣는다 — 다음 전투는 시작할 때 새로 열고 시드는 연 전투 수가 정한다.
         const bool bStorage = io.valueOpened( _storage, [this]( MonsterStorage& storage )
         {
-            if ( _pCatalog != nullptr && _pChart != nullptr && storage.initialize( _pCatalog.get(), _boxCapacity ) )
+            if ( _pCatalog != nullptr && _pChart != nullptr && storage.initialize( *_pCatalog, _boxCapacity ) )
                 return true;
             SW_LOG_ERROR_ID( "MonsterCollector.StateNeedsCatalog", "Monster collector game mode: state read before the catalog and the element chart are loaded - refused" );
             return false;

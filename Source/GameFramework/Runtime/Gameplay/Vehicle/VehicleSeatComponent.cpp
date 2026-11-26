@@ -213,9 +213,9 @@ namespace sw
 
     void VehicleSeatComponent::applyRideFeedback()
     {
-        using Internal              = VehicleSeatComponentInternal;
-        GameObject*        pVehicle = getOwner();
-        GameObjectManager* pManager = pVehicle != nullptr ? pVehicle->getMutableManager() : nullptr;
+        using Internal                    = VehicleSeatComponentInternal;
+        GameObject*              pVehicle = getOwner();
+        const GameObjectManager* pManager = pVehicle != nullptr ? pVehicle->getManager() : nullptr;
         if ( pManager == nullptr )
             return;
         if ( _rideFeel._speedSoundParameter.empty() == false )

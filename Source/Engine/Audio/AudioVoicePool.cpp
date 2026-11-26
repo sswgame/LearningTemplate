@@ -47,7 +47,7 @@ namespace sw
                                        ( slot._priority == pVictim->_priority &&
                                          ( slot._bVirtual != pVictim->_bVirtual ? slot._bVirtual
                                                                                 : ( slot._audibility != pVictim->_audibility ? slot._audibility < pVictim->_audibility
-                                                                                                                             : slot._playingID > pVictim->_playingID ) ) );
+                                                                                                                             : pVictim->_playingID < slot._playingID ) ) );
             if ( bBetterVictim )
                 pVictim = &slot;
         }
@@ -87,7 +87,7 @@ namespace sw
         slot._bInUse          = false;
         slot._bStolen         = false;
         slot._bWaitingForClip = false;
-        slot._playingID       = 0;
+        slot._playingID       = AudioPlayingID{};
         slot._instanceIndex.reset();
     }
 

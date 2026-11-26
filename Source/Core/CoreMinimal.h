@@ -18,6 +18,7 @@
 #include "Core/Foundation/EnumUtil.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/StdHeaders.h"
+#include "Core/Foundation/TypedID.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/Math.h"

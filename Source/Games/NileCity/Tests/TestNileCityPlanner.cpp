@@ -45,7 +45,7 @@ namespace
         {
             SW_REQUIRE_TRUE( _catalog.loadFromXMLText( kNileCityXML, "NileCityPlannerTest" ) );
             _wallet.add( _catalog.getRules()._currency, kStartingMoney );
-            SW_REQUIRE_TRUE( _city.initialize( &_catalog, kTestWidth, kTestHeight, _wallet ) );
+            SW_REQUIRE_TRUE( _city.initialize( _catalog, kTestWidth, kTestHeight, _wallet ) );
             SW_REQUIRE_TRUE( _tileMap.resetTiles( kTestWidth, kTestHeight ) );
             SW_REQUIRE_TRUE( _tileMap.addDataLayer( NileCityPlanner::kTerrainLayer, 0 ) );
         }

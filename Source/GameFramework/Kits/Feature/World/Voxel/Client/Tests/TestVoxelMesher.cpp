@@ -24,7 +24,7 @@ namespace
         {
             _stone = addBlock( "stone", true, 3, 1.0f );
             _glass = addBlock( "glass", false, 5, 0.5f );
-            SW_REQUIRE_TRUE( _world.initialize( 2, 2, &_catalog ) );
+            SW_REQUIRE_TRUE( _world.initialize( 2, 2, _catalog ) );
             _world.setChunkGenerator( []( const VoxelWorld&, int32, int32, vector<VoxelBlockIndex>& ) {} );
             SW_REQUIRE_EQUAL( uint32( 4 ), _world.updateResidency( 0, 0, 1, 4 ) );
         }

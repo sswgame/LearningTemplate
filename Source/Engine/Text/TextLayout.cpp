@@ -716,7 +716,7 @@ namespace sw
         context        = Internal::hashFloat( context, maxWidth );
         for ( uint32 index = 0; index < chain._faceCount; ++index )
         {
-            context = HashUtil::combine( context, chain._arrFace[index] );
+            context = HashUtil::combine( context, chain._arrFace[index].getValue() );
         }
         if ( pListSpan != nullptr )
         {

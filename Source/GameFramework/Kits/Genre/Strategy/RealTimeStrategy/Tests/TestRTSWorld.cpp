@@ -44,7 +44,7 @@ namespace
 
         bool setUp( const sw::RTSCatalog& catalog )
         {
-            if ( _world.initialize( &catalog, kMapSize, kMapSize ) == false )
+            if ( _world.initialize( catalog, kMapSize, kMapSize ) == false )
                 return false;
             for ( int32 y = 20; y < 28; ++y )
                 _world.setTerrainBlocked( 24, y, true ); // 가운데 벽 — 무리 이동이 돌아간다
@@ -358,7 +358,7 @@ SW_TEST_CASE( RTSWorldTest, ReadStateRefusesOutOfRangeIndices )
     sw::RTSCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kUnitXML, "RTSWorldTest" ) );
     sw::RTSWorld world;
-    SW_REQUIRE_TRUE( world.initialize( &catalog, RTSFixture::kSize, RTSFixture::kSize ) );
+    SW_REQUIRE_TRUE( world.initialize( catalog, RTSFixture::kSize, RTSFixture::kSize ) );
     sw::Wallet wallet;
     SW_REQUIRE_EQUAL( 0, world.addPlayer( 0, wallet, sw::float3{} ) );
 
@@ -430,7 +430,7 @@ SW_TEST_CASE( RTSWorldTest, ReadStateRefusesOutOfRangeValues )
     sw::RTSCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kUnitXML, "RTSWorldTest" ) );
     sw::RTSWorld world;
-    SW_REQUIRE_TRUE( world.initialize( &catalog, RTSFixture::kSize, RTSFixture::kSize ) );
+    SW_REQUIRE_TRUE( world.initialize( catalog, RTSFixture::kSize, RTSFixture::kSize ) );
     sw::Wallet wallet;
     SW_REQUIRE_EQUAL( 0, world.addPlayer( 0, wallet, sw::float3{} ) );
 
@@ -531,7 +531,7 @@ SW_TEST_CASE( RTSWorldTest, SpeedScaleKeepsStepRatio )
     sw::RTSCatalog catalog;
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kUnitXML, "RTSWorldTest" ) );
     sw::RTSWorld world;
-    SW_REQUIRE_TRUE( world.initialize( &catalog, kMapSize, kMapSize ) );
+    SW_REQUIRE_TRUE( world.initialize( catalog, kMapSize, kMapSize ) );
 
     float32 advanced = 0.0f;
     for ( int32 frame = 0; frame < 30; ++frame )
@@ -549,13 +549,10 @@ SW_TEST_CASE( RTSWorldTest, CatalogWithoutRulesIsRefused )
     SW_EXPECT_LOG( "RTSCatalog.RulesMissing" );
     SW_EXPECT_LOG( "RTSCatalog.RulesInvalid" );
     SW_EXPECT_LOG( "XMLFields.RequiredFieldMissing" );
-    SW_EXPECT_LOG( "RTSWorld.RTSWorldNeedsCatalog" );
     sw::RTSCatalog bare;
     SW_EXPECT_FALSE( bare.loadFromXMLText( R"(<RTSCatalog supplyMax="200"><Unit id="minerals" name="minerals" kind="Resource" resource="Minerals" amount="1500" footprint="1"/></RTSCatalog>)", "RTSWorldTest" ) );
     sw::RTSCatalog partial;
     SW_EXPECT_FALSE( partial.loadFromXMLText( R"(<RTSCatalog supplyMax="200"><Rules fixedStep="0.05"/><Unit id="minerals" name="minerals" kind="Resource" resource="Minerals" amount="1500" footprint="1"/></RTSCatalog>)", "RTSWorldTest" ) );
-    sw::RTSWorld world;
-    SW_EXPECT_FALSE( world.initialize( nullptr, kMapSize, kMapSize ) );
 }
 
 /** @brief [RTSWorldTest] 공격 이동(A + 클릭): 싸울 수 있는 유닛은 `AttackMove` 명령을 받고 쉬프트 입력은 뒤에 붙는다. 건물과 없는 유닛은 거절한다. */

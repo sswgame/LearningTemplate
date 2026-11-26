@@ -113,7 +113,7 @@ namespace sw::editor
     {
         if ( _selectedEvent >= _listEventName.size() )
             return;
-        (void)getAudioSubsystem().getEngine().postEvent( _listEventName[_selectedEvent], 0 ); // 재생 id 는 쓰지 않는다 — 끝나면 저절로 멈춘다
+        (void)getAudioSubsystem().getEngine().postEvent( _listEventName[_selectedEvent] ); // 재생 id 는 쓰지 않는다 — 끝나면 저절로 멈춘다
     }
 
     bool AudioMixerViewModel::playClip( string_view clipPath ) const

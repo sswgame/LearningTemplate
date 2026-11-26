@@ -200,8 +200,8 @@ namespace sw
         SceneComponent::onPostLoad();
         // 늘 틱 뒤에 한 번 짓는다 — 같은 배치에서 지형(높이장)과 강 경로 어댑터(`setRiverPathFromSource`)가 아직이거나 뒤따르면 지금 지은 메시는 버려졌다
         // (waterplay: 지형 없이 한 번 · 강 경로로 또 한 번). 그사이 들어온 다시 만들기 요청은 줄 선 이 한 번에 합쳐진다.
-        GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
+        GameObject*              pOwner   = getOwner();
+        const GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         if ( pManager == nullptr )
         {
             rebuildSurface();
@@ -401,7 +401,7 @@ namespace sw
             return;
 
         GameObject*               pOwner   = getOwner();
-        GameObjectManager*        pManager = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
+        const GameObjectManager*  pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         const TerrainComponent*   pTerrain = pManager != nullptr ? TerrainComponent::findTerrainAt( *pManager, _surfaceOrigin._x, _surfaceOrigin._z ) : nullptr;
         const TerrainHeightfield* pField   = pTerrain != nullptr ? &pTerrain->getHeightfield() : nullptr;
         _bBuiltOnTerrain                   = pField != nullptr;
