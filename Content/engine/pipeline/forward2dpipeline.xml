@@ -47,10 +47,17 @@
 				<item>SceneColor</item>
 				<item>SceneDepth</item>
 			</_listInput>
-			<_listPermutation />
+			<_listPermutation>
+				<item _op="Remove">SW_POST_BLOOM=1</item>
+				<item _op="Remove">SW_POST_OUTLINE=1</item>
+				<item _op="Remove">SW_POST_TONEMAP=1</item>
+			</_listPermutation>
 		</RenderGraphPassDesc>
 	</_listPass>
+	<!-- 그림자 맵 · 장면 색 사본 · 포워드 색 묶음은 빼고 프레임 패스 묶음만 가져온다. -->
 	<_listRenderPassRef>
-		<item>guid:3bbe483ea09c587a0612ffacd7007d3d</item>
+		<item _op="Remove">guid:57bd09488b11feda78cbced691b416fe</item>
+		<item _op="Remove">guid:772ca6339dfa39e6f45e06670e127c46</item>
+		<item _op="Remove">guid:85dda27761602296f8342aa3e0fda17e</item>
 	</_listRenderPassRef>
 </RenderPipelineDesc>

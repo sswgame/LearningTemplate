@@ -26,10 +26,9 @@
 			</_listInput>
 		</RenderGraphPassDesc>
 	</_listPass>
+	<!-- 장면 색 · 깊이 사본 패스를 지웠으니 그 첨부 묶음(scenecopyrenderpass)도 뺀다. -->
 	<_listRenderPassRef>
-		<item>guid:57bd09488b11feda78cbced691b416fe</item>
-		<item>guid:3bbe483ea09c587a0612ffacd7007d3d</item>
-		<item>guid:772ca6339dfa39e6f45e06670e127c46</item>
+		<item _op="Remove">guid:85dda27761602296f8342aa3e0fda17e</item>
 	</_listRenderPassRef>
 	<_listExtensionShader>
 		<item>guid:d065c7e080a5fd21566ce30f25a0be89</item>

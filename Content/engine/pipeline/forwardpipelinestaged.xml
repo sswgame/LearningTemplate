@@ -36,7 +36,11 @@
 			<_listInput>
 				<item>OutlineColor</item>
 			</_listInput>
-			<_listPermutation />
+			<_listPermutation>
+				<item _op="Remove">SW_POST_BLOOM=1</item>
+				<item _op="Remove">SW_POST_OUTLINE=1</item>
+				<item _op="Remove">SW_POST_TONEMAP=1</item>
+			</_listPermutation>
 		</RenderGraphPassDesc>
 	</_listPass>
 </RenderPipelineDesc>

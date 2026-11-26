@@ -13,8 +13,12 @@
 | `engine/renderstate/blendpresets.xml` | 블렌드 프리셋 — 줄을 더하면 코드 없이 새 프리셋 |
 | `*.material` (`MaterialDef`) | 렌더 상태 칸은 패스와 같은 형식(머티리얼 XML 은 앞 `_` 와 불리언 `b` 를 뗀 이름) |
 
-- 비슷한 파이프라인은 `_base` 로 부모를 가리키고 차이만 적는다([DataInheritance](DataInheritance.md)). 이름이 겹치는 첨부는 오류다.
+- 비슷한 파이프라인은 `_base` 로 부모를 가리키고 차이만 적는다([DataInheritance](DataInheritance.md)). 이름이 겹치는 첨부는 오류다. `_listPermutation` · `_listRenderPassRef` 는 글이 열쇠라 하나씩 더하고 `<item _op="Remove">` 로 지운다(한 퍼뮤테이션 이름은 한 번).
 - 패스 칸은 리플렉션 enum 이다 — 철자 오타는 읽기 오류. 메시 · 증폭 스테이지는 없다.
+- 뷰 패스 종류는 파이프라인에 한 번이다. 표가 `kRepeatable` 로 적은 종류(그림자 · Compute · 후처리 머티리얼)만 여럿 둔다. 그래픽스 패스 PSO 는 패스 이름이 열쇠라(`FramePSOManager::getPassPSO`) 같은 종류의 패스마다 제 서술로 그린다.
+- 씬 메시 패스가 그릴 머티리얼은 패스 칸 `_requiredMaterialDefine` · `_excludedMaterialDefine` 이 정한다(유니티 LightMode 자리). 비운 칸은 표의 기본값이다(G버퍼는 `MATERIAL_FORWARD_ONLY` 를 빼고, 메시 외곽선은 `MATERIAL_OUTLINE` 을 요구한다). 드로우 · PSO 변형 · 쿠커가 `MaterialPassFilter` 하나를 본다.
+- 표가 XML 에 끄는 것만 허락한 칸(깊이 테스트 `kDepthTest` · 깊이 쓰기 `kDepthWrite` · 앞면 컬링 `kCullFront`)을 XML 이 켜거나 뒤집으면 로드 오류다.
+- 로드는 뷰 그래프 · 프레임 그래프를 서술만으로 한 번 컴파일한다(`validateGraphsCompile`). 순환은 첫 프레임 로그가 아니라 로드 오류다.
 
 ### 머티리얼 칸
 
@@ -24,6 +28,7 @@
 - 순서에 기대는 머티리얼에 `renderQueue` 차례를 적지 않는다 — 불투명 띠는 렌더 상태가 정한다(`OpaqueDrawBand`).
 - 인스턴스 모델은 둘이다: 에셋 변형은 자식 머티리얼(`_base` — 렌더 상태 · `alphaMode` · `renderQueue` · 정적 스위치 · 멀티 컴파일 · 값), 실행 중 값은 `MaterialInstance::create`(값 · 텍스처 · 런타임 스위치만 — 드로우마다 PSO 를 가르지 않는다).
 - 자식의 `_permutations` 는 부모와 이름으로 합친다 — 더할 define · 바꿀 스위치만 적는다.
+- 게임 · 도구가 머티리얼을 물을 때는 배포에서도 되는 형식 멤버를 쓴다: 키워드 `isKeywordEnabled`, 패스가 그리는지 `isDrawnByPass( pass._resolvedMaterialFilter )`, 셰이더 · 퍼뮤테이션 `getShaderPath` · `getCachedShaderDefines`(`Material` · `MaterialInstance` 같은 이름). define 목록을 따로 훑어 판정하지 않는다.
 - 모든 머티리얼이 같은 값을 읽고 자주 바뀌는 것(날씨 · 환경 시간)은 머티리얼 칸에 묶지 않고 전역 값(`MaterialGlobals` → PassCB `g_MaterialGlobal*`)으로 둔다. 파라미터 묶음의 값은 `_global` 로 먹이고, 전역 값에는 프로퍼티를 묶지 않는다(오류).
 - 퍼뮤테이션을 바꾸는 값(정적 스위치 · 키워드 칸)은 자식 머티리얼에 적거나, 부모가 선언한 런타임 스위치(`bShaderFeature="0"`)를 `enableKeyword` 로 켠다. 값 API(`setParameter` 등)는 키워드 칸을 오류로 거절한다 — 런타임 값은 쿠킹하지 않은 조합이다(언리얼 MID 와 같은 경계).
 

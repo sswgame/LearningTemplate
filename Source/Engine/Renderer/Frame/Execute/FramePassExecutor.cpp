@@ -423,17 +423,16 @@ namespace sw
         _pActiveView = &_state.getMainView();
     }
 
-    bool FramePassExecutor::shouldDrawBatchInPass( RenderPassKind passType, const GPUMeshBatch& batch, const GPUMeshBatchBinding& binding ) const
+    bool FramePassExecutor::shouldDrawBatchInPass( const MaterialPassFilter& filter, const GPUMeshBatch& batch, const GPUMeshBatchBinding& binding ) const
     {
         // 변형 풀이 받지 못한 메시(상한 초과 · 버퍼 실패)는 어느 패스에서도 그리지 않는다 — 바인드 · 레스트 포즈로 대신 그리지 않는다(풀이 오류를 남겼다).
         if ( binding._bDeformRefused != SW_FALSE )
             return false;
-        const RenderPassKindInfo& passInfo = getRenderPassKindInfo( passType );
-        if ( passInfo.shouldFilterBatchesByMaterial() == false )
+        if ( filter.isEmpty() )
             return true;
         const GPUShaderPermutation* pPermutation =
             ( batch._shaderPermutation == kInvalidShaderPermutation ) ? nullptr : _state._gpuScene.findShaderPermutation( batch._shaderPermutation );
-        return passInfo.shouldDrawMaterial( pPermutation != nullptr ? &pPermutation->_listDefine : nullptr );
+        return filter.shouldDraw( pPermutation != nullptr ? &pPermutation->_listDefine : nullptr );
     }
 
     bool FramePassExecutor::shouldDrawCasterBatch( ShadowCasterFilter filter, const GPUMeshBatch& batch )

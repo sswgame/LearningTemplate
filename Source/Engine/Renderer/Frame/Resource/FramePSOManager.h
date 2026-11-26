@@ -29,6 +29,7 @@
 namespace sw
 {
     struct ExtensionProgramDesc;
+    struct RHICapabilities;
     struct ShaderCompileDesc;
 
     class GPUScene;
@@ -81,7 +82,7 @@ namespace sw
         const RenderPSOCache& getCache() const { return *_pCache; }
 
         /**
-         * @brief 엔진 패스 PSO(패스 종류 표를 enum 순서로), 출력 패스의 포맷별 변형, 머티리얼 폴백 버퍼를 셋업에서 만듭니다. 저장소에 이미 있는 것은 그대로 둡니다.
+         * @brief 엔진 슬롯 PSO(패스 종류 표를 enum 순서로), 파이프라인 패스 PSO(패스 이름이 열쇠), 출력 패스의 포맷별 변형, 머티리얼 폴백 버퍼를 셋업에서 만듭니다. 저장소에 이미 있는 것은 그대로 둡니다.
          * @details 출력 패스 PSO 를 하나라도 못 만들면 멈춘다(`reportFatalError`) — 화면에 낼 수 없고 다른 PSO 로 대신하지 않는다.
          *          그래픽스 · 컴퓨트 패스는 desc 를 먼저 모아 셰이더를 워커가 나눠 데우고(`warmShaders`), PSO 는 이 스레드가 차례로 만든다(백엔드 교체 뒤 셋업이 이 길을 다시 탄다).
          *          처음 그리는 프레임에 만드는 PSO(입자 · 쿠키 아틀라스)의 셰이더도 같은 데우기에 넣는다 — 그 프레임에는 드라이버 생성만 남는다.
@@ -92,8 +93,18 @@ namespace sw
         /** @brief 셰이더 핫 리로드 — 소유한 저장소에서 그 셰이더를 쓰는 PSO 와 레이아웃만 놓습니다(`RenderPSOCache::releasePSOsUsingShader`). 다시 채우기는 `createPassPSOs` 입니다. */
         void onShaderRecompiled( string_view shaderPath );
 
-        /** @brief 패스 타입에 해당하는 엔진 PSO 입니다. 없으면 0 입니다. 프레임 패스(`isFramePassType`)는 이 파이프라인이 선언하지 않았으면 0 입니다. */
+        /**
+         * @brief 패스 타입에 해당하는 PSO 입니다. 없으면 0 입니다. 프레임 패스(`isFramePassType`)는 이 파이프라인이 선언하지 않았으면 0 입니다.
+         * @details 파이프라인이 선언한 그래픽스 뷰 패스 종류면 그 종류의 첫 패스 PSO 다(`getPassPSO`) — 종류로만 묻는 쪽(비 가림 · 입자 원본 · 셋업 로그)의 자리다.
+         *          패스를 실행하는 쪽은 `getPassPSO` 로 자기 패스의 것을 받는다(같은 종류가 여럿이면 둘째 패스의 PSO 가 다르다).
+         */
         RHIPipelineStateHandle getEnginePSO( RenderPassKind passType ) const;
+        /**
+         * @brief 파이프라인 그래픽스 패스 @p pass(이 파이프라인 `getGraphPass` 의 원소)의 PSO 입니다. 없으면(만들지 않은 종류 · 실패 · 다른 파이프라인의 서술) 0 입니다.
+         * @details 열쇠는 패스 이름이다(`RenderGraphPassDesc::_resolvedName` — 로드 때 intern). 서술 · 머티리얼 필터가 앞 패스와 같으면 그 패스의 PSO 를 함께 쓴다.
+         *          컴퓨트 패스는 `findPipelineComputePSO` 다.
+         */
+        RHIPipelineStateHandle getPassPSO( const RenderGraphPassDesc& pass ) const;
         /**
          * @brief 컴퓨트 패스 타입의 엔진 PSO 와 그 PSO 에서 풀어 둔 매개변수 표입니다(`ComputeShaderParameters::apply` 가 받는다). 없으면 빈 값입니다. 프레임 패스 규칙은 `getEnginePSO` 와 같다.
          */
@@ -198,6 +209,7 @@ namespace sw
             RHIPipelineStateDesc _desc{};
             RenderPassKind       _passType{ RenderPassKind::Invalid };
             RHIFormat            _outputFormat{ RHIFormat::Unknown };
+            hashed_string        _pipelinePassName; ///< 파이프라인 패스면 그 이름입니다(PSO 의 열쇠). 비면 엔진 슬롯 `_passType` 이다
         };
 
         /** @brief 출력 패스(Present, Canvas, RCAS)가 그릴 수 있는 대상 포맷(백버퍼, 오프스크린, 캡처)의 PSO 를 @p inoutListJob 에 더합니다. desc 를 정하지 못하면 멈춥니다. */
@@ -247,8 +259,19 @@ namespace sw
          * @return 컬러 RT 가 있는데 포맷을 정할 근거가 없거나 출력 선언에 포맷을 모르는 출력(Swapchain)이 있으면 false 입니다 — RGBA8 로 짐작하지 않는다.
          */
         [[nodiscard]] bool fillPassRenderTargetFormats( RHIPipelineStateDesc& desc, const RenderGraphPassDesc* pPassDesc, const RHIFormat* pRTVFormats, uint32 numRenderTargets ) const;
-        /** @brief 이 패스 종류의 컬러 포맷을 정할 근거(표의 고정 포맷 · 컬러 없음 · 파이프라인의 출력 선언)가 있는지 반환합니다. 없으면 이 파이프라인에서 실행되지 않는 패스입니다. */
-        bool hasRenderTargetFormatSource( RenderPassKind passType ) const;
+        /**
+         * @brief 이 패스 종류의 컬러 포맷을 정할 근거(표의 고정 포맷 · 컬러 없음 · @p pTargetDesc 의 출력 선언)가 있는지 반환합니다. 없으면 이 파이프라인에서 실행되지 않는 패스입니다.
+         * @param pTargetDesc 컬러 출력을 정하는 서술입니다. 파이프라인 패스는 자기 서술, 내부 슬롯은 대신 그리는 패스(`_targetSourceType`)의 서술입니다.
+         */
+        static bool hasRenderTargetFormatSource( const RenderPassKindInfo& info, const RenderGraphPassDesc* pTargetDesc );
+        /** @brief 이 백엔드 · 실행에서 이 종류의 PSO 를 만드는지(진단 요청 · 네이티브 bindless · HDR 화면 · 출력 패스가 아님) 반환합니다. 엔진 슬롯과 파이프라인 패스가 같은 판정을 쓴다. */
+        bool shouldCreatePassPSO( RenderPassKind passType, const RHICapabilities& caps ) const;
+        /**
+         * @brief 씬 메시를 그리는 패스 PSO 마다(엔진 슬롯 · 파이프라인 패스, 함께 쓰는 PSO 는 한 번) @p fn( passPSO, passType, materialFilter ) 를 부릅니다. 머티리얼 변형 · 배치 표가 같은 목록을 훑는다.
+         * @details 거르기는 파이프라인 패스면 그 서술의 것(`RenderGraphPassDesc::_resolvedMaterialFilter`), 엔진 슬롯이면 표의 기본값이다. 드로우 루프 · 쿠커와 같은 값이다.
+         */
+        template <typename TFunction>
+        void forEachSceneMeshPassPSO( TFunction&& fn ) const;
         /**
          * @brief 패스 PSO 에 머티리얼 퍼뮤테이션, 뷰 모드, 컬 반전을 적용한 변형을 만듭니다. 적용할 것이 없으면 패스 PSO 를 그대로 반환합니다.
          * @details 렌더 상태는 패스 → 머티리얼 → 보기 모드 → 컬 반전 순서로 합친다. RT 포맷은 패스의 것이다.
@@ -261,8 +284,8 @@ namespace sw
         static uint32 getPassViewModeMask( const RenderPassKindInfo& passInfo, uint32 viewModeMask );
         /** @brief 변형 조건 하나를 @p passPSO · @p viewMode 로 그릴 PSO 입니다. 적용할 것이 없으면 패스 PSO 그대로, 만드는 중이면 직전 변형(`GPUShaderPermutation::_fallbackHash`)입니다. */
         GPUMeshBatchPSO resolveBatchPSO( RHIPipelineStateHandle passPSO, const MaterialPSORequest& request, RenderViewMode viewMode ) const;
-        /** @brief 요청 하나에 대해 이번 프레임의 보기 모드마다 변형을 만들어 둡니다. */
-        void ensureRequestMaterialPSOs( RHIPipelineStateHandle passPSO, RenderPassKind passType, const MaterialPSORequest& request, uint32 viewModeMask );
+        /** @brief 요청 하나에 대해 이번 프레임의 보기 모드마다 변형을 만들어 둡니다. 패스가 그리지 않는 머티리얼(@p filter)이면 만들지 않습니다. */
+        void ensureRequestMaterialPSOs( RHIPipelineStateHandle passPSO, RenderPassKind passType, const MaterialPassFilter& filter, const MaterialPSORequest& request, uint32 viewModeMask );
         /**
          * @brief 변형 하나가 저장소에 없으면 만들어 넣습니다. 셰이더를 컴파일해야 하는 변형은 `Building` 으로 올리고 빌더 줄에 넣습니다(`pollMaterialPSOBuilds` 가 합칩니다).
          * @param bUrgent 이번 프레임 배치가 필요한 키면 true, 미리 만들기(`warmPinnedMaterialPSOs`)는 false 입니다.
@@ -308,6 +331,8 @@ namespace sw
         RHIPipelineStateHandle _particleSourcePSO{ 0 };
         /// @brief 입자 PSO 의 서술체 지문(`RHIPipelineStateDesc::computeHash` — 코드가 짓는 PSO 저장소의 키)입니다. 0 이면 그리지 않는다.
         uint64 _particlePSODescHash{ 0 };
+        /// @brief 파이프라인 패스(`getGraphPass` 차례)마다 그 PSO 를 가진 패스의 이름입니다 — 자기 이름이거나, 서술 · 머티리얼 필터가 같은 앞 패스의 이름이다. 비면 PSO 가 없다(`createPassPSOs` 가 정한다).
+        vector<hashed_string> _listPassPSOOwner;
         /// @brief 디퍼드 조명 타일 종류마다의 PSO 서술체 지문입니다(`createPassPSOs` 가 정한다 — 0 이면 그 종류의 PSO 가 없다).
         uint64 _arrDeferredTileDescHash[kDeferredTileClassCount]{};
     };

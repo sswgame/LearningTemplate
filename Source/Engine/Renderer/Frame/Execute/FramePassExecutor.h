@@ -101,10 +101,10 @@ namespace sw
          */
         void setInputRoleEnabled( RenderPassInputRole role, bool bEnabled );
         /**
-         * @brief 이 패스가 이 배치를 그리는지 반환합니다. 패스가 머티리얼 define 으로 배치를 거르면(메시 외곽선) 퍼뮤테이션에 그 define 이 있어야 합니다.
-         * @details 판정은 `RenderPassKindInfo::shouldDrawMaterial` 하나로 한다. 머티리얼 PSO 변형과 셰이더 쿠커도 같은 판정을 쓴다.
+         * @brief 거르기 @p filter 의 패스가 이 배치를 그리는지 반환합니다. 패스가 머티리얼 define 으로 배치를 거르면(메시 외곽선) 퍼뮤테이션에 그 define 이 있어야 합니다.
+         * @details 판정은 `MaterialPassFilter::shouldDraw` 하나로 한다. 머티리얼 PSO 변형과 셰이더 쿠커도 같은 판정을 쓴다. 거르기는 패스 서술의 것이다(`RenderGraphPassDesc::_resolvedMaterialFilter`).
          */
-        bool shouldDrawBatchInPass( RenderPassKind passType, const GPUMeshBatch& batch, const GPUMeshBatchBinding& binding ) const;
+        bool shouldDrawBatchInPass( const MaterialPassFilter& filter, const GPUMeshBatch& batch, const GPUMeshBatchBinding& binding ) const;
         /**
          * @brief 파이프라인 패스 번호 @p passIndex(`getGraphPass` 의 차례)가 이번 뷰에서 비활성이면 true 입니다(꺼진 효과 · 그릴 것 없는 덧그리기 · 읽는 쪽이 없는 패스)
          *        — 뷰 패스 고르기의 결과(`FrameViewTarget::_listPassDisabled`)를 그대로 읽는다.
@@ -199,6 +199,7 @@ namespace sw
             RHIBufferHandle                                    _slotStream{ 0 }; ///< 인스턴스 슬롯 스트림(슬롯 1)
             RHIBufferHandle                                    _argsBuffer{ 0 }; ///< 이 패스의 뷰가 만든 간접 인자
             RenderPassKind                                     _passType{};
+            const MaterialPassFilter*                          _pMaterialFilter{ nullptr };              ///< 이 패스가 그리는 머티리얼(패스 서술의 거르기 · 서술이 없으면 표의 기본값)
             ShadowCasterFilter                                 _casterFilter{ ShadowCasterFilter::All }; ///< 그림자 캐시의 정적 · 움직임 거르기(패스 컨텍스트의 값)
             uint32                                             _batchOffset{ 0 };                        ///< 간접 인자 슬롯의 시작(불투명 다음 투명)
             uint32                                             _particleSlotCursor{ 0 };

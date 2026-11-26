@@ -9,6 +9,7 @@
 
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Foundation/Foundation.h"
+#include "Engine/Graphics/Material/MaterialTypes.h"
 #include "Engine/Graphics/RHI/RHIDescriptors.h"
 #include "Engine/Graphics/RenderState/RenderState.h"
 #include "Engine/Graphics/View/PostProcessValues.h"
@@ -539,6 +540,9 @@ namespace sw
          */
         hashed_string _resolvedDepthAttachment;
 
+        /** @brief `_name` 을 intern 해 둔 값입니다. XML 로드 시 RenderPipelineAsset 가 채웁니다(직렬화 대상이 아니다). 패스 이름이 열쇠인 PSO 를 프레임마다 intern 없이 찾는다(`FramePSOManager::getPassPSO`). */
+        hashed_string _resolvedName;
+
         /**
          * @brief `_depthAttachment` 의 역할(`RenderPassInputRole` 정수 — 이 헤더는 그 enum 을 모른다)입니다. XML 로드 시 RenderPipelineAsset 가 채웁니다.
          * @details 그림자 패스는 이 값으로 그릴 타일을 고른다 — ShadowMap 이면 방향광 캐스케이드, LocalShadowMap 이면 점광 · 스폿 타일(아틀라스 둘, 감사 RN-4).
@@ -603,9 +607,27 @@ namespace sw
         PROPERTY( SkipIfEmpty )
         string _domainEntryPoint;
 
-        /** @brief 셰이더 매크로(퍼뮤테이션)입니다. "NAME" 또는 "NAME=VALUE" 형태로 적습니다. */
-        PROPERTY( SkipIfEmpty )
+        /**
+         * @brief 셰이더 매크로(퍼뮤테이션)입니다. "NAME" 또는 "NAME=VALUE" 형태로 적습니다. 한 이름은 한 번만 적는다(검증).
+         * @details 열쇠는 원소의 글이다(`_base` 자식은 하나씩 더하고 `<item _op="Remove">NAME=VALUE</item>` 로 지운다 — DataInheritance 글 목록).
+         *          값만 바꾸려면 옛 글을 지우고 새 글을 더한다.
+         */
+        PROPERTY( SkipIfEmpty, InheritKey )
         vector<string> _listPermutation;
+
+        /**
+         * @brief 이 패스가 그리는 배치의 머티리얼에 있어야 하는 define 입니다(유니티 Pass Tag `LightMode` 자리 — 예: 외곽선 패스의 `MATERIAL_OUTLINE`). 씬 메시 패스만 적는다(검증).
+         * @details 비면 패스 종류 표의 기본값이다(`RenderPassKindInfo::getDefaultMaterialFilter`). 표 기본값을 지우는 표기는 없다(shortcut: 빈 칸 = 기본값, 지울 패스가 생기면 `None` 같은 표기를 더한다).
+         */
+        PROPERTY( SkipIfEmpty )
+        string _requiredMaterialDefine;
+
+        /** @brief 이 패스가 빼는 배치의 머티리얼 define 입니다(G버퍼의 `MATERIAL_FORWARD_ONLY`). 비면 표의 기본값이다. 씬 메시 패스만 적는다(검증). */
+        PROPERTY( SkipIfEmpty )
+        string _excludedMaterialDefine;
+
+        /** @brief 서술 칸이 표 기본값을 덮은 머티리얼 거르기입니다. XML 로드 시 RenderPipelineAsset 가 채웁니다(직렬화 대상이 아니다). 드로우 · PSO 변형 · 쿠커가 이 값 하나를 본다. */
+        MaterialPassFilter _resolvedMaterialFilter;
 
         /**
          * @brief 모든 렌더 타깃의 블렌드 프리셋 이름입니다(`engine/renderstate/blendpresets.xml`). 비면 불투명입니다. `_listBlendTarget` 과 함께 적을 수 없습니다(검증).

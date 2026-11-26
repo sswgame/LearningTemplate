@@ -197,7 +197,7 @@ namespace sw
             context.beginRenderPass( RHIRenderPassBeginInfo::depthOnly( layer._texture, RHIRenderPassLoadOp::Clear, RHIRenderPassStoreOp::Store, layer._ops._clearDepth, layer._ops._clearStencil )
                                          .setExtent( layer._width, layer._height ) );
             const PassConstantNames&     names           = passConstantNames();
-            const RHIPipelineStateHandle pso             = _psoManager.getEnginePSO( RenderPassKind::Shadow );
+            const RHIPipelineStateHandle pso             = _psoManager.getPassPSO( *context._pPassDesc );
             const uint32                 viewCull        = context._cullViewIndex;
             const uint32                 pending         = _pendingPSOBatchCount.load( std::memory_order_relaxed ) + _fallbackPSOBatchCount.load( std::memory_order_relaxed );
             context._shadowCasterFilter                  = ShadowCasterFilter::StaticOnly;
@@ -258,7 +258,7 @@ namespace sw
     {
         // 그림자는 모든 타일을 덮는 상자로 거른 목록을 쓴다(언리얼의 뷰별 인스턴스 컬링에 해당한다). 끝나면 지금 뷰의 슬롯으로 돌아간다.
         const ViewShadowData&        shadow   = _pActiveView->_shadow;
-        const RHIPipelineStateHandle pso      = _psoManager.getEnginePSO( RenderPassKind::Shadow );
+        const RHIPipelineStateHandle pso      = _psoManager.getPassPSO( *context._pPassDesc );
         const uint32                 viewCull = context._cullViewIndex;
         context._cullViewIndex                = _pActiveView->_shadowCullSlot;
 
@@ -287,7 +287,7 @@ namespace sw
 
     void FramePassExecutor::drawLocalShadowTiles( FramePassContext& context, bool bTransparentBatch, bool bCacheLayer )
     {
-        const RHIPipelineStateHandle  pso      = _psoManager.getEnginePSO( RenderPassKind::Shadow );
+        const RHIPipelineStateHandle  pso      = _psoManager.getPassPSO( *context._pPassDesc );
         const uint32                  viewCull = context._cullViewIndex;
         const vector<ShadowTileDraw>& listTile = _state._frameShadow._listLocalTile;
         // 캐시한 타일은 캐시 층의 깊이를 픽셀 깊이로 옮긴 뒤(ShadowCacheRestore — 층을 LocalShadowMap 역할 이름으로 건다) 움직이는 배치만 그린다.
@@ -444,8 +444,9 @@ namespace sw
 
     void FramePassExecutor::drawRainOcclusion()
     {
-        FrameRainOcclusion&          rain = _state._rainOcclusion;
-        const RHIPipelineStateHandle pso  = _psoManager.getEnginePSO( RenderPassKind::Shadow );
+        FrameRainOcclusion& rain = _state._rainOcclusion;
+        // 그림자 패스 밖의 그리기다 — 그림자 종류의 첫 패스(방향광) PSO 와 그 서술로 그린다.
+        const RHIPipelineStateHandle pso = _psoManager.getEnginePSO( RenderPassKind::Shadow );
         if ( rain.isActive() == false || pso == 0 || _pCmd == nullptr )
             return;
         SW_PROFILE_SCOPE( "RT.RainOcclusion" );
@@ -453,6 +454,7 @@ namespace sw
         FramePassContext context = _state._frameContext;
         context._pCmd            = _pCmd;
         context._passType        = RenderPassKind::Shadow;
+        context._pPassDesc       = findPassDescByType( RenderPassKind::Shadow );
         context._cullViewIndex   = rain.getCullSlot();
         context._resourceRegistry.reset();
         registerLightBuffer( context );
@@ -785,7 +787,7 @@ namespace sw
             const uint32               batchIndex       = ( inoutState._pOrder != nullptr ) ? ( *inoutState._pOrder )[orderIndex] : orderIndex;
             const GPUMeshBatch&        head             = inoutState._batches[batchIndex];
             const GPUMeshBatchBinding& headBinding      = inoutState._bindings[batchIndex];
-            const bool                 bHeadNotDrawable = headBinding.hasGeometry() == false || head.hasDrawSlots() == false || shouldDrawBatchInPass( inoutState._passType, head, headBinding ) == false ||
+            const bool                 bHeadNotDrawable = headBinding.hasGeometry() == false || head.hasDrawSlots() == false || shouldDrawBatchInPass( *inoutState._pMaterialFilter, head, headBinding ) == false ||
                                           shouldDrawCasterBatch( inoutState._casterFilter, head ) == false;
             if ( bHeadNotDrawable )
             {
@@ -837,8 +839,9 @@ namespace sw
         // 상수 주입도 없다(DX12 커맨드 시그니처에 루트 상수를 넣으면 ExecuteIndirect 가 두 배 느려진다. 실측이다). 멀티 드로우가 없는
         // 백엔드(DX11)는 하나씩 부른다. 드로우 루프의 비용은 호출 수라, 배치가 많은 씬에서는 RT 프레임의 큰 몫이 된다.
         state._bMerge = isDrawMergeEnabled() && _pDevice->getCapabilities()._bMultiDrawIndirect != SW_FALSE;
-        // 패스가 머티리얼로 배치를 거르면(메시 외곽선 — 외곽선을 켠 머티리얼만) 그 밖의 배치는 그리지도 묶지도 않는다.
-        state._passType = context._passType;
+        // 패스가 머티리얼로 배치를 거르면(메시 외곽선 — 외곽선을 켠 머티리얼만) 그 밖의 배치는 그리지도 묶지도 않는다. 거르기는 패스 서술의 것이다(서술이 없는 그리기는 표의 기본값).
+        state._passType        = context._passType;
+        state._pMaterialFilter = context._pPassDesc != nullptr ? &context._pPassDesc->_resolvedMaterialFilter : &getRenderPassKindInfo( context._passType ).getDefaultMaterialFilter();
 
         state._argsBuffer = _state._gpuScene.getCullView( context._cullViewIndex )._indirectArgs._buffer;
         // 추가 뷰의 투명 패스는 그 뷰의 순서로 배치를 돈다(GPUViewTransparentOrder). 묶기는 그 순서에서 이웃이고 번호도 이어진 것만 — 간접 인자는 번호 순으로 놓여 있다.
@@ -881,7 +884,7 @@ namespace sw
         const GPUMeshBatch&        other                  = state._batches[otherIndex];
         const GPUMeshBatchBinding& otherBinding           = state._bindings[otherIndex];
         const GPUMeshBatchBinding& headBinding            = state._bindings[headIndex];
-        const bool                 bOtherBatchNotDrawable = otherBinding.hasGeometry() == false || other.hasDrawSlots() == false || shouldDrawBatchInPass( state._passType, other, otherBinding ) == false;
+        const bool                 bOtherBatchNotDrawable = otherBinding.hasGeometry() == false || other.hasDrawSlots() == false || shouldDrawBatchInPass( *state._pMaterialFilter, other, otherBinding ) == false;
         if ( bOtherBatchNotDrawable )
             return false;
         // 정점 · 인덱스 버퍼는 짝이다(풀의 둘, 아니면 메시의 둘) — 정점 버퍼가 같으면 인덱스 버퍼도 같다.

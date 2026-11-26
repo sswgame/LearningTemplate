@@ -134,8 +134,14 @@ namespace sw
     struct RenderPassTraitFlag
     {
         static constexpr uint32 kDepthTest  = BitUtil::bit( 0 ); ///< PSO 기본값으로 깊이 테스트를 쓴다(XML 로 끌 수는 있어도 켤 수는 없다).
-        static constexpr uint32 kDepthWrite = BitUtil::bit( 1 ); ///< PSO 기본값으로 깊이 쓰기를 한다.
-        // 비트 2 · 13 은 비워 둔다 — 블렌드는 깃발이 아니라 `RenderPassKindInfo::_blend` 칸 하나다(프리멀티플라이인데 블렌드가 꺼진 줄을 적을 수 없다).
+        static constexpr uint32 kDepthWrite = BitUtil::bit( 1 ); ///< PSO 기본값으로 깊이 쓰기를 한다. 없는 종류는 XML 이 깊이 쓰기를 켤 수 없다(로드 오류 `PassDepthWriteNotWritable`).
+        /**
+         * @brief 한 파이프라인에 이 종류의 뷰 패스를 여럿 둘 수 있다 — 실행과 PSO 가 종류가 아니라 패스 서술로 갈린다(그림자: 깊이 첨부의 역할이 타일을 고른다, Compute: 셰이더가 패스마다 다르다, 후처리 머티리얼: 블렌더블 자리가 패스마다 다르다).
+         * @details 없는 종류를 두 번 선언하면 로드 오류다(`RenderPipelineAsset::validate`) — 실행이 종류 하나의 상태(기록 · 타일 · 입자 원본)를 쥐어 둘째 패스가 그것을 덮는다.
+         *          그래픽스 패스 PSO 는 패스 이름이 열쇠다(`FramePSOManager::getPassPSO`). 이 비트를 붙이는 종류는 실행이 그 종류의 첫 패스를 찾지 않아야 한다(`findPassDescByType`).
+         */
+        static constexpr uint32 kRepeatable = BitUtil::bit( 2 );
+        // 비트 13 은 비워 둔다 — 블렌드는 깃발이 아니라 `RenderPassKindInfo::_blend` 칸 하나다(프리멀티플라이인데 블렌드가 꺼진 줄을 적을 수 없다).
         static constexpr uint32 kDepthOnly             = BitUtil::bit( 3 );  ///< 깊이만 쓴다. 출력 선언이 없을 때 컬러 RT 수가 0이 되는 근거다.
         static constexpr uint32 kDrawsSceneMeshes      = BitUtil::bit( 4 );  ///< 씬 메시(GPUScene 배치)를 그린다. 머티리얼 변형 PSO 를 만들 대상이다.
         static constexpr uint32 kDrawsTransparentBatch = BitUtil::bit( 5 );  ///< 씬 메시 중 반투명 배치 목록을 그린다(아니면 불투명 목록을 그린다).
@@ -145,7 +151,7 @@ namespace sw
         static constexpr uint32 kCompute               = BitUtil::bit( 9 );  ///< 컴퓨트 PSO 다(`CSMain`).
         static constexpr uint32 kRequiresGPUCulling    = BitUtil::bit( 10 ); ///< 컴퓨트 PSO 를 `_bGPUCulling` 일 때만 만든다(아니면 `_bCompute`).
         static constexpr uint32 kHasInputContract      = BitUtil::bit( 11 ); ///< `_inputContract` 가 이 패스의 입력을 검사한다.
-        static constexpr uint32 kCullFront             = BitUtil::bit( 12 ); ///< PSO 기본값으로 앞면 컬링을 쓴다(인버티드 헐 외곽선). XML 은 None 으로만 바꿀 수 있다.
+        static constexpr uint32 kCullFront             = BitUtil::bit( 12 ); ///< PSO 기본값으로 앞면 컬링을 쓴다(인버티드 헐 외곽선). XML 은 None 으로만 바꿀 수 있다(Back 은 로드 오류 `PassCullFrontKind`).
         /**
          * @brief 후처리를 끈 뷰(CCTV, 표면 값 보기)와 품질(`_minPostQuality`)로 꺼지는 효과 패스다(SSAO, 블룸, 외곽선, 피사계 심도, 모션 블러)와 TAA 다. TAA 말고는 `kGenericFullscreen` 에만 붙는다.
          * @details 꺼진 패스는 기록하지 않는다 — 어떻게 빠지는지는 `kBypassesToSource`(출력이 원본을 가리킨다) 또는 `kOmittedWhenOff`(출력이 없다) 가 정하고, 둘 중 하나가 꼭 붙는다.
@@ -265,11 +271,11 @@ namespace sw
         /** @brief 패스가 셰이더에 추가하는 define 입니다. 파이프라인 XML 의 `_listPermutation` 뒤에 붙습니다. nullptr 이면 없습니다. */
         const utf8* _pPassDefine{ nullptr };
         /**
-         * @brief 이 패스가 그리는 배치의 머티리얼 퍼뮤테이션에 있어야 하는 define 입니다. nullptr 이면 모든 배치를 그립니다.
-         * @details 없는 배치(머티리얼 없는 배치 포함)는 드로우, 머티리얼 PSO 변형, 셰이더 쿠킹에서 함께 빠집니다(`shouldDrawMaterial`).
+         * @brief 이 패스가 그리는 배치의 머티리얼 퍼뮤테이션에 있어야 하는 define 의 기본값입니다. nullptr 이면 모든 배치를 그립니다.
+         * @details 파이프라인 패스 서술의 `_requiredMaterialDefine` 이 덮는다(`RenderGraphPassDesc::_resolvedMaterialFilter`). 판정은 `MaterialPassFilter` 하나다(`getDefaultMaterialFilter`).
          */
         const utf8* _pRequiredMaterialDefine{ nullptr };
-        /** @brief 이 패스가 빼는 배치의 머티리얼 define 입니다(G버퍼의 `MATERIAL_FORWARD_ONLY`). nullptr 이면 빼지 않습니다. 빠지는 범위는 `_pRequiredMaterialDefine` 과 같습니다. */
+        /** @brief 이 패스가 빼는 배치의 머티리얼 define 의 기본값입니다(G버퍼의 `MATERIAL_FORWARD_ONLY`). nullptr 이면 빼지 않습니다. 서술의 `_excludedMaterialDefine` 이 덮는다. */
         const utf8* _pExcludedMaterialDefine{ nullptr };
         /** @brief 고정 컬러 포맷(`_colorTargetCount` 개)입니다. nullptr 이면 패스가 선언한 출력의 포맷을 씁니다. */
         const RHIFormat* _pColorFormat{ nullptr };
@@ -351,23 +357,12 @@ namespace sw
             return hasFlag( RenderPassTraitFlag::kMaterialFixedState ) ? RenderStateOverride::Scope::FixedState : RenderStateOverride::Scope::CullOnly;
         }
 
-        /** @brief 이 패스가 머티리얼 define 으로 배치를 거르는지(있어야 하거나 없어야 하는 define 이 있는지) 반환합니다. 거르지 않으면 판정을 건너뛴다. */
-        bool shouldFilterBatchesByMaterial() const { return _pRequiredMaterialDefine != nullptr || _pExcludedMaterialDefine != nullptr; }
-
         /**
-         * @brief 이 패스가 이 머티리얼 define 목록의 배치를 그리는지 반환합니다. `_pRequiredMaterialDefine` 이 있으면 그것이 있어야 하고,
-         *        `_pExcludedMaterialDefine` 이 있으면 그것이 없어야 합니다. 둘 다 없으면 항상 true 입니다.
-         * @details 드로우 루프, 머티리얼 PSO 변형, 셰이더 쿠커가 같은 판정을 쓴다. 셋이 갈리면 쿠킹하지 않은 변형을 런타임이 찾거나,
-         *          외곽선을 모르는 셰이더가 외곽선 패스의 앞면 컬링으로 그려져 뒷면이 화면을 덮는다.
+         * @brief 이 종류의 기본 머티리얼 거르기(`_pRequiredMaterialDefine` · `_pExcludedMaterialDefine`)입니다. 서술이 없는 내부 슬롯과, 서술이 칸을 비운 파이프라인 패스가 쓴다.
+         * @details 드로우 루프, 머티리얼 PSO 변형, 셰이더 쿠커가 같은 판정(`MaterialPassFilter::shouldDraw`)을 쓴다. 셋이 갈리면 쿠킹하지 않은 변형을 런타임이 찾거나,
+         *          외곽선을 모르는 셰이더가 외곽선 패스의 앞면 컬링으로 그려져 뒷면이 화면을 덮는다. 값은 처음 물을 때 한 번 지은 표다(프레임마다 글을 만들지 않는다).
          */
-        bool shouldDrawMaterial( const vector<string>* pListMaterialDefine ) const
-        {
-            if ( _pExcludedMaterialDefine != nullptr && hasMaterialDefine( pListMaterialDefine, _pExcludedMaterialDefine ) )
-                return false;
-            if ( _pRequiredMaterialDefine == nullptr )
-                return true;
-            return hasMaterialDefine( pListMaterialDefine, _pRequiredMaterialDefine );
-        }
+        SW_API const MaterialPassFilter& getDefaultMaterialFilter() const;
 
         /**
          * @brief 깊이만 쓰는 패스(그림자 · 깊이 프리패스)가 이 머티리얼의 배치를 패스 셰이더 대신 머티리얼의 셰이더로 그리는지 반환합니다.

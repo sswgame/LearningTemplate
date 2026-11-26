@@ -329,6 +329,20 @@ namespace sw
                         SW_LOG_ERROR_ID( "RenderPipelineAsset.PassDepthWriteNoTest", "[%#] pass '%#': _bEnableDepthWrite needs _bEnableDepthTest", sourcePath, pass._name );
                         ++issueCount;
                     }
+                    // 표가 "XML 은 끌 수만 있다" 고 적은 칸은 켤 수 없다 — 실행이 그 값을 받지 않는다. 깊이를 쓰지 않는 패스(반투명 · 하늘 · 강조)는 장면 깊이를 입력으로 읽거나 테스트만 하는 첨부로 쥔다.
+                    else if ( pass._bEnableDepthWrite && info.hasFlag( RenderPassTraitFlag::kDepthWrite ) == false )
+                    {
+                        SW_LOG_ERROR_ID( "RenderPipelineAsset.PassDepthWriteNotWritable", "[%#] pass '%#': a %# pass does not write depth - set _bEnableDepthWrite=\"false\"", sourcePath, pass._name,
+                                         getEnumName( pass._type ) );
+                        ++issueCount;
+                    }
+                    // 앞면 컬링 종류(인버티드 헐 외곽선 · 강조)는 None 으로만 바꿀 수 있다 — Back 이면 부풀린 껍질의 앞면이 물체를 덮는다.
+                    if ( info.hasFlag( RenderPassTraitFlag::kCullFront ) && pass._cullMode == CullMode::Back )
+                    {
+                        SW_LOG_ERROR_ID( "RenderPipelineAsset.PassCullFrontKind", "[%#] pass '%#': a %# pass culls front faces (inverted hull) - _cullMode must be Front or None, not Back", sourcePath, pass._name,
+                                         getEnumName( pass._type ) );
+                        ++issueCount;
+                    }
                     // 같은 규칙을 머티리얼을 합친 값에도 건다(`FixedRenderState::findInvalidReason`). 깊이 쓰기는 위가 알렸다.
                     const utf8* const pStateReason = pass._bEnableDepthWrite && pass._bEnableDepthTest == false ? nullptr : pass.findInvalidReason();
                     if ( pStateReason != nullptr )
@@ -523,9 +537,96 @@ namespace sw
                 return issueCount;
             }
 
+            /**
+             * @brief 2-0a) 뷰 패스 종류는 한 번이다 — 여러 번 둘 수 있다고 표가 적은 종류(`kRepeatable`)만 빼고. 프레임 패스의 `FramePassTypeDuplicated` 와 같은 규칙이다.
+             * @details 실행이 종류 하나의 상태(TAA 기록 · 조명 타일 · 입자 원본 · 깊이 프리패스 표시)를 쥐고 그 종류의 첫 패스를 찾는다. 둘째 패스의 서술은 조용히 무시되거나 첫째의 상태를 덮는다.
+             */
+            static uint32 validatePassTypesUnique( const RenderPipelineDesc& desc, string_view sourcePath )
+            {
+                uint32 issueCount{ 0 };
+                for ( size_t passIndex = 0; passIndex < desc._listPass.size(); ++passIndex )
+                {
+                    const RenderGraphPassDesc& pass = desc._listPass[passIndex];
+                    if ( pass._type == RenderPassKind::Invalid || getRenderPassKindInfo( pass._type ).hasFlag( RenderPassTraitFlag::kRepeatable ) )
+                        continue;
+                    for ( size_t earlierIndex = 0; earlierIndex < passIndex; ++earlierIndex )
+                    {
+                        if ( desc._listPass[earlierIndex]._type != pass._type )
+                            continue;
+                        SW_LOG_ERROR_ID( "RenderPipelineAsset.PassTypeDuplicated", "[%#] pass '%#': type %# is already declared by pass '%#' - one view pass per type (only Shadow, Compute and PostProcessMaterial repeat)",
+                                         sourcePath, pass._name, getEnumName( pass._type ), desc._listPass[earlierIndex]._name );
+                        ++issueCount;
+                        break;
+                    }
+                }
+                return issueCount;
+            }
+
+            /**
+             * @brief 2-0c) 머티리얼 거르기(`_requiredMaterialDefine` · `_excludedMaterialDefine`)는 씬 메시를 그리는 패스만 적는다 — 다른 패스는 배치를 그리지 않아 읽는 쪽이 없다.
+             *        같은 define 을 요구하면서 빼면 어느 배치도 그리지 않는다.
+             */
+            static uint32 validatePassMaterialFilters( const RenderPipelineDesc& desc, string_view sourcePath )
+            {
+                uint32 issueCount{ 0 };
+                for ( const RenderGraphPassDesc& pass : desc._listPass )
+                {
+                    const bool bWritten = pass._requiredMaterialDefine.empty() == false || pass._excludedMaterialDefine.empty() == false;
+                    if ( bWritten && getRenderPassKindInfo( pass._type ).shouldDrawSceneMeshes() == false )
+                    {
+                        SW_LOG_ERROR_ID( "RenderPipelineAsset.PassMaterialFilterNotMeshPass", "[%#] pass '%#': _requiredMaterialDefine / _excludedMaterialDefine filter scene mesh batches - a %# pass draws none",
+                                         sourcePath, pass._name, getEnumName( pass._type ) );
+                        ++issueCount;
+                    }
+                    const MaterialPassFilter& filter = pass._resolvedMaterialFilter;
+                    if ( filter._requiredDefine.empty() == false && filter._requiredDefine == filter._excludedDefine )
+                    {
+                        SW_LOG_ERROR_ID( "RenderPipelineAsset.PassMaterialFilterEmpty", "[%#] pass '%#' requires and excludes material define '%#' - it would draw nothing", sourcePath, pass._name,
+                                         filter._requiredDefine );
+                        ++issueCount;
+                    }
+                }
+                return issueCount;
+            }
+
+            /**
+             * @brief 2-0b) 퍼뮤테이션 한 이름은 패스에 한 번이다. 퍼뮤테이션은 글이 열쇠라(`_base` 합치기) 자식이 값만 바꿔 더하면 옛 글과 새 글이 함께 남는다.
+             * @details 같은 매크로를 두 값으로 정의하면 컴파일러가 어느 쪽을 쓸지 셰이더마다 다르고 쿠킹 해시도 갈린다 — 로드에서 멈춘다.
+             */
+            static uint32 validatePassPermutations( const RenderPipelineDesc& desc, string_view sourcePath )
+            {
+                uint32 issueCount{ 0 };
+                for ( const RenderGraphPassDesc& pass : desc._listPass )
+                {
+                    for ( size_t defineIndex = 0; defineIndex < pass._listPermutation.size(); ++defineIndex )
+                    {
+                        const string_view define = pass._listPermutation[defineIndex];
+                        const string_view name   = define.substr( 0, define.find( '=' ) );
+                        for ( size_t earlierIndex = 0; earlierIndex < defineIndex; ++earlierIndex )
+                        {
+                            const string_view earlier = pass._listPermutation[earlierIndex];
+                            if ( earlier.substr( 0, earlier.find( '=' ) ) != name )
+                                continue;
+                            SW_LOG_ERROR_ID( "RenderPipelineAsset.PassPermutationDefinedTwice", "[%#] pass '%#': permutation '%#' is defined twice ('%#', '%#') - remove the old item (_op=\"Remove\") before adding the new value",
+                                             sourcePath, pass._name, name, earlier, define );
+                            ++issueCount;
+                            break;
+                        }
+                    }
+                }
+                return issueCount;
+            }
+
             /** @brief 패스 하나의 타입 · 뎁스 · 입출력 역할을 해석해 `_resolved*` 에 채웁니다. 역할은 첨부의 선언(`_role`)이 먼저, 그다음 원본 이름 · 포맷이다. */
             static void resolvePass( const RenderPipelineDesc& desc, RenderGraphPassDesc& pass )
             {
+                pass._resolvedName = hashed_string( pass._name.c_str() );
+                // 머티리얼 거르기 — 서술이 적은 칸이 표의 기본값을 덮는다(유니티 LightMode 태그를 렌더러 쪽에서 고르는 자리)
+                pass._resolvedMaterialFilter = getRenderPassKindInfo( pass._type ).getDefaultMaterialFilter();
+                if ( pass._requiredMaterialDefine.empty() == false )
+                    pass._resolvedMaterialFilter._requiredDefine = pass._requiredMaterialDefine;
+                if ( pass._excludedMaterialDefine.empty() == false )
+                    pass._resolvedMaterialFilter._excludedDefine = pass._excludedMaterialDefine;
                 pass._resolvedDepthAttachment =
                     pass._depthAttachment.empty() ? hashed_string{} : hashed_string( pass._depthAttachment.c_str() );
                 const RenderPassAttachment* pDepth = pass._depthAttachment.empty() ? nullptr : findAttachment( desc, pass._depthAttachment );
@@ -1227,6 +1328,59 @@ namespace sw
                 }
                 return issueCount;
             }
+
+            /**
+             * @brief 4) 뷰 그래프와 프레임 그래프를 패스 서술만으로 한 번 컴파일한다 — 순환(앞 패스가 뒤 패스의 출력을 읽고 뒤 패스가 앞 패스의 출력을 읽는다)은 첫 프레임 로그가 아니라 로드 오류다.
+             * @details 모든 패스를 켠 그래프다(뷰마다 꺼지는 패스는 간선을 줄일 뿐이라 켠 그래프에 없던 순환이 생기지 않는다). 접근은 실행과 같은 규칙이다 — 뷰 패스는 입력 읽기 · 출력과 깊이 첨부 쓰기
+             *          (읽고 쓰는 첨부는 쓰기 하나), 프레임 패스는 `buildFramePassAccesses` 와 자원 수명 선언. 패스 종류가 스스로 거는 엔진 자원과 모듈 확장 패스는 코드의 것이라 들지 않는다
+             *          (실행의 그래프 묶기가 같은 컴파일을 다시 본다). 언리얼 RDG 가 개발 빌드에서 그래프를 즉시 검증하는 자리다.
+             */
+            static uint32 validateGraphsCompile( const RenderPipelineAsset& asset, string_view sourcePath )
+            {
+                uint32                    issueCount{ 0 };
+                const RenderPipelineDesc& desc = asset.getDesc();
+                if ( desc._listPass.empty() == false )
+                {
+                    RenderGraph viewGraph;
+                    for ( const RenderGraphPassDesc& pass : desc._listPass )
+                    {
+                        vector<hashed_string> listOutput = pass._listResolvedOutput;
+                        if ( pass._resolvedDepthAttachment.empty() == false && VectorUtil::contains( listOutput, pass._resolvedDepthAttachment ) == false )
+                            listOutput.push_back( pass._resolvedDepthAttachment );
+                        vector<hashed_string> listInput;
+                        for ( const RenderGraphPassDesc::ResolvedAttachment& input : pass._listResolvedInput )
+                        {
+                            if ( VectorUtil::contains( listOutput, input._attachment ) == false )
+                                listInput.push_back( input._attachment );
+                        }
+                        (void)viewGraph.addPass( pass._resolvedName, std::move( listInput ), std::move( listOutput ) ); // 이름 겹침은 앞 규칙(2-0)이 막았다
+                    }
+                    if ( viewGraph.compile() == false )
+                    {
+                        SW_LOG_ERROR_ID( "RenderPipelineAsset.ViewGraphDoesNotCompile", "[%#] the view graph (_listPass) does not compile - see the render graph error above (cycle or mixed reads)", sourcePath );
+                        ++issueCount;
+                    }
+                }
+                if ( desc._listFramePass.empty() == false )
+                {
+                    RenderGraph frameGraph;
+                    for ( const RenderGraphResourceDesc& resource : desc._listResource )
+                    {
+                        frameGraph.declareResource( hashed_string( resource._name.c_str() ), resource._kind );
+                    }
+                    for ( uint32 index = 0; index < static_cast<uint32>( desc._listFramePass.size() ); ++index )
+                    {
+                        const RenderGraphPassDesc& pass = desc._listFramePass[index];
+                        (void)frameGraph.addPass( hashed_string( pass._name.c_str() ), asset.buildFramePassAccesses( pass ), RenderGraphPassExecuteFn{}, pass._queue, index );
+                    }
+                    if ( frameGraph.compile() == false )
+                    {
+                        SW_LOG_ERROR_ID( "RenderPipelineAsset.FrameGraphDoesNotCompile", "[%#] the frame graph (_listFramePass) does not compile - see the render graph error above (cycle or mixed reads)", sourcePath );
+                        ++issueCount;
+                    }
+                }
+                return issueCount;
+            }
         };
     } // namespace
 
@@ -1237,7 +1391,10 @@ namespace sw
         uint32 issueCount = Internal::validateAttachments( _desc, sourcePath );
         issueCount += Internal::validateShadingModel( _desc, sourcePath );
         issueCount += Internal::validatePassNamesUnique( _desc, sourcePath );
+        issueCount += Internal::validatePassTypesUnique( _desc, sourcePath );
+        issueCount += Internal::validatePassPermutations( _desc, sourcePath );
         issueCount += Internal::resolveAndCheckPassAttachments( _desc, sourcePath );
+        issueCount += Internal::validatePassMaterialFilters( _desc, sourcePath );
         issueCount += Internal::validatePassRenderState( _desc, sourcePath );
         issueCount += Internal::validateComputePasses( _desc, sourcePath );
         issueCount += Internal::validateFrameGraph( _desc, sourcePath );
@@ -1255,6 +1412,9 @@ namespace sw
         issueCount += Internal::validatePostProcessMaterialPasses( _desc, sourcePath );
         issueCount += Internal::validateDecalPasses( _desc, sourcePath );
         issueCount += Internal::validateAttachmentStoreOps( _desc, sourcePath );
+        // 그래프 컴파일은 서술이 맞을 때만 본다 — 앞 규칙이 알린 결함(없는 첨부 · 겹친 이름)이 그래프 오류로 한 번 더 나오지 않게.
+        if ( issueCount == 0 )
+            issueCount += Internal::validateGraphsCompile( *this, sourcePath );
         if ( issueCount > 0 )
             SW_LOG_ERROR_ID( "RenderPipelineAsset.PipelineValidationFoundIssues", "[%#] Pipeline validation found %# issues - the render result may be wrong or the GPU may die",
                              sourcePath, issueCount );

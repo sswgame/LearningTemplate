@@ -120,7 +120,7 @@ namespace sw
         [[nodiscard]] optional<string> findElementKey( const XMLNode& element ) const;
         /** @brief 열쇠 있는 목록의 원소 @p element 에 열쇠 @p key 를 적습니다(속성 또는 글). */
         void writeElementKey( const XMLNode& element, string_view key ) const;
-        /** @brief 리플렉션 형식의 규칙을 만듭니다. 구조체 칸 · `InheritKey` 칸이 있는 구조체 목록은 합치고, 필수 칸(`Required`)은 저장이 지우지 않습니다. */
+        /** @brief 리플렉션 형식의 규칙을 만듭니다. 구조체 칸 · `InheritKey` 칸이 있는 구조체 목록 · `InheritKey` 를 단 글 목록(`kTextKey`)은 합치고, 필수 칸(`Required`)은 저장이 지우지 않습니다. */
         [[nodiscard]] static DataInheritanceSchema makeFromType( const TypeInfo& typeInfo );
     };
 

@@ -25,6 +25,7 @@ namespace sw
         , _mapEnginePSO{}
         , _mapOutputPSO{}
         , _mapGlobalPSO{}
+        , _mapPipelinePassPSO{}
         , _mapPipelineComputePSO{}
         , _mapMaterialPSO{}
         , _materialPSOMutex{}
@@ -179,6 +180,22 @@ namespace sw
         return true;
     }
 
+    void RenderPSOCache::setPipelinePassPSO( IRHIDevice* pDevice, const hashed_string& passName, RHIPipelineState&& pso )
+    {
+        RHIPipelineState& slot = _mapPipelinePassPSO[passName];
+        releaseReplacedPSO( pDevice, slot );
+        slot = std::move( pso );
+    }
+
+    bool RenderPSOCache::findPipelinePassPSO( const hashed_string& passName, RHIPipelineStateHandle& outPipelineState ) const
+    {
+        const auto it = _mapPipelinePassPSO.find( passName );
+        if ( it == _mapPipelinePassPSO.end() )
+            return false;
+        outPipelineState = it->second._handle;
+        return true;
+    }
+
     void RenderPSOCache::setPipelineComputePSO( IRHIDevice* pDevice, const hashed_string& passName, RHIPipelineState&& pso, const ComputeShaderBindings& computeBindings )
     {
         PassPSOEntry& slot = _mapPipelineComputePSO[passName];
@@ -310,6 +327,11 @@ namespace sw
             entry._pso.release( pDevice );
         }
         _mapEnginePSO.clear();
+        for ( auto& [passName, pso] : _mapPipelinePassPSO )
+        {
+            pso.release( pDevice );
+        }
+        _mapPipelinePassPSO.clear();
 
         for ( auto& [key, pso] : _mapOutputPSO )
         {
@@ -374,6 +396,17 @@ namespace sw
             destroy( it->second._pso );
             bPassReleased = true;
             it            = _mapEnginePSO.erase( it );
+        }
+        for ( auto it = _mapPipelinePassPSO.begin(); it != _mapPipelinePassPSO.end(); )
+        {
+            if ( VectorUtil::contains( listAffected, it->second._handle ) == false )
+            {
+                ++it;
+                continue;
+            }
+            destroy( it->second );
+            bPassReleased = true;
+            it            = _mapPipelinePassPSO.erase( it );
         }
         for ( auto it = _mapOutputPSO.begin(); it != _mapOutputPSO.end(); )
         {
@@ -445,6 +478,7 @@ namespace sw
         _mapEnginePSO.clear();
         _mapOutputPSO.clear();
         _mapGlobalPSO.clear();
+        _mapPipelinePassPSO.clear();
         _mapPipelineComputePSO.clear();
         {
             ScopedLock<shared_mutex> lock{ _materialPSOMutex };

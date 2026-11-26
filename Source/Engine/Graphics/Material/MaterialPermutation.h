@@ -47,6 +47,9 @@ namespace sw
          */
         static void mergeDefine( vector<string>& inoutListDefine, string_view define );
 
+        /** @brief define 목록에 이름 @p name 의 define(`NAME` 또는 `NAME=VALUE` — `mergeDefine` 과 같은 이름 규칙)이 있으면 true 입니다. */
+        [[nodiscard]] static bool hasDefineName( const vector<string>& listDefine, string_view name );
+
         /** @brief `MATERIAL_TEXTURE_COUNT=<count>` define 입니다(`kMaterialTextureCountDefine`). */
         static string makeTextureCountDefine( uint32 count );
 
