@@ -3,6 +3,7 @@
 #include "Engine/Renderer/SceneRHISubsystem.h"
 
 #include "Engine/Asset/AssetManager.h"
+#include "Engine/Asset/EngineDefaultAssetsSubsystem.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemHost.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
@@ -92,7 +93,7 @@ namespace sw
 
 namespace sw
 {
-    SW_ENGINE_SUBSYSTEM( SceneRHISubsystem, Process, Startup, ( RHISubsystem ), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
+    SW_ENGINE_SUBSYSTEM( SceneRHISubsystem, Process, Startup, ( RHISubsystem, EngineDefaultAssetsSubsystem ), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
     {
         if ( build._pStartupSetup->_bDedicatedServer )
             return;

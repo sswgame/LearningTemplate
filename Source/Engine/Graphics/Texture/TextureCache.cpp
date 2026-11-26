@@ -445,6 +445,9 @@ namespace sw
             _impl->_formatVariantSuffix = std::move( formatSuffix );
         }
         _impl->_pBoundDevice.store( pDevice, std::memory_order_release );
+        // 자리 텍스처는 장치를 묶는 게임 스레드에서 올린다. 첫 비동기 요청이 렌더 스레드 패킷(VFX 텍스처)이면 그 안은 디스크 읽기가 금지다.
+        if ( pDevice != nullptr )
+            ensureStandInTextures();
     }
 
     void TextureCache::ensureStandInTextures()
