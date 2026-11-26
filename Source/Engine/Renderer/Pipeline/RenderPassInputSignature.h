@@ -73,8 +73,8 @@ namespace sw
 
     /**
      * @brief 첨부의 역할을 정합니다. 첨부가 선언한 역할(`RenderPassAttachment::_role`)이 먼저입니다.
-     * @details 선언이 없거나 모르는 문자열이면(검증이 오류로 알립니다) 고정 역할 이름(GBufferAlbedo, GBufferNormal, GBufferMaterial, GBufferCustomData, ShadowMap, LocalShadowMap, AOColor, BloomBright, SceneColorCopy, SceneDepthCopy)은 그 역할,
-     *          그 밖의 깊이 포맷은 SceneDepth, 나머지 컬러는 SourceColor 입니다. ShadowMap · LocalShadowMap 은 깊이 포맷이지만 이름이 먼저입니다.
+     * @details 선언이 없거나 모르는 문자열이면(검증이 오류로 알립니다) 고정 역할 이름(GBufferAlbedo, GBufferNormal, GBufferMaterial, GBufferCustomData, AOColor, BloomBright, SceneColorCopy, SceneDepthCopy)은 그 역할,
+     *          그 밖의 깊이 포맷은 SceneDepth, 나머지 컬러는 SourceColor 입니다. 그림자 역할(ShadowMap · LocalShadowMap)은 이름으로 짐작하지 않는다 — 첨부가 `_role` 로 적는다(검증 `PassShadowDepthRole`).
      */
     RenderPassInputRole resolveRenderPassInputRole( string_view attachmentName, bool bDepthFormat, string_view declaredRole );
 

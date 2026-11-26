@@ -902,8 +902,10 @@ SW_TEST_CASE( ShadowSetupTest, DirectionalAndLocalShadowsUseSeparateTextures )
     const sw::ShadowAtlasCell spotCell    = frame._listLocalTile[0]._cell;
     SW_EXPECT_TRUE( Internal::overlaps( cascadeCell, spotCell ) ); // 좌표는 겹친다 — 다른 텍스처라서 성립한다
 
-    SW_EXPECT_TRUE( sw::resolveRenderPassInputRole( "ShadowMap", true, "" ) == sw::RenderPassInputRole::ShadowMap );
-    SW_EXPECT_TRUE( sw::resolveRenderPassInputRole( "LocalShadowMap", true, "" ) == sw::RenderPassInputRole::LocalShadowMap );
+    // 그림자 역할은 첨부가 적은 칸이 정한다 — 이름만으로는 장면 깊이다(이름을 바꾼 그림자 첨부가 조용히 화면 크기가 되지 않게 로드가 역할을 요구한다).
+    SW_EXPECT_TRUE( sw::resolveRenderPassInputRole( "ShadowMap", true, "ShadowMap" ) == sw::RenderPassInputRole::ShadowMap );
+    SW_EXPECT_TRUE( sw::resolveRenderPassInputRole( "AnyAtlas", true, "LocalShadowMap" ) == sw::RenderPassInputRole::LocalShadowMap );
+    SW_EXPECT_TRUE( sw::resolveRenderPassInputRole( "ShadowMap", true, "" ) == sw::RenderPassInputRole::SceneDepth );
     uint32 directionalOrdinal = 0;
     uint32 localOrdinal       = 0;
     SW_REQUIRE_TRUE( sw::shaderslot::emulated::tryFindOrdinal( "ShadowMap", directionalOrdinal ) );

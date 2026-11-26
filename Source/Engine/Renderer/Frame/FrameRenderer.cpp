@@ -91,6 +91,16 @@ namespace sw
         shutdown();
     }
 
+    RHITextureHandle FrameRenderer::getTAAHistory() const
+    {
+        // TAA 패스의 첫 출력(`_bHistory`)의 기록이다 — 기록은 패스 종류가 아니라 첨부 칸이 정한다.
+        const RenderGraphPassDesc* pTAAPass = _pipelineResource.findUniquePass<RenderPassKind::TAA>();
+        const FrameViewHistory*    pHistory = ( pTAAPass != nullptr && pTAAPass->_listResolvedColorOutput.empty() == false )
+                                                ? _state.getMainView().findAttachmentHistory( pTAAPass->_listResolvedColorOutput[0]._attachment )
+                                                : nullptr;
+        return pHistory != nullptr ? pHistory->getCurrent()._texture : RHITextureHandle{ 0 };
+    }
+
     RenderPipelineRequest RenderPipelineRequest::load( string_view path )
     {
         // 공유 캐시가 경로마다 한 벌을 나눈다 — 받은 판을 그대로 쥔다(다시 읽힌 판은 `FrameRendererSubsystem` 이 다시 골라 넘긴다). 읽지 못하면 빈 판이고 이유는 로그에 있다.

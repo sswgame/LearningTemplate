@@ -643,8 +643,8 @@ namespace sw
             }
 
             /**
-             * @brief 2-0d) 기록(`_bHistory`)은 시간 누적 패스의 출력에만 있고, 그 출력은 기록을 적어야 한다 — 기록을 읽는 실행이 TAA(`executeTAAPass`) · 볼륨 구름 둘이다.
-             * @details 기록 텍스처는 그 패스의 첫 컬러 출력의 복사본이다(`FrameViewResources::updateOutputHistory`). 적지 않은 기록이 코드에서 생기거나, 적은 기록이 쓰이지 않고 메모리만 잡지 않게 한다.
+             * @brief 2-0d) 시간 누적 패스(TAA · 볼륨 구름)의 첫 출력은 기록(`_bHistory`)을 적어야 하고, 기록 첨부는 쓰는 패스가 하나다 — 기록은 그 패스가 끝에 출력을 복사한 것이다.
+             * @details 기록은 패스 종류가 아니라 첨부 칸 하나로 붙는다(`FrameViewResources` · `FramePassExecutor` 의 복사) — XML 에 시간 누적 패스를 더해도 코드를 고치지 않는다.
              */
             static uint32 validateAttachmentHistories( const RenderPipelineDesc& desc, string_view sourcePath )
             {
@@ -666,18 +666,40 @@ namespace sw
                                          sourcePath, attachment._name );
                         ++issueCount;
                     }
-                    // 쓰는 패스가 없는 첨부(가져온 묶음에만 있다)는 기록도 만들어지지 않는다 — 읽히지 않는 선언이 아니라 쓰이지 않는 첨부다.
-                    const bool bWritten = VectorUtil::containsIf( desc._listPass, [&attachment]( const RenderGraphPassDesc& pass )
+                    // 기록은 쓰는 패스가 끝에 복사한다 — 쓰는 패스가 둘이면 어느 쪽 끝의 내용인지 정할 수 없다(언리얼 RDG 의 기록 추출도 패스 하나의 출력이다).
+                    uint32 writerCount{ 0 };
+                    for ( const RenderGraphPassDesc& pass : desc._listPass )
                     {
-                        return VectorUtil::containsIf( pass._listResolvedColorOutput, [&attachment]( const RenderGraphPassDesc::ResolvedAttachment& output )
-                        { return output._attachment.view() == string_view( attachment._name ); } );
-                    } );
-                    if ( bHistoryOutput == false && bWritten && attachment._bHistory != SW_FALSE )
+                        writerCount += VectorUtil::containsIf( pass._listResolvedColorOutput, [&attachment]( const RenderGraphPassDesc::ResolvedAttachment& output )
+                        { return output._attachment.view() == string_view( attachment._name ); } )
+                                         ? 1u
+                                         : 0u;
+                    }
+                    if ( attachment._bHistory != SW_FALSE && writerCount > 1 )
                     {
-                        SW_LOG_ERROR_ID( "RenderPipelineAsset.AttachmentHistoryUnread", "[%#] attachment '%#': _bHistory - only the first output of a TAA or VolumetricClouds pass keeps a history", sourcePath,
-                                         attachment._name );
+                        SW_LOG_ERROR_ID( "RenderPipelineAsset.AttachmentHistoryTwoWriters", "[%#] attachment '%#': _bHistory needs one writing pass - %# passes write it, so the copied frame is ambiguous",
+                                         sourcePath, attachment._name, writerCount );
                         ++issueCount;
                     }
+                }
+                return issueCount;
+            }
+
+            /**
+             * @brief 2-0e) 그림자 패스의 깊이 첨부는 그림자 역할(ShadowMap · LocalShadowMap)을 적는다 — 그릴 타일(방향광 캐스케이드 · 점광 스폿)과 아틀라스 크기를 그 칸이 정한다.
+             * @details 역할을 첨부 이름으로 짐작하지 않는다(이름을 바꾼 그림자 첨부가 장면 깊이로 읽혀 화면 크기로 만들어졌다). 언리얼은 그림자 투영 종류가 깊이 대상과 함께 정해진다.
+             */
+            static uint32 validateShadowDepthRoles( const RenderPipelineDesc& desc, string_view sourcePath )
+            {
+                uint32 issueCount{ 0 };
+                for ( const RenderGraphPassDesc& pass : desc._listPass )
+                {
+                    const RenderPassInputRole role = static_cast<RenderPassInputRole>( pass._resolvedDepthRole );
+                    if ( pass._type != RenderPassKind::Shadow || role == RenderPassInputRole::ShadowMap || role == RenderPassInputRole::LocalShadowMap )
+                        continue;
+                    SW_LOG_ERROR_ID( "RenderPipelineAsset.PassShadowDepthRole", "[%#] shadow pass '%#': depth attachment '%#' declares no shadow role - write _role=\"ShadowMap\" (directional cascades) or \"LocalShadowMap\" (point · spot tiles)",
+                                     sourcePath, pass._name, pass._depthAttachment );
+                    ++issueCount;
                 }
                 return issueCount;
             }
@@ -762,6 +784,13 @@ namespace sw
                     resolved._attachment = hashed_string( attachmentName.c_str() );
                     resolved._role       = static_cast<uint8>(
                         resolveRenderPassInputRole( attachmentName, isDepthAttachment( pAttachment ), pAttachment != nullptr ? string_view( pAttachment->_role ) : string_view{} ) );
+                    if ( pAttachment != nullptr && pAttachment->_bHistory != SW_FALSE )
+                    {
+                        // 기록의 그래프 자원 이름 — 로드 때 한 번 intern 한다(실행은 프레임마다 이 값을 쓴다)
+                        StringBuilder<constant::buffer::kMax128> historyName;
+                        historyName.appendFormat( "%#History", attachmentName );
+                        resolved._historyResource = hashed_string( string( historyName.view() ).c_str() );
+                    }
                     return resolved;
                 };
                 for ( const string& inputName : pass._listInput )
@@ -1517,6 +1546,7 @@ namespace sw
         issueCount += Internal::resolveAndCheckPassAttachments( _desc, sourcePath );
         issueCount += Internal::validatePassMaterialFilters( _desc, sourcePath );
         issueCount += Internal::validateAttachmentHistories( _desc, sourcePath );
+        issueCount += Internal::validateShadowDepthRoles( _desc, sourcePath );
         issueCount += Internal::validatePassRenderState( _desc, sourcePath );
         issueCount += Internal::validateComputePasses( _desc, sourcePath );
         issueCount += Internal::validateFrameGraph( _desc, sourcePath );

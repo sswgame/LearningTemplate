@@ -600,8 +600,8 @@ SW_TEST_CASE( RenderPipelineAssetTest, PipelineChoiceEndsAtTheQualityTier )
 }
 
 /**
- * @brief [RenderPipelineAssetTest] 첨부의 고정 크기는 가로 · 세로를 함께 적고 배율 규칙과 섞지 않는다. 기록(`_bHistory`)은 시간 누적 패스의 출력만 적고, 그 출력은 꼭 적는다
- * @details 변이: 고정 크기 검사를 지우면 한 변만 적은 첨부가 읽혀 둘째 묶음이 진다. 기록 검사를 지우면 컴퓨트 출력의 기록 선언이 읽혀(실행이 읽지 않는 값) 마지막 단언이 진다.
+ * @brief [RenderPipelineAssetTest] 첨부의 고정 크기는 가로 · 세로를 함께 적고 배율 규칙과 섞지 않는다. 기록(`_bHistory`)은 어느 패스의 출력에도 칸 하나로 붙고, 쓰는 패스는 하나다
+ * @details 변이: 고정 크기 검사를 지우면 한 변만 적은 첨부가 읽혀 둘째 묶음이 진다. 기록 자원 이름을 풀지 않으면 컴퓨트 출력의 기록 이름 단언이 진다. 쓰는 패스 검사를 지우면 마지막 단언이 진다.
  */
 SW_TEST_CASE( RenderPipelineAssetTest, AttachmentSizeAndHistoryFollowTheRules )
 {
@@ -630,14 +630,29 @@ SW_TEST_CASE( RenderPipelineAssetTest, AttachmentSizeAndHistoryFollowTheRules )
     SW_REQUIRE_TRUE( pTAA != nullptr );
     SW_EXPECT_TRUE( pTAA->_bHistory != SW_FALSE );
 
+    // 사용자 컴퓨트 패스의 출력도 칸 하나로 기록이 붙는다(코드가 종류를 보지 않는다)
+    RenderPipelineAsset history;
+    SW_REQUIRE_TRUE( RenderPipelineTestUtil::load( history, makeXML( "_bHistory=\"true\"" ) ) );
+    SW_EXPECT_TRUE( history.getGraphPass()[0]._listResolvedColorOutput[0]._historyResource == hashed_string( "LutHistory" ) );
+
     SW_EXPECT_LOG( "RenderPipelineAsset.AttachmentFixedSizeInvalid" );
-    SW_EXPECT_LOG( "RenderPipelineAsset.AttachmentHistoryUnread" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.AttachmentHistoryTwoWriters" );
     SW_EXPECT_LOG( "RenderPipelineAsset.PipelineValidationFoundIssues" );
     SW_EXPECT_LOG( "RenderPipelineAsset.PipelineIssueNotLoaded" );
     RenderPipelineAsset rejected;
     SW_EXPECT_FALSE( RenderPipelineTestUtil::load( rejected, makeXML( "_width=\"32\"" ) ) );
     SW_EXPECT_FALSE( RenderPipelineTestUtil::load( rejected, makeXML( "_width=\"32\" _height=\"32\" _resolutionDivisor=\"2\"" ) ) );
-    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( rejected, makeXML( "_bHistory=\"true\"" ) ) );
+    const string      twoWritersSource = makeXML( "_bHistory=\"true\"" );
+    const string      secondPass       = "<RenderGraphPassDesc _name=\"Second\" _type=\"Compute\" _shaderPath=\"game/playground/shaders/compute_channelswap.hlsl\" _cullMode=\"None\" _bEnableDepthTest=\"false\" "
+                                         "_bEnableDepthWrite=\"false\"><_listInput><item>A</item></_listInput><_listOutput><item>Lut</item></_listOutput></RenderGraphPassDesc>";
+    const string_view whole            = twoWritersSource;
+    const size_t      listEnd          = whole.find( "</_listPass>" );
+    SW_REQUIRE_TRUE( listEnd != string_view::npos );
+    StringBuilder<constant::buffer::kMax2048> twoWriters;
+    twoWriters.append( whole.substr( 0, listEnd ) );
+    twoWriters.append( string_view( secondPass ) );
+    twoWriters.append( whole.substr( listEnd ) );
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( rejected, string( twoWriters.view() ) ) );
 }
 
 /** @brief [RenderPipelineAssetTest] 쿠킹이 펼친 글은 원본을 합쳐 읽은 것과 같은 값이고, 부모를 가리키지 않는다(팩 쿠커의 펼치기와 같은 함수) */

@@ -479,7 +479,8 @@ namespace sw
 
         /**
          * @brief 프레임을 넘어 지난 프레임 내용의 복사본(기록)을 뷰마다 둔다(언리얼 `FTemporalAAHistory` · 유니티 `RTHandle` 기록 자리). 시간 누적 패스(TAA · VolumetricClouds)의 출력은 이 칸을 적어야 한다(검증).
-         * @details 기록은 출력과 같은 크기 · 형식의 텍스처 하나를 더 잡는다 — 메모리 예산에 든다는 것을 데이터가 말한다. 기록을 읽는 실행이 그 두 종류뿐이라 다른 첨부에는 적을 수 없다(검증).
+         * @details 기록은 출력과 같은 크기 · 형식의 텍스처 하나를 더 잡는다 — 메모리 예산에 든다는 것을 데이터가 말한다. 이 첨부를 쓰는 패스는 하나이고(검증) 그 패스가 끝에 출력을 기록으로 복사한다 —
+         *          패스 종류와 상관없이 칸 하나로 붙는다(`FrameViewTarget::_listAttachmentHistory`, 그래프 자원 `<첨부>History`).
          */
         PROPERTY()
         uint8                  _bHistory      : 1;
@@ -597,6 +598,8 @@ namespace sw
         struct ResolvedAttachment
         {
             hashed_string _attachment;
+            /// @brief 첨부가 기록을 둘 때(`RenderPassAttachment::_bHistory`) 그 기록의 그래프 자원 이름(`<첨부>History`)입니다. 비면 기록이 없다. 출력이면 이 패스가 끝에 기록으로 복사한다.
+            hashed_string _historyResource;
             uint8         _role{ 0 };
         };
 
