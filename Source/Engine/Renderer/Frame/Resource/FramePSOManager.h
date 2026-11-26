@@ -266,7 +266,10 @@ namespace sw
         static bool hasRenderTargetFormatSource( const RenderPassKindInfo& info, const RenderGraphPassDesc* pTargetDesc );
         /** @brief 이 백엔드 · 실행에서 이 종류의 PSO 를 만드는지(진단 요청 · 네이티브 bindless · HDR 화면 · 출력 패스가 아님) 반환합니다. 엔진 슬롯과 파이프라인 패스가 같은 판정을 쓴다. */
         bool shouldCreatePassPSO( RenderPassKind passType, const RHICapabilities& caps ) const;
-        /** @brief 씬 메시를 그리는 패스 PSO 마다(엔진 슬롯 · 파이프라인 패스, 함께 쓰는 PSO 는 한 번) @p fn( passPSO, passType ) 을 부릅니다. 머티리얼 변형 · 배치 표가 같은 목록을 훑는다. */
+        /**
+         * @brief 씬 메시를 그리는 패스 PSO 마다(엔진 슬롯 · 파이프라인 패스, 함께 쓰는 PSO 는 한 번) @p fn( passPSO, passType, materialFilter ) 를 부릅니다. 머티리얼 변형 · 배치 표가 같은 목록을 훑는다.
+         * @details 거르기는 파이프라인 패스면 그 서술의 것(`RenderGraphPassDesc::_resolvedMaterialFilter`), 엔진 슬롯이면 표의 기본값이다. 드로우 루프 · 쿠커와 같은 값이다.
+         */
         template <typename TFunction>
         void forEachSceneMeshPassPSO( TFunction&& fn ) const;
         /**
@@ -281,8 +284,8 @@ namespace sw
         static uint32 getPassViewModeMask( const RenderPassKindInfo& passInfo, uint32 viewModeMask );
         /** @brief 변형 조건 하나를 @p passPSO · @p viewMode 로 그릴 PSO 입니다. 적용할 것이 없으면 패스 PSO 그대로, 만드는 중이면 직전 변형(`GPUShaderPermutation::_fallbackHash`)입니다. */
         GPUMeshBatchPSO resolveBatchPSO( RHIPipelineStateHandle passPSO, const MaterialPSORequest& request, RenderViewMode viewMode ) const;
-        /** @brief 요청 하나에 대해 이번 프레임의 보기 모드마다 변형을 만들어 둡니다. */
-        void ensureRequestMaterialPSOs( RHIPipelineStateHandle passPSO, RenderPassKind passType, const MaterialPSORequest& request, uint32 viewModeMask );
+        /** @brief 요청 하나에 대해 이번 프레임의 보기 모드마다 변형을 만들어 둡니다. 패스가 그리지 않는 머티리얼(@p filter)이면 만들지 않습니다. */
+        void ensureRequestMaterialPSOs( RHIPipelineStateHandle passPSO, RenderPassKind passType, const MaterialPassFilter& filter, const MaterialPSORequest& request, uint32 viewModeMask );
         /**
          * @brief 변형 하나가 저장소에 없으면 만들어 넣습니다. 셰이더를 컴파일해야 하는 변형은 `Building` 으로 올리고 빌더 줄에 넣습니다(`pollMaterialPSOBuilds` 가 합칩니다).
          * @param bUrgent 이번 프레임 배치가 필요한 키면 true, 미리 만들기(`warmPinnedMaterialPSOs`)는 false 입니다.

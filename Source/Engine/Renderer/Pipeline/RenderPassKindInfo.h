@@ -271,11 +271,11 @@ namespace sw
         /** @brief 패스가 셰이더에 추가하는 define 입니다. 파이프라인 XML 의 `_listPermutation` 뒤에 붙습니다. nullptr 이면 없습니다. */
         const utf8* _pPassDefine{ nullptr };
         /**
-         * @brief 이 패스가 그리는 배치의 머티리얼 퍼뮤테이션에 있어야 하는 define 입니다. nullptr 이면 모든 배치를 그립니다.
-         * @details 없는 배치(머티리얼 없는 배치 포함)는 드로우, 머티리얼 PSO 변형, 셰이더 쿠킹에서 함께 빠집니다(`shouldDrawMaterial`).
+         * @brief 이 패스가 그리는 배치의 머티리얼 퍼뮤테이션에 있어야 하는 define 의 기본값입니다. nullptr 이면 모든 배치를 그립니다.
+         * @details 파이프라인 패스 서술의 `_requiredMaterialDefine` 이 덮는다(`RenderGraphPassDesc::_resolvedMaterialFilter`). 판정은 `MaterialPassFilter` 하나다(`getDefaultMaterialFilter`).
          */
         const utf8* _pRequiredMaterialDefine{ nullptr };
-        /** @brief 이 패스가 빼는 배치의 머티리얼 define 입니다(G버퍼의 `MATERIAL_FORWARD_ONLY`). nullptr 이면 빼지 않습니다. 빠지는 범위는 `_pRequiredMaterialDefine` 과 같습니다. */
+        /** @brief 이 패스가 빼는 배치의 머티리얼 define 의 기본값입니다(G버퍼의 `MATERIAL_FORWARD_ONLY`). nullptr 이면 빼지 않습니다. 서술의 `_excludedMaterialDefine` 이 덮는다. */
         const utf8* _pExcludedMaterialDefine{ nullptr };
         /** @brief 고정 컬러 포맷(`_colorTargetCount` 개)입니다. nullptr 이면 패스가 선언한 출력의 포맷을 씁니다. */
         const RHIFormat* _pColorFormat{ nullptr };
@@ -357,23 +357,12 @@ namespace sw
             return hasFlag( RenderPassTraitFlag::kMaterialFixedState ) ? RenderStateOverride::Scope::FixedState : RenderStateOverride::Scope::CullOnly;
         }
 
-        /** @brief 이 패스가 머티리얼 define 으로 배치를 거르는지(있어야 하거나 없어야 하는 define 이 있는지) 반환합니다. 거르지 않으면 판정을 건너뛴다. */
-        bool shouldFilterBatchesByMaterial() const { return _pRequiredMaterialDefine != nullptr || _pExcludedMaterialDefine != nullptr; }
-
         /**
-         * @brief 이 패스가 이 머티리얼 define 목록의 배치를 그리는지 반환합니다. `_pRequiredMaterialDefine` 이 있으면 그것이 있어야 하고,
-         *        `_pExcludedMaterialDefine` 이 있으면 그것이 없어야 합니다. 둘 다 없으면 항상 true 입니다.
-         * @details 드로우 루프, 머티리얼 PSO 변형, 셰이더 쿠커가 같은 판정을 쓴다. 셋이 갈리면 쿠킹하지 않은 변형을 런타임이 찾거나,
-         *          외곽선을 모르는 셰이더가 외곽선 패스의 앞면 컬링으로 그려져 뒷면이 화면을 덮는다.
+         * @brief 이 종류의 기본 머티리얼 거르기(`_pRequiredMaterialDefine` · `_pExcludedMaterialDefine`)입니다. 서술이 없는 내부 슬롯과, 서술이 칸을 비운 파이프라인 패스가 쓴다.
+         * @details 드로우 루프, 머티리얼 PSO 변형, 셰이더 쿠커가 같은 판정(`MaterialPassFilter::shouldDraw`)을 쓴다. 셋이 갈리면 쿠킹하지 않은 변형을 런타임이 찾거나,
+         *          외곽선을 모르는 셰이더가 외곽선 패스의 앞면 컬링으로 그려져 뒷면이 화면을 덮는다. 값은 처음 물을 때 한 번 지은 표다(프레임마다 글을 만들지 않는다).
          */
-        bool shouldDrawMaterial( const vector<string>* pListMaterialDefine ) const
-        {
-            if ( _pExcludedMaterialDefine != nullptr && hasMaterialDefine( pListMaterialDefine, _pExcludedMaterialDefine ) )
-                return false;
-            if ( _pRequiredMaterialDefine == nullptr )
-                return true;
-            return hasMaterialDefine( pListMaterialDefine, _pRequiredMaterialDefine );
-        }
+        SW_API const MaterialPassFilter& getDefaultMaterialFilter() const;
 
         /**
          * @brief 깊이만 쓰는 패스(그림자 · 깊이 프리패스)가 이 머티리얼의 배치를 패스 셰이더 대신 머티리얼의 셰이더로 그리는지 반환합니다.

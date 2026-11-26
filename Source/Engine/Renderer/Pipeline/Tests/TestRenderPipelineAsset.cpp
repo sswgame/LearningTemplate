@@ -453,6 +453,45 @@ SW_TEST_CASE( RenderPipelineAssetTest, ViewPassTypeIsDeclaredOnce )
     SW_EXPECT_FALSE( RenderPipelineTestUtil::load( opaque, string( xml.view() ) ) );
 }
 
+/**
+ * @brief [RenderPipelineAssetTest] 패스가 그릴 머티리얼(필수 · 제외 define)은 패스 서술이 덮고, 비운 칸은 표의 기본값이다 — 유니티 Pass Tag LightMode 자리
+ * @details 변이: 서술 칸을 풀지 않으면(표만 보면) 포워드 패스의 필수 define 이 비어 첫 묶음이 진다. 씬 메시 패스가 아닌 패스의 거르기를 받으면 마지막 단언이 진다.
+ */
+SW_TEST_CASE( RenderPipelineAssetTest, PassDescriptionOverridesTheMaterialFilter )
+{
+    StringBuilder<constant::buffer::kMax256> passAttributes;
+    passAttributes.appendFormat( "_type=\"ForwardOpaque\" _depthAttachment=\"SceneDepth\" _requiredMaterialDefine=\"MATERIAL_DISTORTION\" %#", RenderPipelineTestUtil::kOpaqueState );
+    RenderPipelineAsset forward;
+    SW_REQUIRE_TRUE( RenderPipelineTestUtil::load( forward, RenderPipelineTestUtil::makeXML( passAttributes.view() ) ) );
+    const MaterialPassFilter& filter = forward.getGraphPass()[0]._resolvedMaterialFilter;
+    SW_EXPECT_EQUAL( string( kMaterialDistortionDefine ), filter._requiredDefine );
+    SW_EXPECT_TRUE( filter._excludedDefine.empty() );
+    const vector<string> listDistortion{ string( kMaterialDistortionDefine ) };
+    const vector<string> listPlain{ string( "MATERIAL_PLAIN" ) };
+    SW_EXPECT_TRUE( filter.shouldDraw( &listDistortion ) );
+    SW_EXPECT_FALSE( filter.shouldDraw( &listPlain ) );
+    SW_EXPECT_FALSE( filter.shouldDraw( nullptr ) );                                                               // 머티리얼 없는 배치는 필수 define 이 없다
+    SW_EXPECT_TRUE( getRenderPassKindInfo( RenderPassKind::ForwardOpaque ).getDefaultMaterialFilter().isEmpty() ); // 표는 그대로다
+
+    // 비운 칸은 표의 기본값 — 디퍼드 G버퍼는 포워드 전용 머티리얼을 뺀다
+    RenderPipelineAsset deferred;
+    SW_REQUIRE_TRUE( deferred.loadFromXMLFile( AssetID{ string_view( "engine/pipeline/deferredpipeline.xml" ) } ) );
+    const RenderGraphPassDesc* pGBuffer = VectorUtil::findIf( deferred.getGraphPass(), []( const RenderGraphPassDesc& pass )
+    { return pass._type == RenderPassKind::GBuffer; } );
+    SW_REQUIRE_TRUE( pGBuffer != nullptr );
+    SW_EXPECT_EQUAL( string( kMaterialForwardOnlyDefine ), pGBuffer->_resolvedMaterialFilter._excludedDefine );
+
+    SW_EXPECT_LOG( "RenderPipelineAsset.PassMaterialFilterNotMeshPass" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.PassMaterialFilterEmpty" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.PipelineValidationFoundIssues" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.PipelineIssueNotLoaded" );
+    StringBuilder<constant::buffer::kMax256> invalidFilter;
+    invalidFilter.appendFormat( "_type=\"ForwardOpaque\" _depthAttachment=\"SceneDepth\" _requiredMaterialDefine=\"MATERIAL_X\" _excludedMaterialDefine=\"MATERIAL_X\" %#", RenderPipelineTestUtil::kOpaqueState );
+    RenderPipelineAsset rejected;
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( rejected, RenderPipelineTestUtil::makeXML( invalidFilter.view() ) ) );
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( rejected, ComputePassTestUtil::makeXML( ComputePassTestUtil::withShader( "_requiredMaterialDefine=\"MATERIAL_X\"" ), "<item>A</item>", "<item>B</item>" ) ) );
+}
+
 /** @brief [RenderPipelineAssetTest] 쿠킹이 펼친 글은 원본을 합쳐 읽은 것과 같은 값이고, 부모를 가리키지 않는다(팩 쿠커의 펼치기와 같은 함수) */
 SW_TEST_CASE( RenderPipelineAssetTest, CookedFlatTextReadsLikeTheSource )
 {
@@ -713,9 +752,9 @@ SW_TEST_CASE( RenderPipelineAssetTest, DistortionPassTypesFollowTheTable )
     SW_EXPECT_FALSE( accumulate.hasFlag( RenderPassTraitFlag::kDepthWrite ) );
     const vector<string> listDistortion{ string( kMaterialDistortionDefine ), string( "MATERIAL_BLEND_TRANSLUCENT" ) };
     const vector<string> listPlain{ string( "MATERIAL_BLEND_TRANSLUCENT" ) };
-    SW_EXPECT_TRUE( getRenderPassKindInfo( RenderPassKind::Distortion ).shouldDrawMaterial( &listDistortion ) );
-    SW_EXPECT_FALSE( getRenderPassKindInfo( RenderPassKind::Distortion ).shouldDrawMaterial( &listPlain ) );
-    SW_EXPECT_FALSE( getRenderPassKindInfo( RenderPassKind::Distortion ).shouldDrawMaterial( nullptr ) ); // 머티리얼 없는 배치는 왜곡이 없다
+    SW_EXPECT_TRUE( getRenderPassKindInfo( RenderPassKind::Distortion ).getDefaultMaterialFilter().shouldDraw( &listDistortion ) );
+    SW_EXPECT_FALSE( getRenderPassKindInfo( RenderPassKind::Distortion ).getDefaultMaterialFilter().shouldDraw( &listPlain ) );
+    SW_EXPECT_FALSE( getRenderPassKindInfo( RenderPassKind::Distortion ).getDefaultMaterialFilter().shouldDraw( nullptr ) ); // 머티리얼 없는 배치는 왜곡이 없다
     const EngineDefaultAssets& assets = engine::getSubsystem<EngineDefaultAssets>();
     SW_EXPECT_TRUE( VectorUtil::contains( selectRenderPassShader( RenderPassKind::Distortion, nullptr, nullptr, assets )._listDefine, string( kPassDistortionDefine ) ) );
     const RenderPassInputSignature* pApply = findRenderPassInputSignature( RenderPassKind::DistortionApply );

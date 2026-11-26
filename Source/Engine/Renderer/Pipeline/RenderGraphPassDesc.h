@@ -9,6 +9,7 @@
 
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Foundation/Foundation.h"
+#include "Engine/Graphics/Material/MaterialTypes.h"
 #include "Engine/Graphics/RHI/RHIDescriptors.h"
 #include "Engine/Graphics/RenderState/RenderState.h"
 #include "Engine/Graphics/View/PostProcessValues.h"
@@ -613,6 +614,20 @@ namespace sw
          */
         PROPERTY( SkipIfEmpty, InheritKey )
         vector<string> _listPermutation;
+
+        /**
+         * @brief 이 패스가 그리는 배치의 머티리얼에 있어야 하는 define 입니다(유니티 Pass Tag `LightMode` 자리 — 예: 외곽선 패스의 `MATERIAL_OUTLINE`). 씬 메시 패스만 적는다(검증).
+         * @details 비면 패스 종류 표의 기본값이다(`RenderPassKindInfo::getDefaultMaterialFilter`). 표 기본값을 지우는 표기는 없다(shortcut: 빈 칸 = 기본값, 지울 패스가 생기면 `None` 같은 표기를 더한다).
+         */
+        PROPERTY( SkipIfEmpty )
+        string _requiredMaterialDefine;
+
+        /** @brief 이 패스가 빼는 배치의 머티리얼 define 입니다(G버퍼의 `MATERIAL_FORWARD_ONLY`). 비면 표의 기본값이다. 씬 메시 패스만 적는다(검증). */
+        PROPERTY( SkipIfEmpty )
+        string _excludedMaterialDefine;
+
+        /** @brief 서술 칸이 표 기본값을 덮은 머티리얼 거르기입니다. XML 로드 시 RenderPipelineAsset 가 채웁니다(직렬화 대상이 아니다). 드로우 · PSO 변형 · 쿠커가 이 값 하나를 본다. */
+        MaterialPassFilter _resolvedMaterialFilter;
 
         /**
          * @brief 모든 렌더 타깃의 블렌드 프리셋 이름입니다(`engine/renderstate/blendpresets.xml`). 비면 불투명입니다. `_listBlendTarget` 과 함께 적을 수 없습니다(검증).

@@ -67,6 +67,15 @@ namespace sw
         { return string_view( item ) == define; } );
     }
 
+    bool MaterialPassFilter::shouldDraw( const vector<string>* pListMaterialDefine ) const
+    {
+        const auto hasDefine = [pListMaterialDefine]( const string& define )
+        { return pListMaterialDefine != nullptr && VectorUtil::contains( *pListMaterialDefine, define ); };
+        if ( _excludedDefine.empty() == false && hasDefine( _excludedDefine ) )
+            return false;
+        return _requiredDefine.empty() || hasDefine( _requiredDefine );
+    }
+
     Material* Material::resolveDrawMaterial( Material* pOwn, const MaterialInstance* pInstance, Material* pSceneDefault )
     {
         Material* pMaterial = pOwn;

@@ -735,6 +735,26 @@ namespace sw
         return index < kRenderPassKindCount ? s_infoTable._arrRow[index] : s_infoTable._arrRow[0];
     }
 
+    const MaterialPassFilter& RenderPassKindInfo::getDefaultMaterialFilter() const
+    {
+        // 표 값은 글자 상수라 처음 한 번 글로 옮겨 둔다 — 드로우 루프가 프레임마다 묻는다.
+        static const vector<MaterialPassFilter> s_listFilter = []
+        {
+            vector<MaterialPassFilter> listFilter( kRenderPassKindCount );
+            for ( uint32 typeIndex = 0; typeIndex < kRenderPassKindCount; ++typeIndex )
+            {
+                const RenderPassKindInfo& info = s_infoTable._arrRow[typeIndex];
+                if ( info._pRequiredMaterialDefine != nullptr )
+                    listFilter[typeIndex]._requiredDefine = info._pRequiredMaterialDefine;
+                if ( info._pExcludedMaterialDefine != nullptr )
+                    listFilter[typeIndex]._excludedDefine = info._pExcludedMaterialDefine;
+            }
+            return listFilter;
+        }();
+        const uint32 typeIndex = static_cast<uint32>( _type );
+        return s_listFilter[typeIndex < kRenderPassKindCount ? typeIndex : 0u];
+    }
+
     bool passWritesVelocity( RenderPassKind type, const RenderGraphPassDesc* pTargetDesc )
     {
         if ( pTargetDesc == nullptr || getRenderPassKindInfo( type ).hasFlag( RenderPassTraitFlag::kWritesVelocity ) == false )

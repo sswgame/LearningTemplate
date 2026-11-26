@@ -145,15 +145,16 @@ namespace sw
             /** @brief 씬 메시를 그리는 패스 하나입니다. 머티리얼과 곱해 변형을 만들 대상입니다. */
             struct MeshPassInfo
             {
-                string         _shaderPath;
-                string         _vertexEntryPoint;
-                string         _pixelEntryPoint;
-                vector<string> _listPermutation;
-                RenderPassKind _passType{ RenderPassKind::Invalid };
-                vector<string> _listOrigin; ///< 이 패스를 낸 파이프라인(`ShaderCookRequest::_listOrigin` 의 한 묶음 — 표의 패스는 비었다)
-                bool           _bUsesMaterialShader{ false };
-                bool           _bAppliesViewMode{ false };
-                bool           _bHasPixelStage{ false };
+                string             _shaderPath;
+                string             _vertexEntryPoint;
+                string             _pixelEntryPoint;
+                vector<string>     _listPermutation;
+                RenderPassKind     _passType{ RenderPassKind::Invalid };
+                MaterialPassFilter _materialFilter; ///< 이 패스가 그리는 머티리얼(런타임과 같은 값 — 파이프라인 패스는 서술의 거르기, 표 · 내부 슬롯은 표의 기본값)
+                vector<string>     _listOrigin;     ///< 이 패스를 낸 파이프라인(`ShaderCookRequest::_listOrigin` 의 한 묶음 — 표의 패스는 비었다)
+                bool               _bUsesMaterialShader{ false };
+                bool               _bAppliesViewMode{ false };
+                bool               _bHasPixelStage{ false };
             };
 
             /** @brief 메시 패스 하나가 그리는 변형 하나입니다 — 셰이더 경로, define, 픽셀 스테이지 유무(깊이 패스의 알파 컷오프는 패스와 달리 PS 가 있다), 헐 · 도메인 유무(변위 머티리얼). */
@@ -300,6 +301,7 @@ namespace sw
                             passInfo._pixelEntryPoint     = string( resolveEntryPoint( pass._pixelEntryPoint, ShaderStage::Pixel ) );
                             passInfo._listPermutation     = passShader._listDefine;
                             passInfo._passType            = pass._type;
+                            passInfo._materialFilter      = pass._resolvedMaterialFilter;
                             passInfo._listOrigin          = pipelineOrigin;
                             passInfo._bUsesMaterialShader = getRenderPassKindInfo( pass._type ).usesMaterialShader();
                             passInfo._bAppliesViewMode    = getRenderPassKindInfo( pass._type ).shouldApplyViewMode();
@@ -348,6 +350,7 @@ namespace sw
                     passInfo._pixelEntryPoint     = getShaderStageInfo( ShaderStage::Pixel )._pEntryPoint;
                     passInfo._listPermutation     = slotShader._listDefine;
                     passInfo._passType            = slotType;
+                    passInfo._materialFilter      = slotInfo.getDefaultMaterialFilter();
                     passInfo._listOrigin          = listOrigin;
                     passInfo._bUsesMaterialShader = slotInfo.usesMaterialShader();
                     passInfo._bAppliesViewMode    = slotInfo.shouldApplyViewMode();
@@ -394,6 +397,7 @@ namespace sw
                         passInfo._pixelEntryPoint     = getShaderStageInfo( ShaderStage::Pixel )._pEntryPoint;
                         passInfo._listPermutation     = passShader._listDefine;
                         passInfo._passType            = passType;
+                        passInfo._materialFilter      = info.getDefaultMaterialFilter();
                         passInfo._bUsesMaterialShader = info.usesMaterialShader();
                         passInfo._bAppliesViewMode    = info.shouldApplyViewMode();
                         passInfo._bHasPixelStage      = info.hasPixelStage();
@@ -529,8 +533,9 @@ namespace sw
                 for ( const MeshPassInfo& passInfo : listMeshPass )
                 {
                     StringBuilder<constant::buffer::kMax512> keyBuilder;
-                    keyBuilder.appendFormat( "%#\n%#\n%#\n%#%#%#%#", passInfo._shaderPath, passInfo._vertexEntryPoint, passInfo._pixelEntryPoint, static_cast<uint64>( passInfo._passType ),
-                                             passInfo._bUsesMaterialShader ? "M" : "-", passInfo._bAppliesViewMode ? "V" : "-", passInfo._bHasPixelStage ? "P" : "-" );
+                    keyBuilder.appendFormat( "%#\n%#\n%#\n%#%#%#%#\n+%#\n-%#", passInfo._shaderPath, passInfo._vertexEntryPoint, passInfo._pixelEntryPoint, static_cast<uint64>( passInfo._passType ),
+                                             passInfo._bUsesMaterialShader ? "M" : "-", passInfo._bAppliesViewMode ? "V" : "-", passInfo._bHasPixelStage ? "P" : "-", passInfo._materialFilter._requiredDefine,
+                                             passInfo._materialFilter._excludedDefine );
                     for ( const string& define : passInfo._listPermutation )
                         keyBuilder.appendFormat( "\n%#", define );
                     const auto [passIt, bInserted] = mapPassIndex.emplace( string( keyBuilder.view() ), listUniquePass.size() );
@@ -572,7 +577,7 @@ namespace sw
                     {
                         const MaterialVariantInfo& variant = *listUniqueVariant[variantIndex];
                         // 패스가 그리지 않는 머티리얼(외곽선 패스 · 외곽선을 켜지 않은 머티리얼)은 런타임도 변형을 만들지 않는다.
-                        if ( getRenderPassKindInfo( passInfo._passType ).shouldDrawMaterial( &variant._listDefine ) == false )
+                        if ( passInfo._materialFilter.shouldDraw( &variant._listDefine ) == false )
                             continue;
                         // 후처리 머티리얼은 메시에 붙지 않는다 — 풀스크린 VS · PS(정의 없는 변형, 4 단계)만 쓴다(`FramePostProcessMaterials` 의 확장 프로그램 PSO).
                         if ( VectorUtil::contains( variant._listDefine, string( kMaterialDomainPostProcessDefine ) ) )

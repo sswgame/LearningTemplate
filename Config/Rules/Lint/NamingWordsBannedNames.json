@@ -1,6 +1,8 @@
 {
   "_comment": "전수 개명한 옛 이름 → 새 이름 · 까닭(Scripts/lint/naming_words.py 의 naming-words 규칙이 되살린 옛 이름을 막는다). 언리얼 CoreRedirects 의 옛 이름 → 새 이름 자리이되 고쳐 주지 않고 막는다. 개명 도구(py -3 -m Scripts rename-symbol)가 줄을 더한다 — 키(옛 이름)는 개명 도구가 바꾸지 않는다.",
   "_bannedNames": {
+    "shouldDrawMaterial": "MaterialPassFilter::shouldDraw — 머티리얼 거르기는 패스 서술이 덮는 값이다(RenderGraphPassDesc::_resolvedMaterialFilter, 표 기본값은 RenderPassKindInfo::getDefaultMaterialFilter)(2026-11-26)",
+    "shouldFilterBatchesByMaterial": "MaterialPassFilter::isEmpty — 머티리얼 거르기는 패스 서술이 덮는 값이다(2026-11-26)",
     "UnitStatsComponent": "지움 — 체력 · 피해는 AbilitySystemComponent + CombatAttributeSet(2026-11-26)",
     "CityTerrain": "CityTerrainDef — 땅은 도시 카탈로그의 <Terrain> 행이다(2026-11-25)",
     "CityService": "CityServiceDef — 서비스는 도시 카탈로그의 <Service> 행이다(2026-11-25)",
@@ -322,7 +324,7 @@
     "findFramePassTimestampSlot": "GPUTimestampSlotLayout::findFramePassSlot — 타임스탬프 슬롯 배치를 FrameRendererUtil 에서 Frame/Timeline 의 제 형식으로 옮겼다(2026-11-19)",
     "countUntimedGPUPass": "GPUTimestampSlotLayout::countUntimedPass — 타임스탬프 슬롯 배치를 FrameRendererUtil 에서 Frame/Timeline 의 제 형식으로 옮겼다(2026-11-19)",
     "isDepthOnlyPassType": "RenderPassKindInfo::isDepthOnly — 패스 종류 판정은 표의 멤버다(2026-11-19)",
-    "shouldDrawMaterialInPass": "RenderPassKindInfo::shouldDrawMaterial — 패스 종류 판정은 표의 멤버다(2026-11-19)",
+    "shouldDrawMaterialInPass": "MaterialPassFilter::shouldDraw — 패스의 머티리얼 거르기는 형식 멤버다(2026-11-19, 2026-11-26)",
     "findViewModeDefine": "RenderViewModeUtil::getInfo( mode )._pShaderDefine — 한 줄 감싸기라 지웠다(2026-11-19)",
     "findOrAddMaterialGroup": "getOrCreateMaterialGroup — 없으면 만드는 조회는 getOrCreate(NamingCpp 동사 표 — findOrAdd 쓰지 않음)(2026-11-19)",
     "tickCompleted": "RHIReleaseQueue::releaseCompleted — tick 은 틱 시스템만 — 완료된 펜스 이하의 해제 콜백을 실행한다(2026-11-19)",
@@ -603,7 +605,7 @@
     "drawsBatchInPass": "shouldDrawBatchInPass — bool 함수는 술어 첫 단어(is · has · can · should · uses · needs …)로(2026-11-12)",
     "drawsCasterBatch": "shouldDrawCasterBatch — bool 함수는 술어 첫 단어(is · has · can · should · uses · needs …)로(2026-11-12)",
     "drawsDepthWithMaterialShader": "usesMaterialShaderForDepth — bool 함수는 술어 첫 단어(is · has · can · should · uses · needs …)로(2026-11-12)",
-    "drawsMaterialInPass": "shouldDrawMaterialInPass — bool 함수는 술어 첫 단어(is · has · can · should · uses · needs …)로(2026-11-12)",
+    "drawsMaterialInPass": "MaterialPassFilter::shouldDraw — bool 함수는 술어 첫 단어(is · has · can · should · uses · needs …)로(2026-11-12)",
     "drawsPostProcessMaterial": "shouldDrawPostProcessMaterial — bool 함수는 술어 첫 단어(is · has · can · should · uses · needs …)로(2026-11-12)",
     "drawsSceneMeshes": "shouldDrawSceneMeshes — bool 함수는 술어 첫 단어(is · has · can · should · uses · needs …)로(2026-11-12)",
     "drivesTarget": "affectsTarget — bool 함수는 술어 첫 단어(is · has · can · should · uses · needs …)로(2026-11-12)",

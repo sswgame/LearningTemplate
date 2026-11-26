@@ -549,6 +549,33 @@ namespace sw
             }
 
             /**
+             * @brief 2-0c) 머티리얼 거르기(`_requiredMaterialDefine` · `_excludedMaterialDefine`)는 씬 메시를 그리는 패스만 적는다 — 다른 패스는 배치를 그리지 않아 읽는 쪽이 없다.
+             *        같은 define 을 요구하면서 빼면 어느 배치도 그리지 않는다.
+             */
+            static uint32 validatePassMaterialFilters( const RenderPipelineDesc& desc, string_view sourcePath )
+            {
+                uint32 issueCount{ 0 };
+                for ( const RenderGraphPassDesc& pass : desc._listPass )
+                {
+                    const bool bWritten = pass._requiredMaterialDefine.empty() == false || pass._excludedMaterialDefine.empty() == false;
+                    if ( bWritten && getRenderPassKindInfo( pass._type ).shouldDrawSceneMeshes() == false )
+                    {
+                        SW_LOG_ERROR_ID( "RenderPipelineAsset.PassMaterialFilterNotMeshPass", "[%#] pass '%#': _requiredMaterialDefine / _excludedMaterialDefine filter scene mesh batches - a %# pass draws none",
+                                         sourcePath, pass._name, getEnumName( pass._type ) );
+                        ++issueCount;
+                    }
+                    const MaterialPassFilter& filter = pass._resolvedMaterialFilter;
+                    if ( filter._requiredDefine.empty() == false && filter._requiredDefine == filter._excludedDefine )
+                    {
+                        SW_LOG_ERROR_ID( "RenderPipelineAsset.PassMaterialFilterEmpty", "[%#] pass '%#' requires and excludes material define '%#' - it would draw nothing", sourcePath, pass._name,
+                                         filter._requiredDefine );
+                        ++issueCount;
+                    }
+                }
+                return issueCount;
+            }
+
+            /**
              * @brief 2-0b) 퍼뮤테이션 한 이름은 패스에 한 번이다. 퍼뮤테이션은 글이 열쇠라(`_base` 합치기) 자식이 값만 바꿔 더하면 옛 글과 새 글이 함께 남는다.
              * @details 같은 매크로를 두 값으로 정의하면 컴파일러가 어느 쪽을 쓸지 셰이더마다 다르고 쿠킹 해시도 갈린다 — 로드에서 멈춘다.
              */
@@ -580,6 +607,12 @@ namespace sw
             static void resolvePass( const RenderPipelineDesc& desc, RenderGraphPassDesc& pass )
             {
                 pass._resolvedName = hashed_string( pass._name.c_str() );
+                // 머티리얼 거르기 — 서술이 적은 칸이 표의 기본값을 덮는다(유니티 LightMode 태그를 렌더러 쪽에서 고르는 자리)
+                pass._resolvedMaterialFilter = getRenderPassKindInfo( pass._type ).getDefaultMaterialFilter();
+                if ( pass._requiredMaterialDefine.empty() == false )
+                    pass._resolvedMaterialFilter._requiredDefine = pass._requiredMaterialDefine;
+                if ( pass._excludedMaterialDefine.empty() == false )
+                    pass._resolvedMaterialFilter._excludedDefine = pass._excludedMaterialDefine;
                 pass._resolvedDepthAttachment =
                     pass._depthAttachment.empty() ? hashed_string{} : hashed_string( pass._depthAttachment.c_str() );
                 const RenderPassAttachment* pDepth = pass._depthAttachment.empty() ? nullptr : findAttachment( desc, pass._depthAttachment );
@@ -1294,6 +1327,7 @@ namespace sw
         issueCount += Internal::validatePassTypesUnique( _desc, sourcePath );
         issueCount += Internal::validatePassPermutations( _desc, sourcePath );
         issueCount += Internal::resolveAndCheckPassAttachments( _desc, sourcePath );
+        issueCount += Internal::validatePassMaterialFilters( _desc, sourcePath );
         issueCount += Internal::validatePassRenderState( _desc, sourcePath );
         issueCount += Internal::validateComputePasses( _desc, sourcePath );
         issueCount += Internal::validateFrameGraph( _desc, sourcePath );

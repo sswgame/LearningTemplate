@@ -275,10 +275,13 @@ namespace sw
             return bInside;
         }
 
-        /** @brief 앞 패스 @p earlier 의 PSO 를 @p pass 가 함께 쓸 수 있는 종류 조건입니다(서술 지문은 부르는 쪽이 견준다). 종류가 다르면 실행 · 머티리얼 변형 규칙이 다르다. */
+        /**
+         * @brief 앞 패스 @p earlier 의 PSO 를 @p pass 가 함께 쓸 수 있는 조건입니다(서술 지문은 부르는 쪽이 견준다). 종류가 다르면 실행 · 머티리얼 변형 규칙이 다르다.
+         * @details 머티리얼 거르기는 PSO 서술에 들지 않는다 — 거르기가 다른 두 패스가 PSO 를 함께 쓰면 변형은 앞 패스의 거르기로만 만들어져 뒤 패스가 그리는 배치의 변형이 빠진다.
+         */
         bool isSamePassPSO( const RenderGraphPassDesc& earlier, const RenderGraphPassDesc& pass )
         {
-            return earlier._type == pass._type;
+            return earlier._type == pass._type && earlier._resolvedMaterialFilter == pass._resolvedMaterialFilter;
         }
     } // namespace
 
@@ -997,8 +1000,9 @@ namespace sw
     {
         for ( const auto& [passType, passState] : _pCache->getEnginePSOs() )
         {
-            if ( passState._pso._handle != 0 && getRenderPassKindInfo( passType ).shouldDrawSceneMeshes() )
-                fn( passState._pso._handle, passType );
+            const RenderPassKindInfo& info = getRenderPassKindInfo( passType );
+            if ( passState._pso._handle != 0 && info.shouldDrawSceneMeshes() )
+                fn( passState._pso._handle, passType, info.getDefaultMaterialFilter() ); // 서술이 없는 엔진 슬롯은 표의 거르기다
         }
         const vector<RenderGraphPassDesc>& listPass = _pipeline.getGraphPass();
         for ( size_t passIndex = 0; passIndex < listPass.size() && passIndex < _listPassPSOOwner.size(); ++passIndex )
@@ -1009,7 +1013,7 @@ namespace sw
                 continue;
             RHIPipelineStateHandle pso{ 0 };
             if ( _pCache->findPipelinePassPSO( pass._resolvedName, pso ) && pso != 0 )
-                fn( pso, pass._type );
+                fn( pso, pass._type, pass._resolvedMaterialFilter );
         }
     }
 
@@ -1142,13 +1146,13 @@ namespace sw
         if ( listOpaqueRequest.empty() && listTransparentRequest.empty() )
             return;
 
-        forEachSceneMeshPassPSO( [&]( RHIPipelineStateHandle passPSO, RenderPassKind passType )
+        forEachSceneMeshPassPSO( [&]( RHIPipelineStateHandle passPSO, RenderPassKind passType, const MaterialPassFilter& filter )
         {
             const bool                        bTransparentPass = getRenderPassKindInfo( passType ).hasFlag( RenderPassTraitFlag::kDrawsTransparentBatch );
             const vector<MaterialPSORequest>& listRequest      = bTransparentPass ? listTransparentRequest : listOpaqueRequest;
             for ( const MaterialPSORequest& request : listRequest )
             {
-                ensureRequestMaterialPSOs( passPSO, passType, request, viewModeMask );
+                ensureRequestMaterialPSOs( passPSO, passType, filter, request, viewModeMask );
             }
         } );
     }
@@ -1171,10 +1175,10 @@ namespace sw
             for ( const bool bAppearanceDither : { false, true } )
             {
                 const GPUShaderPermutation permutation = GPUMaterialRegistry::makeShaderPermutation( entry, bAppearanceDither );
-                forEachSceneMeshPassPSO( [&]( RHIPipelineStateHandle passPSO, RenderPassKind passType )
+                forEachSceneMeshPassPSO( [&]( RHIPipelineStateHandle passPSO, RenderPassKind passType, const MaterialPassFilter& filter )
                 {
                     const bool bTransparentPass = getRenderPassKindInfo( passType ).hasFlag( RenderPassTraitFlag::kDrawsTransparentBatch );
-                    if ( bTransparentPass != bTransparentMaterial || getRenderPassKindInfo( passType ).shouldDrawMaterial( &permutation._listDefine ) == false )
+                    if ( bTransparentPass != bTransparentMaterial || filter.shouldDraw( &permutation._listDefine ) == false )
                         return;
                     const uint32 passModeMask = getPassViewModeMask( getRenderPassKindInfo( passType ), viewModeMask );
                     for ( uint32 modeIndex = 0; modeIndex < static_cast<uint32>( RenderViewMode::Count ); ++modeIndex )
@@ -1208,13 +1212,14 @@ namespace sw
         }
     }
 
-    void FramePSOManager::ensureRequestMaterialPSOs( RHIPipelineStateHandle passPSO, RenderPassKind passType, const MaterialPSORequest& request, uint32 viewModeMask )
+    void FramePSOManager::ensureRequestMaterialPSOs( RHIPipelineStateHandle passPSO, RenderPassKind passType, const MaterialPassFilter& filter, const MaterialPSORequest& request,
+                                                     uint32 viewModeMask )
     {
         const bool bReverseCulling = ( request._bReverseCulling != SW_FALSE );
         // 이 패스가 그리지 않는 배치(외곽선을 켜지 않은 머티리얼)의 변형은 만들지 않는다. 쿠커도 그것을 쿠킹하지 않는다.
         const GPUShaderPermutation* pRequestPermutation =
             ( request._shaderPermutation == kInvalidShaderPermutation ) ? nullptr : _gpuScene.findShaderPermutation( request._shaderPermutation );
-        if ( getRenderPassKindInfo( passType ).shouldDrawMaterial( pRequestPermutation != nullptr ? &pRequestPermutation->_listDefine : nullptr ) == false )
+        if ( filter.shouldDraw( pRequestPermutation != nullptr ? &pRequestPermutation->_listDefine : nullptr ) == false )
             return;
         const uint32 passModeMask = getPassViewModeMask( getRenderPassKindInfo( passType ), viewModeMask );
         for ( uint32 modeIndex = 0; modeIndex < static_cast<uint32>( RenderViewMode::Count ); ++modeIndex )
@@ -1360,7 +1365,7 @@ namespace sw
         _listBatchPSORow.clear();
         if ( _pDevice == nullptr )
             return;
-        forEachSceneMeshPassPSO( [&]( RHIPipelineStateHandle passPSO, RenderPassKind passType )
+        forEachSceneMeshPassPSO( [&]( RHIPipelineStateHandle passPSO, RenderPassKind passType, const MaterialPassFilter& )
         {
             const RenderPassKindInfo&         passInfo         = getRenderPassKindInfo( passType );
             const bool                        bTransparentPass = passInfo.hasFlag( RenderPassTraitFlag::kDrawsTransparentBatch );
