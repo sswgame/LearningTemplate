@@ -87,17 +87,20 @@ SW_TEST_CASE( LocalizationManagerTest, ModuleProjectsFollowTheirRegistration )
     const ScopedScratchDomain domain;
     const sw::string          projectID = ScopedScratchDomain::toIDText( Internal::writeSampleProject( domain.getFolder() ) );
     sw::LocalizationManager   loc;
+    // 테스트 실행 파일에 링크된 키트도 제 프로젝트를 등록해 두므로, 그 수를 기준으로 이 등록 하나만큼 늘고 주는지 본다.
+    SW_REQUIRE_TRUE( loc.syncModuleProjects() );
+    const size_t linkedCount = loc.getMountedProjectNames().size();
     {
         const sw::LocalizationModuleProject          project{ projectID.c_str() };
         const sw::LocalizationModuleProjectRegistrar registrar{ &project };
         SW_REQUIRE_TRUE( loc.syncModuleProjects() );
-        SW_EXPECT_EQUAL( size_t( 1 ), loc.getMountedProjectNames().size() );
+        SW_EXPECT_EQUAL( linkedCount + 1, loc.getMountedProjectNames().size() );
         SW_EXPECT_EQUAL( sw::string( "Mystery Island" ), Internal::text( loc.findString( sw::hashed_string( "ui.title" ) ) ) );
         SW_REQUIRE_TRUE( loc.syncModuleProjects() ); // 이미 올린 등록은 다시 올리지 않는다
-        SW_EXPECT_EQUAL( size_t( 1 ), loc.getMountedProjectNames().size() );
+        SW_EXPECT_EQUAL( linkedCount + 1, loc.getMountedProjectNames().size() );
     }
     SW_REQUIRE_TRUE( loc.syncModuleProjects() );
-    SW_EXPECT_TRUE( loc.getMountedProjectNames().empty() );
+    SW_EXPECT_EQUAL( linkedCount, loc.getMountedProjectNames().size() );
     SW_EXPECT_NULL( loc.findString( sw::hashed_string( "ui.title" ) ) );
 }
 
