@@ -19,15 +19,9 @@ namespace sw
     /** @brief 종료를 요청한 까닭입니다. 처음 요청만 남습니다. */
     enum class ShutdownCause : uint8
     {
-        None,           ///< 요청 없음
-        Interrupt,      ///< SIGINT · Ctrl+C · Ctrl+Break
-        Terminate,      ///< SIGTERM(systemd · docker stop · kill)
-        Hangup,         ///< SIGHUP(터미널이 닫힘)
-        ConsoleClose,   ///< Windows 콘솔 창 닫기
-        SystemShutdown, ///< Windows 로그오프 · 시스템 종료
-        ServiceStop,    ///< Windows 서비스 정지 · 사전 종료
-        ConsoleCommand, ///< 서버 콘솔의 quit · stop
-        TickLimit,      ///< 테스트용 틱 상한(`-gv_serverExitAfterTicks`)
+#define SW_SHUTDOWN_CAUSE( Name ) Name,
+#include "Core/Process/ShutdownCauseList.xxx"
+#undef SW_SHUTDOWN_CAUSE
     };
 } // namespace sw
 
