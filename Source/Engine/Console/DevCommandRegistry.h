@@ -10,6 +10,7 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/DevSourcePath.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Path/AbsolutePath.h"
@@ -134,6 +135,7 @@ namespace sw
  * @param pFunc   `bool( const vector<string>&, string& )` 본문
  */
     #define SW_DEV_COMMAND( varName, pName, pUsage, pHelp, pFunc )                                                                                        \
+        SW_DEV_REGISTRATION_PATH_CHECK( "SW_DEV_COMMAND" );                                                                                               \
         static_assert( SW_DEV_COMMAND_REGISTRATION, "dev command " pName ": an MVVM View may not register dev commands - put it in the panel's Model/" ); \
         static const ::sw::DevCommandRegistration sw_devCommandRegistration_##varName{ pName, pUsage, pHelp, pFunc, nullptr };                            \
         static ::sw::DevCommandRegistrar          sw_devCommandRegistrar_##varName                                                                        \
@@ -145,6 +147,7 @@ namespace sw
  * @brief 씬 전체를 도는 개발 명령을 등록합니다(`scene.tree` 처럼). 인자는 `SW_DEV_COMMAND` 와 같고 @p pFunc 는 `bool( SceneIterationKey, const vector<string>&, string& )` 입니다.
  */
     #define SW_DEV_SCENE_COMMAND( varName, pName, pUsage, pHelp, pFunc )                                                       \
+        SW_DEV_REGISTRATION_PATH_CHECK( "SW_DEV_SCENE_COMMAND" );                                                              \
         static const ::sw::DevCommandRegistration sw_devCommandRegistration_##varName{ pName, pUsage, pHelp, nullptr, pFunc }; \
         static ::sw::DevCommandRegistrar          sw_devCommandRegistrar_##varName                                             \
         {                                                                                                                      \
