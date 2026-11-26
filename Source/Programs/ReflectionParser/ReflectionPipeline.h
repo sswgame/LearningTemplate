@@ -43,13 +43,26 @@ namespace sw
         int32 run( float32 setupSeconds );
 
     private:
+        /**
+         * @brief 입력 하나(겹치지 않게 한 번씩)의 산출물 경로와 스탬프입니다. 스탬프는 실행마다 입력당 한 번만 읽는다.
+         * @details 증분 판정 · 이름 충돌 검사 · 목록 다섯(FlagOps 우산 · 형식 · 경로 칸 · 고정 배치형 · depfile)이 같은 스탬프를 본다. 예전에는 저마다
+         *          디스크에서 다시 읽어 입력 하나에 여섯 번 읽었다. 이번 실행이 새로 쓴 입력은 쓴 스탬프로 바꾼다(디스크와 같다).
+         */
+        struct InputRecord
+        {
+            const AbsolutePath*    _pInputFile;
+            GeneratedPaths         _paths;
+            GeneratedStamp         _stamp;         ///< `_bHasStamp` 일 때만 뜻이 있다
+            uint8                  _bHasStamp : 1; ///< 디스크에 읽을 수 있는 스탬프가 있다(없으면 자리 표시자이거나 이번 실행에 실패했다)
+            [[maybe_unused]] uint8 _reserved  : 7;
+        };
+
         /** @brief 파싱해야 하는 입력 하나입니다. 키워드를 거를 때 읽은 내용을 파서에 그대로 넘깁니다(이중 I/O 방지). */
         struct PendingInput
         {
-            const AbsolutePath* _pInputFile;
-            string              _content;
-            GeneratedPaths      _paths;
-            uint64              _inputWriteTime; /**< 내용을 읽기 전에 측정한 입력의 쓰기 시각 — 스탬프에 적는다(`GeneratedStamp::write`) */
+            InputRecord* _pRecord; ///< 이 입력의 기록. 산출물을 쓰면 스탬프를 바꾼다(입력마다 한 워커만 쓴다)
+            string       _content;
+            uint64       _inputWriteTime; /**< 내용을 읽기 전에 측정한 입력의 쓰기 시각 — 스탬프에 적는다(`GeneratedStamp::write`) */
         };
 
         /** @brief 파싱할 입력들을 처리합니다 — 둘 이상이면 한 번역 단위로 묶고, 그것이 안 되면 하나씩. 실패한 수를 돌려줍니다. */
@@ -69,26 +82,25 @@ namespace sw
          * @param inputWriteTime 읽기 전에 측정한 입력 시각.
          * @param listDependency 이 입력을 파싱한 번역 단위가 include 한 프로젝트 헤더(스탬프에 적는다).
          */
-        [[nodiscard]] bool writeOutputs( const AbsolutePath& inputFile, const GeneratedPaths& paths, const ParsedHeader& parsed, uint64 inputWriteTime,
-                                         const vector<StampDependency>& listDependency ) const;
+        [[nodiscard]] bool writeOutputs( InputRecord& record, const ParsedHeader& parsed, uint64 inputWriteTime, const vector<StampDependency>& listDependency ) const;
         /**
          * @brief `--depfile` 이 있으면 모든 입력의 산출물을 목표로, 스탬프들의 의존을 합친 것을 Makefile 꼴로 씁니다. 실행마다 씁니다.
          * @details ninja 는 이 파일로 "반사되지 않은 헤더가 바뀌면 이 단계를 다시 돌린다" 를 안다. 빠지면 단계가 늘 더럽다고 보거나(파일 없음)
          *          옛 의존으로 판단한다 — 그래서 모두 최신인 실행도 스탬프에서 모아 쓴다.
          */
-        [[nodiscard]] bool writeDepfile() const;
+        [[nodiscard]] bool writeDepfile( const vector<InputRecord>& listInput ) const;
         /** @brief ENUM(Flags) 트레이트를 담은 .gen.h 들을 모으는 우산(FlagOps.gen.h)을 씁니다. */
-        [[nodiscard]] bool writeFlagOpsUmbrella() const;
+        [[nodiscard]] bool writeFlagOpsUmbrella( const vector<InputRecord>& listInput ) const;
         /**
          * @brief 대상의 타입 · 열거형을 `<FQN>\t<모듈>` 줄로 `ReflectedTypes.list` 에 씁니다(정렬, 내용이 같으면 쓰지 않음).
          * @details 타입이 어느 모듈인지를 아는 곳은 CMake(`--module`) 하나다 - 콘텐츠 검사(`Scripts/generate/content_modules.py`)가 이 목록을 읽는다.
          */
-        [[nodiscard]] bool writeReflectedTypesList() const;
+        [[nodiscard]] bool writeReflectedTypesList( const vector<InputRecord>& listInput ) const;
         /**
          * @brief 대상의 경로 칸(`AssetRef<T>` · `DataPath`)을 `<이름>\t<대상>` 줄로 `AssetReferenceFields.list` 에 씁니다(정렬, 내용이 같으면 쓰지 않음).
          * @details 끊어진 경로 검사 · 옮기기 도구가 어느 칸이 경로인지 아는 근거다. 손으로 맞추던 이름 표를 대신한다(`Scripts/generate/asset_reference_field_list.py` 가 모은다).
          */
-        [[nodiscard]] bool writeAssetFieldList() const;
+        [[nodiscard]] bool writeAssetFieldList( const vector<InputRecord>& listInput ) const;
         /** @brief 이번 실행이 만든 `.gen.cpp` 바이트를 방출 함수 구역마다 로그 `ReflectionParser.EmitBytes` 한 줄로 남깁니다(만든 것이 없으면 남기지 않는다). */
         void logEmitBytes() const;
         /**
@@ -100,7 +112,7 @@ namespace sw
         /** @brief @p phase 에 걸린 시간을 더합니다(워커가 함께 부른다). */
         void addPhaseTime( ParsePhase phase, float32 seconds ) const;
         /** @brief 대상의 `.gen.cpp` 들에서 고정 배치형 정규 문자열 줄을 모아 `FixedSchemas.gen.txt` 를 씁니다. */
-        [[nodiscard]] bool writeFixedSchemaList() const;
+        [[nodiscard]] bool writeFixedSchemaList( const vector<InputRecord>& listInput ) const;
 
     private:
         const ParserOptions* _pOptions;

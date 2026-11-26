@@ -292,9 +292,9 @@ namespace sw
             _newestToolWriteTime = MathUtil::kMaxUInt64;
     }
 
-    bool IncrementalCheck::isUpToDate( const AbsolutePath& inputFile, const GeneratedPaths& paths ) const
+    bool IncrementalCheck::isUpToDate( const AbsolutePath& inputFile, const GeneratedPaths& paths, const GeneratedStamp* pStamp ) const
     {
-        const uint64 stampTime     = GeneratedFileUtil::getWriteTime( paths._stampPath );
+        const uint64 stampTime     = pStamp != nullptr ? GeneratedFileUtil::getWriteTime( paths._stampPath ) : 0;
         const bool   bStampMissing = stampTime == 0 || FileUtil::exists( paths._cppPath ) == false ||
                                    ( paths.isInline() == false && ( FileUtil::exists( paths._headerPath ) == false || FileUtil::exists( paths._editorMetadataPath ) == false ) );
         if ( bStampMissing )
@@ -310,8 +310,8 @@ namespace sw
         // 헤더를 옮기기만 하면 내용도 시각도 그대로라 시각 비교는 "최신" 이라고 답한다. 그런데 .gen.cpp 는 원본을 절대
         // 경로로 #include 하므로 그대로 두면 없는 경로를 가리켜 빌드가 깨진다. 스탬프에 적힌 원본 경로를 대조해 이동을 잡는다.
         // 시각을 읽지 못하는 스탬프는 최신이 아니다 — 다시 만든다.
-        GeneratedStamp record;
-        if ( GeneratedStamp::read( paths._stampPath, record ) == false || ( record._sourcePath == inputFile ) == false )
+        const GeneratedStamp& record = *pStamp;
+        if ( ( record._sourcePath == inputFile ) == false )
             return false;
         // 명령줄이 바뀌었으면(`--module` · `-D…` · `--include`) 파일 시각이 그대로여도 산출물이 달라진다.
         if ( record._argsHash != _argsHash )

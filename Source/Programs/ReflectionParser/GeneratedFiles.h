@@ -121,8 +121,11 @@ namespace sw
     public:
         IncrementalCheck( const ParserOptions& options, const ParserConfig& config );
 
-        /** @brief 스탬프가 있고(없으면 자리 표시자) 입력 · 도구보다 새로우며, 스탬프의 원본 경로 · 명령줄 해시가 이번 실행과 같으면 true */
-        bool isUpToDate( const AbsolutePath& inputFile, const GeneratedPaths& paths ) const;
+        /**
+         * @brief 스탬프가 있고(없으면 자리 표시자) 입력 · 도구보다 새로우며, 스탬프의 원본 경로 · 명령줄 해시가 이번 실행과 같으면 true
+         * @param pStamp 부르는 쪽이 읽은 그 입력의 스탬프(`GeneratedStamp::read`). 읽지 못했으면 nullptr — 스탬프는 입력마다 한 번만 읽는다.
+         */
+        bool isUpToDate( const AbsolutePath& inputFile, const GeneratedPaths& paths, const GeneratedStamp* pStamp ) const;
 
         /** @brief 이번 실행의 명령줄 해시입니다. 스탬프를 쓰는 쪽이 `GeneratedStamp::_argsHash` 에 적는다. */
         uint64 getArgsHash() const { return _argsHash; }
