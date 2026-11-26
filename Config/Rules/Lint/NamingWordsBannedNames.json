@@ -2539,6 +2539,9 @@
     "getCompileBusyClock": "getCompileBusyTimeAccumulator — BusyTimeAccumulator 를 돌려준다(2026-11-27)",
     "CommandLineManager": "CommandLine — 인자를 파싱 · 보관하는 형식 하나다 — Manager 는 집합의 수명 정책 뜻(언리얼 FCommandLine)(2026-11-27)",
     "getCommandLineManager": "getCommandLine — CommandLine 을 돌려준다(2026-11-27)",
-    "_pCommandLineManager": "_pCommandLine — CommandLine 칸(2026-11-27)"
+    "_pCommandLineManager": "_pCommandLine — CommandLine 칸(2026-11-27)",
+    "NetMessageHasBody": "NetMessageTraits<T>::kHasBody — 메시지 서술자의 컴파일 시간 특성은 형식 하나로 읽는다(std::iterator_traits 꼴)(2026-11-27)",
+    "NetMessageIsHeld": "NetMessageTraits<T>::kIsHeld — 메시지 서술자의 컴파일 시간 특성은 형식 하나로 읽는다(std::iterator_traits 꼴)(2026-11-27)",
+    "NetMessageMaxPerPoll": "NetMessageTraits<T>::kMaxPerPoll — 메시지 서술자의 컴파일 시간 특성은 형식 하나로 읽는다(std::iterator_traits 꼴)(2026-11-27)"
   }
 }
