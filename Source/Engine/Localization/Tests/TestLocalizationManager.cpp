@@ -473,7 +473,7 @@ SW_TEST_CASE( LocalizedMessageTest, ResolvesInTheLanguageOfTheMoment )
 
 /**
  * @brief [LocalizedMessageTest] 열거값의 보일 글 — 키는 `Enum.<열거형>.<열거자>` 이고, 표에 없으면 원문(DisplayName)을, 원문도 없으면 열거자 이름을 돌려준다
- * @details 음성 대조: 키를 열거형 FQN(`sw::TestMetaEnum`)으로 만들면 수집기가 넣은 키와 어긋나 첫 기대와 표 조회가 진다. 범위 밖 값이 이름을 지어내면 마지막 기대가 진다.
+ * @details 음성 대조: 키를 열거형 FQN(`sw::TestMetaEnum`)으로 만들면 수집기가 넣은 키와 어긋나 첫 기대와 표 조회가 진다. 범위 밖 값이 공통 키로 가지 않고 이름을 지어내면 그 두 기대가 진다.
  */
 SW_TEST_CASE( LocalizedMessageTest, EnumeratorDisplayTextUsesEnumKey )
 {
@@ -482,7 +482,8 @@ SW_TEST_CASE( LocalizedMessageTest, EnumeratorDisplayTextUsesEnumKey )
     SW_EXPECT_EQUAL( string( "The first one" ), string( LocalizedText::findEnumTooltip( TestMetaEnum::First ) ) );
     SW_EXPECT_EQUAL( string( "Second" ), string( LocalizedText::findEnum( TestMetaEnum::Second ) ) );
     SW_EXPECT_EQUAL( string(), string( LocalizedText::findEnumTooltip( TestMetaEnum::Second ) ) );
-    SW_EXPECT_EQUAL( string( "Unknown" ), string( LocalizedText::findEnum( static_cast<TestMetaEnum>( 7 ) ) ) );
+    SW_EXPECT_EQUAL( string( "unknown" ), string( LocalizedText::findEnum( static_cast<TestMetaEnum>( 7 ) ) ) ); // 범위 밖 값은 공통 키의 원문
+    SW_EXPECT_EQUAL( string( "Enum.Unknown" ), LocalizedText::makeEnumKey( static_cast<TestMetaEnum>( 7 ) ) );
 
     // 화면이 든 키는 그릴 때의 표로 풀린다(배포는 메타 없이 이 길만 쓴다).
     LocalizationManager localization;

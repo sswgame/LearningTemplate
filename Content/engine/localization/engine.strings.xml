@@ -24,11 +24,6 @@
 				<item>engine/ui/quantity.ui.xml</item>
 			</origins>
 		</entry>
-		<entry key="Chat.Failed" source="Chat failed">
-			<origins>
-				<item>Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp</item>
-			</origins>
-		</entry>
 		<entry key="Chat.InvalidMessage" source="Message is empty or not valid">
 			<origins>
 				<item>Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp</item>
@@ -2733,6 +2728,11 @@
 		<entry key="Enum.SocialPresenceStatus.Online" source="online">
 			<origins>
 				<item>Source/GameFramework/Kits/Feature/Online/Social/Runtime/SocialTypes.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.Unknown" source="unknown">
+			<origins>
+				<item>Source/Engine/Localization/LocText.cpp</item>
 			</origins>
 		</entry>
 		<entry key="Enum.ZoneModuleOrigin.Added" source="added here">

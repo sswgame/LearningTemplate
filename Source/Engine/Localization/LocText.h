@@ -57,11 +57,11 @@ namespace sw
 
         /** @brief 열거자의 보일 글 키 `Enum.<열거형>.<열거자>` 입니다. 수집기(`TextGatherer`)와 실행 조회가 이 하나로 만든다. */
         static string makeEnumKey( string_view enumName, string_view enumeratorName );
-        /** @brief @p pInfo 의 값 @p value 의 키입니다(그릴 때 `resolve` 가 푼다). 정보가 없거나 범위 밖이면 `getEnumName` 과 같은 `"Unknown"` 입니다. */
+        /** @brief @p pInfo 의 값 @p value 의 키입니다(그릴 때 `resolve` 가 푼다). 정보가 없거나 범위 밖(와이어에서 온 모르는 값)이면 공통 키 `Enum.Unknown` 입니다. */
         static string makeEnumKey( const EnumInfo* pInfo, int64 value );
         /**
          * @brief @p pInfo 의 값 @p value 의 지금 문화권 글입니다. 표에 없으면 빠진 키로 알리고 원문(에디터 메타)을, 메타도 없으면(배포) 열거자 이름을 돌려줍니다.
-         * @details 돌려준 포인터는 표 · 메타 · intern 된 이름의 것이라 오래 산다. 정보가 없거나 범위 밖이면 `"Unknown"` 입니다.
+         * @details 돌려준 포인터는 표 · 메타 · intern 된 이름의 것이라 오래 산다. 정보가 없거나 범위 밖이면 공통 키 `Enum.Unknown` 의 글입니다.
          */
         static const utf8* findEnum( const EnumInfo* pInfo, int64 value );
         /** @brief 값의 툴팁(`ENUMERATOR( Tooltip = "…" )`, 키 `Enum.<열거형>.<열거자>.Tooltip`)입니다. 툴팁은 에디터만 그린다 — 메타에 적지 않았으면(배포 포함) 빈 글입니다. */

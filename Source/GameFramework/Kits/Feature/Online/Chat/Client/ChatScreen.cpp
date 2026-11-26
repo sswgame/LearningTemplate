@@ -88,9 +88,7 @@ namespace sw
         }
         if ( result._result == ChatResult::Ok )
             return "";
-        if ( static_cast<uint8>( result._result ) >= static_cast<uint8>( ChatResult::Count ) )
-            return SW_LOCKEYREF( "Chat", "Failed" ); // 와이어에서 온 모르는 값
-        // 글이 쓰지 않는 인자는 무시된다(`ChatResult` 의 DisplayName 이 고른다)
+        // 글이 쓰지 않는 인자는 무시된다(`ChatResult` 의 DisplayName 이 고른다). 와이어에서 온 모르는 값은 공통 키 `Enum.Unknown` 이다
         return LocalizedMessage( LocalizedText::makeEnumKey( result._result ) ).addInteger( "seconds", retryAfterMs / 1000 ).addInteger( "milliseconds", retryAfterMs ).str();
     }
 

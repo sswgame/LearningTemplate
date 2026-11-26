@@ -36,11 +36,6 @@ msgid "Cancel"
 msgstr "キャンセル"
 
 #: Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp
-msgctxt "Chat.Failed"
-msgid "Chat failed"
-msgstr "チャットに失敗しました"
-
-#: Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp
 msgctxt "Chat.InvalidMessage"
 msgid "Message is empty or not valid"
 msgstr "メッセージが空か正しくありません"
@@ -2680,6 +2675,11 @@ msgstr "オフライン"
 msgctxt "Enum.SocialPresenceStatus.Online"
 msgid "online"
 msgstr "オンライン"
+
+#: Source/Engine/Localization/LocText.cpp
+msgctxt "Enum.Unknown"
+msgid "unknown"
+msgstr "不明"
 
 #: Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneModuleOrigin.h
 msgctxt "Enum.ZoneModuleOrigin.Added"

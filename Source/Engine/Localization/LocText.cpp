@@ -186,14 +186,15 @@ namespace sw
     string LocalizedText::makeEnumKey( const EnumInfo* pInfo, int64 value )
     {
         const utf8* pName = pInfo != nullptr ? pInfo->valueToCString( value ) : nullptr;
-        return pName != nullptr ? makeEnumKey( pInfo->_name.toString(), pName ) : string( EnumNameCache::kUnknownName );
+        // 범위 밖 값은 열거형마다 글을 두지 않고 공통 키 하나로 간다. 원문은 아래 `findEnum` 의 SW_LOCTEXT 가 수집기에 준다(그 줄이 없으면 이 참조가 수집 오류다).
+        return pName != nullptr ? makeEnumKey( pInfo->_name.toString(), pName ) : string( SW_LOCKEYREF( "Enum", "Unknown" ) );
     }
 
     const utf8* LocalizedText::findEnum( const EnumInfo* pInfo, int64 value )
     {
         const utf8* pName = pInfo != nullptr ? pInfo->valueToCString( value ) : nullptr;
         if ( pName == nullptr )
-            return EnumNameCache::kUnknownName;
+            return SW_LOCTEXT( "Enum", "Unknown", "unknown" );
         const string& displayName = findEnumValueEditorMetadata( pInfo, value )._displayName;
         return find( makeEnumKey( pInfo->_name.toString(), pName ), displayName.empty() ? pName : displayName.c_str() );
     }

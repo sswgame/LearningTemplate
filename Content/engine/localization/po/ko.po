@@ -36,11 +36,6 @@ msgid "Cancel"
 msgstr "취소"
 
 #: Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp
-msgctxt "Chat.Failed"
-msgid "Chat failed"
-msgstr "채팅을 보내지 못했습니다"
-
-#: Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp
 msgctxt "Chat.InvalidMessage"
 msgid "Message is empty or not valid"
 msgstr "메시지가 비었거나 올바르지 않습니다"
@@ -2680,6 +2675,11 @@ msgstr "오프라인"
 msgctxt "Enum.SocialPresenceStatus.Online"
 msgid "online"
 msgstr "온라인"
+
+#: Source/Engine/Localization/LocText.cpp
+msgctxt "Enum.Unknown"
+msgid "unknown"
+msgstr "알 수 없음"
 
 #: Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneModuleOrigin.h
 msgctxt "Enum.ZoneModuleOrigin.Added"

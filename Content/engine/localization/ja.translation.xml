@@ -5,7 +5,6 @@
 		<entry key="Amount" text="量" sourceHash="ba98a7152d80b949" />
 		<entry key="Apply" text="適用" sourceHash="b8f855b49234b81b" />
 		<entry key="Cancel" text="キャンセル" sourceHash="2ceb11be2290bb1b" />
-		<entry key="Chat.Failed" text="チャットに失敗しました" sourceHash="835a9e246c532850" />
 		<entry key="Chat.InvalidMessage"
 		       text="メッセージが空か正しくありません"
 		       sourceHash="90852f96d275f811" />
@@ -811,6 +810,7 @@
 		<entry key="Enum.SocialPresenceStatus.InGame" text="ゲーム中" sourceHash="751b555ee38fcef8" />
 		<entry key="Enum.SocialPresenceStatus.Offline" text="オフライン" sourceHash="574193ebbf068988" />
 		<entry key="Enum.SocialPresenceStatus.Online" text="オンライン" sourceHash="abf0e099159a8caa" />
+		<entry key="Enum.Unknown" text="不明" sourceHash="498865c7bd1f3959" />
 		<entry key="Enum.ZoneModuleOrigin.Added" text="ここで追加" sourceHash="1d0422d2923a2619" />
 		<entry key="Enum.ZoneModuleOrigin.Changed" text="ここで変更" sourceHash="b670513a18b222f7" />
 		<entry key="Enum.ZoneModuleOrigin.Inherited" text="継承" sourceHash="45228ea14dc64581" />
