@@ -1,5 +1,5 @@
 // ChatTypesTest — 채널 id 규칙: 접두어마다의 종류, 이름 없는 접두어 · 모르는 접두어 · 글자 · 길이 거절, 만든 id(길드 · 파티 · 귓속말)가 규칙 안이고 화면이 드는 채팅 기록(`ChatLog`)의 약한 참조도 본다.
-// 귓속말 키는 두 계정의 순서와 무관하다. 서버는 받은 채널 id 를 이 함수로 거른다(ChatService).
+// 귓속말 키는 두 계정의 순서와 무관하다. 서버는 받은 채널 id 를 이 함수로 거른다(ChatLogic).
 #include "pch.h"
 
 #include "Core/TestFramework/TestFramework.h"

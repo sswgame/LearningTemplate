@@ -2,7 +2,7 @@
 
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/MatchBackfillSender.h"
 
-#include "GameFramework/Kits/Feature/Online/Matchmaking/Server/MatchQueueService.h"
+#include "GameFramework/Kits/Feature/Online/Matchmaking/Server/MatchQueueLogic.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/MatchServerAgent.h"
 
 namespace sw
@@ -14,7 +14,7 @@ namespace sw
     {
     }
 
-    void MatchBackfillSender::initialize( MatchQueueService* pQueue, MatchServerAgent* pAgent, ServerDescriptor& descriptor )
+    void MatchBackfillSender::initialize( MatchQueueLogic* pQueue, MatchServerAgent* pAgent, ServerDescriptor& descriptor )
     {
         SW_ASSERT( pQueue != nullptr && pAgent != nullptr );
         _pQueue      = pQueue;

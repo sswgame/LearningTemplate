@@ -638,7 +638,7 @@
     "Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp": {"integer": 1},
     "Source/GameFramework/Kits/Feature/Online/Economy/Runtime/ReceiptBuyerToken.h": {"integer": 1},
     "Source/GameFramework/Kits/Feature/Online/Economy/Server/Receipt/Provider/Steam/SteamReceiptValidator.cpp": {"integer": 18},
-    "Source/GameFramework/Kits/Feature/Online/Leaderboard/Server/LeaderboardService.cpp": {"integer": 1},
+    "Source/GameFramework/Kits/Feature/Online/Leaderboard/Server/LeaderboardLogic.cpp": {"integer": 1},
     "Source/GameFramework/Kits/Feature/Online/LiveOps/Runtime/LiveOpsTypes.h": {"minus-one": 1},
     "Source/GameFramework/Kits/Feature/Online/OnlineCore/Server/HTTP/HPACK.cpp": {"integer": 2, "hex": 15},
     "Source/GameFramework/Kits/Feature/Online/OnlineCore/Server/OnlinePushRelay.cpp": {"integer": 1},

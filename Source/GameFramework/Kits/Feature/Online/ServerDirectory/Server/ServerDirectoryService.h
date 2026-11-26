@@ -1,170 +1,54 @@
 /**
  * @file ServerDirectoryService.h
- * @brief 서버 디렉터리 로직입니다. 배정, 상태, 목록은 메모리에서 바로 응답하고, 점검과 공지의 변경은 영속 레코드와 감사 기록을 한 트랜잭션으로 씁니다. 전송은 모르며 서비스 스레드 하나에서 씁니다.
- * @details - 점검과 공지는 영속 테이블(`sd_maintenance`, `sd_notice`)에 있다. 주기(기본 30초)마다 다시 읽고, 다른 서버가 바꿨다는 버스 알림(`notifyChanged`, 바인딩이 부른다)이 오면 바로 읽는다.
- *            버스는 최대 한 번만 배달하므로 주기적인 읽기가 놓친 변경을 메운다. 바꾼 서버는 쓰기가 끝나면 버스 `sd.changed` 를 낸다.
- *          - 보이는 내용(기간 안의 점검과 공지)의 해시가 바뀌면 `takeStatusChange` 가 true 이다. 다시 읽기나 기간 경계에서 바뀌며, 시작과 끝은 다시 읽지 않아도 보이는 내용이 바뀐다. 바인딩이 이 서버의 모든 클라이언트에 알린다.
- *          - 배정은 서버 종류마다 기반 계층의 `ServerRegistryReader` 하나(설정 `_listServerKind`)의 스냅샷으로 고른다. 기반 계층의 `ServerSelectionQuery` 규칙을 따른다.
- *            점검이 걸린 종류는 허용 계정만 배정받으며, 그들은 Maintenance 상태의 서버도 후보가 된다.
- *          - 변경 API 는 클라이언트 네트워크 메서드로 열지 않는다. GM 도구(GF_Admin)는 서버 조립 문맥의 `IServerDirectoryControl` 로 부르고 완료를 `takeControlCompletions` 로 받는다.
- *            같은 프로세스의 다른 코드와 테스트는 `setMaintenance` 등을 직접 부르고 `takeCompletions` 로 받는다. 한 서비스의 완료를 두 쪽이 함께 거두지 않는다.
- *
- *          PlayFab Title News(공지)와 타이틀 점검, 국내 MMO 의 "서버 선택과 점검 화이트리스트" 와 같은 구조이다.
+ * @brief 서버 디렉터리의 스트림 바인딩입니다. 프로토콜 표(`OnlineProtocolService`, 영역 `kServerDirectory`)로 섭니다.
+ * @details 요청을 로직에 넘겨 바로 응답하고, 보이는 상태가 바뀌면 이 프로세스의 모든 클라이언트에 알리며, 버스 `sd.changed` 를 로직에 전달한다.
+ *          - 상태와 목록은 로그인 전에도 쓸 수 있다(표의 `Anonymous`). 배정은 로그인한 뒤에 쓴다. 점검 허용 목록이 계정을 보기 때문이다.
+ *          - 호스트에 등록하는 일은 호출하는 쪽이 한다(`host.registerServerService( &server )`, 호스트 `initialize` 전에). 버스 구독은 첫 서비스 틱에서 하며 이때는 호스트가 버스를 받은 뒤이다.
  */
 #pragma once
-#include "Core/Container/string.h"
-#include "Core/Container/vector.h"
-#include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Memory/Memory.h"
 #include "Core/Time/TimePoint.h"
 
-#include "Engine/Reflection/ReflectionMacros.h"
-
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/ServerDirectoryControl.h"
-#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/ServerRegistryReader.h"
-#include "GameFramework/Kits/Feature/Online/ServerDirectory/Runtime/ServerDirectoryTypes.h"
-#include "GameFramework/Kits/Feature/Online/ServerDirectory/Server/ServerDirectoryKitConfig.h"
-#include "GameFramework/Runtime/Online/Audit/Server/ServiceAuditLog.h"
-#include "GameFramework/Runtime/Online/Bus/ServerBusTopic.h"
-#include "GameFramework/Runtime/Online/Schedule/Server/ServicePeriodicJob.h"
-#include "GameFramework/Runtime/Online/Store/Server/ServiceStoreTracker.h"
-#include "GameFramework/Runtime/Online/Store/Server/ServiceTTLRule.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/OnlineProtocolService.h"
+#include "GameFramework/Kits/Feature/Online/ServerDirectory/Runtime/ServerDirectoryProtocol.h"
+#include "GameFramework/Runtime/Online/Service/Server/OnlineServiceHost.h"
 
 namespace sw
 {
-    class EphemeralStoreRouter;
-    class ServiceStore;
-    class ServerBus;
+    class MetricRegistry;
+    class ServerDirectoryLogic;
 
-    /** @brief 서버 디렉터리 설정입니다. */
-    struct ServerDirectoryServiceConfig : ServerDirectoryPolicy
-    {
-        vector<string> _listServerKind{};          ///< 배정과 목록을 받는 서버 종류이다(예: "game")
-        int64          _seatReservationTTLMs{ 0 }; ///< 필수 — 서버 사이의 좌석 예약 창(서버 설정 `_seatReservationSeconds`)
-    };
-} // namespace sw
-
-namespace sw
-{
-    /** @brief 빌려 쓰는 객체들입니다. 로직보다 오래 살아야 합니다. */
-    struct ServerDirectoryDependencies
-    {
-        ServiceStore*         _pStore{ nullptr };  ///< 필수
-        EphemeralStoreRouter* _pRouter{ nullptr }; ///< 필수이다. 서버 목록에 쓴다
-        ServerBus*            _pBus{ nullptr };    ///< 서버가 한 대이면 null 이다. 바꾼 뒤 알리기만 하며 받기는 바인딩이 구독한다
-    };
-} // namespace sw
-
-namespace sw
-{
-    /** @brief 변경 요청의 완료입니다. */
-    struct ServerDirectoryCompletion
-    {
-        uint64                       _requestTag{ 0 };
-        ServerDirectoryServiceResult _result{ ServerDirectoryResult::Ok };
-    };
-} // namespace sw
-
-namespace sw
-{
-    /** @brief 점검이나 공지를 바꿨다는 버스 신호의 본문입니다. 필드가 없고 받는 서버가 다시 읽습니다. */
-    REFLECT()
-    struct SW_KIT_SERVER_API ServerDirectoryChanged
-    {
-        REFLECT_BODY();
-        static constexpr uint32 kBusVersion = 0; ///< 의미 버전
-    };
-} // namespace sw
-
-namespace sw
-{
-    /** @brief 서버 간 버스 주제입니다. 다른 모듈이 값으로 읽으므로 내보내는 클래스 밖에 둡니다. */
-    struct ServerDirectoryBus
-    {
-        static constexpr ServerBusTopic<ServerDirectoryChanged> kChangedTopic{ "sd.changed" }; ///< 점검이나 공지를 바꿨다는 알림이다. 받는 서버가 다시 읽는다
-    };
-} // namespace sw
-
-namespace sw
-{
     /**
      * @class ServerDirectoryService
-     * @brief 서버 디렉터리 로직 서비스입니다.
+     * @brief 서버 디렉터리 바인딩입니다. 호스트 `tick` 스레드에서 씁니다.
      */
-    class SW_KIT_SERVER_API ServerDirectoryService final : public IServerDirectoryControl
+    class SW_KIT_SERVER_API ServerDirectoryService final : public OnlineProtocolService<ServerDirectoryService, ServerDirectoryProtocol>
     {
     public:
         ServerDirectoryService();
-        ~ServerDirectoryService() override;
 
-        ServerDirectoryService( const ServerDirectoryService& )            = delete;
-        ServerDirectoryService& operator=( const ServerDirectoryService& ) = delete;
-
-        void initialize( const ServerDirectoryDependencies& dependencies, const ServerDirectoryServiceConfig& settings );
-        /** @brief 끝난 공지(`sd_notice`)의 TTL 규칙입니다(커서 규칙, 끝이 없는 공지는 남긴다). */
-        static ServiceTTLRule makeAnnouncementTTLRule( int64 expireAfterMs );
-        /** @brief 끝난 점검 창(`sd_maintenance`)의 TTL 규칙입니다(커서 규칙, 끝이 없는 점검은 남긴다). */
-        static ServiceTTLRule makeMaintenanceTTLRule( int64 expireAfterMs );
-        /** @brief 서버 목록 읽기를 멈추고 기다리던 캐시 요청을 취소합니다. 맡긴 저장소 작업은 저장소의 `shutdown` 과 `pollCompletions` 가 회수하므로 이 객체는 그때까지 살아 있어야 합니다. */
+        /** @brief @p pService 는 빌려 씁니다. 첫 서비스 틱 전에 지정합니다. */
+        void initialize( ServerDirectoryLogic* pService, MetricRegistry* pMetricRegistry = nullptr );
+        /** @brief 버스 구독을 해제합니다. 로직은 호출하는 쪽이 종료합니다. */
         void shutdown();
 
-        /** @brief 목록 읽기, 주기적인 다시 읽기, 기간 경계 판정을 합니다. 라우터와 저장소의 완료는 호스트(또는 서버 루프)가 비웁니다. */
-        void update( UnixMilliseconds nowMs );
-        /** @brief 다른 서버가 점검이나 공지를 바꿨음을 버스(`ServerDirectoryBus::kChangedTopic`)로 받았을 때 부릅니다. 다음 tick 에 다시 읽습니다. */
-        void notifyChanged();
-        /** @brief 보이는 상태가 지난번 이후 바뀌었으면 true 입니다. 읽으면 표시를 지웁니다. */
-        [[nodiscard]] bool takeStatusChange();
+        // 프로토콜 표의 메서드
+        void handleCall( OnlineServerCall<ServerDirectoryMethod::GetStatus> call, const OnlineCallContext& context, const OnlineNoBody& request );
+        void handleCall( OnlineServerCall<ServerDirectoryMethod::AssignServer> call, const OnlineCallContext& context, const ServerAssignmentRequest& request );
+        void handleCall( OnlineServerCall<ServerDirectoryMethod::ListServers> call, const OnlineCallContext& context, const ServerListRequest& request );
 
-        // 클라이언트 요청 함수들이며 동기이고 메모리에서 처리한다
-        ServerDirectoryStatus makeStatus( UnixMilliseconds nowMs ) const;
-        /** @brief 서버를 고릅니다. 모르는 종류 · 틀린 지역 이름은 키트 오류 `kUnknownKind`, 아니면 업무 결과(`Ok` · `NoServer` · `Maintenance`)이고 @p outAssignment 를 채웁니다. */
-        [[nodiscard]] ServerDirectoryServiceResult assignServer( AccountID accountID, const ServerAssignmentRequest& request, UnixMilliseconds nowMs, ServerAssignment& outAssignment );
-        [[nodiscard]] ServerDirectoryServiceResult listServers( string_view kind, UnixMilliseconds nowMs, vector<ServerListEntry>& outListEntry ) const;
-        /** @brief 지금 @p kind 에 걸린 점검이 @p accountID 를 막으면 true 입니다. 계정 서버와 게임 서버가 조립 단계에서 물을 수 있습니다. 막으면 그 점검 창을 @p pOutWindow 에 채웁니다. */
-        bool isBlockedByMaintenance( string_view kind, AccountID accountID, UnixMilliseconds nowMs, MaintenanceWindow* pOutWindow = nullptr ) const;
-
-        // 변경 함수들이며 비동기이다. 완료는 takeCompletions 로 받는다. @p actor 는 감사 기록의 GM 계정과 허락 가드이다 — 가드가 거절하면 kForbidden 과 거절 감사 줄이다.
-        void setMaintenance( const MaintenanceWindow& window, const ServiceOperator& actor, string_view memo, UnixMilliseconds nowMs, uint64 requestTag );
-        void clearMaintenance( string_view scope, const ServiceOperator& actor, string_view memo, UnixMilliseconds nowMs, uint64 requestTag ) override;
-        void postAnnouncement( const ServiceAnnouncement& announcement, const ServiceOperator& actor, UnixMilliseconds nowMs, uint64 requestTag );
-        void removeAnnouncement( uint64 announcementID, const ServiceOperator& actor, UnixMilliseconds nowMs, uint64 requestTag ) override;
-
-        void takeCompletions( vector<ServerDirectoryCompletion>& outListCompletion ) { _completionBuffer.moveAllTo( outListCompletion ); }
-
-        // IServerDirectoryControl — GM 키트가 서버 조립 문맥으로 부른다
-        void setMaintenance( const ServerDirectoryMaintenanceChange& change, const ServiceOperator& actor, string_view memo, UnixMilliseconds nowMs, uint64 requestTag ) override;
-        void postAnnouncement( const ServerDirectoryAnnouncementChange& change, const ServiceOperator& actor, UnixMilliseconds nowMs, uint64 requestTag ) override;
-        void takeControlCompletions( vector<ServerDirectoryControlCompletion>& outListCompletion ) override;
-
-        uint64 getStatusRevision() const { return _statusRevision; }
-        int32  getPendingCount() const { return _store.getOpenCount(); }
-
-        /** @brief 저장소 작업의 `complete` 가 호출합니다. 키트 안에서만 씁니다. */
-        void applyReload( vector<MaintenanceWindow>&& listMaintenance, vector<ServiceAnnouncement>&& listAnnouncement, bool bReadOk, UnixMilliseconds nowMs );
-        void applyWrite( uint64 requestTag, ServerDirectoryServiceResult result );
+        // IOnlineServerService
+        void onServiceTick( OnlineServiceHost& host, UnixMilliseconds nowMs ) override;
+        void onHostShutdown( OnlineServiceHost& host ) override;
+        void onServerBusMessage( OnlineServiceHost& host, const ServerBusMessage& message ) override;
 
     private:
-        void                  startReload( UnixMilliseconds nowMs );
-        void                  markStatusIfChanged( UnixMilliseconds nowMs );
-        uint64                computeVisibleHash( UnixMilliseconds nowMs ) const;
-        ServerRegistryReader* findReader( string_view kind ) const;
-        /** @brief 아는 종류 · 맞는 지역의 배정입니다(`assignServer` 가 먼저 가린다). */
-        ServerAssignment pickAssignment( AccountID accountID, const ServerAssignmentRequest& request, UnixMilliseconds nowMs );
-        void             submitWrite( ServiceAuditedWrite&& job, uint64 requestTag );
+        void attachHost( OnlineServiceHost& host );
 
     private:
-        vector<unique_ptr<ServerRegistryReader>> _listReader;
-        vector<MaintenanceWindow>                _listMaintenance;
-        vector<ServiceAnnouncement>              _listAnnouncement; ///< 우선순위 내림차순이다
-        EventBuffer<ServerDirectoryCompletion>   _completionBuffer;
-        ServerDirectoryServiceConfig             _settings;
-        ServerDirectoryDependencies              _dependencies;
-        uint64                                   _lastVisibleHash;
-        uint64                                   _statusRevision;
-        ServicePeriodicJob                       _reloadJob; ///< 다시 읽기 일정(요청 · 주기 · 읽는 중)
-        ServiceStoreTracker                      _store;     ///< 저장소에 맡긴 일의 앞이다
-        uint8                                    _bStatusChanged;
+        ServerDirectoryLogic* _pService;
+        OnlineServiceHost*    _pHost;           ///< 붙은 호스트이다(첫 서비스 틱에 붙는다). 붙었는지만 본다
+        Subscription          _busSubscription; ///< 버스 주제의 구독. 서버가 한 대면 비어 있다
     };
 } // namespace sw

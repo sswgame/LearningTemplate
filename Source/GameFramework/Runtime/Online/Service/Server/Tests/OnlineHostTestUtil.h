@@ -53,7 +53,7 @@ namespace sw::test
     SW_GF_API const OnlineProtocolEntry& getTestLoginProtocol();
 
     /** @brief 테스트 로그인 — 몸 `varuint 계정 id` 로 이 연결을 그 계정에 묶습니다. 계정 0 이면 kInvalidRequest, 이미 다른 연결에 붙은 계정이면 kConflict. */
-    class TestLoginService final : public IOnlineServerService
+    class TestLoginLogic final : public IOnlineServerService
     {
     public:
         static constexpr uint16 kLoginMethod = OnlineMethodRange::kGame + 0x01;
@@ -102,7 +102,7 @@ namespace sw::test
         MemoryServiceStore           _store;
         MemoryEphemeralStore         _cache;
         LocalServerBus               _bus;
-        TestLoginService             _loginService;
+        TestLoginLogic               _loginLogic;
         unique_ptr<IStreamTransport> _transport;
         OnlineServiceHost            _host;
         uint16                       _port;
@@ -112,12 +112,12 @@ namespace sw::test
             : _store{ pDatabase }
             , _cache{ pCacheDatabase }
             , _bus{ pBusHub, serverID }
-            , _loginService{}
+            , _loginLogic{}
             , _transport{ network.createTransport() }
             , _host{}
             , _port{ static_cast<uint16>( kFirstPort + serverID ) }
         {
-            SW_EXPECT_TRUE( _host.registerServerService( &_loginService ) );
+            SW_EXPECT_TRUE( _host.registerServerService( &_loginLogic ) );
         }
 
         ~OnlineTestServer()
@@ -208,7 +208,7 @@ namespace sw::test
         {
             BitWriter body;
             body.writeVarUint( accountID );
-            (void)getClient( clientIndex ).sendRequest( TestLoginService::kLoginMethod, body, NetRequestOptions{}, OnlineResponseDelegate{} );
+            (void)getClient( clientIndex ).sendRequest( TestLoginLogic::kLoginMethod, body, NetRequestOptions{}, OnlineResponseDelegate{} );
         }
 
         /** @brief 연결을 끊습니다(서버는 계정이 떠났다고 본다). */

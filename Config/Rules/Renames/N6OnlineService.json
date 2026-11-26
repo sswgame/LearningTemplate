@@ -1,0 +1,126 @@
+[
+  {
+    "old": "AccountServer",
+    "new": "AccountService",
+    "why": "온라인 요청 끝점은 Service, Server 는 프로세스 전체(OnlineServerRuntime · ServerRecord)만 — Economy · Mailbox · Admin 의 XService 와 같게"
+  },
+  {
+    "old": "AccountServerConfig",
+    "new": "AccountServiceConfig",
+    "why": "온라인 요청 끝점은 Service, Server 는 프로세스 전체(OnlineServerRuntime · ServerRecord)만 — Economy · Mailbox · Admin 의 XService 와 같게"
+  },
+  {
+    "old": "AccountServerFixture",
+    "new": "AccountServiceFixture",
+    "why": "온라인 요청 끝점은 Service, Server 는 프로세스 전체(OnlineServerRuntime · ServerRecord)만 — Economy · Mailbox · Admin 의 XService 와 같게"
+  },
+  {
+    "old": "AccountServerInternal",
+    "new": "AccountServiceInternal",
+    "why": "온라인 요청 끝점은 Service, Server 는 프로세스 전체(OnlineServerRuntime · ServerRecord)만 — Economy · Mailbox · Admin 의 XService 와 같게"
+  },
+  {
+    "old": "AccountServerPolicy",
+    "new": "AccountServicePolicy",
+    "why": "온라인 요청 끝점은 Service, Server 는 프로세스 전체(OnlineServerRuntime · ServerRecord)만 — Economy · Mailbox · Admin 의 XService 와 같게"
+  },
+  {
+    "old": "AccountServerTest",
+    "new": "AccountServiceTest",
+    "why": "온라인 요청 끝점은 Service, Server 는 프로세스 전체(OnlineServerRuntime · ServerRecord)만 — Economy · Mailbox · Admin 의 XService 와 같게"
+  },
+  {
+    "old": "AccountServerTestUtil",
+    "new": "AccountServiceTestUtil",
+    "why": "온라인 요청 끝점은 Service, Server 는 프로세스 전체(OnlineServerRuntime · ServerRecord)만 — Economy · Mailbox · Admin 의 XService 와 같게"
+  },
+  {
+    "old": "ChatServer",
+    "new": "ChatService",
+    "why": "온라인 요청 끝점은 Service, Server 는 프로세스 전체(OnlineServerRuntime · ServerRecord)만 — Economy · Mailbox · Admin 의 XService 와 같게",
+    "allowExisting": true
+  },
+  {
+    "old": "LeaderboardServer",
+    "new": "LeaderboardService",
+    "why": "온라인 요청 끝점은 Service, Server 는 프로세스 전체(OnlineServerRuntime · ServerRecord)만 — Economy · Mailbox · Admin 의 XService 와 같게",
+    "allowExisting": true
+  },
+  {
+    "old": "LiveOpsServer",
+    "new": "LiveOpsService",
+    "why": "온라인 요청 끝점은 Service, Server 는 프로세스 전체(OnlineServerRuntime · ServerRecord)만 — Economy · Mailbox · Admin 의 XService 와 같게",
+    "allowExisting": true
+  },
+  {
+    "old": "MatchmakingServer",
+    "new": "MatchmakingService",
+    "why": "온라인 요청 끝점은 Service, Server 는 프로세스 전체(OnlineServerRuntime · ServerRecord)만 — Economy · Mailbox · Admin 의 XService 와 같게"
+  },
+  {
+    "old": "MatchmakingServerInternal",
+    "new": "MatchmakingServiceInternal",
+    "why": "온라인 요청 끝점은 Service, Server 는 프로세스 전체(OnlineServerRuntime · ServerRecord)만 — Economy · Mailbox · Admin 의 XService 와 같게"
+  },
+  {
+    "old": "ServerDirectoryServer",
+    "new": "ServerDirectoryService",
+    "why": "온라인 요청 끝점은 Service, Server 는 프로세스 전체(OnlineServerRuntime · ServerRecord)만 — Economy · Mailbox · Admin 의 XService 와 같게",
+    "allowExisting": true
+  },
+  {
+    "old": "SocialServer",
+    "new": "SocialService",
+    "why": "온라인 요청 끝점은 Service, Server 는 프로세스 전체(OnlineServerRuntime · ServerRecord)만 — Economy · Mailbox · Admin 의 XService 와 같게",
+    "allowExisting": true
+  },
+  {
+    "old": "TradeServer",
+    "new": "TradeService",
+    "why": "온라인 요청 끝점은 Service, Server 는 프로세스 전체(OnlineServerRuntime · ServerRecord)만 — Economy · Mailbox · Admin 의 XService 와 같게",
+    "allowExisting": true
+  },
+  {
+    "old": "TradeServerFixture",
+    "new": "TradeServiceFixture",
+    "why": "온라인 요청 끝점은 Service, Server 는 프로세스 전체(OnlineServerRuntime · ServerRecord)만 — Economy · Mailbox · Admin 의 XService 와 같게"
+  },
+  {
+    "old": "TradeServerTest",
+    "new": "TradeServiceTest",
+    "why": "온라인 요청 끝점은 Service, Server 는 프로세스 전체(OnlineServerRuntime · ServerRecord)만 — Economy · Mailbox · Admin 의 XService 와 같게",
+    "allowExisting": true
+  },
+  {
+    "old": "TradeServerTestUtil",
+    "new": "TradeServiceTestUtil",
+    "why": "온라인 요청 끝점은 Service, Server 는 프로세스 전체(OnlineServerRuntime · ServerRecord)만 — Economy · Mailbox · Admin 의 XService 와 같게"
+  },
+  {
+    "old": "_accountServer",
+    "new": "_accountService",
+    "why": "온라인 요청 끝점은 Service, Server 는 프로세스 전체(OnlineServerRuntime · ServerRecord)만 — Economy · Mailbox · Admin 의 XService 와 같게"
+  },
+  {
+    "old": "_socialServer",
+    "new": "_socialService",
+    "why": "온라인 요청 끝점은 Service, Server 는 프로세스 전체(OnlineServerRuntime · ServerRecord)만 — Economy · Mailbox · Admin 의 XService 와 같게",
+    "allowExisting": true
+  },
+  {
+    "old": "_tradeServer",
+    "new": "_tradeService",
+    "why": "온라인 요청 끝점은 Service, Server 는 프로세스 전체(OnlineServerRuntime · ServerRecord)만 — Economy · Mailbox · Admin 의 XService 와 같게",
+    "allowExisting": true
+  },
+  {
+    "old": "makeAccountServerLoginSettings",
+    "new": "makeAccountServiceLoginSettings",
+    "why": "온라인 요청 끝점은 Service, Server 는 프로세스 전체(OnlineServerRuntime · ServerRecord)만 — Economy · Mailbox · Admin 의 XService 와 같게"
+  },
+  {
+    "old": "makeAccountServerSettings",
+    "new": "makeAccountServiceSettings",
+    "why": "온라인 요청 끝점은 Service, Server 는 프로세스 전체(OnlineServerRuntime · ServerRecord)만 — Economy · Mailbox · Admin 의 XService 와 같게"
+  }
+]

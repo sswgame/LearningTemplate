@@ -3,7 +3,7 @@
 #include "Core/Network/DevOnlineExtension.h"
 
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/LiveOpsKitConfig.h"
-#include "GameFramework/Kits/Feature/Online/LiveOps/Server/LiveOpsServer.h"
+#include "GameFramework/Kits/Feature/Online/LiveOps/Server/LiveOpsLogic.h"
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/LiveOpsService.h"
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/Push/Provider/Fake/FakePushProvider.h"
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/Push/PushNotificationDispatcher.h"
@@ -176,8 +176,8 @@ namespace sw
             }
 
         private:
-            LiveOpsService                                                        _service;
-            LiveOpsServer                                                         _server;
+            LiveOpsLogic                                                          _service;
+            LiveOpsService                                                        _server;
             PushNotificationDispatcher                                            _dispatcher;
             LiveOpsOfflinePush                                                    _offlinePush;   ///< 발송기를 빌려 쓰므로 뒤에 선언한다
             unique_ptr<IPushNotificationProvider>                                 _pFakeProvider; ///< `_bFakePush` 의 가짜 제공자(DevOnline 단위가 만든다). 발송기가 빌려 쓴다

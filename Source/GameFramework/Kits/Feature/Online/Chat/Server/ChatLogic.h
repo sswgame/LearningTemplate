@@ -1,0 +1,276 @@
+/**
+ * @file ChatLogic.h
+ * @brief 채팅 로직입니다. 채널 멤버(이 서버), 말하기, 귓속말, 기록 읽기를 처리합니다. 말하기는 제재, 도배, 필터를 거친 뒤 전달, 버스 발행, 기록으로 이어집니다. 전송은 모르며 서비스 스레드 하나에서 씁니다.
+ * @details - 결과는 요청 태그와 함께 `takeCompletions` 로, 받을 사람에게 갈 메시지는 `pollDeliveries` 로, 버스 구독 변경은 `pollBusTopicChanges` 로 회수한다. 구독과 해지는 바인딩이 호스트에 한다.
+ *            다른 서버가 낸 버스 메시지는 바인딩이 `handleBusMessage` 로 넘긴다.
+ *          - 클라이언트가 들어가고 나올 수 있는 채널은 `world.` 와 `custom.` 뿐이다. `guild.` 와 `party.` 는 서버 시스템이 `addMember` 와 `removeMember` 로 넣는다.
+ *            게임 조립 단계가 친구와 매칭 키트의 이벤트를 연결하며, 키트끼리는 include 하지 않는다.
+ *          - 서버가 여러 대일 때는 채널에 이 서버의 멤버가 있는 동안만 `chat.channel.<id>` 를 구독한다. 말하기는 이 서버의 멤버에게 바로 전달하고 버스에도 발행한다.
+ *            버스는 최대 한 번 배달하며 놓친 메시지는 기록에 있다.
+ *            귓속말은 상대가 이 서버에 있으면 바로 전달하고, 아니면 접속 상태(`AccountPresence`)로 서버를 찾아 `chat.server.<서버>` 로 보낸다.
+ *            차단은 받는 쪽 서버가 확인해 조용히 버린다. 보낸 사람에게는 Ok 를 반환해서 차단 여부를 드러내지 않는다.
+ *          - 채팅 금지는 제재 레코드를 계정의 첫 말하기에서 읽고 `_sanctionCacheMs` 동안 캐시한다. 버스 `sanction.changed` 가 오면 그 계정의 캐시를 버린다.
+ *            첫 읽기 전의 말하기는 `_maxPendingSendPerMember` 개까지 대기시켰다가 읽기가 끝나면 처리한다.
+ *          - 기록은 영속 테이블 `chat_history` 에 둔다. 키는 `<채널 id>/<보낸 시각 16진>.<서버 16진>.<순번 16진>` 이며 키 순서가 시간 순서이다.
+ *            틱마다 쌓인 기록을 트랜잭션 하나로 쓰며 최선 노력이다. 실패하면 경고를 남기고 버린다.
+ *            지우기는 TTL 규칙(`makeTTLRule`, 기간은 `ChatKitConfig::_historyTTL`)이 한다. 기록을 쓰는 트랜잭션에 TTL 색인 `chat_history_expiry` 의
+ *            줄 `<날짜 끝 16진>/<채널 id>/`(채널 · 날짜마다 한 번)을 함께 넣고, 매일 쓸기가 기간이 지난 날짜의 채널만 범위 읽기로 지운다.
+ *            새 글이 없는 채널(귓속말 쌍, 해산된 길드)도 색인 줄이 남아 있어 함께 지워진다(개인정보 보존 기간).
+ *            같은 트랜잭션에 보낸 사람 색인 `chat_history_sender`(`<보낸 계정>/<보낸 시각>/<기록 키>`)과 그 TTL 색인 줄도 넣는다 — 탈퇴 정리(`eraseAccount`)가
+ *            계정이 보낸 기록을 찾는다. 이 색인도 기록과 같은 기간에 TTL 규칙(`makeSenderTTLRule`)이 지운다.
+ *          - 신고(`reportMessage`)는 저장된 기록에서 그 메시지와 앞 메시지(키트 설정 `_reportContextCount` 개)를 읽어 신고 레코드(`ServiceReportStore`)로 남긴다.
+ *            기록은 틱마다 쓰이므로 막 받은 메시지는 아직 없을 수 있다(NotFound). GM 키트가 목록을 읽고 처리한다. 계정마다 도배를 제한한다.
+ *          - `shutdown` 은 맡긴 저장 작업을 회수하고(최대 5초) 접속 상태 찾기를 취소한다. 호스트(접속 상태, 저장소)보다 먼저 종료해도 늦게 종료해도 된다.
+ *
+ *          Nakama 의 채널 메시지(DB 기록과 노드 간 클러스터 버스)와 같은 구조이다.
+ */
+#pragma once
+#include "Core/Container/deque.h"
+#include "Core/Container/string.h"
+#include "Core/Container/unordered_map.h"
+#include "Core/Container/unordered_set.h"
+#include "Core/Container/vector.h"
+#include "Core/Delegate/Subscription.h"
+#include "Core/Event/EventBuffer.h"
+#include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
+#include "Core/Time/TimePoint.h"
+
+#include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Kits/Feature/Online/Chat/Runtime/ChatProtocol.h"
+#include "GameFramework/Kits/Feature/Online/Chat/Runtime/ChatTypes.h"
+#include "GameFramework/Kits/Feature/Online/Chat/Server/ChatKitConfig.h"
+#include "GameFramework/Kits/Feature/Online/Chat/Server/ChatModeration.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/AccountPresenceTracker.h"
+#include "GameFramework/Runtime/Online/Guard/Server/TokenBucketMap.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceStoreTracker.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceTTLRule.h"
+
+namespace sw
+{
+
+    class ServiceStore;
+    class ServerBus;
+    class ServerBusMessage;
+
+    /**
+     * @class IChatPolicy
+     * @brief 서버 조립이 연결해 주는 정책입니다. 차단 테이블은 친구 키트(GF_Social)의 것이며, 채팅 키트 조립(`ChatOnlineServerKit`)이 기반의 `IAccountBlockList` 로 받습니다.
+     */
+    class IChatPolicy
+    {
+    public:
+        IChatPolicy()          = default;
+        virtual ~IChatPolicy() = default;
+
+        IChatPolicy( const IChatPolicy& )            = delete;
+        IChatPolicy& operator=( const IChatPolicy& ) = delete;
+
+        /** @brief @p recipientID 가 @p senderID 를 막았으면 true 입니다. 받는 사람이 이 서버에 접속해 있을 때 불리므로 메모리 조회여야 합니다. */
+        virtual bool isBlocked( AccountID recipientID, AccountID senderID ) const = 0;
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @brief 채팅 설정입니다 — 운영 값은 키트 설정(`ChatKitConfig`, 리플렉션 필수 칸) 그대로이고, 풀어 둔 경로와 동작만 더합니다.
+     * @details 칸을 다시 적어 옮기지 않는다 — 옮기다 빠진 칸이 코드 기본값으로 서던 모양이다. 필수 칸이 비면 `initialize` 가 거절한다(키트 밖에서 지은 설정).
+     */
+    struct ChatLogicConfig : ChatKitConfig
+    {
+        AbsolutePath   _bannedWordsPath{};       ///< 비면 거르지 않는다. 서버 조립 단계는 `_bannedWordsFile` 을 푼 경로다
+        AbsolutePath   _ignoredCharactersPath{}; ///< 건너뛸 글자 파일(필수 — `ChatTextNormalizer`). 서버 조립 단계는 `_ignoredCharactersFile` 을 푼 경로다
+        ChatFilterMode _filterMode{ ChatFilterMode::Mask };
+        int32          _historyFlushMax{ 60 }; ///< 트랜잭션 하나에 쓰는 기록 수이다. 색인 줄과 합쳐 상한 64 안에서 자른다
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 빌려 쓰는 객체들입니다. 서비스보다 오래 살아야 합니다. */
+    struct ChatLogicDependencies
+    {
+        ServiceStore*            _pStore{ nullptr };     ///< 필수이다. 기록과 제재에 쓴다
+        ServerBus*               _pBus{ nullptr };       ///< 서버가 하나면 null 이다
+        AccountPresence*         _pPresence{ nullptr };  ///< 서버 한 대 구성(`OnlineServerTopology`)에서만 null 이며 다른 서버로 가는 귓속말이 없다
+        const IAccountDirectory* _pDirectory{ nullptr }; ///< 필수이다. 표시 이름과 이 서버에 있는지를 조회한다
+        const IChatPolicy*       _pPolicy{ nullptr };    ///< null 이면 차단을 쓰지 않는다
+        uint64                   _serverID{ 1 };
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 요청 하나의 결과입니다. `_method` 는 서술자의 번호(`ChatMethod::Xxx::kID`)이고, 바인딩이 그 메서드의 응답 타입으로 옮긴다. */
+    struct ChatCompletion
+    {
+        vector<ChatMessage> _listHistory{}; ///< History
+        ChatMessage         _message{};     ///< Send · Whisper
+        string              _nextCursor{};  ///< History
+        int64               _retryAfterMs{ 0 };
+        uint64              _requestTag{ 0 };
+        ChatServiceResult   _result{ ChatResult::Ok };
+        uint16              _method{ 0 };
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 받을 사람 하나에게 갈 메시지입니다. 받을 사람은 이 서버에 접속한 계정입니다. */
+    struct ChatDelivery
+    {
+        ChatMessage _message{};
+        AccountID   _recipientID{ kInvalidAccountID };
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 버스 구독 변경입니다. */
+    struct ChatBusTopicChange
+    {
+        string _topic{};
+        uint8  _bSubscribe{ SW_TRUE };
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @class ChatLogic
+     * @brief 채팅 로직 서비스입니다.
+     */
+    class SW_KIT_SERVER_API ChatLogic
+    {
+    public:
+        ChatLogic();
+        ~ChatLogic();
+
+        ChatLogic( const ChatLogic& )            = delete;
+        ChatLogic& operator=( const ChatLogic& ) = delete;
+
+        /** @brief 저장소나 계정 디렉터리가 없으면 false 를 반환합니다. 버스가 있으면 이 서버의 주제와 제재 주제의 구독을 요청합니다. */
+        [[nodiscard]] bool initialize( const ChatLogicDependencies& dependencies, const ChatLogicConfig& settings );
+        /** @brief 맡긴 저장 작업이 끝날 때까지 저장소를 회수합니다. 상한은 5초이며 저장소를 종료하기 전에 부릅니다. */
+        void shutdown();
+
+        /** @brief 쌓인 기록을 저장소에 씁니다. */
+        void update( UnixMilliseconds nowMs );
+
+        /** @brief 기록 테이블의 TTL 규칙입니다(TTL 색인 규칙). 키트 조립이 `IOnlineServerKit::addTTLRule` 로 올립니다. */
+        static ServiceTTLRule makeTTLRule( int64 expireAfterMs );
+        /** @brief 보낸 사람 색인(`chat_history_sender`)의 TTL 규칙입니다(TTL 색인 규칙, 기록과 같은 기간). 키트 조립이 함께 올립니다. */
+        static ServiceTTLRule makeSenderTTLRule( int64 expireAfterMs );
+        /**
+         * @brief 탈퇴한 계정이 보낸 기록을 지웁니다(`IAfterDeleteAccount`). 보낸 사람 색인으로 찾고, 그 계정이 낀 귓속말 채널은 상대 기록까지 채널째 지운다.
+         * @details 신고 레코드(`ServiceReportStore`)에 옮겨 적은 문맥은 운영 증거라 신고 보존 기간까지 남는다. 저장소 스레드에서 부릅니다. 멱등이다.
+         */
+        [[nodiscard]] static ServiceStoreResult eraseAccount( IServiceStoreConnection& connection, AccountID accountID, int64 nowMs );
+
+        // 클라이언트 요청이다. 결과는 같은 요청 태그로 takeCompletions 에서 받는다
+        void joinChannel( AccountID accountID, string_view channelID, UnixMilliseconds nowMs, uint64 requestTag );
+        void leaveChannel( AccountID accountID, string_view channelID, uint64 requestTag );
+        void sendMessage( AccountID accountID, string_view channelID, string_view text, UnixMilliseconds nowMs, uint64 requestTag );
+        void sendWhisper( AccountID accountID, AccountID recipientID, string_view text, UnixMilliseconds nowMs, uint64 requestTag );
+        void readHistory( AccountID accountID, string_view channelID, string_view cursor, int32 maxCount, uint64 requestTag );
+        /** @brief 메시지를 신고합니다. 읽을 수 있는 채널이어야 하고 계정마다 도배를 제한합니다. 신고 레코드는 `ServiceReportStore` 형식이며 GM 도구가 읽습니다. */
+        void reportMessage( AccountID accountID, const ChatReportRequest& request, UnixMilliseconds nowMs, uint64 requestTag );
+
+        // 서버 시스템(길드, 파티, GM)이 부르는 함수이며 완료는 없다
+        [[nodiscard]] ChatServiceResult addMember( AccountID accountID, string_view channelID, UnixMilliseconds nowMs );
+        void                            removeMember( AccountID accountID, string_view channelID );
+        /**
+         * @brief 그룹 채널(길드 · 파티)에서 계정을 뺍니다. 이 서버의 멤버에서 빼고, 버스로 다른 채팅 서버에도 알립니다.
+         * @details 길드 추방을 처리한 서버가 그 계정이 접속한 서버가 아니면 예전에는 그 서버에 멤버가 남아 길드 채팅을 계속 받았다(감사 O-18).
+         */
+        void removeGroupMember( AccountID accountID, string_view channelID );
+        /** @brief GM 이 제재를 바꿨을 때 부릅니다. 다음 말하기 전에 다시 읽습니다. */
+        void refreshSanction( AccountID accountID );
+        /** @brief 계정이 이 서버를 떠났을 때 부릅니다. 모든 채널에서 뺍니다. */
+        void removeAccount( AccountID accountID );
+
+        /** @brief 구독한 버스 메시지를 처리합니다. 바인딩이 넘기며, 자기 서버가 낸 채팅은 메시지의 서버 id 로 거릅니다. 제재 알림은 자기 서버가 낸 것도 처리합니다. */
+        void handleBusMessage( const ServerBusMessage& message );
+
+        void takeCompletions( vector<ChatCompletion>& outListCompletion ) { _completionBuffer.moveAllTo( outListCompletion ); }
+        void pollDeliveries( vector<ChatDelivery>& outListDelivery ) { _deliveryBuffer.moveAllTo( outListDelivery ); }
+        void pollBusTopicChanges( vector<ChatBusTopicChange>& outListChange ) { _busTopicBuffer.moveAllTo( outListChange ); }
+
+        int32 getLocalMemberCount( string_view channelID ) const;
+        /** @brief 맡겨 두고 끝나지 않은 작업(저장, 접속 상태 찾기)의 수입니다. */
+        int32 getPendingCount() const { return _store.getOpenCount() + _presenceFinds.getOpenCount(); }
+        int32 getQueuedHistoryCount() const { return static_cast<int32>( _listHistoryQueue.size() ); }
+
+    private:
+        /** @brief 저장 일의 완료입니다. */
+        void applySanction( AccountID accountID, int64 muteUntilMs, bool bReadOk, UnixMilliseconds nowMs );
+        /** @brief 읽은 기록에서 @p readerID 가 차단한 사람의 글을 빼고 답합니다(실시간 전달과 같은 규칙 — 기록으로 다시 읽히지 않게, 감사 O-18). */
+        void applyHistoryRead( AccountID readerID, uint64 requestTag, ChatServiceResult result, vector<ChatMessage>&& listMessage, string&& nextCursor );
+        void applyHistoryWrite( bool bCommitted, int32 messageCount, int32 rejectedCount, const vector<string>& listIndexKey, ServiceStoreCompletion completion );
+        void applyReport( uint64 requestTag, ChatServiceResult result );
+
+        struct PendingSend
+        {
+            string           _channelID{};
+            string           _text{};
+            uint64           _requestTag{ 0 };
+            UnixMilliseconds _nowMs{ 0 };
+            AccountID        _recipientID{ kInvalidAccountID }; ///< 귓속말이면 받는 계정이다
+        };
+
+        struct Member
+        {
+            vector<string>      _listChannel{};
+            vector<PendingSend> _listPendingSend{};
+            string              _displayName{};
+            int64               _muteUntilMs{ 0 };
+            int64               _sanctionReadMs{ constant::invalid_index::kInt64 }; ///< -1이면 아직 읽지 않았거나 GM 이 바꿔서 캐시를 버린 것이다
+            uint8               _bSanctionReading{ SW_FALSE };
+            uint8               _bSanctionChanged{ SW_FALSE }; ///< 읽는 도중 GM 이 바꿨다. 그 읽기는 이전 값일 수 있어 다시 읽는다
+        };
+
+        /** @brief 다른 서버에 있을 수 있는 상대를 찾은 답입니다. 받는 서버로 보내거나 상대가 없다고 끝낸다. */
+        void              handleWhisperPresenceResult( const AccountPresenceResult& result, ChatMessage&& message, uint64 requestTag );
+        Member*           ensureMember( AccountID accountID, UnixMilliseconds nowMs );
+        bool              isSanctionFresh( const Member& member, UnixMilliseconds nowMs ) const;
+        void              startSanctionRead( AccountID accountID, Member& member, UnixMilliseconds nowMs );
+        void              submitSend( AccountID accountID, PendingSend&& send );
+        ChatServiceResult prepareText( AccountID accountID, Member& member, string_view text, UnixMilliseconds nowMs, string& outText, int64& outRetryAfterMs );
+        void              processSend( AccountID accountID, Member& member, const PendingSend& send );
+        void              publishMessage( const ServerBusTopicFamily<ChatMessage>& family, string_view suffix, const ChatMessage& message );
+        void              deliverToChannel( const ChatMessage& message );
+        void              deliverWhisperLocally( const ChatMessage& message );
+        void              queueHistory( const ChatMessage& message );
+        void              completeMessage( uint16 method, uint64 requestTag, ChatMessage&& message );
+        void              completeSimple( uint16 method, uint64 requestTag, ChatServiceResult result, int64 retryAfterMs = 0 );
+        void              addLocalMember( AccountID accountID, Member& member, const string& channelID );
+        void              removeLocalMember( AccountID accountID, Member& member, const string& channelID );
+        bool              isWhisperParticipant( AccountID accountID, string_view channelID ) const;
+        /** @brief 기록을 읽고 신고할 수 있는 채널이면 true 입니다. 귓속말은 당사자, 나머지는 이 서버의 멤버입니다. */
+        bool canReadChannel( AccountID accountID, string_view channelID, ChatChannelKind kind ) const;
+
+    private:
+        unordered_map<AccountID, Member>         _mapAccountToMember;
+        unordered_map<string, vector<AccountID>> _mapChannelToMember;
+        deque<ChatMessage>                       _listHistoryQueue; ///< 저장소에 쓸 기록(받은 순서) — 앞에서 꺼내고 넘치면 앞을 버리므로 링이다
+        EventBuffer<ChatCompletion>              _completionBuffer;
+        EventBuffer<ChatDelivery>                _deliveryBuffer;
+        EventBuffer<ChatBusTopicChange>          _busTopicBuffer;
+        ChatWordFilter                           _wordFilter;
+        ChatSpamGuard                            _spamGuard;
+        TokenBucketMap                           _reportGuard;
+        ChatLogicConfig                          _settings;
+        ChatLogicDependencies                    _dependencies;
+        AccountPresenceTracker                   _presenceFinds; ///< 다른 서버 귓속말의 상대 찾기(`initialize` 가 묶고 `shutdown` 이 푼다)
+        string                                   _serverTopic;
+        uint32                                   _sequence;
+        uint32                                   _reportSequence;         ///< 신고 키의 고유 값(서버 id 와 섞는다)
+        ServiceStoreTracker                      _store;                  ///< 저장소에 맡긴 일의 앞이다(기록 · 제재 · 신고)
+        unordered_set<string>                    _uniqueIndexedGroupKeys; ///< 이 서버가 커밋한 TTL 색인 줄(채널 · 날짜마다 한 번). 날짜가 바뀌면 비운다
+        int64                                    _indexedDayEndMs;        ///< `_uniqueIndexedGroupKeys` 가 담은 날짜의 끝
+        uint8                                    _bHistoryWriting;
+    };
+} // namespace sw

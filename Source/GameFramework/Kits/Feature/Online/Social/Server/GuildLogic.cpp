@@ -1,0 +1,1703 @@
+#include "pch.h"
+
+#include "GameFramework/Kits/Feature/Online/Social/Server/GuildLogic.h"
+
+#include "Core/Encoding/HexUtil.h"
+#include "Core/Serialization/BitStream.h"
+#include "Core/String/StringBuilder.h"
+#include "Core/String/StringUtil.h"
+
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Store/ServiceIdempotency.h"
+#include "GameFramework/Kits/Feature/Online/Social/Server/SocialStoreRecords.h"
+#include "GameFramework/Runtime/Online/Ledger/LedgerTypes.h"
+#include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
+#include "GameFramework/Runtime/Online/Service/OnlineLimit.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceCommitRunner.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceReadSetConnection.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordReader.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordTable.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
+
+#include <algorithm>
+
+namespace sw
+{
+    namespace
+    {
+        struct GuildLogicInternal
+        {
+            static constexpr int64       kMaxExperience   = static_cast<int64>( 1 ) << 53; ///< 경험치 상한이다. 넘으면 상한에 멈춘다
+            static constexpr const utf8* kSequenceKey     = "guild";
+            static constexpr uint32      kReplacementChar = 0xFFFDu;
+            static constexpr uint32      kFirstPrintable  = 0x20u;
+            static constexpr uint32      kDeleteChar      = 0x7Fu;
+            static constexpr const utf8* kStorageDomain   = "guild";
+            static constexpr const utf8* kDepositReason   = "guild.deposit";
+            static constexpr const utf8* kWithdrawReason  = "guild.withdraw";
+            static constexpr const utf8* kRefundReason    = "guild.refund"; ///< 떠나거나 내보내진 멤버에게 그의 몫을 돌려준다
+            static constexpr int32       kGrantPageSize   = 128;            ///< 길드의 허용 전체를 훑을 때(떠나는 멤버가 받은 허용 지우기) 한 번에 읽는 수이다
+            /// 신청 표를 끝까지 훑을 때 한 번에 읽는 수이다. 읽은 쪽마다 읽기 집합의 범위 조건이 하나씩 붙으므로(상한 `kMaxConditionCount`) 크게 잡는다 — 죽은 신청은 TTL 쓸기가 지워 쪽 수가 늘지 않는다
+            static constexpr int32 kApplicationPageSize = 256;
+
+            /** @brief 허용 부여 · 회수의 멱등 기록 범위(`guild/<계정 16진>`)입니다. 회수가 허용 기록을 지워도 이 기록은 남아 늦게 다시 온 부여를 가린다. */
+            static string makeGrantScope( AccountID accountID )
+            {
+                string scope{ "guild/" };
+                ServiceKeyUtil::appendHex64( scope, accountID );
+                return scope;
+            }
+
+            /** @brief 길드 창고 보유자(`esc/guild/<길드 16진>`)입니다. 이전 가능 자산의 공용 창고입니다. */
+            static LedgerHolder makeStorageHolder( uint64 guildID ) { return LedgerHolder::makeEscrow( kStorageDomain, ServiceKeyUtil::makeHex64( guildID ) ); }
+
+            /**
+             * @brief 맡긴 사람별 창고 보유자(`esc/guild/<길드 16진>.<계정 16진>`)입니다. 이전 불가 자산이 듭니다.
+             * @details 섞이면 누가 맡긴 몫인지 잃으므로 보유자를 나눈다. 공용 창고의 잔액 키 앞(`esc/guild/<길드 16진>/`)과 겹치지 않는다.
+             */
+            static LedgerHolder makeDepositorHolder( uint64 guildID, AccountID depositorID )
+            {
+                string token = ServiceKeyUtil::makeHex64( guildID );
+                token.push_back( '.' );
+                ServiceKeyUtil::appendHex64( token, depositorID );
+                return LedgerHolder::makeEscrow( kStorageDomain, token );
+            }
+
+            /** @brief 꺼내기 허용 키(`<길드>/<맡긴 사람>/<받는 계정>/<자산>`)입니다. 맡긴 사람의 허용은 `<길드>/<맡긴 사람>/` 로 열거합니다. */
+            static string makeGrantKey( uint64 guildID, AccountID depositorID, AccountID granteeID, string_view assetID )
+            {
+                string key = makePairKey( guildID, depositorID );
+                key.push_back( '/' );
+                ServiceKeyUtil::appendHex64( key, granteeID );
+                key.push_back( '/' );
+                key.append( assetID );
+                return key;
+            }
+
+            /** @brief 꺼내기 허용의 남은 한도입니다. 부여 · 회수의 재전송은 멱등 기록(`ServiceIdempotency`)이 가리므로 기록에는 한도만 둡니다. */
+            static GuildGrantStoreRecord encodeGrant( int64 remaining )
+            {
+                GuildGrantStoreRecord record;
+                record._remaining = remaining;
+                return record;
+            }
+
+            [[nodiscard]] static bool decodeGrant( const ServiceRecord& raw, int64& outRemaining )
+            {
+                GuildGrantStoreRecord record;
+                if ( getGrantTable().decode( raw, record ) == false )
+                    return false;
+                outRemaining = record._remaining;
+                return true;
+            }
+
+            static const ServiceRecordTable<GuildStoreRecord>& getGuildTable()
+            {
+                static const ServiceRecordTable<GuildStoreRecord> s_table{ "social_guild" };
+                return s_table;
+            }
+
+            static const ServiceRecordTable<GuildMemberStoreRecord>& getMemberTable()
+            {
+                static const ServiceRecordTable<GuildMemberStoreRecord> s_table{ "social_guild_member" };
+                return s_table;
+            }
+
+            static const ServiceLinkTable& getAccountGuildTable()
+            {
+                static const ServiceLinkTable s_table{ "social_account_guild" };
+                return s_table;
+            }
+
+            static const ServiceLinkTable& getNameTable()
+            {
+                static const ServiceLinkTable s_table{ "social_guild_name" };
+                return s_table;
+            }
+
+            static const ServiceRecordTable<GuildInviteStoreRecord>& getInviteTable()
+            {
+                static const ServiceRecordTable<GuildInviteStoreRecord> s_table{ "social_guild_invite" };
+                return s_table;
+            }
+
+            static const ServiceIndexTable& getInviteExpiryTable()
+            {
+                static const ServiceIndexTable s_table{ "social_guild_invite_expiry" };
+                return s_table;
+            }
+
+            static const ServiceRecordTable<GuildApplicationStoreRecord>& getApplicationTable()
+            {
+                static const ServiceRecordTable<GuildApplicationStoreRecord> s_table{ "social_guild_application" };
+                return s_table;
+            }
+
+            static const ServiceIndexTable& getApplicationExpiryTable()
+            {
+                static const ServiceIndexTable s_table{ "social_guild_application_expiry" };
+                return s_table;
+            }
+
+            /** @brief 이전 불가 자산을 맡긴 사람(`<길드>/<계정>`)입니다. 원장은 보유자를 열거하지 못하므로 해산 확인과 창고 목록이 이것으로 몫을 찾습니다. */
+            /** @brief 신청의 역색인 `<계정>/<길드>`(값 없음)입니다. 신청 키가 길드 앞이라 탈퇴 정리가 계정의 신청을 여기서 찾는다. 신청을 쓰고 지우는 트랜잭션이 함께 맞춘다. */
+            static const ServiceIndexTable& getAccountApplicationTable()
+            {
+                static const ServiceIndexTable s_table{ "social_account_application" };
+                return s_table;
+            }
+
+            /** @brief 신청 키 `<길드>/<계정>` 의 역색인 키 `<계정>/<길드>` 입니다. */
+            static string makeApplicationReverseKey( const string& applicationKey )
+            {
+                const size_t                             width = static_cast<size_t>( ServiceKeyUtil::kHexWidth );
+                const string_view                        key( applicationKey );
+                StringBuilder<constant::buffer::kMax128> reverseKey;
+                reverseKey.appendFormat( "%#/%#", key.substr( width + 1 ), key.substr( 0, width ) );
+                return string( reverseKey.view() );
+            }
+
+            static const ServiceLinkTable& getDepositorTable()
+            {
+                static const ServiceLinkTable s_table{ "social_guild_depositor" };
+                return s_table;
+            }
+
+            /** @brief 맡긴 사람이 준 꺼내기 허용(`<길드>/<맡긴 사람>/<받는 계정>/<자산>`)입니다. */
+            static const ServiceRecordTable<GuildGrantStoreRecord>& getGrantTable()
+            {
+                static const ServiceRecordTable<GuildGrantStoreRecord> s_table{ "social_guild_storage_grant" };
+                return s_table;
+            }
+
+            static const ServiceLinkTable& getSequenceTable()
+            {
+                static const ServiceLinkTable s_table{ "social_sequence" };
+                return s_table;
+            }
+
+            static string makePairKey( uint64 first, uint64 second )
+            {
+                string key = ServiceKeyUtil::makeHex64( first );
+                key.push_back( '/' );
+                ServiceKeyUtil::appendHex64( key, second );
+                return key;
+            }
+
+            /** @brief 이름 키를 만듭니다. ASCII 는 소문자로 바꾼 뒤 모든 바이트를 16진 문자열로 바꾸므로 한글 이름도 키 규칙 안에 들어옵니다. 24바이트는 48글자가 됩니다. */
+            static string makeNameKey( string_view name )
+            {
+                string key;
+                for ( const utf8 character : name )
+                {
+                    const uint8 byte = static_cast<uint8>( StringUtil::toLowerChar( character ) );
+                    HexUtil::appendBytes( key, &byte, 1 );
+                }
+                return key;
+            }
+
+            static GuildStoreRecord encodeGuild( const GuildInfo& info )
+            {
+                GuildStoreRecord record;
+                record._name         = info._name;
+                record._announcement = info._announcement;
+                record._masterID     = info._masterID;
+                record._createdMs    = info._createdMs;
+                record._memberCount  = info._memberCount;
+                record._experience   = info._experience;
+                record._bOpenToApply = info._bOpenToApply;
+                return record;
+            }
+
+            [[nodiscard]] static bool decodeGuild( const ServiceRecord& raw, uint64 guildID, GuildInfo& outInfo )
+            {
+                GuildStoreRecord record;
+                if ( getGuildTable().decode( raw, record ) == false )
+                    return false;
+                outInfo._guildID      = guildID;
+                outInfo._name         = std::move( record._name );
+                outInfo._announcement = std::move( record._announcement );
+                outInfo._masterID     = record._masterID;
+                outInfo._createdMs    = record._createdMs;
+                outInfo._memberCount  = record._memberCount;
+                outInfo._experience   = record._experience;
+                outInfo._bOpenToApply = record._bOpenToApply;
+                return true;
+            }
+
+            static GuildMemberStoreRecord encodeMember( GuildRole role, int64 joinedMs )
+            {
+                GuildMemberStoreRecord record;
+                record._role     = role;
+                record._joinedMs = joinedMs;
+                return record;
+            }
+
+            [[nodiscard]] static bool decodeMember( const ServiceRecord& raw, GuildMember& outMember )
+            {
+                GuildMemberStoreRecord record;
+                if ( getMemberTable().decode( raw, record ) == false || record._role == GuildRole::Count )
+                    return false;
+                outMember._role     = record._role;
+                outMember._joinedMs = record._joinedMs;
+                return true;
+            }
+
+            static GuildInviteStoreRecord encodeInvite( AccountID inviterID, int64 expiresMs )
+            {
+                GuildInviteStoreRecord record;
+                record._inviterID = inviterID;
+                record._expiresMs = expiresMs;
+                return record;
+            }
+
+            static GuildApplicationStoreRecord encodeApplication( int64 appliedMs, int64 expiresMs )
+            {
+                GuildApplicationStoreRecord record;
+                record._appliedMs = appliedMs;
+                record._expiresMs = expiresMs;
+                return record;
+            }
+
+            [[nodiscard]] static bool decodeApplication( const ServiceRecord& raw, int64& outAppliedMs, int64& outExpiresMs )
+            {
+                GuildApplicationStoreRecord record;
+                if ( getApplicationTable().decode( raw, record ) == false )
+                    return false;
+                outAppliedMs = record._appliedMs;
+                outExpiresMs = record._expiresMs;
+                return true;
+            }
+
+            [[nodiscard]] static bool decodeInviteExpiry( const ServiceRecord& raw, int64& outExpiresMs )
+            {
+                GuildInviteStoreRecord record;
+                if ( getInviteTable().decode( raw, record ) == false )
+                    return false;
+                outExpiresMs = record._expiresMs;
+                return true;
+            }
+
+            /** @brief 초대 레코드의 만료 시각을 읽습니다(보존 쓸기). */
+            [[nodiscard]] static bool readInviteExpiryMs( const ServiceRecord& record, int64& outTimeMs ) { return decodeInviteExpiry( record, outTimeMs ); }
+
+            /** @brief 가입 신청 레코드의 만료 시각을 읽습니다(TTL 쓸기). */
+            [[nodiscard]] static bool readApplicationExpiryMs( const ServiceRecord& record, int64& outTimeMs )
+            {
+                int64 appliedMs = 0;
+                return decodeApplication( record, appliedMs, outTimeMs );
+            }
+
+            /** @brief TTL 쓸기가 지우는 신청의 역색인 `<계정>/<길드>` 를 같은 트랜잭션에서 지웁니다 — 빼면 만료된 신청마다 역색인 줄이 탈퇴 때까지 남는다. */
+            static ServiceStoreResult stageApplicationErase( IServiceStoreConnection&, const vector<const ServiceRecord*>& listErased, ServiceTransaction& inoutTransaction )
+            {
+                for ( const ServiceRecord* pRecord : listErased )
+                {
+                    inoutTransaction.erase( getAccountApplicationTable(), makeApplicationReverseKey( pRecord->_key ) );
+                }
+                return ServiceStoreResult::Ok;
+            }
+        };
+
+        /** @brief 길드 요청 하나를 저장소 스레드에서 처리합니다. 읽기, 규칙 검사, 버전 조건 쓰기 순서로 진행하며 충돌이 나면 다시 시도합니다. 한 번 쓰고 버린다. */
+        class GuildStoreRun final
+        {
+        public:
+            GuildStoreRun( const GuildRequest& request, const GuildPolicy& policy, const ILedgerPolicy* pLedgerPolicy )
+                : _request{ request }
+                , _serviceResult{}
+                , _policy{ policy }
+                , _pLedgerPolicy{ pLedgerPolicy }
+            {
+            }
+
+            /** @brief 요청을 처리하고 결과를 넘깁니다. */
+            GuildResult run( IServiceStoreConnection& connection )
+            {
+                runAttempts( connection );
+                return std::move( _serviceResult );
+            }
+
+        private:
+            void runAttempts( IServiceStoreConnection& connection )
+            {
+                // 판단에 쓴 레코드(내 멤버 역할 · 길드 · 대상의 길드)는 시도의 읽기 집합이 모두 커밋 조건으로 건다 — 강등 · 추방된 임원의 초대 · 공지 · 가입 정책이 읽기와 커밋 사이에 통과하지 않는다.
+                const ServiceStoreResult result = ServiceCommitRunner::run<ServiceStoreResult>( connection, "Guild.Request", [this]( ServiceCommitAttempt& attempt ) -> optional<ServiceStoreResult>
+                {
+                    _serviceResult                = GuildResult{};
+                    const ServiceStoreResult once = runOnce( attempt );
+                    if ( once == ServiceStoreResult::Conflict )
+                        return nullopt;
+                    return once;
+                } );
+                if ( result == ServiceStoreResult::Ok )
+                {
+                    collectMembers( connection );
+                    return;
+                }
+                if ( result == ServiceStoreResult::Conflict )
+                {
+                    _serviceResult         = GuildResult{};
+                    _serviceResult._result = SocialServiceResult::fail( OnlineError::kBusy );
+                }
+                else if ( _serviceResult._result == SocialResult::Ok )
+                    _serviceResult._result = SocialServiceResult::fail( OnlineError::kUnavailable );
+            }
+
+            /** @brief 규칙 실패를 처리합니다. 결과를 적고 Invalid 를 반환하며 다시 시도하지 않습니다. */
+            ServiceStoreResult fail( SocialServiceResult result )
+            {
+                _serviceResult._result = result;
+                return ServiceStoreResult::Invalid;
+            }
+
+            /** @brief 계정의 길드를 읽습니다. 길드가 있으면 Ok, 없으면 NotFound, 저장소를 쓸 수 없으면 Unavailable 입니다. */
+            static ServiceStoreResult readAccountGuild( IServiceStoreConnection& connection, AccountID accountID, uint64& outGuildID, ServiceRecord& outRecord )
+            {
+                outGuildID                    = 0;
+                const ServiceStoreResult read = connection.readRecord( GuildLogicInternal::getAccountGuildTable(), ServiceKeyUtil::makeHex64( accountID ), outRecord );
+                if ( read != ServiceStoreResult::Ok )
+                    return read == ServiceStoreResult::NotFound ? ServiceStoreResult::NotFound : ServiceStoreResult::Unavailable;
+                return GuildLogicInternal::getAccountGuildTable().decode( ServiceKeyUtil::makeHex64( accountID ), outRecord, outGuildID ) ? ServiceStoreResult::Ok : ServiceStoreResult::Unavailable;
+            }
+
+            ServiceStoreResult runOnce( ServiceCommitAttempt& connection )
+            {
+                ServiceRecord            selfGuildRecord;
+                uint64                   guildID  = 0;
+                const ServiceStoreResult selfRead = readAccountGuild( connection, _request._accountID, guildID, selfGuildRecord );
+                if ( selfRead == ServiceStoreResult::Unavailable )
+                    return ServiceStoreResult::Unavailable;
+                const bool bSelfInGuild = selfRead == ServiceStoreResult::Ok;
+                switch ( _request._operation )
+                {
+                    case GuildOperation::Create:
+                    {
+                        return bSelfInGuild ? fail( SocialResult::AlreadyInGuild ) : runCreate( connection );
+                    }
+                    case GuildOperation::Accept:
+                    {
+                        return bSelfInGuild ? fail( SocialResult::AlreadyInGuild ) : runAccept( connection );
+                    }
+                    case GuildOperation::Apply:
+                    {
+                        return bSelfInGuild ? fail( SocialResult::AlreadyInGuild ) : runApply( connection );
+                    }
+                    case GuildOperation::AddExperience:
+                    {
+                        return runAddExperience( connection );
+                    }
+                    case GuildOperation::Attach:
+                    {
+                        if ( bSelfInGuild == false )
+                            return fail( SocialResult::NotInGuild );
+                        _serviceResult._guildID    = guildID;
+                        _serviceResult._attachedID = _request._accountID;
+                        return ServiceStoreResult::Ok;
+                    }
+                    default:
+                    {
+                        return bSelfInGuild ? runInGuild( connection, guildID, selfGuildRecord ) : fail( SocialResult::NotInGuild );
+                    }
+                }
+            }
+
+            ServiceStoreResult runCreate( ServiceCommitAttempt& connection )
+            {
+                using Internal = GuildLogicInternal;
+                if ( GuildLogic::isValidName( _request._text ) == false )
+                    return fail( SocialServiceResult::fail( OnlineError::kInvalidRequest ) );
+                ServiceRecord            nameRecord;
+                ServiceRecord            sequenceRecord;
+                const string             nameKey      = Internal::makeNameKey( _request._text );
+                const ServiceStoreResult nameRead     = connection.readRecord( Internal::getNameTable(), nameKey, nameRecord );
+                const ServiceStoreResult sequenceRead = connection.readRecord( Internal::getSequenceTable(), Internal::kSequenceKey, sequenceRecord );
+                if ( nameRead == ServiceStoreResult::Ok )
+                    return fail( SocialResult::GuildNameTaken );
+                if ( nameRead != ServiceStoreResult::NotFound || ( sequenceRead != ServiceStoreResult::Ok && sequenceRead != ServiceStoreResult::NotFound ) )
+                    return ServiceStoreResult::Unavailable;
+                uint64 nextID = 1;
+                if ( sequenceRead == ServiceStoreResult::Ok && Internal::getSequenceTable().decode( Internal::kSequenceKey, sequenceRecord, nextID ) == false )
+                    return ServiceStoreResult::Unavailable;
+                GuildInfo info;
+                info._guildID     = nextID;
+                info._name        = _request._text;
+                info._masterID    = _request._accountID;
+                info._createdMs   = _request._nowMs.count();
+                info._memberCount = 1;
+                ServiceTransaction transaction;
+                transaction.put( Internal::getSequenceTable(), Internal::kSequenceKey, nextID + 1, sequenceRecord._version );
+                transaction.put( Internal::getGuildTable(), ServiceKeyUtil::makeHex64( nextID ), Internal::encodeGuild( info ), ServiceRecord::kAbsentVersion );
+                transaction.put( Internal::getMemberTable(), Internal::makePairKey( nextID, _request._accountID ), Internal::encodeMember( GuildRole::Master, _request._nowMs.count() ),
+                                 ServiceRecord::kAbsentVersion );
+                transaction.put( Internal::getAccountGuildTable(), ServiceKeyUtil::makeHex64( _request._accountID ), nextID, ServiceRecord::kAbsentVersion );
+                transaction.put( Internal::getNameTable(), nameKey, nextID, ServiceRecord::kAbsentVersion );
+                const ServiceStoreResult commitResult = connection.commit( transaction );
+                if ( commitResult == ServiceStoreResult::Ok )
+                {
+                    _serviceResult._info     = info;
+                    _serviceResult._guildID  = nextID;
+                    _serviceResult._joinedID = _request._accountID;
+                }
+                return commitResult; // 이름이 그사이 선점됐으면 다시 읽어 GuildNameTaken 으로 끝낸다
+            }
+
+            /** @brief 공개 길드에 가입 신청을 냅니다. 죽은 신청을 지우고 살아 있는 신청이 상한이면 PendingLimit 입니다. */
+            ServiceStoreResult runApply( ServiceCommitAttempt& connection )
+            {
+                using Internal = GuildLogicInternal;
+                ServiceRecord guildRecord;
+                GuildInfo     info;
+                const string  guildKey = ServiceKeyUtil::makeHex64( _request._guildID );
+                const bool    bGuildOk = connection.readRecord( Internal::getGuildTable(), guildKey, guildRecord ) == ServiceStoreResult::Ok &&
+                                      Internal::decodeGuild( guildRecord, _request._guildID, info );
+                if ( bGuildOk == false )
+                    return fail( SocialResult::NotFound );
+                if ( info._bOpenToApply == SW_FALSE )
+                    return fail( SocialResult::GuildClosed );
+                if ( info._memberCount >= _policy._maxMember )
+                    return fail( SocialResult::GuildFull );
+                StringBuilder<constant::buffer::kMax128> prefixBuilder;
+                prefixBuilder.appendFormat( "%#/", guildKey );
+                const string prefix( prefixBuilder.view() );
+                // 한 번에 지우는 죽은 신청 수 — 역색인까지 두 쓰기라 트랜잭션 상한에 맞춘다. 남은 것은 TTL 쓸기와 다음 신청이 지운다
+                constexpr int32    kMaxDeadErase = ( ServiceTransaction::kMaxWriteCount - 4 ) / 2;
+                const string       selfKey       = Internal::makePairKey( _request._guildID, _request._accountID );
+                int32              liveCount     = 0;
+                int32              deadCount     = 0;
+                ServiceTransaction transaction;
+                // 끝까지 센다 — 죽은 신청이 앞 쪽을 채우면 한 쪽만 읽은 수는 살아 있는 신청을 덜 세어 상한을 넘긴다
+                const ServiceStoreResult listed =
+                    ServiceRecordReader::visitAll( connection, Internal::getApplicationTable(), prefix, Internal::kApplicationPageSize, [&]( const ServiceRecord& record )
+                {
+                    if ( record._key == selfKey )
+                        return true; // 다시 낸 신청은 아래 put 이 덮어쓴다
+                    int64      appliedMs = 0;
+                    int64      expiresMs = 0;
+                    const bool bLive     = Internal::decodeApplication( record, appliedMs, expiresMs ) && _request._nowMs.count() < expiresMs;
+                    if ( bLive )
+                        ++liveCount;
+                    else if ( deadCount < kMaxDeadErase )
+                    {
+                        ++deadCount;
+                        transaction.erase( Internal::getApplicationTable(), record._key, record._version ); // 죽었거나 읽을 수 없는 신청이다
+                        transaction.erase( Internal::getAccountApplicationTable(), Internal::makeApplicationReverseKey( record._key ) );
+                    }
+                    return liveCount < _policy._maxApplication; // 상한에 닿으면 더 볼 것이 없다
+                } );
+                if ( listed != ServiceStoreResult::Ok )
+                    return ServiceStoreResult::Unavailable;
+                if ( liveCount >= _policy._maxApplication )
+                    return fail( SocialResult::PendingLimit );
+                // 쓰기: 죽은 신청과 그 역색인 지우기(최대 2 × kMaxDeadErase) + 신청 + 역색인 + TTL 색인 줄 + 여유 하나(길드 · 신청 목록은 읽기 집합이 조건으로 건다 — 상한에 들지 않는다)
+                static_assert( kMaxDeadErase * 2 + 4 <= ServiceTransaction::kMaxWriteCount, "runApply 의 트랜잭션이 쓰기 상한을 넘을 수 있다" );
+                const int64 expiresMs = _request._nowMs.count() + _policy._applicationLifetimeMs;
+                transaction.put( Internal::getApplicationTable(), selfKey, Internal::encodeApplication( _request._nowMs.count(), expiresMs ) );
+                // 해산한 길드 · 다시 오지 않는 신청자의 신청은 이 함수가 다시 돌지 않아 남는다 - TTL 색인 줄이 기간 뒤에 지운다. 다시 낸 신청은 새 줄이 맡는다
+                transaction.put( Internal::getApplicationExpiryTable(), ServiceTTLRule::makeTTLIndexKey( expiresMs, selfKey ), ServiceRecord::kAnyVersion );
+                transaction.put( Internal::getAccountApplicationTable(), Internal::makeApplicationReverseKey( selfKey ) );
+                return connection.commit( transaction );
+            }
+
+            /** @brief 서버 시스템이 길드 경험치를 늘립니다. 상한(`kMaxExperience`)을 넘지 않습니다. */
+            ServiceStoreResult runAddExperience( ServiceCommitAttempt& connection )
+            {
+                using Internal = GuildLogicInternal;
+                if ( _request._amount <= 0 )
+                    return fail( SocialServiceResult::fail( OnlineError::kInvalidRequest ) );
+                ServiceRecord guildRecord;
+                GuildInfo     info;
+                const string  guildKey = ServiceKeyUtil::makeHex64( _request._guildID );
+                const bool    bGuildOk = connection.readRecord( Internal::getGuildTable(), guildKey, guildRecord ) == ServiceStoreResult::Ok &&
+                                      Internal::decodeGuild( guildRecord, _request._guildID, info );
+                if ( bGuildOk == false )
+                    return fail( SocialResult::NotFound );
+                const bool bReachesCap = _request._amount >= Internal::kMaxExperience - info._experience;
+                info._experience       = bReachesCap ? Internal::kMaxExperience : info._experience + _request._amount;
+                ServiceTransaction transaction;
+                transaction.put( Internal::getGuildTable(), guildKey, Internal::encodeGuild( info ), guildRecord._version );
+                const ServiceStoreResult commitResult = connection.commit( transaction );
+                if ( commitResult == ServiceStoreResult::Ok )
+                {
+                    _serviceResult._guildID = _request._guildID;
+                    _serviceResult._info    = info;
+                }
+                return commitResult;
+            }
+
+            ServiceStoreResult runAccept( ServiceCommitAttempt& connection )
+            {
+                using Internal = GuildLogicInternal;
+                ServiceRecord inviteRecord;
+                ServiceRecord guildRecord;
+                int64         expiresMs = 0;
+                GuildInfo     info;
+                const string  inviteKey = Internal::makePairKey( _request._accountID, _request._guildID );
+                const string  guildKey  = ServiceKeyUtil::makeHex64( _request._guildID );
+                const bool    bInvited  = connection.readRecord( Internal::getInviteTable(), inviteKey, inviteRecord ) == ServiceStoreResult::Ok &&
+                                      Internal::decodeInviteExpiry( inviteRecord, expiresMs );
+                if ( bInvited == false )
+                    return fail( SocialResult::NotFound );
+                if ( _request._nowMs.count() >= expiresMs )
+                    return fail( SocialResult::InviteExpired );
+                const bool bGuildOk = connection.readRecord( Internal::getGuildTable(), guildKey, guildRecord ) == ServiceStoreResult::Ok &&
+                                      Internal::decodeGuild( guildRecord, _request._guildID, info );
+                if ( bGuildOk == false )
+                    return fail( SocialResult::NotFound ); // 해산된 길드이다
+                if ( info._memberCount >= _policy._maxMember )
+                    return fail( SocialResult::GuildFull );
+                ++info._memberCount;
+                ServiceTransaction transaction;
+                transaction.put( Internal::getGuildTable(), guildKey, Internal::encodeGuild( info ), guildRecord._version );
+                transaction.put( Internal::getMemberTable(), Internal::makePairKey( _request._guildID, _request._accountID ),
+                                 Internal::encodeMember( GuildRole::Member, _request._nowMs.count() ), ServiceRecord::kAbsentVersion );
+                transaction.put( Internal::getAccountGuildTable(), ServiceKeyUtil::makeHex64( _request._accountID ), _request._guildID,
+                                 ServiceRecord::kAbsentVersion );
+                transaction.erase( Internal::getInviteTable(), inviteKey, inviteRecord._version );
+                const ServiceStoreResult commitResult = connection.commit( transaction );
+                if ( commitResult == ServiceStoreResult::Ok )
+                {
+                    _serviceResult._guildID  = _request._guildID;
+                    _serviceResult._joinedID = _request._accountID;
+                }
+                return commitResult;
+            }
+
+            /** @brief "내 길드" 에 대한 요청입니다. 조회, 초대, 떠나기, 내보내기, 역할, 공지가 해당합니다. */
+            ServiceStoreResult runInGuild( ServiceCommitAttempt& connection, uint64 guildID, const ServiceRecord& selfGuildRecord )
+            {
+                using Internal = GuildLogicInternal;
+                ServiceRecord guildRecord;
+                ServiceRecord selfMemberRecord;
+                GuildInfo     info;
+                GuildMember   selfMember;
+                const string  guildKey = ServiceKeyUtil::makeHex64( guildID );
+                const bool    bReadOk  = connection.readRecord( Internal::getGuildTable(), guildKey, guildRecord ) == ServiceStoreResult::Ok &&
+                                     Internal::decodeGuild( guildRecord, guildID, info ) &&
+                                     connection.readRecord( Internal::getMemberTable(), Internal::makePairKey( guildID, _request._accountID ), selfMemberRecord ) ==
+                                         ServiceStoreResult::Ok &&
+                                     Internal::decodeMember( selfMemberRecord, selfMember );
+                if ( bReadOk == false )
+                    return ServiceStoreResult::Unavailable;
+                _serviceResult._guildID = guildID;
+
+                ServiceTransaction transaction;
+                switch ( _request._operation )
+                {
+                    case GuildOperation::Get:
+                    {
+                        _serviceResult._info = info;
+                        return ServiceStoreResult::Ok; // 멤버 목록은 collectMembers 가 채운다
+                    }
+                    case GuildOperation::Invite:
+                    {
+                        return runInvite( connection, guildID, selfMember );
+                    }
+                    case GuildOperation::Leave:
+                    {
+                        return runLeave( connection, guildID, info, guildRecord, selfMember, selfMemberRecord, selfGuildRecord );
+                    }
+                    case GuildOperation::Kick:
+                    case GuildOperation::SetRole:
+                    {
+                        return runMemberChange( connection, guildID, info, guildRecord, selfMember, selfMemberRecord );
+                    }
+                    case GuildOperation::SetAnnouncement:
+                    {
+                        if ( selfMember._role < GuildRole::Officer )
+                            return fail( SocialResult::NotAllowed );
+                        if ( _request._text.size() > static_cast<size_t>( GuildLimit::kMaxAnnouncementSize ) )
+                            return fail( SocialServiceResult::fail( OnlineError::kInvalidRequest ) );
+                        info._announcement = _request._text;
+                        transaction.put( Internal::getGuildTable(), guildKey, Internal::encodeGuild( info ), guildRecord._version );
+                        return connection.commit( transaction );
+                    }
+                    case GuildOperation::Deposit:
+                    case GuildOperation::Withdraw:
+                    {
+                        return runStorageTransfer( connection, guildID, info, guildRecord, selfMember );
+                    }
+                    case GuildOperation::SetJoinPolicy:
+                    {
+                        if ( selfMember._role < GuildRole::Officer )
+                            return fail( SocialResult::NotAllowed );
+                        info._bOpenToApply = _request._bOpen == SW_TRUE ? SW_TRUE : SW_FALSE;
+                        transaction.put( Internal::getGuildTable(), guildKey, Internal::encodeGuild( info ), guildRecord._version );
+                        return connection.commit( transaction );
+                    }
+                    case GuildOperation::ListApplications:
+                    case GuildOperation::Approve:
+                    case GuildOperation::Reject:
+                    {
+                        if ( selfMember._role < GuildRole::Officer )
+                            return fail( SocialResult::NotAllowed );
+                        return runApplication( connection, guildID, info, guildRecord );
+                    }
+                    case GuildOperation::ListStorage:
+                    {
+                        return runListStorage( connection, guildID );
+                    }
+                    case GuildOperation::GrantWithdrawal:
+                    case GuildOperation::RevokeWithdrawal:
+                    {
+                        return runStorageGrant( connection, guildID );
+                    }
+                    default:
+                    {
+                        return fail( SocialServiceResult::fail( OnlineError::kInvalidRequest ) );
+                    }
+                }
+            }
+
+            /** @brief 임원이 다른 계정을 길드에 초대합니다. 다시 보내면 초대를 덮어씁니다. */
+            ServiceStoreResult runInvite( ServiceCommitAttempt& connection, uint64 guildID, const GuildMember& selfMember )
+            {
+                using Internal = GuildLogicInternal;
+                if ( selfMember._role < GuildRole::Officer )
+                    return fail( SocialResult::NotAllowed );
+                if ( _request._targetID == kInvalidAccountID || _request._targetID == _request._accountID )
+                    return fail( SocialServiceResult::fail( OnlineError::kInvalidRequest ) );
+                uint64                   targetGuildID = 0;
+                ServiceRecord            targetRecord;
+                const ServiceStoreResult targetRead = readAccountGuild( connection, _request._targetID, targetGuildID, targetRecord );
+                if ( targetRead == ServiceStoreResult::Unavailable )
+                    return ServiceStoreResult::Unavailable;
+                if ( targetRead == ServiceStoreResult::Ok )
+                    return fail( SocialResult::AlreadyInGuild );
+                ServiceTransaction transaction;
+                const string       inviteKey = Internal::makePairKey( _request._targetID, guildID );
+                const int64        expiresMs = _request._nowMs.count() + _policy._inviteLifetimeMs;
+                transaction.put( Internal::getInviteTable(), inviteKey, Internal::encodeInvite( _request._accountID, expiresMs ) ); // 다시 보내면 덮어쓴다
+                transaction.put( Internal::getInviteExpiryTable(), ServiceTTLRule::makeTTLIndexKey( expiresMs, inviteKey ), ServiceRecord::kAnyVersion );
+                _serviceResult._invitedID = _request._targetID;
+                return connection.commit( transaction );
+            }
+
+            /** @brief 길드를 떠납니다. 혼자 남은 길드장이 떠나면 길드를 해산하며, 공용 창고와 맡긴 사람별 몫이 모두 비어 있어야 합니다. 멤버가 떠나면 그의 몫을 돌려줍니다. */
+            ServiceStoreResult runLeave( ServiceCommitAttempt& connection, uint64 guildID, GuildInfo& inoutInfo, const ServiceRecord& guildRecord, const GuildMember& selfMember,
+                                         const ServiceRecord& selfMemberRecord, const ServiceRecord& selfGuildRecord )
+            {
+                using Internal = GuildLogicInternal;
+                if ( selfMember._role == GuildRole::Master && inoutInfo._memberCount > 1 )
+                    return fail( SocialResult::NotAllowed ); // 길드장을 넘기고 떠난다
+                ServiceTransaction       transaction;
+                const ServiceStoreResult staged = selfMember._role == GuildRole::Master ? stageDissolution( connection, guildID, transaction )
+                                                                                        : stageMemberExit( connection, guildID, _request._accountID, transaction );
+                if ( staged != ServiceStoreResult::Ok )
+                    return staged;
+                transaction.erase( Internal::getMemberTable(), Internal::makePairKey( guildID, _request._accountID ), selfMemberRecord._version );
+                transaction.erase( Internal::getAccountGuildTable(), ServiceKeyUtil::makeHex64( _request._accountID ), selfGuildRecord._version );
+                if ( selfMember._role == GuildRole::Master ) // 혼자 남은 길드장이면 길드를 해산한다
+                {
+                    transaction.erase( Internal::getGuildTable(), ServiceKeyUtil::makeHex64( guildID ), guildRecord._version );
+                    transaction.erase( Internal::getNameTable(), Internal::makeNameKey( inoutInfo._name ) );
+                }
+                else
+                {
+                    --inoutInfo._memberCount;
+                    transaction.put( Internal::getGuildTable(), ServiceKeyUtil::makeHex64( guildID ), Internal::encodeGuild( inoutInfo ), guildRecord._version );
+                }
+                _serviceResult._leftID = _request._accountID;
+                return connection.commit( transaction ); // 몫을 돌려주는 이동이 그사이 바뀐 잔액과 부딪히면 Conflict 로 다시 읽는다
+            }
+
+            /**
+             * @brief 해산 전 확인입니다. 공용 창고와 맡긴 사람별 몫이 모두 비어 있어야 하며, 빈 몫의 맡긴 사람 기록과 남은 꺼내기 허용을 @p inoutTransaction 에서 지웁니다.
+             * @details 창고를 비운 뒤에 해산한다. 맡기기는 길드 레코드 버전을 올리므로 이 확인 뒤에 끼면 커밋이 충돌한다.
+             *          맡긴 사람은 떠날 때 기록이 지워지므로 해산 때 남은 것은 혼자 남은 길드장의 것뿐이지만 기록 전체를 본다.
+             */
+            ServiceStoreResult stageDissolution( IServiceStoreConnection& connection, uint64 guildID, ServiceTransaction& inoutTransaction )
+            {
+                using Internal = GuildLogicInternal;
+                vector<LedgerBalance> listBalance;
+                if ( Ledger::listBalances( connection, Internal::makeStorageHolder( guildID ), listBalance ) != ServiceStoreResult::Ok )
+                    return ServiceStoreResult::Unavailable;
+                if ( listBalance.empty() == false )
+                    return fail( SocialResult::StorageNotEmpty );
+                StringBuilder<constant::buffer::kMax128> prefixBuilder;
+                prefixBuilder.appendFormat( "%#/", ServiceKeyUtil::makeHex64( guildID ) );
+                const string prefix( prefixBuilder.view() );
+                string       cursor;
+                while ( true ) // 맡긴 사람 기록을 끝까지 쪽으로 넘긴다 — 뒤를 못 보고 해산하면 그 몫이 주인 없이 남는다
+                {
+                    vector<ServiceRecord>   listDepositorRecord;
+                    const ServiceRecordPage page = ServiceRecordReader::readPage( connection, Internal::getDepositorTable(), prefix, cursor, GuildLimit::kMaxMember, false, listDepositorRecord );
+                    if ( page.isOk() == false )
+                        return ServiceStoreResult::Unavailable;
+                    for ( const ServiceRecord& record : listDepositorRecord )
+                    {
+                        AccountID depositorID = kInvalidAccountID;
+                        if ( ServiceKeyUtil::parseHex64( string_view( record._key ).substr( prefix.size() ), depositorID ) == false )
+                            return ServiceStoreResult::Unavailable;
+                        if ( Ledger::listBalances( connection, Internal::makeDepositorHolder( guildID, depositorID ), listBalance ) != ServiceStoreResult::Ok )
+                            return ServiceStoreResult::Unavailable;
+                        if ( listBalance.empty() == false )
+                            return fail( SocialResult::StorageNotEmpty ); // 맡긴 몫이 남았다 — 몫의 주인이 꺼낸 뒤에 해산한다
+                        inoutTransaction.erase( Internal::getDepositorTable(), record._key, record._version );
+                    }
+                    if ( page.hasMore() == false )
+                        break;
+                    cursor = page._nextCursor;
+                }
+                return stageGrantErase( connection, prefix, inoutTransaction ); // 떠난 맡긴 사람의 허용은 떠날 때 지웠으니 길드장의 것만 남지만 끝까지 지운다
+            }
+
+            /**
+             * @brief 떠나거나 내보내지는 @p accountID 의 창고 정리를 @p inoutTransaction 에 붙입니다. 그가 받은 꺼내기 허용을 모두 지우고, 맡긴 몫이 있으면 돌려줍니다.
+             * @details 받은 허용을 남기면 다시 들어올 때 맡긴 사람이 모르는 사이 권한이 살아난다 — 멤버 자격과 함께 끝낸다.
+             */
+            ServiceStoreResult stageMemberExit( IServiceStoreConnection& connection, uint64 guildID, AccountID accountID, ServiceTransaction& inoutTransaction )
+            {
+                const ServiceStoreResult removed = stageReceivedGrantRemoval( connection, guildID, accountID, inoutTransaction );
+                return removed == ServiceStoreResult::Ok ? stageShareRefund( connection, guildID, accountID, inoutTransaction ) : removed;
+            }
+
+            /**
+             * @brief 길드에서 @p granteeID 가 받은 꺼내기 허용(`<길드>/<맡긴 사람>/<받는 계정>/<자산>` 중 받는 계정이 그인 것)을 모두 지우는 쓰기를 붙입니다.
+             * @details 키가 맡긴 사람 순이라 길드의 허용 전체를 쪽으로 훑는다. 허용 수는 멤버 수 × `kMaxStorageGrant` 를 넘지 않는다(맡긴 사람은 떠날 때 자기가 준 허용을 지운다).
+             */
+            ServiceStoreResult stageReceivedGrantRemoval( IServiceStoreConnection& connection, uint64 guildID, AccountID granteeID, ServiceTransaction& inoutTransaction )
+            {
+                using Internal                                  = GuildLogicInternal;
+                constexpr size_t                         kWidth = static_cast<size_t>( ServiceKeyUtil::kHexWidth );
+                StringBuilder<constant::buffer::kMax128> prefixBuilder;
+                prefixBuilder.appendFormat( "%#/", ServiceKeyUtil::makeHex64( guildID ) );
+                const string prefix( prefixBuilder.view() );
+                string       cursor;
+                while ( true )
+                {
+                    vector<ServiceRecord> listGrantRecord;
+                    if ( ServiceRecordReader::readPage( connection, Internal::getGrantTable(), prefix, cursor, Internal::kGrantPageSize, false, listGrantRecord )._result != ServiceStoreResult::Ok )
+                        return ServiceStoreResult::Unavailable;
+                    for ( const ServiceRecord& record : listGrantRecord )
+                    {
+                        const string_view rest      = string_view( record._key ).substr( prefix.size() ); // <맡긴 사람>/<받는 계정>/<자산>
+                        AccountID         grantee   = kInvalidAccountID;
+                        const bool        bReceived = rest.size() > kWidth * 2 + 1 && ServiceKeyUtil::parseHex64( rest.substr( kWidth + 1, kWidth ), grantee ) && grantee == granteeID;
+                        if ( bReceived )
+                            inoutTransaction.erase( Internal::getGrantTable(), record._key, record._version );
+                    }
+                    if ( static_cast<int32>( listGrantRecord.size() ) < Internal::kGrantPageSize )
+                        return ServiceStoreResult::Ok;
+                    cursor = listGrantRecord.back()._key;
+                }
+            }
+
+            /**
+             * @brief 떠나거나 내보내지는 @p depositorID 의 몫을 그 계정으로 돌려주는 원장 이동과, 그의 맡긴 사람 기록 · 그가 준 허용을 지우는 쓰기를 @p inoutTransaction 에 붙입니다.
+             * @details 몫이 남은 채 멤버가 아니게 되면 아무도 꺼낼 수 없으므로 같은 트랜잭션에서 돌려준다. 분개 키는 요청(떠나기 · 내보내기)의 멱등 키이며 몫이 있을 때만 필요하다.
+             *          계정 상한을 넘으면 떠나기 · 내보내기가 CapExceeded 로 멈춘다 — 재화를 버리지 않는다.
+             */
+            ServiceStoreResult stageShareRefund( IServiceStoreConnection& connection, uint64 guildID, AccountID depositorID, ServiceTransaction& inoutTransaction )
+            {
+                using Internal = GuildLogicInternal;
+                ServiceRecord            depositorRecord;
+                const string             depositorKey = Internal::makePairKey( guildID, depositorID );
+                const ServiceStoreResult read         = connection.readRecord( Internal::getDepositorTable(), depositorKey, depositorRecord );
+                if ( read == ServiceStoreResult::NotFound )
+                    return ServiceStoreResult::Ok; // 이전 불가 자산을 맡긴 적이 없다
+                if ( read != ServiceStoreResult::Ok )
+                    return ServiceStoreResult::Unavailable;
+                const LedgerHolder    share = Internal::makeDepositorHolder( guildID, depositorID );
+                vector<LedgerBalance> listBalance;
+                if ( Ledger::listBalances( connection, share, listBalance ) != ServiceStoreResult::Ok )
+                    return ServiceStoreResult::Unavailable;
+                if ( listBalance.empty() == false )
+                {
+                    if ( LedgerUtil::isValidJournalKey( _request._journalKey ) == false )
+                        return fail( SocialServiceResult::fail( OnlineError::kInvalidRequest ) );
+                    LedgerTransferRequest transfer;
+                    for ( const LedgerBalance& balance : listBalance ) // 자산 종류는 맡기기가 `kMaxDepositorAsset`(다리 상한) 안으로 막는다
+                    {
+                        transfer._listPosting.push_back( LedgerPosting{ share, LedgerHolder::makeAccount( depositorID ), balance._assetID, balance._amount } );
+                    }
+                    transfer._journalKey = _request._journalKey;
+                    transfer._reason     = Internal::kRefundReason;
+                    transfer._pPolicy    = _pLedgerPolicy;
+                    transfer._timeMs     = _request._nowMs.count();
+                    transfer._actorID    = _request._accountID;
+                    transfer._actorKind  = LedgerActorKind::Player;
+                    LedgerTransferResult transferResult;
+                    const LedgerResult   staged = Ledger::stageTransfer( connection, transfer, inoutTransaction, transferResult );
+                    if ( staged != LedgerResult::Ok )
+                        return failLedger( staged );
+                }
+                inoutTransaction.erase( Internal::getDepositorTable(), depositorKey, depositorRecord._version );
+                StringBuilder<constant::buffer::kMax128> grantPrefix;
+                grantPrefix.appendFormat( "%#/", depositorKey );
+                return stageGrantErase( connection, string( grantPrefix.view() ), inoutTransaction );
+            }
+
+            /** @brief 키가 @p prefix 로 시작하는 꺼내기 허용을 끝까지 읽어 모두 지우는 쓰기를 붙입니다. 한 쪽만 지우면 남은 허용이 다시 들어온 멤버에게 살아난다. */
+            static ServiceStoreResult stageGrantErase( IServiceStoreConnection& connection, const string& prefix, ServiceTransaction& inoutTransaction )
+            {
+                const ServiceStoreResult listed =
+                    ServiceRecordReader::visitAll( connection, GuildLogicInternal::getGrantTable(), prefix, GuildLimit::kMaxStorageGrant, [&]( const ServiceRecord& record )
+                {
+                    inoutTransaction.erase( GuildLogicInternal::getGrantTable(), record._key, record._version );
+                    return true;
+                } );
+                return listed == ServiceStoreResult::Ok ? ServiceStoreResult::Ok : ServiceStoreResult::Unavailable;
+            }
+
+            /**
+             * @brief 길드 창고의 품목 한 쪽(공용 창고, 그다음 맡긴 사람 id 순 몫, 그 안은 자산 id 순)을 요청의 커서 다음부터 결과에 담습니다.
+             * @details 키셋 쪽 읽기다 — 쪽 크기는 클라이언트가 정하고 서버가 `GuildLimit::kMaxStoragePage` 로 자른다(입력 검증). 쪽이 가득 차면 마지막 품목이 다음 커서다.
+             *          커서는 클라이언트 값이지만 길드는 요청한 계정의 것이라 다른 길드의 보유자를 가리킬 수 없다.
+             */
+            ServiceStoreResult runListStorage( ServiceCommitAttempt& connection, uint64 guildID )
+            {
+                using Internal                         = GuildLogicInternal;
+                const GuildStorageCursor& cursor       = _request._storageCursor;
+                const bool                bInvalidPage = _request._storageMaxCount < 1 || ( cursor.isEnd() == false && LedgerUtil::isValidAssetID( cursor._assetID ) == false ) ||
+                                          ( cursor.isEnd() && cursor._depositorID != kInvalidAccountID );
+                if ( bInvalidPage )
+                    return fail( SocialServiceResult::fail( OnlineError::kInvalidRequest ) );
+                const int32 maxCount = std::min( _request._storageMaxCount, GuildLimit::kMaxStoragePage );
+
+                // 커서가 든 보유자(처음이면 공용 창고)의 남은 품목부터 읽는다.
+                const LedgerHolder firstHolder = cursor._depositorID == kInvalidAccountID ? Internal::makeStorageHolder( guildID )
+                                                                                          : Internal::makeDepositorHolder( guildID, cursor._depositorID );
+                if ( appendStoragePage( connection, firstHolder, cursor._depositorID, cursor._assetID, maxCount ) != ServiceStoreResult::Ok )
+                    return ServiceStoreResult::Unavailable;
+                StringBuilder<constant::buffer::kMax128> prefixBuilder;
+                prefixBuilder.appendFormat( "%#/", ServiceKeyUtil::makeHex64( guildID ) );
+                const string prefix( prefixBuilder.view() );
+                string       recordKey = cursor._depositorID == kInvalidAccountID ? string() : Internal::makePairKey( guildID, cursor._depositorID );
+                while ( static_cast<int32>( _serviceResult._listStorage.size() ) < maxCount )
+                {
+                    vector<ServiceRecord>   listDepositorRecord;
+                    const ServiceRecordPage page = ServiceRecordReader::readPage( connection, Internal::getDepositorTable(), prefix, recordKey, maxCount, false, listDepositorRecord );
+                    if ( page.isOk() == false )
+                        return ServiceStoreResult::Unavailable;
+                    for ( const ServiceRecord& record : listDepositorRecord )
+                    {
+                        AccountID depositorID = kInvalidAccountID;
+                        if ( ServiceKeyUtil::parseHex64( string_view( record._key ).substr( prefix.size() ), depositorID ) == false )
+                            return ServiceStoreResult::Unavailable;
+                        if ( appendStoragePage( connection, Internal::makeDepositorHolder( guildID, depositorID ), depositorID, "", maxCount ) != ServiceStoreResult::Ok )
+                            return ServiceStoreResult::Unavailable;
+                        if ( static_cast<int32>( _serviceResult._listStorage.size() ) == maxCount )
+                            break;
+                    }
+                    if ( page.hasMore() == false )
+                        break;
+                    recordKey = page._nextCursor;
+                }
+                if ( static_cast<int32>( _serviceResult._listStorage.size() ) == maxCount )
+                {
+                    const GuildStorageItem& last      = _serviceResult._listStorage.back();
+                    _serviceResult._storageNextCursor = GuildStorageCursor{ last._assetID, last._depositorID };
+                }
+                return ServiceStoreResult::Ok;
+            }
+
+            /** @brief 보유자 @p holder 의 잔액을 @p afterAssetID 다음부터 쪽이 찰 때까지(@p maxCount) 창고 품목으로 결과에 붙입니다. */
+            ServiceStoreResult appendStoragePage( IServiceStoreConnection& connection, const LedgerHolder& holder, AccountID depositorID, string_view afterAssetID, int32 maxCount )
+            {
+                const int32 remaining = maxCount - static_cast<int32>( _serviceResult._listStorage.size() );
+                if ( remaining <= 0 )
+                    return ServiceStoreResult::Ok;
+                vector<LedgerBalance>    listBalance;
+                const ServiceStoreResult listed = Ledger::listBalancePage( connection, holder, afterAssetID, remaining, listBalance );
+                if ( listed != ServiceStoreResult::Ok )
+                    return listed;
+                for ( LedgerBalance& balance : listBalance )
+                {
+                    _serviceResult._listStorage.push_back( GuildStorageItem{ std::move( balance._assetID ), balance._amount, depositorID } );
+                }
+                return ServiceStoreResult::Ok;
+            }
+
+            /** @brief 임원의 신청 처리입니다. 목록, 받아들이기(수락과 같은 쓰기), 지우기가 해당합니다. */
+            ServiceStoreResult runApplication( ServiceCommitAttempt& connection, uint64 guildID, GuildInfo& inoutInfo, const ServiceRecord& guildRecord )
+            {
+                using Internal = GuildLogicInternal;
+                if ( _request._operation == GuildOperation::ListApplications )
+                {
+                    StringBuilder<constant::buffer::kMax128> prefixBuilder;
+                    prefixBuilder.appendFormat( "%#/", ServiceKeyUtil::makeHex64( guildID ) );
+                    const string prefix( prefixBuilder.view() );
+                    // 죽은 신청을 건너뛰며 끝까지 읽는다 — 한 쪽만 읽으면 죽은 신청이 앞을 채워 살아 있는 신청이 빠진다(살아 있는 수는 신청이 상한으로 막는다)
+                    const ServiceStoreResult listed =
+                        ServiceRecordReader::visitAll( connection, Internal::getApplicationTable(), prefix, Internal::kApplicationPageSize, [&]( const ServiceRecord& record )
+                    {
+                        GuildApplication application;
+                        int64            expiresMs = 0;
+                        const bool       bLive     = Internal::decodeApplication( record, application._appliedMs, expiresMs ) && _request._nowMs.count() < expiresMs &&
+                                           ServiceKeyUtil::parseHex64( string_view( record._key ).substr( prefix.size() ), application._accountID );
+                        if ( bLive )
+                            _serviceResult._listApplication.push_back( application );
+                        return _serviceResult._listApplication.size() < static_cast<size_t>( GuildLimit::kMaxApplication );
+                    } );
+                    return listed == ServiceStoreResult::Ok ? ServiceStoreResult::Ok : ServiceStoreResult::Unavailable;
+                }
+                ServiceRecord applicationRecord;
+                int64         appliedMs        = 0;
+                int64         expiresMs        = 0;
+                const string  applicationKey   = Internal::makePairKey( guildID, _request._targetID );
+                const bool    bApplicationRead = connection.readRecord( Internal::getApplicationTable(), applicationKey, applicationRecord ) == ServiceStoreResult::Ok &&
+                                              Internal::decodeApplication( applicationRecord, appliedMs, expiresMs );
+                if ( bApplicationRead == false )
+                    return fail( SocialResult::NotFound );
+                ServiceTransaction transaction;
+                transaction.erase( Internal::getApplicationTable(), applicationKey, applicationRecord._version );
+                transaction.erase( Internal::getAccountApplicationTable(), Internal::makeApplicationReverseKey( applicationKey ) );
+                if ( _request._operation == GuildOperation::Reject )
+                    return connection.commit( transaction );
+                if ( _request._nowMs.count() >= expiresMs )
+                    return fail( SocialResult::InviteExpired );
+                uint64                   targetGuildID = 0;
+                ServiceRecord            targetRecord;
+                const ServiceStoreResult targetRead = readAccountGuild( connection, _request._targetID, targetGuildID, targetRecord );
+                if ( targetRead == ServiceStoreResult::Unavailable )
+                    return ServiceStoreResult::Unavailable;
+                if ( targetRead == ServiceStoreResult::Ok )
+                    return fail( SocialResult::AlreadyInGuild ); // 그사이 다른 길드에 들어갔다
+                if ( inoutInfo._memberCount >= _policy._maxMember )
+                    return fail( SocialResult::GuildFull );
+                ++inoutInfo._memberCount;
+                const string guildKey = ServiceKeyUtil::makeHex64( guildID );
+                transaction.put( Internal::getGuildTable(), guildKey, Internal::encodeGuild( inoutInfo ), guildRecord._version );
+                transaction.put( Internal::getMemberTable(), Internal::makePairKey( guildID, _request._targetID ), Internal::encodeMember( GuildRole::Member, _request._nowMs.count() ),
+                                 ServiceRecord::kAbsentVersion );
+                transaction.put( Internal::getAccountGuildTable(), ServiceKeyUtil::makeHex64( _request._targetID ), guildID, ServiceRecord::kAbsentVersion );
+                const ServiceStoreResult commitResult = connection.commit( transaction );
+                if ( commitResult == ServiceStoreResult::Ok )
+                    _serviceResult._joinedID = _request._targetID;
+                return commitResult;
+            }
+
+            /** @brief 내보내기와 역할 바꾸기(길드장 넘기기 포함)입니다. */
+            ServiceStoreResult runMemberChange( ServiceCommitAttempt& connection, uint64 guildID, GuildInfo& inoutInfo, const ServiceRecord& guildRecord,
+                                                const GuildMember& selfMember, const ServiceRecord& selfMemberRecord )
+            {
+                using Internal = GuildLogicInternal;
+                ServiceRecord targetMemberRecord;
+                GuildMember   targetMember;
+                const string  targetMemberKey = Internal::makePairKey( guildID, _request._targetID );
+                const string  guildKey        = ServiceKeyUtil::makeHex64( guildID );
+                const bool    bTargetOk       = _request._targetID != _request._accountID &&
+                                       connection.readRecord( Internal::getMemberTable(), targetMemberKey, targetMemberRecord ) == ServiceStoreResult::Ok &&
+                                       Internal::decodeMember( targetMemberRecord, targetMember );
+                if ( bTargetOk == false )
+                    return fail( SocialResult::NotFound );
+                ServiceTransaction transaction;
+                if ( _request._operation == GuildOperation::Kick )
+                {
+                    if ( selfMember._role <= targetMember._role )
+                        return fail( SocialResult::NotAllowed );
+                    ServiceRecord            targetGuildRecord;
+                    uint64                   targetGuildID = 0;
+                    const ServiceStoreResult targetRead    = readAccountGuild( connection, _request._targetID, targetGuildID, targetGuildRecord );
+                    if ( targetRead == ServiceStoreResult::Unavailable )
+                        return ServiceStoreResult::Unavailable;
+                    const ServiceStoreResult refunded = stageMemberExit( connection, guildID, _request._targetID, transaction );
+                    if ( refunded != ServiceStoreResult::Ok )
+                        return refunded;
+                    --inoutInfo._memberCount;
+                    transaction.erase( Internal::getMemberTable(), targetMemberKey, targetMemberRecord._version );
+                    transaction.erase( Internal::getAccountGuildTable(), ServiceKeyUtil::makeHex64( _request._targetID ), targetGuildRecord._version );
+                    transaction.put( Internal::getGuildTable(), guildKey, Internal::encodeGuild( inoutInfo ), guildRecord._version );
+                    _serviceResult._leftID = _request._targetID;
+                    return connection.commit( transaction );
+                }
+                if ( selfMember._role != GuildRole::Master )
+                    return fail( SocialResult::NotAllowed );
+                if ( _request._role >= GuildRole::Count ) // 와이어에서 온 값이다. 그대로 쓰면 그 멤버 레코드를 다시 읽지 못한다
+                    return fail( SocialServiceResult::fail( OnlineError::kInvalidRequest ) );
+                transaction.put( Internal::getMemberTable(), targetMemberKey, Internal::encodeMember( _request._role, targetMember._joinedMs ), targetMemberRecord._version );
+                if ( _request._role == GuildRole::Master ) // 길드장을 넘기면 나는 임원이 된다
+                {
+                    transaction.put( Internal::getMemberTable(), Internal::makePairKey( guildID, _request._accountID ),
+                                     Internal::encodeMember( GuildRole::Officer, selfMember._joinedMs ), selfMemberRecord._version );
+                    inoutInfo._masterID = _request._targetID;
+                    transaction.put( Internal::getGuildTable(), guildKey, Internal::encodeGuild( inoutInfo ), guildRecord._version );
+                }
+                return connection.commit( transaction );
+            }
+
+            /** @brief 원장 결과를 규칙 실패나 저장소 결과로 바꿉니다. 충돌은 다시 읽어 다시 하도록 Conflict 를 반환합니다. */
+            ServiceStoreResult failLedger( LedgerResult result )
+            {
+                switch ( result )
+                {
+                    case LedgerResult::InsufficientFunds:
+                        return fail( SocialResult::InsufficientFunds );
+                    case LedgerResult::CapExceeded:
+                        return fail( SocialResult::CapExceeded );
+                    case LedgerResult::Conflict:
+                        return ServiceStoreResult::Conflict;
+                    case LedgerResult::Unavailable:
+                        return ServiceStoreResult::Unavailable;
+                    default:
+                        return fail( SocialServiceResult::fail( OnlineError::kInvalidRequest ) ); // 규칙 밖의 자산이나 양, 다른 내용에 다시 쓴 멱등 키이다
+                }
+            }
+
+            /**
+             * @brief 맡기기와 꺼내기입니다. 원장 이동을 멤버 레코드 버전 조건과 한 트랜잭션에 붙여 커밋합니다.
+             * @details 이전 불가 자산(유료 재화)은 맡긴 사람별 보유자에 든다 — 공용 창고에 섞이면 다른 임원이 꺼내 계정 사이로 옮겨진다. 맡긴 당사자가 허용한 권한 안에서만
+             *          다른 계정으로 간다(사용자 결정 2026-11-12, 감사 O-10). 정책이 없으면(화폐 카탈로그 없이 조립한 서버) 유료 재화도 없어 모두 공용 창고이다.
+             */
+            ServiceStoreResult runStorageTransfer( ServiceCommitAttempt& connection, uint64 guildID, const GuildInfo& info, const ServiceRecord& guildRecord, const GuildMember& selfMember )
+            {
+                using Internal      = GuildLogicInternal;
+                const bool bDeposit = _request._operation == GuildOperation::Deposit;
+                const bool bValid   = LedgerUtil::isValidAssetID( _request._assetID ) && _request._amount > 0 && _request._amount <= LedgerConstant::kMaxAmount &&
+                                    LedgerUtil::isValidJournalKey( _request._journalKey );
+                if ( bValid == false )
+                    return fail( SocialServiceResult::fail( OnlineError::kInvalidRequest ) );
+                const bool bShare = _pLedgerPolicy != nullptr && _pLedgerPolicy->isTransferable( _request._assetID ) == false;
+                // 맡기기의 몫 주인은 서버가 정하고(요청한 사람), 꺼내기는 어느 몫인지 요청이 적는다 — 자산 성격과 어긋나면 규칙 밖이다
+                const bool bDepositorOk = bDeposit ? _request._depositorID == kInvalidAccountID : ( _request._depositorID != kInvalidAccountID ) == bShare;
+                if ( bDepositorOk == false )
+                    return fail( SocialServiceResult::fail( OnlineError::kInvalidRequest ) );
+                const AccountID    depositorID = bDeposit ? _request._accountID : _request._depositorID;
+                const LedgerHolder storage     = bShare ? Internal::makeDepositorHolder( guildID, depositorID ) : Internal::makeStorageHolder( guildID );
+                const LedgerHolder account     = LedgerHolder::makeAccount( _request._accountID );
+
+                ServiceTransaction transaction;
+                if ( bDeposit == false )
+                {
+                    const ServiceStoreResult allowed = stageWithdrawalRight( connection, guildID, selfMember, bShare, transaction );
+                    if ( allowed != ServiceStoreResult::Ok )
+                        return allowed;
+                }
+                else if ( bShare )
+                {
+                    vector<LedgerBalance> listBalance;
+                    if ( Ledger::listBalances( connection, storage, listBalance ) != ServiceStoreResult::Ok )
+                        return ServiceStoreResult::Unavailable;
+                    bool bHeld = false;
+                    for ( const LedgerBalance& balance : listBalance )
+                    {
+                        bHeld = bHeld || balance._assetID == _request._assetID;
+                    }
+                    if ( bHeld == false && listBalance.size() >= static_cast<size_t>( GuildLimit::kMaxDepositorAsset ) )
+                        return fail( SocialResult::StorageLimit ); // 떠날 때 몫 전체를 이동 하나(다리 상한)로 돌려준다
+                    transaction.put( Internal::getDepositorTable(), Internal::makePairKey( guildID, depositorID ), depositorID );
+                }
+
+                LedgerTransferRequest transfer;
+                transfer._listPosting.push_back( LedgerPosting{ bDeposit ? account : storage, bDeposit ? storage : account, _request._assetID, _request._amount } );
+                transfer._journalKey = _request._journalKey;
+                transfer._reason     = bDeposit ? Internal::kDepositReason : Internal::kWithdrawReason;
+                transfer._pPolicy    = _pLedgerPolicy;
+                transfer._timeMs     = _request._nowMs.count();
+                transfer._actorID    = _request._accountID;
+                transfer._actorKind  = LedgerActorKind::Player;
+
+                if ( bDeposit ) // 길드 레코드 버전을 올려 해산의 "창고가 비었다" 확인과 겹치지 않게 한다. 맡기기끼리도 줄을 세워 몫의 자산 종류 상한을 지킨다
+                    transaction.put( Internal::getGuildTable(), ServiceKeyUtil::makeHex64( guildID ), Internal::encodeGuild( info ), guildRecord._version );
+                LedgerTransferResult transferResult;
+                const LedgerResult   staged = Ledger::stageTransfer( connection, transfer, transaction, transferResult );
+                if ( staged != LedgerResult::Ok )
+                    return failLedger( staged );
+                if ( transferResult._bReplayed == SW_FALSE )
+                {
+                    const LedgerResult committed = Ledger::commitTransfer( connection, transaction, transfer, transferResult );
+                    if ( committed != LedgerResult::Ok )
+                        return committed == LedgerResult::Conflict ? ServiceStoreResult::Conflict : ServiceStoreResult::Unavailable;
+                }
+                const AccountID itemDepositorID = bShare ? depositorID : kInvalidAccountID;
+                for ( const LedgerTransferResult::HolderBalance& holderBalance : transferResult._listHolderBalance )
+                {
+                    if ( holderBalance._holder == storage )
+                    {
+                        _serviceResult._listStorage.push_back( GuildStorageItem{ holderBalance._balance._assetID, holderBalance._balance._amount, itemDepositorID } );
+                        return ServiceStoreResult::Ok;
+                    }
+                }
+                LedgerBalance balance; // 다시 온 요청이면 이동 뒤 잔액이 없을 수 있어 지금 잔액을 읽는다
+                if ( Ledger::readBalance( connection, storage, _request._assetID, balance ) == ServiceStoreResult::Ok )
+                    _serviceResult._listStorage.push_back( GuildStorageItem{ _request._assetID, balance._amount, itemDepositorID } );
+                return ServiceStoreResult::Ok;
+            }
+
+            /**
+             * @brief 꺼내기 권한을 봅니다. 공용 창고는 임원 이상, 맡긴 사람별 몫은 본인이거나 그가 준 허용의 남은 한도 안일 때만이며, 허용을 쓰면 한도를 줄이는 쓰기를
+             *        @p inoutTransaction 에 붙입니다(원장 이동과 같은 트랜잭션 — 그사이 회수 · 다른 꺼내기가 끼면 버전 충돌로 다시 읽는다).
+             * @details 권한이 없어도 같은 분개 키의 이동이 이미 적용돼 있으면 통과시켜 원장이 처음 결과를 돌려주게 한다 — 한도를 다 쓴 뒤 다시 온 요청도 같은 답을 받는다.
+             *          분개 키는 요청한 계정 범위(`makeAccountScope`)라 다른 계정이 만들 수 없다.
+             */
+            ServiceStoreResult stageWithdrawalRight( IServiceStoreConnection& connection, uint64 guildID, const GuildMember& selfMember, bool bShare,
+                                                     ServiceTransaction& inoutTransaction )
+            {
+                using Internal = GuildLogicInternal;
+                bool bAllowed  = bShare ? _request._depositorID == _request._accountID : selfMember._role >= GuildRole::Officer;
+                if ( bShare && bAllowed == false )
+                {
+                    ServiceRecord            grantRecord;
+                    int64                    remaining = 0;
+                    const string             recordKey = Internal::makeGrantKey( guildID, _request._depositorID, _request._accountID, _request._assetID );
+                    const ServiceStoreResult read      = connection.readRecord( Internal::getGrantTable(), recordKey, grantRecord );
+                    if ( read != ServiceStoreResult::Ok && read != ServiceStoreResult::NotFound )
+                        return ServiceStoreResult::Unavailable;
+                    bAllowed = read == ServiceStoreResult::Ok && Internal::decodeGrant( grantRecord, remaining ) && _request._amount <= remaining;
+                    if ( bAllowed )
+                        inoutTransaction.put( Internal::getGrantTable(), recordKey, Internal::encodeGrant( remaining - _request._amount ), grantRecord._version );
+                }
+                if ( bAllowed )
+                    return ServiceStoreResult::Ok;
+                LedgerJournalEntry       entry;
+                const ServiceStoreResult found = Ledger::findJournal( connection, _request._journalKey, entry );
+                if ( found == ServiceStoreResult::NotFound )
+                    return fail( SocialResult::NotAllowed );
+                return found == ServiceStoreResult::Ok ? ServiceStoreResult::Ok : ServiceStoreResult::Unavailable;
+            }
+
+            /**
+             * @brief 맡긴 사람이 자기 몫의 꺼내기 허용을 주거나(받는 계정 · 자산 · 한도, 한도는 덮어쓴다) 거둡니다. 맡긴 사람 본인만 하므로 키의 맡긴 사람은 요청한 계정입니다.
+             * @details 허용은 이전 불가 자산에만 뜻이 있다(공용 창고는 임원 권한이 정한다). 받는 계정은 지금 멤버여야 한다.
+             *          WoW 길드 은행의 출금 한도처럼 한도는 쌓지 않고 덮어쓰며, 꺼낼 때 쓴 만큼 줄어든다.
+             *          부여 · 회수는 멱등 기록(`ServiceIdempotency`, 지우지 않는다)을 같은 트랜잭션에 남긴다 — 같은 키의 재전송은 상태를 바꾸지 않고 Ok 만 돌려주므로,
+             *          쓴 만큼 줄어든 한도가 되돌아가거나 회수 뒤 늦게 다시 온 부여가 허용을 되살리지 않는다(Stripe Idempotency-Key 와 같다).
+             */
+            ServiceStoreResult runStorageGrant( ServiceCommitAttempt& connection, uint64 guildID )
+            {
+                using Internal    = GuildLogicInternal;
+                const bool bGrant = _request._operation == GuildOperation::GrantWithdrawal;
+                const bool bValid = LedgerUtil::isValidAssetID( _request._assetID ) && _request._idempotencyKey.isValid() && _request._targetID != kInvalidAccountID &&
+                                    _request._targetID != _request._accountID && ( bGrant == false || ( _request._amount > 0 && _request._amount <= LedgerConstant::kMaxAmount ) );
+                if ( bValid == false )
+                    return fail( SocialServiceResult::fail( OnlineError::kInvalidRequest ) );
+                if ( _pLedgerPolicy == nullptr || _pLedgerPolicy->isTransferable( _request._assetID ) )
+                    return fail( SocialServiceResult::fail( OnlineError::kInvalidRequest ) ); // 공용 창고 자산에는 맡긴 사람별 허용이 없다
+                const string             scope = Internal::makeGrantScope( _request._accountID );
+                const NetIdempotencyKey& key   = _request._idempotencyKey;
+                vector<uint8>            listReply;
+                const ServiceStoreResult found = ServiceIdempotency::findReply( connection, scope, key._high, key._low, listReply );
+                if ( found == ServiceStoreResult::Ok )
+                    return ServiceStoreResult::Ok; // 이미 적용한 요청이다 — 기록은 성공만 남는다
+                if ( found != ServiceStoreResult::NotFound )
+                    return ServiceStoreResult::Unavailable;
+                ServiceRecord            grantRecord;
+                const string             recordKey = Internal::makeGrantKey( guildID, _request._accountID, _request._targetID, _request._assetID );
+                const ServiceStoreResult grantRead = connection.readRecord( Internal::getGrantTable(), recordKey, grantRecord );
+                if ( grantRead != ServiceStoreResult::Ok && grantRead != ServiceStoreResult::NotFound )
+                    return ServiceStoreResult::Unavailable;
+                const bool         bExists = grantRead == ServiceStoreResult::Ok;
+                ServiceTransaction transaction;
+                if ( bGrant == false )
+                {
+                    if ( bExists ) // 이미 없어도 기록은 남긴다 — 회수의 재전송도 같은 답이다
+                        transaction.erase( Internal::getGrantTable(), recordKey, grantRecord._version );
+                    return commitGrant( connection, transaction, scope );
+                }
+                ServiceRecord targetMemberRecord;
+                GuildMember   targetMember;
+                const string  targetMemberKey = Internal::makePairKey( guildID, _request._targetID );
+                const bool    bTargetOk       = connection.readRecord( Internal::getMemberTable(), targetMemberKey, targetMemberRecord ) == ServiceStoreResult::Ok &&
+                                       Internal::decodeMember( targetMemberRecord, targetMember );
+                if ( bTargetOk == false )
+                    return fail( SocialResult::NotFound );
+                if ( bExists == false )
+                {
+                    vector<ServiceRecord>                    listGrantRecord;
+                    StringBuilder<constant::buffer::kMax128> prefixBuilder;
+                    prefixBuilder.appendFormat( "%#/", Internal::makePairKey( guildID, _request._accountID ) );
+                    const string prefix( prefixBuilder.view() );
+                    if ( ServiceRecordReader::readPage( connection, Internal::getGrantTable(), prefix, "", GuildLimit::kMaxStorageGrant, false, listGrantRecord )._result != ServiceStoreResult::Ok )
+                        return ServiceStoreResult::Unavailable;
+                    if ( listGrantRecord.size() >= static_cast<size_t>( _policy._maxStorageGrant ) )
+                        return fail( SocialResult::StorageLimit ); // 쓰지 않는 허용을 거둔 뒤에 준다
+                }
+                transaction.put( Internal::getGrantTable(), recordKey, Internal::encodeGrant( _request._amount ), bExists ? grantRecord._version : ServiceRecord::kAbsentVersion );
+                return commitGrant( connection, transaction, scope );
+            }
+
+            /** @brief 허용 부여 · 회수를 커밋합니다. 적용됐는지 모르는 실패(Unavailable)는 멱등 기록이 있으면 적용된 것으로 봅니다. */
+            ServiceStoreResult commitGrant( ServiceCommitAttempt& attempt, ServiceTransaction& inoutTransaction, string_view scope )
+            {
+                return ServiceIdempotency::commit( attempt, inoutTransaction, scope, _request._idempotencyKey._high, _request._idempotencyKey._low,
+                                                   vector<uint8>{ static_cast<uint8>( SocialResult::Ok ) } );
+            }
+
+            /** @brief 성공한 뒤 멤버 목록을 읽습니다. 조회이면 정보로, 변경이면 알림 대상으로 씁니다. 창고 요청(이동 · 목록 · 허용)은 멤버 정보가 바뀌지 않으므로 읽지 않습니다. */
+            void collectMembers( IServiceStoreConnection& connection )
+            {
+                const bool bStorage = _request._operation == GuildOperation::Deposit || _request._operation == GuildOperation::Withdraw ||
+                                      _request._operation == GuildOperation::ListStorage || _request._operation == GuildOperation::GrantWithdrawal ||
+                                      _request._operation == GuildOperation::RevokeWithdrawal;
+                const bool bApplication = _request._operation == GuildOperation::Apply || _request._operation == GuildOperation::ListApplications ||
+                                          _request._operation == GuildOperation::Reject;
+                const bool bSkip = _serviceResult._guildID == 0 || _request._operation == GuildOperation::Attach || _request._operation == GuildOperation::Invite || bStorage ||
+                                   bApplication;
+                if ( bSkip )
+                    return;
+                vector<ServiceRecord>                    listRecord;
+                StringBuilder<constant::buffer::kMax128> prefixBuilder;
+                prefixBuilder.appendFormat( "%#/", ServiceKeyUtil::makeHex64( _serviceResult._guildID ) );
+                const string prefix( prefixBuilder.view() );
+                if ( ServiceRecordReader::readPage( connection, GuildLogicInternal::getMemberTable(), prefix, "", GuildLimit::kMaxMember, false, listRecord )._result != ServiceStoreResult::Ok )
+                    return; // 알림만 빠지며 클라이언트가 다시 조회한다
+                for ( const ServiceRecord& record : listRecord )
+                {
+                    GuildMember member;
+                    const bool  bParsed = ServiceKeyUtil::parseHex64( string_view( record._key ).substr( prefix.size() ), member._accountID ) &&
+                                         GuildLogicInternal::decodeMember( record, member );
+                    if ( bParsed == false )
+                        continue;
+                    _serviceResult._listNotifyMember.push_back( member._accountID );
+                    if ( _request._operation == GuildOperation::Get )
+                        _serviceResult._info._listMember.push_back( member );
+                }
+            }
+
+        private:
+            GuildRequest         _request;
+            GuildResult          _serviceResult;
+            GuildPolicy          _policy;        ///< 서비스 스레드에서 복사해 둔다. 저장소 스레드는 서비스를 읽지 않는다
+            const ILedgerPolicy* _pLedgerPolicy; ///< 서비스 스레드에서 복사해 둔다. 저장소 스레드는 서비스를 읽지 않는다
+        };
+    } // namespace
+} // namespace sw
+
+namespace sw
+{
+    GuildLogic::GuildLogic()
+        : _completionBuffer{}
+        , _notificationBuffer{}
+        , _onEvent{}
+        , _listLevelExperience{}
+        , _pLedgerPolicy{ nullptr }
+        , _policy{}
+        , _store{}
+    {
+    }
+
+    void GuildLogic::initialize( ServiceStore* pStore, const GuildPolicy& policy )
+    {
+        SW_ASSERT( pStore != nullptr );
+        _policy = policy;
+        _store.bindStore( pStore );
+    }
+
+    void GuildLogic::shutdown()
+    {
+        _store.bindStore( nullptr ); // 남은 일은 조립이 저장소 드레인으로 거둔다(예전과 같이 여기서 기다리지 않는다)
+        _pLedgerPolicy = nullptr;    // 이벤트 칸은 건 쪽이 구독을 놓아 비운다
+    }
+
+    namespace
+    {
+        /** @brief 탈퇴 정리의 저장 부분입니다. 단계마다 커밋하므로 중간에 멈춰도 다음 회차가 남은 것부터 다시 한다. */
+        struct GuildDeleteAccountInternal
+        {
+            /** @brief 맡김 @p holder 의 잔액을 모두 소각합니다. 분개는 자산 `kMaxPostingCount` 개씩, 키는 @p journalPrefix + 첫 자산입니다. */
+            static ServiceStoreResult burnEscrow( IServiceStoreConnection& connection, const LedgerHolder& holder, const string& journalPrefix, int64 nowMs )
+            {
+                bool       bDone    = false;
+                const auto burnStep = [&]( ServiceCommitAttempt& attempt ) -> optional<ServiceStoreResult>
+                {
+                    vector<LedgerBalance> listBalance;
+                    if ( Ledger::listBalances( attempt, holder, listBalance ) != ServiceStoreResult::Ok )
+                        return ServiceStoreResult::Unavailable;
+                    bDone = listBalance.empty();
+                    if ( bDone )
+                        return ServiceStoreResult::Ok;
+                    LedgerTransferRequest                    request;
+                    StringBuilder<constant::buffer::kMax128> journalKey;
+                    journalKey.appendFormat( "%#%#", journalPrefix, listBalance.front()._assetID );
+                    request._journalKey = string( journalKey.view() );
+                    request._reason     = "account.delete";
+                    request._timeMs     = nowMs;
+                    request._actorKind  = LedgerActorKind::System;
+                    const size_t count  = listBalance.size() < static_cast<size_t>( LedgerConstant::kMaxPostingCount ) ? listBalance.size()
+                                                                                                                       : static_cast<size_t>( LedgerConstant::kMaxPostingCount );
+                    for ( size_t index = 0; index < count; ++index )
+                    {
+                        request._listPosting.push_back( LedgerPosting{ holder, LedgerHolder::makeSink(), listBalance[index]._assetID, listBalance[index]._amount } );
+                    }
+                    ServiceTransaction   transaction;
+                    LedgerTransferResult result;
+                    LedgerResult         moved = Ledger::stageTransfer( attempt, request, transaction, result );
+                    if ( moved == LedgerResult::Ok && result._bReplayed == SW_FALSE )
+                        moved = Ledger::commitTransfer( attempt, transaction, request, result );
+                    if ( moved == LedgerResult::Unavailable )
+                        return ServiceStoreResult::Unavailable;
+                    if ( moved != LedgerResult::Ok || result._bReplayed == SW_TRUE )
+                        return nullopt; // 그사이 바뀌었거나 같은 키가 이미 쓰였다 — 다시 읽는다
+                    return ServiceStoreResult::Ok;
+                };
+                while ( true )
+                {
+                    const ServiceStoreResult burned = ServiceCommitRunner::run<ServiceStoreResult>( connection, "Guild.BurnEscrow", burnStep );
+                    if ( burned != ServiceStoreResult::Ok || bDone )
+                        return burned;
+                }
+            }
+
+            /** @brief 길드 @p guildID 의 허용 중 @p accountID 가 주거나(@p bAll 이면 모두) 받은 것을 지웁니다. */
+            static ServiceStoreResult eraseGrants( IServiceStoreConnection& connection, uint64 guildID, AccountID accountID, bool bAll )
+            {
+                using Internal                                  = GuildLogicInternal;
+                constexpr size_t                         kWidth = static_cast<size_t>( ServiceKeyUtil::kHexWidth );
+                StringBuilder<constant::buffer::kMax128> prefixBuilder;
+                prefixBuilder.appendFormat( "%#/", ServiceKeyUtil::makeHex64( guildID ) );
+                const string prefix( prefixBuilder.view() );
+                const string self = ServiceKeyUtil::makeHex64( accountID );
+                string       cursor;
+                while ( true )
+                {
+                    vector<ServiceRecord> listGrant;
+                    if ( ServiceRecordReader::readPage( connection, Internal::getGrantTable(), prefix, cursor, Internal::kGrantPageSize, false, listGrant )._result != ServiceStoreResult::Ok )
+                        return ServiceStoreResult::Unavailable;
+                    ServiceTransaction transaction;
+                    for ( const ServiceRecord& record : listGrant )
+                    {
+                        const string_view rest      = string_view( record._key ).substr( prefix.size() ); // <맡긴 사람>/<받는 계정>/<자산>
+                        const bool        bInvolved = bAll || rest.substr( 0, kWidth ) == self || ( rest.size() > kWidth * 2 && rest.substr( kWidth + 1, kWidth ) == self );
+                        if ( bInvolved == false )
+                            continue;
+                        transaction.erase( Internal::getGrantTable(), record._key, record._version );
+                        if ( transaction.getWrites().size() < static_cast<size_t>( ServiceTransaction::kMaxWriteCount ) )
+                            continue;
+                        if ( const ServiceStoreResult committed = ServiceCommitRunner::commitOnce( connection, transaction ); committed != ServiceStoreResult::Ok )
+                            return committed;
+                        transaction = ServiceTransaction{};
+                    }
+                    if ( transaction.getWrites().empty() == false )
+                    {
+                        if ( const ServiceStoreResult committed = ServiceCommitRunner::commitOnce( connection, transaction ); committed != ServiceStoreResult::Ok )
+                            return committed;
+                    }
+                    if ( static_cast<int32>( listGrant.size() ) < Internal::kGrantPageSize )
+                        return ServiceStoreResult::Ok;
+                    cursor = listGrant.back()._key;
+                }
+            }
+
+            /** @brief 맡긴 사람 @p depositorID 의 몫을 소각하고 맡긴 사람 기록을 지웁니다. */
+            static ServiceStoreResult burnShare( IServiceStoreConnection& connection, uint64 guildID, AccountID depositorID, AccountID deletedID, int64 nowMs )
+            {
+                using Internal = GuildLogicInternal;
+                StringBuilder<constant::buffer::kMax128> journalPrefixBuilder;
+                journalPrefixBuilder.appendFormat( "%#/guild.share.%#.%#.", LedgerJournalKey::makeAccountScope( deletedID ), ServiceKeyUtil::makeHex64( guildID ),
+                                                   ServiceKeyUtil::makeHex64( depositorID ) );
+                const string journalPrefix( journalPrefixBuilder.view() );
+                if ( const ServiceStoreResult burned = burnEscrow( connection, Internal::makeDepositorHolder( guildID, depositorID ), journalPrefix, nowMs ); burned != ServiceStoreResult::Ok )
+                    return burned;
+                ServiceTransaction transaction;
+                transaction.erase( Internal::getDepositorTable(), Internal::makePairKey( guildID, depositorID ) );
+                return ServiceCommitRunner::commitOnce( connection, transaction );
+            }
+
+            /** @brief 남은 멤버 중 다음 길드장(가장 높은 역할, 같으면 먼저 들어온 사람, 같으면 작은 id)을 고릅니다. 없으면 false 입니다. */
+            static bool chooseSuccessor( const vector<ServiceRecord>& listMemberRecord, const string& prefix, AccountID deletedID, AccountID& outSuccessorID, GuildMember& outMember,
+                                         uint64& outVersion )
+            {
+                bool bFound = false;
+                for ( const ServiceRecord& record : listMemberRecord )
+                {
+                    GuildMember member;
+                    AccountID   memberID = kInvalidAccountID;
+                    if ( ServiceKeyUtil::parseHex64( string_view( record._key ).substr( prefix.size() ), memberID ) == false || memberID == deletedID ||
+                         GuildLogicInternal::decodeMember( record, member ) == false )
+                        continue;
+                    const bool bBetter = bFound == false || member._role > outMember._role ||
+                                         ( member._role == outMember._role && ( member._joinedMs < outMember._joinedMs ||
+                                                                                ( member._joinedMs == outMember._joinedMs && memberID < outSuccessorID ) ) );
+                    if ( bBetter == false )
+                        continue;
+                    bFound         = true;
+                    outSuccessorID = memberID;
+                    outMember      = member;
+                    outVersion     = record._version;
+                }
+                return bFound;
+            }
+
+            /** @brief 길드 @p guildID 에서 지운 계정 @p accountID 를 뺍니다. 몫을 소각하고, 길드장이면 넘기거나 해산합니다. */
+            static ServiceStoreResult eraseMembership( IServiceStoreConnection& connection, uint64 guildID, AccountID accountID, const ServiceRecord& selfGuildRecord, int64 nowMs )
+            {
+                using Internal                                    = GuildLogicInternal;
+                const string                             guildKey = ServiceKeyUtil::makeHex64( guildID );
+                StringBuilder<constant::buffer::kMax128> guildPrefixBuilder;
+                guildPrefixBuilder.appendFormat( "%#/", guildKey );
+                const string             guildPrefix( guildPrefixBuilder.view() );
+                const string             memberKey = Internal::makePairKey( guildID, accountID );
+                ServiceRecord            guildRecord;
+                ServiceRecord            memberRecord;
+                GuildInfo                info;
+                GuildMember              selfMember;
+                const ServiceStoreResult guildRead  = connection.readRecord( Internal::getGuildTable(), guildKey, guildRecord );
+                const ServiceStoreResult memberRead = connection.readRecord( Internal::getMemberTable(), memberKey, memberRecord );
+                if ( guildRead == ServiceStoreResult::Unavailable || memberRead == ServiceStoreResult::Unavailable )
+                    return ServiceStoreResult::Unavailable;
+                const bool bGuildOk  = guildRead == ServiceStoreResult::Ok && Internal::decodeGuild( guildRecord, guildID, info );
+                const bool bMemberOk = memberRead == ServiceStoreResult::Ok && Internal::decodeMember( memberRecord, selfMember );
+                if ( const ServiceStoreResult grants = eraseGrants( connection, guildID, accountID, false ); grants != ServiceStoreResult::Ok )
+                    return grants;
+                if ( const ServiceStoreResult share = burnShare( connection, guildID, accountID, accountID, nowMs ); share != ServiceStoreResult::Ok )
+                    return share;
+                ServiceTransaction transaction;
+                transaction.erase( Internal::getAccountGuildTable(), ServiceKeyUtil::makeHex64( accountID ), selfGuildRecord._version );
+                if ( memberRead == ServiceStoreResult::Ok )
+                    transaction.erase( Internal::getMemberTable(), memberKey, memberRecord._version );
+                if ( bGuildOk == false )
+                    return ServiceCommitRunner::commitOnce( connection, transaction ); // 길드가 이미 없다 — 계정 쪽 줄만 지운다
+                const bool bMaster = bMemberOk && selfMember._role == GuildRole::Master;
+                if ( bMaster && info._memberCount <= 1 )
+                {
+                    // 혼자 남은 길드장이다 — 공용 창고 · 남은 몫을 소각하고 길드를 해산한다(돌려줄 사람이 없다)
+                    StringBuilder<constant::buffer::kMax128> storagePrefixBuilder;
+                    storagePrefixBuilder.appendFormat( "%#/guild.storage.%#.", LedgerJournalKey::makeAccountScope( accountID ), guildKey );
+                    const string storagePrefix( storagePrefixBuilder.view() );
+                    if ( const ServiceStoreResult storage = burnEscrow( connection, Internal::makeStorageHolder( guildID ), storagePrefix, nowMs ); storage != ServiceStoreResult::Ok )
+                        return storage;
+                    // 맡긴 몫을 끝까지 태운다 — 한 쪽만 보면 뒤의 몫이 해산한 길드에 남는다
+                    ServiceStoreResult       burned = ServiceStoreResult::Ok;
+                    const ServiceStoreResult listed =
+                        ServiceRecordReader::visitAll( connection, Internal::getDepositorTable(), guildPrefix, GuildLimit::kMaxMember, [&]( const ServiceRecord& record )
+                    {
+                        AccountID depositorID = kInvalidAccountID;
+                        if ( ServiceKeyUtil::parseHex64( string_view( record._key ).substr( guildKey.size() + 1 ), depositorID ) == false )
+                            return true;
+                        burned = burnShare( connection, guildID, depositorID, accountID, nowMs );
+                        return burned == ServiceStoreResult::Ok;
+                    } );
+                    if ( listed != ServiceStoreResult::Ok )
+                        return ServiceStoreResult::Unavailable;
+                    if ( burned != ServiceStoreResult::Ok )
+                        return burned;
+                    if ( const ServiceStoreResult grants = eraseGrants( connection, guildID, accountID, true ); grants != ServiceStoreResult::Ok )
+                        return grants;
+                    transaction.erase( Internal::getGuildTable(), guildKey, guildRecord._version );
+                    transaction.erase( Internal::getNameTable(), Internal::makeNameKey( info._name ) );
+                    return ServiceCommitRunner::commitOnce( connection, transaction );
+                }
+                if ( bMaster )
+                {
+                    vector<ServiceRecord> listMemberRecord;
+                    if ( ServiceRecordReader::readPage( connection, Internal::getMemberTable(), guildPrefix, "", GuildLimit::kMaxMember, false, listMemberRecord )._result != ServiceStoreResult::Ok )
+                        return ServiceStoreResult::Unavailable;
+                    AccountID   successorID = kInvalidAccountID;
+                    GuildMember successor;
+                    uint64      successorVersion = 0;
+                    if ( chooseSuccessor( listMemberRecord, guildPrefix, accountID, successorID, successor, successorVersion ) )
+                    {
+                        transaction.put( Internal::getMemberTable(), Internal::makePairKey( guildID, successorID ), Internal::encodeMember( GuildRole::Master, successor._joinedMs ),
+                                         successorVersion );
+                        info._masterID = successorID;
+                    }
+                }
+                info._memberCount = info._memberCount > 0 ? info._memberCount - 1 : 0;
+                transaction.put( Internal::getGuildTable(), guildKey, Internal::encodeGuild( info ), guildRecord._version );
+                return ServiceCommitRunner::commitOnce( connection, transaction );
+            }
+        };
+    } // namespace
+
+    ServiceStoreResult GuildLogic::eraseAccount( IServiceStoreConnection& connection, AccountID accountID, int64 nowMs )
+    {
+        using Internal = GuildLogicInternal;
+        StringBuilder<constant::buffer::kMax128> prefixBuilder;
+        prefixBuilder.appendFormat( "%#/", ServiceKeyUtil::makeHex64( accountID ) );
+        const string    prefix( prefixBuilder.view() );
+        constexpr int32 kPage = 32;
+        // 받은 초대(`<나>/<길드>`)와 그 만료 색인
+        while ( true )
+        {
+            vector<ServiceRecord> listInvite;
+            if ( const ServiceStoreResult listed = ServiceRecordReader::readPage( connection, Internal::getInviteTable(), prefix, "", kPage, false, listInvite )._result; listed != ServiceStoreResult::Ok )
+                return listed;
+            if ( listInvite.empty() )
+                break;
+            ServiceTransaction transaction;
+            for ( const ServiceRecord& record : listInvite )
+            {
+                transaction.erase( Internal::getInviteTable(), record._key, record._version );
+                int64 expiresMs = 0;
+                if ( Internal::decodeInviteExpiry( record, expiresMs ) )
+                    transaction.erase( Internal::getInviteExpiryTable(), ServiceTTLRule::makeTTLIndexKey( expiresMs, record._key ) );
+            }
+            if ( const ServiceStoreResult committed = ServiceCommitRunner::commitOnce( connection, transaction ); committed != ServiceStoreResult::Ok )
+                return committed;
+        }
+        // 낸 신청(역색인 `<나>/<길드>` → 신청 `<길드>/<나>`)
+        while ( true )
+        {
+            vector<ServiceRecord> listReverse;
+            if ( const ServiceStoreResult listed = ServiceRecordReader::readPage( connection, Internal::getAccountApplicationTable(), prefix, "", kPage, false, listReverse )._result;
+                 listed != ServiceStoreResult::Ok )
+                return listed;
+            if ( listReverse.empty() )
+                break;
+            ServiceTransaction transaction;
+            for ( const ServiceRecord& record : listReverse )
+            {
+                transaction.erase( Internal::getAccountApplicationTable(), record._key, record._version );
+                transaction.erase( Internal::getApplicationTable(), Internal::makeApplicationReverseKey( record._key ) ); // 역색인의 역은 신청 키다
+            }
+            if ( const ServiceStoreResult committed = ServiceCommitRunner::commitOnce( connection, transaction ); committed != ServiceStoreResult::Ok )
+                return committed;
+        }
+        uint64                   guildID = 0;
+        ServiceRecord            selfGuildRecord;
+        const ServiceStoreResult read = connection.readRecord( Internal::getAccountGuildTable(), ServiceKeyUtil::makeHex64( accountID ), selfGuildRecord );
+        if ( read == ServiceStoreResult::NotFound )
+            return ServiceStoreResult::Ok;
+        if ( read != ServiceStoreResult::Ok )
+            return read;
+        if ( Internal::getAccountGuildTable().decode( ServiceKeyUtil::makeHex64( accountID ), selfGuildRecord, guildID ) == false )
+        {
+            ServiceTransaction broken; // 지운 계정의 깨진 줄이다 — 지우기만 한다
+            broken.erase( Internal::getAccountGuildTable(), ServiceKeyUtil::makeHex64( accountID ), selfGuildRecord._version );
+            return ServiceCommitRunner::commitOnce( connection, broken );
+        }
+        return GuildDeleteAccountInternal::eraseMembership( connection, guildID, accountID, selfGuildRecord, nowMs );
+    }
+
+    ServiceTTLRule GuildLogic::makeInviteTTLRule( int64 expireAfterMs )
+    {
+        ServiceTTLRule rule;
+        rule._table           = GuildLogicInternal::getInviteTable();
+        rule._ttlIndexTable   = GuildLogicInternal::getInviteExpiryTable();
+        rule._expireAfterMs   = expireAfterMs;
+        rule._pfnReadTime     = &GuildLogicInternal::readInviteExpiryMs;
+        rule._pBackfillSource = ServiceTTLRule::makeRecordBackfillSource<&GuildLogicInternal::readInviteExpiryMs>();
+        rule._backfillVersion = 0;
+        return rule;
+    }
+
+    ServiceTTLRule GuildLogic::makeApplicationTTLRule( int64 expireAfterMs )
+    {
+        ServiceTTLRule rule;
+        rule._table           = GuildLogicInternal::getApplicationTable();
+        rule._ttlIndexTable   = GuildLogicInternal::getApplicationExpiryTable();
+        rule._expireAfterMs   = expireAfterMs;
+        rule._pfnReadTime     = &GuildLogicInternal::readApplicationExpiryMs;
+        rule._pfnStageErase   = &GuildLogicInternal::stageApplicationErase;
+        rule._pBackfillSource = ServiceTTLRule::makeRecordBackfillSource<&GuildLogicInternal::readApplicationExpiryMs>();
+        rule._backfillVersion = 0;
+        return rule;
+    }
+
+    bool GuildLogic::isValidName( string_view name )
+    {
+        const bool bSizeOk           = name.empty() == false && name.size() <= static_cast<size_t>( GuildLimit::kMaxNameSize );
+        const bool bInvalidGuildName = bSizeOk == false || name.front() == ' ' || name.back() == ' ';
+        if ( bInvalidGuildName )
+            return false;
+        size_t offset = 0;
+        while ( offset < name.size() )
+        {
+            const uint32 codepoint = StringUtil::decodeUTF8( name, offset );
+            const bool   bBad      = codepoint == GuildLogicInternal::kReplacementChar || codepoint < GuildLogicInternal::kFirstPrintable ||
+                              codepoint == GuildLogicInternal::kDeleteChar;
+            if ( bBad )
+                return false;
+        }
+        return true;
+    }
+
+    void GuildLogic::submit( const GuildRequest& request, uint64 requestTag )
+    {
+        _store.submit( [request, policy = _policy, pLedgerPolicy = _pLedgerPolicy]( IServiceStoreConnection& connection )
+        {
+            GuildStoreRun runner{ request, policy, pLedgerPolicy };
+            return runner.run( connection );
+        }, [this, request, requestTag]( GuildResult& serviceResult )
+        { applyServiceResult( request, requestTag, std::move( serviceResult ) ); } );
+    }
+
+    void GuildLogic::attachAccount( AccountID accountID, UnixMilliseconds nowMs )
+    {
+        GuildRequest request;
+        request._operation = GuildOperation::Attach;
+        request._accountID = accountID;
+        request._nowMs     = nowMs;
+        submit( request, 0 );
+    }
+
+    void GuildLogic::addExperience( uint64 guildID, int64 amount, UnixMilliseconds nowMs )
+    {
+        GuildRequest request;
+        request._operation = GuildOperation::AddExperience;
+        request._guildID   = guildID;
+        request._amount    = amount;
+        request._nowMs     = nowMs;
+        submit( request, 0 );
+    }
+
+    expected<void> GuildLogic::setLevelTable( const vector<int64>& listLevelExperience )
+    {
+        if ( listLevelExperience.size() > static_cast<size_t>( GuildLimit::kMaxLevelCount ) )
+        {
+            StringBuilder<constant::buffer::kMax128> detailBuilder;
+            detailBuilder.appendFormat( "%# levels, at most %#", listLevelExperience.size(), static_cast<int32>( GuildLimit::kMaxLevelCount ) );
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the level table has too many levels", detailBuilder.view() } );
+        }
+        int64 previous = 0;
+        for ( const int64 experience : listLevelExperience )
+        {
+            if ( experience <= previous )
+            {
+                StringBuilder<constant::buffer::kMax128> detailBuilder;
+                detailBuilder.appendFormat( "%# after %#", experience, previous );
+                return unexpected( Error{ ErrorKind::InvalidArgument, "level experience must be positive and greater than the previous level", detailBuilder.view() } );
+            }
+            previous = experience;
+        }
+        _listLevelExperience = listLevelExperience;
+        return {};
+    }
+
+    int32 GuildLogic::computeLevel( int64 experience ) const
+    {
+        int32 level = 1;
+        for ( const int64 threshold : _listLevelExperience )
+        {
+            if ( experience < threshold )
+                break;
+            ++level;
+        }
+        return level;
+    }
+
+    void GuildLogic::applyServiceResult( const GuildRequest& request, uint64 requestTag, GuildResult&& serviceResult )
+    {
+        const bool bServerOperation = request._operation == GuildOperation::Attach || request._operation == GuildOperation::AddExperience;
+        if ( bServerOperation == false )
+        {
+            GuildCompletion completion;
+            completion._requestTag        = requestTag;
+            completion._result            = serviceResult._result;
+            completion._info              = serviceResult._info;
+            completion._info._level       = computeLevel( serviceResult._info._experience );
+            completion._listStorage       = std::move( serviceResult._listStorage );
+            completion._storageNextCursor = std::move( serviceResult._storageNextCursor );
+            completion._listApplication   = std::move( serviceResult._listApplication );
+            _completionBuffer.push( std::move( completion ) );
+        }
+        if ( serviceResult._result != SocialResult::Ok )
+            return;
+        if ( serviceResult._attachedID != kInvalidAccountID )
+            raiseEvent( serviceResult._attachedID, serviceResult._guildID, GuildEvent::Kind::MemberAttached, request._nowMs );
+        if ( serviceResult._joinedID != kInvalidAccountID )
+            raiseEvent( serviceResult._joinedID, serviceResult._guildID, GuildEvent::Kind::Joined, request._nowMs );
+        if ( serviceResult._leftID != kInvalidAccountID )
+        {
+            raiseEvent( serviceResult._leftID, serviceResult._guildID, GuildEvent::Kind::Left, request._nowMs );
+            if ( serviceResult._leftID != request._accountID ) // 내보내진 사람이다. 이제 멤버 목록에 없다
+                _notificationBuffer.push( SocialNotification{ SocialPresence{}, serviceResult._leftID, request._accountID, serviceResult._guildID, SocialNotificationKind::GuildChanged } );
+        }
+        if ( serviceResult._invitedID != kInvalidAccountID )
+            _notificationBuffer.push( SocialNotification{ SocialPresence{}, serviceResult._invitedID, request._accountID, serviceResult._guildID, SocialNotificationKind::GuildInvited } );
+        if ( request._operation == GuildOperation::Get )
+            return;
+        for ( const AccountID memberID : serviceResult._listNotifyMember )
+        {
+            if ( memberID != request._accountID )
+                _notificationBuffer.push( SocialNotification{ SocialPresence{}, memberID, request._accountID, serviceResult._guildID, SocialNotificationKind::GuildChanged } );
+        }
+    }
+
+    void GuildLogic::raiseEvent( AccountID accountID, uint64 guildID, GuildEvent::Kind kind, UnixMilliseconds nowMs )
+    {
+        if ( _onEvent.isBound() )
+            _onEvent.get()( GuildEvent{ accountID, guildID, nowMs, kind } );
+    }
+} // namespace sw

@@ -1,142 +1,255 @@
-// TradeServiceTest — 거래 저장과 서비스(메모리 저장소 + 원장): 초대의 바쁨 · 지연 만료, 정산은 양쪽을 한 분개로 옮기고 한 번만(응답을 잃어도), 잠금 · 정산의 잔액 확인, 실패 닫기, 닫힌 거래,
-// 계정이 떠날 때, 시한 · 저장소 실패 뒤 다시 시도, 기동 복구, 알림. 상태 기계 표는 TradeStateMachineTest 가 본다. 온라인 키트라 `UnitTests.OnlineKits` 가 돌린다(nogpu).
+// TradeServiceTest — 거래 바인딩(패킷 → 거래 서비스 → 응답 · 알림): 깨진 몸 · 모르는 메서드 · 로그인 안 한 요청, 위조 값(남의 거래, 범위 밖 수량), 상대 찾기(이 서버 · 접속 상태 관리자 · 없음),
+// 정산 응답과 알림의 잔액, 떠난 계정, 다른 서버로 넘기는 알림, 기능 플래그, 저장소 실패. 진짜 `TradeLogic`(메모리 저장소 + 원장)를 루프백 호스트에 올린다 — 로그인은 테스트 로그인이고,
+// 디렉터리 · 접속 상태는 가짜다. 상태 기계 표는 TradeStateMachineTest, 저장 규칙은 TradeLogicTest 가 본다. 온라인 키트라 `UnitTests.OnlineKits` 가 돌린다(nogpu).
 #include "pch.h"
 
+#include "Core/String/StringUtil.h"
 #include "Core/TestFramework/TestFramework.h"
 
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/AccountPresence.h"
+#include "GameFramework/Kits/Feature/Online/Trade/Runtime/TradeSessionRecord.h"
+#include "GameFramework/Kits/Feature/Online/Trade/Server/TradeLogic.h"
 #include "GameFramework/Kits/Feature/Online/Trade/Server/TradeService.h"
 #include "GameFramework/Kits/Feature/Online/Trade/Server/TradeStateMachine.h"
-#include "GameFramework/Kits/Feature/Online/Trade/Server/TradeStoreLogic.h"
+#include "GameFramework/Runtime/Online/Audit/Server/ServiceAuditLog.h"
+#include "GameFramework/Runtime/Online/Config/Server/RemoteConfig.h"
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
-#include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
-#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordTable.h"
-#include "GameFramework/Runtime/Online/Store/Server/ServiceTTLRule.h"
-#include "GameFramework/Runtime/Online/Store/Server/Tests/ServiceStoreEntryTestUtil.h"
+#include "GameFramework/Runtime/Online/Service/OnlineServiceClient.h"
+#include "GameFramework/Runtime/Online/Service/Server/OnlineServiceHost.h"
+#include "GameFramework/Runtime/Online/Service/Server/Tests/OnlineHostTestUtil.h"
 
 using namespace sw;
 
 namespace
 {
-    constexpr AccountID kAlice  = 11;
-    constexpr AccountID kBob    = 12;
-    constexpr AccountID kCarol  = 13;
-    constexpr uint64    kServer = 1;
-    constexpr int64     kNowMs  = 1700000000000ll;
+    constexpr int64     kNowMs     = 1700000000000ll;
+    constexpr AccountID kAlice     = 11;
+    constexpr AccountID kBob       = 12;
+    constexpr AccountID kCarol     = 13;
+    constexpr AccountID kRemote    = 14; ///< 디렉터리에는 있지만 이 서버에 연결이 없는 계정(다른 서버)
+    constexpr uint64    kServerID  = 1;
+    constexpr int32     kAliceSlot = 0;
+    constexpr int32     kBobSlot   = 1;
+    constexpr int32     kCarolSlot = 2;
 
-    /** @brief 서버 하나입니다. 영속 데이터는 빌립니다 — 같은 데이터로 둘째를 만들면 "다시 뜬 서버" 입니다. */
-    struct TradeFixture
+    /** @brief 표시 이름 → 계정의 가짜 디렉터리입니다. */
+    class FakeTradeDirectory final : public IAccountDirectory
     {
-        MemoryServiceStore _store;
-        DefaultTradePolicy _policy;
-        TradeService       _service;
-        TradeServiceConfig _settings;
-        int64              _nowMs{ kNowMs };
-        uint64             _nextTag{ 1 };
-
-        explicit TradeFixture( MemoryServiceDatabase& database )
-            : _store{ &database }
-            , _policy{}
-            , _service{}
-            , _settings{}
+    public:
+        void add( string_view name, AccountID accountID )
         {
-            _settings._inviteTimeoutMs = 30000; // 키트 설정의 필수 칸 — 견본 값
-            _settings._idleTimeoutMs   = 300000;
-            _service.initialize( _store, &_policy, nullptr, kServer, _settings );
+            AccountIdentity& identity = _listIdentity.emplace_back();
+            identity._displayName     = string( name );
+            identity._accountID       = accountID;
         }
 
-        void poll()
+        [[nodiscard]] bool findIdentity( AccountID accountID, AccountIdentity& outIdentity ) const override
         {
-            while ( _store.pollCompletions() > 0 )
+            for ( const AccountIdentity& identity : _listIdentity )
             {
+                if ( identity._accountID != accountID )
+                    continue;
+                outIdentity = identity;
+                return true;
             }
+            return false;
+        }
+        [[nodiscard]] bool findIdentityByDisplayName( string_view displayName, AccountIdentity& outIdentity ) const override
+        {
+            for ( const AccountIdentity& identity : _listIdentity )
+            {
+                if ( identity._displayName != displayName )
+                    continue;
+                outIdentity = identity;
+                return true;
+            }
+            return false;
+        }
+        bool isAccountOnline( AccountID accountID ) const override
+        {
+            AccountIdentity identity;
+            return findIdentity( accountID, identity );
         }
 
-        TradeCompletion take( uint64 tag )
+    private:
+        vector<AccountIdentity> _listIdentity{};
+    };
+
+    /** @brief 찾기를 들고 있다가 테스트가 답하는 가짜 접속 상태 관리자입니다. 원격 알림은 받는 계정만 적습니다. */
+    class FakeTradePresence final : public AccountPresence
+    {
+    public:
+        vector<AccountID> _listRelayedAccount{};
+
+        uint64 submitFindByDisplayName( string_view displayName, const AccountPresenceDelegate& onFound, const Subscription& owner ) override
         {
-            poll();
-            vector<TradeCompletion> listCompletion;
-            _service.takeCompletions( listCompletion );
-            SW_EXPECT_EQUAL( size_t( 1 ), listCompletion.size() );
-            if ( listCompletion.empty() )
-                return TradeCompletion{};
-            SW_EXPECT_EQUAL( tag, listCompletion[0]._requestTag );
-            return std::move( listCompletion[0] );
+            (void)displayName;
+            (void)owner;
+            const uint64 requestID = ++_lastRequestID;
+            _listFind.push_back( PendingFind{ onFound, requestID } );
+            return requestID;
+        }
+        uint64 submitFindByAccount( AccountID accountID, const AccountPresenceDelegate& onFound, const Subscription& owner ) override
+        {
+            (void)accountID;
+            return submitFindByDisplayName( "", onFound, owner );
+        }
+        bool relayRemotePush( const OnlinePushRelay& relay ) override
+        {
+            _listRelayedAccount.push_back( relay._accountID );
+            return true;
         }
 
-        TradeCompletion invite( AccountID fromID, AccountID toID )
+        size_t getPendingCount() const { return _listFind.size(); }
+
+        /** @brief 맨 앞 찾기에 @p accountID 로 답합니다(0 이면 못 찾음). */
+        void answerFront( AccountID accountID )
         {
-            const uint64 tag = _nextTag++;
-            _service.invite( fromID, toID, UnixMilliseconds{ _nowMs }, tag );
-            return take( tag );
+            const PendingFind find = _listFind.front();
+            _listFind.erase( _listFind.begin() );
+            AccountPresenceResult result;
+            result._requestID           = find._requestID;
+            result._identity._accountID = accountID;
+            find._onFound( result );
         }
 
-        TradeCompletion respond( AccountID accountID, uint64 tradeID, bool bAccept = true )
-        {
-            const uint64 tag = _nextTag++;
-            _service.respondInvite( accountID, tradeID, bAccept, UnixMilliseconds{ _nowMs }, tag );
-            return take( tag );
-        }
+    protected:
+        void releaseSubscription( uint64 id ) override { (void)id; }
 
-        TradeCompletion offer( AccountID accountID, uint64 tradeID, string_view assetID, int64 amount )
+    private:
+        struct PendingFind
         {
-            TradeLeg leg;
-            leg._assetID     = string( assetID );
-            leg._amount      = amount;
-            const uint64 tag = _nextTag++;
-            _service.setOffer( accountID, tradeID, vector<TradeLeg>{ leg }, UnixMilliseconds{ _nowMs }, tag );
-            return take( tag );
-        }
+            AccountPresenceDelegate _onFound;
+            uint64                  _requestID;
+        };
 
-        TradeCompletion lock( AccountID accountID, uint64 tradeID )
-        {
-            const uint64 tag = _nextTag++;
-            _service.lock( accountID, tradeID, UnixMilliseconds{ _nowMs }, tag );
-            return take( tag );
-        }
+        vector<PendingFind> _listFind{};
+        uint64              _lastRequestID{ 0 };
+    };
 
-        TradeCompletion confirm( AccountID accountID, const TradeSnapshot& trade )
-        {
-            const int32  sideIndex = trade.findSideIndex( accountID ).value();
-            const uint64 tag       = _nextTag++;
-            _service.confirm( accountID, trade._tradeID, trade._arrSide[sideIndex]._offerRevision, trade._arrSide[1 - sideIndex]._offerRevision, UnixMilliseconds{ _nowMs }, tag );
-            return take( tag );
-        }
+    /** @brief 클라이언트 쪽 거래 알림을 받아 적습니다. 키트 클라이언트 대신 맨 요청을 보내므로 영역만 맞춘다. */
+    class TradePushSink final : public OnlineClientService
+    {
+    public:
+        vector<uint16>            _listKind{};
+        vector<TradeNotification> _listReply{};
 
-        /** @brief 앨리스 금 @p gold ↔ 밥 보석 @p gem 을 제시하고 양쪽이 잠근 거래입니다. */
-        TradeSnapshot makeLockedTrade( int64 gold, int64 gem )
+        const OnlineProtocolEntry& getProtocol() const override { return TradeSessionRecord::kOnlineEntry; }
+        void                       onServicePush( uint16 kind, BitReader& body ) override
         {
-            const uint64 tradeID = invite( kAlice, kBob )._snapshot._tradeID;
-            SW_EXPECT_TRUE( respond( kBob, tradeID )._result == TradeResult::Ok );
-            SW_EXPECT_TRUE( offer( kAlice, tradeID, "cur.gold", gold )._result == TradeResult::Ok );
-            SW_EXPECT_TRUE( offer( kBob, tradeID, "cur.gem", gem )._result == TradeResult::Ok );
-            SW_EXPECT_TRUE( lock( kAlice, tradeID )._result == TradeResult::Ok );
-            const TradeCompletion locked = lock( kBob, tradeID );
-            SW_EXPECT_TRUE( locked._result == TradeResult::Ok );
-            return locked._snapshot;
-        }
-
-        vector<TradeSnapshot> takeUpdates()
-        {
-            poll();
-            vector<TradeSnapshot> listUpdate;
-            _service.pollUpdates( listUpdate );
-            return listUpdate;
+            TradeNotification reply;
+            SW_EXPECT_TRUE( TradeSessionRecord::MessageTypes::read( body, reply ) == FixedReadResult::Ok );
+            _listKind.push_back( kind );
+            _listReply.push_back( std::move( reply ) );
         }
     };
 
-    /** @brief 원장 데이터와 서버 하나의 묶음입니다. */
-    struct TradeWorld
+    /** @brief 맨 요청의 답입니다. 몸은 콜백 뒤에도 쓰게 복사한다. */
+    struct TradeResponseSink
     {
-        MemoryServiceDatabase _database;
-        TradeFixture          _rig;
+        vector<uint8> _bodyBytes{};
+        int32         _count{ 0 };
+        uint16        _errorCode{ OnlineError::kOk };
+        uint8         _bOk : 1;
 
-        TradeWorld()
-            : _database{}
-            , _rig{ _database }
+        TradeResponseSink()
+            : _bOk{ SW_FALSE }
         {
-            grant( kAlice, "cur.gold", 100 );
-            grant( kBob, "cur.gem", 50 );
         }
+
+        void onResponse( const OnlineResponse& response )
+        {
+            ++_count;
+            _errorCode = response._errorCode;
+            _bOk       = response.isOk() ? SW_TRUE : SW_FALSE;
+            _bodyBytes.assign( response._pBody, response._pBody + response._bodySize );
+        }
+
+        /** @brief 성공 응답의 몸을 읽습니다. */
+        TradeReply readReply() const
+        {
+            TradeReply reply;
+            BitReader  reader( _bodyBytes.data(), static_cast<int32>( _bodyBytes.size() ) );
+            SW_EXPECT_TRUE( _bOk == SW_TRUE );
+            SW_EXPECT_TRUE( TradeSessionRecord::MessageTypes::read( reader, reply ) == FixedReadResult::Ok );
+            return reply;
+        }
+    };
+
+    /**
+     * @brief 거래 서비스 + 바인딩 + 루프백 서버 + 세 계정의 연결입니다.
+     * @details 서버를 먼저 내린다(저장소 → 호스트 → 남은 완료) — 완료가 서비스를 부르므로 서비스의 `shutdown` 은 그 뒤다.
+     */
+    struct TradeServiceFixture
+    {
+        DefaultTradePolicy                  _policy{};
+        RemoteConfig                        _remoteConfig{};
+        TradeLogic                          _tradeLogic{};
+        FakeTradeDirectory                  _directory{};
+        FakeTradePresence                   _presence{};
+        TradeService                        _tradeService{};
+        TradePushSink                       _arrSink[3]{};
+        TradeResponseSink                   _response{};
+        unique_ptr<test::OnlineTestFixture> _pRig{};
+
+        /** @brief @p bWithPresence 면 서버 여러 대의 모양이다(상대를 접속 상태 관리자에게도 묻는다). */
+        explicit TradeServiceFixture( bool bWithPresence = false, bool bWithRemoteConfig = false )
+        {
+            _pRig = make_unique<test::OnlineTestFixture>( false );
+            TradeLogicConfig settings;
+            settings._inviteTimeoutMs = 30000; // 키트 설정의 필수 칸 — 견본 값
+            settings._idleTimeoutMs   = 300000;
+            _tradeLogic.initialize( _pRig->_server._store, &_policy, nullptr, kServerID, settings );
+            _tradeService.initialize( &_tradeLogic, &_directory, bWithPresence ? &_presence : nullptr );
+            _directory.add( "alice", kAlice );
+            _directory.add( "bob", kBob );
+            _directory.add( "carol", kCarol );
+            _directory.add( "remote", kRemote );
+            SW_EXPECT_TRUE( _pRig->_server._host.registerServerService( &_tradeService ) );
+            if ( bWithRemoteConfig )
+                startWithRemoteConfig();
+            else
+                _pRig->_server.start();
+            for ( TradePushSink& sink : _arrSink )
+            {
+                (void)_pRig->_clients.connect( _pRig->_server._port, { &sink } );
+            }
+            poll();
+            _pRig->_clients.login( kAliceSlot, kAlice );
+            _pRig->_clients.login( kBobSlot, kBob );
+            _pRig->_clients.login( kCarolSlot, kCarol );
+            poll();
+        }
+
+        ~TradeServiceFixture()
+        {
+            _pRig.reset();
+            _tradeService.shutdown();
+            _tradeLogic.shutdown();
+        }
+
+        /** @brief `OnlineTestServer::start` 와 같은 설정에 원격 설정만 더해 받기 시작합니다. */
+        void startWithRemoteConfig()
+        {
+            test::OnlineTestServer& server = _pRig->_server;
+            OnlineServiceHostConfig settings;
+            settings._transportSettings._ioThreadCount = 0;
+            settings._listenAddress                    = NetAddress::makeLoopback( server._port );
+            settings._pServiceStore                    = &server._store;
+            settings._pEphemeralStore                  = &server._cache;
+            settings._pServerBusTransport              = &server._bus;
+            settings._pRemoteConfig                    = &_remoteConfig;
+            settings._requestBurstPerRemote            = 1000;
+            settings._requestBurstPerAccount           = 1000;
+            settings._maxConnectionsPerRemote          = 64;
+            settings._maxPendingCallsPerService        = 100000;
+            {
+                const auto result = server._host.initialize( server._transport.get(), settings );
+                SW_EXPECT_TRUE_MSG( result.has_value(), result.has_value() ? std::string_view{} : result.error().message() );
+            }
+        }
+
+        void poll() { test::updateAll( { &_pRig->_server }, _pRig->_clients, kNowMs, 12 ); }
 
         void grant( AccountID accountID, string_view assetID, int64 amount )
         {
@@ -146,345 +259,417 @@ namespace
             journalKey.appendFormat( "test/grant/%#/%#", accountID, assetID );
             request._journalKey = string( journalKey.view() );
             request._reason     = "test.grant";
-            LedgerTransferResult result;
-            SW_EXPECT_TRUE( Ledger::executeTransfer( _database, request, result ) == LedgerResult::Ok );
-        }
-
-        void spend( AccountID accountID, string_view assetID, int64 amount )
-        {
-            LedgerTransferRequest request;
-            request._listPosting.push_back( LedgerPosting{ LedgerHolder::makeAccount( accountID ), LedgerHolder::makeSink(), string( assetID ), amount } );
-            StringBuilder<constant::buffer::kMax128> journalKey;
-            journalKey.appendFormat( "test/spend/%#/%#", accountID, assetID );
-            request._journalKey = string( journalKey.view() );
-            request._reason     = "test.spend";
-            LedgerTransferResult result;
-            SW_EXPECT_TRUE( Ledger::executeTransfer( _database, request, result ) == LedgerResult::Ok );
+            LedgerTransferResult serviceResult;
+            SW_EXPECT_TRUE( Ledger::executeTransfer( _pRig->_database, request, serviceResult ) == LedgerResult::Ok );
         }
 
         int64 getBalanceOf( AccountID accountID, string_view assetID )
         {
             LedgerBalance balance;
-            SW_EXPECT_TRUE( Ledger::readBalance( _database, LedgerHolder::makeAccount( accountID ), assetID, balance ) == ServiceStoreResult::Ok );
+            SW_EXPECT_TRUE( Ledger::readBalance( _pRig->_database, LedgerHolder::makeAccount( accountID ), assetID, balance ) == ServiceStoreResult::Ok );
             return balance._amount;
+        }
+
+        /** @brief 맨 요청을 보내고 돌립니다. 답은 `_response` 입니다. */
+        const TradeResponseSink& sendRaw( int32 slot, uint16 method, const BitWriter& body )
+        {
+            _response = TradeResponseSink{};
+            NetRequestOptions options;
+            options._idempotencyKey = NetIdempotencyKey::makeRandom(); // 표의 호출 규칙이다. 빠진 요청은 kInvalidRequest 다
+            (void)_pRig->_clients.getClient( slot ).sendRequest( method, body, options, SW_DELEGATE_METHOD( OnlineResponseDelegate, &TradeResponseSink::onResponse, &_response ) );
+            poll();
+            return _response;
+        }
+
+        template <typename TMessage>
+        const TradeResponseSink& send( int32 slot, uint16 method, const TMessage& message )
+        {
+            BitWriter body;
+            SW_EXPECT_TRUE( TradeSessionRecord::MessageTypes::write( body, message ) );
+            return sendRaw( slot, method, body );
+        }
+
+        /** @brief 답 하나를 받아야 하는 요청입니다. 공통 범주로 끝났으면 빈 응답이고 이유는 `_response._errorCode` 이다. */
+        template <typename TMessage>
+        TradeReply call( int32 slot, uint16 method, const TMessage& message )
+        {
+            const TradeResponseSink& response = send( slot, method, message );
+            SW_EXPECT_EQUAL( 1, response._count );
+            if ( response._bOk == SW_FALSE )
+                return TradeReply{};
+            return response.readReply();
+        }
+
+        TradeReply invite( int32 slot, string_view peerName )
+        {
+            TradeInviteRequest request;
+            request._peerDisplayName = string( peerName );
+            return call( slot, TradeMethod::Invite::kID, request );
+        }
+
+        TradeReply respond( int32 slot, uint64 tradeID, bool bAccept = true )
+        {
+            TradeRespondRequest request;
+            request._tradeID = tradeID;
+            request._bAccept = bAccept ? SW_TRUE : SW_FALSE;
+            return call( slot, TradeMethod::Respond::kID, request );
+        }
+
+        TradeReply offer( int32 slot, uint64 tradeID, string_view assetID, int64 amount )
+        {
+            TradeLeg leg;
+            leg._assetID = string( assetID );
+            leg._amount  = amount;
+            TradeOfferRequest request;
+            request._tradeID = tradeID;
+            request._listLeg.push_back( leg );
+            return call( slot, TradeMethod::SetOffer::kID, request );
+        }
+
+        TradeReply lock( int32 slot, uint64 tradeID )
+        {
+            TradeIDRequest request;
+            request._tradeID = tradeID;
+            return call( slot, TradeMethod::Lock::kID, request );
+        }
+
+        TradeReply confirm( int32 slot, const TradeSnapshot& snapshot, AccountID accountID )
+        {
+            const int32         sideIndex = snapshot.findSideIndex( accountID ).value();
+            TradeConfirmRequest request;
+            request._tradeID          = snapshot._tradeID;
+            request._seenOwnRevision  = snapshot._arrSide[sideIndex]._offerRevision;
+            request._seenPeerRevision = snapshot._arrSide[1 - sideIndex]._offerRevision;
+            return call( slot, TradeMethod::Confirm::kID, request );
+        }
+
+        void clearPushes()
+        {
+            for ( TradePushSink& sink : _arrSink )
+            {
+                sink._listKind.clear();
+                sink._listReply.clear();
+            }
+        }
+    };
+
+    /** @brief 답을 살핍니다. */
+    struct TradeServiceTestUtil
+    {
+        static BitWriter makeJunk( int32 byteCount )
+        {
+            const vector<uint8> listByte( static_cast<size_t>( byteCount ), uint8( 0xFF ) );
+            BitWriter           writer;
+            writer.writeBytes( listByte.data(), byteCount );
+            return writer;
+        }
+
+        /** @brief 잔액 목록에서 자산의 값입니다. 없으면 비어 있습니다. */
+        static optional<int64> findBalance( const vector<TradeBalance>& listBalance, string_view assetID )
+        {
+            for ( const TradeBalance& balance : listBalance )
+            {
+                if ( balance._assetID == assetID )
+                    return balance._amount;
+            }
+            return nullopt;
         }
     };
 } // namespace
 
-/** @brief [TradeServiceTest] 초대: 자신 · 0 은 Invalid, 이미 거래 중이면 AlreadyTrading · PeerBusy 이고, 거절하면 다시 초대할 수 있다 */
-SW_TEST_CASE( TradeServiceTest, InviteRules )
+/** @brief [TradeServiceTest] 신청: 응답은 신청한 쪽, 초대 알림은 받는 쪽에만 간다(신청한 쪽은 응답으로 안다) */
+SW_TEST_CASE( TradeServiceTest, InvitePushesOnlyToThePeer )
 {
-    TradeWorld    world;
-    TradeFixture& rig = world._rig;
-    SW_EXPECT_TRUE( rig.invite( kAlice, kAlice )._result.hasError( OnlineError::kInvalidRequest ) );
-    SW_EXPECT_TRUE( rig.invite( kAlice, kInvalidAccountID )._result.hasError( OnlineError::kInvalidRequest ) );
+    TradeServiceFixture rig;
+    const TradeReply    reply = rig.invite( kAliceSlot, "bob" );
+    SW_EXPECT_TRUE( reply._result == TradeResult::Ok );
+    SW_EXPECT_TRUE( reply._snapshot._state == TradeState::Invited );
+    SW_EXPECT_NOT_EQUAL( uint64( 0 ), reply._snapshot._tradeID );
+    SW_EXPECT_EQUAL( kAlice, reply._snapshot._arrSide[0]._accountID );
+    SW_EXPECT_EQUAL( kBob, reply._snapshot._arrSide[1]._accountID );
 
-    const TradeCompletion invited = rig.invite( kAlice, kBob );
-    SW_EXPECT_TRUE( invited._result == TradeResult::Ok );
-    SW_EXPECT_TRUE( invited._snapshot._state == TradeState::Invited );
-    SW_EXPECT_TRUE( invited._snapshot._tradeID != 0 );
-    SW_EXPECT_TRUE( rig.invite( kAlice, kCarol )._result == TradeResult::AlreadyTrading );
-    SW_EXPECT_TRUE( rig.invite( kCarol, kBob )._result == TradeResult::PeerBusy );
-
-    SW_EXPECT_TRUE( rig.respond( kCarol, invited._snapshot._tradeID )._result == TradeResult::NotParty );
-    const TradeCompletion declined = rig.respond( kBob, invited._snapshot._tradeID, false );
-    SW_EXPECT_TRUE( declined._result == TradeResult::Ok );
-    SW_EXPECT_TRUE( declined._snapshot.isClosed() );
-    SW_EXPECT_TRUE( rig.invite( kAlice, kCarol )._result == TradeResult::Ok );
-
-    SW_EXPECT_TRUE( rig.respond( kBob, 999 )._result == TradeResult::NotFound );
+    SW_EXPECT_TRUE( rig._arrSink[kAliceSlot]._listKind.empty() );
+    SW_REQUIRE_EQUAL( size_t( 1 ), rig._arrSink[kBobSlot]._listKind.size() );
+    SW_EXPECT_EQUAL( TradeMethod::Invited::kKind, rig._arrSink[kBobSlot]._listKind[0] );
+    SW_EXPECT_EQUAL( reply._snapshot._tradeID, rig._arrSink[kBobSlot]._listReply[0]._snapshot._tradeID );
+    SW_EXPECT_TRUE( rig._arrSink[kCarolSlot]._listKind.empty() );
 }
 
-/** @brief [TradeServiceTest] 정산: 양쪽이 확정하면 재화가 서로에게 옮겨지고, 닫힌 뒤 또 확정해도 결과만 돌려주며 두 번 옮기지 않는다 */
-SW_TEST_CASE( TradeServiceTest, SettlementSwapsBothSidesOnce )
+/** @brief [TradeServiceTest] 찾지 못한 상대: 서버 한 대(접속 상태 없음)면 바로 PeerOffline 이다. 자기 자신 신청은 Invalid 다 */
+SW_TEST_CASE( TradeServiceTest, UnknownPeerAndSelf )
 {
-    TradeWorld          world;
-    TradeFixture&       rig    = world._rig;
-    const TradeSnapshot locked = rig.makeLockedTrade( 40, 20 );
-
-    const TradeCompletion firstConfirm = rig.confirm( kAlice, locked );
-    SW_EXPECT_TRUE( firstConfirm._result == TradeResult::Ok );
-    SW_EXPECT_FALSE( firstConfirm._snapshot.isClosed() );
-    SW_EXPECT_EQUAL( int64( 100 ), world.getBalanceOf( kAlice, "cur.gold" ) ); // 한쪽 확정으로는 옮기지 않는다
-
-    const TradeCompletion settled = rig.confirm( kBob, firstConfirm._snapshot );
-    SW_EXPECT_TRUE( settled._result == TradeResult::Ok );
-    SW_EXPECT_TRUE( settled._snapshot._state == TradeState::Settled );
-    SW_EXPECT_EQUAL( int64( 60 ), world.getBalanceOf( kAlice, "cur.gold" ) );
-    SW_EXPECT_EQUAL( int64( 20 ), world.getBalanceOf( kAlice, "cur.gem" ) );
-    SW_EXPECT_EQUAL( int64( 40 ), world.getBalanceOf( kBob, "cur.gold" ) );
-    SW_EXPECT_EQUAL( int64( 30 ), world.getBalanceOf( kBob, "cur.gem" ) );
-
-    SW_EXPECT_TRUE( rig.confirm( kBob, firstConfirm._snapshot )._result == TradeResult::Ok ); // 응답을 잃은 재시도
-    SW_EXPECT_EQUAL( int64( 60 ), world.getBalanceOf( kAlice, "cur.gold" ) );
-
-    SW_EXPECT_TRUE( rig.invite( kAlice, kBob )._result == TradeResult::Ok ); // 끝난 거래의 링크는 남지 않는다
+    TradeServiceFixture rig;
+    SW_EXPECT_TRUE( rig.invite( kAliceSlot, "nobody" )._result == TradeResult::PeerOffline );
+    SW_EXPECT_TRUE( rig.invite( kAliceSlot, "" )._result == TradeResult::PeerOffline );
+    (void)rig.invite( kAliceSlot, "alice" );
+    SW_EXPECT_EQUAL( OnlineError::kInvalidRequest, rig._response._errorCode ); // 자기 자신에게는 신청할 수 없다
+    SW_EXPECT_EQUAL( 0, rig._tradeLogic.getOpenTradeCount() );
 }
 
-/** @brief [TradeServiceTest] 정산 커밋의 응답을 잃어도 원장이 가려 Settled 로 끝나고 한 번만 옮긴다 */
-SW_TEST_CASE( TradeServiceTest, LostSettlementReplyMovesOnce )
+/** @brief [TradeServiceTest] 패킷: 메서드마다 깨진 · 빈 몸은 kInvalidRequest 이고 거래가 생기거나 바뀌지 않는다. 다른 타입의 몸도 같다. 모르는 메서드도 같다 */
+SW_TEST_CASE( TradeServiceTest, MalformedBodiesAreRefused )
 {
-    TradeWorld          world;
-    TradeFixture&       rig    = world._rig;
-    const TradeSnapshot locked = rig.makeLockedTrade( 40, 20 );
-    const TradeSnapshot first  = rig.confirm( kAlice, locked )._snapshot;
-
-    world._database.armFault( ServiceStoreFault::LoseCommitReply );
-    const TradeCompletion settled = rig.confirm( kBob, first );
-    SW_EXPECT_TRUE( settled._result == TradeResult::Ok );
-    SW_EXPECT_TRUE( settled._snapshot._state == TradeState::Settled );
-    SW_EXPECT_EQUAL( int64( 60 ), world.getBalanceOf( kAlice, "cur.gold" ) );
-    SW_EXPECT_EQUAL( int64( 40 ), world.getBalanceOf( kBob, "cur.gold" ) );
-}
-
-/** @brief [TradeServiceTest] 잔액: 잠글 때 모자라면 거절하고, 잠근 뒤 써 버렸으면 정산이 Failed 로 닫히며 아무도 재화를 잃지 않는다 */
-SW_TEST_CASE( TradeServiceTest, FundsAreCheckedAtLockAndSettlement )
-{
-    TradeWorld    world;
-    TradeFixture& rig     = world._rig;
-    const uint64  tradeID = rig.invite( kAlice, kBob )._snapshot._tradeID;
-    SW_EXPECT_TRUE( rig.respond( kBob, tradeID )._result == TradeResult::Ok );
-    SW_EXPECT_TRUE( rig.offer( kAlice, tradeID, "cur.gold", 101 )._result == TradeResult::Ok ); // 제시는 잔액을 보지 않는다
-    SW_EXPECT_TRUE( rig.lock( kAlice, tradeID )._result == TradeResult::InsufficientFunds );
-    rig._service.cancel( kAlice, tradeID, UnixMilliseconds{ rig._nowMs }, 90 );
-    SW_EXPECT_TRUE( rig.take( 90 )._result == TradeResult::Ok );
-
-    const TradeSnapshot locked = rig.makeLockedTrade( 40, 20 );
-    const TradeSnapshot first  = rig.confirm( kAlice, locked )._snapshot;
-    world.spend( kAlice, "cur.gold", 90 ); // 잠근 뒤 다른 곳에서 썼다
-
-    const TradeCompletion failed = rig.confirm( kBob, first );
-    SW_EXPECT_TRUE( failed._result == TradeResult::InsufficientFunds );
-    SW_EXPECT_TRUE( failed._snapshot._state == TradeState::Failed );
-    SW_EXPECT_TRUE( failed._snapshot._closeReason == TradeCloseReason::InsufficientFunds );
-    SW_EXPECT_EQUAL( int64( 10 ), world.getBalanceOf( kAlice, "cur.gold" ) );
-    SW_EXPECT_EQUAL( int64( 50 ), world.getBalanceOf( kBob, "cur.gem" ) );
-
-    SW_EXPECT_TRUE( rig.confirm( kBob, first )._result == TradeResult::InsufficientFunds ); // 재시도도 같은 답이다
-    SW_EXPECT_TRUE( rig.invite( kAlice, kBob )._result == TradeResult::Ok );
-}
-
-/** @brief [TradeServiceTest] 낸 뒤 제시가 바뀌면 옛 내용을 본 확정은 StaleOffer 다 — 바뀐 조건으로 정산되지 않는다 */
-SW_TEST_CASE( TradeServiceTest, ConfirmOfStaleOfferIsRefused )
-{
-    TradeWorld          world;
-    TradeFixture&       rig    = world._rig;
-    const TradeSnapshot locked = rig.makeLockedTrade( 40, 20 );
-    SW_EXPECT_TRUE( rig.offer( kBob, locked._tradeID, "cur.gem", 1 )._result == TradeResult::Ok );
-    SW_EXPECT_TRUE( rig.lock( kAlice, locked._tradeID )._result == TradeResult::Ok );
-    const TradeSnapshot relocked = rig.lock( kBob, locked._tradeID )._snapshot;
-    SW_EXPECT_TRUE( rig.confirm( kAlice, locked )._result == TradeResult::StaleOffer );
-    SW_EXPECT_TRUE( rig.confirm( kAlice, relocked )._result == TradeResult::Ok );
-    SW_EXPECT_EQUAL( int64( 100 ), world.getBalanceOf( kAlice, "cur.gold" ) );
-}
-
-/** @brief [TradeServiceTest] 시한이 지난 거래: 명령을 내면 닫히며 WrongState 이고, 새 초대는 남은 링크를 정리하고 진행한다 */
-SW_TEST_CASE( TradeServiceTest, ExpiredTradesCloseLazily )
-{
-    TradeWorld    world;
-    TradeFixture& rig     = world._rig;
-    const uint64  tradeID = rig.invite( kAlice, kBob )._snapshot._tradeID;
-
-    rig._nowMs += rig._settings._inviteTimeoutMs;
-    const TradeCompletion late = rig.respond( kBob, tradeID );
-    SW_EXPECT_TRUE( late._result == TradeResult::WrongState );
-    SW_EXPECT_TRUE( late._snapshot._closeReason == TradeCloseReason::Timeout );
-
-    const uint64 secondID = rig.invite( kAlice, kBob )._snapshot._tradeID;
-    SW_EXPECT_TRUE( secondID != 0 );
-    rig._nowMs += rig._settings._inviteTimeoutMs;
-    const TradeCompletion replaced = rig.invite( kBob, kCarol ); // 밥의 묵은 거래를 닫고 진행한다
-    SW_EXPECT_TRUE( replaced._result == TradeResult::Ok );
-    SW_EXPECT_TRUE( rig.respond( kBob, secondID )._result == TradeResult::WrongState );
-    SW_EXPECT_TRUE( rig.invite( kAlice, kCarol )._result == TradeResult::PeerBusy );
-}
-
-/** @brief [TradeServiceTest] 서비스 시한: update 가 시한이 된 거래를 닫고 알린다. 활동이 있으면 시한이 밀린다 */
-SW_TEST_CASE( TradeServiceTest, UpdateExpiresIdleTrades )
-{
-    TradeWorld    world;
-    TradeFixture& rig     = world._rig;
-    const uint64  tradeID = rig.invite( kAlice, kBob )._snapshot._tradeID;
-    (void)rig.takeUpdates();
-
-    rig._service.update( UnixMilliseconds{ kNowMs + rig._settings._inviteTimeoutMs - 1 } );
-    SW_EXPECT_TRUE( rig.takeUpdates().empty() );
-
-    rig._nowMs += rig._settings._inviteTimeoutMs - 1;
-    SW_EXPECT_TRUE( rig.respond( kBob, tradeID )._result == TradeResult::Ok );
-    (void)rig.takeUpdates();
-    rig._service.update( UnixMilliseconds{ kNowMs + rig._settings._inviteTimeoutMs } ); // 수락으로 밀렸다
-    SW_EXPECT_TRUE( rig.takeUpdates().empty() );
-
-    rig._service.update( UnixMilliseconds{ rig._nowMs + rig._settings._idleTimeoutMs } );
-    const vector<TradeSnapshot> listClosed = rig.takeUpdates();
-    SW_REQUIRE_EQUAL( size_t( 1 ), listClosed.size() );
-    SW_EXPECT_TRUE( listClosed[0]._closeReason == TradeCloseReason::Timeout );
-    SW_EXPECT_EQUAL( 0, rig._service.getPendingCount() );
-}
-
-/** @brief [TradeServiceTest] 시한 처리가 저장소 실패로 지면 잊지 않고 다시 시도해 닫는다 */
-SW_TEST_CASE( TradeServiceTest, ExpiryRetriesAfterStoreFailure )
-{
-    TradeWorld    world;
-    TradeFixture& rig = world._rig;
-    (void)rig.invite( kAlice, kBob );
-    (void)rig.takeUpdates();
-    const int64 deadlineMs = kNowMs + rig._settings._inviteTimeoutMs;
-
-    world._database.armFault( ServiceStoreFault::RejectRead );
-    rig._service.update( UnixMilliseconds{ deadlineMs } );
-    SW_EXPECT_TRUE( rig.takeUpdates().empty() );
-
-    rig._service.update( UnixMilliseconds{ deadlineMs + TradeConstant::kExpiryRetryMs } );
-    const vector<TradeSnapshot> listClosed = rig.takeUpdates();
-    SW_REQUIRE_EQUAL( size_t( 1 ), listClosed.size() );
-    SW_EXPECT_TRUE( listClosed[0]._closeReason == TradeCloseReason::Timeout );
-}
-
-/** @brief [TradeServiceTest] 계정이 떠나면 그 거래가 닫히고 알림이 간다. 거래가 없으면 아무 일도 없다 */
-SW_TEST_CASE( TradeServiceTest, CloseForAccountWhenLeaving )
-{
-    TradeWorld    world;
-    TradeFixture& rig = world._rig;
-    (void)rig.invite( kAlice, kBob );
-    (void)rig.takeUpdates();
-
-    rig._service.closeForAccount( kCarol, TradeCloseReason::PartyLeft, UnixMilliseconds{ kNowMs } );
-    SW_EXPECT_TRUE( rig.takeUpdates().empty() );
-
-    rig._service.closeForAccount( kBob, TradeCloseReason::PartyLeft, UnixMilliseconds{ kNowMs } );
-    const vector<TradeSnapshot> listClosed = rig.takeUpdates();
-    SW_REQUIRE_EQUAL( size_t( 1 ), listClosed.size() );
-    SW_EXPECT_TRUE( listClosed[0]._closeReason == TradeCloseReason::PartyLeft );
-    SW_EXPECT_TRUE( rig.invite( kAlice, kCarol )._result == TradeResult::Ok );
-}
-
-/** @brief [TradeServiceTest] TTL 규칙: 거절된(닫힌) 거래는 닫은 뒤 기간이 지나면 지우고, 열린 거래는 남긴다(감사 O-9) */
-SW_TEST_CASE( TradeServiceTest, ClosedTradesExpireByRetention )
-{
-    TradeWorld    world;
-    TradeFixture& rig = world._rig;
-    for ( int32 index = 0; index < 3; ++index )
+    TradeServiceFixture rig;
+    const uint64        tradeID = rig.invite( kAliceSlot, "bob" )._snapshot._tradeID;
+    rig.clearPushes();
+    for ( const uint16 method : { TradeMethod::Invite::kID, TradeMethod::Respond::kID, TradeMethod::SetOffer::kID, TradeMethod::Lock::kID, TradeMethod::Confirm::kID, TradeMethod::Cancel::kID } )
     {
-        const uint64 tradeID = rig.invite( kAlice, kBob )._snapshot._tradeID;
-        SW_REQUIRE_TRUE( rig.respond( kBob, tradeID, false )._result == TradeResult::Ok );
+        SW_EXPECT_EQUAL( OnlineError::kInvalidRequest, rig.sendRaw( kBobSlot, method, BitWriter{} )._errorCode );
+        SW_EXPECT_EQUAL( OnlineError::kInvalidRequest, rig.sendRaw( kBobSlot, method, TradeServiceTestUtil::makeJunk( 24 ) )._errorCode );
     }
-    SW_REQUIRE_TRUE( rig.invite( kAlice, kBob )._result == TradeResult::Ok ); // 열린 거래다
-    SW_REQUIRE_EQUAL( 4, world._database.countRecords( TradeStoreLogic::getSessionTable() ) );
-    SW_EXPECT_EQUAL( 3, world._database.countRecords( TradeStoreLogic::getSessionExpiryTable() ) );
+    TradeIDRequest idRequest;
+    idRequest._tradeID = tradeID;
+    SW_EXPECT_EQUAL( OnlineError::kInvalidRequest, rig.send( kBobSlot, TradeMethod::Respond::kID, idRequest )._errorCode ); // 수락 칸이 없는 다른 메시지
+    SW_EXPECT_EQUAL( OnlineError::kInvalidRequest, rig.sendRaw( kBobSlot, static_cast<uint16>( OnlineMethodRange::kTrade + 0x70 ), BitWriter{} )._errorCode );
 
-    ServiceTTLRule        rule = TradeStoreLogic::makeTTLRule( 1000 );
-    ServiceTTLSweepReport report;
-    SW_REQUIRE_TRUE( ServiceTTLRule::sweep( world._database, rule, kNowMs + 500, 100, 100, report ) == ServiceStoreResult::Ok );
-    SW_EXPECT_EQUAL( 4, world._database.countRecords( TradeStoreLogic::getSessionTable() ) ); // 아직 기간 안이다
-    SW_REQUIRE_TRUE( ServiceTTLRule::sweep( world._database, rule, kNowMs + 2000, 100, 100, report ) == ServiceStoreResult::Ok );
-    SW_EXPECT_EQUAL( 3, report._deletedCount );
-    SW_EXPECT_EQUAL( 1, world._database.countRecords( TradeStoreLogic::getSessionTable() ) );
-    SW_EXPECT_EQUAL( 0, world._database.countRecords( TradeStoreLogic::getSessionExpiryTable() ) );
+    SW_EXPECT_TRUE( rig._arrSink[kAliceSlot]._listKind.empty() );
+    SW_EXPECT_TRUE( rig.respond( kBobSlot, tradeID )._snapshot._state == TradeState::Open ); // 앞의 어느 요청도 초대를 건드리지 않았다
 }
 
-/** @brief [TradeServiceTest] 기동 복구: 다시 뜬 서버는 자기가 연 열린 거래를 닫아 당사자를 풀어 준다. 재화는 그대로다 */
-SW_TEST_CASE( TradeServiceTest, RestartRecoversOwnedTrades )
+/** @brief [TradeServiceTest] 로그인하지 않은 연결은 호스트가 kUnauthenticated 로 막아 바인딩에 닿지 않는다 */
+SW_TEST_CASE( TradeServiceTest, AnonymousConnectionIsRefused )
 {
-    TradeWorld          world;
-    const TradeSnapshot locked = world._rig.makeLockedTrade( 40, 20 );
-
-    TradeFixture restarted( world._database );
-    restarted._service.recoverOwnedTrades( UnixMilliseconds{ kNowMs } );
-    const vector<TradeSnapshot> listClosed = restarted.takeUpdates();
-    SW_REQUIRE_EQUAL( size_t( 1 ), listClosed.size() );
-    SW_EXPECT_EQUAL( locked._tradeID, listClosed[0]._tradeID );
-    SW_EXPECT_TRUE( listClosed[0]._closeReason == TradeCloseReason::ServerRestart );
-    SW_EXPECT_EQUAL( int64( 100 ), world.getBalanceOf( kAlice, "cur.gold" ) );
-    SW_EXPECT_TRUE( restarted.invite( kAlice, kBob )._result == TradeResult::Ok );
-    (void)restarted.takeUpdates();
-
-    restarted._service.recoverOwnedTrades( UnixMilliseconds{ kNowMs } ); // 다시 돌아도 닫힌 것은 그대로다 — 방금 연 거래만 닫는다
-    SW_EXPECT_EQUAL( size_t( 1 ), restarted.takeUpdates().size() );
-    restarted._service.recoverOwnedTrades( UnixMilliseconds{ kNowMs } );
-    SW_EXPECT_TRUE( restarted.takeUpdates().empty() );
+    TradeServiceFixture rig;
+    TradePushSink       anonymousSink;
+    const int32         anonymous = rig._pRig->_clients.connect( rig._pRig->_server._port, { &anonymousSink } );
+    rig.poll();
+    TradeInviteRequest request;
+    request._peerDisplayName = "bob";
+    SW_EXPECT_EQUAL( OnlineError::kUnauthenticated, rig.send( anonymous, TradeMethod::Invite::kID, request )._errorCode );
+    SW_EXPECT_EQUAL( 0, rig._tradeLogic.getOpenTradeCount() );
+    rig._pRig.reset(); // 받기를 내린 뒤 지역 알림 받이가 사라진다
 }
 
-/** @brief [TradeServiceTest] 저장소 실패: 명령은 Unavailable 이고 거래 내용이 그대로다 */
-SW_TEST_CASE( TradeServiceTest, StoreFailureLeavesTradeIntact )
+/** @brief [TradeServiceTest] 위조: 없는 거래는 NotFound, 남의 거래는 NotParty 이고, 음수 · 0 · 범위 밖 수량은 Invalid, 항목이 너무 많으면 TooManyLegs 다. 어느 것도 거래를 바꾸지 않는다 */
+SW_TEST_CASE( TradeServiceTest, CraftedValuesAreRefused )
 {
-    TradeWorld    world;
-    TradeFixture& rig     = world._rig;
-    const uint64  tradeID = rig.invite( kAlice, kBob )._snapshot._tradeID;
-    world._database.armFault( ServiceStoreFault::RejectCommit );
-    SW_EXPECT_TRUE( rig.respond( kBob, tradeID )._result.hasError( OnlineError::kUnavailable ) );
-    SW_EXPECT_TRUE( rig.respond( kBob, tradeID )._result == TradeResult::Ok );
-}
+    TradeServiceFixture rig;
+    rig.grant( kAlice, "cur.gold", 100 );
+    const uint64 tradeID = rig.invite( kAliceSlot, "bob" )._snapshot._tradeID;
+    SW_EXPECT_TRUE( rig.respond( kBobSlot, tradeID )._result == TradeResult::Ok );
 
-/**
- * @brief [TradeServiceTest] 기동 복구는 한 쪽(256)보다 많은 열린 거래도 끝까지 닫는다 — 한 쪽만 닫으면 뒤의 거래 당사자는 주인 서버 없는 거래에 묶여 남았다
- */
-SW_TEST_CASE( TradeServiceTest, RestartRecoversEveryOwnedTradePastOnePage )
-{
-    TradeWorld      world;
-    constexpr int32 kTradeCount = 300;
-    for ( int32 index = 0; index < kTradeCount; ++index )
+    SW_EXPECT_TRUE( rig.lock( kBobSlot, tradeID + 1000 )._result == TradeResult::NotFound );
+    SW_EXPECT_TRUE( rig.lock( kBobSlot, 0 )._result != TradeResult::Ok );
+    const auto carolLock = rig.lock( kCarolSlot, tradeID );
+    SW_EXPECT_TRUE( carolLock._result == TradeResult::NotParty );
+    SW_EXPECT_EQUAL( uint64( 0 ), carolLock._snapshot._tradeID ); // 권한 실패 응답에 남의 거래 내용이 없다(감사 O-4)
+    SW_EXPECT_TRUE( rig.offer( kCarolSlot, tradeID, "cur.gold", 1 )._result == TradeResult::NotParty );
+
+    (void)rig.offer( kAliceSlot, tradeID, "cur.gold", -5 );
+    SW_EXPECT_EQUAL( OnlineError::kInvalidRequest, rig._response._errorCode );
+    (void)rig.offer( kAliceSlot, tradeID, "cur.gold", 0 );
+    SW_EXPECT_EQUAL( OnlineError::kInvalidRequest, rig._response._errorCode );
+    (void)rig.offer( kAliceSlot, tradeID, "cur.gold", LedgerConstant::kMaxAmount + 1 );
+    SW_EXPECT_EQUAL( OnlineError::kInvalidRequest, rig._response._errorCode );
+
+    TradeOfferRequest tooMany;
+    tooMany._tradeID = tradeID;
+    for ( int32 index = 0; index <= TradeConstant::kMaxLegsPerSide; ++index )
     {
-        const AccountID fromID = 1000 + static_cast<AccountID>( index ) * 2;
-        SW_REQUIRE_TRUE( world._rig.invite( fromID, fromID + 1 )._result == TradeResult::Ok );
+        TradeLeg&                               leg = tooMany._listLeg.emplace_back();
+        StringBuilder<constant::buffer::kMax64> assetID;
+        assetID.appendFormat( "cur.c%#", index );
+        leg._assetID = string( assetID.view() );
+        leg._amount  = 1;
     }
-    (void)world._rig.takeUpdates();
+    SW_EXPECT_TRUE( rig.call( kAliceSlot, TradeMethod::SetOffer::kID, tooMany )._result == TradeResult::TooManyLegs );
 
-    TradeFixture restarted( world._database );
-    restarted._service.recoverOwnedTrades( UnixMilliseconds{ kNowMs } );
-    SW_EXPECT_EQUAL( size_t( kTradeCount ), restarted.takeUpdates().size() );
-    restarted._service.recoverOwnedTrades( UnixMilliseconds{ kNowMs } );
-    SW_EXPECT_TRUE( restarted.takeUpdates().empty() ); // 남은 열린 거래가 없다
+    const TradeReply same = rig.lock( kAliceSlot, tradeID );
+    SW_EXPECT_TRUE( same._result == TradeResult::Ok ); // 거절된 제시는 없던 일이라 빈 제시를 잠근다
+    SW_EXPECT_TRUE( same._snapshot._arrSide[0]._listLeg.empty() );
+    SW_EXPECT_EQUAL( int64( 100 ), rig.getBalanceOf( kAlice, "cur.gold" ) );
 }
 
-/** @brief [TradeServiceTest] 기동 복구가 충돌에 거듭 지면 kBusy 이고 거래는 열려 있다 — Ok 로 넘기면 닫지 못한 거래가 주인 서버 없이 남는다. 충돌이 풀리면 닫는다 */
-SW_TEST_CASE( TradeServiceTest, RecoveryUnderConflictsIsBusyNotDone )
+/** @brief [TradeServiceTest] 낡은 확정: 본 버전이 지금 버전과 다르면 StaleOffer 이고 아무것도 옮기지 않는다(바꿔치기 사기) */
+SW_TEST_CASE( TradeServiceTest, StaleConfirmMovesNothing )
 {
-    SW_EXPECT_LOG( "ServiceStore.ConflictRetriesExhausted" );
-    MemoryServiceDatabase database;
-    TradeFixture          fixture( database );
-    const TradeCompletion invited = fixture.invite( kAlice, kBob );
-    SW_REQUIRE_TRUE( invited._result == TradeResult::Ok );
+    TradeServiceFixture rig;
+    rig.grant( kAlice, "cur.gold", 100 );
+    const uint64 tradeID = rig.invite( kAliceSlot, "bob" )._snapshot._tradeID;
+    SW_EXPECT_TRUE( rig.respond( kBobSlot, tradeID )._result == TradeResult::Ok );
+    SW_EXPECT_TRUE( rig.offer( kAliceSlot, tradeID, "cur.gold", 10 )._result == TradeResult::Ok );
+    SW_EXPECT_TRUE( rig.lock( kAliceSlot, tradeID )._result == TradeResult::Ok );
+    const TradeSnapshot locked = rig.lock( kBobSlot, tradeID )._snapshot;
 
-    UnreliableStoreConnection unreliable( database );
-    TradeStoreLogic           logic( unreliable, fixture._policy, nullptr, kServer, fixture._settings );
-    unreliable._conflictCount = 1000;
-    vector<TradeSnapshot> listClosed;
-    SW_EXPECT_TRUE( logic.recoverOwned( kNowMs, listClosed ).hasError( OnlineError::kBusy ) );
-    SW_EXPECT_TRUE( listClosed.empty() );
-    unreliable._conflictCount = 1;
-    SW_EXPECT_TRUE( logic.recoverOwned( kNowMs, listClosed ) == TradeResult::Ok );
-    SW_REQUIRE_EQUAL( size_t{ 1 }, listClosed.size() );
-    SW_EXPECT_TRUE( listClosed[0].isClosed() );
+    TradeConfirmRequest request;
+    request._tradeID          = tradeID;
+    request._seenOwnRevision  = locked._arrSide[1]._offerRevision;
+    request._seenPeerRevision = locked._arrSide[0]._offerRevision + 1;
+    SW_EXPECT_TRUE( rig.call( kBobSlot, TradeMethod::Confirm::kID, request )._result == TradeResult::StaleOffer );
+    SW_EXPECT_EQUAL( int64( 100 ), rig.getBalanceOf( kAlice, "cur.gold" ) );
 }
 
-/** @brief [TradeServiceTest] 초대가 충돌에 거듭 지면 kBusy 다 — 쓰지 않았으므로 다시 해도 된다 */
-SW_TEST_CASE( TradeServiceTest, InviteUnderConflictsIsBusy )
+/** @brief [TradeServiceTest] 정산: 양쪽을 옮기고, 응답에는 요청한 쪽, 닫힘 알림에는 각자의 이동 뒤 잔액만 실린다. 남의 잔액이 섞이지 않는다 */
+SW_TEST_CASE( TradeServiceTest, SettlementCarriesOwnBalances )
 {
-    SW_EXPECT_LOG( "ServiceStore.ConflictRetriesExhausted" );
-    MemoryServiceDatabase     database;
-    TradeFixture              fixture( database );
-    UnreliableStoreConnection unreliable( database );
-    unreliable._conflictCount = 1000;
-    TradeStoreLogic logic( unreliable, fixture._policy, nullptr, kServer, fixture._settings );
-    TradeSnapshot   snapshot;
-    SW_EXPECT_TRUE( logic.invite( kAlice, kBob, 1, kNowMs, snapshot ).hasError( OnlineError::kBusy ) );
-    unreliable._conflictCount = 0;
-    SW_EXPECT_TRUE( logic.invite( kAlice, kBob, 1, kNowMs, snapshot ) == TradeResult::Ok );
+    TradeServiceFixture rig;
+    rig.grant( kAlice, "cur.gold", 100 );
+    rig.grant( kBob, "cur.gem", 50 );
+    const uint64 tradeID = rig.invite( kAliceSlot, "bob" )._snapshot._tradeID;
+    SW_EXPECT_TRUE( rig.respond( kBobSlot, tradeID )._result == TradeResult::Ok );
+    SW_EXPECT_TRUE( rig.offer( kAliceSlot, tradeID, "cur.gold", 40 )._result == TradeResult::Ok );
+    SW_EXPECT_TRUE( rig.offer( kBobSlot, tradeID, "cur.gem", 20 )._result == TradeResult::Ok );
+    SW_EXPECT_TRUE( rig.lock( kAliceSlot, tradeID )._result == TradeResult::Ok );
+    const TradeSnapshot locked = rig.lock( kBobSlot, tradeID )._snapshot;
+    const TradeSnapshot first  = rig.confirm( kAliceSlot, locked, kAlice )._snapshot;
+    SW_EXPECT_FALSE( first.isClosed() );
+    rig.clearPushes();
+
+    const TradeReply settled = rig.confirm( kBobSlot, first, kBob );
+    SW_REQUIRE_TRUE( settled._result == TradeResult::Ok );
+    SW_EXPECT_TRUE( settled._snapshot._state == TradeState::Settled );
+    SW_EXPECT_TRUE( TradeServiceTestUtil::findBalance( settled._listBalance, "cur.gold" ) == int64( 40 ) );
+    SW_EXPECT_TRUE( TradeServiceTestUtil::findBalance( settled._listBalance, "cur.gem" ) == int64( 30 ) );
+
+    SW_REQUIRE_EQUAL( size_t( 1 ), rig._arrSink[kAliceSlot]._listKind.size() );
+    SW_EXPECT_EQUAL( TradeMethod::Closed::kKind, rig._arrSink[kAliceSlot]._listKind[0] );
+    const TradeNotification& alicePush = rig._arrSink[kAliceSlot]._listReply[0];
+    SW_EXPECT_TRUE( alicePush._snapshot._state == TradeState::Settled );
+    SW_EXPECT_TRUE( TradeServiceTestUtil::findBalance( alicePush._listBalance, "cur.gold" ) == int64( 60 ) );
+    SW_EXPECT_TRUE( TradeServiceTestUtil::findBalance( alicePush._listBalance, "cur.gem" ) == int64( 20 ) );
+
+    SW_REQUIRE_EQUAL( size_t( 1 ), rig._arrSink[kBobSlot]._listKind.size() );
+    SW_EXPECT_TRUE( TradeServiceTestUtil::findBalance( rig._arrSink[kBobSlot]._listReply[0]._listBalance, "cur.gold" ) == int64( 40 ) );
+    SW_EXPECT_TRUE( rig._arrSink[kCarolSlot]._listKind.empty() );
+
+    SW_EXPECT_EQUAL( int64( 60 ), rig.getBalanceOf( kAlice, "cur.gold" ) );
+    SW_EXPECT_EQUAL( int64( 40 ), rig.getBalanceOf( kBob, "cur.gold" ) );
 }
 
-/** @brief [TradeServiceTest] 기동 복구가 저장소 실패로 지면 재시도 간격 뒤의 update 가 다시 해 거래를 닫는다 */
-SW_TEST_CASE( TradeServiceTest, FailedRecoveryRunsAgainFromUpdate )
+/** @brief [TradeServiceTest] 제시가 바뀌면 두 당사자에게 갱신 알림이 가고, 거절하면 닫힘 알림과 이유가 간다 */
+SW_TEST_CASE( TradeServiceTest, UpdatesAndClosePush )
 {
-    TradeWorld world;
-    SW_REQUIRE_TRUE( world._rig.invite( kAlice, kBob )._result == TradeResult::Ok );
-    TradeFixture restarted( world._database );
-    world._database.armFault( ServiceStoreFault::RejectCommit );
-    restarted._service.recoverOwnedTrades( UnixMilliseconds{ kNowMs } );
-    SW_EXPECT_TRUE( restarted.takeUpdates().empty() );
-    restarted._service.update( UnixMilliseconds{ kNowMs + TradeConstant::kExpiryRetryMs - 1 } );
-    SW_EXPECT_TRUE( restarted.takeUpdates().empty() ); // 아직 간격 전이다
-    restarted._service.update( UnixMilliseconds{ kNowMs + TradeConstant::kExpiryRetryMs } );
-    SW_EXPECT_EQUAL( size_t( 1 ), restarted.takeUpdates().size() );
+    TradeServiceFixture rig;
+    rig.grant( kAlice, "cur.gold", 100 );
+    const uint64 tradeID = rig.invite( kAliceSlot, "bob" )._snapshot._tradeID;
+    SW_EXPECT_TRUE( rig.respond( kBobSlot, tradeID )._result == TradeResult::Ok );
+    rig.clearPushes();
+
+    SW_EXPECT_TRUE( rig.offer( kAliceSlot, tradeID, "cur.gold", 10 )._result == TradeResult::Ok );
+    SW_REQUIRE_EQUAL( size_t( 1 ), rig._arrSink[kBobSlot]._listKind.size() );
+    SW_EXPECT_EQUAL( TradeMethod::Update::kKind, rig._arrSink[kBobSlot]._listKind[0] );
+    SW_EXPECT_EQUAL( size_t( 1 ), rig._arrSink[kBobSlot]._listReply[0]._snapshot._arrSide[0]._listLeg.size() );
+    SW_EXPECT_EQUAL( size_t( 1 ), rig._arrSink[kAliceSlot]._listKind.size() );
+    rig.clearPushes();
+
+    TradeIDRequest cancel;
+    cancel._tradeID = tradeID;
+    SW_EXPECT_TRUE( rig.call( kBobSlot, TradeMethod::Cancel::kID, cancel )._result == TradeResult::Ok );
+    SW_REQUIRE_EQUAL( size_t( 1 ), rig._arrSink[kAliceSlot]._listKind.size() );
+    SW_EXPECT_EQUAL( TradeMethod::Closed::kKind, rig._arrSink[kAliceSlot]._listKind[0] );
+    SW_EXPECT_TRUE( rig._arrSink[kAliceSlot]._listReply[0]._snapshot._closeReason == TradeCloseReason::CancelledByParty );
+}
+
+/** @brief [TradeServiceTest] 계정이 떠나면 그 계정의 열린 거래를 닫고 상대에게 PartyLeft 로 알린다 */
+SW_TEST_CASE( TradeServiceTest, LeavingClosesTheTrade )
+{
+    TradeServiceFixture rig;
+    const uint64        tradeID = rig.invite( kAliceSlot, "bob" )._snapshot._tradeID;
+    SW_EXPECT_TRUE( rig.respond( kBobSlot, tradeID )._result == TradeResult::Ok );
+    rig.clearPushes();
+
+    rig._pRig->_clients.drop( kBobSlot );
+    rig.poll();
+    SW_REQUIRE_EQUAL( size_t( 1 ), rig._arrSink[kAliceSlot]._listKind.size() );
+    SW_EXPECT_EQUAL( TradeMethod::Closed::kKind, rig._arrSink[kAliceSlot]._listKind[0] );
+    SW_EXPECT_TRUE( rig._arrSink[kAliceSlot]._listReply[0]._snapshot._closeReason == TradeCloseReason::PartyLeft );
+    SW_EXPECT_EQUAL( 0, rig._tradeLogic.getOpenTradeCount() );
+}
+
+/** @brief [TradeServiceTest] 서버 여러 대: 이 서버에 없는 이름은 접속 상태 관리자에게 묻고, 답이 오는 다음 틱에 응답한다. 못 찾으면 PeerOffline, 모르는 찾기 번호는 무시한다 */
+SW_TEST_CASE( TradeServiceTest, PresenceLookupFinishesTheInvite )
+{
+    TradeServiceFixture rig( true );
+    TradeInviteRequest  request;
+    request._peerDisplayName = "elsewhere";
+
+    SW_EXPECT_EQUAL( 0, rig.send( kAliceSlot, TradeMethod::Invite::kID, request )._count ); // 찾기를 기다린다
+    SW_REQUIRE_EQUAL( size_t( 1 ), rig._presence.getPendingCount() );
+    rig._presence.answerFront( kInvalidAccountID );
+    rig.poll();
+    SW_EXPECT_EQUAL( 1, rig._response._count );
+    SW_EXPECT_TRUE( rig._response.readReply()._result == TradeResult::PeerOffline );
+
+    SW_EXPECT_EQUAL( 0, rig.send( kAliceSlot, TradeMethod::Invite::kID, request )._count );
+    rig._presence.answerFront( kBob );
+    rig.poll();
+    SW_EXPECT_EQUAL( 1, rig._response._count );
+    const TradeReply reply = rig._response.readReply();
+    SW_EXPECT_TRUE( reply._result == TradeResult::Ok );
+    SW_EXPECT_EQUAL( kBob, reply._snapshot._arrSide[1]._accountID );
+}
+
+/** @brief [TradeServiceTest] 찾기를 기다리는 사이 신청한 계정이 떠나면 신청을 거둔다 — 뒤늦은 답으로 떠난 계정의 거래가 열려 아무도 닫지 못하면 상대가 시한까지 "거래 중" 이 된다 */
+SW_TEST_CASE( TradeServiceTest, LookupOfADepartedAccountOpensNothing )
+{
+    TradeServiceFixture rig( true );
+    TradeInviteRequest  request;
+    request._peerDisplayName = "elsewhere";
+    (void)rig.send( kAliceSlot, TradeMethod::Invite::kID, request );
+    SW_REQUIRE_EQUAL( size_t( 1 ), rig._presence.getPendingCount() );
+
+    rig._pRig->_clients.drop( kAliceSlot );
+    rig.poll();
+    rig._presence.answerFront( kBob );
+    rig.poll();
+    SW_EXPECT_EQUAL( 0, rig._tradeLogic.getOpenTradeCount() );
+    SW_EXPECT_TRUE( rig._arrSink[kBobSlot]._listKind.empty() );
+
+    SW_EXPECT_TRUE( rig.invite( kBobSlot, "carol" )._result == TradeResult::Ok ); // 밥은 묶이지 않았다
+}
+
+/** @brief [TradeServiceTest] 상대가 이 서버에 연결돼 있지 않으면 알림을 접속 상태 관리자에게 넘긴다 */
+SW_TEST_CASE( TradeServiceTest, PushForAnotherServerGoesThroughPresence )
+{
+    TradeServiceFixture rig( true );
+    const TradeReply    reply = rig.invite( kAliceSlot, "remote" );
+    SW_EXPECT_TRUE( reply._result == TradeResult::Ok );
+    SW_REQUIRE_EQUAL( size_t( 1 ), rig._presence._listRelayedAccount.size() );
+    SW_EXPECT_EQUAL( kRemote, rig._presence._listRelayedAccount[0] );
+}
+
+/** @brief [TradeServiceTest] 저장소 실패는 kUnavailable 이고 같은 요청을 다시 하면 된다 */
+SW_TEST_CASE( TradeServiceTest, StoreFailureIsUnavailable )
+{
+    TradeServiceFixture rig;
+    const uint64        tradeID = rig.invite( kAliceSlot, "bob" )._snapshot._tradeID;
+    rig._pRig->_database.armFault( ServiceStoreFault::RejectCommit );
+    TradeRespondRequest request;
+    request._tradeID = tradeID;
+    request._bAccept = SW_TRUE;
+    SW_EXPECT_EQUAL( OnlineError::kUnavailable, rig.send( kBobSlot, TradeMethod::Respond::kID, request )._errorCode );
+    SW_EXPECT_TRUE( rig.respond( kBobSlot, tradeID )._result == TradeResult::Ok );
+}
+
+/** @brief [TradeServiceTest] 기능 플래그가 꺼지면 모든 요청이 kFeatureDisabled 이고 서비스에 닿지 않는다. 플래그가 없으면 기본은 켬이다 */
+SW_TEST_CASE( TradeServiceTest, FeatureFlagBlocksRequests )
+{
+    TradeServiceFixture rig( false, true );
+    SW_EXPECT_TRUE( rig.invite( kAliceSlot, "bob" )._result == TradeResult::Ok ); // 플래그 없음 = 켬
+
+    RemoteConfigValue value;
+    value._type    = RemoteConfigValueKind::Flag;
+    value._integer = 0;
+    ServiceAuditEntry audit;
+    audit._actor   = "gm.0000000000000001";
+    audit._action  = "config.set";
+    audit._subject = "config";
+    audit._timeMs  = 1;
+    rig._remoteConfig.submitSet( rig._pRig->_server._store, TradeService::kFeatureFlag, value, audit );
+    rig.poll();
+
+    TradeInviteRequest request;
+    request._peerDisplayName = "carol";
+    SW_EXPECT_EQUAL( OnlineError::kFeatureDisabled, rig.send( kBobSlot, TradeMethod::Invite::kID, request )._errorCode );
+    SW_EXPECT_EQUAL( OnlineError::kFeatureDisabled, rig.sendRaw( kBobSlot, TradeMethod::Lock::kID, TradeServiceTestUtil::makeJunk( 4 ) )._errorCode ); // 몸을 읽기 전에 막는다
+    SW_EXPECT_EQUAL( 1, rig._tradeLogic.getOpenTradeCount() );
+}
+
+/** @brief [TradeServiceTest] 다시 시도할 공통 범주(저장소 일시 장애)는 요청 층이 기억하지 않아 같은 멱등 키의 거래 명령 재시도가 서비스에 다시 닿고, 끝난 결과는 기억한다 */
+SW_TEST_CASE( TradeServiceTest, RetryableReplyReachesTheServiceAgain )
+{
+    test::ReplyRetentionFixture<TradeSessionRecord, TradeReply> rig;
+    TradeReply                                                  finished;
+    finished._result = TradeResult::Ok;
+    rig.expectFailureReachesService( TradeMethod::Invite::kID, OnlineError::kUnavailable, finished );
 }

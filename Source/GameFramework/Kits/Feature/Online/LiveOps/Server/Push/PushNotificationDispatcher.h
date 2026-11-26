@@ -104,7 +104,7 @@ namespace sw
          * @brief `notifyTopic` 을 같은 @p claimKey 로 한 번만 합니다 — 저장소의 `liveops_push` 에 "없어야 한다" 조건으로 표를 쓰고, 쓴 서버만 보냅니다.
          * @details 서버 여럿이 같은 이벤트 시작을 보고도 전체 대상 알림이 한 번만 나가게 한다. 키는 저장소 키 규칙(`[0-9a-z_./-]`)을 지켜야 한다. 저장소에 닿지 못하면 보내지 않고 센다
          *          (다음 시작 알림이 아니라 이번 알림을 놓치는 쪽이 중복보다 낫다). 표는 창이 끝난 뒤 TTL 규칙(`makeTopicClaimTTLRule`)이 지운다 —
-         *          창이 끝나면 같은 창의 시작 알림이 다시 나갈 일이 없어 멱등 근거가 아니다. 키는 `<…>/<창 끝 16진>/<16진 꼬리>` 로 끝나야 한다(`LiveOpsServer::announceStarts`).
+         *          창이 끝나면 같은 창의 시작 알림이 다시 나갈 일이 없어 멱등 근거가 아니다. 키는 `<…>/<창 끝 16진>/<16진 꼬리>` 로 끝나야 한다(`LiveOpsService::announceStarts`).
          */
         void notifyTopicOnce( string_view claimKey, string_view topic, const PushNotificationMessage& message, UnixMilliseconds nowMs );
         /** @brief 제공자의 결과를 회수하고, 백오프가 끝난 배달을 다시 보냅니다. 저장소 완료는 호스트(또는 서버 루프)가 비웁니다. */

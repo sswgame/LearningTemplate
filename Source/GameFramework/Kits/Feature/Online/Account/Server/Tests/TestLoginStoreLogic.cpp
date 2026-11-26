@@ -87,7 +87,7 @@ namespace
         MemoryServiceDatabase database;
         FakeLoginCrypto       crypto;
         FakeLoginHasher       hasher;
-        LoginServiceConfig    settings;
+        LoginLogicConfig      settings;
         LoginTicketAuthority  ticketAuthority;
 
         Fixture()

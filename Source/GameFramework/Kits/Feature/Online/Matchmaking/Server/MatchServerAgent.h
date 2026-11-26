@@ -9,7 +9,7 @@
  *          - 게임 서버는 이 객체를 계정 키트의 접속 인증기에 받아들이기 정책(`IConnectAdmission`)으로 넘긴다. 티켓이 맞아도 명단에 없는 계정은 거절된다.
  *            인증기는 네트워크 스레드에서 묻고 기록 읽기 · 배정 · 시한은 서버 루프에서 바뀌므로 명단은 잠금 하나로 지킨다.
  *          서버가 매칭 결과를 미리 알고 접속할 때 확인하는 방식은 PlayFab Multiplayer Servers 의 세션 플레이어 목록 · Agones Allocation 의 영속 배정과 같다.
- *          버스 구독은 서버 조립 단계(또는 `MatchmakingServer`)가 `getAssignTopic` 으로 한다.
+ *          버스 구독은 서버 조립 단계(또는 `MatchmakingService`)가 `getAssignTopic` 으로 한다.
  */
 #pragma once
 #include "Core/Concurrency/mutex.h"

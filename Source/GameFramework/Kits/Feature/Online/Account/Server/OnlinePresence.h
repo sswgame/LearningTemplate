@@ -10,7 +10,7 @@
  *          - 알림은 최대 한 번 배달된다(버스). 놓치면 클라이언트가 다시 읽으며, 거래 스냅샷은 저장소에 있다.
  *          - 캐시나 버스가 없는 호스트(테스트 — 서버 조립은 늘 준다)에서는 찾기가 다음 `tick` 에 "없음" 으로 끝나고 원격 알림은 false 를 반환한다. 찾기 결과는 항상 맡긴 델리게이트로 한 번 전달한다.
  *
- *          계정 키트의 `AccountServer` 가 소유하며 호스트 틱 스레드에서 쓴다. Nakama 의 status registry 와 PlayFab 의 presence 에 해당한다.
+ *          계정 키트의 `AccountService` 가 소유하며 호스트 틱 스레드에서 쓴다. Nakama 의 status registry 와 PlayFab 의 presence 에 해당한다.
  */
 #pragma once
 #include "Core/Container/IDAllocator.h"

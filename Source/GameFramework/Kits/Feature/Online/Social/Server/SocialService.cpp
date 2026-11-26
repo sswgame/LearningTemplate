@@ -2,800 +2,378 @@
 
 #include "GameFramework/Kits/Feature/Online/Social/Server/SocialService.h"
 
-#include "Core/Math/MathUtil.h"
 #include "Core/Serialization/BitStream.h"
 
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/AccountPresence.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/OnlinePushRelay.h"
 #include "GameFramework/Kits/Feature/Online/Social/Runtime/SocialProtocol.h"
 #include "GameFramework/Kits/Feature/Online/Social/Server/SocialCounts.h"
-#include "GameFramework/Kits/Feature/Online/Social/Server/SocialStoreRecords.h"
 #include "GameFramework/Runtime/Online/Bus/ServerBusTopic.h"
-#include "GameFramework/Runtime/Online/Cache/Server/EphemeralRecordTable.h"
-#include "GameFramework/Runtime/Online/Cache/Server/EphemeralStore.h"
-#include "GameFramework/Runtime/Online/Cache/Server/EphemeralStoreRouter.h"
-#include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
-#include "GameFramework/Runtime/Online/Service/OnlineLimit.h"
-#include "GameFramework/Runtime/Online/Store/Server/ServiceCommitRunner.h"
-#include "GameFramework/Runtime/Online/Store/Server/ServiceReadSetConnection.h"
-#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordReader.h"
-#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordTable.h"
-#include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
-#include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
-
-#include <algorithm>
-
-namespace sw
-{
-    namespace
-    {
-        struct SocialServiceInternal
-        {
-            static constexpr int64 kPresenceTTLMs     = 90000;
-            static constexpr int64 kPresenceRefreshMs = 30000;
-
-            static const ServiceRecordTable<SocialLinkStoreRecord>& getLinkTable()
-            {
-                static const ServiceRecordTable<SocialLinkStoreRecord> s_table{ "social_link" };
-                return s_table;
-            }
-
-            static const ServiceRecordTable<SocialCountStoreRecord>& getCountTable()
-            {
-                static const ServiceRecordTable<SocialCountStoreRecord> s_table{ "social_count" };
-                return s_table;
-            }
-
-            /** @brief 막음의 역색인 `<막힌 사람>/<막은 사람>`(값 없음)입니다. 막힌 쪽 줄은 없으므로 탈퇴 정리가 "나를 막은 사람" 을 여기서 찾는다. */
-            static const ServiceIndexTable& getBlockedByTable()
-            {
-                static const ServiceIndexTable s_table{ "social_blocked_by" };
-                return s_table;
-            }
-
-            /** @brief 줄 키 `<주인>/<상대>` 의 역색인 키 `<상대>/<주인>` 입니다. */
-            static string makeReverseKey( const string& key )
-            {
-                const size_t                             width = static_cast<size_t>( ServiceKeyUtil::kHexWidth );
-                const string_view                        keyView( key );
-                StringBuilder<constant::buffer::kMax128> reverseKey;
-                reverseKey.appendFormat( "%#/%#", keyView.substr( width + 1 ), keyView.substr( 0, width ) );
-                return string( reverseKey.view() );
-            }
-
-            static string makeLinkKey( AccountID ownerID, AccountID otherID )
-            {
-                string key = ServiceKeyUtil::makeHex64( ownerID );
-                key.push_back( '/' );
-                ServiceKeyUtil::appendHex64( key, otherID );
-                return key;
-            }
-
-            static string makePresenceKey( AccountID accountID )
-            {
-                StringBuilder<constant::buffer::kMax128> key;
-                key.appendFormat( "social/rp/%#", ServiceKeyUtil::makeHex64( accountID ) );
-                return string( key.view() );
-            }
-
-            static SocialLinkStoreRecord encodeLink( SocialLinkState state, int64 sinceMs )
-            {
-                SocialLinkStoreRecord record;
-                record._state   = state;
-                record._sinceMs = sinceMs;
-                return record;
-            }
-
-            [[nodiscard]] static bool decodeLink( const ServiceRecord& raw, SocialLinkState& outState, int64& outSinceMs )
-            {
-                SocialLinkStoreRecord record;
-                if ( getLinkTable().decode( raw, record ) == false || record._state == SocialLinkState::Count )
-                    return false;
-                outState   = record._state;
-                outSinceMs = record._sinceMs;
-                return true;
-            }
-
-            static SocialCountStoreRecord encodeCounts( const SocialCounts& counts )
-            {
-                SocialCountStoreRecord record;
-                record._friendCount   = counts._friendCount;
-                record._incomingCount = counts._incomingCount;
-                record._outgoingCount = counts._outgoingCount;
-                record._blockedCount  = counts._blockedCount;
-                return record;
-            }
-
-            [[nodiscard]] static bool decodeCounts( const ServiceRecord& raw, SocialCounts& outCounts )
-            {
-                SocialCountStoreRecord record;
-                if ( getCountTable().decode( raw, record ) == false )
-                    return false;
-                outCounts._friendCount   = record._friendCount;
-                outCounts._incomingCount = record._incomingCount;
-                outCounts._outgoingCount = record._outgoingCount;
-                outCounts._blockedCount  = record._blockedCount;
-                return true;
-            }
-
-            static void addCounts( SocialCounts& inoutCounts, const SocialCounts& delta )
-            {
-                inoutCounts._friendCount   = MathUtil::max( 0, inoutCounts._friendCount + delta._friendCount );
-                inoutCounts._incomingCount = MathUtil::max( 0, inoutCounts._incomingCount + delta._incomingCount );
-                inoutCounts._outgoingCount = MathUtil::max( 0, inoutCounts._outgoingCount + delta._outgoingCount );
-                inoutCounts._blockedCount  = MathUtil::max( 0, inoutCounts._blockedCount + delta._blockedCount );
-            }
-
-            /** @brief 레코드를 읽습니다. 저장소를 쓸 수 없으면 false 를 반환하고, 레코드가 없는 것은 true 이며 버전이 `kAbsentVersion` 입니다. */
-            [[nodiscard]] static bool readOrAbsent( IServiceStoreConnection& connection, const hashed_string& table, string_view key, ServiceRecord& outRecord )
-            {
-                const ServiceStoreResult result = connection.readRecord( table, key, outRecord );
-                return result == ServiceStoreResult::Ok || result == ServiceStoreResult::NotFound;
-            }
-
-            /** @brief 줄 하나의 새 상태를 트랜잭션에 붙입니다. 상태가 같으면 아무것도 쓰지 않습니다. */
-            static void stageLink( ServiceTransaction& inoutTransaction, const string& key, const ServiceRecord& record, SocialLinkState oldState, SocialLinkState newState,
-                                   UnixMilliseconds nowMs )
-            {
-                const bool bWasBlocked = oldState == SocialLinkState::Blocked;
-                const bool bBlocked    = newState == SocialLinkState::Blocked;
-                if ( bWasBlocked != bBlocked ) // 막음이 서거나 풀릴 때 역색인을 같은 트랜잭션에서 맞춘다
-                {
-                    if ( bBlocked )
-                        inoutTransaction.put( getBlockedByTable(), makeReverseKey( key ) );
-                    else
-                        inoutTransaction.erase( getBlockedByTable(), makeReverseKey( key ) );
-                }
-                if ( newState == SocialLinkState::None )
-                {
-                    if ( record._version != ServiceRecord::kAbsentVersion )
-                        inoutTransaction.erase( getLinkTable(), key, record._version );
-                    return;
-                }
-                if ( newState != oldState )
-                    inoutTransaction.put( getLinkTable(), key, encodeLink( newState, nowMs.count() ), record._version );
-            }
-
-            /** @brief 개수 변화를 트랜잭션에 붙입니다. 바뀌지 않은 개수(상한 판정의 근거)의 버전 조건은 읽기 집합 연결(`ServiceReadSetConnection`)이 붙인다. */
-            static void stageCounts( ServiceTransaction& inoutTransaction, const string& key, const ServiceRecord& record, SocialCounts counts, const SocialCounts& delta )
-            {
-                if ( delta.isZero() )
-                    return;
-                addCounts( counts, delta );
-                inoutTransaction.put( getCountTable(), key, encodeCounts( counts ), record._version );
-            }
-        };
-
-        /** @brief 탈퇴 정리의 저장 부분입니다. */
-        struct SocialDeleteAccountInternal
-        {
-            /** @brief 상대 @p otherID 의 상태가 나를 향해 @p otherState 일 때 상대 개수의 변화입니다. */
-            static SocialCounts makeOtherDelta( SocialLinkState otherState )
-            {
-                SocialCounts delta;
-                delta._friendCount   = otherState == SocialLinkState::Friend ? -1 : 0;
-                delta._outgoingCount = otherState == SocialLinkState::Outgoing ? -1 : 0;
-                delta._incomingCount = otherState == SocialLinkState::Incoming ? -1 : 0;
-                delta._blockedCount  = otherState == SocialLinkState::Blocked ? -1 : 0;
-                return delta;
-            }
-
-            /**
-             * @brief 지운 계정 @p selfID 와 @p otherID 사이의 줄을 지웁니다. 내 줄 @p pSelfLink(없으면 nullptr)와 상대 줄 `<상대>/<나>` 를 지우고 상대 개수를 고치며 역색인을 맞춥니다.
-             */
-            static ServiceStoreResult erasePair( IServiceStoreConnection& connection, AccountID selfID, AccountID otherID, const ServiceRecord* pSelfLink )
-            {
-                using Internal         = SocialServiceInternal;
-                const string  selfKey  = Internal::makeLinkKey( selfID, otherID );
-                const string  otherKey = Internal::makeLinkKey( otherID, selfID );
-                const string  countKey = ServiceKeyUtil::makeHex64( otherID );
-                ServiceRecord otherLink;
-                ServiceRecord otherCount;
-                if ( Internal::readOrAbsent( connection, Internal::getLinkTable(), otherKey, otherLink ) == false ||
-                     Internal::readOrAbsent( connection, Internal::getCountTable(), countKey, otherCount ) == false )
-                    return ServiceStoreResult::Unavailable;
-                SocialLinkState selfState  = SocialLinkState::None;
-                SocialLinkState otherState = SocialLinkState::None;
-                int64           sinceMs    = 0;
-                if ( pSelfLink != nullptr && Internal::decodeLink( *pSelfLink, selfState, sinceMs ) == false )
-                    selfState = SocialLinkState::None;
-                if ( otherLink._version != ServiceRecord::kAbsentVersion && Internal::decodeLink( otherLink, otherState, sinceMs ) == false )
-                    otherState = SocialLinkState::None;
-                SocialCounts counts;
-                if ( otherCount._version != ServiceRecord::kAbsentVersion && Internal::decodeCounts( otherCount, counts ) == false )
-                    counts = SocialCounts{};
-                ServiceTransaction transaction;
-                if ( pSelfLink != nullptr )
-                    transaction.erase( Internal::getLinkTable(), selfKey, pSelfLink->_version );
-                if ( otherLink._version != ServiceRecord::kAbsentVersion )
-                    transaction.erase( Internal::getLinkTable(), otherKey, otherLink._version );
-                Internal::stageCounts( transaction, countKey, otherCount, counts, makeOtherDelta( otherState ) );
-                if ( selfState == SocialLinkState::Blocked )
-                    transaction.erase( Internal::getBlockedByTable(), Internal::makeReverseKey( selfKey ) );
-                if ( otherState == SocialLinkState::Blocked || pSelfLink == nullptr )
-                    transaction.erase( Internal::getBlockedByTable(), Internal::makeReverseKey( otherKey ) );
-                return ServiceCommitRunner::commitOnce( connection, transaction );
-            }
-        };
-
-        /** @brief 관계 바꾸기 하나를 처리합니다. 이름으로 신청했으면 이름 인덱스를 읽고, 두 줄과 두 개수를 읽어 규칙으로 정한 뒤 버전 조건으로 씁니다. 충돌이 나면 다시 읽고 다시 시도합니다. */
-        struct SocialLinkResult
-        {
-            SocialLinkDecision _decision{};
-            AccountID          _otherID{ kInvalidAccountID }; ///< 이름으로 신청했으면 찾은 계정이다
-        };
-
-        class SocialLinkStoreRun final
-        {
-        public:
-            SocialLinkStoreRun( const SocialLinkPolicy& policy, const IAccountNameIndex* pNameIndex, SocialLinkOperation operation, AccountID accountID, AccountID otherID, string_view displayName,
-                                UnixMilliseconds nowMs )
-                : _decision{}
-                , _displayName{ displayName }
-                , _policy{ policy }
-                , _pNameIndex{ pNameIndex }
-                , _accountID{ accountID }
-                , _otherID{ otherID }
-                , _nowMs{ nowMs }
-                , _operation{ operation }
-            {
-            }
-
-            /** @brief 저장소 스레드에서 관계를 바꾸고 결정과 상대 계정을 넘깁니다. 한 번 쓰고 버린다. */
-            SocialLinkResult run( IServiceStoreConnection& connection )
-            {
-                runAttempts( connection );
-                return SocialLinkResult{ _decision, _otherID };
-            }
-
-        private:
-            void runAttempts( IServiceStoreConnection& connection )
-            {
-                if ( _displayName.empty() == false && resolveName( connection ) == false )
-                    return;
-                // 두 링크 · 두 개수를 읽어 정한다 — 쓰지 않는 쪽(바뀌지 않은 상대 링크)도 판단의 근거라 시도의 읽기 집합이 모두 커밋 조건으로 건다.
-                const ServiceStoreResult result = ServiceCommitRunner::run<ServiceStoreResult>( connection, "Social.Link", [this]( ServiceCommitAttempt& attempt ) -> optional<ServiceStoreResult>
-                {
-                    const ServiceStoreResult once = runOnce( attempt );
-                    if ( once == ServiceStoreResult::Conflict )
-                        return nullopt;
-                    return once;
-                } );
-                if ( result == ServiceStoreResult::Ok )
-                    return;
-                _decision         = SocialLinkDecision{};
-                _decision._result = SocialServiceResult::fail( result == ServiceStoreResult::Conflict ? OnlineError::kBusy : OnlineError::kUnavailable );
-            }
-
-            /** @brief 이름으로 계정 id 를 찾습니다. 못 찾으면 결과를 적고 false 를 반환합니다. */
-            [[nodiscard]] bool resolveName( IServiceStoreConnection& connection )
-            {
-                AccountIdentity          identity;
-                const ServiceStoreResult found = _pNameIndex != nullptr ? _pNameIndex->readIdentityByDisplayName( connection, _displayName, identity )
-                                                                        : ServiceStoreResult::NotFound;
-                if ( found != ServiceStoreResult::Ok )
-                {
-                    _decision._result = found == ServiceStoreResult::NotFound ? SocialResult::NotFound : SocialServiceResult::fail( OnlineError::kUnavailable );
-                    return false;
-                }
-                _otherID = identity._accountID;
-                if ( _otherID == _accountID || _otherID == kInvalidAccountID )
-                {
-                    _decision._result = SocialServiceResult::fail( OnlineError::kInvalidRequest );
-                    return false;
-                }
-                return true;
-            }
-
-            /** @brief 읽고, 정하고, 커밋합니다. 쓸 것이 없으면 Ok 이며 결정의 결과가 응답입니다. */
-            ServiceStoreResult runOnce( ServiceCommitAttempt& connection )
-            {
-                using Internal = SocialServiceInternal;
-                ServiceRecord selfLink;
-                ServiceRecord otherLink;
-                ServiceRecord selfCount;
-                ServiceRecord otherCount;
-                const string  selfLinkKey   = Internal::makeLinkKey( _accountID, _otherID );
-                const string  otherLinkKey  = Internal::makeLinkKey( _otherID, _accountID );
-                const string  selfCountKey  = ServiceKeyUtil::makeHex64( _accountID );
-                const string  otherCountKey = ServiceKeyUtil::makeHex64( _otherID );
-                const bool    bReadOk       = Internal::readOrAbsent( connection, Internal::getLinkTable(), selfLinkKey, selfLink ) &&
-                                     Internal::readOrAbsent( connection, Internal::getLinkTable(), otherLinkKey, otherLink ) &&
-                                     Internal::readOrAbsent( connection, Internal::getCountTable(), selfCountKey, selfCount ) &&
-                                     Internal::readOrAbsent( connection, Internal::getCountTable(), otherCountKey, otherCount );
-                if ( bReadOk == false )
-                    return ServiceStoreResult::Unavailable;
-
-                SocialLinkState selfState  = SocialLinkState::None;
-                SocialLinkState otherState = SocialLinkState::None;
-                int64           sinceMs    = 0;
-                SocialCounts    selfCounts;
-                SocialCounts    otherCounts;
-                if ( selfLink._version != ServiceRecord::kAbsentVersion && Internal::decodeLink( selfLink, selfState, sinceMs ) == false )
-                    selfState = SocialLinkState::None;
-                if ( otherLink._version != ServiceRecord::kAbsentVersion && Internal::decodeLink( otherLink, otherState, sinceMs ) == false )
-                    otherState = SocialLinkState::None;
-                if ( selfCount._version != ServiceRecord::kAbsentVersion && Internal::decodeCounts( selfCount, selfCounts ) == false )
-                    selfCounts = SocialCounts{};
-                if ( otherCount._version != ServiceRecord::kAbsentVersion && Internal::decodeCounts( otherCount, otherCounts ) == false )
-                    otherCounts = SocialCounts{};
-
-                _decision = SocialCounts::decide( _policy, _operation, selfState, otherState, selfCounts, otherCounts );
-                if ( _decision._bWrite == SW_FALSE )
-                    return ServiceStoreResult::Ok;
-
-                ServiceTransaction transaction;
-                Internal::stageLink( transaction, selfLinkKey, selfLink, selfState, _decision._newSelfState, _nowMs );
-                Internal::stageLink( transaction, otherLinkKey, otherLink, otherState, _decision._newOtherState, _nowMs );
-                Internal::stageCounts( transaction, selfCountKey, selfCount, selfCounts, _decision._selfDelta );
-                Internal::stageCounts( transaction, otherCountKey, otherCount, otherCounts, _decision._otherDelta );
-                return connection.commit( transaction );
-            }
-
-        private:
-            SocialLinkDecision       _decision;
-            string                   _displayName;
-            SocialLinkPolicy         _policy; ///< 서비스 스레드에서 복사해 둔다. 저장소 스레드는 서비스를 읽지 않는다
-            const IAccountNameIndex* _pNameIndex;
-            AccountID                _accountID;
-            AccountID                _otherID;
-            UnixMilliseconds         _nowMs;
-            SocialLinkOperation      _operation;
-        };
-
-        /** @brief 한 계정의 관계를 모두 읽습니다. 읽지 못한 줄은 건너뛴다. */
-        struct SocialStoreRun
-        {
-            static ServiceStoreRead<vector<SocialLink>> readLinks( IServiceStoreConnection& connection, AccountID accountID )
-            {
-                ServiceStoreRead<vector<SocialLink>>     read;
-                vector<ServiceRecord>                    listRecord;
-                StringBuilder<constant::buffer::kMax128> prefixBuilder;
-                prefixBuilder.appendFormat( "%#/", ServiceKeyUtil::makeHex64( accountID ) );
-                const string prefix( prefixBuilder.view() );
-                read._result = ServiceRecordReader::readPage( connection, SocialServiceInternal::getLinkTable(), prefix, "", SocialLimit::kMaxLinkPage, false, listRecord )._result;
-                if ( read._result != ServiceStoreResult::Ok )
-                    return read;
-                for ( const ServiceRecord& record : listRecord )
-                {
-                    SocialLink link;
-                    const bool bParsed = ServiceKeyUtil::parseHex64( string_view( record._key ).substr( prefix.size() ), link._otherID ) &&
-                                         SocialServiceInternal::decodeLink( record, link._state, link._sinceMs );
-                    if ( bParsed )
-                        read._value.push_back( link );
-                }
-                return read;
-            }
-        };
-    } // namespace
-} // namespace sw
+#include "GameFramework/Runtime/Online/Ledger/LedgerTypes.h"
 
 namespace sw
 {
     SocialService::SocialService()
-        : _mapAccountToLocal{}
-        , _mapFriendToWatchers{}
-        , _mapQuery{}
-        , _completionBuffer{}
-        , _notificationBuffer{}
-        , _dependencies{}
-        , _queryIDAllocator{}
-        , _store{}
+        : _listSocialScratch{}
+        , _listGuildScratch{}
+        , _listNotificationScratch{}
+        , _listJoinedAccount{}
+        , _pSocialLogic{ nullptr }
+        , _pGuildLogic{ nullptr }
+        , _pPresence{ nullptr }
+        , _pHost{ nullptr }
+        , _listBusSubscription{}
     {
+        setReady( false );
     }
 
-    SocialService::~SocialService()
+    void SocialService::initialize( SocialLogic* pSocialLogic, GuildLogic* pGuildLogic, AccountPresence* pPresence, MetricRegistry* pMetricRegistry )
     {
-        shutdown();
-    }
-
-    void SocialService::initialize( const SocialServiceDependencies& dependencies )
-    {
-        SW_ASSERT( dependencies._pStore != nullptr );
-        _dependencies = dependencies;
-        _store.bindStore( dependencies._pStore );
-        _replyOwner = dependencies._pRouter != nullptr ? dependencies._pRouter->openReplyOwner() : Subscription{};
+        _pSocialLogic = pSocialLogic;
+        _pGuildLogic  = pGuildLogic;
+        _pPresence    = pPresence;
+        initializeCalls( pMetricRegistry, "social" );
+        setReady( pSocialLogic != nullptr && pGuildLogic != nullptr );
     }
 
     void SocialService::shutdown()
     {
-        _replyOwner.reset(); // 기다리던 접속 상태 답이 이 객체를 부르지 않게 지운다
-        _mapQuery.clear();
-        _mapAccountToLocal.clear();
-        _mapFriendToWatchers.clear();
-        _dependencies = SocialServiceDependencies{};
-        _store.bindStore( nullptr );
+        _listBusSubscription.clear();
+        _calls.clear();
+        _pHost        = nullptr;
+        _pSocialLogic = nullptr;
+        _pGuildLogic  = nullptr;
+        _pPresence    = nullptr;
+        setReady( false );
     }
 
-    void SocialService::update( UnixMilliseconds nowMs )
+    void SocialService::onHostShutdown( OnlineServiceHost& host )
     {
-        for ( auto& [accountID, local] : _mapAccountToLocal ) // 접속 상태의 시한을 연장한다
-        {
-            if ( local._status == SocialPresenceStatus::Offline || nowMs.count() - local._presenceWrittenMs < SocialServiceInternal::kPresenceRefreshMs )
-                continue;
-            local._presenceWrittenMs = nowMs.count();
-            if ( writePresenceRecord( SocialPresence{ local._activity, accountID, local._status } ) == false )
-                SW_LOG_WARNING_ID( "SocialService.SocialServicePresenceAccountNot", "SocialService: presence of account %# was not refreshed - it expires from the cache", accountID );
-        }
+        (void)host;
+        _listBusSubscription.clear();
+        _pHost = nullptr;
     }
 
-    ServiceStoreResult SocialService::eraseAccount( IServiceStoreConnection& connection, AccountID accountID, int64 /*nowMs*/ )
+    void SocialService::handleCall( OnlineServerCall<SocialMethod::RequestFriend> call, const OnlineCallContext& context, const SocialAccountRequest& request )
     {
-        using Internal = SocialServiceInternal;
-        StringBuilder<constant::buffer::kMax128> prefixBuilder;
-        prefixBuilder.appendFormat( "%#/", ServiceKeyUtil::makeHex64( accountID ) );
-        const string    prefix( prefixBuilder.view() );
-        constexpr int32 kPage = 64;
-        // 내 줄과 상대 쪽 짝 줄
-        while ( true )
-        {
-            vector<ServiceRecord>    listLink;
-            const ServiceStoreResult listed = ServiceRecordReader::readPage( connection, Internal::getLinkTable(), prefix, "", kPage, false, listLink )._result;
-            if ( listed != ServiceStoreResult::Ok )
-                return listed;
-            if ( listLink.empty() )
-                break;
-            for ( const ServiceRecord& link : listLink )
-            {
-                AccountID otherID = kInvalidAccountID;
-                if ( ServiceKeyUtil::parseHex64( string_view( link._key ).substr( prefix.size() ), otherID ) == false )
-                {
-                    ServiceTransaction broken; // 지운 계정의 깨진 줄이다 — 지우기만 한다
-                    broken.erase( Internal::getLinkTable(), link._key, link._version );
-                    if ( const ServiceStoreResult committed = ServiceCommitRunner::commitOnce( connection, broken ); committed != ServiceStoreResult::Ok )
-                        return committed;
-                    continue;
-                }
-                if ( const ServiceStoreResult erased = SocialDeleteAccountInternal::erasePair( connection, accountID, otherID, &link ); erased != ServiceStoreResult::Ok )
-                    return erased;
-            }
-        }
-        // 나를 막은 사람 — 내 쪽 줄이 없어 역색인으로 찾는다
-        while ( true )
-        {
-            vector<ServiceRecord>    listBlocker;
-            const ServiceStoreResult listed = ServiceRecordReader::readPage( connection, Internal::getBlockedByTable(), prefix, "", kPage, false, listBlocker )._result;
-            if ( listed != ServiceStoreResult::Ok )
-                return listed;
-            if ( listBlocker.empty() )
-                break;
-            for ( const ServiceRecord& blocker : listBlocker )
-            {
-                AccountID blockerID = kInvalidAccountID;
-                if ( ServiceKeyUtil::parseHex64( string_view( blocker._key ).substr( prefix.size() ), blockerID ) == false )
-                {
-                    ServiceTransaction broken;
-                    broken.erase( Internal::getBlockedByTable(), blocker._key, blocker._version );
-                    if ( const ServiceStoreResult committed = ServiceCommitRunner::commitOnce( connection, broken ); committed != ServiceStoreResult::Ok )
-                        return committed;
-                    continue;
-                }
-                if ( const ServiceStoreResult erased = SocialDeleteAccountInternal::erasePair( connection, accountID, blockerID, nullptr ); erased != ServiceStoreResult::Ok )
-                    return erased;
-            }
-        }
-        ServiceTransaction counts;
-        counts.erase( Internal::getCountTable(), ServiceKeyUtil::makeHex64( accountID ) );
-        return ServiceCommitRunner::commitOnce( connection, counts );
+        _pSocialLogic->changeLink( SocialLinkOperation::Request, context._accountID, request._otherID, context._nowMs, call._callID );
     }
 
-    void SocialService::changeLink( SocialLinkOperation operation, AccountID accountID, AccountID otherID, UnixMilliseconds nowMs, uint64 requestTag )
+    void SocialService::handleCall( OnlineServerCall<SocialMethod::RequestFriendByName> call, const OnlineCallContext& context, const SocialTextRequest& request )
     {
-        if ( otherID == kInvalidAccountID || otherID == accountID )
-        {
-            pushCompletion( requestTag, SocialServiceResult::fail( OnlineError::kInvalidRequest ) );
+        _pSocialLogic->requestFriendByName( context._accountID, request._text, context._nowMs, call._callID );
+    }
+
+    void SocialService::handleCall( OnlineServerCall<SocialMethod::RespondFriend> call, const OnlineCallContext& context, const SocialRespondRequest& request )
+    {
+        const SocialLinkOperation operation = request._bAccept == SW_TRUE ? SocialLinkOperation::Accept : SocialLinkOperation::Decline;
+        _pSocialLogic->changeLink( operation, context._accountID, request._otherID, context._nowMs, call._callID );
+    }
+
+    void SocialService::handleCall( OnlineServerCall<SocialMethod::RemoveFriend> call, const OnlineCallContext& context, const SocialAccountRequest& request )
+    {
+        _pSocialLogic->changeLink( SocialLinkOperation::Remove, context._accountID, request._otherID, context._nowMs, call._callID );
+    }
+
+    void SocialService::handleCall( OnlineServerCall<SocialMethod::Block> call, const OnlineCallContext& context, const SocialAccountRequest& request )
+    {
+        _pSocialLogic->changeLink( SocialLinkOperation::Block, context._accountID, request._otherID, context._nowMs, call._callID );
+    }
+
+    void SocialService::handleCall( OnlineServerCall<SocialMethod::Unblock> call, const OnlineCallContext& context, const SocialAccountRequest& request )
+    {
+        _pSocialLogic->changeLink( SocialLinkOperation::Unblock, context._accountID, request._otherID, context._nowMs, call._callID );
+    }
+
+    void SocialService::handleCall( OnlineServerCall<SocialMethod::ListLinks> call, const OnlineCallContext& context, const OnlineNoBody& request )
+    {
+        (void)request;
+        _pSocialLogic->listLinks( context._accountID, call._callID );
+    }
+
+    void SocialService::handleCall( OnlineServerCall<SocialMethod::SetPresence> call, const OnlineCallContext& context, const SocialPresenceRequest& request )
+    {
+        _pSocialLogic->setPresence( context._accountID, request._status, request._text, context._nowMs, call._callID );
+    }
+
+    void SocialService::handleCall( OnlineServerCall<SocialMethod::FriendPresence> call, const OnlineCallContext& context, const OnlineNoBody& request )
+    {
+        (void)request;
+        _pSocialLogic->queryFriendPresence( context._accountID, call._callID );
+    }
+
+    void SocialService::handleCall( OnlineServerCall<SocialMethod::GuildCreate> call, const OnlineCallContext& context, const SocialTextRequest& request )
+    {
+        GuildRequest guildRequest;
+        guildRequest._text = request._text;
+        submitGuild( call._callID, context, GuildOperation::Create, guildRequest );
+    }
+
+    void SocialService::handleCall( OnlineServerCall<SocialMethod::GuildInvite> call, const OnlineCallContext& context, const SocialAccountRequest& request )
+    {
+        GuildRequest guildRequest;
+        guildRequest._targetID = request._otherID;
+        submitGuild( call._callID, context, GuildOperation::Invite, guildRequest );
+    }
+
+    void SocialService::handleCall( OnlineServerCall<SocialMethod::GuildAccept> call, const OnlineCallContext& context, const GuildIDRequest& request )
+    {
+        GuildRequest guildRequest;
+        guildRequest._guildID = request._guildID;
+        submitGuild( call._callID, context, GuildOperation::Accept, guildRequest );
+    }
+
+    void SocialService::handleCall( OnlineServerCall<SocialMethod::GuildLeave> call, const OnlineCallContext& context, const OnlineNoBody& request )
+    {
+        GuildRequest guildRequest;
+        (void)request;
+        submitGuild( call._callID, context, GuildOperation::Leave, guildRequest );
+    }
+
+    void SocialService::handleCall( OnlineServerCall<SocialMethod::GuildKick> call, const OnlineCallContext& context, const SocialAccountRequest& request )
+    {
+        GuildRequest guildRequest;
+        guildRequest._targetID = request._otherID;
+        submitGuild( call._callID, context, GuildOperation::Kick, guildRequest );
+    }
+
+    void SocialService::handleCall( OnlineServerCall<SocialMethod::GuildSetRole> call, const OnlineCallContext& context, const GuildRoleRequest& request )
+    {
+        GuildRequest guildRequest;
+        guildRequest._targetID = request._otherID;
+        guildRequest._role     = request._role;
+        submitGuild( call._callID, context, GuildOperation::SetRole, guildRequest );
+    }
+
+    void SocialService::handleCall( OnlineServerCall<SocialMethod::GuildSetAnnouncement> call, const OnlineCallContext& context, const SocialTextRequest& request )
+    {
+        GuildRequest guildRequest;
+        guildRequest._text = request._text;
+        submitGuild( call._callID, context, GuildOperation::SetAnnouncement, guildRequest );
+    }
+
+    void SocialService::handleCall( OnlineServerCall<SocialMethod::GuildGet> call, const OnlineCallContext& context, const OnlineNoBody& request )
+    {
+        GuildRequest guildRequest;
+        (void)request;
+        submitGuild( call._callID, context, GuildOperation::Get, guildRequest );
+    }
+
+    void SocialService::handleCall( OnlineServerCall<SocialMethod::GuildDeposit> call, const OnlineCallContext& context, const GuildAssetRequest& request )
+    {
+        GuildRequest guildRequest;
+        guildRequest._assetID     = request._assetID;
+        guildRequest._amount      = request._amount;
+        guildRequest._depositorID = request._depositorID; // 비어 있지 않으면 길드 로직이 Invalid 로 끝낸다
+        submitGuild( call._callID, context, GuildOperation::Deposit, guildRequest );
+    }
+
+    void SocialService::handleCall( OnlineServerCall<SocialMethod::GuildWithdraw> call, const OnlineCallContext& context, const GuildAssetRequest& request )
+    {
+        GuildRequest guildRequest;
+        guildRequest._assetID     = request._assetID;
+        guildRequest._amount      = request._amount;
+        guildRequest._depositorID = request._depositorID;
+        submitGuild( call._callID, context, GuildOperation::Withdraw, guildRequest );
+    }
+
+    void SocialService::handleCall( OnlineServerCall<SocialMethod::GuildStorage> call, const OnlineCallContext& context, const GuildStoragePageRequest& request )
+    {
+        GuildRequest guildRequest;
+        guildRequest._storageCursor   = request._cursor;
+        guildRequest._storageMaxCount = request._maxCount;
+        submitGuild( call._callID, context, GuildOperation::ListStorage, guildRequest );
+    }
+
+    void SocialService::handleCall( OnlineServerCall<SocialMethod::GuildSetJoinPolicy> call, const OnlineCallContext& context, const GuildJoinPolicyRequest& request )
+    {
+        GuildRequest guildRequest;
+        guildRequest._bOpen = request._bOpen;
+        submitGuild( call._callID, context, GuildOperation::SetJoinPolicy, guildRequest );
+    }
+
+    void SocialService::handleCall( OnlineServerCall<SocialMethod::GuildApply> call, const OnlineCallContext& context, const GuildIDRequest& request )
+    {
+        GuildRequest guildRequest;
+        guildRequest._guildID = request._guildID;
+        submitGuild( call._callID, context, GuildOperation::Apply, guildRequest );
+    }
+
+    void SocialService::handleCall( OnlineServerCall<SocialMethod::GuildApplications> call, const OnlineCallContext& context, const OnlineNoBody& request )
+    {
+        GuildRequest guildRequest;
+        (void)request;
+        submitGuild( call._callID, context, GuildOperation::ListApplications, guildRequest );
+    }
+
+    void SocialService::handleCall( OnlineServerCall<SocialMethod::GuildApprove> call, const OnlineCallContext& context, const SocialAccountRequest& request )
+    {
+        GuildRequest guildRequest;
+        guildRequest._targetID = request._otherID;
+        submitGuild( call._callID, context, GuildOperation::Approve, guildRequest );
+    }
+
+    void SocialService::handleCall( OnlineServerCall<SocialMethod::GuildReject> call, const OnlineCallContext& context, const SocialAccountRequest& request )
+    {
+        GuildRequest guildRequest;
+        guildRequest._targetID = request._otherID;
+        submitGuild( call._callID, context, GuildOperation::Reject, guildRequest );
+    }
+
+    void SocialService::handleCall( OnlineServerCall<SocialMethod::GuildGrantWithdrawal> call, const OnlineCallContext& context, const GuildWithdrawalGrantRequest& request )
+    {
+        GuildRequest guildRequest;
+        guildRequest._targetID = request._otherID;
+        guildRequest._assetID  = request._assetID;
+        guildRequest._amount   = request._amount;
+        submitGuild( call._callID, context, GuildOperation::GrantWithdrawal, guildRequest );
+    }
+
+    void SocialService::handleCall( OnlineServerCall<SocialMethod::GuildRevokeWithdrawal> call, const OnlineCallContext& context, const GuildWithdrawalGrantRequest& request )
+    {
+        GuildRequest guildRequest;
+        guildRequest._targetID = request._otherID;
+        guildRequest._assetID  = request._assetID;
+        submitGuild( call._callID, context, GuildOperation::RevokeWithdrawal, guildRequest );
+    }
+
+    void SocialService::submitGuild( uint64 callID, const OnlineCallContext& context, GuildOperation operation, GuildRequest& inoutRequest )
+    {
+        inoutRequest._accountID      = context._accountID;
+        inoutRequest._nowMs          = context._nowMs;
+        inoutRequest._operation      = operation;
+        inoutRequest._idempotencyKey = context._idempotencyKey; // 허용 부여 · 회수의 멱등 기록 키이다
+        if ( context._idempotencyKey.isValid() )                // 창고 이동 · 허용 · 몫을 돌려주는 떠나기와 내보내기의 분개 키이다. 필요한데 없으면 길드 로직이 Invalid 로 끝낸다
+            inoutRequest._journalKey = LedgerJournalKey::makeFromIdempotency( LedgerJournalKey::makeAccountScope( context._accountID ), context._idempotencyKey._high,
+                                                                              context._idempotencyKey._low );
+        _pGuildLogic->submit( inoutRequest, callID );
+    }
+
+    void SocialService::onServiceTick( OnlineServiceHost& host, UnixMilliseconds nowMs )
+    {
+        if ( _pHost == nullptr )
+            attachHost( host );
+        if ( _pSocialLogic == nullptr || _pGuildLogic == nullptr )
             return;
+        _pSocialLogic->update( nowMs );
+        _calls.publishPendingCount();
+        for ( const AccountID accountID : _listJoinedAccount )
+        {
+            _pGuildLogic->attachAccount( accountID, nowMs ); // 길드 멤버면 MemberAttached 이벤트가 길드 채널에 넣는다
         }
-        submitLinkJob( operation, accountID, otherID, string_view{}, nowMs, requestTag );
+        _listJoinedAccount.clear();
+
+        _listSocialScratch.clear();
+        _pSocialLogic->takeCompletions( _listSocialScratch );
+        for ( SocialCompletion& completion : _listSocialScratch )
+        {
+            (void)completeByMethod( completion._requestTag, completion ); // 응답 타입은 호출의 메서드가 정한다(`fillReply`). 요청 태그가 0이면(내부에서 건 작업) 버린다
+        }
+
+        _listGuildScratch.clear();
+        _pGuildLogic->takeCompletions( _listGuildScratch );
+        for ( GuildCompletion& completion : _listGuildScratch )
+        {
+            (void)completeByMethod( completion._requestTag, completion ); // 연결이 닫혔으면 호스트가 버린다
+        }
+        sendNotifications( host );
     }
 
-    void SocialService::requestFriendByName( AccountID accountID, string_view displayName, UnixMilliseconds nowMs, uint64 requestTag )
+    void SocialService::fillReply( SocialResultReply& reply, SocialCompletion& completion )
     {
-        if ( displayName.empty() )
-        {
-            pushCompletion( requestTag, SocialServiceResult::fail( OnlineError::kInvalidRequest ) );
+        reply._result = completion._result._result;
+    }
+
+    void SocialService::fillReply( SocialLinkReply& reply, SocialCompletion& completion )
+    {
+        reply._otherID = completion._otherID;
+        reply._result  = completion._result._result;
+    }
+
+    void SocialService::fillReply( SocialLinksReply& reply, SocialCompletion& completion )
+    {
+        reply._listLink = std::move( completion._listLink );
+    }
+
+    void SocialService::fillReply( SocialPresenceReply& reply, SocialCompletion& completion )
+    {
+        reply._listPresence = std::move( completion._listPresence );
+    }
+
+    void SocialService::fillReply( SocialResultReply& reply, GuildCompletion& completion )
+    {
+        reply._result = completion._result._result;
+    }
+
+    void SocialService::fillReply( GuildInfoReply& reply, GuildCompletion& completion )
+    {
+        reply._guild  = std::move( completion._info );
+        reply._result = completion._result._result;
+    }
+
+    void SocialService::fillReply( GuildStorageReply& reply, GuildCompletion& completion )
+    {
+        reply._listStorage = std::move( completion._listStorage );
+        reply._nextCursor  = std::move( completion._storageNextCursor );
+        reply._result      = completion._result._result;
+    }
+
+    void SocialService::fillReply( GuildApplicationsReply& reply, GuildCompletion& completion )
+    {
+        reply._listApplication = std::move( completion._listApplication );
+        reply._result          = completion._result._result;
+    }
+
+    void SocialService::onAccountJoined( OnlineServiceHost& host, AccountID accountID )
+    {
+        (void)host;
+        _listJoinedAccount.push_back( accountID );
+    }
+
+    void SocialService::onAccountLeft( OnlineServiceHost& host, AccountID accountID )
+    {
+        if ( _pSocialLogic == nullptr )
             return;
-        }
-        submitLinkJob( SocialLinkOperation::Request, accountID, kInvalidAccountID, displayName, nowMs, requestTag );
+        _pSocialLogic->removeAccount( accountID );
+        sendNotifications( host ); // 이 서버의 친구들에게 오프라인을 바로 알린다
     }
 
-    void SocialService::submitLinkJob( SocialLinkOperation operation, AccountID accountID, AccountID otherID, string_view displayName, UnixMilliseconds nowMs, uint64 requestTag )
+    void SocialService::onServerBusMessage( OnlineServiceHost& host, const ServerBusMessage& message )
     {
-        (void)ensureLocal( accountID ); // 항목을 있게만 한다 — 쓰는 쪽은 저마다 다시 찾는다
-        _store.submit( [policy = _dependencies._linkPolicy, pNameIndex = _dependencies._pNameIndex, operation, accountID, otherID, name = string( displayName ), nowMs]( IServiceStoreConnection& connection )
+        const ServerBus* pBus = host.getServerBus();
+        if ( _pSocialLogic == nullptr || ( pBus != nullptr && message.getOriginServerID() == pBus->getServerID() ) )
+            return; // 이 서버가 낸 메시지이다. 바꾼 시점에 이미 처리했다
+        _pSocialLogic->handleBusMessage( message );
+    }
+
+    void SocialService::attachHost( OnlineServiceHost& host )
+    {
+        _pHost = &host;
+        if ( host.getServerBus() == nullptr )
+            return; // 서버가 한 대이다
+        _listBusSubscription.push_back( host.subscribeServerBus( SocialBus::kLinksTopic.getName(), this ) );
+        _listBusSubscription.push_back( host.subscribeServerBus( SocialBus::kPresenceTopic.getName(), this ) );
+    }
+
+    void SocialService::sendNotifications( OnlineServiceHost& host )
+    {
+        _listNotificationScratch.clear();
+        _pSocialLogic->pollNotifications( _listNotificationScratch );
+        _pGuildLogic->pollNotifications( _listNotificationScratch );
+        for ( const SocialNotification& notification : _listNotificationScratch )
         {
-            SocialLinkStoreRun runner{ policy, pNameIndex, operation, accountID, otherID, name, nowMs };
-            return runner.run( connection );
-        }, [this, requestTag, accountID]( const SocialLinkResult& done )
-        { applyLinkChange( requestTag, accountID, done._otherID, done._decision ); } );
-    }
-
-    void SocialService::applyLinkChange( uint64 requestTag, AccountID accountID, AccountID otherID, const SocialLinkDecision& decision )
-    {
-        SocialCompletion completion;
-        completion._requestTag = requestTag;
-        completion._otherID    = otherID;
-        completion._result     = decision._result;
-        _completionBuffer.push( std::move( completion ) );
-        if ( decision._result != SocialResult::Ok || decision._bWrite == SW_FALSE )
-            return;
-
-        // 이 서버의 메모리는 두 사람 모두(접속해 있으면) 다시 읽는다. 다른 서버에는 버스로 알린다.
-        reloadIfLocal( accountID );
-        reloadIfLocal( otherID );
-        if ( _dependencies._pBus != nullptr )
-        {
-            (void)SocialBus::kLinksTopic.publish( *_dependencies._pBus, SocialLinkChanged{ accountID, otherID } ); // 실패는 발행이 로그로 남겼다. 다른 서버는 다음 로그인에 다시 읽는다
+            BitWriter body;
+            if ( SocialProtocol::MessageTypes::write( body, notification ) == false )
+                continue; // write 가 범위 밖 값을 로그에 남겼다. 알림은 다음 조회로 대신한다
+            if ( host.sendPush( notification._recipientID, SocialMethod::Notification::kKind, body ) == false && _pPresence != nullptr )
+                (void)_pPresence->sendRemotePush( notification._recipientID, SocialPushName::Notification, notification ); // 다른 서버에 접속해 있다
         }
-
-        if ( decision._bNotifyOtherRequested == SW_TRUE )
-            _notificationBuffer.push( SocialNotification{ SocialPresence{}, otherID, accountID, 0, SocialNotificationKind::FriendRequested } );
-        if ( decision._bNotifyBothAdded == SW_TRUE )
-        {
-            _notificationBuffer.push( SocialNotification{ SocialPresence{}, otherID, accountID, 0, SocialNotificationKind::FriendAdded } );
-            _notificationBuffer.push( SocialNotification{ SocialPresence{}, accountID, otherID, 0, SocialNotificationKind::FriendAdded } );
-        }
-        if ( decision._bNotifyOtherRemoved == SW_TRUE )
-            _notificationBuffer.push( SocialNotification{ SocialPresence{}, otherID, accountID, 0, SocialNotificationKind::FriendRemoved } );
+        _listNotificationScratch.clear();
     }
+} // namespace sw
 
-    void SocialService::listLinks( AccountID accountID, uint64 requestTag )
-    {
-        (void)_mapAccountToLocal[accountID];
-        startLoad( accountID, requestTag ); // 목록은 항상 저장소에서 읽고, 메모리는 그 결과로 교체한다
-    }
-
-    void SocialService::applyLinksLoaded( AccountID accountID, uint64 requestTag, bool bReadOk, vector<SocialLink>&& listLink )
-    {
-        const auto localIt = _mapAccountToLocal.find( accountID );
-        if ( localIt != _mapAccountToLocal.end() )
-        {
-            localIt->second._bLoading = SW_FALSE;
-            if ( bReadOk )
-            {
-                replaceLinks( accountID, localIt->second, listLink );
-                localIt->second._bLoaded = SW_TRUE;
-            }
-            if ( localIt->second._bReloadPending == SW_TRUE ) // 이 읽기는 바뀌기 전 값일 수 있다 - 막음이 빠지면 차단이 새므로 다시 읽는다
-            {
-                localIt->second._bReloadPending = SW_FALSE;
-                startLoad( accountID, 0 );
-            }
-        }
-        if ( requestTag == 0 )
-            return; // 내부에서 건 읽기이다. 첫 요청이나 버스 알림에서 시작한 것이다
-        SocialCompletion completion;
-        completion._requestTag = requestTag;
-        completion._result     = bReadOk ? SocialResult::Ok : SocialServiceResult::fail( OnlineError::kUnavailable );
-        completion._listLink   = std::move( listLink );
-        _completionBuffer.push( std::move( completion ) );
-    }
-
-    bool SocialService::isBlockedLocal( AccountID ownerID, AccountID otherID ) const
-    {
-        const auto localIt = _mapAccountToLocal.find( ownerID );
-        if ( localIt == _mapAccountToLocal.end() )
-            return false;
-        for ( const SocialLink& link : localIt->second._listLink )
-        {
-            if ( link._otherID == otherID )
-                return link._state == SocialLinkState::Blocked;
-        }
-        return false;
-    }
-
-    void SocialService::setPresence( AccountID accountID, SocialPresenceStatus status, string_view activity, UnixMilliseconds nowMs, uint64 requestTag )
-    {
-        const bool bValid = status != SocialPresenceStatus::Offline && status < SocialPresenceStatus::Count &&
-                            activity.size() <= static_cast<size_t>( SocialLimit::kMaxActivitySize );
-        if ( bValid == false )
-        {
-            pushCompletion( requestTag, SocialServiceResult::fail( OnlineError::kInvalidRequest ) );
-            return;
-        }
-        if ( writePresenceRecord( SocialPresence{ string( activity ), accountID, status } ) == false )
-        {
-            pushCompletion( requestTag, SocialServiceResult::fail( OnlineError::kInvalidRequest ) ); // 캐시 값을 못 쓰면 이 서버의 상태도 바꾸지 않는다
-            return;
-        }
-        LocalAccount& local      = ensureLocal( accountID );
-        local._status            = status;
-        local._activity          = string( activity );
-        local._presenceWrittenMs = nowMs.count();
-        publishPresence( accountID, local );
-        pushCompletion( requestTag, SocialResult::Ok );
-    }
-
-    void SocialService::queryFriendPresence( AccountID accountID, uint64 requestTag )
-    {
-        const LocalAccount& local   = ensureLocal( accountID );
-        const uint64        queryID = _queryIDAllocator.allocate();
-        PresenceQuery       query;
-        query._requestTag = requestTag;
-        vector<AccountID> listCachedFriend;
-        for ( const SocialLink& link : local._listLink )
-        {
-            if ( link._state != SocialLinkState::Friend )
-                continue;
-            const auto friendIt = _mapAccountToLocal.find( link._otherID );
-            if ( friendIt != _mapAccountToLocal.end() && friendIt->second._status != SocialPresenceStatus::Offline )
-            {
-                query._listPresence.push_back( SocialPresence{ friendIt->second._activity, link._otherID, friendIt->second._status } ); // 이 서버의 계정이므로 캐시를 읽지 않는다
-                continue;
-            }
-            if ( _dependencies._pRouter == nullptr )
-            {
-                query._listPresence.push_back( SocialPresence{ string{}, link._otherID, SocialPresenceStatus::Offline } );
-                continue;
-            }
-            listCachedFriend.push_back( link._otherID );
-        }
-        if ( listCachedFriend.empty() == false )
-        {
-            query._outstandingCount = static_cast<int32>( listCachedFriend.size() ); // 먼저 다 세고 표에 올려 둔다 — 맡기지 못한 요청은 그 자리에서 끝난다
-            _mapQuery[queryID]      = std::move( query );
-            for ( const AccountID friendID : listCachedFriend )
-            {
-                _dependencies._pRouter->submit( EphemeralRequest::makeGet( SocialServiceInternal::makePresenceKey( friendID ) ), _replyOwner, [this, queryID, friendID]( const EphemeralReply& reply )
-                { onPresenceReply( queryID, friendID, reply ); } );
-            }
-            return;
-        }
-        SocialCompletion completion;
-        completion._requestTag   = requestTag;
-        completion._listPresence = std::move( query._listPresence );
-        _completionBuffer.push( std::move( completion ) );
-    }
-
-    void SocialService::removeAccount( AccountID accountID )
-    {
-        const auto localIt = _mapAccountToLocal.find( accountID );
-        if ( localIt == _mapAccountToLocal.end() )
-            return;
-        if ( localIt->second._status != SocialPresenceStatus::Offline )
-        {
-            localIt->second._status = SocialPresenceStatus::Offline;
-            localIt->second._activity.clear();
-            publishPresence( accountID, localIt->second );
-            if ( _dependencies._pRouter != nullptr )
-                _dependencies._pRouter->submit( EphemeralRequest::makeErase( SocialServiceInternal::makePresenceKey( accountID ) ) );
-        }
-        removeFriendWatcher( accountID, localIt->second._listLink );
-        _mapAccountToLocal.erase( localIt );
-    }
-
-    void SocialService::handleBusMessage( const ServerBusMessage& message )
-    {
-        SocialLinkChanged changed;
-        if ( SocialBus::kLinksTopic.read( message, changed ) == ServerBusReadResult::Read )
-        {
-            reloadIfLocal( changed._firstID );
-            reloadIfLocal( changed._secondID );
-            return;
-        }
-        SocialPresence presence;
-        if ( SocialBus::kPresenceTopic.read( message, presence ) == ServerBusReadResult::Read )
-            notifyFriendsOfPresence( presence );
-    }
-
-    SocialService::LocalAccount& SocialService::ensureLocal( AccountID accountID )
-    {
-        LocalAccount& local = _mapAccountToLocal[accountID];
-        if ( local._bLoaded == SW_FALSE && local._bLoading == SW_FALSE )
-            startLoad( accountID, 0 );
-        return local;
-    }
-
-    void SocialService::startLoad( AccountID accountID, uint64 requestTag )
-    {
-        _mapAccountToLocal[accountID]._bLoading = SW_TRUE;
-        _store.submit( [accountID]( IServiceStoreConnection& connection )
-        { return SocialStoreRun::readLinks( connection, accountID ); },
-                       [this, accountID, requestTag]( ServiceStoreRead<vector<SocialLink>>& read )
-        { applyLinksLoaded( accountID, requestTag, read.isOk(), std::move( read._value ) ); } );
-    }
-
-    void SocialService::reloadIfLocal( AccountID accountID )
-    {
-        const auto localIt = _mapAccountToLocal.find( accountID );
-        if ( localIt == _mapAccountToLocal.end() )
-            return;
-        if ( localIt->second._bLoading == SW_TRUE )
-            localIt->second._bReloadPending = SW_TRUE;
-        else
-            startLoad( accountID, 0 );
-    }
-
-    void SocialService::replaceLinks( AccountID accountID, LocalAccount& local, const vector<SocialLink>& listLink )
-    {
-        removeFriendWatcher( accountID, local._listLink );
-        local._listLink = listLink;
-        addFriendWatcher( accountID, local._listLink );
-    }
-
-    void SocialService::addFriendWatcher( AccountID accountID, const vector<SocialLink>& listLink )
-    {
-        for ( const SocialLink& link : listLink )
-        {
-            if ( link._state == SocialLinkState::Friend )
-                (void)_mapFriendToWatchers[link._otherID].insert( accountID ); // 저장소 키가 `<나>/<상대>` 라 한 목록에 같은 상대가 두 번 오지 않는다
-        }
-    }
-
-    void SocialService::removeFriendWatcher( AccountID accountID, const vector<SocialLink>& listLink )
-    {
-        for ( const SocialLink& link : listLink )
-        {
-            if ( link._state != SocialLinkState::Friend )
-                continue;
-            const auto watchersIt = _mapFriendToWatchers.find( link._otherID );
-            if ( watchersIt == _mapFriendToWatchers.end() ) // addFriendWatcher 가 넣은 것만 뺀다 — 없으면 역색인이 관계 목록과 갈라진 것이다
-                reportFatalError( "SocialService: friend index has no watchers of account %# while account %# lists it", link._otherID, accountID );
-            unordered_set<AccountID>& setWatcher = watchersIt->second;
-            if ( setWatcher.erase( accountID ) == 0 )
-                reportFatalError( "SocialService: friend index lost watcher %# of account %#", accountID, link._otherID );
-            if ( setWatcher.empty() )
-                _mapFriendToWatchers.erase( watchersIt );
-        }
-    }
-
-    bool SocialService::writePresenceRecord( const SocialPresence& presence )
-    {
-        EphemeralValue value;
-        if ( EphemeralRecordTable<SocialPresence>{}.makeValue( presence, value ) == false )
-            return false;
-        if ( _dependencies._pRouter == nullptr )
-            return true;
-        _dependencies._pRouter->submit( EphemeralRequest::makeSet( SocialServiceInternal::makePresenceKey( presence._accountID ), std::move( value ),
-                                                                   SocialServiceInternal::kPresenceTTLMs ) );
-        return true;
-    }
-
-    void SocialService::publishPresence( AccountID accountID, const LocalAccount& local )
-    {
-        const SocialPresence presence{ local._activity, accountID, local._status };
-        notifyFriendsOfPresence( presence ); // 이 서버의 계정이다
-        if ( _dependencies._pBus == nullptr )
-            return;
-        (void)SocialBus::kPresenceTopic.publish( *_dependencies._pBus, presence ); // 실패는 발행이 로그로 남겼다
-    }
-
-    void SocialService::notifyFriendsOfPresence( const SocialPresence& presence )
-    {
-        const auto watchersIt = _mapFriendToWatchers.find( presence._accountID ); // 서버 전 계정을 훑지 않고 이 계정을 친구로 둔 계정만 본다
-        if ( watchersIt == _mapFriendToWatchers.end() )
-            return;
-        for ( const AccountID watcherID : watchersIt->second )
-        {
-            _notificationBuffer.push( SocialNotification{ presence, watcherID, presence._accountID, 0, SocialNotificationKind::PresenceChanged } );
-        }
-    }
-
-    void SocialService::onPresenceReply( uint64 queryID, AccountID friendID, const EphemeralReply& reply )
-    {
-        const auto queryIt = _mapQuery.find( queryID );
-        if ( queryIt == _mapQuery.end() )
-            return;
-        PresenceQuery& query = queryIt->second;
-        SocialPresence presence{ string{}, friendID, SocialPresenceStatus::Offline };
-        if ( reply._result == EphemeralResult::Ok )
-        {
-            if ( EphemeralRecordTable<SocialPresence>{}.decode( reply, presence ) == false || presence._accountID != friendID )
-                presence = SocialPresence{ string{}, friendID, SocialPresenceStatus::Offline };
-        }
-        query._listPresence.push_back( std::move( presence ) );
-        if ( --query._outstandingCount > 0 )
-            return;
-        SocialCompletion completion;
-        completion._requestTag   = query._requestTag;
-        completion._listPresence = std::move( query._listPresence );
-        _completionBuffer.push( std::move( completion ) );
-        _mapQuery.erase( queryIt );
-    }
-
-    void SocialService::pushCompletion( uint64 requestTag, SocialServiceResult result )
-    {
-        SocialCompletion completion;
-        completion._requestTag = requestTag;
-        completion._result     = result;
-        _completionBuffer.push( std::move( completion ) );
-    }
+namespace sw
+{
+    // 다른 서버에 접속한 계정에게 가는 알림이다. 받는 서버가 이 항목으로 자기 빌드의 번호와 B 를 만든다(OnlinePushRelay.h).
+    const OnlinePushRelayEntry kSocialNotificationRelay{ "Social.Notification", SocialMethod{}, SocialPushName::Notification, SocialProtocol::MessageTypes{}, OnlinePushBody<SocialNotification>{} };
 } // namespace sw

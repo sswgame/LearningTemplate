@@ -2,9 +2,9 @@
 
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/AccountPresence.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/GroupChannelMembership.h"
-#include "GameFramework/Kits/Feature/Online/Social/Server/GuildService.h"
+#include "GameFramework/Kits/Feature/Online/Social/Server/GuildLogic.h"
 #include "GameFramework/Kits/Feature/Online/Social/Server/SocialKitConfig.h"
-#include "GameFramework/Kits/Feature/Online/Social/Server/SocialServer.h"
+#include "GameFramework/Kits/Feature/Online/Social/Server/SocialLogic.h"
 #include "GameFramework/Kits/Feature/Online/Social/Server/SocialService.h"
 #include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
 #include "GameFramework/Runtime/Online/Ledger/LedgerTypes.h"
@@ -27,7 +27,7 @@ namespace sw
         class SocialBlockList final : public IAccountBlockList
         {
         public:
-            explicit SocialBlockList( const SocialService* pService )
+            explicit SocialBlockList( const SocialLogic* pService )
                 : _pService{ pService }
             {
             }
@@ -35,10 +35,10 @@ namespace sw
             bool isBlocked( AccountID ownerID, AccountID otherID ) const override { return _pService->isBlockedLocal( ownerID, otherID ); }
 
         private:
-            const SocialService* _pService;
+            const SocialLogic* _pService;
         };
 
-        /** @brief 친구 키트의 탈퇴 정리입니다 — 관계(`SocialService::eraseAccount`) 뒤 길드(`GuildService::eraseAccount`)를 지웁니다. */
+        /** @brief 친구 키트의 탈퇴 정리입니다 — 관계(`SocialLogic::eraseAccount`) 뒤 길드(`GuildLogic::eraseAccount`)를 지웁니다. */
         class SocialAfterDeleteAccount final : public IAfterDeleteAccount
         {
         public:
@@ -46,8 +46,8 @@ namespace sw
 
             [[nodiscard]] ServiceStoreResult afterDeleteAccount( IServiceStoreConnection& connection, AccountID accountID, int64 nowMs ) const override
             {
-                const ServiceStoreResult links = SocialService::eraseAccount( connection, accountID, nowMs );
-                return links == ServiceStoreResult::Ok ? GuildService::eraseAccount( connection, accountID, nowMs ) : links;
+                const ServiceStoreResult links = SocialLogic::eraseAccount( connection, accountID, nowMs );
+                return links == ServiceStoreResult::Ok ? GuildLogic::eraseAccount( connection, accountID, nowMs ) : links;
             }
         };
 
@@ -59,10 +59,10 @@ namespace sw
         {
         public:
             SocialOnlineServerKit()
-                : _socialService{}
-                , _guildService{}
-                , _socialServer{}
-                , _blockList{ &_socialService }
+                : _socialLogic{}
+                , _guildLogic{}
+                , _socialService{}
+                , _blockList{ &_socialLogic }
                 , _afterDeleteAccount{}
                 , _linkPolicy{}
                 , _guildPolicy{}
@@ -80,38 +80,38 @@ namespace sw
                     return unexpected( Error{ ErrorKind::InvalidArgument, "the social kit setting _links adds up to more than one link page can carry (SocialLimit::kMaxLinkPage)" } );
                 _linkPolicy  = kitConfig._links;
                 _guildPolicy = kitConfig._guild;
-                if ( expected<void> table = _guildService.setLevelTable( kitConfig._listGuildLevelExperience ); table.has_value() == false )
+                if ( expected<void> table = _guildLogic.setLevelTable( kitConfig._listGuildLevelExperience ); table.has_value() == false )
                 {
                     Error error{ table.error().kind(), table.error().message().data(), "_listGuildLevelExperience: " };
                     error.appendDetail( table.error().detail() );
                     return unexpected( error );
                 }
-                return registerServerService( context, entry, &_socialServer )
+                return registerServerService( context, entry, &_socialService )
                     .and_then( [&]
                 { return exposeInterface<IAccountBlockList>( context, entry, _blockList ); } )
                     .and_then( [&]
-                { return addTTLRule( context, entry, GuildService::makeInviteTTLRule( kitConfig._expiredInviteTTL.getExpireAfterMs() ), kitConfig._expiredInviteTTL ); } )
+                { return addTTLRule( context, entry, GuildLogic::makeInviteTTLRule( kitConfig._expiredInviteTTL.getExpireAfterMs() ), kitConfig._expiredInviteTTL ); } )
                     .and_then( [&]
-                { return addTTLRule( context, entry, GuildService::makeApplicationTTLRule( kitConfig._expiredApplicationTTL.getExpireAfterMs() ), kitConfig._expiredApplicationTTL ); } );
+                { return addTTLRule( context, entry, GuildLogic::makeApplicationTTLRule( kitConfig._expiredApplicationTTL.getExpireAfterMs() ), kitConfig._expiredApplicationTTL ); } );
             }
 
             expected<void> start( OnlineServerKitContext& context, const Dependencies& interfaces, const UnorderedDependencies& unordered ) override
             {
-                SocialServiceDependencies dependencies;
+                SocialLogicDependencies dependencies;
                 dependencies._pStore     = context._pStore;
                 dependencies._pRouter    = context._pRouter;
                 dependencies._pBus       = context._pBus;
                 dependencies._pNameIndex = interfaces.find<const IAccountNameIndex>();
                 dependencies._linkPolicy = _linkPolicy;
-                _socialService.initialize( dependencies );
-                _guildService.initialize( context._pStore, _guildPolicy );
-                _guildService.setLedgerPolicy( interfaces.find<const ILedgerPolicy>() ); // 창고에서 꺼낼 때 화폐 상한을 본다. 경제 키트가 없으면 원장 상한만 본다
+                _socialLogic.initialize( dependencies );
+                _guildLogic.initialize( context._pStore, _guildPolicy );
+                _guildLogic.setLedgerPolicy( interfaces.find<const ILedgerPolicy>() ); // 창고에서 꺼낼 때 화폐 상한을 본다. 경제 키트가 없으면 원장 상한만 본다
                 // 채팅 키트는 순서 없는 목록(`OnlineKitUnordered`)에 적는다 — 채팅이 이 키트의 차단 목록에 의존해 순환이 된다. 채팅의 멤버 창은 채팅 서비스가 서기 전과 내린 뒤의 호출을 무시하므로
                 // 순서가 없어도 되고, 찾기는 모든 키트의 `initialize` 뒤인 여기서 한다.
                 _pGroupChannels = unordered.find<IGroupChannelMembership>();
                 if ( _pGroupChannels != nullptr )
-                    _guildEventSubscription = _guildService.bindEventDelegate( SW_DELEGATE_METHOD( GuildEventDelegate, &SocialOnlineServerKit::onGuildEvent, this ) );
-                _socialServer.initialize( &_socialService, &_guildService, interfaces.find<AccountPresence>(), context._pMetricRegistry );
+                    _guildEventSubscription = _guildLogic.bindEventDelegate( SW_DELEGATE_METHOD( GuildEventDelegate, &SocialOnlineServerKit::onGuildEvent, this ) );
+                _socialService.initialize( &_socialLogic, &_guildLogic, interfaces.find<AccountPresence>(), context._pMetricRegistry );
                 return {};
             }
 
@@ -119,12 +119,12 @@ namespace sw
             const IAfterDeleteAccount* getAfterDeleteAccount() const override { return &_afterDeleteAccount; }
 
             /** @brief 종료 드레인이 기다릴 진행 중인 일 — 저장소에 맡긴 친구 · 길드 요청. */
-            int32 getOpenJobCount() const override { return _socialService.getPendingCount() + _guildService.getPendingCount(); }
+            int32 getOpenJobCount() const override { return _socialLogic.getPendingCount() + _guildLogic.getPendingCount(); }
 
             void stop() override
             {
                 if ( isStarted() )
-                    _socialServer.shutdown();
+                    _socialService.shutdown();
             }
 
             void shutdown() override
@@ -133,8 +133,8 @@ namespace sw
                 _guildEventSubscription.reset();
                 if ( isStarted() == false )
                     return;
-                _guildService.shutdown();
-                _socialService.shutdown();
+                _guildLogic.shutdown();
+                _socialLogic.shutdown();
             }
 
         private:
@@ -150,9 +150,9 @@ namespace sw
             }
 
         private:
+            SocialLogic              _socialLogic;
+            GuildLogic               _guildLogic;
             SocialService            _socialService;
-            GuildService             _guildService;
-            SocialServer             _socialServer;
             SocialBlockList          _blockList;
             SocialAfterDeleteAccount _afterDeleteAccount;
             SocialLinkPolicy         _linkPolicy;             ///< 관계 수 상한(`initialize` 가 설정에서 읽어 `start` 가 서비스에 넘긴다)

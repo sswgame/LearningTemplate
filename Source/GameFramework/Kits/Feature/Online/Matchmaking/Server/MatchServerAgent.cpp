@@ -7,7 +7,7 @@
 #include "Core/Serialization/BitStream.h"
 
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Runtime/MatchmakingProtocol.h"
-#include "GameFramework/Kits/Feature/Online/Matchmaking/Server/MatchQueueService.h"
+#include "GameFramework/Kits/Feature/Online/Matchmaking/Server/MatchQueueLogic.h"
 #include "GameFramework/Runtime/Online/Bus/MixedBuildCodec.h"
 #include "GameFramework/Runtime/Online/Cache/Server/EphemeralRecordTable.h"
 #include "GameFramework/Runtime/Online/Cache/Server/EphemeralStore.h"
@@ -67,7 +67,7 @@ namespace sw
 
     string MatchServerAgent::getAssignTopic() const
     {
-        return MatchQueueService::makeAssignTopic( _serverID );
+        return MatchQueueLogic::makeAssignTopic( _serverID );
     }
 
     bool MatchServerAgent::handleAssign( const ServerBusMessage& message, UnixMilliseconds nowMs )
@@ -217,7 +217,7 @@ namespace sw
         }
         _nextListReadMs = _nowMs + _policy._recordRefreshMs;
         _bListPending   = SW_TRUE;
-        _pRouter->submit( EphemeralRequest::makeScoreRange( MatchQueueService::makeMatchListKey( _serverID ), 0, _policy._maxRecordCount ), _replyOwner, [this]( const EphemeralReply& reply )
+        _pRouter->submit( EphemeralRequest::makeScoreRange( MatchQueueLogic::makeMatchListKey( _serverID ), 0, _policy._maxRecordCount ), _replyOwner, [this]( const EphemeralReply& reply )
         { onListReply( reply ); } );
     }
 
@@ -226,7 +226,7 @@ namespace sw
         _bListPending = SW_FALSE;
         if ( reply._result != EphemeralResult::Ok )
             return; // 목록이 없거나(배정이 없다) 캐시에 닿지 못했다. 다음 주기에 다시 읽는다
-        const string listKey = MatchQueueService::makeMatchListKey( _serverID );
+        const string listKey = MatchQueueLogic::makeMatchListKey( _serverID );
         for ( const EphemeralScoredMember& member : reply._listMember )
         {
             if ( member._score <= _nowMs )
@@ -237,7 +237,7 @@ namespace sw
             if ( _mapRecordToExpiresMs.count( member._member ) != 0 )
                 continue;
             _mapRecordToExpiresMs[member._member] = member._score;
-            _pRouter->submit( EphemeralRequest::makeGet( MatchQueueService::makeMatchRecordKey( _serverID, member._member ) ), _replyOwner, [this, recordName = member._member]( const EphemeralReply& recordReply )
+            _pRouter->submit( EphemeralRequest::makeGet( MatchQueueLogic::makeMatchRecordKey( _serverID, member._member ) ), _replyOwner, [this, recordName = member._member]( const EphemeralReply& recordReply )
             { onRecordReply( recordName, recordReply ); } );
         }
     }

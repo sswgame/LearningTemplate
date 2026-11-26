@@ -38,7 +38,7 @@ namespace sw
 
         /**
          * @brief 경기를 만듭니다. 만든 경기는 @p outListMatch 뒤에, 시한을 넘긴 티켓은 @p outListTimedOut 뒤에 덧붙입니다.
-         * @details 경기 id 는 비워 둡니다(0). 대기열마다 세면 다른 모드 · 재시작 앞뒤의 id 가 겹쳐 명단 기록을 덮으므로, 서버에 하나인 발급기(`MatchQueueService`)가 매긴다.
+         * @details 경기 id 는 비워 둡니다(0). 대기열마다 세면 다른 모드 · 재시작 앞뒤의 id 가 겹쳐 명단 기록을 덮으므로, 서버에 하나인 발급기(`MatchQueueLogic`)가 매긴다.
          */
         void process( int64 nowMs, vector<MatchFormed>& outListMatch, vector<MatchTicket>& outListTimedOut );
 

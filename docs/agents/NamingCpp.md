@@ -64,7 +64,9 @@ Never loop `releaseRHI` / `clearRHI` / `initRHI` from outside: `IRHIDevice` broa
 | `…Registry` | Lookup table filled by registration; no lifetime policy |
 | `…System` | Runs every frame over many objects with the same logic |
 | `…Subsystem` | Unit whose lifetime a `SubsystemCollection` owns (`initializeSubsystem` · `shutdownSubsystem`), found by type in a scope — engine · host · scene · editor · game instance (Unreal `USubsystem`) |
-| `…Service` | Online · server network service only (a request endpoint or its client — `IOnlineServerService`, `OnlineClientService`). A unit the engine owns is a `…Subsystem` |
+| `…Service` | Online · server network service only (a request endpoint or its client — `IOnlineServerService`, `OnlineClientService`). A unit the engine owns is a `…Subsystem`. `Server` names the whole process (`OnlineServerRuntime`, `ServerRecord`), never an endpoint |
+| `…Logic` | Online kit business rules that do not know the transport, called by the kit's `…Service` (`ChatLogic`, `EconomyStoreLogic`) |
+| `…Controller` | One flow or state machine (`ScreenTransitionController`, `LoadingScreenController`). Not a `…Manager` |
 | `…Registration` | A static record linked into a registration list (name, order, create function) |
 | `…Registrar` | Static object that adds a registration when built and removes it when destroyed (`StaticRegistrar`) |
 | `Subscription` | Move-only handle whose destruction undoes a bind (`DelegateSlot::bind`, `ObserverSlot::bind`, event subscribe) |

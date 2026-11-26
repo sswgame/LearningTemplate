@@ -218,7 +218,7 @@ namespace sw
         PROPERTY()
         int32 _memberCount{ 0 };
         PROPERTY()
-        int64 _experience{ 0 }; ///< 길드 경험치이다. 서버 시스템(`GuildService::addExperience`)만 늘린다
+        int64 _experience{ 0 }; ///< 길드 경험치이다. 서버 시스템(`GuildLogic::addExperience`)만 늘린다
         PROPERTY()
         int32 _level{ 1 }; ///< 경험치와 서버 설정의 레벨 표(`SocialKitConfig::_listGuildLevelExperience`)로 응답할 때 정한다. 저장하지 않는다
         PROPERTY( Min = 0, Max = 1 )
