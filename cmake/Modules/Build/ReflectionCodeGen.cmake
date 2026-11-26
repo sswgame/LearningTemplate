@@ -35,7 +35,8 @@ endfunction()
 # (언리얼 UHT 는 헤더만 읽어 이런 형식도 헤더에 남는다). 아래 제외 규칙은 헤더와 .cpp 에 똑같이 걸린다.
 function(sw_scan_reflection_inputs OUT_HEADERS OUT_OTHERS TARGET_NAME EXCLUDE_REGEX)
 	message(VERBOSE "[Reflection] No HEADERS specified for target: ${TARGET_NAME}, auto-scanning for REFLECT macros...")
-	sw_glob_source_tree(list_candidate_header RECURSE "${CMAKE_CURRENT_SOURCE_DIR}/*.h" "${CMAKE_CURRENT_SOURCE_DIR}/*.hpp" "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp")
+	sw_get_reflection_input_globs(list_input_glob "${CMAKE_CURRENT_SOURCE_DIR}")
+	sw_glob_source_tree(list_candidate_header RECURSE ${list_input_glob})
 	# 하위 폴더의 다른 모듈(키트 · 게임의 Editor/ 확장)은 그 모듈이 따로 훑는다.
 	if(EXCLUDE_REGEX)
 		list(FILTER list_candidate_header EXCLUDE REGEX "${EXCLUDE_REGEX}")
@@ -321,7 +322,7 @@ function(sw_add_reflection_candidate_check TARGET_NAME OUTPUT_DIR)
 	set(reflect_scan_stamp "${OUTPUT_DIR}/ReflectionCandidates.stamp")
 	add_custom_command(
 		OUTPUT "${reflect_scan_stamp}"
-		COMMAND ${CMAKE_COMMAND} "-DCANDIDATE_LIST=${reflect_candidate_list}" "-DSTAMP=${reflect_scan_stamp}" "-DTARGET_NAME=${TARGET_NAME}"
+		COMMAND ${CMAKE_COMMAND} "-DCANDIDATE_LIST=${reflect_candidate_list}" "-DSTAMP=${reflect_scan_stamp}" "-DTARGET_NAME=${TARGET_NAME}" "-DSW_GENERATED_CMAKE_VARS=${SW_GENERATED_CMAKE_VARS}"
 			-P "${CMAKE_SOURCE_DIR}/cmake/Scripts/CheckReflectionCandidates.cmake"
 		DEPENDS ${ARGN} "${reflect_candidate_list}" "${CMAKE_SOURCE_DIR}/cmake/Scripts/CheckReflectionCandidates.cmake"
 		COMMENT "[Reflection] Checking ${TARGET_NAME} headers for new reflection macros"

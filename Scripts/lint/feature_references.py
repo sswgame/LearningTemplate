@@ -27,6 +27,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterable, Mapping
 
+from common import project_constants
+from lint import cpp_code
+from lint.cpp_code import is_reflection_input
 from lint.index_cache import open_facts
 from lint.lint_rule import LintRule
 from lint.lint_scope import LintScope, list_repo_files
@@ -88,7 +91,7 @@ def extract_facts(bucket: str, path: str, text: str) -> dict[str, list[str]]:
     """파일 하나의 사실 — 정의(컴포넌트 · 감시 값 · 명령), 참조(컴포넌트 이름 · 글자 첫 낱말 · 시나리오 낱말), 등록 없는 명령 함수. 색인(`index_cache`)에 둔다."""
     facts: dict[str, list[str]] = {}
     if bucket == "dict_header":
-        if path.endswith((".h", ".cpp")):   # .cpp 안의 리플렉션 컴포넌트(`<이름>.cpp.gen.inl`)도 정의다
+        if is_reflection_input(path, text):   # 헤더 · .cpp(`<이름>.cpp.gen.inl`) — 생성 단계와 같은 판정
             facts["component"] = [match.group(1) for match in CLASS_PATTERN.finditer(text)
                                   if any("REFLECT(" in line for line in text[:match.start()].splitlines()[-REFLECT_LOOK_BACK_LINES:])]
         if not (path.endswith("AutomationWatch.h") or path.endswith("AutomationComponentWatch.h")):   # 매크로 정의 자체
@@ -194,7 +197,7 @@ def make_table(**sections: dict[str, str]) -> ExceptionTable:
 def read_summary(project_root: Path) -> list[str]:
     """저장소에 있는 파일만 본다(git 이 아는 파일 — 빌드 산출물 · 임포트 산출물을 줍지 않는다). 내용이 바뀐 파일만 다시 읽고(`index_cache`), 판정은 접은 토큰만 읽는다."""
     list_path = [path for path in list_repo_files(project_root) if classify_path(path) is not None]
-    return list(open_facts(project_root, "feature-refs", [__file__], list_path, lambda path, text: extract_facts(classify_path(path), path, text), errors="ignore",
+    return list(open_facts(project_root, "feature-refs", [__file__, cpp_code.__file__, project_constants.__file__], list_path, lambda path, text: extract_facts(classify_path(path), path, text), errors="ignore",
                           contribute=fold_tokens).summary)
 
 

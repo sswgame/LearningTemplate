@@ -38,6 +38,7 @@ from dev.rename_scope import (
     BANNED_NAMES_PATH, C_LIKE_SUFFIX, CPP_SUFFIX, KEEP_OLD_NAME_MARKER, TEXT_SUFFIX, collect_reflected_properties, dump_naming_table, is_rename_table,
     list_tracked_text, plan_serialized_rename, read_text, replace_serialized_name, rewrite_rename_target, write_text,
 )
+from lint.cpp_code import is_reflection_input
 
 TAG = "[rename-symbol]"
 #: 데이터 · 설정의 글 형식 가운데 소스 이동(`move-source`)이 보지 않는 것 — 머티리얼 칸 이름 · 설정 키에 식별자가 든다.
@@ -182,7 +183,8 @@ def check_pairs(root: Path, list_pair: Sequence[dict], map_text: dict[Path, str]
     """쌍마다 안전 규칙을 본다. (문제 수, 옛 멤버 이름 → 함께 바꿀 직렬화 이름 쌍)."""
     problems = 0
     map_relative = {path.relative_to(root).as_posix(): text for path, text in map_text.items()}
-    properties = collect_reflected_properties({relative: text for relative, text in map_relative.items() if relative.startswith("Source/") and relative.endswith(".h")})
+    # 리플렉션 입력(헤더 · .cpp — 생성 단계와 같은 판정)만 본다. 헤더만 보면 .cpp 안 형식의 칸을 바꿀 때 데이터의 직렬화 이름이 남는다.
+    properties = collect_reflected_properties({relative: text for relative, text in map_relative.items() if relative.startswith("Source/") and is_reflection_input(relative, text)})
     serialized_pairs: dict[str, tuple[str, str]] = {}
     for pair in list_pair:
         old, new = pair.get("old", ""), pair.get("new", "")

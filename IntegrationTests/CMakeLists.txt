@@ -315,8 +315,9 @@ if(TARGET ReflectionParser)
 		message(FATAL_ERROR "[ReflectionParser tests] no target macros found on sw_global_options / SW_FLAG_LIBRARIES")
 	endif()
 	string(JOIN "|" parser_test_target_args ${list_parser_test_target_arg})
-	# .cpp 사례는 .cpp 입력의 길(`<이름>.cpp.gen.inl`)을 지난다. 사례 이름(확장자를 뺀 것)은 헤더 사례와 겹치지 않게 짓는다.
-	sw_glob_source_tree(list_parser_fixture "${CMAKE_CURRENT_SOURCE_DIR}/ReflectionParser/Fixtures/*.h" "${CMAKE_CURRENT_SOURCE_DIR}/ReflectionParser/Fixtures/*.cpp")
+	# 사례 파일은 리플렉션 입력 확장자 전부다(`sw_get_reflection_input_globs`). .cpp 사례는 .cpp 입력의 길(`<이름>.cpp.gen.inl`)을 지난다. 사례 이름(확장자를 뺀 것)은 서로 겹치지 않게 짓는다.
+	sw_get_reflection_input_globs(list_parser_fixture_glob "${CMAKE_CURRENT_SOURCE_DIR}/ReflectionParser/Fixtures")
+	sw_glob_source_tree(list_parser_fixture ${list_parser_fixture_glob})
 	foreach(parser_fixture IN LISTS list_parser_fixture)
 		get_filename_component(parser_fixture_name "${parser_fixture}" NAME_WE)
 		add_test(NAME ReflectionParser.${parser_fixture_name}

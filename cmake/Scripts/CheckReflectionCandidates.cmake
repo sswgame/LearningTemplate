@@ -4,7 +4,7 @@
 # @details sw_add_reflection_step 의 자동 훑기는 구성 시점에 굳는다. 새 헤더 · 옮긴 헤더는 소스 글롭(CONFIGURE_DEPENDS)이 다시 구성하게 하지만,
 #          이미 있던 헤더에 REFLECT( · ENUM( 을 더하면 구성이 다시 돌지 않아 .gen.cpp 가 없는 채로 링크에서 깨진다.
 #          이 스크립트는 그런 헤더(구성 때 매크로가 없던 것)가 바뀌었을 때만 돈다 — 매크로가 생겼으면 다시 구성하라고 알리고 빌드를 세운다.
-# 인자: -DCANDIDATE_LIST=<줄마다 헤더 경로> -DSTAMP=<스탬프 파일> -DTARGET_NAME=<타깃>
+# 인자: -DCANDIDATE_LIST=<줄마다 후보 경로> -DSTAMP=<스탬프 파일> -DTARGET_NAME=<타깃> -DSW_GENERATED_CMAKE_VARS=<ConfigVars.cmake — 매크로 판정 정규식>
 # ==============================================================================
 include("${CMAKE_CURRENT_LIST_DIR}/../Modules/Build/ReflectionMacroScan.cmake")
 

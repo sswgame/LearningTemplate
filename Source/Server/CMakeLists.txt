@@ -50,7 +50,8 @@ sw_emit_runtime_copies(Server)
 # (`SW_EXCLUDED_ENGINE_FOLDERS` · `SW_CLIENT_ONLY_SOURCE_PATTERNS`, 테스트 폴더는 뺀다). 언리얼이 쿠킹 때 서버에서 뺄 클래스 목록을 내는 자리와 같다.
 # .cpp 안의 리플렉션 형식(`<이름>.cpp.gen.inl` 로 등록한다)도 든다. .cpp 는 매크로가 있는 것만 넘긴다. 클라이언트 .cpp 를 고칠 때마다 표를 다시 쓰지 않게 하려는 것이고,
 # 매크로가 새로 생긴 .cpp 는 리플렉션 후보 검사(`sw_add_reflection_candidate_check`)가 다시 구성하게 한다.
-sw_glob_source_tree(list_source_header RECURSE "${CMAKE_SOURCE_DIR}/Source/*.h" "${CMAKE_SOURCE_DIR}/Source/*.cpp")
+sw_get_reflection_input_globs(list_reflection_input_glob "${CMAKE_SOURCE_DIR}/Source")
+sw_glob_source_tree(list_source_header RECURSE ${list_reflection_input_glob})
 set(list_client_only_header "")
 foreach(header IN LISTS list_source_header)
 	string(REPLACE "${CMAKE_SOURCE_DIR}/Source/" "" relative_header "${header}")
@@ -70,8 +71,9 @@ foreach(header IN LISTS list_source_header)
 			set(client_only ON)
 		endif()
 	endforeach()
+	# 헤더는 매크로가 없어도 넘긴다 — 구성 뒤에 매크로가 생긴 헤더도 표에 든다(헤더를 다 넘기는 리플렉션 단계가 있어 후보 검사가 지켜보지 않는 헤더가 있다).
 	if(client_only AND header MATCHES "\\.cpp$")
-		sw_has_reflection_macro(client_only "${header}")
+		sw_is_reflection_input(client_only "${header}")
 	endif()
 	if(client_only)
 		list(APPEND list_client_only_header "${header}")
