@@ -30,7 +30,7 @@ namespace sw
     /**
      * @brief 텍스트 하나를 에셋으로 파싱합니다. 실패하면 오류(`<경로>:<줄>: <이유>`)입니다.
      * @details 에셋 타입은 가진 서브시스템만 안다. 공통 구현은 `shared_ptr<const void>` 로 보관하고, 가진 서브시스템이 자기 타입으로 되돌린다.
-     *          @p context 는 캐시가 만든 합성 문맥이다(리소스 id = 경로, 변형이면 바꿔 끼운 태그) — 파서는 글을 이 문맥으로 합쳐 읽는다(`XMLDocument::parseComposed`).
+     *          @p context 는 캐시가 만든 합성 문맥이다(에셋 id = 경로, 변형이면 바꿔 끼운 태그) — 파서는 글을 이 문맥으로 합쳐 읽는다(`XMLDocument::parseComposed`).
      */
     using UITextAssetParseFunction = expected<shared_ptr<const void>> ( * )( string_view text, string_view path, const AssetComposeContext& context );
 } // namespace sw
@@ -68,7 +68,7 @@ namespace sw
         bool        isCached( string_view relativePath ) const override;
         /** @brief 에셋(엔진 판과 변형)을 다시 읽어 파싱합니다(에디터 핫 리로드 · 태그 다시 읽기). 하나라도 되면 바꾸고 알림을 한 번 부릅니다. 디바이스는 쓰지 않습니다. */
         [[nodiscard]] ReloadResult reload( const AssetID& assetID );
-        /** @brief 리소스 태그 · 층이 바뀌어 다시 읽습니다(`AssetManager` 의 합성 다시 읽기 — 배포 구성에도 있다). 들고 있지 않으면 false 입니다. */
+        /** @brief 에셋 태그 · 층이 바뀌어 다시 읽습니다(`AssetManager` 의 합성 다시 읽기 — 배포 구성에도 있다). 들고 있지 않으면 false 입니다. */
         bool   reloadComposed( string_view relativePath ) override;
         size_t getCachedCount() const override { return _mapKeyToEntry.size(); }
         /** @brief 읽어 둔 에셋마다 한 줄입니다. 파싱한 형식을 모르는 칸(`shared_ptr<const void>`)이라 CPU 바이트는 0 이다 — 그 몫은 메모리 태그(UI) 줄에 있다. */

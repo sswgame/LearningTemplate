@@ -99,7 +99,7 @@ namespace sw
             _listCoreBone.clear();
             return false;
         }
-        // 리소스 id 로 합친다 — 부모 · 조건에 더해 덮어쓰기 층 · 다시 읽기 기록 · 접속 대조를 받는다(글 입구 `loadFromXMLText` 는 id 가 없다).
+        // 에셋 id 로 합친다 — 부모 · 조건에 더해 덮어쓰기 층 · 다시 읽기 기록 · 접속 대조를 받는다(글 입구 `loadFromXMLText` 는 id 가 없다).
         _listLevel.clear();
         _listCoreBone.clear();
         string flatText;

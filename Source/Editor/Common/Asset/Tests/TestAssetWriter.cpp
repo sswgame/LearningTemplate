@@ -8,7 +8,7 @@
 
 #include "Editor/Common/Asset/AssetWriter.h"
 
-#define SW_TEST_INTERNAL // 임시 리소스 도메인 픽스처(`ScopedScratchDomain`)가 엔진 서비스를 직접 쓴다
+#define SW_TEST_INTERNAL // 임시 콘텐츠 도메인 픽스처(`ScopedScratchDomain`)가 엔진 서비스를 직접 쓴다
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
 
 using namespace sw;
@@ -32,7 +32,7 @@ namespace
     };
 } // namespace
 
-// 리소스 id 를 푼 경로는 쓰는 함수에 들어가지 않는다 — 문을 지나지 않은 쓰기가 컴파일되지 않는다.
+// 에셋 id 를 푼 경로는 쓰는 함수에 들어가지 않는다 — 문을 지나지 않은 쓰기가 컴파일되지 않는다.
 static_assert( std::is_convertible_v<DiskPath, AbsolutePath> == false, "a content path must not turn into a writable path" );
 static_assert( std::is_invocable_v<decltype( &FileUtil::writeTextFile ), const DiskPath&, string_view> == false, "FileUtil must not write a content path" );
 static_assert( std::is_invocable_v<decltype( &FileUtil::removeFile ), const DiskPath&> == false, "FileUtil must not remove a content path" );

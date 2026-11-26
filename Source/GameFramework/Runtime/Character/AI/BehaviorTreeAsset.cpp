@@ -386,7 +386,7 @@ namespace sw
             SW_LOG_ERROR_ID( "BehaviorTreeAsset.FileNotFound", "Behavior tree '%#' cannot be read", assetID.view() );
             return false;
         }
-        // 리소스 id 로 읽는다 - 조건 · 덮어쓰기 층 · 다시 읽기 기록이 이 합성 한 길을 지난다.
+        // 에셋 id 로 읽는다 - 조건 · 덮어쓰기 층 · 다시 읽기 기록이 이 합성 한 길을 지난다.
         string flatText;
         bool   bComposed = false;
         if ( AssetComposer::compose( text, assetID.view(), AssetComposeContext::forSchema( &BehaviorTreeSchema::make ).withAsset( assetID ), flatText, bComposed ) == false )

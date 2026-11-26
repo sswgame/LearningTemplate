@@ -349,7 +349,7 @@ namespace sw
             SW_LOG_ERROR_ID( "TileSet.TileSetNotFound", "Tile set '%#' not found", path );
             return false;
         }
-        // 리소스 id 로 합친다 — 조건 · 덮어쓰기 층 · 다시 읽기 기록 · 접속 대조를 받는다(글 입구 `loadFromXMLText` 는 id 가 없다).
+        // 에셋 id 로 합친다 — 조건 · 덮어쓰기 층 · 다시 읽기 기록 · 접속 대조를 받는다(글 입구 `loadFromXMLText` 는 id 가 없다).
         XMLDocument doc;
         if ( doc.parseAssetText( text, assetID ) == false )
         {

@@ -17,7 +17,7 @@ namespace sw
 {
     namespace
     {
-        /** @brief 리소스 하나의 기록입니다. */
+        /** @brief 에셋 하나의 기록입니다. */
         struct AssetCompositionRecord
         {
             vector<string> _listLoadTag;  ///< 결과가 기댄 로드 축 태그
@@ -54,7 +54,7 @@ namespace sw
     {
         mutex                                         _mutex{};
         vector<string>                                _listLayerRoot{};
-        unordered_map<string, AssetCompositionRecord> _mapRecord{};     ///< 리소스 id 로 합성한 리소스 모두
+        unordered_map<string, AssetCompositionRecord> _mapRecord{};     ///< 에셋 id 로 합성한 에셋 모두
         unordered_map<string, vector<string>>         _mapRemapTag{};   ///< 경로 교체가 물은 로드 축 태그(`recordRemap`)
         unordered_map<string, vector<string>>         _mapVariantTag{}; ///< 바꿔 끼운 태그로 합친 변형이 물은 로드 축 태그(`recordVariant`)
         vector<string>                                _listPendingReload{};
@@ -235,7 +235,7 @@ namespace sw
 
     void AssetComposition::notifyLayersChanged( const vector<string>& listRoot )
     {
-        // 층 파일이 있는지는 잠금 밖에서 본다(파일 · 팩 색인을 읽는다). 후보는 리소스 id 로 합성한 적이 있는 것 — 읽지 않은 리소스는 다음 읽기가 새 층을 본다.
+        // 층 파일이 있는지는 잠금 밖에서 본다(파일 · 팩 색인을 읽는다). 후보는 에셋 id 로 합성한 적이 있는 것 — 읽지 않은 에셋은 다음 읽기가 새 층을 본다.
         vector<string> listCandidate;
         {
             State&            state = *_pState;

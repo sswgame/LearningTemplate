@@ -105,7 +105,7 @@ namespace sw::editor
         // 씬을 여는 모든 입구(메뉴 · 콘솔 `scene.open` · 복원 · 미저장 확인 뒤)가 여기로 온다 — 플레이 중에 열면 Stop 이 연 씬을 스냅샷으로 덮는다.
         if ( EditorSceneFileCommandsInternal::isPlayStoppedForSceneFile() == false )
             return false;
-        // 리소스 id 로만 연다 - 디스크 경로는 받는 쪽(대화상자 · 개발 명령)이 `AssetPaths::toAssetID` 로 바꿔 온다.
+        // 에셋 id 로만 연다 - 디스크 경로는 받는 쪽(대화상자 · 개발 명령)이 `AssetPaths::toAssetID` 로 바꿔 온다.
         const string loadPath = AssetPaths::normalizeAssetID( path );
         if ( loadPath.empty() )
         {
@@ -349,7 +349,7 @@ namespace sw::editor
                 AbsolutePath absolutePath;
                 if ( listArgument.size() != 1 || EditorAssetFileCommands::readSourceFileArgument( listArgument[0], absolutePath, outReply ) == false )
                     return false;
-                // 씬은 리소스 id 로 연다 - 리소스 트리 · 붙인 디스크 도메인 밖의 파일은 씬의 소스가 될 수 없다.
+                // 씬은 에셋 id 로 연다 - 콘텐츠 트리 · 붙인 디스크 도메인 밖의 파일은 씬의 소스가 될 수 없다.
                 const string sceneID = editor::getSubsystem<AssetPaths>().toAssetID( absolutePath );
                 if ( sceneID.empty() )
                 {

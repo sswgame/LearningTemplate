@@ -119,7 +119,7 @@ namespace sw
                 vector<uint8>  _listGeneratedByte; ///< `Generated` 의 바이트
             };
 
-            /** @brief 고르기 결과입니다 — 담을 원본 id, 닿았지만 제외 규칙이 뺀 원본 id(모두 정규화한 리소스 id), 스테이징 산출물의 고르기입니다. */
+            /** @brief 고르기 결과입니다 — 담을 원본 id, 닿았지만 제외 규칙이 뺀 원본 id(모두 정규화한 에셋 id), 스테이징 산출물의 고르기입니다. */
             struct PackSelection
             {
                 unordered_set<string>         _setIncluded;
@@ -135,7 +135,7 @@ namespace sw
             class PackDiskReachSource final : public IPackReachSource
             {
             public:
-                unordered_map<string, AbsolutePath> _mapAbsolutePath; ///< 리소스 id → 디스크 절대 경로(리눅스는 대소문자를 가린다 — 정규화한 id 로 열지 않는다)
+                unordered_map<string, AbsolutePath> _mapAbsolutePath; ///< 에셋 id → 디스크 절대 경로(리눅스는 대소문자를 가린다 — 정규화한 id 로 열지 않는다)
 
                 bool readText( const string& assetID, string& outText ) const override
                 {
@@ -169,7 +169,7 @@ namespace sw
                 return PackCooker::shouldIncludeFile( relativePath, config, params._shaderFolder, params._buildTarget ) && AssetCookPath::isCookedOutput( relativePath ) == false;
             }
 
-            /** @brief 도메인 기준 상대 경로의 정규화 리소스 id(`game/playground/maps/a.scene.xml`)입니다. */
+            /** @brief 도메인 기준 상대 경로의 정규화 에셋 id(`game/playground/maps/a.scene.xml`)입니다. */
             static string makeAssetID( string_view domain, string_view relativePath ) { return FileUtil::normalizePath( FileUtil::joinPath( domain, relativePath ) ).str(); }
 
             /** @brief 원소 @p node 나 그 아래에 조건(`_when`)이 있으면 true 입니다. 주석 · 글에 적힌 이름은 조건이 아니다. */
@@ -185,7 +185,7 @@ namespace sw
                 return false;
             }
 
-            /** @brief @p assetID 가 굽는 게임의 덮어쓰기 층 파일(`<층 뿌리>/<리소스 id>`)이면 true 입니다. 층은 원본과의 차이라 혼자서는 완전한 문서가 아니다. */
+            /** @brief @p assetID 가 굽는 게임의 덮어쓰기 층 파일(`<층 뿌리>/<에셋 id>`)이면 true 입니다. 층은 원본과의 차이라 혼자서는 완전한 문서가 아니다. */
             [[nodiscard]] static bool isLayerFile( const PackSelection& selection, string_view assetID )
             {
                 for ( const vector<string>& listRoot : selection._listGameLayerRoot )
@@ -763,7 +763,7 @@ namespace sw
 
             /**
              * @brief 파일 하나를 읽어 팩에 담습니다. 디스크 읽기 입구(`AssetIO::readBinaryFile`)가 읽기와 작업 입력 기록(`CookJob::allowDiskRead`)을 함께 한다.
-             * @details 팩은 마운트된 팩이 아니라 느슨한 트리 · 스테이징(리소스 루트 밖)에서 베이크하므로 디스크 경로로 읽는다. 예전에는 `FileUtil` 로 읽고 입력을 손으로 기록했다(같은 일 둘).
+             * @details 팩은 마운트된 팩이 아니라 느슨한 트리 · 스테이징(콘텐츠 루트 밖)에서 베이크하므로 디스크 경로로 읽는다. 예전에는 `FileUtil` 로 읽고 입력을 손으로 기록했다(같은 일 둘).
              *          읽기 시간에는 입력 해시가 들어 있다.
              */
             [[nodiscard]] static bool readStagedFile( const AbsolutePath& absPath, PackCookTiming& ioTiming, vector<uint8>& outBytes )
@@ -915,7 +915,7 @@ namespace sw
                     return meta.parseXML( text, AssetMeta::makePath( assetID ) );
                 if ( rules.isUnderDerivedFolder( assetID ) == false )
                     return nullopt;
-                const AbsolutePath          contentRoot = FileUtil::toDiskPath( string_view( absPath.str() ).substr( 0, absPath.str().size() - assetID.size() ) ); // 원본 경로는 리소스 id 로 끝난다(`makeAssetID`)
+                const AbsolutePath          contentRoot = FileUtil::toDiskPath( string_view( absPath.str() ).substr( 0, absPath.str().size() - assetID.size() ) ); // 원본 경로는 에셋 id 로 끝난다(`makeAssetID`)
                 vector<AssetImportedSource> listSource;
                 rules.collectImportedSources( assetID, listSource );
                 for ( const AssetImportedSource& source : listSource )

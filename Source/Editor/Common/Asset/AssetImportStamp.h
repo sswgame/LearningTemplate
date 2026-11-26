@@ -40,9 +40,9 @@ namespace sw::editor
     {
         /** @brief 사람이 읽을 수 있는 한 줄 메시지의 목록입니다. CheckOnly 는 어긋남을, ImportStale 은 임포트하지 못한 것을 담습니다. */
         vector<string> _listProblem;
-        /** @brief 취소로 보지 않은 원본(리소스 경로)입니다(`AssetImportControl`). 스탬프 줄은 그대로다. */
+        /** @brief 취소로 보지 않은 원본(에셋 경로)입니다(`AssetImportControl`). 스탬프 줄은 그대로다. */
         vector<string> _listSkippedPath;
-        /** @brief 이번에 본 원본(리소스 경로 — 규칙을 고르는 경로)의 정렬한 목록입니다. 뒤에 원본 전체를 보는 일(죽은 규칙 · 공유 저장소 정리)이 트리를 다시 훑지 않는다. */
+        /** @brief 이번에 본 원본(에셋 경로 — 규칙을 고르는 경로)의 정렬한 목록입니다. 뒤에 원본 전체를 보는 일(죽은 규칙 · 공유 저장소 정리)이 트리를 다시 훑지 않는다. */
         vector<string> _listSourcePath;
         uint32         _sourceCount;
         uint32         _importedCount;
@@ -94,7 +94,7 @@ namespace sw::editor
     /** @brief 바뀐 원본 하나와 그 결과입니다(`AssetSourceBatch`). */
     struct AssetSourceBatchItem
     {
-        string _relativePath;      ///< 리소스 루트 기준 원본 경로
+        string _relativePath;      ///< 콘텐츠 루트 기준 원본 경로
         bool   _bRan{ false };     ///< 임포터가 보았다(취소로 건너뛰었으면 false — 부른 쪽이 다시 요청한다)
         bool   _bHandled{ false }; ///< 임포터가 원본으로 처리했다 — 임포트했거나 임포트하지 않는다고 알렸다(false 면 부른 쪽이 캐시를 다시 읽어야 한다)
     };
@@ -117,7 +117,7 @@ namespace sw::editor
     struct AssetSourceBatchEntry
     {
         size_t         _itemIndex{ 0 }; ///< `AssetSourceBatch::_listItem` 의 번호
-        vector<string> _listSourcePath; ///< 리소스 루트 기준
+        vector<string> _listSourcePath; ///< 콘텐츠 루트 기준
     };
 } // namespace sw::editor
 
@@ -172,8 +172,8 @@ namespace sw::editor
         /** @brief DDC 키에 넣는 임포터 코드 지문(`CookCodeFingerprint::find`)입니다. 0 이면 `Config/Dev/CookCodeInputs.json` 에 없는 것이라 DDC 를 쓰는 임포트가 오류로 멈춥니다. */
         virtual uint64 findCodeFingerprint() const = 0;
         /**
-         * @brief 결과 글에 자기 리소스 경로가 박히면 true 입니다(기본 false). 모델은 `_shared/` · 머티리얼 경로를 적는다.
-         * @details true 면 DDC 키에 리소스 경로를 넣고 결과 파일 이름을 리소스 루트 기준으로 담는다. false 면 경로를 키에 넣지 않아 복제본 · 옮긴 원본도 같은 항목을 쓰고
+         * @brief 결과 글에 자기 에셋 경로가 박히면 true 입니다(기본 false). 모델은 `_shared/` · 머티리얼 경로를 적는다.
+         * @details true 면 DDC 키에 에셋 경로를 넣고 결과 파일 이름을 콘텐츠 루트 기준으로 담는다. false 면 경로를 키에 넣지 않아 복제본 · 옮긴 원본도 같은 항목을 쓰고
          *          (유니티는 GUID 를 넣어 복제본을 다시 임포트한다), 결과 파일 이름은 결과 폴더 기준이다.
          */
         virtual bool isImportedPathEmbedded() const { return false; }
@@ -202,7 +202,7 @@ namespace sw::editor
     struct AssetImportStampUtil
     {
         /**
-         * @brief 리소스 루트 아래 모든 원본 폴더(@p importer 의 이름)의 원본을 그 폴더의 `import.stamp` 와 대조합니다. @p mode 가 ImportStale 이면
+         * @brief 콘텐츠 루트 아래 모든 원본 폴더(@p importer 의 이름)의 원본을 그 폴더의 `import.stamp` 와 대조합니다. @p mode 가 ImportStale 이면
          *        어긋난 것을 임포트합니다.
          * @details 스탬프 한 줄은 `<원본 해시> <결과 해시> <원본 폴더 기준 상대 경로>` 형식이다. 원본 해시에는 규칙과 임포터 버전이 섞이므로 규칙만
          *          바꿔도 어긋남이고, 결과 해시 덕분에 결과를 손댄 경우도 잡힌다. 판정은 파일 시간이 아니라 내용으로 한다. 원본과 결과를 둘 다 커밋하므로
@@ -216,7 +216,7 @@ namespace sw::editor
          * @param resourceRoot `Content/` 의 절대 경로
          *
          *          어긋난 원본은 임포트하기 전에 @p derivedDataCache 를 찾고, 미스면 임포트한 뒤 넣는다(ImportStale 만). 키 = 임포터 스탬프 머리 + 코드 지문 + 원본 해시
-         *          (원본 바이트 · 규칙 · 임포터 판 · 대상 형식) + (`isImportedPathEmbedded` 면) 리소스 경로. 히트는 임포터를 부르지 않고 결과 파일을 되살린다.
+         *          (원본 바이트 · 규칙 · 임포터 판 · 대상 형식) + (`isImportedPathEmbedded` 면) 에셋 경로. 히트는 임포터를 부르지 않고 결과 파일을 되살린다.
          * @param pTaskManager 사슬을 나눠 돌 작업 시스템(빌림, nullptr 이면 이 스레드가 직렬로). 부르는 쪽이 찾아 넘긴다 — 워커에서 불릴 수 있어 여기서는 에디터 서비스 범위(`findEditorScope`)를 읽지 않는다.
          * @param derivedDataCache 결과를 찾고 넣는 DDC(보통 `DerivedDataCache::open` — 부르는 쪽이 읽어 넘긴다, 테스트는 임시 폴더 층)
          */
@@ -224,7 +224,7 @@ namespace sw::editor
                                                            const DerivedDataCache& derivedDataCache );
 
         /**
-         * @brief @p listAssetPath(리소스 루트 기준, 구분자 · 대소문자 무시)의 원본만 스탬프와 대조하고 어긋났으면 임포트합니다(ImportStale). 에디터 핫 리로드가 바뀐 원본만 임포트하는 길입니다.
+         * @brief @p listAssetPath(콘텐츠 루트 기준, 구분자 · 대소문자 무시)의 원본만 스탬프와 대조하고 어긋났으면 임포트합니다(ImportStale). 에디터 핫 리로드가 바뀐 원본만 임포트하는 길입니다.
          * @details 루트 전체를 훑는 `importAll` 은 비용이 바뀐 파일 수가 아니라 원본 수에 비례한다. 이쪽은 범위 안 원본이 든 원본 폴더만 목록을 내고 범위 밖 원본은 읽지 않는다.
          *          스탬프를 쓰는 길은 `importAll` 과 같은 한 곳이다(에디터가 임포트한 것과 `App --import-*` 가 임포트한 것이 같은 판정을 받는다). 범위 밖 원본의 스탬프 줄은 그대로 둔다.
          *          지우면 다음 전체 대조가 그 원본들을 모두 다시 임포트한다. 사슬과 순서 의존은 범위 안 원본끼리만 따진다.

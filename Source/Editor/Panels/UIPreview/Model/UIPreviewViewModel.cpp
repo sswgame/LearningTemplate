@@ -164,7 +164,7 @@ namespace sw::editor
 
     void UIPreviewViewModel::openDocument( string_view assetPath )
     {
-        // 리소스 id 가 아니면 commit 이 알리고 지금 문서를 그대로 둔다. 같은 경로면 commit 이 false 지만 다시 짓는다(다시 읽기).
+        // 에셋 id 가 아니면 commit 이 알리고 지금 문서를 그대로 둔다. 같은 경로면 commit 이 false 지만 다시 짓는다(다시 읽기).
         if ( assetPath.empty() == false )
             (void)_documentPath.commit( assetPath );
         closePreview();

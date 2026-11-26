@@ -64,7 +64,7 @@ namespace sw
         PROPERTY( Required, Tooltip = "Time zones this build can convert to" )
         vector<TimeZoneInfo> _listZone;
 
-        /** @brief 리소스 경로의 XML 을 읽고 검사합니다. 실패하면(파일 없음, 모르는 키, 빠진 칸, 검사 실패) 오류를 남기고 false 이며 표는 비어 있습니다. */
+        /** @brief 에셋 경로의 XML 을 읽고 검사합니다. 실패하면(파일 없음, 모르는 키, 빠진 칸, 검사 실패) 오류를 남기고 false 이며 표는 비어 있습니다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         /** @brief 이름의 시간대입니다(대소문자 구분, 없으면 nullptr). */
         const TimeZoneInfo* findZone( string_view zoneName ) const;

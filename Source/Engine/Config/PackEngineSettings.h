@@ -26,7 +26,7 @@ namespace sw
 {
     /**
      * @struct PackEngineSettings
-     * @brief 팩 `gamesettings.xml` 의 `<Engine>` 요소입니다. 경로 칸은 도메인을 포함한 리소스 id(`game/<팩>/data/…`)입니다.
+     * @brief 팩 `gamesettings.xml` 의 `<Engine>` 요소입니다. 경로 칸은 도메인을 포함한 에셋 id(`game/<팩>/data/…`)입니다.
      * @details 경로 칸은 선택이다 — 적지 않으면 `DataPath` 가 "읽지 않음" 으로 남고, 그 뜻은 칸마다 적은 대로(엔진 기본 · 없음)다. 비었는지는 `isSet` 으로 묻는다
      *          (`get` 은 Debug 에서 어서션이 난다). 창 제목은 필수다. 모르는 속성 · 자식은 로드 오류다(`ConfigManager::readConfigXMLElement`).
      */
@@ -68,7 +68,7 @@ namespace sw
         DataPath _uiPauseMenu; ///< 일시정지 메뉴 문서입니다. 없으면 엔진 기본(`EngineDefaultAssets::_uiPauseMenu`)이고, `_bUIPauseMenu` 가 켜졌을 때만 씁니다
 
         /**
-         * @brief 이 게임의 덮어쓰기 층 뿌리(리소스 id 폴더, 아래 층이 먼저)입니다(`AssetLayers`). 리소스 `X` 를 읽을 때 `<뿌리>/X` 가 있으면 원본 위에 얹는다.
+         * @brief 이 게임의 덮어쓰기 층 뿌리(에셋 id 폴더, 아래 층이 먼저)입니다(`AssetLayers`). 리소스 `X` 를 읽을 때 `<뿌리>/X` 가 있으면 원본 위에 얹는다.
          * @details 공용 도메인(`common` · `engine`)의 리소스를 게임마다 다르게 쓰면서 파일을 베끼지 않는 자리다(언리얼 팩 우선순위 · Composite Data Table). 비면 층이 없다.
          */
         PROPERTY()

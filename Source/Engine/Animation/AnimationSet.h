@@ -110,11 +110,11 @@ namespace sw
         [[nodiscard]] bool loadCopyFromAsset( const AssetID& assetID ) { return loadFromAsset( assetID ); }
 
     private:
-        /** @brief 리소스 경로의 파일을 읽습니다. 종류의 로더(공유 캐시)만 부른다 — 쓰는 쪽은 `SharedAssetCache<AnimationSet>::acquire` 로 한 벌을 쥔다. */
+        /** @brief 에셋 경로의 파일을 읽습니다. 종류의 로더(공유 캐시)만 부른다 — 쓰는 쪽은 `SharedAssetCache<AnimationSet>::acquire` 로 한 벌을 쥔다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         /** @brief @p depth 번째 사슬 칸을 읽습니다. */
         [[nodiscard]] bool parseChained( string_view xml, string_view sourceLabel, uint32 depth, const AssetComposeContext& context );
-        /** @brief 리소스 경로의 셋 파일을 @p depth 번째 사슬 칸으로 읽습니다. */
+        /** @brief 에셋 경로의 셋 파일을 @p depth 번째 사슬 칸으로 읽습니다. */
         [[nodiscard]] bool loadChained( string_view path, uint32 depth );
         /** @brief 정렬을 지키며 한 줄을 넣습니다. */
         void insertEntry( string name, string clipPath );

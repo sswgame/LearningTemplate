@@ -33,7 +33,7 @@ namespace sw::editor
     {
         SW_EDITOR_EXTENSION_KIND( "inputMap" );
 
-        const utf8* _pAssetPath; ///< 리소스 경로(`editor/input/…` 또는 확장 팩의 경로)
+        const utf8* _pAssetPath; ///< 에셋 경로(`editor/input/…` 또는 확장 팩의 경로)
     };
 } // namespace sw::editor
 
@@ -131,7 +131,7 @@ namespace sw::editor
 } // namespace sw::editor
 
 /**
- * @brief 확장 모듈이 에디터 입력 맵에 자기 액션 파일을 더합니다. @p pID 는 등록 id, @p pAssetPath 는 `*.input.xml` 리소스 경로입니다.
+ * @brief 확장 모듈이 에디터 입력 맵에 자기 액션 파일을 더합니다. @p pID 는 등록 id, @p pAssetPath 는 `*.input.xml` 에셋 경로입니다.
  * @code SW_EDITOR_INPUT_MAP( ParkInput, "themepark.input", "editor/input/themepark.input.xml" ); @endcode
  */
 #define SW_EDITOR_INPUT_MAP( name, pID, pAssetPath ) SW_EDITOR_REGISTER( ::sw::editor::EditorInputMapRegistration, InputMap_##name, { pID, 0 }, pAssetPath )

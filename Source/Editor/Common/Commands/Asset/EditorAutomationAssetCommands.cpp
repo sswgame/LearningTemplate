@@ -1,7 +1,7 @@
 /**
  * @file EditorAutomationAssetCommands.cpp
  * @brief 시나리오가 저장소 리소스를 바꾸지 않고 에셋 편집 · 임포트 · 프리팹 만들기를 거치게 하는 콘솔 명령입니다(`asset.open` · `asset.import` · `prefab.create` …).
- * @details 쓰는 자리는 작업 폴더의 `Saved/Automation/`(리소스 트리 밖)과 사본 도메인의 `scratch/import` 만 받는다 — 이 파일의 경로 검사가 그 문지기다.
+ * @details 쓰는 자리는 작업 폴더의 `Saved/Automation/`(콘텐츠 트리 밖)과 사본 도메인의 `scratch/import` 만 받는다 — 이 파일의 경로 검사가 그 문지기다.
  *          예전 `EditorDevCommands.cpp`(여러 기능의 콘솔 명령을 모은 파일)에서 뗐다. 플레이 · 씬 · 선택 명령은 그 기능의 명령 파일로 갔다.
  */
 #include "pch.h"
@@ -59,8 +59,8 @@ namespace sw::editor
         struct EditorAutomationAssetCommandsInternal
         {
             /**
-             * @brief `asset.import` 가 받는 임시 리소스 폴더(리소스 id)입니다. 사본 도메인(`AutomationScratch::kScratchDomain` — 실행 뿌리 아래, 리소스 트리 밖)이라
-             *        자동화 쓰기 게이트가 막지 않고 저장소에 남지 않는다. 자동화가 쓰는 리소스 폴더는 이 도메인 하나다(결정 5-11).
+             * @brief `asset.import` 가 받는 임시 에셋 폴더(에셋 id)입니다. 사본 도메인(`AutomationScratch::kScratchDomain` — 실행 뿌리 아래, 콘텐츠 트리 밖)이라
+             *        자동화 쓰기 게이트가 막지 않고 저장소에 남지 않는다. 자동화가 쓰는 에셋 폴더는 이 도메인 하나다(결정 5-11).
              */
             static constexpr const utf8* kImportTempFolder = AutomationScratch::kImportDomain;
 
@@ -77,7 +77,7 @@ namespace sw::editor
             };
 
             /**
-             * @brief 임시 에셋 인자를 읽습니다. 자동화 산출물 폴더(`makeAutomationOutputFolderPath`) 아래이고 리소스 트리 밖인 절대 경로일 때만 true 입니다.
+             * @brief 임시 에셋 인자를 읽습니다. 자동화 산출물 폴더(`makeAutomationOutputFolderPath`) 아래이고 콘텐츠 트리 밖인 절대 경로일 때만 true 입니다.
              * @details 시나리오가 저장 단계를 밟아도 저장소 리소스가 바뀌지 않게 하는 문지기다. 절대 경로만 받는다(`scene.saveAs` 와 같다).
              */
             [[nodiscard]] static bool resolveTempAssetPath( const string& path, AbsolutePath& outAbsolutePath, string& outReply )
@@ -159,7 +159,7 @@ namespace sw::editor
                     outReply = string( replyBuilder.view() );
                     return false;
                 }
-                // 콘텐츠 브라우저 · Quick Open 과 같게 리소스 id 로 연다(`openPath` 의 인자는 id 다).
+                // 콘텐츠 브라우저 · Quick Open 과 같게 에셋 id 로 연다(`openPath` 의 인자는 id 다).
                 if ( EditorAssetCommands::openPath( listArgument[0] ) == false )
                 {
                     StringBuilder<constant::buffer::kMax256> replyBuilder;
@@ -289,7 +289,7 @@ namespace sw::editor
             }
 
             /**
-             * @brief `asset.select <리소스 id>` — 오브젝트 선택을 비우고 그 에셋 하나를 고릅니다(콘텐츠 브라우저에서 누른 것과 같은 선택). 인스펙터가 임포트 원본의 Import Settings 를 보인다.
+             * @brief `asset.select <에셋 id>` — 오브젝트 선택을 비우고 그 에셋 하나를 고릅니다(콘텐츠 브라우저에서 누른 것과 같은 선택). 인스펙터가 임포트 원본의 Import Settings 를 보인다.
              * @details 파일이 없으면 실패다 — 없는 id 를 고르면 인스펙터가 빈 상태라 뒤 단계가 무엇을 보는지 흐려진다.
              */
             static bool runSelectAsset( const vector<string>& listArgument, string& outReply )
@@ -503,17 +503,17 @@ namespace sw::editor
             }
 
             /**
-             * @brief 임포트 대상 폴더(리소스 id)를 절대 경로로 바꿉니다. 임시 리소스 폴더(`kImportTempFolder`) 아래일 때만 true 입니다.
-             * @details 임포트한 에셋은 리소스 id 가 있어야 씬이 쓸 수 있다 — 작업 도메인의 가져오기 그릇 하나만 받는다.
+             * @brief 임포트 대상 폴더(에셋 id)를 절대 경로로 바꿉니다. 임시 에셋 폴더(`kImportTempFolder`) 아래일 때만 true 입니다.
+             * @details 임포트한 에셋은 에셋 id 가 있어야 씬이 쓸 수 있다 — 작업 도메인의 가져오기 그릇 하나만 받는다.
              *          시나리오가 처음과 끝에 지운다(`asset.removeImportFolder`). 이 검사가 저장소 리소스를 지킨다.
              */
             [[nodiscard]] static expected<AbsolutePath> resolveImportFolder( const string& folderID )
             {
                 const PathKey folderKey        = FileUtil::normalizePath( folderID );
-                const bool    bOutsideTempArea = FileUtil::startsWithPathComponent( folderKey, kImportTempFolder ) == false || folderKey.view().find( ".." ) != string_view::npos; // 리소스 id 끼리(소문자)
+                const bool    bOutsideTempArea = FileUtil::startsWithPathComponent( folderKey, kImportTempFolder ) == false || folderKey.view().find( ".." ) != string_view::npos; // 에셋 id 끼리(소문자)
                 if ( bOutsideTempArea )
                     return unexpected( Error{ ErrorKind::InvalidArgument, "imports go under the temporary resource folder", kImportTempFolder }.appendDetail( "/: " ).appendDetail( folderID ) );
-                // 작업 도메인은 실행 뿌리 아래다(`AssetPaths::getScratchFolderPath`) — 리소스 루트에 id 를 붙이지 않고 도메인 규칙으로 푼다.
+                // 작업 도메인은 실행 뿌리 아래다(`AssetPaths::getScratchFolderPath`) — 콘텐츠 루트에 id 를 붙이지 않고 도메인 규칙으로 푼다.
                 const optional<AbsolutePath> folder = EditorAssetFileCommands::makeOperationPath( folderKey.str() );
                 if ( folder.has_value() == false )
                     return unexpected( Error{ ErrorKind::InvalidArgument, "the import folder does not resolve to a disk folder", folderID } );
@@ -521,9 +521,9 @@ namespace sw::editor
             }
 
             /**
-             * @brief 원본 파일 하나를 임시 리소스 폴더로 가져옵니다. 콘텐츠 브라우저 Import 와 같은 경로(`EditorAssetFileCommands::importFiles`)이고
+             * @brief 원본 파일 하나를 임시 에셋 폴더로 가져옵니다. 콘텐츠 브라우저 Import 와 같은 경로(`EditorAssetFileCommands::importFiles`)이고
              *        OS 파일 대화상자만 건너뜁니다.
-             * @details 원본은 절대 경로나 리소스 id 다(`readSourceFileArgument`). 같은 이름이 있으면 새 이름을 받으므로 시나리오는 먼저 폴더를 지운다.
+             * @details 원본은 절대 경로나 에셋 id 다(`readSourceFileArgument`). 같은 이름이 있으면 새 이름을 받으므로 시나리오는 먼저 폴더를 지운다.
              */
             static bool runImportAsset( const vector<string>& listArgument, string& outReply )
             {
@@ -550,7 +550,7 @@ namespace sw::editor
             }
 
             /**
-             * @brief 임시 리소스 폴더(`kImportTempFolder`)의 에셋 하나의 내용을 원본 파일로 바꾸고 GUID 가 그대로인지 봅니다 — 에디터 "내용 바꾸기"
+             * @brief 임시 에셋 폴더(`kImportTempFolder`)의 에셋 하나의 내용을 원본 파일로 바꾸고 GUID 가 그대로인지 봅니다 — 에디터 "내용 바꾸기"
              *        (`EditorAssetFileCommands::replaceAssetContent`)와 같은 길이다. 대상은 임시 폴더만 받는다(추적 중인 에셋을 시나리오가 고치지 않게).
              * @details 바꾸기 전에 GUID 가 없으면 실패다 — 가져오기(`asset.import`)가 새 GUID 를 줬는지도 함께 본다.
              */
@@ -606,7 +606,7 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief 시나리오의 처음과 끝에 임시 리소스 폴더 하나를 통째로 지웁니다. 폴더가 없으면 할 일이 없으므로 성공입니다. */
+            /** @brief 시나리오의 처음과 끝에 임시 에셋 폴더 하나를 통째로 지웁니다. 폴더가 없으면 할 일이 없으므로 성공입니다. */
             static bool runRemoveImportFolder( const vector<string>& listArgument, string& outReply )
             {
                 if ( listArgument.size() != 1 )
@@ -640,7 +640,7 @@ namespace sw::editor
 
             /**
              * @brief 고른 오브젝트(주 선택)를 임시 프리팹 파일로 저장하고 그 오브젝트를 프리팹 인스턴스로 연결합니다(유니티의 "오브젝트를 Project 로 끌어 프리팹 만들기").
-             * @details 경로는 `asset.open` 과 같은 임시 에셋 규칙(작업 폴더의 `Saved/Automation/` 아래, 리소스 트리 밖)이고 확장자(`.prefab.xml` · `.prefab.json`)가
+             * @details 경로는 `asset.open` 과 같은 임시 에셋 규칙(작업 폴더의 `Saved/Automation/` 아래, 콘텐츠 트리 밖)이고 확장자(`.prefab.xml` · `.prefab.json`)가
              *          형식을 정한다. 시나리오가 저장소 리소스를 바꾸지 않고 프리팹 만들기, 고치기, 적용을 거치는 경로다. 시나리오를 반복하므로 이미 있는 파일은 덮어쓴다.
              */
             static bool runCreatePrefab( const vector<string>& listArgument, string& outReply )
@@ -677,7 +677,7 @@ namespace sw::editor
                     outReply = string( replyBuilder.view() );
                     return false;
                 }
-                // 캐시 · 놓인 프리팹 표는 리소스 id 로 찾는다 — 작업 폴더의 `Saved/` 는 시나리오가 붙인 디스크 도메인이다.
+                // 캐시 · 놓인 프리팹 표는 에셋 id 로 찾는다 — 작업 폴더의 `Saved/` 는 시나리오가 붙인 디스크 도메인이다.
                 const string prefabID = editor::getSubsystem<AssetPaths>().toAssetID( absolutePath );
                 if ( prefabID.empty() )
                 {
@@ -698,7 +698,7 @@ namespace sw::editor
 
             /**
              * @brief 프리팹 인스턴스 하나를 활성 씬 루트에 스폰하고 고릅니다. 콘텐츠 브라우저에서 끌어 놓기와 같은 경로이고 되돌리기를 하나 남깁니다.
-             * @details `Saved/` 로 시작하는 경로는 `prefab.create` 가 만든 임시 프리팹(작업 폴더 기준)이라 시나리오가 붙인 `saved` 도메인의 id 로 바꿔 스폰하고, 나머지는 리소스 id 다.
+             * @details `Saved/` 로 시작하는 경로는 `prefab.create` 가 만든 임시 프리팹(작업 폴더 기준)이라 시나리오가 붙인 `saved` 도메인의 id 로 바꿔 스폰하고, 나머지는 에셋 id 다.
              */
             static bool runSpawnPrefab( const vector<string>& listArgument, string& outReply )
             {
@@ -706,7 +706,7 @@ namespace sw::editor
                 if ( listArgument.size() != 1 || pManager == nullptr )
                     return false;
                 string path = listArgument[0];
-                // 인자는 리소스 경로이거나 절대 디스크 경로다 — 글자(`Saved/`)로 추측하지 않는다. 디스크 경로는 이 경계에서 한 번 리소스 경로로 바꾼다.
+                // 인자는 에셋 경로이거나 절대 디스크 경로다 — 글자(`Saved/`)로 추측하지 않는다. 디스크 경로는 이 경계에서 한 번 에셋 경로로 바꾼다.
                 if ( FileUtil::isAbsolutePath( path ) )
                 {
                     AbsolutePath absolutePath;

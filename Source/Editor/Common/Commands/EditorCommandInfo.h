@@ -84,7 +84,7 @@ namespace sw::editor
     {
         SW_EDITOR_EXTENSION_KIND( "commandText" );
 
-        const utf8* _pAssetPath; ///< 리소스 경로(`editor/commands/editor.commands.xml`)
+        const utf8* _pAssetPath; ///< 에셋 경로(`editor/commands/editor.commands.xml`)
     };
 
     /**

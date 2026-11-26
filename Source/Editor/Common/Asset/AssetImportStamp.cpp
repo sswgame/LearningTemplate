@@ -166,7 +166,7 @@ namespace sw::editor
             {
                 AbsolutePath _sourcePath;
                 string       _relativePath; ///< 원본 폴더 기준
-                string       _assetPath;    ///< 리소스 루트 기준
+                string       _assetPath;    ///< 콘텐츠 루트 기준
                 AbsolutePath _importedPath;
                 uint64       _byteCount{ 0 };   ///< 원본 크기 — 무거운 원본부터 임포트하는 순서에만 쓴다
                 uint32       _folderIndex{ 0 }; ///< 이 원본이 든 `RawFolder` 번호
@@ -208,7 +208,7 @@ namespace sw::editor
                 return text;
             }
 
-            /** @brief 결과 파일 이름의 기준 폴더(끝에 `/`)입니다. 경로가 박히는 종류는 리소스 루트, 아니면 결과 파일의 폴더입니다(`isImportedPathEmbedded`). */
+            /** @brief 결과 파일 이름의 기준 폴더(끝에 `/`)입니다. 경로가 박히는 종류는 콘텐츠 루트, 아니면 결과 파일의 폴더입니다(`isImportedPathEmbedded`). */
             static string makeCacheNameBase( const IRawAssetImporter& importer, const SourceFile& file )
             {
                 string base = importer.isImportedPathEmbedded() ? file._sourcePath.str().substr( 0, file._sourcePath.str().size() - file._assetPath.size() )
@@ -876,10 +876,10 @@ namespace sw::editor
                 SW_LOG_INFO_ID( "AssetImportStamp.RemovedOrphanedResult", "Removed '%#' - its source is gone", importedPath.str() );
             }
 
-            /** @brief 범위 표의 열쇠입니다 — 구분자를 `/` 로 맞춘 소문자 리소스 경로(파일 이름의 대소문자는 OS 가 구분하지 않는다). */
+            /** @brief 범위 표의 열쇠입니다 — 구분자를 `/` 로 맞춘 소문자 에셋 경로(파일 이름의 대소문자는 OS 가 구분하지 않는다). */
             static string makeScopeKey( string_view assetPath ) { return StringUtil::toLower( FileUtil::normalizeSeparators( assetPath ).c_str() ); }
 
-            /** @brief @p pScope 의 원본이 든 원본 폴더(절대 경로)를 모읍니다 — 리소스 트리를 훑지 않는다(비용이 바뀐 파일 수에 비례한다). */
+            /** @brief @p pScope 의 원본이 든 원본 폴더(절대 경로)를 모읍니다 — 콘텐츠 트리를 훑지 않는다(비용이 바뀐 파일 수에 비례한다). */
             static void collectScopeFolders( const AbsolutePath& rootDir, const vector<string>& listAssetPath, string_view rawFolderName, vector<AbsolutePath>& outListFolder )
             {
                 unordered_set<string> uniqueFolder;
@@ -895,7 +895,7 @@ namespace sw::editor
                 }
             }
 
-            /** @brief 리소스 루트를 한 번 훑어 원본 폴더마다 파일을 모읍니다(폴더 경로 순). 원본 폴더를 먼저 찾고 다시 훑지 않는다. 옛 작업 도메인 자리의 찌꺼기는 `EditorContentScan` 이 뺀다. 훑지 못하면 false 입니다. */
+            /** @brief 콘텐츠 루트를 한 번 훑어 원본 폴더마다 파일을 모읍니다(폴더 경로 순). 원본 폴더를 먼저 찾고 다시 훑지 않는다. 옛 작업 도메인 자리의 찌꺼기는 `EditorContentScan` 이 뺀다. 훑지 못하면 false 입니다. */
             [[nodiscard]] static bool collectRawFolders( const AbsolutePath& rootDir, string_view rawFolderName, map<string, vector<EditorContentFile>>& outMapFolder )
             {
                 vector<EditorContentFile> listTreeFile;
@@ -912,7 +912,7 @@ namespace sw::editor
             }
 
             /**
-             * @brief 리소스 루트 아래 원본 폴더들을 스탬프와 대조하고, ImportStale 이면 어긋난 것을 임포트합니다. @p pListScopePath 가 있으면 그 원본(리소스 경로)만 봅니다.
+             * @brief 콘텐츠 루트 아래 원본 폴더들을 스탬프와 대조하고, ImportStale 이면 어긋난 것을 임포트합니다. @p pListScopePath 가 있으면 그 원본(에셋 경로)만 봅니다.
              * @details 단계는 준비(직렬: 폴더마다 스탬프 · 파일 목록, 모든 폴더에 걸친 사슬) → 병렬 임포트(다른 원본의 결과를 읽지 않는 원본, 그 뒤 읽는 원본) → 합치기(직렬, 폴더 · 파일 순서)입니다.
              *          폴더마다 끝을 기다리지 않는다 — 폴더 하나의 무거운 원본이 도는 동안 다른 폴더의 원본이 워커를 채운다.
              *          파일마다 결과가 자기 칸에 담기고 요약 · 스탬프 표는 폴더 · 파일 순서대로만 만들어지므로, 문제 목록의 순서와 스탬프의 내용은 직렬로 돌 때와 같습니다.
@@ -936,7 +936,7 @@ namespace sw::editor
                 else if ( collectRawFolders( rootDir, importer.getRawFolderName(), mapRawFolder ) == false )
                 {
                     StringBuilder<constant::buffer::kMax512> problemBuilder;
-                    problemBuilder.appendFormat( "리소스 루트를 훑지 못했습니다: %#", rootDir.str() );
+                    problemBuilder.appendFormat( "콘텐츠 루트를 훑지 못했습니다: %#", rootDir.str() );
                     summary._listProblem.push_back( string( problemBuilder.view() ) );
                     return summary;
                 }

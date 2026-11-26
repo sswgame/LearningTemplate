@@ -87,7 +87,7 @@ if(CMAKE_CROSSCOMPILING OR SW_SHIPPING_BUILD)
 	unset(host_exe_suffix)
 	sw_require_rhi_backend_name("${SW_SHIPPING_RHI_BACKEND}")
 	set(shipping_backend_flag "-${SW_RHI_BACKEND_${SW_SHIPPING_RHI_BACKEND}_COMMAND_LINE_NAME}")
-	# 리소스 조건(`_when`)의 platform 축은 굽는 App 이 아니라 이 빌드의 플랫폼이다 — 호스트 App 이 구운 Android 팩이 Windows 조건을 푼 채 나가지 않게.
+	# 에셋 조건(`_when`)의 platform 축은 굽는 App 이 아니라 이 빌드의 플랫폼이다 — 호스트 App 이 구운 Android 팩이 Windows 조건을 푼 채 나가지 않게.
 	string(TOLOWER "${SW_PLATFORM_NAME}" cook_platform)
 	list(APPEND cook_args "--cook-platform=${cook_platform}")
 	unset(cook_platform)

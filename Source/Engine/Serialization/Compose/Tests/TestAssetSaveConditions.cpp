@@ -1,4 +1,4 @@
-// 저장이 리소스 조건(`_when`)을 지키는가(nogpu). 편집기 사본은 지금 태그로 푼 값을 들고, 저장 입구가 있던 파일의 조건을 되돌린다.
+// 저장이 에셋 조건(`_when`)을 지키는가(nogpu). 편집기 사본은 지금 태그로 푼 값을 들고, 저장 입구가 있던 파일의 조건을 되돌린다.
 #include "pch.h"
 
 #define SW_TEST_INTERNAL
@@ -174,7 +174,7 @@ SW_TEST_CASE( AssetSaveConditionTest, BrokenConditionsAndOtherRootsAreNotSaved )
     SW_EXPECT_FALSE( AssetComposer::restoreConditions( AssetSaveText::makeComplete( "<Doc />" ), R"(<Doc><_when a="1" /></Doc>)", "test", Util::makeLow(), outText ) );
 }
 
-/** @brief [AssetSaveConditionTest] 덮어쓰기 층을 얹어 읽은 리소스는 원본 자리에 쓰지 않는다 — 층 값이 원본에 박힌다 */
+/** @brief [AssetSaveConditionTest] 덮어쓰기 층을 얹어 읽은 에셋은 원본 자리에 쓰지 않는다 — 층 값이 원본에 박힌다 */
 SW_TEST_CASE( AssetSaveConditionTest, LayeredResourceIsNotSavedOverTheOriginal )
 {
     const ScopedScratchDomain domain;
@@ -249,7 +249,7 @@ SW_TEST_CASE( AssetSaveConditionTest, ResetToDefaultGoesToTheCondition )
 
 /**
  * @brief [AssetSaveConditionTest] 바꿔 끼운 태그로만 합친 변형도 그 태그가 바뀌면 다시 읽을 목록에 오르고, 합성 기록(접속 대조)에는 들지 않는다
- * @details 예전에는 변형을 아무 데도 적지 않아 변형만 읽은 리소스(미리보기만 연 화면)가 엔진 태그가 바뀌어도 다시 읽히지 않았다. 변이: `recordVariant` 를 비우면 첫 단언이 진다.
+ * @details 예전에는 변형을 아무 데도 적지 않아 변형만 읽은 에셋(미리보기만 연 화면)가 엔진 태그가 바뀌어도 다시 읽히지 않았다. 변이: `recordVariant` 를 비우면 첫 단언이 진다.
  */
 SW_TEST_CASE( AssetSaveConditionTest, TagOverrideVariantIsReloadedWhenItsTagChanges )
 {

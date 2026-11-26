@@ -86,7 +86,7 @@ namespace sw::editor
                 }
                 AssetSourceLocator::collectStoredSources( contentRoot, listFile ); // 저장소 밖 원본의 산출물도 있는 것이다
                 AssetIDSet                         assets;
-                vector<pair<AbsolutePath, string>> listReferrer; // (디스크 경로, 리소스 id)
+                vector<pair<AbsolutePath, string>> listReferrer; // (디스크 경로, 에셋 id)
                 for ( const AbsolutePath& filePath : listFile )
                 {
                     string assetID;

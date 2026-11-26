@@ -165,7 +165,7 @@ namespace sw
         [[maybe_unused]] uint8 _reserved   : 6;
     };
 
-    /** @brief 묶음 파일 하나의 리소스 id 와 글입니다(`InputMap::writeSourceText` 의 글 — `loadBundleTexts` 가 읽는다). */
+    /** @brief 묶음 파일 하나의 에셋 id 와 글입니다(`InputMap::writeSourceText` 의 글 — `loadBundleTexts` 가 읽는다). */
     struct InputMapSourceText
     {
         string _assetPath;
@@ -221,7 +221,7 @@ namespace sw
         [[nodiscard]] bool loadBundleTexts( const vector<InputMapSourceText>& listSource );
         /** @brief 읽은 파일 수입니다(`loadFromAsset` 은 1, `loadBundle` 은 묶음 길이, 파일에서 읽지 않은 맵은 0). */
         uint32 getSourceCount() const { return static_cast<uint32>( _listSource.size() ); }
-        /** @brief 읽은 파일 @p sourceIndex 의 리소스 id 입니다. */
+        /** @brief 읽은 파일 @p sourceIndex 의 에셋 id 입니다. */
         const string& getSourceAssetPath( uint32 sourceIndex ) const { return _listSource[sourceIndex]._assetPath; }
         /** @brief 액션을 마지막으로 정한 파일 번호입니다(패널이 보이고 저장이 돌려보낸다). 없는 액션이면 없음입니다. */
         [[nodiscard]] optional<uint32> findActionSourceIndex( const hashed_string& action ) const;
@@ -236,7 +236,7 @@ namespace sw
         [[nodiscard]] bool saveSourceToAsset( uint32 sourceIndex, const AbsolutePath& absPath ) const;
         /**
          * @brief 레이어, 액션, 현재 바인딩을 `loadFromAsset` 가 읽는 `<InputMap>` 정의로 씁니다(에디터 InputMap 패널의 저장).
-         * @param absPath 쓸 디스크 경로입니다(리소스 id 는 부르는 쪽이 `AssetPaths::toDiskPath` 로 푼다).
+         * @param absPath 쓸 디스크 경로입니다(에셋 id 는 부르는 쪽이 `AssetPaths::toDiskPath` 로 푼다).
          * @return 파일 형식으로 표현할 수 없는 바인딩(가상 조이스틱, 아무 키)이 있거나 쓰지 못하면 false 이며, 이때 파일은 건드리지 않습니다.
          * @details 플레이어의 키 리매핑은 여기에 저장하지 않는다. UserSettings 의 `keyBinding` 설정(사용자 파일)에 저장한다.
          */

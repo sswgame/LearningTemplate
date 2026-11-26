@@ -200,7 +200,7 @@ class MultiProcessSession:
 
     def start_scenario(self, name: str, app: Path, game: str, scenario: str, variables: Mapping[str, object] | None = None, *, stdin: bool = False) -> ChildProcess:
         """
-        @p app 을 시나리오 @p scenario(리소스 경로)로 띄운다. 보고는 `<out_dir>/<name>.report.json`. @p stdin 이면 표준 입력 줄을 개발 명령으로 받는다(실행기가 다른 프로세스의 사건을 잇는다).
+        @p app 을 시나리오 @p scenario(에셋 경로)로 띄운다. 보고는 `<out_dir>/<name>.report.json`. @p stdin 이면 표준 입력 줄을 개발 명령으로 받는다(실행기가 다른 프로세스의 사건을 잇는다).
         무인 실행의 사용자 데이터는 프로세스마다 Saved/Automation 아래 제 폴더다 — 밖을 가리키면 App 이 시작을 거절한다(`AutomationUserDataRoot`).
         """
         report_path = self.out_dir / f"{name}.report.json"

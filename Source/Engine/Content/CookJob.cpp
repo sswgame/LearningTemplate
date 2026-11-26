@@ -44,7 +44,7 @@ namespace sw
                 return nullopt;
             }
 
-            /** @brief 디스크 읽기 입력의 종류와 출처입니다. 붙인 도메인 · 리소스 루트 아래면 리소스(id), 밖이면 디스크 파일(절대 경로)입니다. */
+            /** @brief 디스크 읽기 입력의 종류와 출처입니다. 붙인 도메인 · 콘텐츠 루트 아래면 리소스(id), 밖이면 디스크 파일(절대 경로)입니다. */
             [[nodiscard]] static bool makeDiskInput( const DiskPath& diskPath, CookInputKind& outKind, string& outSource )
             {
                 const optional<AbsolutePath> absPath = collapseDiskPath( diskPath );
@@ -196,7 +196,7 @@ namespace sw
             return true;
         CookInput input;
         input._kind = CookInputKind::Listing;
-        // 폴더는 절대 경로로 둔다 — 도메인 폴더(`engine`)는 리소스 id 로 줄이면 다시 풀 때 같은 폴더로 돌아오지 않는다.
+        // 폴더는 절대 경로로 둔다 — 도메인 폴더(`engine`)는 에셋 id 로 줄이면 다시 풀 때 같은 폴더로 돌아오지 않는다.
         const optional<AbsolutePath> folder = CookJobInternal::collapseDiskPath( folderPath );
         if ( folder.has_value() == false )
             return false;

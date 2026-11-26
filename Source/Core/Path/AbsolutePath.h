@@ -67,7 +67,7 @@ namespace sw
         }
     };
 
-    // 논리 경로 글(리소스 id · `DataPath` 를 꺼낸 글)이 디스크 I/O 로 새지 않게 글에서 암시적으로 만들 수 없다.
+    // 논리 경로 글(에셋 id · `DataPath` 를 꺼낸 글)이 디스크 I/O 로 새지 않게 글에서 암시적으로 만들 수 없다.
     static_assert( std::is_convertible_v<string, AbsolutePath> == false && std::is_convertible_v<string_view, AbsolutePath> == false &&
                        std::is_convertible_v<const utf8*, AbsolutePath> == false && std::is_constructible_v<AbsolutePath, DiskPath> == false,
                    "AbsolutePath is made explicitly (tryMake · tryResolve · FileUtil::toDiskPath)" );

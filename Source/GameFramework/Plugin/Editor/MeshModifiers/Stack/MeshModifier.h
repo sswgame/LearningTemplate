@@ -111,7 +111,7 @@ namespace sw::editor
         Vector3,       ///< 세 성분 모두 [`_min`, `_max`]
         Curve,         ///< [0,1] → 값 곡선(`FloatCurve`). 키는 시간 오름차순이고 키마다 보간(Constant · Linear · Cubic)과 접선을 든다
         Reference,     ///< 씬 오브젝트 참조(오브젝트 이름 — 스플라인 · 대상 메시 · 콜라이더 · 워프 기준). 글로 둡니다
-        AssetPath,     ///< 에셋 경로(텍스처 · 포인트 캐시 · 정점 애니메이션 · 메시). 리소스 id 글로 둡니다
+        AssetPath,     ///< 에셋 경로(텍스처 · 포인트 캐시 · 정점 애니메이션 · 메시). 에셋 id 글로 둡니다
         NumberList,    ///< 수 목록. `_stride` 개씩 한 항목(예: 충돌점 = x y z 반경 세기 → stride 5)
         CurveList,     ///< 곡선 목록(예: 층마다 곡선). 항목은 `Curve` 와 같은 모양이고 `_max` 가 항목 수 상한이다. 기본은 빈 목록
         ReferenceList, ///< 참조 목록(예: 대상 N 개). 항목은 `Reference` 와 같은 모양이고 `_max` 가 항목 수 상한이다. 기본은 빈 목록

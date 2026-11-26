@@ -272,16 +272,16 @@ namespace sw
         vector<AnimationBoneMaskDef>   _listBoneMask; /**< 본 마스크 목록입니다(XML "bone_masks"). 레이어가 이름으로 가리킵니다. */
         vector<AnimationGraphLayerDef> _listLayer;    /**< 레이어 목록입니다(XML "layers"). 적은 순서대로 얹습니다. */
         vector<GraphCommentBox>        _listComment;  /**< 그래프 에디터의 주석 상자입니다(XML "comments", 선택 — 실행에는 쓰지 않는다). */
-        string                         _baseID;       /**< 부모 그래프의 리소스 id 입니다(XML "_base"). 목록은 펼친 값이고, 저장이 부모와 다른 칸만 쓴다. */
+        string                         _baseID;       /**< 부모 그래프의 에셋 id 입니다(XML "_base"). 목록은 펼친 값이고, 저장이 부모와 다른 칸만 쓴다. */
         /** @brief 이 에셋 종류입니다(등록은 `AnimationGraphAsset.cpp` 의 `SW_ASSET_TYPE`). */
         static constexpr AssetTypeDef kAssetType{ "AnimationGraphAsset", kArrAssetSuffix, static_cast<uint32>( SW_COUNT_OF( kArrAssetSuffix ) ), {}, 0, {} };
 
         /** @brief 빈 그래프를 만듭니다. */
         AnimationGraphAsset() = default;
 
-        /** @brief 리소스 id 의 XML 을 읽습니다(낱개 파일 또는 팩). OS 경로는 받지 않습니다 — 디스크 파일은 `loadFromDiskFile` 입니다. */
+        /** @brief 에셋 id 의 XML 을 읽습니다(낱개 파일 또는 팩). OS 경로는 받지 않습니다 — 디스크 파일은 `loadFromDiskFile` 입니다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
-        /** @brief 디스크 파일의 XML 을 읽습니다. 리소스 id 로 풀지 않고 팩을 보지 않습니다(에디터 문서 · 도구 · 테스트용). */
+        /** @brief 디스크 파일의 XML 을 읽습니다. 에셋 id 로 풀지 않고 팩을 보지 않습니다(에디터 문서 · 도구 · 테스트용). */
         [[nodiscard]] bool loadFromDiskFile( const DiskPath& diskPath );
         /** @brief XML 파일을 씁니다. `_baseID` 가 있으면 차이만 쓰고, 차이로 같은 그래프가 나오지 않으면(칸을 형식 기본값으로 되돌렸다) 쓰지 않고 오류입니다(부모를 끊지 않는다). */
         [[nodiscard]] bool saveToFile( const AbsolutePath& absPath ) const;

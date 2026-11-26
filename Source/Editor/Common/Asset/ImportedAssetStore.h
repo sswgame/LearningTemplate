@@ -55,19 +55,19 @@ namespace sw::editor
 
         /**
          * @brief 원본 폴더의 내용 주소 파일(`textures_raw/_shared/…` — 커밋한다)을 쓰고 곁의 `.meta` 가 없으면 함께 씁니다(`writeIfAbsent` 와 같은 쓰기 규칙).
-         * @details 정체성은 리소스 id 의 이름 GUID(`AssetGUID::fromName`)다 — 경로가 곧 내용이라 두 사람이 같은 모델을 따로 임포트해도 같은 `.meta` 가 생긴다(무작위면 더하기 · 더하기 충돌).
-         *          있던 `.meta` 는 그대로 둔다. 리소스 트리 밖(테스트 폴더)은 정체성이 없다.
+         * @details 정체성은 에셋 id 의 이름 GUID(`AssetGUID::fromName`)다 — 경로가 곧 내용이라 두 사람이 같은 모델을 따로 임포트해도 같은 `.meta` 가 생긴다(무작위면 더하기 · 더하기 충돌).
+         *          있던 `.meta` 는 그대로 둔다. 콘텐츠 트리 밖(테스트 폴더)은 정체성이 없다.
          */
         [[nodiscard]] static bool writeSourceIfAbsent( const AssetPaths& assetPaths, const AbsolutePath& sourcePath, const void* pBytes, size_t byteCount );
 
-        /** @brief 글 @p text 에서 저장소를 가리키는 리소스 경로(`"…/models/_shared/…"` 따옴표 안)를 모두 찾아 @p outListPath 에 더합니다. */
+        /** @brief 글 @p text 에서 저장소를 가리키는 에셋 경로(`"…/models/_shared/…"` 따옴표 안)를 모두 찾아 @p outListPath 에 더합니다. */
         static void collectReferences( string_view text, vector<string>& outListPath );
 
         /** @brief 저장소 경로를 가리킬 수 있는 임포트 결과인지 봅니다(`.material` · `.animset.xml` · `.prefab.xml`). */
         [[nodiscard]] static bool isReferrer( string_view path );
 
         /**
-         * @brief @p importedPath(리소스 루트 아래 디스크 경로)가 가리키는 저장소 파일들의 바이트 해시를 @p hash 에 섞습니다(`ModelImporter::computeImportedHash`).
+         * @brief @p importedPath(콘텐츠 루트 아래 디스크 경로)가 가리키는 저장소 파일들의 바이트 해시를 @p hash 에 섞습니다(`ModelImporter::computeImportedHash`).
          * @details 공유 파일은 옆 폴더 밖이라 옆 폴더 해시에 들지 않는다. 지우거나 손대면 어긋남으로 잡히게 참조를 따라가 섞는다.
          */
         [[nodiscard]] static uint64 mixReferencedFiles( const AbsolutePath& importedPath, string_view text, uint64 hash );

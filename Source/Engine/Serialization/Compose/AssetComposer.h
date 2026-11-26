@@ -1,6 +1,6 @@
 /**
  * @file AssetComposer.h
- * @brief 리소스 글을 읽기 전에 합치는 한 길입니다. 모든 읽는 쪽(`XMLDocument::parseData` · `ReflectedXMLFile` · `XMLSerializer::loadFromAsset` · `Material` · 프리팹 머리 · 팩 쿠커)이 이 함수를 지납니다.
+ * @brief 에셋 글을 읽기 전에 합치는 한 길입니다. 모든 읽는 쪽(`XMLDocument::parseData` · `ReflectedXMLFile` · `XMLSerializer::loadFromAsset` · `Material` · 프리팹 머리 · 팩 쿠커)이 이 함수를 지납니다.
  * @details 단계는 부모(`_base`) → 조건(`_when`) → 덮어쓰기 층입니다(`docs/agents/DataInheritance.md` 조건 절). 읽는 쪽은 단계를 모른다 — 펼친 글만 받는다.
  *          언리얼은 Device Profile · 팩 우선순위 · CDO 가 저마다의 길로 값을 얹고, Godot 은 기능 태그와 씬 상속이 따로다(기억에 의존). 여기는 차이를 얹는 일이 글 수준에서 한 함수를 지나므로
  *          읽는 코드가 변형을 모르고, 쿠킹본과 런타임이 같은 결과를 본다.
@@ -9,7 +9,7 @@
  *            조건이 고치는 것은 자기를 품은 원소 하나뿐이라 합치기 규칙(열쇠 · 스키마)이 필요 없다 — 쿠커 · 개발 실행 · 배포 런타임이 형식을 몰라도 같은 답을 낸다.
  *            조건부로 더하는 원소는 "원소를 적고 반대 조건으로 뺀다" 로 쓴다. 팩 쿠킹은 쿠킹 축 조건만 풀고(`AssetTagTiming::Cook`), 한 원소에서 로드 축 조건이 나온 뒤의 조건은
  *            차례를 지키려 함께 남긴다. 런타임은 남은 조건을 모두 푼다(쿠킹 축 값은 런타임도 같은 값을 든다 — 엔진 기동이 넣는다).
- *          - 덮어쓰기 층(`AssetLayers`): 리소스 id 로 읽을 때(`AssetComposeContext::withAsset`)만 얹는다. 층 파일 `<뿌리>/<id>` 는 원본을 암묵적 부모로 가진 차이이고,
+ *          - 덮어쓰기 층(`AssetLayers`): 에셋 id 로 읽을 때(`AssetComposeContext::withAsset`)만 얹는다. 층 파일 `<뿌리>/<id>` 는 원본을 암묵적 부모로 가진 차이이고,
  *            합치기 규칙은 읽는 쪽의 형식에서 온다(리플렉션 · 손 규칙 · 합치기 함수 · 카탈로그 표). 팩 쿠킹은 층을 펼치지 않는다 — 공용 도메인 팩(`common` · `engine`)은 게임마다 같아야 한다.
  *
  *          규칙의 출처는 문서 루트 이름입니다: 카탈로그 표 · 문서 표(`Content/engine/settings/datacataloginheritance.xml`) → 합치기 함수(`SW_DATA_INHERITANCE_MERGE`) → 손 형식(`SW_DATA_INHERITANCE_SCHEMA`). 읽기는 리플렉션 형식에서도 규칙을 만들지만 쿠킹은 그러지 않습니다. 어느 규칙이든 결과는 부모 없는 글입니다.
@@ -40,7 +40,7 @@ namespace sw
 
     /**
      * @struct AssetComposeContext
-     * @brief 합치는 문맥입니다. 읽는 쪽이 자기 자리를 고르는 값입니다. 조건 단계의 태그는 엔진 값(코어 범위의 리소스 루트가 든 `AssetTags`)이고,
+     * @brief 합치는 문맥입니다. 읽는 쪽이 자기 자리를 고르는 값입니다. 조건 단계의 태그는 엔진 값(코어 범위의 콘텐츠 루트가 든 `AssetTags`)이고,
      *        미리보기 문맥만 몇 축을 바꿔 끼웁니다(`withTagOverride`).
      */
     struct SW_API AssetComposeContext
@@ -59,15 +59,15 @@ namespace sw
         DataInheritance::MakeSchemaFunction _pfnMakeSchema; ///< `KnownSchema` 의 규칙
         const TypeInfo*                     _pTypeInfo;     ///< `KnownType` 의 형식
         DataInheritance::MergeFunction      _pfnMerge;      ///< `KnownMerge` 의 함수
-        DataInheritanceSource*              _pSource;       ///< `RootName` 이 부모를 읽는 곳. 나머지는 리소스다
-        AssetID                             _assetID;       ///< 리소스 id 로 읽을 때의 id(`withAsset`). 덮어쓰기 층 · 다시 읽기 기록 · 접속 대조가 쓴다. 비면 글 읽기다
+        DataInheritanceSource*              _pSource;       ///< `RootName` 이 부모를 읽는 곳. 나머지는 에셋이다
+        AssetID                             _assetID;       ///< 에셋 id 로 읽을 때의 id(`withAsset`). 덮어쓰기 층 · 다시 읽기 기록 · 접속 대조가 쓴다. 비면 글 읽기다
         const AssetTagSet*                  _pTagOverride;  ///< 엔진 태그에서 바꿔 끼울 축(`withTagOverride`, 부르는 쪽이 합치는 동안 든다). nullptr 이면 엔진 태그 그대로다
 
-        /** @brief 이 문맥으로 리소스 @p assetID 를 읽습니다 — 덮어쓰기 층을 얹고, 로드 축 조건에 기댄 결과를 기록합니다(`AssetComposition`). 팩 쿠킹 문맥에는 쓰지 않습니다. */
+        /** @brief 이 문맥으로 에셋 @p assetID 를 읽습니다 — 덮어쓰기 층을 얹고, 로드 축 조건에 기댄 결과를 기록합니다(`AssetComposition`). 팩 쿠킹 문맥에는 쓰지 않습니다. */
         [[nodiscard]] AssetComposeContext withAsset( const AssetID& assetID ) const;
         /**
          * @brief 이 문맥의 조건 단계가 엔진 태그에 @p overrideTags 의 축을 바꿔 끼워 풉니다(에디터 UI 미리보기의 기기 견본 — `screen` · `orientation`). 빈 집합이면 이 문맥 그대로입니다.
-         * @details 바꿔 끼운 합성은 다시 읽기 기록(`AssetComposition`)에 적지 않는다 — 기록은 엔진 태그로 읽은 리소스의 것이고 접속 대조 해시도 그 결과다.
+         * @details 바꿔 끼운 합성은 다시 읽기 기록(`AssetComposition`)에 적지 않는다 — 기록은 엔진 태그로 읽은 에셋의 것이고 접속 대조 해시도 그 결과다.
          *          언리얼 위젯 디자이너의 미리보기 기기 · Godot 에디터의 기능 태그 덮기처럼 엔진 값을 건드리지 않고 한 문맥만 바꾼다(기억).
          *          @p overrideTags 는 합치기가 끝날 때까지 살아 있어야 한다(포인터로 든다). 팩 쿠킹 문맥에는 쓰지 않습니다.
          */
@@ -123,7 +123,7 @@ namespace sw
     {
         /**
          * @brief @p text 에 얹을 차이가 있으면 합쳐 @p outText 에 쓰고 @p outbComposed 를 true 로 둡니다. 없으면 글 검색 한 번으로 끝나고 @p outbComposed 는 false 입니다(읽는 쪽은 @p text 를 그대로 읽는다).
-         * @param id 오류에 적는 이름입니다(대개 리소스 id).
+         * @param id 오류에 적는 이름입니다(대개 에셋 id).
          * @return 합치다 실패하면 오류를 남기고 false 입니다. 부모 없이 자식 칸만으로 읽지 않습니다.
          */
         [[nodiscard]] static bool compose( string_view text, string_view id, const AssetComposeContext& context, string& outText, bool& outbComposed );
@@ -138,7 +138,7 @@ namespace sw
                                                      vector<string>& inoutListLoadTag );
 
         /**
-         * @brief 층 글 @p layerText(조건을 푼 것)를 리소스 @p assetID 의 합친 글 @p inoutText 위에 얹습니다. 층의 부모는 늘 그 리소스이므로 층은 `_base` 를 적지 않습니다.
+         * @brief 층 글 @p layerText(조건을 푼 것)를 에셋 @p assetID 의 합친 글 @p inoutText 위에 얹습니다. 층의 부모는 늘 그 에셋이므로 층은 `_base` 를 적지 않습니다.
          * @details 읽기의 층 단계와 팩 쿠킹의 층 검사(`PackCooker`)가 같은 함수를 쓴다. 합치기 규칙은 @p context 의 형식에서 온다(카탈로그 표 문맥은 표를 읽는다).
          * @return 층이 `_base` 를 적었거나 · XML 이 아니거나 · 합치지 못하면 오류를 남기고 false 입니다(@p inoutText 는 그대로).
          */
@@ -157,7 +157,7 @@ namespace sw
         [[nodiscard]] static bool restoreConditions( const AssetSaveText& savedText, string_view sourceText, string_view id, const AssetTagSet& tags, string& outText );
 
         /**
-         * @brief 글 리소스를 디스크에 씁니다(폴더가 없으면 만듭니다). 저장 입구(직렬화기 · 형식의 `saveToFile`)가 모두 이 함수를 지납니다 — 있던 파일의 조건을 지키고(`restoreConditions`), 덮어쓰기 층을 얹어 읽은 리소스는 층 값이 원본에 박히므로 쓰지 않습니다.
+         * @brief 글 에셋을 디스크에 씁니다(폴더가 없으면 만듭니다). 저장 입구(직렬화기 · 형식의 `saveToFile`)가 모두 이 함수를 지납니다 — 있던 파일의 조건을 지키고(`restoreConditions`), 덮어쓰기 층을 얹어 읽은 에셋은 층 값이 원본에 박히므로 쓰지 않습니다.
          * @param pTagOverride 사본을 바꿔 끼운 태그로 읽었으면 그 축입니다(`AssetComposeContext::withTagOverride`) — 조건을 되돌릴 때 읽은 태그와 같아야 편집이 맞는 조건에 들어간다. nullptr 이면 엔진 태그입니다.
          * @return 쓰지 못하면 false 입니다(까닭은 로그).
          */

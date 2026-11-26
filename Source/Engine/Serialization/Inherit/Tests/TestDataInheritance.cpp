@@ -352,7 +352,7 @@ SW_TEST_CASE( DataInheritanceTest, ReadWithoutDepthLimitIsAnError )
     SW_EXPECT_FALSE( DataInheritance::collectChain( R"(<Doc _base="base.xml" />)", "child", source, listLayer ) );
 }
 
-/** @brief [DataInheritanceTest] 엔진의 깊이 사본은 뜨기 전엔 없고, 리소스 읽기는 만들 때 엔진의 사본을 싣는다 */
+/** @brief [DataInheritanceTest] 엔진의 깊이 사본은 뜨기 전엔 없고, 에셋 읽기는 만들 때 엔진의 사본을 싣는다 */
 SW_TEST_CASE( DataInheritanceTest, ResourceSourceCarriesTheEngineCopy )
 {
     AssetComposition composition;

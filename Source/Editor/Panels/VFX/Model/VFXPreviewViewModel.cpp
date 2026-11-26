@@ -295,7 +295,7 @@ namespace sw::editor
     {
         _listEmitterRow.clear();
         _previewEffectPath.clear();
-        // 자동 갱신이 볼 내용 해시 — 리소스 id 면 디스크 경로로 푼다(시나리오의 임시 문서는 이미 디스크 경로다).
+        // 자동 갱신이 볼 내용 해시 — 에셋 id 면 디스크 경로로 푼다(시나리오의 임시 문서는 이미 디스크 경로다).
         const optional<DiskPath> diskPath = AbsolutePath::isStrictAbsolute( assetPath ) ? optional<DiskPath>{ FileUtil::toDiskPath( assetPath ) }
                                                                                         : editor::getSubsystem<AssetPaths>().toDiskPath( assetPath );
         _loadedDiskPath                   = diskPath.has_value() ? *diskPath : DiskPath{};

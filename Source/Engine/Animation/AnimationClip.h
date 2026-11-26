@@ -156,7 +156,7 @@ namespace sw
         [[nodiscard]] bool loadCopyFromAsset( const AssetID& assetID ) { return loadFromAsset( assetID ); }
 
     private:
-        /** @brief 리소스 경로의 파일을 읽습니다. 종류의 로더(공유 캐시)만 부른다 — 쓰는 쪽은 `SharedAssetCache<AnimationClip>::acquire` 로 한 벌을 쥔다. */
+        /** @brief 에셋 경로의 파일을 읽습니다. 종류의 로더(공유 캐시)만 부른다 — 쓰는 쪽은 `SharedAssetCache<AnimationClip>::acquire` 로 한 벌을 쥔다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         /** @brief 블롭을 정렬된 저장소에 옮깁니다. */
         void assignCodecBytes( const uint8* pData, size_t byteCount );

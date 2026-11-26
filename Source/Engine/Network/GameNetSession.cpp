@@ -1162,7 +1162,7 @@ namespace sw
     // 게임 네트워크 세션 — 게임 모듈 리로드를 넘어 연결을 지킨다.
     SW_ENGINE_SUBSYSTEM_WITH_SLOT( GameNetSession, GameVisible, GameInstance, Startup, (), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
     {
-        // 합성 기록은 코어 범위(리소스 루트)에 있다 — 서비스 표가 서기 전이라 범위 사슬에서 찾는다.
+        // 합성 기록은 코어 범위(콘텐츠 루트)에 있다 — 서비스 표가 서기 전이라 범위 사슬에서 찾는다.
         (void)build;
         (void)scope.emplaceSubsystem<GameNetSession>( getSubsystemFrom<const AssetComposition>( scope.getScope() ) );
     } );

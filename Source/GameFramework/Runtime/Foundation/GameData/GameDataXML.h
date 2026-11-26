@@ -35,7 +35,7 @@ namespace sw
     struct SW_GF_API GameDataXML
     {
         /**
-         * @brief 리소스 경로의 XML 을 열어 @p pRootName 루트를 카탈로그의 루트 읽기(@p pLoadRoot)에 넘깁니다. 문서나 루트가 없거나 읽은 것이 없으면 false 입니다.
+         * @brief 에셋 경로의 XML 을 열어 @p pRootName 루트를 카탈로그의 루트 읽기(@p pLoadRoot)에 넘깁니다. 문서나 루트가 없거나 읽은 것이 없으면 false 입니다.
          * @details 카탈로그마다 같았던 `loadFromAsset` 의 몸통이다. 카탈로그는 이 한 줄만 두면 된다.
          * @code
          *     bool CropCatalog::loadFromAsset( const AssetID& assetID ) { const string_view path = assetID.view(); return GameDataXML::loadFromAsset( *this, &CropCatalog::loadRoot, path, "CropCatalog" ); }

@@ -838,7 +838,7 @@ namespace sw::editor
             string_view getStampHeader() const override { return ModelImportUtil::kImportStampHeader; }
             string_view getImportedLabel() const override { return "메시"; }
             uint64      findCodeFingerprint() const override { return CookCodeFingerprint::find( "ModelImport" ); }
-            /** @brief 결과 글이 `_shared/` · 머티리얼 리소스 경로를 적으므로 DDC 키에 리소스 경로를 넣는다. */
+            /** @brief 결과 글이 `_shared/` · 머티리얼 에셋 경로를 적으므로 DDC 키에 에셋 경로를 넣는다. */
             bool         isImportedPathEmbedded() const override { return true; }
             void         collectImportedFiles( const AbsolutePath& importedPath, vector<AbsolutePath>& outListPath ) const override { ModelImporter::collectImportedFiles( importedPath, outListPath ); }
             bool         isSourceFile( string_view path ) const override { return ModelImportUtil::isSourceModel( path ); }
@@ -875,7 +875,7 @@ namespace sw::editor
 
         private:
             /**
-             * @brief 리소스 경로에 맞는 규칙에 원본 @p sourcePath 곁 서술의 임포트 예외를 얹어 @p outRule 에 담습니다. 맞는 규칙이 없으면 기본 규칙이 바탕입니다.
+             * @brief 에셋 경로에 맞는 규칙에 원본 @p sourcePath 곁 서술의 임포트 예외를 얹어 @p outRule 에 담습니다. 맞는 규칙이 없으면 기본 규칙이 바탕입니다.
              * @return 규칙이 겹치거나 서술 · 예외를 읽지 못하면 오류를 남기고 false 입니다.
              */
             [[nodiscard]] bool findRule( const AbsolutePath& sourcePath, string_view assetPath, ModelImportRule& outRule ) const

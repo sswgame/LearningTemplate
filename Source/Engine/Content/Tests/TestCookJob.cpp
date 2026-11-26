@@ -6,14 +6,14 @@
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/CookJob.h"
 
-#define SW_TEST_INTERNAL // 임시 리소스 도메인 픽스처(`ScopedScratchDomain`)가 엔진 서비스를 직접 쓴다
+#define SW_TEST_INTERNAL // 임시 콘텐츠 도메인 픽스처(`ScopedScratchDomain`)가 엔진 서비스를 직접 쓴다
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
 
 using namespace sw;
 
 /**
- * @brief [CookJobTest] 리소스 루트 밖 디스크 파일 · 목록은 절대 경로의 디스크 입력으로 기록되어, 기록 뒤에 다시 풀어도 같은 파일 · 폴더의 해시가 나온다
- * @details 예전에는 입력 한 칸에 리소스 id 와 디스크 경로를 함께 담고 다시 풀 때 모양으로 추측했다 — 종류를 기록에 남긴다(`CookInputKind`).
+ * @brief [CookJobTest] 콘텐츠 루트 밖 디스크 파일 · 목록은 절대 경로의 디스크 입력으로 기록되어, 기록 뒤에 다시 풀어도 같은 파일 · 폴더의 해시가 나온다
+ * @details 예전에는 입력 한 칸에 에셋 id 와 디스크 경로를 함께 담고 다시 풀 때 모양으로 추측했다 — 종류를 기록에 남긴다(`CookInputKind`).
  */
 SW_TEST_CASE( CookJobTest, RecordsDiskReadsAsAbsoluteDiskInputs )
 {
@@ -31,7 +31,7 @@ SW_TEST_CASE( CookJobTest, RecordsDiskReadsAsAbsoluteDiskInputs )
     for ( const CookInput& input : job.getInputs() )
     {
         SW_EXPECT_TRUE( FileUtil::isAbsolutePath( input._source ) );
-        SW_EXPECT_TRUE( input._kind == CookInputKind::DiskFile || input._kind == CookInputKind::Listing ); // 리소스 루트 밖이라 리소스로 기록되지 않는다
+        SW_EXPECT_TRUE( input._kind == CookInputKind::DiskFile || input._kind == CookInputKind::Listing ); // 콘텐츠 루트 밖이라 리소스로 기록되지 않는다
         SW_EXPECT_NOT_EQUAL( uint64( 0 ), input._contentHash );
         SW_EXPECT_EQUAL( input._contentHash, input.computeCurrentHash() );
     }

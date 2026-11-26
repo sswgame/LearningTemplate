@@ -71,7 +71,7 @@ SW_REGISTER_ARGUMENT( COOK_ALL, Dev, false, "cook-all" )
 // `-cook-scenes` · `-cook-packs` · `-cook-all` 이 쿠킹 결과를 쓸 스테이징 폴더
 SW_REGISTER_ARGUMENT( COOKED_DIR, Dev, CommandLineDiskPath{}, "cooked-dir" )
 
-// `-cook-scenes` · `-cook-packs` · `-cook-all` 이 굽는 대상 플랫폼(`windows` · `linux` · `android` · `web`) — 리소스 조건(`_when`)의 `platform` 축이다. 없으면 쿠킹하는 App 의 플랫폼. 교차 빌드(호스트 App 이 굽는 Android · 웹)가 준다
+// `-cook-scenes` · `-cook-packs` · `-cook-all` 이 굽는 대상 플랫폼(`windows` · `linux` · `android` · `web`) — 에셋 조건(`_when`)의 `platform` 축이다. 없으면 쿠킹하는 App 의 플랫폼. 교차 빌드(호스트 App 이 굽는 Android · 웹)가 준다
 SW_REGISTER_ARGUMENT( COOK_PLATFORM, Dev, "", "cook-platform" )
 
 // DDC 폴더 — 층 설정(`Config/Dev/DerivedData.json`) 대신 이 폴더 하나(쓰기 가능, 정리 없음)를 쓴다. 빈 캐시에서 굽는 길의 테스트가 함께 쓰는 캐시를 건드리지 않게
@@ -178,7 +178,7 @@ SW_REGISTER_ARGUMENT( CHECK_ASSET_REFS, Dev, false, "check-asset-refs" )
 SW_REGISTER_ARGUMENT( EXPORT_PO, Dev, false, "export-po" )
 SW_REGISTER_ARGUMENT( IMPORT_PO, Dev, CommandLineDiskPath{}, "import-po" )
 
-// 크래시 보고 프로세스 — 값은 크래시 묶음 폴더. 앞 실행이 띄운다(`CrashReportSubsystem::launchReporterProcess`). 엔진은 명령줄까지만 세우고(크래시 핸들러 · 리소스 루트 ·
+// 크래시 보고 프로세스 — 값은 크래시 묶음 폴더. 앞 실행이 띄운다(`CrashReportSubsystem::launchReporterProcess`). 엔진은 명령줄까지만 세우고(크래시 핸들러 · 콘텐츠 루트 ·
 // 서비스 없이) 대기 중인 묶음을 보낸 뒤 끝낸다(헤드리스).
 SW_REGISTER_ARGUMENT( CRASH_REPORTER, All, CommandLineDiskPath{}, "crash-reporter" )
 
@@ -213,7 +213,7 @@ SW_REGISTER_ARGUMENT( UPDATE_SNAPSHOTS, Test, false, "update-snapshots" )
 // 없는 스냅숏만 지금 값으로 쓰고 그 케이스는 진다(`SnapshotMissing`) — 있는 스냅숏은 덮지 않는다. 쓴 파일을 보고 커밋한 뒤 이 깃발 없이 다시 돌린다(preflight `changed` 단계).
 SW_REGISTER_ARGUMENT( RECORD_MISSING_SNAPSHOTS, Test, false, "record-missing-snapshots" )
 
-// 자동화 시나리오 — 값은 시나리오 파일(리소스 경로 `game/<팩>/automation/x.scenario.xml` 또는 절대 경로). 끝나면 결과를 종료 코드로 낸다
+// 자동화 시나리오 — 값은 시나리오 파일(에셋 경로 `game/<팩>/automation/x.scenario.xml` 또는 절대 경로). 끝나면 결과를 종료 코드로 낸다
 // (0 통과 · 10 실패 · 11 읽기 오류 · 12 시간 초과 · 13 건너뜀). 형식은 `Source/Engine/Automation/` 의 헤더 주석.
 SW_REGISTER_ARGUMENT( SCENARIO, Test, "", "scenario" )
 // 시나리오의 `<ExpectImage golden>` 이 없거나 · 크기가 다르거나 · 허용치에 가깝거나(`PassNearLimit`) · 진 골든을 지금 그림으로 쓰고 옆에 메타(`*.golden.json`)를 둔다(시나리오 파일 옆 `golden/`) — 쓴 파일은 보고의 updatedGoldens 에 남는다. 리뷰하고 커밋한다.

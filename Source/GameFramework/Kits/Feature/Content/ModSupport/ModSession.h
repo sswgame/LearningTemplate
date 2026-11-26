@@ -93,7 +93,7 @@ namespace sw
         [[nodiscard]] static bool exportPackedMod( string_view id, string_view packRoot, AbsolutePath& outFolder );
 
     private:
-        /** @brief 이 세션이 바꾼 기본 리소스 id(덮어쓰기와 층, 겹치지 않게)입니다. 캐시를 다시 읽힐 목록이다. */
+        /** @brief 이 세션이 바꾼 기본 에셋 id(덮어쓰기와 층, 겹치지 않게)입니다. 캐시를 다시 읽힐 목록이다. */
         vector<string> makeChangedPaths() const;
         /** @brief 켤 모드의 매니페스트를 읽습니다(id 형식 · 파일 크기 · id 와 폴더 이름의 일치). */
         [[nodiscard]] static bool loadManifests( const ModSessionRequest& request, const ModSupportSettings& settings, vector<ModManifest>& outListManifest );
@@ -109,8 +109,8 @@ namespace sw
         AssetManager&          _assets;
         vector<string>         _listMountedPackPath;   ///< 이 세션이 올린 팩(마운트 순서)
         vector<AbsolutePath>   _listBuiltPackPath;     ///< 이 세션이 소스 모드에서 묶은 팩 파일(내린 뒤 지운다)
-        vector<string>         _listOverridePath;      ///< 켠 모드가 덮어쓴 기본 리소스 id
-        vector<string>         _listLayerPath;         ///< 켠 모드가 층을 얹은 기본 리소스 id
+        vector<string>         _listOverridePath;      ///< 켠 모드가 덮어쓴 기본 에셋 id
+        vector<string>         _listLayerPath;         ///< 켠 모드가 층을 얹은 기본 에셋 id
         vector<string>         _listPreviousLayerRoot; ///< 모드 층을 더하기 전의 엔진 층 목록(`AssetLayers` — 내릴 때 되돌린다)
         ModSetDigest           _digest;
         uint8                  _bApplied   : 1; ///< `apply` 를 불렀다(성공 여부와 상관없이 세션마다 한 번)

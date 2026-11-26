@@ -9,7 +9,7 @@
  *          사람이 일부러 실제 폴더(또는 자동화 폴더 밖 뿌리)를 쓰려면 `-gv_automationAllowOutsideUserData=true` 를 명시한다.
  *          실행마다 따로 써야 하는 상태 자리 변수(`gv_editorStateDir` · `gv_userSettingsFile`)를 명령줄로 주면 그 자리도 사람의 폴더(`Saved/Editor` · OS 사용자 폴더)면 거절하고,
  *          백엔드별 부모는 그 변수를 자식 모두에 넘기지 않는다(한 자리를 함께 쓰게 된다 — 거절).
- *          뿌리 폴더를 리소스 도메인에 두지 않는 까닭: 에디터의 파일 감시 · 색인이 세이브를 에셋으로 본다 — 실행 산출물 자리(`Saved/Automation`)에 둔다
+ *          뿌리 폴더를 콘텐츠 도메인에 두지 않는 까닭: 에디터의 파일 감시 · 색인이 세이브를 에셋으로 본다 — 실행 산출물 자리(`Saved/Automation`)에 둔다
  *          (사용자 설정의 무인 자리 `Saved/Automation/UserSettings/` 와 같은 곳). 언리얼 Automation 의 `FPaths::AutomationDir`(Saved/Automation) · 유니티 Test Runner 가
  *          persistentDataPath 를 비우는 관례와 같은 자리다.
  */

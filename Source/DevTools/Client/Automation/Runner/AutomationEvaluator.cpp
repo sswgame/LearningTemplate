@@ -684,7 +684,7 @@ namespace sw
     void AutomationEvaluator::writeGolden( IAutomationStepContext& context, const AutomationStep& step, const AutomationImage& image, const string& goldenID, string_view backendTag, const utf8* pReason,
                                            const AutomationImageDifference* pPrevious, const AutomationGoldenLimits& limits )
     {
-        // 골든 쓰기는 이 모드에서만 연다(`AutomationScratch` 의 쓰기 문 — 평소에는 리소스 루트에 쓰지 못한다). 쓴 파일은 보고에 남아 리뷰한다.
+        // 골든 쓰기는 이 모드에서만 연다(`AutomationScratch` 의 쓰기 문 — 평소에는 콘텐츠 루트에 쓰지 못한다). 쓴 파일은 보고에 남아 리뷰한다.
         if ( _recordingCommit.empty() )
         {
             const expected<string> commit = AutomationGoldenUtil::findRecordingCommit();

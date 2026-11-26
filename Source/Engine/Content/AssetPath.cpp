@@ -40,7 +40,7 @@ namespace sw
 {
     optional<AssetPath> AssetPath::tryMake( string_view domain, string_view relative )
     {
-        // 절대 경로(`/x` · `\x` · `C:/x`)는 리소스 경로가 아니다 - 앞 구분자를 지워 상대로 바꾸지 않고 거절한다.
+        // 절대 경로(`/x` · `\x` · `C:/x`)는 에셋 경로가 아니다 - 앞 구분자를 지워 상대로 바꾸지 않고 거절한다.
         if ( relative.empty() || relative[0] == '/' || relative[0] == '\\' )
             return nullopt;
 
@@ -54,7 +54,7 @@ namespace sw
 
     bool DomainTable::add( string_view name, int32 priority, bool bCooked )
     {
-        // 이름도 리소스 경로와 같은 정규화를 거친다 - 같은 이름이 글자만 달라 둘 들어가지 않게.
+        // 이름도 에셋 경로와 같은 정규화를 거친다 - 같은 이름이 글자만 달라 둘 들어가지 않게.
         const optional<AssetPath> normalized = AssetPath::tryMake( {}, name );
         if ( normalized.has_value() == false || find( normalized->relative() ) != nullptr )
             return false;

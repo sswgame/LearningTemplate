@@ -48,7 +48,7 @@ namespace sw
             struct Header
             {
                 uint64        _processToken{ 0 }; ///< 찍은 프로세스의 토큰 — 같으면 id 를 복원한다
-                string        _sceneID;           ///< 찍을 때 활성 씬의 지금 리소스 id(읽을 때 GUID 를 푼다 — 씬이 없었으면 빈 글)
+                string        _sceneID;           ///< 찍을 때 활성 씬의 지금 에셋 id(읽을 때 GUID 를 푼다 — 씬이 없었으면 빈 글)
                 string        _contentText;       ///< 찍을 때 콘텐츠 구성(켠 모드) 글
                 vector<uint8> _minigameBytes;     ///< 찍을 때의 미니게임 칸 스택(`MinigameStack::writeSaveState`, 밖이면 빈 바이트)
                 float64       _playTime{ 0.0 };   ///< 찍을 때까지의 플레이 시간(초)
@@ -241,7 +241,7 @@ namespace sw
                 SceneManager* const pSceneManager = game::findSubsystem<SceneManager>();
                 return pSceneManager != nullptr ? pSceneManager->getActiveScene() : nullptr;
             }
-            /** @brief 활성 씬의 리소스 id(`Scene::getSourcePath`)입니다. 씬 매니저나 활성 씬이 없으면(씬 없는 스냅샷) 빈 글입니다. */
+            /** @brief 활성 씬의 에셋 id(`Scene::getSourcePath`)입니다. 씬 매니저나 활성 씬이 없으면(씬 없는 스냅샷) 빈 글입니다. */
             static string findActiveSceneID()
             {
                 SceneManager* const pSceneManager = game::findSubsystem<SceneManager>();

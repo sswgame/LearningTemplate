@@ -283,12 +283,12 @@ namespace sw
 
     bool SceneDocument::loadXMLFromDiskFile( const AbsolutePath& diskPath )
     {
-        // 디스크 파일은 부르는 쪽이 이름(`loadXMLFromDiskFile`)으로 고른 것이다 — 리소스 id 읽기가 실패한 뒤 넘어오는 길이 아니다.
+        // 디스크 파일은 부르는 쪽이 이름(`loadXMLFromDiskFile`)으로 고른 것이다 — 에셋 id 읽기가 실패한 뒤 넘어오는 길이 아니다.
         *this       = {};
         _sourcePath = diskPath.str();
         AssetLoadScope loadScope( "Scene", diskPath.str() );
         XMLDocument    doc;
-        // 리소스 id 읽기와 같은 규칙으로 펼친다 — 날것으로 읽으면 쿠킹본에만 조건(`_when`)이 풀리지 않는다(개발 실행은 푼다).
+        // 에셋 id 읽기와 같은 규칙으로 펼친다 — 날것으로 읽으면 쿠킹본에만 조건(`_when`)이 풀리지 않는다(개발 실행은 푼다).
         string         baseID;
         const bool     bRead = doc.loadDataFileAs( diskPath, AssetComposeContext::forSchema( &SceneDocumentInternal::makeInheritanceSchema ), &baseID );
         vector<string> listChain;
@@ -315,7 +315,7 @@ namespace sw
             return false;
         }
 
-        // 씬 상속: 두 입구(리소스 id · 디스크)가 부모 위에 차이를 얹어 한 벌로 펼친 글을 넘긴다(Godot 씬 상속 · 유니티 Prefab Variant 와 같은 모델). 부모는 `AssetIO` 로 읽으므로 쿠킹 입력이 된다.
+        // 씬 상속: 두 입구(에셋 id · 디스크)가 부모 위에 차이를 얹어 한 벌로 펼친 글을 넘긴다(Godot 씬 상속 · 유니티 Prefab Variant 와 같은 모델). 부모는 `AssetIO` 로 읽으므로 쿠킹 입력이 된다.
         _baseScenePath = flattenedBaseID;
 
         if ( AssetXMLFormat::upgradeToCurrentXMLVersion( kAssetType, root ) == false )

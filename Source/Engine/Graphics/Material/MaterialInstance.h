@@ -97,7 +97,7 @@ namespace sw
         /** @brief 벡터 파라미터를 설정합니다. 정적 종류 칸 거절은 `setScalarParameter` 와 같습니다. */
         void setVectorParameter( hashed_string name, const float4& value );
         /**
-         * @brief 텍스처 파라미터를 텍스처 에셋으로 덮어씁니다(리소스 경로, 예: `engine/textures/perlin.dds`). 빈 경로면 덮어쓰기를 지웁니다.
+         * @brief 텍스처 파라미터를 텍스처 에셋으로 덮어씁니다(에셋 경로, 예: `engine/textures/perlin.dds`). 빈 경로면 덮어쓰기를 지웁니다.
          * @details 언리얼 MIC 의 `SetTextureParameterValue( UTexture* )`, 유니티 `MaterialPropertyBlock.SetTexture( Texture )` 처럼 디스크립터
          *          인덱스가 아니라 텍스처 자체를 가리킨다. 경로만 적고, 다음 `getRenderBinding` 이 TextureCache 로 요청하고 반환한다.
          *          셰이더에 넣는 값(네이티브 bindless 의 SRV 인덱스, DX11 과 GL 의 슬롯 서수)은 그때마다 지금 텍스처에서 읽으므로 텍스처를 다시

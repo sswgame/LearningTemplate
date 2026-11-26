@@ -431,7 +431,7 @@ namespace sw
         /** @brief 등록된 화면 스위치(`UIScreenSwitches`, 견본 · 벤치 · 옵션 메뉴 등)를 순서대로 돌려 개발 스위치에 맞게 화면을 열고 닫습니다. */
         void syncScreenSwitches();
         /**
-         * @brief 뷰포트에서 화면 등급(`screen`: compact · regular)과 방향(`orientation`)을 정해 리소스 태그로 올립니다. 바뀐 프레임에만 올리고, 그 태그를 쓴 문서는 다시 읽힌다.
+         * @brief 뷰포트에서 화면 등급(`screen`: compact · regular)과 방향(`orientation`)을 정해 에셋 태그로 올립니다. 바뀐 프레임에만 올리고, 그 태그를 쓴 문서는 다시 읽힌다.
          * @details 좁은 화면 재배치는 데이터다(문서의 `_when` 변형) — 코드가 배치를 고르지 않는다. 규칙은 `UIScaleSettings::makeScreenTags` 한 곳이다(에디터 미리보기도 같은 함수).
          *          Android 의 smallestWidth 자원 한정자 · 유니티 Device Simulator 의 방향과 같은 자리다(기억).
          */

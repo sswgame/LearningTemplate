@@ -144,13 +144,13 @@ namespace sw
         vector<GraphCommentBox> _listComment{};
         string                  _baseID{}; ///< 읽은 글의 `_base`(PROPERTY 가 아니다 — 읽기 앞 단계가 지우는 표시다). `saveToAsset` 이 부모와 다른 칸만 쓴다
 
-        /** @brief 리소스 경로의 XML 을 읽고 검사합니다. 실패하면 오류를 남기고 false 입니다. */
+        /** @brief 에셋 경로의 XML 을 읽고 검사합니다. 실패하면 오류를 남기고 false 입니다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         /** @brief XML 문자열을 읽고 검사합니다(테스트용). */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName = "<text>" );
 
     private:
-        /** @brief 합성 문맥을 받는 읽기의 본문입니다. `loadFromAsset` 은 리소스 id 를 실은 문맥(`withAsset`)을, 글 입구는 id 없는 문맥을 넘깁니다(덮어쓰기 층 · 다시 읽기 기록 · 접속 대조는 id 로 읽을 때만 받는다). */
+        /** @brief 합성 문맥을 받는 읽기의 본문입니다. `loadFromAsset` 은 에셋 id 를 실은 문맥(`withAsset`)을, 글 입구는 id 없는 문맥을 넘깁니다(덮어쓰기 층 · 다시 읽기 기록 · 접속 대조는 id 로 읽을 때만 받는다). */
         [[nodiscard]] bool loadComposed( string_view xmlText, string_view sourceName, const AssetComposeContext& context );
 
     public:
@@ -159,7 +159,7 @@ namespace sw
         /** @brief 그래프를 읽기와 같은 XML 형식으로 씁니다(`loadFromXMLText` 가 다시 읽는다). */
         string saveToXMLText() const;
         /**
-         * @brief 검사를 통과한 그래프를 리소스 경로의 파일에 씁니다. 에디터의 소리 그래프 창이 저장하는 길이고, 저장한 파일은 핫 리로드가 클립 캐시에 다시 굳힌다.
+         * @brief 검사를 통과한 그래프를 에셋 경로의 파일에 씁니다. 에디터의 소리 그래프 창이 저장하는 길이고, 저장한 파일은 핫 리로드가 클립 캐시에 다시 굳힌다.
          * @details 부모(`_base`)를 가리키던 글에서 읽었으면 부모와 다른 칸만 쓴다(`ReflectedXMLFile::saveDescAsChild`) — 변형을 모든 칸을 적은 파일로 끊지 않는다.
          * @return 검사 실패 · 부모를 읽지 못함 · 쓰기 실패면 오류를 남기고 false 입니다(읽을 수 없는 파일을 남기지 않는다).
          */

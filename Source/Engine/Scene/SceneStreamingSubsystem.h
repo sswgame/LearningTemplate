@@ -124,7 +124,7 @@ namespace sw
 
         /**
          * @brief 씬 @p scene 의 셀을 받습니다. 받은 셀은 모두 내려가 있고, 다음 갱신부터 원점 둘레를 올립니다.
-         * @param contentPath 셀 내용이 든 쿠킹본의 리소스 id 입니다(`SceneDocument::_sourcePath`). 내용이 메모리에 있는 셀만 받으면 쓰지 않습니다.
+         * @param contentPath 셀 내용이 든 쿠킹본의 에셋 id 입니다(`SceneDocument::_sourcePath`). 내용이 메모리에 있는 셀만 받으면 쓰지 않습니다.
          * @param maxFileCellFileID 파일에 남은(색인만 읽은) 셀 엔티티의 가장 큰 파일 id 입니다(`SceneDocument::_maxCellFileID`).
          * @return 설정이 스트리밍하지 않거나 격자를 만들 수 없거나 같은 셀이 두 번 있거나 파일 내용을 읽을 쿠킹본이 없으면 오류를 남기고 false 입니다(셀을 받지 않는다).
          */
@@ -339,7 +339,7 @@ namespace sw
 
         Scene*                                _pScene; ///< 셀을 받은 씬(빌림). nullptr 이면 스트리밍하지 않는다
         SceneSettings                         _settings;
-        string                                _contentPath; ///< 셀 내용이 든 쿠킹본의 리소스 id
+        string                                _contentPath; ///< 셀 내용이 든 쿠킹본의 에셋 id
         StreamingCellGrid                     _grid;
         vector<SceneDocument::StreamingCell>  _listSourceCell;       ///< 받은 문서의 셀(쿠킹본은 색인만) — 복원이 조각을 처음 상태로 되돌린다(`resetCells`)
         vector<unique_ptr<CellSlot>>          _listCell;             ///< 문서의 조각(문서 순서) 뒤에 옮겨 온 오브젝트를 받으려 만든 조각

@@ -37,7 +37,7 @@ namespace sw
             SW_LOG_ERROR_ID( "SkeletonMirrorTable.CouldNotRead", "Mirror table '%#' could not be read", path );
             return false;
         }
-        // 리소스 id 로 합친다 — 덮어쓰기 층 · 다시 읽기 기록을 받는다(본 LOD 와 같은 입구).
+        // 에셋 id 로 합친다 — 덮어쓰기 층 · 다시 읽기 기록을 받는다(본 LOD 와 같은 입구).
         string flatText;
         bool   bComposed = false;
         if ( AssetComposer::compose( text, path, AssetComposeContext::forType( *StaticType() ).withAsset( assetID ), flatText, bComposed ) == false )

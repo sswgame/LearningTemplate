@@ -48,11 +48,11 @@ namespace sw
     {
     public:
         virtual ~IPackReachSource() = default;
-        /** @brief 리소스 id(정규화 — 소문자 · `/`) @p assetID 의 글을 읽습니다. 읽지 못하면 false 입니다. */
+        /** @brief 에셋 id(정규화 — 소문자 · `/`) @p assetID 의 글을 읽습니다. 읽지 못하면 false 입니다. */
         [[nodiscard]] virtual bool readText( const string& assetID, string& outText ) const = 0;
     };
 
-    /** @struct PackReachFiles @brief 고르기의 파일 목록입니다. id 는 모두 정규화한 리소스 id(`FileUtil::normalizePath`)다. */
+    /** @struct PackReachFiles @brief 고르기의 파일 목록입니다. id 는 모두 정규화한 에셋 id(`FileUtil::normalizePath`)다. */
     struct PackReachFiles
     {
         unordered_set<string> _setPackable;                                   ///< 담을 수 있는 파일(굽는 도메인의 파일 중 제외 규칙을 지난 것)
@@ -72,7 +72,7 @@ namespace sw
     /** @brief 글(또는 항목)이 가리키는 참조 하나입니다. */
     struct PackReachReference
     {
-        string           _path;  ///< 정규화한 리소스 id(파일 또는 폴더)
+        string           _path;  ///< 정규화한 에셋 id(파일 또는 폴더)
         string           _field; ///< 칸 이름(오류 문구용)
         PackCatalogReach _reach{ PackCatalogReach::Whole };
     };

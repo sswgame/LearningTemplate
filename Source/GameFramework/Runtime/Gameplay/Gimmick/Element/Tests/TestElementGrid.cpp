@@ -1,7 +1,7 @@
 // ElementGridTest — 규칙표 원소 격자: 표 읽기의 거절, 자극 규칙의 차례, 번짐(이웃 · 바람 · 옆바람 · 지연), 다 탐 · 이웃 바꾸기, 대전의 수명과 이어 퍼지기, 고정 스텝, 상태 왕복(nogpu).
 #include "pch.h"
 
-#define SW_TEST_INTERNAL // 임시 리소스 도메인 픽스처가 엔진 서비스(`AssetPaths`)를 직접 쓴다
+#define SW_TEST_INTERNAL // 임시 콘텐츠 도메인 픽스처가 엔진 서비스(`AssetPaths`)를 직접 쓴다
 
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"

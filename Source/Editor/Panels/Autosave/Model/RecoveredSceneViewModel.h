@@ -14,7 +14,7 @@ namespace sw::editor
     /** @brief 복구 후보 한 줄입니다(값만). */
     struct RecoveredSceneRow
     {
-        string _sceneID;        ///< 원래 씬의 리소스 id(저장한 적 없는 새 씬은 표시 이름)
+        string _sceneID;        ///< 원래 씬의 에셋 id(저장한 적 없는 새 씬은 표시 이름)
         string _savedAge;       ///< 사본을 쓴 지 얼마나 됐는지("4 min ago", 모르면 "-")
         uint32 _copyCount{ 0 }; ///< 남은 세대 수
         string _refusal;        ///< 복원할 수 없는 이유(비면 복원할 수 있다)
@@ -23,7 +23,7 @@ namespace sw::editor
     /** @brief 문서 패널의 복구 후보 한 줄입니다(값만 — 감사 E-1). */
     struct RecoveredDocumentRow
     {
-        string _documentPath; ///< 문서의 리소스 id
+        string _documentPath; ///< 문서의 에셋 id
         string _savedAge;     ///< 사본을 쓴 지 얼마나 됐는지("4 min ago", 모르면 "-")
         string _refusal;      ///< 복원할 수 없는 이유(비면 복원할 수 있다)
     };

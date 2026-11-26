@@ -571,7 +571,7 @@ SW_TEST_CASE( ObjectStateBatchTest, ResolverIsAskedOnlyForWhatTheBatchLacks )
     batch.abandon();
 }
 
-/** @brief [SceneAssemblyTest] 디스크 입구(쿠커가 쓴다)도 리소스 id 입구처럼 조건을 푼다 — 날것으로 읽으면 개발 실행에서 빠진 엔티티가 쿠킹본에만 남는다 */
+/** @brief [SceneAssemblyTest] 디스크 입구(쿠커가 쓴다)도 에셋 id 입구처럼 조건을 푼다 — 날것으로 읽으면 개발 실행에서 빠진 엔티티가 쿠킹본에만 남는다 */
 SW_TEST_CASE( SceneAssemblyTest, DiskReadResolvesConditionsLikeTheResourceRead )
 {
     const test::ScopedScratchDomain domain;

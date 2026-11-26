@@ -233,7 +233,7 @@ namespace sw
         /** @brief 카메라 컷: 대상의 카메라 디렉터가 켤 프리셋 id 입니다. 비우면 카메라를 그대로 씁니다. 외형: 대상이 입을 외형 프리셋 id 입니다(필수). */
         PROPERTY( SkipIfEmpty, Tooltip = "Camera cut: preset id the target's camera director turns on (empty: camera as is). Appearance: preset id the target wears (required)" )
         string _preset;
-        /** @brief 시나리오: 시작 프레임을 지날 때 재생할 시나리오(`.scenario.xml` 리소스 id)입니다. 다른 종류는 비운다. */
+        /** @brief 시나리오: 시작 프레임을 지날 때 재생할 시나리오(`.scenario.xml` 에셋 id)입니다. 다른 종류는 비운다. */
         PROPERTY( SkipIfEmpty, Tooltip = "Scenario: scenario (.scenario.xml) played when the start frame is crossed" )
         AssetRef<ScenarioAsset> _scenario;
         /** @brief 애니메이션: 구간 동안 섞을 클립입니다 — 대상 애니메이션 셋의 클립 이름(`SkeletalAnimatorComponent::makeClipPath`, 파일이 아니다). 다른 종류는 비운다. */
@@ -383,9 +383,9 @@ namespace sw
         /** @brief 빈 시퀀스를 만듭니다. */
         SequenceAsset() = default;
 
-        /** @brief 리소스 id 의 XML 을 읽습니다. OS 경로는 받지 않습니다(`loadFromDiskFile`). 실패하면 빈 에셋이 남습니다. */
+        /** @brief 에셋 id 의 XML 을 읽습니다. OS 경로는 받지 않습니다(`loadFromDiskFile`). 실패하면 빈 에셋이 남습니다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
-        /** @brief 디스크 파일의 XML 을 읽습니다. 리소스 id 로 풀지 않습니다(에디터 문서 · 도구 · 테스트용). 실패하면 빈 에셋이 남습니다. */
+        /** @brief 디스크 파일의 XML 을 읽습니다. 에셋 id 로 풀지 않습니다(에디터 문서 · 도구 · 테스트용). 실패하면 빈 에셋이 남습니다. */
         [[nodiscard]] bool loadFromDiskFile( const DiskPath& diskPath );
         /** @brief XML 파일을 씁니다. */
         [[nodiscard]] bool saveToFile( const AbsolutePath& absPath ) const;

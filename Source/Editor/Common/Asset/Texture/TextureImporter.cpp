@@ -458,7 +458,7 @@ namespace sw::editor
 
         protected:
             /**
-             * @brief 리소스 루트 기준 경로에 맞는 규칙에 원본 @p sourcePath 곁 서술의 임포트 예외를 얹어 @p outRule 에 담습니다. 맞는 규칙이 없으면 기본 규칙이 바탕입니다.
+             * @brief 콘텐츠 루트 기준 경로에 맞는 규칙에 원본 @p sourcePath 곁 서술의 임포트 예외를 얹어 @p outRule 에 담습니다. 맞는 규칙이 없으면 기본 규칙이 바탕입니다.
              * @return 규칙이 겹치거나 서술 · 예외를 읽지 못하면 오류를 남기고 false 입니다.
              */
             [[nodiscard]] bool findRule( const AbsolutePath& sourcePath, string_view assetPath, TextureImportRule& outRule ) const

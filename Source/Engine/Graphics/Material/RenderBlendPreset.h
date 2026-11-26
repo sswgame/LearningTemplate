@@ -34,7 +34,7 @@ namespace sw
         PROPERTY()
         vector<RenderBlendPreset> _listPreset;
 
-        /** @brief 프리셋 파일의 리소스 경로입니다. */
+        /** @brief 프리셋 파일의 에셋 경로입니다. */
         static constexpr const utf8* kAssetPath = "engine/renderstate/blendpresets.xml";
 
         /**

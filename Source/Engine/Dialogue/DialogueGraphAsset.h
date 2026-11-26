@@ -197,9 +197,9 @@ namespace sw
         /** @brief 빈 그래프를 만듭니다. */
         DialogueGraphAsset() = default;
 
-        /** @brief 리소스 id 의 XML 을 읽습니다. OS 경로는 받지 않습니다(`loadFromDiskFile`). 읽지 못하면 false 이고 그래프는 비어 있습니다. */
+        /** @brief 에셋 id 의 XML 을 읽습니다. OS 경로는 받지 않습니다(`loadFromDiskFile`). 읽지 못하면 false 이고 그래프는 비어 있습니다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
-        /** @brief 디스크 파일의 XML 을 읽습니다. 리소스 id 로 풀지 않습니다(에디터 문서 · 도구 · 테스트용). */
+        /** @brief 디스크 파일의 XML 을 읽습니다. 에셋 id 로 풀지 않습니다(에디터 문서 · 도구 · 테스트용). */
         [[nodiscard]] bool loadFromDiskFile( const DiskPath& diskPath );
         /** @brief XML 파일을 씁니다. */
         [[nodiscard]] bool saveToFile( const AbsolutePath& absPath ) const;

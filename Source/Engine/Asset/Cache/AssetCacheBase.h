@@ -74,7 +74,7 @@ namespace sw
      */
     struct AssetMemoryEntry
     {
-        string _path{};              ///< 리소스 id. 경로가 키가 아닌 캐시(지어 나누는 값)는 `<종류>#<번호>` 다
+        string _path{};              ///< 에셋 id. 경로가 키가 아닌 캐시(지어 나누는 값)는 `<종류>#<번호>` 다
         uint64 _cpuBytes{ 0 };       ///< CPU 쪽 추정 바이트(객체 + 쥔 버퍼)
         uint64 _gpuBytes{ 0 };       ///< GPU 쪽 논리 바이트(텍스처 밉 · 메시 정점 · 인덱스). GPU 자원이 없으면 0
         uint32 _referenceCount{ 0 }; ///< 쥔 쪽 수(캐시 자신과 이 질의의 사본은 뺀다)

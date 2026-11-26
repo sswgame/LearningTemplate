@@ -12,7 +12,7 @@ namespace sw
     {
         struct AutomationScratchInternal
         {
-            /** @brief 리소스 id 에 들어가는 글자인지입니다(id 경계 판정). */
+            /** @brief 에셋 id 에 들어가는 글자인지입니다(id 경계 판정). */
             static bool isIDCharacter( utf8 character )
             {
                 const bool bLetterOrDigit = ( 'a' <= character && character <= 'z' ) || ( 'A' <= character && character <= 'Z' ) || ( '0' <= character && character <= '9' );

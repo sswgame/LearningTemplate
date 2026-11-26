@@ -1,7 +1,7 @@
 // ScavengerGameModeTest — 협동 수집 공포 디렉터: 명령은 판이 열린 동안만 받고, 봇 승무원 혼자 터미널에서 자물쇠 따개를 사고 잠긴 문을 열어 고철을 싣고 팔아 할당량을 채우며, 상태는 왕복한다(nogpu).
 #include "pch.h"
 
-#define SW_TEST_INTERNAL // 임시 리소스 도메인 픽스처가 엔진 서비스(`AssetPaths`)를 직접 쓴다
+#define SW_TEST_INTERNAL // 임시 콘텐츠 도메인 픽스처가 엔진 서비스(`AssetPaths`)를 직접 쓴다
 
 #include "Core/File/FileUtil.h"
 #include "Core/Subsystem/SubsystemScope.h"

@@ -1,7 +1,7 @@
 // SurvivalHorrorGameModeTest — 생존 공포 디렉터: 명령은 판이 열린 동안만 받고, 배치가 카탈로그 · 방과 다르면 열지 않으며, 열쇠 → 잠긴 문 → 전투 → 목표 방으로 이기고, 전투 중의 상태는 왕복한다(nogpu).
 #include "pch.h"
 
-#define SW_TEST_INTERNAL // 임시 리소스 도메인 픽스처가 엔진 서비스(`AssetPaths`)를 직접 쓴다
+#define SW_TEST_INTERNAL // 임시 콘텐츠 도메인 픽스처가 엔진 서비스(`AssetPaths`)를 직접 쓴다
 
 #include "Core/File/FileUtil.h"
 #include "Core/Subsystem/SubsystemScope.h"

@@ -6,7 +6,7 @@
 #include "Core/TestFramework/TestFramework.h"
 #include "Core/TestFramework/TestWait.h"
 
-#define SW_TEST_INTERNAL // 임시 리소스 도메인 픽스처(`ScopedScratchDomain`)와 엔진 서비스를 직접 쓴다
+#define SW_TEST_INTERNAL // 임시 콘텐츠 도메인 픽스처(`ScopedScratchDomain`)와 엔진 서비스를 직접 쓴다
 #include "Engine/Config/GameTimeScale.h"
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
 #include "Engine/Foundation/EngineSubsystems.h"

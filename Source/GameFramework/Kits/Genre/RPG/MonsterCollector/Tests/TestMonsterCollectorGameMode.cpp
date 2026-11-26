@@ -1,7 +1,7 @@
 // MonsterCollectorGameModeTest — 몬스터 수집 디렉터: 명령은 판이 열린 동안만 받고, 씬 데이터가 비었으면 판을 열지 않으며, 걸음 조우 → 기술 승리 · 볼 포획 → 목표 승리와 상태 왕복(nogpu).
 #include "pch.h"
 
-#define SW_TEST_INTERNAL // 임시 리소스 도메인 픽스처가 엔진 서비스(`AssetPaths`)를 직접 쓴다
+#define SW_TEST_INTERNAL // 임시 콘텐츠 도메인 픽스처가 엔진 서비스(`AssetPaths`)를 직접 쓴다
 
 #include "Core/File/FileUtil.h"
 #include "Core/String/StringBuilder.h"

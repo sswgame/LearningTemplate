@@ -332,7 +332,7 @@ namespace sw
     shared_ptr<const AudioClipData> AudioClipCache::decodeClip( const hashed_string& path ) const
     {
         const string_view pathView = path.view();
-        const AssetID     assetID{ pathView }; // 캐시 키(클립 리소스 id)를 로더 id 로 바꾸는 한 곳
+        const AssetID     assetID{ pathView }; // 캐시 키(클립 에셋 id)를 로더 id 로 바꾸는 한 곳
         if ( engine::getSubsystem<AssetPaths>().isExcludedForHost( pathView ) )
             return nullptr; // 이 호스트의 패키지에 없는 종류 — 없는 것으로 친다(위 requestClip 과 같다)
         if ( StringUtil::endsWith( pathView, AudioGraphDef::kExtension, true ) )
@@ -384,7 +384,7 @@ namespace sw
     shared_ptr<const AudioClipData> AudioClipCache::decodeGraph( const hashed_string& path ) const
     {
         const string_view pathView = path.view();
-        const AssetID     assetID{ pathView }; // 캐시 키(그래프 리소스 id)를 로더 id 로 바꾸는 한 곳
+        const AssetID     assetID{ pathView }; // 캐시 키(그래프 에셋 id)를 로더 id 로 바꾸는 한 곳
         AudioGraphDef     def;
         if ( def.loadFromAsset( assetID ) == false )
             return nullptr; // 읽기 · 검사가 오류를 남겼다

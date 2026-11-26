@@ -31,7 +31,7 @@ namespace sw
                 {     "region", AssetTagTiming::Load, AssetTagArity::Single,              nullptr,                                                          0,    AssetTagScope::Shared}, ///< 출시 지역(게임 코드가 넣는다)
                 {      "layer", AssetTagTiming::Load,  AssetTagArity::Multi,              nullptr,                                                          0,    AssetTagScope::Shared}, ///< 켜진 씬 데이터 레이어(`SceneDataLayerSubsystem`)
                 {    "feature", AssetTagTiming::Load,  AssetTagArity::Multi,              nullptr,                                                          0,    AssetTagScope::Shared}, ///< 게임이 켜는 기능 태그(행사 · 계절)
-                {       "flag", AssetTagTiming::Load,  AssetTagArity::Multi,              nullptr,                                                          0,    AssetTagScope::Shared}, ///< 게임 플래그를 리소스에 비추는 태그(게임 코드가 켠다)
+                {       "flag", AssetTagTiming::Load,  AssetTagArity::Multi,              nullptr,                                                          0,    AssetTagScope::Shared}, ///< 게임 플래그를 에셋에 비추는 태그(게임 코드가 켠다)
                 {     "screen", AssetTagTiming::Load, AssetTagArity::Single,      kArrScreenValue,      static_cast<uint32>( SW_COUNT_OF( kArrScreenValue ) ), AssetTagScope::PerClient}, ///< 좁은 화면 재배치(UI 문서의 `_when="screen.compact"`)
                 {"orientation", AssetTagTiming::Load, AssetTagArity::Single, kArrOrientationValue, static_cast<uint32>( SW_COUNT_OF( kArrOrientationValue ) ), AssetTagScope::PerClient}, ///< 가로 · 세로 배치
             };

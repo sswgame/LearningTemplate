@@ -85,7 +85,7 @@ namespace sw
         /**
          * @brief 문서 텍스트 @p text 를 합쳐(`AssetComposer::compose` — 조건 `_when` · 덮어쓰기 층) 파싱합니다.
          * @param path 문서 경로입니다(오류 메시지와 `UIDocumentAsset::_path` 에 쓰며, 정규화해서 적습니다).
-         * @param context 합성 문맥입니다. 캐시는 리소스 id(경로)와 변형의 태그를 싣고(`UITextAssetCache`), 글만 읽는 쪽(테스트)은 `AssetComposeContext::forDocument()` 입니다.
+         * @param context 합성 문맥입니다. 캐시는 에셋 id(경로)와 변형의 태그를 싣고(`UITextAssetCache`), 글만 읽는 쪽(테스트)은 `AssetComposeContext::forDocument()` 입니다.
          *        오류의 줄 번호는 합친 글의 줄입니다(조건이 없는 문서는 원문과 같다).
          * @return 실패하면 그 이유(대상은 `<경로>:<줄>: <까닭>`)입니다. 이때 @p outAsset 은 쓰지 않습니다.
          */

@@ -173,7 +173,7 @@ namespace sw
          * @details 차이를 다시 읽어 같은 프로필이 나올 때만 씁니다. 기본값인 선택 키는 적지 않으므로, 부모가 적은 값을 자식이 기본값으로 되돌린 편집은 차이로 적을 수 없어 쓰지 않고 오류다(부모를 끊지 않는다).
          */
         [[nodiscard]] bool saveToFile( const AbsolutePath& absPath ) const;
-        /** @brief 읽은 글이 가리킨 부모의 리소스 id 입니다. 부모 없이 읽었거나 비웠으면 비어 있습니다. */
+        /** @brief 읽은 글이 가리킨 부모의 에셋 id 입니다. 부모 없이 읽었거나 비웠으면 비어 있습니다. */
         const string& getBaseID() const { return _baseID; }
         /** @brief 부모를 정합니다. 저장이 그 부모와의 차이로 씁니다(되돌리기가 펼친 글로 복원한 프로필에 문서의 부모를 다시 단다). */
         void setBaseID( string_view baseID ) { _baseID = string{ baseID }; }
@@ -216,9 +216,9 @@ namespace sw
                                RetargetTranslationMode mode );
 
     private:
-        /** @brief 합성 문맥을 받는 읽기의 본문입니다. `loadFromAsset` 은 리소스 id 를 실은 문맥(`withAsset`)을, 글 입구는 id 없는 문맥을 넘깁니다(덮어쓰기 층 · 다시 읽기 기록 · 접속 대조는 id 로 읽을 때만 받는다). */
+        /** @brief 합성 문맥을 받는 읽기의 본문입니다. `loadFromAsset` 은 에셋 id 를 실은 문맥(`withAsset`)을, 글 입구는 id 없는 문맥을 넘깁니다(덮어쓰기 층 · 다시 읽기 기록 · 접속 대조는 id 로 읽을 때만 받는다). */
         [[nodiscard]] bool loadComposed( string_view xml, string_view sourceLabel, const AssetComposeContext& context );
-        /** @brief 리소스 경로의 파일을 읽습니다. 종류의 로더(공유 캐시)만 부른다 — 쓰는 쪽은 `SharedAssetCache<RetargetProfile>::acquire` 로 한 벌을 쥔다. */
+        /** @brief 에셋 경로의 파일을 읽습니다. 종류의 로더(공유 캐시)만 부른다 — 쓰는 쪽은 `SharedAssetCache<RetargetProfile>::acquire` 로 한 벌을 쥔다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         [[nodiscard]] bool parseRoot( const XMLNode& root, string_view sourceLabel );
 

@@ -217,7 +217,7 @@ namespace sw
 
         /** @brief 믹서 그래프를 리소스에서 읽어 교체합니다(게임이 자기 그래프를 쓸 때). 읽기나 검사에 실패하면 false 를 반환하고 현재 그래프를 그대로 씁니다. */
         [[nodiscard]] bool loadMixer( const AssetID& assetID );
-        /** @brief 마지막으로 읽은 믹서 그래프의 리소스 경로입니다. 코드의 기본 그래프를 쓰면 비어 있습니다. */
+        /** @brief 마지막으로 읽은 믹서 그래프의 에셋 경로입니다. 코드의 기본 그래프를 쓰면 비어 있습니다. */
         const string& getMixerPath() const { return _mixerPath; }
 
         /**

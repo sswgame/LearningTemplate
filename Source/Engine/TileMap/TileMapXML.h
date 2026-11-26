@@ -283,13 +283,13 @@ namespace sw
          */
         SW_API bool mapTileCells( const TileSetAsset& tileSet, vector<uint16>& outListBrushIndex ) const;
 
-        /** @brief 리소스 id 의 타일맵 XML 을 읽습니다. OS 경로는 받지 않습니다(`loadFromDiskFile`). */
+        /** @brief 에셋 id 의 타일맵 XML 을 읽습니다. OS 경로는 받지 않습니다(`loadFromDiskFile`). */
         [[nodiscard]] SW_API bool load( const AssetID& assetID );
-        /** @brief 디스크 파일의 타일맵 XML 을 읽습니다. 리소스 id 로 풀지 않습니다(에디터 문서 · 도구 · 테스트용). */
+        /** @brief 디스크 파일의 타일맵 XML 을 읽습니다. 에셋 id 로 풀지 않습니다(에디터 문서 · 도구 · 테스트용). */
         [[nodiscard]] SW_API bool loadFromDiskFile( const DiskPath& diskPath );
         /** @brief XML 본문에서 타일맵을 읽습니다(리소스가 아닌 글 — 덮어쓰기 층 · 다시 읽기 기록을 받지 않는다). */
         [[nodiscard]] SW_API bool loadFromXML( string_view xml );
-        /** @brief 읽어 둔 문서(`load` 는 리소스 id 를 싣고 `parseAssetText` 로 읽는다)에서 타일맵을 읽습니다. */
+        /** @brief 읽어 둔 문서(`load` 는 에셋 id 를 싣고 `parseAssetText` 로 읽는다)에서 타일맵을 읽습니다. */
         [[nodiscard]] SW_API bool loadFromDocument( const XMLDocument& doc );
         /** @brief Resource 상대 또는 절대 경로로 타일맵 XML을 씁니다. */
         [[nodiscard]] SW_API bool save( const AbsolutePath& absPath ) const;

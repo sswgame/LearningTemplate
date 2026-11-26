@@ -1,10 +1,10 @@
 /**
  * @file AssetID.h
- * @brief 리소스 id(도메인으로 시작하는 리소스 경로 — `engine/shaders/lit.hlsl`)를 담는 형식입니다. 리소스 입구(`AssetIO`)는 이 형식만 받습니다.
- * @details 리소스 id 와 디스크 경로가 같은 `string_view` 로 오가면 디스크 경로를 리소스 입구에 넣는 호출이 컴파일을 지나고, 구성마다 다른 실행 규칙에서야
+ * @brief 에셋 id(도메인으로 시작하는 에셋 경로 — `engine/shaders/lit.hlsl`)를 담는 형식입니다. 에셋 입구(`AssetIO`)는 이 형식만 받습니다.
+ * @details 에셋 id 와 디스크 경로가 같은 `string_view` 로 오가면 디스크 경로를 에셋 입구에 넣는 호출이 컴파일을 지나고, 구성마다 다른 실행 규칙에서야
  *          드러났다. 그래서 문자열에서 암시적으로 만들 수 없다 —
  *          `AssetIO::readTextAsset( path, … )` 는 컴파일되지 않고, 글을 id 로 쓰는 자리는 `AssetID{ text }` 로 드러난다.
- *          디스크 경로는 리소스 루트 안이든 밖이든 id 가 아니다 — `AssetPaths::toAssetID` 가 붙인 도메인 아래 경로를 id 로 바꾼다.
+ *          디스크 경로는 콘텐츠 루트 안이든 밖이든 id 가 아니다 — `AssetPaths::toAssetID` 가 붙인 도메인 아래 경로를 id 로 바꾼다.
  *          담는 글을 고치지 않는다(대소문자 · 구분자). OS 경로 거절은 입구(`AssetIO`)가 한 곳에서 한다.
  *          상용 엔진: 언리얼 `FSoftObjectPath`(문자열에서 명시적으로 만든다), 유니티는 GUID, Godot 은 `res://` 접두가 붙은 문자열이다.
  */
@@ -17,14 +17,14 @@ namespace sw
 {
     /**
      * @class AssetID
-     * @brief 리소스 id 하나입니다. 빈 값은 "id 없음" 입니다.
+     * @brief 에셋 id 하나입니다. 빈 값은 "id 없음" 입니다.
      */
     class AssetID
     {
     public:
         /** @brief id 없음입니다. */
         AssetID() = default;
-        /** @brief 글 @p id 를 리소스 id 로 씁니다. 암시적 변환은 없다 — 디스크 경로와 섞지 않으려고 부르는 자리에 형식을 적게 한다. */
+        /** @brief 글 @p id 를 에셋 id 로 씁니다. 암시적 변환은 없다 — 디스크 경로와 섞지 않으려고 부르는 자리에 형식을 적게 한다. */
         explicit AssetID( string_view id )
             : _id{ id }
         {

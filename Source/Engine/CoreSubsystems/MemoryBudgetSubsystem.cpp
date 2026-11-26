@@ -31,7 +31,7 @@ namespace sw
 
     span<const utf8* const> MemoryBudgetSubsystem::getSubsystemDependencies() const
     {
-        // 예산 표는 게임 프로젝트 폴더에 있다 — 리소스 루트 · 게임을 정하는 단계 뒤에 선다.
+        // 예산 표는 게임 프로젝트 폴더에 있다 — 콘텐츠 루트 · 게임을 정하는 단계 뒤에 선다.
         static constexpr const utf8* kArrDependency[] = { ContentRootSubsystem::kSubsystemName };
         return kArrDependency;
     }

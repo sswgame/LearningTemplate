@@ -220,7 +220,7 @@ SW_TEST_CASE( DataCatalogReferencesTest, AbsentReferencesMustNameRemovedEntries 
 }
 
 /**
- * @brief [DataCatalogReferencesTest] 다른 파일의 원소(`file`)는 루트가 적은 리소스에서 찾고, 값을 적지 않으면 `defaultAttribute` 의 값을 id 로 본다
+ * @brief [DataCatalogReferencesTest] 다른 파일의 원소(`file`)는 루트가 적은 에셋에서 찾고, 값을 적지 않으면 `defaultAttribute` 의 값을 id 로 본다
  * @details 격투 캐릭터의 기술(`Fighter/Move`)이 루트 `moves` 의 기술 카탈로그를 가리키는 모양이다. 대상 파일로 엔진 팩의 실제 표를 쓴다(루트의 자식 `<Catalog root>`).
  */
 SW_TEST_CASE( DataCatalogReferencesTest, FileReferencesLookInTheNamedResource )

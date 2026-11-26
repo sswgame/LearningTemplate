@@ -46,7 +46,7 @@ namespace sw
             /**
              * @brief `matfind <keyword|shader> <값> [머티리얼]` — 키워드(define 이름)를 켠 머티리얼이나 그 셰이더로 그리는 머티리얼을 찾습니다(`MaterialTagIndex`). 읽지 않은 머티리얼도 든다.
              * @details 유니티 에디터의 "이 셰이더 키워드를 쓰는 머티리얼 찾기", 언리얼 에셋 레지스트리 태그 질의 자리다. 쿠킹본은 팩의 색인을, 소스는 머티리얼을 읽어 같은 줄을 만든다.
-             *          셋째 인자(리소스 id)를 주면 그 머티리얼이 결과에 없을 때 진다 — 시나리오가 색인을 확인한다.
+             *          셋째 인자(에셋 id)를 주면 그 머티리얼이 결과에 없을 때 진다 — 시나리오가 색인을 확인한다.
              */
             static bool runFind( const vector<string>& listArgument, string& outReply )
             {

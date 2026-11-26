@@ -73,7 +73,7 @@ namespace sw
         [[nodiscard]] expected<void> readFromBytes( const uint8* pData, size_t size );
         /** @brief 파일로 씁니다. 부모 폴더가 없으면 만듭니다. */
         [[nodiscard]] bool saveToFile( const AbsolutePath& absPath ) const;
-        /** @brief 리소스 경로(또는 절대 경로)에서 읽습니다. 못 읽거나 틀리면 그 까닭입니다. */
+        /** @brief 에셋 경로(또는 절대 경로)에서 읽습니다. 못 읽거나 틀리면 그 까닭입니다. */
         [[nodiscard]] expected<void> loadFromAsset( const AssetID& assetID );
     };
 } // namespace sw

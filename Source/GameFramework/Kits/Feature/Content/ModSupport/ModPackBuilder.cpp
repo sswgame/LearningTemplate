@@ -47,7 +47,7 @@ namespace sw
             SW_LOG_ERROR_ID( "ModPackBuilder.MaterialUnreadable", "Mod material '%#' could not be read for the material index", relativePath );
             return false;
         }
-        // 열쇠는 팩 색인과 같은 참조 글이다 — 머리 GUID 가 있으면 GUID 참조(덮어쓴 기본 머티리얼은 기본 줄을 이긴다), 없으면 전체 리소스 id.
+        // 열쇠는 팩 색인과 같은 참조 글이다 — 머리 GUID 가 있으면 GUID 참조(덮어쓴 기본 머티리얼은 기본 줄을 이긴다), 없으면 전체 에셋 id.
         const AssetGUIDHeader header = AssetGUIDHeader::read( text );
         inoutIndex._listEntry.push_back( MaterialTagIndex::makeEntry( AssetRegistry::makeReferenceText( relativePath, header._guid ), *material ) );
         return true;
@@ -67,7 +67,7 @@ namespace sw
                              settings._maxEntryCount );
             return false;
         }
-        AssetPackIndex   identityIndex; // 모드 에셋의 GUID 색인 — 런타임이 도메인 색인 뒤 층으로 합친다(`AssetManager`, 줄은 전체 리소스 id)
+        AssetPackIndex   identityIndex; // 모드 에셋의 GUID 색인 — 런타임이 도메인 색인 뒤 층으로 합친다(`AssetManager`, 줄은 전체 에셋 id)
         MaterialTagIndex materialIndex; // 모드 머티리얼의 태그 색인 — 같은 층 규칙(`MaterialTagIndex::loadMounted`)
         // 스트림 쓰기는 경로 해시 순만 받는다 — 경로를 먼저 다 보고(정규형 · 크기) 해시로 세운 뒤 하나씩 읽어 담는다(팩 전체를 들지 않는다).
         vector<std::pair<uint64, AbsolutePath>> listOrdered; // (경로 해시, 원본 파일 경로)
@@ -142,7 +142,7 @@ namespace sw
         VectorUtil::sort( listOrdered, []( const std::pair<uint64, AbsolutePath>& left, const std::pair<uint64, AbsolutePath>& right )
         { return left.first < right.first; } );
 
-        PackWriterDesc desc; // 도메인 없음 — 항목이 전체 리소스 경로인 패치 팩이다(`mods/<id>/…` 와 덮어쓰는 기본 리소스가 한 팩에 든다)
+        PackWriterDesc desc; // 도메인 없음 — 항목이 전체 에셋 경로인 패치 팩이다(`mods/<id>/…` 와 덮어쓰는 기본 리소스가 한 팩에 든다)
         desc._blockSize        = settings._packBlockSize;
         desc._writeWindowBytes = settings._maxEntryBytes; // 창은 항목 하나의 한계와 같다 — 모드 팩의 메모리 상한이 이미 받아들인 값이다
         PackStreamWriter writer;

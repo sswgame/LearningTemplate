@@ -56,7 +56,7 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief `netplay.start [dedicated|listen] [<플레이어 수>] [scene=<리소스 경로>]` — 구성을 고치고 세션을 시작합니다. 씬을 주면 모든 프로세스가 그 씬으로 시작합니다(구성에 남지 않는다). */
+            /** @brief `netplay.start [dedicated|listen] [<플레이어 수>] [scene=<에셋 경로>]` — 구성을 고치고 세션을 시작합니다. 씬을 주면 모든 프로세스가 그 씬으로 시작합니다(구성에 남지 않는다). */
             static bool runStart( const vector<string>& listArgument, string& outReply )
             {
                 EditorNetPlaySession* pSession = MultiplayerSessionViewModel::findSession();

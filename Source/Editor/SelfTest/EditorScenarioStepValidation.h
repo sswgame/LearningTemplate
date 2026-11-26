@@ -72,7 +72,7 @@ namespace sw::editor
         PROPERTY( Required )
         string _mark{}; ///< 놓을 자리(레이블 가운데)
         PROPERTY( Required )
-        string _files{}; ///< `;` 로 나눈 원본 파일 — 리소스 id(`engine/automation/…`) 또는 절대 경로(`asset.import` 와 같은 읽기). 없는 파일도 그대로 놓는다(받는 쪽이 거른다)
+        string _files{}; ///< `;` 로 나눈 원본 파일 — 에셋 id(`engine/automation/…`) 또는 절대 경로(`asset.import` 와 같은 읽기). 없는 파일도 그대로 놓는다(받는 쪽이 거른다)
     };
 
     /** @brief `EditorDrag` 의 인자입니다. 끝은 `toMark` 또는 이동량(`dx` · `dy`) 하나로 적습니다. */

@@ -55,7 +55,7 @@ namespace sw::editor
          * @details 실패하면 현재 표를 그대로 둡니다. 쌍의 순서가 맞춰 보는 순서입니다.
          */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName );
-        /** @brief 리소스 경로(또는 절대 경로)의 파일을 읽습니다. */
+        /** @brief 에셋 경로(또는 절대 경로)의 파일을 읽습니다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         /** @brief 현재 표를 XML 텍스트로 씁니다. */
         string saveToXMLText() const;

@@ -572,7 +572,7 @@ namespace sw
     bool PrefabAsset::loadFromDiskFile( const AbsolutePath& diskPath )
     {
         // 형식은 접미사 칸 하나로 정한다 — `saveToFile` · 쿠커와 같은 규칙.
-        // 디스크 파일은 부르는 쪽이 이름(`loadFromDiskFile`)으로 고른 것이다 — 리소스 id 읽기가 실패한 뒤 넘어오는 길이 아니다.
+        // 디스크 파일은 부르는 쪽이 이름(`loadFromDiskFile`)으로 고른 것이다 — 에셋 id 읽기가 실패한 뒤 넘어오는 길이 아니다.
         const optional<PrefabFileFormat> format = findFileFormat( diskPath.str() );
         if ( format == PrefabFileFormat::JSON )
         {

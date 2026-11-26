@@ -227,7 +227,7 @@ namespace sw
         /** @brief XML 을 절대 경로에 씁니다. */
         [[nodiscard]] static bool saveToFile( const AbsolutePath& absPath, const void* pInstance, const TypeInfo& typeInfo,
                                               const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring ) );
-        /** @brief 절대 경로나 리소스 경로에서 XML 을 읽어 엄격하게 역직렬화합니다(`deserialize` 와 같은 규칙). */
+        /** @brief 절대 경로나 에셋 경로에서 XML 을 읽어 엄격하게 역직렬화합니다(`deserialize` 와 같은 규칙). */
         [[nodiscard]] static bool loadFromAsset( const AssetID& assetID, void* pInstance, const TypeInfo& typeInfo,
                                                  const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring ) );
 

@@ -368,7 +368,7 @@ namespace sw
         /** @brief 모든 정의를 비웁니다. */
         void clear();
 
-        /** @brief 리소스 경로의 스키마 XML 을 읽어 덧붙입니다. 실패하면 아무것도 더하지 않습니다. */
+        /** @brief 에셋 경로의 스키마 XML 을 읽어 덧붙입니다. 실패하면 아무것도 더하지 않습니다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         /** @brief 스키마 XML 글을 읽어 덧붙입니다. 실패하면 아무것도 더하지 않습니다. */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName );

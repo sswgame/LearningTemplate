@@ -49,7 +49,7 @@ namespace sw
     /** @brief 수집과 합치기에서 나온 문제입니다. */
     struct TextGatherIssue
     {
-        string _location; ///< `파일:줄` 또는 리소스 경로입니다.
+        string _location; ///< `파일:줄` 또는 에셋 경로입니다.
         string _message;
         bool   _bError{ false };
     };

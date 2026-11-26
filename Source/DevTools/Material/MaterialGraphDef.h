@@ -130,13 +130,13 @@ namespace sw
         PROPERTY( Tooltip = "Comment boxes of the graph editor; the compiler does not read them" )
         vector<GraphCommentBox> _listComment{};
 
-        /** @brief 리소스 경로의 파일을 읽습니다(`_base` 를 펼친다). 실패하면 오류를 남기고 false 입니다. */
+        /** @brief 에셋 경로의 파일을 읽습니다(`_base` 를 펼친다). 실패하면 오류를 남기고 false 입니다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         /** @brief XML 글을 읽습니다(`_base` 를 펼친다). 모르는 칸 · 다른 판은 오류를 남기고 false 입니다. */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName );
 
     private:
-        /** @brief 합성 문맥을 받는 읽기의 본문입니다. `loadFromAsset` 은 리소스 id 를 실은 문맥(`withAsset`)을, 글 입구는 id 없는 문맥을 넘깁니다(덮어쓰기 층 · 다시 읽기 기록 · 접속 대조는 id 로 읽을 때만 받는다). */
+        /** @brief 합성 문맥을 받는 읽기의 본문입니다. `loadFromAsset` 은 에셋 id 를 실은 문맥(`withAsset`)을, 글 입구는 id 없는 문맥을 넘깁니다(덮어쓰기 층 · 다시 읽기 기록 · 접속 대조는 id 로 읽을 때만 받는다). */
         [[nodiscard]] bool loadComposed( string_view xmlText, string_view sourceName, const AssetComposeContext& context );
 
     public:

@@ -1,4 +1,4 @@
-// 붙인 디스크 도메인(`AssetPaths::mountDiskDomain`) — 쓰기 자리의 디스크 표기, 경로 캐시의 낡은 답, 리소스 입구의 OS 경로 거절, 떼기(nogpu).
+// 붙인 디스크 도메인(`AssetPaths::mountDiskDomain`) — 쓰기 자리의 디스크 표기, 경로 캐시의 낡은 답, 에셋 입구의 OS 경로 거절, 떼기(nogpu).
 #include "pch.h"
 
 #include "Core/File/FileUtil.h"
@@ -65,7 +65,7 @@ SW_TEST_CASE( MountedDiskDomainTest, WritePathKeepsTheDiskSpellingOfExistingFold
     expectedWritePath.appendFormat( "%#/Saved/Automation/out.txt", directory.str() );
     SW_EXPECT_TRUE( FileUtil::isSameDiskPath( expectedWritePath.view(), writePath->str() ) );
 
-    // 없는 폴더부터는 id 의 표기를 쓴다 — 리소스 id 는 소문자로 접히므로(`normalizeAssetID`) 새 성분은 소문자다. Windows 는 대소문자를 가리지 않아 같은 폴더다.
+    // 없는 폴더부터는 id 의 표기를 쓴다 — 에셋 id 는 소문자로 접히므로(`normalizeAssetID`) 새 성분은 소문자다. Windows 는 대소문자를 가리지 않아 같은 폴더다.
     const optional<DiskPath> freshPath = paths.toDiskPath( ScopedScratchDomain::makeID( "Saved/Fresh/Deep/New.txt" ).str() );
     SW_REQUIRE_TRUE( freshPath.has_value() );
     StringBuilder<constant::buffer::kMax512> expectedFreshPath;
@@ -105,7 +105,7 @@ SW_TEST_CASE( MountedDiskDomainTest, PathCacheDropsAnswersWhenThisProcessCreates
 }
 
 /**
- * @brief [MountedDiskDomainTest] 리소스 입구는 OS 경로를 콘텐츠 정책과 무관하게 거절하고, 디스크 파일은 디스크 입구 · 붙인 디스크 도메인으로 읽는다
+ * @brief [MountedDiskDomainTest] 에셋 입구는 OS 경로를 콘텐츠 정책과 무관하게 거절하고, 디스크 파일은 디스크 입구 · 붙인 디스크 도메인으로 읽는다
  * @details 예전에는 OS 절대 경로를 디스크에서 바로 읽고 팩 전용 모드만 루트 안 경로를 거절해, 잘못 넣은 호출이 Dev 를 지나 배포 테스트에서야
  *          드러났다. 이제 두 정책 모두 거절하고, 루트 밖 파일은 `readTextFile` 이나 `mountDiskDomain` 의 id 로 읽는다.
  */
@@ -141,7 +141,7 @@ SW_TEST_CASE( MountedDiskDomainTest, ResourceEntryRefusesOSPathsInEveryContentSo
     SW_EXPECT_TRUE( AssetIO::readTextFile( outsideRoot, content ) );
     SW_EXPECT_EQUAL( string( "OUTSIDE" ), content );
 
-    // 리소스 루트 안 폴더는 붙일 수 없다 — 팩 전용 규칙을 지나 낱개 에셋을 읽는 길이 된다.
+    // 콘텐츠 루트 안 폴더는 붙일 수 없다 — 팩 전용 규칙을 지나 낱개 에셋을 읽는 길이 된다.
     SW_EXPECT_LOG( "AssetPaths.MountInsideContentRoot" );
     SW_EXPECT_FALSE( paths.mountDiskDomain( "insideroot", paths.getRootFolderPath().join( "game" ) ) );
 }
@@ -175,7 +175,7 @@ SW_TEST_CASE( MountedDiskDomainTest, UnmountedDomainNoLongerResolves )
 }
 
 /**
- * @brief [MountedDiskDomainTest] 도메인 이름만인 id 는 붙인 폴더 자신으로 풀린다 — 리소스 트리의 도메인(`engine` · `game/<팩>`)이 뿌리를 가리키는 것과 같다
+ * @brief [MountedDiskDomainTest] 도메인 이름만인 id 는 붙인 폴더 자신으로 풀린다 — 콘텐츠 트리의 도메인(`engine` · `game/<팩>`)이 뿌리를 가리키는 것과 같다
  * @details 도메인 전체를 훑는 읽기(머티리얼 태그 색인의 소스 갈래)가 도메인 뿌리를 `collectLooseFolders` 로 푼다. 음성 대조: 붙인 도메인을 `<도메인>/…` 꼴로만 받으면
  *          폴더 목록이 비어 첫 단언이 지고, 쓰기 자리(`toDiskPath`)는 상대 키로 보아 `AssetPaths.WriteRelativeKeyMissing` 오류를 남긴다(MaterialTagIndexTest.SourceIndexWalksTheWholeDomain 이 그렇게 졌다).
  */

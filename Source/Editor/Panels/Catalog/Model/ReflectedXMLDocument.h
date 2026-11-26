@@ -37,14 +37,14 @@ namespace sw::editor
         /** @brief 편집 알림 창구를 겁니다 — 문서 패널이 만들 때 한 번 건다. */
         void bindDocumentEditRecorder( const DocumentEditRecorder& recorder ) { _pEditRecorder = &recorder; }
 
-        /** @brief 원문 @p text 를 형식 @p type 의 문서로 엽니다(저장한 원문이 된다). 실패하면 이유이고 문서는 비어 있습니다. @p sourceID 는 펼치기 오류에 적는 이름입니다(대개 리소스 id). */
+        /** @brief 원문 @p text 를 형식 @p type 의 문서로 엽니다(저장한 원문이 된다). 실패하면 이유이고 문서는 비어 있습니다. @p sourceID 는 펼치기 오류에 적는 이름입니다(대개 에셋 id). */
         [[nodiscard]] expected<void> load( const TypeInfo& type, string_view text, string_view sourceID );
         /** @brief 비웁니다. */
         void clear();
 
         /** @brief 고칠 수 있으면(인스턴스가 있으면) true 입니다. */
         [[nodiscard]] bool isEditable() const { return _instance.isValid(); }
-        /** @brief 물려받은 부모의 리소스 id(`_base`)입니다. 부모가 없으면 빈 글입니다. */
+        /** @brief 물려받은 부모의 에셋 id(`_base`)입니다. 부모가 없으면 빈 글입니다. */
         const string& getBaseID() const { return _baseID; }
         /** @brief 목록 @p listName 의 @p index 번째 원소가 부모에도 있으면 true 입니다 — 열쇠를 바꾸면 다른 원소가 되므로 그리드가 열쇠 칸을 감춘다. */
         [[nodiscard]] bool isInheritedItem( string_view listName, uint32 index ) const;

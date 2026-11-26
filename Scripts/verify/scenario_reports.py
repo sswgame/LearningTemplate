@@ -84,7 +84,7 @@ def read_backend_chain_order(log_text: str) -> list[str]:
 
 
 def read_scenario_name(path: str) -> str:
-    """시나리오 리소스 id(`game/x/automation/y.scenario.xml`)의 `name` 속성. 없으면 멈춘다(체인 목록이 지금 Content 와 다르다)."""
+    """시나리오 에셋 id(`game/x/automation/y.scenario.xml`)의 `name` 속성. 없으면 멈춘다(체인 목록이 지금 Content 와 다르다)."""
     match = SCENARIO_NAME.search((REPO / 'Content' / path).read_text(encoding='utf-8'))
     if match is None:
         sys.exit(f'{path}: <Scenario name="…"> 이 없다')

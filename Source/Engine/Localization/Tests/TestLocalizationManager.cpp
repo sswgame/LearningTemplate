@@ -390,7 +390,7 @@ SW_TEST_CASE( LocalizationManagerTest, LanguageCodeIsReturnedByValue )
 
 /**
  * @brief [LocalizationManagerTest] 언어 코드는 철자가 달라도 한 언어다 — `ko-KR` · `ko_KR` · `ko_kr` 는 같다
- * @details 파일 이름(리소스 id 는 소문자만 받는다 → `ko_kr`)과 기본값(`GameSettings` 의 "ko_KR") · 명령줄(`-lang=ko-KR`)의 철자가 다를 수 있다.
+ * @details 파일 이름(에셋 id 는 소문자만 받는다 → `ko_kr`)과 기본값(`GameSettings` 의 "ko_KR") · 명령줄(`-lang=ko-KR`)의 철자가 다를 수 있다.
  */
 SW_TEST_CASE( LocalizationManagerTest, LanguageCodeSpellingsNameOneLanguage )
 {
@@ -546,7 +546,7 @@ SW_TEST_CASE( LocalizedMessageTest, PlayerTextStaysText )
     SW_EXPECT_EQUAL( string( "Item.Axe" ), LocalizedText::resolve( &localization, LocalizedMessage::literal( "Item.Axe" ) ) );
 }
 
-/** @brief [LocalizationManagerTest] 엔진의 관리자가 아닌 것(UI 미리보기 · 도구 · 테스트)이 언어를 바꿔도 엔진의 리소스 조건(`locale` 축)은 그대로다 */
+/** @brief [LocalizationManagerTest] 엔진의 관리자가 아닌 것(UI 미리보기 · 도구 · 테스트)이 언어를 바꿔도 엔진의 에셋 조건(`locale` 축)은 그대로다 */
 SW_TEST_CASE( LocalizationManagerTest, SeparateManagerLeavesTheEngineLocaleTag )
 {
     const vector<string> listTag = engine::getSubsystem<AssetTags>().capture().getTags();
@@ -557,7 +557,7 @@ SW_TEST_CASE( LocalizationManagerTest, SeparateManagerLeavesTheEngineLocaleTag )
     SW_EXPECT_TRUE( listTag == engine::getSubsystem<AssetTags>().capture().getTags() );
 }
 
-/** @brief [LocalizationManagerEngineTest] 엔진의 리소스 조건은 늘 엔진의 지금 언어다 — 프로젝트를 올리며 정해진 처음 언어도 바꾼 언어도 되돌린 언어도 */
+/** @brief [LocalizationManagerEngineTest] 엔진의 에셋 조건은 늘 엔진의 지금 언어다 — 프로젝트를 올리며 정해진 처음 언어도 바꾼 언어도 되돌린 언어도 */
 SW_TEST_CASE_F( LocalizationManagerEngineTest, LocaleTagFollowsTheEngineLanguage )
 {
     const auto hasLocaleTag = []( string_view language )

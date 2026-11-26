@@ -31,7 +31,7 @@ namespace sw::editor
 
         /**
          * @brief 다른 문서를 읽었다 — 재생을 멈추고 지금 노드를 잊습니다(옛 문서의 노드 id 로 새 문서를 걷지 않는다).
-         * @param graphPath 문서의 리소스 경로입니다. 뷰포트 미리보기가 이 그래프를 돌리는 러너만 고르고, 화자 오브젝트는 그 러너의 화자 표로 찾는다.
+         * @param graphPath 문서의 에셋 경로입니다. 뷰포트 미리보기가 이 그래프를 돌리는 러너만 고르고, 화자 오브젝트는 그 러너의 화자 표로 찾는다.
          */
         void resetForDocument( string_view graphPath )
         {
@@ -54,7 +54,7 @@ namespace sw::editor
         void enterNode( const DialogueGraphAsset& graph, optional<int32> nodeID );
 
     private:
-        string  _graphPath;   ///< 미리보는 문서의 리소스 경로
+        string  _graphPath;   ///< 미리보는 문서의 에셋 경로
         float32 _holdSeconds; ///< 지금 노드에 머문 시간
         int32   _nodeID;
         uint8   _bPlaying : 1;

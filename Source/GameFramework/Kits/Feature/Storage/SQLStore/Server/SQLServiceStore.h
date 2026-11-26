@@ -30,7 +30,7 @@ namespace sw
     class SW_KIT_SERVER_API SQLServiceStore final : public ServiceStore
     {
     public:
-        /** @brief 서비스 저장소 마이그레이션의 리소스 폴더입니다. */
+        /** @brief 서비스 저장소 마이그레이션의 에셋 폴더입니다. */
         static constexpr const utf8* kMigrationFolder = "common/sql/servicestore";
 
         SQLServiceStore();
@@ -38,7 +38,7 @@ namespace sw
 
         /**
          * @brief 드라이버를 찾고, 마이그레이션을 적용하고, 풀을 시작합니다. 실패하면 false 와 실패 이유를 반환하며 기동 오류입니다. 폴백은 없습니다.
-         * @param migrationFolder 리소스 폴더(`common/sql/servicestore`)입니다.
+         * @param migrationFolder 에셋 폴더(`common/sql/servicestore`)입니다.
          * @param nowMs 마이그레이션 기록에 남길 벽시계 시각입니다.
          */
         [[nodiscard]] expected<void> initialize( string_view driverName, const SQLConnectionPoolConfig& settings, string_view migrationFolder, UnixMilliseconds nowMs );

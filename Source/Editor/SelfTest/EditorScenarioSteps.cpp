@@ -368,7 +368,7 @@ namespace sw::editor
 
             /**
              * @brief OS 파일 끌어 놓기를 흉내 냅니다 — 레이블 가운데에 `files` 를 놓는다(창 처리기와 같은 입구 `EditorFileDrop`). 받는 창은 다음 그리기에서 꺼낸다.
-             * @details 원본은 리소스 id 나 절대 경로로 적고(`EditorAssetFileCommands::readSourceFileArgument`), 풀리지 않는 글은 그대로 놓는다 — 받는 쪽의 거르기가 판정 대상이다.
+             * @details 원본은 에셋 id 나 절대 경로로 적고(`EditorAssetFileCommands::readSourceFileArgument`), 풀리지 않는 글은 그대로 놓는다 — 받는 쪽의 거르기가 판정 대상이다.
              */
             static bool runDropFiles( IAutomationStepContext& runner, const AutomationStep& step )
             {

@@ -53,7 +53,7 @@ namespace sw
         /** @brief 프리팹 엔티티의 프리팹입니다 — 저장 꼴은 GUID 참조(`AssetRefBase`). 경로 글 칸이었을 때는 다른 칸의 `AssetRef<PrefabAsset>` `_prefab` 과 이름이 같아 GUID 이전 도구가 칸 꼴을 가르지 못했다. */
         PROPERTY()
         AssetRef<PrefabAsset> _prefab{};
-        /** @brief 씬 인스턴스의 앵커면 넣을 씬의 리소스 id 입니다(언리얼 Level Instance). 앵커 자리에 그 씬이 펼쳐진다. */
+        /** @brief 씬 인스턴스의 앵커면 넣을 씬의 에셋 id 입니다(언리얼 Level Instance). 앵커 자리에 그 씬이 펼쳐진다. */
         PROPERTY()
         AssetRef<SceneDocument> _scene{};
         /** @brief 이 엔티티가 붙은 데이터 레이어 이름들입니다(쉼표로 가른다). 모두 켜졌을 때 오른다. */
@@ -117,7 +117,7 @@ namespace sw
             string _prefabOverrideXML;
             /** @brief 이 엔티티가 붙은 데이터 레이어 이름(정렬, 겹침 없음)입니다. 모두 켜졌을 때 오릅니다(`SceneDataLayerSubsystem`). 인스턴스 멤버는 앵커의 레이어를 더해 가집니다. */
             vector<string> _listDataLayer;
-            /** @brief 씬 인스턴스의 앵커면 넣은 씬의 리소스 id 입니다. 저작 칸 — 쿠킹본은 펼친 결과만 싣고 이 칸을 비웁니다. */
+            /** @brief 씬 인스턴스의 앵커면 넣은 씬의 에셋 id 입니다. 저작 칸 — 쿠킹본은 펼친 결과만 싣고 이 칸을 비웁니다. */
             string _sceneInstance;
             /**
              * @brief 씬 인스턴스의 멤버면 그 자리의 앵커(가장 가까운)의 파일 id 입니다. 0 이면 멤버가 아닙니다.
@@ -210,10 +210,10 @@ namespace sw
 
         /** @brief 빌드(Shipping/Dev)와 파일 존재 여부에 따라 알맞은 포맷(바이너리 우선)으로 로드합니다. */
         [[nodiscard]] SW_API bool load( const AssetID& assetID );
-        /** @brief 리소스 id 의 XML 을 로드합니다. OS 경로는 받지 않습니다(디스크 파일은 `loadXMLFromDiskFile`). */
+        /** @brief 에셋 id 의 XML 을 로드합니다. OS 경로는 받지 않습니다(디스크 파일은 `loadXMLFromDiskFile`). */
         [[nodiscard]] SW_API bool loadXML( const AssetID& assetID );
         /**
-         * @brief 디스크 파일에서 XML 을 로드합니다. 리소스 id 로 풀지 않고 팩을 보지 않습니다.
+         * @brief 디스크 파일에서 XML 을 로드합니다. 에셋 id 로 풀지 않고 팩을 보지 않습니다.
          * @details 소스 트리를 디스크로 훑은 쿠커 · 테스트용입니다 — OS 경로를 `loadXML` 에 넣으면 모든 구성에서 오류로 거절합니다.
          *          게임 런타임 코드는 쓰지 않습니다.
          */
@@ -235,7 +235,7 @@ namespace sw
          */
         [[nodiscard]] SW_API static bool splitInstancePartPath( string_view partPath, uint64& outAnchorFileID, string_view& outRelativePath );
         /**
-         * @brief 리소스 id 의 바이너리(SCN1)를 로드합니다(OS 경로는 받지 않습니다). 월드 설정 · 늘 올라 있는 엔티티 · 셀 색인(좌표 · 레이어 · 내용 구간)을 읽습니다.
+         * @brief 에셋 id 의 바이너리(SCN1)를 로드합니다(OS 경로는 받지 않습니다). 월드 설정 · 늘 올라 있는 엔티티 · 셀 색인(좌표 · 레이어 · 내용 구간)을 읽습니다.
          * @details 셀 내용은 풀지 않는다 — 스트리밍이 셀을 올릴 때 그 구간만 비동기로 읽어 워커에서 푼다(`readStreamingCellContent`, 언리얼 World Partition 의 셀 패키지 비동기 로드).
          */
         [[nodiscard]] SW_API bool loadBinary( const AssetID& assetID );
@@ -263,10 +263,10 @@ namespace sw
     private:
         /**
          * @brief XML 읽기 입구 둘(`loadXML` · `loadXMLFromDiskFile`)이 읽은 문서를 풉니다.
-         * @details 리소스 id 와 디스크 경로는 입구가 형식으로 갈라 읽는다 — 안쪽이 열거형으로 고르면 같은 글이 어느 쪽으로도 흘러간다.
+         * @details 에셋 id 와 디스크 경로는 입구가 형식으로 갈라 읽는다 — 안쪽이 열거형으로 고르면 같은 글이 어느 쪽으로도 흘러간다.
          */
         [[nodiscard]] bool readXMLSource( XMLDocument& doc, bool bRead, const string& absPath, const string& flattenedBaseID, AssetLoadScope& loadScope, vector<string>& inoutListChain );
-        /** @brief 리소스 id 의 XML 을 읽습니다. @p inoutListChain 은 지금 펼치는 씬 사슬입니다(자기 포함 · 깊이 검사). */
+        /** @brief 에셋 id 의 XML 을 읽습니다. @p inoutListChain 은 지금 펼치는 씬 사슬입니다(자기 포함 · 깊이 검사). */
         [[nodiscard]] bool loadXMLChained( const AssetID& assetID, vector<string>& inoutListChain );
         /** @brief 씬 인스턴스 앵커마다 넣은 씬의 엔티티를 앵커 뒤에 펼칩니다(런타임은 이 평평한 목록만 본다). 없는 씬 · 자기 포함 · 겹친 id 는 오류입니다. */
         [[nodiscard]] bool expandSceneInstances( string_view absPath, vector<string>& inoutListChain );

@@ -81,7 +81,7 @@ namespace sw::editor
         unique_ptr<EditorExternalToolJob> _pJob;
         EditorTestSelection               _selfTests;          ///< 자체 테스트 목록 · 체크 · 검색
         EditorTestSelection               _unitTests;          ///< 단위 테스트 목록 · 체크
-        EditorScenarioList                _scenarios;          ///< 시나리오 목록 · 고른 것(리소스 id `engine/automation/…`)
+        EditorScenarioList                _scenarios;          ///< 시나리오 목록 · 고른 것(에셋 id `engine/automation/…`)
         vector<EditorTestCaseResult>      _listUnitTestResult; ///< 마지막 단위 테스트 실행의 결과
         vector<string>                    _listExternalLine;   ///< 마지막 외부 실행의 출력
         string                            _externalTitle;      ///< 마지막 외부 실행이 무엇이었는지

@@ -4,7 +4,7 @@
 
 #include "Engine/Content/AssetPath.h"
 
-// 리소스 경로 정규화와 도메인 표의 최장 일치 가르기.
+// 에셋 경로 정규화와 도메인 표의 최장 일치 가르기.
 
 using namespace sw;
 

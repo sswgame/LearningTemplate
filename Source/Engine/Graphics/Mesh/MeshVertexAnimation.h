@@ -87,7 +87,7 @@ namespace sw
         [[nodiscard]] bool readFromBytes( const uint8* pData, size_t byteCount, string_view sourceLabel );
         /** @brief 파일로 씁니다(부모 폴더를 만듭니다). */
         [[nodiscard]] bool saveToFile( const AbsolutePath& absPath ) const;
-        /** @brief 리소스 경로(팩, 느슨한 파일, 절대 경로)의 쿠킹본을 읽습니다. */
+        /** @brief 에셋 경로(팩, 느슨한 파일, 절대 경로)의 쿠킹본을 읽습니다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         /** @brief 메시 경로와 클립 이름에 해당하는 쿠킹본 경로입니다(`a/knight.mesh` + `Idle` → `a/knight.idle.vat`). 메시 경로가 `.mesh` 가 아니면 빈 문자열입니다. */
         static string makeCookedPath( string_view meshPath, const hashed_string& clipName );

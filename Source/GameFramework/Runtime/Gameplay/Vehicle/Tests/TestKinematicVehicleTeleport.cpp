@@ -1,7 +1,7 @@
 // KinematicVehicleTeleportTest — 바디 없는 탈것은 모터가 자리를 쥔다: 바깥의 순간이동(문 · 리스폰)을 모터가 받아 다음 틱이 되돌리지 않는다(nogpu).
 #include "pch.h"
 
-#define SW_TEST_INTERNAL // 임시 리소스 도메인 픽스처가 엔진 서비스(`AssetPaths`)를 직접 쓴다
+#define SW_TEST_INTERNAL // 임시 콘텐츠 도메인 픽스처가 엔진 서비스(`AssetPaths`)를 직접 쓴다
 
 #include "Core/File/FileUtil.h"
 #include "Core/TestFramework/TestFramework.h"

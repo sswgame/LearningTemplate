@@ -1,7 +1,7 @@
 /**
  * @file DataCatalogInheritance.h
  * @brief 한 파일에 항목이 여럿인 카탈로그(아이템 · 외형 · 어빌리티)의 항목 단위 상속입니다. 합치기는 `DataInheritance` 하나이고 여기는 카탈로그 모양을 그 입력으로 옮깁니다.
- * @details 항목에 `_base="<id>"`(같은 파일) · `_base="<리소스 id>#<id>"`(다른 파일)를 적고 다른 칸만 씁니다. 루트의 `_base="<리소스 id>"` 는 파일 전체를 물려받습니다.
+ * @details 항목에 `_base="<id>"`(같은 파일) · `_base="<에셋 id>#<id>"`(다른 파일)를 적고 다른 칸만 씁니다. 루트의 `_base="<에셋 id>"` 는 파일 전체를 물려받습니다.
  *          카탈로그의 자식은 래퍼 없이 같은 이름이 되풀이되고 종류도 섞인다(`<Part>` 여럿 · `<Requires>` 여럿). `DataInheritance` 는 칸마다 원소 하나를 보므로,
  *          같은 이름의 형제를 그 이름의 래퍼 하나로 묶어 넘기고 결과를 다시 풉니다. 항목 하나는 가상의 문서이고 부모는 `DataInheritanceSource` 가 돌려주는 글이므로
  *          순환 · 없는 부모 · 깊이 초과 · 목록 합치기 규칙이 파일 상속과 같습니다.
@@ -9,8 +9,8 @@
  *          언리얼 Data Asset 은 항목마다 파일 하나이고 부모 관계가 클래스 상속이라 값만 다른 변형에도 자산이 하나씩 든다. 유니티 ScriptableObject Variant 도 자산 단위다.
  *          여기는 작은 표를 한 파일에 쓰는 형식을 지키면서 항목 하나를 자산처럼 짚는다. 쿠킹이 펼치므로 런타임 경로는 하나다(`PackCooker`).
  *
- *          합치는 규칙은 리소스 표(`kTableAssetID`)에 있다. 팩 쿠킹은 게임 모듈을 올리기 전에 도니(`HeadlessSubsystem`) 카탈로그 코드 옆의 정적 등록을 볼 수 없다.
- *          설정(`Config/`)이 아니라 리소스인 까닭: 배포 런타임이 덮어쓰기 층을 얹을 때 이 표를 읽는데 배포본에는 `Config/Dev` 가 없다. 언리얼이 설정 파일을 팩에 함께 담는 것과 같은 자리다(기억에 의존).
+ *          합치는 규칙은 에셋 표(`kTableAssetID`)에 있다. 팩 쿠킹은 게임 모듈을 올리기 전에 도니(`HeadlessSubsystem`) 카탈로그 코드 옆의 정적 등록을 볼 수 없다.
+ *          설정(`Config/`)이 아니라 에셋인 까닭: 배포 런타임이 덮어쓰기 층을 얹을 때 이 표를 읽는데 배포본에는 `Config/Dev` 가 없다. 언리얼이 설정 파일을 팩에 함께 담는 것과 같은 자리다(기억에 의존).
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -27,7 +27,7 @@ namespace sw
      */
     struct SW_API DataCatalogInheritance
     {
-        static constexpr const utf8* kTableAssetID  = "engine/settings/datacataloginheritance.xml"; ///< 규칙 표(리소스 id). 코드 뿌리로 엔진 팩에 담긴다
+        static constexpr const utf8* kTableAssetID  = "engine/settings/datacataloginheritance.xml"; ///< 규칙 표(에셋 id). 코드 뿌리로 엔진 팩에 담긴다
         static constexpr utf8        kFileSeparator = '#';                                          ///< `_base` 에서 파일과 항목 id 를 가른다
         static constexpr const utf8* kOpClear       = "Clear";                                      ///< 열쇠 없는 되풀이 원소: `<Requires _op="Clear" />` 는 물려받은 목록을 비운다
 

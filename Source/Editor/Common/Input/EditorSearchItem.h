@@ -22,7 +22,7 @@ namespace sw::editor
         Command,     ///< 명령 레지스트리(메뉴 · 단축키와 같은 정의)
         Panel,       ///< 등록된 에디터 패널 열기
         SceneObject, ///< 활성 씬의 게임 오브젝트 고르기
-        Asset,       ///< 리소스 트리의 에셋 열기(색인은 워커가 만든다)
+        Asset,       ///< 콘텐츠 트리의 에셋 열기(색인은 워커가 만든다)
     };
 
     /** @brief 검색 항목 하나입니다. */
@@ -33,7 +33,7 @@ namespace sw::editor
         string             _category; ///< 배지 글 — 명령 분류 · "Panel" · "GameObject" · 에셋 종류 이름
         string             _title;
         string             _detail;
-        string             _key; ///< 실행 열쇠 — 명령 id · 패널 id · 에셋 리소스 id
+        string             _key; ///< 실행 열쇠 — 명령 id · 패널 id · 에셋 에셋 id
         /**
          * @brief 칸 필터가 보는 값(`칸:값`) — 씬 오브젝트는 컴포넌트 유형(`type:MeshComponent`) · 태그(`tag:Enemy`) · 상태(`is:active` · `is:inactive`)를 갖는다.
          * @details 검색어의 `칸:값` 낱말은 이 목록을 본다(`EditorSearchQuery`). 칸이 없는 항목(명령 · 패널 · 에셋)은 칸 필터가 있으면 빠진다.

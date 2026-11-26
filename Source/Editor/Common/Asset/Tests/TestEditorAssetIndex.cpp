@@ -181,7 +181,7 @@ SW_TEST_CASE( EditorAssetIndexTest, ScratchCopiesAreReferenceDomains )
 }
 
 /**
- * @brief [EditorAssetIndexTest] 열쇠는 소문자 리소스 id 이고 목록에는 디스크 표기가 그대로 나온다 — 전체 훑기와 한 파일 갱신이 같다. `.meta` 는 목록의 파일이 아니다.
+ * @brief [EditorAssetIndexTest] 열쇠는 소문자 에셋 id 이고 목록에는 디스크 표기가 그대로 나온다 — 전체 훑기와 한 파일 갱신이 같다. `.meta` 는 목록의 파일이 아니다.
  */
 SW_TEST_CASE( EditorAssetIndexTest, DisplayPathKeepsDiskSpelling )
 {

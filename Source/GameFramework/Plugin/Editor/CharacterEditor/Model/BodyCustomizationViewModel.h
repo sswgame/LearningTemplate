@@ -117,7 +117,7 @@ namespace sw::editor
         vector<FluidRow>      _listFluid{};
         vector<ActionRow>     _listAction{};
         hashed_string         _bodyProfile{};
-        hashed_string         _bodyShapes{}; ///< 몸 부품의 채널 매핑 파일(`*.bodyshape.xml`, 리소스 id)
+        hashed_string         _bodyShapes{}; ///< 몸 부품의 채널 매핑 파일(`*.bodyshape.xml`, 에셋 id)
         float32               _wrinkleIntensity{ 1.0f };
         float32               _footLift{ 0.0f };
         float32               _pupilSize{ 0.0f };

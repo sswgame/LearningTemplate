@@ -1,4 +1,4 @@
-// 형식별 읽기 입구가 리소스 id 를 합성에 넘기는가 — 덮어쓰기 층 · 다시 읽기 기록 · 접속 대조는 id 로 읽을 때만 받는다(nogpu).
+// 형식별 읽기 입구가 에셋 id 를 합성에 넘기는가 — 덮어쓰기 층 · 다시 읽기 기록 · 접속 대조는 id 로 읽을 때만 받는다(nogpu).
 #include "pch.h"
 
 #define SW_TEST_INTERNAL
@@ -98,7 +98,7 @@ namespace
     using Util = XEntranceTestUtil;
 } // namespace
 
-/** @brief [AssetEntranceTest] 손 형식 · 리플렉션 형식 · 합치기 함수 없는 일반 형식이 리소스 id 로 읽으면 로드 축 조건에 기댄 합성이 기록된다(접속 대조 · 다시 읽기의 입력) */
+/** @brief [AssetEntranceTest] 손 형식 · 리플렉션 형식 · 합치기 함수 없는 일반 형식이 에셋 id 로 읽으면 로드 축 조건에 기댄 합성이 기록된다(접속 대조 · 다시 읽기의 입력) */
 SW_TEST_CASE( AssetEntranceTest, ReadingByIDRecordsTheComposition )
 {
     const ScopedScratchDomain domain;
@@ -225,7 +225,7 @@ SW_TEST_CASE( AssetEntranceTest, LayerOverHandFormatUsesItsRule )
     SW_EXPECT_TRUE( Util::isRecorded( ScopedScratchDomain::makeID( "b.retarget.xml" ) ) );
 }
 
-/** @brief [AssetEntranceTest] 씬 상속을 리소스 id 로 읽어도 저장이 쓰는 부모 id 는 남는다(펼친 글에는 `_base` 가 없다) */
+/** @brief [AssetEntranceTest] 씬 상속을 에셋 id 로 읽어도 저장이 쓰는 부모 id 는 남는다(펼친 글에는 `_base` 가 없다) */
 SW_TEST_CASE( AssetEntranceTest, SceneKeepsItsBaseIDThroughTheRule )
 {
     const ScopedScratchDomain domain;

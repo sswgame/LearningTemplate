@@ -36,7 +36,7 @@ namespace
         return data;
     }
 
-    /** @brief @p data 를 임시 도메인의 `.mesh` 로 쓰고 그 리소스 id 를 돌려줍니다. */
+    /** @brief @p data 를 임시 도메인의 `.mesh` 로 쓰고 그 에셋 id 를 돌려줍니다. */
     string writeMesh( const test::ScopedScratchDomain& domain, const utf8* pFileName, const MeshAssetData& data )
     {
         vector<uint8> bytes;

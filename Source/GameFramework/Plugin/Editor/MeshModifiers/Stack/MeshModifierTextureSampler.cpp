@@ -54,7 +54,7 @@ namespace sw::editor
             static int64 getNowMilliseconds() { return MonotonicClock::nowMicroseconds() / constant::time::kMicrosecondsPerMillisecond; }
 
             /**
-             * @brief 텍스처 리소스 id 를 디스크의 낱개 파일로 풉니다(다시 읽기가 파일 내용을 본다 - 원본 트리에서 도는 에디터 도구다). 못 찾으면 빈 문자열입니다.
+             * @brief 텍스처 에셋 id 를 디스크의 낱개 파일로 풉니다(다시 읽기가 파일 내용을 본다 - 원본 트리에서 도는 에디터 도구다). 못 찾으면 빈 문자열입니다.
              * @details 예전에는 작업 폴더에 그 이름이 있는지 먼저 봤다(같은 글이 작업 폴더에 따라 다른 파일).
              */
             static DiskPath resolvePath( const AssetPaths& assetPaths, string_view assetPath )
@@ -230,7 +230,7 @@ namespace sw::editor
     struct MeshModifierTextureSampler::State
     {
 
-        const AssetPaths&                                _assetPaths; ///< 리소스 id 를 푸는 경로 상태(만든 쪽이 넘겼다 — 표본기보다 오래 산다)
+        const AssetPaths&                                _assetPaths; ///< 에셋 id 를 푸는 경로 상태(만든 쪽이 넘겼다 — 표본기보다 오래 산다)
         shared_mutex                                     _mutex;
         MeshModifierTextureSamplerInternal::TextureCache _cache;
         explicit State( const AssetPaths& assetPaths )

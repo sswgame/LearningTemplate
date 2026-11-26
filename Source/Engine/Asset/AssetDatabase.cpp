@@ -27,7 +27,7 @@ namespace sw
         {
             static string toLowerID( string_view assetID ) { return StringUtil::toLower( assetID ); }
 
-            /** @brief 서술 리소스 id(`a/b.png.meta`)의 원본 리소스 id(`a/b.png`)입니다. */
+            /** @brief 서술 에셋 id(`a/b.png.meta`)의 원본 에셋 id(`a/b.png`)입니다. */
             static string_view toSourceID( string_view sidecarID ) { return sidecarID.substr( 0, sidecarID.size() - AssetMeta::kExtension.size() ); }
 
             static bool hasNoEmptyText( const vector<string>& listText, const utf8* pField, string_view path )
@@ -494,7 +494,7 @@ namespace sw
 
         AssetDatabase                    database;
         vector<const string*>            listOutputID;  // 임포트 산출물 — 원본이 모두 오른 뒤에 줄을 적는다
-        unordered_map<string, AssetMeta> mapSourceMeta; // 원본 리소스 id(소문자) → 그 `.meta`(산출물 표를 본다)
+        unordered_map<string, AssetMeta> mapSourceMeta; // 원본 에셋 id(소문자) → 그 `.meta`(산출물 표를 본다)
         for ( const AssetIdentityFile* pFile : listSorted )
         {
             const string& assetID = pFile->_assetID;

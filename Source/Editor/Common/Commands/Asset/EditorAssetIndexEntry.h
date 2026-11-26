@@ -19,7 +19,7 @@ namespace sw::editor
         string          _category; ///< 종류의 단수 이름(`EditorAssetTypeRegistration::_pDisplayName`)
         string          _title;
         string          _detail;
-        string          _path; ///< 리소스 id(콘텐츠 브라우저 · 끌어 놓기와 같은 형태)
+        string          _path; ///< 에셋 id(콘텐츠 브라우저 · 끌어 놓기와 같은 형태)
     };
 } // namespace sw::editor
 

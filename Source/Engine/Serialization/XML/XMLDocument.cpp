@@ -1156,7 +1156,7 @@ namespace sw
             *pOutAbsPath = absPath;
         if ( pOutBaseID != nullptr )
             *pOutBaseID = DataInheritance::findBasePath( text );
-        // 리소스 id 로 읽었으니 덮어쓰기 층과 다시 읽기 기록이 이 id 를 쓴다(`AssetComposeContext::withAsset`).
+        // 에셋 id 로 읽었으니 덮어쓰기 층과 다시 읽기 기록이 이 id 를 쓴다(`AssetComposeContext::withAsset`).
         return parseComposed( text, absPath, context.withAsset( assetID ) );
     }
 

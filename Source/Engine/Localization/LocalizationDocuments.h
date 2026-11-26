@@ -26,7 +26,7 @@ namespace sw
         string         _source;         ///< 원문(ICU MessageFormat 패턴)
         string         _context;        ///< 같은 글자의 다른 뜻을 구분하는 맥락입니다(번역가에게 보입니다. PO `#.`).
         string         _comment;        ///< 개발자 설명(PO `#.`)
-        vector<string> _listOrigin;     ///< 수집기가 찾은 위치입니다(저장소 상대 파일, 리소스 경로). 비어 있으면 손으로 넣은 줄이고 수집기가 지우지 않습니다.
+        vector<string> _listOrigin;     ///< 수집기가 찾은 위치입니다(저장소 상대 파일, 에셋 경로). 비어 있으면 손으로 넣은 줄이고 수집기가 지우지 않습니다.
         uint32         _maxLength{ 0 }; ///< 번역의 최대 글자 수(UTF-8 글자, 0 = 제한 없음)
 
         // 원문 해시와 키 규칙처럼 저작 파일 세트가 함께 쓰는 유틸리티입니다.
@@ -212,11 +212,11 @@ namespace sw
      * @brief 로컬라이제이션 프로젝트 파일(`*.locproject.xml`)입니다. 원문 문화권, 대상 문화권, 수집 설정을 담습니다(언리얼 Localization Dashboard 의 타깃 하나에 해당).
      * @details `<LocalizationProject name="engine" sourceCulture="en"><cultures><item>ko</item><item>ja</item></cultures><stringTables><item>engine.strings.xml</item></stringTables>
      *            <codeRoots><item>Source/Engine</item></codeRoots><assetRoots><item>engine/settings</item></assetRoots></LocalizationProject>` 형태이며, 테이블 이름은 프로젝트 파일 옆의 상대 경로, `codeRoots` 는 저장소 상대 경로,
-     *          `assetRoots` 는 리소스 경로다. 수집기는 첫 테이블(`stringTables[0]`)에 쓴다. 번역 테이블은 문화권마다 `<culture>.translation.xml`,
+     *          `assetRoots` 는 에셋 경로다. 수집기는 첫 테이블(`stringTables[0]`)에 쓴다. 번역 테이블은 문화권마다 `<culture>.translation.xml`,
      *          번역 메모리는 `tm/<culture>.tm.xml`, 교환 파일은 `po/<culture>.po` 이다. 배포 팩에는 프로젝트 파일과 쿠킹본(`.locres`)만 든다 — 원문 · 번역 테이블 XML 은 팩 제외 규칙(`PackConfig.json` 의 `Exclude_Localization_Authoring_Tables`)이 뺀다.
      *          `stagedCultures` 는 출시하는 문화권이다(언리얼 패키징 설정의 Cultures to Stage). `cultures` 의 부분 집합이어야 하고, `--check-text` 는 이 문화권의
      *          빠지거나 낡은 번역을 실패로 본다. 목록 밖 문화권은 번역 중으로 보고 개수만 보고한다.
-     *          자산 뿌리(`assetRoots`)는 리소스 경로 칸이라 리플렉션 칸으로 선언한다 — 참조 검사 · 옮기기가 칸 이름을 생성 목록에서 안다(읽기는 아래 손 읽기가 한다. 목록 모양은 리플렉션 컨테이너와 같다).
+     *          자산 뿌리(`assetRoots`)는 에셋 경로 칸이라 리플렉션 칸으로 선언한다 — 참조 검사 · 옮기기가 칸 이름을 생성 목록에서 안다(읽기는 아래 손 읽기가 한다. 목록 모양은 리플렉션 컨테이너와 같다).
      */
     REFLECT()
     class SW_API LocalizationProject
@@ -237,7 +237,7 @@ namespace sw
         vector<string> _listStringTable;
         vector<string> _listCodeRoot;
         PROPERTY( Name = "assetRoots" )
-        vector<DataPath>              _listAssetRoot; ///< 글을 모을 리소스 폴더(폴더는 정체성이 없어 경로 글이다)
+        vector<DataPath>              _listAssetRoot; ///< 글을 모을 에셋 폴더(폴더는 정체성이 없어 경로 글이다)
         vector<LocalizationAssetRule> _listAssetRule;
         /**
          * @brief 이 프로젝트가 키를 빌려 쓰는 다른 프로젝트입니다(키트 프로젝트 → 엔진 프로젝트). 수집이 그 원문 표를 참조로만 본다 — 키를 옮겨 오지 않는다.
@@ -267,7 +267,7 @@ namespace sw
         vector<string> collectCookedCultures() const;
         /**
          * @brief 문화권 하나의 쿠킹된 이진 번역 표 경로(`<폴더>/<이름>.<culture>.locres`)입니다. 쿠커(`LocalizationCooker`)와 쿠킹본을 읽는 런타임이 같은 규칙 하나를 쓴다.
-         * @details 쿠킹 스테이징은 리소스 루트 기준 같은 상대 경로라(`PackCooker`) 리소스 id 그대로 팩에서 찾는다.
+         * @details 쿠킹 스테이징은 콘텐츠 루트 기준 같은 상대 경로라(`PackCooker`) 에셋 id 그대로 팩에서 찾는다.
          */
         string makeCookedTablePath( string_view projectPath, string_view culture ) const;
     };

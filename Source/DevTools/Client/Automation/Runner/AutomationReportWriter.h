@@ -26,7 +26,7 @@ namespace sw
         uint32                                _frameCount{ 0 };
         const AutomationRunResult*            _pRunResult{ nullptr }; ///< 판정 값 하나 — `reason` 과 `failure`(종류 · 까닭 · 단계 자리)를 쓴다. 끝난 실행만 보고를 쓰므로 비지 않는다
         const vector<string>*                 _pListFailure{ nullptr };
-        const vector<string>*                 _pListUpdatedGolden{ nullptr };   ///< `-scenario-update-golden` 이 쓴 골든(리소스 id) — 리뷰할 목록
+        const vector<string>*                 _pListUpdatedGolden{ nullptr };   ///< `-scenario-update-golden` 이 쓴 골든(에셋 id) — 리뷰할 목록
         const vector<string>*                 _pListNearLimitGolden{ nullptr }; ///< 통과했지만 허용치에 가까운 골든의 비교 줄 — 기록 모드로 다시 뜰 목록
         const vector<AutomationGoldenSample>* _pListGoldenSample{ nullptr };    ///< 골든마다의 측정값과 상한(기록 모드가 아닌 실행) — 여러 보고를 모아 실행 사이 흔들림을 잰다
         const vector<string>*                 _pListUnhandledLog{ nullptr };    ///< 로그 게이트가 처리하지 않았다고 본 Warning · Error 줄

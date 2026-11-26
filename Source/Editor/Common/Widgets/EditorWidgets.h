@@ -317,7 +317,7 @@ namespace sw::editor
             return drawHintField( pID, str.data(), str.capacity(), pHint, pMark, bSubmitOnEnter );
         }
         /**
-         * @brief 리소스 id 를 치거나 콘텐츠 브라우저에서 끌어 놓는 경로 칸입니다(`drawHintField` + 끌어 놓기). @p pExpectedExt 에 맞는 애셋만 받습니다(`drawAssetSlot` 과 같은 거르개).
+         * @brief 에셋 id 를 치거나 콘텐츠 브라우저에서 끌어 놓는 경로 칸입니다(`drawHintField` + 끌어 놓기). @p pExpectedExt 에 맞는 애셋만 받습니다(`drawAssetSlot` 과 같은 거르개).
          * @details 끌어 놓기만 받는 `drawAssetSlot` 과 달리 글로 칠 수 있다 — 시나리오가 경로를 치는 칸(골격 · 미리보기 프리팹 · 클립)이 쓴다.
          */
         static HintFieldResult drawAssetPathField( const utf8* pID, utf8* pBuffer, uint32 bufferBytes, const utf8* pHint, const utf8* pExpectedExt, const utf8* pMark );
@@ -350,16 +350,16 @@ namespace sw::editor
         static void popInspectorStyle();
 
         /**
-         * @brief 에셋 페이로드 id 를 만듭니다. 에셋 id 의 이름은 리소스 id(상대 경로) 한 형식이다 — 끌기 · 콘텐츠 브라우저 명령 · 인스펙터 에셋 칸 메뉴가 모두 이것을 쓴다.
+         * @brief 에셋 페이로드 id 를 만듭니다. 에셋 id 의 이름은 에셋 id(상대 경로) 한 형식이다 — 끌기 · 콘텐츠 브라우저 명령 · 인스펙터 에셋 칸 메뉴가 모두 이것을 쓴다.
          * @details 예전에는 끌기가 상대 경로, 콘텐츠 브라우저 명령이 절대 경로를 올려 같은 에셋이 두 id 였다(한쪽에서 만든 id 를 다른 쪽이 풀면 다른 글이 나왔다).
-         *          디스크 경로(절대)는 받지 않는다 — 넘기면 멈춘다. 디스크 자리가 필요한 쪽은 `findAssetPayload` 로 받은 리소스 id 를 `AssetPaths::findLooseFile` 로 푼다.
+         *          디스크 경로(절대)는 받지 않는다 — 넘기면 멈춘다. 디스크 자리가 필요한 쪽은 `findAssetPayload` 로 받은 에셋 id 를 `AssetPaths::findLooseFile` 로 푼다.
          */
         static uint64 registerAssetPayload( string_view resourceID );
-        /** @brief `registerAssetPayload` 가 만든 id 의 리소스 id 입니다. 모르는 id 면 false 입니다. */
+        /** @brief `registerAssetPayload` 가 만든 id 의 에셋 id 입니다. 모르는 id 면 false 입니다. */
         [[nodiscard]] static bool findAssetPayload( uint64 id, string& outResourceID );
 
         /**
-         * @brief 현재 아이템을 애셋 끌기 원본으로 만듭니다. 페이로드는 `{Asset, 리소스 id 의 id}` 다(`registerAssetPayload`).
+         * @brief 현재 아이템을 애셋 끌기 원본으로 만듭니다. 페이로드는 `{Asset, 에셋 id 의 id}` 다(`registerAssetPayload`).
          */
         static void drawAssetDragSource( const utf8* pRelativePath, bool bAllowNullID = false );
 

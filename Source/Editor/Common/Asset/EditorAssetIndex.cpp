@@ -31,7 +31,7 @@ namespace sw::editor
         struct EditorAssetIndexInternal
         {
             /**
-             * @brief 경로 참조가 시작할 수 있는 리소스 도메인입니다(리소스 id 의 첫 조각).
+             * @brief 경로 참조가 시작할 수 있는 콘텐츠 도메인입니다(에셋 id 의 첫 조각).
              * @details `scratch/` 는 자동화 시나리오의 실행마다 새 사본 폴더(`AutomationScratch::kScratchDomain`)다 — 빠지면 사본 안의 참조(이름 바꾸기가 고칠 씬)를 세지 못한다.
              */
             static constexpr const utf8* kArrDomainPrefix[] = { "engine/", "common/", "game/", "editor/", "scratch/" };
@@ -44,7 +44,7 @@ namespace sw::editor
             /** @brief 파일 수가 이보다 적으면 나누지 않습니다. 파일 하나가 읽기 · 파싱이라 디스패치 비용보다 훨씬 큽니다. */
             static constexpr uint32 kSerialFileThreshold = 8;
 
-            /** @brief 리소스 id 안에 올 수 있는 글자입니다(경로 조각 · 확장자). */
+            /** @brief 에셋 id 안에 올 수 있는 글자입니다(경로 조각 · 확장자). */
             static bool isPathChar( utf8 ch )
             {
                 const utf8 lower = StringUtil::toLowerChar( ch );
@@ -118,8 +118,8 @@ namespace sw::editor
             }
 
             /**
-             * @brief 디스크 경로 @p filePath 의 리소스 id 를 디스크 표기(대소문자 그대로, `/` 구분)로 돌려줍니다. 루트 밖이면 빈 글입니다.
-             * @details 작업 도메인(`scratch/`)은 리소스 루트 밖, 실행 뿌리 아래다(`AssetPaths::getScratchFolderPath` — 프로세스 상수라 워커에서도 읽는다).
+             * @brief 디스크 경로 @p filePath 의 에셋 id 를 디스크 표기(대소문자 그대로, `/` 구분)로 돌려줍니다. 루트 밖이면 빈 글입니다.
+             * @details 작업 도메인(`scratch/`)은 콘텐츠 루트 밖, 실행 뿌리 아래다(`AssetPaths::getScratchFolderPath` — 프로세스 상수라 워커에서도 읽는다).
              */
             static string makeDisplayPath( string_view resourceRoot, string_view filePath )
             {
@@ -147,7 +147,7 @@ namespace sw::editor
                 return resourceRoot.join( displayPath );
             }
 
-            /** @brief 색인의 열쇠(소문자 리소스 id)입니다. */
+            /** @brief 색인의 열쇠(소문자 에셋 id)입니다. */
             static string makeKey( string_view displayPath ) { return FileUtil::normalizePath( displayPath ).str(); }
 
             /** @brief 원본 @p absPath 곁의 `.meta` 를 읽습니다. 없거나 읽지 못하면 false 입니다(정체성 없음 — 결함 알림은 `asset-ids` · `AssetDatabase` 가 한다). */

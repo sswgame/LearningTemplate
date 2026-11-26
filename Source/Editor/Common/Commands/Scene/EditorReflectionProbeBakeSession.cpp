@@ -333,7 +333,7 @@ namespace sw::editor
             return;
         }
         // 쓸 경로는 찍기 전에 정한다 - 씬 · 서비스는 이 스레드에서만 본다(워커는 경로 사본을 받는다). 저장 안 한 씬이면 찍지 않는다.
-        const string& sceneAssetID = scene.getSourcePath(); // 씬의 소스는 늘 리소스 id 다(`SceneManager::saveActiveSceneAs`)
+        const string& sceneAssetID = scene.getSourcePath(); // 씬의 소스는 늘 에셋 id 다(`SceneManager::saveActiveSceneAs`)
         if ( sceneAssetID.empty() )
         {
             reportFailure( "the scene has never been saved - save it before baking reflection probes" );

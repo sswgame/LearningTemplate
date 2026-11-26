@@ -115,10 +115,10 @@ namespace sw::editor
         [[nodiscard]] static string makeSlotMaterialText( string_view fileStem, string_view sharedAssetID );
         /** @brief 공유 머티리얼(`<x>/models/_shared/materials/<키>.material`)과 슬롯 파일을 씁니다. 원본이 `models_raw/` 아래가 아니거나 쓰지 못하면 false 입니다. */
         [[nodiscard]] static bool writeSharedMaterial( const AssetPaths& assetPaths, string_view fullText, string_view templateText, string_view templatePath, string_view fileStem, const AbsolutePath& sourcePath, const AbsolutePath& sideFolder );
-        /** @brief 슬롯 파일이 가리키는 공유 머티리얼의 리소스 경로입니다(임포트가 쓰는 프리팹은 공유 파일을 바로 가리킨다). 읽지 못하면 빈 글입니다. */
+        /** @brief 슬롯 파일이 가리키는 공유 머티리얼의 에셋 경로입니다(임포트가 쓰는 프리팹은 공유 파일을 바로 가리킨다). 읽지 못하면 빈 글입니다. */
         [[nodiscard]] static string findSharedMaterial( const AbsolutePath& sideFolder, string_view fileStem );
         /**
-         * @brief 내장 이미지를 공유 원본(`<x>/textures_raw/_shared/<규칙>/<키>.<확장자>`)으로 꺼내고 텍스처 임포트가 만들 DDS 의 리소스 경로를 @p outAssetPath 에 담습니다.
+         * @brief 내장 이미지를 공유 원본(`<x>/textures_raw/_shared/<규칙>/<키>.<확장자>`)으로 꺼내고 텍스처 임포트가 만들 DDS 의 에셋 경로를 @p outAssetPath 에 담습니다.
          * @details 모델마다 꺼내면 같은 아틀라스를 쓰는 모델 수만큼 DDS 가 생긴다(KayKit Dungeon 19 벌). 규칙은 폴더 이름에 남아 설정이 다르면 다른 원본이다. 바이트가 같으면 건드리지 않는다.
          * @return 임포트 설정이 깨졌거나 규칙이 겹치거나 쓰지 못하면 오류를 남기고 false 입니다.
          */

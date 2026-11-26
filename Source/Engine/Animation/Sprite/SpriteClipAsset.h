@@ -148,9 +148,9 @@ namespace sw
         /** @brief 빈 클립을 만듭니다. */
         SpriteClipAsset();
 
-        /** @brief 리소스 id 의 클립을 읽습니다. OS 경로는 받지 않습니다(`loadFromDiskFile`). 읽지 못하면 false 를 반환하고 내용은 비어 있습니다. */
+        /** @brief 에셋 id 의 클립을 읽습니다. OS 경로는 받지 않습니다(`loadFromDiskFile`). 읽지 못하면 false 를 반환하고 내용은 비어 있습니다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
-        /** @brief 디스크 파일의 클립을 읽습니다. 리소스 id 로 풀지 않습니다(에디터 문서 · 도구 · 테스트용). 실패 규칙은 `loadFromAsset` 과 같습니다. */
+        /** @brief 디스크 파일의 클립을 읽습니다. 에셋 id 로 풀지 않습니다(에디터 문서 · 도구 · 테스트용). 실패 규칙은 `loadFromAsset` 과 같습니다. */
         [[nodiscard]] bool loadFromDiskFile( const DiskPath& diskPath );
         /** @brief 파일로 씁니다(부모 폴더를 만듭니다). */
         [[nodiscard]] bool saveToFile( const AbsolutePath& absPath ) const;
@@ -213,7 +213,7 @@ namespace sw
         [[nodiscard]] bool resolveLoadedValues( string_view sourceLabel );
         /** @brief 읽은 본문을 클립으로 옮깁니다. 두 읽기 입구(`loadFromAsset` · `loadFromDiskFile`)의 공통 단계입니다. */
         [[nodiscard]] bool loadFromXMLText( const string& text, string_view sourceLabel );
-        /** @brief 합친 글을 클립으로 옮깁니다(`ConfigManager::readComposedXMLDocument`). 리소스 id 로 읽으면(`loadFromFile`) @p context 에 `withAsset` 이 실린다. */
+        /** @brief 합친 글을 클립으로 옮깁니다(`ConfigManager::readComposedXMLDocument`). 에셋 id 로 읽으면(`loadFromFile`) @p context 에 `withAsset` 이 실린다. */
         [[nodiscard]] bool loadComposed( string_view text, string_view sourceLabel, const AssetComposeContext& context );
     };
 

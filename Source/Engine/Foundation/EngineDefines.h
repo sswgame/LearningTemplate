@@ -30,7 +30,7 @@ namespace sw
 
     /**
      * @brief Resource 아래 팩 · 폴더 이름입니다.
-     * @details XML 보다 먼저 리소스 루트를 찾아야 하므로 컴파일 상수로 둡니다.
+     * @details XML 보다 먼저 콘텐츠 루트를 찾아야 하므로 컴파일 상수로 둡니다.
      *          파이프라인 · 셰이더 · InputMap 경로는 EngineDefaultAssets 가 정합니다.
      */
     namespace constant::path

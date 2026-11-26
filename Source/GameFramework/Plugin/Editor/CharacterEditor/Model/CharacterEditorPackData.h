@@ -30,7 +30,7 @@ namespace sw::editor
 {
     /**
      * @struct CharacterEditorPackData
-     * @brief `<CharacterEditor sockets="…" skeleton="…" items="…" appearance="…" animationSet="…" mirrorNames="…" previewPreset="…" [rig="…"] [wipeEvent="…"]/>` 한 줄입니다(`rig` · `wipeEvent` 만 선택). 경로 값은 도메인을 포함한 리소스 경로이고 `previewPreset` 은 프리셋 id 입니다.
+     * @brief `<CharacterEditor sockets="…" skeleton="…" items="…" appearance="…" animationSet="…" mirrorNames="…" previewPreset="…" [rig="…"] [wipeEvent="…"]/>` 한 줄입니다(`rig` · `wipeEvent` 만 선택). 경로 값은 도메인을 포함한 에셋 경로이고 `previewPreset` 은 프리셋 id 입니다.
      */
     REFLECT()
     struct CharacterEditorPackData
@@ -72,7 +72,7 @@ namespace sw::editor
         PROPERTY( Name = "wipeEvent" )
         string _wipeEvent{};
 
-        /** @brief 리소스 경로의 파일을 읽어 표를 바꿉니다. 파일이 없거나, 모르는 원소 · 속성이 있거나, 칸이 빠지면 false 이고 표는 비웁니다. */
+        /** @brief 에셋 경로의 파일을 읽어 표를 바꿉니다. 파일이 없거나, 모르는 원소 · 속성이 있거나, 칸이 빠지면 false 이고 표는 비웁니다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         /** @brief `loadFromAsset` 의 XML 글 버전입니다(테스트). */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName );

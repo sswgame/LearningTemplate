@@ -1,9 +1,9 @@
 /**
  * @file AssetIO.h
- * @brief 리소스 id 를 해석해 낱개 파일 또는 마운트된 VFS .pack 에서 읽습니다. 경로 해석은 AssetPaths 가 맡습니다.
- * @details 입구는 둘로 나뉩니다. 리소스 입구(`read*Resource` · `hasAsset` · `collectAssets`)는 리소스 id 만 받고, 디스크 입구(`readTextFile` ·
- *          `readBinaryFile`)는 디스크 경로만 받습니다. 리소스 입구에 OS 경로를 넣으면 구성과 무관하게 오류로 멈춥니다 — 예전에는 Dev 가 받고 배포본만
- *          거절해 잘못 넣은 호출이 배포 테스트에서야 드러났습니다. 리소스 입구의 인자는 `AssetID` 라 일반 문자열 · 디스크 경로를
+ * @brief 에셋 id 를 해석해 낱개 파일 또는 마운트된 VFS .pack 에서 읽습니다. 경로 해석은 AssetPaths 가 맡습니다.
+ * @details 입구는 둘로 나뉩니다. 에셋 입구(`read*Resource` · `hasAsset` · `collectAssets`)는 에셋 id 만 받고, 디스크 입구(`readTextFile` ·
+ *          `readBinaryFile`)는 디스크 경로만 받습니다. 에셋 입구에 OS 경로를 넣으면 구성과 무관하게 오류로 멈춥니다 — 예전에는 Dev 가 받고 배포본만
+ *          거절해 잘못 넣은 호출이 배포 테스트에서야 드러났습니다. 에셋 입구의 인자는 `AssetID` 라 일반 문자열 · 디스크 경로를
  *          그대로 넘기면 컴파일되지 않는다.
  */
 #pragma once
@@ -23,20 +23,20 @@ namespace sw
 
     class AsyncReadHandle;
 
-    /** @brief 리소스 폴더 나열(`AssetIO::collectAssets`)의 결과입니다. 폴더가 없는 것과 나열에 실패한 것을 가릅니다. */
+    /** @brief 에셋 폴더 나열(`AssetIO::collectAssets`)의 결과입니다. 폴더가 없는 것과 나열에 실패한 것을 가릅니다. */
     enum class AssetFolderListing : uint8
     {
         Listed,        ///< 폴더가 있었다(낱개 폴더 또는 팩 항목). 거른 결과가 비어 있을 수 있다
         FolderMissing, ///< 어느 팩에도, (낱개 파일을 허용하면) 디스크에도 그 폴더가 없다
-        Failed,        ///< 폴더 인자가 리소스 id 가 아니거나 디스크 폴더를 읽지 못했다(오류 로그를 남겼다)
+        Failed,        ///< 폴더 인자가 에셋 id 가 아니거나 디스크 폴더를 읽지 못했다(오류 로그를 남겼다)
     };
 
-    /** @brief 리소스 하나의 비동기 읽기가 끝났을 때 불립니다. 성공이면 다 읽은(팩이면 풀고 CRC 까지 맞춘) 바이트이고, 옮겨 가져도 됩니다. */
+    /** @brief 에셋 하나의 비동기 읽기가 끝났을 때 불립니다. 성공이면 다 읽은(팩이면 풀고 CRC 까지 맞춘) 바이트이고, 옮겨 가져도 됩니다. */
     using AssetReadCompleteDelegate = Delegate<void( bool bSuccess, vector<uint8>& bytes )>;
 
     /**
      * @class AssetIO
-     * @brief 리소스를 읽는 창구입니다(동기 · 비동기 · 존재 확인 · 팩 매니저).
+     * @brief 에셋을 읽는 창구입니다(동기 · 비동기 · 존재 확인 · 팩 매니저).
      * @note 찾는 순서는 하나입니다 — 낱개 파일(허용될 때, 붙인 디스크 도메인은 늘) · 마운트된 팩. 에셋 소유권은 AssetManager 에 있습니다.
      */
     class SW_API AssetIO
@@ -54,69 +54,69 @@ namespace sw
          */
         static bool usesSource();
         /**
-         * @brief 리소스 id 를 해석해 텍스트로 읽습니다. 낱개 파일 우선이 켜져 있으면 디스크를 먼저, 꺼져 있으면 마운트된 팩만 봅니다.
+         * @brief 에셋 id 를 해석해 텍스트로 읽습니다. 낱개 파일 우선이 켜져 있으면 디스크를 먼저, 꺼져 있으면 마운트된 팩만 봅니다.
          *        OS 경로는 받지 않습니다 — 모든 구성에서 오류 로그를 남기고 false 입니다. 디스크 파일은
-         *        `readTextFile` 로, 루트 밖 폴더를 리소스로 읽으려면 `AssetPaths::mountDiskDomain` 으로 붙여 id 로 읽습니다.
-         * @param id 리소스 id. 풀지 못하면 false 입니다(작업 폴더 기준 경로로 다시 열어 보지 않는다)
+         *        `readTextFile` 로, 루트 밖 폴더를 에셋으로 읽으려면 `AssetPaths::mountDiskDomain` 으로 붙여 id 로 읽습니다.
+         * @param id 에셋 id. 풀지 못하면 false 입니다(작업 폴더 기준 경로로 다시 열어 보지 않는다)
          * @param outText 읽은 UTF-8 본문
          * @param pOutAbsPath 실제로 쓴 절대 경로(nullptr 가능)
          * @return 파일을 읽었으면 true 입니다.
          */
         [[nodiscard]] static bool readTextAsset( const AssetID& id, string& outText, string* pOutAbsPath = nullptr );
         /**
-         * @brief 디스크 경로(절대 경로 또는 작업 폴더 기준)의 파일을 텍스트로 읽습니다. 리소스 id 로 풀지 않습니다.
+         * @brief 디스크 경로(절대 경로 또는 작업 폴더 기준)의 파일을 텍스트로 읽습니다. 에셋 id 로 풀지 않습니다.
          * @details 경로로 읽는 문서 로더(`XMLDocument::loadFromFile` · `JSONDocument::loadFromFile`)가 쓴다. 쿠킹 작업 안이면 그 작업의 입력으로 기록하고,
          *          쿠킹 세션 안인데 작업 밖이면 실패한다(`CookJob::allowDiskRead`) — `FileUtil` 로 바로 읽으면 기록에서 빠진다.
          */
         [[nodiscard]] static bool readTextFile( const DiskPath& filePath, string& outText );
-        /** @brief 디스크 경로의 파일을 바이트로 읽습니다. 리소스 id 로 풀지 않습니다. 쿠킹 기록 규칙은 `readTextFile` 과 같습니다. */
+        /** @brief 디스크 경로의 파일을 바이트로 읽습니다. 에셋 id 로 풀지 않습니다. 쿠킹 기록 규칙은 `readTextFile` 과 같습니다. */
         [[nodiscard]] static bool readBinaryFile( const AbsolutePath& filePath, vector<uint8>& outBytes );
 
         /**
-         * @brief 상대 리소스 경로의 바이너리 데이터를 로드합니다. 찾는 순서는 `readTextAsset` 와 같습니다.
-         * @param id 리소스 id
+         * @brief 상대 에셋 경로의 바이너리 데이터를 로드합니다. 찾는 순서는 `readTextAsset` 와 같습니다.
+         * @param id 에셋 id
          * @param outBytes 읽은 바이너리 데이터
          * @return 파일을 읽었으면 true 입니다.
          */
         [[nodiscard]] static bool readBinaryAsset( const AssetID& id, vector<uint8>& outBytes );
 
         /**
-         * @brief 리소스 하나를 비동기로 읽습니다. 찾는 순서는 `readBinaryAsset` 와 같고(낱개 파일 · 팩, OS 경로는 오류), 읽기는
+         * @brief 에셋 하나를 비동기로 읽습니다. 찾는 순서는 `readBinaryAsset` 와 같고(낱개 파일 · 팩, OS 경로는 오류), 읽기는
          *        `engine::getSubsystem<AsyncFileIO>()` 가 합니다. 팩 항목의 압축 해제 · CRC 는 완료를 받은 태스크 워커에서 합니다.
          * @details 찾는 일(낱개 파일의 존재 확인 · 팩 색인)은 부른 스레드에서 하고, 바이트 읽기만 IO 스레드로 갑니다.
          * @return 건 읽기의 핸들(취소 · 기다리기). 어디에도 없으면 아무것도 걸지 않고 `isValid() == false` 이며 @p onComplete 는 불리지 않습니다.
          */
         static AsyncReadHandle readBinaryAssetAsync( const AssetID& id, AsyncIOPriority priority, const AssetReadCompleteDelegate& onComplete );
         /**
-         * @brief 리소스의 구간 [@p offset, @p offset + @p size) 를 비동기로 읽습니다 — 찾는 순서는 `readBinaryAssetAsync` 와 같다(텍스처 밉 스트리밍, MR-2).
+         * @brief 에셋의 구간 [@p offset, @p offset + @p size) 를 비동기로 읽습니다 — 찾는 순서는 `readBinaryAssetAsync` 와 같다(텍스처 밉 스트리밍, MR-2).
          * @details 낱개 파일은 `IContentFileSource::readRangeAsync`, 팩은 저장(Stored) 항목이면 그 구간, 블록 압축 항목이면 걸친 블록만 풀어 자른 구간이다(`PackReader::readRangeAsync`).
          * @return 어디에도 없거나 구간을 읽을 수 없으면 `isValid() == false` 이고 @p onComplete 는 불리지 않습니다.
          */
         /**
-         * @brief 리소스의 바이트 길이입니다(없으면 nullopt). 찾는 순서는 읽기와 같다. 낱개 파일은 파일 길이, 팩은 항목의 원본 크기다(MR-3, 범위 읽기의 머리 풀이).
+         * @brief 에셋의 바이트 길이입니다(없으면 nullopt). 찾는 순서는 읽기와 같다. 낱개 파일은 파일 길이, 팩은 항목의 원본 크기다(MR-3, 범위 읽기의 머리 풀이).
          */
         [[nodiscard]] static optional<uint64> findAssetSize( const AssetID& id );
         static AsyncReadHandle                readBinaryAssetRangeAsync( const AssetID& id, uint64 offset, uint64 size, AsyncIOPriority priority, const AssetReadCompleteDelegate& onComplete );
         /**
-         * @brief 리소스의 구간 [@p offset, @p offset + @p size) 를 동기로 읽습니다 — 찾는 순서는 `readBinaryAsset` 와 같다(낱개 파일은 위치 지정 읽기 `AsyncFileHandle::readAt`, 팩은 `PackReader::readRange`).
+         * @brief 에셋의 구간 [@p offset, @p offset + @p size) 를 동기로 읽습니다 — 찾는 순서는 `readBinaryAsset` 와 같다(낱개 파일은 위치 지정 읽기 `AsyncFileHandle::readAt`, 팩은 `PackReader::readRange`).
          * @details 쿠킹본의 머리만 읽는 로더(씬 셀 색인 · 내비메시 타일 색인)가 쓰며 파일 전체를 읽지 않는다. 쿠킹 작업 안이면 실패한다(구간만으로는 입력 해시를 만들 수 없다. 쿠커는 전체를 읽는다).
          * @return 어디에도 없거나 구간이 파일 끝을 넘으면 false 이고 @p outBytes 는 비어 있습니다.
          */
         [[nodiscard]] static bool readBinaryAssetRange( const AssetID& id, uint64 offset, uint64 size, vector<uint8>& outBytes );
 
         /**
-         * @brief 리소스가 있는지 검사합니다(VFS 팩 또는 낱개 파일). 찾는 규칙은 읽기와 같습니다 — OS 경로는 오류 로그를 남기고 false 입니다.
-         * @param id 리소스 id
+         * @brief 에셋이 있는지 검사합니다(VFS 팩 또는 낱개 파일). 찾는 규칙은 읽기와 같습니다 — OS 경로는 오류 로그를 남기고 false 입니다.
+         * @param id 에셋 id
          * @return 있으면 true 입니다.
          */
         static bool hasAsset( const AssetID& id );
 
         /**
-         * @brief 리소스 폴더 바로 아래 파일(하위 폴더 안은 빼고)의 리소스 id 를 모읍니다. 런타임 코드가 리소스 폴더를 훑는 길은 이것 하나입니다 —
+         * @brief 에셋 폴더 바로 아래 파일(하위 폴더 안은 빼고)의 에셋 id 를 모읍니다. 런타임 코드가 에셋 폴더를 훑는 길은 이것 하나입니다 —
          *        `FileUtil::collectFiles` 는 디스크만 보므로 팩으로 쿠킹한 빌드에서 폴더가 비어 보입니다.
-         * @param folderID 리소스 폴더 id(예: "common/data/appearance/presets"). OS 절대 경로와 `..` 는 받지 않습니다.
+         * @param folderID 에셋 폴더 id(예: "common/data/appearance/presets"). OS 절대 경로와 `..` 는 받지 않습니다.
          * @param extension 이름 끝 거르기(대소문자 무시, 예: ".appearance.xml"). 빈 값이면 모두입니다.
-         * @param outListID 찾은 리소스 id. 마운트된 모든 팩과, 낱개 파일을 허용하면 디스크 폴더의 합집합입니다. 대소문자를 무시해 중복을 없애고
+         * @param outListID 찾은 에셋 id. 마운트된 모든 팩과, 낱개 파일을 허용하면 디스크 폴더의 합집합입니다. 대소문자를 무시해 중복을 없애고
          *                    (디스크 · 높은 우선순위 팩의 표기가 남는다) 소문자 기준 이름순으로 정렬합니다 — 실행마다 같습니다.
          * @return 폴더가 없으면 `FolderMissing`, 인자가 잘못됐거나 디스크 폴더를 읽지 못하면 `Failed` 입니다. 그 둘이면 @p outListID 는 비어 있습니다.
          */

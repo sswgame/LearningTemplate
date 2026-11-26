@@ -212,7 +212,7 @@ namespace sw::editor
 
         /**
          * @brief glTF 파일 하나를 @p rule 로 `.mesh` 로 임포트합니다. 스킨드 모델이면 옆 폴더에도 씁니다.
-         * @param assetPaths 산출물 경로를 리소스 id 로 바꿀 경로 상태 — 워커에서 불리므로 서비스를 찾지 않고 부른 쪽이 넘긴다.
+         * @param assetPaths 산출물 경로를 에셋 id 로 바꿀 경로 상태 — 워커에서 불리므로 서비스를 찾지 않고 부른 쪽이 넘긴다.
          */
         [[nodiscard]] static bool importModel( const AssetPaths& assetPaths, const AbsolutePath& sourcePath, const ModelImportRule& rule, const AbsolutePath& outputPath, TaskManager* pTaskManager = nullptr );
         /**
@@ -230,9 +230,9 @@ namespace sw::editor
         static void importChangedSources( AssetSourceBatch& batch );
 
         /**
-         * @brief 리소스 루트 아래 모든 `models_raw/` 의 원본을 그 폴더의 `import.stamp` 와 대조합니다. @p mode 가 ImportStale 이면 어긋난 원본을 임포트합니다.
+         * @brief 콘텐츠 루트 아래 모든 `models_raw/` 의 원본을 그 폴더의 `import.stamp` 와 대조합니다. @p mode 가 ImportStale 이면 어긋난 원본을 임포트합니다.
          * @details 절차는 `AssetImportStampUtil::importAll` 을 따른다. 텍스처와 같은 스탬프 형식과 판정을 쓴다. 원본마다 @p config 에서 규칙을 고른다.
-         *          @p assetPaths 는 워커의 임포트가 산출물을 리소스 id 로 바꿀 때 쓴다(부른 스레드가 찾아 넘긴다).
+         *          @p assetPaths 는 워커의 임포트가 산출물을 에셋 id 로 바꿀 때 쓴다(부른 스레드가 찾아 넘긴다).
          */
         [[nodiscard]] static AssetImportSummary importAllModels( const AssetPaths& assetPaths, const AbsolutePath& resourceRoot, const ModelImportConfig& config, AssetImportMode mode );
         /**

@@ -5,7 +5,7 @@
  *          캐시 위치는 메시 로컬 공간이다 — 모디파이어 공간으로 옮겨 넣는다(기즈모를 옮겨도 캐시 모양은 그대로).
  *          재생 위치 = (시간 × `Speed` + `Time Offset`) × fps 프레임, 두 프레임 사이는 선형 보간. `Loop` 면 감고, 아니면 끝 프레임에 멈춘다.
  *          경로가 비면 항등이다. 읽기 실패 · 형식 틀림 · 정점 수 불일치면 경고하고 항등이다. 법선은 건드리지 않는다(스택의 법선 재계산을 쓴다).
- *          경로는 파일 경로로 그대로 연다(리소스 id 를 절대 경로로 푸는 일은 엔진 서비스가 필요해 확장 모듈에서 하지 않는다).
+ *          경로는 파일 경로로 그대로 연다(에셋 id 를 절대 경로로 푸는 일은 엔진 서비스가 필요해 확장 모듈에서 하지 않는다).
  *          읽은 파일은 경로가 같은 동안 모디파이어 안에 붙잡아 둔다 — 스택은 게임 스레드 한 곳에서만 건다.
  */
 #include "pch.h"
@@ -40,7 +40,7 @@ namespace sw::editor
             static constexpr size_t kHeaderSize = 12;
 
             // 파일 확장자는 .mfpc(mesh-modifier point cache)다. 이 모디파이어가 정한 형식이며, 에셋 슬롯 필터도 이 확장자만 받는다.
-            // 경로는 에셋 슬롯이 고른 리소스 id 다 - 런타임 읽기 입구(`AssetIO`)로 읽는다(예전에는 `FileUtil` 이 받아 작업 폴더 기준으로 열었다).
+            // 경로는 에셋 슬롯이 고른 에셋 id 다 - 런타임 읽기 입구(`AssetIO`)로 읽는다(예전에는 `FileUtil` 이 받아 작업 폴더 기준으로 열었다).
             [[nodiscard]] static bool load( string_view path, PointCacheData& outData )
             {
                 outData       = PointCacheData{};

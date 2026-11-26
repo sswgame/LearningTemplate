@@ -81,7 +81,7 @@ namespace sw
     struct SW_API CanvasTextureRef
     {
         shared_ptr<const Texture2D> _texture{};                                     ///< 이미지와 9-슬라이스. 패킷이 수명을 잡는다(머티리얼과 같은 규칙).
-        hashed_string               _texturePath{};                                 ///< 이미지의 리소스 경로(DDS). 렌더 스레드가 찾는다. 텍스처 객체가 없을 때 쓴다.
+        hashed_string               _texturePath{};                                 ///< 이미지의 에셋 경로(DDS). 렌더 스레드가 찾는다. 텍스처 객체가 없을 때 쓴다.
         uint16                      _atlasPage{ constant::invalid_index::kUint16 }; ///< 글리프 아틀라스 페이지(텍스처와 경로가 없을 때)
 
         /** @brief 같은 텍스처를 가리키면 true 입니다. */

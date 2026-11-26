@@ -129,7 +129,7 @@ namespace sw::editor
         const string  marker     = ImportedAssetStoreInternal::makeMarker();
         for ( const string& reference : listReference )
         {
-            // 리소스 경로의 도메인(`common` · `game/x`)을 디스크 경로에서 찾아 리소스 루트를 얻는다.
+            // 에셋 경로의 도메인(`common` · `game/x`)을 디스크 경로에서 찾아 콘텐츠 루트를 얻는다.
             const string                             domain = reference.substr( 0, reference.find( marker ) );
             StringBuilder<constant::buffer::kMax256> rootBuilder;
             rootBuilder.appendFormat( "/%#/%#/", domain, kModelFolderName );

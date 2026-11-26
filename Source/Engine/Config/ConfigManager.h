@@ -408,7 +408,7 @@ namespace sw
         [[nodiscard]] static bool readConfigXMLDocument( void* pInstance, const TypeInfo& typeInfo, string_view documentXML, const utf8* pSourceLabel );
         /**
          * @brief 리소스 글을 합친 뒤(`AssetComposer::compose` — 부모 · 조건 · 덮어쓰기 층) `readConfigXMLDocument` 규칙으로 읽습니다.
-         * @details 파일이 곧 리플렉션 형식 하나인 리소스(`FacialRig` · `SequenceAsset` …)의 읽기 입구다. 리소스 id 로 읽으면 @p context 에 `withAsset` 을 실어 넘긴다 —
+         * @details 파일이 곧 리플렉션 형식 하나인 리소스(`FacialRig` · `SequenceAsset` …)의 읽기 입구다. 에셋 id 로 읽으면 @p context 에 `withAsset` 을 실어 넘긴다 —
          *          id 가 없으면 층 · 다시 읽기 기록 · 접속 대조를 받지 못한다(글 입구는 `AssetComposeContext::forType` 그대로). 합치지 못하면 까닭을 남기고 false 입니다.
          */
         [[nodiscard]] static bool readComposedXMLDocument( void* pInstance, const TypeInfo& typeInfo, string_view documentXML, string_view sourceLabel, const AssetComposeContext& context );

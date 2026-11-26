@@ -56,8 +56,8 @@ namespace sw::editor
      */
     struct EditorAssetMoveEvent
     {
-        vector<string> _listOldID;       ///< 옮기기마다 옛 리소스 id
-        vector<string> _listNewID;       ///< 같은 칸의 새 리소스 id
+        vector<string> _listOldID;       ///< 옮기기마다 옛 에셋 id
+        vector<string> _listNewID;       ///< 같은 칸의 새 에셋 id
         vector<string> _listRewrittenID; ///< 글을 고친 참조 파일(옮긴 뒤의 id — 함께 옮긴 참조자는 새 id)
     };
     /** @brief 에셋 옮김 알림입니다(`EditorWorkspace::notifyAssetsMoved`). */
@@ -79,7 +79,7 @@ namespace sw::editor
     struct EditorSceneFileRequest
     {
         EditorSceneFileRequestKind _kind{ EditorSceneFileRequestKind::Open };
-        string                     _path;                                ///< Open: 리소스 id(디스크 경로는 받는 쪽이 `AssetPaths::toAssetID` 로 바꿔 온다), SaveAs: 디스크 절대 경로
+        string                     _path;                                ///< Open: 에셋 id(디스크 경로는 받는 쪽이 `AssetPaths::toAssetID` 로 바꿔 온다), SaveAs: 디스크 절대 경로
         EditorUnsavedChoice        _choice{ EditorUnsavedChoice::None }; ///< UnsavedChoice: 확인 창에서 고른 것
     };
 
@@ -168,7 +168,7 @@ namespace sw::editor
         // ------------------------------------------------------------------------------
         // 5) 씬 파일 요청. UI 는 요청만 남기고 게임 단계(`EditorGameStepOrder::kSceneSession`)가 요청한 순서대로 연다 · 저장한다
         // ------------------------------------------------------------------------------
-        /** @brief 리소스 id @p path 의 씬 열기를 요청합니다(미저장 확인은 게임 단계의 `tryOpenScene` 이 띄운다). */
+        /** @brief 에셋 id @p path 의 씬 열기를 요청합니다(미저장 확인은 게임 단계의 `tryOpenScene` 이 띄운다). */
         void requestLoadScene( string_view path );
         /** @brief 활성 씬을 디스크 절대 경로 @p absPath 에 다른 이름으로 저장하기를 요청합니다(Save As 대화상자 결과). */
         void requestSaveSceneAs( string_view absPath );

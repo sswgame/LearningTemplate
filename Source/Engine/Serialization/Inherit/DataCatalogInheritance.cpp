@@ -214,7 +214,7 @@ namespace sw
                 vector<LoadedFile>           _listFile;
             };
 
-            /** @brief 항목 하나의 부모를 `<id>` 또는 `<리소스 id>#<id>` 로 찾아 래퍼 꼴의 글로 돌려줍니다. */
+            /** @brief 항목 하나의 부모를 `<id>` 또는 `<에셋 id>#<id>` 로 찾아 래퍼 꼴의 글로 돌려줍니다. */
             class EntrySource final : public DataInheritanceSource
             {
             public:
@@ -349,7 +349,7 @@ namespace sw
                 return true;
             }
 
-            /** @brief 표를 읽습니다. 리소스라 쿠킹 작업 안이면 그 작업의 입력이 되고, 배포 구성은 엔진 팩에서 읽습니다. 읽지 못하면 오류입니다. */
+            /** @brief 표를 읽습니다. 에셋이라 쿠킹 작업 안이면 그 작업의 입력이 되고, 배포 구성은 엔진 팩에서 읽습니다. 읽지 못하면 오류입니다. */
             [[nodiscard]] static bool readTable( string& outText )
             {
                 if ( AssetIO::readTextAsset( AssetID{ DataCatalogInheritance::kTableAssetID }, outText ) )

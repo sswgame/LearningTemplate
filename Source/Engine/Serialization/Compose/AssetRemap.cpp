@@ -29,8 +29,8 @@ namespace sw
             /** @brief 표의 줄 하나입니다. */
             struct Entry
             {
-                string       _assetID; ///< 바꿀 리소스 id
-                string       _target;  ///< 조건이 참이면 읽을 리소스 id
+                string       _assetID; ///< 바꿀 에셋 id
+                string       _target;  ///< 조건이 참이면 읽을 에셋 id
                 AssetTagTest _test;    ///< 컴파일한 `when`
             };
 
@@ -39,7 +39,7 @@ namespace sw
             {
                 mutex          _mutex{};
                 vector<Entry>  _listEntry{};
-                atomic<uint32> _entryCount{ 0 }; ///< 표가 비었는지 잠금 없이 묻는다 — 모든 리소스 읽기가 지나는 자리다
+                atomic<uint32> _entryCount{ 0 }; ///< 표가 비었는지 잠금 없이 묻는다 — 모든 에셋 읽기가 지나는 자리다
             };
 
             static bool hasEntry( const vector<Entry>& listEntry, string_view assetID )

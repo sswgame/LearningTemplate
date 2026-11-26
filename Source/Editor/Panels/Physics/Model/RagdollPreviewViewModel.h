@@ -138,7 +138,7 @@ namespace sw::editor
         [[nodiscard]] bool saveDocument( AssetWriter& writer );
         /** @brief 이 에셋을 고칠 수 있으면 true 입니다. 물려받은 에셋(`_base`)은 부모와 다른 칸만 쓴다. */
         [[nodiscard]] bool isEditable() const;
-        /** @brief 물려받은 부모의 리소스 id 입니다. 부모가 없으면 빈 글입니다. */
+        /** @brief 물려받은 부모의 에셋 id 입니다. 부모가 없으면 빈 글입니다. */
         const string& getBaseID() const;
         /** @brief 고른 바디의 그리드가 감출 칸입니다 — 부모에 있는 바디의 본(열쇠)은 바꾸면 다른 바디가 된다. */
         vector<hashed_string> collectHiddenProperties() const;

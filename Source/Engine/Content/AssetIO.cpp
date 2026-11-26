@@ -38,9 +38,9 @@ namespace sw
         }
 
         /**
-         * @brief 리소스 id 가 아닌 OS 경로를 리소스 입구에 넣었으면 오류를 남기고 true 입니다.
-         * @details 리소스 입구는 리소스 id 만 받는다. 디스크 파일은 디스크 입구(`AssetIO::readTextFile` · `readBinaryFile`, 로더의 `*FromDiskFile`)로
-         *          읽고, 루트 밖 폴더를 리소스로 읽어야 하면 `AssetPaths::mountDiskDomain` 으로 붙인다. 예전에는 OS 절대 경로를 디스크에서 바로 읽고
+         * @brief 에셋 id 가 아닌 OS 경로를 에셋 입구에 넣었으면 오류를 남기고 true 입니다.
+         * @details 에셋 입구는 에셋 id 만 받는다. 디스크 파일은 디스크 입구(`AssetIO::readTextFile` · `readBinaryFile`, 로더의 `*FromDiskFile`)로
+         *          읽고, 루트 밖 폴더를 에셋으로 읽어야 하면 `AssetPaths::mountDiskDomain` 으로 붙인다. 예전에는 OS 절대 경로를 디스크에서 바로 읽고
          *          배포 구성만 루트 안 경로를 거절해, 잘못 넣은 호출이 Dev 테스트를 지나 Shipping 에서야 드러났다(2026-10-19 CI).
          */
         bool shouldRejectOSPath( string_view relativePath )
@@ -54,12 +54,12 @@ namespace sw
         }
 
         /**
-         * @brief 리소스 하나를 찾아 읽습니다. 순서는 텍스트 · 바이너리가 같습니다.
+         * @brief 에셋 하나를 찾아 읽습니다. 순서는 텍스트 · 바이너리가 같습니다.
          * @param readFromDisk 디스크 절대 경로에서 읽는 방법.
          * @param readFromPack 마운트된 팩에서 읽는 방법(팩 매니저를 받고, 찾았으면 팩 경로를 `outPackPath` 에 담습니다).
-         * @details 인자는 리소스 id 하나다 — OS 경로는 오류로 거절한다(`shouldRejectOSPath`). 순서는 둘입니다. (1) 낱개 파일 우선이 켜져 있거나 붙인 디스크
+         * @details 인자는 에셋 id 하나다 — OS 경로는 오류로 거절한다(`shouldRejectOSPath`). 순서는 둘입니다. (1) 낱개 파일 우선이 켜져 있거나 붙인 디스크
          *          도메인(`AssetPaths::mountDiskDomain`)이면 디스크, (2) 마운트된 팩. 붙인 도메인은 팩에 없으므로 (2) 를 보지 않는다.
-         *          풀지 못한 id 를 작업 폴더 기준 경로로 다시 열어 보는 마지막 단계는 없앴다 — 리소스 id 가 아닌 것을 디스크에서 찾는 폴백이었다.
+         *          풀지 못한 id 를 작업 폴더 기준 경로로 다시 열어 보는 마지막 단계는 없앴다 — 에셋 id 가 아닌 것을 디스크에서 찾는 폴백이었다.
          *
          *          `readTextAsset` 와 `readBinaryAsset` 가 이 순서 하나를 씁니다 — 두 벌이면 한쪽만 고쳐 텍스트와
          *          바이너리가 다른 파일을 읽게 됩니다.
@@ -338,7 +338,7 @@ namespace sw
                 return true;
         }
         const bool bInPack = bDiskDomain == false && pPackManager != nullptr && pPackManager->hasFile( FileUtil::normalizePath( relativePath ).str() );
-        // "없음" 도 쿠킹의 입력이다(못 찾은 읽기와 같다) — 층 파일처럼 있을 때만 읽는 리소스가 나중에 생기면 다시 구워야 한다. 있으면 뒤따르는 읽기가 내용을 기록한다.
+        // "없음" 도 쿠킹의 입력이다(못 찾은 읽기와 같다) — 층 파일처럼 있을 때만 읽는 에셋이 나중에 생기면 다시 구워야 한다. 있으면 뒤따르는 읽기가 내용을 기록한다.
         if ( bInPack == false )
             CookJob::allowMissingRead( id );
         return bInPack;

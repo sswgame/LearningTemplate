@@ -130,7 +130,7 @@ SW_TEST_CASE( ModManifestTest, ReadsLayersUnderTheOverrideRules )
     SW_EXPECT_EQUAL( string( "first,second" ), TestModManifestInternal::resolveIDs( listManifest ) );
 }
 
-// id 는 폴더 이름과 리소스 경로가 된다 — 구분자 · `..` · 대문자 · 드라이브는 형식에서 막는다.
+// id 는 폴더 이름과 에셋 경로가 된다 — 구분자 · `..` · 대문자 · 드라이브는 형식에서 막는다.
 SW_TEST_CASE( ModManifestTest, IDRuleBlocksPathEscape )
 {
     SW_EXPECT_TRUE( ModManifest::isValidID( "demo_lantern" ) );
@@ -171,7 +171,7 @@ SW_TEST_CASE( ModManifestTest, RejectsMalformedManifests )
         manifest ) );
 }
 
-// 덮어쓰기는 정규형 기본 리소스 id 만 — 경로 탈출 · 절대 경로 · 대문자 · 다른 모드의 리소스는 거절한다.
+// 덮어쓰기는 정규형 기본 에셋 id 만 — 경로 탈출 · 절대 경로 · 대문자 · 다른 모드의 리소스는 거절한다.
 SW_TEST_CASE( ModManifestTest, RejectsOverridesOutsideBaseResources )
 {
     using Internal = TestModManifestInternal;

@@ -1689,7 +1689,7 @@ namespace sw
 {
     namespace
     {
-        /** @brief 공유 캐시의 로더입니다 — 리소스 id 로 읽고 검증한다(`RenderPipelineAsset::loadFromXMLFile`). */
+        /** @brief 공유 캐시의 로더입니다 — 에셋 id 로 읽고 검증한다(`RenderPipelineAsset::loadFromXMLFile`). */
         bool loadPipelineAsset( const AssetID& assetID, RenderPipelineAsset& outAsset )
         {
             return outAsset.loadFromXMLFile( assetID );

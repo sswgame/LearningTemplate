@@ -102,7 +102,7 @@ namespace sw::editor
         /** @brief 미리보는 문서 경로입니다. 뷰가 경로 칸을 그리고, 확정한 글은 문서 열기(패널의 워크스페이스 포커스)로 넘깁니다 — 미리볼 문서를 바꾸는 곳은 `openDocument` 하나다. */
         EditableAssetPath& getDocumentPath() { return _documentPath; }
         /**
-         * @brief @p assetPath(리소스 id)를 미리볼 문서로 정하고 미리보기를 닫습니다(고친 값을 버린다). 다음 `syncPreview` 가 디스크에서 다시 짓습니다.
+         * @brief @p assetPath(에셋 id)를 미리볼 문서로 정하고 미리보기를 닫습니다(고친 값을 버린다). 다음 `syncPreview` 가 디스크에서 다시 짓습니다.
          * @details 빈 경로는 지금 문서(처음에는 에디터 도구 기본 문서)를 다시 짓는다 — 패널이 문서 기반(`EditorDocumentPanel::loadDocument`)으로 부른다.
          */
         void openDocument( string_view assetPath );

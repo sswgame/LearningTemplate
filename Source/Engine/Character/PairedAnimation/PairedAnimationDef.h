@@ -235,7 +235,7 @@ namespace sw
         const PairedAnimationContentDef& getContent() const { return _content; }
 
         /**
-         * @brief 읽은 리소스 경로입니다(`loadFromAsset`). 텍스트에서 읽었거나 코드가 만든 에셋은 비어 있습니다.
+         * @brief 읽은 에셋 경로입니다(`loadFromAsset`). 텍스트에서 읽었거나 코드가 만든 에셋은 비어 있습니다.
          * @details 네트워크 복제(`GF_NetPairedAnimation`)는 이 경로로 클라이언트가 같은 에셋을 받게 한다 — 경로가 빈 에셋의 세션은 복제할 수 없다(오류).
          */
         const string& getSourcePath() const { return _sourcePath; }
@@ -262,7 +262,7 @@ namespace sw
         static void computeAlignTarget( const float3& anchorPosition, float32 anchorYaw, const PairedAnimationRoleDef& role, float3& outPosition, float32& outYaw );
 
     private:
-        /** @brief 리소스 경로의 파일을 읽습니다. 종류의 로더(공유 캐시)만 부른다 — 쓰는 쪽은 `SharedAssetCache<PairedAnimationDef>::acquire` 로 한 벌을 쥔다. */
+        /** @brief 에셋 경로의 파일을 읽습니다. 종류의 로더(공유 캐시)만 부른다 — 쓰는 쪽은 `SharedAssetCache<PairedAnimationDef>::acquire` 로 한 벌을 쥔다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         void               readRoot( const XMLNode& root, CharacterDataReader& reader );
         void               readRole( const XMLNode& node, CharacterDataReader& reader );

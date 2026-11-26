@@ -79,8 +79,8 @@ namespace sw::editor
             };
 
             /**
-             * @brief 도구 문서 경로를 디스크 경로로 풉니다 - 절대 경로면 그대로, 아니면 리소스 id 다(읽기는 `findLooseFile` - 없으면 빈 글, 쓰기는 `toDiskPath`).
-             * @details 예전에는 리소스로 못 찾으면 받은 글을 그대로 디스크 경로로 썼다(리소스 id 가 작업 폴더 상대 경로로 열렸다). 읽기에 쓰기 해석을 쓰면
+             * @brief 도구 문서 경로를 디스크 경로로 풉니다 - 절대 경로면 그대로, 아니면 에셋 id 다(읽기는 `findLooseFile` - 없으면 빈 글, 쓰기는 `toDiskPath`).
+             * @details 예전에는 리소스로 못 찾으면 받은 글을 그대로 디스크 경로로 썼다(에셋 id 가 작업 폴더 상대 경로로 열렸다). 읽기에 쓰기 해석을 쓰면
              *          아직 없는 문서(새 문서)를 열 때마다 "만들 도메인을 모른다" 오류가 남았다.
              */
             static DiskPath resolveToolDocumentPath( string_view path, const DocumentUse use )
@@ -108,7 +108,7 @@ namespace sw::editor
                 return EditorPaths::resolveEditorStateFile( desc._pDefaultFileName );
             }
 
-            // 도구 문서는 디스크 파일이다(받은 리소스 id 를 낱개 파일로 풀었거나 `Saved/Editor` 기본 문서) — 디스크 입구로 읽는다. 저장(`writeDocument`)도 디스크다.
+            // 도구 문서는 디스크 파일이다(받은 에셋 id 를 낱개 파일로 풀었거나 `Saved/Editor` 기본 문서) — 디스크 입구로 읽는다. 저장(`writeDocument`)도 디스크다.
             template <typename TAsset>
             [[nodiscard]] static bool readDocument( TAsset& outData, const DiskPath& resolved )
             {
@@ -142,7 +142,7 @@ namespace sw::editor
                 return data.save( resolved );
             }
 
-            /** @brief 상태 문구에 보일 경로입니다. 받은 경로(리소스 id)가 있으면 그것이고, 없으면 해석한 경로입니다. */
+            /** @brief 상태 문구에 보일 경로입니다. 받은 경로(에셋 id)가 있으면 그것이고, 없으면 해석한 경로입니다. */
             static string makeShownPath( string_view path, const string& resolved ) { return path.empty() ? resolved : string{ path }; }
 
             /**

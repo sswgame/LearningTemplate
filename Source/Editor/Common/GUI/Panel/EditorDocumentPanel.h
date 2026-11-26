@@ -75,7 +75,7 @@ namespace sw::editor
         /** @brief 매칭된 포커스 경로를 반환합니다. 종류가 맞고 `canAcceptDocumentPath` 가 받는 경로만이며, 매칭이 없으면 빈 문자열입니다. */
         string_view getMatchingFocusedPath() const;
         /**
-         * @brief 이 패널이 @p assetPath(리소스 id)를 문서로 받으면 true 입니다. 기본은 종류만 맞으면 받습니다.
+         * @brief 이 패널이 @p assetPath(에셋 id)를 문서로 받으면 true 입니다. 기본은 종류만 맞으면 받습니다.
          * @details 한 종류 안의 일부만 다루는 패널이 좁힌다(Data 종류 중 `*.vfx.xml` 만 보는 VFX 미리보기). "Open..." 목록은 이 판정에 더해 파일의 첫 종류가 이 패널의 종류여야 한다 — 포커스는 그보다 넓다(스프라이트 클립은 포커스한 이미지를 아틀라스로 열지만, 이미지를 모두 목록에 넣지는 않는다).
          */
         virtual bool canAcceptDocumentPath( string_view assetPath ) const
@@ -110,7 +110,7 @@ namespace sw::editor
         const string&             getLoadedAssetPath() const { return _loadedAssetPath; }
         [[nodiscard]] string_view getDocumentAssetPath() const final { return _loadedAssetPath; }
         /**
-         * @brief 열린 문서(리소스 id)의 디스크 자리입니다 - 읽기와 쓰기가 같은 해석이다(R7, `AssetPaths::toDiskPath`: 전역 id 는 아직 없어도 그 도메인 아래, 상대 키는 이긴 있는 파일).
+         * @brief 열린 문서(에셋 id)의 디스크 자리입니다 - 읽기와 쓰기가 같은 해석이다(R7, `AssetPaths::toDiskPath`: 전역 id 는 아직 없어도 그 도메인 아래, 상대 키는 이긴 있는 파일).
          * @details 예전에는 패널마다 읽기는 `findLooseFile`, 쓰기는 다른 해석(못 찾으면 받은 글 그대로 · 쓸 자리 해석)을 따로 불렀다. 문서가 없거나 풀 수 없으면 빈 값이다(이유는 로그).
          */
         [[nodiscard]] optional<DiskPath> getDocumentDiskPath() const;
@@ -156,7 +156,7 @@ namespace sw::editor
          * @details 연 경로(`getLoadedAssetPath`) 말고 저장 · 다시 읽기 자리를 따로 든 패널(타일맵 · 캐릭터의 경로 칸, 프리팹의 격리 단계)이 그것을 고친다.
          */
         virtual void onAssetMoved( string_view /*oldPath*/, string_view /*newPath*/ ) {}
-        /** @brief @p path(리소스 id 또는 절대 경로)의 쓸 자리를 @p outListPath 에 더합니다 — 쓰기와 같은 해석(`AssetPaths::toDiskPath`)이다. 비었거나 풀지 못하면 더하지 않는다. */
+        /** @brief @p path(에셋 id 또는 절대 경로)의 쓸 자리를 @p outListPath 에 더합니다 — 쓰기와 같은 해석(`AssetPaths::toDiskPath`)이다. 비었거나 풀지 못하면 더하지 않는다. */
         static void appendFileToSave( string_view path, vector<DiskPath>& outListPath ); /**
                                                                                           * @brief 이 문서의 되돌리기 스택입니다 — 문서 패널마다 하나(감사 E-3). 문서 글 편집 · 미리보기 씬 편집 · 패널 모델의 명령이 모두 여기 간다.
                                                                                           * @details 예전에는 미리보기 없는 문서 패널(시퀀서 · 타일맵 · 대화 · UI 미리보기 …)이 씬과 전역 스택 하나를 써서, 플레이 경계(`suspendHistory`)가 그 기록을
@@ -238,7 +238,7 @@ namespace sw::editor
         unique_ptr<CommandStack>                 _pDocumentStack;          ///< 이 문서의 되돌리기 스택(`getDocumentCommandStack`). 작업 공간 형식이라 GUI 헤더는 앞 선언만 본다
         unique_ptr<CommandStackInteractionScope> _pStackInteraction;       ///< 쥔 구간 동안 문서 스택에 연 상호작용(`syncStackInteraction`) — 스택 뒤에 두어 먼저 사라진다
         vector<string>                           _listRecentPath;
-        vector<string>                           _listOpenCandidate; ///< 열기 팝업을 열 때 모은 이 종류의 에셋(리소스 id)
+        vector<string>                           _listOpenCandidate; ///< 열기 팝업을 열 때 모은 이 종류의 에셋(에셋 id)
         fixed_string<constant::buffer::kMax128>  _openFilter;
         string                                   _movedText;        ///< 문서를 옮길 때의 글 — 새 자리에서 다시 읽은 뒤 미저장이던 편집을 얹고, 글이 같으면 되돌리기 기록을 잇는다(`markDocumentLoaded`)
         uint32                                   _documentSerial;   ///< 연 문서의 번호(`acceptFocusedDocument` 마다 오른다) — 되돌리기 단계가 자기 문서인지 경로가 아니라 이것으로 본다(옮기면 경로가 바뀐다)

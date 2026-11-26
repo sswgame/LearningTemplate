@@ -48,7 +48,7 @@ namespace sw::editor
         /** @brief 색인이 있고, 넣지 않은 스캔이 없고, 마지막 스캔 뒤로 @p contentChangeSerial 이 오르지 않았으면 true 입니다. */
         bool isCurrent( uint64 contentChangeSerial ) const;
         /**
-         * @brief 파일 하나(리소스 id)를 색인에서 그 자리에서 다시 읽습니다. 색인이 아직 없으면 아무것도 하지 않습니다.
+         * @brief 파일 하나(에셋 id)를 색인에서 그 자리에서 다시 읽습니다. 색인이 아직 없으면 아무것도 하지 않습니다.
          * @details 연쇄 리로드가 바뀐 파일의 참조를 먼저 맞춘다 — 저장이 부모를 바꿨으면 옛 부모가 아니라 새 부모로 사슬을 따라야 한다.
          */
         void refreshFile( string_view assetID );

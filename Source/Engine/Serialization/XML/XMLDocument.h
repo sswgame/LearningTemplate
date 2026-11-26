@@ -394,7 +394,7 @@ namespace sw
          * @return 펼치지 못하면 false 입니다. 부모 없이 자식 칸만으로 읽지 않습니다.
          */
         [[nodiscard]] bool parseData( string_view xmlText, string_view sourceName = {} );
-        /** @brief 부르는 쪽이 이미 읽은 리소스 @p assetID 의 글을 `parseData` 처럼 읽되 덮어쓰기 층 · 다시 읽기 기록 · 접속 대조를 받습니다(글이 먼저 필요한 형식 — 부모 id 를 드는 저장). */
+        /** @brief 부르는 쪽이 이미 읽은 에셋 @p assetID 의 글을 `parseData` 처럼 읽되 덮어쓰기 층 · 다시 읽기 기록 · 접속 대조를 받습니다(글이 먼저 필요한 형식 — 부모 id 를 드는 저장). */
         [[nodiscard]] bool parseAssetText( string_view xmlText, const AssetID& assetID );
         /**
          * @brief `loadAsset` 와 같되 합치기 규칙을 읽는 쪽이 고릅니다(@p context — 카탈로그 표에 없는 손 형식 · 리플렉션 형식의 부모와 층).
@@ -404,13 +404,13 @@ namespace sw
 
         /** @brief 디스크의 절대 경로를 그대로 읽고 파싱합니다. 팩을 보지 않습니다(도구 · 설정 · Saved 파일용). */
         [[nodiscard]] bool loadFromFile( const DiskPath& absPath );
-        /** @brief `loadFromFile` 의 데이터 문서 판입니다(`parseData`). 리소스 id 가 아니라 디스크 경로로 고른 데이터 파일을 리소스 읽기와 같은 길로 읽습니다. */
+        /** @brief `loadFromFile` 의 데이터 문서 판입니다(`parseData`). 에셋 id 가 아니라 디스크 경로로 고른 데이터 파일을 에셋 읽기와 같은 길로 읽습니다. */
         [[nodiscard]] bool loadDataFile( const AbsolutePath& absPath );
         /** @brief `loadDataFile` 과 같되 합치기 규칙을 읽는 쪽이 고릅니다(`loadAssetAs` 의 디스크 판). @p pOutBaseID 는 펼치기 전 원문의 `_base` 입니다. */
         [[nodiscard]] bool loadDataFileAs( const AbsolutePath& absPath, const AssetComposeContext& context, string* pOutBaseID );
 
         /**
-         * @brief 리소스 id · OS 절대 경로 · 작업 경로를 `AssetIO::readTextAsset` 로 읽고 `parseData` 합니다(낱개 파일 · 팩).
+         * @brief 에셋 id · OS 절대 경로 · 작업 경로를 `AssetIO::readTextAsset` 로 읽고 `parseData` 합니다(낱개 파일 · 팩).
          * @details 디스크를 먼저 보는 별도 입구를 두지 않는다 — 낱개 파일 허용 정책은 `AssetIO` 한 곳이 본다.
          */
         [[nodiscard]] bool loadAsset( const AssetID& assetID, string* pOutAbsPath = nullptr );
@@ -453,7 +453,7 @@ namespace sw
         /** @brief XML 엔티티 문자열(&amp;, &lt;, &gt;, &quot;, &apos;)을 원래 문자로 복원합니다. 쓰는 쪽(이스케이프)은 `XMLWriter::appendEscaped` 하나다. */
         static string unescapeString( string_view text );
 
-        /** @brief @p context 로 합친 글을 파싱합니다(`parseData` · `loadAsset` 의 본문). 문맥을 고르는 읽는 쪽(UI 문서 · 스타일 시트 캐시 — 리소스 id 와 미리보기 변형의 태그)이 직접 부릅니다. */
+        /** @brief @p context 로 합친 글을 파싱합니다(`parseData` · `loadAsset` 의 본문). 문맥을 고르는 읽는 쪽(UI 문서 · 스타일 시트 캐시 — 에셋 id 와 미리보기 변형의 태그)이 직접 부릅니다. */
         [[nodiscard]] bool parseComposed( string_view xmlText, string_view sourceName, const AssetComposeContext& context );
 
     private:

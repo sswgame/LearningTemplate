@@ -48,7 +48,7 @@ namespace sw
         PROPERTY( DisplayName = "Themes" )
         vector<UIThemeDef> _listTheme{};
 
-        /** @brief 리소스 경로의 XML 을 읽습니다. 실패하면(파일이 없거나 모르는 키) 오류를 남기고 false 입니다. */
+        /** @brief 에셋 경로의 XML 을 읽습니다. 실패하면(파일이 없거나 모르는 키) 오류를 남기고 false 입니다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         /** @brief 이름의 테마입니다. 없으면 nullptr 입니다. */
         const UIThemeDef* findTheme( const hashed_string& name ) const;

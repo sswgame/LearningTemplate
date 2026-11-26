@@ -1,6 +1,6 @@
 /**
  * @file AssetDatabase.h
- * @brief 에셋 정체성의 규칙(`AssetIdentityRules`), 원본 곁의 서술(`AssetMeta`), 그리고 콘텐츠 루트를 훑어 지은 GUID ↔ 리소스 id 색인(`AssetDatabase`)입니다.
+ * @brief 에셋 정체성의 규칙(`AssetIdentityRules`), 원본 곁의 서술(`AssetMeta`), 그리고 콘텐츠 루트를 훑어 지은 GUID ↔ 에셋 id 색인(`AssetDatabase`)입니다.
  * @details 정체성은 무작위 GUID(`AssetGUID`)다 — 경로 id 는 옮기면 바뀌어 리다이렉트 표가 영구히 자란다. 우리 형식 글(XML)은 파일 머리(`AssetGUIDHeader`)에, 원본(png · ogg · glb …)은
  *          곁의 `<파일>.meta` 에 든다(유니티 `.meta`, Godot 4.4 의 `.uid` 곁 파일과 같은 자리). 도구가 만들고 짝을 지킨다 — 사람은 서술을 만지지 않는다
  *          (`py -3 -m Scripts asset-ids --fix` · 에디터 옮기기 · 복제 · 가져오기 · 내용 바꾸기).
@@ -57,7 +57,7 @@ namespace sw
     /** @brief 임포트 산출물 자리 하나가 가리킬 수 있는 원본 하나입니다(`AssetIdentityRules::collectImportedSources`). */
     struct AssetImportedSource
     {
-        string _sourceID;   ///< 원본 리소스 id(`common/models_raw/a/b.glb`)
+        string _sourceID;   ///< 원본 에셋 id(`common/models_raw/a/b.glb`)
         string _outputName; ///< 원본 안의 산출물 이름 — 산출물 id 에서 원본 줄기를 뺀 나머지(`.mesh` · `/materials/mi_eyes.material`)
     };
 
@@ -76,9 +76,9 @@ namespace sw
         PROPERTY( Required )
         vector<string> _listHeaderSuffix; ///< 정체성을 파일 머리에 드는 우리 형식 접미사(소문자)
         PROPERTY( Required )
-        vector<string> _listSkipPattern; ///< 정체성이 없는 파일의 리소스 id 패턴
+        vector<string> _listSkipPattern; ///< 정체성이 없는 파일의 에셋 id 패턴
         PROPERTY( Required )
-        vector<string> _listKeptDerived; ///< 산출물 폴더에 손으로 두는 것을 허락한 파일의 리소스 id 패턴
+        vector<string> _listKeptDerived; ///< 산출물 폴더에 손으로 두는 것을 허락한 파일의 에셋 id 패턴
 
         vector<AssetImportedFolder> _listImportedFolder; ///< 임포트 산출물 폴더 — 그 안의 정체성 없는 파일(머리 · `.meta` 없음)은 산출물(캐시)이다
 
@@ -110,7 +110,7 @@ namespace sw
 
         /** @brief 프로젝트 루트의 규칙 파일을 읽습니다. 없거나 칸이 빠지면 오류를 남기고 false 입니다(기본 규칙으로 대신하지 않는다). */
         [[nodiscard]] bool load( const AbsolutePath& projectRoot );
-        /** @brief 리소스 id @p assetID 의 정체성 자리입니다. 대소문자는 가리지 않습니다. */
+        /** @brief 에셋 id @p assetID 의 정체성 자리입니다. 대소문자는 가리지 않습니다. */
         AssetIdentityKind classify( string_view assetID ) const;
         /** @brief @p assetID 가 임포트 산출물 폴더(`_listImportedFolder`) 아래면 true 입니다. */
         bool isUnderDerivedFolder( string_view assetID ) const;
@@ -138,12 +138,12 @@ namespace sw
         // 디스크의 에셋 파일 하나의 정체성 — 에디터 새로 만들기 · 복제 · 가져오기(새 GUID)와 내용 바꾸기(GUID 유지)가 함께 지난다. 자리는 `classify` 가 정한다.
         // ------------------------------------------------------------------------------
         /**
-         * @brief 디스크 파일 @p absPath(리소스 id @p assetID, 경로는 id 로 끝난다)의 GUID 입니다. 우리 형식 글은 머리, 원본은 곁의 `.meta`, 임포트 산출물은 원본의 `.meta` 와 산출물 이름.
+         * @brief 디스크 파일 @p absPath(에셋 id @p assetID, 경로는 id 로 끝난다)의 GUID 입니다. 우리 형식 글은 머리, 원본은 곁의 `.meta`, 임포트 산출물은 원본의 `.meta` 와 산출물 이름.
          * @return 정체성이 없거나 읽지 못하면 없음입니다.
          */
         [[nodiscard]] optional<AssetGUID> readIdentity( const DiskPath& absPath, string_view assetID ) const;
         /**
-         * @brief 막 생긴 파일 @p absPath(리소스 id @p assetID)에 새 GUID 를 줍니다. 베낀 글이 든 머리 · 베낀 원본의 옛 서술은 새 것으로 바꾼다(복사본은 새 에셋이다).
+         * @brief 막 생긴 파일 @p absPath(에셋 id @p assetID)에 새 GUID 를 줍니다. 베낀 글이 든 머리 · 베낀 원본의 옛 서술은 새 것으로 바꾼다(복사본은 새 에셋이다).
          * @return 읽거나 쓰지 못하면 오류를 남기고 false 입니다. 정체성이 없는 파일(건너뛰는 파일 · `.meta` 자신)은 할 일이 없어 true 입니다.
          */
         [[nodiscard]] bool assignNewIdentity( const AbsolutePath& absPath, string_view assetID ) const;
@@ -246,7 +246,7 @@ namespace sw
         [[nodiscard]] optional<AssetGUID> findOutputGUID( string_view outputName ) const;
         /** @brief 원본을 @p sourcePath 로 옮긴 서술로 고칩니다 — 이름만 바꾸고 GUID · 내용 주소 · 임포트 예외 · 산출물 표는 그대로입니다(읽은 서술에만 부른다). */
         void renameSource( string_view sourcePath );
-        /** @brief 원본 리소스 id @p sourcePath 의 서술 id(`<id>.meta`)입니다 — 색인 키 · 오류 표시용 글. 디스크 자리는 `AbsolutePath` 판입니다. */
+        /** @brief 원본 에셋 id @p sourcePath 의 서술 id(`<id>.meta`)입니다 — 색인 키 · 오류 표시용 글. 디스크 자리는 `AbsolutePath` 판입니다. */
         static string makePath( string_view sourcePath );
         /** @brief 원본 디스크 경로 @p sourcePath 의 서술 디스크 경로(`<경로>.meta`)입니다 — 글로 잇고 다시 올리지 않는다(`AbsolutePath::appendSuffix`). */
         [[nodiscard]] static AbsolutePath makePath( const AbsolutePath& sourcePath ) { return sourcePath.appendSuffix( kExtension ); }
@@ -285,7 +285,7 @@ namespace sw
         string toString() const;
     };
 
-    /** @brief 색인을 지을 파일 하나입니다 — 리소스 id 와, 정체성을 드는 파일(머리 글 · `.meta`)이면 그 글입니다. */
+    /** @brief 색인을 지을 파일 하나입니다 — 에셋 id 와, 정체성을 드는 파일(머리 글 · `.meta`)이면 그 글입니다. */
     struct AssetIdentityFile
     {
         string _assetID;
@@ -294,7 +294,7 @@ namespace sw
 
     /**
      * @class AssetDatabase
-     * @brief GUID ↔ 리소스 id 색인입니다. 지은 뒤에는 읽기만 하므로 여러 스레드가 함께 읽어도 된다(조회는 복사로 돌려준다).
+     * @brief GUID ↔ 에셋 id 색인입니다. 지은 뒤에는 읽기만 하므로 여러 스레드가 함께 읽어도 된다(조회는 복사로 돌려준다).
      */
     class SW_API AssetDatabase
     {
@@ -306,16 +306,16 @@ namespace sw
          */
         static AssetDatabase build( const vector<AssetIdentityFile>& listFile, const AssetIdentityRules& rules, vector<AssetIdentityIssue>& outListIssue );
         /**
-         * @brief 디스크 폴더 @p contentRoot(리소스 id 의 뿌리, `Content`)를 훑어 색인을 짓습니다. 정체성을 드는 파일만 읽는다.
+         * @brief 디스크 폴더 @p contentRoot(에셋 id 의 뿌리, `Content`)를 훑어 색인을 짓습니다. 정체성을 드는 파일만 읽는다.
          * @details 폴더를 훑지 못하면 `Unreadable` 하나를 낸다. @p pCache(판 `kScanPayloadVersion`)를 주면 크기 · 시각이 그대로인 파일은 열지 않고 그 줄을 쓴다.
          */
         static AssetDatabase scan( const AbsolutePath& contentRoot, const AssetIdentityRules& rules, vector<AssetIdentityIssue>& outListIssue, AssetScanCache* pCache = nullptr );
         /** @brief 훑기 캐시에 두는 글(머리 글 한 줄 · `.meta` 글)의 판입니다. 남기는 글의 규칙이나 머리 글의 읽기 규칙을 바꾸면 올린다. */
         static constexpr uint32 kScanPayloadVersion = 0;
 
-        /** @brief @p guid 의 리소스 id 입니다(복사). 없으면 없음입니다. */
+        /** @brief @p guid 의 에셋 id 입니다(복사). 없으면 없음입니다. */
         [[nodiscard]] optional<string> findPath( const AssetGUID& guid ) const;
-        /** @brief 리소스 id @p assetID 의 GUID 입니다. 없으면 없음입니다. 대소문자는 가리지 않습니다. */
+        /** @brief 에셋 id @p assetID 의 GUID 입니다. 없으면 없음입니다. 대소문자는 가리지 않습니다. */
         [[nodiscard]] optional<AssetGUID> findGUID( string_view assetID ) const;
         /** @brief 색인의 에셋 수입니다. */
         [[nodiscard]] size_t getCount() const { return _mapGUIDToPath.size(); }
@@ -324,7 +324,7 @@ namespace sw
 
     private:
         unordered_map<AssetGUID, string> _mapGUIDToPath;
-        unordered_map<string, AssetGUID> _mapPathToGUID; ///< 키는 소문자 리소스 id
+        unordered_map<string, AssetGUID> _mapPathToGUID; ///< 키는 소문자 에셋 id
         vector<AssetIdentityRedirect>    _listRedirect;  ///< 도메인 리다이렉트 표의 정체성 대체 줄
     };
 } // namespace sw

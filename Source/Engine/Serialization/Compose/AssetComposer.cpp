@@ -27,7 +27,7 @@ namespace sw
 {
     namespace
     {
-        /** @brief 층 파일의 암묵적 부모(@p baseID)는 지금까지 합친 글로 답하고, 나머지 부모(다른 파일의 카탈로그 항목)는 리소스로 읽습니다. */
+        /** @brief 층 파일의 암묵적 부모(@p baseID)는 지금까지 합친 글로 답하고, 나머지 부모(다른 파일의 카탈로그 항목)는 에셋으로 읽습니다. */
         class AssetLayerBaseSource final : public DataInheritanceSource
         {
         public:
@@ -641,7 +641,7 @@ namespace sw
                 return false;
             }
 
-            /** @brief 리소스 id 로 읽는 문맥에 얹을 층 파일이 하나라도 있으면 true 입니다. */
+            /** @brief 에셋 id 로 읽는 문맥에 얹을 층 파일이 하나라도 있으면 true 입니다. */
             [[nodiscard]] static bool hasLayer( const AssetComposeContext& context )
             {
                 if ( context._assetID.isEmpty() )
@@ -777,7 +777,7 @@ namespace sw
             bText   = true;
         }
 
-        // 3. 덮어쓰기 층 — 리소스 id 로 읽을 때만 얹는다.
+        // 3. 덮어쓰기 층 — 에셋 id 로 읽을 때만 얹는다.
         bool bLayered = false;
         if ( bCook == false && context._assetID.isEmpty() == false )
         {

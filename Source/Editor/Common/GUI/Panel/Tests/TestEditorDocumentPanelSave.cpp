@@ -12,7 +12,7 @@
 #include "Editor/Common/Workspace/Undo/CommandStack.h"
 #include "Editor/Common/Workspace/Undo/DocumentEditRecorder.h"
 
-#define SW_TEST_INTERNAL // 임시 리소스 도메인 픽스처(`ScopedScratchDomain`)가 엔진 서비스를 직접 쓴다
+#define SW_TEST_INTERNAL // 임시 콘텐츠 도메인 픽스처(`ScopedScratchDomain`)가 엔진 서비스를 직접 쓴다
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
 
 using namespace sw;

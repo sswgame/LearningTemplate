@@ -233,7 +233,7 @@ def extract_references(relative_path: str, text: str, config: FieldConfig) -> li
 # 있음 판정
 # ----------------------------------------------------------------------------------------------------------------------------------
 class AssetSet:
-    """있는 리소스 id(소문자, `Content/` 뒤)와 그 폴더들입니다."""
+    """있는 에셋 id(소문자, `Content/` 뒤)와 그 폴더들입니다."""
 
     def __init__(self, list_asset_id: Iterable[str]):
         self.set_file: set[str] = set()
@@ -319,7 +319,7 @@ def read_index_blobs(project_root: Path, list_relative_path: list[str]) -> dict[
 
 
 def make_redirect_table_id(asset_id: str) -> str:
-    """리소스 id 가 속한 도메인의 표 id(`<도메인>/redirects.xml`) — 도메인은 첫 마디, `game/<팩>` · `dlc/<묶음>` 은 두 마디(C++ `AssetRedirect::makeTableID`)."""
+    """에셋 id 가 속한 도메인의 표 id(`<도메인>/redirects.xml`) — 도메인은 첫 마디, `game/<팩>` · `dlc/<묶음>` 은 두 마디(C++ `AssetRedirect::makeTableID`)."""
     parts = asset_id.split("/")
     domain = "/".join(parts[:2]) if parts[0] in ("game", "dlc") and len(parts) > 1 else parts[0]
     return f"{domain}/{REDIRECT_FILE_NAME}"

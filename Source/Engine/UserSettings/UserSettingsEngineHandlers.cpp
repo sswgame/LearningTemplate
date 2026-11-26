@@ -30,7 +30,7 @@ namespace sw
             static constexpr uint32 kMinResolution = 320;
             static constexpr uint32 kMaxResolution = 16384;
 
-            /** @brief 값을 리소스 태그 축 `param` 의 값으로 넣습니다(`AssetTags::setAxisValue`). 그 축에 기댄 리소스는 다음 프레임에 다시 읽힌다. */
+            /** @brief 값을 에셋 태그 축 `param` 의 값으로 넣습니다(`AssetTags::setAxisValue`). 그 축에 기댄 리소스는 다음 프레임에 다시 읽힌다. */
             static bool applyAssetTag( const UserSettingApplyParams& context )
             {
                 // 모르는 축 · 여러 값 축 · 닫힌 목록 밖의 값은 `AssetTags` 가 오류로 남긴다 — 스키마의 param 오타가 조용히 지나가지 않는다.

@@ -1,4 +1,4 @@
-// 리소스 조건(`_when`) · 문맥 태그 · 덮어쓰기 층 · 합성 기록(nogpu). 태그는 프로세스 값이라 케이스마다 세우고 되돌린다.
+// 에셋 조건(`_when`) · 문맥 태그 · 덮어쓰기 층 · 합성 기록(nogpu). 태그는 프로세스 값이라 케이스마다 세우고 되돌린다.
 #include "pch.h"
 
 #include "Core/Algorithm/VectorUtil.h"
@@ -293,7 +293,7 @@ SW_TEST_CASE( AssetConditionTest, ConditionsStackAcrossTheBaseChain )
 }
 
 /**
- * @brief [AssetLayerTest] 리소스 id 로 읽으면 층 파일 `<뿌리>/<id>` 가 원본을 부모로 삼아 얹히고, 층의 조건은 층의 차이에 얹힌다. 층을 바꾸면 그 리소스가 다시 읽을 목록에 오른다
+ * @brief [AssetLayerTest] 에셋 id 로 읽으면 층 파일 `<뿌리>/<id>` 가 원본을 부모로 삼아 얹히고, 층의 조건은 층의 차이에 얹힌다. 층을 바꾸면 그 에셋이 다시 읽을 목록에 오른다
  */
 SW_TEST_CASE( AssetLayerTest, LayerFileLiesOverTheResource )
 {
@@ -324,11 +324,11 @@ SW_TEST_CASE( AssetLayerTest, LayerFileLiesOverTheResource )
     }
     SW_EXPECT_EQUAL( static_cast<uint32>( 2 ), itemCount );
 
-    // 글로 읽으면(리소스 id 없음) 층을 얹지 않는다.
+    // 글로 읽으면(에셋 id 없음) 층을 얹지 않는다.
     SW_REQUIRE_TRUE( AssetComposer::compose( kText, "text", AssetComposeContext::forSchema( &XTestUtil::makeListSchema ), flatText, bComposed ) );
     SW_EXPECT_FALSE( bComposed );
 
-    // 층을 떼면 층을 얹었던 리소스를 다시 읽는다. 층이 기댄 로드 축 태그가 바뀌어도 다시 읽는다.
+    // 층을 떼면 층을 얹었던 에셋을 다시 읽는다. 층이 기댄 로드 축 태그가 바뀌어도 다시 읽는다.
     vector<string> listPending;
     engine::getSubsystem<AssetComposition>().takePendingReload( listPending );
     SW_REQUIRE_TRUE( engine::getSubsystem<AssetComposition>().setLayers( {} ) );
@@ -364,7 +364,7 @@ SW_TEST_CASE( AssetCompositionTest, LoadTagDependentsAreReloadedAndDigested )
     SW_EXPECT_FALSE( VectorUtil::contains( listPending, plain.str() ) );
 }
 
-/** @brief [AssetRemapTest] 같은 id 의 줄은 위에서부터 보고 처음 참인 줄의 파일을 읽는다. 리소스 입구(읽기 · 있는지 묻기)가 한 번 바꾸고, 로드 축 태그가 바뀌면 그 id 를 다시 읽는다 */
+/** @brief [AssetRemapTest] 같은 id 의 줄은 위에서부터 보고 처음 참인 줄의 파일을 읽는다. 에셋 입구(읽기 · 있는지 묻기)가 한 번 바꾸고, 로드 축 태그가 바뀌면 그 id 를 다시 읽는다 */
 SW_TEST_CASE( AssetRemapTest, ReadsTheFirstMatchingTarget )
 {
     const ScopedScratchDomain domain;
@@ -433,7 +433,7 @@ SW_TEST_CASE( AssetCompositionTest, PerClientAxesAreNotCompared )
     SW_EXPECT_TRUE( hasEntry( shared ) );
 }
 
-/** @brief [AssetCompositionTest] 접속 대조는 이 프로세스가 로드 축 · 층에 기대 합성한 리소스만 본다 — 같은 해시는 통과, 다른 해시는 어긋남, 모르는 id 는 대조하지 않는다 */
+/** @brief [AssetCompositionTest] 접속 대조는 이 프로세스가 로드 축 · 층에 기대 합성한 에셋만 본다 — 같은 해시는 통과, 다른 해시는 어긋남, 모르는 id 는 대조하지 않는다 */
 SW_TEST_CASE( AssetCompositionTest, DigestMismatchComparesOnlyKnownCompositions )
 {
     const XTestTagScope   scope{ XTestUtil::makeTags( { "region.us" } ) };
@@ -462,7 +462,7 @@ SW_TEST_CASE( AssetCompositionTest, DigestComparesPlainCompositionsToo )
     SW_EXPECT_TRUE( engine::getSubsystem<AssetComposition>().isDigestMismatch( AssetDigestEntry{ id.str(), AssetComposition::hashText( R"(<Doc a="layer" />)" ) } ) );
 }
 
-/** @brief [AssetCompositionTest] 번호 뒤의 합성만 나온다 — 접속 뒤에 새로 읽은 리소스와 태그로 바뀐 결과가 서버에 간다. 기대지 않은 합성은 보낼 줄이 아니다 */
+/** @brief [AssetCompositionTest] 번호 뒤의 합성만 나온다 — 접속 뒤에 새로 읽은 에셋과 태그로 바뀐 결과가 서버에 간다. 기대지 않은 합성은 보낼 줄이 아니다 */
 SW_TEST_CASE( AssetCompositionTest, ChangesSinceARevisionAreCollected )
 {
     const XTestTagScope      scope{ XTestUtil::makeTags( { "region.us" } ) };
@@ -496,13 +496,13 @@ SW_TEST_CASE( AssetCompositionTest, ChangesSinceARevisionAreCollected )
     SW_EXPECT_EQUAL( AssetComposition::hashText( flatText ), listEntry[0]._hash );
 }
 
-/** @brief [AssetDigestComparerTest] 상대 줄이 먼저 오고 서버가 나중에 읽어도 만난다 — 접속 뒤에 합성한 리소스의 어긋남을 유예가 지난 뒤 알린다 */
+/** @brief [AssetDigestComparerTest] 상대 줄이 먼저 오고 서버가 나중에 읽어도 만난다 — 접속 뒤에 합성한 에셋의 어긋남을 유예가 지난 뒤 알린다 */
 SW_TEST_CASE( AssetDigestComparerTest, ServerReadingLaterStillCompares )
 {
     const XTestTagScope scope{ XTestUtil::makeTags( { "quality.low" } ) };
     const AssetID       id{ "testproject/data/compare-later.xml" };
     AssetDigestComparer comparer{ engine::getSubsystem<AssetComposition>() };
-    SW_REQUIRE_TRUE( comparer.addPeerLine( 7, AssetDigestEntry{ id.str(), 12345u }, 0 ) ); // 서버는 아직 이 리소스를 읽지 않았다
+    SW_REQUIRE_TRUE( comparer.addPeerLine( 7, AssetDigestEntry{ id.str(), 12345u }, 0 ) ); // 서버는 아직 이 에셋을 읽지 않았다
 
     vector<AssetDigestMismatch> listMismatch;
     comparer.update( 1, 100, listMismatch );

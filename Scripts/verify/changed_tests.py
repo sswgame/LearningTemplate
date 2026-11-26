@@ -140,7 +140,7 @@ def find_golden_scenario(golden_path: str, list_scenario_file: Sequence[str]) ->
 
 
 def select_scenarios(list_changed: Sequence[ChangedFile], list_scenario_file: Sequence[str]) -> dict[str, list[ChangedFile]]:
-    """시나리오(Content 기준 리소스 경로) → 그 시나리오를 고른 바뀐 파일(시나리오 파일 · 그 골든)."""
+    """시나리오(Content 기준 에셋 경로) → 그 시나리오를 고른 바뀐 파일(시나리오 파일 · 그 골든)."""
     map_scenario: dict[str, list[ChangedFile]] = {}
     for changed in list_changed:
         if not changed.path.startswith("Content/"):

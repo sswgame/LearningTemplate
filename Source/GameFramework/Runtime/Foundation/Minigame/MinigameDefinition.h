@@ -62,7 +62,7 @@ namespace sw
         PROPERTY( Required )
         hashed_string _name{}; ///< 파일 이름(`<이름>.minigame.xml`)과 같아야 한다 — `minigame.enter <이름>` 이 그 이름으로 찾는다
         PROPERTY( Required )
-        DataPath _map; ///< 들어갈 맵 씬(리소스 id)
+        DataPath _map; ///< 들어갈 맵 씬(에셋 id)
         PROPERTY( Required )
         MinigameEntry _entry{ MinigameEntry::SceneSwitch }; ///< 들어가는 방식
         PROPERTY()
@@ -76,7 +76,7 @@ namespace sw
         PROPERTY( Name = "inputContexts" )
         vector<hashed_string> _listInputContext{}; ///< 켤 입력 맵 레이어(게임 입력 맵 묶음에 있어야 한다 — 켤 때 본다)
         PROPERTY( Name = "ui" )
-        vector<DataPath> _listUI{}; ///< 열 UI 문서(리소스 id) — 있는지는 `validate` 가 본다
+        vector<DataPath> _listUI{}; ///< 열 UI 문서(에셋 id) — 있는지는 `validate` 가 본다
         PROPERTY( Name = "catalogs" )
         vector<hashed_string> _listCatalog{}; ///< 기능이 읽을 데이터 종류(`kDataKind`). 기능이 적지 않은 종류를 읽거나 적은 종류를 아무도 읽지 않으면 켜기가 진다
         PROPERTY( Name = "save" )

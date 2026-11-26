@@ -387,7 +387,7 @@ namespace sw::editor
         if ( bRecordHistory )
             _history.record( normalizedPath, listBreadcrumb );
 
-        // 탐색과 I/O 는 실제 파일 시스템의 대소문자를 쓰고, 새로 만드는 파일 이름은 소문자다(리소스 id 규칙).
+        // 탐색과 I/O 는 실제 파일 시스템의 대소문자를 쓰고, 새로 만드는 파일 이름은 소문자다(에셋 id 규칙).
         _selectedFolderAbs = normalizedPath;
         _listBreadcrumb    = listBreadcrumb;
         _selectedAssetAbs  = {};
