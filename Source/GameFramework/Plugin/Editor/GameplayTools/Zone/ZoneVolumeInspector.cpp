@@ -33,24 +33,6 @@ namespace sw::editor
     {
         struct ZoneVolumeInspectorUtil
         {
-            static const utf8* getOriginLabel( ZoneModuleOrigin origin )
-            {
-                switch ( origin )
-                {
-                    case ZoneModuleOrigin::Inherited:
-                        return SW_LOCKEY( "EdLabel", "ZoneInherited" );
-                    case ZoneModuleOrigin::Changed:
-                        return SW_LOCKEY( "EdLabel", "ZoneChanged" );
-                    case ZoneModuleOrigin::Replaced:
-                        return SW_LOCKEY( "EdLabel", "ZoneReplaced" );
-                    case ZoneModuleOrigin::Added:
-                        return SW_LOCKEY( "EdLabel", "ZoneAdded" );
-                    case ZoneModuleOrigin::Removed:
-                        return SW_LOCKEY( "EdLabel", "ZoneRemoved" );
-                }
-                return "";
-            }
-
             /** @brief 덮어쓰기 항목 @p name 지우기를 요청합니다(게임 단계가 되돌리기 기록과 함께 지운다 — `InspectorComponentEdit::requestComponentEdit`). */
             static void requestRevert( const EditorPropertyGridTarget& target, const hashed_string& name )
             {
@@ -175,7 +157,7 @@ namespace sw::editor
                     const ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_SpanAvailWidth | ( pOverride != nullptr ? ImGuiTreeNodeFlags_DefaultOpen : ImGuiTreeNodeFlags_None );
                     const bool               bOpen = ImGui::TreeNodeEx( "##module", flags, "%s  %s", name.c_str(), pMerged != nullptr ? pMerged->_kind.c_str() : "" );
                     ImGui::SameLine();
-                    ImGui::TextDisabled( "%s", Util::getOriginLabel( origin ) );
+                    ImGui::TextDisabled( "%s", LocalizedText::findEnum( origin ) );
                     if ( pOverride != nullptr )
                     {
                         ImGui::SameLine();

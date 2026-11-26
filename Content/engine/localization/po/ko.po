@@ -84,16 +84,6 @@ msgid "Discard"
 msgstr "버리기"
 
 #: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp
-msgctxt "EdAbilityCatalog.Abilities"
-msgid "Abilities"
-msgstr "어빌리티"
-
-#: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp
-msgctxt "EdAbilityCatalog.AbilitySets"
-msgid "Ability sets"
-msgstr "어빌리티 세트"
-
-#: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp
 msgctxt "EdAbilityCatalog.AddAbility"
 msgid "Add ability"
 msgstr "어빌리티 더하기"
@@ -122,11 +112,6 @@ msgstr "이펙트 더하기"
 msgctxt "EdAbilityCatalog.Duplicate"
 msgid "Duplicate"
 msgstr "복제"
-
-#: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp
-msgctxt "EdAbilityCatalog.Effects"
-msgid "Effects"
-msgstr "이펙트"
 
 #: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp
 msgctxt "EdAbilityCatalog.File"
@@ -167,11 +152,6 @@ msgstr "(없음)"
 msgctxt "EdAbilityCatalog.PickEntryHint"
 msgid "Pick an entry on the left to see what it uses and what uses it."
 msgstr "왼쪽에서 항목을 고르면 그 항목이 쓰는 것과 그것을 쓰는 곳을 봅니다."
-
-#: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp
-msgctxt "EdAbilityCatalog.Presentations"
-msgid "Cue presentations"
-msgstr "큐 연출"
 
 #: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp
 msgctxt "EdAbilityCatalog.Redo"
@@ -354,34 +334,9 @@ msgid "Revert"
 msgstr "되돌리기"
 
 #: Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp
-msgctxt "EdLabel.ZoneAdded"
-msgid "added here"
-msgstr "여기서 더함"
-
-#: Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp
-msgctxt "EdLabel.ZoneChanged"
-msgid "changed here"
-msgstr "여기서 바꿈"
-
-#: Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp
 msgctxt "EdLabel.ZoneCondition"
 msgid "When"
 msgstr "조건"
-
-#: Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp
-msgctxt "EdLabel.ZoneInherited"
-msgid "inherited"
-msgstr "물려받음"
-
-#: Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp
-msgctxt "EdLabel.ZoneRemoved"
-msgid "removed here"
-msgstr "여기서 뺌"
-
-#: Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp
-msgctxt "EdLabel.ZoneReplaced"
-msgid "replaced here"
-msgstr "여기서 갈아끼움"
 
 #: Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.AddItem"
@@ -2241,6 +2196,26 @@ msgctxt "EditorTip.ZoneRevertParam"
 msgid "Use the preset's value for this parameter again."
 msgstr "이 매개변수에 프리셋 값을 다시 씁니다."
 
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/Model/AbilityCatalogEditModel.h
+msgctxt "Enum.AbilityEntryKind.Ability"
+msgid "Abilities"
+msgstr "어빌리티"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/Model/AbilityCatalogEditModel.h
+msgctxt "Enum.AbilityEntryKind.AbilitySet"
+msgid "Ability sets"
+msgstr "어빌리티 세트"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/Model/AbilityCatalogEditModel.h
+msgctxt "Enum.AbilityEntryKind.Effect"
+msgid "Effects"
+msgstr "이펙트"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/Model/AbilityCatalogEditModel.h
+msgctxt "Enum.AbilityEntryKind.Presentation"
+msgid "Cue presentations"
+msgstr "큐 연출"
+
 #: Source/GameFramework/Kits/Feature/Online/Chat/Runtime/ChatTypes.h
 msgctxt "Enum.ChatResult.Muted"
 msgid "You are muted ({seconds} s left)"
@@ -2705,6 +2680,31 @@ msgstr "오프라인"
 msgctxt "Enum.SocialPresenceStatus.Online"
 msgid "online"
 msgstr "온라인"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneModuleOrigin.h
+msgctxt "Enum.ZoneModuleOrigin.Added"
+msgid "added here"
+msgstr "여기서 더함"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneModuleOrigin.h
+msgctxt "Enum.ZoneModuleOrigin.Changed"
+msgid "changed here"
+msgstr "여기서 바꿈"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneModuleOrigin.h
+msgctxt "Enum.ZoneModuleOrigin.Inherited"
+msgid "inherited"
+msgstr "물려받음"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneModuleOrigin.h
+msgctxt "Enum.ZoneModuleOrigin.Removed"
+msgid "removed here"
+msgstr "여기서 뺌"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneModuleOrigin.h
+msgctxt "Enum.ZoneModuleOrigin.Replaced"
+msgid "replaced here"
+msgstr "여기서 갈아끼움"
 
 #: Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp
 msgctxt "FriendList.Idle"

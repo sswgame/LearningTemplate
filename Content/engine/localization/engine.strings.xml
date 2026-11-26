@@ -69,16 +69,6 @@
 				<item>engine/ui/confirm_unsaved.ui.xml</item>
 			</origins>
 		</entry>
-		<entry key="EdAbilityCatalog.Abilities" source="Abilities">
-			<origins>
-				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdAbilityCatalog.AbilitySets" source="Ability sets">
-			<origins>
-				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp</item>
-			</origins>
-		</entry>
 		<entry key="EdAbilityCatalog.AddAbility" source="Add ability">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp</item>
@@ -105,11 +95,6 @@
 			</origins>
 		</entry>
 		<entry key="EdAbilityCatalog.Duplicate" source="Duplicate">
-			<origins>
-				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdAbilityCatalog.Effects" source="Effects">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp</item>
 			</origins>
@@ -152,11 +137,6 @@
 			</origins>
 		</entry>
 		<entry key="EdAbilityCatalog.PickEntryHint" source="Pick an entry on the left to see what it uses and what uses it.">
-			<origins>
-				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdAbilityCatalog.Presentations" source="Cue presentations">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp</item>
 			</origins>
@@ -344,32 +324,7 @@
 				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EdLabel.ZoneAdded" source="added here">
-			<origins>
-				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdLabel.ZoneChanged" source="changed here">
-			<origins>
-				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp</item>
-			</origins>
-		</entry>
 		<entry key="EdLabel.ZoneCondition" source="When">
-			<origins>
-				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdLabel.ZoneInherited" source="inherited">
-			<origins>
-				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdLabel.ZoneRemoved" source="removed here">
-			<origins>
-				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdLabel.ZoneReplaced" source="replaced here">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp</item>
 			</origins>
@@ -2285,6 +2240,26 @@
 				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp</item>
 			</origins>
 		</entry>
+		<entry key="Enum.AbilityEntryKind.Ability" source="Abilities">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Ability/Model/AbilityCatalogEditModel.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.AbilityEntryKind.AbilitySet" source="Ability sets">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Ability/Model/AbilityCatalogEditModel.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.AbilityEntryKind.Effect" source="Effects">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Ability/Model/AbilityCatalogEditModel.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.AbilityEntryKind.Presentation" source="Cue presentations">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Ability/Model/AbilityCatalogEditModel.h</item>
+			</origins>
+		</entry>
 		<entry key="Enum.ChatResult.Muted" source="You are muted ({seconds} s left)">
 			<origins>
 				<item>Source/GameFramework/Kits/Feature/Online/Chat/Runtime/ChatTypes.h</item>
@@ -2758,6 +2733,31 @@
 		<entry key="Enum.SocialPresenceStatus.Online" source="online">
 			<origins>
 				<item>Source/GameFramework/Kits/Feature/Online/Social/Runtime/SocialTypes.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.ZoneModuleOrigin.Added" source="added here">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneModuleOrigin.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.ZoneModuleOrigin.Changed" source="changed here">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneModuleOrigin.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.ZoneModuleOrigin.Inherited" source="inherited">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneModuleOrigin.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.ZoneModuleOrigin.Removed" source="removed here">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneModuleOrigin.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.ZoneModuleOrigin.Replaced" source="replaced here">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneModuleOrigin.h</item>
 			</origins>
 		</entry>
 		<entry key="FriendList.Idle" source="Press Refresh to list friends">

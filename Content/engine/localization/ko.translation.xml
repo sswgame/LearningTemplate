@@ -18,15 +18,12 @@
 		<entry key="Close" text="닫기" sourceHash="5e8250fb85d64c23" />
 		<entry key="Defaults" text="기본값" sourceHash="48022f6d5501d677" />
 		<entry key="Discard" text="버리기" sourceHash="c00a88b90cd60661" />
-		<entry key="EdAbilityCatalog.Abilities" text="어빌리티" sourceHash="9c5c6645f6238fcd" />
-		<entry key="EdAbilityCatalog.AbilitySets" text="어빌리티 세트" sourceHash="ff3820b1acda8056" />
 		<entry key="EdAbilityCatalog.AddAbility" text="어빌리티 더하기" sourceHash="a69e936d44d68d4a" />
 		<entry key="EdAbilityCatalog.AddAbilitySet" text="세트 더하기" sourceHash="1f92efc5fb99ba74" />
 		<entry key="EdAbilityCatalog.AddAbilityToSet" text="어빌리티 더하기" sourceHash="a69e936d44d68d4a" />
 		<entry key="EdAbilityCatalog.AddEffect" text="이펙트 더하기" sourceHash="f9caa9d2834ca145" />
 		<entry key="EdAbilityCatalog.AddEffectToSet" text="이펙트 더하기" sourceHash="f9caa9d2834ca145" />
 		<entry key="EdAbilityCatalog.Duplicate" text="복제" sourceHash="fac15b89e0668996" />
-		<entry key="EdAbilityCatalog.Effects" text="이펙트" sourceHash="d004bbafa47097e5" />
 		<entry key="EdAbilityCatalog.File" text="파일" sourceHash="d1f81284eeb7b503" />
 		<entry key="EdAbilityCatalog.FileTip"
 		       text="게임이 읽는 카탈로그 파일입니다. 편집해도 주석과 줄 배치가 남습니다."
@@ -43,7 +40,6 @@
 		<entry key="EdAbilityCatalog.PickEntryHint"
 		       text="왼쪽에서 항목을 고르면 그 항목이 쓰는 것과 그것을 쓰는 곳을 봅니다."
 		       sourceHash="268dc0a1bf394d29" />
-		<entry key="EdAbilityCatalog.Presentations" text="큐 연출" sourceHash="e160bc2d29075769" />
 		<entry key="EdAbilityCatalog.Redo" text="다시 실행" sourceHash="7417792bbe720149" />
 		<entry key="EdAbilityCatalog.Remove" text="지우기" sourceHash="ea4f08110bb8f15d" />
 		<entry key="EdAbilityCatalog.RemoveTip"
@@ -98,12 +94,7 @@
 		<entry key="EdAbilityDebug.SectionLog" text="최근 이펙트" sourceHash="562c325175e2853c" />
 		<entry key="EdAbilityDebug.SectionTags" text="소유 태그" sourceHash="35d4aac5d07d7ce3" />
 		<entry key="EdButton.ZoneRevert" text="되돌리기" sourceHash="d89a2e529b31ef43" />
-		<entry key="EdLabel.ZoneAdded" text="여기서 더함" sourceHash="1d0422d2923a2619" />
-		<entry key="EdLabel.ZoneChanged" text="여기서 바꿈" sourceHash="b670513a18b222f7" />
 		<entry key="EdLabel.ZoneCondition" text="조건" sourceHash="c683c10250a1b719" />
-		<entry key="EdLabel.ZoneInherited" text="물려받음" sourceHash="45228ea14dc64581" />
-		<entry key="EdLabel.ZoneRemoved" text="여기서 뺌" sourceHash="d595b30d28c16df7" />
-		<entry key="EdLabel.ZoneReplaced" text="여기서 갈아끼움" sourceHash="821d05431d192019" />
 		<entry key="EdMeshModifiers.AddItem" text="항목 추가" sourceHash="1373a4ab54d88333" />
 		<entry key="EdMeshModifiers.AddModifier" text="모디파이어 추가" sourceHash="f4d95a66cf236fed" />
 		<entry key="EdMeshModifiers.Axis" text="축" sourceHash="b035a78b241ed7d4" />
@@ -649,6 +640,10 @@
 		<entry key="EditorTip.ZoneRevertParam"
 		       text="이 매개변수에 프리셋 값을 다시 씁니다."
 		       sourceHash="2216bc5d4a3af475" />
+		<entry key="Enum.AbilityEntryKind.Ability" text="어빌리티" sourceHash="9c5c6645f6238fcd" />
+		<entry key="Enum.AbilityEntryKind.AbilitySet" text="어빌리티 세트" sourceHash="ff3820b1acda8056" />
+		<entry key="Enum.AbilityEntryKind.Effect" text="이펙트" sourceHash="d004bbafa47097e5" />
+		<entry key="Enum.AbilityEntryKind.Presentation" text="큐 연출" sourceHash="e160bc2d29075769" />
 		<entry key="Enum.ChatResult.Muted"
 		       text="채팅이 금지되어 있습니다({seconds}초 남음)"
 		       sourceHash="d44ad231e1dc9e57" />
@@ -792,6 +787,11 @@
 		<entry key="Enum.SocialPresenceStatus.InGame" text="게임 중" sourceHash="751b555ee38fcef8" />
 		<entry key="Enum.SocialPresenceStatus.Offline" text="오프라인" sourceHash="574193ebbf068988" />
 		<entry key="Enum.SocialPresenceStatus.Online" text="온라인" sourceHash="abf0e099159a8caa" />
+		<entry key="Enum.ZoneModuleOrigin.Added" text="여기서 더함" sourceHash="1d0422d2923a2619" />
+		<entry key="Enum.ZoneModuleOrigin.Changed" text="여기서 바꿈" sourceHash="b670513a18b222f7" />
+		<entry key="Enum.ZoneModuleOrigin.Inherited" text="물려받음" sourceHash="45228ea14dc64581" />
+		<entry key="Enum.ZoneModuleOrigin.Removed" text="여기서 뺌" sourceHash="d595b30d28c16df7" />
+		<entry key="Enum.ZoneModuleOrigin.Replaced" text="여기서 갈아끼움" sourceHash="821d05431d192019" />
 		<entry key="FriendList.Idle"
 		       text="새로 고침을 누르면 친구 목록을 보입니다"
 		       sourceHash="1bf7709ef94325c5" />
