@@ -1,5 +1,5 @@
 /**
- * @file DevTools/ServerPose/ServerPoseOverlay.h
+ * @file DevTools/Network/ServerPoseOverlay.h
  * @brief 권위 겹쳐 보기 — 서버가 가진 오브젝트 위치를 클라이언트 화면에 와이어프레임 고스트로 겹치고, 내 화면과 서버의 차이를 숫자로 알립니다(서버 디버깅 S6). **Shipping 에는 없습니다.**
  * @details 클라이언트가 `-gv_serverPoseOverlayPort=N -gv_serverPoseOverlayToken=T` 로 켜면 게임 스레드가 4 Hz 안팎으로 읽기 태스크 하나를 내고(`TaskManager`, 낮은 우선순위),
  *          그 태스크가 서버의 디버그 채널(`DebugChannel`)에 붙어 `scene.poses` 를 한 번 읽습니다. 앞 읽기가 끝나야 다음을 낸다(스테이지 완료) — 잠들며 도는 전용 스레드가 없다.
