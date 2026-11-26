@@ -1,15 +1,21 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Genre/Action/Fighting/Client/FightingViewComponent.h"
-
+#include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Log/Logger.h"
+#include "Core/Memory/Memory.h"
+#include "Core/String/Name/hashed_string.h"
 
+#include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Input/Map/CommonInputActions.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
+#include "GameFramework/Client/View/GameModeViewComponent.h"
+#include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Action/Fighting/Client/FightingHUDViewModel.h"
 #include "GameFramework/Kits/Genre/Action/Fighting/Component/FightingGameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Presentation/IHUDViewModelBinder.h"
@@ -17,6 +23,49 @@
 
 namespace sw
 {
+    class FightingGameModeComponent;
+    class FightingHUDViewModel;
+    class GameObjectManager;
+
+    /**
+     * @class FightingViewComponent
+     * @brief `Move` 축을 넘패드 방향으로, 버튼 액션 누름을 카탈로그 버튼 비트로 바꿔 디렉터에 넘기고 두 몸 · HUD 를 맞춥니다.
+     */
+    REFLECT( Category = "Fighting", DisplayName = "Fighting View",
+             Tooltip = "Client side of a Fighting match: sends input commands to the Fighting Game Mode on the same object and shows both fighters and the HUD" )
+    class FightingViewComponent : public GameModeViewComponent
+    {
+    public:
+        REFLECT_BODY();
+
+        static constexpr TickGroup kTickGroup = TickGroup::PostUpdate;
+
+        FightingViewComponent();
+        virtual ~FightingViewComponent() override;
+
+    private:
+        /** @brief 틱 뒤 게임 스레드: 입력을 명령으로 넘기고 몸 · HUD 를 맞춥니다. */
+        void updateView( GameObjectManager& manager, FightingGameModeComponent& director );
+        void submitInput( const GameModeInput& input, FightingGameModeComponent& director ) const;
+        /** @brief 캐릭터 @p player 의 몸 오브젝트를 대전의 자리 · 자세 높이에 둡니다. */
+        void updateBody( GameObjectManager& manager, const FightingGameModeComponent& director, int32 player, GameObjectHandle body ) const;
+        void updateHUD( const FightingGameModeComponent& director );
+
+    private:
+        PROPERTY( Category = "Input", DisplayName = "Move Action", Tooltip = "InputMap 2D action turned into a numpad direction (required)" )
+        hashed_string _moveAction;
+        PROPERTY( Required, Category = "Input", DisplayName = "Button Actions", Tooltip = "InputMap actions of the attack buttons, in the catalog's button order (required)" )
+        vector<hashed_string> _listButtonAction;
+        PROPERTY( Category = "Input", DisplayName = "Dead Zone", Tooltip = "An axis below this is neutral", Min = 0.0, Max = 1.0 )
+        float32 _deadZone;
+        PROPERTY( Category = "Scene", DisplayName = "Player Body", Tooltip = "Object shown as player 0" )
+        GameObjectHandle _playerBody;
+        PROPERTY( Category = "Scene", DisplayName = "Opponent Body", Tooltip = "Object shown as player 1" )
+        GameObjectHandle _opponentBody;
+
+        SW_TRANSIENT unique_ptr<FightingHUDViewModel> _hudViewModel; ///< HUD 가 보는 값(이 컴포넌트가 소유하고 HUD 는 빌려 쓴다 — 먼저 지워지면 HUD 가 스스로 뗀다)
+    };
+
     namespace
     {
         struct FightingViewComponentInternal
@@ -109,3 +158,5 @@ namespace sw
         _hudViewModel->setMatchWinner( director.getMatchWinner() );
     }
 } // namespace sw
+
+#include "FightingViewComponent.cpp.gen.inl"

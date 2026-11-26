@@ -1,14 +1,21 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Genre/Action/ActionAdventure/Client/AdventureAvatarComponent.h"
-
+#include "Core/Foundation/Types.h"
 #include "Core/Log/Logger.h"
+#include "Core/Math/Math.h"
+#include "Core/String/Name/hashed_string.h"
 
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Input/Map/CommonInputActions.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/Prefab/PrefabAsset.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
+#include "GameFramework/Client/View/GameModeViewComponent.h"
+#include "GameFramework/Client/View/PrefabViewBatch.h"
+#include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Action/ActionAdventure/AdventureRegionCatalog.h"
 #include "GameFramework/Kits/Genre/Action/ActionAdventure/Component/AdventureGameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
@@ -16,6 +23,74 @@
 
 namespace sw
 {
+    class AdventureGameModeComponent;
+    class GameObjectManager;
+    struct AdventureRegionDef;
+
+    /**
+     * @class AdventureAvatarComponent
+     * @brief `Move` 축 · 쓰기 액션을 프레임마다 디렉터 입력 명령으로 넘기고 판을 그립니다.
+     */
+    REFLECT( Category = "ActionAdventure", DisplayName = "Adventure Avatar",
+             Tooltip = "Client side of an action adventure: sends input commands to the Adventure Game Mode on the same object and draws its regions, beacons, camps and player" )
+    class AdventureAvatarComponent : public GameModeViewComponent
+    {
+    public:
+        REFLECT_BODY();
+
+        static constexpr TickGroup kTickGroup = TickGroup::PostUpdate;
+
+        AdventureAvatarComponent();
+        virtual ~AdventureAvatarComponent() override;
+
+        /** @brief 세운 모습을 지웁니다. */
+        void onEndPlay() override;
+
+    private:
+        /** @brief 틱 뒤 게임 스레드: 입력을 명령으로 넘기고 그립니다. */
+        void updateAvatar( GameObjectManager& manager, AdventureGameModeComponent& director );
+        void submitInput( const GameModeInput& input, AdventureGameModeComponent& director );
+        /** @brief 판을 보입니다. 지역 표 · 플레이어 자리는 절대 자리다. */
+        void showWorld( const AdventureGameModeComponent& director, GameObjectManager& manager );
+        /** @brief 지역 경계 넷을 얇은 상자로 보입니다 — 씬에 땅 메시가 없는 지역(확장 팩)도 어디까지 걸을 수 있는지 보인다. */
+        void showBorder( const AdventureRegionDef& region, GameObjectManager& manager );
+
+    private:
+        PROPERTY( Category = "Input", DisplayName = "Move Action", Tooltip = "InputMap 2D action that walks the player (required)" )
+        hashed_string _moveAction;
+        PROPERTY( Required, Category = "Input", DisplayName = "Use Action", Tooltip = "InputMap action that lights a beacon or rests at a camp (required)" )
+        hashed_string _useAction;
+        PROPERTY( Category = "View", DisplayName = "Cube Prefab", Required, Tooltip = "1 m cube stretched into region borders and beacons" )
+        AssetRef<PrefabAsset> _cubePrefab;
+        PROPERTY( Category = "View", DisplayName = "Sphere Prefab", Required, Tooltip = "1 m diameter sphere scaled to camps and the player" )
+        AssetRef<PrefabAsset> _spherePrefab;
+        PROPERTY( Category = "View", DisplayName = "Border Color" )
+        float4 _borderColor;
+        PROPERTY( Category = "View", DisplayName = "Border Width", Min = 0.01, Units = m )
+        float32 _borderWidth;
+        PROPERTY( Category = "View", DisplayName = "Beacon Size", Tooltip = "Full size of a beacon box; it stands on the floor", Units = m )
+        float3 _beaconSize;
+        PROPERTY( Category = "View", DisplayName = "Lit Beacon Color" )
+        float4 _litBeaconColor;
+        PROPERTY( Category = "View", DisplayName = "Unlit Beacon Color" )
+        float4 _unlitBeaconColor;
+        PROPERTY( Category = "View", DisplayName = "Camp Radius", Min = 0.01, Units = m )
+        float32 _campRadius;
+        PROPERTY( Category = "View", DisplayName = "Camp Height", Tooltip = "Height of a camp's center above the floor", Units = m )
+        float32 _campHeight;
+        PROPERTY( Category = "View", DisplayName = "Camp Color" )
+        float4 _campColor;
+        PROPERTY( Category = "View", DisplayName = "Player Radius", Min = 0.01, Units = m )
+        float32 _playerRadius;
+        PROPERTY( Category = "View", DisplayName = "Player Height", Tooltip = "Height of the player's center above the floor", Units = m )
+        float32 _playerHeight;
+        PROPERTY( Category = "View", DisplayName = "Player Color" )
+        float4 _playerColor;
+
+        SW_TRANSIENT PrefabViewBatch _cubeViews;
+        SW_TRANSIENT PrefabViewBatch _sphereViews;
+    };
+
     AdventureAvatarComponent::AdventureAvatarComponent()
         : GameModeViewComponent( GameModeViewBinding::of<&AdventureAvatarComponent::updateAvatar, &AdventureAvatarComponent::submitInput>() )
         , _moveAction{ CommonInputActions::kMove }
@@ -105,3 +180,5 @@ namespace sw
         (void)_cubeViews.show( manager, _cubePrefab, AbsolutePosition{ float3( region._max._x, half, centerZ ) }, alongZ, 0.0f, _borderColor );
     }
 } // namespace sw
+
+#include "AdventureAvatarComponent.cpp.gen.inl"

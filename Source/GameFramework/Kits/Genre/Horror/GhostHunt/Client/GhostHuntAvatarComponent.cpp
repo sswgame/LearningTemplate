@@ -1,13 +1,20 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Genre/Horror/GhostHunt/Client/GhostHuntAvatarComponent.h"
-
+#include "Core/Foundation/Types.h"
 #include "Core/Log/Logger.h"
+#include "Core/Memory/Memory.h"
+#include "Core/String/Name/hashed_string.h"
 
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Input/Map/CommonInputActions.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/Prefab/PrefabAsset.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
+#include "GameFramework/Client/View/GameModeViewComponent.h"
+#include "GameFramework/Client/View/PrefabViewBatch.h"
+#include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Horror/GhostHunt/Client/GhostHuntHUDViewModel.h"
 #include "GameFramework/Kits/Genre/Horror/GhostHunt/Component/GhostHuntGameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Presentation/IHUDViewModelBinder.h"
@@ -15,6 +22,57 @@
 
 namespace sw
 {
+    class GhostHuntGameModeComponent;
+    class GhostHuntHUDViewModel;
+    class GameObjectManager;
+
+    /**
+     * @class GhostHuntAvatarComponent
+     * @brief 입력 맵 액션을 프레임마다 디렉터 명령으로 넘기고 판을 그리며 HUD 를 채웁니다.
+     */
+    REFLECT( Category = "GhostHunt", DisplayName = "Ghost Hunt Avatar",
+             Tooltip = "Client side of a ghost hunt: sends commands to the Ghost Hunt Game Mode on the same object, draws the game and fills the HUD" )
+    class GhostHuntAvatarComponent : public GameModeViewComponent
+    {
+    public:
+        REFLECT_BODY();
+
+        static constexpr TickGroup kTickGroup = TickGroup::PostUpdate;
+
+        GhostHuntAvatarComponent();
+        virtual ~GhostHuntAvatarComponent() override;
+
+        /** @brief 세운 표식을 지웁니다. */
+        void onEndPlay() override;
+
+    private:
+        /** @brief 틱 뒤 게임 스레드: 입력을 명령으로 넘기고 판을 그리며 HUD 를 채웁니다. */
+        void updateAvatar( GameObjectManager& manager, GhostHuntGameModeComponent& director );
+        /** @brief 입력 맵을 읽어 디렉터 명령으로 넘깁니다. */
+        void submitInput( const GameModeInput& input, GhostHuntGameModeComponent& director ) const;
+        /** @brief 판을 표식으로 그립니다. */
+        void drawGame( GameObjectManager& manager, const GhostHuntGameModeComponent& director );
+        /** @brief HUD 값을 채웁니다. */
+        static void fillHUD( GhostHuntHUDViewModel& outViewModel, const GhostHuntGameModeComponent& director );
+
+    private:
+        PROPERTY( Category = "Input", DisplayName = "Move Action", Tooltip = "InputMap 2D action that walks the player and pulls against a ghost in the vacuum (required)" )
+        hashed_string _moveAction;
+        PROPERTY( Required, Category = "Input", DisplayName = "Light Action", Tooltip = "InputMap action held to shine the flashlight (required)" )
+        hashed_string _lightAction;
+        PROPERTY( Required, Category = "Input", DisplayName = "Strobe Action", Tooltip = "InputMap action held to charge the strobe, released to fire it (required)" )
+        hashed_string _strobeAction;
+        PROPERTY( Required, Category = "Input", DisplayName = "Vacuum Action", Tooltip = "InputMap action held to run the vacuum (required)" )
+        hashed_string _vacuumAction;
+        PROPERTY( Required, Category = "Input", DisplayName = "Use Action", Tooltip = "InputMap action: surge, search furniture (required)" )
+        hashed_string _useAction;
+        PROPERTY( Required, Category = "Look", DisplayName = "Marker Prefab", Tooltip = "Prefab with one mesh, spawned for everything the view shows" )
+        AssetRef<PrefabAsset> _markerPrefab;
+
+        SW_TRANSIENT PrefabViewBatch _markers;
+        SW_TRANSIENT unique_ptr<GhostHuntHUDViewModel> _hudViewModel; ///< HUD 가 보는 값(이 컴포넌트가 소유하고 HUD 는 빌려 쓴다 — 먼저 지워지면 HUD 가 스스로 뗀다)
+    };
+
     namespace
     {
         /** @brief 표식의 색 · 크기(m)입니다. */
@@ -178,3 +236,5 @@ namespace sw
         outViewModel.setLoseShown( director.getHuntResult() == GhostHuntResult::Lose );
     }
 } // namespace sw
+
+#include "GhostHuntAvatarComponent.cpp.gen.inl"

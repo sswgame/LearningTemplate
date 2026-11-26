@@ -1,17 +1,22 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.h"
-
+#include "Core/Container/string.h"
+#include "Core/Foundation/Types.h"
+#include "Core/Memory/Memory.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/formatString.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Automation/Watch/AutomationWatchComponent.h"
+#include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
+#include "GameFramework/Client/View/GameModeViewComponent.h"
+#include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternHUDViewModel.h"
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Component/WesternGameModeComponent.h"
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Component/WesternHorseComponent.h"
@@ -24,6 +29,47 @@
 
 namespace sw
 {
+    class GameObjectManager;
+    class PawnComponent;
+    class WesternGameModeComponent;
+    class WesternHUDViewModel;
+
+    /**
+     * @class WesternRiderViewComponent
+     * @brief 기수의 화면입니다. HUD 는 `WesternHUDViewModel` 을 같은 오브젝트의 HUD 컨트롤러에 건다 — 탑승 상태 글(`_rideStatus`), 말 스태미나(`_stamina` · `_staminaRatio`), 무법자 글(`_outlawStatus`).
+     */
+    REFLECT( Category = "Western", DisplayName = "Western Rider View",
+             Tooltip = "Client side of a western game: keeps the camera rig on the rider and writes the ride and outlaw lines of the HUD from the Western Game Mode on the same object" )
+    class WesternRiderViewComponent : public GameModeViewComponent
+    {
+    public:
+        REFLECT_BODY();
+
+        static constexpr TickGroup kTickGroup = TickGroup::PrePhysics;
+
+        WesternRiderViewComponent();
+        virtual ~WesternRiderViewComponent() override;
+
+        /** @brief @p director 의 무법자 글입니다. 아무 일도 없으면(시작 명예 · 수배 없음 · 가죽 없음 · 코어 멀쩡) 비어 있어 HUD 에 아무것도 그리지 않습니다. */
+        string formatOutlawStatus( const WesternGameModeComponent& director ) const;
+
+    private:
+        /** @brief 틱 뒤 게임 스레드: 판이 열렸으면 카메라 초점과 HUD 를 씁니다. */
+        void updateView( GameObjectManager& manager, const WesternGameModeComponent& director );
+        /** @brief 카메라 리그 초점을 기수(탔으면 기수가 붙은 말 위)의 발 아래에 둡니다. */
+        void updateCameraFocus( GameObjectManager& manager, const PawnComponent& playerPawn );
+        /** @brief 같은 오브젝트의 HUD 에 탑승 상태 한 줄과 말 스태미나, 무법자 글을 씁니다. */
+        void updateHUD( const WesternGameModeComponent& director, const PawnComponent& playerPawn );
+
+    private:
+        PROPERTY( Category = "Scene", DisplayName = "Camera Rig", Tooltip = "Object with the CameraDirectorComponent that follows the rider" )
+        GameObjectHandle _cameraRig;
+        PROPERTY( Category = "HUD", DisplayName = "Low Core Warning", Min = 0.0, Max = 100.0, Tooltip = "The HUD warns when a core falls below this" )
+        float32 _lowCoreWarning;
+
+        SW_TRANSIENT unique_ptr<WesternHUDViewModel> _hudViewModel; ///< HUD 가 보는 값(이 컴포넌트가 소유하고 HUD 는 빌려 쓴다 — 먼저 지워지면 HUD 가 스스로 뗀다)
+    };
+
     namespace
     {
         struct WesternRiderViewComponentInternal
@@ -132,3 +178,5 @@ namespace sw
         pViewModel->setStamina( pHorse != nullptr ? pHorse->getStamina().getValue() : 0.0f, pHorse != nullptr ? pHorse->getStamina().getRatio() : 0.0f );
     }
 } // namespace sw
+
+#include "WesternRiderViewComponent.cpp.gen.inl"
