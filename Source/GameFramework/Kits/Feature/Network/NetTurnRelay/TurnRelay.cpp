@@ -12,6 +12,7 @@
 #include "Core/Network/Connection/NetEndpoint.h"
 #include "Core/Network/NetConnectionState.h"
 #include "Core/Serialization/BitStream.h"
+#include "Core/Serialization/LittleEndianUtil.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/ConfigRangeUtil.h"

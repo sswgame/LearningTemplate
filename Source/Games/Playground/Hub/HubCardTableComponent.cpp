@@ -4,6 +4,7 @@
 
 #include "Core/Foundation/Constants.h"
 #include "Core/Math/SecureRandom.h"
+#include "Core/Network/Message/NetMessageRouter.h"
 #include "Core/Serialization/BitStream.h"
 #include "Core/Time/MonotonicClock.h"
 
