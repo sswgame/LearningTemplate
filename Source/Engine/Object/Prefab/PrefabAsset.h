@@ -161,6 +161,12 @@ namespace sw
         [[nodiscard]] bool applySpawnTemplateTo( GameObject* pTarget ) const;
         /** @brief 펼친 중첩 노드 @p nodeIndex 의 스폰 원형으로 읽습니다. 원형이 없는 노드(저작본 노드, 캐시 밖 자산)면 오류와 함께 false 입니다. */
         [[nodiscard]] bool applyNestedSpawnTemplateTo( GameObject* pTarget, size_t nodeIndex ) const;
+        /**
+         * @brief 프리팹의 기준 상태(원형 — 언리얼 CDO 자리)를 오브젝트 상태 XML 로 만듭니다.
+         * @details 프리팹을 씬 밖 임시 매니저의 오브젝트에 읽어 다시 씁니다 — 저장된 본문(XML · JSON · 쿠킹본)의 형식과 무관하게 같은 글이 나오고,
+         *          프리팹 본문에 남은 다른 오브젝트로의 부착 · 핸들은 적지 않습니다. 읽지 못하면 false 입니다.
+         */
+        [[nodiscard]] bool makeBaseState( string& outStateXML ) const;
         /** @brief 로드에 성공했으면 true 입니다. */
         bool isValid() const { return _bValid == SW_TRUE; }
         /**

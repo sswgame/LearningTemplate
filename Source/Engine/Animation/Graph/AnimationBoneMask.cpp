@@ -9,7 +9,6 @@
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
-#include "Engine/Serialization/XML/XMLNameCheck.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
 namespace sw
@@ -41,7 +40,7 @@ namespace sw
                         continue;
                     }
                     AnimationBoneMaskEntryParams params;
-                    if ( XMLFields::readProperties( entryNode, params, context ) == false || XMLNameCheck::reportUnknownChildren( entryNode, nullptr, 0, context ) == false )
+                    if ( XMLFields::readProperties( entryNode, params, context ) == false || entryNode.reportUnknownChildren( nullptr, 0, context ) == false )
                     {
                         bValid = false;
                         continue;

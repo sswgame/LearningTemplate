@@ -30,7 +30,6 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Serialization/XML/XMLDocument.h"
-#include "Engine/Serialization/XML/XMLNameCheck.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
@@ -54,7 +53,7 @@ namespace sw
 
         // 표를 돌리는 쪽입니다.
         // 문서 순서는 원소끼리 서로 보지 않는 카탈로그, 표 순서는 뒤 줄이 앞 줄을 읽는 동안 찾아보는 카탈로그(줍는 것 → 능력)가 쓴다.
-        /** @brief 자식 원소를 적힌 순서대로 읽습니다. 이름은 철자 그대로 비교합니다(`XMLNameCheck`). */
+        /** @brief 자식 원소를 적힌 순서대로 읽습니다. 이름은 철자 그대로 비교합니다(`XMLNode::reportUnknownChildren`). */
         template <typename TCatalog, size_t Count>
         [[nodiscard]] static XMLCatalogReadResult readInDocumentOrder( TCatalog& catalog, const XMLCatalogRoot& root, string_view sourceName, const XMLCatalogElement<TCatalog> ( &arrElement )[Count] )
         {
@@ -102,9 +101,9 @@ namespace sw
             }
             vector<const utf8*>  listUnknown;
             XMLCatalogReadResult result;
-            result._failedCount = XMLNameCheck::collectUnknownChildren( root, arrName, static_cast<uint32>( Count ), listUnknown );
+            result._failedCount = root.collectUnknownChildren( arrName, static_cast<uint32>( Count ), listUnknown );
             if ( result._failedCount > 0 )
-                (void)XMLNameCheck::reportUnknownChildren( root, arrName, static_cast<uint32>( Count ), sourceName );
+                (void)root.reportUnknownChildren( arrName, static_cast<uint32>( Count ), sourceName );
             return result;
         }
         template <typename TCatalog>

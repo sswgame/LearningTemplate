@@ -8,7 +8,7 @@
 #include "Engine/Input/GamepadButtonUtil.h"
 #include "Engine/Input/IInputDevice.h"
 #include "Engine/Input/Virtual/VirtualJoystick.h"
-#include "Engine/Serialization/XML/XMLNameCheck.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
 /**
  * @file InputBinding.cpp

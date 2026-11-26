@@ -61,7 +61,7 @@ namespace sw::editor
         void drawAnimationSection();
         /**
          * @brief 아틀라스 이미지를 열 · 행 셀로 나눠 보이고, 누른 셀을 고른 프레임의 UV 로 넣습니다(Shift 는 새 프레임으로 더한다).
-         * @details 유니티 Sprite Editor 의 Slice by Cell Count 와 같다. 셀 계산은 `SpriteClipViewModel::pickAtlasCell`(`AtlasGridUtil`).
+         * @details 유니티 Sprite Editor 의 Slice by Cell Count 와 같다. 셀 계산은 `SpriteClipViewModel::pickAtlasCell`(`TileGridUtil`).
          */
         void drawAtlasPicker();
         /**

@@ -12,6 +12,7 @@
         "Source/Engine/Physics/IPhysicsScene.h|IPhysicsScene": "역할 인터페이스(바디 · 캐릭터 · 질의 · 차 · 소프트 바디 · 부력)를 묶은 순수 인터페이스 — 차원 트레이트가 없는 역할은 빈 타입으로 갈린다"
     },
     "_staticOwner": {
+        "Source/Engine/Animation/Rig/RigIKSolver.h|RigIKSolver": "IK 알고리즘 모음 — 입력은 포즈 버퍼(RigPoseBuffer, 저장소) 위의 사슬 · 목표이고 풀이 공간(RigSolveSpace)은 인자 하나일 뿐이다. 풀이기를 포즈 버퍼나 풀이 공간 멤버로 합치지 않는다(언리얼 FABRIK · TwoBoneIK 도 애니메이션 노드 쪽 알고리즘 함수다)",
         "Source/Engine/Graphics/Texture/TextureStreamingPolicy.h|TextureStreamingPolicy": "여러 텍스처 · 예산 · 설정을 함께 보고 정하는 판단 하나 — 후보 하나의 일이 아니다(바이트 계산은 후보의 멤버). 언리얼 FRenderAssetStreamingManager 의 결정 자리",
         "Source/Editor/Common/Workspace/Undo/UndoStep.h|UndoStepRegistry": "정적 등록 목록 창구 — 처리기 줄(UndoStepHandler)을 다루지만 일은 목록(RegistrationList)에 올리고 내리고 찾는 것이고, 정적 등록자(UndoStepRegistrar)가 함수 포인터로 건다(다른 Registry 창구와 같은 자리)",
         "Source/Engine/Graphics/Shader/Compile/ShaderCompiler.h|ShaderCompiler": "컴파일러 창구 — 요청(ShaderCompileDesc)은 인자이고 일은 셰이더 DDC · 바깥 컴파일러 · 소스 해석 · 도구 지문이다(언리얼 FShaderCompilingManager 자리)",

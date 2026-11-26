@@ -210,7 +210,7 @@ namespace sw
         {
             float32 arrValue[4]{ 0.0f, 0.0f, 0.0f, 0.0f };
             Internal::evaluateChannel( channel, arrValue );
-            UIStyleFieldTable::writeComponents( state._shown._value, channel._field, arrValue );
+            state._shown._value.writeComponents( channel._field, arrValue );
             state._shown._setMask |= UIStyleFieldTable::makeBit( channel._field ); // 새 스타일이 정하지 않은 필드도 옮기는 동안은 정한 것으로 보인다
         }
         WidgetTree* pTree = widget.getTree();
@@ -226,7 +226,7 @@ namespace sw
         // 새 값: 시트가 정했으면 그 값, 아니면 위젯이 자기 필드로 그리는 값이다(읽지 못하는 위젯은 바로 바뀐다).
         UIStyleTransitionState::Channel channel{};
         if ( newStyle.has( field ) )
-            UIStyleFieldTable::readComponents( newStyle._value, field, channel._arrTo );
+            newStyle._value.readComponents( field, channel._arrTo );
         else if ( widget.tryGetOwnStyleField( field, newStates, channel._arrTo ) == false )
             return false;
         UIStyleTransitionState::Channel mirrored{};
@@ -246,7 +246,7 @@ namespace sw
         {
             // 옛 값: 옛 스타일이 정했으면 그 값, 아니면 위젯이 자기 필드로 그리던 값이다. 진행 중이던 채널의 지금 값이 있으면 그것이 우선이다.
             if ( bHaveFrom == false && oldStyle.has( field ) )
-                UIStyleFieldTable::readComponents( oldStyle._value, field, inoutFrom );
+                oldStyle._value.readComponents( field, inoutFrom );
             else if ( bHaveFrom == false && widget.tryGetOwnStyleField( field, oldStates, inoutFrom ) == false )
                 return false;
             channel._field    = field;
@@ -337,7 +337,7 @@ namespace sw
                     std::copy( std::begin( channel._arrTo ), std::end( channel._arrTo ), std::begin( arrValue ) );
                 else
                     Internal::evaluateChannel( channel, arrValue );
-                UIStyleFieldTable::writeComponents( state._shown._value, channel._field, arrValue );
+                state._shown._value.writeComponents( channel._field, arrValue );
                 changedProperties |= UIStyleFieldTable::makeBit( channel._field );
             }
             VectorUtil::removeIf( state._listChannel, Internal::isFinished ); // 끝난 채널은 한 번에 지운다(남은 순서는 그대로)

@@ -14,7 +14,6 @@
 #include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
-#include "Engine/Serialization/XML/XMLNameCheck.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
 namespace sw
@@ -429,11 +428,7 @@ namespace sw
 
     float4 TileSetAsset::computeCellUVRect( const TileSetContent& content, int32 cell )
     {
-        const int32   column = ( content._columnCount > 0 ) ? cell % content._columnCount : 0;
-        const int32   row    = ( content._columnCount > 0 ) ? cell / content._columnCount : 0;
-        const float32 width  = 1.0f / static_cast<float32>( MathUtil::max( content._columnCount, 1 ) );
-        const float32 height = 1.0f / static_cast<float32>( MathUtil::max( content._rowCount, 1 ) );
-        return float4{ static_cast<float32>( column ) * width, static_cast<float32>( row ) * height, width, height };
+        return TileGridUtil::computeCellUVRect( cell, content._columnCount, content._rowCount );
     }
 
     const TileVisual* TileSetAsset::resolveVisual( const vector<uint16>& listBrushIndex, int32 width, int32 height, int32 x, int32 y ) const

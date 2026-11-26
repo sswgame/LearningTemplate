@@ -7,7 +7,6 @@
 #include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
-#include "Engine/Serialization/XML/XMLNameCheck.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceTypes.h"
@@ -105,7 +104,7 @@ namespace sw
     bool AppearanceXMLUtil::reportUnknownAttributes( const XMLNode& node, const utf8* const* ppKnownName, uint32 knownCount, AppearanceLoadReport& report, string_view sourceName )
     {
         vector<const utf8*> listUnknown;
-        if ( XMLNameCheck::collectUnknownAttributes( node, ppKnownName, knownCount, listUnknown ) == 0 )
+        if ( node.collectUnknownAttributes( ppKnownName, knownCount, listUnknown ) == 0 )
             return true;
         for ( const utf8* pName : listUnknown )
         {

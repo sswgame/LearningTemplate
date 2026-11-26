@@ -50,6 +50,7 @@ namespace sw
             static constexpr const utf8* kNestedOverrides = "overrides";
             static constexpr const utf8* kNestedList      = "_listPrefabInstance";
             static constexpr const utf8* kNestedLocalID   = "localID";
+            static constexpr const utf8* kBaseName        = "PrefabBase"; ///< 이름 없는 프리팹의 원형 오브젝트 이름입니다(`makeBaseState`).
 
             /**
              * @brief 노드의 지역 id 키 글 @p text 를 @p outNode 에 읽습니다. 비었거나 꼴이 틀리면 오류로 false 입니다(다른 노드로 대신하지 않는다).
@@ -310,7 +311,7 @@ namespace sw
                 PrefabAsset trimmedAsset;
                 string      fullState;
                 string      trimmedState;
-                if ( trimmedAsset.setStateForCompare( asset.getName(), trimmedBody, format ) && PrefabOverrides::makeBaseState( asset, fullState ) && PrefabOverrides::makeBaseState( trimmedAsset, trimmedState ) && fullState == trimmedState )
+                if ( trimmedAsset.setStateForCompare( asset.getName(), trimmedBody, format ) && asset.makeBaseState( fullState ) && trimmedAsset.makeBaseState( trimmedState ) && fullState == trimmedState )
                     return trimmedBody;
                 SW_LOG_WARNING_ID( "PrefabAsset.DefaultOmitMismatch", "Prefab '%#' reads differently without its default values - all fields are written", asset.getName() );
                 return fullBody;
@@ -348,7 +349,7 @@ namespace sw
                     expected<void>                      overrides{};
                     PrefabPartOverride                  part{ to_string( static_cast<uint64>( index ) ), {} };
                     vector<PrefabPartOverride>          listDeepPart;
-                    const bool                          bMade = pSource != nullptr && PrefabOverrides::makeBaseState( *pSource, sourceState ) &&
+                    const bool                          bMade = pSource != nullptr && pSource->makeBaseState( sourceState ) &&
                                        PrefabOverrides::makeInstanceState( sourceState, baseNode._overrideXML, node._name, baseNodeState ) &&
                                        PrefabOverrides::makeInstanceState( sourceState, node._overrideXML, node._name, nodeState ) &&
                                        ( overrides = PrefabOverrides::computeOverrides( nodeState, baseNodeState, part._overrideXML ) ).has_value() &&
@@ -452,7 +453,7 @@ namespace sw
 
                     const shared_ptr<const PrefabAsset> pSource = pPrefabs->loadPrefab( node._prefabPath );
                     string                              baseState;
-                    if ( pSource == nullptr || PrefabOverrides::makeBaseState( *pSource, baseState ) == false )
+                    if ( pSource == nullptr || pSource->makeBaseState( baseState ) == false )
                     {
                         SW_LOG_WARNING_ID( "PrefabAsset.NestedPrefabCouldNot", "Nested prefab '%#' of '%#' could not be read - instance '%#' is not written to the prefab", node._prefabPath, root.getName().c_str(),
                                            node._name );
@@ -740,7 +741,7 @@ namespace sw
             return false;
         }
         string convertedBase;
-        if ( base.getStateFormat() != PrefabStateFormat::XML && PrefabOverrides::makeBaseState( base, convertedBase ) == false )
+        if ( base.getStateFormat() != PrefabStateFormat::XML && base.makeBaseState( convertedBase ) == false )
             return false;
         const string_view baseState = base.getStateFormat() == PrefabStateFormat::XML ? string_view( base.getStateData() ) : string_view( convertedBase );
 
@@ -783,7 +784,7 @@ namespace sw
         string         selfState;
         string         baseState;
         expected<void> overrides{};
-        if ( PrefabOverrides::makeBaseState( *this, selfState ) == false || PrefabOverrides::makeBaseState( base, baseState ) == false ||
+        if ( this->makeBaseState( selfState ) == false || base.makeBaseState( baseState ) == false ||
              ( overrides = PrefabOverrides::computeOverrides( selfState, baseState, outOverrideXML ) ).has_value() == false )
         {
             SW_LOG_ERROR_ID( "PrefabAsset.VariantDeltaFailed", "Prefab variant '%#': its differences from '%#' could not be made (%#)", _name, _basePath,
@@ -1126,6 +1127,35 @@ namespace sw
         PrefabAssetInternal::captureNestedParts( *pGameObject, pPrefabs, _listNestedInstance );
     }
 
+    bool PrefabAsset::makeBaseState( string& outStateXML ) const
+    {
+        outStateXML.clear();
+        if ( isValid() == false )
+            return false;
+
+        // 원형은 씬 밖에서 짓는다(언리얼 CDO 처럼 월드에 들지 않는다). 매니저마다 엔진 · 모듈의 팩토리가 등록되므로 게임 컴포넌트도 지어진다.
+        // 비동기 씬 로드(워커)도 부른다 — 씬 밖 매니저(TransientTag)라 컴포넌트 훅을 부르지 않는다(감사 A-15).
+        GameObjectManager scratch( GameObjectManager::TransientTag{} );
+        const string&     prefabName = getName();
+        GameObject*       pBase      = scratch.createGameObject( hashed_string( prefabName.empty() ? PrefabAssetInternal::kBaseName : prefabName.c_str() ) );
+        if ( pBase == nullptr )
+            return false;
+        if ( StringUtil::trim( getStateData() ).empty() == false && applyStateTo( pBase ) == false )
+            return false;
+
+        ObjectSaveOptions options{ SerializePurpose::Authoring };
+        options._bOmitExternalParent = SW_TRUE;
+        expected<string> state       = ObjectStateSerializer::saveToXMLString( pBase, options );
+        if ( state.has_value() == false )
+        {
+            SW_LOG_ERROR_ID( "PrefabOverrides.BaseStateNotSaved", "Prefab base state could not be saved: %# (%#)", state.error().message(), state.error().detail() );
+            outStateXML.clear();
+            return false;
+        }
+        outStateXML = std::move( *state );
+        return true;
+    }
+
     bool PrefabAsset::applyStateTo( GameObject* pTarget, const ObjectIdentity* pIdentity ) const
     {
         if ( pTarget == nullptr || _stateData.empty() )
@@ -1166,7 +1196,7 @@ namespace sw
         if ( bHasState == false && hasResolvedNestedInstances() == false )
             return true;
 
-        // 원형은 씬 밖에서 짓는다(`PrefabOverrides::makeBaseState` 와 같은 방법, 언리얼 CDO 처럼 월드에 들지 않는다). 매니저 하나를 상태마다 비워 쓴다.
+        // 원형은 씬 밖에서 짓는다(`PrefabAsset::makeBaseState` 와 같은 방법, 언리얼 CDO 처럼 월드에 들지 않는다). 매니저 하나를 상태마다 비워 쓴다.
         // 캐시는 워커에서도 로드한다 — 씬 밖 매니저(TransientTag)는 훅을 부르지 않아 공유 에셋을 만지지 않는다(감사 A-15). 스폰 때 산 오브젝트에서 훅이 돈다.
         GameObjectManager scratch( GameObjectManager::TransientTag{} );
         if ( bHasState && PrefabAssetInternal::bakeSpawnTemplate( scratch, _name, [&]( GameObject* pTemp )

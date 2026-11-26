@@ -345,7 +345,7 @@
     "Source/Engine/Animation/Retarget/PoseRetargeter.cpp": {"float": 1},
     "Source/Engine/Animation/Rig/RigConstraintNodes.cpp": {"float": 1},
     "Source/Engine/Animation/Rig/RigIKNodes.cpp": {"float": 3},
-    "Source/Engine/Animation/Rig/RigIKSolver.cpp": {"float": 8},
+    "Source/Engine/Animation/Rig/RigIKSolver.cpp": {"float": 6},
     "Source/Engine/Animation/Rig/RigNodeParams.h": {"minus-one": 1},
     "Source/Engine/Animation/Rig/RigSecondaryNodes.cpp": {"float": 1},
     "Source/Engine/Animation/Rig/RigSpringChain.cpp": {"float": 4},

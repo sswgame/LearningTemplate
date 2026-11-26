@@ -1,6 +1,6 @@
 /**
  * @file TileMapPaintUtil.h
- * @brief 2D 도구(`TileMapPanel` · `SpriteClipPanel`)의 셀 판단입니다 — 획 선분, 사각형, 채우기, 화면 ↔ 셀, 아틀라스 셀. ImGui 를 모릅니다(EditorTest 가 테스트합니다).
+ * @brief 2D 도구(`TileMapPanel` · `SpriteClipPanel`)의 셀 판단입니다 — 획 선분, 사각형, 채우기, 화면 ↔ 셀(아틀라스 셀은 엔진 `TileGridUtil`). ImGui 를 모릅니다(EditorTest 가 테스트합니다).
  */
 #pragma once
 #include "Core/Container/vector.h"
@@ -77,20 +77,5 @@ namespace sw::editor
     private:
         float2  _pan;  ///< 캔버스 왼쪽 위에서 격자 왼쪽 위까지의 거리(px)
         float32 _zoom; ///< 칸 크기 배율
-    };
-} // namespace sw::editor
-
-namespace sw::editor
-{
-    /**
-     * @struct AtlasGridUtil
-     * @brief 열 · 행으로 나눈 아틀라스의 셀 계산입니다(타일 팔레트 · Sprite Clip 의 셀 고르기 — 유니티 Sprite Editor 의 Slice by Cell Count).
-     */
-    struct AtlasGridUtil
-    {
-        /** @brief 셀 번호(행 우선, 0 = 왼쪽 위)의 UV 사각형 (u, v, 폭, 높이) 입니다. 열 · 행이 1 보다 작으면 1 로 봅니다. */
-        static float4 computeCellUVRect( int32 cell, int32 columnCount, int32 rowCount );
-        /** @brief 이미지 안의 0..1 위치(@p u, @p v)가 놓인 셀 번호입니다. 이미지 밖이면 비어 있습니다. */
-        static optional<int32> findCellAtUV( float32 u, float32 v, int32 columnCount, int32 rowCount );
     };
 } // namespace sw::editor

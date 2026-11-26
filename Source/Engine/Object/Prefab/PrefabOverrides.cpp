@@ -425,35 +425,6 @@ namespace sw
         return path;
     }
 
-    bool PrefabOverrides::makeBaseState( const PrefabAsset& prefab, string& outStateXML )
-    {
-        outStateXML.clear();
-        if ( prefab.isValid() == false )
-            return false;
-
-        // 원형은 씬 밖에서 짓는다(언리얼 CDO 처럼 월드에 들지 않는다). 매니저마다 엔진 · 모듈의 팩토리가 등록되므로 게임 컴포넌트도 지어진다.
-        // 비동기 씬 로드(워커)도 부른다 — 씬 밖 매니저(TransientTag)라 컴포넌트 훅을 부르지 않는다(감사 A-15).
-        GameObjectManager scratch( GameObjectManager::TransientTag{} );
-        const string&     prefabName = prefab.getName();
-        GameObject*       pBase      = scratch.createGameObject( hashed_string( prefabName.empty() ? PrefabOverridesInternal::kBaseName : prefabName.c_str() ) );
-        if ( pBase == nullptr )
-            return false;
-        if ( StringUtil::trim( prefab.getStateData() ).empty() == false && prefab.applyStateTo( pBase ) == false )
-            return false;
-
-        ObjectSaveOptions options{ SerializePurpose::Authoring };
-        options._bOmitExternalParent = SW_TRUE;
-        expected<string> state       = ObjectStateSerializer::saveToXMLString( pBase, options );
-        if ( state.has_value() == false )
-        {
-            SW_LOG_ERROR_ID( "PrefabOverrides.BaseStateNotSaved", "Prefab base state could not be saved: %# (%#)", state.error().message(), state.error().detail() );
-            outStateXML.clear();
-            return false;
-        }
-        outStateXML = std::move( *state );
-        return true;
-    }
-
     expected<void> PrefabOverrides::computeOverrides( string_view instanceStateXML, string_view baseStateXML, string& outOverrideXML )
     {
         outOverrideXML.clear();

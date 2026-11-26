@@ -112,8 +112,8 @@ SW_TEST_CASE( PrefabVariantTest, SaveKeepsVariantAndRoundTrips )
     SW_REQUIRE_TRUE( reread.loadFromDiskFile( savedPath ) );
     string before;
     string after;
-    SW_REQUIRE_TRUE( PrefabOverrides::makeBaseState( asset, before ) );
-    SW_REQUIRE_TRUE( PrefabOverrides::makeBaseState( reread, after ) );
+    SW_REQUIRE_TRUE( asset.makeBaseState( before ) );
+    SW_REQUIRE_TRUE( reread.makeBaseState( after ) );
     SW_EXPECT_EQUAL( before, after );
 }
 
@@ -136,8 +136,8 @@ SW_TEST_CASE( PrefabVariantTest, SaveOmitsDefaultValues )
     SW_REQUIRE_TRUE( reread.loadFromDiskFile( savedPath ) );
     string before;
     string after;
-    SW_REQUIRE_TRUE( PrefabOverrides::makeBaseState( asset, before ) );
-    SW_REQUIRE_TRUE( PrefabOverrides::makeBaseState( reread, after ) );
+    SW_REQUIRE_TRUE( asset.makeBaseState( before ) );
+    SW_REQUIRE_TRUE( reread.makeBaseState( after ) );
     SW_EXPECT_EQUAL( before, after );
 }
 
@@ -160,8 +160,8 @@ SW_TEST_CASE( PrefabVariantTest, JSONSaveOmitsDefaultValues )
     SW_REQUIRE_TRUE( reread.loadFromDiskFile( savedPath ) );
     string before;
     string after;
-    SW_REQUIRE_TRUE( PrefabOverrides::makeBaseState( asset, before ) );
-    SW_REQUIRE_TRUE( PrefabOverrides::makeBaseState( reread, after ) );
+    SW_REQUIRE_TRUE( asset.makeBaseState( before ) );
+    SW_REQUIRE_TRUE( reread.makeBaseState( after ) );
     SW_EXPECT_EQUAL( before, after );
 }
 

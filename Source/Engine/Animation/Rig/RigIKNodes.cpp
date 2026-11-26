@@ -126,7 +126,7 @@ namespace sw
                     if ( chainIndex + 1 < listChainBone.size() )
                     {
                         const float3 toNext   = listReference[listChainBone[chainIndex + 1]].getTranslation() - listReference[bone].getTranslation();
-                        const float3 boneAxis = float3::transform( toNext, RigIKSolver::makeInverse( listReference[bone].getRotation() ) ).normalize();
+                        const float3 boneAxis = float3::transform( toNext, listReference[bone].getRotation().inverse() ).normalize();
                         limit._boneAxis       = ( boneAxis.getLengthSquared() > 0.5f ) ? boneAxis : float3::UnitY;
                     }
                 }
@@ -337,7 +337,7 @@ namespace sw
                     // 모델 공간 축을 레퍼런스 포즈의 본 로컬 축으로 바꾼다. 원형(`_params`)의 축은 그대로 두어 다시 묶어도 같은 값이다.
                     vector<float4x4> listReference;
                     RigIKNodesInternal::computeReferenceModel( *context._pSkeleton, listReference );
-                    _aimAxis = float3::transform( _params._aimAxis.normalize(), RigIKSolver::makeInverse( listReference[_bone].getRotation() ) ).normalize();
+                    _aimAxis = float3::transform( _params._aimAxis.normalize(), listReference[_bone].getRotation().inverse() ).normalize();
                 }
                 for ( ChainEntry& entry : _listChain )
                 {
@@ -362,7 +362,7 @@ namespace sw
                 if ( animated.getLengthSquared() < 0.5f || toTarget.getLengthSquared() < 1e-8f )
                     return;
                 const float32    distance = toTarget.getLength();
-                const quaternion turn     = RigAimNode::limitTurn( RigIKSolver::makeFromToRotation( animated, toTarget ), _maxAngle );
+                const quaternion turn     = RigAimNode::limitTurn( quaternion::fromToRotation( animated, toTarget ), _maxAngle );
                 const float3     aimPoint = bonePosition + float3::transform( animated, turn ) * distance;
 
                 for ( const ChainEntry& entry : _listChain )
@@ -371,7 +371,7 @@ namespace sw
                     const float3 desired    = space.projectVector( aimPoint - pose.getModelPosition( _bone ) );
                     if ( currentAim.getLengthSquared() < 1e-8f || desired.getLengthSquared() < 1e-8f )
                         continue;
-                    const quaternion delta = RigIKSolver::makeFromToRotation( currentAim, desired );
+                    const quaternion delta = quaternion::fromToRotation( currentAim, desired );
                     pose.rotateModel( entry._bone, RigAimNode::limitTurn( quaternion::slerp( quaternion::Identity, delta, entry._weight ), entry._maxAngle ) );
                 }
                 (void)RigIKSolver::aimBone( pose, _bone, _aimAxis, aimPoint, MathUtil::kPi, 1.0f, space );
@@ -538,7 +538,7 @@ namespace sw
                     quaternion aligned = footRotation;
                     if ( _params._bAlignToNormal && foot._bHit == SW_TRUE )
                     {
-                        quaternion    tilt  = RigIKSolver::makeFromToRotation( float3::UnitY, foot._normalModel );
+                        quaternion    tilt  = quaternion::fromToRotation( float3::UnitY, foot._normalModel );
                         const float32 angle = 2.0f * MathUtil::acos( MathUtil::clamp( MathUtil::abs( tilt._w ), 0.0f, 1.0f ) );
                         if ( angle > _maxAlignAngle && angle > MathUtil::kEpsilon )
                             tilt = quaternion::slerp( quaternion::Identity, tilt, _maxAlignAngle / angle );

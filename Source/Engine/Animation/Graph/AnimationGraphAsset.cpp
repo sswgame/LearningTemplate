@@ -15,7 +15,6 @@
 #include "Engine/Serialization/Inherit/ResourceComposer.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
-#include "Engine/Serialization/XML/XMLNameCheck.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
 namespace sw
@@ -36,7 +35,7 @@ namespace sw
                                                    std::initializer_list<string_view> listHandRead = {} )
             {
                 const bool bProperties = XMLFields::readProperties( element, outParams, sourceLabel, listHandRead );
-                const bool bChildren   = XMLNameCheck::reportUnknownChildren( element, arrChild, sourceLabel );
+                const bool bChildren   = element.reportUnknownChildren( arrChild, sourceLabel );
                 return bProperties && bChildren;
             }
 
@@ -45,7 +44,7 @@ namespace sw
             [[nodiscard]] static bool readLeafElement( const XMLNode& element, TParams& outParams, string_view sourceLabel )
             {
                 const bool bProperties = XMLFields::readProperties( element, outParams, sourceLabel );
-                const bool bChildren   = XMLNameCheck::reportUnknownChildren( element, nullptr, 0, sourceLabel );
+                const bool bChildren   = element.reportUnknownChildren( nullptr, 0, sourceLabel );
                 return bProperties && bChildren;
             }
 

@@ -10,6 +10,7 @@
 #include "Engine/Graphics/Canvas/CanvasOverlay.h"
 #include "Engine/Graphics/Canvas/CanvasPainter.h"
 #include "Engine/Graphics/DebugDraw/DebugDrawQueue.h"
+#include "Engine/Graphics/View/SceneViewQuery.h"
 #include "Engine/Text/FontSubsystem.h"
 
 namespace sw
@@ -86,28 +87,6 @@ namespace sw
         gv_debugDrawGameView = bEnabled;
     }
 
-    bool DebugDrawCanvasUtil::projectSegment( const float4x4& viewProj, const float3& from, const float3& to, const float2& targetSize, float2& outFrom, float2& outTo )
-    {
-        float4 clipA = float4::transform( float4{ from, 1.0f }, viewProj );
-        float4 clipB = float4::transform( float4{ to, 1.0f }, viewProj );
-        if ( clipA._w <= kNearW && clipB._w <= kNearW )
-            return false;
-        // 한쪽만 뒤에 있으면 w == kNearW 가 되는 지점까지 당긴다. 동차 좌표는 선형이라 clip 공간에서 바로 보간된다.
-        if ( clipA._w <= kNearW )
-        {
-            const float32 t = ( kNearW - clipA._w ) / ( clipB._w - clipA._w );
-            clipA           = clipA + ( clipB - clipA ) * t;
-        }
-        else if ( clipB._w <= kNearW )
-        {
-            const float32 t = ( kNearW - clipB._w ) / ( clipA._w - clipB._w );
-            clipB           = clipB + ( clipA - clipB ) * t;
-        }
-        outFrom = DebugDrawCanvasInternal::toScreen( clipA, targetSize );
-        outTo   = DebugDrawCanvasInternal::toScreen( clipB, targetSize );
-        return true;
-    }
-
     uint32 DebugDrawCanvasUtil::paint( const DebugDrawQueue& queue, const float4x4& viewProj, const float2& targetSize, FontSubsystem* pFontSubsystem, uint64 frameIndex,
                                        vector<DebugLine>& inoutScratchLine, CanvasDrawList& outCanvas )
     {
@@ -120,7 +99,7 @@ namespace sw
         {
             float2 screenFrom;
             float2 screenTo;
-            if ( projectSegment( viewProj, line._from, line._to, targetSize, screenFrom, screenTo ) == false )
+            if ( SceneViewQuery::projectSegment( viewProj, line._from, line._to, targetSize, screenFrom, screenTo ) == false )
                 continue;
             DebugDrawCanvasInternal::fillSegment( painter, screenFrom, screenTo, line._color );
             ++paintedCount;

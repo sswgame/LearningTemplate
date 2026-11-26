@@ -467,7 +467,7 @@ SW_TEST_CASE_F( RigIKTest, AimAxisInModelSpaceFollowsTheReferencePose )
     setBone( kGoal, position( kTurned ) + float3{ 1.0f, 0.0f, 0.0f } );
     run();
 
-    const float3 localAxis = float3::transform( float3{ 0.0f, 0.0f, 1.0f }, RigIKSolver::makeInverse( turned._rotation ) );
+    const float3 localAxis = float3::transform( float3{ 0.0f, 0.0f, 1.0f }, turned._rotation.inverse() );
     SW_EXPECT_TRUE( angleToDirection( rotation( kTurned ), localAxis, float3{ 1.0f, 0.0f, 0.0f } ) < 0.5f );
 }
 
