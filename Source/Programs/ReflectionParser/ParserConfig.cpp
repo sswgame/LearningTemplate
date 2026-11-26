@@ -361,7 +361,7 @@ namespace sw
                 bool bAllKnown = true;
                 for ( const string& targetOption : listTargetOption )
                 {
-                    const auto rowIt = mapIt->find( std::string( targetOption.c_str() ) );
+                    const auto rowIt = mapIt->find( targetOption.c_str() );
                     if ( rowIt != mapIt->end() )
                     {
                         if ( rowIt->is_array() == false )
