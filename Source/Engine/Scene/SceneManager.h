@@ -107,7 +107,7 @@ namespace sw
         static constexpr MemoryTag   kSubsystemMemoryTag = MemoryTag::Scene;
         /**
          * @brief 빈 매니저로 만듭니다. 엔진 서비스 묶음은 바인딩된 표에서 한 번 읽어 둡니다(`SceneEngineSubsystems::makeFromBoundEngine`).
-         * @details 서비스 저장소(`EngineServiceCollection`)는 표를 묶기 **전에** 이것을 만든다 — 그래서 `initializeSubsystem` 이 묶인 뒤의 표를 다시 읽습니다.
+         * @details 서비스 저장소(`EngineServiceCollection`)는 표를 묶기 전에 이것을 만든다 — 그래서 `initializeSubsystem` 이 묶인 뒤의 표를 다시 읽습니다.
          */
         SceneManager();
         /** @brief 매니저를 해제합니다(`shutdownSubsystem` 을 부르지 않았으면 여기서 내린다). */

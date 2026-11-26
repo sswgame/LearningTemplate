@@ -111,7 +111,7 @@ namespace sw
         void collectLooseFolders( string_view folderID, vector<DiskPath>& outListFolder ) const;
 
         /**
-         * @brief 리소스 id 를 디스크 경로로 풉니다(`toAssetID` 의 짝) — 낱개 파일 · 폴더의 자리를 정하는 입구 하나다. 결과는 읽기 경로다 — 쓰는 자리는 문을 지난다(에디터 `AssetWriter`, 나머지는 `AssetWriteAccess` 의 친구).
+         * @brief 리소스 id 를 디스크 경로로 풉니다(`toAssetID` 의 짝). 낱개 파일 · 폴더의 자리를 정하는 입구 하나다. 결과는 읽기 경로이고 쓰는 자리는 문을 지난다(에디터 `AssetWriter`, 나머지는 `AssetWriteAccess` 의 친구).
          *        에디터 · 쿠커 · 도구가 디스크 자리를 알 때 쓴다. 런타임 내용 읽기는 팩까지 보는 `AssetIO` 다.
          * @param resourceID 전역 id(`engine/`/`common/`/`game/<pack>/`/`editor/`/`dlc/<이름>/`… · 붙인 디스크 도메인)는 그 도메인 루트 아래(파일이 아직 없어도),
          *        상대 키는 검색 순서로 이긴 있는 파일이다(읽은 그 파일에 쓴다).

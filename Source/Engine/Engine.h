@@ -88,13 +88,13 @@ namespace sw
          *          이 빌드에 없는 역할이면(Client 빌드의 전용 서버, Server 빌드의 클라이언트) 실패합니다.
          * @param pHostScope 호스트 범위입니다 — 코어 범위의 부모이고, 엔진의 `ModuleLoadStage` · `ModuleUnloadStage` 단계가 여기서 `IModuleLoader` 를 찾습니다.
          *                   범위 객체는 엔진보다 오래 살아야 합니다. 그 안의 서브시스템은 `shutdown` 이 내립니다. nullptr 이면 호스트가 내준 것이 없습니다(테스트 하네스).
-         *                   이 범위가 **프로세스 범위**(범위 사슬의 뿌리)라, 모듈 서브시스템(`SW_MODULE_SUBSYSTEM( Process, Process, … )`)이 여기에 모듈 이름의 자식 범위로 선다 —
+         *                   이 범위가 프로세스 범위(범위 사슬의 뿌리)라, 모듈 서브시스템(`SW_MODULE_SUBSYSTEM( Process, Process, … )`)이 여기에 모듈 이름의 자식 범위로 선다 —
          *                   그래서 쓰기 가능한 범위로 받는다. 없으면 코어 범위가 뿌리다.
          */
         [[nodiscard]] bool initialize( int32 argc, utf8* pArgv[], EngineHostRole role, SubsystemScope* pHostScope );
         /**
          * @brief 매니저들을 종료하고 정리합니다.
-         * @param hostScope `initialize` 에 넘긴 호스트 범위입니다. 엔진 범위(기동 · 공용)를 내린 뒤, 코어 범위보다 **먼저** 비웁니다(`destroyAll`).
+         * @param hostScope `initialize` 에 넘긴 호스트 범위입니다. 엔진 범위(기동 · 공용)를 내린 뒤, 코어 범위보다 먼저 비웁니다(`destroyAll`).
          * @details 코어의 진단 서브시스템이 소멸하며 종료 누수 창을 닫습니다. 호스트 범위는 기동 뒤에 칸 · 부품 · 종료 순서를 키우므로(`bind`,
          *          `shutdownDependents`), 창보다 늦게 비우면 그 저장소가 "창 안에서 태어나 살아 있는 블록" 으로 보고됩니다. 호스트의 서브시스템도
          *          로거 · 이름 풀(코어)이 아직 있을 때 소멸합니다.

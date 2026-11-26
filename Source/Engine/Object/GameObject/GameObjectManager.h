@@ -671,7 +671,7 @@ namespace sw
 
         /** @brief 등록 줄의 단계가 @p step 인 서비스를 씬 범위의 초기화 순서(의존 순서)로 갱신합니다. `update` 가 모든 단계 끝에 부른다 — 본문은 부르지 않는다. */
         void updateSceneSubsystems( SceneFrameStep step, float32 deltaTime );
-        /** @brief 등록 줄의 마치는 단계가 @p step 인 서비스의 프레임 일을 마칩니다(`completeFrameJob`). `update` 가 모든 단계 본문 **앞**에 부른다. */
+        /** @brief 등록 줄의 마치는 단계가 @p step 인 서비스의 프레임 일을 마칩니다(`completeFrameJob`). `update` 가 모든 단계 본문 앞에 부른다. */
         void completeSceneSubsystemJobs( SceneFrameStep step );
         /**
          * @brief 프레임 일의 등록 줄이 맞는지 봅니다(만들 때 한 번) — 마치는 단계가 넘기는 단계 뒤인가, 사이가 겹치는 두 서비스의 일이 겹치는 접근을 선언하지 않았는가.

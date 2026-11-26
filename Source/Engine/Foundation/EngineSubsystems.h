@@ -2,7 +2,7 @@
  * @file EngineSubsystems.h
  * @brief 엔진 범위의 서브시스템 창구입니다 — `engine::getSubsystem<T>()`(반드시 있음) · `engine::findSubsystem<T>()`(없을 수 있음).
  *
- * @details 서브시스템 접근은 **소유 수명마다 한 창구, 한 어휘**입니다. `get` 은 `T&` 를 돌려주고 비었으면 멈추며, `find` 는 `T*` 를 돌려준다.
+ * @details 서브시스템 접근은 소유 수명마다 한 창구, 한 어휘입니다. `get` 은 `T&` 를 돌려주고 비었으면 멈추며, `find` 는 `T*` 를 돌려준다.
  *          | 수명 | 창구 |
  *          | --- | --- |
  *          | 엔진(프로세스) | `engine::getSubsystem<T>()` · `engine::findSubsystem<T>()` — 이 헤더 |
@@ -105,7 +105,7 @@ namespace sw
         }
 
         /**
-         * @brief 엔진 서브시스템 @p T 입니다. **없으면 nullptr 이므로** 받는 쪽이 확인해야 합니다(바인딩 전 · 선택 칸 · 하네스가 넣지 않은 서브시스템).
+         * @brief 엔진 서브시스템 @p T 입니다. 없으면 nullptr 이므로 받는 쪽이 확인해야 합니다(바인딩 전 · 선택 칸 · 하네스가 넣지 않은 서브시스템).
          * @details 칸이 있는 타입은 그 칸을 읽고, 칸이 없는 타입은 바인딩한 범위에서 상위로 올라가며 찾는다(선형 검색 — 핫 패스면 칸을 선언한다).
          *          `const T` 로 찾으면 const 로 건 객체(전용 서버의 `const ServerConfig`)도 찾고 const 포인터를 돌려준다(`findInLocator` 와 같은 규칙).
          */

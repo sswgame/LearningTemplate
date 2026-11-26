@@ -132,7 +132,7 @@ namespace sw
     /**
      * @class TelemetrySubsystem
      * @brief 엔진 서비스입니다(`engine::getTelemetrySubsystem`, 게임은 `game::findSubsystem<TelemetrySubsystem>()`). `record` 는 아무 스레드에서나 부릅니다(잠금 하나).
-     * @details **흐름**: `record` → 스키마 대조(모르는 사건 · 필드 · 타입 → 거절) → 빵부스러기 → 동의 → 세션 표본 → 사건 표본 → 묶음. 묶음이 `batchEvents` 에
+     * @details 흐름: `record` → 스키마 대조(모르는 사건 · 필드 · 타입 → 거절) → 빵부스러기 → 동의 → 세션 표본 → 사건 표본 → 묶음. 묶음이 `batchEvents` 에
      *          닿거나 `flushSeconds` 가 지나면(`update`) 스풀 파일 `telemetry_<세션>_<번호>.jsonl` 에 덧붙입니다. 파일이 `maxFileBytes` 를 넘으면 닫고 다음
      *          번호로 회전하며, 닫힌 파일은 업로더에 넘겨 `Sent` 면 지웁니다. 스풀 전체가 `maxFiles` · `maxTotalBytes` 를 넘으면 가장 오래된 닫힌 파일을
      *          지웁니다(보내지 못한 것을 무한히 쌓지 않는다). 지난 실행이 남긴 파일도 닫힌 파일로 이어 받습니다.
@@ -144,7 +144,7 @@ namespace sw
      *          (`DedicatedWorker`)가 받은 순서대로 하고, 그 상태는 스풀 잠금(`_spoolMutex`)이 지킨다. 네트워크 올리기는 어느 잠금도 쥐지 않는다 — 끝점이 느려도
      *          프레임 · 다른 스레드의 `record` 가 기다리지 않는다(감사 N-6). 올리기가 `Failed` 면 지수 물러서기(`uploadRetrySeconds` ~ `uploadRetryMaxSeconds`,
      *          지터)만큼 세션 시계가 흐를 때까지 다시 보내지 않는다. 언리얼 `FHttpModule`(비동기) + 분석 공급자의 배치 플러시와 같은 자리다.
-     *          **서브시스템** `Telemetry`(Client 대상): 엔진 · 게임 스키마를 읽고 스풀 폴더(사용자 설정 파일 옆 `telemetry/`)로
+     *          서브시스템 `Telemetry`(Client 대상): 엔진 · 게임 스키마를 읽고 스풀 폴더(사용자 설정 파일 옆 `telemetry/`)로
      *          서며 동의를 사용자 설정에 묶습니다. 같은 동의를 쓰는 크래시 보고(`CrashReportSubsystem`)의 지난 크래시 묶기도 이 단계가 세우고 내립니다.
      */
     class SW_API TelemetrySubsystem : public Subsystem

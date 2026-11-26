@@ -4,7 +4,7 @@
  * @details 라이브러리(Recast, Detour)는 `Navigation/Recast/` 안에만 있고 여기에는 그 타입이 하나도 없다.
  *          백엔드를 바꾸려면 이 인터페이스를 구현하는 두 클래스(내비메시와 군중)와 `NavMeshBackend::createNavMesh` 의 한 줄을 바꾼다.
  *
- *          **역할 나눔.** 타일만 다루는 코드(쿠킹 `NavMeshAsset`, 재베이크 워커, 편집기 베이크 명령)는 `INavMeshTileStore` 만 받는다 — 베이크 워커가 교체 · 질의를 부르는 모양을
+ *          역할 나눔. 타일만 다루는 코드(쿠킹 `NavMeshAsset`, 재베이크 워커, 편집기 베이크 명령)는 `INavMeshTileStore` 만 받는다 — 베이크 워커가 교체 · 질의를 부르는 모양을
  *          형식으로 막는다. 질의 · 바꾸기 · 디버그는 따로 받는 곳이 없어 이 인터페이스에 함께 둔다(언리얼 `ANavigationData`, Godot `NavigationServer3D` 가 한 창구인 것과 같다).
  *
  *          타일. 내비메시는 XZ 타일 격자다. 타일 하나는 백엔드가 아는 불투명 바이트(`NavTileData`)이고, 베이크(`bakeTile`)는 입력만 읽는
@@ -93,7 +93,7 @@ namespace sw
         /** @brief 이 내비메시 위의 군중을 만듭니다. */
         virtual unique_ptr<INavCrowd> createCrowd( uint32 maxAgentCount, float32 maxAgentRadius ) = 0;
 
-        // 질의 — 모두 const 이고 여러 스레드가 같이 호출해도 된다(교체와 겹치면 안 된다 — 파일 머리말). 유니티 `NavMesh.CalculatePath` · `NavMesh.Raycast` 자리다.
+        // 질의: 모두 const 이고 여러 스레드가 같이 호출해도 된다(교체와 겹치면 안 된다, 파일 머리말). 유니티 `NavMesh.CalculatePath` · `NavMesh.Raycast` 자리다.
         /** @brief @p position 에서 반 크기 @p searchExtent 상자 안(가로 XZ 기준)의 가장 가까운 내비메시 위 점입니다. 없으면 false 입니다 — 폴리곤의 경계 상자만 걸치고 점은 상자 밖이면 false 다. */
         [[nodiscard]] virtual bool findNearestPoint( const float3& position, const float3& searchExtent, const NavQueryFilter& filter, NavLocation& outLocation ) const = 0;
         /**

@@ -119,7 +119,7 @@ namespace sw
      *          입력 라우팅 `UIInputRouter`(포인터 · 포커스 · 소비는 화면 트리를 따라 간다 — `getInputRouter`, 포커스를 함께 옮기는 `setInputMode`),
      *          그리기 목록과 재사용 판정 상태 · 레이어 숨김 요청 수 `UICanvasPaintState`(스택을 칠한 결과다 — `getPaintState`. 숨김 요청은 화면마다 `_bHiddenByLayer` 를 맞추므로
      *          `addLayerHideRequest` 가 이 클래스에 있다). 화면 스택과 프레임 순서도 이 클래스에 남는다(순서는 `processInput` 과 `update` 본문이 기준이다).
-     *          **따로 선 서브시스템**(값 멤버가 아니다 — `engine::getSubsystem<T>()`): 이 시스템이 의존하는 것 — 클립보드 `UIClipboardSubsystem` · 전역 명령 표 `UIGlobalCommandRegistry` ·
+     *          따로 선 서브시스템(값 멤버가 아니다, `engine::getSubsystem<T>()`): 이 시스템이 의존하는 것: 클립보드 `UIClipboardSubsystem` · 전역 명령 표 `UIGlobalCommandRegistry` ·
      *          바인딩 변환기 `UIBindingConverterRegistry` · 문서 캐시 `UIDocumentCache` · 스타일 시트 캐시 `UIStyleSheetCache` · 테마 `UIThemeController`.
      *          이 시스템에 의존하고 UI 갱신 칸(`onPointerProcessed` · `onUpdateBeforeScreens` · `onUpdateAfterScreens` · `onUpdateBeforeLayout` · `onUpdateAfterPaint`)에 거는 것 —
      *          알림 `UINotificationSubsystem` · 자막 `UISubtitleSubsystem` · 툴팁 `UITooltipSubsystem` · 접근성 `UIAccessibilitySubsystem` ·
@@ -278,16 +278,16 @@ namespace sw
 
         // --- 화면 스택 위의 UI 서비스 -------------------------------------------------------
         /**
-         * @brief 화면 틱 **앞**에서 도는 UI 서비스의 칸입니다(자막 `UISubtitleSubsystem` · 툴팁 `UITooltipSubsystem`). 인자는 실제 프레임 시간입니다.
+         * @brief 화면 틱 앞에서 도는 UI 서비스의 칸입니다(자막 `UISubtitleSubsystem` · 툴팁 `UITooltipSubsystem`). 인자는 실제 프레임 시간입니다.
          * @details 화면 스택 위에서 자기 화면을 여닫는 서비스는 이 시스템의 값 멤버가 아니라 서브시스템이다(UI 에 의존 — `engine::getSubsystem<UINotificationSubsystem>()` 처럼
          *          찾는다). 기동에서 이 칸에 걸고 종료에서 푼다 — 언리얼 Slate 의 `OnPreTick` · Godot `SceneTree.process_frame` 신호와 같은 자리다.
          *          화면 그리기를 막은 동안(`isOnScreenSuppressed`)에도 불린다 — 포인터를 보는 서비스(툴팁)는 스스로 거른다.
          */
         UIUpdateDelegate& onUpdateBeforeScreens() { return _onUpdateBeforeScreens; }
-        /** @brief 화면 틱 **뒤**에서 도는 UI 서비스의 칸입니다(알림 `UINotificationSubsystem` — 이번 프레임에 화면이 올린 알림까지 본다). */
+        /** @brief 화면 틱 뒤에서 도는 UI 서비스의 칸입니다(알림 `UINotificationSubsystem` — 이번 프레임에 화면이 올린 알림까지 본다). */
         UIUpdateDelegate& onUpdateAfterScreens() { return _onUpdateAfterScreens; }
         /**
-         * @brief 스타일 뒤, 레이아웃 **앞**에서 도는 UI 서비스의 칸입니다(위젯 컴포넌트 `UIWidgetComponentSubsystem` 의 화면 마커 투영 — 같은 프레임에 배치된다).
+         * @brief 스타일 뒤, 레이아웃 앞에서 도는 UI 서비스의 칸입니다(위젯 컴포넌트 `UIWidgetComponentSubsystem` 의 화면 마커 투영 — 같은 프레임에 배치된다).
          * @details 게임 틱과 트랜스폼 적용 뒤의 월드 점을 이번 뷰포트(`getViewport`)로 투영하는 자리다. 화면 그리기를 막은 동안에도 불린다.
          */
         UIUpdateDelegate& onUpdateBeforeLayout() { return _onUpdateBeforeLayout; }

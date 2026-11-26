@@ -21,7 +21,7 @@
 #include "Engine/Graphics/Mesh/MeshVertex.h"
 
 // ------------------------------------------------------------------------------
-// MeshBuildVertex — 게임 코드가 메시를 지을 때 넘기는 정점(위치 · 노멀 · UV · 색)입니다 — GPU 정점 칸(`RHIVertex`)의 배치를 모르고 메시를 짓습니다.
+// MeshBuildVertex: 게임 코드가 메시를 지을 때 넘기는 정점(위치 · 노멀 · UV · 색)입니다. GPU 정점 칸(`RHIVertex`)의 배치를 모르고 메시를 짓습니다.
 //   `RHIVertex` 로 옮기는 일은 메시(`Mesh::setBuildVertices`)가 한다. 언리얼 `FDynamicMeshVertex` → 정점 버퍼가 렌더 쪽에서 갈리는 것과 같은 자리다(기억).
 // ------------------------------------------------------------------------------
 namespace sw

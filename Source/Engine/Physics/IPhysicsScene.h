@@ -7,7 +7,7 @@
  *          (`PhysicsSystem` 은 백엔드 이름을 모른다 — `NavMeshBackend` 와 같은 모양).
  *          Godot 의 PhysicsServer3D 에 해당한다.
  *
- *          **역할 나눔.** 씬 하나가 역할을 함께 구현하지만, 한 역할만 쓰는 코드는 그 역할의 인터페이스만 받는다(따로 받는 곳이 없는 관절은 이 인터페이스에 둔다). 언리얼 Chaos 가 월드(`FPhysScene`),
+ *          역할 나눔. 씬 하나가 역할을 함께 구현하지만, 한 역할만 쓰는 코드는 그 역할의 인터페이스만 받는다(따로 받는 곳이 없는 관절은 이 인터페이스에 둔다). 언리얼 Chaos 가 월드(`FPhysScene`),
  *          바디(`FPhysicsInterface`), 구속(`FConstraintInstance`), 캐릭터 이동을 나누고, 유니티가 `Physics` 질의와 `Rigidbody` · `Joint` ·
  *          `CharacterController` 를 나누는 것과 같다.
  *
