@@ -139,7 +139,7 @@ class StageContext:
             self.write_line(f"build warnings: {sum('warning:' in line for line in read_lines(self.root / logs / 'verify.build.log'))}")
 
     def run_tests(self, preset: str, name: str, *filters: str) -> bool:
-        """ctest 를 돌리고 이력에 쌓는다(진 실행도 — 흔들림 · p95 추세는 여러 묶음을 모아야 보인다, test_history.py report). 갈래도 부르므로 여기서 끝내지 않는다."""
+        """ctest 를 돌리고 이력에 쌓는다(진 실행도 — 흔들림 · p95 추세는 여러 묶음을 모아야 보인다, verify-history report). 갈래도 부르므로 여기서 끝내지 않는다."""
         log = f"Testing/Logs/verify.ctest.{name}.log"
         folder = f"build/{preset}"
         marker = f"{folder}/{log}.start"   # 이번 실행이 쓴 로그 · 보고를 가르는 시각 표지 — 앞에 시작한 보고는 손 실행이라 sha 없이 manual 로 들어간다(흔들림 판정은 verify 만 본다)
@@ -156,7 +156,7 @@ class StageContext:
             list_log = [path for path in (self.root / folder / "Testing/Logs").glob("Scenario.*.log") if path.stat().st_mtime > started]
             for line in collect_results([self.root / folder / log, *list_log]):
                 self.write_line(line)
-        if self.run([*SCRIPTS, "test-history", "ingest", f"{folder}/Bin/Saved/Automation", "--commit", self.sha, "--kind", "verify", "--since", marker]) != 0:
+        if self.run([*SCRIPTS, "verify-history", "ingest", f"{folder}/Bin/Saved/Automation", "--commit", self.sha, "--kind", "verify", "--since", marker]) != 0:
             self.write_line(f"{preset} test history ingest 실패")
             return False
         return code == 0
@@ -428,7 +428,7 @@ class PreflightRun:
             raise self._stop(f"{record} 통과 기록")
 
     def _record_time(self, record: str, result: str, started: float) -> None:
-        if not self._dry and not self.shell.run_record_command("test-history", "stage", record, "--commit", self.shell.sha, "--result", result,
+        if not self._dry and not self.shell.run_record_command("verify-history", "stage", record, "--commit", self.shell.sha, "--result", result,
                                                             "--seconds", str(int(time.monotonic() - started))):
             self.shell.write_line(f"단계 시간을 쌓지 못했다({record})")
 

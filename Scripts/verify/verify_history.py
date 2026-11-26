@@ -1,5 +1,5 @@
 """
-Scripts/verify/history_command.py
+Scripts/verify/verify_history.py
 
 시나리오 보고 JSON(`AutomationReportWriter` — `name` · `result` · `backend` · `game` · `startedAtUnixMs` · `wallMilliseconds`)을 sqlite 에 쌓고,
 테스트마다 흔들림 지수와 걸린 시간 p95 추세를 낸다. 격리 표(`Config/Rules/TestSelection/Quarantine.json`)는 사유 · 만료가 필수이고 지난 만료는 오류다.
@@ -8,13 +8,13 @@ Scripts/verify/history_command.py
 여러 묶음 검증을 모아야 보인다 — 언리얼 Gauntlet · Horde 의 테스트 이력, 크로미움 Flakiness Dashboard 와 같은 자리를 저장소 안 sqlite 하나로 둔다.
 흔들림 지수 = 연속 두 실행의 결과가 바뀐 횟수 / (실행 수 - 1). 0 은 늘 같음, 1 은 매번 바뀜.
 
-  py -3 Scripts/verify/history_command.py ingest <보고 폴더…> [--commit <sha>] [--kind verify|manual|rerun] [--since <표지 파일>]   # DB: Saved/TestHistory/history.sqlite
-  py -3 Scripts/verify/history_command.py flaky                                    # 최근 검증 커밋의 흔들림 — 끝 줄 FLAKY=<수>, 문턱을 넘으면 진다
-  py -3 Scripts/verify/history_command.py stage <단계> --commit <sha> --result passed|failed|skipped --seconds <초>   # 묶음 검증 단계 시간(느려지면 경고)
-  py -3 Scripts/verify/history_command.py report [--min-runs 3] [--top 30]
-  py -3 Scripts/verify/history_command.py quarantine [--ctest-exclude]              # 표를 검사한다(만료 · 빠진 칸은 실패), --ctest-exclude 는 ctest -E 정규식을 찍는다
-  py -3 Scripts/verify/history_command.py costs [--write]                           # 시나리오 → 초 시간표(통과한 실행의 백엔드별 p50 합). --write 는 Config/Dev/ScenarioCosts.json 을 쓴다
-  py -3 Scripts/verify/history_command.py changed --preset <프리셋> [--base origin/main]  # 새로 들어온 · 바뀐 테스트 · 시나리오를 먼저 돈다(`changed_tests.py`)
+  py -3 Scripts/verify/verify_history.py ingest <보고 폴더…> [--commit <sha>] [--kind verify|manual|rerun] [--since <표지 파일>]   # DB: Saved/TestHistory/history.sqlite
+  py -3 Scripts/verify/verify_history.py flaky                                    # 최근 검증 커밋의 흔들림 — 끝 줄 FLAKY=<수>, 문턱을 넘으면 진다
+  py -3 Scripts/verify/verify_history.py stage <단계> --commit <sha> --result passed|failed|skipped --seconds <초>   # 묶음 검증 단계 시간(느려지면 경고)
+  py -3 Scripts/verify/verify_history.py report [--min-runs 3] [--top 30]
+  py -3 Scripts/verify/verify_history.py quarantine [--ctest-exclude]              # 표를 검사한다(만료 · 빠진 칸은 실패), --ctest-exclude 는 ctest -E 정규식을 찍는다
+  py -3 Scripts/verify/verify_history.py costs [--write]                           # 시나리오 → 초 시간표(통과한 실행의 백엔드별 p50 합). --write 는 Config/Dev/ScenarioCosts.json 을 쓴다
+  py -3 Scripts/verify/verify_history.py changed --preset <프리셋> [--base origin/main]  # 새로 들어온 · 바뀐 테스트 · 시나리오를 먼저 돈다(`changed_tests.py`)
 
 묶음 검증(`Scripts/verify/preflight.sh`)이 ctest 마다 보고 폴더를 ingest 하고, ctest 에 격리 표를 `-E` 로 넘긴다.
 
@@ -49,8 +49,8 @@ from verify.changed_tests import run_changed  # noqa: E402
 from verify.history_store import DEFAULT_DATABASE, RUN_KINDS, SCENARIO_COSTS_PATH, STAGE_RESULTS, compute_scenario_costs, compute_stats, decide_flaky, find_flaky, find_slow_runs, ingest, make_ctest_exclude, make_scenario_costs_text, open_database, read_quarantine, read_reports, read_verify_config, record_stage  # noqa: E402
 
 
-class TestHistoryCommand(Command):
-    name = "test-history"
+class VerifyHistoryCommand(Command):
+    name = "verify-history"
     help = "테스트 이력(sqlite) — ingest · report(흔들림 · p95 추세) · flaky(끝 줄 FLAKY=) · stage(단계 시간) · quarantine · costs · changed"
 
     def add_arguments(self, parser: argparse.ArgumentParser) -> None:
@@ -135,4 +135,4 @@ class TestHistoryCommand(Command):
 
 
 if __name__ == "__main__":
-    sys.exit(TestHistoryCommand.main())
+    sys.exit(VerifyHistoryCommand.main())

@@ -145,16 +145,23 @@ class Baseline:
         self.files: dict[str, dict[str, int]] = {file: dict(counts) for file, counts in data["_files"].items()}
 
     @classmethod
-    def load(cls, project_root: Path, rule_id: str) -> "Baseline":
+    def load(cls, project_root: Path, rule_id: str, new_comment: str = "") -> "Baseline":
+        """판정은 @p new_comment 없이 부른다(없는 파일은 멈춘다). 기준선을 처음 만드는 `--accept` 만 머리 글을 주어 빈 기준선에서 시작한다."""
         path = get_table_path(rule_id, "Baseline")
+        if new_comment and not (project_root / path).is_file():
+            return cls(path, {"_comment": new_comment, "_files": {}})
         return cls(path, read_table(project_root, path))
+
+    def get_limits(self, path: str, map_old: Mapping[str, str]) -> dict[str, int]:
+        """그 파일의 종류 → 수(옮긴 파일은 옛 경로 @p map_old 의 것)."""
+        return self.files.get(path, self.files.get(map_old.get(path, ""), {}))
 
     def compare(self, actual: Mapping[str, Mapping[str, int]], list_path: Iterable[str], map_old: Mapping[str, str], kinds: Sequence[str],
                 advise: Callable[[str], str], ratchet_command: str) -> list[str]:
         """@p list_path 파일마다 지금 수(@p actual)를 기준선과 견준다. 옮긴 파일(@p map_old 새 → 옛)은 옛 경로의 기준선을 이어받는다."""
         list_problem: list[str] = []
         for path in sorted(set(list_path)):
-            allowed = self.files.get(path, self.files.get(map_old.get(path, ""), {}))
+            allowed = self.get_limits(path, map_old)
             have = actual.get(path, {})
             for kind in kinds:
                 count, limit = have.get(kind, 0), allowed.get(kind, 0)
@@ -190,13 +197,18 @@ class Baseline:
         (project_root / self.path).write_text(self.dump(), encoding="utf-8", newline="\n")
 
     def update(self, project_root: Path, actual: Mapping[str, Mapping[str, int]], list_accept: Sequence[str] | None) -> None:
-        """`--ratchet`(@p list_accept 없음 — 저장소 전체를 센 @p actual 로 낮춘다) · `--accept <파일…>`(그 파일만 지금 수로)을 적용하고 쓴다."""
+        """`--ratchet`(@p list_accept 없음 — 저장소 전체를 센 @p actual 로 낮춘다) · `--accept <파일 · 폴더…>`(그것만 지금 수로)을 적용하고 쓴다."""
         if list_accept is None:
             self.lower(actual, {path for path in self.files if (project_root / path).is_file()})
         else:
             for path in list_accept:
                 relative = Path(path).resolve().relative_to(project_root.resolve()).as_posix()
-                print(f"[lint] accept {relative}: {self.files.get(relative, {})} -> {actual.get(relative, {})}")
-                self.accept(relative, actual.get(relative, {}))
+                list_relative = [relative]
+                if (project_root / relative).is_dir():   # 폴더면 그 아래에서 센 파일과 기준선에 있던 파일 모두
+                    prefix = "" if relative == "." else relative.rstrip("/") + "/"
+                    list_relative = sorted(file for file in {*actual, *self.files} if file.startswith(prefix))
+                for file in list_relative:
+                    print(f"[lint] accept {file}: {self.files.get(file, {})} -> {actual.get(file, {})}")
+                    self.accept(file, actual.get(file, {}))
         self.write(project_root)
         print(f"[lint] baseline -> {self.path}")

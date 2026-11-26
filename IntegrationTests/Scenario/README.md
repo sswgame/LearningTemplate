@@ -113,4 +113,4 @@
 
 ## 새 시나리오 · 기준 파일(`changed` 단계)
 
-묶음 검증(`Scripts/verify/preflight.sh`)은 빌드 직후 `py -3 Scripts/verify/history_command.py changed --preset Ninja-Release` 로 `git diff origin/main...HEAD` 에서 (a) 바뀐 소스 · 테스트의 기능 폴더를 단위 항목에 `--test-source` 로 좁혀 돌리고, (b) 더해지거나 바뀐 시나리오를 하나씩 제 프로세스로 체인의 백엔드마다 돈다. 기준 파일은 없는 것만 쓰고(`--record-missing-snapshots` · `-scenario-record-missing-golden`) 표 하나(항목 · 새것/바뀐 것 · 실패 종류 · 까닭 · 갈래)를 낸다. 모든 백엔드에서 같은 단언으로 지면 `전제`, 한 백엔드만 지면 `백엔드 <이름>`. 지거나 처음 쓴 기준 파일이 있으면 끝 줄 `CHANGED_FAILED` 로 멈추고, 그림 · 글을 보고 커밋한 뒤 `--from changed` 로 잇는다. 에디터 폴더(`/Editor/`) 케이스는 이 단계가 고르지 않는다(편집기 체인이 돈다).
+묶음 검증(`Scripts/verify/preflight.sh`)은 빌드 직후 `py -3 Scripts/verify/verify_history.py changed --preset Ninja-Release` 로 `git diff origin/main...HEAD` 에서 (a) 바뀐 소스 · 테스트의 기능 폴더를 단위 항목에 `--test-source` 로 좁혀 돌리고, (b) 더해지거나 바뀐 시나리오를 하나씩 제 프로세스로 체인의 백엔드마다 돈다. 기준 파일은 없는 것만 쓰고(`--record-missing-snapshots` · `-scenario-record-missing-golden`) 표 하나(항목 · 새것/바뀐 것 · 실패 종류 · 까닭 · 갈래)를 낸다. 모든 백엔드에서 같은 단언으로 지면 `전제`, 한 백엔드만 지면 `백엔드 <이름>`. 지거나 처음 쓴 기준 파일이 있으면 끝 줄 `CHANGED_FAILED` 로 멈추고, 그림 · 글을 보고 커밋한 뒤 `--from changed` 로 잇는다. 에디터 폴더(`/Editor/`) 케이스는 이 단계가 고르지 않는다(편집기 체인이 돈다).

@@ -24,13 +24,11 @@ from __future__ import annotations
 import collections
 import re
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Mapping, Sequence
 
-from common.git import run_git_in_hook_repository
 from lint.cpp_code import is_source_file
 from lint.lint_rule import LintRule, SourceFile, inspect_files
-from lint.lint_scope import LintScope, make_file_scope, make_whole_scope
+from lint.lint_scope import LintScope, make_file_scope, make_whole_scope, read_staged_renames
 from lint.rule_tables import Baseline
 
 
@@ -150,19 +148,6 @@ def count_kinds(file: SourceFile) -> dict[str, int]:
     """래칫이 세는 종류별 수입니다(0 인 종류는 적지 않는다 — 기준선 JSON 이 짧고 diff 가 읽힌다)."""
     counter = collections.Counter(row.kind for row in find_literals(file) if row.counted)
     return {kind: counter[kind] for kind in KINDS if counter[kind] > 0}
-
-
-def read_staged_renames(project_root: Path) -> dict[str, str]:
-    """staged 이름 바꾸기의 새 경로 → 옛 경로입니다(옮긴 파일은 옛 경로의 기준선을 이어받는다)."""
-    result = run_git_in_hook_repository(["diff", "--cached", "--name-status", "-M"], cwd=project_root)
-    if result.return_code != 0:
-        raise RuntimeError(f"git diff --cached --name-status 실패: {result.stderr.strip()}")
-    map_old: dict[str, str] = {}
-    for line in result.stdout.splitlines():
-        list_part = line.split("\t")
-        if len(list_part) == 3 and list_part[0].startswith("R"):
-            map_old[list_part[2]] = list_part[1]
-    return map_old
 
 
 class MagicLiteralsRule(LintRule):

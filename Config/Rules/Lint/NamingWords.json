@@ -1,5 +1,5 @@
 {
-  "_comment": "이름 대조 표(Scripts/lint/rules/naming_words.py). 금지 동사(_banned — 함수 첫 단어) · 금지 명사(_bannedTerms — 모든 이름의 모든 단어), 표준 합성어 예외(_keepTerms), bool 술어 첫 단어(_predicateWords), For · Of 게터의 조회 동사(_lookupWords). 새 단어는 언리얼 · 유니티 · Godot 과 대조한 뒤 올린다. 낱말 표(_words · _scopedWords · _externalPatterns)는 모든 이름의 모든 낱말(함수 첫 낱말 · 형식 끝 낱말 포함)을 본다(word 규칙, 전수 집계는 py -3 -m Scripts naming-census). 약어(_acronyms — 모두 대문자로 쓰는 약어, docs/agents/NamingCpp.md Acronyms)는 식별자 · 파일 · 폴더의 낱말이 첫 글자만 대문자로 쓴 것(Json · Id · Gpu)을 막고, 새 약어는 같은 커밋에서 전수로 고친다. 바깥 이름(서드파티 · OS API)과 데이터 철자(직렬화 키 · 테스트 이름)는 _acronymKeep 에 까닭과 함께.",
+  "_comment": "이름 대조 표(Scripts/lint/rules/naming_words.py). 금지 동사(_banned — 함수 첫 단어) · 금지 명사(_bannedTerms — 모든 이름의 모든 단어), 표준 합성어 예외(_keepTerms), bool 술어 첫 단어(_predicateWords), For · Of 게터의 조회 동사(_lookupWords). 새 단어는 언리얼 · 유니티 · Godot 과 대조한 뒤 올린다. 낱말 표(_words · _scopedWords · _externalPatterns)는 모든 이름의 모든 낱말(함수 첫 낱말 · 형식 끝 낱말 포함)을 본다(word 규칙, 전수 집계는 py -3 -m Scripts naming-census). 약어(_acronyms — 모두 대문자로 쓰는 약어, docs/agents/NamingCpp.md Acronyms)는 식별자 · 파일 · 폴더의 낱말이 첫 글자만 대문자로 쓴 것(Json · Id · Gpu)을 막고, 새 약어는 같은 커밋에서 전수로 고친다. 바깥 이름(서드파티 · OS API)과 데이터 철자(직렬화 키 · 테스트 이름)는 _acronymKeep 에 까닭과 함께. 여러 낱말 금지(_bannedPhrases — 낱말이 이어 나오는 이름), 형식 끝말의 짝(_suffixRules), CMake 동사의 본문 모양(_cmakeVerbs), 개념표(_concepts — 개념 → 고른 낱말 · 동의어, 동의어마다 막는 줄이 있어야 하고 naming-census 가 개념마다 수를 낸다). 판정을 넓히거나 낱말을 막을 때 지금 이름은 기준선(NamingWordsBaseline.json, --ratchet · --accept)에 둔다.",
   "_banned": {
     "drain": "flush(쌓인 일을 끝낼 때까지 막는다) · poll(큐를 꺼내 처리한다) · take(꺼내 넘긴다). 서버 드레인 · 게임 수치 소모만 예외",
     "note": "동사는 record",
@@ -145,7 +145,11 @@
     "SW_KIT_API": "new_online_kit.py 의 C++ 틀 글(class SW_KIT_API …) — 파이썬 클래스가 아니다",
     "SW_KIT_SERVER_API": "new_online_kit.py 의 C++ 틀 글(class SW_KIT_SERVER_API …) — 파이썬 클래스가 아니다",
     "acceptOther": "접속 허가 테스트의 다른 쪽 손님",
-    "acceptThis": "접속 허가 테스트의 이쪽 손님"
+    "acceptThis": "접속 허가 테스트의 이쪽 손님",
+    "RunStop": "오류가 아닌 멈춤 신호(묶음 검증을 사용자가 멈췄다) — 예외 클래스 Error 끝말의 예외(NamingCpp Python Exceptions)",
+    "AssetManager": "SubsystemCollection 이 쥐지만 업계 고유명(언리얼 UAssetManager) — suffix 판정의 예외",
+    "ISceneFrameSystem": "System 판정의 뿌리 — …System 이 잇는 인터페이스 자신",
+    "PlatformFileSystem": "파일 시스템은 업계 용어(언리얼 IPlatformFile, std::filesystem) — 프레임 시스템이 아니다"
   },
   "_words": {
     "_comment": "낱말 표(word 규칙) — 모든 이름(형식 · 함수 · 멤버 · 상수 · 매크로 · 파일 · 폴더)의 모든 낱말(소문자, 숫자 · 한 글자 · 출력 인자 머리 out · inout 은 뺀다)이 a(업계 · 일반 용어) 나 b(게임 · 도메인) 에 있어야 한다. 새 낱말은 언리얼 · 유니티 · Godot 과 대조한 뒤 올린다. 업계 낱말이 따로 있는 조어는 올리지 않는다(지금 이름은 NamingWordsBaseline.json 의 word, 개명은 이름 전수 대조 목록).",
@@ -1278,6 +1282,8 @@
       "concat",
       "concatenate",
       "concatenated",
+      "concept",
+      "concepts",
       "conclude",
       "concurrency",
       "concurrent",
@@ -5251,8 +5257,6 @@
       "resolver",
       "resolves",
       "resolving",
-      "resource",
-      "resources",
       "resp",
       "respawn",
       "respawned",
@@ -5631,8 +5635,6 @@
       "settable",
       "setter",
       "setters",
-      "setting",
-      "settings",
       "settlement",
       "setup",
       "seven",
@@ -5906,13 +5908,11 @@
       "speaker",
       "speakers",
       "speaking",
-      "spec",
       "special",
       "specialized",
       "specific",
       "specificity",
       "specifier",
-      "specs",
       "spectator",
       "spectrum",
       "specular",
@@ -5994,9 +5994,6 @@
       "staleness",
       "stall",
       "stalled",
-      "stamp",
-      "stamped",
-      "stamps",
       "stance",
       "stand",
       "standalone",
@@ -6134,8 +6131,6 @@
       "structures",
       "struggle",
       "struggling",
-      "stub",
-      "stubs",
       "stuck",
       "studio",
       "style",
@@ -6264,6 +6259,8 @@
       "synchronization",
       "synchronize",
       "syncing",
+      "synonym",
+      "synonyms",
       "syntax",
       "synthesize",
       "synthesized",
@@ -6417,8 +6414,6 @@
       "tidy",
       "tie",
       "tied",
-      "tier",
-      "tiers",
       "tight",
       "tilde",
       "tile",
@@ -6873,7 +6868,6 @@
       "utilization",
       "utils",
       "uui",
-      "uuid",
       "uv",
       "va",
       "val",
@@ -7865,6 +7859,119 @@
         "Source/GameFramework/Runtime/Gameplay/Appearance/CharacterSurfaceBinding.cpp"
       ],
       "hint": "게임 차선 · 리듬 레인 · 프로파일러 · 시퀀서 타임라인의 줄, GPU SIMD lane(셰이더 · float4 칸 채우기) · 외부 상수만 — 틱 실행 자리는 메인 스레드 · 병렬(runMain · runOnAnyThread, TickMode), 워커 몫은 chunk"
+    },
+    "spec": {
+      "paths": [
+        "Source/GameFramework/Runtime/Gameplay/Ability",
+        "Source/GameFramework/Runtime/Gameplay/Appearance"
+      ],
+      "hint": "GAS 뜻(Def 에서 펼친 실행 값, 언리얼 FGameplayEffectSpec)만 — 만들기 서술 · 상수 서술자 표는 Desc, 정적 사실 표는 Info, 호출 인자 묶음은 Params, 캐시 키는 Key"
+    },
+    "specs": {
+      "paths": [
+        "Source/GameFramework/Runtime/Gameplay/Ability",
+        "Source/GameFramework/Runtime/Gameplay/Appearance"
+      ],
+      "hint": "GAS 뜻(Def 에서 펼친 실행 값, 언리얼 FGameplayEffectSpec)만 — 만들기 서술 · 상수 서술자 표는 Desc, 정적 사실 표는 Info, 호출 인자 묶음은 Params, 캐시 키는 Key"
+    },
+    "resource": {
+      "paths": [
+        "Source/Engine/Graphics",
+        "Source/Engine/Renderer",
+        "Source/Engine/Window",
+        "Source/GameFramework/Kits/Genre",
+        "Source/Games"
+      ],
+      "hint": "GPU · RHI 자원(언리얼 FRenderResource)과 게임의 자원(RTS 자원)만 — 콘텐츠는 Asset, 콘텐츠 트리 · 주소 · 입출력 층은 Content"
+    },
+    "resources": {
+      "paths": [
+        "Source/Engine/Graphics",
+        "Source/Engine/Renderer",
+        "Source/Engine/Window",
+        "Source/GameFramework/Kits/Genre",
+        "Source/Games"
+      ],
+      "hint": "GPU · RHI 자원(언리얼 FRenderResource)과 게임의 자원(RTS 자원)만 — 콘텐츠는 Asset, 콘텐츠 트리 · 주소 · 입출력 층은 Content"
+    },
+    "setting": {
+      "exceptPaths": [
+        "Source/Editor"
+      ],
+      "hint": "에디터 사용자 환경은 Preferences(언리얼 Editor Preferences) — 에디터에서는 ProjectSettings · UserSettings 만(_keepTerms)",
+      "keepCompounds": [
+        "ProjectSettings",
+        "UserSettings"
+      ]
+    },
+    "settings": {
+      "exceptPaths": [
+        "Source/Editor"
+      ],
+      "hint": "에디터 사용자 환경은 Preferences(언리얼 Editor Preferences) — 에디터에서는 ProjectSettings · UserSettings 만(_keepTerms)",
+      "keepCompounds": [
+        "ProjectSettings",
+        "UserSettings"
+      ]
+    },
+    "stamp": {
+      "paths": [
+        "Source/Engine/Environment/Surface",
+        "cmake"
+      ],
+      "hint": "칠하기 Stamp(Environment/Surface) · 빌드 완료 표지 파일 stamp(cmake)만 — 내용 해시는 Digest, 크기 · 시각은 Stat, 표시하기는 mark · touch"
+    },
+    "stamps": {
+      "paths": [
+        "Source/Engine/Environment/Surface",
+        "cmake"
+      ],
+      "hint": "칠하기 Stamp(Environment/Surface) · 빌드 완료 표지 파일 stamp(cmake)만 — 내용 해시는 Digest, 크기 · 시각은 Stat, 표시하기는 mark · touch"
+    },
+    "stamped": {
+      "paths": [
+        "Source/Engine/Environment/Surface",
+        "cmake"
+      ],
+      "hint": "칠하기 Stamp(Environment/Surface) · 빌드 완료 표지 파일 stamp(cmake)만 — 내용 해시는 Digest, 크기 · 시각은 Stat, 표시하기는 mark · touch"
+    },
+    "uuid": {
+      "paths": [
+        "Source/Engine/Graphics/RHI/DX"
+      ],
+      "hint": "128 비트 고유 값은 GUID 하나(sw::GUID · AssetGUID, 언리얼 FGuid) — MSVC __declspec( uuid ) 만"
+    },
+    "tier": {
+      "exceptPaths": [
+        "cmake",
+        "Scripts",
+        ".claude"
+      ],
+      "hint": "층 순번 표는 layer(Bazel layering_check, 2026-11-27 N8b) — 게임 등급 · D3D12 TIER 같은 단계 뜻은 Source 에서 쓴다"
+    },
+    "tiers": {
+      "exceptPaths": [
+        "cmake",
+        "Scripts",
+        ".claude"
+      ],
+      "hint": "층 순번 표는 layer(Bazel layering_check, 2026-11-27 N8b) — 게임 등급 · D3D12 TIER 같은 단계 뜻은 Source 에서 쓴다"
+    },
+    "stub": {
+      "exceptPaths": [
+        "cmake",
+        "Scripts",
+        ".claude"
+      ],
+      "hint": "위 층 헤더 자리의 #error 껍데기는 guard(2026-11-27 N8b) — 테스트 대역은 Fake · Mock, 델리게이트 썽크는 Source 에서 쓴다"
+    },
+    "stubs": {
+      "exceptPaths": [
+        "cmake",
+        "Scripts",
+        ".claude"
+      ],
+      "hint": "위 층 헤더 자리의 #error 껍데기는 guard(2026-11-27 N8b) — 테스트 대역은 Fake · Mock, 델리게이트 썽크는 Source 에서 쓴다"
     }
   },
   "_externalPatterns": [
@@ -8073,5 +8180,164 @@
     "getRemainingMilliseconds": "Deadline(Core/Time/MonotonicClock.h) — 시한까지 남은 시간, 대기 · 시한 동작에 쓴다",
     "getBusyNanoseconds": "BusyTimeAccumulator(Core/Time/BusyTimeAccumulator.h) — 바쁜 시간 누산기 형식 자체의 읽기다",
     "getExpectedEvaluationMicroseconds": "AnimationSystem — LOD 예산 배분(AnimationLODState::allocateBudget)이 계산한 예상 비용이다(시계로 잰 값이 아니다)"
+  },
+  "_bannedPhrases": {
+    "LiveReload": "HotReload — 실행 중 바꿔 끼우기(언리얼 Hot Reload). Live 는 LiveOps 만",
+    "FixedCodec": "Layout…Codec — 위치 기반 이진(같은 빌드)은 스키마 결합형, 접두 Layout(언리얼 FRepLayout)",
+    "FixedLayout": "Layout — 위치 기반 이진 배치 표(언리얼 FRepLayout)"
+  },
+  "_suffixRules": {
+    "Subsystem": {
+      "baseNeedsName": true,
+      "hint": "SubsystemCollection 이 수명을 쥐는 형식은 …Subsystem 으로 끝난다(언리얼 USubsystem). 업계 고유명(AssetManager · InputManager)은 _keep 에 까닭과 함께"
+    },
+    "System": {
+      "nameNeedsBase": "System",
+      "hint": "…System 은 매 프레임 여러 객체를 같은 논리로 도는 형식(ISceneFrameSystem 파생)만 — 아니면 하는 일 이름(…Registry · …Manager · …Subsystem)"
+    },
+    "Codec": {
+      "members": [
+        [
+          "write",
+          "read"
+        ],
+        [
+          "encode",
+          "decode"
+        ],
+        [
+          "compress",
+          "decompress"
+        ],
+        [
+          "compress",
+          "sample"
+        ]
+      ],
+      "hint": "Codec 은 부호화 기전(write/read · encode/decode · compress/decompress · compress/sample 짝)만 — 형식별 배치 표는 Schema(Avro schema)"
+    },
+    "Def": {
+      "notTemplate": true,
+      "notConstantTable": true,
+      "hint": "Def 는 데이터 파일에서 읽는 저작 정의만(언리얼 DataAsset 행) — 템플릿 · 코드 상수 서술자 표는 Desc(D3D12 _DESC)"
+    },
+    "Util": {
+      "notBesideOwner": true,
+      "hint": "주인 형식이 같은 헤더에 있으면 그 형식의 (static) 멤버로 옮긴다(docs/agents/CppStyle.md Helpers)"
+    }
+  },
+  "_cmakeVerbs": {
+    "require": {
+      "requires": [
+        "FATAL_ERROR"
+      ],
+      "hint": "require 는 조건이 어긋나면 FATAL_ERROR 로 멈춘다(find_package(REQUIRED)) — 결과를 돌려주는 탐지면 check, 고치는 일이면 그 동사"
+    },
+    "check": {
+      "requires": [
+        "PARENT_SCOPE"
+      ],
+      "forbids": [
+        "FATAL_ERROR"
+      ],
+      "hint": "check 는 탐지 결과를 PARENT_SCOPE 로 돌려주고 멈추지 않는다(CMake CheckXXX) — 멈추면 require"
+    }
+  },
+  "_concepts": {
+    "결과": {
+      "word": "Result",
+      "synonyms": [
+        "Verdict",
+        "Outcome",
+        "Judgement"
+      ]
+    },
+    "비동기 일 하나": {
+      "word": "Job",
+      "synonyms": [
+        "Work"
+      ]
+    },
+    "셈": {
+      "word": "Stats",
+      "synonyms": [
+        "Tally"
+      ]
+    },
+    "더러움 표시": {
+      "word": "Dirty",
+      "synonyms": [
+        "Dirtied"
+      ]
+    },
+    "리플렉션 칸 묶음": {
+      "word": "Params",
+      "synonyms": [
+        "Fields"
+      ]
+    },
+    "내용 해시": {
+      "word": "Digest",
+      "synonyms": [
+        "Fingerprint",
+        "stamp"
+      ]
+    },
+    "128 비트 고유 값": {
+      "word": "GUID",
+      "synonyms": [
+        "uuid"
+      ]
+    },
+    "층 순번 표": {
+      "word": "layer",
+      "synonyms": [
+        "Tier"
+      ]
+    },
+    "#error 껍데기": {
+      "word": "guard",
+      "synonyms": [
+        "Stub",
+        "gate"
+      ]
+    },
+    "실행 중 바꿔 끼우기": {
+      "word": "HotReload",
+      "synonyms": [
+        "LiveReload"
+      ]
+    },
+    "위치 기반 이진": {
+      "word": "Layout",
+      "synonyms": [
+        "FixedCodec",
+        "FixedLayout"
+      ]
+    },
+    "콘텐츠": {
+      "word": "Asset",
+      "synonyms": [
+        "resource"
+      ]
+    },
+    "만들기 서술 · 상수 서술자 표": {
+      "word": "Desc",
+      "synonyms": [
+        "spec"
+      ]
+    },
+    "에디터 사용자 환경": {
+      "word": "Preferences",
+      "synonyms": [
+        "settings"
+      ]
+    },
+    "큐 비우기": {
+      "word": "flush · poll · take",
+      "synonyms": [
+        "drain"
+      ]
+    }
   }
 }

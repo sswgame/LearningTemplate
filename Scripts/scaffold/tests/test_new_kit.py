@@ -15,7 +15,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from common.paths import get_project_root  # noqa: E402
-from scaffold.tests.kit_skeleton_checks import find_problems  # noqa: E402
+from scaffold.tests.kit_skeleton_checks import find_naming_problems, find_problems  # noqa: E402
 from scaffold.new_kit import KIT_ROOT, REFERENCE_TABLE, add_reference_rows, describe_invalid_request, make_files  # noqa: E402
 
 GROUP = "Feature/World"
@@ -44,6 +44,11 @@ class NewKitTest(unittest.TestCase):
     def test_code_uses_only_names_the_repository_has(self) -> None:
         set_own = {"getEntry", "getEntries", "hasEntry", "validateEntries", "ReadsEntriesAndRejectsDuplicates"}
         self.assertEqual(find_problems(self._files, f"GameFramework/Kits/{GROUP}/ZzFishing", "ZzFishing", set_own), [])
+
+    def test_skeleton_passes_the_naming_lint(self) -> None:
+        self.assertEqual(find_naming_problems(self._files, f"{KIT_ROOT}/{GROUP}/ZzFishing", "ZzFishing"), [])
+        bad = dict(self._files, **{"ZzFishingWatch.h": "struct LiveReloadWatch {};\n"})   # 음성 대조: 금지 구절을 넣으면 잡는다
+        self.assertEqual(len(find_naming_problems(bad, f"{KIT_ROOT}/{GROUP}/ZzFishing", "ZzFishing")), 1)
 
     def test_no_placeholder_is_left(self) -> None:
         for relative, text in self._files.items():

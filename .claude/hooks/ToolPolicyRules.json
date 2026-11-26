@@ -1,5 +1,5 @@
 {
-  "_comment": "도구 정책 규칙(.claude/hooks/tool_policy.py). 각 줄: 이 도구 · 경로 · 셸 명령을 쓰기 전에 requiresAny 중 하나를 이 에이전트가 먼저 했어야 한다. 표지는 skill:<이름>(Skill 도구), graph(graphify query · path · explain). never 는 언제나 거절(금지 명령 · 손으로 고치지 않는 파일). windowMinutes 가 있으면 그 시간 안에 한 것만 센다.",
+  "_comment": "도구 정책 규칙(.claude/hooks/tool_policy.py). 각 줄: 이 도구 · 경로 · 셸 명령을 쓰기 전에 requiresAny 중 하나를 이 에이전트가 먼저 했어야 한다. 표지는 skill:<이름>(Skill 도구), graph(graphify query · path · explain). never 는 언제나 거절(금지 명령 · 손으로 고치지 않는 파일). windowMinutes 가 있으면 그 시간 안에 한 것만 센다. stemTables 가 있으면 경로가 맞고 파일 줄기가 그 린트 표의 칸(lastWord: 끝 낱말, phrase: 이어 나오는 낱말)에 걸릴 때만, newFileOnly 면 아직 없는 파일만, exceptPath 에 맞는 경로는 빼고 본다.",
   "_rules": [
     {
       "name": "graph-before-reading-source",
@@ -244,16 +244,16 @@
       "hint": "생성물은 손으로 고치지 않는다 — 머티리얼 그래프 생성물은 그래프를 고친 뒤 `App --cook-shaders`(또는 편집기 저장), AssetReferenceFields.generated.json 은 빌드의 리플렉션 생성(Scripts/generate/asset_reference_field_list.py)이 다시 쓴다 — 칸은 구조체의 AssetRef<T> · DataPath 형식으로 고친다."
     },
     {
-      "name": "no-hand-raise-magic-baseline",
+      "name": "no-hand-edit-lint-baseline",
       "tools": [
         "Edit",
         "Write"
       ],
-      "path": "/Config/Rules/Lint/MagicLiteralsBaseline\\.json$",
+      "path": "/Config/Rules/Lint/\\w+Baseline\\.json$",
       "requiresAny": [
         "never"
       ],
-      "hint": "매직 리터럴 기준선은 손으로 고치지 않는다 — 내리는 것은 `py -3 -m Scripts lint magic-literals --ratchet`, 올리는 것은 통합에서만 `--accept <파일…>`(docs/agents/CppStyle.md Constants The ratchet)."
+      "hint": "린트 기준선(MagicLiterals · NamingWords · FolderLayout Baseline.json)은 손으로 고치지 않는다 — 내리는 것은 `py -3 -m Scripts lint <규칙> --ratchet`, 올리는 것은 통합에서만 `--accept <파일 · 폴더…>`(docs/agents/CppStyle.md Constants The ratchet)."
     },
     {
       "name": "no-per-folder-constants-header",
@@ -265,6 +265,31 @@
         "never"
       ],
       "hint": "폴더마다 `*Constants.h` 를 새로 만들지 않는다 — 한 모듈 상수는 주인 형식(`MeshAssetFormat::kExtension`)이나 그 모듈 형식 헤더의 이름공간에, 모듈 사이 계약은 층마다 하나인 파일(`Core/Foundation/Constants.h` 등)에 둔다(docs/agents/CppStyle.md Constants)."
+    },
+    {
+      "name": "no-banned-header-name",
+      "tools": [
+        "Write"
+      ],
+      "path": "/Source/.+\\.h$",
+      "exceptPath": "/Source/GameFramework/Kits/Feature/Online/(\\w+)/.*/\\1Types\\.h$",
+      "newFileOnly": true,
+      "stemTables": [
+        {
+          "table": "Config/Rules/Lint/FolderLayout.json",
+          "key": "_bannedFileStems",
+          "match": "lastWord"
+        },
+        {
+          "table": "Config/Rules/Lint/NamingWords.json",
+          "key": "_bannedPhrases",
+          "match": "phrase"
+        }
+      ],
+      "requiresAny": [
+        "never"
+      ],
+      "hint": "새 헤더 이름이 잡동사니 줄기(FolderLayout.json _bannedFileStems — Types · Support · Defines · Helpers · Misc)나 금지 구절(NamingWords.json _bannedPhrases)에 걸린다 — 파일 이름은 그 헤더의 주 형식 이름으로 짓는다(docs/agents/FolderLayout.md 4 절, 린트 folder-layout · naming-words 와 같은 표)."
     }
   ]
 }

@@ -213,7 +213,7 @@ class ChangedStage(Stage):
 
     def run(self, shell: StageContext) -> None:
         shell.announce("changed")
-        code = shell.run([*SCRIPTS, "test-history", "changed", "--preset", RELEASE.preset], self.log)
+        code = shell.run([*SCRIPTS, "verify-history", "changed", "--preset", RELEASE.preset], self.log)
         shell.show_matches(self.log, r"^(?!\[Changed\] run )")
         if code != 0:
             raise StageFailedError("changed")
@@ -252,7 +252,7 @@ class FlakyStage(Stage):
     last_start = "linux"
 
     def run(self, shell: StageContext) -> None:
-        if shell.run_logged("flaky", [*SCRIPTS, "test-history", "flaky"], "build/verify.flaky.log", 20) != 0:
+        if shell.run_logged("flaky", [*SCRIPTS, "verify-history", "flaky"], "build/verify.flaky.log", 20) != 0:
             raise StageFailedError("흔들림이 문턱을 넘었다 - build/verify.flaky.log")
 
 

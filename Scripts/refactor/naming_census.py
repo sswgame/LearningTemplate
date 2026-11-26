@@ -10,6 +10,7 @@ Scripts/refactor/naming_census.py
 `py -3 -m Scripts naming-census --out <폴더> [--only-unknown]`
 - `words.tsv`  : 낱말 · 표 분류(a 업계 · b 게임 · scoped 경로 한정 · c 표에 없음) · 이름 수 · 종류별 수 · 바깥 이름 수 · 대표 이름 · 대표 파일
 - `words.json` : 낱말 → 이름 → [종류, 첫 파일] (판정 · 개명 목록을 만들 때 읽는다)
+- `concepts.tsv`: 개념표(`_concepts`)의 개념 · 고른 낱말 · 동의어 · 동의어가 든 이름 수 · 대표 이름 — 수가 기준선보다 늘면 린트(naming-words 기준선)가 멈춘다
 """
 
 from __future__ import annotations
@@ -24,7 +25,7 @@ from typing import Iterable
 from common.command import Command, ScriptContext
 from common.exit_code import ExitCode
 from lint.lint_scope import make_whole_scope
-from lint.name_collection import DECLARATION_KINDS, is_external_name, iterate_names, split_lower_words
+from lint.name_collection import DECLARATION_KINDS, is_external_name, iterate_names, split_lower_words, split_words
 from lint.rule_tables import read_rule_table
 
 
@@ -35,6 +36,22 @@ def build_census(list_name: Iterable[tuple[str, str, str]]) -> dict[str, dict[st
         for word in split_lower_words(name, kind):
             census[word].setdefault(name, (kind, path))
     return census
+
+
+def count_concepts(census: dict[str, dict[str, tuple[str, str]]], concepts: dict) -> list[tuple[str, str, str, list[str]]]:
+    """(개념, 고른 낱말, 동의어, 그 동의어가 든 이름) — 한 낱말 동의어는 그 낱말의 이름, 여러 낱말(`LiveReload`)은 낱말이 이어 나오는 이름."""
+    set_name = {name for names in census.values() for name in names}
+    list_row: list[tuple[str, str, str, list[str]]] = []
+    for concept, entry in concepts.items():
+        for synonym in entry["synonyms"]:
+            words = [word.lower() for word in split_words(synonym)]
+            if len(words) == 1:
+                names = sorted(census.get(words[0], {}))
+            else:
+                names = sorted(name for name in set_name if any(lowered[index:index + len(words)] == words
+                                                                 for lowered in [[word.lower() for word in split_words(name)]] for index in range(len(lowered))))
+            list_row.append((concept, entry["word"], synonym, names))
+    return list_row
 
 
 def write_census(out_dir: Path, census: dict[str, dict[str, tuple[str, str]]], table: dict) -> int:
@@ -54,15 +71,18 @@ def write_census(out_dir: Path, census: dict[str, dict[str, tuple[str, str]]], t
     (out_dir / "words.tsv").write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
     data = {word: {name: list(where) for name, where in sorted(names.items())} for word, names in sorted(census.items())}
     (out_dir / "words.json").write_text(json.dumps(data, ensure_ascii=False, indent=0), encoding="utf-8", newline="\n")
+    concept_lines = ["concept\tword\tsynonym\tnames\tsamples"] + [f"{concept}\t{word}\t{synonym}\t{len(names)}\t{' '.join(sorted(names, key=len)[:4])}"
+                                                                for concept, word, synonym, names in count_concepts(census, table["_concepts"])]
+    (out_dir / "concepts.tsv").write_text("\n".join(concept_lines) + "\n", encoding="utf-8", newline="\n")
     return len(census)
 
 
 class NamingCensusCommand(Command):
     name = "naming-census"
-    help = "Source 의 모든 이름(형식 · 함수 · 멤버 · 상수 · 매크로 · 파일 · 폴더)을 낱말로 쪼개 종류별로 센다(--out <폴더>) — 이름 전수 대조용"
+    help = "Source 의 모든 이름(형식 · 함수 · 멤버 · 상수 · 매크로 · 파일 · 폴더)을 낱말로 쪼개 종류별로 · 개념표의 동의어마다 센다(--out <폴더>) — 이름 전수 대조용"
 
     def add_arguments(self, parser: argparse.ArgumentParser) -> None:
-        parser.add_argument("--out", required=True, help="결과 폴더(words.tsv · words.json)")
+        parser.add_argument("--out", required=True, help="결과 폴더(words.tsv · words.json · concepts.tsv)")
 
     def run(self, context: ScriptContext, args: argparse.Namespace) -> int:
         project_root = context.root

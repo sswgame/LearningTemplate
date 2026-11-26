@@ -1,5 +1,5 @@
 """
-새로 들어온 · 바뀐 테스트 · 시나리오를 먼저 도는 단계(`test-history changed`, 묶음 검증의 `changed`).
+새로 들어온 · 바뀐 테스트 · 시나리오를 먼저 도는 단계(`verify-history changed`, 묶음 검증의 `changed`).
 
 `changed`. push 는 검증한 커밋만 하므로 `origin/main` 에 있는 것은 돈 적이 있고, 그 뒤에 더해지거나 바뀐 것은 돈 적이 없다 — 상태 파일 없이
 `git diff --name-status <base>...HEAD` 로 가른다(이력 DB 는 기계마다 달라 쓰지 않는다). 묶음 검증이 build 와 cpu 사이에 부른다(`preflight.sh` 의 `changed` 단계).

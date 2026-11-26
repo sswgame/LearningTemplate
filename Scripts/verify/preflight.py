@@ -105,7 +105,7 @@ class PreflightCommand(Command):
         if not shell.run_record_command("git-locks"):
             shell.write_line("git 잠금 파일이 남아 있다(위 줄) - 도는 git 이 없으면 py -3 -m Scripts git-locks --remove")
         # 격리 표의 테스트를 ctest -E 로 뺀다. 만료가 지났거나 칸이 빠진 표는 검증 실패다(격리가 말없이 늘어지지 않게).
-        quarantine = run_process([*SCRIPTS, "test-history", "quarantine", "--ctest-exclude"], cwd=root)
+        quarantine = run_process([*SCRIPTS, "verify-history", "quarantine", "--ctest-exclude"], cwd=root)
         if not quarantine.succeeded:
             shell.write_line(quarantine.stdout.strip())
             shell.write_line(make_windows_failure("quarantine table", sha))

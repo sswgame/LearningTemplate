@@ -63,3 +63,20 @@ def find_problems(map_file: dict[str, str], include_path: str, tag: str, set_own
             if name not in KEYWORDS | set_own and tag not in name and tag[0].lower() + tag[1:] not in name and name not in set_known:
                 list_problem.append(f"{relative}: '{name}' 이 include 한 어느 헤더에도 없다")
     return sorted(set(list_problem))
+
+
+def find_naming_problems(map_file: dict[str, str], kit_root: str, tag: str) -> list[str]:
+    """
+    뼈대를 `kit_root`(저장소 기준 `Source/…/<키트>`) 아래 파일처럼 이름 린트(naming-words)에 다시 넣는다 — 뼈대 글은 저장소에 없어 커밋 훅이 보지 못하고,
+    뼈대로 만든 키트마다 같은 금지 낱말 · 끝말이 새로 들어온다. 키트 이름(`tag`)이 든 이름은 낱말 표에 없는 것이 당연해 뺀다. 새 파일이라 기준선은 0 이다.
+    """
+    from lint.lint_rule import SourceFile, find_rules
+
+    rule = find_rules(get_project_root())["naming-words"]
+    lowered = tag[0].lower() + tag[1:]
+    list_problem: list[str] = []
+    for relative, text in sorted(map_file.items()):
+        path = f"{kit_root}/{relative}"
+        rows = (rule.inspect(SourceFile(path, text)) if rule.selects(path) else []) + rule.names.classify_path(path)
+        list_problem += [row.hint for row in rows if tag not in row.name and lowered not in row.name]
+    return list_problem

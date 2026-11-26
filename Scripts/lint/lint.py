@@ -245,7 +245,7 @@ class LintCommand(Command):
         mode.add_argument("--files", nargs="+", metavar="파일", help="규칙 하나가 이 파일만 본다")
         mode.add_argument("--self-check", action="store_true", help="규칙 하나의 자체 검사")
         mode.add_argument("--ratchet", action="store_true", help="규칙 하나의 기준선을 줄어든 만큼 낮춘다(올리지 않는다)")
-        mode.add_argument("--accept", nargs="+", metavar="파일", help="규칙 하나의 기준선에서 그 파일들을 지금 수로 바꾼다(올리는 유일한 길 — 통합에서만)")
+        mode.add_argument("--accept", nargs="+", metavar="파일", help="규칙 하나의 기준선에서 그 파일 · 폴더를 지금 수로 바꾼다(올리는 유일한 길 — 통합에서만)")
         parser.add_argument("rule", nargs="?", metavar="규칙", help="규칙 id(--list)")
 
     def run(self, context: ScriptContext, args: argparse.Namespace) -> int:

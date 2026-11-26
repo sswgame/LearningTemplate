@@ -73,6 +73,7 @@ Never loop `releaseRHI` / `clearRHI` / `initRHI` from outside: `IRHIDevice` broa
 | `…Backend` | Platform or library implementation of an interface |
 | `…API` | A C function table |
 
+- 끝말의 짝은 린트 `naming-words` 의 suffix 판정이 본다(`_suffixRules`): `…Subsystem` 을 이은 형식은 `…Subsystem`, `…System` 은 `…System`(ISceneFrameSystem) 을 잇고, `…Codec` 은 write/read · encode/decode · compress/decompress 짝을 갖고, `…Def` 는 템플릿 · 코드 상수 표가 아니고, `TUtil` 은 같은 헤더의 `T` 옆에 두지 않는다. 지금 이름은 기준선 `NamingWordsBaseline.json`.
 - Spell `Anim` out as `Animation`, except outside terms (`AnimInstance`).
 - A boolean variable or member keeps the `b` prefix (`_bOpen`); a function returning a boolean follows [Predicates](#predicates-callbacks-results).
 - Name a graphics type as a game programmer would in Unreal or Unity. `Slot` is only a shader binding slot or a position in a ring; a type owning a buffer is named after the buffer. No bookkeeping metaphors (`Ledger`): `…Tracker`, `…Registry`, `…Allocator`.
@@ -160,6 +161,8 @@ Use a banned verb only when it is the domain's own term (`SurfaceBVH::build`).
 
 새 이름이 같은 낱말을 다른 뜻으로 쓰면 이름을 바꾼다. 새 낱말은 `Config/Rules/Lint/NamingWords.json` `_words`(문맥마다 갈리면 `_scopedWords`)에 먼저 올리고, 옛 이름은 `_bannedNames` 에 둔다(린트 `naming-words`).
 
+한 개념에는 낱말 하나다. 개념표 `_concepts`(개념 → 고른 낱말 · 동의어)의 동의어마다 막는 줄이 있어야 한다: 낱말 하나는 `_bannedTerms`, 낱말이 이어 나오는 것(`LiveReload` · `FixedLayout`)은 `_bannedPhrases`, 문맥마다 갈리는 것은 `_scopedWords`(spec 은 Ability · Appearance, resource 는 그래픽 · 렌더러 · 창 · 게임 자원, 에디터의 settings 는 ProjectSettings · UserSettings 만, stamp 는 Environment/Surface · cmake, tier · stub 은 cmake · Scripts 밖). `py -3 -m Scripts naming-census` 의 `concepts.tsv` 가 동의어 수를 내고, 판정을 넓힐 때 남은 이름은 기준선에 두어 새 이름만 멈춘다(`--ratchet` · `--accept`).
+
 대량 일괄 개명은 하지 않는다 — 모호한 이름을 바꿀 때는 리플렉션 · 직렬화 · 에셋 경로 참조까지 함께 바꾼다. 이름 · 경로는 도구로 바꾼다(`py -3 -m Scripts rename-symbol` · `move-source`, 여러 쌍은 `rename-symbol --pairs <표>`) — 코드 · 문서 · 데이터의 직렬화 이름을 함께 고친다. 옛 이름을 일부러 적는 줄에는 `keep-old-name` 표지(Markdown 은 `<!-- keep-old-name -->`).
 
 | 규칙 | 근거 |
@@ -205,6 +208,7 @@ Use a banned verb only when it is the domain's own term (`SurfaceBVH::build`).
 
 Lint `naming-words` enforces the function form.
 
+- A function's verb promises its body: `sw_require_*` stops with `FATAL_ERROR`, `sw_check_*` returns its result through `PARENT_SCOPE` and never stops (`_cmakeVerbs`, lint `naming-words`).
 - **No `macro()`** — it leaks every local into the caller. Use `function()` + `set(<name> … PARENT_SCOPE)` (we require 3.24, so no `return(PROPAGATE)`). A body that must run in the caller's scope stays a macro with a one-line reason.
 - Renames go through a pair table: `py -3 -m Scripts rename-symbol --pairs Config/Rules/Renames/<table>.json --reapply` (`"scope": "cmake"` for locals, `"ban": false` to keep them off `_bannedNames`); delete the table once every branch is merged.
 
@@ -220,9 +224,9 @@ PEP 8. Python names do not mirror C++ names; a JSON key or C++ name read as data
 | Classes, exceptions, `TypeVar`s | `PascalCase` |
 | Module and class constants, enum members | `UPPER_CASE`; a function-local constant is a `snake_case` local |
 | Overrides of an outside API | the outside spelling (`setUp`, `do_POST`), listed in `NamingWords.json` `_keep` |
-| CLI subcommands and lint rule ids | `kebab-case`; a command's file stem is its name (`lint.py` → `lint`, `linux_verify.py` → `linux-verify`) |
-| Checks | returns problems → `find_<what>_problems`, stops → `require_<what>`, returns its error or verdict → `validate_<what>`, bool → `is_` · `has_`; no `check_` (CMake `CheckXXX`-style probing only) |
-| Exceptions | an error ends in `Error` (`StageFailedError`); a stop signal that is not an error does not (`RunStop`) |
+| CLI subcommands and lint rule ids | `kebab-case`; a command's file stem is its name (`lint.py` → `lint`, `linux_verify.py` → `linux-verify`) — `find_commands` 가 어긋나면 기동 때 멈춘다 |
+| Checks | returns problems → `find_<what>_problems`, stops → `require_<what>`, returns its error or verdict → `validate_<what>`, bool → `is_` · `has_`; no `check_` (CMake `CheckXXX`-style probing only). The `_banned` verbs and `_bannedTerms` apply to script names too |
+| Exceptions | an error ends in `Error` (`StageFailedError`); a stop signal that is not an error does not (`RunStop`, in `_keep`). Lint `naming-words` checks classes whose base ends in `Error` · `Exception` |
 | JSON keys of Python-owned contracts (`CookContract.json`, hand-read import configs) | `snake_case`; keys read through reflection keep the C++ member name (`_width`) |
 | Shell scripts and functions | `snake_case` |
 

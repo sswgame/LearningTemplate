@@ -1,5 +1,5 @@
 """
-시나리오 · 테스트 실행 이력(sqlite) — 보고 쌓기, 흔들림 · p95 추세 · 느려짐 · 단계 시간 · 시간표, 격리 표. 명령은 `test_history.py` 다.
+시나리오 · 테스트 실행 이력(sqlite) — 보고 쌓기, 흔들림 · p95 추세 · 느려짐 · 단계 시간 · 시간표, 격리 표. 명령은 `verify_history.py` 다.
 """
 
 from __future__ import annotations
@@ -208,12 +208,12 @@ def find_scenario_cost(map_cost: dict[str, float], name: str) -> float:
     if name in map_cost:
         return map_cost[name]
     if not map_cost:
-        raise ValueError(f"{SCENARIO_COSTS_PATH} 가 비었다 — `test_history.py costs --write` 로 먼저 쓴다")
+        raise ValueError(f"{SCENARIO_COSTS_PATH} 가 비었다 — `verify-history costs --write` 로 먼저 쓴다")
     return compute_percentile(list(map_cost.values()), 0.5)
 
 
 def make_scenario_costs_text(map_cost: dict[str, float]) -> str:
-    return json.dumps({"_comment": "test_history.py costs --write 가 쓴다 — 시나리오 → 초(통과한 실행의 백엔드별 p50 합). 사람이 커밋할 때만 바뀐다",
+    return json.dumps({"_comment": "verify-history costs --write 가 쓴다 — 시나리오 → 초(통과한 실행의 백엔드별 p50 합). 사람이 커밋할 때만 바뀐다",
                        "scenarioSeconds": map_cost}, ensure_ascii=False, indent=2) + "\n"
 
 

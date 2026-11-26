@@ -22,7 +22,7 @@ REPO = pathlib.Path(__file__).resolve().parents[2]
 
 
 def record_rerun(run_dir: pathlib.Path) -> None:
-    """다시 돌린 보고를 이력에 `rerun` 으로 넣는다 — 흔들림 판정(`test_history.py flaky`)은 검증 실행만 본다. 같은 보고는 다시 들어가지 않아
+    """다시 돌린 보고를 이력에 `rerun` 으로 넣는다 — 흔들림 판정(`verify-history flaky`)은 검증 실행만 본다. 같은 보고는 다시 들어가지 않아
     다음 검증의 ingest 가 이것을 검증 실행으로 덮지 못한다."""
     ingest(open_database(REPO / DEFAULT_DATABASE), read_reports([run_dir]), run_git_or_raise(['rev-parse', 'HEAD'], cwd=REPO).strip(), 'rerun')
 
