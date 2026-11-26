@@ -2,7 +2,7 @@
 Pack 플랫폼 검사 — 플랫폼마다 프리셋과 패키지 폴더가 정해지고, 그 플랫폼이 짓지 않는 타깃 · 백엔드는 빌드 전에 실패한다.
 빌드 · SDK 는 부르지 않는다.
 
-실행: python -X utf8 Scripts/package/tests/test_package_platform.py (CTest `Scripts.PackPlatform`).
+실행: python -X utf8 Scripts/package/tests/test_package_platform.py (CTest `Scripts.PackagePlatform`).
 """
 
 from __future__ import annotations

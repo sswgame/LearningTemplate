@@ -31,7 +31,8 @@ from common.project_constants import (
     KEY_VCPKG_TOOLS_SUBDIR,
 )
 from common.git import ensure_git_on_path, get_main_working_tree, run_git
-from common.paths import get_project_root, platform_key, platform_script_command
+from common.host_platform import platform_key, platform_script_command
+from common.paths import get_project_root
 from common.run_process import run_process
 from common.tool_search import is_vcpkg_root
 from setup.toolchain_detect import ToolSpec, find_tool_root

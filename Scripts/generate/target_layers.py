@@ -28,11 +28,11 @@ import tomllib
 from pathlib import Path
 from typing import Sequence
 
-from common.tool_search import list_files_under
+from common.paths import list_files_under
 from common.host_platform import is_windows_host
 from common.paths import get_project_root
 from common.project_constants import SERVER_EXCLUDED_ENGINE_FOLDERS
-from generate.generator_output import Generator, GeneratorError, write_generated_file
+from generate.generator_output import CodeGenerator, GeneratorError, write_generated_file
 
 TAG = "TargetLayers"
 RULE_FILE = Path(__file__).resolve().parents[2] / "Config" / "Rules" / "Layers" / "TargetLayers.toml"
@@ -260,6 +260,6 @@ def generate_target_layers(output_path: Path) -> None:
     write_generated_file(output_path, "\n".join(list_line), tag=TAG, summary=f"{len(map_gate)} gates · {sum(len(entry[0]) for entry in map_gate.values())} stubs")
 
 
-class TargetLayersGenerator(Generator):
+class TargetLayersGenerator(CodeGenerator):
     def generate(self, output_dir: Path, game_name: str) -> None:
         generate_target_layers(output_dir / "TargetLayers.cmake")

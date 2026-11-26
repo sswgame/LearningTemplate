@@ -44,7 +44,8 @@ from common import app_arguments
 from common.exit_code import ExitCode
 from common.host_platform import executable_name, is_windows_host
 from common.paths import get_bin_dir, get_build_dir
-from common.run_process import run_cmake, run_process
+from common.run_process import run_process
+from common.cmake_build import run_cmake
 from package.pack_files import LIST_SHARED_PACK_NAME, PACK_FOLDER_NAME, list_pack_name_of_game
 from package.pack_index import PackIndexError, read_pack_paths
 

@@ -1,7 +1,7 @@
 """
 Linux 검증 입구(`linux_verify.py`)의 판정 회귀 검사 — 퍼저 로그 · 체인 단계 줄 · 끝 줄(SCENARIO_RESULT=).
 
-실행: python -X utf8 Scripts/verify/tests/test_linux_verify.py (CTest `Scripts.LinuxScenarios`). 빌드 · WSL 없이 돈다.
+실행: python -X utf8 Scripts/verify/tests/test_linux_verify.py (CTest `Scripts.LinuxVerify`). 빌드 · WSL 없이 돈다.
 """
 
 from __future__ import annotations
@@ -39,7 +39,7 @@ class LinuxVerifyTest(unittest.TestCase):
 
     def run_action(self, action: str, arguments: list[str], **fakes: object) -> tuple[int | str, str]:
         """(종료 코드 — 예외면 그 이름, 마지막 줄). 자식 · 클론은 가짜다."""
-        defaults = {"build": 0, "run_job": 0, "chain": 0, "configure_and_build": 0, "shell": subprocess.CompletedProcess("", 0), "sync_clone": None, "make_configure_command": "",
+        defaults = {"build_clone": 0, "run_job": 0, "run_chain_action": 0, "configure_and_build": 0, "run_in_shell": subprocess.CompletedProcess("", 0), "sync_clone": None, "make_configure_command": "",
                     "run_git_or_raise": "abc"}
         output = io.StringIO()
         with contextlib.ExitStack() as stack, contextlib.redirect_stdout(output):
@@ -56,16 +56,16 @@ class LinuxVerifyTest(unittest.TestCase):
         failed = subprocess.CompletedProcess("", 5)
         for action, arguments, fakes, want in (
             ("all", [], {}, (0, "LINUX_OK=abc")),
-            ("all", [], {"build": 7}, (7, "LINUX_FAILED")),
+            ("all", [], {"build_clone": 7}, (7, "LINUX_FAILED")),
             ("all", [], {"run_job": [0, 4]}, (4, "LINUX_FAILED")),
-            ("all", [], {"chain": 3}, (3, "LINUX_FAILED")),
-            ("all", [], {"build": RuntimeError("git")}, ("RuntimeError", "LINUX_FAILED")),
-            ("all", [], {"chain": SystemExit("no build")}, ("SystemExit", "LINUX_FAILED")),
+            ("all", [], {"run_chain_action": 3}, (3, "LINUX_FAILED")),
+            ("all", [], {"build_clone": RuntimeError("git")}, ("RuntimeError", "LINUX_FAILED")),
+            ("all", [], {"run_chain_action": SystemExit("no build")}, ("SystemExit", "LINUX_FAILED")),
             ("sanitize", ["thread"], {}, (0, "SANITIZE_OK=thread")),
             ("sanitize", [], {"run_fuzz": (0, "FUZZ_OK")}, (0, "SANITIZE_OK=address")),
             ("sanitize", [], {"run_fuzz": (1, "FUZZ_FAILED=A")}, (1, "SANITIZE_FAILED=fuzz")),
             ("sanitize", [], {"configure_and_build": 1}, (1, "SANITIZE_FAILED=address")),
-            ("sanitize", ["thread"], {"shell": failed}, (5, f"SANITIZE_FAILED=thread - {linux_verify.VERIFY_LOGS}/lt.sanitize.log")),
+            ("sanitize", ["thread"], {"run_in_shell": failed}, (5, f"SANITIZE_FAILED=thread - {linux_verify.VERIFY_LOGS}/lt.sanitize.log")),
             ("sanitize", ["memory"], {}, (2, "sanitize 는 address 또는 thread 다: memory")),
             ("sanitize", [], {"sync_clone": RuntimeError("git")}, ("RuntimeError", "SANITIZE_FAILED")),
             ("fuzz", ["A"], {"configure_and_build": 1}, (1, "FUZZ_FAILED")),

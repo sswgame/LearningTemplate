@@ -2623,6 +2623,8 @@
     "check_pair": "validate_pair — 파이썬 check_ → 오류(까닭)를 돌려주면 validate_(2026-11-27)",
     "check_pairs": "validate_pairs — 파이썬 check_ → 오류 수를 돌려주면 validate_(2026-11-27)",
     "check_no_test_variables": "validate_no_test_variables — 파이썬 check_ → 판정 값(SmokeResult)을 돌려주면 validate_(2026-11-27)",
-    "check_redirect_tables": "validate_redirect_tables — 파이썬 check_ → 판정 값(SmokeResult)을 돌려주면 validate_(2026-11-27)"
+    "check_redirect_tables": "validate_redirect_tables — 파이썬 check_ → 판정 값(SmokeResult)을 돌려주면 validate_(2026-11-27)",
+    "rename_scope": "refactor/rename_files.py(훑을 파일 · 읽고 쓰기 · 예외 규칙) + refactor/serialized_rename.py(직렬화 이름) — scope 는 lint_scope 와 뜻이 겹쳤다 (2026-11-27 N8a Scripts 재편)",
+    "Generator": "CodeGenerator — CMake 의 generator(Ninja · VS) · generator expression 과 겹친다 (2026-11-27 N8a Scripts 재편)"
   }
 }

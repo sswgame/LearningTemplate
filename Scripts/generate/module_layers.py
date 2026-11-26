@@ -22,9 +22,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Sequence
 
-from common.tool_search import list_files_under
+from common.paths import list_files_under
 from common.paths import get_project_root
-from generate.generator_output import Generator, GeneratorError, write_generated_file
+from generate.generator_output import CodeGenerator, GeneratorError, write_generated_file
 
 TAG = "ModuleLayers"
 RULE_DIR = Path(__file__).resolve().parents[2] / "Config" / "Rules" / "Layers"
@@ -130,7 +130,7 @@ def generate_module_layers(module: str, output_path: Path) -> None:
     write_generated_file(output_path, "\n".join(list_line), tag=f"{module}Layers", summary=f"{file_count} files · {len(list_tier)} tiers")
 
 
-class ModuleLayersGenerator(Generator):
+class ModuleLayersGenerator(CodeGenerator):
     def generate(self, output_dir: Path, game_name: str) -> None:
         for table in LIST_LAYER_TABLE:
             generate_module_layers(table._module, output_dir / f"{table._module}Layers.cmake")

@@ -15,7 +15,9 @@ import sys
 from common.command import Command, ScriptContext
 from common import app_arguments
 from common.paths import get_bin_dir, get_build_dir
-from common.run_process import run_cmake, run_process
+from common.run_process import run_process
+
+from common.cmake_build import run_cmake
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 PROBE_H = REPO / 'Source/Games/Playground/Dev/ScenarioTest/HotReloadTestComponent.h'

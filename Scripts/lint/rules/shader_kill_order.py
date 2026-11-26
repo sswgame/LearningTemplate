@@ -185,7 +185,7 @@ class ShaderKillOrderRule(LintRule):
     def evaluate(self, scope: LintScope, found: Mapping[str, object]) -> list[str]:
         """
         Content · Source 의 셰이더 함수 — 함수마다의 요약 행(`fold_functions`)만 읽어 버리기 · 미분 닫힘을 내고(역방향 간선), 버리기에 닿는 함수의 판정은
-        `judgement.json` 에 둔다. 본문 조각은 판정이 없는(바뀐 파일 · 닫힘 소속이 바뀐 이름을 부르는) 함수의 파일만 읽는다(`evaluate_incremental`).
+        `result.json` 에 둔다. 본문 조각은 판정이 없는(바뀐 파일 · 닫힘 소속이 바뀐 이름을 부르는) 함수의 파일만 읽는다(`evaluate_incremental`).
         """
         if not scope.whole_repo and not scope.touches(("Content", "Source"), EXTENSIONS):
             return []
@@ -197,17 +197,17 @@ class ShaderKillOrderRule(LintRule):
                              want=want, contribute=fold_functions)
 
         list_row = [parse_row(token) for token in open_functions(()).summary]
-        judgement_path = self.root / CACHE_FOLDER / "shader-kill-order" / "judgement.json"
+        result_path = self.root / CACHE_FOLDER / "shader-kill-order" / "result.json"
         version = compute_version([__file__])   # 판정 글이 바뀌면 캐시한 판정을 버린다
         try:
-            document = json.loads(judgement_path.read_text(encoding="utf-8"))
+            document = json.loads(result_path.read_text(encoding="utf-8"))
             map_cached = document["results"] if document.get("version") == version else {}
         except (OSError, ValueError, KeyError):
             map_cached = {}
         list_problem, map_result = evaluate_incremental(list_row, map_cached, lambda list_miss: open_functions(list_miss).map_fact, list_path)
         if map_result != map_cached:
-            judgement_path.parent.mkdir(parents=True, exist_ok=True)
-            write_json(judgement_path, {"version": version, "results": map_result})
+            result_path.parent.mkdir(parents=True, exist_ok=True)
+            write_json(result_path, {"version": version, "results": map_result})
         return list_problem
 
     def self_check(self) -> None:

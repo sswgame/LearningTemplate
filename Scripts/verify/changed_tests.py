@@ -28,7 +28,8 @@ from typing import Callable, Sequence
 from common.exit_code import ExitCode
 from common.git import run_git, run_git_or_raise
 from common.paths import get_build_dir
-from common.run_process import ProcessResult, build_preset_or_exit, run_process
+from common.run_process import ProcessResult, run_process
+from common.cmake_build import build_preset_or_exit
 from verify.history_store import PASSED_RESULTS, QuarantineEntry, read_quarantine, read_reports, read_verify_config
 from verify.affected_scenarios import read_reach, select_reached
 from lint.cpp_code import is_reflection_input

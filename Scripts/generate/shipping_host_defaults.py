@@ -16,7 +16,7 @@ import json
 from pathlib import Path
 
 from common.project_constants import DIR_RUNTIME_GAME_PRESET, DIR_RUNTIME_PLATFORM_CONFIG, FILE_RUNTIME_ENGINE_CONFIG, FILE_RUNTIME_RENDER_QUALITY
-from generate.generator_output import Generator, GeneratorError, write_generated_file
+from generate.generator_output import CodeGenerator, GeneratorError, write_generated_file
 from common.paths import get_project_root
 
 TAG = "ShippingHostDefaults"
@@ -151,7 +151,7 @@ namespace sw::shipping_host
     write_generated_file(game_output_path, game_content, tag=TAG, report_unchanged=False)
 
 
-class ShippingHostDefaultsGenerator(Generator):
+class ShippingHostDefaultsGenerator(CodeGenerator):
     def generate(self, output_dir: Path, game_name: str) -> None:
         game_preset = f"{DIR_RUNTIME_GAME_PRESET}/{game_name}.json"
         if (get_project_root() / game_preset).is_file():   # 없으면 CMake 가 그 자리에서 멈춘다

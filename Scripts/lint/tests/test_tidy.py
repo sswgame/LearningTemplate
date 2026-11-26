@@ -1,7 +1,7 @@
 """
 clang_tidy 의 TU 고르기 회귀 검사 — 짝 .cpp 가 없는 헤더는 그 헤더를 (헤더를 거쳐서라도) 포함하는 TU 로 돈다.
 
-실행: python -X utf8 Scripts/lint/tests/test_tidy.py (CTest `Scripts.ClangTidySelect`). 임시 폴더만 쓴다.
+실행: python -X utf8 Scripts/lint/tests/test_tidy.py (CTest `Scripts.Tidy`). 임시 폴더만 쓴다.
 """
 
 from __future__ import annotations

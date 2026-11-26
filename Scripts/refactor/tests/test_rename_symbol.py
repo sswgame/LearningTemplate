@@ -25,10 +25,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from common import command  # noqa: E402
 from common.git import run_git_or_raise  # noqa: E402
-from refactor.rename_scope import (  # noqa: E402
-    BANNED_NAMES_PATH, RENAME_PAIRS_FOLDER, collect_reflected_properties, dump_naming_table, make_serialized_name, plan_serialized_rename, replace_serialized_name,
-    rewrite_rename_target, rewrite_unmarked_lines,
-)
+from refactor.rename_files import BANNED_NAMES_PATH, RENAME_PAIRS_FOLDER, dump_naming_table, rewrite_rename_target, rewrite_unmarked_lines  # noqa: E402
+from refactor.serialized_rename import collect_reflected_properties, make_serialized_name, plan_serialized_rename, replace_serialized_name  # noqa: E402
 from refactor import rename_symbol  # noqa: E402
 
 

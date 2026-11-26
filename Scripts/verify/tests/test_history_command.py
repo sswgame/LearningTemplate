@@ -1,7 +1,7 @@
 """
 테스트 이력(`history_store.py` · `changed_tests.py`) — 실행 종류 · 표지(--since) · 흔들림 판정 · 느려짐 경고 · 단계 시간 · changed 단계.
 
-실행: python -X utf8 Scripts/verify/tests/test_history_command.py (CTest `Scripts.TestHistory`). 빌드 · git 을 띄우지 않는다.
+실행: python -X utf8 Scripts/verify/tests/test_history_command.py (CTest `Scripts.HistoryCommand`). 빌드 · git 을 띄우지 않는다.
 """
 
 from __future__ import annotations

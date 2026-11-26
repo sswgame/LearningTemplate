@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import platform
 from dataclasses import dataclass
+from pathlib import Path
 
 
 @dataclass(frozen=True)
@@ -53,3 +54,30 @@ def is_windows_host() -> bool:
 def executable_name(stem: str) -> str:
     """호스트의 실행 파일 이름(`App` → `App.exe`)."""
     return f"{stem}{HOST.executable_suffix}"
+
+
+def platform_key() -> str:
+    """
+    현재 시스템에 대한 플랫폼 키('windows', 'linux')를 반환합니다.
+    """
+    return HOST.key
+
+
+def shared_library_names(base_name: str) -> list[str]:
+    """
+    플랫폼별 동적 라이브러리 파일명 목록을 반환합니다 (.dll, .so).
+    """
+    if is_windows_host():
+        return [f"{base_name}{HOST.shared_library_suffix}"]
+    name = base_name if base_name.startswith(HOST.shared_library_prefix) else f"{HOST.shared_library_prefix}{base_name}"
+    return [f"{name}{HOST.shared_library_suffix}", f"{name}{HOST.shared_library_suffix}.1"]
+
+
+def platform_script_command(script_path: str | Path) -> list[str]:
+    """
+    플랫폼별 쉘 스크립트 실행 명령어 리스트를 반환합니다 (Windows: cmd /c, POSIX: bash).
+    """
+    resolved = str(script_path)
+    if is_windows_host():
+        return ["cmd", "/c", resolved]  # .bat · .cmd 는 cmd 만 돌린다(CreateProcess 가 직접 띄우지 못한다)
+    return ["bash", resolved]

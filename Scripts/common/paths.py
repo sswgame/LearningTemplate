@@ -1,7 +1,7 @@
 """
 Scripts/common/paths.py
 
-프로젝트 루트 디렉터리 탐색, 경로 정규화, 템플릿 치환 및 플랫폼 판별 유틸리티.
+프로젝트 루트 디렉터리 탐색, 경로 정규화, 템플릿 치환, 폴더 아래 파일 목록. 호스트 플랫폼 판별은 `host_platform.py` 다.
 """
 
 from __future__ import annotations
@@ -11,7 +11,6 @@ import os
 import re
 from pathlib import Path
 
-from .host_platform import is_windows_host, HOST
 
 PathLike = str | Path
 
@@ -76,29 +75,15 @@ def expand_path_template(template: str, extras: dict[str, str] | None = None) ->
     return os.path.expandvars(expanded)
 
 
-def platform_key() -> str:
-    """
-    현재 시스템에 대한 플랫폼 키('windows', 'linux')를 반환합니다.
-    """
-    return HOST.key
+@functools.lru_cache(maxsize=None)
+def list_files_under(root: Path) -> tuple[Path, ...]:
+    """`root` 아래 모든 파일(경로 정렬 — `sorted(root.rglob("*"))` 의 파일과 같은 순서). 한 프로세스에서 폴더마다 한 번만 훑는다.
 
-
-def shared_library_names(base_name: str) -> list[str]:
+    configure 생성기(`Scripts/generate/run_generators.py`)는 한 프로세스에서 층 표 둘 · 타깃 게이트 · 매니페스트가 같은 `Source/` 를
+    따로 rglob 하고 항목마다 `is_file()` 을 물어 같은 트리를 네 번 훑었다. 부분 폴더는 `Source/` 목록을 `is_relative_to` 로 거른다.
+    프로세스 안에서 트리가 바뀌지 않는 짧은 도구 전용이다(오래 도는 프로세스는 쓰지 않는다).
     """
-    플랫폼별 동적 라이브러리 파일명 목록을 반환합니다 (.dll, .so).
-    """
-    if is_windows_host():
-        return [f"{base_name}{HOST.shared_library_suffix}"]
-    name = base_name if base_name.startswith(HOST.shared_library_prefix) else f"{HOST.shared_library_prefix}{base_name}"
-    return [f"{name}{HOST.shared_library_suffix}", f"{name}{HOST.shared_library_suffix}.1"]
-
-
-def platform_script_command(script_path: PathLike) -> list[str]:
-    """
-    플랫폼별 쉘 스크립트 실행 명령어 리스트를 반환합니다 (Windows: cmd /c, POSIX: bash).
-    """
-    resolved = str(script_path)
-    if is_windows_host():
-        return ["cmd", "/c", resolved]  # .bat · .cmd 는 cmd 만 돌린다(CreateProcess 가 직접 띄우지 못한다)
-    return ["bash", resolved]
-
+    list_path: list[Path] = []
+    for directory, _, list_file_name in os.walk(root):
+        list_path.extend(Path(directory, name) for name in list_file_name)
+    return tuple(sorted(list_path))

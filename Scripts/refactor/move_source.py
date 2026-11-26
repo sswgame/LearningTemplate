@@ -22,7 +22,7 @@ from pathlib import Path
 from common.command import Command, ScriptContext
 from common.exit_code import ExitCode
 from common.git import run_git
-from refactor.rename_scope import CPP_SUFFIX, C_LIKE_SUFFIX, TEXT_SUFFIX, list_tracked_text, read_text, rewrite_unmarked_lines, write_text
+from refactor.rename_files import CPP_SUFFIX, C_LIKE_SUFFIX, TEXT_SUFFIX, list_tracked_text, read_text, rewrite_unmarked_lines, write_text
 
 BARE_INCLUDE = re.compile(r'^(\s*#\s*include\s*")([^"/]+)(")', re.M)
 

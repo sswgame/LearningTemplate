@@ -12,7 +12,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from generate.generator_output import Generator, GeneratorError, write_generated_file
+from generate.generator_output import CodeGenerator, GeneratorError, write_generated_file
 from common.paths import get_project_root
 
 TAG = "ProcessExitCodes"
@@ -97,6 +97,6 @@ def generate_process_exit_codes(header_path: Path, cmake_path: Path) -> None:
     write_generated_file(cmake_path, make_cmake_text(list_row), tag=TAG)
 
 
-class ProcessExitCodesGenerator(Generator):
+class ProcessExitCodesGenerator(CodeGenerator):
     def generate(self, output_dir: Path, game_name: str) -> None:
         generate_process_exit_codes(output_dir / "ProcessExitCodes.gen.h", output_dir / "ProcessExitCodes.cmake")

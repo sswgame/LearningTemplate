@@ -36,7 +36,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from common import project_constants as config_constants  # noqa: E402
 from common.command import Command, ScriptContext  # noqa: E402
 from common.exit_code import ExitCode  # noqa: E402
-from generate.generator_output import Generator, format_cmake_set, write_generated_file  # noqa: E402
+from generate.generator_output import CodeGenerator, format_cmake_set, write_generated_file  # noqa: E402
 
 TAG = "CMakeConstants"
 
@@ -80,7 +80,7 @@ def generate_cmake_constants(output_file: Path) -> None:
     write_generated_file(output_file, "\n".join(list_line), tag=TAG, summary=f"{len(map_exported)} constants")
 
 
-class CMakeConstantsGenerator(Generator):
+class CMakeConstantsGenerator(CodeGenerator):
     def generate(self, output_dir: Path, game_name: str) -> None:
         generate_cmake_constants(output_dir / "ConfigVars.cmake")
 

@@ -49,7 +49,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from common.command import Command, ScriptContext  # noqa: E402
 from common.paths import get_bin_dir  # noqa: E402
-from common.run_process import run_cmake  # noqa: E402
+from common.cmake_build import run_cmake  # noqa: E402
 from common.exit_code import ExitCode  # noqa: E402
 from common.host_platform import executable_name, HOST  # noqa: E402
 from package.pack_files import PACK_FOLDER_NAME, PackageError, select_staged_packs  # noqa: E402

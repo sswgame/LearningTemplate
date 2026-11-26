@@ -21,7 +21,8 @@ from pathlib import Path
 from typing import Any
 
 from common.tool_search import find_first_valid_root, platform_search_roots, select_latest_version
-from common.paths import normalize_path, platform_key
+from common.host_platform import platform_key
+from common.paths import normalize_path
 from common.host_platform import is_windows_host
 from common.project_constants import KEY_NINJA_DOWNLOAD_URLS, KEY_NINJA_SEARCH_ROOTS, KEY_NINJA_TOOLS_SUBDIR
 from common.run_process import run_process

@@ -1,7 +1,7 @@
 """
 affected_scenarios 회귀 검사 — 참조 닫힘(경로 · GUID · 임포트 원본 · include), 소스가 정의한 이름, 상한과 표본.
 
-실행: python -X utf8 Scripts/verify/tests/test_affected_scenarios.py (CTest `Scripts.ScenarioReach`). 저장소를 읽지 않는다.
+실행: python -X utf8 Scripts/verify/tests/test_affected_scenarios.py (CTest `Scripts.AffectedScenarios`). 저장소를 읽지 않는다.
 """
 
 from __future__ import annotations

@@ -7,13 +7,13 @@
   py -3 -m Scripts rename-symbol --pairs Config/Rules/Renames/<표>.json [--reapply]
 
 안전 규칙(기본은 안전한 쪽, 풀려면 옵션):
-- 낱말 경계로만 바꾼다(부분 일치 없음). 옛 이름을 일부러 적은 줄은 `keep-old-name` 표지로 남고, 금지 이름 표의 키 · 이름 기준선 · 쌍 표는 지킨다(`common/rename_scope.py`).
+- 낱말 경계로만 바꾼다(부분 일치 없음). 옛 이름을 일부러 적은 줄은 `keep-old-name` 표지로 남고, 금지 이름 표의 키 · 이름 기준선 · 쌍 표는 지킨다(`refactor/rename_files.py`).
 - C 계열(C++ · HLSL) · 파이썬 소스의 문자열 리터럴 안은 건너뛰고 그 파일을 알린다 — 파일 매직("OggS") · JSON 키 · 내보내기 기호처럼 바깥이 정한 철자다(`--include-strings`).
 - 짧거나 흔한 이름(낱말 하나 · 6 글자 미만, 멤버는 4 글자 미만)은 거절한다 — 낱말 치환이 엉뚱한 식별자를 바꾼다(`--allow-common-name`).
 - 새 이름이 코드에 이미 있으면 겹친 파일을 알리고 멈춘다(`--force`, 쌍 표는 `"allowExisting": true`). `--reapply` 는 병합 뒤 다시 돌리기라 겹침을 보지 않는다.
 - 리플렉션 프로퍼티(`PROPERTY` 가 붙은 `_` 멤버)는 데이터의 직렬화 이름(`_bFooBar` → `fooBar`)도 함께 바꾸고, 그 이름을 다른 멤버도 쓰거나 흔한 낱말이면 멈춘다
   (`--force`, 쌍 표는 데이터를 손으로 옮긴 뒤 `"serializedName": false`).
-- 옛 이름을 `_bannedNames`(`rename_scope.BANNED_NAMES_PATH`)에 올려 다른 갈래 · 붙여 넣은 코드가 되살리지 못하게 하고 이름 기준선을 줄인다(`--no-ban`, 쌍 표는 `"ban": false`).
+- 옛 이름을 `_bannedNames`(`rename_files.BANNED_NAMES_PATH`)에 올려 다른 갈래 · 붙여 넣은 코드가 되살리지 못하게 하고 이름 기준선을 줄인다(`--no-ban`, 쌍 표는 `"ban": false`).
 - 형식 이름과 같은 줄기의 소스 파일(`Old.h` · `TestOld.cpp`)은 `git mv` 로 옮긴다 — include 경로는 같은 치환이 따라간다.
 쌍 표: `[{"old": …, "new": …, "why": …}, …]`. `"scope": "cmake"` 면 CMake 파일(`*.cmake` · `CMakeLists.txt`)만 바꾼다(CMake 지역 변수 — 낙타 · 밑줄 꼴만 받는다).
 """
@@ -34,10 +34,11 @@ from typing import Sequence
 from common.command import Command, ScriptContext
 from common.exit_code import ExitCode
 from common.git import run_git_or_raise
-from refactor.rename_scope import (
-    BANNED_NAMES_PATH, C_LIKE_SUFFIX, CPP_SUFFIX, KEEP_OLD_NAME_MARKER, TEXT_SUFFIX, collect_reflected_properties, dump_naming_table, is_rename_table,
-    list_tracked_text, plan_serialized_rename, read_text, replace_serialized_name, rewrite_rename_target, write_text,
+from refactor.rename_files import (
+    BANNED_NAMES_PATH, C_LIKE_SUFFIX, CPP_SUFFIX, KEEP_OLD_NAME_MARKER, TEXT_SUFFIX, dump_naming_table, is_rename_table, list_tracked_text, read_text,
+    rewrite_rename_target, write_text,
 )
+from refactor.serialized_rename import collect_reflected_properties, plan_serialized_rename, replace_serialized_name
 from lint.cpp_code import is_reflection_input
 
 TAG = "[rename-symbol]"

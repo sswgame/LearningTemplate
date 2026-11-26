@@ -1,7 +1,7 @@
 """
 린트 규칙별 시간 줄(`lint.format_rule_times`) — `--all` 은 느린 다섯과 합, 커밋 훅은 예산을 넘은 규칙만 경고.
 
-실행: python -X utf8 Scripts/lint/tests/test_lint_rule_times.py (CTest `Scripts.PreCommitRuleTimes`). git 을 띄우지 않는다.
+실행: python -X utf8 Scripts/lint/tests/test_lint_rule_times.py (CTest `Scripts.LintRuleTimes`). git 을 띄우지 않는다.
 """
 
 from __future__ import annotations

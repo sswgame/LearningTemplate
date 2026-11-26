@@ -1,7 +1,7 @@
 """
 여러 프로세스 실행기의 판정 회귀 검사 — 파괴 해시 로그(JSON 본문) 맞대기, 바닥 위 자리 견주기(보고 records), 서버 설정 사본의 빈 포트, ctest 항목 모으기.
 
-실행: python -X utf8 Scripts/sessions/tests/test_sessions.py (CTest `Scripts.NetChecks`). 프로세스를 띄우지 않는다.
+실행: python -X utf8 Scripts/sessions/tests/test_sessions.py (CTest `Scripts.Sessions`). 프로세스를 띄우지 않는다.
 """
 
 from __future__ import annotations

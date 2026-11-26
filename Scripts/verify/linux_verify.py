@@ -88,11 +88,11 @@ def to_wsl_path(windows_path, env):
     result = subprocess.run(['wsl.exe', '-d', DISTRO, '--', 'wslpath', '-a', windows_path.as_posix()], env=env, capture_output=True, text=True)
     converted = result.stdout.strip()
     if result.returncode != 0 or not converted.startswith('/'):
-        sys.exit(f'LinuxScenarios: wslpath could not convert {windows_path} ({result.stderr.strip()})')
+        sys.exit(f'LinuxVerify: wslpath could not convert {windows_path} ({result.stderr.strip()})')
     return converted
 
 
-def shell(command, **kwargs):
+def run_in_shell(command, **kwargs):
     return subprocess.run(command, shell=True, executable='/bin/bash', env=dict(os.environ, PATH=PATH_LINUX), **kwargs)
 
 
@@ -156,20 +156,20 @@ class Xvfb:
         self.process.wait()
 
 
-def setup():
+def install_dependencies():
     os.makedirs(f'{HOME}/lt-deps/xvfb', exist_ok=True)
     for package in XVFB_DEBS:
-        if shell(f'cd ~/lt-deps/xvfb && apt-get download {package}', stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode != 0:
+        if run_in_shell(f'cd ~/lt-deps/xvfb && apt-get download {package}', stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode != 0:
             print('내려받지 못함:', package)
-    shell('cd ~/lt-deps/xvfb && mkdir -p root && for d in *.deb; do dpkg -x "$d" root; done', check=True)
+    run_in_shell('cd ~/lt-deps/xvfb && mkdir -p root && for d in *.deb; do dpkg -x "$d" root; done', check=True)
     binary = pathlib.Path(f'{XVFB_ROOT}/usr/bin/Xvfb').read_bytes()
     patched = pathlib.Path(f'{XVFB_ROOT}/usr/bin/Xvfb.p')
     patched.write_bytes(binary.replace(b'/usr/bin\x00', b'/tmp/xkb\x00'))
     patched.chmod(0o755)
     os.makedirs(FONT_DIR, exist_ok=True)
     os.makedirs(f'{HOME}/lt-deps/fontdeb', exist_ok=True)
-    shell('cd ~/lt-deps/fontdeb && apt-get download fonts-liberation fonts-noto-cjk && mkdir -p root && for d in *.deb; do dpkg -x "$d" root; done', check=True, stdout=subprocess.DEVNULL)
-    shell(f'find ~/lt-deps/fontdeb/root \\( -name "LiberationSans-*.ttf" -o -name "NotoSansCJK-Regular.ttc" \\) -exec cp -f {{}} {FONT_DIR}/ \\; && fc-cache -f', check=True)
+    run_in_shell('cd ~/lt-deps/fontdeb && apt-get download fonts-liberation fonts-noto-cjk && mkdir -p root && for d in *.deb; do dpkg -x "$d" root; done', check=True, stdout=subprocess.DEVNULL)
+    run_in_shell(f'find ~/lt-deps/fontdeb/root \\( -name "LiberationSans-*.ttf" -o -name "NotoSansCJK-Regular.ttc" \\) -exec cp -f {{}} {FONT_DIR}/ \\; && fc-cache -f', check=True)
     print(sorted(os.listdir(FONT_DIR)))
     return 0
 
@@ -190,7 +190,7 @@ def sync_clone():
 def require_current_build():
     """
     chain · stages · bisect 앞: Release 바이너리가 지금 커밋으로 지어졌는지 본다. 아니면 돌리지 않고 멈춘다 — 옛 바이너리가 돌면 고친 테스트가 다시 진다
-    (preflight.sh --from 과 같은 틈). 어긋나는 경우: 커밋한 뒤 build 없이 chain, sanitize 가 클론만 새 커밋으로 옮김, 지다 만 build(ninja -k 0 이 일부만 다시 지음).
+    (preflight.sh --from 과 같은 틈). 어긋나는 경우: 커밋한 뒤 build 없이 chain, sanitize 가 클론만 새 커밋으로 옮김, 지다 만 build_clone(ninja -k 0 이 일부만 다시 지음).
     스스로 다시 짓지는 않는다 — build 는 클론을 clean 해 옮기지 않은 기록 골든을 지운다.
     """
     built = pathlib.Path(BUILT_COMMIT).read_text().strip() if os.path.exists(BUILT_COMMIT) else '없음'
@@ -207,16 +207,16 @@ def ensure_vcpkg_manifest(installed_dir):
     표시는 설치본 안의 매니페스트 해시 파일이다. 깔지 못하면 False(구성 로그 경로를 남긴다).
     """
     stamp = f'{installed_dir}/.sw-manifest.sha256'
-    current = shell(f'sha256sum {CLONE}/vcpkg.json | cut -d" " -f1', capture_output=True, text=True).stdout.strip()
-    previous = shell(f'cat {stamp} 2>/dev/null', capture_output=True, text=True).stdout.strip()
+    current = run_in_shell(f'sha256sum {CLONE}/vcpkg.json | cut -d" " -f1', capture_output=True, text=True).stdout.strip()
+    previous = run_in_shell(f'cat {stamp} 2>/dev/null', capture_output=True, text=True).stdout.strip()
     if current == previous:
         return True
     debug_dir = f'{CLONE}/build/Linux-Debug'
     print(f'vcpkg 매니페스트가 바뀌었다 - {debug_dir} 를 강제 설치로 다시 구성한다(오래 걸릴 수 있다)')
-    if shell(f'cmake -S {CLONE} -B {debug_dir} -DSW_VCPKG_FORCE_INSTALL=ON > {debug_dir}.vcpkg.log 2>&1').returncode != 0:
+    if run_in_shell(f'cmake -S {CLONE} -B {debug_dir} -DSW_VCPKG_FORCE_INSTALL=ON > {debug_dir}.vcpkg.log 2>&1').returncode != 0:
         print(f'vcpkg 설치 실패 - {debug_dir}.vcpkg.log')
         return False
-    shell(f'echo {current} > {stamp}')
+    run_in_shell(f'echo {current} > {stamp}')
     return True
 
 
@@ -236,17 +236,17 @@ def make_configure_command(preset, build_dir, definitions='', installed_dir=None
             f'-DCMAKE_TOOLCHAIN_FILE="{read_debug_cache("CMAKE_TOOLCHAIN_FILE")}" -DVCPKG_INSTALLED_DIR="{installed_dir or read_debug_cache("VCPKG_INSTALLED_DIR")}"')
 
 
-def build():
+def build_clone():
     sync_clone()
     if ensure_vcpkg_manifest(read_debug_cache('VCPKG_INSTALLED_DIR')) is False:
         return 1
     # 유니티 빌드는 끈다 - TU 하나씩 지어 빠진 include 를 잡는다(유니티 Release 는 Windows 가 짓는다).
     configure = make_configure_command('Linux-Release', RELEASE, '-DSW_ENABLE_UNITY_BUILD=OFF')
-    if shell(f'cd {CLONE} && {configure} > {RELEASE}.configure.log 2>&1').returncode != 0:
+    if run_in_shell(f'cd {CLONE} && {configure} > {RELEASE}.configure.log 2>&1').returncode != 0:
         print(f'구성 실패 - {RELEASE}.configure.log')
         return 1
     pathlib.Path(BUILT_COMMIT).unlink(missing_ok=True)  # 지다 만 빌드는 어느 커밋의 바이너리도 아니다
-    built = shell(f'ninja -C {RELEASE} -k 0 > {RELEASE}.build.log 2>&1').returncode
+    built = run_in_shell(f'ninja -C {RELEASE} -k 0 > {RELEASE}.build.log 2>&1').returncode
     log = pathlib.Path(f'{RELEASE}.build.log').read_text(errors='replace').splitlines()
     for line in [l for l in log if 'error:' in l or 'FAILED:' in l][:40]:
         print(line[:240])
@@ -257,13 +257,13 @@ def build():
     # Windows 에서 이미 임포트한 결과를 옮긴다 - 스탬프가 바이트 해시라 다시 임포트하지 않는다(Linux 임포트는 느리다).
     copy = (f"cd {WSL_REPO}/Content && find . -type f \\( -path '*/textures/*' -o -path '*/models/*' -o -path '*/heightfields/*' -o -name import.stamp \\) "
             f"-not -path '*/textures_raw/*.png' -not -path '*/models_raw/*' -printf '%P\\n' > /tmp/lcopy.list && rsync -a --files-from=/tmp/lcopy.list . {CLONE}/Content/")
-    if shell(copy).returncode != 0:
+    if run_in_shell(copy).returncode != 0:
         print('임포트 결과 복사 실패')
         return 1
-    return shell(f"cd {RELEASE} && ctest -R '^Import\\.' 2>&1 | tail -n 1").returncode
+    return run_in_shell(f"cd {RELEASE} && ctest -R '^Import\\.' 2>&1 | tail -n 1").returncode
 
 
-def report(pack):
+def print_failure_report(pack):
     """진 단계와 그 까닭(실행기의 판정 값 한 줄)을 낸다. 부모 로그가 있으면 끝 줄(SCENARIO_RESULT=)도. 그 밖의 경고 · 오류 분류는 로그를 직접 읽는다."""
     parent = f'{LOGS}/Scenario.{pack}.log'
     if os.path.exists(parent):
@@ -342,7 +342,7 @@ def run_chain(name, record, display):
             result = subprocess.run(['timeout', '3000', *command], cwd=f'{RELEASE}/Bin', env=env, stdout=console, stderr=subprocess.STDOUT)
         output = io.StringIO()
         with contextlib.redirect_stdout(output):
-            reported = report(name)
+            reported = print_failure_report(name)
         tail = ''
         if result.returncode != 0:
             with open(console_path, encoding='utf-8', errors='replace') as console:
@@ -351,7 +351,7 @@ def run_chain(name, record, display):
         return name, result.returncode or reported, f'{name} rc={result.returncode} {int(time.time() - started)}초\n{output.getvalue()}{tail}'
 
 
-def chain(arguments):
+def run_chain_action(arguments):
     record = '--record' in arguments
     names = [a for a in arguments if a != '--record']
     if not names:
@@ -377,7 +377,7 @@ def run_stage_set(names, env, log_name, record=False, extra=()):
                           cwd=f'{RELEASE}/Bin', env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode
 
 
-def stages(arguments):
+def run_stage_action(arguments):
     record = '--record' in arguments  # 체인 전체가 못 도는 구간(앞 단계가 멈춤)의 골든을 기록할 때
     # 전역 변수(`-gv_이름=값`)는 앱으로 그대로 넘긴다 — 자체 테스트 하나만(`-gv_editorSelfTestPattern=…`)처럼 시나리오 사본 없이 좁힐 때
     extra = [a for a in arguments if a.startswith('-gv_')]
@@ -502,7 +502,7 @@ def goldens():
 def run_job(steps):
     """(제목, 셸 명령) 묶음을 차례로 돌리고 첫 실패 코드를 돌려준다(뒤 단계는 앞 단계를 기다린다 — 서버 기동은 서버 빌드 뒤다). 출력은 단계마다 한 덩어리로 찍는다."""
     for title, command in steps:
-        result = shell(command, capture_output=True, text=True)
+        result = run_in_shell(command, capture_output=True, text=True)
         print(f'{title} {result.returncode}', flush=True)
         if result.stdout.strip():
             print(result.stdout.rstrip(), flush=True)
@@ -511,10 +511,10 @@ def run_job(steps):
     return 0
 
 
-def finish(failure, work, arguments):
-    """끝 줄이 있는 명령을 돌린다 — work 는 (종료 코드, 끝 줄)을 돌려주므로 끝 줄 없이 지는 길이 없다. 예외(클론 동기화 실패 · sys.exit)로 끝나면 failure 를 찍는다."""
+def finish_with_result_line(failure, action, arguments):
+    """끝 줄이 있는 명령을 돌린다 — action 은 (종료 코드, 끝 줄)을 돌려주므로 끝 줄 없이 지는 길이 없다. 예외(클론 동기화 실패 · sys.exit)로 끝나면 failure 를 찍는다."""
     try:
-        code, line = work(arguments)
+        code, line = action(arguments)
     except BaseException:
         print(failure, flush=True)
         raise
@@ -524,7 +524,7 @@ def finish(failure, work, arguments):
 
 def verify_all(arguments):
     """묶음 끝 Linux 검증 한 번. Debug 클라이언트는 짓지 않는다 - Release 단위가 키트까지 덮고 단언은 Windows Debug 가 본다. 서버 구성은 렌더러를 빼 여기서만 드러나는 층 위반이 있어 남긴다."""
-    code = build()
+    code = build_clone()
     if code != 0:
         return code, 'LINUX_FAILED'
     head = run_git_or_raise(['rev-parse', 'HEAD'], cwd=pathlib.Path(CLONE)).strip()
@@ -542,7 +542,7 @@ def verify_all(arguments):
     if code != 0:
         return code, 'LINUX_FAILED'
     # 빠른 실패: 단위 · 서버가 지면 긴 체인을 돌리지 않는다.
-    code = chain(arguments + ALL_CHAINS)
+    code = run_chain_action(arguments + ALL_CHAINS)
     if code != 0:
         return code, 'LINUX_FAILED'
     return 0, f'LINUX_OK={head}'
@@ -561,12 +561,12 @@ def sanitize(arguments):
     # 누수는 처음에는 끈다 — 기준선을 만든 뒤 켠다(감사 P-8 "detect_leaks=0 으로 시작"). 첫 오류에서 멈춰 보고를 읽게 한다.
     options = ('ASAN_OPTIONS=detect_leaks=0:halt_on_error=1:abort_on_error=1 UBSAN_OPTIONS=print_stacktrace=1:halt_on_error=1' if kind == 'address'
                else f'TSAN_OPTIONS=halt_on_error=1:second_deadlock_stack=1:suppressions={CLONE}/Config/Build/TsanSuppressions.txt')
-    rc = shell(f'cd {build_dir} && {options} ./Bin/App --test -unattended > {VERIFY_LOGS}/lt.sanitize.log 2>&1; rc=$?; '
+    rc = run_in_shell(f'cd {build_dir} && {options} ./Bin/App --test -unattended > {VERIFY_LOGS}/lt.sanitize.log 2>&1; rc=$?; '
                f'grep -E "case run|FAILED|ERROR: (Address|Thread)Sanitizer|runtime error|WARNING: ThreadSanitizer" {VERIFY_LOGS}/lt.sanitize.log | head -n 20 | cut -c1-200; exit $rc').returncode
     if rc != 0:
         return rc, f'SANITIZE_FAILED={kind} - {VERIFY_LOGS}/lt.sanitize.log'
     # 퍼저는 ASan 묶음 끝에 타깃마다 30 초 — 클론은 위에서 이미 옮겼다.
-    if kind == 'address' and finish('FUZZ_FAILED', lambda names: run_fuzz(names, FUZZ_SMOKE_SECONDS, sync=False), []) != 0:
+    if kind == 'address' and finish_with_result_line('FUZZ_FAILED', lambda names: run_fuzz(names, FUZZ_SMOKE_SECONDS, sync=False), []) != 0:
         return 1, 'SANITIZE_FAILED=fuzz'
     return 0, f'SANITIZE_OK={kind}'
 
@@ -579,10 +579,10 @@ def configure_and_build(preset, targets, tsan=False):
         configure = make_configure_command(preset, build_dir, '-DVCPKG_TARGET_TRIPLET=x64-linux-tsan', f'{build_dir}/vcpkg_installed')
     else:
         configure = make_configure_command(preset, build_dir)
-    if shell(f'cd {CLONE} && {configure} > {build_dir}.configure.log 2>&1').returncode != 0:
+    if run_in_shell(f'cd {CLONE} && {configure} > {build_dir}.configure.log 2>&1').returncode != 0:
         print(f'구성 실패 - {build_dir}.configure.log')
         return 1
-    if shell(f'ninja -C {build_dir} -k 0 {" ".join(targets)} > {build_dir}.build.log 2>&1').returncode != 0:
+    if run_in_shell(f'ninja -C {build_dir} -k 0 {" ".join(targets)} > {build_dir}.build.log 2>&1').returncode != 0:
         print(f'빌드 실패 - {build_dir}.build.log')
         return 1
     return 0
@@ -621,7 +621,7 @@ def run_fuzz(names, seconds, sync=True):
         # 자라는 말뭉치를 앞에 둔다 — libFuzzer 는 첫 폴더에 새 입력을 쓴다(씨앗 폴더를 더럽히지 않는다).
         # 엔진은 공유 ASan 런타임(libclang_rt.asan.so)으로 짓는다 — 퍼저 실행 파일은 그 런타임을 먼저 싣지 않아 "ASan runtime does not come first" 로 바로 멈췄다. 런타임을 앞에 싣는다.
         preload = f'$(ls {CLONE}/Tools/LLVM/lib/clang/*/lib/x86_64-unknown-linux-gnu/libclang_rt.asan.so | head -n 1)'
-        shell(f'cd {build_dir}/Bin && LD_PRELOAD={preload} ASAN_OPTIONS=detect_leaks=0:abort_on_error=1 ./Fuzz_{name} -max_total_time={seconds} {corpus} {seeds_root / name} > {log} 2>&1')
+        run_in_shell(f'cd {build_dir}/Bin && LD_PRELOAD={preload} ASAN_OPTIONS=detect_leaks=0:abort_on_error=1 ./Fuzz_{name} -max_total_time={seconds} {corpus} {seeds_root / name} > {log} 2>&1')
         reason = evaluate_fuzz_log(pathlib.Path(log).read_text(errors='replace'))
         print(f'fuzz {name}: {"ok" if reason is None else reason} - {log}')
         if reason is not None:
@@ -657,7 +657,7 @@ def find_run_processes():
     return found
 
 
-def stop():
+def stop_runs():
     """돌고 있는 실행을 끝낸다. SIGTERM 을 받은 실행은 Xvfb 를 닫지 못하므로 함께 끝낸다."""
     for sig in (signal.SIGTERM, signal.SIGKILL):
         for pid in find_run_processes():
@@ -675,12 +675,12 @@ def setup_dzn():
     """dzn(Mesa microsoft-experimental Vulkan)을 sudo 없이 짓는다: 빌드 의존 deb 를 풀고 Mesa 소스를 받아 meson 으로 ~/lt-deps/dzn/install 에 설치한다."""
     os.makedirs(f'{DZN}/deb', exist_ok=True)
     for package in DZN_DEBS:
-        if shell(f'cd {DZN}/deb && apt-get download {package}', stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode != 0:
+        if run_in_shell(f'cd {DZN}/deb && apt-get download {package}', stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode != 0:
             print('내려받지 못함:', package)
-    shell(f'cd {DZN}/deb && mkdir -p {DZN}/root && for d in *.deb; do dpkg -x "$d" {DZN}/root; done', check=True)
+    run_in_shell(f'cd {DZN}/deb && mkdir -p {DZN}/root && for d in *.deb; do dpkg -x "$d" {DZN}/root; done', check=True)
     source = f'{DZN}/src/mesa-{DZN_MESA_VERSION}'
     if not os.path.isdir(source):
-        shell(f'mkdir -p {DZN}/src && cd {DZN}/src && curl -sSLO https://archive.mesa3d.org/mesa-{DZN_MESA_VERSION}.tar.xz && tar xf mesa-{DZN_MESA_VERSION}.tar.xz', check=True)
+        run_in_shell(f'mkdir -p {DZN}/src && cd {DZN}/src && curl -sSLO https://archive.mesa3d.org/mesa-{DZN_MESA_VERSION}.tar.xz && tar xf mesa-{DZN_MESA_VERSION}.tar.xz', check=True)
     root = f'{DZN}/root/usr'
     env = dict(os.environ, PATH=f'{root}/bin:{PATH_LINUX}', PYTHONPATH=f'{root}/lib/python3/dist-packages',
                PKG_CONFIG_PATH=f'{root}/lib/x86_64-linux-gnu/pkgconfig:{root}/share/pkgconfig', CPATH=f'{root}/include',
@@ -694,19 +694,19 @@ def setup_dzn():
 
 #: 명령 → 그 일(나머지 인자를 받는다)
 ACTIONS = {
-    'setup': lambda arguments: setup(),
+    'setup': lambda arguments: install_dependencies(),
     'setup-dzn': lambda arguments: setup_dzn(),
-    'build': lambda arguments: build(),
-    'chain': chain,
-    'stages': stages,
+    'build': lambda arguments: build_clone(),
+    'chain': run_chain_action,
+    'stages': run_stage_action,
     'bisect': bisect,
-    'report': lambda arguments: report(arguments[0] if arguments else 'editor'),
+    'report': lambda arguments: print_failure_report(arguments[0] if arguments else 'editor'),
     'rerun': retry_failed,
     'goldens': lambda arguments: goldens(),
-    'stop': lambda arguments: stop(),
-    'all': lambda arguments: finish('LINUX_FAILED', verify_all, arguments),
-    'sanitize': lambda arguments: finish('SANITIZE_FAILED', sanitize, arguments),
-    'fuzz': lambda arguments: finish('FUZZ_FAILED', fuzz, arguments),
+    'stop': lambda arguments: stop_runs(),
+    'all': lambda arguments: finish_with_result_line('LINUX_FAILED', verify_all, arguments),
+    'sanitize': lambda arguments: finish_with_result_line('SANITIZE_FAILED', sanitize, arguments),
+    'fuzz': lambda arguments: finish_with_result_line('FUZZ_FAILED', fuzz, arguments),
 }
 
 
@@ -726,7 +726,7 @@ class LinuxVerifyCommand(Command):
         if is_windows_host():
             return run_in_wsl(args.gpu, args.action, args.arguments)
         os.makedirs(VERIFY_LOGS, exist_ok=True)
-        os.environ['PATH'] = PATH_LINUX  # git(common.git)도 shell() 과 같은 도구를 본다 — 물려받은 PATH 에는 git-lfs 가 없어 클론 reset 이 졌다
+        os.environ['PATH'] = PATH_LINUX  # git(common.git)도 run_in_shell() 과 같은 도구를 본다 — 물려받은 PATH 에는 git-lfs 가 없어 클론 reset 이 졌다
         GPU = args.gpu
         return ACTIONS[args.action](args.arguments)
 

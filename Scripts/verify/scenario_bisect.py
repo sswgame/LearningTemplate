@@ -29,7 +29,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))   # Scripts
 from common import app_arguments  # noqa: E402
 from common.command import Command, ScriptContext  # noqa: E402
 from common.paths import get_build_dir  # noqa: E402
-from common.run_process import build_preset_or_exit  # noqa: E402
+from common.cmake_build import build_preset_or_exit  # noqa: E402
 from verify.scenario_determinism import find_determinism_problems, make_runner  # noqa: E402
 from verify.history_store import DEFAULT_DATABASE, open_database  # noqa: E402
 from verify.scenario_reports import REPO, collect_expected_stages, describe_code_change, describe_stage_failures, find_first_bad_step, find_latest_per_backend_folder, make_run_report_folder, minimize_stages, print_advance_steps, print_golden_coverage, print_golden_margins, read_backend_chain_order, read_backend_reports, read_run_reports, read_scenario_name, record_rerun, resolve_target, retry_failed_stages, select_failed_stages, stage_failed_in_reports  # noqa: E402

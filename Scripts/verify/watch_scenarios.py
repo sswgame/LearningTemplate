@@ -11,7 +11,7 @@ import subprocess
 from common.command import Command, ScriptContext
 from common import app_arguments
 from common.paths import get_build_dir
-from common.run_process import build_preset_or_exit
+from common.cmake_build import build_preset_or_exit
 
 
 

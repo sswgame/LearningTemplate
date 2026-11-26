@@ -1,7 +1,7 @@
 """
 Pack 모드 스테이징 회귀 검사 — 배포 패키지는 묶은 모드(`mod.xml` + `content.pack`)만 담고, 형식이 틀린 id(경로 탈출) · 묶지 않은 모드는 실패다.
 
-실행: python -X utf8 Scripts/package/tests/test_package_mods.py (CTest `Scripts.PackMods`). 프로젝트 폴더는 임시 폴더다.
+실행: python -X utf8 Scripts/package/tests/test_package_mods.py (CTest `Scripts.PackageMods`). 프로젝트 폴더는 임시 폴더다.
 """
 
 from __future__ import annotations
