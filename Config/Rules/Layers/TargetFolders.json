@@ -1,0 +1,36 @@
+{
+    "_comment": "대상(Client · Server)마다 짓지 않는 소스 폴더 표 — 읽는 곳은 cmake/Modules/Build/ExcludedSources.cmake(`SW_CLIENT_ONLY_SOURCE_PATTERNS` · `SW_SERVER_ONLY_SOURCE_PATTERNS`). 전용 서버 구성은 `_clientOnlyFolders` 를, 클라이언트 구성은 `_serverOnlyFolders` 를 짓지 않는다. 폴더 이름만으로 빼면 폴더를 옮기거나 이름을 바꿀 때 조용히 다른 쪽이 짓게 되어 자리를 표에 적는다(언리얼 UBT 가 모듈 `Type`(ClientOnly · ServerOnly)으로 가르는 자리). 값이 `Client/`(`Server/`)로 끝나면 그 폴더 하나, 아니면 그 아래 어느 `Client/`(`Server/`)든이다. 표 밖 `Source/` 에 `Client/` · `Server/` 폴더가 있거나, 표의 줄이 가리키는 폴더가 없으면 configure 가 멈춘다. 옮기면 줄도 고친다.",
+    "_clientOnlyFolders": {
+        "Source/DevTools/Client/": "클라이언트 프로세스의 개발 도구(자동화 실행기 · 캡처 · 디버그 HUD · 셰이더 리컴파일 · 쿠크 구동) — 그리는 창 · 입력 · RHI 가 있어야 선다",
+        "Source/DevTools/Host/Client/": "에디터가 게임 모듈을 올리고 내리는 관리자(EditorGameModuleManager) — 전용 서버는 에디터 호스트가 없다",
+        "Source/GameFramework/Client/": "GameFramework 의 보이는 몫(HUD · 마커 · 뷰 · 상점 · 인벤토리 화면)",
+        "Source/GameFramework/Developer/Client/": "GameFrameworkDev 의 화면 쪽 개발 도구(HUD · 흐름 · 상점 · 인벤토리 디버그 화면)",
+        "Source/GameFramework/Kits/": "키트의 `Client/` 는 따로 짓는 모듈(GF_Client_<X>, 매니페스트 `_listTarget` 이 Client)이고 그 안의 더 깊은 `Client/`(예: `Dev/Client/`)도 같다",
+        "Source/Games/Playground/Client/": "Playground 의 화면 시연(인벤토리 · 상점 데모 컴포넌트)",
+        "Source/Games/Playground/Online/Client/": "Playground 온라인 상점의 개발 전용 클라이언트 몫(Dev/OnlineShop)",
+        "Source/Games/Playground/Velmora/Client/": "Velmora 조우의 보이는 컴포넌트"
+    },
+    "_serverOnlyFolders": {
+        "Source/Engine/Config/Server/": "서버 비밀(ServerSecret) — 클라이언트 배포본에 들면 안 된다",
+        "Source/Engine/Server/": "전용 서버 운영(HTTP 끝점 · 관리 채널 · 서버 서비스 레지스트리)",
+        "Source/GameFramework/Kits/": "키트의 `Server/` 는 따로 짓는 모듈(GF_Server_<X>, 매니페스트 `_listTarget` 이 Server)이고 그 안의 더 깊은 `Server/` 도 같다",
+        "Source/GameFramework/Runtime/Online/Audit/Server/": "서비스 감사 기록(ServiceAuditLog)",
+        "Source/GameFramework/Runtime/Online/Bus/Server/": "서버 사이 메시지 버스(로컬 · 캐시 서버 버스)",
+        "Source/GameFramework/Runtime/Online/Cache/Server/": "캐시 저장소(레코드 표 · 라우터 · 메모리 드라이버)",
+        "Source/GameFramework/Runtime/Online/Config/Server/": "원격 설정(RemoteConfig)",
+        "Source/GameFramework/Runtime/Online/Directory/Server/": "서버 목록 등록(ServerRegistration)",
+        "Source/GameFramework/Runtime/Online/Identity/Server/": "계정 디렉터리 · 세션 제어 창구",
+        "Source/GameFramework/Runtime/Online/Ledger/Server/": "아이템 원장(Ledger)",
+        "Source/GameFramework/Runtime/Online/Mail/Server/": "서비스 우편 · 우편 캠페인",
+        "Source/GameFramework/Runtime/Online/RateLimit/Server/": "요청 빈도 제한(TokenBucketMap)",
+        "Source/GameFramework/Runtime/Online/Report/Server/": "신고 저장(ServiceReportStore)",
+        "Source/GameFramework/Runtime/Online/Sanction/Server/": "제재(ServiceSanction)",
+        "Source/GameFramework/Runtime/Online/Scheduler/Server/": "주기 작업 · TTL 감시(ServiceScheduler)",
+        "Source/GameFramework/Runtime/Online/Server/": "온라인 서버 조립(OnlineServerRuntime · 로컬 서버)",
+        "Source/GameFramework/Runtime/Online/Service/Server/": "서비스 호스트(OnlineServiceHost)",
+        "Source/GameFramework/Runtime/Online/Store/Server/": "서비스 저장소(커밋 실행기 · 메모리 드라이버)",
+        "Source/Games/Playground/Hub/Server/": "허브 월드의 서버 쪽 프로필 저장 · 서버 연결",
+        "Source/Games/Playground/Online/Server/": "Playground 온라인 우편의 개발 전용 서버 몫(Dev/OnlineSelfMail)",
+        "Source/Server/": "전용 서버 실행 파일 — 제 CMakeLists 가 Server 대상에서만 선다"
+    }
+}

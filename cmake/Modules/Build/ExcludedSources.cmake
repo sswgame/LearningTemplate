@@ -17,67 +17,87 @@ include("${CMAKE_CURRENT_LIST_DIR}/PlatformFolders.cmake")
 # 게이트는 빌드 트리 기준 같은 상대 경로(`generated/sw/config/ExcludedSources.txt`)를 읽는다.
 set(SW_EXCLUDED_SOURCE_LIST "${CMAKE_BINARY_DIR}/generated/sw/config/ExcludedSources.txt")
 
+# ------------------------------------------------------------------------------
+# sw_read_source_folder_table — 자리 표(TABLE 의 KEY: `Source/` 폴더 → 까닭)를 읽어 이름이 FOLDER_NAME 인 폴더의 경로 정규식을 OUT_VAR 에 돌려준다.
+#   값이 `<FOLDER_NAME>/` 로 끝나면 그 폴더 하나, 아니면 그 아래 어느 `<FOLDER_NAME>/` 든이다. 정규식은 저장소 기준 경로 앞에 `/` 를 붙인 모양에 맞는다.
+#   다음이면 configure 가 멈춘다: 표의 값이 없는 폴더이거나 그 아래 `<FOLDER_NAME>/` 가 하나도 없다(옮겼는데 줄이 남았다), `Source/` 에 표 밖 `<FOLDER_NAME>/` 가 있다.
+#   폴더 이름만 보고 빼면 옮기거나 이름을 바꿀 때 다른 구성이 조용히 짓는다 — 언리얼 UBT 가 모듈 규칙(`Type`)으로 가르는 자리를 표로 둔다.
+# ------------------------------------------------------------------------------
+function(sw_read_source_folder_table TABLE KEY FOLDER_NAME OUT_VAR)
+	set_property(DIRECTORY "${CMAKE_SOURCE_DIR}" APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${TABLE}")
+	file(READ "${TABLE}" table_json)
+	string(JSON entry_count ERROR_VARIABLE table_error LENGTH "${table_json}" ${KEY})
+	if(table_error)
+		message(FATAL_ERROR "${TABLE}: ${KEY} 를 읽지 못했다 (${table_error})")
+	endif()
+	set(list_pattern "")
+	math(EXPR entry_last "${entry_count} - 1")
+	foreach(entry_index RANGE ${entry_last})
+		string(JSON folder_prefix MEMBER "${table_json}" ${KEY} ${entry_index})
+		if(NOT folder_prefix MATCHES "^Source/[A-Za-z0-9_/]+/$" OR NOT IS_DIRECTORY "${CMAKE_SOURCE_DIR}/${folder_prefix}")
+			message(FATAL_ERROR "${TABLE}: ${KEY} 의 '${folder_prefix}' 는 있는 `Source/` 폴더(끝에 /)가 아니다 — 옮겼으면 줄도 고치세요")
+		endif()
+		if(folder_prefix MATCHES "/${FOLDER_NAME}/$")
+			list(APPEND list_pattern "/${folder_prefix}")
+		else()
+			list(APPEND list_pattern "/${folder_prefix}(.*/)?${FOLDER_NAME}/")
+		endif()
+	endforeach()
+
+	# 파일마다가 아니라 첫 `<FOLDER_NAME>/` 까지 자른 폴더마다 본다(더 깊은 같은 이름 폴더는 바깥 폴더를 따른다). 저장소 기준이라 저장소를 담은 상위 폴더 이름에 걸리지 않는다.
+	set(source_files ${SW_SOURCE_TREE_FILES})
+	list(FILTER source_files INCLUDE REGEX "/${FOLDER_NAME}/")
+	string(LENGTH "/${FOLDER_NAME}/" folder_length)
+	set(list_folder "")
+	foreach(source_file IN LISTS source_files)
+		file(RELATIVE_PATH relative_path "${CMAKE_SOURCE_DIR}" "${source_file}")
+		string(FIND "/${relative_path}" "/${FOLDER_NAME}/" folder_index)
+		if(NOT folder_index EQUAL -1)
+			math(EXPR folder_end "${folder_index} + ${folder_length}")
+			string(SUBSTRING "/${relative_path}" 0 ${folder_end} folder)
+			list(APPEND list_folder "${folder}")
+		endif()
+	endforeach()
+	list(REMOVE_DUPLICATES list_folder)
+
+	set(list_stray "")
+	set(list_unused ${list_pattern})
+	foreach(folder IN LISTS list_folder)
+		set(allowed OFF)
+		foreach(pattern IN LISTS list_pattern)
+			if(folder MATCHES "^${pattern}")
+				set(allowed ON)
+				list(REMOVE_ITEM list_unused "${pattern}")
+			endif()
+		endforeach()
+		if(NOT allowed)
+			list(APPEND list_stray "${folder}")
+		endif()
+	endforeach()
+	if(list_unused)
+		message(FATAL_ERROR "${TABLE}: ${KEY} 의 줄이 가리키는 `${FOLDER_NAME}/` 폴더가 없다: ${list_unused} — 옮겼으면 줄도 고치세요")
+	endif()
+	if(list_stray)
+		message(FATAL_ERROR "`${FOLDER_NAME}/` 폴더가 표 밖에 있다: ${list_stray} — ${TABLE} 의 ${KEY} 에 까닭과 함께 적거나, 그 구성이 지어야 하는 코드면 폴더 이름을 바꾸세요")
+	endif()
+	set(${OUT_VAR} ${list_pattern} PARENT_SCOPE)
+endfunction()
+
 # 배포 구성이 짓지 않는 개발 전용 소스 — 기능 폴더의 단위 테스트(`Tests/`)와 개발 전용 단위 폴더(`Dev/` — 호스트의 개발 계층 · 서버 개발 조종 · 에디터 모듈 개발 경로).
 # 파일 이름 꼬리로 빼지 않는다: 개발 명령 · 캐시 리로드 · 온라인 개발 대체물은 기능 파일에 두고 등록 매크로가 배포에서 등록하지 않는다(`docs/agents/CppStyle.md "Build configuration switches"`).
 #
 # `Dev/` 는 아무 폴더에나 붙는 패턴이 아니라 표(`Config/Rules/Layers/DevFolders.json`)에 적은 자리만이다 — 예전 `/Dev/` 한 줄은 어디든 `Dev/` 를 만들면 배포에서 빠지는
 # 편의라 개발 기능이 DevTools 대신 엔진 곳곳에 쌓였다(린트가 뒤에서 막았다). 표 밖 `Source/` 의 `Dev/` 폴더는 configure 가 멈춘다. 언리얼이 개발 코드를 Developer 모듈 단위로만 빼는 자리다.
-set(dev_folder_table "${CMAKE_SOURCE_DIR}/Config/Rules/Layers/DevFolders.json")
-set_property(DIRECTORY "${CMAKE_SOURCE_DIR}" APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${dev_folder_table}")
-file(READ "${dev_folder_table}" dev_folder_json)
-string(JSON dev_folder_count ERROR_VARIABLE dev_folder_error LENGTH "${dev_folder_json}" _devFolderAllowed)
-if(dev_folder_error)
-	message(FATAL_ERROR "${dev_folder_table}: _devFolderAllowed 를 읽지 못했다 (${dev_folder_error})")
-endif()
-set(SW_DEV_ONLY_SOURCE_PATTERNS "/Tests/")
-set(dev_folder_patterns "")
-math(EXPR dev_folder_last "${dev_folder_count} - 1")
-foreach(dev_folder_index RANGE ${dev_folder_last})
-	string(JSON dev_folder_prefix MEMBER "${dev_folder_json}" _devFolderAllowed ${dev_folder_index})
-	if(NOT dev_folder_prefix MATCHES "^Source/[A-Za-z0-9_/]+/$" OR NOT IS_DIRECTORY "${CMAKE_SOURCE_DIR}/${dev_folder_prefix}")
-		message(FATAL_ERROR "${dev_folder_table}: '${dev_folder_prefix}' 는 있는 `Source/` 폴더(끝에 /)가 아니다 — 옮겼으면 줄을 지우세요")
-	endif()
-	if(dev_folder_prefix MATCHES "/Dev/$")
-		list(APPEND dev_folder_patterns "/${dev_folder_prefix}")
-	else()
-		list(APPEND dev_folder_patterns "/${dev_folder_prefix}(.*/)?Dev/")
-	endif()
-endforeach()
-list(APPEND SW_DEV_ONLY_SOURCE_PATTERNS ${dev_folder_patterns})
+sw_read_source_folder_table("${CMAKE_SOURCE_DIR}/Config/Rules/Layers/DevFolders.json" _devFolderAllowed Dev dev_folder_patterns)
+set(SW_DEV_ONLY_SOURCE_PATTERNS "/Tests/" ${dev_folder_patterns})
 
-# 표 밖 `Dev/` 폴더 — 경로 비교는 저장소 기준 앞에 `/` 를 붙여 패턴과 같은 모양으로 한다(저장소를 담은 상위 폴더 이름에 걸리지 않게).
-set(source_files ${SW_SOURCE_TREE_FILES})
-list(FILTER source_files INCLUDE REGEX "/Dev/")
-set(stray_dev_folders "")
-foreach(source_file IN LISTS source_files)
-	file(RELATIVE_PATH relative_path "${CMAKE_SOURCE_DIR}" "${source_file}")
-	set(allowed OFF)
-	foreach(dev_folder_pattern IN LISTS dev_folder_patterns)
-		if("/${relative_path}" MATCHES "^${dev_folder_pattern}")
-			set(allowed ON)
-		endif()
-	endforeach()
-	if(NOT allowed)
-		string(REGEX REPLACE "/Dev/.*$" "/Dev/" stray_folder "${relative_path}")
-		list(APPEND stray_dev_folders "${stray_folder}")
-	endif()
-endforeach()
-if(stray_dev_folders)
-	list(REMOVE_DUPLICATES stray_dev_folders)
-	message(FATAL_ERROR "개발 전용 `Dev/` 폴더가 표 밖에 있다: ${stray_dev_folders} — 개발 기능은 Source/DevTools/ 로 옮기세요(엔진이 확장점을 내고 DevTools 가 붙는다). "
-		"DevTools 가 볼 수 없는 모듈 안이면 ${dev_folder_table} 의 _devFolderAllowed 에 까닭과 함께 적습니다.")
-endif()
-
-# 전용 서버가 짓지 않는 클라이언트 전용 소스 — GameFramework · 게임 모듈 안의 `Client/` 폴더(HUD · 마커 · 로딩 화면 · UI 시연). 키트의 `Client/` 는
-# 따로 짓는 모듈(`GF_Client_<X>`, 대상 Client)이라 여기 걸리지 않는다. 공유 코드는 그 헤더를 include 하지 않는다 — 서버 구성 가드 `serverbuild` 가 이름이 `Client` 인 모든 폴더의 헤더를 막는다(`TargetLayers.toml` 의 `[guardfolder]`).
-# 서버가 그 컴포넌트를 씬에서 만나면 MissingComponent 가 아니라 조용히 건너뛴다(서버 빌드가 만드는 `Bin/ClientOnlyTypes.json` — Source/Server/CMakeLists.txt).
-set(SW_CLIENT_ONLY_SOURCE_PATTERNS "/Client/")
-
-# 클라이언트 구성이 짓지 않는 서버 전용 소스 — 위의 반대쪽. Engine · GameFramework · DevTools · 게임 모듈 안의 `Server/` 폴더(전용 서버 운영 `Engine/Server` · 서버 비밀 `Engine/Config/Server` ·
-# 온라인 서버 조립 `GameFramework/Runtime/Online/Server` · 기능마다의 서버 구현 `Online/<기능>/Server` — 서비스 호스트 · 메모리 저장소 · 캐시 · 버스). 키트의 `Server/` 는 따로 짓는 모듈(`GF_Server_<X>`, 대상 Server)이고 전용 서버 실행 파일 `Source/Server` 는
-# 제 CMake 가 Client 에서 빼므로 여기 걸리지 않는다. 공유 코드는 그 헤더를 include 하지 않는다 — 클라이언트 구성 가드 `clientbuild` 가 이름이 `Server` 인 모든 폴더의
-# 헤더를 막는다(`TargetLayers.toml` 의 `[guardfolder]`). 세션이 서버를 띄우는 일은 창구(`IOnlineLocalServerFactory`)로 부른다. 언리얼 `WITH_SERVER_CODE` 와 서버 전용 모듈 자리다(기억).
-set(SW_SERVER_ONLY_SOURCE_PATTERNS "/Server/")
+# 전용 서버가 짓지 않는 클라이언트 전용 소스와 클라이언트 구성이 짓지 않는 서버 전용 소스 — 자리는 표(`Config/Rules/Layers/TargetFolders.json`)에 적는다.
+# 공유 코드는 그 헤더를 include 하지 않는다 — 서버 구성 가드 `serverbuild` 는 `Client/`, 클라이언트 구성 가드 `clientbuild` 는 `Server/` 폴더의 헤더를 막는다
+# (`TargetLayers.toml` 의 `[guardfolder]`. 표 밖 같은 이름 폴더가 없으니 이름으로 막아도 표와 같다). 서버가 클라이언트 전용 컴포넌트를 씬에서 만나면 MissingComponent 가 아니라
+# 조용히 건너뛴다(서버 빌드가 만드는 `Bin/ClientOnlyTypes.json` — Source/Server/CMakeLists.txt). 세션이 서버를 띄우는 일은 창구(`IOnlineLocalServerFactory`)로 부른다.
+# 언리얼 `WITH_SERVER_CODE` 와 ClientOnly · ServerOnly 모듈 자리다.
+sw_read_source_folder_table("${CMAKE_SOURCE_DIR}/Config/Rules/Layers/TargetFolders.json" _clientOnlyFolders Client SW_CLIENT_ONLY_SOURCE_PATTERNS)
+sw_read_source_folder_table("${CMAKE_SOURCE_DIR}/Config/Rules/Layers/TargetFolders.json" _serverOnlyFolders Server SW_SERVER_ONLY_SOURCE_PATTERNS)
 
 # 이 구성이 짓지 않는 소스를 적는다(절대 경로). 헤더도 받아 두지만 목록에는 `.c` · `.cpp` 만 쓴다.
 function(sw_declare_excluded_sources)
