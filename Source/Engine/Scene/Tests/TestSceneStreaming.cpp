@@ -207,10 +207,10 @@ namespace
     {
     public:
         explicit ScopedContentFileSource( const IContentFileSource& source )
-            : _pPrevious{ ContentFileSource::bindCurrent( &source ) }
+            : _pPrevious{ IContentFileSource::bindCurrent( &source ) }
         {
         }
-        ~ScopedContentFileSource() { (void)ContentFileSource::bindCurrent( _pPrevious ); }
+        ~ScopedContentFileSource() { (void)IContentFileSource::bindCurrent( _pPrevious ); }
         ScopedContentFileSource( const ScopedContentFileSource& )            = delete;
         ScopedContentFileSource& operator=( const ScopedContentFileSource& ) = delete;
 
@@ -316,7 +316,7 @@ SW_TEST_CASE( SceneStreamingTest, UnloadWhileReadingCancelsWithoutLeak )
     SW_EXPECT_TRUE( cooked._listStreamingCell[0].hasFileContent() );
     SW_EXPECT_TRUE( cooked._listStreamingCell[0]._listSceneObjectNode.empty() ); // 색인만 상주한다
 
-    LatchedContentFileSource      latched{ ContentFileSource::getCurrent(), kFileName };
+    LatchedContentFileSource      latched{ IContentFileSource::getCurrent(), kFileName };
     const ScopedContentFileSource bind{ latched };
     Scene                         scene{ "Cooked" };
     SW_REQUIRE_TRUE( scene.instantiate( cooked ) );

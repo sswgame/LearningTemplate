@@ -114,12 +114,12 @@ SW_TEST_CASE( ContentFileSourceTest, MemoryFileGoesThroughAsyncFileIO )
 /** @brief [ContentFileSourceTest] 건 소스가 지금 소스이고, 놓으면 플랫폼 기본으로 돌아갑니다. */
 SW_TEST_CASE( ContentFileSourceTest, BindReplacesTheCurrentSource )
 {
-    const IContentFileSource&     platformSource = ContentFileSource::getCurrent();
+    const IContentFileSource&     platformSource = IContentFileSource::getCurrent();
     const MemoryContentFileSource source         = Util::makeSource();
-    const IContentFileSource*     pPrevious      = ContentFileSource::bindCurrent( &source );
-    SW_EXPECT_TRUE( ContentFileSource::getCurrent().isFile( "/packs/a.pack" ) );
-    (void)ContentFileSource::bindCurrent( pPrevious );
-    SW_EXPECT_TRUE( &ContentFileSource::getCurrent() == &platformSource );
+    const IContentFileSource*     pPrevious      = IContentFileSource::bindCurrent( &source );
+    SW_EXPECT_TRUE( IContentFileSource::getCurrent().isFile( "/packs/a.pack" ) );
+    (void)IContentFileSource::bindCurrent( pPrevious );
+    SW_EXPECT_TRUE( &IContentFileSource::getCurrent() == &platformSource );
 }
 
 /** @brief [ContentFileSourceTest] 메모리 · 디스크 소스의 구간 읽기가 통째 읽기의 같은 자리와 바이트까지 같고, 끝을 넘으면 `OutOfRange` 다(밉 범위 읽기 — MR-1). */

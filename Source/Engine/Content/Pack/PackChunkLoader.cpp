@@ -55,7 +55,7 @@ namespace sw
                 FileState& state = _pShared->_mapState[packName];
                 if ( state == FileState::Unknown )
                 {
-                    if ( ContentFileSource::getCurrent().isFile( _packs.makePackKey( packName ) ) )
+                    if ( IContentFileSource::getCurrent().isFile( _packs.makePackKey( packName ) ) )
                         state = FileState::Local;
                     else if ( _pSource != nullptr )
                     {
