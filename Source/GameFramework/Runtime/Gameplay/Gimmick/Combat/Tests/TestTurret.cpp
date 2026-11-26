@@ -12,8 +12,8 @@
 #include "GameFramework/Runtime/Character/Combat/TargetFilter.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilitySystemComponent.h"
 #include "GameFramework/Runtime/Gameplay/Ability/Tests/CombatAttributeTestUtil.h"
-#include "GameFramework/Runtime/Gameplay/Gimmick/Combat/GimmickDamageUtil.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/Combat/TurretComponent.h"
+#include "GameFramework/Runtime/Gameplay/Gimmick/GimmickUtil.h"
 #include "GameFramework/Runtime/World/Query/WorldQuery.h"
 
 // TurretTest — 포탑이 탄도 계산(`Ballistics`)을 묶어 쓰는 길(`TurretComponent::computeAim`)과 쏜 탄의 세계 질의. 물리 씬 없이 설정된 중력만 읽는다(nogpu).
@@ -187,7 +187,7 @@ SW_TEST_CASE( TurretTest, DeadTargetIsNotPicked )
 
     pTurret->stepOnce();
     SW_EXPECT_TRUE( pTurret->getTarget() == pPlayer->getHandle() );
-    GimmickDamageUtil::applyDamage( *pPlayer, nullptr, hashed_string( "Hazard" ), 50.0f );
+    GimmickUtil::applyDamage( *pPlayer, nullptr, hashed_string( "Hazard" ), 50.0f );
     SW_REQUIRE_TRUE( pStats->getHealthReading()._bDead == SW_TRUE );
     SW_EXPECT_FALSE( TargetFilter::isSelectable( *pPlayer ) );
     pTurret->stepOnce();

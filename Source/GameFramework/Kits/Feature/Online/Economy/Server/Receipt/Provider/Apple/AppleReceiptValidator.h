@@ -22,7 +22,7 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/StoreReceiptValidator.h"
-#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Security/JSONWebToken.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/JSONWebToken.h"
 #include "GameFramework/Runtime/Online/HTTP/HTTPTypes.h"
 
 namespace sw

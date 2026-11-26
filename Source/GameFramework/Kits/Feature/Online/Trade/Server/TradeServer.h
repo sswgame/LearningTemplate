@@ -13,9 +13,9 @@
 #include "Core/Time/TimePoint.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Identity/AccountPresenceTracker.h"
-#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Ledger/IBalanceChangedListener.h"
-#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Service/OnlineProtocolService.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/AccountPresenceTracker.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/IBalanceChangedListener.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/OnlineProtocolService.h"
 #include "GameFramework/Kits/Feature/Online/Trade/Runtime/TradeSessionRecord.h"
 #include "GameFramework/Kits/Feature/Online/Trade/Server/TradeService.h"
 #include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"

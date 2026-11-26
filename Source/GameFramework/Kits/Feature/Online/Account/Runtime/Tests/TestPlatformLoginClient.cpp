@@ -78,3 +78,16 @@ SW_TEST_CASE( PlatformLoginClientTest, ResetTicketAndDistinctRequests )
         SW_EXPECT_EQUAL( string( "new" ), PlatformLoginTestUtil::toText( result._ticket ) );
     }
 }
+
+/** @brief [PlatformLoginClientTest] 시스템 브라우저는 평범한 http(s) 주소만 연다 — 다른 스킴과 셸에 뜻이 있는 글자는 거절한다 */
+SW_TEST_CASE( PlatformLoginClientTest, SystemBrowserOpensOnlyPlainHTTPURL )
+{
+    SW_EXPECT_TRUE( SystemExternalBrowser::isOpenableURL( "https://accounts.example.com/auth?client_id=a%20b&state=x" ) );
+    SW_EXPECT_TRUE( SystemExternalBrowser::isOpenableURL( "HTTP://127.0.0.1:8080/callback" ) );
+    SW_EXPECT_FALSE( SystemExternalBrowser::isOpenableURL( "" ) );
+    SW_EXPECT_FALSE( SystemExternalBrowser::isOpenableURL( "file:///etc/passwd" ) );
+    SW_EXPECT_FALSE( SystemExternalBrowser::isOpenableURL( "javascript:alert(1)" ) );
+    SW_EXPECT_FALSE( SystemExternalBrowser::isOpenableURL( "https://example.com/\"quoted\"" ) );
+    SW_EXPECT_FALSE( SystemExternalBrowser::isOpenableURL( "https://example.com/$(whoami)" ) );
+    SW_EXPECT_FALSE( SystemExternalBrowser::isOpenableURL( "https://example.com/a b" ) );
+}

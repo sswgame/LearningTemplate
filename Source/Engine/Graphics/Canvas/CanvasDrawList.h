@@ -225,7 +225,7 @@ namespace sw
         /**
          * @brief 주 출력(백버퍼, 게임 뷰 RT, 스크린샷 캡처)에 Present 뒤 그리는 목록입니다. 없으면 nullptr 입니다(`getMainOutput` 은 빈 목록).
          * @details 불변 공유 값이다 — UI 가 칠한 목록(`UICanvasPaintState::getSharedCanvas`)을 포인터로 싣고 베끼지 않는다. 예전에는 내용 번호가 같아도 프레임마다
-         *          사각형(144 바이트)을 모두 패킷에 베꼈다. 디버그 그리기 · 테스트 그림을 겹치는 프레임만 사본을 만들어 그 위에 칠한다(`RenderPacketCanvasCollector`).
+         *          사각형(144 바이트)을 모두 패킷에 베꼈다. 디버그 그리기 · 테스트 그림을 겹치는 프레임만 사본을 만들어 그 위에 칠한다(`RenderPacketBuilder::populateCanvas`).
          */
         shared_ptr<const CanvasDrawList> _pMainOutput{};
         /**

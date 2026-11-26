@@ -1997,6 +1997,7 @@
     "rewrite_python_code": "dev.rename_symbol.rename_in_text — 지킬 구간 방식(Scripts 감사, 2026-11-21)",
     "rewrite_code": "dev.rename_symbol.rename_in_text(Scripts 감사, 2026-11-21)",
     "NAMING_PATH": "dev.rename_scope.BANNED_NAMES_PATH — 이름 이력 표 경로는 한 곳(Scripts 감사, 2026-11-21)",
+    "ServiceServerCallTableBase": "OnlineServerCallTableBase — 파생 OnlineServerCallTable 과 같은 머리말, OnlineProtocolService.h 로 합쳤다(2026-11-26)",
     "NAMING_WORDS_PATH": "dev.rename_scope.BANNED_NAMES_PATH — _bannedNames 는 NamingWordsBannedNames.json 으로 옮겼다(Scripts 감사, 2026-11-21)",
     "NameBaseline": "이름 기준선 래칫은 0 에 닿아 은퇴 — 이름 하나의 예외는 NamingWords.json _keep(2026-11-21)",
     "NAMING_BASELINE_PATH": "이름 기준선 표 폐지(2026-11-21)",
@@ -2478,6 +2479,7 @@
     "EditorBackgroundTaskInternal": "EditorBackgroundJobInternal — 에디터 백그라운드 잡은 TaskManager 실행 단위(Task)와 뜻이 달라(최신 요청 · 결과 칸) 같은 폴더의 EditorExternalToolJob 처럼 Job 으로 가른다(2026-11-26)(2026-11-26)",
     "EditorBackgroundTaskTest": "EditorBackgroundJobTest — 에디터 백그라운드 잡은 TaskManager 실행 단위(Task)와 뜻이 달라(최신 요청 · 결과 칸) 같은 폴더의 EditorExternalToolJob 처럼 Job 으로 가른다(2026-11-26)(2026-11-26)",
     "EditorBackgroundTask": "EditorBackgroundJob — 에디터 백그라운드 잡은 TaskManager 실행 단위(Task)와 뜻이 달라(최신 요청 · 결과 칸) 같은 폴더의 EditorExternalToolJob 처럼 Job 으로 가른다(2026-11-26)(2026-11-26)",
-    "EditorTaskPoll": "EditorJobPoll — 에디터 백그라운드 잡은 TaskManager 실행 단위(Task)와 뜻이 달라(최신 요청 · 결과 칸) 같은 폴더의 EditorExternalToolJob 처럼 Job 으로 가른다(2026-11-26)(2026-11-26)"
+    "EditorTaskPoll": "EditorJobPoll — 에디터 백그라운드 잡은 TaskManager 실행 단위(Task)와 뜻이 달라(최신 요청 · 결과 칸) 같은 폴더의 EditorExternalToolJob 처럼 Job 으로 가른다(2026-11-26)(2026-11-26)",
+    "GimmickDamageUtil": "GimmickUtil — 기믹 도구는 GimmickUtil 하나로 합쳤다(피해 · 파괴도 같은 주인 없는 도구)(2026-11-26)"
   }
 }

@@ -25,7 +25,7 @@
 #include "GameFramework/Runtime/Foundation/Flow/GameInstanceClientHook.h"
 #include "GameFramework/Runtime/Foundation/Flow/GameSceneFlow.h"
 #include "GameFramework/Runtime/Foundation/Flow/IContentConfiguration.h"
-#include "GameFramework/Runtime/Foundation/Flow/IGameDevPart.h"
+#include "GameFramework/Runtime/Foundation/Flow/IGame.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameSettingsOverride.h"
 #include "GameFramework/Runtime/Foundation/GameFeature/GameFeatureComponents.h"
 #include "GameFramework/Runtime/Foundation/GameFeature/GameFeatureScope.h"

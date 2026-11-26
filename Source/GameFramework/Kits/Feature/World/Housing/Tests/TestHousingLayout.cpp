@@ -6,8 +6,8 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Kits/Feature/World/Housing/Catalog/HousingPart.h"
-#include "GameFramework/Kits/Feature/World/Housing/Rule/HousingLayout.h"
+#include "GameFramework/Kits/Feature/World/Housing/HousingLayout.h"
+#include "GameFramework/Kits/Feature/World/Housing/HousingPart.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Wallet.h"
 #include "GameFramework/Runtime/World/Land/LandRegistry.h"
 

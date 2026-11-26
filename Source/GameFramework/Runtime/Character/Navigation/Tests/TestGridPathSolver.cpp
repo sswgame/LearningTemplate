@@ -5,7 +5,6 @@
 
 #include "Engine/Navigation/PathRequestQueue.h"
 
-#include "GameFramework/Runtime/Character/Navigation/GridPathSolver.h"
 #include "GameFramework/Runtime/Character/Navigation/GridPathfinder.h"
 #include "GameFramework/Runtime/Character/Navigation/NavAgent.h"
 #include "GameFramework/Runtime/Character/Navigation/NavGrid.h"

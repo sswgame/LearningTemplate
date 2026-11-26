@@ -6,9 +6,9 @@
 
 #include "Engine/Observability/MetricRegistry.h"
 
-#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Identity/AccountPresence.h"
-#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Identity/OnlinePushRelay.h"
-#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Ledger/IBalanceChangedListener.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/AccountPresence.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/IBalanceChangedListener.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/OnlinePushRelay.h"
 #include "GameFramework/Runtime/Foundation/GameData/ConfigRangeUtil.h"
 #include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
 #include "GameFramework/Runtime/Online/Mail/Server/ServiceMail.h"
