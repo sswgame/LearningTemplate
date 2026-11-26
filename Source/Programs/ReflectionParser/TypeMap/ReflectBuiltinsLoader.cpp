@@ -18,6 +18,8 @@
 #include "Programs/ReflectionParser/TypeMap/TypeNameMap.h"
 #include "Programs/ReflectionParser/TypeMap/TypeSpelling.h"
 
+#include "sw/config/ConfigConstants.h"
+
 namespace sw
 {
     // ------------------------------------------------------------------------------

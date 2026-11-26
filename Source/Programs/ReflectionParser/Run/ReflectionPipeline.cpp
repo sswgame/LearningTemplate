@@ -25,6 +25,8 @@
 #include "Programs/ReflectionParser/Run/ParserSession.h"
 #include "Programs/ReflectionParser/TypeMap/TypeSpelling.h"
 
+#include "sw/config/ConfigConstants.h"
+
 #include <clang-c/Index.h>
 
 namespace sw
