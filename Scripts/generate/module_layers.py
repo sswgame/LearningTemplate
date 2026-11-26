@@ -81,6 +81,13 @@ def assign_tiers(map_tier: dict[str, int], list_relative: Sequence[str], rule_na
     return map_result
 
 
+def check_stale_keys(map_tier: dict[str, int], root_dir: Path, rule_name: str) -> None:
+    """[tier] 키가 가리키는 폴더 · 파일이 없으면 멈춘다. 파일을 옮기고 표 줄을 남기면 configure 가 여기서 선다."""
+    list_stale = [key for key in map_tier if not (root_dir / key).exists()]
+    if list_stale:
+        raise GeneratorError(f"폴더 · 파일이 없는 층 표 줄: {', '.join(list_stale)} — {rule_name} 의 [tier] 에서 지우세요")
+
+
 def read_tier_table(rule_file: Path) -> dict[str, int]:
     try:
         return tomllib.loads(rule_file.read_text(encoding="utf-8"))["tier"]
@@ -103,9 +110,7 @@ def generate_module_layers(module: str, output_path: Path) -> None:
             map_source.setdefault(tier, []).append(relative)
         else:
             map_header.setdefault(tier, []).append(f"{table._root_folder}/{relative}")
-    list_stale = [key for key in map_tier if not (root_dir / key).exists()]
-    if list_stale:
-        raise GeneratorError(f"폴더 · 파일이 없는 층 표 줄: {', '.join(list_stale)} — {rule_file.name} 의 [tier] 에서 지우세요")
+    check_stale_keys(map_tier, root_dir, rule_file.name)
 
     list_tier = sorted(set(map_tier.values()))
     header = f"""# ==============================================================================

@@ -8,6 +8,8 @@ CMake 빌드 규칙 함수 검사 — 구성 없이 `cmake -P` 로 함수만 부
 - `sw_decide_module_activation`(cmake/Modules/Build/ModuleManifest.cmake): 정적 모듈 구성은 고른 RHI 백엔드 하나만 켠다. 키트의 클라이언트 모듈(`GF_Client_<X>`)은
   전용 서버 구성에서 꺼지고 공유 키트(`GF_<X>`)는 켜진다 — 실제 매니페스트의 `_listTarget` 으로 본다(키트 셋 가르기: 규칙 · 디렉터 · 클라이언트).
 - `sw_collect_unused_kits`(같은 파일): 게임이 공유 키트 `GF_<X>` 만 의존해도 짝(`GF_Client_<X>` · `GF_Server_<X>`)은 쓰는 키트다 — 정적 구성(Shipping)이 짝을 빼던 회귀.
+- `sw_read_module_enum_names`(같은 파일): 매니페스트 낱말을 `ModuleCatalog.h` 의 열거자 이름에서 읽는다. 열거자 뒤의 리플렉션 메타 `ENUMERATOR( ... )` · 값 · 줄 주석을
+  건너뛰고, 실제 헤더에서 CMake 가 쓰는 낱말(Editor · Kit · RHI · Android · Dev · Client …)이 나온다 — 메타를 붙이자 이름을 하나도 못 읽어 모든 구성이 선 회귀.
 
 실행: SW_CMAKE_COMMAND=<cmake 실행 파일> python -X utf8 Scripts/setup/tests/test_cmake_build_rules.py (CTest `Scripts.CmakeBuildRules` 가 환경 변수를 준다).
 """
@@ -271,6 +273,47 @@ class UsedKitPairTest(unittest.TestCase):
         # GF_Solo 는 짝 매니페스트가 없다 — 없는 짝 이름이 결과에 끼지 않는다. GF_Idle 은 쓰지 않으니 짝도 쓰지 않는다.
         active = ["Game", "GF_Solo", "GF_Idle", "GF_Client_Idle"]
         self.assertEqual(unused_kits(active, {"Game": ["GF_Solo"]}), ["GF_Client_Idle", "GF_Idle"])
+
+
+def module_enum_names(header_text: str | None = None) -> dict[str, list[str]]:
+    """ModuleManifest.cmake 를 include 해 실제 헤더의 네 열거형을 읽고, `header_text` 가 있으면 그 글의 `FixtureKind` 도 읽는다."""
+    lines = [
+        "cmake_minimum_required(VERSION 3.24)",
+        f'include("{(PROJECT_ROOT / "cmake/Modules/Build/ModuleManifest.cmake").as_posix()}")',
+    ]
+    for name in ("SW_MODULE_KINDS", "SW_MODULE_PLATFORMS", "SW_MODULE_CONFIGURATIONS", "SW_MODULE_TARGETS"):
+        lines.append(f'message(NOTICE "{name}=[${{{name}}}]")')
+    with tempfile.TemporaryDirectory() as folder:
+        if header_text is not None:
+            header = Path(folder) / "FixtureCatalog.h"
+            header.write_text(header_text, encoding="utf-8")
+            lines += [f'set(SW_MODULE_CATALOG_HEADER "{header.as_posix()}")', "sw_read_module_enum_names(fixture FixtureKind)", 'message(NOTICE "fixture=[${fixture}]")']
+        values = run_cmake_script("\n".join(lines) + "\n")
+    return {name: value.split(";") for name, value in values.items()}
+
+
+class ModuleEnumNamesTest(unittest.TestCase):
+    FIXTURE = """
+    enum class FixtureKind : uint8
+    {
+        Plain,
+        WithMeta   ENUMERATOR( DisplayName = "With meta" ), ///< 메타 뒤 주석 (괄호 포함)
+        // 줄 주석은 열거자가 아니다
+        Valued = 1 << 2,
+        MetaValued ENUMERATOR( DisplayName = "Meta valued" ) = 1 << 3,
+        Last       ENUMERATOR( DisplayName = "Last" ),
+    };
+"""
+
+    def test_reflection_meta_values_and_comments_are_skipped(self) -> None:
+        self.assertEqual(module_enum_names(self.FIXTURE)["fixture"], ["Plain", "WithMeta", "Valued", "MetaValued", "Last"])
+
+    def test_real_header_yields_the_words_cmake_uses(self) -> None:
+        names = module_enum_names()
+        self.assertLessEqual({"Kit", "Game", "Editor", "RHI", "EditorExtension"}, set(names["SW_MODULE_KINDS"]))
+        self.assertLessEqual({"Windows", "Linux", "Android", "Web"}, set(names["SW_MODULE_PLATFORMS"]))
+        self.assertEqual(names["SW_MODULE_CONFIGURATIONS"], ["Dev", "Shipping"])
+        self.assertEqual(names["SW_MODULE_TARGETS"], ["Client", "Server"])
 
 
 if __name__ == "__main__":
