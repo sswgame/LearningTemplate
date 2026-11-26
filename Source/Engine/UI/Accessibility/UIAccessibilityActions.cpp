@@ -2,7 +2,7 @@
 
 #include "Engine/UI/Accessibility/UIAccessibilityActions.h"
 
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/UI/Accessibility/UIAccessibilityService.h"

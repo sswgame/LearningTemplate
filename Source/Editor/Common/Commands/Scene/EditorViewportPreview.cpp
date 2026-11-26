@@ -4,7 +4,7 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 #include "Core/Task/TaskTypes.h"
 
 #include "Editor/Common/EditorSceneIterationAccess.h"

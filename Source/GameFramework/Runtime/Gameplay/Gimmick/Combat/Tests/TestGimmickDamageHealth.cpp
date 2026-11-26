@@ -2,7 +2,7 @@
 // 결함: 기믹 피해가 센서와 "game" 채널 이벤트에만 들어 가시 · 불 · 폭발 통이 캐릭터 체력에 닿지 않았다. (nogpu).
 #include "pch.h"
 
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Object/Component/SceneComponent.h"

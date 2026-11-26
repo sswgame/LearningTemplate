@@ -2,8 +2,8 @@
 #include "pch.h"
 
 #include "Core/Event/EventDispatcher.h"
-#include "Core/Name/TagID.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/TagID.h"
+#include "Core/String/Name/hashed_string.h"
 #include "Core/Subsystem/SubsystemScope.h"
 #include "Core/Testing/TestFramework.h"
 

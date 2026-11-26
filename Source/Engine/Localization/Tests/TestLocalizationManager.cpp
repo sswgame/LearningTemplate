@@ -3,7 +3,7 @@
 #include "pch.h"
 
 #include "Core/File/FileUtil.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 #include "Core/String/StringUtil.h"
 #include "Core/Testing/TestFramework.h"
 

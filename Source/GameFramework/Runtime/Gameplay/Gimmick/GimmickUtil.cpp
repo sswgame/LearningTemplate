@@ -2,7 +2,7 @@
 
 #include "GameFramework/Runtime/Gameplay/Gimmick/GimmickUtil.h"
 
-#include "Core/Name/TagID.h"
+#include "Core/String/Name/TagID.h"
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"

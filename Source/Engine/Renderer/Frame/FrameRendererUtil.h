@@ -10,7 +10,7 @@
 #include "Core/Math/Half.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/NormalizedInt.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Graphics/RHI/RHIFormatInfo.h"

@@ -16,7 +16,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Process/ThreadCrashStack.h"
+#include "Core/Process/Process.h"
 
 #include <condition_variable>
 

@@ -7,7 +7,7 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/Ray.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 #include "Core/String/StringBuilder.h"
 
 #include "Editor/Common/Asset/AssetWriter.h"

@@ -8,7 +8,7 @@
 #include "Core/Delegate/Delegate.h"
 #include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 #include "Core/Task/TaskFuture.h"
 
 #include "GameFramework/GameFrameworkExports.h"

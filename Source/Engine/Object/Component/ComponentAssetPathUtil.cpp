@@ -3,7 +3,7 @@
 #include "Engine/Object/Component/ComponentAssetPathUtil.h"
 
 #include "Core/Foundation/Expected.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Object/Component/Component.h"

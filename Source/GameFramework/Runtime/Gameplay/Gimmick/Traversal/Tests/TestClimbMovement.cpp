@@ -1,7 +1,7 @@
 // ClimbMovementTest — 캐릭터 이동기가 오르기 구역에서 매달리고 · 올라 발판에 서고 · 놓지 않으면 머문다. 실제 3D 물리(Jolt) 위, 디바이스 없음(nogpu).
 #include "pch.h"
 
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Object/GameObject/GameObject.h"

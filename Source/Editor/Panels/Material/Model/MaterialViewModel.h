@@ -9,7 +9,7 @@
 #include "Core/Container/string.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"

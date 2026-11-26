@@ -3,7 +3,7 @@
 #include "Engine/Text/SystemFontLocator.h"
 
 #include "Core/File/FileUtil.h"
-#include "Core/Process/ProcessEnvironment.h"
+#include "Core/Process/Process.h"
 #include "Core/String/StringUtil.h"
 
 #if defined( SW_PLATFORM_WINDOWS )

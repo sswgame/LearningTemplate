@@ -1,7 +1,7 @@
 // MovementSnapshotTest — 공중에서 가속하던 캐릭터를 스냅샷으로 옮겨도 같은 의도 열이 같은 궤적을 낸다(수평 속도 · 수직 속도 · 공중 관성이 상태 칸이다). 실제 3D 물리(Jolt), 디바이스 없음(nogpu).
 #include "pch.h"
 
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Object/GameObject/GameObject.h"

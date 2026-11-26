@@ -5,7 +5,6 @@
 #include "Core/Log/Logger.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
-#include "Core/String/UTF8Util.h"
 
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
@@ -34,7 +33,7 @@ namespace sw
                 {
                     const uint8 last = static_cast<uint8>( inoutText.back() );
                     inoutText.pop_back();
-                    if ( UTF8Util::isContinuation( last ) == false )
+                    if ( StringUtil::isUTF8Continuation( last ) == false )
                         return;
                 }
             }

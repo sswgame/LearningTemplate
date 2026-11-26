@@ -10,7 +10,7 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/MemoryBlock.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 #include "Core/String/StringBuilder.h"
 
 #include "Engine/Foundation/EngineServices.h"

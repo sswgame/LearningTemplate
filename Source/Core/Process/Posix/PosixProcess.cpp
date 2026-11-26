@@ -1,26 +1,33 @@
 #include "pch.h"
 
+#include "Core/Foundation/PlatformOSHeaders.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Memory/Memory.h"
+#include "Core/Memory/MemoryBlock.h"
 #include "Core/Process/Process.h"
-#include "Core/Process/ProcessEnvironment.h"
+#include "Core/Process/ShutdownSignal.h"
+#include "Core/Process/StandardInputReader.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/Time/MonotonicClock.h"
 
-#if defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_ANDROID )
-    #include "Core/Foundation/PlatformOSHeaders.h"
-
-    #include <cerrno>
-    #include <csignal>
-    #include <cstring>
-    #include <ctime>
-    #include <fcntl.h>
-    #include <sys/syscall.h>
-    #if defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_ANDROID )
-        #include <sys/prctl.h>
-    #endif
+#if defined( SW_PLATFORM_POSIX )
+    #include <cstdlib>
+    #include <poll.h>
+    #include <signal.h>
     #include <unistd.h>
+    #if defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_ANDROID )
+        #include <cerrno>
+        #include <csignal>
+        #include <cstring>
+        #include <ctime>
+        #include <fcntl.h>
+        #include <sys/prctl.h>
+        #include <sys/syscall.h>
+    #endif
+
+    #if defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_ANDROID )
 
 namespace sw
 {
@@ -52,13 +59,13 @@ namespace sw
         {
             // 남길 하나(exec 오류 파이프 — CLOEXEC 라 exec 가 되면 저절로 닫힌다)를 빼고 닫는다.
             int32 closedFrom = 3;
-    #if defined( SYS_close_range )
+        #if defined( SYS_close_range )
             const bool bRangeClosed = keepDescriptor < 3 ? syscall( SYS_close_range, 3U, ~0U, 0U ) == 0
                                                          : ( keepDescriptor == 3 || syscall( SYS_close_range, 3U, static_cast<uint32>( keepDescriptor - 1 ), 0U ) == 0 ) &&
                                                                syscall( SYS_close_range, static_cast<uint32>( keepDescriptor + 1 ), ~0U, 0U ) == 0;
             if ( bRangeClosed )
                 closedFrom = descriptorMax;
-    #endif
+        #endif
             for ( int32 descriptor = closedFrom; descriptor < descriptorMax; ++descriptor )
             {
                 if ( descriptor != keepDescriptor )
@@ -73,17 +80,17 @@ namespace sw
          */
         [[nodiscard]] bool openExecErrorPipe( int32 ( &outArrFd )[2] )
         {
-    #if defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_ANDROID )
+        #if defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_ANDROID )
             if ( pipe2( outArrFd, O_CLOEXEC ) == 0 )
                 return true;
-    #else
+        #else
             if ( pipe( outArrFd ) == 0 )
             {
                 fcntl( outArrFd[0], F_SETFD, FD_CLOEXEC );
                 fcntl( outArrFd[1], F_SETFD, FD_CLOEXEC );
                 return true;
             }
-    #endif
+        #endif
             outArrFd[0] = -1;
             outArrFd[1] = -1;
             return false;
@@ -277,16 +284,16 @@ namespace sw
             outArrOutputFd[1] = -1;
             outArrInputFd[0]  = -1;
             outArrInputFd[1]  = -1;
-    #if defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_ANDROID )
+        #if defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_ANDROID )
             const bool bPipeOpened = pipe2( outArrOutputFd, O_CLOEXEC ) == 0;
-    #else
+        #else
             const bool bPipeOpened = pipe( outArrOutputFd ) == 0;
             if ( bPipeOpened )
             {
                 fcntl( outArrOutputFd[0], F_SETFD, FD_CLOEXEC );
                 fcntl( outArrOutputFd[1], F_SETFD, FD_CLOEXEC );
             }
-    #endif
+        #endif
             if ( bPipeOpened == false )
             {
                 outArrOutputFd[0] = -1;
@@ -314,13 +321,13 @@ namespace sw
         [[noreturn]] void runLaunchedChild( const int32 ( &arrPipeFd )[2], const int32 ( &arrInputFd )[2], int32 errorFd, int32 descriptorMax, const utf8* pWorkingDirectory,
                                             const PosixExecImage& image, pid_t endWithParentPid )
         {
-    #if defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_ANDROID )
+        #if defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_ANDROID )
             // 부모와 함께 끝낼 자식이다(감사 E-15) — 부모가 죽으면 커널이 SIGKILL 을 보낸다. fork 와 이 줄 사이에 부모가 이미 죽었으면 신호가 오지 않으니 스스로 끝낸다.
             if ( endWithParentPid > 0 && ( prctl( PR_SET_PDEATHSIG, SIGKILL ) != 0 || getppid() != endWithParentPid ) )
                 _exit( 1 );
-    #else
+        #else
             (void)endWithParentPid; // 부모 사망 신호가 없다 — 놓을 때만 끝낸다(`shutdown`)
-    #endif
+        #endif
             close( arrPipeFd[0] );
             // 표준 에러를 표준 출력에 합친다. `ProcessOutputDelegate` 가 약속한 대로다(빌드 로그는 두 스트림이 원래 순서대로
             // 섞여야 읽을 수 있다).
@@ -803,6 +810,232 @@ namespace sw
             return false;
         cursor = text.find_first_not_of( " \t", cursor + kField.size() );
         return cursor != string_view::npos && text[cursor] != '0' && text[cursor] != '\n';
+    }
+} // namespace sw
+
+    #endif
+
+// ------------------------------------------------------------------------------
+// ProcessEnvironment
+// ------------------------------------------------------------------------------
+
+namespace sw
+{
+    namespace
+    {
+        /** @brief `setenv` · `unsetenv` 가 거절하는 이름(빈 이름 · `=` 포함)이 아니면 true 입니다. */
+        bool isValidName( string_view name )
+        {
+            return name.empty() == false && name.find( '=' ) == string_view::npos;
+        }
+    } // namespace
+
+    bool ProcessEnvironment::tryRead( string_view name, string& outValue )
+    {
+        outValue.clear();
+        if ( isValidName( name ) == false )
+            return false;
+        const utf8* const pValue = std::getenv( string{ name }.c_str() );
+        if ( pValue == nullptr )
+            return false;
+        outValue = pValue;
+        return true;
+    }
+
+    bool ProcessEnvironment::trySet( string_view name, string_view value )
+    {
+        return isValidName( name ) && ::setenv( string{ name }.c_str(), string{ value }.c_str(), 1 ) == 0;
+    }
+
+    bool ProcessEnvironment::tryUnset( string_view name )
+    {
+        return isValidName( name ) && ::unsetenv( string{ name }.c_str() ) == 0;
+    }
+} // namespace sw
+
+// ------------------------------------------------------------------------------
+// ThreadCrashStack
+// ------------------------------------------------------------------------------
+    #if defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_ANDROID )
+
+namespace sw
+{
+    namespace
+    {
+        /**
+         * @brief 대체 시그널 스택의 크기입니다.
+         * @details 스택 오버플로로 생긴 SIGSEGV 는 스택이 이미 바닥난 상태라 그 스택 위에서 핸들러를 실행할 수 없습니다. 핸들러에
+         *          들어가는 순간 다시 폴트가 나고, 프로세스는 **아무 기록도 없이** 죽습니다. 그래서 별도 스택을 깔고 SA_ONSTACK 으로
+         *          그 위에서 핸들러를 돌립니다. 최신 glibc 의 SIGSTKSZ 는 sysconf() 를 부르도록 바뀌어 상수가 아니라 넉넉한 고정 크기를 쓴다.
+         *          리포트 경로가 스택에 올리는 것은 StringBuilder<8192> 와 DeepCallStack(64 프레임) 정도이고, 나머지는 힙이다.
+         */
+        constexpr size_t kSignalStackSize = 128 * 1024;
+
+        /**
+         * @brief 이 스레드의 대체 시그널 스택입니다. **`sigaltstack` 은 스레드마다다** — 한 스레드에만 깔면 작업 스레드 · 렌더 스레드의
+         *        스택 오버플로는 기록 없이 죽는다. 스레드가 끝날 때 스택을 끄고 돌려준다.
+         */
+        struct ThreadSignalStackHolder
+        {
+            MemoryBlock _stack;
+
+            ~ThreadSignalStackHolder() { release(); }
+
+            void release()
+            {
+                if ( _stack.isValid() == false )
+                    return;
+                stack_t disableStack{};
+                disableStack.ss_flags = SS_DISABLE;
+                sigaltstack( &disableStack, nullptr );
+                _stack.reset();
+            }
+        };
+
+        thread_local ThreadSignalStackHolder t_signalStack{};
+    } // namespace
+} // namespace sw
+
+namespace sw
+{
+    void ThreadCrashStack::initializeCurrentThread()
+    {
+        if ( t_signalStack._stack.isValid() )
+            return;
+
+        MemoryBlock stack = MemoryBlock::allocate( kSignalStackSize );
+        if ( stack.isValid() == false )
+            return;
+
+        stack_t signalStack{};
+        signalStack.ss_sp    = stack.get();
+        signalStack.ss_size  = kSignalStackSize;
+        signalStack.ss_flags = 0;
+        if ( sigaltstack( &signalStack, nullptr ) != 0 )
+        {
+            SW_LOG_WARNING_ID( "PosixCrashHandler.SigaltstackFailedStackOverflow", "sigaltstack failed — a stack overflow on this thread will not be reported" );
+            return;
+        }
+        t_signalStack._stack = std::move( stack );
+    }
+
+    void ThreadCrashStack::releaseCurrentThread()
+    {
+        t_signalStack.release();
+    }
+} // namespace sw
+
+    #endif
+
+// ------------------------------------------------------------------------------
+// StandardInputReader
+// ------------------------------------------------------------------------------
+
+namespace sw
+{
+    bool StandardInputReader::readLinePlatform( const StopToken& stopToken, string& outLine )
+    {
+        for ( ;; )
+        {
+            if ( takeLine( outLine ) )
+                return true;
+            if ( stopToken.isStopRequested() )
+                return false;
+            pollfd      descriptor{ STDIN_FILENO, POLLIN, 0 };
+            const int32 ready = poll( &descriptor, 1, 100 );
+            if ( ready <= 0 )
+                continue; // 시한(멈춤 요청을 다시 본다) · EINTR
+            utf8          arrBuffer[512];
+            const ssize_t count = read( STDIN_FILENO, arrBuffer, sizeof( arrBuffer ) );
+            if ( count <= 0 )
+            {
+                _endOfInput.store( 1 );
+                return false;
+            }
+            _partialLine.append( arrBuffer, static_cast<size_t>( count ) );
+        }
+    }
+} // namespace sw
+
+// ------------------------------------------------------------------------------
+// ShutdownSignal
+// ------------------------------------------------------------------------------
+
+namespace sw
+{
+    namespace
+    {
+        struct PosixShutdownSignalInternal
+        {
+            static constexpr int32 kArrHandledSignal[] = { SIGINT, SIGTERM, SIGHUP };
+
+            static inline struct sigaction s_arrPreviousAction[SW_COUNT_OF( kArrHandledSignal )]{};
+            static inline struct sigaction s_previousPipeAction{};
+            static inline atomic<bool>     s_bInstalled{ false };
+            static inline atomic<uint32>   s_interruptCount{ 0 };
+
+            /** @brief 신호 처리기 — async-signal-safe 함수만 부른다(원자 연산 · write · _exit). */
+            static void onSignal( int32 signalNumber )
+            {
+                const uint32               earlier = signalNumber == SIGINT ? s_interruptCount.fetch_add( 1, std::memory_order_relaxed ) : 0u;
+                const ShutdownSignalAction action  = ShutdownSignal::decideSignal( signalNumber, earlier );
+                if ( action._bPassToDefault )
+                {
+                    static constexpr utf8 kMessage[] = "\nSecond interrupt - exiting immediately\n";
+                    (void)write( STDERR_FILENO, kMessage, sizeof( kMessage ) - 1 ); // 신호 처리기 안 — 알림을 못 써도 바로 _exit 한다
+                    _exit( 130 );
+                }
+                ShutdownSignal::request( action._cause );
+            }
+        };
+    } // namespace
+
+    bool ShutdownSignal::install()
+    {
+        if ( PosixShutdownSignalInternal::s_bInstalled.exchange( true ) ) // 첫 호출 하나만 설치한다
+            return true;
+        struct sigaction action{};
+        action.sa_handler = &PosixShutdownSignalInternal::onSignal;
+        sigemptyset( &action.sa_mask );
+        action.sa_flags = SA_RESTART;
+        bool bInstalled = true;
+        for ( size_t index = 0; index < SW_COUNT_OF( PosixShutdownSignalInternal::kArrHandledSignal ); ++index )
+        {
+            bInstalled = sigaction( PosixShutdownSignalInternal::kArrHandledSignal[index], &action, &PosixShutdownSignalInternal::s_arrPreviousAction[index] ) == 0 && bInstalled;
+        }
+
+        struct sigaction ignore{};
+        ignore.sa_handler = SIG_IGN;
+        sigemptyset( &ignore.sa_mask );
+        bInstalled = sigaction( SIGPIPE, &ignore, &PosixShutdownSignalInternal::s_previousPipeAction ) == 0 && bInstalled;
+        return bInstalled;
+    }
+
+    void ShutdownSignal::uninstall()
+    {
+        if ( PosixShutdownSignalInternal::s_bInstalled.exchange( false ) == false )
+            return;
+        for ( size_t index = 0; index < SW_COUNT_OF( PosixShutdownSignalInternal::kArrHandledSignal ); ++index )
+        {
+            (void)sigaction( PosixShutdownSignalInternal::kArrHandledSignal[index], &PosixShutdownSignalInternal::s_arrPreviousAction[index], nullptr );
+        }
+        (void)sigaction( SIGPIPE, &PosixShutdownSignalInternal::s_previousPipeAction, nullptr );
+    }
+
+    void ShutdownSignal::notifyShutdownComplete()
+    {
+    }
+
+    void ShutdownSignal::setServiceMode( [[maybe_unused]] bool bServiceMode )
+    {
+    }
+
+    ShutdownSignalAction ShutdownSignal::decideSignal( int32 signalNumber, uint32 earlierInterruptCount )
+    {
+        if ( signalNumber == SIGINT && earlierInterruptCount >= 1 )
+            return ShutdownSignalAction{ ShutdownCause::None, true, false };
+        const ShutdownCause cause = signalNumber == SIGTERM ? ShutdownCause::Terminate : ( signalNumber == SIGHUP ? ShutdownCause::Hangup : ShutdownCause::Interrupt );
+        return ShutdownSignalAction{ cause, false, false }; // 신호 처리기 안에서는 기다리지 않는다(async-signal-safe 만)
     }
 } // namespace sw
 

@@ -6,7 +6,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/VectorMath.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 
 #include "Engine/Animation/AnimationClip.h"
 #include "Engine/Asset/AssetManager.h"

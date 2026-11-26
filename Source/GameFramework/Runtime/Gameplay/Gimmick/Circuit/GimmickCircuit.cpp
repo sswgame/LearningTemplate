@@ -7,8 +7,8 @@
 #include "Core/Foundation/Constants.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/Name/NameHashIndex.h"
 #include "Core/Serialization/BitStream.h"
+#include "Core/String/Name/NameHashIndex.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Console/DebugHUDRegistry.h"

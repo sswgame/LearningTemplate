@@ -19,8 +19,8 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
-#include "Core/Name/hashed_string.h"
 #include "Core/Registry/RegistrationList.h"
+#include "Core/String/Name/hashed_string.h"
 
 #include "Engine/Object/GameObject/Service/ISceneService.h"
 #include "Engine/Physics/IPhysicsQueryScene.h"

@@ -8,7 +8,7 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/IdentityToken.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 
 #include "Engine/EngineMinimal.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"

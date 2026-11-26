@@ -2,7 +2,7 @@
 
 #include "Core/Delegate/Subscription.h"
 #include "Core/Log/Logger.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 
 #include "GameFramework/Kits/Genre/Action/AbilityArena/ArenaAbilities.h"
 #include "GameFramework/Runtime/Character/Combat/Projectile/ProjectileDef.h"

@@ -7,7 +7,7 @@
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Path/AbsolutePath.h"
-#include "Core/Process/ProcessEnvironment.h"
+#include "Core/Process/Process.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 

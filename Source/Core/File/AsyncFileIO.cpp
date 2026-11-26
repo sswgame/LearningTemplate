@@ -10,7 +10,7 @@
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Process/ThreadCrashStack.h"
+#include "Core/Process/Process.h"
 #include "Core/Task/TaskManager.h"
 #include "Core/Time/MonotonicClock.h"
 

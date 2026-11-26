@@ -2,9 +2,19 @@
 
 #include "Core/Process/Process.h"
 
+#include "Core/Algorithm/VectorUtil.h"
+#include "Core/CommandLine/CommandLineManager.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Foundation/HexDigitUtil.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Log/Logger.h"
+#include "Core/Math/SecureRandom.h"
+#include "Core/Path/AbsolutePath.h"
+#include "Core/String/StringBuilder.h"
+#include "Core/Time/MonotonicClock.h"
+#include "Core/Time/WallClock.h"
+
+#include <cstdio>
 
 namespace sw
 {
@@ -213,5 +223,89 @@ namespace sw
         outLine = std::move( _bufferedOutput );
         _bufferedOutput.clear();
         return true;
+    }
+} // namespace sw
+
+// ------------------------------------------------------------------------------
+// 엔진 자식 명령
+// ------------------------------------------------------------------------------
+namespace sw
+{
+    ProcessCommand ProcessCommand::forEngineChild( const CommandLineManager& parent, const AbsolutePath& executablePath, vector<string> listArgument )
+    {
+        if ( executablePath.empty() )
+            return {};
+        if ( parent.isAutomatedRun() )
+        {
+            StringBuilder<constant::buffer::kMax64> unattended;
+            unattended.appendFormat( "-%#", getCommandLineArgumentSpelling( CommandLineArgument::UNATTENDED ) );
+            VectorUtil::addUnique( listArgument, string( unattended.view() ) );
+        }
+        return at( executablePath, std::move( listArgument ) );
+    }
+} // namespace sw
+
+// ------------------------------------------------------------------------------
+// ProcessEnvironment
+// ------------------------------------------------------------------------------
+namespace sw
+{
+    bool ProcessEnvironment::isSet( string_view name )
+    {
+        string ignoredValue;
+        return tryRead( name, ignoredValue );
+    }
+
+    bool ProcessEnvironment::tryReadNonEmpty( string_view name, string& outValue )
+    {
+        return tryRead( name, outValue ) && outValue.empty() == false;
+    }
+} // namespace sw
+
+// ------------------------------------------------------------------------------
+// ProcessSession
+// ------------------------------------------------------------------------------
+namespace sw
+{
+    namespace
+    {
+        /** @brief 세션 ID 글자입니다(16 자리 16진수 + 널). */
+        struct ProcessSessionText
+        {
+            utf8 _arrText[24]{};
+        };
+
+        /**
+         * @brief 시각과 난수를 섞은 16진수 세션 ID 를 새로 만듭니다.
+         * @details GUID API 를 쓰지 않는다 — 플랫폼마다 헤더가 다르고, 여기서 필요한 것은 "이 실행을 다른 실행과 구분하는 것" 뿐이다.
+         */
+        ProcessSessionText makeProcessSessionText()
+        {
+            const uint64 nowTicks    = static_cast<uint64>( MonotonicClock::nowNanoseconds() );
+            const uint64 wallSeconds = static_cast<uint64>( WallClock::nowUnixMilliseconds().count() );
+            const uint64 mixed       = nowTicks ^ ( wallSeconds << 16 ) ^ SecureRandom::nextUint64();
+
+            ProcessSessionText session{};
+            HexDigitUtil::writeDigits( session._arrText, mixed, HexDigitUtil::kMaxDigitCount, HexCase::Lower );
+            return session;
+        }
+    } // namespace
+
+    const utf8* ProcessSession::getID()
+    {
+        static const ProcessSessionText s_session = makeProcessSessionText();
+        return s_session._arrText;
+    }
+} // namespace sw
+
+// ------------------------------------------------------------------------------
+// StandardOutput
+// ------------------------------------------------------------------------------
+namespace sw
+{
+    bool StandardOutput::write( string_view text )
+    {
+        const size_t written = std::fwrite( text.data(), 1, text.size(), stdout );
+        return written == text.size() && std::fflush( stdout ) == 0;
     }
 } // namespace sw

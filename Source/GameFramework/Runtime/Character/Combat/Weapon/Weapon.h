@@ -14,7 +14,7 @@
 #include "Core/Math/Math.h"
 #include "Core/Math/Radians.h"
 #include "Core/Math/Ray.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 #include "Core/Time/Countdown.h"
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"

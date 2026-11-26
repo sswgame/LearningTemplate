@@ -3,7 +3,7 @@
 #include "Games/Playground/CharacterCrowdSpawnerComponent.h"
 
 #include "Core/Math/MathUtil.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Object/Component/SceneComponent.h"

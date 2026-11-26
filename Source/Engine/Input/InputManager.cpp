@@ -5,7 +5,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
-#include "Core/String/UTF8Util.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Config/EngineConfig.h"
@@ -1152,7 +1152,7 @@ namespace sw
         string_view rest = event._text;
         while ( rest.empty() == false )
         {
-            const size_t length = rest.size() <= RawInputEvent::kMaxTextBytes ? rest.size() : UTF8Util::backOffToCharacterStart( rest.data(), RawInputEvent::kMaxTextBytes );
+            const size_t length = rest.size() <= RawInputEvent::kMaxTextBytes ? rest.size() : StringUtil::backOffToUTF8CharacterStart( rest.data(), RawInputEvent::kMaxTextBytes );
             if ( length == 0 )
                 return; // UTF-8 이 아닌 글이다(연속 바이트만 있다) - 나눌 경계가 없다
             (void)postRawEvent( RawInputEvent::makeTextInput( rest.substr( 0, length ) ) );
@@ -1165,7 +1165,7 @@ namespace sw
         string_view rest = text;
         do
         {
-            size_t length = rest.size() <= RawInputEvent::kMaxTextBytes ? rest.size() : UTF8Util::backOffToCharacterStart( rest.data(), RawInputEvent::kMaxTextBytes );
+            size_t length = rest.size() <= RawInputEvent::kMaxTextBytes ? rest.size() : StringUtil::backOffToUTF8CharacterStart( rest.data(), RawInputEvent::kMaxTextBytes );
             if ( length == 0 && rest.empty() == false )
                 length = rest.size(); // UTF-8 이 아닌 글이다(나눌 경계가 없다) - 마지막 조각으로 넣어 칸에서 잘린다, 이어짐을 남기지 않는다
             const string_view piece = rest.substr( 0, length );

@@ -8,8 +8,8 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/PackedTypes.h"
 #include "Core/Math/VectorMath.h"
-#include "Core/Name/TagID.h"
 #include "Core/Serialization/ByteStream.h"
+#include "Core/String/Name/TagID.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 

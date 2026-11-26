@@ -10,7 +10,7 @@
 #include "Core/Math/Math.h"
 #include "Core/Math/Radians.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Environment/EnvironmentUtil.h"

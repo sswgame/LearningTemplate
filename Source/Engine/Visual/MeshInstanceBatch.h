@@ -12,7 +12,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 
 #include "Engine/Object/GameObject/Registry/PrimitiveComponent.h"
 #include "Engine/Presentation/InstanceCustomData.h"

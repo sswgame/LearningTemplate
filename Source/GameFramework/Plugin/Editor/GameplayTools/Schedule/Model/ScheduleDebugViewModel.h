@@ -9,7 +9,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 
 // NPC 하루 계획(`ScheduleSystem::getPlan`)을 일정 디버그 창의 표 행으로 바꾸는 화면 없는 변환입니다. ImGui 를 모르므로 EngineTest 가 직접 컴파일해 테스트합니다(`TestScheduleTimelineRows.cpp`). 시각은 그날의 분입니다.
 namespace sw

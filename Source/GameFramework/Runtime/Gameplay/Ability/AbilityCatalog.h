@@ -13,9 +13,9 @@
 #include "Core/Math/Math.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Name/TagID.h"
-#include "Core/Name/hashed_string.h"
 #include "Core/Registry/RegistrationList.h"
+#include "Core/String/Name/TagID.h"
+#include "Core/String/Name/hashed_string.h"
 
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Asset/Cache/SharedAssetCache.h"

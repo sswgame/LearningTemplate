@@ -35,8 +35,8 @@
 #include "Core/Math/AABB.h"
 #include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Name/hashed_string.h"
 #include "Core/Registry/RegistrationList.h"
+#include "Core/String/Name/hashed_string.h"
 #include "Core/Task/TaskTypes.h"
 
 #include "Engine/Foundation/SceneIterationKey.h"

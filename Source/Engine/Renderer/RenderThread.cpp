@@ -10,7 +10,7 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/LogOnce.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Process/ThreadCrashStack.h"
+#include "Core/Process/Process.h"
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Asset/Image/ImageFileWriter.h"

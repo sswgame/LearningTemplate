@@ -1,7 +1,7 @@
 // StaticRegistrationTest — 겹친 정적 등록은 두 자리(파일 · 줄)를 찍고 시작 단계가 로드 오류로 멈추게 센다. 실행 중 손으로 부른 등록의 겹침은 세지 않는다.
 #include "pch.h"
 
-#include "Core/Process/StandardOutput.h"
+#include "Core/Process/Process.h"
 #include "Core/Registry/RegistrationList.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"

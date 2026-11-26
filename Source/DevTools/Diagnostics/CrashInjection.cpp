@@ -6,7 +6,7 @@
 #include "Core/Concurrency/thread.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Log/Logger.h"
-#include "Core/Process/ThreadCrashStack.h"
+#include "Core/Process/Process.h"
 
 #include <cstdio>
 #include <cstdlib>

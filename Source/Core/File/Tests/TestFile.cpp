@@ -5,7 +5,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/File/PlatformFileUtil.h"
 #include "Core/Foundation/Macros.h"
-#include "Core/Process/ProcessEnvironment.h"
+#include "Core/Process/Process.h"
 #include "Core/String/StringUtil.h"
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"

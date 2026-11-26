@@ -16,7 +16,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Radians.h"
 #include "Core/Math/VectorMath.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Reflection/ReflectionMacros.h"

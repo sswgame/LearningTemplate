@@ -1,7 +1,7 @@
 // FoliageCutTest — 풀베기의 닿음 판정: 수평 거리와 식물의 키 구간으로 본다. 베고 다시 자라는 길은 시나리오 game.playground.weathergarden 이 본다. 디바이스 없음(nogpu).
 #include "pch.h"
 
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Environment/Foliage/FoliageComponent.h"

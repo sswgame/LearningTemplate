@@ -2,7 +2,7 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
-#include "Core/Process/ProcessEnvironment.h"
+#include "Core/Process/Process.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Config/ConfigManager.h"

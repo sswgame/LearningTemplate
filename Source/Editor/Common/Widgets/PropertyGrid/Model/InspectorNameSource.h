@@ -6,7 +6,7 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 
 namespace sw::editor
 {

@@ -4,7 +4,7 @@
 
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/Log/Logger.h"
-#include "Core/Process/StandardOutput.h"
+#include "Core/Process/Process.h"
 #include "Core/Subsystem/SubsystemCollection.h"
 
 #include "Engine/Asset/EngineDefaultAssetsSubsystem.h"

@@ -15,7 +15,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 #include "Core/String/StringUtil.h"
 #include "Core/Subsystem/SubsystemScope.h"
 #include "Core/Task/TaskManager.h"
