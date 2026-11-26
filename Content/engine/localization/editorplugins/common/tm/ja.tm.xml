@@ -1,0 +1,11 @@
+<?asset guid="5638ccce7fcf444195c14888058f0bea"?>
+<TranslationMemory culture="ja">
+	<entries>
+		<entry source="Connect" text="接続" />
+		<entry source="Kind" text="種類" />
+		<entry source="Name" text="名前" />
+		<entry source="Reload" text="再読み込み" />
+		<entry source="Remove" text="削除" />
+		<entry source="Save" text="保存" />
+	</entries>
+</TranslationMemory>

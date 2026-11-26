@@ -855,11 +855,6 @@
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EdPluginWidget.Kind" source="Kind">
-			<origins>
-				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
-			</origins>
-		</entry>
 		<entry key="EdPluginWidget.Loop" source="Loop">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>

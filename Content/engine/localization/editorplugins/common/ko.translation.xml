@@ -1,0 +1,11 @@
+<?asset guid="5f2776f0297747ec8ef5c0b7310c7910"?>
+<TranslationTable culture="ko">
+	<entries>
+		<entry key="EdPlugin.Connect" text="연결" sourceHash="7a4f059aaa029719" />
+		<entry key="EdPlugin.Name" text="이름" sourceHash="ef49aec68fd1dc66" />
+		<entry key="EdPlugin.Reload" text="다시 읽기" sourceHash="d5b6130b4937488c" />
+		<entry key="EdPlugin.Remove" text="제거" sourceHash="ea4f08110bb8f15d" />
+		<entry key="EdPlugin.Save" text="저장" sourceHash="33f85f24c0f5f008" />
+		<entry key="EdPluginWidget.Kind" text="종류" sourceHash="70af97de3ad8fb23" />
+	</entries>
+</TranslationTable>

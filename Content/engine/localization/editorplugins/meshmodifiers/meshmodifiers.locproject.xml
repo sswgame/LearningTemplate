@@ -18,5 +18,6 @@
 	<dependencies>
 		<item>guid:b29adbb3a89cf7dce07cdd2d4213515c</item> <!-- engine/localization/engine.locproject.xml -->
 		<item>guid:3c30841d0b324411be8283d492895ab1</item> <!-- engine/localization/kits/gameframework/gameframework.locproject.xml -->
+		<item>guid:469ac742b52a41209da4721f60423066</item> <!-- engine/localization/editorplugins/common/common.locproject.xml -->
 	</dependencies>
 </LocalizationProject>

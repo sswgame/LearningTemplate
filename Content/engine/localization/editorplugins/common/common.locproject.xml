@@ -1,0 +1,18 @@
+<?asset guid="469ac742b52a41209da4721f60423066"?>
+<LocalizationProject name="editorplugincommon" sourceCulture="en">
+	<!-- 에디터 확장이 함께 쓰는 키(SW_LOCKEY 로만 부르는 EdPlugin.* · EdPluginWidget.*) — 에디터 모듈이 올라온 동안 붙는다(SW_LOCALIZATION_PROJECT). 코드 루트가 없어 수집이 이 줄을 지우지 않는다. 배포 팩에 담지 않는다. -->
+	<cultures>
+		<item>ko</item>
+		<item>ja</item>
+	</cultures>
+	<stagedCultures>
+		<item>ko</item>
+		<item>ja</item>
+	</stagedCultures>
+	<stringTables>
+		<item>common.strings.xml</item>
+	</stringTables>
+	<dependencies>
+		<item>guid:b29adbb3a89cf7dce07cdd2d4213515c</item> <!-- engine/localization/engine.locproject.xml -->
+	</dependencies>
+</LocalizationProject>

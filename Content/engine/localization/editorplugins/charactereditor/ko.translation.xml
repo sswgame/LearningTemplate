@@ -247,7 +247,6 @@
 		<entry key="EdPluginWidget.Chains" text="체인" sourceHash="3a6771172abb34bf" />
 		<entry key="EdPluginWidget.Check" text="검사" sourceHash="42cbd8dca939a9c7" />
 		<entry key="EdPluginWidget.EquipmentSet" text="장비 세트" sourceHash="647fb99b02fe02df" />
-		<entry key="EdPluginWidget.Kind" text="종류" sourceHash="70af97de3ad8fb23" />
 		<entry key="EdPluginWidget.Loop" text="반복" sourceHash="4efee5b48a4593cb" />
 		<entry key="EdPluginWidget.Options" text="옵션" sourceHash="463b8c4e92751ba5" />
 		<entry key="EdPluginWidget.Play" text="재생" sourceHash="cd105819b5a10243" />
