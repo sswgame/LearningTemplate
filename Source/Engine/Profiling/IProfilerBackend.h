@@ -15,34 +15,15 @@
 
 #include "Engine/Profiling/IProfilerGPUTimeline.h"
 
-/*
- * 외부 프로파일러의 메모리 쪽 계약입니다. 할당 · 해제를 메모리 태그 이름별로 냅니다.
- * 부르는 곳은 Core 할당 관찰(`ProfilerBackend` 의 `MemoryAllocationObserver`) 하나다. 할당 경로에서 불리므로 받는 쪽은 sw 할당자로 할당하지 않는다.
- */
-namespace sw
-{
-    /** @class IProfilerMemoryOutput @brief 파일 머리말 참고. */
-    class IProfilerMemoryOutput
-    {
-    public:
-        virtual ~IProfilerMemoryOutput() = default;
-
-        /** @brief 할당 한 건을 알립니다. @p pPoolName 은 프로세스 수명 문자열(메모리 태그 이름)입니다. */
-        virtual void onAllocate( const void* pPtr, size_t size, const utf8* pPoolName ) = 0;
-        /** @brief `onAllocate` 로 알린 블록의 해제를 알립니다. */
-        virtual void onFree( const void* pPtr, const utf8* pPoolName ) = 0;
-    };
-} // namespace sw
-
 namespace sw
 {
     /**
      * @class IProfilerBackend
-     * @brief 외부 프로파일러 출력 하나입니다. CPU 구간 · 프레임 · 그래프는 여기에 있고, 메모리(`IProfilerMemoryOutput`) · GPU 타임라인(`IProfilerGPUTimeline`)은 역할 인터페이스로 상속합니다.
+     * @brief 외부 프로파일러 출력 하나입니다. CPU 구간 · 프레임 · 그래프 · 메모리는 여기에 있고, GPU 타임라인(`IProfilerGPUTimeline`)은 RHI 가 따로 받는 역할 인터페이스로 상속합니다.
      * @details 여기 함수는 어느 스레드에서나 부를 수 있습니다(GPU 함수는 렌더 스레드 하나). 구간은 RAII(`ScopedFrameProfile`)가 열고 닫으므로 같은 스레드에서 짝이 맞습니다.
      *          `beginZone` 이 돌려준 값은 `endZone` 에 그대로 돌려줍니다.
      */
-    class SW_API IProfilerBackend : public IProfilerMemoryOutput, public IProfilerGPUTimeline
+    class SW_API IProfilerBackend : public IProfilerGPUTimeline
     {
     public:
         IProfilerBackend()           = default;
@@ -65,5 +46,12 @@ namespace sw
         virtual void markFrame( const utf8* pFrameName ) = 0;
         /** @brief 이름 붙은 값 그래프에 한 점을 더합니다(프레임당 드로우 수 등). 이름은 프로세스 수명 문자열입니다. */
         virtual void plotValue( const utf8* pPlotName, float64 value ) = 0;
+
+        // 메모리 — 할당 · 해제를 메모리 태그 이름별로 낸다. 부르는 곳은 Core 할당 관찰(`ProfilerBackend` 의 `MemoryAllocationObserver`) 하나다.
+        // 할당 경로에서 불리므로 받는 쪽은 sw 할당자로 할당하지 않는다.
+        /** @brief 할당 한 건을 알립니다. @p pPoolName 은 프로세스 수명 문자열(메모리 태그 이름)입니다. */
+        virtual void onAllocate( const void* pPtr, size_t size, const utf8* pPoolName ) = 0;
+        /** @brief `onAllocate` 로 알린 블록의 해제를 알립니다. */
+        virtual void onFree( const void* pPtr, const utf8* pPoolName ) = 0;
     };
 } // namespace sw

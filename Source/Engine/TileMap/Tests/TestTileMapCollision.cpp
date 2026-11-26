@@ -17,7 +17,7 @@
 #include "Engine/Physics/IPhysicsScene.h"
 #include "Engine/Physics/Scene/ScenePhysics.h"
 #include "Engine/Serialization/Format/Archive.h"
-#include "Engine/TileMap/Component/TileMapComponent.h"
+#include "Engine/TileMap/TileMapComponent.h"
 #include "Engine/TileMap/TileMapXML.h"
 #include "Engine/TileMap/TileSetAsset.h"
 

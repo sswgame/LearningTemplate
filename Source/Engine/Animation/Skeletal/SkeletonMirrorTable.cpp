@@ -5,8 +5,8 @@
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Animation/AnimationAssetCache.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
+#include "Engine/Asset/Cache/SharedAssetCacheDefinition.h"
 #include "Engine/Asset/Cook/AssetCompanion.h"
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Content/AssetIO.h"
@@ -122,3 +122,8 @@ namespace sw
 
 // 스켈레톤 옆의 미러 표 — 스켈레톤이 담기면 함께 담는다(없으면 넘어간다). 스켈레톤이 아니면 빈 글이다.
 SW_ASSET_COMPANION( SkeletonMirrorTable, &::sw::SkeletonMirrorTable::makePathForSkeleton );
+
+namespace sw
+{
+    SW_SHARED_ASSET_CACHE( SkeletonMirrorTable, SkeletonMirrorTable, SkeletonMirrorTable::kAssetType.withLoader( AssetTypeLoader::of<SkeletonMirrorTable>( MemoryTag::Animation ) ) );
+} // namespace sw

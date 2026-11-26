@@ -1,6 +1,8 @@
 /**
- * @file RecastQueryUtil.h
- * @brief Detour 질의 객체로 점을 내비메시에 붙이는 규칙입니다. `RecastNavMesh` 의 질의와 `DetourNavCrowd` 의 목적지 · 위치 붙이기가 같은 규칙을 씁니다.
+ * @file RecastUtil.h
+ * @brief Recast · Detour 와 엔진 형식 사이의 규칙입니다 — 영역 번호 · 폴리곤 표시 비트, 폴리 참조, 점을 내비메시에 붙이기.
+ * @details 베이크(`RecastNavMesh`) · 층에서 짓기(`RecastTileCache`) · 군중(`DetourNavCrowd`)이 같은 규칙을 쓴다.
+ *          엔진 영역 i 는 Recast 영역 i + 1(0 은 걷지 못함)이고, 폴리곤 표시 비트는 1 << i 다. 질의 필터의 영역 비트가 그대로 표시 비트다.
  */
 #pragma once
 #include "Core/Foundation/Types.h"
@@ -16,9 +18,26 @@ static_assert( sizeof( dtPolyRef ) == sizeof( sw::NavPolyRef ), "Detour must be 
 
 namespace sw
 {
-    /** @brief 점을 질의 상자 안의 폴리곤에 붙이는 규칙입니다. */
-    struct RecastQueryUtil
+    /** @brief Recast 백엔드 경계의 규칙입니다(전부 static). Recast 의 걷지 못함 `RC_NULL_AREA` 는 0 이다. */
+    struct RecastUtil
     {
+        static constexpr uint8 kNullArea = 0;
+
+        /** @brief 엔진 영역 번호(또는 걷지 못함)의 Recast 영역입니다. */
+        static uint8 toRecastArea( uint8 area )
+        {
+            if ( area == NavigationConstant::kNotWalkableArea || area >= NavigationConstant::kMaxAreaCount )
+                return kNullArea;
+            return static_cast<uint8>( area + 1 );
+        }
+
+        /** @brief Recast 영역의 폴리곤 표시 비트입니다(질의 필터의 영역 비트와 같다). 엔진 영역이 아니면 0 입니다. */
+        static uint16 toPolyFlags( uint8 recastArea )
+        {
+            const bool bEngineArea = 1 <= recastArea && recastArea <= NavigationConstant::kMaxAreaCount;
+            return bEngineArea ? static_cast<uint16>( 1u << ( recastArea - 1 ) ) : static_cast<uint16>( 0 );
+        }
+
         /** @brief Detour 참조를 엔진 형식으로 바꿉니다. 폭이 같다(위 `static_assert`). */
         static NavPolyRef toNavPolyRef( dtPolyRef polyRef ) { return static_cast<NavPolyRef>( polyRef ); }
         /** @brief 엔진 형식을 Detour 참조로 바꿉니다. */

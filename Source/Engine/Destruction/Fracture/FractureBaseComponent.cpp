@@ -9,10 +9,9 @@
 
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Destruction/DestructionRandom.h"
-#include "Engine/Destruction/Fracture/FractureAnchor.h"
 #include "Engine/Destruction/Fracture/FractureAsset.h"
 #include "Engine/Destruction/Fracture/FractureLeafShapeTable.h"
-#include "Engine/Destruction/Fracture/FractureRenderUtil.h"
+#include "Engine/Destruction/Fracture/FractureRenderUnits.h"
 #include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Graphics/Material/Material.h"
@@ -101,6 +100,46 @@ namespace sw
 
         struct FractureComponentBaseInternal
         {
+            /** @brief 잎이 가장 낮은 면에서 @p tolerance(월드 미터) 안에 닿는지 반환합니다(`Bottom` 모드). @p scale 은 오브젝트의 고른 배율입니다. */
+            static bool isBottomLeaf( const FractureAsset& asset, uint32 leaf, float32 tolerance, float32 scale )
+            {
+                return asset._listPiece[leaf]._boundsMin._y <= asset._boundsMin._y + tolerance / scale;
+            }
+
+            /** @brief 메시 공간 점이 앵커 볼륨(오브젝트 로컬 상자) 하나라도 안에 있는지 반환합니다. 경계는 안으로 칩니다. */
+            static bool isInsideAnyVolume( const float3& point, vector_reference<const FractureAnchorVolume> listVolume )
+            {
+                for ( const FractureAnchorVolume& volume : listVolume )
+                {
+                    const float3 delta = point - volume._center;
+                    const bool   bIn   = MathUtil::abs( delta._x ) <= volume._halfExtents._x && MathUtil::abs( delta._y ) <= volume._halfExtents._y &&
+                                     MathUtil::abs( delta._z ) <= volume._halfExtents._z;
+                    if ( bIn )
+                        return true;
+                }
+                return false;
+            }
+
+            /**
+             * @brief 잎마다 앵커 여부(1 = 앵커)를 정합니다(물리를 모르는 순수 계산). 모드의 판정에 앵커 볼륨(무게 중심 기준)을 더합니다.
+             * @param listWorldContact `World` 모드에서 잎마다 다른 오브젝트의 정적 바디에 닿았는지입니다. 다른 모드이거나 물을 수 없으면 비워 둡니다.
+             */
+            static void computeAnchors( const FractureAsset& asset, FractureAnchorMode mode, float32 tolerance, float32 scale,
+                                        vector_reference<const FractureAnchorVolume> listVolume, vector_reference<const uint8> listWorldContact,
+                                        vector<uint8>& outListAnchor )
+            {
+                outListAnchor.assign( asset.getPieceCount(), 0 );
+                for ( uint32 leaf = 0; leaf < asset.getPieceCount(); ++leaf )
+                {
+                    bool bAnchored = false;
+                    if ( mode == FractureAnchorMode::Bottom )
+                        bAnchored = isBottomLeaf( asset, leaf, tolerance, scale );
+                    else if ( mode == FractureAnchorMode::World )
+                        bAnchored = leaf < listWorldContact.size() && listWorldContact[leaf] != 0;
+                    bAnchored           = bAnchored || isInsideAnyVolume( asset._graph._listNode[leaf]._centroid, listVolume );
+                    outListAnchor[leaf] = bAnchored ? 1 : 0;
+                }
+            }
             static constexpr FormatDef kStateFormat{ "FRST" };
 
             /// `_listRuntime` 은 그룹 번호 오름차순이다(그룹 변경 뒤 정렬, 복원은 상태의 오름차순 그룹 순서). 그 순서로 이분 탐색한다 — 사건 · 충돌마다 부르는 곳이라 선형이면 그룹 수만큼 든다.
@@ -718,7 +757,7 @@ namespace sw
         _listPiecePose.assign( _asset->getPieceCount(), BoneTransform{} );
         for ( uint32 leaf = 0; leaf < _asset->getPieceCount(); ++leaf )
         {
-            _listPiecePose[leaf] = FractureRenderUtil::makeBoneTransform( _asset->_graph._listNode[leaf]._centroid, quaternion::Identity, float3{}, 1.0f );
+            _listPiecePose[leaf] = FractureRenderUnits::makeBoneTransform( _asset->_graph._listNode[leaf]._centroid, quaternion::Identity, float3{}, 1.0f );
         }
         _listLeafStaticBody.assign( _asset->getPieceCount(), PhysicsBodyHandle{} );
         _eventLog._seed = _seed;
@@ -731,7 +770,7 @@ namespace sw
     void FractureBaseComponent::computeAnchors( const float3& position, const quaternion& rotation, float32 scale, vector<uint8>& outListAnchor ) const
     {
         const FractureAsset& asset = *_asset;
-        // World 모드의 "정적 월드에 닿았나" 는 물리 질의라 여기서 잎마다 묻는다. 판정은 FractureAnchorUtil 이 모은다.
+        // World 모드의 "정적 월드에 닿았나" 는 물리 질의라 여기서 잎마다 묻는다. 판정은 FractureComponentBaseInternal::computeAnchors 가 모은다.
         vector<uint8> listWorldContact;
         if ( _anchorMode == FractureAnchorMode::World && _physics != nullptr )
         {
@@ -742,7 +781,7 @@ namespace sw
                 listWorldContact[leaf] = _physics->overlapsStaticWorld( asset, leaf, scale, position, rotation, selfID ) ? 1 : 0;
             }
         }
-        FractureAnchorUtil::computeAnchors( asset, _anchorMode, _anchorTolerance, scale, _listAnchorVolume, listWorldContact, outListAnchor );
+        FractureComponentBaseInternal::computeAnchors( asset, _anchorMode, _anchorTolerance, scale, _listAnchorVolume, listWorldContact, outListAnchor );
     }
 
     void FractureBaseComponent::processPendingEvents( ScenePhysics& physics )
@@ -1329,7 +1368,7 @@ namespace sw
             const quaternion            rotation = inverseObject * runtime._rotation;
             const float3                offset   = float3::transform( runtime._position - _objectPosition, inverseObject ) / _objectScale;
             const float32               scale    = runtime._bGone == SW_TRUE ? 0.0f : runtime._fade;
-            _listPiecePose[leaf]                 = FractureRenderUtil::makeBoneTransform( _asset->_graph._listNode[leaf]._centroid, rotation, offset, scale );
+            _listPiecePose[leaf]                 = FractureRenderUnits::makeBoneTransform( _asset->_graph._listNode[leaf]._centroid, rotation, offset, scale );
             maxOffset                            = MathUtil::max( maxOffset, offset.getLength() );
         }
         GameObject* pOwner = getOwner();

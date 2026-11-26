@@ -29,7 +29,7 @@ namespace sw
 {
     class FacialRig;
     class FacialAnimationComponent;
-    class IFacialLiveSource;
+    class LiveLinkFaceSource;
     class MaterialInstance;
     class Mesh;
     class SkeletalAnimatorComponent;
@@ -103,7 +103,7 @@ namespace sw
          * @details 값은 게임 스레드에서 프레임마다 옮겨 둔다(`prepareAnimationFrame`) — 워커의 얼굴 단계는 입력을 직접 읽지 않는다.
          *          입력은 하나뿐이라 다시 걸면 교체한다. 교체된 옛 구독은 놓아도 새 입력을 떼지 않는다. nullptr 이면 빈 구독이다.
          */
-        [[nodiscard]] Subscription registerLiveSource( const IFacialLiveSource* pSource );
+        [[nodiscard]] Subscription registerLiveSource( const LiveLinkFaceSource* pSource );
         /** @brief 시선 목표(월드)를 정합니다. */
         void setLookAtTarget( const float3& worldPosition );
         /** @brief 시선을 놓습니다(눈은 애니메이션 그대로). */
@@ -186,16 +186,16 @@ namespace sw
         SW_TRANSIENT vector<float32> _listSpeechSample;     ///< 트랙이 없을 때의 진폭 립싱크 표본(모노)
         SW_TRANSIENT vector<float32> _listExpressionWeight; ///< 리그 표정 순서의 명시 가중치
         SW_TRANSIENT vector<float32> _listLiveWeight;       ///< 리그 표정 순서의 실시간 입력 값(게임 스레드가 프레임마다 옮겨 둔다, 입력이 없으면 0)
-        const IFacialLiveSource*     _pLiveSource;          ///< 실시간 얼굴 입력(빌림, `registerLiveSource`)
+        const LiveLinkFaceSource*    _pLiveSource;          ///< 실시간 얼굴 입력(빌림, `registerLiveSource`)
 
         /** @brief 지금 입력이 @p pSource 이면 뗍니다(입력 구독이 풀릴 때 — 교체된 옛 구독이면 할 일이 없다). */
-        void                                          detachLiveSource( const IFacialLiveSource* pSource );
-        ItemSubscriptionList<const IFacialLiveSource> _liveSourceSubscriptions; ///< `_pLiveSource` 의 등록 구독을 내준다(풀리면 `detachLiveSource`). 리플렉션 클래스라 기반을 더하지 않고 멤버로 둔다
-        SW_TRANSIENT vector<vector<optional<uint32>>> _listExpressionTarget;    ///< 표정마다 타깃 → 메시 타깃 번호(메시에 없으면 없음)
-        SW_TRANSIENT vector<vector<optional<uint32>>> _listVisemeTarget;        ///< 비즘마다 타깃 → 메시 타깃 번호(메시에 없으면 없음)
-        SW_TRANSIENT vector<optional<uint32>> _listBlinkTarget;                 ///< 깜빡임 타깃 → 메시 타깃 번호(메시에 없으면 없음)
-        SW_TRANSIENT vector<uint32> _listEyeBone;                               ///< 눈 본 번호(스켈레톤에 있는 것만)
-        SW_TRANSIENT vector<optional<uint32>> _listTrackToRigViseme;            ///< 립싱크 비즘 순서 → 리그 비즘 번호(리그에 없으면 없음)
+        void                                           detachLiveSource( const LiveLinkFaceSource* pSource );
+        ItemSubscriptionList<const LiveLinkFaceSource> _liveSourceSubscriptions; ///< `_pLiveSource` 의 등록 구독을 내준다(풀리면 `detachLiveSource`). 리플렉션 클래스라 기반을 더하지 않고 멤버로 둔다
+        SW_TRANSIENT vector<vector<optional<uint32>>> _listExpressionTarget;     ///< 표정마다 타깃 → 메시 타깃 번호(메시에 없으면 없음)
+        SW_TRANSIENT vector<vector<optional<uint32>>> _listVisemeTarget;         ///< 비즘마다 타깃 → 메시 타깃 번호(메시에 없으면 없음)
+        SW_TRANSIENT vector<optional<uint32>> _listBlinkTarget;                  ///< 깜빡임 타깃 → 메시 타깃 번호(메시에 없으면 없음)
+        SW_TRANSIENT vector<uint32> _listEyeBone;                                ///< 눈 본 번호(스켈레톤에 있는 것만)
+        SW_TRANSIENT vector<optional<uint32>> _listTrackToRigViseme;             ///< 립싱크 비즘 순서 → 리그 비즘 번호(리그에 없으면 없음)
         SW_TRANSIENT vector<float32> _listScratchVisemeWeight;
         shared_ptr<const WrinkleMap> _pWrinkleMap;                          ///< 주름 매핑(몸 프로필이 준다). 없으면 nullptr
         SW_TRANSIENT vector<hashed_string> _listScratchExpressionName;      ///< 주름 계산의 표정 이름(리그 표정 순서)

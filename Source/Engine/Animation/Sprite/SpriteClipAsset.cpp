@@ -4,7 +4,9 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Memory/Memory.h"
 
+#include "Engine/Asset/Cache/SharedAssetCacheDefinition.h"
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
@@ -292,4 +294,17 @@ namespace sw
         outKey._angle       = Radians::fromRadians( MathUtil::lerp( pBefore->_angle.radians(), pAfter->_angle.radians(), alpha ) );
         return true;
     }
+} // namespace sw
+
+namespace sw
+{
+    namespace
+    {
+        struct SpriteClipCacheInternal
+        {
+            [[nodiscard]] static bool load( const AssetID& assetID, SpriteClipAsset& outClip ) { return outClip.loadFromAsset( assetID ); }
+        };
+    } // namespace
+
+    SW_SHARED_ASSET_CACHE( SpriteClipAsset, SpriteClipAsset, SpriteClipAsset::kAssetType.withLoader( AssetTypeLoader::with<SpriteClipAsset, &SpriteClipCacheInternal::load>( MemoryTag::Animation ) ) );
 } // namespace sw

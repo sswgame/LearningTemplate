@@ -11,6 +11,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringUtil.h"
 
+#include "Engine/Asset/Cache/SharedAssetCacheDefinition.h"
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
@@ -446,4 +447,9 @@ namespace sw
 namespace sw
 {
     SW_DATA_INHERITANCE_MERGE( SkeletonVariant, &Skeleton::mergeVariantText );
+} // namespace sw
+
+namespace sw
+{
+    SW_SHARED_ASSET_CACHE( Skeleton, Skeleton, Skeleton::kAssetType.withLoader( AssetTypeLoader::of<Skeleton>( MemoryTag::Animation ) ) );
 } // namespace sw

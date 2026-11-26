@@ -16,6 +16,7 @@
 #include "Core/String/Name/hashed_string.h"
 
 #include "Engine/Asset/AssetRef.h"
+#include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -121,4 +122,7 @@ namespace sw
     private:
         vector<AnimationSetEntry> _listEntry;
     };
+
+    /** @brief 애니메이션 셋을 경로로 나눠 줍니다("AnimationSet"). 같은 셋을 쓰는 캐릭터 백 명이 XML 을 백 번 읽지 않습니다. */
+    SW_DECLARE_SHARED_ASSET_CACHE( SW_API_EXTERN_TEMPLATE, AnimationSet );
 } // namespace sw

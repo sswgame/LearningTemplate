@@ -9,8 +9,8 @@
 
 #include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
 #include "Engine/VFX/VFXCPUSimulation.h"
+#include "Engine/VFX/VFXComponent.h"
 #include "Engine/VFX/VFXEffectDef.h"
-#include "Engine/VFX/VFXMeshSlotVisibility.h"
 #include "Engine/Visual/MeshInstanceBatch.h"
 
 using namespace sw;

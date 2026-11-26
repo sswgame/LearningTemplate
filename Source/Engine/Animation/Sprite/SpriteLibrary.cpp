@@ -4,8 +4,10 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/Memory/Memory.h"
 
 #include "Engine/Animation/Sprite/SpriteClipAsset.h"
+#include "Engine/Asset/Cache/SharedAssetCacheDefinition.h"
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
@@ -86,4 +88,9 @@ namespace sw
         const SpriteLibraryCategory* pCategory = VectorUtil::findBy<&SpriteLibraryCategory::_name>( _listCategory, category );
         return pCategory != nullptr ? VectorUtil::findBy<&SpriteLibraryLabel::_name>( pCategory->_listLabel, label ) : nullptr;
     }
+} // namespace sw
+
+namespace sw
+{
+    SW_SHARED_ASSET_CACHE( SpriteLibrary, SpriteLibrary, SpriteLibrary::kAssetType.withLoader( AssetTypeLoader::of<SpriteLibrary>( MemoryTag::Animation ) ) );
 } // namespace sw

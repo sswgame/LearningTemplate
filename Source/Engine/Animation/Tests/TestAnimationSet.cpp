@@ -5,7 +5,6 @@
 #include "Core/Memory/Memory.h"
 #include "Core/TestFramework/TestFramework.h"
 
-#include "Engine/Animation/AnimationAssetCache.h"
 #include "Engine/Animation/AnimationSet.h"
 #include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Content/Tests/ScopedScratchDomain.h"

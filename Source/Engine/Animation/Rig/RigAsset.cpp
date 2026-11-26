@@ -12,6 +12,7 @@
 
 #include "Engine/Animation/Rig/RigBuiltinNodes.h"
 #include "Engine/Animation/Rig/RigJiggleNode.h"
+#include "Engine/Asset/Cache/SharedAssetCacheDefinition.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Foundation/EngineSubsystems.h"
@@ -299,4 +300,9 @@ namespace sw
         _listNode.push_back( std::move( node ) );
         return true;
     }
+} // namespace sw
+
+namespace sw
+{
+    SW_SHARED_ASSET_CACHE( RigAsset, RigAsset, RigAsset::kAssetType.withLoader( AssetTypeLoader::of<RigAsset>( MemoryTag::Animation ) ) );
 } // namespace sw

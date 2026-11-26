@@ -4,7 +4,7 @@
 #include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Audio/AudioRoomGraph.h"
-#include "Engine/Audio/Scene/Physics2DAudioOcclusionQuery.h"
+#include "Engine/Audio/Scene/PhysicsAudioOcclusionQuery.h"
 #include "Engine/Physics/IPhysicsQueryScene.h"
 
 // ------------------------------------------------------------------------------
@@ -75,7 +75,7 @@ namespace
  */
 SW_TEST_CASE( AudioOcclusionTest, Physics2DRayQueryCountsBlockedRays )
 {
-    sw::Physics2DAudioOcclusionQuery query;
+    sw::PhysicsAudioOcclusionQuery query;
     SW_EXPECT_NEAR( 0.0f, query.computePropagation( sw::float3( 0.0f, 0.0f, 0.0f ), sw::float3( 10.0f, 0.0f, 0.0f ) )._occlusion, 1e-6f ); // 씬 없음
 
     const WallQueryScene2D fullWall( 5.0f, -10.0f, 10.0f );

@@ -15,7 +15,6 @@
 #include "Core/Foundation/Types.h"
 #include "Core/String/Name/hashed_string.h"
 
-#include "Engine/Animation/Facial/FacialLiveSource.h"
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -143,8 +142,10 @@ namespace sw
     /**
      * @class LiveLinkFaceSource
      * @brief 푼 패킷을 표정 채널로 내는 실시간 입력입니다(`FacialAnimationComponent::registerLiveSource`). 받은 패킷이 없으면 어떤 채널도 내지 않습니다.
+     * @details 게임 스레드에서 프레임마다 읽는다(얼굴 단계 앞, `prepareAnimationFrame`). 채널 이름은 얼굴 리그의 표정 이름이다(애니메이터의 표정 커브와 같은 자리, 값이 더해진다).
+     *          실시간 얼굴 입력은 이 형식 하나다 — 다른 장치(ARKit 블렌드셰이프 등)가 생기면 그때 창구 인터페이스를 둔다.
      */
-    class SW_API LiveLinkFaceSource final : public IFacialLiveSource
+    class SW_API LiveLinkFaceSource
     {
     public:
         LiveLinkFaceSource();
@@ -156,7 +157,8 @@ namespace sw
         /** @brief 받은 프레임이 있는지입니다. */
         bool hasFrame() const { return _bHasFrame; }
 
-        [[nodiscard]] bool tryGetChannel( const hashed_string& channel, float32& outWeight ) const override;
+        /** @brief 채널 @p channel 의 지금 값(보통 0..1)입니다. 이 입력이 내지 않는 채널이면 false 입니다. */
+        [[nodiscard]] bool tryGetChannel( const hashed_string& channel, float32& outWeight ) const;
 
     private:
         struct ExpressionInput

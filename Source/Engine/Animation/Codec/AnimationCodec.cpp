@@ -7,7 +7,7 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Animation/Codec/ACL/ACLAnimationCodec.h"
-#include "Engine/Animation/Codec/Raw/RawAnimationCodec.h"
+#include "Engine/Animation/Codec/RawAnimationCodec.h"
 
 namespace sw
 {
