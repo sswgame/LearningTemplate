@@ -136,17 +136,15 @@ namespace sw
                              type._validate, type._fullyQualifiedName, type._validate );
             bValid = false;
         }
+        if ( type._readValidate.empty() == false && DeclarationValidatorInternal::isValidatorDeclared( listMethodSignature, type._readValidate ) == false )
+        {
+            SW_LOG_ERROR_ID( "AstVisitor.ERRORREFLECTReadValidateNeeds",
+                             "ERROR: REFLECT( ReadValidate = %# ) on '%#' needs a method of the same type: void %#( ValidationContext& context ) [const].", type._readValidate,
+                             type._fullyQualifiedName, type._readValidate );
+            bValid = false;
+        }
         for ( ParsedPropertyInfo& prop : type._listProperty )
         {
-            // `REFLECT( Validate )` 타입은 읽기 관문이다(고정 배치형 읽기 끝 · 세이브 읽기가 오류면 거절한다). 프로퍼티 검증은 배포에서 빠지므로
-            // 관문에 섞이면 개발 구성은 거절하고 배포는 통과한다. 관문의 검사는 타입 검증 함수 하나에 둔다.
-            if ( prop._validate.empty() == false && type._validate.empty() == false )
-            {
-                SW_LOG_ERROR_ID( "AstVisitor.ERRORPROPERTYValidateWithTypeValidate",
-                                 "ERROR: PROPERTY( Validate = %# ) on '%#' - the type has REFLECT( Validate = %# ), a read check that ships; property validators are dev-only, so move the check into %#.",
-                                 prop._validate, CursorReader::makeMemberOwnerName( type._fullyQualifiedName, prop._name ), type._validate, type._validate );
-                bValid = false;
-            }
             if ( prop._validate.empty() == false && DeclarationValidatorInternal::isValidatorDeclared( listMethodSignature, prop._validate ) == false )
             {
                 SW_LOG_ERROR_ID( "AstVisitor.ERRORPROPERTYValidateNeeds", "ERROR: PROPERTY( Validate = %# ) on '%#' needs a method of the same type: void %#( ValidationContext& context ) [const].",

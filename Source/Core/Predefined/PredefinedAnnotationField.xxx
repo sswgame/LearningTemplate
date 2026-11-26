@@ -54,8 +54,10 @@ REGISTER_ANNOTATION_FIELD_FN( Reflect, Alias, _listAlias, appendAlias, Manual )
 REGISTER_ANNOTATION_FIELD_FN( Reflect, RemovedField, _listRemovedField, appendRemovedField, Manual )
 // 지운 타입 이름: RemovedType="sw::OldThing". 보통 뒤를 이은 타입에 적는다. 새 타입 · enum 이 그 이름 · 해시를 다시 쓰면 등록이 오류로 멈춘다
 REGISTER_ANNOTATION_FIELD_FN( Reflect, RemovedType, _listRemovedType, appendRemovedType, Manual )
-// 타입 검증 함수 — 같은 타입의 void fn( ValidationContext& context ) [const]. 로드 · 저장 · 인스펙터 편집 뒤에 불린다(ReflectionValidation)
+// 타입 검증 함수(에디터 데이터 검증) — 같은 타입의 void fn( ValidationContext& context ) [const]. 로드 · 저장 · 인스펙터 편집 · 맵 검사 뒤에 불린다(ReflectionValidation). 배포에는 등록되지 않는다
 REGISTER_ANNOTATION_FIELD( Reflect, Validate, _validate, Manual )
+// 읽기 검사 함수 — 모양은 Validate 와 같다. 배포에서도 돌고, 고정 배치형 읽기 끝 · 세이브 읽기(ReflectionValidation::validateRead)가 오류면 거절한다
+REGISTER_ANNOTATION_FIELD( Reflect, ReadValidate, _readValidate, Manual )
 // 컴포넌트 틱 모드 선언: Batch(기본 — 타입별 일괄) · Task(선행 조건 · 일의 양이 큰 개별 태스크) · Main(메인 스레드 전용 API). 컴포넌트만 받는다. 모드는 등록이 없는 파생이 물려받는다(TickBatchRegistry::findDispatch)
 REGISTER_ANNOTATION_FIELD( Reflect, TickMode, _tickMode, Manual )
 // 타입의 저장 판(1 이상의 정수 · 정수 상수 이름). 칸 배치나 뜻을 바꾸면 올리고, 옛 판은 그 타입에 등록한 패치 사슬(`SW_TYPE_VERSION_PATCH`)이 올린다(ezEngine 타입 판 + GraphPatch 자리). 적지 않으면 첫 판(0)

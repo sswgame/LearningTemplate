@@ -91,7 +91,7 @@ namespace sw
      *          용량은 생성할 때 정하는 설정이라 싣지 않고, 읽은 고리 버퍼의 길이가 용량과 다르면 `validateState` 가 거절합니다.
      *          `clear` 는 슬롯을 중립 입력으로 되돌리므로, 쌓인 수 밖의 슬롯에 지난 입력이 남아 같은 버퍼가 다른 바이트가 되는 일이 없습니다.
      */
-    REFLECT( Validate = validateState )
+    REFLECT( ReadValidate = validateState )
     class SW_GF_API InputCommandBuffer
     {
     public:
@@ -114,7 +114,7 @@ namespace sw
         const InputFrame& getFrame( int32 framesAgo ) const;
         /** @brief 바라보는 쪽에 맞춰 뒤집은 방향입니다. */
         static uint8 mirrorDirection( uint8 direction, int32 facing );
-        /** @brief 읽은 링 버퍼가 이 버퍼의 용량과 맞는지 봅니다(`REFLECT( Validate )`). 길이, 다음 위치, 쌓인 수를 봅니다. */
+        /** @brief 읽은 링 버퍼가 이 버퍼의 용량과 맞는지 봅니다(`REFLECT( ReadValidate )`). 길이, 다음 위치, 쌓인 수를 봅니다. */
         void validateState( ValidationContext& context ) const;
 
     private:

@@ -117,6 +117,7 @@ namespace sw
         _destroyInstance      = desc._pDestroyInstance;
         _addComponent         = desc._pAddComponent;
         _pValidate            = desc._pValidate;
+        _pReadValidate        = desc._pReadValidate;
         _pFixedCodec          = desc._pFixedCodec;
         _bAbstract            = toFlag( TypeDescFlag::kAbstract );
         _bStatic              = toFlag( TypeDescFlag::kStatic );
@@ -193,6 +194,7 @@ namespace sw
         , _destroyInstance{ nullptr }
         , _addComponent{ nullptr }
         , _pValidate{ nullptr }
+        , _pReadValidate{ nullptr }
         , _pFixedCodec{ nullptr }
         , _name{}
         , _fullyQualifiedName{}
@@ -327,6 +329,7 @@ namespace sw
         _destroyInstance      = other._destroyInstance;
         _addComponent         = other._addComponent;
         _pValidate            = other._pValidate;
+        _pReadValidate        = other._pReadValidate;
         _pFixedCodec          = other._pFixedCodec;
         _name                 = other._name;
         _fullyQualifiedName   = other._fullyQualifiedName;
@@ -359,6 +362,7 @@ namespace sw
         _destroyInstance      = other._destroyInstance;
         _addComponent         = other._addComponent;
         _pValidate            = other._pValidate;
+        _pReadValidate        = other._pReadValidate;
         _pFixedCodec          = other._pFixedCodec;
         _name                 = other._name;
         _fullyQualifiedName   = other._fullyQualifiedName;
@@ -414,6 +418,13 @@ namespace sw
         const uint8 flags = _derived._derivedFlags.load( std::memory_order_acquire );
         SW_ASSERT( ( flags & kDerivedFlagsBuilt ) != 0 && "판정을 구하지 않은 TypeInfo 다 — 레지스트리 밖 사본은 computeDerivedFlags 를 먼저 부른다" );
         return ( flags & kDerivedHasValidator ) != 0;
+    }
+
+    bool TypeInfo::hasReadValidator() const
+    {
+        const uint8 flags = _derived._derivedFlags.load( std::memory_order_acquire );
+        SW_ASSERT( ( flags & kDerivedFlagsBuilt ) != 0 && "판정을 구하지 않은 TypeInfo 다 — 레지스트리 밖 사본은 computeDerivedFlags 를 먼저 부른다" );
+        return ( flags & kDerivedHasReadValidator ) != 0;
     }
 
     bool TypeInfo::hasRequiredProperty() const
@@ -484,8 +495,10 @@ namespace sw
             }
         }
         _derived._schemaLayoutHash.store( static_cast<uint32>( layoutHash ^ ( layoutHash >> 32 ) ), std::memory_order_relaxed ); // 아래 판정 비트의 release 가 함께 발행한다
-        const bool   bValidator = ReflectionValidation::computeHasValidator( *this, resolver );
-        const uint32 flags      = kDerivedFlagsBuilt | ( bPOD ? kDerivedPODFastPath : 0u ) | ( bSaveGame ? kDerivedHasSaveGameProperty : 0u ) | ( bValidator ? kDerivedHasValidator : 0u ) | ( bRequired ? kDerivedHasRequiredProperty : 0u );
+        const bool   bValidator     = ReflectionValidation::computeHasValidator( *this, resolver );
+        const bool   bReadValidator = ReflectionValidation::computeHasReadValidator( *this, resolver );
+        const uint32 flags          = kDerivedFlagsBuilt | ( bPOD ? kDerivedPODFastPath : 0u ) | ( bSaveGame ? kDerivedHasSaveGameProperty : 0u ) | ( bValidator ? kDerivedHasValidator : 0u ) |
+                             ( bRequired ? kDerivedHasRequiredProperty : 0u ) | ( bReadValidator ? kDerivedHasReadValidator : 0u );
         _derived._derivedFlags.store( static_cast<uint8>( flags ), std::memory_order_release ); // 한 번에 바꾼다 — 읽기는 옛 판정이나 새 판정 하나를 본다
     }
 
@@ -623,8 +636,9 @@ namespace sw
         _addComponent           = nullptr;
         _derived._bIsCacheBuilt = SW_FALSE;
         _derived._inheritedProperties.publish( make_unique<TypeInheritedPropertySlot::Snapshot>() ); // 묘비는 빈 목록이 답이다 — 든 포인터로 물어도 멈추지 않는다
-        _pValidate   = nullptr;
-        _pFixedCodec = nullptr;
+        _pValidate     = nullptr;
+        _pReadValidate = nullptr;
+        _pFixedCodec   = nullptr;
     }
 
     bool TypeInfo::computeAncestorDisplay() const

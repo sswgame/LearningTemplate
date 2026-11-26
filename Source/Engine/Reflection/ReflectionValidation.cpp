@@ -42,23 +42,24 @@ namespace sw
 
             /**
              * @brief 검증 함수가 있는지 — 자기 사슬의 타입 · 프로퍼티 검증, 값으로 든 구조체 · 시퀀스 원소 타입의 것까지.
+             * @param bReadOnly 참이면 읽기 검사(`REFLECT( ReadValidate )`)만 본다
              * @param depth 값 타입이 서로를 담는 사슬(드물다)에서 멈추는 깊이
              */
-            static bool computeHasValidator( const TypeInfo& type, const TypeResolver& resolver, const uint32 depth )
+            static bool computeHasValidator( const TypeInfo& type, const TypeResolver& resolver, const bool bReadOnly, const uint32 depth )
             {
                 if ( depth > constant::reflection::kMaxParentChainDepth )
                     return false;
                 for ( const TypeInfo* pLevel : type.getTypeChain() )
                 {
-                    if ( pLevel->_pValidate != nullptr )
+                    if ( pLevel->_pReadValidate != nullptr || ( bReadOnly == false && pLevel->_pValidate != nullptr ) )
                         return true;
                 }
                 for ( const PropertyInfo& prop : type.getPropertiesWithBase() )
                 {
-                    if ( prop._pValidate != nullptr )
+                    if ( bReadOnly == false && prop._pValidate != nullptr )
                         return true;
                     const TypeInfo* pNested          = prop._bIsContainer == SW_TRUE ? findSequenceElementType( prop, resolver ) : findNestedType( prop._typeName, resolver );
-                    const bool      bNestedValidator = pNested != nullptr && pNested != &type && computeHasValidator( *pNested, resolver, depth + 1 );
+                    const bool      bNestedValidator = pNested != nullptr && pNested != &type && computeHasValidator( *pNested, resolver, bReadOnly, depth + 1 );
                     if ( bNestedValidator )
                         return true;
                 }
@@ -73,16 +74,18 @@ namespace sw
                 return hasSequenceElement( prop ) ? prop.resolveElementFacts( registry ).findStructType() : nullptr;
             }
 
-            static uint32 validate( const TypeInfo& type, const void* pInstance, ValidationContext& context, const uint32 depth, const TypeRegistry& registry )
+            /** @param bReadOnly 참이면 읽기 검사(`REFLECT( ReadValidate )`)만 돌린다 — 배포와 개발 구성이 같은 답을 내야 하는 읽기 거절 자리(`validateRead`) */
+            static uint32 validate( const TypeInfo& type, const void* pInstance, ValidationContext& context, const bool bReadOnly, const uint32 depth, const TypeRegistry& registry )
             {
-                const bool bNothingToValidate = pInstance == nullptr || depth > constant::reflection::kMaxParentChainDepth || ReflectionValidation::hasValidator( type ) == false;
+                const bool bHasAny            = bReadOnly ? type.hasReadValidator() : ReflectionValidation::hasValidator( type );
+                const bool bNothingToValidate = pInstance == nullptr || depth > constant::reflection::kMaxParentChainDepth || bHasAny == false;
                 if ( bNothingToValidate )
                     return 0;
                 const size_t issueCountBefore = context.getIssues().size();
 
                 for ( const PropertyInfo& prop : type.getPropertiesWithBase() )
                 {
-                    if ( prop._pValidate != nullptr )
+                    if ( bReadOnly == false && prop._pValidate != nullptr )
                     {
                         context.setScope( type._fullyQualifiedName, prop._name );
                         prop._pValidate( pInstance, context );
@@ -95,14 +98,14 @@ namespace sw
                         continue;
                     if ( prop._bIsContainer == SW_FALSE )
                     {
-                        validate( *pNested, pValue, context, depth + 1, registry );
+                        validate( *pNested, pValue, context, bReadOnly, depth + 1, registry );
                         continue;
                     }
                     const ISequenceContainerWrapper* pSequence    = prop._containerWrapper->asSequence();
                     const size_t                     elementCount = pSequence->getSize( pValue );
                     for ( size_t elementIndex = 0; elementIndex < elementCount; ++elementIndex )
                     {
-                        validate( *pNested, pSequence->getElementConst( pValue, elementIndex ), context, depth + 1, registry );
+                        validate( *pNested, pSequence->getElementConst( pValue, elementIndex ), context, bReadOnly, depth + 1, registry );
                     }
                 }
 
@@ -111,10 +114,11 @@ namespace sw
                 for ( uint32 level = chain.size(); level > 0; --level )
                 {
                     const TypeInfo& levelType = *chain[level - 1];
-                    if ( levelType._pValidate == nullptr )
-                        continue;
                     context.setScope( levelType._fullyQualifiedName, hashed_string{} );
-                    levelType._pValidate( pInstance, context );
+                    if ( levelType._pReadValidate != nullptr )
+                        levelType._pReadValidate( pInstance, context );
+                    if ( bReadOnly == false && levelType._pValidate != nullptr )
+                        levelType._pValidate( pInstance, context );
                 }
                 context.setScope( hashed_string{}, hashed_string{} );
                 return static_cast<uint32>( context.getIssues().size() - issueCountBefore );
@@ -183,7 +187,12 @@ namespace sw
 
     uint32 ReflectionValidation::validateObject( const TypeInfo& type, const void* pInstance, ValidationContext& context )
     {
-        return ReflectionValidationInternal::validate( type, pInstance, context, 0, engine::getSubsystem<TypeRegistry>() );
+        return ReflectionValidationInternal::validate( type, pInstance, context, false, 0, engine::getSubsystem<TypeRegistry>() );
+    }
+
+    uint32 ReflectionValidation::validateRead( const TypeInfo& type, const void* pInstance, ValidationContext& context )
+    {
+        return ReflectionValidationInternal::validate( type, pInstance, context, true, 0, engine::getSubsystem<TypeRegistry>() );
     }
 
     bool ReflectionValidation::hasValidator( const TypeInfo& type )
@@ -193,6 +202,16 @@ namespace sw
 
     bool ReflectionValidation::computeHasValidator( const TypeInfo& type, const TypeResolver& resolver )
     {
-        return ReflectionValidationInternal::computeHasValidator( type, resolver, 0 );
+        return ReflectionValidationInternal::computeHasValidator( type, resolver, false, 0 );
+    }
+
+    bool ReflectionValidation::hasReadValidator( const TypeInfo& type )
+    {
+        return type.hasReadValidator();
+    }
+
+    bool ReflectionValidation::computeHasReadValidator( const TypeInfo& type, const TypeResolver& resolver )
+    {
+        return ReflectionValidationInternal::computeHasValidator( type, resolver, true, 0 );
     }
 } // namespace sw

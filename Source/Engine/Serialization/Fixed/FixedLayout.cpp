@@ -575,10 +575,10 @@ namespace sw
                 result = readChildren( codec, 0, codec._fieldCount, reader, pObject, scope );
                 if ( result != FixedReadResult::Ok )
                     return result;
-                if ( codec._pValidate != nullptr )
+                if ( codec._pReadValidate != nullptr )
                 {
                     ValidationContext context;
-                    codec._pValidate( pObject, context );
+                    codec._pReadValidate( pObject, context );
                     if ( context.hasError() )
                         return FixedReadResult::ValidateFailed;
                 }

@@ -352,7 +352,7 @@ namespace sw
             repNotify = string( b.view() );
         }
         // const 든 아니든 부를 수 있게 인스턴스를 그 타입으로 돌려 부른다. 프로퍼티 검증은 에디터 데이터 검증이라 배포에는 없다(`SW_DEV_ONLY_FUNCTION`).
-        // 그래서 배포는 검증 함수를 참조하지 않고, 본문은 개발 전용 소스(`Dev/`)에 둘 수 있다. 배포에서 도는 읽기 관문은 `REFLECT( Validate )` 다.
+        // 그래서 배포는 검증 함수를 참조하지 않고, 본문은 개발 전용 소스(`Dev/`)에 둘 수 있다. 배포에서 도는 읽기 검사는 `REFLECT( ReadValidate )` 다.
         string validate( "nullptr" );
         if ( prop._validate.empty() == false )
         {

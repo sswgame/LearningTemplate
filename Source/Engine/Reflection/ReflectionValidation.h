@@ -1,11 +1,12 @@
 /**
  * @file ReflectionValidation.h
- * @brief `PROPERTY( Validate = fn )` · `REFLECT( Validate = fn )` 검증 함수를 돌려 결과를 모읍니다(로드 · 저장 · 인스펙터 편집, 나중에 맵 검사 패널).
+ * @brief 검증 함수(`PROPERTY( Validate = fn )` · `REFLECT( Validate = fn )` · `REFLECT( ReadValidate = fn )`)를 돌려 결과를 모읍니다.
  * @details 검증 함수의 모양은 `void fn( ValidationContext& context ) const`(const 가 아니어도 된다)이고, 파서가 같은 타입에서 찾아 모양을 봅니다.
  *          함수는 문제를 `context.addError` · `addWarning` 으로 적기만 합니다 — 값을 고치거나 로드를 멈추지 않습니다.
- *          둘은 구성이 다르다. 타입 검증(`REFLECT( Validate )`)은 배포에서도 도는 읽기 검사다(고정 배치형 읽기 끝 · 세이브 읽기가 오류면 거절한다).
- *          프로퍼티 검증(`PROPERTY( Validate )`)은 에디터 데이터 검증이라 배포에는 등록되지 않는다(생성 코드의 `SW_DEV_ONLY_FUNCTION`, 언리얼 `IsDataValid` 가 `WITH_EDITOR` 인 것과 같다).
- *          한 타입에 둘을 두면 생성 오류다(`AstVisitor.ERRORPROPERTYValidateWithTypeValidate`). 결과 표(`Dev/ValidationIssueLog.h`)와 고침도 개발 전용이다.
+ *          `Validate` 는 프로퍼티든 타입이든 에디터 데이터 검증이다(로드 · 저장 · 인스펙터 · 맵 검사). 배포에는 등록되지 않는다(생성 코드의 `SW_DEV_ONLY_FUNCTION`,
+ *          언리얼 `UObject::IsDataValid` 가 `WITH_EDITOR` 인 것과 같다). `ReadValidate` 는 배포에서도 도는 읽기 검사다 — 고정 배치형 읽기 끝과 세이브 읽기가
+ *          오류면 거절한다(언리얼 `NetSerialize` 의 `bOutSuccess` 자리). 읽기 거절은 `validateRead` 로 읽기 검사만 돌려 두 구성이 같은 답을 낸다.
+ *          결과 표(`Dev/ValidationIssueLog.h`)와 고침도 개발 전용이다.
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -105,10 +106,16 @@ namespace sw
     {
         /**
          * @brief 인스턴스를 검증합니다 — 프로퍼티 검증(상속분 포함), 값으로 든 반사 구조체 · 그 시퀀스의 원소까지 내려가고, 타입 검증은 기반부터.
-         * @details 배포에는 프로퍼티 검증이 등록되지 않아 타입 검증만 돈다. 읽은 값을 거절하는 데 쓰는 쪽(`FightingMatch::serializeState`)은 그래서 타입 검증에만 기댄다.
+         * @details 에디터 데이터 검증이다(로드 · 저장 · 인스펙터 · 맵 검사). 배포에는 `Validate` 가 등록되지 않아 읽기 검사만 남으므로, 읽은 값을 거절하는 자리는 `validateRead` 를 쓴다.
          * @return 이번에 적힌 결과 수
          */
         static uint32 validateObject( const TypeInfo& type, const void* pInstance, ValidationContext& context );
+        /**
+         * @brief 읽기 검사(`REFLECT( ReadValidate )`)만 돌립니다 — 값으로 든 구조체 · 그 시퀀스 원소까지 내려가고 기반부터. 배포와 개발 구성이 같은 답을 낸다.
+         * @details 세이브 · 네트워크에서 읽은 값을 거절할지 정하는 자리가 쓴다(`FightingMatch::serializeState`, 고정 배치형 읽기 끝은 코덱이 같은 함수를 부른다).
+         * @return 이번에 적힌 결과 수
+         */
+        static uint32 validateRead( const TypeInfo& type, const void* pInstance, ValidationContext& context );
         /**
          * @brief 이 타입(기반 · 값으로 든 구조체 포함)에 검증 함수가 하나라도 있으면 true 입니다. 없으면 `validateObject` 를 부를 까닭이 없다.
          * @details 답은 `TypeInfo` 의 판정 비트다 — 등록 · 해제가 바뀐 타입과 자손만 다시 구한다(`TypeRegistry::relinkAffectedLocked` → `TypeInfo::computeDerivedFlags`).
@@ -116,5 +123,9 @@ namespace sw
         static bool hasValidator( const TypeInfo& type );
         /** @brief 위 판정을 지금 구합니다(캐시하지 않는다). 칸 타입을 재귀로 따라가므로 칸 타입의 상속 목록이 지어져 있어야 한다. 칸 타입은 @p resolver 로 찾는다(레지스트리 잠금 안에서도 부른다). */
         static bool computeHasValidator( const TypeInfo& type, const TypeResolver& resolver );
+        /** @brief 읽기 검사(값으로 든 구조체 포함)가 하나라도 있으면 true 입니다(`TypeInfo` 의 판정 비트). */
+        static bool hasReadValidator( const TypeInfo& type );
+        /** @brief 위 판정을 지금 구합니다(캐시하지 않는다, `computeHasValidator` 와 같은 조건). */
+        static bool computeHasReadValidator( const TypeInfo& type, const TypeResolver& resolver );
     };
 } // namespace sw

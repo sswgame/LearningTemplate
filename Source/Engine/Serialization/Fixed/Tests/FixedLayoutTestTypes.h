@@ -52,7 +52,7 @@ namespace sw
     };
 
     /** @brief 검증 함수가 있어 펼치지 않는 타입입니다 — 부모 표는 이 코덱을 의존으로 부른다. 체력 13 은 검증 실패다. */
-    REFLECT( Validate = validateHealth )
+    REFLECT( ReadValidate = validateHealth )
     struct FixedLayoutSampleStat
     {
         REFLECT_BODY();

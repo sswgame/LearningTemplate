@@ -400,7 +400,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 검증 샘플 — 프로퍼티 검증 · 값 구조체 · 그 시퀀스입니다(`ReflectionValidationTest`). 타입 검증은 관문 샘플(`ValidatedRecord`)이 든다(한 타입에 둘을 두면 생성 오류다). */
+    /** @brief 검증 샘플 — 프로퍼티 검증 · 값 구조체 · 그 시퀀스입니다(`ReflectionValidationTest`). 읽기 검사는 `ValidatedRecord` 가 든다. */
     REFLECT()
     struct ValidatedActor
     {
@@ -452,8 +452,8 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 타입 검증(읽기 관문) 샘플입니다(`ReflectionValidationTest`). 배포에서도 도는 검증이다. */
-    REFLECT( Validate = validateLimit )
+    /** @brief 읽기 검사(`REFLECT( ReadValidate )`) 샘플입니다(`ReflectionValidationTest`). 배포에서도 도는 검사다. */
+    REFLECT( ReadValidate = validateLimit )
     struct ValidatedRecord
     {
         REFLECT_BODY();
@@ -472,7 +472,7 @@ namespace sw
         }
     };
 
-    /** @brief 타입 검증도 상속된다. */
+    /** @brief 읽기 검사도 상속된다. */
     REFLECT()
     struct ValidatedRecordChild : public ValidatedRecord
     {

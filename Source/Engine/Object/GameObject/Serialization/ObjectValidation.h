@@ -5,7 +5,7 @@
  *          검증 함수가 없는 타입은 건너뜁니다(`ReflectionValidation::hasValidator` — 등록 때 한 번 구해 둔 답).
  *          에디터 데이터 검증이라 배포에는 없다(언리얼 `UObject::IsDataValid` · Map Check 가 `WITH_EDITOR` 인 것과 같다). 구현과 결과 표(`Dev/SceneValidationIssues.h`)는
  *          개발 전용 소스(`Serialization/Dev/`)에 있고 배포 구성은 짓지 않는다. 입구는 인라인 함수라 배포에서는 빈 함수다 — 버린 `if constexpr` 갈래가 쓰는 함수는
- *          정의가 없어도 된다(C++17 [basic.def.odr]). 배포에서도 도는 읽기 검사는 타입 검증(`REFLECT( Validate )`, `ReflectionValidation::validateObject`)이다.
+ *          정의가 없어도 된다(C++17 [basic.def.odr]). 배포에서도 도는 읽기 검사는 `REFLECT( ReadValidate )`(`ReflectionValidation::validateRead`)다.
  */
 #pragma once
 #include "Core/Foundation/BuildConfig.h"

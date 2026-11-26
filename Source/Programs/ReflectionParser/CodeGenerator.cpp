@@ -502,10 +502,16 @@ namespace sw
         if ( typeInfo.requiresComponentFactory() )
             listPart.push_back( CodeGeneratorInternal::makeCall( "withAddComponent",
                                                                  "[]( void* pOwner ) -> void* { return ::sw::GameObject::addComponentForReflection<Self>( pOwner ); }" ) );
+        // 타입 검증(`Validate`)은 에디터 데이터 검증이라 배포에는 등록하지 않는다(프로퍼티 검증과 같다). 읽기 검사(`ReadValidate`)는 배포에서도 돌고 고정 배치 코덱이 같은 함수를 부른다.
         if ( typeInfo._validate.empty() == false )
         {
-            emit.linef( "static constexpr ::sw::ReflectValidateFunction kValidate = %#;", makeValidateLambda( typeInfo._validate ) );
+            emit.linef( "static constexpr ::sw::ReflectValidateFunction kValidate = SW_DEV_ONLY_FUNCTION( ( %# ) );", makeValidateLambda( typeInfo._validate ) );
             listPart.push_back( CodeGeneratorInternal::makeCall( "withValidate", "kValidate" ) );
+        }
+        if ( typeInfo._readValidate.empty() == false )
+        {
+            emit.linef( "static constexpr ::sw::ReflectValidateFunction kReadValidate = %#;", makeValidateLambda( typeInfo._readValidate ) );
+            listPart.push_back( CodeGeneratorInternal::makeCall( "withReadValidate", "kReadValidate" ) );
         }
         const auto addTextTable = [&emit, &listPart]( const utf8* pTableName, const utf8* pWith, const vector<string>& listText )
         {
