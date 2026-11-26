@@ -44,7 +44,7 @@ namespace sw
         uint8         _bLastWet{ SW_FALSE };
     };
 
-    struct SurfaceFootstepRecord
+    struct SW_API SurfaceFootstepRecord
     {
         /// 종류 이름 → 그 종류의 기록. 두 발이 한 프레임에 다른 종류를 디디면 "마지막 발걸음" 은 나중 것 하나라, 종류마다의 반응은 여기서 본다.
         unordered_map<hashed_string, SurfaceFootstepKindNote> _mapKind{};

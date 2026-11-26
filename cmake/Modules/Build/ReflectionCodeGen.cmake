@@ -438,8 +438,9 @@ function(sw_add_reflection_step TARGET_NAME)
 	# 정의는 생성 때 정해지므로 생성기 식으로 둘째 응답 파일에 쓴다(내용이 같으면 file(GENERATE) 가 파일을 건드리지 않는다).
 	set(reflect_definition_file "${ARG_OUTPUT_DIR}/ReflectionParser.definitions.rsp")
 	set(target_definitions "$<FILTER:$<TARGET_PROPERTY:${TARGET_NAME},COMPILE_DEFINITIONS>,EXCLUDE,^$>")
-	file(GENERATE OUTPUT "${reflect_definition_file}" TARGET ${TARGET_NAME}
-		CONTENT "$<$<BOOL:${target_definitions}>:--target-arg\n-D$<JOIN:${target_definitions},\n--target-arg\n-D>\n>")
+	file(GENERATE OUTPUT "${reflect_definition_file}"
+		CONTENT "$<$<BOOL:${target_definitions}>:--target-arg\n-D$<JOIN:${target_definitions},\n--target-arg\n-D>\n>"
+		TARGET ${TARGET_NAME})
 
 	add_custom_command(
 		OUTPUT ${generated_files}
