@@ -774,10 +774,13 @@ namespace sw
             }
             case BindingKind::Shortcut:
             {
-                if ( areShortcutModifiersExact( binding, read ) == false )
+                // 포커스를 무시하는 맵에서 게임 눈과 장치 눈의 차이는 도구 포커스 가림뿐이다. Ctrl · Alt 조합은 글자가 아니라 그 가림을 걷는다(`setToolShortcutReader`).
+                const bool     bNonTextChord = ( binding._modifierMask & ( ModifierKey::Ctrl | ModifierKey::Alt ) ) != 0;
+                const SlotRead chordRead     = read == SlotRead::Game && _bReadsToolShortcut == SW_TRUE && _bKeyboardFocusIgnored == SW_TRUE && bNonTextChord ? SlotRead::Device : read;
+                if ( areShortcutModifiersExact( binding, chordRead ) == false )
                     return false;
 
-                if ( isSlotHeldThisFrame( binding._arrSlot[0], read ) )
+                if ( isSlotHeldThisFrame( binding._arrSlot[0], chordRead ) )
                 {
                     outValue = float2{ 1.0f, 0.0f };
                     return true;

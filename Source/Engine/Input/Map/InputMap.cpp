@@ -83,6 +83,7 @@ namespace sw
         , _bSuppressBaseActionOnChord{ SW_TRUE }
         , _bKeyboardFocusIgnored{ SW_FALSE }
         , _bReadsToolKeyboard{ SW_FALSE }
+        , _bReadsToolShortcut{ SW_FALSE }
         , _reservedFlags{ 0 }
         , _layerSubscriptions{ SW_DELEGATE_METHOD( SubscriptionList::ReleaseFunction, &InputMap::releaseLayer, this ) }
     {
