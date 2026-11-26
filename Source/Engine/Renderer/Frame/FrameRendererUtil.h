@@ -36,12 +36,6 @@ namespace sw
             static constexpr auto kGBufferNormal     = "GBufferNormal";
             static constexpr auto kGBufferMaterial   = "GBufferMaterial";
             static constexpr auto kGBufferCustomData = "GBufferCustomData";
-            static constexpr auto kLitColor          = "LitColor";
-            static constexpr auto kBloomColor        = "BloomColor";
-            static constexpr auto kBloomBright       = "BloomBright";
-            static constexpr auto kOutlineColor      = "OutlineColor";
-            static constexpr auto kTransparentColor  = "TransparentColor";
-            static constexpr auto kTAAColor          = "TAAColor";
         };
 
         static constexpr uint32 kDefaultTransientSize = 1280;
@@ -98,12 +92,13 @@ namespace sw
             string_view _commandLinePath; ///< `-gv_renderPipeline`
             string_view _deferredPath;    ///< 엔진 기본 디퍼드(`-gv_deferredShading` 일 때만)
             string_view _gamePath;        ///< 팩 설정(`PackEngineSettings::_renderPipeline`)
-            string_view _forwardPath;     ///< 엔진 기본 포워드
+            string_view _qualityPath;     ///< 엔진 렌더 설정(`RenderConfig::_renderPipeline` — 바탕 · 플랫폼 · 품질 단계 층을 얹은 값)
             bool        _bDeferred{ false };
         };
         /**
-         * @brief 그릴 파이프라인을 고릅니다. `-gv_renderPipeline` → `-gv_deferredShading` → 팩 설정 → 엔진 기본 포워드 순서입니다.
+         * @brief 그릴 파이프라인을 고릅니다. `-gv_renderPipeline` → `-gv_deferredShading` → 팩 설정 → 엔진 렌더 설정(플랫폼 · 품질 단계) 순서입니다.
          * @details 명령줄은 측정 · 검증 스위치라 게임 데이터보다 앞선다(유니티 Graphics 설정의 Render Pipeline Asset 을 실행 인자가 덮는 것과 같다).
+         *          엔진 렌더 설정은 필수 칸이라 비지 않는다 — 마지막 단계에 코드 기본값이 없다.
          */
         static string_view computePipelinePath( const PipelineChoice& choice )
         {
@@ -113,7 +108,7 @@ namespace sw
                 return choice._deferredPath;
             if ( choice._gamePath.empty() == false )
                 return choice._gamePath;
-            return choice._forwardPath;
+            return choice._qualityPath;
         }
 
         /**
@@ -330,11 +325,6 @@ namespace sw
         hashed_string _gbufferNormal{ FrameRendererUtil::Attachment::kGBufferNormal };
         hashed_string _gbufferMaterial{ FrameRendererUtil::Attachment::kGBufferMaterial };
         hashed_string _gbufferCustomData{ FrameRendererUtil::Attachment::kGBufferCustomData };
-        hashed_string _litColor{ FrameRendererUtil::Attachment::kLitColor };
-        hashed_string _bloomColor{ FrameRendererUtil::Attachment::kBloomColor };
-        hashed_string _outlineColor{ FrameRendererUtil::Attachment::kOutlineColor };
-        hashed_string _transparentColor{ FrameRendererUtil::Attachment::kTransparentColor };
-        hashed_string _taaColor{ FrameRendererUtil::Attachment::kTAAColor };
 
         /// 셰이더가 보는 이름입니다(어태치먼트 이름과 다를 수 있습니다. registerPassTexture 의 canonical 인자).
         /// 값은 RenderPassInputRole 의 이름과 같습니다. 역할로 바인딩하고 셰이더가 `g_<Role>Index` 로 읽습니다.

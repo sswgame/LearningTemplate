@@ -9,6 +9,8 @@
     "StandardOutput": "Process::writeStandardOutput(2026-11-26)",
     "NamedValueUtil": "NamedValue<T>::find — 표 찾기는 줄 형식의 정적 멤버다(2026-11-26)",
     "ContentFileSource": "IContentFileSource::getCurrent · bindCurrent — 콘텐츠 소스 자리는 그 인터페이스의 정적 멤버다(2026-11-26)",
+    "findPassDescByType": "RenderPipelineAsset::findUniquePass<종류>() — 종류 하나의 패스는 여러 번 두는 종류를 컴파일 때 거절하는 조회로만 찾는다(isRepeatablePassType)(2026-11-26)",
+    "kRepeatable": "isRepeatablePassType — 여러 번 두는 종류는 컴파일 때 보는 constexpr 판정이다(2026-11-26)",
     "shouldDrawMaterial": "MaterialPassFilter::shouldDraw — 머티리얼 거르기는 패스 서술이 덮는 값이다(RenderGraphPassDesc::_resolvedMaterialFilter, 표 기본값은 RenderPassKindInfo::getDefaultMaterialFilter)(2026-11-26)",
     "shouldFilterBatchesByMaterial": "MaterialPassFilter::isEmpty — 머티리얼 거르기는 패스 서술이 덮는 값이다(2026-11-26)",
     "UnitStatsComponent": "지움 — 체력 · 피해는 AbilitySystemComponent + CombatAttributeSet(2026-11-26)",

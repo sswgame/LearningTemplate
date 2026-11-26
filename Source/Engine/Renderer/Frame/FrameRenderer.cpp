@@ -10,6 +10,7 @@
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Asset/AssetManager.h"
+#include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Environment/Fog/FogSettings.h"
@@ -92,11 +93,10 @@ namespace sw
 
     RenderPipelineRequest RenderPipelineRequest::load( string_view path )
     {
+        // 공유 캐시가 경로마다 한 벌을 나눈다 — 받은 판을 그대로 쥔다(다시 읽힌 판은 `FrameRendererSubsystem` 이 다시 골라 넘긴다). 읽지 못하면 빈 판이고 이유는 로그에 있다.
         RenderPipelineRequest request{};
-        request._path                         = string( path );
-        shared_ptr<RenderPipelineAsset> asset = make_shared<RenderPipelineAsset>();
-        if ( asset->loadFromXMLFile( AssetID{ path } ) )
-            request._asset = std::move( asset );
+        request._path  = string( path );
+        request._asset = SharedAssetCache<RenderPipelineAsset>::acquire( path ).snapshot();
         return request;
     }
 
@@ -1272,7 +1272,8 @@ namespace sw
         const bool    bWet       = weather._x > 0.0f || weather._y > 0.0f || weather._z > 0.0f || packet._materialGlobals._rain._x > 0.0f;
         const bool    bParticles = VFXGPUSimulation::usesRainOcclusion( _state._gpuScene.getParticleBatches(), _state._gpuScene.getVFXMeshEmitters() );
         // 그림자 PSO 로 그린다(깊이만 쓰는 같은 셰이더 · 머티리얼 변형) — 깊이 형식도 그 PSO 의 것이다. 그림자 패스가 없는 파이프라인(2D)은 맵이 없다.
-        const RHIPipelineStateHandle shadowPSO   = _psoManager.getEnginePSO( RenderPassKind::Shadow );
+        const RenderGraphPassDesc*   pShadowPass = nullptr;
+        const RHIPipelineStateHandle shadowPSO   = _psoManager.getDirectionalShadowPSO( pShadowPass );
         const RHIFormat              depthFormat = shadowPSO != 0 ? _psoManager.findDepthStencilFormat( shadowPSO ) : RHIFormat::Unknown;
         _state._rainOcclusion.beginFrame( _pDevice, packet._rainOcclusion, packet._cameraPos, depthFormat, bWet || bParticles, bParticles );
     }

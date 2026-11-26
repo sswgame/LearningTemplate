@@ -37,6 +37,11 @@ namespace sw
          *          요청했는데 원본이 닿지 않아 버리는" 바이너리만 경고하는 데 쓴다. 닿지 않은 개발 파이프라인(`deferredpipeline_gi.xml`)의 셰이더를 버리는 것은 정상이다.
          */
         vector<vector<string>> _listOrigin;
+        /**
+         * @brief 이 바이너리가 읽어도 되는 엔진 역할 텍스처(`g_<Role>Index`)의 비트 집합입니다(비트 번호 = 렌더 패스 입력 역할 값, `RenderPassKindInfo::getReadableRoleMask`).
+         * @details 요청을 낸 패스 종류들의 입력 계약을 모두 만족해야 하므로 합칠 때 교집합이다. 모두 켜져 있으면(머티리얼 · 계약 없는 종류) 보지 않는다. 쿠커가 리플렉션과 대조해 밖의 역할을 읽으면 쿠킹 오류다.
+         */
+        uint64 _readableRoleMask{ ~uint64{ 0 } };
     };
 } // namespace sw
 

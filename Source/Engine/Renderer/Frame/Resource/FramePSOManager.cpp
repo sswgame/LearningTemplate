@@ -250,21 +250,16 @@ namespace sw
          */
         bool validatePassInputContract( RenderPassKind passType, const ShaderBindingLayout& layout )
         {
-            const RenderPassInputSignature* const pContract = findRenderPassInputSignature( passType );
-            if ( pContract == nullptr )
+            const uint64 readableRoleMask = getRenderPassKindInfo( passType ).getReadableRoleMask();
+            if ( readableRoleMask == RenderPassKindInfo::kAnyRoleMask )
                 return true;
             bool bInside = true;
             for ( const ShaderBindingSlot& slot : layout.getSlots() )
             {
                 for ( const ShaderVariableInfo& member : slot._listCbMember )
                 {
-                    const string_view name       = member._name;
-                    const bool        bRoleIndex = member._usage == ShaderVariableUsage::Used && name.size() > 7 && name.substr( 0, 2 ) == "g_" && name.substr( name.size() - 5 ) == "Index";
-                    if ( bRoleIndex == false )
-                        continue;
-                    RenderPassInputRole role  = RenderPassInputRole::Invalid;
-                    const bool          bRole = tryParseRenderPassInputRole( name.substr( 2, name.size() - 7 ), role );
-                    if ( bRole == false || pContract->hasRole( role ) || getRenderPassKindInfo( passType )._executionBoundRole == role )
+                    RenderPassInputRole role = RenderPassInputRole::Invalid;
+                    if ( member._usage != ShaderVariableUsage::Used || tryParseRoleIndexVariable( member._name, role ) == false || ( ( readableRoleMask >> static_cast<uint32>( role ) ) & 1u ) != 0 )
                         continue;
                     SW_LOG_ERROR_ID( "FramePSOManager.PassReadsRoleOutsideContract",
                                      "Pass %# reads engine role '%#' (%#) but its input contract does not have it - the graph binds no texture there and the shader reads an invalid index; add the role to the contract (RenderPassKindInfo) and the pipeline inputs",
@@ -328,17 +323,17 @@ namespace sw
             const bool bGraphics = info.hasFlag( RenderPassTraitFlag::kCompute ) == false;
             // 파이프라인이 선언한 그래픽스 종류는 아래 패스 단계가 패스마다 만든다(열쇠 = 패스 이름). 종류 하나에 PSO 하나면 같은 종류 둘째 패스의 서술이 버려진다.
             // 셰이더가 파이프라인의 퍼뮤테이션을 요구하는 패스(kRequiresPassDesc)는 그래서 이 단계에서 늘 빠진다(서술이 없으면 실행도 없다).
-            if ( bGraphics && findPassDescByType( passType ) != nullptr )
+            if ( bGraphics && _pipeline.hasPass( passType ) )
                 continue;
-            if ( info.hasFlag( RenderPassTraitFlag::kRequiresPassDesc ) && findPassDescByType( passType ) == nullptr )
+            if ( info.hasFlag( RenderPassTraitFlag::kRequiresPassDesc ) && _pipeline.hasPass( passType ) == false )
                 continue;
             // 프레임 패스(컬링 · 그리드 · 스키닝 등)는 파이프라인이 `_listFramePass` 에 선언할 때만 돈다 — 선언이 없으면 PSO 도 만들지 않는다.
             // 실행 쪽은 PSO 가 아니라 선언으로 가른다(`RenderPipelineAsset::hasFramePass`) — 미리보기 렌더러는 주 렌더러의 저장소를 함께 써 PSO 가 있어도 선언이 없을 수 있다.
             if ( isFramePassType( passType ) && _pipeline.hasFramePass( passType ) == false )
                 continue;
             // 컬러 포맷을 정할 근거(표의 고정 포맷 · 대신 그리는 패스의 출력 선언)가 없는 그래픽스 슬롯은 이 파이프라인에서 실행되지 않는다. RGBA8 로 짐작해 만들지 않는다.
-            const RenderPassKind sourceType = info._targetSourceType != RenderPassKind::Invalid ? info._targetSourceType : passType;
-            if ( bGraphics && hasRenderTargetFormatSource( info, findPassDescByType( sourceType ) ) == false )
+            const RenderGraphPassDesc* pTargetDesc = info._targetSourceType != RenderPassKind::Invalid ? _pipeline.findUniquePass( info._targetSourceType ) : nullptr;
+            if ( bGraphics && hasRenderTargetFormatSource( info, pTargetDesc ) == false )
                 continue;
 
             if ( bGraphics )
@@ -448,7 +443,7 @@ namespace sw
             RHIPipelineStateDesc _desc{};
         };
         vector<DeferredTilePSOJob> listTileJob;
-        const RenderGraphPassDesc* pLightingDesc = findPassDescByType( RenderPassKind::Lighting );
+        const RenderGraphPassDesc* pLightingDesc = _pipeline.findUniquePass<RenderPassKind::Lighting>();
         const bool                 bTileCapable  = pLightingDesc != nullptr && _pDevice->supportsNativeBindlessSampling() && caps._bGPUCulling != SW_FALSE;
         for ( uint32 tileClass = 0; tileClass < kDeferredTileClassCount; ++tileClass )
         {
@@ -607,10 +602,21 @@ namespace sw
         if ( isFramePassType( passType ) && _pipeline.hasFramePass( passType ) == false )
             return 0;
         // 이 파이프라인이 선언한 그래픽스 종류는 패스 PSO 다 — 함께 쓰는 저장소에 다른 렌더러가 표로 만든 같은 종류의 PSO 가 있어도 자기 패스의 것을 준다.
-        const RenderGraphPassDesc* pPass = isViewPassType( passType ) ? findPassDescByType( passType ) : nullptr;
+        // 여러 번 둘 수 있는 종류는 "그 종류의 패스" 가 없다 — 표의 엔진 슬롯(그 종류를 선언하지 않은 파이프라인)만 답한다. 패스는 `getPassPSO` 로 고른다.
+        if ( isRepeatablePassType( passType ) && _pipeline.hasPass( passType ) )
+            return 0;
+        const bool                 bUniqueViewType = isViewPassType( passType ) && isRepeatablePassType( passType ) == false;
+        const RenderGraphPassDesc* pPass           = bUniqueViewType ? _pipeline.findUniquePass( passType ) : nullptr;
         if ( pPass != nullptr && getRenderPassKindInfo( passType ).hasFlag( RenderPassTraitFlag::kCompute ) == false )
             return getPassPSO( *pPass );
         return _pCache->findEnginePSO( passType );
+    }
+
+    RHIPipelineStateHandle FramePSOManager::getDirectionalShadowPSO( const RenderGraphPassDesc*& outPass ) const
+    {
+        // 그림자는 여러 번 둘 수 있는 종류다 — "첫 그림자 패스" 가 아니라 깊이 역할로 방향광 패스를 고른다. 없으면(2D) 표의 엔진 슬롯이다.
+        outPass = _pipeline.findUniquePassByDepthRole( RenderPassKind::Shadow, static_cast<uint8>( RenderPassInputRole::ShadowMap ) );
+        return outPass != nullptr ? getPassPSO( *outPass ) : getEnginePSO( RenderPassKind::Shadow );
     }
 
     RHIPipelineStateHandle FramePSOManager::getPassPSO( const RenderGraphPassDesc& pass ) const
@@ -678,17 +684,6 @@ namespace sw
         // gv_rhiBackend(전역) 대신 이 관리자가 실제로 물려 있는 디바이스의 백엔드를 넘긴다.
         // 한 프로세스에 여러 IRHIDevice 가 동시에 있으면 전역값이 어긋날 수 있다.
         _pCache->registerLayout( pso, desc, _pDevice->getShaderTargetFormat() );
-    }
-
-    const RenderGraphPassDesc* FramePSOManager::findPassDescByType( RenderPassKind passType ) const
-    {
-        // 값만 비교한다 — 표기는 읽을 때 enum 으로 검사했다.
-        for ( const RenderGraphPassDesc& pass : _pipeline.getGraphPass() )
-        {
-            if ( pass._type == passType )
-                return &pass;
-        }
-        return nullptr;
     }
 
     void FramePSOManager::ensureMaterialFallbackBuffers()
@@ -833,7 +828,7 @@ namespace sw
                 job._outputFormat              = format;
                 const RHIFormat arrRTVFormat[] = { format };
                 // 주 출력에 그리는 PSO 다 — 없으면 화면에 아무것도 낼 수 없고, 다른 PSO · 복사로 대신하지 않으므로 여기서 멈춘다.
-                if ( makePassPSODesc( passType, findPassDescByType( passType ), arrRTVFormat, job._desc ) == false )
+                if ( makePassPSODesc( passType, _pipeline.findUniquePass( passType ), arrRTVFormat, job._desc ) == false )
                     reportFatalError( "Output pass %# could not create its PSO for target format %# - nothing can be presented", passType, static_cast<uint32>( format ) );
                 inoutListJob.push_back( std::move( job ) );
             }
@@ -905,7 +900,7 @@ namespace sw
         const RenderPassKindInfo& info = getRenderPassKindInfo( passType );
         // 내부 슬롯은 대신 그리는 파이프라인 패스의 출력 선언으로 포맷 · 화면 속도 쓰기를 정한다(`_targetSourceType`).
         const RenderGraphPassDesc* pTargetDesc =
-            ( pPassDesc == nullptr && info._targetSourceType != RenderPassKind::Invalid ) ? findPassDescByType( info._targetSourceType ) : pPassDesc;
+            ( pPassDesc == nullptr && info._targetSourceType != RenderPassKind::Invalid ) ? _pipeline.findUniquePass( info._targetSourceType ) : pPassDesc;
         const RenderPassShaderSelection shader = selectRenderPassShader( passType, pPassDesc, pTargetDesc, engine::getSubsystem<EngineDefaultAssets>() );
 
         RHIPipelineStateDesc& desc = outDesc;

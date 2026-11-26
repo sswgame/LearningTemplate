@@ -842,7 +842,7 @@ namespace sw
 
         // 컴퓨트 구현(`_implementation="Compute"`)은 네이티브 bindless 에서만 돈다 — PSO 와 실행이 같은 판정을 본다(`FramePSOManager::createPassPSOs` · `executeGenericFullscreenPass`).
         const bool                 bNativeBindless = _pDevice != nullptr && _pDevice->supportsNativeBindlessSampling();
-        const RenderGraphPassDesc* pTonemapPass    = FrameAutoExposure::findTonemapPass( _pipelineResource );
+        const RenderGraphPassDesc* pTonemapPass    = _pipelineResource.findTonemapPass();
         for ( uint32 index = 0; index < passCount; ++index )
         {
             addModulePassesAt( index );
@@ -969,8 +969,8 @@ namespace sw
         {
             // 나누지 않는 것: 깊이(장면 깊이는 다음 프레임의 깊이 히스토리가 읽는다 · 그림자 맵), 프레임을 넘어 내용을 잇는 첨부(`Load`), 그래프가 모르는 첨부.
             const bool bDepth = FrameRendererUtil::isDepthFormat( attachment._format );
-            if ( bDepth || attachment._loadOp == RHIRenderPassLoadOp::Load )
-                continue;
+            if ( bDepth || attachment._loadOp == RHIRenderPassLoadOp::Load || attachment.isFixedSize() )
+                continue; // 고정 크기는 풀 크기에서 나온 서술 키(나눗수)로 견줄 수 없다
             const hashed_string                name( attachment._name.c_str() );
             const RenderGraphResourceLifetime* pLife = graph.findResourceLifetime( name );
             if ( pLife == nullptr )

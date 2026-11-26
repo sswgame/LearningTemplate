@@ -6,13 +6,17 @@
 #include "Core/File/FileUtil.h"
 #include "Core/TestFramework/TestFramework.h"
 
+#include "Engine/Asset/Cache/SharedAssetRef.h"
+#include "Engine/Config/EngineConfig.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetPaths.h"
+#include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/RHI/RHIDescriptors.h"
 #include "Engine/Graphics/RHI/RHIPipelineStateDesc.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Renderer/Frame/Resource/FramePSOManager.h"
+#include "Engine/Renderer/Pipeline/RenderPassInputSignature.h"
 #include "Engine/Renderer/Pipeline/RenderPassKindInfo.h"
 #include "Engine/Renderer/Pipeline/RenderPipelineAsset.h"
 #include "Engine/Serialization/Format/ReflectedXMLFile.h"
@@ -474,7 +478,7 @@ SW_TEST_CASE( RenderPipelineAssetTest, PermutationNameIsDefinedOnce )
 
 /**
  * @brief [RenderPipelineAssetTest] 같은 종류의 뷰 패스는 한 번이다 — 표가 여러 번 둘 수 있다고 적은 종류(그림자 · Compute · 후처리 머티리얼)만 빼고. 패스 이름은 로드 때 intern 된다
- * @details 변이: 검사를 지우면 둘째 ForwardOpaque 가 읽혀 마지막 단언이 진다. 그림자에 `kRepeatable` 이 없으면 엔진 포워드 파이프라인(방향광 · 점광 그림자 둘)이 읽히지 않아 첫 단언이 진다.
+ * @details 변이: 검사를 지우면 둘째 ForwardOpaque 가 읽혀 마지막 단언이 진다. 그림자가 `isRepeatablePassType` 이 아니면 엔진 포워드 파이프라인(방향광 · 점광 그림자 둘)이 읽히지 않아 첫 단언이 진다.
  */
 SW_TEST_CASE( RenderPipelineAssetTest, ViewPassTypeIsDeclaredOnce )
 {
@@ -540,6 +544,100 @@ SW_TEST_CASE( RenderPipelineAssetTest, PassDescriptionOverridesTheMaterialFilter
     RenderPipelineAsset rejected;
     SW_EXPECT_FALSE( RenderPipelineTestUtil::load( rejected, RenderPipelineTestUtil::makeXML( invalidFilter.view() ) ) );
     SW_EXPECT_FALSE( RenderPipelineTestUtil::load( rejected, ComputePassTestUtil::makeXML( ComputePassTestUtil::withShader( "_requiredMaterialDefine=\"MATERIAL_X\"" ), "<item>A</item>", "<item>B</item>" ) ) );
+}
+
+/**
+ * @brief [RenderPipelineAssetTest] 종류 하나의 패스 조회는 여러 번 두는 종류를 거절한다 — 그림자는 깊이 역할로, 나머지는 종류로 하나를 찾는다(컴파일 때는 `findUniquePass<종류>` 의 static_assert)
+ * @details 변이: 실행 중 조회가 여러 번 두는 종류를 받으면 첫 그림자 패스가 나와 첫 단언이 진다. 역할 조회가 종류만 보면 점광 그림자와 겹쳐 nullptr 이 되어 둘째 묶음이 진다.
+ */
+SW_TEST_CASE( RenderPipelineAssetTest, UniquePassLookupRejectsRepeatableTypes )
+{
+    RenderPipelineAsset forward;
+    SW_REQUIRE_TRUE( forward.loadFromXMLFile( AssetID{ "engine/pipeline/forwardpipeline.xml" } ) );
+    SW_EXPECT_LOG( "RenderPipelineAsset.UniquePassRepeatableType" );
+    SW_EXPECT_TRUE( forward.findUniquePass( RenderPassKind::Shadow ) == nullptr );
+    SW_EXPECT_TRUE( forward.hasPass( RenderPassKind::Shadow ) );
+
+    const RenderGraphPassDesc* pCascade = forward.findUniquePassByDepthRole( RenderPassKind::Shadow, static_cast<uint8>( RenderPassInputRole::ShadowMap ) );
+    const RenderGraphPassDesc* pLocal   = forward.findUniquePassByDepthRole( RenderPassKind::Shadow, static_cast<uint8>( RenderPassInputRole::LocalShadowMap ) );
+    SW_REQUIRE_TRUE( pCascade != nullptr && pLocal != nullptr );
+    SW_EXPECT_EQUAL( string( "Shadow" ), pCascade->_name );
+    SW_EXPECT_EQUAL( string( "LocalShadow" ), pLocal->_name );
+
+    const RenderGraphPassDesc* pTonemap = forward.findTonemapPass();
+    SW_REQUIRE_TRUE( pTonemap != nullptr );
+    SW_EXPECT_TRUE( pTonemap->_type == RenderPassKind::Present ); // 후처리 체인이 톤맵한다
+    SW_EXPECT_TRUE( forward.findUniquePass<RenderPassKind::Transparent>() != nullptr );
+    SW_EXPECT_TRUE( forward.findUniquePass<RenderPassKind::Lighting>() == nullptr ); // 포워드에는 없다
+}
+
+/**
+ * @brief [RenderPipelineAssetTest] 파이프라인 고르기는 명령줄 → 디퍼드 스위치 → 팩 설정 → 엔진 렌더 설정(플랫폼 · 품질 단계) 차례다. 엔진 렌더 설정은 비지 않는다(필수)
+ * @details 변이: 마지막 단계를 코드 기본값으로 되돌리면 품질 단계의 경로가 나오지 않아 셋째 단언이 진다. 파이프라인 폴더의 XML 이 공유 캐시 종류가 아니면 마지막 묶음이 진다(핫 리로드가 다시 읽을 캐시가 없다).
+ */
+SW_TEST_CASE( RenderPipelineAssetTest, PipelineChoiceEndsAtTheQualityTier )
+{
+    FrameRendererUtil::PipelineChoice choice{};
+    choice._qualityPath = "quality.xml";
+    choice._gamePath    = "game.xml";
+    SW_EXPECT_EQUAL( string_view( "game.xml" ), FrameRendererUtil::computePipelinePath( choice ) );
+    choice._gamePath = {};
+    SW_EXPECT_EQUAL( string_view( "quality.xml" ), FrameRendererUtil::computePipelinePath( choice ) );
+    choice._deferredPath = "deferred.xml";
+    choice._bDeferred    = true;
+    SW_EXPECT_EQUAL( string_view( "deferred.xml" ), FrameRendererUtil::computePipelinePath( choice ) );
+    choice._commandLinePath = "command.xml";
+    SW_EXPECT_EQUAL( string_view( "command.xml" ), FrameRendererUtil::computePipelinePath( choice ) );
+    SW_EXPECT_TRUE( engine::getSubsystem<EngineConfig>()._render._renderPipeline.isSet() );
+
+    vector<const AssetTypeDef*> listType;
+    AssetTypeRegistry::collectPathMatches( "engine/pipeline/forwardpipeline.xml", listType );
+    SW_REQUIRE_EQUAL( size_t( 1 ), listType.size() );
+    SW_EXPECT_EQUAL( RenderPipelineAsset::kAssetType._name, listType[0]->_name );
+    const shared_ptr<const RenderPipelineAsset> pCached = SharedAssetCache<RenderPipelineAsset>::acquire( "engine/pipeline/forwardpipeline.xml" ).snapshot();
+    SW_REQUIRE_TRUE( pCached != nullptr );
+    SW_EXPECT_EQUAL( string( "ForwardPipeline" ), pCached->getDesc()._name );
+}
+
+/**
+ * @brief [RenderPipelineAssetTest] 첨부의 고정 크기는 가로 · 세로를 함께 적고 배율 규칙과 섞지 않는다. 기록(`_bHistory`)은 시간 누적 패스의 출력만 적고, 그 출력은 꼭 적는다
+ * @details 변이: 고정 크기 검사를 지우면 한 변만 적은 첨부가 읽혀 둘째 묶음이 진다. 기록 검사를 지우면 컴퓨트 출력의 기록 선언이 읽혀(실행이 읽지 않는 값) 마지막 단언이 진다.
+ */
+SW_TEST_CASE( RenderPipelineAssetTest, AttachmentSizeAndHistoryFollowTheRules )
+{
+    const auto makeXML = []( string_view outputAttributes )
+    {
+        StringBuilder<constant::buffer::kMax1024> xml;
+        xml.append( "<RenderPipelineDesc _name=\"Test\"><_listAttachment>"
+                    "<RenderPassAttachment _name=\"A\" _format=\"R16G16B16A16_FLOAT\" _clearColor=\"0,0,0,1\" _loadOp=\"DontCare\"/>" );
+        xml.appendFormat( "<RenderPassAttachment _name=\"Lut\" _format=\"R16G16B16A16_FLOAT\" _clearColor=\"0,0,0,1\" _loadOp=\"DontCare\" %#/>", outputAttributes );
+        xml.appendFormat( "</_listAttachment><_listPass><RenderGraphPassDesc _name=\"Pass\" _type=\"Compute\" %#><_listInput><item>A</item></_listInput><_listOutput><item>Lut</item></_listOutput>"
+                          "</RenderGraphPassDesc></_listPass></RenderPipelineDesc>",
+                          ComputePassTestUtil::withShader() );
+        return string( xml.view() );
+    };
+    RenderPipelineAsset fixed;
+    SW_REQUIRE_TRUE( RenderPipelineTestUtil::load( fixed, makeXML( "_width=\"32\" _height=\"16\"" ) ) );
+    const RenderPassAttachment& lut = fixed.getDesc()._listAttachment[1];
+    SW_EXPECT_TRUE( lut.isFixedSize() );
+    SW_EXPECT_EQUAL( 32u, lut._width );
+    SW_EXPECT_EQUAL( 16u, lut._height );
+
+    RenderPipelineAsset deferred;
+    SW_REQUIRE_TRUE( deferred.loadFromXMLFile( AssetID{ "engine/pipeline/deferredpipeline.xml" } ) );
+    const RenderPassAttachment* pTAA = VectorUtil::findIf( deferred.getDesc()._listAttachment, []( const RenderPassAttachment& attachment )
+    { return attachment._name == "TAAColor"; } );
+    SW_REQUIRE_TRUE( pTAA != nullptr );
+    SW_EXPECT_TRUE( pTAA->_bHistory != SW_FALSE );
+
+    SW_EXPECT_LOG( "RenderPipelineAsset.AttachmentFixedSizeInvalid" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.AttachmentHistoryUnread" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.PipelineValidationFoundIssues" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.PipelineIssueNotLoaded" );
+    RenderPipelineAsset rejected;
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( rejected, makeXML( "_width=\"32\"" ) ) );
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( rejected, makeXML( "_width=\"32\" _height=\"32\" _resolutionDivisor=\"2\"" ) ) );
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( rejected, makeXML( "_bHistory=\"true\"" ) ) );
 }
 
 /** @brief [RenderPipelineAssetTest] 쿠킹이 펼친 글은 원본을 합쳐 읽은 것과 같은 값이고, 부모를 가리키지 않는다(팩 쿠커의 펼치기와 같은 함수) */

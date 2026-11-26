@@ -342,6 +342,17 @@ namespace sw
     }
 
     /**
+     * @brief 한 파이프라인에 이 종류의 뷰 패스를 여럿 둘 수 있으면 true 입니다 — 실행과 PSO 가 종류가 아니라 패스 서술로 갈린다.
+     * @details 그림자는 깊이 첨부의 역할이 타일을 고르고(방향광 · 점광), Compute 는 셰이더가 패스마다 다르고, 후처리 머티리얼은 블렌더블 자리가 패스마다 다르다.
+     *          나머지 종류를 두 번 선언하면 로드 오류다(`RenderPipelineAsset::validate`). 종류 하나의 패스를 찾는 조회(`RenderPipelineAsset::findUniquePass`)는 이 종류를 컴파일 때 거절한다 —
+     *          "그 종류의 첫 패스" 는 둘째 패스의 서술을 조용히 버린다. 언리얼 RDG · 유니티 Render Graph 도 패스는 인스턴스 단위다.
+     */
+    constexpr bool isRepeatablePassType( RenderPassKind type )
+    {
+        return type == RenderPassKind::Shadow || type == RenderPassKind::Compute || type == RenderPassKind::PostProcessMaterial;
+    }
+
+    /**
      * @brief 렌더 해상도 색을 출력 해상도로 넘기는(시간 업스케일) 패스 종류인지 반환합니다 — TAA 하나다(언리얼 TAAU · TSR 자리).
      * @details 해상도 공간 검증(`RenderPipelineAsset::validate`)과 업스케일 상수(`FramePassExecutor::executeTAAPass`)가 같은 질문을 이 함수로 한다.
      */
@@ -392,6 +403,13 @@ namespace sw
     struct RenderPassAttachment
     {
         REFLECT_BODY();
+        /** @brief 기록 없는 첨부로 만듭니다(깃발 칸은 비트필드라 생성자가 정한다). */
+        RenderPassAttachment() noexcept
+            : _bHistory{ SW_FALSE }
+            , _reservedFlags{ 0 }
+        {
+        }
+
         PROPERTY( Required, InheritKey )
         string _name;
 
@@ -447,6 +465,28 @@ namespace sw
          */
         PROPERTY()
         RenderResolutionSpace _resolutionSpace{ RenderResolutionSpace::Render };
+
+        /**
+         * @brief 고정 픽셀 크기입니다(가로 · 세로를 함께 적는다). 0 이면 프레임 크기를 `_resolutionDivisor` 로 나눈 크기다.
+         * @details 화면과 상관없는 타깃(LUT · 작은 분석 타깃)용이다(언리얼 `FRDGTextureDesc::Extent` · 유니티 `TextureDesc` 의 고정 크기). 고정 크기 첨부는 나눗수 · 해상도 공간을 받지 않고
+         *          (렌더 배율 · 동적 해상도가 바꾸지 않는다) 앨리어싱에 들지 않는다. 그림자 맵(ShadowMap · LocalShadowMap 역할)은 크기를 렌더 설정이 정해 적을 수 없다(검증).
+         */
+        PROPERTY()
+        uint32 _width{ 0 };
+
+        PROPERTY()
+        uint32 _height{ 0 };
+
+        /**
+         * @brief 프레임을 넘어 지난 프레임 내용의 복사본(기록)을 뷰마다 둔다(언리얼 `FTemporalAAHistory` · 유니티 `RTHandle` 기록 자리). 시간 누적 패스(TAA · VolumetricClouds)의 출력은 이 칸을 적어야 한다(검증).
+         * @details 기록은 출력과 같은 크기 · 형식의 텍스처 하나를 더 잡는다 — 메모리 예산에 든다는 것을 데이터가 말한다. 기록을 읽는 실행이 그 두 종류뿐이라 다른 첨부에는 적을 수 없다(검증).
+         */
+        PROPERTY()
+        uint8                  _bHistory      : 1;
+        [[maybe_unused]] uint8 _reservedFlags : 7;
+
+        /** @brief 고정 크기 첨부(`_width` · `_height`)면 true 입니다. */
+        [[nodiscard]] bool isFixedSize() const { return _width != 0 || _height != 0; }
     };
 } // namespace sw
 

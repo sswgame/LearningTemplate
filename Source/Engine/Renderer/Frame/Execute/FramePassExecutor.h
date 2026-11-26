@@ -239,7 +239,7 @@ namespace sw
         /**
          * @brief 파이프라인 패스 @p pass 의 종류가 스스로 쓰는 엔진 자원 접근(`ViewGraphResource` — 자동 노출 · FSR 중간 RT · 그림자 캐시 층 · 후처리 사본 · 깊이 사본 · HZB · 컬링 버퍼)을
          *        @p inoutListAccess 에 더합니다. XML 은 첨부만 적고 이 자원은 종류가 선언한다(언리얼 RDG 패스 파라미터가 패스 형식에 박힌 자원 자리).
-         * @param bTonemapPass @p pass 가 톤맵하는 패스(`FrameAutoExposure::findTonemapPass`)인지입니다 — 자동 노출 기록을 읽고 쓴다.
+         * @param bTonemapPass @p pass 가 톤맵하는 패스(`RenderPipelineAsset::findTonemapPass`)인지입니다 — 자동 노출 기록을 읽고 쓴다.
          */
         static void appendEngineResourceAccesses( const RenderGraphPassDesc& pass, bool bTonemapPass, vector<RenderGraphResourceAccess>& inoutListAccess );
         /** @brief 프레임 패스를 프레임 그래프 노드로 묶고 컴파일합니다(`bindPassCallbacks` 의 뒷부분). 프레임 패스가 없으면 빈 그래프이고 true 입니다. */
@@ -405,8 +405,6 @@ namespace sw
         RHITextureHandle getScreenTarget() const;
         /** @brief 이 패스가 Swapchain 을 쓰는 마지막 패스면 true 입니다. 스크린샷 캡처를 백버퍼로 복사하는 일을 이 패스 끝에서 합니다. */
         bool isLastSwapchainWriter( const RenderGraphPassDesc& passDesc ) const;
-        /** @brief 패스 타입으로 파이프라인의 패스 서술을 찾습니다. */
-        const RenderGraphPassDesc* findPassDescByType( RenderPassKind passType ) const;
 
         // ------------------------------------------------------------------------------
         // 드로우

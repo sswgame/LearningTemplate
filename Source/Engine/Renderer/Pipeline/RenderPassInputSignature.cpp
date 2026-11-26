@@ -82,6 +82,15 @@ namespace sw
         return false;
     }
 
+    bool tryParseRoleIndexVariable( string_view variableName, RenderPassInputRole& outRole )
+    {
+        static constexpr string_view kPrefix = "g_";
+        static constexpr string_view kSuffix = "Index";
+        const bool                   bShaped = variableName.size() > kPrefix.size() + kSuffix.size() && variableName.substr( 0, kPrefix.size() ) == kPrefix &&
+                             variableName.substr( variableName.size() - kSuffix.size() ) == kSuffix;
+        return bShaped && tryParseRenderPassInputRole( variableName.substr( kPrefix.size(), variableName.size() - kPrefix.size() - kSuffix.size() ), outRole );
+    }
+
     RenderPassInputRole resolveRenderPassInputRole( string_view attachmentName, bool bDepthFormat, string_view declaredRole )
     {
         RenderPassInputRole declared{ RenderPassInputRole::Invalid };

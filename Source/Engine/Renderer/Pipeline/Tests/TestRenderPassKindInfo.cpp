@@ -23,3 +23,24 @@ SW_TEST_CASE( RenderPassKindInfoTest, BlendMatchesHowThePassDraws )
     SW_EXPECT_TRUE( getRenderPassKindInfo( RenderPassKind::DisplayEncodeScRGB )._blend == RenderPassBlend::None );
     SW_EXPECT_TRUE( getRenderPassKindInfo( RenderPassKind::Present )._blend == RenderPassBlend::None );
 }
+
+/**
+ * @brief [RenderPassKindInfoTest] 패스 셰이더가 읽어도 되는 역할은 입력 계약(필수 · 선택)과 실행이 거는 역할이다 — 쿠커 · 런타임 PSO 검사가 이 값과 `g_<Role>Index` 해석 하나를 본다
+ * @details 변이: 실행이 거는 역할(TAA 기록의 GBufferAlbedo 칸)을 빼면 TAA 셰이더가 계약 밖을 읽는다고 쿠킹이 멈춰 둘째 단언이 진다. 이름 해석이 앞뒤 꼴을 보지 않으면 마지막 두 단언이 진다.
+ */
+SW_TEST_CASE( RenderPassKindInfoTest, ReadableRolesComeFromTheContract )
+{
+    const auto hasRole = []( uint64 mask, RenderPassInputRole role )
+    { return ( ( mask >> static_cast<uint32>( role ) ) & 1u ) != 0; };
+    const uint64 taa = getRenderPassKindInfo( RenderPassKind::TAA ).getReadableRoleMask();
+    SW_EXPECT_TRUE( hasRole( taa, RenderPassInputRole::SourceColor ) );
+    SW_EXPECT_TRUE( hasRole( taa, RenderPassInputRole::GBufferAlbedo ) );
+    SW_EXPECT_FALSE( hasRole( taa, RenderPassInputRole::Distortion ) );
+    SW_EXPECT_EQUAL( RenderPassKindInfo::kAnyRoleMask, getRenderPassKindInfo( RenderPassKind::Shadow ).getReadableRoleMask() ); // 계약 없는 메시 패스는 보지 않는다
+
+    RenderPassInputRole role = RenderPassInputRole::Invalid;
+    SW_EXPECT_TRUE( tryParseRoleIndexVariable( "g_SceneDepthIndex", role ) );
+    SW_EXPECT_TRUE( role == RenderPassInputRole::SceneDepth );
+    SW_EXPECT_FALSE( tryParseRoleIndexVariable( "g_PlasmaIndex", role ) );
+    SW_EXPECT_FALSE( tryParseRoleIndexVariable( "SceneDepthIndex", role ) );
+}

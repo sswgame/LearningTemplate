@@ -7,6 +7,7 @@
 
 #include "Engine/Asset/AssetFormat.h"
 #include "Engine/Asset/AssetManager.h"
+#include "Engine/Asset/Cache/SharedAssetCacheDefinition.h"
 #include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/Material/RenderBlendPreset.h"
 #include "Engine/Graphics/RHI/RHIFormatInfo.h"
@@ -60,6 +61,57 @@ namespace sw
                 return true;
         }
         return false;
+    }
+
+    bool RenderPipelineAsset::hasPass( RenderPassKind type ) const
+    {
+        return VectorUtil::containsIf( _desc._listPass, [type]( const RenderGraphPassDesc& pass )
+        { return pass._type == type; } );
+    }
+
+    namespace
+    {
+        /** @brief 조건 @p fnMatch 에 맞는 뷰 패스 하나를 찾습니다. 둘이면 @p pWhat 으로 오류를 남기고 nullptr 이다(로드 검증의 차례에 기대지 않는다). */
+        template <typename TMatch>
+        const RenderGraphPassDesc* findSinglePass( const vector<RenderGraphPassDesc>& listPass, const TMatch& fnMatch, const utf8* pWhat )
+        {
+            const RenderGraphPassDesc* pFound = nullptr;
+            for ( const RenderGraphPassDesc& pass : listPass )
+            {
+                if ( fnMatch( pass ) == false )
+                    continue;
+                if ( pFound != nullptr )
+                {
+                    SW_LOG_ERROR_ONCE_ID( "RenderPipelineAsset.UniquePassDeclaredTwice", "Passes '%#' and '%#' are both the %# - a single-pass lookup gets none", pFound->_name, pass._name, pWhat );
+                    return nullptr;
+                }
+                pFound = &pass;
+            }
+            return pFound;
+        }
+    } // namespace
+
+    const RenderGraphPassDesc* RenderPipelineAsset::findUniquePass( RenderPassKind type ) const
+    {
+        if ( isRepeatablePassType( type ) )
+        {
+            SW_LOG_ERROR_ONCE_ID( "RenderPipelineAsset.UniquePassRepeatableType", "Pass type %# repeats in a pipeline - there is no single pass of it (pick the pass by its description)", getEnumName( type ) );
+            return nullptr;
+        }
+        return findSinglePass( _desc._listPass, [type]( const RenderGraphPassDesc& pass )
+        { return pass._type == type; }, "pass of one type" );
+    }
+
+    const RenderGraphPassDesc* RenderPipelineAsset::findUniquePassByDepthRole( RenderPassKind type, uint8 depthRole ) const
+    {
+        return findSinglePass( _desc._listPass, [type, depthRole]( const RenderGraphPassDesc& pass )
+        { return pass._type == type && pass._resolvedDepthRole == depthRole; }, "pass of one type and depth role" );
+    }
+
+    const RenderGraphPassDesc* RenderPipelineAsset::findTonemapPass() const
+    {
+        return findSinglePass( _desc._listPass, []( const RenderGraphPassDesc& pass )
+        { return passAppliesTonemap( pass ); }, "tonemapping pass" );
     }
 
     vector<RenderGraphResourceAccess> RenderPipelineAsset::buildFramePassAccesses( const RenderGraphPassDesc& pass ) const
@@ -166,6 +218,22 @@ namespace sw
                             SW_LOG_ERROR_ID( "RenderPipelineAsset.AttachmentNameDuplicated", "[%#] attachment '%#' name is duplicated", sourcePath, attachment._name );
                             ++issueCount;
                             break;
+                        }
+                    }
+                    if ( attachment.isFixedSize() )
+                    {
+                        // 고정 크기는 배율 규칙과 함께 쓰지 않는다 — 어느 쪽이 크기를 정하는지 둘이 되면 렌더 배율이 바뀔 때 PSO · 뷰포트가 갈린다.
+                        const bool                bBothAxes = attachment._width != 0 && attachment._height != 0;
+                        const bool                bScaled   = attachment._resolutionDivisor != 1 || attachment._resolutionSpace != RenderResolutionSpace::Render;
+                        const RenderPassInputRole fixedRole =
+                            resolveRenderPassInputRole( attachment._name, isDepthAttachment( &attachment ), string_view( attachment._role ) );
+                        const bool bShadowAtlas = fixedRole == RenderPassInputRole::ShadowMap || fixedRole == RenderPassInputRole::LocalShadowMap;
+                        if ( bBothAxes == false || bScaled || bShadowAtlas )
+                        {
+                            SW_LOG_ERROR_ID( "RenderPipelineAsset.AttachmentFixedSizeInvalid",
+                                             "[%#] attachment '%#': _width %# x _height %# - write both, keep _resolutionDivisor 1 and _resolutionSpace Render, and not on a shadow map (its size is the render config's)",
+                                             sourcePath, attachment._name, attachment._width, attachment._height );
+                            ++issueCount;
                         }
                     }
                     if ( isSupportedResolutionDivisor( attachment._resolutionDivisor ) == false )
@@ -538,7 +606,7 @@ namespace sw
             }
 
             /**
-             * @brief 2-0a) 뷰 패스 종류는 한 번이다 — 여러 번 둘 수 있다고 표가 적은 종류(`kRepeatable`)만 빼고. 프레임 패스의 `FramePassTypeDuplicated` 와 같은 규칙이다.
+             * @brief 2-0a) 뷰 패스 종류는 한 번이다 — 여러 번 둘 수 있는 종류(`isRepeatablePassType`)만 빼고. 프레임 패스의 `FramePassTypeDuplicated` 와 같은 규칙이다. 톤맵하는 패스도 하나다.
              * @details 실행이 종류 하나의 상태(TAA 기록 · 조명 타일 · 입자 원본 · 깊이 프리패스 표시)를 쥐고 그 종류의 첫 패스를 찾는다. 둘째 패스의 서술은 조용히 무시되거나 첫째의 상태를 덮는다.
              */
             static uint32 validatePassTypesUnique( const RenderPipelineDesc& desc, string_view sourcePath )
@@ -547,7 +615,19 @@ namespace sw
                 for ( size_t passIndex = 0; passIndex < desc._listPass.size(); ++passIndex )
                 {
                     const RenderGraphPassDesc& pass = desc._listPass[passIndex];
-                    if ( pass._type == RenderPassKind::Invalid || getRenderPassKindInfo( pass._type ).hasFlag( RenderPassTraitFlag::kRepeatable ) )
+                    if ( passAppliesTonemap( pass ) )
+                    {
+                        for ( size_t earlierIndex = 0; earlierIndex < passIndex; ++earlierIndex )
+                        {
+                            if ( passAppliesTonemap( desc._listPass[earlierIndex] ) == false )
+                                continue;
+                            SW_LOG_ERROR_ID( "RenderPipelineAsset.PassTonemapsTwice", "[%#] pass '%#' tonemaps, and so does pass '%#' - one pass applies the tonemap (auto exposure reads it)", sourcePath, pass._name,
+                                             desc._listPass[earlierIndex]._name );
+                            ++issueCount;
+                            break;
+                        }
+                    }
+                    if ( pass._type == RenderPassKind::Invalid || isRepeatablePassType( pass._type ) )
                         continue;
                     for ( size_t earlierIndex = 0; earlierIndex < passIndex; ++earlierIndex )
                     {
@@ -557,6 +637,46 @@ namespace sw
                                          sourcePath, pass._name, getEnumName( pass._type ), desc._listPass[earlierIndex]._name );
                         ++issueCount;
                         break;
+                    }
+                }
+                return issueCount;
+            }
+
+            /**
+             * @brief 2-0d) 기록(`_bHistory`)은 시간 누적 패스의 출력에만 있고, 그 출력은 기록을 적어야 한다 — 기록을 읽는 실행이 TAA(`executeTAAPass`) · 볼륨 구름 둘이다.
+             * @details 기록 텍스처는 그 패스의 첫 컬러 출력의 복사본이다(`FrameViewResources::updateOutputHistory`). 적지 않은 기록이 코드에서 생기거나, 적은 기록이 쓰이지 않고 메모리만 잡지 않게 한다.
+             */
+            static uint32 validateAttachmentHistories( const RenderPipelineDesc& desc, string_view sourcePath )
+            {
+                uint32     issueCount{ 0 };
+                const auto isHistoryOutput = [&desc]( const RenderPassAttachment& attachment )
+                {
+                    return VectorUtil::containsIf( desc._listPass, [&attachment]( const RenderGraphPassDesc& pass )
+                    {
+                        const bool bTemporalPass = pass._type == RenderPassKind::TAA || pass._type == RenderPassKind::VolumetricClouds;
+                        return bTemporalPass && pass._listResolvedColorOutput.empty() == false && pass._listResolvedColorOutput[0]._attachment.view() == string_view( attachment._name );
+                    } );
+                };
+                for ( const RenderPassAttachment& attachment : desc._listAttachment )
+                {
+                    const bool bHistoryOutput = isHistoryOutput( attachment );
+                    if ( bHistoryOutput && attachment._bHistory == SW_FALSE )
+                    {
+                        SW_LOG_ERROR_ID( "RenderPipelineAsset.AttachmentHistoryMissing", "[%#] attachment '%#' is the output of a temporal pass (TAA, VolumetricClouds) - declare _bHistory=\"true\" (its copy lives across frames)",
+                                         sourcePath, attachment._name );
+                        ++issueCount;
+                    }
+                    // 쓰는 패스가 없는 첨부(가져온 묶음에만 있다)는 기록도 만들어지지 않는다 — 읽히지 않는 선언이 아니라 쓰이지 않는 첨부다.
+                    const bool bWritten = VectorUtil::containsIf( desc._listPass, [&attachment]( const RenderGraphPassDesc& pass )
+                    {
+                        return VectorUtil::containsIf( pass._listResolvedColorOutput, [&attachment]( const RenderGraphPassDesc::ResolvedAttachment& output )
+                        { return output._attachment.view() == string_view( attachment._name ); } );
+                    } );
+                    if ( bHistoryOutput == false && bWritten && attachment._bHistory != SW_FALSE )
+                    {
+                        SW_LOG_ERROR_ID( "RenderPipelineAsset.AttachmentHistoryUnread", "[%#] attachment '%#': _bHistory - only the first output of a TAA or VolumetricClouds pass keeps a history", sourcePath,
+                                         attachment._name );
+                        ++issueCount;
                     }
                 }
                 return issueCount;
@@ -849,7 +969,7 @@ namespace sw
                             pFirst = pAttachment;
                             return;
                         }
-                        if ( pAttachment->_resolutionDivisor == pFirst->_resolutionDivisor )
+                        if ( pAttachment->_resolutionDivisor == pFirst->_resolutionDivisor && pAttachment->_width == pFirst->_width && pAttachment->_height == pFirst->_height )
                             return;
                         SW_LOG_ERROR_ID( "RenderPipelineAsset.PassOutputsDivisorDivisor", "[%#] pass '%#': outputs '%#' (divisor %#) and '%#' (divisor %#) differ in size - all outputs of one pass must have the same size",
                                          sourcePath, pass._name, pFirst->_name, pFirst->_resolutionDivisor, pAttachment->_name, pAttachment->_resolutionDivisor );
@@ -1175,7 +1295,8 @@ namespace sw
                     const string                sourceName = pSource->_attachment.c_str();
                     const RenderPassAttachment* pOutput    = findAttachment( desc, outputName );
                     const RenderPassAttachment* pSourceAtt = findAttachment( desc, sourceName );
-                    const bool                  bSameShape = pOutput != nullptr && pSourceAtt != nullptr && pOutput->_format == pSourceAtt->_format && pOutput->_resolutionDivisor == pSourceAtt->_resolutionDivisor;
+                    const bool                  bSameShape = pOutput != nullptr && pSourceAtt != nullptr && pOutput->_format == pSourceAtt->_format && pOutput->_resolutionDivisor == pSourceAtt->_resolutionDivisor &&
+                                            pOutput->_width == pSourceAtt->_width && pOutput->_height == pSourceAtt->_height;
                     if ( bSameShape == false )
                     {
                         SW_LOG_ERROR_ID( "RenderPipelineAsset.PassOutputSourceDiffer", "[%#] pass '%#' (%#): output '%#' and source '%#' differ in format or divisor - when the effect is off the output names the source",
@@ -1395,6 +1516,7 @@ namespace sw
         issueCount += Internal::validatePassPermutations( _desc, sourcePath );
         issueCount += Internal::resolveAndCheckPassAttachments( _desc, sourcePath );
         issueCount += Internal::validatePassMaterialFilters( _desc, sourcePath );
+        issueCount += Internal::validateAttachmentHistories( _desc, sourcePath );
         issueCount += Internal::validatePassRenderState( _desc, sourcePath );
         issueCount += Internal::validateComputePasses( _desc, sourcePath );
         issueCount += Internal::validateFrameGraph( _desc, sourcePath );
@@ -1421,6 +1543,20 @@ namespace sw
         return issueCount;
     }
 
+} // namespace sw
+
+namespace sw
+{
+    namespace
+    {
+        /** @brief 공유 캐시의 로더입니다 — 리소스 id 로 읽고 검증한다(`RenderPipelineAsset::loadFromXMLFile`). */
+        bool loadPipelineAsset( const AssetID& assetID, RenderPipelineAsset& outAsset )
+        {
+            return outAsset.loadFromXMLFile( assetID );
+        }
+    } // namespace
+
+    SW_SHARED_ASSET_CACHE( RenderPipeline, RenderPipelineAsset, RenderPipelineAsset::kAssetType.withLoader( AssetTypeLoader::with<RenderPipelineAsset, &loadPipelineAsset>( MemoryTag::RenderCPU ) ) );
 } // namespace sw
 
 // ------------------------------------------------------------------------------
