@@ -85,21 +85,5 @@ namespace sw
          * @param pMacroName 멤버 쪽 매크로 이름(오류 메시지용)
          */
         static bool isInsideReflectType( CXCursor member, const utf8* pMacroName );
-
-    private:
-        /** @brief 검증 함수(`void fn( ValidationContext& )`)가 그 이름으로 선언됐는지 봅니다. */
-        static bool isValidatorDeclared( const vector<ParsedMethodSignature>& listMethodSignature, string_view name );
-        /** @brief 이름이 같은 메서드 중 인자 수가 @p maxParameterCount 이하인 첫 것입니다. 없으면 nullptr 입니다. */
-        static const ParsedMethodSignature* findMethodSignature( const vector<ParsedMethodSignature>& listMethodSignature, string_view name, size_t maxParameterCount );
-        /** @brief 열거자 목록에서 이름(대소문자 무시)이 같은 열거자입니다. 없으면 nullptr 입니다. */
-        static const ParsedEnumeratorInfo* findEnumeratorIgnoreCase( const ParsedEnumInfo& enumInfo, string_view name );
-        /** @brief 식별자(영문 · 숫자 · `_`, 숫자로 시작하지 않는다)인지 봅니다. */
-        static bool isIdentifier( string_view text ) noexcept;
-        /** @brief `name` · `!name` · `name == Value` · `name != Value` 꼴인지 봅니다(값은 식별자 · 정수 · `Enum::Value`). */
-        static bool isEditConditionWellFormed( string_view text );
-        /** @brief 조건식이 보는 이름이 @p type 이 선언한 프로퍼티(C++ 이름)인지 봅니다. */
-        static bool hasEditConditionSubject( const ParsedTypeInfo& type, string_view text );
-        /** @brief @p type 이 부모를 가리키는 칸(`InheritParent`)을 선언했는지 봅니다. */
-        static bool hasInheritParent( const ParsedTypeInfo& type );
     };
 } // namespace sw

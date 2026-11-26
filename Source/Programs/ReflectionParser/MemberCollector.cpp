@@ -164,7 +164,7 @@ namespace sw
                 result->_bIntegerMath   = pTraits->_layout == BuiltinLayoutKind::Int32 ? SW_TRUE : SW_FALSE;
                 return result;
             }
-            // 각은 메모리가 라디안 float32 하나다 — 압축 타입 표시보다 먼저 float32 칸으로 분류한다(경계 변환은 `FixedCodecValueEmitter::emitProperty`).
+            // 각은 메모리가 라디안 float32 하나다 — 압축 타입 표시보다 먼저 float32 칸으로 분류한다(경계 변환은 `FixedCodecValueEmitterInternal::emitProperty`).
             if ( pTraits->_layout == BuiltinLayoutKind::Angle )
             {
                 result->_kind   = FixedValueKind::Float32;
@@ -227,6 +227,38 @@ namespace sw
 
 namespace sw
 {
+    namespace
+    {
+        /** @brief `findPortInterface` 의 기반 순회 상태입니다. */
+        struct PortBaseSearch
+        {
+            const string* _pSpelling;
+            string        _found;
+        };
+
+        CXChildVisitResult portBaseVisitor( CXCursor cursor, CXCursor, CXClientData data )
+        {
+            if ( clang_getCursorKind( cursor ) != CXCursor_CXXBaseSpecifier )
+                return CXChildVisit_Continue;
+            PortBaseSearch& search   = *static_cast<PortBaseSearch*>( data );
+            const CXCursor  baseDecl = CursorReader::getBaseClassDeclaration( cursor );
+            if ( clang_Cursor_isNull( baseDecl ) != 0 )
+                return CXChildVisit_Continue;
+            const string      fqn      = CursorReader::makeFullyQualifiedName( baseDecl );
+            const string_view spelling = *search._pSpelling;
+            const string_view full     = fqn;
+            // 짧은 이름(`IHealthSource`)이나 한정 이름(`sw::IHealthSource`) 둘 다 받는다 — 한정은 `::` 경계에서만 맞춘다.
+            const bool bQualifiedTail = full.size() > spelling.size() + 2 && full.substr( full.size() - spelling.size() ) == spelling &&
+                                        full.substr( full.size() - spelling.size() - 2, 2 ) == "::";
+            if ( full == spelling || bQualifiedTail )
+            {
+                search._found = fqn;
+                return CXChildVisit_Break;
+            }
+            return CXChildVisit_Continue;
+        }
+    } // namespace
+
     MemberCollector::MemberCollector( ParsedTypeInfo& type, const ParserSession& session )
         : _pType{ &type }
         , _pSession{ &session }
@@ -243,6 +275,190 @@ namespace sw
         if ( type._bAbstract == SW_TRUE || type._bStatic == SW_TRUE )
             _bSkipConstructors = SW_TRUE;
     }
+
+    namespace
+    {
+        struct MemberCollectorInternal
+        {
+            /** @brief 메서드 · 생성자에 붙은 애노테이션 셋을 한 번의 자식 순회로 봅니다. */
+            struct MethodAnnotation
+            {
+                string                 _functionSpelling; ///< FUNCTION(...) 철자. 없으면 비어 있다
+                string                 _propertySpelling; ///< PROPERTY(...) 철자. 값 참조를 돌려주는 메서드면 접근자 프로퍼티다
+                uint8                  _bBody    : 1;     ///< REFLECT_BODY
+                [[maybe_unused]] uint8 _reserved : 7;
+
+                MethodAnnotation()
+                    : _functionSpelling{}
+                    , _propertySpelling{}
+                    , _bBody{ SW_FALSE }
+                    , _reserved{ 0 }
+                {
+                }
+            };
+
+            struct StateCodecSearch
+            {
+                bool _bFound;
+            };
+
+            struct ComponentSearch
+            {
+                const vector<string>* _pListBaseType;
+                bool                  _bDerives;
+            };
+
+            /** @brief 인자 이름 · 정규 타입 · 기본 인자를 채웁니다. */
+            static void fillParameters( const CXCursor cursor, ParsedFunctionInfo& method, const ParserSession& session )
+            {
+                const int32 numArgs = clang_Cursor_getNumArguments( cursor );
+                for ( int32 argIndex = 0; argIndex < numArgs; ++argIndex )
+                {
+                    const CXCursor      argCursor = clang_Cursor_getArgument( cursor, static_cast<uint32>( argIndex ) );
+                    ParsedParameterInfo parameter;
+                    parameter._name         = CursorReader::getCursorSpelling( argCursor );
+                    parameter._typeName     = session._typeNameMap.normalize( CursorReader::takeString( clang_getTypeSpelling( clang_getCursorType( argCursor ) ) ) );
+                    parameter._defaultValue = SourceTokens::readDefaultArgument( argCursor );
+                    // 타입 핸들 인자는 썽크가 지역 변수로 만들 정규 철자를 함께 적는다(`resolveComponentHandleParameters`). const · 참조는 뗀다.
+                    string canonical = CursorReader::takeString( clang_getTypeSpelling( clang_getCanonicalType( clang_getNonReferenceType( clang_getCursorType( argCursor ) ) ) ) );
+                    if ( StringUtil::startsWith( canonical, "const " ) )
+                        canonical.erase( 0, 6 );
+                    parameter._canonicalTypeName = std::move( canonical );
+                    // 타입 핸들은 형식의 정체로 가른다 — 한 값이면 대상 `T` 를 읽고, 컨테이너 안에 들었으면 `_bHoldsTypedHandle` 만 켜 두어 오류가 된다.
+                    const CXType valueType       = clang_getNonReferenceType( clang_getCursorType( argCursor ) );
+                    parameter._bHoldsTypedHandle = CursorReader::containsTypeIdentity( valueType, typeidentity::kTypedComponentHandle );
+                    if ( CursorReader::getTypeIdentity( valueType ) == typeidentity::kTypedComponentHandle )
+                        parameter._handleTargetTypeName = session._typeNameMap.normalize( CursorReader::getTemplateArgumentSpelling( valueType, 0 ) );
+                    method._listParameter.push_back( std::move( parameter ) );
+                }
+            }
+
+            /** @brief 필드 타입이 리플렉션 이벤트(멀티캐스트 델리게이트)인지 봅니다. */
+            static bool isEventType( const CXType fieldType )
+            {
+                return CursorReader::getTypeIdentity( fieldType ) == typeidentity::kMulticastDelegate;
+            }
+
+            /**
+             * @brief 이벤트 필드 타입의 함수 타입(`void( int32, const string& )`)을 적힌 꼴로 찾습니다.
+             * @details 정규 타입에서 꺼내면 인자 타입이 펼쳐진 철자(`sw::basic_string<char>`)라 정규 이름(`string`)이 되지 않는다. 별칭
+             *          (`using ScoreEvent = …`)은 벗겨 적힌 템플릿 인자를 읽고, 그래도 못 찾으면 정규 타입으로 물러선다.
+             */
+            static CXType findEventFunctionType( const CXType fieldType )
+            {
+                CXType current = fieldType;
+                for ( int32 depth = 0; depth < 8; ++depth )
+                {
+                    const CXType named = ( current.kind == CXType_Elaborated ) ? clang_Type_getNamedType( current ) : current;
+                    if ( named.kind == CXType_Typedef )
+                    {
+                        current = clang_getTypedefDeclUnderlyingType( clang_getTypeDeclaration( named ) );
+                        continue;
+                    }
+                    const CXType written = clang_Type_getTemplateArgumentAsType( named, 0 );
+                    if ( written.kind == CXType_FunctionProto )
+                        return written;
+                    break;
+                }
+                return clang_Type_getTemplateArgumentAsType( clang_getCanonicalType( fieldType ), 0 );
+            }
+
+            static CXChildVisitResult methodAnnotationVisitor( CXCursor cursor, CXCursor, CXClientData data )
+            {
+                const CXCursorKind kind = clang_getCursorKind( cursor );
+                if ( kind != CXCursor_AnnotateAttr && kind != CXCursor_UnexposedAttr )
+                    return CXChildVisit_Continue;
+
+                MethodAnnotation* pAnnotation = static_cast<MethodAnnotation*>( data );
+                const CXString    cxSpelling  = clang_getCursorSpelling( cursor );
+                const utf8*       pText       = clang_getCString( cxSpelling );
+                if ( pText != nullptr )
+                {
+                    const string_view spelling( pText );
+                    if ( spelling.find( annotation::kReflectBodyPrefix ) != string_view::npos )
+                        pAnnotation->_bBody = SW_TRUE;
+                    if ( pAnnotation->_functionSpelling.empty() && spelling.find( annotation::kFunctionPrefix ) != string_view::npos )
+                        pAnnotation->_functionSpelling = pText;
+                    if ( pAnnotation->_propertySpelling.empty() && spelling.find( annotation::kPropertyPrefix ) != string_view::npos )
+                        pAnnotation->_propertySpelling = pText;
+                }
+                clang_disposeString( cxSpelling );
+                return CXChildVisit_Continue;
+            }
+
+            /** @brief 포트 형식 @p portType 의 기반 가운데 @p interfaceSpelling 으로 끝나는 것의 정규 이름입니다. 없으면 빈 글입니다. */
+            static string findPortInterface( const CXType portType, const string& interfaceSpelling )
+            {
+                // 생성 코드는 이름공간과 무관하게 이 정규 이름을 쓴다(적은 철자는 생성 단위의 이름공간에서 다르게 풀릴 수 있다).
+                const CXCursor portDecl = clang_getTypeDeclaration( clang_getCanonicalType( portType ) );
+                if ( clang_Cursor_isNull( portDecl ) != 0 )
+                    return {};
+                PortBaseSearch search{ &interfaceSpelling, {} };
+                clang_visitChildren( portDecl, portBaseVisitor, &search );
+                return search._found;
+            }
+
+            /** @brief @p type 이 싣고 되살릴 값을 드는 형식인지 봅니다. 포인터 · 참조 · const 값 · `typeidentity::kArrNonStateType` 은 아니다. 배열은 원소로 본다. */
+            static bool hasStateValue( const CXType type )
+            {
+                const CXType canonical = clang_getCanonicalType( type );
+                if ( canonical.kind == CXType_ConstantArray )
+                    return hasStateValue( clang_getArrayElementType( canonical ) );
+                const bool bReference = canonical.kind == CXType_Pointer || canonical.kind == CXType_LValueReference || canonical.kind == CXType_RValueReference || canonical.kind == CXType_MemberPointer;
+                if ( bReference || clang_isConstQualifiedType( canonical ) != 0 )
+                    return false;
+                const string identity = CursorReader::getTypeIdentity( canonical );
+                if ( CursorReader::isAnyIdentity( identity, typeidentity::kArrNonStateType ) )
+                    return false;
+                const bool bSharedConst = CursorReader::isAnyIdentity( identity, typeidentity::kArrSharedPointerTemplate ) &&
+                                          clang_isConstQualifiedType( clang_Type_getTemplateArgumentAsType( canonical, 0 ) ) != 0;
+                return bSharedConst == false;
+            }
+
+            /** @brief @p recordCursor 나 그 기반이 `serializeState` · `serializeGameState` 를 선언했는지 봅니다. */
+            static bool hasStateCodec( const CXCursor recordCursor )
+            {
+                const CXCursor definition = clang_getCursorDefinition( recordCursor );
+                if ( clang_Cursor_isNull( definition ) != 0 )
+                    return false;
+                StateCodecSearch search{ false };
+                clang_visitChildren( definition, stateCodecVisitor, &search );
+                return search._bFound;
+            }
+
+            static CXChildVisitResult stateCodecVisitor( CXCursor cursor, CXCursor, CXClientData data )
+            {
+                StateCodecSearch&  search = *static_cast<StateCodecSearch*>( data );
+                const CXCursorKind kind   = clang_getCursorKind( cursor );
+                if ( kind == CXCursor_CXXMethod )
+                {
+                    const string name = CursorReader::getCursorSpelling( cursor );
+                    search._bFound    = name == annotation::kSerializeStateMethod || name == annotation::kSerializeGameStateMethod;
+                }
+                else if ( kind == CXCursor_CXXBaseSpecifier )
+                {
+                    const CXCursor baseDecl = CursorReader::getBaseClassDeclaration( cursor );
+                    search._bFound          = clang_Cursor_isNull( baseDecl ) == 0 && hasStateCodec( baseDecl );
+                }
+                return search._bFound ? CXChildVisit_Break : CXChildVisit_Continue;
+            }
+
+            /** @brief 기반 목록(`ComponentSearch::_pListBaseType`)의 파생인지 베이스 체인을 검사합니다. */
+            static CXChildVisitResult componentBaseVisitor( CXCursor cursor, CXCursor, CXClientData clientData )
+            {
+                if ( clang_getCursorKind( cursor ) != CXCursor_CXXBaseSpecifier )
+                    return CXChildVisit_Continue;
+
+                ComponentSearch* pSearch  = static_cast<ComponentSearch*>( clientData );
+                const CXCursor   baseDecl = CursorReader::getBaseClassDeclaration( cursor );
+                if ( clang_Cursor_isNull( baseDecl ) != 0 || MemberCollector::isDerivedFromAny( baseDecl, *pSearch->_pListBaseType ) == false )
+                    return CXChildVisit_Continue;
+
+                pSearch->_bDerives = true;
+                return CXChildVisit_Break;
+            }
+        };
+    } // namespace
 
     void MemberCollector::collect( const CXCursor recordCursor )
     {
@@ -298,7 +514,7 @@ namespace sw
             bStateType = bStateType || prop._bRuntimeState == SW_TRUE || prop._bSaveGame == SW_TRUE;
         }
         const bool bUndeclaredAllowed = bStateType == false || _pSession->_config.isStateDeclarationSkipped( headerPath );
-        const bool bCodec             = bStateType && hasStateCodec( recordCursor );
+        const bool bCodec             = bStateType && MemberCollectorInternal::hasStateCodec( recordCursor );
         bool       bValid             = true;
         for ( const CollectedField& field : _listField )
         {
@@ -325,7 +541,7 @@ namespace sw
                 bValid = false;
                 continue;
             }
-            if ( bUndeclaredAllowed || bMarked || field._declaration == StateDeclaration::Property || hasStateValue( field._type ) == false )
+            if ( bUndeclaredAllowed || bMarked || field._declaration == StateDeclaration::Property || MemberCollectorInternal::hasStateValue( field._type ) == false )
                 continue;
             // 남는 비트(`_reserved`)와 인터페이스 포트는 값이 아니다.
             bool bWithoutValue = StringUtil::startsWith( field._name, annotation::kReservedMemberPrefix );
@@ -341,54 +557,6 @@ namespace sw
             bValid = false;
         }
         return bValid;
-    }
-
-    bool MemberCollector::hasStateValue( const CXType type )
-    {
-        const CXType canonical = clang_getCanonicalType( type );
-        if ( canonical.kind == CXType_ConstantArray )
-            return hasStateValue( clang_getArrayElementType( canonical ) );
-        const bool bReference = canonical.kind == CXType_Pointer || canonical.kind == CXType_LValueReference || canonical.kind == CXType_RValueReference || canonical.kind == CXType_MemberPointer;
-        if ( bReference || clang_isConstQualifiedType( canonical ) != 0 )
-            return false;
-        const string identity = CursorReader::getTypeIdentity( canonical );
-        if ( CursorReader::isAnyIdentity( identity, typeidentity::kArrNonStateType ) )
-            return false;
-        const bool bSharedConst = CursorReader::isAnyIdentity( identity, typeidentity::kArrSharedPointerTemplate ) &&
-                                  clang_isConstQualifiedType( clang_Type_getTemplateArgumentAsType( canonical, 0 ) ) != 0;
-        return bSharedConst == false;
-    }
-
-    struct MemberCollector::StateCodecSearch
-    {
-        bool _bFound;
-    };
-
-    CXChildVisitResult MemberCollector::stateCodecVisitor( CXCursor cursor, CXCursor, CXClientData data )
-    {
-        StateCodecSearch&  search = *static_cast<StateCodecSearch*>( data );
-        const CXCursorKind kind   = clang_getCursorKind( cursor );
-        if ( kind == CXCursor_CXXMethod )
-        {
-            const string name = CursorReader::getCursorSpelling( cursor );
-            search._bFound    = name == annotation::kSerializeStateMethod || name == annotation::kSerializeGameStateMethod;
-        }
-        else if ( kind == CXCursor_CXXBaseSpecifier )
-        {
-            const CXCursor baseDecl = CursorReader::getBaseClassDeclaration( cursor );
-            search._bFound          = clang_Cursor_isNull( baseDecl ) == 0 && hasStateCodec( baseDecl );
-        }
-        return search._bFound ? CXChildVisit_Break : CXChildVisit_Continue;
-    }
-
-    bool MemberCollector::hasStateCodec( const CXCursor recordCursor )
-    {
-        const CXCursor definition = clang_getCursorDefinition( recordCursor );
-        if ( clang_Cursor_isNull( definition ) != 0 )
-            return false;
-        StateCodecSearch search{ false };
-        clang_visitChildren( definition, stateCodecVisitor, &search );
-        return search._bFound;
     }
 
     bool MemberCollector::validateInterfaces()
@@ -444,7 +612,7 @@ namespace sw
                 bValid = false;
                 continue;
             }
-            entry._interfaceFQN = findPortInterface( pField->_type, entry._interfaceSpelling );
+            entry._interfaceFQN = MemberCollectorInternal::findPortInterface( pField->_type, entry._interfaceSpelling );
             if ( entry._interfaceFQN.empty() )
             {
                 SW_LOG_ERROR_ID( "AstVisitor.ERRORInterfacePortBase", "ERROR: port '%#' of '%#' does not derive from interface '%#' - make the port type a nested 'struct ...Port final : %#'.",
@@ -453,49 +621,6 @@ namespace sw
             }
         }
         return bValid;
-    }
-
-    namespace
-    {
-        /** @brief `findPortInterface` 의 기반 순회 상태입니다. */
-        struct PortBaseSearch
-        {
-            const string* _pSpelling;
-            string        _found;
-        };
-
-        CXChildVisitResult portBaseVisitor( CXCursor cursor, CXCursor, CXClientData data )
-        {
-            if ( clang_getCursorKind( cursor ) != CXCursor_CXXBaseSpecifier )
-                return CXChildVisit_Continue;
-            PortBaseSearch& search   = *static_cast<PortBaseSearch*>( data );
-            const CXCursor  baseDecl = CursorReader::getBaseClassDeclaration( cursor );
-            if ( clang_Cursor_isNull( baseDecl ) != 0 )
-                return CXChildVisit_Continue;
-            const string      fqn      = CursorReader::makeFullyQualifiedName( baseDecl );
-            const string_view spelling = *search._pSpelling;
-            const string_view full     = fqn;
-            // 짧은 이름(`IHealthSource`)이나 한정 이름(`sw::IHealthSource`) 둘 다 받는다 — 한정은 `::` 경계에서만 맞춘다.
-            const bool bQualifiedTail = full.size() > spelling.size() + 2 && full.substr( full.size() - spelling.size() ) == spelling &&
-                                        full.substr( full.size() - spelling.size() - 2, 2 ) == "::";
-            if ( full == spelling || bQualifiedTail )
-            {
-                search._found = fqn;
-                return CXChildVisit_Break;
-            }
-            return CXChildVisit_Continue;
-        }
-    } // namespace
-
-    string MemberCollector::findPortInterface( const CXType portType, const string& interfaceSpelling )
-    {
-        // 생성 코드는 이름공간과 무관하게 이 정규 이름을 쓴다(적은 철자는 생성 단위의 이름공간에서 다르게 풀릴 수 있다).
-        const CXCursor portDecl = clang_getTypeDeclaration( clang_getCanonicalType( portType ) );
-        if ( clang_Cursor_isNull( portDecl ) != 0 )
-            return {};
-        PortBaseSearch search{ &interfaceSpelling, {} };
-        clang_visitChildren( portDecl, portBaseVisitor, &search );
-        return search._found;
     }
 
     CXChildVisitResult MemberCollector::memberCollectVisitor( CXCursor cursor, CXCursor, CXClientData data )
@@ -548,54 +673,6 @@ namespace sw
         _bHasError = SW_TRUE;
     }
 
-    void MemberCollector::fillParameters( const CXCursor cursor, ParsedFunctionInfo& method, const ParserSession& session )
-    {
-        const int32 numArgs = clang_Cursor_getNumArguments( cursor );
-        for ( int32 argIndex = 0; argIndex < numArgs; ++argIndex )
-        {
-            const CXCursor      argCursor = clang_Cursor_getArgument( cursor, static_cast<uint32>( argIndex ) );
-            ParsedParameterInfo parameter;
-            parameter._name         = CursorReader::getCursorSpelling( argCursor );
-            parameter._typeName     = session._typeNameMap.normalize( CursorReader::takeString( clang_getTypeSpelling( clang_getCursorType( argCursor ) ) ) );
-            parameter._defaultValue = SourceTokens::readDefaultArgument( argCursor );
-            // 타입 핸들 인자는 썽크가 지역 변수로 만들 정규 철자를 함께 적는다(`resolveComponentHandleParameters`). const · 참조는 뗀다.
-            string canonical = CursorReader::takeString( clang_getTypeSpelling( clang_getCanonicalType( clang_getNonReferenceType( clang_getCursorType( argCursor ) ) ) ) );
-            if ( StringUtil::startsWith( canonical, "const " ) )
-                canonical.erase( 0, 6 );
-            parameter._canonicalTypeName = std::move( canonical );
-            // 타입 핸들은 형식의 정체로 가른다 — 한 값이면 대상 `T` 를 읽고, 컨테이너 안에 들었으면 `_bHoldsTypedHandle` 만 켜 두어 오류가 된다.
-            const CXType valueType       = clang_getNonReferenceType( clang_getCursorType( argCursor ) );
-            parameter._bHoldsTypedHandle = CursorReader::containsTypeIdentity( valueType, typeidentity::kTypedComponentHandle );
-            if ( CursorReader::getTypeIdentity( valueType ) == typeidentity::kTypedComponentHandle )
-                parameter._handleTargetTypeName = session._typeNameMap.normalize( CursorReader::getTemplateArgumentSpelling( valueType, 0 ) );
-            method._listParameter.push_back( std::move( parameter ) );
-        }
-    }
-
-    bool MemberCollector::isEventType( const CXType fieldType )
-    {
-        return CursorReader::getTypeIdentity( fieldType ) == typeidentity::kMulticastDelegate;
-    }
-
-    CXType MemberCollector::findEventFunctionType( const CXType fieldType )
-    {
-        CXType current = fieldType;
-        for ( int32 depth = 0; depth < 8; ++depth )
-        {
-            const CXType named = ( current.kind == CXType_Elaborated ) ? clang_Type_getNamedType( current ) : current;
-            if ( named.kind == CXType_Typedef )
-            {
-                current = clang_getTypedefDeclUnderlyingType( clang_getTypeDeclaration( named ) );
-                continue;
-            }
-            const CXType written = clang_Type_getTemplateArgumentAsType( named, 0 );
-            if ( written.kind == CXType_FunctionProto )
-                return written;
-            break;
-        }
-        return clang_Type_getTemplateArgumentAsType( clang_getCanonicalType( fieldType ), 0 );
-    }
-
     void MemberCollector::collectEvent( const CXCursor cursor, const string& spelling, const CXType fieldType )
     {
         const ParserSession& session = *_pSession;
@@ -625,7 +702,7 @@ namespace sw
         }
 
         // 함수 타입은 MulticastDelegate 의 첫 템플릿 인자다. 반환은 void 만 받는다 — broadcast 는 반환값을 모으지 않는다.
-        const CXType functionType = findEventFunctionType( fieldType );
+        const CXType functionType = MemberCollectorInternal::findEventFunctionType( fieldType );
         const CXType resultType   = clang_getResultType( functionType );
         if ( functionType.kind != CXType_FunctionProto || resultType.kind != CXType_Void )
         {
@@ -653,7 +730,7 @@ namespace sw
         if ( spelling.empty() )
             return;
 
-        if ( isEventType( clang_getCursorType( cursor ) ) )
+        if ( MemberCollectorInternal::isEventType( clang_getCursorType( cursor ) ) )
         {
             collectEvent( cursor, spelling, clang_getCursorType( cursor ) );
             return;
@@ -780,45 +857,6 @@ namespace sw
         _pType->_listProperty.push_back( std::move( prop ) );
     }
 
-    struct MemberCollector::MethodAnnotation
-    {
-        string                 _functionSpelling; ///< FUNCTION(...) 철자. 없으면 비어 있다
-        string                 _propertySpelling; ///< PROPERTY(...) 철자. 값 참조를 돌려주는 메서드면 접근자 프로퍼티다
-        uint8                  _bBody    : 1;     ///< REFLECT_BODY
-        [[maybe_unused]] uint8 _reserved : 7;
-
-        MethodAnnotation()
-            : _functionSpelling{}
-            , _propertySpelling{}
-            , _bBody{ SW_FALSE }
-            , _reserved{ 0 }
-        {
-        }
-    };
-
-    CXChildVisitResult MemberCollector::methodAnnotationVisitor( CXCursor cursor, CXCursor, CXClientData data )
-    {
-        const CXCursorKind kind = clang_getCursorKind( cursor );
-        if ( kind != CXCursor_AnnotateAttr && kind != CXCursor_UnexposedAttr )
-            return CXChildVisit_Continue;
-
-        MethodAnnotation* pAnnotation = static_cast<MethodAnnotation*>( data );
-        const CXString    cxSpelling  = clang_getCursorSpelling( cursor );
-        const utf8*       pText       = clang_getCString( cxSpelling );
-        if ( pText != nullptr )
-        {
-            const string_view spelling( pText );
-            if ( spelling.find( annotation::kReflectBodyPrefix ) != string_view::npos )
-                pAnnotation->_bBody = SW_TRUE;
-            if ( pAnnotation->_functionSpelling.empty() && spelling.find( annotation::kFunctionPrefix ) != string_view::npos )
-                pAnnotation->_functionSpelling = pText;
-            if ( pAnnotation->_propertySpelling.empty() && spelling.find( annotation::kPropertyPrefix ) != string_view::npos )
-                pAnnotation->_propertySpelling = pText;
-        }
-        clang_disposeString( cxSpelling );
-        return CXChildVisit_Continue;
-    }
-
     void MemberCollector::collectConstructor( const CXCursor cursor, const string& functionSpelling )
     {
         if ( _bSkipConstructors == SW_TRUE )
@@ -835,7 +873,7 @@ namespace sw
         method._returnTypeName = annotation::kVoidTypeName;
         method._bConstructor   = SW_TRUE;
         method._category       = annotation::kConstructorCategory;
-        fillParameters( cursor, method, *_pSession );
+        MemberCollectorInternal::fillParameters( cursor, method, *_pSession );
 
         const string owner = CursorReader::makeMemberOwnerName( _pType->_fullyQualifiedName, annotation::kCtorLookupName );
         if ( functionSpelling.empty() == false && AnnotationLookup::applyAnnotation( functionSpelling, method, owner ) == false )
@@ -882,7 +920,7 @@ namespace sw
         method._returnTypeName = session._typeNameMap.normalize( CursorReader::takeString( clang_getTypeSpelling( clang_getCursorResultType( cursor ) ) ) );
         method._bStatic        = clang_CXXMethod_isStatic( cursor ) != 0 ? SW_TRUE : SW_FALSE;
         method._bConst         = clang_CXXMethod_isConst( cursor ) != 0 ? SW_TRUE : SW_FALSE;
-        fillParameters( cursor, method, session );
+        MemberCollectorInternal::fillParameters( cursor, method, session );
 
         const string owner = CursorReader::makeMemberOwnerName( _pType->_fullyQualifiedName, method._name );
         if ( AnnotationLookup::applyAnnotation( functionSpelling, method, owner ) == false )
@@ -948,8 +986,8 @@ namespace sw
             return;
         }
 
-        MethodAnnotation annotation;
-        clang_visitChildren( cursor, methodAnnotationVisitor, &annotation );
+        MemberCollectorInternal::MethodAnnotation annotation;
+        clang_visitChildren( cursor, MemberCollectorInternal::methodAnnotationVisitor, &annotation );
         if ( annotation._bBody == SW_TRUE )
             _bBodyFound = SW_TRUE;
 
@@ -986,26 +1024,6 @@ namespace sw
         }
     }
 
-    struct MemberCollector::ComponentSearch
-    {
-        const vector<string>* _pListBaseType;
-        bool                  _bDerives;
-    };
-
-    CXChildVisitResult MemberCollector::componentBaseVisitor( CXCursor cursor, CXCursor, CXClientData clientData )
-    {
-        if ( clang_getCursorKind( cursor ) != CXCursor_CXXBaseSpecifier )
-            return CXChildVisit_Continue;
-
-        ComponentSearch* pSearch  = static_cast<ComponentSearch*>( clientData );
-        const CXCursor   baseDecl = CursorReader::getBaseClassDeclaration( cursor );
-        if ( clang_Cursor_isNull( baseDecl ) != 0 || isDerivedFromAny( baseDecl, *pSearch->_pListBaseType ) == false )
-            return CXChildVisit_Continue;
-
-        pSearch->_bDerives = true;
-        return CXChildVisit_Break;
-    }
-
     bool MemberCollector::isDerivedFromComponent( const CXCursor cursor, const ParserConfig& config )
     {
         return isDerivedFromAny( cursor, config._listComponentBaseType );
@@ -1033,8 +1051,8 @@ namespace sw
         // 캐시 미스. 순환 참조를 막으려고 먼저 false 로 넣는다
         s_mapFqnToDerives[cacheKey] = false;
 
-        ComponentSearch search{ &listBaseType, false };
-        clang_visitChildren( cursor, componentBaseVisitor, &search );
+        MemberCollectorInternal::ComponentSearch search{ &listBaseType, false };
+        clang_visitChildren( cursor, MemberCollectorInternal::componentBaseVisitor, &search );
         s_mapFqnToDerives[cacheKey] = search._bDerives;
         return search._bDerives;
     }
