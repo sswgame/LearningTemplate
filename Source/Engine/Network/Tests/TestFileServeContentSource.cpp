@@ -1,5 +1,5 @@
 // FileServeContentSourceTest — 장치가 PC 의 팩 폴더를 HTTP 로 받아 읽는 소스(Fileserve): 구간으로 받아 거울에 두고, 도장이 같으면 다시 받지 않으며,
-// 걸린 폴더 밖 · 서버 목록의 탈출 이름은 거절한다. 서버는 가짜 `IHTTPClient` 다(`Scripts/net/fileserve.py` 와 같은 끝점 · 글)(nogpu).
+// 걸린 폴더 밖 · 서버 목록의 탈출 이름은 거절한다. 서버는 가짜 `IHTTPClient` 다(`Scripts/package/file_server.py` 와 같은 끝점 · 글)(nogpu).
 #include "pch.h"
 
 #include "Core/Concurrency/ScopedLock.h"

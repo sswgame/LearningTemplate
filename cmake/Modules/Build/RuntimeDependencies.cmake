@@ -1,17 +1,17 @@
 # ==============================================================================
 # @file cmake/Modules/Build/RuntimeDependencies.cmake
-# @brief project() 이후: vcpkg include/bin 경로 조회 + 런타임 DLL 복사 헬퍼
-# @note BuildLayout.cmake 의 sw_queue_runtime_copy 이후에 include 할 것
+# @brief project() 이후: vcpkg include/bin 경로 조회 + 런타임 DLL 복사 헬퍼 · 실행 파일 옆 배치(sw_deploy_runtime_dependencies)
+# @note OutputLayout.cmake 의 sw_queue_runtime_copy 이후에 include 할 것
 # ==============================================================================
 
 # ------------------------------------------------------------------------------
 # 1) sw_get_vcpkg_paths — vcpkg 설치 트리의 include · bin/lib 폴더 후보
-# vcpkg 를 쓰지 않는 구성(SW_USE_VCPKG=OFF)이면 둘 다 빈 목록이다 — 그래서 아래 함수들은 늘 정의돼 있다.
+# vcpkg 를 쓰지 않는 구성(SW_ENABLE_VCPKG=OFF)이면 둘 다 빈 목록이다 — 그래서 아래 함수들은 늘 정의돼 있다.
 # ------------------------------------------------------------------------------
 function(sw_get_vcpkg_paths OUT_INC_DIRS OUT_BIN_DIRS)
 	set(list_include_dir "")
 	set(list_bin_dir "")
-	if(SW_USE_VCPKG AND VCPKG_TARGET_TRIPLET)
+	if(SW_ENABLE_VCPKG AND VCPKG_TARGET_TRIPLET)
 		foreach(installed_root "${VCPKG_INSTALLED_DIR}" "${SW_VCPKG_ROOT}/installed")
 			if(installed_root AND NOT installed_root STREQUAL "/installed")
 				list(APPEND list_include_dir "${installed_root}/${VCPKG_TARGET_TRIPLET}/include")
@@ -39,7 +39,7 @@ function(sw_link_vcpkg_header_only_target TARGET_NAME)
 endfunction()
 
 # ------------------------------------------------------------------------------
-# 3) 런타임 복사 큐 — 실제 POST_BUILD는 sw_emit_runtime_copies
+# 3) 런타임 복사 큐 — 실제 POST_BUILD는 sw_apply_runtime_copies
 # sw_copy_vcpkg_file: bin 디렉터리의 지정 파일
 # sw_copy_vcpkg_shared_lib: 플랫폼별 .dll / .so
 # ------------------------------------------------------------------------------
@@ -98,4 +98,22 @@ function(sw_copy_tracy_runtime TARGET_NAME)
 		message(FATAL_ERROR "sw_copy_tracy_runtime: Tracy::TracyClient has no IMPORTED_LOCATION for ${CMAKE_BUILD_TYPE}")
 	endif()
 	sw_queue_runtime_copy(${TARGET_NAME} "${tracy_dll}")
+endfunction()
+
+# ------------------------------------------------------------------------------
+# 실행 파일 옆에 놓을 런타임 DLL — 구성마다 실제로 쓰는 것만.
+#   DXC        : 개발 구성만 — 런타임 HLSL 컴파일 · DXIL 리플렉션 · 셰이더 쿠킹(배포 팩도 호스트 개발 빌드가 굽는다). 배포 구성은 컴파일러를 쓰지 않는다(언리얼도 셰이더 컴파일러는 쿠커 쪽에만 둔다).
+#   검증 레이어 : SW_VULKAN_VALIDATION 인 Windows 구성만(OutputLayout.cmake 의 정의 하나를 VulkanRHIDevice 도 매크로로 읽는다)
+#   Tracy      : 개발 빌드 · Windows · SW_ENABLE_TRACY (함수 안에서 거른다)
+#   Tint       : WebGPU 셰이더 대상(SPIR-V → WGSL)의 쿠킹 도구 — DXC 와 같은 이유로 개발 구성의 실행 파일 옆에 둔다(ThirdParty/dawn, 웹 · Android · 서버는 함수 안에서 거른다)
+function(sw_deploy_runtime_dependencies TARGET_NAME)
+	if(NOT SW_SHIPPING_BUILD)
+		sw_copy_dxc_dlls(${TARGET_NAME})
+		sw_copy_tint_tool(${TARGET_NAME})
+	endif()
+	if(SW_VULKAN_VALIDATION AND WIN32)   # 레이어를 vcpkg 가 주는 곳은 Windows 뿐(vcpkg.json) — Linux 는 시스템 레이어를 쓴다
+		sw_copy_vulkan_validation_runtime(${TARGET_NAME})
+	endif()
+	sw_copy_tracy_runtime(${TARGET_NAME})
+	sw_apply_runtime_copies(${TARGET_NAME})
 endfunction()

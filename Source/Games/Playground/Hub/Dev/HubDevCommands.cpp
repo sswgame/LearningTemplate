@@ -297,7 +297,7 @@ namespace sw
     {
         struct HubPawnReplicationDevInternal
         {
-            // 바닥 기준의 자리 — 두 클라이언트 시나리오가 `<Record>` 로 보고에 남기고 `Scripts net-pair mmo` 가 견준다(한쪽의 자기 자리와 다른 쪽이 본 자리). 바닥 위가 아니면 값이 없다.
+            // 바닥 기준의 자리 — 두 클라이언트 시나리오가 `<Record>` 로 보고에 남기고 `Scripts login-connect-session mmo` 가 견준다(한쪽의 자기 자리와 다른 쪽이 본 자리). 바닥 위가 아니면 값이 없다.
             [[nodiscard]] static bool readFloorX( const HubPawnReplicationComponent& component, float64& outValue )
             {
                 outValue = static_cast<float64>( component.getFloorLocalPosition()._x );

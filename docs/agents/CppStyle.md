@@ -17,15 +17,15 @@ C++ 를 쓸 때의 규칙. 린트 · 컴파일이 강제하는 줄은 "강제" �
 - 초기값은 한 곳에: with a constructor, initialize every field there in declaration order, braces, one per line, leading `,`. An iterator pair takes parentheses.
 - Header defaults only for a `= default` / inline default constructor, a delegating constructor, or a type with no constructor.
 - A field default-initialization leaves indeterminate gets a value in every constructor (copy · move included) or a header default; byte buffers are exempt.
-- **Bit packing**: order fields to minimize padding; a flag is `uint8 _bX : 1`, kept together per access section (린트 `cpp-shape` 강제). An aggregate (built by braces, no constructor) keeps `bool _bX{ false }` — a C++17 bit-field cannot have a default member initializer; any other type with a flag writes the constructor. In a type with a constructor, `bool` + `NOLINT(sw-bool-flag): <reason>` only when its address is taken or it is atomic.
-- Declaration order: public fields; constructors; `initialize`/`shutdown`; `process`; getters/setters; private functions; private fields last (린트 `cpp-shape` 강제).
+- **Bit packing**: order fields to minimize padding; a flag is `uint8 _bX : 1`, kept together per access section (린트 `cpp-style` 강제). An aggregate (built by braces, no constructor) keeps `bool _bX{ false }` — a C++17 bit-field cannot have a default member initializer; any other type with a flag writes the constructor. In a type with a constructor, `bool` + `NOLINT(sw-bool-flag): <reason>` only when its address is taken or it is atomic.
+- Declaration order: public fields; constructors; `initialize`/`shutdown`; `process`; getters/setters; private functions; private fields last (린트 `cpp-style` 강제).
 
 ### Types, strings, functions
 
 - `auto` only for iterators, structured bindings or similarly complex types. Lambdas only when they buy performance. `const` wherever free.
 - **Strings**: `formatstring` and `%#` (no `operator+` — 컴파일 강제). Text used once: `fixed_string<constant::buffer::kMaxN>`; text kept or never cut (path, key, serialized): `StringBuilder::appendFormat`. No helper returns a formatted `string`. Booleans in text: `StringUtil::tryParseBool`.
 - No wrapper with one caller; change the existing function's shape.
-- **Inheritance: one base** (린트 `cpp-shape` 강제). Expose an interface by holding the implementation as a member and registering it (`SubsystemScope::exposeMember`, `SW_MODULE_PART`); a capability is a separate object holding a reference; a per-build choice is a CMake file choice.
+- **Inheritance: one base** (린트 `cpp-style` 강제). Expose an interface by holding the implementation as a member and registering it (`SubsystemScope::exposeMember`, `SW_MODULE_PART`); a capability is a separate object holding a reference; a per-build choice is a CMake file choice.
 - Split a class only into bundles with their own state and rules; never split a file for size alone.
 - Vectors: no erase-in-loop (mark, then `VectorUtil::removeIf` · `removeAtSwap`); dedupe with a set or `VectorUtil::sortUnique`, not `contains` before `push_back`.
 
@@ -34,7 +34,7 @@ C++ 를 쓸 때의 규칙. 린트 · 컴파일이 강제하는 줄은 "강제" �
 - Static registration tables are `RegistrationList` · `RegistrationSlot<T>` with `SW_DEFINE_*` / `SW_STATIC_REGISTRATION` registrars, removed at module unload; a cached reader compares `getGeneration()`.
 - A name-keyed registry does not check empty or duplicate names with its own `if`: `RegistrationList` (`bRequireName`), `NamedEntryRegistry<T>` (named static entries found across modules) or `NameRegistry`, and the caller reports `add`. Duplicate ids of one kind in XML are errors.
 - Subscriptions go through `RegistrationList::addSubscribed`, `ItemSubscriptionList<T>` or a `MulticastDelegate`; never turn an id back into an address.
-- 델리게이트는 `SW_DELEGATE_FUNCTION` · `SW_DELEGATE_METHOD` · `SW_DELEGATE_LAMBDA` 로 붙인다(린트 `cpp-shape` 강제). 꺾쇠 안 쉼표가 있으면 `SW_DECLARE_DELEGATE` 별칭.
+- 델리게이트는 `SW_DELEGATE_FUNCTION` · `SW_DELEGATE_METHOD` · `SW_DELEGATE_LAMBDA` 로 붙인다(린트 `cpp-style` 강제). 꺾쇠 안 쉼표가 있으면 `SW_DECLARE_DELEGATE` 별칭.
 - Cannot go on: `reportFatalError( "...%#", value )` (below the log tier `SW_LOW_LEVEL_FATAL`), never `std::abort()`.
 - Never discard a graphics device result: `isVkSuccess` / `isHrSuccess`, `requireVk` / `requireHr`, or `FAILED()` with a comment (SDK types cannot be `[[nodiscard]]` — review keeps this).
 
@@ -79,7 +79,7 @@ C++ 를 쓸 때의 규칙. 린트 · 컴파일이 강제하는 줄은 "강제" �
 
 먼저 주인 타입을 찾는다. 첫 "예" 에서 멈춘다.
 
-1. **주인 우선 — one type owns it?** A function over one type's data or invariants is its member (`static` / `private` as needed); static-only types or `vector<T>` functions beside a data type belong to it (린트 `cpp-shape` 규칙 4 강제); a `.cpp` state struct mutated by static functions becomes a class (린트 `cpp-shape` 규칙 10 강제).
+1. **주인 우선 — one type owns it?** A function over one type's data or invariants is its member (`static` / `private` as needed); static-only types or `vector<T>` functions beside a data type belong to it (린트 `cpp-style` 규칙 4 강제); a `.cpp` state struct mutated by static functions becomes a class (린트 `cpp-style` 규칙 10 강제).
 2. **No owner, several TUs** → a `XxxUtil` static struct in a header (never `Internal`).
 3. **No owner, one `.cpp`** → that file's anonymous namespace.
 
@@ -90,7 +90,7 @@ C++ 를 쓸 때의 규칙. 린트 · 컴파일이 강제하는 줄은 "강제" �
 
 - TU-only helpers: constants only → anonymous namespace; one function → a free function there with a file-unique name; more → one `XxxInternal` struct named after the TU (`D3D11RHIDevice.cpp` → `D3D11RHIDeviceInternal`).
 - One class definition per named `namespace` block.
-- One non-empty anonymous namespace per `.cpp` holding everything TU-local, no free `static` functions (린트 `cpp-shape` 규칙 3 강제).
+- One non-empty anonymous namespace per `.cpp` holding everything TU-local, no free `static` functions (린트 `cpp-style` 규칙 3 강제).
 
 ## Includes and layers
 
@@ -198,5 +198,5 @@ Change the type or API so the shape cannot be written.
 2. **One fact known in two places.** One owner; the other side reads it.
 3. **Failure or truncation not returned as a value.** `sw::expected` / `[[nodiscard]]`.
 4. **Platform hooks that still compile when left out.** Pure virtual.
-5. **Saves and settings with no version upgrade.** `REFLECT( Version = N )` + `SW_TYPE_VERSION_PATCH`, `FormatDesc` steps, `SW_ASSET_FORMAT_UPGRADE` (from release on; before release every version stays 0 — `format-release` only reports); runtime state is `PROPERTY( RuntimeState )` via `StateIO::reflected`.
+5. **Saves and settings with no version upgrade.** `REFLECT( Version = N )` + `SW_TYPE_VERSION_PATCH`, `FormatDesc` steps, `SW_ASSET_FORMAT_UPGRADE` (from release on; before release every version stays 0 — `serialization-compat` only reports); runtime state is `PROPERTY( RuntimeState )` via `StateIO::reflected`.
 6. **State changes handled by call-order rules.** Put the state in a value the next step reads.

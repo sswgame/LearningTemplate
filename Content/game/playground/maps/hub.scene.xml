@@ -117,7 +117,7 @@
 			</GameObject>
 		</entity>
 		<!-- 허브 서버(Games/Playground/Hub) — 전용 서버가 이 맵을 열면 계정마다 진행을 저장하는 공유 월드가 선다(짐승 · 버섯 · 파티, NetMMO 복제). 혼자 띄우면 규칙만 확인하고 쉰다.
-		     시나리오 automation/hubserver_rules · hubserver_slice, 두 프로세스는 py -3 -m Scripts net-pair mmo(automation/netpair). -->
+		     시나리오 automation/hubserver_rules · hubserver_slice, 두 프로세스는 py -3 -m Scripts login-connect-session mmo(automation/netpair). -->
 		<entity id="310" name="HubServer">
 			<GameObject _schemaVersion="0" _name="HubServer" _bActive="true" _bAlwaysLoaded="true">
 				<_listComponent>

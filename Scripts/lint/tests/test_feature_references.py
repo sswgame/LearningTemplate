@@ -12,7 +12,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
-from lint.feature_references import Sources, find_problems, make_table  # noqa: E402
+from lint.rules.feature_references import Sources, find_problems, make_table  # noqa: E402
 
 
 def make_sources() -> Sources:

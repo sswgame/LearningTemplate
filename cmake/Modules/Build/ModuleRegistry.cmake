@@ -119,7 +119,7 @@ function(sw_add_module_build_stamp)
 	endif()
 	set(stamp_path "${CMAKE_BINARY_DIR}/Bin/Modules/${SW_FILE_MODULE_BUILD_STAMP}")
 	add_custom_command(OUTPUT "${stamp_path}"
-		COMMAND "${CMAKE_COMMAND}" "-DSTAMP_PATH=${stamp_path}" -P "${CMAKE_SOURCE_DIR}/cmake/Scripts/WriteModuleBuildStamp.cmake"
+		COMMAND "${CMAKE_COMMAND}" "-DSTAMP_PATH=${stamp_path}" -P "${CMAKE_SOURCE_DIR}/cmake/ScriptMode/WriteModuleBuildStamp.cmake"
 		DEPENDS ${list_module}
 		COMMENT "Module build stamp (live reload signal)"
 		VERBATIM
@@ -136,7 +136,7 @@ endfunction()
 # MODULE 은 정의상 "이름으로 찾아 올리는 플러그인" 이라 App 이 반드시 먼저 빌드해야 하는 것들이다.
 #
 # 빠진 것이 있으면 **구성이 선다.** 조용히 빠지는 것보다 낫다.
-function(sw_verify_dynamic_module_registry)
+function(sw_require_dynamic_module_registry)
 	get_property(list_registered GLOBAL PROPERTY SW_DYNAMIC_MODULES)
 	# 함께 짓는 게임 팩(`sw_add_game_module`, 활성 게임이 아닌 것)은 App 이 `Bin/Modules` 에서 올리지 않으므로 레지스트리 밖이다.
 	get_property(list_game_pack_target GLOBAL PROPERTY SW_GAME_PACK_TARGETS)

@@ -11,7 +11,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from generate.generator_output import Generator, GeneratorError, write_generated_file
+from generate.generator_output import CodeGenerator, GeneratorError, write_generated_file
 from common.paths import get_project_root
 
 TAG = "DevSourceFolders"
@@ -67,6 +67,6 @@ def generate_dev_source_folders(header_path: Path) -> None:
     write_generated_file(header_path, make_header_text(load_tables(get_project_root())), tag=TAG)
 
 
-class DevSourceFoldersGenerator(Generator):
+class DevSourceFoldersGenerator(CodeGenerator):
     def generate(self, output_dir: Path, game_name: str) -> None:
         generate_dev_source_folders(output_dir / "DevSourceFolders.gen.h")

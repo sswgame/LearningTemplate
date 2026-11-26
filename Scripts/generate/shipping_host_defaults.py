@@ -16,12 +16,12 @@ import json
 from pathlib import Path
 
 from common.project_constants import DIR_RUNTIME_GAME_PRESET, DIR_RUNTIME_PLATFORM_CONFIG, FILE_RUNTIME_ENGINE_CONFIG, FILE_RUNTIME_RENDER_QUALITY
-from generate.generator_output import Generator, GeneratorError, write_generated_file
+from generate.generator_output import CodeGenerator, GeneratorError, write_generated_file
 from common.paths import get_project_root
 
 TAG = "ShippingHostDefaults"
 
-# 플랫폼 이름(SW_PLATFORM_NAME — cmake/Modules/Build/BuildLayout.cmake). 이 밖의 폴더는 어느 빌드도 읽지 않는 덮어쓰기라 오류다(철자 틀림이 조용히 무시되지 않게).
+# 플랫폼 이름(SW_PLATFORM_NAME — cmake/Modules/Build/OutputLayout.cmake). 이 밖의 폴더는 어느 빌드도 읽지 않는 덮어쓰기라 오류다(철자 틀림이 조용히 무시되지 않게).
 SET_PLATFORM_NAME = frozenset({"Windows", "Linux", "Android", "Web"})
 
 
@@ -151,7 +151,7 @@ namespace sw::shipping_host
     write_generated_file(game_output_path, game_content, tag=TAG, report_unchanged=False)
 
 
-class ShippingHostDefaultsGenerator(Generator):
+class ShippingHostDefaultsGenerator(CodeGenerator):
     def generate(self, output_dir: Path, game_name: str) -> None:
         game_preset = f"{DIR_RUNTIME_GAME_PRESET}/{game_name}.json"
         if (get_project_root() / game_preset).is_file():   # 없으면 CMake 가 그 자리에서 멈춘다

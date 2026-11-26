@@ -113,7 +113,7 @@ namespace sw
          * @param transition 그릴 화면 페이드를 쥔 전환 관리자이다. 로딩 화면을 닫을 때 밝히기를 청한다(`fadeInFromBlack`). 페이드를 진행시키는 것(`ScreenFade::update`)은 주인(전환 관리자)의 일이다.
          */
         void update( float32 deltaSeconds, bool bLoading, optional<float32> loadProgress, ScreenTransitionController& transition );
-        /** @brief 게임 인스턴스의 씬 흐름이 받는 창구(`ILoadingScreen`)입니다. 컨트롤러가 그 인터페이스를 함께 상속하지 않는다(다중 상속 금지 — 린트 `cpp-shape`). */
+        /** @brief 게임 인스턴스의 씬 흐름이 받는 창구(`ILoadingScreen`)입니다. 컨트롤러가 그 인터페이스를 함께 상속하지 않는다(다중 상속 금지 — 린트 `cpp-style`). */
         ILoadingScreen& getLoadingScreen() { return _loadingScreenPort; }
 
         /** @brief 로딩 화면이 떠 있으면 true 입니다. */

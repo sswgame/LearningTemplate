@@ -47,7 +47,7 @@ endfunction()
 # sw_add_pch_entry_directory — `.cpp` 첫 줄 `#include "pch.h"` 를 푸는 include 경로를 타깃에 준다.
 #   그 폴더에는 PCH 진입 헤더(ENTRY, `Source/` 기준 — `Engine/pch.h` · `Core/pch.h`)로 넘기는 생성 헤더 하나뿐이다. 소스 폴더(`Source/Engine`)를
 #   include 경로로 내보내면 `#include "Scene/SceneManager.h"` 같은 접두 없는 include 가 풀려 층 게이트(`Engine/` 접두로 본다)를 비껴간다.
-#   그래서 폴더가 아니라 이 헤더 하나만 내보낸다(`sw_verify_source_include_roots` 가 소스 폴더 include 경로를 막는다). NAME 은 생성 폴더 이름이다.
+#   그래서 폴더가 아니라 이 헤더 하나만 내보낸다(`sw_require_source_include_roots` 가 소스 폴더 include 경로를 막는다). NAME 은 생성 폴더 이름이다.
 # ------------------------------------------------------------------------------
 function(sw_add_pch_entry_directory TARGET_NAME VISIBILITY NAME ENTRY)
 	if(NOT EXISTS "${CMAKE_SOURCE_DIR}/Source/${ENTRY}")
@@ -65,12 +65,12 @@ function(sw_add_pch_entry_directory TARGET_NAME VISIBILITY NAME ENTRY)
 endfunction()
 
 # ------------------------------------------------------------------------------
-# sw_verify_source_include_roots — `Source/` 아래 폴더를 include 경로로 가진 타깃이 있으면 구성을 세운다.
+# sw_require_source_include_roots — `Source/` 아래 폴더를 include 경로로 가진 타깃이 있으면 구성을 세운다.
 #   include 는 `Source/` 기준 전체 경로(`Engine/Scene/SceneManager.h`)로만 풀려야 층 게이트가 경로 앞부분으로 층을 안다. `Source/Engine` · 모듈 폴더를
 #   include 경로로 주면 접두 없는 include 가 다른 층으로 풀린다. 경로를 주는 줄은 CMake 어디에나 쓸 수 있어 형식으로 막지 못하므로 구성 끝에 여기서 본다.
 #   남는 틈(그 파일의 폴더 기준 경로 — 컴파일러가 늘 먼저 본다)은 리뷰가 본다. 루트 CMakeLists 가 모든 타깃을 만든 뒤 부른다.
 # ------------------------------------------------------------------------------
-function(sw_verify_source_include_roots)
+function(sw_require_source_include_roots)
 	set(source_prefix "${CMAKE_SOURCE_DIR}/Source/")
 	string(LENGTH "${source_prefix}" source_prefix_length)
 	set(list_directory "${CMAKE_SOURCE_DIR}")
@@ -264,11 +264,11 @@ function(sw_require_deterministic_mark_for_rollback TARGET_NAME)
 	endforeach()
 	if(list_rollback_header)
 		# DEFER 의 인자는 실행할 때 풀리므로 지금 값을 글로 박아 넘긴다.
-		cmake_language(EVAL CODE "cmake_language(DEFER CALL sw_verify_deterministic_mark [[${TARGET_NAME}]] [[${list_rollback_header}]])")
+		cmake_language(EVAL CODE "cmake_language(DEFER CALL sw_require_deterministic_mark [[${TARGET_NAME}]] [[${list_rollback_header}]])")
 	endif()
 endfunction()
 
-function(sw_verify_deterministic_mark TARGET_NAME ROLLBACK_HEADERS)
+function(sw_require_deterministic_mark TARGET_NAME ROLLBACK_HEADERS)
 	get_property(list_marked GLOBAL PROPERTY SW_DETERMINISTIC_TARGETS)
 	if(NOT TARGET_NAME IN_LIST list_marked)
 		message(FATAL_ERROR "${TARGET_NAME} implements the rollback contract (saveState( vector<uint8>& ) in ${ROLLBACK_HEADERS}) "

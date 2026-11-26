@@ -10,7 +10,7 @@
 # 그 함수 스코프에만 생기고, 뒤의 include 는 가드에 걸려 아무 것도 하지 않는다).
 include_guard(GLOBAL)
 
-include("${CMAKE_CURRENT_LIST_DIR}/../Environment/PythonUtils.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/../Environment/PythonScript.cmake")
 
 # project_constants.py 가 원본이다. 파이썬이 `set(SW_...)` 목록을 찍고 CMake 는 그것을 읽는다.
 # 최상위 configure 는 GenerateConfigConstants.cmake 가 생성기 다섯을 한 프로세스로 먼저 돌려 두었다(SW_CONFIGURE_FILES_GENERATED) —

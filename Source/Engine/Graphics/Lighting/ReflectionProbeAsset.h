@@ -34,7 +34,7 @@ namespace sw
      *          적은 표본으로도 잡음 없이 거른다(`ReflectionProbeAsset::filterRoughnessLevels`). 언리얼 · 유니티의 큐브맵 밉 사슬 자리이고, 큐브 대신 옥타헤드럴인 까닭은
      *          `ReflectionProbeAsset` 과 같다. 옥타헤드럴 텍셀 (x, y) 의 자식은 한 단계 위 밉의 (2x .. 2x+1, 2y .. 2y+1) 이라 상자 평균이 같은 방향 묶음이다.
      *
-     *          파일(리틀 엔디언): 매직 `SWRM`, 버전, 한 변 텍셀 수 uint32, 텍셀마다 float32 RGB(행 → 열). HDRI 하늘의 원본이고 `Scripts/dev/make_sky_hdri_prefabs.py` 가 쓴다.
+     *          파일(리틀 엔디언): 매직 `SWRM`, 버전, 한 변 텍셀 수 uint32, 텍셀마다 float32 RGB(행 → 열). HDRI 하늘의 원본이고 `Scripts/content/make_sky_hdri_prefabs.py` 가 쓴다.
      */
     struct SW_API OctahedralRadianceMap
     {

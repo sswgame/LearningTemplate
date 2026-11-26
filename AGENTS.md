@@ -46,7 +46,7 @@ Preserve existing project conventions unless the user explicitly requests otherw
 ## Build
 
 ```powershell
-py -3 Scripts/setup/environment.py
+py -3 Scripts/setup/setup_environment.py
 py -3 Scripts/setup/vcpkg.py --install
 cmake --preset Ninja-Debug
 cmake --build --preset Ninja-Debug

@@ -134,7 +134,7 @@ def _read_bytes(key: str) -> bytes | None:
 def read_bytes(path: Path | str) -> bytes | None:
     """
     파일 바이트(없으면 None, 그 밖의 OSError 는 올린다). 규칙은 파일 내용을 이것(`SourceFile` · `read_text` · `read_texts`)이나 `index_cache` 로만 얻는다 — 커밋 훅은
-    규칙 스물 몇 개가 같은 스테이지 파일을 보므로 한 번 읽어 함께 쓴다. `pre_commit.check_read_bound` 가 스테이지 파일 하나에 모든 규칙이 연 파일이 그 파일
+    규칙 스물 몇 개가 같은 스테이지 파일을 보므로 한 번 읽어 함께 쓴다. `lint.find_read_bound_problems` 가 스테이지 파일 하나에 모든 규칙이 연 파일이 그 파일
     한 번뿐인지 본다(직접 `read_text` 하면 두 번째 열기로 걸린다). 크기 한도는 `--all` 이 저장소 전체를 붙잡지 않게 둔다(커밋 훅의 스테이지는 다 담는다).
     """
     return _read_bytes(os.path.normcase(os.path.abspath(path)))
@@ -150,7 +150,7 @@ def read_text(path: Path | str, errors: str = "strict", encoding: str = "utf-8")
 
 
 def clear_read_cache() -> None:
-    """읽은 바이트를 잊는다 — `pre_commit.check_read_bound` 가 파일을 실제로 여는지 세기 전에 부른다."""
+    """읽은 바이트를 잊는다 — `lint.find_read_bound_problems` 가 파일을 실제로 여는지 세기 전에 부른다."""
     _read_bytes.cache_clear()
 
 

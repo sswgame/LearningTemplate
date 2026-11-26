@@ -22,9 +22,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Sequence
 
-from common.file_collect import list_files_under
+from common.paths import list_files_under
 from common.paths import get_project_root
-from generate.generator_output import Generator, GeneratorError, write_generated_file
+from generate.generator_output import CodeGenerator, GeneratorError, write_generated_file
 
 TAG = "ModuleLayers"
 RULE_DIR = Path(__file__).resolve().parents[2] / "Config" / "Rules" / "Layers"
@@ -81,7 +81,7 @@ def assign_tiers(map_tier: dict[str, int], list_relative: Sequence[str], rule_na
     return map_result
 
 
-def check_stale_keys(map_tier: dict[str, int], root_dir: Path, rule_name: str) -> None:
+def require_no_stale_keys(map_tier: dict[str, int], root_dir: Path, rule_name: str) -> None:
     """[tier] 키가 가리키는 폴더 · 파일이 없으면 멈춘다. 파일을 옮기고 표 줄을 남기면 configure 가 여기서 선다."""
     list_stale = [key for key in map_tier if not (root_dir / key).exists()]
     if list_stale:
@@ -110,7 +110,7 @@ def generate_module_layers(module: str, output_path: Path) -> None:
             map_source.setdefault(tier, []).append(relative)
         else:
             map_header.setdefault(tier, []).append(f"{table._root_folder}/{relative}")
-    check_stale_keys(map_tier, root_dir, rule_file.name)
+    require_no_stale_keys(map_tier, root_dir, rule_file.name)
 
     list_tier = sorted(set(map_tier.values()))
     header = f"""# ==============================================================================
@@ -130,7 +130,7 @@ def generate_module_layers(module: str, output_path: Path) -> None:
     write_generated_file(output_path, "\n".join(list_line), tag=f"{module}Layers", summary=f"{file_count} files · {len(list_tier)} tiers")
 
 
-class ModuleLayersGenerator(Generator):
+class ModuleLayersGenerator(CodeGenerator):
     def generate(self, output_dir: Path, game_name: str) -> None:
         for table in LIST_LAYER_TABLE:
             generate_module_layers(table._module, output_dir / f"{table._module}Layers.cmake")

@@ -19,7 +19,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 from generate.generator_output import GeneratorError  # noqa: E402
 from common.paths import get_project_root  # noqa: E402
 from generate.editor_layers import generate_editor_layers  # noqa: E402
-from generate.module_layers import LIST_LAYER_TABLE, assign_tiers, check_stale_keys, find_layer_table, generate_module_layers, read_tier_table  # noqa: E402
+from generate.module_layers import LIST_LAYER_TABLE, assign_tiers, require_no_stale_keys, find_layer_table, generate_module_layers, read_tier_table  # noqa: E402
 
 
 class EngineLayerTableTest(unittest.TestCase):
@@ -49,9 +49,9 @@ class EngineLayerTableTest(unittest.TestCase):
         map_tier = dict(self._map_tier)
         map_tier["Input/NoSuchMovedFile.cpp"] = 5
         with self.assertRaises(GeneratorError) as context:
-            check_stale_keys(map_tier, root_dir, "EngineLayers.toml")
+            require_no_stale_keys(map_tier, root_dir, "EngineLayers.toml")
         self.assertIn("Input/NoSuchMovedFile.cpp", str(context.exception))
-        check_stale_keys(self._map_tier, root_dir, "EngineLayers.toml")   # 지금 표에는 낡은 줄이 없다
+        require_no_stale_keys(self._map_tier, root_dir, "EngineLayers.toml")   # 지금 표에는 낡은 줄이 없다
 
 
 class RealLayerTablesConfigureTest(unittest.TestCase):

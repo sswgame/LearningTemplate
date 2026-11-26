@@ -28,7 +28,7 @@ namespace sw
             writer.endArray();
         }
 
-        /** @brief `"goldenSamples": [ { golden, 측정값 셋, 상한 셋 } ]` 을 씁니다. 읽는 쪽은 `Scripts/dev/scenario_bisect.py --golden-margins` 다(키 이름을 바꾸지 않는다). */
+        /** @brief `"goldenSamples": [ { golden, 측정값 셋, 상한 셋 } ]` 을 씁니다. 읽는 쪽은 `Scripts/verify/scenario_bisect.py --golden-margins` 다(키 이름을 바꾸지 않는다). */
         void writeAutomationGoldenSamples( JSONWriter& writer, const vector<AutomationGoldenSample>* pListSample )
         {
             writer.key( "goldenSamples" );
@@ -129,7 +129,7 @@ namespace sw
         const AutomationRunResult& runResult = *params._pRunResult;
         writer.key( "reason" );
         writer.valueString( runResult.getReason() );
-        // 판정 값 — 부모(`AutomationPerBackend`) · 스크립트(`scenario_bisect.py` · `linux_scenarios.py`)가 이 칸으로 끝 줄을 짓는다(로그 문구를 읽지 않는다).
+        // 판정 값 — 부모(`AutomationPerBackend`) · 스크립트(`scenario_bisect.py` · `linux_verify.py`)가 이 칸으로 끝 줄을 짓는다(로그 문구를 읽지 않는다).
         writer.key( "failure" );
         writer.beginObject();
         writer.key( "kind" );

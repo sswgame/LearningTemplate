@@ -63,7 +63,7 @@ namespace sw
 
     /**
      * @struct AssetIdentityRules
-     * @brief 정체성 규칙 파일(`kConfigFile`)입니다. 파이썬 도구(`Scripts/lint/asset_identity.py`)가 같은 키를 읽는다. 패턴의 `*` 는 `/` 도 넘는다(`StringUtil::matchesWildcard`).
+     * @brief 정체성 규칙 파일(`kConfigFile`)입니다. 파이썬 도구(`Scripts/lint/asset_guid.py`)가 같은 키를 읽는다. 패턴의 `*` 는 `/` 도 넘는다(`StringUtil::matchesWildcard`).
      */
     REFLECT()
     struct SW_API AssetIdentityRules
@@ -130,7 +130,7 @@ namespace sw
          * @brief 산출물 자리 @p outputID 의 원본 후보를 가까운 것부터 @p outListSource 끝에 더합니다(있는지는 보지 않는다).
          * @details 원본은 산출물 자리의 어느 조상이다 — `models/a/b/c.mesh` 는 `models_raw/a/b/c.glb` → `a/b.glb` → `a.glb` 순서로 본다(옆 폴더 `a/clips` 도 `a.glb` 의 것).
          *          그 원본에서 나오지 않는 종류의 파일(`_listOutputSuffix` 밖)은 원본이 있어도 산출물이 아니다 — 손으로 적은 글이 원본 이름을 빌려 지나가지 않게 한다. 폴더는 접미사를 보지 않는다.
-         *          끊어진 참조 검사(`AssetReferenceFields`)와 산출물 정체성이 이 규칙 하나를 쓴다(파이썬 `asset_identity.py` 의 `iterate_imported_sources`).
+         *          끊어진 참조 검사(`AssetReferenceFields`)와 산출물 정체성이 이 규칙 하나를 쓴다(파이썬 `asset_guid.py` 의 `iterate_imported_sources`).
          */
         void collectImportedSources( string_view outputID, vector<AssetImportedSource>& outListSource ) const;
 

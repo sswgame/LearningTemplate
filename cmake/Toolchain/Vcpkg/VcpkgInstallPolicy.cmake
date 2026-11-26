@@ -11,7 +11,7 @@
 include_guard(GLOBAL)
 
 # SOURCE_DIR: 구성하는 소스 트리. INSTALLED_DIR: VCPKG_INSTALLED_DIR. USER_INSTALL: 사용자가 준 VCPKG_MANIFEST_INSTALL(없으면 빈 값).
-function(sw_vcpkg_install_read_only_reason SOURCE_DIR INSTALLED_DIR USER_INSTALL OUT_REASON)
+function(sw_get_vcpkg_install_read_only_reason SOURCE_DIR INSTALLED_DIR USER_INSTALL OUT_REASON)
 	set(reason "")
 
 	if(NOT USER_INSTALL STREQUAL "" AND NOT USER_INSTALL)
@@ -38,7 +38,7 @@ endfunction()
 
 # `vcpkg install --dry-run` 출력(영어로 고정 — VSLANG=1033)에서 지울 · 지을(다시 지을 포함) 포트를 읽는다.
 # 절마다 머리 줄("The following packages will be removed:" 등) 아래에 포트가 한 줄씩 온다. 게이트(Vcpkg.cmake 1b)가 부른다.
-function(sw_vcpkg_parse_install_plan OUTPUT OUT_REMOVE OUT_BUILD)
+function(sw_parse_vcpkg_install_plan OUTPUT OUT_REMOVE OUT_BUILD)
 	string(REPLACE "\r" "" output "${OUTPUT}")
 	string(REPLACE ";" "," output "${output}")
 	string(REPLACE "\n" ";" lines "${output}")
@@ -71,7 +71,7 @@ endfunction()
 # 줄끝(CRLF/LF)을 같게 보고 파일 내용의 SHA256 을 구한다.
 # 스탬프는 main 체크아웃과 워크트리가 나눠 쓴다. 두 체크아웃의 줄끝이 다르면(core.autocrlf — main 은 LF, 워크트리는 CRLF 로 나온 적이 있다)
 # 내용이 같아도 해시가 달라 configure 마다 스탬프가 번갈아 덮이고, 그때마다 바뀐 것 없이 설치가 돌았다.
-function(sw_vcpkg_hash_file_normalized FILE_PATH OUT_VAR)
+function(sw_hash_normalized_file FILE_PATH OUT_VAR)
 	file(READ "${FILE_PATH}" content)
 	string(REPLACE "\r\n" "\n" content "${content}")
 	string(SHA256 hash "${content}")
@@ -80,14 +80,14 @@ endfunction()
 
 # 오버레이 포트(SOURCE_DIR/ThirdParty/*/vcpkg-port) 폴더의 모든 파일 — 이름과 내용 — 의 SHA256. vcpkg 도 포트 폴더의 모든 파일을 포트 ABI 해시에 넣는다.
 # 확장자로 고르면(portfile · vcpkg.json · *.patch 만 셌다) *.diff · vcpkg-cmake-wrapper.cmake · CMakeLists.txt · usage 를 고쳐도 스탬프가 같아 설치를 건너뛰었다.
-function(sw_vcpkg_hash_overlay_ports SOURCE_DIR OUT_VAR)
+function(sw_hash_vcpkg_overlay_ports SOURCE_DIR OUT_VAR)
 	file(GLOB list_port_folder "${SOURCE_DIR}/ThirdParty/*/vcpkg-port")
 	set(entries "")
 	foreach(port_folder IN LISTS list_port_folder)
 		file(GLOB_RECURSE list_file LIST_DIRECTORIES false RELATIVE "${SOURCE_DIR}" "${port_folder}/*")
 		list(SORT list_file)
 		foreach(file IN LISTS list_file)
-			sw_vcpkg_hash_file_normalized("${SOURCE_DIR}/${file}" content_hash)
+			sw_hash_normalized_file("${SOURCE_DIR}/${file}" content_hash)
 			string(APPEND entries "${file}=${content_hash}\n")
 		endforeach()
 	endforeach()

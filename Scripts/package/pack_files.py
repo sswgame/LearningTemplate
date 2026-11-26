@@ -1,5 +1,5 @@
 """
-배포 패키지가 담는 팩 파일 고르기 — 패키지 만들기(`pack`)와 플랫폼 묶기(`android-apk` · `web-package`), 배포 확인(`shipping-check`)이 함께 쓴다.
+배포 패키지가 담는 팩 파일 고르기 — 패키지 만들기(`package`)와 플랫폼 묶기(`android-apk` · `web-package`), 배포 확인(`shipping-check`)이 함께 쓴다.
 """
 
 from __future__ import annotations

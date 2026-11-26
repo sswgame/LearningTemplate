@@ -5,11 +5,11 @@
 
 # 모듈 · 핫 리로드 타깃의 런타임 출력 — 모듈 DLL(rhi · kit · game · editor)은 `Bin/Modules/`, 모두가 링크하는 GameFramework 는 `Bin/` 이다.
 # 런타임은 `ModuleLibraryUtil::findModuleLibraryPath` 로 같은 순서(Modules → Bin)로 찾는다. SHARED/MODULE 은 플랫폼에 따라 LIBRARY 출력(Lib/)으로
-# 갈 수 있어 둘 다 정한다. `$<0:>` 는 BuildLayout 과 같다.
+# 갈 수 있어 둘 다 정한다. `$<0:>` 는 OutputLayout 과 같다.
 # vcpkg 의 applocal 이 `Bin/Modules` 의 모듈 옆에 서드파티 DLL 을 복사하지 않게 하고, 같은 일을 모듈마다 스테이지 폴더에서 해 `Bin` 으로 옮긴다
-# (`StageModuleRuntimeDLLs.cmake`). 서드파티 DLL 은 `Bin` 에 한 벌이다 — 모듈 로드(`LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR | DEFAULT_DIRS`)는 모듈 폴더 다음에
+# (`DeployModuleRuntimeDLLs.cmake`). 서드파티 DLL 은 `Bin` 에 한 벌이다 — 모듈 로드(`LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR | DEFAULT_DIRS`)는 모듈 폴더 다음에
 # 실행 파일 폴더를 본다. vcpkg 의 `add_library` 래퍼는 타깃을 만드는 순간 `VCPKG_APPLOCAL_DEPS` 를 읽으므로 부르는 쪽(`sw_add_module_library`)이 그 순간만 끈다.
-function(sw_stage_module_runtime_dlls TARGET_NAME)
+function(sw_deploy_module_runtime_dlls TARGET_NAME)
 	if(NOT WIN32 OR NOT DEFINED Z_VCPKG_EXECUTABLE OR NOT DEFINED VCPKG_INSTALLED_DIR)
 		return()
 	endif()
@@ -20,7 +20,7 @@ function(sw_stage_module_runtime_dlls TARGET_NAME)
 			"-DBIN_DIR=${CMAKE_BINARY_DIR}/Bin"
 			"-DVCPKG_EXECUTABLE=${Z_VCPKG_EXECUTABLE}"
 			"-DINSTALLED_BIN_DIR=${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}$<$<CONFIG:Debug>:/debug>/bin"
-			-P "${CMAKE_SOURCE_DIR}/cmake/Scripts/StageModuleRuntimeDLLs.cmake"
+			-P "${CMAKE_SOURCE_DIR}/cmake/ScriptMode/DeployModuleRuntimeDLLs.cmake"
 		VERBATIM
 	)
 endfunction()
@@ -110,7 +110,7 @@ function(sw_add_module_library TARGET_NAME)
 		set(share_game_pch ON)
 	endif()
 
-	# `Bin/Modules` 에 가는 모듈은 vcpkg applocal 을 끄고(이 함수 범위만) 서드파티 DLL 을 `Bin` 으로 모은다(`sw_stage_module_runtime_dlls`).
+	# `Bin/Modules` 에 가는 모듈은 vcpkg applocal 을 끄고(이 함수 범위만) 서드파티 DLL 을 `Bin` 으로 모은다(`sw_deploy_module_runtime_dlls`).
 	set(stage_runtime_dlls OFF)
 	if(VCPKG_APPLOCAL_DEPS AND NOT lib_type STREQUAL "STATIC" AND NOT ARG_KIND STREQUAL "gameframework")
 		set(VCPKG_APPLOCAL_DEPS OFF)
@@ -124,13 +124,13 @@ function(sw_add_module_library TARGET_NAME)
 	sw_require_deterministic_mark_for_rollback(${TARGET_NAME} ${ARG_SOURCES})
 	sw_keep_import_library_if_unchanged(${TARGET_NAME})
 	if(stage_runtime_dlls)
-		sw_stage_module_runtime_dlls(${TARGET_NAME})
+		sw_deploy_module_runtime_dlls(${TARGET_NAME})
 	endif()
 	set_target_properties(${TARGET_NAME} PROPERTIES FOLDER "${ARG_FOLDER}")
 	if(NOT ARG_MODULE_NAME STREQUAL TARGET_NAME)
 		set_target_properties(${TARGET_NAME} PROPERTIES OUTPUT_NAME "${ARG_MODULE_NAME}")
 	endif()
-	# 모듈 폴더는 include 경로로 내보내지 않는다 — 키트 · 게임 헤더도 `Source/` 기준 전체 경로로 쓴다(`sw_verify_source_include_roots`).
+	# 모듈 폴더는 include 경로로 내보내지 않는다 — 키트 · 게임 헤더도 `Source/` 기준 전체 경로로 쓴다(`sw_require_source_include_roots`).
 	sw_apply_module_layer_guard(${TARGET_NAME} ${ARG_KIND} ${ARG_MODULE_NAME} "${ARG_CONTENT_OWNER}")
 	if(ARG_KIND MATCHES "^(gameframework|kit|game)$")
 		sw_require_template_definitions(${TARGET_NAME}) # 부분(GameFramework 층)보다 먼저 — 부분이 옵션을 복사한다
@@ -348,7 +348,7 @@ function(sw_add_game_framework_kit KIT_NAME)
 	# 키트의 에디터 확장은 Plugin/Editor/<이름>/ 의 별도 모듈이다(GF_EditorPlugin_<이름>) — 키트 DLL(배포본 포함)에 섞지 않는다. 게임의 Editor/ 도 같다.
 	list(FILTER list_kit_source EXCLUDE REGEX "/Editor/")
 	# 장르 키트의 클라이언트 · 서버 몫은 키트 폴더 안 `Client/` · `Server/` 의 따로 짓는 모듈(GF_Client_<X> · GF_Server_<X>)이다 — 공유 키트 DLL 에 섞지 않는다
-	# (섞으면 전용 서버 구성이 `Client/` 소스를 짓게 되어 `sw_verify_built_sources` 가 멈춘다). 이 키트 폴더 바로 아래만 본다 — `…/Chat/Client/` 처럼
+	# (섞으면 전용 서버 구성이 `Client/` 소스를 짓게 되어 `sw_require_built_sources` 가 멈춘다). 이 키트 폴더 바로 아래만 본다 — `…/Chat/Client/` 처럼
 	# 그 폴더 자체가 모듈인 키트의 소스는 빼지 않는다.
 	sw_escape_regex(kit_directory_regex "${CMAKE_CURRENT_SOURCE_DIR}")
 	list(FILTER list_kit_source EXCLUDE REGEX "^${kit_directory_regex}/(Client|Server)/")

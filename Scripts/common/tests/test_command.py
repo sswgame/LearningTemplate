@@ -53,7 +53,7 @@ class FindCommandsTest(unittest.TestCase):
             def run(self, context: command.ScriptContext, args: object) -> int:
                 raise command.CommandError("까닭")
 
-        self.assertEqual(FailCommand.main([]), command.ExitCode.VIOLATION)
+        self.assertEqual(FailCommand.main([]), command.ExitCode.FAILURE)
 
 
 if __name__ == "__main__":

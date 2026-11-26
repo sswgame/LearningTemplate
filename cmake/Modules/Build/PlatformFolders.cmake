@@ -1,7 +1,7 @@
 # ==============================================================================
 # @file cmake/Modules/Build/PlatformFolders.cmake
 # @brief 플랫폼 폴더 규칙 하나 — `Windows/` · `Linux/` · `LinuxKernel/` · `Android/` · `Web/` · `Posix/` 폴더가 이 구성에서 지어지는가
-# @details 거르기(sw_filter_platform_sources)와 구성 끝 훑기(sw_verify_built_sources)가 같은 판정을 쓴다.
+# @details 거르기(sw_filter_platform_sources)와 구성 끝 훑기(sw_require_built_sources)가 같은 판정을 쓴다.
 #          `cmake -P` 로도 부를 수 있게 함수만 둔다(Scripts/setup/tests/test_cmake_build_rules.py).
 # ==============================================================================
 include_guard(GLOBAL)

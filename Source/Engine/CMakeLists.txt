@@ -44,7 +44,7 @@ list(REMOVE_ITEM ENGINE_SOURCES ${list_rhi_backend_source})
 # 엔진에 남는 것은 런타임 코드가 선언하는 얇은 창구다: 감시 값(`Watch/`), 단계 · 차단 조건 · 단계 초기화 등록과 시나리오 형식(`Scenario/`), 실행기 창구 `IAutomationRuntime`.
 # 등록 매크로는 `SW_SHIPPING` 에서 빈 선언이 된다(`AutomationStepRegistry.h` · `AutomationWatch.h` · `AutomationStageReset.h`).
 
-# 이 타깃이 짓지 않는 폴더(전용 서버의 `Renderer/` — 목록은 cmake/Modules/Build/BuildLayout.cmake 의 `SW_EXCLUDED_ENGINE_FOLDERS`).
+# 이 타깃이 짓지 않는 폴더(전용 서버의 `Renderer/` — 목록은 cmake/Modules/Build/OutputLayout.cmake 의 `SW_EXCLUDED_ENGINE_FOLDERS`).
 # 그 폴더의 헤더는 타깃 게이트 `serverbuild` 가 막는다(서버는 `IEngineRenderDriver` 만 본다). 리플렉션 헤더도 아래 8) 에서 뺀다.
 set(excluded_folder_regex "")
 foreach(excluded_folder IN LISTS SW_EXCLUDED_ENGINE_FOLDERS)
@@ -300,7 +300,7 @@ endif()
 # 다시 넣고 싶어지면 먼저 `SW_ENABLE_UNITY_BUILD` 를 켠 빌드로 **무엇이 실제로 부딪치는지** 보고, 목록이 아니라 그 이름을 고칠 것.
 #
 # 매크로는 이름 규칙으로 못 막는다. X11 을 include 하는 .cpp(`Convex` · `None` … 매크로)는 리눅스에서 `sw_set_unity_build` 가
-# include 줄을 보고 저절로 묶음에서 뺀다 — 이것도 목록이 아니다(`cmake/Toolchain/Options/UnityBuild.cmake`).
+# include 줄을 보고 저절로 묶음에서 뺀다 — 이것도 목록이 아니다(`cmake/Modules/Build/UnityBuild.cmake`).
 # ------------------------------------------------------------------------------
 sw_set_unity_build(Engine)
 
@@ -329,7 +329,7 @@ sw_add_reflection_step(Engine
 	MODULE Engine
 	EXCLUDE_REGEX "${excluded_folder_regex}"
 )
-sw_add_reflect_builtins_gen(Engine)
+sw_add_reflect_builtins_step(Engine)
 
 # ------------------------------------------------------------------------------
 # 9) Jolt 백엔드 소스 — 자기 PCH 를 가진 OBJECT 라이브러리(목적 파일은 Core 티어 부분처럼 Engine 에 들어간다)

@@ -1,5 +1,5 @@
 # 셰이더 데우기 — 요청 기록(`*.shaderrequests`, `ShaderRequestLog`)만 컴파일하는 길(`App --cook-shaders -shader-request-dir=`)이 셰이더 DDC 를 채워, 같은 요청의 다음 컴파일이
-# 캐시에 맞는지 본다. 묶음 검증은 지난 시나리오 체인의 기록으로 이 길을 cpu 단계에서 돌려 GPU 단계가 캐시 미스 컴파일을 떠안지 않게 한다(Scripts/dev/preflight.sh 의 shader warm).
+# 캐시에 맞는지 본다. 묶음 검증은 지난 시나리오 체인의 기록으로 이 길을 cpu 단계에서 돌려 GPU 단계가 캐시 미스 컴파일을 떠안지 않게 한다(Scripts/verify/preflight.sh 의 shader warm).
 # 이 테스트의 DDC(DDC_DIR — `-ddc-dir`)와 기록 폴더(REQUEST_DIR)는 비우고 시작한다 — 빌드 폴더가 함께 쓰는 DDC 는 건드리지 않는다.
 # 첫 실행은 기록의 요청을 캐시 미스로 컴파일하고(`ShaderCompiler.CompiledOnCacheMiss`), 둘째 실행은 같은 기록을 한 번도 컴파일하지 않아야 한다(모두 DDC 적중).
 # 소스가 없어진 요청을 건너뛰는 규칙은 단위 테스트(`ShaderRequestLogTest`)가 본다 — 여기서 경고 줄을 내지 않는다.

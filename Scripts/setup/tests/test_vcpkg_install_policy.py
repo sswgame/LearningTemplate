@@ -25,7 +25,7 @@ def read_only_reason(source_dir: Path, installed_dir: str, user_install: str) ->
         script = Path(folder) / "Probe.cmake"
         script.write_text(
             f'include("{POLICY_FILE.as_posix()}")\n'
-            f'sw_vcpkg_install_read_only_reason("{source_dir.as_posix()}" "{installed_dir}" "{user_install}" reason)\n'
+            f'sw_get_vcpkg_install_read_only_reason("{source_dir.as_posix()}" "{installed_dir}" "{user_install}" reason)\n'
             'message(NOTICE "REASON=[${reason}]")\n',
             encoding="utf-8",
         )
@@ -35,7 +35,7 @@ def read_only_reason(source_dir: Path, installed_dir: str, user_install: str) ->
 
 
 def parse_install_plan(output: str) -> tuple[str, str]:
-    """`sw_vcpkg_parse_install_plan` 이 읽은 (지울, 지을) 포트 목록 — CMake 리스트 글 그대로."""
+    """`sw_parse_vcpkg_install_plan` 이 읽은 (지울, 지을) 포트 목록 — CMake 리스트 글 그대로."""
     with tempfile.TemporaryDirectory() as folder:
         plan = Path(folder) / "plan.txt"
         plan.write_bytes(output.encode("utf-8"))
@@ -43,7 +43,7 @@ def parse_install_plan(output: str) -> tuple[str, str]:
         script.write_text(
             f'include("{POLICY_FILE.as_posix()}")\n'
             f'file(READ "{plan.as_posix()}" output)\n'
-            'sw_vcpkg_parse_install_plan("${output}" remove build)\n'
+            'sw_parse_vcpkg_install_plan("${output}" remove build)\n'
             'message(NOTICE "REMOVE=[${remove}]")\n'
             'message(NOTICE "BUILD=[${build}]")\n',
             encoding="utf-8",
@@ -60,7 +60,7 @@ def overlay_hash(source_dir: Path) -> str:
         script = Path(folder) / "Probe.cmake"
         script.write_text(
             f'include("{POLICY_FILE.as_posix()}")\n'
-            f'sw_vcpkg_hash_overlay_ports("{source_dir.as_posix()}" hash)\n'
+            f'sw_hash_vcpkg_overlay_ports("{source_dir.as_posix()}" hash)\n'
             'message(NOTICE "HASH=[${hash}]")\n',
             encoding="utf-8",
         )

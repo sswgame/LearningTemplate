@@ -42,7 +42,7 @@ endforeach()
 # ------------------------------------------------------------------------------
 # Tests/ 는 봇 자체의 단위 테스트(보내기 방식 · 시나리오 읽기)다 — `UnitTests.OnlineKits` 가 이 폴더도 넘긴다(IntegrationTests/CMakeLists.txt).
 sw_glob_source_tree(load_bot_core_source "${CMAKE_CURRENT_SOURCE_DIR}/LoadBot*.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/LoadBot*.h" "${CMAKE_CURRENT_SOURCE_DIR}/Tests/*.cpp")
-# SHARED(진입점 하나만 내보냄): MODULE 종류는 App 이 올리는 동적 모듈 레지스트리에 들어야 한다(`sw_verify_dynamic_module_registry`) — 이 모듈은 봇 실행 파일만 올린다.
+# SHARED(진입점 하나만 내보냄): MODULE 종류는 App 이 올리는 동적 모듈 레지스트리에 들어야 한다(`sw_require_dynamic_module_registry`) — 이 모듈은 봇 실행 파일만 올린다.
 add_library(OnlineLoadBotCore SHARED ${load_bot_core_source})
 target_link_libraries(OnlineLoadBotCore
 	PRIVATE

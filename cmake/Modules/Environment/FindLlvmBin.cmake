@@ -27,7 +27,7 @@ function(sw_find_llvm_bin OUT_VAR)
 	if(llvm_path STREQUAL "" OR NOT IS_DIRECTORY "${llvm_path}/bin")
 		message(FATAL_ERROR
 			"[FindLlvmBin] ${config_file}: ${SW_KEY_LLVM_PATH}='${llvm_path}' has no bin folder.\n"
-			"  Run `py -3 Scripts/setup/environment.py` (or llvm.py --install) so it records a valid LLVM kit."
+			"  Run `py -3 Scripts/setup/setup_environment.py` (or llvm.py --install) so it records a valid LLVM kit."
 		)
 	endif()
 

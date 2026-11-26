@@ -1,11 +1,11 @@
 # ==============================================================================
 # @file cmake/Toolchain/LoadCompileFlags.cmake
-# @brief Compiler/Platform/Architecture/BuildType/Options INTERFACE 모듈 (명시적 순서)
+# @brief Compiler/Platform/Architecture/BuildType/CppStandard/Instrumentation/UnityBuild INTERFACE 모듈 (명시적 순서)
 # @note cmake/Toolchain/Vcpkg 는 루트 CMakeLists.txt 의 vcpkg 게이트가 include 한다
 # ==============================================================================
 
 # ------------------------------------------------------------------------------
-# 1) 플래그 모듈 순서 — 아키텍처 → 플랫폼 → 컴파일러 → BuildType → Options
+# 1) 플래그 모듈 순서 — 아키텍처 → 플랫폼 → 컴파일러 → BuildType → C++ 표준 → 계측(새니타이저 · 퍼징) → 유니티 빌드
 # 해당하지 않는 모듈은 즉시 return
 # ------------------------------------------------------------------------------
 include("${CMAKE_CURRENT_LIST_DIR}/Architecture/DetectArchitecture.cmake")
@@ -30,9 +30,9 @@ include("${CMAKE_CURRENT_LIST_DIR}/Compiler/MSVC.cmake")
 include("${CMAKE_CURRENT_LIST_DIR}/BuildType/Debug.cmake")
 include("${CMAKE_CURRENT_LIST_DIR}/BuildType/Release.cmake")
 
-include("${CMAKE_CURRENT_LIST_DIR}/Options/CppStandard.cmake")
-include("${CMAKE_CURRENT_LIST_DIR}/Options/Sanitizer.cmake")
-include("${CMAKE_CURRENT_LIST_DIR}/Options/Fuzzing.cmake")
-include("${CMAKE_CURRENT_LIST_DIR}/Options/UnityBuild.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/CppStandard.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/Instrumentation/Sanitizer.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/Instrumentation/Fuzzing.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/../Modules/Build/UnityBuild.cmake")
 
 unset(modules_root)

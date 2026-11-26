@@ -24,7 +24,7 @@ namespace sw::editor
     namespace
     {
         /** @brief 진입점(저장소 루트 기준)입니다. */
-        constexpr const utf8* kScriptRelativePath = "Scripts/package/pack.py";
+        constexpr const utf8* kScriptRelativePath = "Scripts/package/package.py";
         /** @brief 진입점이 받는 플랫폼 이름입니다(`--platform`, `pack.py` 의 `MAP_PLATFORM_PRESET`). 맨 앞이 이 호스트다. */
         constexpr const utf8* kArrPlatform[] = { "Desktop", "Web", "Android" };
         /** @brief 진입점이 받는 타깃 이름입니다(`--target`). */

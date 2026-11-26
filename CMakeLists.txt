@@ -15,7 +15,7 @@ include(cmake/Modules/Config/BuildOptions.cmake)
 include(cmake/Modules/Config/GenerateConfigConstants.cmake)
 include(cmake/Modules/Environment/DetectToolchain.cmake)
 # vcpkg 매니페스트 게이트 — 실제 툴체인은 그 안에서 CMAKE_TOOLCHAIN_FILE 로 확정한다(project() 전이어야 한다).
-if(SW_USE_VCPKG)
+if(SW_ENABLE_VCPKG)
 	include(cmake/Toolchain/Vcpkg/Vcpkg.cmake)
 endif()
 
@@ -29,21 +29,21 @@ project(
 # 2) project() 직후 — Windows 빌드 도구 사후 바인딩, vcpkg 스탬프
 # ------------------------------------------------------------------------------
 include(cmake/Modules/Environment/ToolchainBinaries.cmake)
-include(cmake/Modules/Environment/FindWindowsTools.cmake)
+include(cmake/Modules/Environment/WindowsToolPaths.cmake)
 sw_bind_clang_cl_windows_tools()
 sw_bind_pinned_archiver()
-sw_vcpkg_write_manifest_stamp()
+sw_write_vcpkg_manifest_stamp()
 
 # ------------------------------------------------------------------------------
 # 3) 컴파일 플래그 · 모듈 빌드 규칙 · 런타임 DLL 복사 · 리플렉션 코드젠 · 에셋/도구 타겟
 # ------------------------------------------------------------------------------
-# BuildLayout 은 include 되는 순간 출력 경로와 sw_global_options 를 정하므로 타깃 규칙(ExcludedSources · ModuleTargets)보다 먼저다.
-# RuntimeDependencies 는 BuildLayout 의 sw_queue_runtime_copy 를 쓴다. 나머지는 함수만 정의한다(파일마다 맡는 일은 cmake/README.md).
+# OutputLayout 은 include 되는 순간 출력 경로와 sw_global_options 를 정하므로 타깃 규칙(ExcludedSources · ModuleTargets)보다 먼저다.
+# RuntimeDependencies 는 OutputLayout 의 sw_queue_runtime_copy 를 쓴다. 나머지는 함수만 정의한다(파일마다 맡는 일은 cmake/README.md).
 include(cmake/Modules/Build/NinjaBuildLogs.cmake) # 구성 끝의 ninja 재압축보다 앞 — 지다 만 것을 먼저 끝낸다
 include(cmake/Modules/Config/DerivedOptions.cmake) # 대상 · 다른 옵션에서 유도하는 옵션 — 아래 모든 파일이 푼 값을 본다
 include(cmake/Modules/Build/SourceTree.cmake) # `Source/` 를 한 번 훑은 목록 — 소스 목록은 모두 여기서 거른다(Web.cmake 가 먼저 쓴다)
 include(cmake/Toolchain/LoadCompileFlags.cmake)
-include(cmake/Modules/Build/BuildLayout.cmake)
+include(cmake/Modules/Build/OutputLayout.cmake)
 include(cmake/Modules/Build/ExcludedSources.cmake)
 include(cmake/Modules/Build/TargetCompileRules.cmake)
 include(cmake/Modules/Build/EngineABIStamp.cmake)
@@ -71,12 +71,12 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty")
 	add_subdirectory(ThirdParty)
 endif()
 
-# 교차 빌드는 호스트 빌드의 도구(ReflectionParser · 쿠킹하는 App)를, 배포 빌드는 호스트 개발 빌드의 쿠커를 쓴다 — 쿠킹 타깃(AssetAndToolTargets)이 호스트 폴더(SW_HOST_BUILD_DIR)를 읽기 전에 정한다.
+# 교차 빌드는 호스트 빌드의 도구(ReflectionParser · 쿠킹하는 App)를, 배포 빌드는 호스트 개발 빌드의 쿠커를 쓴다 — 쿠킹 타깃(CookTargets)이 호스트 폴더(SW_HOST_BUILD_DIR)를 읽기 전에 정한다.
 # 예전에는 이 줄이 아래(Source/Core 뒤)에 있어 첫 구성에서 CookAssets 가 빈 경로(`cmake --build ""`)로 섰다 — 캐시가 생긴 두 번째 구성부터만 맞았다.
 if(CMAKE_CROSSCOMPILING OR SW_SHIPPING_BUILD)
 	include(cmake/Modules/Build/HostTools.cmake)
 endif()
-include(cmake/Modules/Build/AssetAndToolTargets.cmake)
+include(cmake/Modules/Build/CookTargets.cmake)
 
 # ------------------------------------------------------------------------------
 # 4) 서브디렉터리 빌드 및 의존성 구성
@@ -123,7 +123,7 @@ endif()
 
 # 여기까지 오면 동적 모듈이 전부 만들어졌다 — 레지스트리에 빠진 것이 없는지 먼저 확인한다.
 # (빠지면 App 이 그 DLL 보다 먼저 빌드될 수 있고, 증상은 "가끔 실패" 로만 나타난다.)
-sw_verify_dynamic_module_registry()
+sw_require_dynamic_module_registry()
 # 동적 모듈을 모두 링크한 뒤에만 다시 쓰는 스탬프 — 바깥 빌드의 핫 리로드 신호(`ModuleHotReloadManager`).
 sw_add_module_build_stamp()
 # 리플렉션 단계가 모두 선 뒤 — 콘텐츠가 쓰는 타입의 모듈을 그 도메인이 가지는지 빌드 단계로 본다(대상마다 파서가 쓴 타입 목록을 읽는다).
@@ -137,10 +137,10 @@ sw_configure_app_dependencies(Server)
 # 이 구성이 일부러 짓지 않는 소스(배포의 에디터 · 핫 리로드 · 고르지 않은 RHI 백엔드 …)를 빌드 트리에 적는다 — 구성 끝에 목록 파일로 쓴다.
 sw_write_excluded_source_list()
 # 모든 타깃을 훑어 이 구성이 짓지 않을 소스(플랫폼 폴더 · 개발 전용 · 반대쪽 대상 전용 · 위 목록)를 든 타깃이 있으면 구성을 세운다.
-sw_verify_built_sources()
+sw_require_built_sources()
 
 # 모든 타깃이 선 뒤 — `Source/` 아래 폴더를 include 경로로 준 타깃이 있으면 구성을 세운다(접두 없는 include 가 층 게이트를 비껴가는 길).
-sw_verify_source_include_roots()
+sw_require_source_include_roots()
 
 # 뿌리(`Source/` · `IntegrationTests/` · 시나리오 폴더) 아래를 sw_glob_source_tree 밖에서 빌드마다 훑는 글롭이 있으면 빌드가 멈춘다(생성된 VerifyGlobs.cmake 를 본다).
-sw_check_configure_globs()
+sw_require_configure_globs()

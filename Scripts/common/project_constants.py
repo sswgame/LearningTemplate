@@ -100,7 +100,7 @@ DIR_TOOLS_REFLECTION_TEMPLATES = "Source/Programs/ReflectionParser/Emit/Template
 # =============================================================================
 
 SCRIPT_SETUP_VCPKG = "Scripts/setup/vcpkg.py"
-SCRIPT_SETUP_ENVIRONMENT = "Scripts/setup/environment.py"
+SCRIPT_SETUP_ENVIRONMENT = "Scripts/setup/setup_environment.py"
 
 # =============================================================================
 # --- 5. JSON Schema Keys & Environment Variables (JSON 필드명 및 환경변수 심볼) -
@@ -150,7 +150,7 @@ KEY_VCPKG_AUTO_BOOTSTRAP = "vcpkg_auto_bootstrap"
 ENV_SW_LLVM_AUTO_BOOTSTRAP = "SW_LLVM_AUTO_BOOTSTRAP"
 ENV_SW_VCPKG_AUTO_BOOTSTRAP = "SW_VCPKG_AUTO_BOOTSTRAP"
 
-#: 전용 서버가 짓지 않는 엔진 폴더(`Source/Engine/` 기준) — CMake 의 `SW_EXCLUDED_ENGINE_FOLDERS`(BuildLayout.cmake)와 서버 게이트(`target_layers.py`)가 함께 읽는 정본이다.
+#: 전용 서버가 짓지 않는 엔진 폴더(`Source/Engine/` 기준) — CMake 의 `SW_EXCLUDED_ENGINE_FOLDERS`(OutputLayout.cmake)와 서버 게이트(`target_layers.py`)가 함께 읽는 정본이다.
 SERVER_EXCLUDED_ENGINE_FOLDERS: tuple[str, ...] = ("Audio", "Renderer", "UI", "Window/Linux", "Input/Linux")
 
 # =============================================================================

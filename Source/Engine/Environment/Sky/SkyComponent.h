@@ -73,9 +73,9 @@ namespace sw
         AssetRef<Texture2D> _hdriTexture;
         PROPERTY( Category = "HDRI", DisplayName = "Rotation", EditCondition = "_mode == Hdri", Tooltip = "Turns the sky around the vertical axis" )
         Radians _hdriRotation;
-        PROPERTY( Category = "HDRI", DisplayName = "Radiance Map", EditCondition = "_mode == Hdri", Tooltip = "Octahedral .radiancemap of the source image the sky light filters for reflections (roughness to level); written by Scripts/dev/make_sky_hdri_prefabs.py" )
+        PROPERTY( Category = "HDRI", DisplayName = "Radiance Map", EditCondition = "_mode == Hdri", Tooltip = "Octahedral .radiancemap of the source image the sky light filters for reflections (roughness to level); written by Scripts/content/make_sky_hdri_prefabs.py" )
         AssetRef<OctahedralRadianceMap> _hdriRadianceMap;
-        PROPERTY( Category = "HDRI", DisplayName = "Ambient SH", EditCondition = "_mode == Hdri", Tooltip = "27 SH9 coefficients of the source image (basis * 3 + channel) lighting the probes; written by Scripts/dev/make_sky_hdri_prefabs.py" )
+        PROPERTY( Category = "HDRI", DisplayName = "Ambient SH", EditCondition = "_mode == Hdri", Tooltip = "27 SH9 coefficients of the source image (basis * 3 + channel) lighting the probes; written by Scripts/content/make_sky_hdri_prefabs.py" )
         vector<float32> _listHdriAmbient;
         PROPERTY( Category = "Atmosphere", DisplayName = "Rayleigh Scale", Min = 0.0, EditCondition = "_mode == Atmosphere", Tooltip = "Multiplies the Rayleigh scattering (blue sky); 0 removes it" )
         float32 _rayleighScale;

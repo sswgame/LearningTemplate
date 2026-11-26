@@ -42,7 +42,7 @@ SW_TEST_CASE( AssetGUIDTest, FromNameIsDeterministicAndDistinct )
 }
 
 /**
- * @brief [AssetGUIDTest] 이름공간 + 이름의 GUID(임포트 산출물)는 원본 GUID 와 산출물 이름만 본다 — 값은 파이썬 도구(`asset_identity.py` 의 자체 검사)와 같은 글이다
+ * @brief [AssetGUIDTest] 이름공간 + 이름의 GUID(임포트 산출물)는 원본 GUID 와 산출물 이름만 본다 — 값은 파이썬 도구(`asset_guid.py` 의 자체 검사)와 같은 글이다
  */
 SW_TEST_CASE( AssetGUIDTest, OutputIdentityComesFromSourceAndOutputName )
 {

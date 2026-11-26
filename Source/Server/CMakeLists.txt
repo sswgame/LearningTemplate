@@ -43,10 +43,10 @@ endif()
 
 # Tracy 클라이언트(개발 빌드 · Windows). Engine 이 지연 로드하므로 `-gv_tracy` 를 켜기 전에는 올라오지 않는다.
 sw_copy_tracy_runtime(Server)
-sw_emit_runtime_copies(Server)
+sw_apply_runtime_copies(Server)
 
 # 클라이언트 전용 형식 이름 표(`ClientOnlyTypeTable`) — 전용 서버로 선 프로세스만 읽는다(서버 구성은 클라이언트 코드를 짓지 않고, 개발 구성의 Server 는 클라이언트 모듈을 올리지 않아 그 형식을 모른다). 클라이언트 전용 소스의 헤더에서 빌드가 만들어
-# 실행 파일 옆(`Bin/ClientOnlyTypes.json`)에 두고, 패키지(`Scripts/package/pack.py`)가 함께 싣는다. 헤더 고르기는 클라이언트 전용 소스의 정본과 같다
+# 실행 파일 옆(`Bin/ClientOnlyTypes.json`)에 두고, 패키지(`Scripts/package/package.py`)가 함께 싣는다. 헤더 고르기는 클라이언트 전용 소스의 정본과 같다
 # (`SW_EXCLUDED_ENGINE_FOLDERS` · `SW_CLIENT_ONLY_SOURCE_PATTERNS`, 테스트 폴더는 뺀다). 언리얼이 쿠킹 때 서버에서 뺄 클래스 목록을 내는 자리와 같다.
 # .cpp 안의 리플렉션 형식(`<이름>.cpp.gen.inl` 로 등록한다)도 든다. .cpp 는 매크로가 있는 것만 넘긴다. 클라이언트 .cpp 를 고칠 때마다 표를 다시 쓰지 않게 하려는 것이고,
 # 매크로가 새로 생긴 .cpp 는 리플렉션 후보 검사(`sw_add_reflection_candidate_check`)가 다시 구성하게 한다.

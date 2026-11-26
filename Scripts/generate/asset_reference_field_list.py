@@ -5,7 +5,7 @@ Scripts/generate/asset_reference_field_list.py
 
 리플렉션 파서가 대상마다 쓴 칸 목록(`AssetReferenceFields.list`, `<이름>\\t<대상>` 줄)을 저장소의 표 `Config/Dev/AssetReferenceFields.generated.json` 으로 모은다.
 
-- 표를 저장소에 두는 까닭: 커밋 전 린트(`Scripts/lint/asset_references.py`)와 `move-asset` 은 빌드 없이 돈다.
+- 표를 저장소에 두는 까닭: 커밋 전 린트(`Scripts/lint/asset_reference_scan.py`)와 `move-asset` 은 빌드 없이 돈다.
 - 표는 주인(`CONTENT_OWNER` — 엔진은 빈 글, 게임은 `game:<폴더>`)별이다. 한 구성은 게임 하나만 지으므로 이 구성이 짓는 주인의 줄만 갈아 끼우고 나머지는 그대로 둔다.
   저장소에서 지운 게임(`Source/Games/<폴더>` 없음)의 줄은 아무 구성도 다시 짓지 않으므로 여기서 뺀다.
 - 낡음은 `App --check-asset-refs` 가 리플렉션과 표를 대조해 잡는다. 내용이 같으면 쓰지 않는다(빌드가 저장소를 더럽히지 않게).

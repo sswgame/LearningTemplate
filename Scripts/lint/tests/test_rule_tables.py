@@ -16,7 +16,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
 from common.paths import get_project_root  # noqa: E402
-from lint.rule_tables import TABLE_FOLDER, Baseline, ExceptionTable, check_head, get_table_path, read_table  # noqa: E402
+from lint.rule_tables import TABLE_FOLDER, Baseline, ExceptionTable, require_table_head, get_table_path, read_table  # noqa: E402
 
 HEAD = {"_comment": "시험 표"}
 
@@ -31,15 +31,15 @@ class TablePathTest(unittest.TestCase):
 class HeadTest(unittest.TestCase):
     def test_comment_is_required(self) -> None:
         with self.assertRaises(ValueError):
-            check_head("x.json", {"_items": {}})
+            require_table_head("x.json", {"_items": {}})
         with self.assertRaises(ValueError):
-            check_head("x.json", {"_comment": " ", "_items": {}})
+            require_table_head("x.json", {"_comment": " ", "_items": {}})
 
     def test_keys_are_underscore_camel_case(self) -> None:
-        check_head("x.json", {"_comment": "c", "_devCommands": {}, "_logIDs": {}})
+        require_table_head("x.json", {"_comment": "c", "_devCommands": {}, "_logIDs": {}})
         for bad in ("items", "_Items", "_dev_commands", "_description2x-"):
             with self.assertRaises(ValueError, msg=bad):
-                check_head("x.json", {"_comment": "c", bad: {}})
+                require_table_head("x.json", {"_comment": "c", bad: {}})
 
     def test_every_lint_table_in_repo_has_the_head(self) -> None:
         root = get_project_root()

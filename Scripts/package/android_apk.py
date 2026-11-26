@@ -1,7 +1,7 @@
 """
 Scripts/package/android_apk.py
 
-Android 빌드(lib<이름>.so + 쿠킹한 팩)를 서명한 디버그 APK 로 묶는 명령 — 묶는 일은 `apk_packager.py` 가 한다.
+Android 빌드(lib<이름>.so + 쿠킹한 팩)를 서명한 디버그 APK 로 묶는 명령 — 묶는 일은 `android_apk_builder.py` 가 한다.
 """
 
 from __future__ import annotations
@@ -10,7 +10,7 @@ import argparse
 
 from common.command import Command, ScriptContext
 from common.exit_code import ExitCode
-from package.apk_packager import DEFAULT_PRESET_NAME, LIST_PRESET_NAME, make_apk
+from package.android_apk_builder import DEFAULT_PRESET_NAME, LIST_PRESET_NAME, make_apk
 from package.pack_files import PACK_FOLDER_NAME
 
 

@@ -41,7 +41,7 @@ namespace sw
     {
         struct HotReloadTestInternal
         {
-            /** @brief 모듈 판입니다 — `Scripts/dev/hot_reload_debug_check.py` 가 이 줄의 숫자만 바꿔 다시 짓고 끝나면 되돌린다. */
+            /** @brief 모듈 판입니다 — `Scripts/verify/hot_reload_debug_check.py` 가 이 줄의 숫자만 바꿔 다시 짓고 끝나면 되돌린다. */
             static constexpr int32 kTestVersion = 100;
         };
     } // namespace

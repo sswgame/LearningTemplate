@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <?asset guid="80d5c48fedbd2bfe2841d6555f11f229"?>
 <!--
-  접속한 허브 → 매치 서버 → 허브(클라이언트). 허브 서버 · 매치 서버와 함께 세 프로세스로 돈다(`py -3 -m Scripts net-pair match`).
+  접속한 허브 → 매치 서버 → 허브(클라이언트). 허브 서버 · 매치 서버와 함께 세 프로세스로 돈다(`py -3 -m Scripts login-connect-session match`).
   ① 로그인(허브의 서비스 포트) → 허브 티켓 → 허브 접속(Hub.AvatarID).
   ② 매치형 미니게임으로 들어가면 줄 → 배정 → 허브를 떠나 매치 서버에 붙고(MatchState 4) 사격장에 들어간다. 자동 플레이 AI 의 의도가 매치 서버의 폰을 몰아 서버가 처치를 센다(ServerKillCount).
   ③ 그만두면 매치 서버가 점수를 순위표에 내고, 클라이언트는 새 티켓으로 허브에 다시 붙는다(RestoreCount · Hub.NetRole 2 · AvatarID).

@@ -58,7 +58,7 @@ sw_split_shipping_debug_info(App)
 # ------------------------------------------------------------------------------
 
 # DXC(dxcompiler/dxil)는 런타임 HLSL 컴파일 · DXIL 리플렉션 · 셰이더 쿠킹에 쓰인다 — 개발 구성만 둔다. 배포 App 은 미리 쿠킹한 셰이더(`ShaderCache`)와 매니페스트(`ShaderReflectionLibrary`)만 읽고,
-# 배포 팩은 호스트 개발 빌드가 굽는다(AssetAndToolTargets.cmake).
+# 배포 팩은 호스트 개발 빌드가 굽는다(CookTargets.cmake).
 # Vulkan 검증 레이어는 VulkanRHIDevice 가 SW_DEBUG 에서만 켜므로 Debug 구성에만, Tracy 클라이언트는 개발 빌드 · Windows 에만
 # (Engine 이 지연 로드하므로 `-gv_tracy` 를 켜기 전에는 올라오지 않는다) — 고르기는 sw_deploy_runtime_dependencies 가 한다.
 sw_deploy_runtime_dependencies(App)

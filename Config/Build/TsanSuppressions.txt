@@ -1,4 +1,4 @@
-# ThreadSanitizer 억제 목록 — `py -3 Scripts/dev/linux_scenarios.py sanitize thread` 가 `TSAN_OPTIONS=suppressions=<이 파일>` 로 건다.
+# ThreadSanitizer 억제 목록 — `py -3 Scripts/verify/linux_verify.py sanitize thread` 가 `TSAN_OPTIONS=suppressions=<이 파일>` 로 건다.
 # (예전에 걸던 TestTargets.cmake 가 테스트 연결을 걷을 때 사라져 이 파일이 아무 데도 걸리지 않았다 — 496caa8677.)
 #
 # 우리 코드의 경쟁은 억제하지 않는다 — 아래 줄은 고칠 수 없는 서드파티 내부뿐이다. 원자 연산으로 스스로 동기화하는 서드파티(Jolt · Box2D)는 TSan 구성에서 트리플릿 `x64-linux-tsan`

@@ -3,7 +3,7 @@
 # @brief 모듈 매니페스트(`<모듈>.module.json`) 읽기 · 해석 — 켜짐 · 의존 확인 · 적재 순서, Dev 는 매니페스트를 `Bin/Modules/` 에 복사한다
 # ==============================================================================
 #
-# 해석 결과를 묻는 쪽(꺼진 모듈 건너뛰기)은 `ModuleActivation.cmake`, `Bin` 의 옛 산출물 지우기는 `BuildLayout.cmake` 다.
+# 해석 결과를 묻는 쪽(꺼진 모듈 건너뛰기)은 `ModuleActivation.cmake`, `Bin` 의 옛 산출물 지우기는 `OutputLayout.cmake` 다.
 #
 # 규칙은 런타임(`Engine/Module/ModuleCatalog.cpp`)과 같다 — 한쪽만 고치면 빌드한 것과 App 이 올리는 것이 갈린다.
 # 그래서 해석 결과(켜진 모듈 · 적재 순서)를 `Bin/Modules/ResolvedModules.txt` 로 남기고, 테스트(`ModuleCatalogTest.BuildAndRuntimeAgree`)이
@@ -59,7 +59,7 @@ sw_read_module_enum_names(SW_MODULE_CONFIGURATIONS ModuleConfiguration)
 sw_read_module_enum_names(SW_MODULE_TARGETS ModuleTarget)
 
 # 매니페스트 키가 모두 표(`SW_MODULE_MANIFEST_KEYS`)에 있는지 본다.
-function(sw_check_manifest_keys MANIFEST_PATH)
+function(sw_require_manifest_keys MANIFEST_PATH)
 	sw_require_json_value(key_count "${MANIFEST_PATH}" LENGTH)
 	math(EXPR last_key "${key_count} - 1")
 
@@ -185,7 +185,7 @@ function(sw_read_module_manifest MANIFEST_PATH)
 		message(FATAL_ERROR "[Module] ${MANIFEST_PATH}: the file must be named '${name}.module.json'")
 	endif()
 
-	sw_check_manifest_keys("${MANIFEST_PATH}")
+	sw_require_manifest_keys("${MANIFEST_PATH}")
 	sw_require_json_value(version "${MANIFEST_PATH}" _version)
 
 	if(NOT version MATCHES "^[0-9]+\\.[0-9]+\\.[0-9]+$")
@@ -364,7 +364,7 @@ function(sw_decide_module_activation OUT_ACTIVE)
 		math(EXPR override_index "${override_index} + 1")
 	endforeach()
 
-	# 플랫폼 · 구성 이름은 SW_PLATFORM_NAME · SW_CONFIGURATION_NAME(cmake/Modules/Build/BuildLayout.cmake) — 배포 백엔드 확인과 같은 낱말이다.
+	# 플랫폼 · 구성 이름은 SW_PLATFORM_NAME · SW_CONFIGURATION_NAME(cmake/Modules/Build/OutputLayout.cmake) — 배포 백엔드 확인과 같은 낱말이다.
 	# 빌드 타깃이 담는 모듈 대상 — Game 은 둘 다.
 	if(SW_TARGET_TYPE STREQUAL "Game")
 		set(build_targets Client Server)

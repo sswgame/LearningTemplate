@@ -55,7 +55,7 @@
     {
       "name": "Linux-Debug-ASan",
       "displayName": "Linux Ninja Debug + AddressSanitizer/UBSan (Clang)",
-      "description": "수명 · 경계 · 미정의 동작 그물 — `py -3 Scripts/dev/linux_scenarios.py sanitize address` 가 단위 테스트를 돌린다(감사 P-8, Godot CI 의 ASan 빌드 · 언리얼 -EnableASan 자리)",
+      "description": "수명 · 경계 · 미정의 동작 그물 — `py -3 Scripts/verify/linux_verify.py sanitize address` 가 단위 테스트를 돌린다(감사 P-8, Godot CI 의 ASan 빌드 · 언리얼 -EnableASan 자리)",
       "inherits": "Linux-Debug",
       "cacheVariables": {
         "SW_ENABLE_SANITIZER": "ON",
@@ -74,7 +74,7 @@
     {
       "name": "Linux-Debug-TSan",
       "displayName": "Linux Ninja Debug + ThreadSanitizer (Clang)",
-      "description": "데이터 경쟁 그물 — vcpkg 는 x64-linux-tsan 트리플릿(원자로 스스로 동기화하는 포트 계측). `py -3 Scripts/dev/linux_scenarios.py sanitize thread`",
+      "description": "데이터 경쟁 그물 — vcpkg 는 x64-linux-tsan 트리플릿(원자로 스스로 동기화하는 포트 계측). `py -3 Scripts/verify/linux_verify.py sanitize thread`",
       "inherits": "Linux-Debug",
       "cacheVariables": {
         "SW_ENABLE_SANITIZER": "ON",
@@ -128,7 +128,7 @@
     {
       "name": "Ninja-Release-ASan",
       "displayName": "Windows Ninja Release + AddressSanitizer (Clang-cl)",
-      "description": "묶음 검증의 CPU 단위 테스트(`ctest -L nogpu`)와 clang-tidy 컴파일 DB 구성 — Release 최적화에 단언 · 검사(SW_DO_CHECKS)와 clang-cl ASan(/MD, 런타임 DLL 은 Bin 으로 — cmake/Toolchain/Options/Sanitizer.cmake). 언리얼 `-EnableASan`(Windows MSVC ASan, Development 구성) 자리, 유니티는 엔진 소스 ASan 구성이 없다. 게임 · 키트 범위는 Ninja-Debug 와 같고(NileCity — 모든 게임은 Ninja-Release 가 짓고 돈다), 유니티 빌드를 끈다(묶음 TU 는 컴파일 DB 에 원본 파일이 없어 tidy 가 고를 수 없다)",
+      "description": "묶음 검증의 CPU 단위 테스트(`ctest -L nogpu`)와 clang-tidy 컴파일 DB 구성 — Release 최적화에 단언 · 검사(SW_DO_CHECKS)와 clang-cl ASan(/MD, 런타임 DLL 은 Bin 으로 — cmake/Toolchain/Instrumentation/Sanitizer.cmake). 언리얼 `-EnableASan`(Windows MSVC ASan, Development 구성) 자리, 유니티는 엔진 소스 ASan 구성이 없다. 게임 · 키트 범위는 Ninja-Debug 와 같고(NileCity — 모든 게임은 Ninja-Release 가 짓고 돈다), 유니티 빌드를 끈다(묶음 TU 는 컴파일 DB 에 원본 파일이 없어 tidy 가 고를 수 없다)",
       "inherits": "Ninja-Release",
       "cacheVariables": {
         "SW_GAMES": "NileCity",

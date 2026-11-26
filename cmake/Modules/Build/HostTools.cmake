@@ -32,7 +32,7 @@ if(NOT EXISTS "${SW_HOST_BUILD_DIR}/CMakeCache.txt")
 endif()
 unset(default_host_preset)
 
-# 배포 빌드(교차 아님)의 ReflectionParser · 쿠커 도구 판은 이 빌드의 것이다 — 쿠커 실행 파일만 호스트 빌드에서 빌린다(AssetAndToolTargets.cmake).
+# 배포 빌드(교차 아님)의 ReflectionParser · 쿠커 도구 판은 이 빌드의 것이다 — 쿠커 실행 파일만 호스트 빌드에서 빌린다(CookTargets.cmake).
 if(NOT CMAKE_CROSSCOMPILING)
 	unset(host_exe_suffix)
 	return()

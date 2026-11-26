@@ -244,7 +244,7 @@ namespace sw
     /**
      * @struct FileServeConfig
      * @brief 장치가 PC 의 팩 폴더를 받는 개발 전용 전송(`-fileserve=<주소>` — `FileServeContentSource` + 평문 HTTP 클라이언트 `PlainHTTPClient`)의 한도입니다.
-     * @details 응답은 PC 쪽 서버(`py -3 -m Scripts fileserve`)가 보내지만 믿지 않는다 — 머리말 · 본문 상한과 요청 시한이 넘치면 그 요청은 실패다(언리얼 `HttpMaxContentLength` · 요청 시한 자리).
+     * @details 응답은 PC 쪽 서버(`py -3 -m Scripts file-server`)가 보내지만 믿지 않는다 — 머리말 · 본문 상한과 요청 시한이 넘치면 그 요청은 실패다(언리얼 `HttpMaxContentLength` · 요청 시한 자리).
      *          본문 상한은 받는 구간(`FileServeContentSource::kChunkBytes`, 1 MiB) 이상이어야 한다 — 아니면 기동(`AndroidMain`)이 멈춘다. 배포 구성은 이 전송을 짓지 않는다.
      */
     REFLECT()

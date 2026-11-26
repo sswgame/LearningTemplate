@@ -27,7 +27,7 @@ namespace sw
         if ( bHdri && ( pHdriRadiance == nullptr || pHdriRadiance->getMipCount() == 0 ) )
         {
             outData._reflection.clear();
-            return unexpected( Error{ ErrorKind::InvalidArgument, "HDRI sky has no radiance map (_hdriRadianceMap) - run Scripts/dev/make_sky_hdri_prefabs.py" } );
+            return unexpected( Error{ ErrorKind::InvalidArgument, "HDRI sky has no radiance map (_hdriRadianceMap) - run Scripts/content/make_sky_hdri_prefabs.py" } );
         }
 
         // 원본 밉 0 — 텍셀 중심 방향의 하늘빛. 같은 순회에서 SH9 를 투영한다: 옥타헤드럴 사각형의 같은 넓이는 팔면체 면의 같은 넓이이고, 그 조각이 구에서 차지하는

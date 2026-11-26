@@ -77,7 +77,14 @@ option(SW_REQUIRE_REFLECTION "Engine/SWGame 등 리플렉션 타겟에 Reflectio
 
 # 2-2) 도구 및 vcpkg 부트스트랩 옵션
 option(SW_LLVM_AUTO_BOOTSTRAP "LLVM이 없을 때 Llvm.py를 통해 Tools/LLVM에 최소 clang-cl+libclang 키트 자동 다운로드 허용" ON)
-option(SW_USE_VCPKG "vcpkg 패키지 매니저 연동 및 툴체인 사용" ON)
+# 옛 이름 SW_USE_VCPKG(옵션 접두는 SW_ENABLE_). option() 이 캐시에 남긴 기본값 ON 은 지우고, 끈 값이면 새 이름으로 다시 주게 멈춘다. keep-old-name
+if(DEFINED CACHE{SW_USE_VCPKG})   # keep-old-name
+	if(NOT SW_USE_VCPKG)   # keep-old-name
+		message(FATAL_ERROR "[BuildOptions] SW_USE_VCPKG 는 SW_ENABLE_VCPKG 로 바뀌었다 — -DSW_ENABLE_VCPKG=OFF 로 다시 구성한다")   # keep-old-name
+	endif()
+	unset(SW_USE_VCPKG CACHE)   # keep-old-name
+endif()
+option(SW_ENABLE_VCPKG "vcpkg 패키지 매니저 연동 및 툴체인 사용" ON)
 option(SW_VCPKG_AUTO_BOOTSTRAP "vcpkg가 없을 때 Scripts/setup/vcpkg.py를 통해 Tools/vcpkg로 자동 git clone 허용" ON)
 option(SW_VCPKG_FORCE_INSTALL "설치 트리 및 스탬프가 일치해도 vcpkg manifest install 강제 실행" OFF)
 
@@ -142,13 +149,13 @@ if(CMAKE_GENERATOR MATCHES "Ninja")
 		set(cpu_count 4)
 	endif()
 
-	# 링크 동시 실행 개수 — ThinLTO 로 링크하는 구성(배포 Release + SW_ENABLE_LTO, BuildLayout.cmake 의 IPO 조건과 같다)만 좁게 묶는다(LinkJobPool.cmake).
+	# 링크 동시 실행 개수 — ThinLTO 로 링크하는 구성(배포 Release + SW_ENABLE_LTO, OutputLayout.cmake 의 IPO 조건과 같다)만 좁게 묶는다(LinkJobPool.cmake).
 	include("${CMAKE_CURRENT_LIST_DIR}/LinkJobPool.cmake")
 	set(link_lto OFF)
 	if(SW_ENABLE_LTO AND SW_SHIPPING_BUILD AND CMAKE_BUILD_TYPE MATCHES "^(Release|RelWithDebInfo|MinSizeRel)$")
 		set(link_lto ON)
 	endif()
-	sw_link_job_count(${cpu_count} ${link_lto} link_jobs)
+	sw_get_link_pool_size(${cpu_count} ${link_lto} link_jobs)
 
 	set_property(GLOBAL PROPERTY JOB_POOLS compile_job_pool=${cpu_count} link_job_pool=${link_jobs})
 	set(CMAKE_JOB_POOL_COMPILE compile_job_pool)

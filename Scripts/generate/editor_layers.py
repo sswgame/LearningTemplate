@@ -23,7 +23,7 @@ import tomllib
 from pathlib import Path
 
 from common.project_constants import DIR_SOURCE_EDITOR
-from generate.generator_output import Generator, GeneratorError, write_generated_file
+from generate.generator_output import CodeGenerator, GeneratorError, write_generated_file
 from common.paths import get_project_root
 
 TAG = "EditorLayers"
@@ -136,6 +136,6 @@ def generate_editor_layers(output_path: Path) -> None:
     write_generated_file(output_path, "\n".join(list_line), tag=TAG, summary=f"{len(list_actual)} layers · {len(list_tier)} tiers")
 
 
-class EditorLayersGenerator(Generator):
+class EditorLayersGenerator(CodeGenerator):
     def generate(self, output_dir: Path, game_name: str) -> None:
         generate_editor_layers(output_dir / "EditorLayers.cmake")

@@ -13,7 +13,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
-from dev.shipping_check import find_missing_redirect_tables  # noqa: E402
+from verify.shipping_check import find_missing_redirect_tables  # noqa: E402
 from package.pack_index import FLAG_ENCRYPTED, FLAG_HAS_STRING_POOL, HEADER, MAGIC, PackIndexError, read_pack_paths  # noqa: E402
 
 
