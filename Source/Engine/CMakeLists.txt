@@ -73,15 +73,10 @@ endif()
 if(NOT SW_TARGET_TYPE STREQUAL "Server")
 	sw_remove_excluded_sources(ENGINE_SOURCES "/Source/Engine/(Window|Input)/Headless/.*\\.(c|cpp)$")
 endif()
-# 서버 전용 소스(`Server` — 운영 HTTP 끝점 · 관리 채널 · 서버 서비스 레지스트리, `Config/Server` — 서버 비밀)는 클라이언트 구성이 짓지 않는다(`SW_SERVER_ONLY_SOURCE_PATTERNS`, 헤더는 게이트 `clientbuild`).
-if(SW_TARGET_TYPE STREQUAL "Client")
-	sw_remove_excluded_sources(ENGINE_SOURCES ${SW_SERVER_ONLY_SOURCE_PATTERNS})
-endif()
-# 거꾸로 전용 서버는 클라이언트 전용 소스(`Client/`)를 짓지 않는다(헤더는 게이트 `serverbuild`). 게임 모듈과 같은 패턴이다(ModuleTargets.cmake).
-# 렌더러에 기대는 감시 값 · 조건은 `Client/` 가 아니라 렌더러 폴더 안 주인 곁에 둔다(`Renderer/Frame/View/RenderStabilityWatches.cpp` — 서버는 `Renderer` 를 통째로 짓지 않는다).
-if(SW_TARGET_TYPE STREQUAL "Server")
-	sw_remove_excluded_sources(ENGINE_SOURCES ${SW_CLIENT_ONLY_SOURCE_PATTERNS})
-endif()
+# 서버 전용 소스(`Server` — 운영 HTTP 끝점 · 관리 채널 · 서버 서비스 레지스트리, `Config/Server` — 서버 비밀)는 클라이언트 구성이, 클라이언트 전용 소스(`Client/`)는
+# 전용 서버가 짓지 않는다(헤더는 게이트 `clientbuild` · `serverbuild`). 소스를 트리째 모으는 다른 타깃과 같은 함수다.
+# 렌더러에 기대는 감시 값 · 조건은 `Client/` 가 아니라 렌더러 폴더 안 주인 곁에 둔다(서버는 `Renderer` 를 통째로 짓지 않는다).
+sw_remove_other_target_sources(ENGINE_SOURCES)
 
 # 개발 전용 소스(기능 폴더의 단위 테스트 · 개발 명령)는 배포 구성이 짓지 않는다.
 if(SW_SHIPPING_BUILD)
