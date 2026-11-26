@@ -23,7 +23,7 @@
 
 | 갈래 · 워크트리 | 몫 |
 | --- | --- |
-| w-cpp-reflect · LT-wt/cppreflect | 파서 정의 · include 를 타깃 속성에서(671f8c8988 · fd2dac7d65 끝), 컴파일 옵션(9d9872a619 끝), 구성 단계 경로 테스트, Core (c) 열거 이름 constexpr 표, 모르는 옵션은 생성 오류 |
+| w-cpp-reflect · LT-wt/cppreflect | 파서 정의 · include 를 타깃 속성에서(671f8c8988 · fd2dac7d65 끝), 컴파일 옵션 · 옵션 표 엄격화 · 구성 경로 ctest(9d9872a619 · 4de5136b58 · 1f9504d287 끝), Core (c) 열거 이름 6 개를 X 매크로로 |
 | w-enum-meta · LT-wt/enummeta | ENUM 잎 헤더 · 열거형 둘(2898146f6c 끝), 키트별 현지화 표(모듈 단위 탑재 · 수집 대상 · 쿠킹 · 표 이전), AssetTypeDef 접미사 중복(AudioPlayableAsset) |
 | w-gf-dev · LT-wt/gfdev | 개발 등록 매크로 배포 컴파일 오류(1994afb762 끝), DevTools 확장자 글 · `.hlsli`, 내비 베이크 테스트 되살리기 |
 | w-pimpl · LT-wt/pimpl | P1 · P3 · P4(bf52a2d679 · 32ac84a437 · ac9a1f1bf7 끝), 렌더 R4 나머지(쿠킹 컴파일 스트리핑 · 패치 팩 색인 합치기 · 색인 첫 사용처) |
@@ -37,6 +37,7 @@
 - `mesh_modifier.hlsli` 노이즈 복사본이 CPU(Core ValueNoise)와 비트가 같은지.
 - 보류(조사 먼저): ReflectionValidation → TypeInfo, PROPERTY 검증기를 개발 전용으로 빼도 배포 안전이 지켜지는가.
 - AssertDialog 합치기 — 사용자에게 물을 것.
+- 나머지 `sw_*` CMake 함수(모듈 매니페스트 · 층 문지기 · 쿠킹 표)의 구성 단계 경로 테스트.
 - 개발 구성에서도 개발 등록 자리를 막기(__FILE__ 경로 검사 — 에디터 플러그인 · 키트 Editor/ 허용 경로 표가 먼저).
 
 ## 1. 다음 순서
