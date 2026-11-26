@@ -18,6 +18,7 @@
 #pragma once
 #include "Core/String/Name/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionEnumMacros.h"
 #include "Engine/Reflection/TypeLookupCache.h"
 
 namespace sw
@@ -69,7 +70,6 @@ namespace sw::generated
     #define REFLECT( ... )  static_assert( true, "REFLECT;" #__VA_ARGS__ );
     #define PROPERTY( ... ) __attribute__( ( annotate( "PROPERTY;" #__VA_ARGS__ ) ) )
     #define FUNCTION( ... ) __attribute__( ( annotate( "FUNCTION;" #__VA_ARGS__ ) ) )
-    #define ENUM( ... )     static_assert( true, "ENUM;" #__VA_ARGS__ );
     /**
      * @brief 되살리지 않는 값 멤버입니다(캐시 · 이번 프레임 값 · 다시 세우는 리소스 · 바깥이 다시 넣는 값). 저장 · 스트리밍 · 핫 리로드가 싣지 않아도 같은 게임이 이어지는 것만 적습니다.
      * @details 컴포넌트와 상태 칸(`RuntimeState` · `SaveGame`)을 가진 형식에서 선언이 없는 값 멤버는 생성 오류다 — 새 상태가 조용히 빠지지 않는다. 언리얼 `UPROPERTY( Transient )` ·
@@ -78,8 +78,6 @@ namespace sw::generated
     #define SW_TRANSIENT __attribute__( ( annotate( "SW_TRANSIENT" ) ) )
     /** @brief 이 형식(이나 기반)의 `serializeState` · `serializeGameState` 가 싣는 값 멤버입니다. 그 함수가 없는 형식에 적으면 생성 오류입니다. */
     #define SW_CODEC_STATE __attribute__( ( annotate( "SW_CODEC_STATE" ) ) )
-    /** @brief 열거자 하나의 표시 메타입니다(언리얼 `UMETA`). 열거자 이름 뒤에 적습니다: `Red ENUMERATOR( DisplayName = "빨강", Hidden ),` */
-    #define ENUMERATOR( ... ) __attribute__( ( annotate( "ENUMERATOR;" #__VA_ARGS__ ) ) )
 
     /**
      * @brief 컨테이너 타입을 선언할 때 씁니다. 파서가 타입 선언에서 읽어 Sequence/Map 으로 인식합니다.
@@ -115,8 +113,6 @@ namespace sw::generated
     #define REFLECT( ... )
     #define PROPERTY( ... )
     #define FUNCTION( ... )
-    #define ENUM( ... )
-    #define ENUMERATOR( ... )
     #define SW_TRANSIENT
     #define SW_CODEC_STATE
     #define REFLECT_CONTAINER( ... )

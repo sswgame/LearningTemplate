@@ -14,6 +14,7 @@ Compression = 0
 "EngineMinimal.h" = 0
 "EngineHooks.h" = 0                   # 엔진 바깥이 붙는 자리(프레임 훅 · 훅 목록 · 기동 확장) — Core 델리게이트만 쓴다
 "EngineHooks.cpp" = 0
+"Reflection/ReflectionEnumMacros.h" = 0  # 열거형 표식(ENUM · ENUMERATOR)만 둔 잎 헤더(include 없음) — 엔진 pch(EngineMinimal.h)가 끌어 어느 층의 열거형에도 붙인다
 # 1 — 기반: 리플렉션 · 직렬화 · 설정 · 콘텐츠 파일 시스템 · 관측
 Reflection = 1
 Curve = 1

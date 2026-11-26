@@ -11,6 +11,7 @@
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Console/DevCommandRegistry.h"
+#include "Engine/Reflection/EnumName.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/GameSettings.h"
 #include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
@@ -44,26 +45,6 @@ namespace sw
                 info._gameBuild = settings._onlineGameBuild;
                 info._platform  = kPlatformText;
                 return info;
-            }
-
-            static const utf8* describeState( OnlineClientState state )
-            {
-                switch ( state )
-                {
-                    case OnlineClientState::Disconnected:
-                        return "disconnected";
-                    case OnlineClientState::Connecting:
-                        return "connecting";
-                    case OnlineClientState::Negotiating:
-                        return "negotiating";
-                    case OnlineClientState::Ready:
-                        return "ready";
-                    case OnlineClientState::VersionMismatch:
-                        return "version mismatch";
-                    case OnlineClientState::HandshakeFailed:
-                        return "handshake failed";
-                }
-                return "unknown";
             }
 
             // 개발 명령 - 게임 코드 없이 세션을 시나리오와 스크립트가 움직인다.
@@ -111,7 +92,7 @@ namespace sw
                     return true;
                 }
                 StringBuilder<constant::buffer::kMax256> reply;
-                reply.appendFormat( "online: %#, %# kit clients, local server %#", describeState( pSession->getState() ), pSession->getClientCount(), pSession->hasLocalServer() ? "on" : "off" );
+                reply.appendFormat( "online: %#, %# kit clients, local server %#", getEnumName( pSession->getState() ), pSession->getClientCount(), pSession->hasLocalServer() ? "on" : "off" );
                 outReply = string( reply.view() );
                 return true;
             }
