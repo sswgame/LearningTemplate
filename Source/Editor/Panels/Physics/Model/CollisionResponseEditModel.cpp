@@ -64,7 +64,13 @@ namespace sw::editor
 
     bool CollisionResponseEditModel::saveDocument( AssetWriter& writer, const DiskPath& diskPath )
     {
-        if ( writer.writeText( diskPath, _text ) == false )
+        const AssetWriteResult written = writer.writeText( diskPath, _text );
+        if ( written == AssetWriteResult::Refused )
+        {
+            _status = "Not saved: the file is read-only or changed on disk";
+            return false;
+        }
+        if ( written == AssetWriteResult::Failed )
         {
             _status = "Not saved: the file could not be written (see the log)";
             return false;

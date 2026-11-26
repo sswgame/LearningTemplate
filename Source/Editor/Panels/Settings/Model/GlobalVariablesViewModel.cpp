@@ -117,8 +117,11 @@ namespace sw::editor
         formatstring( fileName.data(), fileName.capacity(), "%#%#", name, GlobalVariablesViewModelInternal::kPresetSuffix );
         const AbsolutePath presetPath = EditorGlobalVariableCommands::getPresetFolderPath().join( fileName );
         // 이름 붙인 프리셋 저장은 세션 문서의 저장이 아니다. 세션의 dirty 는 건드리지 않는다.
-        AssetWriter writer; // 이름 붙인 프리셋은 연 문서가 아니다 — 읽기 전용만 본다
-        if ( EditorGlobalVariableCommands::savePreset( writer, presetPath, name.c_str() ) == false )
+        AssetWriter            writer; // 이름 붙인 프리셋은 연 문서가 아니다 — 읽기 전용만 본다
+        const AssetWriteResult saved = EditorGlobalVariableCommands::savePreset( writer, presetPath, name.c_str() );
+        if ( saved == AssetWriteResult::Refused )
+            return false; // 문이 이미 알렸다
+        if ( saved == AssetWriteResult::Failed )
         {
             SW_LOG_ERROR_ID( "GlobalVariablesPanel.CouldNotSavePreset", "Could not save preset '%#'", presetPath.c_str() );
             return false;
@@ -267,7 +270,7 @@ namespace sw::editor
 
     bool GlobalVariablesViewModel::saveSessionPreset( AssetWriter& writer )
     {
-        return EditorGlobalVariableCommands::saveSessionPreset( writer );
+        return EditorGlobalVariableCommands::saveSessionPreset( writer ) == AssetWriteResult::Written; // 문서 패널 저장 길이라 거절은 패널이 먼저 본다
     }
 
     void GlobalVariablesViewModel::collectFilesToSave( vector<DiskPath>& outListPath )

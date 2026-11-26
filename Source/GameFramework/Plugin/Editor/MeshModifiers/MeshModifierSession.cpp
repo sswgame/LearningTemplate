@@ -748,7 +748,10 @@ namespace sw::editor
         const optional<DiskPath> path = findSidecarPath();
         if ( path.has_value() == false )
             return false;
-        if ( writer.saveAsset( *path, _stack ) == false )
+        const AssetWriteResult written = writer.saveAsset( *path, _stack );
+        if ( written == AssetWriteResult::Refused )
+            return false; // 문이 이미 알렸다
+        if ( written == AssetWriteResult::Failed )
         {
             SW_LOG_ERROR_ID( "MeshModifierSession.FailedWriteMeshModifier", "Failed to write mesh modifier stack %#", path->c_str() );
             return false;
@@ -803,9 +806,12 @@ namespace sw::editor
         const auto               meshPath = editor::getSubsystem<AssetPaths>().toDiskPath( _meshPath );
         const optional<DiskPath> path     = meshPath.has_value() ? optional<DiskPath>{ FileUtil::toDiskPath( MeshModifierStack::makeBakedMeshPath( meshPath->str() ) ) } : nullopt;
         AssetWriter              writer; // 구운 메시는 연 문서가 아니다 — 읽기 전용만 본다
-        const bool               bSaved = path.has_value() && writer.save( *path, [&baked]( const AbsolutePath& writable )
-                      { return MeshAssetFormat::saveToFile( writable, baked ); } );
-        if ( bSaved == false )
+        const AssetWriteResult   saved = path.has_value() ? writer.save( *path, [&baked]( const AbsolutePath& writable )
+          { return MeshAssetFormat::saveToFile( writable, baked ); } )
+                                                          : AssetWriteResult::Failed;
+        if ( saved == AssetWriteResult::Refused )
+            return false; // 문이 이미 알렸다
+        if ( saved == AssetWriteResult::Failed )
         {
             SW_LOG_ERROR_ID( "MeshModifierSession.FailedWriteBakedMesh", "Failed to write the baked mesh of '%#'", _meshPath.c_str() );
             return false;

@@ -154,10 +154,15 @@ namespace sw::editor
             SW_LOG_ERROR_ID( "BehaviorTreePanel.BehaviorTreeVariantNotSaved", "Behavior tree '%#' was not saved: %# (%#)", path.c_str(), saveText.error().message(), saveText.error().detail() );
             return false;
         }
-        const string completeText = _model.write(); // 차이(`_base`)면 부모와 같은 칸을 뺐다 — 펼친 글이 짝이다
-        const bool   bSaved       = writer.save( *diskPath, [&saveText, &completeText]( const AbsolutePath& writable )
-                { return ResourceComposer::saveText( writable, ResourceSaveText::makeWithComplete( *saveText, completeText ) ); } );
-        if ( bSaved == false )
+        const string           completeText = _model.write(); // 차이(`_base`)면 부모와 같은 칸을 뺐다 — 펼친 글이 짝이다
+        const AssetWriteResult saved        = writer.save( *diskPath, [&saveText, &completeText]( const AbsolutePath& writable )
+               { return ResourceComposer::saveText( writable, ResourceSaveText::makeWithComplete( *saveText, completeText ) ); } );
+        if ( saved == AssetWriteResult::Refused )
+        {
+            _statusText = "Not saved - the file is read-only or changed on disk";
+            return false; // 문이 이미 알렸다
+        }
+        if ( saved == AssetWriteResult::Failed )
         {
             _statusText = "The file could not be written";
             SW_LOG_ERROR_ID( "BehaviorTreePanel.BehaviorTreeFileCould3", "Behavior tree file '%#' could not be written", diskPath->c_str() );

@@ -226,23 +226,23 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief 지금 높이를 `.heightfield` 형식으로 쓸 자리에 씁니다(높이는 지형의 높이 범위로 양자화). 높이장이 없으면 false 입니다. */
-            [[nodiscard]] static bool saveHeightfield( AssetWriter& writer, const TerrainComponent& terrain, const DiskPath& filePath )
+            /** @brief 지금 높이를 `.heightfield` 형식으로 쓸 자리에 씁니다(높이는 지형의 높이 범위로 양자화). 높이장이 없으면 `Failed` 입니다. */
+            [[nodiscard]] static AssetWriteResult saveHeightfield( AssetWriter& writer, const TerrainComponent& terrain, const DiskPath& filePath )
             {
                 const TerrainHeightfield& heightfield = terrain.getHeightfield();
                 if ( heightfield.isValid() == false )
-                    return false;
+                    return AssetWriteResult::Failed;
                 HeightfieldAsset data;
                 heightfield.makeHeightfieldAsset( terrain.getHeightMin(), terrain.getHeightMax(), data );
                 return writer.saveAsset( filePath, data );
             }
 
-            /** @brief 지금 CPU 가중치를 `.layerweights` 형식(`LayerWeightsAsset`)으로 쓸 자리에 씁니다. 가중치가 없으면 false 입니다. */
-            [[nodiscard]] static bool saveSplat( AssetWriter& writer, const TerrainComponent& terrain, const DiskPath& filePath )
+            /** @brief 지금 CPU 가중치를 `.layerweights` 형식(`LayerWeightsAsset`)으로 쓸 자리에 씁니다. 가중치가 없으면 `Failed` 입니다. */
+            [[nodiscard]] static AssetWriteResult saveSplat( AssetWriter& writer, const TerrainComponent& terrain, const DiskPath& filePath )
             {
                 const TerrainHeightfield& heightfield = terrain.getHeightfield();
                 if ( heightfield.getSplatWidth() == 0 )
-                    return false;
+                    return AssetWriteResult::Failed;
                 LayerWeightsAsset data;
                 data._width  = heightfield.getSplatWidth();
                 data._height = heightfield.getSplatHeight();
@@ -668,22 +668,20 @@ namespace sw::editor
                 TerrainComponent* pTerrain = TerrainBrushToolInternal::findTerrain( _lastEdited );
                 if ( pTerrain == nullptr )
                     return;
-                bool                     bSaved = true;
+                bool                     bSaved = false;
                 AssetWriter              writer;
-                const optional<DiskPath> heightfieldPath = editor::getSubsystem<AssetPaths>().toDiskPath( pTerrain->getHeightfieldPath() ); // 쓰기다 - 읽기 해석이 아니라 쓸 자리
-                if ( heightfieldPath.has_value() == false || TerrainBrushToolInternal::saveHeightfield( writer, *pTerrain, *heightfieldPath ) == false )
-                {
+                const optional<DiskPath> heightfieldPath  = editor::getSubsystem<AssetPaths>().toDiskPath( pTerrain->getHeightfieldPath() ); // 쓰기다 - 읽기 해석이 아니라 쓸 자리
+                const AssetWriteResult   heightfieldSaved = heightfieldPath.has_value() ? TerrainBrushToolInternal::saveHeightfield( writer, *pTerrain, *heightfieldPath ) : AssetWriteResult::Failed;
+                if ( heightfieldSaved == AssetWriteResult::Failed ) // 거절은 문이 이미 알렸다
                     SW_LOG_ERROR_ID( "TerrainBrushTool.TerrainHeightfieldNotSaved", "Terrain heightfield '%#' was not saved", pTerrain->getHeightfieldPath().c_str() );
-                    bSaved = false;
-                }
+                bSaved = heightfieldSaved == AssetWriteResult::Written;
                 if ( pTerrain->getLayerWeightsPath().empty() == false )
                 {
-                    const optional<DiskPath> splatPath = editor::getSubsystem<AssetPaths>().toDiskPath( pTerrain->getLayerWeightsPath() );
-                    if ( splatPath.has_value() == false || TerrainBrushToolInternal::saveSplat( writer, *pTerrain, *splatPath ) == false )
-                    {
+                    const optional<DiskPath> splatPath  = editor::getSubsystem<AssetPaths>().toDiskPath( pTerrain->getLayerWeightsPath() );
+                    const AssetWriteResult   splatSaved = splatPath.has_value() ? TerrainBrushToolInternal::saveSplat( writer, *pTerrain, *splatPath ) : AssetWriteResult::Failed;
+                    if ( splatSaved == AssetWriteResult::Failed ) // 거절은 문이 이미 알렸다
                         SW_LOG_ERROR_ID( "TerrainBrushTool.TerrainSplatNotSaved", "Terrain splat '%#' was not saved", pTerrain->getLayerWeightsPath().c_str() );
-                        bSaved = false;
-                    }
+                    bSaved = bSaved && splatSaved == AssetWriteResult::Written;
                 }
                 if ( bSaved )
                 {

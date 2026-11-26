@@ -6,6 +6,7 @@
 #include "Core/String/Name/TagID.h"
 #include "Core/String/StringUtil.h"
 
+#include "Editor/Common/Asset/AssetWriter.h"
 #include "Editor/Common/Commands/Diagnostics/EditorGlobalVariableCommands.h"
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Commands/Scene/EditorInspectorCommands.h"
@@ -519,8 +520,11 @@ namespace sw::editor
 
     bool InspectorViewModel::saveComponentPreset( const EditorCommandTarget& target, string_view presetName )
     {
-        Component* pComp = InspectorViewModelInternal::findTargetComponent( target );
-        if ( pComp == nullptr || EditorTransformCommands::saveComponentPreset( pComp, string( presetName ).c_str() ) == false )
+        Component*             pComp = InspectorViewModelInternal::findTargetComponent( target );
+        const AssetWriteResult saved = pComp != nullptr ? EditorTransformCommands::saveComponentPreset( pComp, string( presetName ).c_str() ) : AssetWriteResult::Failed;
+        if ( saved == AssetWriteResult::Refused )
+            return false; // 문이 이미 알렸다
+        if ( saved == AssetWriteResult::Failed )
         {
             SW_LOG_ERROR_ID( "InspectorPanel.CouldNotSaveComponent", "Could not save component preset '%#'", presetName );
             return false;

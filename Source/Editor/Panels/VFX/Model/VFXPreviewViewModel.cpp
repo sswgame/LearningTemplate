@@ -103,7 +103,7 @@ namespace sw::editor
 
     bool VFXPreviewViewModel::saveDocument( AssetWriter& writer )
     {
-        if ( _loadedDiskPath.empty() || writer.writeText( _loadedDiskPath, _pDocument->getText() ) == false )
+        if ( _loadedDiskPath.empty() || writer.writeText( _loadedDiskPath, _pDocument->getText() ) != AssetWriteResult::Written )
         {
             _status = "The effect could not be saved - see the log";
             return false;

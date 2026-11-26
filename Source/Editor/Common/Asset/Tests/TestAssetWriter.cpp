@@ -43,18 +43,18 @@ SW_TEST_CASE( AssetWriterTest, ReadOnlyFileIsRefusedAndKept )
     const test::ScopedScratchDomain domain;
     const AbsolutePath              path = domain.makeDiskPath( "locked.material" );
     AssetWriter                     writer;
-    SW_REQUIRE_TRUE( writer.writeText( path, "kept" ) );
+    SW_REQUIRE_TRUE( writer.writeText( path, "kept" ) == AssetWriteResult::Written );
     SW_REQUIRE_TRUE( FileUtil::setWritable( path, false ) );
 
     SW_EXPECT_LOG( "AssetWriter.ReadOnly" );
     SW_EXPECT_TRUE( AssetWriter::warnIfReadOnly( path, AssetWriteKind::Save ) );
-    SW_EXPECT_FALSE( writer.writeText( path, "overwritten" ) );
+    SW_EXPECT_TRUE( writer.writeText( path, "overwritten" ) == AssetWriteResult::Refused );
     SW_EXPECT_TRUE( FileUtil::isReadOnlyFile( path ) );
     SW_EXPECT_EQUAL( readText( path ), string( "kept" ) );
 
     SW_REQUIRE_TRUE( FileUtil::setWritable( path, true ) ); // 케이스 폴더 정리가 Windows 에서 읽기 전용 파일을 지우지 못한다
     SW_EXPECT_FALSE( AssetWriter::warnIfReadOnly( path, AssetWriteKind::Save ) );
-    SW_EXPECT_TRUE( writer.writeText( path, "overwritten" ) );
+    SW_EXPECT_TRUE( writer.writeText( path, "overwritten" ) == AssetWriteResult::Written );
 }
 
 /** @brief [AssetWriterTest] 폴더는 그 아래 모든 파일을 본다 — 깊은 곳의 읽기 전용 파일 하나가 폴더 전체를 막는다. 없는 자리(새로 만들 파일)는 막지 않는다 */
@@ -95,32 +95,32 @@ SW_TEST_CASE( AssetWriterTest, OutsideChangeIsRefusedOncePerContent )
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( path, "changed outside" ) );
     SW_EXPECT_LOG( "AssetWriter.ChangedOnDisk" );
     SW_EXPECT_TRUE( writer.isChangedOnDisk( path ) );
-    SW_EXPECT_FALSE( writer.writeText( path, "mine" ) );
+    SW_EXPECT_TRUE( writer.writeText( path, "mine" ) == AssetWriteResult::Refused );
     SW_EXPECT_EQUAL( readText( path ), string( "changed outside" ) );
 
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( path, "changed outside once more" ) );
-    SW_EXPECT_FALSE( writer.writeText( path, "mine" ) );
-    SW_EXPECT_TRUE( writer.writeText( path, "mine" ) ); // 알고 다시 저장한다
+    SW_EXPECT_TRUE( writer.writeText( path, "mine" ) == AssetWriteResult::Refused );
+    SW_EXPECT_TRUE( writer.writeText( path, "mine" ) == AssetWriteResult::Written ); // 알고 다시 저장한다
     SW_EXPECT_EQUAL( readText( path ), string( "mine" ) );
-    SW_EXPECT_TRUE( writer.writeText( path, "mine again" ) ); // 쓴 내용이 새 기준이다
+    SW_EXPECT_TRUE( writer.writeText( path, "mine again" ) == AssetWriteResult::Written ); // 쓴 내용이 새 기준이다
 
     SW_REQUIRE_TRUE( FileUtil::removeFile( path ) );
     SW_EXPECT_TRUE( writer.validateSave( path ) ); // 지워진 파일은 다시 만든다
 }
 
-/** @brief [AssetWriterTest] 부모 폴더가 없으면 만들고, 쓰기가 지면 false 이고 기준은 그대로다(다음 저장이 밖에서 바뀐 것으로 보지 않는다) */
+/** @brief [AssetWriterTest] 부모 폴더가 없으면 만들고, 쓰기가 지면 Failed 이고 기준은 그대로다(다음 저장이 밖에서 바뀐 것으로 보지 않는다) */
 SW_TEST_CASE( AssetWriterTest, MissingFolderIsMadeAndAFailedSaveKeepsTheBaseline )
 {
     const test::ScopedScratchDomain domain;
     const AbsolutePath              path = domain.makeDiskPath( "deep/new/asset.xml" );
     AssetWriter                     writer;
-    SW_EXPECT_TRUE( writer.saveAsset( path, FakeAsset{} ) );
+    SW_EXPECT_TRUE( writer.saveAsset( path, FakeAsset{} ) == AssetWriteResult::Written );
     SW_EXPECT_EQUAL( readText( path ), string( "asset" ) );
 
-    SW_EXPECT_FALSE( writer.saveAsset( path, FakeAsset{ false } ) );
+    SW_EXPECT_TRUE( writer.saveAsset( path, FakeAsset{ false } ) == AssetWriteResult::Failed );
     SW_EXPECT_EQUAL( readText( path ), string( "asset" ) );
     SW_EXPECT_TRUE( writer.validateSave( path ) );
-    SW_EXPECT_TRUE( writer.writeText( path, "next" ) );
+    SW_EXPECT_TRUE( writer.writeText( path, "next" ) == AssetWriteResult::Written );
 }
 
 /** @brief [AssetWriterTest] 여러 파일 저장은 첫 파일을 쓰기 전에 모두 본다 — 하나라도 바뀌었으면 아무것도 쓰지 않고, 바뀐 파일을 한 번에 알려 다시 저장 한 번이면 모두 쓴다 */
@@ -130,7 +130,7 @@ SW_TEST_CASE( AssetWriterTest, EveryFileIsCheckedBeforeTheFirstWrite )
     const DiskPath                  arrPath[] = { domain.makeDiskPath( "a.xml" ), domain.makeDiskPath( "b.xml" ), domain.makeDiskPath( "c.xml" ) };
     AssetWriter                     writer;
     for ( const DiskPath& path : arrPath )
-        SW_REQUIRE_TRUE( writer.writeText( path, "opened" ) );
+        SW_REQUIRE_TRUE( writer.writeText( path, "opened" ) == AssetWriteResult::Written );
     SW_EXPECT_TRUE( writer.validateSave( arrPath ) );
 
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "a.xml" ), "outside" ) );
@@ -139,7 +139,7 @@ SW_TEST_CASE( AssetWriterTest, EveryFileIsCheckedBeforeTheFirstWrite )
     SW_EXPECT_FALSE( writer.validateSave( arrPath ) );
     SW_EXPECT_TRUE( writer.validateSave( arrPath ) );
     for ( const DiskPath& path : arrPath )
-        SW_EXPECT_TRUE( writer.writeText( path, "saved" ) );
+        SW_EXPECT_TRUE( writer.writeText( path, "saved" ) == AssetWriteResult::Written );
 }
 
 /** @brief [AssetWriterTest] 되돌리기 쓰기는 자기가 쓴 글만 바꾼다 — 그 사이 밖에서 바뀐 파일은 알리고 남긴다 */
@@ -148,12 +148,32 @@ SW_TEST_CASE( AssetWriterTest, UndoWriteReplacesOnlyTheTextItWrote )
     const test::ScopedScratchDomain domain;
     const AbsolutePath              path = domain.makeDiskPath( "rig.xml" );
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( path, "after" ) );
-    SW_EXPECT_TRUE( AssetWriter::replaceText( path, "after", "before" ) ); // 되돌리기
+    SW_EXPECT_TRUE( AssetWriter::replaceText( path, "after", "before" ) == AssetWriteResult::Written ); // 되돌리기
     SW_EXPECT_EQUAL( readText( path ), string( "before" ) );
-    SW_EXPECT_TRUE( AssetWriter::replaceText( path, "before", "after" ) ); // 다시 하기
+    SW_EXPECT_TRUE( AssetWriter::replaceText( path, "before", "after" ) == AssetWriteResult::Written ); // 다시 하기
 
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( path, "edited outside" ) );
     SW_EXPECT_LOG( "AssetWriter.ChangedOnDisk" );
-    SW_EXPECT_FALSE( AssetWriter::replaceText( path, "after", "before" ) );
+    SW_EXPECT_TRUE( AssetWriter::replaceText( path, "after", "before" ) == AssetWriteResult::Refused );
     SW_EXPECT_EQUAL( readText( path ), string( "edited outside" ) );
+}
+
+/**
+ * @brief [AssetWriterTest] 거절(밖에서 바뀜)은 Refused 이고 문이 남긴 경고 하나뿐이다 — 부르는 자리는 Failed 에서만 오류를 남긴다
+ * @details 케이스가 선언하지 않은 Error 로그는 실패다. 거절에 오류를 더 찍던 자리(설정 페이지 저장)를 `ProjectSettingsPageTest.FirstSaveRefusesAFileChangedOnDisk` 가 같은 길로 본다.
+ */
+SW_TEST_CASE( AssetWriterTest, RefusalIsNotAWriteFailure )
+{
+    const test::ScopedScratchDomain domain;
+    const AbsolutePath              path = domain.makeDiskPath( "doc.json" );
+    AssetWriter                     writer;
+    SW_REQUIRE_TRUE( writer.writeText( path, "opened" ) == AssetWriteResult::Written );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( path, "outside" ) );
+
+    SW_EXPECT_LOG( "AssetWriter.ChangedOnDisk" );
+    const AssetWriteResult refused = writer.saveAsset( path, FakeAsset{} );
+    SW_EXPECT_TRUE( refused == AssetWriteResult::Refused );
+    SW_EXPECT_EQUAL( readText( path ), string( "outside" ) );
+    SW_EXPECT_TRUE( writer.saveAsset( path, FakeAsset{ false } ) == AssetWriteResult::Failed ); // 확인은 지났고 쓰기가 졌다
+    SW_EXPECT_EQUAL( readText( path ), string( "outside" ) );
 }

@@ -250,7 +250,10 @@ namespace sw::editor
             SW_LOG_ERROR_ID( "ProjectSettingsJSON.SaveTextInvalid", "Project settings: the text made for %# does not read back the same - not saved", _absolutePath.str() );
             return false;
         }
-        if ( writer.writeText( _absolutePath, text ) == false )
+        const AssetWriteResult written = writer.writeText( _absolutePath, text );
+        if ( written == AssetWriteResult::Refused )
+            return false; // 문이 이미 알렸다
+        if ( written == AssetWriteResult::Failed )
         {
             SW_LOG_ERROR_ID( "ProjectSettingsJSON.SaveWriteFailed", "Project settings: %# could not be written", _absolutePath.str() );
             return false;

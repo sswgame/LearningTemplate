@@ -483,7 +483,10 @@ namespace sw::editor
             SW_LOG_ERROR_ID( "DataTablePanel.GameDataNotValidXML", "Game data table '%#' is not saved - the text is not valid XML: %#", fileName.c_str(), _gameDataDocument.getError().c_str() );
             return false;
         }
-        if ( writer.writeText( _gameDataPath, _selectedGameDataRawText ) == false )
+        const AssetWriteResult written = writer.writeText( _gameDataPath, _selectedGameDataRawText );
+        if ( written == AssetWriteResult::Refused )
+            return false; // 문이 이미 알렸다
+        if ( written == AssetWriteResult::Failed )
         {
             SW_LOG_ERROR_ID( "DataTablePanel.CouldNotWriteGame", "Could not write game data table '%#'", _gameDataPath.c_str() );
             return false;

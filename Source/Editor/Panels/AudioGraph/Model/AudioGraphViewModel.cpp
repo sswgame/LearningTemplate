@@ -62,7 +62,7 @@ namespace sw::editor
     bool AudioGraphViewModel::saveDocument( AssetWriter& writer, const DiskPath& diskPath ) const
     {
         return writer.save( diskPath, [this]( const AbsolutePath& writable )
-        { return _editGraph.saveToAsset( writable ); } );
+        { return _editGraph.saveToAsset( writable ); } ) == AssetWriteResult::Written;
     }
 
     void AudioGraphViewModel::publishEdit()

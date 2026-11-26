@@ -78,7 +78,7 @@ namespace sw::editor
     {
         // 부모(`_base`)를 가리키던 파일은 부모와의 차이로 쓴다 — 실패 이유는 `SocketSet::saveToFile` 이 알린다.
         const bool bSaved = writer.save( path, [this]( const AbsolutePath& writable )
-        { return _sockets.saveToFile( writable, _kinds ); } );
+        { return _sockets.saveToFile( writable, _kinds ); } ) == AssetWriteResult::Written;
         if ( bSaved == false )
             return false;
         _state.markSaved( _sockets.saveToXMLText() ); // 더러움은 펼친 한 벌로 비교한다

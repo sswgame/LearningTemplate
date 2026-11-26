@@ -113,7 +113,7 @@ namespace sw::editor
 
     bool RagdollPreviewViewModel::saveDocument( AssetWriter& writer )
     {
-        if ( _loadedDiskPath.empty() || writer.writeText( _loadedDiskPath, _pDocument->getText() ) == false )
+        if ( _loadedDiskPath.empty() || writer.writeText( _loadedDiskPath, _pDocument->getText() ) != AssetWriteResult::Written )
         {
             _status = "The physics asset could not be saved - see the log";
             return false;

@@ -382,7 +382,10 @@ namespace sw::editor
         string replacedText;
         if ( FileUtil::readOptionalTextFile( *absolutePath, replacedText ) != OptionalFileRead::Read )
             replacedText = _session.getDocument().getSavedText(); // 지워진 파일은 다시 만든다
-        if ( writer.writeText( *absolutePath, _session.getDocument().getText() ) == false )
+        const AssetWriteResult written = writer.writeText( *absolutePath, _session.getDocument().getText() );
+        if ( written == AssetWriteResult::Refused )
+            return false; // 문이 이미 알렸다
+        if ( written == AssetWriteResult::Failed )
         {
             SW_LOG_ERROR_ID( "CatalogPanel.CouldNotWriteCatalog", "Could not write catalog file '%#'", assetID.c_str() );
             _session.setStatus( "Could not write the file" );
@@ -435,7 +438,10 @@ namespace sw::editor
         if ( _session.hasFile() == false )
             return;
         const optional<DiskPath> absolutePath = EditorPaths::getAssetPaths().toDiskPath( _session.getAssetID() );
-        if ( absolutePath.has_value() == false || getAssetWriter().writeText( *absolutePath, _session.getPreviousText() ) == false )
+        const AssetWriteResult   written      = absolutePath.has_value() ? getAssetWriter().writeText( *absolutePath, _session.getPreviousText() ) : AssetWriteResult::Failed;
+        if ( written == AssetWriteResult::Refused )
+            return; // 문이 이미 알렸다
+        if ( written == AssetWriteResult::Failed )
         {
             SW_LOG_ERROR_ID( "CatalogPanel.CouldNotRestoreCatalog", "Could not restore catalog file '%#'", _session.getAssetID().c_str() );
             _session.setStatus( "Could not restore the file" );

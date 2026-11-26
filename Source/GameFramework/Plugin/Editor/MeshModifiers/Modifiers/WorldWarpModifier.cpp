@@ -30,13 +30,13 @@ namespace sw::editor
         setWorldSpace( true );
     }
 
-    bool WorldWarpModifier::writeWarpFile( AssetWriter& writer, const MeshModifierStack& stack, const DiskPath& path )
+    AssetWriteResult WorldWarpModifier::writeWarpFile( AssetWriter& writer, const MeshModifierStack& stack, const DiskPath& path )
     {
         const expected<string> text = stack.makeJSONText();
         if ( text.has_value() == false )
         {
             SW_LOG_ERROR_ID( "WorldWarpModifier.NotWritable", "Warp file could not be written as JSON: %# (%#) - %# was not written", text.error().message(), text.error().detail(), path.str() );
-            return false;
+            return AssetWriteResult::Failed;
         }
         return writer.writeText( path, *text );
     }

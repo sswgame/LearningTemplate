@@ -204,23 +204,23 @@ namespace sw::editor
         return fileName.substr( prefix.size(), fileName.size() - prefix.size() - EditorTransformCommandsInternal::kPresetSuffix.size() );
     }
 
-    bool EditorTransformCommands::saveComponentPreset( const Component* pComp, string_view presetName )
+    AssetWriteResult EditorTransformCommands::saveComponentPreset( const Component* pComp, string_view presetName )
     {
         const DiskPath folder   = EditorGlobalVariableCommands::getComponentPresetFolderPath();
         const string   fileName = makeComponentPresetFileName( pComp, presetName );
         if ( folder.empty() || fileName.empty() )
         {
             SW_LOG_ERROR_ID( "EditorTransformCommands.ComponentPresetPresetFolder", "Component preset '%#': the preset folder of the active game could not be resolved", presetName );
-            return false;
+            return AssetWriteResult::Failed;
         }
         return saveComponentPresetTo( pComp, folder.join( fileName ) );
     }
 
-    bool EditorTransformCommands::saveComponentPresetTo( const Component* pComp, const DiskPath& filePath )
+    AssetWriteResult EditorTransformCommands::saveComponentPresetTo( const Component* pComp, const DiskPath& filePath )
     {
         const bool bInvalidPresetSaveArguments = pComp == nullptr || pComp->getTypeInfo() == nullptr || filePath.empty();
         if ( bInvalidPresetSaveArguments )
-            return false;
+            return AssetWriteResult::Failed;
 
         DiskPath fullPath = filePath;
         if ( StringUtil::endsWith( fullPath.str(), EditorTransformCommandsInternal::kPresetSuffix, true ) == false )

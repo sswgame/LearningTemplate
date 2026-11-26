@@ -213,10 +213,12 @@ namespace sw::editor
 
     bool BonePoseEditModel::saveDocument( AssetWriter& writer, const DiskPath& path )
     {
-        const string text   = _override.saveToXMLText();
-        const bool   bSaved = writer.save( path, [&text]( const AbsolutePath& writable )
-          { return ResourceComposer::saveText( writable, ResourceSaveText::makeComplete( text ) ); } ); // 뼈마다 모든 칸을 쓴다
-        if ( bSaved == false )
+        const string           text  = _override.saveToXMLText();
+        const AssetWriteResult saved = writer.save( path, [&text]( const AbsolutePath& writable )
+        { return ResourceComposer::saveText( writable, ResourceSaveText::makeComplete( text ) ); } ); // 뼈마다 모든 칸을 쓴다
+        if ( saved == AssetWriteResult::Refused )
+            return false; // 문이 이미 알렸다
+        if ( saved == AssetWriteResult::Failed )
         {
             SW_LOG_ERROR_ID( "BonePoseEditModel.ReferencePoseFileCould2", "Reference pose file could not be written: %#", string( path.str() ).c_str() );
             return false;

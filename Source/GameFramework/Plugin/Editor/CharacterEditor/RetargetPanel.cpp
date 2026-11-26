@@ -195,8 +195,8 @@ namespace sw::editor
             _status = string( status.view() );
             return false;
         }
-        const auto writePath = getDocumentDiskPath();                                                         // 읽은 그 자리
-        if ( writePath.has_value() == false || writer.saveAsset( *writePath, _model.getProfile() ) == false ) // 변형(`_base`)은 부모와의 차이로 쓴다
+        const auto writePath = getDocumentDiskPath();                                                                             // 읽은 그 자리
+        if ( writePath.has_value() == false || writer.saveAsset( *writePath, _model.getProfile() ) != AssetWriteResult::Written ) // 변형(`_base`)은 부모와의 차이로 쓴다
         {
             _status = writePath.has_value() == false ? string( "No write path for this asset" ) : string( "The profile could not be written (see the log)" );
             return false;

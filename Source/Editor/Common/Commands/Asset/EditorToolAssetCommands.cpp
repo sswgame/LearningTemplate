@@ -198,9 +198,9 @@ namespace sw::editor
                     return false;
                 }
                 // 다시 읽지 못할 문서가 멀쩡한 파일을 덮지 않게, 옆에 써서 읽어 본 뒤에 덮는다(쓰기는 값을 검사하지 않고 읽기가 검사한다).
-                bool       bReadsBack = true;
-                const bool bSaved     = writer.save( resolved, [&data, &bReadsBack]( const AbsolutePath& writable )
-                    {
+                bool                   bReadsBack = true;
+                const AssetWriteResult saved      = writer.save( resolved, [&data, &bReadsBack]( const AbsolutePath& writable )
+                     {
                     const AbsolutePath probePath = writable.appendSuffix( kProbeFileSuffix );
                     TAsset             readBack;
                     const bool         bProbeWritten = writeDocument( data, probePath );
@@ -214,7 +214,9 @@ namespace sw::editor
                     SW_LOG_ERROR_ID( "EditorToolAssetCommands.WouldNotReadBack", "The %# was not saved to '%#' - the file could not be read back (see the log above), so the saved file is kept", desc._pLabel, resolved.str() );
                     return false;
                 }
-                if ( bSaved == false )
+                if ( saved == AssetWriteResult::Refused )
+                    return false; // 문이 이미 알렸다
+                if ( saved == AssetWriteResult::Failed )
                 {
                     SW_LOG_ERROR_ID( "EditorToolAssetCommands.FailedSave", "Failed to save the %# to '%#'", desc._pLabel, resolved.str() );
                     return false;

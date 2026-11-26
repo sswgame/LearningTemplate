@@ -10,6 +10,7 @@
 
 #include "DevTools/RenderDoc/RenderDocCapture.h"
 
+#include "Editor/Common/Asset/AssetWriter.h"
 #include "Editor/Common/Backend/FileDialog.h"
 #include "Editor/Common/Commands/Asset/EditorToolAssetCommands.h"
 #include "Editor/Common/Commands/Diagnostics/EditorGlobalVariableCommands.h"
@@ -267,7 +268,7 @@ namespace sw::editor
                 EditorCommandRegistry::getInEditorContext().requestSceneEdit( SW_DELEGATE_LAMBDA( Delegate<void( EditorTransaction& )>, [componentID, presetPath]( EditorTransaction& /*transaction*/ )
                 {
                     const Component* pComp = findPresetComponent( componentID );
-                    if ( pComp != nullptr && EditorTransformCommands::saveComponentPresetTo( pComp, presetPath ) == false )
+                    if ( pComp != nullptr && EditorTransformCommands::saveComponentPresetTo( pComp, presetPath ) == AssetWriteResult::Failed ) // 거절은 문이 이미 알렸다
                         warn( SW_LOCKEY( "EdCommon", "NotifyPresetTitle" ), SW_LOCKEY( "EdCommon", "NotifyPresetWriteFailed" ) );
                 } ) );
             }
