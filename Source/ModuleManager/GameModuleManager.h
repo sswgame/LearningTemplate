@@ -3,7 +3,7 @@
  * @brief 게임 모듈의 수명 주기를 관리합니다. 라이브러리 로드, 게임 API 바인딩, 게임 업데이트, 게임 쪽 핫 리로드를 맡으며 App 과 Server 가 함께 씁니다.
  *
  * @note 호스트와 모듈 사이 계약(ModuleAPI)의 수명 주기를 실행 파일 쪽에서 맡습니다. 에디터 인스턴스, 에디터 리로드, 에디터 UI, RHI 교체 뒤의
- *       재초기화의 호스트 몫은 개발 전용 `EditorGameModuleManager`(DevTools/Host — 배포는 짓지 않는다)가 이 클래스 위에 구현합니다(장치 교체의 순서는 이 클래스 — `applyPendingDeviceChange`). 의존은 그쪽에서 여기로 한 방향입니다.
+ *       재초기화의 호스트 몫은 개발 전용 `EditorGameModuleManager`(DevTools/Host, 배포는 짓지 않는다)가 이 클래스 위에 구현합니다(장치 교체의 순서는 이 클래스의 `applyPendingDeviceChange`). 의존은 그쪽에서 여기로 한 방향입니다.
  * @note 모듈을 잇는 방식(개발은 동적 라이브러리 · 리로드 매니저, 배포는 정적 링크)에 따라 다른 함수는 `GameModuleManager.cpp` 의 `SW_WITH_DYNAMIC_MODULES` 구역 한 파일이
  *       `SW_WITH_DYNAMIC_MODULES` 로 가른다. 나머지는 `GameModuleManager.cpp` 하나다.
  */
@@ -269,7 +269,7 @@ namespace sw
         [[nodiscard]] bool initializeGame( ILiveReloadManager* pLiveReloadManager, RHI* pRHI, GenericWindow* pWindow, IEngineRenderDriver* pRenderDriver );
         /**
          * @brief 호스트 서브시스템 범위를 새로 채워 모듈의 @p bindService 에 넘기고 @p inoutServices 를 그것으로 바꿉니다. @p bindService 가 비었으면(API 표가 없다) 아무것도 하지 않습니다.
-         * @details 새 범위를 넘긴 **뒤에** 앞 범위를 놓는다 — 모듈이 앞 범위를 들고 있는 동안 사라지지 않게. 게임 · 에디터 모듈이 같은 길을 쓴다(@p bGameModule 은 `fillModuleSubsystemScope` 와 같다).
+         * @details 새 범위를 넘긴 뒤에 앞 범위를 놓는다 — 모듈이 앞 범위를 들고 있는 동안 사라지지 않게. 게임 · 에디터 모듈이 같은 길을 쓴다(@p bGameModule 은 `fillModuleSubsystemScope` 와 같다).
          */
         void rebindModuleSubsystems( void ( *bindService )( const ISubsystemLocator* pService ), unique_ptr<SubsystemScope>& inoutServices, bool bGameModule ) const;
 
