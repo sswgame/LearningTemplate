@@ -14,6 +14,8 @@ namespace sw
             static constexpr float32 kDegenerateAxisLengthSquared = 0.5f;
             /// `orthogonalize` 가 1 행에 수직인 보조 축을 고를 때, 1 행의 y 가 이보다 크면 위(+Y) 대신 앞(+Z)을 쓴다(나란한 축의 외적을 피한다).
             static constexpr float32 kHelperAxisParallelLimit = 0.9f;
+            /// `toSwingTwist` 에서 비틀림 성분의 노름 제곱이 이보다 작으면 축에 수직인 180° 회전으로 보고 비틀림을 없앤다.
+            static constexpr float32 kTwistDegenerateNormSquared = 1e-12f;
             /// 4x4 행렬의 성분 수.
             static constexpr uint32 kMatrixElementCount = sizeof( float4x4 ) / sizeof( float32 );
 
@@ -179,6 +181,24 @@ namespace sw
         return q2 * q1;
     }
 
+    quaternion quaternion::fromToRotation( const float3& from, const float3& to ) noexcept
+    {
+        const float3  f = from.normalize();
+        const float3  t = to.normalize();
+        const float32 d = f.dot( t );
+
+        if ( d <= -1.f + MathUtil::kEpsilon )
+        {
+            float3 axis = float3::Right.cross( f );
+            if ( axis.getLengthSquared() < MathUtil::kEpsilon )
+                axis = float3::Up.cross( f );
+            return makeFromAxisAngle( axis, MathUtil::kPi );
+        }
+
+        const float3 c = f.cross( t );
+        return quaternion{ c._x, c._y, c._z, 1.f + d }.normalize();
+    }
+
     quaternion quaternion::lookRotation( const float3& direction, const float3& up ) noexcept
     {
         float3 f = direction.normalize();
@@ -236,6 +256,30 @@ namespace sw
         if ( nSq > MathUtil::kEpsilon )
             return conjugate() / nSq;
         return Identity;
+    }
+
+    void quaternion::toSwingTwist( const float3& twistAxis, quaternion& outSwing, quaternion& outTwist ) const noexcept
+    {
+        const float3     vectorPart{ _x, _y, _z };
+        const float3     projected = twistAxis * vectorPart.dot( twistAxis );
+        const quaternion twist{ projected._x, projected._y, projected._z, _w };
+        if ( twist.normSquared() < MatrixMathInternal::kTwistDegenerateNormSquared )
+        {
+            // 축에 수직인 180° 회전이다. 비틀림이 없다.
+            outTwist = Identity;
+            outSwing = *this;
+            return;
+        }
+        outTwist = twist.normalize();
+        outSwing = ( *this * outTwist.inverse() ).normalize();
+    }
+
+    float32 quaternion::getTwistAngle( const float3& twistAxis ) const noexcept
+    {
+        // 같은 회전인 −q 를 골라 w ≥ 0 으로 두면 각이 −π ~ π 안에 든다.
+        const quaternion positive = _w < 0.0f ? -*this : *this;
+        const float3     vectorPart{ positive._x, positive._y, positive._z };
+        return 2.0f * MathUtil::atan2( vectorPart.dot( twistAxis ), positive._w );
     }
 
     float32 quaternion::dot( const quaternion& other ) const noexcept

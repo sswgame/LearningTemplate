@@ -1,13 +1,11 @@
 #include "pch.h"
 
 #include "Core/Math/MathUtil.h"
-#include "Core/Math/ValueNoise.h"
 #include "Core/TestFramework/TestFramework.h"
 
 #include "GameFramework/Runtime/Character/Camera/CameraBlend.h"
 #include "GameFramework/Runtime/Character/Camera/CameraCollisionProbe.h"
 #include "GameFramework/Runtime/Character/Camera/CameraMode.h"
-#include "GameFramework/Runtime/Character/Camera/CameraShake.h"
 
 using namespace sw;
 
@@ -575,19 +573,4 @@ SW_TEST_CASE( CameraModeTest, ResetForgetsEverything )
     SW_EXPECT_EQUAL( state._yawOffset, 0.0f );
     SW_EXPECT_EQUAL( state._armLength, -1.0f );
     SW_EXPECT_TRUE( state._bAimValid == SW_FALSE );
-}
-
-/**
- * @brief [CameraModeTest] Core `ValueNoise::samplePerlin1D` 는 카메라 흔들림의 `computePerlinNoise1d` 와 비트 단위로 같다(흔들림이 Core 로 옮겨도 골든이 그대로다)
- */
-SW_TEST_CASE( CameraModeTest, CorePerlinNoiseMatchesCameraShakeNoise )
-{
-    for ( uint32 seed : { 0u, 7u, 0x9E3779B9u } )
-    {
-        for ( int32 step = -300; step <= 300; ++step )
-        {
-            const float32 position = static_cast<float32>( step ) * 0.137f;
-            SW_REQUIRE_EQUAL( computePerlinNoise1d( position, seed ), ValueNoise::samplePerlin1D( position, seed ) );
-        }
-    }
 }

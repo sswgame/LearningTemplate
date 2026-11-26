@@ -5,6 +5,7 @@
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Math/ValueNoise.h"
 
 #include "Engine/Object/GameObject/Registry/CameraShakeChannel.h"
 
@@ -20,37 +21,12 @@ namespace sw
             static constexpr uint32 kChannelSeedStride = HashUtil::kGoldenRatio32;
             /** @brief 채널마다 시간을 조금씩 어긋나게 한다 — 시드만 다르면 정수 자리(값 0)가 모든 채널에서 같은 때 온다. */
             static constexpr float32 kChannelTimeOffset = 17.31f;
-
-            /** @brief 정수 격자점 하나의 기울기(−1..1)입니다. 시드와 자리를 섞은 정수 해시입니다. */
-            static float32 computeGradient( int32 lattice, uint32 seed )
-            {
-                uint32 hash = static_cast<uint32>( lattice ) * 0x27D4EB2Du ^ seed * 0x165667B1u;
-                hash ^= hash >> 15;
-                hash *= 0x85EBCA6Bu;
-                hash ^= hash >> 13;
-                hash *= 0xC2B2AE35u;
-                hash ^= hash >> 16;
-                return static_cast<float32>( hash & 0xFFFFu ) / 32767.5f - 1.0f;
-            }
-
-            static float32 computeFade( float32 t ) { return t * t * t * ( t * ( t * 6.0f - 15.0f ) + 10.0f ); }
         };
     } // namespace
 } // namespace sw
 
 namespace sw
 {
-    float32 computePerlinNoise1d( float32 position, uint32 seed )
-    {
-        const float32 floorValue = MathUtil::floor( position );
-        const int32   lattice    = static_cast<int32>( floorValue );
-        const float32 fraction   = position - floorValue;
-        const float32 left       = CameraShakeInternal::computeGradient( lattice, seed ) * fraction;
-        const float32 right      = CameraShakeInternal::computeGradient( lattice + 1, seed ) * ( fraction - 1.0f );
-        // 1D 펄린의 값은 ±0.5 안이다 — 두 배 해서 진폭이 곧 최대 흔들림이 되게 한다.
-        return MathUtil::lerp( left, right, CameraShakeInternal::computeFade( fraction ) ) * 2.0f;
-    }
-
     CameraShakeOffset computeCameraNoise( const CameraNoiseDef& noise, float32 time )
     {
         CameraShakeOffset offset{};
@@ -62,7 +38,7 @@ namespace sw
         {
             const uint32  seed    = noise._seed + ( channel + 1u ) * CameraShakeInternal::kChannelSeedStride;
             const float32 shifted = position + static_cast<float32>( channel ) * CameraShakeInternal::kChannelTimeOffset;
-            arrValue[channel]     = computePerlinNoise1d( shifted, seed );
+            arrValue[channel]     = ValueNoise::samplePerlin1D( shifted, seed );
         }
         offset._position = float3{ arrValue[0] * noise._positionAmplitude._x, arrValue[1] * noise._positionAmplitude._y, arrValue[2] * noise._positionAmplitude._z };
         offset._rotation = float3{ arrValue[3] * noise._rotationAmplitude.getPitch().radians(), arrValue[4] * noise._rotationAmplitude.getYaw().radians(),

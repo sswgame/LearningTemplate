@@ -7,9 +7,9 @@
 #include "pch.h"
 
 #include "Core/Math/MathUtil.h"
+#include "Core/Math/ValueNoise.h"
 
 #include "GameFramework/Plugin/Editor/MeshModifiers/Stack/MeshModifier.h"
-#include "GameFramework/Plugin/Editor/MeshModifiers/Stack/MeshModifierNoise.h"
 #include "GameFramework/Plugin/Editor/MeshModifiers/Stack/MeshModifierRegistry.h"
 
 namespace sw::editor
@@ -54,9 +54,9 @@ namespace sw::editor
                 return point._position;
             const uint32  seed   = static_cast<uint32>( getInt( _seedParam ) );
             const float3  sample = point._position * getFloat( _frequencyParam );
-            const float3  noiseVector{ MeshModifierNoise::valueNoise3D( sample, seed ),
-                                      MeshModifierNoise::valueNoise3D( sample + float3{ CrumpleModifierInternal::kAxisOffsetY, 0.0f, 0.0f }, seed ),
-                                      MeshModifierNoise::valueNoise3D( sample + float3{ 0.0f, 0.0f, CrumpleModifierInternal::kAxisOffsetZ }, seed ) };
+            const float3  noiseVector{ ValueNoise::sampleValue3D( sample, seed ),
+                                      ValueNoise::sampleValue3D( sample + float3{ CrumpleModifierInternal::kAxisOffsetY, 0.0f, 0.0f }, seed ),
+                                      ValueNoise::sampleValue3D( sample + float3{ 0.0f, 0.0f, CrumpleModifierInternal::kAxisOffsetZ }, seed ) };
             const float3  along  = point._normal * noiseVector._x;
             const float32 blend  = MathUtil::saturate( getFloat( _normalBlendParam ) );
             const float3  offset = noiseVector * ( 1.0f - blend ) + along * blend;
