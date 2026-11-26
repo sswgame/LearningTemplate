@@ -255,12 +255,6 @@ namespace sw
         /** @brief 프로젝트 루트 기준 설정 파일 경로입니다. */
         static constexpr ConfigFileID<PackConfig> kConfigFile{ "Config/Engine/PackConfig.json" };
 
-        /**
-         * @brief 셰이더 원본(`.hlsl` · `.hlsli`)인가입니다 — `_bExcludeRawShaderSource` 가 켜진 팩(배포)에는 없고 쿠킹한 바이너리만 있다.
-         * @details 팩 쿠커가 뺄 때와 기본 에셋 검사가 "배포 팩에 없는 것이 맞다" 고 볼 때 같은 판정을 쓴다(확장자를 두 곳에 적지 않는다).
-         */
-        static bool isRawShaderSource( string_view path ) { return StringUtil::endsWith( path, ".hlsl", true ) || StringUtil::endsWith( path, ".hlsli", true ); }
-
         PROPERTY( Required )
         PackCompressionConfig _compression; ///< 팩 압축
 

@@ -247,9 +247,8 @@ namespace sw
 
 #else
 
-    // 인자를 평가 없이 참조한다 — 등록에만 쓰이는 순서 상수 · 본문 함수가 Shipping 에서만 '안 쓰임' 경고를 내지 않게.
-    #define SW_DEBUG_HUD_CATEGORY( varName, pName, pTitle, order, flags, pFunc, pDrawFunc, pWatchGroup ) \
-        static_assert( sizeof( pFunc ) > 0 && sizeof( pDrawFunc ) > 0 && sizeof( order ) > 0 && sizeof( flags ) > 0, "SW_DEBUG_HUD_CATEGORY is compiled out of Shipping" )
+    // 디버그 HUD 섹션은 개발 전용 소스에만 둔다 — 배포가 짓는 TU 에 두면 컴파일되지 않는다.
+    #define SW_DEBUG_HUD_CATEGORY( varName, pName, pTitle, order, flags, pFunc, pDrawFunc, pWatchGroup ) static_assert( false, "SW_DEBUG_HUD_CATEGORY is a development registration: move it to a development-only source (a Dev/ folder of DevFolders.json, Tests/, DevTools or GameFrameworkDev) - shipping does not build those" )
 
 #endif
 

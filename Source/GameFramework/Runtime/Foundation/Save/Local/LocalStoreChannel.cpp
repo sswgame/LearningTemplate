@@ -29,17 +29,6 @@ namespace sw
 
     SW_MODULE_PART( Engine, LocalStoreChannelList, LocalStoreChannelList );
 
-    namespace
-    {
-        /** @brief 저장 · 썸네일 쓰기가 끝나기 전에 시나리오가 그 결과를 보거나 끝나지 않게 한다(에디터 자리 잡기 · `<Pass/>`). */
-        AutomationReadiness readLocalStoreRequests()
-        {
-            return LocalStoreChannel::isAnyChannelBusy() ? AutomationReadiness::waiting( 0, "a local store write is in flight" ) : AutomationReadiness::ready();
-        }
-    } // namespace
-
-    SW_AUTOMATION_FINISH_BLOCKER( localStoreRequests, "LocalStoreRequests", &readLocalStoreRequests );
-
     LocalStoreChannel::LocalStoreChannel()
         : _keyProvider{}
         , _sealContext{}

@@ -1,7 +1,7 @@
 /**
  * @file PushPayloadUtil.h
  * @brief 푸시 제공자들이 알림(`PushNotificationMessage`)을 JSON 본문으로 쓸 때 같이 쓰는 도우미입니다(FCM · APNs).
- * @details 제품마다 본문 모양은 다르지만(`message.data` · 최상위 사용자 키) 인자 수 세기 · 빈 값 건너뛰기 · 글 배열 쓰기, 앱이 읽는 사용자 키(`deep_link` · `title_key` · `body_key` · `arg<N>`),
+ * @details 제품마다 본문 모양은 다르지만(`message.data` · 최상위 사용자 키) 빈 값 건너뛰기 · 글 배열 쓰기, 앱이 읽는 사용자 키(`deep_link` · `title_key` · `body_key` · `arg<N>`),
  *          iOS 알림 사전의 보이는 알림 멤버(`alert` · `badge`)는 같다 — 제공자마다 따로 두면 규칙이 어긋나므로 한 자리에 둔다.
  *          제품 이름은 이 파일에 쓰지 않는다. 헤더만 있어 내보내는 기호가 없다.
  */
@@ -22,20 +22,6 @@ namespace sw
     /** @struct PushPayloadUtil @brief 알림 본문을 JSON 으로 쓰는 공통 조각입니다. 상태가 없습니다. */
     struct PushPayloadUtil
     {
-        /** @brief 문구(제목 · 본문 키)가 있어 보이는 알림이면 true 입니다. 없으면 조용한 알림(데이터만)입니다. */
-        static bool hasAlert( const PushNotificationMessage& message ) { return message._titleKey.empty() == false || message._bodyKey.empty() == false; }
-
-        /** @brief 알림의 앞쪽에서 비지 않은 인자 수입니다(첫 빈 인자에서 멈춘다). */
-        static int32 countArguments( const PushNotificationMessage& message )
-        {
-            int32 count = 0;
-            while ( count < PushNotificationMessage::kArgumentCount && message._arrArgument[count].empty() == false )
-            {
-                ++count;
-            }
-            return count;
-        }
-
         /** @brief 글이 비지 않았을 때만 멤버 하나를 씁니다. */
         static void writeOptionalText( JSONWriter& writer, string_view key, string_view text )
         {

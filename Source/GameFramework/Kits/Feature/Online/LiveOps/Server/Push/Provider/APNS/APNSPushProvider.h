@@ -73,7 +73,7 @@ namespace sw
         void        update( UnixMilliseconds nowMs ) override;
         int32       pollResults( vector<PushDeliveryResult>& outListResult ) override;
 
-        /** @brief 알림 본문(JSON)입니다. 문구가 없으면(`PushPayloadUtil::hasAlert` 가 false — `apns-push-type` 이 `background`) 조용한 알림(`content-available`)입니다. 테스트가 봅니다. */
+        /** @brief 알림 본문(JSON)입니다. 문구가 없으면(`PushNotificationMessage::hasAlert` 가 false — `apns-push-type` 이 `background`) 조용한 알림(`content-available`)입니다. 테스트가 봅니다. */
         static string makePayloadJSON( const PushNotificationMessage& message );
         /** @brief 기기 토큰 규칙(16진 글자 1..200 자)입니다. */
         static bool isValidDeviceToken( string_view token );

@@ -3,6 +3,7 @@
 #include "ModuleManager/GameModuleManager.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/Foundation/BuildConfig.h"
 #include "Core/Foundation/DynamicModules.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Subsystem/SubsystemScope.h"
@@ -542,12 +543,11 @@ namespace sw
     // 배포는 정적 링크라 로드할 라이브러리 · 리로드 매니저 · 모듈 컴파일러가 없고 게임 API 는 정적 `exportGameAPI` 다. 두 방식은 진짜 구현 둘이다
     // (빈 몸통이 아니다. 언리얼 `IS_MONOLITHIC` 과 같다). 동적 쪽이 배포에 없는 리로드 매니저(`ILiveReloadManager`, DevTools 가 구현)를 써서 여기만 `SW_WITH_DYNAMIC_MODULES` 로 가른다(docs/agents/CppStyle.md "Build configuration switches" 둘째 줄).
     // ----------------------------------------------------------------------------------------------------------------------
-#if SW_WITH_DYNAMIC_MODULES
-
     bool GameModuleManager::loadModuleLibraries( ILiveReloadManager* pLiveReloadManager, const ModuleCatalog& catalog, const ModuleResolution& resolution )
     {
         _pLiveReloadManager = pLiveReloadManager;
-        if ( _pLiveReloadManager == nullptr )
+        // 정적 모듈 구성(배포 · 웹 · Android 개발)은 매니저가 없다 — 타입은 리플렉션 단계가 이미 모았고, 무엇을 링크할지는 CMake 가 같은 매니페스트로 정했다.
+        if ( build::kStaticModules || _pLiveReloadManager == nullptr )
             return true;
 
         const ScopedMemoryTag moduleMemoryTag{ kGameModuleMemoryTag }; // 라이브러리 로드가 모듈의 정적 등록자를 돌린다
@@ -607,6 +607,11 @@ namespace sw
 
     bool GameModuleManager::startGameInstance()
     {
+        if ( build::kStaticModules )
+        {
+            onAfterGameReload( ModuleLibraryHandle{} ); // 정적 링크 표로 바로 세운다
+            return true;
+        }
         if ( _pLiveReloadManager == nullptr )
             return true;
         _moduleCompiler = _pLiveReloadManager->createModuleCompiler(); // 빌드 시작 · 끝을 리로드 매니저에 알리는 구현(DevTools)
@@ -635,41 +640,18 @@ namespace sw
     ModuleLibraryHandle GameModuleManager::getLoadedModuleHandle( string_view moduleName ) const
     {
         if ( _pLiveReloadManager == nullptr )
-            return ModuleLibraryHandle{};
+            return ModuleLibraryHandle{}; // 정적 링크에는 "로드된 모듈" 이 없다. 부르는 쪽이 빈 핸들을 처리한다
         return _pLiveReloadManager->getModuleHandle( moduleName );
     }
 
+    // 동적 구성은 라이브러리 심볼(ABI 대조 포함), 정적 구성은 링크된 `exportGameAPI` 다 — 그 함수가 한쪽 구성에만 있어 이 함수만 전처리로 가른다.
+#if SW_WITH_DYNAMIC_MODULES
     bool GameModuleManager::exportGameAPITable( ModuleLibraryHandle library )
     {
         // 동적 경로라 새 라이브러리가 이 호스트와 다른 테이블로 빌드됐을 수 있다 — ABI 를 대조한다(배포는 정적 링크라 어긋날 수 없다).
         return ModuleInstanceUtil::exportAPIFromLibrary<GameAPI, PFN_ExportGameAPI>( library, getModuleSymbols(), _gameAPI );
     }
 #else
-
-    bool GameModuleManager::loadModuleLibraries( ILiveReloadManager* pLiveReloadManager, [[maybe_unused]] const ModuleCatalog& catalog,
-                                                 [[maybe_unused]] const ModuleResolution& resolution )
-    {
-        // 그 타입은 리플렉션 단계가 이미 모았고, 무엇을 링크할지는 CMake 가 같은 매니페스트로 정했다.
-        _pLiveReloadManager = pLiveReloadManager;
-        return true;
-    }
-
-    bool GameModuleManager::startGameInstance()
-    {
-        onAfterGameReload( ModuleLibraryHandle{} );
-        return true;
-    }
-
-    void GameModuleManager::markReloadGraphBroken( [[maybe_unused]] const utf8* pReason )
-    {
-    }
-
-    ModuleLibraryHandle GameModuleManager::getLoadedModuleHandle( [[maybe_unused]] string_view moduleName ) const
-    {
-        // 정적 링크라 "로드된 모듈"이라는 것이 없다. 부르는 쪽이 빈 핸들을 처리한다.
-        return ModuleLibraryHandle{};
-    }
-
     bool GameModuleManager::exportGameAPITable( [[maybe_unused]] ModuleLibraryHandle library )
     {
         if ( exportGameAPI( &_gameAPI ) == false )

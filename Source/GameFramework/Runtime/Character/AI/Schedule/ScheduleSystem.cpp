@@ -10,7 +10,6 @@
 #include "Core/String/StringUtil.h"
 #include "Core/Subsystem/Subsystem.h"
 
-#include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Module/ModuleSubsystemRegistrar.h"
 #include "Engine/Reflection/EnumName.h"
 
@@ -636,7 +635,6 @@ namespace sw
     {
         _eventBuffer.moveAllTo( outListEvent );
     }
-
 } // namespace sw
 
 namespace sw
@@ -753,54 +751,6 @@ namespace sw
         }
         outText.assign( text.c_str() );
     }
-
-} // namespace sw
-
-namespace sw
-{
-    namespace
-    {
-        struct ScheduleTraceCommandInternal
-        {
-            /**
-             * @brief `schedule.trace <npc id | *>`: 살아 있는 일정 시스템마다 그 NPC 의 "왜 여기 있나" 와 오늘 시간표를 답합니다(개발 명령 — 배포본에는 등록되지 않는다).
-             * @details 예전에는 테스트용 변수(`-gv_scheduleTrace`)를 일정 시스템이 틱마다 읽었다. 묻는 쪽이 부르는 명령으로 바꿔 런타임 틱에서 개발 분기를 뺐다.
-             *          시작부터 찍으려면 `-gv_devConsoleExec=schedule.trace *`.
-             */
-            static bool runTrace( const vector<string>& listArgument, string& outReply )
-            {
-                if ( listArgument.size() != 1 )
-                    return false;
-                const string&                 request = listArgument[0];
-                const bool                    bAll    = request == "*";
-                vector<const ScheduleSystem*> listSystem;
-                ScheduleSystem::collectLiveSystems( listSystem );
-                string text;
-                for ( const ScheduleSystem* pSystem : listSystem )
-                {
-                    for ( int32 npcIndex = 0; npcIndex < pSystem->getNPCCount(); ++npcIndex )
-                    {
-                        if ( bAll == false && pSystem->getNPCID( npcIndex ) != hashed_string( request ) )
-                            continue;
-                        pSystem->explainNPC( npcIndex, text );
-                        outReply += text;
-                        pSystem->dumpTimeline( npcIndex, text );
-                        outReply += text;
-                    }
-                }
-                if ( outReply.empty() )
-                {
-                    StringBuilder<constant::buffer::kMax256> replyBuilder;
-                    replyBuilder.appendFormat( "no live schedule NPC matches '%#'", request );
-                    outReply = string( replyBuilder.view() );
-                }
-                return true;
-            }
-        };
-    } // namespace
-
-    SW_DEV_COMMAND( ScheduleTrace, "schedule.trace", "schedule.trace <npc id | *>", "Reply the why-am-I-here trace and today's timeline of this schedule NPC (* = all)",
-                    &ScheduleTraceCommandInternal::runTrace );
 } // namespace sw
 
 namespace sw
@@ -1186,7 +1136,6 @@ namespace sw
             context._weekday = vocabulary._listWeekday[static_cast<size_t>( day % static_cast<int32>( vocabulary._listWeekday.size() ) )];
         return context;
     }
-
 } // namespace sw
 
 namespace sw
@@ -1526,7 +1475,6 @@ namespace sw
         // 끼어든 동안에도 일정 시계는 흘렀다 — 지금 시각의 칸으로, 끼어든 자리에서 다시 세운다.
         planNPC( npcIndex, _minute, npc._held );
     }
-
 } // namespace sw
 
 namespace sw

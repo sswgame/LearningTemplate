@@ -4,8 +4,8 @@
  *
  * @note 호스트와 모듈 사이 계약(ModuleAPI)의 수명 주기를 실행 파일 쪽에서 맡습니다. 에디터 인스턴스, 에디터 리로드, 에디터 UI, RHI 교체 뒤의
  *       재초기화의 호스트 몫은 개발 전용 `EditorGameModuleManager`(DevTools/Host, 배포는 짓지 않는다)가 이 클래스 위에 구현합니다(장치 교체의 순서는 이 클래스의 `applyPendingDeviceChange`). 의존은 그쪽에서 여기로 한 방향입니다.
- * @note 모듈을 잇는 방식(개발은 동적 라이브러리 · 리로드 매니저, 배포는 정적 링크)에 따라 다른 함수는 `GameModuleManager.cpp` 의 `SW_WITH_DYNAMIC_MODULES` 구역 한 파일이
- *       `SW_WITH_DYNAMIC_MODULES` 로 가른다. 나머지는 `GameModuleManager.cpp` 하나다.
+ * @note 모듈을 잇는 방식(개발은 동적 라이브러리 · 리로드 매니저, 정적 모듈 구성은 정적 링크)은 리로드 매니저 창구(`ILiveReloadManager` — 정적 구성은 nullptr)와
+ *       `build::kStaticModules` 로 가른다. 한쪽 구성에만 있는 함수를 부르는 `exportGameAPITable` 만 `SW_WITH_DYNAMIC_MODULES` 로 가른다.
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -321,11 +321,11 @@ namespace sw
         static const ModuleAPISymbols& getModuleSymbols();
         /**
          * @brief `initializeGame` 의 끝 — 게임 인스턴스를 세웁니다. 개발은 모듈 컴파일러와 리로드 매니저의 비우기 · "리로드 직후" 콜백을 걸고 그 콜백을 한 번 돌리며,
-         *        배포는 정적 링크 테이블로 바로 세운다(이 클래스 cpp 의 `SW_WITH_DYNAMIC_MODULES` 구역).
+         *        정적 모듈 구성은 정적 링크 테이블로 바로 세운다(`build::kStaticModules`).
          * @return 개발 구성에서 리로드 매니저가 게임 인스턴스를 세우지 못하면 false 입니다.
          */
         [[nodiscard]] bool startGameInstance();
-        /** @brief `_gameAPI` 를 채웁니다. 개발은 @p library 의 심볼(ABI 대조 포함), 배포는 정적 `exportGameAPI` 다(이 클래스 cpp 의 `SW_WITH_DYNAMIC_MODULES` 구역). */
+        /** @brief `_gameAPI` 를 채웁니다. 개발은 @p library 의 심볼(ABI 대조 포함), 정적 모듈 구성은 링크된 `exportGameAPI` 다(이 함수만 `SW_WITH_DYNAMIC_MODULES` 로 가른다). */
         [[nodiscard]] bool exportGameAPITable( ModuleLibraryHandle library );
         /** @brief 호스트가 모듈에 넘기는 서비스 테이블을 채웁니다. @p bGameModule 이면 게임에 허용된 것(GameVisible)만 채웁니다. */
         void fillModuleSubsystemScope( SubsystemScope& outScope, bool bGameModule ) const;

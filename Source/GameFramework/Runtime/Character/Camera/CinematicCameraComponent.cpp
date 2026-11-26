@@ -6,8 +6,6 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
 
-#include "Engine/Automation/Watch/AutomationWatch.h"
-#include "Engine/Automation/Watch/AutomationWatchComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -30,17 +28,6 @@ namespace sw
         {
             /** @brief 시퀀서 흔들림의 기본 위상 속도(rad/s)입니다. 충격의 기본값과 같은 빠르기입니다. */
             static constexpr float32 kDefaultShakeFrequency = 30.0f;
-
-            /** @brief 감시 값 `Cinematic.CutCamera` 입니다. 대상의 시네마틱 컴포넌트가 지금 화면을 덮는다고 아는 컷 카메라의 오브젝트 이름이고, 덮지 않으면 `none` 입니다. */
-            [[nodiscard]] static bool readCutCamera( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
-            {
-                const CinematicCameraComponent* pCinematic = query.findTargetComponent<CinematicCameraComponent>( "cinematic camera", outValue );
-                if ( pCinematic == nullptr )
-                    return false;
-                const GameObject* pCut = pCinematic->isCinematicActive() ? query._pManager->resolveGameObject( pCinematic->getCurrentCutCamera() ) : nullptr;
-                outValue.setText( pCut != nullptr ? pCut->getName().c_str() : "none" );
-                return true;
-            }
 
             /**
              * @brief 컷씬 디버거의 시네마틱 카메라 해석입니다 — 플레이어 옆 시네마틱 컴포넌트가 아는 컷 카메라와, 플레이어 카메라 매니저의 실제 블렌드 진행량(가중치)입니다.
@@ -65,8 +52,6 @@ namespace sw
         };
     } // namespace
 
-    SW_AUTOMATION_QUERY_WATCH( cinematicCutCamera, "Cinematic.CutCamera", "Name of the cut camera the target's cinematic component knows covers the screen; none between cinematics",
-                               &CinematicCameraComponentInternal::readCutCamera, true, false );
     SW_SEQUENCE_DIAGNOSTIC( cinematicCamera, "Cinematic camera", &CinematicCameraComponentInternal::describeForSequenceDebugger );
 } // namespace sw
 

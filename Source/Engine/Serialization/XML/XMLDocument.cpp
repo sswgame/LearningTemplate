@@ -949,6 +949,11 @@ namespace sw
         return pNode.remove_child( pChild );
     }
 
+    bool XMLDocument::isDocumentPath( string_view path )
+    {
+        return StringUtil::endsWith( path, kFileSuffix, true );
+    }
+
     XMLDocument::XMLDocument()
         : _impl{ make_unique<Impl>() }
         , _bLastErrorNotFound{ SW_FALSE }

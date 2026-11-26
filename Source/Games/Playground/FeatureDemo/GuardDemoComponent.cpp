@@ -1,179 +1,30 @@
 #include "pch.h"
 
-#include "Core/Foundation/Types.h"
-#include "Core/Log/Logger.h"
-#include "Core/Math/Math.h"
-#include "Core/Math/Radians.h"
-#include "Core/String/Name/hashed_string.h"
-#include "Core/String/StringUtil.h"
-#include "Core/Time/TimeSeconds.h"
+#include "Games/Playground/FeatureDemo/GuardDemoComponent.h"
 
-#include "Engine/Console/DevCommandRegistry.h"
+#include "Core/Log/Logger.h"
+#include "Core/String/StringUtil.h"
+
 #include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
-#include "GameFramework/Runtime/Character/AI/AIPerception.h"
 #include "GameFramework/Runtime/Character/AI/AIStimulusSourceComponent.h"
-#include "GameFramework/Runtime/Character/Combat/LockOnSelector.h"
-#include "GameFramework/Runtime/Character/Navigation/NavGrid.h"
-#include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
-
-#include "Games/Playground/FeatureDemo/FeatureDemoCommandUtil.h"
 
 #include <utility>
 
 namespace sw
 {
-    /**
-     * @class GuardDemoComponent
-     * @brief 프레임마다 감각을 돌려 보인 · 들린 대상의 이름을 상태 칸에 적고, 록온을 유지합니다. 록온은 개발 명령 `guard.lock` · `guard.cycle` · `guard.release` 가 겁니다.
-     */
-    REFLECT( Category = "FeatureDemo", DisplayName = "Guard Demo", Tooltip = "Senses stimulus sources (sight, hearing, memory) and locks on to one of them" )
-    class GuardDemoComponent : public GameModeComponent
-    {
-    public:
-        REFLECT_BODY();
-
-        GuardDemoComponent();
-        virtual ~GuardDemoComponent() override;
-
-        /** @brief 보이는 대상 가운데 가장 좋은 것을 쥡니다. 없으면 풀리고 false 입니다. */
-        bool lockBest();
-        /** @brief 지금 대상에서 오른쪽(@p direction 1)이나 왼쪽(-1)의 다음 대상으로 넘깁니다. */
-        void cycleLock( int32 direction );
-        /** @brief 록온을 놓습니다. */
-        void releaseLock();
-
-        const hashed_string& getLockedTarget() const { return _lockedTarget; }
-
-    protected:
-        void               serializeGameState( StateIO& io ) override;
-        [[nodiscard]] bool startGame() override;
-        void               updateGame( GameSeconds frameTime ) override;
-
-    private:
-        /** @brief 이 오브젝트의 눈 자리와 앞 방향(로컬 +Z)입니다. 씬 컴포넌트가 없으면 false 입니다. */
-        [[nodiscard]] bool readEye( float3& outEye, float3& outForward ) const;
-        /** @brief 기억하는 대상을 록온 후보로 옮깁니다(지금 보이는 것만 `_bVisible`). */
-        void gatherLockCandidates( vector<LockOnCandidate>& outListCandidate ) const;
-        /** @brief 오브젝트 id 의 이름입니다. 0 이거나 사라졌으면 빈 이름입니다. */
-        [[nodiscard]] hashed_string findName( uint64 objectID ) const;
-        /** @brief 록온 대상 이름을 상태 칸에 적습니다. */
-        void refreshLockedTarget() { _lockedTarget = findName( _lockOn.getTarget() ); }
-
-    private:
-        PROPERTY( Category = "Perception", DisplayName = "Team", Min = 0, Max = 3, Tooltip = "Stimulus sources of this team are ignored" )
-        int32 _team;
-        PROPERTY( Category = "Perception", DisplayName = "Sight Range", Min = 0.0, Units = m )
-        float32 _sightRange;
-        PROPERTY( Category = "Perception", DisplayName = "Lose Sight Range", Min = 0.0, Units = m, Tooltip = "A target already seen stays seen up to this distance" )
-        float32 _loseSightRange;
-        PROPERTY( Category = "Perception", DisplayName = "Sight Half Angle" )
-        Radians _sightHalfAngle;
-        PROPERTY( Category = "Perception", DisplayName = "Memory Duration", Min = 0.0, Units = s )
-        float32 _memoryDuration;
-        PROPERTY( Category = "Perception", DisplayName = "Wall Name", Tooltip = "Objects with this base name block sight on their grid cell" )
-        hashed_string _wallName;
-        PROPERTY( Category = "Perception", DisplayName = "Grid Origin", Units = m )
-        float3 _gridOrigin;
-        PROPERTY( Category = "Perception", DisplayName = "Grid Size", Min = 1, Tooltip = "Cells along each side of the sight grid" )
-        int32 _gridSize;
-        PROPERTY( Category = "Perception", DisplayName = "Grid Cell Size", Min = 0.01, Units = m )
-        float32 _gridCellSize;
-        PROPERTY( Category = "Lock On", DisplayName = "Max Distance", Min = 0.01, Units = m )
-        float32 _lockMaxDistance;
-        PROPERTY( Category = "Lock On", DisplayName = "Break Distance", Min = 0.01, Units = m )
-        float32 _lockBreakDistance;
-        PROPERTY( Category = "Lock On", DisplayName = "Lost Sight Grace", Min = 0.0, Units = s )
-        float32 _lockLostSightGrace;
-
-        PROPERTY( RuntimeState )
-        hashed_string _seenTarget; ///< 지금 보이는 대상 가운데 가장 가까운 것(없으면 빈 이름)
-        PROPERTY( RuntimeState )
-        hashed_string _heardTarget; ///< 이번에 들린 대상(없으면 빈 이름)
-        PROPERTY( RuntimeState )
-        hashed_string _lockedTarget; ///< 쥔 대상(없으면 빈 이름)
-        PROPERTY( RuntimeState, Min = 0 )
-        int32 _rememberedCount; ///< 기억하는 대상 수(보이지 않아도 기억 시간 안이면 센다)
-
-        SW_TRANSIENT AIPerception   _perception;
-        SW_TRANSIENT LockOnSelector _lockOn;
-        SW_TRANSIENT NavGrid        _sightGrid;
-    };
-
     namespace
     {
         struct GuardDemoComponentInternal
         {
             static constexpr FormatDef kStateFormat{ "FDGU" };
-
-            static bool runLock( const vector<string>& listArgument, string& outReply )
-            {
-                if ( listArgument.size() != 1 )
-                    return false;
-                GuardDemoComponent* pGuard = FeatureDemoCommandUtil::findStarted<GuardDemoComponent>( listArgument[0], outReply );
-                if ( pGuard == nullptr )
-                    return false;
-                (void)pGuard->lockBest(); // 잡을 것이 없으면 풀린 채다 — 답과 상태 칸이 알린다
-                FeatureDemoCommandUtil::reply( outReply, "locked %#", pGuard->getLockedTarget() );
-                return true;
-            }
-
-            static bool runCycle( const vector<string>& listArgument, string& outReply )
-            {
-                const bool bRight = listArgument.size() == 2 && StringUtil::equals( listArgument[1], "right", true );
-                const bool bLeft  = listArgument.size() == 2 && StringUtil::equals( listArgument[1], "left", true );
-                if ( bRight == false && bLeft == false )
-                    return false;
-                GuardDemoComponent* pGuard = FeatureDemoCommandUtil::findStarted<GuardDemoComponent>( listArgument[0], outReply );
-                if ( pGuard == nullptr )
-                    return false;
-                pGuard->cycleLock( bRight ? 1 : -1 );
-                FeatureDemoCommandUtil::reply( outReply, "locked %#", pGuard->getLockedTarget() );
-                return true;
-            }
-
-            static bool runRelease( const vector<string>& listArgument, string& outReply )
-            {
-                if ( listArgument.size() != 1 )
-                    return false;
-                GuardDemoComponent* pGuard = FeatureDemoCommandUtil::findStarted<GuardDemoComponent>( listArgument[0], outReply );
-                if ( pGuard == nullptr )
-                    return false;
-                pGuard->releaseLock();
-                outReply = "released";
-                return true;
-            }
-
-            /** @brief `noise.report <object> <radius>` — 자극 원천이 낸 소리 반경(m)을 겁니다. 0 이면 거둡니다. */
-            static bool runNoise( const vector<string>& listArgument, string& outReply )
-            {
-                float32 radius = 0.0f;
-                if ( listArgument.size() != 2 || StringUtil::parseFloat( listArgument[1], radius ) == false )
-                    return false;
-                GameObject*                pObject = engine::findActiveObject( hashed_string( listArgument[0] ) );
-                AIStimulusSourceComponent* pSource = pObject != nullptr ? pObject->getComponent<AIStimulusSourceComponent>() : nullptr;
-                if ( pSource == nullptr )
-                {
-                    FeatureDemoCommandUtil::reply( outReply, "no object named '%#' with an AIStimulusSourceComponent", listArgument[0] );
-                    return false;
-                }
-                pSource->reportNoise( radius );
-                FeatureDemoCommandUtil::reply( outReply, "%# makes noise of radius %#", listArgument[0], radius );
-                return true;
-            }
         };
     } // namespace
-
-    SW_DEV_COMMAND( GuardLock, "guard.lock", "guard.lock <guard object>", "Lock on to the best target the guard sees", &GuardDemoComponentInternal::runLock );
-    SW_DEV_COMMAND( GuardCycle, "guard.cycle", "guard.cycle <guard object> <left|right>", "Move the guard's lock to the next target on that side", &GuardDemoComponentInternal::runCycle );
-    SW_DEV_COMMAND( GuardRelease, "guard.release", "guard.release <guard object>", "Release the guard's lock", &GuardDemoComponentInternal::runRelease );
-    SW_DEV_COMMAND( NoiseReport, "noise.report", "noise.report <object> <radius>", "Set the noise radius of a stimulus source (0 clears it)", &GuardDemoComponentInternal::runNoise );
 
     GuardDemoComponent::GuardDemoComponent()
         : _team{ 1 }
@@ -328,5 +179,3 @@ namespace sw
         io.end();
     }
 } // namespace sw
-
-#include "GuardDemoComponent.cpp.gen.inl"

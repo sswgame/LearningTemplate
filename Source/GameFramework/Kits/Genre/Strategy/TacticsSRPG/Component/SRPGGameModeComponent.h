@@ -1,6 +1,6 @@
 /**
  * @file SRPGGameModeComponent.h
- * @brief 택틱스 SRPG 키트(`GF_TacticsSRPG`)의 디렉터 — 전투 한 판을 진행합니다. 키트의 전장(`SRPGBattlefield`) · 전투(`SRPGCombat`) · 적 AI(`SRPGCommanderAI`)를
+ * @brief 택틱스 SRPG 키트(`GF_TacticsSRPG`)의 디렉터 — 전투 한 판을 진행합니다. 키트의 전장(`SRPGBattlefield` — 전투 계산 포함) · 적 AI(`SRPGCommanderAI`)를
  *        씬 데이터로 열고, 아군 페이즈는 명령(`confirmCell` · `endPlayerPhase`)으로, 적 · 제3세력 페이즈는 AI 로 돌립니다.
  * @details 키트 세 갈래의 가운데다: 규칙(키트 루트, 엔진 시계 · 렌더를 모른다)을 들고 씬과 잇는다. 입력 · 커서 · 모습은 클라이언트 모듈
  *          (`GF_Client_TacticsSRPG` 의 `SRPGCursorComponent`)이 이 디렉터의 명령 · 읽기 API 로만 다룬다 — 전용 서버는 그 모듈을 짓지 않는다.

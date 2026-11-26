@@ -5,8 +5,6 @@
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Automation/Watch/AutomationComponentWatch.h"
-#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -41,24 +39,6 @@ namespace sw
             static constexpr const utf8* kEventPlayerFell = "ArenaPlayerFell";
             static constexpr const utf8* kEventEnemyFell  = "ArenaEnemyFell";
 
-            [[nodiscard]] static bool readPlayerX( const ArenaGameModeComponent& gameMode, float64& outValue )
-            {
-                float3 position{};
-                if ( gameMode.findUnitPosition( gameMode.getPlayerObject(), position ) == false )
-                    return false;
-                outValue = static_cast<float64>( position._x );
-                return true;
-            }
-
-            [[nodiscard]] static bool readPlayerZ( const ArenaGameModeComponent& gameMode, float64& outValue )
-            {
-                float3 position{};
-                if ( gameMode.findUnitPosition( gameMode.getPlayerObject(), position ) == false )
-                    return false;
-                outValue = static_cast<float64>( position._z );
-                return true;
-            }
-
             /**
              * @brief 맞은 유닛 @p target 에 짐의 스펙을 틱 뒤(게임 스레드)에 겁니다. 대상은 다른 워커가 틱하고 있을 수 있다. 무적이면 이펙트의 BlockedTag 가 막는다.
              * @details 맞은 자리(탄이 닿은 점 · 나는 방향)를 피해 스펙에 싣는다 — 이 탄으로 쓰러지면 치명 신호가 그 방향을 쓴다(`AbilityEffectSpec::setHit`).
@@ -87,12 +67,6 @@ namespace sw
             }
         };
     } // namespace
-
-    SW_AUTOMATION_COMPONENT_WATCH( arenaPlayerX, "Arena.PlayerX", "World X of the arena player", ArenaGameModeComponent, &ArenaGameModeComponentInternal::readPlayerX );
-    SW_AUTOMATION_COMPONENT_WATCH( arenaPlayerZ, "Arena.PlayerZ", "World Z of the arena player", ArenaGameModeComponent, &ArenaGameModeComponentInternal::readPlayerZ );
-    SW_AUTOMATION_GETTER_WATCH( arenaPlayerShotCount, "Arena.PlayerShotCount", "Projectiles the player team fired this game", ArenaGameModeComponent, &ArenaGameModeComponent::getPlayerShotCount );
-    SW_AUTOMATION_GETTER_WATCH( arenaKillCount, "Arena.KillCount", "Enemies felled this game", ArenaGameModeComponent, &ArenaGameModeComponent::getKillCount );
-    SW_AUTOMATION_GETTER_WATCH( arenaPlayerControllerKind, "Arena.PlayerControllerKind", "0 = the player controller holds the player, 1 = the auto battle AI", ArenaGameModeComponent, &ArenaGameModeComponent::isPlayerDrivenByAI );
 } // namespace sw
 
 namespace sw
