@@ -24,6 +24,7 @@
 #include "Engine/Graphics/View/RenderViewSettings.h"
 #include "Engine/Graphics/View/SimulationOnlyFrameQueue.h"
 #include "Engine/Profiling/FrameProfiler.h"
+#include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Renderer/Debug/RenderDebugRegistry.h"
 #include "Engine/Renderer/Extension/RenderExtensionRegistry.h"
 #include "Engine/Renderer/Frame/FrameRenderer.h"

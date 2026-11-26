@@ -14,7 +14,8 @@ endif()
 
 # 줄 머리에 반사 매크로가 있으면 OUT_VAR 가 ON 이다. 확장자는 보지 않는다(입력 판정은 `sw_is_reflection_input`).
 function(sw_has_reflection_macro OUT_VAR FILE_PATH)
-	file(STRINGS "${FILE_PATH}" list_reflect_line REGEX "${SW_REFLECTION_MACRO_LINE_PATTERN}")
+	# ENCODING UTF-8: 없으면 file(STRINGS) 가 한글 바이트에서 줄을 끊어 주석 중간의 `ENUM(` 도 `^` 에 맞는다.
+	file(STRINGS "${FILE_PATH}" list_reflect_line ENCODING UTF-8 REGEX "${SW_REFLECTION_MACRO_LINE_PATTERN}")
 	if(list_reflect_line)
 		set(${OUT_VAR} ON PARENT_SCOPE)
 	else()
