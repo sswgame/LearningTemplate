@@ -14,6 +14,7 @@
 #include "Editor/Common/Widgets/EditorVirtualList.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
+#include "Editor/Common/Workspace/Asset/EditorAssetTypeID.h"
 #include "Editor/Common/Workspace/Play/EditorSessionPolicy.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
@@ -117,7 +118,7 @@ namespace sw::editor
 
     bool DataTablePanel::canAcceptDocumentPath( string_view assetPath ) const
     {
-        return FileUtil::hasExtension( assetPath, ".xml" );
+        return EditorAssetTypeIDs::isDataXMLPath( assetPath ); // Data 종류 가운데 XML 문서만(JSON 데이터는 표로 열지 않는다)
     }
 
     ToolAssetLoadResult DataTablePanel::loadDocument()

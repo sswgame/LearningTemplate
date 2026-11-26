@@ -23,6 +23,7 @@
 #include "Editor/Common/Widgets/PropertyGrid/Model/InspectorObjectEdit.h"
 #include "Editor/Common/Widgets/PropertyGrid/Model/PropertyEditConditionExpr.h"
 #include "Editor/Common/Widgets/PropertyGrid/PropertyDrawerRegistry.h"
+#include "Editor/Common/Workspace/Asset/EditorAssetTypeID.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorDefaultObjects.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
@@ -1410,7 +1411,7 @@ namespace sw::editor
         // (언리얼 임시 마운트 지점의 패키지도 에셋 레지스트리에 오른다). 폴더가 없으면 고를 것이 없다.
         vector<AbsolutePath> listScratchFile;
         const AbsolutePath&  scratchFolder = AssetPaths::getScratchFolderPath();
-        if ( FileUtil::isDirectory( scratchFolder ) && EditorContentScan::collectFiles( scratchFolder, ".xml", listScratchFile, true ) )
+        if ( FileUtil::isDirectory( scratchFolder ) && EditorContentScan::collectFiles( scratchFolder, "", listScratchFile, true ) )
         {
             for ( const AbsolutePath& filePath : listScratchFile )
             {
@@ -1424,7 +1425,7 @@ namespace sw::editor
         for ( const string& assetID : listAssetID )
         {
             string text;
-            if ( StringUtil::endsWith( assetID, ".xml", true ) == false || AssetIO::readTextAsset( AssetID{ assetID }, text ) == false ||
+            if ( EditorAssetTypeIDs::isDataXMLPath( assetID ) == false || AssetIO::readTextAsset( AssetID{ assetID }, text ) == false ||
                  ( text.find( opening.view() ) == string::npos && text.find( entryOpening.view() ) == string::npos ) )
                 continue;
             XMLDocument doc;

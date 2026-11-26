@@ -8,6 +8,7 @@
 
 #include "Editor/Common/Asset/AssetWriter.h"
 #include "Editor/Common/Config/EditorPaths.h"
+#include "Editor/Common/Workspace/Asset/EditorAssetTypeID.h"
 #include "Editor/Common/Workspace/EditorSubsystems.h"
 
 #include "Engine/Config/EngineDefaultAssets.h"
@@ -280,11 +281,11 @@ namespace sw::editor
         outList.clear();
 
         vector<DiskPath> listFile;
-        const bool       bListed = FileUtil::collectFiles( dataFolder, ".xml", listFile, false );
+        const bool       bListed = FileUtil::collectFiles( dataFolder, "", listFile, false );
 
         for ( const DiskPath& file : listFile )
         {
-            if ( FileUtil::hasExtension( file.str(), ".xml" ) == false )
+            if ( EditorAssetTypeIDs::isDataXMLPath( file.str() ) == false )
                 continue;
 
             GameDataFileEntry entry{};

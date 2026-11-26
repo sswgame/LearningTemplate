@@ -50,8 +50,6 @@ namespace sw::editor
              * @details XML 은 그 경로를 가진 캐시가 다시 읽고, 항목 · 파일 `_base` 로 부모를 펼쳐 넣으므로 부모가 바뀌면 연쇄한다(`AssetReloadCascade`). 부모만 고쳐도 감시가 알려야 하므로 캐시에 없는 파일도 감시 대상이다.
              *          JSON 은 상속이 없고(`DataInheritance.md`) 다시 읽는 캐시도 없어 감시하지 않는다.
              */
-            static constexpr string_view kArrDataXMLExt[]  = { ".xml" };
-            static constexpr string_view kArrDataJSONExt[] = { ".json" };
 
             /** @brief 스프라이트 시트로 쓰는 이미지 규칙들입니다 — 텍스처가 먼저 가져가고(`Fallback`), 스프라이트 클립 패널이 시트로 열 때만 이 종류로 본다. 텍스처의 원본(HDR 빼고)과 임포트한 텍스처다. */
             static EditorAssetMatchRule makeSheetSourceRule()
@@ -116,9 +114,9 @@ namespace sw::editor
                                             EditorAssetMatchPriority::Suffix, { AssetReloadRoute::kAnyCacheHoldingPath, nullptr, nullptr, AssetReferenceUse::InlinedAtLoad } ),
             EditorAssetMatchRule::engineType( AudioMixerDef::kAssetType, { AssetReloadRoute::kAnyCacheHoldingPath } ),
             EditorAssetMatchRule::engineType( AudioEventLibrary::kAssetType, { AssetReloadRoute::kAnyCacheHoldingPath } ),
-            EditorAssetMatchRule::suffixes( EditorAssetMatchMode::Extension, BuiltinAssetTypesInternal::kArrDataXMLExt, SW_COUNT_OF( BuiltinAssetTypesInternal::kArrDataXMLExt ),
+            EditorAssetMatchRule::suffixes( EditorAssetMatchMode::Extension, EditorAssetTypeIDs::kArrDataXMLExtension, SW_COUNT_OF( EditorAssetTypeIDs::kArrDataXMLExtension ),
                                             EditorAssetMatchPriority::Catchall, { AssetReloadRoute::kAnyCacheHoldingPath, nullptr, nullptr, AssetReferenceUse::InlinedAtLoad } ),
-            EditorAssetMatchRule::suffixes( EditorAssetMatchMode::Extension, BuiltinAssetTypesInternal::kArrDataJSONExt, SW_COUNT_OF( BuiltinAssetTypesInternal::kArrDataJSONExt ),
+            EditorAssetMatchRule::suffixes( EditorAssetMatchMode::Extension, EditorAssetTypeIDs::kArrDataJSONExtension, SW_COUNT_OF( EditorAssetTypeIDs::kArrDataJSONExtension ),
                                             EditorAssetMatchPriority::Catchall ),
         };
     } // namespace

@@ -8,6 +8,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/String/fixed_string.h"
 
+#include "Editor/Common/EditorExports.h"
+
 #include "Engine/Content/AssetTypeRegistry.h"
 
 namespace sw::editor
@@ -54,5 +56,12 @@ namespace sw::editor
     {
         static constexpr const utf8* kShader = "Shader"; ///< 저작 셰이더 소스(`.hlsl` · `.hlsli`). 엔진 종류는 쿠킹된 바이너리(`ShaderBinary`)뿐이다
         static constexpr const utf8* kData   = "Data";   ///< 카탈로그 데이터(`.xml` · `.json`)와 전용 종류가 없는 데이터 문서. 전용 창이 접미사로 고르는 문서(`canAcceptDocumentPath`)가 여기 든다
+        /** @brief Data 종류의 XML 문서 확장자입니다. 종류 등록(Data 의 판정 규칙)과 XML 데이터만 보는 곳(데이터 표 · 카탈로그 키 고르기 · 글 수집)이 이 한 표를 읽는다. */
+        static constexpr string_view kArrDataXMLExtension[] = { ".xml" };
+        /** @brief Data 종류의 JSON 문서 확장자입니다(상속 · 핫 리로드가 없다). */
+        static constexpr string_view kArrDataJSONExtension[] = { ".json" };
+
+        /** @brief @p path 가 Data 종류의 XML 문서 확장자(`kArrDataXMLExtension`)로 끝나면 true 입니다. 전용 종류(`.scene.xml`)도 XML 이므로 참이다 — 종류는 `EditorAssetTypeRegistry::findKind` 가 가른다. */
+        SW_EDITOR_API static bool isDataXMLPath( string_view path );
     };
 } // namespace sw::editor
