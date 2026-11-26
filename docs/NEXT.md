@@ -26,7 +26,8 @@
 | --- | --- |
 | w-shaderreload · LT-wt/shaderreload | 끝(b58d3c91df — 열거형 여섯을 `ENUM()` 으로) — 다음 묶음에 합친다 |
 | w-pimpl · LT-wt/pimpl | 끝(d7a634aef5 — .meta 산출물 표) — 다음 묶음에 합친다. 합친 뒤 `App --import-models --import-textures --import-heightfields -unattended` 로 원본 .meta 약 1486 개를 채우고 `py -3 -m Scripts asset-ids` 확인 뒤 커밋 |
-| w-cpp-reflect · LT-wt/cppreflect | ReflectionValidation 나누기(조사 끝 — 타입 검증은 배포에 남기고 프로퍼티 검증 · ObjectValidation · 기록 표는 개발 전용으로, 관문 타입의 `PROPERTY( Validate )` 는 파서가 거절) |
+| w-cpp-reflect · LT-wt/cppreflect | ReflectionValidation 나누기 끝(…ee8f658c0a — 다음 묶음), 타입 검증으로 적힌 에디터 검사(HousingPlot `validatePlot` 등)를 개발 전용으로 |
+| w-devtools-merge · LT-wt/devtoolsmerge | 여러 에디터 플러그인이 함께 쓰는 키(`EdPlugin.Connect · Name · Reload · Remove · Save`, `EdPluginWidget.Kind`)의 자리 — `App -gather-text` rc=17 |
 
 나머지 갈래(enum-meta · gf-dev · devtools-merge · server-subsystem · engine-owner · core-lift · render-data)는 main 에 합쳤다. push 뒤 워크트리를 지운다.
 
