@@ -12,6 +12,7 @@
 
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Content/AssetPaths.h"
+#include "Engine/Content/AssetRegistry.h"
 #include "Engine/Content/AssetScanCache.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
 #include "Engine/Serialization/Inherit/AssetRedirect.h"
@@ -177,6 +178,15 @@ namespace sw
                 return true;
         }
         return false;
+    }
+
+    expected<string> AssetIdentityRules::makeIdentityReference( string_view assetID, const optional<AssetGUID>& guid ) const
+    {
+        if ( guid.has_value() )
+            return AssetRegistry::makeReferenceText( *guid );
+        if ( isUnderDerivedFolder( assetID ) )
+            return string{ assetID };
+        return unexpected( Error{ ErrorKind::NotFound, "an asset has no identity (.meta or header GUID) and is not an import output", assetID } );
     }
 
     bool AssetIdentityRules::isMisplacedInDerivedFolder( string_view assetID ) const
