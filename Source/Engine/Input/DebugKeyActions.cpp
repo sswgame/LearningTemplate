@@ -71,6 +71,8 @@ namespace sw
         unique_ptr<InputMap>  map = make_unique<InputMap>();
         // 셸 단축키와 개발 콘솔은 콘솔이 키보드를 쥔 동안에도 키를 받아야 한다(닫는 키 · 편집 키).
         map->setKeyboardFocusIgnored( true );
+        // 리로드 단축키(Ctrl+F6~F8)는 에디터 패널이 키보드를 쥔 편집 모드에서도 받는다. 맨 키(`~`)는 여전히 가린다.
+        map->setToolShortcutReader( true );
         if ( inputMapPath.empty() || map->loadFromAsset( assetID ) == false )
         {
             map->clear();

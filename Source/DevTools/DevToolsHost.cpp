@@ -261,7 +261,7 @@ namespace sw
             exitCode = pProfileSession->onFrameEnd( context._activeSceneID );
         if ( ProfilerLaunchSubsystem* const pProfilerSwitches = engine::findSubsystem<ProfilerLaunchSubsystem>() )
             pProfilerSwitches->onFrameEnd(); // 느린 프레임 자동 캡처(`-gv_traceSlowTickMs`)
-        // 셰이더 재컴파일 · 강제 리로드 단축키(Debug 클라이언트) · 시작 인자 사진 — 클라이언트 전용 부분이 한다. 먼저 끝난 쪽의 종료 코드를 돌려준다.
+        // 셰이더 재컴파일 · 강제 리로드 단축키(`gv_liveShaderRecompile`) · 시작 인자 사진 — 클라이언트 전용 부분이 한다. 먼저 끝난 쪽의 종료 코드를 돌려준다.
         if ( IDevToolsClientPart* const pClientPart = IDevToolsClientPart::find() )
         {
             const EngineFrameExit clientExit = pClientPart->onFrameEnd();
