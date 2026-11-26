@@ -12,9 +12,9 @@
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
+#include "Editor/Viewport/EditorViewportOverlayBars.h"
 #include "Editor/Viewport/Model/EditorViewportOverlaysViewModel.h"
 #include "Editor/Viewport/Model/SceneViewOverlayLayoutStore.h"
-#include "Editor/Viewport/ViewportToolbarSettings.h"
 
 #include "Engine/Localization/LocText.h"
 
@@ -83,7 +83,7 @@ namespace sw::editor
         }
     }
 
-    void EditorViewportOverlays::draw( const float2& canvasMin, const float2& canvasSize, ViewportToolbarSettings& settings, const ViewportToolbarState& toolbarState )
+    void EditorViewportOverlays::draw( const float2& canvasMin, const float2& canvasSize, EditorViewportOverlayBars& settings, const EditorViewportOverlayViewState& toolbarState )
     {
         EditorViewportOverlaysViewModel::gather( _listBarState );
         if ( canvasSize._x <= 1.0f || canvasSize._y <= 1.0f )
@@ -145,8 +145,8 @@ namespace sw::editor
         return moved;
     }
 
-    void EditorViewportOverlays::drawBar( const EditorOverlayBarState& state, const float2& canvasMin, const float2& canvasSize, ViewportToolbarSettings& settings,
-                                          const ViewportToolbarState& toolbarState )
+    void EditorViewportOverlays::drawBar( const EditorOverlayBarState& state, const float2& canvasMin, const float2& canvasSize, EditorViewportOverlayBars& settings,
+                                          const EditorViewportOverlayViewState& toolbarState )
     {
         const SceneViewOverlayBarDesc* pDesc   = SceneViewOverlayLayoutStore::findBarDesc( state._id );
         EditorOverlayBarRuntime&       runtime = getRuntime( state._id );
@@ -199,15 +199,15 @@ namespace sw::editor
         }
         else
         {
-            ViewportToolbarSettings::nextItem( bVertical );
+            EditorViewportOverlayBars::nextItem( bVertical );
             if ( state._id == "view" )
-                ViewportToolbarSettings::drawViewBar( settings, bVertical, toolbarState );
+                EditorViewportOverlayBars::drawViewBar( settings, bVertical, toolbarState );
             else if ( state._id == "transform" )
-                ViewportToolbarSettings::drawTransformBar( settings, bVertical, toolbarState._selectedObjectCount > 0 );
+                EditorViewportOverlayBars::drawTransformBar( settings, bVertical, toolbarState._selectedObjectCount > 0 );
             else if ( state._id == "display" )
-                ViewportToolbarSettings::drawDisplayBar( settings, bVertical );
+                EditorViewportOverlayBars::drawDisplayBar( settings, bVertical );
             else if ( state._id == "tools" )
-                ViewportToolbarSettings::drawToolsBar( settings, bVertical, toolbarState );
+                EditorViewportOverlayBars::drawToolsBar( settings, bVertical, toolbarState );
         }
 
         const ImVec2 size = ImGui::GetWindowSize();

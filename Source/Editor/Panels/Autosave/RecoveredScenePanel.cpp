@@ -14,7 +14,7 @@
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
-#include "Editor/Common/Workspace/EditorPanelID.h"
+#include "Editor/Common/Workspace/Layout/EditorPanelID.h"
 #include "Editor/Panels/Autosave/Model/RecoveredSceneViewModel.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 

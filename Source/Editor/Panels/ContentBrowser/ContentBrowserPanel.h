@@ -11,7 +11,7 @@
 
 #include "Editor/Common/GUI/EditorThumbnailCache.h"
 #include "Editor/Common/GUI/Panel/EditorPanel.h"
-#include "Editor/Common/Workspace/EditorPanelID.h"
+#include "Editor/Common/Workspace/Layout/EditorPanelID.h"
 #include "Editor/Panels/ContentBrowser/Model/ContentBrowserCollectionStore.h"
 #include "Editor/Panels/ContentBrowser/Model/ContentBrowserViewModel.h"
 

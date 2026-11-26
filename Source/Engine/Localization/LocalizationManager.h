@@ -145,7 +145,7 @@ namespace sw
          * @brief 키트 모듈이 등록한 프로젝트(`LocalizationModuleProject`)와 `Module` 범위의 탑재를 맞춥니다 — 새 등록은 올리고, 사라진 등록(내려간 모듈)은 뗀다.
          * @details 모듈 적재 단계(`ModuleLoadStage`)와 엔진 프로젝트 탑재(`EngineDefaultAssetsSubsystem`) 뒤에 부른다. 두 순서 어느 쪽이 먼저여도 같은 결과다.
          *          등록 목록이 앞에 맞춘 때와 같으면(`LocalizationModuleProject::getRegistrationGeneration`) 아무것도 하지 않고 그때의 결과를 돌려주므로 프레임마다 불러도 된다 —
-         *          에디터 확장 모듈은 에디터가 선 뒤에도 올라오고 내려가서 에디터가 프레임 앞에서 부른다(`EditorSubsystemSet::syncExtensionRegistrations`).
+         *          에디터 확장 모듈은 에디터가 선 뒤에도 올라오고 내려가서 에디터가 프레임 앞에서 부른다(`EditorBuiltinSubsystems::syncExtensionRegistrations`).
          * @return 올리지 못한 등록이 있으면 false 입니다(그 프로젝트의 읽기가 이유를 남겼다 — 키트 글이 빠진 채로 돌지 않게 기동을 멈춘다).
          */
         [[nodiscard]] bool syncModuleProjects();

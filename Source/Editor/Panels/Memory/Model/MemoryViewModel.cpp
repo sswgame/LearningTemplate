@@ -11,7 +11,7 @@
 #include "DevTools/Profiling/Memory/MemoryDiffStatus.h"
 #include "DevTools/Profiling/Memory/MemorySnapshotSources.h"
 
-#include "Editor/Common/Workspace/EditorStateStore.h"
+#include "Editor/Common/Workspace/Layout/EditorStateStore.h"
 #include "Editor/Common/Workspace/NetPlay/EditorRemoteInspector.h"
 
 #include "Engine/Config/ConfigManager.h"

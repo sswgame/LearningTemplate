@@ -14,7 +14,7 @@
 #include "Core/Time/MonotonicClock.h"
 
 #include "DevTools/Cook/CookStore.h"
-#include "DevTools/Cook/PackReachResult.h"
+#include "DevTools/Cook/PackReachableSet.h"
 #include "DevTools/Cook/PackSceneChunkPlan.h"
 
 #include "Engine/Asset/AssetDatabase.h"
@@ -296,7 +296,7 @@ namespace sw
             }
 
             /** @brief 고르기 요약입니다 — 도메인마다 담은 파일 수 · 바이트와 후보 수 · 바이트, 그리고 합계(보고 · 크기 추적용). */
-            static void logSelection( const vector<PackDomainCandidates>& listCandidates, const PackReachResult& reach )
+            static void logSelection( const vector<PackDomainCandidates>& listCandidates, const PackReachableSet& reach )
             {
                 uint64 totalIncludedCount = 0;
                 uint64 totalCount         = 0;
@@ -467,7 +467,7 @@ namespace sw
             }
 
             /**
-             * @brief 굽는 모든 도메인을 한 번에 보고 담을 파일을 고릅니다(`PackReachResult`). 빠진 참조가 있으면 오류를 남기고 false 입니다.
+             * @brief 굽는 모든 도메인을 한 번에 보고 담을 파일을 고릅니다(`PackReachableSet`). 빠진 참조가 있으면 오류를 남기고 false 입니다.
              * @details 작업 범위 하나(`PackReach`) 안에서 읽는다 — 쿠킹 세션은 작업 밖 읽기를 막는다. 그 범위의 입력은 기록하지 않는다: 고른 결과는 팩마다 설정 해시로 들어가고
              *          담긴 파일은 팩 작업이 다시 읽어 그 작업의 입력이 된다(`computeSelectionHash`).
              */
@@ -481,9 +481,9 @@ namespace sw
                 if ( loadReachInputs( config, params, listDomain, inputs ) == false )
                     return false;
                 // 그래프 하나를 전체 고르기 · 기동 필수 · 씬마다의 고르기가 함께 걷는다 — 글마다 한 번 읽고 푼다.
-                PackReachGraph  graph( inputs._properties, config._cookRules, inputs._files, inputs._source );
-                PackReachResult reach;
-                const bool      bReached = PackReachResult::collect( graph, {}, reach );
+                PackReachGraph   graph( inputs._properties, config._cookRules, inputs._files, inputs._source );
+                PackReachableSet reach;
+                const bool       bReached = PackReachableSet::collect( graph, {}, reach );
                 logSelection( inputs._listCandidates, reach );
                 if ( bReached == false )
                 {
@@ -529,8 +529,8 @@ namespace sw
                     if ( matchesAnyPattern( config._split._listScenePattern, assetID ) )
                         setDeferredRoot.insert( assetID );
                 }
-                PackReachResult startupReach;
-                if ( PackReachResult::collect( graph, setDeferredRoot, startupReach ) == false )
+                PackReachableSet startupReach;
+                if ( PackReachableSet::collect( graph, setDeferredRoot, startupReach ) == false )
                 {
                     SW_LOG_ERROR_ID( "PackCooker.SceneChunkEssentialFailed", "Pack cook: following references without the deferred scenes failed (reasons above) - no pack is written" );
                     return false;
@@ -544,8 +544,8 @@ namespace sw
                 VectorUtil::sort( listScene );
                 for ( const string& sceneID : listScene )
                 {
-                    PackReachResult sceneReach;
-                    if ( PackReachResult::collectFromRoots( graph, { sceneID }, sceneReach ) == false )
+                    PackReachableSet sceneReach;
+                    if ( PackReachableSet::collectFromRoots( graph, { sceneID }, sceneReach ) == false )
                     {
                         SW_LOG_ERROR_ID( "PackCooker.SceneChunkReachFailed", "Pack cook: following references from scene '%#' failed (reasons above) - no pack is written", sceneID );
                         return false;
@@ -1046,7 +1046,7 @@ namespace sw
                         continue;
                     }
                     if ( selection._setIncluded.contains( makeAssetID( domain, relativePath ) ) == false )
-                        continue; // 뿌리에서 참조로 닿지 않는다 - 이 빌드의 게임이 쓰지 않는다(`PackReachResult`)
+                        continue; // 뿌리에서 참조로 닿지 않는다 - 이 빌드의 게임이 쓰지 않는다(`PackReachableSet`)
                     addItem( relativePath, absPath, PackItemSource::Source );
                 }
 
@@ -1632,9 +1632,9 @@ namespace sw
         PackCookerInternal::PackReachInputs inputs;
         if ( PackCookerInternal::loadReachInputs( config, params, listDomain, inputs ) == false )
             return false;
-        PackReachGraph  graph( inputs._properties, config._cookRules, inputs._files, inputs._source );
-        PackReachResult reach;
-        if ( PackReachResult::collect( graph, {}, reach ) == false )
+        PackReachGraph   graph( inputs._properties, config._cookRules, inputs._files, inputs._source );
+        PackReachableSet reach;
+        if ( PackReachableSet::collect( graph, {}, reach ) == false )
         {
             SW_LOG_ERROR_ID( "PackCooker.PackReachFailed", "Pack cook: following references from the cook roots failed (reasons above) - no pack is written" );
             return false;

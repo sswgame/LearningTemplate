@@ -8,9 +8,9 @@
 #include "Core/TestFramework/TestFramework.h"
 
 #include "Editor/Common/Workspace/EditorSubsystems.h"
-#include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/Undo/CommandStack.h"
 #include "Editor/Common/Workspace/Undo/DocumentEditSpan.h"
+#include "Editor/Common/Workspace/Undo/EditorTransaction.h"
 #include "Editor/Common/Workspace/Undo/UndoStep.h"
 
 namespace

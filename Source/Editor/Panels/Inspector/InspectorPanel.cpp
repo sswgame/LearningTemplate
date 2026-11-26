@@ -14,7 +14,7 @@
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorComponentMenu.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
-#include "Editor/Common/Widgets/PropertyGrid/InspectorPropertyUndo.h"
+#include "Editor/Common/Widgets/PropertyGrid/PropertyGridUndo.h"
 #include "Editor/Panels/Inspector/IComponentInspector.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
@@ -608,7 +608,7 @@ namespace sw::editor
             ImGui::BeginGroup();
             pInspector->drawSection( componentTarget );
             ImGui::EndGroup();
-            InspectorPropertyUndo::trackComponentRegion( _propertyGrid.editModel(), EditorPropertyGridScope::MainScene, _state._objectID, card._componentID, card._typeDisplayName.c_str() );
+            PropertyGridUndo::trackComponentRegion( _propertyGrid.editModel(), EditorPropertyGridScope::MainScene, _state._objectID, card._componentID, card._typeDisplayName.c_str() );
             pInspector->collectDrawnProperties( listDrawnName );
         }
 

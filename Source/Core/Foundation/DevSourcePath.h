@@ -118,8 +118,8 @@ namespace sw
         return false;
     }
 
-    static_assert( isDevelopmentSourcePath( "D:/Repo/Source/DevTools/Network/NetLineEmulation.cpp" ) );
-    static_assert( isDevelopmentSourcePath( "D:\\Repo\\Source\\Editor\\SelfTest\\EditorWatchSupport.h" ) );
+    static_assert( isDevelopmentSourcePath( "D:/Repo/Source/DevTools/Network/NetEmulationSubsystem.cpp" ) );
+    static_assert( isDevelopmentSourcePath( "D:\\Repo\\Source\\Editor\\SelfTest\\EditorWatchState.h" ) );
     static_assert( isDevelopmentSourcePath( "/home/u/Repo/Source/Games/Playground/Dev/PlaygroundAutoplay.cpp" ) );
     static_assert( isDevelopmentSourcePath( "Source/Engine/Config/Tests/TestGlobalVariableMacro.cpp" ) );
     static_assert( isDevelopmentSourcePath( "D:/Repo/Source/GameFramework/Developer/GameSettingsLaunchOverride.cpp" ) );

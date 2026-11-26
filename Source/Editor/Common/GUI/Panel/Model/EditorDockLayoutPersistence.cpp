@@ -9,7 +9,7 @@
 #include "Editor/Common/GUI/Panel/EditorDockLayout.h"
 #include "Editor/Common/GUI/Panel/EditorPanel.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
-#include "Editor/Common/Workspace/EditorLayoutStore.h"
+#include "Editor/Common/Workspace/Layout/EditorLayoutStore.h"
 
 namespace sw::editor
 {

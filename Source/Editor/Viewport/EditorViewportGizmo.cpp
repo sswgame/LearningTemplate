@@ -4,8 +4,8 @@
 
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
-#include "Editor/Viewport/EditorViewportProjection.h"
-#include "Editor/Viewport/ViewportToolbarSettings.h"
+#include "Editor/Viewport/EditorViewportOverlayBars.h"
+#include "Editor/Viewport/EditorViewportProjectionUtil.h"
 
 #include <imgui.h>
 #include <ImGuizmo.h>
@@ -30,7 +30,7 @@ namespace sw::editor
             };
 
             /** @brief 조작 번호(0 이동 · 1 회전 · 2 크기)와 좌표계, 툴바의 스냅 설정으로 설정을 만듭니다. */
-            static GizmoSetup makeSetup( const int32 operationIndex, const bool bLocalSpace, const ViewportToolbarSettings& settings )
+            static GizmoSetup makeSetup( const int32 operationIndex, const bool bLocalSpace, const EditorViewportOverlayBars& settings )
             {
                 GizmoSetup setup;
                 setup._mode       = bLocalSpace ? ImGuizmo::LOCAL : ImGuizmo::WORLD;
@@ -88,7 +88,7 @@ namespace sw::editor
     }
 
     void EditorViewportGizmo::draw( const EditorGizmoViewState& state, const float32* pView, const float32* pProj, const float2& canvasPos, const float2& canvasSize,
-                                    const ViewportToolbarSettings& settings, const utf8* pCenterMark )
+                                    const EditorViewportOverlayBars& settings, const utf8* pCenterMark )
     {
         _listCommand.clear();
         _bHovered = SW_FALSE;

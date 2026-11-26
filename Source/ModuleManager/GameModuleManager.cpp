@@ -27,7 +27,7 @@
 #include "ModuleAPI/Service/IServerKitLocator.h"
 
 #include "ModuleManager/DeviceChangeSequence.h"
-#include "ModuleManager/ILiveReloadManager.h"
+#include "ModuleManager/IModuleHotReloadManager.h"
 #include "ModuleManager/ModuleInstanceUtil.h"
 
 #include "sw/config/ConfigConstants.h"
@@ -59,7 +59,7 @@ namespace sw
         , _gameAPI{}
         , _game{ nullptr }
         , _gameServices{ nullptr }
-        , _pLiveReloadManager{ nullptr }
+        , _pModuleHotReloadManager{ nullptr }
         , _pRHI{ nullptr }
         , _pWindow{ nullptr }
         , _pRenderDriver{ nullptr }
@@ -78,12 +78,12 @@ namespace sw
         shutdown();
     }
 
-    bool GameModuleManager::initializeGame( ILiveReloadManager* pLiveReloadManager, RHI* pRHI, GenericWindow* pWindow, IEngineRenderDriver* pRenderDriver )
+    bool GameModuleManager::initializeGame( IModuleHotReloadManager* pModuleHotReloadManager, RHI* pRHI, GenericWindow* pWindow, IEngineRenderDriver* pRenderDriver )
     {
-        _pLiveReloadManager = pLiveReloadManager;
-        _pRHI               = pRHI;
-        _pWindow            = pWindow;
-        _pRenderDriver      = pRenderDriver;
+        _pModuleHotReloadManager = pModuleHotReloadManager;
+        _pRHI                    = pRHI;
+        _pWindow                 = pWindow;
+        _pRenderDriver           = pRenderDriver;
 
         // 프레임 경로가 매 프레임 전역 조회를 하지 않도록 여기서 한 번 읽는다. 서비스 테이블이 비어 있으면 그 일을 건너뛴다.
         const bool bServicesBound = engine::areEngineSubsystemsBound();
@@ -94,9 +94,9 @@ namespace sw
         return startGameInstance();
     }
 
-    bool GameModuleManager::initializeDedicatedServer( ILiveReloadManager* pLiveReloadManager )
+    bool GameModuleManager::initializeDedicatedServer( IModuleHotReloadManager* pModuleHotReloadManager )
     {
-        return initializeGame( pLiveReloadManager, nullptr, nullptr, nullptr );
+        return initializeGame( pModuleHotReloadManager, nullptr, nullptr, nullptr );
     }
 
     void GameModuleManager::shutdown()
@@ -108,7 +108,7 @@ namespace sw
         suspendModules( ModuleScope::Both, true, FlushReason::Shutdown );
         // 정적 링크(배포)는 모듈을 내리는 쪽(핫 리로드 매니저)이 없다 — 등록한 쪽(`bindGameAPI`)이 뗀다. 떼지 않으면 게임 모듈이 건 캐시 · 서브시스템
         // (`ElementRuleCatalog` · `InteractionCatalog` 캐시)이 에셋 매니저 종료까지 남아 "still registered" 경고가 났다.
-        if ( _pLiveReloadManager == nullptr && engine::areEngineSubsystemsBound() )
+        if ( _pModuleHotReloadManager == nullptr && engine::areEngineSubsystemsBound() )
             engine::unregisterModuleTypes( sw::config::kTargetGameModule );
 
         // 콜백은 이 객체의 메서드를 가리킨다. 실행 파일은 호스트를 먼저 지우고 나중에 리로드 매니저를 정리하므로, 이 객체가 건 것(모듈마다의 칸 ·
@@ -166,7 +166,7 @@ namespace sw
     }
 
     // ======================================================================
-    // LiveReload 콜백. 게임.
+    // HotReload 콜백. 게임.
     // ======================================================================
 
     void GameModuleManager::onBeforeGameReload()
@@ -196,7 +196,7 @@ namespace sw
     }
 
     // ======================================================================
-    // LiveReload 콜백. GameFramework 와 키트 DLL 연쇄 교체.
+    // HotReload 콜백. GameFramework 와 키트 DLL 연쇄 교체.
     // ======================================================================
 
     void GameModuleManager::onBeforeGameplayDLLReload()
@@ -525,7 +525,7 @@ namespace sw
         ModuleInstanceUtil::destroyInstance( _gameAPI, _game, bReleaseAPITable, sw::config::kTargetGameModule );
         // 게임 컴포넌트를 모든 씬에서 제거했다. 복원할 때까지(`restoreGameState`) 씬을 저장하면 그것들이 빠진 채 저장된다. 리로드가 실패하거나
         // 중단되면 복원하는 쪽이 오지 않으므로 여기서 막는다. 리로드 매니저가 없으면(배포) 다시 올 리로드도 없다.
-        const bool bBlockSave = bReleaseAPITable && _pLiveReloadManager != nullptr && engine::areEngineSubsystemsBound();
+        const bool bBlockSave = bReleaseAPITable && _pModuleHotReloadManager != nullptr && engine::areEngineSubsystemsBound();
         if ( bBlockSave )
             engine::getSubsystem<SceneManager>().setSaveBlockReason( "the game module's components were removed for a reload and have not been restored yet" );
     }
@@ -541,20 +541,20 @@ namespace sw
     // ----------------------------------------------------------------------------------------------------------------------
     // 모듈 잇기 — 개발은 게임 · 키트 · GameFramework 를 동적 라이브러리로 리로드 매니저에 올리고 게임 API 를 라이브러리 심볼에서 읽는다.
     // 배포는 정적 링크라 로드할 라이브러리 · 리로드 매니저 · 모듈 컴파일러가 없고 게임 API 는 정적 `exportGameAPI` 다. 두 방식은 진짜 구현 둘이다
-    // (빈 몸통이 아니다. 언리얼 `IS_MONOLITHIC` 과 같다). 동적 쪽이 배포에 없는 리로드 매니저(`ILiveReloadManager`, DevTools 가 구현)를 써서 여기만 `SW_WITH_DYNAMIC_MODULES` 로 가른다(docs/agents/CppStyle.md "Build configuration switches" 둘째 줄).
+    // (빈 몸통이 아니다. 언리얼 `IS_MONOLITHIC` 과 같다). 동적 쪽이 배포에 없는 리로드 매니저(`IModuleHotReloadManager`, DevTools 가 구현)를 써서 여기만 `SW_WITH_DYNAMIC_MODULES` 로 가른다(docs/agents/CppStyle.md "Build configuration switches" 둘째 줄).
     // ----------------------------------------------------------------------------------------------------------------------
-    bool GameModuleManager::loadModuleLibraries( ILiveReloadManager* pLiveReloadManager, const ModuleCatalog& catalog, const ModuleResolution& resolution )
+    bool GameModuleManager::loadModuleLibraries( IModuleHotReloadManager* pModuleHotReloadManager, const ModuleCatalog& catalog, const ModuleResolution& resolution )
     {
-        _pLiveReloadManager = pLiveReloadManager;
+        _pModuleHotReloadManager = pModuleHotReloadManager;
         // 정적 모듈 구성(배포 · 웹 · Android 개발)은 매니저가 없다 — 타입은 리플렉션 단계가 이미 모았고, 무엇을 링크할지는 CMake 가 같은 매니페스트로 정했다.
-        if ( build::kStaticModules || _pLiveReloadManager == nullptr )
+        if ( build::kStaticModules || _pModuleHotReloadManager == nullptr )
             return true;
 
         const ScopedMemoryTag moduleMemoryTag{ kGameModuleMemoryTag }; // 라이브러리 로드가 모듈의 정적 등록자를 돌린다
         vector<string>        listGameModule;
 
         // 로드 순서는 매니페스트의 의존이 정한다(의존이 먼저, 동점은 이름 순). 공용 모듈(GameFramework)은 그것을 링크하는 키트와 SWGame 보다 먼저
-        // 로드되므로 제 이름으로 등록된다(`LiveReloadManager::loadSharedModule` 의 이유).
+        // 로드되므로 제 이름으로 등록된다(`ModuleHotReloadManager::loadSharedModule` 의 이유).
         for ( const string& moduleName : resolution._listLoadOrder )
         {
             const ModuleManifest* pManifest = catalog.findManifest( moduleName );
@@ -562,7 +562,7 @@ namespace sw
                 continue;
             if ( pManifest->_kind == ModuleKind::GameFramework )
             {
-                if ( _pLiveReloadManager->loadSharedModule( moduleName ) == false )
+                if ( _pModuleHotReloadManager->loadSharedModule( moduleName ) == false )
                 {
                     SW_LOG_ERROR_ID( "GameModuleManager.SharedModuleLoadFailed", "Shared module load failed (%#)", moduleName );
                     return false;
@@ -573,12 +573,12 @@ namespace sw
             if ( pManifest->_kind != ModuleKind::Kit )
                 continue;
 
-            if ( _pLiveReloadManager->registerModule( moduleName, pManifest->collectDependencyNames() ) == false )
+            if ( _pModuleHotReloadManager->registerModule( moduleName, pManifest->collectDependencyNames() ) == false )
             {
                 SW_LOG_ERROR_ID( "GameModuleManager.KitModuleRegisterFailed", "Kit module register failed (%#)", moduleName );
                 return false;
             }
-            holdReloadSubscription( _pLiveReloadManager->setModuleClient( moduleName, _kitReloadClient ) );
+            holdReloadSubscription( _pModuleHotReloadManager->setModuleClient( moduleName, _kitReloadClient ) );
             listGameModule.push_back( moduleName );
         }
 
@@ -587,21 +587,21 @@ namespace sw
         _listGameScopeModule = listGameModule; // SWGame 은 이름으로 따로 본다(onBeforeCommitBatch)
         if ( resolution.isActive( sw::config::kTargetGameModule ) == false )
             return true; // 테스트 자식이 연 모듈에 게임이 없다(`ModuleResolution::keepOnly`)
-        if ( _pLiveReloadManager->registerModule( sw::config::kTargetGameModule, listGameModule ) == false )
+        if ( _pModuleHotReloadManager->registerModule( sw::config::kTargetGameModule, listGameModule ) == false )
         {
             SW_LOG_ERROR_ID( "GameModuleManager.SWGameModuleRegisterFailed", "SWGame module register failed" );
             return false;
         }
-        holdReloadSubscription( _pLiveReloadManager->setModuleClient( sw::config::kTargetGameModule, _gameReloadClient ) );
+        holdReloadSubscription( _pModuleHotReloadManager->setModuleClient( sw::config::kTargetGameModule, _gameReloadClient ) );
 
-        if ( _pLiveReloadManager->isGraphBroken() )
+        if ( _pModuleHotReloadManager->isGraphBroken() )
         {
-            SW_LOG_ERROR_ID( "GameModuleManager.LiveReloadGraphBrokenDuring", "LiveReload graph broken during module registration — aborting initialize" );
+            SW_LOG_ERROR_ID( "GameModuleManager.HotReloadGraphBrokenDuring", "HotReload graph broken during module registration — aborting initialize" );
             return false;
         }
 
         holdReloadSubscription(
-            _pLiveReloadManager->addOnBeforeCommitBatch( SW_DELEGATE_METHOD( ILiveReloadManager::OnBeforeCommitBatchDelegate, &GameModuleManager::onBeforeCommitBatch, this ) ) );
+            _pModuleHotReloadManager->addOnBeforeCommitBatch( SW_DELEGATE_METHOD( IModuleHotReloadManager::OnBeforeCommitBatchDelegate, &GameModuleManager::onBeforeCommitBatch, this ) ) );
         return true;
     }
 
@@ -612,17 +612,17 @@ namespace sw
             onAfterGameReload( ModuleLibraryHandle{} ); // 정적 링크 표로 바로 세운다
             return true;
         }
-        if ( _pLiveReloadManager == nullptr )
+        if ( _pModuleHotReloadManager == nullptr )
             return true;
-        _moduleCompiler = _pLiveReloadManager->createModuleCompiler(); // 빌드 시작 · 끝을 리로드 매니저에 알리는 구현(DevTools)
+        _moduleCompiler = _pModuleHotReloadManager->createModuleCompiler(); // 빌드 시작 · 끝을 리로드 매니저에 알리는 구현(DevTools)
 
         // 매니저가 비우기를 부르는 것은 모듈을 내리기 직전(리로드)뿐이다 — 종료는 `shutdown` 이 이 콜백을 놓은 뒤 매니저를 내린다.
-        holdReloadSubscription( _pLiveReloadManager->setFlushWorkers( SW_DELEGATE_LAMBDA( ILiveReloadManager::FlushWorkersDelegate, [this]()
+        holdReloadSubscription( _pModuleHotReloadManager->setFlushWorkers( SW_DELEGATE_LAMBDA( IModuleHotReloadManager::FlushWorkersDelegate, [this]()
         { flushRenderWorkers( FlushReason::Reload ); } ) ) );
 
         BLOCK( "SWGame 인스턴스 생성" )
         {
-            if ( _pLiveReloadManager->runAfterReload( sw::config::kTargetGameModule ) == false )
+            if ( _pModuleHotReloadManager->runAfterReload( sw::config::kTargetGameModule ) == false )
             {
                 SW_LOG_ERROR_ID( "GameModuleManager.SWGameInstanceCouldNot", "SWGame instance could not be started" );
                 return false;
@@ -633,15 +633,15 @@ namespace sw
 
     void GameModuleManager::markReloadGraphBroken( const utf8* pReason )
     {
-        if ( _pLiveReloadManager != nullptr )
-            _pLiveReloadManager->markGraphBroken( pReason != nullptr ? pReason : "unspecified" );
+        if ( _pModuleHotReloadManager != nullptr )
+            _pModuleHotReloadManager->markGraphBroken( pReason != nullptr ? pReason : "unspecified" );
     }
 
     ModuleLibraryHandle GameModuleManager::getLoadedModuleHandle( string_view moduleName ) const
     {
-        if ( _pLiveReloadManager == nullptr )
+        if ( _pModuleHotReloadManager == nullptr )
             return ModuleLibraryHandle{}; // 정적 링크에는 "로드된 모듈" 이 없다. 부르는 쪽이 빈 핸들을 처리한다
-        return _pLiveReloadManager->getModuleHandle( moduleName );
+        return _pModuleHotReloadManager->getModuleHandle( moduleName );
     }
 
     // 동적 구성은 라이브러리 심볼(ABI 대조 포함), 정적 구성은 링크된 `exportGameAPI` 다 — 그 함수가 한쪽 구성에만 있어 이 함수만 전처리로 가른다.

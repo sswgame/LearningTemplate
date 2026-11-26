@@ -5,7 +5,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 
-#include "DevTools/AssetReload/ConfigReloadSubsystem.h"
+#include "DevTools/AssetReload/ConfigHotReloadSubsystem.h"
 
 #include "Editor/Common/Config/EditorToolDefaults.h"
 #include "Editor/Common/Workspace/EditorSubsystems.h"
@@ -15,7 +15,7 @@ namespace sw::editor
     SubsystemInitResult EditorToolDefaultsReload::initializeSubsystem()
     {
         // 설정 리로드는 개발 빌드의 엔진 서브시스템이다 — 없으면(감시를 끈 호스트) 손 저장만 남는다.
-        if ( ConfigReloadSubsystem* pConfigReload = editor::findSubsystem<ConfigReloadSubsystem>() )
+        if ( ConfigHotReloadSubsystem* pConfigReload = editor::findSubsystem<ConfigHotReloadSubsystem>() )
             _handler = pConfigReload->registerFileHandler( SW_DELEGATE_FUNCTION( ConfigFileReloadDelegate, &EditorToolDefaultsReload::reloadIfToolDefaults ) );
         return SubsystemInitResult::Succeeded;
     }

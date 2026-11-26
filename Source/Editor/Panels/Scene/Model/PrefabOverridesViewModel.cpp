@@ -6,9 +6,9 @@
 
 #include "Editor/Common/Commands/Asset/EditorToolAssetCommands.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
-#include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorSubsystems.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
+#include "Editor/Common/Workspace/Selection/EditorSelection.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"

@@ -14,7 +14,7 @@ namespace sw
 {
     /**
      * @class ModuleLibraryHandle
-     * @brief 파일 머리말 참고. 소유하지 않는다 — 라이브러리를 연 쪽(`LiveReloadManager` · 헤드리스 경로)이 내린다. 기본값은 빈 핸들(정적 링크 · 로드 전)입니다.
+     * @brief 파일 머리말 참고. 소유하지 않는다 — 라이브러리를 연 쪽(`ModuleHotReloadManager` · 헤드리스 경로)이 내린다. 기본값은 빈 핸들(정적 링크 · 로드 전)입니다.
      */
     class ModuleLibraryHandle
     {

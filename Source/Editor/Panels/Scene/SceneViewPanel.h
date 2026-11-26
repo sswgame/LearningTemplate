@@ -7,7 +7,7 @@
 #include "Core/String/Name/hashed_string.h"
 
 #include "Editor/Common/GUI/Panel/EditorPanel.h"
-#include "Editor/Common/Workspace/EditorPanelID.h"
+#include "Editor/Common/Workspace/Layout/EditorPanelID.h"
 #include "Editor/Panels/Scene/Model/SceneViewModel.h"
 #include "Editor/Viewport/EditorViewportClient.h"
 

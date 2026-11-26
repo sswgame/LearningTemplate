@@ -9,14 +9,14 @@
 
 #include "Editor/Common/Commands/EditorDragPayload.h"
 #include "Editor/Common/Config/EditorPreferences.h"
-#include "Editor/Common/Config/EditorSettingsRegistry.h"
+#include "Editor/Common/Config/EditorPreferencesRegistry.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorInputActionNames.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
-#include "Editor/Viewport/EditorViewportProjection.h"
-#include "Editor/Viewport/ViewportToolbarSettings.h"
+#include "Editor/Viewport/EditorViewportOverlayBars.h"
+#include "Editor/Viewport/EditorViewportProjectionUtil.h"
 
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
@@ -51,7 +51,7 @@ namespace sw::editor
     {
     }
 
-    void EditorViewportAssetPlacement::process( ImDrawList* pDrawList, const float2& canvasPos, const float2& canvasSize, const float4x4& viewProj, const ViewportToolbarSettings& settings )
+    void EditorViewportAssetPlacement::process( ImDrawList* pDrawList, const float2& canvasPos, const float2& canvasSize, const float4x4& viewProj, const EditorViewportOverlayBars& settings )
     {
         if ( EditorInputGUI::isPayloadInFlight( EditorPayloadKindSet{ EditorPayloadKind::Asset } ) == false )
         {

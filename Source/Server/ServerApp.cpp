@@ -68,9 +68,9 @@
 #include "ModuleAPI/Service/IServerKitLocator.h"
 
 #include "ModuleManager/GameModuleManager.h"
-#include "ModuleManager/Host/HostDevLayer.h"
 #include "ModuleManager/Host/HostLaunch.h"
-#include "ModuleManager/Host/ServerDebugControl.h"
+#include "ModuleManager/Host/IHostDevLayer.h"
+#include "ModuleManager/Host/IServerDebugControl.h"
 #include "ModuleManager/ModuleLoaderSubsystem.h"
 
 #include "Server/ServerEntry.h"
@@ -363,7 +363,7 @@ namespace sw
 
         SubsystemInitResult initializeSubsystem() override
         {
-            const bool bStarted = _server._launch.getModuleManager()->initializeDedicatedServer( _server._launch.getLiveReloadManager() );
+            const bool bStarted = _server._launch.getModuleManager()->initializeDedicatedServer( _server._launch.getModuleHotReloadManager() );
             if ( bStarted == false )
                 SW_LOG_ERROR_ID( "Server.GameModuleCouldNot", "The game module could not be started on the dedicated server" );
             return bStarted ? SubsystemInitResult::Succeeded : SubsystemInitResult::Failed;

@@ -18,13 +18,13 @@
 #include "Editor/Common/Commands/Scene/EditorTransformCommands.h"
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
 #include "Editor/Common/EditorSceneIterationAccess.h"
-#include "Editor/Common/Workspace/EditorCamera.h"
 #include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorSubsystems.h"
-#include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
+#include "Editor/Common/Workspace/Selection/EditorSelection.h"
+#include "Editor/Common/Workspace/Undo/EditorTransaction.h"
+#include "Editor/Common/Workspace/View/EditorCamera.h"
 
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Object/Component/CameraComponent.h"
@@ -234,7 +234,7 @@ namespace sw::editor
                 Component*        pComponent = EditorSceneObjectCommands::findTargetComponent( target, pOwner );
                 if ( pComponent == nullptr )
                     return;
-                // 인스펙터 편집과 같은 규칙(`InspectorObjectEdit`) — 정지 상태면 되돌리기 기록과 dirty, 플레이 중이면 사본을 바로 바꾼다.
+                // 인스펙터 편집과 같은 규칙(`PropertyGridObjectEdit`) — 정지 상태면 되돌리기 기록과 dirty, 플레이 중이면 사본을 바로 바꾼다.
                 const bool           bRecord        = EditorPlaySession::areSceneEditsAllowed();
                 const ObjectSnapshot beforeSnapshot = bRecord ? EditorTransaction::captureSnapshot( pOwner ) : ObjectSnapshot{};
                 (void)pOwner->moveComponent( pComponent, direction ); // 끝 · 주 씬 컴포넌트면 그대로 — 켜짐 조건이 이미 막는다

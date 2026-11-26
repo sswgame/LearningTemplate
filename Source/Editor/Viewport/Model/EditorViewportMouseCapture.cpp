@@ -2,7 +2,7 @@
 
 #include "Editor/Viewport/Model/EditorViewportMouseCapture.h"
 
-#include "Editor/Common/Workspace/EditorStateStore.h"
+#include "Editor/Common/Workspace/Layout/EditorStateStore.h"
 
 namespace sw::editor
 {

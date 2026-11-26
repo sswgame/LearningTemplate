@@ -101,7 +101,7 @@ SW_TEST_CASE( PropertyGridViewModelTest, RowsCarryValueCopiesAndCommandsWriteByR
     const sw::editor::PropertyValueRow* pRow = Internal::findRow( state, "_renderTextureWidth" );
     SW_REQUIRE_NOT_NULL( pRow );
     SW_EXPECT_TRUE( pRow->_kind == sw::editor::PropertyRowKind::Builtin );
-    SW_EXPECT_TRUE( pRow->_widget == sw::editor::InspectorValueWidget::Number );
+    SW_EXPECT_TRUE( pRow->_widget == sw::editor::PropertyGridValueWidget::Number );
     SW_REQUIRE_NOT_NULL( pRow->_value.getPtr<uint32>() );
     SW_EXPECT_EQUAL( 256u, *pRow->_value.getPtr<uint32>() );
 

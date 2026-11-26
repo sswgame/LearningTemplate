@@ -9,7 +9,7 @@
 
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
-#include "Editor/Viewport/EditorViewportProjection.h"
+#include "Editor/Viewport/EditorViewportProjectionUtil.h"
 
 #include "Engine/Input/RawInputEvent.h"
 
@@ -62,7 +62,7 @@ namespace sw::editor
         const EditorPickSelectMode mode = EditorViewportPickerInternal::readSelectMode();
         EditorViewportPickHit      hit{};
         const bool                 bHit = findObjectUnderMouse( input, hit );
-        EditorViewportPick::applyClick( hit, mode );
+        EditorViewportPickViewModel::applyClick( hit, mode );
         if ( bHit )
             return;
         _bMarqueeArmed = SW_TRUE;
@@ -91,7 +91,7 @@ namespace sw::editor
         _bMarqueeArmed         = SW_FALSE;
         const bool bWasDragged = pointer.wasClickedWithoutDrag( EditorMouseButton::Left ) == false;
         if ( bWasDragged )
-            EditorViewportPick::selectInRect( input, minPos, maxPos, static_cast<EditorPickSelectMode>( _marqueeMode ) );
+            EditorViewportPickViewModel::selectInRect( input, minPos, maxPos, static_cast<EditorPickSelectMode>( _marqueeMode ) );
     }
 
     void EditorViewportPicker::processHover( const EditorViewportPickInput& input, bool bCanvasHovered, bool bGizmoBusy )
@@ -121,7 +121,7 @@ namespace sw::editor
         EditorViewportPickHit hit{};
         _hoveredObjectID = findObjectUnderMouse( input, hit ) ? hit._objectID : 0;
         // 이미 선택한 오브젝트는 호버로 취급하지 않는다. 선택 상자와 기즈모가 이미 있다. 그 위의 기즈모 핸들과 겹치는 판정도 여기서 없어진다.
-        if ( _hoveredObjectID != 0 && EditorViewportPick::isSelected( _hoveredObjectID ) )
+        if ( _hoveredObjectID != 0 && EditorViewportPickViewModel::isSelected( _hoveredObjectID ) )
             _hoveredObjectID = 0;
         _lastHoverPickSeconds = static_cast<float64>( MonotonicClock::nowNanoseconds() - startNanos ) * 1e-9;
         _lastHoverPickTime    = now;
@@ -132,6 +132,6 @@ namespace sw::editor
         Ray          pickRay{};
         const bool   bRay  = EditorViewportProjectionUtil::makeMouseRay( input._viewProj.invert(), input._canvasPos, input._canvasSize, pickRay );
         const ImVec2 mouse = ImGui::GetMousePos();
-        return EditorViewportPick::findUnderMouse( input, float2{ mouse.x, mouse.y }, bRay ? &pickRay : nullptr, outHit );
+        return EditorViewportPickViewModel::findUnderMouse( input, float2{ mouse.x, mouse.y }, bRay ? &pickRay : nullptr, outHit );
     }
 } // namespace sw::editor

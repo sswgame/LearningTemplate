@@ -8,7 +8,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
-#include "Editor/Common/Commands/Asset/EditorPrefabOverrideItem.h"
+#include "Editor/Common/Commands/Asset/PrefabOverrideItem.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 
 #include "Engine/Content/AssetID.h"

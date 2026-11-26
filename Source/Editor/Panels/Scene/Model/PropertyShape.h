@@ -2,7 +2,7 @@
  * @file PropertyShape.h
  * @brief 프로퍼티 메타로 선언한 모양(`Meta = "Shape=Sphere"`)의 값과 계산입니다 — 월드 틀, 모양 값, 그 모양의 선 · 손잡이, 손잡이를 끈 새 값(ImGui · 씬 없음).
  * @details ezEngine 조작기 · 시각화 속성(`ezSphereManipulatorAttribute` · `ezConeVisualizerAttribute`), 언리얼 `MakeEditWidget`, 유니티 `Handles.RadiusHandle` 자리다 —
- *          컴포넌트가 손 코드 없이 프로퍼티 메타 한 줄로 씬 뷰 모양과 손잡이를 얻는다. 선언을 읽고 값을 쓰는 쪽은 `PropertyShapeEdit.h`.
+ *          컴포넌트가 손 코드 없이 프로퍼티 메타 한 줄로 씬 뷰 모양과 손잡이를 얻는다. 선언을 읽고 값을 쓰는 쪽은 `PropertyShapeViewModel.h`.
  *          손잡이 도구 View 가 셰이프 · 씬 헤더 없이 들 수 있게 값만 둔다.
  */
 #pragma once

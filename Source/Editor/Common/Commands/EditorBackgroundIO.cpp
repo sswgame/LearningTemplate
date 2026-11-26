@@ -5,7 +5,7 @@
 #include "Core/File/FileUtil.h"
 
 #include "Editor/Common/Asset/EditorAssetIndex.h"
-#include "Editor/Common/Commands/Asset/EditorAssetCatalog.h"
+#include "Editor/Common/Commands/Asset/EditorAssetClassifier.h"
 #include "Editor/Common/Commands/Asset/EditorDataTableCommands.h"
 #include "Editor/Common/Commands/Asset/EditorFolderListing.h"
 #include "Editor/Common/Workspace/EditorSubsystems.h"
@@ -126,10 +126,10 @@ namespace sw::editor
         // 경로 상태는 여기(에디터 스레드)서 찾아 넘긴다 — 워커는 에디터 서비스 범위를 읽지 않는다.
         const AssetPaths* const pAssetPaths = &editor::getSubsystem<AssetPaths>();
         // 에디터의 에셋 색인이 찼으면 그것에서 바로 낸다(피커와 같은 규칙 — 첫 전체 스캔 전에만 디스크를 걷는다). 결과는 다음 `take` 가 꺼낸다.
-        if ( const EditorAssetIndex* const pIndex = EditorAssetCatalog::findReadyIndex(); pIndex != nullptr )
+        if ( const EditorAssetIndex* const pIndex = EditorAssetClassifier::findReadyIndex(); pIndex != nullptr )
         {
             vector<EditorAssetIndexEntry> listEntry;
-            EditorAssetCatalog::collectEntries( *pAssetPaths, *pIndex, listEntry );
+            EditorAssetClassifier::collectEntries( *pAssetPaths, *pIndex, listEntry );
             publish( _pState, generation, std::move( listEntry ) );
             return;
         }
@@ -149,7 +149,7 @@ namespace sw::editor
 
         vector<EditorAssetIndexEntry> listEntry;
         const StopToken               stopToken = readStopSignal( pState );
-        EditorAssetCatalog::collectEntries( *args.get<const AssetPaths*>( 2 ), listEntry, stopToken );
+        EditorAssetClassifier::collectEntries( *args.get<const AssetPaths*>( 2 ), listEntry, stopToken );
         if ( stopToken.isStopRequested() )
             return;
 
@@ -199,11 +199,11 @@ namespace sw::editor
     {
         const uint32            generation  = beginRequest( {} );
         const AssetPaths* const pAssetPaths = &editor::getSubsystem<AssetPaths>(); // 워커는 서비스를 찾지 않는다 — 여기서 넘긴다
-        // 에셋 색인이 찼으면 그것으로 센다(첫 전체 스캔 전에만 디스크를 걷는다 — `EditorAssetCatalog::findReadyIndex`).
-        if ( const EditorAssetIndex* const pIndex = EditorAssetCatalog::findReadyIndex(); pIndex != nullptr )
+        // 에셋 색인이 찼으면 그것으로 센다(첫 전체 스캔 전에만 디스크를 걷는다 — `EditorAssetClassifier::findReadyIndex`).
+        if ( const EditorAssetIndex* const pIndex = EditorAssetClassifier::findReadyIndex(); pIndex != nullptr )
         {
             EditorResourceCatalogCounts counts{};
-            EditorAssetCatalog::collectCatalogCounts( *pAssetPaths, *pIndex, counts );
+            EditorAssetClassifier::collectCatalogCounts( *pAssetPaths, *pIndex, counts );
             publish( _pState, generation, std::move( counts ) );
             return;
         }
@@ -223,7 +223,7 @@ namespace sw::editor
 
         EditorResourceCatalogCounts counts{};
         const StopToken             stopToken = readStopSignal( pState );
-        EditorAssetCatalog::collectCatalogCounts( *args.get<const AssetPaths*>( 2 ), counts, stopToken );
+        EditorAssetClassifier::collectCatalogCounts( *args.get<const AssetPaths*>( 2 ), counts, stopToken );
         if ( stopToken.isStopRequested() )
             return;
 

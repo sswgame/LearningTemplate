@@ -8,7 +8,7 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/TestFramework/TestRunner.h"
 
-#include "DevTools/Diagnostics/TestCaseStateProbe.h"
+#include "DevTools/Diagnostics/TestCaseStateSnapshot.h"
 
 #include "Engine/Foundation/EngineSubsystems.h"
 
@@ -58,9 +58,9 @@ namespace sw
         options._seed          = static_cast<uint32>( seed );
         options._repeatCount   = repeatCount > 0 ? static_cast<uint32>( repeatCount ) : 1u;
         options._pCrashHandler = &engine::getSubsystem<CrashHandler>();
-        TestCaseStateProbe stateProbe;
-        options._onCaseBegin = SW_DELEGATE_METHOD( Delegate<void()>, &TestCaseStateProbe::beginCase, &stateProbe );
-        options._onCaseEnd   = SW_DELEGATE_METHOD( Delegate<void( vector<string>& )>, &TestCaseStateProbe::endCase, &stateProbe );
+        TestCaseStateSnapshot stateProbe;
+        options._onCaseBegin = SW_DELEGATE_METHOD( Delegate<void()>, &TestCaseStateSnapshot::beginCase, &stateProbe );
+        options._onCaseEnd   = SW_DELEGATE_METHOD( Delegate<void( vector<string>& )>, &TestCaseStateSnapshot::endCase, &stateProbe );
         return test::TestRunner::run( options );
     }
 } // namespace sw

@@ -1,7 +1,7 @@
 /**
  * @file EditorDefaultCommands.cpp
  * @brief 기본 커맨드 테이블(동작 · 활성 조건)과 레지스트리 다시 만들기입니다. 씬 · 선택 · 작업 공간을 보는 쪽이다 — 메뉴 · 단추 그리기(`EditorCommandGUI.cpp`)는 이 파일을 보지 않는다.
- * @details 테이블은 명령의 동작만 든다. 표시 · 배치는 `editor/commands/editor.commands.xml` 의 같은 id 줄이다(`EditorCommandTextSet`).
+ * @details 테이블은 명령의 동작만 든다. 표시 · 배치는 `editor/commands/editor.commands.xml` 의 같은 id 줄이다(`EditorCommandInfoSet`).
  */
 #include "pch.h"
 
@@ -22,22 +22,22 @@
 #include "Editor/Common/Commands/Scene/EditorTransformCommands.h"
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/GUI/EditorMenuBar.h"
-#include "Editor/Common/Input/CommandPalettePopup.h"
+#include "Editor/Common/GUI/Popup/CommandPalettePopup.h"
+#include "Editor/Common/GUI/Popup/QuickLauncherPopup.h"
 #include "Editor/Common/Input/EditorCommandGUI.h"
 #include "Editor/Common/Input/EditorInputActions.h"
-#include "Editor/Common/Input/QuickLauncherPopup.h"
-#include "Editor/Common/Localization/EditorDataText.h"
+#include "Editor/Common/Localization/EditorDataLocalization.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorNotificationManager.h"
-#include "Editor/Common/Workspace/EditorSelection.h"
-#include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/Common/Workspace/EditorSubsystems.h"
-#include "Editor/Common/Workspace/EditorTransaction.h"
-#include "Editor/Common/Workspace/EditorUICommandQueue.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
+#include "Editor/Common/Workspace/Layout/EditorStateStore.h"
+#include "Editor/Common/Workspace/Notification/EditorNotificationManager.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
-#include "Editor/Common/Workspace/Undo/EditorUndoEntry.h"
+#include "Editor/Common/Workspace/Selection/EditorSelection.h"
+#include "Editor/Common/Workspace/Undo/EditorTransaction.h"
+#include "Editor/Common/Workspace/Undo/EditorUICommandQueue.h"
+#include "Editor/Common/Workspace/Undo/EditorUndoCommands.h"
 
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Content/AssetPaths.h"
@@ -77,7 +77,7 @@ namespace sw::editor
             // 하나다.
             //   - 반환형을 맞춘다: `commandNewScene` (대상은 `bool` 을 반환하는데 테이블은 `void()` 를 요구한다)
             //   - 인자를 고정한다: `commandAlign<TAxis>` (대상이 축과 정렬 두 인자를 받는다)
-            //   - 대상을 찾아온다: `commandUndo` (`EditorUndoEntry` 가 포커스 창의 스택을 찾는다)
+            //   - 대상을 찾아온다: `commandUndo` (`EditorUndoCommands` 가 포커스 창의 스택을 찾는다)
             //
             // 인자를 고정하는 경우에도 값마다 함수를 하나씩 만들지 않는다. 축처럼 값만 다른 것은 템플릿 인자로 받는다.
             // ------------------------------------------------------------------------------
@@ -123,10 +123,10 @@ namespace sw::editor
             }
 
             // 포커스된 툴 창(미리보기 씬)이 자기 스택을 걸었으면 그것을 — 미리보기 창의 Undo 가 메인 씬 기록을 건드리지 않는다.
-            /** @brief 되돌리기 입구는 하나다(`EditorUndoEntry`) — History 창과 같은 판정을 거친다. */
-            static void commandUndo() { (void)EditorUndoEntry::undo(); }
+            /** @brief 되돌리기 입구는 하나다(`EditorUndoCommands`) — History 창과 같은 판정을 거친다. */
+            static void commandUndo() { (void)EditorUndoCommands::undo(); }
 
-            static void commandRedo() { (void)EditorUndoEntry::redo(); }
+            static void commandRedo() { (void)EditorUndoCommands::redo(); }
 
             static void commandCompileGame()
             {
@@ -481,7 +481,7 @@ namespace sw::editor
     void EditorCommandGUI::syncWithRegistry()
     {
         const EditorDefaultCommandsInternal::GUIState& guiState     = getEditorState<EditorDefaultCommandsInternal::GUIState>();
-        const uint32                                   textRevision = EditorDataText::getRevision();
+        const uint32                                   textRevision = EditorDataLocalization::getRevision();
         const bool                                     bSynced      = EditorExtensionRegistry<EditorCommandRegistration>::getList().getGeneration() == guiState._syncedGeneration && textRevision == guiState._syncedTextRevision;
         if ( bSynced == false )
             registerDefaults();
@@ -496,10 +496,10 @@ namespace sw::editor
         registry.clear();
         EditorDefaultCommandsInternal::GUIState& guiState = getEditorState<EditorDefaultCommandsInternal::GUIState>();
         guiState._syncedGeneration                        = EditorExtensionRegistry<EditorCommandRegistration>::getList().getGeneration();
-        guiState._syncedTextRevision                      = EditorDataText::getRevision();
+        guiState._syncedTextRevision                      = EditorDataLocalization::getRevision();
 
         // 표시 · 배치는 모듈마다 등록한 표시 파일이 정한다 — 다시 만들 때마다 읽는다(모듈 적재 · 해제로 파일 목록이 바뀐다).
-        EditorCommandTextSet texts;
+        EditorCommandInfoSet texts;
         texts.loadRegistered();
         for ( const EditorDefaultCommandsInternal::CommandRow& row : EditorDefaultCommandsInternal::_s_arrCommandRow )
         {

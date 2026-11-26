@@ -5,7 +5,7 @@
 #pragma once
 #include "Core/Container/vector.h"
 
-#include "Editor/Common/Workspace/EditorNotificationItem.h"
+#include "Editor/Common/Workspace/Notification/NotificationItem.h"
 
 namespace sw::editor
 {

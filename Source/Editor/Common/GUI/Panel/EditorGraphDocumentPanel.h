@@ -73,7 +73,7 @@ namespace sw::editor
         void requestNodeDeletion( int32 nodeID ) { _nodeGraph.requestNodeDeletion( nodeID ); }
         /** @brief 이 패널 애셋 종류의 id 입니다(그래프 복사 버퍼의 열쇠 — 다른 종류의 그래프에는 붙지 않는다). */
         string getGraphClipboardKind() const { return string{ getDocumentKind().getID() }; }
-        /** @brief 이 그래프 문서의 편집 알림 입구입니다 — 패널은 명령 묶음(`DialogueGraphEdit` · `AnimationGraphEdit`)에 넘기기만 한다(알림 · 이름은 명령이 낸다, 감사 E-16). */
+        /** @brief 이 그래프 문서의 편집 알림 입구입니다 — 패널은 명령 묶음(`DialogueGraphEditModel` · `AnimationGraphEditModel`)에 넘기기만 한다(알림 · 이름은 명령이 낸다, 감사 E-16). */
         const EditorGraphEditSession& getGraphEditSession() const { return _graphEditSession; }
 
     private:
@@ -244,7 +244,7 @@ namespace sw::editor
         /**
          * @brief 캔버스 단축키 복사 · 잘라내기 · 붙여 넣기 · 복제(Ctrl+C · X · V · D)를 목록에 반영합니다. 캔버스 안에서 `processCanvasDeletions` 보다 먼저 부릅니다(잘라내기는 지우기 요청을 낸다).
          * @details 언리얼 그래프 편집기의 노드 복사와 같은 모양이다 — 고른 노드와 그 노드끼리의 링크를 애셋 XML 조각으로 만들어 편집기 복사 버퍼에 두고(OS 클립보드는 쓰지 않는다,
-         *          `ObjectCopyBuffer` 와 같은 까닭), 붙일 때 노드 · 링크 id 를 새로 매긴다. 붙여 넣기는 마우스 자리에, 복제는 원본에서 조금 비켜 놓는다. 패널마다 다른 것은
+         *          `ObjectClipboard` 와 같은 까닭), 붙일 때 노드 · 링크 id 를 새로 매긴다. 붙여 넣기는 마우스 자리에, 복제는 원본에서 조금 비켜 놓는다. 패널마다 다른 것은
          *          링크 양 끝이 어느 노드인지(@p linkNodes)와 양 끝을 새 노드 id 로 바꾸는 법(@p remapLink)뿐이다(대화는 핀 번호에 노드 id 가 들어 있다).
          * @param linkNodes `( const LinkType&, int32& outFromNode, int32& outToNode ) -> void` 시그니처의 콜백입니다.
          * @param remapLink `( LinkType&, int32 fromNode, int32 toNode ) -> void` 시그니처의 콜백입니다. 링크 양 끝을 새 노드 id 로 바꿉니다.

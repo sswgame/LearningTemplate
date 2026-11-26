@@ -1,6 +1,6 @@
 /**
  * @file DevTools/ModuleReload/ModuleReloadDriver.h
- * @brief 호스트(App · Server)가 소유하는 모듈 핫 리로드입니다 — `LiveReloadManager` 의 수명, 리로드 요청, 프레임마다의 교체, 그리고 자동화 창구(`module.reload` · 감시 값 `Module.*`)입니다.
+ * @brief 호스트(App · Server)가 소유하는 모듈 핫 리로드입니다 — `ModuleHotReloadManager` 의 수명, 리로드 요청, 프레임마다의 교체, 그리고 자동화 창구(`module.reload` · 감시 값 `Module.*`)입니다.
  * @details App 과 Server 가 같은 모양으로 씁니다. 리로드를 거는 입력(단축키)은 그 입력을 아는 호스트가 정하고 여기에는 `requestReload` 로 넘깁니다.
  *          개발 도구(DevTools.dll)에만 있다 — 배포는 모듈이 정적 링크라 리로드할 것이 없고 DevTools 를 짓지 않는다. 호스트는 개발 계층(`IHostDevLayer`)으로 닿는다.
  */
@@ -12,7 +12,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
-#include "ModuleManager/Host/HostDevLayer.h"
+#include "ModuleManager/Host/IHostDevLayer.h"
 
 namespace sw
 {
@@ -20,7 +20,7 @@ namespace sw
 
     class DebugKeyActions;
     class FileWatchService;
-    class LiveReloadManager;
+    class ModuleHotReloadManager;
     class ModuleCatalog;
     class ModuleLoaderSubsystem;
     class SubsystemScope;
@@ -69,7 +69,7 @@ namespace sw
         void update();
 
         /** @brief 핫 리로드 매니저입니다. Shipping 에서는 항상 nullptr 이고, 받는 쪽이 그 경우를 처리합니다. */
-        LiveReloadManager* getLiveReloadManager() const;
+        ModuleHotReloadManager* getModuleHotReloadManager() const;
 
         // --- 자동화 창구(개발 명령 `module.reload` · 감시 값 `Module.*`) ---------------------------------------------------------------------------------
         /**

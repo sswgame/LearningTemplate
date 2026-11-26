@@ -8,9 +8,9 @@
 #include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Workspace/Asset/EditorAssetReferenceUtil.h"
-#include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorSubsystems.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
+#include "Editor/Common/Workspace/Selection/EditorSelection.h"
 
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Object/Component/Component.h"

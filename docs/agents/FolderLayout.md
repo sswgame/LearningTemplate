@@ -9,7 +9,7 @@
 | `Core` | 엔진 · 게임을 모르는 기반(형식 · 컨테이너 · 글자 · 수학 · 스레드 · 파일 · 로그 · 네트워크 전송) | 씬 · 에셋 · 리플렉션 · 게임 낱말 |
 | `Engine` | 런타임 제품 기능과 그 확장점 | 에디터만 부르는 함수(`WITH_EDITOR` 없음), 개발 도구 구현 |
 | `DevTools` | 엔진 확장점에 스스로 붙는 개발 도구(배포 제외). 클라이언트 전용은 `DevTools/Client`, 머티리얼 그래프 컴파일러는 `DevTools/Material`, 쿠킹 명령 · 쿠커는 `DevTools/Cook`(셰이더는 `DevTools/Client/Cook`) | 게임 · GF · ModuleManager 내부를 아는 것 |
-| `ModuleManager` | 모듈 로드 · 매니페스트 · 호스트 공용 기동. 개발 전용 핫 리로드는 `Dev/LiveReload` | 엔진 기능 |
+| `ModuleManager` | 모듈 로드 · 매니페스트 · 호스트 공용 기동. 개발 전용 핫 리로드는 `DevTools/ModuleReload/HotReload` | 엔진 기능 |
 | `ModuleAPI` | 모듈 C-ABI 계약(헤더만) | 구현 |
 | `App` · `Server` | 그 실행 파일에만 있는 호스트 배선 | 엔진 기능, 개발 도구 구현(붙이는 줄만) |
 | `Editor` | 에디터 기능 전부(키트 하나의 에디터 확장은 그 키트 `Editor/`) | 런타임이 쓰는 것 |
@@ -63,6 +63,7 @@ CMake(`cmake/` — 폴더 하나에 파일 종류 하나): `Modules/<Build·Envi
 | 개발 기능은 `Source/DevTools/`. `Dev/` 폴더는 `Config/Rules/Layers/DevFolders.json` 에 까닭과 함께 적은 자리만(configure 강제) | DevTools 는 GF · 게임 · ModuleManager · App 을 못 본다 — 엔진이 확장점을 내고 DevTools 가 붙는다 |
 | 개발 전용 소스(`GameFramework/Developer` · 키트 `Dev/`)는 등록하는 것으로 이름 짓는다: 개발 명령 `<X>DevCommands`, 자동화 감시 값 `<X>Watches`, HUD 섹션 `<X>DebugSections`, 시나리오 단계 `<X>AutomationSteps`, 캡처 · 끝내기 차단 `<X>CaptureBlock` · `<X>FinishBlock` | 파일 이름으로 그 기능의 명령 · 감시를 찾는다 |
 | 실행 중 바꾸기 · 핫스왑은 개발, 기동 때 고르기는 제품 | 언리얼도 RHI · 모듈 교체는 재시작 |
+| 에디터 작업 공간(`Editor/Common/Workspace`)은 일마다 하위 폴더(`Selection` · `Notification` · `Layout` · `View` · `Undo` · `Play` · `NetPlay` · `HotReload` · `Asset`)에 두고 뿌리에는 에디터 컨텍스트 · 작업 공간(`EditorWorkspace`) · 서브시스템 창구만 둔다. 뷰포트 Model 은 `Gizmo/` · `Visualizers/`, 설정 계열 창은 창마다 폴더(`Panels/Preferences` · `UserSettings` · `Modules` · `GlobalVariables`). 짝을 이루는 기능(시나리오 재생기 · 녹화기)은 한 폴더 | 층은 `Common/<하위 폴더>` 단위라 하위 폴더를 나눠도 층 표가 그대로다. 언리얼 UnrealEd 도 기능마다 폴더 |
 | 층 경계는 실제 순환 · 독립 배포 요구가 확인된 층만 별도 링크 타깃으로 나눈다 | 타깃 수만 는다 |
 | 옮기지 않는 것: `Core/Foundation/BitFlagTrait.h`(생성 헤더가 include 하는 잎), `Engine/UI/Screen/UIScreenSwitch`(확장점 자체), `Core/Diagnostics/SubsystemTimingReport` · `Engine/Profiling/FrameProfileReport`(보고 값 형식) | |
 

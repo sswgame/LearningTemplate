@@ -13,7 +13,7 @@
 #include "Core/Path/AbsolutePath.h"
 #include "Core/Subsystem/Subsystem.h"
 
-#include "DevTools/Client/Automation/Runner/AutomationRunTitle.h"
+#include "DevTools/Client/Automation/Runner/AutomationRunTitleTracker.h"
 #include "DevTools/Client/Automation/Runner/AutomationStageFingerprint.h"
 #include "DevTools/Client/Automation/Scenario/ScenarioRecorder.h"
 #include "DevTools/DevToolsAPI.h"

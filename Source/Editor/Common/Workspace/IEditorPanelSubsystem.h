@@ -8,7 +8,7 @@
 #include "Core/Foundation/Types.h"
 
 #include "Editor/Common/EditorSubsystem.h"
-#include "Editor/Common/Workspace/EditorPanelID.h"
+#include "Editor/Common/Workspace/Layout/EditorPanelID.h"
 
 namespace sw
 {

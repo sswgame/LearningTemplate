@@ -13,7 +13,7 @@
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
-#include "Editor/Common/Widgets/PropertyGrid/Model/InspectorPropertyLayout.h"
+#include "Editor/Common/Widgets/PropertyGrid/Model/PropertyGridLayout.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Input/RawInputEvent.h"
@@ -1020,7 +1020,7 @@ namespace sw::editor
             const utf8* const pCurve = SW_LOCKEY( "EditorSequencer", "CurveButton" );
             EditorWidgets::drawPropertyRowLabel( track.getChannelName( channelIndex ) );
             ImGui::SetNextItemWidth( ImGui::GetContentRegionAvail().x - EditorChrome::measureSmallButton( pCurve ) - ImGui::GetStyle().ItemSpacing.x );
-            const float32 speed = bRotation ? InspectorPropertyLayout::kAngleDragSpeed : 0.05f;
+            const float32 speed = bRotation ? PropertyGridLayout::kAngleDragSpeed : 0.05f;
             if ( EditorWidgets::dragFloat( SW_WIDGET_ID( "##value" ), &value, speed, 0.0f, 0.0f, bRotation ? "%.2f deg" : "%.3f" ) )
             {
                 (void)_document.setChannelValue( track, channelIndex, frame, value ); // 끄는 동안의 알림은 상호작용 구간 하나 — 되돌리기 한 단계

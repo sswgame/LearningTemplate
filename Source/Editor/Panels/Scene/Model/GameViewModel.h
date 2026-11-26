@@ -10,7 +10,7 @@
 #include "Core/Math/VectorMath.h"
 
 #include "Editor/Common/Backend/ImGuiKeyForward.h"
-#include "Editor/Common/Workspace/EditorViewTargetUtil.h"
+#include "Editor/Common/Workspace/View/EditorViewTargetUtil.h"
 #include "Editor/Viewport/ViewportInputOverlay.h"
 
 #include "Engine/Graphics/RHI/RHIHandles.h"

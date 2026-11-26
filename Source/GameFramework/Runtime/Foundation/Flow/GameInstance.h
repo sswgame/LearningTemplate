@@ -84,7 +84,7 @@ namespace sw
         void update( float32 deltaTime ) final;
 
         // --------------------------------------------------------------------------
-        // 런타임 상태 직렬화 / 스냅샷 (Dev LiveReload & Shipping 체크포인트/세이브)
+        // 런타임 상태 직렬화 / 스냅샷 (Dev HotReload & Shipping 체크포인트/세이브)
         // --------------------------------------------------------------------------
         /** @brief C-ABI(모듈 핫 리로드): 활성 씬과 파생 클래스의 커스텀 리플렉션 상태를 스냅샷 목적(`SerializePurpose::Snapshot`)의 통합 바이너리로 직렬화합니다. */
         [[nodiscard]] bool serializeState( vector<uint8>& outBytes ) override;

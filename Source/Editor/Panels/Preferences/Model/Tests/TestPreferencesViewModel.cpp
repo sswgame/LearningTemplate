@@ -1,0 +1,224 @@
+#include "pch.h"
+
+#include "Core/TestFramework/TestFramework.h"
+
+#include "Editor/Common/Config/EditorPreferencesRegistry.h"
+#include "Editor/Common/Workspace/Undo/CommandStack.h"
+#include "Editor/Panels/Preferences/Model/PreferencesViewModel.h"
+
+#include "Engine/Module/ModuleCatalog.h"
+
+using namespace sw;
+using namespace sw::editor;
+
+namespace
+{
+    /**
+     * @brief 값 있는 섹션 하나와 그리기 함수 페이지 하나를 등록부에 잠시 올립니다. 값은 프로퍼티가 둘인 `ModuleOverride`(`_name` · `_bEnabled`)를 빌려 씁니다.
+     * @details 항목을 등록자 없이 목록에 바로 올린다 — 등록자의 떼기는 진짜 환경설정 파일에 쓴다(테스트는 그 파일에 쓰지 않는다). 파일 값을 입힌 것으로 두어 파일을 읽지도 않는다.
+     *          저장을 강제하는 `savePendingChanges( true )` 도 같은 까닭에 기다리는 편집이 있을 때는 부르지 않는다.
+     */
+    struct PreferencesViewModelTest
+    {
+        static inline int32 s_changedCount = 0;
+
+        ModuleOverride                _instance;
+        ModuleOverride                _default;
+        EditorPreferencesRegistration _section;
+        EditorPreferencesRegistration _page;
+        PreferencesViewModel          _model;
+
+        PreferencesViewModelTest()
+            : _instance{
+        }
+            , _default{}
+            , _section{ { "zztest.section", 1000000 }, "ZzTest/Section", &ModuleOverride::StaticType, &_instance, &_default, &PreferencesViewModelTest::onChanged, nullptr, SW_TRUE },
+            _page{ { "zztest.page", 1000001 }, "ZzTest/Page", &EditorPreferencesPageNone::getType, nullptr, nullptr, nullptr, &PreferencesViewModelTest::drawPage, SW_TRUE },
+            _model{}
+        {
+            s_changedCount                        = 0;
+            EditorExtensionRegistrationList& list = EditorExtensionRegistry<EditorPreferencesRegistration>::getList();
+            SW_EXPECT_TRUE( EditorExtensionRegistration::addTo( list, _section ) );
+            SW_EXPECT_TRUE( EditorExtensionRegistration::addTo( list, _page ) );
+        }
+
+        ~PreferencesViewModelTest()
+        {
+            EditorExtensionRegistrationList& list = EditorExtensionRegistry<EditorPreferencesRegistration>::getList();
+            EditorExtensionRegistration::removeFrom( list, _page );
+            EditorExtensionRegistration::removeFrom( list, _section );
+        }
+
+        static void onChanged() { ++s_changedCount; }
+        static void drawPage() {}
+
+        static bool contains( const vector<const EditorPreferencesRegistration*>& listSection, const EditorPreferencesRegistration& section )
+        {
+            for ( const EditorPreferencesRegistration* pSection : listSection )
+            {
+                if ( pSection == &section )
+                    return true;
+            }
+            return false;
+        }
+    };
+} // namespace
+
+SW_TEST_CASE_F( PreferencesViewModelTest, EmptyFilterShowsEverySectionAndSelectsOne )
+{
+    const vector<const EditorPreferencesRegistration*>& listVisible = _model.refreshVisibleSections( "" );
+
+    SW_EXPECT_EQUAL( EditorExtensionRegistry<EditorPreferencesRegistration>::getCount(), _model.getVisibleSectionCount() );
+    SW_EXPECT_TRUE( contains( listVisible, _section ) );
+    SW_EXPECT_TRUE( contains( listVisible, _page ) );
+    SW_EXPECT_TRUE( _model.getSelected() == listVisible.front() );
+}
+
+SW_TEST_CASE_F( PreferencesViewModelTest, FilterMatchesLabelCaseInsensitively )
+{
+    const vector<const EditorPreferencesRegistration*>& listVisible = _model.refreshVisibleSections( "zztest/section" );
+
+    SW_REQUIRE_EQUAL( 1u, _model.getVisibleSectionCount() );
+    SW_EXPECT_TRUE( listVisible.front() == &_section );
+    SW_EXPECT_TRUE( _model.getSelected() == &_section );
+}
+
+SW_TEST_CASE_F( PreferencesViewModelTest, FilterMatchesPropertyNameOfValueSectionOnly )
+{
+    const vector<const EditorPreferencesRegistration*>& listVisible = _model.refreshVisibleSections( "_bEnabled" );
+
+    SW_EXPECT_TRUE( contains( listVisible, _section ) );
+    SW_EXPECT_FALSE( contains( listVisible, _page ) ); // 그리기 함수 쪽은 이름으로만 찾는다
+}
+
+SW_TEST_CASE_F( PreferencesViewModelTest, NoMatchSelectsNothing )
+{
+    (void)_model.refreshVisibleSections( "" );
+    SW_EXPECT_NOT_NULL( _model.getSelected() );
+
+    (void)_model.refreshVisibleSections( "no section is named this" );
+
+    SW_EXPECT_EQUAL( 0u, _model.getVisibleSectionCount() );
+    SW_EXPECT_NULL( _model.getSelected() );
+}
+
+SW_TEST_CASE_F( PreferencesViewModelTest, SelectionStaysWhileVisibleAndMovesWhenFilteredOut )
+{
+    (void)_model.refreshVisibleSections( "zztest" );
+    _model.selectSection( _page );
+    (void)_model.refreshVisibleSections( "ZZTEST/" );
+    SW_EXPECT_TRUE( _model.getSelected() == &_page );
+
+    (void)_model.refreshVisibleSections( "zztest/section" );
+    SW_EXPECT_TRUE( _model.getSelected() == &_section );
+}
+
+SW_TEST_CASE_F( PreferencesViewModelTest, SectionRemovedByModuleUnloadIsNotHeld )
+{
+    (void)_model.refreshVisibleSections( "zztest/section" );
+    SW_EXPECT_TRUE( _model.getSelected() == &_section );
+
+    EditorExtensionRegistration::removeFrom( EditorExtensionRegistry<EditorPreferencesRegistration>::getList(), _section );
+    (void)_model.refreshVisibleSections( "zztest/section" ); // 검색 글은 같고 등록 세대만 바뀌었다
+
+    SW_EXPECT_NULL( _model.getSelected() );
+    SW_EXPECT_EQUAL( 0u, _model.getVisibleSectionCount() );
+}
+
+SW_TEST_CASE_F( PreferencesViewModelTest, ModifiedOnlyHidesPropertiesAtDefault )
+{
+    vector<hashed_string> listHidden;
+    _model.selectSection( _section );
+
+    _model.collectHiddenProperties( listHidden );
+    SW_EXPECT_TRUE( listHidden.empty() ); // 체크칸을 켜지 않았다
+
+    _model.editModifiedOnly() = true;
+    _model.collectHiddenProperties( listHidden );
+    SW_EXPECT_EQUAL( size_t{ 2 }, listHidden.size() );
+
+    _instance._name = "changed";
+    _model.collectHiddenProperties( listHidden );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, listHidden.size() );
+    SW_EXPECT_TRUE( listHidden[0] == hashed_string( "_bEnabled" ) );
+}
+
+SW_TEST_CASE_F( PreferencesViewModelTest, ModifiedOnlyHidesNothingOnAPageOrWithoutSelection )
+{
+    vector<hashed_string> listHidden;
+    _model.editModifiedOnly() = true;
+
+    _model.collectHiddenProperties( listHidden );
+    SW_EXPECT_TRUE( listHidden.empty() );
+
+    _model.selectSection( _page );
+    _model.collectHiddenProperties( listHidden );
+    SW_EXPECT_TRUE( listHidden.empty() );
+}
+
+SW_TEST_CASE_F( PreferencesViewModelTest, EditCallsTheHookAndWaitsBeforeSaving )
+{
+    _model.savePendingChanges( true ); // 기다리는 것이 없으면 쓰지 않는다
+    SW_EXPECT_FALSE( _model.hasPendingSave() );
+
+    _model.selectSection( _section );
+    _model.recordEdited( "Edit", false );
+    SW_EXPECT_EQUAL( 1, s_changedCount );
+    SW_EXPECT_TRUE( _model.hasPendingSave() );
+
+    _model.savePendingChanges( false ); // 시간이 지나지 않았다 — 끌기 한 번을 한 번의 쓰기로 묶는다
+    SW_EXPECT_TRUE( _model.hasPendingSave() );
+}
+
+SW_TEST_CASE_F( PreferencesViewModelTest, EditWithoutHookStillWaitsToSave )
+{
+    _model.selectSection( _page );
+    _model.recordEdited( "Edit", false );
+    SW_EXPECT_EQUAL( 0, s_changedCount );
+    SW_EXPECT_TRUE( _model.hasPendingSave() );
+}
+
+SW_TEST_CASE_F( PreferencesViewModelTest, ResetRestoresDefaultsAndCallsTheHookOnce )
+{
+    _instance._name     = "changed";
+    _instance._bEnabled = false;
+    _model.selectSection( _section );
+
+    _model.resetSelectedSection();
+
+    SW_EXPECT_TRUE( _instance._name == _default._name );
+    SW_EXPECT_TRUE( _instance._bEnabled == _default._bEnabled );
+    SW_EXPECT_EQUAL( 1, s_changedCount );
+    SW_EXPECT_TRUE( _model.hasPendingSave() );
+}
+
+// 저장 단추가 없는 창이라 잘못 누른 되돌리기 · 편집을 되돌릴 길이 Ctrl+Z 뿐이다 — 끌기는 한 단계, 섹션 되돌리기도 한 단계다.
+SW_TEST_CASE_F( PreferencesViewModelTest, EditsAndResetUndoAsOneStepEach )
+{
+    _model.selectSection( _section );
+    _instance._name = "dragging";
+    _model.recordEdited( "Edit _name", true );
+    _instance._name = "changed";
+    _model.recordEdited( "Edit _name", true );
+    SW_EXPECT_FALSE( _model.getCommandStack().undo() ); // 끄는 동안은 거절한다
+    _model.flushEdit( false );
+    SW_EXPECT_EQUAL( size_t{ 1 }, _model.getCommandStack().getCommandCount() );
+
+    _model.resetSelectedSection();
+    SW_EXPECT_EQUAL( size_t{ 2 }, _model.getCommandStack().getCommandCount() );
+    SW_EXPECT_TRUE( _instance._name == _default._name );
+
+    SW_EXPECT_TRUE( _model.getCommandStack().undo() );
+    SW_EXPECT_TRUE( _instance._name == "changed" );
+    SW_EXPECT_TRUE( _model.getCommandStack().undo() );
+    SW_EXPECT_TRUE( _instance._name == _default._name );
+    SW_EXPECT_TRUE( _model.getCommandStack().redo() );
+    SW_EXPECT_TRUE( _instance._name == "changed" );
+}
+
+SW_TEST_CASE_F( PreferencesViewModelTest, ResetWithoutSelectionDoesNothing )
+{
+    _model.resetSelectedSection();
+    SW_EXPECT_EQUAL( 0, s_changedCount );
+    SW_EXPECT_FALSE( _model.hasPendingSave() );
+}

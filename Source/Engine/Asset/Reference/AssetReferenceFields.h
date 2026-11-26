@@ -5,7 +5,7 @@
  *          (손으로 읽던 XML 칸은 `XMLFields` 로 읽는 스키마 구조체로 옮겼다 — 언리얼이 `FSoftObjectPath` 칸만 참조로 보는 것과 같다).
  *          참조 글은 GUID(`guid:<32자>`)이거나 경로다(정체성이 없는 폴더 · 작업 사본 · 임포트 산출물끼리 · 코드 · CMake). 둘 다 끊어지면 여기서 잡고, 같은 데이터 파일을
  *          다섯 곳이 읽는다: 커밋 전 검사(`Scripts/lint/asset_references.py`), `py -3 -m Scripts move-asset`, 헤드리스 검사(`App --check-asset-refs` — ctest
- *          `ToolCheckAssetRefs`), 에디터 이름 바꾸기 · 옮기기(`EditorAssetFileCommands::moveAsset`), 팩 쿠킹의 참조 따라가기(`PackReachResult` — 쓰는 것만 담는다).
+ *          `ToolCheckAssetRefs`), 에디터 이름 바꾸기 · 옮기기(`EditorAssetFileCommands::moveAsset`), 팩 쿠킹의 참조 따라가기(`PackReachableSet` — 쓰는 것만 담는다).
  *          뽑기 규칙은 파이썬 쪽(`asset_references.py` 의 `_extract*`)과 같은 것이다 — 하나를 고치면 다른 하나도 고친다(언어가 달라 코드를 나눌 수 없는 자리라 둘이다).
  *          임포트 산출물 폴더는 정체성 규칙(`AssetIdentityRules` — `Config/Dev/AssetIdentity.json`)의 것을 쓴다.
  *          글 모양을 짐작해 찾지 않는다: 목록에 든 이름의 XML 속성 · XML 요소 글(`<_listX><item>…</item></_listX>` 포함) · JSON 키 · CMake 인자의 값만 보고,

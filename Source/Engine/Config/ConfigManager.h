@@ -191,8 +191,8 @@ namespace sw
                 return ConfigReadResult::Invalid; // 이유는 읽기 · 합치기가 오류로 남겼다
             if ( loadConfigFromJSON<T>( jsonStr, label.c_str() ) == false )
                 return ConfigReadResult::Invalid;
-            _mapSource[getConfigKey<T>()] = ReloadSource{ resolvedPath, resolvedOverridePath, resolvedQualityPath, qualityTier, T::StaticType()->_name,
-                                                          SW_DEV_ONLY_FUNCTION( &ConfigManager::reloadFromSource<T> ) }; // 배포는 다시 읽지 않는다
+            _mapSource[getConfigKey<T>()] = HotReloadKind{ resolvedPath, resolvedOverridePath, resolvedQualityPath, qualityTier, T::StaticType()->_name,
+                                                           SW_DEV_ONLY_FUNCTION( &ConfigManager::reloadFromSource<T> ) }; // 배포는 다시 읽지 않는다
             return ConfigReadResult::Loaded;
         }
 
@@ -455,9 +455,9 @@ namespace sw
         [[nodiscard]] static expected<string> readProjectText( const utf8* pPath );
 
         /** @brief 파일에서 읽은 설정 하나의 경로와 다시 읽는 함수입니다. */
-        struct ReloadSource
+        struct HotReloadKind
         {
-            using ReloadFunc = bool ( * )( ConfigManager& manager, const ReloadSource& source );
+            using ReloadFunc = bool ( * )( ConfigManager& manager, const HotReloadKind& source );
 
             AbsolutePath  _resolvedPath;
             AbsolutePath  _resolvedOverridePath; ///< 덮어쓰기 파일(비면 층이 없다). 지금 없어도 생기면 다시 읽기가 합친다
@@ -481,7 +481,7 @@ namespace sw
 
         /** @brief T 를 @p source 의 바탕(+ 덮어쓰기) 파일에서 새로 읽어 테이블의 객체에 값으로 덮어씁니다. */
         template <typename T>
-        [[nodiscard]] static bool reloadFromSource( ConfigManager& manager, const ReloadSource& source )
+        [[nodiscard]] static bool reloadFromSource( ConfigManager& manager, const HotReloadKind& source )
         {
             T* pExisting = manager.getConfig<T>();
             if ( pExisting == nullptr )
@@ -549,7 +549,7 @@ namespace sw
         unique_ptr<IConfig>                        _pGameSlot;                 ///< 호스트 게임 프리셋의 객체 - `_pEngineSlot` 과 같다
         EngineConfig*                              _pHostEngineConfig;         ///< `_pEngineSlot` 의 객체 주소 - 표를 옮겨도 같다
         GameConfig*                                _pHostGameConfig;           ///< `_pGameSlot` 의 객체 주소
-        unordered_map<uint32, ReloadSource>        _mapSource;                 ///< 파일에서 읽은 설정에서 경로와 다시 읽는 함수로 가는 맵이다
+        unordered_map<uint32, HotReloadKind>       _mapSource;                 ///< 파일에서 읽은 설정에서 경로와 다시 읽는 함수로 가는 맵이다
         unique_ptr<ConfigSource>                   _pEngineSource;             ///< 엔진 설정을 읽은 출처(`loadEngineConfig`) — 품질 단계만 바꿔 다시 읽는다
         Subscription                               _renderQualitySubscription; ///< `gv_renderQuality` 변경 훅의 구독(기동 범위에서만 건다)
         ConfigReloadedDelegate                     _onConfigReloaded;

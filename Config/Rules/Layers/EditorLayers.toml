@@ -23,17 +23,16 @@ Common = 0
 "Common/Workspace" = 2
 # ImGui 없는 동작과 커맨드 레지스트리(EditorTest 가 화면 없이 테스트한다).
 "Common/Commands" = 3
-# 패널 · 팝업 틀과 매니저, 도킹 · 메뉴 · 알림 그리기 · 테마, 공용 위젯.
+# 패널 · 팝업 틀과 매니저(셸이 띄우는 커맨드 팔레트 · 빠른 열기 팝업은 `Popup/` — 패널 · 뷰포트를 모른다), 도킹 · 메뉴 · 알림 그리기 · 테마, 공용 위젯.
 "Common/GUI" = 4
 # 에디터 입력 어댑터 — 엔진 입력 맵(editor.input.xml)의 소유 · 포커스 레이어, 맥락 메뉴 · 끌어 놓기. 패널 티어의 ImGui 입력 함수 금지(EditorInputBan.h)를 받지 않는 자리다.
-# 그리고 셸이 띄우는 팝업(커맨드 팔레트 · 빠른 열기 — 기본 커맨드 표가 그 토글을 가리킨다). 팝업은 패널 · 뷰포트를 모른다.
 "Common/Input" = 4
 "Common/Widgets" = 4
 # 뷰포트 클라이언트 · 시각화.
 Viewport = 5
 # 구체 패널 · 에셋 종류별 동작(열기 · 썸네일 · 뷰포트에 놓기).
 Panels = 6
-AssetActions = 6
+AssetTypeActions = 6
 # 자체 테스트 · 시나리오 단계 — 모든 것을 내려다본다.
 SelfTest = 7
 # 셸(ImGuiEditor) — 모듈 진입점.
@@ -42,12 +41,12 @@ SelfTest = 7
 # 어느 층에서 include 해도 되는 잎 헤더(위 층을 include 하지 않는다) → 이유. 위 층 껍데기를 놓지 않는다.
 [prelude]
 "Editor/Common/Workspace/EditorSubsystems.h" = "호스트(엔진) 서브시스템 창구와 활성 씬 바로가기 — Core · ModuleAPI 만 include 하는 잎 헤더라 어느 층에서나 쓴다"
-"Editor/Common/Workspace/EditorNotificationManager.h" = "토스트 알림 목록 — Core · EditorSubsystem · 알림 값만 include 하는 잎 헤더라 UI 없는 도구 층의 쓰기 문(AssetWriter)이 저장 거절을 알린다"
-"Editor/Common/Workspace/EditorNotificationItem.h" = "알림 하나의 값 — Core 만 include(알림 목록이 품는다)"
-"Editor/Common/Workspace/EditorStateStore.h" = "에디터 범위 상태 저장소(getEditorState<T>) — Core · EditorSubsystem · EditorSubsystems 만 include 하는 잎 헤더라 토대 층(ImGui 백엔드)의 정적 칸 소유자가 쓴다"
+"Editor/Common/Workspace/Notification/EditorNotificationManager.h" = "토스트 알림 목록 — Core · EditorSubsystem · 알림 값만 include 하는 잎 헤더라 UI 없는 도구 층의 쓰기 문(AssetWriter)이 저장 거절을 알린다"
+"Editor/Common/Workspace/Notification/NotificationItem.h" = "알림 하나의 값 — Core 만 include(알림 목록이 품는다)"
+"Editor/Common/Workspace/Layout/EditorStateStore.h" = "에디터 범위 상태 저장소(getEditorState<T>) — Core · EditorSubsystem · EditorSubsystems 만 include 하는 잎 헤더라 토대 층(ImGui 백엔드)의 정적 칸 소유자가 쓴다"
 "Editor/Common/Widgets/Model/EditorDisplayNameUtil.h" = "프로퍼티 표시 이름 규칙(makeDisplayName · chooseLabel) — Core 만 include 하는 잎 헤더라 프리팹 오버라이드 목록(커맨드 층)도 쓴다"
 "Editor/Viewport/Model/EditorOrbitMath.h" = "궤도 카메라 수식(dolly · panWorldPerPixel) — Core 만 include 하는 순수 수학 잎 헤더라 미리보기 뷰포트(4층)와 씬 뷰가 함께 쓴다"
-"Editor/SelfTest/EditorWatchSupport.h" = "감시 값 대상 전역 변수와 읽기 보조 함수의 선언 — Core 만 include 하는 잎 헤더라 기능 폴더의 *Probes.cpp 가 층을 가리지 않고 쓴다"
+"Editor/SelfTest/EditorWatchState.h" = "감시 값 대상 전역 변수와 읽기 보조 함수의 선언 — Core 만 include 하는 잎 헤더라 기능 폴더의 *Probes.cpp 가 층을 가리지 않고 쓴다"
 "Editor/SelfTest/EditorSelfTestInput.h" = "입력 흉내 표식(EditorSelfTestMarks::note) — 위젯이 그린 자리를 남기는 잎 헤더(Core 만 include)"
 
 # MVVM View(`views` 의 층 · 폴더 · 파일 가운데 `Model` 폴더 밖 파일)가 include 하지 못하는 모델 · 씬 헤더(Source 기준 경로의 정규식). docs/agents/EditorUI.md 'MVVM' 절.
@@ -58,7 +57,7 @@ SelfTest = 7
 [panelViewBan]
 views = [
     "Panels",
-    "AssetActions",
+    "AssetTypeActions",
     "Common/GUI/EditorMenuBar.cpp",
     "Common/GUI/EditorPlayToolbar.cpp",
     "Common/GUI/Panel/EditorDockLayout.cpp",
@@ -68,26 +67,26 @@ views = [
     "Common/GUI/Status",
     "Common/GUI/Theme",
     "Common/Widgets/PropertyGrid",
-    "Common/Input/CommandPalettePopup.cpp",
+    "Common/GUI/Popup/CommandPalettePopup.cpp",
     "Common/Input/EditorCommandGUI.cpp",
-    "Common/Input/QuickLauncherPopup.cpp",
+    "Common/GUI/Popup/QuickLauncherPopup.cpp",
     "Viewport/EditorColliderHandleTool.cpp",
     "Viewport/EditorDebugHUDView.cpp",
     "Viewport/EditorPreviewGizmo.cpp",
     "Viewport/EditorProjectedLineRenderer.cpp",
     "Viewport/EditorViewportAssetPlacement.cpp",
     "Viewport/EditorViewportCamera.cpp",
-    "Viewport/EditorViewportCanvasOverlay.cpp",
+    "Viewport/EditorViewportGuides.cpp",
     "Viewport/EditorViewportClient.cpp",
     "Viewport/EditorViewportGizmo.cpp",
     "Viewport/EditorViewportOverlays.cpp",
     "Viewport/EditorViewportPicker.cpp",
-    "Viewport/EditorViewportProjection.cpp",
+    "Viewport/EditorViewportProjectionUtil.cpp",
     "Viewport/EditorViewportVisualizer.cpp",
     "Viewport/RigTargetGizmoVisualizer.cpp",
     "Viewport/ViewportInputOverlay.cpp",
     "Viewport/TerrainBrushTool.cpp",
-    "Viewport/ViewportToolbarSettings.cpp",
+    "Viewport/EditorViewportOverlayBars.cpp",
 ]
 patterns = [
     "^Editor/Common/Workspace/",
@@ -120,28 +119,28 @@ defaultBan = [
 "Editor/Common/Commands/EditorCommandIDs.h" = "명령 id 상수(Types.h 만 포함) — View 가 EditorCommandRegistry 로 부를 때 쓴다"
 "Editor/Common/Commands/EditorCommandTarget.h" = "명령이 받는 대상 값(종류 · 선택 스냅숏 · id) — 포인터가 없다"
 "Editor/Common/Commands/EditorDragPayload.h" = "끌어 놓기 페이로드 값({종류, id})"
-"Editor/Common/Workspace/EditorNotificationItem.h" = "토스트 알림 하나의 값(글 · 종류 · 남은 시간) — 목록의 주인은 EditorNotificationManager 다"
-"Editor/Common/Workspace/EditorPanelID.h" = "패널 id 형식과 상수 — 값"
-"Editor/Common/Workspace/EditorPanelOpenRequest.h" = "패널 열기 요청 값(id · 문서 종류 · 띄우기) — 메뉴 막대 View 가 꺼내 연다"
-"Editor/Common/Workspace/EditorPanelVisibility.h" = "패널 보임 표(리플렉션 설정 값) — 도킹 레이아웃(EditorDockLayout)이 값으로 든다"
+"Editor/Common/Workspace/Notification/NotificationItem.h" = "토스트 알림 하나의 값(글 · 종류 · 남은 시간) — 목록의 주인은 EditorNotificationManager 다"
+"Editor/Common/Workspace/Layout/EditorPanelID.h" = "패널 id 형식과 상수 — 값"
+"Editor/Common/Workspace/Layout/EditorPanelOpenRequest.h" = "패널 열기 요청 값(id · 문서 종류 · 띄우기) — 메뉴 막대 View 가 꺼내 연다"
+"Editor/Common/Workspace/Layout/EditorPanelVisibility.h" = "패널 보임 표(리플렉션 설정 값) — 도킹 레이아웃(EditorDockLayout)이 값으로 든다"
 "Editor/Common/Workspace/Play/EditorSessionPolicy.h" = "미저장 · 플레이 중 편집 판정 값(EditorPanel 이 쓴다)"
 "Editor/Common/Workspace/Asset/EditorAssetType.h" = "에셋 종류 서술(EditorPanel 이 쓴다)"
 "Editor/Common/Workspace/Asset/EditorAssetTypeID.h" = "에셋 종류를 가리키는 값과 에디터 전용 종류 id(EditorPanel · 패널 열기 요청이 값으로 든다 — 등록 표 EditorAssetType.h 에서 나눈 잎)"
-"Editor/Common/Commands/EditorCommandText.h" = "명령의 표시 · 배치 데이터(라벨 · 아이콘 · 메뉴) — 값이고, 허용한 EditorCommandRegistry.h 가 include 한다"
+"Editor/Common/Commands/EditorCommandInfo.h" = "명령의 표시 · 배치 데이터(라벨 · 아이콘 · 메뉴) — 값이고, 허용한 EditorCommandRegistry.h 가 include 한다"
 "Engine/Object/GameObject/Subsystem/ScenePreviewPolicy.h" = "미리보기 씬 틱 정책 값(집합체) — 미리보기 패널이 getPreviewPolicy 로 돌려준다"
 "Editor/Common/Commands/Diagnostics/EditorModuleDetail.h" = "모듈 창 상세 한 모듈의 값(집합체) — makeDetail 이 채우고 View 가 그린다"
 "Editor/Common/Commands/EditorBackgroundIO.h" = "백그라운드 잡(요청 · 꺼내기) — 결과 값 헤더와 잡 뼈대(Common/Job)만 include 한다. 작업 본문이 부르는 커맨드는 .cpp 가 본다(Model 이 잡을 값으로 든다)"
 "Editor/Common/Commands/Asset/EditorAssetIndexEntry.h" = "퀵 런처 항목 · 리소스 카탈로그 개수 값"
 "Editor/Common/Commands/Asset/EditorFolderListingEntry.h" = "콘텐츠 브라우저 폴더 항목 값"
-"Editor/Common/Commands/Asset/EditorLocalizationSheet.h" = "로컬라이즈 표 · 게임 데이터 파일 항목 값(판정 함수만 있다)"
+"Editor/Common/Commands/Asset/LocalizationSheet.h" = "로컬라이즈 표 · 게임 데이터 파일 항목 값(판정 함수만 있다)"
 "Editor/Common/Workspace/Undo/EditorDocumentState.h" = "문서 한 벌의 저장한 값과 창 안 되돌리기 기록 — Core 와 EditSnapshotHistory 만 include 하는 값 템플릿(문서 Model 이 값으로 든다)"
 "Editor/Common/Workspace/Undo/EditSnapshotHistory.h" = "창 안 되돌리기 스냅숏 기록 — Core 와 기록기(SnapshotUndoRecorder, 스택은 앞 선언)만 include 하는 값 템플릿"
 "Editor/Common/Workspace/Undo/SnapshotUndoRecorder.h" = "스냅숏 기록을 명령 스택에 올리는 기록기 — Core 와 내보내기만 include 하고 CommandStack 은 앞 선언이다"
-"Editor/Common/Workspace/EditorViewTargetUtil.h" = "뷰 종류 · 게임 뷰 비율 값과 렌더 타깃 크기 · 이미지 사각형 판정 — Core 만 include 하는 값 · 순수 계산"
-"Editor/Common/Commands/Asset/EditorPrefabOverrideItem.h" = "프리팹 오버라이드 항목 값"
+"Editor/Common/Workspace/View/EditorViewTargetUtil.h" = "뷰 종류 · 게임 뷰 비율 값과 렌더 타깃 크기 · 이미지 사각형 판정 — Core 만 include 하는 값 · 순수 계산"
+"Editor/Common/Commands/Asset/PrefabOverrideItem.h" = "프리팹 오버라이드 항목 값"
 "Editor/Common/Workspace/NetPlay/EditorNetPlaySettings.h" = "멀티 프로세스 재생 구성 · 프리셋 파일 값(리플렉션 집합체) — Core 와 리플렉션 매크로만 include 한다. Multiplayer 세션 ViewState 가 구성 사본을 들고 Net Mode 위젯이 고친다"
 "Editor/Common/Workspace/NetPlay/EditorNetProfilerSample.h" = "Profiler 표본 값 형식(채널 열거 · 종류별 비중 · 복제 셈)과 그 계산 — Core 와 리플렉션 매크로만 include 한다. Profiler ViewState 가 그대로 든다"
-"Editor/Common/Workspace/EditorFrameStep.h" = "UI 프레임 단계 등록 줄(SW_EDITOR_FRAME_STEP)과 순서 값 — EditorExtensionRegistry 만 include 하고 EditorContext 는 앞 선언이다. 창이 닫혀도 도는 단계를 그 창 View 가 등록한다(Profiler 의 합친 트레이스 열기)"
+"Editor/Common/Workspace/View/EditorFrameStep.h" = "UI 프레임 단계 등록 줄(SW_EDITOR_FRAME_STEP)과 순서 값 — EditorExtensionRegistry 만 include 하고 EditorContext 는 앞 선언이다. 창이 닫혀도 도는 단계를 그 창 View 가 등록한다(Profiler 의 합친 트레이스 열기)"
 "Editor/Common/Workspace/Asset/EditorAssetTypeActions.h" = "종류별 썸네일 · 열기 · 뷰포트 배치 확장 인터페이스 — Core 와 내보내기만 include 하고 씬 형식은 앞 선언이다. 콘텐츠 브라우저 View 가 카드 썸네일을 그 종류의 동작으로 그린다"
 "Editor/Common/Commands/Asset/EditorAssetMove.h" = "에셋 옮기기 · 옮기기 계획 값(EditorAssetFileCommands 에서 떼어 낸 값) — Core 만 include 한다. 콘텐츠 브라우저 확인 대화상자가 계획을 그린다"
 "Engine/Object/Component/TagSystem.h" = "태그 집합 값(TagContainer)과 질의 — Core 와 리플렉션 매크로만 include 한다. 외형 데이터 값(CharacterAppearance · ItemVisual · 장비 조건)이 들어 캐릭터 편집 창 모델 헤더를 거쳐 온다"
@@ -149,7 +148,7 @@ defaultBan = [
 # 기본 금지 폴더(`[panelViewBan] defaultBan`) 안에서 View 가 include 해도 되는 폴더(접두, `/` 로 끝난다) → 까닭. 값 · 정의 헤더의 폴더다 — 서비스 헤더는 `patterns` 가 따로 막는다.
 # 줄을 더하기 전에 그 폴더의 서비스 · 매니저 헤더를 `patterns` 에 올린다.
 [panelViewAllowedFolders]
-"DevTools/AssetReload/" = "리로드 결과 집계 값(ReloadTracker 의 상태 열거)을 감시 값 · 표가 읽는다"
+"DevTools/AssetReload/" = "리로드 결과 집계 값(HotReloadTracker 의 상태 열거)을 감시 값 · 표가 읽는다"
 "DevTools/Client/" = "자동화 실행기 값(시나리오 결과 · 단계 이름)을 Test Runner 창이 그린다"
 "DevTools/Console/" = "개발 콘솔 줄 값을 Output Log 가 그린다"
 "DevTools/Material/" = "머티리얼 그래프 노드 서술(값)을 그래프 창이 그린다 — 에셋 컴파일러는 쿠킹과 공유한다(검토 B 10)"

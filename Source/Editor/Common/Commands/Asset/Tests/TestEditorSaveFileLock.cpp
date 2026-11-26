@@ -6,8 +6,8 @@
 #include "Core/TestFramework/TestFramework.h"
 
 #include "Editor/Common/Commands/Asset/EditorSaveFileLock.h"
-#include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/Common/Workspace/EditorSubsystems.h"
+#include "Editor/Common/Workspace/Layout/EditorStateStore.h"
 
 using namespace sw;
 using namespace sw::editor;

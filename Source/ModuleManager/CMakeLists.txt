@@ -8,7 +8,7 @@
 # include 경로는 `ModuleManager/...` 다.
 #
 # 개발 구성은 공유 라이브러리다 — 핫 리로드 · 호스트 개발 계층(DevTools.dll 의 `DevTools/ModuleReload` · `DevTools/Host`)이 이 라이브러리 위에 서서
-# 창구(`ILiveReloadManager` · `IHostDevLayer` · `IServerDebugControl`)를 구현한다. 정적이면 호스트와 DevTools 가 한 벌씩 들어 정적 등록 · 상태가 둘이 된다
+# 창구(`IModuleHotReloadManager` · `IHostDevLayer` · `IServerDebugControl`)를 구현한다. 정적이면 호스트와 DevTools 가 한 벌씩 들어 정적 등록 · 상태가 둘이 된다
 # (언리얼 Core 의 ModuleManager 가 DLL 이고 Developer 모듈 HotReload 가 그 위에 서는 자리). 의존은 DevTools → ModuleManager 한 방향이다(TargetLayers).
 # 배포는 정적이다 — 모듈이 정적 링크라 갈아 끼울 것이 없고 DevTools 도 짓지 않는다. 개발 전용 폴더(`Dev/`)는 없다(테스트 `Tests/` 만 배포가 뺀다).
 # ------------------------------------------------------------------------------

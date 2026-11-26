@@ -6,8 +6,8 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/Common/Workspace/EditorSubsystems.h"
+#include "Editor/Common/Workspace/Layout/EditorStateStore.h"
 
 #include "Engine/Audio/AudioEngine.h"
 #include "Engine/Audio/AudioSubsystem.h"

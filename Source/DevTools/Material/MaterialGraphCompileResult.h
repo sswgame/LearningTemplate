@@ -11,7 +11,7 @@
 #include "Core/Foundation/Types.h"
 
 #include "DevTools/DevToolsAPI.h"
-#include "DevTools/Material/MaterialGraph.h"
+#include "DevTools/Material/MaterialGraphDef.h"
 #include "DevTools/Material/MaterialGraphNodeRegistry.h"
 
 #include "Engine/Config/ConfigFileID.h"

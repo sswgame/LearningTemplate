@@ -132,6 +132,7 @@ Use a banned verb only when it is the domain's own term (`UUID::generate`, `Surf
 | `Spec` | A granted runtime instance (GAS `AbilitySpec`) |
 | `Config` | Preset or deployment configuration; a service's `initialize` configuration |
 | `Settings` | User or game settings changed at run time; project-wide engine tables (`PhysicsSettings`) |
+| `Preferences` | 에디터 사용자 환경(`EditorPreferences.json` 섹션, `SW_EDITOR_PREFERENCES`). 게임 · 프로젝트 설정은 `Settings`(언리얼 Editor Preferences ↔ Project Settings) |
 | `Params` | Call arguments bundled into one value |
 | `Context` | The environment handed to a callee for one call, pass or frame. A per-thing record the owner keeps is a `Record` |
 | `Unit` | A game-play unit, an animated skeletal mesh in `AnimationSystem`, or a measurement unit |
@@ -182,7 +183,8 @@ Use a banned verb only when it is the domain's own term (`UUID::generate`, `Surf
 | `Reply` 는 키트 응답 본문, `OnlineResponse` 는 전송 봉투. `Since` 는 시간을 세는 칸만 | 뜻이 다르다 |
 | 저작 정의는 `Def` 하나. 값의 갈래를 고르는 열거형은 `…Kind` — `…Type` 은 C++ · 리플렉션 형식과 외부 API 용어만 | 저장소 다수 |
 | 읽기 · 쓰기 동사는 원본 종류를 넣고 짝을 맞춘다: `loadFromAsset` · `loadFromFile`/`saveToFile` · `loadFromXMLText`/`saveToXMLText`. `read*`/`write*` 는 바이트 스트림 · Archive, `parse*` 는 글 → 스칼라만. `createGameObject` ↔ `destroyGameObject` | 언리얼 LoadFromFile |
-| 에디터 창 하나의 상태 · 명령은 `<창>ViewModel`(폴더 `Model/`), 문서 사본과 편집 연산은 `<문서>EditModel`([EditorUI](EditorUI.md)). `Document` 는 메모리에 든 파일 내용만 | MVVM |
+| 에디터 창 하나의 상태 · 명령은 `<창>ViewModel`(폴더 `Model/`), 문서 사본과 편집 연산은 `<문서>EditModel`([EditorUI](EditorUI.md)). 뷰포트 기즈모 · 핸들 · 브러시의 상태 · 명령도 `…ViewModel` 이고 `…Edit` 끝말은 쓰지 않는다. `Document` 는 메모리에 든 파일 내용만 | MVVM |
+| 실행 중 바꿔 끼우기는 `HotReload`(모듈 · 셰이더 · 설정 · 에셋 — `Live` 는 `LiveOps` 만). 망 상태 흉내는 `NetEmulation`. 로그 창은 `OutputLog`, 명령 입력은 `DevConsole`. 속성 그리드 위젯 · 행 그리기 확장은 `PropertyGrid*` · `IPropertyDrawer`, 패널만 `Inspector` | 언리얼 Hot Reload · NetEmulation · Output Log, 유니티 PropertyDrawer |
 | 알림: 버스의 "바뀌었다" 는 `<X>Changed` · `<X>Revoked`, 플레이어 알림 `<X>Notification`, 운영 공지 `Announcement`. `Notice` 는 영어 관용구만 | Apple · Google 서버 알림 |
 | 은유 대신 내용: 셈 `Stats`, 기록 `History`, `InstancedStruct`. 매크로는 낱말마다 `_`(`SW_THEME_COLOR`) | 언리얼 FCookStats |
 | 둔 것: `Editor*` · `Automation*` 접두어, App 폴더, `*Info` 정적 사실 표, 폴더 이름과 같은 접두어 묶음, `IWindowTitleTarget` | |

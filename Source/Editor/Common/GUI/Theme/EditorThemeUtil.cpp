@@ -7,7 +7,7 @@
 
 #include "Editor/Common/Config/EditorAppearanceConfig.h"
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
-#include "Editor/Common/Config/EditorSettingsRegistry.h"
+#include "Editor/Common/Config/EditorPreferencesRegistry.h"
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Theme/EditorFontSetup.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
@@ -25,7 +25,7 @@ namespace sw::editor
         struct EditorThemeInternal
         {
             /**
-             * @brief 환경설정 섹션 Appearance 의 값을 고칠 수 있게 돌려줍니다. 값은 등록 줄(`SW_EDITOR_SETTINGS`)이 가리키는 그 인스턴스 하나다 —
+             * @brief 환경설정 섹션 Appearance 의 값을 고칠 수 있게 돌려줍니다. 값은 등록 줄(`SW_EDITOR_PREFERENCES`)이 가리키는 그 인스턴스 하나다 —
              *        테마를 저장할 때(`saveToConfig`)만 쓴다. 읽기는 `getPreferences<EditorAppearanceConfig>()` 다.
              */
             static EditorAppearanceConfig& editAppearance() { return editPreferences<EditorAppearanceConfig>(); }
@@ -634,7 +634,7 @@ namespace sw::editor
 namespace sw::editor
 {
     // 테마는 환경설정 섹션 "Editor/Appearance" 다. 저장은 EditorPreferences.json 하나에 하고, 값을 고치면(창에서 편집하거나 파일을 다시 읽으면) 테마를 다시 적용한다.
-    SW_EDITOR_SETTINGS( EditorAppearanceConfig, "appearance", "Editor/Appearance", 200, &EditorThemeInternal::onAppearanceChanged );
+    SW_EDITOR_PREFERENCES( EditorAppearanceConfig, "appearance", "Editor/Appearance", 200, &EditorThemeInternal::onAppearanceChanged );
 } // namespace sw::editor
 
 namespace sw::editor

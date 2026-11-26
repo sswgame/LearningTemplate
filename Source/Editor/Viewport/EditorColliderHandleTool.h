@@ -13,7 +13,7 @@ namespace sw::editor
 
     /**
      * @struct EditorColliderHandleTool
-     * @brief 손잡이 값(`EditorColliderHandleEdit::gather`)을 그리고 마우스를 명령으로 냅니다 — 적용과 되돌리기는 `EditorColliderHandleEdit`(Model), 명령 순서는 `EditorColliderHandleDragTracker`.
+     * @brief 손잡이 값(`EditorColliderHandleViewModel::gather`)을 그리고 마우스를 명령으로 냅니다 — 적용과 되돌리기는 `EditorColliderHandleViewModel`(Model), 명령 순서는 `EditorColliderHandleDragTracker`.
      * @details 단일 선택된 오브젝트의 `RigidBodyComponent` 셰이프(상자 · 구 · 캡슐)마다 면 가운데에 사각 손잡이를 그린다. 손잡이를 끌면 레이와 손잡이 축이 가장 가까운 점이
      *          새 가장자리가 되어 셰이프 크기가 바뀌고, 놓으면 끌기 하나가 되돌리기 하나(`Resize Collider`)로 남는다. 플레이 중에는 편집이 막혀 그리지도 않는다.
      *          손잡이 위에 마우스가 있는 동안에는 클릭 선택과 변환 기즈모가 마우스를 양보한다(`isCapturingMouse`) — 손잡이가 기즈모 축 위에 놓이기 때문이다.

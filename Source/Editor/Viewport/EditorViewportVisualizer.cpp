@@ -11,8 +11,8 @@
 
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
-#include "Editor/Viewport/EditorViewportProjection.h"
-#include "Editor/Viewport/Model/EditorVisualizerDrawList.h"
+#include "Editor/Viewport/EditorViewportProjectionUtil.h"
+#include "Editor/Viewport/Model/Visualizers/EditorVisualizerDrawList.h"
 
 #include <imgui.h>
 #include <imgui_internal.h>

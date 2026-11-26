@@ -13,22 +13,22 @@
 #include "Core/Task/TaskArgs.h"
 
 #include "Editor/Common/Asset/EditorContentScan.h"
-#include "Editor/Common/Commands/Asset/EditorAssetCatalog.h"
+#include "Editor/Common/Commands/Asset/EditorAssetClassifier.h"
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
-#include "Editor/Common/Widgets/PropertyGrid/Model/InspectorBuiltinValue.h"
-#include "Editor/Common/Widgets/PropertyGrid/Model/InspectorEditRecorder.h"
-#include "Editor/Common/Widgets/PropertyGrid/Model/InspectorFavorites.h"
-#include "Editor/Common/Widgets/PropertyGrid/Model/InspectorObjectEdit.h"
 #include "Editor/Common/Widgets/PropertyGrid/Model/PropertyEditConditionExpr.h"
+#include "Editor/Common/Widgets/PropertyGrid/Model/PropertyGridBuiltinValue.h"
+#include "Editor/Common/Widgets/PropertyGrid/Model/PropertyGridEditRecorder.h"
+#include "Editor/Common/Widgets/PropertyGrid/Model/PropertyGridFavorites.h"
+#include "Editor/Common/Widgets/PropertyGrid/Model/PropertyGridObjectEdit.h"
 #include "Editor/Common/Widgets/PropertyGrid/PropertyDrawerRegistry.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorDefaultObjects.h"
-#include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorSubsystems.h"
-#include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/Play/EditorSessionPolicy.h"
+#include "Editor/Common/Workspace/Selection/EditorSelection.h"
+#include "Editor/Common/Workspace/Undo/EditorTransaction.h"
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetIO.h"
@@ -156,12 +156,12 @@ namespace sw::editor
 
             /**
              * @brief 씬 대상의 FUNCTION 호출 하나를 게임 단계에 넘깁니다. 호출은 오브젝트 편집 하나로 감싼다(바뀐 것이 있으면 되돌리기 한 단계 — 플레이 중에는 기록 없이,
-             *        `InspectorObjectEdit::applyObjectEdit`). 선언으로 고르지 않는다 — 모든 호출이 기록 대상이라 "선언을 빠뜨린 변경 호출" 이 없다(언리얼 CallInEditor 의
+             *        `PropertyGridObjectEdit::applyObjectEdit`). 선언으로 고르지 않는다 — 모든 호출이 기록 대상이라 "선언을 빠뜨린 변경 호출" 이 없다(언리얼 CallInEditor 의
              *        `FScopedTransaction` 과 같다). 결과는 @p pResult 칸(그리드가 가진 결과 칸 — 다음 UI 프레임이 읽는다)에 둔다. 람다는 id · 이름 · 인자 값만 붙잡는다.
              */
             static void requestInvoke( EditorPropertyGridScope scope, uint64 objectID, uint64 componentID, uint32 sceneKey, vector<PropertyEditTarget>&& listOther,
                                        const hashed_string& methodName, const string& label, const vector<ReflectedValue>& listArg,
-                                       const shared_ptr<InspectorInvokeResult>& pResult )
+                                       const shared_ptr<PropertyGridInvokeResult>& pResult )
             {
                 EditorCommandRegistry::getInEditorContext().requestSceneEdit( SW_DELEGATE_LAMBDA( Delegate<void( EditorTransaction& )>, [scope, objectID, componentID, sceneKey, listOther = std::move( listOther ), methodName, label, listArg, pResult]( EditorTransaction& transaction )
                 {
@@ -187,11 +187,11 @@ namespace sw::editor
 
             /** @brief 대상 하나에 이름으로 부르고(`ReflectionInvoke::callByName` — 없는 함수 · 틀린 인자는 결과 갈래로 온다) 결과를 더합니다. */
             static void invokeOn( EditorTransaction& transaction, GameObject* pObject, const TypeInfo& type, void* pInstance, const hashed_string& methodName,
-                                  const string& label, const vector<ReflectedValue>& listArg, InspectorInvokeResult& outResult )
+                                  const string& label, const vector<ReflectedValue>& listArg, PropertyGridInvokeResult& outResult )
             {
                 ReflectCallResult result = ReflectCallResult::NotBound;
                 ReflectedValue    returnValue;
-                InspectorObjectEdit::applyObjectEdit( transaction, pObject, label, [&]()
+                PropertyGridObjectEdit::applyObjectEdit( transaction, pObject, label, [&]()
                 { result = ReflectionInvoke::callByName( type, pInstance, methodName, listArg, &returnValue ); } );
                 outResult.record( result, returnValue );
             }
@@ -232,12 +232,12 @@ namespace sw::editor
             }
 
             /** @brief 내장 값의 읽기 전용 글입니다. 숫자 · 벡터는 표시 단위(@p scale)로 보인다. */
-            static void formatReadOnlyBuiltin( const InspectorBuiltinValue& builtin, const void* pValue, float32 scale, string& outText )
+            static void formatReadOnlyBuiltin( const PropertyGridBuiltinValue& builtin, const void* pValue, float32 scale, string& outText )
             {
                 fixed_string<constant::buffer::kMax512> buf;
                 switch ( builtin._widget )
                 {
-                    case InspectorValueWidget::Number:
+                    case PropertyGridValueWidget::Number:
                     {
                         float64                   number = 0.0;
                         int64                     integer{ 0 };
@@ -248,19 +248,19 @@ namespace sw::editor
                             formatstring( buf.data(), buf.capacity(), "%#", number * static_cast<float64>( scale ) );
                         break;
                     }
-                    case InspectorValueWidget::Vector2:
+                    case PropertyGridValueWidget::Vector2:
                     {
                         const float2& value = *static_cast<const float2*>( pValue );
                         formatstring( buf.data(), buf.capacity(), "(%#, %#)", Fmt( value._x, Format( 2 ) ), Fmt( value._y, Format( 2 ) ) );
                         break;
                     }
-                    case InspectorValueWidget::Vector3:
+                    case PropertyGridValueWidget::Vector3:
                     {
                         const float3 shown = *static_cast<const float3*>( pValue ) * scale;
                         formatstring( buf.data(), buf.capacity(), "(%#, %#, %#)", Fmt( shown._x, Format( 2 ) ), Fmt( shown._y, Format( 2 ) ), Fmt( shown._z, Format( 2 ) ) );
                         break;
                     }
-                    case InspectorValueWidget::Vector4:
+                    case PropertyGridValueWidget::Vector4:
                     {
                         const float4& value = *static_cast<const float4*>( pValue );
                         formatstring( buf.data(), buf.capacity(), "(%#, %#, %#, %#)", Fmt( value._x, Format( 2 ) ), Fmt( value._y, Format( 2 ) ), Fmt( value._z, Format( 2 ) ),
@@ -324,7 +324,7 @@ namespace sw::editor
         , _targetObjectID{ 0 }
         , _targetComponentID{ 0 }
         , _targetScope{ EditorPropertyGridScope::None }
-        , _pLastInvokeResult{ make_shared<InspectorInvokeResult>() }
+        , _pLastInvokeResult{ make_shared<PropertyGridInvokeResult>() }
     {
     }
 
@@ -424,15 +424,15 @@ namespace sw::editor
             return;
         const TypeInfo& type = *_pType;
 
-        // 무엇을 어떤 순서로 그릴지는 `InspectorPropertyLayout` 이 정한다. 상속한 프로퍼티까지 포함하고, 카테고리는 기반 클래스부터 처음 나온 순서다.
+        // 무엇을 어떤 순서로 그릴지는 `PropertyGridLayout` 이 정한다. 상속한 프로퍼티까지 포함하고, 카테고리는 기반 클래스부터 처음 나온 순서다.
         // 묶음은 (타입, 그린 이름, 검색 글, 레지스트리 세대)가 같으면 캐시한 것을 쓴다. 즐겨찾기 · 바뀐 것만 보기는 그 사본을 거른다.
-        static const vector<hashed_string>    s_listNoDrawnName{};
-        const EditorListFilter                filter{ params._filterText };
-        const vector<InspectorPropertyGroup>& listCachedGroup =
+        static const vector<hashed_string> s_listNoDrawnName{};
+        const EditorListFilter             filter{ params._filterText };
+        const vector<PropertyGridGroup>&   listCachedGroup =
             _layoutCache.getOrCreateGroups( type, params._pListDrawnName != nullptr ? *params._pListDrawnName : s_listNoDrawnName, filter, params._filterText,
                                             TypeRegistry::getGeneration(), true );
-        const vector<InspectorPropertyGroup>* pListGroup     = &listCachedGroup;
-        const bool                            bFavoritesOnly = params._bFavoritesOnly && hasFavorites();
+        const vector<PropertyGridGroup>* pListGroup     = &listCachedGroup;
+        const bool                       bFavoritesOnly = params._bFavoritesOnly && hasFavorites();
         if ( bFavoritesOnly )
         {
             _listFilteredGroup = listCachedGroup;
@@ -471,7 +471,7 @@ namespace sw::editor
         const auto    isOnScreen      = [&window, margin]( float32 top, float32 height )
         { return window._bSkipOffscreen == SW_FALSE || ( top + height >= window._clipMinY - margin && top <= window._clipMaxY + margin ); };
 
-        for ( const InspectorPropertyGroup& group : *pListGroup )
+        for ( const PropertyGridGroup& group : *pListGroup )
         {
             const uint64      categoryKey     = HashUtil::combine( salt, HashUtil::computeStringHash64( group._category, false ) );
             PropertyValueRow& category        = appendRow( outState, PropertyRowKind::Category, 0, categoryKey );
@@ -485,7 +485,7 @@ namespace sw::editor
             if ( bCategoryOpen == false )
                 continue;
 
-            for ( const InspectorPropertyItem& item : group._listItem )
+            for ( const PropertyGridItem& item : group._listItem )
             {
                 const PropertyInfo& prop = *item._pProperty;
                 // `EditCondition` 이 거짓이면 숨기거나(EditConditionHides) 막는다. 판정은 ImGui 에 의존하지 않는 `PropertyEditConditionExpr` 이 한다.
@@ -554,7 +554,7 @@ namespace sw::editor
     }
 
     void PropertyGridViewModel::appendValueRow( PropertyGridViewState& outState, const MutableObjectAddress instance, const PropertyInfo& prop, uint16 depth, uint32 rootRowID, uint64 key,
-                                                PropertyRowChild child, bool bDisabled, InspectorPropertyDisplay* pDisplay )
+                                                PropertyRowChild child, bool bDisabled, PropertyGridDisplay* pDisplay )
     {
         using Internal = PropertyGridViewModelInternal;
 
@@ -569,7 +569,7 @@ namespace sw::editor
 
         const bool bReadOnly = prop._metadata->_bReadOnly != SW_FALSE;
         row._child           = child;
-        row._label           = InspectorPropertyLayout::getPropertyLabel( prop );
+        row._label           = PropertyGridLayout::getPropertyLabel( prop );
         row._tooltip         = prop._metadata->getEditor()._tooltip.c_str();
         row._typeName        = prop._typeName;
         row._propName        = prop._name;
@@ -577,7 +577,7 @@ namespace sw::editor
         row._bDisabled       = bDisabled ? SW_TRUE : SW_FALSE;
 
         // 위젯 종류는 그리기 순서와 같다: 내장 값 → 그리기 확장 → 열거형 → 컨테이너 → 구조체 → 없음(`EditorPropertyGrid` 가 확장을 먼저 부른다).
-        const InspectorBuiltinValue* pBuiltin = InspectorBuiltinValue::findBuiltin( prop._typeName.c_str() );
+        const PropertyGridBuiltinValue* pBuiltin = PropertyGridBuiltinValue::findBuiltin( prop._typeName.c_str() );
         if ( pBuiltin != nullptr )
         {
             fillBuiltinRow( row, instance, prop, *pBuiltin, pDisplay );
@@ -585,7 +585,7 @@ namespace sw::editor
         }
         if ( getPropertyManager().find( prop._typeName.c_str() ) != nullptr )
         {
-            // 확장(`IInspectorProperty`)이 맡는 타입 — 값은 글로 넘긴다(확장이 자기 형식으로 읽는다).
+            // 확장(`IPropertyDrawer`)이 맡는 타입 — 값은 글로 넘긴다(확장이 자기 형식으로 읽는다).
             row._kind             = PropertyRowKind::Text;
             const void* pAssetRef = PropertyGridViewModelInternal::isAssetReference( prop._typeName ) ? prop.getValuePtr<void>( instance.get() ) : nullptr;
             row._valueText        = pAssetRef != nullptr ? PropertyGridViewModelInternal::formatValueText( pAssetRef, prop._typeName )
@@ -789,8 +789,8 @@ namespace sw::editor
         }
     }
 
-    void PropertyGridViewModel::fillBuiltinRow( PropertyValueRow& row, const MutableObjectAddress instance, const PropertyInfo& prop, const InspectorBuiltinValue& builtin,
-                                                const InspectorPropertyDisplay* pDisplay )
+    void PropertyGridViewModel::fillBuiltinRow( PropertyValueRow& row, const MutableObjectAddress instance, const PropertyInfo& prop, const PropertyGridBuiltinValue& builtin,
+                                                const PropertyGridDisplay* pDisplay )
     {
         // 비트필드는 포인터를 잡을 수 없으므로 값으로 읽는다. 정수 계열과 bool 이 같은 체크박스를 쓴다.
         if ( prop._bIsBitField == SW_TRUE )
@@ -809,20 +809,20 @@ namespace sw::editor
         row._builtinIndex = builtin._index;
         row._value        = builtin._pReadValue( pValue );
 
-        const InspectorDisplayUnit unit = pDisplay != nullptr ? pDisplay->_unit : InspectorPropertyLayout::getDisplayUnit( prop );
-        row._scale                      = unit._scale;
-        row._dragSpeed                  = unit._dragSpeed;
-        if ( builtin._widget == InspectorValueWidget::Number )
-            row._range = InspectorPropertyLayout::getNumericRange( prop, ObjectAddress{ instance } ); // 필드 이름 형태 경계는 이 객체의 그 필드 값이다
-        else if ( builtin._widget == InspectorValueWidget::Vector3 || builtin._widget == InspectorValueWidget::Vector4 )
+        const PropertyGridDisplayUnit unit = pDisplay != nullptr ? pDisplay->_unit : PropertyGridLayout::getDisplayUnit( prop );
+        row._scale                         = unit._scale;
+        row._dragSpeed                     = unit._dragSpeed;
+        if ( builtin._widget == PropertyGridValueWidget::Number )
+            row._range = PropertyGridLayout::getNumericRange( prop, ObjectAddress{ instance } ); // 필드 이름 형태 경계는 이 객체의 그 필드 값이다
+        else if ( builtin._widget == PropertyGridValueWidget::Vector3 || builtin._widget == PropertyGridValueWidget::Vector4 )
         {
-            row._bColor    = InspectorPropertyLayout::isColorRequested( prop ) ? SW_TRUE : SW_FALSE;
+            row._bColor    = PropertyGridLayout::isColorRequested( prop ) ? SW_TRUE : SW_FALSE;
             row._bColorHDR = prop._metadata->getEditor()._bColorHDR != SW_FALSE ? SW_TRUE : SW_FALSE;
         }
-        else if ( builtin._widget == InspectorValueWidget::Text || builtin._widget == InspectorValueWidget::Name )
+        else if ( builtin._widget == PropertyGridValueWidget::Text || builtin._widget == PropertyGridValueWidget::Name )
         {
             row._bMultiline = prop._metadata->getEditor()._bMultiline != SW_FALSE ? SW_TRUE : SW_FALSE;
-            if ( const string* pNameSource = prop.findCustomMeta( hashed_string( "NameSource" ) ); pNameSource != nullptr && builtin._widget == InspectorValueWidget::Name )
+            if ( const string* pNameSource = prop.findCustomMeta( hashed_string( "NameSource" ) ); pNameSource != nullptr && builtin._widget == PropertyGridValueWidget::Name )
                 row._nameSource = hashed_string( pNameSource->c_str() );
         }
 
@@ -847,7 +847,7 @@ namespace sw::editor
 
     const PropertyInfo& PropertyGridViewModel::appendElementProperty( const PropertyInfo& containerProp )
     {
-        _listElementProp.push_back( make_unique<PropertyInfo>( InspectorPropertyLayout::makeElementProperty( containerProp ) ) );
+        _listElementProp.push_back( make_unique<PropertyInfo>( PropertyGridLayout::makeElementProperty( containerProp ) ) );
         return *_listElementProp.back();
     }
 
@@ -877,16 +877,16 @@ namespace sw::editor
         const RowBinding* pBinding = findValueBinding( rowID );
         if ( pBinding == nullptr )
             return pNumberFormat;
-        InspectorPropertyDisplay* const pDisplay = pBinding->_pDisplay;
+        PropertyGridDisplay* const pDisplay = pBinding->_pDisplay;
         if ( pDisplay == nullptr )
         {
             // 묶음 밖(컨테이너 원소 · 맵 값 · 중첩 필드)은 표시 정보가 없다 — 부를 때마다 짓는다.
-            _scratchUnitFormat = InspectorPropertyLayout::appendUnitSuffix( pNumberFormat, InspectorPropertyLayout::getDisplayUnit( *pBinding->_pProp )._suffix );
+            _scratchUnitFormat = PropertyGridLayout::appendUnitSuffix( pNumberFormat, PropertyGridLayout::getDisplayUnit( *pBinding->_pProp )._suffix );
             return _scratchUnitFormat.c_str();
         }
         if ( pDisplay->_pUnitFormatBase != pNumberFormat )
         {
-            pDisplay->_unitFormat      = InspectorPropertyLayout::appendUnitSuffix( pNumberFormat, pDisplay->_unit._suffix );
+            pDisplay->_unitFormat      = PropertyGridLayout::appendUnitSuffix( pNumberFormat, pDisplay->_unit._suffix );
             pDisplay->_pUnitFormatBase = pNumberFormat;
         }
         return pDisplay->_unitFormat.c_str();
@@ -939,13 +939,13 @@ namespace sw::editor
         return _pFavorites != nullptr && _pFavorites->contains( favoriteKey );
     }
 
-    void PropertyGridViewModel::keepFavoriteProperties( const TypeInfo& type, vector<InspectorPropertyGroup>& inoutListGroup ) const
+    void PropertyGridViewModel::keepFavoriteProperties( const TypeInfo& type, vector<PropertyGridGroup>& inoutListGroup ) const
     {
-        InspectorPropertyGroup favoriteGroup;
+        PropertyGridGroup favoriteGroup;
         favoriteGroup._category = type.getDisplayName();
-        for ( const InspectorPropertyGroup& group : inoutListGroup )
+        for ( const PropertyGridGroup& group : inoutListGroup )
         {
-            for ( const InspectorPropertyItem& item : group._listItem )
+            for ( const PropertyGridItem& item : group._listItem )
             {
                 if ( isFavorite( item._pDisplay->_favoriteKey ) )
                     favoriteGroup._listItem.push_back( item );
@@ -966,25 +966,25 @@ namespace sw::editor
 
     bool PropertyGridViewModel::isActionFavorite( const TypeInfo& type, const FunctionInfo& method ) const
     {
-        return _pActionFavorites != nullptr && _pActionFavorites->contains( InspectorFavorites::makeMethodKey( type, method ) );
+        return _pActionFavorites != nullptr && _pActionFavorites->contains( PropertyGridFavorites::makeMethodKey( type, method ) );
     }
 
     void PropertyGridViewModel::toggleActionFavorite( const TypeInfo& type, const FunctionInfo& method )
     {
         if ( _pActionFavorites == nullptr )
             return;
-        (void)_pActionFavorites->toggle( InspectorFavorites::makeMethodKey( type, method ) );
+        (void)_pActionFavorites->toggle( PropertyGridFavorites::makeMethodKey( type, method ) );
         (void)_pActionFavorites->saveToFile( _pActionFavorites->getFilePath() ); // 실패는 saveToFile 이 경고한다
     }
 
-    void PropertyGridViewModel::removeDefaultValued( const ObjectAddress instance, const ObjectAddress defaultInstance, vector<InspectorPropertyGroup>& inoutListGroup )
+    void PropertyGridViewModel::removeDefaultValued( const ObjectAddress instance, const ObjectAddress defaultInstance, vector<PropertyGridGroup>& inoutListGroup )
     {
-        for ( InspectorPropertyGroup& group : inoutListGroup )
+        for ( PropertyGridGroup& group : inoutListGroup )
         {
-            VectorUtil::removeIf( group._listItem, [this, instance, defaultInstance]( const InspectorPropertyItem& item )
+            VectorUtil::removeIf( group._listItem, [this, instance, defaultInstance]( const PropertyGridItem& item )
             { return isMixed( *item._pProperty ) == false && EditorDefaultObjects::isDefaultValue( *item._pProperty, instance, defaultInstance ); } );
         }
-        VectorUtil::removeIf( inoutListGroup, []( const InspectorPropertyGroup& group )
+        VectorUtil::removeIf( inoutListGroup, []( const PropertyGridGroup& group )
         { return group._listItem.empty(); } );
     }
 
@@ -1063,7 +1063,7 @@ namespace sw::editor
             const AssetRefBase* pRef = prop.getValuePtr<AssetRefBase>( pBinding->_instance.get() );
             return pRef != nullptr && AssetRefBase::isPathOfTarget( path, pRef->getTargetType() );
         }
-        return InspectorPropertyLayout::matchesFileFilter( prop._metadata->getEditor()._fileFilter, path );
+        return PropertyGridLayout::matchesFileFilter( prop._metadata->getEditor()._fileFilter, path );
     }
 
     bool PropertyGridViewModel::canPasteText( uint32 rowID, string_view text ) const
@@ -1083,10 +1083,10 @@ namespace sw::editor
             int64      parsedValue = 0;
             return pEnumInfo->tryParseText( bQuoted ? text.substr( 1, text.size() - 2 ) : text, parsedValue );
         }
-        const InspectorBuiltinValue* pBuiltin = prop._containerWrapper == nullptr ? InspectorBuiltinValue::findBuiltin( prop._typeName.c_str() ) : nullptr;
+        const PropertyGridBuiltinValue* pBuiltin = prop._containerWrapper == nullptr ? PropertyGridBuiltinValue::findBuiltin( prop._typeName.c_str() ) : nullptr;
         if ( pBuiltin == nullptr )
             return true; // 적용이 거른다 — 읽지 못하면 값은 그대로다(`SerializerUtil::applyPropertyText`)
-        if ( pBuiltin->_widget == InspectorValueWidget::Text || pBuiltin->_widget == InspectorValueWidget::Name )
+        if ( pBuiltin->_widget == PropertyGridValueWidget::Text || pBuiltin->_widget == PropertyGridValueWidget::Name )
             return true; // 글 칸은 어떤 글이든 받는다
         // 그 C++ 타입의 기본값 사본에 읽어 본다. 사본은 이 함수의 지역 값이라 그 저장 공간에 써도 된다.
         TaskValue scratch = pBuiltin->_pMakeDefault();
@@ -1096,12 +1096,12 @@ namespace sw::editor
 
     bool PropertyGridViewModel::findObjectComponent( const hashed_string& targetTypeName, uint64 objectID, ComponentHandle& outHandle ) const
     {
-        const TypeInfo*          pTargetType = InspectorComponentChoice::findTargetType( getTypeRegistry(), targetTypeName );
+        const TypeInfo*          pTargetType = PropertyGridComponentChoice::findTargetType( getTypeRegistry(), targetTypeName );
         const GameObjectManager* pManager    = findEditOwnerManager();
         const GameObject*        pObject     = ( pTargetType != nullptr && pManager != nullptr ) ? pManager->findGameObjectByID( objectID ) : nullptr;
         if ( pObject == nullptr )
             return false;
-        // `forEachComponentOfType<Component>` 은 기반 타입이라 거르지 않는다 — 선택기(`InspectorComponentChoice::computeHandleState`)와 같은 파생 판정을 쓴다.
+        // `forEachComponentOfType<Component>` 은 기반 타입이라 거르지 않는다 — 선택기(`PropertyGridComponentChoice::computeHandleState`)와 같은 파생 판정을 쓴다.
         bool bFound = false;
         pObject->forEachComponent( [pTargetType, &bFound, &outHandle]( const Component* pComponent )
         {
@@ -1273,13 +1273,13 @@ namespace sw::editor
         const RowBinding* pRoot = findValueBinding( binding._rootRowID );
         if ( pRoot == nullptr )
             return;
-        const PropertyInfo&          rootProp = *pRoot->_pProp;
-        const InspectorBuiltinValue* pBuiltin = InspectorBuiltinValue::findBuiltin( rootProp._typeName.c_str() );
+        const PropertyInfo&             rootProp = *pRoot->_pProp;
+        const PropertyGridBuiltinValue* pBuiltin = PropertyGridBuiltinValue::findBuiltin( rootProp._typeName.c_str() );
         if ( pBuiltin != nullptr && static_cast<ReflectBuiltinIndex>( pBuiltin->_index ) == ReflectBuiltinIndex::katomic_bool )
             return; // 다른 스레드가 쓰는 값이라 되돌리기에 넣지 않는다(되돌리면 런타임이 쓴 값을 덮는다)
         if ( _editSpans.isHeld( pRoot->_key ) )
             return; // 끄는 중 — 연 때 찍은 값이 이 구간의 "편집 전" 이다
-        const string undoLabel = label.empty() ? InspectorPropertyLayout::makeUndoLabel( InspectorPropertyLayout::getPropertyLabel( rootProp ).c_str() ) : string{ label };
+        const string undoLabel = label.empty() ? PropertyGridLayout::makeUndoLabel( PropertyGridLayout::getPropertyLabel( rootProp ).c_str() ) : string{ label };
         _editSpans.open( pRoot->_key, PropertyEditSpan::captureProperty( *_pObject, _pComponent, rootProp, _collectEditTargets, undoLabel ) );
     }
 
@@ -1307,7 +1307,7 @@ namespace sw::editor
         Component*  pComponent = pObject != nullptr ? pObject->findComponentByID( componentID ) : nullptr;
         if ( pComponent == nullptr )
             return;
-        const string undoLabel = InspectorPropertyLayout::makeUndoLabel( string{ label }.c_str() );
+        const string undoLabel = PropertyGridLayout::makeUndoLabel( string{ label }.c_str() );
         _editSpans.open( key, PropertyEditSpan::captureComponent( *pComponent, undoLabel ) );
         _editSpans.touch( key );
     }
@@ -1376,13 +1376,13 @@ namespace sw::editor
         if ( pBinding == nullptr )
             return;
         // 에디터의 에셋 색인에서 읽는다 — 팝업을 열 때마다 리소스 트리를 걷지 않는다.
-        EditorAssetCatalog::collectEntriesOnUIThread( EditorPaths::getAssetPaths(), outListEntry );
+        EditorAssetClassifier::collectEntriesOnUIThread( EditorPaths::getAssetPaths(), outListEntry );
         // 타입 있는 참조는 대상 종류가 거른다(언리얼 `TSoftObjectPtr<T>` 의 선택기와 같다). 그 밖의 경로 칸은 `FileFilter` 를 본다.
         const PropertyInfo& prop = *pBinding->_pProp;
         const AssetRefBase* pRef = prop._typeName == hashed_string( AssetRefBase::kTypeName ) ? prop.getValuePtr<AssetRefBase>( pBinding->_instance.get() ) : nullptr;
         const string_view   fileFilter{ prop._metadata->getEditor()._fileFilter };
         VectorUtil::removeIf( outListEntry, [pRef, fileFilter]( const EditorAssetIndexEntry& entry )
-        { return ( pRef != nullptr ? AssetRefBase::isPathOfTarget( entry._path, pRef->getTargetType() ) : InspectorPropertyLayout::matchesFileFilter( fileFilter, entry._path ) ) == false; } );
+        { return ( pRef != nullptr ? AssetRefBase::isPathOfTarget( entry._path, pRef->getTargetType() ) : PropertyGridLayout::matchesFileFilter( fileFilter, entry._path ) ) == false; } );
     }
 
     bool PropertyGridViewModel::collectCatalogKeyEntries( uint32 rowID, vector<string>& outListID ) const
@@ -1399,7 +1399,7 @@ namespace sw::editor
         if ( pTarget == nullptr )
             return false;
         vector<EditorAssetIndexEntry> listEntry;
-        EditorAssetCatalog::collectEntriesOnUIThread( EditorPaths::getAssetPaths(), listEntry );
+        EditorAssetClassifier::collectEntriesOnUIThread( EditorPaths::getAssetPaths(), listEntry );
         vector<string> listAssetID;
         listAssetID.reserve( listEntry.size() );
         for ( EditorAssetIndexEntry& entry : listEntry )
@@ -1442,9 +1442,9 @@ namespace sw::editor
         return true;
     }
 
-    bool PropertyGridViewModel::describeComponentHandle( const hashed_string& targetTypeName, const ComponentHandle& handle, string& outPreview, InspectorHandleState& outState ) const
+    bool PropertyGridViewModel::describeComponentHandle( const hashed_string& targetTypeName, const ComponentHandle& handle, string& outPreview, PropertyGridHandleState& outState ) const
     {
-        const TypeInfo*          pTargetType = InspectorComponentChoice::findTargetType( getTypeRegistry(), targetTypeName );
+        const TypeInfo*          pTargetType = PropertyGridComponentChoice::findTargetType( getTypeRegistry(), targetTypeName );
         const GameObjectManager* pManager    = findEditOwnerManager();
         if ( pTargetType == nullptr || pManager == nullptr )
         {
@@ -1456,18 +1456,18 @@ namespace sw::editor
             outPreview = text.c_str();
             return false;
         }
-        outState   = InspectorComponentChoice::computeHandleState( *pManager, *pTargetType, handle );
-        outPreview = InspectorComponentChoice::makePreview( *pManager, handle, outState );
+        outState   = PropertyGridComponentChoice::computeHandleState( *pManager, *pTargetType, handle );
+        outPreview = PropertyGridComponentChoice::makePreview( *pManager, handle, outState );
         return true;
     }
 
-    void PropertyGridViewModel::collectComponentChoices( const hashed_string& targetTypeName, vector<InspectorComponentChoice>& outListChoice ) const
+    void PropertyGridViewModel::collectComponentChoices( const hashed_string& targetTypeName, vector<PropertyGridComponentChoice>& outListChoice ) const
     {
         outListChoice.clear();
-        const TypeInfo*          pTargetType = InspectorComponentChoice::findTargetType( getTypeRegistry(), targetTypeName );
+        const TypeInfo*          pTargetType = PropertyGridComponentChoice::findTargetType( getTypeRegistry(), targetTypeName );
         const GameObjectManager* pManager    = findEditOwnerManager();
         if ( pTargetType != nullptr && pManager != nullptr )
-            InspectorComponentChoice::collectChoices( *pManager, *pTargetType, outListChoice );
+            PropertyGridComponentChoice::collectChoices( *pManager, *pTargetType, outListChoice );
     }
 
     // ------------------------------------------------------------------------------

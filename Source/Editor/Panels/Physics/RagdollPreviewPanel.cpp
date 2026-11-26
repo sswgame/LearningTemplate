@@ -19,9 +19,9 @@
 #include "Editor/Panels/Physics/Model/RagdollPreviewViewModel.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 #include "Editor/Viewport/EditorProjectedLineRenderer.h"
-#include "Editor/Viewport/EditorViewportProjection.h"
-#include "Editor/Viewport/Model/EditorColliderHandle.h"
-#include "Editor/Viewport/Model/EditorHandleDrag.h"
+#include "Editor/Viewport/EditorViewportProjectionUtil.h"
+#include "Editor/Viewport/Model/Gizmo/ColliderHandle.h"
+#include "Editor/Viewport/Model/Gizmo/EditorHandleDragTracker.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Localization/LocText.h"

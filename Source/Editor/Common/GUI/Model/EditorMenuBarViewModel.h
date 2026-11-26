@@ -11,7 +11,7 @@
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/EditorExports.h"
-#include "Editor/Common/Workspace/EditorPanelOpenRequest.h"
+#include "Editor/Common/Workspace/Layout/EditorPanelOpenRequest.h"
 #include "Editor/Common/Workspace/Play/EditorSessionPolicy.h"
 
 #include "ModuleAPI/Service/IModuleCompiler.h"

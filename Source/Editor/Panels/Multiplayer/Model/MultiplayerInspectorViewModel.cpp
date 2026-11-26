@@ -4,7 +4,7 @@
 
 #include "Core/String/StringBuilder.h"
 
-#include "Editor/Common/Workspace/EditorStateStore.h"
+#include "Editor/Common/Workspace/Layout/EditorStateStore.h"
 #include "Editor/Common/Workspace/NetPlay/EditorNetPlaySession.h"
 #include "Editor/Common/Workspace/NetPlay/EditorRemoteInspector.h"
 #include "Editor/Panels/Multiplayer/Model/MultiplayerSessionViewModel.h"

@@ -1,12 +1,12 @@
 /**
  * @file EditorViewportPicker.h
- * @brief 씬 뷰의 클릭 선택 · 상자 선택 · 호버 강조 View 입니다. 마우스 · 수정 키 · 호버 빈도만 다루고, 판정과 선택 적용은 `EditorViewportPick`(Model)이 id 로 합니다.
+ * @brief 씬 뷰의 클릭 선택 · 상자 선택 · 호버 강조 View 입니다. 마우스 · 수정 키 · 호버 빈도만 다루고, 판정과 선택 적용은 `EditorViewportPickViewModel`(Model)이 id 로 합니다.
  */
 #pragma once
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
-#include "Editor/Viewport/Model/EditorViewportPick.h"
+#include "Editor/Viewport/Model/EditorViewportPickViewModel.h"
 
 struct ImDrawList;
 
@@ -14,7 +14,7 @@ namespace sw::editor
 {
     /**
      * @class EditorViewportPicker
-     * @brief 씬 뷰 캔버스의 피킹입니다. 이번 프레임에 그은 아이콘 배지를 먼저 보고 레이 피킹을 한다(`EditorViewportPick::findUnderMouse`).
+     * @brief 씬 뷰 캔버스의 피킹입니다. 이번 프레임에 그은 아이콘 배지를 먼저 보고 레이 피킹을 한다(`EditorViewportPickViewModel::findUnderMouse`).
      * @details `EditorViewportClient` 가 값 멤버로 들고 시각화 그리기 뒤에 부릅니다(배지 화면 자리가 이번 프레임 값이다). 입력은 값(`EditorViewportPickInput`)만 받는다.
      */
     class EditorViewportPicker
@@ -34,7 +34,7 @@ namespace sw::editor
         void processHover( const EditorViewportPickInput& input, bool bCanvasHovered, bool bGizmoBusy );
 
         /**
-         * @brief 빈 곳에서 시작한 왼쪽 끌기를 상자 선택으로 다룹니다. 끄는 동안 상자를 그리고, 떼면 상자에 걸친 오브젝트를 고릅니다(`EditorViewportPick::selectInRect`).
+         * @brief 빈 곳에서 시작한 왼쪽 끌기를 상자 선택으로 다룹니다. 끄는 동안 상자를 그리고, 떼면 상자에 걸친 오브젝트를 고릅니다(`EditorViewportPickViewModel::selectInRect`).
          * @details 유니티 씬 뷰 · Godot 3D 뷰의 끌기 선택과 같다(언리얼은 Ctrl+Alt 끌기).
          */
         void processMarquee( const EditorViewportPickInput& input, ImDrawList* pDrawList );

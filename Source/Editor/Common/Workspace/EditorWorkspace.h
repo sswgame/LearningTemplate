@@ -18,9 +18,9 @@
 #include "Editor/Common/EditorExports.h"
 #include "Editor/Common/EditorSubsystem.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetTypeID.h"
-#include "Editor/Common/Workspace/EditorPanelOpenRequest.h"
-#include "Editor/Common/Workspace/EditorSelection.h"
+#include "Editor/Common/Workspace/Layout/EditorPanelOpenRequest.h"
 #include "Editor/Common/Workspace/Play/EditorSessionPolicy.h"
+#include "Editor/Common/Workspace/Selection/EditorSelection.h"
 
 namespace sw
 {

@@ -14,12 +14,12 @@
 #include "Editor/Common/Commands/Scene/EditorSiblingOrder.h"
 #include "Editor/Common/EditorSceneIterationAccess.h"
 #include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorSubsystems.h"
-#include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
-#include "Editor/Common/Workspace/ObjectCopyBuffer.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
+#include "Editor/Common/Workspace/Selection/EditorSelection.h"
+#include "Editor/Common/Workspace/Selection/ObjectClipboard.h"
+#include "Editor/Common/Workspace/Undo/EditorTransaction.h"
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/ComponentStableKey.h"
@@ -607,9 +607,9 @@ namespace sw::editor
 
     uint32 EditorSceneCommands::copyObjects( const vector<GameObject*>& listObject )
     {
-        vector<ObjectCopyEntry> listCopied;
-        EditorContext*          pContext = editor::findSubsystem<EditorContext>();
-        uint32                  rootCount{ 0 };
+        vector<ObjectClipboardEntry> listCopied;
+        EditorContext*               pContext = editor::findSubsystem<EditorContext>();
+        uint32                       rootCount{ 0 };
         for ( GameObject* pRoot : EditorSelection::filterTopLevel( listObject ) ) // 선택한 것 안의 자손은 조상의 서브트리로 한 번만 복사한다
         {
             vector<GameObject*> listSubtree;
@@ -617,7 +617,7 @@ namespace sw::editor
             VectorUtil::reverse( listSubtree ); // 부모부터 둔다. 붙여 넣을 때 자식이 먼저 만든 부모에 붙는다
             for ( GameObject* pObj : listSubtree )
             {
-                ObjectCopyEntry copied{};
+                ObjectClipboardEntry copied{};
                 copied._name    = pObj->getName();
                 copied._savedID = pObj->getObjectID();
                 copied._bRoot   = pObj == pRoot;
@@ -630,20 +630,20 @@ namespace sw::editor
             ++rootCount;
         }
         if ( rootCount > 0 )
-            editor::getSubsystem<ObjectCopyBuffer>().setEntries( std::move( listCopied ) );
+            editor::getSubsystem<ObjectClipboard>().setEntries( std::move( listCopied ) );
         return rootCount;
     }
 
     bool EditorSceneCommands::hasCopiedObjects()
     {
-        return editor::getSubsystem<ObjectCopyBuffer>().getEntries().empty() == false;
+        return editor::getSubsystem<ObjectClipboard>().getEntries().empty() == false;
     }
 
     void EditorSceneCommands::pasteObjects( EditorTransaction& transaction, GameObjectManager* pManager, vector<GameObject*>& outListCreated )
     {
         outListCreated.clear();
-        const vector<ObjectCopyEntry>& listCopied      = editor::getSubsystem<ObjectCopyBuffer>().getEntries();
-        const bool                     bNothingToPaste = EditorPlaySession::refuseSceneEdit( "Paste GameObjects" ) || pManager == nullptr || listCopied.empty();
+        const vector<ObjectClipboardEntry>& listCopied      = editor::getSubsystem<ObjectClipboard>().getEntries();
+        const bool                          bNothingToPaste = EditorPlaySession::refuseSceneEdit( "Paste GameObjects" ) || pManager == nullptr || listCopied.empty();
         if ( bNothingToPaste )
             return;
         // 복제와 같은 경로다. 배치가 복사할 때의 id 로 사본끼리 연결한다. 루트는 씬의 루트로 둔다. 다른 씬에는 원래 부모가 없기 때문이다.
@@ -651,7 +651,7 @@ namespace sw::editor
         vector<GameObject*> listCopy;
         listCopy.reserve( listCopied.size() );
         bool bAllLoaded = true;
-        for ( const ObjectCopyEntry& copied : listCopied )
+        for ( const ObjectClipboardEntry& copied : listCopied )
         {
             // 같은 씬에 붙이면 이름이 겹치므로 저장소가 번호를 붙인다(`<이름>_2`, 유니티의 붙여 넣기와 같다).
             GameObject* pCopy = pManager->createGameObject( copied._name );

@@ -1,0 +1,133 @@
+/**
+ * @file DevTools/ModuleReload/HotReload/ModuleShadowCopy.h
+ * @brief 모듈 원본을 읽어 검사하고, 세대 이름을 붙인 섀도 복사본 파일을 씁니다. 복사본의 자리 · 이름과 지우기 · 치우기도 여기서 합니다.
+ *
+ * @note 파일과 라이브러리 바이트만 다룹니다. 복사본을 로드하고 교체하는 순서(정적 등록 헤드 · `RegistrationReloadScope` · 라이브러리 검사 콜백)는
+ *       `ModuleHotReloadManager` 가 정합니다. 핫 리로드만 쓰고, Shipping 빌드에서 함께 빠집니다(`Source/ModuleManager/CMakeLists.txt` 의 제외 목록).
+ */
+#pragma once
+#include "Core/Container/string.h"
+#include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
+#include "Core/Path/AbsolutePath.h"
+
+namespace sw
+{
+    /**
+     * @brief 모듈 라이브러리 이름 세 가지입니다 — 리눅스는 SONAME, Windows 는 DLL 파일 이름(로더가 import 를 맞추는 이름)입니다.
+     * @details `_original` 은 원본 파일의 이름이라 의존 모듈의 NEEDED · import 표가 이것을 적고 있고, `_current` 는 의존 모듈이 지금
+     *          적어야 할 이름(복사본을 쓸 때 세대 이름으로 바꾼다), `_loaded` 는 commit 된 복사본의 이름입니다. prepare 가 실패하면
+     *          `_current` 를 `_loaded` 로 되돌립니다.
+     */
+    struct ShadowLibraryNameState
+    {
+        string _original;
+        string _current;
+        string _loaded;
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @struct ShadowCopySerials
+     * @brief 섀도 복사본의 일련번호 둘입니다. 리로드 매니저(`ModuleHotReloadManager`)가 하나 들고 `writeShadowCopy` 에 넘긴다 — 프로세스 정적 칸이 아니라 번호를 쓰는 주인의 멤버다.
+     */
+    struct ShadowCopySerials
+    {
+        uint32 _reloadCount{ 0 };           ///< 복사본 이름의 일련번호(`ModuleShadowCopy::makeCopyName`)
+        uint32 _libraryNameGeneration{ 0 }; ///< 라이브러리 이름 세대 — 모듈과 무관하게 하나씩 오르므로 앞부분이 같은 두 모듈도 같은 이름을 받지 않는다
+    };
+
+    /** @brief 이 매니저가 올린 다른 모듈 하나의 이름과 라이브러리 이름입니다(`ShadowCopyParams`). */
+    struct ShadowCopyModuleLibrary
+    {
+        string_view                   _moduleName;
+        const ShadowLibraryNameState* _pLibraryName{ nullptr };
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 섀도 복사본 하나를 쓰는 데 필요한 입력입니다(`ModuleShadowCopy::writeShadowCopy`). */
+    struct ShadowCopyParams
+    {
+        string_view  _moduleName;
+        AbsolutePath _originalModulePath;
+        bool         _bReplacingLoadedLibrary{ false }; ///< 이미 올라온 라이브러리를 바꾸는 리로드다(거절 로그의 안내 문구만 바뀐다)
+        /** @brief 이 모듈이 의존하는 모듈 가운데 이 매니저가 올린 것입니다. 복사본의 import · NEEDED 를 그 의존의 지금 이름으로 바꿉니다. */
+        vector<ShadowCopyModuleLibrary> _listDependencyLibrary;
+        /** @brief 이 매니저에 등록된 모든 모듈입니다(자기 포함). Windows 에서 의존 목록에 없이 등록된 모듈을 import 하는지 봅니다. */
+        vector<ShadowCopyModuleLibrary> _listRegisteredLibrary;
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @struct ModuleShadowCopy
+     * @brief 섀도 복사본 파일을 만들고 지웁니다. 복사본은 실행 뿌리 아래 이 프로세스의 폴더(`getCopyDirectory`)에 `<모듈>_<번호>` 이름으로 둡니다.
+     * @details 원본을 한 번 읽어 엔진 ABI 스탬프와 지연 import 를 대조하고, 세대 이름을 붙여(`ModuleLibraryPatch`) 이 프로세스의 섀도 폴더(`ModuleShadowCopy::getCopyDirectory`)에 씁니다.
+     *          Windows 는 복사본마다 제 폴더(`<모듈>_<번호>/<세대 이름>.dll`)를 쓰고, 리눅스는 파일 하나(`<모듈>_<번호>.so`)입니다.
+     *          복사본 이름의 일련번호와 세대 번호는 프로세스 하나에 하나씩 오릅니다.
+     */
+    struct ModuleShadowCopy
+    {
+        /** @brief 확장자 없는 복사본 이름을 만듭니다(예: `SWGame_3`). 경로를 짧게 두려고 원본 시각 같은 칸은 넣지 않는다 — Windows 복사본 경로가 실행 뿌리 아래라 길다. */
+        static string makeCopyName( string_view moduleName, uint32 serial );
+
+        /**
+         * @brief 이 프로세스의 섀도 복사본 폴더 `<실행 뿌리>/ModuleShadow/<pid>` 입니다. 쓰는 쪽이 처음 쓸 때 만듭니다.
+         * @details pid 칸은 실행 뿌리를 물려받은 손자(`kRunRootVariable`)와 같은 이름의 복사본이 겹치지 않게 할 뿐이다 — 이름을 읽어 거두는 코드는 없다.
+         *          같은 뿌리에서 pid 가 다시 쓰여도 겹치지 않는다: 동시에 살아 있는 두 프로세스는 pid 가 다르고, 앞 프로세스는 이미 끝나 사본이 매핑돼 있지 않으므로
+         *          새 프로세스의 매니저가 시작할 때 `removeCopies` 로 지우고(못 지워도 쓰기가 덮는다) 번호를 1 부터 다시 쓴다.
+         */
+        static AbsolutePath getCopyDirectory();
+
+        /**
+         * @brief @p directoryPath 아래의 복사본(파일 · Windows 의 복사본 폴더 · 디버그 심볼 · 쓰다 만 임시 파일)을 지우고, 지운 수를 반환합니다.
+         * @details 아직 올라와 있는 복사본은 OS 가 지우기를 거절하므로(Windows) 남는다 — 실행 뿌리째 주인이 거둔다.
+         */
+        static uint32 removeCopies( const AbsolutePath& directoryPath );
+
+        /**
+         * @brief 라이브러리 옆에 있는 디버그 심볼 파일의 경로를 반환합니다(섀도 복사본의 심볼 위치).
+         * @note Windows 는 `.pdb`, Linux 는 `.debug` 입니다(없으면 DWARF 가 .so 안에 들어 있는 경우가 많습니다).
+         */
+        static AbsolutePath getDebugSymbolPath( const AbsolutePath& libraryPath );
+
+        /**
+         * @brief 빌드가 낸 라이브러리의 디버그 심볼 파일을 찾습니다. `Bin/Symbols/<이름>` 을 먼저 보고, 없으면 라이브러리 옆을 봅니다. 둘 다 없으면 빈 경로를 반환합니다.
+         * @details Dev 빌드는 PDB 를 `Bin/Symbols` 에 낸다(`cmake/Modules/Build/BuildLayout.cmake`). `ModuleLibraryUtil::setModuleSubdirectory` 로 옮긴 모듈은 `Bin/Symbols/<그 폴더>` 다 —
+         *          게임 팩마다 PDB 이름이 같아(`SWGame.pdb`) 폴더로 가른다.
+         */
+        static AbsolutePath findBuiltDebugSymbolPath( const AbsolutePath& libraryPath );
+
+        /** @brief 원본을 읽습니다. 링커가 아직 쓰는 중이면 잠겨 있으므로 잠깐씩 기다려 다시 읽습니다. */
+        [[nodiscard]] static bool readModuleFile( const AbsolutePath& path, vector<uint8>& outBytes );
+
+        /**
+         * @brief 모듈 라이브러리 바이트 @p bytes 에 지연 import 가 있으면 원인을 남기고 true 를 반환합니다 — 그런 라이브러리는 올리지 않습니다.
+         * @details 모듈 라이브러리는 모든 import 를 로드할 때 묶어야 한다. lld 20 의 x64 지연 로드 썽크(`__tailMerge_<dll>`)는 xmm0~3 을
+         *          `__delayLoadHelper2` 호출의 홈 공간에 저장해, 첫 호출이 묶으면 그 호출의 float 인자가 망가진다.
+         *          빌드는 `/DELAYLOAD` 를 쓰지 않고(`ArchitectureTest.NoBuiltLibraryHasDelayLoadedImports` 가 산출물을 본다), 이것은 그 규칙을 어긴 라이브러리를 올리기 전에 거절하는 마지막 그물이다.
+         */
+        static bool shouldRejectDelayImports( string_view moduleName, string_view modulePath, const vector<uint8>& bytes );
+
+        /**
+         * @brief 원본을 읽어 대조하고, 세대 이름을 붙인 섀도 복사본(과 디버그 심볼)을 씁니다. 아직 로드하지 않습니다.
+         * @param inoutLibraryName 이 모듈의 라이브러리 이름입니다. `_current` 가 세대 이름으로 바뀝니다. 이름을 바꾼 뒤 실패하면 `_loaded` 로 되돌립니다.
+         * @param outShadowPath 쓴 복사본 경로입니다. 실패하면 건드리지 않습니다.
+         * @return 원본을 못 읽었거나, 엔진 ABI 스탬프가 다르거나 없거나, 지연 import 가 있거나, 세대 이름을 붙이지 못했거나, 쓰지 못했으면 false 입니다.
+         *         실패하면 쓰다 만 복사본을 지웁니다.
+         * @details 로드하기 전에 확인한다. 로드하면 정적 초기화가 돌므로, 돌고 있는 엔진과 다른 헤더로 빌드된 모듈은 그 전에 거절해야 한다.
+         */
+        [[nodiscard]] static bool writeShadowCopy( const ShadowCopyParams& params, ShadowCopySerials& inoutSerials, ShadowLibraryNameState& inoutLibraryName, AbsolutePath& outShadowPath );
+
+        /**
+         * @brief 섀도 복사본과 그 디버그 심볼을 지웁니다(Windows 는 비었으면 복사본 폴더까지). 경로가 비면 아무것도 하지 않습니다.
+         * @details 아직 매핑된 복사본은 지금 지울 수 없다. 남은 것은 종료의 `ModuleShadowCopy::removeCopies`, 그래도 남으면 실행 뿌리째 주인 정리가 거둔다.
+         */
+        static void removeArtifacts( const AbsolutePath& shadowPath );
+    };
+} // namespace sw

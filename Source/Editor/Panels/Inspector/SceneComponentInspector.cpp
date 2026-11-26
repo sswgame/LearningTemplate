@@ -5,7 +5,7 @@
 #include "pch.h"
 
 #include "Editor/Common/Widgets/EditorWidgets.h"
-#include "Editor/Common/Widgets/PropertyGrid/Model/InspectorPropertyLayout.h"
+#include "Editor/Common/Widgets/PropertyGrid/Model/PropertyGridLayout.h"
 #include "Editor/Panels/Inspector/IComponentInspector.h"
 #include "Editor/Panels/Inspector/Model/InspectorComponentEdit.h"
 #include "Editor/Panels/Inspector/Model/InspectorComponentManager.h"
@@ -35,7 +35,7 @@ namespace sw::editor
 
                 if ( EditorWidgets::drawVec3Control( "Position", values._localPosition, 0.0f, 80.0f, 0.1f ) )
                     InspectorComponentEdit::setLocalPosition( target, values._localPosition );
-                if ( EditorWidgets::drawVec3Control( "Rotation", values._localRotationDegrees, 0.0f, 80.0f, InspectorPropertyLayout::kAngleDragSpeed ) )
+                if ( EditorWidgets::drawVec3Control( "Rotation", values._localRotationDegrees, 0.0f, 80.0f, PropertyGridLayout::kAngleDragSpeed ) )
                     InspectorComponentEdit::setLocalRotationDegrees( target, values._localRotationDegrees );
                 if ( EditorWidgets::drawVec3Control( "Scale", values._localScale, 1.0f, 80.0f, 0.01f ) )
                     InspectorComponentEdit::setLocalScale( target, values._localScale );

@@ -4,12 +4,12 @@
 
 #include "Editor/Common/EditorExtensionRegistry.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
-#include "Editor/Common/Input/EditorPopupManager.h"
+#include "Editor/Common/GUI/Popup/EditorPopupManager.h"
 #include "Editor/Common/Widgets/PropertyGrid/PropertyDrawerRegistry.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorDefaultObjects.h"
 #include "Editor/Common/Workspace/EditorExtensionSubsystems.h"
-#include "Editor/EditorSubsystemSet.h"
+#include "Editor/EditorBuiltinSubsystems.h"
 #include "Editor/Panels/Inspector/Model/InspectorComponentManager.h"
 
 #include "Engine/Reflection/TypeRegistry.h"
@@ -48,7 +48,7 @@ namespace sw::editor
     void EditorModuleUnloadListener::onModuleObjectsDetached( string_view /*moduleName*/ )
     {
         // 매니저마다 목록의 세대 번호와 맞춘다 — 바뀐 종류만 다시 짓는다.
-        EditorSubsystemSet::syncExtensionRegistrations( _context );
+        EditorBuiltinSubsystems::syncExtensionRegistrations( _context );
     }
 
     void EditorModuleUnloadListener::onModuleUnloading( string_view /*moduleName*/ )

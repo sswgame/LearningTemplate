@@ -25,5 +25,5 @@ namespace sw::editor
 
     SW_EDITOR_COMMAND( GimmickGraphOpen, "gimmick.openGraphPanel", &openGimmickGraphPanel, nullptr, NoScene );
 
-    SW_EDITOR_COMMAND_TEXT( GameplayTools, "gameplaytools.commands", "editor/commands/gameplaytools.commands.xml" ); // 이 모듈 명령의 표시 · 배치
+    SW_EDITOR_COMMAND_INFO( GameplayTools, "gameplaytools.commands", "editor/commands/gameplaytools.commands.xml" ); // 이 모듈 명령의 표시 · 배치
 } // namespace sw::editor

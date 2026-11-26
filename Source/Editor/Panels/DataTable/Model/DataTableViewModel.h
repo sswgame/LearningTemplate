@@ -12,7 +12,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Path/AbsolutePath.h"
 
-#include "Editor/Common/Commands/Asset/EditorLocalizationSheet.h"
+#include "Editor/Common/Commands/Asset/LocalizationSheet.h"
 #include "Editor/Common/Commands/EditorBackgroundIO.h"
 #include "Editor/Panels/Catalog/Model/CatalogDocument.h"
 

@@ -30,7 +30,7 @@ namespace sw::editor
 
     private:
         /** @brief 한 방향 슬라이더 그룹을 그립니다. 값이 바뀌었으면 true 이고, 손을 뗐을 때 바뀌었으면 @p outReleased 가 true 입니다. */
-        static bool drawLinkSliders( const utf8* pID, EditorNetLinkSettings& inoutSettings, bool& outReleased );
+        static bool drawLinkSliders( const utf8* pID, EditorNetEmulationSettings& inoutSettings, bool& outReleased );
         /** @brief 대상의 마지막 보고(`net.emulation stats` 의 답)를 한 줄로 그립니다. */
         static void drawReport( const MultiplayerProcessRow& status );
 
@@ -47,27 +47,27 @@ namespace sw::editor
     MultiplayerConditionsTab::MultiplayerConditionsTab()
         : _viewModel{}
         , _viewState{}
-        , _spikeSeconds{ EditorNetLinkSettings::kDefaultSpikeSeconds }
+        , _spikeSeconds{ EditorNetEmulationSettings::kDefaultSpikeSeconds }
         , _bApplyToAll{ false }
     {
     }
 
-    bool MultiplayerConditionsTab::drawLinkSliders( const utf8* pID, EditorNetLinkSettings& inoutSettings, bool& outReleased )
+    bool MultiplayerConditionsTab::drawLinkSliders( const utf8* pID, EditorNetEmulationSettings& inoutSettings, bool& outReleased )
     {
         bool bChanged = false;
         outReleased   = false;
         ImGui::PushID( pID );
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "LatencyMs" ) );
-        bChanged |= EditorWidgets::sliderFloat( SW_WIDGET_ID( "##Latencyms" ), &inoutSettings._latencyMilliseconds, 0.0f, EditorNetLinkSettings::kMaxLatencyMilliseconds, "%.0f" );
+        bChanged |= EditorWidgets::sliderFloat( SW_WIDGET_ID( "##Latencyms" ), &inoutSettings._latencyMilliseconds, 0.0f, EditorNetEmulationSettings::kMaxLatencyMilliseconds, "%.0f" );
         outReleased |= ImGui::IsItemDeactivatedAfterEdit();
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "JitterMs" ) );
-        bChanged |= EditorWidgets::sliderFloat( SW_WIDGET_ID( "##Jitterms" ), &inoutSettings._jitterMilliseconds, 0.0f, EditorNetLinkSettings::kMaxJitterMilliseconds, "%.0f" );
+        bChanged |= EditorWidgets::sliderFloat( SW_WIDGET_ID( "##Jitterms" ), &inoutSettings._jitterMilliseconds, 0.0f, EditorNetEmulationSettings::kMaxJitterMilliseconds, "%.0f" );
         outReleased |= ImGui::IsItemDeactivatedAfterEdit();
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "Loss" ) );
         bChanged |= EditorWidgets::sliderFloat( SW_WIDGET_ID( "##Loss" ), &inoutSettings._lossPercent, 0.0f, 100.0f, "%.1f" );
         outReleased |= ImGui::IsItemDeactivatedAfterEdit();
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "BandwidthKBS" ) );
-        bChanged |= EditorWidgets::sliderInt( SW_WIDGET_ID( "##BandwidthKBs" ), &inoutSettings._bandwidthKilobytesPerSecond, 0, EditorNetLinkSettings::kMaxBandwidthKilobytesPerSecond, "%d" );
+        bChanged |= EditorWidgets::sliderInt( SW_WIDGET_ID( "##BandwidthKBs" ), &inoutSettings._bandwidthKilobytesPerSecond, 0, EditorNetEmulationSettings::kMaxBandwidthKilobytesPerSecond, "%d" );
         outReleased |= ImGui::IsItemDeactivatedAfterEdit();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "ConditionsBandwidth" ) );
         ImGui::PopID();
@@ -117,10 +117,10 @@ namespace sw::editor
         ImGui::Separator();
         if ( ImGui::BeginTable( "##ConditionsLinks", 2, ImGuiTableFlags_SizingStretchSame ) )
         {
-            EditorNetLinkSettings up        = _viewState._up;
-            EditorNetLinkSettings down      = _viewState._down;
-            bool                  bUpDone   = false;
-            bool                  bDownDone = false;
+            EditorNetEmulationSettings up        = _viewState._up;
+            EditorNetEmulationSettings down      = _viewState._down;
+            bool                       bUpDone   = false;
+            bool                       bDownDone = false;
             ImGui::TableNextColumn();
             ImGui::TextUnformatted( SW_LOCKEY( "EdText", "UpSend" ) );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "ConditionsUp" ) );
@@ -133,9 +133,9 @@ namespace sw::editor
             if ( bChanged )
                 _viewModel.setLink( targetIndex, up, down ); // 끄는 동안의 값 — 보내기는 손을 뗐을 때다
             if ( bUpDone )
-                _viewModel.sendLink( EditorNetLinkDirection::Up, targetIndex, _bApplyToAll );
+                _viewModel.sendLink( NetEmulationDirection::Up, targetIndex, _bApplyToAll );
             if ( bDownDone )
-                _viewModel.sendLink( EditorNetLinkDirection::Down, targetIndex, _bApplyToAll );
+                _viewModel.sendLink( NetEmulationDirection::Down, targetIndex, _bApplyToAll );
         }
 
         ImGui::Separator();

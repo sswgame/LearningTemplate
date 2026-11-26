@@ -1,13 +1,13 @@
 /**
  * @file RigTargetGizmoVisualizer.cpp
- * @brief 리그 대상 오프셋 기즈모 시각화(MVVM View)입니다 — 값(`RigTargetEdit::gather`)으로 기즈모를 그리고 ImGuizmo 조작을 명령으로 냅니다.
- * @details 모으기 · 적용과 리그 파일 되쓰기(되돌리기 하나)는 Model `RigTargetEdit`, 명령 순서는 `RigTargetGizmoCommand::step`. 편집 상태는 리그 디버그 창과 함께 보는 `RigTargetEdit` 다.
+ * @brief 리그 대상 오프셋 기즈모 시각화(MVVM View)입니다 — 값(`RigTargetGizmoViewModel::gather`)으로 기즈모를 그리고 ImGuizmo 조작을 명령으로 냅니다.
+ * @details 모으기 · 적용과 리그 파일 되쓰기(되돌리기 하나)는 Model `RigTargetGizmoViewModel`, 명령 순서는 `RigTargetGizmoCommand::step`. 편집 상태는 리그 디버그 창과 함께 보는 `RigTargetGizmoViewModel` 다.
  */
 #include "pch.h"
 
-#include "Editor/Viewport/EditorViewportProjection.h"
+#include "Editor/Viewport/EditorViewportProjectionUtil.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"
-#include "Editor/Viewport/Model/RigTargetGizmoEdit.h"
+#include "Editor/Viewport/Model/Gizmo/RigTargetGizmoViewModel.h"
 
 #include "Engine/Localization/LocText.h"
 
@@ -33,7 +33,7 @@ namespace sw::editor
             {
                 const float32           aspect = args._canvasSize._x / ( args._canvasSize._y > 0.0f ? args._canvasSize._y : 1.0f );
                 RigTargetGizmoViewState state;
-                RigTargetEdit::get().gather( args._pActiveCamera, aspect, state );
+                RigTargetGizmoViewModel::get().gather( args._pActiveCamera, aspect, state );
                 if ( state._bAvailable == false )
                     return;
 
@@ -54,7 +54,7 @@ namespace sw::editor
                 vector<RigTargetGizmoCommand> listCommand;
                 RigTargetGizmoCommand::step( state._bDragging, bMoved ? &movedWorld : nullptr, ImGuizmo::IsUsing(), listCommand );
                 if ( listCommand.empty() == false )
-                    RigTargetEdit::get().apply( listCommand );
+                    RigTargetGizmoViewModel::get().apply( listCommand );
             }
         };
     } // namespace

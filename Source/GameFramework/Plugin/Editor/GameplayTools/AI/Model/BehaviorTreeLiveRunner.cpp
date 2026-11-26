@@ -2,8 +2,8 @@
 
 #include "GameFramework/Plugin/Editor/GameplayTools/AI/Model/BehaviorTreeLiveRunner.h"
 
-#include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorSubsystems.h"
+#include "Editor/Common/Workspace/Selection/EditorSelection.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
 

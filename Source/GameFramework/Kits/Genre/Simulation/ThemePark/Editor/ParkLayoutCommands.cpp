@@ -27,6 +27,6 @@ namespace sw::editor
 
     // [doc:command-register]
     SW_EDITOR_COMMAND( ParkLayoutOpen, "themepark.openLayoutPanel", &openParkLayoutPanel, nullptr, NoScene );
-    SW_EDITOR_COMMAND_TEXT( ThemePark, "themepark.commands", "editor/commands/themepark.commands.xml" ); // 이 모듈 명령의 표시 · 배치
+    SW_EDITOR_COMMAND_INFO( ThemePark, "themepark.commands", "editor/commands/themepark.commands.xml" ); // 이 모듈 명령의 표시 · 배치
     // [/doc:command-register]
 } // namespace sw::editor

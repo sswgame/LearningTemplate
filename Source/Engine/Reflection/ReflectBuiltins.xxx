@@ -10,7 +10,7 @@
  * SW_REFLECT_BUILTIN_TYPE( Canonical, CppType, TextConvOrNone, NamespaceOr-, Widget, Layout, Roles, aliases... )
  *   TextConv: stoi|stoll|stoul|stoull|stof|stod|packed|none
  *     none 은 SerializeContext 가 따로 처리기를 등록하는 타입이고, packed 는 `PackedValueTraits` 의 성분 규칙(쉼표로 이은 실수)으로 등록합니다.
- *   Widget: 에디터 `InspectorValueWidget` 열거자 이름(Number · Checkbox · Text · Name · Vector2 · Vector3 · Vector4 · Matrix · Rotation · Handle · Tag · Packed · Direction).
+ *   Widget: 에디터 `PropertyGridValueWidget` 열거자 이름(Number · Checkbox · Text · Name · Vector2 · Vector3 · Vector4 · Matrix · Rotation · Handle · Tag · Packed · Direction).
  *     Packed 는 TextConv=packed 줄에만 씁니다(파서가 시작할 때 봅니다).
  *   Layout: 메모리 모양 — none | num | f32(멤버, …) | i32(멤버, …) | angle
  *     num   산술 스칼라 하나(정수 · 실수). 상태 직렬화 · 해시는 그 타입 그대로 싣습니다.

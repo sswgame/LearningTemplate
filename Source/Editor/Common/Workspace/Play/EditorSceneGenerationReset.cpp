@@ -1,0 +1,22 @@
+#include "pch.h"
+
+#include "Editor/Common/Workspace/Play/EditorSceneGenerationReset.h"
+
+#include "Editor/Common/Workspace/EditorWorkspace.h"
+#include "Editor/Common/Workspace/Undo/CommandStack.h"
+
+namespace sw::editor
+{
+    bool EditorSceneGenerationReset::apply( EditorWorkspace& workspace, uint64 generation, bool bPlaying, CommandStack* pCommandStack )
+    {
+        if ( generation == workspace.getObservedSceneGeneration() )
+            return false;
+        workspace.setObservedSceneGeneration( generation );
+        if ( bPlaying == false )
+            workspace.clearSceneDirty();
+        workspace.clearSelection();
+        if ( pCommandStack != nullptr )
+            pCommandStack->clear();
+        return true;
+    }
+} // namespace sw::editor

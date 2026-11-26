@@ -10,7 +10,7 @@
 #include "Core/String/StringBuilder.h"
 
 #include "Editor/Common/Config/EditorPreferences.h"
-#include "Editor/Common/Config/EditorSettingsRegistry.h"
+#include "Editor/Common/Config/EditorPreferencesRegistry.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Console/DevCommandRegistry.h"
@@ -76,7 +76,7 @@ namespace sw::editor
         };
     } // namespace
 
-    SW_EDITOR_SETTINGS( EditorDiagnosticsPreferences, "diagnostics", "Editor/Diagnostics", 380, &EditorAssertControlInternal::onDiagnosticsChanged );
+    SW_EDITOR_PREFERENCES( EditorDiagnosticsPreferences, "diagnostics", "Editor/Diagnostics", 380, &EditorAssertControlInternal::onDiagnosticsChanged );
 
     SW_DEV_COMMAND( AssertClearIgnored, "assert.clearIgnored", "assert.clearIgnored",
                     "Forget every assert site the assert dialog was told to ignore for the rest of the run (Cancel) - the next failure asks again",

@@ -1,7 +1,7 @@
 /**
  * @file Engine/Config/GameAutoplay.h
  * @brief 게임의 자동 플레이(입력 없이 AI 가 조종 — 확인 · 녹화 · 벤치) 개발 스위치입니다. 게임이 자기 `Dev/` 에서 한 줄로 등록하고, 에디터 툴바 · 콘솔 · 명령줄이 같은 스위치를 켭니다.
- * @details 등록 틀만 여기 있다(게임 모듈이 쓰므로 Engine). 켜는 장치(콘솔 `autoplay` · 런타임 칸 `IGameAutoplayQuery` 를 채우는 서브시스템)는 개발 도구 `DevTools/Diagnostics/GameAutoplaySwitch.cpp` 다 — 게임 모드는 이 헤더를 모르고 칸만 읽는다.
+ * @details 등록 틀만 여기 있다(게임 모듈이 쓰므로 Engine). 켜는 장치(콘솔 `autoplay` · 런타임 칸 `IGameAutoplayQuery` 를 채우는 서브시스템)는 개발 도구 `DevTools/Diagnostics/GameAutoplaySubsystem.cpp` 다 — 게임 모드는 이 헤더를 모르고 칸만 읽는다.
  */
 #pragma once
 #include "Core/Foundation/Macros.h"

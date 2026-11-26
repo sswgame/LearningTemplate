@@ -2,7 +2,7 @@
  * @file ZoneVolumeInspector.cpp
  * @brief 지역 볼륨의 인스펙터 구역 — 프리셋(프로필 · 변형)에서 물려받은 모듈과 이 자리가 바꾼 모듈을 가르고, 바꾼 것마다 되돌리기를 둡니다.
  * @details 프리팹 덮어쓰기 화면과 같은 길이다: 줄마다 출처(물려받음 · 바꿈 · 통째로 바꿈 · 더함 · 뺌)를 흐린 글로 붙이고, 덮어쓴 모듈마다 되돌리기가 덮어쓰기 항목 하나를 지운다
- *          (되돌리기 기록 · 씬 dirty 는 `InspectorObjectEdit`, 쓰기는 게임 단계 요청 `InspectorComponentEdit::requestComponentEdit` 하나). 매개변수는 합친 값을 칸으로 보인다 — 물려받은 값을 고치면 이 자리의 합치기 덮어쓰기가 되고, 이 자리가 적은 값은 표시와
+ *          (되돌리기 기록 · 씬 dirty 는 `PropertyGridObjectEdit`, 쓰기는 게임 단계 요청 `InspectorComponentEdit::requestComponentEdit` 하나). 매개변수는 합친 값을 칸으로 보인다 — 물려받은 값을 고치면 이 자리의 합치기 덮어쓰기가 되고, 이 자리가 적은 값은 표시와
  *          되돌리기(그 매개변수만 — 항목이 비면 항목째, `ZoneModuleDef::revertOverrideParam`)를 단다. 통째로 바꾸기 · 빼기 항목과 칸 밖의 것(조건 · 경우)은 반사 칸에서 고친다.
  *          언리얼 Details 의 "Reset to default" 화살표 ·
  *          유니티 Prefab Overrides 창(굵은 글 · 파란 막대 · Revert)과 같은 자리다(기억). 강조색은 쓰지 않는다(상태는 글 — 앱 화면 규칙).
@@ -12,8 +12,8 @@
 #include "Core/String/formatString.h"
 
 #include "Editor/Common/Widgets/EditorWidgets.h"
-#include "Editor/Common/Widgets/PropertyGrid/Model/InspectorObjectEdit.h"
-#include "Editor/Common/Workspace/EditorTransaction.h"
+#include "Editor/Common/Widgets/PropertyGrid/Model/PropertyGridObjectEdit.h"
+#include "Editor/Common/Workspace/Undo/EditorTransaction.h"
 #include "Editor/Panels/Inspector/IComponentInspector.h"
 #include "Editor/Panels/Inspector/Model/InspectorComponentEdit.h"
 #include "Editor/Panels/Inspector/Model/InspectorComponentManager.h"
@@ -39,7 +39,7 @@ namespace sw::editor
                 InspectorComponentEdit::requestComponentEdit( target, SW_DELEGATE_LAMBDA( InspectorComponentEdit::ComponentEditDelegate, [name]( Component& component, EditorTransaction& transaction )
                 {
                     ZoneVolumeComponent& volume = static_cast<ZoneVolumeComponent&>( component ); // 이 형에 등록한 확장의 대상이다
-                    InspectorObjectEdit::applyObjectEdit( transaction, volume.getOwner(), SW_LOCKEY( "EdUndo", "ZoneRevertModule" ), [&volume, &name]()
+                    PropertyGridObjectEdit::applyObjectEdit( transaction, volume.getOwner(), SW_LOCKEY( "EdUndo", "ZoneRevertModule" ), [&volume, &name]()
                     { (void)ZoneModuleDef::revertOverrideModule( volume.getModuleOverrides(), name ); } );
                 } ) );
             }
@@ -60,7 +60,7 @@ namespace sw::editor
                 {
                     ZoneVolumeComponent& volume = static_cast<ZoneVolumeComponent&>( component ); // 이 형에 등록한 확장의 대상이다
                     const utf8*          pUndo  = edit._bRevert ? SW_LOCKEY( "EdUndo", "ZoneRevertParam" ) : SW_LOCKEY( "EdUndo", "ZoneOverrideParam" );
-                    InspectorObjectEdit::applyObjectEdit( transaction, volume.getOwner(), pUndo, [&volume, &edit]()
+                    PropertyGridObjectEdit::applyObjectEdit( transaction, volume.getOwner(), pUndo, [&volume, &edit]()
                     {
                         if ( edit._bRevert )
                             (void)ZoneModuleDef::revertOverrideParam( volume.getModuleOverrides(), edit._module, edit._param );

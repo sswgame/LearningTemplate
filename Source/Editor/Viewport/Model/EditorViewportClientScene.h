@@ -16,7 +16,7 @@ namespace sw::editor
     struct EditorGizmoViewState;
     struct EditorViewportVisualizerArgs;
 
-    class EditorGizmoEdit;
+    class EditorGizmoViewModel;
     class EditorViewportCamera;
 
     /** @brief 씬 뷰 이미지를 그린 카메라(에디터 카메라)의 이번 프레임 값입니다. */
@@ -46,10 +46,10 @@ namespace sw::editor
         static void fillVisualizerScene( EditorViewportVisualizerArgs& inoutArgs );
         /** @brief 씬 변환을 이번 프레임 값으로 맞춥니다(기즈모 모으기 전에). */
         static void flushSceneTransforms();
-        /** @brief 메인 선택의 기즈모 대상을 모읍니다(`EditorGizmoEdit::gather`). */
+        /** @brief 메인 선택의 기즈모 대상을 모읍니다(`EditorGizmoViewModel::gather`). */
         static void gatherGizmo( EditorGizmoViewState& outState );
-        /** @brief 기즈모 명령을 메인 선택에 적용합니다(`EditorGizmoEdit::apply`). */
-        static void applyGizmo( EditorGizmoEdit& edit, const vector<EditorGizmoCommand>& listCommand );
+        /** @brief 기즈모 명령을 메인 선택에 적용합니다(`EditorGizmoViewModel::apply`). */
+        static void applyGizmo( EditorGizmoViewModel& edit, const vector<EditorGizmoCommand>& listCommand );
         /** @brief 씬 뷰가 포커스면 인스펙터 · 전역 명령이 다시 메인 선택을 겨눈다 — 미리보기 창이 걸어 둔 것을 푼다(`editor::getFocusedSelection`). */
         static void focusMainSelection();
         /** @brief 워크스페이스 기즈모 조작 번호(0 이동 · 1 회전 · 2 크기)입니다. */

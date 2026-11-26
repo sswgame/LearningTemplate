@@ -5,7 +5,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Path/AbsolutePath.h"
 
-#include "DevTools/Material/MaterialGraph.h"
+#include "DevTools/Material/MaterialGraphDef.h"
 #include "DevTools/Material/MaterialGraphNodeRegistry.h"
 
 #include "Editor/Common/Commands/EditorCommandRegistry.h"

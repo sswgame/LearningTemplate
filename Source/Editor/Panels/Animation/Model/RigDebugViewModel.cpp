@@ -10,9 +10,9 @@
 #include "Editor/Common/Commands/Asset/RigSaveParams.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorSubsystems.h"
-#include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
-#include "Editor/Viewport/Model/RigTargetGizmoEdit.h"
+#include "Editor/Common/Workspace/Undo/EditorTransaction.h"
+#include "Editor/Viewport/Model/Gizmo/RigTargetGizmoViewModel.h"
 
 #include "Engine/Animation/Component/SkeletalMeshComponent.h"
 #include "Engine/Animation/Rig/RigAsset.h"
@@ -160,13 +160,13 @@ namespace sw::editor
         outState._listTarget.clear();
         outState._content = RigDebugContent::NoRig;
 
-        const uint64   objectID   = Internal::getSelectedObjectID();
-        RigTargetEdit& targetEdit = RigTargetEdit::get();
+        const uint64             objectID   = Internal::getSelectedObjectID();
+        RigTargetGizmoViewModel& targetEdit = RigTargetGizmoViewModel::get();
         if ( objectID != _selectedObjectID )
         {
             _selectedObjectID = objectID;
             _selectedNode     = nullopt;
-            targetEdit        = RigTargetEdit{};
+            targetEdit        = RigTargetGizmoViewModel{};
         }
         outState._status       = _status;
         outState._targetStatus = targetEdit._status;
@@ -261,10 +261,10 @@ namespace sw::editor
 
     void RigDebugViewModel::setTargetGizmo( uint32 targetIndex, bool bOn )
     {
-        RigTargetEdit& targetEdit = RigTargetEdit::get();
-        targetEdit                = RigTargetEdit{};
-        targetEdit._objectID      = bOn ? _selectedObjectID : 0;
-        targetEdit._targetIndex   = bOn ? optional<uint32>{ targetIndex } : nullopt;
+        RigTargetGizmoViewModel& targetEdit = RigTargetGizmoViewModel::get();
+        targetEdit                          = RigTargetGizmoViewModel{};
+        targetEdit._objectID                = bOn ? _selectedObjectID : 0;
+        targetEdit._targetIndex             = bOn ? optional<uint32>{ targetIndex } : nullopt;
     }
 
     void RigDebugViewModel::submitBoneMarkers( const float4& color )

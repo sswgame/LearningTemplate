@@ -1,7 +1,7 @@
 /**
  * @file EditorContext.cpp
  * @brief EditorContext 의 범위와 생명 주기(생성 · 초기화 · 종료 · 활성 전환)입니다.
- * @details 어느 하위 객체를 넣는지는 모르고 셸이 넘긴 조립점(`EditorSubsystemSet::install`)에 맡긴다. 그래서 컨텍스트를 쓰기만 하는 코드(단위 테스트)가
+ * @details 어느 하위 객체를 넣는지는 모르고 셸이 넘긴 조립점(`EditorBuiltinSubsystems::install`)에 맡긴다. 그래서 컨텍스트를 쓰기만 하는 코드(단위 테스트)가
  *          패널 · 팝업 · 인스펙터 매니저(그 끝은 ImGui)를 링크에 끌어오지 않는다. 언리얼 `UEditorEngine` 이 서브시스템 컬렉션을 들기만 하는 것과 같다.
  */
 #include "pch.h"
@@ -18,8 +18,8 @@
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/Job/EditorBackgroundJob.h"
 #include "Editor/Common/Workspace/EditorExtensionSubsystems.h"
-#include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/Common/Workspace/EditorSubsystems.h"
+#include "Editor/Common/Workspace/Layout/EditorStateStore.h"
 
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Foundation/EngineSubsystemHost.h"

@@ -8,7 +8,7 @@
 #include "Core/Subsystem/Subsystem.h"
 
 #include "DevTools/DevToolsAPI.h"
-#include "DevTools/Profiling/FrameStall.h"
+#include "DevTools/Profiling/FrameHitchInjection.h"
 
 #include "Engine/EngineHooks.h"
 
@@ -23,7 +23,7 @@ namespace sw
      * @class DevToolsHost
      * @brief 호스트(App · Server)가 자기 범위에 두는 개발 도구의 진입점입니다. 엔진은 이것을 모르고 두 확장점으로만 만난다.
      * @details 엔진 확장점은 상속하지 않고 델리게이트로 붙는다 —
-     *          - 기동 확장(`EngineStartupExtensionDelegate`): 셰이더 라이브 리로드(`LiveShaderSubsystem`, 렌더러가 있을 때)와 설정 파일 리로드(`ConfigReloadSubsystem`), 디버그 HUD(`DebugHUD`, UI 가 있을 때)를 기동 단계 범위에 더한다.
+     *          - 기동 확장(`EngineStartupExtensionDelegate`): 셰이더 라이브 리로드(`ShaderHotReloadSubsystem`, 렌더러가 있을 때)와 설정 파일 리로드(`ConfigHotReloadSubsystem`), 디버그 HUD(`DebugHUD`, UI 가 있을 때)를 기동 단계 범위에 더한다.
      *          - 파일 읽기 관찰자(`FileReadDiagnostics`): 만들 때 걸어 기동 첫 읽기부터 디스크 흉내 · 읽기 기록을 한다(호스트 범위 수명).
      *          - 누수 기준선 질의(`gv_leakWindowFullStacks` — `MemoryProfiler::setLeakBaselineDetailQuery`): 만들 때 걸어 기동 기준선 창의 기록 수준을 답한다.
      *          - 프레임 훅(`EngineFrameHooks`): 씬 틱 뒤에 HUD 를 돌리고, 프레임 끝에 셰이더 재컴파일을 돌리고(Debug) 강제 리로드 단축키를 읽고, 설정 파일 변화를 반영한다.
@@ -64,7 +64,7 @@ namespace sw
         EngineFrameHooks makeFrameHooks();
 
         /** @brief 개발 명령 `profile.stall` 이 거는 프레임 지연입니다(씬 틱 뒤에 소비한다). */
-        FrameStall& getFrameStall() { return _frameStall; }
+        FrameHitchInjection& getFrameHitchInjection() { return _frameHitchInjection; }
 
     private:
         void            onFrameBegin( const EngineFrameContext& context );
@@ -79,6 +79,6 @@ namespace sw
         unique_ptr<DevConsoleHost>            _pConsole; ///< `startConsole` 이 세운 콘솔(App 만 — 서버는 자기 명령 채널이 있다)
         unique_ptr<ContentFolderWatchService> _pContentFolderWatch;
         unique_ptr<FileReadDiagnostics>       _pFileReadDiagnostics; ///< 파일 읽기 관찰자(디스크 흉내 · 읽기 기록) — 만들 때 걸고 소멸할 때 뗀다
-        FrameStall                            _frameStall;           ///< `profile.stall` 이 건 지연(`onAfterSceneTick` 이 소비한다)
+        FrameHitchInjection                   _frameHitchInjection;  ///< `profile.stall` 이 건 지연(`onAfterSceneTick` 이 소비한다)
     };
 } // namespace sw

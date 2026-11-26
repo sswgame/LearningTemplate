@@ -7,11 +7,11 @@
 
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
+#include "Editor/Common/GUI/Popup/EditorPopupManager.h"
 #include "Editor/Common/GUI/Status/EditorStatusBar.h"
 #include "Editor/Common/Input/EditorInputActions.h"
-#include "Editor/Common/Input/EditorPopupManager.h"
 #include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorFrameStep.h"
+#include "Editor/Common/Workspace/View/EditorFrameStep.h"
 #include "Editor/Panels/Inspector/Model/InspectorComponentManager.h"
 #include "Editor/Panels/Multiplayer/MultiplayerTab.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"

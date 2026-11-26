@@ -17,7 +17,7 @@
 #include "Editor/Common/Widgets/EditorNodeGraphID.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/Play/EditorSessionPolicy.h"
-#include "Editor/Panels/Animation/Model/AnimationGraphEdit.h"
+#include "Editor/Panels/Animation/Model/AnimationGraphEditModel.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Animation/AnimationClip.h"
@@ -176,7 +176,7 @@ namespace sw::editor
         {
             const utf8* pEdit = _layerEditor.draw( _graph );
             if ( pEdit != nullptr )
-                AnimationGraphEdit::commitLayerEdit( getGraphEditSession(), pEdit );
+                AnimationGraphEditModel::commitLayerEdit( getGraphEditSession(), pEdit );
             ImGui::EndTabItem();
         }
         ImGui::EndTabBar();
@@ -204,7 +204,7 @@ namespace sw::editor
                     if ( bClipState == false && kind._kindID == SW_COUNT_OF( AnimationGraphPanelInternal::kArrClipStateName ) )
                         ImGui::SeparatorText( SW_LOCKEY( "EditorAnimationGraph", "AddPoseNodeSection" ) );
                     if ( ImGui::MenuItem( kind._pName ) && addNodeOfKind( kind._kindID ) != 0 )
-                        AnimationGraphEdit::commitNodeAdded( getGraphEditSession() );
+                        AnimationGraphEditModel::commitNodeAdded( getGraphEditSession() );
                     EditorSelfTestMarks::recordFormat( "animationGraph.add.%#", kind._pName );
                     EditorWidgets::drawTooltip( bClipState ? arrClipTip[kind._kindID] : SW_LOCKEY( "EditorAnimationGraph", "AddPoseNodeTip" ) );
                 }
@@ -383,7 +383,7 @@ namespace sw::editor
             link._id       = nextLinkID();
             link._fromNode = AnimationGraphPanelInternal::pinNodeID( fromPin );
             link._toNode   = AnimationGraphPanelInternal::pinNodeID( toPin );
-            AnimationGraphEdit::addLink( _graph, getGraphEditSession(), link );
+            AnimationGraphEditModel::addLink( _graph, getGraphEditSession(), link );
         }
 
         vector<EditorGraphNodeKind> listKind;
@@ -396,7 +396,7 @@ namespace sw::editor
             if ( nodeID != 0 )
             {
                 placeNewNode( nodeID, canvasPosition );
-                AnimationGraphEdit::commitNodeAdded( getGraphEditSession() );
+                AnimationGraphEditModel::commitNodeAdded( getGraphEditSession() );
             }
         }
 
@@ -427,7 +427,7 @@ namespace sw::editor
     ToolAssetLoadResult AnimationGraphPanel::loadDocument()
     {
         AnimationGraphAsset       data;
-        const ToolAssetLoadResult result = AnimationGraphEdit::loadGraph( data, getLoadedAssetPath() );
+        const ToolAssetLoadResult result = AnimationGraphEditModel::loadGraph( data, getLoadedAssetPath() );
         applyLoadedGraph( std::move( data ), result );
         _preview.resetForDocument();
         _layerEditor.clearSelection();
@@ -446,7 +446,7 @@ namespace sw::editor
     bool AnimationGraphPanel::saveDocument( AssetWriter& writer )
     {
         // 노드 자리는 그린 프레임마다 `cacheNodeLayout` 이 문서에 싣는다 — 저장이 캔버스에 다시 물으면 아직 그리지 않은 노드(되돌리기 직후)는 FLT_MAX 가 파일에 남는다.
-        return AnimationGraphEdit::saveGraph( writer, captureGraphData(), getLoadedAssetPath() );
+        return AnimationGraphEditModel::saveGraph( writer, captureGraphData(), getLoadedAssetPath() );
     }
 
     int32 AnimationGraphPanel::addNamedNode( const utf8* pName )
@@ -466,7 +466,7 @@ namespace sw::editor
     int32 AnimationGraphPanel::addPoseNode( const hashed_string& typeName )
     {
         AnimationGraphPoseNodeDef def;
-        if ( AnimationGraphEdit::makeDefaultPoseNode( typeName, def ) == false )
+        if ( AnimationGraphEditModel::makeDefaultPoseNode( typeName, def ) == false )
             return 0; // 오류는 표가 남겼다
         const int32 nodeID                = addNamedNode( typeName.c_str() );
         _graph._listNode.back()._poseNode = std::move( def );
@@ -476,7 +476,7 @@ namespace sw::editor
     void AnimationGraphPanel::collectAddKinds( vector<EditorGraphNodeKind>& outListKind )
     {
         // 표는 게임 · 플러그인이 종류를 더할 수 있어 메뉴를 열 때마다 다시 읽는다. 이름 포인터는 이 목록(`_listPoseTypeName`)이 다음 호출까지 든다.
-        _listPoseTypeName = AnimationGraphEdit::getPoseNodeTypeNames();
+        _listPoseTypeName = AnimationGraphEditModel::getPoseNodeTypeNames();
         outListKind.clear();
         uint32 kindID = 0;
         for ( const utf8* pName : AnimationGraphPanelInternal::kArrClipStateName )
@@ -568,7 +568,7 @@ namespace sw::editor
         link._fromNode  = _listSelectionOrder[_listSelectionOrder.size() - 2];
         link._toNode    = _listSelectionOrder.back();
         _selectedLinkID = link._id;
-        AnimationGraphEdit::addLink( _graph, getGraphEditSession(), link );
+        AnimationGraphEditModel::addLink( _graph, getGraphEditSession(), link );
     }
 
     uint32 AnimationGraphPanel::countConditionLinks() const
@@ -648,7 +648,7 @@ namespace sw::editor
         const bool bStateNameCommitted = ImGui::IsItemDeactivatedAfterEdit() && _nameEditBuffer.empty() == false && _nameEditBuffer != pNode->_name;
         if ( bStateNameCommitted )
         {
-            AnimationGraphEdit::renameState( pNode->_name, getGraphEditSession(), _nameEditBuffer );
+            AnimationGraphEditModel::renameState( pNode->_name, getGraphEditSession(), _nameEditBuffer );
         }
         const utf8* const arrLoop[] = { "Default", "Loop", "Once" };
         int32             loopIndex = pNode->_loop.has_value() == false ? 0 : ( *pNode->_loop ? 1 : 2 );
@@ -657,7 +657,7 @@ namespace sw::editor
         ImGui::SetNextItemWidth( -FLT_MIN );
         if ( EditorWidgets::combo( SW_WIDGET_ID( "##stateLoop" ), &loopIndex, arrLoop, 3 ) )
         {
-            AnimationGraphEdit::setStateLoop( pNode->_loop, getGraphEditSession(), loopIndex == 0 ? optional<bool>{} : optional<bool>( loopIndex == 1 ) );
+            AnimationGraphEditModel::setStateLoop( pNode->_loop, getGraphEditSession(), loopIndex == 0 ? optional<bool>{} : optional<bool>( loopIndex == 1 ) );
         }
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationGraph", "StateLoopTip" ) );
         if ( pNode->hasPoseNode() )
@@ -689,7 +689,7 @@ namespace sw::editor
 
     void AnimationGraphPanel::drawPoseNodeInspector( GraphNode& node )
     {
-        const AnimationPoseNodeType* pType = AnimationGraphEdit::findPoseNodeType( node._poseNode._type );
+        const AnimationPoseNodeType* pType = AnimationGraphEditModel::findPoseNodeType( node._poseNode._type );
         ImGui::SeparatorText( SW_LOCKEY( "EditorAnimationGraph", "PoseNodeSection" ) );
         ImGui::TextDisabled( "%s", node._poseNode._type.c_str() );
         if ( pType == nullptr )
@@ -798,7 +798,7 @@ namespace sw::editor
         // 계약을 어기는 편집(빈 입력 · 섹션 차례 · 없는 링크)은 들이지 않는다 — 까닭은 표가 오류로 남겼다.
         _poseDraftNodeID = 0;
         if ( AnimationPoseNodeRegistry::isSatisfiedBy( *pType, edited, node._name ) )
-            AnimationGraphEdit::setPoseNode( node._poseNode, getGraphEditSession(), std::move( edited ) );
+            AnimationGraphEditModel::setPoseNode( node._poseNode, getGraphEditSession(), std::move( edited ) );
     }
 
     void AnimationGraphPanel::drawTransitionList()
@@ -888,6 +888,6 @@ namespace sw::editor
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationGraph", "TransitionBlendTip" ) );
         bEdited = ImGui::IsItemDeactivatedAfterEdit() || bEdited;
         if ( bEdited )
-            AnimationGraphEdit::commitTransitionEdit( getGraphEditSession() );
+            AnimationGraphEditModel::commitTransitionEdit( getGraphEditSession() );
     }
 } // namespace sw::editor

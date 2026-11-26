@@ -24,7 +24,7 @@ namespace sw::editor
         static void registerDefaults();
         /**
          * @brief 커맨드 등록 줄(`SW_EDITOR_COMMAND`)의 세대가 바뀌었으면 표와 등록 줄로 레지스트리를 다시 만들고, 이번 UI 프레임이 읽을 명령 켜짐 값 묶음을 냅니다(`publishEnabledState`).
-         * @details 셸이 UI 프레임을 열기 직전에 부른다(`ImGuiEditor::prepareFrameState` → `EditorSubsystemSet::syncExtensionRegistrations`). 스레드를 나누지 않으므로(사용자 결정)
+         * @details 셸이 UI 프레임을 열기 직전에 부른다(`ImGuiEditor::prepareFrameState` → `EditorBuiltinSubsystems::syncExtensionRegistrations`). 스레드를 나누지 않으므로(사용자 결정)
          *          한 호스트 프레임은 이 준비 → UI 프레임(메뉴 · 패널) → 명령 적용 · 게임 단계 → 씬 틱 순서로 한 스레드에서 돈다 — UI 가 읽는 값을 UI 바로 앞에서 내므로
          *          첫 프레임 · 모듈 리로드로 다시 만든 뒤에도 그 프레임의 메뉴가 바로 켜진다. 계약 테스트 `EditorUIFrameOrderTest`.
          */

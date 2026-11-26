@@ -10,8 +10,8 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
-#include "DevTools/Material/MaterialGraph.h"
 #include "DevTools/Material/MaterialGraphCompileResult.h"
+#include "DevTools/Material/MaterialGraphDef.h"
 
 #include "Engine/Asset/AssetDatabase.h"
 #include "Engine/Content/AssetGUID.h"
