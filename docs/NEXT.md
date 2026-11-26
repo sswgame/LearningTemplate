@@ -26,7 +26,7 @@
 | --- | --- |
 | w-shaderreload · LT-wt/shaderreload | 끝(b58d3c91df — 열거형 여섯을 `ENUM()` 으로) — 다음 묶음에 합친다 |
 | w-pimpl · LT-wt/pimpl | 끝(d7a634aef5 — .meta 산출물 표) — 다음 묶음에 합친다. 합친 뒤 `App --import-models --import-textures --import-heightfields -unattended` 로 원본 .meta 약 1486 개를 채우고 `py -3 -m Scripts asset-ids` 확인 뒤 커밋 |
-| w-cpp-reflect · LT-wt/cppreflect | ReflectionValidation 나누기 끝(…ee8f658c0a — 다음 묶음), 타입 검증으로 적힌 에디터 검사(HousingPlot `validatePlot` 등)를 개발 전용으로, 모듈 PCH 퇴행 둘(visit 이 PCH 선언까지 훑음, 작은 키트 굽기 문턱) |
+| w-cpp-reflect · LT-wt/cppreflect | 끝(…ba567aadce — ReadValidate 분리, 이름공간 건너뛰기 복원, PCH 문턱 4) — 다음 묶음에 합친다. 합친 뒤 파서를 다시 잰다(앞서 건너뛰기는 PCH 없이 251.5 초로 느려 되돌렸다 — 다시 느리면 f443d780ea 를 되돌린다, 문턱은 GF_NetDestruction · GF_Overworld · GF_Server_Admin total 로 정한다) |
 
 나머지 갈래(enum-meta · gf-dev · devtools-merge · server-subsystem · engine-owner · core-lift · render-data)는 main 에 합쳤다. push 뒤 워크트리를 지운다.
 
