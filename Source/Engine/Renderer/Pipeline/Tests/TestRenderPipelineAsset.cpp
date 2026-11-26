@@ -124,6 +124,24 @@ SW_TEST_CASE( RenderPipelineAssetTest, ImpossibleStateIsRejected )
     SW_EXPECT_FALSE( RenderPipelineTestUtil::loadMeshState( asset, "_bEnableDepthTest=\"false\" _bEnableDepthWrite=\"true\" _cullMode=\"Back\"", "ForwardOpaque", false ) );
 }
 
+/**
+ * @brief [RenderPipelineAssetTest] 표가 "XML 은 끌 수만 있다" 고 적은 칸(깊이 쓰기 · 앞면 컬링)은 켜거나 뒤집으면 로드 오류다 — 실행이 받지 않는 값을 조용히 PSO 에 넣지 않는다
+ * @details 변이: 두 검사를 지우면 깊이를 쓰는 반투명 · 뒷면 컬링 메시 외곽선이 읽혀 마지막 두 단언이 진다.
+ */
+SW_TEST_CASE( RenderPipelineAssetTest, TableOnlyStatesCannotBeTurnedOn )
+{
+    RenderPipelineAsset asset;
+    SW_EXPECT_TRUE( RenderPipelineTestUtil::loadMeshState( asset, "_bEnableDepthTest=\"true\" _bEnableDepthWrite=\"true\" _cullMode=\"Front\"", "MeshOutline" ) );
+    SW_EXPECT_TRUE( RenderPipelineTestUtil::loadMeshState( asset, "_bEnableDepthTest=\"true\" _bEnableDepthWrite=\"true\" _cullMode=\"None\"", "MeshOutline" ) );
+
+    SW_EXPECT_LOG( "RenderPipelineAsset.PassDepthWriteNotWritable" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.PassCullFrontKind" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.PipelineValidationFoundIssues" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.PipelineIssueNotLoaded" );
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::loadMeshState( asset, "_bEnableDepthTest=\"true\" _bEnableDepthWrite=\"true\" _cullMode=\"Back\" _blendPreset=\"Transparent\"", "Transparent" ) );
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::loadMeshState( asset, "_bEnableDepthTest=\"true\" _bEnableDepthWrite=\"true\" _cullMode=\"Back\"", "MeshOutline" ) );
+}
+
 /** @brief [RenderPipelineAssetTest] 반투명의 블렌드를 끄는 것은 고를 수 있지만 경고한다 */
 SW_TEST_CASE( RenderPipelineAssetTest, TransparentWithoutBlendWarns )
 {

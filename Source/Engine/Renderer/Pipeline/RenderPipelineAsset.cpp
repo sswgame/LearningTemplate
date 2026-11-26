@@ -329,6 +329,20 @@ namespace sw
                         SW_LOG_ERROR_ID( "RenderPipelineAsset.PassDepthWriteNoTest", "[%#] pass '%#': _bEnableDepthWrite needs _bEnableDepthTest", sourcePath, pass._name );
                         ++issueCount;
                     }
+                    // 표가 "XML 은 끌 수만 있다" 고 적은 칸은 켤 수 없다 — 실행이 그 값을 받지 않는다. 깊이를 쓰지 않는 패스(반투명 · 하늘 · 강조)는 장면 깊이를 입력으로 읽거나 테스트만 하는 첨부로 쥔다.
+                    else if ( pass._bEnableDepthWrite && info.hasFlag( RenderPassTraitFlag::kDepthWrite ) == false )
+                    {
+                        SW_LOG_ERROR_ID( "RenderPipelineAsset.PassDepthWriteNotWritable", "[%#] pass '%#': a %# pass does not write depth - set _bEnableDepthWrite=\"false\"", sourcePath, pass._name,
+                                         getEnumName( pass._type ) );
+                        ++issueCount;
+                    }
+                    // 앞면 컬링 종류(인버티드 헐 외곽선 · 강조)는 None 으로만 바꿀 수 있다 — Back 이면 부풀린 껍질의 앞면이 물체를 덮는다.
+                    if ( info.hasFlag( RenderPassTraitFlag::kCullFront ) && pass._cullMode == CullMode::Back )
+                    {
+                        SW_LOG_ERROR_ID( "RenderPipelineAsset.PassCullFrontKind", "[%#] pass '%#': a %# pass culls front faces (inverted hull) - _cullMode must be Front or None, not Back", sourcePath, pass._name,
+                                         getEnumName( pass._type ) );
+                        ++issueCount;
+                    }
                     // 같은 규칙을 머티리얼을 합친 값에도 건다(`FixedRenderState::findInvalidReason`). 깊이 쓰기는 위가 알렸다.
                     const utf8* const pStateReason = pass._bEnableDepthWrite && pass._bEnableDepthTest == false ? nullptr : pass.findInvalidReason();
                     if ( pStateReason != nullptr )

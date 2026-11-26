@@ -134,7 +134,7 @@ namespace sw
     struct RenderPassTraitFlag
     {
         static constexpr uint32 kDepthTest  = BitUtil::bit( 0 ); ///< PSO 기본값으로 깊이 테스트를 쓴다(XML 로 끌 수는 있어도 켤 수는 없다).
-        static constexpr uint32 kDepthWrite = BitUtil::bit( 1 ); ///< PSO 기본값으로 깊이 쓰기를 한다.
+        static constexpr uint32 kDepthWrite = BitUtil::bit( 1 ); ///< PSO 기본값으로 깊이 쓰기를 한다. 없는 종류는 XML 이 깊이 쓰기를 켤 수 없다(로드 오류 `PassDepthWriteNotWritable`).
         /**
          * @brief 한 파이프라인에 이 종류의 뷰 패스를 여럿 둘 수 있다 — 실행과 PSO 가 종류가 아니라 패스 서술로 갈린다(그림자: 깊이 첨부의 역할이 타일을 고른다, Compute: 셰이더가 패스마다 다르다, 후처리 머티리얼: 블렌더블 자리가 패스마다 다르다).
          * @details 없는 종류를 두 번 선언하면 로드 오류다(`RenderPipelineAsset::validate`) — 실행이 종류 하나의 상태(기록 · 타일 · 입자 원본)를 쥐어 둘째 패스가 그것을 덮는다.
@@ -151,7 +151,7 @@ namespace sw
         static constexpr uint32 kCompute               = BitUtil::bit( 9 );  ///< 컴퓨트 PSO 다(`CSMain`).
         static constexpr uint32 kRequiresGPUCulling    = BitUtil::bit( 10 ); ///< 컴퓨트 PSO 를 `_bGPUCulling` 일 때만 만든다(아니면 `_bCompute`).
         static constexpr uint32 kHasInputContract      = BitUtil::bit( 11 ); ///< `_inputContract` 가 이 패스의 입력을 검사한다.
-        static constexpr uint32 kCullFront             = BitUtil::bit( 12 ); ///< PSO 기본값으로 앞면 컬링을 쓴다(인버티드 헐 외곽선). XML 은 None 으로만 바꿀 수 있다.
+        static constexpr uint32 kCullFront             = BitUtil::bit( 12 ); ///< PSO 기본값으로 앞면 컬링을 쓴다(인버티드 헐 외곽선). XML 은 None 으로만 바꿀 수 있다(Back 은 로드 오류 `PassCullFrontKind`).
         /**
          * @brief 후처리를 끈 뷰(CCTV, 표면 값 보기)와 품질(`_minPostQuality`)로 꺼지는 효과 패스다(SSAO, 블룸, 외곽선, 피사계 심도, 모션 블러)와 TAA 다. TAA 말고는 `kGenericFullscreen` 에만 붙는다.
          * @details 꺼진 패스는 기록하지 않는다 — 어떻게 빠지는지는 `kBypassesToSource`(출력이 원본을 가리킨다) 또는 `kOmittedWhenOff`(출력이 없다) 가 정하고, 둘 중 하나가 꼭 붙는다.
