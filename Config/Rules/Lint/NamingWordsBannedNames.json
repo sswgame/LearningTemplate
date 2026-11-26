@@ -14,6 +14,7 @@
     "getResourceTagOverride": "getAssetTagOverride — AssetTagSet 덮기(2026-11-27)",
     "getResourceTags": "getAssetTags — AssetTags(2026-11-27)",
     "gv_netResourceDigestGraceSeconds": "gv_netAssetDigestGraceSeconds — AssetDigest 가 어긋난 클라이언트를 끊기 전 유예(2026-11-27)",
+    "history_command": "verify_history.py — 명령 이름 = 파일 이름(2026-11-27 N11)",
     "kResourceDigest": "kAssetDigest — AssetDigest 메시지 종류 번호(2026-11-27)",
     "loadResource": "loadAsset — 에셋 id 로 문서를 읽는 입구(XMLDocument · JSONDocument) — 다른 형식의 loadAsset 과 이름만 같다(2026-11-27)",
     "loadResourceAs": "loadAssetAs — 합치기 문맥을 고르는 에셋 읽기 입구(2026-11-27)",
@@ -93,6 +94,8 @@
     "kRepeatable": "isRepeatablePassType — 여러 번 두는 종류는 컴파일 때 보는 constexpr 판정이다(2026-11-26)",
     "shouldDrawMaterial": "MaterialPassFilter::shouldDraw — 머티리얼 거르기는 패스 서술이 덮는 값이다(RenderGraphPassDesc::_resolvedMaterialFilter, 표 기본값은 RenderPassKindInfo::getDefaultMaterialFilter)(2026-11-26)",
     "shouldFilterBatchesByMaterial": "MaterialPassFilter::isEmpty — 머티리얼 거르기는 패스 서술이 덮는 값이다(2026-11-26)",
+    "test-history": "verify-history — 명령 이름 = 파일 이름(2026-11-27 N11)",
+    "TestHistoryCommand": "VerifyHistoryCommand (2026-11-27 N11)",
     "UnitStatsComponent": "지움 — 체력 · 피해는 AbilitySystemComponent + CombatAttributeSet(2026-11-26)",
     "CityTerrain": "CityTerrainDef — 땅은 도시 카탈로그의 <Terrain> 행이다(2026-11-25)",
     "CityService": "CityServiceDef — 서비스는 도시 카탈로그의 <Service> 행이다(2026-11-25)",
@@ -3375,9 +3378,6 @@
     "WindowsToolSearch": "WindowsToolPaths.cmake — 파일 이름은 내용으로 (2026-11-27 N8a Scripts 재편)",
     "FindWindowsTools": "WindowsToolPaths.cmake — 파일 이름은 내용으로 (2026-11-27 N8a Scripts 재편)",
     "fingerprintPose": "computePoseDigest — 포즈 · 모프 가중치의 해시(2026-11-27)",
-    "StageModuleRuntimeDLLs": "ScriptMode/DeployModuleRuntimeDLLs.cmake — 파일 이름은 내용으로 (2026-11-27 N8a Scripts 재편)",
-    "test-history": "verify-history — 명령 이름 = 파일 이름(2026-11-27 N11)",
-    "history_command": "verify_history.py — 명령 이름 = 파일 이름(2026-11-27 N11)",
-    "TestHistoryCommand": "VerifyHistoryCommand (2026-11-27 N11)"
+    "StageModuleRuntimeDLLs": "ScriptMode/DeployModuleRuntimeDLLs.cmake — 파일 이름은 내용으로 (2026-11-27 N8a Scripts 재편)"
   }
 }

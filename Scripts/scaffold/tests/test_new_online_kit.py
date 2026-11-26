@@ -19,7 +19,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 from common.paths import get_project_root  # noqa: E402
 from scaffold.new_online_kit import (KIT_NAME_HEADER, KIT_ROOT, RANGE_HEADER, add_kit_name, add_method_range,  # noqa: E402
                                 describe_invalid_request, make_files)
-from scaffold.tests.kit_skeleton_checks import find_problems  # noqa: E402
+from scaffold.tests.kit_skeleton_checks import find_naming_problems, find_problems  # noqa: E402
 
 NAME = "ZzGuildHall"
 INCLUDE_PATH = f"GameFramework/Kits/Feature/Online/{NAME}"
@@ -63,6 +63,9 @@ class NewOnlineKitTest(unittest.TestCase):
 
     def test_code_uses_only_names_the_repository_has(self) -> None:
         self.assertEqual(find_problems(self._files, INCLUDE_PATH, NAME, {"Echo", "ResultName", "Table", "EchoIsInsideTheKitRange"}), [])
+
+    def test_skeleton_passes_the_naming_lint(self) -> None:
+        self.assertEqual(find_naming_problems(self._files, f"{KIT_ROOT}/{NAME}", NAME), [])
 
     def test_no_placeholder_is_left(self) -> None:
         for relative, text in self._files.items():

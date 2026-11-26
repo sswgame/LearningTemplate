@@ -98,6 +98,19 @@ def make_staged_scope(project_root: Path) -> LintScope:
     return LintScope(tuple(sorted(path for path in list_changed if (project_root / path).is_file())), tuple(sorted(list_removed)), False)
 
 
+def read_staged_renames(project_root: Path) -> dict[str, str]:
+    """staged 이름 바꾸기의 새 경로 → 옛 경로입니다(옮긴 파일은 옛 경로의 기준선을 이어받는다)."""
+    result = run_git_in_hook_repository(["diff", "--cached", "--name-status", "-M"], cwd=project_root)
+    if result.return_code != 0:
+        raise RuntimeError(f"git diff --cached --name-status 실패: {result.stderr.strip()}")
+    map_old: dict[str, str] = {}
+    for line in result.stdout.splitlines():
+        list_part = line.split("\t")
+        if len(list_part) == 3 and list_part[0].startswith("R"):
+            map_old[list_part[2]] = list_part[1]
+    return map_old
+
+
 def list_staged_with_unstaged_changes(project_root: Path, scope: LintScope) -> list[str]:
     """
     스테이지 파일 가운데 작업 폴더에 스테이지 안 된 변경이 더 있는 것. 규칙은 작업 폴더 글을 읽으므로(`read_bytes`) 이런 파일은 커밋할 내용이 아닌 글로
@@ -109,17 +122,21 @@ def list_staged_with_unstaged_changes(project_root: Path, scope: LintScope) -> l
 
 
 def make_file_scope(project_root: Path, list_file_argument: Iterable[str]) -> LintScope:
-    """규칙 모듈의 `--files` — 절대 · 상대 경로를 저장소 기준으로 푼다(저장소 밖 · 없는 파일은 뺀다)."""
+    """규칙 모듈의 `--files` · `--accept` — 절대 · 상대 경로를 저장소 기준으로 푼다(폴더는 그 아래 파일, 저장소 밖 · 없는 파일은 뺀다)."""
     resolved_root = project_root.resolve()
     list_file: set[str] = set()
     for item in list_file_argument:
         path = Path(item)
         path = (project_root / path if not path.is_absolute() and (project_root / path).exists() else path).resolve()
+        try:
+            relative = path.relative_to(resolved_root).as_posix()
+        except ValueError:
+            continue
         if path.is_file():
-            try:
-                list_file.add(path.relative_to(resolved_root).as_posix())
-            except ValueError:
-                continue
+            list_file.add(relative)
+        elif path.is_dir():   # 기준선 `--accept <폴더>` — 그 아래 git 이 아는 파일
+            prefix = "" if relative == "." else relative + "/"
+            list_file.update(file for file in list_repo_files(project_root) if file.startswith(prefix))
     return LintScope(tuple(sorted(list_file)), (), False)
 
 
