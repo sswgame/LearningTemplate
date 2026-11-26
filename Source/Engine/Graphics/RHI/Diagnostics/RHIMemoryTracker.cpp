@@ -3,6 +3,7 @@
 #include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/Log/Logger.h"
 #include "Core/Log/ScopedDeferredLog.h"
 
 #include "Engine/Graphics/RHI/RHIDescriptors.h"
@@ -10,6 +11,33 @@
 
 namespace sw
 {
+    vector<string> RHIMemoryTracker::collectAllocatorStatsNames( const utf8* pStatsJSON )
+    {
+        vector<string>        listName;
+        constexpr string_view kNameKey = "\"Name\"";
+        const string_view     stats    = pStatsJSON != nullptr ? string_view{ pStatsJSON } : string_view{};
+        size_t                position = stats.find( kNameKey );
+        while ( position != string_view::npos )
+        {
+            const size_t valueBegin = stats.find( '"', position + kNameKey.size() );
+            const size_t valueEnd   = valueBegin != string_view::npos ? stats.find( '"', valueBegin + 1 ) : string_view::npos;
+            if ( valueEnd == string_view::npos )
+                break;
+            listName.push_back( string{ stats.substr( valueBegin + 1, valueEnd - valueBegin - 1 ) } );
+            position = stats.find( kNameKey, valueEnd + 1 );
+        }
+        return listName;
+    }
+
+    void RHIMemoryTracker::reportAllocatorLeaks( const utf8* pBackendName, uint32 liveCount, const utf8* pStatsJSON )
+    {
+        SW_LOG_ERROR_ID( "RHI.AllocationLeak", "%# device memory allocations are still alive while %# shuts down - their owners were not released before the device", liveCount, pBackendName );
+        for ( const string& name : collectAllocatorStatsNames( pStatsJSON ) )
+        {
+            SW_LOG_ERROR_ID( "RHI.AllocationLeakName", "  leaked %# allocation: '%#'", pBackendName, name.c_str() );
+        }
+    }
+
     namespace
     {
         struct RHIMemoryTrackerInternal

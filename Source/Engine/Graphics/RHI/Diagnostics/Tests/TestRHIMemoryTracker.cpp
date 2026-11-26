@@ -5,6 +5,8 @@
 #include "pch.h"
 
 #include "Core/Concurrency/mutex.h"
+#include "Core/Container/string.h"
+#include "Core/Container/vector.h"
 #include "Core/Delegate/Subscription.h"
 #include "Core/Log/Logger.h"
 #include "Core/TestFramework/TestFramework.h"
@@ -271,4 +273,26 @@ SW_TEST_CASE( RHIMemoryTrackerTest, CollectResourcesListsShapeAndLabel )
     SW_REQUIRE_EQUAL( size_t{ 1 }, listEntry.size() );
     SW_EXPECT_TRUE( listEntry[0]._key._space == RHIMemoryKeySpace::Buffer );
     SW_EXPECT_TRUE( listEntry[0]._label.empty() );
+}
+
+/**
+ * @brief [RHIMemoryTrackerTest] 할당기 통계 JSON 에서 할당마다 적힌 이름만 나온 차례로 모으고, 이름 없는 할당 · 다른 칸의 글자는 모으지 않는다
+ * @details 변이: `"Name"` 이 아닌 글자 칸(`"GPU"` · `"Type"`)까지 모으면 수가 어긋난다.
+ */
+SW_TEST_CASE( RHIMemoryTrackerTest, CollectsAllocatorStatsNamesOnly )
+{
+    const utf8* const pStats =
+        "{ \"General\": { \"API\": \"Vulkan\", \"GPU\": \"Any\" }, \"DefaultPools\": { \"Type 0\": { \"Blocks\": { \"0\": { \"Suballocations\": ["
+        "{\"Offset\": 0, \"Type\": \"BUFFER\", \"Size\": 256, \"Usage\": 18, \"Name\": \"ConstantBuffer\"},"
+        "{\"Offset\": 256, \"Type\": \"FREE\", \"Size\": 1024}] } }, \"DedicatedAllocations\": ["
+        "{\"Type\": \"IMAGE_OPTIMAL\", \"Size\": 8294400, \"Usage\": 23},
+        "
+        "{\"Type\": \"IMAGE_OPTIMAL\", \"Size\": 8294400, \"Usage\": 23, \"Name\" : \"RenderTarget\"}] } } }";
+    const vector<string> listName = RHIMemoryTracker::collectAllocatorStatsNames( pStats );
+    SW_REQUIRE_EQUAL( size_t( 2 ), listName.size() );
+    SW_EXPECT_TRUE( listName[0] == "ConstantBuffer" );
+    SW_EXPECT_TRUE( listName[1] == "RenderTarget" );
+
+    SW_EXPECT_TRUE( RHIMemoryTracker::collectAllocatorStatsNames( nullptr ).empty() );
+    SW_EXPECT_TRUE( RHIMemoryTracker::collectAllocatorStatsNames( "\"Name\": \"cut" ).empty() ); // 잘린 글에서 멈춘다
 }

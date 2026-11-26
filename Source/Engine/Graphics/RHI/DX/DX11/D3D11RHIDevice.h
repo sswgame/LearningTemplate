@@ -16,6 +16,7 @@
 #include "Engine/Graphics/RHI/Backend/RHIBindlessRegistry.h"
 #include "Engine/Graphics/RHI/Backend/RHIFrameFenceRing.h"
 #include "Engine/Graphics/RHI/Backend/RHIHandleTable.h"
+#include "Engine/Graphics/RHI/Backend/RHILiveCommandListSet.h"
 #include "Engine/Graphics/RHI/Backend/RHIReleaseQueue.h"
 #include "Engine/Graphics/RHI/Backend/RHISwapChainSet.h"
 #include "Engine/Graphics/RHI/Backend/RHITimestampRing.h"
@@ -664,8 +665,7 @@ namespace sw
 
         /// @brief 살아 있는 `D3D11RHICommandList` 들입니다. 소유하지 않습니다. 리사이즈 직전에
         ///        기록물을 버리게 하려고 가지고 있습니다(백버퍼 참조를 붙들고 있기 때문입니다).
-        mutex                        _liveCmdListMutex;
-        vector<D3D11RHICommandList*> _listLiveCmd;
+        RHILiveCommandListSet<D3D11RHICommandList> _liveCommandLists;
 
         /// @brief 제출한 전송마다 이벤트 쿼리 하나(와 있으면 업로드 스테이징)를 제출 순서대로 쌓습니다. 앞에서부터 끝난 것만 워터마크를 올리고 스테이징을 놓습니다.
         ///        쿼리는 `_immediateContext.lock()` 가드 안에서만 만지고 풀(`_listFreeTransferQuery`)로 돌려 씁니다.

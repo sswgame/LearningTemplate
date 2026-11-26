@@ -21,7 +21,7 @@
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Engine/Config/EngineDefaultAssets.h"
     #include "Engine/Foundation/EnginePlatformHeaders.h"
-    #include "Engine/Graphics/RHI/Backend/RHILiveCommandListUtil.h"
+    #include "Engine/Graphics/RHI/Backend/RHILiveCommandListSet.h"
     #include "Engine/Graphics/RHI/DX/DXGIAdapter.h"
     #include "Engine/Graphics/RHI/DX/DXGIFormat.h"
     #include "Engine/Graphics/RHI/DX/DXGIMemoryBudget.h"
@@ -685,7 +685,7 @@ namespace sw
     void D3D11RHIDevice::detachCommandRecordingInternal()
     {
         _frameStreamContext.reset();
-        RHILiveCommandListUtil::detachAll( _liveCmdListMutex, _listLiveCmd );
+        _liveCommandLists.detachAll();
     }
 
     void D3D11RHIDevice::shutdownInternal()
@@ -786,13 +786,8 @@ namespace sw
         // 바인딩, 그리고 기록이 끝난 커맨드 리스트다. 마지막 것을 빠뜨리면 창 크기 변경이
         // 매번 조용히 실패한다.
         swapChain.releaseBackBufferRTV();
-        {
-            ScopedLock<mutex> lock{ _liveCmdListMutex };
-            for ( D3D11RHICommandList* pLiveList : _listLiveCmd )
-            {
-                pLiveList->releaseRecordedState();
-            }
-        }
+        _liveCommandLists.forEach( []( D3D11RHICommandList& liveList )
+        { liveList.releaseRecordedState(); } );
         if ( _immediateContext.isValid() )
         {
             const D3D11ImmediateContext::ScopedLock context = _immediateContext.lock();
@@ -1240,14 +1235,12 @@ namespace sw
 
     void D3D11RHIDevice::registerCommandList( D3D11RHICommandList* pCmdList )
     {
-        ScopedLock<mutex> lock{ _liveCmdListMutex };
-        _listLiveCmd.push_back( pCmdList );
+        _liveCommandLists.add( pCmdList );
     }
 
     void D3D11RHIDevice::unregisterCommandList( D3D11RHICommandList* pCmdList )
     {
-        ScopedLock<mutex> lock{ _liveCmdListMutex };
-        (void)VectorUtil::removeSingleSwap( _listLiveCmd, pCmdList ); // 등록되지 않은 리스트면 뺄 것이 없다
+        _liveCommandLists.remove( pCmdList );
     }
 
     void D3D11RHIDevice::executeCommandListInternal( IRHICommandList* pCmdList )

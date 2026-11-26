@@ -12,7 +12,7 @@
 
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Foundation/EngineSubsystems.h"
-#include "Engine/Graphics/RHI/Backend/RHILiveCommandListUtil.h"
+#include "Engine/Graphics/RHI/Backend/RHILiveCommandListSet.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanPhysicalDeviceRank.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHICommandContext.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHICommandList.h"
@@ -70,8 +70,7 @@ namespace sw
         , _oneShotCommandPool{ nullptr }
         , _oneShotMutex{}
         , _queueMutex{}
-        , _liveCmdListMutex{}
-        , _listLiveCmd{}
+        , _liveCommandLists{}
         , _frameSegmentCursor{ 0 }
         , _timestampPeriod{ 0.0f }
         , _activeFrameBuffer{ nullptr }
@@ -394,7 +393,7 @@ namespace sw
     {
         // 뗀 리스트는 제 커맨드 버퍼 쌍을 부순다. 안 그러면 그쪽 소멸자가 죽은 디바이스에 반납하려 들고, 풀은 새어 검증 레이어가 잡는다.
         _frameStreamContext.reset();
-        RHILiveCommandListUtil::detachAll( _liveCmdListMutex, _listLiveCmd );
+        _liveCommandLists.detachAll();
     }
 
     // 길이 유지(긴 함수 정리 기준): 생성의 역순으로 놓는 해제 목록(GPU 유휴 대기 뒤)이라 나누지 않는다.
@@ -2544,14 +2543,12 @@ namespace sw
 
     void VulkanRHIDevice::registerCommandList( VulkanRHICommandList* pCmdList )
     {
-        ScopedLock<mutex> lock{ _liveCmdListMutex };
-        _listLiveCmd.push_back( pCmdList );
+        _liveCommandLists.add( pCmdList );
     }
 
     void VulkanRHIDevice::unregisterCommandList( VulkanRHICommandList* pCmdList )
     {
-        ScopedLock<mutex> lock{ _liveCmdListMutex };
-        (void)VectorUtil::removeSingleSwap( _listLiveCmd, pCmdList ); // 등록되지 않은 리스트면 뺄 것이 없다
+        _liveCommandLists.remove( pCmdList );
     }
 
     void VulkanRHIDevice::recycleCommandListEntryDeferred( VulkanCommandListEntry entry )

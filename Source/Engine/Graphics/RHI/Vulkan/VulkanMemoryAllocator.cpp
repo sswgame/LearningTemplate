@@ -6,7 +6,6 @@
 #include "Core/Log/Logger.h"
 #include "Core/Log/ScopedDeferredLog.h"
 
-#include "Engine/Graphics/RHI/Backend/RHIAllocationLeakUtil.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIRequiredVersion.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanResultCheck.h"
@@ -56,7 +55,7 @@ namespace sw
         {
             utf8* pStats{ nullptr };
             vmaBuildStatsString( _allocator, &pStats, VK_TRUE );
-            RHIAllocationLeakUtil::report( "Vulkan", statistics.total.statistics.allocationCount, pStats );
+            RHIMemoryTracker::reportAllocatorLeaks( "Vulkan", statistics.total.statistics.allocationCount, pStats );
             vmaFreeStatsString( _allocator, pStats );
         }
         vmaDestroyAllocator( _allocator );
