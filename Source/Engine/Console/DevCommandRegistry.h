@@ -125,9 +125,8 @@ namespace sw
 #if !defined( SW_SHIPPING )
 
 /**
- * @brief 개발 명령을 기능의 `.cpp` 에서 등록합니다(언리얼 `FAutoConsoleCommand` 처럼 기능 옆에 둔다).
- *        배포 구성은 등록하지 않고 본문 함수를 `[[maybe_unused]]` 상수로만 붙잡는다 — 본문은 모든 구성에서 컴파일되고(썩지 않는다) 부르는 곳이 없어 배포 실행 파일에서 빠진다.
- *        파일 이름으로 배포에서 빼지 않는다(`docs/agents/CppStyle.md "Build configuration switches"`).
+ * @brief 개발 명령을 개발 전용 소스(DevFolders.json 의 `Dev/` · DevTools · GameFrameworkDev)에서 등록합니다(언리얼 `FAutoConsoleCommand` 처럼 기능 곁의 개발 폴더에 둔다).
+ *        배포 구성에서 이 매크로는 컴파일 오류다 — 배포가 짓는 TU 에 개발 명령 본문을 둘 수 없다. 파일 이름으로 배포에서 빼지 않는다(`docs/agents/CppStyle.md "Build configuration switches"`).
  * @param varName 파일 안에서 유일한 이름 조각(변수 이름용)
  * @param pName   콘솔에 치는 이름(리터럴)
  * @param pUsage  사용법 한 줄
@@ -154,7 +153,8 @@ namespace sw
 
 #else
 
-    #define SW_DEV_COMMAND( varName, pName, pUsage, pHelp, pFunc )       [[maybe_unused]] static constexpr auto sw_devCommandShippingUnused_##varName = pFunc
-    #define SW_DEV_SCENE_COMMAND( varName, pName, pUsage, pHelp, pFunc ) [[maybe_unused]] static constexpr auto sw_devCommandShippingUnused_##varName = pFunc
+    // 배포가 짓는 TU 에 개발 명령을 두면 컴파일되지 않는다 — 배포는 개발 전용 소스를 짓지 않으므로 바른 자리의 등록은 이 정의를 만나지 않는다.
+    #define SW_DEV_COMMAND( varName, pName, pUsage, pHelp, pFunc )       static_assert( false, "SW_DEV_COMMAND is a development registration: move it to a development-only source (a Dev/ folder of DevFolders.json, Tests/, DevTools or GameFrameworkDev) - shipping does not build those" )
+    #define SW_DEV_SCENE_COMMAND( varName, pName, pUsage, pHelp, pFunc ) static_assert( false, "SW_DEV_SCENE_COMMAND is a development registration: move it to a development-only source (a Dev/ folder of DevFolders.json, Tests/, DevTools or GameFrameworkDev) - shipping does not build those" )
 
 #endif
