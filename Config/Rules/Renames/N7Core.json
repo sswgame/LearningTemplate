@@ -18,7 +18,6 @@
   {"old": "BusyClock", "new": "BusyTimeAccumulator", "why": "시각을 내지 않고 바쁜 구간의 합집합 길이를 센다 — Clock 은 시간원(IClock · MonotonicClock) 뜻이다(RateAccumulator 와 끝낱말을 맞춘다)"},
   {"old": "BusyClockTest", "new": "BusyTimeAccumulatorTest", "why": "테스트 이름", "ban": false},
   {"old": "getCompileBusyClock", "new": "getCompileBusyTimeAccumulator", "why": "BusyTimeAccumulator 를 돌려준다"},
-  {"old": "getProviderBusyClock", "new": "getProviderBusyTimeAccumulator", "why": "BusyTimeAccumulator 를 돌려준다"},
   {"old": "CommandLineManager", "new": "CommandLine", "why": "인자를 파싱 · 보관하는 형식 하나다 — Manager 는 집합의 수명 정책 뜻(언리얼 FCommandLine)", "allowExisting": true},
   {"old": "getCommandLineManager", "new": "getCommandLine", "why": "CommandLine 을 돌려준다", "allowExisting": true},
   {"old": "_pCommandLineManager", "new": "_pCommandLine", "why": "CommandLine 칸", "allowExisting": true},

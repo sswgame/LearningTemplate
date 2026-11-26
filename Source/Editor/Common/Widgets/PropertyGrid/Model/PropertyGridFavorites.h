@@ -28,7 +28,7 @@ namespace sw::editor
     class PropertyGridFavorites
     {
     public:
-        static constexpr const utf8* kPropertyFileName = "InspectorFavorites.txt";
+        static constexpr const utf8* kPropertyFileName = "InspectorFavorites.txt"; // 이미 저장된 사용자 파일 이름이다(바꾸면 즐겨찾기를 잃는다) keep-old-name
         static constexpr const utf8* kActionFileName   = "InspectorActionFavorites.txt";
 
         /** @brief 에디터 상태 폴더의 @p pFileName 에 저장하는 빈 집합입니다. */
