@@ -54,7 +54,10 @@ namespace sw::editor
 
     bool ProjectSettingsPage::saveDocument( AssetWriter& writer, bool& outApplied )
     {
-        outApplied        = false;
+        outApplied = false;
+        // 확인(읽기 전용 · 밖에서 바뀜)을 문서 쓰기보다 먼저 본다. 문서 쓰기가 지면 쓰기 실패 오류를 남기는데, 거절은 문이 이미 경고로 알렸다(`EditorDocumentPanelBase` 와 같은 차례).
+        if ( writer.validateSave( _absolutePath ) == false )
+            return false;
         const bool bSaved = _entry.isTable() ? _tableDocument.saveDocument( writer ) : _document.saveDocument( writer );
         if ( bSaved == false )
             return false;
