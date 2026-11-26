@@ -35,31 +35,6 @@ msgctxt "Cancel"
 msgid "Cancel"
 msgstr "キャンセル"
 
-#: Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp
-msgctxt "Chat.InvalidMessage"
-msgid "Message is empty or not valid"
-msgstr "メッセージが空か正しくありません"
-
-#: Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp
-msgctxt "Chat.SignIn"
-msgid "Sign in to chat"
-msgstr "チャットするにはサインインしてください"
-
-#: Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp
-msgctxt "Chat.TooFast"
-msgid "Too fast, try again soon"
-msgstr "速すぎます。少し待ってください"
-
-#: Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp
-msgctxt "Chat.Unavailable"
-msgid "Chat is not available right now"
-msgstr "現在チャットは利用できません"
-
-#: Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp
-msgctxt "Chat.UpdateGame"
-msgid "Update the game to chat"
-msgstr "チャットするにはゲームを更新してください"
-
 #. Context: TextWidget._text
 #: engine/ui/options.ui.xml
 msgctxt "Close"
@@ -623,11 +598,6 @@ msgctxt "EdPlugin.Appearance"
 msgid "Appearance"
 msgstr "外見"
 
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPlugin.ApplySanction"
-msgid "Apply sanction"
-msgstr "制裁を適用"
-
 #: Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp
 msgctxt "EdPlugin.AutoLayout"
 msgid "Auto layout"
@@ -728,11 +698,6 @@ msgctxt "EdPlugin.ClickANodeToEditIt"
 msgid "Click a node to edit it"
 msgstr "ノードをクリックして編集"
 
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPlugin.ClosedReports"
-msgid "Closed reports"
-msgstr "閉じた通報"
-
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
 msgctxt "EdPlugin.ColumnAlias"
 msgid "Alias"
@@ -789,16 +754,6 @@ msgctxt "EdPlugin.DeleteNode"
 msgid "Delete node"
 msgstr "ノードを削除"
 
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPlugin.Disconnect"
-msgid "Disconnect"
-msgstr "切断"
-
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPlugin.Dismiss"
-msgid "Dismiss"
-msgstr "閉じる"
-
 #: Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp
 msgctxt "EdPlugin.Down"
 msgid "Down"
@@ -818,16 +773,6 @@ msgstr "染色セクション"
 msgctxt "EdPlugin.DyeSectionsEmpty"
 msgid "No mesh sections. List sections with aliases in the item visual."
 msgstr "メッシュセクションがありません。アイテム外観にエイリアス付きでセクションを記述してください。"
-
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPlugin.Edit"
-msgid "Edit"
-msgstr "編集"
-
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPlugin.EndMaintenance"
-msgid "End maintenance"
-msgstr "メンテナンス終了"
 
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
 msgctxt "EdPlugin.ExportDataPreset"
@@ -868,11 +813,6 @@ msgstr "涙・唾液"
 msgctxt "EdPlugin.FootLift"
 msgid "Foot lift (m)"
 msgstr "足の持ち上げ(m)"
-
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPlugin.Grant"
-msgid "Grant"
-msgstr "付与"
 
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
 msgctxt "EdPlugin.HighlightDrive"
@@ -949,21 +889,6 @@ msgctxt "EdPlugin.LayerScaleTooltip"
 msgid "Skin UV size one layer covers"
 msgstr "レイヤーが覆う肌UVのサイズ"
 
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPlugin.LiftSanction"
-msgid "Lift sanction"
-msgstr "制裁を解除"
-
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPlugin.ListAudit"
-msgid "List audit"
-msgstr "監査ログ一覧"
-
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPlugin.ListLiveEvents"
-msgid "List live events"
-msgstr "ライブイベント一覧"
-
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
 msgctxt "EdPlugin.Load"
 msgid "Load"
@@ -1008,16 +933,6 @@ msgstr "外見データ(外見タブ)を読み込むとプレビューの体に�
 msgctxt "EdPlugin.LoadTheItemsFileAndTheAppearanceFolder"
 msgid "Load the items file and the appearance folder to pick items and see rule explanations."
 msgstr "アイテムファイルと外見フォルダを読み込むと、アイテムを選んでルールの説明を見られます。"
-
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPlugin.LookUpAnAccountToSeeItsBalances"
-msgid "Look up an account to see its balances and sanctions"
-msgstr "アカウントを検索すると残高と制裁が見えます"
-
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPlugin.Lookup"
-msgid "Lookup"
-msgstr "検索"
 
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp
 msgctxt "EdPlugin.MapSameNames"
@@ -1066,16 +981,6 @@ msgctxt "EdPlugin.NoFitResultYetThePreviewSceneSolves"
 msgid "No fit result yet. The preview scene solves the fit when a slider is released."
 msgstr "まだフィット結果がありません。スライダーを離すとプレビューシーンがフィットします。"
 
-#: Source/GameFramework/Kits/Feature/Network/NetSimulation/Editor/MultiplayerInProcessTab.cpp
-msgctxt "EdPlugin.NoInProcessGameIsRegisteredNetSimGameRegistryOnly"
-msgid "No in-process game is registered (NetSimGameRegistry) - only games with a kit session (INetSimSession) can run here."
-msgstr "インプロセスゲームが登録されていません(NetSimGameRegistry) — キットセッション(INetSimSession)のあるゲームだけがここで動きます。"
-
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPlugin.NoLoginHandlerIsBoundGMCommandsAre"
-msgid "No login handler is bound: GM commands are refused as not logged in"
-msgstr "ログインハンドラがありません: GM コマンドは未ログインとして拒否されます"
-
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
 msgctxt "EdPlugin.NoPenetration"
 msgid "No penetration."
@@ -1105,11 +1010,6 @@ msgstr ".pairedanim.xml を開いて役割を一つの時計でスクラブし�
 msgctxt "EdPlugin.OpenARetargetXmlOrTypeANew"
 msgid "Open a .retarget.xml, or type a new path and press New, to pair the chains of two skeletons and check how they bind."
 msgstr ".retarget.xml を開くか、新しいパスを入力して新規を押し、二つのスケルトンのチェーンを対にして結び付きを確認します。"
-
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPlugin.OpenReports"
-msgid "Open reports"
-msgstr "未処理の通報"
 
 #: Source/GameFramework/Plugin/Editor/CameraPresets/CameraPresetPanel.cpp
 msgctxt "EdPlugin.OrthographicPresetThePreviewDrawsItInPerspective"
@@ -1141,11 +1041,6 @@ msgctxt "EdPlugin.PickSection"
 msgid "Pick section in Preview"
 msgstr "プレビューで区間を選ぶ"
 
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPlugin.PostAnnouncement"
-msgid "Post notice"
-msgstr "お知らせを掲示"
-
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
 msgctxt "EdPlugin.PresetsUserData"
 msgid "Presets (user data)"
@@ -1171,11 +1066,6 @@ msgctxt "EdPlugin.PupilSize"
 msgid "Pupil size"
 msgstr "瞳孔サイズ"
 
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPlugin.PutLiveEvent"
-msgid "Put live event"
-msgstr "ライブイベントを登録"
-
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/PairedAnimationPanel.cpp
 msgctxt "EdPlugin.Redo"
@@ -1191,11 +1081,6 @@ msgstr "外見をやり直し"
 msgctxt "EdPlugin.RedoPose"
 msgid "Redo pose"
 msgstr "ポーズをやり直し"
-
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPlugin.RefundRevokeMayLeaveADebt"
-msgid "Refund revoke (may leave a debt)"
-msgstr "返金回収(負債が残る場合がある)"
 
 #: Source/GameFramework/Plugin/Editor/CameraPresets/CameraPresetPanel.cpp
 #: Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp
@@ -1216,20 +1101,10 @@ msgctxt "EdPlugin.Remove"
 msgid "Remove"
 msgstr "削除"
 
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPlugin.RemoveAnnouncement"
-msgid "Remove notice"
-msgstr "お知らせを削除"
-
 #: Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp
 msgctxt "EdPlugin.RemoveBrokenWires"
 msgid "Remove broken wires"
 msgstr "切れた配線を削除"
-
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPlugin.RemoveLiveEvent"
-msgid "Remove live event"
-msgstr "ライブイベントを削除"
 
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
 msgctxt "EdPlugin.RemoveSkinLayer"
@@ -1245,16 +1120,6 @@ msgstr "名前を変更"
 msgctxt "EdPlugin.ResetBone"
 msgid "Reset bone"
 msgstr "ボーンをリセット"
-
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPlugin.Resolve"
-msgid "Resolve"
-msgstr "処理"
-
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPlugin.Revoke"
-msgid "Revoke"
-msgstr "回収"
 
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/PairedAnimationPanel.cpp
 msgctxt "EdPlugin.Roles"
@@ -1347,21 +1212,6 @@ msgctxt "EdPlugin.Sockets"
 msgid "Sockets"
 msgstr "ソケット"
 
-#: Source/GameFramework/Kits/Feature/Network/NetSimulation/Editor/MultiplayerInProcessTab.cpp
-msgctxt "EdPlugin.StartInProcess"
-msgid "Start in process"
-msgstr "インプロセスで開始"
-
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPlugin.StartMaintenance"
-msgid "Start maintenance"
-msgstr "メンテナンス開始"
-
-#: Source/GameFramework/Kits/Feature/Network/NetSimulation/Editor/MultiplayerInProcessTab.cpp
-msgctxt "EdPlugin.Stop"
-msgid "Stop"
-msgstr "停止"
-
 #: Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp
 msgctxt "EdPlugin.TargetObject"
 msgid "Target object"
@@ -1424,30 +1274,10 @@ msgctxt "EdPlugin.Wrinkles"
 msgid "Wrinkles"
 msgstr "しわ"
 
-#: Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.cpp
-msgctxt "EdPluginButton.Reload"
-msgid "Reload"
-msgstr "再読み込み"
-
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPluginField.Amount"
-msgid "Amount"
-msgstr "量"
-
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
 msgctxt "EdPluginField.Anchor"
 msgid "Anchor"
 msgstr "アンカー"
-
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPluginField.AnnouncementId"
-msgid "Notice id"
-msgstr "お知らせ id"
-
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPluginField.AnnouncementSeconds0UntilRemoved"
-msgid "Notice seconds (0 = until removed)"
-msgstr "お知らせ秒(0 = 削除まで)"
 
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
 msgctxt "EdPluginField.BasePreset"
@@ -1479,11 +1309,6 @@ msgctxt "EdPluginField.BoneTranslation"
 msgid "Bone translation"
 msgstr "ボーン移動"
 
-#: Source/GameFramework/Kits/Feature/Network/NetSimulation/Editor/MultiplayerInProcessTab.cpp
-msgctxt "EdPluginField.Clients"
-msgid "Clients"
-msgstr "クライアント"
-
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/PairedAnimationPanel.cpp
 msgctxt "EdPluginField.DurationS"
 msgid "Duration (s)"
@@ -1499,20 +1324,10 @@ msgctxt "EdPluginField.Face"
 msgid "Face"
 msgstr "顔"
 
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPluginField.GMPassword"
-msgid "GM password"
-msgstr "GM パスワード"
-
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp
 msgctxt "EdPluginField.HeightRatio0Pelvis"
 msgid "Height ratio (0 = pelvis)"
 msgstr "高さ比(0 = 骨盤)"
-
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPluginField.MaintenanceSeconds0UntilCleared"
-msgid "Maintenance seconds (0 = until cleared)"
-msgstr "メンテナンス秒(0 = 解除まで)"
 
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/PairedAnimationPanel.cpp
 msgctxt "EdPluginField.OffsetM"
@@ -1529,11 +1344,6 @@ msgctxt "EdPluginField.PreviewMesh"
 msgid "Preview mesh"
 msgstr "プレビューメッシュ"
 
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPluginField.Priority"
-msgid "Priority"
-msgstr "優先度"
-
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
 msgctxt "EdPluginField.Rotation"
 msgid "Rotation"
@@ -1543,11 +1353,6 @@ msgstr "回転"
 msgctxt "EdPluginField.Scale"
 msgid "Scale"
 msgstr "スケール"
-
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPluginField.Seconds"
-msgid "Seconds"
-msgstr "秒"
 
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp
 msgctxt "EdPluginField.SourceBones"
@@ -1600,11 +1405,6 @@ msgctxt "EdPluginFormat.Clamped"
 msgid "Clamped to range: {clamped}"
 msgstr "範囲に収めた: {clamped}"
 
-#: Source/GameFramework/Kits/Feature/Network/NetSimulation/Editor/MultiplayerInProcessTab.cpp
-msgctxt "EdPluginFormat.Client"
-msgid "{focused}Client {worldIndex}"
-msgstr "{focused}クライアント {worldIndex}"
-
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/PairedAnimationPanel.cpp
 msgctxt "EdPluginFormat.ClipS"
 msgid "{role, select, anchor {anchor} required {required} other {optional}}  clip {clip}  {stage} {clipSeconds} s{clipLength, select, unknown {  (clip length unknown - pick a prefab)} other {}}"
@@ -1619,16 +1419,6 @@ msgstr "{name}: カット {cutTriangleCount}/{triangleCount}({cutRatio}%)、頂�
 msgctxt "EdPluginFormat.Dropped"
 msgid "Dropped: {dropped}"
 msgstr "除外: {dropped}"
-
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPluginFormat.GMConnection"
-msgid "GM connection: {stateText}"
-msgstr "GM 接続: {stateText}"
-
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPluginFormat.Id"
-msgid "{displayName}  (id {accountID})  {presence, select, online {online} other {offline}}"
-msgstr "{displayName}  (id {accountID})  {presence, select, online {オンライン} other {オフライン}}"
 
 #: Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp
 msgctxt "EdPluginFormat.Live"
@@ -1670,16 +1460,6 @@ msgctxt "EdPluginFormat.Problems"
 msgid "{issueCount, plural, one {# problem} other {# problems}}"
 msgstr "問題 {issueCount} 個"
 
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPluginFormat.Provider"
-msgid "Provider: {providerName}"
-msgstr "プロバイダー: {providerName}"
-
-#: Source/GameFramework/Kits/Feature/Network/NetSimulation/Editor/MultiplayerInProcessTab.cpp
-msgctxt "EdPluginFormat.Server"
-msgid "{focused}Server"
-msgstr "{focused}サーバー"
-
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
 msgctxt "EdPluginFormat.Slot"
 msgid "Slot {slot}: {requestedItem} -> {fallbackItem} ({reason})"
@@ -1700,85 +1480,10 @@ msgctxt "EdPluginFormat.ThisFileCouldNot"
 msgid "This file could not be opened: {statusText}"
 msgstr "このファイルを開けません: {statusText}"
 
-#: Source/GameFramework/Kits/Feature/Network/NetSimulation/Editor/MultiplayerInProcessTab.cpp
-msgctxt "EdPluginFormat.TickInputFocusWorld"
-msgid "tick {tick}  input focus: world {inputFocus}"
-msgstr "ティック {tick}  入力フォーカス: ワールド {inputFocus}"
-
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
 msgctxt "EdPluginFormat.WearingOnBasePreset"
 msgid "Wearing {wearing, select, none {no slot items} other {the selection}} on base preset ''{basePresetID}'' (assembled {appearance} times)"
 msgstr "基準プリセット ''{basePresetID}'' に {wearing, select, none {スロットアイテムなし} other {選択中のもの}} を装着(組み立て {appearance} 回)"
-
-#: Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.cpp
-msgctxt "EdPluginParkLayout.ColumnCapacity"
-msgid "Capacity"
-msgstr "定員"
-
-#: Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.cpp
-msgctxt "EdPluginParkLayout.ColumnCheck"
-msgid "Check"
-msgstr "チェック"
-
-#: Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.cpp
-msgctxt "EdPluginParkLayout.ColumnCost"
-msgid "Cost"
-msgstr "費用"
-
-#: Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.cpp
-msgctxt "EdPluginParkLayout.ColumnPrice"
-msgid "Ticket"
-msgstr "料金"
-
-#: Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.cpp
-msgctxt "EdPluginParkLayout.ColumnRide"
-msgid "Ride"
-msgstr "アトラクション"
-
-#: Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.cpp
-msgctxt "EdPluginParkLayout.ColumnTime"
-msgid "Time (s)"
-msgstr "時間(秒)"
-
-#: Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.cpp
-msgctxt "EdPluginParkLayout.FocusGate"
-msgid "Focus gate"
-msgstr "正門を表示"
-
-#: Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.cpp
-msgctxt "EdPluginParkLayout.FocusGateTip"
-msgid "Move the scene view camera to the park gate"
-msgstr "シーンビューのカメラを公園の正門へ移動します"
-
-#: Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.cpp
-msgctxt "EdPluginParkLayout.IssueDuplicateID"
-msgid "Same id as {name}"
-msgstr "{name}と ID が同じ"
-
-#: Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.cpp
-msgctxt "EdPluginParkLayout.IssueEntrance"
-msgid "Entrance is inside the footprint"
-msgstr "入口が敷地の内側にある"
-
-#: Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.cpp
-msgctxt "EdPluginParkLayout.IssueOverlap"
-msgid "Overlaps {name}"
-msgstr "{name}と重なっている"
-
-#: Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.cpp
-msgctxt "EdPluginParkLayout.NoLayoutHint"
-msgid "This game has no park layout data ({path})"
-msgstr "このゲームにはパーク配置データがありません({path})"
-
-#: Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.cpp
-msgctxt "EdPluginParkLayout.ReadFailedHint"
-msgid "The park layout could not be read ({path}). Fix the file (see the log) and press Reload."
-msgstr "パーク配置を読み込めませんでした({path})。ログを確認してファイルを修正し、再読み込みしてください。"
-
-#: Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.cpp
-msgctxt "EdPluginParkLayout.Summary"
-msgid "Total cost {cost}  ·  starting cash {cash}  ·  entry fee {fee}  ·  layout issues {issues}"
-msgstr "総費用 {cost}  ·  初期資金 {cash}  ·  入場料 {fee}  ·  配置の問題 {issues}"
 
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/PairedAnimationPanel.cpp
 msgctxt "EdPluginTip.AnchorRelativeRootPositionAndYawAt"
@@ -1830,16 +1535,6 @@ msgctxt "EdPluginTip.TurnATargetBoneInItsParent"
 msgid "Turn a target bone in its parent space (degrees) so the target reference matches the source reference, e.g. lower the arms of a T-pose source onto an A-pose target"
 msgstr "ターゲットの基準ポーズがソースと合うよう、ターゲットのボーンを親空間で回します(度) — 例: T ポーズのソースを A ポーズのターゲットに合わせて腕を下げる"
 
-#: Source/GameFramework/Kits/Feature/World/Housing/Editor/HousingPlotVisualizer.cpp
-msgctxt "EdPluginVisualizer.HousingPlotLabel"
-msgid "Plots"
-msgstr "敷地"
-
-#: Source/GameFramework/Kits/Feature/World/Housing/Editor/HousingPlotVisualizer.cpp
-msgctxt "EdPluginVisualizer.HousingPlotTip"
-msgid "Bounds and cells of every housing plot in the scene, with its id and size"
-msgstr "シーンのハウジング敷地ごとの境界とマス、ID とサイズ"
-
 #: Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersVisualizer.cpp
 msgctxt "EdPluginVisualizer.MeshModifiersLabel"
 msgid "Modifiers"
@@ -1860,16 +1555,6 @@ msgctxt "EdPluginVisualizer.MeshModifiersTip"
 msgid "Deformation preview lines of the mesh modifier stack, gizmos and range display with drag editing, picking and dragging lattice control points"
 msgstr "メッシュモディファイアスタックの変形プレビュー線、ギズモと範囲表示のドラッグ編集、ラティス制御点の選択とドラッグ"
 
-#: Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutVisualizer.cpp
-msgctxt "EdPluginVisualizer.ParkLayoutLabel"
-msgid "Park"
-msgstr "パーク"
-
-#: Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutVisualizer.cpp
-msgctxt "EdPluginVisualizer.ParkLayoutTip"
-msgid "Ride footprints, entrances and coaster tracks of the ThemePark layout file (rides.xml)"
-msgstr "ThemePark 配置ファイル(rides.xml)のアトラクションの足跡、入口、コースターのトラック"
-
 #: Source/GameFramework/Plugin/Editor/GameplayTools/World/SplineVisualizer.cpp
 msgctxt "EdPluginVisualizer.SplinesLabel"
 msgid "Splines"
@@ -1879,36 +1564,6 @@ msgstr "スプライン"
 msgctxt "EdPluginVisualizer.SplinesTip"
 msgid "Curve of every spline in the scene - drag the control point handles of the selected one (Shapes)"
 msgstr "シーンの各スプラインの曲線 - 選択中のスプラインは制御点のハンドルをドラッグ（Shapes）"
-
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPluginWidget.Account"
-msgid "Account"
-msgstr "アカウント"
-
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPluginWidget.AccountIdHex"
-msgid "Account id (hex)"
-msgstr "アカウント id(16進数)"
-
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPluginWidget.ActingRole"
-msgid "Acting role"
-msgstr "担当ロール"
-
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPluginWidget.AnnouncementText"
-msgid "Notice text"
-msgstr "お知らせ本文"
-
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPluginWidget.AssetId"
-msgid "Asset id"
-msgstr "アセット id"
-
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPluginWidget.AuditLog"
-msgid "Audit log"
-msgstr "監査ログ"
 
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
 msgctxt "EdPluginWidget.BasePreset"
@@ -1935,30 +1590,10 @@ msgctxt "EdPluginWidget.EquipmentSet"
 msgid "Equip set"
 msgstr "装備セット"
 
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPluginWidget.EventId"
-msgid "Event id"
-msgstr "イベント id"
-
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPluginWidget.EventJson"
-msgid "Event JSON"
-msgstr "イベント JSON"
-
 #: Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp
 msgctxt "EdPluginWidget.From"
 msgid "From"
 msgstr "送信元"
-
-#: Source/GameFramework/Kits/Feature/Network/NetSimulation/Editor/MultiplayerInProcessTab.cpp
-msgctxt "EdPluginWidget.Game"
-msgid "Game"
-msgstr "ゲーム"
-
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPluginWidget.GrantRevoke"
-msgid "Grant / Revoke"
-msgstr "付与 / 取り消し"
 
 #: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
@@ -1966,30 +1601,10 @@ msgctxt "EdPluginWidget.Kind"
 msgid "Kind"
 msgstr "種類"
 
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPluginWidget.LiveEvents"
-msgid "Live events"
-msgstr "ライブイベント"
-
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
 msgctxt "EdPluginWidget.Loop"
 msgid "Loop"
 msgstr "ループ"
-
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPluginWidget.MaintenanceAnnouncement"
-msgid "Maintenance / Notice"
-msgstr "メンテナンス / お知らせ"
-
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPluginWidget.MemoTicket"
-msgid "Memo (ticket)"
-msgstr "メモ(チケット)"
-
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPluginWidget.MessageKey"
-msgid "Message key"
-msgstr "メッセージキー"
 
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp
 msgctxt "EdPluginWidget.Options"
@@ -2011,16 +1626,6 @@ msgctxt "EdPluginWidget.Problems"
 msgid "Problems"
 msgstr "問題"
 
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPluginWidget.ReasonCode"
-msgid "Reason code"
-msgstr "理由コード"
-
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPluginWidget.Reports"
-msgid "Reports"
-msgstr "通報"
-
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp
 msgctxt "EdPluginWidget.RetargetPose"
 msgid "Retarget pose"
@@ -2031,16 +1636,6 @@ msgctxt "EdPluginWidget.RootAndPelvis"
 msgid "Root and pelvis"
 msgstr "ルートと骨盤"
 
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPluginWidget.Sanction"
-msgid "Sanction"
-msgstr "制裁"
-
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPluginWidget.ScopeAllOrServerKind"
-msgid "Scope (all or server kind)"
-msgstr "範囲(all またはサーバー種別)"
-
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp
 msgctxt "EdPluginWidget.Skeletons"
 msgid "Skeletons"
@@ -2050,11 +1645,6 @@ msgstr "スケルトン"
 msgctxt "EdPluginWidget.Stop"
 msgid "Stop"
 msgstr "停止"
-
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPluginWidget.SubjectPrefix"
-msgid "Subject prefix"
-msgstr "サブジェクト接頭辞"
 
 #: Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp
 msgctxt "EdPluginWidget.To"
@@ -2210,51 +1800,6 @@ msgstr "エフェクト"
 msgctxt "Enum.AbilityEntryKind.Presentation"
 msgid "Cue presentations"
 msgstr "キュー演出"
-
-#: Source/GameFramework/Kits/Feature/Online/Chat/Runtime/ChatTypes.h
-msgctxt "Enum.ChatResult.Muted"
-msgid "You are muted ({seconds} s left)"
-msgstr "チャットが禁止されています(残り{seconds}秒)"
-
-#: Source/GameFramework/Kits/Feature/Online/Chat/Runtime/ChatTypes.h
-msgctxt "Enum.ChatResult.NotFound"
-msgid "Message not found"
-msgstr "メッセージが見つかりません"
-
-#: Source/GameFramework/Kits/Feature/Online/Chat/Runtime/ChatTypes.h
-msgctxt "Enum.ChatResult.NotJoinable"
-msgid "This channel cannot be joined"
-msgstr "このチャンネルには参加できません"
-
-#: Source/GameFramework/Kits/Feature/Online/Chat/Runtime/ChatTypes.h
-msgctxt "Enum.ChatResult.NotMember"
-msgid "You have not joined this channel"
-msgstr "このチャンネルに参加していません"
-
-#: Source/GameFramework/Kits/Feature/Online/Chat/Runtime/ChatTypes.h
-msgctxt "Enum.ChatResult.RateLimited"
-msgid "Too fast, wait {milliseconds} ms"
-msgstr "速すぎます。{milliseconds}ms待ってください"
-
-#: Source/GameFramework/Kits/Feature/Online/Chat/Runtime/ChatTypes.h
-msgctxt "Enum.ChatResult.Rejected"
-msgid "Message was blocked by the word filter"
-msgstr "メッセージは単語フィルターでブロックされました"
-
-#: Source/GameFramework/Kits/Feature/Online/Chat/Runtime/ChatTypes.h
-msgctxt "Enum.ChatResult.Repeated"
-msgid "You already said that"
-msgstr "同じ発言は繰り返せません"
-
-#: Source/GameFramework/Kits/Feature/Online/Chat/Runtime/ChatTypes.h
-msgctxt "Enum.ChatResult.TargetOffline"
-msgid "That player is offline"
-msgstr "相手はオフラインです"
-
-#: Source/GameFramework/Kits/Feature/Online/Chat/Runtime/ChatTypes.h
-msgctxt "Enum.ChatResult.TooManyChannels"
-msgid "Too many channels"
-msgstr "チャンネルが多すぎます"
 
 #: Source/Engine/Physics/Collision/CollisionLayers.h
 msgctxt "Enum.CollisionResponse.Block"
@@ -2706,31 +2251,6 @@ msgctxt "Enum.ShopPurchaseStatus.Unverified"
 msgid "The purchase reply did not match; your wallet was refreshed."
 msgstr "購入の応答が一致しなかったため、ウォレットを更新しました。"
 
-#: Source/GameFramework/Kits/Feature/Online/Social/Runtime/SocialTypes.h
-msgctxt "Enum.SocialPresenceStatus.Away"
-msgid "away"
-msgstr "離席中"
-
-#: Source/GameFramework/Kits/Feature/Online/Social/Runtime/SocialTypes.h
-msgctxt "Enum.SocialPresenceStatus.Busy"
-msgid "busy"
-msgstr "取り込み中"
-
-#: Source/GameFramework/Kits/Feature/Online/Social/Runtime/SocialTypes.h
-msgctxt "Enum.SocialPresenceStatus.InGame"
-msgid "in game"
-msgstr "ゲーム中"
-
-#: Source/GameFramework/Kits/Feature/Online/Social/Runtime/SocialTypes.h
-msgctxt "Enum.SocialPresenceStatus.Offline"
-msgid "offline"
-msgstr "オフライン"
-
-#: Source/GameFramework/Kits/Feature/Online/Social/Runtime/SocialTypes.h
-msgctxt "Enum.SocialPresenceStatus.Online"
-msgid "online"
-msgstr "オンライン"
-
 #: Source/Engine/Localization/LocText.cpp
 msgctxt "Enum.Unknown"
 msgid "unknown"
@@ -2760,46 +2280,6 @@ msgstr "ここで削除"
 msgctxt "Enum.ZoneModuleOrigin.Replaced"
 msgid "replaced here"
 msgstr "ここで置換"
-
-#: Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp
-msgctxt "FriendList.Idle"
-msgid "Press Refresh to list friends"
-msgstr "更新を押すとフレンド一覧を表示します"
-
-#: Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp
-msgctxt "FriendList.LoadFailed"
-msgid "Could not load the friend list (error {error})"
-msgstr "フレンド一覧を読み込めませんでした(エラー {error})"
-
-#: Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp
-msgctxt "FriendList.Loading"
-msgid "Loading friends..."
-msgstr "フレンドを読み込み中..."
-
-#: Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp
-msgctxt "FriendList.None"
-msgid "No friends yet"
-msgstr "フレンドはまだいません"
-
-#: Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp
-msgctxt "FriendList.PendingRequests"
-msgid "{title}  ({count, plural, one {# pending request} other {# pending requests}})"
-msgstr "{title}  (保留中の申請 {count}件)"
-
-#: Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp
-msgctxt "FriendList.Row"
-msgid "#{account}  {presence}"
-msgstr "#{account}  {presence}"
-
-#: Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp
-msgctxt "FriendList.RowActivity"
-msgid "#{account}  {presence}  {activity}"
-msgstr "#{account}  {presence}  {activity}"
-
-#: Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp
-msgctxt "FriendList.Title"
-msgid "Friends"
-msgstr "フレンド"
 
 #: Source/GameFramework/Client/Inventory/InventoryScreen.cpp
 msgctxt "Inventory.DropTitle"
@@ -2979,36 +2459,6 @@ msgctxt "SceneLoad.Retry"
 msgid "Try Again"
 msgstr "もう一度試す"
 
-#: Source/GameFramework/Kits/Feature/Online/ServerDirectory/Client/ServerPickerScreen.cpp
-msgctxt "ServerPicker.Idle"
-msgid "Press Refresh to list servers"
-msgstr "更新を押すとサーバー一覧を表示します"
-
-#: Source/GameFramework/Kits/Feature/Online/ServerDirectory/Client/ServerPickerScreen.cpp
-msgctxt "ServerPicker.LoadFailed"
-msgid "Could not load the server list (error {error})"
-msgstr "サーバー一覧を読み込めませんでした(エラー {error})"
-
-#: Source/GameFramework/Kits/Feature/Online/ServerDirectory/Client/ServerPickerScreen.cpp
-msgctxt "ServerPicker.Loading"
-msgid "Loading servers..."
-msgstr "サーバーを読み込み中..."
-
-#: Source/GameFramework/Kits/Feature/Online/ServerDirectory/Client/ServerPickerScreen.cpp
-msgctxt "ServerPicker.None"
-msgid "No server is available right now"
-msgstr "現在利用できるサーバーはありません"
-
-#: Source/GameFramework/Kits/Feature/Online/ServerDirectory/Client/ServerPickerScreen.cpp
-msgctxt "ServerPicker.Pick"
-msgid "Pick a server"
-msgstr "サーバーを選んでください"
-
-#: Source/GameFramework/Kits/Feature/Online/ServerDirectory/Client/ServerPickerScreen.cpp
-msgctxt "ServerPicker.Row"
-msgid "{region}  {fill}%  {state}"
-msgstr "{region}  {fill}%  {state}"
-
 #: Source/GameFramework/Client/Shop/ShopScreen.cpp
 msgctxt "Shop.BalanceLine"
 msgid "{amount} {currency}"
@@ -3087,51 +2537,6 @@ msgstr "ゲームを終了しますか?"
 msgctxt "UIMenu.QuitTitle"
 msgid "Quit Game"
 msgstr "ゲームを終了"
-
-#: Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp
-msgctxt "Western.Bounty"
-msgid "Bounty ${amount}"
-msgstr "懸賞金 ${amount}"
-
-#: Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp
-msgctxt "Western.Carcasses"
-msgid "Carcasses {count}"
-msgstr "獲物 {count}"
-
-#: Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp
-msgctxt "Western.Honor"
-msgid "Honor {honor} ({tier})"
-msgstr "名誉 {honor}({tier})"
-
-#: Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp
-msgctxt "Western.Hungry"
-msgid "Hungry"
-msgstr "空腹"
-
-#: Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp
-msgctxt "Western.Money"
-msgid "${amount}"
-msgstr "${amount}"
-
-#: Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp
-msgctxt "Western.OnFoot"
-msgid "On foot - E: mount  F: whistle"
-msgstr "徒歩 - E: 騎乗  F: 口笛"
-
-#: Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp
-msgctxt "Western.Pelts"
-msgid "Pelts {count}"
-msgstr "毛皮 {count}"
-
-#: Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp
-msgctxt "Western.Riding"
-msgid "Riding {horse} - {gait} {speed} m/s - E: dismount  Shift: gallop"
-msgstr "{horse}に騎乗 - {gait} {speed} m/s - E: 降りる  Shift: ギャロップ"
-
-#: Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp
-msgctxt "Western.Wanted"
-msgid "Wanted {level}"
-msgstr "手配 {level}"
 
 #. Context: TextWidget._text
 #: engine/ui/confirm_unsaved.ui.xml

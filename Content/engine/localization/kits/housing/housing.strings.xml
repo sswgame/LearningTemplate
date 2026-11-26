@@ -1,0 +1,16 @@
+<?asset guid="f5dd5879bea34bdabd3a69fe671d1a69"?>
+<SourceStringTable culture="en">
+	<entries>
+		<entry key="EdPluginVisualizer.HousingPlotLabel" source="Plots">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/World/Housing/Editor/HousingPlotVisualizer.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginVisualizer.HousingPlotTip"
+		       source="Bounds and cells of every housing plot in the scene, with its id and size">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/World/Housing/Editor/HousingPlotVisualizer.cpp</item>
+			</origins>
+		</entry>
+	</entries>
+</SourceStringTable>

@@ -1,0 +1,71 @@
+<?asset guid="a2f9392f271140f992a703ef6b8c3a75"?>
+<TranslationTable culture="ja">
+	<entries>
+		<entry key="EdPlugin.ApplySanction" text="制裁を適用" sourceHash="9f0c979ae0d9d618" />
+		<entry key="EdPlugin.ClosedReports" text="閉じた通報" sourceHash="3c5905586fa5e736" />
+		<entry key="EdPlugin.Disconnect" text="切断" sourceHash="d2208cd1a767644b" />
+		<entry key="EdPlugin.Dismiss" text="閉じる" sourceHash="12d6dde9b30c3093" />
+		<entry key="EdPlugin.Edit" text="編集" sourceHash="64ef2a6c2dd1d3d1" />
+		<entry key="EdPlugin.EndMaintenance" text="メンテナンス終了" sourceHash="7d5699fb9376bca1" />
+		<entry key="EdPlugin.Grant" text="付与" sourceHash="ef16778fe7074a8d" />
+		<entry key="EdPlugin.LiftSanction" text="制裁を解除" sourceHash="81fdfffbe8a3f431" />
+		<entry key="EdPlugin.ListAudit" text="監査ログ一覧" sourceHash="961acb5f276c143a" />
+		<entry key="EdPlugin.ListLiveEvents" text="ライブイベント一覧" sourceHash="418530c2b0d3dec6" />
+		<entry key="EdPlugin.LookUpAnAccountToSeeItsBalances"
+		       text="アカウントを検索すると残高と制裁が見えます"
+		       sourceHash="5be35335366b396f" />
+		<entry key="EdPlugin.Lookup" text="検索" sourceHash="3b29e8112bce0f0b" />
+		<entry key="EdPlugin.NoLoginHandlerIsBoundGMCommandsAre"
+		       text="ログインハンドラがありません: GM コマンドは未ログインとして拒否されます"
+		       sourceHash="0a0746e5bde7cb37" />
+		<entry key="EdPlugin.OpenReports" text="未処理の通報" sourceHash="f38f9ccb5aa4a4d2" />
+		<entry key="EdPlugin.PostAnnouncement" text="お知らせを掲示" sourceHash="37e6931da5f87431" />
+		<entry key="EdPlugin.PutLiveEvent" text="ライブイベントを登録" sourceHash="9a54ec5c13858e78" />
+		<entry key="EdPlugin.RefundRevokeMayLeaveADebt"
+		       text="返金回収(負債が残る場合がある)"
+		       sourceHash="a7c96eb259368178" />
+		<entry key="EdPlugin.RemoveAnnouncement" text="お知らせを削除" sourceHash="9d6cadb063f5b14f" />
+		<entry key="EdPlugin.RemoveLiveEvent" text="ライブイベントを削除" sourceHash="286ec822b6f1b615" />
+		<entry key="EdPlugin.Resolve" text="処理" sourceHash="4de430b40c94e903" />
+		<entry key="EdPlugin.Revoke" text="回収" sourceHash="0e871352ba4b17d3" />
+		<entry key="EdPlugin.StartMaintenance" text="メンテナンス開始" sourceHash="2e417dd12aa53688" />
+		<entry key="EdPluginField.Amount" text="量" sourceHash="ba98a7152d80b949" />
+		<entry key="EdPluginField.AnnouncementId" text="お知らせ id" sourceHash="346e643ae672864e" />
+		<entry key="EdPluginField.AnnouncementSeconds0UntilRemoved"
+		       text="お知らせ秒(0 = 削除まで)"
+		       sourceHash="5ca50ca62e3f11de" />
+		<entry key="EdPluginField.GMPassword" text="GM パスワード" sourceHash="73021dd72e500432" />
+		<entry key="EdPluginField.MaintenanceSeconds0UntilCleared"
+		       text="メンテナンス秒(0 = 解除まで)"
+		       sourceHash="14988336ae4ff447" />
+		<entry key="EdPluginField.Priority" text="優先度" sourceHash="a4e407b3a0fe4669" />
+		<entry key="EdPluginField.Seconds" text="秒" sourceHash="c4842e5b8b90466a" />
+		<entry key="EdPluginFormat.GMConnection" text="GM 接続: {stateText}" sourceHash="ba6187deff08f6db" />
+		<entry key="EdPluginFormat.Id"
+		       text="{displayName}  (id {accountID})  {presence, select, online {オンライン} other {オフライン}}"
+		       sourceHash="474a28b48d6cce02" />
+		<entry key="EdPluginFormat.Provider" text="プロバイダー: {providerName}" sourceHash="eff920aeeb94ed28" />
+		<entry key="EdPluginWidget.Account" text="アカウント" sourceHash="846b3790b6e25c1c" />
+		<entry key="EdPluginWidget.AccountIdHex" text="アカウント id(16進数)" sourceHash="b6db0ef22675ed05" />
+		<entry key="EdPluginWidget.ActingRole" text="担当ロール" sourceHash="25bba11d3a172de3" />
+		<entry key="EdPluginWidget.AnnouncementText" text="お知らせ本文" sourceHash="30c28e16a2b1dc84" />
+		<entry key="EdPluginWidget.AssetId" text="アセット id" sourceHash="69d468f7fdd713f4" />
+		<entry key="EdPluginWidget.AuditLog" text="監査ログ" sourceHash="2bd16f12896a150a" />
+		<entry key="EdPluginWidget.EventId" text="イベント id" sourceHash="9b572c9af0cf6ef8" />
+		<entry key="EdPluginWidget.EventJson" text="イベント JSON" sourceHash="f9211a1af156135b" />
+		<entry key="EdPluginWidget.GrantRevoke" text="付与 / 取り消し" sourceHash="b43e7fa0410aeb6e" />
+		<entry key="EdPluginWidget.LiveEvents" text="ライブイベント" sourceHash="b5622b26740874ec" />
+		<entry key="EdPluginWidget.MaintenanceAnnouncement"
+		       text="メンテナンス / お知らせ"
+		       sourceHash="85b0db04bdd7964f" />
+		<entry key="EdPluginWidget.MemoTicket" text="メモ(チケット)" sourceHash="fdcbf34ceeb42ab6" />
+		<entry key="EdPluginWidget.MessageKey" text="メッセージキー" sourceHash="a982200e6ce2d4db" />
+		<entry key="EdPluginWidget.ReasonCode" text="理由コード" sourceHash="e4e83587c443b062" />
+		<entry key="EdPluginWidget.Reports" text="通報" sourceHash="884bcdca26998a48" />
+		<entry key="EdPluginWidget.Sanction" text="制裁" sourceHash="454ca7e5daa9851c" />
+		<entry key="EdPluginWidget.ScopeAllOrServerKind"
+		       text="範囲(all またはサーバー種別)"
+		       sourceHash="b549f10e94463f43" />
+		<entry key="EdPluginWidget.SubjectPrefix" text="サブジェクト接頭辞" sourceHash="f5ff56bd51df1f21" />
+	</entries>
+</TranslationTable>

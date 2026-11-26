@@ -1,0 +1,71 @@
+<?asset guid="09d367dba5fa49f6bba3688791979fb7"?>
+<SourceStringTable culture="en">
+	<entries>
+		<entry key="Enum.SocialPresenceStatus.Away" source="away">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Social/Runtime/SocialTypes.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.SocialPresenceStatus.Busy" source="busy">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Social/Runtime/SocialTypes.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.SocialPresenceStatus.InGame" source="in game">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Social/Runtime/SocialTypes.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.SocialPresenceStatus.Offline" source="offline">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Social/Runtime/SocialTypes.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.SocialPresenceStatus.Online" source="online">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Social/Runtime/SocialTypes.h</item>
+			</origins>
+		</entry>
+		<entry key="FriendList.Idle" source="Press Refresh to list friends">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="FriendList.LoadFailed" source="Could not load the friend list (error {error})">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="FriendList.Loading" source="Loading friends...">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="FriendList.None" source="No friends yet">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="FriendList.PendingRequests"
+		       source="{title}  ({count, plural, one {# pending request} other {# pending requests}})">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="FriendList.Row" source="#{account}  {presence}">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="FriendList.RowActivity" source="#{account}  {presence}  {activity}">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="FriendList.Title" source="Friends">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp</item>
+			</origins>
+		</entry>
+	</entries>
+</SourceStringTable>

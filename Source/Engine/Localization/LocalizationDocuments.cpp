@@ -407,7 +407,7 @@ namespace sw
                 return unexpected( Error{ ErrorKind::InvalidArgument, "the document is not well-formed XML", document.getLastError() } );
             return unexpected( Internal::atSource( Error{ ErrorKind::InvalidArgument, "root must be <LocalizationProject>" }, sourceName ) );
         }
-        if ( const optional<string_view> unknown = Internal::findUnknownName( root, { "name", "sourceCulture" }, { "cultures", "stagedCultures", "stringTables", "codeRoots", "assetRoots", "assetRules" } );
+        if ( const optional<string_view> unknown = Internal::findUnknownName( root, { "name", "sourceCulture" }, { "cultures", "stagedCultures", "stringTables", "codeRoots", "assetRoots", "assetRules", "dependencies" } );
              unknown.has_value() )
             return unexpected( Internal::atSource( Error{ ErrorKind::InvalidArgument, "unknown field", *unknown }, sourceName ) );
 
@@ -418,7 +418,8 @@ namespace sw
                                 Internal::readStringList( root.findChild( "stagedCultures" ), loaded._listStagedCulture ) &&
                                 Internal::readStringList( root.findChild( "stringTables" ), loaded._listStringTable ) &&
                                 Internal::readStringList( root.findChild( "codeRoots" ), loaded._listCodeRoot ) &&
-                                Internal::readPathList( root.findChild( "assetRoots" ), loaded._listAssetRoot );
+                                Internal::readPathList( root.findChild( "assetRoots" ), loaded._listAssetRoot ) &&
+                                Internal::readPathList( root.findChild( "dependencies" ), loaded._listDependency );
         size_t ruleIndex{ 0 };
         for ( XMLNode ruleNode = root.findChild( "assetRules" ).findChild(); ruleNode.isValid(); ruleNode = ruleNode.findNextSibling(), ++ruleIndex )
         {

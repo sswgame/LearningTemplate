@@ -1,0 +1,24 @@
+<?asset guid="4365eb21486c4493a673f485c5202fb5"?>
+<TranslationTable culture="ja">
+	<entries>
+		<entry key="Enum.SocialPresenceStatus.Away" text="離席中" sourceHash="6f3fb3842ffa02bb" />
+		<entry key="Enum.SocialPresenceStatus.Busy" text="取り込み中" sourceHash="ff75d19be2aea620" />
+		<entry key="Enum.SocialPresenceStatus.InGame" text="ゲーム中" sourceHash="751b555ee38fcef8" />
+		<entry key="Enum.SocialPresenceStatus.Offline" text="オフライン" sourceHash="574193ebbf068988" />
+		<entry key="Enum.SocialPresenceStatus.Online" text="オンライン" sourceHash="abf0e099159a8caa" />
+		<entry key="FriendList.Idle"
+		       text="更新を押すとフレンド一覧を表示します"
+		       sourceHash="1bf7709ef94325c5" />
+		<entry key="FriendList.LoadFailed"
+		       text="フレンド一覧を読み込めませんでした(エラー {error})"
+		       sourceHash="126516148f7f55b3" />
+		<entry key="FriendList.Loading" text="フレンドを読み込み中..." sourceHash="fd7afe91ccb1c0b8" />
+		<entry key="FriendList.None" text="フレンドはまだいません" sourceHash="2736cb628dbd9e09" />
+		<entry key="FriendList.PendingRequests"
+		       text="{title}  (保留中の申請 {count}件)"
+		       sourceHash="edf972fdfe13cb2e" />
+		<entry key="FriendList.Row" text="#{account}  {presence}" sourceHash="2db55beacdf5ec2a" />
+		<entry key="FriendList.RowActivity" text="#{account}  {presence}  {activity}" sourceHash="b1fda9d92194f095" />
+		<entry key="FriendList.Title" text="フレンド" sourceHash="4c675180cc54b9ba" />
+	</entries>
+</TranslationTable>

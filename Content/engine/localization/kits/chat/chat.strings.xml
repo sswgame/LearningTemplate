@@ -1,0 +1,75 @@
+<?asset guid="f60892df1a314832b31eea29c743b1b6"?>
+<SourceStringTable culture="en">
+	<entries>
+		<entry key="Chat.InvalidMessage" source="Message is empty or not valid">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Chat.SignIn" source="Sign in to chat">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Chat.TooFast" source="Too fast, try again soon">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Chat.Unavailable" source="Chat is not available right now">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Chat.UpdateGame" source="Update the game to chat">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp</item>
+			</origins>
+		</entry>
+		<entry key="Enum.ChatResult.Muted" source="You are muted ({seconds} s left)">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Chat/Runtime/ChatTypes.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.ChatResult.NotFound" source="Message not found">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Chat/Runtime/ChatTypes.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.ChatResult.NotJoinable" source="This channel cannot be joined">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Chat/Runtime/ChatTypes.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.ChatResult.NotMember" source="You have not joined this channel">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Chat/Runtime/ChatTypes.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.ChatResult.RateLimited" source="Too fast, wait {milliseconds} ms">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Chat/Runtime/ChatTypes.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.ChatResult.Rejected" source="Message was blocked by the word filter">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Chat/Runtime/ChatTypes.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.ChatResult.Repeated" source="You already said that">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Chat/Runtime/ChatTypes.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.ChatResult.TargetOffline" source="That player is offline">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Chat/Runtime/ChatTypes.h</item>
+			</origins>
+		</entry>
+		<entry key="Enum.ChatResult.TooManyChannels" source="Too many channels">
+			<origins>
+				<item>Source/GameFramework/Kits/Feature/Online/Chat/Runtime/ChatTypes.h</item>
+			</origins>
+		</entry>
+	</entries>
+</SourceStringTable>

@@ -1,0 +1,20 @@
+<?asset guid="079ce026374f411e9db5a571726bf659"?>
+<TranslationMemory culture="ja">
+	<entries>
+		<entry source="Chat is not available right now" text="現在チャットは利用できません" />
+		<entry source="Message is empty or not valid" text="メッセージが空か正しくありません" />
+		<entry source="Message not found" text="メッセージが見つかりません" />
+		<entry source="Message was blocked by the word filter"
+		       text="メッセージは単語フィルターでブロックされました" />
+		<entry source="Sign in to chat" text="チャットするにはサインインしてください" />
+		<entry source="That player is offline" text="相手はオフラインです" />
+		<entry source="This channel cannot be joined" text="このチャンネルには参加できません" />
+		<entry source="Too fast, try again soon" text="速すぎます。少し待ってください" />
+		<entry source="Too fast, wait {milliseconds} ms" text="速すぎます。{milliseconds}ms待ってください" />
+		<entry source="Too many channels" text="チャンネルが多すぎます" />
+		<entry source="Update the game to chat" text="チャットするにはゲームを更新してください" />
+		<entry source="You already said that" text="同じ発言は繰り返せません" />
+		<entry source="You are muted ({seconds} s left)" text="チャットが禁止されています(残り{seconds}秒)" />
+		<entry source="You have not joined this channel" text="このチャンネルに参加していません" />
+	</entries>
+</TranslationMemory>

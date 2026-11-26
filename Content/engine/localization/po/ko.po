@@ -35,31 +35,6 @@ msgctxt "Cancel"
 msgid "Cancel"
 msgstr "취소"
 
-#: Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp
-msgctxt "Chat.InvalidMessage"
-msgid "Message is empty or not valid"
-msgstr "메시지가 비었거나 올바르지 않습니다"
-
-#: Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp
-msgctxt "Chat.SignIn"
-msgid "Sign in to chat"
-msgstr "채팅하려면 로그인하세요"
-
-#: Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp
-msgctxt "Chat.TooFast"
-msgid "Too fast, try again soon"
-msgstr "너무 빠릅니다. 잠시 뒤에 다시 시도하세요"
-
-#: Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp
-msgctxt "Chat.Unavailable"
-msgid "Chat is not available right now"
-msgstr "지금은 채팅할 수 없습니다"
-
-#: Source/GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.cpp
-msgctxt "Chat.UpdateGame"
-msgid "Update the game to chat"
-msgstr "채팅하려면 게임을 업데이트하세요"
-
 #. Context: TextWidget._text
 #: engine/ui/options.ui.xml
 msgctxt "Close"
@@ -623,11 +598,6 @@ msgctxt "EdPlugin.Appearance"
 msgid "Appearance"
 msgstr "외형"
 
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPlugin.ApplySanction"
-msgid "Apply sanction"
-msgstr "제재 적용"
-
 #: Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp
 msgctxt "EdPlugin.AutoLayout"
 msgid "Auto layout"
@@ -728,11 +698,6 @@ msgctxt "EdPlugin.ClickANodeToEditIt"
 msgid "Click a node to edit it"
 msgstr "노드를 누르면 편집합니다"
 
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPlugin.ClosedReports"
-msgid "Closed reports"
-msgstr "닫은 신고"
-
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
 msgctxt "EdPlugin.ColumnAlias"
 msgid "Alias"
@@ -789,16 +754,6 @@ msgctxt "EdPlugin.DeleteNode"
 msgid "Delete node"
 msgstr "노드 삭제"
 
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPlugin.Disconnect"
-msgid "Disconnect"
-msgstr "연결 끊기"
-
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPlugin.Dismiss"
-msgid "Dismiss"
-msgstr "닫기"
-
 #: Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp
 msgctxt "EdPlugin.Down"
 msgid "Down"
@@ -818,16 +773,6 @@ msgstr "염색 구간"
 msgctxt "EdPlugin.DyeSectionsEmpty"
 msgid "No mesh sections. List sections with aliases in the item visual."
 msgstr "메시 구간이 없습니다. 아이템 외형에 별칭과 함께 구간을 적으세요."
-
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPlugin.Edit"
-msgid "Edit"
-msgstr "편집"
-
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPlugin.EndMaintenance"
-msgid "End maintenance"
-msgstr "점검 끝내기"
 
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
 msgctxt "EdPlugin.ExportDataPreset"
@@ -868,11 +813,6 @@ msgstr "눈물 · 침"
 msgctxt "EdPlugin.FootLift"
 msgid "Foot lift (m)"
 msgstr "발 들림(m)"
-
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPlugin.Grant"
-msgid "Grant"
-msgstr "지급"
 
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
 msgctxt "EdPlugin.HighlightDrive"
@@ -949,21 +889,6 @@ msgctxt "EdPlugin.LayerScaleTooltip"
 msgid "Skin UV size one layer covers"
 msgstr "층 하나가 덮는 피부 UV 크기"
 
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPlugin.LiftSanction"
-msgid "Lift sanction"
-msgstr "제재 풀기"
-
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPlugin.ListAudit"
-msgid "List audit"
-msgstr "감사 기록 보기"
-
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPlugin.ListLiveEvents"
-msgid "List live events"
-msgstr "라이브 이벤트 보기"
-
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
 msgctxt "EdPlugin.Load"
 msgid "Load"
@@ -1008,16 +933,6 @@ msgstr "외형 데이터(외형 탭)를 불러오면 미리보기 몸에 입힙�
 msgctxt "EdPlugin.LoadTheItemsFileAndTheAppearanceFolder"
 msgid "Load the items file and the appearance folder to pick items and see rule explanations."
 msgstr "항목 파일과 외형 폴더를 불러오면 항목을 고르고 규칙 설명을 봅니다."
-
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPlugin.LookUpAnAccountToSeeItsBalances"
-msgid "Look up an account to see its balances and sanctions"
-msgstr "계정을 찾으면 잔액과 제재가 보입니다"
-
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPlugin.Lookup"
-msgid "Lookup"
-msgstr "찾기"
 
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp
 msgctxt "EdPlugin.MapSameNames"
@@ -1066,16 +981,6 @@ msgctxt "EdPlugin.NoFitResultYetThePreviewSceneSolves"
 msgid "No fit result yet. The preview scene solves the fit when a slider is released."
 msgstr "아직 맞춤 결과가 없습니다. 슬라이더를 놓으면 미리보기 씬이 맞춥니다."
 
-#: Source/GameFramework/Kits/Feature/Network/NetSimulation/Editor/MultiplayerInProcessTab.cpp
-msgctxt "EdPlugin.NoInProcessGameIsRegisteredNetSimGameRegistryOnly"
-msgid "No in-process game is registered (NetSimGameRegistry) - only games with a kit session (INetSimSession) can run here."
-msgstr "한 프로세스 게임이 등록되지 않았습니다(NetSimGameRegistry) — 키트 세션(INetSimSession)이 있는 게임만 여기서 돕니다."
-
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPlugin.NoLoginHandlerIsBoundGMCommandsAre"
-msgid "No login handler is bound: GM commands are refused as not logged in"
-msgstr "로그인 처리기가 없습니다: GM 명령은 로그인하지 않은 것으로 거절됩니다"
-
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
 msgctxt "EdPlugin.NoPenetration"
 msgid "No penetration."
@@ -1105,11 +1010,6 @@ msgstr ".pairedanim.xml 을 열어 역할을 한 시계로 훑고 맞춤 오프�
 msgctxt "EdPlugin.OpenARetargetXmlOrTypeANew"
 msgid "Open a .retarget.xml, or type a new path and press New, to pair the chains of two skeletons and check how they bind."
 msgstr ".retarget.xml 을 열거나 새 경로를 적고 새로를 눌러 두 스켈레톤의 사슬을 짝짓고 묶임을 확인합니다."
-
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPlugin.OpenReports"
-msgid "Open reports"
-msgstr "열린 신고"
 
 #: Source/GameFramework/Plugin/Editor/CameraPresets/CameraPresetPanel.cpp
 msgctxt "EdPlugin.OrthographicPresetThePreviewDrawsItInPerspective"
@@ -1141,11 +1041,6 @@ msgctxt "EdPlugin.PickSection"
 msgid "Pick section in Preview"
 msgstr "미리보기에서 구간 집기"
 
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPlugin.PostAnnouncement"
-msgid "Post notice"
-msgstr "공지 올리기"
-
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
 msgctxt "EdPlugin.PresetsUserData"
 msgid "Presets (user data)"
@@ -1171,11 +1066,6 @@ msgctxt "EdPlugin.PupilSize"
 msgid "Pupil size"
 msgstr "동공 크기"
 
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPlugin.PutLiveEvent"
-msgid "Put live event"
-msgstr "라이브 이벤트 넣기"
-
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/PairedAnimationPanel.cpp
 msgctxt "EdPlugin.Redo"
@@ -1191,11 +1081,6 @@ msgstr "외형 다시 실행"
 msgctxt "EdPlugin.RedoPose"
 msgid "Redo pose"
 msgstr "포즈 다시 실행"
-
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPlugin.RefundRevokeMayLeaveADebt"
-msgid "Refund revoke (may leave a debt)"
-msgstr "환불 회수(빚이 남을 수 있다)"
 
 #: Source/GameFramework/Plugin/Editor/CameraPresets/CameraPresetPanel.cpp
 #: Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp
@@ -1216,20 +1101,10 @@ msgctxt "EdPlugin.Remove"
 msgid "Remove"
 msgstr "제거"
 
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPlugin.RemoveAnnouncement"
-msgid "Remove notice"
-msgstr "공지 지우기"
-
 #: Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp
 msgctxt "EdPlugin.RemoveBrokenWires"
 msgid "Remove broken wires"
 msgstr "끊어진 선 지우기"
-
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPlugin.RemoveLiveEvent"
-msgid "Remove live event"
-msgstr "라이브 이벤트 지우기"
 
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
 msgctxt "EdPlugin.RemoveSkinLayer"
@@ -1245,16 +1120,6 @@ msgstr "이름 바꾸기"
 msgctxt "EdPlugin.ResetBone"
 msgid "Reset bone"
 msgstr "뼈 초기화"
-
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPlugin.Resolve"
-msgid "Resolve"
-msgstr "처리"
-
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPlugin.Revoke"
-msgid "Revoke"
-msgstr "회수"
 
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/PairedAnimationPanel.cpp
 msgctxt "EdPlugin.Roles"
@@ -1347,21 +1212,6 @@ msgctxt "EdPlugin.Sockets"
 msgid "Sockets"
 msgstr "소켓"
 
-#: Source/GameFramework/Kits/Feature/Network/NetSimulation/Editor/MultiplayerInProcessTab.cpp
-msgctxt "EdPlugin.StartInProcess"
-msgid "Start in process"
-msgstr "한 프로세스로 시작"
-
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPlugin.StartMaintenance"
-msgid "Start maintenance"
-msgstr "점검 시작"
-
-#: Source/GameFramework/Kits/Feature/Network/NetSimulation/Editor/MultiplayerInProcessTab.cpp
-msgctxt "EdPlugin.Stop"
-msgid "Stop"
-msgstr "정지"
-
 #: Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp
 msgctxt "EdPlugin.TargetObject"
 msgid "Target object"
@@ -1424,30 +1274,10 @@ msgctxt "EdPlugin.Wrinkles"
 msgid "Wrinkles"
 msgstr "주름"
 
-#: Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.cpp
-msgctxt "EdPluginButton.Reload"
-msgid "Reload"
-msgstr "다시 불러오기"
-
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPluginField.Amount"
-msgid "Amount"
-msgstr "양"
-
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
 msgctxt "EdPluginField.Anchor"
 msgid "Anchor"
 msgstr "기준"
-
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPluginField.AnnouncementId"
-msgid "Notice id"
-msgstr "공지 id"
-
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPluginField.AnnouncementSeconds0UntilRemoved"
-msgid "Notice seconds (0 = until removed)"
-msgstr "공지 초(0 = 지울 때까지)"
 
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
 msgctxt "EdPluginField.BasePreset"
@@ -1479,11 +1309,6 @@ msgctxt "EdPluginField.BoneTranslation"
 msgid "Bone translation"
 msgstr "뼈 이동"
 
-#: Source/GameFramework/Kits/Feature/Network/NetSimulation/Editor/MultiplayerInProcessTab.cpp
-msgctxt "EdPluginField.Clients"
-msgid "Clients"
-msgstr "클라이언트"
-
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/PairedAnimationPanel.cpp
 msgctxt "EdPluginField.DurationS"
 msgid "Duration (s)"
@@ -1499,20 +1324,10 @@ msgctxt "EdPluginField.Face"
 msgid "Face"
 msgstr "얼굴"
 
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPluginField.GMPassword"
-msgid "GM password"
-msgstr "GM 비밀번호"
-
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp
 msgctxt "EdPluginField.HeightRatio0Pelvis"
 msgid "Height ratio (0 = pelvis)"
 msgstr "높이 비(0 = 골반)"
-
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPluginField.MaintenanceSeconds0UntilCleared"
-msgid "Maintenance seconds (0 = until cleared)"
-msgstr "점검 초(0 = 풀 때까지)"
 
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/PairedAnimationPanel.cpp
 msgctxt "EdPluginField.OffsetM"
@@ -1529,11 +1344,6 @@ msgctxt "EdPluginField.PreviewMesh"
 msgid "Preview mesh"
 msgstr "미리보기 메시"
 
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPluginField.Priority"
-msgid "Priority"
-msgstr "우선순위"
-
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
 msgctxt "EdPluginField.Rotation"
 msgid "Rotation"
@@ -1543,11 +1353,6 @@ msgstr "회전"
 msgctxt "EdPluginField.Scale"
 msgid "Scale"
 msgstr "크기"
-
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPluginField.Seconds"
-msgid "Seconds"
-msgstr "초"
 
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp
 msgctxt "EdPluginField.SourceBones"
@@ -1600,11 +1405,6 @@ msgctxt "EdPluginFormat.Clamped"
 msgid "Clamped to range: {clamped}"
 msgstr "범위로 자름: {clamped}"
 
-#: Source/GameFramework/Kits/Feature/Network/NetSimulation/Editor/MultiplayerInProcessTab.cpp
-msgctxt "EdPluginFormat.Client"
-msgid "{focused}Client {worldIndex}"
-msgstr "{focused}클라이언트 {worldIndex}"
-
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/PairedAnimationPanel.cpp
 msgctxt "EdPluginFormat.ClipS"
 msgid "{role, select, anchor {anchor} required {required} other {optional}}  clip {clip}  {stage} {clipSeconds} s{clipLength, select, unknown {  (clip length unknown - pick a prefab)} other {}}"
@@ -1619,16 +1419,6 @@ msgstr "{name}: 자름 {cutTriangleCount}/{triangleCount}({cutRatio}%), 정점 {
 msgctxt "EdPluginFormat.Dropped"
 msgid "Dropped: {dropped}"
 msgstr "빠짐: {dropped}"
-
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPluginFormat.GMConnection"
-msgid "GM connection: {stateText}"
-msgstr "GM 연결: {stateText}"
-
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPluginFormat.Id"
-msgid "{displayName}  (id {accountID})  {presence, select, online {online} other {offline}}"
-msgstr "{displayName}  (id {accountID})  {presence, select, online {접속 중} other {접속 안 함}}"
 
 #: Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp
 msgctxt "EdPluginFormat.Live"
@@ -1670,16 +1460,6 @@ msgctxt "EdPluginFormat.Problems"
 msgid "{issueCount, plural, one {# problem} other {# problems}}"
 msgstr "문제 {issueCount}개"
 
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPluginFormat.Provider"
-msgid "Provider: {providerName}"
-msgstr "제공자: {providerName}"
-
-#: Source/GameFramework/Kits/Feature/Network/NetSimulation/Editor/MultiplayerInProcessTab.cpp
-msgctxt "EdPluginFormat.Server"
-msgid "{focused}Server"
-msgstr "{focused}서버"
-
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
 msgctxt "EdPluginFormat.Slot"
 msgid "Slot {slot}: {requestedItem} -> {fallbackItem} ({reason})"
@@ -1700,85 +1480,10 @@ msgctxt "EdPluginFormat.ThisFileCouldNot"
 msgid "This file could not be opened: {statusText}"
 msgstr "이 파일을 열 수 없습니다: {statusText}"
 
-#: Source/GameFramework/Kits/Feature/Network/NetSimulation/Editor/MultiplayerInProcessTab.cpp
-msgctxt "EdPluginFormat.TickInputFocusWorld"
-msgid "tick {tick}  input focus: world {inputFocus}"
-msgstr "틱 {tick}  입력 초점: 월드 {inputFocus}"
-
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
 msgctxt "EdPluginFormat.WearingOnBasePreset"
 msgid "Wearing {wearing, select, none {no slot items} other {the selection}} on base preset ''{basePresetID}'' (assembled {appearance} times)"
 msgstr "기준 프리셋 ''{basePresetID}'' 위에 {wearing, select, none {칸 아이템 없음} other {선택한 것}} 착용(조립 {appearance}번)"
-
-#: Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.cpp
-msgctxt "EdPluginParkLayout.ColumnCapacity"
-msgid "Capacity"
-msgstr "정원"
-
-#: Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.cpp
-msgctxt "EdPluginParkLayout.ColumnCheck"
-msgid "Check"
-msgstr "검사"
-
-#: Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.cpp
-msgctxt "EdPluginParkLayout.ColumnCost"
-msgid "Cost"
-msgstr "비용"
-
-#: Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.cpp
-msgctxt "EdPluginParkLayout.ColumnPrice"
-msgid "Ticket"
-msgstr "탑승료"
-
-#: Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.cpp
-msgctxt "EdPluginParkLayout.ColumnRide"
-msgid "Ride"
-msgstr "놀이기구"
-
-#: Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.cpp
-msgctxt "EdPluginParkLayout.ColumnTime"
-msgid "Time (s)"
-msgstr "시간(초)"
-
-#: Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.cpp
-msgctxt "EdPluginParkLayout.FocusGate"
-msgid "Focus gate"
-msgstr "정문 보기"
-
-#: Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.cpp
-msgctxt "EdPluginParkLayout.FocusGateTip"
-msgid "Move the scene view camera to the park gate"
-msgstr "씬 뷰 카메라를 공원 정문으로 옮깁니다"
-
-#: Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.cpp
-msgctxt "EdPluginParkLayout.IssueDuplicateID"
-msgid "Same id as {name}"
-msgstr "{name}와 id 가 같음"
-
-#: Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.cpp
-msgctxt "EdPluginParkLayout.IssueEntrance"
-msgid "Entrance is inside the footprint"
-msgstr "입구가 바닥 영역 안에 있음"
-
-#: Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.cpp
-msgctxt "EdPluginParkLayout.IssueOverlap"
-msgid "Overlaps {name}"
-msgstr "{name}와 겹침"
-
-#: Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.cpp
-msgctxt "EdPluginParkLayout.NoLayoutHint"
-msgid "This game has no park layout data ({path})"
-msgstr "이 게임에는 공원 배치 데이터가 없습니다({path})"
-
-#: Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.cpp
-msgctxt "EdPluginParkLayout.ReadFailedHint"
-msgid "The park layout could not be read ({path}). Fix the file (see the log) and press Reload."
-msgstr "공원 배치를 읽지 못했습니다({path}). 로그를 보고 파일을 고친 뒤 다시 불러오세요."
-
-#: Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.cpp
-msgctxt "EdPluginParkLayout.Summary"
-msgid "Total cost {cost}  ·  starting cash {cash}  ·  entry fee {fee}  ·  layout issues {issues}"
-msgstr "총 비용 {cost}  ·  시작 자금 {cash}  ·  입장료 {fee}  ·  배치 문제 {issues}"
 
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/PairedAnimationPanel.cpp
 msgctxt "EdPluginTip.AnchorRelativeRootPositionAndYawAt"
@@ -1830,16 +1535,6 @@ msgctxt "EdPluginTip.TurnATargetBoneInItsParent"
 msgid "Turn a target bone in its parent space (degrees) so the target reference matches the source reference, e.g. lower the arms of a T-pose source onto an A-pose target"
 msgstr "대상 기준 자세가 원본 기준 자세와 맞게 대상 뼈를 부모 공간에서 돌립니다(도) — 예: T 자세 원본을 A 자세 대상에 맞게 팔을 내린다"
 
-#: Source/GameFramework/Kits/Feature/World/Housing/Editor/HousingPlotVisualizer.cpp
-msgctxt "EdPluginVisualizer.HousingPlotLabel"
-msgid "Plots"
-msgstr "부지"
-
-#: Source/GameFramework/Kits/Feature/World/Housing/Editor/HousingPlotVisualizer.cpp
-msgctxt "EdPluginVisualizer.HousingPlotTip"
-msgid "Bounds and cells of every housing plot in the scene, with its id and size"
-msgstr "씬의 하우징 부지마다 경계와 칸, id 와 크기"
-
 #: Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersVisualizer.cpp
 msgctxt "EdPluginVisualizer.MeshModifiersLabel"
 msgid "Modifiers"
@@ -1860,16 +1555,6 @@ msgctxt "EdPluginVisualizer.MeshModifiersTip"
 msgid "Deformation preview lines of the mesh modifier stack, gizmos and range display with drag editing, picking and dragging lattice control points"
 msgstr "메시 모디파이어 스택의 변형 미리보기 선, 기즈모 · 범위 표시와 끌기 편집, 격자 제어점 고르기 · 끌기"
 
-#: Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutVisualizer.cpp
-msgctxt "EdPluginVisualizer.ParkLayoutLabel"
-msgid "Park"
-msgstr "놀이공원"
-
-#: Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutVisualizer.cpp
-msgctxt "EdPluginVisualizer.ParkLayoutTip"
-msgid "Ride footprints, entrances and coaster tracks of the ThemePark layout file (rides.xml)"
-msgstr "ThemePark 배치 파일(rides.xml)의 놀이기구 발자국, 입구, 코스터 트랙"
-
 #: Source/GameFramework/Plugin/Editor/GameplayTools/World/SplineVisualizer.cpp
 msgctxt "EdPluginVisualizer.SplinesLabel"
 msgid "Splines"
@@ -1879,36 +1564,6 @@ msgstr "스플라인"
 msgctxt "EdPluginVisualizer.SplinesTip"
 msgid "Curve of every spline in the scene - drag the control point handles of the selected one (Shapes)"
 msgstr "씬의 스플라인마다 곡선 - 고른 스플라인은 조절점 손잡이를 끈다(Shapes)"
-
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPluginWidget.Account"
-msgid "Account"
-msgstr "계정"
-
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPluginWidget.AccountIdHex"
-msgid "Account id (hex)"
-msgstr "계정 id(16진수)"
-
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPluginWidget.ActingRole"
-msgid "Acting role"
-msgstr "맡은 역할"
-
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPluginWidget.AnnouncementText"
-msgid "Notice text"
-msgstr "공지 글"
-
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPluginWidget.AssetId"
-msgid "Asset id"
-msgstr "에셋 id"
-
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPluginWidget.AuditLog"
-msgid "Audit log"
-msgstr "감사 기록"
 
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
 msgctxt "EdPluginWidget.BasePreset"
@@ -1935,30 +1590,10 @@ msgctxt "EdPluginWidget.EquipmentSet"
 msgid "Equip set"
 msgstr "장비 세트"
 
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPluginWidget.EventId"
-msgid "Event id"
-msgstr "이벤트 id"
-
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPluginWidget.EventJson"
-msgid "Event JSON"
-msgstr "이벤트 JSON"
-
 #: Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp
 msgctxt "EdPluginWidget.From"
 msgid "From"
 msgstr "보내는 곳"
-
-#: Source/GameFramework/Kits/Feature/Network/NetSimulation/Editor/MultiplayerInProcessTab.cpp
-msgctxt "EdPluginWidget.Game"
-msgid "Game"
-msgstr "게임"
-
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPluginWidget.GrantRevoke"
-msgid "Grant / Revoke"
-msgstr "지급 / 회수"
 
 #: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
@@ -1966,30 +1601,10 @@ msgctxt "EdPluginWidget.Kind"
 msgid "Kind"
 msgstr "종류"
 
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPluginWidget.LiveEvents"
-msgid "Live events"
-msgstr "라이브 이벤트"
-
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
 msgctxt "EdPluginWidget.Loop"
 msgid "Loop"
 msgstr "반복"
-
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPluginWidget.MaintenanceAnnouncement"
-msgid "Maintenance / Notice"
-msgstr "점검 / 공지"
-
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPluginWidget.MemoTicket"
-msgid "Memo (ticket)"
-msgstr "메모(티켓)"
-
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPluginWidget.MessageKey"
-msgid "Message key"
-msgstr "메시지 키"
 
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp
 msgctxt "EdPluginWidget.Options"
@@ -2011,16 +1626,6 @@ msgctxt "EdPluginWidget.Problems"
 msgid "Problems"
 msgstr "문제"
 
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPluginWidget.ReasonCode"
-msgid "Reason code"
-msgstr "사유 코드"
-
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPluginWidget.Reports"
-msgid "Reports"
-msgstr "신고"
-
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp
 msgctxt "EdPluginWidget.RetargetPose"
 msgid "Retarget pose"
@@ -2031,16 +1636,6 @@ msgctxt "EdPluginWidget.RootAndPelvis"
 msgid "Root and pelvis"
 msgstr "루트와 골반"
 
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPluginWidget.Sanction"
-msgid "Sanction"
-msgstr "제재"
-
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPluginWidget.ScopeAllOrServerKind"
-msgid "Scope (all or server kind)"
-msgstr "범위(all 또는 서버 종류)"
-
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp
 msgctxt "EdPluginWidget.Skeletons"
 msgid "Skeletons"
@@ -2050,11 +1645,6 @@ msgstr "스켈레톤"
 msgctxt "EdPluginWidget.Stop"
 msgid "Stop"
 msgstr "정지"
-
-#: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
-msgctxt "EdPluginWidget.SubjectPrefix"
-msgid "Subject prefix"
-msgstr "주체 접두어"
 
 #: Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp
 msgctxt "EdPluginWidget.To"
@@ -2210,51 +1800,6 @@ msgstr "이펙트"
 msgctxt "Enum.AbilityEntryKind.Presentation"
 msgid "Cue presentations"
 msgstr "큐 연출"
-
-#: Source/GameFramework/Kits/Feature/Online/Chat/Runtime/ChatTypes.h
-msgctxt "Enum.ChatResult.Muted"
-msgid "You are muted ({seconds} s left)"
-msgstr "채팅이 금지되어 있습니다({seconds}초 남음)"
-
-#: Source/GameFramework/Kits/Feature/Online/Chat/Runtime/ChatTypes.h
-msgctxt "Enum.ChatResult.NotFound"
-msgid "Message not found"
-msgstr "메시지를 찾을 수 없습니다"
-
-#: Source/GameFramework/Kits/Feature/Online/Chat/Runtime/ChatTypes.h
-msgctxt "Enum.ChatResult.NotJoinable"
-msgid "This channel cannot be joined"
-msgstr "참여할 수 없는 채널입니다"
-
-#: Source/GameFramework/Kits/Feature/Online/Chat/Runtime/ChatTypes.h
-msgctxt "Enum.ChatResult.NotMember"
-msgid "You have not joined this channel"
-msgstr "참여하지 않은 채널입니다"
-
-#: Source/GameFramework/Kits/Feature/Online/Chat/Runtime/ChatTypes.h
-msgctxt "Enum.ChatResult.RateLimited"
-msgid "Too fast, wait {milliseconds} ms"
-msgstr "너무 빠릅니다. {milliseconds}ms 기다리세요"
-
-#: Source/GameFramework/Kits/Feature/Online/Chat/Runtime/ChatTypes.h
-msgctxt "Enum.ChatResult.Rejected"
-msgid "Message was blocked by the word filter"
-msgstr "단어 거르기에 걸려 메시지를 보내지 못했습니다"
-
-#: Source/GameFramework/Kits/Feature/Online/Chat/Runtime/ChatTypes.h
-msgctxt "Enum.ChatResult.Repeated"
-msgid "You already said that"
-msgstr "이미 한 말입니다"
-
-#: Source/GameFramework/Kits/Feature/Online/Chat/Runtime/ChatTypes.h
-msgctxt "Enum.ChatResult.TargetOffline"
-msgid "That player is offline"
-msgstr "상대가 접속해 있지 않습니다"
-
-#: Source/GameFramework/Kits/Feature/Online/Chat/Runtime/ChatTypes.h
-msgctxt "Enum.ChatResult.TooManyChannels"
-msgid "Too many channels"
-msgstr "채널이 너무 많습니다"
 
 #: Source/Engine/Physics/Collision/CollisionLayers.h
 msgctxt "Enum.CollisionResponse.Block"
@@ -2706,31 +2251,6 @@ msgctxt "Enum.ShopPurchaseStatus.Unverified"
 msgid "The purchase reply did not match; your wallet was refreshed."
 msgstr "구매 응답이 맞지 않아 지갑을 새로 고쳤습니다."
 
-#: Source/GameFramework/Kits/Feature/Online/Social/Runtime/SocialTypes.h
-msgctxt "Enum.SocialPresenceStatus.Away"
-msgid "away"
-msgstr "자리 비움"
-
-#: Source/GameFramework/Kits/Feature/Online/Social/Runtime/SocialTypes.h
-msgctxt "Enum.SocialPresenceStatus.Busy"
-msgid "busy"
-msgstr "바쁨"
-
-#: Source/GameFramework/Kits/Feature/Online/Social/Runtime/SocialTypes.h
-msgctxt "Enum.SocialPresenceStatus.InGame"
-msgid "in game"
-msgstr "게임 중"
-
-#: Source/GameFramework/Kits/Feature/Online/Social/Runtime/SocialTypes.h
-msgctxt "Enum.SocialPresenceStatus.Offline"
-msgid "offline"
-msgstr "오프라인"
-
-#: Source/GameFramework/Kits/Feature/Online/Social/Runtime/SocialTypes.h
-msgctxt "Enum.SocialPresenceStatus.Online"
-msgid "online"
-msgstr "온라인"
-
 #: Source/Engine/Localization/LocText.cpp
 msgctxt "Enum.Unknown"
 msgid "unknown"
@@ -2760,46 +2280,6 @@ msgstr "여기서 뺌"
 msgctxt "Enum.ZoneModuleOrigin.Replaced"
 msgid "replaced here"
 msgstr "여기서 갈아끼움"
-
-#: Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp
-msgctxt "FriendList.Idle"
-msgid "Press Refresh to list friends"
-msgstr "새로 고침을 누르면 친구 목록을 보입니다"
-
-#: Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp
-msgctxt "FriendList.LoadFailed"
-msgid "Could not load the friend list (error {error})"
-msgstr "친구 목록을 불러오지 못했습니다(오류 {error})"
-
-#: Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp
-msgctxt "FriendList.Loading"
-msgid "Loading friends..."
-msgstr "친구 목록을 불러오는 중..."
-
-#: Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp
-msgctxt "FriendList.None"
-msgid "No friends yet"
-msgstr "아직 친구가 없습니다"
-
-#: Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp
-msgctxt "FriendList.PendingRequests"
-msgid "{title}  ({count, plural, one {# pending request} other {# pending requests}})"
-msgstr "{title}  (받은 요청 {count}건)"
-
-#: Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp
-msgctxt "FriendList.Row"
-msgid "#{account}  {presence}"
-msgstr "#{account}  {presence}"
-
-#: Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp
-msgctxt "FriendList.RowActivity"
-msgid "#{account}  {presence}  {activity}"
-msgstr "#{account}  {presence}  {activity}"
-
-#: Source/GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.cpp
-msgctxt "FriendList.Title"
-msgid "Friends"
-msgstr "친구"
 
 #: Source/GameFramework/Client/Inventory/InventoryScreen.cpp
 msgctxt "Inventory.DropTitle"
@@ -2979,36 +2459,6 @@ msgctxt "SceneLoad.Retry"
 msgid "Try Again"
 msgstr "다시 시도"
 
-#: Source/GameFramework/Kits/Feature/Online/ServerDirectory/Client/ServerPickerScreen.cpp
-msgctxt "ServerPicker.Idle"
-msgid "Press Refresh to list servers"
-msgstr "새로 고침을 누르면 서버 목록을 보입니다"
-
-#: Source/GameFramework/Kits/Feature/Online/ServerDirectory/Client/ServerPickerScreen.cpp
-msgctxt "ServerPicker.LoadFailed"
-msgid "Could not load the server list (error {error})"
-msgstr "서버 목록을 불러오지 못했습니다(오류 {error})"
-
-#: Source/GameFramework/Kits/Feature/Online/ServerDirectory/Client/ServerPickerScreen.cpp
-msgctxt "ServerPicker.Loading"
-msgid "Loading servers..."
-msgstr "서버 목록을 불러오는 중..."
-
-#: Source/GameFramework/Kits/Feature/Online/ServerDirectory/Client/ServerPickerScreen.cpp
-msgctxt "ServerPicker.None"
-msgid "No server is available right now"
-msgstr "지금 들어갈 수 있는 서버가 없습니다"
-
-#: Source/GameFramework/Kits/Feature/Online/ServerDirectory/Client/ServerPickerScreen.cpp
-msgctxt "ServerPicker.Pick"
-msgid "Pick a server"
-msgstr "서버를 고르세요"
-
-#: Source/GameFramework/Kits/Feature/Online/ServerDirectory/Client/ServerPickerScreen.cpp
-msgctxt "ServerPicker.Row"
-msgid "{region}  {fill}%  {state}"
-msgstr "{region}  {fill}%  {state}"
-
 #: Source/GameFramework/Client/Shop/ShopScreen.cpp
 msgctxt "Shop.BalanceLine"
 msgid "{amount} {currency}"
@@ -3087,51 +2537,6 @@ msgstr "게임을 끝낼까요?"
 msgctxt "UIMenu.QuitTitle"
 msgid "Quit Game"
 msgstr "게임 종료"
-
-#: Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp
-msgctxt "Western.Bounty"
-msgid "Bounty ${amount}"
-msgstr "현상금 ${amount}"
-
-#: Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp
-msgctxt "Western.Carcasses"
-msgid "Carcasses {count}"
-msgstr "사체 {count}"
-
-#: Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp
-msgctxt "Western.Honor"
-msgid "Honor {honor} ({tier})"
-msgstr "명예 {honor}({tier})"
-
-#: Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp
-msgctxt "Western.Hungry"
-msgid "Hungry"
-msgstr "배고픔"
-
-#: Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp
-msgctxt "Western.Money"
-msgid "${amount}"
-msgstr "${amount}"
-
-#: Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp
-msgctxt "Western.OnFoot"
-msgid "On foot - E: mount  F: whistle"
-msgstr "걷는 중 - E: 타기  F: 휘파람"
-
-#: Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp
-msgctxt "Western.Pelts"
-msgid "Pelts {count}"
-msgstr "가죽 {count}"
-
-#: Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp
-msgctxt "Western.Riding"
-msgid "Riding {horse} - {gait} {speed} m/s - E: dismount  Shift: gallop"
-msgstr "{horse} 탑승 - {gait} {speed} m/s - E: 내리기  Shift: 질주"
-
-#: Source/GameFramework/Kits/Genre/RPG/OpenWorldWestern/Client/WesternRiderViewComponent.cpp
-msgctxt "Western.Wanted"
-msgid "Wanted {level}"
-msgstr "수배 {level}"
 
 #. Context: TextWidget._text
 #: engine/ui/confirm_unsaved.ui.xml

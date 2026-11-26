@@ -1,0 +1,22 @@
+<?asset guid="1cd6c823daa243a8933d9b1d616ad481"?>
+<TranslationTable culture="ko">
+	<entries>
+		<entry key="Enum.SocialPresenceStatus.Away" text="자리 비움" sourceHash="6f3fb3842ffa02bb" />
+		<entry key="Enum.SocialPresenceStatus.Busy" text="바쁨" sourceHash="ff75d19be2aea620" />
+		<entry key="Enum.SocialPresenceStatus.InGame" text="게임 중" sourceHash="751b555ee38fcef8" />
+		<entry key="Enum.SocialPresenceStatus.Offline" text="오프라인" sourceHash="574193ebbf068988" />
+		<entry key="Enum.SocialPresenceStatus.Online" text="온라인" sourceHash="abf0e099159a8caa" />
+		<entry key="FriendList.Idle"
+		       text="새로 고침을 누르면 친구 목록을 보입니다"
+		       sourceHash="1bf7709ef94325c5" />
+		<entry key="FriendList.LoadFailed"
+		       text="친구 목록을 불러오지 못했습니다(오류 {error})"
+		       sourceHash="126516148f7f55b3" />
+		<entry key="FriendList.Loading" text="친구 목록을 불러오는 중..." sourceHash="fd7afe91ccb1c0b8" />
+		<entry key="FriendList.None" text="아직 친구가 없습니다" sourceHash="2736cb628dbd9e09" />
+		<entry key="FriendList.PendingRequests" text="{title}  (받은 요청 {count}건)" sourceHash="edf972fdfe13cb2e" />
+		<entry key="FriendList.Row" text="#{account}  {presence}" sourceHash="2db55beacdf5ec2a" />
+		<entry key="FriendList.RowActivity" text="#{account}  {presence}  {activity}" sourceHash="b1fda9d92194f095" />
+		<entry key="FriendList.Title" text="친구" sourceHash="4c675180cc54b9ba" />
+	</entries>
+</TranslationTable>

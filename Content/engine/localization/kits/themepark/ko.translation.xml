@@ -1,0 +1,34 @@
+<?asset guid="b05292f4f0fb442eabf496efe7de8bb9"?>
+<TranslationTable culture="ko">
+	<entries>
+		<entry key="EdPluginButton.Reload" text="다시 불러오기" sourceHash="d5b6130b4937488c" />
+		<entry key="EdPluginParkLayout.ColumnCapacity" text="정원" sourceHash="662a4649201589c9" />
+		<entry key="EdPluginParkLayout.ColumnCheck" text="검사" sourceHash="42cbd8dca939a9c7" />
+		<entry key="EdPluginParkLayout.ColumnCost" text="비용" sourceHash="367d079d1aed1358" />
+		<entry key="EdPluginParkLayout.ColumnPrice" text="탑승료" sourceHash="b75ee24776b3d425" />
+		<entry key="EdPluginParkLayout.ColumnRide" text="놀이기구" sourceHash="dcc85b2bf9f5004f" />
+		<entry key="EdPluginParkLayout.ColumnTime" text="시간(초)" sourceHash="b30cb1f77e66860c" />
+		<entry key="EdPluginParkLayout.FocusGate" text="정문 보기" sourceHash="0f54f967b84971ee" />
+		<entry key="EdPluginParkLayout.FocusGateTip"
+		       text="씬 뷰 카메라를 공원 정문으로 옮깁니다"
+		       sourceHash="8bfe700223462b90" />
+		<entry key="EdPluginParkLayout.IssueDuplicateID" text="{name}와 id 가 같음" sourceHash="f889fe2f2a742099" />
+		<entry key="EdPluginParkLayout.IssueEntrance"
+		       text="입구가 바닥 영역 안에 있음"
+		       sourceHash="d771331ea711dc1b" />
+		<entry key="EdPluginParkLayout.IssueOverlap" text="{name}와 겹침" sourceHash="1f5279ef06ad20b2" />
+		<entry key="EdPluginParkLayout.NoLayoutHint"
+		       text="이 게임에는 공원 배치 데이터가 없습니다({path})"
+		       sourceHash="57f81944f9952bee" />
+		<entry key="EdPluginParkLayout.ReadFailedHint"
+		       text="공원 배치를 읽지 못했습니다({path}). 로그를 보고 파일을 고친 뒤 다시 불러오세요."
+		       sourceHash="b7bd7c1b560208ed" />
+		<entry key="EdPluginParkLayout.Summary"
+		       text="총 비용 {cost}  ·  시작 자금 {cash}  ·  입장료 {fee}  ·  배치 문제 {issues}"
+		       sourceHash="6e8c60cf7ef53d48" />
+		<entry key="EdPluginVisualizer.ParkLayoutLabel" text="놀이공원" sourceHash="2e3f0d19ed369939" />
+		<entry key="EdPluginVisualizer.ParkLayoutTip"
+		       text="ThemePark 배치 파일(rides.xml)의 놀이기구 발자국, 입구, 코스터 트랙"
+		       sourceHash="40b20210c0343418" />
+	</entries>
+</TranslationTable>

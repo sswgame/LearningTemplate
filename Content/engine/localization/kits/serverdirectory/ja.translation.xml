@@ -1,0 +1,17 @@
+<?asset guid="55dd0d470a244c37b8460dd8620e465c"?>
+<TranslationTable culture="ja">
+	<entries>
+		<entry key="ServerPicker.Idle"
+		       text="更新を押すとサーバー一覧を表示します"
+		       sourceHash="90268a2738feb664" />
+		<entry key="ServerPicker.LoadFailed"
+		       text="サーバー一覧を読み込めませんでした(エラー {error})"
+		       sourceHash="9f1431b46bb9b536" />
+		<entry key="ServerPicker.Loading" text="サーバーを読み込み中..." sourceHash="fc9faff913354a2f" />
+		<entry key="ServerPicker.None"
+		       text="現在利用できるサーバーはありません"
+		       sourceHash="5fd07d96180b4276" />
+		<entry key="ServerPicker.Pick" text="サーバーを選んでください" sourceHash="6711b33edde339d6" />
+		<entry key="ServerPicker.Row" text="{region}  {fill}%  {state}" sourceHash="e8ee51c94be0f27e" />
+	</entries>
+</TranslationTable>

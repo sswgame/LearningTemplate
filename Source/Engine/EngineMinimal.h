@@ -11,3 +11,4 @@
 #include "Core/CoreMinimal.h"
 
 #include "Engine/Foundation/EngineDefines.h"
+#include "Engine/Reflection/ReflectionEnumMacros.h" // 열거형 표식은 어느 헤더에서나 쓴다(잎 헤더, include 없음)

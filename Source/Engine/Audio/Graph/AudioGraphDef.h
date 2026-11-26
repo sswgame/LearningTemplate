@@ -43,6 +43,7 @@
 #include "Engine/Audio/AudioSpatial.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetTypeRegistry.h"
+#include "Engine/Presentation/AudioPlayableAsset.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Serializer/DataPath.h"
 
@@ -124,13 +125,9 @@ namespace sw
     {
         REFLECT_BODY();
         /** @brief 소리 그래프 파일의 접미사입니다. 클립 캐시와 에디터 종류 등록(`Editor/AssetActions`)이 이 값을 씁니다. */
-        static constexpr string_view kExtension = ".audiograph.xml";
-        /** @brief 이 에셋 종류의 접미사입니다(종류 표 `AssetTypeRegistry`). */
-        static constexpr AssetSuffix kArrAssetSuffix[] = {
-            { kExtension, AssetSuffixRole::Plain },
-        };
-        /** @brief 소리 그래프 에셋 종류입니다(등록은 `AudioGraphDef.cpp` 의 `SW_ASSET_TYPE`). 소리 파일과 같이 전용 서버 패키지가 빼는 묶음 `Audio` 다 — 서버는 그래프를 읽지 않는다. */
-        static constexpr AssetTypeDef kAssetType{ "AudioGraph", kArrAssetSuffix, static_cast<uint32>( SW_COUNT_OF( kArrAssetSuffix ) ), {}, 0, "Audio" };
+        static constexpr string_view kExtension = AudioGraphAssetKind::kExtension;
+        /** @brief 소리 그래프 에셋 종류입니다(정의는 `AudioGraphAssetKind`, 등록은 `AudioGraphDef.cpp` 의 `SW_ASSET_TYPE`). */
+        static constexpr const AssetTypeDef& kAssetType = AudioGraphAssetKind::kAssetType;
         /** @brief 노드 수의 상한입니다. */
         static constexpr uint32 kMaxNodeCount = 32;
         /** @brief 길이의 상한(초)입니다. 프레임 수가 32 비트에 들어가야 한다. */

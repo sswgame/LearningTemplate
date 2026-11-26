@@ -151,6 +151,12 @@ namespace sw
         const string_view* _pBuiltinName{ nullptr }; ///< 파일이 아니라 엔진이 만드는 에셋의 이름(내장 도형 `Cube`). 없으면 nullptr
         uint32             _builtinNameCount{ 0 };   ///< `_pBuiltinName` 의 수
         AssetPathRule      _runtimePath{};           ///< 파일이 아니라 실행 중에 만드는 자원의 경로 규칙(렌더 텍스처 `rendertarget/`). 비어 있으면 없다
+        /**
+         * @brief 합 종류를 이루는 종류들입니다(소리 참조 = 소리 파일 + 소리 그래프). 합 종류는 자기 접미사 없이 이 종류들의 경로를 받는다(`makeUnion`).
+         * @details 언리얼 `USoundBase` 칸이 `USoundWave` · `USoundCue` 를 받는 자리다. 접미사를 한 벌 더 적으면 구성 종류에 형식을 더할 때 합 종류가 뒤처진다.
+         */
+        const AssetTypeDef* const* _ppMemberType{ nullptr };
+        uint32                     _memberTypeCount{ 0 }; ///< `_ppMemberType` 의 수
 
         /**
          * @brief @p rule 을 경로 규칙으로 가진 사본입니다. 카탈로그 종류는 헤더의 `kAssetType` 에 규칙을 적어(`makeDataFile`) 타입 있는 참조(`AssetRef<T>`)가 경로를 가른다.
@@ -194,7 +200,7 @@ namespace sw
             return copy;
         }
         /** @brief 경로로 이 종류의 에셋인지 가를 수 있으면(접미사 · 경로 규칙 · 내장 이름 중 하나가 있으면) true 입니다. 가를 수 없는 종류는 타입 있는 참조의 대상이 될 수 없다. */
-        [[nodiscard]] constexpr bool canTellPath() const { return _suffixCount > 0 || _pathRule.isEmpty() == false || _builtinNameCount > 0; }
+        [[nodiscard]] constexpr bool canTellPath() const { return _suffixCount > 0 || _pathRule.isEmpty() == false || _builtinNameCount > 0 || _memberTypeCount > 0; }
         /** @brief @p loader 를 로더로 가진 사본입니다(등록 줄). */
         [[nodiscard]] constexpr AssetTypeDef withLoader( const AssetTypeLoader& loader ) const
         {
@@ -209,6 +215,16 @@ namespace sw
             def._name     = name;
             def._pathRule = rule;
             def._loader   = loader;
+            return def;
+        }
+        /** @brief 종류 @p arrMember 의 합인 종류입니다(타입 있는 참조의 대상 — 표에 올리지 않는다). 접미사는 구성 종류의 것을 그대로 쓴다. */
+        template <uint32 Count>
+        [[nodiscard]] static constexpr AssetTypeDef makeUnion( string_view name, const AssetTypeDef* const ( &arrMember )[Count] )
+        {
+            AssetTypeDef def;
+            def._name            = name;
+            def._ppMemberType    = arrMember;
+            def._memberTypeCount = Count;
             return def;
         }
         /** @brief 파일 규칙 없이 공유 캐시로만 찾는 종류입니다(등록 줄). */

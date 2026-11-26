@@ -1,0 +1,16 @@
+<?asset guid="8b5eaaa973524e8399911b91575b3f19"?>
+<TranslationTable culture="ko">
+	<entries>
+		<entry key="Western.Bounty" text="현상금 ${amount}" sourceHash="c58db76a5bd04bb6" />
+		<entry key="Western.Carcasses" text="사체 {count}" sourceHash="ddc82144621ac028" />
+		<entry key="Western.Honor" text="명예 {honor}({tier})" sourceHash="993157e899c31860" />
+		<entry key="Western.Hungry" text="배고픔" sourceHash="d5f6173b71caeddc" />
+		<entry key="Western.Money" text="${amount}" sourceHash="99e2e4655d7f5a1b" />
+		<entry key="Western.OnFoot" text="걷는 중 - E: 타기  F: 휘파람" sourceHash="1682216146fa816d" />
+		<entry key="Western.Pelts" text="가죽 {count}" sourceHash="85a0fcd45b363acc" />
+		<entry key="Western.Riding"
+		       text="{horse} 탑승 - {gait} {speed} m/s - E: 내리기  Shift: 질주"
+		       sourceHash="b783302b2e4d4c79" />
+		<entry key="Western.Wanted" text="수배 {level}" sourceHash="d1573e50d443252a" />
+	</entries>
+</TranslationTable>

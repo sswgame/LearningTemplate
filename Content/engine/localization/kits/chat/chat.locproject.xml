@@ -1,0 +1,21 @@
+<?asset guid="699319b198b441eaa46fe5789722e776"?>
+<LocalizationProject name="chat" sourceCulture="en">
+	<!-- 키트 Feature/Online/Chat 의 글 — 키트 모듈이 실행 중에 붙인다(SW_LOCALIZATION_PROJECT). 엔진 키는 의존 프로젝트에서 빌려 쓴다. -->
+	<cultures>
+		<item>ko</item>
+		<item>ja</item>
+	</cultures>
+	<stagedCultures>
+		<item>ko</item>
+		<item>ja</item>
+	</stagedCultures>
+	<stringTables>
+		<item>chat.strings.xml</item>
+	</stringTables>
+	<codeRoots>
+		<item>Source/GameFramework/Kits/Feature/Online/Chat</item>
+	</codeRoots>
+	<dependencies>
+		<item>guid:b29adbb3a89cf7dce07cdd2d4213515c</item> <!-- engine/localization/engine.locproject.xml -->
+	</dependencies>
+</LocalizationProject>

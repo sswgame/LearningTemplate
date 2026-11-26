@@ -49,6 +49,7 @@
   "_cookRules": {
     "_listAlwaysCook": [
       { "_name": "EngineLocalizationTables_NamedRelativeToTheProject", "_listPattern": [ "engine/localization/*" ], "_bAutomationOnly": false },
+      { "_name": "KitLocalizationTables_MountedByKitModules", "_listPattern": [ "engine/localization/kits/**" ], "_bAutomationOnly": false },
       { "_name": "GameData_FoundByKindPathRule", "_listPattern": [ "game/*/data/**" ], "_bAutomationOnly": false },
       { "_name": "GameMaps_OpenedByName", "_listPattern": [ "game/*/maps/**" ], "_bAutomationOnly": false },
       { "_name": "GameMinigames_ReadByName", "_listPattern": [ "game/*/minigames/**" ], "_bAutomationOnly": false },

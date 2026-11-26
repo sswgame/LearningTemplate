@@ -397,8 +397,43 @@ namespace sw
                 return true;
             }
 
-            /** @brief 코드 루트 아래의 소스 파일(`kArrCodeExtension`)에서 문구를 모읍니다. 출처는 저장소 기준 상대 경로입니다. */
-            static void gatherCodeRoots( const LocalizationProject& project, const DiskPath& repositoryRoot, TextGatherer& gatherer )
+            /**
+             * @brief 다른 프로젝트가 맡는, 이 프로젝트 코드 루트 안쪽의 더 깊은 코드 루트입니다(엔진 `Source/GameFramework` 안의 키트 폴더).
+             * @details 소스 파일 하나는 그 파일을 덮는 코드 루트 가운데 가장 깊은 것의 프로젝트에만 든다 — 키트를 더해도 엔진 프로젝트를 고치지 않는다(언리얼 플러그인 타깃이 제 폴더를 모으는 자리).
+             */
+            /** @brief 저장소 기준 경로 @p path 가 폴더 @p root 자체이거나 그 아래면 true 입니다. */
+            static bool isUnderRoot( string_view path, string_view root )
+            {
+                return StringUtil::startsWith( path, root ) && ( path.size() == root.size() || path[root.size()] == '/' );
+            }
+
+            static vector<string> collectNestedCodeRoots( string_view projectPath, const LocalizationProject& project )
+            {
+                vector<string> listProjectPath;
+                LocalizationTools::collectProjectPaths( listProjectPath, true );
+                const string   self = FileUtil::normalizeSeparators( resolveAbsolutePath( projectPath ).str() );
+                vector<string> listNested;
+                for ( const string& otherPath : listProjectPath )
+                {
+                    if ( StringUtil::equals( FileUtil::normalizeSeparators( otherPath ), self, true ) )
+                        continue;
+                    LocalizationProject other;
+                    if ( other.loadFromFile( resolveAbsolutePath( otherPath ) ).has_value() == false )
+                        continue; // 그 프로젝트의 수집이 읽기 오류를 알린다
+                    for ( const string& otherRoot : other._listCodeRoot )
+                    {
+                        for ( const string& ownRoot : project._listCodeRoot )
+                        {
+                            if ( otherRoot.size() > ownRoot.size() && isUnderRoot( FileUtil::normalizeSeparators( otherRoot ), FileUtil::normalizeSeparators( ownRoot ) ) )
+                                listNested.push_back( FileUtil::normalizeSeparators( otherRoot ) );
+                        }
+                    }
+                }
+                return listNested;
+            }
+
+            /** @brief 코드 루트 아래의 소스 파일(`kArrCodeExtension`)에서 문구를 모읍니다. 출처는 저장소 기준 상대 경로입니다. @p listNestedRoot 아래 파일은 그 프로젝트의 것이라 건너뜁니다. */
+            static void gatherCodeRoots( const LocalizationProject& project, const DiskPath& repositoryRoot, const vector<string>& listNestedRoot, TextGatherer& gatherer )
             {
                 for ( const string& codeRoot : project._listCodeRoot )
                 {
@@ -415,13 +450,19 @@ namespace sw
                         // 테스트 소스는 배포 문구가 아니다(빌드도 `/Tests/` 를 개발 전용으로 뺀다 — SW_DEV_ONLY_SOURCE_PATTERNS). 테스트가 쓰는 키가 엔진 표에 오르지 않게 한다.
                         if ( StringUtil::contains( FileUtil::normalizeSeparators( filePath.str() ), "/Tests/" ) )
                             continue;
-                        string text;
-                        if ( FileUtil::readTextFile( filePath, text ) == false )
-                            continue;
                         string relative;
                         if ( FileUtil::makeRelativePath( repositoryRoot.str(), filePath.str(), relative ) == false )
                             relative = filePath.str();
-                        gatherer.gatherCodeText( text, FileUtil::normalizeSeparators( relative ) );
+                        relative = FileUtil::normalizeSeparators( relative );
+                        bool bNested{ false };
+                        for ( const string& nestedRoot : listNestedRoot )
+                        {
+                            bNested = bNested || isUnderRoot( relative, nestedRoot );
+                        }
+                        string text;
+                        if ( bNested || FileUtil::readTextFile( filePath, text ) == false )
+                            continue;
+                        gatherer.gatherCodeText( text, relative );
                         gatherer.countFile();
                     }
                 }
@@ -467,7 +508,21 @@ namespace sw
         // 엔진 문자열 프로젝트 경로는 데이터에서 읽은 테이블에만 있다 — 테이블이 없으면 대신 쓸 값이 없으므로 오류로 알리고 엔진 프로젝트를 빼고 모은다.
         const EngineDefaultAssets* pDefaultAssets = editor::findSubsystem<const EngineDefaultAssets>();
         if ( pDefaultAssets != nullptr )
-            outListProjectPath.push_back( LocalizationToolsInternal::resolveAbsolutePath( pDefaultAssets->_localizationProject.get() ).str() );
+        {
+            const DiskPath engineProject = LocalizationToolsInternal::resolveAbsolutePath( pDefaultAssets->_localizationProject.get() );
+            outListProjectPath.push_back( engineProject.str() );
+            // 키트 프로젝트(엔진 현지화 폴더 아래 `kits/<키트>/`)는 키트 모듈이 실행 중에 올린다(`SW_LOCALIZATION_PROJECT`) — 수집은 엔진 프로젝트와 함께 모은다.
+            vector<AbsolutePath> listNested;
+            if ( editor::EditorContentScan::collectFiles( FileUtil::toDiskPath( FileUtil::getDirectoryPart( engineProject.str() ) ), ".xml", listNested, true ) )
+            {
+                VectorUtil::sort( listNested );
+                for ( const AbsolutePath& nestedPath : listNested )
+                {
+                    if ( StringUtil::endsWith( nestedPath.str(), LocalizationProject::kExtension, true ) && nestedPath.str() != engineProject.str() )
+                        outListProjectPath.push_back( FileUtil::normalizeSeparators( nestedPath.str() ) );
+                }
+            }
+        }
         else
             SW_LOG_ERROR_ID( "LocalizationTools.EngineDefaultAssetsNot", "Engine default assets are not loaded - the engine localization project is left out" );
         // 에디터 UI 문구 — 명령줄 도구는 에디터 컨텍스트 없이 돌므로 표를 직접 읽는다.
@@ -574,11 +629,33 @@ namespace sw
         {
             listOtherTable.push_back( &listTable[tableIndex] );
         }
+        // 의존 프로젝트(키트 → 엔진)의 원문 표는 참조로만 본다 — 키를 빌려 쓰는 쪽이 같은 글을 다시 모으지 않는다.
+        vector<vector<SourceStringTable>> listDependencyTable( project._listDependency.size() );
+        for ( size_t dependencyIndex = 0; dependencyIndex < project._listDependency.size(); ++dependencyIndex )
+        {
+            const DiskPath      dependencyPath = Internal::resolveAbsolutePath( project._listDependency[dependencyIndex].get() );
+            LocalizationProject dependency;
+            if ( const expected<void> read = dependency.loadFromFile( dependencyPath ); read.has_value() == false )
+            {
+                SW_LOG_ERROR_ID( "LocalizationTools.DependencyProjectNotLoaded", "Localization project '%#' depends on '%#', which is not loaded: %# (%#)", project._name,
+                                 project._listDependency[dependencyIndex].get(), read.error().message(), read.error().detail() );
+                return false;
+            }
+            if ( Internal::loadGatherTables( dependencyPath, dependency, listDependencyTable[dependencyIndex] ) == false )
+                return false;
+        }
+        for ( const vector<SourceStringTable>& listDependency : listDependencyTable )
+        {
+            for ( const SourceStringTable& table : listDependency )
+            {
+                listOtherTable.push_back( &table );
+            }
+        }
         outResult._gatherTablePath = LocalizationProject::makeSiblingPath( absolute, project._listStringTable.front() );
 
         // 1) 코드 2) 데이터
         TextGatherer gatherer;
-        Internal::gatherCodeRoots( project, repositoryRoot, gatherer );
+        Internal::gatherCodeRoots( project, repositoryRoot, Internal::collectNestedCodeRoots( projectPath, project ), gatherer );
         Internal::gatherAssetRoots( project, gatherer );
         outResult._fileCount = gatherer.getFileCount();
 
