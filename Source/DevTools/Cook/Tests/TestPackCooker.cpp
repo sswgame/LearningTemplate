@@ -266,3 +266,25 @@ SW_TEST_CASE( PackCookerTest, RealPackRulesExcludeLocalizationAuthoringTables )
         SW_EXPECT_TRUE_MSG( PackCooker::shouldIncludeStagedFile( cookedTable, kShaderFolder, pBuildTarget ), label );
     }
 }
+
+/** @brief [PackCookerTest] 콘텐츠에서 사라진 도메인의 장부 팩과 청크 목록은 지우고, 살아 있는 다른 게임 팩과 장부에 없는 파일은 남긴다 */
+SW_TEST_CASE( PackCookerTest, OrphanDomainPacksAreRemovedWithTheirChunkList )
+{
+    const AbsolutePath root       = test::makeScratchPath( "PackOrphanDomains" );
+    const AbsolutePath content    = root.join( "Content" );
+    const AbsolutePath packFolder = root.join( "Packs" );
+    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( content.join( "game/playground" ) ) && FileUtil::ensureDirectoryExists( packFolder ) );
+    for ( const utf8* pName : { "engine.pack", "game_playground.pack", "game_empty.pack", "game_empty.scene_empty_a.0.pack", "packchunks.game_empty.xml", "handmade.pack" } )
+    {
+        SW_REQUIRE_TRUE( FileUtil::writeTextFile( packFolder.join( pName ), "x" ) );
+    }
+    unordered_set<string> setLedger{ "engine.pack", "game_playground.pack", "game_empty.pack", "game_empty.scene_empty_a.0.pack" };
+    SW_REQUIRE_TRUE( PackCooker::removeOrphanDomainPacks( content, packFolder, setLedger ) );
+    SW_EXPECT_TRUE( setLedger == ( unordered_set<string>{ "engine.pack", "game_playground.pack" } ) );
+    SW_EXPECT_FALSE( FileUtil::exists( packFolder.join( "game_empty.pack" ) ) );
+    SW_EXPECT_FALSE( FileUtil::exists( packFolder.join( "game_empty.scene_empty_a.0.pack" ) ) );
+    SW_EXPECT_FALSE( FileUtil::exists( packFolder.join( "packchunks.game_empty.xml" ) ) );
+    SW_EXPECT_TRUE( FileUtil::exists( packFolder.join( "game_playground.pack" ) ) );
+    SW_EXPECT_TRUE( FileUtil::exists( packFolder.join( "handmade.pack" ) ) ); // 쿠커가 쓰지 않은 파일
+    SW_EXPECT_TRUE( FileUtil::removeDirectory( root ) );
+}

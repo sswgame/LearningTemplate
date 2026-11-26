@@ -1248,6 +1248,42 @@ namespace sw
 
 namespace sw
 {
+    bool PackCooker::removeOrphanDomainPacks( const AbsolutePath& contentRoot, const AbsolutePath& packOutputDir, unordered_set<string>& inoutSetLedger )
+    {
+        vector<string> listAliveDomain{ "engine", "common" };
+        if ( AssetPaths::collectGamePackDomains( contentRoot, listAliveDomain ) == false )
+            return false;
+        unordered_set<string> setAliveStem;
+        for ( const string& domain : listAliveDomain )
+        {
+            setAliveStem.insert( PackChunkManifest::makeDomainStem( domain ) );
+        }
+        bool           bAllGone = true;
+        vector<string> listOrphan;
+        for ( const string& name : inoutSetLedger )
+        {
+            const string_view stem = string_view( name ).substr( 0, name.find( '.' ) ); // `<줄기>.pack` · `<줄기>.<청크>.<번호>.pack`
+            if ( setAliveStem.contains( string( stem ) ) == false )
+                listOrphan.push_back( name );
+        }
+        std::sort( listOrphan.begin(), listOrphan.end() );
+        for ( const string& name : listOrphan )
+        {
+            const AbsolutePath packPath = packOutputDir.join( name );
+            if ( FileUtil::exists( packPath ) && FileUtil::removeFile( packPath ) == false )
+            {
+                bAllGone = false;
+                continue;
+            }
+            inoutSetLedger.erase( name );
+            const AbsolutePath manifestPath = packOutputDir.join( PackChunkManifest::makeFileName( string_view( name ).substr( 0, name.find( '.' ) ) ) );
+            if ( FileUtil::exists( manifestPath ) && FileUtil::removeFile( manifestPath ) == false )
+                bAllGone = false;
+            SW_LOG_INFO_ID( "PackCooker.PackCookRemovedOrphan", "Pack cook: removed %# - its domain is no longer in the content", packPath.str() );
+        }
+        return bAllGone;
+    }
+
     string PackCooker::makePackFileName( string_view domain, string_view chunk, uint32 number )
     {
         string name = FileUtil::trimTrailingSlashes( FileUtil::normalizePath( domain ).str() );
@@ -1658,6 +1694,8 @@ namespace sw
             if ( PackCookerInternal::removeStaleSiblingPacks( params._packOutputDir, domain, listWrittenName, setLedger ) == false )
                 ++failedCount;
         }
+        if ( removeOrphanDomainPacks( params._resourceRoot, params._packOutputDir, setLedger ) == false )
+            ++failedCount;
         if ( failedCount == 0 && PackCookerInternal::writeChunkManifest( params._packOutputDir, listDomain, selection, mapPlacedChunk, mapChunkPack ) == false )
             ++failedCount;
         if ( PackCookerInternal::writeCookedPackLedger( params._packOutputDir, setLedger ) == false )
