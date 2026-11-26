@@ -117,7 +117,7 @@ namespace sw
         inline constexpr const utf8* kArrNameFieldType[] = { "sw::basic_hashed_string", "sw::DataPath", "sw::AssetID", "sw::TagID", "sw::AssetRef" };
         /**
          * @brief 값이 아니라 구독 · 연결 · 공유 에셋 · 잠금인 형식입니다 — 싣고 되살릴 값이 없어 상태 선언(`SW_TRANSIENT` · `SW_CODEC_STATE`)을 묻지 않는다
-         *        (포인터 · 참조 · const 값 · `shared_ptr<const T>` 도 같다, `MemberCollector::hasStateValue`).
+         *        (포인터 · 참조 · const 값 · `shared_ptr<const T>` 도 같다, `MemberCollectorValidationInternal::hasStateValue`).
          */
         inline constexpr const utf8* kArrNonStateType[] = { "sw::Subscription", "sw::SubscriptionList", "sw::ItemSubscriptionList", "sw::Delegate", "sw::MulticastDelegate",
                                                             "sw::DelegateSlot", "sw::SharedAssetRef", "sw::AssetHandle", "sw::BoundAssetRef", "sw::AssetReloadWatch",

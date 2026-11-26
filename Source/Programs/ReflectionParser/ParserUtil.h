@@ -1,11 +1,10 @@
 /**
  * @file ParserUtil.h
- * @brief ReflectionParser 경로 조합·공통 토큰 분할
+ * @brief ReflectionParser 의 형식 철자 다루기(`<>` 밖 쉼표 분할 · 마지막 범위 이름 · 바깥 템플릿 이름)
  */
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
-#include "Core/File/FileUtil.h"
 #include "Core/String/StringUtil.h"
 
 namespace sw
@@ -13,21 +12,9 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 1) ParserUtil — emit 경로 조합 · 템플릿 인자 토큰 분할
     // ------------------------------------------------------------------------------
-    /** @brief 생성 경로 조합(.gen.cpp / .gen.h)과 `<>` 밖 쉼표 분할 */
+    /** @brief 형식 철자 · 범위 이름 다루기(`<>` 밖 쉼표 분할 · 마지막 범위 이름 · 바깥 템플릿 이름) */
     struct ParserUtil
     {
-        /**
-         * @brief 출력 디렉터리 + stem + 확장자(.gen.cpp / .gen.h)로 생성 경로를 만듭니다.
-         * @note FileUtil::normalizePath 는 Windows 에서 소문자로 바꾸므로, CMake OUTPUT 과 맞추려고 쓰지 않습니다.
-         */
-        static AbsolutePath makeGeneratedPath( const AbsolutePath& outputDir, const AbsolutePath& sourceFilePath,
-                                               const string_view extension )
-        {
-            string fileName = FileUtil::removeExtension( FileUtil::getFileNamePart( sourceFilePath.str() ) );
-            fileName += extension;
-            return outputDir.join( fileName );
-        }
-
         /** @brief `<>` · `()` 밖의 `,` 만 분할하고 각 토큰을 trim 합니다(`map<K, V>` · builtins 의 Layout 칸 `f32(_x,_y)` 가 한 토큰). */
         static vector<string> splitCommaRespectingAngles( string_view inner )
         {

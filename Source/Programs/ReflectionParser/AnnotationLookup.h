@@ -57,14 +57,7 @@ namespace sw
         }
 
     private:
-        struct AttrSearch;
-        struct SiblingSearch;
-        static CXChildVisitResult attrSearchVisitor( CXCursor cursor, CXCursor, CXClientData data );
-        static CXChildVisitResult stringLiteralVisitor( CXCursor cursor, CXCursor, CXClientData data );
-        static CXChildVisitResult siblingSearchVisitor( CXCursor cursor, CXCursor, CXClientData data );
-        static CXChildVisitResult bodyMarkerVisitor( CXCursor cursor, CXCursor, CXClientData data );
-        /** @brief libclang 이 다시 쓴 문자열 리터럴 철자(`"…"`, C 이스케이프 · 팔진 `\ooo`)를 원본 바이트로 풉니다. 모양이 다르면 빈 문자열입니다. */
-        static string unescapeLiteralSpelling( string_view spelling );
-        static void   reportUnknownTokens( const ReflectAnnotationDesc& desc, string_view owner, const vector<string>& listUnknownToken );
+        /** @brief 모르는 토큰을 알립니다. 템플릿 `applyAnnotation` 이 불러 헤더에 남는다. */
+        static void reportUnknownTokens( const ReflectAnnotationDesc& desc, string_view owner, const vector<string>& listUnknownToken );
     };
 } // namespace sw

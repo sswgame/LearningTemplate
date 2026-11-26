@@ -50,42 +50,5 @@ namespace sw
 
         /** @brief 애노테이션이 상수 이름으로 적은 값(`MaxCount` · `Min` · `Max`)을 선언에서 찾아 값으로 풉니다. */
         [[nodiscard]] static bool resolvePropertyConstants( CXCursor memberCursor, ParsedPropertyInfo& prop, string_view owner );
-
-    private:
-        /** @brief @p type 의 정체가 템플릿 @p identity(`sw::AssetRef` …)면 첫 형식 인자의 정규 이름(대상), 아니면 빈 문자열입니다. */
-        static string readTypedTarget( CXType type, string_view identity, const ParserSession& session );
-        /** @brief 시퀀스 값 형식의 원소 형식입니다(C 배열은 원소, 그 밖은 첫 템플릿 인자). */
-        static CXType getSequenceElementType( CXType valueType );
-        /** @brief 한 겹 시퀀스(중첩 · 키 없음)이고 집합이 아니면 true 입니다 — 핸들 · 참조 · 키를 원소로 받을 수 있는 모양입니다. */
-        static bool isFlatOrderedSequence( const ParsedPropertyInfo& prop );
-        /** @brief 값(또는 원소)의 형식 이름을 내장 형식 이름 @p canonical 로 바꿉니다. */
-        static void normalizeTypedValue( ParsedPropertyInfo& prop, bool bSingleValue, const string& canonical );
-        /** @brief @p text 안의 @p from 을 모두 @p to 로 바꿉니다. */
-        static void replaceAllText( string& text, const string& from, const string& to );
-        /** @brief 한 범위의 자식에서 이름 조각(`A::B::kX`)을 차례로 따라가 변수 선언을 찾는 상태입니다(`constantSearchVisitor`). */
-        struct ConstantSearch;
-        static CXChildVisitResult constantSearchVisitor( CXCursor cursor, CXCursor, CXClientData data );
-        /** @brief @p scope 의 자식에서 @p listPart 를 따라간 변수 선언을 찾습니다. 없으면 null 커서입니다. */
-        static CXCursor findConstantIn( CXCursor scope, const vector<string>& listPart );
-        /**
-         * @brief 상수 이름(`kMaxSlotCount`, `LedgerConstant::kMaxMemoSize`)이 가리키는 변수 선언을 찾습니다. 없으면 null 커서입니다.
-         * @details `MaxCount` 와 `Min` · `Max` 가 같은 규칙으로 씁니다. 이름 찾기는 C++ 를 좁게 따릅니다. 필드가 든 타입과 그 바깥 타입을 안쪽부터 보고,
-         *          그다음 바깥 네임스페이스 경로를 안쪽부터 붙여 번역 단위 맨 위에서 찾습니다(네임스페이스는 여러 블록에 걸쳐 열리므로 맨 위에서 모든 블록을 봅니다).
-         *          기반 클래스 · using 은 보지 않습니다.
-         */
-        static CXCursor findNamedConstant( CXCursor memberCursor, string_view name );
-        /**
-         * @brief `MaxCount = 상수 이름` 의 상수를 선언에서 찾아 값을 `_maxCount` 에 넣습니다. 숫자로 적었으면(`_maxCountName` 이 비었으면) 할 일이 없습니다.
-         * @details 상한의 기준을 C++ 상수 하나로 둡니다. 생성기가 그 값을 읽으므로 코덱 · 정규 문자열(스키마 해시) · `PropertyMetadata::_maxCount` 가
-         *          모두 같은 수를 봅니다. 상수를 바꾸면 그 헤더를 읽는 생성물이 다시 만들어집니다(depfile). 이름 찾기는 `findNamedConstant` 입니다.
-         *          찾지 못했거나 정수 상수가 아니거나 1 이상의 32 비트 값이 아니면 생성 오류입니다 — 상한을 조용히 빼면 그 필드는 코덱 없이 넘어갑니다.
-         */
-        [[nodiscard]] static bool resolveMaxCountName( CXCursor memberCursor, ParsedPropertyInfo& prop, string_view owner );
-        /**
-         * @brief `Min` · `Max` 글의 상수 이름 항(`kMaxLevel`, `-LedgerConstant::kMaxX`)을 상수의 값으로 바꾸고 숫자 경계를 채웁니다.
-         * @details 필드 이름 항은 `_` 로 시작하므로(필드 이름 규칙) 그 밖의 이름이 상수입니다. 상수를 바꾸면 코덱 · 스키마 해시 · 인스펙터 범위가 함께 바뀝니다.
-         *          정수나 실수 상수만 받고, 못 찾거나 숫자가 아니면 생성 오류입니다 — 경계를 조용히 빼면 범위 검사가 사라집니다.
-         */
-        [[nodiscard]] static bool resolveRangeConstants( CXCursor memberCursor, ParsedPropertyInfo& prop, string_view owner );
     };
 } // namespace sw
