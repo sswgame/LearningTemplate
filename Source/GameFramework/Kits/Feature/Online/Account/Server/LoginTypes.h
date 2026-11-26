@@ -12,7 +12,7 @@
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Account/Runtime/AccountTypes.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/AccountKitConfig.h"
-#include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
+#include "GameFramework/Runtime/Online/Identity/AccountIdentity.h"
 
 namespace sw
 {

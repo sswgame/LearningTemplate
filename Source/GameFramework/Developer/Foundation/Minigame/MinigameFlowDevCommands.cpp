@@ -37,6 +37,7 @@
 #include "GameFramework/Runtime/Foundation/Flow/GameInstance.h"
 #include "GameFramework/Runtime/Foundation/Flow/GameInstanceClientHook.h"
 #include "GameFramework/Runtime/Foundation/Flow/GameSceneFlow.h"
+#include "GameFramework/Runtime/Foundation/Flow/ILoadingScreen.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameSettings.h"
 #include "GameFramework/Runtime/Foundation/GameFeature/GameFeatureRegistry.h"
 #include "GameFramework/Runtime/Foundation/GameFeature/GameFeatureScope.h"

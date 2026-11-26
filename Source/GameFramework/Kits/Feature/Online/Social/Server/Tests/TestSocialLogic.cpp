@@ -14,7 +14,7 @@
 #include "GameFramework/Runtime/Online/Bus/ServerBus.h"
 #include "GameFramework/Runtime/Online/Cache/Server/CacheStoreRouter.h"
 #include "GameFramework/Runtime/Online/Cache/Server/MemoryCacheStore.h"
-#include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
+#include "GameFramework/Runtime/Online/Identity/Server/IAccountNameIndex.h"
 #include "GameFramework/Runtime/Online/Service/Server/Tests/OnlineHostTestUtil.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"

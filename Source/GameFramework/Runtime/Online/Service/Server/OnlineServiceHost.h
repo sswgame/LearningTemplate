@@ -40,7 +40,7 @@
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Online/Bus/ServerBus.h"
 #include "GameFramework/Runtime/Online/Cache/Server/CacheStoreRouter.h"
-#include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
+#include "GameFramework/Runtime/Online/Identity/AccountIdentity.h"
 #include "GameFramework/Runtime/Online/RateLimit/Server/TokenBucketMap.h"
 #include "GameFramework/Runtime/Online/Service/OnlineProtocolRegistry.h"
 

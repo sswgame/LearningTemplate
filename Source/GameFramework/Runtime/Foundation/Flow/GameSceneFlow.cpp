@@ -12,7 +12,7 @@
 #include "Engine/Scene/SceneManager.h"
 
 #include "GameFramework/Runtime/Foundation/Event/GameEvents.h"
-#include "GameFramework/Runtime/Foundation/Flow/GameInstanceClientHook.h"
+#include "GameFramework/Runtime/Foundation/Flow/ILoadingScreen.h"
 #include "GameFramework/Runtime/Foundation/Flow/ScreenTransitionController.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameSettings.h"
 #include "GameFramework/Runtime/Foundation/Save/Autosave.h"

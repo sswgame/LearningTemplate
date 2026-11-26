@@ -18,6 +18,7 @@
 #include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
 #include "GameFramework/Runtime/Online/Audit/Server/ServiceAuditLog.h"
 #include "GameFramework/Runtime/Online/Bus/Server/CacheServerBus.h"
+#include "GameFramework/Runtime/Online/Cache/Server/ICacheStoreDriver.h"
 #include "GameFramework/Runtime/Online/Cache/Server/MemoryCacheStore.h"
 #include "GameFramework/Runtime/Online/Config/Server/RemoteConfig.h"
 #include "GameFramework/Runtime/Online/Directory/Server/ServerRegistration.h"
@@ -27,9 +28,9 @@
 #include "GameFramework/Runtime/Online/Scheduler/Server/ServiceScheduler.h"
 #include "GameFramework/Runtime/Online/Scheduler/Server/ServiceTTLMonitor.h"
 #include "GameFramework/Runtime/Online/Security/NetSecurity.h"
-#include "GameFramework/Runtime/Online/Server/IOnlineStoreDriver.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerKit.h"
 #include "GameFramework/Runtime/Online/Service/Server/OnlineServiceHost.h"
+#include "GameFramework/Runtime/Online/Store/Server/IServiceStoreDriver.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
 
 namespace sw
@@ -41,7 +42,7 @@ namespace sw
             /** @brief 원격 설정을 저장소에서 다시 읽는 간격입니다. 바꾼 서버는 버스로 바로 알리므로, 이것은 버스를 놓친 서버의 늦은 따라잡기다. */
             static constexpr int64 kRemoteConfigReloadMs = 60000;
 
-            static bool isMemoryDriver( string_view driver ) { return driver == kMemoryStoreDriverName; }
+            static bool isMemoryDriver( string_view driver ) { return driver == OnlineServerStoreConfig::kMemoryDriverName; }
 
             /** @brief 서버 설정의 항목 목록에서 @p name 을 찾습니다. 비었거나 없으면 오류입니다(첫 항목이나 메모리로 대신하지 않는다). */
             template <typename TEntry>

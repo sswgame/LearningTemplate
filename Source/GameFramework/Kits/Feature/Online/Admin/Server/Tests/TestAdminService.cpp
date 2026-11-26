@@ -10,7 +10,9 @@
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/IBalanceChangedListener.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/LiveEventControl.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/ServerDirectoryControl.h"
-#include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
+#include "GameFramework/Runtime/Online/Identity/Server/IAccountDirectory.h"
+#include "GameFramework/Runtime/Online/Identity/Server/IAccountNameIndex.h"
+#include "GameFramework/Runtime/Online/Identity/Server/IAccountSessionControl.h"
 #include "GameFramework/Runtime/Online/Service/Server/Tests/OnlineHostTestUtil.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
 

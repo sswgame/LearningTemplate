@@ -10,7 +10,7 @@
 #include "Core/String/StringUtil.h"
 
 #include "GameFramework/Runtime/Online/Audit/Server/ServiceAuditLog.h"
-#include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
+#include "GameFramework/Runtime/Online/Identity/Server/IAfterDeleteAccount.h"
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
 #include "GameFramework/Runtime/Online/Sanction/Server/ServiceSanction.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceCommitRunner.h"

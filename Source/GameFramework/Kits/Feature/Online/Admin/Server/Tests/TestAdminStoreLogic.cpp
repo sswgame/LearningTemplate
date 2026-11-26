@@ -6,7 +6,7 @@
 
 #include "GameFramework/Kits/Feature/Online/Admin/Server/AdminStoreLogic.h"
 #include "GameFramework/Runtime/Online/Audit/Server/ServiceAuditLog.h"
-#include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
+#include "GameFramework/Runtime/Online/Identity/Server/IAccountNameIndex.h"
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceReadSetConnection.h"

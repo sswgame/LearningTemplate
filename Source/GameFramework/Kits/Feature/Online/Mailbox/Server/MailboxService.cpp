@@ -10,7 +10,8 @@
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/IBalanceChangedListener.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/OnlinePushRelay.h"
 #include "GameFramework/Runtime/Foundation/GameData/ConfigRangeUtil.h"
-#include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
+#include "GameFramework/Runtime/Online/Identity/AccountIdentity.h"
+#include "GameFramework/Runtime/Online/Identity/Server/IOfflinePushSender.h"
 #include "GameFramework/Runtime/Online/Mail/Server/ServiceMail.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
 

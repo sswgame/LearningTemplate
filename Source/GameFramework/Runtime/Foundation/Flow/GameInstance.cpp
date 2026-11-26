@@ -25,6 +25,7 @@
 #include "GameFramework/Runtime/Foundation/Flow/GameSceneFlow.h"
 #include "GameFramework/Runtime/Foundation/Flow/IContentConfiguration.h"
 #include "GameFramework/Runtime/Foundation/Flow/IGame.h"
+#include "GameFramework/Runtime/Foundation/Flow/ILoadingScreen.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameSettingsOverride.h"
 #include "GameFramework/Runtime/Foundation/GameFeature/GameFeatureComponents.h"
 #include "GameFramework/Runtime/Foundation/GameFeature/GameFeatureScope.h"

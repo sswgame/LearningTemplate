@@ -38,7 +38,10 @@ namespace sw
     /** @brief 저장소나 캐시 하나의 드라이버 항목입니다. 비밀은 이미 환경 변수에서 읽은 값입니다. */
     struct OnlineServerStoreConfig
     {
-        string _driver{};     ///< 필수. 프로세스 안 저장소도 `kMemoryStoreDriverName` 이라고 적는다 - 비면 런타임이 기동을 멈춘다
+        /** @brief 서버 설정의 `memory` 드라이버 이름입니다(저장소 · 캐시 공통). 그 런타임 안에서만 나눠 쓰는 메모리 구현을 서버 조립이 직접 만든다. */
+        static constexpr const utf8* kMemoryDriverName = "memory";
+
+        string _driver{};     ///< 필수. 프로세스 안 저장소도 `kMemoryDriverName` 이라고 적는다 - 비면 런타임이 기동을 멈춘다
         string _connection{}; ///< 저장소의 접속 문자열 · 캐시의 엔드포인트
         string _secret{};     ///< 런타임이 드라이버에 넘긴 뒤 비운다
     };

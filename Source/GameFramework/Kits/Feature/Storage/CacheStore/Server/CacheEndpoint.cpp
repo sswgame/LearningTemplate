@@ -13,9 +13,10 @@
 
 #include "GameFramework/Kits/Feature/Storage/CacheStore/Server/Driver/RESP/RESPCacheStore.h"
 #include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
+#include "GameFramework/Runtime/Online/Cache/Server/ICacheStoreDriver.h"
 #include "GameFramework/Runtime/Online/Cache/Server/MemoryCacheStore.h"
 #include "GameFramework/Runtime/Online/Security/NetSecurity.h"
-#include "GameFramework/Runtime/Online/Server/IOnlineStoreDriver.h"
+#include "GameFramework/Runtime/Online/Server/OnlineServerRuntime.h"
 
 namespace sw
 {
@@ -139,7 +140,7 @@ namespace sw
 
     expected<unique_ptr<ICacheStore>> RESPCacheStoreDriver::createCacheStore( string_view driverName, string_view endpoint, string_view secret )
     {
-        if ( driverName == kMemoryStoreDriverName )
+        if ( driverName == OnlineServerStoreConfig::kMemoryDriverName )
             return unique_ptr<ICacheStore>( make_unique<MemoryCacheStore>( &_memoryDatabase ) );
         if ( driverName != CacheEndpoint::kRESPDriverName )
             return unexpected( Error{ ErrorKind::Unsupported, "the cache driver is not in this build (memory, resp)", driverName } );

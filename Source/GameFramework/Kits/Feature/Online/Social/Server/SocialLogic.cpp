@@ -12,7 +12,7 @@
 #include "GameFramework/Runtime/Online/Cache/Server/CacheRecordTable.h"
 #include "GameFramework/Runtime/Online/Cache/Server/CacheStore.h"
 #include "GameFramework/Runtime/Online/Cache/Server/CacheStoreRouter.h"
-#include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
+#include "GameFramework/Runtime/Online/Identity/Server/IAccountNameIndex.h"
 #include "GameFramework/Runtime/Online/Service/OnlineLimit.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceCommitRunner.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceReadSetConnection.h"

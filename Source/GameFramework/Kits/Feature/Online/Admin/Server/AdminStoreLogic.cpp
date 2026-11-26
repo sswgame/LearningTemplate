@@ -7,7 +7,8 @@
 
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Store/ServiceIdempotency.h"
 #include "GameFramework/Runtime/Online/Audit/Server/ServiceAuditLog.h"
-#include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
+#include "GameFramework/Runtime/Online/Identity/AccountIdentity.h"
+#include "GameFramework/Runtime/Online/Identity/Server/IAccountNameIndex.h"
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
 #include "GameFramework/Runtime/Online/Mail/Server/ServiceMail.h"
 #include "GameFramework/Runtime/Online/Mail/Server/ServiceMailCampaign.h"

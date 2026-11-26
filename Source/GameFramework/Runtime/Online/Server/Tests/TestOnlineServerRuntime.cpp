@@ -8,14 +8,18 @@
 #include "Engine/Server/ServiceHealthRegistry.h"
 
 #include "GameFramework/Runtime/Online/Cache/Server/CacheStoreRouter.h"
+#include "GameFramework/Runtime/Online/Cache/Server/ICacheStoreDriver.h"
 #include "GameFramework/Runtime/Online/Directory/ServerRecord.h"
-#include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
+#include "GameFramework/Runtime/Online/Identity/Server/IAccountBlockList.h"
+#include "GameFramework/Runtime/Online/Identity/Server/IAccountDirectory.h"
+#include "GameFramework/Runtime/Online/Identity/Server/IAfterDeleteAccount.h"
+#include "GameFramework/Runtime/Online/Identity/Server/IOfflinePushSender.h"
 #include "GameFramework/Runtime/Online/Ledger/LedgerTypes.h"
-#include "GameFramework/Runtime/Online/Server/IOnlineStoreDriver.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerConfig.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerKit.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerRuntime.h"
 #include "GameFramework/Runtime/Online/Server/Tests/OnlineConfigTestTypes.h"
+#include "GameFramework/Runtime/Online/Store/Server/IServiceStoreDriver.h"
 
 // OnlineServerRuntimeTest — 온라인 서비스 서버 조립: 키트를 이름 의존 순서로 세우고(설정 순서 · 이름 순서와 상관없이) 반대로 내린다, 앞 키트가 지역 범위에 건 인터페이스를
 // 뒤 키트가 받는다, 모르는 키트 · 빠진 필수 키트 · 초기화와 시작 실패는 기동을 멈추고 만든 것을 되돌린다, 상태 검사(online_services)(nogpu).
@@ -305,8 +309,8 @@ namespace
             settings._config._requestBurstPerAccount    = 30;
             settings._config._maxConnectionsPerRemote   = 64;
             settings._config._maxPendingCallsPerService = 100000; // 온라인 서버 설정 파일의 값 — 필수 칸이다
-            settings._store._driver                     = kMemoryStoreDriverName;
-            settings._cache._driver                     = kMemoryStoreDriverName;
+            settings._store._driver                     = OnlineServerStoreConfig::kMemoryDriverName;
+            settings._cache._driver                     = OnlineServerStoreConfig::kMemoryDriverName;
             for ( const utf8* pName : listKitName )
             {
                 OnlineServerKitEntry& entry = settings._config._listKit.emplace_back();
@@ -597,10 +601,10 @@ SW_TEST_CASE_F( OnlineServerRuntimeTest, ResolveStoresNeedsNamedEntries )
     serverConfig._listStore[0]._driver = "sqlite";
     serverConfig._listStore.push_back( ServerStoreEntry{} );
     serverConfig._listStore[1]._name   = "local";
-    serverConfig._listStore[1]._driver = kMemoryStoreDriverName;
+    serverConfig._listStore[1]._driver = OnlineServerStoreConfig::kMemoryDriverName;
     serverConfig._listCache.push_back( ServerCacheEntry{} );
     serverConfig._listCache[0]._name   = "local";
-    serverConfig._listCache[0]._driver = kMemoryStoreDriverName;
+    serverConfig._listCache[0]._driver = OnlineServerStoreConfig::kMemoryDriverName;
 
     OnlineServerConfig        onlineConfig;
     OnlineServerRuntimeConfig settings;
@@ -631,8 +635,8 @@ SW_TEST_CASE_F( OnlineServerRuntimeTest, ResolveStoresNeedsNamedEntries )
 
     onlineConfig._cacheName = "local";
     SW_REQUIRE_TRUE( OnlineServerRuntime::resolveStores( serverConfig, onlineConfig, settings ) );
-    SW_EXPECT_EQUAL( string( kMemoryStoreDriverName ), settings._store._driver );
-    SW_EXPECT_EQUAL( string( kMemoryStoreDriverName ), settings._cache._driver );
+    SW_EXPECT_EQUAL( string( OnlineServerStoreConfig::kMemoryDriverName ), settings._store._driver );
+    SW_EXPECT_EQUAL( string( OnlineServerStoreConfig::kMemoryDriverName ), settings._cache._driver );
 }
 
 /** @brief [OnlineServerRuntimeTest] 게임 서버(공개 주소가 있다)는 기동 안에서 디렉터리에 자기 기록을 쓴다 — 첫 틱에 서버 목록을 읽는 키트(매칭)가 이 서버를 본다.

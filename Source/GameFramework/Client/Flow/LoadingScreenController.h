@@ -19,7 +19,7 @@
 
 #include "GameFramework/Client/Flow/LoadingScreenViewModel.h"
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Runtime/Foundation/Flow/GameInstanceClientHook.h"
+#include "GameFramework/Runtime/Foundation/Flow/ILoadingScreen.h"
 #include "GameFramework/Runtime/Foundation/Random/GameRandom.h"
 #include "GameFramework/Runtime/Foundation/Subsystem/GameInstanceSubsystem.h"
 

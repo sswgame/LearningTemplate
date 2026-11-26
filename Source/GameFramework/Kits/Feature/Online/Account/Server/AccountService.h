@@ -27,7 +27,7 @@
 #include "GameFramework/Kits/Feature/Online/Account/Server/LoginLogic.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/OnlineProtocolService.h"
 #include "GameFramework/Runtime/Online/Bus/ServerBusTopic.h"
-#include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
+#include "GameFramework/Runtime/Online/Identity/Server/IAccountSessionControl.h"
 #include "GameFramework/Runtime/Online/Service/PendingRequestTable.h"
 #include "GameFramework/Runtime/Online/Service/Server/OnlineServiceHost.h"
 

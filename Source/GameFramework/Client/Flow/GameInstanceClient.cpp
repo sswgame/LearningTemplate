@@ -14,6 +14,7 @@
 #include "GameFramework/Client/Flow/LoadingScreenController.h"
 #include "GameFramework/Runtime/Foundation/Flow/GameInstanceClientHook.h"
 #include "GameFramework/Runtime/Foundation/Flow/GameSceneFlow.h"
+#include "GameFramework/Runtime/Foundation/Flow/ILoadingScreen.h"
 #include "GameFramework/Runtime/Foundation/GameFeature/GameFeatureScope.h"
 #include "GameFramework/Runtime/Foundation/Minigame/MinigameDefinition.h"
 #include "GameFramework/Runtime/Foundation/Minigame/MinigameFlow.h"

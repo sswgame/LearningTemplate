@@ -20,7 +20,8 @@
 #include "GameFramework/Kits/Feature/Online/Economy/Runtime/EconomyProtocol.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/EconomyKitConfig.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/ReceiptValidator.h"
-#include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
+#include "GameFramework/Runtime/Online/Identity/Server/IAccountExternalLinks.h"
+#include "GameFramework/Runtime/Online/Identity/Server/IAfterDeleteAccount.h"
 #include "GameFramework/Runtime/Online/Ledger/LedgerTypes.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
 

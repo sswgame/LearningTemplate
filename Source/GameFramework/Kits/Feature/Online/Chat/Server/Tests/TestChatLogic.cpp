@@ -11,7 +11,7 @@
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/AccountPresence.h"
 #include "GameFramework/Runtime/Online/Bus/Server/LocalServerBus.h"
 #include "GameFramework/Runtime/Online/Bus/ServerBus.h"
-#include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
+#include "GameFramework/Runtime/Online/Identity/Server/IAccountDirectory.h"
 #include "GameFramework/Runtime/Online/Report/Server/ServiceReportStore.h"
 #include "GameFramework/Runtime/Online/Sanction/Server/ServiceSanction.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"

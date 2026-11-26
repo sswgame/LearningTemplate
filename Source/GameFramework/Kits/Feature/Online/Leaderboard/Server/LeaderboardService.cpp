@@ -8,7 +8,7 @@
 #include "GameFramework/Kits/Feature/Online/Leaderboard/Server/LeaderboardScoreSender.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/AccountPresence.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/OnlinePushRelay.h"
-#include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
+#include "GameFramework/Runtime/Online/Identity/Server/IAccountDirectory.h"
 
 namespace sw
 {

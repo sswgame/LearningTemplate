@@ -12,7 +12,7 @@
 #include "Core/Time/TimePoint.h"
 
 #include "GameFramework/Runtime/Online/Audit/Server/ServiceAuditLog.h"
-#include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
+#include "GameFramework/Runtime/Online/Identity/AccountIdentity.h"
 #include "GameFramework/Runtime/Online/Service/OnlineServerKitName.h"
 
 namespace sw
