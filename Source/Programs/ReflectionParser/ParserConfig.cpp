@@ -490,9 +490,9 @@ namespace sw
             if ( llvmPath.empty() )
             {
                 sw::string  pEnvLlvmText;
-                const utf8* pEnvLlvm = sw::ProcessEnvironment::tryRead( jsonkey::kEnvLlvmDir, pEnvLlvmText ) ? pEnvLlvmText.c_str() : nullptr;
+                const utf8* pEnvLlvm = sw::Process::tryReadEnvironment( jsonkey::kEnvLlvmDir, pEnvLlvmText ) ? pEnvLlvmText.c_str() : nullptr;
                 if ( pEnvLlvm == nullptr )
-                    pEnvLlvm = sw::ProcessEnvironment::tryRead( jsonkey::kEnvLlvmHome, pEnvLlvmText ) ? pEnvLlvmText.c_str() : nullptr;
+                    pEnvLlvm = sw::Process::tryReadEnvironment( jsonkey::kEnvLlvmHome, pEnvLlvmText ) ? pEnvLlvmText.c_str() : nullptr;
                 if ( pEnvLlvm != nullptr )
                     llvmPath = pEnvLlvm;
             }

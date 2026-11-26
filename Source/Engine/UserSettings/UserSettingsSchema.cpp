@@ -130,7 +130,7 @@ namespace sw
                 StringUtil::forEachToken( text, " ,", [&]( string_view name )
                 {
                     uint8 bit = 0;
-                    if ( NamedValueUtil::find( kArrPlatformName, name, bit ) == false )
+                    if ( NamedValue<uint8>::find( kArrPlatformName, name, bit ) == false )
                     {
                         SW_LOG_ERROR_ID( "UserSettingsSchema.SettingNamesUnknownPlatform", "%#: setting '%#' names an unknown platform '%#'", sourceName, settingID.c_str(), name );
                         bOk = false;

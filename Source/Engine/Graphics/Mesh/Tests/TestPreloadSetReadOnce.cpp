@@ -76,10 +76,10 @@ namespace
     {
     public:
         explicit ScopedContentFileSource( const IContentFileSource& source )
-            : _pPrevious{ ContentFileSource::bindCurrent( &source ) }
+            : _pPrevious{ IContentFileSource::bindCurrent( &source ) }
         {
         }
-        ~ScopedContentFileSource() { (void)ContentFileSource::bindCurrent( _pPrevious ); }
+        ~ScopedContentFileSource() { (void)IContentFileSource::bindCurrent( _pPrevious ); }
         ScopedContentFileSource( const ScopedContentFileSource& )            = delete;
         ScopedContentFileSource& operator=( const ScopedContentFileSource& ) = delete;
 
@@ -122,7 +122,7 @@ SW_TEST_CASE( PreloadSetTest, PinnedAssetIsReadOnce )
     SW_REQUIRE_TRUE( FileUtil::writeFile( domain.makeDiskPath( kFileName ), bytes.data(), bytes.size() ) );
     const string path = test::ScopedScratchDomain::makeID( kFileName ).str();
 
-    const CountingContentFileSource counter{ ContentFileSource::getCurrent(), kFileName };
+    const CountingContentFileSource counter{ IContentFileSource::getCurrent(), kFileName };
     const ScopedContentFileSource   bind{ counter };
 
     AssetStreamingQueue queue;

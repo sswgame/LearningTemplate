@@ -94,15 +94,16 @@ namespace sw
                 return string( builder.view() );
             }
 
+            /** @brief @p readableRoleMask 는 요청을 낸 패스 종류가 읽어도 되는 역할이다(`RenderPassKindInfo::getReadableRoleMask` — 패스가 아닌 요청은 모두 켠 값). */
             static void appendRequestUnique( RequestList& outListRequest, string_view shaderPath, string_view entryPoint, ShaderStage stage, const vector<string>& listPermutation,
-                                             const vector<string>& listOrigin )
+                                             const vector<string>& listOrigin, uint64 readableRoleMask = RenderPassKindInfo::kAnyRoleMask )
             {
-                appendRequestUniqueGroups( outListRequest, shaderPath, entryPoint, stage, listPermutation, vector<OriginGroup>{ makeOriginGroup( listOrigin ) } );
+                appendRequestUniqueGroups( outListRequest, shaderPath, entryPoint, stage, listPermutation, vector<OriginGroup>{ makeOriginGroup( listOrigin ) }, readableRoleMask );
             }
 
             /** @brief 요청 하나를 더합니다(이미 있으면 출처 묶음만) — @p listOriginGroup 은 이 요청을 낸 출처 묶음들이다(같은 패스를 가진 파이프라인 여럿). */
             static void appendRequestUniqueGroups( RequestList& outListRequest, string_view shaderPath, string_view entryPoint, ShaderStage stage, const vector<string>& listPermutation,
-                                                   const vector<OriginGroup>& listOriginGroup )
+                                                   const vector<OriginGroup>& listOriginGroup, uint64 readableRoleMask = RenderPassKindInfo::kAnyRoleMask )
             {
                 if ( shaderPath.empty() || entryPoint.empty() )
                     return;
@@ -111,6 +112,7 @@ namespace sw
                 const auto rawIt  = outListRequest._mapRawIndex.find( rawKey );
                 if ( rawIt != outListRequest._mapRawIndex.end() )
                 {
+                    outListRequest._list[rawIt->second]._readableRoleMask &= readableRoleMask; // 같은 바이너리를 쓰는 패스 종류 모두의 계약을 지킨다
                     for ( const OriginGroup& group : listOriginGroup )
                         addOrigin( outListRequest, rawIt->second, group );
                     return;
@@ -122,18 +124,20 @@ namespace sw
                 if ( indexIt != outListRequest._mapIndex.end() )
                 {
                     outListRequest._mapRawIndex.emplace( std::move( rawKey ), indexIt->second ); // 같은 define 집합의 다른 순서 · 표기
+                    outListRequest._list[indexIt->second]._readableRoleMask &= readableRoleMask;
                     for ( const OriginGroup& group : listOriginGroup )
                         addOrigin( outListRequest, indexIt->second, group );
                     return;
                 }
 
                 ShaderCookRequest request;
-                request._shaderPath      = normPath;
-                request._entryPoint      = string( entryPoint );
-                request._stage           = stage;
-                request._listPermutation = listPermutation;
-                request._permutationHash = permutationHash;
-                const uint32 index       = static_cast<uint32>( outListRequest._list.size() );
+                request._shaderPath       = normPath;
+                request._entryPoint       = string( entryPoint );
+                request._stage            = stage;
+                request._listPermutation  = listPermutation;
+                request._permutationHash  = permutationHash;
+                request._readableRoleMask = readableRoleMask;
+                const uint32 index        = static_cast<uint32>( outListRequest._list.size() );
                 outListRequest._mapIndex.emplace( requestKey, index );
                 outListRequest._mapRawIndex.emplace( std::move( rawKey ), index );
                 outListRequest._listOriginKey.emplace_back();
@@ -145,15 +149,16 @@ namespace sw
             /** @brief 씬 메시를 그리는 패스 하나입니다. 머티리얼과 곱해 변형을 만들 대상입니다. */
             struct MeshPassInfo
             {
-                string         _shaderPath;
-                string         _vertexEntryPoint;
-                string         _pixelEntryPoint;
-                vector<string> _listPermutation;
-                RenderPassKind _passType{ RenderPassKind::Invalid };
-                vector<string> _listOrigin; ///< 이 패스를 낸 파이프라인(`ShaderCookRequest::_listOrigin` 의 한 묶음 — 표의 패스는 비었다)
-                bool           _bUsesMaterialShader{ false };
-                bool           _bAppliesViewMode{ false };
-                bool           _bHasPixelStage{ false };
+                string             _shaderPath;
+                string             _vertexEntryPoint;
+                string             _pixelEntryPoint;
+                vector<string>     _listPermutation;
+                RenderPassKind     _passType{ RenderPassKind::Invalid };
+                MaterialPassFilter _materialFilter; ///< 이 패스가 그리는 머티리얼(런타임과 같은 값 — 파이프라인 패스는 서술의 거르기, 표 · 내부 슬롯은 표의 기본값)
+                vector<string>     _listOrigin;     ///< 이 패스를 낸 파이프라인(`ShaderCookRequest::_listOrigin` 의 한 묶음 — 표의 패스는 비었다)
+                bool               _bUsesMaterialShader{ false };
+                bool               _bAppliesViewMode{ false };
+                bool               _bHasPixelStage{ false };
             };
 
             /** @brief 메시 패스 하나가 그리는 변형 하나입니다 — 셰이더 경로, define, 픽셀 스테이지 유무(깊이 패스의 알파 컷오프는 패스와 달리 PS 가 있다), 헐 · 도메인 유무(변위 머티리얼). */
@@ -231,35 +236,37 @@ namespace sw
             static void appendPipelinePassStages( RequestList& outListRequest, const RenderGraphPassDesc& pass, const RenderPipelineAsset& pipeline, const EngineDefaultAssets& engineDefaultAssets,
                                                   const string& shaderPath, const vector<string>& listPassDefine, const vector<string>& listOrigin )
             {
+                // 패스 셰이더가 읽는 엔진 역할은 그 종류의 입력 계약 안이어야 한다 — 쿠커가 리플렉션과 대조한다(`ShaderCookDriver`, 런타임 PSO 검사와 같은 값).
+                const uint64 roleMask = getRenderPassKindInfo( pass._type ).getReadableRoleMask();
                 if ( pass._type == RenderPassKind::Compute )
                 {
-                    appendRequestUnique( outListRequest, shaderPath, string( resolveEntryPoint( pass._computeEntryPoint, ShaderStage::Compute ) ), ShaderStage::Compute, listPassDefine, listOrigin );
+                    appendRequestUnique( outListRequest, shaderPath, string( resolveEntryPoint( pass._computeEntryPoint, ShaderStage::Compute ) ), ShaderStage::Compute, listPassDefine, listOrigin, roleMask );
                     return;
                 }
                 // 컴퓨트 구현(`_implementation="Compute"`)도 굽는다 — 런타임과 같은 함수(`selectRenderPassComputeShader`)의 define 이다. 픽셀 구현(아래)은 에뮬 백엔드가 쓰므로 함께 굽는다.
                 if ( pass._implementation == RenderPassExecutionMode::Compute )
                 {
                     const RenderPassShaderSelection computeShader = selectRenderPassComputeShader( pass, engineDefaultAssets );
-                    appendRequestUnique( outListRequest, computeShader._shaderPath, getShaderStageInfo( ShaderStage::Compute )._pEntryPoint, ShaderStage::Compute, computeShader._listDefine, listOrigin );
+                    appendRequestUnique( outListRequest, computeShader._shaderPath, getShaderStageInfo( ShaderStage::Compute )._pEntryPoint, ShaderStage::Compute, computeShader._listDefine, listOrigin, roleMask );
                 }
                 const string vsEntry = string( resolveEntryPoint( pass._vertexEntryPoint, ShaderStage::Vertex ) );
-                appendRequestUnique( outListRequest, shaderPath, vsEntry, ShaderStage::Vertex, listPassDefine, listOrigin );
+                appendRequestUnique( outListRequest, shaderPath, vsEntry, ShaderStage::Vertex, listPassDefine, listOrigin, roleMask );
 
                 // 픽셀 셰이더. 컬러 출력이 없는 패스(그림자 · 뎁스 프리패스)엔 없다. 런타임과 같은 판정
                 // (`hasPixelStage`, 출력 선언의 RT 수)을 써야 둘이 어긋나지 않는다.
                 if ( FrameRendererUtil::hasPixelStage( pass, pipeline.getDesc()._listAttachment ) )
                 {
                     const string psEntry = string( resolveEntryPoint( pass._pixelEntryPoint, ShaderStage::Pixel ) );
-                    appendRequestUnique( outListRequest, shaderPath, psEntry, ShaderStage::Pixel, listPassDefine, listOrigin );
+                    appendRequestUnique( outListRequest, shaderPath, psEntry, ShaderStage::Pixel, listPassDefine, listOrigin, roleMask );
                 }
 
                 // 선택 스테이지는 진입점을 적은 패스만 쓴다.
                 if ( pass._geometryEntryPoint.empty() == false )
-                    appendRequestUnique( outListRequest, shaderPath, pass._geometryEntryPoint, ShaderStage::Geometry, listPassDefine, listOrigin );
+                    appendRequestUnique( outListRequest, shaderPath, pass._geometryEntryPoint, ShaderStage::Geometry, listPassDefine, listOrigin, roleMask );
                 if ( pass._hullEntryPoint.empty() == false )
-                    appendRequestUnique( outListRequest, shaderPath, pass._hullEntryPoint, ShaderStage::Hull, listPassDefine, listOrigin );
+                    appendRequestUnique( outListRequest, shaderPath, pass._hullEntryPoint, ShaderStage::Hull, listPassDefine, listOrigin, roleMask );
                 if ( pass._domainEntryPoint.empty() == false )
-                    appendRequestUnique( outListRequest, shaderPath, pass._domainEntryPoint, ShaderStage::Domain, listPassDefine, listOrigin );
+                    appendRequestUnique( outListRequest, shaderPath, pass._domainEntryPoint, ShaderStage::Domain, listPassDefine, listOrigin, roleMask );
             }
 
             /** @brief 1) 렌더 파이프라인 XML(`pipeline` 폴더)의 패스마다 셰이더 요청을 더하고, 씬 메시 패스는 머티리얼과 곱할 목록에 넣습니다. */
@@ -300,6 +307,7 @@ namespace sw
                             passInfo._pixelEntryPoint     = string( resolveEntryPoint( pass._pixelEntryPoint, ShaderStage::Pixel ) );
                             passInfo._listPermutation     = passShader._listDefine;
                             passInfo._passType            = pass._type;
+                            passInfo._materialFilter      = pass._resolvedMaterialFilter;
                             passInfo._listOrigin          = pipelineOrigin;
                             passInfo._bUsesMaterialShader = getRenderPassKindInfo( pass._type ).usesMaterialShader();
                             passInfo._bAppliesViewMode    = getRenderPassKindInfo( pass._type ).shouldApplyViewMode();
@@ -312,9 +320,10 @@ namespace sw
                         for ( uint32 tileClass = 0; pass._type == RenderPassKind::Lighting && tileClass < kDeferredTileClassCount; ++tileClass )
                         {
                             const RenderPassShaderSelection tileShader = selectDeferredTileLightingShader( pass, tileClass, engineDefaultAssets );
-                            appendRequestUnique( outListRequest, tileShader._shaderPath, kDeferredTileVertexEntryPoint, ShaderStage::Vertex, tileShader._listDefine, pipelineOrigin );
+                            appendRequestUnique( outListRequest, tileShader._shaderPath, kDeferredTileVertexEntryPoint, ShaderStage::Vertex, tileShader._listDefine, pipelineOrigin,
+                                                 getRenderPassKindInfo( pass._type ).getReadableRoleMask() );
                             appendRequestUnique( outListRequest, tileShader._shaderPath, resolveEntryPoint( pass._pixelEntryPoint, ShaderStage::Pixel ), ShaderStage::Pixel, tileShader._listDefine,
-                                                 pipelineOrigin );
+                                                 pipelineOrigin, getRenderPassKindInfo( pass._type ).getReadableRoleMask() );
                         }
                     }
                     // 모듈 확장 패스의 프로그램(ExtensionRenderPass) — 모듈이 런타임에 고르는 셰이더라 파이프라인 XML 이 `_listExtensionShader` 로 선언한다. 진입점 · define 은 기본 한 벌이다.
@@ -348,13 +357,14 @@ namespace sw
                     passInfo._pixelEntryPoint     = getShaderStageInfo( ShaderStage::Pixel )._pEntryPoint;
                     passInfo._listPermutation     = slotShader._listDefine;
                     passInfo._passType            = slotType;
+                    passInfo._materialFilter      = slotInfo.getDefaultMaterialFilter();
                     passInfo._listOrigin          = listOrigin;
                     passInfo._bUsesMaterialShader = slotInfo.usesMaterialShader();
                     passInfo._bAppliesViewMode    = slotInfo.shouldApplyViewMode();
                     passInfo._bHasPixelStage      = slotInfo.hasPixelStage();
                     outListMeshPass.push_back( std::move( passInfo ) );
-                    appendRequestUnique( outListRequest, slotShader._shaderPath, getShaderStageInfo( ShaderStage::Vertex )._pEntryPoint, ShaderStage::Vertex, slotShader._listDefine, listOrigin );
-                    appendRequestUnique( outListRequest, slotShader._shaderPath, getShaderStageInfo( ShaderStage::Pixel )._pEntryPoint, ShaderStage::Pixel, slotShader._listDefine, listOrigin );
+                    appendRequestUnique( outListRequest, slotShader._shaderPath, getShaderStageInfo( ShaderStage::Vertex )._pEntryPoint, ShaderStage::Vertex, slotShader._listDefine, listOrigin, slotInfo.getReadableRoleMask() );
+                    appendRequestUnique( outListRequest, slotShader._shaderPath, getShaderStageInfo( ShaderStage::Pixel )._pEntryPoint, ShaderStage::Pixel, slotShader._listDefine, listOrigin, slotInfo.getReadableRoleMask() );
                 }
             }
 
@@ -382,7 +392,7 @@ namespace sw
                         vector<string> listComputeDefine;
                         if ( info._pPassDefine != nullptr )
                             listComputeDefine.push_back( string( info._pPassDefine ) );
-                        appendRequestUnique( outListRequest, defaultShader, getShaderStageInfo( ShaderStage::Compute )._pEntryPoint, ShaderStage::Compute, listComputeDefine, {} );
+                        appendRequestUnique( outListRequest, defaultShader, getShaderStageInfo( ShaderStage::Compute )._pEntryPoint, ShaderStage::Compute, listComputeDefine, {}, info.getReadableRoleMask() );
                         continue;
                     }
                     if ( info.shouldDrawSceneMeshes() )
@@ -394,6 +404,7 @@ namespace sw
                         passInfo._pixelEntryPoint     = getShaderStageInfo( ShaderStage::Pixel )._pEntryPoint;
                         passInfo._listPermutation     = passShader._listDefine;
                         passInfo._passType            = passType;
+                        passInfo._materialFilter      = info.getDefaultMaterialFilter();
                         passInfo._bUsesMaterialShader = info.usesMaterialShader();
                         passInfo._bAppliesViewMode    = info.shouldApplyViewMode();
                         passInfo._bHasPixelStage      = info.hasPixelStage();
@@ -402,8 +413,8 @@ namespace sw
                     // define 은 런타임이 서술 없이 만드는 엔진 PSO 와 같은 함수(selectRenderPassShader — 표의 패스 define 포함)로 정한다. 빈 목록으로 쿠킹하면
                     // 패스 define 이 있는 종류(FSR 의 RCAS 등)는 런타임이 찾는 해시를 아무도 쿠킹하지 않아 Shipping 에서 PSO 가 없다.
                     const RenderPassShaderSelection tableShader = selectRenderPassShader( passType, nullptr, nullptr, engineDefaultAssets );
-                    appendRequestUnique( outListRequest, defaultShader, getShaderStageInfo( ShaderStage::Vertex )._pEntryPoint, ShaderStage::Vertex, tableShader._listDefine, {} );
-                    appendRequestUnique( outListRequest, defaultShader, getShaderStageInfo( ShaderStage::Pixel )._pEntryPoint, ShaderStage::Pixel, tableShader._listDefine, {} );
+                    appendRequestUnique( outListRequest, defaultShader, getShaderStageInfo( ShaderStage::Vertex )._pEntryPoint, ShaderStage::Vertex, tableShader._listDefine, {}, info.getReadableRoleMask() );
+                    appendRequestUnique( outListRequest, defaultShader, getShaderStageInfo( ShaderStage::Pixel )._pEntryPoint, ShaderStage::Pixel, tableShader._listDefine, {}, info.getReadableRoleMask() );
                 }
             }
 
@@ -529,8 +540,9 @@ namespace sw
                 for ( const MeshPassInfo& passInfo : listMeshPass )
                 {
                     StringBuilder<constant::buffer::kMax512> keyBuilder;
-                    keyBuilder.appendFormat( "%#\n%#\n%#\n%#%#%#%#", passInfo._shaderPath, passInfo._vertexEntryPoint, passInfo._pixelEntryPoint, static_cast<uint64>( passInfo._passType ),
-                                             passInfo._bUsesMaterialShader ? "M" : "-", passInfo._bAppliesViewMode ? "V" : "-", passInfo._bHasPixelStage ? "P" : "-" );
+                    keyBuilder.appendFormat( "%#\n%#\n%#\n%#%#%#%#\n+%#\n-%#", passInfo._shaderPath, passInfo._vertexEntryPoint, passInfo._pixelEntryPoint, static_cast<uint64>( passInfo._passType ),
+                                             passInfo._bUsesMaterialShader ? "M" : "-", passInfo._bAppliesViewMode ? "V" : "-", passInfo._bHasPixelStage ? "P" : "-", passInfo._materialFilter._requiredDefine,
+                                             passInfo._materialFilter._excludedDefine );
                     for ( const string& define : passInfo._listPermutation )
                         keyBuilder.appendFormat( "\n%#", define );
                     const auto [passIt, bInserted] = mapPassIndex.emplace( string( keyBuilder.view() ), listUniquePass.size() );
@@ -572,7 +584,7 @@ namespace sw
                     {
                         const MaterialVariantInfo& variant = *listUniqueVariant[variantIndex];
                         // 패스가 그리지 않는 머티리얼(외곽선 패스 · 외곽선을 켜지 않은 머티리얼)은 런타임도 변형을 만들지 않는다.
-                        if ( getRenderPassKindInfo( passInfo._passType ).shouldDrawMaterial( &variant._listDefine ) == false )
+                        if ( passInfo._materialFilter.shouldDraw( &variant._listDefine ) == false )
                             continue;
                         // 후처리 머티리얼은 메시에 붙지 않는다 — 풀스크린 VS · PS(정의 없는 변형, 4 단계)만 쓴다(`FramePostProcessMaterials` 의 확장 프로그램 PSO).
                         if ( VectorUtil::contains( variant._listDefine, string( kMaterialDomainPostProcessDefine ) ) )

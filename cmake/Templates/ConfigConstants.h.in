@@ -64,6 +64,7 @@ namespace sw::config
     inline constexpr const utf8* kExtReflectionGenCpp    = "@SW_EXT_REFLECTION_GEN_CPP@";
     inline constexpr const utf8* kExtReflectionGenMetaCpp = "@SW_EXT_REFLECTION_GEN_META_CPP@"; ///< 개발 전용 에디터 메타데이터 단위(배포는 짓지 않는다)
     inline constexpr const utf8* kExtReflectionGenHeader = "@SW_EXT_REFLECTION_GEN_HEADER@";
+    inline constexpr const utf8* kExtReflectionGenInline = "@SW_EXT_REFLECTION_GEN_INLINE@"; ///< .cpp 입력의 산출물(`<이름>.cpp.gen.inl`, 그 .cpp 끝에서 include 한다)
     inline constexpr const utf8* kExtReflectionTemplate  = "@SW_EXT_REFLECTION_TEMPLATE@";
     inline constexpr const utf8* kExtReflectionStamp     = "@SW_EXT_REFLECTION_STAMP@";
     inline constexpr const utf8* kFileReflectionFlagOps  = "@SW_FILE_REFLECTION_FLAG_OPS@";

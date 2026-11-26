@@ -550,8 +550,8 @@ namespace sw
         for ( uint32 boneIndex = 0; boneIndex < boneCount; ++boneIndex )
         {
             // 회전은 w ≥ 0 쪽으로 맞춰(같은 회전) 성분마다 [-1, 1] 을 int16 으로.
-            quaternion rotation = pose.getRotations()[boneIndex];
-            rotation.normalize();
+            quaternion rotation          = pose.getRotations()[boneIndex];
+            rotation                     = rotation.normalize();
             const float32 sign           = rotation._w < 0.0f ? -1.0f : 1.0f;
             const float32 arrRotation[4] = { rotation._x * sign, rotation._y * sign, rotation._z * sign, rotation._w * sign };
             for ( const float32 component : arrRotation )

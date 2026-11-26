@@ -5,14 +5,18 @@
  *          보관하고 있어 렌더러와 같은 시점에, 디바이스가 살아 있을 때(종료) 해제한다. 소멸은 패킷 빌더(해제 `destroy` 뒤) → 렌더러 순이다.
  */
 #pragma once
+#include "Core/Container/string.h"
 #include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Subsystem/Subsystem.h"
 
+#include "Engine/Asset/Cache/AssetReloadWatch.h"
+
 namespace sw
 {
     class FrameRenderer;
+    class RenderPipelineAsset;
     struct RenderPipelineRequest;
     class OffscreenSceneRenderers;
     struct GlobalVariableInfo;
@@ -47,10 +51,19 @@ namespace sw
         /** @brief 화면 밖 씬(미리보기 · 캡처)마다의 렌더러입니다. 주 렌더러의 PSO 캐시를 빌려 쓰므로 주 렌더러보다 먼저 내린다. 렌더 스레드 객체다. */
         OffscreenSceneRenderers& getOffscreenRenderers() const { return *_offscreenRenderers; }
         RenderPacketBuilder&     getPacketBuilder() const { return *_packetBuilder; }
+        /**
+         * @brief (게임 스레드, 프레임마다) 파이프라인 XML 이 다시 읽혔으면(에디터 핫 리로드 — 공유 캐시의 다시 읽기 횟수) 지금 고른 파이프라인을 새 판으로 다시 고릅니다.
+         * @details `_base` 부모를 고쳐도 자식이 함께 다시 읽힌다(에디터의 연쇄 리로드). 렌더 패스 묶음(`_listRenderPassRef`)만 고친 것은 파이프라인 파일을 다시 저장해야 따라온다.
+         */
+        void refreshReloadedPipeline();
 
     private:
         /** @brief 파이프라인을 고르는 변수(`gv_renderPipeline` · `gv_deferredShading`)가 바뀌면 렌더 스레드에 다시 고르기를 맡깁니다(기다리지 않는다 — `RenderThread::enqueueCommand`). */
         void onPipelineVariableChanged( GlobalVariableInfo* pVariable );
+        /** @brief 엔진 설정을 다시 읽었으면(품질 단계 바꾸기) 고른 파이프라인이 달라졌을 때만 다시 고르기를 맡깁니다. */
+        void onConfigReloaded( const hashed_string& configTypeName );
+        /** @brief (게임 스레드) 읽은 파이프라인 @p pipeline 으로 바꾸기를 렌더 스레드에 맡깁니다(기다리지 않는다). @p change 는 로그에 적을 까닭입니다. */
+        void requestPipelineChange( const string& change, RenderPipelineRequest pipeline );
         /** @brief (패킷을 실행하는 스레드, 프레임 기록 전) 화면 밖 렌더러를 내리고 주 렌더러의 파이프라인을 @p pipeline(게임 스레드가 읽은 것)으로 바꿉니다. @p change 는 로그에 적을 "변수=값" 입니다. */
         void applyPipelineChange( const string& change, const RenderPipelineRequest& pipeline );
 
@@ -61,5 +74,10 @@ namespace sw
         const RHISubsystem&                 _rhiSubsystem;
         /** @brief 파이프라인 변수(`gv_renderPipeline` · `gv_deferredShading`) 변경 훅의 구독입니다. 백엔드 교체로 내렸다 세울 때 다시 건다. */
         Subscription _arrPipelineVariableSubscription[2];
+        Subscription _configReloadedSubscription; ///< 엔진 설정 다시 읽기(품질 단계) 구독
+        /// @brief 게임 스레드가 마지막으로 고른 파이프라인 경로입니다 — 품질 단계가 바뀌었을 때 고른 결과가 달라졌는지 본다(렌더러의 경로는 렌더 스레드가 바꾼다).
+        string _chosenPipelinePath;
+        /// @brief 파이프라인 공유 캐시의 다시 읽기 횟수를 본 값입니다(`refreshReloadedPipeline`).
+        AssetReloadWatch<RenderPipelineAsset> _pipelineReload;
     };
 } // namespace sw

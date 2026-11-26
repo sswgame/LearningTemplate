@@ -35,6 +35,18 @@ namespace sw
     };
 
     /**
+     * @struct FrameAttachmentHistory
+     * @brief 기록 첨부(`RenderPassAttachment::_bHistory`) 하나의 뷰 기록입니다 — 그 첨부를 쓰는 패스가 끝에 출력을 복사한 지난 프레임 내용이다.
+     * @details 패스 종류가 아니라 첨부 칸이 기록을 정한다(XML 에 시간 누적 패스를 더하면 코드 없이 붙는다). 언리얼 `FTemporalAAHistory` · 유니티 `RTHandle` 기록 자리.
+     */
+    struct FrameAttachmentHistory
+    {
+        hashed_string    _attachment; ///< 기록 첨부 이름
+        hashed_string    _resource;   ///< 그래프 자원 이름(`RenderGraphPassDesc::ResolvedAttachment::_historyResource` — `<첨부>History`)
+        FrameViewHistory _history{ FrameViewHistoryLayout::Copy, FrameViewHistoryIdleRule::Discard };
+    };
+
+    /**
      * @brief 뷰 하나가 프레임을 넘어 유지하는 상태입니다. 트랜지언트 풀, 추가 뷰의 컬링 입력, TAA 히스토리, 직렬 커맨드 리스트, 출력 텍스처가 들어 있습니다.
      * @details 주 시점은 뷰 목록의 0 번이고(`FrameRenderState::getMainView`), 추가 뷰는 카메라 id(`_viewID`)로 찾는다. 패스 코드는 지금 그리는 뷰
      *          (`FramePassExecutor::_pActiveView`)의 것만 본다. 뷰가 바뀌면 트랜지언트 이름(SceneColor 등)이 다른 텍스처를 가리키기 때문이다.
@@ -62,8 +74,8 @@ namespace sw
         Texture2D*                  _pOutputTexture{ nullptr }; ///< 준비된 렌더 텍스처(`_outputLoad` 가 쥐는 동안 유효). 만드는 중이면 nullptr — 그 뷰는 그리지 않는다
         RHITextureHandle            _viewportTarget{ 0 };       ///< 호스트 타깃 뷰의 출력(호스트가 소유한다)
         uint64                      _viewID{ 0 };
-        FrameViewHistory            _taaHistory{ FrameViewHistoryLayout::Copy, FrameViewHistoryIdleRule::Discard };      ///< TAA resolve 히스토리(지난 TAAColor 의 복사본)
-        FrameViewHistory            _skyCloudHistory{ FrameViewHistoryLayout::Copy, FrameViewHistoryIdleRule::Discard }; ///< 볼륨 구름 기록(지난 SkyCloudColor 의 복사본) — 볼륨 구름을 그리는 뷰만 있다
+        /// @brief 기록 첨부마다의 기록입니다(파이프라인의 `_bHistory` 첨부 차례 — `FrameViewResources::syncAttachmentHistories` 가 맞춘다). TAA · 볼륨 구름도 여기 하나다.
+        vector<FrameAttachmentHistory> _listAttachmentHistory;
         /**
          * @brief 깊이 히스토리 — 지난 프레임에 이 뷰가 남긴 장면 깊이의 R32 실수 사본(RT · RW 텍스처)입니다. GPU 입자의 깊이 충돌이 읽는다(`recordDepthHistories`).
          * @details 깊이 텍스처는 RW 텍스처가 될 수 없고 에뮬 백엔드의 컴퓨트는 샘플 텍스처를 못 읽어서, 프레임 처음에 풀스크린으로 옮겨 둔다.
@@ -119,7 +131,7 @@ namespace sw
         uint32     _lightGridIndex{ constant::invalid_index::kUint32 }; ///< 이번 프레임 이 뷰의 라이트 그리드 번호(`GPULightBuffer::getGridBase`). 없으면 셰이더는 목록 전체를 돈다
         /// @brief 지난번 이 뷰를 그린 뷰-투영입니다(모션 블러의 `g_PrevViewProj`). 지터 없는 것이다. 기록을 버리는 프레임(`_bHistoryReset`)은 이번 것으로 둔다(속도 0).
         float4x4 _prevViewProj{};
-        /// @brief TAA 서브픽셀 지터 순서입니다. TAA 가 도는 프레임(`_taaHistory` 를 쓰는 프레임)만 한 칸 넘기고 래스터 뷰-투영에 싣는다(`FramePassExecutor::applyViewProjection`).
+        /// @brief TAA 서브픽셀 지터 순서입니다. TAA 가 도는 프레임(TAA 출력의 기록 `_listAttachmentHistory` 를 쓰는 프레임)만 한 칸 넘기고 래스터 뷰-투영에 싣는다(`FramePassExecutor::applyViewProjection`).
         /// 순번은 뷰 대상과 함께 처음부터 시작한다 — 자동화 단계마다 뷰 대상을 새로 만든다(`FrameRenderer::discardViewTargets`).
         TemporalJitterSequence _temporalJitter{};
         /**
@@ -198,10 +210,40 @@ namespace sw
             _bHistoryReset = ( _bHasHistory == SW_FALSE || _settings._bCut == SW_TRUE || _bFrameSkipped == SW_TRUE ) ? SW_TRUE : SW_FALSE;
             _bHasHistory   = SW_TRUE;
             _bFrameSkipped = SW_FALSE;
-            for ( FrameViewHistory* pHistory : { &_taaHistory, &_skyCloudHistory, &_autoExposureHistory } )
+            for ( FrameAttachmentHistory& attachmentHistory : _listAttachmentHistory )
             {
-                pHistory->beginFrame( _bHistoryReset == SW_TRUE );
+                attachmentHistory._history.beginFrame( _bHistoryReset == SW_TRUE );
             }
+            _autoExposureHistory.beginFrame( _bHistoryReset == SW_TRUE );
+        }
+        /** @brief 기록 첨부 @p attachment 의 기록입니다. 그 첨부가 기록을 두지 않으면 nullptr 입니다. */
+        FrameViewHistory* findAttachmentHistory( const hashed_string& attachment )
+        {
+            for ( FrameAttachmentHistory& attachmentHistory : _listAttachmentHistory )
+            {
+                if ( attachmentHistory._attachment == attachment )
+                    return &attachmentHistory._history;
+            }
+            return nullptr;
+        }
+        const FrameViewHistory* findAttachmentHistory( const hashed_string& attachment ) const
+        {
+            for ( const FrameAttachmentHistory& attachmentHistory : _listAttachmentHistory )
+            {
+                if ( attachmentHistory._attachment == attachment )
+                    return &attachmentHistory._history;
+            }
+            return nullptr;
+        }
+        /** @brief 기록 첨부 하나라도 이번 프레임에 쌓였으면 true 입니다(시간 누적 — 사진 앞 정착이 기다린다). */
+        bool hasWrittenAttachmentHistory() const
+        {
+            for ( const FrameAttachmentHistory& attachmentHistory : _listAttachmentHistory )
+            {
+                if ( attachmentHistory._history.isWritten() )
+                    return true;
+            }
+            return false;
         }
         /** @brief 이번 프레임에 이 뷰를 그리지 않습니다 — 다음에 그리는 프레임은 시간 누적 기록을 버립니다. */
         void markFrameSkipped() { _bFrameSkipped = SW_TRUE; }

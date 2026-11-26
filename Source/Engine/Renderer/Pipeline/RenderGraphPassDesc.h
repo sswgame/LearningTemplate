@@ -9,6 +9,7 @@
 
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Foundation/Foundation.h"
+#include "Engine/Graphics/Material/MaterialTypes.h"
 #include "Engine/Graphics/RHI/RHIDescriptors.h"
 #include "Engine/Graphics/RenderState/RenderState.h"
 #include "Engine/Graphics/View/PostProcessValues.h"
@@ -315,6 +316,36 @@ namespace sw
     };
 
     /**
+     * @enum RenderPassInputBinding
+     * @brief 컴퓨트 패스(`_type="Compute"`)가 첨부를 셰이더에 거는 방식입니다. 파이프라인 XML 의 `_inputBinding` 이 적는다.
+     * @details Role 은 RW 칸 셋(출력 + 입력 둘, `compute_pass.hlsli` 의 `g_ComputeInput0Index`)이고 모든 백엔드에서 돈다. Name 은 셰이더의 루트 상수를 선언 차례로 채운다 —
+     *          `g_ComputeWidth` · `g_ComputeHeight` · `g_<출력>Index`(RW) · 출력이 기록 첨부면 `g_<출력>HistoryIndex`(지난 프레임, 셰이더 읽기) · 입력마다 `g_<입력>Index`(셰이더 읽기) ·
+     *          `_listValue` 마다 `g_<이름>`(실수). 입력 수는 루트 상수 칸(`SW_ROOT_DWORD_COUNT`)이 정하고 깊이 형식도 읽는다. 셰이더 읽기를 번호로 하므로 네이티브 bindless(DX12 · Vulkan)에서만 돈다
+     *          (유니티 Fullscreen Pass · Godot Compositor Effect 가 셰이더 프로퍼티 이름으로 텍스처를 거는 자리).
+     */
+    ENUM()
+    enum class RenderPassInputBinding : uint8
+    {
+        Role, ///< RW 칸(출력 하나 · 입력 둘) — 모든 백엔드
+        Name, ///< 선언 차례의 루트 상수(`g_<첨부 이름>Index`) — 네이티브 bindless
+    };
+
+    /**
+     * @struct RenderPassValue
+     * @brief 컴퓨트 패스의 이름 있는 실수 값 하나입니다(`_listValue`). 이름 바인딩 패스의 루트 상수 `g_<이름>` 으로 간다(언리얼 RDG 패스 파라미터 · 유니티 머티리얼 프로퍼티 자리).
+     */
+    REFLECT()
+    struct RenderPassValue
+    {
+        REFLECT_BODY();
+        PROPERTY( Required, InheritKey )
+        string _name;
+
+        PROPERTY()
+        float32 _value{ 0.0f };
+    };
+
+    /**
      * @enum RenderResolutionSpace
      * @brief 첨부가 사는 해상도 공간입니다 — 시간 업스케일(TAAU) 앞의 렌더 해상도와 뒤의 출력 해상도(언리얼 1 차 · 2 차 화면 배율, `ScreenPercentage` 앞 · 뒤).
      * @details 파이프라인 XML 이 첨부마다 선언한다(`RenderPassAttachment::_resolutionSpace`). 렌더 공간은 장면(G버퍼 · 깊이 · 속도 · 조명), 출력 공간은 TAA 가 키운 색과 그 뒤 후처리다.
@@ -338,6 +369,17 @@ namespace sw
     constexpr bool isViewPassType( RenderPassKind type )
     {
         return type != RenderPassKind::Invalid && static_cast<uint32>( type ) <= static_cast<uint32>( RenderPassKind::Compute );
+    }
+
+    /**
+     * @brief 한 파이프라인에 이 종류의 뷰 패스를 여럿 둘 수 있으면 true 입니다 — 실행과 PSO 가 종류가 아니라 패스 서술로 갈린다.
+     * @details 그림자는 깊이 첨부의 역할이 타일을 고르고(방향광 · 점광), Compute 는 셰이더가 패스마다 다르고, 후처리 머티리얼은 블렌더블 자리가 패스마다 다르다.
+     *          나머지 종류를 두 번 선언하면 로드 오류다(`RenderPipelineAsset::validate`). 종류 하나의 패스를 찾는 조회(`RenderPipelineAsset::findUniquePass`)는 이 종류를 컴파일 때 거절한다 —
+     *          "그 종류의 첫 패스" 는 둘째 패스의 서술을 조용히 버린다. 언리얼 RDG · 유니티 Render Graph 도 패스는 인스턴스 단위다.
+     */
+    constexpr bool isRepeatablePassType( RenderPassKind type )
+    {
+        return type == RenderPassKind::Shadow || type == RenderPassKind::Compute || type == RenderPassKind::PostProcessMaterial;
     }
 
     /**
@@ -391,6 +433,13 @@ namespace sw
     struct RenderPassAttachment
     {
         REFLECT_BODY();
+        /** @brief 기록 없는 첨부로 만듭니다(깃발 칸은 비트필드라 생성자가 정한다). */
+        RenderPassAttachment() noexcept
+            : _bHistory{ SW_FALSE }
+            , _reservedFlags{ 0 }
+        {
+        }
+
         PROPERTY( Required, InheritKey )
         string _name;
 
@@ -446,6 +495,29 @@ namespace sw
          */
         PROPERTY()
         RenderResolutionSpace _resolutionSpace{ RenderResolutionSpace::Render };
+
+        /**
+         * @brief 고정 픽셀 크기입니다(가로 · 세로를 함께 적는다). 0 이면 프레임 크기를 `_resolutionDivisor` 로 나눈 크기다.
+         * @details 화면과 상관없는 타깃(LUT · 작은 분석 타깃)용이다(언리얼 `FRDGTextureDesc::Extent` · 유니티 `TextureDesc` 의 고정 크기). 고정 크기 첨부는 나눗수 · 해상도 공간을 받지 않고
+         *          (렌더 배율 · 동적 해상도가 바꾸지 않는다) 앨리어싱에 들지 않는다. 그림자 맵(ShadowMap · LocalShadowMap 역할)은 크기를 렌더 설정이 정해 적을 수 없다(검증).
+         */
+        PROPERTY()
+        uint32 _width{ 0 };
+
+        PROPERTY()
+        uint32 _height{ 0 };
+
+        /**
+         * @brief 프레임을 넘어 지난 프레임 내용의 복사본(기록)을 뷰마다 둔다(언리얼 `FTemporalAAHistory` · 유니티 `RTHandle` 기록 자리). 시간 누적 패스(TAA · VolumetricClouds)의 출력은 이 칸을 적어야 한다(검증).
+         * @details 기록은 출력과 같은 크기 · 형식의 텍스처 하나를 더 잡는다 — 메모리 예산에 든다는 것을 데이터가 말한다. 이 첨부를 쓰는 패스는 하나이고(검증) 그 패스가 끝에 출력을 기록으로 복사한다 —
+         *          패스 종류와 상관없이 칸 하나로 붙는다(`FrameViewTarget::_listAttachmentHistory`, 그래프 자원 `<첨부>History`).
+         */
+        PROPERTY()
+        uint8                  _bHistory      : 1;
+        [[maybe_unused]] uint8 _reservedFlags : 7;
+
+        /** @brief 고정 크기 첨부(`_width` · `_height`)면 true 입니다. */
+        [[nodiscard]] bool isFixedSize() const { return _width != 0 || _height != 0; }
     };
 } // namespace sw
 
@@ -539,6 +611,9 @@ namespace sw
          */
         hashed_string _resolvedDepthAttachment;
 
+        /** @brief `_name` 을 intern 해 둔 값입니다. XML 로드 시 RenderPipelineAsset 가 채웁니다(직렬화 대상이 아니다). 패스 이름이 열쇠인 PSO 를 프레임마다 intern 없이 찾는다(`FramePSOManager::getPassPSO`). */
+        hashed_string _resolvedName;
+
         /**
          * @brief `_depthAttachment` 의 역할(`RenderPassInputRole` 정수 — 이 헤더는 그 enum 을 모른다)입니다. XML 로드 시 RenderPipelineAsset 가 채웁니다.
          * @details 그림자 패스는 이 값으로 그릴 타일을 고른다 — ShadowMap 이면 방향광 캐스케이드, LocalShadowMap 이면 점광 · 스폿 타일(아틀라스 둘, 감사 RN-4).
@@ -553,6 +628,8 @@ namespace sw
         struct ResolvedAttachment
         {
             hashed_string _attachment;
+            /// @brief 첨부가 기록을 둘 때(`RenderPassAttachment::_bHistory`) 그 기록의 그래프 자원 이름(`<첨부>History`)입니다. 비면 기록이 없다. 출력이면 이 패스가 끝에 기록으로 복사한다.
+            hashed_string _historyResource;
             uint8         _role{ 0 };
         };
 
@@ -603,9 +680,27 @@ namespace sw
         PROPERTY( SkipIfEmpty )
         string _domainEntryPoint;
 
-        /** @brief 셰이더 매크로(퍼뮤테이션)입니다. "NAME" 또는 "NAME=VALUE" 형태로 적습니다. */
-        PROPERTY( SkipIfEmpty )
+        /**
+         * @brief 셰이더 매크로(퍼뮤테이션)입니다. "NAME" 또는 "NAME=VALUE" 형태로 적습니다. 한 이름은 한 번만 적는다(검증).
+         * @details 열쇠는 원소의 글이다(`_base` 자식은 하나씩 더하고 `<item _op="Remove">NAME=VALUE</item>` 로 지운다 — DataInheritance 글 목록).
+         *          값만 바꾸려면 옛 글을 지우고 새 글을 더한다.
+         */
+        PROPERTY( SkipIfEmpty, InheritKey )
         vector<string> _listPermutation;
+
+        /**
+         * @brief 이 패스가 그리는 배치의 머티리얼에 있어야 하는 define 입니다(유니티 Pass Tag `LightMode` 자리 — 예: 외곽선 패스의 `MATERIAL_OUTLINE`). 씬 메시 패스만 적는다(검증).
+         * @details 비면 패스 종류 표의 기본값이다(`RenderPassKindInfo::getDefaultMaterialFilter`). 표 기본값을 지우는 표기는 없다(shortcut: 빈 칸 = 기본값, 지울 패스가 생기면 `None` 같은 표기를 더한다).
+         */
+        PROPERTY( SkipIfEmpty )
+        string _requiredMaterialDefine;
+
+        /** @brief 이 패스가 빼는 배치의 머티리얼 define 입니다(G버퍼의 `MATERIAL_FORWARD_ONLY`). 비면 표의 기본값이다. 씬 메시 패스만 적는다(검증). */
+        PROPERTY( SkipIfEmpty )
+        string _excludedMaterialDefine;
+
+        /** @brief 서술 칸이 표 기본값을 덮은 머티리얼 거르기입니다. XML 로드 시 RenderPipelineAsset 가 채웁니다(직렬화 대상이 아니다). 드로우 · PSO 변형 · 쿠커가 이 값 하나를 본다. */
+        MaterialPassFilter _resolvedMaterialFilter;
 
         /**
          * @brief 모든 렌더 타깃의 블렌드 프리셋 이름입니다(`engine/renderstate/blendpresets.xml`). 비면 불투명입니다. `_listBlendTarget` 과 함께 적을 수 없습니다(검증).
@@ -640,6 +735,24 @@ namespace sw
         /** @brief 일반 풀스크린 패스의 실행 방식입니다(`RenderPassExecutionMode`). Compute 는 표가 컴퓨트 구현을 가진 종류만 받는다(검증). */
         PROPERTY()
         RenderPassExecutionMode _implementation{ RenderPassExecutionMode::Pixel };
+
+        /** @brief 컴퓨트 패스가 첨부를 거는 방식입니다(`RenderPassInputBinding`). Name 은 Compute 패스만 적는다(검증). */
+        PROPERTY()
+        RenderPassInputBinding _inputBinding{ RenderPassInputBinding::Role };
+
+        /** @brief 이름 바인딩 컴퓨트 패스의 값입니다 — 선언 차례로 입력 번호 뒤의 루트 상수 `g_<이름>` 이 된다. 이름이 열쇠라 `_base` 자식은 값 하나씩 고친다. 이름 바인딩 패스만 적는다(검증). */
+        PROPERTY( SkipIfEmpty )
+        vector<RenderPassValue> _listValue;
+
+        /**
+         * @brief 이름 바인딩 패스가 쓰는 루트 상수 칸 수입니다(크기 둘 + 출력 + 출력 기록 + 입력 + 값). 로드 검증과 실행이 같은 차례를 이 값 하나로 본다.
+         * @details 출력 기록 칸은 해석한 첫 컬러 출력이 기록 첨부일 때만 든다(`ResolvedAttachment::_historyResource` — 로드가 채운 뒤에 부른다).
+         */
+        [[nodiscard]] uint32 countNamedRootConstants() const
+        {
+            const bool bOutputHistory = _listResolvedColorOutput.empty() == false && _listResolvedColorOutput[0]._historyResource.empty() == false;
+            return 3u + ( bOutputHistory ? 1u : 0u ) + static_cast<uint32>( _listResolvedInput.size() + _listValue.size() );
+        }
 
         /**
          * @brief `PostProcessMaterial` 패스가 맡는 블렌더블 자리입니다. 그 패스는 None 이 아니어야 하고 다른 패스는 None 이어야 한다(검증). 자리마다 패스는 하나다.

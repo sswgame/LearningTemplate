@@ -108,22 +108,16 @@ namespace sw
         /** @brief 다른 벡터와의 내적을 구합니다. */
         float32 dot( const float2& other ) const noexcept;
 
-        /** @brief 길이 1 로 정규화하고 자신을 반환합니다. */
-        float2& normalize() noexcept;
-
-        /** @brief 정규화한 사본을 반환합니다. */
-        float2 normalize() const noexcept;
+        /**
+         * @brief 정규화한 사본을 반환합니다. 길이가 0 이면 0 벡터입니다.
+         * @details 제자리 판을 두지 않는다. const 아닌 값에서 같은 이름의 제자리 판이 골라져 원본을 몰래 바꿨다(제자리로 쓸 때는 `v = v.normalize()` 로 대입을 드러낸다). 언리얼 `FVector::GetSafeNormal` · 유니티 `Vector3.normalized` 처럼 값만 돌려준다.
+         */
+        [[nodiscard]] float2 normalize() const noexcept;
         /** @brief 정규화한 사본입니다. 길이가 @p minLength 이하이거나 유한하지 않으면 @p fallback 입니다(방향이 없는 입력 — 문턱은 부르는 쪽의 단위가 정한다). */
         float2 normalizeOr( const float2& fallback, float32 minLength ) const noexcept;
 
-        /** @brief 각 성분을 minValue ~ maxValue 로 자릅니다(clamp). */
-        void clamp( const float2& minValue, const float2& maxValue ) noexcept;
-
-        /** @brief 각 성분을 minValue ~ maxValue 로 자른 사본을 반환합니다. */
-        float2 clamp( const float2& minValue, const float2& maxValue ) const noexcept;
-
-        /** @brief `clamp() const` 와 같습니다(자른 사본을 반환합니다). */
-        float2 clamped( const float2& minValue, const float2& maxValue ) const noexcept { return clamp( minValue, maxValue ); }
+        /** @brief 각 성분을 minValue ~ maxValue 로 자른 사본을 반환합니다. 제자리 판(`clamp`)은 `normalize` 와 같은 까닭으로 두지 않는다. */
+        [[nodiscard]] float2 clamped( const float2& minValue, const float2& maxValue ) const noexcept;
 
         /** @brief 길이를 반환합니다. */
         float32 getLength() const noexcept;
@@ -415,11 +409,11 @@ namespace sw
         /** @brief 다른 벡터와의 외적을 구합니다. */
         float3 cross( const float3& other ) const noexcept;
 
-        /** @brief 길이 1 로 정규화하고 자신을 반환합니다. */
-        float3& normalize() noexcept;
-
-        /** @brief 정규화한 사본을 반환합니다. */
-        float3 normalize() const noexcept;
+        /**
+         * @brief 정규화한 사본을 반환합니다. 길이가 0 이면 0 벡터입니다.
+         * @details 제자리 판을 두지 않는다(`float2::normalize` 와 같은 까닭).
+         */
+        [[nodiscard]] float3 normalize() const noexcept;
         /** @brief 정규화한 사본입니다. 길이가 @p minLength 이하이거나 유한하지 않으면 @p fallback 입니다(방향이 없는 입력 — 문턱은 부르는 쪽의 단위가 정한다). */
         float3 normalizeOr( const float3& fallback, float32 minLength ) const noexcept;
 
@@ -433,14 +427,8 @@ namespace sw
         /** @brief 성분마다 차이가 @p tolerance 보다 작으면 true 입니다(언리얼 `Equals( V, Tolerance )`). `==` 는 허용치가 `MathUtil::kEpsilon` 으로 고정이다. */
         bool nearEqual( const float3& other, float32 tolerance ) const noexcept;
 
-        /** @brief 각 성분을 minValue ~ maxValue 로 자릅니다(clamp). */
-        void clamp( const float3& minValue, const float3& maxValue ) noexcept;
-
-        /** @brief 각 성분을 minValue ~ maxValue 로 자른 사본을 반환합니다. */
-        float3 clamp( const float3& minValue, const float3& maxValue ) const noexcept;
-
-        /** @brief `clamp() const` 와 같습니다(자른 사본을 반환합니다). */
-        float3 clamped( const float3& minValue, const float3& maxValue ) const noexcept { return clamp( minValue, maxValue ); }
+        /** @brief 각 성분을 minValue ~ maxValue 로 자른 사본을 반환합니다. 제자리 판(`clamp`)은 `normalize` 와 같은 까닭으로 두지 않는다. */
+        [[nodiscard]] float3 clamped( const float3& minValue, const float3& maxValue ) const noexcept;
 
         /** @brief 길이를 반환합니다. */
         float32 getLength() const noexcept;
@@ -601,10 +589,11 @@ namespace sw
 
         /** @brief 다른 벡터와의 내적을 구합니다. */
         float32 dot( const float4& other ) const noexcept;
-        /** @brief 길이 1 로 정규화하고 자신을 반환합니다. */
-        float4& normalize() noexcept;
-        /** @brief 정규화한 사본을 반환합니다. */
-        float4 normalize() const noexcept;
+        /**
+         * @brief 정규화한 사본을 반환합니다. 길이가 0 이면 0 벡터입니다.
+         * @details 제자리 판을 두지 않는다(`float2::normalize` 와 같은 까닭).
+         */
+        [[nodiscard]] float4 normalize() const noexcept;
 
         /** @brief 각 성분이 [-bound, bound] 안에 있으면 true 입니다. */
         bool isInBounds( const float4& bound ) const noexcept;
@@ -613,12 +602,8 @@ namespace sw
         /** @brief 성분마다 차이가 @p tolerance 보다 작으면 true 입니다(언리얼 `Equals( V, Tolerance )`). `==` 는 허용치가 `MathUtil::kEpsilon` 으로 고정이다. */
         bool nearEqual( const float4& other, float32 tolerance ) const noexcept;
 
-        /** @brief 각 성분을 minValue ~ maxValue 로 자릅니다(clamp). */
-        void clamp( const float4& minValue, const float4& maxValue ) noexcept;
-        /** @brief 각 성분을 minValue ~ maxValue 로 자른 사본을 반환합니다. */
-        float4 clamp( const float4& minValue, const float4& maxValue ) const noexcept;
-        /** @brief `clamp() const` 와 같습니다(자른 사본을 반환합니다). */
-        float4 clamped( const float4& minValue, const float4& maxValue ) const noexcept { return clamp( minValue, maxValue ); }
+        /** @brief 각 성분을 minValue ~ maxValue 로 자른 사본을 반환합니다. 제자리 판(`clamp`)은 `normalize` 와 같은 까닭으로 두지 않는다. */
+        [[nodiscard]] float4 clamped( const float4& minValue, const float4& maxValue ) const noexcept;
 
         /** @brief 길이를 반환합니다. */
         float32 getLength() const noexcept;
@@ -746,17 +731,14 @@ namespace sw
         float64 dot( const double3& other ) const noexcept;
         /** @brief 다른 벡터와의 외적을 구합니다. */
         double3 cross( const double3& other ) const noexcept;
-        /** @brief 길이 1 로 정규화하고 자신을 반환합니다. */
-        double3& normalize() noexcept;
-        /** @brief 정규화한 사본을 반환합니다. */
-        double3 normalize() const noexcept;
+        /**
+         * @brief 정규화한 사본을 반환합니다. 길이가 0 이면 0 벡터입니다.
+         * @details 제자리 판을 두지 않는다(`float2::normalize` 와 같은 까닭).
+         */
+        [[nodiscard]] double3 normalize() const noexcept;
 
-        /** @brief 각 성분을 minValue ~ maxValue 로 자릅니다(clamp). */
-        void clamp( const double3& minValue, const double3& maxValue ) noexcept;
-        /** @brief 각 성분을 minValue ~ maxValue 로 자른 사본을 반환합니다. */
-        double3 clamp( const double3& minValue, const double3& maxValue ) const noexcept;
-        /** @brief `clamp() const` 와 같습니다(자른 사본을 반환합니다). */
-        double3 clamped( const double3& minValue, const double3& maxValue ) const noexcept { return clamp( minValue, maxValue ); }
+        /** @brief 각 성분을 minValue ~ maxValue 로 자른 사본을 반환합니다. 제자리 판(`clamp`)은 `normalize` 와 같은 까닭으로 두지 않는다. */
+        [[nodiscard]] double3 clamped( const double3& minValue, const double3& maxValue ) const noexcept;
 
         /** @brief float3 로 좁힙니다(정밀도가 떨어집니다). */
         float3 toFloat3() const noexcept { return float3{ static_cast<float32>( _x ), static_cast<float32>( _y ), static_cast<float32>( _z ) }; }
@@ -956,16 +938,6 @@ namespace sw
         return ( _x * other._x ) + ( _y * other._y );
     }
 
-    inline float2& float2::normalize() noexcept
-    {
-        const float32 invLen = MathUtil::invSqrt( getLengthSquared() );
-        if ( invLen > 0.f )
-            ( *this ) *= invLen;
-        else
-            ( *this ) = Zero;
-        return *this;
-    }
-
     inline float2 float2::normalizeOr( const float2& fallback, float32 minLength ) const noexcept
     {
         const float32 length = getLength();
@@ -982,16 +954,11 @@ namespace sw
         return Zero;
     }
 
-    inline void float2::clamp( const float2& minValue, const float2& maxValue ) noexcept
-    {
-        _x = MathUtil::clamp( _x, minValue._x, maxValue._x );
-        _y = MathUtil::clamp( _y, minValue._y, maxValue._y );
-    }
-
-    inline float2 float2::clamp( const float2& minValue, const float2& maxValue ) const noexcept
+    inline float2 float2::clamped( const float2& minValue, const float2& maxValue ) const noexcept
     {
         float2 result = *this;
-        result.clamp( minValue, maxValue );
+        result._x     = MathUtil::clamp( _x, minValue._x, maxValue._x );
+        result._y     = MathUtil::clamp( _y, minValue._y, maxValue._y );
         return result;
     }
 
@@ -1167,16 +1134,6 @@ namespace sw
         return result;
     }
 
-    inline float3& float3::normalize() noexcept
-    {
-        const float32 invLen = MathUtil::invSqrt( getLengthSquared() );
-        if ( invLen > 0.f )
-            ( *this ) *= invLen;
-        else
-            ( *this ) = Zero;
-        return *this;
-    }
-
     inline float3 float3::normalizeOr( const float3& fallback, float32 minLength ) const noexcept
     {
         const float32 length = getLength();
@@ -1213,17 +1170,12 @@ namespace sw
         return MathUtil::nearEqual( _x, other._x, tolerance ) && MathUtil::nearEqual( _y, other._y, tolerance ) && MathUtil::nearEqual( _z, other._z, tolerance );
     }
 
-    inline void float3::clamp( const float3& minValue, const float3& maxValue ) noexcept
-    {
-        _x = MathUtil::clamp( _x, minValue._x, maxValue._x );
-        _y = MathUtil::clamp( _y, minValue._y, maxValue._y );
-        _z = MathUtil::clamp( _z, minValue._z, maxValue._z );
-    }
-
-    inline float3 float3::clamp( const float3& minValue, const float3& maxValue ) const noexcept
+    inline float3 float3::clamped( const float3& minValue, const float3& maxValue ) const noexcept
     {
         float3 result = *this;
-        result.clamp( minValue, maxValue );
+        result._x     = MathUtil::clamp( _x, minValue._x, maxValue._x );
+        result._y     = MathUtil::clamp( _y, minValue._y, maxValue._y );
+        result._z     = MathUtil::clamp( _z, minValue._z, maxValue._z );
         return result;
     }
 
@@ -1354,16 +1306,6 @@ namespace sw
         return ( _x * other._x ) + ( _y * other._y ) + ( _z * other._z ) + ( _w * other._w );
     }
 
-    inline float4& float4::normalize() noexcept
-    {
-        const float32 invLen = MathUtil::invSqrt( getLengthSquared() );
-        if ( invLen > 0.f )
-            ( *this ) *= invLen;
-        else
-            ( *this ) = Zero;
-        return *this;
-    }
-
     inline float4 float4::normalize() const noexcept
     {
         const float32 invLen = MathUtil::invSqrt( getLengthSquared() );
@@ -1378,18 +1320,13 @@ namespace sw
         return ( -bound._x <= _x && _x <= bound._x ) && ( -bound._y <= _y && _y <= bound._y ) && ( -bound._z <= _z && _z <= bound._z ) && ( -bound._w <= _w && _w <= bound._w );
     }
 
-    inline void float4::clamp( const float4& minValue, const float4& maxValue ) noexcept
-    {
-        _x = MathUtil::clamp( _x, minValue._x, maxValue._x );
-        _y = MathUtil::clamp( _y, minValue._y, maxValue._y );
-        _z = MathUtil::clamp( _z, minValue._z, maxValue._z );
-        _w = MathUtil::clamp( _w, minValue._w, maxValue._w );
-    }
-
-    inline float4 float4::clamp( const float4& minValue, const float4& maxValue ) const noexcept
+    inline float4 float4::clamped( const float4& minValue, const float4& maxValue ) const noexcept
     {
         float4 result = *this;
-        result.clamp( minValue, maxValue );
+        result._x     = MathUtil::clamp( _x, minValue._x, maxValue._x );
+        result._y     = MathUtil::clamp( _y, minValue._y, maxValue._y );
+        result._z     = MathUtil::clamp( _z, minValue._z, maxValue._z );
+        result._w     = MathUtil::clamp( _w, minValue._w, maxValue._w );
         return result;
     }
 
@@ -1510,19 +1447,6 @@ namespace sw
         return result;
     }
 
-    inline double3& double3::normalize() noexcept
-    {
-        const float64 lenSq = getLengthSquared();
-        if ( lenSq > 0.0 )
-        {
-            const float64 invLen = 1.0 / MathUtil::sqrt( lenSq );
-            ( *this ) *= invLen;
-        }
-        else
-            ( *this ) = Zero;
-        return *this;
-    }
-
     inline double3 double3::normalize() const noexcept
     {
         const float64 lenSq = getLengthSquared();
@@ -1534,17 +1458,12 @@ namespace sw
         return Zero;
     }
 
-    inline void double3::clamp( const double3& minValue, const double3& maxValue ) noexcept
-    {
-        _x = MathUtil::clamp( _x, minValue._x, maxValue._x );
-        _y = MathUtil::clamp( _y, minValue._y, maxValue._y );
-        _z = MathUtil::clamp( _z, minValue._z, maxValue._z );
-    }
-
-    inline double3 double3::clamp( const double3& minValue, const double3& maxValue ) const noexcept
+    inline double3 double3::clamped( const double3& minValue, const double3& maxValue ) const noexcept
     {
         double3 result = *this;
-        result.clamp( minValue, maxValue );
+        result._x      = MathUtil::clamp( _x, minValue._x, maxValue._x );
+        result._y      = MathUtil::clamp( _y, minValue._y, maxValue._y );
+        result._z      = MathUtil::clamp( _z, minValue._z, maxValue._z );
         return result;
     }
 

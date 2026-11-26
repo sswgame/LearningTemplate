@@ -19,9 +19,9 @@ namespace sw::test
         ScopedEnvironmentVariable( string_view name, string_view value )
             : _name{ name }
         {
-            SW_EXPECT_TRUE( ProcessEnvironment::trySet( name, value ) );
+            SW_EXPECT_TRUE( Process::trySetEnvironment( name, value ) );
         }
-        ~ScopedEnvironmentVariable() { SW_EXPECT_TRUE( ProcessEnvironment::tryUnset( _name ) ); }
+        ~ScopedEnvironmentVariable() { SW_EXPECT_TRUE( Process::tryUnsetEnvironment( _name ) ); }
 
         ScopedEnvironmentVariable( const ScopedEnvironmentVariable& )            = delete;
         ScopedEnvironmentVariable& operator=( const ScopedEnvironmentVariable& ) = delete;

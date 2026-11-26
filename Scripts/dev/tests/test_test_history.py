@@ -50,9 +50,12 @@ class TestHistoryTest(unittest.TestCase):
         def read_no_text(path: str) -> str:
             return ""
         assert [changed.path for changed in select_editor_files(list_changed, read_no_text)] == ["Source/Editor/Panel/Tests/TestPanel.cpp"], "에디터 소스"
-        header_changed = [ChangedFile("M", "Source/Engine/Foo/Light.h"), ChangedFile("M", "Source/Engine/Foo/Plain.h"), ChangedFile("M", "Source/Engine/Foo/Light.cpp")]
-        header_text = {"Source/Engine/Foo/Light.h": 'x\n    REFLECT( Meta = "Icon=Curve" )\n', "Source/Engine/Foo/Plain.h": "// REFLECT( 주석 )\n"}
-        assert [changed.path for changed in select_editor_files(header_changed, lambda path: header_text[path])] == ["Source/Engine/Foo/Light.h"], "메타만 바뀐 엔진 헤더"
+        header_changed = [ChangedFile("M", "Source/Engine/Foo/Light.h"), ChangedFile("M", "Source/Engine/Foo/Plain.h"), ChangedFile("M", "Source/Engine/Foo/Light.cpp"),
+                          ChangedFile("M", "Source/Engine/Foo/Hidden.cpp")]
+        header_text = {"Source/Engine/Foo/Light.h": 'x\n    REFLECT( Meta = "Icon=Curve" )\n', "Source/Engine/Foo/Plain.h": "// REFLECT( 주석 )\n", "Source/Engine/Foo/Light.cpp": "void f();\n",
+                       "Source/Engine/Foo/Hidden.cpp": 'REFLECT( Meta = "Icon=Curve" )\nclass HiddenComponent : public Component\n{\n};\n#include "Hidden.cpp.gen.inl"\n'}
+        assert [changed.path for changed in select_editor_files(header_changed, lambda path: header_text[path])] == ["Source/Engine/Foo/Light.h", "Source/Engine/Foo/Hidden.cpp"], \
+            "메타만 바뀐 엔진 헤더 · .cpp 안의 리플렉션 형식(.cpp.gen.inl)"
         editor_changed = [ChangedFile("M", path) for path in ("Source/GameFramework/Plugin/Editor/X.cpp", "Content/game/g/automation/editor/e.scenario.xml",
                                                               "Content/editor/fonts/i.glyphs.xml", "Content/game/g/automation/editor/golden/e.dx12.ppm")]
         assert len(select_editor_files(editor_changed, read_no_text)) == 3, "편집기 확장 · 편집기 시나리오 · 에디터 데이터(골든은 아니다)"

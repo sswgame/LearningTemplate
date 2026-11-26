@@ -217,8 +217,8 @@ namespace sw
             sample._giAccumulatedFrames   = _state._probeUpdater.getAccumulatedFrames();
             sample._giError               = _state._probeUpdater.getError();
             sample._cameraStillFrameCount = _state.getMainView()._cameraStillFrameCount;
-            // 시간 누적은 TAA 와 볼륨 구름 둘이다 — 하나라도 쌓이면 정지 프레임을 기다린다.
-            const bool bTemporal          = _state.getMainView()._taaHistory.isWritten() || _state.getMainView()._skyCloudHistory.isWritten();
+            // 시간 누적은 기록 첨부(TAA · 볼륨 구름 · XML 이 더한 것)다 — 하나라도 쌓이면 정지 프레임을 기다린다.
+            const bool bTemporal          = _state.getMainView().hasWrittenAttachmentHistory();
             sample._bTemporalAccumulation = bTemporal ? SW_TRUE : SW_FALSE;
             sample._bAutoExposure         = _state.getMainView()._autoExposureHistory.isWritten() ? SW_TRUE : SW_FALSE;
             sample._bRealtimeGI           = _state._probeUpdater.isActive() ? SW_TRUE : SW_FALSE;
@@ -337,12 +337,12 @@ namespace sw
         /** @brief 패스 타입에 해당하는 엔진 PSO 입니다. 없으면 0 입니다. */
         RHIPipelineStateHandle getEnginePSO( RenderPassKind passType ) const;
         /**
-         * @brief 이 패스가 이 배치를 그리는지 반환합니다. 패스가 머티리얼 define 으로 배치를 거르면(메시 외곽선) 퍼뮤테이션에 그 define 이 있어야 합니다.
-         * @details 판정은 `RenderPassKindInfo::shouldDrawMaterial` 하나로 한다. 머티리얼 PSO 변형과 셰이더 쿠커도 같은 판정을 쓴다. 드로우 루프(`FramePassExecutor`)와 같은 함수다.
+         * @brief 거르기 @p filter 의 패스가 이 배치를 그리는지 반환합니다. 패스가 머티리얼 define 으로 배치를 거르면(메시 외곽선) 퍼뮤테이션에 그 define 이 있어야 합니다.
+         * @details 판정은 `MaterialPassFilter::shouldDraw` 하나로 한다. 머티리얼 PSO 변형과 셰이더 쿠커도 같은 판정을 쓴다. 드로우 루프(`FramePassExecutor`)와 같은 함수다.
          */
-        bool shouldDrawBatchInPass( RenderPassKind passType, const GPUMeshBatch& batch, const GPUMeshBatchBinding& binding ) const
+        bool shouldDrawBatchInPass( const MaterialPassFilter& filter, const GPUMeshBatch& batch, const GPUMeshBatchBinding& binding ) const
         {
-            return _passExecutor.shouldDrawBatchInPass( passType, batch, binding );
+            return _passExecutor.shouldDrawBatchInPass( filter, batch, binding );
         }
         /**
          * @brief PSO 를 만들 때 쓴 디스크립터(셰이더 경로, define, 렌더 상태)를 반환합니다. 모르는 PSO 면 false 입니다.
@@ -351,7 +351,7 @@ namespace sw
          */
         [[nodiscard]] bool findPSODesc( RHIPipelineStateHandle pso, RHIPipelineStateDesc& outDesc ) const;
         /** @brief 주 시점의 TAA 히스토리 텍스처입니다. 파이프라인에 TAA 패스가 없거나 아직 만들지 않았으면 0 입니다(진단과 테스트용). */
-        RHITextureHandle getTAAHistory() const { return _state.getMainView()._taaHistory.getCurrent()._texture; }
+        RHITextureHandle getTAAHistory() const;
         /** @brief 주 시점의 첨부 풀입니다. 어느 타깃이 있고 몇 번 만들었는지 보는 진단 · 테스트용입니다(고치지 않는다). */
         const TransientAttachmentPool& getMainViewPool() const { return _state.getMainView()._transientPool; }
         /** @brief 마지막 프레임에 실제로 그린 추가 뷰 수입니다. 갱신 주기나 예산 때문에 쉰 뷰는 빠집니다(진단과 테스트용). */

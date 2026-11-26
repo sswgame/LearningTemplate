@@ -31,12 +31,12 @@ from common.paths import get_build_dir
 from common.run_process import ProcessResult, build_preset_or_exit, run_process
 from dev.run_history import PASSED_RESULTS, QuarantineEntry, read_quarantine, read_reports, read_verify_config
 from dev.scenario_reach import read_reach, select_reached
+from lint.cpp_code import is_reflection_input
 from net.ctest_items import read_items as read_net_items
 
 CHANGED_OUTPUT = Path("Testing") / "Changed"   # 빌드 폴더 아래 이 단계의 로그 · 보고 — 돌 때마다 비운다
 # 에디터 단위 테스트(창 · GPU 없는 `App --test-editor`) — 시나리오 읽기 검사 · 아이콘 · 테마 · 현지화 검사가 모두 여기다.
 EDITOR_UNIT_TEST_ITEM = "UnitTests.Editor"
-REFLECT_DECLARATION = re.compile(r"^\s*(?:REFLECT|PROPERTY|ENUM)\(", re.MULTILINE)
 UNIT_ITEM_PATTERN = re.compile(r"^UnitTests(\.[A-Za-z0-9_]+)?$")
 SOURCE_SUFFIXES = (".cpp", ".h", ".hpp", ".inl")
 SCENARIO_SUFFIX = ".scenario.xml"
@@ -156,8 +156,8 @@ def select_scenarios(list_changed: Sequence[ChangedFile], list_scenario_file: Se
 
 
 def has_reflected_type(path: str, read_text: Callable[[str], str]) -> bool:
-    """리플렉션 형식을 선언하는 헤더 — 에디터 단위 테스트가 그 메타(아이콘 · 색 · 분류)를 데이터 표와 대조한다."""
-    return path.startswith("Source/") and path.endswith(".h") and REFLECT_DECLARATION.search(read_text(path)) is not None
+    """리플렉션 형식을 선언하는 헤더 · .cpp(`<이름>.cpp.gen.inl` 로 등록한다) — 에디터 단위 테스트가 그 메타(아이콘 · 색 · 분류)를 데이터 표와 대조한다."""
+    return path.startswith("Source/") and is_reflection_input(path, read_text(path))
 
 
 def select_editor_files(list_changed: Sequence[ChangedFile], read_text: Callable[[str], str]) -> list[ChangedFile]:

@@ -349,6 +349,35 @@ namespace sw
                                   outputName.c_str() );
     }
 
+    void FrameViewResources::syncAttachmentHistories( FrameViewTarget& view )
+    {
+        // 파이프라인의 기록 첨부 차례와 같게 둔다 — 파이프라인을 바꾸면 어긋난 칸부터 놓고 다시 더한다(텍스처는 쓰는 프레임에 `updateOutputHistory` 가 만든다).
+        vector<FrameAttachmentHistory>& listHistory = view._listAttachmentHistory;
+        size_t                          matched     = 0;
+        for ( const RenderGraphPassDesc& pass : _pipeline.getGraphPass() )
+        {
+            for ( const RenderGraphPassDesc::ResolvedAttachment& output : pass._listResolvedColorOutput )
+            {
+                if ( output._historyResource.empty() )
+                    continue;
+                const bool bSame = matched < listHistory.size() && listHistory[matched]._attachment == output._attachment && listHistory[matched]._resource == output._historyResource;
+                if ( bSame == false )
+                {
+                    for ( size_t index = matched; index < listHistory.size(); ++index )
+                        listHistory[index]._history.release( _pDevice );
+                    listHistory.resize( matched );
+                    FrameAttachmentHistory& added = listHistory.emplace_back();
+                    added._attachment             = output._attachment;
+                    added._resource               = output._historyResource;
+                }
+                ++matched;
+            }
+        }
+        for ( size_t index = matched; index < listHistory.size(); ++index )
+            listHistory[index]._history.release( _pDevice );
+        listHistory.resize( matched );
+    }
+
     void FrameViewResources::ensureHZB( FrameViewTarget& view )
     {
         const bool bNotNeeded = _pDevice == nullptr || view._depthHistory.isValid() == false || ( view._hzb.isValid() && view._occlusionTiles.isValid() );
@@ -401,8 +430,8 @@ namespace sw
             view._occlusionTiles       = RHIStructuredBuffer{};
             view._deferredTileCapacity = 0;
             view._transientPool.clear();
-            view._taaHistory.release( nullptr );
-            view._skyCloudHistory.release( nullptr );
+            for ( FrameAttachmentHistory& attachmentHistory : view._listAttachmentHistory )
+                attachmentHistory._history.release( nullptr );
             view._depthHistory.release( nullptr );
             view._bLastFrameDepthValid = SW_FALSE;
             return;
@@ -416,10 +445,10 @@ namespace sw
         view._depthHistory.release( _pDevice );
         view._bLastFrameDepthValid = SW_FALSE;
 
-        // 히스토리는 TAA 출력의 복사본이라 크기가 정확히 같아야 한다(CopyResource 제약). 트랜지언트가
+        // 기록은 출력의 복사본이라 크기가 정확히 같아야 한다(CopyResource 제약). 트랜지언트가
         // 새 크기로 다시 잡히면 이것도 같이 버려야 updateOutputHistory 가 새 크기로 다시 만든다.
-        view._taaHistory.release( _pDevice );
-        view._skyCloudHistory.release( _pDevice );
+        for ( FrameAttachmentHistory& attachmentHistory : view._listAttachmentHistory )
+            attachmentHistory._history.release( _pDevice );
         view._transientPool.release( _pDevice );
     }
 
@@ -453,12 +482,16 @@ namespace sw
                 const RenderPassInputRole role   = resolveRenderPassInputRole( attachment._name, bDepth, attachment._role );
                 // 그림자 맵(방향광 · 점광 스폿 아틀라스 둘)은 화면이 아니라 빛의 볼륨을 담는다 — 프레임 크기 대신 정사각 고정 크기로 만든다. 이름이 아니라 역할로 가린다(이름을 바꾼 그림자 첨부도 같다).
                 const bool bShadowAtlas = role == RenderPassInputRole::ShadowMap || role == RenderPassInputRole::LocalShadowMap;
-                const bool bMade        = bShadowAtlas
-                                            ? pool.allocateSized( _pDevice, name, attachment._format, bDepth, attachment.getOps(), view._shadowMapResolution, view._shadowMapResolution, false, true )
-                                            : pool.allocate( _pDevice, name, attachment._format, bDepth, attachment.getOps(), attachment._resolutionSpace, attachment._resolutionDivisor,
-                                                             FrameRendererUtil::isComputeOutputOrInput( _pipeline.getGraphPass(), attachment._name ),
-                                                             name != attachmentNames()._sceneDepth ); // 장면 깊이는 다음 프레임의 깊이 기록이 읽는다
-                bAllocated              = bMade || bAllocated;
+                const bool bCompute     = FrameRendererUtil::isComputeOutputOrInput( _pipeline.getGraphPass(), attachment._name );
+                const bool bLeased      = name != attachmentNames()._sceneDepth; // 장면 깊이는 다음 프레임의 깊이 기록이 읽는다
+                bool       bMade        = false;
+                if ( bShadowAtlas )
+                    bMade = pool.allocateSized( _pDevice, name, attachment._format, bDepth, attachment.getOps(), view._shadowMapResolution, view._shadowMapResolution, false, true );
+                else if ( attachment.isFixedSize() ) // XML 이 정한 픽셀 크기(로드가 둘 다 적었는지 봤다) — 렌더 배율이 바꾸지 않는다
+                    bMade = pool.allocateSized( _pDevice, name, attachment._format, bDepth, attachment.getOps(), attachment._width, attachment._height, bCompute, bLeased );
+                else
+                    bMade = pool.allocate( _pDevice, name, attachment._format, bDepth, attachment.getOps(), attachment._resolutionSpace, attachment._resolutionDivisor, bCompute, bLeased );
+                bAllocated = bMade || bAllocated;
             }
         }
         if ( bAllocated )
@@ -515,9 +548,17 @@ namespace sw
         view._listPassDisabled.assign( listPass.size(), SW_FALSE );
         _listScratchWrittenAttachment.clear();
         bool bForwardSet = false;
-        // TAA 가 이번 프레임에 기록을 쓰는지는 이 고르기 하나가 정한다(실행은 같은 결과, 곧 출력이 이어졌는지를 본다). 다음 프레임의 `beginViewHistory` 가 읽는다.
-        hashed_string cloudOutput;
-        hashed_string taaOutput;
+        // 기록을 쓰는지는 이 고르기 하나가 정한다 — 기록 첨부(`_bHistory`)를 쓰는 패스가 돌면 그 기록이 쌓인다(패스 종류를 보지 않는다). 다음 프레임의 `beginViewHistory` 가 읽는다.
+        syncAttachmentHistories( view );
+        const auto markOutputHistories = [&view]( const RenderGraphPassDesc& pass )
+        {
+            for ( const RenderGraphPassDesc::ResolvedAttachment& output : pass._listResolvedColorOutput )
+            {
+                FrameViewHistory* pHistory = output._historyResource.empty() ? nullptr : view.findAttachmentHistory( output._attachment );
+                if ( pHistory != nullptr )
+                    pHistory->markWritten();
+            }
+        };
         // 모듈 확장 패스는 늘 돈다 — 읽는 첨부의 쓰는 쪽이 빠지지 않고, 쓰는 첨부 · 깊이 첨부가 있다. 선언에 없는 이름(모듈 임시 텍스처)은 `FrameExtensionHost::allocateTextures` 가 만든다.
         for ( const ExtensionFramePass& extension : listExtensionPass )
         {
@@ -538,10 +579,6 @@ namespace sw
         for ( size_t passIndex = listPass.size(); passIndex-- > 0; )
         {
             const RenderGraphPassDesc& pass = listPass[passIndex];
-            if ( pass._type == RenderPassKind::TAA && pass._listResolvedColorOutput.empty() == false )
-                taaOutput = pass._listResolvedColorOutput[0]._attachment; // 실행(executeTAAPass)과 같은 첫 컬러 출력이다
-            if ( pass._type == RenderPassKind::VolumetricClouds && pass._listResolvedColorOutput.empty() == false )
-                cloudOutput = pass._listResolvedColorOutput[0]._attachment;
             if ( Internal::isSelectable( listPass, pass ) == false )
             {
                 // 비활성인 덧그리는 패스는 출력이 그대로라 입력을 필요로 하지 않는다 — 그것만 읽는 사본이 아래에서 빠진다.
@@ -550,8 +587,7 @@ namespace sw
                     view._listPassDisabled[passIndex] = SW_TRUE;
                     continue;
                 }
-                if ( pass._type == RenderPassKind::TAA )
-                    view._taaHistory.markWritten();
+                markOutputHistories( pass );
                 const bool bSkipSceneCopyInputs = getRenderPassKindInfo( pass._type ).hasFlag( RenderPassTraitFlag::kDrawsTransparentBatch ) && sceneState._bRefractionBatches == SW_FALSE;
                 Internal::markReads( listAttachment, pass, true, listNeeded, bSkipSceneCopyInputs );
                 Internal::addWrites( pass, _listScratchWrittenAttachment );
@@ -582,10 +618,7 @@ namespace sw
                 }
                 continue;
             }
-            if ( pass._type == RenderPassKind::TAA )
-                view._taaHistory.markWritten();
-            if ( pass._type == RenderPassKind::VolumetricClouds )
-                view._skyCloudHistory.markWritten();
+            markOutputHistories( pass );
             for ( const RenderGraphPassDesc::ResolvedAttachment& output : pass._listResolvedColorOutput )
             {
                 bForwardSet = pool.stopForward( output._attachment ) || bForwardSet;
@@ -599,16 +632,24 @@ namespace sw
         const bool bReleased  = ageAttachments( pool );
         // 시간 누적 기록 — 도는 뷰만 있고, 오래 쉬어 출력을 놓은 뷰는 기록도 놓는다. 구름의 표본 번호는 기록을 버린 프레임에 처음부터 센다.
         // 셋업에서 만든다 — 패스 콜백(병렬 기록)이 만들고 bindless 에 등록하면 다른 스레드가 같은 레지스트리를 읽는 도중에 레지스트리가 resize 된다.
-        updateOutputHistory( pool, taaOutput, "TAAHistory", view._taaHistory );
-        updateOutputHistory( pool, cloudOutput, "SkyCloudHistory", view._skyCloudHistory );
-        if ( view._skyCloudHistory.isWritten() )
-            view._skyCloudSample = view._skyCloudHistory.isReset() ? 0u : view._skyCloudSample + 1u;
-        // 사진 앞 정착(조건 `RenderTemporalAccumulation`): 시간 누적이 쌓인 정지 프레임 수. TAA 를 이번 프레임에 돌리는지는 위 고르기가 정했다(`_taaHistory`) —
+        for ( FrameAttachmentHistory& attachmentHistory : view._listAttachmentHistory )
+            updateOutputHistory( pool, attachmentHistory._attachment, attachmentHistory._resource.c_str(), attachmentHistory._history );
+        // 볼륨 구름의 표본 번호는 구름 패스의 기록을 따른다(구름 실행이 읽는 값이다).
+        const RenderGraphPassDesc* pCloudPass    = _pipeline.findUniquePass<RenderPassKind::VolumetricClouds>();
+        const FrameViewHistory*    pCloudHistory = ( pCloudPass != nullptr && pCloudPass->_listResolvedColorOutput.empty() == false )
+                                                     ? view.findAttachmentHistory( pCloudPass->_listResolvedColorOutput[0]._attachment )
+                                                     : nullptr;
+        if ( pCloudHistory != nullptr && pCloudHistory->isWritten() )
+            view._skyCloudSample = pCloudHistory->isReset() ? 0u : view._skyCloudSample + 1u;
+        // 사진 앞 정착(조건 `RenderTemporalAccumulation`): 시간 누적이 쌓인 정지 프레임 수. TAA 를 이번 프레임에 돌리는지는 위 고르기가 정했다(기록 첨부의 `markWritten`) —
         // TAA 가 없는 뷰는 TAA 기록 버림을 보지 않는다(그것만 보면 Forward 뷰의 정지 프레임이 늘 0 이었다).
         // 볼륨 구름의 기록도 같은 규칙이다(Forward 뷰는 TAA 없이 구름만 쌓는다).
         const bool bHistoryReset      = view._bHistoryReset == SW_TRUE;
-        const bool bAccumulationReset = RenderStabilityUtil::isAccumulationReset( bHistoryReset, view._taaHistory.isWritten(), view._taaHistory.isReset() ) ||
-                                        RenderStabilityUtil::isAccumulationReset( bHistoryReset, view._skyCloudHistory.isWritten(), view._skyCloudHistory.isReset() );
+        bool       bAccumulationReset = false;
+        for ( const FrameAttachmentHistory& attachmentHistory : view._listAttachmentHistory )
+        {
+            bAccumulationReset = bAccumulationReset || RenderStabilityUtil::isAccumulationReset( bHistoryReset, attachmentHistory._history.isWritten(), attachmentHistory._history.isReset() );
+        }
         view._stillFrameCount       = RenderStabilityUtil::advanceStillFrames( view._stillFrameCount, bAccumulationReset, bCameraStill, bObjectMotion );
         view._cameraStillFrameCount = RenderStabilityUtil::advanceStillFrames( view._cameraStillFrameCount, bAccumulationReset, bCameraStill, false );
         // 화면에 나가는 첨부 표시(`_bPresented`)가 가리키는 곳을 따라가므로 가리키는 곳이 바뀌어도 렌더러가 목록을 다시 싣는다. 놓은 타깃도 목록에서 뺀다(죽은 핸들을 남기지 않는다).

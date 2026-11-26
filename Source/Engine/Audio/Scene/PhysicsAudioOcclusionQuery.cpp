@@ -72,12 +72,12 @@ namespace sw
             float3 forward = emitter - listener;
             if ( forward.getLengthSquared() <= MathUtil::kEpsilon )
                 return AudioPropagation::makeOcclusion( 0.0f );
-            forward.normalize();
+            forward = forward.normalize();
             // 수평으로 옆 방향(위 × 앞). 똑바로 위아래면 X 축을 옆으로 쓴다.
             float3 side = float3::Up.cross( forward );
             if ( side.getLengthSquared() <= MathUtil::kEpsilon )
                 side = float3::Right;
-            side.normalize();
+            side                = side.normalize();
             const float3 offset = side * kSideOffset;
 
             uint32 blockedCount = 0;
@@ -93,7 +93,7 @@ namespace sw
             float2       forward = to - from;
             if ( forward.getLengthSquared() <= MathUtil::kEpsilon )
                 return AudioPropagation::makeOcclusion( 0.0f );
-            forward.normalize();
+            forward             = forward.normalize();
             const float2 offset = float2( -forward._y, forward._x ) * kSideOffset;
 
             uint32 blockedCount = 0;

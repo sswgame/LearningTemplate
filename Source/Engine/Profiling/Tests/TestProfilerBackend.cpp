@@ -11,7 +11,7 @@ using namespace sw;
 #if SW_PROFILER_BACKEND_COMPILED
 /**
  * @brief [ProfilerBackendTest] 태스크 훅은 함수 한 쌍을 다 갖고, 활성 출력이 없는 동안에는 구간을 열지 않는다(연 출력이 nullptr — 닫을 것이 없다)
- * @details `TaskManager::bindProfileHook` 에 꽂는 그 훅이다. 테스트가 도는 동안 켜져 있던 출력은 끝에 되돌린다.
+ * @details `TaskProfileHook::bind` 에 꽂는 그 훅이다. 테스트가 도는 동안 켜져 있던 출력은 끝에 되돌린다.
  */
 SW_TEST_CASE( ProfilerBackendTest, TaskHookOpensNoZoneWithoutAnActiveBackend )
 {

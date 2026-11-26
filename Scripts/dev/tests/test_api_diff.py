@@ -58,10 +58,29 @@ diff --git a/Config/Engine/EngineConfig.json b/Config/Engine/EngineConfig.json
 """
 
 
+#: .cpp 안의 리플렉션 형식 — 바로 앞 줄이 PROPERTY · FUNCTION 인 칸 · 함수만 이름이다. 본문의 대입 · 호출 줄은 아니다.
+SOURCE_REFLECTION = """diff --git a/Source/Engine/Physics/LaunchVelocity.cpp b/Source/Engine/Physics/LaunchVelocity.cpp
+--- a/Source/Engine/Physics/LaunchVelocity.cpp
++++ b/Source/Engine/Physics/LaunchVelocity.cpp
+@@ -1,2 +1,9 @@
++        PROPERTY( Min = 0.0 )
++        float32 _launchSpeed;
++        FUNCTION()
++        void launchNow();
++        uint8 _bPendingLaunch;
++        _bPendingLaunch = SW_TRUE;
++        steerTowardVelocity();
+"""
+
+
 class ApiDiffTest(unittest.TestCase):
     def test_collect_each_kind(self) -> None:
         names = {(n._kind, n._name) for n in parse_new_names(BRANCH_A)}
         self.assertEqual(names, {("function", "countSettledFrames"), ("member", "_settledFrameCount"), ("registration", "Render.Settled"), ("config", "_renderStability")})
+
+    def test_reflected_names_in_source(self) -> None:
+        names = {(n._kind, n._name) for n in parse_new_names(SOURCE_REFLECTION)}
+        self.assertEqual(names, {("member", "_launchSpeed"), ("function", "launchNow")})
 
     def test_name_on_removed_line_is_not_new(self) -> None:
         self.assertNotIn("countSettledFrames", {n._name for n in parse_new_names(BRANCH_B)})

@@ -9,6 +9,8 @@
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Content/AssetTypeRegistry.h"
+#include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Serializer/DataPath.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
 
@@ -16,6 +18,21 @@
 
 namespace sw
 {
+    /**
+     * @brief `<Overridable prefix>` · `<Overridable path>` 한 줄의 칸입니다. 둘 중 하나만 적는다(`ModSupportSettings::readOverridable` 이 본다).
+     * @details 이 .cpp 만 쓰는 형식이라 헤더에 두지 않는다. 리플렉션 등록은 파일 끝의 `ModSupportSettings.cpp.gen.inl` 이 한다.
+     */
+    REFLECT()
+    struct ModOverridableLine
+    {
+        REFLECT_BODY();
+
+        PROPERTY()
+        string _prefix{}; ///< 기본 리소스 폴더(끝 `/`) — 폴더는 정체성이 없어 글이다
+        PROPERTY()
+        DataPath _path; ///< 기본 리소스 파일 하나
+    };
+
     bool ModSupportSettings::parseXMLText( string_view text, string_view sourceName, ModSupportSettings& outSettings )
     {
         // 데이터 문서 길로 읽는다 — 조건(`_when`)을 푼다.
@@ -115,3 +132,5 @@ namespace sw
     SW_ASSET_TYPE( ModSupportSettings, AssetTypeDef::makeDataFile( ModSupportSettings::kDataKind, AssetPathRule{ "game/", {}, "/data/modsupport.xml" },
                                                                    AssetTypeLoader::with<ModSupportSettings, &ModSupportSettings::loadFromAsset>() ) );
 } // namespace sw
+
+#include "ModSupportSettings.cpp.gen.inl"

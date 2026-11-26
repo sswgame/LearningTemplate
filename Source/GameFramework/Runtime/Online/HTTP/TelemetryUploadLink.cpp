@@ -90,7 +90,7 @@ namespace sw
             return {};
         }
         string apiKey;
-        if ( _settings._telemetryUploadKeyEnvironment.empty() == false && ProcessEnvironment::tryReadNonEmpty( _settings._telemetryUploadKeyEnvironment, apiKey ) == false )
+        if ( _settings._telemetryUploadKeyEnvironment.empty() == false && Process::tryReadEnvironmentNonEmpty( _settings._telemetryUploadKeyEnvironment, apiKey ) == false )
             return unexpected( Error{ ErrorKind::NotFound, "the API key environment variable (telemetryUploadKeyEnvironment) is empty", _settings._telemetryUploadKeyEnvironment } );
         if ( _telemetryClient.initialize() == false )
             return unexpected( Error{ ErrorKind::ExternalFailure, "the HTTP client could not start" } );

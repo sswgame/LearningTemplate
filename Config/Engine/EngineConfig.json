@@ -89,6 +89,7 @@
             "_captureIntervalFrames": 30
         },
         "_rainOcclusionResolution": 512,
+        "_renderPipeline": "guid:a75d4f411b530b43612e42001606bcec",
         "_skyClouds": {
             "_bVolumetric": true,
             "_viewStepCount": 48,

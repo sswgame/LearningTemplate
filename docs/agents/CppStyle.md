@@ -84,7 +84,7 @@ C++ 를 쓸 때의 규칙. 린트 · 컴파일이 강제하는 줄은 "강제" �
 3. **No owner, one `.cpp`** → that file's anonymous namespace.
 
 - Before adding a struct, search lower layers for the same shape (`Ray`, `HTTPHeader`). No argument-only struct unless there are many arguments.
-- No new `.h`/`.cpp` pair until a second user, reflection, a registration macro or a test needs a header. A header-less `.cpp` is only a self-registering unit, a platform implementation or a module entry.
+- No new `.h`/`.cpp` pair until a second user, a registration macro or a test needs a header. A header-less `.cpp` is only a self-registering unit, a platform implementation or a module entry. A reflected type no other file names stays in its `.cpp`, which includes `<name>.cpp.gen.inl` at the end at global scope (the parser stops without it).
 
 ### Internal 규칙
 
@@ -128,16 +128,16 @@ C++ 를 쓸 때의 규칙. 린트 · 컴파일이 강제하는 줄은 "강제" �
 - Never re-derive the configuration from other macros; no alias macros (컴파일 강제).
 - Costly diagnostics compile into every non-Shipping build and are chosen at startup (`-rhi-validation` · `-rhi-dred` · `-deadlock-detection`); cheap checks under `SW_DO_CHECKS`; Debug-only via `build::kDebug` + `if constexpr`.
 - **Test and dev hooks stop at Release** (`shipping-check` 강제): per-frame numbers through `SW_PROFILE_SCOPE` · `SW_PROFILE_COUNT`, test-only counts as `DevCounter`, no measurement · watch · test accessor as a public API. Dev substitutes register through `DevOnlineExtension.h`; dev config lives under `Config/Dev`.
-- Reflection editor metadata lives in dev-only `.gen.meta.cpp`; layout is the same in every configuration.
+- Reflection editor metadata lives in dev-only `.gen.meta.cpp` (a `.cpp` input's `.cpp.gen.inl` drops it under `SW_SHIPPING`); layout is the same in every configuration.
 
 ## Existing facilities
 
 새로 짜기 전에 이 장치를 쓴다. 없는 기능은 Core · Engine 에 하나 더한다. 목록 밖은 graphify 로 찾는다.
 
-- Log `SW_LOG_*_ID` (`"Area.Event"`, once `*_ONCE_ID`), command-line output `StandardOutput::write`; assert `SW_ASSERT`. Never `printf` · `assert`.
+- Log `SW_LOG_*_ID` (`"Area.Event"`, once `*_ONCE_ID`), command-line output `Process::writeStandardOutput`; assert `SW_ASSERT`. Never `printf` · `assert`.
 - Time `MonotonicClock` · `Stopwatch` · `Deadline` · `WallClock`; random `MathUtil::getRandom*`, deterministic `XorShift32` · `GameRandom`. Never `std::chrono` clocks · `rand`.
 - Files only through `FileUtil` (`[[nodiscard]]`, writes pass `isWriteAllowed`) and `AsyncFileIO`; disk I/O takes `const AbsolutePath&` (string overloads are private). Path rules: [AssetLoading](AssetLoading.md) "경로 · 리소스 신원".
-- Environment `ProcessEnvironment::tryRead`, child process `Process::execute`, shared library `ModuleLibraryUtil::loadLibraryAt`. Never `getenv` · `system` · `dlopen` · Python `subprocess`.
+- Environment `Process::tryReadEnvironment`, child process `Process::execute`, shared library `ModuleLibraryUtil::loadLibraryAt`. Never `getenv` · `system` · `dlopen` · Python `subprocess`.
 - Text `StringUtil` · `HexUtil` · `Base64Util` · `hashed_string`; never `atoi` · `sscanf` · hand split loops.
 - Binary `ByteReader` · `Archive` · `BitReader` return values, no output parameter (the old overloads do not exist); a target outside the function gets a local moved in only after the failure check. Never a hand cursor or `.resize( countFromFile )`.
 - Diagnostics: `SW_PROFILE_*` per frame, `DevCounter` cumulative — never a counter field + getter on a runtime class.

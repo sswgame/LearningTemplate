@@ -423,17 +423,16 @@ namespace sw
         _pActiveView = &_state.getMainView();
     }
 
-    bool FramePassExecutor::shouldDrawBatchInPass( RenderPassKind passType, const GPUMeshBatch& batch, const GPUMeshBatchBinding& binding ) const
+    bool FramePassExecutor::shouldDrawBatchInPass( const MaterialPassFilter& filter, const GPUMeshBatch& batch, const GPUMeshBatchBinding& binding ) const
     {
         // 변형 풀이 받지 못한 메시(상한 초과 · 버퍼 실패)는 어느 패스에서도 그리지 않는다 — 바인드 · 레스트 포즈로 대신 그리지 않는다(풀이 오류를 남겼다).
         if ( binding._bDeformRefused != SW_FALSE )
             return false;
-        const RenderPassKindInfo& passInfo = getRenderPassKindInfo( passType );
-        if ( passInfo.shouldFilterBatchesByMaterial() == false )
+        if ( filter.isEmpty() )
             return true;
         const GPUShaderPermutation* pPermutation =
             ( batch._shaderPermutation == kInvalidShaderPermutation ) ? nullptr : _state._gpuScene.findShaderPermutation( batch._shaderPermutation );
-        return passInfo.shouldDrawMaterial( pPermutation != nullptr ? &pPermutation->_listDefine : nullptr );
+        return filter.shouldDraw( pPermutation != nullptr ? &pPermutation->_listDefine : nullptr );
     }
 
     bool FramePassExecutor::shouldDrawCasterBatch( ShadowCasterFilter filter, const GPUMeshBatch& batch )
@@ -607,7 +606,9 @@ namespace sw
         // 컬링 · 지난 뷰-투영(속도 기준)은 받은 @p viewProj(지터 없음)를 쓰고, 화면 속도는 셰이더가 `g_TemporalJitter` 를 빼서 물체 · 카메라 움직임만 남긴다.
         const TransientAttachmentPool& pool = view._transientPool;
         // 기록을 버리는 프레임(처음 · 컷 · 건너뛴 프레임 뒤)은 이번 원본만 남으므로 지터하지 않는다 — 한 장짜리 그림이 흔들리기만 한다.
-        const bool bJitter = view._taaHistory.isWritten() && view._taaHistory.isReset() == false;
+        const RenderGraphPassDesc* pTAAPass    = _pipelineResource.findUniquePass<RenderPassKind::TAA>();
+        const FrameViewHistory*    pTAAHistory = pTAAPass != nullptr ? findPassHistory( view, *pTAAPass ) : nullptr;
+        const bool                 bJitter     = pTAAHistory != nullptr && pTAAHistory->isWritten() && pTAAHistory->isReset() == false;
         if ( bJitter == false )
             view._temporalJitter.restart(); // 기록이 새로 시작하면 지터도 첫 표본부터 — 그 전에 흐른 프레임 수(앞 씬 · 대기)가 그림을 바꾸지 않는다
         // 지터는 렌더 공간 픽셀이다. 시간 업스케일이면 출력 픽셀마다 표본이 모이게 바퀴를 늘린다(`TemporalJitterSequence::computePhaseCount`).
@@ -775,8 +776,6 @@ namespace sw
         const RenderGraphResourceAccess arrEngineResource[] = {
             ViewGraphResource::autoExposureHistory(),
             ViewGraphResource::autoExposureTarget(),
-            ViewGraphResource::taaHistory(),
-            ViewGraphResource::skyCloudHistory(),
             ViewGraphResource::upscaleIntermediate(),
             ViewGraphResource::shadowCacheLayer(),
             ViewGraphResource::postProcessChainBeforeTonemap(),
@@ -792,6 +791,15 @@ namespace sw
         for ( const RenderGraphResourceAccess& resource : arrEngineResource )
         {
             _state._graph.declareResource( resource._resource, RenderGraphResourceKind::Persistent );
+        }
+        // 기록 첨부의 기록(`<첨부>History`)도 그래프보다 오래 산다 — 쓰는 패스가 끝에 복사하고 다음 프레임이 읽는다.
+        for ( const RenderGraphPassDesc& pass : listPass )
+        {
+            for ( const RenderGraphPassDesc::ResolvedAttachment& output : pass._listResolvedColorOutput )
+            {
+                if ( output._historyResource.empty() == false )
+                    _state._graph.declareResource( output._historyResource, RenderGraphResourceKind::Persistent );
+            }
         }
 
         // 모듈 확장 패스(ExtensionRenderPass M3)가 끼는 자리 — 단계마다 XML 패스 목록의 정해진 첫 자리 앞이다(없으면 끝). 선언 순서가 쓰기 사슬이라 같은 자리의 모듈 패스는 선언한 순서다.
@@ -843,7 +851,7 @@ namespace sw
 
         // 컴퓨트 구현(`_implementation="Compute"`)은 네이티브 bindless 에서만 돈다 — PSO 와 실행이 같은 판정을 본다(`FramePSOManager::createPassPSOs` · `executeGenericFullscreenPass`).
         const bool                 bNativeBindless = _pDevice != nullptr && _pDevice->supportsNativeBindlessSampling();
-        const RenderGraphPassDesc* pTonemapPass    = FrameAutoExposure::findTonemapPass( _pipelineResource );
+        const RenderGraphPassDesc* pTonemapPass    = _pipelineResource.findTonemapPass();
         for ( uint32 index = 0; index < passCount; ++index )
         {
             addModulePassesAt( index );
@@ -862,7 +870,9 @@ namespace sw
             vector<RenderGraphResourceAccess> listAccess;
             for ( const string& in : pass._listInput )
             {
-                addAttachmentAccess( listAccess, hashed_string( in.c_str() ), bComputePass ? RenderGraphAccess::UnorderedAccessRead : RenderGraphAccess::ShaderRead );
+                // RW 칸 바인딩 컴퓨트 패스는 입력을 RW 텍스처로 읽는다. 이름 바인딩은 셰이더 읽기 번호로 읽는다(`executeNamedComputePass`).
+                const bool bRWInput = bComputePass && pass._inputBinding == RenderPassInputBinding::Role;
+                addAttachmentAccess( listAccess, hashed_string( in.c_str() ), bRWInput ? RenderGraphAccess::UnorderedAccessRead : RenderGraphAccess::ShaderRead );
             }
             for ( const string& out : pass._listOutput )
             {
@@ -895,6 +905,12 @@ namespace sw
 
     void FramePassExecutor::appendEngineResourceAccesses( const RenderGraphPassDesc& pass, bool bTonemapPass, vector<RenderGraphResourceAccess>& inoutListAccess )
     {
+        // 기록 첨부를 쓰는 패스는 그 기록을 복사 대상으로 쥔다(패스 끝의 `copyOutputHistories`) — 지난 기록을 읽는 것도 같은 패스라 다음 프레임 순서가 선다.
+        for ( const RenderGraphPassDesc::ResolvedAttachment& output : pass._listResolvedColorOutput )
+        {
+            if ( output._historyResource.empty() == false )
+                inoutListAccess.push_back( RenderGraphTextureCopyDest{ output._historyResource } );
+        }
         // 패스 종류가 스스로 쓰는 엔진 자원을 그 종류가 선언한다(XML 은 첨부만 적는다) — 패스 안 왕복(UAV ↔ 셰이더 읽기)은 쓰기로 선언한 자원만 `RenderGraphPassContext::transition` 으로 한다.
         // 자동 노출 — 톤맵하는 패스가 지난 칸을 읽고 이번 칸에 쓴 뒤 같은 패스가 읽는다.
         if ( bTonemapPass )
@@ -905,14 +921,6 @@ namespace sw
         if ( pass._type == RenderPassKind::Present )
         {
             inoutListAccess.push_back( ViewGraphResource::upscaleIntermediate() ); // FSR 1 — EASU 가 그리고 같은 패스의 RCAS 가 읽는다
-        }
-        else if ( pass._type == RenderPassKind::TAA )
-        {
-            inoutListAccess.push_back( ViewGraphResource::taaHistory() ); // 지난 기록을 읽고 같은 패스가 이번 출력을 복사한다
-        }
-        else if ( pass._type == RenderPassKind::VolumetricClouds )
-        {
-            inoutListAccess.push_back( ViewGraphResource::skyCloudHistory() ); // TAA 와 같다
         }
         else if ( pass._type == RenderPassKind::Lighting )
         {
@@ -970,8 +978,8 @@ namespace sw
         {
             // 나누지 않는 것: 깊이(장면 깊이는 다음 프레임의 깊이 히스토리가 읽는다 · 그림자 맵), 프레임을 넘어 내용을 잇는 첨부(`Load`), 그래프가 모르는 첨부.
             const bool bDepth = FrameRendererUtil::isDepthFormat( attachment._format );
-            if ( bDepth || attachment._loadOp == RHIRenderPassLoadOp::Load )
-                continue;
+            if ( bDepth || attachment._loadOp == RHIRenderPassLoadOp::Load || attachment.isFixedSize() )
+                continue; // 고정 크기는 풀 크기에서 나온 서술 키(나눗수)로 견줄 수 없다
             const hashed_string                name( attachment._name.c_str() );
             const RenderGraphResourceLifetime* pLife = graph.findResourceLifetime( name );
             if ( pLife == nullptr )
@@ -1332,12 +1340,12 @@ namespace sw
             _viewResourceTable.registerTexture( ViewGraphResource::autoExposureHistory()._name, 0, view._autoExposureHistory.getPrevious()._texture, RenderGraphAccess::ShaderRead );
             _viewResourceTable.registerTexture( ViewGraphResource::autoExposureTarget()._name, 0, view._autoExposureHistory.getCurrent()._texture, RenderGraphAccess::ShaderRead );
         }
-        // TAA 기록 — TAA 가 도는 뷰만(`applyViewPassSelection`). 지난 프레임의 복사 끝에 셰이더 읽기로 남았다.
-        if ( view._taaHistory.isWritten() && view._taaHistory.isValid() )
-            _viewResourceTable.registerTexture( ViewGraphResource::taaHistory()._name, 0, view._taaHistory.getCurrent()._texture, RenderGraphAccess::ShaderRead );
-        // 볼륨 구름 기록 — 구름이 도는 뷰만(`applyViewPassSelection`). TAA 기록과 같은 상태로 남는다.
-        if ( view._skyCloudHistory.isWritten() && view._skyCloudHistory.isValid() )
-            _viewResourceTable.registerTexture( ViewGraphResource::skyCloudHistory()._name, 0, view._skyCloudHistory.getCurrent()._texture, RenderGraphAccess::ShaderRead );
+        // 기록 첨부의 기록 — 쓰는 패스가 도는 뷰만(`applyViewPassSelection`). 지난 프레임의 복사 끝에 셰이더 읽기로 남았다.
+        for ( const FrameAttachmentHistory& attachmentHistory : view._listAttachmentHistory )
+        {
+            if ( attachmentHistory._history.isWritten() && attachmentHistory._history.isValid() )
+                _viewResourceTable.registerTexture( attachmentHistory._resource, 0, attachmentHistory._history.getCurrent()._texture, RenderGraphAccess::ShaderRead );
+        }
         // FSR 1 — 이번 프레임에 키우는 뷰만(`prepareUpscale`).
         if ( view._bUpscaleThisFrame == SW_TRUE && view._upscaleIntermediate.isValid() )
             _viewResourceTable.registerTexture( ViewGraphResource::upscaleIntermediate()._name, 0, view._upscaleIntermediate._texture, RenderGraphAccess::ShaderRead );

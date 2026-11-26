@@ -1,6 +1,18 @@
 {
   "_comment": "전수 개명한 옛 이름 → 새 이름 · 까닭(Scripts/lint/naming_words.py 의 naming-words 규칙이 되살린 옛 이름을 막는다). 언리얼 CoreRedirects 의 옛 이름 → 새 이름 자리이되 고쳐 주지 않고 막는다. 개명 도구(py -3 -m Scripts rename-symbol)가 줄을 더한다 — 키(옛 이름)는 개명 도구가 바꾸지 않는다.",
   "_bannedNames": {
+    "bindProfileHook": "TaskProfileHook::bind — 태스크 프로파일 훅 자리는 훅 형식의 정적 멤버다(2026-11-26)",
+    "copyTaskDebugName": "TaskProfileHook::copyName · TaskNode::setName · StageNode::setName(2026-11-26)",
+    "kTaskDebugNameCapacity": "TaskProfileHook::kNameCapacity(2026-11-26)",
+    "ProcessEnvironment": "Process::tryReadEnvironment · tryReadEnvironmentNonEmpty · trySetEnvironment · hasEnvironment · tryUnsetEnvironment — 이 프로세스의 값은 Process 정적 함수다(2026-11-26)",
+    "ProcessSession": "Process::getSessionID(2026-11-26)",
+    "StandardOutput": "Process::writeStandardOutput(2026-11-26)",
+    "NamedValueUtil": "NamedValue<T>::find — 표 찾기는 줄 형식의 정적 멤버다(2026-11-26)",
+    "ContentFileSource": "IContentFileSource::getCurrent · bindCurrent — 콘텐츠 소스 자리는 그 인터페이스의 정적 멤버다(2026-11-26)",
+    "findPassDescByType": "RenderPipelineAsset::findUniquePass<종류>() — 종류 하나의 패스는 여러 번 두는 종류를 컴파일 때 거절하는 조회로만 찾는다(isRepeatablePassType)(2026-11-26)",
+    "kRepeatable": "isRepeatablePassType — 여러 번 두는 종류는 컴파일 때 보는 constexpr 판정이다(2026-11-26)",
+    "shouldDrawMaterial": "MaterialPassFilter::shouldDraw — 머티리얼 거르기는 패스 서술이 덮는 값이다(RenderGraphPassDesc::_resolvedMaterialFilter, 표 기본값은 RenderPassKindInfo::getDefaultMaterialFilter)(2026-11-26)",
+    "shouldFilterBatchesByMaterial": "MaterialPassFilter::isEmpty — 머티리얼 거르기는 패스 서술이 덮는 값이다(2026-11-26)",
     "UnitStatsComponent": "지움 — 체력 · 피해는 AbilitySystemComponent + CombatAttributeSet(2026-11-26)",
     "CityTerrain": "CityTerrainDef — 땅은 도시 카탈로그의 <Terrain> 행이다(2026-11-25)",
     "CityService": "CityServiceDef — 서비스는 도시 카탈로그의 <Service> 행이다(2026-11-25)",
@@ -322,7 +334,7 @@
     "findFramePassTimestampSlot": "GPUTimestampSlotLayout::findFramePassSlot — 타임스탬프 슬롯 배치를 FrameRendererUtil 에서 Frame/Timeline 의 제 형식으로 옮겼다(2026-11-19)",
     "countUntimedGPUPass": "GPUTimestampSlotLayout::countUntimedPass — 타임스탬프 슬롯 배치를 FrameRendererUtil 에서 Frame/Timeline 의 제 형식으로 옮겼다(2026-11-19)",
     "isDepthOnlyPassType": "RenderPassKindInfo::isDepthOnly — 패스 종류 판정은 표의 멤버다(2026-11-19)",
-    "shouldDrawMaterialInPass": "RenderPassKindInfo::shouldDrawMaterial — 패스 종류 판정은 표의 멤버다(2026-11-19)",
+    "shouldDrawMaterialInPass": "MaterialPassFilter::shouldDraw — 패스의 머티리얼 거르기는 형식 멤버다(2026-11-19, 2026-11-26)",
     "findViewModeDefine": "RenderViewModeUtil::getInfo( mode )._pShaderDefine — 한 줄 감싸기라 지웠다(2026-11-19)",
     "findOrAddMaterialGroup": "getOrCreateMaterialGroup — 없으면 만드는 조회는 getOrCreate(NamingCpp 동사 표 — findOrAdd 쓰지 않음)(2026-11-19)",
     "tickCompleted": "RHIReleaseQueue::releaseCompleted — tick 은 틱 시스템만 — 완료된 펜스 이하의 해제 콜백을 실행한다(2026-11-19)",
@@ -603,7 +615,7 @@
     "drawsBatchInPass": "shouldDrawBatchInPass — bool 함수는 술어 첫 단어(is · has · can · should · uses · needs …)로(2026-11-12)",
     "drawsCasterBatch": "shouldDrawCasterBatch — bool 함수는 술어 첫 단어(is · has · can · should · uses · needs …)로(2026-11-12)",
     "drawsDepthWithMaterialShader": "usesMaterialShaderForDepth — bool 함수는 술어 첫 단어(is · has · can · should · uses · needs …)로(2026-11-12)",
-    "drawsMaterialInPass": "shouldDrawMaterialInPass — bool 함수는 술어 첫 단어(is · has · can · should · uses · needs …)로(2026-11-12)",
+    "drawsMaterialInPass": "MaterialPassFilter::shouldDraw — bool 함수는 술어 첫 단어(is · has · can · should · uses · needs …)로(2026-11-12)",
     "drawsPostProcessMaterial": "shouldDrawPostProcessMaterial — bool 함수는 술어 첫 단어(is · has · can · should · uses · needs …)로(2026-11-12)",
     "drawsSceneMeshes": "shouldDrawSceneMeshes — bool 함수는 술어 첫 단어(is · has · can · should · uses · needs …)로(2026-11-12)",
     "drivesTarget": "affectsTarget — bool 함수는 술어 첫 단어(is · has · can · should · uses · needs …)로(2026-11-12)",
@@ -1535,7 +1547,7 @@
     "sw_requireTemplateDefinitions": "sw_require_template_definitions — CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)(2026-11-13)",
     "sw_resolveModuleManifests": "sw_resolve_module_manifests — CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)(2026-11-13)",
     "sw_resolveShippingRHIBackend": "sw_resolve_shipping_rhi_backend — CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)(2026-11-13)",
-    "sw_scanReflectionHeaders": "sw_scan_reflection_headers — CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)(2026-11-13)",
+    "sw_scanReflectionHeaders": "sw_scan_reflection_inputs — CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)(2026-11-13)",
     "sw_selectGamePacks": "sw_select_game_packs — CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)(2026-11-13)",
     "sw_setModuleBinOutput": "sw_set_module_bin_output — CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)(2026-11-13)",
     "sw_setTargetDefsHeader": "sw_set_target_defs_header — CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)(2026-11-13)",
@@ -2480,6 +2492,7 @@
     "EditorBackgroundTaskTest": "EditorBackgroundJobTest — 에디터 백그라운드 잡은 TaskManager 실행 단위(Task)와 뜻이 달라(최신 요청 · 결과 칸) 같은 폴더의 EditorExternalToolJob 처럼 Job 으로 가른다(2026-11-26)(2026-11-26)",
     "EditorBackgroundTask": "EditorBackgroundJob — 에디터 백그라운드 잡은 TaskManager 실행 단위(Task)와 뜻이 달라(최신 요청 · 결과 칸) 같은 폴더의 EditorExternalToolJob 처럼 Job 으로 가른다(2026-11-26)(2026-11-26)",
     "EditorTaskPoll": "EditorJobPoll — 에디터 백그라운드 잡은 TaskManager 실행 단위(Task)와 뜻이 달라(최신 요청 · 결과 칸) 같은 폴더의 EditorExternalToolJob 처럼 Job 으로 가른다(2026-11-26)(2026-11-26)",
-    "GimmickDamageUtil": "GimmickUtil — 기믹 도구는 GimmickUtil 하나로 합쳤다(피해 · 파괴도 같은 주인 없는 도구)(2026-11-26)"
+    "GimmickDamageUtil": "GimmickUtil — 기믹 도구는 GimmickUtil 하나로 합쳤다(피해 · 파괴도 같은 주인 없는 도구)(2026-11-26)",
+    "sw_scan_reflection_headers": "sw_scan_reflection_inputs — 헤더와 함께 REFLECT · ENUM 이 든 .cpp 도 훑는다(2026-11-26)"
   }
 }

@@ -22,6 +22,7 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/string.h"
 #include "Core/Diagnostics/ProfilerTimeline.h"
+#include "Core/Foundation/BuildConfig.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -293,4 +294,21 @@ namespace sw
         static const uint32 SW_CONCAT( swProfileCount_, __LINE__ ) =                                                 \
             ::sw::FrameProfiler::registerEngineCounter( name );                                                      \
         ::sw::FrameProfiler::addEngineCount( SW_CONCAT( swProfileCount_, __LINE__ ), static_cast<uint64>( value ) ); \
+    } while ( false )
+
+/**
+ * @brief 비싼 카운터(항목마다 세는 값)입니다. `build::kVerboseProfileCounters` 인 구성(Debug)만 세고, 다른 구성은 식만 컴파일한다(언리얼 stat verbose 자리).
+ * @details 구성 스위치는 여기 한 곳이다. 부르는 곳마다 `if constexpr ( build::kDebug )` 를 두지 않는다.
+ */
+#define SW_PROFILE_COUNT_VERBOSE( name, value )               \
+    do                                                        \
+    {                                                         \
+        if constexpr ( ::sw::build::kVerboseProfileCounters ) \
+        {                                                     \
+            SW_PROFILE_COUNT( name, value );                  \
+        }                                                     \
+        else                                                  \
+        {                                                     \
+            (void)( value );                                  \
+        }                                                     \
     } while ( false )

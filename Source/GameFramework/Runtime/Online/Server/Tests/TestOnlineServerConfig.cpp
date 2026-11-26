@@ -229,7 +229,7 @@ SW_TEST_CASE( OnlineServerConfigTest, RepositoryOnlineConfigsResolve )
         sw::vector<sw::string>  listSecretName;
         const auto              addSecret = [&listSecretName]( const sw::string& name )
         {
-            if ( name.empty() == false && sw::ProcessEnvironment::isSet( name ) == false && sw::ProcessEnvironment::trySet( name, "test-secret" ) )
+            if ( name.empty() == false && sw::Process::hasEnvironment( name ) == false && sw::Process::trySetEnvironment( name, "test-secret" ) )
                 listSecretName.push_back( name );
         };
         for ( const sw::ServerStoreEntry& store : serverConfig._listStore )
@@ -247,7 +247,7 @@ SW_TEST_CASE( OnlineServerConfigTest, RepositoryOnlineConfigsResolve )
         }
         for ( const sw::string& name : listSecretName )
         {
-            (void)sw::ProcessEnvironment::tryUnset( name );
+            (void)sw::Process::tryUnsetEnvironment( name );
         }
         ++pairCount;
     }

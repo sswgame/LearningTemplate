@@ -153,6 +153,26 @@ namespace sw
         string _name;
         uint32 _value{ 0 };
     };
+
+    /**
+     * @struct MaterialPassFilter
+     * @brief 패스가 그릴 머티리얼을 define 으로 고르는 조건입니다(유니티 Pass Tag `LightMode` 와 렌더러의 `ShaderTagId` 목록, 언리얼 `FMeshPassProcessor` 의 머티리얼 거르기 자리).
+     * @details 필수 define 이 있으면 머티리얼 define 목록에 있어야 하고, 제외 define 이 있으면 없어야 한다. 둘 다 비면 모든 배치를 그린다.
+     *          파이프라인 패스 서술이 적고(`RenderGraphPassDesc::_requiredMaterialDefine`), 비운 칸은 패스 종류 표의 값이다. 드로우 루프 · 머티리얼 PSO 변형 · 셰이더 쿠커 ·
+     *          머티리얼 질의(`Material::isDrawnByPass`)가 이 판정 하나를 본다 — 셋이 갈리면 쿠킹하지 않은 변형을 런타임이 찾는다.
+     */
+    struct MaterialPassFilter
+    {
+        string _requiredDefine; ///< 머티리얼에 있어야 하는 define(비면 묻지 않는다)
+        string _excludedDefine; ///< 머티리얼에 없어야 하는 define(비면 묻지 않는다)
+
+        /** @brief 거르지 않는 조건(모든 배치를 그린다)이면 true 입니다. */
+        [[nodiscard]] bool isEmpty() const { return _requiredDefine.empty() && _excludedDefine.empty(); }
+        /** @brief 이 조건의 패스가 define 목록 @p pListMaterialDefine 의 배치를 그리면 true 입니다. nullptr 은 머티리얼이 없는 배치다(필수 define 이 있으면 빠진다). */
+        [[nodiscard]] SW_API bool shouldDraw( const vector<string>* pListMaterialDefine ) const;
+        [[nodiscard]] bool        operator==( const MaterialPassFilter& other ) const { return _requiredDefine == other._requiredDefine && _excludedDefine == other._excludedDefine; }
+        [[nodiscard]] bool        operator!=( const MaterialPassFilter& other ) const { return ( *this == other ) == false; }
+    };
 } // namespace sw
 
 namespace sw

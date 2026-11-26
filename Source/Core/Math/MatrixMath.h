@@ -85,7 +85,10 @@ namespace sw
          * @note `operator*` 와 인자 순서가 반대입니다. 행렬로 옮기면 `q1.toMatrix() * q2.toMatrix()` 와 같습니다.
          */
         static quaternion concatenate( const quaternion& q1, const quaternion& q2 ) noexcept;
-        /** @brief 방향 from 을 방향 to 로 돌리는 가장 작은 회전을 구합니다. 두 방향이 정반대면 수직인 축으로 180도 돕니다. */
+        /**
+         * @brief 방향 from 을 방향 to 로 돌리는 가장 작은 회전을 구합니다. 두 방향이 정반대면 수직인 축으로 180도 돕니다.
+         * @details 거의 같은 방향도 단위 회전으로 버리지 않고 반각 공식(외적, 1 + 내적)을 정규화한다(언리얼 `FQuat::FindBetweenNormals`). 사슬 IK 의 마지막 몇 mm 가 0.08° 안쪽이다.
+         */
         static quaternion fromToRotation( const float3& from, const float3& to ) noexcept;
         /** @brief 앞(+Z)이 direction 을, 위가 up 쪽을 향하게 하는 회전을 구합니다. direction 이 0 이면 단위 쿼터니언입니다. */
         static quaternion lookRotation( const float3& direction, const float3& up ) noexcept;
@@ -97,20 +100,19 @@ namespace sw
         /** @brief 노름의 제곱을 반환합니다. */
         float32 normSquared() const noexcept;
 
-        /** @brief 길이 1 로 정규화하고 자신을 반환합니다. 길이가 0 이면 단위 쿼터니언이 됩니다. */
-        quaternion& normalize() noexcept;
-        /** @brief 정규화한 사본을 반환합니다. 길이가 0 이면 단위 쿼터니언입니다. */
-        quaternion normalize() const noexcept;
+        /**
+         * @brief 정규화한 사본을 반환합니다. 길이가 0 이면 단위 쿼터니언입니다.
+         * @details 제자리 판을 두지 않는다(`float3::normalize` 와 같은 까닭, 제자리로 쓸 때는 `q = q.normalize()`). 언리얼 `FQuat::GetNormalized` 자리다.
+         */
+        [[nodiscard]] quaternion normalize() const noexcept;
 
-        /** @brief 켤레로 바꿉니다(허수부의 부호를 뒤집습니다). */
-        void conjugate() noexcept;
-        /** @brief 켤레를 반환합니다. */
-        quaternion conjugate() const noexcept;
-
-        /** @brief 역원으로 바꿉니다. 노름이 거의 0 이면 단위 쿼터니언이 됩니다. */
-        void inverse() noexcept;
+        /**
+         * @brief 켤레를 반환합니다(허수부의 부호를 뒤집습니다).
+         * @details 제자리 판(`void`)을 두지 않는다. const 아닌 값에서 `q.inverse()` 가 제자리 판으로 골라져 값을 받지 못했다(언리얼 `FQuat::Inverse` 도 값만 돌려준다).
+         */
+        [[nodiscard]] quaternion conjugate() const noexcept;
         /** @brief 역원을 반환합니다. 노름이 거의 0 이면 단위 쿼터니언입니다. */
-        quaternion inverse() const noexcept;
+        [[nodiscard]] quaternion inverse() const noexcept;
 
         /** @brief 다른 쿼터니언과의 내적을 구합니다. */
         float32 dot( const quaternion& other ) const noexcept;
@@ -128,6 +130,13 @@ namespace sw
          * @brief @p other 와 내적이 음수면 부호를 뒤집어 같은 반구에 둡니다(언리얼 `FQuat::EnforceShortestArcWith`). 회전은 그대로이고, 성분별 섞기 · 비교가 짧은 쪽을 갑니다.
          */
         void enforceShortestArcWith( const quaternion& other ) noexcept;
+        /**
+         * @brief 이 회전을 축 @p twistAxis(단위) 둘레의 비틀림과 그 나머지(흔들림)로 나눕니다. *this = outSwing * outTwist 입니다(언리얼 `FQuat::ToSwingTwist`).
+         * @details 축에 수직인 180° 회전이면 비틀림이 없어 @p outTwist 는 단위 쿼터니언이고 @p outSwing 은 이 회전 그대로다. 관절 제한(Cone 흔들림 · 비틀림)이 쓴다.
+         */
+        void toSwingTwist( const float3& twistAxis, quaternion& outSwing, quaternion& outTwist ) const noexcept;
+        /** @brief 축 @p twistAxis(단위) 둘레 비틀림의 부호 있는 각(라디안, −π ~ π)입니다(언리얼 `FQuat::GetTwistAngle`). */
+        [[nodiscard]] float32 getTwistAngle( const float3& twistAxis ) const noexcept;
 
         /** @brief 오일러 각(라디안)을 구합니다. `_x` 가 피치, `_y` 가 요, `_z` 가 롤로, makeFromYawPitchRoll( angles ) 와 같은 배치입니다. */
         float3 getEulerAngles() const noexcept;

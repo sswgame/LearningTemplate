@@ -31,7 +31,7 @@
 		<RenderPassAttachment _name="BloomColor" _format="R16G16B16A16_FLOAT" _clearColor="0,0,0,1" _loadOp="Clear" />
 		<!-- 해상도 공간 — TAA 출력과 그 뒤 후처리 색은 출력 해상도(_resolutionSpace="Output")다. 시간 업스케일(EngineConfig _render._temporalUpscaleRenderScale < 1)이 켜지면 장면은 렌더 해상도로
 		     그리고 TAA 가 출력 해상도로 키운다(언리얼 1 차 · 2 차 화면 배율). 모션 블러 타일은 속도에서 나와 렌더 공간에 둔다. 배율 1 이면 두 공간이 같은 크기다. -->
-		<RenderPassAttachment _name="TAAColor" _format="R16G16B16A16_FLOAT" _clearColor="0,0,0,1" _loadOp="Clear" _resolutionSpace="Output" />
+		<RenderPassAttachment _name="TAAColor" _format="R16G16B16A16_FLOAT" _clearColor="0,0,0,1" _loadOp="Clear" _resolutionSpace="Output" _bHistory="true" />
 		<RenderPassAttachment _name="DepthOfFieldColor" _format="R16G16B16A16_FLOAT" _clearColor="0,0,0,1" _loadOp="Clear" _resolutionSpace="Output" />
 		<RenderPassAttachment _name="MotionBlurColor" _format="R16G16B16A16_FLOAT" _clearColor="0,0,0,1" _loadOp="Clear" _resolutionSpace="Output" />
 		<!-- 모션 블러 타일(16² 픽셀) 속도 — 타일 최대(MotionBlurTileMax) · 이웃 최대(MotionBlurNeighborMax). 나눗수는 motion_blur_tile_max.hlsl 의 kMotionBlurTileSize 와 같다. -->

@@ -30,7 +30,7 @@ namespace sw
             {
 #if defined( SW_PLATFORM_WINDOWS )
                 string programFiles;
-                if ( ProcessEnvironment::tryReadNonEmpty( "ProgramFiles", programFiles ) == false )
+                if ( Process::tryReadEnvironmentNonEmpty( "ProgramFiles", programFiles ) == false )
                     return nullptr;
                 const AbsolutePath libraryPath = AbsolutePath::tryMake( programFiles ).value_or( AbsolutePath{} ).join( "RenderDoc" ).join( libraryName );
                 if ( libraryPath.empty() || FileUtil::isRegularFile( libraryPath ) == false )

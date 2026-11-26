@@ -162,7 +162,7 @@ namespace sw
 
 namespace sw
 {
-    const IContentFileSource& ContentFileSource::getCurrent()
+    const IContentFileSource& IContentFileSource::getCurrent()
     {
         if ( s_pContentFileSource != nullptr )
             return *s_pContentFileSource;
@@ -177,7 +177,7 @@ namespace sw
 #endif
     }
 
-    const IContentFileSource* ContentFileSource::bindCurrent( const IContentFileSource* pSource )
+    const IContentFileSource* IContentFileSource::bindCurrent( const IContentFileSource* pSource )
     {
         const IContentFileSource* const pPrevious = s_pContentFileSource;
         s_pContentFileSource                      = pSource;

@@ -44,6 +44,8 @@
 #include "Engine/Graphics/Shader/Compile/ShaderSourceGenerator.h"
 #include "Engine/Graphics/Shader/Reflection/ShaderReflectionData.h"
 #include "Engine/Graphics/Shader/Reflection/ShaderReflectionLibrary.h"
+#include "Engine/Renderer/Pipeline/RenderPassInputSignature.h"
+#include "Engine/Renderer/Pipeline/RenderPassKindInfo.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
 #include <algorithm>
@@ -76,6 +78,33 @@ namespace sw
                 {
                 }
             };
+
+            /**
+             * @brief 패스 셰이더가 읽는 엔진 역할(`g_<Role>Index`)을 요청의 계약(`ShaderCookRequest::_readableRoleMask`)과 대조해 밖의 역할 수를 셉니다(로그를 남긴다).
+             * @details 계약 밖 역할은 그래프가 그 칸에 텍스처를 걸지 않아 셰이더가 무효 번호를 읽는다 — 런타임 PSO 검사(`FramePSOManager`)와 같은 규칙을 쿠킹에서 먼저 본다(언리얼은 셰이더 파라미터
+             *          구조체가 곧 바인딩이라 어긋나면 컴파일이 깨진다). 쓰임을 모르는 리플렉션(SPIR-V · GLSL)은 변수가 `Unknown` 이라 건너뛴다 — DX 형식의 쿠킹이 잡는다. 여러 워커가 부른다(읽기만 한다).
+             */
+            static uint32 countRolesOutsideContract( const ShaderReflectionData& reflection, uint64 readableRoleMask, string_view binaryPath )
+            {
+                if ( readableRoleMask == RenderPassKindInfo::kAnyRoleMask )
+                    return 0;
+                uint32 count{ 0 };
+                for ( const ShaderBufferInfo& buffer : reflection._listConstantBuffer )
+                {
+                    for ( const ShaderVariableInfo& variable : buffer._listVariable )
+                    {
+                        RenderPassInputRole role = RenderPassInputRole::Invalid;
+                        if ( variable._usage != ShaderVariableUsage::Used || tryParseRoleIndexVariable( variable._name, role ) == false || ( ( readableRoleMask >> static_cast<uint32>( role ) ) & 1u ) != 0 )
+                            continue;
+                        SW_LOG_ERROR_ID( "ShaderCooker.PassReadsRoleOutsideContract",
+                                         "%#: the pass shader reads engine role '%#' (%#) outside the input contract of the pass types that use it - the graph binds no texture there; add the role to the contract "
+                                         "(RenderPassKindInfo) and the pipeline inputs",
+                                         binaryPath, getRenderPassInputRoleName( role ), variable._name.c_str() );
+                        ++count;
+                    }
+                }
+                return count;
+            }
 
             /** @brief 요청 하나를 포맷 하나로 쿠킹하는 작업의 입력입니다. 계획 단계(직렬)가 채우고, 병렬 구간에서는 읽기만 합니다. */
             struct FormatTask
@@ -191,8 +220,11 @@ namespace sw
                     ReflectionMemo::Entry entry = _reflectionMemo.read( compileResult, task._format, task._outPath.str() );
                     outResult._bUnreadable      = entry._pReflection == nullptr;
                     outResult._violationCount   = entry._violationCount;
-                    outResult._pReflection      = std::move( entry._pReflection );
-                    outResult._reflectNanos     = reflectWatch.getElapsedNanoseconds();
+                    // 역할 계약은 요청마다다(같은 바이트코드라도 요청을 낸 패스 종류가 다르다) — 바이트코드 기억 밖에서 센다.
+                    if ( entry._pReflection != nullptr )
+                        outResult._violationCount += countRolesOutsideContract( *entry._pReflection, task._pRequest->_readableRoleMask, task._outPath.str() );
+                    outResult._pReflection  = std::move( entry._pReflection );
+                    outResult._reflectNanos = reflectWatch.getElapsedNanoseconds();
                 }
             };
 

@@ -129,7 +129,7 @@ namespace sw
             return false;
 
         const string          normalizedPath = FileUtil::normalizeSeparators( packFilePath );
-        const AsyncFileHandle file           = ContentFileSource::getCurrent().open( normalizedPath );
+        const AsyncFileHandle file           = IContentFileSource::getCurrent().open( normalizedPath );
         if ( file.isValid() == false )
         {
             lock.unlock();

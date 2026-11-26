@@ -45,12 +45,6 @@ namespace sw
         FrameAutoExposure& operator=( const FrameAutoExposure& ) = delete;
 
         /**
-         * @brief HDR 색을 톤맵하는 첫 패스입니다(Tonemap, 또는 퍼뮤테이션 `SW_POST_TONEMAP` 을 켠 후처리 체인 Present — `passAppliesTonemap`). 없으면(2D 파이프라인) nullptr 입니다.
-         * @details 포인터를 들고 있지 않고 지금 파이프라인에서 찾는다 — 파이프라인을 다시 읽으면 패스 목록이 바뀐다.
-         */
-        static const RenderGraphPassDesc* findTonemapPass( const RenderPipelineAsset& pipeline );
-
-        /**
          * @brief 휘도 @p luminance 가 드는 히스토그램 칸입니다 — log2 휘도의 [@p logMin, @p logMax] 를 @p binCount 칸으로 고르게 나눈다. 범위 밖은 끝 칸이다(검은 텍셀은 첫 칸).
          * @details 셰이더(auto_exposure.hlsl `AutoExposure::computeBin`)와 같은 식이다. @p binCount 가 0 이면 0 이다.
          */

@@ -7,6 +7,6 @@
 		<!-- 화면 왜곡 오프셋(화면 UV, R16G16 실수) — 왜곡 누적 패스가 지운 뒤 가산으로 쌓고 적용 패스가 장면 색 사본을 그만큼 비껴 읽는다. 왜곡 배치가 없으면 둘 다 돌지 않는다. -->
 		<RenderPassAttachment _name="SceneDistortion" _format="R16G16_FLOAT" _clearColor="0,0,0,0" _loadOp="Clear" />
 		<!-- 볼륨 구름(산란 rgb — 불투명도 곱함, 불투명도 a) — 1/4 해상도에 걷고 뷰의 기록과 섞는다(volumetric_clouds.hlsl). 볼륨 구름이 없는 뷰는 만들지 않는다. 나눗수는 셰이더가 상수로 받는다. -->
-		<RenderPassAttachment _name="SkyCloudColor" _format="R16G16B16A16_FLOAT" _clearColor="0,0,0,0" _loadOp="DontCare" _resolutionDivisor="4" />
+		<RenderPassAttachment _name="SkyCloudColor" _format="R16G16B16A16_FLOAT" _clearColor="0,0,0,0" _loadOp="DontCare" _resolutionDivisor="4" _bHistory="true" />
 	</_listAttachment>
 </RenderPassDesc>

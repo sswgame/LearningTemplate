@@ -101,10 +101,10 @@ namespace sw
          */
         void setInputRoleEnabled( RenderPassInputRole role, bool bEnabled );
         /**
-         * @brief 이 패스가 이 배치를 그리는지 반환합니다. 패스가 머티리얼 define 으로 배치를 거르면(메시 외곽선) 퍼뮤테이션에 그 define 이 있어야 합니다.
-         * @details 판정은 `RenderPassKindInfo::shouldDrawMaterial` 하나로 한다. 머티리얼 PSO 변형과 셰이더 쿠커도 같은 판정을 쓴다.
+         * @brief 거르기 @p filter 의 패스가 이 배치를 그리는지 반환합니다. 패스가 머티리얼 define 으로 배치를 거르면(메시 외곽선) 퍼뮤테이션에 그 define 이 있어야 합니다.
+         * @details 판정은 `MaterialPassFilter::shouldDraw` 하나로 한다. 머티리얼 PSO 변형과 셰이더 쿠커도 같은 판정을 쓴다. 거르기는 패스 서술의 것이다(`RenderGraphPassDesc::_resolvedMaterialFilter`).
          */
-        bool shouldDrawBatchInPass( RenderPassKind passType, const GPUMeshBatch& batch, const GPUMeshBatchBinding& binding ) const;
+        bool shouldDrawBatchInPass( const MaterialPassFilter& filter, const GPUMeshBatch& batch, const GPUMeshBatchBinding& binding ) const;
         /**
          * @brief 파이프라인 패스 번호 @p passIndex(`getGraphPass` 의 차례)가 이번 뷰에서 비활성이면 true 입니다(꺼진 효과 · 그릴 것 없는 덧그리기 · 읽는 쪽이 없는 패스)
          *        — 뷰 패스 고르기의 결과(`FrameViewTarget::_listPassDisabled`)를 그대로 읽는다.
@@ -199,6 +199,7 @@ namespace sw
             RHIBufferHandle                                    _slotStream{ 0 }; ///< 인스턴스 슬롯 스트림(슬롯 1)
             RHIBufferHandle                                    _argsBuffer{ 0 }; ///< 이 패스의 뷰가 만든 간접 인자
             RenderPassKind                                     _passType{};
+            const MaterialPassFilter*                          _pMaterialFilter{ nullptr };              ///< 이 패스가 그리는 머티리얼(패스 서술의 거르기 · 서술이 없으면 표의 기본값)
             ShadowCasterFilter                                 _casterFilter{ ShadowCasterFilter::All }; ///< 그림자 캐시의 정적 · 움직임 거르기(패스 컨텍스트의 값)
             uint32                                             _batchOffset{ 0 };                        ///< 간접 인자 슬롯의 시작(불투명 다음 투명)
             uint32                                             _particleSlotCursor{ 0 };
@@ -238,7 +239,7 @@ namespace sw
         /**
          * @brief 파이프라인 패스 @p pass 의 종류가 스스로 쓰는 엔진 자원 접근(`ViewGraphResource` — 자동 노출 · FSR 중간 RT · 그림자 캐시 층 · 후처리 사본 · 깊이 사본 · HZB · 컬링 버퍼)을
          *        @p inoutListAccess 에 더합니다. XML 은 첨부만 적고 이 자원은 종류가 선언한다(언리얼 RDG 패스 파라미터가 패스 형식에 박힌 자원 자리).
-         * @param bTonemapPass @p pass 가 톤맵하는 패스(`FrameAutoExposure::findTonemapPass`)인지입니다 — 자동 노출 기록을 읽고 쓴다.
+         * @param bTonemapPass @p pass 가 톤맵하는 패스(`RenderPipelineAsset::findTonemapPass`)인지입니다 — 자동 노출 기록을 읽고 쓴다.
          */
         static void appendEngineResourceAccesses( const RenderGraphPassDesc& pass, bool bTonemapPass, vector<RenderGraphResourceAccess>& inoutListAccess );
         /** @brief 프레임 패스를 프레임 그래프 노드로 묶고 컴파일합니다(`bindPassCallbacks` 의 뒷부분). 프레임 패스가 없으면 빈 그래프이고 true 입니다. */
@@ -343,6 +344,12 @@ namespace sw
          *          "선언은 했는데 바인딩되지 않는 입력" 이 생기지 않는다. 쇼 플래그로 끈 역할은 건너뛴다.
          */
         void registerDeclaredInputs( FramePassContext& context, const RenderGraphPassDesc& passDesc );
+        /** @brief 패스 @p passDesc 가 쓴 기록 첨부(`_bHistory` 출력)를 기록 텍스처로 복사합니다 — 패스 종류와 상관없는 패스 끝 단계입니다(`executePass`). */
+        void copyOutputHistories( FramePassContext& context, const RenderGraphPassDesc& passDesc );
+        /** @brief 이름 바인딩 컴퓨트 패스(`RenderPassInputBinding::Name`)를 돌립니다 — 루트 상수를 선언 차례로 채워 출력 크기만큼 디스패치한다(`executeComputePass` 가 부른다). */
+        void executeNamedComputePass( const PassExecuteInput& input, const ComputePipeline& pipeline, const TransientAttachmentPool::Attachment& output );
+        /** @brief 패스 @p passDesc 의 첫 컬러 출력의 기록입니다(시간 누적 패스가 자기 지난 출력을 읽는다). 기록이 없으면 nullptr 입니다. */
+        const FrameViewHistory* findPassHistory( const FrameViewTarget& view, const RenderGraphPassDesc& passDesc ) const;
         /** @brief 역할의 셰이더 이름입니다. intern 된 hashed_string 입니다. */
         const hashed_string& inputRoleName( RenderPassInputRole role ) const;
         /**
@@ -404,8 +411,6 @@ namespace sw
         RHITextureHandle getScreenTarget() const;
         /** @brief 이 패스가 Swapchain 을 쓰는 마지막 패스면 true 입니다. 스크린샷 캡처를 백버퍼로 복사하는 일을 이 패스 끝에서 합니다. */
         bool isLastSwapchainWriter( const RenderGraphPassDesc& passDesc ) const;
-        /** @brief 패스 타입으로 파이프라인의 패스 서술을 찾습니다. */
-        const RenderGraphPassDesc* findPassDescByType( RenderPassKind passType ) const;
 
         // ------------------------------------------------------------------------------
         // 드로우

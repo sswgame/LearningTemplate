@@ -19,15 +19,15 @@ namespace
     {
     public:
         ScopedUserDataRoot()
-            : _bHadValue{ static_cast<uint8>( sw::ProcessEnvironment::tryRead( sw::kUserDataRootVariable, _previous ) ? SW_TRUE : SW_FALSE ) }
+            : _bHadValue{ static_cast<uint8>( sw::Process::tryReadEnvironment( sw::kUserDataRootVariable, _previous ) ? SW_TRUE : SW_FALSE ) }
         {
         }
         ~ScopedUserDataRoot()
         {
             if ( _bHadValue )
-                (void)sw::ProcessEnvironment::trySet( sw::kUserDataRootVariable, _previous ); // 소멸자에서는 알릴 길이 없다 — 읽은 이름이라 유효하다
+                (void)sw::Process::trySetEnvironment( sw::kUserDataRootVariable, _previous ); // 소멸자에서는 알릴 길이 없다 — 읽은 이름이라 유효하다
             else
-                (void)sw::ProcessEnvironment::tryUnset( sw::kUserDataRootVariable ); // 위와 같다
+                (void)sw::Process::tryUnsetEnvironment( sw::kUserDataRootVariable ); // 위와 같다
         }
         ScopedUserDataRoot( const ScopedUserDataRoot& )            = delete;
         ScopedUserDataRoot& operator=( const ScopedUserDataRoot& ) = delete;
@@ -130,7 +130,7 @@ SW_TEST_CASE( AutomationUserDataRootTest, SessionRejectsRootOutsideTheAutomation
         path.append( sw::string_view{ platformFolder } );
     const sw::string outside( path.view() );
 
-    SW_REQUIRE_TRUE( sw::ProcessEnvironment::trySet( sw::kUserDataRootVariable, outside ) );
+    SW_REQUIRE_TRUE( sw::Process::trySetEnvironment( sw::kUserDataRootVariable, outside ) );
     SW_EXPECT_FALSE( sw::AutomationUserDataRoot::resolve( false ).has_value() );
     const sw::expected<sw::string> allowed = sw::AutomationUserDataRoot::resolve( true );
     SW_EXPECT_TRUE( allowed.has_value() && *allowed == outside );
@@ -138,7 +138,7 @@ SW_TEST_CASE( AutomationUserDataRootTest, SessionRejectsRootOutsideTheAutomation
     path.clear();
     path.appendFormat( "%#/unit_test_root", sw::AutomationUserDataRoot::getBaseFolder().str() );
     const sw::string inside( path.view() );
-    SW_REQUIRE_TRUE( sw::ProcessEnvironment::trySet( sw::kUserDataRootVariable, inside ) );
+    SW_REQUIRE_TRUE( sw::Process::trySetEnvironment( sw::kUserDataRootVariable, inside ) );
     const sw::expected<sw::string> accepted = sw::AutomationUserDataRoot::resolve( false );
     SW_EXPECT_TRUE( accepted.has_value() && *accepted == inside );
     path.clear();

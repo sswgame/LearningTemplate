@@ -141,7 +141,7 @@ namespace sw
                     if ( StringUtil::endsWith( candidate, PackPatchManifest::kManifestExtension, true ) == false )
                         continue;
                     string text;
-                    if ( ContentFileSource::getCurrent().readTextFile( candidate, text ) == false )
+                    if ( IContentFileSource::getCurrent().readTextFile( candidate, text ) == false )
                     {
                         SW_LOG_ERROR_ID( "PackManager.PackPatchManifestCould", "Pack patch manifest could not be read: %#", candidate );
                         return false;
@@ -765,7 +765,7 @@ namespace sw
 
     bool PackManager::scanAndMountPacks( string_view packsDirectory )
     {
-        const IContentFileSource& source = ContentFileSource::getCurrent();
+        const IContentFileSource& source = IContentFileSource::getCurrent();
         if ( packsDirectory.empty() || source.isFolder( packsDirectory ) == false )
             return false;
 
@@ -908,7 +908,7 @@ namespace sw
     {
         const string recordPath = makePackKey( PackBuildRecord::kFileName );
         string       recordText;
-        if ( ContentFileSource::getCurrent().readTextFile( recordPath, recordText ) == false )
+        if ( IContentFileSource::getCurrent().readTextFile( recordPath, recordText ) == false )
         {
             SW_LOG_ERROR_ID( "PackManager.PackPatchesExistBut", "Pack patches exist in %# but the installed build is unknown - %# is missing", packsDirectory, PackBuildRecord::kFileName );
             return false;
@@ -944,7 +944,7 @@ namespace sw
         {
             const PackPatchManifest& manifest = listManifest[listOrder[orderIndex]];
             const string             packPath = makePackKey( manifest._packFileName );
-            if ( ContentFileSource::getCurrent().isFile( packPath ) == false )
+            if ( IContentFileSource::getCurrent().isFile( packPath ) == false )
             {
                 SW_LOG_ERROR_ID( "PackManager.PackPatchNamesBut", "Pack patch %# -> %# names %# but the file is missing from %#", manifest._fromBuild, manifest._toBuild, manifest._packFileName, packsDirectory );
                 return false;

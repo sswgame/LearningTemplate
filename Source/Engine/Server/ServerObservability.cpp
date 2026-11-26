@@ -99,7 +99,7 @@ namespace sw
         }
         opsSettings._bindAddress._port = static_cast<uint16>( config._opsPort ); // 포트는 `_opsPort` 가 기준이다(주소 필드에 포트를 적어도 무시한다).
         // 토큰은 환경에서만 읽는다(관리 채널과 같다). 없으면 인증 없이 열고, 그때 엔드포인트가 루프백 · 사설 밖 바인드를 거절한다.
-        (void)ProcessEnvironment::tryReadNonEmpty( config._opsTokenEnvironment, opsSettings._bearerToken );
+        (void)Process::tryReadEnvironmentNonEmpty( config._opsTokenEnvironment, opsSettings._bearerToken );
         _opsTransport = StreamTransportFactory::createPlatformTransport();
         if ( _opsTransport == nullptr )
         {
@@ -190,9 +190,9 @@ namespace sw
         if ( pNetSession != nullptr )
             netStatsLine = pNetSession->makeStatsReport().makeLine(); // 메시지 종류별 누적 셈 — 덤프 순간 한 번만 읽는다(틱마다 읽으면 Profiler 탭의 "지난 보고" 상태를 건드린다)
         string text;
-        _frameHistory->writeReport( text, pReason, ProcessSession::getID(), netStatsLine );
+        _frameHistory->writeReport( text, pReason, Process::getSessionID(), netStatsLine );
         string fileName{ "frames_" };
-        fileName.append( ProcessSession::getID() ).append( "_tick" ).append( to_string( tickCount ) ).append( "_" ).append( pReason ).append( ".txt" );
+        fileName.append( Process::getSessionID() ).append( "_tick" ).append( to_string( tickCount ) ).append( "_" ).append( pReason ).append( ".txt" );
         const AbsolutePath path = reportsFolder.join( fileName );
         if ( FileUtil::writeTextFile( path, text ) == false )
         {

@@ -1702,15 +1702,13 @@ namespace sw
             float3     positionA{};
             quaternion rotationA{};
             (void)getBodyTransform( desc._bodyA, positionA, rotationA );
-            rotationA.inverse();
-            record._anchorA = float3::transform( desc._anchor - positionA, rotationA );
+            record._anchorA = float3::transform( desc._anchor - positionA, rotationA.inverse() );
             float3     positionB{};
             quaternion rotationB{};
             record._anchorB = desc._anchorB;
             if ( getBodyTransform( desc._bodyB, positionB, rotationB ) )
             {
-                rotationB.inverse();
-                record._anchorB = float3::transform( desc._anchorB - positionB, rotationB );
+                record._anchorB = float3::transform( desc._anchorB - positionB, rotationB.inverse() );
             }
         }
         JoltPhysicsSceneInternal::applyMotor( *pConstraint, desc._type, desc._motor );

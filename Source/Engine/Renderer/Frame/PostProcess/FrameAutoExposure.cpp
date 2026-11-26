@@ -1,7 +1,7 @@
 /**
  * @file FrameAutoExposure.cpp
  * @brief 자동 노출입니다 — 뷰마다 HDR 장면의 평균 로그 휘도를 재어 노출을 천천히 맞춥니다(언리얼 Auto Exposure Basic 에 해당).
- * @details 흐름: 셋업(`prepareAutoExposure`, 뷰마다 프레임에 한 번)이 잴지 · 측정 상수 · 쓰는 기록 칸을 정하고, 톤맵하는 패스(`findTonemapPass`)가 자기 그리기 앞에서
+ * @details 흐름: 셋업(`prepareAutoExposure`, 뷰마다 프레임에 한 번)이 잴지 · 측정 상수 · 쓰는 기록 칸을 정하고, 톤맵하는 패스(`RenderPipelineAsset::findTonemapPass`)가 자기 그리기 앞에서
  *          측정 풀스크린 하나를 같은 리스트에 기록한다(`recordAutoExposure`, auto_exposure.hlsl). 측정은 지난 칸의 EV 를 읽어 목표 EV 로 다가간 값을 이번 칸(1x1 R32)에 쓰고,
  *          톤맵은 이번 칸을 `g_AutoExposureIndex` 로 읽어 2^-EV 를 곱한다(post_grade.hlsli). 칸이 둘인 까닭은 한 텍스처를 읽으며 쓸 수 없어서다.
  *          EV 는 평균 휘도가 중간 회색(0.18)일 때 0 이다 — 카메라의 범위가 0 · 0(기본)이면 노출 1 이라 자동 노출을 쓰지 않는 카메라의 화면이 그대로다.
@@ -113,19 +113,9 @@ namespace sw
         return sumWeight > 0.0f ? sumLog / sumWeight : lowBinCenter;
     }
 
-    const RenderGraphPassDesc* FrameAutoExposure::findTonemapPass( const RenderPipelineAsset& pipeline )
-    {
-        for ( const RenderGraphPassDesc& pass : pipeline.getGraphPass() )
-        {
-            if ( passAppliesTonemap( pass ) )
-                return &pass;
-        }
-        return nullptr;
-    }
-
     void FrameAutoExposure::ensureAutoExposureHistory( FrameViewTarget& view )
     {
-        const bool bNotNeeded = _pDevice == nullptr || findTonemapPass( _pipeline ) == nullptr || view._autoExposureHistory.isValid();
+        const bool bNotNeeded = _pDevice == nullptr || _pipeline.findTonemapPass() == nullptr || view._autoExposureHistory.isValid();
         if ( bNotNeeded )
             return;
         RHITextureDesc desc{};
@@ -221,7 +211,7 @@ namespace sw
 
     void FrameAutoExposure::recordAutoExposure( FramePassContext& context, const FrameViewTarget& view, const RenderGraphPassDesc& passDesc ) const
     {
-        if ( &passDesc != findTonemapPass( _pipeline ) || view._autoExposureHistory.isWritten() == false )
+        if ( &passDesc != _pipeline.findTonemapPass() || view._autoExposureHistory.isWritten() == false )
             return;
         TransientAttachmentPool::Attachment source{};
         for ( const RenderGraphPassDesc::ResolvedAttachment& input : passDesc._listResolvedInput )

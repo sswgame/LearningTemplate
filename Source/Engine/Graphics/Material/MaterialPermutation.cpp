@@ -117,6 +117,12 @@ namespace sw
         inoutListDefine.push_back( string( define ) );
     }
 
+    bool MaterialPermutation::hasDefineName( const vector<string>& listDefine, string_view name )
+    {
+        return name.empty() == false && VectorUtil::containsIf( listDefine, [name]( const string& define )
+        { return string_view( define ).substr( 0, string_view( define ).find( '=' ) ) == name; } );
+    }
+
     string MaterialPermutation::makeTextureCountDefine( uint32 count )
     {
         StringBuilder<constant::buffer::kMax64> builder;

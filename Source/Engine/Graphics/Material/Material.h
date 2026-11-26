@@ -275,6 +275,18 @@ namespace sw
         const void* getParameterData( string_view name ) const;
         /** @brief 캐시된 셰이더 define 을 반환합니다. */
         const vector<string>& getCachedShaderDefines() const;
+        /**
+         * @brief 셰이더 키워드(define 이름) @p keyword 가 이 머티리얼의 변형에 켜져 있으면 true 입니다(유니티 `Material.IsKeywordEnabled`). `NAME=VALUE` 는 이름으로 본다.
+         * @details 정적 스위치 · 멀티 컴파일 · 표면 모델 · 늘 켜는 define 이 낸 목록(`getCachedShaderDefines`)을 본다 — 쿠킹한 변형의 define 과 같아 배포에서도 같은 답이다.
+         *          스위치 이름이 아니라 그 스위치가 내는 키워드를 묻는다. 실행 중 바꾼 스위치는 인스턴스가 답한다(`MaterialInstance::isKeywordEnabled`).
+         */
+        [[nodiscard]] bool isKeywordEnabled( string_view keyword ) const;
+        /**
+         * @brief 머티리얼 거르기 @p filter 의 패스(파이프라인 패스 서술의 `_resolvedMaterialFilter`)가 이 머티리얼을 그리면 true 입니다(유니티 `Material.FindPass` 가 LightMode 패스를 찾는 자리).
+         * @details 드로우 루프 · PSO 변형 · 쿠커와 같은 판정(`MaterialPassFilter::shouldDraw`)이다. 이 머티리얼의 셰이더 · 퍼뮤테이션(Technique)은 `getShaderPath` · `getCachedShaderDefines` ·
+         *          `getPermutationHash` 가 답한다.
+         */
+        [[nodiscard]] bool isDrawnByPass( const MaterialPassFilter& filter ) const;
         /** @brief 퍼뮤테이션 정의 @p permutationDesc 로 이 머티리얼의 define 목록(정렬)을 만듭니다. 캐시를 건드리지 않는다(`getCachedShaderDefines` 의 본문 — 인스턴스는 런타임 스위치를 덮은 사본을 넘긴다). */
         void computeShaderDefines( const MaterialPermutationDef& permutationDesc, vector<string>& outListDefine ) const;
         /** @brief 정렬한 define 목록의 퍼뮤테이션 해시입니다(렌더 칸 해시를 섞는다 — `getPermutationHash` 와 같은 규칙). */

@@ -101,7 +101,7 @@ namespace sw
         if ( worldDirection.getLengthSquared() <= MathUtil::kEpsilon )
             worldDirection = localDirection;
         else
-            worldDirection.normalize();
+            worldDirection = worldDirection.normalize();
         return worldDirection;
     }
 } // namespace sw

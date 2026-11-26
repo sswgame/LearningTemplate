@@ -119,7 +119,7 @@ namespace sw
                 }
                 const optional<DiskPath> looseFile = engine::getSubsystem<AssetPaths>().findLooseFile( relativePath );
                 const string             loosePath = looseFile.has_value() ? looseFile->str() : string{};
-                if ( loosePath.empty() == false && ContentFileSource::getCurrent().isFile( loosePath ) )
+                if ( loosePath.empty() == false && IContentFileSource::getCurrent().isFile( loosePath ) )
                 {
                     if ( pOutAbsPath != nullptr )
                         *pOutAbsPath = loosePath;
@@ -166,7 +166,7 @@ namespace sw
         const bool        bRead        = readResourceCommon(
             relativePath, pOutAbsPath,
             [&outText]( string_view absPath )
-        { return ContentFileSource::getCurrent().readTextFile( absPath, outText ); },
+        { return IContentFileSource::getCurrent().readTextFile( absPath, outText ); },
             [&outText]( const PackManager& packManager, string_view key, string& outPackPath )
         { return packManager.readTextFile( key, outText, &outPackPath ); } );
         // 쿠킹 작업 안의 읽기는 그 작업의 입력이다. 쿠킹 세션 안인데 작업 밖이면 기록이 빠지므로 읽기가 실패한다(`CookJob`).
@@ -205,7 +205,7 @@ namespace sw
         const bool        bRead        = readResourceCommon(
             relativePath, nullptr,
             [&outBytes]( string_view absPath )
-        { return ContentFileSource::getCurrent().readFile( absPath, outBytes ); },
+        { return IContentFileSource::getCurrent().readFile( absPath, outBytes ); },
             [&outBytes]( const PackManager& packManager, string_view key, string& )
         { return packManager.readFile( key, outBytes ); } );
         if ( bRead == false )
@@ -229,7 +229,7 @@ namespace sw
             relativePath, nullptr,
             [&io, &handle, priority, &onComplete]( string_view absPath )
         {
-            handle = ContentFileSource::getCurrent().readFileAsync( io, absPath, priority, SW_DELEGATE_LAMBDA( AsyncReadCompleteDelegate, [onComplete]( AsyncReadResult& result )
+            handle = IContentFileSource::getCurrent().readFileAsync( io, absPath, priority, SW_DELEGATE_LAMBDA( AsyncReadCompleteDelegate, [onComplete]( AsyncReadResult& result )
             {
                 if ( onComplete.isBound() )
                     onComplete( result.isSucceeded(), result._bytes );
@@ -251,7 +251,7 @@ namespace sw
             id.view(), nullptr,
             [&size]( string_view absPath )
         {
-            const AsyncFileHandle file = ContentFileSource::getCurrent().open( absPath );
+            const AsyncFileHandle file = IContentFileSource::getCurrent().open( absPath );
             if ( file.isValid() == false )
                 return false;
             size = file.getSize();
@@ -277,7 +277,7 @@ namespace sw
             relativePath, nullptr,
             [&io, &handle, offset, size, priority, &onComplete]( string_view absPath )
         {
-            handle = ContentFileSource::getCurrent().readRangeAsync( io, absPath, offset, size, priority, SW_DELEGATE_LAMBDA( AsyncReadCompleteDelegate, [onComplete]( AsyncReadResult& result )
+            handle = IContentFileSource::getCurrent().readRangeAsync( io, absPath, offset, size, priority, SW_DELEGATE_LAMBDA( AsyncReadCompleteDelegate, [onComplete]( AsyncReadResult& result )
             {
                 if ( onComplete.isBound() )
                     onComplete( result.isSucceeded(), result._bytes );
@@ -304,7 +304,7 @@ namespace sw
             id.view(), nullptr,
             [&outBytes, offset, size]( string_view absPath )
         {
-            const AsyncFileHandle file = ContentFileSource::getCurrent().open( absPath );
+            const AsyncFileHandle file = IContentFileSource::getCurrent().open( absPath );
             if ( file.isValid() == false || offset > file.getSize() || size > file.getSize() - offset )
                 return false;
             outBytes.resize( static_cast<size_t>( size ) );
@@ -334,7 +334,7 @@ namespace sw
         {
             // 읽기와 같은 판정이다(R7) - 읽기는 파일만 읽으므로 폴더는 "있음" 이 아니다(예전에는 `exists` 라 폴더에도 true 였다).
             const optional<DiskPath> absPath = engine::getSubsystem<AssetPaths>().findLooseFile( relativePath );
-            if ( absPath.has_value() && ContentFileSource::getCurrent().isFile( absPath->str() ) )
+            if ( absPath.has_value() && IContentFileSource::getCurrent().isFile( absPath->str() ) )
                 return true;
         }
         const bool bInPack = bDiskDomain == false && pPackManager != nullptr && pPackManager->hasFile( FileUtil::normalizePath( relativePath ).str() );
@@ -368,7 +368,7 @@ namespace sw
             for ( const DiskPath& diskFolder : listDiskFolder )
             {
                 vector<string> listDiskFile;
-                if ( ContentFileSource::getCurrent().collectFiles( diskFolder.str(), listDiskFile ) == false )
+                if ( IContentFileSource::getCurrent().collectFiles( diskFolder.str(), listDiskFile ) == false )
                 {
                     SW_LOG_ERROR_ID( "AssetIO.CannotListResourceFolder2", "Cannot list the resource folder '%#' (%#)", folder, diskFolder.str() );
                     return AssetFolderListing::Failed;

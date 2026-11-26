@@ -115,6 +115,10 @@ namespace sw
         string getTextureParameter( hashed_string name ) const;
         /** @brief 캐시된 셰이더 define 을 반환합니다. */
         const vector<string>& getCachedShaderDefines() const;
+        /** @brief 셰이더 키워드 @p keyword 가 이 인스턴스의 변형(부모 define + 런타임 스위치 덮어쓰기)에 켜져 있으면 true 입니다(유니티 `Material.IsKeywordEnabled`). 규칙은 `Material::isKeywordEnabled` 와 같다. */
+        [[nodiscard]] bool isKeywordEnabled( string_view keyword ) const;
+        /** @brief 머티리얼 거르기 @p filter 의 패스가 이 인스턴스를 그리면 true 입니다(`Material::isDrawnByPass` 와 같은 판정 — 인스턴스의 define 을 본다). */
+        [[nodiscard]] bool isDrawnByPass( const MaterialPassFilter& filter ) const;
         /** @brief 퍼뮤테이션 해시를 반환합니다. */
         uint64 getPermutationHash() const;
         /** @brief 정의를 다시 만들기 직전의 퍼뮤테이션 해시입니다(`Material::getPreviousPermutationHash` 와 같은 뜻). */

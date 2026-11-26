@@ -399,7 +399,7 @@ SW_TEST_CASE( ShadowSetupTest, PerspectiveCameraSplitsIntoNestedCascades )
 
     // 시선 한가운데의 점 — 클립 w(뷰 깊이)가 곧 거리다. 그 깊이를 맡는 캐스케이드 볼륨 안에 있고, 그리는 행렬과 (배율, 이동)이 같은 NDC 를 낸다.
     sw::float3 forward = target - eye;
-    forward.normalize();
+    forward            = forward.normalize();
     for ( uint32 cascadeIndex = 0; cascadeIndex < projection._cascadeCount; ++cascadeIndex )
     {
         const float32    startDepth = cascadeIndex == 0 ? 0.1f : projection._arrCascade[cascadeIndex - 1]._splitDepth;
@@ -902,8 +902,10 @@ SW_TEST_CASE( ShadowSetupTest, DirectionalAndLocalShadowsUseSeparateTextures )
     const sw::ShadowAtlasCell spotCell    = frame._listLocalTile[0]._cell;
     SW_EXPECT_TRUE( Internal::overlaps( cascadeCell, spotCell ) ); // 좌표는 겹친다 — 다른 텍스처라서 성립한다
 
-    SW_EXPECT_TRUE( sw::resolveRenderPassInputRole( "ShadowMap", true, "" ) == sw::RenderPassInputRole::ShadowMap );
-    SW_EXPECT_TRUE( sw::resolveRenderPassInputRole( "LocalShadowMap", true, "" ) == sw::RenderPassInputRole::LocalShadowMap );
+    // 그림자 역할은 첨부가 적은 칸이 정한다 — 이름만으로는 장면 깊이다(이름을 바꾼 그림자 첨부가 조용히 화면 크기가 되지 않게 로드가 역할을 요구한다).
+    SW_EXPECT_TRUE( sw::resolveRenderPassInputRole( "ShadowMap", true, "ShadowMap" ) == sw::RenderPassInputRole::ShadowMap );
+    SW_EXPECT_TRUE( sw::resolveRenderPassInputRole( "AnyAtlas", true, "LocalShadowMap" ) == sw::RenderPassInputRole::LocalShadowMap );
+    SW_EXPECT_TRUE( sw::resolveRenderPassInputRole( "ShadowMap", true, "" ) == sw::RenderPassInputRole::SceneDepth );
     uint32 directionalOrdinal = 0;
     uint32 localOrdinal       = 0;
     SW_REQUIRE_TRUE( sw::shaderslot::emulated::tryFindOrdinal( "ShadowMap", directionalOrdinal ) );

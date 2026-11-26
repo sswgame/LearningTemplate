@@ -350,6 +350,8 @@ namespace sw
         // 패킷 · 씬 스냅샷은 FrameRenderer 단계가 만든다. 그 단계가 서지 않았으면(헤드리스 작업) 낼 패킷이 없다.
         if ( _pPacketBuilder == nullptr || _pPacketBuilder->isInitialized() == false )
             return;
+        // 다시 읽힌 파이프라인 XML(에디터 핫 리로드)은 이번 패킷 앞에 렌더 스레드에 바꾸기를 맡긴다 — 렌더 스레드는 파일을 읽지 않는다.
+        _frameRendererSubsystem.refreshReloadedPipeline();
 
         Scene* pActiveScene = _pSceneManager != nullptr ? _pSceneManager->getActiveScene() : nullptr;
 

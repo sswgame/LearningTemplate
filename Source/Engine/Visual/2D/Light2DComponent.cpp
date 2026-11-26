@@ -105,7 +105,7 @@ namespace sw
         float2       direction2D = float2{ direction._x, direction._y };
         if ( direction2D.getLengthSquared() <= MathUtil::kEpsilon )
             direction2D = float2{ 1.0f, 0.0f };
-        direction2D.normalize();
+        direction2D = direction2D.normalize();
         // 칸의 뜻은 lighting_2d.hlsli 머리 주석의 표 — z 는 2D 거리에 쓰이지 않아 노멀 맵 높이를 싣는다.
         outLight._positionRadius = float4{ position._x, position._y, MathUtil::max( _normalMapHeight, 1e-3f ), _outerRadius };
         outLight._directionType  = float4{ direction2D._x, direction2D._y, _innerRadius, outLight._directionType._w };
