@@ -4,16 +4,62 @@
 
 #include "Core/Container/InlineAllocator.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Foundation/EngineSubsystems.h"
+#include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
-#include "Engine/Object/GameObject/Tests/InterfaceTestComponents.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Reflection/Tests/ScopedTestModule.h"
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Reflection/TypeRegistry.h"
+
+namespace sw
+{
+    /** @brief 수를 읽는 계약입니다(상태 없음 — 생성 코드가 크기를 vptr 하나로 지킨다). */
+    REFLECT( Interface )
+    struct ICountSourceTest
+    {
+        REFLECT_BODY();
+
+        virtual ~ICountSourceTest()     = default;
+        virtual uint32 getCount() const = 0;
+    };
+
+    /** @brief `ICountSourceTest` 를 포트 멤버로 내보냅니다 — 포트는 주인의 `_count` 를 읽는다. */
+    REFLECT( HideInMenu )
+    struct CountSourceTestComponent : public Component
+    {
+        REFLECT_BODY();
+        REFLECT_INTERFACE( ICountSourceTest, _countSourcePort );
+
+        /** @brief 주인에게 넘기는 포트입니다. */
+        struct CountSourcePort final : ICountSourceTest
+        {
+            uint32 getCount() const override { return getPortOwner<const CountSourceTestComponent>( *this, offsetof( CountSourceTestComponent, _countSourcePort ) )._count; }
+        };
+
+        uint32          _count{ 0 };
+        CountSourcePort _countSourcePort;
+    };
+
+    /** @brief 인터페이스를 다시 적지 않고 이어받기만 합니다 — 조상 표가 합쳐져 찾힌다. */
+    REFLECT( HideInMenu )
+    struct DerivedCountSourceTestComponent : public CountSourceTestComponent
+    {
+        REFLECT_BODY();
+    };
+
+    /** @brief 인터페이스가 없는 컴포넌트입니다 — 찾기가 건너뛴다. */
+    REFLECT( HideInMenu )
+    struct PlainInterfaceTestComponent : public Component
+    {
+        REFLECT_BODY();
+    };
+} // namespace sw
 
 using namespace sw;
 
@@ -115,3 +161,5 @@ SW_TEST_CASE( FindInterfaceTest, ExportingTheSameInterfaceTwiceIsReported )
     SW_EXPECT_LOG( "Reflection.InterfaceExportedTwice" );
     registry.registerClass( twice );
 }
+
+#include "TestFindInterface.cpp.gen.inl"

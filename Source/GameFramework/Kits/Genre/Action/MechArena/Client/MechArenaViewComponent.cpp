@@ -1,25 +1,98 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Genre/Action/MechArena/Client/MechArenaViewComponent.h"
-
+#include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Memory/Memory.h"
+#include "Core/String/Name/hashed_string.h"
 
+#include "Engine/Asset/AssetRef.h"
+#include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Input/Map/CommonInputActions.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/Prefab/PrefabAsset.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Visual/Component/MeshComponent.h"
 
+#include "GameFramework/Client/View/GameModeViewComponent.h"
+#include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Action/MechArena/Client/MechArenaHUDViewModel.h"
 #include "GameFramework/Kits/Genre/Action/MechArena/Component/MechArenaGameModeComponent.h"
+#include "GameFramework/Runtime/Foundation/GameMode/PrefabPool.h"
 #include "GameFramework/Runtime/Foundation/Presentation/IHUDViewModelBinder.h"
 #include "GameFramework/Runtime/Foundation/Save/StatefulComponentRegistrar.h"
 #include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 
 namespace sw
 {
+    class GameObjectManager;
+    class MechArenaGameModeComponent;
+    class MechArenaHUDViewModel;
+
+    /**
+     * @class MechArenaViewComponent
+     * @brief `Move` 축과 액션을 디렉터에 넘기고 기체 · 탄 · HUD 를 맞춥니다. 점프 액션을 누른 채면 부유합니다.
+     */
+    REFLECT( Category = "MechArena", DisplayName = "Mech Arena View",
+             Tooltip = "Client side of a mech arena match: sends input commands to the Mech Arena Game Mode on the same object and shows mechs, projectiles and the HUD" )
+    class MechArenaViewComponent : public GameModeViewComponent
+    {
+    public:
+        REFLECT_BODY();
+
+        static constexpr TickGroup kTickGroup = TickGroup::PostUpdate;
+
+        MechArenaViewComponent();
+        virtual ~MechArenaViewComponent() override;
+
+        void onBeginPlay() override;
+        /** @brief 세운 탄을 걷습니다. */
+        void onEndPlay() override;
+
+    private:
+        /** @brief 세운 모습을 모두 지웁니다(플레이 끝 · 다시 세울 때). 모습은 파생이라 상태를 실을 때 걷지 않는다(`SpawnLifetime::Derived`). */
+        void despawnViews();
+        /** @brief 틱 뒤 게임 스레드: 입력을 명령으로 넘기고 모습 · HUD 를 맞춥니다. */
+        void updateView( GameObjectManager& manager, MechArenaGameModeComponent& director );
+        void submitInput( const GameModeInput& input, MechArenaGameModeComponent& director ) const;
+        void updatePilotBody( GameObjectManager& manager, const MechArenaGameModeComponent& director ) const;
+        /** @brief 탄 수만큼 모습을 꺼내고(넘치면 돌려주고) 탄 자리에 둡니다. */
+        void syncProjectiles( GameObjectManager& manager, const MechArenaGameModeComponent& director );
+        void updateHUD( const MechArenaGameModeComponent& director );
+
+    private:
+        PROPERTY( Category = "Input", DisplayName = "Move Action", Tooltip = "InputMap 2D action that moves the mech (required)" )
+        hashed_string _moveAction;
+        PROPERTY( Required, Category = "Input", DisplayName = "Fire Action", Tooltip = "InputMap action held to fire the main weapon (required)" )
+        hashed_string _fireAction;
+        PROPERTY( Required, Category = "Input", DisplayName = "Melee Action", Tooltip = "InputMap action of the melee combo (required)" )
+        hashed_string _meleeAction;
+        PROPERTY( Required, Category = "Input", DisplayName = "Special Action", Tooltip = "InputMap action of the special weapon; while destroyed it picks the next mech of the deck (required)" )
+        hashed_string _specialAction;
+        PROPERTY( Required, Category = "Input", DisplayName = "Dash Action", Tooltip = "InputMap action that boosts (required)" )
+        hashed_string _dashAction;
+        PROPERTY( Required, Category = "Input", DisplayName = "Jump Action", Tooltip = "InputMap action that jumps and, held, hovers (required)" )
+        hashed_string _jumpAction;
+        PROPERTY( Required, Category = "Input", DisplayName = "Lock Action", Tooltip = "InputMap action that locks on or picks the next target (required)" )
+        hashed_string _lockAction;
+        PROPERTY( Category = "Scene", DisplayName = "Pilots", Tooltip = "Objects shown as the mechs, in pilot order (player, allies, enemies)" )
+        vector<GameObjectHandle> _listPilotBody;
+        PROPERTY( Category = "Look", DisplayName = "Mech Height", Min = 0.1, Units = m )
+        float32 _mechHeight;
+        PROPERTY( Required, Category = "Prefabs", DisplayName = "Projectile Prefab", Tooltip = "View of one projectile" )
+        AssetRef<PrefabAsset> _projectilePrefab;
+        PROPERTY( Required, Category = "Prefabs", DisplayName = "Projectile Pool Size", Tooltip = "Projectile views kept switched off for reuse instead of being destroyed", Min = 1 )
+        uint32 _projectilePoolSize;
+
+        SW_TRANSIENT unique_ptr<MechArenaHUDViewModel> _hudViewModel; ///< HUD 가 보는 값(이 컴포넌트가 소유하고 HUD 는 빌려 쓴다 — 먼저 지워지면 HUD 가 스스로 뗀다)
+        SW_TRANSIENT PrefabPool                        _projectilePool;
+        SW_TRANSIENT vector<GameObjectHandle> _listProjectileView; ///< 꺼낸 탄 모습(판의 탄 목록 순서)
+    };
+
     namespace
     {
 
@@ -169,3 +242,5 @@ namespace sw
         _hudViewModel->setResult( director.hasWon(), bEnded && director.hasWon() == false );
     }
 } // namespace sw
+
+#include "MechArenaViewComponent.cpp.gen.inl"

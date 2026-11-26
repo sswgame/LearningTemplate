@@ -10,6 +10,7 @@
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetTypeRegistry.h"
+#include "Engine/Presentation/AudioPlayableAsset.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
 #include "Engine/Serialization/Inherit/ResourceComposer.h"
 
@@ -160,5 +161,5 @@ namespace sw
     }
 
     /** @brief 오디오 음악 데이터 파일 종류입니다(스키마 테스트가 이 줄로 파일을 읽어 본다). */
-    SW_ASSET_TYPE( AudioMusic, AssetTypeDef::makeDataFile( "audiomusic", AssetPathRule{ {}, {}, ".music.xml" }, AssetTypeLoader::of<AudioMusicDef>() ) );
+    SW_ASSET_TYPE( AudioMusic, AssetTypeDef::makeDataFile( "audiomusic", AssetPathRule{ {}, {}, AudioMusicAsset::kExtension }, AssetTypeLoader::of<AudioMusicDef>() ) );
 } // namespace sw

@@ -23,8 +23,8 @@
 
 namespace sw
 {
-    // Admin 키트의 글(엔진 현지화 폴더의 `kits/admin/`) — 이 모듈이 올라온 동안 조회 사슬에 든다(언리얼 플러그인 현지화 타깃)
-    SW_LOCALIZATION_PROJECT( AdminKit, "engine/localization/kits/admin/admin.locproject.xml" );
+    // Admin 키트의 글(엔진 현지화 폴더의 `editorplugins/admin/`) — 이 모듈이 올라온 동안 조회 사슬에 든다. 에디터 모듈이라 배포 팩에 담지 않는다(언리얼 플러그인 현지화 타깃)
+    SW_LOCALIZATION_PROJECT( AdminKit, "engine/localization/editorplugins/admin/admin.locproject.xml" );
 } // namespace sw
 
 namespace sw::editor

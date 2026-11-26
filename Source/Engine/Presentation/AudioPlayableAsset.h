@@ -68,8 +68,10 @@ namespace sw
     /** @brief 적응형 음악 파일(`*.music.xml`)을 가리키는 참조(`AssetRef<AudioMusicAsset>`)의 대상입니다 — `GameSound::playAdaptiveMusic` 이 받는다. 같은 까닭으로 검사에만 쓴다. */
     struct AudioMusicAsset
     {
+        /** @brief 적응형 음악 파일의 접미사입니다. 데이터 파일 종류의 경로 규칙(`AudioMusic` 등록 줄)도 이 값을 쓴다. */
+        static constexpr string_view kExtension        = ".music.xml";
         static constexpr AssetSuffix kArrAssetSuffix[] = {
-            { ".music.xml", AssetSuffixRole::Plain },
+            { kExtension, AssetSuffixRole::Plain },
         };
         static constexpr AssetTypeDef kAssetType{ "AudioMusic", kArrAssetSuffix, static_cast<uint32>( SW_COUNT_OF( kArrAssetSuffix ) ), {}, 0, {} };
     };

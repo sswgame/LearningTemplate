@@ -1,14 +1,22 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Genre/Simulation/RestaurantSim/Client/RestaurantCounterComponent.h"
-
+#include "Core/Foundation/Types.h"
+#include "Core/Math/Math.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Memory/Memory.h"
+#include "Core/String/Name/hashed_string.h"
 
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Input/Map/CommonInputActions.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/Prefab/PrefabAsset.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
+#include "GameFramework/Client/View/GameModeViewComponent.h"
+#include "GameFramework/Client/View/PrefabViewBatch.h"
+#include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Simulation/RestaurantSim/Client/RestaurantHUDViewModel.h"
 #include "GameFramework/Kits/Genre/Simulation/RestaurantSim/Component/RestaurantGameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Presentation/IHUDViewModelBinder.h"
@@ -16,6 +24,69 @@
 
 namespace sw
 {
+    class GameInputView;
+    class GameObjectManager;
+    class RestaurantGameModeComponent;
+    class RestaurantHUDViewModel;
+
+    /**
+     * @class RestaurantCounterComponent
+     * @brief 줄 고르기 · 사기 · 가격 올리기 · 내리기 · 열기와 다음 날을 디렉터 명령으로 넘기고 식당을 그립니다.
+     */
+    REFLECT( Category = "RestaurantSim", DisplayName = "Restaurant Counter",
+             Tooltip = "Client side of a RestaurantSim run: sends commands to the Restaurant Game Mode on the same object, draws the seats and the kitchen and fills the HUD" )
+    class RestaurantCounterComponent : public GameModeViewComponent
+    {
+    public:
+        REFLECT_BODY();
+
+        static constexpr TickGroup kTickGroup = TickGroup::PostUpdate;
+
+        RestaurantCounterComponent();
+        virtual ~RestaurantCounterComponent() override;
+
+        void onBeginPlay() override;
+        /** @brief 세운 모습을 지웁니다. */
+        void onEndPlay() override;
+
+    private:
+        /** @brief 틱 뒤 게임 스레드: 입력을 명령으로 넘기고 HUD · 그리기를 합니다. */
+        void updateCounter( GameObjectManager& manager, RestaurantGameModeComponent& director );
+        void submitInput( const GameModeInput& input, RestaurantGameModeComponent& director );
+        void updateHUD( const RestaurantGameModeComponent& director );
+        /** @brief 자리 · 손님 · 주문을 그립니다. */
+        void draw( const RestaurantGameModeComponent& director, GameObjectManager& manager );
+
+    private:
+        PROPERTY( Category = "Input", DisplayName = "Move Action", Tooltip = "InputMap 2D action that changes the chosen row (required)" )
+        hashed_string _moveAction;
+        PROPERTY( Required, Category = "Input", DisplayName = "Buy Action", Tooltip = "InputMap action that buys the chosen ingredient (required)" )
+        hashed_string _buyAction;
+        PROPERTY( Required, Category = "Input", DisplayName = "Price Up Action", Tooltip = "InputMap action that raises the price of the chosen dish (required)" )
+        hashed_string _priceUpAction;
+        PROPERTY( Required, Category = "Input", DisplayName = "Price Down Action", Tooltip = "InputMap action that lowers the price of the chosen dish (required)" )
+        hashed_string _priceDownAction;
+        PROPERTY( Required, Category = "Input", DisplayName = "Station Action", Tooltip = "InputMap action that adds a cooking station for the chosen dish (required)" )
+        hashed_string _stationAction;
+        PROPERTY( Required, Category = "Input", DisplayName = "Open Action", Tooltip = "InputMap action that opens the day, or starts the next one after closing (required)" )
+        hashed_string _openAction;
+        PROPERTY( Category = "View", DisplayName = "Seat Origin", Tooltip = "Absolute ground-plane position (X, Z) of the first seat" )
+        float2 _seatOrigin;
+        PROPERTY( Category = "View", DisplayName = "Seat Spacing", Min = 0.1, Units = m )
+        float32 _seatSpacing;
+
+        PROPERTY( Required, Category = "View", DisplayName = "Body Prefab", Tooltip = "Prefab with one mesh, feet at its origin and one metre tall, spawned for every body the view shows" )
+        AssetRef<PrefabAsset> _bodyPrefab;
+        PROPERTY( Required, Category = "View", DisplayName = "Marker Prefab", Tooltip = "One-metre cube prefab, spawned for every marker the view shows" )
+        AssetRef<PrefabAsset> _markerPrefab;
+
+        SW_TRANSIENT PrefabViewBatch _bodies;
+        SW_TRANSIENT PrefabViewBatch _markers;
+        SW_TRANSIENT unique_ptr<RestaurantHUDViewModel> _hudViewModel; ///< HUD 가 보는 값(이 컴포넌트가 소유하고 HUD 는 빌려 쓴다)
+        SW_TRANSIENT int32                              _row;          ///< 고른 줄(재료 · 요리)
+        SW_TRANSIENT int32                              _lastStep;     ///< 지난 프레임의 축 방향(-1 · 0 · 1) — 놓아야 다음 줄을 고른다
+    };
+
     namespace
     {
         /** @brief 모습의 색 · 크기(m)와 입력 문턱입니다. */
@@ -175,3 +246,5 @@ namespace sw
         }
     }
 } // namespace sw
+
+#include "RestaurantCounterComponent.cpp.gen.inl"

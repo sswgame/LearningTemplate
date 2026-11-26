@@ -1,18 +1,48 @@
 // MovementPadTest: 발사대가 겹친 동적 강체를 쏘는지(실제 2D 물리, Box2D), 부스트 패드가 부스트 계약(IBoostReceiver: 탈것 · 테스트 받는 쪽)에 부스트를 거는지 본다(nogpu). 받는 쪽이 하나라 이벤트 없이 직접 부른다.
 #include "pch.h"
 
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/Name/hashed_string.h"
 #include "Core/TestFramework/TestFramework.h"
 
+#include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Physics/Collision/PhysicsShape.h"
 #include "Engine/Physics/Component/RigidBody2DComponent.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
+#include "GameFramework/Runtime/Character/Movement/IBoostReceiver.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/Movement/BoostPadComponent.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/Movement/LaunchPadComponent.h"
-#include "GameFramework/Runtime/Gameplay/Gimmick/Movement/Tests/BoostReceiverTestComponent.h"
 #include "GameFramework/Runtime/Gameplay/Vehicle/KinematicVehicleComponent.h"
+
+namespace sw
+{
+    /** @brief 받은 부스트 시간을 남기고, `_bAccept` 가 꺼져 있으면 거절합니다. */
+    REFLECT( HideInMenu )
+    struct BoostReceiverTestComponent : public Component
+    {
+        REFLECT_BODY();
+        REFLECT_INTERFACE( IBoostReceiver, _boostReceiverPort );
+
+        /** @brief 주인에게 넘기는 포트입니다. */
+        struct BoostReceiverPort final : IBoostReceiver
+        {
+            [[nodiscard]] bool receiveBoost( float32 durationSeconds ) override
+            {
+                BoostReceiverTestComponent& owner = getPortOwner<BoostReceiverTestComponent>( *this, offsetof( BoostReceiverTestComponent, _boostReceiverPort ) );
+                owner._lastDuration               = durationSeconds;
+                return owner._bAccept == SW_TRUE;
+            }
+        };
+
+        float32           _lastDuration{ 0.0f };
+        uint8             _bAccept{ SW_TRUE };
+        BoostReceiverPort _boostReceiverPort;
+    };
+} // namespace sw
 
 using namespace sw;
 
@@ -115,3 +145,5 @@ SW_TEST_CASE( MovementPadTest, BoostPadUsesTheBoostContract )
     pPad->boost( *pSled );
     SW_EXPECT_EQUAL( 1, pPad->getBoostCount() );
 }
+
+#include "TestMovementPads.cpp.gen.inl"

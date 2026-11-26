@@ -1,0 +1,172 @@
+<?asset guid="5f576f9d96dd46be9ca91c058abc941c"?>
+<TranslationTable culture="ko">
+	<entries>
+		<entry key="EdAbilityCatalog.AddAbility" text="어빌리티 더하기" sourceHash="a69e936d44d68d4a" />
+		<entry key="EdAbilityCatalog.AddAbilitySet" text="세트 더하기" sourceHash="1f92efc5fb99ba74" />
+		<entry key="EdAbilityCatalog.AddAbilityToSet" text="어빌리티 더하기" sourceHash="a69e936d44d68d4a" />
+		<entry key="EdAbilityCatalog.AddEffect" text="이펙트 더하기" sourceHash="f9caa9d2834ca145" />
+		<entry key="EdAbilityCatalog.AddEffectToSet" text="이펙트 더하기" sourceHash="f9caa9d2834ca145" />
+		<entry key="EdAbilityCatalog.Duplicate" text="복제" sourceHash="fac15b89e0668996" />
+		<entry key="EdAbilityCatalog.File" text="파일" sourceHash="d1f81284eeb7b503" />
+		<entry key="EdAbilityCatalog.FileTip"
+		       text="게임이 읽는 카탈로그 파일입니다. 편집해도 주석과 줄 배치가 남습니다."
+		       sourceHash="85aaca40c7a44e38" />
+		<entry key="EdAbilityCatalog.FilterHint" text="id 로 거르기" sourceHash="c43f7e285bae95e1" />
+		<entry key="EdAbilityCatalog.Go" text="가기" sourceHash="09023907b59c38eb" />
+		<entry key="EdAbilityCatalog.InheritedTip"
+		       text="부모 항목에서 물려받은 값입니다. 고르면 이 항목에 적습니다."
+		       sourceHash="258dfb955934f894" />
+		<entry key="EdAbilityCatalog.NoFileHint"
+		       text="편집할 어빌리티 카탈로그 파일(game/&lt;게임>/data/abilities.xml)을 적으세요."
+		       sourceHash="40ad614f3e928f78" />
+		<entry key="EdAbilityCatalog.NoneChoice" text="(없음)" sourceHash="8c36545f724b9460" />
+		<entry key="EdAbilityCatalog.PickEntryHint"
+		       text="왼쪽에서 항목을 고르면 그 항목이 쓰는 것과 그것을 쓰는 곳을 봅니다."
+		       sourceHash="268dc0a1bf394d29" />
+		<entry key="EdAbilityCatalog.Redo" text="다시 실행" sourceHash="7417792bbe720149" />
+		<entry key="EdAbilityCatalog.Remove" text="지우기" sourceHash="ea4f08110bb8f15d" />
+		<entry key="EdAbilityCatalog.RemoveTip"
+		       text="다른 항목이 쓰는 항목은 지우지 않습니다. 그 참조를 먼저 바꾸세요."
+		       sourceHash="dd165e99ffa137c9" />
+		<entry key="EdAbilityCatalog.Revert" text="되돌리기" sourceHash="d89a2e529b31ef43" />
+		<entry key="EdAbilityCatalog.Save" text="저장" sourceHash="33f85f24c0f5f008" />
+		<entry key="EdAbilityCatalog.Undo" text="실행 취소" sourceHash="8f4be9f086eb530f" />
+		<entry key="EdAbilityCatalog.UsedBy" text="쓰는 곳" sourceHash="779c0036ee34fe7d" />
+		<entry key="EdAbilityCatalog.UsedByNothing"
+		       text="이 항목을 쓰는 곳이 없습니다."
+		       sourceHash="ce418dbe01852ba4" />
+		<entry key="EdAbilityCatalog.Uses" text="쓰는 것" sourceHash="a48f82f001b89585" />
+		<entry key="EdAbilityCatalog.UsesNothing"
+		       text="다른 항목을 쓰지 않습니다."
+		       sourceHash="44bec3c2ce8364f4" />
+		<entry key="EdAbilityCatalog.ValidationFailed"
+		       text="런타임 로더가 저장한 파일을 읽지 못했습니다. 이유는 로그를 보세요."
+		       sourceHash="f82ad242c323c715" />
+		<entry key="EdAbilityCatalog.ValidationPassed"
+		       text="런타임 로더가 저장한 파일을 읽습니다."
+		       sourceHash="7ccb4a0f7b3336fe" />
+		<entry key="EdAbilityDebug.ColumnActive" text="실행 중" sourceHash="a45a194b58837e4f" />
+		<entry key="EdAbilityDebug.ColumnBase" text="기본값" sourceHash="c1a4e2a7a8e20d58" />
+		<entry key="EdAbilityDebug.ColumnCooldown" text="쿨다운" sourceHash="8b59db90be866528" />
+		<entry key="EdAbilityDebug.ColumnCount" text="개수" sourceHash="71a5c9f4b68ef4d4" />
+		<entry key="EdAbilityDebug.ColumnCurrent" text="현재값" sourceHash="ab8b4cbbb1fa71fa" />
+		<entry key="EdAbilityDebug.ColumnEvent" text="사건" sourceHash="d0ea7366ebc403ff" />
+		<entry key="EdAbilityDebug.ColumnName" text="이름" sourceHash="ef49aec68fd1dc66" />
+		<entry key="EdAbilityDebug.ColumnRemaining" text="남은 시간" sourceHash="dd9423c2ce1195a3" />
+		<entry key="EdAbilityDebug.ColumnSource" text="출처" sourceHash="5f43af3669b1e098" />
+		<entry key="EdAbilityDebug.ColumnStacks" text="스택" sourceHash="1d286181862db5e4" />
+		<entry key="EdAbilityDebug.ColumnTag" text="태그" sourceHash="6ce0cb19e201b153" />
+		<entry key="EdAbilityDebug.ColumnTime" text="시각" sourceHash="48e186fb300e5464" />
+		<entry key="EdAbilityDebug.HintNoLog"
+		       text="아직 적용 · 거부 · 제거된 이펙트가 없습니다."
+		       sourceHash="249a7225f66cf71f" />
+		<entry key="EdAbilityDebug.HintNoTarget"
+		       text="AbilitySystemComponent 가 있는 오브젝트를 선택하거나 위에서 고르세요."
+		       sourceHash="937bde747e495279" />
+		<entry key="EdAbilityDebug.HintPlayOnly"
+		       text="어빌리티 런타임 상태는 플레이 중에만 있습니다. 플레이를 눌러 확인하세요."
+		       sourceHash="7adebb387e539a62" />
+		<entry key="EdAbilityDebug.Infinite" text="무한" sourceHash="0c024c0024360a2d" />
+		<entry key="EdAbilityDebug.NoComponentsInScene"
+		       text="활성 씬에 AbilitySystemComponent 가 없습니다"
+		       sourceHash="f9aceb1e918e73da" />
+		<entry key="EdAbilityDebug.PickTarget" text="어빌리티 시스템 고르기..." sourceHash="0f5befa1ba0a7140" />
+		<entry key="EdAbilityDebug.SectionAbilities" text="부여된 어빌리티" sourceHash="59c749c8cdb544fa" />
+		<entry key="EdAbilityDebug.SectionAttributes" text="어트리뷰트" sourceHash="16b9446e3a70e1f4" />
+		<entry key="EdAbilityDebug.SectionEffects" text="걸린 이펙트" sourceHash="6991d93fa865e70d" />
+		<entry key="EdAbilityDebug.SectionLog" text="최근 이펙트" sourceHash="562c325175e2853c" />
+		<entry key="EdAbilityDebug.SectionTags" text="소유 태그" sourceHash="35d4aac5d07d7ce3" />
+		<entry key="EdButton.ZoneRevert" text="되돌리기" sourceHash="d89a2e529b31ef43" />
+		<entry key="EdLabel.ZoneCondition" text="조건" sourceHash="c683c10250a1b719" />
+		<entry key="EdPlugin.AddNode" text="노드 추가" sourceHash="e63c78875f5b2178" />
+		<entry key="EdPlugin.AutoLayout" text="자동 배치" sourceHash="4f4251e697a0d1dc" />
+		<entry key="EdPlugin.ClearTarget" text="대상 지우기" sourceHash="d18a85c948654d57" />
+		<entry key="EdPlugin.ClickANodeToEditIt" text="노드를 누르면 편집합니다" sourceHash="3300dd9449098b38" />
+		<entry key="EdPlugin.Connect" text="연결" sourceHash="7a4f059aaa029719" />
+		<entry key="EdPlugin.Delete" text="삭제" sourceHash="dc673e73b5c13aea" />
+		<entry key="EdPlugin.DeleteNode" text="노드 삭제" sourceHash="d9bdfc0f95188eea" />
+		<entry key="EdPlugin.Down" text="아래" sourceHash="032c13736048bf35" />
+		<entry key="EdPlugin.Duplicate" text="복제" sourceHash="fac15b89e0668996" />
+		<entry key="EdPlugin.Invert" text="반전" sourceHash="93b38b71b79d98c1" />
+		<entry key="EdPlugin.OpenABehaviorTreeFileBtXmlWith"
+		       text="Open... 으로 행동 트리 파일(*.bt.xml)을 엽니다"
+		       sourceHash="c353725f155e1e20" />
+		<entry key="EdPlugin.RemoveBrokenWires" text="끊어진 선 지우기" sourceHash="56ba420ceb30c42c" />
+		<entry key="EdPlugin.SelectANodeToEditItRightClick"
+		       text="노드를 고르면 편집합니다. 캔버스를 오른쪽 클릭해 더합니다."
+		       sourceHash="4609bfba81986750" />
+		<entry key="EdPlugin.SelectAnObjectThatHasAGimmickCircuit"
+		       text="기믹 회로 컴포넌트가 있는 오브젝트를 고릅니다"
+		       sourceHash="2b3af1b8adec3a10" />
+		<entry key="EdPlugin.TargetObject" text="대상 오브젝트" sourceHash="385e62428acaa50f" />
+		<entry key="EdPlugin.Task" text="작업" sourceHash="03ee3cfb0919c62c" />
+		<entry key="EdPlugin.TheNodeEditorCouldNotBeCreated"
+		       text="노드 편집기를 만들지 못했습니다"
+		       sourceHash="8b63c1afdb07b732" />
+		<entry key="EdPlugin.Up" text="위" sourceHash="09313a07b5c3ab60" />
+		<entry key="EdPlugin.UseSelectedObject" text="고른 오브젝트 쓰기" sourceHash="63735c6b1d1894ec" />
+		<entry key="EdPluginFormat.Live" text="실행 중: {liveRunnerName}" sourceHash="a97f0a67617d3e8c" />
+		<entry key="EdPluginFormat.NodesProblems"
+		       text="노드 {nodeCount}개 | 문제 {issueCount}개"
+		       sourceHash="afa990bd6f8d2a8e" />
+		<entry key="EdPluginFormat.NodesWiresProblems"
+		       text="{name} - 노드 {nodesCount}개, 선 {wiresCount}개, 문제 {issueCount}개"
+		       sourceHash="a1400749f18ad639" />
+		<entry key="EdPluginFormat.ParamDefault"
+		       text="기본값: {hasDefault, select, yes {{value}} other {(없음)}}"
+		       sourceHash="ab8219dc63aada6a" />
+		<entry key="EdPluginFormat.Problems" text="문제 {issueCount}개" sourceHash="ef1fef2a60c87f14" />
+		<entry key="EdPluginFormat.ThisFileCouldNot"
+		       text="이 파일을 열 수 없습니다: {statusText}"
+		       sourceHash="253bbce2905b4f9e" />
+		<entry key="EdPluginVisualizer.SplinesLabel" text="스플라인" sourceHash="c80e88bdeab5993d" />
+		<entry key="EdPluginVisualizer.SplinesTip"
+		       text="씬의 스플라인마다 곡선 - 고른 스플라인은 조절점 손잡이를 끈다(Shapes)"
+		       sourceHash="f23fe5163d0d582d" />
+		<entry key="EdPluginWidget.From" text="보내는 곳" sourceHash="a6ab5184d6315895" />
+		<entry key="EdPluginWidget.Problems" text="문제" sourceHash="0e6bbd9fe1101fbd" />
+		<entry key="EdPluginWidget.To" text="받는 곳" sourceHash="09353907b5c79284" />
+		<entry key="EdPluginWidget.Wires" text="선" sourceHash="b1344bf526482d11" />
+		<entry key="EdSchedule.ColumnActivity" text="행동" sourceHash="6c76b294d740446c" />
+		<entry key="EdSchedule.ColumnPlace" text="장소" sourceHash="13b3f5afa0862d1c" />
+		<entry key="EdSchedule.ColumnSource" text="출처" sourceHash="5f43af3669b1e098" />
+		<entry key="EdSchedule.ColumnTime" text="시각" sourceHash="48e186fb300e5464" />
+		<entry key="EdSchedule.ColumnTravel" text="이동" sourceHash="bb87af74ab3706b9" />
+		<entry key="EdSchedule.EmptyHint"
+		       text="실행 중인 일정 시스템이 없습니다. 일정을 가진 NPC 가 있는 상태로 플레이를 시작하세요."
+		       sourceHash="c440b029ca8db326" />
+		<entry key="EdSchedule.EmptyPlan" text="오늘 계획이 없습니다" sourceHash="b3a79d044bf5027f" />
+		<entry key="EdSchedule.FollowClock" text="게임 시계 따라가기" sourceHash="9331e1eca52eafa8" />
+		<entry key="EdSchedule.GameTime" text="게임 시각" sourceHash="312a78762d9ad9a4" />
+		<entry key="EdSchedule.NPCListTitle" text="NPC 목록" sourceHash="578931c5a8afe279" />
+		<entry key="EdSchedule.RawTimeline" text="타임라인 원문" sourceHash="60d9224c1e5f1898" />
+		<entry key="EdSchedule.SelectNPCHint" text="왼쪽에서 NPC 를 고르세요" sourceHash="2d4aa57458132d18" />
+		<entry key="EdSchedule.SystemIndex" text="일정 시스템" sourceHash="22b2a2f792a7281d" />
+		<entry key="EdSchedule.WhyNow" text="지금 왜 이 행동인가" sourceHash="998a39497efff850" />
+		<entry key="EdSection.ZoneModules" text="지역 모듈" sourceHash="643c9a42b27e108a" />
+		<entry key="EdUndo.ZoneOverrideParam" text="지역 매개변수 덮어쓰기" sourceHash="27a7315229ee3fbe" />
+		<entry key="EdUndo.ZoneRevertModule" text="지역 모듈 되돌리기" sourceHash="bdcc597ed31c7231" />
+		<entry key="EdUndo.ZoneRevertParam" text="지역 매개변수 되돌리기" sourceHash="ee424136ab42d00c" />
+		<entry key="EditorTip.ZoneNoProfile"
+		       text="모듈을 보려면 지역 프로필(*.zone.xml)을 고르세요."
+		       sourceHash="454c1cabe79af977" />
+		<entry key="EditorTip.ZoneOverridesInvalid"
+		       text="덮어쓰기가 이 프로필에 맞지 않습니다 - 모듈 이름은 로그를 보세요."
+		       sourceHash="4e2d23130ef7db97" />
+		<entry key="EditorTip.ZoneRevert"
+		       text="이 배치 덮어쓰기를 지우고 프리셋을 다시 씁니다."
+		       sourceHash="53a9278b632e3703" />
+		<entry key="EditorTip.ZoneRevertParam"
+		       text="이 매개변수에 프리셋 값을 다시 씁니다."
+		       sourceHash="2216bc5d4a3af475" />
+		<entry key="Enum.AbilityEntryKind.Ability" text="어빌리티" sourceHash="9c5c6645f6238fcd" />
+		<entry key="Enum.AbilityEntryKind.AbilitySet" text="어빌리티 세트" sourceHash="ff3820b1acda8056" />
+		<entry key="Enum.AbilityEntryKind.Effect" text="이펙트" sourceHash="d004bbafa47097e5" />
+		<entry key="Enum.AbilityEntryKind.Presentation" text="큐 연출" sourceHash="e160bc2d29075769" />
+		<entry key="Enum.ZoneModuleOrigin.Added" text="여기서 더함" sourceHash="1d0422d2923a2619" />
+		<entry key="Enum.ZoneModuleOrigin.Changed" text="여기서 바꿈" sourceHash="b670513a18b222f7" />
+		<entry key="Enum.ZoneModuleOrigin.Inherited" text="물려받음" sourceHash="45228ea14dc64581" />
+		<entry key="Enum.ZoneModuleOrigin.Removed" text="여기서 뺌" sourceHash="d595b30d28c16df7" />
+		<entry key="Enum.ZoneModuleOrigin.Replaced" text="여기서 갈아끼움" sourceHash="821d05431d192019" />
+	</entries>
+</TranslationTable>

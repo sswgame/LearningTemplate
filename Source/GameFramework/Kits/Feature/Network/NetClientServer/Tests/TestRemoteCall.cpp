@@ -1,19 +1,143 @@
 #include "pch.h"
 
+#include "Core/Container/string.h"
 #include "Core/Delegate/Subscription.h"
+#include "Core/Foundation/Types.h"
+#include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Network/Connection/NetEndpoint.h"
 #include "Core/Network/Tests/LoopbackCluster.h"
 #include "Core/Serialization/BitStream.h"
 #include "Core/TestFramework/TestFramework.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
 #include "GameFramework/Kits/Feature/Network/NetClientServer/RemoteCall.h"
-#include "GameFramework/Kits/Feature/Network/NetClientServer/Tests/RemoteCallTestTypes.h"
 
 #include <limits>
+
+namespace sw
+{
+    /** @brief 열거형 인자의 왕복을 보는 열거형입니다. */
+    ENUM()
+    enum class RemoteCallTestMode : uint8
+    {
+        Quiet,
+        Loud,
+    };
+
+    /** @brief 서버 쪽 대상 — 신뢰 · 검증 함수, 비신뢰 함수, 원격으로 부를 수 없는 로컬 함수, 서버가 부르는 클라이언트 함수를 하나씩 둡니다. */
+    REFLECT()
+    struct RemoteCallTestAvatar
+    {
+        REFLECT_BODY();
+
+        PROPERTY()
+        int32 _lastTargetID{ 0 };
+        PROPERTY()
+        int32 _totalPower{ 0 };
+        PROPERTY()
+        float32 _movedDistance{ 0.0f };
+        PROPERTY()
+        int32 _localApplyCount{ 0 };
+        PROPERTY()
+        int32 _shownHealth{ 0 };
+        PROPERTY()
+        int32 _lastMarkerID{ 0 };
+        PROPERTY()
+        uint64 _lastBigID{ 0 };
+        PROPERTY()
+        float64 _lastNumber{ 0.0 };
+        PROPERTY()
+        string _lastText{};
+        PROPERTY()
+        RemoteCallTestMode _lastMode{ RemoteCallTestMode::Quiet };
+        PROPERTY()
+        bool _bLastFlag{ false }; // NOLINT(sw-bool-flag): 집합체다(중괄호로 만든다)
+
+        /** @brief 모든 인자 꼴을 하나씩 받아 적습니다. */
+        FUNCTION( Server, Reliable )
+        void recordArguments( uint64 bigID, float64 number, const string& text, bool bFlag, RemoteCallTestMode mode )
+        {
+            _lastBigID  = bigID;
+            _lastNumber = number;
+            _lastText   = text;
+            _bLastFlag  = bFlag;
+            _lastMode   = mode;
+        }
+
+        /** @brief 검증을 지난 공격 — 대상과 힘을 적습니다. */
+        FUNCTION( Server, Reliable, Validate )
+        void attackTarget( int32 targetID, int32 power )
+        {
+            _lastTargetID = targetID;
+            _totalPower += power;
+        }
+
+        /** @brief `attackTarget` 의 검증 짝 — 힘은 0 ~ 50 이어야 합니다(밖이면 조작이다). */
+        FUNCTION()
+        bool validateAttackTarget( int32 targetID, int32 power ) const { return targetID > 0 && power >= 0 && power <= 50; }
+
+        /** @brief 비신뢰 이동 — 잃어도 되는 호출입니다. */
+        FUNCTION( Server )
+        void moveStep( float32 distance ) { _movedDistance += distance; }
+
+        /** @brief 함수별 상한이 있는 표시 놓기 — 연결마다 초당 2 번입니다(`MaxCallsPerSecond`). */
+        FUNCTION( Server, MaxCallsPerSecond = 2 )
+        void placeMarker( int32 markerID ) { _lastMarkerID = markerID; }
+
+        /** @brief 원격 역할이 없는 함수 — 서버가 원격으로 받지 않습니다. */
+        FUNCTION()
+        void applyLocal( int32 amount ) { _localApplyCount += amount; }
+
+        /** @brief 서버가 주인 클라이언트에게 부르는 함수입니다. */
+        FUNCTION( Client, Reliable )
+        void receiveHealth( int32 health ) { _shownHealth = health; }
+    };
+
+    /** @brief `Validate` 인데 짝이 없는 대상 — 등록이 거절해야 합니다. */
+    REFLECT()
+    struct RemoteCallTestMissingValidator
+    {
+        REFLECT_BODY();
+
+        PROPERTY()
+        int32 _value{ 0 };
+
+        /** @brief 짝 `validateAct` 가 없습니다. */
+        FUNCTION( Server, Reliable, Validate )
+        void act( int32 value ) { _value = value; }
+    };
+
+    /** @brief 실을 수 없는 인자(벡터)를 받는 원격 함수 — 등록이 거절해야 합니다. */
+    REFLECT()
+    struct RemoteCallTestVectorArgument
+    {
+        REFLECT_BODY();
+
+        PROPERTY()
+        float3 _position{};
+
+        /** @brief 벡터 인자는 원격 인자가 될 수 없습니다. */
+        FUNCTION( Server, Reliable )
+        void place( float3 position ) { _position = position; }
+    };
+
+    /** @brief `Client` 함수에 함수별 상한을 적은 대상 — 서버가 지킬 수 없으므로 등록이 거절해야 합니다. */
+    REFLECT()
+    struct RemoteCallTestClientRate
+    {
+        REFLECT_BODY();
+
+        PROPERTY()
+        int32 _shownValue{ 0 };
+
+        FUNCTION( Client, MaxCallsPerSecond = 3 )
+        void receiveValue( int32 value ) { _shownValue = value; }
+    };
+} // namespace sw
 
 // 반사 함수 호출 — `FUNCTION( Server · Client · Reliable · Validate )` 메타데이터가 주인 · 역할 · 채널 · 검증 정책으로 실제 선을 지나 지켜지는가.
 
@@ -541,3 +665,5 @@ SW_TEST_CASE( RemoteCallTest, CallBodyRejectsTrailingBytesAndHugeArgumentCounts 
     SW_EXPECT_TRUE( NetHandleResult::Malformed == rig._server.handleMessage( rig._connectionID, arrTruncated, 2 ) );
     SW_EXPECT_EQUAL( uint64{ 0 }, rig._server.getStats()._invokedCount );
 }
+
+#include "TestRemoteCall.cpp.gen.inl"

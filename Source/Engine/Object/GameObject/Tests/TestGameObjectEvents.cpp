@@ -2,13 +2,56 @@
 // 컴포넌트가 사라지면 구독이 풀린다. 듣는 쪽이 없는 오브젝트는 묶음을 만들지 않는다(nogpu, 물리 없음).
 #include "pch.h"
 
+#include "Core/Container/vector.h"
+#include "Core/Delegate/Subscription.h"
+#include "Core/Foundation/Types.h"
 #include "Core/TestFramework/TestFramework.h"
 
+#include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectEvents.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/Tests/GameObjectEventsTestComponents.h"
+#include "Engine/Reflection/ReflectionMacros.h"
+
+namespace sw
+{
+    /** @brief 맞음 · 겹침 진입을 구독해 받은 차례를 남깁니다(파일 머리말). */
+    REFLECT( HideInMenu )
+    struct EventListenerTestComponent : public Component
+    {
+        REFLECT_BODY();
+
+        vector<uint32>* _pLog{ nullptr };          ///< 맞음을 받을 때마다 `_id` 를 넣는다(여러 컴포넌트가 함께 쓴다)
+        Subscription*   _pReleaseOnHit{ nullptr }; ///< 맞음을 받으면 풀 구독(자기 것 · 남의 것)
+        uint32          _id{ 0 };
+        uint32          _overlapBeginCount{ 0 };
+        Subscription    _hitSubscription;
+        Subscription    _overlapBeginSubscription;
+
+        void onRegister( GameObjectManager& manager ) override
+        {
+            Component::onRegister( manager );
+            _hitSubscription          = GameObjectEvents::listen<&EventListenerTestComponent::handleHit>( *this, &GameObjectEvents::_hitReceived );
+            _overlapBeginSubscription = GameObjectEvents::listen<&EventListenerTestComponent::handleOverlapBegin>( *this, &GameObjectEvents::_overlapBegin );
+        }
+
+        void handleHit( const HitInfo& hit )
+        {
+            (void)hit;
+            if ( _pLog != nullptr )
+                _pLog->push_back( _id );
+            if ( _pReleaseOnHit != nullptr )
+                _pReleaseOnHit->reset();
+        }
+
+        void handleOverlapBegin( const OverlapInfo& overlap )
+        {
+            (void)overlap;
+            ++_overlapBeginCount;
+        }
+    };
+} // namespace sw
 
 using namespace sw;
 
@@ -152,3 +195,5 @@ SW_TEST_CASE( GameObjectEventsTest, RemovedComponentReleasesItsSubscription )
     SW_EXPECT_FALSE( pObject->findEvents()->_hitReceived.isBound() );
     SW_EXPECT_FALSE( pObject->findEvents()->_overlapBegin.isBound() );
 }
+
+#include "TestGameObjectEvents.cpp.gen.inl"

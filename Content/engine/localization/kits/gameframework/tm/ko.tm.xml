@@ -1,0 +1,62 @@
+<?asset guid="70391dfe656a4d289417352ac47ddf4e"?>
+<TranslationMemory culture="ko">
+	<entries>
+		<entry source="A purchase is still in progress." text="구매가 아직 진행 중입니다." />
+		<entry source="Bought." text="구매했습니다." />
+		<entry source="Buy" text="구매" />
+		<entry source="Buy {item} for {price} {currency}?" text="{item}을(를) {price} {currency}에 구매할까요?" />
+		<entry source="Cancel" text="취소" />
+		<entry source="Canter" text="구보" />
+		<entry source="Choose where to put it." text="놓을 곳을 고르세요." />
+		<entry source="Confirm Purchase" text="구매 확인" />
+		<entry source="Could not reach the store. The wallet shows what the server holds."
+		       text="상점에 연결하지 못했습니다. 지갑에는 서버가 가진 값이 보입니다." />
+		<entry source="Done." text="완료했습니다." />
+		<entry source="Drop how many?" text="몇 개를 버릴까요?" />
+		<entry source="Gallop" text="질주" />
+		<entry source="Game saved" text="게임을 저장했습니다" />
+		<entry source="Load Failed" text="불러오기 실패" />
+		<entry source="Loading Failed" text="불러오기 실패" />
+		<entry source="Name" text="이름" />
+		<entry source="Not enough money." text="돈이 부족합니다." />
+		<entry source="Pause" text="일시정지" />
+		<entry source="Play" text="재생" />
+		<entry source="Purchasing..." text="구매 중..." />
+		<entry source="Reload" text="다시 불러오기" />
+		<entry source="Remove" text="지우기" />
+		<entry source="Save" text="저장" />
+		<entry source="Save Failed" text="저장 실패" />
+		<entry source="Sold out." text="품절입니다." />
+		<entry source="Split how many?" text="몇 개를 나눌까요?" />
+		<entry source="Standing" text="서 있음" />
+		<entry source="That amount is not possible." text="그 수량은 안 됩니다." />
+		<entry source="That slot cannot take it." text="그 칸에는 넣을 수 없습니다." />
+		<entry source="The game could not be saved. Try again, or keep playing without saving."
+		       text="게임을 저장하지 못했습니다. 다시 시도하거나 저장하지 않고 계속하세요." />
+		<entry source="The purchase reply did not match; your wallet was refreshed."
+		       text="구매 응답이 맞지 않아 지갑을 새로 고쳤습니다." />
+		<entry source="The saved game could not be loaded. Try again, or stay here."
+		       text="저장한 게임을 불러오지 못했습니다. 다시 시도하거나 지금 자리에 머무르세요." />
+		<entry source="The scene could not be opened. Try again, or stay here."
+		       text="장면을 열지 못했습니다. 다시 시도하거나 지금 자리에 머무르세요." />
+		<entry source="The slot is empty." text="빈 칸입니다." />
+		<entry source="This cannot be bought now." text="지금은 구매할 수 없습니다." />
+		<entry source="This cannot be used." text="사용할 수 없습니다." />
+		<entry source="Trot" text="속보" />
+		<entry source="Try Again" text="다시 시도" />
+		<entry source="Walk" text="평보" />
+		<entry source="You cannot buy this any more." text="더 이상 구매할 수 없습니다." />
+		<entry source="You cannot equip this there." text="그 자리에는 장착할 수 없습니다." />
+		<entry source="Your bag is full." text="가방이 가득 찼습니다." />
+		<entry source="draining" text="비우는 중" />
+		<entry source="maintenance" text="점검 중" />
+		<entry source="open" text="열림" />
+		<entry source="starting" text="시작 중" />
+		<entry source="{amount} {currency}" text="{amount} {currency}" />
+		<entry source="{item}  {price} {currency}" text="{item}  {price} {currency}" />
+		<entry source="{item} x{count}" text="{item} x{count}" />
+		<entry source="{offer}  ({stock})" text="{offer}  ({stock})" />
+		<entry source="{slot}: {item}" text="{slot}: {item}" />
+		<entry source="{stat} {value}" text="{stat} {value}" />
+	</entries>
+</TranslationMemory>

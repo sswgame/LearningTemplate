@@ -1,0 +1,66 @@
+<?asset guid="41ab2674fe5344a5bad4f20059be58ae"?>
+<TranslationMemory culture="ja">
+	<entries>
+		<entry source="(CPU only)" text="(CPU のみ)" />
+		<entry source="(None)" text="(なし)" />
+		<entry source="Add Item" text="項目を追加" />
+		<entry source="Add Modifier" text="モディファイアを追加" />
+		<entry source="Axis" text="軸" />
+		<entry source="Bake" text="ベイク" />
+		<entry source="CPU only (Recompute Normals)" text="CPU のみ (法線の再計算)" />
+		<entry source="CPU only:" text="CPU のみ:" />
+		<entry source="Center" text="中心" />
+		<entry source="Click to edit the curve" text="クリックしてカーブを編集" />
+		<entry source="Control Points" text="制御点" />
+		<entry source="Deformation preview lines of the mesh modifier stack, gizmos and range display with drag editing, picking and dragging lattice control points"
+		       text="メッシュモディファイアスタックの変形プレビュー線、ギズモと範囲表示のドラッグ編集、ラティス制御点の選択とドラッグ" />
+		<entry source="Depth" text="深さ" />
+		<entry source="Duplicate row" text="行を複製" />
+		<entry source="Edit this group's nested stack" text="このグループのネストされたスタックを編集" />
+		<entry source="Empty - add modifiers to group them."
+		       text="空です。モディファイアを追加してグループにします。" />
+		<entry source="Export as World Warp" text="ワールドワープとして書き出す" />
+		<entry source="Fit to Bounds" text="境界に合わせる" />
+		<entry source="Mirror" text="ミラー" />
+		<entry source="Modifiers" text="モディファイア" />
+		<entry source="Move row down" text="行を下へ移動" />
+		<entry source="Move row up" text="行を上へ移動" />
+		<entry source="Name" text="名前" />
+		<entry source="Nested Stack" text="ネストされたスタック" />
+		<entry source="No object has component:"
+		       text="次のコンポーネントを持つオブジェクトがありません:" />
+		<entry source="No target" text="対象なし" />
+		<entry source="Overlays, in another color, the result with only the modifiers up to the selected one applied (deformation influence preview)"
+		       text="選択したモディファイアまでを適用した結果を別色の線で重ねて描きます(変形の影響プレビュー)" />
+		<entry source="Play" text="再生" />
+		<entry source="Point" text="点" />
+		<entry source="Position" text="位置" />
+		<entry source="Preview Time" text="プレビュー時間" />
+		<entry source="Recompute Normals" text="法線の再計算" />
+		<entry source="Redo" text="やり直し" />
+		<entry source="Reference Object" text="参照オブジェクト" />
+		<entry source="Reload Stack" text="スタックを再読み込み" />
+		<entry source="Remove row" text="行を削除" />
+		<entry source="Reset Lattice" text="ラティスをリセット" />
+		<entry source="Reset Parameters" text="パラメーターをリセット" />
+		<entry source="Rotation" text="回転" />
+		<entry source="Save Stack" text="スタックを保存" />
+		<entry source="Save or reload the modifier stack before picking another mesh"
+		       text="ほかのメッシュを選ぶ前にモディファイアスタックを保存するか再読み込みしてください" />
+		<entry source="Select a modifier in the stack."
+		       text="スタックからモディファイアを選択してください。" />
+		<entry source="Select an object whose mesh component uses a .mesh asset, then press Use Selection."
+		       text="メッシュコンポーネントが .mesh アセットを使うオブジェクトを選択し、「選択を使用」を押してください。" />
+		<entry source="Shade the target mesh with the stack result. Runs on a compute shader when every enabled modifier supports it, otherwise the CPU result is uploaded as vertices. Off leaves the original mesh and the wire preview."
+		       text="スタックの結果で対象メッシュをシェーディングします。有効なモディファイアがすべて対応していればコンピュートシェーダーで実行し、そうでなければ CPU の結果を頂点としてアップロードします。オフにすると元のメッシュとワイヤープレビューのままです。" />
+		<entry source="Shaded Preview" text="シェーディングプレビュー" />
+		<entry source="Stage" text="ステージ" />
+		<entry source="The target object no longer exists."
+		       text="対象のオブジェクトはもう存在しません。" />
+		<entry source="Undo" text="元に戻す" />
+		<entry source="Up" text="上" />
+		<entry source="Use Selection" text="選択を使用" />
+		<entry source="Warp File (.mfwarp)" text="ワープファイル (.mfwarp)" />
+		<entry source="World Space" text="ワールド空間" />
+	</entries>
+</TranslationMemory>

@@ -1,0 +1,82 @@
+<?asset guid="042b85753eff4fecac75ee6f9b24a267"?>
+<TranslationTable culture="ko">
+	<entries>
+		<entry key="EdPlugin.Name" text="이름" sourceHash="ef49aec68fd1dc66" />
+		<entry key="EdPlugin.Reload" text="다시 읽기" sourceHash="d5b6130b4937488c" />
+		<entry key="EdPlugin.Remove" text="제거" sourceHash="ea4f08110bb8f15d" />
+		<entry key="EdPlugin.Save" text="저장" sourceHash="33f85f24c0f5f008" />
+		<entry key="Enum.InventoryCommandResult.EmptySlot" text="빈 칸입니다." sourceHash="b56cc9d513099dfd" />
+		<entry key="Enum.InventoryCommandResult.InvalidCount"
+		       text="그 수량은 안 됩니다."
+		       sourceHash="e710ff918fd580da" />
+		<entry key="Enum.InventoryCommandResult.InvalidSlot"
+		       text="그 칸에는 넣을 수 없습니다."
+		       sourceHash="af46c51eb2b0ce83" />
+		<entry key="Enum.InventoryCommandResult.NoRoom" text="가방이 가득 찼습니다." sourceHash="3034de0a57eb2551" />
+		<entry key="Enum.InventoryCommandResult.NotUsable" text="사용할 수 없습니다." sourceHash="fee7c8ce0b060e74" />
+		<entry key="Enum.InventoryCommandResult.Ok" text="완료했습니다." sourceHash="7301570d0bb8fc6d" />
+		<entry key="Enum.InventoryCommandResult.Refused"
+		       text="그 자리에는 장착할 수 없습니다."
+		       sourceHash="e65da3e12aa85757" />
+		<entry key="Enum.MountGait.Canter" text="구보" sourceHash="8ddeb8be59f30f00" />
+		<entry key="Enum.MountGait.Gallop" text="질주" sourceHash="5080657618a7ac4a" />
+		<entry key="Enum.MountGait.Idle" text="서 있음" sourceHash="989261d5eefc4735" />
+		<entry key="Enum.MountGait.Trot" text="속보" sourceHash="85c8a4fb52a15fd0" />
+		<entry key="Enum.MountGait.Walk" text="평보" sourceHash="8904bd022d8e7e10" />
+		<entry key="Enum.ServerState.Draining" text="비우는 중" sourceHash="445341bdde0ebac7" />
+		<entry key="Enum.ServerState.Maintenance" text="점검 중" sourceHash="9e7f28b2e900e4a0" />
+		<entry key="Enum.ServerState.Open" text="열림" sourceHash="f84f97b4633670e9" />
+		<entry key="Enum.ServerState.Starting" text="시작 중" sourceHash="44c11cb1fc7fca39" />
+		<entry key="Enum.ShopPurchaseStatus.Busy"
+		       text="구매가 아직 진행 중입니다."
+		       sourceHash="839e3be6e938c8ed" />
+		<entry key="Enum.ShopPurchaseStatus.LimitReached"
+		       text="더 이상 구매할 수 없습니다."
+		       sourceHash="90b45ac5c64d58fe" />
+		<entry key="Enum.ShopPurchaseStatus.NoRoom" text="가방이 가득 찼습니다." sourceHash="3034de0a57eb2551" />
+		<entry key="Enum.ShopPurchaseStatus.NotEnoughMoney" text="돈이 부족합니다." sourceHash="7d5f2b96ea36e02c" />
+		<entry key="Enum.ShopPurchaseStatus.OutOfStock" text="품절입니다." sourceHash="53429c9af9f7338b" />
+		<entry key="Enum.ShopPurchaseStatus.Rejected"
+		       text="지금은 구매할 수 없습니다."
+		       sourceHash="cc4a444b068922aa" />
+		<entry key="Enum.ShopPurchaseStatus.ServerError"
+		       text="상점에 연결하지 못했습니다. 지갑에는 서버가 가진 값이 보입니다."
+		       sourceHash="7894b59a4b718b86" />
+		<entry key="Enum.ShopPurchaseStatus.Succeeded" text="구매했습니다." sourceHash="7eba7cbbd2693250" />
+		<entry key="Enum.ShopPurchaseStatus.Unverified"
+		       text="구매 응답이 맞지 않아 지갑을 새로 고쳤습니다."
+		       sourceHash="ccfce3ecd112ddfe" />
+		<entry key="Inventory.DropTitle" text="몇 개를 버릴까요?" sourceHash="5851b629b00886c2" />
+		<entry key="Inventory.EquipLine" text="{slot}: {item}" sourceHash="49a515e2a7dc7316" />
+		<entry key="Inventory.ItemCount" text="{item} x{count}" sourceHash="35b4cb38ae71afeb" />
+		<entry key="Inventory.Picked" text="놓을 곳을 고르세요." sourceHash="76033ca89d70f4b0" />
+		<entry key="Inventory.SplitTitle" text="몇 개를 나눌까요?" sourceHash="009e2ff8de6bc491" />
+		<entry key="Inventory.StatLine" text="{stat} {value}" sourceHash="ed0016c573032a8a" />
+		<entry key="Notification.GameSaved" text="게임을 저장했습니다" sourceHash="820b2b70b4c9f0c4" />
+		<entry key="ReplayBar.Pause" text="일시정지" sourceHash="061cc20e3432dead" />
+		<entry key="ReplayBar.Play" text="재생" sourceHash="cd105819b5a10243" />
+		<entry key="SaveGame.LoadFailedMessage"
+		       text="저장한 게임을 불러오지 못했습니다. 다시 시도하거나 지금 자리에 머무르세요."
+		       sourceHash="1fb3e376c989cf8a" />
+		<entry key="SaveGame.LoadFailedTitle" text="불러오기 실패" sourceHash="6b42d98464d12106" />
+		<entry key="SaveGame.SaveFailedMessage"
+		       text="게임을 저장하지 못했습니다. 다시 시도하거나 저장하지 않고 계속하세요."
+		       sourceHash="f0f3bf3daa3561bd" />
+		<entry key="SaveGame.SaveFailedTitle" text="저장 실패" sourceHash="9d65377afdfb1d2d" />
+		<entry key="SceneLoad.FailedMessage"
+		       text="장면을 열지 못했습니다. 다시 시도하거나 지금 자리에 머무르세요."
+		       sourceHash="2422111a96377ee9" />
+		<entry key="SceneLoad.FailedTitle" text="불러오기 실패" sourceHash="3b0d43abf06f4ac4" />
+		<entry key="SceneLoad.Retry" text="다시 시도" sourceHash="8cdcbe65c5e46f7a" />
+		<entry key="Shop.BalanceLine" text="{amount} {currency}" sourceHash="cc7c013f5ab43d0a" />
+		<entry key="Shop.ConfirmAccept" text="구매" sourceHash="166a4319b11387ab" />
+		<entry key="Shop.ConfirmCancel" text="취소" sourceHash="2ceb11be2290bb1b" />
+		<entry key="Shop.ConfirmMessage"
+		       text="{item}을(를) {price} {currency}에 구매할까요?"
+		       sourceHash="ea9754ab6e1a7ebc" />
+		<entry key="Shop.ConfirmTitle" text="구매 확인" sourceHash="e3d3f829c35e7d0a" />
+		<entry key="Shop.OfferRow" text="{item}  {price} {currency}" sourceHash="fb8403757162871e" />
+		<entry key="Shop.OfferRowStock" text="{offer}  ({stock})" sourceHash="97981f7eb4dc983a" />
+		<entry key="Shop.Purchasing" text="구매 중..." sourceHash="4c1549e91d83c479" />
+	</entries>
+</TranslationTable>

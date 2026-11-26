@@ -3,8 +3,15 @@
 #include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 
 #include "Engine/Foundation/EngineScope.h"
+#include "Engine/Localization/LocalizationManager.h"
 
 #include "GameFramework/GameFrameworkExports.h"
+
+namespace sw
+{
+    // GameFramework 의 Runtime · Client 글(엔진 현지화 폴더의 `kits/gameframework/`) — 이 모듈이 올라온 동안 조회 사슬에 든다(언리얼 플러그인 현지화 타깃)
+    SW_LOCALIZATION_PROJECT( GameFrameworkText, "engine/localization/kits/gameframework/gameframework.locproject.xml" );
+} // namespace sw
 
 namespace sw
 {

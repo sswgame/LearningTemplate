@@ -18,12 +18,19 @@
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Localization/LocText.h"
+#include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Localization/TextFormatter.h"
 #include "Engine/Reflection/EnumName.h"
 
 #include "GameFramework/Plugin/Editor/CameraPresets/Model/CameraPresetViewModel.h"
 
 #include <imgui.h>
+
+namespace sw
+{
+    // 에디터 확장 CameraPresets 의 글(엔진 현지화 폴더의 `editorplugins/camerapresets/`) — 이 모듈이 올라온 동안만 조회 사슬에 든다. 배포 팩에 담지 않는다.
+    SW_LOCALIZATION_PROJECT( EditorPluginCameraPresetsText, "engine/localization/editorplugins/camerapresets/camerapresets.locproject.xml" );
+} // namespace sw
 
 namespace sw::editor
 {

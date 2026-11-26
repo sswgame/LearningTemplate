@@ -19,12 +19,19 @@
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Localization/LocText.h"
+#include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Localization/TextFormatter.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
 
 #include "GameFramework/Plugin/Editor/GameplayTools/Ability/Model/AbilityCatalogEditModel.h"
 
 #include <imgui.h>
+
+namespace sw
+{
+    // 에디터 확장 GameplayTools 의 글(엔진 현지화 폴더의 `editorplugins/gameplaytools/`) — 이 모듈이 올라온 동안만 조회 사슬에 든다. 배포 팩에 담지 않는다.
+    SW_LOCALIZATION_PROJECT( EditorPluginGameplayToolsText, "engine/localization/editorplugins/gameplaytools/gameplaytools.locproject.xml" );
+} // namespace sw
 
 namespace sw::editor
 {

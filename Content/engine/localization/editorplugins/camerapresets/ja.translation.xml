@@ -1,0 +1,21 @@
+<?asset guid="ca672e15c17740f0a1b3581456dcb2b5"?>
+<TranslationTable culture="ja">
+	<entries>
+		<entry key="EdPlugin.OpenACamerasXmlPresetFileToSee"
+		       text=".cameras.xml プリセットファイルを開くとここにカメラが表示されます。プリセットの編集はカタログエディタで行います。"
+		       sourceHash="ea9be68785b441fa" />
+		<entry key="EdPlugin.OrthographicPresetThePreviewDrawsItInPerspective"
+		       text="平行投影プリセット — プレビューは透視で描きます。"
+		       sourceHash="6eb50dde8e0f5da3" />
+		<entry key="EdPluginField.TargetYaw" text="ターゲットのヨー" sourceHash="69738f942ae83a53" />
+		<entry key="EdPluginFormat.OffsetDistancePitchYaw"
+		       text="オフセット {offsetX}, {offsetY}, {offsetZ}  距離 {distance}  ピッチ {pitch}  ヨー {yaw}  視野角 {computeFieldOfViewY}"
+		       sourceHash="d7b0b245eda7fa25" />
+		<entry key="EdPluginTip.DirectionTheTargetFacesFollowFirstPersonAnd"
+		       text="ターゲットの向き — Follow・FirstPerson・ThirdPerson プリセットが追従して回ります"
+		       sourceHash="1dad881dfe0f6d30" />
+		<entry key="EdPluginTip.ReadThePresetFileAgainAfterSaving"
+		       text="プリセットファイルを再読み込みします(カタログエディタで保存した後)"
+		       sourceHash="ba264efc63dd60bd" />
+	</entries>
+</TranslationTable>
