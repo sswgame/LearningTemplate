@@ -5,7 +5,7 @@
 
 #include "Engine/Server/ServerKitDirectory.h"
 
-// 서버 키트 창구 — 서버 서비스가 선 동안만 키트 범위를 보이고, 내려가면(리로드 · stopAll) 비어 게임이 매달린 범위를 보지 않는다.
+// 서버 키트 창구 — 서버 서비스가 선 동안만 키트 범위를 보이고, 내려가면(리로드 · stopService) 비어 게임이 매달린 범위를 보지 않는다.
 
 using namespace sw;
 
