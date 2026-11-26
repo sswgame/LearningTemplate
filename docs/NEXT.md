@@ -12,33 +12,28 @@
 - `[코드]` 는 빌드 없이 지금 짤 수 있는 일, 나머지는 실행 · 실기기 · 계정이 있어야 한다.
 - 맡긴 갈래는 아래 표에 있는 동안 다른 작업자에게 다시 주지 않는다. 합쳐 push 하면 그 줄을 지운다.
 
-### 통합 중(main, push 전)
+### 통합 중
 
-- 합친 것: .cpp 리플렉션 · 모듈 PCH(1535cc90ef) · 헤더만 읽던 도구, Core 정리, 렌더 데이터 R1~R4 · R4 나머지(쿠킹 단계 스트리핑 · 머티리얼 색인 층 · `matfind`), E1~E5 · H1~H4 · D1a · D1b · G2 · P1~P4, Enum 메타 · 키트 현지화 프로젝트, GameFramework 개발 코드 분리 · 배포 매크로 오류, DevTools 합치기 · 키트 Editor 글 표, 서버 서비스 모듈 서브시스템 · `_bOnlineServices`, 셰이더 리로드 · 데이터 철자 열거 6 건, ReflectionParser 정리.
-- 남은 검증: preflight(렌더 골든 네 백엔드) → push. 세 구성 빌드 · 단위 · 파서 · Scripts 테스트 · `App -gather-text`(공유 에디터 키는 editorplugincommon) 는 통과했다.
-- 모듈 PCH 는 쟀고 남긴다(최대 12.0→9.6 초, 스레드 합 parse 300.8→210.4 초). visit 8.8→31.3 초 · 작은 키트 굽기 손해는 w-cpp-reflect 몫.
-- 그림 확인: 카메라 흔들림 · 메시 모디파이어 노이즈, RigIK 정반대 방향(-q), TAA · 구름 기록 칸, 파이프라인 선택 경로, 픽셀 마을 스프라이트 이름(`walk_Down`).
+- main(push 전, preflight 중): .cpp 리플렉션 · 모듈 PCH · Core 정리 · 렌더 데이터 R1~R4 · E1~E5 · H1~H4 · D1 · G2 · P1~P4 · Enum 메타 · 키트 현지화 · GameFramework 개발 코드 분리 · DevTools 합치기 · 서버 서비스 서브시스템 · 셰이더 리로드 · 현지화 수집(공유 에디터 키 editorplugincommon). 통과하면 `WINDOWS_OK` sha 를 push 하고 합친 워크트리 일곱(enum-meta · gf-dev · server-subsystem · engine-owner · core-lift · render-data · 이 넷)을 지운다.
+- 다음 묶음(통합 워크트리 LT-wt/integrate, 갈래 w-integrate d8a97b9c4e — shaderreload b58d3c91df · pimpl d7a634aef5 · cpp-reflect ba567aadce · devtools-merge ecdb7080f6, 충돌 없음): push 뒤 main 으로 옮겨 세 구성 빌드 · 테스트 → `App --import-models --import-textures --import-heightfields -unattended` 로 원본 .meta 약 1486 개 채우고 `py -3 -m Scripts asset-ids` 확인 뒤 커밋 → 파서를 다시 잰다(이름공간 건너뛰기 f443d780ea 는 PCH 없이 251.5 초로 느렸다 — 다시 느리면 되돌리고, PCH 문턱 4 는 GF_NetDestruction · GF_Overworld · GF_Server_Admin total 로 정한다) → preflight.
+- 그림 확인: 카메라 흔들림 · 메시 모디파이어 노이즈, RigIK 정반대 방향(-q), TAA · 구름 기록 칸, 파이프라인 선택 경로, 픽셀 마을 스프라이트 이름(`walk_Down`), 메모리 추적기 · 로그 글 철자(`Allocation size` 등).
 - 판단 남음: TAA 출력의 앨리어싱 제외를 지울지(`-gv_transientAliasing=0` 비교).
 
-### 맡긴 갈래(작업 중)
+### 맡긴 일(작업 중)
 
-| 갈래 · 워크트리 | 몫 |
+| 누가 | 몫 |
 | --- | --- |
-| w-shaderreload · LT-wt/shaderreload | 끝(b58d3c91df — 열거형 여섯을 `ENUM()` 으로) — 다음 묶음에 합친다 |
-| w-pimpl · LT-wt/pimpl | 끝(d7a634aef5 — .meta 산출물 표) — 다음 묶음에 합친다. 합친 뒤 `App --import-models --import-textures --import-heightfields -unattended` 로 원본 .meta 약 1486 개를 채우고 `py -3 -m Scripts asset-ids` 확인 뒤 커밋 |
-| w-cpp-reflect · LT-wt/cppreflect | 끝(…ba567aadce — ReadValidate 분리, 이름공간 건너뛰기 복원, PCH 문턱 4) — 다음 묶음에 합친다. 합친 뒤 파서를 다시 잰다(앞서 건너뛰기는 PCH 없이 251.5 초로 느려 되돌렸다 — 다시 느리면 f443d780ea 를 되돌린다, 문턱은 GF_NetDestruction · GF_Overworld · GF_Server_Admin total 로 정한다) |
-
-나머지 갈래(enum-meta · gf-dev · devtools-merge · server-subsystem · engine-owner · core-lift · render-data)는 main 에 합쳤다. push 뒤 워크트리를 지운다.
+| 에셋 받기 | 두 카탈로그(tmhsdigital Free-Game-Dev-Assets · skyzhao1223 free-for-creators)에서 CC0 · 공개 라이선스만, 원본 페이지에서 라이선스 확인 뒤 `/AssetLibrary/<출처>/<묶음>/` 에(저장소 밖, INDEX.md). 쓸 때만 `Content/common/*_raw/` 로 옮기고 credits 에 적는다 |
 
 ### 아직 아무도 맡지 않은 몫 [코드]
 
-- AssertDialog 합치기 — 사용자에게 물을 것.
+- 10 절 이름 · 폴더 바로잡기 1 물결(다음 묶음을 push 한 main 에서 시작).
 
 ## 1. 다음 순서
 
 1. 2 절 통합 실행 → 3 절 Linux.
 2. 8 절 데이터 이전.
-3. 5 · 6 · 10 절 `[코드]` 줄을 갈래로 나눠 병렬로.
+3. 10 절 이름 · 폴더 바로잡기(물결 차례), 5 · 6 절 `[코드]` 줄을 갈래로 나눠 병렬로.
 
 ## 2. 통합 빌드에서 볼 것
 
@@ -101,6 +96,17 @@
 - **P-4 [14] Android IME 조합:** 실기기(4 절).
 - **O-12 [30] 원장 경로 부하:** PostgreSQL · RESP 로 `OnlineLoadBot` `ledger_mix`(`--store-config=Config/Server/Online/Playground.external.json`) — 재시도 · busy · 버린 도착 수. 종료 코드 5 는 재화 보존 깨짐.
 - **A-13 [36] · K-11 [50]:** 2 절.
+
+## 10. 이름 · 폴더 바로잡기
+
+조사 여섯(Core · Engine 둘 · GameFramework · Editor · Scripts/CMake)을 합쳐 판정했다. 기준: 이름은 기전으로, 한 개념에는 저장소 전체(C++ · 파이썬 · CMake · 데이터)에서 낱말 하나. 묶음마다 옛 → 새 쌍을 `Config/Rules/Renames/<묶음>.json` 에 두고 `rename-symbol --pairs` · `move-source` · `move-asset` 으로 바꾸며, 병합 뒤 `--reapply` 로 맞춘다. 옛 이름은 `_bannedNames` 에.
+
+- 낱말 결정: Def(데이터 저작) · Desc(생성 · 등록 서술, 생성 상수 표) · Info(정적 사실) · Spec(GAS 뜻만) · Params. Config · Settings · Preferences(에디터 사용자 환경). Manager(집합 수명) · Controller(FSM 하나) · Subsystem. 온라인 끝점 Service · 업무 Logic · 프로세스 Server. HotReload(Live 금지). layer(tier 금지) · guard/allow(gate · stub · ban · open 금지). require(멈춤) · validate(오류 반환) · check(CMake 탐지만). Asset · Content · Resource(GPU 만). Digest(Fingerprint 금지). Schema(배치 표) · Codec(부호화가 있을 때만). Layout(옛 Fixed). Cache(옛 Ephemeral). Simulation(한 판 규칙, World 는 공간만). NetEmulation. OutputLog. GUID 하나(옛 UUID — 글 표기는 소문자 16진 32 자).
+- 사용자 결정(2026-11-27): GlobalVariable 은 그대로(낱말 표에 까닭 한 줄). Gimmick → LogicCircuit · 폴더 Gameplay/Mechanism(콘텐츠 63 move-asset). 훅 ToolPolicyRules.json 의 명령 이름 맞추기와 새 헤더 경로 규칙은 고쳐도 된다.
+- 1 물결(병렬): N1 Fixed* → Layout*(FixedCodec → LayoutSchema, FixedLayout → LayoutSerializer …) · FormatDef → FormatDesc · Serialization 폴더(Serializer · Format · Reference · XML · Layout) · ReflectionParser 폴더(Config · Parse · TypeMap · Emit · Run). N3 그래픽(FrameBufferTable → RenderGraphImportedResourceTable, FramePassExecutor → FrameRecorder, FrameGraphExecutor → FramePassRecorder, RenderPass* → RenderFeature* 와 renderpass XML, RHIDescriptors.h 나누기 …). N5 에디터(HotReload · Preferences · PropertyGrid · NetEmulation · EditModel/ViewModel · Workspace 하위 폴더 · Panels/Settings 나누기 …). N6 GameFramework(온라인 Service/Logic, LocalStore Backend/Factory, *World → *Simulation, EphemeralStore → CacheStore, Severing → Dismember, Foundation/Service → Subsystem …). N7 Core(ILogSink → ILogBackend · Log/Output, BusyClock, CommandLineManager → CommandLine, NetTypes · TaskTypes 나누기 …). N8a 스크립트 · CMake(명령 pack → package · linux-scenarios → linux-verify …, ExitCode, sw_verify/check → sw_require, Scripts/dev → verify · refactor · scaffold · content, net → sessions, lint/rules …).
+- 2 물결: N2 Desc/Def/Spec 접미어. N4 Resource → Asset(+Serialization/Compose, `sw::UUID` → `sw::GUID` 와 AssetGUID 가 그것을 듦, 씬 uuid 칸 5 파일 이전). N10 Digest. N9 Gimmick → LogicCircuit.
+- 3 물결: N8b 층 낱말(tier → layer, stub/gate/ban/open → guard/allow — 폴더 이동이 끝난 뒤 층 표를 한 번만). N11 재발 방지(파일 이름 = 주 형식, 명령 이름 = 파일 이름, 금지어를 파이썬 · CMake 에도, `_bannedPhrases`, `_scopedWords`, 접미어 모양, `_bannedFileStems`, CMake 동사 표, `_concepts` 개념표, 새 헤더 경로 훅).
+- 그대로: GameObjectManager · Kit · GameFeature · EditorContext · Engine/Reflection 평평한 폴더 · Graphics/RHI 뿌리 · Window/Windows · RHI/GL · DX · Graphics/DebugDraw · Content/ 대 Asset/.
 
 ## 11. 리소스
 
