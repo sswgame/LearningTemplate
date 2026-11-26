@@ -73,3 +73,38 @@ SW_TEST_CASE( ReloadTrackerTest, CapacityEvictsOldest )
         SW_EXPECT_TRUE( entry._path != "game/0" );
     }
 }
+
+/**
+ * @brief [ReloadTrackerTest] 묶음 리로드는 경로마다 가장 나쁜 결과 하나를 적는다 — 같은 파일의 변형 하나가 실패하면 다른 변형이 바이트가 같아도 그 파일은 낡았다
+ * @details 결함: 셰이더 재컴파일이 변형마다 결과를 적어, 픽셀 셰이더의 실패 뒤에 바이트가 같은 정점 셰이더가 낡음을 풀었다(shaderreload 시나리오 Reload.StaleCount 0).
+ */
+SW_TEST_CASE( ReloadTrackerTest, BatchFoldsVariantsPerPath )
+{
+    ReloadTracker tracker;
+    tracker.recordBatch( ReloadSource::Shader, {
+                                                   ReloadBatchResult{"scratch/s/shaders/glow.hlsl", "PSMain: undeclared\nmore",    ReloadBatchResultKind::Failed},
+                                                   ReloadBatchResult{"scratch/s/shaders/glow.hlsl",                         {}, ReloadBatchResultKind::Unchanged},
+                                                   ReloadBatchResult{  "engine/shaders/other.hlsl",                         {}, ReloadBatchResultKind::Unchanged}
+    } );
+    SW_EXPECT_TRUE( tracker.isStale( ReloadSource::Shader, "scratch/s/shaders/glow.hlsl" ) );
+    SW_EXPECT_EQUAL( uint32( 1 ), tracker.countStale() );
+    SW_EXPECT_EQUAL( uint32( 1 ), tracker.getFailedCount() );                        // 파일 하나의 실패다
+    SW_EXPECT_EQUAL( uint32( 1 ), tracker.getAttemptCount( ReloadSource::Shader ) ); // 바뀌지 않은 낡지 않은 파일은 적지 않는다
+    vector<ReloadTrackerEntry> listEntry = tracker.copyEntries();
+    SW_REQUIRE_EQUAL( size_t( 1 ), listEntry.size() );
+    SW_EXPECT_EQUAL( string( "PSMain: undeclared" ), listEntry[0]._reason );
+
+    // 되돌리면 변형이 모두 이전 바이트와 같다 — 낡음이 풀린다.
+    tracker.recordBatch( ReloadSource::Shader, {
+                                                   ReloadBatchResult{"scratch/s/shaders/glow.hlsl", {}, ReloadBatchResultKind::Unchanged},
+                                                   ReloadBatchResult{"scratch/s/shaders/glow.hlsl", {}, ReloadBatchResultKind::Unchanged}
+    } );
+    SW_EXPECT_EQUAL( uint32( 0 ), tracker.countStale() );
+
+    // 바뀐 변형과 실패한 변형이 섞이면 실패다.
+    tracker.recordBatch( ReloadSource::Shader, {
+                                                   ReloadBatchResult{"scratch/s/shaders/glow.hlsl",            {}, ReloadBatchResultKind::Reloaded},
+                                                   ReloadBatchResult{"scratch/s/shaders/glow.hlsl", "VSMain: bad",   ReloadBatchResultKind::Failed}
+    } );
+    SW_EXPECT_TRUE( tracker.isStale( ReloadSource::Shader, "scratch/s/shaders/glow.hlsl" ) );
+}

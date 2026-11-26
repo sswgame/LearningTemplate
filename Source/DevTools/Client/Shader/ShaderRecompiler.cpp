@@ -111,12 +111,14 @@ namespace sw
             _listPendingReload.clear();
         }
 
-        const float64        startSeconds = MonotonicClock::nowSeconds();
-        ShaderCache&         shaderCache  = engine::getSubsystem<ShaderCache>();
-        vector<string>       listChangedPath;
-        uint32               changed  = 0;
-        uint32               failed   = 0;
-        ReloadTracker* const pTracker = engine::findSubsystem<ReloadTracker>();
+        const float64             startSeconds = MonotonicClock::nowSeconds();
+        ShaderCache&              shaderCache  = engine::getSubsystem<ShaderCache>();
+        vector<string>            listChangedPath;
+        uint32                    changed  = 0;
+        uint32                    failed   = 0;
+        ReloadTracker* const      pTracker = engine::findSubsystem<ReloadTracker>();
+        vector<ReloadBatchResult> listReloadResult; // 변형마다의 결과 — 묶음 끝에 파일마다 한 번 적는다(`ReloadTracker::recordBatch`)
+        listReloadResult.reserve( listToCompile.size() );
         // 셰이더 DDC 는 켜 둔 채로 돈다. 소스가 안 바뀐 셰이더는 컴파일러 안에서 DDC 에 맞아 컴파일러를
         // 타지 않는다. DDC 항목은 소스와 자기가 연 헤더의 내용(의존 기록)을 보므로, 바뀐 헤더를
         // 연 셰이더만 실제로 다시 컴파일된다. 한 번에 묶어 워커에서 컴파일한다 — 공용 헤더를 고치면 수백 개가 낡아, 하나씩 하면 게임 스레드가 그 합만큼 멈춘다.
@@ -140,8 +142,7 @@ namespace sw
             if ( newResult._bSuccess == false )
             {
                 ++failed;
-                if ( pTracker != nullptr )
-                    pTracker->record( ReloadSource::Shader, desc._source.str(), ReloadResult::Failed, newResult._errorMessage );
+                listReloadResult.push_back( ReloadBatchResult{ desc._source.str(), newResult._errorMessage, ReloadBatchResultKind::Failed } );
                 SW_LOG_ERROR_ID( "ShaderRecompiler.ShaderReloadFailedEntry", "Shader reload failed for %# (Entry: %#):\n%#",
                                  desc._source.c_str(), desc._entryPoint.c_str(), newResult._errorMessage.c_str() );
                 continue;
@@ -153,9 +154,7 @@ namespace sw
             const bool    bBytesChanged = shaderCache.findCachedBytecode( desc, previousBytecode ) == false || previousBytecode != newResult._bytecode;
             if ( bBytesChanged == false )
             {
-                // 같은 바이트는 갱신으로 세지 않지만, 앞 묶음에서 깨졌던 파일을 되돌린 것이면 낡음을 푼다(되돌린 원본은 캐시 바이트와 같다).
-                if ( pTracker != nullptr && pTracker->isStale( ReloadSource::Shader, desc._source.str() ) )
-                    pTracker->record( ReloadSource::Shader, desc._source.str(), ReloadResult::Reloaded );
+                listReloadResult.push_back( ReloadBatchResult{ desc._source.str(), {}, ReloadBatchResultKind::Unchanged } );
                 continue;
             }
 
@@ -163,11 +162,11 @@ namespace sw
             if ( shaderCache.replaceCompiled( desc, newResult ) == false )
             {
                 ++failed;
+                listReloadResult.push_back( ReloadBatchResult{ desc._source.str(), "the shader cache did not take the new bytecode", ReloadBatchResultKind::Failed } );
                 continue;
             }
             ++changed;
-            if ( pTracker != nullptr )
-                pTracker->record( ReloadSource::Shader, desc._source.str(), ReloadResult::Reloaded );
+            listReloadResult.push_back( ReloadBatchResult{ desc._source.str(), {}, ReloadBatchResultKind::Reloaded } );
             listChangedPath.emplace_back( desc._source.str() );
         }
 
@@ -182,7 +181,10 @@ namespace sw
             _onAnyRecompiled.get()( listChangedPath );
 
         if ( pTracker != nullptr )
+        {
+            pTracker->recordBatch( ReloadSource::Shader, listReloadResult );
             pTracker->recordElapsed( ReloadSource::Shader, ( MonotonicClock::nowSeconds() - startSeconds ) * static_cast<float64>( constant::time::kMillisecondsPerSecond ) );
+        }
         _completedPassCount.fetch_add( 1, std::memory_order_release );
         SW_LOG_INFO_ID( "ShaderRecompiler.ShaderReloadCheckedUpdated", "Shader reload: %# checked, %# updated, %# failed.",
                         static_cast<uint32>( listToCompile.size() ), changed, failed );
