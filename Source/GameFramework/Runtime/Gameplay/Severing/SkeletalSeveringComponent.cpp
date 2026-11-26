@@ -21,8 +21,6 @@
 #include "Engine/Object/GameObject/Tick/TickContext.h"
 #include "Engine/Physics/Asset/PhysicsAsset.h"
 #include "Engine/Physics/Component/RigidBodyComponent.h"
-#include "Engine/Physics/Scene/PhysicsNameValidation.h"
-#include "Engine/Reflection/ReflectionValidation.h"
 #include "Engine/Visual/Component/MeshComponent.h"
 
 #include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
@@ -548,18 +546,5 @@ namespace sw
                              pOwner->getName().c_str(), static_cast<uint32>( getRegions().size() ), _regionTablePath.c_str(), region.c_str() );
         else
             (void)pSurface->setRegionValue( regionIndex, _severedSurfaceChannel, 1.0f );
-    }
-} // namespace sw
-
-namespace sw
-{
-    void SkeletalSeveringComponent::validatePieceLayer( ValidationContext& context ) const
-    {
-        PhysicsNameValidation::validateLayer( context, "_pieceLayer", _pieceLayer );
-    }
-
-    void SkeletalSeveringComponent::validatePieceMaterial( ValidationContext& context ) const
-    {
-        PhysicsNameValidation::validateMaterial( context, "_pieceMaterial", _pieceMaterial );
     }
 } // namespace sw

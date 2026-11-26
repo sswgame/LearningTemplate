@@ -90,7 +90,7 @@ namespace sw
      *          롤백 키트는 고정 배치형(`FixedLayout`)으로, 세이브는 자기 기술형(`BinarySerializer`)으로 싣는다.
      *          설정(`_settings`)은 `initialize` 가 주는 값이라 싣지 않는다. 참가자 수 대조는 싣는 키트가 한다.
      */
-    REFLECT( Validate = validateState )
+    REFLECT( ReadValidate = validateState )
     class SW_GF_API RoundSeries
     {
     public:
@@ -128,7 +128,7 @@ namespace sw
         int32 getWinner() const { return _winner; }
         int32 getParticipantCount() const { return static_cast<int32>( _listTotal.size() ); }
         int32 getTotal( int32 participant ) const;
-        /** @brief 읽은 우승자가 참가자 안에 있는지 봅니다(`REFLECT( Validate )`). */
+        /** @brief 읽은 우승자가 참가자 안에 있는지 봅니다(`REFLECT( ReadValidate )`). */
         void validateState( ValidationContext& context ) const;
 
     private:

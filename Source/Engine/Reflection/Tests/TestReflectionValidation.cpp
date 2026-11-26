@@ -25,7 +25,7 @@ namespace
 } // namespace
 
 /**
- * @brief [ReflectionValidationTest] 프로퍼티 · 타입 검증이 돌고, 값 구조체와 그 시퀀스의 원소까지 내려간다 — 결과는 타입 · 프로퍼티 이름을 단다
+ * @brief [ReflectionValidationTest] 프로퍼티 검증이 돌고, 값 구조체와 그 시퀀스의 원소까지 내려간다 — 결과는 타입 · 프로퍼티 이름을 단다
  */
 SW_TEST_CASE( ReflectionValidationTest, ValidatorsRunOnPropertiesTypesAndNestedValues )
 {
@@ -63,7 +63,7 @@ SW_TEST_CASE( ReflectionValidationTest, ValidatorsRunOnPropertiesTypesAndNestedV
             SW_EXPECT_TRUE( issue._propertyName == sw::hashed_string( "_name" ) );
         }
         if ( issue._message == "min is greater than max" )
-            SW_EXPECT_TRUE( issue._propertyName.empty() );
+            SW_EXPECT_TRUE( issue._propertyName == sw::hashed_string( "_max" ) );
     }
 
     // 검증 함수는 상속된다
@@ -78,6 +78,41 @@ SW_TEST_CASE( ReflectionValidationTest, ValidatorsRunOnPropertiesTypesAndNestedV
     const sw::TypeInfo* pPlain = sw::SampleTestActor::StaticType();
     SW_REQUIRE_NOT_NULL( pPlain );
     SW_EXPECT_FALSE( sw::ReflectionValidation::hasValidator( *pPlain ) );
+}
+
+/**
+ * @brief [ReflectionValidationTest] 읽기 검사(`REFLECT( ReadValidate )`)는 프로퍼티 범위 없이 돌고 상속된다 — 에디터 검증(`validateObject`)과 읽기 거절(`validateRead`)이 함께 본다
+ */
+SW_TEST_CASE( ReflectionValidationTest, TypeValidatorRunsAndIsInherited )
+{
+    const sw::TypeInfo* pType = sw::ValidatedRecordChild::StaticType();
+    SW_REQUIRE_NOT_NULL( pType );
+    SW_EXPECT_TRUE( sw::ReflectionValidation::hasValidator( *pType ) );
+
+    sw::ValidatedRecordChild clean;
+    sw::ValidationContext    cleanContext;
+    SW_EXPECT_EQUAL( 0u, sw::ReflectionValidation::validateObject( *pType, &clean, cleanContext ) );
+
+    sw::ValidatedRecordChild broken;
+    broken._count = 9;
+    sw::ValidationContext context;
+    SW_EXPECT_EQUAL( 1u, sw::ReflectionValidation::validateObject( *pType, &broken, context ) );
+    SW_EXPECT_TRUE( context.hasError() );
+    SW_REQUIRE_EQUAL( static_cast<size_t>( 1 ), context.getIssues().size() );
+    SW_EXPECT_TRUE( context.getIssues()[0]._typeName == sw::hashed_string( "sw::ValidatedRecord" ) );
+    SW_EXPECT_TRUE( context.getIssues()[0]._propertyName.empty() );
+
+    // 읽기 거절은 읽기 검사만 돌린다 — 프로퍼티 검증만 있는 타입(ValidatedActor)은 돌 것이 없다
+    sw::ValidationContext readContext;
+    SW_EXPECT_TRUE( sw::ReflectionValidation::hasReadValidator( *pType ) );
+    SW_EXPECT_EQUAL( 1u, sw::ReflectionValidation::validateRead( *pType, &broken, readContext ) );
+    const sw::TypeInfo* pEditorOnly = sw::ValidatedActor::StaticType();
+    SW_REQUIRE_NOT_NULL( pEditorOnly );
+    SW_EXPECT_FALSE( sw::ReflectionValidation::hasReadValidator( *pEditorOnly ) );
+    sw::ValidatedActor brokenActor;
+    brokenActor._name = "";
+    sw::ValidationContext editorOnlyContext;
+    SW_EXPECT_EQUAL( 0u, sw::ReflectionValidation::validateRead( *pEditorOnly, &brokenActor, editorOnlyContext ) );
 }
 
 /**

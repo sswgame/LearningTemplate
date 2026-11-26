@@ -105,7 +105,8 @@ namespace sw
 
     private:
         /** @brief `_barSortingLayer` 가 정렬 레이어 표에 있는지 봅니다(`SortingLayerNameValidation`). */
-        void validateBarSortingLayer( ValidationContext& context ) const;
+        /// 형식이 이 .cpp 에만 있어 본문을 `Dev/` 로 옮길 수 없다. 클래스 안 정의(인라인)라 배포는 이 함수를 쓰지 않아 짓지도 않는다(생성 코드의 `SW_DEV_ONLY_FUNCTION`).
+        void validateBarSortingLayer( ValidationContext& context ) const { SortingLayerNameValidation::validate( context, "_barSortingLayer", _barSortingLayer ); }
 
     private:
         /** @brief 스냅 단위를 레지스트리와 씬의 메시에 알립니다. 값이 그대로면 아무것도 하지 않습니다. 틱 중이면 틱 뒤로 미룹니다. */
@@ -351,14 +352,6 @@ namespace sw
             _barBatch.setEntry( 3, SpriteInstanceBatch::makeQuadWorld( float3{ eye._x, eye._y + offsetY, barZ }, 2.0f * ( halfWidth + overlap ), barHeight ), fullUV,
                                 black );
         }
-    }
-} // namespace sw
-
-namespace sw
-{
-    void PixelPerfectCameraComponent::validateBarSortingLayer( ValidationContext& context ) const
-    {
-        SortingLayerNameValidation::validate( context, "_barSortingLayer", _barSortingLayer );
     }
 } // namespace sw
 

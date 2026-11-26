@@ -125,6 +125,10 @@ namespace sw
         void computePinSkinWeights( uint32 column, PhysicsSoftBodySkinnedVertex& outSkinned ) const;
 
     private:
+        /// @brief 솔버 반복 수의 범위입니다. 솔버는 0 반복을 받지 않는다 — 범위 밖은 자르고(`computeLODIterationCount`) 검증 함수(`validateLOD`)가 알린다.
+        static constexpr uint32 kMinIterationCount = 1;
+        static constexpr uint32 kMaxIterationCount = 32;
+
         /** @brief 이 오브젝트부터 조상으로 올라가 처음 만난 스켈레탈 메시입니다(본 · LOD 등급을 읽는다). 없으면 nullptr 입니다. */
         const SkeletalMeshComponent* findSkeletalMesh() const;
         /** @brief 이 오브젝트부터 조상으로 올라가 처음 만난 스켈레탈 메시의 본 @p boneName 의 월드 행렬입니다. 없으면 false 입니다. */

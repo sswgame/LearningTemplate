@@ -55,6 +55,9 @@ namespace sw
         void writeGPULightKindProperties( GPULight& outLight ) const override;
 
     private:
+        /// @brief 기본 반경(m)입니다. 생성자와 검증 함수(`validateRadius`, `Engine/Visual/Dev/LightComponentValidation.cpp`)의 고침이 같은 값을 쓴다.
+        static constexpr float32 kDefaultRadius{ 6.0f };
+
         PROPERTY( Category = "Light", DisplayName = "Radius", Min = 0.0, Tooltip = "Distance at which the light reaches zero", Units = m, Validate = validateRadius, Meta = "Shape=Sphere" )
         float32 _radius;
         PROPERTY( Category = "Shadow", DisplayName = "Shadow Shape", Tooltip = "Light source size for soft shadows and contact shadow length" )

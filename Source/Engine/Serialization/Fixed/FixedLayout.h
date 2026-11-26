@@ -45,7 +45,7 @@ namespace sw
         SchemaMismatch, ///< 해시가 다릅니다. 필드, 순서, 범위 키가 다른 선언(다른 빌드)이 쓴 바이트입니다
         Truncated,      ///< 스트림이 모자랍니다
         OutOfRange,     ///< 범위 밖 정수 · 개수 · 양자화 칸, 등록되지 않은 열거자, 허용 범위 밖 실수입니다
-        ValidateFailed, ///< `REFLECT( Validate = fn )` 가 오류를 적었습니다
+        ValidateFailed, ///< 읽기 검사(`REFLECT( ReadValidate = fn )`)가 오류를 적었습니다
         TrailingData,   ///< 필드를 다 읽고도 바이트 경계 패딩보다 많은 비트가 남았습니다
         InvalidText,    ///< 글자 필드가 올바른 UTF-8 이 아니거나 NUL 이 있습니다
     };
@@ -90,8 +90,8 @@ namespace sw
         const utf8*             _pCanonical;        ///< 이 타입 몫의 정규 문자열입니다(`FixedSchemas.gen.txt` 와 같은 글)
         const utf8*             _pIneligibleReason; ///< 적격이 아니면 이유이고, 적격이면 nullptr 입니다
         const Dependency*       _pDependency;
-        BaseCastFunction        _pBaseCast; ///< 기반 클래스가 있으면 있습니다. 그 코덱은 의존 0 번입니다
-        ReflectValidateFunction _pValidate; ///< `REFLECT( Validate = fn )` 입니다. 읽기 끝에 부릅니다
+        BaseCastFunction        _pBaseCast;     ///< 기반 클래스가 있으면 있습니다. 그 코덱은 의존 0 번입니다
+        ReflectValidateFunction _pReadValidate; ///< `REFLECT( ReadValidate = fn )` 입니다. 읽기 끝에 부릅니다(에디터 검증 `Validate` 는 부르지 않는다)
         uint32                  _fieldCount;
         uint32                  _dependencyCount;
         /** @brief 의존 코덱을 확인한 결과입니다. 첫 사용이 채우고, 그 뒤로는 원자 읽기 한 번입니다. */
@@ -106,13 +106,13 @@ namespace sw
 
         /** @brief 적격 타입의 코덱입니다. 필드가 없으면 @p pField 는 nullptr 입니다. 상수 초기화된다(생성 단위가 등록 코드 없이 정적 객체로 둔다). */
         constexpr FixedCodec( const FixedFieldDesc* pField, const uint32 fieldCount, const utf8* pCanonical, const Dependency* pDependency, const uint32 dependencyCount,
-                              const BaseCastFunction pBaseCast, const ReflectValidateFunction pValidate, const FixedCodec* pReplicated ) noexcept
+                              const BaseCastFunction pBaseCast, const ReflectValidateFunction pReadValidate, const FixedCodec* pReplicated ) noexcept
             : _pField{ pField }
             , _pCanonical{ pCanonical }
             , _pIneligibleReason{ nullptr }
             , _pDependency{ pDependency }
             , _pBaseCast{ pBaseCast }
-            , _pValidate{ pValidate }
+            , _pReadValidate{ pReadValidate }
             , _fieldCount{ fieldCount }
             , _dependencyCount{ dependencyCount }
             , _dependencyState{ dependencyCount == 0 ? FixedDependencyState::Valid : FixedDependencyState::Unknown }
@@ -127,7 +127,7 @@ namespace sw
             , _pIneligibleReason{ pIneligibleReason }
             , _pDependency{ nullptr }
             , _pBaseCast{ nullptr }
-            , _pValidate{ nullptr }
+            , _pReadValidate{ nullptr }
             , _fieldCount{ 0 }
             , _dependencyCount{ 0 }
             , _dependencyState{ FixedDependencyState::Missing }

@@ -462,7 +462,8 @@ namespace sw
         vector<string>                _listAlias;
         vector<string>                _listRemovedField; ///< `REFLECT( RemovedField = "_oldA, _oldB" )` — 지운 필드 이름(세이브의 해시 공간에 남는다)
         vector<string>                _listRemovedType;  ///< `REFLECT( RemovedType = "sw::OldThing" )` — 지운 타입 이름(바이너리 태그의 타입 해시 공간에 남는다)
-        string                        _validate;         ///< `REFLECT( Validate = fn )` — 같은 타입의 `void fn( ValidationContext& )`
+        string                        _validate;         ///< `REFLECT( Validate = fn )` — 같은 타입의 `void fn( ValidationContext& )`(에디터 데이터 검증, 개발 전용)
+        string                        _readValidate;     ///< `REFLECT( ReadValidate = fn )` — 모양은 같고 배포에서도 도는 읽기 검사
         string                        _tickMode;         ///< `REFLECT( TickMode = Batch|Task|Main )` 의 글. 비면 Batch(`DeclarationValidator::validateTickMode` 가 철자를 본다)
         string                        _versionName;      ///< `REFLECT( Version = kName )` 의 상수 이름. 숫자로 적었으면 비고 `_version` 이 찬다(생성 코드가 이름을 그대로 쓴다)
         vector<pair<string, string>>  _listCustomMeta;
@@ -500,6 +501,7 @@ namespace sw
             , _listRemovedField{}
             , _listRemovedType{}
             , _validate{}
+            , _readValidate{}
             , _tickMode{}
             , _versionName{}
             , _listCustomMeta{}

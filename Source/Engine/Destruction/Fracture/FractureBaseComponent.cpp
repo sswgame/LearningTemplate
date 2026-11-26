@@ -25,11 +25,9 @@
 #include "Engine/Physics/Component/RigidBody2DComponent.h"
 #include "Engine/Physics/Component/RigidBodyComponent.h"
 #include "Engine/Physics/IPhysicsScene.h"
-#include "Engine/Physics/Scene/PhysicsNameValidation.h"
 #include "Engine/Physics/Scene/ScenePhysics.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Reflection/ReflectionCast.h"
-#include "Engine/Reflection/ReflectionValidation.h"
 #include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Visual/Component/MeshComponent.h"
 
@@ -1742,21 +1740,6 @@ namespace sw
 
 namespace sw
 {
-    void FractureBaseComponent::validateStaticLayer( ValidationContext& context ) const
-    {
-        PhysicsNameValidation::validateLayer( context, "_staticLayer", _staticLayer );
-    }
-
-    void FractureBaseComponent::validateChunkLayer( ValidationContext& context ) const
-    {
-        PhysicsNameValidation::validateLayer( context, "_chunkLayer", _chunkLayer );
-    }
-
-    void FractureBaseComponent::validateDebrisLayer( ValidationContext& context ) const
-    {
-        PhysicsNameValidation::validateLayer( context, "_debrisLayer", _debrisLayer );
-    }
-
     void FractureBaseComponent::onRegister( GameObjectManager& manager )
     {
         PhysicsComponent::onRegister( manager );

@@ -4,6 +4,7 @@
  * @details 런타임은 모르는 이름을 기본값으로 대신하고 로그만 남긴다. 검증 함수(`PROPERTY( Validate = fn )`)는 로드 · 저장 · 인스펙터 편집 뒤에 불려
  *          생성자 기본값까지 본다 — 데이터에 적힌 값만 보는 에셋 검증 규칙 `component_reference` 가 못 보는 자리다(언리얼 `UObject::IsDataValid`). 빈 이름은 "기본" 이라 보지 않는다.
  *          표는 서비스의 `Render2DSettings` 다(서비스가 없으면 비어 있지 않은 이름을 검증하지 못하고 멈춘다).
+ *          구현은 개발 전용 소스(`Engine/Visual/2D/Dev/SortingLayerNameValidation.cpp`)라 배포 구성은 짓지 않는다 — 부르는 쪽(프로퍼티 검증 함수 · 에디터)이 모두 개발 전용이다.
  */
 #pragma once
 #include "Core/Foundation/Macros.h"

@@ -14,7 +14,6 @@
 #include "Engine/Physics/Collision/PhysicsQuery.h"
 #include "Engine/Physics/Collision/SweepHit.h"
 #include "Engine/Physics/IPhysicsScene.h"
-#include "Engine/Physics/Scene/PhysicsNameValidation.h"
 #include "Engine/Physics/Scene/ScenePhysics.h"
 
 namespace sw
@@ -387,13 +386,5 @@ namespace sw
         if ( pScene != nullptr )
             pScene->destroyBody( _body );
         _body = PhysicsBodyHandle{};
-    }
-} // namespace sw
-
-namespace sw
-{
-    void BoxCollider2DComponent::validateLayer( ValidationContext& context ) const
-    {
-        PhysicsNameValidation::validateLayer( context, "_layer", _layer );
     }
 } // namespace sw

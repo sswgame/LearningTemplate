@@ -8,7 +8,6 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
-#include "Engine/Reflection/ReflectionValidation.h"
 
 namespace sw
 {
@@ -188,14 +187,5 @@ namespace sw
         }
         if ( _probeData._layout.matches( computeLayout(), LightProbeVolumeComponentInternal::kLayoutTolerance ) == false )
             SW_LOG_ERROR_ID( "LightProbeVolume.LightProbeDataBaked", "Light probe data '%#' was baked for a different volume layout - bake the volume again", _probeDataPath.c_str() );
-    }
-
-    void LightProbeVolumeComponent::validateProbeData( ValidationContext& context ) const
-    {
-        const bool bNoExtent = _extent._x <= 0.0f && _extent._y <= 0.0f && _extent._z <= 0.0f;
-        if ( bNoExtent )
-            context.addError( "Extent is 0 on every axis - the volume holds a single probe" );
-        if ( _probeDataPath.empty() && _bRealtime == SW_FALSE )
-            context.addWarning( "Light probe volume is not baked - it gives no indirect light" );
     }
 } // namespace sw

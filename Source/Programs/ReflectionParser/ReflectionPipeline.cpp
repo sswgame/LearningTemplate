@@ -182,9 +182,6 @@ namespace sw
             /** @brief 모듈 PCH 의 원본 헤더 · PCH 파일 이름(출력 폴더 안)입니다. 원본은 `pch.h` 하나를 include 한다. */
             static constexpr const utf8* kModulePchHeaderName = "ReflectionParser.pch.h";
             static constexpr const utf8* kModulePchName       = "ReflectionParser.pch";
-            /** @brief PCH 를 굽는 번역 단위 수의 하한입니다. 하나면 굽는 비용이 그대로 더해진다. */
-            static constexpr size_t kMinTranslationUnitsForPch = 2;
-
             /** @brief @p listExtra 가운데 @p inoutList 에 없는 의존을 더합니다(PCH 를 구울 때 모은 의존을 번역 단위의 의존에 합친다). */
             static void appendDependencies( vector<StampDependency>& inoutList, const vector<StampDependency>& listExtra )
             {
@@ -322,10 +319,10 @@ namespace sw
         SW_LOG_INFO_ID( "ReflectionPipeline.ParsingInputUpDate", "Parsing %# of %# input(s) (%# up to date, %# without annotations).", listPending.size() + listPendingSource.size(),
                         _pOptions->_listInputFile.size(), upToDate, noReflect );
         // .cpp 는 첫 줄이 `pch.h` 라 번역 단위 비용이 거의 그 공통 앞부분이다. 묶음 TU 도 같은 앞부분을 다시 읽는다.
-        // 그래서 번역 단위가 둘 이상이고 .cpp 가 있으면 `pch.h` 를 한 번 PCH 로 굽고 모두 그것을 읽는다(언리얼 UBT 의 모듈 공유 PCH).
+        // 그래서 번역 단위가 문턱(`tuning.min_translation_units_for_pch`) 이상이고 .cpp 가 있으면 `pch.h` 를 한 번 PCH 로 굽고 모두 그것을 읽는다(언리얼 UBT 의 모듈 공유 PCH).
         const size_t translationUnitCount = ( listPending.empty() ? 0 : 1 ) + listPendingSource.size();
         ModulePch    pch;
-        const bool   bWantPch  = listPendingSource.empty() == false && translationUnitCount >= ReflectionPipelineInternal::kMinTranslationUnitsForPch;
+        const bool   bWantPch  = listPendingSource.empty() == false && translationUnitCount >= static_cast<size_t>( _pSession->_config._minTranslationUnitsForPch );
         const bool   bPchBaked = bWantPch && bakeModulePch( pch );
         addPhaseTime( ParsePhase::Pch, static_cast<float32>( phaseTimer.lapSeconds() ) );
         if ( bWantPch && bPchBaked == false )
