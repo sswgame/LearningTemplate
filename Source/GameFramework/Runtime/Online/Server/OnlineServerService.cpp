@@ -191,15 +191,20 @@ namespace sw
         const string path = OnlineServerConfig::makeConfigPath( context._serverConfigPath );
         // 설정 타입이 이 모듈에 있다 — 엔진의 ConfigManager 는 모듈보다 오래 살므로 테이블에 등록하지 않고 이 서비스가 직접 소유한다.
         OnlineServerConfig     onlineConfig;
-        const ConfigReadResult result = ConfigManager::readConfigFileInto( path, onlineConfig );
-        if ( result == ConfigReadResult::Missing )
+        const ConfigReadResult result       = ConfigManager::readConfigFileInto( path, onlineConfig );
+        const ServerConfig&    serverConfig = *context._pServerConfig;
+        // 켜고 끄는 것은 서버 설정의 칸이다. 파일은 그 칸과 맞아야 한다(맞지 않으면 어느 쪽이 맞는지 모른다).
+        if ( serverConfig._bOnlineServices == false )
         {
-            SW_LOG_INFO_ID( "OnlineServerService.OnlineServicesOffDoes", "Online services are off - '%#' does not exist", path.c_str() );
+            if ( result != ConfigReadResult::Missing )
+                return unexpected( Error{ ErrorKind::InvalidArgument, "an online service config exists but the server config's _bOnlineServices is off", path } );
+            SW_LOG_INFO_ID( "OnlineServerService.OnlineServicesOff", "Online services are off (server config _bOnlineServices)" );
             return {};
         }
+        if ( result == ConfigReadResult::Missing )
+            return unexpected( Error{ ErrorKind::NotFound, "the server config's _bOnlineServices is on but the online service config does not exist", path } );
         if ( result != ConfigReadResult::Loaded )
             return unexpected( Error{ ErrorKind::InvalidArgument, "the online service config is invalid", path } );
-        const ServerConfig& serverConfig = *context._pServerConfig;
         if ( serverConfig._servicePort <= 0 )
             return unexpected( Error{ ErrorKind::InvalidArgument, "the online service config exists but the server config's _servicePort is 0", path } );
 

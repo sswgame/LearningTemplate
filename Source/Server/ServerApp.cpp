@@ -683,7 +683,12 @@ namespace sw
         // 서비스를 공개하는 모듈(GameFramework)은 리로드하지 않는 공용 모듈이라 찾은 창구는 엔진 종료까지 산다.
         IServerService* const pService = engine::findSubsystem<IServerService>();
         if ( pService == nullptr )
-            return true; // 서버 서비스를 짓지 않은 구성
+        {
+            if ( _pServerConfig->_bOnlineServices == false )
+                return true; // 온라인을 쓰지 않는 서버다
+            SW_LOG_ERROR_ID( "Server.ServerServiceMissing", "Server config _bOnlineServices is on but this server has no server service (GameFramework's online server subsystem is not built in)" );
+            return false;
+        }
         if ( const expected<void> started = pService->startService( _serverServiceContext ); started.has_value() == false )
         {
             SW_LOG_ERROR_ID( "Server.ServerServiceFailedStart", "Server service failed to start: %# (%#)", started.error().message(), started.error().detail() );

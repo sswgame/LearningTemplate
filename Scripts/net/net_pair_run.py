@@ -110,6 +110,7 @@ def write_server(out_dir: Path, name: str, game_port: int, service_port: int, on
         "_gamePort": game_port,
         "_servicePort": service_port,
         "_bGameConnectTicket": True,
+        "_bOnlineServices": True,  # 옆 온라인 설정을 쓴다 - 끄면 서버가 기동을 멈춘다
         "_bConsoleInput": True,  # 표준 입력 `quit` 로 드레인 없이 정상 종료한다
         "_listStore": [{"_name": "local", **store}],  # 드라이버는 필수다 - 메모리도 적는다
         "_listCache": [{"_name": "local", **cache}],

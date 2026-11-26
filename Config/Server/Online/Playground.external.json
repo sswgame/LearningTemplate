@@ -3,6 +3,7 @@
     "_gamePort": 17790,
     "_servicePort": 17793,
     "_bGameConnectTicket": true,
+    "_bOnlineServices": true,
     "_listStore": [
         {
             "_name": "main",
