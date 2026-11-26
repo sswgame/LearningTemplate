@@ -23,14 +23,34 @@ import argparse
 import inspect
 import os
 import sys
+from typing import IO
 
 from common.command import Command, ScriptContext
 from common.exit_code import ExitCode
 from common.git import run_git_or_raise
+from common.host_platform import is_windows_host
 from common.run_process import run_process
 from dev.preflight_run import SCRIPTS, PreflightOptions, PreflightRun, PreflightShell, list_start_names, list_tree_changes, make_windows_failure
 from dev.preflight_stages import MAX_TREE_LINES, list_stages
 from dev.run_history import read_verify_config
+
+
+def hold_verify_lock(path) -> IO[bytes] | bool:
+    """잠금 파일을 열어 프로세스가 끝날 때까지 배타 잠금을 쥡니다. 다른 프로세스가 쥐고 있으면 False 입니다(돌려준 파일을 닫지 않고 쥔다)."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    handle = open(path, "a+b")
+    try:
+        if is_windows_host():
+            import msvcrt
+            handle.seek(0)
+            msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
+        else:
+            import fcntl
+            fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        handle.close()
+        return False
+    return handle
 
 
 class PreflightCommand(Command):
@@ -60,6 +80,11 @@ class PreflightCommand(Command):
         # 빌드 · 구성 · ctest 는 메인 작업 폴더 하나에서만(공용 vcpkg · 디스크, 사용자 지시 2026-11-12) — 연결된 워크트리는 .git 이 파일이다.
         if (root / ".git").is_file() and not args.dry_run:
             print(f"워크트리({root})에서 묶음 검증을 시작하지 않는다 — 메인 작업 폴더에서 돌린다(--dry-run 은 된다)")
+            return ExitCode.CHECK_INVALID
+        # 같은 작업 폴더에서 두 검증이 겹치면 구성 · ctest · Changed 결과 폴더를 서로 덮어 가짜 실패가 난다(2026-11-26). OS 파일 잠금이라 프로세스가 죽으면 풀린다.
+        lock_file = None if args.dry_run else hold_verify_lock(root / "build" / "verify.lock")
+        if lock_file is False:
+            print("다른 묶음 검증이 이 작업 폴더에서 돌고 있다(build/verify.lock) — 그것이 끝난 뒤 돌린다")
             return ExitCode.CHECK_INVALID
         if args.show:
             os.environ["SW_SHOW_WINDOWS"] = "1"   # 무인 실행의 창 숨김만 끈다(App 이 본다)

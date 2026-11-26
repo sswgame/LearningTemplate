@@ -20,6 +20,7 @@
 | 언제 | 무엇 |
 | --- | --- |
 | 모든 작업 | `ponytail`. 구조 개편을 시킬 때는 "구조는 장기 이득이면 과감히 바꾼다"를 요청에 적는다(스킬의 "기존 구조 유지"와 부딪힌다) |
+| 주석 · 커밋 메시지 · .md 를 쓸 때 | `humanizer`(저장소 스킬, Source · Scripts · Content · Config · Test · .md 편집과 git commit 앞에서 훅이 요구) |
 | 코드를 읽기 전 | `graphify query "<질문>"`(`path` · `explain` 도). 워크트리에서는 `--graph "$(git rev-parse --path-format=absolute --git-common-dir)/../graphify-out/graph.json"`. 그래프 갱신은 Stop 훅이 한다. 작업자 보고에 찾은 범위를 한 줄 |
 | 에디터 UI | `taste-skill` 의 `references/app-screens.md`. 확인은 `editor/uicapture.scenario.xml` 스크린샷 |
 | 묶음 끝 검증 · push / Linux / 시나리오 실패 | `preflight` / `linux-verify` / `scenario-debug`. 임시 스크립트를 새로 만들지 말고 여기에 더한다 |

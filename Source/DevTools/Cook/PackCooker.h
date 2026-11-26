@@ -101,6 +101,13 @@ namespace sw
          */
         static string makePackFileName( string_view domain, string_view chunk = {}, uint32 number = 0 );
         /**
+         * @brief 장부(@p inoutSetLedger, 쿠커가 쓴 팩)의 팩 가운데 @p contentRoot 에 없는 도메인(옮기거나 지운 게임 팩)의 팩을 그 도메인의 청크 목록과 함께 지우고 장부에서 뺍니다.
+         * @details 형제 팩 정리는 이번에 굽는 도메인만 본다. 도메인 폴더가 사라지면 아무도 그 팩을 다시 보지 않아 옛 판의 팩이 남고, 런타임이 폴더의 팩을 모두 마운트하다 거절한다.
+         *          살아 있는 도메인은 굽는 범위가 아니라 콘텐츠 폴더에서 세므로, 게임 하나만 굽는 쿠킹도 다른 게임의 팩은 지우지 않는다. 장부에 없는 파일은 건드리지 않는다.
+         * @return 도메인 목록을 못 읽거나 지우지 못하면 이유를 남기고 false 입니다.
+         */
+        [[nodiscard]] static bool removeOrphanDomainPacks( const AbsolutePath& contentRoot, const AbsolutePath& packOutputDir, unordered_set<string>& inoutSetLedger );
+        /**
          * @brief 도메인 팩의 항목 @p listEntry 를 청크 규칙과 크기 한도(@p split)로 팩 몫들로 나눕니다. 결과는 기본 청크가 먼저이고 기본 청크 0 번은 늘 있다(빈 도메인도 첫 팩이 있다).
          * @details 청크는 규칙 순서대로 처음 맞는 패턴의 것, 아무것도 맞지 않으면 기본이다. 청크 안에서 경로 해시 순으로 놓고 합이 한도를 넘기 전에 다음 번호로 넘긴다 —
          *          같은 입력이면 순서와 상관없이 같은 몫이고, 항목 하나가 한도보다 크면 그 항목만 든 몫이 된다.

@@ -150,6 +150,12 @@ namespace sw
         /** @brief 올릴 디바이스를 붙이거나(엔진이 RHI 를 세울 때) 뗍니다(nullptr, 내릴 때). 붙은 디바이스가 없으면 `request` 는 실패 핸들을 돌려준다. */
         void bindDevice( IRHIDevice* pDevice );
         /**
+         * @brief 자리 텍스처(로드 중 텍스처 · 누락 체커)를 올려 둡니다. 엔진 서비스가 없으면 아무것도 하지 않는다.
+         * @details 동기 `acquire` 로 올리므로 디스크를 읽는다. 엔진은 장치를 묶은 게임 스레드에서 한 번 부른다(`SceneRHISubsystem`). 첫 비동기 요청이 렌더 스레드 패킷(VFX 텍스처)에서
+         *          오면 그 안은 디스크 읽기가 금지다. 비동기 요청도 부르지만 이미 올라 있으면 바로 돌아간다. 디바이스 교체로 GPU 자원을 잃었으면 다시 올린다.
+         */
+        void ensureStandInTextures();
+        /**
          * @brief 붙은 장치가 지원하는 첫 형식 묶음의 파일 접미사입니다(`TextureFormatFamily`, `bindDevice` 가 정한다). BC(데스크톱)는 빈 글이고 임포트한 DDS 를 그대로 읽습니다. 어느 스레드에서든 부릅니다.
          */
         string getFormatVariantSuffix() const;
@@ -328,11 +334,6 @@ namespace sw
         friend class TextureLoadOperation; // 로드 작업이 항목 표(`Impl`)에 결과를 적고 참조를 놓는다
         struct Impl;
 
-        /**
-         * @brief 자리 텍스처(로드 중 텍스처 · 누락 체커)를 올려 둡니다(비동기 요청이 잠금 밖에서 부른다). 엔진 서비스가 없으면 아무것도 하지 않는다.
-         * @details 동기 `acquire` 로 올리므로 다시 이 함수로 들어오지 않는다. 디바이스 교체로 GPU 자원을 잃었으면 다시 올린다.
-         */
-        void ensureStandInTextures();
         /**
          * @brief 이번 프레임의 요구(@p mapFrameDemand — 화면 크기)를 항목의 필요한 밉 · 유휴 프레임에 적고, `TextureStreamingPolicy` 가 고른 내리기 · 다시 올리기를 줄 앞에 넣습니다(R6-6).
          * @details 내리기로 한 키를 @p outMapDemotionKey 에 담는다 — `updateStreaming` 이 줄에서 먼저 낸다. 바꾸는 중인 항목은 바이트만 세고 결정에서 뺀다.

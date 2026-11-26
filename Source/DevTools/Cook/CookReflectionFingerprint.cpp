@@ -16,7 +16,6 @@
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Serializer/SerializerUtil.h"
-#include "Engine/UI/WidgetTree/Widget.h"
 
 namespace sw
 {
@@ -109,8 +108,9 @@ namespace sw
                     }
                     if ( type.isDerivedFrom( Component::StaticType() ) )
                         return 0; // 컴포넌트는 오브젝트에 붙여서만 만든다
-                    // UI 위젯은 씬 · 프리팹 쿠킹본에 들지 않는다(UI 문서가 실행 때 만든다) — 기본값이 런타임 위젯 스킨(호스트 서비스)에서 오므로 헤드리스 쿠킹은 만들 수도 없다.
-                    if ( type.isDerivedFrom( Widget::StaticType() ) )
+                    // UI 위젯은 씬 · 프리팹 쿠킹본에 들지 않는다(UI 문서가 실행 때 만든다). 기본값이 런타임 위젯 스킨(호스트 서비스)에서 와서 헤드리스 쿠킹은 만들 수도 없다.
+                    // 전용 서버는 UI 를 짓지 않아 헤더 대신 등록부에서 찾는다(없으면 위젯도 없다).
+                    if ( const TypeInfo* const pWidgetType = registry.findType( "Widget" ); pWidgetType != nullptr && type.isDerivedFrom( pWidgetType ) )
                         return 0;
                     const ReflectedInstance instance = type.canConstruct() ? ReflectedInstance::create( type ) : ReflectedInstance{};
                     if ( instance.isValid() == false )
