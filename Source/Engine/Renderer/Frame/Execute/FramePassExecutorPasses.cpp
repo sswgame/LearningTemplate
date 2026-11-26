@@ -660,6 +660,11 @@ namespace sw
             SW_LOG_ERROR_ONCE_ID( "FramePassExecutor.ComputePassNotReady", "Compute pass '%#' has no PSO or no RW output - it does not run", passDesc._name );
             return;
         }
+        if ( passDesc._inputBinding == RenderPassInputBinding::Name )
+        {
+            executeNamedComputePass( input, pipeline, output );
+            return;
+        }
         // 네이티브는 RW 텍스처 배열의 번호로, 에뮬은 RW 슬롯 서수로 고른다(Bindless::storeRwTexture2D). 슬롯 0 이 출력, 그 뒤가 입력이다.
         const bool    bNative = _pDevice->supportsNativeBindlessSampling();
         RootConstants constants{};
@@ -689,6 +694,61 @@ namespace sw
         context._pCmd->dispatchThreads( constants._width, constants._height, 1 );
         // 뒤 패스가 샘플하면 레벨 콜백이 셰이더 읽기로 옮긴다. 컴퓨트가 칠했으니 이번 프레임 첫 렌더 패스가 지우면 안 된다.
         (void)markAttachmentCleared( target );
+    }
+
+    void FramePassExecutor::executeNamedComputePass( const PassExecuteInput& input, const ComputePipeline& pipeline, const TransientAttachmentPool::Attachment& output )
+    {
+        // 루트 상수를 선언 차례로 채운다(`RenderPassInputBinding::Name` — 셰이더의 SwRootConstants 가 같은 차례다): 크기 둘 · 출력 RW · 출력 기록 · 입력 · 값.
+        // 입력은 셰이더 읽기 번호라 네이티브 bindless 에서만 돈다 — 에뮬 백엔드는 RW 칸이 셋뿐이고 컴퓨트가 샘플 텍스처를 읽지 못한다.
+        FramePassContext&          context  = input._context;
+        const RenderGraphPassDesc& passDesc = input._passDesc;
+        if ( _pDevice->supportsNativeBindlessSampling() == false )
+        {
+            SW_LOG_ERROR_ONCE_ID( "FramePassExecutor.NamedComputeNeedsBindless", "Compute pass '%#' binds by name - it needs native bindless (DX12, Vulkan) and does not run on this backend", passDesc._name );
+            return;
+        }
+        uint32     arrWord[shaderslot::kRootConstantDwords]{};
+        uint32     wordCount = 0;
+        const auto push      = [&arrWord, &wordCount]( uint32 word )
+        {
+            if ( wordCount < shaderslot::kRootConstantDwords ) // 로드 검증이 칸 수를 봤다(`countNamedRootConstants`)
+                arrWord[wordCount++] = word;
+        };
+        const uint32 width  = _pActiveView->scaleToRect( output, true ); // 사각형 밖은 디스패치하지 않는다
+        const uint32 height = _pActiveView->scaleToRect( output, false );
+        push( width );
+        push( height );
+        push( static_cast<uint32>( output._uav ) );
+        const RenderGraphPassDesc::ResolvedAttachment& target = input._declaredColor[0];
+        if ( target._historyResource.empty() == false )
+        {
+            // 출력의 지난 프레임 기록 — 이 패스가 복사 대상으로 쥔다(끝의 `copyOutputHistories`). 버리는 프레임은 무효 번호라 셰이더가 기록 없이 시작한다.
+            const FrameViewHistory*          pHistory = findPassHistory( *_pActiveView, passDesc );
+            const RenderGraphTextureCopyDest historyResource{ target._historyResource };
+            const bool                       bReadable = pHistory != nullptr && pHistory->isReset() == false && pHistory->isValid() && context._pGraphPass->isRegistered( historyResource );
+            if ( bReadable )
+                context._pGraphPass->transition( historyResource, RenderGraphAccess::ShaderRead );
+            push( bReadable ? static_cast<uint32>( pHistory->getPrevious()._srv ) : kInvalidDescriptorIndex );
+        }
+        for ( const RenderGraphPassDesc::ResolvedAttachment& sourceInput : passDesc._listResolvedInput )
+        {
+            // 이 뷰에서 빠진 패스의 출력은 무효 번호다(`registerPassTexture` 와 같은 규칙 — 셰이더가 기본값을 쓴다).
+            const TransientAttachmentPool::Attachment source = activePool().find( sourceInput._attachment );
+            push( source._texture != 0 ? static_cast<uint32>( source._srv ) : kInvalidDescriptorIndex );
+        }
+        for ( const RenderPassValue& value : passDesc._listValue )
+        {
+            uint32 bits = 0;
+            Memory::copy( &bits, &value._value, sizeof( bits ) );
+            push( bits );
+        }
+        ComputeShaderParameters<ComputePassShader> parameters;
+        parameters.set( ComputePassShader::Output, output._uav );
+        if ( parameters.apply( *context._pCmd, pipeline ) == false )
+            return;
+        context._pCmd->setComputeRootConstants( wordCount, arrWord );
+        context._pCmd->dispatchThreads( width, height, 1 );
+        (void)markAttachmentCleared( target._attachment ); // 컴퓨트가 칠했으니 이번 프레임 첫 렌더 패스가 지우면 안 된다
     }
 
     void FramePassExecutor::executeForwardOpaquePass( const PassExecuteInput& input )

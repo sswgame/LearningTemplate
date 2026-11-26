@@ -58,10 +58,12 @@
 		<Field name="_listAttachment" key="_name"/>
 		<Field name="_listPass" key="_name">
 			<Field name="_listPermutation" key="#text"/>
+			<Field name="_listValue" key="_name"/>
 		</Field>
 		<Field name="_listResource" key="_name"/>
 		<Field name="_listFramePass" key="_name">
 			<Field name="_listPermutation" key="#text"/>
+			<Field name="_listValue" key="_name"/>
 		</Field>
 		<Field name="_listRenderPassRef" key="#text"/>
 	</Document>

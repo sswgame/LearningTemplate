@@ -11,6 +11,7 @@
 #include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/Material/RenderBlendPreset.h"
 #include "Engine/Graphics/RHI/RHIFormatInfo.h"
+#include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Renderer/Pipeline/GBufferLayout.h"
 #include "Engine/Renderer/Pipeline/RenderPassInputSignature.h"
@@ -554,6 +555,22 @@ namespace sw
                 };
                 for ( const RenderGraphPassDesc& pass : desc._listPass )
                 {
+                    // 이름 바인딩 · 값은 컴퓨트 패스의 루트 상수다 — 다른 패스는 읽는 쪽이 없다(풀스크린 패스의 이름 바인딩은 아직 없다).
+                    const bool bNamed = pass._inputBinding == RenderPassInputBinding::Name;
+                    if ( ( bNamed || pass._listValue.empty() == false ) && pass._type != RenderPassKind::Compute )
+                        report( "RenderPipelineAsset.PassNamedBindingNotCompute", pass, "_inputBinding Name and _listValue are for a Compute pass" );
+                    if ( pass._listValue.empty() == false && bNamed == false )
+                        report( "RenderPipelineAsset.PassValueNeedsNamedBinding", pass, "_listValue goes to root constants of a name-bound pass - set _inputBinding=\"Name\"" );
+                    for ( size_t valueIndex = 0; valueIndex < pass._listValue.size(); ++valueIndex )
+                    {
+                        for ( size_t earlierIndex = 0; earlierIndex < valueIndex; ++earlierIndex )
+                        {
+                            if ( pass._listValue[earlierIndex]._name == pass._listValue[valueIndex]._name )
+                                report( "RenderPipelineAsset.PassValueDuplicated", pass, "a _listValue name is written twice" );
+                        }
+                    }
+                    if ( bNamed && pass.countNamedRootConstants() > shaderslot::kRootConstantDwords )
+                        report( "RenderPipelineAsset.PassNamedRootConstantsFull", pass, "sizes, output, output history, inputs and values do not fit the root constants (SW_ROOT_DWORD_COUNT)" );
                     const bool bHasOptionalStage = pass._geometryEntryPoint.empty() == false || pass._hullEntryPoint.empty() == false || pass._domainEntryPoint.empty() == false;
                     if ( pass._hullEntryPoint.empty() != pass._domainEntryPoint.empty() )
                         report( "RenderPipelineAsset.PassHullNeedsDomain", pass, "_hullEntryPoint and _domainEntryPoint go together" );
@@ -570,12 +587,13 @@ namespace sw
                         report( "RenderPipelineAsset.PassComputeNeedsShader", pass, "a Compute pass needs _shaderPath - there is no default compute shader" );
                     if ( pass._listOutput.size() != 1 || pass._listResolvedColorOutput.size() != 1 )
                         report( "RenderPipelineAsset.PassComputeOneOutput", pass, "a Compute pass writes exactly one color attachment (not Swapchain, not depth)" );
-                    if ( pass._listInput.size() > kMaxInputCount )
-                        report( "RenderPipelineAsset.PassComputeTooManyInputs", pass, "a Compute pass reads at most two attachments" );
+                    // RW 칸 바인딩만 칸 수(에뮬 백엔드의 RW 칸 셋)와 깊이 형식에 묶인다 — 이름 바인딩은 입력을 셰이더 읽기 번호로 걸어 루트 상수 칸만 센다(위).
+                    if ( bNamed == false && pass._listInput.size() > kMaxInputCount )
+                        report( "RenderPipelineAsset.PassComputeTooManyInputs", pass, "a role-bound Compute pass reads at most two attachments - set _inputBinding=\"Name\" for more" );
                     for ( const string& inputName : pass._listInput )
                     {
-                        if ( isDepthAttachment( findAttachment( desc, inputName ) ) )
-                            report( "RenderPipelineAsset.PassComputeDepthInput", pass, "a Compute pass cannot bind a depth format as a RW texture - read a SceneDepthCopy instead" );
+                        if ( bNamed == false && isDepthAttachment( findAttachment( desc, inputName ) ) )
+                            report( "RenderPipelineAsset.PassComputeDepthInput", pass, "a role-bound Compute pass cannot bind a depth format as a RW texture - read a SceneDepthCopy or set _inputBinding=\"Name\"" );
                         if ( VectorUtil::contains( pass._listOutput, inputName ) )
                             report( "RenderPipelineAsset.PassComputeInputIsOutput", pass, "a Compute pass cannot read the attachment it writes" );
                     }

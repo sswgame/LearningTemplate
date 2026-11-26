@@ -316,6 +316,36 @@ namespace sw
     };
 
     /**
+     * @enum RenderPassInputBinding
+     * @brief 컴퓨트 패스(`_type="Compute"`)가 첨부를 셰이더에 거는 방식입니다. 파이프라인 XML 의 `_inputBinding` 이 적는다.
+     * @details Role 은 RW 칸 셋(출력 + 입력 둘, `compute_pass.hlsli` 의 `g_ComputeInput0Index`)이고 모든 백엔드에서 돈다. Name 은 셰이더의 루트 상수를 선언 차례로 채운다 —
+     *          `g_ComputeWidth` · `g_ComputeHeight` · `g_<출력>Index`(RW) · 출력이 기록 첨부면 `g_<출력>HistoryIndex`(지난 프레임, 셰이더 읽기) · 입력마다 `g_<입력>Index`(셰이더 읽기) ·
+     *          `_listValue` 마다 `g_<이름>`(실수). 입력 수는 루트 상수 칸(`SW_ROOT_DWORD_COUNT`)이 정하고 깊이 형식도 읽는다. 셰이더 읽기를 번호로 하므로 네이티브 bindless(DX12 · Vulkan)에서만 돈다
+     *          (유니티 Fullscreen Pass · Godot Compositor Effect 가 셰이더 프로퍼티 이름으로 텍스처를 거는 자리).
+     */
+    ENUM()
+    enum class RenderPassInputBinding : uint8
+    {
+        Role, ///< RW 칸(출력 하나 · 입력 둘) — 모든 백엔드
+        Name, ///< 선언 차례의 루트 상수(`g_<첨부 이름>Index`) — 네이티브 bindless
+    };
+
+    /**
+     * @struct RenderPassValue
+     * @brief 컴퓨트 패스의 이름 있는 실수 값 하나입니다(`_listValue`). 이름 바인딩 패스의 루트 상수 `g_<이름>` 으로 간다(언리얼 RDG 패스 파라미터 · 유니티 머티리얼 프로퍼티 자리).
+     */
+    REFLECT()
+    struct RenderPassValue
+    {
+        REFLECT_BODY();
+        PROPERTY( Required, InheritKey )
+        string _name;
+
+        PROPERTY()
+        float32 _value{ 0.0f };
+    };
+
+    /**
      * @enum RenderResolutionSpace
      * @brief 첨부가 사는 해상도 공간입니다 — 시간 업스케일(TAAU) 앞의 렌더 해상도와 뒤의 출력 해상도(언리얼 1 차 · 2 차 화면 배율, `ScreenPercentage` 앞 · 뒤).
      * @details 파이프라인 XML 이 첨부마다 선언한다(`RenderPassAttachment::_resolutionSpace`). 렌더 공간은 장면(G버퍼 · 깊이 · 속도 · 조명), 출력 공간은 TAA 가 키운 색과 그 뒤 후처리다.
@@ -705,6 +735,24 @@ namespace sw
         /** @brief 일반 풀스크린 패스의 실행 방식입니다(`RenderPassExecutionMode`). Compute 는 표가 컴퓨트 구현을 가진 종류만 받는다(검증). */
         PROPERTY()
         RenderPassExecutionMode _implementation{ RenderPassExecutionMode::Pixel };
+
+        /** @brief 컴퓨트 패스가 첨부를 거는 방식입니다(`RenderPassInputBinding`). Name 은 Compute 패스만 적는다(검증). */
+        PROPERTY()
+        RenderPassInputBinding _inputBinding{ RenderPassInputBinding::Role };
+
+        /** @brief 이름 바인딩 컴퓨트 패스의 값입니다 — 선언 차례로 입력 번호 뒤의 루트 상수 `g_<이름>` 이 된다. 이름이 열쇠라 `_base` 자식은 값 하나씩 고친다. 이름 바인딩 패스만 적는다(검증). */
+        PROPERTY( SkipIfEmpty )
+        vector<RenderPassValue> _listValue;
+
+        /**
+         * @brief 이름 바인딩 패스가 쓰는 루트 상수 칸 수입니다(크기 둘 + 출력 + 출력 기록 + 입력 + 값). 로드 검증과 실행이 같은 차례를 이 값 하나로 본다.
+         * @details 출력 기록 칸은 해석한 첫 컬러 출력이 기록 첨부일 때만 든다(`ResolvedAttachment::_historyResource` — 로드가 채운 뒤에 부른다).
+         */
+        [[nodiscard]] uint32 countNamedRootConstants() const
+        {
+            const bool bOutputHistory = _listResolvedColorOutput.empty() == false && _listResolvedColorOutput[0]._historyResource.empty() == false;
+            return 3u + ( bOutputHistory ? 1u : 0u ) + static_cast<uint32>( _listResolvedInput.size() + _listValue.size() );
+        }
 
         /**
          * @brief `PostProcessMaterial` 패스가 맡는 블렌더블 자리입니다. 그 패스는 None 이 아니어야 하고 다른 패스는 None 이어야 한다(검증). 자리마다 패스는 하나다.

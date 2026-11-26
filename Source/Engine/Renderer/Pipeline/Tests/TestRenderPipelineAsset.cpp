@@ -655,6 +655,50 @@ SW_TEST_CASE( RenderPipelineAssetTest, AttachmentSizeAndHistoryFollowTheRules )
     SW_EXPECT_FALSE( RenderPipelineTestUtil::load( rejected, string( twoWriters.view() ) ) );
 }
 
+/**
+ * @brief [RenderPipelineAssetTest] 이름 바인딩 컴퓨트 패스는 입력 둘 · 깊이 형식 제한이 없고 값(`_listValue`)을 루트 상수로 받는다 — 칸 수는 루트 상수가 정한다
+ * @details 변이: 이름 바인딩에도 입력 상한을 걸면 셋째 입력에서 첫 단언이 진다. 칸 수 검사를 지우면 값 열넷인 패스가 읽혀 마지막 단언이 진다(루트 상수 밖에 쓴다).
+ */
+SW_TEST_CASE( RenderPipelineAssetTest, NamedComputeBindingTakesValues )
+{
+    const auto makeXML = []( string_view binding, string_view inputs, uint32 valueCount, string_view type )
+    {
+        StringBuilder<constant::buffer::kMax4096> xml;
+        xml.append( "<RenderPipelineDesc _name=\"Test\"><_listAttachment>"
+                    "<RenderPassAttachment _name=\"A\" _format=\"R16G16B16A16_FLOAT\" _clearColor=\"0,0,0,1\" _loadOp=\"DontCare\"/>"
+                    "<RenderPassAttachment _name=\"B\" _format=\"R16G16B16A16_FLOAT\" _clearColor=\"0,0,0,1\" _loadOp=\"DontCare\"/>"
+                    "<RenderPassAttachment _name=\"C\" _format=\"R16G16B16A16_FLOAT\" _clearColor=\"0,0,0,1\" _loadOp=\"DontCare\"/>"
+                    "<RenderPassAttachment _name=\"D\" _format=\"D24_UNORM_S8_UINT\" _clearDepth=\"1\" _loadOp=\"Clear\"/>"
+                    "<RenderPassAttachment _name=\"Out\" _format=\"R16G16B16A16_FLOAT\" _clearColor=\"0,0,0,1\" _loadOp=\"DontCare\"/>"
+                    "</_listAttachment><_listPass>" );
+        xml.appendFormat( "<RenderGraphPassDesc _name=\"Pass\" _type=\"%#\" _inputBinding=\"%#\" %#><_listInput>%#</_listInput><_listOutput><item>Out</item></_listOutput><_listValue>", type, binding,
+                          ComputePassTestUtil::withShader(), inputs );
+        for ( uint32 index = 0; index < valueCount; ++index )
+            xml.appendFormat( "<RenderPassValue _name=\"g_Value%#\" _value=\"0.5\"/>", index );
+        xml.append( "</_listValue></RenderGraphPassDesc></_listPass></RenderPipelineDesc>" );
+        return string( xml.view() );
+    };
+    const string_view   threeInputs = "<item>A</item><item>B</item><item>D</item>";
+    RenderPipelineAsset named;
+    SW_REQUIRE_TRUE( RenderPipelineTestUtil::load( named, makeXML( "Name", threeInputs, 2, "Compute" ) ) );
+    const RenderGraphPassDesc& pass = named.getGraphPass()[0];
+    SW_EXPECT_TRUE( pass._inputBinding == RenderPassInputBinding::Name );
+    SW_REQUIRE_EQUAL( size_t( 2 ), pass._listValue.size() );
+    SW_EXPECT_EQUAL( 0.5f, pass._listValue[1]._value );
+    SW_EXPECT_EQUAL( 8u, pass.countNamedRootConstants() ); // 크기 둘 + 출력 + 입력 셋 + 값 둘
+
+    SW_EXPECT_LOG( "RenderPipelineAsset.PassValueNeedsNamedBinding" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.PassNamedRootConstantsFull" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.PassComputeTooManyInputs" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.PassComputeDepthInput" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.PipelineValidationFoundIssues" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.PipelineIssueNotLoaded" );
+    RenderPipelineAsset rejected;
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( rejected, makeXML( "Role", "<item>A</item>", 1, "Compute" ) ) ); // 값은 이름 바인딩만
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( rejected, makeXML( "Role", threeInputs, 0, "Compute" ) ) );      // RW 칸 바인딩은 입력 둘 · 깊이 없음
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( rejected, makeXML( "Name", "<item>A</item>", 14, "Compute" ) ) );
+}
+
 /** @brief [RenderPipelineAssetTest] 쿠킹이 펼친 글은 원본을 합쳐 읽은 것과 같은 값이고, 부모를 가리키지 않는다(팩 쿠커의 펼치기와 같은 함수) */
 SW_TEST_CASE( RenderPipelineAssetTest, CookedFlatTextReadsLikeTheSource )
 {

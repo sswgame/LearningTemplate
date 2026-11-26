@@ -870,7 +870,9 @@ namespace sw
             vector<RenderGraphResourceAccess> listAccess;
             for ( const string& in : pass._listInput )
             {
-                addAttachmentAccess( listAccess, hashed_string( in.c_str() ), bComputePass ? RenderGraphAccess::UnorderedAccessRead : RenderGraphAccess::ShaderRead );
+                // RW 칸 바인딩 컴퓨트 패스는 입력을 RW 텍스처로 읽는다. 이름 바인딩은 셰이더 읽기 번호로 읽는다(`executeNamedComputePass`).
+                const bool bRWInput = bComputePass && pass._inputBinding == RenderPassInputBinding::Role;
+                addAttachmentAccess( listAccess, hashed_string( in.c_str() ), bRWInput ? RenderGraphAccess::UnorderedAccessRead : RenderGraphAccess::ShaderRead );
             }
             for ( const string& out : pass._listOutput )
             {

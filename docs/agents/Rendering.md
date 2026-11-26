@@ -21,6 +21,7 @@
 - 표가 XML 에 끄는 것만 허락한 칸(깊이 테스트 `kDepthTest` · 깊이 쓰기 `kDepthWrite` · 앞면 컬링 `kCullFront`)을 XML 이 켜거나 뒤집으면 로드 오류다.
 - 첨부 크기는 프레임 크기 ÷ `_resolutionDivisor` 이거나 고정 `_width` · `_height`(둘을 함께, 배율 규칙과 섞지 않는다, 그림자 맵 제외)다. `_bHistory="true"` 첨부는 쓰는 패스가 하나이고 그 패스가 끝에 기록으로 복사한다(패스 종류와 무관, TAA · VolumetricClouds 출력은 필수). 그림자 첨부는 `_role="ShadowMap"` · `"LocalShadowMap"` 을 적는다(이름으로 짐작하지 않는다).
 - 패스 셰이더가 읽는 엔진 역할(`g_<Role>Index`)은 그 종류의 입력 계약(필수 · 선택)과 실행이 거는 역할 안이어야 한다(`RenderPassKindInfo::getReadableRoleMask`). 쿠커가 DX 리플렉션으로 대조해 어기면 쿠킹 오류다.
+- 사용자 컴퓨트 패스는 `_inputBinding="Name"` 이면 루트 상수를 선언 차례로 받는다: 크기 둘 · `g_<출력>Index` · 출력이 기록 첨부면 `g_<출력>HistoryIndex` · 입력마다 `g_<입력>Index` · `_listValue` 마다 `g_<이름>`(`compute_pass.hlsli` 머리말). 입력 수는 루트 상수 16 칸이 정하고 네이티브 bindless 에서만 돈다. RW 칸 바인딩(기본)은 입력 둘 · 깊이 없음 그대로다.
 - 로드는 뷰 그래프 · 프레임 그래프를 서술만으로 한 번 컴파일한다(`validateGraphsCompile`). 순환은 첫 프레임 로그가 아니라 로드 오류다.
 
 ### 머티리얼 칸
