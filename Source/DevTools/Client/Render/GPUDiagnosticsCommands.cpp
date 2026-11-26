@@ -3,13 +3,19 @@
  * @brief GPU 진단 개발 명령입니다. `gpu.inspect x y [첨부] | off`(픽셀 검사 · 셰이더 출력 선택), `gpu.thread n`(컴퓨트 스레드 선택), `gpu.rhicontract`(RHI 계약 검사, `RHIContractCheck`), `gpu.timings [on|off]`(패스별 GPU 시간 줄).
  * @details 언리얼 `r.ShaderPrint` 커서 · `stat gpu`, RenderDoc 픽셀 기록과 같은 자리다. 상태는 엔진 서브시스템(`GPUPixelInspector` · `FrameProfiler`)이 들고, 이 파일은 명령 줄만 푼다.
  *          셰이더 출력(`SW_GPU_PRINT`)은 `-gv_gpuMessages=1` 로 띄운 실행에서만 줄이 나온다(메시지 변형 PSO). 첨부 값 줄(`GPUInspect.Pixel`)은 늘 나온다.
+ *          우편함(`RenderDebugRegistry`) 요청을 렌더 스레드에서 처리하는 검사 셋(정점 대조 · RHI 계약 · 버퍼 보기)도 여기서 주 렌더러의 실행기에 건다(`IRenderDebugChecks`).
  */
 #include "pch.h"
 
 #include "Core/Foundation/Constants.h"
+#include "Core/Memory/Memory.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 #include "Core/String/formatString.h"
+
+#include "DevTools/Client/Render/MeshVertexCheck.h"
+#include "DevTools/Client/Render/RHIContractCheck.h"
+#include "DevTools/Client/Render/RenderBufferInspector.h"
 
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Foundation/EngineSubsystems.h"
@@ -130,6 +136,38 @@ namespace sw
                 return true;
             }
         };
+
+        /** @class RenderDebugChecks @brief 실행기 하나(주 렌더러)가 드는 검사 셋입니다. 렌더 스레드에서만 쓴다. */
+        class RenderDebugChecks final : public IRenderDebugChecks
+        {
+        public:
+            static unique_ptr<IRenderDebugChecks> create() { return make_unique<RenderDebugChecks>(); }
+
+            void recordAfterFrameUploads( IRHICommandList& cmd, IRHIDevice& device, const GPUScene& scene, RenderDebugRegistry& registry ) override
+            {
+                _meshVertexCheck.service( cmd, device, scene, registry );
+                _rhiContractCheck.service( cmd, device, registry );
+            }
+            void recordAfterFrameGraph( IRHICommandList& cmd, IRHIDevice* pDevice, const FrameBufferTable& table, const RenderGraphExecutionContext& context, RenderPSOCache& psoCache,
+                                        RenderDebugRegistry& registry ) override
+            {
+                _bufferInspector.service( cmd, pDevice, table, context, psoCache, registry );
+            }
+            void release( IRHIDevice* pDevice ) override
+            {
+                _bufferInspector.release();
+                _meshVertexCheck.release( pDevice );
+                _rhiContractCheck.release( pDevice );
+            }
+
+        private:
+            MeshVertexCheck       _meshVertexCheck;
+            RHIContractCheck      _rhiContractCheck;
+            RenderBufferInspector _bufferInspector;
+        };
+
+        const IRenderDebugChecks::Factory   s_renderDebugChecksFactory{ &RenderDebugChecks::create };
+        const IRenderDebugChecks::Registrar s_renderDebugChecksRegistrar{ s_renderDebugChecksFactory };
     } // namespace
 
     SW_DEV_COMMAND( GPUInspectPixel, "gpu.inspect", "gpu.inspect <x> <y> [attachment] | gpu.inspect off",

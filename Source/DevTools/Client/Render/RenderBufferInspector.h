@@ -25,7 +25,7 @@ namespace sw
      * @class RenderBufferInspector
      * @brief 파일 머리말 참고. 렌더 스레드에서만 쓴다.
      */
-    class SW_API RenderBufferInspector
+    class RenderBufferInspector
     {
     public:
         /**

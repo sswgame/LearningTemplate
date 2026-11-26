@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Renderer/Debug/RenderBufferInspector.h"
+#include "DevTools/Client/Render/RenderBufferInspector.h"
 
 #include "Engine/Graphics/RHI/Diagnostics/RHIComputeBindingLog.h"
 #include "Engine/Graphics/RHI/IRHICommandList.h"

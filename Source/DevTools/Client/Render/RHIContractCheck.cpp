@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Renderer/Debug/RHIContractCheck.h"
+#include "DevTools/Client/Render/RHIContractCheck.h"
 
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"

@@ -50,8 +50,7 @@
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Renderer/Capture/FrameCapture.h"
-#include "Engine/Renderer/Debug/MeshVertexCheck.h"
-#include "Engine/Renderer/Debug/RHIContractCheck.h"
+#include "Engine/Renderer/Debug/RenderDebugRegistry.h"
 #include "Engine/Renderer/Extension/FrameExtensionHost.h"
 #include "Engine/Renderer/Extension/RenderExtensionRegistry.h"
 #include "Engine/Renderer/Frame/Execute/ViewGraphResource.h"
@@ -154,11 +153,8 @@ namespace sw
     void FramePassExecutor::releaseResources()
     {
         _frameGraphExecutor.releaseResources();
-        _bufferInspector.release();
-        if ( _meshVertexCheck != nullptr )
-            _meshVertexCheck->release( _pDevice );
-        if ( _rhiContractCheck != nullptr )
-            _rhiContractCheck->release( _pDevice );
+        if ( _pDebugChecks != nullptr )
+            _pDebugChecks->release( _pDevice );
         _nanCheckCommandList.reset();
         _frameEndCommandList.reset();
         _nanCheck.shutdown();
@@ -241,17 +237,14 @@ namespace sw
         _state._gpuScene.recordFrameUploads( *_pCmd, *pDevice );
         // 실시간 프로브의 복셀 칠하기가 읽을 위치 흐름의 GPU 복사도 같은 단계다.
         _state._probeUpdater.recordUploads( *_pCmd );
-#if !defined( SW_SHIPPING )
+        // 개발 검사(정점 대조 · RHI 계약)는 우편함이 있는 주 렌더러만 든다. 개발 도구를 짓지 않은 구성은 `create` 가 비어 늘 건너뛴다.
         if ( _state._pRenderDebug != nullptr )
         {
-            if ( _meshVertexCheck == nullptr )
-                _meshVertexCheck = make_unique<MeshVertexCheck>();
-            _meshVertexCheck->service( *_pCmd, *pDevice, _state._gpuScene, *_state._pRenderDebug );
-            if ( _rhiContractCheck == nullptr )
-                _rhiContractCheck = make_unique<RHIContractCheck>();
-            _rhiContractCheck->service( *_pCmd, *pDevice, *_state._pRenderDebug );
+            if ( _pDebugChecks == nullptr )
+                _pDebugChecks = IRenderDebugChecks::create();
+            if ( _pDebugChecks != nullptr )
+                _pDebugChecks->recordAfterFrameUploads( *_pCmd, *pDevice, _state._gpuScene, *_state._pRenderDebug );
         }
-#endif
 #if SW_PROFILE_COMPILED
         // 프레임 그래프 구간은 프로파일러 기록 중일 때만 쓴다. 게이트는 패스 타임스탬프와 같다(`onGraphPassExecute`).
         const IRHITimestampProvider* pTimestamps   = pDevice->findTimestampProvider();
@@ -1100,11 +1093,9 @@ namespace sw
         }
         if ( bOk == false )
             SW_LOG_ERROR_ONCE_ID( "FramePassExecutor.FrameGraphExecuteFailed", "Frame graph could not run - culling, light grid and skinning results are stale this frame" );
-#if !defined( SW_SHIPPING )
-        // 버퍼 보기: 그래프가 되돌려 둔 접근(등록 접근)에서 읽고 그 상태로 되돌린다(`RenderBufferInspector`).
-        if ( _state._pRenderDebug != nullptr )
-            _bufferInspector.service( *_pCmd, pDevice, _frameBufferTable, _frameGraphContext, _psoManager.getCache(), *_state._pRenderDebug );
-#endif
+        // 버퍼 보기: 그래프가 되돌려 둔 접근(등록 접근)에서 읽고 그 상태로 되돌린다.
+        if ( _pDebugChecks != nullptr && _state._pRenderDebug != nullptr )
+            _pDebugChecks->recordAfterFrameGraph( *_pCmd, pDevice, _frameBufferTable, _frameGraphContext, _psoManager.getCache(), *_state._pRenderDebug );
         _frameGraphExecutor.endFrame( *_pCmd );
     }
 

@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Renderer/Debug/MeshVertexCheck.h"
+#include "DevTools/Client/Render/MeshVertexCheck.h"
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Log/Logger.h"

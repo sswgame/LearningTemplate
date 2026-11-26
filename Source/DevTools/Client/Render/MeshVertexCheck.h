@@ -2,7 +2,7 @@
  * @file MeshVertexCheck.h
  * @brief 그리는 메시의 GPU 정점(렌더 프록시 · 그릴 때 거는 버퍼)을 CPU 정점과 바이트로 견주는 개발 전용 진단입니다(`MeshVertexCheck`).
  * @details 골든이 어긋나면 자동화가 요청한다(`RenderDebugRegistry::requestMeshVertexCheck`). 한 번 깨진 정점은 그 메시가 사라질 때까지 그림에 남으므로, 어긋난 자리에서 되읽으면
- *          CPU 사본이 틀렸는지 · 프록시가 틀렸는지 · 풀 복사가 틀렸는지 갈린다. 결과는 로그다. 배포 구성(`SW_SHIPPING`)의 렌더러는 이것을 부르지 않는다.
+ *          CPU 사본이 틀렸는지 · 프록시가 틀렸는지 · 풀 복사가 틀렸는지 갈린다. 결과는 로그다. 주 렌더러가 `IRenderDebugChecks` 로 부른다(배포 구성은 짓지 않는다).
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -26,7 +26,7 @@ namespace sw
      * @class MeshVertexCheck
      * @brief 파일 머리말 참고. 렌더 스레드에서만 쓴다. CPU 정점을 쥔(`MeshCPUAccess::Keep`) 메시만 견준다.
      */
-    class SW_API MeshVertexCheck
+    class MeshVertexCheck
     {
     public:
         /** @brief 두 정점 사본([위치 구간][속성 구간] — `RHIMeshVertexStreams`)의 첫 차이입니다. */

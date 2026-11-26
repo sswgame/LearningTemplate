@@ -7,10 +7,11 @@
 #include "Core/Container/vector.h"
 #include "Core/TestFramework/TestFramework.h"
 
+#include "DevTools/Client/Render/MeshVertexCheck.h"
+
 #include "Engine/Graphics/Mesh/MeshVertex.h"
 #include "Engine/Graphics/RHI/RHIMeshVertexLayout.h"
 #include "Engine/Graphics/RHI/RHIMeshVertexStreams.h"
-#include "Engine/Renderer/Debug/MeshVertexCheck.h"
 
 using namespace sw;
 
