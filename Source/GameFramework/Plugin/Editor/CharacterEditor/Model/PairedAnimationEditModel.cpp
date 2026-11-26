@@ -73,11 +73,14 @@ namespace sw::editor
     {
         if ( isValid() == false )
             return unexpected( Error{ ErrorKind::InvalidArgument, "The paired animation breaks a rule (see the log) - fix it before saving" } );
-        const string text         = saveToXMLText();
-        const string completeText = PairedAnimationDef::makeXMLText( _content, ResourceFieldWrite::WriteAll );
-        const bool   bSaved       = writer.save( path, [&text, &completeText]( const AbsolutePath& writable )
-                { return ResourceComposer::saveText( writable, ResourceSaveText::makeWithComplete( text, completeText ) ); } ) == AssetWriteResult::Written;
-        if ( bSaved == false )
+        const string           text         = saveToXMLText();
+        const string           completeText = PairedAnimationDef::makeXMLText( _content, ResourceFieldWrite::WriteAll );
+        const AssetWriteResult saved        = writer.save( path, [&text, &completeText]( const AbsolutePath& writable )
+               { return ResourceComposer::saveText( writable, ResourceSaveText::makeWithComplete( text, completeText ) ); } );
+        // 거절은 문이 경고로 알렸다 — 상태 줄이 쓰기 실패와 다른 까닭을 보이게 글을 나눈다(파일을 바꾼 것은 바깥, 버전 관리 · 다른 편집기다)
+        if ( saved == AssetWriteResult::Refused )
+            return unexpected( Error{ ErrorKind::ExternalFailure, "Not saved - the file is read-only or changed on disk", path.str() } );
+        if ( saved == AssetWriteResult::Failed )
             return unexpected( Error{ ErrorKind::ExternalFailure, "The file could not be written", path.str() } );
         _state.markSaved( text );
         return {};

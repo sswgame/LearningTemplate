@@ -18,6 +18,7 @@ namespace sw::editor
 {
     class EditorTransaction;
     class EditorWorkspace;
+    enum class AssetWriteResult : uint8;
 
     /** @brief 정렬 축입니다. */
     enum class AlignAxis : uint8
@@ -57,14 +58,14 @@ namespace sw::editor
         static string makeComponentPresetFileName( const Component* pComp, string_view presetName );
         /** @brief `makeComponentPresetFileName` 규칙을 따른 이 컴포넌트 타입의 프리셋이면 그 이름을, 아니면 빈 문자열을 반환합니다. 경로를 받아도 됩니다. */
         static string getComponentPresetName( const Component* pComp, string_view presetFilePath );
-        /** @brief 컴포넌트 프리셋을 이름으로 프리셋 폴더에 저장합니다(`makeComponentPresetFileName`). 폴더를 찾지 못하면 false 입니다. */
-        [[nodiscard]] static bool saveComponentPreset( const Component* pComp, string_view presetName );
+        /** @brief 컴포넌트 프리셋을 이름으로 프리셋 폴더에 저장합니다(`makeComponentPresetFileName`). 폴더를 찾지 못하면 오류를 남기고 `Failed` 입니다. */
+        [[nodiscard]] static AssetWriteResult saveComponentPreset( const Component* pComp, string_view presetName );
         /**
          * @brief 컴포넌트 프리셋을 선택한 파일에 그대로 저장합니다. `.preset.xml` 이 없으면 붙입니다.
          * @details "Save Component Preset" 대화상자가 쓴다. 선택한 파일 이름을 이름 규칙(`makeComponentPresetFileName`)에 넘기면
-         *          선택한 폴더는 버려지고 `MyPreset.preset.xml` 이 프리셋 폴더의 `<타입>_MyPreset.preset.preset.xml` 이 되므로 주의한다.
+         *          선택한 폴더는 버려지고 `MyPreset.preset.xml` 이 프리셋 폴더의 `<타입>_MyPreset.preset.preset.xml` 이 되므로 주의한다. 컴포넌트 · 경로가 비었으면 `Failed` 입니다.
          */
-        [[nodiscard]] static bool saveComponentPresetTo( const Component* pComp, const DiskPath& filePath );
+        [[nodiscard]] static AssetWriteResult saveComponentPresetTo( const Component* pComp, const DiskPath& filePath );
         /** @brief 프리셋 XML 을 컴포넌트에 적용합니다. 씬을 바꾸므로 부른 쪽이 연 거래 구간 안에서만 부른다(파일 창 · 하위 메뉴가 끝날 때 — `SceneUnrecorded` 명령의 완료). */
         [[nodiscard]] static bool loadComponentPreset( EditorTransaction& transaction, Component* pComp, const DiskPath& presetFilePath );
         /** @brief 선택한 오브젝트를 지면(Y)에 맞춥니다(`snapObjectsToGround`). */

@@ -128,6 +128,7 @@ namespace sw::editor
         string               _assetPath{};
         uint64               _objectID{ 0 };
         bool                 _bSucceeded{ false };
+        bool                 _bWriteRefused{ false }; ///< 쓰기 문이 거절했다(경고는 이미 남았다) — 알림에만 까닭을 싣는다
     };
 
     /**
@@ -165,11 +166,15 @@ namespace sw::editor
                 result._bSucceeded = false;
                 result._error      = "the baker produced no reflection data";
             }
-            AssetWriter writer;
-            if ( result._bSucceeded && ( input._dataPath.has_value() == false || writer.saveAsset( *input._dataPath, result._data ) != AssetWriteResult::Written ) )
+            AssetWriter      writer;
+            AssetWriteResult written = AssetWriteResult::Written; // 접기가 졌으면 쓰지 않는다 — 까닭은 위에서 정했다
+            if ( result._bSucceeded )
+                written = input._dataPath.has_value() ? writer.saveAsset( *input._dataPath, result._data ) : AssetWriteResult::Failed;
+            if ( written != AssetWriteResult::Written )
             {
-                result._bSucceeded = false;
-                result._error      = EditorReflectionProbeBakeSessionInternal::makeWriteError( input._assetPath );
+                result._bSucceeded    = false;
+                result._bWriteRefused = written == AssetWriteResult::Refused;
+                result._error         = EditorReflectionProbeBakeSessionInternal::makeWriteError( input._assetPath );
             }
             publish( pState, generation, std::move( result ) );
         }
@@ -287,7 +292,10 @@ namespace sw::editor
     {
         if ( result._bSucceeded == false )
         {
-            reportFailure( result._error );
+            if ( result._bWriteRefused )
+                _lastError = result._error; // 문이 이미 경고로 알렸다
+            else
+                reportFailure( result._error );
             return;
         }
         ReflectionProbeComponent* pProbe = EditorReflectionProbeBakeSessionInternal::findProbe( result._objectID );

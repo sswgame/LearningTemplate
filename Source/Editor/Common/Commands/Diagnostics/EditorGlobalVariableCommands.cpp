@@ -93,11 +93,11 @@ namespace sw::editor
         return doc.saveToString();
     }
 
-    bool EditorGlobalVariableCommands::savePreset( AssetWriter& writer, const DiskPath& filePath, const string& presetName )
+    AssetWriteResult EditorGlobalVariableCommands::savePreset( AssetWriter& writer, const DiskPath& filePath, const string& presetName )
     {
         const string text = makePresetText( presetName );
         return writer.save( filePath, [&text]( const AbsolutePath& writable )
-        { return ResourceComposer::saveText( writable, ResourceSaveText::makeComplete( text ) ); } ) == AssetWriteResult::Written;
+        { return ResourceComposer::saveText( writable, ResourceSaveText::makeComplete( text ) ); } );
     }
 
     bool EditorGlobalVariableCommands::loadPreset( const DiskPath& filePath )
@@ -168,7 +168,7 @@ namespace sw::editor
         return makePresetText( EditorGlobalVariableCommandsInternal::kSessionPresetName );
     }
 
-    bool EditorGlobalVariableCommands::saveSessionPreset( AssetWriter& writer )
+    AssetWriteResult EditorGlobalVariableCommands::saveSessionPreset( AssetWriter& writer )
     {
         return savePreset( writer, getSessionPresetPath(), EditorGlobalVariableCommandsInternal::kSessionPresetName );
     }

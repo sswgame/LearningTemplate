@@ -248,11 +248,15 @@ namespace sw::editor
         }
         const optional<DiskPath> gridPath = editor::getSubsystem<AssetPaths>().toDiskPath( assetPath );
         AssetWriter              writer;
-        if ( gridPath.has_value() == false || writer.saveAsset( *gridPath, grid ) != AssetWriteResult::Written )
+        const AssetWriteResult   written = gridPath.has_value() ? writer.saveAsset( *gridPath, grid ) : AssetWriteResult::Failed;
+        if ( written != AssetWriteResult::Written )
         {
             StringBuilder<constant::buffer::kMax512> failureBuilder;
             failureBuilder.appendFormat( "could not write %#", assetPath );
-            reportFailure( string( failureBuilder.view() ) );
+            if ( written == AssetWriteResult::Refused )
+                _lastError = string( failureBuilder.view() ); // 문이 이미 경고로 알렸다 — 끝 알림에만 싣는다
+            else
+                reportFailure( string( failureBuilder.view() ) );
             return;
         }
         const uint32 probeCount = static_cast<uint32>( grid._listProbe.size() );
