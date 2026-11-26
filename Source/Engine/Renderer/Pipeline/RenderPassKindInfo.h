@@ -359,6 +359,26 @@ namespace sw
          */
         SW_API const MaterialPassFilter& getDefaultMaterialFilter() const;
 
+        /// @brief `getReadableRoleMask` 가 "보지 않는다" 를 뜻하는 값입니다(입력 계약이 없는 종류 — 메시 패스 · Compute).
+        static constexpr uint64 kAnyRoleMask = ~uint64{ 0 };
+        /**
+         * @brief 이 종류의 셰이더가 읽어도 되는 엔진 역할(`g_<Role>Index`)의 비트 집합입니다(비트 번호 = `RenderPassInputRole` 값) — 입력 계약의 필수 · 선택 역할과 실행이 스스로 거는 역할(`_executionBoundRole`).
+         * @details 계약 밖 역할을 읽으면 그래프가 그 칸에 텍스처를 걸지 않아 셰이더가 무효 번호를 읽는다. 쿠커(쿠킹 오류)와 런타임 PSO 검사가 이 값 하나를 본다. 입력 계약이 없는 종류는 `kAnyRoleMask` 다.
+         */
+        constexpr uint64 getReadableRoleMask() const
+        {
+            if ( hasFlag( RenderPassTraitFlag::kHasInputContract ) == false )
+                return kAnyRoleMask;
+            uint64 mask = 0;
+            for ( uint32 index = 0; index < _inputContract._requiredCount; ++index )
+                mask |= uint64{ 1 } << static_cast<uint32>( _inputContract._arrRequired[index] );
+            for ( uint32 index = 0; index < _inputContract._optionalCount; ++index )
+                mask |= uint64{ 1 } << static_cast<uint32>( _inputContract._arrOptional[index] );
+            if ( _executionBoundRole != RenderPassInputRole::Invalid )
+                mask |= uint64{ 1 } << static_cast<uint32>( _executionBoundRole );
+            return mask;
+        }
+
         /**
          * @brief 깊이만 쓰는 패스(그림자 · 깊이 프리패스)가 이 머티리얼의 배치를 패스 셰이더 대신 머티리얼의 셰이더로 그리는지 반환합니다.
          * @details 깊이 패스는 지오메트리만 그리므로 보통 자기 셰이더(shadow_depth.hlsl)가 기준이다. 덮는 모양이나 정점 자리를 머티리얼 코드가 정하면

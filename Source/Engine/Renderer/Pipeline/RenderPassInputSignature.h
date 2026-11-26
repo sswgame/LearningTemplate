@@ -65,6 +65,11 @@ namespace sw
 
     /** @brief 역할 이름(`getRenderPassInputRoleName` 의 문자열, Invalid 제외)을 역할로 읽습니다. 모르는 이름이면 false 입니다. */
     [[nodiscard]] bool tryParseRenderPassInputRole( string_view roleName, RenderPassInputRole& outRole );
+    /**
+     * @brief 셰이더 상수 이름 `g_<Role>Index`(엔진 PassCB 의 역할 텍스처 번호)가 가리키는 역할을 읽습니다. 그 꼴이 아니거나 모르는 역할이면 false 입니다.
+     * @details 런타임 PSO 검사(`FramePSOManager`)와 쿠커(`ShaderCookDriver`)가 같은 규칙으로 셰이더 리플렉션을 읽는다.
+     */
+    [[nodiscard]] SW_API bool tryParseRoleIndexVariable( string_view variableName, RenderPassInputRole& outRole );
 
     /**
      * @brief 첨부의 역할을 정합니다. 첨부가 선언한 역할(`RenderPassAttachment::_role`)이 먼저입니다.

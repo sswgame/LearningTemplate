@@ -20,6 +20,7 @@
 - 씬 메시 패스가 그릴 머티리얼은 패스 칸 `_requiredMaterialDefine` · `_excludedMaterialDefine` 이 정한다(유니티 LightMode 자리). 비운 칸은 표의 기본값이다(G버퍼는 `MATERIAL_FORWARD_ONLY` 를 빼고, 메시 외곽선은 `MATERIAL_OUTLINE` 을 요구한다). 드로우 · PSO 변형 · 쿠커가 `MaterialPassFilter` 하나를 본다.
 - 표가 XML 에 끄는 것만 허락한 칸(깊이 테스트 `kDepthTest` · 깊이 쓰기 `kDepthWrite` · 앞면 컬링 `kCullFront`)을 XML 이 켜거나 뒤집으면 로드 오류다.
 - 첨부 크기는 프레임 크기 ÷ `_resolutionDivisor` 이거나 고정 `_width` · `_height`(둘을 함께, 배율 규칙과 섞지 않는다, 그림자 맵 제외)다. 시간 누적 패스(TAA · VolumetricClouds)의 출력은 `_bHistory="true"` 를 적고, 다른 첨부는 적지 않는다.
+- 패스 셰이더가 읽는 엔진 역할(`g_<Role>Index`)은 그 종류의 입력 계약(필수 · 선택)과 실행이 거는 역할 안이어야 한다(`RenderPassKindInfo::getReadableRoleMask`). 쿠커가 DX 리플렉션으로 대조해 어기면 쿠킹 오류다.
 - 로드는 뷰 그래프 · 프레임 그래프를 서술만으로 한 번 컴파일한다(`validateGraphsCompile`). 순환은 첫 프레임 로그가 아니라 로드 오류다.
 
 ### 머티리얼 칸

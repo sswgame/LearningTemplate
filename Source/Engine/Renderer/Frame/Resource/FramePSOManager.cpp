@@ -250,21 +250,16 @@ namespace sw
          */
         bool validatePassInputContract( RenderPassKind passType, const ShaderBindingLayout& layout )
         {
-            const RenderPassInputSignature* const pContract = findRenderPassInputSignature( passType );
-            if ( pContract == nullptr )
+            const uint64 readableRoleMask = getRenderPassKindInfo( passType ).getReadableRoleMask();
+            if ( readableRoleMask == RenderPassKindInfo::kAnyRoleMask )
                 return true;
             bool bInside = true;
             for ( const ShaderBindingSlot& slot : layout.getSlots() )
             {
                 for ( const ShaderVariableInfo& member : slot._listCbMember )
                 {
-                    const string_view name       = member._name;
-                    const bool        bRoleIndex = member._usage == ShaderVariableUsage::Used && name.size() > 7 && name.substr( 0, 2 ) == "g_" && name.substr( name.size() - 5 ) == "Index";
-                    if ( bRoleIndex == false )
-                        continue;
-                    RenderPassInputRole role  = RenderPassInputRole::Invalid;
-                    const bool          bRole = tryParseRenderPassInputRole( name.substr( 2, name.size() - 7 ), role );
-                    if ( bRole == false || pContract->hasRole( role ) || getRenderPassKindInfo( passType )._executionBoundRole == role )
+                    RenderPassInputRole role = RenderPassInputRole::Invalid;
+                    if ( member._usage != ShaderVariableUsage::Used || tryParseRoleIndexVariable( member._name, role ) == false || ( ( readableRoleMask >> static_cast<uint32>( role ) ) & 1u ) != 0 )
                         continue;
                     SW_LOG_ERROR_ID( "FramePSOManager.PassReadsRoleOutsideContract",
                                      "Pass %# reads engine role '%#' (%#) but its input contract does not have it - the graph binds no texture there and the shader reads an invalid index; add the role to the contract (RenderPassKindInfo) and the pipeline inputs",
