@@ -5,7 +5,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Serialization/BitStream.h"
 
-#include "Engine/Serialization/Fixed/ReplicatedLayout.h"
+#include "Engine/Serialization/Layout/ReplicatedLayout.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/DepletingValue.h"
 

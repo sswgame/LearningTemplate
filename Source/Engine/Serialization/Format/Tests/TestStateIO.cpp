@@ -6,7 +6,7 @@
 #include "Core/Time/FixedStepTimer.h"
 
 #include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/FormatDef.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include <cstring>
@@ -72,7 +72,7 @@ namespace
         sw::Archive body;
         body << value;
         sw::Archive outer;
-        sw::StateIO::writeSection( outer, sw::FormatDef{ "TEST", version }, body );
+        sw::StateIO::writeSection( outer, sw::FormatDesc{ "TEST", version }, body );
         return outer;
     }
 } // namespace
@@ -86,7 +86,7 @@ SW_TEST_CASE( StateIOTest, ExpectedSectionRejectsOtherVersionOrTag )
 
     sw::Archive same( written.getData(), written.getSize() );
     sw::Archive body;
-    SW_REQUIRE_TRUE( sw::StateIO::readExpectedSection( same, sw::FormatDef{ "TEST", 2 }, body ) );
+    SW_REQUIRE_TRUE( sw::StateIO::readExpectedSection( same, sw::FormatDesc{ "TEST", 2 }, body ) );
     int32 value = 0;
     body >> value;
     SW_EXPECT_EQUAL( 42, value );
@@ -94,9 +94,9 @@ SW_TEST_CASE( StateIOTest, ExpectedSectionRejectsOtherVersionOrTag )
 
     SW_EXPECT_LOG( "FormatUpgrade.NewerThanSupported" );
     sw::Archive readAsOld( written.getData(), written.getSize() );
-    SW_EXPECT_FALSE( sw::StateIO::readExpectedSection( readAsOld, sw::FormatDef{ "TEST", 1 }, body ) ); // 새 판을 옛 판으로 읽지 않는다
+    SW_EXPECT_FALSE( sw::StateIO::readExpectedSection( readAsOld, sw::FormatDesc{ "TEST", 1 }, body ) ); // 새 판을 옛 판으로 읽지 않는다
     sw::Archive otherTag( written.getData(), written.getSize() );
-    SW_EXPECT_FALSE( sw::StateIO::readExpectedSection( otherTag, sw::FormatDef{ "OTHR", 2 }, body ) );
+    SW_EXPECT_FALSE( sw::StateIO::readExpectedSection( otherTag, sw::FormatDesc{ "OTHR", 2 }, body ) );
 
     sw::Archive                              any( written.getData(), written.getSize() );
     const sw::optional<sw::StateIO::Section> section = sw::StateIO::readSection( any );
@@ -224,8 +224,8 @@ SW_TEST_CASE( StateIOTest, RejectedReadLeavesStateUntouched )
  */
 SW_TEST_CASE( StateIOTest, SectionChecksTagVersionAndConsumption )
 {
-    constexpr sw::FormatDef kFormat{ "TEST", 1 };
-    sw::Archive             outer;
+    constexpr sw::FormatDesc kFormat{ "TEST", 1 };
+    sw::Archive              outer;
     {
         sw::StateIO io( outer );
         int32       value = 42;
@@ -245,7 +245,7 @@ SW_TEST_CASE( StateIOTest, SectionChecksTagVersionAndConsumption )
         SW_EXPECT_LOG( "FormatUpgrade.StepMissing" );
         sw::Archive reading( outer.getData(), outer.getSize() );
         sw::StateIO io( reading );
-        io.section( sw::FormatDef{ "TEST", 2 }, []( sw::StateIO& ) {} );
+        io.section( sw::FormatDesc{ "TEST", 2 }, []( sw::StateIO& ) {} );
         SW_EXPECT_FALSE( io.isOk() ); // 다른 판 — 올릴 단계가 없다
     }
     {
@@ -287,7 +287,7 @@ namespace sw
         struct StateUpgradeTestState
         {
             static constexpr FormatStep kArrStep[] = { &StateUpgradeTestSteps::convertHealthToInt32, &StateUpgradeTestSteps::addSpeed };
-            static constexpr FormatDef  kStateFormat{ "TUPG", kArrStep };
+            static constexpr FormatDesc kStateFormat{ "TUPG", kArrStep };
 
             SW_DECLARE_STATE_IO();
 
@@ -326,7 +326,7 @@ namespace sw
 SW_TEST_CASE( StateIOTest, HeaderUpgradesOldVersionThroughTheChain )
 {
     sw::Archive written;
-    sw::FormatDef{ "TUPG" }.write( written );
+    sw::FormatDesc{ "TUPG" }.write( written );
     written << int16{ 7 };
     written << int32{ 99 }; // 바깥 형식의 뒤 칸
 
@@ -357,7 +357,7 @@ SW_TEST_CASE( StateIOTest, HeaderRefusesVersionWithoutChain )
     const auto readVersion = []( uint32 version, sw::StateUpgradeTestState& inoutState )
     {
         sw::Archive crafted;
-        sw::FormatDef{ "TUPG", version }.write( crafted );
+        sw::FormatDesc{ "TUPG", version }.write( crafted );
         crafted << int32{ 3 } << 2.0f;
         sw::Archive reading( crafted.getData(), crafted.getSize() );
         return inoutState.readState( reading );
@@ -368,7 +368,7 @@ SW_TEST_CASE( StateIOTest, HeaderRefusesVersionWithoutChain )
     sw::Archive body;
     body << int32{ 3 } << 2.0f;
     body.setReadModeAndResetPosition( true );
-    SW_EXPECT_FALSE( sw::StateIO::upgradeSectionBody( sw::FormatDef{ "TUPG", 3 }, 2, body ) ); // 단계 없는 형식은 옛 판을 읽지 않는다
+    SW_EXPECT_FALSE( sw::StateIO::upgradeSectionBody( sw::FormatDesc{ "TUPG", 3 }, 2, body ) ); // 단계 없는 형식은 옛 판을 읽지 않는다
     SW_EXPECT_LOG( "FormatUpgrade.NewerThanSupported" );
     SW_EXPECT_FALSE( readVersion( 3, state ) );
     SW_EXPECT_EQUAL( 11, state._health );
@@ -384,7 +384,7 @@ SW_TEST_CASE( StateIOTest, SectionUpgradesOldVersionThroughTheChain )
     sw::Archive body;
     body << int16{ 21 };
     sw::Archive outer;
-    sw::StateIO::writeSection( outer, sw::FormatDef{ "TUPG" }, body );
+    sw::StateIO::writeSection( outer, sw::FormatDesc{ "TUPG" }, body );
 
     sw::Archive reading( outer.getData(), outer.getSize() );
     sw::StateIO io( reading );

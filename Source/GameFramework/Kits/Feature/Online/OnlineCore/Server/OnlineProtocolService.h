@@ -448,7 +448,7 @@ namespace sw
                 return;
             }
             typename TMethod::Request request{};
-            const bool                bBodyRead = TProtocol::MessageTypes::read( body, request ) == FixedReadResult::Ok;
+            const bool                bBodyRead = TProtocol::MessageTypes::read( body, request ) == LayoutReadResult::Ok;
             const bool                bKeyOk    = TMethod::kRequiresIdempotencyKey == false || context._idempotencyKey.isValid();
             if ( bBodyRead == false || bKeyOk == false )
             {

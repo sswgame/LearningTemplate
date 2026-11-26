@@ -15,7 +15,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneStreamingSubsystem.h"
-#include "Engine/Serialization/Fixed/ReplicatedLayout.h"
+#include "Engine/Serialization/Layout/ReplicatedLayout.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/ConfigRangeUtil.h"
 
@@ -51,9 +51,9 @@ namespace sw
 
             [[nodiscard]] static bool readEntity( BitReader& reader, MMOEntity& outEntity, bool bWithType )
             {
-                MMOEntityEnterHeader  header;
-                const FixedReadResult result = bWithType ? ReplicatedLayout::readFull( reader, header, nullptr ) : ReplicatedLayout::readFull( reader, header._header, nullptr );
-                if ( result != FixedReadResult::Ok )
+                MMOEntityEnterHeader   header;
+                const LayoutReadResult result = bWithType ? ReplicatedLayout::readFull( reader, header, nullptr ) : ReplicatedLayout::readFull( reader, header._header, nullptr );
+                if ( result != LayoutReadResult::Ok )
                     return false;
                 outEntity._entityID = header._header._entityID;
                 outEntity._position = AbsolutePosition{ header._header._position };

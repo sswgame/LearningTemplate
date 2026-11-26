@@ -9,9 +9,9 @@
 
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Reflection/ReflectionValidation.h"
-#include "Engine/Serialization/Fixed/FixedLayout.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
+#include "Engine/Serialization/Layout/LayoutSerializer.h"
 #include "Engine/Serialization/Serializer/SerializerUtil.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/ConfigRangeUtil.h"
@@ -1142,7 +1142,7 @@ namespace sw
     {
         // 롤백은 프레임마다, 되감아 다시 돌 때마다 상태를 저장한다. 링 슬롯의 버퍼를 이어받아 쓰고 돌려주므로 새로 할당하지 않는다.
         BitWriter  writer{ std::move( outBuffer ) };
-        const bool bWritten = FixedLayout::write( *this, writer );
+        const bool bWritten = LayoutSerializer::write( *this, writer );
         outBuffer           = writer.releaseBytes();
         if ( bWritten == false )
         {
@@ -1155,8 +1155,8 @@ namespace sw
 
     bool FightingMatch::loadState( const vector<uint8>& buffer )
     {
-        const FixedReadResult result = FixedLayout::read( buffer.data(), static_cast<int32>( buffer.size() ), *this );
-        if ( result != FixedReadResult::Ok )
+        const LayoutReadResult result = LayoutSerializer::read( buffer.data(), static_cast<int32>( buffer.size() ), *this );
+        if ( result != LayoutReadResult::Ok )
         {
             SW_LOG_WARNING_ID( "FightingMatch.FightingRollbackStateRejected", "Fighting rollback state was rejected (%#) - the match keeps its current state", getEnumName( result ) );
             return false;

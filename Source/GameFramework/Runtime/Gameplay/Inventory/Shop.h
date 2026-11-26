@@ -18,7 +18,7 @@
 #include "Engine/Behavior/ConditionExpr.h"
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Serialization/Format/FormatDef.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -216,7 +216,7 @@ namespace sw
     class SW_GF_API ShopManager
     {
     public:
-        static constexpr FormatDef kStateFormat{ "SHOP" };
+        static constexpr FormatDesc kStateFormat{ "SHOP" };
 
         ShopManager();
 

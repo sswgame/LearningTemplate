@@ -98,7 +98,7 @@
   ],
   "_keep": {
     "DummyType": "리플렉션 테스트의 형식 이름 표본(열거형 끝말 kind 규칙의 예외)",
-    "FixedNumberType": "C++ 수 형식(int32 · float32 …)을 가리킨다 — 값의 갈래가 아니라 형식이다(kind 규칙의 예외)",
+    "LayoutScalarType": "C++ 수 형식(int32 · float32 …)을 가리킨다 — 값의 갈래가 아니라 형식이다(kind 규칙의 예외)",
     "GlobalVariableType": "전역 변수의 C++ 형식을 가리킨다(kind 규칙의 예외)",
     "PredefinedNameType": "미리 정한 이름 번호표 — 형식 이름 표다(kind 규칙의 예외)",
     "GamepadBatteryType": "XInput XINPUT_BATTERY_TYPE 의 자기 용어(kind 규칙의 예외)",
@@ -3208,6 +3208,7 @@
       "interpolate",
       "interpolated",
       "interpolation",
+      "interpreter",
       "interrupt",
       "interrupted",
       "interruptible",

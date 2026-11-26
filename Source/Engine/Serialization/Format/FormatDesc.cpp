@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Serialization/Format/FormatDef.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
 
 #include "Core/Encoding/FourCCUtil.h"
 #include "Core/Log/Logger.h"
@@ -14,28 +14,28 @@ namespace sw
 {
     namespace
     {
-        static_assert( FormatDef{ "SWPK" }._tag == FourCCUtil::make( "SWPK" ), "a format tag is the FourCC of its letters" );
+        static_assert( FormatDesc{ "SWPK" }._tag == FourCCUtil::make( "SWPK" ), "a format tag is the FourCC of its letters" );
         constexpr const utf8* kFormatHeadCut = "the bytes are shorter than a format head";
     } // namespace
 
-    void FormatDef::write( vector<uint8>& outBytes ) const
+    void FormatDesc::write( vector<uint8>& outBytes ) const
     {
         LittleEndianUtil::appendUint32( outBytes, _tag );
         LittleEndianUtil::appendUint32( outBytes, _version );
     }
 
-    void FormatDef::write( Archive& outArchive ) const
+    void FormatDesc::write( Archive& outArchive ) const
     {
         outArchive << _tag << _version;
     }
 
-    void FormatDef::write( BitWriter& outWriter ) const
+    void FormatDesc::write( BitWriter& outWriter ) const
     {
         outWriter.writeUint32( _tag );
         outWriter.writeVarUint( _version );
     }
 
-    expected<void> FormatDef::check( ByteReader& reader, size_t headBytes ) const
+    expected<void> FormatDesc::check( ByteReader& reader, size_t headBytes ) const
     {
         const bool   bShort  = reader.getRemainingByteCount() < headBytes;
         const uint32 tag     = reader.readUint32();
@@ -45,7 +45,7 @@ namespace sw
         return check( tag, version );
     }
 
-    expected<void> FormatDef::check( Archive& archive ) const
+    expected<void> FormatDesc::check( Archive& archive ) const
     {
         uint32 tag     = 0;
         uint32 version = 0;
@@ -55,7 +55,7 @@ namespace sw
         return check( tag, version );
     }
 
-    expected<void> FormatDef::check( BitReader& reader ) const
+    expected<void> FormatDesc::check( BitReader& reader ) const
     {
         const uint32 tag     = reader.readUint32();
         const uint32 version = reader.readVarUint32();
@@ -64,7 +64,7 @@ namespace sw
         return check( tag, version );
     }
 
-    expected<void> FormatDef::check( uint32 tag, uint32 version ) const
+    expected<void> FormatDesc::check( uint32 tag, uint32 version ) const
     {
         if ( tag != _tag )
             return unexpected( Error{ ErrorKind::InvalidArgument, "the bytes are another format - expected", makeTagText().view() } );
@@ -75,25 +75,25 @@ namespace sw
         return unexpected( Error{ ErrorKind::Unsupported, version > _version ? "the bytes were written by a newer build" : "the bytes are an older version - write them again", detail.view() } );
     }
 
-    void FormatDef::writeVersion( BitWriter& outWriter ) const
+    void FormatDesc::writeVersion( BitWriter& outWriter ) const
     {
         outWriter.writeVarUint( _version );
     }
 
-    bool FormatDef::readVersion( BitReader& reader ) const
+    bool FormatDesc::readVersion( BitReader& reader ) const
     {
         const uint32 version = reader.readVarUint32();
         return reader.hasOverflowed() == false && version == _version;
     }
 
-    bool FormatDef::report( const expected<void>& checked, string_view sourceName )
+    bool FormatDesc::report( const expected<void>& checked, string_view sourceName )
     {
         if ( checked.has_value() == false )
             SW_LOG_ERROR_ID( "Format.HeadRefused", "'%#' is not read: %# (%#)", sourceName, checked.error().message(), checked.error().detail() );
         return checked.has_value();
     }
 
-    bool FormatDef::raise( uint32 fromVersion, vector<uint8>& inoutBody ) const
+    bool FormatDesc::raise( uint32 fromVersion, vector<uint8>& inoutBody ) const
     {
         if ( fromVersion == _version )
             return true;
@@ -113,7 +113,7 @@ namespace sw
         return true;
     }
 
-    void FormatDef::reportCannotRaise( string_view kind, uint32 fromVersion, uint32 toVersion )
+    void FormatDesc::reportCannotRaise( string_view kind, uint32 fromVersion, uint32 toVersion )
     {
         if ( fromVersion > toVersion )
             SW_LOG_ERROR_ID( "FormatUpgrade.NewerThanSupported", "%# format version %# is newer than the supported %# - written by a newer build", kind, fromVersion, toVersion );
@@ -121,7 +121,7 @@ namespace sw
             SW_LOG_ERROR_ID( "FormatUpgrade.StepMissing", "%# format version %# has no upgrade step towards %# - add the step or rewrite the data", kind, fromVersion, toVersion );
     }
 
-    bool FormatDef::runStep( FormatStep pStep, vector<uint8>& inoutBody )
+    bool FormatDesc::runStep( FormatStep pStep, vector<uint8>& inoutBody )
     {
         Archive oldBody( inoutBody.data(), inoutBody.size() );
         Archive newBody;
@@ -135,7 +135,7 @@ namespace sw
         return true;
     }
 
-    fixed_string<constant::buffer::kMax16> FormatDef::makeTagText() const
+    fixed_string<constant::buffer::kMax16> FormatDesc::makeTagText() const
     {
         const utf8                             arrLetter[] = { static_cast<utf8>( _tag & 0xFFu ), static_cast<utf8>( ( _tag >> 8 ) & 0xFFu ), static_cast<utf8>( ( _tag >> 16 ) & 0xFFu ),
                                                                static_cast<utf8>( ( _tag >> 24 ) & 0xFFu ) };

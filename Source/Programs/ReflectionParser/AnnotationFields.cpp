@@ -192,8 +192,8 @@ namespace sw
 
             /**
              * @brief 아래 경계만 적습니다. 위 경계는 따로이고, 한쪽만 적은 범위는 그쪽만 막습니다. 꼴이 틀리면 `AnnotationApply` 가 이미 거절했습니다.
-             * @details 글은 늘 남깁니다(고정 배치형 코덱이 읽습니다). 숫자 하나면 여기서 숫자 경계가 됩니다. 같은 타입의 필드 하나면 생성기가
-             *          그 필드를 읽는 함수를 냅니다(`CodeGenerator` 의 `emitRangeReader`). 바깥 타입의 필드 · 목록 꼴은 코덱만 씁니다.
+             * @details 글은 늘 남깁니다(레이아웃 스키마이 읽습니다). 숫자 하나면 여기서 숫자 경계가 됩니다. 같은 타입의 필드 하나면 생성기가
+             *          그 필드를 읽는 함수를 냅니다(`CodeGenerator` 의 `emitRangeReader`). 바깥 타입의 필드 · 목록 꼴은 스키마만 씁니다.
              */
             static void applyMinRange( ParsedPropertyInfo& target, const string_view value )
             {
@@ -215,7 +215,7 @@ namespace sw
                 target._bHasMaxRange = SW_TRUE;
             }
 
-            /** @brief 고정 배치형 코덱의 양자화 간격입니다. 숫자인지는 `AnnotationApply` 가 이미 봤습니다. */
+            /** @brief 레이아웃 스키마의 양자화 간격입니다. 숫자인지는 `AnnotationApply` 가 이미 봤습니다. */
             static void applyStep( ParsedPropertyInfo& target, const string_view value )
             {
                 float32 parsed{ 0.0f };

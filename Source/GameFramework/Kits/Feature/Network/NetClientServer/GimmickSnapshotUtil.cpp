@@ -7,7 +7,7 @@
 #include "Core/Serialization/BitStream.h"
 #include "Core/Serialization/ByteStream.h"
 
-#include "Engine/Serialization/Fixed/FixedLayout.h"
+#include "Engine/Serialization/Layout/LayoutSerializer.h"
 
 #include <algorithm>
 
@@ -40,7 +40,7 @@ namespace sw
                 continue;
             }
             BitWriter           writer;
-            const bool          bWritten = FixedLayout::write( entry._state, writer );
+            const bool          bWritten = LayoutSerializer::write( entry._state, writer );
             const vector<uint8> bytes( writer.getBytes().begin(), writer.getBytes().begin() + writer.getByteCount() );
             if ( bWritten == false || bytes.size() > kMaxCircuitBytes )
             {
@@ -114,7 +114,7 @@ namespace sw
                 }
                 GimmickStateEntry entry;
                 entry._ownerKey = listChunk[begin]._ownerKey;
-                bRead           = FixedLayout::read( bytes.data(), static_cast<int32>( bytes.size() ), entry._state ) == FixedReadResult::Ok;
+                bRead           = LayoutSerializer::read( bytes.data(), static_cast<int32>( bytes.size() ), entry._state ) == LayoutReadResult::Ok;
                 if ( bRead )
                     outBundle._listEntry.push_back( std::move( entry ) );
             }

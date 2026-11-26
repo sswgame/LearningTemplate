@@ -27,7 +27,7 @@ namespace sw
         Parse, ///< clang 이 번역 단위를 만든다(공통 include 가 거의 전부)
         Visit, ///< AST 를 돌며 리플렉션 사실을 모은다
         Emit,  ///< 코드젠 · 산출물 쓰기 · 스탬프
-        Lists, ///< 대상 전체의 목록(FlagOps 우산 · 형식 · 경로 칸 · 고정 배치형 · depfile)
+        Lists, ///< 대상 전체의 목록(FlagOps 우산 · 형식 · 경로 칸 · 스키마 결합형 · depfile)
         Count,
     };
 
@@ -46,7 +46,7 @@ namespace sw
     private:
         /**
          * @brief 입력 하나(겹치지 않게 한 번씩)의 산출물 경로와 스탬프입니다. 스탬프는 실행마다 입력당 한 번만 읽는다.
-         * @details 증분 판정 · 이름 충돌 검사 · 목록 다섯(FlagOps 우산 · 형식 · 경로 칸 · 고정 배치형 · depfile)이 같은 스탬프를 본다. 예전에는 저마다
+         * @details 증분 판정 · 이름 충돌 검사 · 목록 다섯(FlagOps 우산 · 형식 · 경로 칸 · 스키마 결합형 · depfile)이 같은 스탬프를 본다. 예전에는 저마다
          *          디스크에서 다시 읽어 입력 하나에 여섯 번 읽었다. 이번 실행이 새로 쓴 입력은 쓴 스탬프로 바꾼다(디스크와 같다).
          */
         struct InputRecord
@@ -128,8 +128,8 @@ namespace sw
         void logPhaseTimes( size_t parsedCount, float64 totalSeconds ) const;
         /** @brief @p phase 에 걸린 시간을 더합니다(워커가 함께 부른다). */
         void addPhaseTime( ParsePhase phase, float32 seconds ) const;
-        /** @brief 대상의 `.gen.cpp` 들에서 고정 배치형 정규 문자열 줄을 모아 `FixedSchemas.gen.txt` 를 씁니다. */
-        [[nodiscard]] bool writeFixedSchemaList( const vector<InputRecord>& listInput ) const;
+        /** @brief 대상의 `.gen.cpp` 들에서 스키마 결합형 정규 문자열 줄을 모아 `LayoutSchemas.gen.txt` 를 씁니다. */
+        [[nodiscard]] bool writeLayoutSchemaList( const vector<InputRecord>& listInput ) const;
 
     private:
         const ParserOptions* _pOptions;

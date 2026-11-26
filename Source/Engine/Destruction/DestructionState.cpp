@@ -18,7 +18,7 @@
 #include "Engine/Destruction/Fracture/FractureGraph.h"
 #include "Engine/Foundation/EngineDefines.h"
 #include "Engine/Physics/PhysicsSystem.h"
-#include "Engine/Serialization/Format/FormatDef.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
 
 #include <algorithm>
 
@@ -28,8 +28,8 @@ namespace sw
     {
         struct DestructionStateInternal
         {
-            static constexpr FormatDef kFormat{ "SWDS" };
-            static constexpr uint32    kNoActiveNode = constant::invalid_index::kUint32;
+            static constexpr FormatDesc kFormat{ "SWDS" };
+            static constexpr uint32     kNoActiveNode = constant::invalid_index::kUint32;
 
             /** @brief 0 또는 1 인 바이트 목록을 비트로 씁니다. */
             static void writeFlagBits( BitWriter& writer, const vector<uint8>& listFlag )

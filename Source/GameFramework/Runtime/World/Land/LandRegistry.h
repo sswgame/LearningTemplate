@@ -11,7 +11,7 @@
 #include "Core/String/Name/hashed_string.h"
 
 #include "Engine/Foundation/WorldOrigin.h"
-#include "Engine/Serialization/Format/FormatDef.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -34,8 +34,8 @@ namespace sw
     class SW_GF_API LandRegistry
     {
     public:
-        static constexpr FormatDef kStateFormat{ "LAND" };
-        static constexpr uint16    kNoOwner = 0;
+        static constexpr FormatDesc kStateFormat{ "LAND" };
+        static constexpr uint16     kNoOwner = 0;
 
         LandRegistry();
 

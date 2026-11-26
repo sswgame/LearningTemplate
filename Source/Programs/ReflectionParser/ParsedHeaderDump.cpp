@@ -4,7 +4,7 @@
 
 #include "Core/String/StringBuilder.h"
 
-#include "Programs/ReflectionParser/FixedCodecGenerator.h"
+#include "Programs/ReflectionParser/LayoutSchemaGenerator.h"
 #include "Programs/ReflectionParser/ParsedReflection.h"
 
 #include <cstdio>
@@ -31,7 +31,7 @@ namespace sw
         };
     } // namespace
 
-    void printParsedHeaderDump( const string& inputFile, const ParsedHeader& parsed, const FixedCodecGenerator& fixedCodec )
+    void printParsedHeaderDump( const string& inputFile, const ParsedHeader& parsed, const LayoutSchemaGenerator& layoutSchema )
     {
         StringBuilder<constant::buffer::kMax8192> out;
         out.appendFormat( "== %#\n", inputFile );
@@ -141,7 +141,7 @@ namespace sw
                 ParsedHeaderDumpInternal::appendParameterList( out, event._listParameter );
                 out.append( ")\n" );
             }
-            out.appendFormat( "%#\n", fixedCodec.makeDumpLine( typeIndex ) );
+            out.appendFormat( "%#\n", layoutSchema.makeDumpLine( typeIndex ) );
         }
         for ( const ParsedEnumInfo& enumInfo : parsed._listEnum )
         {

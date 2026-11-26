@@ -97,7 +97,7 @@ namespace sw
      */
     struct EulerAngles final
     {
-        // 라디안 셋이다(`ReflectBuiltins.xxx` 의 Layout 칸이 이 이름을 본다 — 고정 배치형 코덱 · 상태가 메모리 그대로 싣는다). 값은 아래 함수로 단위를 골라 넣고 꺼낸다.
+        // 라디안 셋이다(`ReflectBuiltins.xxx` 의 Layout 칸이 이 이름을 본다 — 레이아웃 스키마 · 상태가 메모리 그대로 싣는다). 값은 아래 함수로 단위를 골라 넣고 꺼낸다.
         float32 _pitchRadians{ 0.0f };
         float32 _yawRadians{ 0.0f };
         float32 _rollRadians{ 0.0f };

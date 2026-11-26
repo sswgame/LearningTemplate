@@ -1,15 +1,15 @@
 #include "pch.h"
 
-#include "Programs/ReflectionParser/FixedCodecGenerator.h"
+#include "Programs/ReflectionParser/LayoutSchemaGenerator.h"
 
 #include "Core/Log/Logger.h"
 #include "Core/String/StringBuilder.h"
 
-#include "Programs/ReflectionParser/FixedCodecValueEmitter.h"
+#include "Programs/ReflectionParser/LayoutSchemaValueEmitter.h"
 
 namespace sw
 {
-    FixedCodecGenerator::TypePlan::TypePlan() noexcept
+    LayoutSchemaGenerator::TypePlan::TypePlan() noexcept
         : _canonical{}
         , _reason{}
         , _listRootNode{}
@@ -27,7 +27,7 @@ namespace sw
     {
     }
 
-    FixedCodecGenerator::FixedCodecGenerator( const ParsedHeader& header, const string& sourceFilePath )
+    LayoutSchemaGenerator::LayoutSchemaGenerator( const ParsedHeader& header, const string& sourceFilePath )
         : _header{ header }
         , _sourceFilePath{ sourceFilePath }
         , _listPlan{}
@@ -36,24 +36,24 @@ namespace sw
 
     namespace
     {
-        struct FixedCodecGeneratorInternal
+        struct LayoutSchemaGeneratorInternal
         {
             static constexpr const utf8* kBaseFieldName = "(base)";
 
             /** @brief 칸 트리를 평평한 표 글로 폅니다. 묶음의 자식은 이어진 칸이고, 부모 칸 글 뒤에 첫 칸 번호(묶음이면 개수도)가 붙습니다. */
-            static void flattenNodes( const vector<FixedCodecNode>& listNode, vector<string>& outListEntry )
+            static void flattenNodes( const vector<LayoutSchemaNode>& listNode, vector<string>& outListEntry )
             {
                 const size_t first = outListEntry.size();
                 outListEntry.resize( first + listNode.size() );
                 for ( size_t index = 0; index < listNode.size(); ++index )
                 {
-                    const FixedCodecNode&                     node       = listNode[index];
+                    const LayoutSchemaNode&                   node       = listNode[index];
                     const size_t                              childFirst = outListEntry.size();
                     StringBuilder<constant::buffer::kMax2048> entry;
                     entry.append( node._call );
-                    if ( node._childArgs == FixedCodecNode::ChildArgs::Element )
+                    if ( node._childArgs == LayoutSchemaNode::ChildArgs::Element )
                         entry.appendFormat( ", %#u", static_cast<int64>( childFirst ) );
-                    else if ( node._childArgs == FixedCodecNode::ChildArgs::Group )
+                    else if ( node._childArgs == LayoutSchemaNode::ChildArgs::Group )
                         entry.appendFormat( ", %#u, %#u", static_cast<int64>( childFirst ), static_cast<int64>( node._listChild.size() ) );
                     entry.append( " )" );
                     outListEntry[first + index] = string( entry.view() );
@@ -62,16 +62,16 @@ namespace sw
             }
 
             /**
-             * @brief 서술자 표 · 의존 표를 @p pTablePrefix 이름(`s_arrFixedField` · `s_arrFixedDependency` 꼴)으로 쓰고, 코덱 생성자의 (표, 개수) · (의존 표, 개수) 인자 글을 돌려줍니다.
+             * @brief 서술자 표 · 의존 표를 @p pTablePrefix 이름(`s_arrLayoutField` · `s_arrLayoutDependency` 꼴)으로 쓰고, 스키마 생성자의 (표, 개수) · (의존 표, 개수) 인자 글을 돌려줍니다.
              * @param listEmittedEnum 이 등록 함수 안에서 이미 낸 열거자 값 표입니다(같은 이름을 두 번 정의하지 않는다).
              */
-            static pair<string, string> emitTables( CodeEmit& emit, const vector<FixedCodecNode>& listRootNode, const vector<const ParsedFixedEnum*>& listEnum,
+            static pair<string, string> emitTables( CodeEmit& emit, const vector<LayoutSchemaNode>& listRootNode, const vector<const ParsedLayoutEnum*>& listEnum,
                                                     const vector<pair<string, string>>& listDependency, const string& tablePrefix, vector<string>& listEmittedEnum )
             {
                 // 플래그가 아닌 열거형의 등록 값(`Count` · 겹친 값 제외)입니다. 읽은 값이 이 안에 없으면 OutOfRange 입니다.
-                for ( const ParsedFixedEnum* pEnum : listEnum )
+                for ( const ParsedLayoutEnum* pEnum : listEnum )
                 {
-                    const string tableName = FixedCodecEmitState::makeEnumValueTableName( *pEnum );
+                    const string tableName = LayoutSchemaEmitState::makeEnumValueTableName( *pEnum );
                     if ( std::find( listEmittedEnum.begin(), listEmittedEnum.end(), tableName ) != listEmittedEnum.end() )
                         continue;
                     listEmittedEnum.push_back( tableName );
@@ -89,13 +89,13 @@ namespace sw
                     emit.pop().line( "};" );
                 }
 
-                // 서술자 표입니다. 최상위 필드가 앞 칸들이고, 묶음의 자식은 그 뒤에 이어진 칸이다(`FixedFieldDesc`).
+                // 서술자 표입니다. 최상위 필드가 앞 칸들이고, 묶음의 자식은 그 뒤에 이어진 칸이다(`LayoutFieldDesc`).
                 vector<string> listEntry;
                 flattenNodes( listRootNode, listEntry );
                 string fieldArgs = "nullptr, 0u";
                 if ( listEntry.empty() == false )
                 {
-                    emit.linef( "static constexpr ::sw::FixedFieldDesc %#Field[] =", tablePrefix );
+                    emit.linef( "static constexpr ::sw::LayoutFieldDesc %#Field[] =", tablePrefix );
                     emit.line( "{" ).push();
                     for ( const string& entry : listEntry )
                     {
@@ -110,7 +110,7 @@ namespace sw
                 string dependencyArgs = "nullptr, 0u";
                 if ( listDependency.empty() == false )
                 {
-                    emit.linef( "static const ::sw::FixedCodec::Dependency %#Dependency[] =", tablePrefix );
+                    emit.linef( "static const ::sw::LayoutSchema::Dependency %#Dependency[] =", tablePrefix );
                     emit.line( "{" ).push();
                     for ( const pair<string, string>& dependency : listDependency )
                     {
@@ -126,7 +126,7 @@ namespace sw
         };
     } // namespace
 
-    bool FixedCodecGenerator::makePlan()
+    bool LayoutSchemaGenerator::makePlan()
     {
         _listPlan.clear();
         _listPlan.resize( _header._listType.size() );
@@ -137,18 +137,18 @@ namespace sw
         {
             const ParsedTypeInfo& type = _header._listType[typeIndex];
             TypePlan&             plan = _listPlan[typeIndex];
-            FixedCodecEmitState   state( _header, _sourceFilePath, type );
+            LayoutSchemaEmitState state( _header, _sourceFilePath, type );
 
-            FixedCanonicalBuilder canonical;
+            LayoutCanonicalBuilder canonical;
             canonical.appendFormat( "T=%#|", type._fullyQualifiedName );
             const bool bHasBase = type._baseCount == 1 && type._bParentReflected == SW_TRUE && type._parentFQN.empty() == false;
             if ( bHasBase )
             {
                 canonical.appendFormat( "B=%#|", type._parentFQN );
-                (void)state.addDependency( FixedCodecGeneratorInternal::kBaseFieldName, type._parentFQN ); // 기반은 의존 0 번이다(런타임 `FixedCodec::_pBaseCast`)
+                (void)state.addDependency( LayoutSchemaGeneratorInternal::kBaseFieldName, type._parentFQN ); // 기반은 의존 0 번이다(런타임 `LayoutSchema::_pBaseCast`)
             }
             state._listInlineFqn.push_back( type._fullyQualifiedName );
-            FixedCodecValueEmitter::emitProperties( state, type, canonical, state._listRootNode );
+            LayoutSchemaValueEmitter::emitProperties( state, type, canonical, state._listRootNode );
 
             if ( state._bError == SW_TRUE )
                 bValid = false;
@@ -183,15 +183,15 @@ namespace sw
                 plan._bResolvedByParent = SW_TRUE;
                 continue;
             }
-            SW_LOG_ERROR_ID( "FixedCodecGenerator.ERRORFixedLayoutRange", "ERROR: %#(%#): fixed layout of '%#::%#': range name '%#' is not a field of this type, and no type in this header "
-                                                                          "embeds it with such a field declared before it",
+            SW_LOG_ERROR_ID( "LayoutSchemaGenerator.ERRORLayoutSchemaRange", "ERROR: %#(%#): layout schema of '%#::%#': range name '%#' is not a field of this type, and no type in this header "
+                                                                             "embeds it with such a field declared before it",
                              _sourceFilePath, plan._unresolvedLine, type._fullyQualifiedName, plan._unresolvedMember, plan._unresolvedName );
             bValid = false;
         }
         return bValid;
     }
 
-    bool FixedCodecGenerator::planReplicated( const ParsedTypeInfo& type, TypePlan& outPlan ) const
+    bool LayoutSchemaGenerator::planReplicated( const ParsedTypeInfo& type, TypePlan& outPlan ) const
     {
         // `Replicated` 칸만 남긴 사본을 같은 값 방출기로 돈다 — 칸 표는 하나의 인코딩 규칙이고, 범위 이름은 사본 안(앞선 Replicated 칸)에서만 풀린다.
         ParsedTypeInfo replicatedType = type;
@@ -202,7 +202,7 @@ namespace sw
                 continue;
             if ( prop._bTransient == SW_TRUE )
             {
-                SW_LOG_ERROR_ID( "FixedCodecGenerator.ERRORReplicatedTransient", "ERROR: %#(%#): replicated schema of '%#::%#': a Replicated field cannot be Transient",
+                SW_LOG_ERROR_ID( "LayoutSchemaGenerator.ERRORReplicatedTransient", "ERROR: %#(%#): replicated schema of '%#::%#': a Replicated field cannot be Transient",
                                  _sourceFilePath, prop._line, type._fullyQualifiedName, prop._memberName );
                 return false;
             }
@@ -211,22 +211,22 @@ namespace sw
         if ( replicatedType._listProperty.empty() )
             return true;
 
-        FixedCodecEmitState   state( _header, _sourceFilePath, replicatedType );
-        FixedCanonicalBuilder canonical;
+        LayoutSchemaEmitState  state( _header, _sourceFilePath, replicatedType );
+        LayoutCanonicalBuilder canonical;
         canonical.appendFormat( "R=%#|", type._fullyQualifiedName );
         state._listInlineFqn.push_back( type._fullyQualifiedName );
-        FixedCodecValueEmitter::emitProperties( state, replicatedType, canonical, state._listRootNode );
+        LayoutSchemaValueEmitter::emitProperties( state, replicatedType, canonical, state._listRootNode );
         if ( state._bError == SW_TRUE )
             return false;
         if ( state._reason.empty() == false )
         {
-            SW_LOG_ERROR_ID( "FixedCodecGenerator.ERRORReplicatedUnencodable", "ERROR: %#: replicated schema of '%#': Replicated field is not in the fixed layout encoding table - %#",
+            SW_LOG_ERROR_ID( "LayoutSchemaGenerator.ERRORReplicatedUnencodable", "ERROR: %#: replicated schema of '%#': Replicated field is not in the layout encoding table - %#",
                              _sourceFilePath, type._fullyQualifiedName, state._reason );
             return false;
         }
         if ( state._unresolvedName.empty() == false )
         {
-            SW_LOG_ERROR_ID( "FixedCodecGenerator.ERRORReplicatedRange", "ERROR: %#(%#): replicated schema of '%#::%#': range name '%#' must be a Replicated field declared before it",
+            SW_LOG_ERROR_ID( "LayoutSchemaGenerator.ERRORReplicatedRange", "ERROR: %#(%#): replicated schema of '%#::%#': range name '%#' must be a Replicated field declared before it",
                              _sourceFilePath, state._unresolvedLine, type._fullyQualifiedName, state._unresolvedMember, state._unresolvedName );
             return false;
         }
@@ -237,30 +237,30 @@ namespace sw
         return true;
     }
 
-    void FixedCodecGenerator::emitRegistration( CodeEmit& emit, const size_t typeIndex ) const
+    void LayoutSchemaGenerator::emitRegistration( CodeEmit& emit, const size_t typeIndex ) const
     {
         const TypePlan& plan = _listPlan[typeIndex];
         vector<string>  listEmittedEnum;
 
         // 복제 스키마 — `Replicated` 칸만 든 두 번째 표다. 기반 · 검증은 없다(기반의 복제 칸은 `ReplicatedLayout` 이 거절한다, 검증은 타입 전체의 것이다).
-        // 코덱이 생성자 인자로 이것을 가리키므로 먼저 낸다(둘 다 상수 초기화된다 — 의존 표가 있는 타입만 그 표가 첫 호출에 지어진다).
+        // 스키마이 생성자 인자로 이것을 가리키므로 먼저 낸다(둘 다 상수 초기화된다 — 의존 표가 있는 타입만 그 표가 첫 호출에 지어진다).
         const utf8* pReplicated = "nullptr";
         if ( plan._replicatedCanonical.empty() == false )
         {
             const pair<string, string> tableArgs =
-                FixedCodecGeneratorInternal::emitTables( emit, plan._replicated._listRootNode, plan._replicated._listEnum, plan._replicated._listDependency, "s_arrReplicated", listEmittedEnum );
-            emit.linef( "static ::sw::FixedCodec s_replicatedCodec( %#, %#, %#, nullptr, nullptr, nullptr );", tableArgs.first, CodeEmit::quoted( plan._replicatedCanonical ), tableArgs.second );
-            pReplicated = "&s_replicatedCodec";
+                LayoutSchemaGeneratorInternal::emitTables( emit, plan._replicated._listRootNode, plan._replicated._listEnum, plan._replicated._listDependency, "s_arrReplicated", listEmittedEnum );
+            emit.linef( "static ::sw::LayoutSchema s_replicatedSchema( %#, %#, %#, nullptr, nullptr, nullptr );", tableArgs.first, CodeEmit::quoted( plan._replicatedCanonical ), tableArgs.second );
+            pReplicated = "&s_replicatedSchema";
         }
 
         if ( plan._bEligible == SW_FALSE )
         {
-            emit.linef( "static ::sw::FixedCodec s_fixedCodec( %#, %# );", CodeEmit::quoted( plan._reason ), pReplicated );
+            emit.linef( "static ::sw::LayoutSchema s_layoutSchema( %#, %# );", CodeEmit::quoted( plan._reason ), pReplicated );
         }
         else
         {
             const ParsedTypeInfo&      type      = _header._listType[typeIndex];
-            const pair<string, string> tableArgs = FixedCodecGeneratorInternal::emitTables( emit, plan._listRootNode, plan._listEnum, plan._listDependency, "s_arrFixed", listEmittedEnum );
+            const pair<string, string> tableArgs = LayoutSchemaGeneratorInternal::emitTables( emit, plan._listRootNode, plan._listEnum, plan._listDependency, "s_arrLayout", listEmittedEnum );
 
             string baseCast = "nullptr";
             if ( plan._bHasBase == SW_TRUE )
@@ -271,12 +271,12 @@ namespace sw
                 baseCast = string( text.view() );
             }
             // 읽기 검사는 타입 서술자와 같은 함수다(`REFLECT( ReadValidate = fn )` 이 없으면 nullptr). 에디터 검증(`Validate`)은 읽기 끝에 돌지 않는다.
-            emit.linef( "static ::sw::FixedCodec s_fixedCodec( %#, %#, %#, %#, %#, %# );", tableArgs.first, CodeEmit::quoted( plan._canonical ), tableArgs.second, baseCast,
+            emit.linef( "static ::sw::LayoutSchema s_layoutSchema( %#, %#, %#, %#, %#, %# );", tableArgs.first, CodeEmit::quoted( plan._canonical ), tableArgs.second, baseCast,
                         type._readValidate.empty() ? "nullptr" : "kReadValidate", pReplicated );
         }
     }
 
-    string FixedCodecGenerator::makeSchemaLine( const size_t typeIndex ) const
+    string LayoutSchemaGenerator::makeSchemaLine( const size_t typeIndex ) const
     {
         const TypePlan&                           plan = _listPlan[typeIndex];
         StringBuilder<constant::buffer::kMax1024> line;
@@ -287,14 +287,14 @@ namespace sw
         return string( line.view() );
     }
 
-    string FixedCodecGenerator::makeDumpLine( const size_t typeIndex ) const
+    string LayoutSchemaGenerator::makeDumpLine( const size_t typeIndex ) const
     {
         const TypePlan&                           plan = _listPlan[typeIndex];
         StringBuilder<constant::buffer::kMax1024> line;
         if ( plan._bEligible == SW_TRUE )
-            line.appendFormat( "  FIXED codec: eligible  %#", plan._canonical );
+            line.appendFormat( "  LAYOUT schema: eligible  %#", plan._canonical );
         else
-            line.appendFormat( "  FIXED codec: not eligible - %#", plan._reason );
+            line.appendFormat( "  LAYOUT schema: not eligible - %#", plan._reason );
         return string( line.view() );
     }
 } // namespace sw

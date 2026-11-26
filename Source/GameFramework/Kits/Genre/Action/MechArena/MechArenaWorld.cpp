@@ -10,9 +10,9 @@
 
 #include "Engine/Network/NetMessageChannel.h"
 #include "Engine/Reflection/TypeFqn.h"
-#include "Engine/Serialization/Fixed/FixedLayout.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Layout/LayoutSerializer.h"
 
 #include "GameFramework/Kits/Genre/Action/MechArena/MechArenaSnapshot.h"
 #include "GameFramework/Runtime/Character/Combat/Projectile/ResolvedShot.h"

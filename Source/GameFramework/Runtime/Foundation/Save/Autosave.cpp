@@ -11,7 +11,7 @@
 #include "Engine/Presentation/IPlayerNotificationSink.h"
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/FormatDef.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
 #include "Engine/Serialization/Format/StateIO.h"
 #include "Engine/Serialization/Serializer/SerializerUtil.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
@@ -32,7 +32,7 @@ namespace sw
     {
         struct AutosaveInternal
         {
-            static constexpr FormatDef   kInfoFormat{ "ASAV" };
+            static constexpr FormatDesc  kInfoFormat{ "ASAV" };
             static constexpr const utf8* kInfoExtension = ".info";
         };
     } // namespace

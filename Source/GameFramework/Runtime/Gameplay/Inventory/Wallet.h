@@ -11,7 +11,7 @@
 #include "Core/String/Name/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Serialization/Format/FormatDef.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -55,7 +55,7 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        static constexpr FormatDef kStateFormat{ "WALT" };
+        static constexpr FormatDesc kStateFormat{ "WALT" };
 
         /** @brief 통화를 적지 않으면 쓰는 기본 통화 "Gold" 입니다. */
         static hashed_string getDefaultCurrency();

@@ -29,7 +29,7 @@
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/FormatDef.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
 
 #include "GameFramework/Runtime/Character/Camera/CameraCollisionProbe.h"
 #include "GameFramework/Runtime/Character/Camera/CameraDirectorComponent.h"

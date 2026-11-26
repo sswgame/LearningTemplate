@@ -12,7 +12,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Serialization/Format/FormatDef.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
 #include "Engine/Serialization/Format/StateIO.h"
 #include "Engine/Serialization/Serializer/CatalogKey.h"
 
@@ -51,7 +51,7 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        static constexpr FormatDef kStateFormat{ "MVHM" };
+        static constexpr FormatDesc kStateFormat{ "MVHM" };
 
         MeadowHomeGameModeComponent();
         virtual ~MeadowHomeGameModeComponent() override;

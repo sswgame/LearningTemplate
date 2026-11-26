@@ -196,7 +196,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 턴 중계 키트의 메시지 표입니다. 종류 · 마스크 · 와이어 버전은 표에서 나오고, 본문은 고정 배치형이라 판이 스키마 해시다(`NetMessageBodyDef`). */
+    /** @brief 턴 중계 키트의 메시지 표입니다. 종류 · 마스크 · 와이어 버전은 표에서 나오고, 본문은 스키마 결합형이라 판이 스키마 해시다(`NetMessageBodyDef`). */
     struct NetTurnRelayMessage
     {
         using Join     = NetLimitedMessageDef<NetMessageBodyDef<0, NetMessageDirection::ToServer, NetChannelKind::ReliableOrdered, TurnJoinBody>, NetRequestLimit::kCommand>;

@@ -6,7 +6,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/String/StringUtil.h"
 
-#include "Engine/Serialization/Format/FormatDef.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
 
 namespace sw
 {
@@ -57,7 +57,7 @@ namespace sw
     {
         if ( fromVersion > toVersion )
         {
-            FormatDef::reportCannotRaise( kind, fromVersion, toVersion );
+            FormatDesc::reportCannotRaise( kind, fromVersion, toVersion );
             return false;
         }
         for ( uint32 version = fromVersion; version < toVersion; ++version )
@@ -65,7 +65,7 @@ namespace sw
             const FormatUpgradeStep* pStep = FormatUpgradeInternal::findStep( domain, kind, version );
             if ( pStep == nullptr )
             {
-                FormatDef::reportCannotRaise( kind, version, toVersion );
+                FormatDesc::reportCannotRaise( kind, version, toVersion );
                 return false;
             }
             if ( pStep->_pFunction( payload ) == false )

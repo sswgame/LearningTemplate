@@ -14,7 +14,7 @@
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Serialization/Format/FormatDef.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -138,7 +138,7 @@ namespace sw
     class SW_GF_API Crafter
     {
     public:
-        static constexpr FormatDef kStateFormat{ "CRFT" };
+        static constexpr FormatDesc kStateFormat{ "CRFT" };
 
         /** @brief 재료를 인벤토리 대신 다른 곳(신선도별 재고, 원가 장부)에서 가져오는 함수입니다. 인자는 (재료 목록, 횟수)이고, 재료를 모두 가져왔으면 true 를 반환합니다. */
         using ConsumeInputsDelegate = Delegate<bool( const ItemStackList& inputs, int32 count )>;

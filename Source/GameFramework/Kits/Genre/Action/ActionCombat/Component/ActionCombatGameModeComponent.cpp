@@ -2,7 +2,7 @@
 
 #include "GameFramework/Kits/Genre/Action/ActionCombat/Component/ActionCombatGameModeComponent.h"
 
-#include "Engine/Serialization/Format/FormatDef.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/DepletingValue.h"
@@ -14,7 +14,7 @@ namespace sw
     {
         struct ActionCombatGameModeComponentInternal
         {
-            static constexpr FormatDef kStateFormat{ "KDAC" };
+            static constexpr FormatDesc kStateFormat{ "KDAC" };
 
             static constexpr const utf8* kHealValue = "heal"; ///< 승리 결과 값 이름 — 허브 캐릭터의 보상 표(`MinigameRewardComponent`)가 같은 이름을 적는다
 

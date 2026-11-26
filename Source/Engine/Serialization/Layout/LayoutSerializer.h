@@ -1,21 +1,21 @@
 /**
- * @file FixedLayout.h
- * @brief 고정 배치형(B) 직렬화입니다. 같은 빌드끼리만 읽는 바이트를 코드 생성기가 타입마다 만든 서술자 표(`FixedFieldDesc`)로 쓰고, 읽고, 비교합니다.
+ * @file LayoutSerializer.h
+ * @brief 스키마 결합형 직렬화입니다. 같은 빌드끼리만 읽는 바이트를 코드 생성기가 타입마다 만든 서술자 표(`LayoutFieldDesc`)로 쓰고, 읽고, 비교합니다.
  * @details
- *          사용자는 B 를 선언하지 않습니다. 생성기가 `REFLECT()` 타입마다 코덱을 만들어 `TypeInfo::_pFixedCodec` 에 등록합니다.
- *          필드 타입이 인코딩 표 밖이면(포인터, `MaxCount` 없는 가변 길이, 핸들 등) 코덱 대신 그 이유를 등록합니다.
- *          코덱이 필요한 등록 API 는 기동 때 `findCodec` 으로 확인하고, 없으면 이유와 함께 멈춥니다.
+ *          사용자는 스키마를 선언하지 않습니다. 생성기가 `REFLECT()` 타입마다 스키마을 만들어 `TypeInfo::_pLayoutSchema` 에 등록합니다.
+ *          필드 타입이 인코딩 표 밖이면(포인터, `MaxCount` 없는 가변 길이, 핸들 등) 스키마 대신 그 이유를 등록합니다.
+ *          스키마이 필요한 등록 API 는 기동 때 `findSchema` 으로 확인하고, 없으면 이유와 함께 멈춥니다.
  *
  *          스트림은 `[스키마 해시 64 비트][최상위 타입의 필드들]` 입니다. 필드는 선언 순서대로 쓰고 태그와 크기를 붙이지 않습니다.
  *          해시는 생성기가 만든 정규 문자열(필드 이름, 순서, 타입, 범위 키, 열거자)과 `kVersion` 에서 나옵니다.
  *          그래서 필드 순서만 바꿔도 다른 빌드가 쓴 바이트는 `SchemaMismatch` 로 거절됩니다. 필드 순서가 와이어 형식입니다.
  *          롤백과 스냅샷처럼 같은 빌드끼리만 오가는 데이터에 씁니다. 세이브와 에셋은 자기 기술형(`BinarySerializer`)에 둡니다.
- *          다른 해시의 바이트를 읽어야 하는 타입(남겨 둔 B 바이트)은 (타입, 기록된 해시)마다 변환 함수를 등록한다(`SW_FIXED_LAYOUT_CONVERSION`) — 없으면 거절이다.
+ *          다른 해시의 바이트를 읽어야 하는 타입(남겨 둔 스키마 결합형 바이트)은 (타입, 기록된 해시)마다 마이그레이션 함수를 등록한다(`SW_LAYOUT_SCHEMA_MIGRATION`) — 없으면 거절이다.
  *
  *          읽기는 원자적입니다. 대상을 복사한 임시 객체에 읽고, 끝까지 성공했을 때만 옮깁니다. 실패하면 대상은 그대로입니다.
- *          코덱에 없는 필드(Transient, 포인터)는 복사본에서 이어집니다.
+ *          스키마에 없는 필드(Transient, 포인터)는 복사본에서 이어집니다.
  *
- *          코덱이 없는 타입을 `write` · `read` · `equals` · `getSchemaHash` 에 넘기면 이유를 로그에 남기고 프로세스를 멈춥니다(모든 구성).
+ *          스키마이 없는 타입을 `write` · `read` · `equals` · `getSchemaHash` 에 넘기면 이유를 로그에 남기고 프로세스를 멈춥니다(모든 구성).
  *          값 하나(0 해시, 빈 결과)를 대신 돌려주면 핸드셰이크 해시에 그 값이 섞이므로 대체 값을 두지 않습니다.
  */
 #pragma once
@@ -33,13 +33,13 @@
 namespace sw
 {
     class DynamicBitset;
-    struct FixedFieldDesc; // 코덱은 서술자 표를 포인터로만 든다 — 표를 짓는 생성 코드는 ReflectGenerated.h 로 FixedFieldDesc.h 를 읽는다
+    struct LayoutFieldDesc; // 스키마은 서술자 표를 포인터로만 든다 — 표를 짓는 생성 코드는 ReflectGenerated.h 로 LayoutFieldDesc.h 를 읽는다
     class NetMessageChannel;
     struct ReplicatedLayout;
 
     /** @brief 읽기 결과입니다. `Ok` 가 아니면 대상 객체는 바뀌지 않았습니다. 결과를 버리면 컴파일이 멈춥니다. 로그 이름은 `getEnumName` 입니다. */
     ENUM()
-    enum class [[nodiscard]] FixedReadResult : uint8
+    enum class [[nodiscard]] LayoutReadResult : uint8
     {
         Ok,
         SchemaMismatch, ///< 해시가 다릅니다. 필드, 순서, 범위 키가 다른 선언(다른 빌드)이 쓴 바이트입니다
@@ -53,8 +53,8 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 코덱이 의존하는 다른 타입의 코덱을 확인한 결과입니다. */
-    enum class FixedDependencyState : uint8
+    /** @brief 스키마이 의존하는 다른 타입의 스키마을 확인한 결과입니다. */
+    enum class LayoutSchemaDependencyState : uint8
     {
         Unknown, ///< 아직 확인하지 않았습니다
         Valid,   ///< 모두 적격입니다
@@ -65,18 +65,18 @@ namespace sw
 namespace sw
 {
     /**
-     * @brief 생성기가 타입마다 만드는 코덱입니다. `TypeInfo::_pFixedCodec` 가 가리킵니다.
-     * @details 본문은 없고 서술자 표(`FixedFieldDesc`)와 정규 문자열 · 의존 목록뿐이다. 쓰기 · 읽기 · 비교는 `FixedLayout` 의 해석기 하나가 이 표로 한다.
+     * @brief 생성기가 타입마다 만드는 스키마입니다. `TypeInfo::_pLayoutSchema` 가 가리킵니다.
+     * @details 본문은 없고 서술자 표(`LayoutFieldDesc`)와 정규 문자열 · 의존 목록뿐이다. 쓰기 · 읽기 · 비교는 `LayoutSerializer` 의 해석기 하나가 이 표로 한다.
      *          적격이 아닌 타입은 표가 비어 있고 `_pIneligibleReason` 에 이유가 있습니다.
-     *          적격 여부와 의존 타입 확인을 `FixedLayout::findCodec` 한 곳에 두어, 확인 없이 부르는 길을 만들지 않습니다.
+     *          적격 여부와 의존 타입 확인을 `LayoutSerializer::findSchema` 한 곳에 두어, 확인 없이 부르는 길을 만들지 않습니다.
      *          모듈 코드(생성된 표 · 접근 함수)를 가리키므로 모듈을 해제하면 `TypeInfo` 가 이 포인터를 비웁니다.
      */
-    struct SW_API FixedCodec
+    struct SW_API LayoutSchema
     {
         /** @brief 파생 객체 주소에서 기반 클래스 부분의 주소를 얻습니다. 생성 코드의 캡처 없는 람다입니다(기반이 오프셋 0 이 아닐 수 있다). */
         using BaseCastFunction = const void* (*)( const void* pObject );
 
-        /** @brief 이 코덱이 실행 시간에 찾아 부르는 다른 타입의 코덱입니다(기반 클래스, 펼치지 못한 중첩 타입). */
+        /** @brief 이 스키마이 실행 시간에 찾아 부르는 다른 타입의 스키마입니다(기반 클래스, 펼치지 못한 중첩 타입). */
         struct SW_API Dependency
         {
             const utf8*     _pFieldName; ///< 오류 메시지에 씁니다. 기반 클래스면 "(base)" 입니다
@@ -86,27 +86,27 @@ namespace sw
             Dependency( const utf8* pFieldName, const utf8* pTypeFqn );
         };
 
-        const FixedFieldDesc*   _pField;            ///< 서술자 표입니다. 최상위 필드는 앞 `_fieldCount` 칸입니다
-        const utf8*             _pCanonical;        ///< 이 타입 몫의 정규 문자열입니다(`FixedSchemas.gen.txt` 와 같은 글)
+        const LayoutFieldDesc*  _pField;            ///< 서술자 표입니다. 최상위 필드는 앞 `_fieldCount` 칸입니다
+        const utf8*             _pCanonical;        ///< 이 타입 몫의 정규 문자열입니다(`LayoutSchemas.gen.txt` 와 같은 글)
         const utf8*             _pIneligibleReason; ///< 적격이 아니면 이유이고, 적격이면 nullptr 입니다
         const Dependency*       _pDependency;
-        BaseCastFunction        _pBaseCast;     ///< 기반 클래스가 있으면 있습니다. 그 코덱은 의존 0 번입니다
+        BaseCastFunction        _pBaseCast;     ///< 기반 클래스가 있으면 있습니다. 그 스키마은 의존 0 번입니다
         ReflectValidateFunction _pReadValidate; ///< `REFLECT( ReadValidate = fn )` 입니다. 읽기 끝에 부릅니다(에디터 검증 `Validate` 는 부르지 않는다)
         uint32                  _fieldCount;
         uint32                  _dependencyCount;
-        /** @brief 의존 코덱을 확인한 결과입니다. 첫 사용이 채우고, 그 뒤로는 원자 읽기 한 번입니다. */
-        mutable atomic<FixedDependencyState> _dependencyState;
+        /** @brief 의존 스키마을 확인한 결과입니다. 첫 사용이 채우고, 그 뒤로는 원자 읽기 한 번입니다. */
+        mutable atomic<LayoutSchemaDependencyState> _dependencyState;
         /** @brief 스키마 해시입니다. 0 이면 아직 셈하지 않았습니다(같은 표에서 늘 같은 값이라 경쟁해 셈해도 같다). */
         mutable atomic<uint64> _schemaHash;
         /**
-         * @brief 이 타입의 `PROPERTY( Replicated )` 칸만 든 코덱(복제 스키마)입니다. `Replicated` 칸이 없으면 nullptr 입니다. 타입 전체가 적격이 아니어도 있을 수 있다.
-         * @details 생성 코드가 생성자 인자로 건다(`s_replicatedCodec` 이 앞선다). 읽는 길은 `ReplicatedLayout` 하나다.
+         * @brief 이 타입의 `PROPERTY( Replicated )` 칸만 든 스키마(복제 스키마)입니다. `Replicated` 칸이 없으면 nullptr 입니다. 타입 전체가 적격이 아니어도 있을 수 있다.
+         * @details 생성 코드가 생성자 인자로 건다(`s_replicatedSchema` 이 앞선다). 읽는 길은 `ReplicatedLayout` 하나다.
          */
-        const FixedCodec* _pReplicated;
+        const LayoutSchema* _pReplicatedSchema;
 
-        /** @brief 적격 타입의 코덱입니다. 필드가 없으면 @p pField 는 nullptr 입니다. 상수 초기화된다(생성 단위가 등록 코드 없이 정적 객체로 둔다). */
-        constexpr FixedCodec( const FixedFieldDesc* pField, const uint32 fieldCount, const utf8* pCanonical, const Dependency* pDependency, const uint32 dependencyCount,
-                              const BaseCastFunction pBaseCast, const ReflectValidateFunction pReadValidate, const FixedCodec* pReplicated ) noexcept
+        /** @brief 적격 타입의 스키마입니다. 필드가 없으면 @p pField 는 nullptr 입니다. 상수 초기화된다(생성 단위가 등록 코드 없이 정적 객체로 둔다). */
+        constexpr LayoutSchema( const LayoutFieldDesc* pField, const uint32 fieldCount, const utf8* pCanonical, const Dependency* pDependency, const uint32 dependencyCount,
+                                const BaseCastFunction pBaseCast, const ReflectValidateFunction pReadValidate, const LayoutSchema* pReplicated ) noexcept
             : _pField{ pField }
             , _pCanonical{ pCanonical }
             , _pIneligibleReason{ nullptr }
@@ -115,13 +115,13 @@ namespace sw
             , _pReadValidate{ pReadValidate }
             , _fieldCount{ fieldCount }
             , _dependencyCount{ dependencyCount }
-            , _dependencyState{ dependencyCount == 0 ? FixedDependencyState::Valid : FixedDependencyState::Unknown }
+            , _dependencyState{ dependencyCount == 0 ? LayoutSchemaDependencyState::Valid : LayoutSchemaDependencyState::Unknown }
             , _schemaHash{ 0 }
-            , _pReplicated{ pReplicated }
+            , _pReplicatedSchema{ pReplicated }
         {
         }
         /** @brief 적격이 아닌 타입입니다. @p pIneligibleReason 은 필드 이름과 이유입니다. */
-        constexpr FixedCodec( const utf8* pIneligibleReason, const FixedCodec* pReplicated ) noexcept
+        constexpr LayoutSchema( const utf8* pIneligibleReason, const LayoutSchema* pReplicated ) noexcept
             : _pField{ nullptr }
             , _pCanonical{ nullptr }
             , _pIneligibleReason{ pIneligibleReason }
@@ -130,9 +130,9 @@ namespace sw
             , _pReadValidate{ nullptr }
             , _fieldCount{ 0 }
             , _dependencyCount{ 0 }
-            , _dependencyState{ FixedDependencyState::Missing }
+            , _dependencyState{ LayoutSchemaDependencyState::Missing }
             , _schemaHash{ 0 }
-            , _pReplicated{ pReplicated }
+            , _pReplicatedSchema{ pReplicated }
         {
         }
 
@@ -143,11 +143,11 @@ namespace sw
 namespace sw
 {
     /**
-     * @brief 생성 코드가 필드마다 부르는 인코딩 도우미입니다. 사용자 코드는 `FixedLayout` 을 씁니다.
+     * @brief 생성 코드가 필드마다 부르는 인코딩 도우미입니다. 사용자 코드는 `LayoutSerializer` 을 씁니다.
      * @details 범위 밖 정수, `MaxCount` 초과, 등록되지 않은 열거자, 허용 범위 밖 실수는 쓰기 실패입니다. `BitWriter::writeInt` 처럼 잘라 쓰지 않습니다.
      *          `Step` 을 적은 실수만 손실 인코딩이므로 쓸 때 경계로 자릅니다. 읽을 때는 무엇도 자르지 않고 범위를 벗어나면 OutOfRange 입니다.
      */
-    struct SW_API FixedCodecUtil
+    struct SW_API LayoutFieldCodec
     {
         /** @brief 정수 경계를 적지 않은 쪽입니다. */
         static constexpr int64 kNoLowerBound = std::numeric_limits<int64>::min();
@@ -190,18 +190,18 @@ namespace sw
 
         /** @brief `writeRangedInteger` 로 쓴 값을 읽습니다. 범위나 @p T 를 넘으면 OutOfRange 입니다. */
         template <typename T>
-        static FixedReadResult readRangedInteger( BitReader& reader, const int64 minValue, const int64 maxValue, T& outValue )
+        static LayoutReadResult readRangedInteger( BitReader& reader, const int64 minValue, const int64 maxValue, T& outValue )
         {
             if ( isRangeEncodable( minValue, maxValue ) == false )
-                return FixedReadResult::OutOfRange;
+                return LayoutReadResult::OutOfRange;
             const uint64 offset = readRangedOffset( reader, minValue, maxValue );
             if ( offset > static_cast<uint64>( maxValue - minValue ) )
-                return FixedReadResult::OutOfRange;
+                return LayoutReadResult::OutOfRange;
             const int64 value = minValue + static_cast<int64>( offset );
             if ( isRepresentable<T>( value ) == false )
-                return FixedReadResult::OutOfRange;
+                return LayoutReadResult::OutOfRange;
             outValue = static_cast<T>( value );
-            return FixedReadResult::Ok;
+            return LayoutReadResult::Ok;
         }
 
         /** @brief 범위가 없거나 한쪽만 있는 정수를 가변 길이로 씁니다. 부호가 있으면 지그재그입니다. 경계 밖이면 false 입니다. */
@@ -219,27 +219,27 @@ namespace sw
 
         /** @brief `writeVarInteger` 로 쓴 값을 읽습니다. @p T 나 경계를 넘으면 OutOfRange 입니다. */
         template <typename T>
-        static FixedReadResult readVarInteger( BitReader& reader, const int64 minValue, const int64 maxValue, T& outValue )
+        static LayoutReadResult readVarInteger( BitReader& reader, const int64 minValue, const int64 maxValue, T& outValue )
         {
             T value{};
             if constexpr ( std::is_signed_v<T> )
             {
                 const int64 raw = reader.readVarInt();
                 if ( isRepresentable<T>( raw ) == false )
-                    return FixedReadResult::OutOfRange;
+                    return LayoutReadResult::OutOfRange;
                 value = static_cast<T>( raw );
             }
             else
             {
                 const uint64 raw = reader.readVarUint();
                 if ( raw > static_cast<uint64>( std::numeric_limits<T>::max() ) )
-                    return FixedReadResult::OutOfRange;
+                    return LayoutReadResult::OutOfRange;
                 value = static_cast<T>( raw );
             }
             if ( isIntegerInRange( value, minValue, maxValue ) == false )
-                return FixedReadResult::OutOfRange;
+                return LayoutReadResult::OutOfRange;
             outValue = value;
-            return FixedReadResult::Ok;
+            return LayoutReadResult::Ok;
         }
 
         // ------------------------------------------------------------------------------
@@ -247,12 +247,12 @@ namespace sw
         // ------------------------------------------------------------------------------
         /** @brief 32 비트 원본 비트를 씁니다. 경계가 있으면 그 안이어야 합니다(NaN 은 실패입니다). */
         [[nodiscard]] static bool writeBoundedFloat32( BitWriter& writer, float32 value, float64 minValue, float64 maxValue );
-        static FixedReadResult    readBoundedFloat32( BitReader& reader, float64 minValue, float64 maxValue, float32& outValue );
+        static LayoutReadResult   readBoundedFloat32( BitReader& reader, float64 minValue, float64 maxValue, float32& outValue );
         /** @brief 64 비트 원본 비트입니다. */
         static void                  writeFloat64( BitWriter& writer, float64 value );
         [[nodiscard]] static float64 readFloat64( BitReader& reader );
         [[nodiscard]] static bool    writeBoundedFloat64( BitWriter& writer, float64 value, float64 minValue, float64 maxValue );
-        static FixedReadResult       readBoundedFloat64( BitReader& reader, float64 minValue, float64 maxValue, float64& outValue );
+        static LayoutReadResult      readBoundedFloat64( BitReader& reader, float64 minValue, float64 maxValue, float64& outValue );
         /**
          * @brief `Step` 양자화입니다. 범위 밖 값은 경계로 자릅니다. `Step` 을 적은 필드만 이 손실이 있습니다.
          * @details 칸 번호 [0, 칸 수] 를 범위 비트 수로 씁니다. 칸 수와 칸 값은 `readQuantizedFloat32` 와 같은 함수로 구해 두 쪽이 어긋나지 않습니다.
@@ -260,7 +260,7 @@ namespace sw
          */
         [[nodiscard]] static bool writeQuantizedFloat32( BitWriter& writer, float32 value, float32 minValue, float32 maxValue, float32 step );
         /** @brief 칸 번호가 칸 수를 넘으면 자르지 않고 OutOfRange 입니다. 범위가 쓸 수 없는 모양이어도 OutOfRange 입니다. */
-        static FixedReadResult readQuantizedFloat32( BitReader& reader, float32 minValue, float32 maxValue, float32 step, float32& outValue );
+        static LayoutReadResult readQuantizedFloat32( BitReader& reader, float32 minValue, float32 maxValue, float32 step, float32& outValue );
         /** @brief 비트 패턴 비교입니다. `NaN == NaN` 은 참이고 `-0 == +0` 은 거짓입니다(같은 바이트를 만드는지와 같은 뜻입니다). */
         static bool isBitEqual( float32 a, float32 b ) noexcept;
         static bool isBitEqual( float64 a, float64 b ) noexcept;
@@ -270,13 +270,13 @@ namespace sw
         // ------------------------------------------------------------------------------
         /** @brief [0, @p maxCount] 개수를 씁니다. 넘으면 잘라 쓰지 않고 false 입니다. */
         [[nodiscard]] static bool writeCount( BitWriter& writer, size_t count, uint32 maxCount );
-        static FixedReadResult    readCount( BitReader& reader, uint32 maxCount, uint32& outCount );
+        static LayoutReadResult   readCount( BitReader& reader, uint32 maxCount, uint32& outCount );
         /** @brief 길이(개수 규칙)와 문자마다 8 비트입니다. */
         [[nodiscard]] static bool writeString( BitWriter& writer, const string& value, uint32 maxCount );
-        static FixedReadResult    readString( BitReader& reader, uint32 maxCount, string& outValue );
+        static LayoutReadResult   readString( BitReader& reader, uint32 maxCount, string& outValue );
         /** @brief 비트 수(개수 규칙)와 비트마다 1 비트입니다. 원소 주소 없이 값으로 읽고 씁니다(`DynamicBitset`). */
         [[nodiscard]] static bool writeBitset( BitWriter& writer, const DynamicBitset& value, uint32 maxCount );
-        static FixedReadResult    readBitset( BitReader& reader, uint32 maxCount, DynamicBitset& outValue );
+        static LayoutReadResult   readBitset( BitReader& reader, uint32 maxCount, DynamicBitset& outValue );
         /** @brief @p bitCount(최대 64) 비트를 씁니다. */
         static void                 writeRawBits( BitWriter& writer, uint64 value, int32 bitCount );
         [[nodiscard]] static uint64 readRawBits( BitReader& reader, int32 bitCount );
@@ -318,43 +318,43 @@ namespace sw
 namespace sw
 {
     /** @brief 옛 스키마 해시로 쓴 필드 비트(머리 뒤)를 읽어 지금 타입 객체 @p pObject 에 채웁니다. 실패면 그 결과이고, 대상은 임시 사본이라 실패해도 남지 않는다. */
-    using FixedLayoutConversionFunction = FixedReadResult ( * )( BitReader& reader, void* pObject );
+    using LayoutSchemaMigrationFunction = LayoutReadResult ( * )( BitReader& reader, void* pObject );
 
     /**
-     * @struct FixedLayoutConversion
-     * @brief 고정 배치형 바이트의 변환 하나 — (타입 FQN, 기록된 스키마 해시)의 바이트를 지금 타입으로 읽는 함수입니다(등록 항목).
-     * @details 스키마 해시가 다르면 `FixedLayout::read` 가 이 표를 보고, 없으면 `SchemaMismatch` 로 거절한다. 같은 (타입, 해시) 두 번 등록은 거절한다.
-     *          B 는 같은 빌드끼리의 바이트라 보통 변환이 없다 — 판 사슬(`SW_TYPE_VERSION_PATCH`)이 아니라 해시 하나에서 지금으로 바로 가는 까닭이다
+     * @struct LayoutSchemaMigration
+     * @brief 스키마 결합형 바이트의 마이그레이션 하나 — (타입 FQN, 기록된 스키마 해시)의 바이트를 지금 타입으로 읽는 함수입니다(등록 항목).
+     * @details 스키마 해시가 다르면 `LayoutSerializer::read` 가 이 표를 보고, 없으면 `SchemaMismatch` 로 거절한다. 같은 (타입, 해시) 두 번 등록은 거절한다.
+     *          스키마 결합형은 같은 빌드끼리의 바이트라 보통 마이그레이션이 없다 — 판 사슬(`SW_TYPE_VERSION_PATCH`)이 아니라 해시 하나에서 지금으로 바로 가는 까닭이다
      *          (언리얼 `FRepLayout` 은 같은 빌드만 받고, 옛 데이터는 자기 기술형이 맡는다).
      */
-    struct SW_API FixedLayoutConversion
+    struct SW_API LayoutSchemaMigration
     {
         const utf8*                   _pTypeFqn;       ///< `TypeInfo::_fullyQualifiedName` 과 같은 글
         uint64                        _fromSchemaHash; ///< 바이트 머리에 적힌 옛 스키마 해시
-        FixedLayoutConversionFunction _pFunction;
+        LayoutSchemaMigrationFunction _pFunction;
 
-        [[nodiscard]] static bool registerConversion( const FixedLayoutConversion* pConversion );
-        static void               unregisterConversion( const FixedLayoutConversion* pConversion );
-        /** @brief (타입, 해시)의 변환입니다. 없으면 nullptr 입니다. */
-        [[nodiscard]] static const FixedLayoutConversion* find( const hashed_string& typeFqn, uint64 fromSchemaHash );
+        [[nodiscard]] static bool registerMigration( const LayoutSchemaMigration* pMigration );
+        static void               unregisterMigration( const LayoutSchemaMigration* pMigration );
+        /** @brief (타입, 해시)의 마이그레이션입니다. 없으면 nullptr 입니다. */
+        [[nodiscard]] static const LayoutSchemaMigration* find( const hashed_string& typeFqn, uint64 fromSchemaHash );
     };
 
-    /** @brief `SW_FIXED_LAYOUT_CONVERSION` 이 두는 정적 등록자입니다. */
-    SW_DEFINE_STATIC_REGISTRAR( FixedLayoutConversionRegistrar, const FixedLayoutConversion*, &FixedLayoutConversion::registerConversion, &FixedLayoutConversion::unregisterConversion );
+    /** @brief `SW_LAYOUT_SCHEMA_MIGRATION` 이 두는 정적 등록자입니다. */
+    SW_DEFINE_STATIC_REGISTRAR( LayoutSchemaMigrationRegistrar, const LayoutSchemaMigration*, &LayoutSchemaMigration::registerMigration, &LayoutSchemaMigration::unregisterMigration );
 } // namespace sw
 
-/** @brief 타입 @p typeFqn(글)의 옛 스키마 해시 @p fromSchemaHash 바이트를 읽는 변환 @p pFunction(`FixedLayoutConversionFunction`)을 등록합니다(.cpp 의 파일 범위, `namespace sw` 안). */
-#define SW_FIXED_LAYOUT_CONVERSION( id, typeFqn, fromSchemaHash, pFunction ) SW_STATIC_REGISTRATION( fixedLayoutConversion, ::sw::FixedLayoutConversion, ::sw::FixedLayoutConversionRegistrar, id, typeFqn, fromSchemaHash, pFunction )
+/** @brief 타입 @p typeFqn(글)의 옛 스키마 해시 @p fromSchemaHash 바이트를 읽는 마이그레이션 @p pFunction(`LayoutSchemaMigrationFunction`)을 등록합니다(.cpp 의 파일 범위, `namespace sw` 안). */
+#define SW_LAYOUT_SCHEMA_MIGRATION( id, typeFqn, fromSchemaHash, pFunction ) SW_STATIC_REGISTRATION( layoutSchemaMigration, ::sw::LayoutSchemaMigration, ::sw::LayoutSchemaMigrationRegistrar, id, typeFqn, fromSchemaHash, pFunction )
 
 namespace sw
 {
     /**
-     * @brief 고정 배치형 직렬화의 진입점입니다. 롤백, 넷 채널, 온라인 메서드 같은 등록 API 가 이것을 부릅니다.
+     * @brief 스키마 결합형 직렬화의 진입점입니다. 롤백, 넷 채널, 온라인 메서드 같은 등록 API 가 이것을 부릅니다.
      * @details 타입은 컴파일러 시그니처의 FQN(`typeFqn<T>`)과 함수 지역 캐시로 한 번 찾습니다.
-     *          코덱이 없거나 적격이 아니면 이유를 로그에 남기고 프로세스를 멈춥니다. 조용히 다른 형식이나 대체 값으로 바꾸지 않습니다.
-     *          등록 API 는 기동 때 `findCodec` 으로 미리 확인해 그 자리에서 이유를 보여 줍니다.
+     *          스키마이 없거나 적격이 아니면 이유를 로그에 남기고 프로세스를 멈춥니다. 조용히 다른 형식이나 대체 값으로 바꾸지 않습니다.
+     *          등록 API 는 기동 때 `findSchema` 으로 미리 확인해 그 자리에서 이유를 보여 줍니다.
      */
-    class SW_API FixedLayout
+    class SW_API LayoutSerializer
     {
     public:
         /** @brief 인코딩 규칙(가변 정수 꼴, 양자화 반올림, 스트림 머리)의 버전입니다. 규칙을 바꾸면 이 값을 올려 모든 스키마 해시를 바꿉니다. */
@@ -367,12 +367,12 @@ namespace sw
         template <typename T>
         [[nodiscard]] static bool write( const T& object, BitWriter& writer )
         {
-            return writeWithCodec( requireCodec<T>(), &object, writer );
+            return writeWithSchema( requireSchema<T>(), &object, writer );
         }
 
         /** @brief @p byteCount 바이트 전체를 한 객체로 읽습니다. `Ok` 일 때만 @p inoutObject 를 바꿉니다. */
         template <typename T>
-        [[nodiscard]] static FixedReadResult read( const uint8* pData, const int32 byteCount, T& inoutObject )
+        [[nodiscard]] static LayoutReadResult read( const uint8* pData, const int32 byteCount, T& inoutObject )
         {
             BitReader reader( pData, byteCount );
             return read( reader, inoutObject );
@@ -380,95 +380,95 @@ namespace sw
 
         /** @brief @p reader 에 남은 비트 전체를 한 객체로 읽습니다. 받은 메시지 본문처럼 읽기 객체를 넘겨받는 쪽이 씁니다. `Ok` 일 때만 @p inoutObject 를 바꿉니다. */
         template <typename T>
-        [[nodiscard]] static FixedReadResult read( BitReader& reader, T& inoutObject )
+        [[nodiscard]] static LayoutReadResult read( BitReader& reader, T& inoutObject )
         {
-            const FixedCodec&     codec     = requireCodec<T>();
-            T                     temporary = inoutObject; // 코덱에 없는 필드는 이 복사본에서 이어집니다
-            const FixedReadResult result    = readWithCodec( codec, typeFqn<T>(), reader, &temporary );
-            if ( result == FixedReadResult::Ok )
+            const LayoutSchema&    schema    = requireSchema<T>();
+            T                      temporary = inoutObject; // 스키마에 없는 필드는 이 복사본에서 이어집니다
+            const LayoutReadResult result    = readWithSchema( schema, typeFqn<T>(), reader, &temporary );
+            if ( result == LayoutReadResult::Ok )
                 inoutObject = std::move( temporary );
             return result;
         }
 
-        /** @brief 코덱과 같은 필드 집합을 선언 순서로 비교합니다. 실수는 비트 패턴으로 봅니다(`FixedCodecUtil::isBitEqual`). */
+        /** @brief 스키마과 같은 필드 집합을 선언 순서로 비교합니다. 실수는 비트 패턴으로 봅니다(`LayoutFieldCodec::isBitEqual`). */
         template <typename T>
         [[nodiscard]] static bool equals( const T& a, const T& b )
         {
-            return equalsWithCodec( requireCodec<T>(), &a, &b );
+            return equalsWithSchema( requireSchema<T>(), &a, &b );
         }
 
         /** @brief 스트림 머리에 싣는 스키마 해시입니다. */
         template <typename T>
         [[nodiscard]] static uint64 getSchemaHash()
         {
-            return getSchemaHash( requireCodec<T>() );
+            return getSchemaHash( requireSchema<T>() );
         }
 
-        /** @brief 코덱을 찾습니다. 없거나 의존 타입이 적격이 아니면 그 필드와 이유입니다(등록 API 의 기동 확인). */
+        /** @brief 스키마을 찾습니다. 없거나 의존 타입이 적격이 아니면 그 필드와 이유입니다(등록 API 의 기동 확인). */
         template <typename T>
-        [[nodiscard]] static expected<const FixedCodec*> findCodec()
+        [[nodiscard]] static expected<const LayoutSchema*> findSchema()
         {
             // 레지스트리를 이름으로 바로 찾는다 — `StaticType()` 은 DLL 밖으로 내보내지 않은 키트 타입에서 링크가 깨지고, 함수 정적 캐시는 감춘 싱글턴이다.
             const TypeInfo* pType = TypeLookupCache{}.find( typeFqn<T>() );
             if ( pType == nullptr )
                 return unexpected( Error{ ErrorKind::NotFound, "type is not registered", typeFqn<T>().c_str() } );
-            return findCodec( *pType );
+            return findSchema( *pType );
         }
 
-        [[nodiscard]] static expected<const FixedCodec*> findCodec( const TypeInfo& type );
-        /** @brief 코덱이 적격이고 의존 코덱이 모두 적격인지 확인합니다(첫 확인 뒤로는 원자 읽기 한 번). `findCodec` 과 복제 스키마(`ReplicatedLayout`)가 씁니다. */
-        [[nodiscard]] static expected<void> validateCodec( const FixedCodec& codec );
+        [[nodiscard]] static expected<const LayoutSchema*> findSchema( const TypeInfo& type );
+        /** @brief 스키마이 적격이고 의존 스키마이 모두 적격인지 확인합니다(첫 확인 뒤로는 원자 읽기 한 번). `findSchema` 과 복제 스키마(`ReplicatedLayout`)가 씁니다. */
+        [[nodiscard]] static expected<void> validateSchema( const LayoutSchema& schema );
 
         // ------------------------------------------------------------------------------
         // 2) 스키마 해시
         // ------------------------------------------------------------------------------
         /** @brief 정규 문자열과 중첩 타입 해시로 스키마 해시(FNV-1a 64)를 계산합니다. @p version 은 보통 `kVersion` 입니다. */
         [[nodiscard]] static uint64 computeSchemaHash( uint32 version, string_view canonical, std::initializer_list<uint64> listNestedHash );
-        /** @brief 코덱의 스키마 해시입니다. 정규 문자열과 의존 코덱의 해시(의존 차례)로 셈하고 코덱에 남겨 둡니다. */
-        [[nodiscard]] static uint64 getSchemaHash( const FixedCodec& codec );
+        /** @brief 스키마 해시입니다. 정규 문자열과 의존 스키마의 해시(의존 차례)로 셈하고 스키마에 남겨 둡니다. */
+        [[nodiscard]] static uint64 getSchemaHash( const LayoutSchema& schema );
 
     private:
         template <typename T>
-        static const FixedCodec& requireCodec()
+        static const LayoutSchema& requireSchema()
         {
-            const expected<const FixedCodec*> codec = findCodec<T>();
-            if ( codec.has_value() == false )
-                stopForMissingCodec( typeFqn<T>(), codec.error().message(), codec.error().detail() );
-            return **codec;
+            const expected<const LayoutSchema*> schema = findSchema<T>();
+            if ( schema.has_value() == false )
+                stopForMissingSchema( typeFqn<T>(), schema.error().message(), schema.error().detail() );
+            return **schema;
         }
 
-        /** @brief 코덱이 없다는 오류를 남기고 프로세스를 멈춥니다. 모든 구성에서 돌아오지 않습니다. */
-        [[noreturn]] static void  stopForMissingCodec( const hashed_string& fqn, string_view reason, string_view detail = {} );
-        [[nodiscard]] static bool writeWithCodec( const FixedCodec& codec, const void* pObject, BitWriter& writer );
-        /** @brief 머리의 스키마 해시가 다르면 (@p typeFqn, 그 해시)의 변환(`SW_FIXED_LAYOUT_CONVERSION`)으로 읽고, 없으면 `SchemaMismatch` 입니다. */
-        [[nodiscard]] static FixedReadResult readWithCodec( const FixedCodec& codec, const hashed_string& typeFqn, BitReader& reader, void* pObject );
-        [[nodiscard]] static bool            equalsWithCodec( const FixedCodec& codec, const void* pA, const void* pB );
+        /** @brief 스키마이 없다는 오류를 남기고 프로세스를 멈춥니다. 모든 구성에서 돌아오지 않습니다. */
+        [[noreturn]] static void  stopForMissingSchema( const hashed_string& fqn, string_view reason, string_view detail = {} );
+        [[nodiscard]] static bool writeWithSchema( const LayoutSchema& schema, const void* pObject, BitWriter& writer );
+        /** @brief 머리의 스키마 해시가 다르면 (@p typeFqn, 그 해시)의 마이그레이션(`SW_LAYOUT_SCHEMA_MIGRATION`)으로 읽고, 없으면 `SchemaMismatch` 입니다. */
+        [[nodiscard]] static LayoutReadResult readWithSchema( const LayoutSchema& schema, const hashed_string& typeFqn, BitReader& reader, void* pObject );
+        [[nodiscard]] static bool             equalsWithSchema( const LayoutSchema& schema, const void* pA, const void* pB );
 
         // 스키마 해시 머리 없이 필드만 쓰고 읽는다. 같은 스키마임을 핸드셰이크가 확인한 채널(`NetMessageChannel`) 안에서만 뜻이 있으므로 그 클래스만 부른다 —
-        // 다른 길로 머리 없는 바이트를 만들면 다른 빌드의 바이트를 거절할 자리가 사라진다(Source/Engine/Serialization/Fixed/README.md 3.10).
+        // 다른 길로 머리 없는 바이트를 만들면 다른 빌드의 바이트를 거절할 자리가 사라진다(Source/Engine/Serialization/Layout/README.md 3.10).
         friend class NetMessageChannel;
         friend struct ReplicatedLayout;
         friend struct NetMessageBodyCodec; // 게임 넷 메시지 본문 — 라우터가 표 판(스키마 해시 포함)을 상대와 맞춘 뒤에만 처리기에 넘긴다(`NetMessageBodyDef`)
         template <typename T>
         [[nodiscard]] static bool writeBody( const T& object, BitWriter& writer )
         {
-            return writeBodyWithCodec( requireCodec<T>(), &object, writer );
+            return writeBodyWithSchema( requireSchema<T>(), &object, writer );
         }
         template <typename T>
-        [[nodiscard]] static FixedReadResult readBody( BitReader& reader, T& inoutObject )
+        [[nodiscard]] static LayoutReadResult readBody( BitReader& reader, T& inoutObject )
         {
-            const FixedCodec&     codec     = requireCodec<T>();
-            T                     temporary = inoutObject;
-            const FixedReadResult result    = readBodyWithCodec( codec, reader, &temporary );
-            if ( result == FixedReadResult::Ok )
+            const LayoutSchema&    schema    = requireSchema<T>();
+            T                      temporary = inoutObject;
+            const LayoutReadResult result    = readBodyWithSchema( schema, reader, &temporary );
+            if ( result == LayoutReadResult::Ok )
                 inoutObject = std::move( temporary );
             return result;
         }
-        [[nodiscard]] static bool            writeBodyWithCodec( const FixedCodec& codec, const void* pObject, BitWriter& writer );
-        [[nodiscard]] static FixedReadResult readBodyWithCodec( const FixedCodec& codec, BitReader& reader, void* pObject );
+        [[nodiscard]] static bool             writeBodyWithSchema( const LayoutSchema& schema, const void* pObject, BitWriter& writer );
+        [[nodiscard]] static LayoutReadResult readBodyWithSchema( const LayoutSchema& schema, BitReader& reader, void* pObject );
         /** @brief 필드만 읽고 남은 비트는 보지 않습니다 — 복제 상태 뒤에 다른 값이 이어지는 메시지(`ReplicatedLayout::readFull`)가 씁니다. */
-        [[nodiscard]] static FixedReadResult readPropertiesWithCodec( const FixedCodec& codec, BitReader& reader, void* pObject );
+        [[nodiscard]] static LayoutReadResult readPropertiesWithSchema( const LayoutSchema& schema, BitReader& reader, void* pObject );
         /** @brief 최상위 필드 @p fieldIndex 하나를 비교합니다(바뀐 칸 비트). */
-        [[nodiscard]] static bool equalsFieldWithCodec( const FixedCodec& codec, uint32 fieldIndex, const void* pA, const void* pB );
+        [[nodiscard]] static bool equalsFieldWithSchema( const LayoutSchema& schema, uint32 fieldIndex, const void* pA, const void* pB );
     };
 } // namespace sw

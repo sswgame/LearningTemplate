@@ -1,7 +1,7 @@
 /**
  * @file NetLockstepMessage.h
  * @brief 락스텝 키트(락스텝 · 롤백 세션)의 메시지 표입니다. 두 세션이 한 영역을 나눠 받으므로 표를 따로 둔다.
- * @details 입력 · 체크섬 · 이탈 본문은 고정 배치형(`NetMessageBodyDef`)이다. 롤백 입력은 비트 예산에 맞춰 잘라 싣는 입력 버퍼(`RollbackInputBuffer`)라 손으로 쓰는 본문이다.
+ * @details 입력 · 체크섬 · 이탈 본문은 스키마 결합형(`NetMessageBodyDef`)이다. 롤백 입력은 비트 예산에 맞춰 잘라 싣는 입력 버퍼(`RollbackInputBuffer`)라 손으로 쓰는 본문이다.
  */
 #pragma once
 #include "Core/Container/vector.h"

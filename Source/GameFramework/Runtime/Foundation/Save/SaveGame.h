@@ -10,7 +10,7 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/FormatDef.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
 #include "Engine/Serialization/Serializer/SerializeContext.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -84,7 +84,7 @@ namespace sw
         SaveGame& operator=( SaveGame&& ) noexcept = default;
 
         /** @brief 이 타입의 바이트 형식(이름 · 판 · 올리기 단계)입니다. 판은 봉투에 적힌다 — 읽을 때 옛 판이면 형식의 단계로 올리고, 새 판 · 단계 없는 판은 거절합니다. 표는 바꾸지 않는다. */
-        [[nodiscard]] virtual const FormatDef& getFormat() const = 0;
+        [[nodiscard]] virtual const FormatDesc& getFormat() const = 0;
         /** @brief 세이브 바이트를 씁니다. 파생 타입이 자기 형식(리플렉션 세이브는 자기 타입)으로 씁니다. */
         [[nodiscard]] virtual bool writeBytes( vector<uint8>& outBytes ) const = 0;
         /** @brief 세이브 바이트를 읽습니다. `writeBytes` 와 같은 형식입니다. */

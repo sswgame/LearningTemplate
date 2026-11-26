@@ -11,7 +11,7 @@
 #include "Engine/Object/GameObject/Subsystem/SceneNetLink.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
-#include "Engine/Serialization/Fixed/ReplicatedLayout.h"
+#include "Engine/Serialization/Layout/ReplicatedLayout.h"
 
 #include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 

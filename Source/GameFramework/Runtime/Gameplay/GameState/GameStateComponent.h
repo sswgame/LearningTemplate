@@ -14,7 +14,7 @@
 #include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Serialization/Format/FormatDef.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -81,7 +81,7 @@ namespace sw
         static constexpr TickGroup kTickGroup = TickGroup::PrePhysics; ///< 디렉터와 같은 그룹이다. 같은 오브젝트 안에서는 붙은 순서대로 처리하며, 이 컴포넌트가 맨 앞이다.
         REFLECT_INTERFACE( IGameFlagsOwner, _gameFlagsOwnerPort );
 
-        static constexpr FormatDef kStateFormat{ "GTST" };
+        static constexpr FormatDesc kStateFormat{ "GTST" };
 
         GameStateComponent();
         virtual ~GameStateComponent() override;

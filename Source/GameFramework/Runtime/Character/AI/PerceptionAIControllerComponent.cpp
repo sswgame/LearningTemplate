@@ -9,7 +9,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Serialization/Format/FormatDef.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -70,7 +70,7 @@ namespace sw
     {
         struct PerceptionAIControllerComponentInternal
         {
-            static constexpr FormatDef kStateFormat{ "AIPC" };
+            static constexpr FormatDesc kStateFormat{ "AIPC" };
         };
 
         const StatefulComponentRegistrar<PerceptionAIControllerComponent> s_perceptionAIControllerComponentStateRegistration{ "PerceptionAIControllerComponent" };

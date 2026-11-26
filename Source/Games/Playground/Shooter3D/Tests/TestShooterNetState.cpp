@@ -9,7 +9,7 @@
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Serialization/Fixed/ReplicatedLayout.h"
+#include "Engine/Serialization/Layout/ReplicatedLayout.h"
 
 #include "GameFramework/Runtime/Foundation/Service/Tests/SceneNetLinkTestBinding.h"
 
@@ -33,7 +33,7 @@ SW_TEST_CASE( ShooterNetStateTest, EnemyStateRoundTripsWithinQuantizationStep )
 
     BitReader            reader( writer.getBytes().data(), static_cast<int32>( writer.getBytes().size() ) );
     ShooterEnemyNetState received;
-    SW_REQUIRE_TRUE( ReplicatedLayout::readFull( reader, received, nullptr ) == FixedReadResult::Ok );
+    SW_REQUIRE_TRUE( ReplicatedLayout::readFull( reader, received, nullptr ) == LayoutReadResult::Ok );
     SW_EXPECT_TRUE( ( received._position - sent._position ).getLength() <= 0.01f );
     SW_EXPECT_TRUE( MathUtil::abs( received._yaw - sent._yaw ) <= 0.001f );
     SW_EXPECT_EQUAL( sent._phase, received._phase );
@@ -58,7 +58,7 @@ SW_TEST_CASE( ShooterNetStateTest, PawnStateRoundTripsWithinQuantizationStep )
     SW_REQUIRE_TRUE( ReplicatedLayout::writeFull( sent, writer ) );
     BitReader           reader( writer.getBytes().data(), static_cast<int32>( writer.getBytes().size() ) );
     ShooterPawnNetState received;
-    SW_REQUIRE_TRUE( ReplicatedLayout::readFull( reader, received, nullptr ) == FixedReadResult::Ok );
+    SW_REQUIRE_TRUE( ReplicatedLayout::readFull( reader, received, nullptr ) == LayoutReadResult::Ok );
     SW_EXPECT_TRUE( ( received._position - sent._position ).getLength() <= 0.01f );
     SW_EXPECT_TRUE( MathUtil::abs( received._yaw - sent._yaw ) <= 0.001f );
     SW_EXPECT_EQUAL( sent._weaponIndex, received._weaponIndex );

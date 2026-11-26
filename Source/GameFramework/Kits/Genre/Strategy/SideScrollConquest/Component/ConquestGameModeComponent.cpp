@@ -8,7 +8,7 @@
 #include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/FormatDef.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 namespace sw
@@ -17,7 +17,7 @@ namespace sw
     {
         struct ConquestGameModeComponentInternal
         {
-            static constexpr FormatDef kStateFormat{ "CQGM" };
+            static constexpr FormatDesc kStateFormat{ "CQGM" };
 
             static constexpr int32   kStartBuilding = 0;    ///< 시작 건물의 번호 — 판을 열며 처음 짓는다
             static constexpr float32 kAutoPlayAxis  = 1.0f; ///< 자동 플레이의 지휘관 이동 축(오른쪽 — 적 쪽)

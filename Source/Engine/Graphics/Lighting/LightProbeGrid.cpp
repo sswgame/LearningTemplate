@@ -6,7 +6,7 @@
 #include "Core/Serialization/ByteStream.h"
 
 #include "Engine/Content/AssetIO.h"
-#include "Engine/Serialization/Format/FormatDef.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
 
 namespace sw
 {
@@ -15,8 +15,8 @@ namespace sw
         struct LightProbeGridInternal
         {
             /// @brief 머리말 바이트 수 — 매직 · 버전 · 시작점 · 간격 · 프로브 수 셋.
-            static constexpr FormatDef kFormat{ "SWLP" };
-            static constexpr size_t    kHeaderBytes = sizeof( uint32 ) * 2 + sizeof( float32 ) * 6 + sizeof( uint32 ) * 3;
+            static constexpr FormatDesc kFormat{ "SWLP" };
+            static constexpr size_t     kHeaderBytes = sizeof( uint32 ) * 2 + sizeof( float32 ) * 6 + sizeof( uint32 ) * 3;
             /// @brief 프로브 하나의 바이트 수입니다.
             static constexpr size_t kProbeBytes = sizeof( float32 ) * SH9Color::kCoefficientCount;
             /// @brief 한 파일의 프로브 수 상한 — 깨진 머리말이 큰 할당을 일으키지 않게 막는다(256 × 64 × 256).

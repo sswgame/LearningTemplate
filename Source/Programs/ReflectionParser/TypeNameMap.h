@@ -23,7 +23,7 @@ namespace sw
     /** @brief `ReflectBuiltins.xxx` 의 TYPE 줄 하나가 파서에 알리는 모양 · 역할입니다. 손 표(고정 배치 수학 표 · Interp 허용 목록)를 대신하는 정본입니다. */
     struct BuiltinTypeTraits
     {
-        vector<string>         _listMember; ///< f32 · i32 의 멤버 이름(선언 순서). 고정 배치형 코덱이 `offsetof` 로 쓴다
+        vector<string>         _listMember; ///< f32 · i32 의 멤버 이름(선언 순서). 레이아웃 스키마이 `offsetof` 로 쓴다
         BuiltinLayoutKind      _layout;
         uint8                  _bPacked  : 1; ///< 글 처리기가 `packed` 다
         uint8                  _bInterp  : 1; ///< Roles 에 Interp — `PROPERTY( Interp )` 를 받는다
@@ -67,7 +67,7 @@ namespace sw
         void registerTraits( const string& canonical, const BuiltinTypeTraits& traits );
         /** @brief 정규 이름 @p canonical 의 모양 · 역할입니다. 내장 타입이 아니면(열거형 · 구조체) nullptr 입니다. */
         const BuiltinTypeTraits* findTraits( const string& canonical ) const;
-        /** @brief 정규 이름 @p canonical 이 압축 타입(글 처리기 `packed`)인지 반환합니다. 고정 배치형 코덱이 이 타입을 받지 못하는 것을 오류로 알리는 데 씁니다. */
+        /** @brief 정규 이름 @p canonical 이 압축 타입(글 처리기 `packed`)인지 반환합니다. 레이아웃 스키마이 이 타입을 받지 못하는 것을 오류로 알리는 데 씁니다. */
         bool isPacked( const string& canonical ) const;
 
         /** @brief 정규화 전에 떼어 낼 clang 수식어(`const ` · `class ` …)를 정합니다. parser_config 의 `type_strip_prefixes` 입니다. */

@@ -8,7 +8,7 @@
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Serialization/Format/FormatDef.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Foundation/Minigame/MinigameStack.h"
@@ -19,7 +19,7 @@ namespace sw
     {
         struct MechArenaGameModeComponentInternal
         {
-            static constexpr FormatDef kStateFormat{ "MAGM" };
+            static constexpr FormatDesc kStateFormat{ "MAGM" };
 
             static constexpr uint32  kBotSalt         = 1; ///< 판 씨앗에서 컴퓨터 손놀림의 수열을 뽑는 소금
             static constexpr float32 kEvenChance      = 0.5f;

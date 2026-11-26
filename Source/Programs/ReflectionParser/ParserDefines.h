@@ -126,11 +126,11 @@ namespace sw
         inline constexpr const utf8* kArrSharedPointerTemplate[] = { "std::shared_ptr" };
     } // namespace typeidentity
 
-    namespace fixedlayout
+    namespace layoutschema
     {
         /** @brief 대상마다 정규 문자열을 모아 두는 진단 파일 이름입니다. 빌드는 읽지 않습니다. */
-        inline constexpr const utf8* kSchemaListFile = "FixedSchemas.gen.txt";
-    } // namespace fixedlayout
+        inline constexpr const utf8* kSchemaListFile = "LayoutSchemas.gen.txt";
+    } // namespace layoutschema
 
     // ------------------------------------------------------------------------------
     // 3) path — config 파일 이름 (ConfigConstants)

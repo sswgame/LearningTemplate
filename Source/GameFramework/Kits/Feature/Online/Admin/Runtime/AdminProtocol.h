@@ -2,7 +2,7 @@
  * @file AdminProtocol.h
  * @brief GM 명령의 와이어 형식입니다. 메서드 번호(영역 `OnlineMethodRange::kAdmin`), 권한 등급, 결과, 요청과 응답 형식, 명령별 필요 등급을 정의합니다.
  * @details 요청과 응답은 명령 하나에 `REFLECT` 구조체 하나를 쓰며 명령마다 쓰는 필드만 채운다. GM 요청은 드물어서 크기보다 형식을 하나로 두는 편이 낫다.
- *          본문은 고정 배치형(B)이고 바이트 배치는 `PROPERTY` 선언 순서와 키가 정한다. 업무 결과는 응답 본문(`AdminReply::_result`)에 담는다.
+ *          본문은 스키마 결합형이고 바이트 배치는 `PROPERTY` 선언 순서와 키가 정한다. 업무 결과는 응답 본문(`AdminReply::_result`)에 담는다.
  *          권한 등급은 넷이며 `Viewer` < `Support` < `Operator` < `Super` 순서이다. 국내 게임사 GM 툴의 권한 그룹과 Nakama 콘솔의 역할에 해당한다.
  */
 #pragma once
@@ -279,7 +279,7 @@ namespace sw
 {
     /**
      * @struct AdminProtocol
-     * @brief GM 명령의 메시지 타입 목록, 등록 항목, 상한, 등급 테이블입니다. 본문은 고정 배치형(B)이며 `MessageTypes::write` · `read` 로만 쓰고 읽습니다.
+     * @brief GM 명령의 메시지 타입 목록, 등록 항목, 상한, 등급 테이블입니다. 본문은 스키마 결합형이며 `MessageTypes::write` · `read` 로만 쓰고 읽습니다.
      */
     struct SW_KIT_API AdminProtocol
     {

@@ -20,7 +20,7 @@
 #include "Engine/Object/GameObject/Subsystem/SceneNetLink.h"
 #include "Engine/Physics/IPhysicsScene.h"
 #include "Engine/Physics/Scene/ScenePhysics.h"
-#include "Engine/Serialization/Fixed/ReplicatedLayout.h"
+#include "Engine/Serialization/Layout/ReplicatedLayout.h"
 
 #include "GameFramework/Kits/Feature/Online/Leaderboard/Runtime/LeaderboardScoreSender.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Runtime/MatchBackfill.h"
@@ -111,7 +111,7 @@ namespace sw
             [[nodiscard]] static bool readState( const vector<uint8>& bytes, TState& outState )
             {
                 BitReader reader( bytes.data(), static_cast<int32>( bytes.size() ) );
-                return ReplicatedLayout::readFull( reader, outState, nullptr ) == FixedReadResult::Ok;
+                return ReplicatedLayout::readFull( reader, outState, nullptr ) == LayoutReadResult::Ok;
             }
 
             static_assert( ShooterPlayerComponent::kWeaponCount == 3, "ShooterPawnNetState::_weaponIndex 의 Max 를 무기 슬롯 수와 맞춘다" );

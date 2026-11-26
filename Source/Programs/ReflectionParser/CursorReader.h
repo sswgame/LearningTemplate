@@ -67,7 +67,7 @@ namespace sw
 
         /**
          * @brief 개수 표식 열거자 이름입니다. `ENUM( Count = … )` 에 적은 이름이 있으면 그것, 없으면 끝 열거자가 `Count` 일 때 `Count`(비트 플래그 제외), 아니면 빈 글입니다.
-         * @details 등록기(`AstVisitor`)와 고정 배치 코덱(`FixedTypeAnalyzer`)이 같은 규칙을 쓰도록 한 곳에 둔다 — 갈리면 한쪽만 개수를 안다.
+         * @details 등록기(`AstVisitor`)와 레이아웃 스키마(`LayoutTypeAnalyzer`)이 같은 규칙을 쓰도록 한 곳에 둔다 — 갈리면 한쪽만 개수를 안다.
          */
         static string resolveCountEnumerator( string_view annotatedCount, const vector<ParsedEnumeratorInfo>& listEnumerator, bool bIsBitFlag );
     };

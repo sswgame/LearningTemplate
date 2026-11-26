@@ -348,7 +348,7 @@ namespace sw
             ++errorCount;
         if ( writeAssetFieldList( listInput ) == false )
             ++errorCount;
-        if ( writeFixedSchemaList( listInput ) == false )
+        if ( writeLayoutSchemaList( listInput ) == false )
             ++errorCount;
         if ( writeDepfile( listInput ) == false )
             ++errorCount;
@@ -557,17 +557,17 @@ namespace sw
     {
         const AbsolutePath&   inputFile = *record._pInputFile;
         const GeneratedPaths& paths     = record._paths;
-        FixedCodecGenerator   fixedCodec( parsed, inputFile.str() );
-        const bool            bFixedPlanned = fixedCodec.makePlan();
+        LayoutSchemaGenerator layoutSchema( parsed, inputFile.str() );
+        const bool            bLayoutPlanned = layoutSchema.makePlan();
         if ( _pOptions->_bDump && ( parsed._listType.empty() == false || parsed._listEnum.empty() == false ) )
-            printParsedHeaderDump( inputFile.str(), parsed, fixedCodec );
-        if ( bFixedPlanned == false )
+            printParsedHeaderDump( inputFile.str(), parsed, layoutSchema );
+        if ( bLayoutPlanned == false )
         {
-            SW_LOG_ERROR_ID( "ReflectionPipeline.CodeGenerationFailedFixed", "Code generation failed (fixed layout annotations): %#", inputFile.str() );
+            SW_LOG_ERROR_ID( "ReflectionPipeline.CodeGenerationFailedLayout", "Code generation failed (layout schema annotations): %#", inputFile.str() );
             return false;
         }
 
-        const CodeGenerator generator( parsed, fixedCodec, inputFile.str(), *_pSession, _pOptions->_moduleName );
+        const CodeGenerator generator( parsed, layoutSchema, inputFile.str(), *_pSession, _pOptions->_moduleName );
         string              headerText;
         if ( generator.makeHeaderText( headerText ) == false )
         {
@@ -605,7 +605,7 @@ namespace sw
         for ( size_t typeIndex = 0; typeIndex < parsed._listType.size(); ++typeIndex )
         {
             stamp._listTypeFqn.push_back( parsed._listType[typeIndex]._fullyQualifiedName );
-            stamp._listFixedSchema.push_back( fixedCodec.makeSchemaLine( typeIndex ) );
+            stamp._listLayoutSchema.push_back( layoutSchema.makeSchemaLine( typeIndex ) );
             for ( const ParsedPropertyInfo& prop : parsed._listType[typeIndex]._listProperty )
             {
                 if ( prop._bAssetPath == SW_FALSE )
@@ -724,7 +724,7 @@ namespace sw
      * @details 진단 파일입니다. 빌드는 읽지 않으므로 CMake 산출물 목록에 넣지 않습니다. 스키마 해시가 왜 바뀌었는지 빌드 두 개의 이 파일을
      *          비교해 봅니다. 판정 줄은 생성기가 스탬프에 적은 사실이다(이번 실행에 최신이라 다시 쓰지 않은 입력도 스탬프에 남아 있다).
      */
-    bool ReflectionPipeline::writeFixedSchemaList( const vector<InputRecord>& listInput ) const
+    bool ReflectionPipeline::writeLayoutSchemaList( const vector<InputRecord>& listInput ) const
     {
         StringBuilder<constant::buffer::kMax8192> text;
         for ( const InputRecord& record : listInput )
@@ -732,16 +732,16 @@ namespace sw
             // 입력마다 스탬프가 있다(애노테이션이 없는 헤더도 빈 산출물과 스탬프를 쓴다). 없으면 목록이 조용히 빠지므로 실패로 알린다.
             if ( record._bHasStamp == SW_FALSE )
             {
-                SW_LOG_ERROR_ID( "ReflectionPipeline.FixedSchemaListNot", "Fixed schema list is not written - '%#' has no stamp (it failed above)", record._paths._stampPath.str() );
+                SW_LOG_ERROR_ID( "ReflectionPipeline.LayoutSchemaListNot", "Layout schema list is not written - '%#' has no stamp (it failed above)", record._paths._stampPath.str() );
                 return false;
             }
-            for ( const string& schemaLine : record._stamp._listFixedSchema )
+            for ( const string& schemaLine : record._stamp._listLayoutSchema )
             {
                 text.append( schemaLine );
                 text.append( '\n' );
             }
         }
-        return GeneratedFileUtil::writeIfChanged( _pOptions->_outputDir.join( fixedlayout::kSchemaListFile ), text.view() );
+        return GeneratedFileUtil::writeIfChanged( _pOptions->_outputDir.join( layoutschema::kSchemaListFile ), text.view() );
     }
 
     bool ReflectionPipeline::writeReflectedTypesList( const vector<InputRecord>& listInput ) const

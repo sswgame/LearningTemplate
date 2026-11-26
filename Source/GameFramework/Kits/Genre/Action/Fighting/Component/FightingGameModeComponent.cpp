@@ -5,7 +5,7 @@
 #include "Core/Foundation/Constants.h"
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
-#include "Engine/Serialization/Format/FormatDef.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Foundation/Minigame/MinigameStack.h"
@@ -16,7 +16,7 @@ namespace sw
     {
         struct FightingGameModeComponentInternal
         {
-            static constexpr FormatDef kStateFormat{ "FGHT" };
+            static constexpr FormatDesc kStateFormat{ "FGHT" };
 
             // 넘패드 방향 표기다(격투 게임 공용).
             static constexpr uint8 kNeutral = 5;

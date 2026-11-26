@@ -25,7 +25,7 @@ namespace sw
         {
             /**
              * @brief `Min` · `Max` 글이 이 타입의 필드 하나(`_halfSize`, `-_halfSize`)이면 그 필드와 부호를 찾습니다.
-             * @return 그 필드입니다. 숫자 · 성분 목록 · 이 타입에 없는 이름(바깥 타입의 필드)이면 nullptr 입니다. 그 꼴은 고정 배치형 코덱만 씁니다.
+             * @return 그 필드입니다. 숫자 · 성분 목록 · 이 타입에 없는 이름(바깥 타입의 필드)이면 nullptr 입니다. 그 꼴은 레이아웃 스키마만 씁니다.
              */
             static const ParsedPropertyInfo* findOwnRangeField( const ParsedTypeInfo& typeInfo, const string& text, bool& outbNegate )
             {
@@ -91,16 +91,16 @@ namespace sw
              */
             static string makeDefaultLiteral( const ParsedPropertyInfo& prop )
             {
-                const string_view    text = StringUtil::trim( prop._defaultValue );
-                const FixedValueKind kind = prop._fixedType != nullptr ? prop._fixedType->_kind : FixedValueKind::Ineligible;
-                if ( kind == FixedValueKind::String )
+                const string_view     text = StringUtil::trim( prop._defaultValue );
+                const LayoutValueKind kind = prop._layoutType != nullptr ? prop._layoutType->_kind : LayoutValueKind::Ineligible;
+                if ( kind == LayoutValueKind::String )
                     return CodeEmit::quoted( text );
-                const bool bBareEnumerator = kind == FixedValueKind::Enum && prop._fixedType->_enum != nullptr && text.find( "::" ) == string_view::npos &&
+                const bool bBareEnumerator = kind == LayoutValueKind::Enum && prop._layoutType->_enum != nullptr && text.find( "::" ) == string_view::npos &&
                                              ( text.empty() == false && ( text.front() < '0' || text.front() > '9' ) && text.front() != '-' );
                 if ( bBareEnumerator )
                 {
                     StringBuilder<constant::buffer::kMax256> b;
-                    b.appendFormat( "::%#::%#", prop._fixedType->_enum->_fullyQualifiedName, text );
+                    b.appendFormat( "::%#::%#", prop._layoutType->_enum->_fullyQualifiedName, text );
                     return string( b.view() );
                 }
                 return string( text );
@@ -184,7 +184,7 @@ namespace sw
         }
 
         StringBuilder<constant::buffer::kMax128> maxCount;
-        maxCount.appendFormat( "%#u", prop._bHasMaxCount != SW_FALSE ? prop._maxCount : 0u ); // 상한은 코덱이 지키는 값 그대로다(상수 이름으로 적었으면 `PropertyResolver` 가 푼 값)
+        maxCount.appendFormat( "%#u", prop._bHasMaxCount != SW_FALSE ? prop._maxCount : 0u ); // 상한은 스키마이 지키는 값 그대로다(상수 이름으로 적었으면 `PropertyResolver` 가 푼 값)
         StringBuilder<constant::buffer::kMax64> textCount;
         textCount.appendFormat( "%#u", static_cast<uint32>( output._listText.size() ) );
         // 단위는 상수 문맥에서 철자를 열거로 바꾼다 — 표에서 빠진 철자는 컴파일 오류다(검증은 `applyDisplayMeta` 가 먼저 했다).

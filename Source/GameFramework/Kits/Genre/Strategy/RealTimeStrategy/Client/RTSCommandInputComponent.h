@@ -17,7 +17,7 @@
 
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Serialization/Format/FormatDef.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
 #include "Engine/Serialization/Format/StateIO.h"
 #include "Engine/Serialization/Serializer/CatalogKey.h"
 
@@ -112,8 +112,8 @@ namespace sw
         static constexpr TickGroup kTickGroup = TickGroup::PostUpdate;
 
         /** @brief 고르기 · 끌기는 틱 뒤 게임 스레드에서만 바뀝니다 — 유닛 뷰 · 끌기 상자가 병렬 틱에서 읽어도 됩니다(자기 틱이 쓰는 것은 따로 둔 `_bInputLive` 뿐이다). */
-        static constexpr bool      kTickReadSafe = true;
-        static constexpr FormatDef kStateFormat{ "RTSI" };
+        static constexpr bool       kTickReadSafe = true;
+        static constexpr FormatDesc kStateFormat{ "RTSI" };
 
         RTSCommandInputComponent();
         virtual ~RTSCommandInputComponent() override;

@@ -20,7 +20,7 @@
 #include "Engine/Scene/SceneSubLevelSubsystem.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
-#include "Engine/Serialization/Format/FormatDef.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
 
 #include "GameFramework/Runtime/Foundation/Flow/IContentConfiguration.h"
 #include "GameFramework/Runtime/Foundation/Save/SnapshotFaultHook.h"
@@ -42,7 +42,7 @@ namespace sw
              *          머리의 씬 정체는 찍을 때 활성 씬의 GUID 참조(`AssetRegistry::makeReferenceText`)다 — 읽을 때 지금 경로로 풀고, 지금 활성 씬과 다르면 섞지 않고 거절한다.
              *          옛 판은 슬롯에서 읽은 자리가 형식의 단계로 한 번 올린다(`upgradeEnvelope`).
              */
-            static constexpr FormatDef kFormat{ "SWST" };
+            static constexpr FormatDesc kFormat{ "SWST" };
 
             /** @brief 봉투 머리(매직 · 판 뒤의 칸)입니다. */
             struct Header
@@ -461,10 +461,10 @@ namespace sw
 
     bool GameStateSnapshot::upgradeEnvelope( vector<uint8>& inoutBytes )
     {
-        constexpr const FormatDef& kFormat = StateEnvelopeInternal::kFormat;
-        ByteReader                 reader{ inoutBytes.data(), inoutBytes.size() };
-        const uint32               tag     = reader.readUint32();
-        const uint32               version = reader.readUint32();
+        constexpr const FormatDesc& kFormat = StateEnvelopeInternal::kFormat;
+        ByteReader                  reader{ inoutBytes.data(), inoutBytes.size() };
+        const uint32                tag     = reader.readUint32();
+        const uint32                version = reader.readUint32();
         if ( reader.hasOverflowed() || tag != kFormat._tag || version >= kFormat._version )
             return true; // 잘린 봉투 · 다른 바이트 · 새 판은 읽기가 까닭을 남긴다
         vector<uint8> body( inoutBytes.begin() + static_cast<ptrdiff_t>( reader.getOffset() ), inoutBytes.end() );

@@ -24,7 +24,7 @@ namespace sw
         EventList,
         MethodList,    ///< 메서드 표(호출 함수를 뺀 몫)
         MethodInvoker, ///< 메서드 호출 람다 — 형식이 있어야 해 표로 바꿀 수 없다
-        FixedCodec,    ///< 고정 배치형 서술자 표 · 코덱
+        LayoutSchema,  ///< 스키마 결합형 서술자 표 · 스키마
         TickBatch,
         EnumRegistrar,
         TypeTraits, ///< 타입 API 접근 함수
@@ -40,7 +40,7 @@ namespace sw
         static const utf8* toString( const CodeEmitSection section ) noexcept
         {
             constexpr const utf8* kArrName[] = { "FileHeader", "TypeRegistrar", "PropertyBinding", "PropertyContainer", "PropertyDesc", "PropertyMetadata", "EventList",
-                                                 "MethodList", "MethodInvoker", "FixedCodec", "TickBatch", "EnumRegistrar", "TypeTraits" };
+                                                 "MethodList", "MethodInvoker", "LayoutSchema", "TickBatch", "EnumRegistrar", "TypeTraits" };
             static_assert( SW_COUNT_OF( kArrName ) == static_cast<size_t>( CodeEmitSection::Count ), "CodeEmitSection names are out of date" );
             return kArrName[static_cast<size_t>( section )];
         }

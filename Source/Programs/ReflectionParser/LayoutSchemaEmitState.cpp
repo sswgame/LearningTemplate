@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Programs/ReflectionParser/FixedCodecEmitState.h"
+#include "Programs/ReflectionParser/LayoutSchemaEmitState.h"
 
 #include "Core/Log/Logger.h"
 #include "Core/String/StringBuilder.h"
@@ -9,7 +9,7 @@
 
 namespace sw
 {
-    FixedCodecBound::FixedCodecBound() noexcept
+    LayoutSchemaBound::LayoutSchemaBound() noexcept
         : _text{}
         , _ownerFqn{}
         , _fieldName{}
@@ -21,14 +21,14 @@ namespace sw
     {
     }
 
-    FixedCodecNode::FixedCodecNode() noexcept
+    LayoutSchemaNode::LayoutSchemaNode() noexcept
         : _call{}
         , _listChild{}
         , _childArgs{ ChildArgs::None }
     {
     }
 
-    FixedCodecNode::FixedCodecNode( string call, const ChildArgs childArgs ) noexcept
+    LayoutSchemaNode::LayoutSchemaNode( string call, const ChildArgs childArgs ) noexcept
         : _call{ std::move( call ) }
         , _listChild{}
         , _childArgs{ childArgs }
@@ -38,7 +38,7 @@ namespace sw
 
 namespace sw
 {
-    FixedCodecEmitState::FixedCodecEmitState( const ParsedHeader& header, const string& sourcePath, const ParsedTypeInfo& root )
+    LayoutSchemaEmitState::LayoutSchemaEmitState( const ParsedHeader& header, const string& sourcePath, const ParsedTypeInfo& root )
         : _pHeader{ &header }
         , _pSourcePath{ &sourcePath }
         , _pRoot{ &root }
@@ -56,35 +56,35 @@ namespace sw
     {
     }
 
-    string FixedCodecEmitState::formatFloat( const float64 value )
+    string LayoutSchemaEmitState::formatFloat( const float64 value )
     {
         utf8 arrBuffer[constant::buffer::kMax64]{};
         formatstring( arrBuffer, sizeof( arrBuffer ), "%.9g", value );
         return string( arrBuffer );
     }
 
-    string FixedCodecEmitState::formatInteger( const int64 value )
+    string LayoutSchemaEmitState::formatInteger( const int64 value )
     {
         StringBuilder<constant::buffer::kMax64> b;
         b.appendFormat( "%#", value );
         return string( b.view() );
     }
 
-    string FixedCodecEmitState::makeEnumValueTableName( const ParsedFixedEnum& enumInfo )
+    string LayoutSchemaEmitState::makeEnumValueTableName( const ParsedLayoutEnum& enumInfo )
     {
         StringBuilder<constant::buffer::kMax256> b;
-        b.appendFormat( "s_arrFixedEnum_%#", CodeGenerator::sanitizeIdentifier( enumInfo._fullyQualifiedName ) );
+        b.appendFormat( "s_arrLayoutEnum_%#", CodeGenerator::sanitizeIdentifier( enumInfo._fullyQualifiedName ) );
         return string( b.view() );
     }
 
-    void FixedCodecEmitState::reportError( const ParsedPropertyInfo& prop, const string_view message )
+    void LayoutSchemaEmitState::reportError( const ParsedPropertyInfo& prop, const string_view message )
     {
-        SW_LOG_ERROR_ID( "FixedCodecGenerator.ERRORFixedLayout", "ERROR: %#(%#): fixed layout of '%#::%#': %#", *_pSourcePath, prop._line, _pRoot->_fullyQualifiedName,
+        SW_LOG_ERROR_ID( "LayoutSchemaGenerator.ERRORLayoutSchema", "ERROR: %#(%#): layout schema of '%#::%#': %#", *_pSourcePath, prop._line, _pRoot->_fullyQualifiedName,
                          prop._memberName, message );
         _bError = SW_TRUE;
     }
 
-    void FixedCodecEmitState::markIneligible( const ParsedPropertyInfo& prop, const string_view reason )
+    void LayoutSchemaEmitState::markIneligible( const ParsedPropertyInfo& prop, const string_view reason )
     {
         if ( _reason.empty() == false )
             return;
@@ -93,7 +93,7 @@ namespace sw
         _reason = string( b.view() );
     }
 
-    uint32 FixedCodecEmitState::addDependency( const string& fieldName, const string& fqn )
+    uint32 LayoutSchemaEmitState::addDependency( const string& fieldName, const string& fqn )
     {
         for ( size_t index = 0; index < _listDependency.size(); ++index )
         {
@@ -104,9 +104,9 @@ namespace sw
         return static_cast<uint32>( _listDependency.size() - 1 );
     }
 
-    void FixedCodecEmitState::addEnum( const ParsedFixedEnum& enumInfo )
+    void LayoutSchemaEmitState::addEnum( const ParsedLayoutEnum& enumInfo )
     {
-        for ( const ParsedFixedEnum* pEnum : _listEnum )
+        for ( const ParsedLayoutEnum* pEnum : _listEnum )
         {
             if ( pEnum->_fullyQualifiedName == enumInfo._fullyQualifiedName )
                 return;

@@ -10,7 +10,7 @@
 #include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Serialization/Format/FormatDef.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -40,7 +40,7 @@ namespace sw
 
         static constexpr TickGroup kTickGroup = TickGroup::PostPhysics;
 
-        static constexpr FormatDef kStateFormat{ "REPC" };
+        static constexpr FormatDesc kStateFormat{ "REPC" };
 
         ReputationComponent();
         ~ReputationComponent() override;

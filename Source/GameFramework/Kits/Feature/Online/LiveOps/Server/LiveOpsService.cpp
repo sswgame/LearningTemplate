@@ -64,7 +64,7 @@ namespace sw
                     read._result = ServiceStoreResult::Invalid;
                     return read;
                 }
-                // 이벤트 정의는 고정 배치형 코덱이 없어 상한을 읽기가 보지 않으므로, 운영 쓰기와 같은 규칙으로 다시 확인한다
+                // 이벤트 정의는 레이아웃 스키마이 없어 상한을 읽기가 보지 않으므로, 운영 쓰기와 같은 규칙으로 다시 확인한다
                 if ( LiveEventRules::isValid( definition ) == false )
                 {
                     SW_LOG_ERROR_ID( "LiveOpsService.LiveOpsEventRecordBreaks", "LiveOps event record '%#' breaks the event rules", record._key );

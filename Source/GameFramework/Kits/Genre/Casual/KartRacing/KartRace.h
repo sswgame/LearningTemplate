@@ -28,7 +28,7 @@
 #include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Serialization/Format/FormatDef.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -63,11 +63,11 @@ namespace sw
     class SW_KIT_API KartGhost
     {
     public:
-        static constexpr uint8     kButtonDrift   = 1u << 0;
-        static constexpr uint8     kButtonBoost   = 1u << 1;
-        static constexpr uint8     kButtonJump    = 1u << 2;
-        static constexpr uint8     kButtonUseItem = 1u << 3;
-        static constexpr FormatDef kFormat{ "KGHT" };
+        static constexpr uint8      kButtonDrift   = 1u << 0;
+        static constexpr uint8      kButtonBoost   = 1u << 1;
+        static constexpr uint8      kButtonJump    = 1u << 2;
+        static constexpr uint8      kButtonUseItem = 1u << 3;
+        static constexpr FormatDesc kFormat{ "KGHT" };
 
         KartGhost();
 

@@ -6,7 +6,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
-#include "Engine/Serialization/Format/FormatDef.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Foundation/Minigame/MinigameStack.h"
@@ -17,7 +17,7 @@ namespace sw
     {
         struct RestaurantGameModeComponentInternal
         {
-            static constexpr FormatDef kStateFormat{ "RSGM" };
+            static constexpr FormatDesc kStateFormat{ "RSGM" };
 
             static constexpr const utf8* kCookName       = "cook"; ///< 직원 이름(레벨 오름 알림의 id)
             static constexpr const utf8* kServerName     = "server";

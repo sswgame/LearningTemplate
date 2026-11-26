@@ -13,7 +13,7 @@
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Serialization/Format/FormatDef.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -47,7 +47,7 @@ namespace sw
         REFLECT_BODY();
         REFLECT_INTERFACE( IItemReceiver, _itemReceiverPort );
 
-        static constexpr FormatDef kStateFormat{ "CEQP" };
+        static constexpr FormatDesc kStateFormat{ "CEQP" };
 
         CharacterEquipmentComponent();
         virtual ~CharacterEquipmentComponent() override;

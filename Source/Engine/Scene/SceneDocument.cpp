@@ -16,7 +16,7 @@
 #include "Engine/Object/Prefab/PrefabOverrides.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
-#include "Engine/Serialization/Format/FormatDef.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
 #include "Engine/Serialization/Inherit/DataInheritanceSchemaRegistry.h"
@@ -46,7 +46,7 @@ namespace sw
             // 쿠킹본은 쿠커가 매번 다시 쿠킹하는 산출물이라 이 판만 읽는다 — 배치를 바꾸면 판을 올린다.
             // 셀 색인의 구간 뒤에 그 조각의 HLOD 대리 파일 id(`StreamingCell::_hlodFileID`, 0 이면 없음)가 온다.
             // 그 뒤에 조각 내용의 XZ 경계(`StreamingCell::_contentBounds`, 최소 x · z · 최대 x · z — 빈 경계면 최소가 최대보다 크다)가 온다.
-            static constexpr FormatDef kBinFormat{ "SWSC" };
+            static constexpr FormatDesc kBinFormat{ "SWSC" };
             // 고정 머리: 매직 · 판 · 머리 길이 · 내용 길이.
             static constexpr uint64 kFixedHeadBytes = 2u * sizeof( uint32 ) + 2u * sizeof( uint64 );
             // 엔티티 하나는 길이 앞머리(4바이트)를 쓰는 필드 다섯, 목록 수 둘, 파일 id · id 범위 · 앵커 id(8바이트씩)다 — 파일이 말한 개수를 그대로 잡지 않는 데 쓴다.

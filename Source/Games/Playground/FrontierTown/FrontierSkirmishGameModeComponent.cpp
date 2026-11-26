@@ -5,7 +5,7 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/FormatDef.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
 #include "Engine/Serialization/Format/StateIO.h"
 #include "Engine/Serialization/Serializer/CatalogKey.h"
 
@@ -34,7 +34,7 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        static constexpr FormatDef kStateFormat{ "FTSK" };
+        static constexpr FormatDesc kStateFormat{ "FTSK" };
 
         FrontierSkirmishGameModeComponent();
         virtual ~FrontierSkirmishGameModeComponent() override;

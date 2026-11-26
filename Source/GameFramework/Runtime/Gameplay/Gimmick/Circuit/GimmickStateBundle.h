@@ -7,7 +7,7 @@
  *          키는 소유 오브젝트 이름의 해시다. 오브젝트 id 는 기계마다 다를 수 있지만, 같은 씬을 읽은 두 기계의 오브젝트 이름은 매니저가 같은 규칙으로 유일하게 만든다.
  *          번들은 키 오름차순이라 같은 씬이면 같은 바이트다.
  *
- *          바이트는 고정 배치형(`FixedLayout`, 같은 빌드끼리만)이다. 직접 작성한 코덱, 매직, 버전을 두지 않는다. 머리의 스키마 해시가 다른 빌드의 바이트를 거절한다.
+ *          바이트는 스키마 결합형(`LayoutSerializer`, 같은 빌드끼리만)이다. 직접 작성한 코덱, 매직, 버전을 두지 않는다. 머리의 스키마 해시가 다른 빌드의 바이트를 거절한다.
  *          게임이 번들을 디스크에 남기려면 같은 타입을 `BinarySerializer` 로 쓴다(형식을 하나 더 만들지 않는다).
  *          지금 이 번들을 부르는 게임 코드는 없고 테스트뿐이다. 롤백이나 스냅샷을 싣는 게임이 생기면 그 워크로드로 크기와 시간을 다시 측정한다.
  */
@@ -19,7 +19,7 @@
 #include "Core/String/Name/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Serialization/Fixed/FixedLayout.h"
+#include "Engine/Serialization/Layout/LayoutSerializer.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/Circuit/GimmickCircuitState.h"
@@ -71,13 +71,13 @@ namespace sw
          */
         uint32 apply( GameObjectManager& manager, uint32* pOutSkippedCount = nullptr ) const;
 
-        /** @brief 고정 배치형 바이트로 씁니다(`_listEntry` 순서 그대로). 선언한 범위 밖 값(상한을 넘는 항목 수 등)이 있으면 false 이고 @p outBytes 는 비어 있습니다. */
+        /** @brief 스키마 결합형 바이트로 씁니다(`_listEntry` 순서 그대로). 선언한 범위 밖 값(상한을 넘는 항목 수 등)이 있으면 false 이고 @p outBytes 는 비어 있습니다. */
         [[nodiscard]] bool write( vector<uint8>& outBytes ) const;
-        /** @brief 고정 배치형 바이트를 읽습니다. `Ok` 가 아니면 번들은 그대로입니다. */
-        [[nodiscard]] FixedReadResult read( const uint8* pData, size_t size );
-        [[nodiscard]] FixedReadResult read( const vector<uint8>& bytes ) { return read( bytes.data(), bytes.size() ); }
+        /** @brief 스키마 결합형 바이트를 읽습니다. `Ok` 가 아니면 번들은 그대로입니다. */
+        [[nodiscard]] LayoutReadResult read( const uint8* pData, size_t size );
+        [[nodiscard]] LayoutReadResult read( const vector<uint8>& bytes ) { return read( bytes.data(), bytes.size() ); }
 
-        /** @brief 번들의 고정 배치형 바이트 해시입니다. 두 기계의 회로가 같은 상태인지 비교합니다. */
+        /** @brief 번들의 스키마 결합형 바이트 해시입니다. 두 기계의 회로가 같은 상태인지 비교합니다. */
         uint64 computeHash() const;
         /** @brief 키의 항목입니다. 없으면 nullptr 입니다. */
         const GimmickStateEntry* findEntry( uint64 ownerKey ) const;

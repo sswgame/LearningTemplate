@@ -104,7 +104,7 @@ namespace sw
          * @details 경계가 실행 시간에 정해지므로 숫자(`_minRange`) 하나로는 담지 못한다. 생성기가 같은 타입의 필드 하나를 가리키는 경계에만 만든다.
          *          이름을 실행 시간에 찾지 않고 컴파일된 멤버 읽기라, 이름이 틀리면 생성된 코드가 컴파일되지 않는다. 숫자 경계(`_bHasMinRange`)와 함께 있지 않다.
          *          읽기 공통 끝도 이 경계를 지키므로 Shipping 에도 있다(`computeAllowedRange`).
-         *          바깥 타입의 필드를 가리키는 경계와 성분 목록(`"-_a, 0, -_a"`)은 고정 배치형 코덱만 쓴다(인스펙터는 바깥 인스턴스를 모르고 벡터 성분에 범위를 두지 않는다).
+         *          바깥 타입의 필드를 가리키는 경계와 성분 목록(`"-_a, 0, -_a"`)은 레이아웃 스키마만 쓴다(인스펙터는 바깥 인스턴스를 모르고 벡터 성분에 범위를 두지 않는다).
          */
         PropertyRangeReadFunction _pReadMinRange;
         PropertyRangeReadFunction _pReadMaxRange;
@@ -118,7 +118,7 @@ namespace sw
         float32                       _maxRange;
         /**
          * @brief 문자열 · 컨테이너 최대 길이입니다(`PROPERTY( MaxCount = 32 )`, `MaxCount = kMaxSlotCount`). 적지 않았으면 0 입니다.
-         * @details 고정 배치형 코덱이 쓰기와 읽기에서 지키는 상한과 같은 값입니다. 상수 이름으로 적으면 생성기가 그 상수의 값을 넣으므로
+         * @details 레이아웃 스키마이 쓰기와 읽기에서 지키는 상한과 같은 값입니다. 상수 이름으로 적으면 생성기가 그 상수의 값을 넣으므로
          *          상한을 C++ 상수와 애노테이션 두 곳에 숫자로 적지 않습니다.
          */
         uint32 _maxCount;

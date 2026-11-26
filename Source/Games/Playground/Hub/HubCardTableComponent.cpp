@@ -16,7 +16,7 @@
 #include "Engine/Object/GameObject/Subsystem/SceneNetLink.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
-#include "Engine/Serialization/Fixed/FixedLayout.h"
+#include "Engine/Serialization/Layout/LayoutSerializer.h"
 
 #include "GameFramework/Runtime/Foundation/Presentation/IHUDViewModelBinder.h"
 #include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
@@ -113,7 +113,7 @@ namespace sw
         view._winner            = game.getWinner();
         view._color             = game.getCurrentColor();
         BitWriter writer;
-        if ( FixedLayout::write( view, writer ) == false )
+        if ( LayoutSerializer::write( view, writer ) == false )
             return false; // 칸 범위 밖 — 오류 로그가 남았다
         outView = writer.getBytes();
         return true;
@@ -122,7 +122,7 @@ namespace sw
     bool HubCardTurnPolicy::readSeatView( const vector<uint8>& bytes, HubCardSeatView& outView )
     {
         HubCardSeatView view;
-        if ( FixedLayout::read( bytes.data(), static_cast<int32>( bytes.size() ), view ) != FixedReadResult::Ok )
+        if ( LayoutSerializer::read( bytes.data(), static_cast<int32>( bytes.size() ), view ) != LayoutReadResult::Ok )
             return false;
         bool bInDeck = view._topCardID < SheddingCardGame::kDeckCardCount;
         for ( const uint16 cardID : view._listHandCardID )

@@ -10,7 +10,7 @@
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Serialization/Format/FormatDef.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Foundation/Minigame/MinigameStack.h"
@@ -21,7 +21,7 @@ namespace sw
     {
         struct BattleRoyaleGameModeComponentInternal
         {
-            static constexpr FormatDef kStateFormat{ "BRGM" };
+            static constexpr FormatDesc kStateFormat{ "BRGM" };
 
             // 한 씨앗에서 갈래마다 다른 수열을 뽑는 소금이다.
             static constexpr uint32 kFlightSalt = 1;

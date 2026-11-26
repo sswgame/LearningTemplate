@@ -7,7 +7,7 @@
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Serialization/Format/FormatDef.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -40,9 +40,9 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        static constexpr int32     kSlotCount = 9;
-        static constexpr int32     kMaxStack  = 64;
-        static constexpr FormatDef kStateFormat{ "VXHB" };
+        static constexpr int32      kSlotCount = 9;
+        static constexpr int32      kMaxStack  = 64;
+        static constexpr FormatDesc kStateFormat{ "VXHB" };
 
         VoxelHotbar();
 

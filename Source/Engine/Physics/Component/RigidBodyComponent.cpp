@@ -14,7 +14,7 @@
 #include "Engine/Physics/PhysicsSettings.h"
 #include "Engine/Physics/Scene/PhysicsPoseStore.h"
 #include "Engine/Physics/Scene/ScenePhysics.h"
-#include "Engine/Serialization/Format/FormatDef.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
 
 namespace sw
 {
@@ -22,7 +22,7 @@ namespace sw
     {
         struct RigidBodyComponentInternal
         {
-            static constexpr FormatDef kStateFormat{ "RBST" };
+            static constexpr FormatDesc kStateFormat{ "RBST" };
         };
     } // namespace
 } // namespace sw

@@ -3,7 +3,7 @@
 #include "Core/Hash/HashUtil.h"
 #include "Core/TestFramework/TestFramework.h"
 
-#include "Engine/Serialization/Fixed/FixedLayout.h"
+#include "Engine/Serialization/Layout/LayoutSerializer.h"
 
 #include "GameFramework/Runtime/Online/Identity/AccountIdentity.h"
 #include "GameFramework/Runtime/Online/Ledger/LedgerTypes.h"
@@ -120,7 +120,7 @@ SW_TEST_CASE( OnlineServiceTableTest, MessageTypesHashFollowsTheTypesAndTheirOrd
     using Attachment   = sw::OnlineMessageTypes<sw::ServiceMailAttachment>;
     using Both         = sw::OnlineMessageTypes<sw::LedgerBalance, sw::ServiceMailAttachment>;
     using BothReversed = sw::OnlineMessageTypes<sw::ServiceMailAttachment, sw::LedgerBalance>;
-    SW_EXPECT_EQUAL( sw::HashUtil::combine( 0, sw::FixedLayout::getSchemaHash<sw::LedgerBalance>() ), Balance::computeSchemaHash() );
+    SW_EXPECT_EQUAL( sw::HashUtil::combine( 0, sw::LayoutSerializer::getSchemaHash<sw::LedgerBalance>() ), Balance::computeSchemaHash() );
     SW_EXPECT_NOT_EQUAL( Balance::computeSchemaHash(), Attachment::computeSchemaHash() ); // 필드가 같아도 타입 이름이 정규 문자열에 들어간다
     SW_EXPECT_NOT_EQUAL( Both::computeSchemaHash(), BothReversed::computeSchemaHash() );
     SW_EXPECT_EQUAL( uint64( 0 ), sw::OnlineMessageTypes<>::computeSchemaHash() );

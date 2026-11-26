@@ -5,7 +5,7 @@
 #include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Scene/StreamingCellGrid.h"
-#include "Engine/Serialization/Fixed/ReplicatedLayout.h"
+#include "Engine/Serialization/Layout/ReplicatedLayout.h"
 
 #include "GameFramework/Kits/Feature/Network/NetMMO/MMOReplicator.h"
 

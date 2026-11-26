@@ -143,7 +143,7 @@ SW_TEST_CASE( OnlineProtocolTableTest, NoBodyWritesNothing )
     SW_EXPECT_EQUAL( 0, writer.getByteCount() );
     BitReader    reader( nullptr, 0 );
     OnlineNoBody body;
-    SW_EXPECT_TRUE( Messages::read( reader, body ) == FixedReadResult::Ok );
+    SW_EXPECT_TRUE( Messages::read( reader, body ) == LayoutReadResult::Ok );
 }
 
 /** @brief [OnlineProtocolTableTest] 저장 함수 결과: 공통 범주는 어떤 업무 결과와도 같지 않고, 재시도 범주는 일시 장애 · 과부하 · 충돌이다 */

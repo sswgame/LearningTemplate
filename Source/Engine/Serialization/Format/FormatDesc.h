@@ -1,7 +1,7 @@
 /**
- * @file FormatDef.h
+ * @file FormatDesc.h
  * @brief 저장 바이트 형식 하나의 선언(네 글자 표 · 지금 판 · 올리기 단계)과 그 머리(표 · 판)를 쓰고 읽고 거절하는 한 길입니다.
- * @details 형식은 `static constexpr FormatDef kFormat{ "SWHF" };` 한 줄로 선언한다. 세이브 · 상태처럼 옛 판을 읽는 형식은 올리기 단계 배열을 주고 단계 수가 곧 판이라
+ * @details 형식은 `static constexpr FormatDesc kFormat{ "SWHF" };` 한 줄로 선언한다. 세이브 · 상태처럼 옛 판을 읽는 형식은 올리기 단계 배열을 주고 단계 수가 곧 판이라
  *          판만 올리고 단계를 빠뜨리거나 가운데가 빈 사슬을 쓸 수 없다. 옛 판을 읽지 않는 형식(쿠킹본 · 캐시 · 도구 상태)은 판을 숫자로 올린다(`{ "SWPK", 1 }`).
  *          언리얼 `FCustomVersion` 은 판을 아카이브에 등록하고 `Serialize` 가 판마다 갈라 읽고, 유니티 · Godot 은 형식 번호를 로더마다 견준다 — 여기는 갈라 읽기 대신
  *          순수 함수 단계를 두고 대조 · 거절 로그(`Format.HeadRefused` · `FormatUpgrade.*`)를 한 곳에 둔다. XML 에셋의 판은 종류 정의(`AssetTypeDef::_formatVersion`),
@@ -24,7 +24,7 @@ namespace sw
     using FormatStep = bool ( * )( Archive& inOldBody, Archive& outNewBody );
 
     /** @brief 저장 바이트 형식 하나입니다. 머리는 `[표 uint32][판 uint32]`(비트 스트림은 판이 가변 정수)이다. */
-    struct SW_API FormatDef
+    struct SW_API FormatDesc
     {
         /** @brief 표 · 판의 바이트 수입니다. */
         static constexpr size_t kHeadBytes = 2 * sizeof( uint32 );
@@ -34,7 +34,7 @@ namespace sw
         const FormatStep* _pSteps; ///< `_version` 개. 없으면 옛 판을 읽지 않는 형식이다
 
         /** @brief 옛 판을 읽지 않는 형식입니다. 첫 판은 0 이다. */
-        constexpr explicit FormatDef( const utf8 ( &tag )[5], uint32 version = 0 ) noexcept
+        constexpr explicit FormatDesc( const utf8 ( &tag )[5], uint32 version = 0 ) noexcept
             : _tag{ makeTag( tag ) }
             , _version{ version }
             , _pSteps{ nullptr }
@@ -42,7 +42,7 @@ namespace sw
         }
         /** @brief 옛 판을 단계로 올려 읽는 형식입니다. 판은 단계 수다. */
         template <size_t N>
-        constexpr FormatDef( const utf8 ( &tag )[5], const FormatStep ( &arrStep )[N] ) noexcept
+        constexpr FormatDesc( const utf8 ( &tag )[5], const FormatStep ( &arrStep )[N] ) noexcept
             : _tag{ makeTag( tag ) }
             , _version{ static_cast<uint32>( N ) }
             , _pSteps{ arrStep }

@@ -6,7 +6,7 @@
 #include "Engine/Content/AssetID.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/Tick/TickContext.h"
-#include "Engine/Serialization/Format/FormatDef.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
 
 #include "GameFramework/Runtime/Foundation/Save/StatefulComponentRegistrar.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/Element/ElementRuleCatalog.h"
@@ -18,7 +18,7 @@ namespace sw
     {
         struct ElementStatusComponentInternal
         {
-            static constexpr FormatDef kStateFormat{ "ELST" };
+            static constexpr FormatDesc kStateFormat{ "ELST" };
         };
 
         const StatefulComponentRegistrar<ElementStatusComponent> s_elementStatusComponentStateRegistration{ "ElementStatusComponent" };

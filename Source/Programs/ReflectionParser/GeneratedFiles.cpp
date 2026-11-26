@@ -29,8 +29,8 @@ namespace sw
             static constexpr const utf8* kStampDependencyKey = "dep";
             /** @brief 스탬프의 타입 줄 머리입니다 — `type <FQN>`. */
             static constexpr const utf8* kStampTypeKey = "type";
-            /** @brief 스탬프의 고정 배치형 판정 줄 머리입니다 — `schema <FQN> | <정규 문자열 또는 이유>`. */
-            static constexpr const utf8* kStampFixedSchemaKey = "schema";
+            /** @brief 스탬프의 스키마 결합형 판정 줄 머리입니다 — `schema <FQN> | <정규 문자열 또는 이유>`. */
+            static constexpr const utf8* kStampLayoutSchemaKey = "schema";
             /**
              * @brief 스탬프의 칸 줄 머리입니다 — `pathfield <이름>\t<대상>`.
              * @details 줄 모양이나 담는 칸이 바뀔 때 머리를 바꾼다 — 옛 머리(`assetfield` · `assetfieldkind` · `fieldkind` · `fieldform`)의 스탬프는 모르는 줄이라 다시 파싱한다
@@ -105,9 +105,9 @@ namespace sw
                     {
                         outRecord._listTypeFqn.emplace_back( rest );
                     }
-                    else if ( takeKeyedRest( line, kStampFixedSchemaKey, rest ) )
+                    else if ( takeKeyedRest( line, kStampLayoutSchemaKey, rest ) )
                     {
-                        outRecord._listFixedSchema.emplace_back( rest );
+                        outRecord._listLayoutSchema.emplace_back( rest );
                     }
                     else if ( takeKeyedRest( line, kStampAssetFieldKey, rest ) )
                     {
@@ -196,9 +196,9 @@ namespace sw
         {
             stampText.appendFormat( "%# %#\n", GeneratedFilesInternal::kStampTypeKey, typeFqn );
         }
-        for ( const string& schemaLine : _listFixedSchema )
+        for ( const string& schemaLine : _listLayoutSchema )
         {
-            stampText.appendFormat( "%# %#\n", GeneratedFilesInternal::kStampFixedSchemaKey, schemaLine );
+            stampText.appendFormat( "%# %#\n", GeneratedFilesInternal::kStampLayoutSchemaKey, schemaLine );
         }
         for ( const string& assetField : _listAssetField )
         {

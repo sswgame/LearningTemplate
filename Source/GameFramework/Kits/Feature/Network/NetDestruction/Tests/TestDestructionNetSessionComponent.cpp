@@ -12,7 +12,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Subsystem/SceneNetLink.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Serialization/Fixed/ReplicatedLayout.h"
+#include "Engine/Serialization/Layout/ReplicatedLayout.h"
 
 #include "GameFramework/Kits/Feature/Network/NetDestruction/DestructionNetSessionComponent.h"
 #include "GameFramework/Kits/Feature/Network/NetDestruction/DestructionReplication.h"
@@ -105,7 +105,7 @@ SW_TEST_CASE( DestructionNetSessionComponentTest, ServerSessionUpdatesOncePerFra
 }
 
 /**
- * @brief [DestructionReplicationTest] 고정 배치형 본문 — 잘린 해시 · 남는 바이트 · 빈 스냅숏은 깨진 메시지이고, 등록하지 않은 오브젝트의 온전한 해시는 소비하고 버린다
+ * @brief [DestructionReplicationTest] 스키마 결합형 본문 — 잘린 해시 · 남는 바이트 · 빈 스냅숏은 깨진 메시지이고, 등록하지 않은 오브젝트의 온전한 해시는 소비하고 버린다
  */
 SW_TEST_CASE( DestructionReplicationTest, BodyMessagesRejectTruncatedAndTrailingBytes )
 {

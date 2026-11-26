@@ -32,7 +32,7 @@ namespace sw
 
     /**
      * @brief 클라이언트-서버 복제 키트의 메시지 표입니다. 종류 · 마스크 · 와이어 버전은 표에서 나온다(`NetMessageTable`).
-     * @details 확인 본문은 고정 배치형(`NetMessageBodyDef`)이다. 스냅샷(기준 틱 델타 · 비트 예산)과 입력(입력 창 형식 `kInputFormat`)은 손 본문이다.
+     * @details 확인 본문은 스키마 결합형(`NetMessageBodyDef`)이다. 스냅샷(기준 틱 델타 · 비트 예산)과 입력(입력 창 형식 `kInputFormat`)은 손 본문이다.
      */
     struct NetClientServerMessage
     {

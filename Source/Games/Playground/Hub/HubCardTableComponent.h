@@ -29,7 +29,7 @@ namespace sw
     class GameObjectManager;
     class HubCardHUDViewModel;
 
-    /** @brief 자리 하나가 보는 판입니다(서버 → 그 자리, 고정 배치형). 자기 손패만 있고 상대는 장수뿐이다. */
+    /** @brief 자리 하나가 보는 판입니다(서버 → 그 자리, 스키마 결합형). 자기 손패만 있고 상대는 장수뿐이다. */
     REFLECT()
     struct HubCardSeatView
     {

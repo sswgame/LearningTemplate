@@ -1,13 +1,13 @@
-// ReplicatedLayoutTest — 복제 스키마(`Replicated` 칸만의 고정 배치형 표). 칸 고르기 · 스키마 해시가 가르는 것 · 양자화 왕복 · 바뀐 칸 비트 · 쓰기 비용.
+// ReplicatedLayoutTest — 복제 스키마(`Replicated` 칸만의 스키마 결합형 표). 칸 고르기 · 스키마 해시가 가르는 것 · 양자화 왕복 · 바뀐 칸 비트 · 쓰기 비용.
 #include "pch.h"
 
 #include "Core/Serialization/BitStream.h"
 #include "Core/TestFramework/TestFramework.h"
 #include "Core/Time/MonotonicClock.h"
 
-#include "Engine/Serialization/Fixed/FixedLayout.h"
-#include "Engine/Serialization/Fixed/ReplicatedLayout.h"
-#include "Engine/Serialization/Fixed/Tests/FixedLayoutTestTypes.h"
+#include "Engine/Serialization/Layout/LayoutSerializer.h"
+#include "Engine/Serialization/Layout/ReplicatedLayout.h"
+#include "Engine/Serialization/Layout/Tests/LayoutSerializerTestTypes.h"
 
 using namespace sw;
 
@@ -35,8 +35,8 @@ namespace
  */
 SW_TEST_CASE( ReplicatedLayoutTest, OnlyReplicatedPropertiesAreWritten )
 {
-    SW_EXPECT_FALSE( FixedLayout::findCodec<ReplicatedLayoutSample>().has_value() ); // 전체 코덱은 길이 없는 vector 때문에 적격이 아니다
-    const expected<const FixedCodec*> schema = ReplicatedLayout::findSchema<ReplicatedLayoutSample>();
+    SW_EXPECT_FALSE( LayoutSerializer::findSchema<ReplicatedLayoutSample>().has_value() ); // 전체 스키마은 길이 없는 vector 때문에 적격이 아니다
+    const expected<const LayoutSchema*> schema = ReplicatedLayout::findSchema<ReplicatedLayoutSample>();
     SW_REQUIRE_TRUE( schema.has_value() );
     SW_EXPECT_EQUAL( ( *schema )->_fieldCount, 4u );
 
@@ -57,7 +57,7 @@ SW_TEST_CASE( ReplicatedLayoutTest, OnlyReplicatedPropertiesAreWritten )
     target._debugName = "client";
     BitReader     reader( bytes.data(), static_cast<int32>( bytes.size() ) );
     DynamicBitset changed;
-    SW_REQUIRE_TRUE( ReplicatedLayout::readFull( reader, target, &changed ) == FixedReadResult::Ok );
+    SW_REQUIRE_TRUE( ReplicatedLayout::readFull( reader, target, &changed ) == LayoutReadResult::Ok );
     SW_EXPECT_EQUAL( target._health, 42 );
     SW_EXPECT_FALSE( target._bAlive );
     SW_EXPECT_EQUAL( target._position._y, -2.0f );
@@ -68,7 +68,7 @@ SW_TEST_CASE( ReplicatedLayoutTest, OnlyReplicatedPropertiesAreWritten )
 
     // 같은 값을 다시 읽으면 바뀐 칸이 없다.
     BitReader again( bytes.data(), static_cast<int32>( bytes.size() ) );
-    SW_REQUIRE_TRUE( ReplicatedLayout::readFull( again, target, &changed ) == FixedReadResult::Ok );
+    SW_REQUIRE_TRUE( ReplicatedLayout::readFull( again, target, &changed ) == LayoutReadResult::Ok );
     SW_EXPECT_FALSE( changed.test( 0 ) || changed.test( 1 ) || changed.test( 2 ) || changed.test( 3 ) );
 }
 
@@ -77,10 +77,10 @@ SW_TEST_CASE( ReplicatedLayoutTest, OnlyReplicatedPropertiesAreWritten )
  */
 SW_TEST_CASE( ReplicatedLayoutTest, FieldOrderChangesTheSchemaHash )
 {
-    const expected<const FixedCodec*> schema = ReplicatedLayout::findSchema<ReplicatedLayoutSample>();
+    const expected<const LayoutSchema*> schema = ReplicatedLayout::findSchema<ReplicatedLayoutSample>();
     SW_REQUIRE_TRUE( schema.has_value() );
     const string canonical = ( *schema )->_pCanonical;
-    SW_REQUIRE_EQUAL( ReplicatedLayout::getSchemaHash( **schema ), FixedLayout::computeSchemaHash( FixedLayout::kVersion, canonical, {} ) );
+    SW_REQUIRE_EQUAL( ReplicatedLayout::getSchemaHash( **schema ), LayoutSerializer::computeSchemaHash( LayoutSerializer::kVersion, canonical, {} ) );
 
     vector<string> listPart = splitCanonical( canonical );
     SW_REQUIRE_TRUE( listPart.size() >= 3 ); // R=… 와 칸들
@@ -92,7 +92,7 @@ SW_TEST_CASE( ReplicatedLayoutTest, FieldOrderChangesTheSchemaHash )
         swapped += '|';
     }
     SW_EXPECT_TRUE( swapped != canonical );
-    SW_EXPECT_TRUE( FixedLayout::computeSchemaHash( FixedLayout::kVersion, swapped, {} ) != ReplicatedLayout::getSchemaHash( **schema ) );
+    SW_EXPECT_TRUE( LayoutSerializer::computeSchemaHash( LayoutSerializer::kVersion, swapped, {} ) != ReplicatedLayout::getSchemaHash( **schema ) );
 }
 
 /**
@@ -100,13 +100,13 @@ SW_TEST_CASE( ReplicatedLayoutTest, FieldOrderChangesTheSchemaHash )
  */
 SW_TEST_CASE( ReplicatedLayoutTest, NonReplicatedFieldKeepsTheHash )
 {
-    const expected<const FixedCodec*> schema = ReplicatedLayout::findSchema<ReplicatedLayoutSample>();
+    const expected<const LayoutSchema*> schema = ReplicatedLayout::findSchema<ReplicatedLayoutSample>();
     SW_REQUIRE_TRUE( schema.has_value() );
     const string canonical = ( *schema )->_pCanonical;
     SW_EXPECT_TRUE( canonical.find( "_debugName" ) == string::npos );
     SW_EXPECT_TRUE( canonical.find( "_listCache" ) == string::npos );
     SW_EXPECT_TRUE( canonical.find( "_health" ) != string::npos );
-    SW_EXPECT_EQUAL( ReplicatedLayout::getSchemaHash( **schema ), FixedLayout::computeSchemaHash( FixedLayout::kVersion, canonical, {} ) );
+    SW_EXPECT_EQUAL( ReplicatedLayout::getSchemaHash( **schema ), LayoutSerializer::computeSchemaHash( LayoutSerializer::kVersion, canonical, {} ) );
 }
 
 /**
@@ -123,13 +123,13 @@ SW_TEST_CASE( ReplicatedLayoutTest, QuantizedFloatRoundTripsWithinHalfAStep )
         const vector<uint8>    bytes = writer.releaseBytes();
         ReplicatedLayoutSample target;
         BitReader              reader( bytes.data(), static_cast<int32>( bytes.size() ) );
-        SW_REQUIRE_TRUE( ReplicatedLayout::readFull( reader, target, nullptr ) == FixedReadResult::Ok );
+        SW_REQUIRE_TRUE( ReplicatedLayout::readFull( reader, target, nullptr ) == LayoutReadResult::Ok );
         SW_EXPECT_NEAR( target._speed, speed, 0.005f + 1e-4f );
     }
 }
 
 /**
- * @brief [ReplicatedLayoutTest] 엔티티 하나의 복제 상태 쓰기 비용(ns) — 전체 코덱 `FixedLayout::write` 의 1.5 배 안이 목표다
+ * @brief [ReplicatedLayoutTest] 엔티티 하나의 복제 상태 쓰기 비용(ns) — 전체 스키마 `LayoutSerializer::write` 의 1.5 배 안이 목표다
  * @details 재는 법: Release `App --test --test-filter=ReplicatedLayoutTest.EncodeCost` 5 번, 로그 `ReplicatedLayoutTest.EncodeCost` 의 중앙값. 넘으면 해석기의 칸 건너뛰기를 본다.
  */
 SW_TEST_CASE( ReplicatedLayoutTest, EncodeCost, ._tags = "bench" )

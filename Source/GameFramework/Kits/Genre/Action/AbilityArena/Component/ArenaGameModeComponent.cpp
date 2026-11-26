@@ -10,7 +10,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/FormatDef.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
 #include "Engine/Serialization/Format/StateIO.h"
 #include "Engine/Visual/Component/MeshComponent.h"
 
@@ -32,7 +32,7 @@ namespace sw
     {
         struct ArenaGameModeComponentInternal
         {
-            static constexpr FormatDef kStateFormat{ "ARNA" };
+            static constexpr FormatDesc kStateFormat{ "ARNA" };
 
             // 사운드 이벤트 이름 — 클립 · 범위 · 상한은 팩의 사운드 이벤트 데이터(audioevents.xml)가 정한다.
             static constexpr const utf8* kEventWave       = "ArenaWaveStart";

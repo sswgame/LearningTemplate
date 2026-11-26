@@ -16,7 +16,7 @@
 #include "Engine/Object/GameObject/Subsystem/SceneNetLink.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
-#include "Engine/Serialization/Fixed/ReplicatedLayout.h"
+#include "Engine/Serialization/Layout/ReplicatedLayout.h"
 
 #include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 
@@ -196,7 +196,7 @@ namespace sw
                     return false;
                 BitReader         reader( pEntity->_listState.data(), static_cast<int32>( pEntity->_listState.size() ) );
                 HubEntityNetState state;
-                if ( ReplicatedLayout::readFull( reader, state, nullptr ) != FixedReadResult::Ok || state._typeID != HubEntityType::kCreature )
+                if ( ReplicatedLayout::readFull( reader, state, nullptr ) != LayoutReadResult::Ok || state._typeID != HubEntityType::kCreature )
                     return false;
                 outValue = static_cast<float64>( state._stateValue );
                 return true;

@@ -9,7 +9,7 @@
 #include "Engine/EngineMinimal.h"
 
 #include "Programs/ReflectionParser/CodeEmit.h"
-#include "Programs/ReflectionParser/FixedCodecGenerator.h"
+#include "Programs/ReflectionParser/LayoutSchemaGenerator.h"
 #include "Programs/ReflectionParser/ParsedReflection.h"
 #include "Programs/ReflectionParser/ParserSession.h"
 
@@ -22,10 +22,10 @@ namespace sw
     {
     public:
         /**
-         * @param fixedCodec 계획을 마친(`FixedCodecGenerator::makePlan`) 고정 배치형 코덱 생성기입니다. 타입마다 코덱 등록과 멤버를 덧붙입니다.
+         * @param layoutSchema 계획을 마친(`LayoutSchemaGenerator::makePlan`) 레이아웃 스키마 생성기입니다. 타입마다 스키마 등록과 멤버를 덧붙입니다.
          * @param moduleName 타입 · 열거형이 오르는 런타임 모듈 이름(`--module`, CMake 가 대상마다 정한다)입니다.
          */
-        CodeGenerator( const ParsedHeader& header, const FixedCodecGenerator& fixedCodec, const string& sourceFilePath, const ParserSession& session,
+        CodeGenerator( const ParsedHeader& header, const LayoutSchemaGenerator& layoutSchema, const string& sourceFilePath, const ParserSession& session,
                        const string& moduleName );
 
         /** @brief FQN을 C++ 식별자로 안전하게 바꿉니다. */
@@ -105,11 +105,11 @@ namespace sw
         void appendTemplate( CodeEmitBuffer& outBuffer, EmitTemplate kind, const EmitTemplateStore::TemplateVars vars ) const;
 
     private:
-        const ParsedHeader&        _header;
-        const FixedCodecGenerator& _fixedCodec;
-        const ParserSession&       _session;
-        string                     _sourceFilePath;
-        string                     _moduleName; ///< `--module` 그대로 - 경로 글자로 모듈을 추측하지 않는다(런타임 등록 · 내림이 이 이름을 쓴다)
+        const ParsedHeader&          _header;
+        const LayoutSchemaGenerator& _layoutSchema;
+        const ParserSession&         _session;
+        string                       _sourceFilePath;
+        string                       _moduleName; ///< `--module` 그대로 - 경로 글자로 모듈을 추측하지 않는다(런타임 등록 · 내림이 이 이름을 쓴다)
         /// @brief 방출 바이트 계측입니다. 계측은 출력 글을 바꾸지 않아 `const` 방출 함수가 채운다(생성기 하나는 한 스레드가 쓴다).
         mutable CodeEmitByteReport _emitBytes;
     };

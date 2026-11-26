@@ -78,7 +78,7 @@
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/FormatDef.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
 #include "Engine/Window/GenericWindow.h"
 #include "Engine/Window/MainWindowSubsystem.h"
 #include "Engine/Window/NativeWindowEvent.h"
@@ -243,7 +243,7 @@ namespace sw::editor
 
             /** @brief 맡김 칸(`IModuleStateStore`)에 둘 세션 상태의 키와 형식 판입니다. */
             static constexpr string_view kSessionStoreKey = "editor.session";
-            static constexpr FormatDef   kSessionFormat{ "EDSE" };
+            static constexpr FormatDesc  kSessionFormat{ "EDSE" };
 
             /** @brief 인스턴스가 종료하기 전에 선택 · 미저장 표시를 호스트의 맡김 칸에 맡깁니다. 다음 인스턴스가 `resumeEditSession` 으로 찾아갑니다. */
             static void storeEditSession( EditorContext& context )

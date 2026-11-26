@@ -230,7 +230,7 @@ namespace sw
 {
     /**
      * @brief 파티 하나의 스냅샷입니다. 캐시 기록, 알림, 응답이 같은 형식을 씁니다. 실력은 두지 않으며, 줄을 설 때 모드의 실력 통계(`_ratingStat`)를 `IAccountStatSource` 에서 읽습니다.
-     * @details 알림과 응답은 고정 배치형(B)이고, 캐시 기록은 배포 중에 다른 빌드의 서버가 읽을 수 있으므로 자기 기술형(A, `EphemeralRecordTable<PartySnapshot>`)입니다.
+     * @details 알림과 응답은 스키마 결합형이고, 캐시 기록은 배포 중에 다른 빌드의 서버가 읽을 수 있으므로 자기 기술형(A, `EphemeralRecordTable<PartySnapshot>`)입니다.
      */
     REFLECT()
     struct SW_KIT_API PartySnapshot
@@ -297,7 +297,7 @@ namespace sw
 namespace sw
 {
     /**
-     * @brief 로비 하나의 스냅샷입니다. 알림, 응답, 만들기 요청은 고정 배치형(B)이고 캐시 기록은 자기 기술형(A)입니다.
+     * @brief 로비 하나의 스냅샷입니다. 알림, 응답, 만들기 요청은 스키마 결합형이고 캐시 기록은 자기 기술형입니다.
      * @details 상한은 `PartyLobbyLimit` 와 `MatchmakingLimit` 와 같은 값입니다.
      */
     REFLECT()

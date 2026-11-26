@@ -82,7 +82,7 @@ namespace sw
     /**
      * @brief `Min` · `Max` 에 적은 글 그대로입니다. 숫자 하나이거나, 쉼표로 나눈 숫자 · 필드 이름(`-_halfSize`) 목록입니다.
      * @details 숫자 하나면 인스펙터 범위(`_minRange` 등)로도 쓰입니다. 같은 타입의 필드 하나면 인스펙터가 그 필드를 읽는 함수(`_pReadMinRange`)로 씁니다.
-     *          목록 꼴과 바깥 타입의 필드는 고정 배치형 코덱만 씁니다.
+     *          목록 꼴과 바깥 타입의 필드는 레이아웃 스키마만 씁니다.
      */
     struct ParsedRangeExpr
     {
@@ -92,28 +92,28 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 고정 배치형(B) 코덱에서 값 하나를 어떤 꼴로 인코딩하는지 나타냅니다. */
-    enum class FixedValueKind : uint8
+    /** @brief 레이아웃 스키마에서 값 하나를 어떤 꼴로 인코딩하는지 나타냅니다. */
+    enum class LayoutValueKind : uint8
     {
-        Ineligible, ///< 인코딩 표 밖입니다. 그 필드를 가진 타입은 코덱이 없습니다(`ParsedFixedType::_reason`)
+        Ineligible, ///< 인코딩 표 밖입니다. 그 필드를 가진 타입은 스키마이 없습니다(`ParsedLayoutType::_reason`)
         Bool,
         Integer,
         Float32,
         Float64,
         Enum,
         String,
-        Math,       ///< `float3` 같은 수학 타입입니다. 원소마다 실수 규칙을 씁니다
-        Vector,     ///< 가변 길이 시퀀스입니다. `MaxCount` 가 필요합니다
-        FixedArray, ///< `T[N]` · `std::array<T, N>` 입니다. 개수 없이 원소 N 개를 씁니다
-        Reflect,    ///< 다른 `REFLECT` 타입입니다. 그 타입의 필드를 씁니다
-        Bitset,     ///< `DynamicBitset` 입니다. 가변 길이라 `MaxCount` 가 필요하고, 비트를 값으로 읽고 씁니다(원소 주소가 없습니다)
+        Math,        ///< `float3` 같은 수학 타입입니다. 원소마다 실수 규칙을 씁니다
+        Vector,      ///< 가변 길이 시퀀스입니다. `MaxCount` 가 필요합니다
+        StaticArray, ///< `T[N]` · `std::array<T, N>` 입니다. 개수 없이 원소 N 개를 씁니다
+        Reflect,     ///< 다른 `REFLECT` 타입입니다. 그 타입의 필드를 씁니다
+        Bitset,      ///< `DynamicBitset` 입니다. 가변 길이라 `MaxCount` 가 필요하고, 비트를 값으로 읽고 씁니다(원소 주소가 없습니다)
     };
 } // namespace sw
 
 namespace sw
 {
     /** @brief 필드가 가리키는 열거형 하나입니다. 다른 헤더의 열거형도 선언에서 읽습니다. */
-    struct ParsedFixedEnum
+    struct ParsedLayoutEnum
     {
         string                       _fullyQualifiedName;
         string                       _underlyingTypeName; ///< 정규 이름(`uint8`)
@@ -122,7 +122,7 @@ namespace sw
         uint8                        _bIsBitFlag : 1;
         [[maybe_unused]] uint8       _reserved   : 7;
 
-        ParsedFixedEnum() noexcept
+        ParsedLayoutEnum() noexcept
             : _fullyQualifiedName{}
             , _underlyingTypeName{}
             , _listEnumerator{}
@@ -137,30 +137,30 @@ namespace sw
 namespace sw
 {
     /**
-     * @brief 필드 타입을 고정 배치형 인코딩 표에 맞춰 분류한 결과입니다. 컨테이너는 원소를 재귀로 담습니다.
-     * @details 선언(clang 타입)에서 읽습니다. 사용자는 B 형식을 따로 선언하지 않습니다.
+     * @brief 필드 타입을 스키마 결합형 인코딩 표에 맞춰 분류한 결과입니다. 컨테이너는 원소를 재귀로 담습니다.
+     * @details 선언(clang 타입)에서 읽습니다. 사용자는 스키마를 따로 선언하지 않습니다.
      */
-    struct ParsedFixedType
+    struct ParsedLayoutType
     {
-        string                      _typeName;           ///< 정규 타입 이름입니다. 생성 코드의 타입 철자와 진단에 씁니다
-        string                      _reason;             ///< Ineligible 이면 이유입니다(영문, 로그와 생성 주석에 그대로 나갑니다)
-        string                      _fullyQualifiedName; ///< Reflect 의 FQN
-        shared_ptr<ParsedFixedType> _element;            ///< Vector · FixedArray 의 원소
-        shared_ptr<ParsedFixedEnum> _enum;               ///< Enum 의 열거자
-        FixedValueKind              _kind;
-        vector<string>              _listMathMember;   ///< Math 의 성분 멤버(선언 순서) — `ReflectBuiltins.xxx` 의 Layout 칸 `f32(…)` · `i32(…)`
-        uint8                       _bPacked      : 1; ///< 압축 타입(`ReflectBuiltins.xxx` 의 `packed` 줄)입니다. 고정 배치형 인코딩 표에 없어 생성 오류로 알립니다
-        uint8                       _bIntegerMath : 1; ///< Math 의 성분이 int32 다(Layout `i32`)
-        uint8                       _bAngle       : 1; ///< 라디안 float32 하나(Layout `angle`) — 도로 적힌 숫자 경계를 라디안으로 바꾼다
-        [[maybe_unused]] uint8      _reserved     : 5;
+        string                       _typeName;           ///< 정규 타입 이름입니다. 생성 코드의 타입 철자와 진단에 씁니다
+        string                       _reason;             ///< Ineligible 이면 이유입니다(영문, 로그와 생성 주석에 그대로 나갑니다)
+        string                       _fullyQualifiedName; ///< Reflect 의 FQN
+        shared_ptr<ParsedLayoutType> _element;            ///< Vector · StaticArray 의 원소
+        shared_ptr<ParsedLayoutEnum> _enum;               ///< Enum 의 열거자
+        LayoutValueKind              _kind;
+        vector<string>               _listMathMember;   ///< Math 의 성분 멤버(선언 순서) — `ReflectBuiltins.xxx` 의 Layout 칸 `f32(…)` · `i32(…)`
+        uint8                        _bPacked      : 1; ///< 압축 타입(`ReflectBuiltins.xxx` 의 `packed` 줄)입니다. 스키마 결합형 인코딩 표에 없어 생성 오류로 알립니다
+        uint8                        _bIntegerMath : 1; ///< Math 의 성분이 int32 다(Layout `i32`)
+        uint8                        _bAngle       : 1; ///< 라디안 float32 하나(Layout `angle`) — 도로 적힌 숫자 경계를 라디안으로 바꾼다
+        [[maybe_unused]] uint8       _reserved     : 5;
 
-        ParsedFixedType() noexcept
+        ParsedLayoutType() noexcept
             : _typeName{}
             , _reason{}
             , _fullyQualifiedName{}
             , _element{ nullptr }
             , _enum{ nullptr }
-            , _kind{ FixedValueKind::Ineligible }
+            , _kind{ LayoutValueKind::Ineligible }
             , _listMathMember{}
             , _bPacked{ SW_FALSE }
             , _bIntegerMath{ SW_FALSE }
@@ -200,10 +200,10 @@ namespace sw
         /** @brief 타입 핸들(`TComponentHandle<T>`)의 대상 타입 `T` 입니다. 타입 핸들이 아니면 비어 있습니다. 이때 위 타입 이름은 내장 `ComponentHandle` 로 바뀌어 있습니다. */
         string                          _handleTargetTypeName;
         shared_ptr<ParsedContainerNode> _containerTree;
-        /** @brief 고정 배치형 코덱에서의 분류입니다. 필드면 늘 있고, 접근자 프로퍼티는 Ineligible 입니다. */
-        shared_ptr<ParsedFixedType> _fixedType;
-        ParsedRangeExpr             _minRangeExpr; ///< `Min` 의 글입니다. 숫자 하나면 `_minRange` 에도 들어갑니다
-        ParsedRangeExpr             _maxRangeExpr;
+        /** @brief 레이아웃 스키마에서의 분류입니다. 필드면 늘 있고, 접근자 프로퍼티는 Ineligible 입니다. */
+        shared_ptr<ParsedLayoutType> _layoutType;
+        ParsedRangeExpr              _minRangeExpr; ///< `Min` 의 글입니다. 숫자 하나면 `_minRange` 에도 들어갑니다
+        ParsedRangeExpr              _maxRangeExpr;
         /**
          * @brief `MaxCount` 에 적은 C++ 정수 상수 이름입니다(`MaxCount = kMaxSlotCount`, `MaxCount = LedgerConstant::kMaxMemoSize`). 숫자로 적었으면 비어 있습니다.
          * @details 애노테이션 단계는 이름만 받아 두고, 선언을 아는 `PropertyResolver` 가 그 상수를 찾아 값을 `_maxCount` 에 넣습니다(`resolveMaxCountName`).
@@ -254,7 +254,7 @@ namespace sw
         uint8 _bMultiline              : 1;
         uint8 _bHasStep                : 1;
         uint8 _bHasMaxCount            : 1;
-        /** @brief 공개 멤버입니다. 다른 타입의 코덱이 이 필드를 직접 읽고 쓸 수 있는지(중첩 타입 펼치기) 정합니다. */
+        /** @brief 공개 멤버입니다. 다른 타입의 스키마이 이 필드를 직접 읽고 쓸 수 있는지(중첩 타입 펼치기) 정합니다. */
         uint8 _bPublic : 1;
         /** @brief 플레이 중에만 의미가 있는 상태입니다(PROPERTY(RuntimeState)). 저작 저장(`SerializePurpose::Authoring`)이 쓰지 않습니다. */
         uint8 _bRuntimeState : 1;
@@ -289,7 +289,7 @@ namespace sw
             , _keyTypeName{}
             , _handleTargetTypeName{}
             , _containerTree{ nullptr }
-            , _fixedType{ nullptr }
+            , _layoutType{ nullptr }
             , _minRangeExpr{}
             , _maxRangeExpr{}
             , _maxCountName{}
@@ -480,7 +480,7 @@ namespace sw
         uint8                         _bHideInMenu       : 1;
         /** @brief `REFLECT( NotPlaceable )` — 이름 생성 함수(팩토리)를 내지 않는다. 데이터(씬 · 프리팹 · "Add Component")로 놓지 못하고 코드의 `addComponent<T>()` 로만 선다. */
         uint8 _bNotPlaceable : 1;
-        /** @brief 첫 기반 클래스에 `REFLECT()` 가 있습니다. 없으면 기반의 필드는 프로퍼티가 아니므로 고정 배치형 코덱도 기반을 건너뜁니다. */
+        /** @brief 첫 기반 클래스에 `REFLECT()` 가 있습니다. 없으면 기반의 필드는 프로퍼티가 아니므로 레이아웃 스키마도 기반을 건너뜁니다. */
         uint8 _bParentReflected : 1;
         /** @brief `Component` 파생입니다(추상 포함). 틱 모드 등록(`requiresTickRegistration`)과 `TickMode` 검사가 본다. */
         uint8 _bComponent : 1;

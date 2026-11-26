@@ -13,7 +13,7 @@
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Object/GameObject/Tick/TickContext.h"
 #include "Engine/Presentation/ISubtitleSink.h"
-#include "Engine/Serialization/Format/FormatDef.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
 
 #include "GameFramework/Runtime/Foundation/Condition/GameConditions.h"
 #include "GameFramework/Runtime/Foundation/Condition/GameFlags.h"
@@ -26,7 +26,7 @@ namespace sw
     {
         struct DialogueRunnerComponentInternal
         {
-            static constexpr FormatDef kStateFormat{ "DLGR" };
+            static constexpr FormatDesc kStateFormat{ "DLGR" };
         };
 
         const StatefulComponentRegistrar<DialogueRunnerComponent> s_dialogueRunnerComponentStateRegistration{ "DialogueRunnerComponent" };

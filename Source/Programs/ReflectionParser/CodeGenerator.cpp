@@ -159,10 +159,10 @@ namespace sw
 
 namespace sw
 {
-    CodeGenerator::CodeGenerator( const ParsedHeader& header, const FixedCodecGenerator& fixedCodec, const string& sourceFilePath,
+    CodeGenerator::CodeGenerator( const ParsedHeader& header, const LayoutSchemaGenerator& layoutSchema, const string& sourceFilePath,
                                   const ParserSession& session, const string& moduleName )
         : _header{ header }
-        , _fixedCodec{ fixedCodec }
+        , _layoutSchema{ layoutSchema }
         , _session{ session }
         , _sourceFilePath{ sourceFilePath }
         , _moduleName{ moduleName }
@@ -540,9 +540,9 @@ namespace sw
             listPart.push_back( CodeGeneratorInternal::makeCall( "withMethods", "kMethods" ) );
         }
         {
-            const CodeEmitByteScope codecScope{ _emitBytes, outBuffer, CodeEmitSection::FixedCodec };
-            _fixedCodec.emitRegistration( emit, typeIndex );
-            listPart.push_back( CodeGeneratorInternal::makeCall( "withFixedCodec", "&s_fixedCodec" ) );
+            const CodeEmitByteScope codecScope{ _emitBytes, outBuffer, CodeEmitSection::LayoutSchema };
+            _layoutSchema.emitRegistration( emit, typeIndex );
+            listPart.push_back( CodeGeneratorInternal::makeCall( "withLayoutSchema", "&s_layoutSchema" ) );
         }
 
         emit.line( "static constexpr TypeDesc kType =" );

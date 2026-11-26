@@ -17,7 +17,7 @@
 #include "Core/Serialization/BitStream.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Serialization/Fixed/ReplicatedLayout.h"
+#include "Engine/Serialization/Layout/ReplicatedLayout.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Network/NetClientServer/NetSnapshot.h"
@@ -116,8 +116,8 @@ namespace sw
             NetStateSample<TState> sample{ TState{}, TState{}, ratio };
             BitReader              fromReader( pFrom->_buffer.data(), static_cast<int32>( pFrom->_buffer.size() ) );
             BitReader              toReader( pTo->_buffer.data(), static_cast<int32>( pTo->_buffer.size() ) );
-            const bool             bRead = ReplicatedLayout::readFull( fromReader, sample._from, nullptr ) == FixedReadResult::Ok &&
-                               ReplicatedLayout::readFull( toReader, sample._to, nullptr ) == FixedReadResult::Ok;
+            const bool             bRead = ReplicatedLayout::readFull( fromReader, sample._from, nullptr ) == LayoutReadResult::Ok &&
+                               ReplicatedLayout::readFull( toReader, sample._to, nullptr ) == LayoutReadResult::Ok;
             if ( bRead == false )
                 return nullopt;
             sample._ratio.breakAt( sample._from._teleportCount, sample._to._teleportCount );

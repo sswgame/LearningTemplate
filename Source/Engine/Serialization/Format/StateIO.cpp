@@ -9,7 +9,7 @@
 #include "Core/Time/Countdown.h"
 #include "Core/Time/FixedStepTimer.h"
 
-#include "Engine/Serialization/Format/FormatDef.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
 
 namespace sw
 {
@@ -104,7 +104,7 @@ namespace sw
         (void)_pSourceArchive->setOffset( _pSourceArchive->getSize() - _pUpgradedArchive->getRemainingBytes() );
     }
 
-    void StateIO::header( const FormatDef& format )
+    void StateIO::header( const FormatDesc& format )
     {
         if ( isWriting() )
         {
@@ -148,7 +148,7 @@ namespace sw
             outBytes.assign( pBytes, pBytes + remaining );
     }
 
-    bool StateIO::upgradeSectionBody( const FormatDef& format, uint32 fromVersion, Archive& inoutBody )
+    bool StateIO::upgradeSectionBody( const FormatDesc& format, uint32 fromVersion, Archive& inoutBody )
     {
         if ( fromVersion == format._version )
             return true;
@@ -185,7 +185,7 @@ namespace sw
         *_pArchive << inoutCount;
     }
 
-    void StateIO::writeSection( Archive& outArchive, const FormatDef& format, const Archive& body )
+    void StateIO::writeSection( Archive& outArchive, const FormatDesc& format, const Archive& body )
     {
         format.write( outArchive );
         outArchive.writeSection( body.getData(), static_cast<uint32>( body.getSize() ) );
@@ -209,7 +209,7 @@ namespace sw
         return section;
     }
 
-    bool StateIO::readExpectedSection( Archive& archive, const FormatDef& format, Archive& outBody )
+    bool StateIO::readExpectedSection( Archive& archive, const FormatDesc& format, Archive& outBody )
     {
         optional<Section> section = readSection( archive );
         if ( section.has_value() == false || section->_tag != format._tag )

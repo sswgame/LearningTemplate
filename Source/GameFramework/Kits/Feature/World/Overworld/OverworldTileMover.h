@@ -11,7 +11,7 @@
 #include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Serialization/Format/FormatDef.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -56,7 +56,7 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        static constexpr FormatDef kStateFormat{ "OPLC" };
+        static constexpr FormatDesc kStateFormat{ "OPLC" };
 
         /** @brief 타일 (1,1), 입력 허용으로 시작합니다. */
         OverworldTileMover();

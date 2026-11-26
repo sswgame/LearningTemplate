@@ -54,7 +54,7 @@ namespace sw
 namespace sw
 {
     /**
-     * @brief 신고 하나입니다. 저장소 레코드(A)이고 GM 목록 응답에는 고정 배치형(B)으로 실립니다.
+     * @brief 신고 하나입니다. 저장소 레코드(A)이고 GM 목록 응답에는 스키마 결합형으로 실립니다.
      * @details `_listLine` 의 마지막 줄이 신고한 대상입니다. 상한 값은 `ServiceReportConstant` 와 같습니다.
      */
     REFLECT()

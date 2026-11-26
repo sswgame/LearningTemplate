@@ -26,58 +26,58 @@
 namespace sw
 {
     /**
-     * @struct FixedTypeAnalyzer
-     * @brief 고정 배치형 코덱용으로 필드 타입을 인코딩 종류(`FixedValueKind`)에 맞춰 분류합니다.
+     * @struct LayoutTypeAnalyzer
+     * @brief 레이아웃 스키마용으로 필드 타입을 인코딩 종류(`LayoutValueKind`)에 맞춰 분류합니다.
      * @details 선언(clang 타입)에서 읽습니다. 다른 헤더의 열거형 · 구조체도 이 번역 단위 안에 선언이 있으므로 같은 길로 읽습니다.
-     *          표 밖의 타입은 오류가 아닙니다. 그 타입의 코덱이 없을 뿐이고, 코덱이 필요한 등록 API 가 이유와 함께 멈춥니다.
+     *          표 밖의 타입은 오류가 아닙니다. 그 타입의 스키마이 없을 뿐이고, 스키마이 필요한 등록 API 가 이유와 함께 멈춥니다.
      */
-    struct FixedTypeAnalyzer
+    struct LayoutTypeAnalyzer
     {
-        static shared_ptr<ParsedFixedType> makeIneligibleFixedType( shared_ptr<ParsedFixedType> type, string_view reason );
+        static shared_ptr<ParsedLayoutType> makeIneligibleLayoutType( shared_ptr<ParsedLayoutType> type, string_view reason );
 
         /**
-         * @brief 고정 배치형 코덱이 쓰는 선언 사실(줄 · 공개 여부 · 인코딩 분류)을 채웁니다.
+         * @brief 레이아웃 스키마이 쓰는 선언 사실(줄 · 공개 여부 · 인코딩 분류)을 채웁니다.
          * @details 비트필드는 1 비트 플래그만 받으므로(위에서 막았습니다) 정수 · bool 비트필드는 bool 로 씁니다.
          */
-        static void fillFixedLayoutFacts( CXCursor cursor, CXType fieldType, ParsedPropertyInfo& prop, const ParserSession& session );
+        static void fillLayoutSchemaFacts( CXCursor cursor, CXType fieldType, ParsedPropertyInfo& prop, const ParserSession& session );
 
     private:
-        static constexpr int32 kMaxFixedTypeDepth = 4;
-        static bool            isFixedIntegerKind( CXTypeKind kind ) noexcept;
-        static bool            isFixedPointerKind( CXTypeKind kind ) noexcept;
+        static constexpr int32 kMaxLayoutTypeDepth = 4;
+        static bool            isLayoutIntegerKind( CXTypeKind kind ) noexcept;
+        static bool            isLayoutPointerKind( CXTypeKind kind ) noexcept;
         /** @brief 열거형 선언에서 열거자 · `ENUM( Count, Flags )` 를 읽습니다. 다른 헤더의 열거형이면 그 헤더의 수집이 애노테이션 오류를 알립니다. */
-        static shared_ptr<ParsedFixedEnum> collectFixedEnum( CXCursor declaration, const ParserSession& session );
+        static shared_ptr<ParsedLayoutEnum> collectLayoutEnum( CXCursor declaration, const ParserSession& session );
         /**
          * @brief 필드(또는 원소) 타입 하나를 분류합니다. 컨테이너는 원소를 재귀로 분류합니다.
          * @param type 사용자 별칭을 벗긴 선언 타입
          */
-        static shared_ptr<ParsedFixedType> classifyFixedType( CXType type, const ParserSession& session, int32 depth );
+        static shared_ptr<ParsedLayoutType> classifyLayoutType( CXType type, const ParserSession& session, int32 depth );
     };
 
-    shared_ptr<ParsedFixedType> FixedTypeAnalyzer::makeIneligibleFixedType( shared_ptr<ParsedFixedType> type, const string_view reason )
+    shared_ptr<ParsedLayoutType> LayoutTypeAnalyzer::makeIneligibleLayoutType( shared_ptr<ParsedLayoutType> type, const string_view reason )
     {
-        type->_kind   = FixedValueKind::Ineligible;
+        type->_kind   = LayoutValueKind::Ineligible;
         type->_reason = string( reason );
         return type;
     }
 
-    bool FixedTypeAnalyzer::isFixedIntegerKind( const CXTypeKind kind ) noexcept
+    bool LayoutTypeAnalyzer::isLayoutIntegerKind( const CXTypeKind kind ) noexcept
     {
         return kind == CXType_Char_S || kind == CXType_SChar || kind == CXType_Char_U || kind == CXType_UChar || kind == CXType_Short ||
                kind == CXType_UShort || kind == CXType_Int || kind == CXType_UInt || kind == CXType_Long || kind == CXType_ULong ||
                kind == CXType_LongLong || kind == CXType_ULongLong;
     }
 
-    bool FixedTypeAnalyzer::isFixedPointerKind( const CXTypeKind kind ) noexcept
+    bool LayoutTypeAnalyzer::isLayoutPointerKind( const CXTypeKind kind ) noexcept
     {
         return kind == CXType_Pointer || kind == CXType_LValueReference || kind == CXType_RValueReference || kind == CXType_MemberPointer ||
                kind == CXType_BlockPointer || kind == CXType_ObjCObjectPointer;
     }
 
-    shared_ptr<ParsedFixedEnum> FixedTypeAnalyzer::collectFixedEnum( const CXCursor declaration, const ParserSession& session )
+    shared_ptr<ParsedLayoutEnum> LayoutTypeAnalyzer::collectLayoutEnum( const CXCursor declaration, const ParserSession& session )
     {
-        shared_ptr<ParsedFixedEnum> result = make_shared<ParsedFixedEnum>();
-        result->_fullyQualifiedName        = CursorReader::makeFullyQualifiedName( declaration );
+        shared_ptr<ParsedLayoutEnum> result = make_shared<ParsedLayoutEnum>();
+        result->_fullyQualifiedName         = CursorReader::makeFullyQualifiedName( declaration );
         result->_underlyingTypeName =
             session._typeNameMap.normalize( CursorReader::takeString( clang_getTypeSpelling( clang_getCanonicalType( clang_getEnumDeclIntegerType( declaration ) ) ) ) );
         CursorReader::collectEnumerators( declaration, result->_listEnumerator );
@@ -94,49 +94,49 @@ namespace sw
         return result;
     }
 
-    shared_ptr<ParsedFixedType> FixedTypeAnalyzer::classifyFixedType( const CXType type, const ParserSession& session, const int32 depth )
+    shared_ptr<ParsedLayoutType> LayoutTypeAnalyzer::classifyLayoutType( const CXType type, const ParserSession& session, const int32 depth )
     {
-        shared_ptr<ParsedFixedType> result    = make_shared<ParsedFixedType>();
-        const CXType                canonical = clang_getCanonicalType( type );
-        result->_typeName                     = session._typeNameMap.normalize( CursorReader::takeString( clang_getTypeSpelling( type ) ) );
-        if ( depth > kMaxFixedTypeDepth )
-            return makeIneligibleFixedType( result, "containers nested too deeply" );
+        shared_ptr<ParsedLayoutType> result    = make_shared<ParsedLayoutType>();
+        const CXType                 canonical = clang_getCanonicalType( type );
+        result->_typeName                      = session._typeNameMap.normalize( CursorReader::takeString( clang_getTypeSpelling( type ) ) );
+        if ( depth > kMaxLayoutTypeDepth )
+            return makeIneligibleLayoutType( result, "containers nested too deeply" );
 
         const CXTypeKind kind = canonical.kind;
         if ( kind == CXType_Bool )
         {
-            result->_kind = FixedValueKind::Bool;
+            result->_kind = LayoutValueKind::Bool;
             return result;
         }
-        if ( isFixedIntegerKind( kind ) )
+        if ( isLayoutIntegerKind( kind ) )
         {
-            result->_kind = FixedValueKind::Integer;
+            result->_kind = LayoutValueKind::Integer;
             return result;
         }
         if ( kind == CXType_Float || kind == CXType_Double )
         {
-            result->_kind = ( kind == CXType_Float ) ? FixedValueKind::Float32 : FixedValueKind::Float64;
+            result->_kind = ( kind == CXType_Float ) ? LayoutValueKind::Float32 : LayoutValueKind::Float64;
             return result;
         }
         if ( kind == CXType_Enum )
         {
-            result->_kind = FixedValueKind::Enum;
-            result->_enum = collectFixedEnum( clang_getTypeDeclaration( canonical ), session );
+            result->_kind = LayoutValueKind::Enum;
+            result->_enum = collectLayoutEnum( clang_getTypeDeclaration( canonical ), session );
             return result;
         }
         if ( kind == CXType_ConstantArray )
         {
-            result->_kind    = FixedValueKind::FixedArray;
-            result->_element = classifyFixedType( clang_getArrayElementType( canonical ), session, depth + 1 );
+            result->_kind    = LayoutValueKind::StaticArray;
+            result->_element = classifyLayoutType( clang_getArrayElementType( canonical ), session, depth + 1 );
             return result;
         }
-        if ( isFixedPointerKind( kind ) )
-            return makeIneligibleFixedType( result, "pointer or reference" );
+        if ( isLayoutPointerKind( kind ) )
+            return makeIneligibleLayoutType( result, "pointer or reference" );
         if ( kind != CXType_Record )
         {
             StringBuilder<constant::buffer::kMax512> reason;
-            reason.appendFormat( "type '%#' is outside the fixed layout encoding table", result->_typeName );
-            return makeIneligibleFixedType( result, reason.view() );
+            reason.appendFormat( "type '%#' is outside the layout encoding table", result->_typeName );
+            return makeIneligibleLayoutType( result, reason.view() );
         }
 
         // 형식의 정체는 선언의 FQN(템플릿이면 기본 템플릿)으로 가른다 — 정규 철자의 머리를 견주면 표준 라이브러리 구현(인라인 이름공간 · 기본 인자)마다 철자가 다르다.
@@ -144,12 +144,12 @@ namespace sw
         // 글은 문자 원소가 `char` 인 문자열 템플릿이다 — 넓은 문자(`wchar_t` · `char16_t`) 문자열은 인코딩 표 밖이다.
         if ( CursorReader::isTextStringType( canonical ) )
         {
-            result->_kind = FixedValueKind::String;
+            result->_kind = LayoutValueKind::String;
             return result;
         }
         if ( identity == typeidentity::kDynamicBitset )
         {
-            result->_kind = FixedValueKind::Bitset;
+            result->_kind = LayoutValueKind::Bitset;
             return result;
         }
         // 성분 규칙은 `ReflectBuiltins.xxx` 의 Layout 칸이 정본이다 — 핸들처럼 모양이 같아도 뜻이 다른 타입은 Layout 이 none 이라 섞이지 않는다.
@@ -159,69 +159,69 @@ namespace sw
             const bool bMath = pTraits->_layout == BuiltinLayoutKind::Float32 || pTraits->_layout == BuiltinLayoutKind::Int32;
             if ( bMath )
             {
-                result->_kind           = FixedValueKind::Math;
+                result->_kind           = LayoutValueKind::Math;
                 result->_listMathMember = pTraits->_listMember;
                 result->_bIntegerMath   = pTraits->_layout == BuiltinLayoutKind::Int32 ? SW_TRUE : SW_FALSE;
                 return result;
             }
-            // 각은 메모리가 라디안 float32 하나다 — 압축 타입 표시보다 먼저 float32 칸으로 분류한다(경계 변환은 `FixedCodecValueEmitterInternal::emitProperty`).
+            // 각은 메모리가 라디안 float32 하나다 — 압축 타입 표시보다 먼저 float32 칸으로 분류한다(경계 변환은 `LayoutSchemaValueEmitterInternal::emitProperty`).
             if ( pTraits->_layout == BuiltinLayoutKind::Angle )
             {
-                result->_kind   = FixedValueKind::Float32;
+                result->_kind   = LayoutValueKind::Float32;
                 result->_bAngle = SW_TRUE;
                 return result;
             }
         }
-        // 압축 타입은 인코딩 표 밖이다. 적격이 아닌 것으로 조용히 넘기지 않도록 표시를 달아 코덱 생성기가 오류로 멈추게 한다.
+        // 압축 타입은 인코딩 표 밖이다. 적격이 아닌 것으로 조용히 넘기지 않도록 표시를 달아 스키마 생성기가 오류로 멈추게 한다.
         if ( session._typeNameMap.isPacked( result->_typeName ) )
         {
             result->_bPacked = SW_TRUE;
             StringBuilder<constant::buffer::kMax512> reason;
-            reason.appendFormat( "packed type '%#' has no fixed layout encoding", result->_typeName );
-            return makeIneligibleFixedType( result, reason.view() );
+            reason.appendFormat( "packed type '%#' has no layout encoding", result->_typeName );
+            return makeIneligibleLayoutType( result, reason.view() );
         }
         // `sw::vector` 는 두 구성(`SW_ENABLE_STL_CONTAINER`) 모두 sw 의 클래스입니다(안의 저장만 다르다).
         const bool bVector = CursorReader::isAnyIdentity( identity, typeidentity::kArrVectorTemplate );
         const bool bArray  = CursorReader::isAnyIdentity( identity, typeidentity::kArrArrayTemplate );
         if ( bVector || bArray )
         {
-            result->_kind    = bVector ? FixedValueKind::Vector : FixedValueKind::FixedArray;
-            result->_element = classifyFixedType( clang_Type_getTemplateArgumentAsType( canonical, 0 ), session, depth + 1 );
+            result->_kind    = bVector ? LayoutValueKind::Vector : LayoutValueKind::StaticArray;
+            result->_element = classifyLayoutType( clang_Type_getTemplateArgumentAsType( canonical, 0 ), session, depth + 1 );
             return result;
         }
         // `EnumArray<E, T>` 의 본문은 `T[열거자 수]` 와 같다(개수 없이 원소 N 개). 스키마 해시는 칸 철자를 섞어 C 배열과 다르다. 원소는 두 번째 인자다.
         if ( identity == typeidentity::kEnumArray )
         {
-            result->_kind    = FixedValueKind::FixedArray;
-            result->_element = classifyFixedType( clang_Type_getTemplateArgumentAsType( canonical, 1 ), session, depth + 1 );
+            result->_kind    = LayoutValueKind::StaticArray;
+            result->_element = classifyLayoutType( clang_Type_getTemplateArgumentAsType( canonical, 1 ), session, depth + 1 );
             return result;
         }
         const CXCursor declaration = clang_getTypeDeclaration( canonical );
         if ( AnnotationLookup::isReflectedRecord( declaration ) )
         {
-            result->_kind               = FixedValueKind::Reflect;
+            result->_kind               = LayoutValueKind::Reflect;
             result->_fullyQualifiedName = CursorReader::makeFullyQualifiedName( declaration );
             return result;
         }
         StringBuilder<constant::buffer::kMax512> reason;
-        reason.appendFormat( "type '%#' is outside the fixed layout encoding table", result->_typeName );
-        return makeIneligibleFixedType( result, reason.view() );
+        reason.appendFormat( "type '%#' is outside the layout encoding table", result->_typeName );
+        return makeIneligibleLayoutType( result, reason.view() );
     }
 
-    void FixedTypeAnalyzer::fillFixedLayoutFacts( const CXCursor cursor, const CXType fieldType, ParsedPropertyInfo& prop, const ParserSession& session )
+    void LayoutTypeAnalyzer::fillLayoutSchemaFacts( const CXCursor cursor, const CXType fieldType, ParsedPropertyInfo& prop, const ParserSession& session )
     {
         uint32 line = 0;
         clang_getExpansionLocation( clang_getCursorLocation( cursor ), nullptr, &line, nullptr, nullptr );
-        prop._line      = line;
-        prop._bPublic   = clang_getCXXAccessSpecifier( cursor ) == CX_CXXPublic ? SW_TRUE : SW_FALSE;
-        prop._fixedType = classifyFixedType( fieldType, session, 0 );
+        prop._line       = line;
+        prop._bPublic    = clang_getCXXAccessSpecifier( cursor ) == CX_CXXPublic ? SW_TRUE : SW_FALSE;
+        prop._layoutType = classifyLayoutType( fieldType, session, 0 );
         if ( prop._bIsBitField == SW_FALSE )
             return;
-        const FixedValueKind kind = prop._fixedType->_kind;
-        if ( kind == FixedValueKind::Bool || kind == FixedValueKind::Integer )
-            prop._fixedType->_kind = FixedValueKind::Bool;
+        const LayoutValueKind kind = prop._layoutType->_kind;
+        if ( kind == LayoutValueKind::Bool || kind == LayoutValueKind::Integer )
+            prop._layoutType->_kind = LayoutValueKind::Bool;
         else
-            prop._fixedType = makeIneligibleFixedType( prop._fixedType, "bit field of a non-integer type" );
+            prop._layoutType = makeIneligibleLayoutType( prop._layoutType, "bit field of a non-integer type" );
     }
 } // namespace sw
 
@@ -567,7 +567,7 @@ namespace sw
             _bHasError = SW_TRUE;
             return;
         }
-        FixedTypeAnalyzer::fillFixedLayoutFacts( cursor, fieldType, prop, session );
+        LayoutTypeAnalyzer::fillLayoutSchemaFacts( cursor, fieldType, prop, session );
         _pType->_listProperty.push_back( std::move( prop ) );
     }
 
@@ -619,8 +619,8 @@ namespace sw
             _bHasError = SW_TRUE;
             return;
         }
-        // 값이 객체 밖에 있어 고정 배치형 코덱이 필드처럼 읽고 쓸 수 없습니다.
-        prop._fixedType = FixedTypeAnalyzer::makeIneligibleFixedType( make_shared<ParsedFixedType>(), "accessor property (the value lives outside the object)" );
+        // 값이 객체 밖에 있어 레이아웃 스키마이 필드처럼 읽고 쓸 수 없습니다.
+        prop._layoutType = LayoutTypeAnalyzer::makeIneligibleLayoutType( make_shared<ParsedLayoutType>(), "accessor property (the value lives outside the object)" );
         _pType->_listProperty.push_back( std::move( prop ) );
     }
 

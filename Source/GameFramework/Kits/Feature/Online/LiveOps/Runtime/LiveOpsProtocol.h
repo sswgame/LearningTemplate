@@ -1,7 +1,7 @@
 /**
  * @file LiveOpsProtocol.h
  * @brief 라이브 운영 서비스의 와이어 형식입니다. 메서드와 알림 번호(영역 `OnlineMethodRange::kLiveOps`), 본문, 영속 레코드의 형식을 정의하며 클라이언트, 서버, 운영 도구가 함께 씁니다.
- * @details 요청과 응답은 `REFLECT` 구조체 하나씩이고 본문은 고정 배치형(B)이다. 바이트 배치는 `PROPERTY` 선언 순서와 키가 정한다.
+ * @details 요청과 응답은 `REFLECT` 구조체 하나씩이고 본문은 스키마 결합형이다. 바이트 배치는 `PROPERTY` 선언 순서와 키가 정한다.
  *          응답은 메서드마다 따로이다. 업무 결과(`LiveOpsDeviceReply::_result`)는 도메인 값만이고, 범위 밖 요청 · 일시 장애 · 버전은 공통 범주(`OnlineError`)로 온다.
  *          저장소의 이벤트 정의와 기기 레코드는 다른 빌드가 읽으므로 자기 기술형(A, `BinarySerializer`)이다.
  */
@@ -105,7 +105,7 @@ namespace sw
 {
     /**
      * @struct LiveOpsProtocol
-     * @brief 라이브 운영 키트의 메시지 타입 목록, 등록 항목, 영속 레코드 코덱입니다. 본문은 고정 배치형(B)이며 `MessageTypes::write` · `read` 로만 쓰고 읽습니다.
+     * @brief 라이브 운영 키트의 메시지 타입 목록, 등록 항목, 영속 레코드 코덱입니다. 본문은 스키마 결합형이며 `MessageTypes::write` · `read` 로만 쓰고 읽습니다.
      */
     struct SW_KIT_API LiveOpsProtocol
     {

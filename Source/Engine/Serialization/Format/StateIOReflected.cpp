@@ -10,9 +10,9 @@
 #include "Engine/Reflection/ReflectVisit.h"
 #include "Engine/Reflection/ReflectedValue.h"
 #include "Engine/Reflection/TypeRegistry.h"
-#include "Engine/Serialization/Fixed/FixedLayout.h"
 #include "Engine/Serialization/Format/FormatUpgrade.h"
 #include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Layout/LayoutSerializer.h"
 #include "Engine/Serialization/Serializer/SerializerUtil.h"
 
 // `StateIO::reflected` — 리플렉션 상태 칸을 선언에서 싣는다. 바이트 약속은 `StateIO` 의 칸 함수 그대로라 손 본문과 섞여도 같은 아카이브다.
@@ -222,7 +222,7 @@ namespace sw
 
     const TypeInfo& StateIO::requireReflectedType( const hashed_string& fqn )
     {
-        // 레지스트리를 이름으로 바로 찾는다 — `StaticType()` 은 DLL 밖으로 내보내지 않은 키트 타입에서 링크가 깨진다(`FixedLayout::findCodec` 과 같은 까닭).
+        // 레지스트리를 이름으로 바로 찾는다 — `StaticType()` 은 DLL 밖으로 내보내지 않은 키트 타입에서 링크가 깨진다(`LayoutSerializer::findSchema` 과 같은 까닭).
         const TypeInfo* pType = TypeLookupCache{}.find( fqn );
         if ( pType == nullptr )
             reportFatalError( "StateIO::reflected: '%#' is not a registered reflected type - add REFLECT() and REFLECT_BODY() or check the reflection generation", fqn.c_str() );
@@ -233,7 +233,7 @@ namespace sw
     {
         string canonical;
         StateIOReflectedInternal::appendCanonical( engine::getSubsystem<TypeRegistry>(), type, true, 0, canonical );
-        return FixedLayout::computeSchemaHash( StateIOReflectedInternal::kLayoutRuleVersion, canonical, {} );
+        return LayoutSerializer::computeSchemaHash( StateIOReflectedInternal::kLayoutRuleVersion, canonical, {} );
     }
 
     uint64 StateIO::findReflectedLayoutHash( const TypeInfo& type )

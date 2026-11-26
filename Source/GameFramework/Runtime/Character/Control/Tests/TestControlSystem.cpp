@@ -10,7 +10,7 @@
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/FormatDef.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
 
 #include "GameFramework/Runtime/Character/Control/ControlSystem.h"
 #include "GameFramework/Runtime/Character/Control/Controller/AIControllerComponent.h"
@@ -272,7 +272,7 @@ SW_TEST_CASE( ControlIntentHistoryTest, BrokenBytesAreRefusedWithAReason )
     SW_EXPECT_TRUE( garbageRead.error().message().find( "another format" ) != string_view::npos );
 
     BitWriter writer;
-    FormatDef{ "SWIN", ControlIntentHistory::kFormat._version + 1 }.write( writer );
+    FormatDesc{ "SWIN", ControlIntentHistory::kFormat._version + 1 }.write( writer );
     BitReader            badVersion( writer.getBytes().data(), static_cast<int32>( writer.getByteCount() ) );
     const expected<void> badVersionRead = history.read( badVersion );
     SW_REQUIRE_FALSE( badVersionRead.has_value() );

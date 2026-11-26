@@ -1,10 +1,10 @@
 /**
  * @file TradeSessionRecord.h
  * @brief 거래 키트의 와이어 형식입니다. 메서드와 알림 번호(영역 `OnlineMethodRange::kTrade`), 요청과 응답 본문, 저장소 레코드 코덱을 정의합니다.
- * @details 요청과 응답은 `REFLECT` 구조체 하나씩이고 본문은 고정 배치형(B)이다. 바이트 배치는 `PROPERTY` 선언 순서와 키가 정한다.
+ * @details 요청과 응답은 `REFLECT` 구조체 하나씩이고 본문은 스키마 결합형이다. 바이트 배치는 `PROPERTY` 선언 순서와 키가 정한다.
  *          응답 본문(`TradeReply`)은 결과와 스냅샷이고, 정산이면 요청한 계정의 이동 뒤 잔액(자산 id와 양)이 함께 온다. 게임이 이 잔액을 지갑과 인벤토리 미러에 넣는다.
  *          알림 본문도 `TradeReply` 이며 정산이면 그 계정의 잔액이 함께 온다. 기능 플래그 `feature.trade_enabled` 가 꺼져 있으면 모든 요청이 `kFeatureDisabled` 로 끝난다.
- *          저장소의 거래 레코드는 다른 빌드가 읽으므로 자기 기술형(A)이다.
+ *          저장소의 거래 레코드는 다른 빌드가 읽으므로 자기 기술형이다.
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -180,7 +180,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 저장소의 거래 레코드입니다. 거래를 맡은 서버와 스냅샷입니다. 자기 기술형(A)으로 씁니다. */
+    /** @brief 저장소의 거래 레코드입니다. 거래를 맡은 서버와 스냅샷입니다. 자기 기술형으로 씁니다. */
     REFLECT()
     struct SW_KIT_API TradeSessionRecord
     {
@@ -192,7 +192,7 @@ namespace sw
         /// 이 빌드가 모르는 칸(배포 중 새 빌드가 더한 칸)이다. PROPERTY 가 아니다 — 영속 읽기가 담고 쓰기가 그대로 싣는다(`ServiceRecordUtil`).
         ServiceRecordUnknownFields _unknownProperties{};
 
-        // 거래 키트의 메시지 타입 목록과 등록 항목입니다. 본문은 고정 배치형(B)이며 `MessageTypes::write` · `read` 로만 쓰고 읽습니다.
+        // 거래 키트의 메시지 타입 목록과 등록 항목입니다. 본문은 스키마 결합형이며 `MessageTypes::write` · `read` 로만 쓰고 읽습니다.
         using Table        = OnlineProtocolTable<TradeMethod, OnlineMethodList<TradeMethod::Invite, TradeMethod::Respond, TradeMethod::SetOffer, TradeMethod::Lock, TradeMethod::Confirm, TradeMethod::Cancel>, OnlinePushList<TradeMethod::Invited, TradeMethod::Update, TradeMethod::Closed>>;
         using MessageTypes = Table::MessageTypes;
         using ResultName   = TradeResult;

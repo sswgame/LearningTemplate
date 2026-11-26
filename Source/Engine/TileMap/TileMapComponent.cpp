@@ -16,7 +16,7 @@
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Physics/IPhysicsScene.h"
 #include "Engine/Physics/Scene/ScenePhysics.h"
-#include "Engine/Serialization/Format/FormatDef.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
 #include "Engine/TileMap/TileMapXML.h"
 #include "Engine/Visual/2D/SpriteInstanceBatch.h"
 #include "Engine/Visual/2D/SpriteRenderUtil.h"
@@ -27,7 +27,7 @@ namespace sw
     {
         struct TileMapComponentInternal
         {
-            static constexpr FormatDef kStateFormat{ "TMAP" };
+            static constexpr FormatDesc kStateFormat{ "TMAP" };
 
             /** @brief 칠한 칸 하나의 상태입니다. */
             struct PaintedCell

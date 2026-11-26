@@ -4,7 +4,7 @@
  * @details 검증 함수의 모양은 `void fn( ValidationContext& context ) const`(const 가 아니어도 된다)이고, 파서가 같은 타입에서 찾아 모양을 봅니다.
  *          함수는 문제를 `context.addError` · `addWarning` 으로 적기만 합니다 — 값을 고치거나 로드를 멈추지 않습니다.
  *          `Validate` 는 프로퍼티든 타입이든 에디터 데이터 검증이다(로드 · 저장 · 인스펙터 · 맵 검사). 배포에는 등록되지 않는다(생성 코드의 `SW_DEV_ONLY_FUNCTION`,
- *          언리얼 `UObject::IsDataValid` 가 `WITH_EDITOR` 인 것과 같다). `ReadValidate` 는 배포에서도 도는 읽기 검사다 — 고정 배치형 읽기 끝과 세이브 읽기가
+ *          언리얼 `UObject::IsDataValid` 가 `WITH_EDITOR` 인 것과 같다). `ReadValidate` 는 배포에서도 도는 읽기 검사다 — 스키마 결합형 읽기 끝과 세이브 읽기가
  *          오류면 거절한다(언리얼 `NetSerialize` 의 `bOutSuccess` 자리). 읽기 거절은 `validateRead` 로 읽기 검사만 돌려 두 구성이 같은 답을 낸다.
  *          결과 표(`Dev/ValidationIssueLog.h`)와 고침도 개발 전용이다.
  */
@@ -112,7 +112,7 @@ namespace sw
         static uint32 validateObject( const TypeInfo& type, const void* pInstance, ValidationContext& context );
         /**
          * @brief 읽기 검사(`REFLECT( ReadValidate )`)만 돌립니다 — 값으로 든 구조체 · 그 시퀀스 원소까지 내려가고 기반부터. 배포와 개발 구성이 같은 답을 낸다.
-         * @details 세이브 · 네트워크에서 읽은 값을 거절할지 정하는 자리가 쓴다(`FightingMatch::serializeState`, 고정 배치형 읽기 끝은 코덱이 같은 함수를 부른다).
+         * @details 세이브 · 네트워크에서 읽은 값을 거절할지 정하는 자리가 쓴다(`FightingMatch::serializeState`, 스키마 결합형 읽기 끝은 스키마이 같은 함수를 부른다).
          * @return 이번에 적힌 결과 수
          */
         static uint32 validateRead( const TypeInfo& type, const void* pInstance, ValidationContext& context );

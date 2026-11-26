@@ -4,7 +4,7 @@
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Serialization/Format/FormatDef.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Foundation/Minigame/MinigameStack.h"
@@ -15,9 +15,9 @@ namespace sw
     {
         struct AsymmetricHorrorGameModeComponentInternal
         {
-            static constexpr FormatDef kStateFormat{ "AHGM" };
-            static constexpr int32     kPlayer       = 0;  ///< 늘 사람이 잡는 생존자(카메라 · 감시 값의 주인)
-            static constexpr int32     kMaxSurvivors = 32; ///< 사람 비트(`_humanMask`)에 들어가는 수
+            static constexpr FormatDesc kStateFormat{ "AHGM" };
+            static constexpr int32      kPlayer       = 0;  ///< 늘 사람이 잡는 생존자(카메라 · 감시 값의 주인)
+            static constexpr int32      kMaxSurvivors = 32; ///< 사람 비트(`_humanMask`)에 들어가는 수
 
             // 사운드 이벤트 이름 — 클립 · 범위 · 상한은 게임의 사운드 이벤트 데이터(audioevents.xml)가 정한다.
             static constexpr const utf8* kEventHit           = "AsymmetricHorrorHit";

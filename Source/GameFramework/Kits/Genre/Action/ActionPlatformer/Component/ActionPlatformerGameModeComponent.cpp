@@ -9,7 +9,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
-#include "Engine/Serialization/Format/FormatDef.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Action/ActionPlatformer/ActionStageRun.h"
@@ -21,7 +21,7 @@ namespace sw
     {
         struct ActionPlatformerGameModeComponentInternal
         {
-            static constexpr FormatDef kStateFormat{ "KDAP" };
+            static constexpr FormatDesc kStateFormat{ "KDAP" };
 
             static constexpr const utf8* kStartPointID = "start";
 

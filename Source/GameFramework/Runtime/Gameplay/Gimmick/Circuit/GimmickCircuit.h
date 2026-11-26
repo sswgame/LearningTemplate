@@ -137,7 +137,7 @@ namespace sw
          *          `Mismatch` 는 어떤 한계로도 받지 않는다. 받지 않은 결과를 무엇으로 볼지는 부르는 쪽이 정한다(`GimmickCircuitComponent::applySavedState`).
          */
         GimmickStateLoad loadState( const GimmickCircuitState& state, GimmickStateMatch weakestAccepted );
-        /** @brief 상태의 64 비트 해시입니다. 고정 배치형 바이트(`FixedLayout::write`)의 FNV-1a 입니다. 같은 입력이면 같은 값이 나오므로 결정성 검증과 비동기 감지에 씁니다. */
+        /** @brief 상태의 64 비트 해시입니다. 스키마 결합형 바이트(`LayoutSerializer::write`)의 FNV-1a 입니다. 같은 입력이면 같은 값이 나오므로 결정성 검증과 비동기 감지에 씁니다. */
         uint64 computeStateHash() const;
 
         /**

@@ -93,7 +93,7 @@ namespace sw
         [[nodiscard]] expected<void, SnapshotRestoreFailure> readEnvelope( SerializePurpose purpose, const TypeInfo* pStateType, void* pStateInstance, const void* pInBuffer,
                                                                            uint32 size );
         /**
-         * @brief 옛 판 봉투 @p inoutBytes 를 이 빌드의 판까지 제자리에서 올립니다(형식의 단계 `FormatDef`) — 슬롯에서 읽은 바이트를 풀기 전에 한 번 부른다. 이 판이면 할 일이 없다.
+         * @brief 옛 판 봉투 @p inoutBytes 를 이 빌드의 판까지 제자리에서 올립니다(형식의 단계 `FormatDesc`) — 슬롯에서 읽은 바이트를 풀기 전에 한 번 부른다. 이 판이면 할 일이 없다.
          * @return 빠진 단계 · 단계 실패면 오류를 남기고 false 입니다. 머리가 없거나 새 판인 바이트는 true 다(읽기가 까닭을 남기고 거절한다).
          */
         [[nodiscard]] static bool upgradeEnvelope( vector<uint8>& inoutBytes );

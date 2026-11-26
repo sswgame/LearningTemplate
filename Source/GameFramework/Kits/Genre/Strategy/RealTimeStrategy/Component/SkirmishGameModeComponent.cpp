@@ -15,7 +15,7 @@
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/FormatDef.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
@@ -26,7 +26,7 @@ namespace sw
     {
         struct SkirmishGameModeComponentInternal
         {
-            static constexpr FormatDef kStateFormat{ "RTMS" };
+            static constexpr FormatDesc kStateFormat{ "RTMS" };
         };
     } // namespace
 } // namespace sw

@@ -9,7 +9,7 @@
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Format/FormatDef.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Gameplay/GameState/StateSectionTableUtil.h"
@@ -97,7 +97,7 @@ namespace sw
          * @return 읽기면 모두 반영했을 때 true(@p pOwnerName 은 거절 오류에 적는다), 쓰기면 true 입니다.
          */
         template <typename TForEach>
-        [[nodiscard]] bool serializeSections( StateIO& io, const FormatDef& format, uint32 sectionCount, const TForEach& forEachSection, const utf8* pOwnerName ) const
+        [[nodiscard]] bool serializeSections( StateIO& io, const FormatDesc& format, uint32 sectionCount, const TForEach& forEachSection, const utf8* pOwnerName ) const
         {
             if ( io.isWriting() == false )
                 return StateSectionTableUtil::read( io, format, sectionCount, forEachSection, pOwnerName );
@@ -120,7 +120,7 @@ namespace sw
 
         /** @brief 상태 하나(@p state)를 구간 하나로 쓰거나 읽습니다(`serializeSections`). */
         template <typename TState>
-        void serialize( StateIO& io, const FormatDef& format, TState& state, const utf8* pName ) const
+        void serialize( StateIO& io, const FormatDesc& format, TState& state, const utf8* pName ) const
         {
             const auto forEachSection = [&state, pName]( auto&& visit )
             { visit( state, pName ); };

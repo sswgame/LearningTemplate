@@ -12,7 +12,7 @@
 
 #include "Engine/Module/ModuleSubsystemRegistrar.h"
 #include "Engine/Reflection/TypeRegistry.h"
-#include "Engine/Serialization/Fixed/ReplicatedLayout.h"
+#include "Engine/Serialization/Layout/ReplicatedLayout.h"
 
 #include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"

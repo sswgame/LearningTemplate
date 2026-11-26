@@ -24,7 +24,7 @@
 #include "Engine/Physics/Component/CharacterControllerComponent.h"
 #include "Engine/Physics/Component/RigidBodyComponent.h"
 #include "Engine/Scene/Scene.h"
-#include "Engine/Serialization/Fixed/ReplicatedLayout.h"
+#include "Engine/Serialization/Layout/ReplicatedLayout.h"
 
 #include "GameFramework/Runtime/Character/Control/ControlSystem.h"
 #include "GameFramework/Runtime/Character/Control/Controller/RemoteControllerComponent.h"
@@ -1024,7 +1024,7 @@ namespace sw
     bool HubPawnReplicationComponent::readState( const vector<uint8>& bytes, HubPawnState& outState )
     {
         BitReader reader( bytes.data(), static_cast<int32>( bytes.size() ) );
-        return ReplicatedLayout::readFull( reader, outState, nullptr ) == FixedReadResult::Ok;
+        return ReplicatedLayout::readFull( reader, outState, nullptr ) == LayoutReadResult::Ok;
     }
 
     bool HubPawnReplicationComponent::writePose( const HubPawnPose& pose, vector<uint8>& outBytes )

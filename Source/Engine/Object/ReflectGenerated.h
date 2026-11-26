@@ -19,8 +19,8 @@
 #include "Engine/Reflection/ReflectionUnits.h"
 #include "Engine/Reflection/ReflectionValidation.h"
 #include "Engine/Reflection/TypeRegistrar.h"
-#include "Engine/Serialization/Fixed/FixedFieldDesc.h"
-#include "Engine/Serialization/Fixed/FixedLayout.h"
+#include "Engine/Serialization/Layout/LayoutFieldDesc.h"
+#include "Engine/Serialization/Layout/LayoutSerializer.h"
 
 namespace sw
 {

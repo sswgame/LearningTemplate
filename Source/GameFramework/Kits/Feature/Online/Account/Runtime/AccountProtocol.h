@@ -1,7 +1,7 @@
 /**
  * @file AccountProtocol.h
  * @brief 계정 키트의 와이어 형식입니다. 메서드와 알림 번호(영역 `OnlineMethodRange::kAccount`)와 요청과 응답 본문을 정의하며, 서버(`AccountServer`)와 클라이언트(`AccountClient`)가 함께 씁니다.
- * @details - 요청, 응답, 알림, 오류 상세, 서버 버스 본문은 `REFLECT` 구조체 하나씩이고 고정 배치형(B)이다. 바이트 배치는 `PROPERTY` 선언 순서와 키가 정한다.
+ * @details - 요청, 응답, 알림, 오류 상세, 서버 버스 본문은 `REFLECT` 구조체 하나씩이고 스키마 결합형이다. 바이트 배치는 `PROPERTY` 선언 순서와 키가 정한다.
  *          - 응답 본문의 결과는 `LoginResult` 이다. 로그인, 연동, 탈퇴의 업무 결과는 본문에 담고, 전송 실패만 공통 오류 코드를 쓴다.
  *            예외는 시도 제한, 저장소 오류, 빌드 버전이다. 이 셋은 공통 오류(`kRateLimited` 와 기다릴 ms, `kUnavailable`, `kUpdateRequired` 와 상점 주소)로 보낸다.
  *            그래야 모든 키트가 같은 화면(다시 시도, 업데이트)을 보여 줄 수 있다.
@@ -290,7 +290,7 @@ namespace sw
 {
     /**
      * @struct AccountProtocol
-     * @brief 계정 키트의 메시지 타입 목록과 등록 항목입니다. 본문은 고정 배치형(B)이며 `MessageTypes::write` · `read` 로만 쓰고 읽습니다.
+     * @brief 계정 키트의 메시지 타입 목록과 등록 항목입니다. 본문은 스키마 결합형이며 `MessageTypes::write` · `read` 로만 쓰고 읽습니다.
      */
     struct SW_KIT_API AccountProtocol
     {

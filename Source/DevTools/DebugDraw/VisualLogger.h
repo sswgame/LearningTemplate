@@ -29,7 +29,7 @@
 #include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Graphics/Debug/IVisualLogger.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Serialization/Format/FormatDef.h"
+#include "Engine/Serialization/Format/FormatDesc.h"
 
 namespace sw
 {
@@ -72,8 +72,8 @@ namespace sw
     public:
         static constexpr const utf8* kSubsystemName = "VisualLogger";
         /** @brief 기본 용량(기록 수)입니다. 프레임마다 수십 개를 적는 AI 몇 마리를 몇 분 동안 담는 크기다. */
-        static constexpr uint32    kDefaultCapacity = 20000;
-        static constexpr FormatDef kFileFormat{ "SWVL" };
+        static constexpr uint32     kDefaultCapacity = 20000;
+        static constexpr FormatDesc kFileFormat{ "SWVL" };
         /** @brief 분류를 주지 않은 기록의 분류 이름입니다. */
         static constexpr const utf8* kDefaultCategoryName = "Default";
         static constexpr MemoryTag   kSubsystemMemoryTag  = MemoryTag::RenderCPU;
