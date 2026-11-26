@@ -22,7 +22,7 @@ namespace sw
         Handled = 0, ///< 받아서 처리했다(낡아서 버린 것도 포함한다. 형식은 맞았다).
         Malformed,   ///< 내 종류인데 본문이 깨졌다. 라우터가 세고 버리며, 다른 처리기나 남은 목록으로 넘기지 않는다.
         NotMine,     ///< 맡은 종류가 아니다(`handleMessage` 로 직접 전달할 때만 반환한다. 라우터는 마스크로 미리 거른다).
-        NotReady     ///< 아직 처리할 수 없다(대상이 서지 않았다). 서술자가 보류를 선언한 종류(`NetHeldMessageDef`)만 낼 수 있고, 라우터가 보류했다가 순서대로 다시 준다.
+        NotReady     ///< 아직 처리할 수 없다(대상이 서지 않았다). 서술자가 보류를 선언한 종류(`NetHeldMessageDesc`)만 낼 수 있고, 라우터가 보류했다가 순서대로 다시 준다.
     };
 
     /** @brief 보류한 메시지를 끝내 전하지 못한 까닭입니다. */
@@ -33,7 +33,7 @@ namespace sw
         WorldChanged  ///< 기다리는 사이 월드가 바뀌었다 — 대상은 앞 월드의 것이다
     };
 
-    /** @brief 메시지가 가는 방향입니다. 메시지 서술자(`NetMessageDef`)마다 하나를 적고, 라우터가 받는 쪽 역할과 견준다. 와이어 버전에 섞인다. */
+    /** @brief 메시지가 가는 방향입니다. 메시지 서술자(`NetMessageDesc`)마다 하나를 적고, 라우터가 받는 쪽 역할과 견준다. 와이어 버전에 섞인다. */
     enum class NetMessageDirection : uint8
     {
         ToServer = 0, ///< 클라이언트 → 서버
@@ -102,12 +102,12 @@ namespace sw
         /** @brief 영역 안에서 맡는 종류의 마스크입니다. 비트 n 이 (영역 + n)에 해당하며, 한 영역을 여럿이 나눠 맡을 때 겹치지 않게 고릅니다. 0이면 사건만 받습니다. */
         virtual uint16 getMessageKindMask() const { return 0xFFFFu; }
         /**
-         * @brief 맡는 종류마다 갈 수 있는 방향입니다(`NetMessageDirectionMask`). 표 기반 처리기(`NetTableHandler`)는 표의 `NetMessageDef` 에서 저절로 낸다.
+         * @brief 맡는 종류마다 갈 수 있는 방향입니다(`NetMessageDirectionMask`). 표 기반 처리기(`NetTableHandler`)는 표의 `NetMessageDesc` 에서 저절로 낸다.
          * @details 순수 가상이라 빠뜨릴 수 없다. 맡는 종류 중 방향이 없는 것이 있으면 라우터가 등록을 거절한다. 사건만 받는 처리기는 빈 값을 낸다.
          */
         virtual NetMessageDirectionMask getMessageDirectionMask() const = 0;
         /**
-         * @brief 종류 @p kind 를 서버가 한 연결에게서 `poll` 한 번에 받는 상한입니다. 표 기반 처리기는 서술자(`NetLimitedMessageDef`)에서 저절로 낸다.
+         * @brief 종류 @p kind 를 서버가 한 연결에게서 `poll` 한 번에 받는 상한입니다. 표 기반 처리기는 서술자(`NetLimitedMessageDesc`)에서 저절로 낸다.
          * @details 서버로 갈 수 있는 종류의 상한이 0 이면 라우터가 등록을 거절한다(상한 없는 서버 처리기는 없다).
          */
         virtual uint32 getMaxPerPoll( uint8 kind ) const
@@ -139,7 +139,7 @@ namespace sw
         /** @brief 서버 — 연결 @p connectionID 의 클라이언트가 이쪽 월드를 나갔습니다(다른 씬 · 끊김 · 서버가 새 월드를 열었다). 그 연결의 월드 상태를 버립니다. */
         virtual void onPeerLeftWorld( int32 connectionID ) { (void)connectionID; }
         /**
-         * @brief 종류 @p kind 를 처리기가 `NotReady` 로 미룰 때 보류하는 시간(밀리초)입니다. 0 이면 보류하지 않습니다. 표 기반 처리기는 서술자(`NetHeldMessageDef`)에서 저절로 낸다.
+         * @brief 종류 @p kind 를 처리기가 `NotReady` 로 미룰 때 보류하는 시간(밀리초)입니다. 0 이면 보류하지 않습니다. 표 기반 처리기는 서술자(`NetHeldMessageDesc`)에서 저절로 낸다.
          */
         virtual uint32 getHoldLimit( uint8 kind ) const
         {

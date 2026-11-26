@@ -55,7 +55,7 @@ SW_TEST_CASE( FontSubsystemTest, CatalogDefaultFamilyOpens )
     sw::FontSubsystem fontService;
     SW_REQUIRE_TRUE( fontService.initialize( sw::AssetID{ sw::engine::getSubsystem<sw::EngineDefaultAssets>()._fontCatalog.get() } ) );
     SW_EXPECT_TRUE( fontService.isInitialized() );
-    const sw::FontFaceChain chain = fontService.getFaceChain( sw::FontSpec{} );
+    const sw::FontFaceChain chain = fontService.getFaceChain( sw::FontDesc{} );
     SW_REQUIRE_TRUE( chain._faceCount >= 1 );
     uint32               glyphIndex = 0;
     const sw::FontFaceID face       = fontService.findFaceForCodepoint( chain, 'A', glyphIndex );
@@ -70,9 +70,9 @@ SW_TEST_CASE( FontSubsystemTest, ChainFallsBackForMissingCodepoints )
     FontSubsystemTestUtil::configureLatinHangul( *fixture._pRasterizer );
     SW_REQUIRE_TRUE( fixture.initialize( FontSubsystemTestUtil::makeLatinHangulCatalog() ) );
 
-    sw::FontSpec spec{};
-    spec._family                  = "Hangul";
-    const sw::FontFaceChain chain = fixture._fontService->getFaceChain( spec );
+    sw::FontDesc desc{};
+    desc._family                  = "Hangul";
+    const sw::FontFaceChain chain = fixture._fontService->getFaceChain( desc );
     SW_REQUIRE_EQUAL( 2u, static_cast<uint32>( chain._faceCount ) );
 
     uint32               glyphIndex = 0;
@@ -94,16 +94,16 @@ SW_TEST_CASE( FontSubsystemTest, MissingFamilyWarnsOnceAndIsSkipped )
     SW_EXPECT_LOG( "Text.FontFamilyMissing" ); // 없는 가족과 없는 글리프가 한 번씩 경고한다
     SW_EXPECT_LOG( "Text.GlyphMissing" );
 
-    sw::FontSpec spec{};
-    spec._family                  = "No Such Family";
-    const sw::FontFaceChain chain = fixture._fontService->getFaceChain( spec );
+    sw::FontDesc desc{};
+    desc._family                  = "No Such Family";
+    const sw::FontFaceChain chain = fixture._fontService->getFaceChain( desc );
     SW_REQUIRE_EQUAL( 1u, static_cast<uint32>( chain._faceCount ) ); // 기본 가족만
     SW_EXPECT_EQUAL( 1u, sw::FontSubsystemTestAccess::getWarnedOnceCount( *fixture._fontService ) );
 
-    spec._weight = sw::FontWeight::Bold;
-    (void)fixture._fontService->getFaceChain( spec );
+    desc._weight = sw::FontWeight::Bold;
+    (void)fixture._fontService->getFaceChain( desc );
     fixture._fontService->invalidateFaceChains();
-    (void)fixture._fontService->getFaceChain( spec );
+    (void)fixture._fontService->getFaceChain( desc );
     SW_EXPECT_EQUAL( 1u, sw::FontSubsystemTestAccess::getWarnedOnceCount( *fixture._fontService ) );
 
     uint32               glyphIndex = 7;
@@ -130,9 +130,9 @@ SW_TEST_CASE( FontSubsystemTest, MissingSystemFallbackIsNotAWarning )
     SW_REQUIRE_TRUE( fixture.initialize( catalog ) );
 
     // 경고가 나오면 케이스의 로그 게이트가 실패로 센다(이 케이스는 아무 id 도 적지 않는다). 카탈로그에 없는 가족의 경고는 MissingFamilyWarnsOnceAndIsSkipped 가 본다.
-    sw::FontSpec spec{};
-    spec._family                  = "Sw Not Installed Sans";
-    const sw::FontFaceChain chain = fixture._fontService->getFaceChain( spec );
+    sw::FontDesc desc{};
+    desc._family                  = "Sw Not Installed Sans";
+    const sw::FontFaceChain chain = fixture._fontService->getFaceChain( desc );
     SW_EXPECT_EQUAL( 1u, static_cast<uint32>( chain._faceCount ) ); // 기본 가족만
 }
 
@@ -147,9 +147,9 @@ SW_TEST_CASE( FontSubsystemTest, WeightPicksNearestFaceAndMarksFauxBold )
     catalog._listFamily[0]._listFace.push_back( boldFace );
     SW_REQUIRE_TRUE( fixture.initialize( catalog ) );
 
-    sw::FontSpec hangulRegular{};
+    sw::FontDesc hangulRegular{};
     hangulRegular._family                = "Hangul";
-    sw::FontSpec hangulBold              = hangulRegular;
+    sw::FontDesc hangulBold              = hangulRegular;
     hangulBold._weight                   = sw::FontWeight::Bold;
     const sw::FontFaceChain regularChain = fixture._fontService->getFaceChain( hangulRegular );
     const sw::FontFaceChain boldChain    = fixture._fontService->getFaceChain( hangulBold );
@@ -157,11 +157,11 @@ SW_TEST_CASE( FontSubsystemTest, WeightPicksNearestFaceAndMarksFauxBold )
     SW_EXPECT_EQUAL( SW_FALSE, regularChain._bFauxBold );
     SW_EXPECT_EQUAL( SW_TRUE, boldChain._bFauxBold );
 
-    sw::FontSpec latinRegular{};
+    sw::FontDesc latinRegular{};
     latinRegular._family                      = "Latin";
-    sw::FontSpec latinSemi                    = latinRegular;
+    sw::FontDesc latinSemi                    = latinRegular;
     latinSemi._weight                         = sw::FontWeight::SemiBold;
-    sw::FontSpec latinItalic                  = latinRegular;
+    sw::FontDesc latinItalic                  = latinRegular;
     latinItalic._slant                        = sw::FontSlant::Italic;
     const sw::FontFaceChain latinRegularChain = fixture._fontService->getFaceChain( latinRegular );
     const sw::FontFaceChain latinSemiChain    = fixture._fontService->getFaceChain( latinSemi );
@@ -189,13 +189,13 @@ SW_TEST_CASE( FontSubsystemTest, LanguageChangeRebuildsChain )
     SW_EXPECT_LOG( "Text.FontFamilyMissing" ); // 테스트 카탈로그에 없는 문화권 대체 가족(Malgun Gothic · Noto Sans …)이 한 번씩 경고한다
     SW_REQUIRE_TRUE( fixture.initialize( catalog ) );
 
-    const sw::FontFaceChain koreanChain = fixture._fontService->getFaceChain( sw::FontSpec{} );
+    const sw::FontFaceChain koreanChain = fixture._fontService->getFaceChain( sw::FontDesc{} );
     SW_REQUIRE_EQUAL( 2u, static_cast<uint32>( koreanChain._faceCount ) ); // 기본(라틴)이 고른 가족이자 끝 — Noto Sans KR 이 사이에
     const sw::FontFaceID koreanFace = koreanChain._arrFace[1];
 
     SW_REQUIRE_TRUE( localization.setCurrentLanguage( "ar" ) );
     fixture._fontService->invalidateFaceChains();
-    const sw::FontFaceChain arabicChain = fixture._fontService->getFaceChain( sw::FontSpec{} );
+    const sw::FontFaceChain arabicChain = fixture._fontService->getFaceChain( sw::FontDesc{} );
     SW_REQUIRE_EQUAL( 2u, static_cast<uint32>( arabicChain._faceCount ) );
     SW_EXPECT_NOT_EQUAL( koreanFace, arabicChain._arrFace[1] );
     for ( uint32 index = 0; index < arabicChain._faceCount; ++index )
@@ -218,9 +218,9 @@ SW_TEST_CASE( FontSubsystemTest, FormatControlsAreNotMissingGlyphs )
     sw::test::FakeFontSubsystemFixture fixture;
     FontSubsystemTestUtil::configureLatinHangul( *fixture._pRasterizer );
     SW_REQUIRE_TRUE( fixture.initialize( FontSubsystemTestUtil::makeLatinHangulCatalog() ) );
-    sw::FontSpec spec{};
-    spec._family                  = FontSubsystemTestUtil::makeLatinHangulCatalog()._defaultFamily;
-    const sw::FontFaceChain chain = fixture._fontService->getFaceChain( spec );
+    sw::FontDesc desc{};
+    desc._family                  = FontSubsystemTestUtil::makeLatinHangulCatalog()._defaultFamily;
+    const sw::FontFaceChain chain = fixture._fontService->getFaceChain( desc );
     uint32                  glyphIndex{ 0 };
     (void)fixture._fontService->findFaceForCodepoint( chain, 0x202Eu, glyphIndex );
     SW_EXPECT_EQUAL( 0u, sw::FontSubsystemTestAccess::getWarnedOnceCount( *fixture._fontService ) );

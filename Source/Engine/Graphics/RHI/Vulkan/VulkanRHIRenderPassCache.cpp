@@ -96,7 +96,7 @@ namespace sw
     {
     }
 
-    VkRenderPass VulkanRHIRenderPassCache::createFromSpec( VkDevice device, const VulkanRenderPassKey& spec )
+    VkRenderPass VulkanRHIRenderPassCache::createFromKey( VkDevice device, const VulkanRenderPassKey& spec )
     {
         const bool bHasDepth = spec._depthFormat != 0;
         if ( device == nullptr || ( spec._colorCount == 0 && bHasDepth == false ) )
@@ -183,7 +183,7 @@ namespace sw
         if ( existing != _mapPipelineRenderPass.end() )
             return existing->second;
 
-        VkRenderPass renderPass = createFromSpec( device, spec );
+        VkRenderPass renderPass = createFromKey( device, spec );
         if ( renderPass == VK_NULL_HANDLE )
             return VK_NULL_HANDLE;
         _mapPipelineRenderPass.emplace( key, renderPass );
@@ -206,7 +206,7 @@ namespace sw
             return false;
 
         CompositeRecord record{};
-        record._renderPass = createFromSpec( device, spec );
+        record._renderPass = createFromKey( device, spec );
         if ( record._renderPass == VK_NULL_HANDLE )
             return false;
 

@@ -899,26 +899,26 @@ namespace sw
         bool bSaltFilled  = true;
         if ( call._input._operation == LoginOperation::Login )
         {
-            request._arrSpec[0]._params = call._challenge._params;
-            Memory::copy( request._arrSpec[0]._arrSalt, call._challenge._arrSalt, LoginConstant::kSaltSize );
-            request._specCount = 1;
+            request._arrHashParams[0]._params = call._challenge._params;
+            Memory::copy( request._arrHashParams[0]._arrSalt, call._challenge._arrSalt, LoginConstant::kSaltSize );
+            request._hashCount = 1;
             if ( call._challenge._bRehash == SW_TRUE )
             {
                 // 매개변수가 바뀐 계정 — 비밀번호를 아는 지금 새 솔트 · 설정 매개변수로도 계산해 둔다(커밋이 바꾼다).
-                call._prepared._params      = _settings._passwordHashParams;
-                bSaltFilled                 = _pCrypto->fillRandom( call._prepared._arrSalt, LoginConstant::kSaltSize );
-                request._arrSpec[1]._params = call._prepared._params;
-                Memory::copy( request._arrSpec[1]._arrSalt, call._prepared._arrSalt, LoginConstant::kSaltSize );
-                request._specCount = 2;
+                call._prepared._params            = _settings._passwordHashParams;
+                bSaltFilled                       = _pCrypto->fillRandom( call._prepared._arrSalt, LoginConstant::kSaltSize );
+                request._arrHashParams[1]._params = call._prepared._params;
+                Memory::copy( request._arrHashParams[1]._arrSalt, call._prepared._arrSalt, LoginConstant::kSaltSize );
+                request._hashCount = 2;
             }
         }
         else
         {
-            call._prepared._params      = _settings._passwordHashParams;
-            bSaltFilled                 = _pCrypto->fillRandom( call._prepared._arrSalt, LoginConstant::kSaltSize );
-            request._arrSpec[0]._params = call._prepared._params;
-            Memory::copy( request._arrSpec[0]._arrSalt, call._prepared._arrSalt, LoginConstant::kSaltSize );
-            request._specCount = 1;
+            call._prepared._params            = _settings._passwordHashParams;
+            bSaltFilled                       = _pCrypto->fillRandom( call._prepared._arrSalt, LoginConstant::kSaltSize );
+            request._arrHashParams[0]._params = call._prepared._params;
+            Memory::copy( request._arrHashParams[0]._arrSalt, call._prepared._arrSalt, LoginConstant::kSaltSize );
+            request._hashCount = 1;
             call._input._credential._password.wipe(); // 가입 · 연동은 다시 해시할 일이 없다 — 줄에 넘긴 사본만 남는다
         }
         if ( bSaltFilled == false )

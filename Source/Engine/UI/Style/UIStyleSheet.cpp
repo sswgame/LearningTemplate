@@ -170,8 +170,8 @@ namespace sw
                     }
                     if ( field == UIStyleField::Transition )
                     {
-                        UIStyleTransitionSpec spec{};
-                        if ( const expected<void> transition = UIStyleTransitionSpec::parse( assignment._text, spec ); transition.has_value() == false )
+                        UIStyleTransition styleTransition{};
+                        if ( const expected<void> transition = UIStyleTransition::parse( assignment._text, styleTransition ); transition.has_value() == false )
                         {
                             fixed_string<constant::buffer::kMax256> message;
                             formatstring( message.data(), message.capacity(), "Rule _transition: %# '%#'", transition.error().message(), transition.error().detail() );

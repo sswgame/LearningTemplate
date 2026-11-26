@@ -39,7 +39,7 @@ namespace
         {
             PasswordHashRequest request;
             request._password  = string( password );
-            request._specCount = 1;
+            request._hashCount = 1;
             return request;
         }
 

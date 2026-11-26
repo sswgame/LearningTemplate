@@ -27,7 +27,7 @@ namespace sw
     {
     public:
         /**
-         * @brief VkRenderPass 하나의 디스크립터입니다. 렌더패스를 만드는 모든 곳이 이것을 채워 `createFromSpec` 에 넘깁니다.
+         * @brief VkRenderPass 하나의 디스크립터입니다. 렌더패스를 만드는 모든 곳이 이것을 채워 `createFromKey` 에 넘깁니다.
          * @details 스왑체인(CLEAR/LOAD), 공용 오프스크린, 포맷별 오프스크린, PSO 호환용, 합성 프레임버퍼, desc 기반 생성이
          *          모두 이것으로 `VkAttachmentDescription` 과 서브패스 의존성을 만듭니다(곳마다 손으로 적으면 의존성 마스크가
          *          조금씩 달라지고 한 곳을 고칠 때 나머지를 빠뜨립니다). 단일 서브패스, 샘플 1,
@@ -111,7 +111,7 @@ namespace sw
         VulkanRHIRenderPassCache& operator=( const VulkanRHIRenderPassCache& ) = delete;
 
         /** @brief 서술대로 VkRenderPass 를 만듭니다. 실패하면 VK_NULL_HANDLE 입니다. 캐시하지 않고, 부르는 쪽이 소유합니다. */
-        static VkRenderPass createFromSpec( VkDevice device, const VulkanRenderPassKey& spec );
+        static VkRenderPass createFromKey( VkDevice device, const VulkanRenderPassKey& spec );
 
         /** @brief PSO 호환 렌더패스를 키로 찾고, 없으면 spec 으로 만들어 넣습니다. 실패하면 VK_NULL_HANDLE 입니다. */
         VkRenderPass ensurePipelineRenderPass( VkDevice device, const PipelineKey& key, const VulkanRenderPassKey& spec );

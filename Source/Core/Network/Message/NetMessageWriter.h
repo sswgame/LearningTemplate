@@ -15,7 +15,7 @@
 
 namespace sw
 {
-    /** @brief 메시지 서술자의 채널을 누가 정하는가입니다. 표 메시지는 모두 둘 중 하나를 적는다(`NetMessageDef` · `NetMessageSenderChannelDef`). */
+    /** @brief 메시지 서술자의 채널을 누가 정하는가입니다. 표 메시지는 모두 둘 중 하나를 적는다(`NetMessageDesc` · `NetMessageSenderChannelDesc`). */
     enum class NetChannelPolicy : uint8
     {
         Descriptor = 0, ///< 서술자의 채널(`kChannel`)로만 나간다
@@ -39,7 +39,7 @@ namespace sw
      *          - 채널을 받는 `send` · `broadcast` · `sendToPeers` 는 표 밖 종류(`begin( kind )` — 라우터 판 알림, 채널 등록 메시지)만 보낸다. 표 메시지를 그쪽으로 보내려 하면
      *            오류 로그와 함께 보내지 않는다(서술자와 다른 채널로 나가던 스냅샷 확인 · 복제 입력 자리).
      * @code
-     *     if ( _messageWriter.writeMessage<NetLockstepMessage::Table, NetLockstepMessage::Input>( body ) ) // 본문 형식이 있는 메시지(`NetMessageBodyDef`)
+     *     if ( _messageWriter.writeMessage<NetLockstepMessage::Table, NetLockstepMessage::Input>( body ) ) // 본문 형식이 있는 메시지(`NetMessageBodyDesc`)
      *         (void)_messageWriter.sendMessage( *_pHost, connectionID );                              // 서술자의 채널
      *     BitWriter& writer = _messageWriter.beginMessage<NetLockstepMessage::Table, NetLockstepMessage::RollbackInput>(); // 손으로 쓰는 표 메시지
      *     writer.writeVarUint( frame );
@@ -68,7 +68,7 @@ namespace sw
             return beginDescribed( TTable::template getKindOf<TMessage>(), channel, TTable::kWorldScoped );
         }
         /**
-         * @brief 비우고 표 @p TTable 의 메시지 @p TMessage 의 종류 바이트와 본문(스키마 결합형, `NetMessageBodyDef`)을 씁니다.
+         * @brief 비우고 표 @p TTable 의 메시지 @p TMessage 의 종류 바이트와 본문(스키마 결합형, `NetMessageBodyDesc`)을 씁니다.
          * @return 범위 밖 값이 있으면 오류를 남기고 false 입니다 — 쓰다 만 바이트이므로 보내지 않는다.
          */
         template <typename TTable, typename TMessage>

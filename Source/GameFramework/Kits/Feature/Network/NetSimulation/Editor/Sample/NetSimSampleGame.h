@@ -12,7 +12,7 @@
  *            테스트는 다른 원천을 넣는다.
  *          - 오브젝트 이름은 `Avatar<엔티티 id>` 이다. 색은 `MeshComponent::setHighlight` 외곽선으로 구분한다(머티리얼 에셋을 가리키지 않는다).
  *
- *          메시지 본문(같은 파일): 한 프로세스 재생 샘플 게임(`NetSimSampleGame`)의 메시지 본문입니다. 스키마 결합형(`NetMessageBodyDef`)이라 본문 판이 스키마 해시입니다.
+ *          메시지 본문(같은 파일): 한 프로세스 재생 샘플 게임(`NetSimSampleGame`)의 메시지 본문입니다. 스키마 결합형(`NetMessageBodyDesc`)이라 본문 판이 스키마 해시입니다.
  * @details 에디터 확장 모듈(GF_EditorPlugin_NetSimulation)도 반사 단계를 거친다(`sw_add_module_library` 가 `NO_REFLECTION` 없이 부른다) — 이 헤더의 형식은 그 모듈에서 코드젠된다.
  *          필드 순서가 와이어 형식이다.
  */

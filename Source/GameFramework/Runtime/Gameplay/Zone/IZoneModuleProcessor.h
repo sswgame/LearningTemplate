@@ -81,7 +81,7 @@ namespace sw
         /** @brief 데이터가 적는 종류 이름입니다(`_kind`). */
         virtual const utf8* getKindName() const = 0;
         /** @brief 매개변수 표입니다. */
-        virtual void collectParamSpecs( vector<ZoneParamSpec>& outListSpec ) const = 0;
+        virtual void collectParamInfo( vector<ZoneParamInfo>& outListInfo ) const = 0;
         /**
          * @brief 이 종류의 효과를 어느 월드가 판정하는지입니다(`TriggerAuthority`). 순수 가상이라 새 종류가 고르지 않으면 컴파일되지 않는다(기본값이 없다 — "월드마다 판정" 을 모르고 물려받지 않게).
          * @details 겹침 · 대상 기록은 모든 월드가 같이 하고, 처리기 사건(시작 · 진입 · 체류 · 이탈)만 이 값으로 거른다(`ZoneTracker`) — 언리얼은 오버랩이 양쪽에서 나고 게임 로직이 `HasAuthority()` 뒤에서 돈다.

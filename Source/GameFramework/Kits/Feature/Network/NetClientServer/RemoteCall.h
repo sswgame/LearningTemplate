@@ -78,7 +78,7 @@ namespace sw
 
     /**
      * @brief 반사 함수 호출의 메시지 표입니다. 종류 · 마스크 · 와이어 버전은 표에서 나온다(`NetMessageTable`).
-     * @details 호출 본문은 함수마다 인자 형식이 달라 손 본문이다. 거절은 스키마 결합형(`NetMessageBodyDef`)이다.
+     * @details 호출 본문은 함수마다 인자 형식이 달라 손 본문이다. 거절은 스키마 결합형(`NetMessageBodyDesc`)이다.
      */
     struct NetRemoteCallMessage
     {
@@ -86,10 +86,10 @@ namespace sw
          * @brief 호출 하나 — 순번(varuint) · 대상 id(varuint) · 함수 번호(32 비트, 이름 해시) · 인자 수(varuint) · 인자들(타입별 이진 꼴). 클라이언트 → 서버는 `Server` 함수, 서버 → 클라이언트는 `Client` · `Multicast` 함수다.
          *        함수 번호와 타입별 이진 꼴 인자를 싣는다.
          */
-        static constexpr uint32 kCallHoldMilliseconds = 10000;                                                                                                                                                                              ///< 대상이 아직 서지 않은 신뢰 호출을 기다리는 시간(씬 로드 · 스폰 복제)
-        using Call                                    = NetHeldMessageDef<NetLimitedMessageDef<NetMessageSenderChannelDef<0, NetMessageDirection::Both, NetChannelKind::ReliableOrdered>, NetRequestLimit::kBurst>, kCallHoldMilliseconds>; ///< 월드 대상(세션 대상 0 이 아닌 번호) 뒤에 월드 세대가 온다. 채널은 함수의 `Reliable` 이 고른다(`beginMessage( channel )`). 호출률은 `RemoteCallServerConfig` 가 먼저 거절로 답하고, 표의 상한은 그 앞의 바닥이다
+        static constexpr uint32 kCallHoldMilliseconds = 10000;                                                                                                                                                                                 ///< 대상이 아직 서지 않은 신뢰 호출을 기다리는 시간(씬 로드 · 스폰 복제)
+        using Call                                    = NetHeldMessageDesc<NetLimitedMessageDesc<NetMessageSenderChannelDesc<0, NetMessageDirection::Both, NetChannelKind::ReliableOrdered>, NetRequestLimit::kBurst>, kCallHoldMilliseconds>; ///< 월드 대상(세션 대상 0 이 아닌 번호) 뒤에 월드 세대가 온다. 채널은 함수의 `Reliable` 이 고른다(`beginMessage( channel )`). 호출률은 `RemoteCallServerConfig` 가 먼저 거절로 답하고, 표의 상한은 그 앞의 바닥이다
         /** @brief 서버 → 클라이언트. 받지 못한 호출(`RemoteCallRejectedBody`). */
-        using Rejected = NetMessageBodyDef<1, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, RemoteCallRejectedBody>;
+        using Rejected = NetMessageBodyDesc<1, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, RemoteCallRejectedBody>;
         using Table    = NetMessageTable<NetKitMessageRange::kRemoteCall, Call, Rejected>;
 
         static constexpr uint8 kCall     = Table::getKindOf<Call>();

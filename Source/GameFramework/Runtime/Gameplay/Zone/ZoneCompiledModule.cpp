@@ -153,27 +153,27 @@ namespace sw
                 }
                 bool bOk = ConditionExpr::compile( def._condition, sourceName, outModule._condition, kBareCondition );
 
-                vector<ZoneParamSpec> listSpec;
-                outModule._pProcessor->collectParamSpecs( listSpec );
-                for ( const ZoneParamSpec& spec : listSpec )
+                vector<ZoneParamInfo> listInfo;
+                outModule._pProcessor->collectParamInfo( listInfo );
+                for ( const ZoneParamInfo& info : listInfo )
                 {
                     ZoneCompiledParam   param;
-                    const ZoneParamDef* pDef = def.findParam( hashed_string( spec._pName ) );
-                    param._name              = hashed_string( spec._pName );
-                    if ( pDef == nullptr && spec._pDefault == nullptr )
+                    const ZoneParamDef* pDef = def.findParam( hashed_string( info._pName ) );
+                    param._name              = hashed_string( info._pName );
+                    if ( pDef == nullptr && info._pDefault == nullptr )
                     {
-                        SW_LOG_ERROR_ID( "Zone.ParamMissing", "%#: kind '%#' needs parameter '%#'", sourceName, def._kind.c_str(), spec._pName );
+                        SW_LOG_ERROR_ID( "Zone.ParamMissing", "%#: kind '%#' needs parameter '%#'", sourceName, def._kind.c_str(), info._pName );
                         bOk = false;
                         continue;
                     }
-                    bOk = compileParam( spec._kind, pDef != nullptr ? string_view( pDef->_value ) : string_view( spec._pDefault ), sourceName, pCatalog, param ) && bOk;
+                    bOk = compileParam( info._kind, pDef != nullptr ? string_view( pDef->_value ) : string_view( info._pDefault ), sourceName, pCatalog, param ) && bOk;
                     outModule._listParam.push_back( std::move( param ) );
                 }
                 // 표 밖의 이름 — 할 일 모듈이면 동작이 읽는 값(식), 아니면 오타다.
                 for ( const ZoneParamDef& paramDef : def._listParam )
                 {
-                    const bool bDeclared = std::any_of( listSpec.begin(), listSpec.end(), [&paramDef]( const ZoneParamSpec& spec )
-                    { return paramDef._name == hashed_string( spec._pName ); } );
+                    const bool bDeclared = std::any_of( listInfo.begin(), listInfo.end(), [&paramDef]( const ZoneParamInfo& info )
+                    { return paramDef._name == hashed_string( info._pName ); } );
                     if ( bDeclared )
                         continue;
                     if ( outModule._pProcessor->supportsActionParams() == false )
