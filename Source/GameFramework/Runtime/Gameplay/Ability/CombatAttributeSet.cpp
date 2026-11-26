@@ -224,7 +224,7 @@ namespace sw
             hitEvent._target     = pOwner != nullptr ? pOwner->getHandle() : GameObjectHandle{};
             hitEvent._magnitude  = oldHealth - newHealth;
             (void)pAbilitySystem->handleGameplayEvent( hitEvent._eventTag, hitEvent ); // 피격 반응이 없어도 된다
-            // "game" 채널의 피해 알림(언리얼 `OnTakeAnyDamage`) — 피해가 체력에 닿는 곳이 여기 하나다(무기 · 근접 · 기믹 · 어빌리티).
+            // "game" 채널의 피해 알림(언리얼 `OnTakeAnyDamage`) — 피해가 체력에 닿는 곳이 여기 하나다(무기 · 근접 · 장치 · 어빌리티).
             DamageAppliedEvent applied;
             applied._instigator  = hitEvent._instigator;
             applied._target      = hitEvent._target;

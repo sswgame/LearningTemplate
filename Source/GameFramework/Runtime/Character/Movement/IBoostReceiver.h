@@ -14,7 +14,7 @@ namespace sw
     /**
      * @class IBoostReceiver
      * @brief 부스트를 받는 계약입니다. 이동 컴포넌트(바디 없는 탈것 등)가 포트 멤버로 내보내고(`REFLECT_INTERFACE( IBoostReceiver, _boostReceiverPort )`),
-     *        주는 쪽(부스트 패드)은 대상 오브젝트에서 `GameObject::findInterface<IBoostReceiver>()` 로 찾는다 — 범용 기믹이 구체 이동 클래스를 모르게 한다.
+     *        주는 쪽(부스트 패드)은 대상 오브젝트에서 `GameObject::findInterface<IBoostReceiver>()` 로 찾는다 — 범용 장치가 구체 이동 클래스를 모르게 한다.
      * @details 언리얼 UINTERFACE · 유니티 `GetComponent<IBoostable>()` 자리. 세기(최고 속도 보너스 · 밀기)는 받는 쪽 튜닝이 정하고 주는 쪽은 시간만 준다.
      */
     REFLECT( Interface, Category = "Movement", DisplayName = "Boost Receiver", Tooltip = "Contract of movement components that accept a timed boost (boost pads, pickups)" )

@@ -263,22 +263,22 @@
 		</entry>
 		<entry key="EdPlugin.AddNode" source="Add node">
 			<origins>
-				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/LogicCircuit/LogicCircuitGraphPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdPlugin.AutoLayout" source="Auto layout">
 			<origins>
-				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/LogicCircuit/LogicCircuitGraphPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdPlugin.ClearTarget" source="Clear target">
 			<origins>
-				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/LogicCircuit/LogicCircuitGraphPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdPlugin.ClickANodeToEditIt" source="Click a node to edit it">
 			<origins>
-				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/LogicCircuit/LogicCircuitGraphPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdPlugin.Delete" source="Delete">
@@ -288,7 +288,7 @@
 		</entry>
 		<entry key="EdPlugin.DeleteNode" source="Delete node">
 			<origins>
-				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/LogicCircuit/LogicCircuitGraphPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdPlugin.Down" source="Down">
@@ -303,7 +303,7 @@
 		</entry>
 		<entry key="EdPlugin.Invert" source="Invert">
 			<origins>
-				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/LogicCircuit/LogicCircuitGraphPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdPlugin.OpenABehaviorTreeFileBtXmlWith" source="Open a behavior tree file (*.bt.xml) with Open...">
@@ -313,7 +313,7 @@
 		</entry>
 		<entry key="EdPlugin.RemoveBrokenWires" source="Remove broken wires">
 			<origins>
-				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/LogicCircuit/LogicCircuitGraphPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdPlugin.SelectANodeToEditItRightClick"
@@ -322,15 +322,15 @@
 				<item>Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EdPlugin.SelectAnObjectThatHasAGimmickCircuit"
-		       source="Select an object that has a Gimmick Circuit component">
+		<entry key="EdPlugin.SelectAnObjectThatHasALogicCircuit"
+		       source="Select an object that has a Logic Circuit Circuit component">
 			<origins>
-				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/LogicCircuit/LogicCircuitGraphPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdPlugin.TargetObject" source="Target object">
 			<origins>
-				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/LogicCircuit/LogicCircuitGraphPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdPlugin.Task" source="Task">
@@ -341,7 +341,7 @@
 		<entry key="EdPlugin.TheNodeEditorCouldNotBeCreated" source="The node editor could not be created">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp</item>
-				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/LogicCircuit/LogicCircuitGraphPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdPlugin.Up" source="Up">
@@ -351,7 +351,7 @@
 		</entry>
 		<entry key="EdPlugin.UseSelectedObject" source="Use selected object">
 			<origins>
-				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/LogicCircuit/LogicCircuitGraphPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdPluginFormat.Live" source="Live: {liveRunnerName}">
@@ -368,12 +368,12 @@
 		<entry key="EdPluginFormat.NodesWiresProblems"
 		       source="{name} - {nodesCount, plural, one {# node} other {# nodes}}, {wiresCount, plural, one {# wire} other {# wires}}, {issueCount, plural, one {# problem} other {# problems}}">
 			<origins>
-				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/LogicCircuit/LogicCircuitGraphPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdPluginFormat.ParamDefault" source="Default: {hasDefault, select, yes {{value}} other {(none)}}">
 			<origins>
-				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/LogicCircuit/LogicCircuitGraphPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdPluginFormat.Problems" source="{issueCount, plural, one {# problem} other {# problems}}">
@@ -399,22 +399,22 @@
 		</entry>
 		<entry key="EdPluginWidget.From" source="From">
 			<origins>
-				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/LogicCircuit/LogicCircuitGraphPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdPluginWidget.Problems" source="Problems">
 			<origins>
-				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/LogicCircuit/LogicCircuitGraphPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdPluginWidget.To" source="To">
 			<origins>
-				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/LogicCircuit/LogicCircuitGraphPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdPluginWidget.Wires" source="Wires">
 			<origins>
-				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/LogicCircuit/LogicCircuitGraphPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdSchedule.ColumnActivity" source="Activity">

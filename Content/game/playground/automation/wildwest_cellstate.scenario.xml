@@ -28,7 +28,7 @@
 	<AdvanceSimulation frames="30"/> <!-- 풀린 상자가 선반에 앉는다(시간이 내용) -->
 	<Expect watch="Object.Y" target="LedgeCrate" atLeast="3.4"/>
 
-	<!-- ② 기믹: 상자 볼륨을 발동하고(RuntimeState), 문을 연다(자리). ③ NPC 가 셀 B 로 걸어간다 -->
+	<!-- ② 장치: 상자 볼륨을 발동하고(RuntimeState), 문을 연다(자리). ③ NPC 가 셀 B 로 걸어간다 -->
 	<DevCommand line="teleport Player -68 0.05 5"/>
 	<WaitUntil watch="Object.Property" target="CellChest" key="AutosaveTriggerComponent._fireCount" equals="1" timeoutFrames="30"/>
 	<WaitUntil watch="Autosave.SaveCount" atLeast="1" timeoutSeconds="5"/> <!-- 체크포인트 저장이 끝났다 — 아래 저장 수 판정과 겹치지 않게 -->

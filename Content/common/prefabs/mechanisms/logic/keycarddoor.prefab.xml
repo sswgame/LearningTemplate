@@ -1,0 +1,21 @@
+<?asset guid="16b40c4f74bcde3663e946e35c761d8a"?>
+<Prefab formatVersion="0" _base="guid:7e9784de72a577a92a99f316f93a6e29" name="KeycardDoor">
+	<PrefabOverrides>
+		<Override key="#93b8f1000cacd0ad">
+			<InteractableComponent _interactionID="SwipeKeycard" />
+		</Override>
+		<Override key="#afcc91cc53412045">
+			<LogicCircuitComponent>
+				<_listNode>
+					<LogicCircuitNodeDesc _id="swipe" _kind="Interaction" _params="" />
+					<LogicCircuitNodeDesc _id="hold" _kind="Pulse" _params="seconds=4" />
+					<LogicCircuitNodeDesc _id="door" _kind="Door" _params="openTime=0.4; closeTime=0.8; openOffset=0 3 0" />
+				</_listNode>
+				<_listWire>
+					<LogicCircuitWireDesc _from="swipe.OnUsed" _to="hold.In" _bInvert="false" />
+					<LogicCircuitWireDesc _from="hold.Out" _to="door.Open" _bInvert="false" />
+				</_listWire>
+			</LogicCircuitComponent>
+		</Override>
+	</PrefabOverrides>
+</Prefab>

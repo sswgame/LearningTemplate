@@ -539,8 +539,8 @@
 		       text="노드를 고르면 편집합니다. 캔버스를 오른쪽 클릭해 더합니다." />
 		<entry source="Select a socket in the list to edit it." text="목록에서 소켓을 골라 편집합니다." />
 		<entry source="Select an NPC on the left" text="왼쪽에서 NPC 를 고르세요" />
-		<entry source="Select an object that has a Gimmick Circuit component"
-		       text="기믹 회로 컴포넌트가 있는 오브젝트를 고릅니다" />
+		<entry source="Select an object that has a Logic Circuit Circuit component"
+		       text="논리 회로 컴포넌트가 있는 오브젝트를 고릅니다" />
 		<entry source="Select an object whose mesh component uses a .mesh asset, then press Use Selection."
 		       text=".mesh 에셋을 쓰는 메시 컴포넌트가 있는 오브젝트를 고른 뒤 선택 사용을 누르세요." />
 		<entry source="Select an object with an AbilitySystemComponent, or pick one above."

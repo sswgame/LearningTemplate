@@ -27,7 +27,7 @@
 #include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceDatabase.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterAppearanceComponent.h"
-#include "GameFramework/Runtime/Gameplay/Gimmick/Movement/InterpToMovementComponent.h"
+#include "GameFramework/Runtime/Gameplay/Mechanism/Movement/InterpToMovementComponent.h"
 #include "GameFramework/Runtime/Gameplay/Progression/PlayerStatsSubsystem.h"
 
 #include "Games/Playground/Shooter3D/ShooterAutoAimControllerComponent.h"

@@ -94,8 +94,8 @@
 		<entry key="EdPlugin.SelectANodeToEditItRightClick"
 		       text="노드를 고르면 편집합니다. 캔버스를 오른쪽 클릭해 더합니다."
 		       sourceHash="4609bfba81986750" />
-		<entry key="EdPlugin.SelectAnObjectThatHasAGimmickCircuit"
-		       text="기믹 회로 컴포넌트가 있는 오브젝트를 고릅니다"
+		<entry key="EdPlugin.SelectAnObjectThatHasALogicCircuit"
+		       text="논리 회로 컴포넌트가 있는 오브젝트를 고릅니다"
 		       sourceHash="2b3af1b8adec3a10" />
 		<entry key="EdPlugin.TargetObject" text="대상 오브젝트" sourceHash="385e62428acaa50f" />
 		<entry key="EdPlugin.Task" text="작업" sourceHash="03ee3cfb0919c62c" />

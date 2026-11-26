@@ -1,7 +1,7 @@
 /**
  * @file AbilityDebugSections.cpp
  * @brief 런타임 Ability 디버거(HUD 섹션 `ability`)입니다 — 게임 창에서 에디터 Ability Debugger 와 같은 것을 읽는다.
- * @details 걸린 이펙트마다 남은 시간 · 스택 · 건 길(영역 · 상호작용 · 기믹 — `AbilityEffectContext::_sourceName`), 멈춤(걸린 동안의 태그 조건) 표시,
+ * @details 걸린 이펙트마다 남은 시간 · 스택 · 건 길(영역 · 상호작용 · 장치 — `AbilityEffectContext::_sourceName`), 멈춤(걸린 동안의 태그 조건) 표시,
  *          소유 태그, 그리고 최근 적용 · 거부(까닭) · 제거(원인) 기록. 읽기만 하고 꺼져 있으면 불리지 않는다.
  */
 #include "pch.h"

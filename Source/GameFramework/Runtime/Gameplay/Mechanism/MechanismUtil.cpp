@@ -1,0 +1,139 @@
+#include "pch.h"
+
+#include "GameFramework/Runtime/Gameplay/Mechanism/MechanismUtil.h"
+
+#include "Core/String/Name/TagID.h"
+
+#include "Engine/Character/Hit/CharacterHit.h"
+#include "Engine/Destruction/Fracture/FractureAsset.h"
+#include "Engine/Destruction/Fracture/FractureBaseComponent.h"
+#include "Engine/Object/Component/Component.h"
+#include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
+
+#include "GameFramework/Runtime/Foundation/Event/GameEvents.h"
+#include "GameFramework/Runtime/Foundation/Presentation/IAbilityCueSink.h"
+#include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
+#include "GameFramework/Runtime/Gameplay/Ability/AbilityCatalog.h"
+#include "GameFramework/Runtime/Gameplay/Interaction/InteractableComponent.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/IItemReceiver.h"
+#include "GameFramework/Runtime/Gameplay/Mechanism/MechanismEvents.h"
+#include "GameFramework/Runtime/Gameplay/Mechanism/Trigger/LogicCircuitSensorComponent.h"
+
+namespace sw
+{
+    void MechanismUtil::setBodyActive( GameObject& object, bool bActive, const Component* pKeep )
+    {
+        const GameObjectManager* pManager = object.getManager(); // 틱에서도 부른다 — 켜고 끄기는 명령 버퍼로 틱 뒤에 한다
+        if ( pManager == nullptr )
+            return;
+        // 몸은 씬 컴포넌트(콜라이더, 메시, 스프라이트, 라이트)이다. 논리 컴포넌트(센서, 회로, 이 장치)는 켜 둔 채로 시간을 센다.
+        const GameObjectHandle handle = object.getHandle();
+        const uint64           keepID = pKeep != nullptr ? pKeep->getComponentID() : 0;
+        pManager->executeOrDeferPostTickOnScene( [handle, keepID, bActive]( GameObjectManager& sceneManager )
+        {
+            GameObject* pObject = sceneManager.resolveGameObject( handle );
+            if ( pObject == nullptr )
+                return;
+            for ( Component* pComp : pObject->getComponents() )
+            {
+                const bool bToggleSceneComponent = pComp != nullptr && pComp->isSceneComponent() && pComp->getComponentID() != keepID;
+                if ( bToggleSceneComponent )
+                    pComp->setActive( bActive );
+            }
+        } );
+    }
+
+    void MechanismUtil::setInteractableEnabled( GameObject& object, bool bEnabled )
+    {
+        const GameObjectManager* pManager = object.getManager(); // 틱에서도 부른다 — 명령 버퍼로 틱 뒤에 한다
+        if ( pManager == nullptr )
+            return;
+        const GameObjectHandle handle = object.getHandle();
+        pManager->executeOrDeferPostTickOnScene( [handle, bEnabled]( GameObjectManager& sceneManager )
+        {
+            GameObject*            pObject       = sceneManager.resolveGameObject( handle );
+            InteractableComponent* pInteractable = pObject != nullptr ? pObject->getComponent<InteractableComponent>() : nullptr;
+            if ( pInteractable != nullptr )
+                pInteractable->setEnabled( bEnabled );
+        } );
+    }
+
+    bool MechanismUtil::giveItem( const GameObject& giver, const GameObject& target, const hashed_string& item, int32 count )
+    {
+        if ( item.empty() || count <= 0 )
+            return false;
+        IItemReceiver* const pReceiver = IItemReceiver::findForTarget( target );
+        if ( pReceiver != nullptr && pReceiver->receiveItem( item, count ) == ItemGrantResult::Granted )
+            return true;
+        const utf8* pWhy = pReceiver == nullptr ? "no bag on it or its controller" : "its bag is full"; // 가방 없음은 받는 쪽(가방 컴포넌트)이 없는 것이다
+        SW_LOG_WARNING_ID( "MechanismUtil.ItemNotGranted", "'%#' could not give %# x '%#' to '%#' (%#) - the item stays", giver.getName().c_str(), count, item.c_str(), target.getName().c_str(), pWhy );
+        return false;
+    }
+
+    void MechanismUtil::sendCue( const GameObject& source, const hashed_string& cue, const float3& position, float32 magnitude, GameObjectHandle target )
+    {
+        MechanismCueEvent event;
+        event._source    = source.getHandle();
+        event._target    = target;
+        event._cue       = cue;
+        event._position  = position;
+        event._magnitude = magnitude;
+        GameEventUtil::send( event );
+        const GameObjectManager* pManager = source.getManager(); // 폭발 · 파괴 단계는 틱에서 부른다 — 서비스 조회와 스폰은 틱 뒤 게임 스레드에서 한다
+        if ( pManager == nullptr || cue.empty() )
+            return;
+        pManager->executeOrDeferPostTickOnScene( [cue, position]( GameObjectManager& sceneManager )
+        {
+            // 연출은 클라이언트 전용 창구가 낸다 — 전용 서버는 창구가 없어 이벤트만 낸다(`AbilitySystemComponent::playCueDef` 와 같은 길).
+            IAbilityCueSink* const pCueSink = game::findSubsystem<IAbilityCueSink>();
+            const AbilityCatalog*  pCatalog = pCueSink != nullptr ? game::findSubsystem<const AbilityCatalog>() : nullptr;
+            if ( pCatalog == nullptr )
+                return;
+            // 이름은 이미 intern 된 글이라 태그 표에 올리지 않고 id 만 구한다(`TagID::request` 는 표를 고친다).
+            const string_view             cueText = cue.view();
+            const AbilityPresentationDef* pCueDef = pCatalog->findCue( TagID{ TagID::computeID( cueText.data(), cueText.size() ), cue.c_str() } );
+            if ( pCueDef != nullptr )
+                pCueSink->presentCue( sceneManager, *pCueDef, position + pCueDef->_offset );
+        } );
+    }
+
+    void MechanismUtil::applyDamage( const GameObject& target, const GameObject* pSource, const hashed_string& kind, float32 amount )
+    {
+        if ( amount <= 0.0f )
+            return;
+        const GameObjectManager* pManager = target.getManager(); // 틱에서도 부른다 — 피해는 명령 버퍼로 틱 뒤에 넣는다
+        if ( pManager == nullptr )                               // 씬 밖 — 맞음 구독(`onRegister`)이 없으니 센서만 받는다
+        {
+            LogicCircuitSensorComponent* pSensor = target.getComponent<LogicCircuitSensorComponent>();
+            if ( pSensor != nullptr )
+                pSensor->applyDamage( amount );
+            return;
+        }
+        const GameObjectHandle targetHandle = target.getHandle();
+        const GameObjectHandle sourceHandle = pSource != nullptr ? pSource->getHandle() : GameObjectHandle{};
+        pManager->executeOrDeferPostTickOnScene( [targetHandle, sourceHandle, kind, amount]( GameObjectManager& sceneManager )
+        {
+            GameObject* pTarget = sceneManager.resolveGameObject( targetHandle );
+            if ( pTarget == nullptr )
+                return;
+            LogicCircuitSensorComponent* pSensor = pTarget->getComponent<LogicCircuitSensorComponent>();
+            if ( pSensor != nullptr )
+                pSensor->applyDamage( amount );
+            // 체력은 무기 · 근접과 같은 맞음 길로 깎는다(언리얼 ApplyDamage → TakeDamage) — 받는 체력 원천(`AbilitySystemComponent::receiveHit`)이 피해를 정한다.
+            // 받는 쪽이 없으면(체력도 센서도 없는 소품) 조용히 지나간다: 범위 · 점유자 피해는 대상을 영역이 고르고, 무기 광선이 벽을 맞힌 것과 같다.
+            HitInfo hit;
+            hit._pInstigator = sceneManager.resolveGameObject( sourceHandle );
+            hit._kind        = kind;
+            hit._damage      = amount;
+            CharacterRayHit::deliverHit( *pTarget, hit );
+        } );
+    }
+
+    void MechanismUtil::breakAtCenter( FractureBaseComponent& fracture, const float3& center, float32 strain, float32 impulse )
+    {
+        const FractureAsset* pAsset = fracture.findAsset();
+        const float32        radius = pAsset != nullptr ? float3::getDistance( pAsset->_boundsMin, pAsset->_boundsMax ) : 2.0f;
+        fracture.applyRadialDamageAtWorld( center, radius, strain, impulse );
+    }
+} // namespace sw

@@ -18,8 +18,8 @@
 #include "GameFramework/Runtime/Foundation/Event/GameEvents.h"
 #include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityEvents.h"
-#include "GameFramework/Runtime/Gameplay/Gimmick/GimmickEvents.h"
 #include "GameFramework/Runtime/Gameplay/Interaction/InteractionAuthority.h"
+#include "GameFramework/Runtime/Gameplay/Mechanism/MechanismEvents.h"
 #include "GameFramework/Runtime/Gameplay/Quest/QuestCatalog.h"
 #include "GameFramework/Runtime/Gameplay/Quest/QuestLogComponent.h"
 
@@ -89,7 +89,7 @@ SW_TEST_CASE( QuestLogComponentTest, CountsOnlyWhatItsOwnPawnDid )
     GameEventUtil::send( completed );
     SW_EXPECT_TRUE( log.getStatus( hashed_string( "shrine" ) ) == QuestStatus::Completed );
 
-    GimmickCueEvent cue;
+    MechanismCueEvent cue;
     cue._cue    = hashed_string( "Cue.Scare" );
     cue._target = pStranger->getHandle();
     GameEventUtil::send( cue ); // 남이 트리거에 들어갔다 — 세지 않는다

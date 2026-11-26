@@ -1,6 +1,6 @@
 /**
  * @file GameplayDebugTarget.h
- * @brief 런타임 게임플레이 디버거(디버그 HUD 섹션 `quest` · `progress` · `gimmick` · `npc` · `contacts` · `movement` · `ability` · `interaction`, 엔진의 `action` 은 대상이 없다)가 볼 대상입니다.
+ * @brief 런타임 게임플레이 디버거(디버그 HUD 섹션 `quest` · `progress` · `circuit` · `npc` · `contacts` · `movement` · `ability` · `interaction`, 엔진의 `action` 은 대상이 없다)가 볼 대상입니다.
  * @details 언리얼 Gameplay Debugger 의 카테고리 + 대상 고르기(`gdt.SelectActor`)와 같은 나눔이다 — 섹션마다 자기 폴더에서 `SW_DEBUG_HUD_SECTION` 으로 등록하고(키트도 같은 길),
  *          대상은 디버그 섹션 표(`DebugHUDRegistry::setTarget`)에 핸들 하나다 — 개발 명령 `debug.target <이름|#id>` 와 씬 뷰 HUD(에디터 선택을 따른다)가 정한다. 정하지 않았거나 그 오브젝트에 그 컴포넌트가 없으면 활성 씬에서 그 컴포넌트를 가진 오브젝트 가운데 id 가 가장 작은 것이다(순회 차례에 기대지 않는다).
  *          섹션은 HUD 가 보이고 그 섹션이 켜졌을 때만(4 Hz) 불리고 읽기만 한다 — 꺼져 있으면 비용이 없다. 줄 수는 `kMaxLines` 로 묶는다(고정 용량).

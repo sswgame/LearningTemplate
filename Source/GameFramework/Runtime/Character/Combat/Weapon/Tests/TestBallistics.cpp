@@ -7,7 +7,7 @@
 
 #include "GameFramework/Runtime/Character/Combat/Weapon/Ballistics.h"
 
-// BallisticsTest — 앞 겨누기 · 포물선 발사 방향 · 낙차. 물리 씬 없이 설정된 중력만 읽는다(nogpu). 포탑이 셋을 묶어 쓰는 길은 Gameplay/Gimmick/Tests/TestTurret.cpp.
+// BallisticsTest — 앞 겨누기 · 포물선 발사 방향 · 낙차. 물리 씬 없이 설정된 중력만 읽는다(nogpu). 포탑이 셋을 묶어 쓰는 길은 Gameplay/Mechanism/Combat/Tests/TestTurret.cpp.
 
 using namespace sw;
 

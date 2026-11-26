@@ -17,9 +17,9 @@ namespace sw
      * @class NoiseEmitterComponent
      * @brief 소리를 냅니다. `emit` 로 직접 낼 수 있고, `_interval` 마다 낼 수 있으며(기계), 같은 오브젝트의 센서에 새로 올라선 것이 있을 때도 냅니다(삐걱이는 마루).
      * @details 반경은 같은 오브젝트의 `AIStimulusSourceComponent::reportNoise` 로 걸어 AI 감각이 색인으로 듣고(필수 — 없으면 시작에서 오류), 다음 프레임 틱에서 거둔다.
-     *          들리는 소리는 연출 신호 "Noise"(크기 = 반경)로 낸다(`GimmickUtil::sendCue` — 큐 표가 소리 · 프리팹을 정한다).
+     *          들리는 소리는 연출 신호 "Noise"(크기 = 반경)로 낸다(`MechanismUtil::sendCue` — 큐 표가 소리 · 프리팹을 정한다).
      */
-    REFLECT( Category = "Gimmick", DisplayName = "Noise Emitter", Tooltip = "Emits noise events AI hearing can use (periodic, on step, or scripted)" )
+    REFLECT( Category = "Mechanism", DisplayName = "Noise Emitter", Tooltip = "Emits noise events AI hearing can use (periodic, on step, or scripted)" )
     class SW_GF_API NoiseEmitterComponent : public Component
     {
     public:

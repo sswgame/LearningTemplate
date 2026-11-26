@@ -3920,7 +3920,7 @@
 		       sourceHash="c55ac6cff029edfb" />
 		<entry key="GM Tool" text="GM 도구" sourceHash="182c1e31ac2d0a6d" />
 		<entry key="Game" text="게임" sourceHash="b568a67e05a19907" />
-		<entry key="Gimmick Graph" text="기믹 그래프" sourceHash="8ade24f69ad468e4" />
+		<entry key="Logic Circuit Graph" text="논리 회로 그래프" sourceHash="8ade24f69ad468e4" />
 		<entry key="Global Variables" text="전역 변수" sourceHash="b27a2fd4b0389bc7" />
 		<entry key="Hierarchy" text="계층" sourceHash="36b7d22c88c2b948" />
 		<entry key="Hierarchy / Skeleton View" text="계층 / 스켈레톤 보기" sourceHash="c48a10a0462f47f9" />
@@ -3986,7 +3986,7 @@
 		<entry key="Open the character editor panel"
 		       text="캐릭터 편집 패널을 엽니다"
 		       sourceHash="d69cd45c0ec1732c" />
-		<entry key="Open the gimmick graph panel" text="기믹 그래프 패널을 엽니다" sourceHash="177db3f3b1f9a37b" />
+		<entry key="Open the logic circuit graph panel" text="논리 회로 그래프 패널을 엽니다" sourceHash="177db3f3b1f9a37b" />
 		<entry key="Open the material graph editor"
 		       text="머티리얼 그래프 편집기를 엽니다"
 		       sourceHash="4d0d53286b4789c0" />
@@ -4016,8 +4016,8 @@
 		<entry key="Opens the editor preferences window"
 		       text="에디터 환경설정 창을 엽니다"
 		       sourceHash="906dceecafb06954" />
-		<entry key="Opens the gimmick circuit graph window"
-		       text="기믹 회로 그래프 창을 엽니다"
+		<entry key="Opens the logic circuit graph window"
+		       text="논리 회로 그래프 창을 엽니다"
 		       sourceHash="596c0e820dae06af" />
 		<entry key="Opens the material graph window (node canvas, live preview, save)"
 		       text="머티리얼 그래프 창을 엽니다(노드 캔버스, 실시간 미리 보기, 저장)"

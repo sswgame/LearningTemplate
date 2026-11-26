@@ -31,7 +31,7 @@ namespace sw::editor
     struct AbilityDebugEffectRow
     {
         string  _name{};
-        string  _source{};              ///< 건 길(`AbilityEffectContext::_sourceName` — 영역 · 상호작용 · 기믹). 비면 어빌리티 · 코드
+        string  _source{};              ///< 건 길(`AbilityEffectContext::_sourceName` — 영역 · 상호작용 · 장치). 비면 어빌리티 · 코드
         float32 _remainingTime{ 0.0f }; ///< 무한 이펙트이면 0
         int32   _stackCount{ 1 };
         bool    _bInfinite{ false };

@@ -1,0 +1,35 @@
+<?asset guid="76d6bef354f378c758b73f4139e82c59"?>
+<Prefab formatVersion="0" name="SqueakyFloor">
+	<GameObject _schemaVersion="0" _name="SqueakyFloor" _bActive="true">
+		<_listComponent>
+			<BoxCollider2DComponent _localID="17134987369502387536" _componentName="BoxCollider2DComponent"
+			                        _bActive="true"
+			                        _localPosition="0,0,0"
+			                        _localRotation="0,0,0"
+			                        _localScale="1,1,1"
+			                        _attachOwner="None"
+			                        _attachOwnerID="0"
+			                        _attachComponent="None"
+			                        _offsetPos="0,0"
+			                        _offsetScale="2,0.4"
+			                        _layer="Default"
+			                        _bContinuous="false"
+			                        _bTrigger="true" />
+			<LogicCircuitSensorComponent _localID="5906677949702648734" _componentName="LogicCircuitSensorComponent"
+			                        _bActive="true"
+			                        _defaultWeight="1"
+			                        _bCountTriggers="false">
+				<_requiredTags>
+					<_listTag />
+				</_requiredTags>
+				<_listOccupant />
+			</LogicCircuitSensorComponent>
+			<NoiseEmitterComponent _localID="3368014348673673199" _componentName="NoiseEmitterComponent"
+			                       _bActive="true"
+			                       _radius="8"
+			                       _interval="0"
+			                       _bOnStep="true" />
+			<AIStimulusSourceComponent _localID="7417170765597658317" _componentName="AIStimulusSourceComponent" _bActive="true" _team="0" _bVisible="false" />
+		</_listComponent>
+	</GameObject>
+</Prefab>

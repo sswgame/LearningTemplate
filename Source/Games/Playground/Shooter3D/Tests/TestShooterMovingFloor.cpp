@@ -11,7 +11,7 @@
 #include "Engine/Physics/Component/RigidBodyComponent.h"
 
 #include "GameFramework/Runtime/Character/Control/Controller/RemoteControllerComponent.h"
-#include "GameFramework/Runtime/Gameplay/Gimmick/Movement/InterpToMovementComponent.h"
+#include "GameFramework/Runtime/Gameplay/Mechanism/Movement/InterpToMovementComponent.h"
 
 #include "Games/Playground/Shooter3D/ShooterBodyMovementComponent.h"
 #include "Games/Playground/Shooter3D/Tests/ShooterServerTestWorld.h"

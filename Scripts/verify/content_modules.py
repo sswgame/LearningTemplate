@@ -145,7 +145,7 @@ def find_problems(pack_root: str, pack_folder: Path, set_module: set[str], map_o
 def require_content_modules(project_root: Path, inputs_path: Path) -> int:
     """어긋남이 있으면 `GeneratorError`. 본 팩 수를 돌려줍니다.
 
-    도메인마다 쓸 수 있는 모듈: `game/<팩>` 은 그 게임이 가진 것, `common/` 은 모든 게임이 가진 것(어느 게임이 쓸지 정적으로 알 수 없다 — 기믹 프리팹은
+    도메인마다 쓸 수 있는 모듈: `game/<팩>` 은 그 게임이 가진 것, `common/` 은 모든 게임이 가진 것(어느 게임이 쓸지 정적으로 알 수 없다 — 장치 프리팹은
     코드가 이름으로 찾는다), `editor/` 는 엔진과 `EditorModule`, `engine/` 은 엔진만(모든 호스트 — 서버 · 도구도 읽는다).
     """
     source_root = project_root / "Source"

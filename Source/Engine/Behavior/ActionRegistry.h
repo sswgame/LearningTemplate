@@ -2,7 +2,7 @@
  * @file ActionRegistry.h
  * @brief 동작의 등록 줄(`ActionEntry`)과 이름 → 동작 표, 등록 매크로 `SW_GAME_ACTION`, 동작 호출 추적입니다. 읽은 호출을 들기만 하는 쪽은 `GameActionCall.h` 만 본다.
  * @details 칸은 리플렉션 구조체라 고정 칸이 없고, 편집기는 등록을 읽어 목록과 칸을 저절로 보인다.
- *          어빌리티 이펙트(복제 · 예측), 기믹 회로 노드(스텝 상태), `EditorCommandRegistry` · `DevCommandRegistry`(게임플레이가 아니다)는 여기에 합치지 않는다.
+ *          어빌리티 이펙트(복제 · 예측), 논리 회로 노드(스텝 상태), `EditorCommandRegistry` · `DevCommandRegistry`(게임플레이가 아니다)는 여기에 합치지 않는다.
  */
 #pragma once
 #include "Core/Container/string.h"

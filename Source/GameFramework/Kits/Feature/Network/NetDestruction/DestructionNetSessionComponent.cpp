@@ -22,7 +22,7 @@
 #include "Engine/Scene/SceneObjectHash.h"
 
 #include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
-#include "GameFramework/Runtime/Gameplay/Gimmick/Combat/ExplosiveBarrelComponent.h"
+#include "GameFramework/Runtime/Gameplay/Mechanism/Combat/ExplosiveBarrelComponent.h"
 
 #include <algorithm>
 
@@ -137,7 +137,7 @@ namespace sw
 
         if ( side == DestructionNetSide::Client )
         {
-            // 피해를 내는 기믹은 서버의 게임플레이다 — 클라이언트는 사건만 받는다.
+            // 피해를 내는 장치는 서버의 게임플레이다 — 클라이언트는 사건만 받는다.
             // 끄기가 등록을 바꿀 수 있어 먼저 모은다.
             vector<ExplosiveBarrelComponent*> listBarrel;
             for ( ExplosiveBarrelComponent* pBarrel : manager.getComponentRegistry().getAll<ExplosiveBarrelComponent>() )

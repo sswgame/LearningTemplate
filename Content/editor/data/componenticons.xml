@@ -20,7 +20,7 @@
 		<EditorComponentCategoryIcon _category="Environment" _icon="Globe" _color="Environment" />
 		<EditorComponentCategoryIcon _category="Vehicle" _icon="Vehicle" _color="Neutral" />
 		<EditorComponentCategoryIcon _category="Interaction" _icon="Trigger" _color="Neutral" />
-		<EditorComponentCategoryIcon _category="Gimmick" _icon="Trigger" _color="Neutral" />
+		<EditorComponentCategoryIcon _category="Mechanism" _icon="Trigger" _color="Neutral" />
 		<EditorComponentCategoryIcon _category="Cinematics" _icon="Sequence" _color="Neutral" />
 		<EditorComponentCategoryIcon _category="Gameplay" _icon="Ability" _color="Neutral" />
 	</_listCategory>

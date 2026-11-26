@@ -1,6 +1,6 @@
 <?asset guid="edf8d133ac5a30237b852c3866350664"?>
 <Scene formatVersion="0" name="MaterialLineup">
-	<!-- 머티리얼 라이브러리 줄 세우기(시나리오 automation/surfacelibrary) — 줄 0 일상 물건 · 줄 1 소품 · 줄 2 배경 · 줄 3 기믹. 바닥은 콘크리트 프리셋이라 날씨(engine/materials/weather.matparams.xml)를 바꾸면 웅덩이 · 눈이 함께 보인다. 프리셋은 engine/materials/library/. -->
+	<!-- 머티리얼 라이브러리 줄 세우기(시나리오 automation/surfacelibrary) — 줄 0 일상 물건 · 줄 1 소품 · 줄 2 배경 · 줄 3 장치. 바닥은 콘크리트 프리셋이라 날씨(engine/materials/weather.matparams.xml)를 바꾸면 웅덩이 · 눈이 함께 보인다. 프리셋은 engine/materials/library/. -->
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0" _addToWorldBudgetMicroseconds="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
 	</SceneSettings>
@@ -173,57 +173,57 @@
 				</_listComponent>
 			</GameObject>
 		</entity>
-		<entity id="25" name="GimmickInteractHighlight">
-			<GameObject _schemaVersion="0" _name="GimmickInteractHighlight" _bActive="true">
+		<entity id="25" name="MechanismInteractHighlight">
+			<GameObject _schemaVersion="0" _name="MechanismInteractHighlight" _bActive="true">
 				<_listComponent>
 					<MeshComponent _localID="163493842152903304" _localPosition="-6.30,0.6,6.60" _localRotation="0,0,0" _localScale="1.2,1.2,1.2" _attachOwner="None" _attachComponent="None" _meshID="Sphere" _materialPath="guid:c376e8defd72060f65208b78e80449f8" _boundsRadius="0.7" />
 				</_listComponent>
 			</GameObject>
 		</entity>
-		<entity id="26" name="GimmickNeon">
-			<GameObject _schemaVersion="0" _name="GimmickNeon" _bActive="true">
+		<entity id="26" name="MechanismNeon">
+			<GameObject _schemaVersion="0" _name="MechanismNeon" _bActive="true">
 				<_listComponent>
 					<MeshComponent _localID="163493842152903304" _localPosition="-4.50,0.6,6.60" _localRotation="0,0,0" _localScale="0.6,0.6,0.6" _attachOwner="None" _attachComponent="None" _meshID="Capsule" _materialPath="guid:0d17e535f7f2614dfe24c634313e970a" _boundsRadius="1" />
 				</_listComponent>
 			</GameObject>
 		</entity>
-		<entity id="27" name="GimmickScreen">
-			<GameObject _schemaVersion="0" _name="GimmickScreen" _bActive="true">
+		<entity id="27" name="MechanismScreen">
+			<GameObject _schemaVersion="0" _name="MechanismScreen" _bActive="true">
 				<_listComponent>
 					<MeshComponent _localID="163493842152903304" _localPosition="-2.70,0.55,6.60" _localRotation="0,0.6,0" _localScale="1.1,1.1,1.1" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="guid:0347ca82af894588a26e3ebff6d3667d" _boundsRadius="1" />
 				</_listComponent>
 			</GameObject>
 		</entity>
-		<entity id="28" name="GimmickLava">
-			<GameObject _schemaVersion="0" _name="GimmickLava" _bActive="true">
+		<entity id="28" name="MechanismLava">
+			<GameObject _schemaVersion="0" _name="MechanismLava" _bActive="true">
 				<_listComponent>
 					<MeshComponent _localID="163493842152903304" _localPosition="-0.90,0.55,6.60" _localRotation="0,0.6,0" _localScale="1.1,1.1,1.1" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="guid:029e99364e4ee6d12ee242f6ff0b16df" _boundsRadius="1" />
 				</_listComponent>
 			</GameObject>
 		</entity>
-		<entity id="29" name="GimmickIce">
-			<GameObject _schemaVersion="0" _name="GimmickIce" _bActive="true">
+		<entity id="29" name="MechanismIce">
+			<GameObject _schemaVersion="0" _name="MechanismIce" _bActive="true">
 				<_listComponent>
 					<MeshComponent _localID="163493842152903304" _localPosition="0.90,0.6,6.60" _localRotation="0,0,0" _localScale="1.2,1.2,1.2" _attachOwner="None" _attachComponent="None" _meshID="Sphere" _materialPath="guid:2c767795272780d23e7c8f00e56ccbac" _boundsRadius="0.7" />
 				</_listComponent>
 			</GameObject>
 		</entity>
-		<entity id="30" name="GimmickHologram">
-			<GameObject _schemaVersion="0" _name="GimmickHologram" _bActive="true">
+		<entity id="30" name="MechanismHologram">
+			<GameObject _schemaVersion="0" _name="MechanismHologram" _bActive="true">
 				<_listComponent>
 					<MeshComponent _localID="163493842152903304" _localPosition="2.70,0.6,6.60" _localRotation="0,0,0" _localScale="1.2,1.2,1.2" _attachOwner="None" _attachComponent="None" _meshID="Sphere" _materialPath="guid:f08db4e9d34e1bc88d370d7cab7247a7" _boundsRadius="0.7" />
 				</_listComponent>
 			</GameObject>
 		</entity>
-		<entity id="31" name="GimmickForceField">
-			<GameObject _schemaVersion="0" _name="GimmickForceField" _bActive="true">
+		<entity id="31" name="MechanismForceField">
+			<GameObject _schemaVersion="0" _name="MechanismForceField" _bActive="true">
 				<_listComponent>
 					<MeshComponent _localID="163493842152903304" _localPosition="4.50,0.6,6.60" _localRotation="0,0,0" _localScale="1.2,1.2,1.2" _attachOwner="None" _attachComponent="None" _meshID="Sphere" _materialPath="guid:258cd08bd410b068b7bb4a9327d4abdf" _boundsRadius="0.7" />
 				</_listComponent>
 			</GameObject>
 		</entity>
-		<entity id="32" name="GimmickDissolve">
-			<GameObject _schemaVersion="0" _name="GimmickDissolve" _bActive="true">
+		<entity id="32" name="MechanismDissolve">
+			<GameObject _schemaVersion="0" _name="MechanismDissolve" _bActive="true">
 				<_listComponent>
 					<MeshComponent _localID="163493842152903304" _localPosition="6.30,0.6,6.60" _localRotation="0,0,0" _localScale="1.2,1.2,1.2" _attachOwner="None" _attachComponent="None" _meshID="Sphere" _materialPath="guid:c010376975a88215be9e8ded89502d5f" _boundsRadius="0.7" />
 				</_listComponent>

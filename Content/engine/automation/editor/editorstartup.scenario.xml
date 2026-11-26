@@ -10,7 +10,7 @@
 	<Expect watch="Editor.HasPanel" key="hierarchy" equals="1"/>
 	<Expect watch="Editor.HasPanel" key="inspector" equals="1"/>
 	<Expect watch="Editor.HasPanel" key="test_runner" equals="1"/>
-	<Expect watch="Editor.HasPanel" key="gimmick_graph" equals="1"/>
+	<Expect watch="Editor.HasPanel" key="logic_circuit_graph" equals="1"/>
 	<Expect watch="Editor.HasPanel" key="behavior_tree" equals="1"/>
 	<Expect watch="Editor.HasPanel" key="charactereditor.main" equals="1"/>
 	<Expect watch="Editor.HasPanel" key="meshmodifiers.stack" equals="1"/>

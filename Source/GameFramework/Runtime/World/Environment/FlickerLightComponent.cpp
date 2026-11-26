@@ -21,7 +21,7 @@ namespace sw
      * @brief 같은 오브젝트의 `LightComponent` 세기를 문자열 패턴으로 깜빡입니다. 퀘이크 라이트 스타일이며 'a' 는 0, 'm' 은 1, 'z' 는 2배이고, 속도는 `_rate` 글자/초입니다.
      * @details 스텝 수로 글자를 고르므로 결정적이다. 같은 스텝이면 같은 밝기가 나온다. 처음 세기를 기준으로 곱하고, 바뀔 때만 틱 뒤에 쓴다.
      */
-    REFLECT( Category = "Gimmick", DisplayName = "Flicker Light", Tooltip = "Drives the light intensity from a Quake-style pattern string" )
+    REFLECT( Category = "Mechanism", DisplayName = "Flicker Light", Tooltip = "Drives the light intensity from a Quake-style pattern string" )
     class FlickerLightComponent : public Component
     {
     public:

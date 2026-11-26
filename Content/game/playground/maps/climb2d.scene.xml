@@ -49,7 +49,7 @@
 							</PhysicsShapeDesc2D>
 						</_listShape>
 					</RigidBody2DComponent>
-					<GimmickSensorComponent _localID="5906677949702648734" _defaultWeight="1" _bCountTriggers="false" />
+					<LogicCircuitSensorComponent _localID="5906677949702648734" _defaultWeight="1" _bCountTriggers="false" />
 					<ClimbZoneComponent _localID="9868195776723156160" _axis="0,1,0" _climbSpeed="3" _lateralSpeed="0" _bSwing="false" />
 				</_listComponent>
 			</GameObject>

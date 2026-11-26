@@ -1,0 +1,52 @@
+<?asset guid="2d5e8a02f58b12a6c8521e715c37ca99"?>
+<Prefab formatVersion="0" name="MovingPlatform">
+	<GameObject _schemaVersion="0" _name="MovingPlatform" _bActive="true">
+		<_listComponent>
+			<BoxCollider2DComponent _localID="17134987369502387536" _componentName="BoxCollider2DComponent"
+			                        _bActive="true"
+			                        _localPosition="0,0,0"
+			                        _localRotation="0,0,0"
+			                        _localScale="1,1,1"
+			                        _attachOwner="None"
+			                        _attachOwnerID="0"
+			                        _attachComponent="None"
+			                        _offsetPos="0,0"
+			                        _offsetScale="3,0.5"
+			                        _layer="Default"
+			                        _bContinuous="false"
+			                        _bTrigger="false" />
+			<MeshComponent _localID="163493842152903304" _componentName="MeshComponent"
+			               _bActive="true"
+			               _localPosition="0,0,0"
+			               _localRotation="0,0,0"
+			               _localScale="3,0.5,3"
+			               _attachOwner="None"
+			               _attachOwnerID="0"
+			               _attachComponent="#edcbb43a3dfead50"
+			               _meshID="Cube"
+			               _materialPath="guid:0e23c2ee4018be638b51655cf03239d2"
+			               _boundsRadius="0.866"
+			               _gpuSpinSeed="0"
+			               _bVisible="true" />
+			<SplineComponent _localID="1299529188794216424" _componentName="SplineComponent"
+			                 _bActive="true"
+			                 _samplesPerSegment="16"
+			                 _type="Linear"
+			                 _bClosed="false">
+				<_listControlPoint>
+					<item>0,0,0</item>
+					<item>6,0,0</item>
+				</_listControlPoint>
+			</SplineComponent>
+			<LogicCircuitComponent _localID="12667660158642495557" _componentName="LogicCircuitComponent" _bActive="true" _stepTime="0.016666668">
+				<_listNode>
+					<LogicCircuitNodeDesc _id="move" _kind="Mover" _params="speed=2; mode=PingPong; pause=0.5" />
+				</_listNode>
+				<_listNodeTarget>
+					<item>0</item>
+				</_listNodeTarget>
+				<_listWire />
+			</LogicCircuitComponent>
+		</_listComponent>
+	</GameObject>
+</Prefab>
