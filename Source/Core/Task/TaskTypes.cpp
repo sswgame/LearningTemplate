@@ -6,7 +6,6 @@
 #include "Core/Container/vector.h"
 #include "Core/Task/TaskManager.h"
 #include "Core/Task/TaskNode.h"
-#include "Core/Task/TaskNodePool.h"
 
 namespace sw
 {

@@ -1216,6 +1216,8 @@
       "comma",
       "command",
       "commandable",
+      "commandlet",
+      "commandlets",
       "commands",
       "comment",
       "comments",

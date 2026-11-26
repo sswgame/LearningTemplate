@@ -147,13 +147,13 @@ namespace sw::editor
 
     bool GlobalVariablesViewModel::pollPresetFilesIn( const DiskPath& presetFolder )
     {
-        vector<DiskPath>     listNewPresetFile;
-        const EditorTaskPoll presetPoll = _presetJob.take( listNewPresetFile );
-        if ( presetPoll == EditorTaskPoll::Ready )
+        vector<DiskPath>    listNewPresetFile;
+        const EditorJobPoll presetPoll = _presetJob.take( listNewPresetFile );
+        if ( presetPoll == EditorJobPoll::Ready )
             _listPresetFile = std::move( listNewPresetFile );
 
-        bool bPresetScanning = presetPoll == EditorTaskPoll::Running;
-        if ( _bPresetListDirty && presetPoll != EditorTaskPoll::Running )
+        bool bPresetScanning = presetPoll == EditorJobPoll::Running;
+        if ( _bPresetListDirty && presetPoll != EditorJobPoll::Running )
         {
             // 깃발은 훑기를 거는 때 내린다 — 결과를 받을 때 내리면 훑는 사이에 저장한 프리셋이 목록에서 빠진 채 남는다.
             _bPresetListDirty = SW_FALSE;

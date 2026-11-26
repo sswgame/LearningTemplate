@@ -11,7 +11,7 @@
 #include "DevTools/Client/Capture/StartupCaptureSubsystem.h"
 
 #include "Editor/Common/Backend/ImGuiRenderer.h"
-#include "Editor/Common/Task/EditorBackgroundTask.h"
+#include "Editor/Common/Job/EditorBackgroundJob.h"
 #include "Editor/Common/Workspace/EditorSubsystems.h"
 
 #include "Engine/Automation/Scenario/AutomationDeferredValue.h"

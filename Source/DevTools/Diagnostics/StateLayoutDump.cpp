@@ -3,8 +3,8 @@
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/File/FileUtil.h"
 
+#include "Engine/Foundation/Commandlet.h"
 #include "Engine/Foundation/EngineSubsystems.h"
-#include "Engine/Foundation/HeadlessTask.h"
 #include "Engine/Reflection/PropertyInfo.h"
 #include "Engine/Reflection/ReflectValueBinding.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
@@ -52,7 +52,7 @@ namespace sw
                 return commandLine.getArgument( CommandLineArgument::WRITE_STATE_LAYOUTS, path ) && path.empty() == false;
             }
 
-            static bool run( HeadlessTaskContext& context )
+            static bool run( CommandletContext& context )
             {
                 AbsolutePath outputPath;
                 (void)context._commandLine.getArgument( CommandLineArgument::WRITE_STATE_LAYOUTS, outputPath );
@@ -88,5 +88,5 @@ namespace sw
         };
     } // namespace
 
-    SW_HEADLESS_TASK( stateLayouts, "StateLayouts", HeadlessTaskPriority::kStateLayouts, Any, &StateLayoutDumpInternal::isRequested, &StateLayoutDumpInternal::run );
+    SW_COMMANDLET( stateLayouts, "StateLayouts", CommandletPriority::kStateLayouts, Any, &StateLayoutDumpInternal::isRequested, &StateLayoutDumpInternal::run );
 } // namespace sw

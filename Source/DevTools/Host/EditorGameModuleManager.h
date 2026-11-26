@@ -3,7 +3,7 @@
  * @brief 에디터를 켠 개발 실행(`-EnableEditor`)의 모듈 관리자입니다. 공통 `GameModuleManager`(게임 모듈 · 장치 교체 순서) 위에 호스트 모듈(에디터)의 인스턴스, 리로드,
  *        UI · 렌더 훅, 창 최소 크기, 장치 교체 뒤 재생성(`recreateHostModule`)을 구현합니다.
  * @details 개발 계층(`IHostDevLayer::makeEditorModuleManager`)이 만든다 — DevTools 에만 있어 배포 App 은 에디터 코드를 컴파일하지 않고 공통 `GameModuleManager` 를 그대로 쓴다
- *          (언리얼이 `UEditorEngine` 을 배포 타깃에 넣지 않는 자리). 인스턴스 없이 에디터 모듈만 올려 부르는 헤드리스 작업은 `EditorModuleHeadlessTasks` 다.
+ *          (언리얼이 `UEditorEngine` 을 배포 타깃에 넣지 않는 자리). 인스턴스 없이 에디터 모듈만 올려 부르는 헤드리스 작업은 `EditorModuleCommandlets` 다.
  * @note 의존은 이쪽에서 `GameModuleManager` 로 한 방향입니다. 개발 전용 함수(에디터 모듈 등록 — cpp 의 동적 모듈 구역)는 정적 모듈 구성이 짓지 않는다.
  */
 #pragma once

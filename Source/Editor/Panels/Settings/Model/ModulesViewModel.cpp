@@ -113,7 +113,7 @@ namespace sw::editor
     void ModulesViewModel::pollReload()
     {
         ModuleCatalogSnapshot snapshot;
-        if ( _loadJob.take( snapshot ) == EditorTaskPoll::Ready )
+        if ( _loadJob.take( snapshot ) == EditorJobPoll::Ready )
             applySnapshot( std::move( snapshot ) );
     }
 

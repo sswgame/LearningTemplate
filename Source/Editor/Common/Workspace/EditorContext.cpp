@@ -15,7 +15,8 @@
 #include "Editor/Common/Config/EditorComponentIconTable.h"
 #include "Editor/Common/Config/EditorDefaultAssets.h"
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
-#include "Editor/Common/Task/EditorBackgroundTask.h"
+#include "Editor/Common/Config/EditorPaths.h"
+#include "Editor/Common/Job/EditorBackgroundJob.h"
 #include "Editor/Common/Workspace/EditorExtensionSubsystems.h"
 #include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/Common/Workspace/EditorSubsystems.h"
@@ -79,7 +80,7 @@ namespace sw::editor
         EditorStateStore* const pStore       = findSubsystem<EditorStateStore>();
         TaskManager* const      pTaskManager = findSubsystem<TaskManager>();
         if ( pStore != nullptr && pTaskManager != nullptr )
-            pTaskManager->waitStage( pStore->get<EditorBackgroundJob>()._stage, "EditorContext::shutdown" ); // 중단은 앞서 올렸다(`requestBackgroundStop`) — 오래 걸리면 남은 태스크가 주기적으로 오류로 남는다
+            pTaskManager->waitStage( pStore->get<EditorBackgroundJobGroup>()._stage, "EditorContext::shutdown" ); // 중단은 앞서 올렸다(`requestBackgroundStop`) — 오래 걸리면 남은 태스크가 주기적으로 오류로 남는다
         const uint64 waitMicroseconds = waitWatch.getElapsedMicroseconds();
 
         if ( findEditorScope() == &_scope )

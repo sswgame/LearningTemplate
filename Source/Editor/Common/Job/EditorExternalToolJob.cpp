@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Editor/Common/Task/EditorExternalToolJob.h"
+#include "Editor/Common/Job/EditorExternalToolJob.h"
 
 #include "Core/Concurrency/thread.h"
 #include "Core/File/FileUtil.h"
@@ -10,7 +10,7 @@
 namespace sw::editor
 {
     EditorExternalToolJob::EditorExternalToolJob()
-        : EditorBackgroundTask{}
+        : EditorBackgroundJob{}
         , _thread{}
         , _pProcess{}
         , _pLiveOutput{ sw::make_shared<EditorExternalToolLiveOutput>() }

@@ -542,16 +542,16 @@ namespace sw::editor
 
     void EditorDocumentAutosaveScheduler::update( const vector<EditorPanelEntry>& listPanel )
     {
-        using Internal             = EditorDocumentAutosaveSchedulerInternal;
-        Internal::State&     state = Internal::getState();
-        uint32               writtenCount{ 0 };
-        const EditorTaskPoll poll = state._writeJob.take( writtenCount ); // 주기와 무관하게 끝난 결과는 프레임마다 받는다
-        if ( poll == EditorTaskPoll::Ready )
+        using Internal            = EditorDocumentAutosaveSchedulerInternal;
+        Internal::State&    state = Internal::getState();
+        uint32              writtenCount{ 0 };
+        const EditorJobPoll poll = state._writeJob.take( writtenCount ); // 주기와 무관하게 끝난 결과는 프레임마다 받는다
+        if ( poll == EditorJobPoll::Ready )
             state._writtenCount += writtenCount;
         const float64 intervalMilli = static_cast<float64>( getEditorToolDefaults()._documentAutosaveSeconds ) * Internal::kMillisecondsPerSecond;
         if ( state._bForceNext == false && static_cast<float64>( state._sinceCopy.getElapsedMilliseconds() ) < intervalMilli )
             return;
-        if ( poll == EditorTaskPoll::Running )
+        if ( poll == EditorJobPoll::Running )
             return; // 앞 묶음이 아직 쓰는 중이다 — 다음 프레임에 다시 본다
         const AbsolutePath sessionFolder = EditorAutosaveCommands::getSessionFolder();
         if ( sessionFolder.empty() )

@@ -15,8 +15,8 @@
 #include "Engine/Automation/AutomationRuntime.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Content/AssetPaths.h"
+#include "Engine/Foundation/Commandlet.h"
 #include "Engine/Foundation/EngineSubsystems.h"
-#include "Engine/Foundation/HeadlessTask.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
 namespace sw
@@ -24,7 +24,7 @@ namespace sw
     namespace
     {
         /** @brief 쿠킹 밖의 개발 헤드리스 작업(단위 테스트 · 백엔드마다 시나리오 · 리플렉션 문서 · 리타깃 베이크 · 립싱크 임포트)입니다. */
-        struct DevHeadlessTasksInternal
+        struct DevCommandletsInternal
         {
             /** @brief bool 인자 @p argument 가 켜져 주어졌으면 true 입니다. */
             static bool isFlagGiven( const CommandLineManager& commandLine, CommandLineArgument argument )
@@ -47,7 +47,7 @@ namespace sw
              * @details 모든 모듈이 올라온 뒤(ModuleLoadStage)라 엔진 · GameFramework · 키트 · 게임의 케이스가 다 등록돼 있고, 엔진 서비스가 서 있다.
              *          창 · RHI 는 세우지 않는다 — 그림이 필요한 확인은 시나리오다.
              */
-            static bool runUnitTestTask( HeadlessTaskContext& context )
+            static bool runUnitTestTask( CommandletContext& context )
             {
                 const bool bPassed = UnitTestRun::run( context._commandLine, {}, {} );
                 // 이 실행의 "전부 통과" 를 에디터까지 통과한 것으로 읽지 않게 한다 - 에디터 모듈은 이 단계에 아직 올라오지 않았다.
@@ -62,7 +62,7 @@ namespace sw
              * @details 일은 자동화 실행기(`IAutomationRuntime::runPerBackend`)가 한다. 실행기를 짓지 않은 구성(Shipping · 전용 서버)은 찾는 것이 없어 이유를 남기고 실패로 끝낸다(폴백 없음).
              *          `-scenario-backends` 가 없으면 보통 시나리오 실행(이 프로세스가 직접 돈다)이다.
              */
-            static bool runScenarioPerBackendTask( HeadlessTaskContext& context )
+            static bool runScenarioPerBackendTask( CommandletContext& context )
             {
                 IAutomationRuntime* const pAutomation = engine::findSubsystem<IAutomationRuntime>();
                 if ( pAutomation == nullptr )
@@ -79,7 +79,7 @@ namespace sw
             static bool isReflectionDocsRequested( const CommandLineManager& commandLine ) { return isTextGiven( commandLine, CommandLineArgument::WRITE_REFLECTION_DOCS ); }
 
             /** @brief 리플렉션 문서도 같은 자리다 — 모든 타입 공급자가 등록을 끝낸 뒤(ModuleLoadStage)라 게임 · 킷의 타입까지 든다. */
-            static bool runReflectionDocsTask( HeadlessTaskContext& context )
+            static bool runReflectionDocsTask( CommandletContext& context )
             {
                 AbsolutePath reflectionDocsDir;
                 (void)context._commandLine.getArgument( CommandLineArgument::WRITE_REFLECTION_DOCS, reflectionDocsDir );
@@ -89,7 +89,7 @@ namespace sw
             static bool isBakeRetargetRequested( const CommandLineManager& commandLine ) { return isTextGiven( commandLine, CommandLineArgument::BAKE_RETARGET ); }
 
             /** @brief 리타깃 베이크(`--bake-retarget=<프로필>,<원본 클립>,<출력 클립>`) — 클립 · 스켈레톤 · 코덱이 모두 엔진 것이라 여기서 한다. */
-            static bool runBakeRetargetTask( HeadlessTaskContext& context )
+            static bool runBakeRetargetTask( CommandletContext& context )
             {
                 string bakeRetarget;
                 (void)context._commandLine.getArgument( CommandLineArgument::BAKE_RETARGET, bakeRetarget );
@@ -106,7 +106,7 @@ namespace sw
             static bool isImportLipSyncRequested( const CommandLineManager& commandLine ) { return isFlagGiven( commandLine, CommandLineArgument::IMPORT_LIPSYNC ); }
 
             /** @brief 립싱크 분석 — 음성마다 비즘 트랙을 곁에 쓴다. 분석 표가 엔진 데이터라 엔진이 한다(음성 디코드라 오디오를 짓지 않는 서버는 하지 않는다). */
-            static bool runImportLipSyncTask( HeadlessTaskContext& context )
+            static bool runImportLipSyncTask( CommandletContext& context )
             {
                 SW_LOG_INFO_ID( "Headless.StartingHeadlessImportLipSync", "Starting Headless (ImportLipSync)..." );
                 // 분석 표는 런타임 얼굴과 같은 공유 캐시의 한 벌이다.
@@ -125,10 +125,10 @@ namespace sw
         };
     } // namespace
 
-    SW_HEADLESS_TASK( unitTest, "UnitTest", HeadlessTaskPriority::kUnitTest, Any, &DevHeadlessTasksInternal::isUnitTestRequested, &DevHeadlessTasksInternal::runUnitTestTask );
-    SW_HEADLESS_TASK( scenarioPerBackend, "ScenarioPerBackend", HeadlessTaskPriority::kScenarioPerBackend, Any, &DevHeadlessTasksInternal::isScenarioPerBackendRequested,
-                      &DevHeadlessTasksInternal::runScenarioPerBackendTask );
-    SW_HEADLESS_TASK( reflectionDocs, "ReflectionDocs", HeadlessTaskPriority::kReflectionDocs, Any, &DevHeadlessTasksInternal::isReflectionDocsRequested, &DevHeadlessTasksInternal::runReflectionDocsTask );
-    SW_HEADLESS_TASK( bakeRetarget, "BakeRetarget", HeadlessTaskPriority::kBakeRetarget, Any, &DevHeadlessTasksInternal::isBakeRetargetRequested, &DevHeadlessTasksInternal::runBakeRetargetTask );
-    SW_HEADLESS_TASK( importLipSync, "ImportLipSync", HeadlessTaskPriority::kImportLipSync, Client, &DevHeadlessTasksInternal::isImportLipSyncRequested, &DevHeadlessTasksInternal::runImportLipSyncTask );
+    SW_COMMANDLET( unitTest, "UnitTest", CommandletPriority::kUnitTest, Any, &DevCommandletsInternal::isUnitTestRequested, &DevCommandletsInternal::runUnitTestTask );
+    SW_COMMANDLET( scenarioPerBackend, "ScenarioPerBackend", CommandletPriority::kScenarioPerBackend, Any, &DevCommandletsInternal::isScenarioPerBackendRequested,
+                   &DevCommandletsInternal::runScenarioPerBackendTask );
+    SW_COMMANDLET( reflectionDocs, "ReflectionDocs", CommandletPriority::kReflectionDocs, Any, &DevCommandletsInternal::isReflectionDocsRequested, &DevCommandletsInternal::runReflectionDocsTask );
+    SW_COMMANDLET( bakeRetarget, "BakeRetarget", CommandletPriority::kBakeRetarget, Any, &DevCommandletsInternal::isBakeRetargetRequested, &DevCommandletsInternal::runBakeRetargetTask );
+    SW_COMMANDLET( importLipSync, "ImportLipSync", CommandletPriority::kImportLipSync, Client, &DevCommandletsInternal::isImportLipSyncRequested, &DevCommandletsInternal::runImportLipSyncTask );
 } // namespace sw

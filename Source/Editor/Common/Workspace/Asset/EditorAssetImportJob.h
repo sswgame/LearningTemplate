@@ -1,7 +1,7 @@
 /**
  * @file EditorAssetImportJob.h
  * @brief 바뀐 원본을 워커에서 임포트하는 에디터 핫 리로드의 백그라운드 잡입니다.
- * @details 핫 리로드(`AssetHotReload`, Workspace 층)가 쓰므로 같은 층에 둔다. 공통 규약(락, 세대, 완료 플래그)은 `EditorBackgroundTask` 에 있다.
+ * @details 핫 리로드(`AssetHotReload`, Workspace 층)가 쓰므로 같은 층에 둔다. 공통 규약(락, 세대, 완료 플래그)은 `EditorBackgroundJob` 에 있다.
  */
 #pragma once
 #include "Core/Concurrency/StopToken.h"
@@ -9,7 +9,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 
-#include "Editor/Common/Task/EditorBackgroundTask.h"
+#include "Editor/Common/Job/EditorBackgroundJob.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 
 namespace sw
@@ -71,7 +71,7 @@ namespace sw::editor
      *          그래서 실행 중에 원본이 또 바뀌면 `cancel` 로 앞 잡이 다음 원본 전에 멈추게 하고(진행 중인 원본 하나는 끝까지 간다), 끝난 뒤 다시 요청한다.
      *          `take()` 가 `Ready` 를 주기 전에 다시 `request` 하지 않는다(안 가져간 결과가 사라진다).
      */
-    class EditorAssetImportJob final : public EditorBackgroundTask<EditorAssetImportInput, EditorAssetImportResult>
+    class EditorAssetImportJob final : public EditorBackgroundJob<EditorAssetImportInput, EditorAssetImportResult>
     {
     public:
         EditorAssetImportJob();

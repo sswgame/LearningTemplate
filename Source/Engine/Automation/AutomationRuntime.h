@@ -44,7 +44,7 @@ namespace sw
     class CommandLineManager;
     class Engine;
     class SubsystemScope;
-    struct HeadlessTaskState;
+    struct CommandletState;
 
     /**
      * @class IAutomationShutdownWatch
@@ -78,7 +78,7 @@ namespace sw
          * @brief `-scenario-backends=<목록>` 작업 — 시나리오를 백엔드마다 자식 App 으로 동시에 돌리고 모읍니다(`AutomationPerBackend`). 결과는 @p inoutState 에 적습니다.
          * @param backends `-scenario-backends` 값(비어 있지 않다)
          */
-        virtual void runPerBackend( string_view backends, CommandLineManager& commandLine, HeadlessTaskState& inoutState ) = 0;
+        virtual void runPerBackend( string_view backends, CommandLineManager& commandLine, CommandletState& inoutState ) = 0;
         /**
          * @brief 지금 시나리오의 진행 · 판정 상태입니다. 시나리오가 없으면 nullptr 입니다(끝난 뒤 결과를 남기는 프레임 동안은 끝난 상태를 준다).
          * @details 포인터는 이 프레임 안에서만 쓴다(세션이 프레임 끝마다 다시 쓴다). 게임 스레드에서만 읽는다.

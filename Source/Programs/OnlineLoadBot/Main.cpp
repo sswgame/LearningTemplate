@@ -94,7 +94,7 @@ namespace sw
             [[nodiscard]] int32 runBot( vector<utf8*>& listBotArgument )
             {
                 if ( _launch.getEngine().isHeadless() )
-                    return _launch.getEngine().didHeadlessTaskFail() ? LoadBotModuleEntry::kExitErrorRate : LoadBotModuleEntry::kExitOk;
+                    return _launch.getEngine().didCommandletFail() ? LoadBotModuleEntry::kExitErrorRate : LoadBotModuleEntry::kExitOk;
                 const auto pfnRun = reinterpret_cast<PFN_RunOnlineLoadBot>( ModuleLibraryUtil::getDynamicSymbol( _pBotModule, LoadBotModuleEntry::kEntrySymbol ) );
                 if ( pfnRun == nullptr )
                 {

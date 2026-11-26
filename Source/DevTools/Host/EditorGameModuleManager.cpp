@@ -362,7 +362,7 @@ namespace sw
 
 #if SW_WITH_DYNAMIC_MODULES
     // ----------------------------------------------------------------------------------------------------------------------
-    // 동적 모듈 구성에만 있는 경로 — 리로드 그래프 등록(LiveReload). 인스턴스 없는 헤드리스 작업은 `DevTools/Host/EditorModuleHeadlessTasks.cpp` 다.
+    // 동적 모듈 구성에만 있는 경로 — 리로드 그래프 등록(LiveReload). 인스턴스 없는 헤드리스 작업은 `DevTools/Host/EditorModuleCommandlets.cpp` 다.
     // 정적 구성(배포 · 웹 · Android 개발)은 이 헤더 · 라이브러리를 짓지 않아 여기만 `#if` 로 가른다(docs/agents/CppStyle.md "Build configuration switches" 둘째 줄). 부르는 자리는 `build::kStaticModules` 로 가른다.
     // ----------------------------------------------------------------------------------------------------------------------
     bool EditorGameModuleManager::registerEditorModule( ILiveReloadManager* pLiveReloadManager )

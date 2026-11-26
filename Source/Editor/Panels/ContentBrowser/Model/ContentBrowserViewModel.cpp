@@ -258,7 +258,7 @@ namespace sw::editor
         if ( _bFolderDirty )
             refreshCurrentFolder();
         vector<EditorFolderListingEntry> listNewEntry;
-        if ( _folderJob.take( listNewEntry ) == EditorTaskPoll::Ready )
+        if ( _folderJob.take( listNewEntry ) == EditorJobPoll::Ready )
             applyFolderListing( listNewEntry );
     }
 

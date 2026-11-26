@@ -7,7 +7,7 @@
  * @details App 이 직접 아는 것은 네 가지로 제한합니다. 부팅 순서, 창, 프레임 순서, 그리고 호스트 ↔ 모듈 콜백 연결입니다.
  *          시간 정책은 FixedTimestep, 장치 교체 · 다시 만들기와 모듈 수명은 모듈 관리자(`GameModuleManager` — 교체 요청은 개발 도구의 RHIBackendSwitcher)가 맡습니다.
  *          개발 전용 몫(에디터 모듈 관리자 · 자동화 실행기 · 핫 리로드 · 개발 콘솔 · 셸 액션 · 에디터 모듈 헤드리스 작업 · 초상화 굽기 · 기동 측정)은 개발 계층(`IHostDevLayer` — Server 와 같이 쓴다)이
- *          DevTools 에 든다 — 배포 App 은 그 코드를 컴파일하지 않고, 개발 전용 인자를 받으면 오류로 멈춘다. 크래시 보고 프로세스는 배포도 쓰므로 이 TU 의 `AppHeadlessTasks` 다.
+ *          DevTools 에 든다 — 배포 App 은 그 코드를 컴파일하지 않고, 개발 전용 인자를 받으면 오류로 멈춘다. 크래시 보고 프로세스는 배포도 쓰므로 이 TU 의 `AppCommandlets` 다.
  *          자동화가 찾아야 하는 호스트 객체(리로드 구동기)는 정적 포인터가 아니라 호스트 범위(`HostLaunch::getHostScope`)에 걸고 `engine::findSubsystem<T>()` 로 찾게 합니다.
  *          런타임 UI 에 끼우는 것(일시정지 메뉴의 "끝내기", 운영체제 클립보드, 스크린 리더)은 엔진의 `UIPlatformBinding` 이 맡습니다.
  */
@@ -201,12 +201,12 @@ namespace sw
     namespace
     {
         /**
-         * @struct AppHeadlessTasks
+         * @struct AppCommandlets
          * @brief 창과 RHI 없이 시작한 App 이 인자에 따라 실행하는 작업들입니다. 엔진의 `Headless` 단계가 하지 못하는 일(크래시 보고, 엔진이 선 뒤의 에디터 모듈 작업)만 둡니다.
-         * @details 에디터 모듈 작업(로컬라이제이션, 임포트, 참조 검사)은 개발 계층의 표가 든다(`DevTools/Host/EditorModuleHeadlessTasks`). 여기서는 부르기만 한다.
+         * @details 에디터 모듈 작업(로컬라이제이션, 임포트, 참조 검사)은 개발 계층의 표가 든다(`DevTools/Host/EditorModuleCommandlets`). 여기서는 부르기만 한다.
          *          실패한 작업이 하나라도 있으면 `App::initialize` 가 false 를 반환한다(종료 코드가 0 이 아님).
          */
-        struct AppHeadlessTasks
+        struct AppCommandlets
         {
             /**
              * @brief 크래시 보고 프로세스(`-crash-reporter=<폴더>`)입니다. 엔진은 명령줄 처리까지만 시작한 상태이며(서비스와 게임 모듈이 없습니다) 번들만 보내고 끝냅니다. 청해지지 않았으면 false 입니다.
@@ -235,7 +235,7 @@ namespace sw
                 if ( runCrashReporter( *pCommandLine ) )
                     return true; // 이 작업만 하고 끝낸다
                 // 에디터 모듈 작업은 개발 계층의 표가 든다 — 배포에는 개발 계층도 그 인자도 없다.
-                return pDevLayer == nullptr || pDevLayer->runEditorModuleHeadlessTasks( *pCommandLine );
+                return pDevLayer == nullptr || pDevLayer->runEditorModuleCommandlets( *pCommandLine );
             }
         };
 
@@ -453,9 +453,9 @@ namespace sw
             return false;
         markStartupPhase( "engine" );
         // 헤드리스 모드(예: --cook-shaders, --cook-scenes)면 스플래시와 창 UI 를 건너뛴다.
-        // App 이 맡는 헤드리스 작업은 크래시 보고와, 개발 계층의 에디터 모듈 작업 표(로컬라이제이션 도구, 원본 임포트)를 부르는 일이다(`AppHeadlessTasks`).
+        // App 이 맡는 헤드리스 작업은 크래시 보고와, 개발 계층의 에디터 모듈 작업 표(로컬라이제이션 도구, 원본 임포트)를 부르는 일이다(`AppCommandlets`).
         if ( engineStart == HostEngineStart::Headless )
-            return AppHeadlessTasks::runAll( _launch.getEngine().getCommandLineManager(), _launch.getDevLayer() );
+            return AppCommandlets::runAll( _launch.getEngine().getCommandLineManager(), _launch.getDevLayer() );
 
         // 무인 실행(-unattended)은 보는 사람이 없다 — 스플래시도 메인 창도 띄우지 않고 그리기 · 캡처만 한다(언리얼 -RenderOffScreen). 화면 표시를 보는 시나리오
         // (present="true")는 그 단계에서 자동화 세션이 메인 창을 띄운다(`AutomationSession::applyPresentPolicy`).
@@ -824,7 +824,7 @@ namespace sw
     int32 App::getInitFailureExitCode() const
     {
         // 헤드리스 작업이 정한 코드(시나리오 행렬의 시나리오 결과)가 먼저다.
-        if ( _launch.getEngine().isHeadless() && _launch.getEngine().didHeadlessTaskFail() && _launch.getEngine().getHeadlessFailureExitCode() != -1 )
+        if ( _launch.getEngine().isHeadless() && _launch.getEngine().didCommandletFail() && _launch.getEngine().getHeadlessFailureExitCode() != -1 )
             return _launch.getEngine().getHeadlessFailureExitCode();
         // 기동 단계가 실패하면서 종료 코드를 골랐으면 그 코드다(시나리오 실행의 사용자 데이터 뿌리 거절 — 로드 오류 11, `AutomationUserDataIsolation`).
         if ( _launch.getEngine().isQuitRequested() && _launch.getEngine().getExitCode() != ProcessExitCode::Passed )

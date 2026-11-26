@@ -37,16 +37,16 @@
 
 namespace sw
 {
-    struct HeadlessTaskState;
+    struct CommandletState;
 
     namespace engine
     {
         /** @brief 기동 단계 공장이 읽는 호스트별 값입니다(`Engine::initialize` 가 채운다). */
         struct StartupSetup
         {
-            HeadlessTaskState& _headlessState;
-            bool               _bDedicatedServer{ SW_FALSE };   ///< 전용 서버 역할 — 창 · RHI · 렌더러 · 렌더 스레드 · 씬 디바이스 공장이 만들지 않고, 오디오는 장치를 열지 않는다
-            bool               _bHeadlessRequested{ SW_FALSE }; ///< 명령줄이 헤드리스 작업을 청했다(`HeadlessTaskRegistration::isAnyRequested`) — 오디오는 장치를 열지 않는다
+            CommandletState& _headlessState;
+            bool             _bDedicatedServer{ SW_FALSE };   ///< 전용 서버 역할 — 창 · RHI · 렌더러 · 렌더 스레드 · 씬 디바이스 공장이 만들지 않고, 오디오는 장치를 열지 않는다
+            bool             _bHeadlessRequested{ SW_FALSE }; ///< 명령줄이 헤드리스 작업을 청했다(`CommandletRegistration::isAnyRequested`) — 오디오는 장치를 열지 않는다
         };
 
         /**

@@ -31,8 +31,8 @@
 
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Engine.h"
+#include "Engine/Foundation/Commandlet.h"
 #include "Engine/Foundation/EngineSubsystems.h"
-#include "Engine/Foundation/HeadlessTask.h"
 #include "Engine/Graphics/DebugDraw/DebugDrawQueue.h"
 #include "Engine/Input/DebugKeyActions.h"
 #include "Engine/Input/Map/InputMap.h"
@@ -120,7 +120,7 @@ namespace sw
         (void)startup.emplaceSubsystem<ReloadTracker>();
         // 설정 파일 리로드는 서버에도 선다. 헤드리스 작업은 프레임을 돌지 않아 리로드할 자리가 없다 — `Config/` 감시를 걸지 않는다.
         const CommandLineManager* const pHeadlessCommandLine = findSubsystemFrom<CommandLineManager>( &startup );
-        const bool                      bHeadless            = pHeadlessCommandLine != nullptr && HeadlessTaskRegistration::isAnyRequested( *pHeadlessCommandLine );
+        const bool                      bHeadless            = pHeadlessCommandLine != nullptr && CommandletRegistration::isAnyRequested( *pHeadlessCommandLine );
         ConfigManager* const            pConfigManager       = startup.find<ConfigManager>();
         if ( pConfigManager != nullptr && bHeadless == false )
             (void)startup.emplaceSubsystem<ConfigReloadSubsystem>( *pConfigManager, _fileWatch );

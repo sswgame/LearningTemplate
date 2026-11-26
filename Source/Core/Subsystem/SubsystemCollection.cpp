@@ -175,13 +175,13 @@ namespace sw
         return false;
     }
 
-    SubsystemCollection::HostedTaskScope::HostedTaskScope()
+    SubsystemCollection::HostedCommandletScope::HostedCommandletScope()
         : _pSaved{ t_pInitializeFrame }
     {
         t_pInitializeFrame = nullptr;
     }
 
-    SubsystemCollection::HostedTaskScope::~HostedTaskScope()
+    SubsystemCollection::HostedCommandletScope::~HostedCommandletScope()
     {
         t_pInitializeFrame = static_cast<SubsystemInitializeFrame*>( _pSaved );
     }

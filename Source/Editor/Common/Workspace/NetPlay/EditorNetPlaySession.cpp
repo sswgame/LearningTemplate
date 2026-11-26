@@ -25,7 +25,7 @@
 
 #include "DevTools/Profiling/ProfilerTraceExport.h"
 
-#include "Editor/Common/Task/EditorBackgroundTask.h"
+#include "Editor/Common/Job/EditorBackgroundJob.h"
 #include "Editor/Common/Workspace/EditorSubsystems.h"
 
 #include "Engine/Content/AssetPaths.h"
@@ -142,7 +142,7 @@ namespace sw::editor
      * @brief 끝난 자식의 읽기 스레드를 합류하고 트레이스를 합치는 에디터 백그라운드 잡입니다(`EditorNetPlaySession::advanceStop` 이 낸다).
      * @details 자식이 모두 끝난 뒤에만 낸다 - 합류는 파이프가 닫힌 읽기 스레드를 기다릴 뿐이라 워커를 오래 잡지 않는다. 합치기는 트레이스 파일 읽기 · JSON 합치기 · 쓰기(IO + CPU)다.
      */
-    class EditorNetPlayStopJob final : public EditorBackgroundTask<EditorNetPlayStopInput, EditorNetPlayStopResult>
+    class EditorNetPlayStopJob final : public EditorBackgroundJob<EditorNetPlayStopInput, EditorNetPlayStopResult>
     {
     public:
         /** @brief 잡을 냅니다(UI 스레드). */
@@ -789,7 +789,7 @@ namespace sw::editor
             case StopPhase::Merging:
             {
                 EditorNetPlayStopResult result;
-                if ( _pStopJob->take( result ) == EditorTaskPoll::Ready )
+                if ( _pStopJob->take( result ) == EditorJobPoll::Ready )
                     finishStop( result._mergedTracePath );
                 return;
             }
@@ -814,7 +814,7 @@ namespace sw::editor
         {
             // 합치기 잡의 완료를 기다린다(돕는다) — 결과를 주기적으로 묻고 잠들지 않는다.
             EditorNetPlayStopResult result;
-            if ( _pStopJob->waitAndTake( result ) == EditorTaskPoll::Ready )
+            if ( _pStopJob->waitAndTake( result ) == EditorJobPoll::Ready )
                 finishStop( result._mergedTracePath );
         }
     }

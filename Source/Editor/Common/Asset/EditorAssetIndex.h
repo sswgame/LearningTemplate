@@ -15,7 +15,7 @@
 #include "Core/Foundation/Types.h"
 
 #include "Editor/Common/EditorExports.h"
-#include "Editor/Common/Task/EditorBackgroundTask.h"
+#include "Editor/Common/Job/EditorBackgroundJob.h"
 
 #include "Engine/Content/AssetGUID.h"
 
@@ -165,7 +165,7 @@ namespace sw::editor
      * @class EditorAssetIndexScanJob
      * @brief 에셋 색인의 전체 스캔(`EditorAssetIndex::scan`)을 워커에서 돌립니다.
      */
-    class EditorAssetIndexScanJob final : public EditorBackgroundTask<AbsolutePath, EditorAssetIndexData>
+    class EditorAssetIndexScanJob final : public EditorBackgroundJob<AbsolutePath, EditorAssetIndexData>
     {
     public:
         /** @brief 워커에 @p resourceRoot 아래 스캔을 요청합니다. 이미 대기 중이면 세대를 올리고 오래된 결과는 버립니다. 작업 관리자는 부른 쪽(UI 스레드)이 찾아 넘깁니다. */

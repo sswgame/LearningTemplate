@@ -14,7 +14,7 @@
 #include "Editor/Common/EditorExtensionRegistry.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
-#include "Editor/Common/Task/EditorExternalToolJob.h"
+#include "Editor/Common/Job/EditorExternalToolJob.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorSubsystems.h"
 #include "Editor/SelfTest/EditorSelfTest.h"
@@ -308,7 +308,7 @@ namespace sw::editor
     void TestRunnerPanel::pollExternalRun()
     {
         EditorExternalToolResult result;
-        if ( _pJob->take( result ) != EditorTaskPoll::Ready )
+        if ( _pJob->take( result ) != EditorJobPoll::Ready )
             return;
         _listExternalLine   = std::move( result._listLine );
         _externalExitCode   = result._exitCode;

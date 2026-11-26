@@ -11,7 +11,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Path/AbsolutePath.h"
 
-#include "Editor/Common/Task/EditorBackgroundTask.h"
+#include "Editor/Common/Job/EditorBackgroundJob.h"
 
 #include "Engine/Module/ModuleCatalog.h"
 
@@ -40,7 +40,7 @@ namespace sw::editor
      * @class ModuleCatalogLoadJob
      * @brief 카탈로그 폴더를 워커에서 읽습니다 — 매니페스트는 모듈마다 파일 하나(100 개 넘음)라 키트가 늘수록 첫 그리기가 느려졌다.
      */
-    class ModuleCatalogLoadJob final : public EditorBackgroundTask<AbsolutePath, ModuleCatalogSnapshot>
+    class ModuleCatalogLoadJob final : public EditorBackgroundJob<AbsolutePath, ModuleCatalogSnapshot>
     {
     public:
         /** @brief 워커에 폴더 @p directory 를 읽으라고 요청합니다. */

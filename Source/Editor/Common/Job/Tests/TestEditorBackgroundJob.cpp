@@ -1,10 +1,10 @@
-// EditorBackgroundTaskTest — 백그라운드 잡의 규약: 상태(없음 · 도는 중 · 끝남), 결과는 한 번만, 새 요청 뒤의 옛 세대는 입력도 결과도 쓰지 못한다(워커 없이 규약만 — nogpu).
+// EditorBackgroundJobTest — 백그라운드 잡의 규약: 상태(없음 · 도는 중 · 끝남), 결과는 한 번만, 새 요청 뒤의 옛 세대는 입력도 결과도 쓰지 못한다(워커 없이 규약만 — nogpu).
 #include "pch.h"
 
 #include "Core/Testing/TestFramework.h"
 
-#include "Editor/Common/Task/EditorBackgroundTask.h"
-#include "Editor/Common/Task/EditorExternalToolJob.h"
+#include "Editor/Common/Job/EditorBackgroundJob.h"
+#include "Editor/Common/Job/EditorExternalToolJob.h"
 
 using namespace sw;
 using namespace sw::editor;
@@ -12,7 +12,7 @@ using namespace sw::editor;
 namespace
 {
     /** @brief 규약의 보호 멤버를 여는 잡입니다 — 제출하지 않고 워커의 차례를 테스트가 부른다. */
-    class ProtocolTask final : public EditorBackgroundTask<int32, int32>
+    class ProtocolJob final : public EditorBackgroundJob<int32, int32>
     {
     public:
         uint32             begin( int32 input ) { return beginRequest( input ); }
@@ -21,17 +21,17 @@ namespace
     };
 } // namespace
 
-/** @brief [EditorBackgroundTaskTest] 요청 전은 없음, 요청하면 도는 중, 결과는 한 번만 나오고 다시 없음이다 */
-SW_TEST_CASE( EditorBackgroundTaskTest, ResultIsTakenOnce )
+/** @brief [EditorBackgroundJobTest] 요청 전은 없음, 요청하면 도는 중, 결과는 한 번만 나오고 다시 없음이다 */
+SW_TEST_CASE( EditorBackgroundJobTest, ResultIsTakenOnce )
 {
-    ProtocolTask task;
-    int32        result = -1;
-    SW_EXPECT_TRUE( task.take( result ) == EditorTaskPoll::Idle );
+    ProtocolJob task;
+    int32       result = -1;
+    SW_EXPECT_TRUE( task.take( result ) == EditorJobPoll::Idle );
     SW_EXPECT_FALSE( task.isPending() );
 
     const uint32 generation = task.begin( 7 );
     SW_EXPECT_TRUE( task.isPending() );
-    SW_EXPECT_TRUE( task.take( result ) == EditorTaskPoll::Running );
+    SW_EXPECT_TRUE( task.take( result ) == EditorJobPoll::Running );
     SW_EXPECT_EQUAL( -1, result ); // 끝나기 전에는 그대로다
     int32 input = 0;
     SW_REQUIRE_TRUE( task.read( generation, input ) );
@@ -39,27 +39,27 @@ SW_TEST_CASE( EditorBackgroundTaskTest, ResultIsTakenOnce )
 
     task.finish( generation, 70 );
     SW_EXPECT_FALSE( task.isPending() );
-    SW_EXPECT_TRUE( task.take( result ) == EditorTaskPoll::Ready );
+    SW_EXPECT_TRUE( task.take( result ) == EditorJobPoll::Ready );
     SW_EXPECT_EQUAL( 70, result );
-    SW_EXPECT_TRUE( task.take( result ) == EditorTaskPoll::Idle );
+    SW_EXPECT_TRUE( task.take( result ) == EditorJobPoll::Idle );
 }
 
-/** @brief [EditorBackgroundTaskTest] 새 요청 뒤의 옛 세대는 입력을 읽지도 결과를 싣지도 못하고, 새 요청은 가져가지 않은 옛 결과를 버린다 */
-SW_TEST_CASE( EditorBackgroundTaskTest, StaleGenerationIsIgnored )
+/** @brief [EditorBackgroundJobTest] 새 요청 뒤의 옛 세대는 입력을 읽지도 결과를 싣지도 못하고, 새 요청은 가져가지 않은 옛 결과를 버린다 */
+SW_TEST_CASE( EditorBackgroundJobTest, StaleGenerationIsIgnored )
 {
-    ProtocolTask task;
+    ProtocolJob  task;
     const uint32 stale   = task.begin( 1 );
     const uint32 current = task.begin( 2 );
     int32        value   = 0;
     SW_EXPECT_FALSE( task.read( stale, value ) );
     task.finish( stale, 10 );
-    SW_EXPECT_TRUE( task.take( value ) == EditorTaskPoll::Running );
+    SW_EXPECT_TRUE( task.take( value ) == EditorJobPoll::Running );
     task.finish( current, 20 );
 
     const uint32 next = task.begin( 3 ); // 20 은 가져가지 않았다
-    SW_EXPECT_TRUE( task.take( value ) == EditorTaskPoll::Running );
+    SW_EXPECT_TRUE( task.take( value ) == EditorJobPoll::Running );
     task.finish( next, 30 );
-    SW_EXPECT_TRUE( task.take( value ) == EditorTaskPoll::Ready );
+    SW_EXPECT_TRUE( task.take( value ) == EditorJobPoll::Ready );
     SW_EXPECT_EQUAL( 30, value );
 }
 
@@ -76,7 +76,7 @@ SW_TEST_CASE( EditorExternalToolJobTest, ScriptCommandAndIdleJob )
     vector<string>           listLine;
     job.takeLines( listLine );
     SW_EXPECT_TRUE( listLine.empty() );
-    SW_EXPECT_TRUE( job.take( result ) == EditorTaskPoll::Idle );
+    SW_EXPECT_TRUE( job.take( result ) == EditorJobPoll::Idle );
     job.cancelAndWait(); // 도는 것이 없어도 부를 수 있다
     SW_EXPECT_FALSE( job.isPending() );
 }

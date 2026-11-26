@@ -100,7 +100,6 @@
     "Source/Core/Task/TaskManager.cpp": {"minus-one": 8, "integer": 1},
     "Source/Core/Task/TaskManager.h": {"integer": 9},
     "Source/Core/Task/TaskNode.h": {"integer": 2},
-    "Source/Core/Task/TaskNodePool.h": {"integer": 1},
     "Source/Core/Testing/TestFramework.h": {"integer": 1},
     "Source/Core/Testing/TestRunner.cpp": {"minus-one": 1, "float": 2, "integer": 3},
     "Source/Core/Time/FixedStepTimer.h": {"float": 1},

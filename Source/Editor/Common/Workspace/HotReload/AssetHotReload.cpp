@@ -637,10 +637,10 @@ namespace sw::editor
     void AssetHotReload::pollImportJob()
     {
         EditorAssetImportResult result{};
-        const EditorTaskPoll    poll = _pImportJob->take( result );
-        if ( poll == EditorTaskPoll::Running )
+        const EditorJobPoll     poll = _pImportJob->take( result );
+        if ( poll == EditorJobPoll::Running )
             return;
-        if ( poll == EditorTaskPoll::Ready )
+        if ( poll == EditorJobPoll::Ready )
             finishImport( result );
         else if ( _bImportInFlight )
         {
