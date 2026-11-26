@@ -95,7 +95,10 @@ namespace sw
         , _missingMutex{}
         , _uniqueMissingKey{}
         , _textRevision{ 0 }
+        , _syncedModuleProjectGeneration{ 0 }
         , _bEngineInstance{ SW_FALSE }
+        , _bModuleProjectsSynced{ SW_FALSE }
+        , _bModuleProjectsComplete{ SW_FALSE }
         , _reserved{ 0 }
         , _onLanguageChanged{}
     {
@@ -114,6 +117,7 @@ namespace sw
         {
             UniqueLock<shared_mutex> lock{ _mutex };
             _listProject.clear();
+            _bModuleProjectsSynced = SW_FALSE; // 탑재가 비었으니 다음 맞추기는 등록 번호와 상관없이 다시 올린다
             _mapLooseTable.clear();
             _mapBinaryTable.clear();
             _currentLanguage.clear();
@@ -359,7 +363,26 @@ namespace sw
         } );
     }
 
+    uint32 LocalizationModuleProject::getRegistrationGeneration()
+    {
+        return getModuleProjects().withLock( []( const RegistrationList<const LocalizationModuleProject>& list )
+        { return list.getGeneration(); } );
+    }
+
     bool LocalizationManager::syncModuleProjects()
+    {
+        // 번호는 목록을 읽기 전에 본다 — 그 사이에 등록이 바뀌면 다음 부름이 번호가 달라 다시 맞춘다.
+        const uint32 registrationGeneration = LocalizationModuleProject::getRegistrationGeneration();
+        if ( _bModuleProjectsSynced != SW_FALSE && registrationGeneration == _syncedModuleProjectGeneration )
+            return _bModuleProjectsComplete != SW_FALSE;
+        const bool bComplete           = syncModuleProjectsInternal();
+        _syncedModuleProjectGeneration = registrationGeneration;
+        _bModuleProjectsSynced         = SW_TRUE;
+        _bModuleProjectsComplete       = bComplete ? SW_TRUE : SW_FALSE;
+        return bComplete;
+    }
+
+    bool LocalizationManager::syncModuleProjectsInternal()
     {
         const vector<string> listRegistered = LocalizationModuleProject::collectProjectPaths();
         vector<string>       listToMount;
@@ -409,6 +432,8 @@ namespace sw
 
     void LocalizationManager::unmountProjects( LocalizationScope scope )
     {
+        if ( scope == LocalizationScope::Module )
+            _bModuleProjectsSynced = SW_FALSE;
         string language;
         {
             UniqueLock<shared_mutex> lock{ _mutex };

@@ -44,6 +44,8 @@
 #include "Editor/Panels/Inspector/Model/InspectorComponentManager.h"
 #include "Editor/Viewport/Model/SceneViewOverlayLayoutStore.h"
 
+#include "Engine/Localization/LocalizationManager.h"
+
 namespace sw::editor
 {
     void EditorSubsystemSet::install( SubsystemScope& scope, EditorContext& context )
@@ -92,6 +94,10 @@ namespace sw::editor
 
     void EditorSubsystemSet::syncExtensionRegistrations( EditorContext& context )
     {
+        // 확장 모듈이 올린 현지화 프로젝트(`SW_LOCALIZATION_PROJECT`)를 붙인다 — 확장은 에디터 컨텍스트가 선 뒤에 올라오고 내려가므로 기동 순서에 기대지 않고 프레임 앞마다 맞춘다.
+        // 등록 번호가 같으면 아무것도 하지 않는다. 못 올린 프로젝트는 그 읽기가 이유를 남겼다(프레임마다 되풀이하지 않는다).
+        if ( LocalizationManager* const pLocalization = editor::findSubsystem<LocalizationManager>() )
+            (void)pLocalization->syncModuleProjects();
         context.getSubsystem<EditorExtensionSubsystems>().syncWithRegistry(); // 패널이 그리기 전에 찾을 수 있게 먼저
         context.getSubsystem<EditorPanelManager>().syncWithRegistry();
         context.getSubsystem<EditorPopupManager>().syncWithRegistry();
