@@ -13,6 +13,7 @@
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Localization/TextFormatter.h"
 #include "Engine/Presentation/UIViewModel.h"
+#include "Engine/Reflection/EnumName.h"
 #include "Engine/Reflection/ReflectValueBinding.h"
 #include "Engine/Reflection/ReflectedValue.h"
 #include "Engine/Reflection/TypeInfo.h"
@@ -270,20 +271,20 @@ namespace sw
             if ( UIBindingValue::canConvert( sourceKind, pConverter->_inputKind ) == false )
                 return unexpected( Error{ ErrorKind::InvalidArgument, "the converter does not take the source kind", pConverter->_name.c_str() }
                                        .appendDetail( " takes " )
-                                       .appendDetail( UIBindingValue::getKindName( pConverter->_inputKind ) )
+                                       .appendDetail( getEnumName( pConverter->_inputKind ) )
                                        .appendDetail( ", the source is " )
-                                       .appendDetail( UIBindingValue::getKindName( sourceKind ) ) );
+                                       .appendDetail( getEnumName( sourceKind ) ) );
             binding._converter = *pConverter;
             sourceKind         = pConverter->_outputKind;
         }
         if ( binding._expression._format.empty() == false )
             sourceKind = UIBindingValueKind::Text;
         if ( UIBindingSetInternal::canBind( sourceKind, sourceTypeName, binding._target ) == false )
-            return unexpected( Error{ ErrorKind::InvalidArgument, "cannot bind the source to the field without a converter", UIBindingValue::getKindName( sourceKind ) }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "cannot bind the source to the field without a converter", getEnumName( sourceKind ) }
                                    .appendDetail( " '" )
                                    .appendDetail( sourceTypeName.c_str() )
                                    .appendDetail( "' to " )
-                                   .appendDetail( UIBindingValue::getKindName( binding._target._kind ) )
+                                   .appendDetail( getEnumName( binding._target._kind ) )
                                    .appendDetail( " '" )
                                    .appendDetail( binding._target.getLeafTypeName().c_str() )
                                    .appendDetail( "'" ) );

@@ -8,6 +8,7 @@
 
 #include "Engine/Graphics/RHI/RHIDescriptors.h"
 #include "Engine/Graphics/RHI/RHIFormatInfo.h"
+#include "Engine/Reflection/EnumName.h"
 
 namespace sw
 {
@@ -42,18 +43,6 @@ namespace sw
     {
         struct RHIMemoryTrackerInternal
         {
-            /** @brief `RHIMemoryKind` 값 순서의 표시 이름입니다. */
-            static constexpr const utf8* kArrKindName[] = {
-                "Texture",
-                "RenderTarget",
-                "TransientPool",
-                "Buffer",
-                "Staging",
-                "Descriptor",
-            };
-            static_assert( sizeof( kArrKindName ) / sizeof( kArrKindName[0] ) == static_cast<size_t>( RHIMemoryKind::MaxKinds ),
-                           "kArrKindName must have one name per RHIMemoryKind" );
-
             /** @brief 깊이 첨부(D24S8)의 텍셀 바이트입니다. 네 백엔드 모두 24 비트 깊이 + 8 비트 스텐실 한 칸으로 만듭니다. */
             static constexpr uint64 kDepthStencilTexelBytes = 4;
 
@@ -91,26 +80,6 @@ namespace sw
         , _bAvailableKnown{ SW_FALSE }
         , _reserved{ 0 }
     {
-    }
-
-    const utf8* RHIMemoryTracker::getKindName( RHIMemoryKind kind )
-    {
-        const uint32 kindIndex = static_cast<uint32>( kind );
-        if ( kindIndex >= kRHIMemoryKindCount )
-            return "Invalid";
-        return RHIMemoryTrackerInternal::kArrKindName[kindIndex];
-    }
-
-    const utf8* RHIMemoryTracker::getSizeBasisName( RHIMemorySizeBasis basis )
-    {
-        switch ( basis )
-        {
-            case RHIMemorySizeBasis::Allocation:
-                return "allocation";
-            case RHIMemorySizeBasis::Logical:
-                return "logical";
-        }
-        return "Invalid";
     }
 
     RHIMemoryKind RHIMemoryTracker::classifyTexture( const RHITextureDesc& desc )
@@ -342,7 +311,7 @@ namespace sw
 
         const uint64 trackedX10 = RHIMemoryTrackerInternal::toMegabytesX10( summary._trackedBytes );
         SW_LOG_INFO_ID( "RHIMemoryTracker.GPUMemoryKindLive", "[Profile] GPU memory by kind (live, %# · %# size)  %#.%# MB in %# resources  + %# of unknown size", pBackendName,
-                        getSizeBasisName( summary._sizeBasis ), trackedX10 / 10, trackedX10 % 10, liveCount, summary._unknownSizeCount );
+                        getEnumName( summary._sizeBasis ), trackedX10 / 10, trackedX10 % 10, liveCount, summary._unknownSizeCount );
         for ( const RHIMemoryKind kind : makeKindOrderByLiveBytes() )
         {
             const RHIMemoryKindStats stats = getStats( kind );
@@ -350,7 +319,7 @@ namespace sw
                 continue;
             const uint64 megabytesX10 = RHIMemoryTrackerInternal::toMegabytesX10( stats._liveBytes );
             const uint64 sharePermill = summary._trackedBytes == 0 ? 0 : ( stats._liveBytes * 1000 ) / summary._trackedBytes;
-            SW_LOG_INFO_ID( "RHIMemoryTracker.MBResourcesUnknownSize", "[Profile]   %#  %#.%# MB  %#.%#%%  %# resources  + %# of unknown size", getKindName( kind ), megabytesX10 / 10, megabytesX10 % 10,
+            SW_LOG_INFO_ID( "RHIMemoryTracker.MBResourcesUnknownSize", "[Profile]   %#  %#.%# MB  %#.%#%%  %# resources  + %# of unknown size", getEnumName( kind ), megabytesX10 / 10, megabytesX10 % 10,
                             sharePermill / 10, sharePermill % 10, stats._liveCount, stats._unknownSizeCount );
         }
 

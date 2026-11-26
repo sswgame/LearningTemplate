@@ -11,6 +11,7 @@
 #include "Core/String/Name/hashed_string.h"
 
 #include "Engine/Reflection/PropertyHandle.h"
+#include "Engine/Reflection/ReflectionEnumMacros.h"
 
 namespace sw
 {
@@ -25,6 +26,7 @@ namespace sw
      * @details 불리언과 숫자는 서로 바꾸고(0 이 아니면 true), 무엇이든 텍스트로는 바꾼다(리플렉션 텍스트 표기). 텍스트에서 숫자나 불리언으로는 바꾸지 않는다(변환기를 쓴다).
      *          그 밖의 타입(색, 벡터, 열거형, 구조체)은 같은 타입끼리, 또는 텍스트로만 연결한다.
      */
+    ENUM()
     enum class UIBindingValueKind : uint8
     {
         None,   ///< 값이 없습니다.
@@ -75,8 +77,6 @@ namespace sw
         static UIBindingValueKind classifyType( ReflectBuiltinIndex builtinIndex );
         /** @brief @p from 종류의 값을 @p to 종류의 필드에 쓸 수 있는지 반환합니다(같은 Other 타입끼리는 `canBindPaths` 가 따로 확인합니다). */
         static bool canConvert( UIBindingValueKind from, UIBindingValueKind to );
-        /** @brief 종류 이름입니다(오류 메시지용). */
-        static const utf8* getKindName( UIBindingValueKind kind );
 
         /**
          * @brief @p type(기반 타입 포함) 기준으로 경로 @p path 를 해석합니다. 중간은 리플렉션 구조체여야 하고 컨테이너는 받지 않습니다(잎의 `vector<string>` 은 받습니다).
