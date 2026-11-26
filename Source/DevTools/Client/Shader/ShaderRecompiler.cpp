@@ -26,11 +26,12 @@ namespace sw
         struct ShaderRecompilerInternal
         {
             /** @brief 묶음 컴파일의 결과를 요청 번호의 칸에 둡니다(워커에서 불린다 — 칸마다 한 번). */
+            /** @brief 묶음 컴파일의 결과를 받습니다 — 워커에서 동시에 불리므로 요청 `i` 는 `_pListResult[i]` 칸에만 쓴다(컨테이너의 쓰기 입구를 함께 지나지 않는다, 쿠커의 `BatchReceiver` 와 같다). */
             struct BatchReceiver
             {
-                vector<ShaderCompileResult> _listResult;
+                ShaderCompileResult* _pListResult{ nullptr }; ///< 요청 수만큼
 
-                void recordResult( uint32 requestIndex, const ShaderCompileResult& result ) { _listResult[requestIndex] = result; }
+                void recordResult( uint32 requestIndex, const ShaderCompileResult& result ) { _pListResult[requestIndex] = result; }
             };
 
             static const ShaderRecompiler* findRecompiler()
@@ -132,13 +133,14 @@ namespace sw
             listLiveDesc.push_back( ShaderCache::makeLiveCompileDesc( desc, shaderCache.isLiveDebugCodegen() ) );
             listLiveDesc.back()._enginePolicy = shaderCache.findEnginePolicy();
         }
+        vector<ShaderCompileResult>             listResult( listLiveDesc.size() );
         ShaderRecompilerInternal::BatchReceiver receiver;
-        receiver._listResult.resize( listLiveDesc.size() );
+        receiver._pListResult = listResult.data();
         ShaderCompiler::compileBatch( listLiveDesc, ShaderRecordScope::Request, SW_DELEGATE_METHOD( ShaderCompiledDelegate, &ShaderRecompilerInternal::BatchReceiver::recordResult, &receiver ) );
         for ( size_t index = 0; index < listToCompile.size(); ++index )
         {
             const ShaderCompileDesc&   desc      = listToCompile[index];
-            const ShaderCompileResult& newResult = receiver._listResult[index];
+            const ShaderCompileResult& newResult = listResult[index];
             if ( newResult._bSuccess == false )
             {
                 ++failed;
