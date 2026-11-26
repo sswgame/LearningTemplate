@@ -29,6 +29,27 @@ namespace sw
             /** @brief 해상도 한 변의 범위입니다. 0 이나 터무니없는 값은 데이터 오타로 봅니다. */
             static constexpr uint32 kMinResolution = 320;
             static constexpr uint32 kMaxResolution = 16384;
+
+            /** @brief 값을 리소스 태그 축 `param` 의 값으로 넣습니다(`ResourceTags::setAxisValue`). 그 축에 기댄 리소스는 다음 프레임에 다시 읽힌다. */
+            static bool applyResourceTag( const UserSettingApplyParams& context )
+            {
+                // 모르는 축 · 여러 값 축 · 닫힌 목록 밖의 값은 `ResourceTags` 가 오류로 남긴다 — 스키마의 param 오타가 조용히 지나가지 않는다.
+                return engine::getSubsystem<ResourceTags>().setAxisValue( context._param, context._value );
+            }
+
+            /** @brief `1920x1080` 형식의 글을 만듭니다. */
+            static string formatResolution( int32 width, int32 height )
+            {
+                utf8 arrText[constant::buffer::kMax32]{};
+                formatstring( arrText, constant::buffer::kMax32, "%#x%#", width, height );
+                return string( arrText );
+            }
+
+            static bool isToggleModeName( string_view value )
+            {
+                return StringUtil::equals( value, UserSettingsEngineHandlersInternal::kHold ) ||
+                       StringUtil::equals( value, UserSettingsEngineHandlersInternal::kToggle );
+            }
         };
     } // namespace
 } // namespace sw
@@ -56,7 +77,7 @@ namespace sw
         _listRegistration.push_back( registry.registerHandler( "input.invertY", SW_DELEGATE_METHOD( UserSettingHandlerDelegate, &UserSettingsEngineHandlers::applyInvertY, this ) ) );
         _listRegistration.push_back( registry.registerHandler( "input.stickDeadzone", SW_DELEGATE_METHOD( UserSettingHandlerDelegate, &UserSettingsEngineHandlers::applyStickDeadzone, this ) ) );
         _listRegistration.push_back( registry.registerHandler( "input.toggleMode", SW_DELEGATE_METHOD( UserSettingHandlerDelegate, &UserSettingsEngineHandlers::applyToggleMode, this ),
-                                                               SW_DELEGATE_FUNCTION( UserSettingValueFilterDelegate, &UserSettingsEngineHandlers::isToggleModeName ) ) );
+                                                               SW_DELEGATE_FUNCTION( UserSettingValueFilterDelegate, &UserSettingsEngineHandlersInternal::isToggleModeName ) ) );
         _listRegistration.push_back( registry.registerHandler( "input.keyBinding", SW_DELEGATE_METHOD( UserSettingHandlerDelegate, &UserSettingsEngineHandlers::applyKeyBinding, this ) ) );
         _listRegistration.push_back( registry.registerHandler( "localization.language", SW_DELEGATE_METHOD( UserSettingHandlerDelegate, &UserSettingsEngineHandlers::applyLanguage, this ) ) );
         _listRegistration.push_back( registry.registerHandler( "display.windowMode", SW_DELEGATE_METHOD( UserSettingHandlerDelegate, &UserSettingsEngineHandlers::applyWindowMode, this ),
@@ -64,7 +85,7 @@ namespace sw
         _listRegistration.push_back( registry.registerHandler( "display.resolution", SW_DELEGATE_METHOD( UserSettingHandlerDelegate, &UserSettingsEngineHandlers::applyResolution, this ),
                                                                SW_DELEGATE_FUNCTION( UserSettingValueFilterDelegate, &UserSettingsEngineHandlers::isResolutionText ) ) );
         _listRegistration.push_back( registry.registerHandler( "display.vsync", SW_DELEGATE_METHOD( UserSettingHandlerDelegate, &UserSettingsEngineHandlers::applyVSync, this ) ) );
-        _listRegistration.push_back( registry.registerHandler( "resource.tag", SW_DELEGATE_FUNCTION( UserSettingHandlerDelegate, &UserSettingsEngineHandlers::applyResourceTag ) ) );
+        _listRegistration.push_back( registry.registerHandler( "resource.tag", SW_DELEGATE_FUNCTION( UserSettingHandlerDelegate, &UserSettingsEngineHandlersInternal::applyResourceTag ) ) );
         _listRegistration.push_back( registry.registerOptionProvider( "display.resolutions",
                                                                       SW_DELEGATE_METHOD( UserSettingOptionProviderDelegate, &UserSettingsEngineHandlers::collectResolutions, this ) ) );
         _listRegistration.push_back( registry.registerOptionProvider( "localization.languages",
@@ -290,12 +311,6 @@ namespace sw
         return true;
     }
 
-    bool UserSettingsEngineHandlers::applyResourceTag( const UserSettingApplyParams& context )
-    {
-        // 모르는 축 · 여러 값 축 · 닫힌 목록 밖의 값은 `ResourceTags` 가 오류로 남긴다 — 스키마의 param 오타가 조용히 지나가지 않는다.
-        return engine::getSubsystem<ResourceTags>().setAxisValue( context._param, context._value );
-    }
-
     void UserSettingsEngineHandlers::collectLanguages( vector<UserSettingOption>& outListOption )
     {
         outListOption.clear();
@@ -333,22 +348,9 @@ namespace sw
         for ( const int2& resolution : _listDisplayResolution )
         {
             UserSettingOption option;
-            option._value = formatResolution( resolution._x, resolution._y );
+            option._value = UserSettingsEngineHandlersInternal::formatResolution( resolution._x, resolution._y );
             outListOption.push_back( option );
         }
-    }
-
-    string UserSettingsEngineHandlers::formatResolution( int32 width, int32 height )
-    {
-        utf8 arrText[constant::buffer::kMax32]{};
-        formatstring( arrText, constant::buffer::kMax32, "%#x%#", width, height );
-        return string( arrText );
-    }
-
-    bool UserSettingsEngineHandlers::isToggleModeName( string_view value )
-    {
-        return StringUtil::equals( value, UserSettingsEngineHandlersInternal::kHold ) ||
-               StringUtil::equals( value, UserSettingsEngineHandlersInternal::kToggle );
     }
 
     bool UserSettingsEngineHandlers::isWindowModeName( string_view value )

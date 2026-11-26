@@ -99,8 +99,8 @@ namespace sw
                 {
                     float32 arrLeft[4]{ 0.0f, 0.0f, 0.0f, 0.0f };
                     float32 arrRight[4]{ 0.0f, 0.0f, 0.0f, 0.0f };
-                    UIStyleFieldTable::readComponents( lhs, field, arrLeft );
-                    UIStyleFieldTable::readComponents( rhs, field, arrRight );
+                    lhs.readComponents( field, arrLeft );
+                    rhs.readComponents( field, arrRight );
                     for ( uint32 component = 0; component < componentCount; ++component )
                     {
                         if ( arrLeft[component] != arrRight[component] )
@@ -132,39 +132,39 @@ namespace sw
         return field < UIStyleField::Count ? WidgetStyleInternal::kArrRow[field]._componentCount : 0u;
     }
 
-    void UIStyleFieldTable::readComponents( const WidgetStyle& style, UIStyleField field, float32 ( &outArr )[4] )
+    void WidgetStyle::readComponents( UIStyleField field, float32 ( &outArr )[4] ) const
     {
-        const uint32 componentCount = getComponentCount( field );
+        const uint32 componentCount = UIStyleFieldTable::getComponentCount( field );
         if ( componentCount == 0 )
             return;
-        const uint8* pBase = reinterpret_cast<const uint8*>( &style );
+        const uint8* pBase = reinterpret_cast<const uint8*>( this );
         std::memcpy( outArr, pBase + WidgetStyleInternal::getRow( field )._offset, componentCount * sizeof( float32 ) );
     }
 
-    void UIStyleFieldTable::writeComponents( WidgetStyle& style, UIStyleField field, const float32 ( &arr )[4] )
+    void WidgetStyle::writeComponents( UIStyleField field, const float32 ( &arr )[4] )
     {
-        const uint32 componentCount = getComponentCount( field );
+        const uint32 componentCount = UIStyleFieldTable::getComponentCount( field );
         if ( componentCount == 0 )
             return;
-        uint8* pBase = reinterpret_cast<uint8*>( &style );
+        uint8* pBase = reinterpret_cast<uint8*>( this );
         std::memcpy( pBase + WidgetStyleInternal::getRow( field )._offset, arr, componentCount * sizeof( float32 ) );
     }
 
-    void UIStyleFieldTable::copyField( const WidgetStyle& source, UIStyleField field, WidgetStyle& outTarget )
+    void WidgetStyle::copyFieldFrom( const WidgetStyle& source, UIStyleField field )
     {
-        if ( getComponentCount( field ) > 0 )
+        if ( UIStyleFieldTable::getComponentCount( field ) > 0 )
         {
             float32 arrComponent[4]{ 0.0f, 0.0f, 0.0f, 0.0f };
-            readComponents( source, field, arrComponent );
-            writeComponents( outTarget, field, arrComponent );
+            source.readComponents( field, arrComponent );
+            writeComponents( field, arrComponent );
         }
         else if ( field == UIStyleField::Font )
         {
-            outTarget._font = source._font;
+            _font = source._font;
         }
         else if ( field == UIStyleField::Transition )
         {
-            outTarget._transition = source._transition; // 수치가 아닌 필드는 이 둘뿐이다(WidgetStyleInternal 의 static_assert)
+            _transition = source._transition; // 수치가 아닌 필드는 이 둘뿐이다(WidgetStyleInternal 의 static_assert)
         }
     }
 

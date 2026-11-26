@@ -1,6 +1,6 @@
 /**
  * @file TestEditorCanvasProjection.cpp
- * @brief 상자의 화면 사각형(`EditorCanvasProjection::projectBoxRect`)이 카메라 뒤로 넘어간 모서리를 근평면에서 잘라 모으는지 봅니다(감사 E-10 — 상자 선택).
+ * @brief 상자의 화면 사각형(`SceneViewQuery::projectBoxRect`)이 카메라 뒤로 넘어간 모서리를 근평면에서 잘라 모으는지 봅니다(감사 E-10 — 상자 선택).
  */
 #include "pch.h"
 
@@ -10,6 +10,8 @@
 #include "Core/TestFramework/TestFramework.h"
 
 #include "Editor/Viewport/Model/EditorCanvasProjection.h"
+
+#include "Engine/Graphics/View/SceneViewQuery.h"
 
 namespace
 {
@@ -42,7 +44,7 @@ SW_TEST_CASE( EditorViewportProjectionTest, BoxRectClipsAtNearPlane )
         sw::float3{-1.0f, -1.0f,  9.0f},
         sw::float3{ 1.0f,  1.0f, 11.0f}
     };
-    SW_REQUIRE_TRUE( sw::editor::EditorCanvasProjection::projectBoxRect( viewProj, ahead, canvasPos, canvasSize, screenMin, screenMax ) );
+    SW_REQUIRE_TRUE( sw::SceneViewQuery::projectBoxRect( viewProj, ahead, canvasPos, canvasSize, screenMin, screenMax ) );
     SW_EXPECT_TRUE( screenMin._x > 0.0f && screenMax._x < 100.0f );
     SW_EXPECT_TRUE( screenMin._y > 0.0f && screenMax._y < 100.0f );
     SW_EXPECT_NEAR( 50.0f, ( screenMin._x + screenMax._x ) * 0.5f, 1e-3f ); // 가운데
@@ -52,7 +54,7 @@ SW_TEST_CASE( EditorViewportProjectionTest, BoxRectClipsAtNearPlane )
         sw::float3{-5.0f, -5.0f, -5.0f},
         sw::float3{ 5.0f,  5.0f,  5.0f}
     };
-    SW_REQUIRE_TRUE( sw::editor::EditorCanvasProjection::projectBoxRect( viewProj, around, canvasPos, canvasSize, screenMin, screenMax ) );
+    SW_REQUIRE_TRUE( sw::SceneViewQuery::projectBoxRect( viewProj, around, canvasPos, canvasSize, screenMin, screenMax ) );
     SW_EXPECT_TRUE( screenMin._x <= 0.0f && screenMax._x >= 100.0f );
     SW_EXPECT_TRUE( screenMin._y <= 0.0f && screenMax._y >= 100.0f );
 
@@ -60,5 +62,5 @@ SW_TEST_CASE( EditorViewportProjectionTest, BoxRectClipsAtNearPlane )
         sw::float3{-1.0f, -1.0f, -11.0f},
         sw::float3{ 1.0f,  1.0f,  -9.0f}
     };
-    SW_EXPECT_FALSE( sw::editor::EditorCanvasProjection::projectBoxRect( viewProj, behind, canvasPos, canvasSize, screenMin, screenMax ) );
+    SW_EXPECT_FALSE( sw::SceneViewQuery::projectBoxRect( viewProj, behind, canvasPos, canvasSize, screenMin, screenMax ) );
 }

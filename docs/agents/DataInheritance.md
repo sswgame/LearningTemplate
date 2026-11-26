@@ -23,7 +23,7 @@
 4. 칸 덮어쓰기로 안 풀리는(차이가 쌓이는) Engine 형식만 `SW_DATA_INHERITANCE_MERGE`.
 5. 카탈로그(한 파일에 항목 여럿)는 `Content/engine/settings/datacataloginheritance.xml` 에 `<Entry name key>` 한 줄 — 읽는 코드는 고치지 않는다.
 6. 조건 · 동작은 등록된 어휘를 쓴다(아래 "행동 어휘"). 칸을 더하면 실행이 읽고 시나리오가 효과를 확인한다 — 읽히지 않는 칸은 넣지 않는다.
-7. 핫 리로드가 있는 종류는 `_base` 칸을 `AssetReferenceUse::InlinedAtLoad` 로 둔다(`AssetReloadCascade` 가 자식을 다시 읽는다).
+7. 핫 리로드가 있는 종류는 `_base` 칸을 `AssetReferenceUse::InlinedAtLoad` 로 둔다(`EditorAssetIndex::planDependents` 가 자식을 다시 읽는다).
 
 ## 저장
 

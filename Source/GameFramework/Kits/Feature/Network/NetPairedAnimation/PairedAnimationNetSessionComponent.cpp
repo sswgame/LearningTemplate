@@ -1,16 +1,55 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Feature/Network/NetPairedAnimation/PairedAnimationNetSessionComponent.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Network/GameNetSession.h"
+#include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Subsystem/SceneNetLink.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
+#include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Kits/Feature/Network/NetPairedAnimation/PairedAnimationReplication.h"
 #include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 
 namespace sw
 {
+    class NetMessageRouter;
+
+    /**
+     * @class PairedAnimationNetSessionComponent
+     * @brief 씬 하나의 페어드 애니메이션 복제를 게임 네트워크 세션에 잇습니다. 자세한 계약은 파일 머리말을 보세요.
+     */
+    REFLECT( Category = "Network", DisplayName = "Paired Animation Net Session", Tooltip = "Replicates this scene's paired animation sessions over the game's network session" )
+    class PairedAnimationNetSessionComponent : public Component
+    {
+    public:
+        REFLECT_BODY();
+
+        static constexpr TickGroup kTickGroup = TickGroup::PostUpdate; ///< 세션 갱신(프레임 시스템 단계) 뒤에 보낸다 — 마지막 그룹에서 돈다.
+
+        PairedAnimationNetSessionComponent();
+        ~PairedAnimationNetSessionComponent() override = default;
+
+        void onBeginPlay() override;
+        void onEndPlay() override;
+        void onTick( TickContext& context ) override;
+
+        const PairedAnimationReplicationServer& getServer() const { return _server; }
+        const PairedAnimationReplicationClient& getClient() const { return _client; }
+
+    private:
+        /** @brief 누적 셈을 `GameNetSession::setReplicaStats( "paired_animation" … )` 로 올립니다(Profiler 탭의 `replicas=` 표). */
+        void reportReplicaStats();
+
+        SW_TRANSIENT PairedAnimationReplicationServer _server;
+        SW_TRANSIENT PairedAnimationReplicationClient _client;
+        Subscription                                  _routerSubscription; ///< 세션 라우터에 단 처리기의 등록. 없으면 시작하지 않았다(처리기보다 뒤에 선언 — 먼저 풀린다)
+        SW_TRANSIENT uint8                            _bServer;            ///< 서버로 시작했다
+    };
+
     PairedAnimationNetSessionComponent::PairedAnimationNetSessionComponent()
         : _server{}
         , _client{}
@@ -82,3 +121,5 @@ namespace sw
             reportReplicaStats();
     }
 } // namespace sw
+
+#include "PairedAnimationNetSessionComponent.cpp.gen.inl"

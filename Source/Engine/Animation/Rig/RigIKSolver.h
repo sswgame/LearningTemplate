@@ -99,17 +99,5 @@ namespace sw
                                 const RigSolveSpace& space );
         /** @brief 본의 지금 로컬 회전에 제한을 겁니다. */
         static void applyJointLimit( RigPoseBuffer& pose, uint32 bone, const RigJointLimit& limit );
-        /** @brief 차이 회전 @p delta 를 축 @p axis 둘레의 비틀림과 그 나머지(흔들림)로 나눕니다. delta = swing * twist 입니다. */
-        static void decomposeSwingTwist( const quaternion& delta, const float3& axis, quaternion& outSwing, quaternion& outTwist );
-        /**
-         * @brief @p from 방향을 @p to 방향으로 돌리는 최소 회전을 반환합니다.
-         * @details `quaternion::fromToRotation` 은 1e-6 안쪽의 코사인 차를 단위 회전으로 버린다(약 0.08°). 사슬 IK 의 마지막 몇 mm 가 그 안에 들어간다.
-         *          여기서는 작은 각도 반각 공식(외적, 1 + 내적)을 그대로 정규화해서 끝까지 수렴하게 한다.
-         */
-        static quaternion makeFromToRotation( const float3& from, const float3& to );
-        /** @brief 역회전을 반환합니다. `quaternion::inverse` 는 const 가 아닌 값에서 제자리 버전이 선택되므로, 값으로 받는 함수를 따로 둡니다. */
-        static quaternion makeInverse( const quaternion& rotation ) { return rotation.inverse(); }
-        /** @brief 축 둘레 비틀림 회전의 부호 있는 각(라디안)입니다. */
-        static float32 computeTwistAngle( const quaternion& twist, const float3& axis );
     };
 } // namespace sw

@@ -100,7 +100,7 @@ namespace sw::editor
                     return false;
                 const shared_ptr<const PrefabAsset> pAsset = prefabCache.loadPrefab( assetRelativePath );
                 string                              newBaseState;
-                const bool                          bNoNewBase = pAsset == nullptr || pAsset->isValid() == false || PrefabOverrides::makeBaseState( *pAsset, newBaseState ) == false;
+                const bool                          bNoNewBase = pAsset == nullptr || pAsset->isValid() == false || pAsset->makeBaseState( newBaseState ) == false;
                 if ( bNoNewBase )
                     return false;
                 // 덮어쓴 것은 옛 원형과 비교해 뽑는다. 새 원형과 비교하면 프리팹에서 바뀐 칸이 모두 "인스턴스가 덮어쓴 값" 으로 보여 퍼지지 않는다.
@@ -152,7 +152,7 @@ namespace sw::editor
         string                              oldBaseState;
         const bool                          bHadFile   = FileUtil::readOptionalTextFile( *filePath, oldFileText ) == OptionalFileRead::Read;
         const shared_ptr<const PrefabAsset> pOldPrefab = ( bHadFile && pPrefabCache != nullptr ) ? pPrefabCache->loadPrefab( prefabPath ) : nullptr;
-        if ( pOldPrefab == nullptr || PrefabOverrides::makeBaseState( *pOldPrefab, oldBaseState ) == false )
+        if ( pOldPrefab == nullptr || pOldPrefab->makeBaseState( oldBaseState ) == false )
             oldBaseState.clear();
 
         // 형식은 경로가 정한다(`.prefab.json` 에는 JSON). 프리팹 경로가 아니면 쓰지 않는다.

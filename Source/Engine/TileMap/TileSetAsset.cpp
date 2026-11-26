@@ -14,7 +14,6 @@
 #include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
-#include "Engine/Serialization/XML/XMLNameCheck.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
 namespace sw
@@ -151,6 +150,89 @@ namespace sw
                     outListIssue.push_back( TileSetIssue{ string( textBuilder.view() ), brushIndex, ruleIndex } );
                 }
             }
+
+            /** @brief 노드의 `cell` 또는 `frames` 와 `fps` 를 읽습니다. 둘 다 없으면 오류입니다. 값의 규칙(셀 범위 · fps)은 `collectIssues` 가 본다. */
+            static bool parseVisual( const XMLNode& node, string_view sourceName, TileVisual& outVisual )
+            {
+                outVisual = TileVisual{};
+                if ( node.findAttribute( "frames" ) != nullptr )
+                {
+                    if ( StringUtil::parseIntList( node.getAttributeText( "frames" ), XMLReadUtil::kListSeparators, outVisual._listFrameCell ) == false || outVisual._listFrameCell.empty() )
+                    {
+                        SW_LOG_ERROR_ID( "TileSet.Invalid", "%#: <%#> frames must be cell numbers", sourceName, node.getName() );
+                        return false;
+                    }
+                    return node.readOptionalAttributeInRange( "fps", 0.0f, MathUtil::kMaxFloat, outVisual._framesPerSecond );
+                }
+                if ( node.findAttribute( "cell" ) != nullptr )
+                {
+                    const optional<int32> cell = node.readRequiredAttribute<int32>( "cell" );
+                    if ( cell.has_value() == false )
+                        return false;
+                    outVisual._listFrameCell.push_back( *cell );
+                    return true;
+                }
+                SW_LOG_ERROR_ID( "TileSet.Invalid", "%#: <%#> needs cell=\"n\" or frames=\"a b c\"", sourceName, node.getName() );
+                return false;
+            }
+
+            /** @brief `<Tile>` 또는 `<RuleTile>` 하나를 읽습니다(형식만 — 이름 겹침 · 셀 범위는 `collectIssues`). 잘못되었으면 오류를 남기고 false 입니다. */
+            static bool parseBrush( const XMLNode& node, string_view sourceName, TileBrush& outBrush )
+            {
+                using Internal       = TileSetAssetInternal;
+                const bool bRuleTile = StringUtil::equals( node.getName(), "RuleTile" );
+                if ( bRuleTile == false && StringUtil::equals( node.getName(), "Tile" ) == false )
+                {
+                    SW_LOG_ERROR_ID( "TileSet.Invalid", "%#: unknown element <%#> (Tile, RuleTile)", sourceName, node.getName() );
+                    return false;
+                }
+                TileBrushParams params;
+                if ( XMLFields::readProperties( node, params, sourceName, { "cell", "frames", "fps" } ) == false || params._name.empty() )
+                    return false;
+                TileBrush&        brush = outBrush;
+                const string_view name  = params._name.view();
+                brush._name             = params._name;
+                if ( TileSetAssetInternal::parseVisual( node, sourceName, brush._defaultVisual ) == false )
+                    return false;
+                brush._bSolid                         = params._bSolid ? SW_TRUE : SW_FALSE;
+                brush._navCost                        = static_cast<uint8>( params._navCost );
+                const string_view outside             = params._outside;
+                const bool        bInvalidOutsideMode = outside.empty() == false && StringUtil::equals( outside, "same" ) == false && StringUtil::equals( outside, "empty" ) == false;
+                if ( bInvalidOutsideMode )
+                {
+                    SW_LOG_ERROR_ID( "TileSet.Invalid", "%#: outside=\"%#\" must be 'same' or 'empty'", sourceName, outside );
+                    return false;
+                }
+                brush._bOutsideIsSame = StringUtil::equals( outside, "same" ) ? SW_TRUE : SW_FALSE;
+
+                for ( XMLNode ruleNode = node.findChild(); ruleNode.isValid(); ruleNode = ruleNode.findNextSibling() )
+                {
+                    if ( bRuleTile == false || StringUtil::equals( ruleNode.getName(), "Rule" ) == false )
+                    {
+                        SW_LOG_ERROR_ID( "TileSet.Invalid", "%#: unknown element <%#> in <%#> (only <Rule> inside <RuleTile>)", sourceName, ruleNode.getName(), node.getName() );
+                        return false;
+                    }
+                    TileRuleParams ruleProperties;
+                    if ( XMLFields::readProperties( ruleNode, ruleProperties, sourceName, { "cell", "frames", "fps" } ) == false )
+                        return false;
+                    TileRule rule{};
+                    if ( Internal::parsePattern( ruleProperties._pattern, rule._arrNeighbor ) == false )
+                    {
+                        SW_LOG_ERROR_ID( "TileSet.Invalid", "%#: rule pattern '%#' of '%#' must be nine of . o x", sourceName, ruleProperties._pattern.c_str(), name );
+                        return false;
+                    }
+                    if ( TileSetAssetInternal::parseVisual( ruleNode, sourceName, rule._visual ) == false )
+                        return false;
+                    brush._listRule.push_back( rule );
+                }
+                // 규칙 없는 규칙 타일은 형식 오류다 — 내용(`TileSetContent`)에는 "규칙 타일" 표시가 따로 없어 규칙이 비면 그냥 타일이 된다.
+                if ( bRuleTile && brush._listRule.empty() )
+                {
+                    SW_LOG_ERROR_ID( "TileSet.Invalid", "%#: rule tile '%#' has no <Rule>", sourceName, name );
+                    return false;
+                }
+                return true;
+            }
         };
     } // namespace
 
@@ -280,30 +362,6 @@ namespace sw
         return applyContent( std::move( loaded ), path );
     }
 
-    bool TileSetAsset::parseVisual( const XMLNode& node, string_view sourceName, TileVisual& outVisual )
-    {
-        outVisual = TileVisual{};
-        if ( node.findAttribute( "frames" ) != nullptr )
-        {
-            if ( StringUtil::parseIntList( node.getAttributeText( "frames" ), XMLReadUtil::kListSeparators, outVisual._listFrameCell ) == false || outVisual._listFrameCell.empty() )
-            {
-                SW_LOG_ERROR_ID( "TileSet.Invalid", "%#: <%#> frames must be cell numbers", sourceName, node.getName() );
-                return false;
-            }
-            return node.readOptionalAttributeInRange( "fps", 0.0f, MathUtil::kMaxFloat, outVisual._framesPerSecond );
-        }
-        if ( node.findAttribute( "cell" ) != nullptr )
-        {
-            const optional<int32> cell = node.readRequiredAttribute<int32>( "cell" );
-            if ( cell.has_value() == false )
-                return false;
-            outVisual._listFrameCell.push_back( *cell );
-            return true;
-        }
-        SW_LOG_ERROR_ID( "TileSet.Invalid", "%#: <%#> needs cell=\"n\" or frames=\"a b c\"", sourceName, node.getName() );
-        return false;
-    }
-
     bool TileSetAsset::loadFromXMLText( string_view xmlText, string_view sourceName )
     {
         TileSetContent loaded;
@@ -362,7 +420,7 @@ namespace sw
         for ( XMLNode node = root.findChild(); node.isValid(); node = node.findNextSibling() )
         {
             TileBrush brush{};
-            if ( parseBrush( node, sourceName, brush ) == false )
+            if ( TileSetAssetInternal::parseBrush( node, sourceName, brush ) == false )
                 return false;
             loaded._listBrush.push_back( brush );
         }
@@ -370,70 +428,9 @@ namespace sw
         return true;
     }
 
-    bool TileSetAsset::parseBrush( const XMLNode& node, string_view sourceName, TileBrush& outBrush )
-    {
-        using Internal       = TileSetAssetInternal;
-        const bool bRuleTile = StringUtil::equals( node.getName(), "RuleTile" );
-        if ( bRuleTile == false && StringUtil::equals( node.getName(), "Tile" ) == false )
-        {
-            SW_LOG_ERROR_ID( "TileSet.Invalid", "%#: unknown element <%#> (Tile, RuleTile)", sourceName, node.getName() );
-            return false;
-        }
-        TileBrushParams params;
-        if ( XMLFields::readProperties( node, params, sourceName, { "cell", "frames", "fps" } ) == false || params._name.empty() )
-            return false;
-        TileBrush&        brush = outBrush;
-        const string_view name  = params._name.view();
-        brush._name             = params._name;
-        if ( parseVisual( node, sourceName, brush._defaultVisual ) == false )
-            return false;
-        brush._bSolid                         = params._bSolid ? SW_TRUE : SW_FALSE;
-        brush._navCost                        = static_cast<uint8>( params._navCost );
-        const string_view outside             = params._outside;
-        const bool        bInvalidOutsideMode = outside.empty() == false && StringUtil::equals( outside, "same" ) == false && StringUtil::equals( outside, "empty" ) == false;
-        if ( bInvalidOutsideMode )
-        {
-            SW_LOG_ERROR_ID( "TileSet.Invalid", "%#: outside=\"%#\" must be 'same' or 'empty'", sourceName, outside );
-            return false;
-        }
-        brush._bOutsideIsSame = StringUtil::equals( outside, "same" ) ? SW_TRUE : SW_FALSE;
-
-        for ( XMLNode ruleNode = node.findChild(); ruleNode.isValid(); ruleNode = ruleNode.findNextSibling() )
-        {
-            if ( bRuleTile == false || StringUtil::equals( ruleNode.getName(), "Rule" ) == false )
-            {
-                SW_LOG_ERROR_ID( "TileSet.Invalid", "%#: unknown element <%#> in <%#> (only <Rule> inside <RuleTile>)", sourceName, ruleNode.getName(), node.getName() );
-                return false;
-            }
-            TileRuleParams ruleProperties;
-            if ( XMLFields::readProperties( ruleNode, ruleProperties, sourceName, { "cell", "frames", "fps" } ) == false )
-                return false;
-            TileRule rule{};
-            if ( Internal::parsePattern( ruleProperties._pattern, rule._arrNeighbor ) == false )
-            {
-                SW_LOG_ERROR_ID( "TileSet.Invalid", "%#: rule pattern '%#' of '%#' must be nine of . o x", sourceName, ruleProperties._pattern.c_str(), name );
-                return false;
-            }
-            if ( parseVisual( ruleNode, sourceName, rule._visual ) == false )
-                return false;
-            brush._listRule.push_back( rule );
-        }
-        // 규칙 없는 규칙 타일은 형식 오류다 — 내용(`TileSetContent`)에는 "규칙 타일" 표시가 따로 없어 규칙이 비면 그냥 타일이 된다.
-        if ( bRuleTile && brush._listRule.empty() )
-        {
-            SW_LOG_ERROR_ID( "TileSet.Invalid", "%#: rule tile '%#' has no <Rule>", sourceName, name );
-            return false;
-        }
-        return true;
-    }
-
     float4 TileSetAsset::computeCellUVRect( const TileSetContent& content, int32 cell )
     {
-        const int32   column = ( content._columnCount > 0 ) ? cell % content._columnCount : 0;
-        const int32   row    = ( content._columnCount > 0 ) ? cell / content._columnCount : 0;
-        const float32 width  = 1.0f / static_cast<float32>( MathUtil::max( content._columnCount, 1 ) );
-        const float32 height = 1.0f / static_cast<float32>( MathUtil::max( content._rowCount, 1 ) );
-        return float4{ static_cast<float32>( column ) * width, static_cast<float32>( row ) * height, width, height };
+        return TileGridUtil::computeCellUVRect( cell, content._columnCount, content._rowCount );
     }
 
     const TileVisual* TileSetAsset::resolveVisual( const vector<uint16>& listBrushIndex, int32 width, int32 height, int32 x, int32 y ) const

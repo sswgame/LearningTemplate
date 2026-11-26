@@ -14,7 +14,7 @@ namespace sw
      * @struct UIBindingDef
      * @brief 문서에서 분리한 바인딩 식 하나입니다(`_value="{bind:_health}"`). 식을 해석하는 일은 바인딩 단계(뷰모델, 설정, 현지화 텍스트)가 합니다.
      * @details 문서를 읽을 때 값으로 파싱하지 않고 분리해 두므로, 그 필드의 값 형식과 상관없이 식을 적을 수 있다(값 파싱 오류가 나지 않는다).
-     *          문서 노드에서는 `_widget` 이 무효이고, 화면을 만들 때(`UIDocumentLoader::instantiate`) 그 위젯 번호가 채워진다.
+     *          문서 노드에서는 `_widget` 이 무효이고, 화면을 만들 때(`UIDocumentAsset::instantiate`) 그 위젯 번호가 채워진다.
      */
     struct UIBindingDef
     {

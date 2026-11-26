@@ -58,13 +58,17 @@ namespace sw
             _bridge->announce( text, priority );
     }
 
-    void UIAccessibilitySubsystem::appendScreen( const UISystem& ui, const UIScreen& screen, UIAccessibilitySnapshot& inoutSnapshot )
+    namespace
     {
-        // 포커스는 한 화면에만 있다. 노드 번호는 스냅샷 전체의 번호라 `appendTree` 가 정한 `_focusedNode` 가 그대로 쓰인다.
-        const UIFocusManager& focus         = ui.getInputRouter().getFocusManager();
-        const WidgetID        focusedWidget = focus.getFocusedTree() == &screen.getTree() ? focus.getFocusedWidget() : kInvalidWidgetID;
-        UIAccessibilitySnapshot::appendTree( screen.getTree(), screen.getHandle().getValue(), focusedWidget, inoutSnapshot );
-    }
+        /** @brief 화면 하나의 접근성 노드를 스냅샷에 덧붙입니다(포커스 위젯을 알아 둔다). */
+        void appendScreen( const UISystem& ui, const UIScreen& screen, UIAccessibilitySnapshot& inoutSnapshot )
+        {
+            // 포커스는 한 화면에만 있다. 노드 번호는 스냅샷 전체의 번호라 `appendTree` 가 정한 `_focusedNode` 가 그대로 쓰인다.
+            const UIFocusManager& focus         = ui.getInputRouter().getFocusManager();
+            const WidgetID        focusedWidget = focus.getFocusedTree() == &screen.getTree() ? focus.getFocusedWidget() : kInvalidWidgetID;
+            UIAccessibilitySnapshot::appendTree( screen.getTree(), screen.getHandle().getValue(), focusedWidget, inoutSnapshot );
+        }
+    } // namespace
 
     void UIAccessibilitySubsystem::collectInteractiveScreens( const vector<unique_ptr<UIScreen>>& listScreen, vector<UIScreen*>& outListScreen )
     {

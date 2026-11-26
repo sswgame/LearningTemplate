@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
@@ -115,5 +116,13 @@ namespace sw
          * @details 빈 셀은 @p emptyCost, 단단한 브러시는 255, 그 밖은 브러시의 `navCost` 를 쓴다.
          */
         static void makeNavCosts( const TileSetAsset& tileSet, const vector<uint16>& listBrushIndex, uint8 emptyCost, vector<uint8>& outListCost );
+
+        /**
+         * @brief 열 · 행으로 나눈 아틀라스에서 셀 번호(행 우선, 0 = 왼쪽 위)의 UV 사각형 (u, v, 폭, 높이) 입니다. 타일셋과 에디터의 Sprite Clip 이 같은 식을 씁니다.
+         * @details 열 · 행이 1 보다 작으면 1 로 봅니다. 열이 1 보다 작은(틀린) 격자는 한 칸이라 어느 번호든 첫 칸이고, 음수 번호는 0 으로 봅니다.
+         */
+        static float4 computeCellUVRect( int32 cell, int32 columnCount, int32 rowCount );
+        /** @brief 이미지 안의 0..1 위치(@p u, @p v)가 놓인 셀 번호입니다. 이미지 밖이면 비어 있습니다. */
+        static optional<int32> findCellAtUV( float32 u, float32 v, int32 columnCount, int32 rowCount );
     };
 } // namespace sw

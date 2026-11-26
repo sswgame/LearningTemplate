@@ -133,31 +133,31 @@ namespace sw
         return true;
     }
 
-    float3 TerrainMeshBuilder::computeChunkTranslation( const TerrainHeightfield& heightfield, const TerrainChunkLayout& layout, uint32 chunkX, uint32 chunkZ )
+    float3 TerrainChunkLayout::computeChunkTranslation( const TerrainHeightfield& heightfield, uint32 chunkX, uint32 chunkZ ) const
     {
         const float3 origin   = heightfield.getOrigin();
         const float2 cellSize = heightfield.getCellSize();
-        const uint32 centerX  = chunkX * layout._chunkCells + layout._chunkCells / 2;
-        const uint32 centerZ  = chunkZ * layout._chunkCells + layout._chunkCells / 2;
+        const uint32 centerX  = chunkX * _chunkCells + _chunkCells / 2;
+        const uint32 centerZ  = chunkZ * _chunkCells + _chunkCells / 2;
         return float3{ origin._x + static_cast<float32>( centerX ) * cellSize._x, origin._y, origin._z + static_cast<float32>( centerZ ) * cellSize._y };
     }
 
-    float32 TerrainMeshBuilder::computeChunkBoundsRadius( const TerrainHeightfield& heightfield, const TerrainChunkLayout& layout, uint32 chunkX, uint32 chunkZ )
+    float32 TerrainChunkLayout::computeChunkBoundsRadius( const TerrainHeightfield& heightfield, uint32 chunkX, uint32 chunkZ ) const
     {
-        const float3 translation = computeChunkTranslation( heightfield, layout, chunkX, chunkZ );
+        const float3 translation = computeChunkTranslation( heightfield, chunkX, chunkZ );
         float32      maxVertical = 0.0f;
-        for ( uint32 offsetZ = 0; offsetZ <= layout._chunkCells; ++offsetZ )
+        for ( uint32 offsetZ = 0; offsetZ <= _chunkCells; ++offsetZ )
         {
-            for ( uint32 offsetX = 0; offsetX <= layout._chunkCells; ++offsetX )
+            for ( uint32 offsetX = 0; offsetX <= _chunkCells; ++offsetX )
             {
-                const float32 height = heightfield.getSampleHeight( static_cast<int32>( chunkX * layout._chunkCells + offsetX ),
-                                                                    static_cast<int32>( chunkZ * layout._chunkCells + offsetZ ) );
+                const float32 height = heightfield.getSampleHeight( static_cast<int32>( chunkX * _chunkCells + offsetX ),
+                                                                    static_cast<int32>( chunkZ * _chunkCells + offsetZ ) );
                 maxVertical          = MathUtil::max( maxVertical, MathUtil::abs( height - translation._y ) );
             }
         }
         const float2  cellSize = heightfield.getCellSize();
-        const float32 halfX    = 0.5f * static_cast<float32>( layout._chunkCells ) * cellSize._x;
-        const float32 halfZ    = 0.5f * static_cast<float32>( layout._chunkCells ) * cellSize._y;
+        const float32 halfX    = 0.5f * static_cast<float32>( _chunkCells ) * cellSize._x;
+        const float32 halfZ    = 0.5f * static_cast<float32>( _chunkCells ) * cellSize._y;
         return MathUtil::sqrt( halfX * halfX + halfZ * halfZ + maxVertical * maxVertical );
     }
 
@@ -191,7 +191,7 @@ namespace sw
             arrSideStep[side] = 1u << MathUtil::max( lod, MathUtil::min( arrNeighborLOD[side], layout._maxLOD ) );
         }
 
-        const float3 translation = computeChunkTranslation( heightfield, layout, chunkX, chunkZ );
+        const float3 translation = layout.computeChunkTranslation( heightfield, chunkX, chunkZ );
         const uint32 baseX       = chunkX * layout._chunkCells;
         const uint32 baseZ       = chunkZ * layout._chunkCells;
         const uint32 cells       = layout._chunkCells;

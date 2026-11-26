@@ -1,18 +1,71 @@
 #include "pch.h"
 
-#include "Games/Playground/Dev/ScenarioTest/NavPathTestComponent.h"
+#include "Core/Foundation/Types.h"
+#include "Core/Math/Math.h"
+#include "Core/String/Name/hashed_string.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Automation/Watch/AutomationWatchComponent.h"
 #include "Engine/Navigation/Component/NavMeshAgentComponent.h"
+#include "Engine/Navigation/Scene/NavPathSolver.h"
 #include "Engine/Navigation/Scene/SceneNavigation.h"
+#include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Tick/TickContext.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
 {
+    class SceneNavigation;
+
+    /**
+     * @class NavPathTestComponent
+     * @brief 시작 자리 → 대상 오브젝트의 비동기 경로를 계속 묻는 탐침입니다. 파일 머리말 참고.
+     */
+    REFLECT()
+    class NavPathTestComponent : public Component
+    {
+    public:
+        REFLECT_BODY();
+
+        NavPathTestComponent();
+        ~NavPathTestComponent() override = default;
+
+        void onRegister( GameObjectManager& manager ) override;
+        void onUnregister( GameObjectManager& manager ) override;
+        void onBeginPlay() override;
+        void onEndPlay() override;
+        void onTick( TickContext& context ) override;
+        /** @brief 질의를 내는 자리를 옮깁니다. */
+        void onWorldOriginShifted( const float3& delta ) override;
+
+        /** @brief 마지막으로 받은 경로의 길이(m)입니다. 아직 받지 못했으면 음수입니다. */
+        float32 getLastPathLength() const { return _lastPathLength; }
+        uint32  getResultCount() const { return _resultCount; }
+        uint32  getCancelLeakCount() const { return _cancelLeakCount; }
+
+    private:
+        /** @brief 결과를 받고(첫 완전 경로면 에이전트를 보낸다), 버리기 시험을 한 칸 진행하고, 기다리는 질의가 없으면 새로 냅니다. */
+        void updateProbe();
+
+    private:
+        PROPERTY( Category = "Probe", DisplayName = "Target", Tooltip = "Name of the object the probe asks a path to" )
+        hashed_string _target;
+
+        SceneNavigation*           _pSceneNavigation; ///< 등록한 씬의 내비게이션(등록 동안)
+        SW_TRANSIENT float3        _origin;           ///< 플레이를 시작한 자리 — 에이전트가 움직여도 질의는 여기서 낸다
+        SW_TRANSIENT NavPathTicket _probe;
+        SW_TRANSIENT NavPathTicket _cancelPending; ///< 다음 프레임에 버릴 질의(그 사이 워커에 넘어간다)
+        SW_TRANSIENT float32       _lastPathLength;
+        SW_TRANSIENT uint32        _requestCount;
+        SW_TRANSIENT uint32        _resultCount;
+        SW_TRANSIENT uint32        _cancelLeakCount;
+        SW_TRANSIENT uint8         _bAgentSent : 1; ///< 첫 완전 경로로 에이전트를 대상에 보냈다
+        [[maybe_unused]] uint8     _reserved   : 7;
+    };
+
     namespace
     {
         struct NavPathTestInternal
@@ -168,3 +221,5 @@ namespace sw
     SW_AUTOMATION_QUERY_WATCH( playgroundNavTestCancelLeaks, "PlaygroundNav.TestCancelLeaks", "Cancelled async path queries of the probe on target that still delivered a result (must stay 0)",
                                &NavPathTestInternal::readCancelLeaks, true, false );
 } // namespace sw
+
+#include "NavPathTestComponent.cpp.gen.inl"

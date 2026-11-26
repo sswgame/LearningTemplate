@@ -11,7 +11,6 @@
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
-#include "Engine/Serialization/XML/XMLNameCheck.h"
 
 /**
  * @file InputMapAsset.cpp
@@ -156,7 +155,7 @@ namespace sw
         static constexpr const utf8* kArrRootChild[] = { "layers", "layer", "action", "override", "remove" };
         InputMapRootParams           params;
         const bool                   bProperties = XMLFields::readProperties( root, params, absPath );
-        const bool                   bChildren   = XMLNameCheck::reportUnknownChildren( root, kArrRootChild, absPath );
+        const bool                   bChildren   = root.reportUnknownChildren( kArrRootChild, absPath );
         if ( bProperties == false || bChildren == false )
             return false;
         if ( bAppend )
@@ -334,7 +333,7 @@ namespace sw
     {
         InputMapRemoveParams params;
         const bool           bProperties = XMLFields::readProperties( node, params, absPath );
-        const bool           bChildren   = XMLNameCheck::reportUnknownChildren( node, nullptr, 0, absPath );
+        const bool           bChildren   = node.reportUnknownChildren( nullptr, 0, absPath );
         if ( bProperties == false || bChildren == false )
         {
             inoutbValid = false;

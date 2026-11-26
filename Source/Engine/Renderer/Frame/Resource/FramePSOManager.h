@@ -263,11 +263,6 @@ namespace sw
          * @return 컬러 RT 가 있는데 포맷을 정할 근거가 없거나 출력 선언에 포맷을 모르는 출력(Swapchain)이 있으면 false 입니다 — RGBA8 로 짐작하지 않는다.
          */
         [[nodiscard]] bool fillPassRenderTargetFormats( RHIPipelineStateDesc& desc, const RenderGraphPassDesc* pPassDesc, const RHIFormat* pRTVFormats, uint32 numRenderTargets ) const;
-        /**
-         * @brief 이 패스 종류의 컬러 포맷을 정할 근거(표의 고정 포맷 · 컬러 없음 · @p pTargetDesc 의 출력 선언)가 있는지 반환합니다. 없으면 이 파이프라인에서 실행되지 않는 패스입니다.
-         * @param pTargetDesc 컬러 출력을 정하는 서술입니다. 파이프라인 패스는 자기 서술, 내부 슬롯은 대신 그리는 패스(`_targetSourceType`)의 서술입니다.
-         */
-        static bool hasRenderTargetFormatSource( const RenderPassKindInfo& info, const RenderGraphPassDesc* pTargetDesc );
         /** @brief 이 백엔드 · 실행에서 이 종류의 PSO 를 만드는지(진단 요청 · 네이티브 bindless · HDR 화면 · 출력 패스가 아님) 반환합니다. 엔진 슬롯과 파이프라인 패스가 같은 판정을 쓴다. */
         bool shouldCreatePassPSO( RenderPassKind passType, const RHICapabilities& caps ) const;
         /**
@@ -284,8 +279,6 @@ namespace sw
                                                                    RenderViewMode viewMode, bool bReverseCulling, RHIMeshVertexFormat vertexFormat, RHIPipelineStateDesc* pOutDeferredDesc );
         /** @brief 배치 목록에서 (퍼뮤테이션, 컬 반전, 정점 형식) 조합을 중복 없이 모으고, 배치마다 그 조합의 번호를 @p outListVariant 에 적습니다. 퍼뮤테이션이 없는 배치도 넣습니다. */
         void collectMaterialPSORequests( vector_reference<const GPUMeshBatch> listBatch, vector<MaterialPSORequest>& outListRequest, vector<uint32>& outListVariant );
-        /** @brief 이 패스가 변형을 두는 보기 모드 비트입니다(보기 모드를 적용하지 않는 패스는 Lit 하나). */
-        static uint32 getPassViewModeMask( const RenderPassKindInfo& passInfo, uint32 viewModeMask );
         /** @brief 변형 조건 하나를 @p passPSO · @p viewMode 로 그릴 PSO 입니다. 적용할 것이 없으면 패스 PSO 그대로, 만드는 중이면 직전 변형(`GPUShaderPermutation::_fallbackHash`)입니다. */
         GPUMeshBatchPSO resolveBatchPSO( RHIPipelineStateHandle passPSO, const MaterialPSORequest& request, RenderViewMode viewMode ) const;
         /** @brief 요청 하나에 대해 이번 프레임의 보기 모드마다 변형을 만들어 둡니다. 패스가 그리지 않는 머티리얼(@p filter)이면 만들지 않습니다. */

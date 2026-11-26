@@ -27,6 +27,15 @@ namespace sw
 
 namespace sw::editor
 {
+    /**
+     * @brief 리소스 id 가 "로드할 때 참조 대상의 내용을 펼쳐 넣는" 종류이면 true 입니다(`AssetReloadRoute::_referenceUse`). 연쇄는 이런 참조자만 따라간다.
+     * @details 경로로만 들고 쓸 때 캐시에서 푸는 참조(메시 → 머티리얼, 스프라이트 → 텍스처)는 대상의 캐시 리로드로 이미 따라가므로 연쇄할 것이 없다.
+     */
+    using AssetInlinesReferencesFunc = bool ( * )( string_view assetID );
+} // namespace sw::editor
+
+namespace sw::editor
+{
     /** @brief 참조 하나입니다(질의 결과). @p _referrerPath 의 텍스트 안에 @p _targetPath 가 적혀 있습니다 — 경로로든 GUID 로든. */
     struct EditorAssetReference
     {
@@ -143,6 +152,13 @@ namespace sw::editor
          * @details 정체성은 텍스트 에셋이면 머리, 그 밖이면 곁의 `.meta` 에서 읽는다(`.meta` 는 목록의 파일이 아니다 — `EditorContentScan::isListedFile`).
          */
         static EditorAssetContent makeContent( const string* pText, const string* pMetaText, const vector<string>& listMountedDomain = {} );
+
+        /**
+         * @brief @p changedID 가 바뀌었을 때(이 색인은 바뀐 파일을 이미 다시 읽은 것이어야 한다, `applyChanges`) 다시 읽을 참조자들을 의존 순서로 @p outListOrder 에 담습니다(@p changedID 자신은 넣지 않는다). 먼저 출력 목록을 비운다.
+         * @param pfnInlinesReferences 참조자가 연쇄 대상인지 정하는 표의 칸입니다.
+         * @return 순서를 정했으면 true 입니다. 참조자 사이에 순환이 있으면 오류를 남기고 false 이며 @p outListOrder 는 비어 있다(아무것도 다시 읽지 않는다).
+         */
+        [[nodiscard]] bool planDependents( string_view changedID, AssetInlinesReferencesFunc pfnInlinesReferences, vector<string>& outListOrder ) const;
 
     private:
         /** @brief 파일 @p assetID 의 줄과 그 줄이 만든 역방향 표 · GUID 줄을 뺍니다. */

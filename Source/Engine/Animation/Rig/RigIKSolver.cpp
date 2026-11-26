@@ -213,7 +213,7 @@ namespace sw
                 const float3 toGoal        = space.projectVector( goal - jointPosition );
                 if ( toEnd.getLengthSquared() < 1e-10f || toGoal.getLengthSquared() < 1e-10f )
                     continue;
-                quaternion    delta = makeFromToRotation( toEnd, toGoal );
+                quaternion    delta = quaternion::fromToRotation( toEnd, toGoal );
                 const float32 angle = RigIKSolverInternal::computeRotationAngle( delta );
                 if ( angle > settings._maxStepAngle )
                     delta = RigIKSolverInternal::scaleRotation( delta, settings._maxStepAngle / angle );
@@ -236,55 +236,13 @@ namespace sw
         const float3     desired  = space.projectVector( target - position );
         if ( current.getLengthSquared() < 1e-10f || desired.getLengthSquared() < 1e-10f )
             return 0.0f;
-        quaternion    delta = makeFromToRotation( current, desired );
+        quaternion    delta = quaternion::fromToRotation( current, desired );
         const float32 angle = RigIKSolverInternal::computeRotationAngle( delta );
         if ( angle > maxAngle && angle > MathUtil::kEpsilon )
             delta = RigIKSolverInternal::scaleRotation( delta, maxAngle / angle );
         delta = RigIKSolverInternal::scaleRotation( delta, weight );
         pose.rotateModel( bone, delta );
         return RigIKSolverInternal::computeRotationAngle( delta );
-    }
-
-    quaternion RigIKSolver::makeFromToRotation( const float3& from, const float3& to )
-    {
-        const float3  fromUnit = from.normalize();
-        const float3  toUnit   = to.normalize();
-        const float32 cosine   = fromUnit.dot( toUnit );
-        if ( cosine < -0.999999f )
-        {
-            // 반대 방향이다. 아무 수직 축으로 180° 돈다.
-            float3 axis = fromUnit.cross( float3::Right );
-            if ( axis.getLengthSquared() < MathUtil::kEpsilon )
-                axis = fromUnit.cross( float3::Up );
-            return quaternion::makeFromAxisAngle( axis.normalize(), MathUtil::kPi );
-        }
-        const float3 axis = fromUnit.cross( toUnit );
-        return quaternion{ axis._x, axis._y, axis._z, 1.0f + cosine }.normalize();
-    }
-
-    void RigIKSolver::decomposeSwingTwist( const quaternion& delta, const float3& axis, quaternion& outSwing, quaternion& outTwist )
-    {
-        const float3     vectorPart{ delta._x, delta._y, delta._z };
-        const float3     projected = axis * vectorPart.dot( axis );
-        const quaternion twist{ projected._x, projected._y, projected._z, delta._w };
-        if ( twist.normSquared() < 1e-12f )
-        {
-            // 축에 수직인 180° 회전이다. 비틀림이 없다.
-            outTwist = quaternion::Identity;
-            outSwing = delta;
-            return;
-        }
-        outTwist = twist.normalize();
-        outSwing = ( delta * makeInverse( outTwist ) ).normalize();
-    }
-
-    float32 RigIKSolver::computeTwistAngle( const quaternion& twist, const float3& axis )
-    {
-        quaternion positive = twist;
-        if ( positive._w < 0.0f )
-            positive = -positive;
-        const float3 vectorPart{ positive._x, positive._y, positive._z };
-        return 2.0f * MathUtil::atan2( vectorPart.dot( axis ), positive._w );
     }
 
     void RigIKSolver::applyJointLimit( RigPoseBuffer& pose, uint32 bone, const RigJointLimit& limit )
@@ -297,19 +255,19 @@ namespace sw
         quaternion       limited{};
         if ( limit._type == RigJointLimitKind::Cone )
         {
-            decomposeSwingTwist( delta, limit._boneAxis, swing, twist );
+            delta.toSwingTwist( limit._boneAxis, swing, twist );
             if ( swing._w < 0.0f )
                 swing = -swing;
             const float32 swingAngle = RigIKSolverInternal::computeRotationAngle( swing );
             if ( swingAngle > limit._swingLimit && swingAngle > MathUtil::kEpsilon )
                 swing = RigIKSolverInternal::scaleRotation( swing, limit._swingLimit / swingAngle );
-            const float32 twistAngle = MathUtil::clamp( computeTwistAngle( twist, limit._boneAxis ), -limit._twistLimit, limit._twistLimit );
+            const float32 twistAngle = MathUtil::clamp( twist.getTwistAngle( limit._boneAxis ), -limit._twistLimit, limit._twistLimit );
             limited                  = swing * quaternion::makeFromAxisAngle( limit._boneAxis, twistAngle );
         }
         else
         {
-            decomposeSwingTwist( delta, limit._hingeAxis, swing, twist );
-            const float32 angle = MathUtil::clamp( computeTwistAngle( twist, limit._hingeAxis ), limit._minAngle, limit._maxAngle );
+            delta.toSwingTwist( limit._hingeAxis, swing, twist );
+            const float32 angle = MathUtil::clamp( twist.getTwistAngle( limit._hingeAxis ), limit._minAngle, limit._maxAngle );
             limited             = quaternion::makeFromAxisAngle( limit._hingeAxis, angle );
         }
         pose.setLocalRotation( bone, ( limit._referenceRotation * limited ).normalize() );

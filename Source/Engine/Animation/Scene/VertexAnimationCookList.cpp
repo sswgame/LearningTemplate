@@ -10,7 +10,6 @@
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
-#include "Engine/Serialization/XML/XMLNameCheck.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
 namespace sw
@@ -47,7 +46,7 @@ namespace sw
     bool VertexAnimationCookList::parseRoot( const XMLNode& root, string_view sourceLabel )
     {
         static constexpr const utf8* kArrRootChild[] = { "clips" };
-        if ( XMLFields::readProperties( root, *this, sourceLabel ) == false || XMLNameCheck::reportUnknownChildren( root, kArrRootChild, sourceLabel ) == false )
+        if ( XMLFields::readProperties( root, *this, sourceLabel ) == false || root.reportUnknownChildren( kArrRootChild, sourceLabel ) == false )
             return false;
         const XMLNode clips                 = root.findChild( "clips" );
         const bool    bInvalidAnimationList = clips.isValid() == false || clips.findChild().isValid() == false;

@@ -60,7 +60,7 @@ namespace sw
             }
 
             /**
-             * @brief 프리팹의 원형 상태(`PrefabOverrides::makeBaseState`)입니다. 한 번의 로드나 저장 안에서 프리팹마다 한 번 만듭니다. 읽지 못하면 nullptr 입니다.
+             * @brief 프리팹의 원형 상태(`PrefabAsset::makeBaseState`)입니다. 한 번의 로드나 저장 안에서 프리팹마다 한 번 만듭니다. 읽지 못하면 nullptr 입니다.
              * @details 프리팹 캐시(`PrefabCache`)가 아니라 부른 쪽의 테이블에 둔다. 원형은 현재 로드된 컴포넌트 타입으로 만드는 것이라 모듈 리로드를 넘겨
              *          보관하면 낡는다.
              */
@@ -72,7 +72,7 @@ namespace sw
 
                 string                              baseState;
                 const shared_ptr<const PrefabAsset> pPrefab = assetManager.getAssetCache<PrefabCache>().loadPrefab( prefabPath );
-                if ( pPrefab != nullptr && PrefabOverrides::makeBaseState( *pPrefab, baseState ) == false )
+                if ( pPrefab != nullptr && pPrefab->makeBaseState( baseState ) == false )
                 {
                     SW_LOG_WARNING_ID( "Scene.PrefabCouldNotBuilt", "Prefab '%#' could not be built as a base state", prefabPath );
                     baseState.clear();
@@ -255,7 +255,7 @@ namespace sw
                 context._savedIDScope = entity._idScope;
                 if ( prefabInstanceState.empty() == false )
                 {
-                    // 원형은 다른 오브젝트로의 부착과 핸들을 싣지 않는다(`PrefabOverrides::makeBaseState`). 다른 엔티티에 붙은 인스턴스의 부착은
+                    // 원형은 다른 오브젝트로의 부착과 핸들을 싣지 않는다(`PrefabAsset::makeBaseState`). 다른 엔티티에 붙은 인스턴스의 부착은
                     // 덮어쓴 값이라 파일 id 로 들어 있고, 배치가 모두 읽은 뒤 연결한다. 덮어쓰기를 얹은 인스턴스 멤버의 글 상태도 여기다.
                     if ( ObjectStateSerializer::loadFromXMLString( pGo, prefabInstanceState, context ) == false )
                         SW_LOG_WARNING_ID( "Scene.PrefabInstanceStateApply", "Prefab instance state apply failed for '%#' (%#)", entity._name, entity._prefab );

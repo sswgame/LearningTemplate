@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/UI/Document/UIDocumentLoader.h"
+#include "Engine/UI/Document/UIDocument.h"
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/File/FileUtil.h"
@@ -19,7 +19,6 @@
 #include "Engine/Serialization/Inherit/ResourceTags.h"
 #include "Engine/Serialization/Serializer/SchemaMigrate.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
-#include "Engine/UI/Document/UIDocument.h"
 #include "Engine/UI/Document/UIDocumentCache.h"
 #include "Engine/UI/WidgetTree/PanelWidget.h"
 #include "Engine/UI/WidgetTree/Widget.h"
@@ -29,7 +28,7 @@ namespace sw
 {
     namespace
     {
-        struct UIDocumentLoaderInternal
+        struct UIDocumentAssetInternal
         {
             static constexpr utf8   kScreenDescElement[]     = "UIScreenDef";
             static constexpr utf8   kStyleSheetListElement[] = "_listStyleSheet";
@@ -286,7 +285,7 @@ namespace sw
                         return widget;
                     }
 
-                    widget = UIDocumentLoader::createWidget( *pType );
+                    widget = UIDocumentAsset::createWidget( *pType );
                     if ( widget == nullptr )
                     {
                         fixed_string<constant::buffer::kMax256> message;
@@ -467,9 +466,9 @@ namespace sw
 
 namespace sw
 {
-    expected<void> UIDocumentLoader::parse( string_view sourceText, string_view path, const ResourceContext& composeContext, UIDocumentAsset& outAsset )
+    expected<void> UIDocumentAsset::parse( string_view sourceText, string_view path, const ResourceContext& composeContext, UIDocumentAsset& outAsset )
     {
-        using Internal = UIDocumentLoaderInternal;
+        using Internal = UIDocumentAssetInternal;
         UIDocumentAsset asset{};
         asset._path = Internal::normalizeDocumentPath( path );
 
@@ -556,7 +555,7 @@ namespace sw
         return {};
     }
 
-    unique_ptr<Widget> UIDocumentLoader::createWidget( const TypeInfo& type )
+    unique_ptr<Widget> UIDocumentAsset::createWidget( const TypeInfo& type )
     {
         // `Widget` 이 첫 기반(단일 상속 연쇄)이므로 블록 시작이 곧 `Widget*` 이다.
         static const hashed_string s_ctor( "$ctor" );
@@ -574,14 +573,14 @@ namespace sw
         return unique_ptr<Widget>( static_cast<Widget*>( block.release() ) );
     }
 
-    expected<unique_ptr<Widget>> UIDocumentLoader::instantiate( const UIDocumentAsset& document, UIDocumentCache& cache, const ResourceTagSet& tagOverride, vector<UIBindingDef>& outListBinding )
+    expected<unique_ptr<Widget>> UIDocumentAsset::instantiate( UIDocumentCache& cache, const ResourceTagSet& tagOverride, vector<UIBindingDef>& outListBinding ) const
     {
-        if ( document._listNode.empty() )
-            return unexpected( Error{ ErrorKind::InvalidArgument, "the UI document cannot be built", XMLDocument::makeSourceError( document._path, 0, "document has no root widget" ) } );
-        const size_t                                 bindingStart = outListBinding.size();
-        string                                       reason; // 위젯을 만드는 깊은 곳(조각 · 필드 읽기)이 `경로:줄: 까닭` 을 적는다
-        UIDocumentLoaderInternal::InstantiateContext context{ &cache, &tagOverride, vector<string>{ document._path }, &outListBinding, &reason };
-        unique_ptr<Widget>                           root = context.instantiateNode( document, 0, string{} );
+        if ( _listNode.empty() )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the UI document cannot be built", XMLDocument::makeSourceError( _path, 0, "document has no root widget" ) } );
+        const size_t                                bindingStart = outListBinding.size();
+        string                                      reason; // 위젯을 만드는 깊은 곳(조각 · 필드 읽기)이 `경로:줄: 까닭` 을 적는다
+        UIDocumentAssetInternal::InstantiateContext context{ &cache, &tagOverride, vector<string>{ _path }, &outListBinding, &reason };
+        unique_ptr<Widget>                          root = context.instantiateNode( *this, 0, string{} );
         if ( root == nullptr )
         {
             outListBinding.resize( bindingStart );

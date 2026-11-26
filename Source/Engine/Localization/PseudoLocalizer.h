@@ -32,9 +32,5 @@ namespace sw
         static string accentLiteral( string_view literalText );
         /** @brief 의사 변환을 거친 텍스트인지(앞뒤 표시가 있는지) 확인합니다. 하드코딩 텍스트 찾기와 테스트가 씁니다. */
         static bool isPseudoText( string_view text );
-
-    private:
-        /** @brief 표기가 없는 글 조각의 ASCII 글자를 바꿉니다. */
-        static string accentPlainText( string_view plainText );
     };
 } // namespace sw

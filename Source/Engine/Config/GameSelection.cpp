@@ -24,20 +24,21 @@ namespace sw
              *          테스트도 범위 없이 묻는다(고르기 전이면 기본 게임) — 그래서 범위에 맡기지 않고 이 변수 하나가 소유한다. 지연 생성하는 접근자를 두지 않는다.
              */
             static inline utf8 s_arrName[GameSelection::kNameCapacity]{};
+
+            /** @brief 고르지 않았을 때의 게임입니다 — Dev 는 빌드의 활성 게임(`Bin/Modules/ActiveGame.txt`), Shipping 은 베이크한 게임입니다. 없으면 빈 문자열입니다. */
+            static string readDefaultName()
+            {
+                if constexpr ( build::kStaticModules ) // 정적 구성은 링크한 게임 하나다
+                    return string{ config::kShippingGameName };
+
+                string             text;
+                const AbsolutePath path = ModuleLibraryUtil::getModuleDirectory().join( config::kFileActiveGame );
+                if ( FileUtil::readTextFile( path, text ) == false )
+                    return {};
+                return string{ StringUtil::trim( text ) };
+            }
         };
     } // namespace
-
-    string GameSelection::readDefaultName()
-    {
-        if constexpr ( build::kStaticModules ) // 정적 구성은 링크한 게임 하나다
-            return string{ config::kShippingGameName };
-
-        string             text;
-        const AbsolutePath path = ModuleLibraryUtil::getModuleDirectory().join( config::kFileActiveGame );
-        if ( FileUtil::readTextFile( path, text ) == false )
-            return {};
-        return string{ StringUtil::trim( text ) };
-    }
 
     bool GameSelection::select( const CommandLineManager& commandLine )
     {
@@ -48,7 +49,7 @@ namespace sw
             return true;
         }
 
-        const string activeGame = readDefaultName();
+        const string activeGame = GameSelectionInternal::readDefaultName();
         string       name;
         if ( commandLine.getArgument( CommandLineArgument::GAME, name ) == false || name.empty() )
             name = activeGame;
@@ -94,7 +95,7 @@ namespace sw
         const utf8* pName = GameSelectionInternal::s_arrName;
         if ( pName[0] != '\0' )
             return string{ pName };
-        return readDefaultName();
+        return GameSelectionInternal::readDefaultName();
     }
 
     string GameSelection::getConfigPath()

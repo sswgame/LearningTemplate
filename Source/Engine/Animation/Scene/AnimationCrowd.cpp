@@ -21,7 +21,6 @@
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
-#include "Engine/Serialization/XML/XMLNameCheck.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
 namespace sw
@@ -96,7 +95,7 @@ namespace sw
     {
         // 셋 다 필수다. 범위 밖 값은 자르지 않고 거절한다(칸 · 범위는 PROPERTY 가 정본이다).
         AnimationCrowdSettings loaded;
-        if ( XMLFields::readProperties( root, loaded, sourceLabel ) == false || XMLNameCheck::reportUnknownChildren( root, nullptr, 0, sourceLabel ) == false )
+        if ( XMLFields::readProperties( root, loaded, sourceLabel ) == false || root.reportUnknownChildren( nullptr, 0, sourceLabel ) == false )
             return false;
         *this = loaded;
         return true;

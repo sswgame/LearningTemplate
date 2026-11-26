@@ -223,7 +223,7 @@ namespace sw
             if ( contact._weight <= 0.0f )
                 return false;
             outPosition = contact._hitModel + contact._normalModel * _listTargetDef[targetIndex]._trace._surfaceOffset;
-            outRotation = ( RigIKSolver::makeFromToRotation( float3::UnitY, contact._normalModel ) * _listTargetOffset[targetIndex]._rotation ).normalize();
+            outRotation = ( quaternion::fromToRotation( float3::UnitY, contact._normalModel ) * _listTargetOffset[targetIndex]._rotation ).normalize();
             return true;
         }
         if ( anchor._kind == TargetAnchorKind::Bone )

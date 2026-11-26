@@ -14,7 +14,6 @@
 #include "Engine/Serialization/Inherit/DataInheritance.h"
 #include "Engine/Serialization/Inherit/ResourceComposer.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
-#include "Engine/Serialization/XML/XMLNameCheck.h"
 
 #include "GameFramework/Runtime/Character/AI/BehaviorTreeAsset.h"
 
@@ -363,7 +362,7 @@ namespace sw::editor
         if ( root.isValid() == false )
             return unexpected( Error{ ErrorKind::InvalidArgument, "The file has no <BehaviorTree> root element" } );
         vector<const utf8*> listUnknown;
-        if ( XMLNameCheck::collectUnknownAttributes( root, nullptr, 0, listUnknown ) > 0 )
+        if ( root.collectUnknownAttributes( nullptr, 0, listUnknown ) > 0 )
             return unexpected( Error{ ErrorKind::InvalidArgument, "<BehaviorTree> has an unknown attribute", listUnknown[0] } );
 
         BehaviorTreeEditModel next;

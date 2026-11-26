@@ -5,7 +5,6 @@
 #include "Core/Foundation/Constants.h"
 
 #include "Engine/Serialization/XML/XMLDocument.h"
-#include "Engine/Serialization/XML/XMLNameCheck.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/ConfigRangeUtil.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
@@ -72,7 +71,7 @@ namespace sw
     {
         RespawnRules rules;
         bool         bValid = XMLFields::readProperties( node, rules, sourceName );
-        bValid              = XMLNameCheck::reportUnknownChildren( node, RespawnRulesInternal::kArrChildName, sourceName ) && bValid;
+        bValid              = node.reportUnknownChildren( RespawnRulesInternal::kArrChildName, sourceName ) && bValid;
         bValid              = GameDataXML::readChildrenInto( node, "Policy", sourceName, rules._listPolicy ) && bValid;
         if ( bValid == false )
             return false;

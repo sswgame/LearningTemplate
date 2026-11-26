@@ -9,7 +9,6 @@
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Module/ModuleSharedAssetCache.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
-#include "Engine/Serialization/XML/XMLNameCheck.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
 #include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
@@ -26,14 +25,14 @@ namespace sw
             template <size_t Count>
             static bool validateAttributes( const XMLNode& node, const utf8* const ( &arrKnown )[Count], bool bCondition, string_view sourceName )
             {
-                return XMLNameCheck::reportUnknownAttributes( node, arrKnown, sourceName, LogLevel::Error, bCondition ? &ScheduleCondition::isConditionAttribute : nullptr );
+                return node.reportUnknownAttributes( arrKnown, sourceName, LogLevel::Error, bCondition ? &ScheduleCondition::isConditionAttribute : nullptr );
             }
 
             /** @brief @p node 의 자식 중 @p arrKnown 에 없는 원소마다 오류를 남깁니다. 모르는 것이 있으면 false 입니다. */
             template <size_t Count>
             static bool validateChildren( const XMLNode& node, const utf8* const ( &arrKnown )[Count], string_view sourceName )
             {
-                return XMLNameCheck::reportUnknownChildren( node, arrKnown, sourceName, LogLevel::Error );
+                return node.reportUnknownChildren( arrKnown, sourceName, LogLevel::Error );
             }
         };
     } // namespace

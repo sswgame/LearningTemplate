@@ -38,6 +38,14 @@ namespace sw
                 inoutByteCount.fetch_add( byteCount );
                 return hash.has_value() ? *hash : 0;
             }
+
+            /** @brief 로컬 캐시 파일을 싣습니다. 못 읽으면 경고합니다. */
+            static void loadLocalCache()
+            {
+                const expected<void> loaded = engine::getSubsystem<ContentHashCache>().load( ContentHashCache::makeLocalCachePath() );
+                if ( loaded.has_value() == false )
+                    SW_LOG_WARNING_ID( "ContentHashCache.LocalCacheDropped", "Content hash cache dropped - every file is hashed again: %# (%#)", loaded.error().message(), loaded.error().detail() );
+            }
         };
     } // namespace
 } // namespace sw
@@ -274,25 +282,19 @@ namespace sw
     LocalContentHashCacheScope::LocalContentHashCacheScope( LocalContentHashCacheUse use )
         : _use{ use }
     {
-        loadLocalCache();
+        ContentHashInternal::loadLocalCache();
     }
 
     LocalContentHashCacheScope::~LocalContentHashCacheScope()
     {
         if ( _use != LocalContentHashCacheUse::LoadAndSave )
             return;
-        loadLocalCache();
+        ContentHashInternal::loadLocalCache();
         const expected<void> saved = engine::getSubsystem<ContentHashCache>().save();
         if ( saved.has_value() == false )
             SW_LOG_WARNING_ID( "ContentHashCache.LocalCacheNotSaved", "Content hash cache not saved - the next run hashes every file again: %# (%#)", saved.error().message(), saved.error().detail() );
     }
 
-    void LocalContentHashCacheScope::loadLocalCache()
-    {
-        const expected<void> loaded = engine::getSubsystem<ContentHashCache>().load( ContentHashCache::makeLocalCachePath() );
-        if ( loaded.has_value() == false )
-            SW_LOG_WARNING_ID( "ContentHashCache.LocalCacheDropped", "Content hash cache dropped - every file is hashed again: %# (%#)", loaded.error().message(), loaded.error().detail() );
-    }
 } // namespace sw
 
 namespace sw

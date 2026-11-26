@@ -1,14 +1,38 @@
 #include "pch.h"
 
-#include "GameFramework/Client/Flow/TitleMenuComponent.h"
-
+#include "Engine/Object/Component/Component.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/UI/Menu/MainMenuScreen.h"
+#include "Engine/UI/Screen/UIOwnedScreen.h"
 #include "Engine/UI/UISystem.h"
 
+#include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 
 namespace sw
 {
+    /**
+     * @class TitleMenuComponent
+     * @brief 플레이 시작에 메인 메뉴를 열고 끝에 닫습니다(Lyra 의 Frontend 상태 컴포넌트가 메인 메뉴를 밀어 넣는 것, 유니티 메뉴 씬의 Canvas).
+     * @details 문서는 엔진 기본 에셋 `_uiMainMenu` 하나다(`UISystem::getEngineDocuments()._mainMenu`). "시작" 이 다음 씬을 열면 이 씬이 내려가며 메뉴도 닫힌다.
+     *          UI 시스템이 없으면(전용 서버, 헤드리스 테스트) 아무것도 띄우지 않는다. 게임 스레드에서만 쓴다.
+     */
+    REFLECT( Category = "UI", DisplayName = "Title Menu", Tooltip = "Opens the engine main menu while this object plays (put it in the title scene)" )
+    class TitleMenuComponent : public Component
+    {
+    public:
+        REFLECT_BODY();
+
+        TitleMenuComponent();
+        ~TitleMenuComponent() override;
+
+        void onBeginPlay() override;
+        void onEndPlay() override;
+
+    private:
+        SW_TRANSIENT UIOwnedScreen _menu;
+    };
+
     TitleMenuComponent::TitleMenuComponent()
         : Component{}
         , _menu{}
@@ -32,3 +56,5 @@ namespace sw
         Component::onEndPlay();
     }
 } // namespace sw
+
+#include "TitleMenuComponent.cpp.gen.inl"

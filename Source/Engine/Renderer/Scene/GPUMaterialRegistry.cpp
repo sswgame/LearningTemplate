@@ -24,13 +24,17 @@ namespace sw
         return combinePermutationHash( pMaterial->getShaderPathHash(), defineHash, bAppearanceDither );
     }
 
-    uint64 GPUMaterialRegistry::combinePermutationHash( uint64 shaderPathHash, uint64 defineHash, bool bAppearanceDither )
+    namespace
     {
-        uint64 hash = HashUtil::combine( shaderPathHash, defineHash );
-        if ( bAppearanceDither )
-            hash = HashUtil::combine( hash, hashed_string( kAppearanceDitherDefine ).getHash() );
-        return hash;
-    }
+        /** @brief (셰이더 경로 해시, define 해시)의 퍼뮤테이션 해시입니다. 머티리얼에서 묻는 길과 미리 만들기 값의 길이 같은 식을 쓴다. */
+        uint64 combinePermutationHash( uint64 shaderPathHash, uint64 defineHash, bool bAppearanceDither )
+        {
+            uint64 hash = HashUtil::combine( shaderPathHash, defineHash );
+            if ( bAppearanceDither )
+                hash = HashUtil::combine( hash, hashed_string( kAppearanceDitherDefine ).getHash() );
+            return hash;
+        }
+    } // namespace
 
     GPUShaderPermutation GPUMaterialRegistry::makeShaderPermutation( const MaterialPSOWarmEntry& entry, bool bAppearanceDither )
     {

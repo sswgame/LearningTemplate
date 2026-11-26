@@ -1,7 +1,7 @@
 #include "pch.h"
 
-#include "Editor/Panels/Physics/RagdollPreviewPanel.h"
-
+#include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/Ray.h"
@@ -10,13 +10,18 @@
 
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
+#include "Editor/Common/GUI/Panel/EditorPreviewPanel.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
+#include "Editor/Common/Widgets/PropertyGrid/EditorPropertyGrid.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
+#include "Editor/Panels/Physics/Model/RagdollPreviewViewModel.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 #include "Editor/Viewport/EditorProjectedLineRenderer.h"
 #include "Editor/Viewport/EditorViewportProjection.h"
+#include "Editor/Viewport/Model/EditorColliderHandle.h"
+#include "Editor/Viewport/Model/EditorHandleDrag.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Localization/LocText.h"
@@ -27,6 +32,69 @@
 
 namespace sw::editor
 {
+    /**
+     * @class RagdollPreviewPanel
+     * @brief 연 물리 에셋을 미리보기 씬의 몸(프리팹 루트의 `SkeletalMeshComponent`)에 래그돌(`RagdollComponent`)로 걸고, 바디 · 관절을 보이며 물리 시험을 돌립니다.
+     * @details 보기 전용 문서다 — 물리 에셋은 이 창이 저장하지 않는다. 물리 에셋은 스켈레톤을 모르므로 입힐 몸(프리팹)을 사람이 고른다. 몸의 루트에 스켈레탈 메시가 있어야 하고
+     *          에셋의 뼈 이름이 그 스켈레톤에 있어야 바디가 선다(없으면 래그돌 빌더가 오류를 남기고 아무것도 만들지 않는다). 몸에 `RagdollComponent` 가 없으면 창이 붙이고,
+     *          있어도 물리 에셋 경로는 열린 문서로 바꾼다. 미리보기 정책은 틱 + 물리 + 플레이다(`getPreviewPolicy`) — 컴포넌트의 `onBeginPlay` 가 돌아야 바디가 선다.
+     */
+    class RagdollPreviewPanel : public EditorPreviewPanel
+    {
+    public:
+        /** @brief 패널 id 입니다. 등록(`SW_EDITOR_PANEL`)과 조회가 모두 이 상수에서 온다. */
+        static constexpr const utf8* kPanelID = "ragdoll_preview";
+
+        RagdollPreviewPanel();
+
+        const utf8* getPanelTitle() const override { return "Ragdoll Preview"; }
+        void        drawDocumentContent() override;
+        /** @brief 고친 물리 에셋 원문을 씁니다. 저장한 파일을 공유 캐시가 다시 읽고(`onDocumentSaved`) 몸을 다시 놓는다. */
+        [[nodiscard]] bool saveDocument( AssetWriter& writer ) override;
+        /** @brief 지난 그리기에 세운 셰이프 크기 손잡이 수입니다(감시 값 `Editor.RagdollShapeHandleCount`). */
+        uint32 getShapeHandleCount() const { return static_cast<uint32>( _listShapeHandle.size() ); }
+
+        /** @brief 문서에서 읽은 물리 에셋의 바디 수입니다. 문서를 읽지 못했으면 false 입니다(감시 값 `Editor.RagdollPreviewDocumentBodies`). */
+        [[nodiscard]] bool findDocumentBodyCount( uint32& outCount ) const;
+        /** @brief 미리보기 몸의 래그돌이 만든 바디 수입니다. 몸이 없거나 래그돌이 아직 서지 않았으면 false 입니다(감시 값 `Editor.RagdollPreviewBuiltBodies`). */
+        [[nodiscard]] bool findBuiltBodyCount( uint32& outCount ) const;
+        /** @brief 미리보기 몸의 래그돌 상태(`RagdollState` 의 번호)입니다. 몸이 없으면 false 입니다(감시 값 `Editor.RagdollPreviewState`). */
+        [[nodiscard]] bool findRagdollState( uint32& outState ) const;
+
+    protected:
+        /** @brief 틱 + 물리 + 플레이, 고정 스텝은 촘촘히(관절 한계를 보려는 창이다). */
+        ScenePreviewPolicy getPreviewPolicy() const override;
+        /** @brief 바닥 면이 y = 0 이다(몸의 발이 닿는 높이). */
+        EditorPreviewEnvironment getPreviewEnvironment() const override;
+
+    private:
+        bool                canAcceptDocumentPath( string_view assetPath ) const override;
+        ToolAssetLoadResult loadDocument() override;
+        string              captureDocumentText() const override { return _model.captureText(); }
+        void                applyDocumentText( string_view text ) override { _model.applyText( text ); }
+        /** @brief 바디 편집 칸(고른 바디의 프로퍼티 · 복사 · 빼기)을 그립니다. 고칠 수 없는 에셋이면 까닭을 보인다. */
+        void drawBodyEditor();
+        void onBodyPropertyEdited( const PropertyInfo& property );
+        /** @brief 고른 바디의 셰이프 크기 손잡이를 뷰포트 이미지 위에 그리고 끌기를 명령으로 냅니다. 손잡이가 마우스를 가져가면 다음 그리기의 궤도 카메라가 물러난다. */
+        void drawShapeHandles( const float4x4& viewProjection, const float2& imagePosition, const float2& imageSize );
+        /** @brief 정적 바닥 바디를 세운다. 몸은 "Spawn" 을 누르면 놓는다. */
+        void populatePreviewScene( Scene& scene ) override;
+        /** @brief 맞춤(F)과 창을 처음 열 때의 카메라가 담을 구입니다. */
+        bool findPreviewFrameSphere( float3& outCenter, float32& outRadius ) const override;
+        void drawBodyTable();
+        /** @brief 뷰포트 이미지 위에 스켈레톤 · 바디 셰이프 · 관절을 선으로 겹쳐 그립니다. */
+        void drawOverlay();
+
+    private:
+        RagdollPreviewViewModel                         _model;
+        RagdollPreviewState                             _ragdollState; ///< 프레임마다 다시 채운다(값만)
+        EditorPropertyGrid                              _grid;
+        EditorHandleDragTracker<ColliderHandle>         _handleTracker;
+        vector<ColliderHandle>                          _listShapeHandle;   ///< 이번 그리기의 손잡이(재사용 버퍼)
+        vector<EditorHandleDragCommand<ColliderHandle>> _listHandleCommand; ///< 이번 그리기의 명령(재사용 버퍼)
+        bool                                            _bHandleCapturing;  ///< NOLINT(sw-bool-flag): 손잡이가 마우스를 가져갔다 — 다음 그리기의 궤도 카메라를 막는다
+    };
+
     namespace
     {
         struct RagdollPreviewPanelInternal

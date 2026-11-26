@@ -52,10 +52,5 @@ namespace sw
          */
         static uint32 paint( const DebugDrawQueue& queue, const float4x4& viewProj, const float2& targetSize, FontSubsystem* pFontSubsystem, uint64 frameIndex,
                              vector<DebugLine>& inoutScratchLine, CanvasDrawList& outCanvas );
-        /**
-         * @brief 월드 선분을 화면 픽셀(왼쪽 위 원점, 아래로 +y)로 투영합니다. 한쪽이 카메라 뒤면 근평면에서 자르고, 둘 다 뒤면 false 입니다.
-         * @details 에디터 씬 뷰의 투영(`EditorViewportProjectionUtil::projectSegment`)과 같은 규칙이다.
-         */
-        [[nodiscard]] static bool projectSegment( const float4x4& viewProj, const float3& from, const float3& to, const float2& targetSize, float2& outFrom, float2& outTo );
     };
 } // namespace sw

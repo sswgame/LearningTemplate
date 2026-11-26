@@ -9,7 +9,6 @@
 
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
-#include "Engine/Serialization/XML/XMLNameCheck.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
 namespace sw
@@ -93,7 +92,7 @@ namespace sw
     void CharacterDataReader::reportUnknownAttributes( const XMLNode& node, const utf8* const* ppKnown, size_t knownCount )
     {
         vector<const utf8*> listUnknown;
-        (void)XMLNameCheck::collectUnknownAttributes( node, ppKnown, static_cast<uint32>( knownCount ), listUnknown ); // 수는 목록이 말한다
+        (void)node.collectUnknownAttributes( ppKnown, static_cast<uint32>( knownCount ), listUnknown ); // 수는 목록이 말한다
         for ( const utf8* pName : listUnknown )
         {
             fixed_string<constant::buffer::kMax256> message;

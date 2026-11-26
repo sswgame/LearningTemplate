@@ -1,17 +1,48 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Feature/Network/NetPairedAnimation/PairedAnimationNetStarterComponent.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
 
 #include "Engine/Character/PairedAnimation/PairedAnimationComponent.h"
 #include "Engine/Network/GameNetSession.h"
+#include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Subsystem/SceneNetLink.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
+#include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 
 namespace sw
 {
+    /**
+     * @class PairedAnimationNetStarterComponent
+     * @brief 파일 머리말 참고.
+     */
+    REFLECT( Category = "Network", DisplayName = "Paired Animation Net Starter", Tooltip = "Server side: restarts this object's paired animation session each time it ends (verification scene driver)" )
+    class PairedAnimationNetStarterComponent : public Component
+    {
+    public:
+        REFLECT_BODY();
+
+        PairedAnimationNetStarterComponent();
+        ~PairedAnimationNetStarterComponent() override = default;
+
+        void onBeginPlay() override;
+        void onTick( TickContext& context ) override;
+
+    private:
+        /** @brief 같은 오브젝트의 `PairedAnimationComponent` 로 세션을 시작합니다(틱 뒤에 불립니다). */
+        void startSession();
+
+        PROPERTY( Category = "Network", DisplayName = "Restart Delay", Min = 0.0, Units = s, Tooltip = "Seconds the session may stay ended before the next one starts" )
+        float32 _restartDelay;
+
+        SW_TRANSIENT float32 _endedSeconds; ///< 세션이 재생 중이 아니었던 시간
+        SW_TRANSIENT uint8   _bStarts;      ///< 이 프로세스가 시작한다(클라이언트가 아니고 데이터 결함으로 멈추지 않았다)
+    };
+
     PairedAnimationNetStarterComponent::PairedAnimationNetStarterComponent()
         : _restartDelay{ 0.0f }
         , _endedSeconds{ 0.0f }
@@ -83,3 +114,5 @@ namespace sw
         _bStarts = SW_FALSE;
     }
 } // namespace sw
+
+#include "PairedAnimationNetStarterComponent.cpp.gen.inl"
