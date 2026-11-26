@@ -14,8 +14,8 @@
 
 ### 통합 중
 
-- main(push 전 — changed · cpu 통과, gpu-release 의 결함 넷(computepass 그래픽스 PSO · decals 지터 위상 · nethousing 열거 수 · devicerecreate Present 로그)을 고쳐 9dc88e92c2 에서 `--from gpu-release`): .cpp 리플렉션 · 모듈 PCH · Core 정리 · 렌더 데이터 R1~R4 · E1~E5 · H1~H4 · D1 · G2 · P1~P4 · Enum 메타 · 키트 현지화 · GameFramework 개발 코드 분리 · DevTools 합치기 · 서버 서비스 서브시스템 · 셰이더 리로드 · 현지화 수집(공유 에디터 키 editorplugincommon). 통과하면 `WINDOWS_OK` sha 를 push 하고 합친 워크트리 일곱(enum-meta · gf-dev · server-subsystem · engine-owner · core-lift · render-data · 이 넷)을 지운다.
-- 다음 묶음(통합 워크트리 LT-wt/integrate, 갈래 w-integrate d8a97b9c4e — shaderreload b58d3c91df · pimpl d7a634aef5 · cpp-reflect ba567aadce · devtools-merge ecdb7080f6, 충돌 없음): push 뒤 main 으로 옮겨 세 구성 빌드 · 테스트 → `App --import-models --import-textures --import-heightfields -unattended` 로 원본 .meta 약 1486 개 채우고 `py -3 -m Scripts asset-ids` 확인 뒤 커밋 → 파서를 다시 잰다(이름공간 건너뛰기 f443d780ea 는 PCH 없이 251.5 초로 느렸다 — 다시 느리면 되돌리고, PCH 문턱 4 는 GF_NetDestruction · GF_Overworld · GF_Server_Admin total 로 정한다) → preflight.
+- main(push 전): w-integrate(shaderreload · pimpl · cpp-reflect · devtools-merge)를 합쳤다. Release · Server 빌드와 단위 134 개가 통과했고, 원본 .meta 1384 개에 산출물 GUID 표를 채웠다(asset-ids 결함 0). 파서 이름공간 건너뛰기는 되돌렸다(248.2 → 240.3 초, 잡음 안). preflight 전체가 남았다.
+- 다음 묶음: 이름 바로잡기 w-naming1(LT-wt/naming1 — 1 물결 N1 · N3 · N5 · N6 · N7 · N8a를 합쳤고, 2 물결 N2 · N4(+GUID) · N10 · N9(LogicCircuit)를 합치는 중). main push 뒤 합쳐 빌드 오류(헤더 나누기로 빠진 include)를 잡고 preflight. N8a 가 preflight 경로를 `Scripts/verify/preflight.sh` 로 옮겼다(기억 파일도 고친다).
 - 그림 확인: 카메라 흔들림 · 메시 모디파이어 노이즈, RigIK 정반대 방향(-q), TAA · 구름 기록 칸, 파이프라인 선택 경로, 픽셀 마을 스프라이트 이름(`walk_Down`), 메모리 추적기 · 로그 글 철자(`Allocation size` 등).
 - 판단 남음: TAA 출력의 앨리어싱 제외를 지울지(`-gv_transientAliasing=0` 비교).
 
@@ -23,13 +23,13 @@
 
 | 누가 | 몫 |
 | --- | --- |
-| w-n1serial · LT-wt/n1serial | 10 절 N1 직렬화 이름 · Serialization · ReflectionParser 폴더 |
-| w-n6gf · LT-wt/n6gf | 10 절 N6 GameFramework 이름 · 폴더 |
-| w-n8ascripts · LT-wt/n8ascripts | 10 절 N8a 스크립트 · CMake 이름과 Scripts 폴더 |
+| w-naming1 · LT-wt/naming1 | 2 물결 네 갈래(n2suffix · n4asset · n10digest · n9circuit)를 합치고 쌍 표를 다시 맞춘다 |
 
-### 끝나서 통합을 기다리는 갈래
+### 이름 바로잡기에서 남긴 몫
 
-- 1 물결(바탕 5f7e3e134a = w-integrate + main): w-n3graphics(N3, 쌍 표 N3Graphics.json, MeshVertex.h 는 게이트 때문에 RHI 밖에 둠) · w-n5editor(N5, N5Editor.json 155 쌍 — HotReload 쌍은 `--reapply --include-strings`. EditorStability → EditorSettle 은 11-13 의 settle → stable 결정을 따라 하지 않는다. Job 파일 · Commands 값 형식 옮기기는 층 껍데기에 걸려 남음) · w-n7core(N7, N7Core.json, 메인 폴더의 빈 폴더 Core/Console · Core/Diagnostics/Dev 를 지운다). 셋 다 빌드 전이라 "형식 없음" 오류는 통합 빌드에서 include 하나로 푼다.
+- EditorStability → EditorSettle 은 하지 않는다(11-13 settle → stable 결정). 에디터 Job 파일 · Commands 값 형식 옮기기는 층 껍데기에 걸려 남았다. 메인 폴더의 빈 폴더 Core/Console · Core/Diagnostics/Dev 를 지운다.
+- N4 밖의 resourceRoot · resourceID · _listResourceFolder · EditorResourceCatalog* · CookInputKind::Resource, 시나리오 이름 resourcecondition · resourcesave · netresourcedigest. Vulkan SamplerSpec · RigIKNodes LimitSpec. 키트 Dev/ 의 `*GameModeComponentDevTools` · `*DevCommands` 접미. VocabularyCheck(Engine/Behavior 와 함께). — N11 기준선 또는 다음 묶음.
+- 3 물결: N8b 층 낱말, N11 재발 방지(10 절).
 
 ## 1. 다음 순서
 
@@ -86,8 +86,6 @@
 남길 것: 작은 둘째 팩 NileCity. 새 게임 폴더를 두지 않는다.
 
 ## 8. 에셋 정체성(GUID)
-
-- 임포트 산출물 이름을 원본 .meta 에 적기(유니티 .meta 하위 에셋 표 자리) — 임포터 · .meta 형식 · EditorAssetIndex · asset_identity.py 를 함께 바꾸고 모델 전체 다시 임포트. 그러면 Scripts/dev/scenario_reach.py 의 `shortcut:` 이 풀린다.
 
 - **3 단계 원본 저장소 떼기:** 코드(`store:<SHA-256>` · `AssetSourceLocator`)는 있다. 데이터는 원본 2 GB 또는 LFS 비용이 문제일 때.
 
