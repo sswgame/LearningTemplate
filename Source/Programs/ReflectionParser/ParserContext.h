@@ -34,10 +34,15 @@ namespace sw
          * @param listIncludePath 추가 include 경로 목록
          * @param listUnsaved 디스크 대신 넘길 내용(키워드 스캔과 이중 I/O 방지 · 디스크에 없는 주 파일)
          * @param bReportErrors 거짓이면 clang 오류를 오류 로그 대신 추적 로그로 남깁니다(실패하면 다시 해 볼 시도용)
+         * @param listExtraArg 설정의 인자 뒤에 붙일 인자(PCH 굽기의 `-x c++-header`, 읽기의 `-include-pch <파일>`)
+         * @param extraFlags 더 붙일 libclang 파싱 깃발(PCH 굽기의 `CXTranslationUnit_ForSerialization`)
          * @return 파싱 성공 여부(clang 오류가 하나라도 있으면 실패)
          */
         [[nodiscard]] bool parse( const string& filePath, const vector<string>& listIncludePath, const vector<ParserUnsavedFile>& listUnsaved,
-                                  bool bReportErrors = true );
+                                  bool bReportErrors = true, const vector<string>& listExtraArg = {}, uint32 extraFlags = 0 );
+
+        /** @brief 파싱한 번역 단위를 PCH 파일로 씁니다. `CXTranslationUnit_ForSerialization` 으로 파싱한 것이어야 합니다. */
+        [[nodiscard]] bool save( const string& path ) const;
 
         /** @brief 생성된 clang TranslationUnit을 반환합니다. */
         CXTranslationUnit getTranslationUnit() const { return _translationUnit; }

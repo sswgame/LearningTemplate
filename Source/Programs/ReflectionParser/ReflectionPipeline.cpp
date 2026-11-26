@@ -179,6 +179,34 @@ namespace sw
             /** @brief 묶음 TU 의 주 파일 이름입니다. 디스크에는 없고 내용으로만 넘깁니다. */
             static constexpr const utf8* kBatchSourceName = "ReflectionParser.batch.cpp";
 
+            /** @brief 모듈 PCH 의 원본 헤더 · PCH 파일 이름(출력 폴더 안)입니다. 원본은 `pch.h` 하나를 include 한다. */
+            static constexpr const utf8* kModulePchHeaderName = "ReflectionParser.pch.h";
+            static constexpr const utf8* kModulePchName       = "ReflectionParser.pch";
+            /** @brief PCH 를 굽는 번역 단위 수의 하한입니다. 하나면 굽는 비용이 그대로 더해진다. */
+            static constexpr size_t kMinTranslationUnitsForPch = 2;
+
+            /** @brief @p listExtra 가운데 @p inoutList 에 없는 의존을 더합니다(PCH 를 구울 때 모은 의존을 번역 단위의 의존에 합친다). */
+            static void appendDependencies( vector<StampDependency>& inoutList, const vector<StampDependency>& listExtra )
+            {
+                const size_t ownCount = inoutList.size();
+                for ( const StampDependency& extra : listExtra )
+                {
+                    bool bFound = false;
+                    for ( size_t index = 0; index < ownCount && bFound == false; ++index )
+                        bFound = inoutList[index]._path == extra._path;
+                    if ( bFound == false )
+                        inoutList.push_back( extra );
+                }
+            }
+
+            /** @brief PCH 를 읽는 인자입니다. PCH 가 없으면 비어 있다. */
+            static vector<string> makePchArgs( const AbsolutePath* pPchPath )
+            {
+                if ( pPchPath == nullptr )
+                    return {};
+                return vector<string>{ "-include-pch", pPchPath->str() };
+            }
+
             /**
              * @brief 소스 텍스트에 리플렉션 매크로 키워드(`kSourceKeywordScan`)가 있는지 봅니다.
              * @details 없으면 무거운 libclang 파싱을 통째로 건너뛰고 빈 산출물을 씁니다. 키워드는 표(`kSourceKeywordScan`) 하나에서 옵니다.
@@ -293,9 +321,27 @@ namespace sw
         addPhaseTime( ParsePhase::Check, static_cast<float32>( phaseTimer.lapSeconds() ) );
         SW_LOG_INFO_ID( "ReflectionPipeline.ParsingInputUpDate", "Parsing %# of %# input(s) (%# up to date, %# without annotations).", listPending.size() + listPendingSource.size(),
                         _pOptions->_listInputFile.size(), upToDate, noReflect );
-        errorCount += parsePending( listPending );
-        // .cpp 는 한 TU 로 묶지 않는다. 내부 연결 이름(익명 이름공간 · static)과 using 지시문이 .cpp 끼리 부딪힌다(헤더만 읽는 UHT 는 없는 문제다).
-        errorCount += parseEachInParallel( listPendingSource );
+        // .cpp 는 첫 줄이 `pch.h` 라 번역 단위 비용이 거의 그 공통 앞부분이다. 묶음 TU 도 같은 앞부분을 다시 읽는다.
+        // 그래서 번역 단위가 둘 이상이고 .cpp 가 있으면 `pch.h` 를 한 번 PCH 로 굽고 모두 그것을 읽는다(언리얼 UBT 의 모듈 공유 PCH).
+        const size_t translationUnitCount = ( listPending.empty() ? 0 : 1 ) + listPendingSource.size();
+        ModulePch    pch;
+        const bool   bWantPch  = listPendingSource.empty() == false && translationUnitCount >= ReflectionPipelineInternal::kMinTranslationUnitsForPch;
+        const bool   bPchBaked = bWantPch && bakeModulePch( pch );
+        addPhaseTime( ParsePhase::Pch, static_cast<float32>( phaseTimer.lapSeconds() ) );
+        if ( bWantPch && bPchBaked == false )
+        {
+            ++errorCount; // 까닭은 bakeModulePch 가 남겼다. .cpp 입력도 같은 `pch.h` 로 시작하므로 PCH 없이 다시 하지 않는다
+        }
+        else
+        {
+            const ModulePch* pPch = bPchBaked ? &pch : nullptr;
+            errorCount += parsePending( listPending, pPch );
+            // .cpp 는 한 TU 로 묶지 않는다. 내부 연결 이름(익명 이름공간 · static)과 using 지시문이 .cpp 끼리 부딪힌다(헤더만 읽는 UHT 는 없는 문제다).
+            errorCount += parseEachInParallel( listPendingSource, pPch );
+        }
+        // PCH 는 이번 실행의 인자 · 헤더로 구운 것이라 남겨 두지 않는다(모듈마다 수십 MB).
+        if ( bPchBaked && FileUtil::removeFile( pch._pchPath ) == false )
+            SW_LOG_WARNING_ID( "ReflectionPipeline.ModulePchNotRemoved", "Could not remove the module PCH %#.", pch._pchPath.str() );
         logEmitBytes();
         static_cast<void>( phaseTimer.lapSeconds() ); // 파싱 · 방문 · 쓰기는 입력마다 더했다
 
@@ -320,23 +366,51 @@ namespace sw
      *          (Release, 실측). 헤더마다 TU 를 따로 만들면 같은 것을 헤더 수만큼 다시 파싱하고, 워커 16 개가 한꺼번에 파싱하면
      *          메모리 대역을 다퉈 한 개가 1.0 → 2.1 초로 늘어난다.
      */
-    int32 ReflectionPipeline::parsePending( const vector<PendingInput>& listPending ) const
+    int32 ReflectionPipeline::parsePending( const vector<PendingInput>& listPending, const ModulePch* pPch ) const
     {
         if ( listPending.empty() )
             return 0;
-        if ( listPending.size() == 1 )
-            return parseAndGenerate( listPending.front() ) ? 0 : 1;
+        // PCH 를 읽을 때는 헤더 하나도 묶음으로 읽는다. 헤더를 주 파일로 읽으면 PCH 에 이미 든 같은 헤더와 정의가 겹친다(`#pragma once` 는 주 파일에 듣지 않는다).
+        if ( listPending.size() == 1 && pPch == nullptr )
+            return parseAndGenerate( listPending.front(), nullptr ) ? 0 : 1;
 
         int32 errorCount = 0;
-        if ( parseBatch( listPending, errorCount ) )
+        if ( parseBatch( listPending, pPch, errorCount ) )
             return errorCount;
 
-        // 묶음이 clang 오류로 실패했다. 어느 헤더가 깨졌는지 헤더마다 파싱해 그 헤더의 오류로 알리고, 나머지는 그대로 만든다.
+        // 묶음이 clang 오류로 실패했다. 어느 헤더가 깨졌는지 헤더마다 파싱해 그 헤더의 오류로 알리고, 나머지는 그대로 만든다(위의 까닭으로 PCH 없이).
         SW_LOG_WARNING_ID( "ReflectionPipeline.OneTranslationUnitInput", "One translation unit for %# input(s) did not parse; parsing them one by one.", listPending.size() );
-        return parseEachInParallel( listPending );
+        return parseEachInParallel( listPending, nullptr );
     }
 
-    bool ReflectionPipeline::parseBatch( const vector<PendingInput>& listPending, int32& outErrorCount ) const
+    bool ReflectionPipeline::bakeModulePch( ModulePch& outPch ) const
+    {
+        // 원본은 내용이 같으면 다시 쓰지 않는다. 출력 폴더 안이라 의존(스탬프 · depfile)에 들지 않는다.
+        const AbsolutePath headerPath = _pOptions->_outputDir.join( ReflectionPipelineInternal::kModulePchHeaderName );
+        if ( GeneratedFileUtil::writeIfChanged( headerPath, "#include \"pch.h\"\n" ) == false )
+        {
+            SW_LOG_ERROR_ID( "ReflectionPipeline.ModulePchHeaderNotWritten", "Could not write the module PCH header %#.", headerPath.str() );
+            return false;
+        }
+        // `-x c++-header` 는 설정의 `-x c++` 뒤에 와서 이긴다. 헤더로 파싱해야 PCH 로 쓸 수 있다.
+        const vector<string> listHeaderArg{ "-x", "c++-header" };
+        ParserContext        context( _pSession->_config );
+        if ( context.parse( headerPath.str(), _listIncludePath, {}, true, listHeaderArg, CXTranslationUnit_ForSerialization ) == false )
+        {
+            SW_LOG_ERROR_ID( "ReflectionPipeline.ModulePchNotParsed", "The module PCH (pch.h) did not parse - the .cpp inputs start with it, so fix the errors above." );
+            return false;
+        }
+        outPch._pchPath = _pOptions->_outputDir.join( ReflectionPipelineInternal::kModulePchName );
+        if ( context.save( outPch._pchPath.str() ) == false )
+        {
+            SW_LOG_ERROR_ID( "ReflectionPipeline.ModulePchNotSaved", "Could not save the module PCH to %#.", outPch._pchPath.str() );
+            return false;
+        }
+        outPch._listDependency = ReflectionPipelineInternal::collectDependencies( context.getTranslationUnit(), _pOptions->_outputDir, _runStartTime );
+        return true;
+    }
+
+    bool ReflectionPipeline::parseBatch( const vector<PendingInput>& listPending, const ModulePch* pPch, int32& outErrorCount ) const
     {
         // 묶음 TU 의 원본 — 입력 헤더를 차례로 include 한다. 디스크에 쓰지 않고 내용으로 넘긴다(입력 헤더들도 이미 읽은 내용으로).
         const string              batchPath = _pOptions->_outputDir.join( ReflectionPipelineInternal::kBatchSourceName ).str();
@@ -352,14 +426,16 @@ namespace sw
             const AbsolutePath& inputFile = *pending._pRecord->_pInputFile;
             batchSourceText.appendFormat( "#include \"%#\"\n", inputFile.str() );
             listTargetFile.push_back( inputFile.str() );
-            listUnsaved.push_back( ParserUnsavedFile{ &inputFile.str(), &pending._content } );
+            // PCH 안에 든 파일을 내용으로 덮으면 clang 이 PCH 를 거절한다. PCH 를 읽을 때는 입력 헤더를 디스크에서 읽는다.
+            if ( pPch == nullptr )
+                listUnsaved.push_back( ParserUnsavedFile{ &inputFile.str(), &pending._content } );
         }
         batchSource = string( batchSourceText.view() );
 
         // clang 오류는 여기서 알리지 않는다 — 헤더마다 다시 파싱할 때 그 헤더의 오류로 나온다.
         ParserContext context( _pSession->_config );
         Stopwatch     phaseTimer;
-        const bool    bParsed = context.parse( batchPath, _listIncludePath, listUnsaved, false );
+        const bool    bParsed = context.parse( batchPath, _listIncludePath, listUnsaved, false, ReflectionPipelineInternal::makePchArgs( pPch != nullptr ? &pPch->_pchPath : nullptr ) );
         addPhaseTime( ParsePhase::Parse, static_cast<float32>( phaseTimer.lapSeconds() ) );
         if ( bParsed == false )
             return false;
@@ -370,8 +446,9 @@ namespace sw
         const vector<ParsedHeader>& listHeader = visitor.getParsedHeaders();
         // 묶음의 의존은 묶음 전체로 적는다. `#pragma once` 로 두 번째 include 는 새 파일 항목이 생기지 않아, 헤더별로 가르면 먼저 include 한
         // 헤더에만 붙는다 — 그러면 그 헤더만 다시 파싱되고 나머지는 옛 것을 든다.
-        const vector<StampDependency> listDependency =
-            ReflectionPipelineInternal::collectDependencies( context.getTranslationUnit(), _pOptions->_outputDir, _runStartTime );
+        vector<StampDependency> listDependency = ReflectionPipelineInternal::collectDependencies( context.getTranslationUnit(), _pOptions->_outputDir, _runStartTime );
+        if ( pPch != nullptr )
+            ReflectionPipelineInternal::appendDependencies( listDependency, pPch->_listDependency );
         for ( size_t index = 0; index < listPending.size(); ++index )
         {
             const AbsolutePath& inputFile = *listPending[index]._pRecord->_pInputFile;
@@ -388,7 +465,7 @@ namespace sw
         return true;
     }
 
-    bool ReflectionPipeline::parseAndGenerate( const PendingInput& pending ) const
+    bool ReflectionPipeline::parseAndGenerate( const PendingInput& pending, const ModulePch* pPch ) const
     {
         const AbsolutePath&   inputFile = *pending._pRecord->_pInputFile;
         const GeneratedPaths& paths     = pending._pRecord->_paths;
@@ -399,7 +476,7 @@ namespace sw
             ParserUnsavedFile{ &inputFile.str(), &pending._content }
         };
         Stopwatch  phaseTimer;
-        const bool bParsed = context.parse( inputFile.str(), _listIncludePath, listUnsaved );
+        const bool bParsed = context.parse( inputFile.str(), _listIncludePath, listUnsaved, true, ReflectionPipelineInternal::makePchArgs( pPch != nullptr ? &pPch->_pchPath : nullptr ) );
         addPhaseTime( ParsePhase::Parse, static_cast<float32>( phaseTimer.lapSeconds() ) );
         if ( bParsed == false )
         {
@@ -427,18 +504,21 @@ namespace sw
             return false;
         }
 
-        const bool bWritten = writeOutputs( *pending._pRecord, parsed, pending._inputWriteTime,
-                                            ReflectionPipelineInternal::collectDependencies( context.getTranslationUnit(), _pOptions->_outputDir, _runStartTime ) );
+        // PCH 안의 헤더가 이 번역 단위의 include 목록에 나오는지는 libclang 판에 달렸다. PCH 를 구울 때 모은 의존을 늘 더한다.
+        vector<StampDependency> listDependency = ReflectionPipelineInternal::collectDependencies( context.getTranslationUnit(), _pOptions->_outputDir, _runStartTime );
+        if ( pPch != nullptr )
+            ReflectionPipelineInternal::appendDependencies( listDependency, pPch->_listDependency );
+        const bool bWritten = writeOutputs( *pending._pRecord, parsed, pending._inputWriteTime, listDependency );
         addPhaseTime( ParsePhase::Emit, static_cast<float32>( phaseTimer.lapSeconds() ) );
         return bWritten;
     }
 
-    int32 ReflectionPipeline::parseEachInParallel( const vector<PendingInput>& listPending ) const
+    int32 ReflectionPipeline::parseEachInParallel( const vector<PendingInput>& listPending, const ModulePch* pPch ) const
     {
         if ( listPending.empty() )
             return 0;
         if ( listPending.size() == 1 )
-            return parseAndGenerate( listPending.front() ) ? 0 : 1;
+            return parseAndGenerate( listPending.front(), pPch ) ? 0 : 1;
 
         // 동시에 여는 TU 는 설정의 상한(`tuning.max_parallel_parses`)까지다 — TU 마다 공통 헤더 전체를 들어 하드웨어 스레드만큼 띄우면 메모리와 대역이 먼저 찬다.
         uint32 workerCount = std::thread::hardware_concurrency();
@@ -463,9 +543,9 @@ namespace sw
             const PendingInput* pPending = &pending;
             TaskHandle          handle   = taskManager.emplaceTask(
                 "ParseHeader",
-                SW_DELEGATE_LAMBDA( TaskDelegate, [this, pPending, &errorCount]()
+                SW_DELEGATE_LAMBDA( TaskDelegate, [this, pPending, pPch, &errorCount]()
                        {
-                if ( parseAndGenerate( *pPending ) == false )
+                if ( parseAndGenerate( *pPending, pPch ) == false )
                     errorCount.fetch_add( 1 );
             } ) );
             handle.submit();
@@ -756,9 +836,9 @@ namespace sw
     {
         const auto toMs = [this]( const ParsePhase phase )
         { return static_cast<float64>( _arrPhaseMicroseconds[static_cast<size_t>( phase )].load( std::memory_order_relaxed ) ) / static_cast<float64>( constant::time::kMicrosecondsPerMillisecond ); };
-        SW_LOG_INFO_ID( "ReflectionParser.PhaseTime", "Module %# (%# of %# input(s) parsed): total %# ms, setup %# ms, check %# ms, parse %# ms, visit %# ms, emit %# ms, lists %# ms",
+        SW_LOG_INFO_ID( "ReflectionParser.PhaseTime", "Module %# (%# of %# input(s) parsed): total %# ms, setup %# ms, check %# ms, pch %# ms, parse %# ms, visit %# ms, emit %# ms, lists %# ms",
                         _pOptions->_moduleName, parsedCount, _pOptions->_listInputFile.size(), totalSeconds * static_cast<float64>( constant::time::kMillisecondsPerSecond ),
-                        toMs( ParsePhase::Setup ), toMs( ParsePhase::Check ), toMs( ParsePhase::Parse ), toMs( ParsePhase::Visit ), toMs( ParsePhase::Emit ),
+                        toMs( ParsePhase::Setup ), toMs( ParsePhase::Check ), toMs( ParsePhase::Pch ), toMs( ParsePhase::Parse ), toMs( ParsePhase::Visit ), toMs( ParsePhase::Emit ),
                         toMs( ParsePhase::Lists ) );
     }
 
