@@ -86,7 +86,7 @@ function(sw_skip_unity_for_x11_sources TARGET_NAME)
 			continue()
 		endif()
 
-		file(STRINGS "${src_path}" list_x11_include LIMIT_COUNT 1
+		file(STRINGS "${src_path}" list_x11_include ENCODING UTF-8 LIMIT_COUNT 1
 			REGEX "^[ \t]*#[ \t]*include[ \t]*[<\"](X11/|GL/glx|vulkan/vulkan_xlib|Core/Foundation/X11Headers\\.h)")
 
 		if(list_x11_include)

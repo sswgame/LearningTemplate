@@ -61,7 +61,7 @@ namespace sw
     };
 
     /** @brief 역할의 셰이더 이름을 반환합니다. `g_<Name>Index` 의 `<Name>` 이자 FrameResourceRegistry 의 키입니다. */
-    const utf8* getRenderPassInputRoleName( RenderPassInputRole role );
+    SW_API const utf8* getRenderPassInputRoleName( RenderPassInputRole role );
 
     /** @brief 역할 이름(`getRenderPassInputRoleName` 의 문자열, Invalid 제외)을 역할로 읽습니다. 모르는 이름이면 false 입니다. */
     [[nodiscard]] bool tryParseRenderPassInputRole( string_view roleName, RenderPassInputRole& outRole );

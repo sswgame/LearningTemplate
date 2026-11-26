@@ -4,7 +4,6 @@
 
 #include "Core/Serialization/BitStream.h"
 
-#include "GameFramework/Runtime/Online/Cache/Server/EphemeralRecordTable.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
 namespace sw
@@ -43,19 +42,5 @@ namespace sw
     bool ServerRecord::isValidName( string_view name )
     {
         return ServiceKeyUtil::isTokenText( name, kMaxNameSize, "_-" );
-    }
-
-    bool ServerRecord::makeValue( const ServerStatus& status, EphemeralValue& outValue )
-    {
-        return EphemeralRecordTable<ServerStatus>{}.makeValue( status, outValue );
-    }
-
-    bool ServerRecord::decode( const EphemeralReply& reply, ServerStatus& outStatus )
-    {
-        ServerStatus status;
-        if ( EphemeralRecordTable<ServerStatus>{}.decode( reply, status ) == false || status._state == ServerState::Count )
-            return false;
-        outStatus = std::move( status );
-        return true;
     }
 } // namespace sw

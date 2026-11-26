@@ -39,7 +39,7 @@ endif()
 # ------------------------------------------------------------------------------
 set(core_tier_table "${CMAKE_SOURCE_DIR}/Config/Rules/Layers/CoreLayers.toml")
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${core_tier_table}")
-file(STRINGS "${core_tier_table}" list_core_tier_line REGEX "^\"?[A-Za-z0-9_/]+\"?[ \t]*=[ \t]*[0-9]+")
+file(STRINGS "${core_tier_table}" list_core_tier_line ENCODING UTF-8 REGEX "^\"?[A-Za-z0-9_/]+\"?[ \t]*=[ \t]*[0-9]+")
 foreach(tier_line IN LISTS list_core_tier_line)
 	string(REGEX MATCH "^\"?([A-Za-z0-9_/]+)\"?[ \t]*=[ \t]*([0-9]+)" ignored "${tier_line}")
 	set(core_tier_${CMAKE_MATCH_1} ${CMAKE_MATCH_2})
@@ -154,7 +154,7 @@ endfunction()
 #    pch: 부분마다 `CoreMinimal.h` 의 include 가운데 그 티어 이하만 담은 생성 헤더를 쓴다 — 소스의 `#include "pch.h"` 는 그대로 두고 생성 폴더만 다르다.
 #    위 티어 선언(티어 3 코드의 `formatString`, Log 아래의 `SW_LOG_*` …)을 pch 가 몰래 넣어 주지 않는다. Engine 층 부분처럼 pch 는 부분 수만큼 짓는다.
 # ------------------------------------------------------------------------------
-file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/CoreMinimal.h" list_core_minimal_line REGEX "^#include \"Core/[^\"]+\"")
+file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/CoreMinimal.h" list_core_minimal_line ENCODING UTF-8 REGEX "^#include \"Core/[^\"]+\"")
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/CoreMinimal.h")
 set(list_core_objects "")
 foreach(tier IN LISTS list_core_tier)
