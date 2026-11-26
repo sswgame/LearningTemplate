@@ -93,7 +93,7 @@ namespace sw
 
     /**
      * @brief 이 엔드포인트가 중단점에 멈출 수 있다고 상대에게 알릴 시점을 정합니다.
-     * @details 개발 빌드에서만 동작한다. Shipping 은 알리지 않고 상대의 알림도 무시한다.
+     * @details 개발 빌드에서만 동작한다. Shipping 은 알리지 않고 상대의 알림도 무시한다(엔드포인트 보안 정책 `NetEndpointSecurityPolicy` — 개발 구성만 느슨한 값을 등록한다).
      *          알리는 쪽은 데이터 패킷마다 1비트를 켠다. 받는 쪽은 그 연결의 타임아웃을 `NetEndpointConfig::_debugHoldTimeoutSeconds` 로 늘린다.
      *          알리는 쪽 자신은 `update` 사이가 크게 벌어지면(프로세스가 멈췄다고 보고) 그만큼 시계가 멈춘 것으로 간주한다(가상 시계).
      */
