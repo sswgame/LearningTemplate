@@ -2516,6 +2516,7 @@
     "SRPGCombat": "SRPGBattlefield::computeStrike · computeForecast · computeForecastFrom · findCounterWeapon · executeAttack · executeMapAttack — 전투 계산은 전장의 멤버다(2026-11-26)",
     "FeatureDemoCommandUtil": "FeatureDemo/Dev/FeatureDemoDevCommands.cpp 의 내부 구조 — 시연 개발 명령만 쓴다(2026-11-26)",
     "makePaths": "GeneratedPaths::make — 리플렉션 산출물 경로는 주인 형식의 멤버다(GeneratedFileUtil 은 주인 없는 파일 쓰기 · 시각만)(2026-11-26)",
-    "writeStamp": "GeneratedStamp::write — 스탬프 쓰기 · 읽기(GeneratedStamp::read)는 스탬프 형식의 멤버다(2026-11-26)"
+    "writeStamp": "GeneratedStamp::write — 스탬프 쓰기 · 읽기(GeneratedStamp::read)는 스탬프 형식의 멤버다(2026-11-26)",
+    "isRawShaderSource": "ShaderSourceAsset::isRawSource — 원본 · include 조각 판정은 셰이더 종류의 접미사 표가 한다(2026-11-26)"
   }
 }

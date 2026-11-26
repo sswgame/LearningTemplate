@@ -350,6 +350,11 @@ namespace sw
     public:
         /** @brief 원소 중첩의 상한입니다(루트가 1). 글 · 이진 쿠킹본 모두 넘으면 읽지 않는다 — 문서를 재귀로 도는 코드(합치기 · 되살리기 · 카탈로그 읽기)가 모드 글 하나에 C 스택을 다 쓰지 않게. */
         static constexpr uint32 kMaxDepth = 256;
+        /** @brief 글 XML 문서 파일의 접미사입니다(소문자). 쿠킹본(`XMLBinary`)은 이 접미사가 아니다. */
+        static constexpr string_view kFileSuffix = ".xml";
+
+        /** @brief @p path 가 글 XML 문서 파일이면 true 입니다(대소문자 무시). 쿠커가 글을 읽어 볼 후보를 고를 때 씁니다. */
+        [[nodiscard]] static bool isDocumentPath( string_view path );
 
         // ------------------------------------------------------------------------------
         // 3) 수명: 복사 금지, 이동 가능
