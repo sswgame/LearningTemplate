@@ -220,7 +220,7 @@ PEP 8. Python names do not mirror C++ names; a JSON key or C++ name read as data
 | Classes, exceptions, `TypeVar`s | `PascalCase` |
 | Module and class constants, enum members | `UPPER_CASE`; a function-local constant is a `snake_case` local |
 | Overrides of an outside API | the outside spelling (`setUp`, `do_POST`), listed in `NamingWords.json` `_keep` |
-| CLI subcommands and lint rule ids | `kebab-case`; a command's file stem is its name (`lint.py` → `lint`, `linux_verify.py` → `linux-verify`) |
+| CLI subcommands and lint rule ids | `kebab-case`; a command's file stem is its name (`lint.py` → `lint`, `linux_verify.py` → `linux-verify`) — `find_commands` 가 어긋나면 기동 때 멈춘다 |
 | Checks | returns problems → `find_<what>_problems`, stops → `require_<what>`, returns its error or verdict → `validate_<what>`, bool → `is_` · `has_`; no `check_` (CMake `CheckXXX`-style probing only) |
 | Exceptions | an error ends in `Error` (`StageFailedError`); a stop signal that is not an error does not (`RunStop`) |
 | JSON keys of Python-owned contracts (`CookContract.json`, hand-read import configs) | `snake_case`; keys read through reflection keep the C++ member name (`_width`) |

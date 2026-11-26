@@ -31,19 +31,28 @@ class FindCommandsTest(unittest.TestCase):
 
     def test_a_file_is_a_command(self) -> None:
         path = self.tools / "copy_file.py"
-        path.write_text(SOURCE.format("Copy", "copy", "사본"), encoding="utf-8")
-        self.assertEqual(command.find_commands(), {"copy": command.CommandEntry("tools.copy_file", "CopyCommand", "사본")})
+        path.write_text(SOURCE.format("Copy", "copy-file", "사본"), encoding="utf-8")
+        self.assertEqual(command.find_commands(), {"copy-file": command.CommandEntry("tools.copy_file", "CopyCommand", "사본")})
         path.unlink()
         self.assertEqual(command.find_commands(), {})
 
     def test_bad_heads_stop(self) -> None:
-        (self.tools / "a.py").write_text(SOURCE.format("A", "copy", "x"), encoding="utf-8")
-        (self.tools / "b.py").write_text(SOURCE.format("B", "copy", "x"), encoding="utf-8")
+        (self.tools / "copy.py").write_text(SOURCE.format("A", "copy", "x"), encoding="utf-8")
+        (self.tools / "more").mkdir()
+        (self.tools / "more" / "copy.py").write_text(SOURCE.format("B", "copy", "x"), encoding="utf-8")
         with self.assertRaises(SystemExit, msg="겹친 이름"):
             command.find_commands()
-        (self.tools / "b.py").write_text('class BCommand(Command):\n    name = "other"\n\n', encoding="utf-8")
+        (self.tools / "more" / "copy.py").write_text('class BCommand(Command):\n    name = "other"\n\n', encoding="utf-8")
         with self.assertRaises(SystemExit, msg="help 없음"):
             command.find_commands()
+
+    def test_name_must_match_the_file_stem(self) -> None:
+        path = self.tools / "copy_file.py"
+        path.write_text(SOURCE.format("Copy", "copy", "사본"), encoding="utf-8")
+        with self.assertRaises(SystemExit, msg="이름 copy ↔ 파일 copy_file"):
+            command.find_commands()
+        path.write_text(SOURCE.format("Copy", "copy-file", "사본"), encoding="utf-8")
+        self.assertEqual(list(command.find_commands()), ["copy-file"])
 
     def test_command_error_is_one_line_and_a_violation(self) -> None:
         class FailCommand(command.Command):

@@ -1,7 +1,7 @@
 """
 바뀐 파일이 닿는 시나리오를 고른다 — 시나리오가 여는 씬 · 에셋의 참조 닫힘과, 시나리오가 쓰는 단계 · 감시 값 · 로그 id 를 정의한 소스.
 
-묶음 검증의 changed 단계(`test_history.py changed`)는 시나리오 XML · 골든이 바뀐 것만 골라, 셰이더 · 머티리얼 · 게임 데이터 · 감시 값이 바뀌어 지는 시나리오는 gpu-release 끝에서야 졌다.
+묶음 검증의 changed 단계(`verify-history changed`)는 시나리오 XML · 골든이 바뀐 것만 골라, 셰이더 · 머티리얼 · 게임 데이터 · 감시 값이 바뀌어 지는 시나리오는 gpu-release 끝에서야 졌다.
 
   에셋   시나리오 글(주석 밖)이 적은 Content 경로 · GUID 에서 시작해, 그 파일들이 적은 것을 끝까지 따라간다(씬 → 프리팹 → 머티리얼 → 셰이더 → `#include`).
          임포트 산출물(`models/` · `textures/` …)은 커밋하지 않으므로 같은 자리의 원본(`models_raw/` …)으로 푼다(`Config/Dev/AssetIdentity.json`).

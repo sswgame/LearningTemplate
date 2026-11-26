@@ -69,7 +69,7 @@ class PreflightTest(unittest.TestCase):
 
     def commands(self, shell: FakeShell) -> list[str]:
         """단계가 부른 명령 — 실행기의 기록 · 이력 줄을 뺀다."""
-        return [line for line in shell.list_call if not any(word in line for word in ("verify-record", "test-history stage", "test-history ingest"))]
+        return [line for line in shell.list_call if not any(word in line for word in ("verify-record", "verify-history stage", "verify-history ingest"))]
 
 
 class StageTest(PreflightTest):
@@ -111,7 +111,7 @@ class StageTest(PreflightTest):
         shell.quarantine_exclude = "^(A)$"
         self.assertFalse(shell.run_tests("P", "all", "-LE", "^load$"))
         self.assertEqual(shell.list_call, ["ctest -j6 --output-on-failure -E ^(A)$ -LE ^load$",
-                                           f"py -3 -m Scripts test-history ingest build/P/Bin/Saved/Automation --commit {SHA} --kind verify --since build/P/Testing/Logs/verify.ctest.all.log.start"])
+                                           f"py -3 -m Scripts verify-history ingest build/P/Bin/Saved/Automation --commit {SHA} --kind verify --since build/P/Testing/Logs/verify.ctest.all.log.start"])
         self.assertFalse(self.shell("ingest").run_tests("P", "all"))
         self.assertTrue(self.shell().run_tests("P", "all"))
 
@@ -173,7 +173,7 @@ class StageTest(PreflightTest):
     def test_changed(self) -> None:
         shell = self.shell()
         ChangedStage().run(shell)
-        self.assertEqual(shell.list_call, ["py -3 -m Scripts test-history changed --preset Ninja-Release"])
+        self.assertEqual(shell.list_call, ["py -3 -m Scripts verify-history changed --preset Ninja-Release"])
         self.check_failure(ChangedStage(), "changed", f"CHANGED_FAILED sha={SHA} - build/verify.changed.log (cpu · gpu-release 를 시작하지 않는다)")
 
     def test_gpu_release(self) -> None:
@@ -185,7 +185,7 @@ class StageTest(PreflightTest):
     def test_flaky(self) -> None:
         shell = self.shell()
         FlakyStage().run(shell)
-        self.assertEqual(shell.list_call, ["py -3 -m Scripts test-history flaky"])
+        self.assertEqual(shell.list_call, ["py -3 -m Scripts verify-history flaky"])
         self.check_failure(FlakyStage(), "flaky", f"WINDOWS_FAILED (흔들림이 문턱을 넘었다 - build/verify.flaky.log) - Linux 를 돌리지 않는다 sha={SHA}")
 
     def test_tree(self) -> None:
@@ -233,7 +233,7 @@ class RunTest(PreflightTest):
 
     BUILD = ["lint --all", "--preset Ninja-Release", "-L import", "--preset Ninja-Shipping", "--preset Ninja-Release-Server", "--preset Ninja-Shipping-Server", "shipping-check --skip-build",
              "syntax", "--preset Ninja-Release-ASan", "tidy"]
-    REST = ["test-history changed", "-L nogpu", "Server.exe", "ExtensionTool", "--cook-shaders", "-LE ^load$", "flaky"]
+    REST = ["verify-history changed", "-L nogpu", "Server.exe", "ExtensionTool", "--cook-shaders", "-LE ^load$", "flaky"]
     AFTER = ["-L ^load$", "linux-verify all", "sanitize address"]
 
     def order(self, **options: object) -> list[str]:
@@ -271,7 +271,7 @@ class RunTest(PreflightTest):
         shell = self.shell(skipped=["cpu"], no_linux=True)
         self.assertEqual(self.run_all(shell), 0)
         self.assertIn(f"py -3 -m Scripts verify-record pass cpu {SHA}", shell.list_call)
-        self.assertIn(f"py -3 -m Scripts test-history stage cpu --commit {SHA} --result skipped --seconds 0", shell.list_call)
+        self.assertIn(f"py -3 -m Scripts verify-history stage cpu --commit {SHA} --result skipped --seconds 0", shell.list_call)
         self.assertFalse(any("nogpu" in line for line in shell.list_call))
 
     def test_dry_run_writes_no_record(self) -> None:
@@ -284,11 +284,11 @@ class RunTest(PreflightTest):
         self.assertEqual(self.run_all(shell), 1)
         self.assertIn(f"WINDOWS_FAILED (Ninja-Shipping build) - Linux 를 돌리지 않는다 sha={SHA}", shell.list_line, "갈래 안의 까닭")
         self.assertIn(f"WINDOWS_FAILED (lint --all shipping build) - Linux 를 돌리지 않는다 sha={SHA}", shell.list_line, "뒤에서 돌던 tidy 는 끝 줄 뒤에 끝날 수 있다")
-        self.assertFalse(any("verify-record pass build" in line or "test-history changed" in line for line in shell.list_call))
+        self.assertFalse(any("verify-record pass build" in line or "verify-history changed" in line for line in shell.list_call))
         self.assertTrue(any("stage build" in line and "--result failed" in line for line in shell.list_call))
 
     def test_changed_failure_stops_before_cpu(self) -> None:
-        shell = self.shell("test-history changed")
+        shell = self.shell("verify-history changed")
         self.assertEqual(self.run_all(shell), 1)
         self.assertTrue(any(line.startswith(f"CHANGED_FAILED sha={SHA}") for line in shell.list_line))
         self.assertFalse(any("nogpu" in line for line in shell.list_call))

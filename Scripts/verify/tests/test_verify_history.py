@@ -1,7 +1,7 @@
 """
 테스트 이력(`history_store.py` · `changed_tests.py`) — 실행 종류 · 표지(--since) · 흔들림 판정 · 느려짐 경고 · 단계 시간 · changed 단계.
 
-실행: python -X utf8 Scripts/verify/tests/test_history_command.py (CTest `Scripts.HistoryCommand`). 빌드 · git 을 띄우지 않는다.
+실행: python -X utf8 Scripts/verify/tests/test_verify_history.py (CTest `Scripts.VerifyHistory`). 빌드 · git 을 띄우지 않는다.
 """
 
 from __future__ import annotations
@@ -21,7 +21,7 @@ from verify.changed_tests import CTEST_DEFAULT_TIMEOUT_SECONDS, ChangedFile, Cha
 from verify.history_store import QuarantineEntry, SCHEMA, compute_percentile, compute_scenario_costs, compute_stats, decide_flaky, find_flaky, find_scenario_cost, find_slow_runs, ingest, make_ctest_exclude, make_scenario_costs_text, record_stage  # noqa: E402
 
 
-class TestHistoryTest(unittest.TestCase):
+class VerifyHistoryTest(unittest.TestCase):
     def test_changed_selection(self) -> None:
         list_changed = parse_name_status("A\tSource/Engine/Foo/Tests/TestFoo.cpp\nM\tSource/Engine/Foo/Foo.cpp\nD\tSource/Gone.cpp\n"
                                          "M\tSource/Engine/Bar/Deep/Bar.cpp\nM\tSource/Editor/Panel/Tests/TestPanel.cpp\n"

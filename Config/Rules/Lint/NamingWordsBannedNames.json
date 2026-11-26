@@ -3375,6 +3375,9 @@
     "WindowsToolSearch": "WindowsToolPaths.cmake — 파일 이름은 내용으로 (2026-11-27 N8a Scripts 재편)",
     "FindWindowsTools": "WindowsToolPaths.cmake — 파일 이름은 내용으로 (2026-11-27 N8a Scripts 재편)",
     "fingerprintPose": "computePoseDigest — 포즈 · 모프 가중치의 해시(2026-11-27)",
-    "StageModuleRuntimeDLLs": "ScriptMode/DeployModuleRuntimeDLLs.cmake — 파일 이름은 내용으로 (2026-11-27 N8a Scripts 재편)"
+    "StageModuleRuntimeDLLs": "ScriptMode/DeployModuleRuntimeDLLs.cmake — 파일 이름은 내용으로 (2026-11-27 N8a Scripts 재편)",
+    "test-history": "verify-history — 명령 이름 = 파일 이름(2026-11-27 N11)",
+    "history_command": "verify_history.py — 명령 이름 = 파일 이름(2026-11-27 N11)",
+    "TestHistoryCommand": "VerifyHistoryCommand (2026-11-27 N11)"
   }
 }
