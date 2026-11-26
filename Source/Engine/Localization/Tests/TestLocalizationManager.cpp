@@ -79,6 +79,29 @@ namespace
 using Internal = LocalizationManagerTestInternal;
 
 /**
+ * @brief [LocalizationManagerTest] 키트 모듈이 등록한 프로젝트는 맞추기(`syncModuleProjects`)가 올리고, 등록이 사라지면(모듈이 내려감) 뗀다
+ * @details 음성 대조: 맞추기가 새 등록을 올리지 않으면 첫 조회가 지고, 사라진 등록을 떼지 않으면 마지막 조회가 원문을 그대로 돌려줘 진다.
+ */
+SW_TEST_CASE( LocalizationManagerTest, ModuleProjectsFollowTheirRegistration )
+{
+    const ScopedScratchDomain domain;
+    const sw::string          projectID = ScopedScratchDomain::toIDText( Internal::writeSampleProject( domain.getFolder() ) );
+    sw::LocalizationManager   loc;
+    {
+        const sw::LocalizationModuleProject          project{ projectID.c_str() };
+        const sw::LocalizationModuleProjectRegistrar registrar{ &project };
+        SW_REQUIRE_TRUE( loc.syncModuleProjects() );
+        SW_EXPECT_EQUAL( size_t( 1 ), loc.getMountedProjectNames().size() );
+        SW_EXPECT_EQUAL( sw::string( "Mystery Island" ), Internal::text( loc.findString( sw::hashed_string( "ui.title" ) ) ) );
+        SW_REQUIRE_TRUE( loc.syncModuleProjects() ); // 이미 올린 등록은 다시 올리지 않는다
+        SW_EXPECT_EQUAL( size_t( 1 ), loc.getMountedProjectNames().size() );
+    }
+    SW_REQUIRE_TRUE( loc.syncModuleProjects() );
+    SW_EXPECT_TRUE( loc.getMountedProjectNames().empty() );
+    SW_EXPECT_NULL( loc.findString( sw::hashed_string( "ui.title" ) ) );
+}
+
+/**
  * @brief [LocalizationManagerTest] 독립적인 복수 인스턴스 — 낱개 표는 인스턴스마다 따로다
  */
 SW_TEST_CASE( LocalizationManagerTest, NonSingletonIndependence )

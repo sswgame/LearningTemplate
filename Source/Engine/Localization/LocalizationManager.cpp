@@ -25,6 +25,9 @@ namespace sw
 {
     namespace
     {
+        /** @brief 키트 모듈이 올린 프로젝트 목록입니다. 함수 정적이라 다른 DLL 의 정적 등록자가 먼저 와도 비어 있는 채로 선다. 모듈 로더 스레드가 올려 잠금을 든다. */
+        SW_DEFINE_LOCKED_REGISTRATION_LIST( getModuleProjects, const LocalizationModuleProject, "LocalizationModuleProjects", RegistrationOrder::Insertion, true )
+
         struct LocalizationManagerInternal
         {
             /**
@@ -331,6 +334,77 @@ namespace sw
         SW_LOG_INFO_ID( "LocalizationManager.MountedLocalizationProject", "Mounted localization project '%#'.", projectPath );
         notifyLanguageChanged( oldLanguage, newLanguage );
         return bComplete;
+    }
+
+    bool LocalizationModuleProject::add( const LocalizationModuleProject* pProject )
+    {
+        return getModuleProjects().addLogged( pProject, "Localization module project", pProject->_pProjectPath ) == RegistrationResult::Added;
+    }
+
+    void LocalizationModuleProject::remove( const LocalizationModuleProject* pProject )
+    {
+        (void)getModuleProjects().remove( pProject ); // 올라 있지 않은 줄을 빼는 것은 할 일이 없다
+    }
+
+    vector<string> LocalizationModuleProject::collectProjectPaths()
+    {
+        return getModuleProjects().withLock( []( const RegistrationList<const LocalizationModuleProject>& list )
+        {
+            vector<string> listPath;
+            for ( const LocalizationModuleProject* pProject : list.getItems() )
+            {
+                listPath.push_back( string( pProject->_pProjectPath ) );
+            }
+            return listPath;
+        } );
+    }
+
+    bool LocalizationManager::syncModuleProjects()
+    {
+        const vector<string> listRegistered = LocalizationModuleProject::collectProjectPaths();
+        vector<string>       listToMount;
+        string               language;
+        bool                 bRemoved{ false };
+        {
+            UniqueLock<shared_mutex> lock{ _mutex };
+            for ( size_t index = _listProject.size(); index > 0; --index )
+            {
+                const MountedProject& mounted = _listProject[index - 1];
+                if ( mounted._scope == LocalizationScope::Module && VectorUtil::contains( listRegistered, mounted._projectPath ) == false )
+                {
+                    _listProject.erase( _listProject.begin() + static_cast<ptrdiff_t>( index - 1 ) );
+                    bRemoved = true;
+                }
+            }
+            for ( const string& path : listRegistered )
+            {
+                bool bMounted{ false };
+                for ( const MountedProject& mounted : _listProject )
+                {
+                    bMounted = bMounted || ( mounted._scope == LocalizationScope::Module && mounted._projectPath == path );
+                }
+                if ( bMounted == false )
+                    listToMount.push_back( path );
+            }
+            if ( bRemoved )
+            {
+                rebuildTablesLocked();
+                rebuildLookupChainLocked();
+            }
+            language = _currentLanguage;
+        }
+        if ( bRemoved )
+            notifyLanguageChanged( language, language );
+        bool bAllMounted{ true };
+        for ( const string& path : listToMount )
+        {
+            if ( mountProject( AssetID{ path }, LocalizationScope::Module ) == false )
+            {
+                SW_LOG_ERROR_ID( "LocalizationManager.ModuleProjectNotMounted", "Localization project '%#' of a loaded module is not (fully) loaded - its text would show as keys", path );
+                bAllMounted = false;
+            }
+        }
+        return bAllMounted;
     }
 
     void LocalizationManager::unmountProjects( LocalizationScope scope )

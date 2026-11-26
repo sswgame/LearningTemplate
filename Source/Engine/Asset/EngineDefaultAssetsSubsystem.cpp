@@ -47,6 +47,8 @@ namespace sw
             SW_LOG_ERROR_ID( "EngineDefaultAssets.EngineLocalizationProjectNot", "Engine localization project '%#' is not (fully) loaded - stopping startup", defaultAssets._localizationProject.c_str() );
             return SubsystemInitResult::Failed;
         }
+        if ( localization.syncModuleProjects() == false ) // 정적 링크(배포)는 키트의 등록이 이미 있다
+            return SubsystemInitResult::Failed;
         string commandLineLanguage;
         if ( engine::getSubsystem<CommandLineManager>().getArgument( CommandLineArgument::LANGUAGE, commandLineLanguage ) && localization.hasLanguage( commandLineLanguage ) )
             localization.setCurrentLanguage( commandLineLanguage );
