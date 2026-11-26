@@ -14,12 +14,16 @@ namespace sw
     struct ParserConfig;
     struct ParserOptions;
 
-    /** @brief 입력 헤더 하나의 산출물 경로입니다. */
+    /**
+     * @brief 입력 하나의 산출물 경로입니다.
+     * @details 헤더 입력은 `.gen.cpp` · `.gen.h` · `.gen.meta.cpp` 셋을 낸다. .cpp 입력은 그 .cpp 끝에서 include 하는 `<이름>.cpp.gen.inl` 하나다.
+     *          다른 TU 는 .cpp 안의 형식을 못 보므로 등록 코드와 에디터 메타데이터를 따로 짓는 단위로 낼 수 없다(`isInline`).
+     */
     struct GeneratedPaths
     {
-        AbsolutePath _cppPath;
-        AbsolutePath _headerPath;
-        AbsolutePath _editorMetadataPath; ///< 개발 전용 단위(`<이름>.gen.meta.cpp` — 에디터 메타데이터). 배포 구성은 짓지 않는다
+        AbsolutePath _cppPath;            ///< 헤더 입력은 `<이름>.gen.cpp`, .cpp 입력은 `<이름>.cpp.gen.inl`
+        AbsolutePath _headerPath;         ///< 헤더 입력만 있다(ENUM(Flags) 트레이트)
+        AbsolutePath _editorMetadataPath; ///< 헤더 입력만 있다. 개발 전용 단위(`<이름>.gen.meta.cpp` — 에디터 메타데이터)라 배포 구성은 짓지 않는다
         /**
          * @brief 마지막으로 성공한 생성의 시각을 담는 빈 파일(`<.gen.cpp>.stamp`)입니다.
          * @details 산출물은 내용이 같으면 다시 쓰지 않습니다 — 쓰면 그 파일을 include 하는 TU 가 전부 다시 컴파일됩니다. 그래서
@@ -28,6 +32,9 @@ namespace sw
          *          안 바뀐 Engine 재실행이 Debug 에서 2.2 초). 스탬프 이름은 CMake 의 `ReflectBuiltins.gen.cpp.stamp` 와 같은 규칙입니다.
          */
         AbsolutePath _stampPath;
+
+        /** @brief .cpp 입력이면 true 입니다. 산출물은 `_cppPath`(그 .cpp 가 include 하는 inl) 하나뿐이다. */
+        bool isInline() const { return _headerPath.empty(); }
     };
 } // namespace sw
 
@@ -68,7 +75,7 @@ namespace sw
 {
     struct GeneratedFileUtil
     {
-        /** @brief 출력 디렉터리 + 입력의 파일 이름으로 산출물 경로 셋을 만듭니다. */
+        /** @brief 출력 디렉터리 + 입력의 파일 이름으로 산출물 경로를 만듭니다. `.cpp` 입력은 inl 하나(`GeneratedPaths::isInline`)입니다. */
         static GeneratedPaths makePaths( const AbsolutePath& outputDir, const AbsolutePath& inputFile );
 
         /**

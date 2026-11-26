@@ -1535,7 +1535,7 @@
     "sw_requireTemplateDefinitions": "sw_require_template_definitions — CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)(2026-11-13)",
     "sw_resolveModuleManifests": "sw_resolve_module_manifests — CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)(2026-11-13)",
     "sw_resolveShippingRHIBackend": "sw_resolve_shipping_rhi_backend — CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)(2026-11-13)",
-    "sw_scanReflectionHeaders": "sw_scan_reflection_headers — CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)(2026-11-13)",
+    "sw_scanReflectionHeaders": "sw_scan_reflection_inputs — CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)(2026-11-13)",
     "sw_selectGamePacks": "sw_select_game_packs — CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)(2026-11-13)",
     "sw_setModuleBinOutput": "sw_set_module_bin_output — CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)(2026-11-13)",
     "sw_setTargetDefsHeader": "sw_set_target_defs_header — CMake 함수는 sw_snake_case(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test)(2026-11-13)",
@@ -2480,6 +2480,7 @@
     "EditorBackgroundTaskTest": "EditorBackgroundJobTest — 에디터 백그라운드 잡은 TaskManager 실행 단위(Task)와 뜻이 달라(최신 요청 · 결과 칸) 같은 폴더의 EditorExternalToolJob 처럼 Job 으로 가른다(2026-11-26)(2026-11-26)",
     "EditorBackgroundTask": "EditorBackgroundJob — 에디터 백그라운드 잡은 TaskManager 실행 단위(Task)와 뜻이 달라(최신 요청 · 결과 칸) 같은 폴더의 EditorExternalToolJob 처럼 Job 으로 가른다(2026-11-26)(2026-11-26)",
     "EditorTaskPoll": "EditorJobPoll — 에디터 백그라운드 잡은 TaskManager 실행 단위(Task)와 뜻이 달라(최신 요청 · 결과 칸) 같은 폴더의 EditorExternalToolJob 처럼 Job 으로 가른다(2026-11-26)(2026-11-26)",
-    "GimmickDamageUtil": "GimmickUtil — 기믹 도구는 GimmickUtil 하나로 합쳤다(피해 · 파괴도 같은 주인 없는 도구)(2026-11-26)"
+    "GimmickDamageUtil": "GimmickUtil — 기믹 도구는 GimmickUtil 하나로 합쳤다(피해 · 파괴도 같은 주인 없는 도구)(2026-11-26)",
+    "sw_scan_reflection_headers": "sw_scan_reflection_inputs — 헤더와 함께 REFLECT · ENUM 이 든 .cpp 도 훑는다(2026-11-26)"
   }
 }

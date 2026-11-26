@@ -43,7 +43,14 @@ namespace sw
          */
         string makeEditorMetadataText() const;
 
-        /** @brief 마지막 `makeSourceText` 가 방출 함수 구역마다 낸 바이트입니다(`ReflectionParser.EmitBytes`). 구역 밖(이름공간 줄 등)은 세지 않는다. */
+        /**
+         * @brief .cpp 입력의 산출물(`<이름>.cpp.gen.inl`)의 내용입니다. 그 .cpp 가 끝에서 include 한다.
+         * @details 다른 TU 는 그 형식을 못 보므로 `.gen.cpp` 의 등록 코드와 `.gen.meta.cpp` 의 에디터 메타데이터를 한 파일에 담는다. 에디터 메타데이터는
+         *          배포 구성(`SW_SHIPPING`)에서 전처리로 빠진다. 파서가 그 .cpp 를 다시 읽을 때는 전체가 빠진다(`__REFLECT_PARSER__`).
+         */
+        string makeInlineText() const;
+
+        /** @brief 마지막 `makeSourceText` · `makeInlineText` 가 방출 함수 구역마다 낸 바이트입니다(`ReflectionParser.EmitBytes`). 구역 밖(이름공간 줄 등)은 세지 않는다. */
         const CodeEmitByteReport& getEmitBytes() const { return _emitBytes; }
 
     private:
@@ -52,6 +59,10 @@ namespace sw
         // ------------------------------------------------------------------------------
         /** @brief 파일 상단 배너·include 를 출력합니다. */
         void emitFileHeader( CodeEmitBuffer& outBuffer ) const;
+        /** @brief 등록 코드(필요한 include · `sw::generated` 의 등록기 · StaticType 접근자)를 출력합니다. `.gen.cpp` 와 inl 이 함께 쓴다. */
+        void emitRegistrationBody( CodeEmitBuffer& buffer ) const;
+        /** @brief 에디터 메타데이터(머리 · 줄 표 · 정적 등록)를 출력합니다. `.gen.meta.cpp` 와 inl 이 함께 쓴다. */
+        void emitEditorMetadata( CodeEmitBuffer& buffer ) const;
         /** @brief 이 헤더의 FUNCTION 가운데 타입 핸들 인자(`ParsedParameterInfo::_handleTargetTypeName`)가 있으면 true 입니다. */
         bool hasHandleArgument() const;
         /** @brief 타입 서술자(`TypeDesc`)와 등록자를 출력합니다. */

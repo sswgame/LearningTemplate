@@ -88,7 +88,7 @@ def extract_facts(bucket: str, path: str, text: str) -> dict[str, list[str]]:
     """파일 하나의 사실 — 정의(컴포넌트 · 감시 값 · 명령), 참조(컴포넌트 이름 · 글자 첫 낱말 · 시나리오 낱말), 등록 없는 명령 함수. 색인(`index_cache`)에 둔다."""
     facts: dict[str, list[str]] = {}
     if bucket == "dict_header":
-        if path.endswith(".h"):
+        if path.endswith((".h", ".cpp")):   # .cpp 안의 리플렉션 컴포넌트(`<이름>.cpp.gen.inl`)도 정의다
             facts["component"] = [match.group(1) for match in CLASS_PATTERN.finditer(text)
                                   if any("REFLECT(" in line for line in text[:match.start()].splitlines()[-REFLECT_LOOK_BACK_LINES:])]
         if not (path.endswith("AutomationWatch.h") or path.endswith("AutomationComponentWatch.h")):   # 매크로 정의 자체

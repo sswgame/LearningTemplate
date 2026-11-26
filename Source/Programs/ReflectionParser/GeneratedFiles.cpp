@@ -141,6 +141,15 @@ namespace sw
     GeneratedPaths GeneratedFileUtil::makePaths( const AbsolutePath& outputDir, const AbsolutePath& inputFile )
     {
         GeneratedPaths paths;
+        if ( FileUtil::hasExtension( inputFile.str(), "cpp" ) )
+        {
+            // 이름에 확장자를 남긴다. `Foo.h` 와 `Foo.cpp` 가 함께 리플렉션 입력일 수 있다(`Foo.gen.cpp` 와 `Foo.cpp.gen.inl`).
+            StringBuilder<constant::buffer::kMax256> fileName;
+            fileName.appendFormat( "%#%#", FileUtil::getFileNamePart( inputFile.str() ), sw::config::kExtReflectionGenInline );
+            paths._cppPath   = outputDir.join( fileName.view() );
+            paths._stampPath = paths._cppPath.appendSuffix( sw::config::kExtReflectionStamp );
+            return paths;
+        }
         paths._cppPath            = ParserUtil::makeGeneratedPath( outputDir, inputFile, sw::config::kExtReflectionGenCpp );
         paths._headerPath         = ParserUtil::makeGeneratedPath( outputDir, inputFile, sw::config::kExtReflectionGenHeader );
         paths._editorMetadataPath = ParserUtil::makeGeneratedPath( outputDir, inputFile, sw::config::kExtReflectionGenMetaCpp );
@@ -275,8 +284,8 @@ namespace sw
     bool IncrementalCheck::isUpToDate( const AbsolutePath& inputFile, const GeneratedPaths& paths ) const
     {
         const uint64 stampTime     = GeneratedFileUtil::getWriteTime( paths._stampPath );
-        const bool   bStampMissing = stampTime == 0 || FileUtil::exists( paths._cppPath ) == false || FileUtil::exists( paths._headerPath ) == false ||
-                                   FileUtil::exists( paths._editorMetadataPath ) == false;
+        const bool   bStampMissing = stampTime == 0 || FileUtil::exists( paths._cppPath ) == false ||
+                                   ( paths.isInline() == false && ( FileUtil::exists( paths._headerPath ) == false || FileUtil::exists( paths._editorMetadataPath ) == false ) );
         if ( bStampMissing )
             return false;
 

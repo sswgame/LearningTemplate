@@ -315,7 +315,8 @@ if(TARGET ReflectionParser)
 		message(FATAL_ERROR "[ReflectionParser tests] no target macros found on sw_global_options / SW_FLAG_LIBRARIES")
 	endif()
 	string(JOIN "|" parser_test_target_args ${list_parser_test_target_arg})
-	sw_glob_source_tree(list_parser_fixture "${CMAKE_CURRENT_SOURCE_DIR}/ReflectionParser/Fixtures/*.h")
+	# .cpp 사례는 .cpp 입력의 길(`<이름>.cpp.gen.inl`)을 지난다. 사례 이름(확장자를 뺀 것)은 헤더 사례와 겹치지 않게 짓는다.
+	sw_glob_source_tree(list_parser_fixture "${CMAKE_CURRENT_SOURCE_DIR}/ReflectionParser/Fixtures/*.h" "${CMAKE_CURRENT_SOURCE_DIR}/ReflectionParser/Fixtures/*.cpp")
 	foreach(parser_fixture IN LISTS list_parser_fixture)
 		get_filename_component(parser_fixture_name "${parser_fixture}" NAME_WE)
 		add_test(NAME ReflectionParser.${parser_fixture_name}
@@ -332,6 +333,7 @@ if(TARGET ReflectionParser)
 				"-DASSET_FIELDS_LIST_NAME=${SW_FILE_ASSET_REFERENCE_FIELDS_LIST}"
 				"-DGEN_CPP_SUFFIX=${SW_EXT_REFLECTION_GEN_CPP}"
 				"-DGEN_META_CPP_SUFFIX=${SW_EXT_REFLECTION_GEN_META_CPP}"
+				"-DGEN_INLINE_SUFFIX=${SW_EXT_REFLECTION_GEN_INLINE}"
 				"-DTARGET_ARGS=${parser_test_target_args}"
 				-P "${CMAKE_CURRENT_SOURCE_DIR}/ReflectionParser/RunParserFixture.cmake")
 		set_tests_properties(ReflectionParser.${parser_fixture_name} PROPERTIES LABELS nogpu TIMEOUT 120)

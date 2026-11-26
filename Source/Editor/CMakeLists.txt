@@ -169,12 +169,12 @@ list(JOIN list_editor_view_model_regex "|" editor_view_model_regex)
 # 코어 리플렉션이 받는 폴더 = 코어 폴더 + 뷰 층 `Model` 폴더. EditorModule 은 이 둘을 자기 훑기에서 뺀다.
 set(editor_core_reflect_regex "${editor_core_regex}|${editor_view_model_regex}")
 
-# REFLECT · ENUM 이 든 헤더(`sw_add_reflection_step` 의 자동 훑기와 같은 조건)를 모은다. 코어 리플렉션은 폴더 정규식 하나로 "코어 폴더 + 뷰 층 Model 폴더" 를 훑을 수 없어(CMake 정규식에 부정 전방탐색이 없다)
+# REFLECT · ENUM 이 든 헤더 · .cpp(`sw_add_reflection_step` 의 자동 훑기와 같은 조건)를 모은다. 코어 리플렉션은 폴더 정규식 하나로 "코어 폴더 + 뷰 층 Model 폴더" 를 훑을 수 없어(CMake 정규식에 부정 전방탐색이 없다)
 # 여기서 같은 조건으로 입력 목록을 만들어 명시한다 — 새 REFLECT 헤더는 구성 때 저절로 들어온다.
 set(list_editor_reflect_core "")
 set(list_editor_reflect_module "")
 foreach(header IN LISTS list_editor_all_source)
-	if(NOT header MATCHES "\\.(h|hpp)$")
+	if(NOT header MATCHES "\\.(h|hpp|cpp)$")
 		continue()
 	endif()
 	sw_has_reflection_macro(reflected "${header}")

@@ -61,6 +61,8 @@ EXT_REFLECTION_GEN_CPP = ".gen.cpp"
 # 헤더마다의 개발 전용 단위 — 에디터 메타데이터(표시 · 편집 필드)를 채워 올린다. 배포 구성은 짓지 않는다(`sw_add_reflection_step`, 언리얼 WITH_METADATA 자리)
 EXT_REFLECTION_GEN_META_CPP = ".gen.meta.cpp"
 EXT_REFLECTION_GEN_HEADER = ".gen.h"
+# .cpp 입력의 산출물(`<이름>.cpp.gen.inl`). 그 .cpp 가 끝에서 include 한다. 다른 TU 는 그 형식을 못 보므로 등록 코드와 에디터 메타데이터가 이 파일 하나에 든다
+EXT_REFLECTION_GEN_INLINE = ".gen.inl"
 EXT_REFLECTION_TEMPLATE = ".tpl"
 EXT_REFLECTION_STAMP = ".stamp"
 FILE_REFLECTION_FLAG_OPS = "FlagOps.gen.h"

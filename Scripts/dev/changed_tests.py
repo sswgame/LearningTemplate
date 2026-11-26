@@ -156,8 +156,8 @@ def select_scenarios(list_changed: Sequence[ChangedFile], list_scenario_file: Se
 
 
 def has_reflected_type(path: str, read_text: Callable[[str], str]) -> bool:
-    """리플렉션 형식을 선언하는 헤더 — 에디터 단위 테스트가 그 메타(아이콘 · 색 · 분류)를 데이터 표와 대조한다."""
-    return path.startswith("Source/") and path.endswith(".h") and REFLECT_DECLARATION.search(read_text(path)) is not None
+    """리플렉션 형식을 선언하는 헤더 · .cpp(`<이름>.cpp.gen.inl` 로 등록한다) — 에디터 단위 테스트가 그 메타(아이콘 · 색 · 분류)를 데이터 표와 대조한다."""
+    return path.startswith("Source/") and path.endswith((".h", ".cpp")) and REFLECT_DECLARATION.search(read_text(path)) is not None
 
 
 def select_editor_files(list_changed: Sequence[ChangedFile], read_text: Callable[[str], str]) -> list[ChangedFile]:

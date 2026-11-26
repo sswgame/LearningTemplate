@@ -22,7 +22,7 @@ endforeach()
 if(list_newly_reflected)
 	string(REPLACE ";" "\n  " newly_reflected_text "${list_newly_reflected}")
 	message(FATAL_ERROR
-		"[Reflection] ${TARGET_NAME}: these headers gained REFLECT/ENUM after the last configure and have no generated code yet:\n  ${newly_reflected_text}\n"
+		"[Reflection] ${TARGET_NAME}: these files gained REFLECT/ENUM after the last configure and have no generated code yet:\n  ${newly_reflected_text}\n"
 		"  Re-run the configure preset (cmake --preset <name>) so the reflection step picks them up.")
 endif()
 file(TOUCH "${STAMP}")
