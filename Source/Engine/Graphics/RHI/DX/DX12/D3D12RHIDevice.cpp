@@ -31,6 +31,8 @@
     #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
     #include "Engine/Profiling/FrameProfiler.h"
 
+    #include <D3D12MemAlloc.h> // Windows SDK 의 d3d12.h 뒤다(ThirdParty/d3d12-memory-allocator — HEADERS_ALREADY_INCLUDED)
+
 namespace sw
 {
     namespace

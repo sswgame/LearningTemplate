@@ -10,7 +10,11 @@
 #include <shared_mutex>
 
 #if defined( SW_PLATFORM_WINDOWS )
-    #include <D3D12MemAlloc.h> // Windows SDK 의 d3d12.h 뒤다(ThirdParty/d3d12-memory-allocator — HEADERS_ALREADY_INCLUDED)
+
+namespace D3D12MA
+{
+    class Allocation;
+} // namespace D3D12MA
 
 namespace sw
 {
@@ -19,8 +23,9 @@ namespace sw
     class D3D12RHIResourceFactory : public IRHIResourceFactory
     {
     public:
-        explicit D3D12RHIResourceFactory( D3D12RHIDevice* pDevice )
-            : _pDevice{ pDevice } {}
+        /** @brief 만들기 · 부수기는 .cpp 에 둔다. 힙 표의 `ComPtr<D3D12MA::Allocation>` 이 완전한 형식을 요구한다(`D3D12RHIDevice` 의 할당기와 같은 앞선 선언). */
+        explicit D3D12RHIResourceFactory( D3D12RHIDevice* pDevice );
+        ~D3D12RHIResourceFactory() override;
         RHIPipelineStateHandle createPipelineStateNative( const RHIPipelineStateDesc& desc, const RHICompiledGraphicsStages& stages ) override;
         RHIPipelineStateHandle createComputePipelineStateNative( const RHICompiledShaderStage& computeStage, string_view label ) override;
         [[nodiscard]] bool     destroyPipelineStateNative( RHIPipelineStateHandle pso, RHIReleasedResource& outReleased ) override;
@@ -70,7 +75,7 @@ namespace sw
         [[nodiscard]] bool              unregisterBindlessUAVNative( RHIUnorderedAccessIndex index ) override;
 
         /** @brief 남은 트랜지언트 힙 핸들을 모두 놓습니다(장치 종료 — 할당기보다 먼저). */
-        void releaseTransientHeaps() { _mapTransientHeap.clear(); }
+        void releaseTransientHeaps();
 
     private:
         /**

@@ -7,6 +7,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Editor/Common/Backend/ImGuiRenderer.h"
+#include "Editor/Common/Backend/Model/EditorDrawReleaseQueue.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorRenderViews.h"
 #include "Editor/Common/Workspace/EditorSubsystems.h"
