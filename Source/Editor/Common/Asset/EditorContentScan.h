@@ -41,6 +41,9 @@ namespace sw::editor
         /** @brief 확장자 표(@p pExtension, @p extensionCount 개, 보통 `kArrDataXMLExtension`) 가운데 하나에 맞는 파일입니다(열거 단계에서 거른다 — `FileUtil::collectFiles` 의 표 판). */
         [[nodiscard]] static bool collectFiles( const AbsolutePath& folder, const string_view* pExtension, size_t extensionCount, vector<AbsolutePath>& outListFilePath, bool bRecursive,
                                                 const StopToken& stopToken = {} );
+        /** @brief 읽기 경로 폴더의 표 판입니다. */
+        [[nodiscard]] static bool collectFiles( const DiskPath& folder, const string_view* pExtension, size_t extensionCount, vector<DiskPath>& outListFilePath, bool bRecursive,
+                                                const StopToken& stopToken = {} );
 
         /** @brief Data 종류의 XML 문서 확장자입니다. 종류 등록(Data 의 판정 규칙)과 XML 데이터만 보는 곳(데이터 표 · 카탈로그 키 고르기 · 글 수집)이 이 한 표를 읽는다. */
         static constexpr string_view kArrDataXMLExtension[] = { ".xml" };

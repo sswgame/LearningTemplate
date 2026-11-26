@@ -194,7 +194,7 @@ namespace sw
     {
         shared_ptr<AudioStreamSource> pSource = make_shared<AudioStreamSource>();
 
-        const AudioFileFormat fileFormat = AudioClipData::findFileFormat( path ); // 코덱은 접미사 칸이 정한다
+        const AudioFileFormat fileFormat = AudioClipAssetKind::findFileFormat( path ); // 코덱은 접미사 칸이 정한다
         if ( fileFormat == AudioFileFormat::Vorbis )
         {
             AudioStreamInfo                 info;
