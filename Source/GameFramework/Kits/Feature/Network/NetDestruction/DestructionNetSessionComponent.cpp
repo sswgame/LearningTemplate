@@ -4,7 +4,8 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/Network/Message/NetMessage.h"
+#include "Core/Network/Message/INetMessageHandler.h"
+#include "Core/Network/Message/NetMessageRouter.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 

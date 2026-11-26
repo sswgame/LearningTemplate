@@ -2543,6 +2543,7 @@
     "NetMessageHasBody": "NetMessageTraits<T>::kHasBody — 메시지 서술자의 컴파일 시간 특성은 형식 하나로 읽는다(std::iterator_traits 꼴)(2026-11-27)",
     "NetMessageIsHeld": "NetMessageTraits<T>::kIsHeld — 메시지 서술자의 컴파일 시간 특성은 형식 하나로 읽는다(std::iterator_traits 꼴)(2026-11-27)",
     "NetMessageMaxPerPoll": "NetMessageTraits<T>::kMaxPerPoll — 메시지 서술자의 컴파일 시간 특성은 형식 하나로 읽는다(std::iterator_traits 꼴)(2026-11-27)",
-    "LoadBotMainInternal": "LoadBotModuleEntryInternal — LoadBotModuleEntry.cpp 의 내부 이름공간 — 파일 이름(진입점 선언 LoadBotModuleEntry.h)과 맞춘다(2026-11-27)"
+    "LoadBotMainInternal": "LoadBotModuleEntryInternal — LoadBotModuleEntry.cpp 의 내부 이름공간 — 파일 이름(진입점 선언 LoadBotModuleEntry.h)과 맞춘다(2026-11-27)",
+    "NetMessageInternal": "NetMessageRouterInternal — NetMessageRouter.cpp 의 내부 이름공간 — NetMessage.cpp 를 작성기 · 처리기 · 라우터로 나눴다(2026-11-27)"
   }
 }

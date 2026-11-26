@@ -17,7 +17,8 @@
 #pragma once
 #include "Core/Foundation/Types.h"
 #include "Core/Hash/HashUtil.h"
-#include "Core/Network/Message/NetMessage.h"
+#include "Core/Network/Message/INetMessageHandler.h"
+#include "Core/Network/Message/NetMessageWriter.h"
 #include "Core/Network/NetChannelKind.h"
 #include "Core/Network/NetConnectionState.h"
 #include "Core/Network/NetMessageRange.h"
@@ -73,7 +74,7 @@ namespace sw
      * @brief 서버 수신 상한의 단계입니다(`NetLimitedMessageDef` — 한 연결이 `poll` 한 번에 보내는 수). 정상 게임이 닿지 않는 값이다.
      * @details 정상 클라이언트가 `poll` 한 번에 가장 많이 몰아 보내는 때는 서버가 멈췄다 깬 뒤다. 그 길이는 연결 시한(`NetEndpointConfig::_timeoutSeconds`, 5 초)을 넘지 못한다 —
      *          넘으면 클라이언트가 먼저 끊는다. 신뢰 메시지는 서버가 확인을 보내지 못하는 동안 창(`NetConnection::kReliableWindow`, 256)까지만 나가므로, 상한이 창 이상이면
-     *          디버거로 오래 세운 서버에서도 정상 연결이 끊기지 않는다(`NetMessage.cpp` 의 단언). 그래서 사람이 시키는 일도 64 가 아니라 창이다 — 64 면 5 초 멈춤에 초당 13 번이라 연타에 끊긴다.
+     *          디버거로 오래 세운 서버에서도 정상 연결이 끊기지 않는다(`NetMessageRouter.cpp` 의 단언). 그래서 사람이 시키는 일도 64 가 아니라 창이다 — 64 면 5 초 멈춤에 초당 13 번이라 연타에 끊긴다.
      */
     struct NetRequestLimit
     {

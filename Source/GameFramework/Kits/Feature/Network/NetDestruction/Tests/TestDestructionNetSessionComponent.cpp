@@ -3,7 +3,9 @@
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Network/Connection/NetEndpoint.h"
-#include "Core/Network/Message/NetMessage.h"
+#include "Core/Network/Message/INetMessageHandler.h"
+#include "Core/Network/Message/NetMessageRouter.h"
+#include "Core/Network/Message/NetMessageWriter.h"
 #include "Core/Network/Tests/FakeNetPeers.h"
 #include "Core/TestFramework/TestFramework.h"
 

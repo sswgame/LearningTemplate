@@ -28,8 +28,9 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
-#include "Core/Network/Message/NetMessage.h"
+#include "Core/Network/Message/INetMessageHandler.h"
 #include "Core/Network/Message/NetMessageTable.h"
+#include "Core/Network/Message/NetMessageWriter.h"
 #include "Core/Network/NetChannelKind.h"
 #include "Core/String/Name/hashed_string.h"
 

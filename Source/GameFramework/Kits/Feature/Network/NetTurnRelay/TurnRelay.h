@@ -26,8 +26,9 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Hash/SecureUtil.h"
 #include "Core/Network/Connection/NetConnection.h"
-#include "Core/Network/Message/NetMessage.h"
+#include "Core/Network/Message/INetMessageHandler.h"
 #include "Core/Network/Message/NetMessageTable.h"
+#include "Core/Network/Message/NetMessageWriter.h"
 
 #include "Engine/Network/NetMessageBody.h"
 #include "Engine/Reflection/ReflectionMacros.h"

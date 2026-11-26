@@ -2,8 +2,10 @@
 
 #include "Core/Delegate/Subscription.h"
 #include "Core/Network/Connection/NetEndpoint.h"
-#include "Core/Network/Message/NetMessage.h"
+#include "Core/Network/Message/INetMessageHandler.h"
+#include "Core/Network/Message/NetMessageRouter.h"
 #include "Core/Network/Message/NetMessageTable.h"
+#include "Core/Network/Message/NetMessageWriter.h"
 #include "Core/Network/Message/NetStatsReport.h"
 #include "Core/Network/Tests/LoopbackCluster.h"
 #include "Core/Network/Tests/NetTestUtil.h"
