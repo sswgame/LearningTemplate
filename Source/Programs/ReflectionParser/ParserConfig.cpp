@@ -329,32 +329,66 @@ namespace sw
                 return outList;
             }
 
-            /** @brief 타깃 컴파일 옵션을 표(`target_options`: 옵션 → libclang 인자 목록)로 바꿔 @p outListArg 에 더합니다. 표가 없거나 꼴이 틀리면 알리고 false. */
+            /** @brief @p text 가 @p arr(글 배열)의 접두어 하나로 시작하면 true 입니다. */
+            static bool startsWithAnyPrefix( const string_view text, const nlohmann::json& arr )
+            {
+                for ( const string& prefix : collectStringArray( arr ) )
+                {
+                    if ( prefix.empty() == false && StringUtil::startsWith( text, prefix ) )
+                        return true;
+                }
+                return false;
+            }
+
+            /**
+             * @brief 타깃 컴파일 옵션을 libclang 인자로 바꿔 @p outListArg 에 더합니다. 표 셋 중 하나에 있어야 한다 — 바꾸는 표(`target_options`: 옵션 → 인자),
+             *        그대로 넘기는 접두어(`target_option_pass_prefixes`: `-march=` 같은 대상 기능), 파싱 뜻이 없어 버리는 접두어(`target_option_ignored_prefixes`: 경고 · 최적화 · `/FI`).
+             * @details 어느 표에도 없는 옵션은 생성 오류다. 조용히 버리면 뜻 있는 옵션(매크로를 정의하거나 언어 규칙을 바꾸는 것)이 새로 생겨도 파서만 옛 규칙으로 읽는다.
+             */
             [[nodiscard]] static bool appendTargetOptions( const nlohmann::json& defaultsDoc, const vector<string>& listTargetOption, vector<string>& outListArg )
             {
-                const auto mapIt = defaultsDoc.find( jsonkey::kTargetOptionMap );
-                if ( mapIt == defaultsDoc.end() || mapIt->is_object() == false )
+                const auto mapIt          = defaultsDoc.find( jsonkey::kTargetOptionMap );
+                const auto passIt         = defaultsDoc.find( jsonkey::kTargetOptionPass );
+                const auto ignoreIt       = defaultsDoc.find( jsonkey::kTargetOptionIgnore );
+                const bool bTablesMissing = mapIt == defaultsDoc.end() || mapIt->is_object() == false || passIt == defaultsDoc.end() || passIt->is_array() == false ||
+                                            ignoreIt == defaultsDoc.end() || ignoreIt->is_array() == false;
+                if ( bTablesMissing )
                 {
-                    SW_LOG_ERROR_ID( "ParserConfig.NoTargetOptionMap", "parser config has no '%#' object (target compile option -> clang arguments)", jsonkey::kTargetOptionMap );
+                    SW_LOG_ERROR_ID( "ParserConfig.NoTargetOptionMap", "parser config needs '%#' (object), '%#' and '%#' (arrays) for the target compile options", jsonkey::kTargetOptionMap,
+                                     jsonkey::kTargetOptionPass, jsonkey::kTargetOptionIgnore );
                     return false;
                 }
+                bool bAllKnown = true;
                 for ( const string& targetOption : listTargetOption )
                 {
                     const auto rowIt = mapIt->find( targetOption );
-                    if ( rowIt == mapIt->end() )
+                    if ( rowIt != mapIt->end() )
+                    {
+                        if ( rowIt->is_array() == false )
+                        {
+                            SW_LOG_ERROR_ID( "ParserConfig.BadTargetOptionRow", "'%#.%#' must be an array of clang arguments", jsonkey::kTargetOptionMap, targetOption );
+                            return false;
+                        }
+                        for ( const string& arg : collectStringArray( *rowIt ) )
+                            outListArg.push_back( arg );
+                        continue;
+                    }
+                    if ( startsWithAnyPrefix( targetOption, *passIt ) )
+                    {
+                        outListArg.push_back( targetOption );
+                        continue;
+                    }
+                    if ( startsWithAnyPrefix( targetOption, *ignoreIt ) )
                     {
                         SW_LOG_TRACE_ID( "ParserConfig.TargetOptionDropped", "Target compile option '%#' does not change parsing; dropped.", targetOption );
                         continue;
                     }
-                    if ( rowIt->is_array() == false )
-                    {
-                        SW_LOG_ERROR_ID( "ParserConfig.BadTargetOptionRow", "'%#.%#' must be an array of clang arguments", jsonkey::kTargetOptionMap, targetOption );
-                        return false;
-                    }
-                    for ( const string& arg : collectStringArray( *rowIt ) )
-                        outListArg.push_back( arg );
+                    SW_LOG_ERROR_ID( "ParserConfig.UnknownTargetOption",
+                                     "Target compile option '%#' is in none of %# / %# / %# (Config/Environment/parser_config.defaults.json) - say whether it changes parsing",
+                                     targetOption, jsonkey::kTargetOptionMap, jsonkey::kTargetOptionPass, jsonkey::kTargetOptionIgnore );
+                    bAllKnown = false;
                 }
-                return true;
+                return bAllKnown;
             }
 
             static vector<string> loadForceIncludeFromDocument( const nlohmann::json& doc )
