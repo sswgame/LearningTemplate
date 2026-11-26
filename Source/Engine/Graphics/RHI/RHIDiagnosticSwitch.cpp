@@ -31,4 +31,21 @@ namespace sw
             return bCommandLineValue;
         return bConfigValue;
     }
+
+    expected<RHIDiagnosticSwitches> resolveRHIDiagnosticSwitches( const RHIConfig& config, const CommandLineManager* pCommandLine, RHIDiagnosticBuild build )
+    {
+        const expected<bool> validation  = resolveRHIDiagnosticSwitch( config._validationLayer, CommandLineArgument::RHI_VALIDATION, pCommandLine, build );
+        const expected<bool> dred        = resolveRHIDiagnosticSwitch( config._dred, CommandLineArgument::RHI_DRED, pCommandLine, build );
+        const expected<bool> breadcrumbs = resolveRHIDiagnosticSwitch( config._gpuBreadcrumbs, CommandLineArgument::RHI_BREADCRUMBS, pCommandLine, build );
+        for ( const expected<bool>* pResult : { &validation, &dred, &breadcrumbs } )
+        {
+            if ( pResult->has_value() == false )
+                return unexpected( pResult->error() );
+        }
+        RHIDiagnosticSwitches switches{};
+        switches._bValidationLayer = build != RHIDiagnosticBuild::Shipping && *validation;
+        switches._bDRED            = *dred;
+        switches._bGPUBreadcrumbs  = *breadcrumbs;
+        return switches;
+    }
 } // namespace sw

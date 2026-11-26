@@ -749,27 +749,20 @@ namespace sw
         deviceDesc._bGPUBasedValidation              = rhiConfig._bGPUBasedValidation;
         deviceDesc._bSynchronizationValidation       = rhiConfig._bSynchronizationValidation;
         {
-            // 검증 층 · DRED · GPU 브레드크럼은 장치를 만들기 전에만 걸 수 있어 여기서 한 번 정한다(설정 기본값, 시작 인자가 이긴다). 배포 구성은 검증 층을 짓지 않아 늘 끈다.
-            constexpr RHIDiagnosticBuild kBuild       = build::kShipping ? RHIDiagnosticBuild::Shipping : build::kDebug ? RHIDiagnosticBuild::Debug
-                                                                                                                        : RHIDiagnosticBuild::Release;
-            const CommandLineManager*    pCommandLine = engine::areEngineSubsystemsBound() ? &engine::getSubsystem<CommandLineManager>() : nullptr;
-            const expected<bool>         validation   = resolveRHIDiagnosticSwitch( rhiConfig._validationLayer, CommandLineArgument::RHI_VALIDATION, pCommandLine, kBuild );
-            const expected<bool>         dred         = resolveRHIDiagnosticSwitch( rhiConfig._dred, CommandLineArgument::RHI_DRED, pCommandLine, kBuild );
-            const expected<bool>         breadcrumbs  = resolveRHIDiagnosticSwitch( rhiConfig._gpuBreadcrumbs, CommandLineArgument::RHI_BREADCRUMBS, pCommandLine, kBuild );
-            for ( const expected<bool>* pResult : { &validation, &dred, &breadcrumbs } )
+            // 검증 층 · DRED · GPU 브레드크럼은 장치를 만들기 전에만 걸 수 있어 여기서 한 번 정한다(설정 기본값, 시작 인자가 이긴다 — `resolveRHIDiagnosticSwitches`).
+            const CommandLineManager*             pCommandLine = engine::areEngineSubsystemsBound() ? &engine::getSubsystem<CommandLineManager>() : nullptr;
+            const expected<RHIDiagnosticSwitches> switches     = resolveRHIDiagnosticSwitches( rhiConfig, pCommandLine, kCurrentRHIDiagnosticBuild );
+            if ( switches.has_value() == false )
             {
-                if ( pResult->has_value() == false )
-                {
-                    SW_LOG_ERROR_ID( "RHI.DiagnosticSwitchNotSet", "%# (-%#) - add it to Config/Engine/EngineConfig.json", pResult->error().message(), pResult->error().detail() );
-                    return false;
-                }
+                SW_LOG_ERROR_ID( "RHI.DiagnosticSwitchNotSet", "%# (-%#) - add it to Config/Engine/EngineConfig.json", switches.error().message(), switches.error().detail() );
+                return false;
             }
-            deviceDesc._bValidationLayer = build::kShipping == false && *validation;
-            deviceDesc._bDRED            = *dred;
-            _bGPUBreadcrumbs             = *breadcrumbs ? SW_TRUE : SW_FALSE;
+            deviceDesc._bValidationLayer = switches->_bValidationLayer;
+            deviceDesc._bDRED            = switches->_bDRED;
+            _bGPUBreadcrumbs             = switches->_bGPUBreadcrumbs ? SW_TRUE : SW_FALSE;
             // 패스 표 쪽(`GPUBreadcrumbs::registerPass`)도 같은 기동 값을 본다. 서비스 범위가 없는 실행은 표가 없어 표지를 남기지 않는다.
             if ( GPUBreadcrumbLog* const pLog = engine::findSubsystem<GPUBreadcrumbLog>() )
-                pLog->setEnabledAtDeviceCreation( *breadcrumbs );
+                pLog->setEnabledAtDeviceCreation( switches->_bGPUBreadcrumbs );
             SW_LOG_INFO_ID( "RHI.DiagnosticSwitches",
                             "Graphics API validation layer: %#, DRED: %#, GPU breadcrumbs: %# (EngineConfig _rhi._validationLayer · _dred · _gpuBreadcrumbs, -rhi-validation · -rhi-dred · -rhi-breadcrumbs)",
                             deviceDesc._bValidationLayer ? "on" : "off", deviceDesc._bDRED ? "on" : "off", _bGPUBreadcrumbs ? "on" : "off" );

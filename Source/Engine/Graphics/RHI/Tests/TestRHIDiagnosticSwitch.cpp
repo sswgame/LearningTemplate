@@ -96,3 +96,32 @@ SW_TEST_CASE( RHIDiagnosticSwitchTest, MissingConfigValueIsAnError )
     SW_EXPECT_TRUE( result.error().kind() == ErrorKind::InvalidArgument );
     SW_EXPECT_TRUE( result.error().detail() == "rhi-dred" );
 }
+
+/**
+ * @brief [RHIDiagnosticSwitchTest] 셋을 한 번에 풀면 배포 구성은 검증 층을 켜지 않는다(On 이어도) — DRED · 표지는 배포에서도 설정대로다. 칸 하나라도 비면 그 칸의 오류다.
+ * @details 변이: 배포 구성의 검증 층 거르기를 빼면 첫 기대가 진다.
+ */
+SW_TEST_CASE( RHIDiagnosticSwitchTest, SwitchSetDropsValidationLayerInShipping )
+{
+    CommandLineManager commandLine;
+    parseDiagnosticCommandLine( commandLine, nullptr );
+    RHIConfig config{};
+    config._validationLayer = RHIDiagnosticSwitch::On;
+    config._dred            = RHIDiagnosticSwitch::On;
+    config._gpuBreadcrumbs  = RHIDiagnosticSwitch::Off;
+
+    const expected<RHIDiagnosticSwitches> shipping = resolveRHIDiagnosticSwitches( config, &commandLine, RHIDiagnosticBuild::Shipping );
+    SW_REQUIRE_TRUE( shipping.has_value() );
+    SW_EXPECT_FALSE( shipping->_bValidationLayer );
+    SW_EXPECT_TRUE( shipping->_bDRED );
+    SW_EXPECT_FALSE( shipping->_bGPUBreadcrumbs );
+
+    const expected<RHIDiagnosticSwitches> release = resolveRHIDiagnosticSwitches( config, &commandLine, RHIDiagnosticBuild::Release );
+    SW_REQUIRE_TRUE( release.has_value() );
+    SW_EXPECT_TRUE( release->_bValidationLayer );
+
+    config._gpuBreadcrumbs                      = RHIDiagnosticSwitch::None;
+    const expected<RHIDiagnosticSwitches> unset = resolveRHIDiagnosticSwitches( config, &commandLine, RHIDiagnosticBuild::Release );
+    SW_EXPECT_FALSE( unset.has_value() );
+    SW_EXPECT_TRUE( unset.has_value() == false && unset.error().detail() == "rhi-breadcrumbs" );
+}
