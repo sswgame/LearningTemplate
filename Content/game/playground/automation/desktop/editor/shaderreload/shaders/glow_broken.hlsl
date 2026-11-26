@@ -1,6 +1,6 @@
 // clang-format off
-// glow.hlsl 에 덮는 깨진 판 — 아래 줄이 컴파일 오류다(ShaderRecompiler.ShaderReloadFailedEntry). 재컴파일기는 이전 바이트코드로 계속 그린다.
-this line is a deliberate shader compile error;
+// glow.hlsl 에 덮는 깨진 판 — 픽셀 진입점이 닿는 evaluateMaterialGraph 안의 없는 이름이 컴파일 오류다(ShaderRecompiler.ShaderReloadFailedEntry). 재컴파일기는 이전 바이트코드로 계속 그린다.
+// 오류는 진입점이 닿는 글에 둔다. 셰이더 DDC 는 닿는 글(ShaderReachableText)로 바이트코드를 찾아, 닿지 않는 최상위 줄의 오류는 되돌린 판의 바이트코드에 맞아 드러나지 않는다.
 #include "lighting.hlsli"
 
 SW_MATERIAL_BEGIN
@@ -50,7 +50,7 @@ MaterialGraphOutput evaluateMaterialGraph( PixelContext context )
     output._roughness = n4_Out;
     output._normal = context._normal;
     output._emissive = n8_Out;
-    output._alpha = 1.0f;
+    output._alpha = deliberateUndeclaredName;
     return output;
 }
 
