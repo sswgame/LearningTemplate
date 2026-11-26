@@ -8,6 +8,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Foundation/BuildConfig.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Foundation/Types.h"
@@ -331,7 +332,7 @@ namespace sw
 
         /**
          * @brief `getComponent<>` 한 번을 Debug 카운터 `GT.Object.getComponentLookups` 에 셉니다(5-3 측정 기반 — 틱이 프레임마다 찾는 수, 이 헤더가 프로파일러를 끌어오지 않게 .cpp 에 둔다).
-         * @details 정의는 모든 구성에서 컴파일된다. 부르는 자리(`getComponent`)만 `SW_DEBUG` 다 — 이 헤더는 리플렉션 파서가 구성 매크로 없이 읽어 `build::kDebug`(BuildInfo.h)를 쓸 수 없다.
+         * @details 정의는 모든 구성에서 컴파일된다. 부르는 자리(`getComponent`)는 `build::kVerboseProfileCounters`(BuildConfig.h, 리플렉션 파서도 읽는다)로 가르고, 다른 구성은 함수 호출도 없다.
          */
         static void countComponentLookup();
 
@@ -425,9 +426,8 @@ namespace sw
             static_assert( HasOwnReflectBody_v<T>,
                            "T must declare its own REFLECT_BODY() (cannot slice to a base class StaticType)" );
 
-#if defined( SW_DEBUG )
-            countComponentLookup();
-#endif
+            if constexpr ( build::kVerboseProfileCounters )
+                countComponentLookup();
             // T 의 TypeInfo 는 루프 밖에서 한 번 구한다. 컴포넌트마다 캐시 조회를 치르지 않는다.
             const TypeInfo* pToType = findStaticType<T>();
             for ( Component* pComp : _listComponent )

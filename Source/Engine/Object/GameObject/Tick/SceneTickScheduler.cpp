@@ -6,7 +6,6 @@
 
 #include "Engine/Object/GameObject/Tick/SceneTickScheduler.h"
 
-#include "Core/Foundation/BuildInfo.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Foundation/EngineParallel.h"
@@ -133,11 +132,7 @@ namespace sw
                         tickEntry( scope._threadState, _time, _pEntry[index] );
                         itemCount += _pEntry[index]._itemCount;
                     }
-                    if constexpr ( build::kDebug )
-                    {
-                        SW_PROFILE_COUNT( "GT.Scene.tick.virtualTicks", itemCount ); // 칸 길은 항목마다 가상 호출이다(카운터는 비용이 커서 Debug 만)
-                    }
-                    (void)itemCount;
+                    SW_PROFILE_COUNT_VERBOSE( "GT.Scene.tick.virtualTicks", itemCount ); // 칸 길은 항목마다 가상 호출이다
                 }
             };
 
