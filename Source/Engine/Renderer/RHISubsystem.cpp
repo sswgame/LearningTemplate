@@ -159,6 +159,16 @@ namespace sw
             }
             /** @brief 감시 값 `RHI.GPUCulling` 입니다. 컴퓨트 컬링이 간접 인자를 만드는 장치면 1 입니다(DX11 은 0 — 간접 인자를 구조 버퍼로 쓸 수 없어 CPU 개수로 그린다). */
             [[nodiscard]] static bool readGPUCulling( const GameObjectManager* /*pManager*/, float64& outValue ) { return readCapability( &RHICapabilities::_bGPUCulling, outValue ); }
+            /** @brief 감시 값 `RHI.NativeBindless` 입니다. 셰이더가 bindless 번호로 텍스처를 읽는 장치(DX12 · Vulkan)면 1 입니다 — 이름 바인딩 패스가 도는 판정과 같은 함수다. */
+            [[nodiscard]] static bool readNativeBindless( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const RHISubsystem* const pSubsystem = engine::findSubsystem<RHISubsystem>();
+                const RHI* const          pRHI       = pSubsystem != nullptr ? pSubsystem->findRHI() : nullptr;
+                if ( pRHI == nullptr || pRHI->hasDevice() == false )
+                    return false;
+                outValue = pRHI->getDevice().supportsNativeBindlessSampling() ? 1.0 : 0.0;
+                return true;
+            }
             [[nodiscard]] static bool readGeometryStage( const GameObjectManager* /*pManager*/, float64& outValue ) { return readCapability( &RHICapabilities::_bGeometryStage, outValue ); }
             [[nodiscard]] static bool readTessellationStages( const GameObjectManager* /*pManager*/, float64& outValue )
             {
@@ -181,6 +191,7 @@ namespace sw
     SW_AUTOMATION_WATCH( rhiMaterialTessellation, "RHI.MaterialTessellation", "1 when this device draws displaced materials (hull and domain stages on material shaders) - 0 on OpenGL and WebGPU",
                          &RHISubsystemInternal::readMaterialTessellation );
     SW_AUTOMATION_WATCH( rhiGPUCulling, "RHI.GPUCulling", "1 when compute culling writes the indirect draw counts on this device - 0 on DirectX 11 (CPU counts)", &RHISubsystemInternal::readGPUCulling );
+    SW_AUTOMATION_WATCH( rhiNativeBindless, "RHI.NativeBindless", "1 when shaders read textures by bindless index (DX12, Vulkan) - name-bound Fullscreen and Compute passes run only here", &RHISubsystemInternal::readNativeBindless );
     SW_AUTOMATION_WATCH( rhiGeometryStage, "RHI.GeometryStage", "1 when pipeline passes can add a geometry stage - 0 on WebGPU and on Vulkan devices without geometryShader",
                          &RHISubsystemInternal::readGeometryStage );
     SW_AUTOMATION_WATCH( rhiTessellationStages, "RHI.TessellationStages", "1 when pipeline passes can add hull and domain stages - 0 on WebGPU and on Vulkan devices without tessellationShader (dzn)",

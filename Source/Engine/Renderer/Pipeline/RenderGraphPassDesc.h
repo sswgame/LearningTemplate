@@ -189,6 +189,12 @@ namespace sw
          *        선언한 컬러 출력 하나에 쓰고 입력(최대 둘, 깊이 형식 제외)을 읽습니다. 첨부는 RW 텍스처로 묶입니다(`compute_pass.hlsli` 의 루트 상수). 디스패치는 출력 크기만큼의 스레드다(그룹 크기는 셰이더 리플렉션).
          */
         Compute,
+        /**
+         * @brief 파이프라인 XML 이 고른 픽셀 셰이더(`_shaderPath`)로 선언한 컬러 출력 하나에 풀스크린 삼각형을 그립니다 — 컴퓨트 패스의 픽셀 짝입니다(언리얼 AddDrawScreenPass · 유니티 Full Screen Pass 자리).
+         *        첨부는 이름으로만 건다(`_inputBinding="Name"`): 셰이더가 PassCB 끝 칸(`SW_PASS_CB_USER_PARAMS`)에 `g_<입력>Index` · `g_<출력>HistoryIndex` · `g_<값>` 을 적고 엔진이 이름으로 채운다.
+         *        입력을 번호로 읽으므로 네이티브 bindless(DX12 · Vulkan)에서만 PSO 를 만들고 돈다.
+         */
+        Fullscreen,
 
         // --- 아래는 뷰 패스(`_listPass`)로 쓸 수 없다. 프레임 패스(`isFramePassType` — 깊이 히스토리 · HZB · 입자 · 애니메이션 · 모프 · 스킨 · 컬링 · 라이트 그리드 ·
         //     볼륨 안개 · 프로브 · 마커)는 `_listFramePass` 에 선언하고, 나머지는 엔진 내부 PSO 슬롯이라 XML 에 나올 수 없다(검증이 거부한다). ---
@@ -317,11 +323,12 @@ namespace sw
 
     /**
      * @enum RenderPassInputBinding
-     * @brief 컴퓨트 패스(`_type="Compute"`)가 첨부를 셰이더에 거는 방식입니다. 파이프라인 XML 의 `_inputBinding` 이 적는다.
+     * @brief 컴퓨트 패스(`_type="Compute"`)와 풀스크린 패스(`_type="Fullscreen"`)가 첨부를 셰이더에 거는 방식입니다. 파이프라인 XML 의 `_inputBinding` 이 적는다.
      * @details Role 은 RW 칸 셋(출력 + 입력 둘, `compute_pass.hlsli` 의 `g_ComputeInput0Index`)이고 모든 백엔드에서 돈다. Name 은 셰이더의 루트 상수를 선언 차례로 채운다 —
      *          `g_ComputeWidth` · `g_ComputeHeight` · `g_<출력>Index`(RW) · 출력이 기록 첨부면 `g_<출력>HistoryIndex`(지난 프레임, 셰이더 읽기) · 입력마다 `g_<입력>Index`(셰이더 읽기) ·
      *          `_listValue` 마다 `g_<이름>`(실수). 입력 수는 루트 상수 칸(`SW_ROOT_DWORD_COUNT`)이 정하고 깊이 형식도 읽는다. 셰이더 읽기를 번호로 하므로 네이티브 bindless(DX12 · Vulkan)에서만 돈다
      *          (유니티 Fullscreen Pass · Godot Compositor Effect 가 셰이더 프로퍼티 이름으로 텍스처를 거는 자리).
+     *          풀스크린 패스는 Name 만 받는다. 크기 · 출력 칸이 없고 같은 이름들(기록 · 입력 · 값)이 루트 상수 대신 PassCB 끝 칸으로 간다 — 차례가 아니라 이름으로 맞춘다.
      */
     ENUM()
     enum class RenderPassInputBinding : uint8
@@ -332,7 +339,7 @@ namespace sw
 
     /**
      * @struct RenderPassValue
-     * @brief 컴퓨트 패스의 이름 있는 실수 값 하나입니다(`_listValue`). 이름 바인딩 패스의 루트 상수 `g_<이름>` 으로 간다(언리얼 RDG 패스 파라미터 · 유니티 머티리얼 프로퍼티 자리).
+     * @brief 이름 바인딩 패스의 이름 있는 실수 값 하나입니다(`_listValue`). 컴퓨트는 루트 상수, 풀스크린은 PassCB 의 `g_<이름>` 으로 간다(언리얼 RDG 패스 파라미터 · 유니티 머티리얼 프로퍼티 자리).
      */
     REFLECT()
     struct RenderPassValue
@@ -343,6 +350,9 @@ namespace sw
 
         PROPERTY()
         float32 _value{ 0.0f };
+
+        /** @brief PassCB 칸 이름 `g_<이름>` 입니다 — 로드가 한 번 intern 한다(풀스크린 실행이 프레임마다 이 열쇠로 값을 건다). */
+        hashed_string _resolvedConstant;
     };
 
     /**
@@ -368,18 +378,18 @@ namespace sw
     /** @brief 뷰 그래프(`_listPass`)의 `_type` 으로 쓸 수 있는 값인지 확인합니다. 뷰마다 다시 도는 패스입니다(내부 슬롯 · 프레임 패스 · Invalid 는 제외합니다). */
     constexpr bool isViewPassType( RenderPassKind type )
     {
-        return type != RenderPassKind::Invalid && static_cast<uint32>( type ) <= static_cast<uint32>( RenderPassKind::Compute );
+        return type != RenderPassKind::Invalid && static_cast<uint32>( type ) <= static_cast<uint32>( RenderPassKind::Fullscreen );
     }
 
     /**
      * @brief 한 파이프라인에 이 종류의 뷰 패스를 여럿 둘 수 있으면 true 입니다 — 실행과 PSO 가 종류가 아니라 패스 서술로 갈린다.
-     * @details 그림자는 깊이 첨부의 역할이 타일을 고르고(방향광 · 점광), Compute 는 셰이더가 패스마다 다르고, 후처리 머티리얼은 블렌더블 자리가 패스마다 다르다.
+     * @details 그림자는 깊이 첨부의 역할이 타일을 고르고(방향광 · 점광), Compute · Fullscreen 은 셰이더가 패스마다 다르고, 후처리 머티리얼은 블렌더블 자리가 패스마다 다르다.
      *          나머지 종류를 두 번 선언하면 로드 오류다(`RenderPipelineAsset::validate`). 종류 하나의 패스를 찾는 조회(`RenderPipelineAsset::findUniquePass`)는 이 종류를 컴파일 때 거절한다 —
      *          "그 종류의 첫 패스" 는 둘째 패스의 서술을 조용히 버린다. 언리얼 RDG · 유니티 Render Graph 도 패스는 인스턴스 단위다.
      */
     constexpr bool isRepeatablePassType( RenderPassKind type )
     {
-        return type == RenderPassKind::Shadow || type == RenderPassKind::Compute || type == RenderPassKind::PostProcessMaterial;
+        return type == RenderPassKind::Shadow || type == RenderPassKind::Compute || type == RenderPassKind::Fullscreen || type == RenderPassKind::PostProcessMaterial;
     }
 
     /**
@@ -736,23 +746,31 @@ namespace sw
         PROPERTY()
         RenderPassExecutionMode _implementation{ RenderPassExecutionMode::Pixel };
 
-        /** @brief 컴퓨트 패스가 첨부를 거는 방식입니다(`RenderPassInputBinding`). Name 은 Compute 패스만 적는다(검증). */
+        /** @brief 컴퓨트 · 풀스크린 패스가 첨부를 거는 방식입니다(`RenderPassInputBinding`). Name 은 Compute · Fullscreen 패스만 적고, Fullscreen 은 Name 이어야 한다(검증). */
         PROPERTY()
         RenderPassInputBinding _inputBinding{ RenderPassInputBinding::Role };
 
-        /** @brief 이름 바인딩 컴퓨트 패스의 값입니다 — 선언 차례로 입력 번호 뒤의 루트 상수 `g_<이름>` 이 된다. 이름이 열쇠라 `_base` 자식은 값 하나씩 고친다. 이름 바인딩 패스만 적는다(검증). */
+        /** @brief 이름 바인딩 패스의 값입니다 — 컴퓨트는 선언 차례로 입력 번호 뒤의 루트 상수, 풀스크린은 PassCB 칸 `g_<이름>` 이 된다. 이름이 열쇠라 `_base` 자식은 값 하나씩 고친다. 이름 바인딩 패스만 적는다(검증). */
         PROPERTY( SkipIfEmpty )
         vector<RenderPassValue> _listValue;
 
         /**
-         * @brief 이름 바인딩 패스가 쓰는 루트 상수 칸 수입니다(크기 둘 + 출력 + 출력 기록 + 입력 + 값). 로드 검증과 실행이 같은 차례를 이 값 하나로 본다.
+         * @brief 이름 바인딩 컴퓨트 패스가 쓰는 루트 상수 칸 수입니다(크기 둘 + 출력 + 이름 칸). 로드 검증과 실행이 같은 차례를 이 값 하나로 본다.
+         */
+        [[nodiscard]] uint32 countNamedRootConstants() const { return 3u + countNamedParams(); }
+
+        /**
+         * @brief 이름으로 거는 칸 수입니다(출력 기록 + 입력 + 값). 풀스크린 패스는 이만큼을 PassCB 끝에 덧붙인다 — 상한은 `kMaxNamedPassCBParams`(로드 검증).
          * @details 출력 기록 칸은 해석한 첫 컬러 출력이 기록 첨부일 때만 든다(`ResolvedAttachment::_historyResource` — 로드가 채운 뒤에 부른다).
          */
-        [[nodiscard]] uint32 countNamedRootConstants() const
+        [[nodiscard]] uint32 countNamedParams() const
         {
             const bool bOutputHistory = _listResolvedColorOutput.empty() == false && _listResolvedColorOutput[0]._historyResource.empty() == false;
-            return 3u + ( bOutputHistory ? 1u : 0u ) + static_cast<uint32>( _listResolvedInput.size() + _listValue.size() );
+            return ( bOutputHistory ? 1u : 0u ) + static_cast<uint32>( _listResolvedInput.size() + _listValue.size() );
         }
+
+        /** @brief 풀스크린 패스가 PassCB 끝에 덧붙이는 칸의 상한입니다(4 바이트 칸). PassCB 는 패스 상수 슬롯(`PassConstantRing::kSlotBytes`) 하나에 든다 — 엔진 칸 뒤에 남은 자리보다 작게 둔다. */
+        static constexpr uint32 kMaxNamedPassCBParams = 16;
 
         /**
          * @brief `PostProcessMaterial` 패스가 맡는 블렌더블 자리입니다. 그 패스는 None 이 아니어야 하고 다른 패스는 None 이어야 한다(검증). 자리마다 패스는 하나다.

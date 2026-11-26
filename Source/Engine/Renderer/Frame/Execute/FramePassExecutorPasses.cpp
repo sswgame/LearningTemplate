@@ -274,6 +274,11 @@ namespace sw
                     executeComputePass( input );
                     break;
                 }
+                case RenderPassKind::Fullscreen:
+                {
+                    executeFullscreenPass( input );
+                    break;
+                }
                 case RenderPassKind::SceneColorCopy:
                 {
                     executeSceneColorCopyPass( input );
@@ -749,6 +754,42 @@ namespace sw
         context._pCmd->setComputeRootConstants( wordCount, arrWord );
         context._pCmd->dispatchThreads( width, height, 1 );
         (void)markAttachmentCleared( target._attachment ); // 컴퓨트가 칠했으니 이번 프레임 첫 렌더 패스가 지우면 안 된다
+    }
+
+    void FramePassExecutor::executeFullscreenPass( const PassExecuteInput& input )
+    {
+        // 셰이더가 PassCB 끝에 적은 칸(`SW_PASS_CB_USER_PARAMS`)을 바인더가 이름으로 채운다: 입력 `g_<입력>Index` · 출력 기록 `g_<출력>HistoryIndex` 는 레지스트리, 값 `g_<이름>` 은 패스 상수다.
+        // 열쇠는 모두 로드가 intern 했다(첨부 이름 · `_historyResource` · `RenderPassValue::_resolvedConstant`). 에뮬 백엔드는 PSO 가 없어 그리지 않는다(표의 kRequiresNativeBindless).
+        FramePassContext&                              context  = input._context;
+        const RenderGraphPassDesc&                     passDesc = input._passDesc;
+        const RenderGraphPassDesc::ResolvedAttachment& target   = input._declaredColor[0];
+        const RHIPipelineStateHandle                   pso      = _psoManager.getPassPSO( passDesc );
+        if ( pso == 0 )
+        {
+            SW_LOG_ERROR_ONCE_ID( "FramePassExecutor.FullscreenPassNotReady", "Fullscreen pass '%#' has no PSO (it needs native bindless - DX12, Vulkan) - it does not run", passDesc._name );
+            return;
+        }
+        for ( const RenderGraphPassDesc::ResolvedAttachment& sourceInput : passDesc._listResolvedInput )
+        {
+            registerPassTexture( context, sourceInput._attachment, sourceInput._attachment ); // 이 뷰에서 빠진 패스의 출력은 걸리지 않는다 — 셰이더가 kInvalidIndex 를 본다
+        }
+        if ( target._historyResource.empty() == false )
+        {
+            // 출력의 지난 프레임 기록 — 이 패스가 복사 대상으로 쥔다(끝의 `copyOutputHistories`). 버리는 프레임은 걸지 않아 셰이더가 kInvalidIndex 로 기록 없이 시작한다.
+            const FrameViewHistory*          pHistory = findPassHistory( *_pActiveView, passDesc );
+            const RenderGraphTextureCopyDest historyResource{ target._historyResource };
+            if ( pHistory != nullptr && pHistory->isReset() == false && pHistory->isValid() && context._pGraphPass->isRegistered( historyResource ) )
+            {
+                context._pGraphPass->transition( historyResource, RenderGraphAccess::ShaderRead );
+                const RHITextureSlot& previous = pHistory->getPrevious();
+                context._resourceRegistry.registerTexture( target._historyResource, previous._texture, previous._srv );
+            }
+        }
+        for ( const RenderPassValue& value : passDesc._listValue )
+        {
+            context._passValues.setFloat( value._resolvedConstant, value._value );
+        }
+        executeFullscreenInto( context, pso, target._attachment, getTargetClearColor( target._attachment ) );
     }
 
     void FramePassExecutor::executeForwardOpaquePass( const PassExecuteInput& input )

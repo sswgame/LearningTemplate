@@ -184,17 +184,19 @@ struct PassTexture
     static float2 sampleVelocityPoint( float2 uv );   // 화면 속도(이번 UV - 지난 UV) — 불투명 지오메트리 패스의 출력(SceneVelocity)
     static float2 sampleDistortionPoint( float2 uv ); // 화면 왜곡 오프셋(화면 UV) — 왜곡 누적 패스의 출력(SceneDistortion)
     static float4 sampleLight2dCookieAtlas( float2 uv );
-    static float4 sampleSkyClouds( float2 uv );         // 볼륨 구름(산란 rgb — 불투명도 곱함, 불투명도 a). 패스가 걸지 않았으면 0(구름 없음)
-    static float4 sampleContactShadow( float2 uv );     // 접촉 그림자 마스크(채널 = 빛). 패스가 걸지 않았으면 1
-    static float4 loadDBufferA( float2 pixelPosition ); // DBuffer 데칼 색(rgb 덮인 색, a 남은 비율) — SV_POSITION.xy 의 텍셀. 걸지 않았으면 (0, 0, 0, 1) = 덮지 않음
-    static float4 loadDBufferB( float2 pixelPosition ); // DBuffer 데칼 노멀(rgb 덮인 노멀 × 0.5 + 0.5, a 남은 비율)
-    static float4 loadDBufferC( float2 pixelPosition ); // DBuffer 데칼 거칠기 · 금속도(r · g, a 남은 비율)
-    static float4 sampleAlbedoPrevious( float2 uv );    // 지난 프레임 첨부를 알베도 역할로 건 패스(TAA 히스토리) — 지난 프레임의 사각형 배율로 읽는다
-    static float2 toViewRectUV( float2 uv );            // 화면 UV(0..1) → 풀 UV(사각형 안, 가장자리는 반 텍셀 안쪽). 그림자 · 쿠키 아틀라스처럼 뷰 크기가 아닌 텍스처에는 쓰지 않는다
-    static float2 toPreviousViewRectUV( float2 uv );    // 같은 변환을 지난 프레임 사각형으로
-    static uint2 getViewRectSize();                     // 텍셀 번호로 읽는 쪽의 크기 — 풀(텍스처)이 아니라 사각형
-    static float4 getPassRectSize();                    // 이 패스가 그리는 해상도 공간의 (사각형 픽셀 xy, 1 / 풀 픽셀 zw) — 픽셀 거리는 이 값으로 잰다
-    static float2 toSourceViewRectUV( float2 uv );      // 원본 역할(반해상도일 수 있다)의 변환 — 반 텍셀을 원본의 실제 텍셀로 잰다
+    static float4 sampleSkyClouds( float2 uv );                 // 볼륨 구름(산란 rgb — 불투명도 곱함, 불투명도 a). 패스가 걸지 않았으면 0(구름 없음)
+    static float4 sampleContactShadow( float2 uv );             // 접촉 그림자 마스크(채널 = 빛). 패스가 걸지 않았으면 1
+    static float4 loadDBufferA( float2 pixelPosition );         // DBuffer 데칼 색(rgb 덮인 색, a 남은 비율) — SV_POSITION.xy 의 텍셀. 걸지 않았으면 (0, 0, 0, 1) = 덮지 않음
+    static float4 loadDBufferB( float2 pixelPosition );         // DBuffer 데칼 노멀(rgb 덮인 노멀 × 0.5 + 0.5, a 남은 비율)
+    static float4 loadDBufferC( float2 pixelPosition );         // DBuffer 데칼 거칠기 · 금속도(r · g, a 남은 비율)
+    static float4 sampleAlbedoPrevious( float2 uv );            // 지난 프레임 첨부를 알베도 역할로 건 패스(TAA 히스토리) — 지난 프레임의 사각형 배율로 읽는다
+    static float4 sampleNamed( uint index, float2 uv );         // 풀스크린 패스(`_type="Fullscreen"`)가 이름으로 건 입력 — 셰이더가 PassCB 끝에 적은 g_<입력>Index 를 넘긴다
+    static float4 sampleNamedPrevious( uint index, float2 uv ); // 그 패스 출력의 지난 프레임(g_<출력>HistoryIndex) — 지난 프레임의 사각형 배율로 읽는다. 버린 프레임은 kInvalidIndex 라 (0, 0, 0, 1)
+    static float2 toViewRectUV( float2 uv );                    // 화면 UV(0..1) → 풀 UV(사각형 안, 가장자리는 반 텍셀 안쪽). 그림자 · 쿠키 아틀라스처럼 뷰 크기가 아닌 텍스처에는 쓰지 않는다
+    static float2 toPreviousViewRectUV( float2 uv );            // 같은 변환을 지난 프레임 사각형으로
+    static uint2 getViewRectSize();                             // 텍셀 번호로 읽는 쪽의 크기 — 풀(텍스처)이 아니라 사각형
+    static float4 getPassRectSize();                            // 이 패스가 그리는 해상도 공간의 (사각형 픽셀 xy, 1 / 풀 픽셀 zw) — 픽셀 거리는 이 값으로 잰다
+    static float2 toSourceViewRectUV( float2 uv );              // 원본 역할(반해상도일 수 있다)의 변환 — 반 텍셀을 원본의 실제 텍셀로 잰다
     static float2 scaleToViewRect( float2 uv, float2 scale, float2 texel );
 };
 
@@ -412,6 +414,13 @@ SW_DECLARE_CBUFFER( PassCB, SW_SLOT_PASS_CB )
     uint  g_SwVertexAnimationCount;    // 그 표의 단어(uint32) 수 — 범위 밖 번호를 막는다
     float g_SwVertexAnimationTime;     // VAT 시계(초) — 게임 스레드의 군중 시계를 EngineConfig _shaderTimeRolloverSeconds 주기로 접은 값(인스턴스 위상도 같은 접힌 시계로 잰다)
     float g_SwMaterialTime;            // 머티리얼 애니메이션 시계(초, 툰 UV 애니메이션) — VAT 시계와 같은 값이지만 VAT 표가 없어도 늘 걸린다
+    // 풀스크린 패스(`_type="Fullscreen"`, C++ FramePassExecutor::executeFullscreenPass)의 칸 — 셰이더가 binding.hlsli 를 include 하기 전에 적는다:
+    //     #define SW_PASS_CB_USER_PARAMS uint g_<입력>Index; uint g_<출력>HistoryIndex; float g_<값>;
+    // 엔진 칸과 같은 규칙으로 C++ 가 리플렉션 이름으로 채운다(미러 없음). 유니티 Full Screen Pass 가 셰이더 프로퍼티 이름으로 거는 쪽이고, 언리얼은 패스마다 C++ 매개변수 구조체를 따로 선언한다.
+    // 엔진 칸 뒤에 붙어 엔진 칸의 자리가 바뀌지 않고, 칸 수는 로드 검증이 막는다(RenderGraphPassDesc::kMaxNamedPassCBParams).
+#if defined( SW_PASS_CB_USER_PARAMS )
+    SW_PASS_CB_USER_PARAMS
+#endif
 };
 
 // ------------------------------------------------------------------------------
