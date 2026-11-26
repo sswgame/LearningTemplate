@@ -2,6 +2,7 @@
 
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/Container/unordered_map.h"
+#include "Core/Container/unordered_set.h"
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
 #include "Core/Log/Logger.h"
@@ -129,19 +130,54 @@ namespace sw
             }
 
             /**
+             * @brief 팩 쿠킹의 입력 가운데 명령줄 · 엔진 설정에서 오는 칸입니다. `_listStoredExtension` · `_mapRequestedShaderBinary` 는 부르는 쪽이 채운다.
+             * @details 셰이더 굽기 앞의 리치(`PackCooker::collectReachedAssets`)와 팩 단계(`cookAllPacks`)가 이 값 하나를 본다 — 갈리면 굽지 않은 변형을 팩이 찾는다.
+             *          빌드 타깃은 쿠킹하는 호스트다(`Engine::initialize` 의 `setHostTarget` 과 같은 규칙) — 전용 서버(`Server`)가 굽은 팩은 서버가 읽지 않는 종류를 뺀다.
+             *          `-game=` 을 주면 그 게임 팩만 베이크한다(배포 패키지).
+             */
+            static PackCookParams makePackCookParams( const CommandLineManager& commandLine, bool bDedicatedServer, const AbsolutePath& cookedDir )
+            {
+                PackCookParams params;
+                params._projectRoot  = ProcessRoots::get()._project; // 참조 칸 표(`Config/Dev/AssetReferenceFields*.json`) — 쓰는 것만 담는 고르기가 읽는다
+                params._resourceRoot = engine::getSubsystem<AssetPaths>().getRootFolderPath();
+                params._cookedDir    = cookedDir;
+                (void)commandLine.getArgument( CommandLineArgument::PACK_DIR, params._packOutputDir ); // 비면 cookAllPacks 가 오류로 멈춘다
+                params._shaderFolder = string( ShaderCooker::getSubfolderForFormat( resolveShaderTarget( commandLine ) ) );
+                params._buildTarget  = bDedicatedServer ? "Server" : "Client";
+                // 실행기가 없는 구성(Shipping · 전용 서버)은 실행기가 스스로 등록하지 않는다 — 그 구성이 굽는 팩에는 시나리오를 담지 않는다.
+                // 배포 대상의 팩(`-pack-for-shipping`)도 담지 않는다 — 교차 빌드(Android · 웹)는 호스트 개발 App(실행기가 있다)이 굽는다.
+                const bool bShippingPack  = commandLine.isArgumentProvided( CommandLineArgument::PACK_FOR_SHIPPING );
+                const bool bHasAutomation = engine::findSubsystem<IAutomationRuntime>() != nullptr;
+                params._automationContent = bHasAutomation && bShippingPack == false ? PackAutomationContent::Included : PackAutomationContent::Excluded;
+                if ( commandLine.isArgumentProvided( CommandLineArgument::GAME ) )
+                {
+                    // 팩 폴더 이름은 게임 이름과 다를 수 있어 게임 설정의 팩 루트(`game/<폴더>`)에서 읽는다.
+                    const string packRoot  = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( engine::getSubsystem<GameConfig>()._packRoot.get() ) );
+                    params._gamePackFolder = FileUtil::getFileNamePart( packRoot );
+                }
+                return params;
+            }
+
+            /**
              * @brief 팩에 담을 셰이더를 쿠킹 스테이징에 굽고(바뀐 것만 — 내용 해시) 소스와 맞는지 판정합니다. 맞지 않으면 false 입니다.
              * @details 쿠킹본은 소스 트리가 아니라 스테이징에만 있으므로 팩을 구울 때 늘 굽는다 — 굽지 않은 채 팩을 만들면 셰이더 없는 팩이 된다.
              *          `CookSession` 을 열기 전에 부른다 — 셰이더 쿠커는 엔진 기본 에셋 같은 리소스를 `CookJob` 밖에서 읽는데, 세션 안에서는 그 읽기가 실패한다.
+             *          팩이 담을 원본(@p packConfig · @p params 의 리치)을 먼저 모아 출처가 하나도 닿지 않은 변형은 굽지 않는다(팩 단계의 `isStrippedShaderVariant` 와 같은 판정).
              *          쿠킹 요청이 만드는 바이너리와 그 출처도 같은 까닭으로 여기서 모아 @p outMapRequestedBinary 로 돌려준다(팩 단계는 받기만 한다).
              */
-            [[nodiscard]] static bool cookShadersForPack( const CommandLineManager& commandLine, const AbsolutePath& cookedDir, unordered_map<string, vector<vector<string>>>& outMapRequestedBinary )
+            [[nodiscard]] static bool cookShadersForPack( const CommandLineManager& commandLine, const PackConfig& packConfig, const PackCookParams& params, const AbsolutePath& cookedDir,
+                                                          unordered_map<string, vector<vector<string>>>& outMapRequestedBinary )
             {
                 // 셰이더 쿠커는 렌더러에 있다 — 렌더러를 짓지 않는 구성(전용 서버)의 팩에는 셰이더 바이너리가 없어 할 일이 없다.
                 IShaderCookService* const pService = IShaderCookService::find();
                 if ( pService == nullptr )
                     return true;
+                unordered_set<string> setReachedAsset;
+                if ( PackCooker::collectReachedAssets( packConfig, params, setReachedAsset ) == false )
+                    return false;
                 const ShaderTargetFormat shaderTarget = resolveShaderTarget( commandLine );
-                if ( pService->cookAllShaders( cookedDir, shaderTarget, ShaderCookScope::All ) == false || pService->verifyCookedShaders( cookedDir, shaderTarget ) == false )
+                if ( pService->cookAllShaders( cookedDir, shaderTarget, ShaderCookScope::All, &setReachedAsset ) == false ||
+                     pService->verifyCookedShaders( cookedDir, shaderTarget, &setReachedAsset ) == false )
                 {
                     SW_LOG_ERROR_ID( "Headless.CookedShadersDoNot", "Cooked shaders do not match their sources - a Shipping build has no runtime compiler, so packing stops" );
                     return false;
@@ -156,45 +192,12 @@ namespace sw
             }
 
             /**
-             * @brief 팩을 베이크합니다. 셰이더 굽기 · 판정은 세션 앞의 `cookShadersForPack` 이 끝냈다.
-             * @details 빌드 타깃은 쿠킹하는 호스트다(`Engine::initialize` 의 `setHostTarget` 과 같은 규칙) — 전용 서버(`Server`)가 굽은 팩은 서버가 읽지 않는 종류를 뺀다.
-             *          `-game=` 을 주면 그 게임 팩만 베이크한다(배포 패키지).
+             * @brief 팩을 베이크합니다. 셰이더 굽기 · 판정은 세션 앞의 `cookShadersForPack` 이 끝냈고, @p params 는 그때와 같은 값에 요청 바이너리 · 저장 방식을 채운 것이다.
              */
-            [[nodiscard]] static bool cookPackStage( const CommandLineManager& commandLine, bool bDedicatedServer, const AbsolutePath& cookedDir, const CookStore& cookStore,
-                                                     unordered_map<string, vector<vector<string>>>&& mapRequestedShaderBinary, vector<string>&& listStoredExtension )
+            [[nodiscard]] static bool cookPackStage( const CommandLineManager& commandLine, const PackConfig& packConfig, const PackCookParams& params, const CookStore& cookStore )
             {
-                const string shaderFolder = string( ShaderCooker::getSubfolderForFormat( resolveShaderTarget( commandLine ) ) );
-
-                const expected<PackConfig> packConfig = ConfigManager::readConfig( PackConfig::kConfigFile );
-                if ( packConfig.has_value() == false )
-                {
-                    SW_LOG_ERROR_ID( "Headless.PackConfigMissingInvalid", "Pack config: %# (%#)", packConfig.error().message(), packConfig.error().detail() );
-                    return false;
-                }
-
-                PackCookParams params;
-                params._listStoredExtension = std::move( listStoredExtension );
-                params._projectRoot         = ProcessRoots::get()._project; // 참조 칸 표(`Config/Dev/AssetReferenceFields*.json`) — 쓰는 것만 담는 고르기가 읽는다
-                params._resourceRoot        = engine::getSubsystem<AssetPaths>().getRootFolderPath();
-                params._cookedDir           = cookedDir;
-                (void)commandLine.getArgument( CommandLineArgument::PACK_DIR, params._packOutputDir ); // 비면 cookAllPacks 가 오류로 멈춘다
-                params._shaderFolder = shaderFolder;
-                params._buildTarget  = bDedicatedServer ? "Server" : "Client";
-                // 세션 앞의 `cookShadersForPack` 이 모은 요청 바이너리. 셰이더 쿠커가 없는 구성(전용 서버)은 빈 목록이다.
-                params._mapRequestedShaderBinary = std::move( mapRequestedShaderBinary );
-                // 실행기가 없는 구성(Shipping · 전용 서버)은 실행기가 스스로 등록하지 않는다 — 그 구성이 굽는 팩에는 시나리오를 담지 않는다.
-                // 배포 대상의 팩(`-pack-for-shipping`)도 담지 않는다 — 교차 빌드(Android · 웹)는 호스트 개발 App(실행기가 있다)이 굽는다.
-                const bool bShippingPack  = commandLine.isArgumentProvided( CommandLineArgument::PACK_FOR_SHIPPING );
-                const bool bHasAutomation = engine::findSubsystem<IAutomationRuntime>() != nullptr;
-                params._automationContent = bHasAutomation && bShippingPack == false ? PackAutomationContent::Included : PackAutomationContent::Excluded;
-                if ( commandLine.isArgumentProvided( CommandLineArgument::GAME ) )
-                {
-                    // 팩 폴더 이름은 게임 이름과 다를 수 있어 게임 설정의 팩 루트(`game/<폴더>`)에서 읽는다.
-                    const string packRoot  = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( engine::getSubsystem<GameConfig>()._packRoot.get() ) );
-                    params._gamePackFolder = FileUtil::getFileNamePart( packRoot );
-                }
                 uint32 packCount = 0;
-                if ( PackCooker::cookAllPacks( *packConfig, params, cookStore, packCount ) == false )
+                if ( PackCooker::cookAllPacks( packConfig, params, cookStore, packCount ) == false )
                     return false;
                 // 설치된 빌드의 출처 — 시작 마운트가 패치를 적용할 때 이 빌드부터 이어지는 사슬을 찾는다. 빌드 번호를 안 주면 패치를 쓰지 않는 빌드이며, 기록을 남기지 않는 대신
                 // `patching="none"` 을 명시한 기록을 남긴다(기록이 없는 폴더와 구별되고, 그 폴더에 패치 목록이 있으면 시작 마운트가 오류로 멈춘다).
@@ -269,7 +272,7 @@ namespace sw
                 (void)commandLine.getArgument( CommandLineArgument::COOK_SHADERS_SAMPLE, bSample );
                 const ShaderCookScope     scope    = bSample ? ShaderCookScope::Sample : ShaderCookScope::All;
                 IShaderCookService* const pService = requireShaderCookService( "--cook-shaders" );
-                return pService != nullptr && pService->cookAllShaders( cookedDir, shaderTarget, scope ); // 비면 쿠커가 오류로 멈춘다
+                return pService != nullptr && pService->cookAllShaders( cookedDir, shaderTarget, scope, nullptr ); // 비면 쿠커가 오류로 멈춘다. 팩 리치 없이 요청을 모두 굽는다
             }
 
             /** @brief 쿠킹 인자(씬 · 팩 · 전부) 중 하나라도 주어졌는지입니다. */
@@ -300,7 +303,7 @@ namespace sw
                 {
                     if ( bOneBackend && info._shaderTarget != RHI::getShaderTargetFormat( commandLineBackend ) )
                         continue;
-                    bAllCurrent = pService != nullptr && pService->verifyCookedShaders( cookedDir, info._shaderTarget ) && bAllCurrent;
+                    bAllCurrent = pService != nullptr && pService->verifyCookedShaders( cookedDir, info._shaderTarget, nullptr ) && bAllCurrent; // `--cook-shaders` 처럼 모두
                 }
                 if ( bAllCurrent )
                     SW_LOG_INFO_ID( "Headless.CookedShaderBinariesMatch", "Cooked shader binaries in '%#' match their sources for %#", cookedDir.str(), bOneBackend ? "the command-line backend" : "every backend" );
@@ -357,18 +360,32 @@ namespace sw
                     SW_LOG_ERROR_ID( "Headless.InputMapBundleRejected", "Cooking stopped: the input map bundle of the active game pack was rejected (listed above)" );
                     return false;
                 }
+                // 팩 설정 · 입력은 셰이더 굽기와 팩 단계가 함께 본다(`makePackCookParams`).
+                const bool     bCooksPacks = bCookPacks || bCookAll;
+                PackConfig     packConfig;
+                PackCookParams packParams;
+                if ( bCooksPacks )
+                {
+                    expected<PackConfig> readConfig = ConfigManager::readConfig( PackConfig::kConfigFile );
+                    if ( readConfig.has_value() == false )
+                    {
+                        SW_LOG_ERROR_ID( "Headless.PackConfigMissingInvalid", "Pack config: %# (%#)", readConfig.error().message(), readConfig.error().detail() );
+                        return false;
+                    }
+                    packConfig = std::move( *readConfig );
+                    packParams = makePackCookParams( commandLine, context._bDedicatedServer, cookedDir );
+                }
                 // 셰이더 굽기 · 판정은 세션 밖에서(`cookShadersForPack` 설명). 씬 단계보다 먼저 하므로 깨진 셰이더로 씬을 굽는 시간을 쓰지 않는다.
-                unordered_map<string, vector<vector<string>>> mapRequestedShaderBinary;
-                if ( ( bCookPacks || bCookAll ) && cookShadersForPack( commandLine, cookedDir, mapRequestedShaderBinary ) == false )
+                // 모은 요청 바이너리는 셰이더 쿠커가 없는 구성(전용 서버)이면 빈 목록이다.
+                if ( bCooksPacks && cookShadersForPack( commandLine, packConfig, packParams, cookedDir, packParams._mapRequestedShaderBinary ) == false )
                     return false;
                 // 팩 저장 방식은 세션 밖에서 읽는다 — 모드 팩 빌더와 같은 파일(배포본에는 `Config/` 가 없어 엔진 데이터에 둔다)이고, 값은 팩 작업 키의 설정 해시에 든다(`PackCooker` computeSettingsHash).
-                vector<string> listStoredExtension;
-                if ( bCookPacks || bCookAll )
+                if ( bCooksPacks )
                 {
                     PackStorageSettings storageSettings;
                     if ( storageSettings.loadFromAsset( AssetID{ engine::getSubsystem<EngineDefaultAssets>()._packStorage.get() } ) == false )
                         return false;
-                    listStoredExtension = std::move( storageSettings._listStoredExtension );
+                    packParams._listStoredExtension = std::move( storageSettings._listStoredExtension );
                 }
                 // 정체성 규칙(원본 폴더 표)도 세션 밖에서 처음 읽는다 — 프로세스에 한 번 읽어 두는 프로젝트 설정이라, 개발 빌드는 에디터 · 임포터가 먼저 읽지만
                 // 배포 쿠킹은 팩 작업 키(`PackCooker` computeSettingsHash)가 세션 안에서 처음 닿아 읽기가 거절됐다.
@@ -382,8 +399,8 @@ namespace sw
                 if ( bCooksScenes )
                     bSucceeded = cookSceneStage( cookedDir, cookStore, reflectionFingerprint, crowdSettings, bCrowdSettingsLoaded );
                 // 씬 단계가 실패하면 팩을 베이크하지 않는다 — 빠진 산출물로 베이크한 팩은 배포본에서야 실패가 드러난다.
-                if ( bSucceeded && ( bCookPacks || bCookAll ) )
-                    bSucceeded = cookPackStage( commandLine, context._bDedicatedServer, cookedDir, cookStore, std::move( mapRequestedShaderBinary ), std::move( listStoredExtension ) );
+                if ( bSucceeded && bCooksPacks )
+                    bSucceeded = cookPackStage( commandLine, packConfig, packParams, cookStore );
                 // 변경 없는 두 번째 쿠킹은 0 이어야 한다(도장만 본다 — `Pack.Scale` 측정의 입력 읽기 값).
                 SW_LOG_INFO_ID( "Headless.CookHashedBytes", "Cook hashed %# input bytes", hashCache.getHashedByteCount() - hashedBytesBefore );
                 return bSucceeded;

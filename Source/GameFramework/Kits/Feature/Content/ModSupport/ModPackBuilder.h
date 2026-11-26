@@ -15,6 +15,7 @@
 namespace sw
 {
     struct AssetPackIndex;
+    struct MaterialTagIndex;
     struct PackStorageSettings;
 
     /**
@@ -40,5 +41,11 @@ namespace sw
          * @details 팩 루트의 `assetindex.xml` 로 실려 런타임 색인이 도메인 색인 뒤 층으로 합친다 — 모드가 새로 더한 에셋도 GUID 참조로 풀린다. 정체성이 없는 파일은 건너뛴다.
          */
         static void addIdentity( const string& relativePath, const vector<uint8>& bytes, AssetPackIndex& inoutIndex );
+        /**
+         * @brief 모드 머티리얼(@p relativePath 가 `.material`)의 태그 줄을 @p inoutIndex 에 더합니다. 머티리얼이 아니면 할 일이 없다.
+         * @details 팩 루트의 `materialindex.xml` 로 실려 런타임 색인이 도메인 색인 뒤 층으로 합친다(`MaterialTagIndex::loadMounted`). 줄은 쿠커와 같은 `MaterialTagIndex::makeEntry` 다.
+         * @return 머티리얼을 읽지 못하면 이유를 오류로 남기고 false 입니다(색인에서 빼고 넘어가지 않는다).
+         */
+        [[nodiscard]] static bool addMaterialTags( const string& relativePath, const vector<uint8>& bytes, MaterialTagIndex& inoutIndex );
     };
 } // namespace sw
