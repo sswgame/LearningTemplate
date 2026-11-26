@@ -8,6 +8,7 @@
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/HexDigitUtil.h"
 #include "Core/Foundation/PlatformOSHeaders.h"
+#include "Core/Module/ModuleLibraryUtil.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
@@ -136,11 +137,8 @@ namespace sw
             modulePath.resize( modulePath.size() * 2 );
         }
         const uint8*            pBase = reinterpret_cast<const uint8*>( hModule );
-        const IMAGE_DOS_HEADER* pDos  = reinterpret_cast<const IMAGE_DOS_HEADER*>( pBase );
-        if ( pDos->e_magic != IMAGE_DOS_SIGNATURE )
-            return result;
-        const IMAGE_NT_HEADERS* pNt = reinterpret_cast<const IMAGE_NT_HEADERS*>( pBase + pDos->e_lfanew );
-        if ( pNt->Signature != IMAGE_NT_SIGNATURE )
+        const IMAGE_NT_HEADERS* pNt   = static_cast<const IMAGE_NT_HEADERS*>( ModuleLibraryUtil::findImageNtHeaders( pBase ) );
+        if ( pNt == nullptr )
             return result;
         const IMAGE_DATA_DIRECTORY&  directory  = pNt->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_DEBUG];
         const uint32                 entryCount = directory.Size / static_cast<uint32>( sizeof( IMAGE_DEBUG_DIRECTORY ) );

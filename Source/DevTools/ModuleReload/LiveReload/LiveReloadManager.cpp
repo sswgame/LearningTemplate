@@ -37,6 +37,39 @@ namespace sw
     {
         struct LiveReloadManagerInternal
         {
+#if defined( SW_PLATFORM_WINDOWS )
+            /**
+             * @brief 모듈 @p pHandle 이 DLL @p dependencyFileName(예: `GameFramework.dll`)을 어느 라이브러리에 바인딩했는지 import 테이블에서 읽습니다.
+             * @details import 는 로드할 때 해석되므로 IAT 첫 항목이 가리키는 주소의 모듈이 바인딩된 라이브러리다(모듈 라이브러리에는 지연 import 가 없다.
+             *          이 매니저가 그런 라이브러리를 거절한다). 리눅스는 import 테이블에서 바인딩을 읽을 수 없어 심볼로 판단한다(`isBoundTo`).
+             * @return 바인딩된 라이브러리의 핸들입니다. 그 DLL 을 import 하지 않으면 nullptr 입니다.
+             */
+            static void* findBoundImportLibrary( void* pHandle, string_view dependencyFileName )
+            {
+                const IMAGE_NT_HEADERS* pNt = static_cast<const IMAGE_NT_HEADERS*>( ModuleLibraryUtil::findImageNtHeaders( pHandle ) );
+                if ( pNt == nullptr )
+                    return nullptr;
+                const uint8* pBase = static_cast<const uint8*>( pHandle );
+
+                const IMAGE_DATA_DIRECTORY& importDir = pNt->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT];
+                if ( importDir.VirtualAddress == 0 )
+                    return nullptr;
+                for ( const IMAGE_IMPORT_DESCRIPTOR* pDesc = reinterpret_cast<const IMAGE_IMPORT_DESCRIPTOR*>( pBase + importDir.VirtualAddress ); pDesc->Name != 0; ++pDesc )
+                {
+                    const utf8* pName = reinterpret_cast<const utf8*>( pBase + pDesc->Name );
+                    if ( StringUtil::equals( string_view{ pName }, dependencyFileName, true ) == false )
+                        continue;
+                    const IMAGE_THUNK_DATA* pThunk = reinterpret_cast<const IMAGE_THUNK_DATA*>( pBase + pDesc->FirstThunk );
+                    if ( pThunk->u1.Function == 0 )
+                        return nullptr;
+                    HMODULE hBound = nullptr;
+                    GetModuleHandleExW( GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, reinterpret_cast<LPCWSTR>( pThunk->u1.Function ), &hBound );
+                    return hBound;
+                }
+                return nullptr;
+            }
+#endif
+
             /**
              * @brief 두 모듈 이름이 같은 모듈 파일을 가리키는지 봅니다.
              * @details Windows 파일 시스템은 대소문자를 가리지 않아 'gameframework' 도 GameFramework.dll 을 엽니다. 그래서 거기서는 대소문자를
@@ -66,7 +99,7 @@ namespace sw
 #if defined( SW_PLATFORM_WINDOWS )
                 (void)dependencyName;
                 pOutExpected = pExpected;
-                pOutActual   = ModuleLibraryUtil::findBoundImportLibrary( pModule, dependencyFileName );
+                pOutActual   = findBoundImportLibrary( pModule, dependencyFileName );
                 return pOutActual == nullptr || pOutActual == pOutExpected;
 #elif defined( SW_PLATFORM_LINUX )
                 (void)dependencyFileName;

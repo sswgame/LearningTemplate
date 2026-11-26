@@ -98,13 +98,10 @@ namespace sw
         // 3) 로드된 라이브러리 조회.
         // ------------------------------------------------------------------------------
         /**
-         * @brief 모듈 @p pHandle 이 DLL @p dependencyFileName(예: `GameFramework.dll`)을 어느 라이브러리에 바인딩했는지 import 테이블에서 읽습니다.
-         * @details import 는 로드할 때 해석되므로 IAT 첫 항목이 가리키는 주소의 모듈이 바인딩된 라이브러리다(모듈 라이브러리에는 지연 import 가 없다.
-         *          `LiveReloadManager` 가 그런 라이브러리를 거절한다). Windows 전용이며, 리눅스는 import 테이블에서 바인딩을 읽을 수 없어
-         *          부르는 쪽이 심볼로 판단한다(`LiveReloadManager` 의 바인딩 검사).
-         * @return 바인딩된 라이브러리의 핸들을 반환합니다. 그 DLL 을 import 하지 않으면(그 밖의 플랫폼 포함) nullptr 입니다.
+         * @brief 로드된 이미지의 기준 주소 @p pBase 가 가리키는 PE NT 머리(`IMAGE_NT_HEADERS`)를 반환합니다. DOS · NT 서명이 맞지 않거나 Windows 가 아니면 nullptr 입니다.
+         * @details PE 머리를 읽는 식은 이 함수 한 곳에만 둔다. 부르는 쪽이 `IMAGE_NT_HEADERS` 로 형변환해 import · 디버그 디렉터리를 읽는다.
          */
-        static void* findBoundImportLibrary( void* pHandle, string_view dependencyFileName );
+        [[nodiscard]] static const void* findImageNtHeaders( const void* pBase );
 
 #if SW_WITH_DYNAMIC_MODULES
         // ------------------------------------------------------------------------------
