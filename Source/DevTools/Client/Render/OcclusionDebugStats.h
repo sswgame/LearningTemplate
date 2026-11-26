@@ -10,6 +10,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
+#include "DevTools/DevToolsAPI.h"
+
 #include "Engine/Renderer/Frame/View/OcclusionTileSnapshot.h"
 
 namespace sw
@@ -18,7 +20,7 @@ namespace sw
      * @struct OcclusionTileStats
      * @brief 가림 타일 한 벌의 요약입니다.
      */
-    struct SW_API OcclusionTileStats
+    struct SW_DEVTOOLS_API OcclusionTileStats
     {
         uint32  _tileCount{ 0 };        ///< 타일 수(열 × 행)
         uint32  _coveredTileCount{ 0 }; ///< 무언가 그려진 타일(최대 깊이 < 1 — 그 뒤의 물체를 가릴 수 있다)

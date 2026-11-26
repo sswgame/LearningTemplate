@@ -7,7 +7,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/TestFramework/TestFramework.h"
 
-#include "Engine/Renderer/Debug/OcclusionDebugStats.h"
+#include "DevTools/Client/Render/OcclusionDebugStats.h"
 
 using namespace sw;
 

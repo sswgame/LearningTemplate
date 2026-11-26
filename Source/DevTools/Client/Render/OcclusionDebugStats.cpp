@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Renderer/Debug/OcclusionDebugStats.h"
+#include "DevTools/Client/Render/OcclusionDebugStats.h"
 
 #include "Core/Math/MathUtil.h"
 
