@@ -105,7 +105,7 @@ int32 main( int32 argc, utf8* argv[] )
     if ( options.isBuiltinsGenMode() )
         return sw::emitReflectBuiltinsGen( options._builtinsPath, options._emitBuiltinsGenPath, options._moduleName, session ) ? 0 : 1;
 
-    if ( session._config.load( options._configPath, options._listTargetArg ) == false || sw::ReflectionParserInternal::loadTables( options, session ) == false )
+    if ( session._config.load( options._configPath, options._listTargetArg, options._listTargetOption ) == false || sw::ReflectionParserInternal::loadTables( options, session ) == false )
         return 1;
 
     sw::ReflectionPipeline pipeline( options, session );

@@ -182,18 +182,10 @@ namespace sw
     /** @brief 연결이 끊긴 까닭입니다. */
     enum class NetDisconnectReason : uint8
     {
-        None = 0,
-        Requested, ///< 이쪽이 끊었다.
-        Remote,    ///< 상대가 끊었다.
-        Timeout,
-        ServerFull,
-        Rejected,             ///< 다른 게임(게임 ID가 다르다)이거나 시작할 수 없는 연결이다.
-        VersionMismatch,      ///< 같은 게임의 다른 와이어 버전(`NetWireVersion`).
-        SecurityMismatch,     ///< 한쪽만 암호화나 토큰 결속을 켰다(협상하지 않으므로 다운그레이드는 없다).
-        AuthenticationFailed, ///< 토큰을 모르거나 세션 비밀 증명이나 키 확인이 틀렸다.
-        ReceiveOverflow,      ///< 신뢰 채널의 받은 큐가 `NetConnection::kMaxPendingReceiveBytes` 를 넘었다(게임이 꺼내는 속도보다 상대가 빨리 넣는다).
-        ReliableOverflow,     ///< 신뢰 창이 차 신뢰 메시지를 넣지 못했다(상대가 확인하지 않는다) — 버리면 받는 쪽의 순서가 영영 끊기므로 닫는다(언리얼은 신뢰 버퍼가 넘치면 연결을 닫는다).
-        Count                 ///< 사유가 아니라 개수다 — 서버 지표가 사유마다 시리즈를 이 값까지 만든다(`GameNetSession`). 사유를 더하면 `toString` 의 switch 가 빠진 줄을 컴파일에서 알린다.
+#define SW_NET_DISCONNECT_REASON( Name ) Name,
+#include "Core/Network/NetDisconnectReasonList.xxx"
+#undef SW_NET_DISCONNECT_REASON
+        Count ///< 사유가 아니라 개수다 — 서버 지표가 사유마다 시리즈를 이 값까지 만든다(`GameNetSession`). 사유는 표(`NetDisconnectReasonList.xxx`)에 줄로 더하고, 이름 표도 그 줄에서 나온다.
     };
 
     SW_API const utf8* toString( NetDisconnectReason reason );

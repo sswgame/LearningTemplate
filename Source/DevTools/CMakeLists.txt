@@ -92,5 +92,4 @@ endif()
 # ------------------------------------------------------------------------------
 sw_add_reflection_step(DevTools
 	MODULE DevTools
-	INCLUDES "${CMAKE_SOURCE_DIR}/Source"
 )

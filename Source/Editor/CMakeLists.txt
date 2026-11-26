@@ -247,7 +247,6 @@ if(NOT SW_TARGET_TYPE STREQUAL "Server" AND NOT SW_STATIC_MODULES)
 			MODULE ${SW_TARGET_EDITOR_MODULE}
 			CONTENT_OWNER ${SW_TARGET_EDITOR_MODULE}
 			HEADERS ${list_editor_reflect_core}
-			INCLUDES "${CMAKE_SOURCE_DIR}/Source"
 		)
 		list(APPEND list_editor_core_target EditorCoreReflect)
 	endif()

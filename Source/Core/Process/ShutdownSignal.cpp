@@ -21,27 +21,13 @@ namespace sw
 
     const utf8* ShutdownSignal::getCauseName( ShutdownCause cause )
     {
-        switch ( cause )
-        {
-            case ShutdownCause::None:
-                return "None";
-            case ShutdownCause::Interrupt:
-                return "Interrupt";
-            case ShutdownCause::Terminate:
-                return "Terminate";
-            case ShutdownCause::Hangup:
-                return "Hangup";
-            case ShutdownCause::ConsoleClose:
-                return "ConsoleClose";
-            case ShutdownCause::SystemShutdown:
-                return "SystemShutdown";
-            case ShutdownCause::ServiceStop:
-                return "ServiceStop";
-            case ShutdownCause::ConsoleCommand:
-                return "ConsoleCommand";
-            case ShutdownCause::TickLimit:
-                return "TickLimit";
-        }
-        return "Unknown";
+        // 열거자 이름 그대로다(표 `ShutdownCauseList.xxx` 한 벌). 범위 밖 값은 "Unknown" 이다.
+        static constexpr const utf8* kArrName[] = {
+#define SW_SHUTDOWN_CAUSE( Name ) #Name,
+#include "Core/Process/ShutdownCauseList.xxx"
+#undef SW_SHUTDOWN_CAUSE
+        };
+        const size_t index = static_cast<size_t>( cause );
+        return index < SW_COUNT_OF( kArrName ) ? kArrName[index] : "Unknown";
     }
 } // namespace sw

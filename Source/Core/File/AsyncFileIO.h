@@ -53,22 +53,17 @@ namespace sw
     /** @brief 읽기 요청 하나의 결과입니다. `Pending` 이 아니면 끝난 것입니다. */
     enum class AsyncIOStatus : uint8
     {
-        Pending,      ///< 아직 끝나지 않았다
-        Succeeded,    ///< 요청한 바이트를 모두 읽었다
-        Canceled,     ///< 취소됐다(바이트 없음)
-        FileNotFound, ///< 파일을 열지 못했다(없음 · 권한)
-        OutOfRange,   ///< 구간이 파일 끝을 넘는다
-        ReadFailed,   ///< OS 읽기가 실패했다
-        ShutDown,     ///< 매니저가 시작되지 않았거나 내려가는 중이다
+#define SW_ASYNC_IO_STATUS( Name ) Name,
+#include "Core/File/AsyncIOStatusList.xxx"
+#undef SW_ASYNC_IO_STATUS
     };
 
     /** @brief 백엔드 종류입니다. */
     enum class AsyncIOBackendKind : uint8
     {
-        Auto,       ///< 플랫폼 것(Windows IOCP · 리눅스 io_uring), 쓸 수 없으면 스레드 풀
-        ThreadPool, ///< 스레드 몇 개가 위치 지정 읽기를 막고 기다린다 — 어디서나 돈다
-        Iocp,       ///< Windows 오버랩드 IO + 완료 포트
-        IOUring,    ///< 리눅스 io_uring(5.1+)
+#define SW_ASYNC_IO_BACKEND_KIND( Name ) Name,
+#include "Core/File/AsyncIOBackendKindList.xxx"
+#undef SW_ASYNC_IO_BACKEND_KIND
     };
 
     /**
