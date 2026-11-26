@@ -114,7 +114,7 @@ namespace sw::editor
 
     namespace
     {
-        /** @brief 항목의 글 칸 하나를 그리는 법입니다(종류 표가 허용한 칸만 그린다 — 칸을 더하면 이 표에 한 줄). 글은 `SequencerPanelInternal::findFieldLabel` · `findFieldTip`. */
+        /** @brief 항목의 글 칸 하나를 그리는 법입니다(종류 표가 허용한 칸만 그린다 — 칸을 더하면 이 표에 한 줄). 글은 `SequenceItemField` 의 DisplayName · Tooltip 이다. */
         struct SequenceItemFieldView
         {
             SequenceItemField _field;
@@ -167,57 +167,9 @@ namespace sw::editor
                     bEdited = true;
                 }
                 EditorSelfTestMarks::record( pMark );
-                if ( pTooltip != nullptr )
+                if ( pTooltip != nullptr && pTooltip[0] != 0 ) // 툴팁이 없는 칸은 빈 글이다(`LocalizedText::findEnumTooltip`)
                     EditorWidgets::drawTooltip( pTooltip );
                 return bEdited;
-            }
-
-            /** @brief 칸의 이름표입니다. */
-            static const utf8* findFieldLabel( SequenceItemField field )
-            {
-                switch ( field )
-                {
-                    case SequenceItemField::Prefab:
-                        return SW_LOCKEY( "EdWidget", "Prefab" );
-                    case SequenceItemField::Preset:
-                        return SW_LOCKEY( "EdWidget", "Preset" );
-                    case SequenceItemField::Scenario:
-                        return SW_LOCKEY( "EditorSequencer", "ScenarioLabel" );
-                    case SequenceItemField::Clip:
-                        return SW_LOCKEY( "EditorSequencer", "ClipLabel" );
-                    case SequenceItemField::Sound:
-                        return SW_LOCKEY( "EditorSequencer", "SoundLabel" );
-                    case SequenceItemField::Text:
-                        return SW_LOCKEY( "EditorSequencer", "TextLabel" );
-                    case SequenceItemField::Binding:
-                    case SequenceItemField::Count:
-                        return "?";
-                }
-                return "?";
-            }
-
-            /** @brief 칸의 풀이입니다. */
-            static const utf8* findFieldTip( SequenceItemField field )
-            {
-                switch ( field )
-                {
-                    case SequenceItemField::Prefab:
-                        return SW_LOCKEY( "EditorSequencer", "PrefabTip" );
-                    case SequenceItemField::Preset:
-                        return SW_LOCKEY( "EditorSequencer", "PresetTip" );
-                    case SequenceItemField::Scenario:
-                        return SW_LOCKEY( "EditorSequencer", "ScenarioTip" );
-                    case SequenceItemField::Clip:
-                        return SW_LOCKEY( "EditorSequencer", "ClipTip" );
-                    case SequenceItemField::Sound:
-                        return SW_LOCKEY( "EditorSequencer", "SoundTip" );
-                    case SequenceItemField::Text:
-                        return SW_LOCKEY( "EditorSequencer", "TextTip" );
-                    case SequenceItemField::Binding:
-                    case SequenceItemField::Count:
-                        return nullptr;
-                }
-                return nullptr;
             }
 
             /** @brief 키 띠에서 포인터 x 에 가장 가까운 키 프레임입니다(마름모 반지름 안). 없으면 비어 있습니다. */
@@ -733,8 +685,8 @@ namespace sw::editor
                 if ( pKindInfo->allowsField( view._field ) == false )
                     continue;
                 string     text       = edit.getFieldText( view._field );
-                const bool bCommitted = SequencerPanelInternal::drawItemField( EditorThemeUtil::makeStableLabel( SequencerPanelInternal::findFieldLabel( view._field ), view._pStableID ), text,
-                                                                               SequencerPanelInternal::findFieldTip( view._field ), view._pDropExtension, view._pMark );
+                const bool bCommitted = SequencerPanelInternal::drawItemField( EditorThemeUtil::makeStableLabel( LocalizedText::findEnum( view._field ), view._pStableID ), text,
+                                                                               LocalizedText::findEnumTooltip( view._field ), view._pDropExtension, view._pMark );
                 // 에셋 칸은 반쯤 친 경로가 값이 될 수 없다 — 칸을 떠날 때 넣는다(받지 않는 경로면 값이 그대로다). 글 칸은 치는 동안에도 사본이 따라가 필수 칸 안내가 바로 바뀐다.
                 if ( bCommitted || view._field != SequenceItemField::Prefab )
                     (void)edit.setFieldText( view._field, text );

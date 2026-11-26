@@ -666,6 +666,34 @@
 		       text="상대가 접속해 있지 않습니다"
 		       sourceHash="4e2a36c23fcdbdc0" />
 		<entry key="Enum.ChatResult.TooManyChannels" text="채널이 너무 많습니다" sourceHash="b67867eff6d1139c" />
+		<entry key="Enum.CollisionResponse.Block" text="막기" sourceHash="2b2ae20d26f78ac2" />
+		<entry key="Enum.CollisionResponse.Ignore" text="무시" sourceHash="917734d83f35efa3" />
+		<entry key="Enum.CollisionResponse.Overlap" text="겹침" sourceHash="7ed143cddb1bffa8" />
+		<entry key="Enum.FogVolumeState.Active"
+		       text="볼륨 안개가 켜졌습니다. 주 화면에 빛 산란 볼륨을 그립니다."
+		       sourceHash="ce64e124f44ddda8" />
+		<entry key="Enum.FogVolumeState.BufferFailed"
+		       text="볼륨 안개를 켰지만 버퍼를 만들지 못해 평범한 안개를 그립니다. 로그를 보세요."
+		       sourceHash="bc22f1490b6b1fc9" />
+		<entry key="Enum.FogVolumeState.Disabled"
+		       text="안개 설정에서 볼륨 안개가 꺼져 평범한 안개를 그립니다. Fog 컴포넌트에서 Volumetric 을 켜세요."
+		       sourceHash="9e22c297cb5e12ce" />
+		<entry key="Enum.FogVolumeState.MissingPipeline"
+		       text="볼륨 안개를 켰지만 컴퓨트 셰이더가 없어 평범한 안개를 그립니다. 셰이더 쿠킹 로그를 보세요."
+		       sourceHash="4c162f8b67519ad9" />
+		<entry key="Enum.FogVolumeState.NoDevice"
+		       text="이번 프레임에 렌더러의 디바이스가 없어 그리지 않습니다."
+		       sourceHash="baf721c36acd278c" />
+		<entry key="Enum.FogVolumeState.NoFog"
+		       text="이 씬에 안개가 없습니다. 볼륨 안개를 보려면 Fog 컴포넌트를 더하세요."
+		       sourceHash="9ad3e9cbc8287fe0" />
+		<entry key="Enum.FogVolumeState.Underwater"
+		       text="카메라가 물속입니다. 물속 안개에는 볼륨이 없습니다."
+		       sourceHash="19a2cac2b1c44306" />
+		<entry key="Enum.InputGlyphStyle.GamepadPlayStation" text="PlayStation 게임패드" sourceHash="ca581e548d6ef12e" />
+		<entry key="Enum.InputGlyphStyle.GamepadSwitch" text="Nintendo Switch 게임패드" sourceHash="3283503dabc4228f" />
+		<entry key="Enum.InputGlyphStyle.GamepadXbox" text="Xbox 게임패드" sourceHash="33f8c6dd16d1b80b" />
+		<entry key="Enum.InputGlyphStyle.KeyboardMouse" text="키보드와 마우스" sourceHash="b83f9919638da259" />
 		<entry key="Enum.InventoryCommandResult.EmptySlot" text="빈 칸입니다." sourceHash="b56cc9d513099dfd" />
 		<entry key="Enum.InventoryCommandResult.InvalidCount"
 		       text="그 수량은 안 됩니다."
@@ -679,11 +707,63 @@
 		<entry key="Enum.InventoryCommandResult.Refused"
 		       text="그 자리에는 장착할 수 없습니다."
 		       sourceHash="e65da3e12aa85757" />
+		<entry key="Enum.ModuleKind.Editor" text="에디터" sourceHash="a75b95980cd80e78" />
+		<entry key="Enum.ModuleKind.EditorExtension" text="에디터 확장" sourceHash="b55408d6f77faff2" />
+		<entry key="Enum.ModuleKind.Game" text="게임" sourceHash="b568a67e05a19907" />
+		<entry key="Enum.ModuleKind.GameFramework" text="GameFramework" sourceHash="d13d3042ead7b919" />
+		<entry key="Enum.ModuleKind.Kit" text="키트" sourceHash="708d8cde3abc020c" />
+		<entry key="Enum.ModuleKind.RHI" text="RHI 백엔드" sourceHash="46dd3ed1d542d6e3" />
 		<entry key="Enum.MountGait.Canter" text="구보" sourceHash="8ddeb8be59f30f00" />
 		<entry key="Enum.MountGait.Gallop" text="질주" sourceHash="5080657618a7ac4a" />
 		<entry key="Enum.MountGait.Idle" text="서 있음" sourceHash="989261d5eefc4735" />
 		<entry key="Enum.MountGait.Trot" text="속보" sourceHash="85c8a4fb52a15fd0" />
 		<entry key="Enum.MountGait.Walk" text="평보" sourceHash="8904bd022d8e7e10" />
+		<entry key="Enum.RenderViewMode.Depth" text="깊이" sourceHash="3231d0dc6fe30d4a" />
+		<entry key="Enum.RenderViewMode.LODFadeCode" text="LOD 페이드 코드" sourceHash="e3471516cca1f937" />
+		<entry key="Enum.RenderViewMode.LODLevel" text="LOD 단계" sourceHash="97d43934e8aeb89e" />
+		<entry key="Enum.RenderViewMode.LightComplexity" text="조명 복잡도" sourceHash="85d63f586b24a321" />
+		<entry key="Enum.RenderViewMode.LightingOnly" text="조명만" sourceHash="8cfe0acaf21281c5" />
+		<entry key="Enum.RenderViewMode.Lit" text="조명" sourceHash="24ec9419b87f1a96" />
+		<entry key="Enum.RenderViewMode.MarkerSlots" text="표지 칸" sourceHash="9eb1b3c90566c0b6" />
+		<entry key="Enum.RenderViewMode.Metallic" text="금속성" sourceHash="dfe7fef1566d1aa8" />
+		<entry key="Enum.RenderViewMode.Mipmaps" text="밉맵" sourceHash="afe2a32db0622b02" />
+		<entry key="Enum.RenderViewMode.Normals" text="노멀" sourceHash="c294e89a3657cf13" />
+		<entry key="Enum.RenderViewMode.Overdraw" text="오버드로" sourceHash="a88c71117100df4d" />
+		<entry key="Enum.RenderViewMode.Roughness" text="거칠기" sourceHash="dea02d9fafe208b5" />
+		<entry key="Enum.RenderViewMode.ShadedWireframe" text="셰이드 와이어프레임" sourceHash="eedf8d2e1a0c0f80" />
+		<entry key="Enum.RenderViewMode.ShadingPath" text="셰이딩 경로" sourceHash="42c1cd79e1cd0620" />
+		<entry key="Enum.RenderViewMode.Unlit" text="조명 없음" sourceHash="2435a2b51ac7281f" />
+		<entry key="Enum.RenderViewMode.Wireframe" text="와이어프레임" sourceHash="96f013195da95865" />
+		<entry key="Enum.SequenceCameraSignalKind.CinematicBegin" text="블렌드 인" sourceHash="32e8d27078f977a7" />
+		<entry key="Enum.SequenceCameraSignalKind.CinematicEnd" text="블렌드 아웃" sourceHash="b0c4581daeca75ac" />
+		<entry key="Enum.SequenceCameraSignalKind.CutBegin" text="컷" sourceHash="f5b9f7190cc182e3" />
+		<entry key="Enum.SequenceCameraSignalKind.CutPrewarm" text="대기 뷰" sourceHash="af29d929d5327b73" />
+		<entry key="Enum.SequenceCameraSignalKind.PlaybackEnd" text="재생 끝" sourceHash="99639487ced1e979" />
+		<entry key="Enum.SequenceCameraSignalKind.Shake" text="흔들림" sourceHash="6ddba2493a836a55" />
+		<entry key="Enum.SequenceItemField.Clip" text="클립" sourceHash="3e092e9d1ee2c5bb" />
+		<entry key="Enum.SequenceItemField.Clip.Tooltip"
+		       text="구간 동안 바인딩된 오브젝트의 애니메이션 위에 섞을 애니메이션 클립입니다. 리소스 id 를 치거나 콘텐츠 브라우저에서 끌어다 놓습니다."
+		       sourceHash="6f17aa73e43916d3" />
+		<entry key="Enum.SequenceItemField.Prefab" text="프리팹" sourceHash="a2d5fac94c77c683" />
+		<entry key="Enum.SequenceItemField.Prefab.Tooltip"
+		       text="이 구간 동안 스폰할 프리팹입니다. 리소스 id 를 치거나 콘텐츠 브라우저에서 끌어다 놓습니다."
+		       sourceHash="96f837eff09a3e8a" />
+		<entry key="Enum.SequenceItemField.Preset" text="프리셋" sourceHash="57ce5bc9b2b4287e" />
+		<entry key="Enum.SequenceItemField.Preset.Tooltip"
+		       text="대상 오브젝트가 입을 외형 프리셋의 id 입니다."
+		       sourceHash="8925b878bba0302e" />
+		<entry key="Enum.SequenceItemField.Scenario" text="시나리오" sourceHash="8a0834f3db621caf" />
+		<entry key="Enum.SequenceItemField.Scenario.Tooltip"
+		       text="시작 프레임을 지날 때 재생할 시나리오입니다. 리소스 id 를 치거나 콘텐츠 브라우저에서 끌어다 놓습니다."
+		       sourceHash="4698e99a85e6a8d3" />
+		<entry key="Enum.SequenceItemField.Sound" text="소리" sourceHash="2593d0c70a1c5074" />
+		<entry key="Enum.SequenceItemField.Sound.Tooltip"
+		       text="시작 프레임을 지날 때 보내고 구간이 끝나면 멈추는 오디오 이벤트입니다."
+		       sourceHash="86fa2343e0131e5e" />
+		<entry key="Enum.SequenceItemField.Text" text="글" sourceHash="2492f5fb1b05b45e" />
+		<entry key="Enum.SequenceItemField.Text.Tooltip"
+		       text="구간 동안 보일 자막 줄의 현지화 키(Namespace.Key)입니다."
+		       sourceHash="46adf64e038e3eed" />
 		<entry key="Enum.ServerState.Draining" text="비우는 중" sourceHash="445341bdde0ebac7" />
 		<entry key="Enum.ServerState.Maintenance" text="점검 중" sourceHash="9e7f28b2e900e4a0" />
 		<entry key="Enum.ServerState.Open" text="열림" sourceHash="f84f97b4633670e9" />

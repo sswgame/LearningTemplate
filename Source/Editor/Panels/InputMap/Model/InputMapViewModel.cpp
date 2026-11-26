@@ -25,6 +25,7 @@
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Input/Map/InputMapBundle.h"
 #include "Engine/Input/Map/InputRemapSerializer.h"
+#include "Engine/Localization/LocText.h"
 
 namespace sw::editor
 {
@@ -32,23 +33,6 @@ namespace sw::editor
     {
         struct InputMapViewModelInternal
         {
-            /** @brief 활성 입력 장치 종류의 표시 이름입니다(장치 모니터). */
-            static const utf8* glyphStyleName( InputGlyphStyle type )
-            {
-                switch ( type )
-                {
-                    case InputGlyphStyle::KeyboardMouse:
-                        return "Keyboard & Mouse";
-                    case InputGlyphStyle::GamepadXbox:
-                        return "Xbox Gamepad";
-                    case InputGlyphStyle::GamepadPlayStation:
-                        return "PlayStation Gamepad";
-                    case InputGlyphStyle::GamepadSwitch:
-                        return "Nintendo Switch Gamepad";
-                }
-                return "Unknown";
-            }
-
             /** @brief 게임패드 배터리 잔량의 표시 이름입니다. */
             static const utf8* batteryLevelName( GamepadBatteryLevel level )
             {
@@ -686,7 +670,7 @@ namespace sw::editor
 
     void InputMapViewModel::gatherDeviceState( const InputManager& input, InputMapDeviceState& outState )
     {
-        outState._pActiveDeviceName = InputMapViewModelInternal::glyphStyleName( input.getActiveGlyphStyle() );
+        outState._pActiveDeviceName = LocalizedText::findEnum( input.getActiveGlyphStyle() );
         outState._listHeldKey.clear();
         for ( int32 keyIndex = 1; keyIndex < static_cast<int32>( Key::Count ); ++keyIndex )
         {

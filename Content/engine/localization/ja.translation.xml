@@ -682,6 +682,38 @@
 		<entry key="Enum.ChatResult.Repeated" text="同じ発言は繰り返せません" sourceHash="3aed68501070baae" />
 		<entry key="Enum.ChatResult.TargetOffline" text="相手はオフラインです" sourceHash="4e2a36c23fcdbdc0" />
 		<entry key="Enum.ChatResult.TooManyChannels" text="チャンネルが多すぎます" sourceHash="b67867eff6d1139c" />
+		<entry key="Enum.CollisionResponse.Block" text="ブロック" sourceHash="2b2ae20d26f78ac2" />
+		<entry key="Enum.CollisionResponse.Ignore" text="無視" sourceHash="917734d83f35efa3" />
+		<entry key="Enum.CollisionResponse.Overlap" text="オーバーラップ" sourceHash="7ed143cddb1bffa8" />
+		<entry key="Enum.FogVolumeState.Active"
+		       text="ボリュメトリックフォグがオンです。メインビューに光散乱ボリュームを描画します。"
+		       sourceHash="ce64e124f44ddda8" />
+		<entry key="Enum.FogVolumeState.BufferFailed"
+		       text="ボリュメトリックフォグはオンですがバッファーを作成できなかったため、通常のフォグを描画します。ログを確認してください。"
+		       sourceHash="bc22f1490b6b1fc9" />
+		<entry key="Enum.FogVolumeState.Disabled"
+		       text="フォグ設定でボリュメトリックフォグがオフのため、通常のフォグを描画します。Fog コンポーネントで Volumetric をオンにしてください。"
+		       sourceHash="9e22c297cb5e12ce" />
+		<entry key="Enum.FogVolumeState.MissingPipeline"
+		       text="ボリュメトリックフォグはオンですがコンピュートシェーダーがないため、通常のフォグを描画します。シェーダーのクックログを確認してください。"
+		       sourceHash="4c162f8b67519ad9" />
+		<entry key="Enum.FogVolumeState.NoDevice"
+		       text="このフレームはレンダラーにデバイスがないため、何も描画しません。"
+		       sourceHash="baf721c36acd278c" />
+		<entry key="Enum.FogVolumeState.NoFog"
+		       text="このシーンにはフォグがありません。ボリュメトリックフォグを見るには Fog コンポーネントを追加してください。"
+		       sourceHash="9ad3e9cbc8287fe0" />
+		<entry key="Enum.FogVolumeState.Underwater"
+		       text="カメラが水中にあります。水中フォグにはボリュームがありません。"
+		       sourceHash="19a2cac2b1c44306" />
+		<entry key="Enum.InputGlyphStyle.GamepadPlayStation"
+		       text="PlayStation ゲームパッド"
+		       sourceHash="ca581e548d6ef12e" />
+		<entry key="Enum.InputGlyphStyle.GamepadSwitch"
+		       text="Nintendo Switch ゲームパッド"
+		       sourceHash="3283503dabc4228f" />
+		<entry key="Enum.InputGlyphStyle.GamepadXbox" text="Xbox ゲームパッド" sourceHash="33f8c6dd16d1b80b" />
+		<entry key="Enum.InputGlyphStyle.KeyboardMouse" text="キーボードとマウス" sourceHash="b83f9919638da259" />
 		<entry key="Enum.InventoryCommandResult.EmptySlot" text="空きスロットです。" sourceHash="b56cc9d513099dfd" />
 		<entry key="Enum.InventoryCommandResult.InvalidCount"
 		       text="その数量は指定できません。"
@@ -697,11 +729,65 @@
 		<entry key="Enum.InventoryCommandResult.Refused"
 		       text="そこには装備できません。"
 		       sourceHash="e65da3e12aa85757" />
+		<entry key="Enum.ModuleKind.Editor" text="エディター" sourceHash="a75b95980cd80e78" />
+		<entry key="Enum.ModuleKind.EditorExtension" text="エディター拡張" sourceHash="b55408d6f77faff2" />
+		<entry key="Enum.ModuleKind.Game" text="ゲーム" sourceHash="b568a67e05a19907" />
+		<entry key="Enum.ModuleKind.GameFramework" text="GameFramework" sourceHash="d13d3042ead7b919" />
+		<entry key="Enum.ModuleKind.Kit" text="キット" sourceHash="708d8cde3abc020c" />
+		<entry key="Enum.ModuleKind.RHI" text="RHI バックエンド" sourceHash="46dd3ed1d542d6e3" />
 		<entry key="Enum.MountGait.Canter" text="キャンター" sourceHash="8ddeb8be59f30f00" />
 		<entry key="Enum.MountGait.Gallop" text="ギャロップ" sourceHash="5080657618a7ac4a" />
 		<entry key="Enum.MountGait.Idle" text="停止" sourceHash="989261d5eefc4735" />
 		<entry key="Enum.MountGait.Trot" text="トロット" sourceHash="85c8a4fb52a15fd0" />
 		<entry key="Enum.MountGait.Walk" text="常歩" sourceHash="8904bd022d8e7e10" />
+		<entry key="Enum.RenderViewMode.Depth" text="深さ" sourceHash="3231d0dc6fe30d4a" />
+		<entry key="Enum.RenderViewMode.LODFadeCode" text="LOD フェードコード" sourceHash="e3471516cca1f937" />
+		<entry key="Enum.RenderViewMode.LODLevel" text="LOD レベル" sourceHash="97d43934e8aeb89e" />
+		<entry key="Enum.RenderViewMode.LightComplexity" text="ライトの複雑さ" sourceHash="85d63f586b24a321" />
+		<entry key="Enum.RenderViewMode.LightingOnly" text="ライティングのみ" sourceHash="8cfe0acaf21281c5" />
+		<entry key="Enum.RenderViewMode.Lit" text="ライティング" sourceHash="24ec9419b87f1a96" />
+		<entry key="Enum.RenderViewMode.MarkerSlots" text="マーカースロット" sourceHash="9eb1b3c90566c0b6" />
+		<entry key="Enum.RenderViewMode.Metallic" text="メタリック" sourceHash="dfe7fef1566d1aa8" />
+		<entry key="Enum.RenderViewMode.Mipmaps" text="ミップマップ" sourceHash="afe2a32db0622b02" />
+		<entry key="Enum.RenderViewMode.Normals" text="法線" sourceHash="c294e89a3657cf13" />
+		<entry key="Enum.RenderViewMode.Overdraw" text="オーバードロー" sourceHash="a88c71117100df4d" />
+		<entry key="Enum.RenderViewMode.Roughness" text="ラフネス" sourceHash="dea02d9fafe208b5" />
+		<entry key="Enum.RenderViewMode.ShadedWireframe"
+		       text="シェーディング + ワイヤーフレーム"
+		       sourceHash="eedf8d2e1a0c0f80" />
+		<entry key="Enum.RenderViewMode.ShadingPath" text="シェーディングパス" sourceHash="42c1cd79e1cd0620" />
+		<entry key="Enum.RenderViewMode.Unlit" text="ライティングなし" sourceHash="2435a2b51ac7281f" />
+		<entry key="Enum.RenderViewMode.Wireframe" text="ワイヤーフレーム" sourceHash="96f013195da95865" />
+		<entry key="Enum.SequenceCameraSignalKind.CinematicBegin" text="ブレンドイン" sourceHash="32e8d27078f977a7" />
+		<entry key="Enum.SequenceCameraSignalKind.CinematicEnd" text="ブレンドアウト" sourceHash="b0c4581daeca75ac" />
+		<entry key="Enum.SequenceCameraSignalKind.CutBegin" text="カット" sourceHash="f5b9f7190cc182e3" />
+		<entry key="Enum.SequenceCameraSignalKind.CutPrewarm" text="待機ビュー" sourceHash="af29d929d5327b73" />
+		<entry key="Enum.SequenceCameraSignalKind.PlaybackEnd" text="再生終了" sourceHash="99639487ced1e979" />
+		<entry key="Enum.SequenceCameraSignalKind.Shake" text="シェイク" sourceHash="6ddba2493a836a55" />
+		<entry key="Enum.SequenceItemField.Clip" text="クリップ" sourceHash="3e092e9d1ee2c5bb" />
+		<entry key="Enum.SequenceItemField.Clip.Tooltip"
+		       text="区間の間、バインドしたオブジェクトのアニメーションに重ねてブレンドするアニメーションクリップです。リソース ID を入力するか、コンテンツブラウザーからドロップしてください。"
+		       sourceHash="6f17aa73e43916d3" />
+		<entry key="Enum.SequenceItemField.Prefab" text="プレハブ" sourceHash="a2d5fac94c77c683" />
+		<entry key="Enum.SequenceItemField.Prefab.Tooltip"
+		       text="この区間にスポーンするプレハブです。リソース ID を入力するか、コンテンツブラウザーからドロップしてください。"
+		       sourceHash="96f837eff09a3e8a" />
+		<entry key="Enum.SequenceItemField.Preset" text="プリセット" sourceHash="57ce5bc9b2b4287e" />
+		<entry key="Enum.SequenceItemField.Preset.Tooltip"
+		       text="対象オブジェクトが着る外見プリセットの ID です。"
+		       sourceHash="8925b878bba0302e" />
+		<entry key="Enum.SequenceItemField.Scenario" text="シナリオ" sourceHash="8a0834f3db621caf" />
+		<entry key="Enum.SequenceItemField.Scenario.Tooltip"
+		       text="開始フレームを過ぎたときに再生するシナリオです。リソース ID を入力するか、コンテンツブラウザーからドロップしてください。"
+		       sourceHash="4698e99a85e6a8d3" />
+		<entry key="Enum.SequenceItemField.Sound" text="サウンド" sourceHash="2593d0c70a1c5074" />
+		<entry key="Enum.SequenceItemField.Sound.Tooltip"
+		       text="開始フレームを過ぎたときに送り、区間が終わると止めるオーディオイベントです。"
+		       sourceHash="86fa2343e0131e5e" />
+		<entry key="Enum.SequenceItemField.Text" text="テキスト" sourceHash="2492f5fb1b05b45e" />
+		<entry key="Enum.SequenceItemField.Text.Tooltip"
+		       text="区間の間に表示する字幕行のローカライズキー(Namespace.Key)です。"
+		       sourceHash="46adf64e038e3eed" />
 		<entry key="Enum.ServerState.Draining" text="退出中" sourceHash="445341bdde0ebac7" />
 		<entry key="Enum.ServerState.Maintenance" text="メンテナンス中" sourceHash="9e7f28b2e900e4a0" />
 		<entry key="Enum.ServerState.Open" text="受付中" sourceHash="f84f97b4633670e9" />

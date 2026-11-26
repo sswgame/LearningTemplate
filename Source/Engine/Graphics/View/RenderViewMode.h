@@ -23,49 +23,49 @@ namespace sw
     ENUM()
     enum class RenderViewMode : uint8
     {
-        Lit = 0,      ///< 조명과 그림자를 모두 계산한 기본 화면
-        Unlit,        ///< 알베도만 보인다. 조명 항이 셰이더에서 컴파일 아웃된다.
-        Wireframe,    ///< 삼각형 외곽선만 보인다(FillMode::Wireframe).
-        Normals,      ///< 월드 노멀을 색으로 보인다(0.5 + 0.5 n).
-        Depth,        ///< 카메라에서의 거리(뷰 공간 깊이)를 보이며 `kViewModeDepthRange` 에서 흰색이 된다.
-        Overdraw,     ///< 겹쳐 그린 횟수를 보인다. 단색을 깊이 쓰기 없이 더한다(유니티 Overdraw).
-        LightingOnly, ///< 알베도를 회색 하나로 바꾸고 조명만 보인다(언리얼 Lighting Only). 빛 · 그림자 배치를 텍스처 없이 본다.
-        Roughness,    ///< 표면의 거칠기를 회색으로 보인다(언리얼 Buffer Visualization Roughness). PBR 칸이 없는 셰이더는 자기 정의값(셰이더의 kSurfaceRoughness)을 보인다.
-        Metallic,     ///< 표면의 금속도를 회색으로 보인다(언리얼 Buffer Visualization Metallic). PBR 칸이 없는 셰이더는 자기 정의값(셰이더의 kSurfaceMetallic)을 보인다.
-        Mipmaps,      ///< 머티리얼 텍스처를 읽는 밉 단계를 색으로 보인다(유니티 Scene 뷰 Mipmaps). 확대는 파랑, 밉 0 초록, 1 노랑, 2 주황, 3 이상 빨강.
+        Lit          ENUMERATOR( DisplayName = "Lit" ) = 0,       ///< 조명과 그림자를 모두 계산한 기본 화면
+        Unlit        ENUMERATOR( DisplayName = "Unlit" ),         ///< 알베도만 보인다. 조명 항이 셰이더에서 컴파일 아웃된다.
+        Wireframe    ENUMERATOR( DisplayName = "Wireframe" ),     ///< 삼각형 외곽선만 보인다(FillMode::Wireframe).
+        Normals      ENUMERATOR( DisplayName = "Normals" ),       ///< 월드 노멀을 색으로 보인다(0.5 + 0.5 n).
+        Depth        ENUMERATOR( DisplayName = "Depth" ),         ///< 카메라에서의 거리(뷰 공간 깊이)를 보이며 `kViewModeDepthRange` 에서 흰색이 된다.
+        Overdraw     ENUMERATOR( DisplayName = "Overdraw" ),      ///< 겹쳐 그린 횟수를 보인다. 단색을 깊이 쓰기 없이 더한다(유니티 Overdraw).
+        LightingOnly ENUMERATOR( DisplayName = "Lighting Only" ), ///< 알베도를 회색 하나로 바꾸고 조명만 보인다(언리얼 Lighting Only). 빛 · 그림자 배치를 텍스처 없이 본다.
+        Roughness    ENUMERATOR( DisplayName = "Roughness" ),     ///< 표면의 거칠기를 회색으로 보인다(언리얼 Buffer Visualization Roughness). PBR 칸이 없는 셰이더는 자기 정의값(셰이더의 kSurfaceRoughness)을 보인다.
+        Metallic     ENUMERATOR( DisplayName = "Metallic" ),      ///< 표면의 금속도를 회색으로 보인다(언리얼 Buffer Visualization Metallic). PBR 칸이 없는 셰이더는 자기 정의값(셰이더의 kSurfaceMetallic)을 보인다.
+        Mipmaps      ENUMERATOR( DisplayName = "Mipmaps" ),       ///< 머티리얼 텍스처를 읽는 밉 단계를 색으로 보인다(유니티 Scene 뷰 Mipmaps). 확대는 파랑, 밉 0 초록, 1 노랑, 2 주황, 3 이상 빨강.
         /**
          * @brief 픽셀마다 조명 식이 도는 라이트 수(라이트 그리드의 전역 구간 + 그 클러스터 목록)를 색 띠로 보인다(언리얼 Light Complexity, 유니티 Forward+ 디버그 보기).
          * @details 0 은 검정, 그 뒤로 파랑 · 초록 · 노랑 · 빨강(binding.hlsli kViewModeLightComplexityMax 이상)이다. 그리드가 없으면(gv_lightCulling=None) 목록 전체의 수다.
          *          G버퍼가 표면에서 셈하므로 디퍼드 조명 패스에 보기 모드 변형이 필요 없다.
          */
-        LightComplexity,
+        LightComplexity ENUMERATOR( DisplayName = "Light Complexity" ),
         /**
          * @brief Lit 으로 그린 위에 같은 배치의 삼각형 외곽선을 단색으로 겹친다(언리얼 Lighting + Wireframe, 유니티 Shaded Wireframe).
          * @details 지오메트리 패스가 배치를 두 번 그린다 — Lit PSO 로 한 번, 이 모드의 PSO(와이어프레임 채우기 · 깊이 바이어스 · 깊이 쓰기 끔 · 단색 define)로 한 번.
          *          G버퍼에는 선을 셰이딩 모델 Unlit 으로 적어 디퍼드 조명 패스가 그대로 낸다.
          */
-        ShadedWireframe,
+        ShadedWireframe ENUMERATOR( DisplayName = "Shaded Wireframe" ),
         /**
          * @brief 그리는 인스턴스의 LOD 단계를 색으로 보인다(언리얼 Visualize LOD Coloration, 유니티 Scene 뷰 LOD 색). 0 초록 · 1 연두 · 2 노랑 · 3 주황 · 4 빨강 · 5 보라 · 6 파랑 · 7 청록이다.
          * @details 컬링이 가시 목록 항목에 쓴 단계 번호(`gpu_cull.hlsl`)를 정점 단계가 픽셀로 넘긴다(binding.hlsli `SW_LODDEBUG_*`). 머티리얼 셰이더 경로의 메시만 읽고 그 밖의 셰이더는 회색이다.
          */
-        LODLevel,
+        LODLevel ENUMERATOR( DisplayName = "LOD Level" ),
         /**
          * @brief LOD 크로스페이드의 디더 코드를 색으로 보인다 — 전환 없음은 어두운 회색, 새 단계는 초록 · 직전 단계는 빨강이고 진행이 클수록 밝다(상보 디더라 두 색이 겹치지도 비지도 않으면 맞다).
          * @details 가시 항목의 위쪽 5비트(`Appearance::computeLODFadeAppearance` 가 읽는 값)를 보인다. 읽는 경로는 `LODLevel` 과 같다.
          */
-        LODFadeCode,
+        LODFadeCode ENUMERATOR( DisplayName = "LOD Fade Code" ),
         /**
          * @brief 화면 마커(`gv_uiMarkerGpuProjection`)가 GPUScene 인스턴스 칸을 가졌는지를 마커 위젯의 색조로 보인다 — 칸이 있으면 초록, 없으면(월드 점을 게임 스레드가 보낸다) 빨강, 칸이 인스턴스 버퍼 밖이면 자홍이다.
          * @details 장면 지오메트리는 Lit 그대로 그린다(셰이더 define 이 없다). 마커 투영 컴퓨트가 앵커의 네 번째 값에 코드를 쓰고(canvas_marker.hlsl) 캔버스 셰이더가 그 위젯을 칠한다(canvas.hlsl). 주 출력 모드만 본다.
          */
-        MarkerSlots,
+        MarkerSlots ENUMERATOR( DisplayName = "Marker Slots" ),
         /**
          * @brief 표면이 어느 셰이딩 경로로 그려졌는지 색으로 보인다 — 디퍼드 G버퍼 조명(파랑) · G버퍼 조명 없음(청회색) · 포워드 전용(주황, `MATERIAL_FORWARD_ONLY`) ·
          *        반투명(보라) · 포워드 파이프라인(초록) · 포워드 조명 없음(짙은 초록). 언리얼 Buffer Visualization 의 Shading Model 과 같은 자리다.
          * @details 디퍼드에서 기본 PBR 머티리얼이 실수로 포워드 전용으로 분류되면(디퍼드 · 타일 라이트 이득을 잃는다) 주황으로 드러난다. 색은 binding_output.hlsli `ViewMode::computeShadingPathColor`.
          */
-        ShadingPath,
+        ShadingPath ENUMERATOR( DisplayName = "Shading Path" ),
 
         Count
     };

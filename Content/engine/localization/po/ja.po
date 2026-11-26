@@ -2286,6 +2286,76 @@ msgctxt "Enum.ChatResult.TooManyChannels"
 msgid "Too many channels"
 msgstr "チャンネルが多すぎます"
 
+#: Source/Engine/Physics/Collision/CollisionLayers.h
+msgctxt "Enum.CollisionResponse.Block"
+msgid "Block"
+msgstr "ブロック"
+
+#: Source/Engine/Physics/Collision/CollisionLayers.h
+msgctxt "Enum.CollisionResponse.Ignore"
+msgid "Ignore"
+msgstr "無視"
+
+#: Source/Engine/Physics/Collision/CollisionLayers.h
+msgctxt "Enum.CollisionResponse.Overlap"
+msgid "Overlap"
+msgstr "オーバーラップ"
+
+#: Source/Engine/Renderer/Frame/PostProcess/FrameFog.h
+msgctxt "Enum.FogVolumeState.Active"
+msgid "Volumetric fog is on: the light-scattering volume is drawn in the main view."
+msgstr "ボリュメトリックフォグがオンです。メインビューに光散乱ボリュームを描画します。"
+
+#: Source/Engine/Renderer/Frame/PostProcess/FrameFog.h
+msgctxt "Enum.FogVolumeState.BufferFailed"
+msgid "Volumetric fog is on but its buffers could not be created, so plain fog is drawn. See the log."
+msgstr "ボリュメトリックフォグはオンですがバッファーを作成できなかったため、通常のフォグを描画します。ログを確認してください。"
+
+#: Source/Engine/Renderer/Frame/PostProcess/FrameFog.h
+msgctxt "Enum.FogVolumeState.Disabled"
+msgid "Volumetric fog is off in the fog settings, so plain fog is drawn. Turn on Volumetric in the Fog component."
+msgstr "フォグ設定でボリュメトリックフォグがオフのため、通常のフォグを描画します。Fog コンポーネントで Volumetric をオンにしてください。"
+
+#: Source/Engine/Renderer/Frame/PostProcess/FrameFog.h
+msgctxt "Enum.FogVolumeState.MissingPipeline"
+msgid "Volumetric fog is on but its compute shader is missing, so plain fog is drawn. Check the shader cook log."
+msgstr "ボリュメトリックフォグはオンですがコンピュートシェーダーがないため、通常のフォグを描画します。シェーダーのクックログを確認してください。"
+
+#: Source/Engine/Renderer/Frame/PostProcess/FrameFog.h
+msgctxt "Enum.FogVolumeState.NoDevice"
+msgid "The renderer has no device this frame, so nothing is drawn."
+msgstr "このフレームはレンダラーにデバイスがないため、何も描画しません。"
+
+#: Source/Engine/Renderer/Frame/PostProcess/FrameFog.h
+msgctxt "Enum.FogVolumeState.NoFog"
+msgid "No fog in this scene. Add a Fog component to see volumetric fog."
+msgstr "このシーンにはフォグがありません。ボリュメトリックフォグを見るには Fog コンポーネントを追加してください。"
+
+#: Source/Engine/Renderer/Frame/PostProcess/FrameFog.h
+msgctxt "Enum.FogVolumeState.Underwater"
+msgid "The camera is under water. Underwater fog has no volume."
+msgstr "カメラが水中にあります。水中フォグにはボリュームがありません。"
+
+#: Source/Engine/Input/InputGlyphStyle.h
+msgctxt "Enum.InputGlyphStyle.GamepadPlayStation"
+msgid "PlayStation Gamepad"
+msgstr "PlayStation ゲームパッド"
+
+#: Source/Engine/Input/InputGlyphStyle.h
+msgctxt "Enum.InputGlyphStyle.GamepadSwitch"
+msgid "Nintendo Switch Gamepad"
+msgstr "Nintendo Switch ゲームパッド"
+
+#: Source/Engine/Input/InputGlyphStyle.h
+msgctxt "Enum.InputGlyphStyle.GamepadXbox"
+msgid "Xbox Gamepad"
+msgstr "Xbox ゲームパッド"
+
+#: Source/Engine/Input/InputGlyphStyle.h
+msgctxt "Enum.InputGlyphStyle.KeyboardMouse"
+msgid "Keyboard & Mouse"
+msgstr "キーボードとマウス"
+
 #: Source/GameFramework/Runtime/Gameplay/Inventory/InventoryCommand.h
 msgctxt "Enum.InventoryCommandResult.EmptySlot"
 msgid "The slot is empty."
@@ -2321,6 +2391,36 @@ msgctxt "Enum.InventoryCommandResult.Refused"
 msgid "You cannot equip this there."
 msgstr "そこには装備できません。"
 
+#: Source/Engine/Module/ModuleCatalog.h
+msgctxt "Enum.ModuleKind.Editor"
+msgid "Editor"
+msgstr "エディター"
+
+#: Source/Engine/Module/ModuleCatalog.h
+msgctxt "Enum.ModuleKind.EditorExtension"
+msgid "Editor extensions"
+msgstr "エディター拡張"
+
+#: Source/Engine/Module/ModuleCatalog.h
+msgctxt "Enum.ModuleKind.Game"
+msgid "Game"
+msgstr "ゲーム"
+
+#: Source/Engine/Module/ModuleCatalog.h
+msgctxt "Enum.ModuleKind.GameFramework"
+msgid "GameFramework"
+msgstr "GameFramework"
+
+#: Source/Engine/Module/ModuleCatalog.h
+msgctxt "Enum.ModuleKind.Kit"
+msgid "Kits"
+msgstr "キット"
+
+#: Source/Engine/Module/ModuleCatalog.h
+msgctxt "Enum.ModuleKind.RHI"
+msgid "RHI backends"
+msgstr "RHI バックエンド"
+
 #: Source/GameFramework/Runtime/Gameplay/Vehicle/MountMovementComponent.h
 msgctxt "Enum.MountGait.Canter"
 msgid "Canter"
@@ -2345,6 +2445,176 @@ msgstr "トロット"
 msgctxt "Enum.MountGait.Walk"
 msgid "Walk"
 msgstr "常歩"
+
+#: Source/Engine/Graphics/View/RenderViewMode.h
+msgctxt "Enum.RenderViewMode.Depth"
+msgid "Depth"
+msgstr "深さ"
+
+#: Source/Engine/Graphics/View/RenderViewMode.h
+msgctxt "Enum.RenderViewMode.LODFadeCode"
+msgid "LOD Fade Code"
+msgstr "LOD フェードコード"
+
+#: Source/Engine/Graphics/View/RenderViewMode.h
+msgctxt "Enum.RenderViewMode.LODLevel"
+msgid "LOD Level"
+msgstr "LOD レベル"
+
+#: Source/Engine/Graphics/View/RenderViewMode.h
+msgctxt "Enum.RenderViewMode.LightComplexity"
+msgid "Light Complexity"
+msgstr "ライトの複雑さ"
+
+#: Source/Engine/Graphics/View/RenderViewMode.h
+msgctxt "Enum.RenderViewMode.LightingOnly"
+msgid "Lighting Only"
+msgstr "ライティングのみ"
+
+#: Source/Engine/Graphics/View/RenderViewMode.h
+msgctxt "Enum.RenderViewMode.Lit"
+msgid "Lit"
+msgstr "ライティング"
+
+#: Source/Engine/Graphics/View/RenderViewMode.h
+msgctxt "Enum.RenderViewMode.MarkerSlots"
+msgid "Marker Slots"
+msgstr "マーカースロット"
+
+#: Source/Engine/Graphics/View/RenderViewMode.h
+msgctxt "Enum.RenderViewMode.Metallic"
+msgid "Metallic"
+msgstr "メタリック"
+
+#: Source/Engine/Graphics/View/RenderViewMode.h
+msgctxt "Enum.RenderViewMode.Mipmaps"
+msgid "Mipmaps"
+msgstr "ミップマップ"
+
+#: Source/Engine/Graphics/View/RenderViewMode.h
+msgctxt "Enum.RenderViewMode.Normals"
+msgid "Normals"
+msgstr "法線"
+
+#: Source/Engine/Graphics/View/RenderViewMode.h
+msgctxt "Enum.RenderViewMode.Overdraw"
+msgid "Overdraw"
+msgstr "オーバードロー"
+
+#: Source/Engine/Graphics/View/RenderViewMode.h
+msgctxt "Enum.RenderViewMode.Roughness"
+msgid "Roughness"
+msgstr "ラフネス"
+
+#: Source/Engine/Graphics/View/RenderViewMode.h
+msgctxt "Enum.RenderViewMode.ShadedWireframe"
+msgid "Shaded Wireframe"
+msgstr "シェーディング + ワイヤーフレーム"
+
+#: Source/Engine/Graphics/View/RenderViewMode.h
+msgctxt "Enum.RenderViewMode.ShadingPath"
+msgid "Shading Path"
+msgstr "シェーディングパス"
+
+#: Source/Engine/Graphics/View/RenderViewMode.h
+msgctxt "Enum.RenderViewMode.Unlit"
+msgid "Unlit"
+msgstr "ライティングなし"
+
+#: Source/Engine/Graphics/View/RenderViewMode.h
+msgctxt "Enum.RenderViewMode.Wireframe"
+msgid "Wireframe"
+msgstr "ワイヤーフレーム"
+
+#: Source/Engine/Sequencer/SequenceTimelineUtil.h
+msgctxt "Enum.SequenceCameraSignalKind.CinematicBegin"
+msgid "blend in"
+msgstr "ブレンドイン"
+
+#: Source/Engine/Sequencer/SequenceTimelineUtil.h
+msgctxt "Enum.SequenceCameraSignalKind.CinematicEnd"
+msgid "blend out"
+msgstr "ブレンドアウト"
+
+#: Source/Engine/Sequencer/SequenceTimelineUtil.h
+msgctxt "Enum.SequenceCameraSignalKind.CutBegin"
+msgid "cut"
+msgstr "カット"
+
+#: Source/Engine/Sequencer/SequenceTimelineUtil.h
+msgctxt "Enum.SequenceCameraSignalKind.CutPrewarm"
+msgid "standby view"
+msgstr "待機ビュー"
+
+#: Source/Engine/Sequencer/SequenceTimelineUtil.h
+msgctxt "Enum.SequenceCameraSignalKind.PlaybackEnd"
+msgid "playback end"
+msgstr "再生終了"
+
+#: Source/Engine/Sequencer/SequenceTimelineUtil.h
+msgctxt "Enum.SequenceCameraSignalKind.Shake"
+msgid "shake"
+msgstr "シェイク"
+
+#: Source/Engine/Sequencer/SequenceAsset.h
+msgctxt "Enum.SequenceItemField.Clip"
+msgid "Clip"
+msgstr "クリップ"
+
+#: Source/Engine/Sequencer/SequenceAsset.h
+msgctxt "Enum.SequenceItemField.Clip.Tooltip"
+msgid "Animation clip blended over the bound object's animation during the span. Type a resource id or drop one from the Content Browser."
+msgstr "区間の間、バインドしたオブジェクトのアニメーションに重ねてブレンドするアニメーションクリップです。リソース ID を入力するか、コンテンツブラウザーからドロップしてください。"
+
+#: Source/Engine/Sequencer/SequenceAsset.h
+msgctxt "Enum.SequenceItemField.Prefab"
+msgid "Prefab"
+msgstr "プレハブ"
+
+#: Source/Engine/Sequencer/SequenceAsset.h
+msgctxt "Enum.SequenceItemField.Prefab.Tooltip"
+msgid "Prefab spawned for this span. Type its resource id or drop it from the content browser."
+msgstr "この区間にスポーンするプレハブです。リソース ID を入力するか、コンテンツブラウザーからドロップしてください。"
+
+#: Source/Engine/Sequencer/SequenceAsset.h
+msgctxt "Enum.SequenceItemField.Preset"
+msgid "Preset"
+msgstr "プリセット"
+
+#: Source/Engine/Sequencer/SequenceAsset.h
+msgctxt "Enum.SequenceItemField.Preset.Tooltip"
+msgid "Id of the appearance preset the target object wears."
+msgstr "対象オブジェクトが着る外見プリセットの ID です。"
+
+#: Source/Engine/Sequencer/SequenceAsset.h
+msgctxt "Enum.SequenceItemField.Scenario"
+msgid "Scenario"
+msgstr "シナリオ"
+
+#: Source/Engine/Sequencer/SequenceAsset.h
+msgctxt "Enum.SequenceItemField.Scenario.Tooltip"
+msgid "Scenario played when the start frame is crossed. Type its resource id or drop it from the content browser."
+msgstr "開始フレームを過ぎたときに再生するシナリオです。リソース ID を入力するか、コンテンツブラウザーからドロップしてください。"
+
+#: Source/Engine/Sequencer/SequenceAsset.h
+msgctxt "Enum.SequenceItemField.Sound"
+msgid "Sound"
+msgstr "サウンド"
+
+#: Source/Engine/Sequencer/SequenceAsset.h
+msgctxt "Enum.SequenceItemField.Sound.Tooltip"
+msgid "Audio event posted when the start frame is crossed and stopped when the span ends."
+msgstr "開始フレームを過ぎたときに送り、区間が終わると止めるオーディオイベントです。"
+
+#: Source/Engine/Sequencer/SequenceAsset.h
+msgctxt "Enum.SequenceItemField.Text"
+msgid "Text"
+msgstr "テキスト"
+
+#: Source/Engine/Sequencer/SequenceAsset.h
+msgctxt "Enum.SequenceItemField.Text.Tooltip"
+msgid "Localization key (Namespace.Key) of the subtitle line shown for the span."
+msgstr "区間の間に表示する字幕行のローカライズキー(Namespace.Key)です。"
 
 #: Source/GameFramework/Runtime/Online/Directory/ServerRecord.h
 msgctxt "Enum.ServerState.Draining"

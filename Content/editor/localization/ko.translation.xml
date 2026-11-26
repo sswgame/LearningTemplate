@@ -1429,22 +1429,6 @@
 		<entry key="EdVerb.Save" text="저장" sourceHash="33f85f24c0f5f008" />
 		<entry key="EdVerb.Stop" text="정지" sourceHash="d9ad53251f2330a5" />
 		<entry key="EdVerb.Undo" text="실행 취소" sourceHash="8f4be9f086eb530f" />
-		<entry key="EdViewMode.Depth" text="깊이" sourceHash="3231d0dc6fe30d4a" />
-		<entry key="EdViewMode.LODFadeCode" text="LOD 페이드 코드" sourceHash="e3471516cca1f937" />
-		<entry key="EdViewMode.LODLevel" text="LOD 단계" sourceHash="97d43934e8aeb89e" />
-		<entry key="EdViewMode.LightComplexity" text="조명 복잡도" sourceHash="85d63f586b24a321" />
-		<entry key="EdViewMode.LightingOnly" text="조명만" sourceHash="8cfe0acaf21281c5" />
-		<entry key="EdViewMode.Lit" text="조명" sourceHash="24ec9419b87f1a96" />
-		<entry key="EdViewMode.MarkerSlots" text="표지 칸" sourceHash="9eb1b3c90566c0b6" />
-		<entry key="EdViewMode.Metallic" text="금속성" sourceHash="dfe7fef1566d1aa8" />
-		<entry key="EdViewMode.Mipmaps" text="밉맵" sourceHash="afe2a32db0622b02" />
-		<entry key="EdViewMode.Normals" text="노멀" sourceHash="c294e89a3657cf13" />
-		<entry key="EdViewMode.Overdraw" text="오버드로" sourceHash="a88c71117100df4d" />
-		<entry key="EdViewMode.Roughness" text="거칠기" sourceHash="dea02d9fafe208b5" />
-		<entry key="EdViewMode.ShadedWireframe" text="셰이드 와이어프레임" sourceHash="eedf8d2e1a0c0f80" />
-		<entry key="EdViewMode.ShadingPath" text="셰이딩 경로" sourceHash="42c1cd79e1cd0620" />
-		<entry key="EdViewMode.Unlit" text="조명 없음" sourceHash="2435a2b51ac7281f" />
-		<entry key="EdViewMode.Wireframe" text="와이어프레임" sourceHash="96f013195da95865" />
 		<entry key="EdVisualizer.BillboardLabel" text="아이콘" sourceHash="b321dddd2d6e46f9" />
 		<entry key="EdVisualizer.BillboardTip"
 		       text="빛 · 카메라 · 오디오처럼 메시가 없는 컴포넌트를 아이콘으로 표시하고 눌러 고르게 합니다"
@@ -1865,9 +1849,6 @@
 		       sourceHash="5b15694f18c528ae" />
 		<entry key="EditorCatalog.Scanning" text="리소스를 훑는 중..." sourceHash="4841a1ca2af64c10" />
 		<entry key="EditorCatalog.UseInherited" text="물려받기" sourceHash="ec2c159686f468e6" />
-		<entry key="EditorCollision.Block" text="막기" sourceHash="2b2ae20d26f78ac2" />
-		<entry key="EditorCollision.Ignore" text="무시" sourceHash="917734d83f35efa3" />
-		<entry key="EditorCollision.Overlap" text="겹침" sourceHash="7ed143cddb1bffa8" />
 		<entry key="EditorCollision.PairsTitle" text="프로필 사이의 결과 응답" sourceHash="89d1a0b9b518702b" />
 		<entry key="EditorCollision.Profile" text="프로필" sourceHash="b061ff5a347a296e" />
 		<entry key="EditorCollision.ResponsesTip"
@@ -3104,10 +3085,6 @@
 		<entry key="EditorSequencer.CinematicNoteTip"
 		       text="시퀀스와 함께 저장되는 자유 메모입니다. 재생에는 영향을 주지 않습니다."
 		       sourceHash="10888390b009288d" />
-		<entry key="EditorSequencer.ClipLabel" text="클립" sourceHash="3e092e9d1ee2c5bb" />
-		<entry key="EditorSequencer.ClipTip"
-		       text="구간 동안 바인딩된 오브젝트의 애니메이션 위에 섞을 애니메이션 클립입니다. 리소스 id 를 치거나 콘텐츠 브라우저에서 끌어다 놓습니다."
-		       sourceHash="6f17aa73e43916d3" />
 		<entry key="EditorSequencer.CopyItem" text="항목 복사" sourceHash="c07f71f8f7da94a3" />
 		<entry key="EditorSequencer.CopyItemTip"
 		       text="고른 구간 항목을 복사합니다. 붙여 넣으면 현재 프레임에 놓입니다."
@@ -3205,12 +3182,6 @@
 		<entry key="EditorSequencer.PlayTip"
 		       text="현재 프레임부터 뷰포트에서 시퀀스를 재생하고, 끝에 닿으면 처음부터 반복합니다."
 		       sourceHash="9cc849680d919b0b" />
-		<entry key="EditorSequencer.PrefabTip"
-		       text="이 구간 동안 스폰할 프리팹입니다. 리소스 id 를 치거나 콘텐츠 브라우저에서 끌어다 놓습니다."
-		       sourceHash="96f837eff09a3e8a" />
-		<entry key="EditorSequencer.PresetTip"
-		       text="대상 오브젝트가 입을 외형 프리셋의 id 입니다."
-		       sourceHash="8925b878bba0302e" />
 		<entry key="EditorSequencer.PreviousKeyTip" text="앞 키로" sourceHash="99a63e0a91e9cd8b" />
 		<entry key="EditorSequencer.PropertyLabel" text="프로퍼티" sourceHash="0d5b7fee0311db68" />
 		<entry key="EditorSequencer.PropertyPathTip"
@@ -3232,10 +3203,6 @@
 		<entry key="EditorSequencer.SaveTip"
 		       text="시퀀스를 포커스된 .seq 파일에 씁니다."
 		       sourceHash="f8231dd1b7e0f570" />
-		<entry key="EditorSequencer.ScenarioLabel" text="시나리오" sourceHash="8a0834f3db621caf" />
-		<entry key="EditorSequencer.ScenarioTip"
-		       text="시작 프레임을 지날 때 재생할 시나리오입니다. 리소스 id 를 치거나 콘텐츠 브라우저에서 끌어다 놓습니다."
-		       sourceHash="4698e99a85e6a8d3" />
 		<entry key="EditorSequencer.ScrubTip"
 		       text="끌어서 현재 프레임을 옮깁니다. 뷰포트가 따라오므로 시퀀스의 어느 순간이든 확인할 수 있습니다."
 		       sourceHash="0de61ae871e9fc8a" />
@@ -3246,10 +3213,6 @@
 		<entry key="EditorSequencer.ShotEndColumn" text="끝" sourceHash="d8f923198e0c5c6a" />
 		<entry key="EditorSequencer.ShotLengthColumn" text="프레임" sourceHash="11a25b24cd33bb4f" />
 		<entry key="EditorSequencer.ShotStartColumn" text="시작" sourceHash="ae1c7f13b7c0c47f" />
-		<entry key="EditorSequencer.SoundLabel" text="소리" sourceHash="2593d0c70a1c5074" />
-		<entry key="EditorSequencer.SoundTip"
-		       text="시작 프레임을 지날 때 보내고 구간이 끝나면 멈추는 오디오 이벤트입니다."
-		       sourceHash="86fa2343e0131e5e" />
 		<entry key="EditorSequencer.SpawnBindingTip"
 		       text="스폰한 오브젝트가 채울 바인딩입니다. 오브젝트 이름은 바인딩 이름입니다."
 		       sourceHash="da3f71298a513c5f" />
@@ -3264,10 +3227,6 @@
 		<entry key="EditorSequencer.TargetNotFound"
 		       text="대상 오브젝트를 찾을 수 없습니다"
 		       sourceHash="f17bc32821b93da2" />
-		<entry key="EditorSequencer.TextLabel" text="글" sourceHash="2492f5fb1b05b45e" />
-		<entry key="EditorSequencer.TextTip"
-		       text="구간 동안 보일 자막 줄의 현지화 키(Namespace.Key)입니다."
-		       sourceHash="46adf64e038e3eed" />
 		<entry key="EditorSequencer.TrackNameLabel" text="이름" sourceHash="ef49aec68fd1dc66" />
 		<entry key="EditorSequencer.TrackTargetLabel" text="대상" sourceHash="ff5bb7742c2896c8" />
 		<entry key="EditorSequencer.UnboundBinding" text="바인딩 안 됨" sourceHash="e7a38a6492965c7a" />
@@ -3859,27 +3818,6 @@
 		<entry key="EditorVolumetricFog.SliceTip"
 		       text="단면 보기가 보일 거리 조각입니다. 클수록 카메라에서 멉니다."
 		       sourceHash="5a830432768bad06" />
-		<entry key="EditorVolumetricFog.StateActive"
-		       text="볼륨 안개가 켜졌습니다. 주 화면에 빛 산란 볼륨을 그립니다."
-		       sourceHash="ce64e124f44ddda8" />
-		<entry key="EditorVolumetricFog.StateBufferFailed"
-		       text="볼륨 안개를 켰지만 버퍼를 만들지 못해 평범한 안개를 그립니다. 로그를 보세요."
-		       sourceHash="bc22f1490b6b1fc9" />
-		<entry key="EditorVolumetricFog.StateDisabled"
-		       text="안개 설정에서 볼륨 안개가 꺼져 평범한 안개를 그립니다. Fog 컴포넌트에서 Volumetric 을 켜세요."
-		       sourceHash="9e22c297cb5e12ce" />
-		<entry key="EditorVolumetricFog.StateMissingPipeline"
-		       text="볼륨 안개를 켰지만 컴퓨트 셰이더가 없어 평범한 안개를 그립니다. 셰이더 쿠킹 로그를 보세요."
-		       sourceHash="4c162f8b67519ad9" />
-		<entry key="EditorVolumetricFog.StateNoDevice"
-		       text="이번 프레임에 렌더러의 디바이스가 없어 그리지 않습니다."
-		       sourceHash="baf721c36acd278c" />
-		<entry key="EditorVolumetricFog.StateNoFog"
-		       text="이 씬에 안개가 없습니다. 볼륨 안개를 보려면 Fog 컴포넌트를 더하세요."
-		       sourceHash="9ad3e9cbc8287fe0" />
-		<entry key="EditorVolumetricFog.StateUnderwater"
-		       text="카메라가 물속입니다. 물속 안개에는 볼륨이 없습니다."
-		       sourceHash="19a2cac2b1c44306" />
 		<entry key="EditorVolumetricFog.ViewCompare" text="비교" sourceHash="7c54f95c59141594" />
 		<entry key="EditorVolumetricFog.ViewNormal" text="보통" sourceHash="9ff3121d30f88d52" />
 		<entry key="EditorVolumetricFog.ViewScattering" text="산란 단면" sourceHash="0ea9db71da57c2c9" />

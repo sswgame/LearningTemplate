@@ -2286,6 +2286,76 @@ msgctxt "Enum.ChatResult.TooManyChannels"
 msgid "Too many channels"
 msgstr "채널이 너무 많습니다"
 
+#: Source/Engine/Physics/Collision/CollisionLayers.h
+msgctxt "Enum.CollisionResponse.Block"
+msgid "Block"
+msgstr "막기"
+
+#: Source/Engine/Physics/Collision/CollisionLayers.h
+msgctxt "Enum.CollisionResponse.Ignore"
+msgid "Ignore"
+msgstr "무시"
+
+#: Source/Engine/Physics/Collision/CollisionLayers.h
+msgctxt "Enum.CollisionResponse.Overlap"
+msgid "Overlap"
+msgstr "겹침"
+
+#: Source/Engine/Renderer/Frame/PostProcess/FrameFog.h
+msgctxt "Enum.FogVolumeState.Active"
+msgid "Volumetric fog is on: the light-scattering volume is drawn in the main view."
+msgstr "볼륨 안개가 켜졌습니다. 주 화면에 빛 산란 볼륨을 그립니다."
+
+#: Source/Engine/Renderer/Frame/PostProcess/FrameFog.h
+msgctxt "Enum.FogVolumeState.BufferFailed"
+msgid "Volumetric fog is on but its buffers could not be created, so plain fog is drawn. See the log."
+msgstr "볼륨 안개를 켰지만 버퍼를 만들지 못해 평범한 안개를 그립니다. 로그를 보세요."
+
+#: Source/Engine/Renderer/Frame/PostProcess/FrameFog.h
+msgctxt "Enum.FogVolumeState.Disabled"
+msgid "Volumetric fog is off in the fog settings, so plain fog is drawn. Turn on Volumetric in the Fog component."
+msgstr "안개 설정에서 볼륨 안개가 꺼져 평범한 안개를 그립니다. Fog 컴포넌트에서 Volumetric 을 켜세요."
+
+#: Source/Engine/Renderer/Frame/PostProcess/FrameFog.h
+msgctxt "Enum.FogVolumeState.MissingPipeline"
+msgid "Volumetric fog is on but its compute shader is missing, so plain fog is drawn. Check the shader cook log."
+msgstr "볼륨 안개를 켰지만 컴퓨트 셰이더가 없어 평범한 안개를 그립니다. 셰이더 쿠킹 로그를 보세요."
+
+#: Source/Engine/Renderer/Frame/PostProcess/FrameFog.h
+msgctxt "Enum.FogVolumeState.NoDevice"
+msgid "The renderer has no device this frame, so nothing is drawn."
+msgstr "이번 프레임에 렌더러의 디바이스가 없어 그리지 않습니다."
+
+#: Source/Engine/Renderer/Frame/PostProcess/FrameFog.h
+msgctxt "Enum.FogVolumeState.NoFog"
+msgid "No fog in this scene. Add a Fog component to see volumetric fog."
+msgstr "이 씬에 안개가 없습니다. 볼륨 안개를 보려면 Fog 컴포넌트를 더하세요."
+
+#: Source/Engine/Renderer/Frame/PostProcess/FrameFog.h
+msgctxt "Enum.FogVolumeState.Underwater"
+msgid "The camera is under water. Underwater fog has no volume."
+msgstr "카메라가 물속입니다. 물속 안개에는 볼륨이 없습니다."
+
+#: Source/Engine/Input/InputGlyphStyle.h
+msgctxt "Enum.InputGlyphStyle.GamepadPlayStation"
+msgid "PlayStation Gamepad"
+msgstr "PlayStation 게임패드"
+
+#: Source/Engine/Input/InputGlyphStyle.h
+msgctxt "Enum.InputGlyphStyle.GamepadSwitch"
+msgid "Nintendo Switch Gamepad"
+msgstr "Nintendo Switch 게임패드"
+
+#: Source/Engine/Input/InputGlyphStyle.h
+msgctxt "Enum.InputGlyphStyle.GamepadXbox"
+msgid "Xbox Gamepad"
+msgstr "Xbox 게임패드"
+
+#: Source/Engine/Input/InputGlyphStyle.h
+msgctxt "Enum.InputGlyphStyle.KeyboardMouse"
+msgid "Keyboard & Mouse"
+msgstr "키보드와 마우스"
+
 #: Source/GameFramework/Runtime/Gameplay/Inventory/InventoryCommand.h
 msgctxt "Enum.InventoryCommandResult.EmptySlot"
 msgid "The slot is empty."
@@ -2321,6 +2391,36 @@ msgctxt "Enum.InventoryCommandResult.Refused"
 msgid "You cannot equip this there."
 msgstr "그 자리에는 장착할 수 없습니다."
 
+#: Source/Engine/Module/ModuleCatalog.h
+msgctxt "Enum.ModuleKind.Editor"
+msgid "Editor"
+msgstr "에디터"
+
+#: Source/Engine/Module/ModuleCatalog.h
+msgctxt "Enum.ModuleKind.EditorExtension"
+msgid "Editor extensions"
+msgstr "에디터 확장"
+
+#: Source/Engine/Module/ModuleCatalog.h
+msgctxt "Enum.ModuleKind.Game"
+msgid "Game"
+msgstr "게임"
+
+#: Source/Engine/Module/ModuleCatalog.h
+msgctxt "Enum.ModuleKind.GameFramework"
+msgid "GameFramework"
+msgstr "GameFramework"
+
+#: Source/Engine/Module/ModuleCatalog.h
+msgctxt "Enum.ModuleKind.Kit"
+msgid "Kits"
+msgstr "키트"
+
+#: Source/Engine/Module/ModuleCatalog.h
+msgctxt "Enum.ModuleKind.RHI"
+msgid "RHI backends"
+msgstr "RHI 백엔드"
+
 #: Source/GameFramework/Runtime/Gameplay/Vehicle/MountMovementComponent.h
 msgctxt "Enum.MountGait.Canter"
 msgid "Canter"
@@ -2345,6 +2445,176 @@ msgstr "속보"
 msgctxt "Enum.MountGait.Walk"
 msgid "Walk"
 msgstr "평보"
+
+#: Source/Engine/Graphics/View/RenderViewMode.h
+msgctxt "Enum.RenderViewMode.Depth"
+msgid "Depth"
+msgstr "깊이"
+
+#: Source/Engine/Graphics/View/RenderViewMode.h
+msgctxt "Enum.RenderViewMode.LODFadeCode"
+msgid "LOD Fade Code"
+msgstr "LOD 페이드 코드"
+
+#: Source/Engine/Graphics/View/RenderViewMode.h
+msgctxt "Enum.RenderViewMode.LODLevel"
+msgid "LOD Level"
+msgstr "LOD 단계"
+
+#: Source/Engine/Graphics/View/RenderViewMode.h
+msgctxt "Enum.RenderViewMode.LightComplexity"
+msgid "Light Complexity"
+msgstr "조명 복잡도"
+
+#: Source/Engine/Graphics/View/RenderViewMode.h
+msgctxt "Enum.RenderViewMode.LightingOnly"
+msgid "Lighting Only"
+msgstr "조명만"
+
+#: Source/Engine/Graphics/View/RenderViewMode.h
+msgctxt "Enum.RenderViewMode.Lit"
+msgid "Lit"
+msgstr "조명"
+
+#: Source/Engine/Graphics/View/RenderViewMode.h
+msgctxt "Enum.RenderViewMode.MarkerSlots"
+msgid "Marker Slots"
+msgstr "표지 칸"
+
+#: Source/Engine/Graphics/View/RenderViewMode.h
+msgctxt "Enum.RenderViewMode.Metallic"
+msgid "Metallic"
+msgstr "금속성"
+
+#: Source/Engine/Graphics/View/RenderViewMode.h
+msgctxt "Enum.RenderViewMode.Mipmaps"
+msgid "Mipmaps"
+msgstr "밉맵"
+
+#: Source/Engine/Graphics/View/RenderViewMode.h
+msgctxt "Enum.RenderViewMode.Normals"
+msgid "Normals"
+msgstr "노멀"
+
+#: Source/Engine/Graphics/View/RenderViewMode.h
+msgctxt "Enum.RenderViewMode.Overdraw"
+msgid "Overdraw"
+msgstr "오버드로"
+
+#: Source/Engine/Graphics/View/RenderViewMode.h
+msgctxt "Enum.RenderViewMode.Roughness"
+msgid "Roughness"
+msgstr "거칠기"
+
+#: Source/Engine/Graphics/View/RenderViewMode.h
+msgctxt "Enum.RenderViewMode.ShadedWireframe"
+msgid "Shaded Wireframe"
+msgstr "셰이드 와이어프레임"
+
+#: Source/Engine/Graphics/View/RenderViewMode.h
+msgctxt "Enum.RenderViewMode.ShadingPath"
+msgid "Shading Path"
+msgstr "셰이딩 경로"
+
+#: Source/Engine/Graphics/View/RenderViewMode.h
+msgctxt "Enum.RenderViewMode.Unlit"
+msgid "Unlit"
+msgstr "조명 없음"
+
+#: Source/Engine/Graphics/View/RenderViewMode.h
+msgctxt "Enum.RenderViewMode.Wireframe"
+msgid "Wireframe"
+msgstr "와이어프레임"
+
+#: Source/Engine/Sequencer/SequenceTimelineUtil.h
+msgctxt "Enum.SequenceCameraSignalKind.CinematicBegin"
+msgid "blend in"
+msgstr "블렌드 인"
+
+#: Source/Engine/Sequencer/SequenceTimelineUtil.h
+msgctxt "Enum.SequenceCameraSignalKind.CinematicEnd"
+msgid "blend out"
+msgstr "블렌드 아웃"
+
+#: Source/Engine/Sequencer/SequenceTimelineUtil.h
+msgctxt "Enum.SequenceCameraSignalKind.CutBegin"
+msgid "cut"
+msgstr "컷"
+
+#: Source/Engine/Sequencer/SequenceTimelineUtil.h
+msgctxt "Enum.SequenceCameraSignalKind.CutPrewarm"
+msgid "standby view"
+msgstr "대기 뷰"
+
+#: Source/Engine/Sequencer/SequenceTimelineUtil.h
+msgctxt "Enum.SequenceCameraSignalKind.PlaybackEnd"
+msgid "playback end"
+msgstr "재생 끝"
+
+#: Source/Engine/Sequencer/SequenceTimelineUtil.h
+msgctxt "Enum.SequenceCameraSignalKind.Shake"
+msgid "shake"
+msgstr "흔들림"
+
+#: Source/Engine/Sequencer/SequenceAsset.h
+msgctxt "Enum.SequenceItemField.Clip"
+msgid "Clip"
+msgstr "클립"
+
+#: Source/Engine/Sequencer/SequenceAsset.h
+msgctxt "Enum.SequenceItemField.Clip.Tooltip"
+msgid "Animation clip blended over the bound object's animation during the span. Type a resource id or drop one from the Content Browser."
+msgstr "구간 동안 바인딩된 오브젝트의 애니메이션 위에 섞을 애니메이션 클립입니다. 리소스 id 를 치거나 콘텐츠 브라우저에서 끌어다 놓습니다."
+
+#: Source/Engine/Sequencer/SequenceAsset.h
+msgctxt "Enum.SequenceItemField.Prefab"
+msgid "Prefab"
+msgstr "프리팹"
+
+#: Source/Engine/Sequencer/SequenceAsset.h
+msgctxt "Enum.SequenceItemField.Prefab.Tooltip"
+msgid "Prefab spawned for this span. Type its resource id or drop it from the content browser."
+msgstr "이 구간 동안 스폰할 프리팹입니다. 리소스 id 를 치거나 콘텐츠 브라우저에서 끌어다 놓습니다."
+
+#: Source/Engine/Sequencer/SequenceAsset.h
+msgctxt "Enum.SequenceItemField.Preset"
+msgid "Preset"
+msgstr "프리셋"
+
+#: Source/Engine/Sequencer/SequenceAsset.h
+msgctxt "Enum.SequenceItemField.Preset.Tooltip"
+msgid "Id of the appearance preset the target object wears."
+msgstr "대상 오브젝트가 입을 외형 프리셋의 id 입니다."
+
+#: Source/Engine/Sequencer/SequenceAsset.h
+msgctxt "Enum.SequenceItemField.Scenario"
+msgid "Scenario"
+msgstr "시나리오"
+
+#: Source/Engine/Sequencer/SequenceAsset.h
+msgctxt "Enum.SequenceItemField.Scenario.Tooltip"
+msgid "Scenario played when the start frame is crossed. Type its resource id or drop it from the content browser."
+msgstr "시작 프레임을 지날 때 재생할 시나리오입니다. 리소스 id 를 치거나 콘텐츠 브라우저에서 끌어다 놓습니다."
+
+#: Source/Engine/Sequencer/SequenceAsset.h
+msgctxt "Enum.SequenceItemField.Sound"
+msgid "Sound"
+msgstr "소리"
+
+#: Source/Engine/Sequencer/SequenceAsset.h
+msgctxt "Enum.SequenceItemField.Sound.Tooltip"
+msgid "Audio event posted when the start frame is crossed and stopped when the span ends."
+msgstr "시작 프레임을 지날 때 보내고 구간이 끝나면 멈추는 오디오 이벤트입니다."
+
+#: Source/Engine/Sequencer/SequenceAsset.h
+msgctxt "Enum.SequenceItemField.Text"
+msgid "Text"
+msgstr "글"
+
+#: Source/Engine/Sequencer/SequenceAsset.h
+msgctxt "Enum.SequenceItemField.Text.Tooltip"
+msgid "Localization key (Namespace.Key) of the subtitle line shown for the span."
+msgstr "구간 동안 보일 자막 줄의 현지화 키(Namespace.Key)입니다."
 
 #: Source/GameFramework/Runtime/Online/Directory/ServerRecord.h
 msgctxt "Enum.ServerState.Draining"

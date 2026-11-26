@@ -77,9 +77,9 @@ namespace sw::editor
         {
             if ( _model.isKindVisible( kind ) == false )
                 continue;
-            if ( ImGui::CollapsingHeader( ModulesViewModel::getKindName( kind ), ImGuiTreeNodeFlags_DefaultOpen ) == false )
+            if ( ImGui::CollapsingHeader( LocalizedText::findEnum( kind ), ImGuiTreeNodeFlags_DefaultOpen ) == false )
                 continue;
-            if ( ImGui::BeginTable( ModulesViewModel::getKindName( kind ), 4, ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersInnerV ) == false )
+            if ( ImGui::BeginTable( LocalizedText::findEnum( kind ), 4, ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersInnerV ) == false )
                 continue;
             ImGui::TableSetupColumn( "On", ImGuiTableColumnFlags_WidthFixed, 32.0f * EditorThemeUtil::getDPIScale() );
             ImGui::TableSetupColumn( "Module" );
@@ -181,14 +181,14 @@ namespace sw::editor
         const float32 comboWidth = 140.0f * EditorThemeUtil::getDPIScale();
         ImGui::SetNextItemWidth( comboWidth );
         const int32 kindFilter   = _model.getKindFilter();
-        const utf8* pKindPreview = kindFilter < 0 ? SW_LOCKEY( "EditorSettings", "ModuleKindAll" ) : ModulesViewModel::getKindName( static_cast<ModuleKind>( kindFilter ) );
+        const utf8* pKindPreview = kindFilter < 0 ? SW_LOCKEY( "EditorSettings", "ModuleKindAll" ) : LocalizedText::findEnum( static_cast<ModuleKind>( kindFilter ) );
         if ( EditorWidgets::beginCombo( "##ModuleKindFilter", pKindPreview ) )
         {
             if ( ImGui::Selectable( SW_LOCKEY( "EditorSettings", "ModuleKindAll" ), kindFilter < 0 ) )
                 _model.setKindFilter( -1 );
             for ( const ModuleKind kind : ModulesViewModel::kArrKindOrder )
             {
-                if ( ImGui::Selectable( ModulesViewModel::getKindName( kind ), kindFilter == static_cast<int32>( kind ) ) )
+                if ( ImGui::Selectable( LocalizedText::findEnum( kind ), kindFilter == static_cast<int32>( kind ) ) )
                     _model.setKindFilter( static_cast<int32>( kind ) );
             }
             ImGui::EndCombo();

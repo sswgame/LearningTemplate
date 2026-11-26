@@ -25,8 +25,6 @@ namespace sw::editor
      */
     struct VolumetricFogStatus
     {
-        /** @brief 상태를 한 문장으로 풉니다(지역화 글). 꺼졌으면 왜인지와 다음 할 일입니다. */
-        static const utf8*           describe( FogVolumeState state );
         static VolumetricFogSeverity getSeverity( FogVolumeState state );
         /** @brief froxel 단면 · 비교 보기를 쓸 수 있으면 true 입니다(볼륨이 도는 프레임만 — 꺼졌으면 안개 패스가 진단 상수를 끈다). */
         static bool canShowVolumeViews( FogVolumeState state ) { return state == FogVolumeState::Active; }

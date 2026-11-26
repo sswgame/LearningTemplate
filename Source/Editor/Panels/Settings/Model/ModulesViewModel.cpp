@@ -168,26 +168,6 @@ namespace sw::editor
         return true;
     }
 
-    const utf8* ModulesViewModel::getKindName( ModuleKind kind )
-    {
-        switch ( kind )
-        {
-            case ModuleKind::GameFramework:
-                return "GameFramework";
-            case ModuleKind::Kit:
-                return "Kits";
-            case ModuleKind::Game:
-                return "Game";
-            case ModuleKind::Editor:
-                return "Editor";
-            case ModuleKind::RHI:
-                return "RHI backends";
-            case ModuleKind::EditorExtension:
-                return "Editor extensions";
-        }
-        return "";
-    }
-
     bool ModulesViewModel::requestToggle( const string& moduleName, bool bEnabled )
     {
         _pendingModule               = moduleName;

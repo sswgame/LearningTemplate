@@ -9,6 +9,7 @@
 #include "Editor/Common/EditorSceneIterationAccess.h"
 #include "Editor/Common/Workspace/EditorSubsystems.h"
 
+#include "Engine/Localization/LocText.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
@@ -59,26 +60,6 @@ namespace sw::editor
                         return "Unbound";
                     case SequenceHistoryKind::Span:
                         return "Span";
-                }
-                return "?";
-            }
-
-            static const utf8* getSignalLabel( uint8 detail )
-            {
-                switch ( static_cast<SequenceCameraSignalKind>( detail ) )
-                {
-                    case SequenceCameraSignalKind::CutBegin:
-                        return "cut";
-                    case SequenceCameraSignalKind::CinematicBegin:
-                        return "blend in";
-                    case SequenceCameraSignalKind::CinematicEnd:
-                        return "blend out";
-                    case SequenceCameraSignalKind::CutPrewarm:
-                        return "standby view";
-                    case SequenceCameraSignalKind::PlaybackEnd:
-                        return "playback end";
-                    case SequenceCameraSignalKind::Shake:
-                        return "shake";
                 }
                 return "?";
             }
@@ -168,7 +149,7 @@ namespace sw::editor
             if ( entry._kind == SequenceHistoryKind::CameraSignal )
             {
                 row._what += " - ";
-                row._what += Internal::getSignalLabel( entry._detail );
+                row._what += LocalizedText::findEnum( static_cast<SequenceCameraSignalKind>( entry._detail ) );
             }
         }
 
