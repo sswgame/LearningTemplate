@@ -34,7 +34,6 @@
 
 ### 아직 아무도 맡지 않은 몫 [코드]
 
-- 렌더 R4 나머지: 쿠킹 단계 컴파일 스트리핑 · 정점 형식 변형 제거, 패치 · 모드 팩의 materialindex 합치기, 색인의 첫 사용처.
 - `mesh_modifier.hlsli` 노이즈 복사본이 CPU(Core ValueNoise)와 비트가 같은지.
 - 보류(조사 먼저): ReflectionValidation → TypeInfo, PROPERTY 검증기를 개발 전용으로 빼도 배포 안전이 지켜지는가.
 - AssertDialog 합치기 — 사용자에게 물을 것.
