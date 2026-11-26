@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Core/Network/Transport/LoopbackStreamTransport.h"
+#include "Core/Network/Tests/LoopbackStreamTransport.h"
 
 #include "Core/Concurrency/OnceInit.h"
 #include "Core/Concurrency/mutex.h"

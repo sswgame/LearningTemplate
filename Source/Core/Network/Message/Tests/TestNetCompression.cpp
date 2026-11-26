@@ -6,10 +6,10 @@
 #include "Core/Delegate/Subscription.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Network/Message/NetCompression.h"
 #include "Core/Network/Message/StreamMessageEndpoint.h"
 #include "Core/Network/Message/Tests/StreamEndpointPair.h"
-#include "Core/Network/NetCompression.h"
-#include "Core/Network/Transport/LoopbackStreamTransport.h"
+#include "Core/Network/Tests/LoopbackStreamTransport.h"
 #include "Core/Testing/TestFramework.h"
 
 #include <cstring>

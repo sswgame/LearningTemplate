@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Core/Network/DebugReplyLine.h"
+#include "Core/Log/DebugReplyLine.h"
 #include "Core/Network/Transport/NetEmulation.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"

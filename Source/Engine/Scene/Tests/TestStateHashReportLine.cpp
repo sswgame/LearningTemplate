@@ -1,7 +1,7 @@
 // SceneObjectHash · StateHashHistory 의 글 형식 — 이력 한 줄 · 오브젝트 목록(여러 줄 · 틱 · 한 줄 판) 되읽기와 거절, 한 줄 상한, 키트 해시 줄.
 #include "pch.h"
 
-#include "Core/Network/DebugReplyLine.h"
+#include "Core/Log/DebugReplyLine.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/Testing/TestFramework.h"
 

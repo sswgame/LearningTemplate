@@ -1,7 +1,8 @@
 #include "pch.h"
 
-#include "Core/Network/Replication/PredictionSmoother.h"
 #include "Core/Testing/TestFramework.h"
+
+#include "GameFramework/Kits/Feature/Network/NetClientServer/ClientPrediction.h"
 
 using namespace sw;
 

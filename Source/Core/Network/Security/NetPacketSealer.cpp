@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Core/Network/Connection/NetPacketSealer.h"
+#include "Core/Network/Security/NetPacketSealer.h"
 
 #include "Core/Foundation/Expected.h"
 #include "Core/Memory/Memory.h"
@@ -219,5 +219,149 @@ namespace sw
         if ( computeProofTag( provider, algorithm, secret, clientSalt, serverSalt, pPublicKey, pToken, tokenSize, arrExpected ) == false )
             return false;
         return NetPacketSealerInternal::isEqualConstantTime( arrExpected, pTag, NetSecurityConstant::kAEADTagSize );
+    }
+} // namespace sw
+
+namespace sw
+{
+    NetReplayWindow::NetReplayWindow()
+        : _arrBit{}
+        , _highest{ 0 }
+        , _bHasReceived{ SW_FALSE }
+    {
+    }
+
+    void NetReplayWindow::reset()
+    {
+        for ( uint64& word : _arrBit )
+        {
+            word = 0;
+        }
+        _highest      = 0;
+        _bHasReceived = SW_FALSE;
+    }
+
+    bool NetReplayWindow::isMarked( uint64 packetNumber ) const
+    {
+        const uint64 slot = packetNumber % kWindowSize;
+        return ( _arrBit[slot / kBitsPerWord] & ( 1ull << ( slot % kBitsPerWord ) ) ) != 0;
+    }
+
+    bool NetReplayWindow::isAcceptable( uint64 packetNumber ) const
+    {
+        if ( _bHasReceived == SW_FALSE || packetNumber > _highest )
+            return true;
+        if ( _highest - packetNumber >= kWindowSize )
+            return false; // 창보다 옛것 — 받았는지 알 수 없으니 거절
+        return isMarked( packetNumber ) == false;
+    }
+
+    void NetReplayWindow::markReceived( uint64 packetNumber )
+    {
+        if ( _bHasReceived == SW_FALSE || packetNumber > _highest )
+        {
+            // 창이 앞으로 간다 — 새로 창에 들어오는 비트(옛 번호가 쓰던 비트)를 비운다.
+            const uint64 advance = _bHasReceived == SW_FALSE ? kWindowSize : packetNumber - _highest;
+            if ( advance >= kWindowSize )
+            {
+                for ( uint64& word : _arrBit )
+                {
+                    word = 0;
+                }
+            }
+            else
+            {
+                // 번호가 아니라 차이로 돈다 — `number <= packetNumber` 꼴은 packetNumber 가 2^64-1 이면 number 가 0 으로 감겨 끝나지 않았다(상대가 정한 번호로 수신 스레드 정지).
+                // 횟수는 advance(< kWindowSize)로 묶이고, packetNumber > _highest 라 _highest + step 은 감기지 않는다(RFC 4303 §3.4.3 · RFC 6347 §4.1.2.6).
+                for ( uint64 step = 1; step <= advance; ++step )
+                {
+                    const uint64 slot = ( _highest + step ) % kWindowSize;
+                    _arrBit[slot / kBitsPerWord] &= ~( 1ull << ( slot % kBitsPerWord ) );
+                }
+            }
+            _highest      = packetNumber;
+            _bHasReceived = SW_TRUE;
+        }
+        else if ( _highest - packetNumber >= kWindowSize )
+        {
+            return;
+        }
+        const uint64 slot = packetNumber % kWindowSize;
+        _arrBit[slot / kBitsPerWord] |= 1ull << ( slot % kBitsPerWord );
+    }
+} // namespace sw
+
+namespace sw
+{
+    namespace
+    {
+        struct NetSessionKeysInternal
+        {
+            static constexpr utf8  kSessionLabel[] = "sw-net-v1";
+            static constexpr utf8  kProofLabel[]   = "sw-net-proof-v1";
+            static constexpr int32 kKeyBlockSize   = 2 * ( NetSecurityConstant::kAEADKeySize + NetSecurityConstant::kAEADNonceSize );
+        };
+    } // namespace
+} // namespace sw
+
+namespace sw
+{
+    void NetSessionKeys::wipe()
+    {
+        Memory::wipe( this, sizeof( NetSessionKeys ) );
+    }
+
+    bool NetSessionKeys::computeSessionKeys( INetSecurityProvider& provider, const uint8* pSharedSecret, const NetSessionSecret* pSessionSecret, uint64 clientSalt,
+                                             uint64 serverSalt, uint32 protocolID, NetSessionKeys& outKeys )
+    {
+        using Internal             = NetSessionKeysInternal;
+        constexpr int32 kLabelSize = static_cast<int32>( sizeof( Internal::kSessionLabel ) - 1 );
+        uint8           arrInfo[kLabelSize + sizeof( clientSalt ) + sizeof( serverSalt ) + sizeof( protocolID )];
+        std::memcpy( arrInfo, Internal::kSessionLabel, static_cast<size_t>( kLabelSize ) );
+        LittleEndianUtil::writeUint64( arrInfo + kLabelSize, clientSalt );
+        LittleEndianUtil::writeUint64( arrInfo + kLabelSize + sizeof( clientSalt ), serverSalt );
+        LittleEndianUtil::writeUint32( arrInfo + kLabelSize + sizeof( clientSalt ) + sizeof( serverSalt ), protocolID );
+        const uint8  arrZeroSalt[NetSecurityConstant::kSHA256Size] = {};
+        const uint8* pSalt                                         = pSessionSecret != nullptr ? pSessionSecret->_arrByte : arrZeroSalt;
+        uint8        arrBlock[Internal::kKeyBlockSize];
+        const bool   bDerived = provider.computeHKDFSHA256( pSharedSecret, NetSecurityConstant::kX25519KeySize, pSalt, NetSecurityConstant::kSHA256Size, arrInfo,
+                                                            static_cast<int32>( sizeof( arrInfo ) ), arrBlock, Internal::kKeyBlockSize );
+        if ( bDerived == false )
+            return false;
+        const uint8* pCursor = arrBlock;
+        std::memcpy( outKeys._clientToServer._arrKey, pCursor, NetSecurityConstant::kAEADKeySize );
+        pCursor += NetSecurityConstant::kAEADKeySize;
+        std::memcpy( outKeys._clientToServer._arrIv, pCursor, NetSecurityConstant::kAEADNonceSize );
+        pCursor += NetSecurityConstant::kAEADNonceSize;
+        std::memcpy( outKeys._serverToClient._arrKey, pCursor, NetSecurityConstant::kAEADKeySize );
+        pCursor += NetSecurityConstant::kAEADKeySize;
+        std::memcpy( outKeys._serverToClient._arrIv, pCursor, NetSecurityConstant::kAEADNonceSize );
+        Memory::wipe( arrBlock, sizeof( arrBlock ) );
+        return true;
+    }
+
+    bool NetSessionKeys::computeProofKey( INetSecurityProvider& provider, const NetSessionSecret& secret, uint8* pOutKey )
+    {
+        using Internal = NetSessionKeysInternal;
+        return provider.computeHKDFSHA256( secret._arrByte, NetSecurityConstant::kSHA256Size, nullptr, 0, reinterpret_cast<const uint8*>( Internal::kProofLabel ),
+                                           static_cast<int32>( sizeof( Internal::kProofLabel ) - 1 ), pOutKey, NetSecurityConstant::kAEADKeySize );
+    }
+
+    void NetSessionKeys::makeNonce( const uint8* pIv, uint64 packetNumber, uint8* pOutNonce )
+    {
+        std::memcpy( pOutNonce, pIv, NetSecurityConstant::kAEADNonceSize );
+        for ( int32 index = 0; index < 8; ++index )
+        {
+            pOutNonce[NetSecurityConstant::kAEADNonceSize - 1 - index] ^= static_cast<uint8>( packetNumber >> ( index * 8 ) );
+        }
+    }
+} // namespace sw
+
+namespace sw
+{
+    // NetSecurityTypes.h 의 키 쌍 지우기 — 그 헤더는 .cpp 가 따로 없어 키를 다루는 이 파일에 둔다.
+    void NetX25519KeyPair::wipe()
+    {
+        Memory::wipe( _arrPrivateKey, sizeof( _arrPrivateKey ) );
     }
 } // namespace sw

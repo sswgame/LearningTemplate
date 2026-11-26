@@ -4,7 +4,7 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Network/Transport/LoopbackStreamTransport.h"
+#include "Core/Network/Tests/LoopbackStreamTransport.h"
 #include "Core/Network/Transport/WebSocketAcceptTransport.h"
 #include "Core/Network/Transport/WebSocketProtocol.h"
 #include "Core/Testing/TestFramework.h"

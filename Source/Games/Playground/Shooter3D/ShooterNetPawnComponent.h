@@ -29,7 +29,6 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Ray.h"
-#include "Core/Network/Replication/PredictionSmoother.h"
 #include "Core/Network/Replication/TickRingBuffer.h"
 
 #include "Engine/Character/Hit/MeleeSweepHistory.h"

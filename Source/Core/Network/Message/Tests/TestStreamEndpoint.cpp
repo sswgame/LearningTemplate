@@ -3,7 +3,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Network/Message/StreamMessageEndpoint.h"
 #include "Core/Network/Message/Tests/StreamEndpointPair.h"
-#include "Core/Network/Transport/LoopbackStreamTransport.h"
+#include "Core/Network/Tests/LoopbackStreamTransport.h"
 #include "Core/Testing/TestFramework.h"
 #include "Core/Time/MonotonicClock.h"
 
