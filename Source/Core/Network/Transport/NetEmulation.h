@@ -48,7 +48,7 @@ namespace sw
 
         /**
          * @brief `latencyMs=80 jitterMs=20 lossPercent=5 duplicatePercent=1 reorderPercent=2 bandwidthKBps=256` 같은 덮어쓰기를 @p base 에 얹은 조건을 돌려줍니다.
-         * @details 키는 개발 도구의 시작 값(`-gv_netEmulation*`, `NetLineEmulationSubsystem`)과 같은 단위입니다. 빈칸으로 나누며, 모르는 키나 음수 · 숫자가 아닌 값이면
+         * @details 키는 개발 도구의 시작 값(`-gv_netEmulation*`, `NetEmulationSubsystem`)과 같은 단위입니다. 빈칸으로 나누며, 모르는 키나 음수 · 숫자가 아닌 값이면
          *          `ErrorKind::InvalidArgument`(대상은 틀린 토큰 · 키)이고 부르는 쪽의 조건은 그대로다(돌려준 값만 쓴다).
          */
         [[nodiscard]] static expected<NetEmulationConditions> parseOverrides( string_view text, const NetEmulationConditions& base );

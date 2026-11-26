@@ -1,5 +1,5 @@
 /**
- * @file EditorNetConditions.h
+ * @file EditorNetEmulationSettings.h
  * @brief 회선 조절(서버 디버깅 S4)의 패널 값과 자식 프로세스에 보내는 명령 글을 정의합니다. ImGui 에 의존하지 않습니다.
  * @details Multiplayer 창 Conditions 탭과 개발 명령 `netplay.command` 가 쓰고, `EditorTest` 가 프리셋 테이블 · 명령 글 · 대상 읽기를 테스트한다.
  *          조건 자체(프리셋 값, 덮어쓰기 글의 키)는 Core `NetEmulationConditions` 가 원본이고, 여기는 패널 단위(ms · % · KB/s)로 옮기는 일만 한다.
@@ -16,7 +16,7 @@ namespace sw
 namespace sw::editor
 {
     /** @brief 회선 조건을 적용할 방향입니다. 대상 프로세스에서 본 방향이다 — 클라이언트의 Up 은 클라이언트 → 서버입니다. */
-    enum class EditorNetLinkDirection : uint8
+    enum class NetEmulationDirection : uint8
     {
         Up = 0, ///< 보내는 쪽(`NetEmulationTransport::setDefaultConditions`)
         Down,   ///< 받는 쪽(`NetEmulationTransport::setIncomingConditions`)
@@ -27,7 +27,7 @@ namespace sw::editor
 namespace sw::editor
 {
     /** @brief 한 방향 회선의 패널 값입니다(슬라이더 단위). */
-    struct EditorNetLinkSettings
+    struct EditorNetEmulationSettings
     {
         float32 _latencyMilliseconds{ 0.0f };
         float32 _jitterMilliseconds{ 0.0f };
@@ -43,17 +43,17 @@ namespace sw::editor
         static constexpr float32 kDefaultSpikeSeconds = 3.0f;
 
         /** @brief 조건에서 패널 값을 만듭니다(지연 · 흔들림 · 손실 · 대역폭 — 중복 · 순서 바꿈은 패널에 없다). */
-        static EditorNetLinkSettings makeLinkSettings( const NetEmulationConditions& conditions );
+        static EditorNetEmulationSettings makeLinkSettings( const NetEmulationConditions& conditions );
         /** @brief 패널 값을 조건으로 바꿉니다. 패널에 없는 칸은 기본값입니다. */
-        static NetEmulationConditions makeConditions( const EditorNetLinkSettings& settings );
+        static NetEmulationConditions makeConditions( const EditorNetEmulationSettings& settings );
 
         /** @brief `net.emulation <up|down|both> latencyMs=… …` — 그 방향을 이 값으로 둡니다(앞 상태와 상관없이). */
-        static string makeLinkCommand( EditorNetLinkDirection direction, const EditorNetLinkSettings& settings );
+        static string makeLinkCommand( NetEmulationDirection direction, const EditorNetEmulationSettings& settings );
         /** @brief `net.emulation both <프리셋>` — 두 방향을 프리셋으로 둡니다(양쪽이 같은 값이면 왕복이 그 회선이다). */
         static string makePresetCommand( string_view presetName );
         /** @brief `net.emulation spike <초>` — 그동안 보내고 받는 것을 모두 버립니다. */
         static string      makeSpikeCommand( float32 seconds );
-        static const utf8* toString( EditorNetLinkDirection direction );
+        static const utf8* toString( NetEmulationDirection direction );
 
         /**
          * @brief 명령 대상 글(`server` · `client<N>` · `clients` · `all` · 프로세스 번호)을 프로세스 번호 구간으로 읽습니다.

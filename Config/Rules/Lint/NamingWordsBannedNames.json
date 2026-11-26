@@ -2656,6 +2656,13 @@
     "kReloadSourceCount": "kHotReloadKindCount — ReloadSource → HotReloadKind 를 따른다(2026-11-27)",
     "AutomationReloadSteps": "AutomationHotReloadSteps — 실행 중 다시 읽기는 HotReload 하나로 부른다(단계 이름은 그대로)(2026-11-27)",
     "AutomationReloadStepsTest": "AutomationHotReloadStepsTest — AutomationReloadSteps → AutomationHotReloadSteps 를 따른다(2026-11-27)",
-    "AutomationReloadStepsInternal": "AutomationHotReloadStepsInternal — AutomationReloadSteps → AutomationHotReloadSteps 를 따른다(2026-11-27)"
+    "AutomationReloadStepsInternal": "AutomationHotReloadStepsInternal — AutomationReloadSteps → AutomationHotReloadSteps 를 따른다(2026-11-27)",
+    "NetLineEmulationSubsystem": "NetEmulationSubsystem — 망 상태 흉내는 NetEmulation 하나로 부른다(언리얼 NetEmulation, 개발 명령 net.emulation)(2026-11-27)",
+    "NetLineEmulation": "NetEmulationSubsystem — NetLineEmulationSubsystem → NetEmulationSubsystem 을 따른다(파일 이름 = 주 형식)(2026-11-27)",
+    "NetLineEmulationInternal": "NetEmulationSubsystemInternal — NetLineEmulationSubsystem → NetEmulationSubsystem 을 따른다(2026-11-27)",
+    "EditorNetLinkSettings": "EditorNetEmulationSettings — 망 상태 흉내는 NetEmulation 하나로 부른다(Link 는 관계만)(2026-11-27)",
+    "EditorNetLinkDirection": "NetEmulationDirection — 망 상태 흉내는 NetEmulation 하나로 부른다(Link 는 관계만)(2026-11-27)",
+    "EditorNetConditions": "EditorNetEmulationSettings — 파일 이름을 주 형식 EditorNetEmulationSettings 에 맞춘다(2026-11-27)",
+    "EditorNetConditionsInternal": "EditorNetEmulationSettingsInternal — EditorNetConditions → EditorNetEmulationSettings 를 따른다(2026-11-27)"
   }
 }

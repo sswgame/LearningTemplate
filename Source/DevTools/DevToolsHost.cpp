@@ -23,7 +23,7 @@
 #include "DevTools/Diagnostics/FileReadDiagnostics.h"
 #include "DevTools/FileWatch/FileWatchService.h"
 #include "DevTools/Maintenance/SavedCleanupSubsystem.h"
-#include "DevTools/Network/NetLineEmulation.h"
+#include "DevTools/Network/NetEmulationSubsystem.h"
 #include "DevTools/Network/NetListenLaunch.h"
 #include "DevTools/Network/ServerPoseOverlay.h"
 #include "DevTools/Profiling/FrameProfileSession.h"
@@ -207,7 +207,7 @@ namespace sw
         // 리슨 포트 덮어쓰기(`-gv_netListenPort`) — 세션이 기동 역할을 정하기 전에 건다.
         if ( GameNetSession* const pNetSession = startup.find<GameNetSession>() )
         {
-            (void)startup.emplaceSubsystem<NetLineEmulationSubsystem>( *pNetSession );
+            (void)startup.emplaceSubsystem<NetEmulationSubsystem>( *pNetSession );
             (void)startup.emplaceSubsystem<NetListenLaunchSubsystem>( *pNetSession );
         }
         // 프로파일러 출력의 실행 인자(Tracy · 종료 트레이스 · 느린 프레임 캡처) — 서비스 범위의 프레임 프로파일러가 이미 섰다.

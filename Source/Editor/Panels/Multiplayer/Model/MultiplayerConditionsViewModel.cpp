@@ -84,7 +84,7 @@ namespace sw::editor
                 }
                 int32 firstIndex = 0;
                 int32 lastIndex  = 0;
-                if ( EditorNetLinkSettings::tryParseTarget( listArgument[0], pSession->getProcessCount(), firstIndex, lastIndex ) == false )
+                if ( EditorNetEmulationSettings::tryParseTarget( listArgument[0], pSession->getProcessCount(), firstIndex, lastIndex ) == false )
                 {
                     StringBuilder<constant::buffer::kMax256> replyBuilder;
                     replyBuilder.appendFormat( "no process '%#' (server, client<N>, clients, all)", listArgument[0] );
@@ -260,8 +260,8 @@ namespace sw::editor
         }
         _listLink.resize( static_cast<size_t>( session.getProcessCount() ) );
         const ProcessLink* pLink = findLink( *targetIndex );
-        outState._up             = pLink != nullptr ? pLink->_up : EditorNetLinkSettings{};
-        outState._down           = pLink != nullptr ? pLink->_down : EditorNetLinkSettings{};
+        outState._up             = pLink != nullptr ? pLink->_up : EditorNetEmulationSettings{};
+        outState._down           = pLink != nullptr ? pLink->_down : EditorNetEmulationSettings{};
 
         // 프리셋: 표 경로는 엔진 기본 에셋 표가 원본이다. 읽지 못하면(이유는 표가 알린다) 단추가 없을 뿐 슬라이더는 그대로 쓰고, 실패 표시를 남긴다.
         if ( _bPresetTableAttempted == SW_FALSE )
@@ -282,7 +282,7 @@ namespace sw::editor
         return targetIndex >= 0 && static_cast<size_t>( targetIndex ) < _listLink.size() ? &_listLink[static_cast<size_t>( targetIndex )] : nullptr;
     }
 
-    void MultiplayerConditionsViewModel::setLink( int32 targetIndex, const EditorNetLinkSettings& up, const EditorNetLinkSettings& down )
+    void MultiplayerConditionsViewModel::setLink( int32 targetIndex, const EditorNetEmulationSettings& up, const EditorNetEmulationSettings& down )
     {
         ProcessLink* pLink = findLink( targetIndex );
         if ( pLink == nullptr )
@@ -291,12 +291,12 @@ namespace sw::editor
         pLink->_down = down;
     }
 
-    void MultiplayerConditionsViewModel::sendLink( EditorNetLinkDirection direction, int32 targetIndex, bool bApplyToAll )
+    void MultiplayerConditionsViewModel::sendLink( NetEmulationDirection direction, int32 targetIndex, bool bApplyToAll )
     {
         const ProcessLink* pLink = findLink( targetIndex );
         if ( pLink == nullptr )
             return;
-        sendToTargets( targetIndex, bApplyToAll, EditorNetLinkSettings::makeLinkCommand( direction, direction == EditorNetLinkDirection::Down ? pLink->_down : pLink->_up ) );
+        sendToTargets( targetIndex, bApplyToAll, EditorNetEmulationSettings::makeLinkCommand( direction, direction == NetEmulationDirection::Down ? pLink->_down : pLink->_up ) );
     }
 
     void MultiplayerConditionsViewModel::applyPreset( size_t presetIndex, int32 targetIndex, bool bApplyToAll )
@@ -312,10 +312,10 @@ namespace sw::editor
             ProcessLink* pLink = findLink( processIndex );
             if ( pLink == nullptr )
                 continue;
-            pLink->_up   = EditorNetLinkSettings::makeLinkSettings( conditions );
-            pLink->_down = EditorNetLinkSettings::makeLinkSettings( conditions );
+            pLink->_up   = EditorNetEmulationSettings::makeLinkSettings( conditions );
+            pLink->_down = EditorNetEmulationSettings::makeLinkSettings( conditions );
         }
-        sendToTargets( targetIndex, bApplyToAll, EditorNetLinkSettings::makePresetCommand( preset._name ) );
+        sendToTargets( targetIndex, bApplyToAll, EditorNetEmulationSettings::makePresetCommand( preset._name ) );
     }
 
     void MultiplayerConditionsViewModel::disconnect( int32 targetIndex, bool bApplyToAll )
@@ -330,7 +330,7 @@ namespace sw::editor
 
     void MultiplayerConditionsViewModel::spike( float32 seconds, int32 targetIndex, bool bApplyToAll )
     {
-        sendToTargets( targetIndex, bApplyToAll, EditorNetLinkSettings::makeSpikeCommand( seconds ) );
+        sendToTargets( targetIndex, bApplyToAll, EditorNetEmulationSettings::makeSpikeCommand( seconds ) );
     }
 
     void MultiplayerConditionsViewModel::refreshStats( int32 targetIndex, bool bApplyToAll )

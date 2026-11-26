@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "DevTools/Network/NetLineEmulation.h"
+#include "DevTools/Network/NetEmulationSubsystem.h"
 
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
@@ -30,7 +30,7 @@ namespace sw
 
     namespace
     {
-        struct NetLineEmulationInternal
+        struct NetEmulationSubsystemInternal
         {
             /**
              * @brief 낱값 전역 변수(`-gv_netEmulationLatencyMs` · `JitterMs` · `LossPercent` · `DuplicatePercent` · `ReorderPercent` · `BandwidthKilobytesPerSecond`)로 시작 조건을 만듭니다.
@@ -45,7 +45,7 @@ namespace sw
                 const expected<NetEmulationConditions> conditions = NetEmulationConditions::parseOverrides( arrText, NetEmulationConditions{} );
                 if ( conditions.has_value() == false )
                 {
-                    SW_LOG_ERROR_ID( "NetLineEmulation.GvNetEmulationInvalid", "gv_netEmulation* values are invalid (%#: %#) - no emulation", conditions.error().message(), conditions.error().detail() );
+                    SW_LOG_ERROR_ID( "NetEmulationSubsystem.GvNetEmulationInvalid", "gv_netEmulation* values are invalid (%#: %#) - no emulation", conditions.error().message(), conditions.error().detail() );
                     return NetEmulationConditions{};
                 }
                 return *conditions;
@@ -69,8 +69,8 @@ namespace sw
              */
             static bool runEmulation( const vector<string>& listArgument, string& outReply )
             {
-                GameNetSession* const            pSession = engine::findSubsystem<GameNetSession>();
-                NetLineEmulationSubsystem* const pTool    = engine::findSubsystem<NetLineEmulationSubsystem>();
+                GameNetSession* const        pSession = engine::findSubsystem<GameNetSession>();
+                NetEmulationSubsystem* const pTool    = engine::findSubsystem<NetEmulationSubsystem>();
                 if ( pSession == nullptr || pSession->isActive() == false || pTool == nullptr )
                 {
                     outReply = "net session: none (start with -gv_netListenPort=<port> or -gv_netConnectAddress=<host:port>)";
@@ -166,43 +166,43 @@ namespace sw
         };
     } // namespace
 
-    NetLineEmulationSubsystem::NetLineEmulationSubsystem( GameNetSession& session )
+    NetEmulationSubsystem::NetEmulationSubsystem( GameNetSession& session )
         : _pSession{ &session }
         , _arrIssued{}
     {
     }
 
-    NetLineEmulationSubsystem::~NetLineEmulationSubsystem() = default;
+    NetEmulationSubsystem::~NetEmulationSubsystem() = default;
 
-    span<const utf8* const> NetLineEmulationSubsystem::getSubsystemDependencies() const
+    span<const utf8* const> NetEmulationSubsystem::getSubsystemDependencies() const
     {
         static constexpr const utf8* kArrDependency[] = { GameNetSession::kSubsystemName };
         return kArrDependency;
     }
 
-    SubsystemInitResult NetLineEmulationSubsystem::initializeSubsystem()
+    SubsystemInitResult NetEmulationSubsystem::initializeSubsystem()
     {
-        _pSession->setTransportDecorator( SW_DELEGATE_METHOD( GameNetTransportDecoratorDelegate, &NetLineEmulationSubsystem::decorate, this ) );
+        _pSession->setTransportDecorator( SW_DELEGATE_METHOD( GameNetTransportDecoratorDelegate, &NetEmulationSubsystem::decorate, this ) );
         return SubsystemInitResult::Succeeded;
     }
 
-    void NetLineEmulationSubsystem::shutdownSubsystem()
+    void NetEmulationSubsystem::shutdownSubsystem()
     {
         _pSession->setTransportDecorator( GameNetTransportDecoratorDelegate{} ); // 이미 감싼 샤드의 흉내는 세션이 든 채 내려간다(코드는 Core 다)
     }
 
-    unique_ptr<INetTransport> NetLineEmulationSubsystem::decorate( int32 shardIndex, INetTransport& inner )
+    unique_ptr<INetTransport> NetEmulationSubsystem::decorate( int32 shardIndex, INetTransport& inner )
     {
         if ( shardIndex < 0 || kMaxShardCount <= shardIndex )
             return nullptr;
-        NetEmulationConditions conditions = NetLineEmulationInternal::makeConditionsFromGlobalVariables();
+        NetEmulationConditions conditions = NetEmulationSubsystemInternal::makeConditionsFromGlobalVariables();
         if ( gv_netEmulationPreset.get().empty() == false )
         {
             NetEmulationPresetTable presetTable;
             conditions = NetEmulationConditions{};
             if ( presetTable.loadFromAsset( AssetID{ engine::getSubsystem<EngineDefaultAssets>()._netEmulationPresets.get() } ) &&
                  presetTable.tryGetConditions( gv_netEmulationPreset.get(), conditions ) == false )
-                SW_LOG_ERROR_ID( "NetLineEmulation.GvNetEmulationPresetNotPreset", "gv_netEmulationPreset '%#' is not a preset (%#) - no emulation", gv_netEmulationPreset.get().c_str(), presetTable.makePresetNames().c_str() );
+                SW_LOG_ERROR_ID( "NetEmulationSubsystem.GvNetEmulationPresetNotPreset", "gv_netEmulationPreset '%#' is not a preset (%#) - no emulation", gv_netEmulationPreset.get().c_str(), presetTable.makePresetNames().c_str() );
         }
         unique_ptr<NetEmulationTransport> emulation = make_unique<NetEmulationTransport>( &inner );
         emulation->setDefaultConditions( conditions );
@@ -210,7 +210,7 @@ namespace sw
         return emulation;
     }
 
-    NetEmulationTransport* NetLineEmulationSubsystem::find( GameNetSession& session, int32 shardIndex ) const
+    NetEmulationTransport* NetEmulationSubsystem::find( GameNetSession& session, int32 shardIndex ) const
     {
         if ( shardIndex < 0 || kMaxShardCount <= shardIndex )
             return nullptr;
@@ -220,7 +220,7 @@ namespace sw
         return pDecorator != nullptr && pIssued == pDecorator ? pIssued : nullptr;
     }
 
-    NetEmulationReport NetLineEmulationSubsystem::makeReport( GameNetSession& session ) const
+    NetEmulationReport NetEmulationSubsystem::makeReport( GameNetSession& session ) const
     {
         NetEmulationReport report = session.makeConnectionReport();
         for ( int32 shardIndex = 0; shardIndex < session.getShardCount(); ++shardIndex )
@@ -236,5 +236,5 @@ namespace sw
     }
 
     SW_DEV_COMMAND( NetEmulation, "net.emulation", "net.emulation [up|down|both [<preset>] [key=value ...] | spike <seconds> | stats]",
-                    "Change the net session's line emulation at run time (presets: off, lan, wifi, lte, badwifi, disconnected)", &NetLineEmulationInternal::runEmulation );
+                    "Change the net session's line emulation at run time (presets: off, lan, wifi, lte, badwifi, disconnected)", &NetEmulationSubsystemInternal::runEmulation );
 } // namespace sw

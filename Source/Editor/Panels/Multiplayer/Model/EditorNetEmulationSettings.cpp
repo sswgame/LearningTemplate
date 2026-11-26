@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Editor/Panels/Multiplayer/Model/EditorNetConditions.h"
+#include "Editor/Panels/Multiplayer/Model/EditorNetEmulationSettings.h"
 
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/Transport/NetEmulation.h"
@@ -11,7 +11,7 @@ namespace sw::editor
 {
     namespace
     {
-        struct EditorNetConditionsInternal
+        struct EditorNetEmulationSettingsInternal
         {
             /** @brief 비율(0~1) ↔ 백분율입니다. */
             static constexpr float32 kPercent = 100.0f;
@@ -23,10 +23,10 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    EditorNetLinkSettings EditorNetLinkSettings::makeLinkSettings( const NetEmulationConditions& conditions )
+    EditorNetEmulationSettings EditorNetEmulationSettings::makeLinkSettings( const NetEmulationConditions& conditions )
     {
-        using Internal = EditorNetConditionsInternal;
-        EditorNetLinkSettings settings;
+        using Internal = EditorNetEmulationSettingsInternal;
+        EditorNetEmulationSettings settings;
         settings._latencyMilliseconds         = static_cast<float32>( conditions._latency * constant::time::kMillisecondsPerSecond );
         settings._jitterMilliseconds          = static_cast<float32>( conditions._jitter * constant::time::kMillisecondsPerSecond );
         settings._lossPercent                 = conditions._lossRate * Internal::kPercent;
@@ -34,9 +34,9 @@ namespace sw::editor
         return settings;
     }
 
-    NetEmulationConditions EditorNetLinkSettings::makeConditions( const EditorNetLinkSettings& settings )
+    NetEmulationConditions EditorNetEmulationSettings::makeConditions( const EditorNetEmulationSettings& settings )
     {
-        using Internal = EditorNetConditionsInternal;
+        using Internal = EditorNetEmulationSettingsInternal;
         NetEmulationConditions conditions;
         conditions._latency                 = static_cast<float64>( MathUtil::max( 0.0f, settings._latencyMilliseconds ) ) / constant::time::kMillisecondsPerSecond;
         conditions._jitter                  = static_cast<float64>( MathUtil::max( 0.0f, settings._jitterMilliseconds ) ) / constant::time::kMillisecondsPerSecond;
@@ -45,35 +45,35 @@ namespace sw::editor
         return conditions;
     }
 
-    const utf8* EditorNetLinkSettings::toString( EditorNetLinkDirection direction )
+    const utf8* EditorNetEmulationSettings::toString( NetEmulationDirection direction )
     {
         switch ( direction )
         {
-            case EditorNetLinkDirection::Up:
+            case NetEmulationDirection::Up:
                 return "up";
-            case EditorNetLinkDirection::Down:
+            case NetEmulationDirection::Down:
                 return "down";
-            case EditorNetLinkDirection::Both:
+            case NetEmulationDirection::Both:
                 return "both";
         }
         return "both";
     }
 
-    string EditorNetLinkSettings::makeLinkCommand( EditorNetLinkDirection direction, const EditorNetLinkSettings& settings )
+    string EditorNetEmulationSettings::makeLinkCommand( NetEmulationDirection direction, const EditorNetEmulationSettings& settings )
     {
         StringBuilder<constant::buffer::kMax256> commandBuilder;
         commandBuilder.appendFormat( "net.emulation %# %#", toString( direction ), makeConditions( settings ).makeOverrideText() );
         return string( commandBuilder.view() );
     }
 
-    string EditorNetLinkSettings::makePresetCommand( string_view presetName )
+    string EditorNetEmulationSettings::makePresetCommand( string_view presetName )
     {
         StringBuilder<constant::buffer::kMax256> commandBuilder;
         commandBuilder.appendFormat( "net.emulation both %#", presetName );
         return string( commandBuilder.view() );
     }
 
-    string EditorNetLinkSettings::makeSpikeCommand( float32 seconds )
+    string EditorNetEmulationSettings::makeSpikeCommand( float32 seconds )
     {
         utf8 arrBuffer[constant::buffer::kMax32];
         (void)StringUtil::formatNumber( arrBuffer, constant::buffer::kMax32, MathUtil::max( 0.0f, seconds ) );
@@ -82,9 +82,9 @@ namespace sw::editor
         return string( commandBuilder.view() );
     }
 
-    bool EditorNetLinkSettings::tryParseTarget( string_view text, int32 processCount, int32& outFirstIndex, int32& outLastIndex )
+    bool EditorNetEmulationSettings::tryParseTarget( string_view text, int32 processCount, int32& outFirstIndex, int32& outLastIndex )
     {
-        using Internal         = EditorNetConditionsInternal;
+        using Internal         = EditorNetEmulationSettingsInternal;
         int32      firstIndex  = 0;
         int32      lastIndex   = -1;
         int32      number      = 0;

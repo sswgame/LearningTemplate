@@ -1,5 +1,5 @@
 /**
- * @file NetLineEmulation.h
+ * @file NetEmulationSubsystem.h
  * @brief 게임 네트워크 세션의 회선 흉내(지연 · 손실 · 끊김)입니다(개발 도구 `DevTools` — 배포 빌드는 짓지 않는다).
  */
 #pragma once
@@ -16,21 +16,21 @@ namespace sw
     class INetTransport;
 
     /**
-     * @class NetLineEmulationSubsystem
+     * @class NetEmulationSubsystem
      * @brief 세션의 샤드 전송 데코레이터(`GameNetSession::setTransportDecorator`)로 회선 흉내(`NetEmulationTransport`)를 겁니다. 개발 명령 `net.emulation` 이 조건을 바꾼다.
      * @details 시작 조건은 `-gv_netEmulation*` 낱값 또는 `-gv_netEmulationPreset` 이다. 조건이 꺼져 있으면 흉내는 패킷을 그대로 넘긴다 —
      *          실행 중에 조건을 바꿀 수 있게 늘 감싼다. 흉내는 샤드가 소유하고(소켓보다 먼저 사라진다), 이 서브시스템은 자기가 만든 것만 알아본다.
      *          세션에 의존한다 — 세션이 열기 전에 걸리고, 세션보다 먼저 내려가며 데코레이터를 푼다.
      */
-    class SW_DEVTOOLS_API NetLineEmulationSubsystem final : public Subsystem
+    class SW_DEVTOOLS_API NetEmulationSubsystem final : public Subsystem
     {
     public:
-        static constexpr const utf8* kSubsystemName = "NetLineEmulation";
+        static constexpr const utf8* kSubsystemName = "NetEmulationSubsystem";
         /** @brief 알아보는 샤드 수의 상한입니다(그 뒤 샤드는 감싸지 않는다). */
         static constexpr int32 kMaxShardCount = 128; // UDP 샤드 64 + 같은 수의 스트림 샤드(`ServerConfig::_gameStreamPort`)
 
-        explicit NetLineEmulationSubsystem( GameNetSession& session );
-        ~NetLineEmulationSubsystem() override;
+        explicit NetEmulationSubsystem( GameNetSession& session );
+        ~NetEmulationSubsystem() override;
 
         SubsystemInitResult     initializeSubsystem() override;
         void                    shutdownSubsystem() override;

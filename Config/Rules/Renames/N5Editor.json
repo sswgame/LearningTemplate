@@ -131,5 +131,12 @@
   {"old": "kReloadSourceCount", "new": "kHotReloadKindCount", "why": "ReloadSource → HotReloadKind 를 따른다"},
   {"old": "AutomationReloadSteps", "new": "AutomationHotReloadSteps", "why": "실행 중 다시 읽기는 HotReload 하나로 부른다(단계 이름은 그대로)"},
   {"old": "AutomationReloadStepsTest", "new": "AutomationHotReloadStepsTest", "why": "AutomationReloadSteps → AutomationHotReloadSteps 를 따른다"},
-  {"old": "AutomationReloadStepsInternal", "new": "AutomationHotReloadStepsInternal", "why": "AutomationReloadSteps → AutomationHotReloadSteps 를 따른다"}
+  {"old": "AutomationReloadStepsInternal", "new": "AutomationHotReloadStepsInternal", "why": "AutomationReloadSteps → AutomationHotReloadSteps 를 따른다"},
+  {"old": "NetLineEmulationSubsystem", "new": "NetEmulationSubsystem", "why": "망 상태 흉내는 NetEmulation 하나로 부른다(언리얼 NetEmulation, 개발 명령 net.emulation)"},
+  {"old": "NetLineEmulation", "new": "NetEmulationSubsystem", "why": "NetLineEmulationSubsystem → NetEmulationSubsystem 을 따른다(파일 이름 = 주 형식)"},
+  {"old": "NetLineEmulationInternal", "new": "NetEmulationSubsystemInternal", "why": "NetLineEmulationSubsystem → NetEmulationSubsystem 을 따른다"},
+  {"old": "EditorNetLinkSettings", "new": "EditorNetEmulationSettings", "why": "망 상태 흉내는 NetEmulation 하나로 부른다(Link 는 관계만)"},
+  {"old": "EditorNetLinkDirection", "new": "NetEmulationDirection", "why": "망 상태 흉내는 NetEmulation 하나로 부른다(Link 는 관계만)"},
+  {"old": "EditorNetConditions", "new": "EditorNetEmulationSettings", "why": "파일 이름을 주 형식 EditorNetEmulationSettings 에 맞춘다"},
+  {"old": "EditorNetConditionsInternal", "new": "EditorNetEmulationSettingsInternal", "why": "EditorNetConditions → EditorNetEmulationSettings 를 따른다"}
 ]
