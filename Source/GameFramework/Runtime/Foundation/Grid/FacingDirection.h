@@ -5,6 +5,8 @@
 #pragma once
 #include "Core/Foundation/Types.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 namespace sw
 {
     /**
@@ -13,6 +15,7 @@ namespace sw
      *          둘 다 `namespace sw` 라서 두 킷의 헤더를 한 번역 단위에 넣으면 `redefinition of 'FacingDirection'` 로
      *          컴파일이 안 되고, 각 킷이 따로 빌드되는 동안은 드러나지 않습니다.
      */
+    ENUM()
     enum class FacingDirection : uint8
     {
         Down = 0,

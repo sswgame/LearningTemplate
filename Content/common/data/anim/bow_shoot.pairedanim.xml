@@ -7,7 +7,7 @@
 -->
 <PairedAnimation duration="1.0666667">
   <Role name="Archer" anchor="true" required="true" clip="2H_Ranged_Shoot" enterBlend="0.15" exitState="Idle" exitBlend="0.2"/>
-  <Role name="Bow" required="true" clip="Bow_Shoot_Bow" align="none" enterBlend="0" exitState="Bow_Idle" exitBlend="0.1"/>
-  <Role name="Arrow" required="false" clip="Arrow_Nock" start="0.2" align="none" enterBlend="0" exitState="Arrow_Hidden" exitBlend="0"/>
+  <Role name="Bow" required="true" clip="Bow_Shoot_Bow" align="None" enterBlend="0" exitState="Bow_Idle" exitBlend="0.1"/>
+  <Role name="Arrow" required="false" clip="Arrow_Nock" start="0.2" align="None" enterBlend="0" exitState="Arrow_Hidden" exitBlend="0"/>
   <Notify name="ReleaseArrow" time="0.6" role="Bow"/>
 </PairedAnimation>

@@ -20,28 +20,28 @@
 	</_listFrame>
 	<_listKey />
 	<_listAnimation>
-		<SpriteClipAnimation _name="walk_down" _firstFrame="0" _frameCount="4" _bLoop="1">
+		<SpriteClipAnimation _name="walk_Down" _firstFrame="0" _frameCount="4" _bLoop="1">
 			<_listNotify />
 		</SpriteClipAnimation>
-		<SpriteClipAnimation _name="idle_down" _firstFrame="0" _frameCount="1" _bLoop="1">
+		<SpriteClipAnimation _name="idle_Down" _firstFrame="0" _frameCount="1" _bLoop="1">
 			<_listNotify />
 		</SpriteClipAnimation>
-		<SpriteClipAnimation _name="walk_right" _firstFrame="4" _frameCount="4" _bLoop="1">
+		<SpriteClipAnimation _name="walk_Right" _firstFrame="4" _frameCount="4" _bLoop="1">
 			<_listNotify />
 		</SpriteClipAnimation>
-		<SpriteClipAnimation _name="idle_right" _firstFrame="4" _frameCount="1" _bLoop="1">
+		<SpriteClipAnimation _name="idle_Right" _firstFrame="4" _frameCount="1" _bLoop="1">
 			<_listNotify />
 		</SpriteClipAnimation>
-		<SpriteClipAnimation _name="walk_up" _firstFrame="8" _frameCount="4" _bLoop="1">
+		<SpriteClipAnimation _name="walk_Up" _firstFrame="8" _frameCount="4" _bLoop="1">
 			<_listNotify />
 		</SpriteClipAnimation>
-		<SpriteClipAnimation _name="idle_up" _firstFrame="8" _frameCount="1" _bLoop="1">
+		<SpriteClipAnimation _name="idle_Up" _firstFrame="8" _frameCount="1" _bLoop="1">
 			<_listNotify />
 		</SpriteClipAnimation>
-		<SpriteClipAnimation _name="walk_left" _firstFrame="12" _frameCount="4" _bLoop="1">
+		<SpriteClipAnimation _name="walk_Left" _firstFrame="12" _frameCount="4" _bLoop="1">
 			<_listNotify />
 		</SpriteClipAnimation>
-		<SpriteClipAnimation _name="idle_left" _firstFrame="12" _frameCount="1" _bLoop="1">
+		<SpriteClipAnimation _name="idle_Left" _firstFrame="12" _frameCount="1" _bLoop="1">
 			<_listNotify />
 		</SpriteClipAnimation>
 	</_listAnimation>

@@ -6,5 +6,5 @@
 -->
 <PairedAnimation duration="1.6666666">
   <Role name="Lead" anchor="true" required="true" clip="Cheer" enterBlend="0.1" exitState="Idle" exitBlend="0.2"/>
-  <Role name="Partner" required="true" clip="Interact" align="warp" offset="0 0 1.5" yaw="180" warpEnd="0.5" maxAlignDistance="3" enterBlend="0.1" exitState="Idle" exitBlend="0.2"/>
+  <Role name="Partner" required="true" clip="Interact" align="Warp" offset="0 0 1.5" yaw="180" warpEnd="0.5" maxAlignDistance="3" enterBlend="0.1" exitState="Idle" exitBlend="0.2"/>
 </PairedAnimation>

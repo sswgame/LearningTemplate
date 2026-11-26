@@ -25,6 +25,7 @@
 #include "Core/Path/AbsolutePath.h"
 
 #include "Engine/Content/AssetID.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
 {
@@ -33,7 +34,8 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 입력의 종류입니다. */
+    /** @brief 입력의 종류입니다. 작업 키 · 쿠킹 기록에는 열거자 이름(`getEnumName`)을 적는다. */
+    ENUM()
     enum class CookInputKind : uint8
     {
         Resource, ///< 리소스 하나의 내용(`_source` 는 리소스 id - 다시 풀 때 검색 순서로 이긴 파일). 없으면 해시 0
@@ -69,20 +71,6 @@ namespace sw
         }
         /** @brief 이 입력의 지금 해시입니다. 리소스 · 디스크 파일은 내용 해시(없으면 0), 목록은 지금 목록의 해시입니다. 종류의 규칙으로만 푼다. 기록이 새것인지 이 값으로 본다. */
         SW_API uint64 computeCurrentHash() const;
-        /** @brief 종류의 글 이름입니다(`resource` · `disk` · `listing`). 작업 키 · 쿠킹 기록이 같은 이름을 쓴다. */
-        static const utf8* getKindName( CookInputKind kind )
-        {
-            switch ( kind )
-            {
-                case CookInputKind::Resource:
-                    return "resource";
-                case CookInputKind::DiskFile:
-                    return "disk";
-                case CookInputKind::Listing:
-                    return "listing";
-            }
-            return "resource";
-        }
     };
 } // namespace sw
 

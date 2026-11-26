@@ -6,7 +6,7 @@
 	</_listFrame>
 	<_listKey />
 	<_listAnimation>
-		<SpriteClipAnimation _name="idle_down" _firstFrame="0" _frameCount="2" _bLoop="1">
+		<SpriteClipAnimation _name="idle_Down" _firstFrame="0" _frameCount="2" _bLoop="1">
 			<_listNotify />
 		</SpriteClipAnimation>
 	</_listAnimation>
