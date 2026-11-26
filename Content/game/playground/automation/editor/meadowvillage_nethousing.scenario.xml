@@ -34,7 +34,7 @@
 	<WaitUntil watch="Editor.NetSimValue" target="1" key="PendingRequests" equals="0" timeoutFrames="120"/>
 	<Expect watch="Editor.NetSimValue" target="0" key="Funds" equals="110"/>
 	<Expect watch="Editor.NetSimValue" target="1" key="Funds" equals="110"/>
-	<Expect watch="Editor.NetSimValue" target="1" key="LastResult" equals="0"/>
+	<Expect watch="Editor.NetSimValue" target="1" key="LastResult" is="Ok"/>
 	<WaitUntil watch="Editor.NetSimValue" target="1" key="ViewCount" equals="9" timeoutFrames="60"/>
 	<!-- ③ 늦은 참가 -->
 	<DevCommand line="netsim.addclient"/>
