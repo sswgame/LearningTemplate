@@ -84,7 +84,7 @@ C++ 를 쓸 때의 규칙. 린트 · 컴파일이 강제하는 줄은 "강제" �
 3. **No owner, one `.cpp`** → that file's anonymous namespace.
 
 - Before adding a struct, search lower layers for the same shape (`Ray`, `HTTPHeader`). No argument-only struct unless there are many arguments.
-- No new `.h`/`.cpp` pair until a second user, reflection, a registration macro or a test needs a header. A header-less `.cpp` is only a self-registering unit, a platform implementation or a module entry.
+- No new `.h`/`.cpp` pair until a second user, a registration macro or a test needs a header. A header-less `.cpp` is only a self-registering unit, a platform implementation or a module entry. A reflected type no other file names stays in its `.cpp`, which includes `<name>.cpp.gen.inl` at the end at global scope (the parser stops without it).
 
 ### Internal 규칙
 
@@ -128,7 +128,7 @@ C++ 를 쓸 때의 규칙. 린트 · 컴파일이 강제하는 줄은 "강제" �
 - Never re-derive the configuration from other macros; no alias macros (컴파일 강제).
 - Costly diagnostics compile into every non-Shipping build and are chosen at startup (`-rhi-validation` · `-rhi-dred` · `-deadlock-detection`); cheap checks under `SW_DO_CHECKS`; Debug-only via `build::kDebug` + `if constexpr`.
 - **Test and dev hooks stop at Release** (`shipping-check` 강제): per-frame numbers through `SW_PROFILE_SCOPE` · `SW_PROFILE_COUNT`, test-only counts as `DevCounter`, no measurement · watch · test accessor as a public API. Dev substitutes register through `DevOnlineExtension.h`; dev config lives under `Config/Dev`.
-- Reflection editor metadata lives in dev-only `.gen.meta.cpp`; layout is the same in every configuration.
+- Reflection editor metadata lives in dev-only `.gen.meta.cpp` (a `.cpp` input's `.cpp.gen.inl` drops it under `SW_SHIPPING`); layout is the same in every configuration.
 
 ## Existing facilities
 

@@ -96,7 +96,7 @@ def make_serialized_name(member: str) -> str:
 
 
 def collect_reflected_properties(map_header: Mapping[str, str]) -> dict[str, list[tuple[str, str]]]:
-    """헤더(경로 → 글)에서 `PROPERTY(...)` 가 붙은 칸을 모은다: 리플렉션 이름 → [(경로, 직렬화 이름)].
+    """리플렉션 입력(경로 → 글, 헤더 · .cpp)에서 `PROPERTY(...)` 가 붙은 칸을 모은다: 리플렉션 이름 → [(경로, 직렬화 이름)].
     리플렉션 이름은 `Name = "x"` 를 적었으면 그것(멤버 이름을 바꿔도 데이터 이름은 그대로다), 아니면 `_` 멤버 이름이다."""
     properties: dict[str, list[tuple[str, str]]] = {}
     for path, raw in map_header.items():

@@ -61,10 +61,17 @@ EXT_REFLECTION_GEN_CPP = ".gen.cpp"
 # 헤더마다의 개발 전용 단위 — 에디터 메타데이터(표시 · 편집 필드)를 채워 올린다. 배포 구성은 짓지 않는다(`sw_add_reflection_step`, 언리얼 WITH_METADATA 자리)
 EXT_REFLECTION_GEN_META_CPP = ".gen.meta.cpp"
 EXT_REFLECTION_GEN_HEADER = ".gen.h"
+# .cpp 입력의 산출물(`<이름>.cpp.gen.inl`). 그 .cpp 가 끝에서 include 한다. 다른 TU 는 그 형식을 못 보므로 등록 코드와 에디터 메타데이터가 이 파일 하나에 든다
+EXT_REFLECTION_GEN_INLINE = ".gen.inl"
 EXT_REFLECTION_TEMPLATE = ".tpl"
 EXT_REFLECTION_STAMP = ".stamp"
 FILE_REFLECTION_FLAG_OPS = "FlagOps.gen.h"
 TEXT_REFLECTION_BANNER = "// AUTO-GENERATED -- DO NOT EDIT"
+# 리플렉션 입력의 판정 — 이 확장자이고 줄 머리에 이 매크로가 있는 파일이다. CMake 훑기(`sw_is_reflection_input`)와 파이썬 도구(`lint.cpp_code.is_reflection_input`)가
+# 이 둘을 함께 쓴다. 도구마다 확장자 목록을 따로 두면 .cpp 입력을 더할 때처럼 한 곳이 헤더만 본 채로 남는다.
+REFLECTION_INPUT_EXTENSIONS: tuple[str, ...] = (".h", ".hpp", ".cpp")
+# CMake 정규식과 파이썬 `re` 가 같은 뜻으로 읽는 꼴만 쓴다. `\t` 는 일반 문자열이라 탭 글자로 들어간다(CMake 정규식은 `\t` 를 모른다).
+REFLECTION_MACRO_LINE_PATTERN = "^[ \t]*(REFLECT\\(|ENUM\\(|REFLECT_CONTAINER\\()"
 
 TARGET_GAME_MODULE = "SWGame"
 TARGET_EDITOR_MODULE = "EditorModule"

@@ -3,7 +3,7 @@
 """
 Scripts/dev/api_diff.py
 
-묶음이 새로 들인 함수 이름(헤더 선언)을 모아 사람이 검토할 목록으로 내고, 두 갈래 이상이 같은 이름을 새로 더했으면 따로 낸다 — 통합 때 `code-review-and-quality` 와 함께 본다.
+묶음이 새로 들인 함수 이름(헤더 선언과 .cpp 안 리플렉션 형식의 PROPERTY · FUNCTION)을 모아 사람이 검토할 목록으로 내고, 두 갈래 이상이 같은 이름을 새로 더했으면 따로 낸다 — 통합 때 `code-review-and-quality` 와 함께 본다.
 
 왜 게이트가 아니라 목록인가. `naming-words` 는 함수의 앞 단어(동사)만 표와 대조한다. `allowsOneMore` · `finishGraceFind` 처럼 동사는 흔하고
 이름 전체가 무엇을 하는지 말하지 않는 것은 낱말 표로 가릴 수 없다(`Peak` · `Extra` 는 업계에서도 쓰는 말이라 낱말을 막으면 맞는 이름까지 막힌다,
@@ -32,6 +32,9 @@ DECLARATION = re.compile(r"^\+\s*(?:\[\[nodiscard\]\]\s*)?(?:(?:static|virtual|i
 MEMBER = re.compile(r"^\+\s*(?:(?:static|inline|constexpr|mutable|const)\s+)*[\w:<>,\*&\s]+?[\s\*&>](_[A-Za-z]\w*)\s*(?:\{[^;]*\}|=[^;]*)?;")
 REGISTRATION = re.compile(r'^\+(?!\s*#\s*define).*?\bSW_[A-Z0-9_]+\(\s*\w+\s*,\s*"([^"]+)"')
 CONFIG_KEY = re.compile(r'^\+\s*"(_\w+)"\s*:')
+#: .cpp 안의 리플렉션 형식(`<이름>.cpp.gen.inl`)은 헤더 없이 이름을 밖(데이터 · 스크립트)에 낸다 — 바로 앞 줄이 이 표식인 멤버 · 함수만 그 이름이다
+#: (.cpp 의 다른 선언 · 대입 줄은 바깥 이름이 아니다).
+REFLECTED_MARK = re.compile(r"^\+\s*(PROPERTY|FUNCTION)\s*\(")
 CALL_LIKE = re.compile(r"\b([a-z][A-Za-z0-9]*)\s*\(")
 REMOVED_WORD = re.compile(r'\b_?[A-Za-z]\w*|"[^"]+"')
 KEYWORDS = {"if", "for", "while", "switch", "return", "sizeof", "static_cast", "decltype", "alignof", "catch"}
@@ -60,9 +63,11 @@ def parse_new_names(diff: str) -> list[NewName]:
     added: dict[tuple[str, str, str], NewName] = {}
     path = ""
     old_path = ""
+    previous_mark = ""   # 바로 앞에 더한 줄의 리플렉션 표식(PROPERTY · FUNCTION) — .cpp 의 리플렉션 칸 · 함수를 고른다
     for line in diff.splitlines():
         if line.startswith("+++ "):
             path = line[6:]
+            previous_mark = ""
             continue
         if line.startswith("--- "):
             old_path = line[6:]   # 지운 파일은 `+++ /dev/null` 이라 지운 줄의 종류는 옛 경로로 본다
@@ -71,10 +76,15 @@ def parse_new_names(diff: str) -> list[NewName]:
             list_removed.update(word.strip('"') for word in REMOVED_WORD.findall(line))
             if old_path.endswith(".h"):
                 list_removed_function.update(CALL_LIKE.findall(line))
+            previous_mark = ""
             continue
         if not line.startswith("+"):
+            previous_mark = ""
             continue
         list_found: list[tuple[str, str]] = []
+        mark = previous_mark
+        mark_match = REFLECTED_MARK.match(line)
+        previous_mark = mark_match.group(1) if mark_match else ""
         if path.endswith(".json"):
             list_found += [("config", match) for match in CONFIG_KEY.findall(line)]
         else:
@@ -84,6 +94,13 @@ def parse_new_names(diff: str) -> list[NewName]:
                 if declaration and declaration.group(1) not in KEYWORDS:
                     list_found.append(("function", declaration.group(1)))
                 member = MEMBER.match(line)
+                if member:
+                    list_found.append(("member", member.group(1)))
+            elif path.endswith(".cpp") and mark:
+                declaration = DECLARATION.match(line) if mark == "FUNCTION" else None
+                member = MEMBER.match(line) if mark == "PROPERTY" else None
+                if declaration and declaration.group(1) not in KEYWORDS:
+                    list_found.append(("function", declaration.group(1)))
                 if member:
                     list_found.append(("member", member.group(1)))
         for kind, name in list_found:

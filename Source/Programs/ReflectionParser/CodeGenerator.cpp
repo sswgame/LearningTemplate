@@ -382,6 +382,38 @@ namespace sw
         }
 
         emitFileHeader( buffer );
+        emitRegistrationBody( buffer );
+        return string( buffer.view() );
+    }
+
+    string CodeGenerator::makeInlineText() const
+    {
+        _emitBytes = CodeEmitByteReport{};
+        CodeEmitBuffer buffer;
+        if ( _header._listType.empty() && _header._listEnum.empty() )
+        {
+            buffer.appendFormat( "// No reflected types found in %#\n", _sourceFilePath );
+            return string( buffer.view() );
+        }
+
+        {
+            const CodeEmitByteScope byteScope{ _emitBytes, buffer, CodeEmitSection::FileHeader };
+            // 원본을 include 하지 않는다. 이 파일은 원본(.cpp)의 끝에서 그 .cpp 안으로 들어간다.
+            buffer.appendFormat( "%#\n// Source: %#\n// Include this file at the end of the source, at global scope.\n\n", sw::config::kTextReflectionBanner, _sourceFilePath );
+            // 파서가 그 .cpp 를 다시 읽을 때 지난 생성 글을 보지 않게 한다. 지운 형식을 가리키는 옛 등록 코드가 파싱을 깨뜨린다.
+            buffer.appendFormat( "%#\n", emitdirective::kIfndefParser );
+            buffer.append( "#include \"Engine/Object/ReflectGenerated.h\"\n\n" );
+        }
+        emitRegistrationBody( buffer );
+        // 에디터 메타데이터는 헤더 입력이면 따로 짓는 개발 전용 단위다. 여기서는 따로 지을 수 없어 배포 구성에서 전처리로 뺀다.
+        buffer.append( "#if !defined( SW_SHIPPING )\n" );
+        emitEditorMetadata( buffer );
+        buffer.appendFormat( "#endif // !defined( SW_SHIPPING )\n%#\n", emitdirective::kEndif );
+        return string( buffer.view() );
+    }
+
+    void CodeGenerator::emitRegistrationBody( CodeEmitBuffer& buffer ) const
+    {
         // 타입 핸들 인자의 확인(`ComponentHandleArgument`)은 씬 매니저를 보므로, 그런 인자가 있는 산출물만 그 헤더를 넣는다(모든 .gen.cpp 가 매니저를 끌어오지 않는다).
         if ( hasHandleArgument() )
             buffer.append( "#include \"Engine/Object/GameObject/ComponentHandleArgument.h\"\n\n" );
@@ -407,7 +439,6 @@ namespace sw
             if ( typeInfo.requiresTypeAPI() )
                 emitTypeInfoAccessors( buffer, typeInfo );
         }
-        return string( buffer.view() );
     }
 
     bool CodeGenerator::hasHandleArgument() const
@@ -1145,6 +1176,12 @@ namespace sw
     string CodeGenerator::makeEditorMetadataText() const
     {
         CodeEmitBuffer buffer;
+        emitEditorMetadata( buffer );
+        return string( buffer.view() );
+    }
+
+    void CodeGenerator::emitEditorMetadata( CodeEmitBuffer& buffer ) const
+    {
         appendTemplate( buffer, EmitTemplate::EditorMetadataFileHeader, {
                                                                             {templatekey::kSourcePath,                   _sourceFilePath},
                                                                             {    templatekey::kBanner, sw::config::kTextReflectionBanner}
@@ -1173,7 +1210,6 @@ namespace sw
         if ( bAny == false )
             emit.linef( "// No editor metadata in %#", _sourceFilePath );
         buffer.append( "} // namespace sw::generated::editormetadata\n" );
-        return string( buffer.view() );
     }
 
     void CodeGenerator::collectTypeEditorRows( const ParsedTypeInfo& typeInfo, vector<string>& outListRow ) const

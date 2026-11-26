@@ -1,12 +1,14 @@
 """
 Scripts/lint/cpp_code.py
 
-C++ 글을 보는 규칙이 함께 쓰는 것 — 주석 · 문자열 · 전처리 줄 지우기(자리를 지킨다), 중괄호 · 인자 목록의 짝, 줄 번호.
+C++ 글을 보는 규칙이 함께 쓰는 것 — 주석 · 문자열 · 전처리 줄 지우기(자리를 지킨다), 중괄호 · 인자 목록의 짝, 줄 번호, 리플렉션 입력 판정.
 """
 
 from __future__ import annotations
 
 import re
+
+from common.project_constants import REFLECTION_INPUT_EXTENSIONS, REFLECTION_MACRO_LINE_PATTERN
 
 STRIP_START = re.compile(r'//|/\*|R"|["\']')   # 지울 것이 시작할 수 있는 자리 — 그 사이 글자는 그대로 둔다
 RAW_STRING_HEAD = re.compile(r'R"([^(]*)\(')
@@ -126,3 +128,11 @@ SOURCE_EXTENSIONS = (".h", ".cpp", ".inl")
 
 def is_source_file(relative: str) -> bool:
     return relative.startswith("Source/") and relative.endswith(SOURCE_EXTENSIONS) and "/ThirdParty/" not in relative
+
+
+REFLECTION_MACRO_LINE = re.compile(REFLECTION_MACRO_LINE_PATTERN, re.M)
+
+
+def is_reflection_input(relative: str, text: str) -> bool:
+    """리플렉션 생성 단계의 입력(헤더 · .cpp)이면 True — CMake 훑기(`sw_is_reflection_input`)와 같은 판정이다(`project_constants` 의 확장자 · 줄 머리 매크로)."""
+    return relative.endswith(REFLECTION_INPUT_EXTENSIONS) and REFLECTION_MACRO_LINE.search(text) is not None

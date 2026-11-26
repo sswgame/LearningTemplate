@@ -9,8 +9,9 @@
 #   // EXPECT-NOT-ASSET-FIELD: <이름> <대상>  AssetReferenceFields.list 에 그 줄이 없다.
 #   // EXPECT-TYPE: <FQN>      ReflectedTypes.list 에 `<FQN>\t<모듈>` 줄이 있다.
 #   // EXPECT-ASSET-FIELD: <이름> <대상>  AssetReferenceFields.list 에 `<이름>\t<대상>` 줄이 있다.
-# 입력: TARGET_ARGS · PARSER · FIXTURE · WORK_DIR · SOURCE_ROOT · GENERATED_DIR · BUILTINS · TEMPLATES · CONFIG · TYPES_LIST_NAME · ASSET_FIELDS_LIST_NAME · GEN_CPP_SUFFIX · GEN_META_CPP_SUFFIX
-foreach(required TARGET_ARGS PARSER FIXTURE WORK_DIR SOURCE_ROOT GENERATED_DIR BUILTINS TEMPLATES CONFIG TYPES_LIST_NAME ASSET_FIELDS_LIST_NAME GEN_CPP_SUFFIX GEN_META_CPP_SUFFIX)
+# 사례가 .cpp 면 산출물은 `<이름>.cpp.gen.inl` 하나라 EXPECT-GEN · EXPECT-NOT-GEN · EXPECT-META 가 모두 그 파일을 본다.
+# 입력: TARGET_ARGS · PARSER · FIXTURE · WORK_DIR · SOURCE_ROOT · GENERATED_DIR · BUILTINS · TEMPLATES · CONFIG · TYPES_LIST_NAME · ASSET_FIELDS_LIST_NAME · GEN_CPP_SUFFIX · GEN_META_CPP_SUFFIX · GEN_INLINE_SUFFIX
+foreach(required TARGET_ARGS PARSER FIXTURE WORK_DIR SOURCE_ROOT GENERATED_DIR BUILTINS TEMPLATES CONFIG TYPES_LIST_NAME ASSET_FIELDS_LIST_NAME GEN_CPP_SUFFIX GEN_META_CPP_SUFFIX GEN_INLINE_SUFFIX)
 	if(NOT DEFINED ${required})
 		message(FATAL_ERROR "RunParserFixture: ${required} is not given")
 	endif()
@@ -109,7 +110,15 @@ endif()
 if(NOT exit_code EQUAL 0)
 	message(FATAL_ERROR "${fixture_name}: the parser exited ${exit_code}\n${output_text}")
 endif()
-file(READ "${WORK_DIR}/${fixture_name}${GEN_CPP_SUFFIX}" gen_text)
+get_filename_component(fixture_file_name "${FIXTURE}" NAME)
+if(FIXTURE MATCHES "\\.cpp$")
+	set(gen_file "${WORK_DIR}/${fixture_file_name}${GEN_INLINE_SUFFIX}")
+	set(meta_file "${gen_file}")
+else()
+	set(gen_file "${WORK_DIR}/${fixture_name}${GEN_CPP_SUFFIX}")
+	set(meta_file "${WORK_DIR}/${fixture_name}${GEN_META_CPP_SUFFIX}")
+endif()
+file(READ "${gen_file}" gen_text)
 foreach(needle IN LISTS list_expect_gen)
 	string(FIND "${gen_text}" "${needle}" found)
 	if(found EQUAL -1)
@@ -122,7 +131,7 @@ foreach(needle IN LISTS list_expect_not_gen)
 		message(FATAL_ERROR "${fixture_name}: '${needle}' must not be in the generated code\n${gen_text}")
 	endif()
 endforeach()
-file(READ "${WORK_DIR}/${fixture_name}${GEN_META_CPP_SUFFIX}" meta_text)
+file(READ "${meta_file}" meta_text)
 foreach(needle IN LISTS list_expect_meta)
 	string(FIND "${meta_text}" "${needle}" found)
 	if(found EQUAL -1)

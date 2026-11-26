@@ -39,7 +39,7 @@ REFLECT_LINE = re.compile(r"^[ 	]*REFLECT\s*\(", re.M)
 
 
 def collect_type_names(list_header: Sequence[Path]) -> list[str]:
-    """헤더들의 리플렉션 형식 이름(글자 순, 겹침 없음)입니다. 읽지 못하는 헤더 · 이름을 읽지 못한 `REFLECT(` 는 멈춘다(빠진 표로 대신하지 않는다)."""
+    """헤더 · .cpp 의 리플렉션 형식 이름(글자 순, 겹침 없음)입니다. 읽지 못하는 헤더 · 이름을 읽지 못한 `REFLECT(` 는 멈춘다(빠진 표로 대신하지 않는다)."""
     set_name: set[str] = set()
     for header in list_header:
         text = header.read_text(encoding="utf-8")
@@ -75,7 +75,7 @@ class ClientOnlyTypesCommand(Command):
     help = "전용 서버가 짓지 않는 소스의 리플렉션 형식 이름 표를 쓴다(서버 구성 빌드가 부른다)"
 
     def add_arguments(self, parser: argparse.ArgumentParser) -> None:
-        parser.add_argument("--headers", type=Path, required=True, help="헤더 절대 경로를 한 줄에 하나씩 적은 파일")
+        parser.add_argument("--headers", type=Path, required=True, help="헤더 · 리플렉션 .cpp(`sw_is_reflection_input`) 절대 경로를 한 줄에 하나씩 적은 파일")
         parser.add_argument("--output", type=Path, required=True, help=f"쓸 표(실행 파일 옆 {TABLE_FILE_NAME})")
 
     def run(self, context: ScriptContext, args: argparse.Namespace) -> int:

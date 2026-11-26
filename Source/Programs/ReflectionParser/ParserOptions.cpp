@@ -25,7 +25,7 @@ namespace sw
         };
 
         constexpr OptionRow kArrOptionRow[] = {
-            {          cli::kInput,                     nullptr,                          nullptr,                              nullptr, &ParserOptions::_listInputFile,            "<header.h>",                                                                              "header to parse (repeatable)"},
+            {          cli::kInput,                     nullptr,                          nullptr,                              nullptr, &ParserOptions::_listInputFile,            "<header.h>",                                                                      "header or .cpp to parse (repeatable)"},
             {         cli::kOutput,                     nullptr,                          nullptr,           &ParserOptions::_outputDir,                        nullptr,                 "<dir>",                                                                  "directory for .gen.cpp / .gen.h / stamps"},
             {        cli::kInclude,                     nullptr, &ParserOptions::_listIncludePath,                              nullptr,                        nullptr,                 "<dir>",                                                                           "clang include path (repeatable)"},
             {         cli::kConfig,                     nullptr,                          nullptr,          &ParserOptions::_configPath,                        nullptr,   "<abs defaults.json>",                       "committed parser_config.defaults.json (local and toolchain settings sit next to it)"},
