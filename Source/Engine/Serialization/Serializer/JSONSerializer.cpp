@@ -13,7 +13,10 @@
 #include "Engine/Serialization/JSON/JSONDocument.h"
 #include "Engine/Serialization/Serializer/ContainerVisitor.h"
 #include "Engine/Serialization/Serializer/NestedObjectCodec.h"
-#include "Engine/Serialization/Serializer/SerializerUtil.h"
+#include "Engine/Serialization/Serializer/PropertyConstraints.h"
+#include "Engine/Serialization/Serializer/PropertyReadRollback.h"
+#include "Engine/Serialization/Serializer/PropertySerializer.h"
+#include "Engine/Serialization/Serializer/ValueSerializer.h"
 
 namespace sw
 {
@@ -86,10 +89,10 @@ namespace sw
                 for ( const PropertyInfo& prop : typeInfo.getPropertiesWithBase() )
                 {
                     const bool bKeepCurrent = uniqueMatched.find( prop.getNameHash() ) != uniqueMatched.end() ||
-                                              SerializerUtil::shouldSerializeProperty( typeInfo, prop, context ) == false;
+                                              PropertySerializer::shouldSerializeProperty( typeInfo, prop, context ) == false;
                     if ( bKeepCurrent )
                         continue;
-                    SerializerUtil::applyPropertyDefault( prop, MutableObjectAddress{ pInstance } );
+                    PropertySerializer::applyPropertyDefault( prop, MutableObjectAddress{ pInstance } );
                 }
             }
 
@@ -99,18 +102,18 @@ namespace sw
                 if ( dst.isValid() == false )
                     return;
 
-                // 묶음(`pBinding`)이 있으면 처리기 · 열거형 · 구조체를 이름 조회 없이 고른다 — 바이너리와 같은 길(`SerializerUtil::findValueCodecs`).
-                const SerializerUtil::ValueCodecs codecs    = SerializerUtil::findValueCodecs( typeName, pBinding, context );
-                const hashed_string&              resolved  = codecs.getHandlerName();
-                const bool                        bIsString = ( resolved.isPredefinedType( PredefinedNameType::NameType_string ) || resolved.isPredefinedType( PredefinedNameType::NameType_hashed_string ) ||
+                // 묶음(`pBinding`)이 있으면 처리기 · 열거형 · 구조체를 이름 조회 없이 고른다 — 바이너리와 같은 길(`ValueSerializer::findValueCodecs`).
+                const ValueSerializer::ValueCodecs codecs    = ValueSerializer::findValueCodecs( typeName, pBinding, context );
+                const hashed_string&               resolved  = codecs.getHandlerName();
+                const bool                         bIsString = ( resolved.isPredefinedType( PredefinedNameType::NameType_string ) || resolved.isPredefinedType( PredefinedNameType::NameType_hashed_string ) ||
                                          resolved.isPredefinedType( PredefinedNameType::NameType_TagID ) );
-                const bool                        bIsBool   = ( resolved.isPredefinedType( PredefinedNameType::NameType_bool ) || resolved.isPredefinedType( PredefinedNameType::NameType_atomic_bool ) );
-                const bool                        bIsEnum   = codecs.findEnum( context ) != nullptr;
+                const bool                         bIsBool   = ( resolved.isPredefinedType( PredefinedNameType::NameType_bool ) || resolved.isPredefinedType( PredefinedNameType::NameType_atomic_bool ) );
+                const bool                         bIsEnum   = codecs.findEnum( context ) != nullptr;
 
                 if ( bIsString || bIsEnum )
                 {
                     StringBuilder<constant::buffer::kMax8192> text;
-                    SerializerUtil::valueToText( text, value, typeName, pBinding, context );
+                    ValueSerializer::valueToText( text, value, typeName, pBinding, context );
                     dst.setString( text.view() );
                     return;
                 }
@@ -118,7 +121,7 @@ namespace sw
                 if ( bIsBool )
                 {
                     StringBuilder<constant::buffer::kMax8192> text;
-                    SerializerUtil::valueToText( text, value, typeName, pBinding, context );
+                    ValueSerializer::valueToText( text, value, typeName, pBinding, context );
                     bool bValue{ false };
                     if ( StringUtil::tryParseBool( text.view(), bValue ) )
                         dst.setBool( bValue );
@@ -130,7 +133,7 @@ namespace sw
                 if ( codecs.findTextWriter( context ) != nullptr )
                 {
                     StringBuilder<constant::buffer::kMax8192> text;
-                    SerializerUtil::valueToText( text, value, typeName, pBinding, context );
+                    ValueSerializer::valueToText( text, value, typeName, pBinding, context );
                     JSONDocument parsed;
                     const bool   bParsedScalar = parsed.tryParse( text.view() ) && parsed.getRoot().isObject() == false && parsed.getRoot().isArray() == false;
                     if ( bParsedScalar )
@@ -149,7 +152,7 @@ namespace sw
                 }
 
                 StringBuilder<constant::buffer::kMax8192> text;
-                SerializerUtil::valueToText( text, value, typeName, pBinding, context );
+                ValueSerializer::valueToText( text, value, typeName, pBinding, context );
                 dst.setString( text.view() );
             }
 
@@ -174,7 +177,7 @@ namespace sw
                 void beginMapEntry( const ValueAddress key, const hashed_string& keyTypeName ) override
                 {
                     StringBuilder<constant::buffer::kMax8192> keyText;
-                    SerializerUtil::valueToText( keyText, key, keyTypeName, _shape.findBinding( keyTypeName ), _context );
+                    ValueSerializer::valueToText( keyText, key, keyTypeName, _shape.findBinding( keyTypeName ), _context );
                     const JSONValue entry = _listSlot.back().set( keyText.view() );
                     _listSlot.push_back( entry );
                 }
@@ -400,7 +403,7 @@ namespace sw
                 if ( pValPtr == nullptr || src.isValid() == false )
                     return FieldReadResult::FieldFailed;
 
-                const SerializerUtil::ValueCodecs   codecs      = SerializerUtil::findValueCodecs( typeName, pBinding, context );
+                const ValueSerializer::ValueCodecs  codecs      = ValueSerializer::findValueCodecs( typeName, pBinding, context );
                 const SerializeContext::TextReadFn* pTextReader = codecs.findTextReader( context );
                 if ( pTextReader != nullptr )
                 {
@@ -447,7 +450,7 @@ namespace sw
                 const ReflectPropertyVisitor propertyVisitor{ ReflectVisitOptions{} };
                 (void)propertyVisitor.visitProperties( typeInfo, pInstance, [&]( const ReflectVisitConstField& field )
                 {
-                    if ( SerializerUtil::shouldSerializeProperty( typeInfo, field._property, context ) )
+                    if ( PropertySerializer::shouldSerializeProperty( typeInfo, field._property, context ) )
                         writeProperty( dst, field._property, ObjectAddress{ pInstance }, context );
                     return ReflectVisitFlow::Continue;
                 } );
@@ -545,10 +548,10 @@ namespace sw
             pathBuilder.append( prop._name.c_str() );
             const string    path  = string( pathBuilder.view() );
             const JSONValue value = object.get( prop._name.c_str() );
-            // 판정은 XML 과 한 함수다(`SerializerUtil::isRequiredValueMissing`) — 빈 이름 글도 빠진 것이다.
+            // 판정은 XML 과 한 함수다(`PropertyConstraints::isRequiredValueMissing`) — 빈 이름 글도 빠진 것이다.
             const string      valueText = value.isValid() && value.isString() ? value.asString() : string{};
             const string_view textView( valueText );
-            if ( SerializerUtil::isRequiredValueMissing( prop, value.isValid(), value.isValid() && value.isString() ? &textView : nullptr, RequiredScope::Root ) )
+            if ( PropertyConstraints::isRequiredValueMissing( prop, value.isValid(), value.isValid() && value.isString() ? &textView : nullptr, RequiredScope::Root ) )
             {
                 outListPath.push_back( path );
                 continue;
@@ -556,7 +559,7 @@ namespace sw
             if ( value.isValid() == false )
                 continue;
             const bool      bContainer = prop._bIsContainer == SW_TRUE;
-            const TypeInfo* pNested    = SerializerUtil::findNestedObjectType( bContainer ? prop._elementTypeName : prop._typeName, bContainer ? prop.findElementBinding() : prop.findValueBinding(), SerializeContext::getDefault( SerializePurpose::Authoring ) );
+            const TypeInfo* pNested    = ValueSerializer::findNestedObjectType( bContainer ? prop._elementTypeName : prop._typeName, bContainer ? prop.findElementBinding() : prop.findValueBinding(), SerializeContext::getDefault( SerializePurpose::Authoring ) );
             if ( bContainer == false && value.isObject() )
             {
                 if ( pNested != nullptr )
@@ -565,7 +568,7 @@ namespace sw
             }
             if ( bContainer == false || value.isArray() == false )
                 continue;
-            const bool bOwnedPointer = SerializerUtil::isOwnedPointerElementType( prop._elementTypeName );
+            const bool bOwnedPointer = ValueSerializer::isOwnedPointerElementType( prop._elementTypeName );
             for ( size_t elementIndex = 0; elementIndex < value.size(); ++elementIndex )
             {
                 const JSONValue element = value.at( elementIndex );
@@ -641,7 +644,7 @@ namespace sw
         for ( const string& keyRaw : src.getMemberNames() )
         {
             const JSONValue field = src.get( keyRaw );
-            if ( SerializerUtil::isKeyEqual( keyRaw, kSchemaVersionKey ) )
+            if ( PropertySerializer::isKeyEqual( keyRaw, kSchemaVersionKey ) )
             {
                 if ( pOutVersion == nullptr )
                     continue;
@@ -653,7 +656,7 @@ namespace sw
                 continue;
             }
             // 키는 철자 그대로 맞춘다 — 대소문자만 다른 키(`_Width`)도 모르는 키라 아래에서 알린다(조용히 묶거나 버리지 않는다).
-            const PropertyInfo* pMatched = SerializerUtil::matchProperty( listProp, keyRaw );
+            const PropertyInfo* pMatched = PropertySerializer::matchProperty( listProp, keyRaw );
 
             if ( pMatched == nullptr || pMatched->_metadata->_bTransient == SW_TRUE )
             {
@@ -664,13 +667,13 @@ namespace sw
                 continue;
             }
             // 저작 파일의 런타임 상태는 로드 오류다. 이 목적이 다루지 않는 그 밖의 필드(옵트인 세이브의 나머지)는 지금 값 그대로 둔다.
-            if ( SerializerUtil::isForbiddenInFile( *pMatched, context ) )
+            if ( PropertySerializer::isForbiddenInFile( *pMatched, context ) )
             {
-                SerializerUtil::reportForbiddenProperty( typeInfo, *pMatched );
+                PropertySerializer::reportForbiddenProperty( typeInfo, *pMatched );
                 bForbiddenField = true;
                 continue;
             }
-            if ( SerializerUtil::shouldSerializeProperty( typeInfo, *pMatched, context ) == false )
+            if ( PropertySerializer::shouldSerializeProperty( typeInfo, *pMatched, context ) == false )
                 continue;
 
             uniqueMatched.insert( pMatched->getNameHash() );
@@ -715,7 +718,7 @@ namespace sw
         const bool bStrictFieldError = pOutListOrphan == nullptr && bFieldError;
         if ( bStrictFieldError )
             return FieldReadResult::FieldFailed;
-        return SerializerUtil::isWithinDeclaredRanges( typeInfo, ObjectAddress{ pInstance }, rollback.getRestoredValues() ) ? FieldReadResult::Read : FieldReadResult::FieldFailed;
+        return PropertyConstraints::isWithinDeclaredRanges( typeInfo, ObjectAddress{ pInstance }, rollback.getRestoredValues() ) ? FieldReadResult::Read : FieldReadResult::FieldFailed;
     }
 
     FieldReadResult JSONSerializer::readField( const JSONValue& field, const PropertyInfo& prop, void* pInstance, const SerializeContext& context )
@@ -772,7 +775,7 @@ namespace sw
         expected<string> text = JSONSerializerInternal::dumpDocument( doc, typeInfo, JSONDocument::kSingleLineIndent );
         if ( text.has_value() )
             return std::move( text ).value();
-        // 이 글은 다른 글 값(XML 속성 · 맵 키 · 표시 글) 안에 들어간다 — 그 쓰기 창구(`SerializerUtil::valueToText`)는 실패를 올릴 길이 없다.
+        // 이 글은 다른 글 값(XML 속성 · 맵 키 · 표시 글) 안에 들어간다 — 그 쓰기 창구(`ValueSerializer::valueToText`)는 실패를 올릴 길이 없다.
         // 잘못된 UTF-8 은 U+FFFD 로 바꿔 쓰고(JSONWriter 와 같은 규칙) 오류로 알린다 — 빈 글로 값을 지우지 않고, 조용히 넘기지도 않는다.
         SW_LOG_ERROR_ID( "JSONSerializer.NestedObjectInvalidUTF8", "Nested %# written into a text value has invalid UTF-8 - replaced with U+FFFD: %# (%#)", typeInfo._name.c_str(),
                          text.error().message(), text.error().detail() );

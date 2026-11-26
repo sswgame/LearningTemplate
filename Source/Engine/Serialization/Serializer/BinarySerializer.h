@@ -50,7 +50,7 @@ namespace sw
         // ------------------------------------------------------------------------------
         /**
          * @brief 객체를 콤팩트 바이너리로 직렬화합니다.
-         * @return 프로퍼티 값 하나라도 실을 수 없으면(`SerializerUtil::serializeValueBinary`) 그 자리에서 멈추고 오류를 알리며 false 입니다. 그때 @p outListBuffer 는 쓰면 안 됩니다.
+         * @return 프로퍼티 값 하나라도 실을 수 없으면(`ValueSerializer::serializeValueBinary`) 그 자리에서 멈추고 오류를 알리며 false 입니다. 그때 @p outListBuffer 는 쓰면 안 됩니다.
          */
         [[nodiscard]] static bool serialize( const void* pInstance, const TypeInfo& typeInfo, vector<uint8>& outListBuffer,
                                              const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring ) );

@@ -22,7 +22,7 @@
         "Engine/Reflection/FunctionInfo.h": {"_limit": 2, "_reason": "메타데이터 상자(ReflectionMetadataBox.h)가 리플렉션 매크로 · 컨테이너 래퍼를 끌지 않는다"},
         "Engine/Serialization/Serializer/StateIO.h": {"_limit": 3, "_reason": "DeterministicRandom32 · typeFqn 은 앞선 선언 — reflected · reflectedAs · writeReflectedHeader<T> 를 부르는 TU 가 TypeFqn.h 를 읽는다"},
         "Engine/Config/ConfigManager.h": {"_limit": 10, "_reason": "TypeInfo 는 앞선 선언(ReflectionFwd.h) — 설정 템플릿(getConfig · readConfig* · load*Config)을 인스턴스화하는 TU 가 TypeInfo.h 를 읽는다"},
-        "Engine/Serialization/Serializer/SerializerUtil.h": {"_limit": 21, "_reason": "프로퍼티 · 타입 기술(TypeInfo.h)만 쓴다 — 레지스트리 · 호출 · 검증 · 값 상자 헤더를 포함하지 않는다"},
+        "Engine/Serialization/Serializer/ValueSerializer.h": {"_limit": 21, "_reason": "프로퍼티 · 타입 기술(TypeInfo.h)만 쓴다 — 레지스트리 · 호출 · 검증 · 값 상자 헤더를 포함하지 않는다"},
         "GameFramework/Runtime/Foundation/GameData/XMLCatalog.h": {"_limit": 1, "_reason": "AssetID 는 참조로만 받는다(앞선 선언) — 캐시를 선언하는 카탈로그 헤더는 SharedAssetCache.h 를 직접 포함한다"},
         "Engine/Serialization/Layout/ReplicatedLayout.h": {"_limit": 11, "_reason": "타입은 이름 캐시(TypeLookupCache · typeFqn — LayoutSerializer.h)로 찾는다 — TypeRegistry.h 를 포함하지 않는다"},
         "Engine/Graphics/RHI/RHIDescriptors.h": {"_limit": 9, "_reason": "메시 정점 스트림 · PSO 서술체 · 밉 배치 계산을 RHIMeshVertexLayout.h · RHIPipelineStateDesc.h · RHITextureMipLayout.h 로 떼었다(half · MeshVertex · RenderState · RHIFormatInfo 를 끌지 않는다)"},

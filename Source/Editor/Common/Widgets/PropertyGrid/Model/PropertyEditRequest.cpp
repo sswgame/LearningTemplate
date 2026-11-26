@@ -12,7 +12,8 @@
 #include "Engine/Reflection/ReflectionContainers.h"
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Reflection/TypeRegistry.h"
-#include "Engine/Serialization/Serializer/SerializerUtil.h"
+#include "Engine/Serialization/Serializer/PropertySerializer.h"
+#include "Engine/Serialization/Serializer/ValueSerializer.h"
 
 namespace sw::editor
 {
@@ -123,7 +124,7 @@ namespace sw::editor
             static bool setText( const Slot& slot, const string& text )
             {
                 // 그 프로퍼티 하나만 쓴다(비트필드는 그 비트만). `{"이름":값}` 을 JSON 으로 읽히면 읽기에서 빠진 프로퍼티마다 기본값을 채워 다른 프로퍼티까지 바뀐다.
-                if ( SerializerUtil::applyPropertyText( *slot._pProp, slot._instance, text, SerializeContext::getDefault( SerializePurpose::Authoring ) ) )
+                if ( PropertySerializer::applyPropertyText( *slot._pProp, slot._instance, text, SerializeContext::getDefault( SerializePurpose::Authoring ) ) )
                     return true;
                 SW_LOG_WARNING_ID( "EditorPropertyGrid.CouldNotApplied", "'%#' could not be applied to %#", text.c_str(), slot._pProp->_name.c_str() );
                 return false;
@@ -155,13 +156,13 @@ namespace sw::editor
                 mapWrapper.defaultConstructKey( pKey );
                 mapWrapper.defaultConstructValue( pValue );
                 bool bInserted = false;
-                if ( SerializerUtil::parseTextValue( MutableValueAddress{ pKey }, prop._keyTypeName, keyText, context ) )
+                if ( ValueSerializer::parseTextValue( MutableValueAddress{ pKey }, prop._keyTypeName, keyText, context ) )
                 {
-                    const string stagedText = SerializerUtil::formatValueText( ValueAddress{ pKey }, prop._keyTypeName, context );
+                    const string stagedText = ValueSerializer::formatValueText( ValueAddress{ pKey }, prop._keyTypeName, context );
                     bool         bExists    = false;
                     mapWrapper.forEach( pContainer, SW_DELEGATE_LAMBDA( MapForEachDelegate, [&]( const void* pExistingKey, const void* )
                     {
-                        if ( SerializerUtil::formatValueText( ValueAddress{ pExistingKey }, prop._keyTypeName, context ) == stagedText )
+                        if ( ValueSerializer::formatValueText( ValueAddress{ pExistingKey }, prop._keyTypeName, context ) == stagedText )
                             bExists = true;
                     } ) );
                     if ( bExists == false )
@@ -187,7 +188,7 @@ namespace sw::editor
                 const ISequenceContainerWrapper* pSeq    = prop._containerWrapper->asSequence();
                 const SerializeContext&          context = SerializeContext::getDefault( SerializePurpose::Authoring );
                 const auto                       fill    = [&]( void* pElement ) -> bool
-                { return SerializerUtil::parseTextValue( MutableValueAddress{ pElement }, prop._elementTypeName, request._text, context ); };
+                { return ValueSerializer::parseTextValue( MutableValueAddress{ pElement }, prop._elementTypeName, request._text, context ); };
                 switch ( request._kind )
                 {
                     case PropertyEditKind::AddElement:

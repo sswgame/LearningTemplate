@@ -39,7 +39,7 @@ namespace sw
         /**
          * @brief 프로퍼티의 옛 이름(`PROPERTY( Alias = … )`)이 같은 타입의 지금 이름이나 다른 옛 이름과 겹치지 않는지 봅니다.
          * @details 이름 해시는 대소문자를 가리지 않으므로 비교도 그렇게 한다. 겹치면 저장된 칸이 어느 프로퍼티로 읽힐지 선언만 보고 알 수 없다.
-         *          읽기는 지금 이름을 먼저 보지만(`SerializerUtil::findPropertyIndexByNameHash`), 그 순서에 기대는 선언은 여기서 멈춘다.
+         *          읽기는 지금 이름을 먼저 보지만(`PropertySerializer::findPropertyIndexByNameHash`), 그 순서에 기대는 선언은 여기서 멈춘다.
          */
         [[nodiscard]] static bool validatePropertyRedirects( const ParsedTypeInfo& type );
 

@@ -8,7 +8,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Serialization/Serializer/Archive.h"
-#include "Engine/Serialization/Serializer/SerializerUtil.h"
+#include "Engine/Serialization/Serializer/PropertySerializer.h"
 
 #include "GameFramework/Kits/Genre/Casual/PartyArena/Component/PartyGameModeComponent.h"
 #include "GameFramework/Kits/Genre/Casual/PartyArena/TrampolineArena.h"
@@ -51,7 +51,7 @@ namespace
         {
             const PropertyInfo* const pInfo = PartyGameModeComponent::StaticType()->findPropertyInHierarchy( hashed_string( pProperty ) );
             SW_REQUIRE_NOT_NULL( pInfo );
-            SW_REQUIRE_TRUE( SerializerUtil::applyPropertyText( *pInfo, MutableObjectAddress{ _pGameMode }, text, SerializeContext::getDefault( SerializePurpose::Authoring ) ) );
+            SW_REQUIRE_TRUE( PropertySerializer::applyPropertyText( *pInfo, MutableObjectAddress{ _pGameMode }, text, SerializeContext::getDefault( SerializePurpose::Authoring ) ) );
         }
 
         void advance( int32 frameCount )

@@ -7,8 +7,8 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Reflection/TypeInfo.h"
+#include "Engine/Serialization/Serializer/PropertySerializer.h"
 #include "Engine/Serialization/Serializer/SerializeContext.h"
-#include "Engine/Serialization/Serializer/SerializerUtil.h"
 #include "Engine/UI/Animation/UIAnimatedProperty.h"
 #include "Engine/UI/Style/UIStylePass.h"
 #include "Engine/UI/WidgetTree/PanelWidget.h"
@@ -85,7 +85,7 @@ namespace sw
                 {
                     BlendCurveDef       scratch{};
                     const PropertyInfo* pCurve = BlendCurveDef::StaticType()->findProperty( hashed_string( "_curve" ) );
-                    if ( pCurve == nullptr || SerializerUtil::applyPropertyText( *pCurve, MutableObjectAddress{ &scratch }, arrToken[nextToken], SerializeContext::getDefault( SerializePurpose::Authoring ) ) == false )
+                    if ( pCurve == nullptr || PropertySerializer::applyPropertyText( *pCurve, MutableObjectAddress{ &scratch }, arrToken[nextToken], SerializeContext::getDefault( SerializePurpose::Authoring ) ) == false )
                         return unexpected( Error{ ErrorKind::NotFound, "a transition item has an unknown curve", item } );
                     entry._curve = scratch._curve;
                     ++nextToken;

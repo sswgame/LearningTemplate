@@ -12,8 +12,8 @@
 #include "Engine/Reflection/ReflectedValue.h"
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Reflection/TypeRegistry.h"
+#include "Engine/Serialization/Serializer/PropertySerializer.h"
 #include "Engine/Serialization/Serializer/SerializeContext.h"
-#include "Engine/Serialization/Serializer/SerializerUtil.h"
 #include "Engine/UI/WidgetTree/Widget.h"
 
 namespace sw
@@ -158,7 +158,7 @@ namespace sw
 
             static UIBindingValue readOther( const PropertyInfo& leaf, const ObjectAddress owner, ValueAddress, ReflectBuiltinIndex )
             {
-                UIBindingValue value = UIBindingValue::makeText( SerializerUtil::formatPropertyText( leaf, owner, SerializeContext::getDefault( SerializePurpose::Authoring ) ) );
+                UIBindingValue value = UIBindingValue::makeText( PropertySerializer::formatPropertyText( leaf, owner, SerializeContext::getDefault( SerializePurpose::Authoring ) ) );
                 value._kind          = UIBindingValueKind::Other;
                 return value;
             }
@@ -167,9 +167,9 @@ namespace sw
                 if ( value._kind != UIBindingValueKind::Other && value._kind != UIBindingValueKind::Text )
                     return false;
                 const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring );
-                if ( SerializerUtil::formatPropertyText( leaf, owner, context ) == value._text )
+                if ( PropertySerializer::formatPropertyText( leaf, owner, context ) == value._text )
                     return false;
-                return SerializerUtil::applyPropertyText( leaf, owner, value._text, context );
+                return PropertySerializer::applyPropertyText( leaf, owner, value._text, context );
             }
 
             /** @brief 종류 표입니다. 줄 순서는 `UIBindingValueKind` 의 값 순서와 같다. 종류를 더하면 여기에 한 줄을 더한다. */

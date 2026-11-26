@@ -1,6 +1,7 @@
 {
   "_comment": "전수 개명한 옛 이름 → 새 이름 · 까닭(Scripts/lint/naming_words.py 의 naming-words 규칙이 되살린 옛 이름을 막는다). 언리얼 CoreRedirects 의 옛 이름 → 새 이름 자리이되 고쳐 주지 않고 막는다. 개명 도구(py -3 -m Scripts rename-symbol)가 줄을 더한다 — 키(옛 이름)는 개명 도구가 바꾸지 않는다.",
   "_bannedNames": {
+    "SerializerUtil": "ValueSerializer(값 하나) · PropertySerializer(프로퍼티 값 하나 · 저장 목적 판정) · PropertyConstraints(Min · Max · Required) · PropertyReadRollback · ScopedScratchInstance · SchemaMigrate 의 runVersionedDeserialize — 하는 일별 형식으로 나눴다(2026-11-27)",
     "ShadowCopyName": "ModuleShadowCopy 의 makeCopyName · getCopyDirectory · removeCopies — 섀도 복사본의 쓰기 · 이름 · 치우기를 형식 하나로(2026-11-26)",
     "RHILiveCommandListUtil": "RHILiveCommandListSet — 네 백엔드의 살아 있는 리스트 잠금 · 목록 · 끊기를 형식 하나로(2026-11-26)",
     "RHIBufferSizeUtil": "IRHIResourceFactory 공통 입구의 원소 수 검사(RHIResourceFactoryInternal::isValidElements) — 쓰는 곳이 하나다(2026-11-26)",
@@ -2531,9 +2532,7 @@
     "FixedDependencyState": "LayoutSchemaDependencyState — LayoutSchema 의 의존 확인 상태(2026-11-27)",
     "FixedFieldDesc": "LayoutFieldDesc — Layout 접두(2026-11-27)",
     "FixedFieldKind": "LayoutFieldKind — Layout 접두(2026-11-27)",
-    "FixedArray": "StaticArray — 칸 종류 이름에서 Fixed 를 뺀다 — 길이가 타입에 박힌 배열(C++ 업계 말 static array)(2026-11-27)",
     "makeFixedArray": "makeStaticArray — LayoutFieldKind::StaticArray(2026-11-27)",
-    "makeCodec": "makeDependency — LayoutFieldKind::Dependency — 다른 타입의 스키마를 의존으로 부른다(2026-11-27)",
     "FixedBound": "LayoutBound — Layout 접두(2026-11-27)",
     "FixedSequenceOps": "LayoutSequenceOps — Layout 접두(2026-11-27)",
     "FixedVectorOpsOf": "LayoutVectorOpsOf — Layout 접두(2026-11-27)",
@@ -2553,8 +2552,6 @@
     "getFixedLayoutConversions": "getLayoutSchemaMigrations — LayoutSchemaMigration(2026-11-27)",
     "SW_FIXED_LAYOUT_CONVERSION": "SW_LAYOUT_SCHEMA_MIGRATION — LayoutSchemaMigration(2026-11-27)",
     "fixedLayoutConversion": "layoutSchemaMigration — LayoutSchemaMigration 등록 id 머리(2026-11-27)",
-    "registerConversion": "registerMigration — LayoutSchemaMigration(2026-11-27)",
-    "unregisterConversion": "unregisterMigration — LayoutSchemaMigration(2026-11-27)",
     "validateCodec": "validateSchema — LayoutSchema(2026-11-27)",
     "requireCodec": "requireSchema — LayoutSchema(2026-11-27)",
     "readWithCodec": "readWithSchema — LayoutSchema(2026-11-27)",

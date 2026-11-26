@@ -14,7 +14,7 @@
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Serializer/ContainerVisitor.h"
 #include "Engine/Serialization/Serializer/SerializeContext.h"
-#include "Engine/Serialization/Serializer/SerializerUtil.h"
+#include "Engine/Serialization/Serializer/ValueSerializer.h"
 
 namespace sw
 {
@@ -98,11 +98,11 @@ namespace sw
             {
                 int64  wireValue{ 0 };
                 size_t offset{ 0 };
-                if ( SerializerUtil::deserializeValueBinary( MutableValueAddress{ &wireValue }, wireTypeName, pPayload, payloadSize, offset, context, wireVersion ) != FieldReadResult::Read ||
+                if ( ValueSerializer::deserializeValueBinary( MutableValueAddress{ &wireValue }, wireTypeName, pPayload, payloadSize, offset, context, wireVersion ) != FieldReadResult::Read ||
                      offset != payloadSize )
                     return false;
                 StringBuilder<constant::buffer::kMax8192> ss;
-                SerializerUtil::valueToText( ss, ValueAddress{ &wireValue }, wireTypeName, context );
+                ValueSerializer::valueToText( ss, ValueAddress{ &wireValue }, wireTypeName, context );
                 outText = ss.c_str();
                 return true;
             }
@@ -370,11 +370,11 @@ namespace sw
         }
 
         // 값 하나로 읽을 수 없는 대상(컨테이너 프로퍼티의 `map` · `vector` 같은 이름, 처리기 없는 타입)은 강제 변환 대상이 아니다. 값 읽기를 시도하지 않는다.
-        if ( SerializerUtil::hasBinaryValueCodec( targetTypeName, context ) == false )
+        if ( ValueSerializer::hasBinaryValueCodec( targetTypeName, context ) == false )
             return FieldReadResult::FieldFailed;
 
         size_t offset{ 0 };
-        switch ( SerializerUtil::deserializeValueBinary( value, targetTypeName, pPayload, payloadSize, offset, context, wireVersion ) )
+        switch ( ValueSerializer::deserializeValueBinary( value, targetTypeName, pPayload, payloadSize, offset, context, wireVersion ) )
         {
             case FieldReadResult::Read:
             {
@@ -500,11 +500,11 @@ namespace sw
             return false;
 
         const string_view stripped = SchemaMigrateInternal::stripJSONQuotes( valStr );
-        if ( SerializerUtil::parseTextValue( value, typeName, pBinding, valStr, context ) )
+        if ( ValueSerializer::parseTextValue( value, typeName, pBinding, valStr, context ) )
             return true;
         if ( stripped.data() != valStr.data() || stripped.size() != valStr.size() )
         {
-            if ( SerializerUtil::parseTextValue( value, typeName, pBinding, stripped, context ) )
+            if ( ValueSerializer::parseTextValue( value, typeName, pBinding, stripped, context ) )
                 return true;
         }
 
@@ -546,4 +546,29 @@ namespace sw
         return true;
     }
 
+} // namespace sw
+
+namespace sw
+{
+    bool runVersionedDeserialize( const uint32 streamVersion, const MutableObjectAddress instance, const TypeInfo& typeInfo,
+                                  uint32 currentVersion, SchemaVersionSource versionSource, SchemaOrphanPolicy orphanPolicy,
+                                  const SoftDeserializeFn& softDeserialize )
+    {
+        if ( softDeserialize.isBound() == false )
+            return false;
+
+        vector<SchemaOrphanValue> listOrphan;
+        const bool                bStreamVersion = versionSource == SchemaVersionSource::Stream;
+        // 스트림 판은 본문 앞에서 이미 안다 — 다른 판이면 본문을 읽기 전에 거절해 대상 객체를 건드리지 않는다(읽고 나서 거절하면 거절한 값이 객체에 남았다).
+        // 언리얼이 패키지 요약의 버전을 보고 로드를 거절하는 것과 같은 자리다. 본문 안 판(JSON · XML)은 본문과 함께 읽혀 이 앞검사가 없다.
+        if ( bStreamVersion && streamVersion != currentVersion )
+            return finishVersionedRead( streamVersion, currentVersion, typeInfo, listOrphan, orphanPolicy );
+
+        uint32 softVersion{ 0 };
+        if ( softDeserialize( instance, typeInfo, listOrphan, softVersion ) == false )
+            return false;
+
+        // 포맷마다 갈리는 한 줄은 orphan 정책이다. 텍스트는 orphan 을 버리고 통과시키고, 바이너리는 거절한다(`SchemaOrphanPolicy` 의 계약).
+        return finishVersionedRead( bStreamVersion ? streamVersion : softVersion, currentVersion, typeInfo, listOrphan, orphanPolicy );
+    }
 } // namespace sw

@@ -7,9 +7,9 @@
 #include "Engine/Serialization/Serializer/Archive.h"
 #include "Engine/Serialization/Serializer/BinarySerializer.h"
 #include "Engine/Serialization/Serializer/JSONSerializer.h"
+#include "Engine/Serialization/Serializer/PropertySerializer.h"
 #include "Engine/Serialization/Serializer/SerializeContext.h"
 #include "Engine/Serialization/Serializer/SerializerTranscode.h"
-#include "Engine/Serialization/Serializer/SerializerUtil.h"
 #include "Engine/Serialization/Serializer/Tests/SerializerTestTypes.h"
 #include "Engine/Serialization/Serializer/XMLSerializer.h"
 
@@ -33,7 +33,7 @@ namespace
             // 경로 칸은 "읽지 않음" 과 "빈 글" 이 다르다 — 값을 넣어 세 형식이 같은 상태를 싣게 한다. 케이스가 `isSet` 으로 확인한다.
             const PropertyInfo* pPath = SerializerSample::StaticType()->findProperty( hashed_string( "_path" ) );
             if ( pPath != nullptr )
-                (void)SerializerUtil::applyPropertyText( *pPath, MutableObjectAddress{ &sample }, "common/materials/a.material", SerializeContext::getDefault( SerializePurpose::Authoring ) );
+                (void)PropertySerializer::applyPropertyText( *pPath, MutableObjectAddress{ &sample }, "common/materials/a.material", SerializeContext::getDefault( SerializePurpose::Authoring ) );
             return sample;
         }
     };

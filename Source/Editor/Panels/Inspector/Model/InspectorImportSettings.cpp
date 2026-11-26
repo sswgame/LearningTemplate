@@ -22,7 +22,7 @@
 #include "Engine/Asset/AssetDatabase.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Reflection/TypeInfo.h"
-#include "Engine/Serialization/Serializer/SerializerUtil.h"
+#include "Engine/Serialization/Serializer/PropertySerializer.h"
 #include "Engine/Serialization/XML/XMLFields.h"
 
 namespace sw::editor
@@ -167,7 +167,7 @@ namespace sw::editor
             row._key = XMLFields::getAttributeName( prop );
             if ( InspectorImportSettingsInternal::isSelectorKey( row._key ) )
                 continue;
-            row._valueText = SerializerUtil::formatPropertyText( prop, ObjectAddress{ pRule }, context );
+            row._valueText = PropertySerializer::formatPropertyText( prop, ObjectAddress{ pRule }, context );
             _listRow.push_back( std::move( row ) );
         }
         // 예외 칸은 서술의 글 그대로 보인다(고칠 때 같은 꼴로 친다). 규칙 구조체에 칸이 없는 예외(손으로 읽는 `lods`)는 줄을 더한다.

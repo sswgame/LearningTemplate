@@ -13,7 +13,10 @@
 #include "Engine/Serialization/Serializer/Archive.h"
 #include "Engine/Serialization/Serializer/ContainerVisitor.h"
 #include "Engine/Serialization/Serializer/NestedObjectCodec.h"
-#include "Engine/Serialization/Serializer/SerializerUtil.h"
+#include "Engine/Serialization/Serializer/PropertyConstraints.h"
+#include "Engine/Serialization/Serializer/PropertyReadRollback.h"
+#include "Engine/Serialization/Serializer/PropertySerializer.h"
+#include "Engine/Serialization/Serializer/ValueSerializer.h"
 
 namespace sw
 {
@@ -148,7 +151,7 @@ namespace sw
                 if ( bWireMismatch == false )
                 {
                     // 기록 타입이 같은데 끝까지 읽히지 않으면 손상이다. 소프트 읽기도 이관으로 짐작하지 않고 orphan 으로 넘긴다(이관은 크기로 짐작해 4 바이트 페이로드를 수의 텍스트로 문자열에 넣는다).
-                    return SerializerUtil::applyPropertyBinary( prop, MutableObjectAddress{ pInstance }, pPayload, payloadSize, context, wireVersion );
+                    return PropertySerializer::applyPropertyBinary( prop, MutableObjectAddress{ pInstance }, pPayload, payloadSize, context, wireVersion );
                 }
                 const hashed_string wireTypeName = findWireTypeName( wireTypeHash );
                 // 기록 타입을 모르면(지운 enum, 지운 타입) 바이트의 뜻을 모른다. 크기로 짐작해 읽지 않는다(지운 enum 의 열거자 이름 해시
@@ -172,9 +175,9 @@ namespace sw
                         bMatched = ( matchedBitmask & ( 1ULL << propIdx ) ) != 0;
                     else
                         bMatched = uniqueMatchedPropHashes.find( listProp[propIdx].getNameHash() ) != uniqueMatchedPropHashes.end();
-                    const bool bOutsidePurpose = SerializerUtil::shouldSerializeProperty( typeInfo, listProp[propIdx], context ) == false;
+                    const bool bOutsidePurpose = PropertySerializer::shouldSerializeProperty( typeInfo, listProp[propIdx], context ) == false;
                     if ( bMatched == false && bOutsidePurpose == false )
-                        SerializerUtil::applyPropertyDefault( listProp[propIdx], MutableObjectAddress{ pInstance } );
+                        PropertySerializer::applyPropertyDefault( listProp[propIdx], MutableObjectAddress{ pInstance } );
                 }
             }
 
@@ -212,7 +215,7 @@ namespace sw
                 // 지금 이름을 먼저, 없을 때만 옛 이름(Alias)을 본다. Transient 칸을 가리키는 태그는 모르는 칸과 같다.
                 const PropertyListView listProp     = state._typeInfo.getPropertiesWithBase();
                 const size_t           numProps     = listProp.size();
-                const optional<uint32> matchedIndex = SerializerUtil::findPropertyIndexByNameHash( listProp, tagHash, state._expectedIndex );
+                const optional<uint32> matchedIndex = PropertySerializer::findPropertyIndexByNameHash( listProp, tagHash, state._expectedIndex );
                 if ( matchedIndex.has_value() )
                     state._expectedIndex = *matchedIndex + 1;
                 const bool          bMatched    = matchedIndex.has_value() && listProp[*matchedIndex]._metadata->_bTransient == SW_FALSE;
@@ -245,13 +248,13 @@ namespace sw
             {
                 outStop = true;
                 // 저작 파일의 런타임 상태는 로드 오류다(XML · JSON 과 같다).
-                if ( SerializerUtil::isForbiddenInFile( prop, state._context ) )
+                if ( PropertySerializer::isForbiddenInFile( prop, state._context ) )
                 {
-                    SerializerUtil::reportForbiddenProperty( state._typeInfo, prop );
+                    PropertySerializer::reportForbiddenProperty( state._typeInfo, prop );
                     return FieldReadResult::ObjectRejected;
                 }
                 // 이 목적이 다루지 않는 필드(옵트인 세이브의 나머지)는 읽지 않는다. 현재 값을 덮지 않는다(쓰기도 적지 않는다).
-                if ( SerializerUtil::shouldSerializeProperty( state._typeInfo, prop, state._context ) == false )
+                if ( PropertySerializer::shouldSerializeProperty( state._typeInfo, prop, state._context ) == false )
                 {
                     outStop = false;
                     return FieldReadResult::Read;
@@ -317,7 +320,7 @@ namespace sw
                 const bool                   bAllRead = propertyVisitor.visitProperties( state._typeInfo, static_cast<const void*>( state._pInstance ), [&]( const ReflectVisitConstField& field )
                                   {
                     const PropertyInfo& prop = field._property;
-                    if ( SerializerUtil::shouldSerializeProperty( state._typeInfo, prop, state._context ) == false )
+                    if ( PropertySerializer::shouldSerializeProperty( state._typeInfo, prop, state._context ) == false )
                         return ReflectVisitFlow::Continue;
                     FieldPayload payload{};
                     if ( readFieldPayload( reader, payload ) == false )
@@ -343,7 +346,7 @@ namespace sw
              *          아니면 실패하며, 소프트는 orphan 으로 담는다. 건너뛰거나 orphan 으로 담은 필드는 읽기 전 값이다(읽다 만 컨테이너 · 구조체를 되돌린다).
              *          되돌릴 수 없는 소유 포인터 목록(되돌리면 컴포넌트를 새로 만든다)이 읽다 말면 객체째 실패한다.
              *          두 플래그는 따로다. 혼합 빌드 사이의 메시지는 (1) 만 켜서 새 빌드가 더한 필드는 건너뛰고 모르는 열거자는 거절한다. 중첩 구조체도
-             *          같은 컨텍스트로 이 루프를 다시 지나므로(`SerializerUtil::deserializeValueBinary`) 모든 깊이에서 정책이 같다.
+             *          같은 컨텍스트로 이 루프를 다시 지나므로(`ValueSerializer::deserializeValueBinary`) 모든 깊이에서 정책이 같다.
              *          기록 타입이 다르면 둘 다 이관(`tryCoerceBinaryPayload`)으로 간다. 기록 타입을 아는 스칼라는 이관이 값으로
              *          옮기고, 나머지는 제 타입으로 끝까지 읽히는지부터 본다. 이관이 안 되면 읽지 못한 프로퍼티다. 제 타입으로 "읽힌 만큼" 받지 않는다
              *          (`int32` 0 을 `vector<int32>` 로 읽으면 원소 수 0 으로 성공해 값이 조용히 빈다).
@@ -535,7 +538,7 @@ namespace sw
         for ( const SchemaOrphanValue& unknown : listUnknown )
         {
             // 읽기와 같은 짝짓기다 — Transient 칸을 가리키는 이름은 읽기도 모르는 칸으로 담는다.
-            const optional<uint32> knownIndex  = SerializerUtil::findPropertyIndexByNameHash( listProp, unknown._nameHash );
+            const optional<uint32> knownIndex  = PropertySerializer::findPropertyIndexByNameHash( listProp, unknown._nameHash );
             const bool             bKnownName  = knownIndex.has_value() && listProp[*knownIndex]._metadata->_bTransient == SW_FALSE;
             const bool             bCannotKeep = unknown._name.empty() == false || bKnownName || unknown._wireVersion != kCurrentBinaryWireVersion;
             if ( bCannotKeep )
@@ -560,7 +563,7 @@ namespace sw
         const ReflectPropertyVisitor propertyVisitor{ ReflectVisitOptions{} };
         (void)propertyVisitor.visitProperties( typeInfo, pInstance, [&]( const ReflectVisitConstField& field )
         {
-            if ( SerializerUtil::shouldSerializeProperty( typeInfo, field._property, context ) )
+            if ( PropertySerializer::shouldSerializeProperty( typeInfo, field._property, context ) )
                 ++propCount;
             return ReflectVisitFlow::Continue;
         } );
@@ -575,7 +578,7 @@ namespace sw
         const bool bAllWritten = propertyVisitor.visitProperties( typeInfo, pInstance, [&]( const ReflectVisitConstField& field )
         {
             const PropertyInfo& prop = field._property;
-            if ( SerializerUtil::shouldSerializeProperty( typeInfo, prop, context ) == false )
+            if ( PropertySerializer::shouldSerializeProperty( typeInfo, prop, context ) == false )
                 return ReflectVisitFlow::Continue;
 
             if ( bSchemaLayout == false )
@@ -593,7 +596,7 @@ namespace sw
 
             size_t payloadStart = writer.getByteCount();
 
-            const bool bWritten = SerializerUtil::writePropertyBinary( prop, ObjectAddress{ pInstance }, outListBuffer, context );
+            const bool bWritten = PropertySerializer::writePropertyBinary( prop, ObjectAddress{ pInstance }, outListBuffer, context );
             if ( bWritten == false )
             {
                 // 쓰는 순간 멈춘다. 계속 쓰면 세이브는 써지고 로드에서 이 값이 빠진다. 알림은 호출마다 한다(타입마다 한 번이면 테스트 순서에 따라 결과가 달라진다).
@@ -638,7 +641,7 @@ namespace sw
                 // 읽기 실패 되돌리기는 읽기 전 값(검사한 적 없는 값)을 돌려놓을 뿐이라 보지 않는다(`SerializeContext::setRestoringValueBeforeRead`).
                 if ( context.isRestoringValueBeforeRead() )
                     return FieldReadResult::Read;
-                return SerializerUtil::isWithinDeclaredRanges( typeInfo, ObjectAddress{ pInstance }, listRestored ) ? FieldReadResult::Read : FieldReadResult::FieldFailed;
+                return PropertyConstraints::isWithinDeclaredRanges( typeInfo, ObjectAddress{ pInstance }, listRestored ) ? FieldReadResult::Read : FieldReadResult::FieldFailed;
             case FieldReadResult::FieldFailed:
             case FieldReadResult::ObjectRejected:
                 return taggedResult;
@@ -664,7 +667,7 @@ namespace sw
             case FieldReadResult::ObjectRejected:
                 return SoftReadResult::Rejected;
         }
-        return SerializerUtil::isWithinDeclaredRanges( typeInfo, ObjectAddress{ pInstance }, listRestored ) ? SoftReadResult::Read : SoftReadResult::Rejected;
+        return PropertyConstraints::isWithinDeclaredRanges( typeInfo, ObjectAddress{ pInstance }, listRestored ) ? SoftReadResult::Read : SoftReadResult::Rejected;
     }
 
     bool BinarySerializer::serializeVersioned( uint32 version, const void* pInstance, const TypeInfo& typeInfo, vector<uint8>& outListBuffer,

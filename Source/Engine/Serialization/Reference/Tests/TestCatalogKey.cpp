@@ -4,8 +4,9 @@
 #include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Serialization/Reference/CatalogKey.h"
+#include "Engine/Serialization/Serializer/PropertyConstraints.h"
 #include "Engine/Serialization/Serializer/SerializeContext.h"
-#include "Engine/Serialization/Serializer/SerializerUtil.h"
+#include "Engine/Serialization/Serializer/ValueSerializer.h"
 
 #include <type_traits>
 
@@ -39,18 +40,18 @@ SW_TEST_CASE( CatalogKeyTest, TextHandlerReadsAndWritesTheID )
     const hashed_string     typeName( CatalogKeyBase::kTypeName );
     SpellKey                key;
     SW_EXPECT_TRUE( key.empty() );
-    SW_REQUIRE_TRUE( SerializerUtil::parseTextValue( MutableValueAddress{ &key }, typeName, "  fireball \t", context ) );
+    SW_REQUIRE_TRUE( ValueSerializer::parseTextValue( MutableValueAddress{ &key }, typeName, "  fireball \t", context ) );
     SW_EXPECT_TRUE( key == SpellKey( hashed_string( "fireball" ) ) );
-    SW_EXPECT_EQUAL( string( "fireball" ), SerializerUtil::formatValueText( ValueAddress{ &key }, typeName, context ) );
-    SW_REQUIRE_TRUE( SerializerUtil::parseTextValue( MutableValueAddress{ &key }, typeName, "\"ice\"", context ) );
+    SW_EXPECT_EQUAL( string( "fireball" ), ValueSerializer::formatValueText( ValueAddress{ &key }, typeName, context ) );
+    SW_REQUIRE_TRUE( ValueSerializer::parseTextValue( MutableValueAddress{ &key }, typeName, "\"ice\"", context ) );
     SW_EXPECT_TRUE( key.key() == hashed_string( "ice" ) );
-    SW_REQUIRE_TRUE( SerializerUtil::parseTextValue( MutableValueAddress{ &key }, typeName, "", context ) );
+    SW_REQUIRE_TRUE( ValueSerializer::parseTextValue( MutableValueAddress{ &key }, typeName, "", context ) );
     SW_EXPECT_TRUE( key.empty() );
-    SW_EXPECT_EQUAL( string(), SerializerUtil::formatValueText( ValueAddress{ &key }, typeName, context ) );
+    SW_EXPECT_EQUAL( string(), ValueSerializer::formatValueText( ValueAddress{ &key }, typeName, context ) );
 }
 
 /** @brief [CatalogKeyTest] 빈 키는 이름 형식처럼 "없음" 이다 — 필수 칸(`Required`)의 빈 값 판정이 본다 */
 SW_TEST_CASE( CatalogKeyTest, EmptyKeyIsANameValue )
 {
-    SW_EXPECT_TRUE( SerializerUtil::isNameValueType( hashed_string( CatalogKeyBase::kTypeName ) ) );
+    SW_EXPECT_TRUE( PropertyConstraints::isNameValueType( hashed_string( CatalogKeyBase::kTypeName ) ) );
 }

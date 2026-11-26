@@ -11,8 +11,9 @@
 #include "Engine/Reflection/ReflectedValue.h"
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Reflection/TypeRegistry.h"
+#include "Engine/Serialization/Serializer/PropertySerializer.h"
 #include "Engine/Serialization/Serializer/SerializeContext.h"
-#include "Engine/Serialization/Serializer/SerializerUtil.h"
+#include "Engine/Serialization/Serializer/ValueSerializer.h"
 #include "Engine/UI/WidgetTree/Widget.h"
 
 namespace sw
@@ -169,7 +170,7 @@ namespace sw
         // 잎 타입의 값으로 읽고 성분으로 옮긴다(XML 속성과 같은 텍스트이며 "0.5", "0,12", "1,0,0,1" 같은 형식이다).
         float4              scratch{};
         const PropertyInfo& leaf = _path.getLeafProperty();
-        if ( SerializerUtil::parseTextValue( MutableValueAddress{ &scratch }, leaf._typeName, text, SerializeContext::getDefault( SerializePurpose::Authoring ) ) == false )
+        if ( ValueSerializer::parseTextValue( MutableValueAddress{ &scratch }, leaf._typeName, text, SerializeContext::getDefault( SerializePurpose::Authoring ) ) == false )
             return false;
         UIAnimatedPropertyInternal::readComponents( _builtinIndex, &scratch, outValue._arrComponent );
         return true;
@@ -187,7 +188,7 @@ namespace sw
         if ( _kind == UIAnimatedValueKind::Float )
             UIAnimatedPropertyInternal::readComponents( _builtinIndex, leaf.getRawPtr( pOwner ), value._arrComponent );
         else
-            value._text = SerializerUtil::formatPropertyText( leaf, ObjectAddress{ pOwner }, SerializeContext::getDefault( SerializePurpose::Authoring ) );
+            value._text = PropertySerializer::formatPropertyText( leaf, ObjectAddress{ pOwner }, SerializeContext::getDefault( SerializePurpose::Authoring ) );
         return value;
     }
 
@@ -207,10 +208,10 @@ namespace sw
         else
         {
             const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring );
-            const string            before  = SerializerUtil::formatPropertyText( leaf, ObjectAddress{ pOwner }, context );
-            if ( SerializerUtil::applyPropertyText( leaf, MutableObjectAddress{ pOwner }, value._text, context ) == false )
+            const string            before  = PropertySerializer::formatPropertyText( leaf, ObjectAddress{ pOwner }, context );
+            if ( PropertySerializer::applyPropertyText( leaf, MutableObjectAddress{ pOwner }, value._text, context ) == false )
                 return false;
-            bChanged = SerializerUtil::formatPropertyText( leaf, ObjectAddress{ pOwner }, context ) != before;
+            bChanged = PropertySerializer::formatPropertyText( leaf, ObjectAddress{ pOwner }, context ) != before;
         }
         if ( bChanged )
             widget.notifyPropertyWritten( _path.getRootProperty() );

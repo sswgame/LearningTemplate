@@ -12,8 +12,10 @@
 #include "Engine/Reflection/ReflectionContainers.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/TypeInfo.h"
+#include "Engine/Serialization/Serializer/PropertyConstraints.h"
+#include "Engine/Serialization/Serializer/PropertySerializer.h"
 #include "Engine/Serialization/Serializer/SerializeContext.h"
-#include "Engine/Serialization/Serializer/SerializerUtil.h"
+#include "Engine/Serialization/Serializer/ValueSerializer.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
 
@@ -128,7 +130,7 @@ namespace sw
                     const utf8* const pItemText = item.getText() != nullptr ? item.getText() : "";
                     pSequence->addElementDefault( pList );
                     void* const pElement = pSequence->getElement( pList, pSequence->getSize( pList ) - 1 );
-                    if ( SerializerUtil::parseTextValue( MutableValueAddress{ pElement }, pFound->_elementTypeName, pItemText, context ) == false )
+                    if ( ValueSerializer::parseTextValue( MutableValueAddress{ pElement }, pFound->_elementTypeName, pItemText, context ) == false )
                     {
                         SW_LOG_ERROR_ID( "GameSettings.GameSettingsCannotRead", "GameSettings %#: <%#><item>%#</item></%#> cannot be read as %#", sourceName, pName, pItemText, pName, pFound->_elementTypeName.c_str() );
                         bOk = false;
@@ -137,20 +139,20 @@ namespace sw
                 continue;
             }
             const utf8* const pText = child.getText() != nullptr ? child.getText() : "";
-            if ( SerializerUtil::applyPropertyText( *pFound, MutableObjectAddress{ this }, pText, context ) == false )
+            if ( PropertySerializer::applyPropertyText( *pFound, MutableObjectAddress{ this }, pText, context ) == false )
             {
                 SW_LOG_ERROR_ID( "GameSettings.GameSettingsCannotRead", "GameSettings %#: <%#>%#</%#> cannot be read as %#", sourceName, pName, pText, pName, pFound->_typeName.c_str() );
                 bOk = false;
             }
         }
 
-        // 필수 칸은 적혀 있어야 하고, 이름 · 경로 형식은 빈 글도 빠진 것이다 — 판정은 직렬화기 · XMLFields 와 한 함수다(`SerializerUtil::isRequiredValueMissing`).
+        // 필수 칸은 적혀 있어야 하고, 이름 · 경로 형식은 빈 글도 빠진 것이다 — 판정은 직렬화기 · XMLFields 와 한 함수다(`PropertyConstraints::isRequiredValueMissing`).
         for ( const PropertyInfo& prop : listProperty )
         {
             const string      elementName{ makeElementName( prop ) };
             const XMLNode     element = rootNode.findChild( elementName.c_str() );
             const string_view text    = element.isValid() && element.getText() != nullptr ? string_view( element.getText() ) : string_view{};
-            if ( SerializerUtil::isRequiredValueMissing( prop, element.isValid(), element.isValid() ? &text : nullptr, RequiredScope::Root ) == false )
+            if ( PropertyConstraints::isRequiredValueMissing( prop, element.isValid(), element.isValid() ? &text : nullptr, RequiredScope::Root ) == false )
                 continue;
             SW_LOG_ERROR_ID( "GameSettings.GameSettingsRequiredResourceId", "GameSettings %#: <%#> is required (PROPERTY( Required ) - the initial value is not a default)", sourceName, elementName.c_str() );
             bOk = false;

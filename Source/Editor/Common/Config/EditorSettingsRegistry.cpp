@@ -13,7 +13,7 @@
 
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
-#include "Engine/Serialization/Serializer/SerializerUtil.h"
+#include "Engine/Serialization/Serializer/PropertySerializer.h"
 
 namespace sw::editor
 {
@@ -31,7 +31,7 @@ namespace sw::editor
                 {
                     if ( EditorPreferencesStore::isPropertyModified( prop, ObjectAddress{ pCurrent }, ObjectAddress{ pDefault } ) == false )
                         continue;
-                    object.set( prop._name.c_str() ).setString( SerializerUtil::formatPropertyText( prop, ObjectAddress{ pCurrent }, SerializeContext::getDefault( SerializePurpose::Authoring ) ) );
+                    object.set( prop._name.c_str() ).setString( PropertySerializer::formatPropertyText( prop, ObjectAddress{ pCurrent }, SerializeContext::getDefault( SerializePurpose::Authoring ) ) );
                     ++writtenCount;
                 }
                 return writtenCount;
@@ -49,7 +49,7 @@ namespace sw::editor
                         continue;
                     }
                     const string text = object.get( key ).asString();
-                    if ( SerializerUtil::applyPropertyText( *pProperty, MutableObjectAddress{ pInstance }, text, SerializeContext::getDefault( SerializePurpose::Authoring ) ) == false )
+                    if ( PropertySerializer::applyPropertyText( *pProperty, MutableObjectAddress{ pInstance }, text, SerializeContext::getDefault( SerializePurpose::Authoring ) ) == false )
                         SW_LOG_WARNING_ID( "EditorPreferences.EditorPreferenceCouldNot", "Editor preference %#.%# = '%#' could not be applied - kept the current value", type._name.c_str(), key.c_str(), text.c_str() );
                 }
             }
@@ -233,7 +233,7 @@ namespace sw::editor
     bool EditorPreferencesStore::isPropertyModified( const PropertyInfo& prop, const ObjectAddress current, const ObjectAddress defaultInstance )
     {
         const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring );
-        return SerializerUtil::canCarryProperty( prop, context ) && SerializerUtil::arePropertyValuesEqual( prop, current, defaultInstance, context ) == false;
+        return PropertySerializer::canCarryProperty( prop, context ) && PropertySerializer::arePropertyValuesEqual( prop, current, defaultInstance, context ) == false;
     }
 
     void EditorPreferencesStore::resetSection( const EditorSettingsRegistration& registration )
@@ -246,7 +246,7 @@ namespace sw::editor
         const SerializeContext& context   = SerializeContext::getDefault( SerializePurpose::Authoring );
         for ( const PropertyInfo& prop : pType->getPropertiesWithBase() )
         {
-            if ( SerializerUtil::applyPropertyText( prop, MutableObjectAddress{ pInstance }, SerializerUtil::formatPropertyText( prop, ObjectAddress{ pDefault }, context ), context ) == false )
+            if ( PropertySerializer::applyPropertyText( prop, MutableObjectAddress{ pInstance }, PropertySerializer::formatPropertyText( prop, ObjectAddress{ pDefault }, context ), context ) == false )
                 SW_LOG_WARNING_ID( "EditorPreferences.ResetSectionCouldNot", "Reset Section could not restore %#.%#", pType->_name.c_str(), prop._name.c_str() );
         }
         if ( registration._pfnOnChanged != nullptr )

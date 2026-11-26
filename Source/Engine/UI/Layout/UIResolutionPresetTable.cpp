@@ -24,7 +24,7 @@ namespace sw
             SW_LOG_ERROR_ID( "UIResolutionPresetTable.NoResolutionsListResolution", "%#: no resolutions in <_listResolution>", path );
             bOk = false;
         }
-        // 원소의 `Min` · `Max` 는 `loadDesc` 가 본다(`SerializerUtil::collectRangeErrors` 는 시퀀스 원소까지 본다).
+        // 원소의 `Min` · `Max` 는 `loadDesc` 가 본다(`PropertyConstraints::collectRangeErrors` 는 시퀀스 원소까지 본다).
         if ( bOk == false )
             _listResolution.clear();
         return bOk;

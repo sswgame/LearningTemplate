@@ -22,7 +22,7 @@
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
-#include "Engine/Serialization/Serializer/SerializerUtil.h"
+#include "Engine/Serialization/Serializer/ValueSerializer.h"
 
 #include <algorithm>
 #include <charconv>

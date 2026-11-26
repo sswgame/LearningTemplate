@@ -15,8 +15,8 @@
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Serializer/Archive.h"
+#include "Engine/Serialization/Serializer/PropertySerializer.h"
 #include "Engine/Serialization/Serializer/SerializeContext.h"
-#include "Engine/Serialization/Serializer/SerializerUtil.h"
 
 // ReflectionPropertyRoleTest — 역할 플래그. 네트워크(Replicated · RepNotify) · 세이브(SaveGame) · 시퀀서(Interp)가 읽는 프로퍼티 메타.
 
@@ -408,6 +408,6 @@ SW_TEST_CASE( ReflectionPropertyRoleTest, HandlesAreSavedByStableKey )
     const sw::TypeInfo* pOwner = sw::AnyValueActor::StaticType(); // SaveGame 칸이 없는 타입 — 세이브가 모든 칸을 쓴다
     SW_REQUIRE_NOT_NULL( pOwner );
     const sw::SerializeContext saveContext = makeSaveContext();
-    SW_EXPECT_TRUE( sw::SerializerUtil::shouldSerializeProperty( *pOwner, handleProp, saveContext ) );
-    SW_EXPECT_TRUE( sw::SerializerUtil::shouldSerializeProperty( *pOwner, handleListProp, saveContext ) );
+    SW_EXPECT_TRUE( sw::PropertySerializer::shouldSerializeProperty( *pOwner, handleProp, saveContext ) );
+    SW_EXPECT_TRUE( sw::PropertySerializer::shouldSerializeProperty( *pOwner, handleListProp, saveContext ) );
 }

@@ -57,7 +57,7 @@ namespace sw
             , _count{ count }
         {
         }
-        /** @brief 선언 목록(`TypeInfo::_listProperty`)을 그대로 봅니다 — 목록을 받는 도구(`SerializerUtil::matchProperty`)에 자기 선언만 넘길 때 쓴다. */
+        /** @brief 선언 목록(`TypeInfo::_listProperty`)을 그대로 봅니다 — 목록을 받는 도구(`PropertySerializer::matchProperty`)에 자기 선언만 넘길 때 쓴다. */
         PropertyListView( const vector<PropertyInfo>& listProperty ) noexcept // NOLINT(google-explicit-constructor): 선언 목록도 같은 뷰로 받는다
             : PropertyListView{ listProperty.data(), listProperty.size() }
         {

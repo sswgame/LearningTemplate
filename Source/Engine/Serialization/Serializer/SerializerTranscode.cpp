@@ -5,7 +5,7 @@
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Serialization/Serializer/BinarySerializer.h"
 #include "Engine/Serialization/Serializer/JSONSerializer.h"
-#include "Engine/Serialization/Serializer/SerializerUtil.h"
+#include "Engine/Serialization/Serializer/ScopedScratchInstance.h"
 #include "Engine/Serialization/Serializer/XMLSerializer.h"
 
 namespace sw

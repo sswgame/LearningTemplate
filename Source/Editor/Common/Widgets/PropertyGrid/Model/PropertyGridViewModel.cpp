@@ -51,7 +51,8 @@
 #include "Engine/Serialization/Inherit/DataCatalogReferences.h"
 #include "Engine/Serialization/Reference/AssetRefBase.h"
 #include "Engine/Serialization/Reference/DataPath.h"
-#include "Engine/Serialization/Serializer/SerializerUtil.h"
+#include "Engine/Serialization/Serializer/PropertySerializer.h"
+#include "Engine/Serialization/Serializer/ValueSerializer.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include <algorithm>
@@ -136,7 +137,7 @@ namespace sw::editor
                 const PropertyInfo* pRootProp = pType->findPropertyInHierarchy( request._path._root );
                 if ( pRootProp == nullptr )
                     return;
-                const string text = SerializerUtil::formatPropertyText( *pRootProp, ObjectAddress{ pInstance }, SerializeContext::getDefault( SerializePurpose::Authoring ) );
+                const string text = PropertySerializer::formatPropertyText( *pRootProp, ObjectAddress{ pInstance }, SerializeContext::getDefault( SerializePurpose::Authoring ) );
                 const string path{ request._path._root.c_str() };
                 for ( const PropertyEditTarget& other : listOther )
                 {
@@ -287,7 +288,7 @@ namespace sw::editor
                     const DataPath& path = *static_cast<const DataPath*>( pValue );
                     return path.isSet() ? path.get() : string{};
                 }
-                return SerializerUtil::formatValueText( ValueAddress{ pValue }, typeName, SerializeContext::getDefault( SerializePurpose::Authoring ) );
+                return ValueSerializer::formatValueText( ValueAddress{ pValue }, typeName, SerializeContext::getDefault( SerializePurpose::Authoring ) );
             }
         };
     } // namespace
@@ -589,7 +590,7 @@ namespace sw::editor
             row._kind             = PropertyRowKind::Text;
             const void* pAssetRef = PropertyGridViewModelInternal::isAssetReference( prop._typeName ) ? prop.getValuePtr<void>( instance.get() ) : nullptr;
             row._valueText        = pAssetRef != nullptr ? PropertyGridViewModelInternal::formatValueText( pAssetRef, prop._typeName )
-                                                         : SerializerUtil::formatPropertyText( prop, instance, SerializeContext::getDefault( SerializePurpose::Authoring ) );
+                                                         : PropertySerializer::formatPropertyText( prop, instance, SerializeContext::getDefault( SerializePurpose::Authoring ) );
             row._bAssetPath       = prop._metadata->_bAssetPath;
             return;
         }
@@ -1085,13 +1086,13 @@ namespace sw::editor
         }
         const InspectorBuiltinValue* pBuiltin = prop._containerWrapper == nullptr ? InspectorBuiltinValue::findBuiltin( prop._typeName.c_str() ) : nullptr;
         if ( pBuiltin == nullptr )
-            return true; // 적용이 거른다 — 읽지 못하면 값은 그대로다(`SerializerUtil::applyPropertyText`)
+            return true; // 적용이 거른다 — 읽지 못하면 값은 그대로다(`PropertySerializer::applyPropertyText`)
         if ( pBuiltin->_widget == InspectorValueWidget::Text || pBuiltin->_widget == InspectorValueWidget::Name )
             return true; // 글 칸은 어떤 글이든 받는다
         // 그 C++ 타입의 기본값 사본에 읽어 본다. 사본은 이 함수의 지역 값이라 그 저장 공간에 써도 된다.
         TaskValue scratch = pBuiltin->_pMakeDefault();
         void*     pValue  = const_cast<void*>( pBuiltin->_pFindTaskValue( scratch ) );
-        return pValue != nullptr && SerializerUtil::parseTextValue( MutableValueAddress{ pValue }, prop._typeName, text, context );
+        return pValue != nullptr && ValueSerializer::parseTextValue( MutableValueAddress{ pValue }, prop._typeName, text, context );
     }
 
     bool PropertyGridViewModel::findObjectComponent( const hashed_string& targetTypeName, uint64 objectID, ComponentHandle& outHandle ) const
@@ -1121,7 +1122,7 @@ namespace sw::editor
             return;
         const PropertyInfo& prop            = *pBinding->_pProp;
         const ObjectAddress defaultInstance = findDefaultInstance( pBinding->_instance.get(), *_pType );
-        const string        text            = defaultInstance.get() != nullptr ? SerializerUtil::formatPropertyText( prop, defaultInstance, SerializeContext::getDefault( SerializePurpose::Authoring ) )
+        const string        text            = defaultInstance.get() != nullptr ? PropertySerializer::formatPropertyText( prop, defaultInstance, SerializeContext::getDefault( SerializePurpose::Authoring ) )
                                                                                : prop._metadata->_defaultValue;
         setPropertyText( rowID, text, "Reset to Default" );
     }
@@ -1131,7 +1132,7 @@ namespace sw::editor
         const RowBinding* pBinding = findValueBinding( rowID );
         if ( pBinding == nullptr )
             return string{};
-        return SerializerUtil::formatPropertyText( *pBinding->_pProp, pBinding->_instance, SerializeContext::getDefault( SerializePurpose::Authoring ) );
+        return PropertySerializer::formatPropertyText( *pBinding->_pProp, pBinding->_instance, SerializeContext::getDefault( SerializePurpose::Authoring ) );
     }
 
     void PropertyGridViewModel::setEnumValue( uint32 rowID, int64 value )

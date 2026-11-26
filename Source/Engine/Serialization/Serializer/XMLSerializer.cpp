@@ -14,7 +14,10 @@
 #include "Engine/Serialization/Format/SchemaMigrate.h"
 #include "Engine/Serialization/Inherit/ResourceComposer.h"
 #include "Engine/Serialization/Serializer/ContainerVisitor.h"
-#include "Engine/Serialization/Serializer/SerializerUtil.h"
+#include "Engine/Serialization/Serializer/PropertyConstraints.h"
+#include "Engine/Serialization/Serializer/PropertyReadRollback.h"
+#include "Engine/Serialization/Serializer/PropertySerializer.h"
+#include "Engine/Serialization/Serializer/ValueSerializer.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw
@@ -99,7 +102,7 @@ namespace sw
                 void beginMapEntry( const ValueAddress key, const hashed_string& keyTypeName ) override
                 {
                     StringBuilder<constant::buffer::kMax8192> keyText;
-                    SerializerUtil::valueToText( keyText, key, keyTypeName, _shape.findBinding( keyTypeName ), _context );
+                    ValueSerializer::valueToText( keyText, key, keyTypeName, _shape.findBinding( keyTypeName ), _context );
                     _backend.beginMap( kXMLEntryTag );
                     _backend.writeAttribute( kXMLKeyAttr, keyText.c_str() );
                 }
@@ -151,7 +154,7 @@ namespace sw
                 void writeScalar( const ValueAddress value, const hashed_string& typeName, const ContainerSlot slot ) override
                 {
                     StringBuilder<constant::buffer::kMax8192> text;
-                    SerializerUtil::valueToText( text, value, typeName, _shape.findBinding( typeName ), _context );
+                    ValueSerializer::valueToText( text, value, typeName, _shape.findBinding( typeName ), _context );
                     if ( slot == ContainerSlot::SequenceElement )
                         _backend.writeValue( kXMLItemTag, text.c_str() );
                     else
@@ -300,7 +303,7 @@ namespace sw
                 (void)propertyVisitor.visitProperties( typeInfo, pInstance, [&]( const ReflectVisitConstField& field )
                 {
                     const PropertyInfo& prop = field._property;
-                    if ( SerializerUtil::shouldSerializeProperty( typeInfo, prop, context ) == false )
+                    if ( PropertySerializer::shouldSerializeProperty( typeInfo, prop, context ) == false )
                         return ReflectVisitFlow::Continue;
 
                     if ( prop._bIsBitField == SW_TRUE )
@@ -325,7 +328,7 @@ namespace sw
                     }
                     else
                     {
-                        const TypeInfo* pNestedType = SerializerUtil::findNestedObjectType( prop._typeName, prop.findValueBinding(), context );
+                        const TypeInfo* pNestedType = ValueSerializer::findNestedObjectType( prop._typeName, prop.findValueBinding(), context );
                         if ( pNestedType != nullptr )
                         {
                             backend.beginMap( prop._name.c_str() );
@@ -335,7 +338,7 @@ namespace sw
                         else
                         {
                             StringBuilder<constant::buffer::kMax8192> ss;
-                            SerializerUtil::valueToText( ss, propValue, prop._typeName, prop.findValueBinding(), context );
+                            ValueSerializer::valueToText( ss, propValue, prop._typeName, prop.findValueBinding(), context );
 
                             // 기본은 "모두 쓴다" 이다. 그래야 파일에 없음과 명시적으로 비어 있음이
                             // 구분된다. 생략해도 좋다고 스키마가 선언한 필드만 비었을 때 뺀다.
@@ -365,7 +368,7 @@ namespace sw
                     return false;
                 if ( prop._bIsContainer && prop.hasContainerWrapper() )
                     return true;
-                return SerializerUtil::findNestedObjectType( prop._typeName, prop.findValueBinding(), context ) != nullptr;
+                return ValueSerializer::findNestedObjectType( prop._typeName, prop.findValueBinding(), context ) != nullptr;
             }
 
             /**
@@ -435,7 +438,7 @@ namespace sw
                     } );
                     if ( entered == false )
                     {
-                        SerializerUtil::applyPropertyDefault( prop, MutableObjectAddress{ pInstance } );
+                        PropertySerializer::applyPropertyDefault( prop, MutableObjectAddress{ pInstance } );
                         return;
                     }
                     if ( _bContinuesAfterUnreadable && _rollback.keepValueBeforeRead( _typeInfo, prop, ObjectAddress{ pInstance }, _context ) == false )
@@ -484,7 +487,7 @@ namespace sw
                     } );
                     if ( entered == false )
                     {
-                        SerializerUtil::applyPropertyDefault( prop, MutableObjectAddress{ pInstance } );
+                        PropertySerializer::applyPropertyDefault( prop, MutableObjectAddress{ pInstance } );
                         return;
                     }
                     // 소프트 읽기의 안쪽 실패는 안쪽 필드가 이미 되돌렸으므로 FieldFailed 는 엄격 읽기에서만 온다.
@@ -522,7 +525,7 @@ namespace sw
                     } );
                     if ( readOk == false )
                     {
-                        SerializerUtil::applyPropertyDefault( prop, MutableObjectAddress{ pInstance } );
+                        PropertySerializer::applyPropertyDefault( prop, MutableObjectAddress{ pInstance } );
                         return;
                     }
                     if ( _bContinuesAfterUnreadable && _rollback.keepValueBeforeRead( _typeInfo, prop, ObjectAddress{ pInstance }, _context ) == false )
@@ -531,7 +534,7 @@ namespace sw
                         return;
                     }
                     // 비트필드는 그 비트만 쓴다. 불리언이 아닌 글("ture")은 false 로 삼키지 않고 실패로 남긴다.
-                    const bool bApplied = ( prop._bIsBitField == SW_TRUE ) ? SerializerUtil::applyPropertyText( prop, MutableObjectAddress{ pInstance }, strValue, _context )
+                    const bool bApplied = ( prop._bIsBitField == SW_TRUE ) ? PropertySerializer::applyPropertyText( prop, MutableObjectAddress{ pInstance }, strValue, _context )
                                                                            : parseTextValueCoerced( MutableValueAddress{ pPropPtr }, prop._typeName, prop.findValueBinding(), strValue, _context );
                     if ( bApplied == false )
                     {
@@ -559,11 +562,11 @@ namespace sw
                 {
                     const PropertyInfo& prop = field._property;
                     // 이 목적이 다루지 않는 필드는 지금 값 그대로다(기본값을 채우지 않는다). 저작 파일의 런타임 상태는 로드 오류다.
-                    if ( SerializerUtil::shouldSerializeProperty( typeInfo, prop, context ) == false )
+                    if ( PropertySerializer::shouldSerializeProperty( typeInfo, prop, context ) == false )
                     {
-                        if ( SerializerUtil::isForbiddenInFile( prop, context ) && hasXMLField( backend, prop ) )
+                        if ( PropertySerializer::isForbiddenInFile( prop, context ) && hasXMLField( backend, prop ) )
                         {
-                            SerializerUtil::reportForbiddenProperty( typeInfo, prop );
+                            PropertySerializer::reportForbiddenProperty( typeInfo, prop );
                             state._bForbiddenField = true;
                         }
                         return ReflectVisitFlow::Continue;
@@ -574,7 +577,7 @@ namespace sw
                     }
                     else
                     {
-                        const TypeInfo* pNestedType = SerializerUtil::findNestedObjectType( prop._typeName, prop.findValueBinding(), context );
+                        const TypeInfo* pNestedType = ValueSerializer::findNestedObjectType( prop._typeName, prop.findValueBinding(), context );
                         if ( pNestedType != nullptr )
                             state.readNestedProperty( prop, *pNestedType );
                         else
@@ -717,7 +720,7 @@ namespace sw
                     appendUnknownXMLChildOrphans( root, typeInfo, context, pOutListOrphan );
 
                 // 선언된 범위는 읽기 공통 끝에서 본다(바이너리 · JSON 과 같다). 되돌린 칸은 파일 값이 아니라 뺀다.
-                const bool bWithinRange = SerializerUtil::isWithinDeclaredRanges( typeInfo, ObjectAddress{ pInstance }, listRestored );
+                const bool bWithinRange = PropertyConstraints::isWithinDeclaredRanges( typeInfo, ObjectAddress{ pInstance }, listRestored );
                 return bPropertiesRead && bWithinRange ? SoftReadResult::Read : SoftReadResult::Rejected;
             }
         };
@@ -985,7 +988,7 @@ namespace sw
         if ( listOrphan.empty() == false )
             return false;
         // 선언된 범위는 읽기 공통 끝에서 본다(바이너리 · JSON 과 같다).
-        return SerializerUtil::isWithinDeclaredRanges( typeInfo, ObjectAddress{ pInstance } );
+        return PropertyConstraints::isWithinDeclaredRanges( typeInfo, ObjectAddress{ pInstance } );
     }
 
     string XMLSerializer::serialize( const void* pInstance, const TypeInfo& typeInfo, const SerializeContext& context )
@@ -1036,7 +1039,7 @@ namespace sw
             const bool        bWritten   = pAttribute != nullptr || child.isValid();
             // 스칼라는 속성으로 적힌다 — 그 글로 빈 이름을 가른다(판정은 JSON 과 한 함수).
             const string_view attributeText = pAttribute != nullptr ? string_view( pAttribute ) : string_view{};
-            if ( SerializerUtil::isRequiredValueMissing( prop, bWritten, pAttribute != nullptr ? &attributeText : nullptr, RequiredScope::Root ) )
+            if ( PropertyConstraints::isRequiredValueMissing( prop, bWritten, pAttribute != nullptr ? &attributeText : nullptr, RequiredScope::Root ) )
             {
                 outListPath.push_back( path );
                 continue;
@@ -1046,7 +1049,7 @@ namespace sw
             if ( child.isValid() == false )
                 continue;
             const bool      bContainer = prop._bIsContainer == SW_TRUE;
-            const TypeInfo* pNested    = SerializerUtil::findNestedObjectType( bContainer ? prop._elementTypeName : prop._typeName, bContainer ? prop.findElementBinding() : prop.findValueBinding(), SerializeContext::getDefault( SerializePurpose::Authoring ) );
+            const TypeInfo* pNested    = ValueSerializer::findNestedObjectType( bContainer ? prop._elementTypeName : prop._typeName, bContainer ? prop.findElementBinding() : prop.findValueBinding(), SerializeContext::getDefault( SerializePurpose::Authoring ) );
             if ( bContainer == false )
             {
                 if ( pNested != nullptr )

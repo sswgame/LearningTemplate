@@ -12,7 +12,7 @@
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Format/FormatUpgrade.h"
 #include "Engine/Serialization/Layout/LayoutSerializer.h"
-#include "Engine/Serialization/Serializer/SerializerUtil.h"
+#include "Engine/Serialization/Serializer/PropertyConstraints.h"
 #include "Engine/Serialization/Serializer/StateIO.h"
 
 // `StateIO::reflected` — 리플렉션 상태 칸을 선언에서 싣는다. 바이트 약속은 `StateIO` 의 칸 함수 그대로라 손 본문과 섞여도 같은 아카이브다.
@@ -302,7 +302,7 @@ namespace sw
         }
         reflectedProperties( type, pObject, true, 0 );
         if ( isOk() )
-            check( SerializerUtil::areValuesWithinDeclaredRanges( type, ObjectAddress{ pObject } ) ); // 손 io.check 처럼 로그 없이 거절한다
+            check( PropertyConstraints::areValuesWithinDeclaredRanges( type, ObjectAddress{ pObject } ) ); // 손 io.check 처럼 로그 없이 거절한다
     }
 
     void StateIO::reflectedDerived( const TypeInfo& dynamicType, const hashed_string& staticFqn, void* pObject )

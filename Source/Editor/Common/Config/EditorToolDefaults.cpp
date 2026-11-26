@@ -11,7 +11,7 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
-#include "Engine/Serialization/Serializer/SerializerUtil.h"
+#include "Engine/Serialization/Serializer/PropertyConstraints.h"
 
 #include "sw/config/ConfigConstants.h"
 
@@ -37,7 +37,7 @@ namespace sw::editor
                 const JSONValue   value = root.get( prop._name.view() );
                 const string      text  = value.isValid() && value.isString() ? value.asString() : string{};
                 const string_view textView( text );
-                if ( SerializerUtil::isRequiredValueMissing( prop, value.isValid(), value.isValid() && value.isString() ? &textView : nullptr, RequiredScope::Root ) == false )
+                if ( PropertyConstraints::isRequiredValueMissing( prop, value.isValid(), value.isValid() && value.isString() ? &textView : nullptr, RequiredScope::Root ) == false )
                     continue;
                 SW_LOG_ERROR_ID( "EditorToolDefaults.EditorToolDefaultsRequired", "Editor tool defaults %#: required key '%#' is missing", pSourceLabel, prop._name.c_str() );
                 bComplete = false;

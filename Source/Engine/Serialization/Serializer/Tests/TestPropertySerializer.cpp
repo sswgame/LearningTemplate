@@ -16,12 +16,14 @@
 #include "Engine/Serialization/Serializer/BinarySerializer.h"
 #include "Engine/Serialization/Serializer/ContainerVisitor.h"
 #include "Engine/Serialization/Serializer/JSONSerializer.h"
+#include "Engine/Serialization/Serializer/PropertyConstraints.h"
+#include "Engine/Serialization/Serializer/PropertySerializer.h"
 #include "Engine/Serialization/Serializer/SerializeContext.h"
-#include "Engine/Serialization/Serializer/SerializerUtil.h"
 #include "Engine/Serialization/Serializer/Tests/SerializerTestTypes.h"
+#include "Engine/Serialization/Serializer/ValueSerializer.h"
 #include "Engine/Serialization/Serializer/XMLSerializer.h"
 
-// SerializerUtilTest · SchemaMigrateTest · DataPathTest — 직렬화 공통 도우미: 값 텍스트 왕복 · 범위 밖 정수 거절 · 키 철자 일치 · 모르는 이름 · 비트필드 한 칸만 쓰기 ·
+// ValueSerializerTest · PropertySerializerTest · PropertyConstraintsTest · SchemaMigrateTest · DataPathTest — 직렬화 공통 도우미: 값 텍스트 왕복 · 범위 밖 정수 거절 · 키 철자 일치 · 모르는 이름 · 비트필드 한 칸만 쓰기 ·
 // 페이로드 끝까지 읽기 · 선언 범위(경계 포함) · 선언 기본값, 판 정확 일치(옛 판은 이관하지 않고 거절) · orphan 정책(텍스트는 버리고 알림, 바이너리는 거절) ·
 // 값으로만 옮기는 강제 변환(스칼라 · 다른 enum · 글 blob · 비트필드는 그 비트만) · 스크래치 인스턴스 · 기록 타입 이름 찾기, 데이터 경로 칸(읽지 않은 칸 · 앞뒤 공백 · 빈 글은 비움)(nogpu).
 
@@ -76,74 +78,74 @@ namespace
     }
 } // namespace
 
-/** @brief [SerializerUtilTest] 값 하나를 글로 쓰고 다시 읽으면 같은 값이고, 읽지 못하는 글은 값을 그대로 둔다 */
-SW_TEST_CASE( SerializerUtilTest, ValueTextRoundTripsAndBadTextKeepsTheValue )
+/** @brief [ValueSerializerTest] 값 하나를 글로 쓰고 다시 읽으면 같은 값이고, 읽지 못하는 글은 값을 그대로 둔다 */
+SW_TEST_CASE( ValueSerializerTest, ValueTextRoundTripsAndBadTextKeepsTheValue )
 {
     int32 count = 42;
-    SW_EXPECT_EQUAL( string( "42" ), SerializerUtil::formatValueText( ValueAddress{ &count }, hashed_string( "int32" ), getContext() ) );
+    SW_EXPECT_EQUAL( string( "42" ), ValueSerializer::formatValueText( ValueAddress{ &count }, hashed_string( "int32" ), getContext() ) );
     int32 parsed = 0;
-    SW_REQUIRE_TRUE( SerializerUtil::parseTextValue( MutableValueAddress{ &parsed }, hashed_string( "int32" ), "-17", getContext() ) );
+    SW_REQUIRE_TRUE( ValueSerializer::parseTextValue( MutableValueAddress{ &parsed }, hashed_string( "int32" ), "-17", getContext() ) );
     SW_EXPECT_EQUAL( -17, parsed );
-    SW_EXPECT_FALSE( SerializerUtil::parseTextValue( MutableValueAddress{ &parsed }, hashed_string( "int32" ), "abc", getContext() ) );
+    SW_EXPECT_FALSE( ValueSerializer::parseTextValue( MutableValueAddress{ &parsed }, hashed_string( "int32" ), "abc", getContext() ) );
     SW_EXPECT_EQUAL( -17, parsed );
 
     float32 ratio = 0.0f;
-    SW_REQUIRE_TRUE( SerializerUtil::parseTextValue( MutableValueAddress{ &ratio }, hashed_string( "float32" ), "0.25", getContext() ) );
+    SW_REQUIRE_TRUE( ValueSerializer::parseTextValue( MutableValueAddress{ &ratio }, hashed_string( "float32" ), "0.25", getContext() ) );
     SW_EXPECT_NEAR( 0.25f, ratio, 1e-6 );
     string name;
-    SW_REQUIRE_TRUE( SerializerUtil::parseTextValue( MutableValueAddress{ &name }, hashed_string( "string" ), "Orc Chief", getContext() ) );
+    SW_REQUIRE_TRUE( ValueSerializer::parseTextValue( MutableValueAddress{ &name }, hashed_string( "string" ), "Orc Chief", getContext() ) );
     SW_EXPECT_EQUAL( string( "Orc Chief" ), name );
 }
 
-/** @brief [SerializerUtilTest] 큰따옴표로 감싼 글 값(JSON 글 `"BC1"`)도 쓰고 읽으면 같은 값이다 — 읽기가 따옴표 한 쌍을 벗기니 쓰기가 한 쌍을 더 씌운다 */
-SW_TEST_CASE( SerializerUtilTest, QuotedStringValueRoundTrips )
+/** @brief [ValueSerializerTest] 큰따옴표로 감싼 글 값(JSON 글 `"BC1"`)도 쓰고 읽으면 같은 값이다 — 읽기가 따옴표 한 쌍을 벗기니 쓰기가 한 쌍을 더 씌운다 */
+SW_TEST_CASE( ValueSerializerTest, QuotedStringValueRoundTrips )
 {
     const string quoted = "\"BC1\"";
-    const string text   = SerializerUtil::formatValueText( ValueAddress{ &quoted }, hashed_string( "string" ), getContext() );
+    const string text   = ValueSerializer::formatValueText( ValueAddress{ &quoted }, hashed_string( "string" ), getContext() );
     string       parsed;
-    SW_REQUIRE_TRUE( SerializerUtil::parseTextValue( MutableValueAddress{ &parsed }, hashed_string( "string" ), text, getContext() ) );
+    SW_REQUIRE_TRUE( ValueSerializer::parseTextValue( MutableValueAddress{ &parsed }, hashed_string( "string" ), text, getContext() ) );
     SW_EXPECT_EQUAL( quoted, parsed );
     const string plain = "Orc Chief";
-    SW_EXPECT_EQUAL( plain, SerializerUtil::formatValueText( ValueAddress{ &plain }, hashed_string( "string" ), getContext() ) );
+    SW_EXPECT_EQUAL( plain, ValueSerializer::formatValueText( ValueAddress{ &plain }, hashed_string( "string" ), getContext() ) );
 }
 
-/** @brief [SerializerUtilTest] 경계 값: 좁은 정수 칸은 범위 끝까지 받고, 넘거나 음수인 글은 감지 않고 거절한다 */
-SW_TEST_CASE( SerializerUtilTest, OutOfRangeIntegerTextIsRejectedNotWrapped )
+/** @brief [ValueSerializerTest] 경계 값: 좁은 정수 칸은 범위 끝까지 받고, 넘거나 음수인 글은 감지 않고 거절한다 */
+SW_TEST_CASE( ValueSerializerTest, OutOfRangeIntegerTextIsRejectedNotWrapped )
 {
     uint8 small = 9;
-    SW_REQUIRE_TRUE( SerializerUtil::parseTextValue( MutableValueAddress{ &small }, hashed_string( "uint8" ), "255", getContext() ) );
+    SW_REQUIRE_TRUE( ValueSerializer::parseTextValue( MutableValueAddress{ &small }, hashed_string( "uint8" ), "255", getContext() ) );
     SW_EXPECT_EQUAL( uint8( 255 ), small );
-    SW_REQUIRE_TRUE( SerializerUtil::parseTextValue( MutableValueAddress{ &small }, hashed_string( "uint8" ), "0", getContext() ) );
+    SW_REQUIRE_TRUE( ValueSerializer::parseTextValue( MutableValueAddress{ &small }, hashed_string( "uint8" ), "0", getContext() ) );
     SW_EXPECT_EQUAL( uint8( 0 ), small );
     SW_EXPECT_LOG( "Serialization.IntegerOutOfRange" );
-    SW_EXPECT_FALSE( SerializerUtil::parseTextValue( MutableValueAddress{ &small }, hashed_string( "uint8" ), "256", getContext() ) );
-    SW_EXPECT_FALSE( SerializerUtil::parseTextValue( MutableValueAddress{ &small }, hashed_string( "uint8" ), "-1", getContext() ) );
+    SW_EXPECT_FALSE( ValueSerializer::parseTextValue( MutableValueAddress{ &small }, hashed_string( "uint8" ), "256", getContext() ) );
+    SW_EXPECT_FALSE( ValueSerializer::parseTextValue( MutableValueAddress{ &small }, hashed_string( "uint8" ), "-1", getContext() ) );
     SW_EXPECT_EQUAL( uint8( 0 ), small );
 }
 
-/** @brief [SerializerUtilTest] 키는 철자 그대로 맞춘다 — 대소문자가 다르면 다른 키이고, 모르는 이름 해시는 목록 끝(없음)이다 */
-SW_TEST_CASE( SerializerUtilTest, KeysMatchExactlyAndUnknownNamesAreNotFound )
+/** @brief [PropertySerializerTest] 키는 철자 그대로 맞춘다 — 대소문자가 다르면 다른 키이고, 모르는 이름 해시는 목록 끝(없음)이다 */
+SW_TEST_CASE( PropertySerializerTest, KeysMatchExactlyAndUnknownNamesAreNotFound )
 {
-    SW_EXPECT_TRUE( SerializerUtil::isKeyEqual( "_count", "_count" ) );
-    SW_EXPECT_FALSE( SerializerUtil::isKeyEqual( "_count", "_Count" ) );
+    SW_EXPECT_TRUE( PropertySerializer::isKeyEqual( "_count", "_count" ) );
+    SW_EXPECT_FALSE( PropertySerializer::isKeyEqual( "_count", "_Count" ) );
     const vector<PropertyInfo>& listProp = getSampleType()._listProperty;
-    const PropertyInfo*         pCount   = SerializerUtil::matchProperty( listProp, "_count" );
+    const PropertyInfo*         pCount   = PropertySerializer::matchProperty( listProp, "_count" );
     SW_REQUIRE_NOT_NULL( pCount );
     SW_EXPECT_TRUE( pCount->_name == hashed_string( "_count" ) );
-    SW_EXPECT_NULL( SerializerUtil::matchProperty( listProp, "_Count" ) );
-    SW_EXPECT_NULL( SerializerUtil::matchProperty( listProp, "_missing" ) );
+    SW_EXPECT_NULL( PropertySerializer::matchProperty( listProp, "_Count" ) );
+    SW_EXPECT_NULL( PropertySerializer::matchProperty( listProp, "_missing" ) );
     const uint32 unknownHash = static_cast<uint32>( hashed_string::computeHash( string_view{ "_notAField" } ) );
-    SW_EXPECT_FALSE( SerializerUtil::findPropertyIndexByNameHash( listProp, unknownHash ).has_value() );
-    const optional<uint32> countIndex = SerializerUtil::findPropertyIndexByNameHash( listProp, hashed_string( "_count" ).getHash() );
+    SW_EXPECT_FALSE( PropertySerializer::findPropertyIndexByNameHash( listProp, unknownHash ).has_value() );
+    const optional<uint32> countIndex = PropertySerializer::findPropertyIndexByNameHash( listProp, hashed_string( "_count" ).getHash() );
     SW_REQUIRE_TRUE( countIndex.has_value() );
     SW_EXPECT_TRUE( listProp[*countIndex]._name == hashed_string( "_count" ) );
 }
 
-/** @brief [SerializerUtilTest] 값 비교는 형식대로 견준다 — 숫자 · 글(철자까지) · 열거형 · 처리기 값 · 구조체 안의 칸 · 개수가 같은 목록의 원소가 다르면 다르다 */
-SW_TEST_CASE( SerializerUtilTest, PropertyValuesCompareByType )
+/** @brief [PropertySerializerTest] 값 비교는 형식대로 견준다 — 숫자 · 글(철자까지) · 열거형 · 처리기 값 · 구조체 안의 칸 · 개수가 같은 목록의 원소가 다르면 다르다 */
+SW_TEST_CASE( PropertySerializerTest, PropertyValuesCompareByType )
 {
     const auto isEqualField = []( const utf8* pName, const SerializerSample& a, const SerializerSample& b )
-    { return SerializerUtil::arePropertyValuesEqual( getSampleProperty( pName ), ObjectAddress{ &a }, ObjectAddress{ &b }, getContext() ); };
+    { return PropertySerializer::arePropertyValuesEqual( getSampleProperty( pName ), ObjectAddress{ &a }, ObjectAddress{ &b }, getContext() ); };
     const SerializerSample base;
     SerializerSample       changed;
     for ( const utf8* pName : { "_count", "_ratio", "_name", "_small", "_mode", "_bFirst", "_path" } )
@@ -156,7 +158,7 @@ SW_TEST_CASE( SerializerUtilTest, PropertyValuesCompareByType )
     changed._small  = 2;
     changed._mode   = SerializerSampleMode::Fast;
     changed._bFirst = 1;
-    SW_REQUIRE_TRUE( SerializerUtil::applyPropertyText( getSampleProperty( "_path" ), MutableObjectAddress{ &changed }, "Game/A.xml", getContext() ) );
+    SW_REQUIRE_TRUE( PropertySerializer::applyPropertyText( getSampleProperty( "_path" ), MutableObjectAddress{ &changed }, "Game/A.xml", getContext() ) );
     for ( const utf8* pName : { "_count", "_ratio", "_name", "_small", "_mode", "_bFirst", "_path" } )
     {
         SW_EXPECT_FALSE_MSG( isEqualField( pName, base, changed ), pName );
@@ -173,35 +175,35 @@ SW_TEST_CASE( SerializerUtilTest, PropertyValuesCompareByType )
     SerializerSampleGroup left;
     left._listText = { "a", "b" };
     SerializerSampleGroup right{ left };
-    SW_EXPECT_TRUE( SerializerUtil::arePropertyValuesEqual( *pList, ObjectAddress{ &left }, ObjectAddress{ &right }, getContext() ) );
-    SW_EXPECT_TRUE( SerializerUtil::arePropertyValuesEqual( *pPart, ObjectAddress{ &left }, ObjectAddress{ &right }, getContext() ) );
+    SW_EXPECT_TRUE( PropertySerializer::arePropertyValuesEqual( *pList, ObjectAddress{ &left }, ObjectAddress{ &right }, getContext() ) );
+    SW_EXPECT_TRUE( PropertySerializer::arePropertyValuesEqual( *pPart, ObjectAddress{ &left }, ObjectAddress{ &right }, getContext() ) );
     right._listText[1] = "c"; // 개수는 같다
     right._part._extra = 2.0f;
-    SW_EXPECT_FALSE( SerializerUtil::arePropertyValuesEqual( *pList, ObjectAddress{ &left }, ObjectAddress{ &right }, getContext() ) );
-    SW_EXPECT_FALSE( SerializerUtil::arePropertyValuesEqual( *pPart, ObjectAddress{ &left }, ObjectAddress{ &right }, getContext() ) );
+    SW_EXPECT_FALSE( PropertySerializer::arePropertyValuesEqual( *pList, ObjectAddress{ &left }, ObjectAddress{ &right }, getContext() ) );
+    SW_EXPECT_FALSE( PropertySerializer::arePropertyValuesEqual( *pPart, ObjectAddress{ &left }, ObjectAddress{ &right }, getContext() ) );
     right._listText = { "a" };
-    SW_EXPECT_FALSE( SerializerUtil::arePropertyValuesEqual( *pList, ObjectAddress{ &left }, ObjectAddress{ &right }, getContext() ) );
+    SW_EXPECT_FALSE( PropertySerializer::arePropertyValuesEqual( *pList, ObjectAddress{ &left }, ObjectAddress{ &right }, getContext() ) );
 }
 
-/** @brief [SerializerUtilTest] 비트필드 하나를 글로 쓰거나 옮겨도 같은 바이트의 이웃 비트는 그대로이고, 불리언이 아닌 글은 거절한다 */
-SW_TEST_CASE( SerializerUtilTest, BitFieldHelpersTouchOnlyTheirOwnBit )
+/** @brief [PropertySerializerTest] 비트필드 하나를 글로 쓰거나 옮겨도 같은 바이트의 이웃 비트는 그대로이고, 불리언이 아닌 글은 거절한다 */
+SW_TEST_CASE( PropertySerializerTest, BitFieldHelpersTouchOnlyTheirOwnBit )
 {
     const PropertyInfo& first  = getSampleProperty( "_bFirst" );
     const PropertyInfo& second = getSampleProperty( "_bSecond" );
     SerializerSample    sample;
     sample._bFirst = 1;
-    SW_REQUIRE_TRUE( SerializerUtil::applyPropertyText( second, MutableObjectAddress{ &sample }, "true", getContext() ) );
+    SW_REQUIRE_TRUE( PropertySerializer::applyPropertyText( second, MutableObjectAddress{ &sample }, "true", getContext() ) );
     SW_EXPECT_EQUAL( 1, static_cast<int32>( sample._bFirst ) );
     SW_EXPECT_EQUAL( 1, static_cast<int32>( sample._bSecond ) );
-    SW_EXPECT_FALSE( SerializerUtil::applyPropertyText( second, MutableObjectAddress{ &sample }, "maybe", getContext() ) );
+    SW_EXPECT_FALSE( PropertySerializer::applyPropertyText( second, MutableObjectAddress{ &sample }, "maybe", getContext() ) );
     SW_EXPECT_EQUAL( 1, static_cast<int32>( sample._bSecond ) );
-    SW_EXPECT_EQUAL( string( "true" ), SerializerUtil::formatPropertyText( first, ObjectAddress{ &sample }, getContext() ) );
+    SW_EXPECT_EQUAL( string( "true" ), PropertySerializer::formatPropertyText( first, ObjectAddress{ &sample }, getContext() ) );
 
     SerializerSample target;
     target._bSecond = 1;
-    SW_EXPECT_FALSE( SerializerUtil::arePropertyValuesEqual( first, ObjectAddress{ &sample }, ObjectAddress{ &target }, getContext() ) );
-    SW_REQUIRE_TRUE( SerializerUtil::copyPropertyValue( first, ObjectAddress{ &sample }, MutableObjectAddress{ &target }, getContext() ) );
-    SW_EXPECT_TRUE( SerializerUtil::arePropertyValuesEqual( first, ObjectAddress{ &sample }, ObjectAddress{ &target }, getContext() ) );
+    SW_EXPECT_FALSE( PropertySerializer::arePropertyValuesEqual( first, ObjectAddress{ &sample }, ObjectAddress{ &target }, getContext() ) );
+    SW_REQUIRE_TRUE( PropertySerializer::copyPropertyValue( first, ObjectAddress{ &sample }, MutableObjectAddress{ &target }, getContext() ) );
+    SW_EXPECT_TRUE( PropertySerializer::arePropertyValuesEqual( first, ObjectAddress{ &sample }, ObjectAddress{ &target }, getContext() ) );
     SW_EXPECT_EQUAL( 1, static_cast<int32>( target._bFirst ) );
     SW_EXPECT_EQUAL( 1, static_cast<int32>( target._bSecond ) ); // 이웃 비트는 옮기지 않았다
 
@@ -212,8 +214,8 @@ SW_TEST_CASE( SerializerUtilTest, BitFieldHelpersTouchOnlyTheirOwnBit )
     SW_EXPECT_EQUAL( 1, static_cast<int32>( cleared._bSecond ) );
 }
 
-/** @brief [SerializerUtilTest] 바이너리 실수 칸은 NaN · 무한대를 거절하고 값 · 위치를 그대로 둔다 — 텍스트 읽기 · `Archive` 와 같은 규칙이다 */
-SW_TEST_CASE( SerializerUtilTest, BinaryFloatRefusesNonFinite )
+/** @brief [ValueSerializerTest] 바이너리 실수 칸은 NaN · 무한대를 거절하고 값 · 위치를 그대로 둔다 — 텍스트 읽기 · `Archive` 와 같은 규칙이다 */
+SW_TEST_CASE( ValueSerializerTest, BinaryFloatRefusesNonFinite )
 {
     const SerializeContext::BinaryReadFn* pReadFloat  = getContext().findBinaryReader( hashed_string( "float32" ) );
     const SerializeContext::BinaryReadFn* pReadDouble = getContext().findBinaryReader( hashed_string( "float64" ) );
@@ -247,63 +249,63 @@ SW_TEST_CASE( SerializerUtilTest, BinaryFloatRefusesNonFinite )
     SW_EXPECT_EQUAL( size_t{ 4 }, offset );
 }
 
-/** @brief [SerializerUtilTest] 프로퍼티 바이너리는 끝까지 읽어야 Read 다 — 남는 바이트 · 잘린 바이트는 이 필드만 실패이고 값은 그대로다 */
-SW_TEST_CASE( SerializerUtilTest, PropertyBinaryMustBeReadToTheEnd )
+/** @brief [PropertySerializerTest] 프로퍼티 바이너리는 끝까지 읽어야 Read 다 — 남는 바이트 · 잘린 바이트는 이 필드만 실패이고 값은 그대로다 */
+SW_TEST_CASE( PropertySerializerTest, PropertyBinaryMustBeReadToTheEnd )
 {
     const PropertyInfo& nameProp = getSampleProperty( "_name" );
     SerializerSample    source;
     source._name = "payload";
     vector<uint8> bytes;
-    SW_REQUIRE_TRUE( SerializerUtil::writePropertyBinary( nameProp, ObjectAddress{ &source }, bytes, getContext() ) );
+    SW_REQUIRE_TRUE( PropertySerializer::writePropertyBinary( nameProp, ObjectAddress{ &source }, bytes, getContext() ) );
 
     SerializerSample target;
-    SW_EXPECT_TRUE( SerializerUtil::applyPropertyBinary( nameProp, MutableObjectAddress{ &target }, bytes.data(), bytes.size(), getContext() ) == FieldReadResult::Read );
+    SW_EXPECT_TRUE( PropertySerializer::applyPropertyBinary( nameProp, MutableObjectAddress{ &target }, bytes.data(), bytes.size(), getContext() ) == FieldReadResult::Read );
     SW_EXPECT_EQUAL( string( "payload" ), target._name );
 
     SerializerSample trailing;
     vector<uint8>    trailingBytes = bytes;
     trailingBytes.push_back( 0 );
-    SW_EXPECT_TRUE( SerializerUtil::applyPropertyBinary( nameProp, MutableObjectAddress{ &trailing }, trailingBytes.data(), trailingBytes.size(), getContext() ) ==
+    SW_EXPECT_TRUE( PropertySerializer::applyPropertyBinary( nameProp, MutableObjectAddress{ &trailing }, trailingBytes.data(), trailingBytes.size(), getContext() ) ==
                     FieldReadResult::FieldFailed );
     SerializerSample truncated;
     truncated._name = "before";
-    SW_EXPECT_TRUE( SerializerUtil::applyPropertyBinary( nameProp, MutableObjectAddress{ &truncated }, bytes.data(), bytes.size() - 1, getContext() ) ==
+    SW_EXPECT_TRUE( PropertySerializer::applyPropertyBinary( nameProp, MutableObjectAddress{ &truncated }, bytes.data(), bytes.size() - 1, getContext() ) ==
                     FieldReadResult::FieldFailed );
     SW_EXPECT_EQUAL( string( "before" ), truncated._name );
 
-    SW_EXPECT_TRUE( SerializerUtil::hasBinaryValueCodec( hashed_string( "int32" ), getContext() ) );
-    SW_EXPECT_FALSE( SerializerUtil::hasBinaryValueCodec( hashed_string( "SerializerUtilTest.NoSuchType" ), getContext() ) );
+    SW_EXPECT_TRUE( ValueSerializer::hasBinaryValueCodec( hashed_string( "int32" ), getContext() ) );
+    SW_EXPECT_FALSE( ValueSerializer::hasBinaryValueCodec( hashed_string( "ValueSerializerTest.NoSuchType" ), getContext() ) );
     vector<uint8> nothing;
     int32         value = 3;
-    SW_EXPECT_FALSE( SerializerUtil::serializeValueBinary( ValueAddress{ &value }, hashed_string( "SerializerUtilTest.NoSuchType" ), nothing, getContext() ) );
+    SW_EXPECT_FALSE( ValueSerializer::serializeValueBinary( ValueAddress{ &value }, hashed_string( "ValueSerializerTest.NoSuchType" ), nothing, getContext() ) );
     SW_EXPECT_TRUE( nothing.empty() ); // 실패한 쓰기는 0 바이트를 남기지 않는다
 }
 
-/** @brief [SerializerUtilTest] 선언 범위는 경계를 포함하고, 넘으면 칸마다 오류 한 줄과 함께 거절한다 */
-SW_TEST_CASE( SerializerUtilTest, DeclaredRangeIsInclusiveAndViolationsAreListed )
+/** @brief [PropertyConstraintsTest] 선언 범위는 경계를 포함하고, 넘으면 칸마다 오류 한 줄과 함께 거절한다 */
+SW_TEST_CASE( PropertyConstraintsTest, DeclaredRangeIsInclusiveAndViolationsAreListed )
 {
     SerializerSample sample;
     sample._count = 0;
-    SW_EXPECT_TRUE( SerializerUtil::isWithinDeclaredRanges( getSampleType(), ObjectAddress{ &sample } ) );
+    SW_EXPECT_TRUE( PropertyConstraints::isWithinDeclaredRanges( getSampleType(), ObjectAddress{ &sample } ) );
     sample._count = 100;
-    SW_EXPECT_TRUE( SerializerUtil::isWithinDeclaredRanges( getSampleType(), ObjectAddress{ &sample } ) );
+    SW_EXPECT_TRUE( PropertyConstraints::isWithinDeclaredRanges( getSampleType(), ObjectAddress{ &sample } ) );
 
     sample._count = 101;
     vector<string> listError;
-    SerializerUtil::collectRangeErrors( getSampleType(), ObjectAddress{ &sample }, "", listError );
+    PropertyConstraints::collectRangeErrors( getSampleType(), ObjectAddress{ &sample }, "", listError );
     SW_REQUIRE_EQUAL( size_t( 1 ), listError.size() );
     SW_EXPECT_TRUE( listError[0].find( "_count" ) != string::npos );
     SW_EXPECT_LOG( "Serialization.ValueOutOfRange" );
-    SW_EXPECT_FALSE( SerializerUtil::isWithinDeclaredRanges( getSampleType(), ObjectAddress{ &sample } ) );
+    SW_EXPECT_FALSE( PropertyConstraints::isWithinDeclaredRanges( getSampleType(), ObjectAddress{ &sample } ) );
 }
 
-/** @brief [SerializerUtilTest] 선언된 기본값(`Default=`)은 읽기가 그 칸을 채우지 않을 때 들어가고, 기본값이 없는 칸은 건드리지 않는다 */
-SW_TEST_CASE( SerializerUtilTest, DeclaredDefaultIsAppliedOnlyWhereDeclared )
+/** @brief [PropertySerializerTest] 선언된 기본값(`Default=`)은 읽기가 그 칸을 채우지 않을 때 들어가고, 기본값이 없는 칸은 건드리지 않는다 */
+SW_TEST_CASE( PropertySerializerTest, DeclaredDefaultIsAppliedOnlyWhereDeclared )
 {
     SerializerSample sample;
     sample._count = 5;
-    SerializerUtil::applyPropertyDefault( getSampleProperty( "_withDefault" ), MutableObjectAddress{ &sample } );
-    SerializerUtil::applyPropertyDefault( getSampleProperty( "_count" ), MutableObjectAddress{ &sample } );
+    PropertySerializer::applyPropertyDefault( getSampleProperty( "_withDefault" ), MutableObjectAddress{ &sample } );
+    PropertySerializer::applyPropertyDefault( getSampleProperty( "_count" ), MutableObjectAddress{ &sample } );
     SW_EXPECT_EQUAL( 7, sample._withDefault );
     SW_EXPECT_EQUAL( 5, sample._count );
 }
@@ -415,7 +417,7 @@ SW_TEST_CASE( SchemaMigrateTest, CoercedBinaryPayloadMovesTheValue )
     SW_REQUIRE_TRUE( tryCoerceBinaryPayload( MutableValueAddress{ &asText }, hashed_string( "string" ), oneAndHalf.data(), oneAndHalf.size(), context, hashed_string( "float32" ) ) ==
                      FieldReadResult::Read );
     float32 reread = 0.0f;
-    SW_REQUIRE_TRUE( SerializerUtil::parseTextValue( MutableValueAddress{ &reread }, hashed_string( "float32" ), asText, context ) );
+    SW_REQUIRE_TRUE( ValueSerializer::parseTextValue( MutableValueAddress{ &reread }, hashed_string( "float32" ), asText, context ) );
     SW_EXPECT_NEAR( 1.5f, reread, 1e-6 ); // 비트값(1069547520)이 아니라 수
 
     int32 asInt = -9;
@@ -469,7 +471,7 @@ SW_TEST_CASE( SchemaMigrateTest, EnumOfAnotherTypeMovesByEnumeratorName )
     const hashed_string        modeType = getSampleProperty( "_mode" )._typeName;
     const SerializerSampleMode fast     = SerializerSampleMode::Fast;
     vector<uint8>              payload;
-    SW_REQUIRE_TRUE( SerializerUtil::serializeValueBinary( ValueAddress{ &fast }, modeType, payload, getContext() ) );
+    SW_REQUIRE_TRUE( ValueSerializer::serializeValueBinary( ValueAddress{ &fast }, modeType, payload, getContext() ) );
     string asText;
     SW_REQUIRE_TRUE( tryCoerceBinaryPayload( MutableValueAddress{ &asText }, hashed_string( "string" ), payload.data(), payload.size(), getContext(), modeType ) ==
                      FieldReadResult::Read );
@@ -669,11 +671,11 @@ SW_TEST_CASE( DataPathTest, TextHandlerTrimsAndEmptyTextClears )
     DataPath            path;
     SW_EXPECT_FALSE( path.isSet() );
     SW_EXPECT_TRUE( path == "" );
-    SW_REQUIRE_TRUE( SerializerUtil::parseTextValue( MutableValueAddress{ &path }, typeName, "  engine/shaders/unindexed.hlsl \t", getContext() ) );
+    SW_REQUIRE_TRUE( ValueSerializer::parseTextValue( MutableValueAddress{ &path }, typeName, "  engine/shaders/unindexed.hlsl \t", getContext() ) );
     SW_REQUIRE_TRUE( path.isSet() );
     SW_EXPECT_EQUAL( string( "engine/shaders/unindexed.hlsl" ), path.get() );
-    SW_EXPECT_EQUAL( string( "engine/shaders/unindexed.hlsl" ), SerializerUtil::formatValueText( ValueAddress{ &path }, typeName, getContext() ) );
-    SW_REQUIRE_TRUE( SerializerUtil::parseTextValue( MutableValueAddress{ &path }, typeName, "   ", getContext() ) );
+    SW_EXPECT_EQUAL( string( "engine/shaders/unindexed.hlsl" ), ValueSerializer::formatValueText( ValueAddress{ &path }, typeName, getContext() ) );
+    SW_REQUIRE_TRUE( ValueSerializer::parseTextValue( MutableValueAddress{ &path }, typeName, "   ", getContext() ) );
     SW_EXPECT_FALSE( path.isSet() );
 }
 
@@ -689,13 +691,13 @@ SW_TEST_CASE( DataPathTest, ReferenceIsStoredAsAGUID )
     AssetRegistry previous = AssetRegistry::install( *registry );
 
     DataPath path;
-    SW_EXPECT_TRUE( SerializerUtil::parseTextValue( MutableValueAddress{ &path }, typeName, "guid:0000000000000000000000000000da7a", getContext() ) );
+    SW_EXPECT_TRUE( ValueSerializer::parseTextValue( MutableValueAddress{ &path }, typeName, "guid:0000000000000000000000000000da7a", getContext() ) );
     SW_EXPECT_TRUE( path == "engine/shaders/moved/toon.hlsl" );
     DataPath fromPath;
-    SW_EXPECT_TRUE( SerializerUtil::parseTextValue( MutableValueAddress{ &fromPath }, typeName, "engine/shaders/moved/toon.hlsl", getContext() ) );
-    SW_EXPECT_EQUAL( string( "guid:0000000000000000000000000000da7a" ), SerializerUtil::formatValueText( ValueAddress{ &fromPath }, typeName, getContext() ) );
+    SW_EXPECT_TRUE( ValueSerializer::parseTextValue( MutableValueAddress{ &fromPath }, typeName, "engine/shaders/moved/toon.hlsl", getContext() ) );
+    SW_EXPECT_EQUAL( string( "guid:0000000000000000000000000000da7a" ), ValueSerializer::formatValueText( ValueAddress{ &fromPath }, typeName, getContext() ) );
     SW_EXPECT_LOG( "DataPath.ReferenceNotResolved" );
-    SW_EXPECT_FALSE( SerializerUtil::parseTextValue( MutableValueAddress{ &path }, typeName, "guid:0000000000000000000000000000dead", getContext() ) );
+    SW_EXPECT_FALSE( ValueSerializer::parseTextValue( MutableValueAddress{ &path }, typeName, "guid:0000000000000000000000000000dead", getContext() ) );
     SW_EXPECT_TRUE( path == "engine/shaders/moved/toon.hlsl" );
 
     (void)AssetRegistry::install( std::move( previous ) );
@@ -705,7 +707,7 @@ SW_TEST_CASE( DataPathTest, ReferenceIsStoredAsAGUID )
 SW_TEST_CASE( DataPathTest, RoundTripsAndStaysUnsetWhenAbsent )
 {
     SerializerSample source;
-    SW_REQUIRE_TRUE( SerializerUtil::applyPropertyText( getSampleProperty( "_path" ), MutableObjectAddress{ &source }, "common/materials/a.material", getContext() ) );
+    SW_REQUIRE_TRUE( PropertySerializer::applyPropertyText( getSampleProperty( "_path" ), MutableObjectAddress{ &source }, "common/materials/a.material", getContext() ) );
     SerializerSample fromJSON;
     SW_REQUIRE_TRUE( JSONSerializer::deserialize( &fromJSON, getSampleType(), JSONSerializer::serialize( &source, getSampleType() ).value() ) );
     SW_EXPECT_TRUE( fromJSON._path == "common/materials/a.material" );
@@ -722,26 +724,26 @@ SW_TEST_CASE( DataPathTest, RoundTripsAndStaysUnsetWhenAbsent )
 }
 
 /**
- * @brief [SerializerUtilTest] 이름이 같은 칸끼리만 값이 옮겨 간다 — 형식이 달라도 이름 · 글 형식이 같으면 옮기고, 짝이 없는 칸은 양쪽 다 그대로다
+ * @brief [PropertySerializerTest] 이름이 같은 칸끼리만 값이 옮겨 간다 — 형식이 달라도 이름 · 글 형식이 같으면 옮기고, 짝이 없는 칸은 양쪽 다 그대로다
  */
-SW_TEST_CASE( SerializerUtilTest, SameNamedPropertiesMoveBetweenTypes )
+SW_TEST_CASE( PropertySerializerTest, SameNamedPropertiesMoveBetweenTypes )
 {
     SerializerSample source;
     source._count = 42;
     source._name  = "knight";
     source._ratio = 0.25f;
     SerializerSamplePart target;
-    SW_REQUIRE_TRUE( SerializerUtil::copySameNamedProperties( &source, getSampleType(), &target, *SerializerSamplePart::StaticType() ) );
+    SW_REQUIRE_TRUE( PropertySerializer::copySameNamedProperties( &source, getSampleType(), &target, *SerializerSamplePart::StaticType() ) );
     SW_EXPECT_EQUAL( 42, target._count );
     SW_EXPECT_EQUAL( string( "knight" ), target._name );
     SW_EXPECT_EQUAL( 1.5f, target._extra ); // 짝이 없는 칸은 그대로다
 }
 
 /**
- * @brief [SerializerUtilTest] 프로퍼티에 묶은 사실(`ReflectValueBinding`)은 이름으로 찾은 것과 같다 — 내장형은 색인, 열거형은 `EnumInfo`, 구조체는 `TypeInfo`
+ * @brief [ValueSerializerTest] 프로퍼티에 묶은 사실(`ReflectValueBinding`)은 이름으로 찾은 것과 같다 — 내장형은 색인, 열거형은 `EnumInfo`, 구조체는 `TypeInfo`
  * @details 직렬화기가 값마다 이름으로 처리기 · 열거형 · 구조체를 다시 찾던 길을 세대마다 한 번 찾는 묶음으로 바꿨다. 두 번째 조회는 캐시이고 답이 같다.
  */
-SW_TEST_CASE( SerializerUtilTest, ValueBindingMatchesNameLookup )
+SW_TEST_CASE( ValueSerializerTest, ValueBindingMatchesNameLookup )
 {
     const TypeRegistry& registry = getContext().getTypeRegistry();
     const PropertyInfo& count    = getSampleProperty( "_count" );
@@ -769,18 +771,18 @@ SW_TEST_CASE( SerializerUtilTest, ValueBindingMatchesNameLookup )
     const SerializerSampleMode fast = SerializerSampleMode::Fast;
     vector<uint8>              byName;
     vector<uint8>              byBinding;
-    SW_REQUIRE_TRUE( SerializerUtil::serializeValueBinary( ValueAddress{ &fast }, mode._typeName, byName, getContext() ) );
-    SW_REQUIRE_TRUE( SerializerUtil::serializeValueBinary( ValueAddress{ &fast }, mode._typeName, mode.findValueBinding(), byBinding, getContext() ) );
+    SW_REQUIRE_TRUE( ValueSerializer::serializeValueBinary( ValueAddress{ &fast }, mode._typeName, byName, getContext() ) );
+    SW_REQUIRE_TRUE( ValueSerializer::serializeValueBinary( ValueAddress{ &fast }, mode._typeName, mode.findValueBinding(), byBinding, getContext() ) );
     SW_EXPECT_TRUE( byName == byBinding );
     SerializerSampleMode read   = SerializerSampleMode::Off;
     size_t               offset = 0;
-    SW_EXPECT_TRUE( SerializerUtil::deserializeValueBinary( MutableValueAddress{ &read }, mode._typeName, mode.findValueBinding(), byBinding.data(), byBinding.size(), offset,
-                                                            getContext(), kCurrentBinaryWireVersion ) == FieldReadResult::Read );
+    SW_EXPECT_TRUE( ValueSerializer::deserializeValueBinary( MutableValueAddress{ &read }, mode._typeName, mode.findValueBinding(), byBinding.data(), byBinding.size(), offset,
+                                                             getContext(), kCurrentBinaryWireVersion ) == FieldReadResult::Read );
     SW_EXPECT_TRUE( read == SerializerSampleMode::Fast );
 }
 
-/** @brief [SerializerUtilTest] 내장형 처리기는 색인으로도 이름으로도 같은 것이 나오고, 빌린 문맥은 자기 등록이 빌린 표를 이긴다 */
-SW_TEST_CASE( SerializerUtilTest, BuiltinHandlerIndexMatchesName )
+/** @brief [ValueSerializerTest] 내장형 처리기는 색인으로도 이름으로도 같은 것이 나오고, 빌린 문맥은 자기 등록이 빌린 표를 이긴다 */
+SW_TEST_CASE( ValueSerializerTest, BuiltinHandlerIndexMatchesName )
 {
     const ReflectBuiltinIndex int32Index = ReflectBuiltinOf<int32>::kIndex;
     SW_REQUIRE_TRUE( getContext().findBinaryWriter( int32Index ) != nullptr );
@@ -806,34 +808,34 @@ SW_TEST_CASE( SerializerUtilTest, BuiltinHandlerIndexMatchesName )
     SW_EXPECT_TRUE( getContext().findBinaryWriter( int32Index ) != derived.findBinaryWriter( int32Index ) );
 }
 
-/** @brief [SerializerUtilTest] 이름 값 형식은 정규 이름으로 가른다 — 파서가 모은 `AssetRef` · `CatalogKey` 와 이름 · 경로 형식은 이름 값, 글(`string`)은 아니다 */
-SW_TEST_CASE( SerializerUtilTest, NameValueTypeByCanonicalName )
+/** @brief [PropertyConstraintsTest] 이름 값 형식은 정규 이름으로 가른다 — 파서가 모은 `AssetRef` · `CatalogKey` 와 이름 · 경로 형식은 이름 값, 글(`string`)은 아니다 */
+SW_TEST_CASE( PropertyConstraintsTest, NameValueTypeByCanonicalName )
 {
-    SW_EXPECT_TRUE( SerializerUtil::isNameValueType( hashed_string( "hashed_string" ) ) );
-    SW_EXPECT_TRUE( SerializerUtil::isNameValueType( hashed_string( "AssetRef" ) ) );
-    SW_EXPECT_TRUE( SerializerUtil::isNameValueType( hashed_string( "CatalogKey" ) ) );
-    SW_EXPECT_TRUE( SerializerUtil::isNameValueType( hashed_string( "DataPath" ) ) );
-    SW_EXPECT_FALSE( SerializerUtil::isNameValueType( hashed_string( "string" ) ) );
-    SW_EXPECT_FALSE( SerializerUtil::isNameValueType( hashed_string( "int32" ) ) );
+    SW_EXPECT_TRUE( PropertyConstraints::isNameValueType( hashed_string( "hashed_string" ) ) );
+    SW_EXPECT_TRUE( PropertyConstraints::isNameValueType( hashed_string( "AssetRef" ) ) );
+    SW_EXPECT_TRUE( PropertyConstraints::isNameValueType( hashed_string( "CatalogKey" ) ) );
+    SW_EXPECT_TRUE( PropertyConstraints::isNameValueType( hashed_string( "DataPath" ) ) );
+    SW_EXPECT_FALSE( PropertyConstraints::isNameValueType( hashed_string( "string" ) ) );
+    SW_EXPECT_FALSE( PropertyConstraints::isNameValueType( hashed_string( "int32" ) ) );
 }
 
-/** @brief [SerializerUtilTest] 태그 찾기는 기대 자리(직전 + 1)를 먼저 보고, 맞지 않으면 훑어 같은 답을 낸다 — 기대 자리가 범위 밖이어도 된다 */
-SW_TEST_CASE( SerializerUtilTest, NameHashLookupTriesExpectedIndexFirst )
+/** @brief [PropertySerializerTest] 태그 찾기는 기대 자리(직전 + 1)를 먼저 보고, 맞지 않으면 훑어 같은 답을 낸다 — 기대 자리가 범위 밖이어도 된다 */
+SW_TEST_CASE( PropertySerializerTest, NameHashLookupTriesExpectedIndexFirst )
 {
     const vector<PropertyInfo>& listProp  = getSampleType()._listProperty;
     const uint32                countHash = hashed_string( "_count" ).getHash();
-    const optional<uint32>      scanned   = SerializerUtil::findPropertyIndexByNameHash( listProp, countHash );
+    const optional<uint32>      scanned   = PropertySerializer::findPropertyIndexByNameHash( listProp, countHash );
     SW_REQUIRE_TRUE( scanned.has_value() );
     // 기대 자리가 맞을 때, 다른 자리일 때, 범위 밖일 때 모두 훑기와 같은 답이다.
-    SW_EXPECT_TRUE( SerializerUtil::findPropertyIndexByNameHash( listProp, countHash, *scanned ) == scanned );
-    SW_EXPECT_TRUE( SerializerUtil::findPropertyIndexByNameHash( listProp, countHash, *scanned + 1 ) == scanned );
-    SW_EXPECT_TRUE( SerializerUtil::findPropertyIndexByNameHash( listProp, countHash, static_cast<uint32>( listProp.size() ) + 3 ) == scanned );
+    SW_EXPECT_TRUE( PropertySerializer::findPropertyIndexByNameHash( listProp, countHash, *scanned ) == scanned );
+    SW_EXPECT_TRUE( PropertySerializer::findPropertyIndexByNameHash( listProp, countHash, *scanned + 1 ) == scanned );
+    SW_EXPECT_TRUE( PropertySerializer::findPropertyIndexByNameHash( listProp, countHash, static_cast<uint32>( listProp.size() ) + 3 ) == scanned );
     const uint32 unknownHash = static_cast<uint32>( hashed_string::computeHash( string_view{ "_notAField" } ) );
-    SW_EXPECT_FALSE( SerializerUtil::findPropertyIndexByNameHash( listProp, unknownHash, 0 ).has_value() );
+    SW_EXPECT_FALSE( PropertySerializer::findPropertyIndexByNameHash( listProp, unknownHash, 0 ).has_value() );
 }
 
-/** @brief [SerializerUtilTest] 텍스트 길도 묶음을 쓴다 — 묶음으로 쓴 글이 이름으로 쓴 글과 같고, 묶음으로 다시 읽힌다(JSON · XML 이 같은 길을 탄다) */
-SW_TEST_CASE( SerializerUtilTest, TextPathUsesValueBinding )
+/** @brief [ValueSerializerTest] 텍스트 길도 묶음을 쓴다 — 묶음으로 쓴 글이 이름으로 쓴 글과 같고, 묶음으로 다시 읽힌다(JSON · XML 이 같은 길을 탄다) */
+SW_TEST_CASE( ValueSerializerTest, TextPathUsesValueBinding )
 {
     const PropertyInfo& mode  = getSampleProperty( "_mode" );
     const PropertyInfo& count = getSampleProperty( "_count" );
@@ -842,15 +844,15 @@ SW_TEST_CASE( SerializerUtilTest, TextPathUsesValueBinding )
     const SerializerSampleMode                fast = SerializerSampleMode::Fast;
     StringBuilder<constant::buffer::kMax8192> byName;
     StringBuilder<constant::buffer::kMax8192> byBinding;
-    SerializerUtil::valueToText( byName, ValueAddress{ &fast }, mode._typeName, getContext() );
-    SerializerUtil::valueToText( byBinding, ValueAddress{ &fast }, mode._typeName, mode.findValueBinding(), getContext() );
+    ValueSerializer::valueToText( byName, ValueAddress{ &fast }, mode._typeName, getContext() );
+    ValueSerializer::valueToText( byBinding, ValueAddress{ &fast }, mode._typeName, mode.findValueBinding(), getContext() );
     SW_EXPECT_TRUE( byName.view() == byBinding.view() );
 
     SerializerSampleMode read = SerializerSampleMode::Off;
-    SW_EXPECT_TRUE( SerializerUtil::parseTextValue( MutableValueAddress{ &read }, mode._typeName, mode.findValueBinding(), byBinding.view(), getContext() ) );
+    SW_EXPECT_TRUE( ValueSerializer::parseTextValue( MutableValueAddress{ &read }, mode._typeName, mode.findValueBinding(), byBinding.view(), getContext() ) );
     SW_EXPECT_TRUE( read == SerializerSampleMode::Fast );
 
     int32 number = 0;
-    SW_EXPECT_TRUE( SerializerUtil::parseTextValue( MutableValueAddress{ &number }, count._typeName, count.findValueBinding(), "42", getContext() ) );
+    SW_EXPECT_TRUE( ValueSerializer::parseTextValue( MutableValueAddress{ &number }, count._typeName, count.findValueBinding(), "42", getContext() ) );
     SW_EXPECT_EQUAL( 42, number );
 }

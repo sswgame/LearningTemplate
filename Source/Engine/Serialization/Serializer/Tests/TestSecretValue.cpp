@@ -7,8 +7,8 @@
 #include "Engine/Serialization/Layout/LayoutSerializer.h"
 #include "Engine/Serialization/Serializer/BinarySerializer.h"
 #include "Engine/Serialization/Serializer/JSONSerializer.h"
-#include "Engine/Serialization/Serializer/SerializerUtil.h"
 #include "Engine/Serialization/Serializer/Tests/SerializerTestTypes.h"
+#include "Engine/Serialization/Serializer/ValueSerializer.h"
 #include "Engine/Serialization/Serializer/XMLSerializer.h"
 
 #include <type_traits>
@@ -52,8 +52,8 @@ SW_TEST_CASE( SecretValueTest, TextFormatsNeverCarryTheValue )
 
     // 가린 글을 값으로 읽지 않는다
     SecretText restored;
-    SW_EXPECT_FALSE( SerializerUtil::parseTextValue( MutableValueAddress{ &restored }, SecretText::StaticType()->_name, SecretValueUtil::kRedactedText,
-                                                     SerializeContext::getDefault( SerializePurpose::Authoring ) ) );
+    SW_EXPECT_FALSE( ValueSerializer::parseTextValue( MutableValueAddress{ &restored }, SecretText::StaticType()->_name, SecretValueUtil::kRedactedText,
+                                                      SerializeContext::getDefault( SerializePurpose::Authoring ) ) );
     SW_EXPECT_TRUE( restored.empty() );
 }
 

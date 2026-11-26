@@ -16,7 +16,7 @@
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Curve/FloatCurve.h"
-#include "Engine/Serialization/Serializer/SerializerUtil.h"
+#include "Engine/Serialization/Serializer/ValueSerializer.h"
 
 #include <imgui.h>
 #include <imgui_internal.h>
@@ -66,7 +66,7 @@ namespace sw::editor
                     _state._working = _curve;
                 if ( EditorCurveEditorState::drawEditor( _state, "inspector.curveEditor" ) )
                 {
-                    const string text = SerializerUtil::formatValueText( ValueAddress{ &_state._working }, row._typeName, SerializeContext::getDefault( SerializePurpose::Authoring ) );
+                    const string text = ValueSerializer::formatValueText( ValueAddress{ &_state._working }, row._typeName, SerializeContext::getDefault( SerializePurpose::Authoring ) );
                     model.setPropertyText( row._rowID, text, "Edit Curve" );
                 }
                 ImGui::EndPopup();
@@ -80,7 +80,7 @@ namespace sw::editor
                 if ( _bCurveRead && row._valueText == _curveText )
                     return true;
                 FloatCurve curve{};
-                if ( SerializerUtil::parseTextValue( MutableValueAddress{ &curve }, row._typeName, row._valueText, SerializeContext::getDefault( SerializePurpose::Authoring ) ) == false )
+                if ( ValueSerializer::parseTextValue( MutableValueAddress{ &curve }, row._typeName, row._valueText, SerializeContext::getDefault( SerializePurpose::Authoring ) ) == false )
                     return false;
                 _curve      = std::move( curve );
                 _curveText  = row._valueText;

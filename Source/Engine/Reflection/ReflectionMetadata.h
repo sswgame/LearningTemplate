@@ -167,13 +167,13 @@ namespace sw
         uint8 _bInterp : 1;
         /**
          * @brief 플레이 중에만 의미가 있는 상태입니다(`RuntimeState`). 저작 저장(`SerializePurpose::Authoring`)은 쓰지 않고, 스냅샷과 세이브는 씁니다.
-         * @details 판정 표는 `SerializerUtil::shouldSerializeProperty` 한 곳이다. 저작 파일을 읽을 때 이 칸이 있으면 로드 오류다(옛 데이터를 다시 쓴다).
+         * @details 판정 표는 `PropertySerializer::shouldSerializeProperty` 한 곳이다. 저작 파일을 읽을 때 이 칸이 있으면 로드 오류다(옛 데이터를 다시 쓴다).
          *          `Transient` · `Required` 와 함께 붙이면 파서가 멈춘다.
          */
         uint8 _bRuntimeState : 1;
         /**
          * @brief 부모가 없는 원소만 반드시 적는 칸입니다(`PROPERTY( RequiredAtRoot )`). 부모를 가리키는 칸(`_bInheritParent`)이 적힌 원소는 물려받은 값을 쓴다.
-         * @details 판정은 `SerializerUtil::isRequiredValueMissing` 한 곳이다 — 손 읽기가 "부모가 없으면 이 칸 필수" 를 따로 적지 않는다(문화권 표의 `digits`).
+         * @details 판정은 `PropertyConstraints::isRequiredValueMissing` 한 곳이다 — 손 읽기가 "부모가 없으면 이 칸 필수" 를 따로 적지 않는다(문화권 표의 `digits`).
          */
         uint8 _bRequiredAtRoot : 1;
         /** @brief 이 칸이 같은 표의 부모 원소를 가리킵니다(`PROPERTY( InheritParent )`). 비어 있지 않게 적히면 그 원소는 상속한다. */
@@ -193,7 +193,7 @@ namespace sw
 
         /**
          * @brief 이 프로퍼티를 가진 객체 @p pOwner 에서 허용 범위를 풉니다. 숫자 경계는 그 값, 필드 경계는 그 필드의 지금 값입니다.
-         * @details 인스펙터의 막기와 읽기 공통 끝(`SerializerUtil::isWithinDeclaredRanges`)이 이 함수 하나로 범위를 얻는다 — 둘이 따로 풀면 필드 경계를 한쪽만 지킨다.
+         * @details 인스펙터의 막기와 읽기 공통 끝(`PropertyConstraints::isWithinDeclaredRanges`)이 이 함수 하나로 범위를 얻는다 — 둘이 따로 풀면 필드 경계를 한쪽만 지킨다.
          *          필드 경계가 있으면 @p pOwner 가 있어야 한다.
          */
         PropertyAllowedRange computeAllowedRange( const void* pOwner ) const noexcept;

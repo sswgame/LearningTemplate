@@ -7,6 +7,8 @@
  *          부르는 쪽이 사슬로 올린 뒤 지금 판으로 읽는다. 파일 이름이 `SchemaMigrate` 로 남은 것은 옛 이름이다.
  */
 #pragma once
+#include "Core/Delegate/Delegate.h"
+
 #include "Engine/EngineMinimal.h"
 #include "Engine/Reflection/TextAddress.h"
 
@@ -155,7 +157,7 @@ namespace sw
      *                     정수와 실수를 가를 수 없습니다(`sizeof(float32) == sizeof(int32)`).
      * @param wireVersion 그 payload 를 적은 버전입니다(스트림 머리나 orphan 이 가지고 있습니다).
      * @return 적용에 성공하면 `Read`, 옮기지 못하면 `FieldFailed` 입니다. 대상이 구조체이고 그 안에 객체째 실패여야 할 것(금지된 필드)이 있으면
-     *         다른 방법을 더 해 보지 않고 `ObjectRejected` 입니다(`SerializerUtil::deserializeValueBinary`).
+     *         다른 방법을 더 해 보지 않고 `ObjectRejected` 입니다(`ValueSerializer::deserializeValueBinary`).
      * @warning 비트필드 프로퍼티의 값 주소(그 바이트)를 넘기면 bool 이 같은 바이트의 다른 플래그까지 덮습니다. 프로퍼티는 `tryCoercePropertyBinary` 로 옮깁니다.
      */
     [[nodiscard]] SW_API FieldReadResult tryCoerceBinaryPayload( MutableValueAddress value, hashed_string targetTypeName,
@@ -166,7 +168,7 @@ namespace sw
 
     /**
      * @brief 기록 타입이 다른 바이너리 페이로드를 프로퍼티 하나에 강제 변환해 씁니다(`tryCoerceBinaryPayload` 의 프로퍼티 판). @p instance 는 프로퍼티를 가진 객체의 주소입니다.
-     * @details 비트필드는 주소를 가질 수 없어 임시 bool 에 옮긴 뒤 그 비트만 씁니다(`SerializerUtil::applyPropertyBinary` 와 같다). 예전에는 태그 스트림
+     * @details 비트필드는 주소를 가질 수 없어 임시 bool 에 옮긴 뒤 그 비트만 씁니다(`PropertySerializer::applyPropertyBinary` 와 같다). 예전에는 태그 스트림
      *          읽기가 `getRawPtr` 로 그 바이트 주소를 꺼내 bool 을 통째로 써, 같은 바이트의 다른 비트필드가 지워졌다.
      * @return `tryCoerceBinaryPayload` 와 같습니다.
      */
@@ -197,4 +199,38 @@ namespace sw
      */
     [[nodiscard]] SW_API bool applyPropertyTextCoerced( const PropertyInfo& prop, MutableObjectAddress instance, string_view valStr,
                                                         const SerializeContext& context );
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @enum SchemaVersionSource
+     * @brief 버전 번호를 어디서 얻는지 나타냅니다. 포맷마다 다릅니다.
+     */
+    enum class SchemaVersionSource : uint8
+    {
+        Stream, ///< 본문 앞에서 따로 읽어 옵니다(Binary). 공통 절차에 들어올 때 이미 채워져 있습니다.
+        Payload ///< 본문 안의 필드입니다(JSON/XML 의 `_schemaVersion`). soft 역직렬화가 알려 줍니다.
+    };
+
+    /**
+     * @brief 공통 절차가 포맷에 맡기는 유일한 일입니다. 본문을 읽어 값과 orphan 을 채웁니다.
+     * @details 인자는 (대상 객체의 주소, 그 타입, orphan 수집함, 버전 출력)입니다. 버전을 본문에서 얻지 않는
+     *          포맷(Binary)은 마지막 인자를 건드리지 않습니다.
+     */
+    using SoftDeserializeFn = Delegate<bool( MutableObjectAddress, const TypeInfo&, vector<SchemaOrphanValue>&, uint32& )>;
+
+    /**
+     * @brief `deserializeVersioned` 의 공통 절차입니다. 세 포맷이 함께 씁니다.
+     *
+     * @param streamVersion `SchemaVersionSource::Stream` 이면 본문 앞에서 이미 읽은 판입니다. `Payload` 면 쓰지 않습니다(판은 soft 읽기가 본문에서 낸다).
+     * @return 판이 @p currentVersion 과 같고 읽었으면 true 입니다. 읽은 판은 돌려주지 않는다 — 성공이면 @p currentVersion 이고, 다른 판의 거절은 `Schema.VersionMismatch` 로그가 판을 적는다.
+     * @param softDeserialize (대상, 타입, orphan 수집함, 버전 출력)을 받아 성공 여부를 반환합니다.
+     *                        `Stream` 포맷은 버전 출력을 건드리지 않습니다.
+     * @details 처리 순서는 다음과 같다. 현재 타입으로 soft 역직렬화하고, 버전을 확정한 다음 `finishVersionedRead` 를 부른다.
+     *          판이 현재 판과 다르면 이관하지 않고 실패한다.
+     */
+    [[nodiscard]] SW_API bool runVersionedDeserialize( uint32 streamVersion, MutableObjectAddress instance, const TypeInfo& typeInfo,
+                                                       uint32 currentVersion, SchemaVersionSource versionSource, SchemaOrphanPolicy orphanPolicy,
+                                                       const SoftDeserializeFn& softDeserialize );
 } // namespace sw

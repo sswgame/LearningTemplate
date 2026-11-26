@@ -7,7 +7,7 @@
 #include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
 #include "Engine/Serialization/Inherit/ResourceComposer.h"
-#include "Engine/Serialization/Serializer/SerializerUtil.h"
+#include "Engine/Serialization/Serializer/PropertyConstraints.h"
 #include "Engine/Serialization/Serializer/XMLSerializer.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
@@ -72,7 +72,7 @@ namespace sw
             SW_LOG_ERROR_ID( "Serialization.RequiredMissing", "%#: <%#> has no required '%#' or it is empty (PROPERTY( Required ) - the initial value is not a default)", sourceName,
                              pTypeInfo->_name.c_str(), missingPath.c_str() );
         }
-        // 범위 밖 값(`Rejected`)은 읽기 공통 끝(`SerializerUtil::isWithinDeclaredRanges`)이 칸마다 이미 알렸다.
+        // 범위 밖 값(`Rejected`)은 읽기 공통 끝(`PropertyConstraints::isWithinDeclaredRanges`)이 칸마다 이미 알렸다.
         // 그래도 모은 이름은 알린다 — 범위 밖 값 하나가 모르는 이름 · 읽지 못한 값의 오류를 삼키지 않게(모두 알린다는 계약).
         for ( const SchemaOrphanValue& orphan : listOrphan )
         {

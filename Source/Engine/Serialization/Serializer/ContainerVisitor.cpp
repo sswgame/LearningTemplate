@@ -6,7 +6,7 @@
 
 #include "Engine/Reflection/ReflectionContainers.h"
 #include "Engine/Serialization/Serializer/SerializeContext.h"
-#include "Engine/Serialization/Serializer/SerializerUtil.h"
+#include "Engine/Serialization/Serializer/ValueSerializer.h"
 
 namespace sw
 {
@@ -149,13 +149,13 @@ namespace sw
         {
             plan._kind = ContainerElementKind::NestedContainer;
         }
-        else if ( slot == ContainerSlot::SequenceElement && SerializerUtil::isOwnedPointerElementType( nested._elementTypeName ) )
+        else if ( slot == ContainerSlot::SequenceElement && ValueSerializer::isOwnedPointerElementType( nested._elementTypeName ) )
         {
             plan._kind = ContainerElementKind::OwnedPointer;
         }
         else
         {
-            plan._pElementType = SerializerUtil::findNestedObjectType( nested._elementTypeName, nested.findBinding( nested._elementTypeName ), context );
+            plan._pElementType = ValueSerializer::findNestedObjectType( nested._elementTypeName, nested.findBinding( nested._elementTypeName ), context );
             plan._kind         = ( plan._pElementType != nullptr ) ? ContainerElementKind::ValueObject : ContainerElementKind::Scalar;
         }
         return plan;

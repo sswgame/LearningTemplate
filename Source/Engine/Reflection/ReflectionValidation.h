@@ -38,7 +38,7 @@ namespace sw
     struct ValidationPropertyEdit
     {
         hashed_string _propertyName; ///< 바꿀 프로퍼티(비면 고침 없음). 적을 때 비우면 검증 범위의 프로퍼티다
-        string        _valueText;    ///< 그 프로퍼티의 텍스트 값(`SerializerUtil::formatPropertyText` 와 같은 형식)
+        string        _valueText;    ///< 그 프로퍼티의 텍스트 값(`PropertySerializer::formatPropertyText` 와 같은 형식)
         string        _description;  ///< 패널 단추 툴팁 · 되돌리기 이름("Set Radius to 6 m")
 
         /** @brief 고칠 프로퍼티가 있으면 true 입니다. */

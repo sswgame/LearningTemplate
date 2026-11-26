@@ -8,8 +8,10 @@
 
 #include "Engine/Reflection/ReflectionContainers.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
+#include "Engine/Serialization/Serializer/PropertyConstraints.h"
+#include "Engine/Serialization/Serializer/PropertySerializer.h"
 #include "Engine/Serialization/Serializer/SerializeContext.h"
-#include "Engine/Serialization/Serializer/SerializerUtil.h"
+#include "Engine/Serialization/Serializer/ValueSerializer.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
@@ -29,7 +31,7 @@ namespace sw
                 {
                     sequence.addElementDefault( pContainer );
                     void* const pElement = sequence.getElement( pContainer, sequence.getSize( pContainer ) - 1 );
-                    bValid               = SerializerUtil::parseTextValue( MutableValueAddress{ pElement }, prop._elementTypeName, token, context ) && bValid;
+                    bValid               = ValueSerializer::parseTextValue( MutableValueAddress{ pElement }, prop._elementTypeName, token, context ) && bValid;
                 } );
                 // 읽지 못한 낱말의 자리에는 기본값이 남아 있다 — 범위 검사가 그 값을 또 오류로 알리지 않게 비운다.
                 if ( bValid == false )
@@ -124,7 +126,7 @@ namespace sw
             }
             const utf8* const pValue = attribute.getValue() != nullptr ? attribute.getValue() : "";
             // 목록 칸은 속성 하나에 낱말을 잇는다(`days="Mon, Tue"`, `times="60, 120"`) — 데이터가 쓰는 구분자를 모두 받는다.
-            const ISequenceContainerWrapper* const pList = SerializerUtil::findTextList( *pFound, context );
+            const ISequenceContainerWrapper* const pList = PropertySerializer::findTextList( *pFound, context );
             if ( pList != nullptr )
             {
                 if ( Internal::readTextList( *pFound, *pList, pInstance, pValue, context ) == false )
@@ -136,7 +138,7 @@ namespace sw
                 }
                 continue;
             }
-            if ( SerializerUtil::applyPropertyText( *pFound, MutableObjectAddress{ pInstance }, pValue, context ) == false )
+            if ( PropertySerializer::applyPropertyText( *pFound, MutableObjectAddress{ pInstance }, pValue, context ) == false )
             {
                 StringBuilder<constant::buffer::kMax256> textBuilder;
                 textBuilder.appendFormat( "%#: <%# %#=\"%#\"> cannot be read as %#", sourceName, pElement, attributeName, pValue, pFound->_typeName.c_str() );
@@ -146,7 +148,7 @@ namespace sw
         }
 
         // 2) 필수 칸이 빠졌는지 본다. 초기값은 형식일 뿐이라 대신 쓰지 않는다. 부모를 가리키는 원소는 `RequiredAtRoot` 칸을 물려받는다.
-        const RequiredScope scope = SerializerUtil::findRequiredScope( listProperty, [&node, &listAttributeName]( const size_t propIndex )
+        const RequiredScope scope = PropertyConstraints::findRequiredScope( listProperty, [&node, &listAttributeName]( const size_t propIndex )
         {
             const utf8* const pText = node.findAttribute( listAttributeName[propIndex].c_str() );
             return pText != nullptr ? string_view( pText ) : string_view{};
@@ -157,7 +159,7 @@ namespace sw
             const utf8* const pAttribute    = node.findAttribute( attributeName.c_str() );
             const string_view writtenText   = pAttribute != nullptr ? string_view( pAttribute ) : string_view{};
             // 판정은 XML · JSON 직렬화기와 한 함수다 — 빠졌거나, 이름 · 경로 형식인데 빈 글이다.
-            if ( SerializerUtil::isRequiredValueMissing( listProperty[propIndex], pAttribute != nullptr, pAttribute != nullptr ? &writtenText : nullptr, scope ) )
+            if ( PropertyConstraints::isRequiredValueMissing( listProperty[propIndex], pAttribute != nullptr, pAttribute != nullptr ? &writtenText : nullptr, scope ) )
             {
                 StringBuilder<constant::buffer::kMax256> textBuilder;
                 textBuilder.appendFormat( "%#: <%#> needs %#=\"...\" (%#)", sourceName, pElement, attributeName.c_str(), typeInfo._name.c_str() );
@@ -172,7 +174,7 @@ namespace sw
         for ( size_t propIndex = 0; propIndex < listProperty.size(); ++propIndex )
         {
             if ( listWritten[propIndex] != 0 )
-                SerializerUtil::collectPropertyRangeErrors( listProperty[propIndex], ObjectAddress{ pInstance }, string(), listRangeError );
+                PropertyConstraints::collectPropertyRangeErrors( listProperty[propIndex], ObjectAddress{ pInstance }, string(), listRangeError );
         }
         for ( const string& rangeError : listRangeError )
         {
@@ -207,11 +209,11 @@ namespace sw
         const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring );
         for ( const PropertyInfo& prop : typeInfo.getPropertiesWithBase() )
         {
-            if ( prop._bIsContainer == SW_TRUE || SerializerUtil::canCarryValueType( prop._typeName, context ) == false )
+            if ( prop._bIsContainer == SW_TRUE || ValueSerializer::canCarryValueType( prop._typeName, context ) == false )
                 continue;
-            const string text         = SerializerUtil::formatPropertyText( prop, ObjectAddress{ pInstance }, context );
+            const string text         = PropertySerializer::formatPropertyText( prop, ObjectAddress{ pInstance }, context );
             const bool   bOmitDefault = pDefaults != nullptr && prop._metadata->_bRequired == SW_FALSE;
-            if ( bOmitDefault && text == SerializerUtil::formatPropertyText( prop, ObjectAddress{ pDefaults }, context ) )
+            if ( bOmitDefault && text == PropertySerializer::formatPropertyText( prop, ObjectAddress{ pDefaults }, context ) )
                 continue;
             node.appendAttribute( XMLFields::getAttributeName( prop ).c_str(), string_view{ text } );
         }
@@ -223,7 +225,7 @@ namespace sw
         outbPresent             = pText != nullptr;
         if ( pText == nullptr )
             return true;
-        if ( SerializerUtil::parseTextValue( MutableValueAddress{ pValue }, enumTypeFqn, pText, SerializeContext::getDefault( SerializePurpose::Authoring ) ) )
+        if ( ValueSerializer::parseTextValue( MutableValueAddress{ pValue }, enumTypeFqn, pText, SerializeContext::getDefault( SerializePurpose::Authoring ) ) )
             return true;
         SW_LOG_ERROR_ID( "XMLFields.UnknownEnumValue", "%#: <%# %#=\"%#\"> is not a value of %#", sourceName, node.getName(), pName, pText, enumTypeFqn.c_str() );
         return false;
