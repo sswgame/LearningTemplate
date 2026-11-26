@@ -50,6 +50,7 @@
 	<Expect watch="Reload.Count.Shader" differsFrom="shaderBefore"/>
 	<Expect watch="Reload.StaleCount" atLeast="1"/>
 	<ExpectLog id="ShaderRecompiler.ShaderReloadFailedEntry" contains="scratch/shaderreload/shaders/glow.hlsl" atLeast="1"/>
+	<ExpectLog id="ShaderCompiler.DXCFailed" contains="deliberateUndeclaredName" atLeast="1"/>
 	<Screenshot file="after_broken.ppm"/>
 	<ExpectImagesDiffer first="before_broken.ppm" second="after_broken.ppm" minDiffering="0" maxDiffering="0.01"/>
 
