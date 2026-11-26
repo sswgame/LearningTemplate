@@ -49,15 +49,10 @@ namespace sw
          * @param listIncludePath 추가 include 경로 목록
          * @param listUnsaved 디스크 대신 넘길 내용(키워드 스캔과 이중 I/O 방지 · 디스크에 없는 주 파일)
          * @param bReportErrors 거짓이면 clang 오류를 오류 로그 대신 추적 로그로 남깁니다(실패하면 다시 해 볼 시도용)
-         * @param listExtraArg 설정의 인자 뒤에 붙일 인자(PCH 굽기 `-x c++-header` · 읽기 `-include-pch <파일>`)
-         * @param extraFlags 더 붙일 libclang 파싱 깃발(PCH 굽기의 `CXTranslationUnit_ForSerialization`)
          * @return 파싱 성공 여부(clang 오류가 하나라도 있으면 실패)
          */
         [[nodiscard]] bool parse( const string& filePath, const vector<string>& listIncludePath, const vector<ParserUnsavedFile>& listUnsaved,
-                                  bool bReportErrors = true, const vector<string>& listExtraArg = {}, uint32 extraFlags = 0 );
-
-        /** @brief 파싱한 번역 단위를 PCH 파일로 씁니다(`ForSerialization` 으로 파싱한 것). */
-        [[nodiscard]] bool save( const string& path ) const;
+                                  bool bReportErrors = true );
 
         /** @brief 생성된 clang TranslationUnit을 반환합니다. */
         CXTranslationUnit getTranslationUnit() const { return _translationUnit; }
@@ -90,15 +85,8 @@ namespace sw
         }
     }
 
-    bool ParserContext::save( const string& path ) const
-    {
-        if ( _translationUnit == nullptr )
-            return false;
-        return clang_saveTranslationUnit( _translationUnit, path.c_str(), clang_defaultSaveOptions( _translationUnit ) ) == CXSaveError_None;
-    }
-
     bool ParserContext::parse( const string& filePath, const vector<string>& listIncludePath, const vector<ParserUnsavedFile>& listUnsaved,
-                               const bool bReportErrors, const vector<string>& listExtraArg, const uint32 extraFlags )
+                               const bool bReportErrors )
     {
         if ( _index == nullptr )
         {
@@ -112,9 +100,8 @@ namespace sw
             _translationUnit = nullptr;
         }
 
-        vector<string> listArgString = _pConfig->makeArgs( listIncludePath );
-        listArgString.insert( listArgString.end(), listExtraArg.begin(), listExtraArg.end() );
-        vector<const utf8*> listArgPtr;
+        const vector<string> listArgString = _pConfig->makeArgs( listIncludePath );
+        vector<const utf8*>  listArgPtr;
         listArgPtr.reserve( listArgString.size() );
         for ( const string& arg : listArgString )
         {
@@ -136,7 +123,7 @@ namespace sw
         constexpr uint32 kParseFlags = CXTranslationUnit_SkipFunctionBodies | CXTranslationUnit_Incomplete;
         _translationUnit             = clang_parseTranslationUnit(
             _index, filePath.c_str(), listArgPtr.data(), static_cast<int32>( listArgPtr.size() ),
-            listCxUnsaved.empty() ? nullptr : listCxUnsaved.data(), static_cast<uint32>( listCxUnsaved.size() ), kParseFlags | extraFlags );
+            listCxUnsaved.empty() ? nullptr : listCxUnsaved.data(), static_cast<uint32>( listCxUnsaved.size() ), kParseFlags );
 
         if ( _translationUnit == nullptr )
         {
@@ -461,12 +448,6 @@ namespace sw
                 return escaped;
             }
 
-            /** @brief .cpp 입력이 함께 읽는 PCH 의 원본 헤더 · PCH 파일 이름(출력 폴더 안)입니다. 원본은 `pch.h` 하나를 include 한다. */
-            static constexpr const utf8* kSourcePchHeaderName = "ReflectionParser.pch.h";
-            static constexpr const utf8* kSourcePchName       = "ReflectionParser.pch";
-            /** @brief PCH 를 굽는 값어치가 있는 .cpp 입력 수 — 하나면 굽는 비용이 그대로 더해진다. */
-            static constexpr size_t kMinSourcesForPch = 2;
-
             /** @brief 묶음 TU 의 주 파일 이름입니다. 디스크에는 없고 내용으로만 넘깁니다. */
             static constexpr const utf8* kBatchSourceName = "ReflectionParser.batch.cpp";
 
@@ -586,7 +567,7 @@ namespace sw
                         _pOptions->_listInputFile.size(), upToDate, noReflect );
         errorCount += parsePending( listPending );
         // .cpp 는 한 TU 로 묶지 않는다. 내부 연결 이름(익명 이름공간 · static)과 using 지시문이 .cpp 끼리 부딪힌다(헤더만 읽는 UHT 는 없는 문제다).
-        errorCount += parseSources( listPendingSource );
+        errorCount += parseEachInParallel( listPendingSource );
         logEmitBytes();
         static_cast<void>( phaseTimer.lapSeconds() ); // 파싱 · 방문 · 쓰기는 입력마다 더했다
 
@@ -679,7 +660,7 @@ namespace sw
         return true;
     }
 
-    bool ReflectionPipeline::parseAndGenerate( const PendingInput& pending, const SourcePrecompiledHeader* pPch ) const
+    bool ReflectionPipeline::parseAndGenerate( const PendingInput& pending ) const
     {
         const AbsolutePath&   inputFile = *pending._pRecord->_pInputFile;
         const GeneratedPaths& paths     = pending._pRecord->_paths;
@@ -689,21 +670,8 @@ namespace sw
         const vector<ParserUnsavedFile> listUnsaved{
             ParserUnsavedFile{ &inputFile.str(), &pending._content }
         };
-        Stopwatch phaseTimer;
-        bool      bParsed = false;
-        if ( pPch != nullptr )
-        {
-            // PCH 로 읽지 못하면(구운 뒤 그 안의 헤더가 바뀌었다 · libclang 이 거절했다) 오류로 알리지 않고 PCH 없이 다시 해 본다.
-            const vector<string> listPchArg{ "-include-pch", pPch->_pchPath };
-            bParsed = context.parse( inputFile.str(), _listIncludePath, listUnsaved, false, listPchArg );
-            if ( bParsed == false )
-                SW_LOG_TRACE_ID( "ReflectionPipeline.SourcePchRejected", "Parsing %# with the shared PCH failed; parsing it without the PCH.", inputFile.str() );
-        }
-        if ( bParsed == false )
-        {
-            pPch    = nullptr;
-            bParsed = context.parse( inputFile.str(), _listIncludePath, listUnsaved );
-        }
+        Stopwatch  phaseTimer;
+        const bool bParsed = context.parse( inputFile.str(), _listIncludePath, listUnsaved );
         addPhaseTime( ParsePhase::Parse, static_cast<float32>( phaseTimer.lapSeconds() ) );
         if ( bParsed == false )
         {
@@ -731,56 +699,18 @@ namespace sw
             return false;
         }
 
-        vector<StampDependency> listDependency = ReflectionPipelineInternal::collectDependencies( context.getTranslationUnit(), _pOptions->_outputDir, _runStartTime );
-        // PCH 안의 헤더가 이 번역 단위의 include 목록에 나오는지는 libclang 판에 달렸다 — PCH 를 구울 때 모은 의존을 늘 더한다.
-        if ( pPch != nullptr )
-            listDependency.insert( listDependency.end(), pPch->_listDependency.begin(), pPch->_listDependency.end() );
-        const bool bWritten = writeOutputs( *pending._pRecord, parsed, pending._inputWriteTime, listDependency );
+        const bool bWritten = writeOutputs( *pending._pRecord, parsed, pending._inputWriteTime,
+                                            ReflectionPipelineInternal::collectDependencies( context.getTranslationUnit(), _pOptions->_outputDir, _runStartTime ) );
         addPhaseTime( ParsePhase::Emit, static_cast<float32>( phaseTimer.lapSeconds() ) );
         return bWritten;
     }
 
-    int32 ReflectionPipeline::parseSources( const vector<PendingInput>& listPending ) const
-    {
-        if ( listPending.size() < ReflectionPipelineInternal::kMinSourcesForPch )
-            return parseEachInParallel( listPending );
-        SourcePrecompiledHeader pch;
-        Stopwatch               phaseTimer;
-        const bool              bHasPch = buildSourcePrecompiledHeader( pch );
-        addPhaseTime( ParsePhase::Parse, static_cast<float32>( phaseTimer.lapSeconds() ) );
-        return parseEachInParallel( listPending, bHasPch ? &pch : nullptr );
-    }
-
-    bool ReflectionPipeline::buildSourcePrecompiledHeader( SourcePrecompiledHeader& outPch ) const
-    {
-        // 원본 헤더는 내용이 같으면 다시 쓰지 않는다(시각이 그대로라 PCH 검사가 원본을 바뀐 것으로 보지 않는다).
-        const AbsolutePath headerPath = _pOptions->_outputDir.join( ReflectionPipelineInternal::kSourcePchHeaderName );
-        if ( GeneratedFileUtil::writeIfChanged( headerPath, "#pragma once\n#include \"pch.h\"\n" ) == false )
-            return false;
-        // `-x c++-header` 는 설정의 `-x c++` 뒤에 와서 이긴다 — 헤더로 파싱해야 PCH 로 쓸 수 있다.
-        const vector<string> listHeaderArg{ "-x", "c++-header" };
-        ParserContext        context( _pSession->_config );
-        if ( context.parse( headerPath.str(), _listIncludePath, {}, false, listHeaderArg, CXTranslationUnit_ForSerialization ) == false )
-        {
-            SW_LOG_TRACE_ID( "ReflectionPipeline.SourcePchNotBuilt", "The shared PCH for .cpp inputs did not parse; parsing each .cpp without it." );
-            return false;
-        }
-        outPch._pchPath = _pOptions->_outputDir.join( ReflectionPipelineInternal::kSourcePchName ).str();
-        if ( context.save( outPch._pchPath ) == false )
-        {
-            SW_LOG_TRACE_ID( "ReflectionPipeline.SourcePchNotSaved", "The shared PCH for .cpp inputs could not be saved to %#; parsing each .cpp without it.", outPch._pchPath );
-            return false;
-        }
-        outPch._listDependency = ReflectionPipelineInternal::collectDependencies( context.getTranslationUnit(), _pOptions->_outputDir, _runStartTime );
-        return true;
-    }
-
-    int32 ReflectionPipeline::parseEachInParallel( const vector<PendingInput>& listPending, const SourcePrecompiledHeader* pPch ) const
+    int32 ReflectionPipeline::parseEachInParallel( const vector<PendingInput>& listPending ) const
     {
         if ( listPending.empty() )
             return 0;
         if ( listPending.size() == 1 )
-            return parseAndGenerate( listPending.front(), pPch ) ? 0 : 1;
+            return parseAndGenerate( listPending.front() ) ? 0 : 1;
 
         // 동시에 여는 TU 는 설정의 상한(`tuning.max_parallel_parses`)까지다 — TU 마다 공통 헤더 전체를 들어 하드웨어 스레드만큼 띄우면 메모리와 대역이 먼저 찬다.
         uint32 workerCount = std::thread::hardware_concurrency();
@@ -805,9 +735,9 @@ namespace sw
             const PendingInput* pPending = &pending;
             TaskHandle          handle   = taskManager.emplaceTask(
                 "ParseHeader",
-                SW_DELEGATE_LAMBDA( TaskDelegate, [this, pPending, pPch, &errorCount]()
+                SW_DELEGATE_LAMBDA( TaskDelegate, [this, pPending, &errorCount]()
                        {
-                if ( parseAndGenerate( *pPending, pPch ) == false )
+                if ( parseAndGenerate( *pPending ) == false )
                     errorCount.fetch_add( 1 );
             } ) );
             handle.submit();

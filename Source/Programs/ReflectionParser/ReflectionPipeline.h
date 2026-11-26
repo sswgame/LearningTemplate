@@ -57,17 +57,6 @@ namespace sw
             [[maybe_unused]] uint8 _reserved  : 7;
         };
 
-        /**
-         * @brief 이번 실행의 .cpp 입력이 함께 읽는 Engine PCH(`pch.h`)입니다(`buildSourcePrecompiledHeader`).
-         * @details .cpp 는 한 TU 로 묶지 못해 입력마다 `pch.h` 전체를 다시 파싱한다(헤더 입력은 한 TU 로 묶어 한 번이다). 한 번 구운 PCH 를
-         *          `-include-pch` 로 읽으면 .cpp 마다 공통 include 를 다시 파싱하지 않는다 — 언리얼 UBT 가 모듈의 공유 PCH 를 쓰는 자리다.
-         */
-        struct SourcePrecompiledHeader
-        {
-            string                  _pchPath;
-            vector<StampDependency> _listDependency; ///< PCH 가 include 한 프로젝트 헤더 — .cpp 마다 의존에 더한다(PCH 안 헤더가 바뀌면 다시 파싱한다)
-        };
-
         /** @brief 파싱해야 하는 입력 하나입니다. 키워드를 거를 때 읽은 내용을 파서에 그대로 넘깁니다(이중 I/O 방지). */
         struct PendingInput
         {
@@ -84,17 +73,10 @@ namespace sw
          * @return clang 이 묶음을 파싱하지 못했으면 false(헤더마다 다시 해 본다)
          */
         [[nodiscard]] bool parseBatch( const vector<PendingInput>& listPending, int32& outErrorCount ) const;
-        /**
-         * @brief 입력 하나를 파싱 · 수집 · 코드젠합니다.
-         * @param pPch 있으면 그 PCH 를 먼저 읽는다(.cpp 입력). PCH 로 파싱하지 못하면 PCH 없이 다시 해 본다.
-         */
-        [[nodiscard]] bool parseAndGenerate( const PendingInput& pending, const SourcePrecompiledHeader* pPch = nullptr ) const;
-        /** @brief 입력마다 따로 파싱합니다(워커 풀). @p pPch 는 `parseAndGenerate` 와 같다. 실패한 수를 돌려줍니다. */
-        int32 parseEachInParallel( const vector<PendingInput>& listPending, const SourcePrecompiledHeader* pPch = nullptr ) const;
-        /** @brief .cpp 입력들을 처리합니다 — 둘 이상이면 PCH 를 한 번 굽고 함께 읽는다. 실패한 수를 돌려줍니다. */
-        int32 parseSources( const vector<PendingInput>& listPending ) const;
-        /** @brief 출력 폴더에 `pch.h` 를 담은 PCH 를 굽습니다. 못 구우면 false 이고 .cpp 는 PCH 없이 파싱한다(오류가 아니다). */
-        [[nodiscard]] bool buildSourcePrecompiledHeader( SourcePrecompiledHeader& outPch ) const;
+        /** @brief 헤더 하나를 파싱 · 수집 · 코드젠합니다. */
+        [[nodiscard]] bool parseAndGenerate( const PendingInput& pending ) const;
+        /** @brief 입력마다 따로 파싱합니다(워커 풀). 실패한 수를 돌려줍니다. */
+        int32 parseEachInParallel( const vector<PendingInput>& listPending ) const;
         /**
          * @brief 모은 것을 산출물로 씁니다 — 이름 충돌 검사 → 내용이 다를 때만 쓰기 → 스탬프.
          * @param inputWriteTime 읽기 전에 측정한 입력 시각.
