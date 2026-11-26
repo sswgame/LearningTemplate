@@ -11,10 +11,12 @@
 	<Launch variable="gv_stressTestLights" value="32"/>
 	<Launch variable="gv_stressTestAnimate" value="0"/>
 	<Launch variable="gv_stressTestTransparent" value="0"/>
+	<DevCommand line="camera.cut"/> <!-- 비교할 두 사진을 같은 누적 출발점(지터 위상)에서 찍는다 -->
 	<Screenshot file="lightculling_gpu.ppm"/>
 	<Variable name="gv_lightCulling" value="None"/>
 	<Screenshot file="lightculling_none.ppm"/>
 	<Variable name="gv_lightCulling" value="CPU"/>
+	<DevCommand line="camera.cut"/> <!-- 비교할 두 사진을 같은 누적 출발점(지터 위상)에서 찍는다 -->
 	<Screenshot file="lightculling_cpu.ppm"/>
 	<Variable name="gv_lightCulling" value="GPU"/>
 	<ExpectImagesDiffer first="lightculling_none.ppm" second="lightculling_cpu.ppm" region="0,0,1,1" minDiffering="0" maxDiffering="0.002"/>

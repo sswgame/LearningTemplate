@@ -36,6 +36,7 @@
 	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="90"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="90"/>
 	<WaitUntil watch="Scene.ObjectCount" atLeast="1" timeoutFrames="60"/>
+	<DevCommand line="camera.cut"/> <!-- 비교할 두 사진을 같은 누적 출발점(지터 위상)에서 찍는다 -->
 	<Screenshot file="surfacelibrary_terrain_clear.ppm"/>
 	<DevCommand line="matparam engine/materials/weather.matparams.xml Weather 0.8 0.6 0 0"/>
 	<DevCommand line="camera.cut"/> <!-- 제자리 변화 뒤 컷 — 다음 사진이 TAA · 노출 기록을 버리고 새로 쌓는다 -->

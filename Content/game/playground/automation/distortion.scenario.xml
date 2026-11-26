@@ -12,9 +12,11 @@
 	<Launch variable="gv_postQuality" value="2"/>
 	<Launch variable="gv_renderScale" value="1"/>
 	<Launch variable="gv_viewDistanceScale" value="1"/>
+	<DevCommand line="camera.cut"/> <!-- 비교할 두 사진을 같은 누적 출발점(지터 위상)에서 찍는다 -->
 	<Screenshot file="distortion_on.ppm"/>
 
 	<DevCommand line="teleport Lens 0 -50 -2"/>
+	<DevCommand line="camera.cut"/> <!-- 비교할 두 사진을 같은 누적 출발점(지터 위상)에서 찍는다 -->
 	<Screenshot file="distortion_off.ppm"/>
 
 	<!-- 렌즈 가운데(화면 가운데)는 왜곡으로 벽 무늬가 비껴 다르다. -->

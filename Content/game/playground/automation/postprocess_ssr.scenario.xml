@@ -12,6 +12,7 @@
 	<Launch variable="gv_postQuality" value="2"/>
 	<Launch variable="gv_renderScale" value="1"/>
 	<Launch variable="gv_viewDistanceScale" value="1"/>
+	<DevCommand line="camera.cut"/> <!-- 끈 사진도 컷 뒤에 — 비교할 사진이 같은 누적 출발점(지터 위상)에서 찍힌다 -->
 	<WaitRenderStable/> <!-- 사진 앞 렌더 안정(TAA · 노출 · 에셋) -->
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<Screenshot file="ppssr_off.ppm" stability="Assets"/>
