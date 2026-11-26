@@ -7,7 +7,6 @@
 
 #include "Engine/Graphics/Shader/Binding/GPULight.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
-#include "Engine/Reflection/ReflectionValidation.h"
 
 namespace sw
 {
@@ -23,13 +22,12 @@ namespace sw
             /// @brief 기본 점광 값입니다. 주광(따뜻한 색)과 구분되도록 차가운 색에서 출발합니다.
             static constexpr float3  kDefaultColor{ 0.55f, 0.75f, 1.0f };
             static constexpr float32 kDefaultIntensity{ 2.0f };
-            static constexpr float32 kDefaultRadius{ 6.0f };
         };
     } // namespace
 
     PointLightComponent::PointLightComponent()
         : LightComponent( shaderslot::kLightTypePoint, PointLightComponentInternal::kDefaultColor, PointLightComponentInternal::kDefaultIntensity )
-        , _radius{ PointLightComponentInternal::kDefaultRadius }
+        , _radius{ kDefaultRadius }
         , _shadowSettings{}
         , _bCastShadow{ SW_FALSE }
         , _reservedPointLight{ 0 }
@@ -55,18 +53,6 @@ namespace sw
     {
         _bCastShadow = bCastShadow ? SW_TRUE : SW_FALSE;
         onPropertyChanged( hashed_string( "_bCastShadow" ) );
-    }
-
-    void PointLightComponent::validateRadius( ValidationContext& context ) const
-    {
-        // 세터는 0 을 막지만 데이터(씬 · 프리팹)의 0 은 그대로 들어온다 — 셰이더가 반경으로 나누는 자리다.
-        if ( _radius > 0.0f )
-            return;
-        fixed_string<constant::buffer::kMax64> valueText;
-        formatstring( valueText.data(), valueText.capacity(), "%#", PointLightComponentInternal::kDefaultRadius );
-        fixed_string<constant::buffer::kMax64> description;
-        formatstring( description.data(), description.capacity(), "Set Radius to the default %# m", PointLightComponentInternal::kDefaultRadius );
-        context.addErrorWithFix( "Radius is 0 - the light reaches nothing and the shader divides by it", ValidationPropertyEdit{ hashed_string{}, valueText.c_str(), description.c_str() } );
     }
 
     void PointLightComponent::writeGPULightKindProperties( GPULight& outLight ) const

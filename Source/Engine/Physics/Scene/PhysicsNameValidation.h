@@ -4,6 +4,7 @@
  * @details 런타임은 모르는 이름을 기본값으로 대신하고 로그만 남긴다. 검증 함수(`PROPERTY( Validate = fn )`)는 로드 · 저장 · 인스펙터 편집 뒤에 불려
  *          생성자 기본값까지 본다 — 데이터에 적힌 값만 보는 에셋 검증 규칙 `component_reference` 가 못 보는 자리다(언리얼 `UObject::IsDataValid`). 빈 이름은 "기본" 이라 보지 않는다.
  *          표는 초기화된 `PhysicsSystem` 의 설정, 없으면(도구 · 서비스 없는 테스트) `PhysicsSystem::kSettingsPath` 를 한 번 읽은 것이다. 한 번 읽은 표는 프로세스가 끝날 때까지 그대로다.
+ *          구현은 개발 전용 소스(`Engine/Physics/Dev/PhysicsNameValidation.cpp`)라 배포 구성은 짓지 않는다 — 부르는 쪽(프로퍼티 검증 함수 · 에디터)이 모두 개발 전용이다.
  */
 #pragma once
 #include "Core/Container/vector.h"

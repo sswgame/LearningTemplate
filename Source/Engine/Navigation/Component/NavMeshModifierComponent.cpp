@@ -2,11 +2,9 @@
 
 #include "Engine/Navigation/Component/NavMeshModifierComponent.h"
 
-#include "Engine/Navigation/Scene/NavAreaNameValidation.h"
 #include "Engine/Navigation/Scene/SceneNavigation.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Reflection/ReflectionValidation.h"
 
 namespace sw
 {
@@ -24,13 +22,5 @@ namespace sw
         const bool  bHasWorldBox = pOwner != nullptr && pOwner->getManager() != nullptr && pOwner->getWorldBox( box );
         if ( bHasWorldBox )
             pOwner->getMutableManager()->getSubsystem<SceneNavigation>().invalidateArea( box, true );
-    }
-} // namespace sw
-
-namespace sw
-{
-    void NavMeshModifierComponent::validateAreaName( ValidationContext& context ) const
-    {
-        NavAreaNameValidation::validate( context, "_areaName", _areaName );
     }
 } // namespace sw
