@@ -37,6 +37,10 @@ namespace sw::editor
     {
         /** @brief 원본을 두는 폴더 이름입니다. 원본 확장자는 `AssetIdentityRules::isImportSource( kRawFolder, … )` 가 답한다. */
         static constexpr string_view kRawFolder = "heightfields_raw";
+        /** @brief 16 비트 원시 높이 원본의 확장자입니다. */
+        static constexpr string_view kRaw16SourceExtension = ".r16";
+        /** @brief 이미지 원본(높이 · 스플랫 · 구멍 마스크)의 확장자입니다. */
+        static constexpr string_view kImageSourceExtension = ".png";
 
         /** @brief 원본(+ 곁 구멍 마스크)을 읽어 높이장으로 만듭니다. */
         [[nodiscard]] static bool readHeightfield( const AbsolutePath& sourcePath, HeightfieldAsset& outData );
