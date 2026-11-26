@@ -71,11 +71,8 @@ namespace sw
         if ( bNeedsSRV )
             _srv = pDevice->getResourceFactory()->registerBindlessBufferSRV( _buffer );
         // 구조 버퍼를 만드는 길은 여기 하나다 — 원소 크기를 여기서 적으면 어떤 이름으로 걸어도 셰이더 선언과 견준다(`BindlessIndexValidator::validateStride`).
-        if constexpr ( build::kShipping == false )
-        {
-            if ( _srv != kInvalidDescriptorIndex )
-                pDevice->getBindlessIndexReportLog().recordBufferStride( _srv, elementSize );
-        }
+        if ( _srv != kInvalidDescriptorIndex )
+            pDevice->getBindlessIndexReportLog().recordBufferStride( _srv, elementSize );
         if ( bNeedsUAV )
             _uav = pDevice->getResourceFactory()->registerBindlessBufferUAV( _buffer );
         _capacityElements = capacityCount;
@@ -172,8 +169,7 @@ namespace sw
         // 뷰를 먼저 놓는다. 버퍼를 먼저 지우면 레지스트리에 죽은 핸들을 가리키는 항목이 남는다.
         if ( _srv != kInvalidDescriptorIndex )
         {
-            if constexpr ( build::kShipping == false )
-                pDevice->getBindlessIndexReportLog().removeBufferStride( _srv );
+            pDevice->getBindlessIndexReportLog().removeBufferStride( _srv );
             pDevice->getResourceFactory()->unregisterBindlessResource( _srv );
         }
         if ( _uav != kInvalidDescriptorIndex )
