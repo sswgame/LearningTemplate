@@ -1,5 +1,5 @@
 # ==============================================================================
-# @file cmake/Toolchain/Options/CppStandard.cmake
+# @file cmake/Toolchain/CppStandard.cmake
 # @brief C++ 표준 INTERFACE (최소 C++17, 그 이상은 캐시 옵션 SW_CPP_STANDARD — cmake/Modules/Config/BuildOptions.cmake)
 # ==============================================================================
 

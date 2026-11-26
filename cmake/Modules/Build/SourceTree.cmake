@@ -14,7 +14,7 @@
 #
 # 뿌리는 `Source/` · `IntegrationTests/` 와, 부르는 쪽이 `sw_add_source_tree_root` 로 더한 폴더(시나리오의 `Content/<팩>/automation` — `Content/` 전체는
 # 에셋이라 훑지 않는다)다. `Source/` 는 include 때 훑고(ExcludedSources 가 목록을 바로 읽는다) 나머지는 처음 걸러 낼 때 훑는다.
-# 이 뿌리들 아래를 `file(GLOB … CONFIGURE_DEPENDS)` 로 직접 훑는 코드는 빌드가 멈춘다(`sw_check_configure_globs` — 생성된 VerifyGlobs.cmake 를 본다).
+# 이 뿌리들 아래를 `file(GLOB … CONFIGURE_DEPENDS)` 로 직접 훑는 코드는 빌드가 멈춘다(`sw_require_configure_globs` — 생성된 VerifyGlobs.cmake 를 본다).
 # ------------------------------------------------------------------------------
 include_guard(GLOBAL)
 
@@ -121,7 +121,7 @@ endfunction()
 # 빌드가 생성된 `CMakeFiles/VerifyGlobs.cmake`(CMake 가 빌드마다 다시 훑는 글롭 목록)를 본다 — 뿌리 아래를 이 파일 밖의 `file(GLOB … CONFIGURE_DEPENDS)` 로
 # 훑는 자리가 있으면 멈춘다. 그 목록은 생성 단계가 쓰므로 configure 안에서는 볼 수 없다. 그래서 그 파일이 바뀐 빌드에서만 한 번 돈다(스탬프).
 # 모든 빌드가 거치는 Core 가 기다린다. 루트 CMakeLists 의 끝(모든 sw_add_source_tree_root 뒤)에서 부른다.
-function(sw_check_configure_globs)
+function(sw_require_configure_globs)
 	get_property(list_root GLOBAL PROPERTY SW_SOURCE_TREE_ROOTS)
 	string(REPLACE ";" "|" root_text "${list_root}")
 	set(verify_globs "${CMAKE_BINARY_DIR}/CMakeFiles/VerifyGlobs.cmake")
@@ -129,8 +129,8 @@ function(sw_check_configure_globs)
 	add_custom_command(
 		OUTPUT "${stamp}"
 		COMMAND "${CMAKE_COMMAND}" "-DVERIFY_GLOBS=${verify_globs}" "-DROOTS=${root_text}" "-DSOURCE_DIR=${CMAKE_SOURCE_DIR}" "-DSTAMP=${stamp}"
-			-P "${CMAKE_SOURCE_DIR}/cmake/Scripts/CheckConfigureGlobs.cmake"
-		DEPENDS "${verify_globs}" "${CMAKE_SOURCE_DIR}/cmake/Scripts/CheckConfigureGlobs.cmake"
+			-P "${CMAKE_SOURCE_DIR}/cmake/ScriptMode/CheckConfigureGlobs.cmake"
+		DEPENDS "${verify_globs}" "${CMAKE_SOURCE_DIR}/cmake/ScriptMode/CheckConfigureGlobs.cmake"
 		COMMENT "Checking that source globs go through sw_glob_source_tree"
 		VERBATIM
 	)

@@ -172,14 +172,14 @@ function(sw_filter_platform_sources LIST_VAR)
 endfunction()
 
 # ------------------------------------------------------------------------------
-# sw_verify_built_sources — 구성 끝(모든 타깃이 선 뒤) 한 번: 어느 타깃이든 이 구성이 짓지 않을 소스를 SOURCES 에 들고 있으면 멈춘다.
+# sw_require_built_sources — 구성 끝(모든 타깃이 선 뒤) 한 번: 어느 타깃이든 이 구성이 짓지 않을 소스를 SOURCES 에 들고 있으면 멈춘다.
 #   빼기는 타깃마다 고른 자리(`if(SW_SHIPPING_BUILD) sw_remove_excluded_sources(…)`)라 새 타깃 · 팩토리를 거치지 않는 타깃(App · Server · Core · DevTools)이
 #   빠뜨리면 조용히 지어졌다. 팩토리 인자로는 팩토리 밖 타깃을 못 잡아 모든 타깃을 훑는다. 판정은 `Source/` 아래 .c · .cpp 만:
 #     - 적어 둔 "짓지 않는 소스"(SW_EXCLUDED_SOURCES)
 #     - 플랫폼 폴더 규칙(sw_is_platform_folder_built)
 #     - 배포 구성의 개발 전용 폴더(SW_DEV_ONLY_SOURCE_PATTERNS), 전용 서버의 `Client/`, 클라이언트 구성의 `Server/`
 # ------------------------------------------------------------------------------
-function(sw_verify_built_sources)
+function(sw_require_built_sources)
 	set(list_forbidden_pattern "")
 	if(SW_SHIPPING_BUILD)
 		list(APPEND list_forbidden_pattern ${SW_DEV_ONLY_SOURCE_PATTERNS})

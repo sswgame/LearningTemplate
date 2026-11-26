@@ -1,5 +1,5 @@
 # ==============================================================================
-# @file cmake/Scripts/CheckReflectionCandidates.cmake
+# @file cmake/ScriptMode/CheckReflectionCandidates.cmake
 # @brief 구성 때 반사 매크로가 없던 헤더에 반사 매크로가 생겼는지 빌드 때 확인한다(cmake -P).
 # @details sw_add_reflection_step 의 자동 훑기는 구성 시점에 굳는다. 새 헤더 · 옮긴 헤더는 소스 글롭(CONFIGURE_DEPENDS)이 다시 구성하게 하지만,
 #          이미 있던 헤더에 REFLECT( · ENUM( 을 더하면 구성이 다시 돌지 않아 .gen.cpp 가 없는 채로 링크에서 깨진다.

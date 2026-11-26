@@ -48,7 +48,7 @@ namespace sw
 {
     namespace
     {
-        /** @brief 쿠킹 명령줄(`--cook-*` · `--verify-shaders` · `-make-patch`)의 헤드리스 작업입니다. 배포 구성은 DevTools 를 짓지 않아 굽지 않는다 — 배포 팩은 호스트 개발 빌드가 굽는다(cmake/Modules/Build/AssetAndToolTargets.cmake). */
+        /** @brief 쿠킹 명령줄(`--cook-*` · `--verify-shaders` · `-make-patch`)의 헤드리스 작업입니다. 배포 구성은 DevTools 를 짓지 않아 굽지 않는다 — 배포 팩은 호스트 개발 빌드가 굽는다(cmake/Modules/Build/CookTargets.cmake). */
         struct CookCommandletsInternal
         {
             /** @brief bool 인자 @p argument 가 켜져 주어졌으면 true 입니다. */

@@ -2,7 +2,7 @@
 CMake 빌드 규칙 함수 검사 — 구성 없이 `cmake -P` 로 함수만 부른다(타깃이 필요한 판정은 통합 configure 가 본다).
 
 - `sw_is_platform_folder_built`(cmake/Modules/Build/PlatformFolders.cmake): 플랫폼 폴더 규칙 — 플랫폼 폴더 거르기와 구성 끝 훑기가 같은 판정을 쓴다.
-- `sw_link_job_count`(cmake/Modules/Config/LinkJobPool.cmake): Ninja 링크 풀 크기 — ThinLTO 구성만 좁게 묶는다.
+- `sw_get_link_pool_size`(cmake/Modules/Config/LinkJobPool.cmake): Ninja 링크 풀 크기 — ThinLTO 구성만 좁게 묶는다.
 - `sw_resolve_auto_option`(cmake/Modules/Config/AutoOption.cmake): 유도 옵션의 틀 — 캐시는 auto 로 남고 푼 값은 보통 변수, 모르는 값은 실패.
 - `sw_resolve_memory_backend`(cmake/Modules/Config/MemoryBackend.cmake): 힙 백엔드 auto 풀기 — 새니타이저 · 웹만 crt, 명시한 mimalloc 이 걸리면 구성 실패.
 - `sw_decide_module_activation`(cmake/Modules/Build/ModuleManifest.cmake): 정적 모듈 구성은 고른 RHI 백엔드 하나만 켠다. 키트의 클라이언트 모듈(`GF_Client_<X>`)은
@@ -106,7 +106,7 @@ class PlatformFolderTest(unittest.TestCase):
 def link_job_counts(cases: list[tuple[int, bool]]) -> dict[str, str]:
     lines = [f'include("{(PROJECT_ROOT / "cmake/Modules/Config/LinkJobPool.cmake").as_posix()}")']
     for cpu_count, lto in cases:
-        lines.append(f'sw_link_job_count({cpu_count} {"ON" if lto else "OFF"} jobs)')
+        lines.append(f'sw_get_link_pool_size({cpu_count} {"ON" if lto else "OFF"} jobs)')
         lines.append(f'message(NOTICE "{cpu_count}-{lto}=[${{jobs}}]")')
     return run_cmake_script("\n".join(lines) + "\n")
 
@@ -328,7 +328,7 @@ class ModuleEnumNamesTest(unittest.TestCase):
 
 
 def rhi_backend_table(backend_name: str | None = None) -> dict[str, str]:
-    """configure 와 같은 생성기로 CookContract.cmake 를 쓰고 RHIBackends.cmake 와 함께 include 한 백엔드 칸. `backend_name` 이 있으면 `sw_check_rhi_backend_name` 에 넘긴다."""
+    """configure 와 같은 생성기로 CookContract.cmake 를 쓰고 RHIBackends.cmake 와 함께 include 한 백엔드 칸. `backend_name` 이 있으면 `sw_require_rhi_backend_name` 에 넘긴다."""
     with tempfile.TemporaryDirectory() as folder:
         cmake_path = Path(folder) / "CookContract.cmake"
         generate_cook_contract(Path(folder) / "CookContract.gen.h", cmake_path)
@@ -342,7 +342,7 @@ def rhi_backend_table(backend_name: str | None = None) -> dict[str, str]:
             "endforeach()",
         ]
         if backend_name is not None:
-            lines.append(f"sw_check_rhi_backend_name({backend_name})")
+            lines.append(f"sw_require_rhi_backend_name({backend_name})")
         return run_cmake_script("\n".join(lines) + "\n")
 
 

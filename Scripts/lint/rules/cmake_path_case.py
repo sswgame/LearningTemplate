@@ -85,10 +85,10 @@ class CMakePathCaseRule(LintRule):
         return evaluate_paths(list_file, expand_paths(list_cmake, facts.summary))
 
     def self_check(self) -> None:
-        list_file = ["CMakeLists.txt", "cmake/Modules/Build/BuildLayout.cmake", "Source/Engine/CMakeLists.txt", "Source/Engine/Audio/CMakeLists.txt"]
-        text = 'include(${CMAKE_SOURCE_DIR}/cmake/modules/build/BuildLayout.cmake)\nadd_subdirectory(Audio)\nadd_subdirectory(audio)\nadd_subdirectory(${X})\n'
+        list_file = ["CMakeLists.txt", "cmake/Modules/Build/OutputLayout.cmake", "Source/Engine/CMakeLists.txt", "Source/Engine/Audio/CMakeLists.txt"]
+        text = 'include(${CMAKE_SOURCE_DIR}/cmake/modules/build/OutputLayout.cmake)\nadd_subdirectory(Audio)\nadd_subdirectory(audio)\nadd_subdirectory(${X})\n'
         list_violation = evaluate_paths(list_file, {"Source/Engine/CMakeLists.txt": extract_paths(text)})
-        assert list_violation == ["Source/Engine/CMakeLists.txt: 'cmake/modules/build/BuildLayout.cmake' → 실제 이름 'cmake/Modules/Build/BuildLayout.cmake'",
+        assert list_violation == ["Source/Engine/CMakeLists.txt: 'cmake/modules/build/OutputLayout.cmake' → 실제 이름 'cmake/Modules/Build/OutputLayout.cmake'",
                                  "Source/Engine/CMakeLists.txt: 'audio' → 실제 이름 'Source/Engine/Audio'"], list_violation
         assert evaluate_paths(list_file, {"CMakeLists.txt": extract_paths("add_subdirectory(Source/Engine)\n")}) == [], "맞는 대소문자는 통과한다"
         fact = extract_paths("add_subdirectory(b)\nadd_subdirectory(a)\nadd_subdirectory(b)\n")

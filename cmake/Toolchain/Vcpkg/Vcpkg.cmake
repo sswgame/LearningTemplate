@@ -10,18 +10,18 @@
 #    지을 것이 없으면 skip, 이미 깔린 포트를 지우게 되면 멈추고 경고, 빠진 포트가 있을 때만 install
 # 4. sw_toolchain_vcpkg INTERFACE (SW_VCPKG 정의만 — 서드파티 include 는 각 라이브러리 타깃이 준다)
 #
-# project() 이후 루트가 sw_vcpkg_write_manifest_stamp() 를 호출해
+# project() 이후 루트가 sw_write_vcpkg_manifest_stamp() 를 호출해
 # 다음 configure에서 불필요한 재설치를 건너뛴다.
 #
-# @note 런타임 헬퍼(sw_copy_vcpkg_*)는 cmake/internal/VcpkgRuntime.cmake
-# VcpkgRuntime은 BuildLayout.cmake의 sw_queue_runtime_copy에 의존하므로 internal에 유지
+# @note 런타임 헬퍼(sw_copy_vcpkg_*)는 cmake/Modules/Build/RuntimeDependencies.cmake
+# VcpkgRuntime은 OutputLayout.cmake의 sw_queue_runtime_copy에 의존하므로 internal에 유지
 # ==============================================================================
-include("${CMAKE_CURRENT_LIST_DIR}/../../Modules/Environment/PythonUtils.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/../../Modules/Environment/PythonScript.cmake")
 include("${CMAKE_CURRENT_LIST_DIR}/../../Modules/Config/LoadConfigConstants.cmake")
 include("${CMAKE_CURRENT_LIST_DIR}/VcpkgTriplets.cmake")
 include("${CMAKE_CURRENT_LIST_DIR}/VcpkgInstallPolicy.cmake")
 
-# 캐시의 VCPKG_MANIFEST_INSTALL 은 사용자 말뿐이다 — 게이트가 정한 값은 project() 뒤 sw_vcpkg_write_manifest_stamp 가 캐시에서 지운다.
+# 캐시의 VCPKG_MANIFEST_INSTALL 은 사용자 말뿐이다 — 게이트가 정한 값은 project() 뒤 sw_write_vcpkg_manifest_stamp 가 캐시에서 지운다.
 # 사용자 OFF 는 SW_VCPKG_USER_INSTALL 로 남아 다음 구성에도 읽기 전용이고, -DVCPKG_MANIFEST_INSTALL=ON 으로만 풀린다.
 # 옛 게이트가 남긴 캐시(SW_VCPKG_GATE_REV 없이 SW_VCPKG_LAST_TREE 만 있음)의 값은 게이트 판단이라 사용자 말로 읽지 않는다.
 if(DEFINED CACHE{VCPKG_MANIFEST_INSTALL} AND (DEFINED SW_VCPKG_GATE_REV OR NOT DEFINED SW_VCPKG_LAST_TREE))
@@ -33,10 +33,10 @@ if(DEFINED CACHE{VCPKG_MANIFEST_INSTALL} AND (DEFINED SW_VCPKG_GATE_REV OR NOT D
 endif()
 
 # ------------------------------------------------------------------------------
-# 1) sw_vcpkg_compute_manifest_hash — manifest + overlay port/triplet SHA256
+# 1) sw_compute_vcpkg_manifest_hash — manifest + overlay port/triplet SHA256
 # 포함: vcpkg.json, vcpkg-configuration.json, ThirdParty/*/vcpkg-port 의 모든 파일(VcpkgInstallPolicy.cmake), 오버레이 triplet (.cmake). 없으면 빈 문자열
 # ------------------------------------------------------------------------------
-function(sw_vcpkg_compute_manifest_hash OUT_VAR)
+function(sw_compute_vcpkg_manifest_hash OUT_VAR)
     set(src_dir "${CMAKE_CURRENT_SOURCE_DIR}")
 
     if(DEFINED CMAKE_SOURCE_DIR AND NOT CMAKE_SOURCE_DIR STREQUAL "")
@@ -47,12 +47,12 @@ function(sw_vcpkg_compute_manifest_hash OUT_VAR)
 
     foreach(manifest_file IN ITEMS vcpkg.json vcpkg-configuration.json)
         if(EXISTS "${src_dir}/${manifest_file}")
-            sw_vcpkg_hash_file_normalized("${src_dir}/${manifest_file}" manifest)
+            sw_hash_normalized_file("${src_dir}/${manifest_file}" manifest)
             string(APPEND hash "${manifest}")
         endif()
     endforeach()
 
-    sw_vcpkg_hash_overlay_ports("${src_dir}" overlay)
+    sw_hash_vcpkg_overlay_ports("${src_dir}" overlay)
     string(APPEND hash "${overlay}")
 
     # 생성한 오버레이(triplet · 포트 툴체인 · 컴파일 규칙 — 4 절이 이 함수보다 먼저 만든다). 포트 ABI 와 같은 입력이다.
@@ -60,7 +60,7 @@ function(sw_vcpkg_compute_manifest_hash OUT_VAR)
     list(SORT overlay_triplet_files)
 
     foreach(triplet_file IN LISTS overlay_triplet_files)
-        sw_vcpkg_hash_file_normalized("${triplet_file}" triplet)
+        sw_hash_normalized_file("${triplet_file}" triplet)
         string(APPEND hash "${triplet}")
     endforeach()
 
@@ -74,12 +74,12 @@ function(sw_vcpkg_compute_manifest_hash OUT_VAR)
 endfunction()
 
 # ------------------------------------------------------------------------------
-# 1b) sw_vcpkg_plan_manifest_install — 이 매니페스트를 공유 설치 폴더에 깔면 무엇이 바뀌는지(`vcpkg install --dry-run`)
+# 1b) sw_plan_vcpkg_manifest_install — 이 매니페스트를 공유 설치 폴더에 깔면 무엇이 바뀌는지(`vcpkg install --dry-run`)
 # 설치 폴더 · 스탬프는 워크트리 모두가 나눠 쓴다. 해시만 다르다고 설치하면 옛 매니페스트의 워크트리가 다른 워크트리가 쓰는
 # 포트를 지운다 — 그래서 설치 여부는 계획(지울 것 · 지을 것)으로 정한다.
 # 계획을 얻지 못하면 구성 오류 — 예전에는 그때 설치를 켜 공유 설치 폴더의 포트를 지울 수 있었다. OUT_REMOVE · OUT_BUILD: 지울 · 지을(다시 지을 포함) 포트 목록
 # ------------------------------------------------------------------------------
-function(sw_vcpkg_plan_manifest_install src_dir OUT_REMOVE OUT_BUILD)
+function(sw_plan_vcpkg_manifest_install src_dir OUT_REMOVE OUT_BUILD)
     set(vcpkg_exe "${SW_VCPKG_ROOT}/vcpkg${CMAKE_HOST_EXECUTABLE_SUFFIX}")
 
     if(NOT DEFINED SW_VCPKG_ROOT OR SW_VCPKG_ROOT STREQUAL "" OR NOT EXISTS "${vcpkg_exe}")
@@ -125,18 +125,18 @@ function(sw_vcpkg_plan_manifest_install src_dir OUT_REMOVE OUT_BUILD)
         message(FATAL_ERROR "[vcpkg] Cannot plan the manifest install (vcpkg install --dry-run exited ${result}):\n${output}\n${error}")
     endif()
 
-    sw_vcpkg_parse_install_plan("${output}" remove build)
+    sw_parse_vcpkg_install_plan("${output}" remove build)
     set(${OUT_REMOVE} "${remove}" PARENT_SCOPE)
     set(${OUT_BUILD} "${build}" PARENT_SCOPE)
 endfunction()
 
 # ------------------------------------------------------------------------------
-# 2) sw_vcpkg_write_manifest_stamp — project() 이후 현재 해시를 스탬프에 기록
+# 2) sw_write_vcpkg_manifest_stamp — project() 이후 현재 해시를 스탬프에 기록
 # 다음 configure의 install gate가 스탬프와 비교해 재설치를 건너뜀
 # 경로: ${VCPKG_INSTALLED_DIR}/.sw_vcpkg_manifest_sha_<triplet>
 # ------------------------------------------------------------------------------
-function(sw_vcpkg_write_manifest_stamp)
-    if(NOT SW_USE_VCPKG)
+function(sw_write_vcpkg_manifest_stamp)
+    if(NOT SW_ENABLE_VCPKG)
         return()
     endif()
 
@@ -161,7 +161,7 @@ function(sw_vcpkg_write_manifest_stamp)
         return()
     endif()
 
-    sw_vcpkg_compute_manifest_hash(manifest_hash)
+    sw_compute_vcpkg_manifest_hash(manifest_hash)
 
     if(manifest_hash STREQUAL "")
         return()
@@ -322,7 +322,7 @@ endif()
 # 오버레이 triplet 은 구성마다 빌드 폴더에 생성한다(VcpkgTriplets.cmake — 포트 ABI 가 풀린 도구 · 플래그만 보게). 재구성(ninja 의
 # `--regenerate-during-build` · `cmake -S -B`)도 이 줄을 지나 같은 폴더를 가리킨다 — 빠지면 vcpkg 가 기본 triplet(MSVC)으로 공유 설치 폴더의
 # 포트 전체를 다시 깐다(2026-10-18). 환경 변수 VCPKG_OVERLAY_TRIPLETS 는 vcpkg 실행 파일도 읽으므로 비운다(다른 오버레이가 섞이지 않게).
-sw_vcpkg_write_overlay_triplets(generated_triplet_dir)
+sw_write_vcpkg_overlay_triplets(generated_triplet_dir)
 set(VCPKG_OVERLAY_TRIPLETS "${generated_triplet_dir}" CACHE STRING "vcpkg 오버레이 triplet 경로(생성)" FORCE)
 unset(ENV{VCPKG_OVERLAY_TRIPLETS})
 
@@ -337,7 +337,7 @@ endif()
 # 트리+스탬프가 일치하면 VCPKG_MANIFEST_INSTALL=OFF
 # MANIFEST_MODE는 한 번 ON이면 OFF 전환을 거부하므로 항상 ON, INSTALL로만 제어
 # ------------------------------------------------------------------------------
-sw_vcpkg_compute_manifest_hash(manifest_hash)
+sw_compute_vcpkg_manifest_hash(manifest_hash)
 
 set(vcpkg_tree "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}")
 set(stamp "${VCPKG_INSTALLED_DIR}/.sw_vcpkg_manifest_sha_${VCPKG_TARGET_TRIPLET}") # triplet 마다 — 한 폴더에 triplet 이 여럿이면 한쪽 스탬프가 다른 쪽 설치를 가렸다
@@ -360,7 +360,7 @@ if(tree_ready AND EXISTS "${stamp}" AND NOT manifest_hash STREQUAL "")
     endif()
 endif()
 
-sw_vcpkg_install_read_only_reason("${src_dir}" "${VCPKG_INSTALLED_DIR}" "${SW_VCPKG_USER_INSTALL}" read_only_reason)
+sw_get_vcpkg_install_read_only_reason("${src_dir}" "${VCPKG_INSTALLED_DIR}" "${SW_VCPKG_USER_INSTALL}" read_only_reason)
 
 if(NOT read_only_reason STREQUAL "")
     # 읽기 전용 — 폴백 없이 멈출 것은 멈춘다. 매니페스트와 다른 포트는 find_package 에서 드러난다.
@@ -394,7 +394,7 @@ elseif(tree_ready AND manifest_hash STREQUAL "")
 elseif(tree_ready)
     # 스탬프가 다르다(이 매니페스트가 바뀌었거나, 설치 폴더를 나눠 쓰는 다른 워크트리가 덮었다). 해시만으로 설치하지 않고 계획을 본다.
     set(VCPKG_MANIFEST_MODE ON CACHE BOOL "vcpkg 매니페스트 모드" FORCE)
-    sw_vcpkg_plan_manifest_install("${src_dir}" plan_remove plan_build)
+    sw_plan_vcpkg_manifest_install("${src_dir}" plan_remove plan_build)
 
     if(plan_remove)
         # 지우게 되면 멈춘다 — 다른 워크트리(최신 main)가 쓰는 포트일 수 있다. 빠진 포트는 find_package 에서 드러난다.
@@ -434,7 +434,7 @@ endif()
 # Preset이 없는 Tools/vcpkg 경로를 박아 둔 경우, project() 전에 원인을 명확히 끊습니다.
 set(toolchain_file "${CMAKE_TOOLCHAIN_FILE}")
 
-if(SW_USE_VCPKG AND toolchain_file AND NOT EXISTS "${toolchain_file}")
+if(SW_ENABLE_VCPKG AND toolchain_file AND NOT EXISTS "${toolchain_file}")
     if(SW_VCPKG_AUTO_BOOTSTRAP)
         message(FATAL_ERROR
             "[vcpkg] CMAKE_TOOLCHAIN_FILE does not exist:\n"

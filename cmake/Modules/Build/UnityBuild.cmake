@@ -1,5 +1,5 @@
 # ==============================================================================
-# @file cmake/Toolchain/Options/UnityBuild.cmake
+# @file cmake/Modules/Build/UnityBuild.cmake
 # @brief Unity 빌드 헬퍼 — SW_ENABLE_UNITY_BUILD로 선택(기본 OFF)
 # @note 헬퍼는 항상 정의하여 타겟이 호출할 수 있게 하고, 옵션이 꺼지면 no-op
 # ==============================================================================

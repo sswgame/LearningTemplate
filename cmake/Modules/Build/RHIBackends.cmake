@@ -36,7 +36,7 @@ function(sw_get_all_rhi_backend_sources OUT_VAR)
 endfunction()
 
 # 쿠킹 표의 백엔드 이름(대소문자까지 그대로 — DirectX11 · DirectX12 · Vulkan · OpenGL)만 받는다. 명령줄 이름(dx12 · vk …)은 받지 않는다 — 모르는 값이면 구성을 세운다.
-function(sw_check_rhi_backend_name TEXT)
+function(sw_require_rhi_backend_name TEXT)
 	if(NOT TEXT IN_LIST SW_RHI_BACKEND_NAMES)
 		string(REPLACE ";" ", " list_name "${SW_RHI_BACKEND_NAMES}")
 		message(FATAL_ERROR "[RHI] unknown backend '${TEXT}' for SW_SHIPPING_RHI_BACKEND — valid names: ${list_name} "
@@ -47,7 +47,7 @@ endfunction()
 # 정적 모듈 구성이 Engine 에 넣을 백엔드 — 이름을 확인하고, 그 백엔드 모듈이 켜졌는지 본다(매니페스트 해석이 정적 구성에서 고른 백엔드 하나만 켜고,
 # 플랫폼 · 대상이 맞지 않으면 그 까닭과 함께 끈다 — sw_decide_module_activation). 꺼졌으면 구성을 세운다 — 이 확인이 없으면 Engine 이 백엔드 없이 링크된다.
 function(sw_resolve_shipping_rhi_backend TEXT OUT_VAR)
-	sw_check_rhi_backend_name("${TEXT}")
+	sw_require_rhi_backend_name("${TEXT}")
 	set(backend_name ${TEXT})
 	set(module_name ${SW_RHI_BACKEND_${backend_name}_MODULE})
 	get_property(module_active GLOBAL PROPERTY SW_MODULE_${module_name}_ACTIVE)

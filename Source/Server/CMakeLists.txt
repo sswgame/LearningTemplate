@@ -43,7 +43,7 @@ endif()
 
 # Tracy 클라이언트(개발 빌드 · Windows). Engine 이 지연 로드하므로 `-gv_tracy` 를 켜기 전에는 올라오지 않는다.
 sw_copy_tracy_runtime(Server)
-sw_emit_runtime_copies(Server)
+sw_apply_runtime_copies(Server)
 
 # 클라이언트 전용 형식 이름 표(`ClientOnlyTypeTable`) — 전용 서버로 선 프로세스만 읽는다(서버 구성은 클라이언트 코드를 짓지 않고, 개발 구성의 Server 는 클라이언트 모듈을 올리지 않아 그 형식을 모른다). 클라이언트 전용 소스의 헤더에서 빌드가 만들어
 # 실행 파일 옆(`Bin/ClientOnlyTypes.json`)에 두고, 패키지(`Scripts/package/package.py`)가 함께 싣는다. 헤더 고르기는 클라이언트 전용 소스의 정본과 같다

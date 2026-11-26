@@ -1,5 +1,5 @@
 # ==============================================================================
-# @file cmake/Modules/Environment/PythonUtils.cmake
+# @file cmake/Modules/Environment/PythonScript.cmake
 # @brief Scripts/*.py 서브프로세스 실행 유틸리티 헬퍼 (sw_execute_python_script) — 파이썬 인터프리터는 여기 한 곳에서 찾는다
 # ==============================================================================
 

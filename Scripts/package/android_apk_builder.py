@@ -292,7 +292,7 @@ def make_apk(game: str, preset_name: str, build_dir: Path, packs_dir: Path, proj
         raise ApkError(str(error)) from error
     settings = resolve_settings(config, game, min_sdk, tools.target_sdk, abi, project_root)
 
-    library = build_dir / "Lib" / f"lib{settings.lib_name}.so"  # 공유 라이브러리는 CMAKE_LIBRARY_OUTPUT_DIRECTORY(cmake/Modules/Build/BuildLayout.cmake 의 Lib)로 간다
+    library = build_dir / "Lib" / f"lib{settings.lib_name}.so"  # 공유 라이브러리는 CMAKE_LIBRARY_OUTPUT_DIRECTORY(cmake/Modules/Build/OutputLayout.cmake 의 Lib)로 간다
     if not library.is_file():
         raise ApkError(f"{library} not found - build the {preset_name} preset first")
     try:

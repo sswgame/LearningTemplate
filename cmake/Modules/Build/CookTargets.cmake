@@ -1,14 +1,14 @@
 # ==============================================================================
-# @file cmake/Modules/Build/AssetAndToolTargets.cmake
+# @file cmake/Modules/Build/CookTargets.cmake
 # @brief 에셋 쿠킹(CookAssets), 서드파티 라이선스 고지
 # ==============================================================================
 
-include("${CMAKE_CURRENT_LIST_DIR}/../Environment/PythonUtils.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/../Environment/PythonScript.cmake")
 
 # ------------------------------------------------------------------------------
 # 스크립트 타겟 — 에셋 쿠킹, 서드파티 고지
 # ------------------------------------------------------------------------------
-# 파이썬은 PythonUtils.cmake(머리의 include)가 찾았다 — 없으면 GenerateConfigConstants 의 REQUIRED 호출에서 configure 가 그전에 섰다.
+# 파이썬은 PythonScript.cmake(머리의 include)가 찾았다 — 없으면 GenerateConfigConstants 의 REQUIRED 호출에서 configure 가 그전에 섰다.
 # 팩은 실행 파일 옆(Bin/Packs)에 놓는다. App 이 exeDir/Packs 를 먼저 찾기 때문.
 # 주의: CMAKE_RUNTIME_OUTPUT_DIRECTORY 를 이어 붙이지 않는다 — 생성기 식(`$<0:>`)이 든 값이라 명령줄 경로가 되지 않는다.
 set(pack_output_dir "${CMAKE_BINARY_DIR}/Bin/Packs")
@@ -85,7 +85,7 @@ if(CMAKE_CROSSCOMPILING OR SW_SHIPPING_BUILD)
 	endif()
 	set(host_cooker "${SW_HOST_BUILD_DIR}/Bin/${cook_host_name}${host_exe_suffix}")
 	unset(host_exe_suffix)
-	sw_check_rhi_backend_name("${SW_SHIPPING_RHI_BACKEND}")
+	sw_require_rhi_backend_name("${SW_SHIPPING_RHI_BACKEND}")
 	set(shipping_backend_flag "-${SW_RHI_BACKEND_${SW_SHIPPING_RHI_BACKEND}_COMMAND_LINE_NAME}")
 	# 리소스 조건(`_when`)의 platform 축은 굽는 App 이 아니라 이 빌드의 플랫폼이다 — 호스트 App 이 구운 Android 팩이 Windows 조건을 푼 채 나가지 않게.
 	string(TOLOWER "${SW_PLATFORM_NAME}" cook_platform)

@@ -98,7 +98,7 @@ namespace sw
 
         /**
          * @brief 빌드가 낸 라이브러리의 디버그 심볼 파일을 찾습니다. `Bin/Symbols/<이름>` 을 먼저 보고, 없으면 라이브러리 옆을 봅니다. 둘 다 없으면 빈 경로를 반환합니다.
-         * @details Dev 빌드는 PDB 를 `Bin/Symbols` 에 낸다(`cmake/Modules/Build/BuildLayout.cmake`). `ModuleLibraryUtil::setModuleSubdirectory` 로 옮긴 모듈은 `Bin/Symbols/<그 폴더>` 다 —
+         * @details Dev 빌드는 PDB 를 `Bin/Symbols` 에 낸다(`cmake/Modules/Build/OutputLayout.cmake`). `ModuleLibraryUtil::setModuleSubdirectory` 로 옮긴 모듈은 `Bin/Symbols/<그 폴더>` 다 —
          *          게임 팩마다 PDB 이름이 같아(`SWGame.pdb`) 폴더로 가른다.
          */
         static AbsolutePath findBuiltDebugSymbolPath( const AbsolutePath& libraryPath );

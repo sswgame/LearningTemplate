@@ -12,7 +12,7 @@
 # ------------------------------------------------------------------------------
 # 1) Python 헬퍼 로드 및 자동 부트스트랩 환경 변수 전달
 # ------------------------------------------------------------------------------
-include("${CMAKE_CURRENT_LIST_DIR}/PythonUtils.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/PythonScript.cmake")
 
 if(SW_VCPKG_AUTO_BOOTSTRAP)
 	set(ENV{SW_VCPKG_AUTO_BOOTSTRAP} "1")
@@ -83,7 +83,7 @@ if(SW_TOOLCHAIN_CONFIG_FOUND)
 
 			# 정적 아카이브(lib.exe/llvm-lib.exe) 및 매니페스트 도구(mt.exe/llvm-mt.exe) 탐색
 			include("${CMAKE_CURRENT_LIST_DIR}/ToolchainBinaries.cmake")
-			include("${CMAKE_CURRENT_LIST_DIR}/FindWindowsTools.cmake")
+			include("${CMAKE_CURRENT_LIST_DIR}/WindowsToolPaths.cmake")
 			sw_find_windows_archive_and_mt(ar mt)
 
 			# 아카이버 · 매니페스트 도구가 없으면 정적 라이브러리 · 링크가 나중에 선다 — 지금 세운다.

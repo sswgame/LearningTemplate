@@ -161,7 +161,7 @@ if(MSVC)
 		$<$<CONFIG:Release>:/OPT:REF> # 미참조 함수 및 데이터 제거
 	)
 	# 배포만 같은 기계어 함수를 합친다(/OPT:ICF — 링크가 모든 함수 내용을 견주어 느리다). 개발 Release 는 증분 되풀이가 일이라 ICF 를 빼고
-	# 형식 레코드를 해시로 합친다(/DEBUG:GHASH — Debug 와 같다). 언리얼도 Shipping 이 아니면 ICF 를 끈다. LTO 를 배포에만 둔 것과 같은 결정(BuildLayout.cmake).
+	# 형식 레코드를 해시로 합친다(/DEBUG:GHASH — Debug 와 같다). 언리얼도 Shipping 이 아니면 ICF 를 끈다. LTO 를 배포에만 둔 것과 같은 결정(OutputLayout.cmake).
 	if(SW_SHIPPING_BUILD)
 		target_link_options(sw_compiler_clang INTERFACE $<$<CONFIG:Release>:/DEBUG:FULL> $<$<CONFIG:Release>:/OPT:ICF>)
 	else()

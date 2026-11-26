@@ -186,7 +186,7 @@ def run_build(request: PackageRequest, project_root: Path) -> None:
 def run_cook(request: PackageRequest, project_root: Path, bin_dir: Path) -> None:
     """리소스 팩을 그 빌드의 쿠킹 타깃(`CookAssets`)으로 다시 쿠킹해 Bin/Packs 에 둔다(빌드를 건너뛰고 쿠킹만 새로 할 때).
 
-    배포 실행 파일에는 쿠커가 없다 — 빌드와 같은 길(호스트 개발 빌드가 굽는다, cmake/Modules/Build/AssetAndToolTargets.cmake)을 지난다. 구성되지 않은 폴더면 다른 빌드로 대신하지 않고 멈춘다.
+    배포 실행 파일에는 쿠커가 없다 — 빌드와 같은 길(호스트 개발 빌드가 굽는다, cmake/Modules/Build/CookTargets.cmake)을 지난다. 구성되지 않은 폴더면 다른 빌드로 대신하지 않고 멈춘다.
     """
     build_dir = bin_dir.parent
     if (build_dir / "CMakeCache.txt").is_file() is False:

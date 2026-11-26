@@ -1,5 +1,5 @@
 # ==============================================================================
-# @file cmake/Toolchain/Options/Fuzzing.cmake
+# @file cmake/Toolchain/Instrumentation/Fuzzing.cmake
 # @brief 커버리지 안내 퍼징 계측 (SW_ENABLE_FUZZING) — 모든 타깃에 `-fsanitize=fuzzer-no-link`, 퍼저 실행 파일만 `-fsanitize=fuzzer` 로 링크한다
 # ==============================================================================
 
@@ -16,7 +16,7 @@ if(NOT SW_ENABLE_SANITIZER OR NOT SW_SANITIZER_KIND STREQUAL "address")
 	message(FATAL_ERROR "[Fuzzing] SW_ENABLE_FUZZING needs SW_ENABLE_SANITIZER=ON with SW_SANITIZER_KIND=address")
 endif()
 
-# 리눅스 심볼 숨김(`--exclude-libs,ALL`, cmake/Modules/Build/BuildLayout.cmake)에는 걸리지 않는다 — 계측된 모듈 .so 가 찾는 `__sanitizer_cov_*` ·
+# 리눅스 심볼 숨김(`--exclude-libs,ALL`, cmake/Modules/Build/OutputLayout.cmake)에는 걸리지 않는다 — 계측된 모듈 .so 가 찾는 `__sanitizer_cov_*` ·
 # `__sancov_lowest_stack` 은 공유 ASan 런타임(`-shared-libsan`, Sanitizer.cmake)이 내보내고, 그 숨김은 정적 아카이브에서 온 심볼만 가린다.
 # 퍼저 실행 파일에는 걸린다: `-fsanitize=fuzzer` 의 정적 libFuzzer 가 가진 진짜 콜백이 숨겨지면 .so 는 ASan 의 빈 기본 구현에 묶이고,
 # 링크 · 실행은 되는데 엔진 .so 의 커버리지가 퍼저에 닿지 않는다. 그래서 `sw_add_fuzz_target`(cmake/Modules/Build/FuzzTargets.cmake)이 대상 속성

@@ -1,5 +1,5 @@
 # ==============================================================================
-# @file cmake/Toolchain/Options/Sanitizer.cmake
+# @file cmake/Toolchain/Instrumentation/Sanitizer.cmake
 # @brief Address/UB 또는 Thread Sanitizer 플래그 (SW_ENABLE_SANITIZER · SW_SANITIZER_KIND)
 # ==============================================================================
 
@@ -10,7 +10,7 @@ endif()
 add_library(sw_sanitizer INTERFACE)
 
 # 리눅스 Clang 은 새니타이저 런타임을 공유 라이브러리로 링크한다(GCC 는 원래 그렇다). 기본(정적)이면 런타임이 App 에 들어가는데, 리눅스 심볼 숨김의
-# `--exclude-libs,ALL`(cmake/Modules/Build/BuildLayout.cmake)이 그 심볼까지 가려 모듈 .so 가 __asan_* · __tsan_* 을 찾지 못하고 링크에서 진다.
+# `--exclude-libs,ALL`(cmake/Modules/Build/OutputLayout.cmake)이 그 심볼까지 가려 모듈 .so 가 __asan_* · __tsan_* 을 찾지 못하고 링크에서 진다.
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 	target_link_options(sw_sanitizer INTERFACE -shared-libsan -frtlib-add-rpath)
 endif()
@@ -25,7 +25,7 @@ if(SW_SANITIZER_KIND STREQUAL "thread")
 	endif()
 	# 원자 연산으로 스스로 동기화하는 포트(Jolt · Box2D)는 TSan 으로 지은 것과 링크해야 한다 — 계측 안 된 라이브러리는 그 동기화가 안 보여
 	# 거짓 경쟁 수백 건을 낸다(cmake/Toolchain/Vcpkg/VcpkgTriplets.cmake 의 x64-linux-tsan). 억제 목록은 그것을 덮지 않는다.
-	if(SW_USE_VCPKG AND NOT VCPKG_TARGET_TRIPLET STREQUAL "x64-linux-tsan")
+	if(SW_ENABLE_VCPKG AND NOT VCPKG_TARGET_TRIPLET STREQUAL "x64-linux-tsan")
 		message(WARNING "[Sanitizer] ThreadSanitizer with vcpkg triplet '${VCPKG_TARGET_TRIPLET}': Jolt/Box2D are not instrumented and will report false races — configure on Linux Clang with SW_SANITIZER_KIND=thread (x64-linux-tsan)")
 	endif()
 	target_compile_definitions(sw_sanitizer INTERFACE SW_SANITIZER_THREAD=1)

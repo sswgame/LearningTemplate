@@ -21,7 +21,7 @@ from common.paths import get_project_root
 
 TAG = "ShippingHostDefaults"
 
-# 플랫폼 이름(SW_PLATFORM_NAME — cmake/Modules/Build/BuildLayout.cmake). 이 밖의 폴더는 어느 빌드도 읽지 않는 덮어쓰기라 오류다(철자 틀림이 조용히 무시되지 않게).
+# 플랫폼 이름(SW_PLATFORM_NAME — cmake/Modules/Build/OutputLayout.cmake). 이 밖의 폴더는 어느 빌드도 읽지 않는 덮어쓰기라 오류다(철자 틀림이 조용히 무시되지 않게).
 SET_PLATFORM_NAME = frozenset({"Windows", "Linux", "Android", "Web"})
 
 

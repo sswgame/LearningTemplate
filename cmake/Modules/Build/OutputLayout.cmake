@@ -1,5 +1,5 @@
 # ==============================================================================
-# @file cmake/Modules/Build/BuildLayout.cmake
+# @file cmake/Modules/Build/OutputLayout.cmake
 # @brief 산출물이 어디에 놓이나 — 출력 경로, 전역 옵션 타겟, IPO, 런타임 복사 큐, `Bin` 의 옛 자리 산출물 지우기
 # ==============================================================================
 
@@ -215,7 +215,7 @@ endif()
 
 
 # ------------------------------------------------------------------------------
-# 런타임 파일 복사 큐 — POST_BUILD는 sw_emit_runtime_copies가 한 번에 방출
+# 런타임 파일 복사 큐 — POST_BUILD는 sw_apply_runtime_copies 가 한 번에 붙인다
 # ------------------------------------------------------------------------------
 function(sw_queue_runtime_copy TARGET_NAME SRC_FILE)
 	if(NOT TARGET ${TARGET_NAME})
@@ -230,9 +230,9 @@ function(sw_queue_runtime_copy TARGET_NAME SRC_FILE)
 	set_property(TARGET ${TARGET_NAME} APPEND PROPERTY SW_RUNTIME_COPY_FILES "${SRC_FILE}")
 endfunction()
 
-function(sw_emit_runtime_copies TARGET_NAME)
+function(sw_apply_runtime_copies TARGET_NAME)
 	if(NOT TARGET ${TARGET_NAME})
-		message(FATAL_ERROR "sw_emit_runtime_copies: target '${TARGET_NAME}' does not exist")
+		message(FATAL_ERROR "sw_apply_runtime_copies: target '${TARGET_NAME}' does not exist")
 	endif()
 
 	get_property(already TARGET ${TARGET_NAME} PROPERTY SW_RUNTIME_COPIES_EMITTED)
@@ -294,27 +294,10 @@ function(sw_keep_import_library_if_unchanged TARGET_NAME)
 	)
 endfunction()
 
-# 실행 파일 옆에 놓을 런타임 DLL — 구성마다 실제로 쓰는 것만.
-#   DXC        : 개발 구성만 — 런타임 HLSL 컴파일 · DXIL 리플렉션 · 셰이더 쿠킹(배포 팩도 호스트 개발 빌드가 굽는다). 배포 구성은 컴파일러를 쓰지 않는다(언리얼도 셰이더 컴파일러는 쿠커 쪽에만 둔다).
-#   검증 레이어 : SW_VULKAN_VALIDATION 인 Windows 구성만(위의 정의 하나를 VulkanRHIDevice 도 매크로로 읽는다)
-#   Tracy      : 개발 빌드 · Windows · SW_ENABLE_TRACY (함수 안에서 거른다)
-#   Tint       : WebGPU 셰이더 대상(SPIR-V → WGSL)의 쿠킹 도구 — DXC 와 같은 이유로 개발 구성의 실행 파일 옆에 둔다(ThirdParty/dawn, 웹 · Android · 서버는 함수 안에서 거른다)
-function(sw_deploy_runtime_dependencies TARGET_NAME)
-	if(NOT SW_SHIPPING_BUILD)
-		sw_copy_dxc_dlls(${TARGET_NAME})
-		sw_copy_tint_tool(${TARGET_NAME})
-	endif()
-	if(SW_VULKAN_VALIDATION AND WIN32)   # 레이어를 vcpkg 가 주는 곳은 Windows 뿐(vcpkg.json) — Linux 는 시스템 레이어를 쓴다
-		sw_copy_vulkan_validation_runtime(${TARGET_NAME})
-	endif()
-	sw_copy_tracy_runtime(${TARGET_NAME})
-	sw_emit_runtime_copies(${TARGET_NAME})
-endfunction()
-
 # ------------------------------------------------------------------------------
 # sw_remove_stale_binary_outputs — Dev `Bin` 의 옛 산출물을 configure 때 지운다(ninja 는 지어 놓은 파일을 치우지 않는다).
 #   1) `Bin/Modules` 의 모듈 산출물(GF_* · RHI_* · EditorModule · SWGame*) 가운데 이 구성에서 꺼진 모듈의 것 — 켜진 모듈 것은 건드리지 않는다.
-#      서드파티 DLL · PDB(모듈 이름 꼴이 아닌 것 — 서드파티는 `Bin` 에 한 벌, `sw_stage_module_runtime_dlls`)와 옛 자리의 섀도 복사본(`<모듈>_temp_…` 파일 · Windows 폴더 —
+#      서드파티 DLL · PDB(모듈 이름 꼴이 아닌 것 — 서드파티는 `Bin` 에 한 벌, `sw_deploy_module_runtime_dlls`)와 옛 자리의 섀도 복사본(`<모듈>_temp_…` 파일 · Windows 폴더 —
 #      지금 복사본은 실행 뿌리 아래 `ModuleShadow` 에 둔다, `ModuleShadowCopy`). 아직 도는 옛 App 이 쓰는 것은 잠겨 있어 지워지지 않는다 — 아래 경고로 남는다.
 #   2) `Bin` 바로 아래의 옛 자리 산출물 — 모듈 DLL · PDB · 매니페스트(지금은 `Bin/Modules`), 테스트 실행 파일(지금은 `TestBin`),
 #      `Bin/Symbols` 에 같은 이름이 생긴 PDB(옛 자리).
