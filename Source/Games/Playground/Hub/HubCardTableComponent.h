@@ -20,7 +20,7 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Kits/Feature/Network/NetTurnRelay/TurnRelay.h"
-#include "GameFramework/Kits/Genre/Casual/CardGame/SheddingCard/SheddingCardGame.h"
+#include "GameFramework/Kits/Genre/Casual/CardGame/SheddingCardGame.h"
 
 namespace sw
 {

@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Genre/Casual/CardGame/Klondike/KlondikeGame.h"
+#include "GameFramework/Kits/Genre/Casual/CardGame/KlondikeGame.h"
 
 #include "Core/Math/MathUtil.h"
 
