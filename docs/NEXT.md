@@ -26,7 +26,7 @@
 | w-cpp-reflect · LT-wt/cppreflect | 파서 정의 · include 를 타깃 속성에서(671f8c8988 · fd2dac7d65 끝), 컴파일 옵션(9d9872a619 끝), 구성 단계 경로 테스트, Core (c) 열거 이름 constexpr 표, 모르는 옵션은 생성 오류 |
 | w-enum-meta · LT-wt/enummeta | ENUM 잎 헤더 · 열거형 둘(2898146f6c 끝), 키트별 현지화 표(모듈 단위 탑재 · 수집 대상 · 쿠킹 · 표 이전), AssetTypeDef 접미사 중복(AudioPlayableAsset) |
 | w-gf-dev · LT-wt/gfdev | 개발 등록 매크로 배포 컴파일 오류(1994afb762 끝), DevTools 확장자 글 · `.hlsli`, 내비 베이크 테스트 되살리기 |
-| w-pimpl · LT-wt/pimpl | P1 Jolt 넷 · P3 ImGuiRenderer · P4 백엔드 팩토리 |
+| w-pimpl · LT-wt/pimpl | P1 · P3 · P4(bf52a2d679 · 32ac84a437 · ac9a1f1bf7 끝), 렌더 R4 나머지(쿠킹 컴파일 스트리핑 · 패치 팩 색인 합치기 · 색인 첫 사용처) |
 | w-devtools-merge · LT-wt/devtoolsmerge | T1(605e855120 · 1eeddfc3ae 끝), PE 헤더 읽기를 한 곳에 두고 findBoundImportLibrary 를 ModuleReload 로, 이름만 쓰이는 단일 .cpp 헤더 합치기 |
 | w-server-subsystem · LT-wt/serversub | 6 절 서버 서비스를 모듈 서브시스템으로 |
 | w-shaderreload · LT-wt/shaderreload | 3 절 셰이더 리로드 시나리오(개발 빌드에서 켜기 · Ctrl+F8 단축키 경로 · 격리 해제), 10 절 `shortcut:` 정리 |
@@ -34,7 +34,6 @@
 
 ### 아직 아무도 맡지 않은 몫 [코드]
 
-- 렌더 R4 나머지: 쿠킹 단계 컴파일 스트리핑 · 정점 형식 변형 제거, 패치 · 모드 팩의 materialindex 합치기, 색인의 첫 사용처.
 - `mesh_modifier.hlsli` 노이즈 복사본이 CPU(Core ValueNoise)와 비트가 같은지.
 - 보류(조사 먼저): ReflectionValidation → TypeInfo, PROPERTY 검증기를 개발 전용으로 빼도 배포 안전이 지켜지는가.
 - AssertDialog 합치기 — 사용자에게 물을 것.
