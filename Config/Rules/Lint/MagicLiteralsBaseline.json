@@ -149,7 +149,6 @@
     "Source/Editor/Common/Asset/ModelImport/ModelImportVrm.cpp": {"minus-one": 1},
     "Source/Editor/Common/Asset/ModelImport/ModelImporter.cpp": {"minus-one": 2, "float": 2, "integer": 8},
     "Source/Editor/Common/Asset/ModelImport/ToonMaterialDef.cpp": {"float": 7},
-    "Source/Editor/Common/Asset/ModelImport/VrmRuntimeAssets.cpp": {"minus-one": 1},
     "Source/Editor/Common/Asset/Texture/HeightfieldImporter.cpp": {"integer": 2},
     "Source/Editor/Common/Asset/Texture/TextureImporter.cpp": {"integer": 2},
     "Source/Editor/Common/Backend/EditorUICapture.cpp": {"integer": 1},

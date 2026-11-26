@@ -1,7 +1,7 @@
 /**
  * @file ModelImportVrm.cpp
  * @brief 모델 임포트의 VRM 아바타 정보(humanoid · 표정 · 스프링 본 · 1인칭) 읽기와 `.avatar.xml` · 얼굴 리그(`.facial.xml`) · 후처리 리그(`.rig.xml`) 쓰기입니다.
- * @details 값의 해석은 `VrmAvatarDef`, 런타임 형식으로 옮기기는 `VrmRuntimeAssets` 가 합니다.
+ * @details 값의 해석은 `VrmAvatarDef`, 런타임 형식으로 옮기기도 `VrmAvatarDef`(`makeFacialRigXML` · `makeSpringRigXML`) 가 합니다.
  */
 #include "pch.h"
 
@@ -18,7 +18,6 @@
 #include "Editor/Common/Asset/ModelImport/ModelImportUtil.h"
 #include "Editor/Common/Asset/ModelImport/ModelImporter.h"
 #include "Editor/Common/Asset/ModelImport/VrmAvatarDef.h"
-#include "Editor/Common/Asset/ModelImport/VrmRuntimeAssets.h"
 
 #include "Engine/Animation/Facial/FacialRig.h"
 #include "Engine/Animation/Rig/RigAsset.h"
@@ -183,25 +182,25 @@ namespace sw::editor
 
         // 런타임이 읽는 형식 — 표정은 얼굴 리그, 스프링 본은 후처리 리그(VrmRuntimeAssets). 캐릭터는 이 파일을 다른 얼굴 리그 · 리그처럼 참조한다.
         vector<string> listNotConverted;
-        if ( VrmRuntimeAssets::hasFacialRig( result._avatar ) )
+        if ( result._avatar.hasFacialRig() )
         {
             fileNameBuilder.clear();
             fileNameBuilder.appendFormat( "%#%#", stem, FacialRig::kExtension );
             const AbsolutePath facialPath = sideFolder.join( fileNameBuilder.view() );
-            if ( ImportedAssetStore::writeResultText( facialPath, VrmRuntimeAssets::makeFacialRigXML( result._avatar, &listNotConverted ) ) == false )
+            if ( ImportedAssetStore::writeResultText( facialPath, result._avatar.makeFacialRigXML( &listNotConverted ) ) == false )
             {
                 SW_LOG_ERROR_ID( "ModelImporter.FailedWriteFacialRig", "Failed to write facial rig %#", facialPath.c_str() );
                 return false;
             }
             SW_LOG_INFO_ID( "ModelImporter.VRMExpressions", "VRM '%#': expressions -> %#", sourcePath, facialPath.c_str() );
         }
-        const bool bHasSpringRig = result._bSkinned != SW_FALSE && VrmRuntimeAssets::hasSpringRig( result._avatar, result._skeleton );
+        const bool bHasSpringRig = result._bSkinned != SW_FALSE && result._avatar.hasSpringRig( result._skeleton );
         if ( bHasSpringRig )
         {
             fileNameBuilder.clear();
             fileNameBuilder.appendFormat( "%#%#", stem, RigAsset::kExtension );
             const AbsolutePath rigPath = sideFolder.join( fileNameBuilder.view() );
-            if ( ImportedAssetStore::writeResultText( rigPath, VrmRuntimeAssets::makeSpringRigXML( result._avatar, result._skeleton, &listNotConverted ) ) == false )
+            if ( ImportedAssetStore::writeResultText( rigPath, result._avatar.makeSpringRigXML( result._skeleton, &listNotConverted ) ) == false )
             {
                 SW_LOG_ERROR_ID( "ModelImporter.FailedWriteSpringRig", "Failed to write spring rig %#", rigPath.c_str() );
                 return false;
@@ -277,9 +276,9 @@ namespace sw::editor
             meshSection.appendAttribute( "_materialPath", string_view{ getMaterialOf( section ) } );
             meshSection.appendAttribute( "_sectionName", string_view{ section._sectionName } );
         }
-        if ( VrmRuntimeAssets::hasFacialRig( result._avatar ) )
+        if ( result._avatar.hasFacialRig() )
             Internal::appendComponent( listComponent, "FacialAnimationComponent" ).appendAttribute( "_facialRigPath", string_view{ getResourceOf( FacialRig::kExtension ) } );
-        if ( VrmRuntimeAssets::hasSpringRig( result._avatar, result._skeleton ) )
+        if ( result._avatar.hasSpringRig( result._skeleton ) )
             Internal::appendComponent( listComponent, "PoseModifierComponent" ).appendAttribute( "_rigPath", string_view{ getResourceOf( RigAsset::kExtension ) } );
 
         if ( bMissingMaterial )
