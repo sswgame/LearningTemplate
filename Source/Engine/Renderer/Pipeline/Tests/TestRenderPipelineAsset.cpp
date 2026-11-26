@@ -703,6 +703,7 @@ SW_TEST_CASE( RenderPipelineAssetTest, NamedComputeBindingTakesValues )
 /**
  * @brief [RenderPipelineAssetTest] 풀스크린 패스: 이름 바인딩으로 입력 · 출력 기록 · 값을 PassCB 칸 이름으로 받는다. 역할 바인딩 · 셰이더 없음 · 제 출력 읽기 · 칸 넘침은 읽기 오류다
  * @details 변이: 값의 칸 이름 해석(`resolvePass` 의 `_resolvedConstant`)을 지우면 첫 단언 묶음이 지고, 풀스크린 검증 묶음을 지우면 거절 넷이 읽힌다.
+ *          컴퓨트의 루트 상수 상한(`PassNamedRootConstantsFull`)을 풀스크린에도 걸면 마지막 거절에서 기대하지 않은 오류 로그로 진다(PassCB 칸은 루트 상수가 아니다).
  */
 SW_TEST_CASE( RenderPipelineAssetTest, FullscreenPassBindsByName )
 {

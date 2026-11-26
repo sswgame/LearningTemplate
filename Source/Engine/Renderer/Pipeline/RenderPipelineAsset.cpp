@@ -588,7 +588,8 @@ namespace sw
                                 report( "RenderPipelineAsset.PassValueDuplicated", pass, "a _listValue name is written twice" );
                         }
                     }
-                    if ( bNamed && pass.countNamedRootConstants() > shaderslot::kRootConstantDwords )
+                    // 루트 상수는 컴퓨트 패스의 칸이다. 풀스크린 패스는 PassCB 끝 칸(위 `kMaxNamedPassCBParams`)이라 이 상한을 걸면 맞는 패스도 거절한다.
+                    if ( bNamed && bFullscreen == false && pass.countNamedRootConstants() > shaderslot::kRootConstantDwords )
                         report( "RenderPipelineAsset.PassNamedRootConstantsFull", pass, "sizes, output, output history, inputs and values do not fit the root constants (SW_ROOT_DWORD_COUNT)" );
                     const bool bHasOptionalStage = pass._geometryEntryPoint.empty() == false || pass._hullEntryPoint.empty() == false || pass._domainEntryPoint.empty() == false;
                     if ( pass._hullEntryPoint.empty() != pass._domainEntryPoint.empty() )
