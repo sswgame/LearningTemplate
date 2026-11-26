@@ -30,8 +30,8 @@ namespace sw
             static void copyDebugSymbolsIfPresent( const AbsolutePath& originalModulePath, const AbsolutePath& shadowModulePath )
             {
                 // 원본 심볼은 Bin/Symbols 에, 섀도 복사본의 심볼은 그 복사본 옆에 둔다.
-                const AbsolutePath originalDebugPath = ModuleLibraryUtil::findBuiltDebugSymbolPath( originalModulePath );
-                const AbsolutePath shadowDebugPath   = ModuleLibraryUtil::getDebugSymbolPath( shadowModulePath );
+                const AbsolutePath originalDebugPath = ModuleShadowCopy::findBuiltDebugSymbolPath( originalModulePath );
+                const AbsolutePath shadowDebugPath   = ModuleShadowCopy::getDebugSymbolPath( shadowModulePath );
                 if ( originalDebugPath.empty() )
                     return;
 
@@ -224,7 +224,7 @@ namespace sw
         if ( shadowPath.empty() )
             return;
         ModuleShadowCopyInternal::tryDeleteFile( shadowPath );
-        ModuleShadowCopyInternal::tryDeleteFile( ModuleLibraryUtil::getDebugSymbolPath( shadowPath ) );
+        ModuleShadowCopyInternal::tryDeleteFile( getDebugSymbolPath( shadowPath ) );
 #if defined( SW_PLATFORM_WINDOWS )
         // Windows 복사본은 제 폴더(`<모듈>_<번호>/<세대 이름>.dll`)에 있다 — 비었으면 폴더도 지운다(아직 매핑된 것이 남으면 종료 정리 · 주인 정리가 거둔다).
         const AbsolutePath   directoryPath = shadowPath.getParent();
@@ -232,6 +232,38 @@ namespace sw
         if ( FileUtil::isPathUnderRoot( getCopyDirectory().str(), directoryPath.str() ) && FileUtil::collectFiles( directoryPath, "", listLeftFile, false ) && listLeftFile.empty() )
             (void)FileUtil::removeDirectory( directoryPath );
 #endif
+    }
+
+    AbsolutePath ModuleShadowCopy::getDebugSymbolPath( const AbsolutePath& libraryPath )
+    {
+#if defined( SW_PLATFORM_WINDOWS )
+        return libraryPath.removeExtension().appendSuffix( ".pdb" );
+#elif defined( SW_PLATFORM_POSIX )
+        return libraryPath.removeExtension().appendSuffix( ".debug" );
+#else
+    #error "Unsupported platform"
+#endif
+    }
+
+    AbsolutePath ModuleShadowCopy::findBuiltDebugSymbolPath( const AbsolutePath& libraryPath )
+    {
+        const AbsolutePath besideLibrary = getDebugSymbolPath( libraryPath );
+        string_view        fileName;
+        FileUtil::getFileNamePart( besideLibrary.str(), fileName );
+        AbsolutePath symbolDirectory = ProcessRoots::get()._binary.join( ModuleLibraryUtil::kSymbolFolder );
+        // 옮긴 모듈(게임 팩)은 그 폴더에서 낸 라이브러리일 때만 `Symbols/<폴더>` 다 — 같은 이름의 `Bin/Symbols/SWGame.pdb` 는 활성 게임의 것이다.
+        string movedBaseName;
+        string movedDirectoryName;
+        if ( ModuleLibraryUtil::getModuleSubdirectory( movedBaseName, movedDirectoryName ) )
+        {
+            const AbsolutePath movedDirectory = ProcessRoots::get()._binary.join( movedDirectoryName );
+            if ( FileUtil::isSameDiskPath( libraryPath.getParent().str(), movedDirectory.str() ) )
+                symbolDirectory = symbolDirectory.join( movedDirectoryName );
+        }
+        AbsolutePath found = symbolDirectory.join( fileName );
+        if ( FileUtil::exists( found ) == false )
+            found = FileUtil::exists( besideLibrary ) ? besideLibrary : AbsolutePath{};
+        return found;
     }
 
     string ModuleShadowCopy::makeCopyName( string_view moduleName, uint32 serial )

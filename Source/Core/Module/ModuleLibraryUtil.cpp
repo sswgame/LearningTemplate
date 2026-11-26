@@ -114,37 +114,6 @@ namespace sw
         return string( sb.view() );
     }
 
-    AbsolutePath ModuleLibraryUtil::getDebugSymbolPath( const AbsolutePath& libraryPath )
-    {
-#if defined( SW_PLATFORM_WINDOWS )
-        return libraryPath.removeExtension().appendSuffix( ".pdb" );
-#elif defined( SW_PLATFORM_POSIX )
-        return libraryPath.removeExtension().appendSuffix( ".debug" );
-#else
-    #error "Unsupported platform"
-#endif
-    }
-
-    AbsolutePath ModuleLibraryUtil::findBuiltDebugSymbolPath( const AbsolutePath& libraryPath )
-    {
-        const AbsolutePath besideLibrary = getDebugSymbolPath( libraryPath );
-        string_view        fileName;
-        FileUtil::getFileNamePart( besideLibrary.str(), fileName );
-        AbsolutePath symbolDirectory = ProcessRoots::get()._binary.join( kSymbolFolder );
-        // 옮긴 모듈(게임 팩)은 그 폴더에서 낸 라이브러리일 때만 `Symbols/<폴더>` 다 — 같은 이름의 `Bin/Symbols/SWGame.pdb` 는 활성 게임의 것이다.
-        const ModuleSubdirectory& moved = s_moduleSubdirectory;
-        if ( moved._arrDirectory[0] != '\0' )
-        {
-            const AbsolutePath movedDirectory = ProcessRoots::get()._binary.join( moved._arrDirectory );
-            if ( FileUtil::isSameDiskPath( libraryPath.getParent().str(), movedDirectory.str() ) )
-                symbolDirectory = symbolDirectory.join( moved._arrDirectory );
-        }
-        AbsolutePath found = symbolDirectory.join( fileName );
-        if ( FileUtil::exists( found ) == false )
-            found = FileUtil::exists( besideLibrary ) ? besideLibrary : AbsolutePath{};
-        return found;
-    }
-
     AbsolutePath ModuleLibraryUtil::getModuleDirectory()
     {
         return ProcessRoots::get()._binary.join( kModuleFolder );

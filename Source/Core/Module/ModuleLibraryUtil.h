@@ -24,7 +24,7 @@ namespace sw
     struct SW_API ModuleLibraryUtil
     {
         // ------------------------------------------------------------------------------
-        // 1) 이름. 플랫폼 접두어, 확장자, 디버그 심볼 파일.
+        // 1) 이름. 플랫폼 접두어, 확장자.
         // ------------------------------------------------------------------------------
         /** @brief 플랫폼의 공유 라이브러리 접두어(예: lib)를 반환합니다. */
         static string_view getSharedLibraryPrefix();
@@ -32,17 +32,6 @@ namespace sw
         static string_view getSharedLibraryExtension();
         /** @brief baseName 에 접두어와 확장자를 붙여 공유 라이브러리 이름을 만듭니다. */
         static string formatSharedLibraryName( string_view baseName );
-        /**
-         * @brief 라이브러리 옆에 있는 디버그 심볼 파일의 경로를 반환합니다(섀도 복사본의 심볼 위치).
-         * @note Windows 는 `.pdb`, Linux 는 `.debug` 입니다(없으면 DWARF 가 .so 안에 들어 있는 경우가 많습니다).
-         */
-        static AbsolutePath getDebugSymbolPath( const AbsolutePath& libraryPath );
-        /**
-         * @brief 빌드가 낸 라이브러리의 디버그 심볼 파일을 찾습니다. `Bin/Symbols/<이름>` 을 먼저 보고, 없으면 라이브러리 옆을 봅니다. 둘 다 없으면 빈 문자열을 반환합니다.
-         * @details Dev 빌드는 PDB 를 `Bin/Symbols` 에 낸다(`cmake/Modules/Build/BuildLayout.cmake`). `setModuleSubdirectory` 로 옮긴 모듈은 `Bin/Symbols/<그 폴더>` 다 —
-         *          게임 팩마다 PDB 이름이 같아(`SWGame.pdb`) 폴더로 가른다.
-         */
-        static AbsolutePath findBuiltDebugSymbolPath( const AbsolutePath& libraryPath );
 
         // ------------------------------------------------------------------------------
         // 1-1) 위치. 모듈 DLL 은 `Bin/Modules`, 엔진, GameFramework, 서드파티 DLL 은 `Bin` 에 둔다.
