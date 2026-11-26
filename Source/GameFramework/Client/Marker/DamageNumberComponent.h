@@ -21,7 +21,7 @@ namespace sw
      * @details 숫자는 같은 오브젝트의 `WidgetComponent`(Screen 모드의 화면 마커)에 넣는 글 위젯 하나이다.
      *          스타일 클래스는 `damage` 이며 테마 시트가 크기, 굵기, 외곽선을 정한다. 색은 `_color` 이고, 불투명도는 `_alpha` 이며 수명에 따라 1 에서 0 으로 줄어든다.
      *          화면 공간이라 거리와 상관없이 같은 크기로 선명하다.
-     *          값, 색, 알파는 틱 **뒤에** 넣는다. 위젯은 게임 스레드만 고칠 수 있기 때문이다.
+     *          값, 색, 알파는 틱 뒤에 넣는다. 위젯은 게임 스레드만 고칠 수 있기 때문이다.
      *          피해를 내는 곳은 `spawnNumber` 하나만 쓴다. 마커와 숫자 컴포넌트를 함께 붙여 준다.
      */
     REFLECT( Category = "UI", DisplayName = "Damage Number Component", Tooltip = "Floating damage number drawn by the object's screen-marker WidgetComponent" )

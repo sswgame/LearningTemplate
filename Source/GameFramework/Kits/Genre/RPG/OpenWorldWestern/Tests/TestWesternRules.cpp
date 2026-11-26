@@ -1082,7 +1082,7 @@ SW_TEST_CASE_F( WesternCatalogBase, LevelTablesAreSorted )
 }
 
 /**
- * @brief [WesternCatalogTest] 결함: 뒤집힌 명예 범위도 세력을 만들어 값을 뒤집힌 범위로 잘랐다 — 넣지 않는다. 이름 없는 단계도 찾기에서 빈 이름에 걸렸다 — 필수다
+ * @brief [WesternCatalogTest] 결함: 뒤집힌 명예 범위도 세력을 만들어 값을 뒤집힌 범위로 잘랐으므로 넣지 않는다. 이름 없는 단계도 찾기에서 빈 이름에 걸렸다 — 필수다
  */
 SW_TEST_CASE( WesternCatalogTest, BrokenHonorIsNotAdded )
 {

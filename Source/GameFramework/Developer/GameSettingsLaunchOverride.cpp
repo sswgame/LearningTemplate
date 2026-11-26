@@ -6,7 +6,7 @@
 #include "GameFramework/Runtime/Foundation/GameData/GameSettings.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameSettingsOverride.h"
 
-// 개발 구성에만 있다(GameFrameworkDev 모듈 — 매니페스트가 배포에서 끈다) — 배포에는 이 모듈이 없어 게임은 팩의 gamesettings 그대로 선다(끝점 · 서버 주소는 운영자가 gamesettings 에 적는 값이다).
+// 개발 구성에만 있다(GameFrameworkDev 모듈, 매니페스트가 배포에서 끈다). 배포에는 이 모듈이 없어 게임은 팩의 gamesettings 그대로 선다(끝점 · 서버 주소는 운영자가 gamesettings 에 적는 값이다).
 namespace sw
 {
     /** @brief `-gv_onlineServerAddress=<주소:포트>`: gamesettings 의 온라인 서버 대신 붙을 주소입니다(로컬 실행 `Scripts/net/online_local_run.py` · 자동화). */

@@ -4,7 +4,7 @@
  *        봉화 · 야영지를 쓰게 하고, 퀘스트 보상을 주고, 자동 저장에 지역 이동 · 보스 앞 · 체크포인트를 알립니다.
  * @details 키트 세 갈래의 가운데다: 규칙(키트 루트의 `AdventureCampaign` · `AdventureRegionCatalog`)을 들고 씬과 잇는다. 입력 읽기 · 모습은 클라이언트 모듈
  *          (`GF_Client_ActionAdventure` 의 `AdventureAvatarComponent`)이 이 디렉터의 명령 · 읽기 API 로만 다룬다 — 전용 서버는 그 모듈을 짓지 않는다.
- *          지역 전투는 이 디렉터가 돌리지 않는다 — 전투 키트를 섞는 것은 게임이다. 전투를 도는 쪽은 같은 오브젝트의 뒤에 붙어 기다리는 전투(`getPendingEncounter`)를 열고(`openEncounter` —
+ *          지역 전투는 이 디렉터가 돌리지 않는다. 전투 키트를 섞는 것은 게임이다. 전투를 도는 쪽은 같은 오브젝트의 뒤에 붙어 기다리는 전투(`getPendingEncounter`)를 열고(`openEncounter` —
  *          게이트가 닫힌다) 피해(`applyPlayerDamage`) · 보스 앞(`announceBoss`) · 클리어(`completeEncounter`)를 알린다. 도는 쪽이 없으면 게이트는 닫히지 않는다(탐험만 한다).
  */
 #pragma once
@@ -35,7 +35,7 @@ namespace sw
 
     /**
      * @class AdventureGameModeComponent
-     * @brief 지역을 걷는 액션 어드벤처 한 판입니다. 같은 오브젝트의 월드 상태(`GameStateComponent`, 맨 앞 — 깃발)와 플레이어 상태 오브젝트(`_playerState` — 조종자)의 퀘스트 일지(`QuestLogComponent`)를 열고 지갑(`WalletComponent`)을 쓴다.
+     * @brief 지역을 걷는 액션 어드벤처 한 판입니다. 같은 오브젝트의 월드 상태(`GameStateComponent`, 맨 앞, 깃발)와 플레이어 상태 오브젝트(`_playerState` — 조종자)의 퀘스트 일지(`QuestLogComponent`)를 열고 지갑(`WalletComponent`)을 쓴다.
      * @details 지역 표(`AdventureRegionCatalog`) · 퀘스트(`QuestCatalog`)는 게임 기능 `ActionAdventure` 가 미니게임 범위에 건 것을 같이 쥔다(확장 팩이 층으로 항목을 더한다).
      *          - 걷기: 지역 밖으로는 나가지 못한다(지역이 땅이다). 전투가 열린 동안에는 그 지역 경계 안에 묶인다(게이트가 닫힌다).
      *          - 지역 진입: 진행 규칙에 알리고 자동 저장에 지역 이동을 알린다. 깨지 않은 전투가 있으면 기다리는 전투로 둔다.

@@ -3,7 +3,7 @@
  * @brief 농장 생활 키트(`GF_Farming`)의 디렉터 — 농부 이동, 도구, 체력, 시간, 가게, 출하, 수면, 날씨, 자동 농부, 로그를 맡습니다.
  * @details 키트 세 갈래의 가운데다: 규칙(키트 루트 — 밭 · 출하함 · 작물 카탈로그)을 들고 씬과 잇는다. 밭 타일의 모습 · 농부 몸 · 카메라 초점은 클라이언트 모듈(`GF_Client_Farming` 의
  *          `FarmFieldViewComponent` · `FarmSoilComponent` · `FarmCropComponent` · `FarmerComponent`)이 이 디렉터의 읽기 API 로만 다룬다 — 전용 서버는 그 모듈을 짓지 않는다.
- *          농부가 **무엇을 누르는가는 농부 폰의 의도**(`PawnComponent`. 플레이어 조종자 또는 `FarmAutoFarmerAIComponent` 가 낸다)이고 디렉터는 입력 맵을 읽지 않는다.
+ *          농부가 무엇을 누르는가는 농부 폰의 의도(`PawnComponent`. 플레이어 조종자 또는 `FarmAutoFarmerAIComponent` 가 낸다)이고 디렉터는 입력 맵을 읽지 않는다.
  *          해는 Runtime `DaylightComponent` 가 `readHourOfDay` 로 읽는다. 씬에 하나만 둔다.
  *
  *          틱 규칙: 디렉터는 `TickGroup::PrePhysics` 에서 상태를 쓰고 뷰는 `PostUpdate` 에서 읽는다.
@@ -68,7 +68,7 @@ namespace sw
      * @class FarmGameModeComponent
      * @brief 농장 한 판을 진행합니다. 플레이가 시작되면 작물 카탈로그를 읽고 밭, 달력, 인벤토리를 새로 만듭니다(봄 1일, 첫 씨앗 10개).
      * @details 농장 상태(밭, 출하함, 농부)는 `serializeGameState` 와 상태 칸으로 게임 상태 스냅샷의 컴포넌트 섹션에 실려 핫 리로드와 세이브를 넘긴다.
-     *          **빙의**: 농부(씬의 `_farmer` 오브젝트의 폰)는 자동 빙의(`Player0`)로 플레이어 조종자가 조종하다가, 자동 플레이 스위치가 켜지면 틱이 끝난 뒤 플러시에서
+     *          빙의: 농부(씬의 `_farmer` 오브젝트의 폰)는 자동 빙의(`Player0`)로 플레이어 조종자가 조종하다가, 자동 플레이 스위치가 켜지면 틱이 끝난 뒤 플러시에서
      *          자동 농부 AI(`_autoFarmerPrefab`)가, 꺼지면 다시 플레이어 조종자가 조종한다. 디렉터 안에 자동 플레이 분기는 없다.
      */
     REFLECT( Category = "Farming", DisplayName = "Farm Game Mode", Tooltip = "Runs the farm rules, the farmer, time and weather" )

@@ -16,7 +16,7 @@ namespace sw
     /**
      * @class WesternHUDViewModel
      * @brief 서부극 플레이어 HUD 의 뷰모델입니다. `WesternRiderViewComponent` 가 소유하고 `IHUDViewModelBinder` 로 HUD 화면에 겁니다.
-     * @details 칸은 승마의 것이라 키트가 가집니다 — 슈터의 무기 이름 · 체력 칸을 빌려 쓰지 않습니다(한 HUD 에 뷰모델 하나 — `HUDControllerComponent::attachViewModel`).
+     * @details 칸은 승마의 것이라 키트가 가집니다. 슈터의 무기 이름 · 체력 칸을 빌려 쓰지 않습니다(한 HUD 에 뷰모델 하나, `HUDControllerComponent::attachViewModel`).
      *          세터는 값이 같으면 알리지 않으므로 매 프레임 불러도 바인딩은 바뀐 칸만 씁니다. 게임 스레드만.
      */
     REFLECT( DisplayName = "Western HUD View Model" )

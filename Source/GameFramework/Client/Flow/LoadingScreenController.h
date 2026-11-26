@@ -51,16 +51,16 @@ namespace sw
      * @brief 로딩 화면과 화면 페이드를 그립니다. 언리얼 Lyra 의 `ULoadingScreenManager` 에 해당합니다.
      * @details 게임 인스턴스 서브시스템이다(`game::findSubsystem<LoadingScreenController>()`). `GameInstance` 가 매 프레임 `update` 한다.
      *          초기화(`onInitialize` 앞)에서 gamesettings 의 `_loadingScreen` 문서와 UI 시스템을 묶어, 첫 씬 요청이 로딩 화면을 띄울 수 있다.
-     *          - **로딩 화면**: `beginLoading` 이 Loading 층 화면(문서 `_documentPath`)을 연다. 이 화면은 입력을 막고 Back 으로 닫히지 않는다.
+     *          - 로딩 화면: `beginLoading` 이 Loading 층 화면(문서 `_documentPath`)을 연다. 이 화면은 입력을 막고 Back 으로 닫히지 않는다.
      *            `update` 는 로드가 끝났고 최소 표시 시간이 지났으면 화면을 닫고 페이드 인을 시작한다.
      *            닫기 애니메이션 역할이며, 검은 화면에서 씬이 드러난다. 페이드는 입력을 막지 않는다.
      *            문서에 `Spinner` 가 있으면 돌리고, `Tip` 이 있으면 팁 하나를 넣는다. 팁 키는 `findStringByText` 로 문자열을 찾는다(없으면 원문 그대로).
      *            진행률은 부르는 쪽이 넘긴다(`update` 의 `loadProgress` — 씬 매니저의 프리로드 진행 `SceneManager::tryGetLoadProgress`). 문서에 `Progress` 슬라이더가 있으면
      *            값이 있을 때 보이고(입력은 받지 않는다) 없으면 접는다.
      *            팁 목록은 gamesettings 의 `_loadingTips` 파일(`loadTipsFromResource`)이 채운다.
-     *          - **페이드**: `ScreenFade::getOverlayAlpha` 가 0 보다 크면 Overlay 층(입력 없음, 로딩 화면 아래)에 페이드 판 문서(`UIEngineDocuments::_screenFade`)를 띄우고 불투명도를 그 알파로 둔다.
+     *          - 페이드: `ScreenFade::getOverlayAlpha` 가 0 보다 크면 Overlay 층(입력 없음, 로딩 화면 아래)에 페이드 판 문서(`UIEngineDocuments::_screenFade`)를 띄우고 불투명도를 그 알파로 둔다.
      *            0 이 되면 닫는다.
-     *          - **실패 알림**: 게임 이동 씬 로드가 실패하면(`SceneLoadCompletedEvent` — 앞 씬에 남는다) 엔진 확인 대화 상자로 알리고 다시 시도할지 묻는다. 뒤 요청에 밀린 로드는
+     *          - 실패 알림: 게임 이동 씬 로드가 실패하면(`SceneLoadCompletedEvent` — 앞 씬에 남는다) 엔진 확인 대화 상자로 알리고 다시 시도할지 묻는다. 뒤 요청에 밀린 로드는
      *            실패가 아니라 알리지 않고, 그 뒤 로드가 서면 떠 있던 알림을 닫는다. 저장 · 불러오기의 실패(`SaveGameSavedEvent` · `SaveGameLoadedEvent`)도 같은 대화 상자로 알리고
      *            같은 슬롯으로 다시 시도한다(까닭이 씬 로드 실패면 그 알림 하나만 둔다).
      *          UI 시스템이 없으면(전용 서버, 헤드리스) 아무것도 하지 않는다. 게임 스레드에서만 써야 한다.

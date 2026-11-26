@@ -35,7 +35,7 @@ namespace sw
      * @class SkirmishGameModeComponent
      * @brief 1 대 1 한 판을 진행합니다. 플레이가 시작되면 유닛 데이터를 읽고 판을 엽니다. 사람(파랑) 대 컴퓨터이며, 자동 플레이면 컴퓨터 대 컴퓨터입니다.
      * @details 판(월드, AI 진행, 속도)은 PROPERTY 가 아니라 `writeState` 로 게임 상태 스냅샷의 컴포넌트 섹션에 실려 핫 리로드와 세이브를 넘긴다.
-     *          움직이던 유닛은 앞 명령의 경로를 다시 구한다. **고른 유닛 · 부대는 판 상태가 아니다** — 이 화면 사람의 것이라 클라이언트의 명령 입력 컴포넌트가 자기 구간에 싣는다
+     *          움직이던 유닛은 앞 명령의 경로를 다시 구한다. 고른 유닛 · 부대는 판 상태가 아니다 — 이 화면 사람의 것이라 클라이언트의 명령 입력 컴포넌트가 자기 구간에 싣는다
      *          (락스텝 체크섬 · 서버의 판 상태에 화면 상태가 섞이지 않는다).
      */
     REFLECT( Category = "RealTimeStrategy", DisplayName = "Skirmish Game Mode", Tooltip = "Runs the one-on-one skirmish match and takes the player commands" )

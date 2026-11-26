@@ -205,8 +205,8 @@ namespace sw
         if ( input._bDashPressed == SW_TRUE && _dashCooldown.isActive() == false )
         {
             _dashCooldown.start( _settings._dashCooldownSeconds );
-            // **줄이지 않는다.** 그냥 대입하면 맞아서 얻은 0.7초짜리 무적이 대시 한 번에
-            // 0.22초로 **깎인다.** 대시가 피해를 덜 받게 해야 하는데 오히려 더 받게 된다.
+            // 줄이지 않는다. 그냥 대입하면 맞아서 얻은 0.7초짜리 무적이 대시 한 번에
+            // 0.22초로 깎인다. 대시가 피해를 덜 받게 해야 하는데 오히려 더 받게 된다.
             _invulnerable.extendTo( _settings._dashInvulnerableSeconds );
             result._bDashStarted = SW_TRUE;
         }

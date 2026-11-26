@@ -1,4 +1,4 @@
-// ScheduleDebugViewModelTest — 살아 있는 일정 시스템에서 모으는 값: NPC 목록 · 고른 NPC 의 타임라인 · 설명 글, 미리 볼 시각의 시계 따라가기(지역 일정 시스템 — nogpu).
+// ScheduleDebugViewModelTest: 살아 있는 일정 시스템에서 모으는 값: NPC 목록 · 고른 NPC 의 타임라인 · 설명 글, 미리 볼 시각의 시계 따라가기(지역 일정 시스템 — nogpu).
 #include "pch.h"
 
 #include "Core/Testing/TestFramework.h"

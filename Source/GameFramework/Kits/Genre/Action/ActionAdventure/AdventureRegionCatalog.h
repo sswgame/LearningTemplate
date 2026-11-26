@@ -1,7 +1,7 @@
 /**
  * @file AdventureRegionCatalog.h
  * @brief 액션 어드벤처 한 판의 지역 표(`data/regions.xml`)입니다 — 지역마다 평면 위 사각 경계, 쓰러졌을 때 일어설 자리, 쉬는 자리(야영지), 불 켤 봉화, 전투(홀 · 보스 배치), 들어서면 받는 퀘스트.
- * @details 지역은 겹치지 않는다(읽을 때 거절한다) — 한 자리는 한 지역이다. 확장 팩(DLC)은 이 표에 덮어쓰기 층으로 지역을 더한다(`<Layer>` — `datacataloginheritance.xml` 의 `Region` 열쇠 `id`).
+ * @details 지역은 겹치지 않는다(읽을 때 거절한다). 한 자리는 한 지역이다. 확장 팩(DLC)은 이 표에 덮어쓰기 층으로 지역을 더한다(`<Layer>` — `datacataloginheritance.xml` 의 `Region` 열쇠 `id`).
  *          전투 배치의 종 id 는 전투를 도는 쪽(게임 — 몬스터 표를 아는 키트를 섞는다)의 종 id 이고, 그쪽이 판을 열 때 모두 있는지 본다. 이 키트는 종의 뜻을 모른다.
  */
 #pragma once

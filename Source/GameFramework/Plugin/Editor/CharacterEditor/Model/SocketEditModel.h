@@ -2,7 +2,7 @@
  * @file SocketEditModel.h
  * @brief 소켓 에셋(`*.sockets.xml`) 편집 모델입니다 — 소켓 추가 · 삭제 · 이름 바꾸기 · 부모 · 종류 · 변환 편집, 좌우 대칭, 검증, 되돌리기, 파일 읽기 · 쓰기. ImGui 와 씬을 모릅니다.
  * @details 편집 대상은 사람이 고치는 원본 파일이다(조립 결과가 아니다). 편집은 모두 `SocketSet` 을 직접 고치고, 편집 직전 표를 되돌리기 기록에 넣는다.
- *          저장은 `SocketSet::saveToXMLText` 이며 **적은 필드만** 쓰므로(`SocketFieldBit`), 값을 고치는 편집은 그 필드의 비트를 함께 켠다.
+ *          저장은 `SocketSet::saveToXMLText` 이며 적은 필드만 쓰므로(`SocketFieldBit`), 값을 고치는 편집은 그 필드의 비트를 함께 켠다.
  *          이름을 바꾸면 다른 소켓의 후보 목록(`_listFallback`)이 따라간다. 부모 본 이름 검증은 본 목록(`setBoneNames`)이 있을 때만 한다.
  *          파일을 쓰면 핫 리로드가 같은 파일을 다시 읽는다 — 편집 중 다시 읽기와 겨루지 않게 하는 것(저장 직후 감시 무시 한 번)은 패널 쪽 일이다.
  */

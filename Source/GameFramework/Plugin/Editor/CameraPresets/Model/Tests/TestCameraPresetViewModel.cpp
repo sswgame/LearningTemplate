@@ -1,4 +1,4 @@
-// CameraPresetViewModelTest — 프리셋 파일을 읽어 첫 프리셋을 고르고, 뷰포트 자리는 바뀐 뒤 한 번만 내며, 대상 요가 따르는 프리셋의 자리를 돌린다(엔진 기본 프리셋 파일 — nogpu).
+// CameraPresetViewModelTest: 프리셋 파일을 읽어 첫 프리셋을 고르고, 뷰포트 자리는 바뀐 뒤 한 번만 내며, 대상 요가 따르는 프리셋의 자리를 돌린다(엔진 기본 프리셋 파일 — nogpu).
 #include "pch.h"
 
 #include "Core/Testing/TestFramework.h"

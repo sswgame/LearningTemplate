@@ -1,6 +1,6 @@
 /**
  * @file SkirmishMatch.h
- * @brief RTS 교전 한 판의 규칙 — 지도 데이터(`SkirmishMap` — 절벽 · 시작 지점 · 처음 놓이는 유닛과 자원)로 판을 열고, 컴퓨터 상대(`RTSCommanderAI`), 정리 사냥, 상태 · 승패 로그를 맡습니다.
+ * @brief RTS 교전 한 판의 규칙입니다. 지도 데이터(`SkirmishMap`: 절벽 · 시작 지점 · 처음 놓이는 유닛과 자원)로 판을 열고, 컴퓨터 상대(`RTSCommanderAI`), 정리 사냥, 상태 · 승패 로그를 맡습니다.
  *
  * @details 화면 · 입력을 모르는 순수 규칙이라 엔진 밖 하네스에서 그대로 돌려 볼 수 있습니다(`RTSWorld` · `RTSCommanderAI` 만 씁니다).
  *          사람이 맡은 플레이어(`kHumanPlayer0` · `kHumanPlayer1` 깃발)는 AI 가 돌지 않습니다 — 혼자 하면 0 번만, 2 인 락스텝이면 둘 다, 자동 플레이면 아무도 사람이 아닙니다.

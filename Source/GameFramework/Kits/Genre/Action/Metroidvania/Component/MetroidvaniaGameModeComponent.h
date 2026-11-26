@@ -4,7 +4,7 @@
  * @details 키트 세 갈래의 가운데다: 규칙(키트 루트 — 능력 · 지도 · 부적 · 죽음과 휴식 · 전투원)과 공용 2D 몸(`PlatformerMotor2D`) · 방 그래프(`AreaGraph`)를 들고 씬과 잇는다.
  *          입력 · 모습 · HUD 는 클라이언트 모듈(`GF_Client_Metroidvania` 의 `MetroidvaniaViewComponent`)이 이 디렉터의 명령 · 읽기 API 로만 다룬다 — 전용 서버는 그 모듈을 짓지 않는다.
  *          지형은 씬 데이터(칸 글자 줄 — `PlatformTileMap` 과 같은 글자)이고, 방은 방 그래프의 사각형(x · y · w · h, 칸 좌표)으로 알며, 적 · 줍는 것 · 지점은 카탈로그 id 에 씬의 자리를 맞춘 것이다.
- *          죽으면 가진 통화가 그 자리의 시체가 되고 마지막으로 쉰 곳에서 되살아난다 — 시체 곁에 서면 되찾는다. 목표 플래그(`_goalFlag` — 보스 플래그)가 켜지면 이기고 `_resultHoldSeconds` 뒤
+ *          죽으면 가진 통화가 그 자리의 시체가 되고 마지막으로 쉰 곳에서 되살아난다. 시체 곁에 서면 되찾는다. 목표 플래그(`_goalFlag` — 보스 플래그)가 켜지면 이기고 `_resultHoldSeconds` 뒤
  *          미니게임을 끝낸다(디렉터 계약 ③) — 가진 통화를 결과 값 `money` 로 내보낸다. 도중에 나가도 가진 통화는 나간다.
  *          장르 완결 루프 시나리오: `game/playground/automation/metroidvania_slice.scenario.xml`.
  */

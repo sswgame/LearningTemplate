@@ -235,7 +235,7 @@ namespace sw
         /** @brief 그 위치의 부스트 패드 번호를 반환합니다. 없으면 비어 있습니다. */
         optional<int32> findBoostPadAt( const float3& position ) const;
         /**
-         * @brief 부스트 패드 규칙입니다. 땅에 붙은 차가 패드에 **새로 올라서면** 부스트를 겁니다(같은 패드 위에 있는 동안은 한 번만 겁니다).
+         * @brief 부스트 패드 규칙입니다. 땅에 붙은 차가 패드에 새로 올라서면 부스트를 겁니다(같은 패드 위에 있는 동안은 한 번만 겁니다).
          * @details 경기와 고스트 재생이 이 함수를 같은 순서(차 걸음 다음)로 호출하므로 경로가 같아진다. 부스트를 걸었으면 true 를 반환한다.
          */
         [[nodiscard]] bool applyBoostPad( KinematicVehicleMotor& motor, int32& inoutLastPad ) const;

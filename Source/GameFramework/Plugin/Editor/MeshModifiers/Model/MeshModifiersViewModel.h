@@ -4,7 +4,7 @@
  *        워프 정의 내보내기 경로, 끌기 한 번을 되돌리기 한 줄로 묶는 편집 상태. ImGui 를 모릅니다.
  * @details 스택 · 되돌리기 · 미리보기는 세션(`MeshModifierSession`, 에디터 서브시스템)이 들고, 패널(`MeshModifiersPanel`)은 그리기와 곡선 편집기 화면 상태(`EditorCurveEditorState`)만 든다 —
  *          카메라 프리셋 `Model/` 과 같은 선이다(언리얼 모디파이어 스택 디테일 커스터마이즈의 상태와 Slate 행이 나뉜 것과 같다).
- *          프레임을 넘어 "그 모디파이어" 를 기억하는 자리는 주소가 아니라 `MeshModifier::getInstanceID`(정체성 토큰 — 들고 있어 주소 재사용이 없다)로 비교한다 — 되돌리기는 스택을 새 인스턴스로 다시 짓는다.
+ *          프레임을 넘어 "그 모디파이어" 를 기억하는 자리는 주소가 아니라 `MeshModifier::getInstanceID`(정체성 토큰, 들고 있어 주소 재사용이 없다)로 비교한다 — 되돌리기는 스택을 새 인스턴스로 다시 짓는다.
  */
 #pragma once
 #include "Core/Container/string.h"

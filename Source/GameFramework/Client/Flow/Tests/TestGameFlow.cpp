@@ -188,7 +188,7 @@ SW_TEST_CASE( GameFlowTest, GameWithoutTitleScene )
 }
 
 /**
- * @brief [GameFlowTest] 타이틀 복귀는 하던 게임을 **먼저** 끝내고 타이틀 씬을 요청한다 — 요청 뒤에 시작한 것(로딩 화면 · 타이틀의 음악)은 남는다
+ * @brief [GameFlowTest] 타이틀 복귀는 하던 게임을 먼저 끝내고 타이틀 씬을 요청한다 — 요청 뒤에 시작한 것(로딩 화면 · 타이틀의 음악)은 남는다
  * @details 결함이면 타이틀 씬이 시작한 음악 · 화면이 게임을 끝내는 비우기에 함께 꺼진다. 엔진 이벤트 큐(게임 인스턴스 수명)를 표지로 본다.
  */
 SW_TEST_CASE( GameFlowTest, TitleEndsTheGameBeforeItRequestsTheScene )

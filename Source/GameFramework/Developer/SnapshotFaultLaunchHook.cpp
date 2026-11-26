@@ -4,7 +4,7 @@
 
 #include "GameFramework/Runtime/Foundation/Save/SnapshotFaultHook.h"
 
-// 개발 구성에만 있다(GameFrameworkDev 모듈 — 매니페스트가 배포에서 끈다) — 배포에는 이 모듈이 없어 창구가 없고 복원은 결함 없이 돈다.
+// 개발 구성에만 있다(GameFrameworkDev 모듈, 매니페스트가 배포에서 끈다). 배포에는 이 모듈이 없어 창구가 없고 복원은 결함 없이 돈다.
 namespace sw
 {
     /**

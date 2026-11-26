@@ -60,13 +60,13 @@ namespace sw::editor
         PROPERTY( Name = "previewPreset", Required )
         string _previewPresetID{};
         /**
-         * @brief 미리보기 몸에 얹어 볼 제약 리그(`*.rig.xml` — 스트라이드 워핑 · 양손 IK 같은 후처리)의 경로입니다. **선택 칸**: 비면 게임에 미리볼 리그가 없다는 뜻이고 창은 리그 단추를 그리지 않는다.
+         * @brief 미리보기 몸에 얹어 볼 제약 리그(`*.rig.xml` — 스트라이드 워핑 · 양손 IK 같은 후처리)의 경로입니다. 선택 칸: 비면 게임에 미리볼 리그가 없다는 뜻이고 창은 리그 단추를 그리지 않는다.
          * @details 일곱 칸이 필수인 것은 없으면 창이 일하지 못하기 때문이고, 리그는 없어도 창이 일하므로 선택이다(없다고 다른 게임의 리그를 쓰지 않는다).
          */
         PROPERTY( Name = "rig" )
         AssetRef<RigAsset> _rigPath{};
         /**
-         * @brief 미리보기 몸이 얼굴을 닦는 애니 알림 이벤트(`CharacterBodyDynamicsComponent::_wipeEvent`)입니다. **선택 칸**: 비면 미리보기 몸은 닦지 않는다.
+         * @brief 미리보기 몸이 얼굴을 닦는 애니 알림 이벤트(`CharacterBodyDynamicsComponent::_wipeEvent`)입니다. 선택 칸: 비면 미리보기 몸은 닦지 않는다.
          * @details 창은 몸을 코드로 세워 컴포넌트 칸을 데이터가 채우지 못한다 — 이벤트 이름은 애니 셋의 것이라 셋 옆(이 줄)에 적는다.
          */
         PROPERTY( Name = "wipeEvent" )
