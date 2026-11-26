@@ -73,7 +73,7 @@ set(list_target_arg "")
 foreach(target_arg IN LISTS list_target_arg_value)
 	list(APPEND list_target_arg --target-arg "${target_arg}")
 endforeach()
-# 사례의 대상 정의(`// TARGET-DEFINE: <이름>=<값>`). 빌드가 그 타깃의 COMPILE_DEFINITIONS 를 넘기는 자리(ReflectionParser.definitions.rsp)를 흉내 낸다.
+# 사례의 대상 정의(`// TARGET-DEFINE: <이름>=<값>`). 빌드가 그 타깃의 COMPILE_DEFINITIONS 를 넘기는 자리(ReflectionParser.target.rsp)를 흉내 낸다.
 file(STRINGS "${FIXTURE}" list_define_line REGEX "^// TARGET-DEFINE: ")
 foreach(line IN LISTS list_define_line)
 	string(REGEX MATCH "^// TARGET-DEFINE: (.+)$" matched "${line}")

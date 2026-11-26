@@ -195,18 +195,7 @@ function(sw_make_reflection_parser_args OUT_VAR TARGET_NAME)
 		list(APPEND parser_args "--include" "${CMAKE_BINARY_DIR}/generated")
 	endif()
 
-	# 셰이더 바인딩 계약(binding_slots.hlsli)은 Engine 의 PUBLIC include 자리다 — 계약 수(shaderslot::k*)를 배열 크기로 쓰는 반사 헤더
-	# (WaterBodyComponent 등)를 파서도 컴파일러와 같은 자리에서 읽게 한다.
-	list(APPEND parser_args "--include" "${CMAKE_SOURCE_DIR}/Content/engine/shaders")
-	# .cpp 입력의 첫 줄 `#include "pch.h"` 는 컴파일러처럼 Engine 의 PCH 진입 폴더(PUBLIC)에서 푼다. 리플렉션 대상은 모두 Engine 이거나 Engine 을 링크한다.
-	get_property(engine_pch_entry_dir GLOBAL PROPERTY SW_PCH_ENTRY_DIR_engine)
-	if(NOT engine_pch_entry_dir)
-		message(FATAL_ERROR "[Reflection] ${TARGET_NAME}: the Engine PCH entry directory is not declared yet (sw_add_pch_entry_directory in Source/Engine/CMakeLists.txt must run first)")
-	endif()
-	list(APPEND parser_args "--include" "${engine_pch_entry_dir}")
-	foreach(inc IN LISTS ARG_INCLUDES)
-		list(APPEND parser_args "--include" "${inc}")
-	endforeach()
+	# 나머지 include 자리(`Source/` · 셰이더 바인딩 계약 · `pch.h` 진입 폴더 · 서드파티)는 타깃의 INCLUDE_DIRECTORIES 그대로다(아래 ReflectionParser.target.rsp).
 	set(${OUT_VAR} ${parser_args} PARENT_SCOPE)
 endfunction()
 
@@ -333,14 +322,14 @@ endfunction()
 
 # ------------------------------------------------------------------------------
 # 1) sw_add_reflection_step — REFLECT · ENUM 헤더 → .gen.cpp / .gen.h / .gen.meta.cpp, REFLECT · ENUM .cpp → .cpp.gen.inl(그 .cpp 끝에서 include)
-# HEADERS / INCLUDES / OUTPUT_DIR. .gen.cpp는 Unity 배치에서 제외 (ODR)
+# HEADERS / OUTPUT_DIR. 정의 · include 자리는 타깃 속성에서 온다(ReflectionParser.target.rsp). .gen.cpp는 Unity 배치에서 제외 (ODR)
 # 루트가 Tools(ReflectionParser) 이후 Engine을 호출해야 이 스텝이 살아 있음
 # MODULE_LOCAL: 이 타깃의 타입을 다른 모듈이 링크하지 않는다(게임 모듈). 실행 파일 타깃은 저절로 이렇게 본다.
 # MODULE(필수): 타입이 오르는 런타임 모듈 이름 — 런타임이 이 이름으로 타입을 올리고 내린다. 경로 글자로 추측하지 않는다(타입 → 모듈 판정은 여기 하나).
 # CONTENT_OWNER: 콘텐츠 모듈 검사(`sw_add_content_module_check`)에서 이 타입들의 주인 — 비우면 모든 호스트가 가진 것(엔진 · 실행 파일), 게임은 `game:<폴더>`.
 # ------------------------------------------------------------------------------
 function(sw_add_reflection_step TARGET_NAME)
-	cmake_parse_arguments(ARG "MODULE_LOCAL" "OUTPUT_DIR;EXCLUDE_REGEX;MODULE;CONTENT_OWNER" "HEADERS;INCLUDES" ${ARGN})
+	cmake_parse_arguments(ARG "MODULE_LOCAL" "OUTPUT_DIR;EXCLUDE_REGEX;MODULE;CONTENT_OWNER" "HEADERS" ${ARGN})
 
 	sw_skip_without_reflection_parser(${TARGET_NAME} skip)
 	if(skip)
@@ -433,20 +422,21 @@ function(sw_add_reflection_step TARGET_NAME)
 	set(reflect_response_args ${parser_args} "--depfile" "${reflect_depfile}")
 	string(REPLACE ";" "\n" reflect_response_text "${reflect_response_args}")
 	sw_write_if_changed("${reflect_response_file}" "${reflect_response_text}")
-	# 그 타깃의 컴파일 정의 전부(자기 것 + 링크한 타깃의 INTERFACE — 내보내기 매크로 · SW_REGISTRAR_MODULE · SW_LOG_TAG)를 파서도 같은 값으로 받는다.
-	# .cpp 입력은 그 타깃의 TU 그대로라 정의가 없으면 파싱되지 않는다(`GlobalVariableManager.h` 가 SW_REGISTRAR_MODULE 을 쓴다). 매크로를 하나씩 손으로 적지 않는다.
-	# 정의는 생성 때 정해지므로 생성기 식으로 둘째 응답 파일에 쓴다(내용이 같으면 file(GENERATE) 가 파일을 건드리지 않는다).
-	set(reflect_definition_file "${ARG_OUTPUT_DIR}/ReflectionParser.definitions.rsp")
+	# 그 타깃의 컴파일 정의와 include 자리 전부(자기 것 + 링크한 타깃의 INTERFACE)를 파서도 컴파일러와 같은 값으로 받는다. .cpp 입력은 그 타깃의 TU 그대로라
+	# 정의(`GlobalVariableManager.h` 가 쓰는 SW_REGISTRAR_MODULE)나 include 자리(서드파티 헤더)가 빠지면 파싱되지 않는다. 하나씩 손으로 적지 않는다.
+	# 둘 다 생성 때 정해지므로 생성기 식으로 둘째 응답 파일에 쓴다(내용이 같으면 file(GENERATE) 가 파일을 건드리지 않는다).
+	set(reflect_target_file "${ARG_OUTPUT_DIR}/ReflectionParser.target.rsp")
 	set(target_definitions "$<FILTER:$<TARGET_PROPERTY:${TARGET_NAME},COMPILE_DEFINITIONS>,EXCLUDE,^$>")
-	file(GENERATE OUTPUT "${reflect_definition_file}" TARGET ${TARGET_NAME}
-		CONTENT "$<$<BOOL:${target_definitions}>:--target-arg\n-D$<JOIN:${target_definitions},\n--target-arg\n-D>\n>")
+	set(target_includes "$<FILTER:$<TARGET_PROPERTY:${TARGET_NAME},INCLUDE_DIRECTORIES>,EXCLUDE,^$>")
+	file(GENERATE OUTPUT "${reflect_target_file}" TARGET ${TARGET_NAME}
+		CONTENT "$<$<BOOL:${target_definitions}>:--target-arg\n-D$<JOIN:${target_definitions},\n--target-arg\n-D>\n>$<$<BOOL:${target_includes}>:--include\n$<JOIN:${target_includes},\n--include\n>\n>")
 
 	add_custom_command(
 		OUTPUT ${generated_files}
 		COMMAND ${CMAKE_COMMAND} -E make_directory "${ARG_OUTPUT_DIR}"
-		COMMAND "$<TARGET_FILE:ReflectionParser>" "@${reflect_response_file}" "@${reflect_definition_file}"
+		COMMAND "$<TARGET_FILE:ReflectionParser>" "@${reflect_response_file}" "@${reflect_target_file}"
 		DEPFILE "${reflect_depfile}"
-		DEPENDS ${ARG_HEADERS} "${reflect_input_list}" "${reflect_response_file}" "${reflect_definition_file}" ReflectionParser "$<TARGET_FILE:ReflectionParser>"
+		DEPENDS ${ARG_HEADERS} "${reflect_input_list}" "${reflect_response_file}" "${reflect_target_file}" ReflectionParser "$<TARGET_FILE:ReflectionParser>"
 		"${reflect_builtins}" ${emit_tpls}
 		${parser_configs}
 		COMMENT "[Reflection] Running ReflectionParser for target: ${TARGET_NAME}"
