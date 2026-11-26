@@ -630,17 +630,14 @@ namespace sw
         // 빠진 패스의 출력은 이어서 오래(`TransientAttachmentPool::kIdleFramesBeforeRelease`) 빠져 있으면 놓는다. 놓은 GPU 자원은 백엔드 해제 큐가 앞 프레임들이 끝난 뒤에 지운다.
         const bool bAllocated = makeAttachments( view, aliasPlan );
         const bool bReleased  = ageAttachments( pool );
-        // 시간 누적 기록 — 도는 뷰만 있고, 오래 쉬어 출력을 놓은 뷰는 기록도 놓는다. 구름의 표본 번호는 기록을 버린 프레임에 처음부터 센다.
+        // 시간 누적 기록 — 도는 뷰만 있고, 오래 쉬어 출력을 놓은 뷰는 기록도 놓는다. 표본 번호는 기록마다 세고 기록을 버린 프레임에 처음부터 센다(`g_TemporalSample`).
         // 셋업에서 만든다 — 패스 콜백(병렬 기록)이 만들고 bindless 에 등록하면 다른 스레드가 같은 레지스트리를 읽는 도중에 레지스트리가 resize 된다.
         for ( FrameAttachmentHistory& attachmentHistory : view._listAttachmentHistory )
+        {
             updateOutputHistory( pool, attachmentHistory._attachment, attachmentHistory._resource.c_str(), attachmentHistory._history );
-        // 볼륨 구름의 표본 번호는 구름 패스의 기록을 따른다(구름 실행이 읽는 값이다).
-        const RenderGraphPassDesc* pCloudPass    = _pipeline.findUniquePass<RenderPassKind::VolumetricClouds>();
-        const FrameViewHistory*    pCloudHistory = ( pCloudPass != nullptr && pCloudPass->_listResolvedColorOutput.empty() == false )
-                                                     ? view.findAttachmentHistory( pCloudPass->_listResolvedColorOutput[0]._attachment )
-                                                     : nullptr;
-        if ( pCloudHistory != nullptr && pCloudHistory->isWritten() )
-            view._skyCloudSample = pCloudHistory->isReset() ? 0u : view._skyCloudSample + 1u;
+            if ( attachmentHistory._history.isWritten() )
+                attachmentHistory._sampleIndex = attachmentHistory._history.isReset() ? 0u : attachmentHistory._sampleIndex + 1u;
+        }
         // 사진 앞 정착(조건 `RenderTemporalAccumulation`): 시간 누적이 쌓인 정지 프레임 수. TAA 를 이번 프레임에 돌리는지는 위 고르기가 정했다(기록 첨부의 `markWritten`) —
         // TAA 가 없는 뷰는 TAA 기록 버림을 보지 않는다(그것만 보면 Forward 뷰의 정지 프레임이 늘 0 이었다).
         // 볼륨 구름의 기록도 같은 규칙이다(Forward 뷰는 TAA 없이 구름만 쌓는다).

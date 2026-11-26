@@ -214,7 +214,8 @@ namespace sw
             RHIPipelineStateDesc _desc{};
             RenderPassKind       _passType{ RenderPassKind::Invalid };
             RHIFormat            _outputFormat{ RHIFormat::Unknown };
-            hashed_string        _pipelinePassName; ///< 파이프라인 패스면 그 이름입니다(PSO 의 열쇠). 비면 엔진 슬롯 `_passType` 이다
+            hashed_string        _pipelinePassName;      ///< 파이프라인 패스면 그 이름입니다(PSO 의 열쇠). 비면 엔진 슬롯 `_passType` 이다
+            uint64               _readableRoleMask{ 0 }; ///< 셰이더가 읽어도 되는 역할(`RenderPassKindInfo::getReadableRoleMask` — 패스면 그 서술의 기록 칸이 든다). 0 은 아무것도 읽지 못한다
         };
 
         /** @brief 출력 패스(Present, Canvas, RCAS)가 그릴 수 있는 대상 포맷(백버퍼, 오프스크린, 캡처)의 PSO 를 @p inoutListJob 에 더합니다. desc 를 정하지 못하면 멈춥니다. */

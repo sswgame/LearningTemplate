@@ -56,7 +56,7 @@ namespace sw
          * @brief 셰이더 쿠킹 요청이 만드는 바이너리의 스테이징 기준 id(`engine/shaders/bin/dx12/<파일>`, 정규화) → 출처 묶음입니다 — 위 층(렌더러의 요청 수집, `ShaderCookRequest::_listOrigin`)이 채운다.
          *        셰이더가 없는 구성(전용 서버)은 비어 있다.
          * @details 출처 묶음 하나의 에셋 id 가 모두 닿았는데(빈 묶음은 늘) 원본이 닿지 않아 팩에서 버리는 것은 경고(`PackCooker.PackCookDroppedRequestedShader`)다 — 런타임이 찾을 셰이더가
-         *          팩에 없다. 닿지 않은 출처만 요청한 것(쓰지 않는 개발 파이프라인)과 요청 밖 바이너리는 정보 줄이다.
+         *          팩에 없다. 닿지 않은 출처만 요청한 것(쓰지 않는 개발 파이프라인)과 요청 밖 바이너리는 정보 줄이다. 원본이 닿아도 출처가 하나도 닿지 않은 변형은 싣지 않는다(`isStrippedShaderVariant`).
          */
         unordered_map<string, vector<vector<string>>> _mapRequestedShaderBinary;
     };
@@ -138,6 +138,12 @@ namespace sw
          * @details 참이면 팩이 그 바이너리를 버릴 때 경고다 — 닿은 파이프라인 · 머티리얼이 쓰는데 원본 셰이더가 리치에서 빠졌다(참조 칸 표의 빈틈).
          */
         [[nodiscard]] static bool isRequestedByReachedOrigin( const unordered_map<string, vector<vector<string>>>& mapRequested, const unordered_set<string>& setIncluded, const string& assetID );
+        /**
+         * @brief 셰이더 변형 스트리핑입니다. 바이너리 @p assetID 가 쿠킹 요청에 들었는데 그 출처 묶음이 하나도 다 닿지 않았으면 true 이고, 원본 셰이더가 닿아도 팩에 싣지 않는다.
+         * @details 유니티 variant stripping(쓰지 않는 shader_feature 변형을 빌드에서 뺀다) · 언리얼 셰이더 라이브러리(쿠킹한 머티리얼의 셰이더 맵만 싣는다)와 같은 자리다.
+         *          출처(파이프라인 XML · 머티리얼)가 팩에 없으면 런타임이 그 조합을 만들 수 없으므로 버려도 그림이 빠지지 않는다. 요청 밖 바이너리는 여기서 가르지 않는다(원본 규칙 그대로).
+         */
+        [[nodiscard]] static bool isStrippedShaderVariant( const unordered_map<string, vector<vector<string>>>& mapRequested, const unordered_set<string>& setIncluded, const string& assetID );
 
         /**
          * @brief 도메인 기준 경로 @p relativePath 를 팩에 담을지 판정합니다(스테이징 산출물은 `shouldIncludeStagedFile` 이 본다).

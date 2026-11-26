@@ -19,6 +19,7 @@
         "Source/Editor/Common/Asset/ModelImport/ModelImportMaterial.cpp": "임포트가 견본과의 차이 글을 만들어 넘긴다 — 쓰기는 임포트 절차가 한다"
     },
     "_assetEntrance": {
+        "Source/Engine/Graphics/Material/MaterialTagIndex.cpp|MaterialTagIndex::loadMounted": "팩 쿠커가 만든 색인이다(assetindex.xml 과 같은 자리) — 덮어쓰기 층 · 경로 교체를 얹으면 쿠킹한 머티리얼과 어긋난 줄이 든다",
         "Source/Engine/Localization/CultureInfo.cpp|CultureTable::loadFromAsset": "문화권 표는 locale 축 값을 정하는 쪽이다 — 그 표가 덮어쓰기 층 · 다시 읽기 기록에 들면 축이 자기를 다시 읽는 순환이 된다",
         "Source/Engine/Serialization/Inherit/ResourceRemap.cpp|ResourceRemap::loadFromAsset": "경로 교체 표 자신이다 — 리소스 입구가 찾기 전에 쓰는 표라 그 표를 층 · 교체로 읽으면 순환이다(사슬은 오류인 것과 같은 까닭)",
         "Source/Engine/Animation/Scene/VertexAnimationCookList.cpp|VertexAnimationCookList::loadFromAsset": "쿠킹 작업 안에서만 읽는 목록이다 — 쿠킹 문맥에는 withAsset 을 쓰지 않는다(ResourceContext::withAsset 머리말, 층은 쿠킹본에 펼치지 않는다)",

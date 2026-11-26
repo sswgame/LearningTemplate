@@ -4,6 +4,7 @@
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/File/FileUtil.h"
+#include "Core/String/StringUtil.h"
 #include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Asset/Cache/SharedAssetRef.h"
@@ -703,6 +704,7 @@ SW_TEST_CASE( RenderPipelineAssetTest, NamedComputeBindingTakesValues )
 /**
  * @brief [RenderPipelineAssetTest] 풀스크린 패스: 이름 바인딩으로 입력 · 출력 기록 · 값을 PassCB 칸 이름으로 받는다. 역할 바인딩 · 셰이더 없음 · 제 출력 읽기 · 칸 넘침은 읽기 오류다
  * @details 변이: 값의 칸 이름 해석(`resolvePass` 의 `_resolvedConstant`)을 지우면 첫 단언 묶음이 지고, 풀스크린 검증 묶음을 지우면 거절 넷이 읽힌다.
+ *          컴퓨트의 루트 상수 상한(`PassNamedRootConstantsFull`)을 풀스크린에도 걸면 마지막 거절에서 기대하지 않은 오류 로그로 진다(PassCB 칸은 루트 상수가 아니다).
  */
 SW_TEST_CASE( RenderPipelineAssetTest, FullscreenPassBindsByName )
 {
@@ -773,6 +775,64 @@ SW_TEST_CASE( RenderPipelineAssetTest, ShadowPassNeedsShadowDepthRole )
     SW_EXPECT_LOG( "RenderPipelineAsset.PipelineIssueNotLoaded" );
     RenderPipelineAsset missingRole;
     SW_EXPECT_FALSE( RenderPipelineTestUtil::load( missingRole, makeXML( "" ) ) );
+}
+
+/**
+ * @brief [RenderPipelineAssetTest] 시간 누적은 패스 서술 칸으로 붙는다. 어느 종류의 패스든 `_historyRole` 이면 기록을 그 칸으로 받고(읽기 계약에도 든다), `_bTemporalJitter` 면 지터의 기준이 된다
+ * @details 변이: `resolvePass` 의 기록 칸 해석을 지우면 첫 묶음의 역할 단언이 지고, 계약 마스크가 서술의 기록 칸을 보지 않으면 그 다음 단언이 진다.
+ *          지터 조회가 종류(TAA)로 찾으면 접촉 그림자 지터 패스 단언이 진다. 검증 다섯(모르는 역할 · 입력과 겹침 · 기록 없는 출력 · TAA 지터 빠짐 · 지터 둘) 가운데 하나를 지우면 그 거절이 읽힌다.
+ */
+SW_TEST_CASE( RenderPipelineAssetTest, TemporalPassBindsHistoryAndJitterByDescription )
+{
+    const auto makeXML = []( string_view passAttributes, string_view outputAttributes )
+    {
+        StringBuilder<constant::buffer::kMax1024> xml;
+        xml.appendFormat( "<RenderPipelineDesc _name=\"Test\"><_listAttachment>"
+                          "<RenderPassAttachment _name=\"SceneDepth\" _format=\"D24_UNORM_S8_UINT\" _clearDepth=\"1\" _loadOp=\"Clear\"/>"
+                          "<RenderPassAttachment _name=\"Out\" _format=\"R16G16B16A16_FLOAT\" _clearColor=\"0,0,0,1\" _loadOp=\"Load\" %#/>"
+                          "</_listAttachment><_listPass><RenderGraphPassDesc _name=\"Pass\" _type=\"ContactShadow\" %# %#>"
+                          "<_listInput><item>SceneDepth</item></_listInput><_listOutput><item>Out</item></_listOutput></RenderGraphPassDesc></_listPass></RenderPipelineDesc>",
+                          outputAttributes, ComputePassTestUtil::kNoState, passAttributes );
+        return string( xml.view() );
+    };
+    const auto hasRole = []( uint64 mask, RenderPassInputRole role )
+    { return ( ( mask >> static_cast<uint32>( role ) ) & 1u ) != 0; };
+    const string_view kHistory = "_bHistory=\"true\"";
+
+    // XML 에만 더한 시간 누적 패스(코드에 종류 분기가 없는 접촉 그림자)가 기록 칸 · 지터를 받는다
+    RenderPipelineAsset temporal;
+    SW_REQUIRE_TRUE( RenderPipelineTestUtil::load( temporal, makeXML( "_historyRole=\"GBufferAlbedo\" _bTemporalJitter=\"true\"", kHistory ) ) );
+    const RenderGraphPassDesc& pass = temporal.getGraphPass()[0];
+    SW_EXPECT_TRUE( static_cast<RenderPassInputRole>( pass._resolvedHistoryRole ) == RenderPassInputRole::GBufferAlbedo );
+    SW_EXPECT_TRUE( hasRole( getRenderPassKindInfo( pass._type ).getReadableRoleMask( pass ), RenderPassInputRole::GBufferAlbedo ) );
+    SW_EXPECT_FALSE( hasRole( getRenderPassKindInfo( pass._type ).getReadableRoleMask(), RenderPassInputRole::GBufferAlbedo ) ); // 표만으로는 기록 칸이 없다
+    SW_EXPECT_TRUE( temporal.findTemporalJitterPass() == &pass );
+
+    // 엔진 디퍼드: TAA 가 지터의 기준이고, 볼륨 구름은 표의 기본 기록 칸을 받는다
+    RenderPipelineAsset deferred;
+    SW_REQUIRE_TRUE( deferred.loadFromXMLFile( AssetID{ "engine/pipeline/deferredpipeline.xml" } ) );
+    const RenderGraphPassDesc* pJitterPass = deferred.findTemporalJitterPass();
+    SW_REQUIRE_TRUE( pJitterPass != nullptr );
+    SW_EXPECT_TRUE( pJitterPass->_type == RenderPassKind::TAA );
+    const RenderGraphPassDesc* pCloudPass = deferred.findUniquePass<RenderPassKind::VolumetricClouds>();
+    SW_REQUIRE_TRUE( pCloudPass != nullptr );
+    SW_EXPECT_TRUE( static_cast<RenderPassInputRole>( pCloudPass->_resolvedHistoryRole ) == RenderPassInputRole::GBufferAlbedo );
+
+    SW_EXPECT_LOG( "RenderPipelineAsset.PassHistoryRoleUnknown" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.PassHistoryRoleIsInput" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.AttachmentHistoryMissing" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.PassTemporalJitterMissing" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.PassTemporalJitterTwice" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.PipelineValidationFoundIssues" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.PipelineIssueNotLoaded" );
+    RenderPipelineAsset rejected;
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( rejected, makeXML( "_historyRole=\"Plasma\"", kHistory ) ) );
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( rejected, makeXML( "_historyRole=\"SceneDepth\"", kHistory ) ) ); // 기록이 깊이 입력을 덮는다
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( rejected, makeXML( "_historyRole=\"GBufferAlbedo\"", "" ) ) );    // 첫 출력에 기록이 없다
+    string deferredText;
+    SW_REQUIRE_TRUE( AssetIO::readTextAsset( AssetID{ "engine/pipeline/deferredpipeline.xml" }, deferredText ) );
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( rejected, StringUtil::replace( deferredText, "_bTemporalJitter=\"true\"", "" ) ) );
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( rejected, StringUtil::replace( deferredText, "_type=\"VolumetricClouds\"", "_type=\"VolumetricClouds\" _bTemporalJitter=\"true\"" ) ) );
 }
 
 /** @brief [RenderPipelineAssetTest] 쿠킹이 펼친 글은 원본을 합쳐 읽은 것과 같은 값이고, 부모를 가리키지 않는다(팩 쿠커의 펼치기와 같은 함수) */

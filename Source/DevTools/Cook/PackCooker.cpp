@@ -35,6 +35,8 @@
 #include "Engine/Content/Pack/PackWriter.h"
 #include "Engine/Foundation/EngineDefines.h"
 #include "Engine/Foundation/EngineSubsystems.h"
+#include "Engine/Graphics/Material/Material.h"
+#include "Engine/Graphics/Material/MaterialTagIndex.h"
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Serialization/Format/JSONSerializer.h"
 #include "Engine/Serialization/Inherit/AssetRedirect.h"
@@ -930,6 +932,29 @@ namespace sw
             }
 
             /** @brief 도메인 리다이렉트 표의 정체성 대체 줄을 팩 색인에 더합니다. 읽지 못했거나 틀렸으면 이유가 남고 false 입니다. */
+            /**
+             * @brief 도메인에 담는 머티리얼마다 태그 줄(셰이더 경로 · define)을 만든 색인 글입니다. 셰이더가 없는 구성(전용 서버)은 빈 색인이다(그리지 않는다).
+             * @details 줄은 런타임 소스 실행과 같은 함수로 만든다(`MaterialTagIndex::makeEntry` — 머티리얼을 읽은 define). 정체성이 없거나 읽지 못한 머티리얼은 건너뛰지 않고 오류다.
+             */
+            [[nodiscard]] static expected<string> makeMaterialTagIndexText( const AssetIdentityRules& rules, const string& domain, const PackCookParams& params, const vector<PackItem>& listItem )
+            {
+                MaterialTagIndex index;
+                for ( const PackItem& item : listItem )
+                {
+                    if ( params._shaderFolder.empty() || item._source != PackItemSource::Source || StringUtil::endsWith( item._relativePath, ".material", true ) == false )
+                        continue;
+                    const string              assetID = makeAssetID( domain, item._relativePath );
+                    const optional<AssetGUID> guid    = readPackedIdentity( rules, rules.classify( assetID ), assetID, item._absPath );
+                    if ( guid.has_value() == false )
+                        return unexpected( Error{ ErrorKind::NotFound, "a packed material has no asset identity", assetID } );
+                    const shared_ptr<Material> material = Material::create();
+                    if ( material->loadFromDiskFile( item._absPath ) == false )
+                        return unexpected( Error{ ErrorKind::InvalidArgument, "a packed material could not be read", assetID } );
+                    index._listEntry.push_back( MaterialTagIndex::makeEntry( *guid, *material ) );
+                }
+                return index.makeText();
+            }
+
             [[nodiscard]] static bool addIdentityRedirects( const PackItem& item, AssetPackIndex& inoutIndex )
             {
                 string text;
@@ -966,6 +991,7 @@ namespace sw
                 vector<string>    _listStale;
                 DroppedShaderList _droppedRequested; ///< 닿은 출처가 요청했는데 원본이 닿지 않아 뺀 것 — 런타임이 찾을 셰이더가 팩에 없다(경고)
                 DroppedShaderList _droppedOther;     ///< 닿지 않은 출처만 요청했거나 요청 밖(낡은 잔재 등) — 정보 줄
+                DroppedShaderList _strippedVariant;  ///< 원본은 닿았지만 요청한 출처가 하나도 닿지 않은 변형(`PackCooker::isStrippedShaderVariant`) — 정보 줄
             };
 
             /**
@@ -1013,12 +1039,18 @@ namespace sw
                     if ( PackCooker::shouldIncludeStagedFile( relativePath, params._shaderFolder, params._buildTarget ) == false )
                         continue;
                     // 산출물은 그 원본(같은 줄기의 원본 · 셰이더 원본)이 쓰일 때만 담는다 - 쓰지 않는 씬의 쿠킹본 · 쓰지 않는 셰이더의 바이너리를 싣지 않는다.
+                    const string assetID = makeAssetID( domain, relativePath );
                     if ( selection._staged.isSelected( domain, relativePath ) == false )
                     {
-                        const string assetID = makeAssetID( domain, relativePath );
                         if ( StringUtil::contains( assetID, "/shaders/bin/" ) )
                             ( PackCooker::isRequestedByReachedOrigin( params._mapRequestedShaderBinary, selection._setIncluded, assetID ) ? outListing._droppedRequested : outListing._droppedOther )
                                 .add( relativePath );
+                        continue;
+                    }
+                    // 원본 셰이더가 닿아도 그 변형을 낸 파이프라인 · 머티리얼이 팩에 없으면 싣지 않는다(유니티 variant stripping 자리).
+                    if ( PackCooker::isStrippedShaderVariant( params._mapRequestedShaderBinary, selection._setIncluded, assetID ) )
+                    {
+                        outListing._strippedVariant.add( relativePath );
                         continue;
                     }
                     addItem( relativePath, absPath, PackItemSource::Staged );
@@ -1039,6 +1071,9 @@ namespace sw
                 if ( listing._droppedOther._count > 0 )
                     SW_LOG_INFO_ID( "PackCooker.PackCookDroppedShaderBinaries", "Pack cook: %# drops %# %# shader binaries outside the cook requests (first: %#)", domain,
                                     listing._droppedOther._count, params._shaderFolder, listing._droppedOther._names );
+                if ( listing._strippedVariant._count > 0 )
+                    SW_LOG_INFO_ID( "PackCooker.PackCookStrippedShaderVariants", "Pack cook: %# strips %# %# shader variants whose pipeline or material is not in the pack (first: %#)", domain,
+                                    listing._strippedVariant._count, params._shaderFolder, listing._strippedVariant._names );
             }
 
             /** @brief 팩 몫 작업의 설정 해시입니다 — 도메인의 고르기 해시에 청크 · 번호 · 담을 경로 해시를 섞는다(경계가 옮겨지면 다시 굽는다). */
@@ -1225,6 +1260,16 @@ namespace sw
                     PackItem indexItem{ PackStreamWriter::makePathHash( AssetPackIndex::kFileName ), string( AssetPackIndex::kFileName ), {}, PackItemSource::Generated, {} };
                     indexItem._listGeneratedByte.assign( indexText->begin(), indexText->end() );
                     listItem.push_back( std::move( indexItem ) );
+                    // 머티리얼 태그 색인도 도메인 전체로 첫 팩에 담는다 — 배포 실행이 읽지 않은 머티리얼을 키워드 · 셰이더 · 패스로 찾는다(`MaterialTagIndex`).
+                    const expected<string> materialIndexText = makeMaterialTagIndexText( identityRules, domain, params, listing._listItem );
+                    if ( materialIndexText.has_value() == false )
+                    {
+                        SW_LOG_ERROR_ID( "PackCooker.PackCookMaterialIndexInvalid", "Pack cook: %# material index - %# '%#'", domain, materialIndexText.error().message(), materialIndexText.error().detail() );
+                        return kFailed;
+                    }
+                    PackItem materialIndexItem{ PackStreamWriter::makePathHash( MaterialTagIndex::kFileName ), string( MaterialTagIndex::kFileName ), {}, PackItemSource::Generated, {} };
+                    materialIndexItem._listGeneratedByte.assign( materialIndexText->begin(), materialIndexText->end() );
+                    listItem.push_back( std::move( materialIndexItem ) );
                 }
 
                 PackWriteResult writeResult;
@@ -1414,6 +1459,11 @@ namespace sw
             listPart.push_back( std::move( part ) );
         }
         return listPart;
+    }
+
+    bool PackCooker::isStrippedShaderVariant( const unordered_map<string, vector<vector<string>>>& mapRequested, const unordered_set<string>& setIncluded, const string& assetID )
+    {
+        return mapRequested.find( assetID ) != mapRequested.end() && isRequestedByReachedOrigin( mapRequested, setIncluded, assetID ) == false;
     }
 
     bool PackCooker::isRequestedByReachedOrigin( const unordered_map<string, vector<vector<string>>>& mapRequested, const unordered_set<string>& setIncluded, const string& assetID )

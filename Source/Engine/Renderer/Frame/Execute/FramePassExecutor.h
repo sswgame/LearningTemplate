@@ -346,6 +346,11 @@ namespace sw
         void registerDeclaredInputs( FramePassContext& context, const RenderGraphPassDesc& passDesc );
         /** @brief 패스 @p passDesc 가 쓴 기록 첨부(`_bHistory` 출력)를 기록 텍스처로 복사합니다 — 패스 종류와 상관없는 패스 끝 단계입니다(`executePass`). */
         void copyOutputHistories( FramePassContext& context, const RenderGraphPassDesc& passDesc );
+        /**
+         * @brief 첫 출력이 기록 첨부인 패스의 앞 단계입니다(패스 종류를 보지 않는다). 기록의 시간 표본(`g_TemporalSample`)을 싣고, 기록 칸(`_resolvedHistoryRole`)에 지난 기록을 겁니다.
+         * @details 기록을 버리는 프레임은 기록 칸에 이번 원본(SourceColor 입력)을 건다. 원본 입력이 없으면 걸지 않고 셰이더가 무효 번호를 본다.
+         */
+        void bindOutputHistory( FramePassContext& context, const RenderGraphPassDesc& passDesc );
         /** @brief 이름 바인딩 컴퓨트 패스(`RenderPassInputBinding::Name`)를 돌립니다 — 루트 상수를 선언 차례로 채워 출력 크기만큼 디스패치한다(`executeComputePass` 가 부른다). */
         void executeNamedComputePass( const PassExecuteInput& input, const ComputePipeline& pipeline, const TransientAttachmentPool::Attachment& output );
         /** @brief 이름 바인딩 풀스크린 패스(`RenderPassKind::Fullscreen`)를 그립니다 — 입력 · 출력 기록 · 값을 PassCB 끝 칸에 이름으로 걸고 첫 컬러 출력에 풀스크린 삼각형 하나를 그린다. */

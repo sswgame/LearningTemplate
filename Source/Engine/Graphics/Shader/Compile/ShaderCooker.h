@@ -33,8 +33,9 @@ namespace sw
         uint64 _permutationHash{ 0 };
         /**
          * @brief 이 요청을 낸 출처입니다. 묶음마다 그 에셋 id(`Content/` 기준 정규화 경로: 파이프라인 XML, 머티리얼, 둘 다)가 모두 팩에 닿으면 이 바이너리가 필요하다.
-         * @details 빈 묶음은 늘 필요하다(패스 종류 표 · 엔진 셰이더). 굽기는 출처를 보지 않고 모두 굽는다(언리얼처럼 닿은 머티리얼만 굽는 일은 하지 않는다) — 팩 쿠커가 "닿은 출처가
-         *          요청했는데 원본이 닿지 않아 버리는" 바이너리만 경고하는 데 쓴다. 닿지 않은 개발 파이프라인(`deferredpipeline_gi.xml`)의 셰이더를 버리는 것은 정상이다.
+         * @details 빈 묶음은 늘 필요하다(패스 종류 표 · 엔진 셰이더). 굽기는 출처를 보지 않고 모두 굽는다(DDC 가 결과를 나눈다). 팩 쿠커가 이 값으로 싣는 것을 고른다:
+         *          출처가 하나도 닿지 않은 변형은 싣지 않고(`PackCooker::isStrippedShaderVariant`, 유니티 variant stripping 자리), 닿은 출처가 요청했는데 원본이 닿지 않아 버리는 것은 경고다.
+         *          닿지 않은 개발 파이프라인(`deferredpipeline_gi.xml`)의 셰이더를 버리는 것은 정상이다.
          */
         vector<vector<string>> _listOrigin;
         /**

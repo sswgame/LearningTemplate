@@ -236,8 +236,8 @@ namespace sw
             static void appendPipelinePassStages( RequestList& outListRequest, const RenderGraphPassDesc& pass, const RenderPipelineAsset& pipeline, const EngineDefaultAssets& engineDefaultAssets,
                                                   const string& shaderPath, const vector<string>& listPassDefine, const vector<string>& listOrigin )
             {
-                // 패스 셰이더가 읽는 엔진 역할은 그 종류의 입력 계약 안이어야 한다 — 쿠커가 리플렉션과 대조한다(`ShaderCookDriver`, 런타임 PSO 검사와 같은 값).
-                const uint64 roleMask = getRenderPassKindInfo( pass._type ).getReadableRoleMask();
+                // 패스 셰이더가 읽는 엔진 역할은 그 종류의 입력 계약과 서술의 기록 칸 안이어야 한다. 쿠커가 리플렉션과 대조한다(`ShaderCookDriver`, 런타임 PSO 검사와 같은 값).
+                const uint64 roleMask = getRenderPassKindInfo( pass._type ).getReadableRoleMask( pass );
                 if ( pass._type == RenderPassKind::Compute )
                 {
                     appendRequestUnique( outListRequest, shaderPath, string( resolveEntryPoint( pass._computeEntryPoint, ShaderStage::Compute ) ), ShaderStage::Compute, listPassDefine, listOrigin, roleMask );
@@ -321,9 +321,9 @@ namespace sw
                         {
                             const RenderPassShaderSelection tileShader = selectDeferredTileLightingShader( pass, tileClass, engineDefaultAssets );
                             appendRequestUnique( outListRequest, tileShader._shaderPath, kDeferredTileVertexEntryPoint, ShaderStage::Vertex, tileShader._listDefine, pipelineOrigin,
-                                                 getRenderPassKindInfo( pass._type ).getReadableRoleMask() );
+                                                 getRenderPassKindInfo( pass._type ).getReadableRoleMask( pass ) );
                             appendRequestUnique( outListRequest, tileShader._shaderPath, resolveEntryPoint( pass._pixelEntryPoint, ShaderStage::Pixel ), ShaderStage::Pixel, tileShader._listDefine,
-                                                 pipelineOrigin, getRenderPassKindInfo( pass._type ).getReadableRoleMask() );
+                                                 pipelineOrigin, getRenderPassKindInfo( pass._type ).getReadableRoleMask( pass ) );
                         }
                     }
                     // 모듈 확장 패스의 프로그램(ExtensionRenderPass) — 모듈이 런타임에 고르는 셰이더라 파이프라인 XML 이 `_listExtensionShader` 로 선언한다. 진입점 · define 은 기본 한 벌이다.

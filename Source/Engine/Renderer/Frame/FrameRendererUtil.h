@@ -411,7 +411,7 @@ namespace sw
         hashed_string _skyCloudSun{ "g_SkyCloudSun" };
         hashed_string _skyCloudAmbient{ "g_SkyCloudAmbient" };
         hashed_string _skyCloudGround{ "g_SkyCloudGround" };
-        hashed_string _skyCloudSample{ "g_SkyCloudSample" }; ///< 뷰마다 볼륨 구름 패스가 쓴다(`FramePassExecutor::executeVolumetricCloudsPass`)
+        hashed_string _temporalSample{ "g_TemporalSample" }; ///< 기록 첨부를 쓰는 패스마다 그 기록의 시간 표본(`FramePassExecutor::bindOutputHistory`)
         /// @brief 스카이 라이트의 프로브 버퍼 자리입니다(lighting.hlsli `SkyLight`). 배치는 `LightProbeElementBuilder::getSkyLight`.
         hashed_string _skyLight{ "g_SkyLight" };
         /// @brief 높이 · 거리 지수 안개입니다(안개 패스). 배치는 `FogSettings` 머리 주석 — 색 · 밀도 / 높이 감쇠 · 기준 높이 · 시작 거리 · 최대 불투명도 / 방향광 산란 / 볼륨 안개.

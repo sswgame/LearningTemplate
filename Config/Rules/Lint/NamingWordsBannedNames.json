@@ -3,6 +3,9 @@
   "_bannedNames": {
     "MeshModifierNoise": "ValueNoise::sampleValue1D · sampleValue3D, HashUtil::toUnitFloatExclusive — 노이즈 식은 Core 결정성 TU 하나에 둔다(2026-11-26)",
     "computePerlinNoise1d": "ValueNoise::samplePerlin1D(2026-11-26)",
+    "_executionBoundRole": "RenderPassKindInfo::_defaultHistoryRole — 기록 칸은 패스 서술 _historyRole 이 덮는 표 기본값이다(2026-11-26)",
+    "_skyCloudSample": "FrameAttachmentHistory::_sampleIndex — 시간 표본은 기록마다 센다(2026-11-26)",
+    "g_SkyCloudSample": "g_TemporalSample — 기록 출력 패스가 모두 받는 시간 표본(FramePassExecutor::bindOutputHistory)(2026-11-26)",
     "bindProfileHook": "TaskProfileHook::bind — 태스크 프로파일 훅 자리는 훅 형식의 정적 멤버다(2026-11-26)",
     "copyTaskDebugName": "TaskProfileHook::copyName · TaskNode::setName · StageNode::setName(2026-11-26)",
     "kTaskDebugNameCapacity": "TaskProfileHook::kNameCapacity(2026-11-26)",

@@ -172,7 +172,7 @@ static float3 VolumetricClouds::computeViewDirection( float2 uv )
 /** @brief 이 저해상도 텍셀을 읽는 전체 해상도 픽셀(합성의 쌍선형이 이웃 반 텍셀까지 닿는다) 가운데 하늘이 하나라도 보이면 true 입니다. */
 static bool VolumetricClouds::isSkyVisible( int2 texel )
 {
-    const int  divisor  = max( (int)( g_SkyCloudSample.w + 0.5f ), 1 );
+    const int  divisor  = max( (int)( g_TemporalSample.w + 0.5f ), 1 );
     const int2 origin   = texel * divisor - ( divisor >> 1 ); // 양수의 반 — 정수 나눗셈이 아니라 자리 옮김이다(FXC X3556)
     const int2 rectEnd  = int2( g_ViewRectSize.xy ) - 1;
     const int  count    = divisor; // 덮는 폭은 텍셀 두 개(divisor × 2)이고 간격이 kCloudDepthProbeStride 다
@@ -272,8 +272,8 @@ float4 PSMain( PSInput input ) : SV_TARGET
         const float  travelLength = length( lightTravel );
         const float3 toSun        = travelLength > 1.0e-6f ? -lightTravel / travelLength : float3( 0.0f, 1.0f, 0.0f );
         // 텍셀 안 자리(xy)와 걸음 시작(z)을 프레임마다 비킨다 — 기록이 모은다.
-        const float3 direction  = VolumetricClouds::computeViewDirection( input._uv + g_SkyCloudSample.xy * texelUv );
-        const float  stepOffset = frac( CommonMath::computeInterleavedGradientNoise( input._position.xy ) + g_SkyCloudSample.z );
+        const float3 direction  = VolumetricClouds::computeViewDirection( input._uv + g_TemporalSample.xy * texelUv );
+        const float  stepOffset = frac( CommonMath::computeInterleavedGradientNoise( input._position.xy ) + g_TemporalSample.z );
         result                  = VolumetricClouds::marchLayer( direction, toSun, stepOffset );
         SW_BRANCH if ( g_SkyCloudVolume.z > 0.0f )
         {

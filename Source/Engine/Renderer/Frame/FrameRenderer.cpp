@@ -93,8 +93,8 @@ namespace sw
 
     RHITextureHandle FrameRenderer::getTAAHistory() const
     {
-        // TAA 패스의 첫 출력(`_bHistory`)의 기록이다 — 기록은 패스 종류가 아니라 첨부 칸이 정한다.
-        const RenderGraphPassDesc* pTAAPass = _pipelineResource.findUniquePass<RenderPassKind::TAA>();
+        // 지터 패스(`_bTemporalJitter` — TAA)의 첫 출력(`_bHistory`)의 기록이다. 기록 · 지터는 패스 종류가 아니라 서술 칸이 정한다.
+        const RenderGraphPassDesc* pTAAPass = _pipelineResource.findTemporalJitterPass();
         const FrameViewHistory*    pHistory = ( pTAAPass != nullptr && pTAAPass->_listResolvedColorOutput.empty() == false )
                                                 ? _state.getMainView().findAttachmentHistory( pTAAPass->_listResolvedColorOutput[0]._attachment )
                                                 : nullptr;

@@ -193,6 +193,8 @@ namespace sw
         registerRainOcclusion( context );
         // 후처리 텍스처(LUT · 먼지 마스크)도 패스를 가리지 않는다 — 톤맵이 Tonemap 패스에도 후처리 체인(Present)에도 있고, 파이프라인 XML 이 자리를 정한다.
         registerPostProcessTextures( context );
+        // 시간 누적 기록(첫 출력의 `_bHistory`)을 읽는 칸 · 표본도 패스 종류를 보지 않는다. XML 에 시간 누적 패스를 더하면 코드 없이 받는다.
+        bindOutputHistory( context, passDesc );
 
         // 이 패스가 바인딩할 뎁스다. 파이프라인 XML 의 `_depthAttachment` 가 기준이고, 비어 있으면
         // 뎁스 없이 연다. "이 패스는 일부러 뎁스를 쓰지 않는다" 를 선언으로 표현할 수 있어야 한다.
@@ -422,6 +424,48 @@ namespace sw
             context._pCmd->blitTexture( texture, pHistory->getCurrent()._texture );
             context._pGraphPass->transition( historyResource, RenderGraphAccess::ShaderRead ); // 복사는 기록을 렌더 타깃 상태로 남긴다 — 다음 프레임이 그대로 샘플하지 않게
         }
+    }
+
+    void FramePassExecutor::bindOutputHistory( FramePassContext& context, const RenderGraphPassDesc& passDesc )
+    {
+        // 꺼져 원본을 가리키는 출력은 그리지 않으므로 기록도 걸지 않는다(`copyOutputHistories` 와 같은 규칙).
+        if ( passDesc._listResolvedColorOutput.empty() )
+            return;
+        const RenderGraphPassDesc::ResolvedAttachment& output = passDesc._listResolvedColorOutput[0];
+        if ( output._historyResource.empty() || activePool().isForwarded( output._attachment ) )
+            return;
+        const FrameViewTarget&        view   = *_pActiveView;
+        const FrameAttachmentHistory* pEntry = VectorUtil::findIf( view._listAttachmentHistory, [&output]( const FrameAttachmentHistory& attachmentHistory )
+        { return attachmentHistory._attachment == output._attachment; } );
+        if ( pEntry == nullptr )
+            return;
+        // 텍셀 안 자리는 TAA 지터와 같은 Halton 한 바퀴, 걸음 시작은 황금비 수열이다. 프레임마다 다른 자리를 기록이 모은다(언리얼 `View.StateFrameIndex` 자리, 기록을 버리면 0 부터).
+        constexpr float32                         kGoldenRatioFraction = 0.618034f;
+        const TransientAttachmentPool::Attachment target               = findTransientAttachment( output._attachment );
+        const float2                              offset               = TemporalJitterSequence::getPixelOffset( pEntry->_sampleIndex % TemporalJitterSequence::kSampleCount );
+        const float32                             stepPhase            = static_cast<float32>( pEntry->_sampleIndex % TemporalJitterSequence::kMaxSampleCount ) * kGoldenRatioFraction;
+        const float32                             divisor              = target._width > 0 ? static_cast<float32>( view._transientPool.getWidth() ) / static_cast<float32>( target._width ) : 1.0f;
+        context._passValues.setFloat4( passConstantNames()._temporalSample, float4{ offset._x, offset._y, stepPhase - MathUtil::floor( stepPhase ), divisor } );
+
+        const RenderPassInputRole historyRole = static_cast<RenderPassInputRole>( passDesc._resolvedHistoryRole );
+        if ( historyRole == RenderPassInputRole::Invalid )
+            return;
+        const FrameViewHistory& history = pEntry->_history;
+        if ( history.isReset() )
+        {
+            // 기록을 버리는 프레임(처음 · 컷 · 쉬던 패스를 다시 켠 첫 프레임)은 이번 원본을 기록 칸에 건다. 섞어도 이번 그림만 남는다.
+            // 원본을 기록 텍스처에 복사하지 않는 것은 형식이 다를 수 있어서다(원본 R8G8B8A8, 기록 R16G16B16A16. D3D 의 복사는 같은 형식만 받는다). 패스 끝 복사가 기록을 새로 채운다.
+            const RenderGraphPassDesc::ResolvedAttachment* pSource = FramePassExecutorInternal::findInputByRole( passDesc, RenderPassInputRole::SourceColor );
+            if ( pSource != nullptr )
+                registerPassTexture( context, inputRoleName( historyRole ), pSource->_attachment );
+            return;
+        }
+        // 기록은 이 패스가 복사 대상으로 선언한 뷰 자원이다. 읽기 앞에 셰이더 읽기로 옮긴다(지난 프레임이 그 상태로 남겼고 새로 만든 텍스처만 실제로 옮겨진다).
+        const RenderGraphTextureCopyDest historyResource{ output._historyResource };
+        if ( context._pGraphPass->isRegistered( historyResource ) == false )
+            return;
+        context._pGraphPass->transition( historyResource, RenderGraphAccess::ShaderRead );
+        context._resourceRegistry.registerTexture( inputRoleName( historyRole ), history.getPrevious()._texture, history.getPrevious()._srv );
     }
 
     const FrameViewHistory* FramePassExecutor::findPassHistory( const FrameViewTarget& view, const RenderGraphPassDesc& passDesc ) const
@@ -1007,31 +1051,16 @@ namespace sw
 
     void FramePassExecutor::executeVolumetricCloudsPass( const PassExecuteInput& input )
     {
-        FramePassContext&      context = input._context;
-        const AttachmentNames& names   = attachmentNames();
-        const hashed_string&   target  = input._declaredColor[0]._attachment;
-        const FrameViewTarget& view    = *_pActiveView;
+        FramePassContext&    context = input._context;
+        const hashed_string& target  = input._declaredColor[0]._attachment;
         registerDeclaredInputs( context, input._passDesc );
-        // 기록은 이 패스가 복사 대상으로 선언한 뷰 자원이다(출력의 `_bHistory`) — 읽기 앞에 셰이더 읽기로 옮긴다. 버리는 프레임(처음 · 컷 · 지난 프레임에 구름이 없음)은 읽지 않고 새로 채우기만 한다.
-        const FrameViewHistory*          pHistory = findPassHistory( view, input._passDesc );
+        // 기록 칸 · 표본은 공통 단계가 걸었다(`bindOutputHistory`). 버리는 프레임(처음 · 컷 · 지난 프레임에 구름이 없음)은 기록 비율을 0 으로 둬 새로 채우기만 한다.
+        const FrameViewHistory*          pHistory = findPassHistory( *_pActiveView, input._passDesc );
         const RenderGraphTextureCopyDest historyResource{ input._declaredColor[0]._historyResource };
-        const bool                       bHistory  = pHistory != nullptr && context._pGraphPass->isRegistered( historyResource );
-        const bool                       bReadable = bHistory && pHistory->isReset() == false;
-        if ( bReadable )
-        {
-            context._pGraphPass->transition( historyResource, RenderGraphAccess::ShaderRead );
-            context._resourceRegistry.registerTexture( names._gbufferAlbedo, pHistory->getPrevious()._texture, pHistory->getPrevious()._srv );
-        }
-        float4 volume = _state._frameSky._cloudVolume;
-        volume._z     = bReadable ? volume._z : 0.0f;
-        // 텍셀 안 자리는 TAA 지터와 같은 Halton 한 바퀴, 걸음 시작은 황금비 수열이다 — 프레임마다 다른 자리를 기록이 모은다.
-        constexpr float32                         kGoldenRatioFraction = 0.618034f;
-        const TransientAttachmentPool::Attachment output               = findTransientAttachment( target );
-        const float2                              offset               = TemporalJitterSequence::getPixelOffset( view._skyCloudSample % TemporalJitterSequence::kSampleCount );
-        const float32                             stepPhase            = static_cast<float32>( view._skyCloudSample % TemporalJitterSequence::kMaxSampleCount ) * kGoldenRatioFraction;
-        const float32                             divisor              = output._width > 0 ? static_cast<float32>( view._transientPool.getWidth() ) / static_cast<float32>( output._width ) : 1.0f;
+        const bool                       bReadable = pHistory != nullptr && pHistory->isReset() == false && context._pGraphPass->isRegistered( historyResource );
+        float4                           volume    = _state._frameSky._cloudVolume;
+        volume._z                                  = bReadable ? volume._z : 0.0f;
         context._passValues.setFloat4( passConstantNames()._skyCloudVolume, volume );
-        context._passValues.setFloat4( passConstantNames()._skyCloudSample, float4{ offset._x, offset._y, stepPhase - MathUtil::floor( stepPhase ), divisor } );
         executeFullscreenInto( context, _psoManager.getPassPSO( input._passDesc ), target, getTargetClearColor( target ) );
         // 기록 복사는 패스 끝의 공통 단계다(`copyOutputHistories`).
     }
@@ -1321,40 +1350,14 @@ namespace sw
     void FramePassExecutor::executeTAAPass( const PassExecuteInput& input )
     {
         // 타깃은 선언한 첫 컬러 출력이다(풀스크린 패스와 같은 규칙이며 히스토리도 같은 규칙으로 만든다. updateOutputHistory).
-        FramePassContext&      context   = input._context;
-        const AttachmentNames& names     = attachmentNames();
-        const hashed_string&   taaTarget = input._declaredColor[0]._attachment;
-        const hashed_string*   pSrcName{ nullptr };
+        FramePassContext&    context   = input._context;
+        const hashed_string& taaTarget = input._declaredColor[0]._attachment;
         // 후처리를 끈 뷰는 셋업이 출력 이름을 원본에 이었다(`applyViewPassSelection`, kBypassesToSource). 기록하지 않고 히스토리도 건드리지 않는다
         // — 원본을 TAAColor 로 복사하거나 셰이더로 옮기던 길은 지웠다. 다시 켠 첫 프레임은 기록을 버린다(`FrameViewHistoryIdleRule::Discard`).
         if ( activePool().isForwarded( taaTarget ) )
             return;
         registerDeclaredInputs( context, input._passDesc );
-        for ( const RenderGraphPassDesc::ResolvedAttachment& sourceInput : input._passDesc._listResolvedInput )
-        {
-            if ( static_cast<RenderPassInputRole>( sourceInput._role ) == RenderPassInputRole::SourceColor )
-                pSrcName = &sourceInput._attachment;
-        }
-        // 히스토리 생성과 bindless 등록은 updateOutputHistory() 가 셋업 단계에서 끝냈다. 이 콜백은
-        // 병렬 기록에서 태스크 스레드가 실행하므로 여기서 레지스트리를 건드리면 안 된다. 히스토리는 뷰마다 하나다.
-        const FrameViewTarget& activeView = *_pActiveView;
-        // 기록을 버리는 프레임(처음 그리는 프레임 · 컷 · 후처리를 다시 켠 첫 프레임 — `FrameViewHistory::isReset`)에서는 지난 화면의 히스토리를 버린다. 이번 프레임은 히스토리 슬롯에 이번 원본을
-        // 바인딩해 섞어도 이번 이미지만 남게 한다. 원본을 히스토리 텍스처에 복사하지 않는 것은 포맷이 다를 수 있어서다(원본 R8G8B8A8, 히스토리 R16G16B16A16이며
-        // D3D 의 복사는 같은 포맷만 받는다). 패스 끝의 복사(TAA 출력에서 히스토리로)가 히스토리를 새로 채운다.
-        const FrameViewHistory* pHistory = findPassHistory( activeView, input._passDesc );
-        const bool              bCut     = pHistory != nullptr && pHistory->isReset() && pSrcName != nullptr;
-        // 기록은 이 패스가 복사 대상으로 선언한 뷰 자원이다(출력의 `_bHistory`) — 읽기 앞에 셰이더 읽기로 옮긴다(지난 프레임이 그 상태로 남겼고 새로 만든 텍스처만 실제로 옮겨진다).
-        const RenderGraphTextureCopyDest historyResource{ input._declaredColor[0]._historyResource };
-        const bool                       bHistory = pHistory != nullptr && context._pGraphPass->isRegistered( historyResource );
-        if ( bCut )
-        {
-            registerPassTexture( context, names._gbufferAlbedo, *pSrcName );
-        }
-        else if ( bHistory )
-        {
-            context._pGraphPass->transition( historyResource, RenderGraphAccess::ShaderRead );
-            context._resourceRegistry.registerTexture( names._gbufferAlbedo, pHistory->getPrevious()._texture, pHistory->getPrevious()._srv );
-        }
+        // 기록(버리는 프레임은 이번 원본)은 공통 단계가 기록 칸에 걸었다(`bindOutputHistory`). 기록 텍스처는 셋업이 만들었다(`updateOutputHistory` — 병렬 기록의 태스크 스레드가 bindless 를 늘리지 않게).
         if ( beginColorPass( context, taaTarget, hashed_string{}, _state._clearColor, getColorLoadFor( taaTarget ), RHIRenderPassLoadOp::Load ) )
         {
             // TAA PSO 가 없으면(셋업이 알렸다) 원본을 복사해 TAA 없이 넘기지 않는다 — drawFullscreen 이 그리지 않는다.

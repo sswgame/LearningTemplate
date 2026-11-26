@@ -20,6 +20,7 @@
 - 씬 메시 패스가 그릴 머티리얼은 패스 칸 `_requiredMaterialDefine` · `_excludedMaterialDefine` 이 정한다(유니티 LightMode 자리). 비운 칸은 표의 기본값이다(G버퍼는 `MATERIAL_FORWARD_ONLY` 를 빼고, 메시 외곽선은 `MATERIAL_OUTLINE` 을 요구한다). 드로우 · PSO 변형 · 쿠커가 `MaterialPassFilter` 하나를 본다.
 - 표가 XML 에 끄는 것만 허락한 칸(깊이 테스트 `kDepthTest` · 깊이 쓰기 `kDepthWrite` · 앞면 컬링 `kCullFront`)을 XML 이 켜거나 뒤집으면 로드 오류다.
 - 첨부 크기는 프레임 크기 ÷ `_resolutionDivisor` 이거나 고정 `_width` · `_height`(둘을 함께, 배율 규칙과 섞지 않는다, 그림자 맵 제외)다. `_bHistory="true"` 첨부는 쓰는 패스가 하나이고 그 패스가 끝에 기록으로 복사한다(패스 종류와 무관, TAA · VolumetricClouds 출력은 필수). 그림자 첨부는 `_role="ShadowMap"` · `"LocalShadowMap"` 을 적는다(이름으로 짐작하지 않는다).
+- 시간 누적은 패스 칸으로 붙는다. `_historyRole` 은 첫 출력의 지난 기록을 걸 역할 칸이다(비면 표 기본값, TAA · 볼륨 구름은 `GBufferAlbedo`. 기록을 버리는 프레임은 SourceColor 입력을 건다). `_bTemporalJitter` 는 투영 지터의 기준이고 파이프라인에 하나, TAA 는 필수다. 기록 출력 패스는 셰이더 칸 `g_TemporalSample`(Halton 자리 · 걸음 시작 · 나눗수)을 받는다. 지터 · 기록을 패스 종류로 찾지 않는다(`findTemporalJitterPass` · `FramePassExecutor::bindOutputHistory`).
 - 패스 셰이더가 읽는 엔진 역할(`g_<Role>Index`)은 그 종류의 입력 계약(필수 · 선택)과 실행이 거는 역할 안이어야 한다(`RenderPassKindInfo::getReadableRoleMask`). 쿠커가 DX 리플렉션으로 대조해 어기면 쿠킹 오류다.
 - 사용자 컴퓨트 패스는 `_inputBinding="Name"` 이면 루트 상수를 선언 차례로 받는다: 크기 둘 · `g_<출력>Index` · 출력이 기록 첨부면 `g_<출력>HistoryIndex` · 입력마다 `g_<입력>Index` · `_listValue` 마다 `g_<이름>`(`compute_pass.hlsli` 머리말). 입력 수는 루트 상수 16 칸이 정하고 네이티브 bindless 에서만 돈다. RW 칸 바인딩(기본)은 입력 둘 · 깊이 없음 그대로다.
 - 사용자 픽셀 패스는 `_type="Fullscreen"` 에 `_inputBinding="Name"` 과 `_shaderPath` 를 적는다. 셰이더는 include 전에 `SW_PASS_CB_USER_PARAMS` 로 PassCB 끝에 같은 이름의 칸(`g_<입력>Index` · `g_<출력>HistoryIndex` · `g_<이름>`)을 적고 `PassTexture::sampleNamed` · `sampleNamedPrevious` 로 읽는다. 칸은 16 개까지이고 네이티브 bindless 에서만 돈다(시나리오는 `SkipUnless watch="RHI.NativeBindless"`).
@@ -34,6 +35,7 @@
 - 인스턴스 모델은 둘이다: 에셋 변형은 자식 머티리얼(`_base` — 렌더 상태 · `alphaMode` · `renderQueue` · 정적 스위치 · 멀티 컴파일 · 값), 실행 중 값은 `MaterialInstance::create`(값 · 텍스처 · 런타임 스위치만 — 드로우마다 PSO 를 가르지 않는다).
 - 자식의 `_permutations` 는 부모와 이름으로 합친다 — 더할 define · 바꿀 스위치만 적는다.
 - 게임 · 도구가 머티리얼을 물을 때는 배포에서도 되는 형식 멤버를 쓴다: 키워드 `isKeywordEnabled`, 패스가 그리는지 `isDrawnByPass( pass._resolvedMaterialFilter )`, 셰이더 · 퍼뮤테이션 `getShaderPath` · `getCachedShaderDefines`(`Material` · `MaterialInstance` 같은 이름). define 목록을 따로 훑어 판정하지 않는다.
+- 읽지 않은 머티리얼을 키워드 · 셰이더 경로 · 패스로 찾을 때는 `MaterialTagIndex::loadMounted` 의 `findByKeyword` · `findByShaderPath` · `findDrawnByPass` 를 쓴다(언리얼 에셋 레지스트리 태그 자리). 배포는 팩 쿠킹이 도메인 첫 팩에 쓴 `materialindex.xml` 을, 소스 실행은 머티리얼을 읽어 같은 줄(`makeEntry`)을 만든다. 실행 중 켠 런타임 스위치는 색인에 없다(읽은 인스턴스에 묻는다).
 - 모든 머티리얼이 같은 값을 읽고 자주 바뀌는 것(날씨 · 환경 시간)은 머티리얼 칸에 묶지 않고 전역 값(`MaterialGlobals` → PassCB `g_MaterialGlobal*`)으로 둔다. 파라미터 묶음의 값은 `_global` 로 먹이고, 전역 값에는 프로퍼티를 묶지 않는다(오류).
 - 퍼뮤테이션을 바꾸는 값(정적 스위치 · 키워드 칸)은 자식 머티리얼에 적거나, 부모가 선언한 런타임 스위치(`bShaderFeature="0"`)를 `enableKeyword` 로 켠다. 값 API(`setParameter` 등)는 키워드 칸을 오류로 거절한다 — 런타임 값은 쿠킹하지 않은 조합이다(언리얼 MID 와 같은 경계).
 
@@ -75,6 +77,8 @@
 - 렌더 상태 칸은 `Engine/Graphics/RenderState/RenderState.h` 하나와 각 백엔드 읽기에 더한다. 조합 규칙은 `findInvalidReason`, 머티리얼에 내주지 않을 칸은 `RenderStateOverride::applyTo`. RHI ABI 는 손으로 올리지 않는다(빌드가 스탬프를 다시 만든다).
 - 그 밖의 패스 칸은 PSO(`makePassPSODesc`) · 쿠커(`ShaderCookRequestCollector`) · 검증(`validate`)을 함께 고친다 — 실행이 읽지 않는 칸은 XML 이 거짓말을 한다. 그림을 바꾸는지는 `<ExpectImagesDiffer>` 시나리오로 확인한다.
 - 쿠커 코드를 고쳐도 번호를 올리지 않는다(쿠킹 키 = 소스 지문). 새 쿠커는 `Config/Dev/CookCodeInputs.json` 에 폴더를 적는다.
+- 셰이더 변형은 모두 굽고(DDC), 팩은 요청한 출처(파이프라인 · 머티리얼)가 하나라도 다 닿은 변형만 싣는다(`PackCooker::isStrippedShaderVariant`, 유니티 variant stripping 자리). 런타임이 쓰는 조합은 요청 출처에 적혀야 한다. 코드가 경로 글로 고르는 파이프라인 · 머티리얼은 참조 칸 표(`AssetReferenceFields`)에 들어야 팩에 남는다.
+- 실행에서 기록하는 PSO 번들(언리얼 FShaderPipelineCache · 유니티 GraphicsStateCollection)은 두지 않는다. 머티리얼을 읽을 때 변형 PSO 를 짓고(`FramePSOManager::warmPinnedMaterialPSOs`, 언리얼 5 PSO 프리캐싱) 드라이버 블롭(`RHIPipelineCacheFile`)이 다음 실행을 덮는다.
 
 ## 머티리얼 그래프
 
