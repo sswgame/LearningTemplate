@@ -26,6 +26,7 @@
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Input/Devices/MouseDevice.h"
 #include "Engine/Input/InputManager.h"
+#include "Engine/Localization/LocText.h"
 #include "Engine/Navigation/Component/NavMeshAgentComponent.h"
 #include "Engine/Navigation/Scene/SceneNavigation.h"
 #include "Engine/Object/Component/CameraComponent.h"
@@ -77,22 +78,6 @@ namespace sw
             static float64 readLastFrameMilliseconds( uint32 slot )
             {
                 return static_cast<float64>( engine::getSubsystem<FrameProfiler>().getLastFrameNanos( slot ) ) / constant::time::kNanosecondsPerMillisecond;
-            }
-
-            static const utf8* getGlyphStyleName( InputGlyphStyle style )
-            {
-                switch ( style )
-                {
-                    case InputGlyphStyle::KeyboardMouse:
-                        return "keyboard/mouse";
-                    case InputGlyphStyle::GamepadXbox:
-                        return "gamepad (Xbox)";
-                    case InputGlyphStyle::GamepadPlayStation:
-                        return "gamepad (PlayStation)";
-                    case InputGlyphStyle::GamepadSwitch:
-                        return "gamepad (Switch)";
-                }
-                return "?";
             }
 
             static const utf8* getKeyboardFocusName( InputKeyboardFocus focus )
@@ -261,7 +246,7 @@ namespace sw
             static void writeInput( DebugHUDSectionWriter& writer )
             {
                 const InputManager& input = engine::getSubsystem<InputManager>();
-                writer.addLine( "device", getGlyphStyleName( input.getActiveGlyphStyle() ) );
+                writer.addLine( "device", LocalizedText::findEnum( input.getActiveGlyphStyle() ) );
                 writer.addLine( "keyboard", getKeyboardFocusName( input.getKeyboardFocus() ) );
                 if ( const MouseDevice* pMouse = input.getMouse() )
                 {

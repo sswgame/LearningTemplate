@@ -8,6 +8,7 @@
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
 
+#include "Editor/Common/Asset/EditorContentScan.h"
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
@@ -117,7 +118,7 @@ namespace sw::editor
 
     bool DataTablePanel::canAcceptDocumentPath( string_view assetPath ) const
     {
-        return FileUtil::hasExtension( assetPath, ".xml" );
+        return EditorContentScan::isDataXMLPath( assetPath ); // Data 종류 가운데 XML 문서만(JSON 데이터는 표로 열지 않는다)
     }
 
     ToolAssetLoadResult DataTablePanel::loadDocument()

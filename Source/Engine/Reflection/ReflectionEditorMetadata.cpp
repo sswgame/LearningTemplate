@@ -157,6 +157,13 @@ namespace sw
                     case EditorMetadataField::Hidden:
                         outMetadata._bHidden = SW_TRUE;
                         break;
+                    case EditorMetadataField::Color:
+                        outMetadata._color = hashed_string{ row._pText };
+                        break;
+                    case EditorMetadataField::Unit:
+                        outMetadata._unit = row._pText;
+                        break;
+
                     default:
                         failUnknownField( row );
                 }
@@ -241,6 +248,8 @@ namespace sw
     EnumeratorEditorMetadata::EnumeratorEditorMetadata() noexcept
         : _displayName{}
         , _tooltip{}
+        , _color{}
+        , _unit{}
         , _mapCustomMeta{}
         , _bHidden{ SW_FALSE }
         , _reservedFlags{ 0 }

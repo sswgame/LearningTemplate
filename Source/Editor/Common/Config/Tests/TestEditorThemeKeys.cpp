@@ -19,6 +19,8 @@
 #include "Editor/Common/Config/EditorThemeTokens.h"
 #include "Editor/Common/Workspace/EditorSubsystems.h"
 
+#include "Engine/Reflection/EnumInfo.h"
+#include "Engine/Reflection/ReflectionEditorMetadata.h"
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
@@ -111,6 +113,17 @@ namespace
         {
             if ( const string* pColor = type.findCustomMeta( "IconColor" ) )
                 scan._setColorKey.insert( EditorComponentIconTable::makeColorKey( *pColor ) );
+        } );
+        // 열거값마다 적은 색(`ENUMERATOR( Color = "Signal.Error" )`)도 데이터가 이름으로 드는 색이다 — 컴파일러가 목록과 대조하지 못한다.
+        editor::getSubsystem<TypeRegistry>().forEachEnum(
+            [&scan]( const EnumInfo& info )
+        {
+            for ( const EnumeratorInfo& enumerator : info._listEnumerator )
+            {
+                const hashed_string& color = info.findEnumeratorEditorMetadata( enumerator._name )._color;
+                if ( color.empty() == false )
+                    scan._setColorKey.insert( string( color.toString() ) );
+            }
         } );
         return scan;
     }

@@ -4,6 +4,8 @@
 
 #include "Editor/Panels/Fog/Model/VolumetricFogStatus.h"
 
+#include "Engine/Localization/LocText.h"
+
 using namespace sw;
 using namespace sw::editor;
 
@@ -14,7 +16,7 @@ SW_TEST_CASE( VolumetricFogStatusTest, EveryStateExplainsItself )
                                         FogVolumeState::MissingPipeline, FogVolumeState::BufferFailed, FogVolumeState::Active };
     for ( const FogVolumeState state : arrState )
     {
-        const utf8* pText = VolumetricFogStatus::describe( state );
+        const utf8* pText = LocalizedText::findEnum( state ); // 문장은 `FogVolumeState` 의 DisplayName 이다
         SW_EXPECT_TRUE( pText != nullptr && pText[0] != '\0' );
         SW_EXPECT_EQUAL( state == FogVolumeState::Active, VolumetricFogStatus::canShowVolumeViews( state ) );
     }

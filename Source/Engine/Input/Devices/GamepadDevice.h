@@ -12,6 +12,7 @@
 #include "Engine/Input/Feedback/IInputFeedbackDevice.h"
 #include "Engine/Input/GamepadButtonUtil.h"
 #include "Engine/Input/IInputDevice.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
 {
@@ -26,12 +27,13 @@ namespace sw
         Unknown
     };
 
+    ENUM()
     enum class GamepadBatteryLevel : uint8
     {
-        Empty = 0,
-        Low,
-        Medium,
-        Full
+        Empty  ENUMERATOR( DisplayName = "Empty" ) = 0,
+        Low    ENUMERATOR( DisplayName = "Low" ),
+        Medium ENUMERATOR( DisplayName = "Medium" ),
+        Full   ENUMERATOR( DisplayName = "Full (100%)" )
     };
 
     struct GamepadBatteryInfo

@@ -39,7 +39,7 @@ namespace sw
     {
         struct LocalizationToolsInternal
         {
-            static constexpr const utf8* kArrCodeExtension[] = { ".h", ".cpp", ".inl" };
+            static constexpr string_view kArrCodeExtension[] = { ".h", ".cpp", ".inl" };
 
             /** @brief 읽기 오류를 보고서 · 로그의 글(`문장: 대상`)로 짓습니다. */
             [[nodiscard]] static string describe( const Error& error )
@@ -404,7 +404,7 @@ namespace sw
                 {
                     const DiskPath   codeFolder = repositoryRoot.join( codeRoot );
                     vector<DiskPath> listFile;
-                    if ( FileUtil::isDirectory( codeFolder ) == false || FileUtil::collectFiles( codeFolder, "", listFile, true ) == false )
+                    if ( FileUtil::isDirectory( codeFolder ) == false || FileUtil::collectFiles( codeFolder, kArrCodeExtension, SW_COUNT_OF( kArrCodeExtension ), listFile, true ) == false )
                     {
                         gatherer.addIssue( codeRoot, "code root does not exist", true );
                         continue;
@@ -415,13 +415,8 @@ namespace sw
                         // 테스트 소스는 배포 문구가 아니다(빌드도 `/Tests/` 를 개발 전용으로 뺀다 — SW_DEV_ONLY_SOURCE_PATTERNS). 테스트가 쓰는 키가 엔진 표에 오르지 않게 한다.
                         if ( StringUtil::contains( FileUtil::normalizeSeparators( filePath.str() ), "/Tests/" ) )
                             continue;
-                        bool bCode{ false };
-                        for ( const utf8* pExtension : kArrCodeExtension )
-                        {
-                            bCode = bCode || FileUtil::hasExtension( filePath.str(), pExtension );
-                        }
                         string text;
-                        if ( bCode == false || FileUtil::readTextFile( filePath, text ) == false )
+                        if ( FileUtil::readTextFile( filePath, text ) == false )
                             continue;
                         string relative;
                         if ( FileUtil::makeRelativePath( repositoryRoot.str(), filePath.str(), relative ) == false )
@@ -441,7 +436,8 @@ namespace sw
                     const DiskPath   assetFolder = resolveAbsolutePath( assetRoot );
                     vector<DiskPath> listFile;
                     // 에셋 루트가 리소스 루트면 옛 작업 도메인 자리의 찌꺼기가 섞인다 — EditorContentScan 이 뺀다
-                    const bool bListed = FileUtil::isDirectory( assetFolder ) && editor::EditorContentScan::collectFiles( assetFolder, "", listFile, true );
+                    const bool bListed = FileUtil::isDirectory( assetFolder ) && editor::EditorContentScan::collectFiles( assetFolder, editor::EditorContentScan::kArrDataXMLExtension,
+                                                                                                                          SW_COUNT_OF( editor::EditorContentScan::kArrDataXMLExtension ), listFile, true );
                     if ( bListed == false )
                     {
                         gatherer.addIssue( assetRoot, "asset root does not exist", true );
@@ -450,9 +446,8 @@ namespace sw
                     VectorUtil::sort( listFile );
                     for ( const DiskPath& filePath : listFile )
                     {
-                        const bool bCandidate = FileUtil::hasExtension( filePath.str(), ".xml" ); // 대화 그래프(`.dialogue.xml`)도 XML 이다
-                        string     text;
-                        if ( bCandidate == false || FileUtil::readTextFile( filePath, text ) == false )
+                        string text; // 대화 그래프(`.dialogue.xml`)도 XML 이다
+                        if ( FileUtil::readTextFile( filePath, text ) == false )
                             continue;
                         LocalizationTools::gatherAssetFile( project, gatherer, FileUtil::skipUTF8Bom( text ), editor::getSubsystem<AssetPaths>().toAssetID( filePath ) );
                         gatherer.countFile();

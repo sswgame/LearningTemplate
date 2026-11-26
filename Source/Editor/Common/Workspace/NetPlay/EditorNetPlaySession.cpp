@@ -30,6 +30,7 @@
 
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Network/GameNetSession.h"
+#include "Engine/Reflection/EnumName.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
 #include <thread>
@@ -225,20 +226,6 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    const utf8* toString( EditorNetMode mode )
-    {
-        switch ( mode )
-        {
-            case EditorNetMode::Standalone:
-                return "Standalone";
-            case EditorNetMode::DedicatedServer:
-                return "Dedicated Server";
-            case EditorNetMode::ListenHost:
-                return "Listen Host";
-        }
-        return "Unknown";
-    }
-
     EditorNetPlaySession::EditorNetPlaySession()
         : _processes{ *this }
         , _listProcess{}
@@ -270,7 +257,7 @@ namespace sw::editor
         if ( pSelected != nullptr )
         {
             _pendingSettings = *pSelected;
-            SW_LOG_INFO_ID( "NetPlay.MultiplayerPresetRestoredPlayer", "Multiplayer preset '%#' restored - %#, %# player(s)", _presetStore.getSelectedPresetName(), toString( _pendingSettings._mode ), _pendingSettings._clientCount );
+            SW_LOG_INFO_ID( "NetPlay.MultiplayerPresetRestoredPlayer", "Multiplayer preset '%#' restored - %#, %# player(s)", _presetStore.getSelectedPresetName(), getEnumName( _pendingSettings._mode ), _pendingSettings._clientCount );
         }
         return SubsystemInitResult::Succeeded;
     }
@@ -454,7 +441,7 @@ namespace sw::editor
         }
         if ( settings._mode == EditorNetMode::Standalone || ( settings._clientCount < 1 && _bReplayServer == false ) )
         {
-            SW_LOG_WARNING_ID( "NetPlay.NetModePlayerNeeds", "Net mode %# with %# player(s) needs no processes - play in the editor instead", toString( settings._mode ), settings._clientCount );
+            SW_LOG_WARNING_ID( "NetPlay.NetModePlayerNeeds", "Net mode %# with %# player(s) needs no processes - play in the editor instead", getEnumName( settings._mode ), settings._clientCount );
             return false;
         }
         if ( EditorNetPlaySessionInternal::isWindowLayoutValid( settings ) == false )
@@ -568,7 +555,7 @@ namespace sw::editor
             requestStop(); // 띄운 프로세스는 끈다(거두기는 프레임마다 `update` 가 잇는다). 합칠 트레이스는 없다
             return false;
         }
-        SW_LOG_INFO_ID( "NetPlay.MultiplayerSessionStartedPlayer", "Multiplayer session started - %#, %# player(s), UDP port %#, traces %#", toString( settings._mode ), settings._clientCount, _port,
+        SW_LOG_INFO_ID( "NetPlay.MultiplayerSessionStartedPlayer", "Multiplayer session started - %#, %# player(s), UDP port %#, traces %#", getEnumName( settings._mode ), settings._clientCount, _port,
                         _traceDirectory.empty() ? string( "off" ) : _traceDirectory.str() );
         return true;
     }

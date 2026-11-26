@@ -86,54 +86,10 @@ namespace sw
                 return SW_LOCKEYREF( "Chat", "Unavailable" );
             }
         }
-        switch ( result._result )
-        {
-            case ChatResult::Ok:
-            {
-                return "";
-            }
-            case ChatResult::NotMember:
-            {
-                return SW_LOCKEYREF( "Chat", "NotMember" );
-            }
-            case ChatResult::NotJoinable:
-            {
-                return SW_LOCKEYREF( "Chat", "NotJoinable" );
-            }
-            case ChatResult::Muted:
-            {
-                return SW_LOCALIZED_MESSAGE( "Chat", "Muted" ).addInteger( "seconds", retryAfterMs / 1000 ).str();
-            }
-            case ChatResult::RateLimited:
-            {
-                return SW_LOCALIZED_MESSAGE( "Chat", "TooFastWait" ).addInteger( "milliseconds", retryAfterMs ).str();
-            }
-            case ChatResult::Repeated:
-            {
-                return SW_LOCKEYREF( "Chat", "Repeated" );
-            }
-            case ChatResult::Rejected:
-            {
-                return SW_LOCKEYREF( "Chat", "Blocked" );
-            }
-            case ChatResult::TargetOffline:
-            {
-                return SW_LOCKEYREF( "Chat", "TargetOffline" );
-            }
-            case ChatResult::TooManyChannels:
-            {
-                return SW_LOCKEYREF( "Chat", "TooManyChannels" );
-            }
-            case ChatResult::NotFound:
-            {
-                return SW_LOCKEYREF( "Chat", "NotFound" );
-            }
-            case ChatResult::Count:
-            {
-                break;
-            }
-        }
-        return SW_LOCKEYREF( "Chat", "Failed" );
+        if ( result._result == ChatResult::Ok )
+            return "";
+        // 글이 쓰지 않는 인자는 무시된다(`ChatResult` 의 DisplayName 이 고른다). 와이어에서 온 모르는 값은 공통 키 `Enum.Unknown` 이다
+        return LocalizedMessage( LocalizedText::makeEnumKey( result._result ) ).addInteger( "seconds", retryAfterMs / 1000 ).addInteger( "milliseconds", retryAfterMs ).str();
     }
 
     bool ChatScreen::onCommand( const hashed_string& command, Widget& source )

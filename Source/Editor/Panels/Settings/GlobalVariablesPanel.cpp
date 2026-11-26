@@ -125,7 +125,7 @@ namespace sw::editor
                         if ( display._bHidden != SW_FALSE )
                             continue;
                         const int32 val32     = static_cast<int32>( enumerator._value );
-                        const utf8* name      = display._displayName.empty() ? enumerator._name.toString().data() : display._displayName.c_str();
+                        const utf8* name      = display._displayName.empty() ? enumerator._name.toString().data() : LocalizedText::findEnum( pEnumInfo, enumerator._value );
                         const bool  bSelected = ( val32 == currentVal );
                         if ( ImGui::Selectable( name, bSelected ) )
                         {

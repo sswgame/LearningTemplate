@@ -17,8 +17,8 @@ SW_TEST_CASE( FriendListRowTest, ReusedRowShowsTheFriendItIsBoundTo )
     LocalizationManager localization; // 엔진 표(engine.strings.xml)와 같은 원문 서식
     localization.setString( "en", hashed_string( "FriendList.Row" ), "#{account}  {presence}" );
     localization.setString( "en", hashed_string( "FriendList.RowActivity" ), "#{account}  {presence}  {activity}" );
-    localization.setString( "en", hashed_string( "FriendList.PresenceInGame" ), "in game" );
-    localization.setString( "en", hashed_string( "FriendList.PresenceOffline" ), "offline" );
+    localization.setString( "en", hashed_string( "Enum.SocialPresenceStatus.InGame" ), "in game" );
+    localization.setString( "en", hashed_string( "Enum.SocialPresenceStatus.Offline" ), "offline" );
     SW_REQUIRE_TRUE( localization.setCurrentLanguage( "en" ) );
     unique_ptr<Widget> row = FriendListScreen::makeRow();
     FriendEntry        entry;

@@ -180,22 +180,6 @@ namespace sw
 
 namespace sw
 {
-    const utf8* toString( ScheduleSegmentSource source )
-    {
-        switch ( source )
-        {
-            case ScheduleSegmentSource::Idle:
-                return "idle";
-            case ScheduleSegmentSource::Routine:
-                return "routine";
-            case ScheduleSegmentSource::Event:
-                return "event";
-            case ScheduleSegmentSource::Appointment:
-                return "appointment";
-        }
-        return "unknown";
-    }
-
     void ScheduleSystem::collectLiveSystems( vector<const ScheduleSystem*>& outListSystem )
     {
         ScheduleSystemRegistry* const pRegistry = game::findSubsystem<ScheduleSystemRegistry>();
@@ -677,7 +661,7 @@ namespace sw
         if ( view._segmentIndex.has_value() )
         {
             const ScheduleSegment& segment = npc._listSegment[static_cast<size_t>( *view._segmentIndex )];
-            text.appendFormat( "  active: %# '%#' block #%# ", toString( segment._source ), segment._sourceID.c_str(), segment._blockIndex );
+            text.appendFormat( "  active: %# '%#' block #%# ", getEnumName( segment._source ), segment._sourceID.c_str(), segment._blockIndex );
             Internal::appendClock( text, segment._startMinute );
             text.append( "-" );
             Internal::appendClock( text, segment._endMinute );
@@ -765,7 +749,7 @@ namespace sw
                 Internal::appendClock( text, segment._departMinute );
                 text.appendFormat( " (+%# min)", segment._travelMinutes );
             }
-            text.appendFormat( " [%# '%#' p%#]\n", toString( segment._source ), segment._sourceID.c_str(), segment._priority );
+            text.appendFormat( " [%# '%#' p%#]\n", getEnumName( segment._source ), segment._sourceID.c_str(), segment._priority );
         }
         outText.assign( text.c_str() );
     }

@@ -103,8 +103,7 @@ namespace sw::editor
         // 3) 켜고 끄기 — 미리보기를 물은 뒤 적용한다
         // ------------------------------------------------------------------------------
         /** @brief 끄면 이 창이 사라지거나 프로젝트가 없어지는 종류입니다 — 켜고 끄기 · 초기화를 막는다. */
-        static bool        isLocked( ModuleKind kind ) { return kind == ModuleKind::Editor || kind == ModuleKind::Game; }
-        static const utf8* getKindName( ModuleKind kind );
+        static bool isLocked( ModuleKind kind ) { return kind == ModuleKind::Editor || kind == ModuleKind::Game; }
 
         /** @brief @p moduleName 을 @p bEnabled 로 바꿀 때 함께 바뀌는 모듈을 미리 봅니다. 그래프가 깨지면 로그를 남기고 false(묻지 않는다)입니다. */
         [[nodiscard]] bool requestToggle( const string& moduleName, bool bEnabled );

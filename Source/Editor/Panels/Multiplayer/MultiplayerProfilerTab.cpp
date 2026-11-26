@@ -12,6 +12,8 @@
 
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
+#include "Engine/Reflection/EnumName.h"
+#include "Engine/Reflection/ReflectionEditorMetadata.h"
 
 #include <imgui.h>
 
@@ -23,54 +25,6 @@ namespace sw::editor
         {
             /** @brief 그래프 한 장의 높이(글자 높이 배수)입니다. */
             static constexpr float32 kGraphHeightInLines = 3.0f;
-
-            /** @brief 그래프 한 장의 제목입니다(로컬라이제이션 키 — 글 수집이 `SW_LOCKEY` 줄을 읽으므로 키를 글자 그대로 둔다). */
-            static const utf8* getGraphTitle( EditorNetProfilerChannel channel )
-            {
-                switch ( channel )
-                {
-                    case EditorNetProfilerChannel::SentBytesPerSecond:
-                        return SW_LOCKEY( "EditorMultiplayer", "ProfilerSentBytes" );
-                    case EditorNetProfilerChannel::ReceivedBytesPerSecond:
-                        return SW_LOCKEY( "EditorMultiplayer", "ProfilerReceivedBytes" );
-                    case EditorNetProfilerChannel::SentPacketsPerSecond:
-                        return SW_LOCKEY( "EditorMultiplayer", "ProfilerSentPackets" );
-                    case EditorNetProfilerChannel::ReceivedPacketsPerSecond:
-                        return SW_LOCKEY( "EditorMultiplayer", "ProfilerReceivedPackets" );
-                    case EditorNetProfilerChannel::ResentMessagesPerSecond:
-                        return SW_LOCKEY( "EditorMultiplayer", "ProfilerResent" );
-                    case EditorNetProfilerChannel::RttMilliseconds:
-                        return SW_LOCKEY( "EditorMultiplayer", "ProfilerRtt" );
-                    case EditorNetProfilerChannel::LossPercent:
-                        return SW_LOCKEY( "EditorMultiplayer", "ProfilerLoss" );
-                    case EditorNetProfilerChannel::Count:
-                        return "";
-                }
-                return "";
-            }
-
-            /** @brief 그래프 한 장의 단위입니다(오버레이 글). */
-            static const utf8* getGraphUnit( EditorNetProfilerChannel channel )
-            {
-                switch ( channel )
-                {
-                    case EditorNetProfilerChannel::SentBytesPerSecond:
-                    case EditorNetProfilerChannel::ReceivedBytesPerSecond:
-                        return "B/s";
-                    case EditorNetProfilerChannel::SentPacketsPerSecond:
-                    case EditorNetProfilerChannel::ReceivedPacketsPerSecond:
-                        return "pkt/s";
-                    case EditorNetProfilerChannel::ResentMessagesPerSecond:
-                        return "msg/s";
-                    case EditorNetProfilerChannel::RttMilliseconds:
-                        return "ms";
-                    case EditorNetProfilerChannel::LossPercent:
-                        return "%";
-                    case EditorNetProfilerChannel::Count:
-                        return "";
-                }
-                return "";
-            }
         };
     } // namespace
 } // namespace sw::editor
@@ -134,9 +88,9 @@ namespace sw::editor
         {
             const MultiplayerProfilerGraph&        graph = _viewState._arrGraph[channel];
             fixed_string<constant::buffer::kMax64> overlay;
-            formatstring( overlay.data(), overlay.capacity(), "%# %# (peak %#)", Fmt( graph._latest, Format().precision( 1 ) ), MultiplayerProfilerTabInternal::getGraphUnit( channel ),
+            formatstring( overlay.data(), overlay.capacity(), "%# %# (peak %#)", Fmt( graph._latest, Format().precision( 1 ) ), getEnumeratorEditorMetadata( channel )._unit.c_str(),
                           Fmt( graph._peak, Format().precision( 1 ) ) );
-            ImGui::TextUnformatted( MultiplayerProfilerTabInternal::getGraphTitle( channel ) );
+            ImGui::TextUnformatted( LocalizedText::findEnum( channel ) );
             ImGui::PushID( static_cast<int32>( channel ) );
             ImGui::PlotLines( "##Graph", graph._listValue.data(), static_cast<int32>( graph._listValue.size() ), 0, overlay.c_str(), 0.0f, graph._peak > 0.0f ? graph._peak : 1.0f,
                               ImVec2( -1.0f, height ) );

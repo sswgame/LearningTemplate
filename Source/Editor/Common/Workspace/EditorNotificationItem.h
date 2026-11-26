@@ -7,15 +7,18 @@
 #include "Core/Container/string.h"
 #include "Core/Foundation/Types.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 namespace sw::editor
 {
-    /** @brief 알림 유형 */
+    /** @brief 알림 유형입니다. 색은 토스트의 테두리와 제목이 함께 쓴다. */
+    ENUM()
     enum class NotificationKind : uint8
     {
-        Info = 0,
-        Success,
-        Warning,
-        Error
+        Info    ENUMERATOR( Color = "Signal.Info" ) = 0,
+        Success ENUMERATOR( Color = "Signal.Success" ),
+        Warning ENUMERATOR( Color = "Signal.Warning" ),
+        Error   ENUMERATOR( Color = "Signal.Error" )
     };
 
     /** @brief 개별 토스트 알림 항목 */

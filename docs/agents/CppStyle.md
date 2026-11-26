@@ -154,6 +154,7 @@ C++ 를 쓸 때의 규칙. 린트 · 컴파일이 강제하는 줄은 "강제" �
 - 세이브에서 핸들을 빼지 않는다. 집합 · 맵은 RuntimeState 로 쓰지 않는다. 중첩 형식은 public 으로만 반사한다.
 - FUNCTION: 주인 밖을 바꾸는 함수는 대상을 인자(핸들)로 드러내 편집 명령을 탄다. `callWithText` · `bindEventToFunction` 배선은 허용 목록 · 수명 · 핫 리로드 검증과 함께만.
 - 복제: `Quantize` 키 · 양자화 형식을 두지 않고, 손 본문 넷 메시지를 고정 배치로 옮기지 않는다.
+- 열거값의 보일 글 · 툴팁 · 색 · 단위는 switch 로 고르지 않고 `ENUMERATOR( DisplayName · Tooltip · Color · Unit )` 에 적는다. 글은 `LocalizedText::findEnum`(지금 글) · `makeEnumKey`(그릴 때 풀 키 `Enum.<열거형>.<열거자>`), 색은 `EditorThemeUtil::findEnumColor`, 단위는 `getEnumeratorEditorMetadata`. 한 열거자라도 DisplayName 을 적었으면 숨기지 않은 열거자 모두 적는다(`App --gather-text` 오류).
 - 손으로 두는 이름 표: `DialogBackend`, `ShaderBindingValidatorInternal::RegisterClass` · `GlNamespace`, `TextChoiceKind`, `RichTextParser::TagKind`, `StageReportResult`, `WaterBodyComponent::MaterialNames` · `FoliageComponent::ViewMaterialNames`.
 
 ## Parallel and async

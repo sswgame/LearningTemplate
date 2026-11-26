@@ -142,6 +142,19 @@ namespace sw
         { return types.getItems(); } );
     }
 
+    const AssetSuffix* AssetTypeDef::findSuffix( string_view path ) const
+    {
+        const AssetSuffix* pBest = nullptr;
+        for ( uint32 index = 0; index < _suffixCount; ++index )
+        {
+            const AssetSuffix& suffix  = _pSuffix[index];
+            const bool         bLonger = pBest == nullptr || pBest->_text.size() < suffix._text.size(); // 가장 긴 것(`.prefab.json` 이 `.prefab` 보다 먼저)
+            if ( bLonger && StringUtil::endsWith( path, suffix._text, true ) )
+                pBest = &suffix;
+        }
+        return pBest;
+    }
+
     AssetSuffixMatch AssetTypeRegistry::findSuffix( string_view path )
     {
         return AssetTypeRegistryInternal::getTypes().withLock( [path]( const AssetTypeRegistryInternal::TypeList& types )

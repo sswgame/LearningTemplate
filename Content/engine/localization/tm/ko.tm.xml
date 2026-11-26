@@ -48,6 +48,8 @@
 		<entry source="Anchor" text="기준" />
 		<entry source="Anchor-relative root position and yaw at alignment time; select the role object in the viewport to move it with the gizmo"
 		       text="맞춤 시각의 기준 상대 뿌리 위치 · 방향 — 뷰포트에서 역할 오브젝트를 골라 기즈모로 옮깁니다" />
+		<entry source="Animation clip blended over the bound object's animation during the span. Type a resource id or drop one from the Content Browser."
+		       text="구간 동안 바인딩된 오브젝트의 애니메이션 위에 섞을 애니메이션 클립입니다. 리소스 id 를 치거나 콘텐츠 브라우저에서 끌어다 놓습니다." />
 		<entry source="Appearance" text="외형" />
 		<entry source="Apply" text="적용" />
 		<entry source="Apply sanction" text="제재 적용" />
@@ -55,6 +57,8 @@
 		<entry source="Asset id" text="에셋 id" />
 		<entry source="Attributes" text="어트리뷰트" />
 		<entry source="Audio" text="오디오" />
+		<entry source="Audio event posted when the start frame is crossed and stopped when the span ends."
+		       text="시작 프레임을 지날 때 보내고 구간이 끝나면 멈추는 오디오 이벤트입니다." />
 		<entry source="Audit log" text="감사 기록" />
 		<entry source="Auto layout" text="자동 배치" />
 		<entry source="Automatic" text="자동" />
@@ -67,6 +71,7 @@
 		<entry source="Binds: {mappedTargetBoneCount} of {targetBoneCount} target bones follow the source, height ratio {heightRatio}"
 		       text="묶음: 대상 본 {targetBoneCount}개 중 {mappedTargetBoneCount}개가 원본을 따름, 키 비율 {heightRatio}" />
 		<entry source="Blackboard key" text="블랙보드 키" />
+		<entry source="Block" text="막기" />
 		<entry source="Body" text="몸" />
 		<entry source="Body channels" text="몸 채널" />
 		<entry source="Body data has unsaved edits" text="몸 데이터에 저장하지 않은 편집이 있습니다" />
@@ -86,6 +91,7 @@
 		<entry source="Buy {item} for {price} {currency}?" text="{item}을(를) {price} {currency}에 구매할까요?" />
 		<entry source="CPU only (Recompute Normals)" text="CPU 전용(법선 다시 계산)" />
 		<entry source="CPU only:" text="CPU 전용:" />
+		<entry source="Camera" text="카메라" />
 		<entry source="Camera Shake" text="카메라 흔들림" />
 		<entry source="Camera View" text="카메라 시점" />
 		<entry source="Cancel" text="취소" />
@@ -106,6 +112,7 @@
 		       text="뷰포트에서 몸을 누르세요(Esc 로 끕니다)" />
 		<entry source="Click to edit the curve" text="눌러서 곡선 편집" />
 		<entry source="Clients" text="클라이언트" />
+		<entry source="Clip" text="클립" />
 		<entry source="Close" text="닫기" />
 		<entry source="Closed reports" text="닫은 신고" />
 		<entry source="Closest distance the camera draws. Geometry nearer than this is clipped; keep it as large as the scene allows to avoid depth fighting."
@@ -170,9 +177,12 @@
 		<entry source="Dyeable" text="염색" />
 		<entry source="Edit" text="편집" />
 		<entry source="Edit this group's nested stack" text="이 묶음의 하위 스택 편집" />
+		<entry source="Editor" text="에디터" />
+		<entry source="Editor extensions" text="에디터 확장" />
 		<entry source="Effects" text="이펙트" />
 		<entry source="Effects Quality" text="효과 품질" />
 		<entry source="Effects Volume" text="효과음 음량" />
+		<entry source="Empty" text="없음" />
 		<entry source="Empty - add modifiers to group them." text="비어 있음 - 모디파이어를 더해 묶습니다." />
 		<entry source="End maintenance" text="점검 끝내기" />
 		<entry source="Enter / exit blend (s)" text="들어감 · 나감 섞기(초)" />
@@ -192,6 +202,7 @@
 		<entry source="Fight: 1/2 moves, Enter=Move0, Esc=Run" text="싸운다: 1/2 기술, Enter=기술0, Esc=도망" />
 		<entry source="File" text="파일" />
 		<entry source="Filter by id" text="id 로 거르기" />
+		<entry source="Finished" text="끝남" />
 		<entry source="Fit check (view only)" text="맞춤 검사(보기만)" />
 		<entry source="Fit to Bounds" text="경계 상자에 맞추기" />
 		<entry source="Fluid paths" text="체액 경로" />
@@ -201,12 +212,14 @@
 		<entry source="Foot lift (m)" text="발 들림(m)" />
 		<entry source="Friends" text="친구" />
 		<entry source="From" text="보내는 곳" />
+		<entry source="Full (100%)" text="가득(100%)" />
 		<entry source="GM connection: {stateText}" text="GM 연결: {stateText}" />
 		<entry source="GM password" text="GM 비밀번호" />
 		<entry source="Gallop" text="질주" />
 		<entry source="Game" text="게임" />
 		<entry source="Game saved" text="게임을 저장했습니다" />
 		<entry source="Game time" text="게임 시각" />
+		<entry source="GameFramework" text="GameFramework" />
 		<entry source="Gamepad Sensitivity" text="게임패드 감도" />
 		<entry source="Gameplay" text="게임플레이" />
 		<entry source="Go" text="가기" />
@@ -237,6 +250,9 @@
 		       text="이 키에서 다음 키까지 곡선이 움직이는 방식입니다. Constant 는 값을 유지하고, Linear 는 직선, Cubic 은 부드러운 스플라인입니다." />
 		<entry source="Hungry" text="배고픔" />
 		<entry source="IK goal" text="IK 목표" />
+		<entry source="Id of the appearance preset the target object wears."
+		       text="대상 오브젝트가 입을 외형 프리셋의 id 입니다." />
+		<entry source="Ignore" text="무시" />
 		<entry source="Infinite" text="무한" />
 		<entry source="Inherited from the base entry. Picking a value writes it on this entry."
 		       text="부모 항목에서 물려받은 값입니다. 고르면 이 항목에 적습니다." />
@@ -250,13 +266,20 @@
 		<entry source="Keep these display settings?" text="이 디스플레이 설정을 유지할까요?" />
 		<entry source="Keep these settings? Reverting in {seconds, plural, one {# second} other {# seconds}}."
 		       text="이 설정을 유지할까요? {seconds}초 뒤에 되돌립니다." />
+		<entry source="Keyboard &amp; Mouse" text="키보드와 마우스" />
 		<entry source="Kind" text="종류" />
+		<entry source="Kits" text="키트" />
+		<entry source="LOD Fade Code" text="LOD 페이드 코드" />
+		<entry source="LOD Level" text="LOD 단계" />
 		<entry source="Language" text="언어" />
 		<entry source="Leave Minigame" text="미니게임 나가기" />
 		<entry source="Lift sanction" text="제재 풀기" />
+		<entry source="Light Complexity" text="조명 복잡도" />
 		<entry source="Light at the eye" text="눈에 닿는 빛" />
+		<entry source="Lighting Only" text="조명만" />
 		<entry source="List audit" text="감사 기록 보기" />
 		<entry source="List live events" text="라이브 이벤트 보기" />
+		<entry source="Lit" text="조명" />
 		<entry source="Live events" text="라이브 이벤트" />
 		<entry source="Live: {liveRunnerName}" text="실행 중: {liveRunnerName}" />
 		<entry source="Load" text="불러오기" />
@@ -277,6 +300,8 @@
 		<entry source="Loading Failed" text="불러오기 실패" />
 		<entry source="Loading friends..." text="친구 목록을 불러오는 중..." />
 		<entry source="Loading servers..." text="서버 목록을 불러오는 중..." />
+		<entry source="Localization key (Namespace.Key) of the subtitle line shown for the span."
+		       text="구간 동안 보일 자막 줄의 현지화 키(Namespace.Key)입니다." />
 		<entry source="Look up an account to see its balances and sanctions"
 		       text="계정을 찾으면 잔액과 제재가 보입니다" />
 		<entry source="Lookup" text="찾기" />
@@ -288,6 +313,7 @@
 		<entry source="Makeup smear" text="화장 번짐" />
 		<entry source="Map" text="축 더하기" />
 		<entry source="Map same names" text="같은 이름끼리 잇기" />
+		<entry source="Marker Slots" text="표지 칸" />
 		<entry source="Master Volume" text="전체 음량" />
 		<entry source="Medium" text="중간" />
 		<entry source="Memo (ticket)" text="메모(티켓)" />
@@ -296,6 +322,8 @@
 		<entry source="Message not found" text="메시지를 찾을 수 없습니다" />
 		<entry source="Message was blocked by the word filter"
 		       text="단어 거르기에 걸려 메시지를 보내지 못했습니다" />
+		<entry source="Metallic" text="금속성" />
+		<entry source="Mipmaps" text="밉맵" />
 		<entry source="Mirror" text="대칭" />
 		<entry source="Mirror bone" text="뼈 대칭" />
 		<entry source="Modifiers" text="모디파이어" />
@@ -312,6 +340,7 @@
 		<entry source="Nested Stack" text="하위 스택" />
 		<entry source="New" text="새로" />
 		<entry source="New socket name" text="새 소켓 이름" />
+		<entry source="Nintendo Switch Gamepad" text="Nintendo Switch 게임패드" />
 		<entry source="No AbilitySystemComponent in the active scene"
 		       text="활성 씬에 AbilitySystemComponent 가 없습니다" />
 		<entry source="No animation clips in ''{clipFolder}''"
@@ -325,6 +354,8 @@
 		<entry source="No entry uses this one." text="이 항목을 쓰는 곳이 없습니다." />
 		<entry source="No fit result yet. The preview scene solves the fit when a slider is released."
 		       text="아직 맞춤 결과가 없습니다. 슬라이더를 놓으면 미리보기 씬이 맞춥니다." />
+		<entry source="No fog in this scene. Add a Fog component to see volumetric fog."
+		       text="이 씬에 안개가 없습니다. 볼륨 안개를 보려면 Fog 컴포넌트를 더하세요." />
 		<entry source="No friends yet" text="아직 친구가 없습니다" />
 		<entry source="No in-process game is registered (NetSimGameRegistry) - only games with a kit session (INetSimSession) can run here."
 		       text="한 프로세스 게임이 등록되지 않았습니다(NetSimGameRegistry) — 키트 세션(INetSimSession)이 있는 게임만 여기서 돕니다." />
@@ -342,6 +373,7 @@
 		<entry source="No skin layers. Add makeup or a tattoo from the list above."
 		       text="피부 층이 없습니다. 위 목록에서 화장이나 문신을 더하세요." />
 		<entry source="No target" text="대상 없음" />
+		<entry source="Normals" text="노멀" />
 		<entry source="Not enough money." text="돈이 부족합니다." />
 		<entry source="Notice id" text="공지 id" />
 		<entry source="Notice seconds (0 = until removed)" text="공지 초(0 = 지울 때까지)" />
@@ -364,6 +396,8 @@
 		<entry source="Options" text="옵션" />
 		<entry source="Orthographic preset - the preview draws it in perspective."
 		       text="직교 프리셋 — 미리보기는 원근으로 그립니다." />
+		<entry source="Overdraw" text="오버드로" />
+		<entry source="Overlap" text="겹침" />
 		<entry source="Overlaps {name}" text="{name}와 겹침" />
 		<entry source="Overlays, in another color, the result with only the modifiers up to the selected one applied (deformation influence preview)"
 		       text="고른 모디파이어까지만 건 결과를 다른 색 선으로 겹쳐 그립니다(변형 영향 미리보기)" />
@@ -389,11 +423,16 @@
 		<entry source="Place" text="장소" />
 		<entry source="Place in Preview" text="미리보기에서 배치" />
 		<entry source="Play" text="재생" />
+		<entry source="PlayStation Gamepad" text="PlayStation 게임패드" />
 		<entry source="Plots" text="부지" />
 		<entry source="Point" text="점" />
 		<entry source="Position" text="위치" />
 		<entry source="Post notice" text="공지 올리기" />
 		<entry source="Post-Processing Quality" text="후처리 품질" />
+		<entry source="Prefab" text="프리팹" />
+		<entry source="Prefab spawned for this span. Type its resource id or drop it from the content browser."
+		       text="이 구간 동안 스폰할 프리팹입니다. 리소스 id 를 치거나 콘텐츠 브라우저에서 끌어다 놓습니다." />
+		<entry source="Preset" text="프리셋" />
 		<entry source="Presets (user data)" text="프리셋(사용자 데이터)" />
 		<entry source="Press Refresh to list friends" text="새로 고침을 누르면 친구 목록을 보입니다" />
 		<entry source="Press Refresh to list servers" text="새로 고침을 누르면 서버 목록을 보입니다" />
@@ -414,6 +453,7 @@
 		<entry source="Quit" text="끝내기" />
 		<entry source="Quit Game" text="게임 종료" />
 		<entry source="Quit the game?" text="게임을 끝낼까요?" />
+		<entry source="RHI backends" text="RHI 백엔드" />
 		<entry source="Raw timeline" text="타임라인 원문" />
 		<entry source="Reactive (re-check higher priority children every tick)"
 		       text="반응형(틱마다 우선순위가 높은 자식을 다시 본다)" />
@@ -470,6 +510,7 @@
 		<entry source="Root and pelvis" text="루트와 골반" />
 		<entry source="Rotation" text="회전" />
 		<entry source="Rotation of the layer in degrees" text="층의 회전(도)" />
+		<entry source="Roughness" text="거칠기" />
 		<entry source="Runtime ability state exists only during play. Press Play to inspect it."
 		       text="어빌리티 런타임 상태는 플레이 중에만 있습니다. 플레이를 눌러 확인하세요." />
 		<entry source="Same id as {name}" text="{name}와 id 가 같음" />
@@ -484,6 +525,9 @@
 		<entry source="Save pose" text="포즈 저장" />
 		<entry source="Save thumbnail" text="썸네일 저장" />
 		<entry source="Scale" text="크기" />
+		<entry source="Scenario" text="시나리오" />
+		<entry source="Scenario played when the start frame is crossed. Type its resource id or drop it from the content browser."
+		       text="시작 프레임을 지날 때 재생할 시나리오입니다. 리소스 id 를 치거나 콘텐츠 브라우저에서 끌어다 놓습니다." />
 		<entry source="Schedule system" text="일정 시스템" />
 		<entry source="Scope (all or server kind)" text="범위(all 또는 서버 종류)" />
 		<entry source="Seconds" text="초" />
@@ -509,6 +553,8 @@
 		<entry source="Shade the target mesh with the stack result. Runs on a compute shader when every enabled modifier supports it, otherwise the CPU result is uploaded as vertices. Off leaves the original mesh and the wire preview."
 		       text="대상 메시를 스택 결과로 셰이딩해 보입니다. 켜진 모디파이어가 모두 지원하면 컴퓨트 셰이더로, 아니면 CPU 결과를 정점으로 올립니다. 끄면 원래 메시와 와이어 미리보기만 남습니다." />
 		<entry source="Shaded Preview" text="셰이딩 미리보기" />
+		<entry source="Shaded Wireframe" text="셰이드 와이어프레임" />
+		<entry source="Shading Path" text="셰이딩 경로" />
 		<entry source="Shadow Filter" text="그림자 필터" />
 		<entry source="Shadow Quality" text="그림자 품질" />
 		<entry source="Share Usage Data" text="사용 데이터 공유" />
@@ -539,8 +585,10 @@
 		       text="끝을 원본 끝 위치로 풉니다(미끄러지지 않고 딛는 발)" />
 		<entry source="Some changes take effect after a restart."
 		       text="일부 변경은 다시 시작한 뒤 적용됩니다." />
+		<entry source="Sound" text="소리" />
 		<entry source="Source" text="출처" />
 		<entry source="Source bones" text="원본 뼈" />
+		<entry source="Span" text="구간" />
 		<entry source="Spatial" text="공간" />
 		<entry source="Speaker Setup" text="스피커 구성" />
 		<entry source="Splines" text="스플라인" />
@@ -555,10 +603,12 @@
 		       text="이 리소스 id 에 빈 프로필을 시작합니다(파일이 있으면 그것을 엽니다)" />
 		<entry source="Start in process" text="한 프로세스로 시작" />
 		<entry source="Start maintenance" text="점검 시작" />
+		<entry source="Started" text="시작" />
 		<entry source="Stereo" text="스테레오" />
 		<entry source="Stick Dead Zone" text="스틱 데드존" />
 		<entry source="Stop" text="정지" />
 		<entry source="Stop picking" text="집기 끄기" />
+		<entry source="Stopped" text="멈춤" />
 		<entry source="Stores the Preview tab's picture in the user data slot of the preset of this name (save the preset first)"
 		       text="미리보기 탭의 그림을 이 이름 프리셋의 사용자 데이터 칸에 담습니다(프리셋을 먼저 저장하세요)" />
 		<entry source="Subject prefix" text="주체 접두어" />
@@ -573,12 +623,15 @@
 		<entry source="Task" text="작업" />
 		<entry source="Tears and saliva" text="눈물 · 침" />
 		<entry source="Test tags:" text="태그 시험:" />
+		<entry source="Text" text="글" />
 		<entry source="Text Language" text="표시 언어" />
 		<entry source="Text Size" text="글자 크기" />
 		<entry source="Texture Quality" text="텍스처 품질" />
 		<entry source="That amount is not possible." text="그 수량은 안 됩니다." />
 		<entry source="That player is offline" text="상대가 접속해 있지 않습니다" />
 		<entry source="That slot cannot take it." text="그 칸에는 넣을 수 없습니다." />
+		<entry source="The camera is under water. Underwater fog has no volume."
+		       text="카메라가 물속입니다. 물속 안개에는 볼륨이 없습니다." />
 		<entry source="The catalog file the game reads. Edits keep its comments and layout."
 		       text="게임이 읽는 카탈로그 파일입니다. 편집해도 주석과 줄 배치가 남습니다." />
 		<entry source="The curve's value at this key." text="이 키에서 곡선이 가지는 값입니다." />
@@ -593,6 +646,8 @@
 		       text="미리보기 몸에 몸 프로필이 없습니다. bodyProfile 이 있는 프리셋을 고르세요." />
 		<entry source="The purchase reply did not match; your wallet was refreshed."
 		       text="구매 응답이 맞지 않아 지갑을 새로 고쳤습니다." />
+		<entry source="The renderer has no device this frame, so nothing is drawn."
+		       text="이번 프레임에 렌더러의 디바이스가 없어 그리지 않습니다." />
 		<entry source="The runtime loader could not read the saved file. See the log for the reason."
 		       text="런타임 로더가 저장한 파일을 읽지 못했습니다. 이유는 로그를 보세요." />
 		<entry source="The runtime loader reads the saved file."
@@ -631,10 +686,12 @@
 		<entry source="UI Scale" text="UI 배율" />
 		<entry source="UI Theme" text="UI 테마" />
 		<entry source="Ultra" text="최고" />
+		<entry source="Unbound" text="묶이지 않음" />
 		<entry source="Undo" text="실행 취소" />
 		<entry source="Undo appearance" text="외형 실행 취소" />
 		<entry source="Undo body edit" text="몸 편집 되돌리기" />
 		<entry source="Undo pose" text="포즈 실행 취소" />
+		<entry source="Unlit" text="조명 없음" />
 		<entry source="Unsupported" text="받지 않음" />
 		<entry source="Up" text="위" />
 		<entry source="Update the game to chat" text="채팅하려면 게임을 업데이트하세요" />
@@ -656,6 +713,14 @@
 		<entry source="Viewport gizmo editing needs the preview scene (EditorMultiWorld)."
 		       text="뷰포트 기즈모 편집은 미리보기 씬(EditorMultiWorld)이 필요합니다." />
 		<entry source="Voice Volume" text="음성 음량" />
+		<entry source="Volumetric fog is off in the fog settings, so plain fog is drawn. Turn on Volumetric in the Fog component."
+		       text="안개 설정에서 볼륨 안개가 꺼져 평범한 안개를 그립니다. Fog 컴포넌트에서 Volumetric 을 켜세요." />
+		<entry source="Volumetric fog is on but its buffers could not be created, so plain fog is drawn. See the log."
+		       text="볼륨 안개를 켰지만 버퍼를 만들지 못해 평범한 안개를 그립니다. 로그를 보세요." />
+		<entry source="Volumetric fog is on but its compute shader is missing, so plain fog is drawn. Check the shader cook log."
+		       text="볼륨 안개를 켰지만 컴퓨트 셰이더가 없어 평범한 안개를 그립니다. 셰이더 쿠킹 로그를 보세요." />
+		<entry source="Volumetric fog is on: the light-scattering volume is drawn in the main view."
+		       text="볼륨 안개가 켜졌습니다. 주 화면에 빛 산란 볼륨을 그립니다." />
 		<entry source="Walk" text="평보" />
 		<entry source="Wanted {level}" text="수배 {level}" />
 		<entry source="Warp File (.mfwarp)" text="워프 파일(.mfwarp)" />
@@ -674,12 +739,14 @@
 		<entry source="Why this activity now" text="지금 왜 이 행동인가" />
 		<entry source="Window Mode" text="창 모드" />
 		<entry source="Windowed" text="창" />
+		<entry source="Wireframe" text="와이어프레임" />
 		<entry source="Wires" text="선" />
 		<entry source="World Space" text="월드 공간" />
 		<entry source="World-space height of the visible area; the width follows the aspect ratio."
 		       text="보이는 영역의 월드 높이입니다. 너비는 화면 비율을 따라갑니다." />
 		<entry source="Wrinkle intensity" text="주름 세기" />
 		<entry source="Wrinkles" text="주름" />
+		<entry source="Xbox Gamepad" text="Xbox 게임패드" />
 		<entry source="Yaw (deg)" text="방향(도)" />
 		<entry source="You already said that" text="이미 한 말입니다" />
 		<entry source="You are muted ({seconds} s left)" text="채팅이 금지되어 있습니다({seconds}초 남음)" />
@@ -693,8 +760,11 @@
 		<entry source="[action=UI.Accept] Select" text="[action=UI.Accept] 선택" />
 		<entry source="added here" text="여기서 더함" />
 		<entry source="away" text="자리 비움" />
+		<entry source="blend in" text="블렌드 인" />
+		<entry source="blend out" text="블렌드 아웃" />
 		<entry source="busy" text="바쁨" />
 		<entry source="changed here" text="여기서 바꿈" />
+		<entry source="cut" text="컷" />
 		<entry source="draining" text="비우는 중" />
 		<entry source="in game" text="게임 중" />
 		<entry source="inherited" text="물려받음" />
@@ -706,9 +776,12 @@
 		       text="오프셋 {offsetX}, {offsetY}, {offsetZ}  거리 {distance}  피치 {pitch}  요 {yaw}  시야각 {computeFieldOfViewY}" />
 		<entry source="online" text="온라인" />
 		<entry source="open" text="열림" />
+		<entry source="playback end" text="재생 끝" />
 		<entry source="removed here" text="여기서 뺌" />
 		<entry source="replaced here" text="여기서 갈아끼움" />
 		<entry source="scRGB" text="scRGB" />
+		<entry source="shake" text="흔들림" />
+		<entry source="standby view" text="대기 뷰" />
 		<entry source="starting" text="시작 중" />
 		<entry source="tick {tick}  input focus: world {inputFocus}" text="틱 {tick}  입력 초점: 월드 {inputFocus}" />
 		<entry source="unknown" text="알 수 없음" />
@@ -756,9 +829,9 @@
 		       text="칸 {slotsCount}개, 세트 {setsCount}개, 프리셋 {presetsCount}개" />
 		<entry source="{slotsCount} slots, {setsCount} sets, {presetsCount} presets"
 		       text="칸 {slotsCount}개, 세트 {setsCount}개, 프리셋 {presetsCount}개" />
+		<entry source="{slot}: {item}" text="{slot}: {item}" />
+		<entry source="{stat} {value}" text="{stat} {value}" />
 		<entry source="{title}  ({count, plural, one {# pending request} other {# pending requests}})"
 		       text="{title}  (받은 요청 {count}건)" />
-		<entry source="{stat} {value}" text="{stat} {value}" />
-		<entry source="{slot}: {item}" text="{slot}: {item}" />
 	</entries>
 </TranslationMemory>

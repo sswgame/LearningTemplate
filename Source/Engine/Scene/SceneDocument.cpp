@@ -873,7 +873,8 @@ namespace sw
 
         // 쿠킹본 경로를 직접 받으면 그것을 읽는다. 그 밖은 정책 하나가 고르고, 고른 쪽이 없으면 다른 쪽을 대신 읽지 않는다 — 소스 실행이 옆에 남은
         // 쿠킹본을 읽으면 소스와 어긋난 씬을 모르고 쓴다(`ContentSource`).
-        if ( FileUtil::hasExtension( path, ".bin" ) )
+        const AssetSuffix* pSuffix = kAssetType.findSuffix( path ); // 쿠킹본인지는 종류의 접미사 표가 정한다(`.scene.bin`)
+        if ( pSuffix != nullptr && pSuffix->_role == AssetSuffixRole::Cooked )
             return loadBinary( assetID );
         if ( AssetIO::usesSource() )
             return loadXML( AssetID{ path } );

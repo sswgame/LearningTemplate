@@ -10,6 +10,7 @@
 
 #include "Engine/Animation/Facial/LipSync.h"
 #include "Engine/Asset/Cook/AssetCompanion.h"
+#include "Engine/Audio/AudioPCM.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Presentation/IVoiceDecoder.h"
 
@@ -17,7 +18,7 @@ namespace sw
 {
     bool LipSyncImport::isVoiceAudio( string_view relativePath )
     {
-        const bool bAudio = StringUtil::endsWith( relativePath, ".wav", true ) || StringUtil::endsWith( relativePath, ".ogg", true );
+        const bool bAudio = AudioPCM::isSupportedExtension( relativePath ); // 공통 디코더가 읽는 소리(접미사 칸 `AudioClipData::kArrAssetSuffix`)
         return bAudio && ( relativePath.find( "/voice/" ) != string_view::npos || StringUtil::startsWith( relativePath, "voice/", true ) );
     }
 

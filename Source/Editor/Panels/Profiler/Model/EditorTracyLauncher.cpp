@@ -92,20 +92,4 @@ namespace sw::editor
         SW_LOG_INFO_ID( "EditorTracy.TracyViewerLaunched", "Tracy viewer launched: %#", command.toCommandLine() );
         return EditorTracyLaunchResult::Launched;
     }
-
-    const utf8* EditorTracyLauncher::describeResult( EditorTracyLaunchResult result )
-    {
-        switch ( result )
-        {
-            case EditorTracyLaunchResult::Launched:
-                return "Tracy viewer launched and connecting to 127.0.0.1";
-            case EditorTracyLaunchResult::TracyNotCompiled:
-                return "Tracy is not linked into this build (SW_ENABLE_TRACY=OFF or Shipping)";
-            case EditorTracyLaunchResult::ViewerNotFound:
-                return "Tracy viewer not found at gv_tracyViewerPath: put tracy-profiler (0.14.1) there or point the variable at it";
-            case EditorTracyLaunchResult::ViewerLaunchFailed:
-                return "Failed to launch the Tracy viewer (see the log)";
-        }
-        return "";
-    }
 } // namespace sw::editor

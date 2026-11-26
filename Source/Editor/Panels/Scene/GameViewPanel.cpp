@@ -182,14 +182,14 @@ namespace sw::editor
     {
         if ( EditorChrome::beginToolbar( "##GameViewToolbar" ) )
         {
-            const utf8* pCurrentLabel = EditorViewTargetUtil::getAspectLabel( _model.getAspect() );
+            const utf8* pCurrentLabel = LocalizedText::findEnum( _model.getAspect() );
             ImGui::SetNextItemWidth( ImGui::GetFontSize() * SW_THEME_METRIC( "Layout", "FieldComboEm" ) );
             if ( EditorWidgets::beginCombo( "##GameViewAspect", pCurrentLabel ) )
             {
                 for ( uint32 aspectIndex = 0; aspectIndex < static_cast<uint32>( EditorGameViewAspect::Count ); ++aspectIndex )
                 {
                     const EditorGameViewAspect aspect = static_cast<EditorGameViewAspect>( aspectIndex );
-                    if ( ImGui::Selectable( EditorViewTargetUtil::getAspectLabel( aspect ), aspect == _model.getAspect() ) )
+                    if ( ImGui::Selectable( LocalizedText::findEnum( aspect ), aspect == _model.getAspect() ) )
                         _model.setAspect( aspect );
                 }
                 ImGui::EndCombo();

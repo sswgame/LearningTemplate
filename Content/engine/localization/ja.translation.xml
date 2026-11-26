@@ -5,29 +5,13 @@
 		<entry key="Amount" text="量" sourceHash="ba98a7152d80b949" />
 		<entry key="Apply" text="適用" sourceHash="b8f855b49234b81b" />
 		<entry key="Cancel" text="キャンセル" sourceHash="2ceb11be2290bb1b" />
-		<entry key="Chat.Blocked"
-		       text="メッセージは単語フィルターでブロックされました"
-		       sourceHash="9f4be67ffd43a11b" />
-		<entry key="Chat.Failed" text="チャットに失敗しました" sourceHash="835a9e246c532850" />
 		<entry key="Chat.InvalidMessage"
 		       text="メッセージが空か正しくありません"
 		       sourceHash="90852f96d275f811" />
-		<entry key="Chat.Muted"
-		       text="チャットが禁止されています(残り{seconds}秒)"
-		       sourceHash="d44ad231e1dc9e57" />
-		<entry key="Chat.NotFound" text="メッセージが見つかりません" sourceHash="9e5e30bbb5ad2ca9" />
-		<entry key="Chat.NotJoinable" text="このチャンネルには参加できません" sourceHash="46a0dd5bcc062ecf" />
-		<entry key="Chat.NotMember" text="このチャンネルに参加していません" sourceHash="3e5bfdfd4245bf3b" />
-		<entry key="Chat.Repeated" text="同じ発言は繰り返せません" sourceHash="3aed68501070baae" />
 		<entry key="Chat.SignIn"
 		       text="チャットするにはサインインしてください"
 		       sourceHash="3e1a44cdd263dd1e" />
-		<entry key="Chat.TargetOffline" text="相手はオフラインです" sourceHash="4e2a36c23fcdbdc0" />
 		<entry key="Chat.TooFast" text="速すぎます。少し待ってください" sourceHash="51ec7c4fa8414af5" />
-		<entry key="Chat.TooFastWait"
-		       text="速すぎます。{milliseconds}ms待ってください"
-		       sourceHash="e5b6fe8229c21b06" />
-		<entry key="Chat.TooManyChannels" text="チャンネルが多すぎます" sourceHash="b67867eff6d1139c" />
 		<entry key="Chat.Unavailable" text="現在チャットは利用できません" sourceHash="97824550bff00311" />
 		<entry key="Chat.UpdateGame"
 		       text="チャットするにはゲームを更新してください"
@@ -35,15 +19,12 @@
 		<entry key="Close" text="閉じる" sourceHash="5e8250fb85d64c23" />
 		<entry key="Defaults" text="初期設定" sourceHash="48022f6d5501d677" />
 		<entry key="Discard" text="破棄" sourceHash="c00a88b90cd60661" />
-		<entry key="EdAbilityCatalog.Abilities" text="アビリティ" sourceHash="9c5c6645f6238fcd" />
-		<entry key="EdAbilityCatalog.AbilitySets" text="アビリティセット" sourceHash="ff3820b1acda8056" />
 		<entry key="EdAbilityCatalog.AddAbility" text="アビリティを追加" sourceHash="a69e936d44d68d4a" />
 		<entry key="EdAbilityCatalog.AddAbilitySet" text="セットを追加" sourceHash="1f92efc5fb99ba74" />
 		<entry key="EdAbilityCatalog.AddAbilityToSet" text="アビリティを追加" sourceHash="a69e936d44d68d4a" />
 		<entry key="EdAbilityCatalog.AddEffect" text="エフェクトを追加" sourceHash="f9caa9d2834ca145" />
 		<entry key="EdAbilityCatalog.AddEffectToSet" text="エフェクトを追加" sourceHash="f9caa9d2834ca145" />
 		<entry key="EdAbilityCatalog.Duplicate" text="複製" sourceHash="fac15b89e0668996" />
-		<entry key="EdAbilityCatalog.Effects" text="エフェクト" sourceHash="d004bbafa47097e5" />
 		<entry key="EdAbilityCatalog.File" text="ファイル" sourceHash="d1f81284eeb7b503" />
 		<entry key="EdAbilityCatalog.FileTip"
 		       text="ゲームが読むカタログファイルです。編集してもコメントと配置は残ります。"
@@ -60,7 +41,6 @@
 		<entry key="EdAbilityCatalog.PickEntryHint"
 		       text="左で項目を選ぶと、その項目が使うものと使われている場所が見えます。"
 		       sourceHash="268dc0a1bf394d29" />
-		<entry key="EdAbilityCatalog.Presentations" text="キュー演出" sourceHash="e160bc2d29075769" />
 		<entry key="EdAbilityCatalog.Redo" text="やり直す" sourceHash="7417792bbe720149" />
 		<entry key="EdAbilityCatalog.Remove" text="削除" sourceHash="ea4f08110bb8f15d" />
 		<entry key="EdAbilityCatalog.RemoveTip"
@@ -113,12 +93,7 @@
 		<entry key="EdAbilityDebug.SectionLog" text="最近のエフェクト" sourceHash="562c325175e2853c" />
 		<entry key="EdAbilityDebug.SectionTags" text="所有タグ" sourceHash="35d4aac5d07d7ce3" />
 		<entry key="EdButton.ZoneRevert" text="元に戻す" sourceHash="d89a2e529b31ef43" />
-		<entry key="EdLabel.ZoneAdded" text="ここで追加" sourceHash="1d0422d2923a2619" />
-		<entry key="EdLabel.ZoneChanged" text="ここで変更" sourceHash="b670513a18b222f7" />
 		<entry key="EdLabel.ZoneCondition" text="条件" sourceHash="c683c10250a1b719" />
-		<entry key="EdLabel.ZoneInherited" text="継承" sourceHash="45228ea14dc64581" />
-		<entry key="EdLabel.ZoneRemoved" text="ここで削除" sourceHash="d595b30d28c16df7" />
-		<entry key="EdLabel.ZoneReplaced" text="ここで置換" sourceHash="821d05431d192019" />
 		<entry key="EdMeshModifiers.AddItem" text="項目を追加" sourceHash="1373a4ab54d88333" />
 		<entry key="EdMeshModifiers.AddModifier" text="モディファイアを追加" sourceHash="f4d95a66cf236fed" />
 		<entry key="EdMeshModifiers.Axis" text="軸" sourceHash="b035a78b241ed7d4" />
@@ -678,6 +653,180 @@
 		<entry key="EditorTip.ZoneRevertParam"
 		       text="このパラメーターにプリセットの値を再び使います。"
 		       sourceHash="2216bc5d4a3af475" />
+		<entry key="Enum.AbilityEntryKind.Ability" text="アビリティ" sourceHash="9c5c6645f6238fcd" />
+		<entry key="Enum.AbilityEntryKind.AbilitySet" text="アビリティセット" sourceHash="ff3820b1acda8056" />
+		<entry key="Enum.AbilityEntryKind.Effect" text="エフェクト" sourceHash="d004bbafa47097e5" />
+		<entry key="Enum.AbilityEntryKind.Presentation" text="キュー演出" sourceHash="e160bc2d29075769" />
+		<entry key="Enum.ChatResult.Muted"
+		       text="チャットが禁止されています(残り{seconds}秒)"
+		       sourceHash="d44ad231e1dc9e57" />
+		<entry key="Enum.ChatResult.NotFound" text="メッセージが見つかりません" sourceHash="9e5e30bbb5ad2ca9" />
+		<entry key="Enum.ChatResult.NotJoinable"
+		       text="このチャンネルには参加できません"
+		       sourceHash="46a0dd5bcc062ecf" />
+		<entry key="Enum.ChatResult.NotMember"
+		       text="このチャンネルに参加していません"
+		       sourceHash="3e5bfdfd4245bf3b" />
+		<entry key="Enum.ChatResult.RateLimited"
+		       text="速すぎます。{milliseconds}ms待ってください"
+		       sourceHash="e5b6fe8229c21b06" />
+		<entry key="Enum.ChatResult.Rejected"
+		       text="メッセージは単語フィルターでブロックされました"
+		       sourceHash="9f4be67ffd43a11b" />
+		<entry key="Enum.ChatResult.Repeated" text="同じ発言は繰り返せません" sourceHash="3aed68501070baae" />
+		<entry key="Enum.ChatResult.TargetOffline" text="相手はオフラインです" sourceHash="4e2a36c23fcdbdc0" />
+		<entry key="Enum.ChatResult.TooManyChannels" text="チャンネルが多すぎます" sourceHash="b67867eff6d1139c" />
+		<entry key="Enum.CollisionResponse.Block" text="ブロック" sourceHash="2b2ae20d26f78ac2" />
+		<entry key="Enum.CollisionResponse.Ignore" text="無視" sourceHash="917734d83f35efa3" />
+		<entry key="Enum.CollisionResponse.Overlap" text="オーバーラップ" sourceHash="7ed143cddb1bffa8" />
+		<entry key="Enum.FogVolumeState.Active"
+		       text="ボリュメトリックフォグがオンです。メインビューに光散乱ボリュームを描画します。"
+		       sourceHash="ce64e124f44ddda8" />
+		<entry key="Enum.FogVolumeState.BufferFailed"
+		       text="ボリュメトリックフォグはオンですがバッファーを作成できなかったため、通常のフォグを描画します。ログを確認してください。"
+		       sourceHash="bc22f1490b6b1fc9" />
+		<entry key="Enum.FogVolumeState.Disabled"
+		       text="フォグ設定でボリュメトリックフォグがオフのため、通常のフォグを描画します。Fog コンポーネントで Volumetric をオンにしてください。"
+		       sourceHash="9e22c297cb5e12ce" />
+		<entry key="Enum.FogVolumeState.MissingPipeline"
+		       text="ボリュメトリックフォグはオンですがコンピュートシェーダーがないため、通常のフォグを描画します。シェーダーのクックログを確認してください。"
+		       sourceHash="4c162f8b67519ad9" />
+		<entry key="Enum.FogVolumeState.NoDevice"
+		       text="このフレームはレンダラーにデバイスがないため、何も描画しません。"
+		       sourceHash="baf721c36acd278c" />
+		<entry key="Enum.FogVolumeState.NoFog"
+		       text="このシーンにはフォグがありません。ボリュメトリックフォグを見るには Fog コンポーネントを追加してください。"
+		       sourceHash="9ad3e9cbc8287fe0" />
+		<entry key="Enum.FogVolumeState.Underwater"
+		       text="カメラが水中にあります。水中フォグにはボリュームがありません。"
+		       sourceHash="19a2cac2b1c44306" />
+		<entry key="Enum.GamepadBatteryLevel.Empty" text="空" sourceHash="500fd71a4232050e" />
+		<entry key="Enum.GamepadBatteryLevel.Full" text="満タン(100%)" sourceHash="26f4fbf61672bfcd" />
+		<entry key="Enum.GamepadBatteryLevel.Low" text="低" sourceHash="24f3a319b88552c1" />
+		<entry key="Enum.GamepadBatteryLevel.Medium" text="中" sourceHash="ac6bdc71f750ac96" />
+		<entry key="Enum.InputGlyphStyle.GamepadPlayStation"
+		       text="PlayStation ゲームパッド"
+		       sourceHash="ca581e548d6ef12e" />
+		<entry key="Enum.InputGlyphStyle.GamepadSwitch"
+		       text="Nintendo Switch ゲームパッド"
+		       sourceHash="3283503dabc4228f" />
+		<entry key="Enum.InputGlyphStyle.GamepadXbox" text="Xbox ゲームパッド" sourceHash="33f8c6dd16d1b80b" />
+		<entry key="Enum.InputGlyphStyle.KeyboardMouse" text="キーボードとマウス" sourceHash="b83f9919638da259" />
+		<entry key="Enum.InventoryCommandResult.EmptySlot" text="空きスロットです。" sourceHash="b56cc9d513099dfd" />
+		<entry key="Enum.InventoryCommandResult.InvalidCount"
+		       text="その数量は指定できません。"
+		       sourceHash="e710ff918fd580da" />
+		<entry key="Enum.InventoryCommandResult.InvalidSlot"
+		       text="そのスロットには入れられません。"
+		       sourceHash="af46c51eb2b0ce83" />
+		<entry key="Enum.InventoryCommandResult.NoRoom"
+		       text="バッグがいっぱいです。"
+		       sourceHash="3034de0a57eb2551" />
+		<entry key="Enum.InventoryCommandResult.NotUsable" text="使用できません。" sourceHash="fee7c8ce0b060e74" />
+		<entry key="Enum.InventoryCommandResult.Ok" text="完了しました。" sourceHash="7301570d0bb8fc6d" />
+		<entry key="Enum.InventoryCommandResult.Refused"
+		       text="そこには装備できません。"
+		       sourceHash="e65da3e12aa85757" />
+		<entry key="Enum.ModuleKind.Editor" text="エディター" sourceHash="a75b95980cd80e78" />
+		<entry key="Enum.ModuleKind.EditorExtension" text="エディター拡張" sourceHash="b55408d6f77faff2" />
+		<entry key="Enum.ModuleKind.Game" text="ゲーム" sourceHash="b568a67e05a19907" />
+		<entry key="Enum.ModuleKind.GameFramework" text="GameFramework" sourceHash="d13d3042ead7b919" />
+		<entry key="Enum.ModuleKind.Kit" text="キット" sourceHash="708d8cde3abc020c" />
+		<entry key="Enum.ModuleKind.RHI" text="RHI バックエンド" sourceHash="46dd3ed1d542d6e3" />
+		<entry key="Enum.MountGait.Canter" text="キャンター" sourceHash="8ddeb8be59f30f00" />
+		<entry key="Enum.MountGait.Gallop" text="ギャロップ" sourceHash="5080657618a7ac4a" />
+		<entry key="Enum.MountGait.Idle" text="停止" sourceHash="989261d5eefc4735" />
+		<entry key="Enum.MountGait.Trot" text="トロット" sourceHash="85c8a4fb52a15fd0" />
+		<entry key="Enum.MountGait.Walk" text="常歩" sourceHash="8904bd022d8e7e10" />
+		<entry key="Enum.RenderViewMode.Depth" text="深さ" sourceHash="3231d0dc6fe30d4a" />
+		<entry key="Enum.RenderViewMode.LODFadeCode" text="LOD フェードコード" sourceHash="e3471516cca1f937" />
+		<entry key="Enum.RenderViewMode.LODLevel" text="LOD レベル" sourceHash="97d43934e8aeb89e" />
+		<entry key="Enum.RenderViewMode.LightComplexity" text="ライトの複雑さ" sourceHash="85d63f586b24a321" />
+		<entry key="Enum.RenderViewMode.LightingOnly" text="ライティングのみ" sourceHash="8cfe0acaf21281c5" />
+		<entry key="Enum.RenderViewMode.Lit" text="ライティング" sourceHash="24ec9419b87f1a96" />
+		<entry key="Enum.RenderViewMode.MarkerSlots" text="マーカースロット" sourceHash="9eb1b3c90566c0b6" />
+		<entry key="Enum.RenderViewMode.Metallic" text="メタリック" sourceHash="dfe7fef1566d1aa8" />
+		<entry key="Enum.RenderViewMode.Mipmaps" text="ミップマップ" sourceHash="afe2a32db0622b02" />
+		<entry key="Enum.RenderViewMode.Normals" text="法線" sourceHash="c294e89a3657cf13" />
+		<entry key="Enum.RenderViewMode.Overdraw" text="オーバードロー" sourceHash="a88c71117100df4d" />
+		<entry key="Enum.RenderViewMode.Roughness" text="ラフネス" sourceHash="dea02d9fafe208b5" />
+		<entry key="Enum.RenderViewMode.ShadedWireframe"
+		       text="シェーディング + ワイヤーフレーム"
+		       sourceHash="eedf8d2e1a0c0f80" />
+		<entry key="Enum.RenderViewMode.ShadingPath" text="シェーディングパス" sourceHash="42c1cd79e1cd0620" />
+		<entry key="Enum.RenderViewMode.Unlit" text="ライティングなし" sourceHash="2435a2b51ac7281f" />
+		<entry key="Enum.RenderViewMode.Wireframe" text="ワイヤーフレーム" sourceHash="96f013195da95865" />
+		<entry key="Enum.SequenceCameraSignalKind.CinematicBegin" text="ブレンドイン" sourceHash="32e8d27078f977a7" />
+		<entry key="Enum.SequenceCameraSignalKind.CinematicEnd" text="ブレンドアウト" sourceHash="b0c4581daeca75ac" />
+		<entry key="Enum.SequenceCameraSignalKind.CutBegin" text="カット" sourceHash="f5b9f7190cc182e3" />
+		<entry key="Enum.SequenceCameraSignalKind.CutPrewarm" text="待機ビュー" sourceHash="af29d929d5327b73" />
+		<entry key="Enum.SequenceCameraSignalKind.PlaybackEnd" text="再生終了" sourceHash="99639487ced1e979" />
+		<entry key="Enum.SequenceCameraSignalKind.Shake" text="シェイク" sourceHash="6ddba2493a836a55" />
+		<entry key="Enum.SequenceHistoryKind.CameraSignal" text="カメラ" sourceHash="54d1b2a64667e32e" />
+		<entry key="Enum.SequenceHistoryKind.Event" text="イベント" sourceHash="d0ea7366ebc403ff" />
+		<entry key="Enum.SequenceHistoryKind.Finished" text="終了" sourceHash="bb99d4ec27fbb263" />
+		<entry key="Enum.SequenceHistoryKind.Span" text="区間" sourceHash="b60bc1250aad44c1" />
+		<entry key="Enum.SequenceHistoryKind.Started" text="開始" sourceHash="3fd6bd99e3f6a5be" />
+		<entry key="Enum.SequenceHistoryKind.Stopped" text="停止" sourceHash="c5fcb9351a03ab2e" />
+		<entry key="Enum.SequenceHistoryKind.UnboundBinding" text="未バインド" sourceHash="e7a38a6492965c7a" />
+		<entry key="Enum.SequenceItemField.Clip" text="クリップ" sourceHash="3e092e9d1ee2c5bb" />
+		<entry key="Enum.SequenceItemField.Clip.Tooltip"
+		       text="区間の間、バインドしたオブジェクトのアニメーションに重ねてブレンドするアニメーションクリップです。リソース ID を入力するか、コンテンツブラウザーからドロップしてください。"
+		       sourceHash="6f17aa73e43916d3" />
+		<entry key="Enum.SequenceItemField.Prefab" text="プレハブ" sourceHash="a2d5fac94c77c683" />
+		<entry key="Enum.SequenceItemField.Prefab.Tooltip"
+		       text="この区間にスポーンするプレハブです。リソース ID を入力するか、コンテンツブラウザーからドロップしてください。"
+		       sourceHash="96f837eff09a3e8a" />
+		<entry key="Enum.SequenceItemField.Preset" text="プリセット" sourceHash="57ce5bc9b2b4287e" />
+		<entry key="Enum.SequenceItemField.Preset.Tooltip"
+		       text="対象オブジェクトが着る外見プリセットの ID です。"
+		       sourceHash="8925b878bba0302e" />
+		<entry key="Enum.SequenceItemField.Scenario" text="シナリオ" sourceHash="8a0834f3db621caf" />
+		<entry key="Enum.SequenceItemField.Scenario.Tooltip"
+		       text="開始フレームを過ぎたときに再生するシナリオです。リソース ID を入力するか、コンテンツブラウザーからドロップしてください。"
+		       sourceHash="4698e99a85e6a8d3" />
+		<entry key="Enum.SequenceItemField.Sound" text="サウンド" sourceHash="2593d0c70a1c5074" />
+		<entry key="Enum.SequenceItemField.Sound.Tooltip"
+		       text="開始フレームを過ぎたときに送り、区間が終わると止めるオーディオイベントです。"
+		       sourceHash="86fa2343e0131e5e" />
+		<entry key="Enum.SequenceItemField.Text" text="テキスト" sourceHash="2492f5fb1b05b45e" />
+		<entry key="Enum.SequenceItemField.Text.Tooltip"
+		       text="区間の間に表示する字幕行のローカライズキー(Namespace.Key)です。"
+		       sourceHash="46adf64e038e3eed" />
+		<entry key="Enum.ServerState.Draining" text="退出中" sourceHash="445341bdde0ebac7" />
+		<entry key="Enum.ServerState.Maintenance" text="メンテナンス中" sourceHash="9e7f28b2e900e4a0" />
+		<entry key="Enum.ServerState.Open" text="受付中" sourceHash="f84f97b4633670e9" />
+		<entry key="Enum.ServerState.Starting" text="起動中" sourceHash="44c11cb1fc7fca39" />
+		<entry key="Enum.ShopPurchaseStatus.Busy" text="購入処理中です。" sourceHash="839e3be6e938c8ed" />
+		<entry key="Enum.ShopPurchaseStatus.LimitReached"
+		       text="これ以上購入できません。"
+		       sourceHash="90b45ac5c64d58fe" />
+		<entry key="Enum.ShopPurchaseStatus.NoRoom" text="バッグがいっぱいです。" sourceHash="3034de0a57eb2551" />
+		<entry key="Enum.ShopPurchaseStatus.NotEnoughMoney"
+		       text="お金が足りません。"
+		       sourceHash="7d5f2b96ea36e02c" />
+		<entry key="Enum.ShopPurchaseStatus.OutOfStock" text="売り切れです。" sourceHash="53429c9af9f7338b" />
+		<entry key="Enum.ShopPurchaseStatus.Rejected"
+		       text="現在は購入できません。"
+		       sourceHash="cc4a444b068922aa" />
+		<entry key="Enum.ShopPurchaseStatus.ServerError"
+		       text="ストアに接続できませんでした。ウォレットにはサーバーの値が表示されます。"
+		       sourceHash="7894b59a4b718b86" />
+		<entry key="Enum.ShopPurchaseStatus.Succeeded" text="購入しました。" sourceHash="7eba7cbbd2693250" />
+		<entry key="Enum.ShopPurchaseStatus.Unverified"
+		       text="購入の応答が一致しなかったため、ウォレットを更新しました。"
+		       sourceHash="ccfce3ecd112ddfe" />
+		<entry key="Enum.SocialPresenceStatus.Away" text="離席中" sourceHash="6f3fb3842ffa02bb" />
+		<entry key="Enum.SocialPresenceStatus.Busy" text="取り込み中" sourceHash="ff75d19be2aea620" />
+		<entry key="Enum.SocialPresenceStatus.InGame" text="ゲーム中" sourceHash="751b555ee38fcef8" />
+		<entry key="Enum.SocialPresenceStatus.Offline" text="オフライン" sourceHash="574193ebbf068988" />
+		<entry key="Enum.SocialPresenceStatus.Online" text="オンライン" sourceHash="abf0e099159a8caa" />
+		<entry key="Enum.Unknown" text="不明" sourceHash="498865c7bd1f3959" />
+		<entry key="Enum.ZoneModuleOrigin.Added" text="ここで追加" sourceHash="1d0422d2923a2619" />
+		<entry key="Enum.ZoneModuleOrigin.Changed" text="ここで変更" sourceHash="b670513a18b222f7" />
+		<entry key="Enum.ZoneModuleOrigin.Inherited" text="継承" sourceHash="45228ea14dc64581" />
+		<entry key="Enum.ZoneModuleOrigin.Removed" text="ここで削除" sourceHash="d595b30d28c16df7" />
+		<entry key="Enum.ZoneModuleOrigin.Replaced" text="ここで置換" sourceHash="821d05431d192019" />
 		<entry key="FriendList.Idle"
 		       text="更新を押すとフレンド一覧を表示します"
 		       sourceHash="1bf7709ef94325c5" />
@@ -689,28 +838,13 @@
 		<entry key="FriendList.PendingRequests"
 		       text="{title}  (保留中の申請 {count}件)"
 		       sourceHash="edf972fdfe13cb2e" />
-		<entry key="FriendList.PresenceAway" text="離席中" sourceHash="6f3fb3842ffa02bb" />
-		<entry key="FriendList.PresenceBusy" text="取り込み中" sourceHash="ff75d19be2aea620" />
-		<entry key="FriendList.PresenceInGame" text="ゲーム中" sourceHash="751b555ee38fcef8" />
-		<entry key="FriendList.PresenceOffline" text="オフライン" sourceHash="574193ebbf068988" />
-		<entry key="FriendList.PresenceOnline" text="オンライン" sourceHash="abf0e099159a8caa" />
-		<entry key="FriendList.PresenceUnknown" text="不明" sourceHash="498865c7bd1f3959" />
 		<entry key="FriendList.Row" text="#{account}  {presence}" sourceHash="2db55beacdf5ec2a" />
 		<entry key="FriendList.RowActivity" text="#{account}  {presence}  {activity}" sourceHash="b1fda9d92194f095" />
 		<entry key="FriendList.Title" text="フレンド" sourceHash="4c675180cc54b9ba" />
-		<entry key="Inventory.Done" text="完了しました。" sourceHash="7301570d0bb8fc6d" />
 		<entry key="Inventory.DropTitle" text="いくつ捨てますか?" sourceHash="5851b629b00886c2" />
-		<entry key="Inventory.EmptySlot" text="空きスロットです。" sourceHash="b56cc9d513099dfd" />
 		<entry key="Inventory.EquipLine" text="{slot}: {item}" sourceHash="49a515e2a7dc7316" />
-		<entry key="Inventory.InvalidCount" text="その数量は指定できません。" sourceHash="e710ff918fd580da" />
-		<entry key="Inventory.InvalidSlot"
-		       text="そのスロットには入れられません。"
-		       sourceHash="af46c51eb2b0ce83" />
 		<entry key="Inventory.ItemCount" text="{item} x{count}" sourceHash="35b4cb38ae71afeb" />
-		<entry key="Inventory.NoRoom" text="バッグがいっぱいです。" sourceHash="3034de0a57eb2551" />
-		<entry key="Inventory.NotUsable" text="使用できません。" sourceHash="fee7c8ce0b060e74" />
 		<entry key="Inventory.Picked" text="置く場所を選んでください。" sourceHash="76033ca89d70f4b0" />
-		<entry key="Inventory.Refused" text="そこには装備できません。" sourceHash="e65da3e12aa85757" />
 		<entry key="Inventory.SplitTitle" text="いくつ分けますか?" sourceHash="009e2ff8de6bc491" />
 		<entry key="Inventory.StatLine" text="{stat} {value}" sourceHash="ed0016c573032a8a" />
 		<entry key="Keep" text="維持" sourceHash="d60a7dde73859828" />
@@ -765,34 +899,16 @@
 		       sourceHash="5fd07d96180b4276" />
 		<entry key="ServerPicker.Pick" text="サーバーを選んでください" sourceHash="6711b33edde339d6" />
 		<entry key="ServerPicker.Row" text="{region}  {fill}%  {state}" sourceHash="e8ee51c94be0f27e" />
-		<entry key="ServerPicker.StateDraining" text="退出中" sourceHash="445341bdde0ebac7" />
-		<entry key="ServerPicker.StateMaintenance" text="メンテナンス中" sourceHash="9e7f28b2e900e4a0" />
-		<entry key="ServerPicker.StateOpen" text="受付中" sourceHash="f84f97b4633670e9" />
-		<entry key="ServerPicker.StateStarting" text="起動中" sourceHash="44c11cb1fc7fca39" />
-		<entry key="ServerPicker.StateUnknown" text="不明" sourceHash="498865c7bd1f3959" />
 		<entry key="Shop.BalanceLine" text="{amount} {currency}" sourceHash="cc7c013f5ab43d0a" />
-		<entry key="Shop.Bought" text="購入しました。" sourceHash="7eba7cbbd2693250" />
-		<entry key="Shop.Busy" text="購入処理中です。" sourceHash="839e3be6e938c8ed" />
 		<entry key="Shop.ConfirmAccept" text="購入" sourceHash="166a4319b11387ab" />
 		<entry key="Shop.ConfirmCancel" text="キャンセル" sourceHash="2ceb11be2290bb1b" />
 		<entry key="Shop.ConfirmMessage"
 		       text="{item}を{price} {currency}で購入しますか?"
 		       sourceHash="ea9754ab6e1a7ebc" />
 		<entry key="Shop.ConfirmTitle" text="購入の確認" sourceHash="e3d3f829c35e7d0a" />
-		<entry key="Shop.LimitReached" text="これ以上購入できません。" sourceHash="90b45ac5c64d58fe" />
-		<entry key="Shop.NoRoom" text="バッグがいっぱいです。" sourceHash="3034de0a57eb2551" />
-		<entry key="Shop.NotEnoughMoney" text="お金が足りません。" sourceHash="7d5f2b96ea36e02c" />
 		<entry key="Shop.OfferRow" text="{item}  {price} {currency}" sourceHash="fb8403757162871e" />
 		<entry key="Shop.OfferRowStock" text="{offer}  ({stock})" sourceHash="97981f7eb4dc983a" />
-		<entry key="Shop.OutOfStock" text="売り切れです。" sourceHash="53429c9af9f7338b" />
 		<entry key="Shop.Purchasing" text="購入中..." sourceHash="4c1549e91d83c479" />
-		<entry key="Shop.Rejected" text="現在は購入できません。" sourceHash="cc4a444b068922aa" />
-		<entry key="Shop.ServerError"
-		       text="ストアに接続できませんでした。ウォレットにはサーバーの値が表示されます。"
-		       sourceHash="7894b59a4b718b86" />
-		<entry key="Shop.Unverified"
-		       text="購入の応答が一致しなかったため、ウォレットを更新しました。"
-		       sourceHash="ccfce3ecd112ddfe" />
 		<entry key="Some changes take effect after a restart."
 		       text="一部の変更は再起動後に反映されます。"
 		       sourceHash="14441b823018dda4" />
@@ -804,11 +920,6 @@
 		<entry key="UIMenu.QuitTitle" text="ゲームを終了" sourceHash="92aee0b2e93f7fd0" />
 		<entry key="Western.Bounty" text="懸賞金 ${amount}" sourceHash="c58db76a5bd04bb6" />
 		<entry key="Western.Carcasses" text="獲物 {count}" sourceHash="ddc82144621ac028" />
-		<entry key="Western.GaitCanter" text="キャンター" sourceHash="8ddeb8be59f30f00" />
-		<entry key="Western.GaitGallop" text="ギャロップ" sourceHash="5080657618a7ac4a" />
-		<entry key="Western.GaitStanding" text="停止" sourceHash="989261d5eefc4735" />
-		<entry key="Western.GaitTrot" text="トロット" sourceHash="85c8a4fb52a15fd0" />
-		<entry key="Western.GaitWalk" text="常歩" sourceHash="8904bd022d8e7e10" />
 		<entry key="Western.Honor" text="名誉 {honor}({tier})" sourceHash="993157e899c31860" />
 		<entry key="Western.Hungry" text="空腹" sourceHash="d5f6173b71caeddc" />
 		<entry key="Western.Money" text="${amount}" sourceHash="99e2e4655d7f5a1b" />

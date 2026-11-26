@@ -10,6 +10,7 @@
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Sequencer/SequenceAsset.h"
 
 #include <optional>
@@ -38,14 +39,20 @@ namespace sw::editor
     };
 
     /** @brief 키 트랙이 저장 · 재생에서 어긋나는 모양입니다(트랙 줄의 오류 배지 · `SequenceEditModel::findTrackIssue`). 하나만 알린다 — 먼저 고칠 것부터다. */
+    ENUM()
     enum class SequenceTrackIssue : uint8
     {
-        None = 0,            ///< 어긋나지 않았다
-        UnknownKind,         ///< 종류 표에 없는 종류다
-        ChannelCount,        ///< 채널 수가 종류와 다르다 — 파일이 읽히지 않는다
-        MissingBinding,      ///< 시퀀스에 없는 바인딩을 가리킨다 — 파일이 읽히지 않는다
-        MissingPropertyPath, ///< 프로퍼티 · 리그 슬롯 트랙인데 대상 경로가 비었다 — 재생이 아무것도 몰지 않는다
-        KeysOutsideTimeline, ///< 타임라인 밖의 키가 있다 — 재생이 닿지 않는다
+        None ENUMERATOR( Hidden ) = 0, ///< 어긋나지 않았다(배지가 없다)
+        /// 종류 표에 없는 종류다
+        UnknownKind ENUMERATOR( DisplayName = "Unknown track kind. The file will not load; delete the track." ),
+        /// 채널 수가 종류와 다르다(파일이 읽히지 않는다)
+        ChannelCount ENUMERATOR( DisplayName = "Wrong channel count for the kind. The file will not load; delete and add the track again." ),
+        /// 시퀀스에 없는 바인딩을 가리킨다(파일이 읽히지 않는다)
+        MissingBinding ENUMERATOR( DisplayName = "The track's binding is not in this sequence. The file will not load; delete the track." ),
+        /// 프로퍼티 · 리그 슬롯 트랙인데 대상 경로가 비었다(재생이 아무것도 몰지 않는다)
+        MissingPropertyPath ENUMERATOR( DisplayName = "No target path. Playback drives nothing; enter the property or rig slot." ),
+        /// 타임라인 밖의 키가 있다(재생이 닿지 않는다)
+        KeysOutsideTimeline ENUMERATOR( DisplayName = "Some keys are outside the timeline and never play. Move them inside or widen the timeline." ),
     };
 
     /**

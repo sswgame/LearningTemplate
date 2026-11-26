@@ -47,19 +47,21 @@ namespace sw
         [[nodiscard]] bool computeTotal( int32 count, int64& outTotal ) const;
     };
 
-    /** @brief 구매 하나의 끝입니다. 로그 · 감시 값의 이름은 `getEnumName` 입니다. */
+    /** @brief 구매 하나의 끝입니다. 로그 · 감시 값의 이름은 `getEnumName`, 상점 화면의 상태 줄은 `DisplayName` 입니다. */
     ENUM()
     enum class ShopPurchaseStatus : uint8
     {
-        Succeeded = 0,
-        NotEnoughMoney,
-        OutOfStock,
-        LimitReached, ///< 계정당 구매 한도
-        NoRoom,       ///< 인벤토리에 자리가 없다
-        Rejected,     ///< 공급자가 거절했다(판매 기간 밖 · 모르는 상품 · 잠김 · 상한)
-        ServerError,  ///< 서버에 닿지 못했거나 일시 장애다(재화는 서버가 정본 — 클라이언트는 되돌리지 않는다)
-        Unverified,   ///< 서버는 성공이라 했지만 답이 요청과 맞지 않았다(가격 · 자산 · 범위) — 지갑을 서버에서 다시 받는다
-        Busy          ///< 앞 구매의 답을 기다리는 중이다(중복 누름)
+        Succeeded      ENUMERATOR( DisplayName = "Bought." ) = 0,
+        NotEnoughMoney ENUMERATOR( DisplayName = "Not enough money." ),
+        OutOfStock     ENUMERATOR( DisplayName = "Sold out." ),
+        LimitReached   ENUMERATOR( DisplayName = "You cannot buy this any more." ), ///< 계정당 구매 한도
+        NoRoom         ENUMERATOR( DisplayName = "Your bag is full." ),             ///< 인벤토리에 자리가 없다
+        Rejected       ENUMERATOR( DisplayName = "This cannot be bought now." ),    ///< 공급자가 거절했다(판매 기간 밖 · 모르는 상품 · 잠김 · 상한)
+        /// 서버에 닿지 못했거나 일시 장애다(재화는 서버가 정본이라 클라이언트는 되돌리지 않는다)
+        ServerError ENUMERATOR( DisplayName = "Could not reach the store. The wallet shows what the server holds." ),
+        /// 서버는 성공이라 했지만 답이 요청과 맞지 않았다(가격 · 자산 · 범위). 지갑을 서버에서 다시 받는다
+        Unverified ENUMERATOR( DisplayName = "The purchase reply did not match; your wallet was refreshed." ),
+        Busy       ENUMERATOR( DisplayName = "A purchase is still in progress." ) ///< 앞 구매의 답을 기다리는 중이다(중복 누름)
     };
 
     /** @brief 구매 하나의 결과(영수증)입니다. */

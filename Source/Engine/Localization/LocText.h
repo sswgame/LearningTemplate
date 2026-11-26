@@ -13,12 +13,17 @@
  *   tooltip = SW_LOCKEY( "EditorTip", "CurveKeyTime" ); // 원문은 editor.strings.xml
  *   const string line = SW_LOCFORMAT( "Battle", "Fainted", "{name} fainted!", TextArgumentList().addText( "name", foeName ) );
  * @endcode
+ *
+ *          열거값의 보일 글은 switch 로 키를 고르지 않고 열거자 뒤에 적는다: `Succeeded ENUMERATOR( DisplayName = "Bought." ),`. 수집기가 그 원문을 키
+ *          `Enum.<열거형>.<열거자>` 로 원문 표에 넣고, 코드는 `LocalizedText::findEnum( value )`(지금 글) · `makeEnumKey( value )`(그릴 때 풀 키)로 읽는다.
  */
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+
+#include "Engine/Reflection/EnumName.h"
 
 namespace sw
 {
@@ -42,6 +47,50 @@ namespace sw
         static string resolve( const LocalizationManager* pLocalization, string_view text );
         /** @brief 지금 문화권(엔진 서비스)으로 풉니다. 서비스가 없으면 키 그대로입니다. 진단 · 시나리오 감시처럼 글을 그 자리에서 쓰고 버리는 곳이 씁니다. */
         static string resolveNow( string_view text );
+
+        // ------------------------------------------------------------------------------
+        // 열거값의 보일 글(`ENUMERATOR( DisplayName = "…" )`). 키는 실행 중에 열거자 이름으로 만들므로 메타가 없는 배포도 쿠킹된 표에서 글을 얻는다.
+        // 언리얼 `UEnum::GetDisplayNameTextByValue` 가 `UObjectDisplayNames` 표를 `<열거형>.<열거자>` 로 찾는 것과 같은 자리다(유니티 `InspectorName` 은 현지화가 없다).
+        // ------------------------------------------------------------------------------
+        static constexpr const utf8* kEnumNamespace     = "Enum";
+        static constexpr const utf8* kEnumTooltipSuffix = "Tooltip";
+
+        /** @brief 열거자의 보일 글 키 `Enum.<열거형>.<열거자>` 입니다. 수집기(`TextGatherer`)와 실행 조회가 이 하나로 만든다. */
+        static string makeEnumKey( string_view enumName, string_view enumeratorName );
+        /** @brief @p pInfo 의 값 @p value 의 키입니다(그릴 때 `resolve` 가 푼다). 정보가 없거나 범위 밖(와이어에서 온 모르는 값)이면 공통 키 `Enum.Unknown` 입니다. */
+        static string makeEnumKey( const EnumInfo* pInfo, int64 value );
+        /**
+         * @brief @p pInfo 의 값 @p value 의 지금 문화권 글입니다. 표에 없으면 빠진 키로 알리고 원문(에디터 메타)을, 메타도 없으면(배포) 열거자 이름을 돌려줍니다.
+         * @details 돌려준 포인터는 표 · 메타 · intern 된 이름의 것이라 오래 산다. 정보가 없거나 범위 밖이면 공통 키 `Enum.Unknown` 의 글입니다.
+         */
+        static const utf8* findEnum( const EnumInfo* pInfo, int64 value );
+        /** @brief 값의 툴팁(`ENUMERATOR( Tooltip = "…" )`, 키 `Enum.<열거형>.<열거자>.Tooltip`)입니다. 툴팁은 에디터만 그린다 — 메타에 적지 않았으면(배포 포함) 빈 글입니다. */
+        static const utf8* findEnumTooltip( const EnumInfo* pInfo, int64 value );
+
+        template <typename E>
+        static string makeEnumKey( E value )
+        {
+            return makeEnumKey( findEnumInfo<E>(), static_cast<int64>( value ) );
+        }
+        template <typename E>
+        static const utf8* findEnum( E value )
+        {
+            return findEnum( findEnumInfo<E>(), static_cast<int64>( value ) );
+        }
+        template <typename E>
+        static const utf8* findEnumTooltip( E value )
+        {
+            return findEnumTooltip( findEnumInfo<E>(), static_cast<int64>( value ) );
+        }
+
+    private:
+        template <typename E>
+        static const EnumInfo* findEnumInfo()
+        {
+            static_assert( std::is_enum_v<E>, "LocalizedText enum lookup requires an enum type" );
+            static const EnumNameCache s_cache;
+            return s_cache.find( typeFqn<E>() );
+        }
     };
 
     /**

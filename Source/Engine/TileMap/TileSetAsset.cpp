@@ -15,6 +15,7 @@
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
+#include "Engine/TileMap/TileGridUtil.h"
 
 namespace sw
 {
@@ -70,21 +71,6 @@ namespace sw
                 return true;
             }
 
-            /** @brief 이웃 조건 하나의 패턴 글자입니다(`parsePattern` 의 짝). */
-            static utf8 makePatternCharacter( TileNeighborRule rule )
-            {
-                switch ( rule )
-                {
-                    case TileNeighborRule::Any:
-                        return '.';
-                    case TileNeighborRule::Same:
-                        return 'o';
-                    case TileNeighborRule::Other:
-                        return 'x';
-                }
-                return '.';
-            }
-
             /** @brief 이웃 여덟 조건을 세 줄 아홉 글자 패턴(`".x. xoo .o."`)으로 씁니다. 가운데는 '.' 입니다. */
             static string makePattern( const TileNeighborRule ( &arrNeighbor )[8] )
             {
@@ -92,7 +78,7 @@ namespace sw
                 arrCell[4] = '.';
                 for ( uint32 neighbor = 0; neighbor < 8; ++neighbor )
                 {
-                    arrCell[kArrCellOfNeighbor[neighbor]] = makePatternCharacter( arrNeighbor[neighbor] );
+                    arrCell[kArrCellOfNeighbor[neighbor]] = TileRule::getPatternCharacter( arrNeighbor[neighbor] );
                 }
                 const utf8 arrText[11] = { arrCell[0], arrCell[1], arrCell[2], ' ', arrCell[3], arrCell[4], arrCell[5], ' ', arrCell[6], arrCell[7], arrCell[8] };
                 return string( arrText, 11 );
@@ -235,6 +221,20 @@ namespace sw
             }
         };
     } // namespace
+
+    utf8 TileRule::getPatternCharacter( TileNeighborRule rule )
+    {
+        switch ( rule ) // `parsePattern` 의 짝
+        {
+            case TileNeighborRule::Any:
+                return '.';
+            case TileNeighborRule::Same:
+                return 'o';
+            case TileNeighborRule::Other:
+                return 'x';
+        }
+        return '.';
+    }
 
     optional<int32> TileVisual::computeCellAt( float32 seconds ) const
     {
