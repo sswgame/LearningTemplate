@@ -3,7 +3,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
 #include "Core/String/StringUtil.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Content/Pack/PackConfig.h"
@@ -20,9 +20,9 @@
  */
 SW_TEST_CASE( AppearanceCookTest, CookEntryCatalogsMatchTheRuntimeFiles )
 {
-    sw::PackConfig         config;
-    const sw::AbsolutePath path = sw::ProcessRoots::get()._project.join( sw::PackConfig::kConfigPath );
-    SW_REQUIRE_TRUE( sw::ConfigManager::readConfigFile( config, path ) == sw::ConfigReadResult::Loaded );
+    const sw::expected<sw::PackConfig> loadedConfig = sw::ConfigManager::readConfig( sw::PackConfig::kConfigFile );
+    SW_REQUIRE_TRUE( loadedConfig.has_value() );
+    const sw::PackConfig& config = *loadedConfig;
     SW_REQUIRE_TRUE( config._cookRules._listEntryCatalog.empty() == false );
 
     sw::string itemPath;

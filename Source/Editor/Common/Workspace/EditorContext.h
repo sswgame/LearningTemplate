@@ -6,7 +6,7 @@
 
 #include "Editor/Common/EditorExports.h"
 #include "Editor/Common/EditorSubsystem.h"
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 
 namespace sw::editor
 {
@@ -54,7 +54,7 @@ namespace sw::editor
         static void setActive( EditorContext* pContext );
 
         /**
-         * @brief 에디터 범위의 하위 객체 @p T 입니다(`EditorSelection`, `EditorWorkspace`, `EditorPanelManager`, `IEditorPanelService` 등). `initialize` 뒤에는 늘 있습니다.
+         * @brief 에디터 범위의 하위 객체 @p T 입니다(`EditorSelection`, `EditorWorkspace`, `EditorPanelManager`, `IEditorPanelSubsystem` 등). `initialize` 뒤에는 늘 있습니다.
          * @details 언리얼의 `GEditor->GetEditorSubsystem<T>()` 에 해당한다. 하위 객체마다 포인터나 접근자를 두지 않고 범위가 타입으로 찾는다.
          *          `initialize` 전이나 `shutdown` 뒤에 부르면 부른 쪽의 잘못이므로 모든 구성에서 오류 로그를 남기고 멈춘다(`SubsystemScope::get` 의 `SW_ASSERT` 는
          *          Release 에서 사라져 널 참조가 되므로 쓰지 않는다). 없을 수 있는 곳에서는 `findSubsystem` 을 쓴다.
@@ -66,7 +66,7 @@ namespace sw::editor
             static_assert( kIsAccessorOnlySubsystem<T> == false, "this subsystem has several instances - use its named accessor (e.g. getMainSceneSelection / getFocusedSelection)" );
             T* pFound = _scope.find<T>();
             if ( pFound == nullptr )
-                ::sw::internal::reportMissingRequiredService( SW_FUNCTION_SIGNATURE );
+                ::sw::internal::reportMissingRequiredSubsystem( SW_FUNCTION_SIGNATURE );
             return *pFound;
         }
         /** @brief 에디터 범위의 하위 객체 @p T 입니다. 없으면 nullptr 입니다. */

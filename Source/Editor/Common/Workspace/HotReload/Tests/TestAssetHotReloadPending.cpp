@@ -2,7 +2,7 @@
 #include "pch.h"
 
 #include "Core/Container/map.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Editor/Common/Workspace/HotReload/AssetHotReload.h"
 

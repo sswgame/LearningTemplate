@@ -9,8 +9,8 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/formatString.h"
 
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/RHI/IRHICommandList.h"
 
 namespace sw
@@ -227,5 +227,5 @@ namespace sw
 namespace sw
 {
     // 디바이스 소실 보고의 패스 이름 표 — 백엔드를 바꿔도 같은 실행의 것이다.
-    SW_ENGINE_SERVICE_SUBSYSTEM( GPUBreadcrumbLog, HostOnly, Process, Services, (), SW_ENGINE_DEFAULT_FACTORY( GPUBreadcrumbLog ) );
+    SW_ENGINE_SUBSYSTEM_WITH_SLOT( GPUBreadcrumbLog, HostOnly, Process, Shared, (), SW_ENGINE_DEFAULT_FACTORY( GPUBreadcrumbLog ) );
 } // namespace sw

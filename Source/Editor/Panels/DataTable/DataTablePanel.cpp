@@ -10,7 +10,6 @@
 
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
-#include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorVirtualList.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
@@ -104,14 +103,14 @@ namespace sw::editor
         return _bLocalizationTab ? &_model.getLocalizationStack() : EditorDocumentPanel::findPanelCommandStack();
     }
 
-    bool DataTablePanel::saveDocument()
+    bool DataTablePanel::saveDocument( AssetWriter& writer )
     {
-        const bool bSaved = _model.saveDocument();
+        const bool bSaved = _model.saveDocument( writer );
         syncDocumentDirty();
         return bSaved;
     }
 
-    void DataTablePanel::collectFilesToSave( vector<AbsolutePath>& outListPath ) const
+    void DataTablePanel::collectFilesToSave( vector<DiskPath>& outListPath ) const
     {
         _model.collectFilesToSave( outListPath );
     }
@@ -125,7 +124,7 @@ namespace sw::editor
     {
         if ( acceptDocumentToLoad().empty() )
             return ToolAssetLoadResult::Missing; // 아직 연 표가 없다 — 저장은 현지화 표만 본다
-        const optional<AbsolutePath> diskPath = getDocumentDiskPath();
+        const optional<DiskPath> diskPath = getDocumentDiskPath();
         // 읽지 못하면 모델이 아무 표도 열지 않고 저장을 막는다 — 앞 표의 글을 이 파일에 쓰지 않는다.
         if ( diskPath.has_value() == false || _model.openGameDataFile( *diskPath ) == false )
             return ToolAssetLoadResult::Malformed;
@@ -309,7 +308,7 @@ namespace sw::editor
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "SaveLocalization" ) ) );
 
             if ( ImGui::Button( SW_LOCKEY( "EdText", "SaveLocalization" ) ) )
-                _model.saveLocalization();
+                _model.saveLocalization( getAssetWriter() );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDataTable", "SaveLocalizationTip" ) );
 
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Reload" ) ) );
@@ -396,7 +395,7 @@ namespace sw::editor
         constexpr ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable | ImGuiTableFlags_ScrollY |
                                           ImGuiTableFlags_SizingStretchProp;
 
-        // 테이블을 열기 **전에** 걸러 둔다. 테이블이 남은 영역을 모두 차지하므로 0건 안내를 테이블 뒤에 그리면
+        // 테이블을 열기 전에 걸러 둔다. 테이블이 남은 영역을 모두 차지하므로 0건 안내를 테이블 뒤에 그리면
         // 화면 밖으로 밀린다. 테이블을 아예 열지 않아야 보인다. 행마다 필터를 다시 만들지 않는 효과도 있다.
         const EditorListFilter filter{ _localizationFilter.c_str() };
 
@@ -554,7 +553,7 @@ namespace sw::editor
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "SaveFile" ) ) );
             if ( ImGui::Button( SW_LOCKEY( "EdText", "SaveFile" ) ) )
             {
-                (void)_model.saveGameDataFile(); // 이 표만 쓴다 — 실패는 모델이 알리고 dirty 가 남는다
+                (void)_model.saveGameDataFile( getAssetWriter() ); // 이 표만 쓴다 — 실패는 모델이 알리고 dirty 가 남는다
                 syncDocumentDirty();
             }
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDataTable", "SaveFileTip" ) );

@@ -152,6 +152,8 @@ namespace sw
         bool undo();
         /** @brief 취소한 명령을 다시 실행합니다. 할 것이 없거나 실행 중이거나 편집이 열려 있으면 거절하고 false 입니다. */
         bool redo();
+        /** @brief 지금 위치 뒤의 명령(다시 하기)을 버립니다 — 편집을 거절해 되돌린 단계를 없던 일로 한다(`SnapshotUndoRecorder::cancelLast`). 실행 중이면 아무것도 하지 않는다. */
+        void discardRedo();
         /** @brief 스택을 비웁니다. 알림 처리기는 그대로 둡니다. 보관해 둔 내역(`suspendHistory`)도 그대로입니다. */
         void clear();
         /**
@@ -188,7 +190,7 @@ namespace sw
         void notifyObjectEdit( const ObjectEditEvent& event ) const;
 
         /**
-         * @brief 주인이 @p ownerID 인 코드 단계를 가진 명령을 빼고 뺀 수를 반환합니다. 트랜잭션 묶음은 안쪽에 하나라도 있으면 **통째로** 뺀다.
+         * @brief 주인이 @p ownerID 인 코드 단계를 가진 명령을 빼고 뺀 수를 반환합니다. 트랜잭션 묶음은 안쪽에 하나라도 있으면 통째로 뺀다.
          * @details 남은 명령의 순서와 현재 위치(되돌린 것과 아직 되돌리지 않은 것의 경계)는 그대로다. 데이터 명령은 대상 오브젝트의 상태 전체를 가지고 있어,
          *          사이의 명령이 빠져도 그 오브젝트는 같은 상태로 돌아간다.
          */

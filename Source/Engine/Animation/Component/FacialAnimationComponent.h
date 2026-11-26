@@ -29,7 +29,7 @@ namespace sw
 {
     class FacialRig;
     class FacialAnimationComponent;
-    class IFacialLiveSource;
+    class LiveLinkFaceSource;
     class MaterialInstance;
     class Mesh;
     class SkeletalAnimatorComponent;
@@ -62,12 +62,12 @@ namespace sw
     /**
      * @class FacialAnimationComponent
      * @brief 얼굴 리그(`_facialRigPath`, `.facial.xml`)대로 얼굴을 움직입니다. 자기 onTick 이 아니라 유닛의 단계 일로 돕니다.
-     * @details - **표정**: `setExpressionWeight` 로 정한 값 + 같은 오브젝트 애니메이터의 같은 이름 커브(표정 커브 — 언리얼 MetaHuman 커브 · Live Link Face
+     * @details - 표정: `setExpressionWeight` 로 정한 값 + 같은 오브젝트 애니메이터의 같은 이름 커브(표정 커브 — 언리얼 MetaHuman 커브 · Live Link Face
      *            의 자리)를 더해, 리그의 타깃 가중치에 곱해 유닛의 모프 가중치에 더합니다(GPU 모프 풀이 스키닝 앞에 적용).
-     *          - **립싱크**: `speak( 음성 )` — 임포트가 만든 비즘 트랙(`<음성>.visemes.xml`)이 있으면 그 곡선을, 없으면 PCM 의 진폭을 런타임에 측정해서
+     *          - 립싱크: `speak( 음성 )` — 임포트가 만든 비즘 트랙(`<음성>.visemes.xml`)이 있으면 그 곡선을, 없으면 PCM 의 진폭을 런타임에 측정해서
      *            리그의 대체 비즘(립싱크 표의 `_fallbackViseme`)을 엽니다. 비즘 → 타깃은 리그 데이터입니다.
-     *          - **깜빡임**: 간격(최소 ~ 최대, 결정적 난수) · 길이로 눈꺼풀 타깃을 올렸다 내립니다.
-     *          - **시선**: `setLookAtTarget( 월드 위치 )` — 눈 본을 목표 쪽으로 돌립니다(최대 각으로 자름). 사카드는 간격마다 작은 각으로 튑니다.
+     *          - 깜빡임: 간격(최소 ~ 최대, 결정적 난수) · 길이로 눈꺼풀 타깃을 올렸다 내립니다.
+     *          - 시선: `setLookAtTarget( 월드 위치 )` — 눈 본을 목표 쪽으로 돌립니다(최대 각으로 자름). 사카드는 간격마다 작은 각으로 튑니다.
      *          - 단계: 시간(타이머 · 말하기 시각, 워커) → 후처리(가중치 · 눈 본, 워커 — 기본 포즈 뒤라 애니메이터 커브가 이미 있다) → 게임 스레드(목표를 모델
      *            공간으로 옮겨 둔다 — 한 프레임 늦다).
      */
@@ -103,7 +103,7 @@ namespace sw
          * @details 값은 게임 스레드에서 프레임마다 옮겨 둔다(`prepareAnimationFrame`) — 워커의 얼굴 단계는 입력을 직접 읽지 않는다.
          *          입력은 하나뿐이라 다시 걸면 교체한다. 교체된 옛 구독은 놓아도 새 입력을 떼지 않는다. nullptr 이면 빈 구독이다.
          */
-        [[nodiscard]] Subscription registerLiveSource( const IFacialLiveSource* pSource );
+        [[nodiscard]] Subscription registerLiveSource( const LiveLinkFaceSource* pSource );
         /** @brief 시선 목표(월드)를 정합니다. */
         void setLookAtTarget( const float3& worldPosition );
         /** @brief 시선을 놓습니다(눈은 애니메이션 그대로). */
@@ -186,16 +186,16 @@ namespace sw
         SW_TRANSIENT vector<float32> _listSpeechSample;     ///< 트랙이 없을 때의 진폭 립싱크 표본(모노)
         SW_TRANSIENT vector<float32> _listExpressionWeight; ///< 리그 표정 순서의 명시 가중치
         SW_TRANSIENT vector<float32> _listLiveWeight;       ///< 리그 표정 순서의 실시간 입력 값(게임 스레드가 프레임마다 옮겨 둔다, 입력이 없으면 0)
-        const IFacialLiveSource*     _pLiveSource;          ///< 실시간 얼굴 입력(빌림, `registerLiveSource`)
+        const LiveLinkFaceSource*    _pLiveSource;          ///< 실시간 얼굴 입력(빌림, `registerLiveSource`)
 
         /** @brief 지금 입력이 @p pSource 이면 뗍니다(입력 구독이 풀릴 때 — 교체된 옛 구독이면 할 일이 없다). */
-        void                                          detachLiveSource( const IFacialLiveSource* pSource );
-        ItemSubscriptionList<const IFacialLiveSource> _liveSourceSubscriptions; ///< `_pLiveSource` 의 등록 구독을 내준다(풀리면 `detachLiveSource`). 리플렉션 클래스라 기반을 더하지 않고 멤버로 둔다
-        SW_TRANSIENT vector<vector<optional<uint32>>> _listExpressionTarget;    ///< 표정마다 타깃 → 메시 타깃 번호(메시에 없으면 없음)
-        SW_TRANSIENT vector<vector<optional<uint32>>> _listVisemeTarget;        ///< 비즘마다 타깃 → 메시 타깃 번호(메시에 없으면 없음)
-        SW_TRANSIENT vector<optional<uint32>> _listBlinkTarget;                 ///< 깜빡임 타깃 → 메시 타깃 번호(메시에 없으면 없음)
-        SW_TRANSIENT vector<uint32> _listEyeBone;                               ///< 눈 본 번호(스켈레톤에 있는 것만)
-        SW_TRANSIENT vector<optional<uint32>> _listTrackToRigViseme;            ///< 립싱크 비즘 순서 → 리그 비즘 번호(리그에 없으면 없음)
+        void                                           detachLiveSource( const LiveLinkFaceSource* pSource );
+        ItemSubscriptionList<const LiveLinkFaceSource> _liveSourceSubscriptions; ///< `_pLiveSource` 의 등록 구독을 내준다(풀리면 `detachLiveSource`). 리플렉션 클래스라 기반을 더하지 않고 멤버로 둔다
+        SW_TRANSIENT vector<vector<optional<uint32>>> _listExpressionTarget;     ///< 표정마다 타깃 → 메시 타깃 번호(메시에 없으면 없음)
+        SW_TRANSIENT vector<vector<optional<uint32>>> _listVisemeTarget;         ///< 비즘마다 타깃 → 메시 타깃 번호(메시에 없으면 없음)
+        SW_TRANSIENT vector<optional<uint32>> _listBlinkTarget;                  ///< 깜빡임 타깃 → 메시 타깃 번호(메시에 없으면 없음)
+        SW_TRANSIENT vector<uint32> _listEyeBone;                                ///< 눈 본 번호(스켈레톤에 있는 것만)
+        SW_TRANSIENT vector<optional<uint32>> _listTrackToRigViseme;             ///< 립싱크 비즘 순서 → 리그 비즘 번호(리그에 없으면 없음)
         SW_TRANSIENT vector<float32> _listScratchVisemeWeight;
         shared_ptr<const WrinkleMap> _pWrinkleMap;                          ///< 주름 매핑(몸 프로필이 준다). 없으면 nullptr
         SW_TRANSIENT vector<hashed_string> _listScratchExpressionName;      ///< 주름 계산의 표정 이름(리그 표정 순서)

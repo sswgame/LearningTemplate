@@ -4,10 +4,10 @@
 #include "pch.h"
 
 #include "Core/Network/Security/Tests/FakeNetSecurityProvider.h"
-#include "Core/Network/Transport/LoopbackStreamTransport.h"
+#include "Core/Network/Tests/LoopbackStreamTransport.h"
 #include "Core/Network/Transport/StreamTypes.h"
 #include "Core/String/StringUtil.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 #include "Core/Time/Clock.h"
 
 #include "Engine/Serialization/JSON/JSONWriter.h"
@@ -15,7 +15,7 @@
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/OidcLoginProvider.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/ProfileAPILoginProvider.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/Provider/Apple/AppleLoginProvider.h"
-#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Security/JSONWebToken.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/JSONWebToken.h"
 #include "GameFramework/Runtime/Online/HTTP/HTTPClient.h"
 #include "GameFramework/Runtime/Online/HTTP/HTTPServer.h"
 

@@ -22,7 +22,7 @@
 #include "Editor/Common/Workspace/Asset/EditorAssetImportJob.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 #include "Editor/Common/Workspace/HotReload/AssetReferenceTracker.h"
 #include "Editor/Common/Workspace/HotReload/AssetReloadCascade.h"
 #include "Editor/Common/Workspace/Undo/UndoStep.h"
@@ -544,8 +544,8 @@ namespace sw::editor
             (void)reloadChangedAsset( AssetID{ assetID } );
             return;
         }
-        const optional<AbsolutePath> diskPath     = editor::getSubsystem<AssetPaths>().toDiskPath( assetID );
-        const string                 relativePath = diskPath.has_value() ? AssetHotReloadInternal::makeTreePath( diskPath->str() ) : string{};
+        const optional<DiskPath> diskPath     = editor::getSubsystem<AssetPaths>().toDiskPath( assetID );
+        const string             relativePath = diskPath.has_value() ? AssetHotReloadInternal::makeTreePath( diskPath->str() ) : string{};
         if ( relativePath.empty() )
         {
             // 트리(리소스 루트 · 작업 도메인) 밖(시나리오의 `Saved/Automation/` 임시 문서 · 붙인 디스크 도메인)은 감시도 색인도 없다 — 그 캐시만 다시 읽는다(예전 패널의 저장 뒤 리로드와 같다).
@@ -637,10 +637,10 @@ namespace sw::editor
     void AssetHotReload::pollImportJob()
     {
         EditorAssetImportResult result{};
-        const EditorTaskPoll    poll = _pImportJob->take( result );
-        if ( poll == EditorTaskPoll::Running )
+        const EditorJobPoll     poll = _pImportJob->take( result );
+        if ( poll == EditorJobPoll::Running )
             return;
-        if ( poll == EditorTaskPoll::Ready )
+        if ( poll == EditorJobPoll::Ready )
             finishImport( result );
         else if ( _bImportInFlight )
         {

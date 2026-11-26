@@ -7,7 +7,7 @@ Scripts/generate/client_only_types.py
 
 - 왜 표인가: 서버는 그 소스를 짓지 않아 형식을 모른다. 씬 · 프리팹에 HUD · 마커 · 월드 위젯 · 소리(에미터 · 리스너 · 잔향 존) 컴포넌트가 있으면 서버는 모르는 형식을 만나는데,
   이름 바꾸기 · 빠진 모듈(오류)과 클라이언트 전용(정상)을 가르려면 이 이름들을 서버도 알아야 한다. 서버의 직렬화기는 표의 형식이면 만들지 않고 조용히
-  건너뛴다(`ClientOnlyTypeTable` — 언리얼은 클래스를 서버도 지어 두고 액터를 띄우지 않는다. 여기는 클래스를 짓지 않으니 이름만 싣는다 — 기억).
+  건너뛴다(`ClientOnlyTypeTable`. 언리얼은 클래스를 서버도 지어 두고 액터를 띄우지 않는다. 여기는 클래스를 짓지 않으니 이름만 싣는다).
 - 누가 쓰는가: 전용 서버 실행 파일을 짓는 빌드(`Source/Server/CMakeLists.txt` — 서버 구성 · 개발 구성)가 헤더 목록을 넘겨 실행 파일 옆(`Bin/ClientOnlyTypes.json`)에 쓴다. 헤더가 바뀌면 다시 쓰고,
   패키지(`Scripts/package/pack.py`)가 서버 실행 파일과 함께 싣는다. 저장소에는 두지 않는다(낡을 사본이 없다).
 
@@ -25,7 +25,7 @@ from typing import Sequence
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 
-from common.command import Command, ScriptContext  # noqa: E402
+from common.command import Command, CommandError, ScriptContext  # noqa: E402
 from common.exit_code import ExitCode  # noqa: E402
 
 #: 실행 파일 옆 표 이름 — `ClientOnlyTypeTable::kTableFile` · `pack.py` 의 `CLIENT_ONLY_TYPE_TABLE` 과 같은 이름이다.
@@ -34,9 +34,22 @@ TABLE_FILE_NAME = "ClientOnlyTypes.json"
 REFLECTED_TYPE = re.compile(r"^\s*REFLECT\s*\((?:[^()]|\([^()]*\))*\)\s*\n\s*(?:class|struct)\s+(?:SW_\w+\s+)?(\w+)", re.M)
 
 
+#: 줄 머리의 `REFLECT(` — 이것마다 형식 이름이 하나 나와야 한다. 못 읽은 선언을 조용히 빼면 서버가 그 형식을 모르는 형식으로 보아 쿠킹 · 씬 읽기에서야 진다.
+REFLECT_LINE = re.compile(r"^[ 	]*REFLECT\s*\(", re.M)
+
+
 def collect_type_names(list_header: Sequence[Path]) -> list[str]:
-    """헤더들의 리플렉션 형식 이름(글자 순, 겹침 없음)입니다. 읽지 못하는 헤더는 예외로 멈춘다(빈 표로 대신하지 않는다)."""
-    return sorted({name for header in list_header for name in REFLECTED_TYPE.findall(header.read_text(encoding="utf-8"))})
+    """헤더들의 리플렉션 형식 이름(글자 순, 겹침 없음)입니다. 읽지 못하는 헤더 · 이름을 읽지 못한 `REFLECT(` 는 멈춘다(빠진 표로 대신하지 않는다)."""
+    set_name: set[str] = set()
+    for header in list_header:
+        text = header.read_text(encoding="utf-8")
+        list_match = list(REFLECTED_TYPE.finditer(text))
+        set_read = {match.start() + len(match.group()) - len(match.group().lstrip()) for match in list_match}
+        for match in REFLECT_LINE.finditer(text):
+            if match.start() + len(match.group()) - len(match.group().lstrip()) not in set_read:
+                raise CommandError(f"{header}:{text.count(chr(10), 0, match.start()) + 1} 의 REFLECT 다음에서 형식 이름을 읽지 못했다 - client_only_types.py 의 REFLECTED_TYPE 이 아는 꼴로 적거나 꼴을 더한다")
+        set_name.update(match.group(1) for match in list_match)
+    return sorted(set_name)
 
 
 def make_table_text(list_name: list[str]) -> str:

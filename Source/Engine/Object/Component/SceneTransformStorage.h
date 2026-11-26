@@ -11,8 +11,8 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
-#include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Subsystem/Subsystem.h"
+#include "Core/Subsystem/SubsystemSlot.h"
 
 #include "Engine/Object/Component/ComponentDataStore.h"
 #include "Engine/Object/Component/SceneTransformPage.h"
@@ -22,7 +22,7 @@ namespace sw
     /**
      * @class SceneTransformStorage
      * @brief 모든 씬 컴포넌트의 트랜스폼 값을 담는 전역 저장소입니다(유니티의 `TransformHierarchy` 에 해당).
-     * @details **컴포넌트는 만들어질 때 슬롯을 받고 없어질 때 반환한다.** 씬에 붙지 않은 컴포넌트(스택에 만든 것, 기본값 비교용)도 슬롯이
+     * @details 컴포넌트는 만들어질 때 슬롯을 받고 없어질 때 반환한다. 씬에 붙지 않은 컴포넌트(스택에 만든 것, 기본값 비교용)도 슬롯이
      *          있으므로, 등록 여부에 따라 값의 위치가 바뀌는 일이 없다. 리플렉션은 `SceneComponent` 의 값 접근자(PROPERTY 를 붙인 참조
      *          반환 메서드)로 슬롯을 찾으므로 직렬화 키(`_localPosition` …)와 씬 파일은 그대로다.
      *
@@ -34,7 +34,7 @@ namespace sw
      *          언리얼의 `FRotationConversionCache` 를 따랐다. 부모만 움직여 자식을 다시 합성할 때 삼각 함수 여섯 번을 건너뛴다.
      *
      *          스레드 계약: 슬롯 받기와 반환은 뮤텍스 안에서 한다(씬 로드 워커와 게임 스레드가 동시에 만들 수 있다). 페이지 테이블은 고정 크기이고
-     *          페이지 포인터는 release 로 발행하므로 `findPage` 는 잠금이 없다. 슬롯 **내용**의 동기화는 쓰는 쪽(씬의 틱 단계)이 맡는다.
+     *          페이지 포인터는 release 로 발행하므로 `findPage` 는 잠금이 없다. 슬롯 내용의 동기화는 쓰는 쪽(씬의 틱 단계)이 맡는다.
      */
     class SW_API SceneTransformStorage final : public Subsystem
     {
@@ -93,6 +93,6 @@ namespace sw
     private:
         Store _store; ///< 칸 받기 · 놓기는 .cpp 에서만 인스턴스화한다(페이지의 칸 채우기 · 비우기가 엔진 모듈 밖에 보이지 않는다)
 
-        SW_SERVICE_SLOT( SceneTransformStorage, Required );
+        SW_SUBSYSTEM_SLOT( SceneTransformStorage, Required );
     };
 } // namespace sw

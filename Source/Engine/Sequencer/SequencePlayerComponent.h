@@ -45,7 +45,7 @@ namespace sw
     /**
      * @class SequencePlayerComponent
      * @brief 시퀀스 하나를 재생합니다. 시퀀스의 바인딩 id 마다 이 씬의 오브젝트를 `_listBinding` 으로 묶는다(유니티 PlayableDirector 의 바인딩, 언리얼 Level Sequence Actor 의 Binding Overrides).
-     * @details **재생 계약**: 시작할 때 재생에 필요한 바인딩이 모두 묶였는지 보고, 하나라도 비면 오류를 남기고 틀지 않는다(이름 찾기 폴백 없음).
+     * @details 재생 계약: 시작할 때 재생에 필요한 바인딩이 모두 묶였는지 보고, 하나라도 비면 오류를 남기고 틀지 않는다(이름 찾기 폴백 없음).
      *          끝(반복이 아닐 때 진행 방향의 끝 프레임) · 끝으로 건너뛰기(`skipToEnd`) · `stop` · 씬 나감(`onEndPlay`) · 재생 중 다시 틀기(먼저 멈춘다) · 시퀀스 바꾸기는 모두 같은 끝내기(`endPlayback`)를 지난다 —
      *          덮던 컷이 있으면 시네마틱 끝을 알리고, 구간 동작(소리 · 애니메이션 덮어쓰기)을 나가고, 스폰을 지우고, 컷을 풀고, 시퀀스의 `_whenFinished` 가
      *          `RestoreState` 면 시작 전 상태로 되돌린다. 일시정지는 끝내기가 아니다.
@@ -106,7 +106,7 @@ namespace sw
         /** @brief 컷씬 움직임 정책을 바꿉니다. 다음 재생부터 따른다(재생 중의 막기 요청은 끝내기가 같은 값으로 푼다). */
         void                   setPlayerMovement( SequencePlayerMovement movement ) { _playerMovement = movement; }
         SequencePlayerMovement getPlayerMovement() const { return _playerMovement; }
-        /** @brief 시작할 때 스스로 틀지 정합니다(기본 참 — 트리거가 트는 디렉터는 끈다). 코드 · 테스트가 쓴다 — 씬 파일은 PROPERTY 로 든다. */
+        /** @brief 시작할 때 스스로 틀지 정합니다(기본 참, 트리거가 트는 디렉터는 끈다). 코드 · 테스트가 쓰고 씬 파일은 PROPERTY 로 든다. */
         void setAutoPlay( bool bAutoPlay ) { _bAutoPlay = bAutoPlay ? SW_TRUE : SW_FALSE; }
         bool isAutoPlay() const { return _bAutoPlay == SW_TRUE; }
         /** @brief 범위 제한(`Confined`)의 대상 · 중심 · 반지름을 정합니다. 코드 · 테스트가 쓴다 — 씬 파일은 PROPERTY 로 든다. */
@@ -134,7 +134,7 @@ namespace sw
         /** @brief 재생할 시퀀스를 바꿉니다(코드로 만든 시퀀스). 재생 중이었으면 먼저 끝낸다. 재생 위치는 그 시퀀스의 처음입니다. */
         void setSequence( const SequenceAsset& asset );
         /**
-         * @brief @p source 의 시퀀스 · 속도 · 반복을 옮겨 **시간만 재는** 플레이어로 둡니다(스스로 틀기는 끈다). 재생 중이었으면 먼저 끝냅니다.
+         * @brief @p source 의 시퀀스 · 속도 · 반복을 옮겨 시간만 재는 플레이어로 둡니다(스스로 틀기는 끈다). 재생 중이었으면 먼저 끝냅니다.
          * @details 시간만 재는 재생은 바인딩을 갖지 않고 오브젝트 · 화면 · 입력 · 이벤트에 아무것도 적용하지 않는다 — 끝과 건너뛰기만 판정한다. 같은 시퀀스의 재생 둘이 같은 오브젝트를
          *          겹쳐 움직일 수 없다(적용하는 재생은 씬의 디렉터 하나 — 언리얼 `Client` RPC 컷씬은 서버가 틀지 않고, 유니티 Timeline 은 바인딩 하나를 디렉터 하나가 쥔다).
          *          서버가 다른 플레이어만 보는 재생을 따로 재는 자리(`SequenceTriggerComponent`)가 쓴다.

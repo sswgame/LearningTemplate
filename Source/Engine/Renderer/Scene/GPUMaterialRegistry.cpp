@@ -263,7 +263,7 @@ namespace sw
 
     void GPUMaterialRegistry::refreshMaterialBindings( GPUSceneSnapshot& inoutSnapshot )
     {
-        // 입력은 맞추기 **전에** 읽는다 — 맞추는 중에 오른 번호(인스턴스가 부모의 레이아웃을 맞춤 · 묶음 값을 다시 패킹)는 다음 빌드가 한 번 더 맞춰 수렴한다.
+        // 입력은 맞추기 전에 읽는다 — 맞추는 중에 오른 번호(인스턴스가 부모의 레이아웃을 맞춤 · 묶음 값을 다시 패킹)는 다음 빌드가 한 번 더 맞춰 수렴한다.
         // 뒤에 읽으면 앞 원소(부모)가 옛 사본을 든 채 건너뛸 수 있다.
         const MaterialRenderInputs inputs      = MaterialRenderInputs::capture();
         const bool                 bInputsSame = inputs.isSame( _lastRefreshInputs );

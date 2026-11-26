@@ -2,7 +2,7 @@
  * @file SequenceNetSessionComponent.h
  * @brief 게임 인스턴스의 네트워크 세션(월드의 넷 링크 `SceneNetLink`)이 열려 있으면 그 씬의 컷씬 재생(시퀀스 트리거)을 복제합니다.
  * @details 씬에 오브젝트 하나로 둔다. 역할은 넷 링크가 정한다: 서버면 `SequenceReplicationServer`, 클라이언트면 `SequenceReplicationClient`, 링크가 없으면(혼자 하는 게임) 아무것도 하지 않는다.
- *          오브젝트 번호표는 플레이 시작 때 만든다 — 디렉터 · 폰과 같은 씬 문서에 둔다. 서버는 마지막 틱 그룹(`PostUpdate`)에서 보낸다 — 트리거가 이번 프레임에 튼 재생을
+ *          오브젝트 번호표는 플레이 시작 때 만들고 디렉터 · 폰과 같은 씬 문서에 둔다. 서버는 마지막 틱 그룹(`PostUpdate`)에서 보낸다 — 트리거가 이번 프레임에 튼 재생을
  *          같은 프레임에 보낸다. 클라이언트는 메시지를 게임 프레임 앞에서 받아 바로 틀고, 로컬 건너뛰기 요청은 틱 뒤에 보낸다.
  *          `GF_NetPairedAnimation` 의 세션 컴포넌트와 같은 꼴이다.
  */

@@ -2,7 +2,7 @@
 // 서버 쪽은 같은 프로토콜 항목의 가짜(`OnlineHostTestUtil` 루프백), 스토어 쪽은 가짜 다리다. 온라인 키트라 `UnitTests.OnlineKits` 가 돌린다(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "GameFramework/Kits/Feature/Online/Economy/Runtime/EconomyClient.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Runtime/EconomyMirror.h"

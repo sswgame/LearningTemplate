@@ -4,8 +4,7 @@
 
 #include "Core/Container/vector.h"
 #include "Core/Task/TaskNode.h"
-#include "Core/Task/TaskNodePool.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 using namespace sw;
 

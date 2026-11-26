@@ -1,8 +1,8 @@
-// LootGrantTest — 아이템 상자가 받을 가방(IItemReceiver — 폰을 쥔 조종자 쪽 · 테스트 받는 쪽)에 아이템을 넣는지, 받는 쪽이 없거나 거절하면 열리지 않는지 본다(nogpu, 헤드리스).
+// LootGrantTest: 아이템 상자가 받을 가방(IItemReceiver: 폰을 쥔 조종자 쪽 · 테스트 받는 쪽)에 아이템을 넣는지, 받는 쪽이 없거나 거절하면 열리지 않는지 본다(nogpu, 헤드리스).
 #include "pch.h"
 
-#include "Core/Name/hashed_string.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/String/Name/hashed_string.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"

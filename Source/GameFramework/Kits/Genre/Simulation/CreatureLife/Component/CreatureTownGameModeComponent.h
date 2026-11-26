@@ -9,7 +9,8 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -47,7 +48,7 @@ namespace sw
 
     /**
      * @class CreatureTownGameModeComponent
-     * @brief 마을 한 판입니다. 같은 오브젝트에서 월드 상태를 여는 디렉터 **뒤에** 붙어 그 디렉터가 이번 틱에 번 돈을 봅니다.
+     * @brief 마을 한 판입니다. 같은 오브젝트에서 월드 상태를 여는 디렉터 뒤에 붙어 그 디렉터가 이번 틱에 번 돈을 봅니다.
      * @details 시가 넘어가면 방문을 굴리고, 날이 넘어가면 하루를 넘긴다. 마을에 사는 생물은 카탈로그에 적힌 부탁(`<Species requests>`)을 받을 수 있게 되는 대로 한다.
      *          플레이어 지갑이 `_upgradePrice` 를 낼 수 있고 `_upgradeHabitat` 서식지가 아직 없으면 마을 업그레이드(`_listUpgradeObject`)을 산다.
      *          상태는 마을 하나(구간 'CTWN')이고 부탁 일지 · 호감도(공유 평판의 세력 `creature.<종>`) · 지갑은 플레이어 상태에 있다. 시작 배치는 공유 일지에 서식지 수를 알리므로
@@ -81,7 +82,7 @@ namespace sw
 
     protected:
         [[nodiscard]] bool startGame() override;
-        void               updateGame( float32 deltaTime ) override;
+        void               updateGame( GameSeconds frameTime ) override;
 
     private:
         /** @brief 마을을 열고 공유 상태(일지 · 평판 · 시계)를 빌립니다(시작과 복원이 같은 설정으로 연다). 크기가 범위 밖이면 마을이 오류를 남기고 false 입니다. */

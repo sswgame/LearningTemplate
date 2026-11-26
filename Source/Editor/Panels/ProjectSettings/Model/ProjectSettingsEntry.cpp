@@ -20,7 +20,7 @@ namespace sw::editor
         return ( bUnderConfig || bUnderResource ) && StringUtil::endsWith( relativePath, ".json" );
     }
 
-    void ProjectSettingsEntry::collectLoaded( const ConfigManager& configManager, const AbsolutePath& projectRoot, vector<ProjectSettingsEntry>& outListEntry )
+    void ProjectSettingsEntry::collectLoaded( const ConfigManager& configManager, const DiskPath& projectRoot, vector<ProjectSettingsEntry>& outListEntry )
     {
         outListEntry.clear();
         configManager.forEachFileSource( [projectRoot, &outListEntry]( const hashed_string& typeName, string_view resolvedPath )
@@ -43,7 +43,7 @@ namespace sw::editor
         { return lhs._page < rhs._page; } );
     }
 
-    void ProjectSettingsEntry::addOtherGamePresets( const AbsolutePath& projectRoot, vector<ProjectSettingsEntry>& inoutListEntry )
+    void ProjectSettingsEntry::addOtherGamePresets( const DiskPath& projectRoot, vector<ProjectSettingsEntry>& inoutListEntry )
     {
         for ( const utf8* pPresetFolder : { config::kDirRuntimeGamePreset, config::kDirRuntimeServerPreset } )
         {
@@ -56,13 +56,13 @@ namespace sw::editor
                 continue;
             const ProjectSettingsEntry active = *pLoaded; // 복사 — 아래 push_back 이 배열을 옮긴다
             pLoaded->_gameName                = FileUtil::removeExtension( FileUtil::getFileNamePart( active._relativePath ) );
-            vector<AbsolutePath> listPath;
+            vector<DiskPath> listPath;
             if ( FileUtil::collectFiles( projectRoot.join( presetFolder ), ".json", listPath, false ) == false )
             {
                 SW_LOG_ERROR_ID( "ProjectSettingsPanel.PresetFolderUnreadable", "Project settings: %# could not be listed - the other games' presets are missing", presetFolder );
                 continue;
             }
-            for ( const AbsolutePath& absolutePath : listPath )
+            for ( const DiskPath& absolutePath : listPath )
             {
                 if ( FileUtil::isSameDiskPath( absolutePath.str(), active._absolutePath.str() ) )
                     continue;
@@ -79,17 +79,17 @@ namespace sw::editor
         }
     }
 
-    bool ProjectSettingsEntry::collectTables( const AbsolutePath& projectRoot, const vector<ProjectSettingsEntry>& listTyped, vector<ProjectSettingsEntry>& outListEntry )
+    bool ProjectSettingsEntry::collectTables( const DiskPath& projectRoot, const vector<ProjectSettingsEntry>& listTyped, vector<ProjectSettingsEntry>& outListEntry )
     {
         outListEntry.clear();
-        const AbsolutePath   configFolder = projectRoot.join( kTableFolder );
-        vector<AbsolutePath> listPath;
+        const DiskPath   configFolder = projectRoot.join( kTableFolder );
+        vector<DiskPath> listPath;
         if ( FileUtil::collectFiles( configFolder, ".json", listPath, true ) == false )
         {
             SW_LOG_ERROR_ID( "ProjectSettingsPanel.TableFolderUnreadable", "Project settings: %# could not be listed - the table pages are missing", configFolder.str() );
             return false;
         }
-        for ( const AbsolutePath& absolutePath : listPath )
+        for ( const DiskPath& absolutePath : listPath )
         {
             // 반사 형식 페이지가 있는 파일은 그 페이지가 고친다(형식 검사 · 기본값 차이 쓰기) — 같은 파일을 두 페이지가 들지 않는다.
             const bool bTyped = VectorUtil::containsIf( listTyped, [&absolutePath]( const ProjectSettingsEntry& typed )

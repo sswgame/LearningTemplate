@@ -1,8 +1,8 @@
 // TagGateTest — 태그 문: 요구 태그를 가진 켜진 오브젝트가 가까이 있을 때만 열린다
 #include "pch.h"
 
-#include "Core/Name/TagID.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/String/Name/TagID.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"

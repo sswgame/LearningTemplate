@@ -2,11 +2,11 @@
  * @file CharacterWetnessSystem.h
  * @brief 표면 노출(`CharacterWetnessComponent` — 비 · 물이 몸 표면을 바꾼다)의 프레임 일을 한 곳에서 한 번에 하는 프레임 시스템입니다.
  * @details 노출 컴포넌트는 예전에 매 틱 자기 일을 통째로 틱 뒤 큐로 미뤘다(물 찾기 · 지붕 광선 · 외형 표면 쓰기는 게임 스레드 일이다) — 컴포넌트 수만큼 미룬 일이 쌓이고
- *          순서는 워커 순서였다. 이제 컴포넌트는 틱에서 게임 초만 쌓고, 이 시스템이 프레임마다 틱 뒤 큐에 일 **하나**를 넣어 같은 자리
+ *          순서는 워커 순서였다. 이제 컴포넌트는 틱에서 게임 초만 쌓고, 이 시스템이 프레임마다 틱 뒤 큐에 일 하나를 넣어 같은 자리
  *          (`ApplyPrePhysics` 의 틱 뒤 큐 — 노출의 틱 그룹 `DuringPhysics` 가 미루던 자리)에서 등록 순서로 돈다. 지역 시스템(`ZoneSystem`)과 같은 모양이다.
  *          언리얼 `UWorldSubsystem` 이 등록받은 목록을 돌고, Mass 처리기가 한 종류를 한 번에 도는 자리다.
  *
- *          - 왜 씬 서비스가 아닌가: 씬 서비스 표(`SW_SCENE_SERVICE`)는 Engine 이미지 안에서만 채운다. GameFramework 의 타입은 프레임 시스템으로 붙고 뗀다 —
+ *          - 왜 씬 서브시스템이 아닌가: 씬 서브시스템 표(`SW_SCENE_SUBSYSTEM`)는 Engine 이미지 안에서만 채운다. GameFramework 의 타입은 프레임 시스템으로 붙고 뗀다 —
  *            첫 노출 컴포넌트의 `onRegister` 가 붙이고(`getOrCreate`), 마지막의 `onUnregister` 가 뗀다(`releaseIfUnused`).
  *          - 같은 프레임의 순서: 넣은 일은 그 프레임의 틱이 미룬 일보다 앞에 돈다(넣은 순서). 노출이 쓰는 외형 표면 상태는 외형의 다음 틱이 감쇠 · 머티리얼로 올린다 — 예전과 같다.
  */

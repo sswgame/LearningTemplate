@@ -82,5 +82,5 @@ namespace sw
 
 namespace sw
 {
-    SW_ENGINE_SERVICE_SUBSYSTEM( DebugOverlayState, GameVisible, GameInstance, Services, (), SW_ENGINE_DEFAULT_FACTORY( DebugOverlayState ) );
+    SW_ENGINE_SUBSYSTEM_WITH_SLOT( DebugOverlayState, GameVisible, GameInstance, Shared, (), SW_ENGINE_DEFAULT_FACTORY( DebugOverlayState ) );
 } // namespace sw

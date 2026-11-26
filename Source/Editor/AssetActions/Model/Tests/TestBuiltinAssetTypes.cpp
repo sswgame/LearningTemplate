@@ -1,9 +1,9 @@
-// BuiltinAssetTypesTest — 코어 애셋 종류의 등록 줄: 경로 → 종류 판정, 끌어 놓기 · 미리보기 동작, 다시 읽는 길, 새 에셋 틀이 자기 종류로 돌아오는지(썸네일 그리기는 뷰 — nogpu).
+// BuiltinAssetTypesTest: 코어 애셋 종류의 등록 줄: 경로 → 종류 판정, 끌어 놓기 · 미리보기 동작, 다시 읽는 길, 새 에셋 틀이 자기 종류로 돌아오는지(썸네일 그리기는 뷰라 뺀다, nogpu).
 #include "pch.h"
 
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetTypeActions.h"

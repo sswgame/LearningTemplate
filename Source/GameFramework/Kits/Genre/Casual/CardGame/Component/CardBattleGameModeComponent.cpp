@@ -174,9 +174,10 @@ namespace sw
         SW_LOG_INFO_ID( "CardBattle.Finished", "[CardBattle] %# on turn %# with %# HP left", _battle.getPhase() == CardBattlePhase::Won ? "victory" : "defeat", _battle.getTurn(), _battle.getPlayerHP() );
     }
 
-    void CardBattleGameModeComponent::updateMatch( float32 deltaTime )
+    void CardBattleGameModeComponent::updateMatch( GameSeconds frameTime )
     {
-        if ( isAutoPlayOn() && _autoPlayTimer.update( deltaTime ) )
+        const float32 deltaTime = frameTime.count();
+        if ( isAutoPlayOn() && _autoPlayTimer.update( frameTime ) )
         {
             stepAutoPlay();
             _autoPlayTimer.start( _autoPlayInterval );

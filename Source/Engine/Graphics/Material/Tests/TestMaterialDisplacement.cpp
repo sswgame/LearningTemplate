@@ -2,7 +2,7 @@
 // 높이 밉이 변마다 정점 간격을 따라 이웃 패치와 같은 값이며 다시 구한 노멀이 오르막 반대로 기우는지(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Graphics/Material/MaterialDisplacement.h"
 

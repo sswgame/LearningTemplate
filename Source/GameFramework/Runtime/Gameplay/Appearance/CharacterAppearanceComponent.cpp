@@ -40,7 +40,7 @@
 #include "Engine/Visual/Component/MeshSectionComponent.h"
 
 #include "GameFramework/Runtime/Foundation/Save/StatefulComponentRegistrar.h"
-#include "GameFramework/Runtime/Foundation/Service/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceDatabase.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceMeshPart.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceXMLUtil.h"
@@ -384,7 +384,7 @@ namespace sw
             return;
         if ( hasSurfaceState() )
         {
-            _surface.update( context.getDeltaTime() ); // 감쇠한다. 바뀐 프레임에만 머티리얼로 올라간다
+            _surface.update( context.getDeltaTime().count() ); // 감쇠한다. 바뀐 프레임에만 머티리얼로 올라간다
             // 부품은 다른 오브젝트의 메시라 머티리얼 올리기는 틱 뒤(같은 프레임)에 한다.
             if ( _surfaceAppliedRevision != _surface.getRevision() )
                 context.deferPostTickOnComponent( *this, []( CharacterAppearanceComponent& self, GameObjectManager& manager )
@@ -994,8 +994,9 @@ namespace sw
         // 장비 소켓은 차림을 풀어야 안다(임포트 때 알 수 없다) — 소켓 표를 다시 지을 때마다 몸 소켓의 부모 본을 몸 유닛 본 LOD 의 핵심 본으로 다시 낸다.
         const ResolvedSocketTable& socketTable = _rig.getTable();
         vector<hashed_string>      listSocketBone;
-        for ( SocketID socketID = 0; socketID < socketTable.getSocketCount(); ++socketID )
+        for ( uint32 socketIndex = 0; socketIndex < socketTable.getSocketCount(); ++socketIndex )
         {
+            const SocketID   socketID{ socketIndex };
             const SocketDef* pDef        = socketTable.isSocketActive( socketID ) ? socketTable.findSocketDef( socketID ) : nullptr;
             const bool       bBodySocket = pDef != nullptr && socketTable.getSocketUnit( socketID ) == AppearanceSocketRig::kBodyUnit && pDef->_parent.empty() == false;
             if ( bBodySocket )
@@ -1101,7 +1102,7 @@ namespace sw
         {
             if ( proportion._owner.empty() == false )
                 continue; // 다른 주인(장비)의 본 비율은 그 주인의 부품이 다룬다
-            // 부품 머티리얼이 받은 채널(`<ChannelMaterial>` — 머리카락 길이)은 이 스켈레톤이 축으로 적지 않았으면 몸 축이 아니다 — 체형 축 데이터 없이도 닿는다.
+            // 부품 머티리얼이 받은 채널(`<ChannelMaterial>`, 예: 머리카락 길이)은 이 스켈레톤이 축으로 적지 않았으면 몸 축이 아니므로 체형 축 데이터 없이도 닿는다.
             const bool bMaterialOnly = VectorUtil::contains( resolved._listMaterialChannel, proportion._name ) && ( _bodyShapeSet == nullptr || _bodyShapeSet->findAxis( proportion._name ) == nullptr );
             if ( bMaterialOnly == false )
                 listValue.push_back( BodyShapeValue{ proportion._name, proportion._value } );

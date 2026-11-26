@@ -1,26 +1,33 @@
 #include "pch.h"
 
+#include "Core/Foundation/PlatformOSHeaders.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Memory/Memory.h"
+#include "Core/Memory/MemoryBlock.h"
 #include "Core/Process/Process.h"
-#include "Core/Process/ProcessEnvironment.h"
+#include "Core/Process/ShutdownSignal.h"
+#include "Core/Process/StandardInputReader.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/Time/MonotonicClock.h"
 
-#if defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_ANDROID )
-    #include "Core/Foundation/PlatformOSHeaders.h"
-
-    #include <cerrno>
-    #include <csignal>
-    #include <cstring>
-    #include <ctime>
-    #include <fcntl.h>
-    #include <sys/syscall.h>
-    #if defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_ANDROID )
-        #include <sys/prctl.h>
-    #endif
+#if defined( SW_PLATFORM_POSIX )
+    #include <cstdlib>
+    #include <poll.h>
+    #include <signal.h>
     #include <unistd.h>
+    #if defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_ANDROID )
+        #include <cerrno>
+        #include <csignal>
+        #include <cstring>
+        #include <ctime>
+        #include <fcntl.h>
+        #include <sys/prctl.h>
+        #include <sys/syscall.h>
+    #endif
+
+    #if defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_ANDROID )
 
 namespace sw
 {
@@ -36,7 +43,7 @@ namespace sw
             return static_cast<FILE*>( pHandle );
         }
 
-        /** @brief 자식에서 닫을 서술자의 상한 — **fork 전에** 구한다(자식에서는 async-signal-safe 함수만 부른다). */
+        /** @brief 자식에서 닫을 서술자의 상한 — fork 전에 구한다(자식에서는 async-signal-safe 함수만 부른다). */
         int32 getDescriptorLimit()
         {
             const int64 openMax = static_cast<int64>( sysconf( _SC_OPEN_MAX ) );
@@ -52,13 +59,13 @@ namespace sw
         {
             // 남길 하나(exec 오류 파이프 — CLOEXEC 라 exec 가 되면 저절로 닫힌다)를 빼고 닫는다.
             int32 closedFrom = 3;
-    #if defined( SYS_close_range )
+        #if defined( SYS_close_range )
             const bool bRangeClosed = keepDescriptor < 3 ? syscall( SYS_close_range, 3U, ~0U, 0U ) == 0
                                                          : ( keepDescriptor == 3 || syscall( SYS_close_range, 3U, static_cast<uint32>( keepDescriptor - 1 ), 0U ) == 0 ) &&
                                                                syscall( SYS_close_range, static_cast<uint32>( keepDescriptor + 1 ), ~0U, 0U ) == 0;
             if ( bRangeClosed )
                 closedFrom = descriptorMax;
-    #endif
+        #endif
             for ( int32 descriptor = closedFrom; descriptor < descriptorMax; ++descriptor )
             {
                 if ( descriptor != keepDescriptor )
@@ -73,17 +80,17 @@ namespace sw
          */
         [[nodiscard]] bool openExecErrorPipe( int32 ( &outArrFd )[2] )
         {
-    #if defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_ANDROID )
+        #if defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_ANDROID )
             if ( pipe2( outArrFd, O_CLOEXEC ) == 0 )
                 return true;
-    #else
+        #else
             if ( pipe( outArrFd ) == 0 )
             {
                 fcntl( outArrFd[0], F_SETFD, FD_CLOEXEC );
                 fcntl( outArrFd[1], F_SETFD, FD_CLOEXEC );
                 return true;
             }
-    #endif
+        #endif
             outArrFd[0] = -1;
             outArrFd[1] = -1;
             return false;
@@ -129,7 +136,7 @@ namespace sw
             return nullopt;
         }
 
-        /** @brief **fork 전에** 만들어 두는 exec 재료입니다 — 찾은 실행 파일 경로와 `execv` 에 줄 인자 포인터 배열(nullptr 로 끝난다). 자식에서는 할당하지 않는다. */
+        /** @brief fork 전에 만들어 두는 exec 재료입니다 — 찾은 실행 파일 경로와 `execv` 에 줄 인자 포인터 배열(nullptr 로 끝난다). 자식에서는 할당하지 않는다. */
         struct PosixExecImage
         {
             string              _path;
@@ -140,7 +147,7 @@ namespace sw
         };
 
         /**
-         * @brief 이 프로세스의 환경에 @p listEntry 를 덮어쓴 envp 를 **fork 전에** @p inoutImage 에 만듭니다. 이름이 비었거나 `=` 를 품으면 false 입니다.
+         * @brief 이 프로세스의 환경에 @p listEntry 를 덮어쓴 envp 를 fork 전에 @p inoutImage 에 만듭니다. 이름이 비었거나 `=` 를 품으면 false 입니다.
          * @details `environ` 을 읽는 곳은 여기뿐이다(`getenv` 계열은 `ProcessEnvironment` 가 맡는다) — 환경 전체를 복사해야 하는 일이라 이름 하나를 묻는 그쪽 API 로는 못 한다.
          */
         [[nodiscard]] bool prepareEnvironmentOverride( const vector<ProcessEnvironmentEntry>& listEntry, PosixExecImage& inoutImage )
@@ -268,7 +275,7 @@ namespace sw
         /**
          * @brief 출력 파이프와 표준 입력 파이프(@p bPipeInput 일 때만)를 엽니다. 실패하면 연 것을 닫고 false 입니다.
          * @details 파이프는 exec 를 넘지 않게 연다. 다른 스레드가 거의 동시에 띄운 자식이 이 파이프를 물려받으면, 이쪽의 읽기는 자기 자식이
-         *          끝나도 EOF 를 못 받고 **남의 자식이 끝날 때까지** 막힌다. 자식 쪽에서 쓸 끝은 `runLaunchedChild` 의 `dup2` 가 표준 출력으로 옮기며
+         *          끝나도 EOF 를 못 받고 남의 자식이 끝날 때까지 막힌다. 자식 쪽에서 쓸 끝은 `runLaunchedChild` 의 `dup2` 가 표준 출력으로 옮기며
          *          CLOEXEC 를 해제하므로 그대로 넘어간다. 표준 입력은 끄면 자식이 /dev/null 을 받는다 — 서버 같은 자식이 이 프로세스의 표준 입력을 가로채지 않게.
          */
         [[nodiscard]] bool openLaunchPipes( bool bPipeInput, const utf8* pCommand, int32 ( &outArrOutputFd )[2], int32 ( &outArrInputFd )[2] )
@@ -277,16 +284,16 @@ namespace sw
             outArrOutputFd[1] = -1;
             outArrInputFd[0]  = -1;
             outArrInputFd[1]  = -1;
-    #if defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_ANDROID )
+        #if defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_ANDROID )
             const bool bPipeOpened = pipe2( outArrOutputFd, O_CLOEXEC ) == 0;
-    #else
+        #else
             const bool bPipeOpened = pipe( outArrOutputFd ) == 0;
             if ( bPipeOpened )
             {
                 fcntl( outArrOutputFd[0], F_SETFD, FD_CLOEXEC );
                 fcntl( outArrOutputFd[1], F_SETFD, FD_CLOEXEC );
             }
-    #endif
+        #endif
             if ( bPipeOpened == false )
             {
                 outArrOutputFd[0] = -1;
@@ -307,20 +314,20 @@ namespace sw
 
         /**
          * @brief (자식에서) 파이프를 표준 입출력에 잇고 @p image 를 셸 없이 exec 합니다. 돌아오지 않습니다.
-         * @details 여기서부터 exec 까지는 **async-signal-safe 한 함수만** 부른다. fork 는 부모의 스레드를 하나만 데려오지만
+         * @details 여기서부터 exec 까지는 async-signal-safe 한 함수만 부른다. fork 는 부모의 스레드를 하나만 데려오지만
          *          뮤텍스는 통째로 복사되므로, 다른 스레드가 잡고 있던 락(로거의 락이 대표적이다)은 영원히 잠긴 채로 남는다.
          *          여기서 로그를 찍거나 할당을 하면 그대로 멈춘다.
          */
         [[noreturn]] void runLaunchedChild( const int32 ( &arrPipeFd )[2], const int32 ( &arrInputFd )[2], int32 errorFd, int32 descriptorMax, const utf8* pWorkingDirectory,
                                             const PosixExecImage& image, pid_t endWithParentPid )
         {
-    #if defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_ANDROID )
+        #if defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_ANDROID )
             // 부모와 함께 끝낼 자식이다(감사 E-15) — 부모가 죽으면 커널이 SIGKILL 을 보낸다. fork 와 이 줄 사이에 부모가 이미 죽었으면 신호가 오지 않으니 스스로 끝낸다.
             if ( endWithParentPid > 0 && ( prctl( PR_SET_PDEATHSIG, SIGKILL ) != 0 || getppid() != endWithParentPid ) )
                 _exit( 1 );
-    #else
+        #else
             (void)endWithParentPid; // 부모 사망 신호가 없다 — 놓을 때만 끝낸다(`shutdown`)
-    #endif
+        #endif
             close( arrPipeFd[0] );
             // 표준 에러를 표준 출력에 합친다. `ProcessOutputDelegate` 가 약속한 대로다(빌드 로그는 두 스트림이 원래 순서대로
             // 섞여야 읽을 수 있다).
@@ -363,7 +370,7 @@ namespace sw
             _pStdOutRead = nullptr;
         }
 
-        // 자식을 **거둔 뒤** 놓는다(언리얼 FProcState 와 같다). 예전에는 도는 자식을 분리해, 그 자식이 나중에 끝나면 이 프로세스가 끝날 때까지
+        // 자식을 거둔 뒤 놓는다(언리얼 FProcState 와 같다). 예전에는 도는 자식을 분리해, 그 자식이 나중에 끝나면 이 프로세스가 끝날 때까지
         // 좀비로 남았다(에디터 · 서버는 오래 산다). 기다리지 않을 실행은 `launchDetached`(두 번 fork — init 이 거둔다)다. 파이프는 위에서 닫았다.
         const pid_t childPid = static_cast<pid_t>( _processID.load() );
         if ( childPid > 0 && _bEndWithParent )
@@ -402,7 +409,7 @@ namespace sw
         shutdown();
         _releaseMode = options._releaseMode;
 
-        // 자식에게 넘길 문자열은 **fork 전에** 만들어 둔다. 자식 블록(`runLaunchedChild`)에서는 할당을 하지 않는다.
+        // 자식에게 넘길 문자열은 fork 전에 만들어 둔다. 자식 블록(`runLaunchedChild`)에서는 할당을 하지 않는다.
         PosixExecImage image;
         if ( preparePosixExec( command, image ) == false || prepareEnvironmentOverride( options._listEnvironment, image ) == false )
             return false;
@@ -462,7 +469,7 @@ namespace sw
             _pStdInWrite = reinterpret_cast<void*>( static_cast<intptr_t>( arrInputFd[1] ) + 1 );
         }
 
-        // 자식과 부모 중 누가 먼저 도는지는 정해져 있지 않다. 그래서 그룹 설정은 **양쪽에서** 부른다(먼저 도는 쪽이
+        // 자식과 부모 중 누가 먼저 도는지는 정해져 있지 않다. 그래서 그룹 설정은 양쪽에서 부른다(먼저 도는 쪽이
         // 이기고, 나중 것은 조용히 실패한다). POSIX 가 권하는 관용구다.
         setpgid( childPid, childPid );
 
@@ -635,7 +642,7 @@ namespace sw
 
     expected<int32> Process::waitForExit()
     {
-        // pid 는 **한 번만 읽어 지역 변수에 담는다.** 아래 `terminate` 주석과 같은 이유다.
+        // pid 는 한 번만 읽어 지역 변수에 담는다. 아래 `terminate` 주석과 같은 이유다.
         const pid_t childPid = static_cast<pid_t>( _processID.load() );
         if ( childPid <= 0 )
             return unexpected( Error{ ErrorKind::NotFound, "there is no child process to wait for (never launched or already reaped)" } );
@@ -647,7 +654,7 @@ namespace sw
             reaped = waitpid( childPid, &status, 0 );
         } while ( reaped < 0 && errno == EINTR );
 
-        // **거둔 뒤에는 pid 를 놓는다.** 그 번호는 OS 가 곧 다른 프로세스에 준다. 계속 들고 있으면 언젠가 소멸자의
+        // 거둔 뒤에는 pid 를 놓는다. 그 번호는 OS 가 곧 다른 프로세스에 준다. 계속 들고 있으면 언젠가 소멸자의
         // `waitpid` 가 다른(정확히는 이 프로세스가 나중에 띄운 다른) 자식을 거둬, 그쪽의 `waitForExit` 에서 종료 코드를
         // 빼앗는다.
         _processID.store( 0 );
@@ -666,7 +673,7 @@ namespace sw
         // POSIX 는 자식의 종료 코드를 정할 수 없다. 시그널로 죽이고, `waitForExit` 은 128 + 시그널 번호를 준다.
         (void)exitCode;
 
-        // **pid 를 한 번만 읽어 지역 변수에 담는다.** 이 함수는 다른 스레드가 `readOutputLine` · `waitForExit` 을 도는
+        // pid 를 한 번만 읽어 지역 변수에 담는다. 이 함수는 다른 스레드가 `readOutputLine` · `waitForExit` 을 도는
         // 중에 불린다(`ModuleCompiler::cancel` 이 UI 스레드에서 그렇게 부른다). 확인한 뒤에 `waitForExit` 이 `_processID` 를
         // 0 으로 만들면 아래 `kill( -_processID, … )` 이 `kill( 0, … )` 이 되는데, 그것은 **이 프로세스 자신의 그룹에
         // SIGKILL 을 보내는 것**이다. 에디터가 통째로 죽는다. 지역 변수에 담아 두면 그 틈이 아예 없다.
@@ -681,7 +688,7 @@ namespace sw
             return false;
         }
 
-        // 아직 죽지 않았을 수 있다. Windows 의 `TerminateProcess` 와 같은 **요청**이다. 확실히 하려면 호출하는 쪽이
+        // 아직 죽지 않았을 수 있다. Windows 의 `TerminateProcess` 와 같은 요청이다. 확실히 하려면 호출하는 쪽이
         // `waitForExit` 으로 기다린다.
         return true;
     }
@@ -745,7 +752,7 @@ namespace sw
         if ( childPid <= 0 )
             return false;
 
-        // 핵심은 `WNOWAIT` 이다. **회수하지 않고** 묻는다. `waitpid(WNOHANG)` 로 물으면 끝난 자식을 그 자리에서 회수해
+        // 핵심은 `WNOWAIT` 이다. 회수하지 않고 묻는다. `waitpid(WNOHANG)` 로 물으면 끝난 자식을 그 자리에서 회수해
         // 버려서, 이어서 부르는 `waitForExit` 이 종료 코드를 영영 받지 못한다.
         siginfo_t info{};
         info.si_pid = 0;
@@ -803,6 +810,232 @@ namespace sw
             return false;
         cursor = text.find_first_not_of( " \t", cursor + kField.size() );
         return cursor != string_view::npos && text[cursor] != '0' && text[cursor] != '\n';
+    }
+} // namespace sw
+
+    #endif
+
+// ------------------------------------------------------------------------------
+// ProcessEnvironment
+// ------------------------------------------------------------------------------
+
+namespace sw
+{
+    namespace
+    {
+        /** @brief `setenv` · `unsetenv` 가 거절하는 이름(빈 이름 · `=` 포함)이 아니면 true 입니다. */
+        bool isValidName( string_view name )
+        {
+            return name.empty() == false && name.find( '=' ) == string_view::npos;
+        }
+    } // namespace
+
+    bool ProcessEnvironment::tryRead( string_view name, string& outValue )
+    {
+        outValue.clear();
+        if ( isValidName( name ) == false )
+            return false;
+        const utf8* const pValue = std::getenv( string{ name }.c_str() );
+        if ( pValue == nullptr )
+            return false;
+        outValue = pValue;
+        return true;
+    }
+
+    bool ProcessEnvironment::trySet( string_view name, string_view value )
+    {
+        return isValidName( name ) && ::setenv( string{ name }.c_str(), string{ value }.c_str(), 1 ) == 0;
+    }
+
+    bool ProcessEnvironment::tryUnset( string_view name )
+    {
+        return isValidName( name ) && ::unsetenv( string{ name }.c_str() ) == 0;
+    }
+} // namespace sw
+
+// ------------------------------------------------------------------------------
+// ThreadCrashStack
+// ------------------------------------------------------------------------------
+    #if defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_ANDROID )
+
+namespace sw
+{
+    namespace
+    {
+        /**
+         * @brief 대체 시그널 스택의 크기입니다.
+         * @details 스택 오버플로로 생긴 SIGSEGV 는 스택이 이미 바닥난 상태라 그 스택 위에서 핸들러를 실행할 수 없습니다. 핸들러에
+         *          들어가는 순간 다시 폴트가 나고, 프로세스는 아무 기록도 없이 죽습니다. 그래서 별도 스택을 깔고 SA_ONSTACK 으로
+         *          그 위에서 핸들러를 돌립니다. 최신 glibc 의 SIGSTKSZ 는 sysconf() 를 부르도록 바뀌어 상수가 아니라 넉넉한 고정 크기를 쓴다.
+         *          리포트 경로가 스택에 올리는 것은 StringBuilder<8192> 와 DeepCallStack(64 프레임) 정도이고, 나머지는 힙이다.
+         */
+        constexpr size_t kSignalStackSize = 128 * 1024;
+
+        /**
+         * @brief 이 스레드의 대체 시그널 스택입니다. `sigaltstack` 은 스레드마다다 — 한 스레드에만 깔면 작업 스레드 · 렌더 스레드의
+         *        스택 오버플로는 기록 없이 죽는다. 스레드가 끝날 때 스택을 끄고 돌려준다.
+         */
+        struct ThreadSignalStackHolder
+        {
+            MemoryBlock _stack;
+
+            ~ThreadSignalStackHolder() { release(); }
+
+            void release()
+            {
+                if ( _stack.isValid() == false )
+                    return;
+                stack_t disableStack{};
+                disableStack.ss_flags = SS_DISABLE;
+                sigaltstack( &disableStack, nullptr );
+                _stack.reset();
+            }
+        };
+
+        thread_local ThreadSignalStackHolder t_signalStack{};
+    } // namespace
+} // namespace sw
+
+namespace sw
+{
+    void ThreadCrashStack::initializeCurrentThread()
+    {
+        if ( t_signalStack._stack.isValid() )
+            return;
+
+        MemoryBlock stack = MemoryBlock::allocate( kSignalStackSize );
+        if ( stack.isValid() == false )
+            return;
+
+        stack_t signalStack{};
+        signalStack.ss_sp    = stack.get();
+        signalStack.ss_size  = kSignalStackSize;
+        signalStack.ss_flags = 0;
+        if ( sigaltstack( &signalStack, nullptr ) != 0 )
+        {
+            SW_LOG_WARNING_ID( "PosixCrashHandler.SigaltstackFailedStackOverflow", "sigaltstack failed — a stack overflow on this thread will not be reported" );
+            return;
+        }
+        t_signalStack._stack = std::move( stack );
+    }
+
+    void ThreadCrashStack::releaseCurrentThread()
+    {
+        t_signalStack.release();
+    }
+} // namespace sw
+
+    #endif
+
+// ------------------------------------------------------------------------------
+// StandardInputReader
+// ------------------------------------------------------------------------------
+
+namespace sw
+{
+    bool StandardInputReader::readLinePlatform( const StopToken& stopToken, string& outLine )
+    {
+        for ( ;; )
+        {
+            if ( takeLine( outLine ) )
+                return true;
+            if ( stopToken.isStopRequested() )
+                return false;
+            pollfd      descriptor{ STDIN_FILENO, POLLIN, 0 };
+            const int32 ready = poll( &descriptor, 1, 100 );
+            if ( ready <= 0 )
+                continue; // 시한(멈춤 요청을 다시 본다) · EINTR
+            utf8          arrBuffer[512];
+            const ssize_t count = read( STDIN_FILENO, arrBuffer, sizeof( arrBuffer ) );
+            if ( count <= 0 )
+            {
+                _endOfInput.store( 1 );
+                return false;
+            }
+            _partialLine.append( arrBuffer, static_cast<size_t>( count ) );
+        }
+    }
+} // namespace sw
+
+// ------------------------------------------------------------------------------
+// ShutdownSignal
+// ------------------------------------------------------------------------------
+
+namespace sw
+{
+    namespace
+    {
+        struct PosixShutdownSignalInternal
+        {
+            static constexpr int32 kArrHandledSignal[] = { SIGINT, SIGTERM, SIGHUP };
+
+            static inline struct sigaction s_arrPreviousAction[SW_COUNT_OF( kArrHandledSignal )]{};
+            static inline struct sigaction s_previousPipeAction{};
+            static inline atomic<bool>     s_bInstalled{ false };
+            static inline atomic<uint32>   s_interruptCount{ 0 };
+
+            /** @brief 신호 처리기 — async-signal-safe 함수만 부른다(원자 연산 · write · _exit). */
+            static void onSignal( int32 signalNumber )
+            {
+                const uint32               earlier = signalNumber == SIGINT ? s_interruptCount.fetch_add( 1, std::memory_order_relaxed ) : 0u;
+                const ShutdownSignalAction action  = ShutdownSignal::decideSignal( signalNumber, earlier );
+                if ( action._bPassToDefault )
+                {
+                    static constexpr utf8 kMessage[] = "\nSecond interrupt - exiting immediately\n";
+                    (void)write( STDERR_FILENO, kMessage, sizeof( kMessage ) - 1 ); // 신호 처리기 안 — 알림을 못 써도 바로 _exit 한다
+                    _exit( 130 );
+                }
+                ShutdownSignal::request( action._cause );
+            }
+        };
+    } // namespace
+
+    bool ShutdownSignal::install()
+    {
+        if ( PosixShutdownSignalInternal::s_bInstalled.exchange( true ) ) // 첫 호출 하나만 설치한다
+            return true;
+        struct sigaction action{};
+        action.sa_handler = &PosixShutdownSignalInternal::onSignal;
+        sigemptyset( &action.sa_mask );
+        action.sa_flags = SA_RESTART;
+        bool bInstalled = true;
+        for ( size_t index = 0; index < SW_COUNT_OF( PosixShutdownSignalInternal::kArrHandledSignal ); ++index )
+        {
+            bInstalled = sigaction( PosixShutdownSignalInternal::kArrHandledSignal[index], &action, &PosixShutdownSignalInternal::s_arrPreviousAction[index] ) == 0 && bInstalled;
+        }
+
+        struct sigaction ignore{};
+        ignore.sa_handler = SIG_IGN;
+        sigemptyset( &ignore.sa_mask );
+        bInstalled = sigaction( SIGPIPE, &ignore, &PosixShutdownSignalInternal::s_previousPipeAction ) == 0 && bInstalled;
+        return bInstalled;
+    }
+
+    void ShutdownSignal::uninstall()
+    {
+        if ( PosixShutdownSignalInternal::s_bInstalled.exchange( false ) == false )
+            return;
+        for ( size_t index = 0; index < SW_COUNT_OF( PosixShutdownSignalInternal::kArrHandledSignal ); ++index )
+        {
+            (void)sigaction( PosixShutdownSignalInternal::kArrHandledSignal[index], &PosixShutdownSignalInternal::s_arrPreviousAction[index], nullptr );
+        }
+        (void)sigaction( SIGPIPE, &PosixShutdownSignalInternal::s_previousPipeAction, nullptr );
+    }
+
+    void ShutdownSignal::notifyShutdownComplete()
+    {
+    }
+
+    void ShutdownSignal::setServiceMode( [[maybe_unused]] bool bServiceMode )
+    {
+    }
+
+    ShutdownSignalAction ShutdownSignal::decideSignal( int32 signalNumber, uint32 earlierInterruptCount )
+    {
+        if ( signalNumber == SIGINT && earlierInterruptCount >= 1 )
+            return ShutdownSignalAction{ ShutdownCause::None, true, false };
+        const ShutdownCause cause = signalNumber == SIGTERM ? ShutdownCause::Terminate : ( signalNumber == SIGHUP ? ShutdownCause::Hangup : ShutdownCause::Interrupt );
+        return ShutdownSignalAction{ cause, false, false }; // 신호 처리기 안에서는 기다리지 않는다(async-signal-safe 만)
     }
 } // namespace sw
 

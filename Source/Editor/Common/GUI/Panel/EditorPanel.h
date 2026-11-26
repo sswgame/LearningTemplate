@@ -89,7 +89,7 @@ namespace sw::editor
         virtual EditorAssetType getDocumentKind() const { return EditorAssetType{}; }
         /** @brief 마지막 draw 에서 이 패널 창에 포커스가 있었으면 true 입니다. */
         bool isWindowFocused() const { return _bWindowFocused; }
-        /** @brief 이 패널 창의 ImGui 창 id 입니다(그린 적이 없으면 0). Ctrl+Z 가 처리하는 순간의 포커스 창과 맞춘다(`IEditorPanelService::collectPanelCommandStacks`). */
+        /** @brief 이 패널 창의 ImGui 창 id 입니다(그린 적이 없으면 0). Ctrl+Z 가 처리하는 순간의 포커스 창과 맞춘다(`IEditorPanelSubsystem::collectPanelCommandStacks`). */
         uint32 getWindowID() const { return _windowID; }
         /** @brief 마지막 draw 에서 내용 영역에 글자 줄(`GetTextLineHeightWithSpacing`)이 몇 줄 들어갔는지입니다. 기본 배치의 크기 점검(감시 값 `Editor.PanelContentLines`)이 읽습니다. */
         float32 getContentLineCount() const { return _contentLineCount; }
@@ -116,7 +116,7 @@ namespace sw::editor
 
         // ------------------------------------------------------------------------------
         // 4) 열림 상태. ImGui Begin 의 p_open
-        //    **닫는 경로는 `requestClose` 하나다.** X, 패널 메뉴 토글, 프리팹 창의 Close 단추, 레이아웃 불러오기, 최대화가 모두 이것을 거친다.
+        //    닫는 경로는 `requestClose` 하나다. X, 패널 메뉴 토글, 프리팹 창의 Close 단추, 레이아웃 불러오기, 최대화가 모두 이것을 거친다.
         //    미저장 편집이 있으면 닫지 않고 Save / Don't Save / Cancel 확인을 기다린다. 경로마다 확인을 직접 부르게 두면 새 경로가 확인을 빼먹는다.
         // ------------------------------------------------------------------------------
         /** @brief 패널이 열려 있으면 true 입니다. 닫기 확인을 기다리는 동안에도 true 입니다. */
@@ -218,7 +218,7 @@ namespace sw::editor
         virtual void onPanelCollapsed() {}
         /**
          * @brief 패널이 열린 뒤 첫 `draw()` 에서 내용보다 먼저 한 번 부릅니다(처음부터 열린 패널은 첫 그리기, 닫혔다 다시 열리면 그 첫 그리기).
-         * @details 무거운 준비(파일 스캔 · 색인 · 카탈로그 읽기)는 여기서 **비동기 잡을 내기만** 하고, View 는 결과가 오기 전에 뼈대(빈 목록 · "찾는 중")를 그린다 —
+         * @details 무거운 준비(파일 스캔 · 색인 · 카탈로그 읽기)는 여기서 비동기 잡을 내기만 하고, View 는 결과가 오기 전에 뼈대(빈 목록 · "찾는 중")를 그린다 —
          *          첫 `drawContent` 에서 동기로 준비하면 패널이 처음 열리는 프레임이 그만큼 멈춘다. 여는 경로(메뉴 · 레이아웃 · `setOpen` · 기본 열림)가 여럿이라 훅은 `draw()` 한 곳이 부른다.
          *          언리얼 `SDockTab::OnTabActivated` · 유니티 `EditorWindow.OnEnable` 자리다.
          */

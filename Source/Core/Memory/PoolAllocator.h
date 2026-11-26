@@ -20,7 +20,7 @@ namespace sw
     public:
         /**
          * @brief 풀을 준비합니다.
-         * @param blockSize 블록 하나의 크기. **16바이트 배수로 올림**하며, 최소 `sizeof(void*)` 입니다.
+         * @param blockSize 블록 하나의 크기. 16바이트 배수로 올림하며, 최소 `sizeof(void*)` 입니다.
          *                  (청크 헤더와 기반 할당도 16 으로 맞추므로 SSE 타입을 담아도 안전합니다.)
          * @param blocksPerChunk 한 번에 OS 에서 할당받을 청크 안의 블록 수
          * @param bThreadSafe true 면 내부 뮤텍스로 스레드 안전하게 동작합니다
@@ -57,13 +57,13 @@ namespace sw
             FreeNode* _pNext;
 #if defined( SW_DO_CHECKS )
             /**
-             * @brief 이 블록이 **지금 자유 목록에 있는지** 나타내는 표시입니다.
-             * @details 같은 블록을 두 번 반납하면 `_pNext` 가 자기 자신을 가리켜 목록이 **자기 자신으로 도는 고리**가 됩니다. 그 뒤로는
+             * @brief 이 블록이 지금 자유 목록에 있는지 나타내는 표시입니다.
+             * @details 같은 블록을 두 번 반납하면 `_pNext` 가 자기 자신을 가리켜 목록이 자기 자신으로 도는 고리가 됩니다. 그 뒤로는
              *          모든 할당이 같은 블록을 돌려주고, 서로 다른 두 객체가 같은 주소를 쓰게 됩니다. 증상은 한참 뒤 엉뚱한 곳에서
-             *          터지므로, **두 번째 반납 바로 그 자리에서** 멈추는 것이 큰 도움이 됩니다(check-then-set 경쟁 같은 이중 반납을 잡습니다).
+             *          터지므로, 두 번째 반납 바로 그 자리에서 멈추는 것이 큰 도움이 됩니다(check-then-set 경쟁 같은 이중 반납을 잡습니다).
              *
              *          목록을 훑으면 해제가 O(n) 이 되므로 표시 하나로 O(1) 에 확인합니다. `sizeof( FreeNode )` 가 8 에서 16 으로
-             *          늘지만, 블록 크기는 어차피 16 의 배수로 올림하므로 **실제 블록 크기는 달라지지 않습니다.**
+             *          늘지만, 블록 크기는 어차피 16 의 배수로 올림하므로 실제 블록 크기는 달라지지 않습니다.
              */
             uint64 _freeMagic;
 #endif
@@ -76,7 +76,7 @@ namespace sw
 
         /** @brief 블록 크기를 16 의 배수로, 최소 `FreeNode` 크기로 올립니다. */
         static size_t roundBlockSize( size_t blockSize );
-        /** @brief 청크를 하나 더 잡아 자유 목록에 붙입니다. **잠금을 잡은 채로** 부릅니다. */
+        /** @brief 청크를 하나 더 잡아 자유 목록에 붙입니다. 잠금을 잡은 채로 부릅니다. */
         void allocateChunk();
 
     private:

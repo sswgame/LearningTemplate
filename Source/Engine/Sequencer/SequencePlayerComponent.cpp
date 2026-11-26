@@ -13,7 +13,7 @@
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/GameTimeScale.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Object/Component/SceneComponent.h"
@@ -222,7 +222,7 @@ namespace sw
             { (void)self.skipToEnd(); } );
             return;
         }
-        _pendingStep = _player.update( context.getDeltaTime() );
+        _pendingStep = _player.update( context.getDeltaTime().count() );
         // 묶인 오브젝트(남의 오브젝트)에 값 · 스폰 · 구간을 적용하는 것은 틱 뒤(같은 프레임)에 한다 — 틱은 시간만 민다.
         context.deferPostTickOnComponent( *this, []( SequencePlayerComponent& self )
         { self.applyPendingStep(); } );
@@ -652,7 +652,7 @@ namespace sw
         if ( listCrossed.empty() )
             return;
 
-        // **사본으로 알린다.** 지난 항목은 플레이어가 가진 에셋의 원소라, 핸들러가 다른 시퀀스를 설정하면(`setSequence`) 남은 포인터가 무효가 된다.
+        // 사본으로 알린다. 지난 항목은 플레이어가 가진 에셋의 원소라, 핸들러가 다른 시퀀스를 설정하면(`setSequence`) 남은 포인터가 무효가 된다.
         vector<SequenceFiredEvent> listEvent;
         listEvent.reserve( listCrossed.size() );
         for ( const SequenceTrackItem* pItem : listCrossed )

@@ -4,8 +4,8 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/PackUtil.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Name/hashed_string.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/String/Name/hashed_string.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Environment/Sky/SkyGradient.h"
 #include "Engine/Graphics/Lighting/SceneVoxelScene.h"

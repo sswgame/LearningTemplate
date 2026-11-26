@@ -8,12 +8,12 @@
 #include "Core/Log/Logger.h"
 #include "Core/Log/ScopedDeferredLog.h"
 #include "Core/String/StringUtil.h"
-#include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Subsystem/Subsystem.h"
+#include "Core/Subsystem/SubsystemSlot.h"
 
 #include "Engine/Content/AssetIO.h"
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Serialization/Inherit/ResourceComposition.h"
 #include "Engine/Serialization/Inherit/ResourceTags.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
@@ -78,7 +78,7 @@ namespace sw
     private:
         ResourceRemapInternal::State _state;
 
-        SW_SERVICE_SLOT( ResourceRemapTable, Required );
+        SW_SUBSYSTEM_SLOT( ResourceRemapTable, Required );
     };
 } // namespace sw
 
@@ -199,5 +199,5 @@ namespace sw
 namespace sw
 {
     // 경로 교체 표 — 팩 설정(`PackEngineSettingsSubsystem`)이 채우고 파일 읽기(`AssetIO`)가 묻는다.
-    SW_ENGINE_SERVICE_SUBSYSTEM( ResourceRemapTable, HostOnly, Process, Services, (), SW_ENGINE_DEFAULT_FACTORY( ResourceRemapTable ) );
+    SW_ENGINE_SUBSYSTEM_WITH_SLOT( ResourceRemapTable, HostOnly, Process, Shared, (), SW_ENGINE_DEFAULT_FACTORY( ResourceRemapTable ) );
 } // namespace sw

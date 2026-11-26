@@ -12,7 +12,7 @@
 #include "Editor/Common/Commands/Asset/EditorToolAssetCommands.h"
 #include "Editor/Common/Config/EditorToolDefaults.h"
 #include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/Undo/DocumentEditRecorder.h"
 #include "Editor/Panels/TileMap/Model/TileMapPaintUtil.h"
@@ -110,9 +110,9 @@ namespace sw::editor
         return ToolAssetLoadResult::Loaded;
     }
 
-    bool TileMapViewModel::saveDocument()
+    bool TileMapViewModel::saveDocument( AssetWriter& writer )
     {
-        if ( EditorToolAssetCommands::saveTileMap( _pathBuffer.c_str(), captureMapData() ) == false )
+        if ( EditorToolAssetCommands::saveTileMap( writer, _pathBuffer.c_str(), captureMapData() ) == false )
         {
             _status = SW_LOCKEY( "EditorTileMap", "SaveFailedStatus" );
             return false;

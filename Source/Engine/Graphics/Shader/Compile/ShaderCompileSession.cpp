@@ -35,7 +35,7 @@ namespace sw
         return _mapInput.emplace( source.str(), input ).first->second;
     }
 
-    bool ShaderCompileSession::findShadowedHeaders( const AbsolutePath& shadersFolder, vector<string>& outListProblem )
+    bool ShaderCompileSession::findShadowedHeaders( const DiskPath& shadersFolder, vector<string>& outListProblem )
     {
         {
             ScopedLock<mutex> lock{ _mutex };

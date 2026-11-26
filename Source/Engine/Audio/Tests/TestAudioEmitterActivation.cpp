@@ -1,7 +1,7 @@
 // AudioEmitterActivationTest — 에미터의 소리가 주인의 계층 활성을 따른다: 끄면 멈추고, 다시 켜면 Play On Begin Play 로 다시 낸다(유니티 AudioSource 의미). 오프라인 엔진(장치 없음).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Audio/Component/AudioEmitterComponent.h"
 #include "Engine/Audio/Scene/SceneAudio.h"

@@ -15,11 +15,11 @@ namespace sw
 {
     /**
      * @class D3D11RHISwapChain
-     * @brief 창 하나의 백버퍼입니다. **스왑체인을 넘겨받아 보관하고, 크기를 바꾸고, RTV 를 다시 잡고, 화면에 표시합니다.**
-     * @details D3D11 은 메인 창의 스왑체인이 디바이스와 `D3D11CreateDeviceAndSwapChain` 한 호출에서 **함께**
+     * @brief 창 하나의 백버퍼입니다. 스왑체인을 넘겨받아 보관하고, 크기를 바꾸고, RTV 를 다시 잡고, 화면에 표시합니다.
+     * @details D3D11 은 메인 창의 스왑체인이 디바이스와 `D3D11CreateDeviceAndSwapChain` 한 호출에서 함께
      *          태어납니다. 그래서 메인 창은 `attach` 로 넘겨받아 소유하고, 다른 창(`IRHIDevice::createSwapChain`)은 `createLike` 가
      *          메인 창의 서술을 그대로 따라 만듭니다(포맷 · 버퍼 수 · 티어링 플래그가 같아야 같은 Present 경로를 쓴다).
-     * @note 백버퍼 RTV 를 **매 프레임 다시 잡습니다.** `DXGI_SWAP_EFFECT_FLIP_DISCARD` 는 백버퍼를
+     * @note 백버퍼 RTV 를 매 프레임 다시 잡습니다. `DXGI_SWAP_EFFECT_FLIP_DISCARD` 는 백버퍼를
      *       돌려 쓰기 때문에, 지난 프레임의 RTV 를 그대로 쓰면 Present 가 보여 줄 버퍼와 다른 버퍼에
      *       그리게 됩니다.
      */
@@ -67,7 +67,7 @@ namespace sw
 
         /**
          * @brief 화면에 표시합니다.
-         * @details VSync 를 끈 경우 티어링 플래그를 함께 넘깁니다. 스왑체인 생성 플래그와 **짝이어야**
+         * @details VSync 를 끈 경우 티어링 플래그를 함께 넘깁니다. 스왑체인 생성 플래그와 짝이어야
          *          합니다(RHIDxgiTearing.h).
          */
         HRESULT present( bool vsync );

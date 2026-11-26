@@ -13,7 +13,6 @@
 #include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringUtil.h"
-#include "Core/String/UTF8Util.h"
 
 namespace sw
 {
@@ -322,7 +321,7 @@ namespace sw
         static void formatstring( utf8* SW_RESTRICT pBuffer, uint32 capacity, string_view format, Args&&... args ) noexcept
         {
             SW_ASSERT( pBuffer != nullptr && capacity > 0 );
-            // **단언은 배포(Shipping)에서는 통째로 사라진다.** 그런데 `capacity` 는 곳곳에서 `capacity - 1` 로 쓰인다(`write` 의
+            // 단언은 배포(Shipping)에서는 통째로 사라진다. 그런데 `capacity` 는 곳곳에서 `capacity - 1` 로 쓰인다(`write` 의
             // 남은 공간 계산, 아래 종료 문자 위치). 0 이면 그 뺄셈이 언더플로해 4,294,967,295 가 되고, 그러면 `write` 가 **길이
             // 제한 없이** 복사하며 종료 문자도 버퍼 밖에 쓴다. 지금 호출하는 곳은 0 을 넘기지 않지만(`StringBuilder` 는 2 미만이면
             // 버퍼를 늘리고 `CrashContext` 는 남은 공간을 먼저 확인한다) 이 함수는 공개 API 다.
@@ -719,7 +718,7 @@ namespace sw
             // 잘리는 위치가 UTF-8 글자 한가운데면 그 글자의 선두 바이트 앞까지 물러난다. 바이트 단위로 자르면 버퍼 끝에 걸친
             // 한글 한 글자가 깨진 바이트로 남는다(로그, 경로 표시).
             if ( copyLength < str.length() )
-                copyLength = static_cast<uint32>( UTF8Util::backOffToCharacterStart( str.data(), copyLength ) );
+                copyLength = static_cast<uint32>( StringUtil::backOffToUTF8CharacterStart( str.data(), copyLength ) );
             if ( copyLength > 0 )
                 Memory::copy( pBuffer + pos, str.data(), copyLength );
             return pos + copyLength;
@@ -1028,7 +1027,7 @@ namespace sw
 
             if ( fmt.isLeftAlign() == false )
             {
-                // 0 으로 채울 때 부호는 채움 **앞**에 온다(printf 의 "%05d" 로 -42 는 "-0042", "00-42" 가 아니다).
+                // 0 으로 채울 때 부호는 채움 앞에 온다(printf 의 "%05d" 로 -42 는 "-0042", "00-42" 가 아니다).
                 const bool bSignFirst = fmt.isZeroPad() && str.empty() == false && ( str[0] == '-' || str[0] == '+' );
                 if ( bSignFirst )
                 {

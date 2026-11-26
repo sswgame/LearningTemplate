@@ -8,7 +8,7 @@
 
 #include "Engine/Config/GameTimeScale.h"
 #include "Engine/Console/DebugHUDRegistry.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/Debug/GPUPixelInspector.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Scene/Scene.h"

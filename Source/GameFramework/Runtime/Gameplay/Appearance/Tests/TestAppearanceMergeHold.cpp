@@ -1,7 +1,7 @@
 // AppearanceMergeHoldTest — 합친 메시를 처음 기다리는 몸은 나타나지 않고(렌더 후보 · 스킨 변형에서 빠진다), 걸리면 나타난다(nogpu, 메시 에셋 없음).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Animation/Component/SkeletalMeshComponent.h"
 #include "Engine/Animation/Scene/AnimationSystem.h"

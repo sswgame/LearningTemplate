@@ -7,18 +7,18 @@
 #include "Core/Path/AbsolutePath.h"
 #include "Core/String/StringBuilder.h"
 
+#include "Editor/Common/Asset/AssetWriter.h"
 #include "Editor/Common/Backend/FileDialog.h"
 #include "Editor/Common/Commands/Asset/EditorAssetFileCommands.h"
-#include "Editor/Common/Commands/Asset/EditorContentWrite.h"
 #include "Editor/Common/Commands/Scene/EditorAutosaveCommands.h"
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorFrameStep.h"
 #include "Editor/Common/Workspace/EditorNotificationManager.h"
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
-#include "Editor/Common/Workspace/IEditorPanelService.h"
+#include "Editor/Common/Workspace/IEditorPanelSubsystem.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 #include "Editor/Common/Workspace/Play/EditorSceneGenerationSync.h"
 #include "Editor/Common/Workspace/Undo/CommandStack.h"
@@ -40,7 +40,7 @@ namespace sw::editor
     {
         struct EditorSceneFileCommandsInternal
         {
-            /// @brief 파일 대화상자의 결과를 받습니다(UI 프레임 — `FileDialog::pollResults`). 씬을 쓰지 않고 요청만 남긴다 — 게임 단계 `sceneSession` 이 `saveSceneAsRequested` 로 쓴다.
+            /// @brief 파일 대화상자의 결과를 받습니다(UI 프레임, `FileDialog::pollResults`). 씬을 쓰지 않고 요청만 남기고 게임 단계 `sceneSession` 이 `saveSceneAsRequested` 로 쓴다.
             static void onSaveSceneDialogResult( const vector<string>& listPath )
             {
                 if ( listPath.empty() == false )
@@ -170,7 +170,7 @@ namespace sw::editor
 
     void EditorSceneFileCommands::saveFocusedOrScene()
     {
-        if ( editor::getSubsystem<IEditorPanelService>().saveFocusedDirtyDocument() )
+        if ( editor::getSubsystem<IEditorPanelSubsystem>().saveFocusedDirtyDocument() )
             return;
         saveActiveSceneOrPrompt();
     }
@@ -184,7 +184,7 @@ namespace sw::editor
         EditorNotificationManager& notifications = editor::getSubsystem<EditorNotificationManager>();
         if ( EditorSessionPolicy::shouldSaveBeforeAction( choice ) )
         {
-            if ( editor::getSubsystem<IEditorPanelService>().saveAllDirtyDocuments() == false )
+            if ( editor::getSubsystem<IEditorPanelSubsystem>().saveAllDirtyDocuments() == false )
             {
                 notifications.push( SW_LOCKEY( "EdCommon", "NotifyEditorTitle" ), SW_LOCKEY( "EdCommon", "NotifyDocumentSaveFailed" ), NotificationKind::Error );
                 return;
@@ -211,7 +211,7 @@ namespace sw::editor
         if ( EditorSessionPolicy::shouldClearDirtyWithoutSave( choice ) )
         {
             ws.clearSceneDirty();
-            editor::getSubsystem<IEditorPanelService>().discardAllDirtyDocuments();
+            editor::getSubsystem<IEditorPanelSubsystem>().discardAllDirtyDocuments();
         }
 
         if ( EditorSessionPolicy::shouldProceedWithAction( choice ) )
@@ -238,7 +238,7 @@ namespace sw::editor
             return false;
 
         const bool   bSceneDirty = workspace.isSceneDirty();
-        const uint32 dirtyDocs   = editor::getSubsystem<IEditorPanelService>().countDirtyDocuments();
+        const uint32 dirtyDocs   = editor::getSubsystem<IEditorPanelSubsystem>().countDirtyDocuments();
         if ( EditorSessionPolicy::needsQuitPrompt( bSceneDirty, dirtyDocs ) == false )
             return true;
 
@@ -262,10 +262,8 @@ namespace sw::editor
         const Scene*  pScene       = sceneManager.getActiveScene();
         const string  sourceID     = pScene != nullptr ? pScene->getSourcePath() : string{};
         // 읽기 전용 검사는 쓰기와 같은 해석으로 푼 자리를 본다(R7). 소스가 없거나 못 풀면 SceneManager 가 이유를 남기고 실패한다.
-        const optional<AbsolutePath> targetPath = sourceID.empty() ? nullopt : editor::getSubsystem<AssetPaths>().toDiskPath( sourceID );
-        if ( targetPath.has_value() && EditorContentWrite::warnIfReadOnly( *targetPath, EditorContentWriteKind::Save ) )
-            return false;
-        if ( targetPath.has_value() && editor::getSubsystem<EditorWorkspace>().validateSceneDiskOverwrite( *targetPath ) == false )
+        const optional<DiskPath> targetPath = sourceID.empty() ? nullopt : editor::getSubsystem<AssetPaths>().toDiskPath( sourceID );
+        if ( targetPath.has_value() && editor::getSubsystem<EditorWorkspace>().getSceneWriter().validateSave( *targetPath ) == false )
             return false;
         return finishSave( sceneManager.saveActiveScene(), sourceID );
     }
@@ -274,7 +272,7 @@ namespace sw::editor
     {
         if ( EditorSceneFileCommandsInternal::isPlayStoppedForSceneFile() == false )
             return false;
-        if ( EditorContentWrite::warnIfReadOnly( absPath, EditorContentWriteKind::Save ) )
+        if ( AssetWriter::warnIfReadOnly( absPath, AssetWriteKind::Save ) )
             return false;
         return finishSave( editor::getSubsystem<SceneManager>().saveActiveSceneAs( absPath ), absPath.str() );
     }
@@ -333,7 +331,6 @@ namespace sw::editor
                 AbsolutePath absolutePath;
                 if ( listArgument.size() != 1 || DevCommandRegistry::readDiskPathArgument( listArgument[0], absolutePath, outReply ) == false )
                     return false;
-                (void)FileUtil::ensureDirectoryExists( absolutePath.getParent() ); // 못 만들면 ensure 가 폴더와 이유를 남기고 뒤따르는 쓰기가 실패로 답한다
                 if ( EditorSceneFileCommands::saveActiveSceneAs( absolutePath ) == false )
                 {
                     StringBuilder<constant::buffer::kMax256> replyBuilder;

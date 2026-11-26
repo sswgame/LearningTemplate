@@ -23,7 +23,7 @@
 #include "DevTools/ModuleReload/LiveReload/ModuleLibraryPatch.h"
 #include "DevTools/ModuleReload/LiveReload/ShadowCopyName.h"
 
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Module/EngineABIStamp.h"
 #include "Engine/Module/ModuleTypeRegistry.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -59,7 +59,7 @@ namespace sw
              * @param pOutExpected 비교한 기준입니다(로그용).
              * @return 아직 묶이지 않았거나 @p pExpected 에 묶였으면 true 입니다.
              * @details 리눅스는 import 표에서 결속을 읽을 수 없어서, 의존 모듈마다 박힌 스탬프 상수를 모듈의 검색 범위(자기 + 자기 의존)에서
-             *          찾습니다. `dlsym( pModule, ... )` 이 돌려주는 주소는 그 모듈이 **실제로 묶인** 의존의 것입니다.
+             *          찾습니다. `dlsym( pModule, ... )` 이 돌려주는 주소는 그 모듈이 실제로 묶인 의존의 것입니다.
              */
             static bool isBoundTo( void* pModule, string_view dependencyName, string_view dependencyFileName, void* pExpected, const void*& pOutActual,
                                    const void*& pOutExpected )
@@ -93,7 +93,7 @@ namespace sw
 
             /**
              * @brief 섀도 복사 없이 여는 라이브러리 파일 @p modulePath 를 열어도 되는지 봅니다(엔진 ABI 스탬프 · 지연 import).
-             * @details 섀도 복사본(`ModuleShadowCopy::writeShadowCopy`)과 같은 이유로 로드하기 **전에** 본다 — 스탬프가 없거나 다르면 정적 초기화가 돌기 전에 거절한다.
+             * @details 섀도 복사본(`ModuleShadowCopy::writeShadowCopy`)과 같은 이유로 로드하기 전에 본다 — 스탬프가 없거나 다르면 정적 초기화가 돌기 전에 거절한다.
              */
             [[nodiscard]] static bool isLibraryFileUsable( string_view moduleName, const AbsolutePath& modulePath )
             {
@@ -171,7 +171,7 @@ namespace sw
 
         _moduleFolderWatch.reset();
 
-        // 언로드를 미룬 옛 라이브러리를 먼저 언로드한다. 그것들은 같은 배치의 미룬 라이브러리나 **지금 살아 있는** 라이브러리에 바인딩돼 있으므로, 살아
+        // 언로드를 미룬 옛 라이브러리를 먼저 언로드한다. 그것들은 같은 배치의 미룬 라이브러리나 지금 살아 있는 라이브러리에 바인딩돼 있으므로, 살아
         // 있는 모듈을 먼저 언로드하면 옛 라이브러리의 정적 소멸자가 언로드된 코드로 점프할 수 있다.
         _deferredUnloadQueue.unloadAll();
 
@@ -287,7 +287,7 @@ namespace sw
                 SW_LOG_ERROR_ID( "LiveReloadManager.FailedWatchModuleDirectory", "Failed to watch the module directory %# - outside builds are not reloaded", moduleDir.str() );
         }
 
-        // 의존 목록은 로드 **전에** 둔다 — 섀도 복사본이 의존 모듈의 import 를 그 의존의 지금 이름으로 바꿀 때 읽는다.
+        // 의존 목록은 로드 전에 둔다 — 섀도 복사본이 의존 모듈의 import 를 그 의존의 지금 이름으로 바꿀 때 읽는다.
         _dependencyGraph.setDependsOn( moduleName, listDependsOn );
         ModuleRecord& moduleRecord       = getOrCreateRecord( moduleName );
         moduleRecord._moduleName         = moduleName;
@@ -331,8 +331,7 @@ namespace sw
                         moduleName, kMtimeDebounceMs );
         context._debounceStamp = FileStamp{};
         (void)FileUtil::getFileStamp( context._originalModulePath, context._debounceStamp ); // 빌드 도중이라 없으면 빈 도장 - 다음 확인에서 도장이 달라 다시 기다린다
-        context._debounceTimer.resetTimer();
-        context._debounceTimer.startTimer();
+        context._debounceTimer.restart();
         context._bMtimeDebouncing = true;
         context._bForceReload     = true;
     }
@@ -365,7 +364,7 @@ namespace sw
             if ( event._bSucceeded == false )
             {
                 // 빌드 실패도 모듈 리로드 실패다 — 옛 이미지로 계속 돈다(집계가 낡음으로 보인다). 이 프로세스가 시작한 빌드만 여기에 온다.
-                if ( ReloadTracker* const pTracker = engine::areEngineServicesBound() ? engine::findSubsystem<ReloadTracker>() : nullptr )
+                if ( ReloadTracker* const pTracker = engine::areEngineSubsystemsBound() ? engine::findSubsystem<ReloadTracker>() : nullptr )
                     pTracker->record( ReloadSource::Module, event._moduleName, ReloadResult::Failed, "the module build failed - the previous image runs" );
                 // 실패한 빌드가 다시 쓴 모듈은 반쯤 완성된 집합일 수 있으므로 로드하지 않는다. 파일은 그대로라 다음에 성공한 빌드의 변경과 함께 로드된다.
                 for ( auto& [name, pContext] : _mapModule )
@@ -433,8 +432,7 @@ namespace sw
             if ( context._bMtimeDebouncing == false || bBuildInProgress )
                 continue;
 
-            context._debounceTimer.updateTimer();
-            const float64 elapsedSec = context._debounceTimer.getTotalTime();
+            const float64 elapsedSec = context._debounceTimer.getElapsedSeconds();
             if ( elapsedSec < static_cast<float32>( kMtimeDebounceMs ) / constant::time::kMillisecondsPerSecond )
                 continue;
 
@@ -444,8 +442,7 @@ namespace sw
             if ( bReadable == false || sourceStamp != context._debounceStamp ) // 없으면(빌드가 쓰는 중) 더 기다린다
             {
                 context._debounceStamp = sourceStamp;
-                context._debounceTimer.resetTimer();
-                context._debounceTimer.startTimer();
+                context._debounceTimer.restart();
                 continue;
             }
 
@@ -707,7 +704,7 @@ namespace sw
         }
         else
         {
-            // 원본을 대조하고 세대 이름을 붙여 복사본으로 쓴다. 로드하기 **전이라** 대조에 걸린 모듈의 정적 초기화는 돌지 않는다.
+            // 원본을 대조하고 세대 이름을 붙여 복사본으로 쓴다. 로드하기 전이라 대조에 걸린 모듈의 정적 초기화는 돌지 않는다.
             ShadowCopyParams params;
             populateShadowCopyParams( context, params );
             if ( ModuleShadowCopy::writeShadowCopy( params, _shadowCopySerials, context._libraryName, outShadow._tempPath ) == false )
@@ -917,7 +914,7 @@ namespace sw
         if ( _listSharedModule.empty() )
             return;
         // 서비스가 이미 내려갔으면 등록을 제 이름으로 해제할 곳이 없다 — 라이브러리를 두면 정적 등록이 남은 채로 프로세스가 끝난다(예전 동작).
-        if ( engine::areEngineServicesBound() == false )
+        if ( engine::areEngineSubsystemsBound() == false )
         {
             _listSharedModule.clear();
             return;
@@ -938,7 +935,7 @@ namespace sw
         const bool bFlushed = flushWorkersBeforeUnload();
         // 큐에 든 이벤트는 그것을 넣은 모듈의 vtable(소멸자 · 타입)을 가진다 — 워커를 비운 지금 배달하고 비워, 내려간 코드를 가리키는 이벤트가 남지 않게 한다.
         // 그 모듈의 구독자는 인스턴스와 함께 이미 풀렸으므로 남은 구독자(엔진 · 다른 모듈)만 받는다.
-        if ( engine::areEngineServicesBound() )
+        if ( engine::areEngineSubsystemsBound() )
         {
             if ( EventDispatcher* const pEventDispatcher = engine::findSubsystem<EventDispatcher>() )
                 pEventDispatcher->processEvents();
@@ -955,7 +952,7 @@ namespace sw
         // clear() 는 부르지 않는다. 그러면 관계없는 GPUScene · 씬 로드 작업까지 버리고 onTaskFinished 정리를 건너뛴다.
         // 도는 씬 로드는 취소하지 않고 멈춰 둔다 — 지은 씬만 코드가 있을 때 없애고, 같은 약속으로 다시 띄운다. 약속을 쥔 모듈 코드(씬 흐름)는 값으로 물어보기만 하고
         // 이어 부르기(`then`)를 걸지 않으므로 내려간 코드를 부르지 않는다. 새로 선 쪽은 `replayPendingLoadRequests` 로 이어받는다.
-        if ( engine::areEngineServicesBound() )
+        if ( engine::areEngineSubsystemsBound() )
             engine::getSubsystem<SceneManager>().suspendPendingLoad();
 
         // 렌더 스레드는 TaskManager 밖에서 돈다. Present 훅이 모듈 코드를 실행 중일 수 있으므로 먼저 비운다.
@@ -968,7 +965,7 @@ namespace sw
         }
 
         // 엔진 전체 대기가 맞다 — 모듈 코드는 어떤 태스크든 가상 함수 · 델리게이트로 들어올 수 있어 낸 쪽으로 가를 수 없다(`GameModuleManager::flushRenderWorkers` 의 같은 주석).
-        if ( engine::areEngineServicesBound() )
+        if ( engine::areEngineSubsystemsBound() )
         {
             engine::getSubsystem<TaskManager>().waitAll( "LiveReloadManager::pollBeforeUnload" );
         }
@@ -1042,7 +1039,7 @@ namespace sw
         _buildFinishedSeconds         = 0.0;
         if ( runCascade( listSubgraphName ) == false )
             return;
-        ReloadTracker* const pTracker = engine::areEngineServicesBound() ? engine::findSubsystem<ReloadTracker>() : nullptr;
+        ReloadTracker* const pTracker = engine::areEngineSubsystemsBound() ? engine::findSubsystem<ReloadTracker>() : nullptr;
         if ( pTracker == nullptr )
             return;
         const bool bSucceeded = _completedReloadCount > completedBefore;

@@ -4,9 +4,9 @@
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Math/BitUtil.h"
 #include "Core/Math/VectorMath.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Foundation/StateHashBuilder.h"
 #include "Engine/Object/Component/SceneComponent.h"

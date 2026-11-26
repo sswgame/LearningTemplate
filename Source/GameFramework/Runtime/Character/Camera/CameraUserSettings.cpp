@@ -7,7 +7,7 @@
 
 #include "Engine/UserSettings/UserSettingsManager.h"
 
-#include "GameFramework/Runtime/Foundation/Service/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 
 namespace sw
 {
@@ -18,7 +18,7 @@ namespace sw
         {
             const GlobalVariableInfo* pVariable = variables.findVariable( name );
             if ( pVariable == nullptr )
-                ::sw::internal::reportMissingRequiredService( name.data() ); // 등록이 빠진 결함 — Release 에서도 멈춘다
+                ::sw::internal::reportMissingRequiredSubsystem( name.data() ); // 등록이 빠진 결함 — Release 에서도 멈춘다
             return *pVariable;
         }
     } // namespace

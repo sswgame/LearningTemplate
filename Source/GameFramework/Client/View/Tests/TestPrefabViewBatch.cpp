@@ -1,7 +1,7 @@
 // PrefabViewBatchTest — 프리팹 뷰 묶음: 세울 수 없는 프리팹은 오류를 한 번 남기고 다시 해 보지 않으며, 지우면 처음 상태로 돌아간다(nogpu, 에셋 없음).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Object/GameObject/GameObject.h"

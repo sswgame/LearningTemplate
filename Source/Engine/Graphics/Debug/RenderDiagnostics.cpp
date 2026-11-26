@@ -6,7 +6,7 @@
 #include "Core/Registry/RegistrationSlot.h"
 #include "Core/Task/TaskManager.h"
 
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 
 #include <type_traits>
 
@@ -38,7 +38,7 @@ namespace sw
     void RenderDiagnostics::publish()
     {
         // 엔진 서비스가 묶이기 전(정적 등록 · 명령줄 직후의 기동)은 게임 스레드 하나뿐이라 확인할 주인이 아직 없다.
-        if ( engine::areEngineServicesBound() )
+        if ( engine::areEngineSubsystemsBound() )
             engine::getSubsystem<TaskManager>().ensureMainThread();
         RenderDiagnosticsPolicy         policy{};
         const RenderDiagnosticsProvider provider = getProviderSlot().get();

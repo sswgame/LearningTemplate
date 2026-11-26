@@ -22,7 +22,7 @@ namespace sw
 
     void ModuleUnloadStageSubsystem::shutdownSubsystem()
     {
-        IModuleLoader* pHost = locateSubsystem<IModuleLoader>( _pScope );
+        IModuleLoader* pHost = findSubsystemFrom<IModuleLoader>( _pScope );
         if ( pHost != nullptr )
             pHost->onScenesReleased();
     }

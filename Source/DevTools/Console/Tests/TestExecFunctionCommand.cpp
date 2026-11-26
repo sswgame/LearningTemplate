@@ -1,7 +1,7 @@
 // ExecFunctionCommandTest — `exec` 는 FUNCTION( Exec ) 를 단 메서드만 부르고, 인자 글을 그 형식으로 바꾸며, 틀린 인자 · 허용하지 않은 메서드는 까닭과 함께 거절한다(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "DevTools/Console/ExecFunctionCommand.h"
 

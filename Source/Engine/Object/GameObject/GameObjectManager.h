@@ -13,13 +13,13 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 #include "Core/Subsystem/SubsystemScope.h"
 
 #include "Engine/Foundation/ComponentHandle.h"
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Foundation/SceneIterationKey.h"
-#include "Engine/Object/GameObject/Service/SceneEngineServices.h"
+#include "Engine/Object/GameObject/Subsystem/SceneEngineSubsystems.h"
 #include "Engine/Object/GameObject/Tick/SceneFrameAccess.h"
 #include "Engine/Object/GameObject/Tick/SceneFrameStep.h"
 #include "Engine/Object/GameObject/Tick/StructuralChangeBuffer.h"
@@ -93,7 +93,7 @@ namespace sw
     struct SceneTransformWrite;
     struct TypeInfo;
     enum class FixedStepGroup : uint8;  ///< 정의는 `Tick/FixedStepContext.h`
-    enum class SceneLightPhase : uint8; ///< 정의는 `Service/ISceneService.h`(바탕 형식이 같아야 한다)
+    enum class SceneLightPhase : uint8; ///< 정의는 `Service/ISceneSubsystem.h`(바탕 형식이 같아야 한다)
 
     /** @brief `GameObjectManager::makeTypedHandle` 의 결과입니다. */
     enum class TypedHandleResult : uint8
@@ -115,11 +115,11 @@ namespace sw
     public:
         /**
          * @brief 엔진 서비스 묶음 @p services 를 받아 만듭니다(씬이 자기 묶음을 넘깁니다). 오브젝트는 없는 채로 시작합니다.
-         * @details 묶음은 이 매니저가 한 번 들고, 씬 서비스(`ScenePhysics` · `SceneAudio` …)가 만들어질 때 `getSceneEngineServices` 로 자기 칸을 읽습니다.
+         * @details 묶음은 이 매니저가 한 번 들고, 씬 서브시스템(`ScenePhysics` · `SceneAudio` …)이 만들어질 때 `getSceneEngineSubsystems` 로 자기 칸을 읽습니다.
          *          에셋 매니저는 씬 안의 코드가 `findAssetManager` 로 씁니다. 빈 칸은 그 서비스가 없다는 뜻입니다.
          */
-        explicit GameObjectManager( const SceneEngineServices& services );
-        /** @brief 바인딩된 서비스 표에서 묶음을 한 번 읽어 만듭니다(`SceneEngineServices::makeFromBoundEngine`). 테스트 · 손수 만든 매니저용입니다. */
+        explicit GameObjectManager( const SceneEngineSubsystems& services );
+        /** @brief 바인딩된 서비스 표에서 묶음을 한 번 읽어 만듭니다(`SceneEngineSubsystems::makeFromBoundEngine`). 테스트 · 손수 만든 매니저용입니다. */
         GameObjectManager();
         /** @brief `GameObjectManager( TransientTag )` 의 표지입니다. */
         struct TransientTag
@@ -158,7 +158,7 @@ namespace sw
 
         /**
          * @brief 이름으로 GameObject 를 찾습니다.
-         * @details **찾기 · 순회는 매니저의 상수성을 따른다.** const 매니저(틱의 `TickContext::getManager` · `GameObject::getManager`)에서는 const 포인터만 나오고,
+         * @details 찾기 · 순회는 매니저의 상수성을 따른다. const 매니저(틱의 `TickContext::getManager` · `GameObject::getManager`)에서는 const 포인터만 나오고,
          *          쓰기 가능한 포인터는 쓰기 가능한 매니저(`GameObject::getMutableManager` · 틱 뒤 작업의 인자)에서만 나온다 — 읽기 전용으로 받은 씬에서 남의 오브젝트를
          *          바꾸는 길이 형식으로 없다(언리얼 Mass 의 읽기 전용 조각 접근 · 유니티 Jobs `[ReadOnly]` 자리).
          */
@@ -214,7 +214,7 @@ namespace sw
 
         /**
          * @brief 힙 할당 없이 씬에서 TComponent 와 그 파생 컴포넌트를 순회합니다. 오브젝트를 훑지 않고 타입별 버킷을 돕니다(`GameObjectStore::forEachComponentOfType`).
-         * @details 비용은 씬의 정확한 타입 수와 맞는 컴포넌트 수의 합입니다. **방문 순서는 약속하지 않습니다** — 순서가 결과에 나오는 곳은 모은 뒤 정렬합니다.
+         * @details 비용은 씬의 정확한 타입 수와 맞는 컴포넌트 수의 합입니다. 방문 순서는 약속하지 않습니다 — 순서가 결과에 나오는 곳은 모은 뒤 정렬합니다.
          *          버킷에서 꺼낸 포인터를 `static_cast` 로 바꿉니다. REFLECT 타입은 가상이 아닌 단일 상속만 받으므로(파서 7-b) 보정이 맞습니다.
          * @note 공유 잠금 안에서 콜백을 부릅니다. 콜백 안에서 오브젝트를 만들거나 지우거나 컴포넌트를 붙이면 안 됩니다(`IterationScope`).
          *       콜백은 매니저의 상수성대로 `TComponent*` · `const TComponent*` 를 받는다.
@@ -342,7 +342,7 @@ namespace sw
          * @details 세터를 컴포넌트마다 부르는 것과 결과가 같습니다(값이 같으면 건너뛰고, 바뀌면 더티 표시). 다른 것은
          *          (1) 핸들 해석 · 필드 쓰기 · 더티 표시가 워커에서 나란히 돌고 (2) 세대는 배치 끝에 한 번 오른다는 것입니다.
          *          핸들이 씬 컴포넌트가 아니거나 죽었으면 그 건은 건너뜁니다.
-         *          **틱 중에는 부를 수 없습니다.** 워커가 트랜스폼을 읽는 구간이라 쓰면 안 되고, 구조 변경이 미뤄지는 구간이라
+         *          틱 중에는 부를 수 없습니다. 워커가 트랜스폼을 읽는 구간이라 쓰면 안 되고, 구조 변경이 미뤄지는 구간이라
          *          부모 사슬이 흔들립니다. 그때는 건마다 세터로 돌립니다(세터가 틱 중 쓰기 길을 탑니다). 알고리즘은
          *          `SceneTransformHierarchy::applyBatch` 에 있습니다.
          * @return 실제로 값이 바뀐 건수입니다.
@@ -360,7 +360,7 @@ namespace sw
         using PostTickDelegate         = StructuralChangeBuffer::Callback;
 
         /**
-         * @brief 틱 중의 구조 변경(컴포넌트 추가 · 부착 · 떼기 · 태그 · 활성)을 **부른 순서대로** 지연 큐에 넣습니다. 틱 직후 가장 먼저 돕니다.
+         * @brief 틱 중의 구조 변경(컴포넌트 추가 · 부착 · 떼기 · 태그 · 활성)을 부른 순서대로 지연 큐에 넣습니다. 틱 직후 가장 먼저 돕니다.
          * @details 구조 변경은 이 큐 하나다(`StructuralChangeBuffer` 머리말의 주의).
          */
         void deferStructuralChange( StructuralChangeDelegate func ) { _structuralChangeBuffer.deferStructuralChange( std::move( func ) ); }
@@ -399,11 +399,11 @@ namespace sw
         /**
          * @brief 컴포넌트 @p self 에 대한 일을 executeOrDeferPostTick 으로 넘깁니다. 실행할 때 타입 핸들로 다시 찾고, 사라졌거나 삭제 대기면 부르지 않습니다.
          * @details 틱 중이면 틱 뒤로 미루고 아니면 바로 실행하는 의미는 executeOrDeferPostTick 과 같습니다.
-         *          **핸들을 받지 않고 컴포넌트를 받습니다.** 타입(`TComponent`)은 @p self 에서 추론하고 핸들은 여기서 만들므로, 다른 컴포넌트의 핸들에
+         *          핸들을 받지 않고 컴포넌트를 받습니다. 타입(`TComponent`)은 @p self 에서 추론하고 핸들은 여기서 만들므로, 다른 컴포넌트의 핸들에
          *          이 타입의 일을 거는 실수(핸들과 템플릿 인자가 어긋나는 것)가 형식으로 없습니다. `const` 멤버 함수 안의 `*this` 도 받습니다.
          *          func 는 붙잡은 값이 없는 람다여야 하며(델리게이트 인라인 버퍼를 넘지 않게) `func( TComponent& )` 또는
          *          `func( TComponent&, GameObjectManager& )` 로 부릅니다.
-         *          **const 매니저에서도 부릅니다(명령 버퍼).** 일을 거는 것은 씬을 바꾸지 않는다 — 틱 중에는 늘 큐로 가고, 쓰기 가능한 매니저는 틱 밖 · 틱 뒤에
+         *          const 매니저에서도 부릅니다(명령 버퍼). 일을 거는 것은 씬을 바꾸지 않는다 — 틱 중에는 늘 큐로 가고, 쓰기 가능한 매니저는 틱 밖 · 틱 뒤에
          *          도는 @p func 만 받는다(언리얼 Mass 의 읽기 전용 처리기도 `Defer()` 명령 버퍼는 연다). 그래서 틱에서 부르는 예약 도우미가 쓰기 가능한 매니저를 꺼내지 않는다.
          */
         template <typename TComponent, typename TFunc>
@@ -454,7 +454,7 @@ namespace sw
 
         /**
          * @brief 타입별 컴포넌트 레지스트리입니다(빛 · 2D 그림자 가림막 · 상호작용 대상 · 환경 질의 대상 …).
-         * @details 프리미티브와 같은 이유로 있습니다. 매 프레임 씬을 뒤져 **찾지** 않고, 컴포넌트가 붙을 때 **등록받습니다** —
+         * @details 프리미티브와 같은 이유로 있습니다. 매 프레임 씬을 뒤져 찾지 않고, 컴포넌트가 붙을 때 등록받습니다 —
          *          `forEachComponentOfType` 은 타입별 버킷을 돌지만 공유 잠금을 잡고 순서를 약속하지 않으므로, 등록 순서 · 채널 · 잠금 없는 읽기가 필요한
          *          프레임 경로는 이 레지스트리를 씁니다. 자세한 사연은 ComponentRegistry.h 에 있습니다.
          */
@@ -495,7 +495,7 @@ namespace sw
 
         /**
          * @brief 컴포넌트 레지스트리에 타입 T 로 오른 것 중 켜진 것(`Component::isActive`, 삭제 대기 아님)마다 @p func( T& ) 를 등록 순서로 부릅니다.
-         * @details 틱 대신 씬 서비스 · 프레임 시스템이 자기 타입을 한 곳에서 한 번에 도는 길이다(언리얼 WorldSubsystem 이 등록받은 목록을 돌고 Mass 처리기가 한 종류를 한 번에 도는 자리 —
+         * @details 틱 대신 씬 서브시스템 · 프레임 시스템이 자기 타입을 한 곳에서 한 번에 도는 길이다(언리얼 WorldSubsystem 이 등록받은 목록을 돌고 Mass 처리기가 한 종류를 한 번에 도는 자리 —
          *          매 틱 자기 일을 통째로 틱 뒤 큐로 미루던 컴포넌트가 여기로 온다, `Gameplay.md`). 핸들 사본(@p inoutScratch, 부르는 쪽의 재사용 버퍼)을 돌고 하나씩 다시 찾으므로
          *          @p func 가 구조를 바꿔도(만들기 · 지우기 · 등록) 된다. 게임 스레드, 틱 밖에서 부른다.
          */
@@ -505,7 +505,7 @@ namespace sw
         /**
          * @brief 타입 핸들이 가리키는 컴포넌트를 `T*` 로 찾습니다. 삭제 예정이면 nullptr 입니다.
          * @details 타입 없는 찾기 뒤에 `static_cast` 합니다(REFLECT 타입은 가상이 아닌 단일 상속뿐이라 보정이 맞습니다).
-         *          **Shipping 이 아닌 모든 구성에서 대상의 타입을 확인합니다.** 핸들은 id 만 담으므로, id 를 다른 타입이 받으면(핫 리로드, 되돌리기의 id 복원)
+         *          Shipping 이 아닌 모든 구성에서 대상의 타입을 확인합니다. 핸들은 id 만 담으므로, id 를 다른 타입이 받으면(핫 리로드, 되돌리기의 id 복원)
          *          캐스트가 다른 타입의 칸을 읽습니다. 어긋나면 오류 로그와 Debug 단언을 남기고 nullptr 을 반환합니다. 그런 길이 없는 Shipping 만 확인을 뺍니다.
          *          상수성은 `findGameObjectByName` 과 같다 — const 매니저에서는 `const T*` 다.
          */
@@ -531,8 +531,8 @@ namespace sw
         GameObject*       resolveGameObject( GameObjectHandle handle );
         const GameObject* resolveGameObject( GameObjectHandle handle ) const;
 
-        /** @brief 생성자로 받은 엔진 서비스 묶음입니다(빌린 포인터들). 씬 서비스가 만들어질 때 자기 칸을 읽습니다. */
-        const SceneEngineServices& getSceneEngineServices() const { return _services; }
+        /** @brief 생성자로 받은 엔진 서비스 묶음입니다(빌린 포인터들). 씬 서브시스템이 만들어질 때 자기 칸을 읽습니다. */
+        const SceneEngineSubsystems& getSceneEngineSubsystems() const { return _services; }
         /** @brief 오브젝트 · 컴포넌트 id 를 내는 번호 공간입니다(엔진 범위 — 엔진 없는 매니저는 자기 것). 워커에서도 부른다(원자값). */
         ObjectIDAllocator& getObjectIDAllocator() const { return *_pObjectIDAllocator; }
         /**
@@ -541,12 +541,12 @@ namespace sw
          */
         AssetManager* findAssetManager() const { return _services._pAssetManager; }
         /**
-         * @brief 이 씬의 범위입니다 — 씬 서비스를 소유하고, 부모가 엔진 범위라 엔진 서비스도 타입으로 찾는다(`locateSubsystem<T>( &scope )`).
+         * @brief 이 씬의 범위입니다 — 씬 서브시스템을 소유하고, 부모가 엔진 범위라 엔진 서비스도 타입으로 찾는다(`findSubsystemFrom<T>( &scope )`).
          * @details 언리얼 `UWorld` 의 서브시스템 컬렉션과 같은 자리입니다.
          */
         const SubsystemScope& getSceneScope() const;
         /**
-         * @brief 이 씬의 서비스 @p TService 입니다(`ISceneService.h`). 레지스트리의 서비스는 매니저마다 하나씩 늘 있습니다.
+         * @brief 이 씬의 서비스 @p TService 입니다(`ISceneSubsystem.h`). 레지스트리의 서비스는 매니저마다 하나씩 늘 있습니다.
          * @details 언리얼 `UWorld::GetSubsystem<T>()` 와 같은 자리입니다. 코어는 서비스 타입을 모르고, 부르는 쪽이 그 타입의 헤더를 듭니다
          *          (`manager.getSubsystem<sw::ScenePhysics>()` · `getSubsystem<sw::SceneAudio>()` · `getSubsystem<SceneNavigation>()` · `getSubsystem<AnimationSystem>()`).
          */
@@ -565,19 +565,19 @@ namespace sw
         void setFrameCamera( const CameraComponent* pCamera ) { _pFrameCamera = pCamera; }
         /** @brief 이번 프레임의 게임 카메라입니다. 없으면 nullptr 입니다. */
         const CameraComponent* getFrameCamera() const { return _pFrameCamera; }
-        /** @brief 모든 씬 서비스에 씬 원본 경로를 알립니다(`ISceneService::onSceneLoading`, 노드를 짓기 전에 씬이 부른다). */
+        /** @brief 모든 씬 서브시스템에 씬 원본 경로를 알립니다(`ISceneSubsystem::onSceneLoading`, 노드를 짓기 전에 씬이 부른다). */
         void notifySceneLoading( string_view sourcePath );
         /** @brief 이 매니저의 오브젝트 자리가 기준한 월드 원점입니다(절대 = 로컬 + 원점, 처음은 0). 바꾸는 것은 씬이다(`Scene::shiftWorldOrigin` · 복원). 틱 워커가 읽어도 된다 — 원점은 틱 밖에서만 바뀐다. */
         const WorldOrigin& getWorldOrigin() const;
         /** @brief 월드 원점을 적습니다 — 오브젝트는 옮기지 않는다(씬이 옮기거나, 복원된 자리가 이미 그 원점 기준이다). */
         void setWorldOrigin( const double3& origin );
-        /** @brief 모든 씬 서비스와 컴포넌트에 월드 원점이 @p delta 만큼 옮겨졌다고 알립니다(`ISceneService::onWorldOriginShifted` · `Component::onWorldOriginShifted`, 씬이 루트를 옮긴 뒤 부른다). */
+        /** @brief 모든 씬 서브시스템과 컴포넌트에 월드 원점이 @p delta 만큼 옮겨졌다고 알립니다(`ISceneSubsystem::onWorldOriginShifted` · `Component::onWorldOriginShifted`, 씬이 루트를 옮긴 뒤 부른다). */
         void notifyWorldOriginShifted( const float3& delta );
-        /** @brief 모든 씬 서비스에 미리보기 정책을 적용합니다(`ISceneService::applyPreviewPolicy`). */
+        /** @brief 모든 씬 서브시스템에 미리보기 정책을 적용합니다(`ISceneSubsystem::applyPreviewPolicy`). */
         void applyPreviewPolicy( const ScenePreviewPolicy& policy );
-        /** @brief 모든 씬 서비스가 @p phase 자리의 라이트 원소를 붙입니다(`ISceneService::contributeLights`). */
-        void collectServiceLights( SceneLightPhase phase, vector<GPULight>& inoutList ) const;
-        /** @brief 모든 씬 서비스가 입자 그리기를 냅니다(`ISceneService::contributeParticles`). */
+        /** @brief 모든 씬 서브시스템이 @p phase 자리의 라이트 원소를 붙입니다(`ISceneSubsystem::contributeLights`). */
+        void collectSubsystemLights( SceneLightPhase phase, vector<GPULight>& inoutList ) const;
+        /** @brief 모든 씬 서브시스템이 입자 그리기를 냅니다(`ISceneSubsystem::contributeParticles`). */
         void collectServiceParticles( ISceneParticleSink& sink ) const;
 
         /**
@@ -621,7 +621,7 @@ namespace sw
         void appendDeferredRegistration( const vector<ComponentHandle>& listRegister, const vector<ComponentHandle>& listPostLoad );
 
         /**
-         * @brief 모듈이 내려가기 전에, 그 모듈이 정의한 컴포넌트 타입의 **살아 있는 인스턴스**를 모두 지웁니다.
+         * @brief 모듈이 내려가기 전에, 그 모듈이 정의한 컴포넌트 타입의 살아 있는 인스턴스를 모두 지웁니다.
          * @details 팩토리 · 타입 · 전역 변수는 등록 해제되지만 씬은 엔진이 소유해 모듈보다 오래 삽니다. 인스턴스가 남으면
          *          vtable 이 사라진 객체가 씬에 남아 다음 틱 · 소멸에서 없는 코드로 뛰어듭니다. 지연 파괴 목록에 남은 것도
          *          그 소멸이 모듈 코드이므로 먼저 지금 처리합니다. 틱 밖에서만 부릅니다(구조 변경이 얼려 있으면 미뤄질 뿐입니다).
@@ -670,17 +670,17 @@ namespace sw
         void registerTypedComponent( Component* pComp );
 
         /** @brief 등록 줄의 단계가 @p step 인 서비스를 씬 범위의 초기화 순서(의존 순서)로 갱신합니다. `update` 가 모든 단계 끝에 부른다 — 본문은 부르지 않는다. */
-        void updateSceneServices( SceneFrameStep step, float32 deltaTime );
-        /** @brief 등록 줄의 마치는 단계가 @p step 인 서비스의 프레임 일을 마칩니다(`completeFrameJob`). `update` 가 모든 단계 본문 **앞**에 부른다. */
-        void completeSceneServiceJobs( SceneFrameStep step );
+        void updateSceneSubsystems( SceneFrameStep step, float32 deltaTime );
+        /** @brief 등록 줄의 마치는 단계가 @p step 인 서비스의 프레임 일을 마칩니다(`completeFrameJob`). `update` 가 모든 단계 본문 앞에 부른다. */
+        void completeSceneSubsystemJobs( SceneFrameStep step );
         /**
          * @brief 프레임 일의 등록 줄이 맞는지 봅니다(만들 때 한 번) — 마치는 단계가 넘기는 단계 뒤인가, 사이가 겹치는 두 서비스의 일이 겹치는 접근을 선언하지 않았는가.
          * @details 어긋나면 오류로 남긴다. 서비스는 그대로 만든다 — 등록 줄은 정적 데이터라 고칠 곳은 그 줄이고, 이 검사는 그 줄을 쓴 사람이 첫 실행에서 보게 하는 자리다.
          */
-        void validateSceneServiceJobs() const;
+        void validateSceneSubsystemJobs() const;
 
-        /** @brief 이 매니저가 만든 씬 서비스 하나입니다(정의는 .cpp — `State` 가 든다). */
-        struct SceneServiceEntry;
+        /** @brief 이 매니저가 만든 씬 서브시스템 하나입니다(정의는 .cpp — `State` 가 든다). */
+        struct SceneSubsystemEntry;
         /** @brief 오브젝트 저장소입니다(`GameObjectManager.inl` 의 순회가 지난다). */
         const GameObjectStore& getObjectStore() const;
 
@@ -718,7 +718,7 @@ namespace sw
 
         /** @brief 엔진 없이 만든 매니저(서비스 묶음에 번호 공간이 없다 — 테스트)만 드는 자기 번호 공간입니다. 엔진 아래면 비어 있다. */
         unique_ptr<ObjectIDAllocator> _pOwnedObjectIDAllocator;
-        /** @brief 오브젝트 · 컴포넌트 id 를 내는 번호 공간입니다(`getObjectIDAllocator` — 엔진 범위 `SceneEngineServices::_pObjectIDAllocator` 또는 위의 자기 것). */
+        /** @brief 오브젝트 · 컴포넌트 id 를 내는 번호 공간입니다(`getObjectIDAllocator` — 엔진 범위 `SceneEngineSubsystems::_pObjectIDAllocator` 또는 위의 자기 것). */
         ObjectIDAllocator* _pObjectIDAllocator;
 
         /** @brief 틱 중 규칙(동결 플래그 · 구조 변경 큐 · 틱 뒤 큐 · 비우는 순서)입니다. 게임이 부르는 API 는 위의 전달 함수입니다. */
@@ -744,8 +744,8 @@ namespace sw
         vector<FrameSystemParallelEntry> _listParallelJob;
         /** @brief 단계가 도는 동안 뗀 시스템입니다 — 그 단계가 끝난 뒤 놓습니다. */
         vector<unique_ptr<ISceneFrameSystem>> _listRetiredFrameSystem;
-        /** @brief 생성자로 받은 엔진 서비스 묶음(빌린 포인터들)입니다(`getSceneEngineServices` · `findAssetManager`). */
-        SceneEngineServices _services;
+        /** @brief 생성자로 받은 엔진 서비스 묶음(빌린 포인터들)입니다(`getSceneEngineSubsystems` · `findAssetManager`). */
+        SceneEngineSubsystems _services;
         /** @brief `FrameSystems` 단계가 도는 중이면 true 입니다. */
         uint8 _bRunningFrameSystems : 1;
         /** @brief false 면 `Physics` 단계를 건너뜁니다(`setPhysicsStepEnabled`). */

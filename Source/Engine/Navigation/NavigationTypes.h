@@ -8,6 +8,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
+#include "Core/Foundation/TypedID.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
@@ -17,7 +18,7 @@ namespace sw
 {
     /**
      * @brief 내비메시 폴리곤 하나의 불투명 참조입니다. `Invalid`(0) 는 없음입니다. 타일을 다시 구우면 옛 참조는 무효가 됩니다.
-     * @details 정수가 아니라 형식이다 — 정수면 32 비트 칸에 말없이 잘려 담겼다(군중의 링크 폴리곤, 감사 S-6). 백엔드 경계(`RecastQueryUtil`)에서만 바꾼다.
+     * @details 정수가 아니라 형식이다 — 정수면 32 비트 칸에 말없이 잘려 담겼다(군중의 링크 폴리곤, 감사 S-6). 백엔드 경계(`RecastUtil`)에서만 바꾼다.
      *          언리얼 `NavNodeRef`(uint64) · Recast `dtPolyRef`(`DT_POLYREF64`) 와 같은 폭이다.
      */
     enum class NavPolyRef : uint64
@@ -26,14 +27,14 @@ namespace sw
     };
 
     /** @brief 군중 안의 에이전트 번호입니다. 음수는 없음입니다. */
-    using NavCrowdAgentID = int32;
+    using NavCrowdAgentID = TypedID<struct NavCrowdAgentIDTag, int32, constant::invalid_index::kInt32>;
 
     struct NavigationConstant
     {
         /** @brief 없는 폴리곤입니다. */
         static constexpr NavPolyRef kInvalidPolyRef = NavPolyRef::Invalid;
         /** @brief 없는 군중 에이전트입니다. */
-        static constexpr NavCrowdAgentID kInvalidAgentID = constant::invalid_index::kInt32;
+        static constexpr NavCrowdAgentID kInvalidAgentID{};
         /** @brief 영역 테이블의 최대 항목 수입니다(영역 하나가 폴리곤 표시 비트 하나이며 16 비트입니다). */
         static constexpr uint32 kMaxAreaCount = 16;
         /** @brief 걸을 수 없는 영역입니다(장애물, 구멍). 베이크에서 그 위치를 뺍니다. 테이블의 번호가 아닙니다. */

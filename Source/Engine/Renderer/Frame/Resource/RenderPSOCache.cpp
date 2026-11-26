@@ -294,7 +294,7 @@ namespace sw
             return;
         }
 
-        // 퍼뮤테이션 변형을 **패스 PSO 보다 먼저** 놓는다. 패스 PSO 를 그대로 가리키는 항목은 소유한 것이 없어 놓을 것이 없다.
+        // 퍼뮤테이션 변형을 패스 PSO 보다 먼저 놓는다. 패스 PSO 를 그대로 가리키는 항목은 소유한 것이 없어 놓을 것이 없다.
         {
             const ScopedDeferredLog  deferredLog;
             ScopedLock<shared_mutex> lock{ _materialPSOMutex };

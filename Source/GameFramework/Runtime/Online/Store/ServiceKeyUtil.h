@@ -28,18 +28,10 @@ namespace sw
 
         /**
          * @brief 키 · 토픽 · 코드에 쓰는 토큰 글인지 봅니다 — 길이 1..@p maxSize, 글자는 모두 `[0-9a-z]` 이거나 @p extraCharacters 에 든 것(`"_."` 처럼).
-         * @details 허용 목록 검사다(그 밖의 바이트 — 대문자 · 공백 · 널 · 비 ASCII — 는 모두 거절). 대문자를 받지 않는 것은 같은 값이 두 키가 되지 않게 하려는 것이다.
+         * @details 허용 목록 검사다(그 밖의 바이트인 대문자 · 공백 · 널 · 비 ASCII 는 모두 거절). 대문자를 받지 않는 것은 같은 값이 두 키가 되지 않게 하려는 것이다.
          *          저장소 키 · 버스 토픽 · 원격 설정 키 · 작업 id · 감사 동작 · 원장 토큰이 이 하나를 쓴다 — 신뢰하지 않는 글이 키에 드는 경계마다 같은 규칙이 돈다.
          */
         [[nodiscard]] static bool isTokenText( string_view text, int32 maxSize, string_view extraCharacters );
-
-        /** @brief id 하나를 레코드 값(가변 정수)으로 씁니다. 다른 표의 레코드를 가리키는 연결 레코드(게스트 → 계정, 계정 → 세션)가 쓴다. */
-        static vector<uint8> encodeVarID( uint64 id );
-        /**
-         * @brief `encodeVarID` 의 값을 읽습니다. 깨졌으면 0 입니다.
-         * @details 서비스 id(계정 · 세션 · 거래)는 0 을 내지 않는다 — 0 은 "없음" 이라 부르는 쪽이 같은 검사로 "없음 · 깨짐" 을 함께 거른다(대체값이 아니라 형식의 약속).
-         */
-        static uint64 decodeVarID( const vector<uint8>& bytes );
 
         /** @brief 길이 + UTF-8 바이트를 씁니다. */
         static void writeString( BitWriter& outWriter, string_view text );

@@ -1,6 +1,6 @@
 /**
  * @file Core/Delegate/SubscriptionList.h
- * @brief 구독을 내주는 쪽이 **멤버로 드는** 구독 목록입니다 — 믹스인 상속(`private SubscriptionSource`) 대신 합성으로 씁니다.
+ * @brief 구독을 내주는 쪽이 멤버로 드는 구독 목록입니다 — 믹스인 상속(`private SubscriptionSource`) 대신 합성으로 씁니다.
  * @details 번호(`IDAllocator`)로 찾는 값 있는 등록(명령 처리기 · 받은 편지함 · 주제 구독)에 쓴다. 주인은 등록할 때 `_subscriptions.issue( id )` 로 구독을 돌려주고, 구독이 풀리면 생성자로 받은 해제 델리게이트(`releaseSubscription( id )`)가 불린다.
  *          해제 델리게이트가 주인 주소를 들므로 주인은 복사 · 이동하지 않는 객체여야 한다(서브시스템 · 레지스트리). 출처 자체가 값으로 오가는
  *          것(`MulticastDelegate` · `DelegateSlot`)은 `SubscriptionSource` 를 그대로 상속한다 — 이동 생성자가 구독을 새 자리로 데려간다.

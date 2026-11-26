@@ -39,8 +39,9 @@ namespace sw
         _bObserved  = SW_FALSE;
     }
 
-    void NetClock::advance( float32 deltaTime )
+    void NetClock::advance( GameSeconds frameTime )
     {
+        const float32 deltaTime = frameTime.count();
         if ( deltaTime <= 0.0f || hasServerTick() == false )
             return;
         const float64 elapsed = static_cast<float64>( deltaTime ) / static_cast<float64>( kTickSeconds );

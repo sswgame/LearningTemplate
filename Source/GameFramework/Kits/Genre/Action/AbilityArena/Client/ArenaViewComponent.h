@@ -2,7 +2,7 @@
  * @file ArenaViewComponent.h
  * @brief 아레나 키트의 클라이언트 쪽 — 디렉터(`ArenaGameModeComponent`)의 탄을 투사체 프리팹으로 세우고 유닛에 종류별 색을 입힙니다.
  * @details 키트 세 갈래의 클라이언트 몫이다(`GF_Client_AbilityArena`, 전용 서버는 짓지 않는다). 디렉터의 읽기 API(`getUnits` · `getProjectiles`)만 쓰고 규칙을 고치지 않는다.
- *          디렉터는 같은 오브젝트에 먼저 붙인다 — 등록(`onRegister`)에서 찾아 핸들로 든다. `PostUpdate` 라 디렉터 걸음 · 발사 뒤의 틱 뒤 작업(게임 스레드)에서 이번 프레임의 판을 본다 —
+ *          디렉터는 같은 오브젝트에 먼저 붙인다. 등록(`onRegister`)에서 찾아 핸들로 든다. `PostUpdate` 라 디렉터 걸음 · 발사 뒤의 틱 뒤 작업(게임 스레드)에서 이번 프레임의 판을 본다 —
  *          이번 프레임에 스폰한 유닛과 쏜 탄도 그 프레임에 색 · 모습을 받는다. 무엇이 새 것인지는 늘기만 하는 유닛 번호 · 탄 id 로 안다.
  *          쓰러짐 연출은 유닛 프리팹의 `ArenaDeathSquashComponent` 가 한다.
  */

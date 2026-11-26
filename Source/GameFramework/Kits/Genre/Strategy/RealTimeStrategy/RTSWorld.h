@@ -1,6 +1,6 @@
 /**
  * @file RTSWorld.h
- * @brief RTS 한 판의 규칙을 담습니다. 플레이어, 유닛, 명령 대기열, 채취, 건설, 생산, 테크, 전투, 전장의 안개, 승패를 다룹니다.
+ * @brief RTS 한 판의 규칙을 담습니다. 플레이어, 유닛, 명령 대기열, 채취, 건설, 생산, 테크, 전투, 전장의 안개, 승패와 유닛 이웃 탐색 버킷(`RTSUnitBuckets`)을 다룹니다.
  */
 #pragma once
 #include "Core/Container/ChunkedArray.h"
@@ -14,9 +14,11 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/Math/MathUtil.h"
+#include "Core/String/Name/hashed_string.h"
 #include "Core/Time/Countdown.h"
 #include "Core/Time/FixedStepTimer.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Navigation/PathRequestQueue.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -25,15 +27,79 @@
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/FogOfWar.h"
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSCatalog.h"
-#include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSUnitBuckets.h"
 #include "GameFramework/Runtime/Character/Navigation/FlowField.h"
-#include "GameFramework/Runtime/Character/Navigation/FlowFieldCache.h"
-#include "GameFramework/Runtime/Character/Navigation/GridPathSolver.h"
 #include "GameFramework/Runtime/Character/Navigation/GridPathfinder.h"
 #include "GameFramework/Runtime/Character/Navigation/NavAgent.h"
 #include "GameFramework/Runtime/Character/Navigation/NavGrid.h"
 #include "GameFramework/Runtime/Foundation/Grid/GridTopology.h"
 #include "GameFramework/Runtime/World/Land/LandRegistry.h"
+
+namespace sw
+{
+    /**
+     * @class RTSUnitBuckets
+     * @brief 버킷마다 첫 슬롯(`_listHead`)과 슬롯마다 다음 슬롯(`_listNext`)을 듭니다. 할당 없이 걸음마다 다시 짓습니다(`rebuild`).
+     * @details 유닛 슬롯 번호만 알고 유닛 모양은 모른다 — 위치를 주는 쪽(`RTSWorld`)이 넣고 거른다. 훑는 순서는 버킷 행 · 열, 버킷 안은 나중에 넣은 슬롯부터다
+     *          (결정적 시뮬레이션이라 순서가 결과에 들어간다). 해시 격자(`SpatialHashGrid2D`)는 맵 크기가 정해진 판에 비해 무겁고 결과를 정렬해 순서가 달라진다.
+     */
+    class SW_KIT_API RTSUnitBuckets
+    {
+    public:
+        /** @brief 격자 크기와 버킷 한 변(셀 수)으로 비웁니다. */
+        void initialize( int32 gridWidth, int32 gridHeight, int32 bucketSize )
+        {
+            _bucketSize = bucketSize;
+            _topology   = GridTopology{ ( gridWidth + bucketSize - 1 ) / bucketSize, ( gridHeight + bucketSize - 1 ) / bucketSize };
+            _listHead.assign( static_cast<size_t>( _topology.getCellCount() ), constant::invalid_index::kInt32 );
+            _listNext.clear();
+        }
+
+        /** @brief 비우고 슬롯 @p slotCount 개를 받을 준비를 합니다. 이어서 살아 있는 슬롯마다 `insert` 를 부릅니다. */
+        void beginRebuild( size_t slotCount )
+        {
+            std::fill( _listHead.begin(), _listHead.end(), constant::invalid_index::kInt32 );
+            _listNext.assign( slotCount, constant::invalid_index::kInt32 );
+        }
+        /** @brief 슬롯 @p slot 을 @p cell(격자 셀)이 속한 버킷에 넣습니다. 격자 밖 셀은 가장자리 버킷에 넣습니다. */
+        void insert( int32 slot, const int2& cell )
+        {
+            const int32  bucketX                   = MathUtil::clamp( cell._x / _bucketSize, 0, _topology._width - 1 );
+            const int32  bucketY                   = MathUtil::clamp( cell._y / _bucketSize, 0, _topology._height - 1 );
+            const size_t bucket                    = static_cast<size_t>( _topology.toIndex( bucketX, bucketY ) );
+            _listNext[static_cast<size_t>( slot )] = _listHead[bucket];
+            _listHead[bucket]                      = slot;
+        }
+
+        /** @brief @p center 둘레 @p reach(월드 거리) 사각형에 걸린 버킷의 슬롯마다 @p function( slot ) 을 부릅니다. 걸러 내기는 부르는 쪽이 합니다. */
+        template <typename TFunction>
+        void forEachSlotNear( const NavGrid& grid, const float3& center, float32 reach, TFunction&& function ) const
+        {
+            if ( _listHead.empty() )
+                return;
+            const float32 bucketLength = grid.getCellSize() * static_cast<float32>( _bucketSize );
+            const int32   lastBucketX  = _topology._width - 1;
+            const int32   lastBucketY  = _topology._height - 1;
+            const int32   minBucketX   = MathUtil::clamp( static_cast<int32>( ( center._x - reach - grid.getOrigin()._x ) / bucketLength ), 0, lastBucketX );
+            const int32   maxBucketX   = MathUtil::clamp( static_cast<int32>( ( center._x + reach - grid.getOrigin()._x ) / bucketLength ), 0, lastBucketX );
+            const int32   minBucketY   = MathUtil::clamp( static_cast<int32>( ( center._z - reach - grid.getOrigin()._z ) / bucketLength ), 0, lastBucketY );
+            const int32   maxBucketY   = MathUtil::clamp( static_cast<int32>( ( center._z + reach - grid.getOrigin()._z ) / bucketLength ), 0, lastBucketY );
+            for ( int32 bucketY = minBucketY; bucketY <= maxBucketY; ++bucketY )
+            {
+                for ( int32 bucketX = minBucketX; bucketX <= maxBucketX; ++bucketX )
+                {
+                    for ( int32 slot = _listHead[static_cast<size_t>( _topology.toIndex( bucketX, bucketY ) )]; slot >= 0; slot = _listNext[static_cast<size_t>( slot )] )
+                        function( slot );
+                }
+            }
+        }
+
+    private:
+        vector<int32> _listHead;        ///< 버킷마다 첫 슬롯(-1 이면 끝)
+        vector<int32> _listNext;        ///< 슬롯마다 다음 슬롯
+        GridTopology  _topology{};      ///< 버킷 격자
+        int32         _bucketSize{ 1 }; ///< 버킷 한 변의 셀 수
+    };
+} // namespace sw
 
 namespace sw
 {
@@ -215,7 +281,7 @@ namespace sw
          * @brief 카탈로그와 격자 크기로 판을 비웁니다. 규칙은 카탈로그의 `<Rules>`(`RTSCatalog::getRules`)이다 — 게임이 C++ 값으로 주는 길은 없다(감사 K-4).
          * @details 카탈로그가 없거나 크기가 1 보다 작으면 오류를 남기고 false 를 반환하며 판은 그대로입니다(1 로 올려 받지 않는다).
          */
-        [[nodiscard]] bool initialize( const RTSCatalog* pCatalog, int32 width, int32 height );
+        [[nodiscard]] bool initialize( const RTSCatalog& catalog, int32 width, int32 height );
         /** @brief 빌린 카탈로그만 @p catalog 로 바꿉니다. 유닛 · 명령의 정의는 이어 읽는 `readState` 가 id 로 다시 찾는다 — 읽기 앞에서만 부른다. 규칙 수치(고정 걸음)는 연 판의 것이다. */
         void rebindCatalog( const RTSCatalog& catalog ) { _pCatalog = &catalog; }
         /** @brief 지형이 막힌 곳(절벽, 물)을 지정합니다. 유닛을 놓기 전에 칠합니다. */
@@ -225,9 +291,9 @@ namespace sw
         /**
          * @brief 공유 땅을 빌립니다. 월드 셀 (0, 0) 이 땅 셀 @p origin 에 해당합니다. 이후 건물은 놓을 때 땅을 얻고(막힘) 부서지면 반납합니다.
          * @details 다른 키트가 막아 둔 땅은 땅 격자에서 막힌 곳이다. 땅 리비전이 바뀌면 `update` 머리에서 땅 격자를 다시 칠한다(하늘 격자는 그대로 둔다).
-         *          막히지 않은 남의 땅(도로)에도 건물을 짓지 못한다. 이미 놓인 건물은 땅을 얻지 않으므로 건물을 놓기 전에 호출해야 한다. @p pLand 가 nullptr 이면 빌린 땅을 반납한다.
+         *          막히지 않은 남의 땅(도로)에도 건물을 짓지 못한다. 이미 놓인 건물은 땅을 얻지 않으므로 건물을 놓기 전에 호출해야 한다.
          */
-        void bindLand( LandRegistry* pLand, const int2& origin );
+        void bindLand( LandRegistry& land, const int2& origin );
         /** @brief 플레이어를 추가하고 플레이어 번호를 반환합니다. 자원은 빌린 지갑 @p pWallet 에서 쓰며, 지갑은 월드보다 오래 살아야 합니다. nullptr 이면 아무것도 살 수 없습니다. */
         int32 addPlayer( int32 team, Wallet& wallet, const float3& startPosition );
         /** @brief 유닛, 건물(건설이 끝난 상태), 자원을 놓습니다. 건물과 자원은 @p position 이 속한 셀이 왼쪽 아래가 됩니다. 놓을 수 없으면 무효 id 를 반환합니다. */
@@ -266,7 +332,7 @@ namespace sw
          * @brief 실제 프레임 시간 @p deltaTime 을 배속 @p timeScale 로 진행합니다. 내부에서는 고정 걸음으로 나눠 처리합니다.
          * @return 이번에 진행한 월드 시간(걸음 수 × 걸음)입니다. 월드와 같이 도는 것(AI · 시계)은 이 값으로 돌려 월드와 어긋나지 않게 한다(감사 K-6).
          */
-        float32 update( float32 deltaTime, float32 timeScale );
+        float32 update( GameSeconds frameTime, float32 timeScale );
         /** @brief 이벤트를 꺼낼 쪽을 정합니다(둘째 쪽은 false). 꺼내기는 이 표가 있어야 한다 — 같은 월드를 붙인 화면 · 시스템이 서로의 이벤트를 가져가지 못한다. */
         [[nodiscard]] bool claimEvents( ConsumerLease& outLease ) { return _eventBuffer.claim( outLease ); }
         void               pollEvents( const ConsumerLease& lease, vector<RTSEvent>& outListEvent );
@@ -340,12 +406,12 @@ namespace sw
         void      snapToWalkable( RTSUnit& unit );
         float32   computeRectDistance( const float3& position, const int2& cell, int32 footprint ) const;
         RTSUnitID allocateUnit();
-        void      stepFixed( float32 deltaTime );
+        void      stepFixed( StepSeconds step );
         void      recomputeSupply();
         void      rebuildBuckets();
         /** @brief 읽은 뒤 살아 있는 이동 유닛의 길찾기 에이전트를 맞추고, 흐름장을 쓰던 명령(@p listFlowFieldOrder, 유닛 · 명령 순서)에 흐름장을 다시 빌립니다. */
         void restoreAgents( const vector<uint8>& listFlowFieldOrder );
-        void updateUnit( RTSUnit& unit, float32 deltaTime );
+        void updateUnit( RTSUnit& unit, StepSeconds step );
         void updateOrder( RTSUnit& unit, float32 deltaTime );
         void updateGather( RTSUnit& unit, RTSOrder& order, float32 deltaTime );
         /** @brief 실은 자원을 가까운 저장소로 가져가 지갑에 넣습니다(채취의 `Returning` 단계). */

@@ -1,6 +1,6 @@
 /**
  * @file ModuleManager/ILiveReloadManager.h
- * @brief 모듈 관리자(`GameModuleManager` · App 의 `ClientModuleManager`)가 보는 핫 리로드 창구 `ILiveReloadManager` 입니다.
+ * @brief 모듈 관리자(`GameModuleManager` · 개발 계층의 `EditorGameModuleManager`)가 보는 핫 리로드 창구 `ILiveReloadManager` 입니다.
  * @details 구현(`DevTools/ModuleReload/LiveReload/LiveReloadManager` — 섀도 복사 · 연쇄 교체 · 파일 감시)은 개발 도구 공유 라이브러리(DevTools.dll)에 있고,
  *          모듈 관리자는 이 창구만 안다 — 의존은 DevTools → ModuleManager 한 방향이다. 배포는 구현이 없어 모듈 관리자가 nullptr 을 받는다.
  *          언리얼 Core 의 `IHotReloadInterface` 를 Developer 모듈 HotReload 가 구현하는 것과 같은 자리다. 계약은 구현 쪽 머리말(`LiveReloadManager.h`)에 있다.

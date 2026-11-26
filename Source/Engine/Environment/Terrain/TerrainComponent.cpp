@@ -14,7 +14,7 @@
 #include "Engine/Environment/Terrain/HeightfieldAsset.h"
 #include "Engine/Environment/Terrain/LayerWeightsAsset.h"
 #include "Engine/Foundation/EngineParallel.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
@@ -97,7 +97,7 @@ namespace sw
                 return MathUtil::sqrt( deltaX * deltaX + deltaY * deltaY + deltaZ * deltaZ );
             }
 
-            /** @brief 청크 메시 열쇠입니다 — LOD 와 변마다의 유효 이웃 LOD(`max( 이웃, 자기 )` — 고운 이웃 쪽 변은 이웃이 접는다)를 4 비트씩 묶는다(`_maxLOD` 는 log2( 청크 칸 ) 이라 15 이하). */
+            /** @brief 청크 메시 열쇠입니다. LOD 와 변마다의 유효 이웃 LOD(`max( 이웃, 자기 )`, 고운 이웃 쪽 변은 이웃이 접는다)를 4 비트씩 묶는다(`_maxLOD` 는 log2( 청크 칸 ) 이라 15 이하). */
             static uint32 makeChunkMeshKey( uint32 lod, const uint32 ( &arrNeighborLOD )[4] )
             {
                 uint32 key = lod;
@@ -298,7 +298,7 @@ namespace sw
             return;
         const GameObject* const        pOwner   = getOwner();
         const GameObjectManager* const pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        const EngineConfig* const      pConfig  = pManager != nullptr ? locateSubsystem<EngineConfig>( pManager->getSceneEngineServices()._pEngineSubsystems ) : nullptr;
+        const EngineConfig* const      pConfig  = pManager != nullptr ? findSubsystemFrom<EngineConfig>( pManager->getSceneEngineSubsystems()._pEngineSubsystems ) : nullptr;
         if ( pConfig == nullptr )
         {
             SW_LOG_ERROR_ONCE_ID( "Terrain.NoRebuildBudget", "Terrain: the scene has no EngineConfig (_terrain._maxChunkMeshRebuildsPerFrame) - the written chunks keep their old mesh" );
@@ -617,7 +617,7 @@ namespace sw
         {
             if ( path.empty() )
                 continue;
-            if ( engine::areEngineServicesBound() )
+            if ( engine::areEngineSubsystemsBound() )
                 engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>().releaseCPUTexture( path );
             path.clear();
         }
@@ -661,7 +661,7 @@ namespace sw
             archive.writeBytes( listHeight.data(), listHeight.size() * sizeof( float32 ) );
             return true;
         }
-        // 크기를 먼저 비교한다 — 맞지 않는 수로 버퍼를 잡지 않는다. 해상도가 달라도 되는 것은 크기를 바꾼 편집(`replaceHeightfield`)뿐이다 —
+        // 크기를 먼저 비교해 맞지 않는 수로 버퍼를 잡지 않는다. 해상도가 달라도 되는 것은 크기를 바꾼 편집(`replaceHeightfield`)뿐이다.
         // 디스크 에셋을 다른 해상도로 다시 가져왔으면 낡은 편집이 그것을 덮지 않는다.
         const uint32 current    = _heightfield.getResolution();
         const bool   bSameSize  = resolution == current;
@@ -778,7 +778,7 @@ namespace sw
         }
         _heightfield.setSplat( data._width, data._height, data._bytes );
         // 그리는 호스트는 이 바이트로 자기 GPU 텍스처를 만든다(칠하기도 이 텍스처를 고친다). 엔진 서비스가 없으면(CPU 테스트) CPU 값만 둔다.
-        if ( engine::areEngineServicesBound() == false )
+        if ( engine::areEngineSubsystemsBound() == false )
             return true;
         // RGBA8 한 장에 레이어 넷이다 - 평면마다 텍스처 하나를 만든다.
         TextureCache& textures = engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>();

@@ -248,7 +248,7 @@ namespace sw
         const ScopedScissorTestOff scissorOff{ _pDevice->_recordingState };
         if ( src == kRHIBackBufferTexture )
         {
-            // 창(기본 프레임버퍼) → 텍스처. 창의 0 행은 **아래**라 원본 y 를 뒤집어 읽는다 — 결과 텍스처의 0 행이 화면 위(D3D 와 같은 뜻)다.
+            // 창(기본 프레임버퍼) → 텍스처. 창의 0 행은 아래라 원본 y 를 뒤집어 읽는다 — 결과 텍스처의 0 행이 화면 위(D3D 와 같은 뜻)다.
             const OpenGLRHIDevice::OpenGLTextureRecord* pDstRecord                = _pDevice->resolveTexture( dst );
             const bool                                  bInvalidDestinationTarget = pDstRecord == nullptr || pDstRecord->_fbo == 0 || pDstRecord->_bDepthStencil != SW_FALSE;
             if ( bInvalidDestinationTarget )
@@ -282,7 +282,7 @@ namespace sw
             dstH   = pDstRecord->_height;
         }
 
-        // 행 순서: FBO 는 UPPER_LEFT 로 그려 0 행이 화면 위다(beginRenderPass). 창(기본 프레임버퍼)은 0 행이 **아래**라,
+        // 행 순서: FBO 는 UPPER_LEFT 로 그려 0 행이 화면 위다(beginRenderPass). 창(기본 프레임버퍼)은 0 행이 아래라,
         // 창으로 옮길 때는 대상 y 를 뒤집어야 화면에 바로 선다. 텍스처끼리는 행 순서가 같아 그대로 옮긴다.
         // 창 쪽 반전은 오프스크린을 읽는 스크린샷으로는 보이지 않는다 — RenderPassGPUTest.PresentedBackBufferMatchesTheCapture 가 창을 읽어 본다.
         const GLint dstY0 = dstFbo == 0 ? static_cast<GLint>( dstH ) : 0;
@@ -360,10 +360,10 @@ namespace sw
 
         glBindFramebuffer( GL_FRAMEBUFFER, fbo );
 
-        // 클립 원점은 **대상에 따라 달라야 한다.**
+        // 클립 원점은 대상에 따라 달라야 한다.
         //  - FBO(오프스크린): GL_UPPER_LEFT. 텍스처 0 행이 화면 위가 되어 DX/Vulkan 과 행 순서가 같다.
         //    이래야 SceneColor 를 읽거나 다시 샘플링할 때 백엔드끼리 그림이 일치한다.
-        //  - 기본 프레임버퍼(fbo 0): GL_LOWER_LEFT. 창에 보여줄 때 GL 은 y=0 을 **아래**로 표시한다.
+        //  - 기본 프레임버퍼(fbo 0): GL_LOWER_LEFT. 창에 보여줄 때 GL 은 y=0 을 아래로 표시한다.
         //    여기에도 UPPER_LEFT 를 걸면 NDC 위쪽이 창 아래로 가서 화면만 상하가 뒤집힌다.
         //    주의: 오프스크린 텍스처만 읽는 스크린샷 검증으로는 이 반전이 보이지 않는다(읽은 텍스처는 맞다).
         // 풀스크린 블릿의 uv 는 DX 규약(NDC 위쪽 = uv.y 0)이라, 위 조합이면 두 경로 모두 바로 선다.
@@ -407,13 +407,13 @@ namespace sw
             else
                 glDrawBuffer( GL_BACK );
 
-            // 첨부마다 **드로우 버퍼 상태를 건드리지 않고** 지운다.
+            // 첨부마다 드로우 버퍼 상태를 건드리지 않고 지운다.
             //
             // 주의: 지울 첨부를 고르려고 `glDrawBuffers` 로 목록을 하나로 좁히고 되돌리지 않으면, 드로우 버퍼가
             // "마지막으로 지운 첨부" 하나만 남아 이어지는 지오메트리의 `SV_TARGET0` 이 그 첨부로 가고 `SV_TARGET1` 은
-            // 버려진다. G버퍼 패스에서는 알베도가 노멀 첨부에 써져 디퍼드 조명이 **OpenGL 만 거의 검게** 나온다.
+            // 버려진다. G버퍼 패스에서는 알베도가 노멀 첨부에 써져 디퍼드 조명이 OpenGL 만 거의 검게 나온다.
             //
-            // `glClearBufferfv` 는 드로우 버퍼 **인덱스**로 직접 지우므로 목록을 바꿀 이유가 없다.
+            // `glClearBufferfv` 는 드로우 버퍼 인덱스로 직접 지우므로 목록을 바꿀 이유가 없다.
             // 다만 쓰기 마스크는 지우기에도 걸린다 — 앞 PSO 의 마스크가 남아 있으면 지운 값이 일부 채널만 들어간다(다른 API 의 지우기는 마스크를 보지 않는다).
             glColorMask( GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE );
             for ( uint32 attachmentIndex = 0; attachmentIndex < colorCount; ++attachmentIndex )
@@ -443,7 +443,7 @@ namespace sw
         if ( _pDevice->_bInitialized == SW_FALSE )
             return;
         glBindFramebuffer( GL_FRAMEBUFFER, 0 );
-        // 패스 밖에서는 **GL 기본 상태**로 되돌린다(기본 프레임버퍼 · 좌하단 원점 · 가위 없음). 오프스크린 패스가 걸어 둔 UPPER_LEFT 가 다음 패스 밖 일(블릿 · 되읽기)에 새지 않게 한다.
+        // 패스 밖에서는 GL 기본 상태로 되돌린다(기본 프레임버퍼 · 좌하단 원점 · 가위 없음). 오프스크린 패스가 걸어 둔 UPPER_LEFT 가 다음 패스 밖 일(블릿 · 되읽기)에 새지 않게 한다.
         glDisable( GL_SCISSOR_TEST );
         _pDevice->_recordingState._bScissorEnabled = SW_FALSE;
         if ( glad_glClipControl != nullptr )
@@ -604,7 +604,7 @@ namespace sw
 
     void OpenGLRHICommandContext::bindUnorderedAccessSlot( uint32 slot, RHIDescriptorIndex index )
     {
-        // 인덱스는 **UAV 레지스트리의 것**이다. 그 레지스트리는 RW 텍스처와 버퍼를 함께 담으므로 어느 쪽인지는 레코드가 말해 준다.
+        // 인덱스는 UAV 레지스트리의 것이다. 그 레지스트리는 RW 텍스처와 버퍼를 함께 담으므로 어느 쪽인지는 레코드가 말해 준다.
         // u5..u7 은 이미지 유닛(SW_GL_IMAGE_UNIT0 + 서수), 그 앞은 SSBO `kUAVBinding0 + slot`(= `-fvk-u-shift`)이다. GL 의 번호는 단계를 가리지 않아 그래픽스도 같은 자리다.
         const bool                                    bImageSlot = slot >= shaderslot::kComputeTextureUAV0;
         const bool                                    bBound     = index != kInvalidDescriptorIndex;
@@ -628,8 +628,8 @@ namespace sw
     void OpenGLRHICommandContext::bindResourceSlot( uint32 slot, RHIDescriptorIndex index )
     {
         // 칸 번호가 종류를 정한다 — 버퍼 칸(t0..t15)은 SSBO, 텍스처 칸(머티리얼 t16..t31 · 엔진 t32..)은 텍스처 유닛이다.
-        // 주의: 텍스처 레지스트리에 없다고 버퍼 레지스트리로 흘러내리면 안 된다. 텍스처 · 버퍼 · UAV 는 **각자 0 부터 시작하는 별개의 프리리스트**라 같은 번호가 셋 다 유효할 수 있다
-        // (모프 정점 버퍼 t7 이 텍스처로 걸리면 정점 셰이더가 SSBO 7 에서 0 을 읽어 **OpenGL 에서만** 기하가 사라진다).
+        // 주의: 텍스처 레지스트리에 없다고 버퍼 레지스트리로 흘러내리면 안 된다. 텍스처 · 버퍼 · UAV 는 각자 0 부터 시작하는 별개의 프리리스트라 같은 번호가 셋 다 유효할 수 있다
+        // (모프 정점 버퍼 t7 이 텍스처로 걸리면 정점 셰이더가 SSBO 7 에서 0 을 읽어 OpenGL 에서만 기하가 사라진다).
         const bool bBound = index != kInvalidDescriptorIndex;
         if ( slot < RHIShaderSlots::kBufferResourceCount )
         {
@@ -660,7 +660,7 @@ namespace sw
 
     void OpenGLRHICommandContext::bindUniformSlot( uint32 slot, RHIDescriptorIndex index )
     {
-        // 상수버퍼는 HLSL b# 가 **SPIR-V binding #** 로 그대로 나온다.
+        // 상수버퍼는 HLSL b# 가 SPIR-V binding # 로 그대로 나온다.
         // `-fvk-b-shift 16 0` 은 명시 `[[vk::binding]]` 이 있으면 적용되지 않는다(common.hlsli 가 항상 명시한다).
         // 주의: 엔진이 16+# 에 걸면 셰이더가 PassCB 를 못 읽어 g_ViewProj 가 0 이 되고, 드로우도 GL 에러도
         // 정상인 채로 메시가 하나도 그려지지 않는다.
@@ -699,7 +699,7 @@ namespace sw
         }
         if ( _pDevice->_meshVao == 0 )
             return false;
-        // 정점 속성은 **공용 표**(PSO 의 메시 정점 형식 — constant::render::getMeshVertexAttributes)에서 건다. DX11 · DX12 · Vulkan 과 같은 표다.
+        // 정점 속성은 공용 표(PSO 의 메시 정점 형식 — constant::render::getMeshVertexAttributes)에서 건다. DX11 · DX12 · Vulkan 과 같은 표다.
         // VAO 상태는 드로우 사이에 남으므로 PSO 가 읽지 않는 슬롯의 속성은 꺼 둔다 — 켜 둔 채 버퍼가 없으면 코어 프로파일에서 드로우가 거부된다.
         // 사본(_meshVaoAttribShadow)과 같은 칸은 건너뛴다 — 언리얼 OpenGLDrv 의 속성 사본과 같다(R-16, 예전에는 드로우마다 여섯 칸을 모두 다시 걸었다).
         glBindVertexArray( _pDevice->_meshVao );
@@ -822,7 +822,7 @@ namespace sw
         if ( _pDevice->_bInitialized == SW_FALSE )
             return;
 
-        // 컴퓨트는 **컴퓨트 PSO** 의 프로그램으로 디스패치해야 한다. 그래픽스 PSO(또는 디바이스 기본 프로그램)로
+        // 컴퓨트는 컴퓨트 PSO 의 프로그램으로 디스패치해야 한다. 그래픽스 PSO(또는 디바이스 기본 프로그램)로
         // 디스패치하면 GL_INVALID_OPERATION("no active compute program") 이 나는데, 컬링 결과가 CPU 가 채운
         // 인자 그대로 남아 화면에는 드러나지 않는다.
         glUseProgram( resolveComputeProgram() );
@@ -992,7 +992,7 @@ namespace sw
         GLuint buf = _pDevice->resolveGlBuffer( argumentBuffer );
         if ( buf == 0 )
             return;
-        // dispatchCompute 와 같다 — 간접 디스패치도 **컴퓨트 PSO** 의 프로그램으로 한다. 앞서 그래픽스 PSO 가 건 프로그램이 남아 있으면
+        // dispatchCompute 와 같다 — 간접 디스패치도 컴퓨트 PSO 의 프로그램으로 한다. 앞서 그래픽스 PSO 가 건 프로그램이 남아 있으면
         // GL_INVALID_OPERATION("no active compute program")이 난다(D3D · Vulkan 은 컴퓨트 PSO 를 따로 걸어 이 차이가 없다).
         glUseProgram( resolveComputeProgram() );
         flushBindings( RHIBindPoint::Compute );

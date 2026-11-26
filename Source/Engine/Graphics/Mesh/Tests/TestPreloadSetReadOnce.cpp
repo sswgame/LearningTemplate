@@ -3,14 +3,14 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/File/ContentFileSource.h"
 #include "Core/File/FileUtil.h"
-#include "Core/Testing/TestFramework.h"
-#include "Core/Testing/TestWait.h"
+#include "Core/TestFramework/TestFramework.h"
+#include "Core/TestFramework/TestWait.h"
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Asset/AssetStreamingQueue.h"
 #include "Engine/Asset/PreloadSet.h"
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 
 using namespace sw;

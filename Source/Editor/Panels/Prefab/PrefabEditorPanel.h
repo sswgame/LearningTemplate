@@ -41,7 +41,7 @@ namespace sw::editor
         EditorTextExtent getInitialPanelSize() const override { return EditorTextExtent::ofText( 75.0f, 27.0f ); }
 
         void               drawDocumentContent() override;
-        [[nodiscard]] bool saveDocument() override;
+        [[nodiscard]] bool saveDocument( AssetWriter& writer ) override;
         /** @brief 저장하지 않고 닫을 때 쓴다 — 디스크의 프리팹으로 문서 루트를 다시 만들어 편집을 버린다. */
         void revertDocument() override;
 

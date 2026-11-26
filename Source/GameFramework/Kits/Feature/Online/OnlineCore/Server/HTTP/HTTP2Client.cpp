@@ -9,10 +9,6 @@
 
 namespace sw
 {
-} // namespace sw
-
-namespace sw
-{
     HTTP2Client::HTTP2Client( const IClock& clock )
         : _clock{ clock }
         , _mutex{}
@@ -335,8 +331,7 @@ namespace sw
     {
         HTTPClientResponse& response = _listDone.emplace_back();
         response._requestID          = requestID;
-        response._bTransportFailed   = SW_TRUE;
-        response._failureText        = pFailure;
+        response.setTransportFailed( pFailure );
     }
 
     HTTP2Client::Session* HTTP2Client::findByHandleLocked( StreamConnectionHandle handle )

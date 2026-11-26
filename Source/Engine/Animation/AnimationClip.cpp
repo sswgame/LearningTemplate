@@ -11,6 +11,7 @@
 #include "Core/Serialization/ByteStream.h"
 
 #include "Engine/Animation/Skeletal/Skeleton.h"
+#include "Engine/Asset/Cache/SharedAssetCacheDefinition.h"
 #include "Engine/Content/AssetIO.h"
 
 namespace sw
@@ -341,8 +342,6 @@ namespace sw
     {
         vector<uint8> bytes;
         makeBytes( bytes );
-        if ( FileUtil::ensureParentDirectoryExists( absPath ) == false )
-            return false;
         return FileUtil::writeFile( absPath, bytes.data(), bytes.size() );
     }
 
@@ -358,4 +357,9 @@ namespace sw
         }
         return readFromBytes( bytes.data(), bytes.size(), path );
     }
+} // namespace sw
+
+namespace sw
+{
+    SW_SHARED_ASSET_CACHE( AnimationClip, AnimationClip, AnimationClip::kAssetType.withLoader( AssetTypeLoader::of<AnimationClip>( MemoryTag::Animation ) ) );
 } // namespace sw

@@ -1,7 +1,7 @@
 #include "pch.h"
 
 #include "Core/Encoding/FourCCUtil.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Destruction/Fracture/FractureComponent.h"
 #include "Engine/Serialization/Format/Archive.h"

@@ -36,7 +36,7 @@ namespace sw
 
 namespace sw
 {
-    mutex::LockObserverRegistration mutex::bindLockObserver( ILockObserver* pObserver )
+    mutex::LockObserverSubscription mutex::bindLockObserver( ILockObserver* pObserver )
     {
         return s_lockObserverSlot.bind( pObserver );
     }

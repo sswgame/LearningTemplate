@@ -22,10 +22,10 @@ namespace sw
              * @brief 코덱을 고릅니다. 넘겨받은 레지스트리를 먼저 보고, 없으면 연결된 활성 레지스트리를 봅니다.
              * @details 넘겨받는 호출부는 드물고(레지스트리는 엔진이 들고 있고 Core 는 거기 닿지 못합니다), 대개 활성 레지스트리가 답합니다.
              *
-             *          **찾지 못하면 nullptr 을 반환합니다.** Null 코덱으로 대신하면 호출부의 오류 처리가 모두 죽은 코드가 되어
-             *          (1) Zstd 가 없는 상태에서 `compressBuffer( …, Zstd )` 가 헤더에는 `Zstd` 라고 적고 페이로드는 **압축하지 않은 채**
+             *          찾지 못하면 nullptr 을 반환합니다. Null 코덱으로 대신하면 호출부의 오류 처리가 모두 죽은 코드가 되어
+             *          (1) Zstd 가 없는 상태에서 `compressBuffer( …, Zstd )` 가 헤더에는 `Zstd` 라고 적고 페이로드는 압축하지 않은 채
              *              쓰고(Zstd 가 등록된 다른 기계에서 읽으면 쓰레기가 나옵니다),
-             *          (2) 알 수 없는 `_codecType` 이 든 스트림도 "해제" 해, 체크섬 플래그가 꺼진 스트림이면 그 쓰레기가 **성공으로** 반환됩니다.
+             *          (2) 알 수 없는 `_codecType` 이 든 스트림도 "해제" 해, 체크섬 플래그가 꺼진 스트림이면 그 쓰레기가 성공으로 반환됩니다.
              *          내장 코덱으로 대신하는 것은 실제로 구현된 두 가지(None · RLE)뿐입니다.
              */
             static ICompressionCodec* findCodec( CompressionCodecKind type, const CompressionCodecRegistry* pRegistry )
@@ -48,11 +48,11 @@ namespace sw
             }
 
             /**
-             * @brief 검증한 헤더가 말하는 코덱을 찾고, 그 코덱으로 그 원본 크기가 **나올 수 있는지** 봅니다. 아니면 nullptr 입니다.
+             * @brief 검증한 헤더가 말하는 코덱을 찾고, 그 코덱으로 그 원본 크기가 나올 수 있는지 봅니다. 아니면 nullptr 입니다.
              * @details 헤더의 `_uncompressedSize` 는 그대로 할당 크기가 됩니다. `kMaxUncompressedSize` 만으로는 81 바이트짜리 입력이
              *          620 MB 를 요구해도 통과했고, 그만큼 할당 · 0 채우기 · 비우기를 한 뒤에야 페이로드가 비었다는 것을 알았습니다
              *          (야간 퍼저 `Compression` 대상 10 초 타임아웃). 압축 크기에서 나올 수 있는 최대치는 코덱이 알므로
-             *          (`ICompressionCodec::decompressBound`) 할당 **전에** 그것과 비교합니다. 두 해제 경로가 모두 여기를 지납니다.
+             *          (`ICompressionCodec::decompressBound`) 할당 전에 그것과 비교합니다. 두 해제 경로가 모두 여기를 지납니다.
              */
             static ICompressionCodec* findCodecForHeader( const CompressionHeader& header, const CompressionCodecRegistry* pRegistry )
             {

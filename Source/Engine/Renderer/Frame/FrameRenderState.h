@@ -254,7 +254,7 @@ namespace sw
          * @brief 시간으로 구동하는 컴퓨트가 읽을 시간(초)입니다. 렌더러 시계(`FrameMeshDeformState::_animationTimer`)의 누적 시간을 스냅샷의 주기로 접은 값입니다.
          * @details 셰이더 칸이 float 라 접지 않으면 긴 실행에서 끊긴다(감사 C-12). 이 함수를 부르는 디스패치는 업로드된 스냅샷이 있을 때만 돈다.
          */
-        float32 getAnimationTime() const { return TimeRolloverUtil::fold( _deform._animationTimer.getTotalTime(), _gpuScene.getShaderTimeRolloverSeconds() ); }
+        float32 getAnimationTime() const { return TimeRolloverUtil::fold( _deform._animationTimer.getElapsedSeconds(), _gpuScene.getShaderTimeRolloverSeconds() ); }
 
     private:
         /** @brief 주 시점 하나만 든 뷰 목록입니다(처음 값). */

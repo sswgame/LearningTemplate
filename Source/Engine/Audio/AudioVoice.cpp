@@ -137,7 +137,7 @@ namespace sw
     void AudioVoice::setGraphParameter( uint32 inputIndex, float32 value )
     {
         if ( _pGraph == nullptr )
-            ::sw::internal::reportMissingRequiredService( SW_FUNCTION_SIGNATURE );
+            ::sw::internal::reportMissingRequiredSubsystem( SW_FUNCTION_SIGNATURE );
         _pGraph->setParameterValue( inputIndex, value );
     }
 

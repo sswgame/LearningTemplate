@@ -132,7 +132,7 @@ namespace sw::editor
             return true;
         const hashed_string      hintName( pComponentHint );
         const GameObjectManager* pManager  = object.getManager();
-        const TypeRegistry*      pRegistry = pManager != nullptr ? pManager->getSceneEngineServices()._pTypeRegistry : nullptr;
+        const TypeRegistry*      pRegistry = pManager != nullptr ? pManager->getSceneEngineSubsystems()._pTypeRegistry : nullptr;
         const TypeInfo*          pHintType = pRegistry != nullptr ? pRegistry->findType( hintName ) : nullptr;
         if ( pHintType == nullptr )
             return object.findComponentByTypeName( hintName ) != nullptr;

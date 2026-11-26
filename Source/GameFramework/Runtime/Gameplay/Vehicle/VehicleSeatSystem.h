@@ -1,7 +1,7 @@
 /**
  * @file VehicleSeatSystem.h
  * @brief 탈것 좌석(`VehicleSeatComponent`)의 탑승 반응(탑승자 기울임 · 카메라 킥 · 소리 파라미터)을 한 곳에서 한 번에 거는 프레임 시스템입니다.
- * @details 좌석은 예전에 앉은 쪽이 있으면 매 틱 반응을 통째로 틱 뒤 큐로 미뤘고(소리 · 카메라 디렉터는 게임 스레드 일이다), 탑승자 기울임은 틱 안에서 **남의 오브젝트**
+ * @details 좌석은 예전에 앉은 쪽이 있으면 매 틱 반응을 통째로 틱 뒤 큐로 미뤘고(소리 · 카메라 디렉터는 게임 스레드 일이다), 탑승자 기울임은 틱 안에서 남의 오브젝트
  *          (탑승자의 소켓 바인딩 · 애니메이터)에 바로 썼다 — 탑승자 오브젝트가 다른 워커에서 틱하는 동안 쓰는 경합이었다. 이제 틱은 자기 칸(가속도 · 기울임 · 걸 값)만 쓰고
  *          깃발을 세우며, 이 시스템이 다음 프레임 `ApplyPrePhysics` 의 틱 뒤 큐 맨 앞에서 등록 순서로 건다(`CharacterWetnessSystem` 과 같은 모양).
  *          언리얼 `UWorldSubsystem` 이 등록받은 목록을 돌고, Mass 처리기가 한 종류를 한 번에 도는 자리다.
@@ -9,7 +9,7 @@
  *          - 자리: 좌석은 `PostPhysics` 에서 잰다. 예전 반응은 같은 프레임 `ApplyPostPhysics` 비우기에서 돌아 카메라 시스템(그 비우기의 맨 앞)보다 늦었다 — 킥은 늘 다음 프레임
  *            카메라 계산에 들었다. 다음 프레임 `ApplyPrePhysics` 맨 앞도 그 프레임 카메라 계산(`ApplyPostPhysics`)보다 앞이라 킥 시점은 같고, 붙인 순서에 기대지 않는다.
  *            기울임은 한 프레임 늦게 든다(다음 프레임 탑승자 틱이 읽는다) — 경합을 없애는 값이다.
- *          - 왜 씬 서비스가 아닌가: 씬 서비스 표(`SW_SCENE_SERVICE`)는 Engine 이미지 안에서만 채운다. 첫 좌석의 `onRegister` 가 붙이고 마지막의 `onUnregister` 가 뗀다.
+ *          - 왜 씬 서브시스템이 아닌가: 씬 서브시스템 표(`SW_SCENE_SUBSYSTEM`)는 Engine 이미지 안에서만 채운다. 첫 좌석의 `onRegister` 가 붙이고 마지막의 `onUnregister` 가 뗀다.
  */
 #pragma once
 #include "Core/Container/vector.h"

@@ -12,10 +12,34 @@
 #include "Engine/Scene/SceneManager.h"
 
 #include "GameFramework/Kits/Feature/Network/NetSimulation/NetSimGameRegistry.h"
-#include "GameFramework/Runtime/Foundation/Service/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 
 namespace sw::editor
 {
+    NetSimStepPacer::NetSimStepPacer()
+        : _accumulatedSeconds{ 0.0 }
+    {
+    }
+
+    uint32 NetSimStepPacer::consume( float64 frameSeconds, float64 tickInterval, uint32 maxSteps )
+    {
+        // NaN 이 한 번 들어가면 모은 시간이 영원히 NaN 이라 재생이 말없이 멈췄다. 음수는 뒤로 가는 시간이다.
+        const bool bFrameTimeUsable = frameSeconds > 0.0;
+        if ( bFrameTimeUsable == false )
+            return 0;
+        _accumulatedSeconds += frameSeconds;
+        uint32 stepCount = 0;
+        while ( _accumulatedSeconds >= tickInterval && stepCount < maxSteps )
+        {
+            _accumulatedSeconds -= tickInterval;
+            ++stepCount;
+        }
+        // 상한을 넘겨 밀린 것만 버린다. 예전에는 상한에 딱 닿기만 해도 남은 몫을 버려 그만큼 재생이 느려졌다.
+        if ( _accumulatedSeconds >= tickInterval )
+            _accumulatedSeconds = 0.0;
+        return stepCount;
+    }
+
     EditorNetSimSession::EditorNetSimSession()
         : _pSceneSource{}
         , _pGame{}
@@ -58,7 +82,7 @@ namespace sw::editor
         NetSimConfig config  = settings._harness;
         config._pSceneSource = _pSceneSource.get();
         _pHarness            = make_unique<NetSimHarness>();
-        if ( _pHarness->initialize( pSceneManager->getEngineServices(), config, _pGame.get() ) == false )
+        if ( _pHarness->initialize( pSceneManager->getSceneEngineSubsystems(), config, _pGame.get() ) == false )
         {
             stop();
             return unexpected( Error{ ErrorKind::ExternalFailure, "the harness did not start (see the log)" } );

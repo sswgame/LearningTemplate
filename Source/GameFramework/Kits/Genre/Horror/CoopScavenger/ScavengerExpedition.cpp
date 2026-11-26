@@ -80,8 +80,7 @@ namespace sw
         _pWallet        = &wallet;
         _pClock         = &clock;
         _pWeather       = &weather;
-        _facility.bindFlags( flags );
-        _facility.bindCatalog( &catalog );
+        _facility.initialize( catalog, flags );
         _shop.initialize( data._shopCatalog, data._itemCatalog );
         _pShipStorage = &shipStorage;
         _listCrew.clear();
@@ -161,9 +160,10 @@ namespace sw
         return ScavengerActionResult::Ok;
     }
 
-    void ScavengerExpedition::update( float32 deltaTime )
+    void ScavengerExpedition::update( GameSeconds frameTime )
     {
-        const bool bNotUpdatable = _phase != ScavengerPhase::Landed || deltaTime <= 0.0f || _pCatalog == nullptr;
+        const float32 deltaTime     = frameTime.count();
+        const bool    bNotUpdatable = _phase != ScavengerPhase::Landed || deltaTime <= 0.0f || _pCatalog == nullptr;
         if ( bNotUpdatable )
             return;
         const ScavengerDayDef& day = _pCatalog->getDaySettings();
@@ -173,7 +173,7 @@ namespace sw
         for ( ScavengerCrewMember& member : _listCrew )
         {
             if ( member.isDead() == false )
-                member._healthMachine.update( deltaTime );
+                member._healthMachine.update( frameTime );
         }
         if ( _pMoon->_bCompany == false )
         {

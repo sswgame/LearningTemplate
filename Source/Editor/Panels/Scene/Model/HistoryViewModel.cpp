@@ -5,7 +5,7 @@
 #include "Editor/Common/Commands/EditorCommandIDs.h"
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Commands/EditorCommandTarget.h"
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 #include "Editor/Common/Workspace/Undo/EditorUndoEntry.h"
 #include "Editor/Common/Workspace/Undo/EditorUndoHistory.h"
 
@@ -15,7 +15,7 @@ namespace sw::editor
     {
         struct HistoryViewModelInternal
         {
-            /** @brief 되돌리기 스택 움직임 하나를 게임 단계에 넘깁니다 — 실행은 Ctrl+Z 와 같은 입구다(`EditorUndoEntry` — 편집 잠금 · 열린 편집을 같은 판정으로 거절한다, 감사 E-2). */
+            /** @brief 되돌리기 스택 움직임 하나를 게임 단계에 넘깁니다. 실행은 Ctrl+Z 와 같은 입구다(`EditorUndoEntry`: 편집 잠금 · 열린 편집을 같은 판정으로 거절한다, 감사 E-2). */
             template <typename TMove>
             static void requestMove( const TMove& move )
             {

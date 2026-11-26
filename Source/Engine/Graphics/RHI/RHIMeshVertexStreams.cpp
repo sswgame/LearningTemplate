@@ -47,7 +47,7 @@ namespace sw
                 attributes._arrNormal[axis]  = snorm8::fromFloat( vertex._arrNormal[axis] ).getRaw();
                 attributes._arrTangent[axis] = snorm8::fromFloat( vertex._arrTangent[axis] ).getRaw();
             }
-            // 바이탄젠트 부호(0 은 + 로 둔다 — MikkTSpace 가 0 을 내지 않는다) × 이음매 표시 크기(`RHIVertex::makeSeamTangentW` — snorm8 에서 정확하다).
+            // 바이탄젠트 부호(0 은 + 로 둔다. MikkTSpace 가 0 을 내지 않는다) × 이음매 표시 크기(`RHIVertex::makeSeamTangentW`, snorm8 에서 정확하다).
             const float32 handedness  = vertex._arrTangent[3] < 0.0f ? -1.0f : 1.0f;
             attributes._arrTangent[3] = snorm8::fromFloat( vertex.isOnSeam() ? vertex._arrTangent[3] : handedness ).getRaw();
             Memory::copy( attributes._arrUV, vertex._arrUV, sizeof( attributes._arrUV ) );

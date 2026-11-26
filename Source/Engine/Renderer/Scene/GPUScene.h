@@ -31,9 +31,9 @@ namespace sw
 
     /**
      * @brief 뷰 하나가 가지는 컬링 산출물(간접 인자와 가시 인스턴스 목록)입니다.
-     * @details 컬링 결과는 **절두체에 종속**된다. 메인 카메라로 거른 목록을 그림자 패스가 쓰면, 화면
+     * @details 컬링 결과는 절두체에 종속된다. 메인 카메라로 거른 목록을 그림자 패스가 쓰면, 화면
      *          밖에 있지만 화면 안으로 그림자를 드리우는 물체가 사라진다. 그래서 뷰마다 하나씩 둔다.
-     *          뷰의 **입력**(행렬, 절두체, 상수 버퍼)은 RenderView 가 가진다.
+     *          뷰의 입력(행렬, 절두체, 상수 버퍼)은 RenderView 가 가진다.
      */
     struct GPUCullViewResources
     {
@@ -55,7 +55,7 @@ namespace sw
     /**
      * @brief 배치의 가시 목록 정렬 방식입니다.
      * @details 컬링이 압축을 하면 슬롯 번호가 원자 연산의 완료 순서로 정해진다. 불투명은 상관없지만
-     *          투명은 그 순서가 곧 블렌딩 순서다. 그래서 투명은 컬링 뒤에 **GPU 에서 CPU 정렬 순서로 되돌린다**
+     *          투명은 그 순서가 곧 블렌딩 순서다. 그래서 투명은 컬링 뒤에 GPU 에서 CPU 정렬 순서로 되돌린다
      *          (instance_sort.hlsl. 인스턴스 번호가 곧 CPU 가 정한 그리는 순서다). 한 워크그룹에 담기지 않는 큰 배치는 같은 정렬을 여러 디스패치로 한다.
      */
     enum class GPUBatchSortMode : uint32
@@ -185,7 +185,7 @@ namespace sw
         /** @brief 스냅샷과 그 안의 소유권을 해제하고 개수를 0으로 되돌립니다. GPU 버퍼는 `releaseGPU` 가 해제합니다. */
         void clear();
         /**
-         * @brief 패킷의 스냅샷을 받아 갑니다. **맞바꾸기**라서 받는 쪽의 지난 스냅샷이 패킷 쪽으로 돌아갑니다.
+         * @brief 패킷의 스냅샷을 받아 갑니다. 맞바꾸기라서 받는 쪽의 지난 스냅샷이 패킷 쪽으로 돌아갑니다.
          *        GPU 핸들, 용량, 간접 개수 같은 RT 소유 상태는 타입이 달라 건드릴 수 없습니다.
          * @details 옮기기(move)만 하면 패킷 쪽 저장소가 비어, 다음에 GT 가 그 슬롯을 다시 채울 때 모두 새로
          *          할당한다. 맞바꾸면 저장소가 GT, 링, RT, 링, GT 순으로 돌아 용량이 남는다(프레임당 할당 0).
@@ -304,7 +304,7 @@ namespace sw
         /** @brief 인스턴스 SRV 인덱스를 반환합니다. */
         RHIBufferSRVIndex getInstanceSRV() const { return _instances._srv; }
         /**
-         * @brief 인스턴스 버퍼의 UAV 인덱스입니다. 컴퓨트가 월드 행렬을 **고쳐 쓰는** 경로입니다.
+         * @brief 인스턴스 버퍼의 UAV 인덱스입니다. 컴퓨트가 월드 행렬을 고쳐 쓰는 경로입니다.
          * @details instance_animation.hlsl 이 인스턴스마다 다른 각속도로 회전을 더한다. 백엔드가 구조 버퍼 UAV 를
          *          만들지 못하면 kInvalidDescriptorIndex 이고, 그러면 애니메이션 패스가 통째로 생략된다(그리기는 그대로).
          */
@@ -313,7 +313,7 @@ namespace sw
         const GPUCullViewResources& getCullView( uint32 cullViewIndex ) const { return _listCullView[cullViewIndex]; }
         uint32                      getCullViewCount() const { return static_cast<uint32>( _listCullView.size() ); }
         /**
-         * @brief 컬링 슬롯 수를 맞춥니다(고정 2개 + 추가 뷰 수). 업로드 **전에** RT 가 부릅니다. 늘면 다음 업로드가 새 슬롯의 버퍼를 만들고, 줄면 남는 슬롯을 해제합니다.
+         * @brief 컬링 슬롯 수를 맞춥니다(고정 2개 + 추가 뷰 수). 업로드 전에 RT 가 부릅니다. 늘면 다음 업로드가 새 슬롯의 버퍼를 만들고, 줄면 남는 슬롯을 해제합니다.
          * @details 슬롯마다 간접 인자와 가시 목록이 따로 있어야 한다. 컬링은 개수를 0에서 세므로 두 뷰가 한 슬롯을 나눠 쓰면 앞 뷰의 개수 위에 뒤 뷰가 더한다.
          */
         void setCullViewCount( IRHIDevice* pDevice, uint32 count );
@@ -359,7 +359,7 @@ namespace sw
         void setVertexPoolEnabled( bool bEnabled );
         /**
          * @brief 간접 인자의 인스턴스 개수를 CPU 가 채울지, 컴퓨트가 만들지 정합니다.
-         * @details true 면 배치 표가 바뀐 업로드에서 개수를 **0으로** 올리고, 그 뒤 프레임마다의 0 되돌리기는 컬링 앞의 GPU 커널이 한다(CPU 는 올리지 않는다).
+         * @details true 면 배치 표가 바뀐 업로드에서 개수를 0으로 올리고, 그 뒤 프레임마다의 0 되돌리기는 컬링 앞의 GPU 커널이 한다(CPU 는 올리지 않는다).
          *          컬링 컴퓨트가 InterlockedAdd 로 채우기 때문이다. 컬링이 없으면 CPU 가 채운 개수 그대로 그려야 하므로 false 여야 한다.
          *          FrameRenderer 가 매 프레임 실제 컬링 가능 여부를 보고 정한다.
          */
@@ -376,7 +376,7 @@ namespace sw
         /**
          * @brief 마지막 upload 가 실제로 개수를 컴퓨트에 맡겼는지 반환합니다.
          * @details "원한다" 와 "실제로 된다" 는 다르다. 가시 목록이나 배치 구간 버퍼를 만들지 못했으면
-         *          개수를 0으로 올리지 않는다. 컬링 디스패치와 가시 목록 바인딩은 **이 값**을 따라야
+         *          개수를 0으로 올리지 않는다. 컬링 디스패치와 가시 목록 바인딩은 이 값을 따라야
          *          한다. 둘이 어긋나면 개수 0짜리 인자로 그리거나(빈 화면), 갱신되지 않은 목록을 읽는다.
          */
         bool areIndirectCountsGPUFilled() const { return _bGPUFillsIndirectCounts != SW_FALSE; }
@@ -449,7 +449,7 @@ namespace sw
         /** @brief 뷰마다의 간접 인자 버퍼를 확보해 올립니다. */
         void uploadIndirectArgs( IRHIDevice* pDevice, uint32 argsCount );
         /**
-         * @brief 움직임 기록을 한 걸음 나아가게 합니다(CPU 만 — 올리기는 `uploadMotionHistory`). 스냅샷마다 한 번 부른다(내용이 그대로여도) — 멈춘 물체의 지난 행렬이 이번 것이 되어야 속도가 0 이 된다.
+         * @brief 움직임 기록을 한 걸음 나아가게 합니다(CPU 만, 올리기는 `uploadMotionHistory`). 스냅샷마다 한 번 부른다(내용이 그대로여도). 멈춘 물체의 지난 행렬이 이번 것이 되어야 속도가 0 이 된다.
          */
         void advanceMotionHistory();
         /** @brief 지난 월드 행렬 버퍼를 올립니다. 내용이 지난번 올린 것과 같으면(모두 멈춘 씬의 두 번째 프레임부터) 올리지 않는다. */
@@ -506,11 +506,11 @@ namespace sw
         RHIStructuredBuffer _instances;
         /**
          * @brief 뷰별 컬링 산출물입니다. 언리얼의 FInstanceCullingContext 가 뷰마다 있는 것과 같은 구조입니다.
-         * @details 컬링 컴퓨트가 살아남은 인스턴스의 **원본 인덱스**를 배치 구간에 압축해 넣고, 정점 셰이더는
+         * @details 컬링 컴퓨트가 살아남은 인스턴스의 원본 인덱스를 배치 구간에 압축해 넣고, 정점 셰이더는
          *          입력 어셈블러가 준 인스턴스 슬롯(간접 인자의 startInstance + 인스턴스 서수)으로
          *          `g_SwVisibleInstanceIDs[슬롯]` 을 읽는다(binding.hlsli InstanceData::resolveID). 이것이 없으면 컬링이
-         *          개수만 줄일 수 있어 **뒤쪽 인스턴스가 통째로 사라진다**(보이는 것을 고를 수 없기 때문이다).
-         *          목록은 절두체에 종속이므로 메인 카메라, 그림자 라이트, 추가 뷰가 **각자** 가진다(슬롯 0과 1은 항상 있다).
+         *          개수만 줄일 수 있어 뒤쪽 인스턴스가 통째로 사라진다(보이는 것을 고를 수 없기 때문이다).
+         *          목록은 절두체에 종속이므로 메인 카메라, 그림자 라이트, 추가 뷰가 각자 가진다(슬롯 0과 1은 항상 있다).
          */
         vector<GPUCullViewResources> _listCullView = vector<GPUCullViewResources>( static_cast<size_t>( kCullSlotsPerView ) );
         RHIStructuredBuffer          _batchInfo;

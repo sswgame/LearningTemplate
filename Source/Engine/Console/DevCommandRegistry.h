@@ -15,8 +15,8 @@
 #include "Core/Path/AbsolutePath.h"
 #include "Core/Registry/RegistrationList.h"
 #include "Core/String/StringUtil.h"
-#include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Subsystem/Subsystem.h"
+#include "Core/Subsystem/SubsystemSlot.h"
 
 #include "Engine/Foundation/SceneIterationKey.h"
 #include "Engine/Module/ModuleEntryRegistrar.h"
@@ -107,7 +107,7 @@ namespace sw
         mutable mutex                                                _mutex;                  ///< 등록 목록을 지킨다(명령 실행은 잠금 밖)
         RegistrationList<const DevCommandRegistration> _registration SW_GUARDED_BY( _mutex ); ///< 이름은 대소문자를 무시하고, 이름 없는 등록은 거절한다
 
-        SW_SERVICE_SLOT( DevCommandRegistry, Required );
+        SW_SUBSYSTEM_SLOT( DevCommandRegistry, Required );
     };
 } // namespace sw
 

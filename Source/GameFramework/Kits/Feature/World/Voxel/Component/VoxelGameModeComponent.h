@@ -7,7 +7,7 @@
  *          이 디렉터의 읽기 API 로만 한다 — 전용 서버는 그 모듈을 짓지 않는다.
  *
  *          틱 규칙은 다음과 같습니다. 디렉터의 걸음은 `TickGroup::PrePhysics` 뒤의 틱 뒤 작업에서 몸 둘레의 청크만 월드에 올립니다(멀어진 청크는 내린다 — 바뀐 청크만 저장본에 남는다).
- *          플레이어와 청크(`DuringPhysics`)는 월드를 **읽기만** 하고, 블록 바꾸기는 틱이 끝난 뒤 게임 스레드에서만 합니다(`applyBlockEdit`).
+ *          플레이어와 청크(`DuringPhysics`)는 월드를 읽기만 하고, 블록 바꾸기는 틱이 끝난 뒤 게임 스레드에서만 합니다(`applyBlockEdit`).
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -15,7 +15,8 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Foundation/GameObjectHandle.h"
@@ -41,7 +42,7 @@ namespace sw
      * @details 블록(부수거나 놓은 것 포함)은 PROPERTY 가 아니라 `writeState` 로 저장합니다.
      *          게임 상태 스냅샷의 컴포넌트 섹션에 실려서 핫 리로드와 세이브를 거쳐도 유지됩니다(게임 인스턴스의 `registerGameMode`).
      *
-     *          **자동 플레이는 AI 조종자가 폰에 빙의하는 방식입니다.** 자동 플레이 스위치(게임의 `SW_GAME_AUTOPLAY` 변수, 씬의 `_bAutoPlay`)가 바뀌면
+     *          자동 플레이는 AI 조종자가 폰에 빙의하는 방식입니다. 자동 플레이 스위치(게임의 `SW_GAME_AUTOPLAY` 변수, 씬의 `_bAutoPlay`)가 바뀌면
      *          틱이 끝난 뒤 플러시에서 플레이어 폰의 조종자를 바꿉니다.
      *          켜면 `VoxelAutoPlayControllerComponent`(스폰한 오브젝트)에게, 끄면 플레이어 0의 조종자(`ControlSystem::getOrCreatePlayerController`)에게 넘깁니다.
      */
@@ -77,7 +78,7 @@ namespace sw
         [[nodiscard]] bool startGame() override;
         void               onStateRestored( bool bRestored ) override;
         void               onGameStarted() override;
-        void               updateGame( float32 deltaTime ) override;
+        void               updateGame( GameSeconds frameTime ) override;
         void               onFlush( GameObjectManager& manager, bool bRespawnViews ) override;
         void               onViewsDespawned() override;
         /** @brief 자동 플레이 스위치와 플레이어 폰의 조종자가 맞지 않으면 true 입니다. 이 값을 보고 베이스가 틱 끝에 플러시를 예약합니다. */

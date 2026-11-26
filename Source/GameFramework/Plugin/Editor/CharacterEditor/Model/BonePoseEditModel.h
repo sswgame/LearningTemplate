@@ -1,7 +1,7 @@
 /**
  * @file BonePoseEditModel.h
  * @brief 스켈레톤(`.skeleton.xml`)을 읽어 본 목록 · 본 트리를 주고, 레퍼런스 포즈 덮어쓰기(`*.refpose.xml`)를 편집하는 모델입니다. ImGui 와 씬을 모릅니다.
- * @details 스켈레톤은 재임포트가 다시 쓰는 산출물이라 **읽기만** 한다. 편집은 `ReferencePoseOverride` 에만 쌓고 파일로 쓴다(적은 필드만 쓴다 — 위치만 고치면 회전 · 스케일은 임포트 값).
+ * @details 스켈레톤은 재임포트가 다시 쓰는 산출물이라 읽기만 한다. 편집은 `ReferencePoseOverride` 에만 쌓고 파일로 쓴다(적은 필드만 쓴다 — 위치만 고치면 회전 · 스케일은 임포트 값).
  *          본의 "지금 값"(`getEffectiveTransform`)은 스켈레톤의 레퍼런스 포즈 위에 덮어쓰기를 얹은 결과이다. 좌우 짝은 이름 규칙(`MirrorNameRules`)으로 찾아 쌍으로 등록한다.
  */
 #pragma once
@@ -10,8 +10,8 @@
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
-#include "Core/Name/hashed_string.h"
 #include "Core/Path/AbsolutePath.h"
+#include "Core/String/Name/hashed_string.h"
 
 #include "Editor/Common/Workspace/Undo/EditorDocumentState.h"
 
@@ -23,6 +23,8 @@
 
 namespace sw::editor
 {
+    class AssetWriter;
+
     /**
      * @class BonePoseEditModel
      * @brief 스켈레톤 하나(읽기 전용)와 레퍼런스 포즈 덮어쓰기 하나(편집 대상), 그 편집 기록입니다.
@@ -74,12 +76,12 @@ namespace sw::editor
 
         /** @brief XML 에서 읽어 덮어쓰기를 바꿉니다. 실패하면 그대로 두고 false 입니다. 성공하면 기록을 지우고 "저장된 상태" 로 맞춥니다. */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName );
-        [[nodiscard]] bool loadFromFile( const AbsolutePath& absolutePath );
+        [[nodiscard]] bool loadFromFile( const DiskPath& absolutePath );
         /** @brief 덮어쓰기를 비웁니다. 기록을 지우고 "저장된 상태" 로 맞춥니다. */
         void   clear();
         string saveToXMLText() const { return _override.saveToXMLText(); }
         /** @brief 파일에 씁니다. 성공하면 "저장된 상태" 로 맞춥니다. */
-        [[nodiscard]] bool saveDocument( const AbsolutePath& absPath );
+        [[nodiscard]] bool saveDocument( AssetWriter& writer, const DiskPath& path );
         bool               isDirty() const { return _state.isDirty( _override.saveToXMLText() ); }
         /** @brief 편집을 버리고 마지막으로 읽거나 저장한 상태로 돌아갑니다(창의 "Don't Save"). 기록을 지웁니다. 그 글을 다시 읽지 못하면 그대로 두고 false 입니다. */
         [[nodiscard]] bool revertToSaved() { return loadFromXMLText( string( _state.getSaved() ), "(saved reference pose state)" ); }
@@ -94,6 +96,10 @@ namespace sw::editor
         [[nodiscard]] expected<BoneTransform> findCurrent( const hashed_string& bone ) const;
         /** @brief 편집 직전에 부릅니다. @p fieldName 이 있으면 같은 본 · 필드의 연속 편집을 한 단계로 합칩니다. */
         void recordUndo( const hashed_string& bone, string_view fieldName );
+
+    private:
+        using CaptureDelegate = EditorDocumentState<ReferencePoseOverride>::CaptureDelegate;
+        using ApplyDelegate   = EditorDocumentState<ReferencePoseOverride>::ApplyDelegate;
 
     private:
         Skeleton                                   _skeleton;

@@ -17,7 +17,7 @@
 
 #include "Editor/Common/Asset/AssetSourceLocator.h"
 #include "Editor/Common/Asset/EditorContentScan.h"
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 
 #include "Engine/Asset/Reference/AssetReferenceFields.h"
 #include "Engine/Content/AssetPaths.h"
@@ -128,9 +128,9 @@ extern "C" SW_MODULE_API int32 validateEditorAssetReferences( const sw::ISubsyst
 {
     // 인스턴스가 없는 헤드리스 호출이라 서비스 범위를 이 호출 동안만 묶는다(`importEditorAssets` 와 같은 길).
     if ( pService != nullptr )
-        sw::editor::bindEditorService( *pService );
+        sw::editor::bindEditorSubsystems( *pService );
     const int32 result = sw::editor::AssetReferenceCheckEntryInternal::validateAssetReferences();
     if ( pService != nullptr )
-        sw::editor::unbindEditorService();
+        sw::editor::unbindEditorSubsystems();
     return result;
 }

@@ -9,7 +9,7 @@
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Content/AssetIO.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
@@ -64,9 +64,9 @@ namespace sw
     {
         SceneComponent::onPostLoad();
         // 배치는 게임 스레드에서만 짓는다(머티리얼 캐시 · 프리미티브 레지스트리) — 비동기 씬 로드는 이 함수를 워커에서 부른다(폴리지와 같은 규칙).
-        const TaskManager* pTaskManager = engine::findSubsystem<TaskManager>(); // 선택: 작업 시스템 없는 호스트(테스트)는 한 스레드다
-        GameObject*        pOwner       = getOwner();
-        GameObjectManager* pManager     = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
+        const TaskManager*       pTaskManager = engine::findSubsystem<TaskManager>(); // 선택: 작업 시스템 없는 호스트(테스트)는 한 스레드다
+        GameObject*              pOwner       = getOwner();
+        const GameObjectManager* pManager     = pOwner != nullptr ? pOwner->getManager() : nullptr;
         if ( pTaskManager != nullptr && pTaskManager->isMainThread() == false && pManager != nullptr )
         {
             pManager->deferPostTickOnComponent( *this, []( InstancedMeshComponent& self )
@@ -144,7 +144,7 @@ namespace sw
             _pPrimitiveRegistry->removeInstanceBatches( vector_reference<PrimitiveBatch* const>( arrBatch, 1 ) );
         }
         _pBatch.reset();
-        if ( _acquiredMaterialPath.empty() == false && engine::areEngineServicesBound() )
+        if ( _acquiredMaterialPath.empty() == false && engine::areEngineSubsystemsBound() )
             engine::getSubsystem<AssetManager>().getAssetCache<MaterialCache>().release( _acquiredMaterialPath.view() );
         _acquiredMaterialPath = hashed_string{};
         _pMaterial            = nullptr;
@@ -153,7 +153,7 @@ namespace sw
     void InstancedMeshComponent::rebuildBatch()
     {
         releaseBatch();
-        if ( _pPrimitiveRegistry == nullptr || _listInstance.empty() || engine::areEngineServicesBound() == false )
+        if ( _pPrimitiveRegistry == nullptr || _listInstance.empty() || engine::areEngineSubsystemsBound() == false )
             return;
         // 메시는 워커가 읽는다 — 다 올 때까지 배치 없이 두고 씬 프레임의 도착 단계가 다시 짓는다(언리얼 ISM 도 메시가 스트리밍되기 전에는 그리지 않는다).
         shared_ptr<Mesh>  mesh;

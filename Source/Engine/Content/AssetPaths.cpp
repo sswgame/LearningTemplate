@@ -15,11 +15,11 @@
 #include "Core/String/StringUtil.h"
 #include "Core/Task/TaskManager.h"
 
+#include "Engine/Config/ConfigOverride.h"
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/GameConfig.h"
-#include "Engine/Config/PlatformConfigOverride.h"
 #include "Engine/Content/AssetTypeRegistry.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
 #include "sw/config/CookContract.gen.h"
@@ -29,7 +29,7 @@ namespace sw
     namespace
     {
         /**
-         * @brief 경로 표 하나(프로젝트 · 리소스 루트, 검색 우선순위 · 검색 루트, 호스트가 읽지 않는 에셋 묶음)입니다. **만든 뒤 바꾸지 않는다.**
+         * @brief 경로 표 하나(프로젝트 · 리소스 루트, 검색 우선순위 · 검색 루트, 호스트가 읽지 않는 에셋 묶음)입니다. 만든 뒤 바꾸지 않는다.
          * @details 읽는 쪽(로더 · 디코드 워커 · 게임 스레드)은 지금 표를 원자 포인터로 한 번 잡아 잠금 없이 읽는다 — 쓰는 쪽이 칸을 제자리에서 고치던 때는 읽는 쪽이
          *          반쯤 고친 벡터를 볼 수 있었다. 쓰기는 사본을 고쳐 새 표로 갈아 끼운다(`AssetPathsInternal::publishTable`).
          */
@@ -54,7 +54,7 @@ namespace sw
         };
 
         /**
-         * @brief 해석을 시작한 때의 세대입니다. **저장은 이 값을 들고서만 할 수 있습니다**(`storeResolved`) — 해석하는 동안 검색 목록이 바뀌었으면(`clearPathCache`) 옛 목록으로 푼
+         * @brief 해석을 시작한 때의 세대입니다. 저장은 이 값을 들고서만 할 수 있습니다(`storeResolved`) — 해석하는 동안 검색 목록이 바뀌었으면(`clearPathCache`) 옛 목록으로 푼
          *        결과를 새 캐시에 넣지 않는다. 찾기 전에 한 번 잡고(`captureStamp`) 찾은 뒤 저장에 넘긴다.
          */
         struct PathCacheStamp
@@ -110,7 +110,7 @@ namespace sw
         atomic<const AssetPathTable*>                          _pCurrentTable{ &_initialTable };
         mutex                                                  _publishMutex{};
         vector<unique_ptr<AssetPathTable>> _listPublishedTable SW_GUARDED_BY( _publishMutex ){};
-        bool                                                   _bInitialized{ SW_FALSE }; ///< `initialize()` 가 **성공했는지**(소유자가 직렬 구간에서만 쓴다)
+        bool                                                   _bInitialized{ SW_FALSE }; ///< `initialize()` 가 성공했는지(소유자가 직렬 구간에서만 쓴다)
 
         // --- 붙인 디스크 도메인 ---
         mutex                                     _diskDomainMutex{};
@@ -533,7 +533,7 @@ namespace sw
         FileUtil::setCreateRule( &AssetPaths::validateLowercaseResourceName );
         // 리소스 트리의 읽기 전용 파일은 체크아웃하지 않은 파일이다 — 지우기 · 옮기기 · 덮는 복사가 모두 Core 입구에서 거절된다(임포트 정리 · 옮기기 · 삭제가 따로 묻지 않는다).
         (void)FileUtil::setCheckoutRule( &AssetPaths::isUnderSourceControl );
-        // `_bInitialized` 는 "시작했다" 가 아니라 **"성공했다"** 를 뜻한다 — 루트를 못 찾아 false 로 나가면 다음 호출이 다시 찾는다.
+        // `_bInitialized` 는 "시작했다" 가 아니라 "성공했다" 를 뜻한다 — 루트를 못 찾아 false 로 나가면 다음 호출이 다시 찾는다.
         // 예전에는 프로세스 정적이라 `call_once` 로 막았다. 이제 부르는 쪽은 이 객체의 소유자 하나(기동의 직렬 구간)라 겹치지 않는다.
         if ( _pState->_bInitialized )
             return true;
@@ -576,7 +576,7 @@ namespace sw
         return _pState->_bInitialized;
     }
 
-    optional<AbsolutePath> AssetPaths::findLooseFile( string_view resourceID ) const
+    optional<DiskPath> AssetPaths::findLooseFile( string_view resourceID ) const
     {
         // 리소스 id 만 받는다 - 디스크 경로를 받아 있으면 그대로 돌려주던 길은 "id 인가 디스크 경로인가" 를 추측하게 했다(디스크 경로는 `AbsolutePath::tryMake`).
         // 루트 밖으로 나가는 id 는 풀지 않는다(`readResourceCommon` 과 같은 규칙).
@@ -596,7 +596,7 @@ namespace sw
                 AssetPathsInternal::getPathStats().recordHit();
                 if ( cached.empty() )
                     AssetPathsInternal::getMissingStats().recordHit();
-                return cached.empty() ? nullopt : optional<AbsolutePath>{ std::move( cached ) };
+                return cached.empty() ? nullopt : optional<DiskPath>{ std::move( cached ) };
             }
         }
         AssetPathsInternal::getPathStats().recordMiss();
@@ -643,10 +643,10 @@ namespace sw
             AssetPathsInternal::getMissingStats().recordMiss();
         // 없음도 저장한다(음성 결과) — 같은 없는 파일을 묻는 호출(선택적 파일 · 팩에만 있는 에셋)이 매번 모든 검색 루트를 훑지 않게.
         AssetPathsInternal::storeResolved( state, std::move( cacheKey ), found, stamp );
-        return found.empty() ? nullopt : optional<AbsolutePath>{ std::move( found ) };
+        return found.empty() ? nullopt : optional<DiskPath>{ std::move( found ) };
     }
 
-    void AssetPaths::collectLooseFolders( string_view folderID, vector<AbsolutePath>& outListFolder ) const
+    void AssetPaths::collectLooseFolders( string_view folderID, vector<DiskPath>& outListFolder ) const
     {
         outListFolder.clear();
         if ( folderID.empty() || FileUtil::isAbsolutePath( folderID ) || hasParentDirectoryComponent( folderID ) )
@@ -656,7 +656,7 @@ namespace sw
         if ( AssetPathsInternal::mapGlobalIDToRoot( state, lowerFolder ).has_value() )
         {
             // 도메인이 정해진 id 는 폴더가 하나다 — 대소문자 처리까지 하는 `findLooseFile` 로 푼다.
-            const optional<AbsolutePath> found = findLooseFile( folderID );
+            const optional<DiskPath> found = findLooseFile( folderID );
             if ( found.has_value() && FileUtil::isDirectory( *found ) )
                 outListFolder.push_back( *found );
             return;
@@ -673,11 +673,11 @@ namespace sw
         }
     }
 
-    string AssetPaths::toAssetID( const AbsolutePath& diskPath ) const
+    string AssetPaths::toAssetID( const DiskPath& diskPath ) const
     {
         if ( diskPath.empty() )
             return {};
-        const optional<AbsolutePath> collapsed = AbsolutePath::tryResolve( diskPath.str(), diskPath ); // `..` 를 접는다 — 접지 않은 글은 루트 밖을 안으로 본다
+        const optional<AbsolutePath> collapsed = AbsolutePath::tryResolve( diskPath.str(), AbsolutePath{} ); // `..` 를 접는다 — 접지 않은 글은 루트 밖을 안으로 본다
         if ( collapsed.has_value() == false )
             return {};
         const AbsolutePath& absolutePath = *collapsed;
@@ -719,7 +719,7 @@ namespace sw
         return id;
     }
 
-    optional<AbsolutePath> AssetPaths::toDiskPath( string_view resourceID ) const
+    optional<DiskPath> AssetPaths::toDiskPath( string_view resourceID ) const
     {
         const string id = normalizeAssetID( resourceID );
         if ( id.empty() )
@@ -728,7 +728,7 @@ namespace sw
             return nullopt;
         }
         // 이미 있는 파일이면 그 디스크 경로가 답이다(덮어쓸 자리). 상대 키는 읽기가 검색 순서로 고른 그 파일이다.
-        optional<AbsolutePath> existing = findLooseFile( id );
+        optional<DiskPath> existing = findLooseFile( id );
         if ( existing.has_value() )
             return existing;
         const optional<DomainLocation> location = AssetPathsInternal::mapGlobalIDToRoot( *_pState, id );

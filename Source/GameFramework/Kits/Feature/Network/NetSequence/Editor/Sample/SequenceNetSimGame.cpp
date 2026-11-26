@@ -11,6 +11,7 @@
 #include "Engine/Sequencer/SequencePlayerComponent.h"
 
 #include "GameFramework/Kits/Feature/Network/NetSequence/SequenceNetSessionComponent.h"
+#include "GameFramework/Kits/Feature/Network/NetSimulation/NetSimGameRegistry.h"
 #include "GameFramework/Runtime/Character/Camera/SequenceTriggerComponent.h"
 #include "GameFramework/Runtime/Character/Control/Controller/PlayerControllerComponent.h"
 #include "GameFramework/Runtime/Character/Control/Controller/PlayerStateComponent.h"
@@ -273,3 +274,12 @@ namespace sw
         return pController != nullptr ? pController->getComponent<PlayerStateComponent>() : nullptr;
     }
 } // namespace sw
+
+namespace sw::editor
+{
+    namespace
+    {
+        /** @brief 이 확장 모듈이 로드된 동안 본보기 게임을 한 프로세스 재생의 게임 목록에 등록합니다. 실제 게임은 자기 모듈에서 같은 줄로 등록한다. */
+        const NetSimGameRegistrar s_sequenceNetSimRegistrar{ SequenceNetSimGame::kName, &SequenceNetSimGame::create };
+    } // namespace
+} // namespace sw::editor

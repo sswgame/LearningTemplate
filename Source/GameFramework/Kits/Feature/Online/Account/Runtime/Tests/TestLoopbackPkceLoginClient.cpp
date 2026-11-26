@@ -5,9 +5,9 @@
 
 #include "Core/Encoding/Base64Util.h"
 #include "Core/Network/Security/Tests/FakeNetSecurityProvider.h"
-#include "Core/Network/Transport/LoopbackStreamTransport.h"
+#include "Core/Network/Tests/LoopbackStreamTransport.h"
 #include "Core/Network/Transport/StreamTypes.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 #include "Core/Time/Clock.h"
 
 #include "GameFramework/Kits/Feature/Online/Account/Runtime/LoopbackPkceLoginClient.h"
@@ -176,7 +176,7 @@ SW_TEST_CASE( LoopbackPkceLoginClientTest, ExchangesTheCodeWithTheVerifier )
     rig.redirect( query.c_str() );
 
     SW_REQUIRE_EQUAL( size_t( 1 ), rig._listRedirectResponse.size() );
-    SW_EXPECT_EQUAL( HTTPConstant::kStatusOk, rig._listRedirectResponse[0]._statusCode ); // 브라우저에 "끝났다" 쪽이 뜬다
+    SW_EXPECT_EQUAL( HTTPConstant::kStatusOk, rig._listRedirectResponse[0].getStatusCode() ); // 브라우저에 "끝났다" 쪽이 뜬다
     SW_REQUIRE_EQUAL( size_t( 1 ), rig._listTokenRequest.size() );
     const HTTPServerRequest& token = rig._listTokenRequest[0];
     SW_EXPECT_TRUE( token._method == HTTPMethod::Post );
@@ -230,7 +230,7 @@ SW_TEST_CASE( LoopbackPkceLoginClientTest, CraftedStateIsIgnoredAndDenialCancels
     (void)rig._login.beginLogin( "google", MonotonicMilliseconds{ kNowMs } );
     rig.redirect( "code=STOLEN&state=forged" );
     SW_REQUIRE_EQUAL( size_t( 1 ), rig._listRedirectResponse.size() );
-    SW_EXPECT_EQUAL( 400, rig._listRedirectResponse[0]._statusCode );
+    SW_EXPECT_EQUAL( 400, rig._listRedirectResponse[0].getStatusCode() );
     SW_EXPECT_TRUE( rig._listTokenRequest.empty() );
     SW_EXPECT_TRUE( rig.takeResults().empty() );
 
@@ -241,7 +241,7 @@ SW_TEST_CASE( LoopbackPkceLoginClientTest, CraftedStateIsIgnoredAndDenialCancels
     (void)rig._redirectSender.submitRequest( other );
     rig.poll();
     SW_REQUIRE_EQUAL( size_t( 2 ), rig._listRedirectResponse.size() );
-    SW_EXPECT_EQUAL( HTTPConstant::kStatusNotFound, rig._listRedirectResponse[1]._statusCode );
+    SW_EXPECT_EQUAL( HTTPConstant::kStatusNotFound, rig._listRedirectResponse[1].getStatusCode() );
 
     SW_EXPECT_LOG( "LoopbackPkceLoginClient.ExternalSignDidNot" );
     fixed_string<constant::buffer::kMax256> query;

@@ -12,7 +12,7 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Localization/LocalizationDocuments.h"
@@ -144,7 +144,7 @@ namespace sw::test
         template <typename TTable>
         static void save( const TTable& table, const AbsolutePath& path )
         {
-            const bool bSaved = FileUtil::ensureParentDirectoryExists( path ) && table.saveToFile( path );
+            const bool bSaved = table.saveToFile( path );
             if ( bSaved == false )
             {
                 fixed_string<constant::buffer::kMax512> message;

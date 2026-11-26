@@ -2,10 +2,10 @@
  * @file RespawnRemoteTarget.h
  * @brief 부활 고르기의 원격 호출 대상입니다. 클라이언트는 정책 종류와 지점 id 해시만 보내고, 서버의 `RespawnFlow` 가 서버 상태 · 서버 세계로 판정합니다.
  * @details 반사 함수 호출(`GF_NetClientServer` 의 `RemoteCall` — 언리얼 `UFUNCTION( Server, Reliable, WithValidation )`)에 대상으로 등록한다(기억에 의존).
- *          - **신뢰 경계**: 자리 · 비용 · 잔액 · 횟수는 받지 않는다. 제자리 부활 자리는 서버가 아는 죽은 자리에서 서버의 세계 질의로, 비용은 서버 지갑으로 정한다.
- *          - **검증 짝**(`validateRequestRespawn`): 열거 밖 정책 값은 정상 클라이언트가 보낼 수 없는 조작이라 거짓 — 호출 층이 연결을 끊는다.
+ *          - 신뢰 경계: 자리 · 비용 · 잔액 · 횟수는 받지 않는다. 제자리 부활 자리는 서버가 아는 죽은 자리에서 서버의 세계 질의로, 비용은 서버 지갑으로 정한다.
+ *          - 검증 짝(`validateRequestRespawn`): 열거 밖 정책 값은 정상 클라이언트가 보낼 수 없는 조작이라 거짓 — 호출 층이 연결을 끊는다.
  *            게임 규칙의 거절(살아 있음 · 고르기 단계 아님 · 허용 안 된 정책 · 모르는 지점 · 돈 부족 · 횟수 끝 · 안전 지점 없음)은 결과 값(`RespawnRequestResult`)으로 돌려준다.
- *          - **호출률**: 함수 상한 `MaxCallsPerSecond` 를 넘은 호출은 몸을 부르지 않는다(호출 층의 토큰 버킷).
+ *          - 호출률: 함수 상한 `MaxCallsPerSecond` 를 넘은 호출은 몸을 부르지 않는다(호출 층의 토큰 버킷).
  *          수명: 서버의 대상은 흐름 · 세계를 빌린다(`_pFlow` · `_context`) — 게임이 걸음마다 세계 칸을 갱신하고, 흐름보다 먼저 등록을 푼다.
  */
 #pragma once
@@ -30,7 +30,7 @@ namespace sw
         REFLECT_BODY();
 
         PROPERTY()
-        RespawnRequestResult _lastResult{ RespawnRequestResult::Accepted }; ///< 서버 — 마지막 판정, 클라이언트 — 마지막으로 받은 판정
+        RespawnRequestResult _lastResult{ RespawnRequestResult::Accepted }; ///< 서버는 마지막 판정, 클라이언트는 마지막으로 받은 판정
         PROPERTY()
         int32 _resultCount{ 0 };
 

@@ -1,7 +1,7 @@
 // MinigameRewardTest — 미니게임 결과 값 → 허브 캐릭터의 어빌리티 이펙트(`MinigameRewardComponent`): 표의 이펙트를 값의 수(SetByCaller Data.Amount)로 걸고, 표에 없는 이름 · 카탈로그에 없는 이펙트는 오류다.
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"

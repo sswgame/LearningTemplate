@@ -5,7 +5,7 @@
 #include "Core/Delegate/Subscription.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 #include "Core/Subsystem/SubsystemScope.h"
 
 #include "Engine/UI/Screen/UIGlobalCommandRegistry.h"
@@ -18,7 +18,7 @@
 #include "GameFramework/Runtime/Foundation/GameFeature/GameFeatureScope.h"
 #include "GameFramework/Runtime/Foundation/Minigame/MinigameDefinition.h"
 #include "GameFramework/Runtime/Foundation/Minigame/MinigameFlow.h"
-#include "GameFramework/Runtime/Foundation/Service/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 
 namespace sw
 {
@@ -76,7 +76,7 @@ namespace sw
             }
         };
 
-        GameInstanceClient                          s_gameInstanceClient;
-        const IGameInstanceClientHook::Registration s_gameInstanceClientRegistration{ s_gameInstanceClient };
+        GameInstanceClient                       s_gameInstanceClient;
+        const IGameInstanceClientHook::Registrar s_gameInstanceClientRegistrar{ s_gameInstanceClient };
     } // namespace
 } // namespace sw

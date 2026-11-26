@@ -22,7 +22,7 @@ from pathlib import Path
 from common.command import Command, ScriptContext
 from common.exit_code import ExitCode
 from common.git import run_git
-from dev.rename_scope import CPP_SUFFIX, C_LIKE_SUFFIX, list_tracked_text, read_text, rewrite_unmarked_lines, write_text
+from dev.rename_scope import CPP_SUFFIX, C_LIKE_SUFFIX, TEXT_SUFFIX, list_tracked_text, read_text, rewrite_unmarked_lines, write_text
 
 BARE_INCLUDE = re.compile(r'^(\s*#\s*include\s*")([^"/]+)(")', re.M)
 
@@ -98,7 +98,7 @@ def list_renamed_file_stem(source: Path, map_file: dict[str, str]) -> list[tuple
 
 def make_path_rule(map_file: dict[str, str], list_folder_prefix: list[tuple[str, str]], root_base: bool = False,
                    list_stem: list[tuple[str, str]] = ()) -> tuple[re.Pattern[str], object]:
-    """파일 경로 · 폴더 접두어를 **한 번 훑기** 규칙 하나로 묶는다(긴 것 먼저).
+    """파일 경로 · 폴더 접두어를 한 번 훑기 규칙 하나로 묶는다(긴 것 먼저).
     차례로 적용하면 앞 규칙이 바꾼 글을 뒤 규칙이 다시 바꿨다 — 폴더를 자기 아래로 옮기면(`A=A/Server`) 파일 규칙이 만든 `A/Server/X.h` 를
     폴더 규칙 `A/` 가 다시 `A/Server/Server/X.h` 로 바꿨다. 정규식 하나의 sub 는 바꾼 자리를 다시 보지 않는다.
     전체 경로는 낱말 경계로 — `Engine/A/B.h` 가 `MyEngine/A/B.h` 안에서 바뀌지 않게(`Source/Engine/A/B.h` 처럼 앞에 `/` 가 오는 것은 바꾼다)."""
@@ -123,6 +123,17 @@ def make_path_rule(map_file: dict[str, str], list_folder_prefix: list[tuple[str,
     root_guard = r"(?<![\w.-]/)" if root_base else ""
     pattern = re.compile(r"(?<![\w.-])" + root_guard + "(?:" + "|".join(part for _, part in list_alternative) + ")")
     return pattern, lambda match: map_new[match.group(0)]
+
+
+def make_file_tag_rules(map_file: dict[str, str]) -> list[tuple[re.Pattern[str], object]]:
+    """`@file` 은 최상위 폴더 없이 적은 곳도 있다(`@file Utility/X.h`). 폴더가 하나 남는 것만 받는다 — 최상위 폴더를 옮기면(`IntegrationTests/CMakeLists.txt`)
+    남는 것이 파일 이름뿐이라 다른 폴더의 같은 이름(뿌리의 `@file CMakeLists.txt`)까지 바꿨다."""
+    list_rule = []
+    for old, new in map_file.items():
+        short_old = old.partition("/")[2]
+        if "/" in short_old:
+            list_rule.append((re.compile(r"(@file\s+)" + re.escape(short_old) + r"\b"), lambda match, new=new: match.group(1) + new))
+    return list_rule
 
 
 class MoveSourceCommand(Command):
@@ -185,10 +196,11 @@ class MoveSourceCommand(Command):
                 folder = folder.parent
 
         list_rule = [make_path_rule(map_file, list_folder_prefix, root_base=base_prefix == "", list_stem=list_stem)]
-        # `@file` 은 최상위 폴더 없이 적은 곳도 있다(`@file Utility/X.h`).
-        list_rule += [(re.compile(r"(@file\s+)" + re.escape(old.partition("/")[2]) + r"\b"), lambda match, new=new: match.group(1) + new) for old, new in map_file.items() if "/" in old]
+        list_rule += make_file_tag_rules(map_file)
         changed_cpp_set = {source / new for new in map_moved_text} | set(list_neighbour_text)
-        for path in list_tracked_text(root):
+        # 옮긴 파일은 새 자리로 훑는다 — 훑는 뿌리 자체를 옮기면(`Test` → `IntegrationTests`) 뿌리 목록에 새 이름이 없어 그 안의 참조가 그대로 남았다.
+        list_moved_text = [source / new for new in map_file.values() if Path(new).suffix.lower() in TEXT_SUFFIX]
+        for path in sorted(set(list_tracked_text(root)) | set(list_moved_text)):
             text = read_text(path)
             def rewrite_paths(part: str) -> str:
                 for pattern, replacement in list_rule:

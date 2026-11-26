@@ -6,7 +6,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Task/TaskManager.h"
 
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 
 namespace sw
 {
@@ -25,7 +25,7 @@ namespace sw
          */
         inline void runParallel( uint32 count, uint32 serialThreshold, const ParallelBlockDelegate& body )
         {
-            if ( areEngineServicesBound() )
+            if ( areEngineSubsystemsBound() )
             {
                 getSubsystem<TaskManager>().runParallel( count, serialThreshold, body );
                 return;
@@ -35,13 +35,13 @@ namespace sw
         }
 
         /**
-         * @brief `runParallel` 과 같되 나눌지를 **측정한 비용**으로 정합니다 — 항목당 비용을 모를 때(대부분의 시스템) 이쪽을 쓰십시오.
+         * @brief `runParallel` 과 같되 나눌지를 측정한 비용으로 정합니다 — 항목당 비용을 모를 때(대부분의 시스템) 이쪽을 쓰십시오.
          * @details 앞 항목을 호출 스레드가 직접 돌며 비용을 재고, 남은 일의 예상 직렬 시간이 디스패치 손익분기(16 us — `kSerialBudgetNanos`)보다 짧으면 이어서 직렬로 돕니다.
          *          무거운 항목은 첫 항목에서 바로 나뉩니다. 자세한 규칙은 `TaskManager::runParallelByCost`. 서비스가 연결되지 않은 곳에서는 현재 스레드가 한 번에 돕니다.
          */
         inline void runParallelByCost( uint32 count, const ParallelBlockDelegate& body )
         {
-            if ( areEngineServicesBound() )
+            if ( areEngineSubsystemsBound() )
             {
                 getSubsystem<TaskManager>().runParallelByCost( count, body );
                 return;
@@ -123,7 +123,7 @@ namespace sw
          */
         inline uint32 getParallelScratchSlotCount()
         {
-            return areEngineServicesBound() ? getSubsystem<TaskManager>().getScratchSlotCount() : 1;
+            return areEngineSubsystemsBound() ? getSubsystem<TaskManager>().getScratchSlotCount() : 1;
         }
 
         /**
@@ -133,13 +133,13 @@ namespace sw
          */
         inline bool isOnPoolWorker()
         {
-            return areEngineServicesBound() && getSubsystem<TaskManager>().isWorkerThread();
+            return areEngineSubsystemsBound() && getSubsystem<TaskManager>().isWorkerThread();
         }
 
         /** @brief 지금 스레드의 스크래치 슬롯입니다. 워커면 그 번호, 아니면 그 스레드가 처음 물을 때 받은 고유한 도우미 칸입니다. */
         inline uint32 getParallelScratchSlot()
         {
-            if ( areEngineServicesBound() == false )
+            if ( areEngineSubsystemsBound() == false )
                 return 0;
             return getSubsystem<TaskManager>().getCurrentThreadScratchSlot();
         }

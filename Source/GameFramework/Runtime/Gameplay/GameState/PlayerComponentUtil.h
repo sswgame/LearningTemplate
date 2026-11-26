@@ -21,9 +21,9 @@ namespace sw
     /**
      * @struct PlayerComponentUtil
      * @brief 플레이어 상태 컴포넌트 찾기 · 열기입니다. 컴포넌트마다 같은 찾기를 되풀이하지 않게 형식 인자로 받는다.
-     * @details - **디렉터**: `GameModeComponent::requirePlayerState` 의 오브젝트에서 `requireOn` · `openOn`(`startGame`), 뒤에는 `findOnPlayerState`.
-     *          - **폰**: `PawnComponent::findControllerObject`(폰 → 쥔 조종자 → 그 오브젝트)의 결과에서 `getComponent<T>` — 형제 `PlayerStateComponent` 와 같은 길.
-     *          - **씬 하나를 읽는 도구**(감시 값 · 치트 · 디버그 HUD · 퀘스트 목표 표시): `findOpen` — 열린 것이 둘 이상이면 오류로 멈춘다(어느 플레이어인지 등록 순서로 고르지 않는다).
+     * @details - 디렉터: `GameModeComponent::requirePlayerState` 의 오브젝트에서 `requireOn` · `openOn`(`startGame`), 뒤에는 `findOnPlayerState`.
+     *          - 폰: `PawnComponent::findControllerObject`(폰 → 쥔 조종자 → 그 오브젝트)의 결과에서 `getComponent<T>` — 형제 `PlayerStateComponent` 와 같은 길.
+     *          - 씬 하나를 읽는 도구(감시 값 · 치트 · 디버그 HUD · 퀘스트 목표 표시): `findOpen` — 열린 것이 둘 이상이면 오류로 멈춘다(어느 플레이어인지 등록 순서로 고르지 않는다).
      *            컴포넌트는 `onRegister` 에서 레지스트리에 올라 있어야 한다.
      */
     struct SW_GF_API PlayerComponentUtil

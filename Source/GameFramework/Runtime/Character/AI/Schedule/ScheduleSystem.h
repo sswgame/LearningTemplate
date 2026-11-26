@@ -5,7 +5,7 @@
  *          축제가 일정을 덮고, NPC 사이의 약속을 판정하고, 화면 밖 NPC 는 지역 단위의 굵은 시간표(LOD)로 돌린다.
  *          잠으로 시간을 건너뛰고, 저장과 복원, 네트워크 요약, "왜 여기 있나" 추적도 지원한다.
  *
- *          **계획은 (그날, 계획을 세운 시각, 그때의 위치)의 함수이다.**
+ *          계획은 (그날, 계획을 세운 시각, 그때의 위치)의 함수이다.
  *          하루가 시작될 때, 조건(날씨, 플래그, 태그)이 바뀔 때, 끼어들기가 끝날 때, 약속이 깨질 때만 계획을 다시 세운다.
  *          어느 시각의 상태(어느 블록인지, 가는 중인지, 경로 위 비율)는 그 계획에서 바로 계산한다.
  *          그래서 화면 밖 NPC 는 매 프레임 아무 일도 하지 않고, 몇 시간을 한 번에 건너뛰어도 매 분 돌린 것과 같은 위치에 선다.
@@ -23,7 +23,7 @@
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 
 #include "Engine/Behavior/GameplayContext.h"
 #include "Engine/Object/Component/TagSystem.h"
@@ -224,7 +224,7 @@ namespace sw
      * @brief 카탈로그의 NPC 모두의 하루 일정을 돌립니다.
      * @code
      *     ScheduleSystem schedules;
-     *     if ( schedules.initialize( &catalog, settings, clock.getDay() * kScheduleMinutesPerDay + clockMinute ) == false )
+     *     if ( schedules.initialize( catalog, settings, clock.getDay() * kScheduleMinutesPerDay + clockMinute ) == false )
      *         return false; // 범위 밖 설정은 오류로 남았다
      *     schedules.setPathing( &areaPathing, &navPathing );           // 굵은 계획 경로 · 화면 안 고운 경로
      *     schedules.setFlags( &flags );
@@ -247,7 +247,7 @@ namespace sw
          * @brief 카탈로그의 NPC 를 모두 집에 두고 @p absoluteMinute(0 일 0:00 부터 센 분)의 계획을 세웁니다.
          * @return 설정이 선언된 범위 밖이거나 @p absoluteMinute 가 음수이면 오류를 남기고 false 입니다. 시스템은 그대로입니다.
          */
-        [[nodiscard]] bool initialize( const ScheduleCatalog* pCatalog, const ScheduleSystemSettings& settings, int32 absoluteMinute );
+        [[nodiscard]] bool initialize( const ScheduleCatalog& catalog, const ScheduleSystemSettings& settings, int32 absoluteMinute );
         void               shutdown();
 
         /** @brief 시계의 지금까지 시간을 흘립니다. */

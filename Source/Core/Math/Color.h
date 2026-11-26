@@ -2,8 +2,8 @@
  * @file Color.h
  * @brief RGBA 색 값 타입 `Color` 입니다 — 부동소수점(0~1) 4채널과 8비트 패킹(`toRGBA` · `toArgb` · `toAbgr`) · 16진 글자 · sRGB 변환을 한곳에 둡니다.
  * @details 엔진 · 에디터 · UI · 디버그 그리기가 `float4` 필드와 손으로 만든 `uint32` 패킹을 따로 들고 있던 것을 대신합니다.
- *          **저장 값은 입력 그대로입니다**(감마 · 선형 가정을 하지 않는다) — 이 값이 sRGB 인지 선형인지는 쓰는 쪽이 알고, `toLinear` · `toSRGB` 로 바꿉니다.
- *          패킹 이름은 **가장 높은 바이트부터** 채널 순서로 읽습니다: `toRGBA` 는 `0xRRGGBBAA`, `toArgb` 는 `0xAARRGGBB`, `toAbgr` 는 `0xAABBGGRR` 입니다.
+ *          저장 값은 입력 그대로입니다(감마 · 선형 가정을 하지 않는다) — 이 값이 sRGB 인지 선형인지는 쓰는 쪽이 알고, `toLinear` · `toSRGB` 로 바꿉니다.
+ *          패킹 이름은 가장 높은 바이트부터 채널 순서로 읽습니다: `toRGBA` 는 `0xRRGGBBAA`, `toArgb` 는 `0xAARRGGBB`, `toAbgr` 는 `0xAABBGGRR` 입니다.
  *          `toAbgr` 는 리틀엔디안 메모리에서 바이트가 R, G, B, A 순으로 놓이는 값이라 `DXGI_FORMAT_R8G8B8A8_UNORM` 텍스처 · ImGui `IM_COL32` 와 같습니다.
  *          언리얼은 선형 float(`FLinearColor`)과 sRGB 8 비트(`FColor`)를 형식으로 가른다. 여기서는 `Color` 를 쓰는 곳이 에디터 UI(테마 토큰 · ImGui — 모두 sRGB 값)뿐이고
  *          엔진의 선형 색은 리플렉션 · 셰이더 상수 레이아웃에 묶인 `float4` 라 섞이는 자리가 없어 형식을 하나로 둔다 — 선형 색을 이 형식으로 옮기는 날 sRGB 8 비트 형식을 따로 둔다.

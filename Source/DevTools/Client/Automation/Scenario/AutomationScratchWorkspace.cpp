@@ -17,7 +17,7 @@
 #include "Engine/Automation/Scenario/AutomationScratch.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Content/AssetRegistry.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 
 namespace sw
 {
@@ -36,6 +36,13 @@ namespace sw
              * @details 프로젝트 설정 창(`Config/Game` · `Config/Engine`)의 저장은 허락하지 않는다 — 시나리오가 그 파일을 고치려면 사본으로 돌려야 한다.
              */
             static constexpr string_view kAllowedConfigWrites[] = { "Config/Editor" };
+
+            /** @brief 사본 폴더의 디스크 자리입니다 — 실행 뿌리 아래(`AssetPaths::getScratchFolderPath`)라 콘텐츠가 아니다. id 가 아니면 빈 경로입니다. */
+            static AbsolutePath makeScratchPath( const AutomationScratchFolder& folder )
+            {
+                const string id = AssetPaths::normalizeAssetID( folder._scratchID );
+                return id.empty() ? AbsolutePath{} : AssetPaths::getScratchFolderPath().getParent().join( id );
+            }
 
             /** @brief 사본 파일 하나의 정체성입니다. */
             struct CopiedIdentity
@@ -119,7 +126,7 @@ namespace sw
                 // 그 실행이 하는 일이 바로 그것이고, 쓴 파일은 보고에 남아 리뷰한다. 무엇을 덮을지는 판정(`AutomationGoldenUtil::decide`)이 가른다. 폴더 이름은 판정이 쓰는 것과 같은 상수다.
                 bool bUpdateGolden        = false;
                 bool bRecordMissingGolden = false;
-                if ( engine::areEngineServicesBound() )
+                if ( engine::areEngineSubsystemsBound() )
                 {
                     const CommandLineManager& commandLine = engine::getSubsystem<CommandLineManager>();
                     (void)commandLine.getArgument( CommandLineArgument::SCENARIO_UPDATE_GOLDEN, bUpdateGolden );
@@ -135,24 +142,23 @@ namespace sw
 
     bool AutomationScratchWorkspace::discard( const AutomationScratchFolder& folder )
     {
-        const optional<AbsolutePath> scratchDir = engine::getSubsystem<AssetPaths>().toDiskPath( folder._scratchID );
-        return scratchDir.has_value() && FileUtil::removeDirectory( *scratchDir ); // 못 풀거나 못 지우면 AssetPaths · FileUtil 이 경로와 이유를 남긴다
+        const AbsolutePath scratchDir = AutomationScratchWorkspaceInternal::makeScratchPath( folder );
+        return scratchDir.empty() == false && FileUtil::removeDirectory( scratchDir ); // 못 지우면 FileUtil 이 경로와 이유를 남긴다
     }
 
     expected<void> AutomationScratchWorkspace::prepare( const AutomationScratchFolder& folder )
     {
         if ( expected<void> valid = folder.validate(); valid.has_value() == false )
             return valid;
-        const AssetPaths&            assetPaths = engine::getSubsystem<AssetPaths>();
-        const AbsolutePath           sourceDir  = assetPaths.getRootFolderPath().join( folder._sourceID );
-        const optional<AbsolutePath> scratchAt  = assetPaths.toDiskPath( folder._scratchID ); // 실행 뿌리 아래다(`AssetPaths::getScratchFolderPath`)
+        const AssetPaths&  assetPaths = engine::getSubsystem<AssetPaths>();
+        const AbsolutePath sourceDir  = assetPaths.getRootFolderPath().join( folder._sourceID );
+        const AbsolutePath scratchDir = AutomationScratchWorkspaceInternal::makeScratchPath( folder );
         if ( FileUtil::isDirectory( sourceDir ) == false )
         {
             return unexpected( Error{ ErrorKind::NotFound, "<Scratch from> is not a folder under Content/", folder._sourceID } );
         }
-        if ( scratchAt.has_value() == false )
+        if ( scratchDir.empty() )
             return unexpected( Error{ ErrorKind::InvalidArgument, "<Scratch as> does not resolve to a disk folder", folder._scratchID } );
-        const AbsolutePath scratchDir = *scratchAt;
         // 지난 실행(중단된 것 포함)이 남긴 사본을 통째로 지운다 — 잔여 파일이 다음 실행의 이름을 바꾸지 않게 한다.
         if ( FileUtil::removeDirectory( scratchDir ) == false || FileUtil::ensureDirectoryExists( scratchDir ) == false )
         {
@@ -177,11 +183,7 @@ namespace sw
                 return unexpected( Error{ ErrorKind::ExternalFailure, "could not place a source file under the scratch source folder", sourceFile.str() } );
             }
             const AbsolutePath targetFile = scratchDir.join( relative );
-            if ( FileUtil::ensureDirectoryExists( targetFile.getParent() ) == false )
-            {
-                return unexpected( Error{ ErrorKind::ExternalFailure, "could not create the folder of a scratch file", targetFile.str() } );
-            }
-            vector<uint8> bytes;
+            vector<uint8>      bytes;
             if ( FileUtil::readFile( sourceFile, bytes ) == false )
             {
                 return unexpected( Error{ ErrorKind::ExternalFailure, "could not read a scratch source file", sourceFile.str() } );
@@ -237,7 +239,7 @@ namespace sw
         return result;
     }
 
-    FileUtil::WriteFilterRegistration AutomationScratchWorkspace::acquireWriteFilter()
+    FileUtil::WriteFilterSubscription AutomationScratchWorkspace::acquireWriteFilter()
     {
         return FileUtil::bindWriteFilter( &AutomationScratchWorkspaceInternal::allowWrite );
     }

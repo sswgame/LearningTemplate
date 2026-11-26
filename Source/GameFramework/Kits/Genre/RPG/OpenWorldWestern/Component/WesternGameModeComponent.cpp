@@ -151,7 +151,7 @@ namespace sw
         AIPerceptionSettings      sight{};
         sight._sightRange = _witnessSightRange;
         // 전리품 카탈로그는 없다 — 프레리 동물은 전리품 테이블을 적지 않는다(적으면 손질이 오류를 낸다).
-        if ( _outlaw.initialize( _pWesternCatalog.get(), nullptr, pWallet->getWallet(), pReputation->getReputation(), pState->getClock(), pState->getFlags(), pState->getWeather(),
+        if ( _outlaw.initialize( *_pWesternCatalog, nullptr, pWallet->getWallet(), pReputation->getReputation(), pState->getClock(), pState->getFlags(), pState->getWeather(),
                                  pBag != nullptr ? &pBag->getInventory() : nullptr, _regionID.key(), _regionBaseTemperature, sight ) == false )
             return false; // 까닭은 무법자가 남겼다
         if ( pWallet->isFreshGame() && _startingMoney > 0 )
@@ -164,9 +164,9 @@ namespace sw
         SW_LOG_INFO_ID( "WesternGameMode.Opened", "[Western] the western is open - walk with WASD, E to mount or dismount, hold Shift to gallop, F to whistle, G to act" );
     }
 
-    void WesternGameModeComponent::updateGame( float32 deltaTime )
+    void WesternGameModeComponent::updateGame( GameSeconds frameTime )
     {
-        _outlaw.update( deltaTime );
+        _outlaw.update( frameTime );
         reportEvents();
         const PawnComponent* pPlayerPawn = findPlayerPawn();
         GameObjectManager*   pManager    = getObjectManager();

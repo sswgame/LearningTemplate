@@ -8,7 +8,7 @@
  *          로그와 `-gv_editorSelfTestReport=<파일>` 에 남기고, 마지막 줄(`EditorSelfTest|DONE|<통과>|<실패>`) 뒤에 앱을 닫는다.
  *          `AppTest`(hostgpu)가 실제 App 을 이렇게 실행해 보고서를 읽는다.
  *
- *          **상태는 소유자가 있다.** 실행기의 상태(`EditorSelfTestRunner` 가 쓰는 실행 상태)와 입력 큐 · 레이블(`EditorSelfTestInput.h`)은 에디터 서브시스템이 소유해 에디터 컨텍스트와 함께 생기고 사라진다.
+ *          상태는 소유자가 있다. 실행기의 상태(`EditorSelfTestRunner` 가 쓰는 실행 상태)와 입력 큐 · 레이블(`EditorSelfTestInput.h`)은 에디터 서브시스템이 소유해 에디터 컨텍스트와 함께 생기고 사라진다.
  *          테스트가 여러 프레임에 걸쳐 들고 가는 값(만든 오브젝트 ID, 단계 표시, 되돌릴 설정)은 `.cpp` 의 함수 정적 지역이 아니라 `EditorSelfTestContext::getTestState<T>()` 의
  *          프로브 구조체에 둔다. 컨텍스트는 테스트마다 새로 만들어지므로 앞 테스트와 앞 실행의 값이 새지 않는다(그래서 테스트 첫 단계에서 프로브를 비울 필요가 없다).
  *          함수 포인터라 상태를 받지 못하는 콜백(ImGui 플랫폼 콜백 등)은 `EditorSelfTestRunner::findRunningContext()->findTestState<T>()` 로 프로브를 찾고, 콜백을 건 프로브의 소멸자가 되돌린다.
@@ -30,7 +30,7 @@ namespace sw::editor
     enum class EditorSelfTestStep : uint8
     {
         Continue = 0, ///< 다음 프레임에 다시 호출한다. 프레임 자체가 시험 내용일 때(매 프레임 크기 바꾸기 · "다음 프레임에 그려졌다") · 조건을 직접 볼 때 쓴다
-        WaitStable,   ///< 에디터가 멈춘 뒤(정지 상태 — `EditorStabilityWait`, 시나리오 `<EditorWaitStable/>` 와 같은 판정) 다시 호출한다. 앞 단계가 낳은 일(패널 열기 · 도킹 · 에셋)을 기다릴 때 쓴다 — 프레임 수를 어림하지 않는다
+        WaitStable,   ///< 에디터가 멈춘 뒤(정지 상태, `EditorStabilityWait`, 시나리오 `<EditorWaitStable/>` 와 같은 판정) 다시 호출한다. 앞 단계가 낳은 일(패널 열기 · 도킹 · 에셋)을 기다릴 때 쓰며 프레임 수를 어림하지 않는다
         Done          ///< 끝났다
     };
 

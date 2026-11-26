@@ -121,7 +121,7 @@ namespace sw::editor
         EditorWidgets::drawPanelStatus( _editError.empty() ? _status.c_str() : _editError.c_str() );
     }
 
-    bool PairedAnimationPanel::saveDocument()
+    bool PairedAnimationPanel::saveDocument( AssetWriter& writer )
     {
         const auto writePath = getDocumentDiskPath(); // 읽은 그 자리
         if ( writePath.has_value() == false )
@@ -129,7 +129,7 @@ namespace sw::editor
             _status = "No write path for this asset";
             return false;
         }
-        if ( const expected<void> saved = _model.saveDocument( *writePath ); saved.has_value() == false )
+        if ( const expected<void> saved = _model.saveDocument( writer, *writePath ); saved.has_value() == false )
         {
             _status = EditorWidgets::makeStatusText( saved.error() );
             return false;

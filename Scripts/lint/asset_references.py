@@ -8,7 +8,7 @@ GUID 로 적은 참조(`guid:<32자>`)는 색인을 짓는 쪽(`App --check-asse
   `Config/Dev/AssetReferenceFields.json`, 임포트 폴더는 `Config/Dev/AssetIdentity.json` 이다. 같은 파일을 C++ 검사(`App --check-asset-refs`,
   ctest `ToolCheckAssetRefs`)와 에디터 이름 바꾸기 · 옮기기(`AssetReferenceFields`), `py -3 -m Scripts move-asset` 이 읽는다.
   글 모양을 짐작하는 정규식으로 찾지 않는다 — 칸 이름이 목록에 있는 속성 · 요소 글 · JSON 키의 값만, 그 안에서도 도메인(`engine/` …)으로 시작하는 낱말만 경로다.
-- 있음 판정은 **스테이지(인덱스)** 기준이다. 커밋하지 않은 파일은 없는 것으로 본다(작업 트리에만 있는 파일을 가리킨 커밋은 다른 체크아웃에서 끊긴다).
+- 있음 판정은 스테이지(인덱스) 기준이다. 커밋하지 않은 파일은 없는 것으로 본다(작업 트리에만 있는 파일을 가리킨 커밋은 다른 체크아웃에서 끊긴다).
   임포트 산출물(`models/` · `textures/` · `heightfields/`)은 커밋하지 않으므로 같은 자리의 원본(`models_raw/<이름>.glb` 등)이 있으면 있다.
 - 검사 범위는 인덱스의 모든 참조 파일(Content 의 글 에셋 + `listCMakeFile`)이다 — 지우거나 옮긴 에셋을 가리키던 다른 파일(역참조)도 같은 판정에서 잡힌다.
   참조 파일마다 뽑은 경로는 블롭 id 키 색인(`index_cache`)에 두어 커밋마다 바뀐 파일만 다시 읽는다. 저장소가 깨끗해야 하므로(ctest 가 지킨다) 걸린 것은 모두 이 커밋이 고칠 몫이다.

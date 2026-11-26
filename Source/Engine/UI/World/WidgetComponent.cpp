@@ -25,7 +25,7 @@
 #include "Engine/UI/Render/UIPaintContext.h"
 #include "Engine/UI/WidgetTree/Widget.h"
 #include "Engine/UI/WidgetTree/WidgetTree.h"
-#include "Engine/UI/World/UIWidgetComponentService.h"
+#include "Engine/UI/World/UIWidgetComponentSubsystem.h"
 #include "Engine/Visual/2D/SpriteRenderUtil.h"
 #include "Engine/Visual/Component/MeshComponent.h"
 
@@ -66,15 +66,15 @@ namespace sw
             }
 
             /**
-             * @brief @p pOwner 의 씬이 받은 엔진 범위(`SceneEngineServices::_pEngineSubsystems`)에서 찾은 위젯 컴포넌트 서비스입니다. 서버처럼 없거나 시작 전이면 nullptr 입니다.
-             * @details 전역 표(`engine::findSubsystem`)를 다시 찾지 않는다 — 씬 쪽은 만들 때 받은 묶음만 본다(`SceneEngineServices.h` 머리말).
+             * @brief @p pOwner 의 씬이 받은 엔진 범위(`SceneEngineSubsystems::_pEngineSubsystems`)에서 찾은 위젯 컴포넌트 서비스입니다. 서버처럼 없거나 시작 전이면 nullptr 입니다.
+             * @details 전역 표(`engine::findSubsystem`)를 다시 찾지 않는다 — 씬 쪽은 만들 때 받은 묶음만 본다(`SceneEngineSubsystems.h` 머리말).
              */
-            static UIWidgetComponentService* findUIService( const GameObject* pOwner )
+            static UIWidgetComponentSubsystem* findUIService( const GameObject* pOwner )
             {
                 const GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
                 if ( pManager == nullptr )
                     return nullptr;
-                UIWidgetComponentService* pService = locateSubsystem<UIWidgetComponentService>( pManager->getSceneEngineServices()._pEngineSubsystems );
+                UIWidgetComponentSubsystem* pService = findSubsystemFrom<UIWidgetComponentSubsystem>( pManager->getSceneEngineSubsystems()._pEngineSubsystems );
                 return pService != nullptr && pService->isActive() ? pService : nullptr;
             }
         };
@@ -123,8 +123,8 @@ namespace sw
     {
         SceneComponent::onBeginPlay();
         // 마커와 월드 사각형은 주 씬 컴포넌트의 월드 점을 따른다 — 위젯 자신이 씬 컴포넌트라(언리얼 `UWidgetComponent`) 오브젝트에 늘 주 씬 컴포넌트가 있다.
-        const GameObject*         pOwner   = getOwner();
-        UIWidgetComponentService* pService = WidgetComponentInternal::findUIService( pOwner );
+        const GameObject*           pOwner   = getOwner();
+        UIWidgetComponentSubsystem* pService = WidgetComponentInternal::findUIService( pOwner );
         if ( pService != nullptr && getContent() == nullptr )
             createDocumentContent( *pService );
         bindUIService( pService );
@@ -132,7 +132,7 @@ namespace sw
             createWorldQuad();
     }
 
-    void WidgetComponent::createDocumentContent( UIWidgetComponentService& service )
+    void WidgetComponent::createDocumentContent( UIWidgetComponentSubsystem& service )
     {
         const string_view path = _documentPath.empty() ? getDefaultDocument( service.getEngineDocuments() ) : string_view{ _documentPath.path() };
         if ( path.empty() )
@@ -164,7 +164,7 @@ namespace sw
         SceneComponent::onEndPlay();
     }
 
-    void WidgetComponent::bindUIService( UIWidgetComponentService* pService )
+    void WidgetComponent::bindUIService( UIWidgetComponentSubsystem* pService )
     {
         if ( _pUIService == pService )
             return;
@@ -219,7 +219,7 @@ namespace sw
 
     void WidgetComponent::attachMarker()
     {
-        UIWidgetComponentService* const pService = _pUIService;
+        UIWidgetComponentSubsystem* const pService = _pUIService;
         if ( pService == nullptr || _pendingContent == nullptr )
             return;
         if ( _space == WidgetSpace::World )
@@ -271,7 +271,7 @@ namespace sw
 
     void WidgetComponent::updateGPUMarker( const SceneComponent* pScene, bool bMarkerHidden )
     {
-        UIWidgetComponentService* const pService = _pUIService;
+        UIWidgetComponentSubsystem* const pService = _pUIService;
         if ( pService == nullptr )
             return;
         // 위젯은 상태가 바뀔 때만 만진다(접힘 ↔ 보임, 슬롯 변경). 매 프레임 하는 일은 월드 점을 기록에 적는 것뿐이다.

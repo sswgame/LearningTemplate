@@ -3,9 +3,9 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/thread.h"
 #include "Core/Container/ChunkedArray.h"
-#include "Core/Testing/TestFramework.h"
-#include "Core/Testing/TestWait.h"
-#include "Core/Testing/ThreadTestAccess.h"
+#include "Core/TestFramework/TestFramework.h"
+#include "Core/TestFramework/TestWait.h"
+#include "Core/TestFramework/ThreadTestAccess.h"
 
 #include "GameFramework/Kits/Feature/Storage/SQLStore/Runtime/SQL/SQLConnectionPool.h"
 #include "GameFramework/Kits/Feature/Storage/SQLStore/Runtime/Tests/FakeSQLDriver.h"
@@ -283,7 +283,7 @@ SW_TEST_CASE( SQLConnectionPoolTest, FailedReconnectBacksOffAndRecovers )
     SW_EXPECT_TRUE( driver.getOpenCount() - attemptsBefore < kJobCount / 2 );
 
     driver.setAllowedOpenCount( -1 );
-    // 다시 붙는 것은 풀의 백오프(실제 시계 — 재시도 간격이라 판정이 아니다)가 정한다. 붙을 때까지 일을 맡겨 본다 — 상한(5 초)을 넘겨 기다린다.
+    // 다시 붙는 것은 풀의 백오프(실제 시계, 재시도 간격이라 판정이 아니다)가 정한다. 붙을 때까지 일을 맡겨 본다. 상한(5 초)을 넘겨 기다린다.
     const bool bRecovered = test::waitUntil( [&pool]()
     { return SQLConnectionPoolTestUtil::runOne( pool )._result == SQLResult::Ok; }, 15.0 );
     SW_EXPECT_TRUE( bRecovered );

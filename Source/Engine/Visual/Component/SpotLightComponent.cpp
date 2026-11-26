@@ -12,7 +12,7 @@ namespace sw
     namespace
     {
         /**
-         * @brief 이 TU 의 기본값 모음입니다. **익명 네임스페이스에 상수를 그냥 두면 안 됩니다.**
+         * @brief 이 TU 의 기본값 모음입니다. 익명 네임스페이스에 상수를 그냥 두면 안 됩니다.
          *        유니티 빌드(CI-*)는 여러 .cpp 를 한 TU 로 합치고, 그러면 세 라이트 컴포넌트의
          *        `kDefaultColor` 가 같은 익명 네임스페이스에서 재정의됩니다(docs/agents/CppStyle.md 의 Internal 규칙).
          */
@@ -90,7 +90,7 @@ namespace sw
         outLight._directionType._x = direction._x;
         outLight._directionType._y = direction._y;
         outLight._directionType._z = direction._z;
-        // 원뿔은 **코사인으로** 보낸다. 셰이더가 픽셀마다 acos 를 하지 않게 하려는 것이다.
+        // 원뿔은 코사인으로 보낸다. 셰이더가 픽셀마다 acos 를 하지 않게 하려는 것이다.
         outLight._params._y = MathUtil::cos( _outerConeAngle.radians() );
         outLight._params._z = MathUtil::cos( _innerConeAngle.radians() );
         _shadowSettings.writeGPULightProperties( outLight );

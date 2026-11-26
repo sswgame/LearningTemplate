@@ -54,7 +54,7 @@ def find_first_bad_step(before: Sequence[str], fails: Callable[[list[str]], bool
 
 
 def minimize_stages(stages: Sequence[str], fails: Callable[[list[str]], bool]) -> list[str]:
-    """지는 앞 단계 묶음 @p stages 에서 빼도 여전히 지는 단계를 하나씩 버려 남은 묶음을 돌려준다(첫 단계 — 시작 단계 — 는 남긴다).
+    """지는 앞 단계 묶음 @p stages 에서 빼도 여전히 지는 단계를 하나씩 버려 남은 묶음을 돌려준다(첫 단계인 시작 단계는 남긴다).
 
     시작 단계 하나만으로는 지지 않을 때(뒤 단계와 함께 상태를 만든다) 쓴다. 단계마다 한 번 돈다.
     결함이 확률로 나오면(같은 묶음이 실행마다 갈린다) 결과가 수렴하지 않는다 — 그때는 묶음이 아니라 쌓인 상태 · 타이밍을 본다.
@@ -115,7 +115,7 @@ def read_run_reports(run_dir: pathlib.Path) -> list[dict]:
 
 
 def describe_result(report: dict) -> str:
-    """보고 하나의 판정 한 줄 — 실행기의 판정 값(`failure` — 종류 · 까닭)이 지은 `<종류> - <까닭>`(통과면 결과 이름). 판정 칸이 없는 옛 보고는 `result - reason`."""
+    """보고 하나의 판정 한 줄: 실행기의 판정 값(`failure`: 종류 · 까닭)이 지은 `<종류> - <까닭>`(통과면 결과 이름). 판정 칸이 없는 옛 보고는 `result - reason`."""
     failure = report.get('failure')
     if isinstance(failure, dict) and failure.get('kind'):
         return f"{failure['kind']} - {failure.get('reason', '')}"
@@ -219,7 +219,7 @@ def describe_code_change(list_report: Sequence[dict], project_root: pathlib.Path
 
 def retry_failed_stages(paths: list[str], failed: Sequence[tuple[str, str]], run: StageRunner, code_change: str | None) -> int:
     """진 단계마다: 혼자 돌려 지면 "단독으로 진다", 통과하면 "체인에서만 진다" — 앞 단계를 모두 붙여 다시 돌리고, 지면 이분 탐색으로 넘어간다.
-    보고 뒤에 코드가 바뀌었으면(@p code_change — `describe_code_change`) 혼자 통과한 단계는 고쳐졌을 수 있다 — 앞 단계를 붙이지 않는다(고친 뒤 확인이 단계마다 앞 160 여 개를 다시 돌았다).
+    보고 뒤에 코드가 바뀌었으면(@p code_change, `describe_code_change`) 혼자 통과한 단계는 고쳐졌을 수 있으므로 앞 단계를 붙이지 않는다(고친 뒤 확인이 단계마다 앞 160 여 개를 다시 돌았다).
     Windows(`main`)와 Linux(`linux_scenarios.py rerun`)가 자기 실행기(@p run)로 같은 함수를 부른다. 진 단계가 하나라도 남으면 1."""
     names = [read_scenario_name(path) for path in paths]
     still_failing = 0
@@ -248,7 +248,7 @@ STEP_TAG = re.compile(r'<!--.*?-->|<([A-Za-z]\w*)\b([^>]*)>', re.S)
 
 def list_advance_steps(scenario_text: str) -> list[dict]:
     """시나리오 글의 진행(`<AdvanceSimulation frames="N" [render="true"]/>`)마다 프레임 수 · render · 다음 단계 종류 · 분류를 낸다.
-    분류: condition(바로 뒤가 `<Expect watch>` — 조건 대기로 바꿀 후보이거나 "아무 일도 안 일어난다" 확인), photo(바로 뒤가 사진 — 사진 앞 진행 시간), other.
+    분류: condition(바로 뒤가 `<Expect watch>`. 조건 대기로 바꿀 후보이거나 "아무 일도 안 일어난다" 확인), photo(바로 뒤가 사진, 사진 앞 진행 시간), other.
     render 는 모든 프레임을 그리는 진행이다(측정 창 · 비교 기준) — 그리는 비용이 그대로 든다."""
     steps = [(match.group(1), match.group(2)) for match in STEP_TAG.finditer(scenario_text) if match.group(1) and match.group(1) != 'Scenario']
     rows = []

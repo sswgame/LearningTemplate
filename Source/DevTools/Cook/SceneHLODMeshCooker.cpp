@@ -126,7 +126,7 @@ namespace sw
         return replacedCount;
     }
 
-    bool SceneHLODMeshCooker::buildMesh( const SceneEngineServices& services, const SceneDocument& doc, string_view scenePath, MeshAssetData& outData )
+    bool SceneHLODMeshCooker::buildMesh( const SceneEngineSubsystems& services, const SceneDocument& doc, string_view scenePath, MeshAssetData& outData )
     {
         using Internal                            = SceneHLODMeshCookerInternal;
         outData                                   = MeshAssetData{};

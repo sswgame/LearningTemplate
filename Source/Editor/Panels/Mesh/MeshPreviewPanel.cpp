@@ -32,8 +32,8 @@ namespace sw::editor
     /**
      * @class MeshPreviewPanel
      * @brief 연 메시를 미리보기 씬의 오브젝트 하나(`MeshComponent`)로 보이고, 단계별 정점 수와 임계값 표에서 LOD 를 골라 그 단계만 그리게 합니다.
-     * @details **보기 전용**이다. `.mesh` 는 모델 임포트의 산출물이라 이 창이 저장하지 않는다(원본을 다시 임포트하면 덮인다). Mesh 종류 중 `.mesh` 만 문서로 받는다
-     *          (`canAcceptDocumentPath` — 같은 종류에 모델 원본 `.fbx` · `.gltf` 도 있다). LOD 는 씬 단위로 고정한다(`MeshLODSystem::setForcedLOD`) — 화면 크기로 고르는 자동 선택은
+     * @details 보기 전용이다. `.mesh` 는 모델 임포트의 산출물이라 이 창이 저장하지 않는다(원본을 다시 임포트하면 덮인다). Mesh 종류 중 `.mesh` 만 문서로 받는다
+     *          (`canAcceptDocumentPath`: 같은 종류에 모델 원본 `.fbx` · `.gltf` 도 있다). LOD 는 씬 단위로 고정한다(`MeshLODSystem::setForcedLOD`) — 화면 크기로 고르는 자동 선택은
      *          창이 "Auto" 일 때만 돈다.
      */
     class MeshPreviewPanel : public EditorPreviewPanel
@@ -46,7 +46,7 @@ namespace sw::editor
 
         const utf8*        getPanelTitle() const override { return "Mesh Preview"; }
         void               drawDocumentContent() override;
-        [[nodiscard]] bool saveDocument() override { return false; }
+        [[nodiscard]] bool saveDocument( AssetWriter& /*writer*/ ) override { return false; }
         bool               canSaveDocument() const override { return false; }
 
         /** @brief 미리보기 메시의 LOD 0 정점 수입니다. 아직 읽는 중이거나 읽지 못했거나 씬이 없으면 false 입니다(감시 값 `Editor.MeshPreviewVertexCount`). */

@@ -5,6 +5,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/String/StringUtil.h"
 
+#include "Editor/Common/Asset/AssetWriter.h"
 #include "Editor/Common/Workspace/Undo/DocumentEditRecorder.h"
 #include "Editor/Panels/Catalog/Model/CatalogXMLText.h"
 
@@ -43,7 +44,7 @@ namespace sw::editor
     {
     }
 
-    ToolAssetLoadResult CollisionResponseEditModel::loadDocument( const AbsolutePath& diskPath )
+    ToolAssetLoadResult CollisionResponseEditModel::loadDocument( const DiskPath& diskPath )
     {
         string text;
         if ( FileUtil::readTextFile( diskPath, text ) == false )
@@ -61,9 +62,15 @@ namespace sw::editor
         return acceptText( string( text ) );
     }
 
-    bool CollisionResponseEditModel::saveDocument( const AbsolutePath& diskPath )
+    bool CollisionResponseEditModel::saveDocument( AssetWriter& writer, const DiskPath& diskPath )
     {
-        if ( FileUtil::writeTextFile( diskPath, _text ) == false )
+        const AssetWriteResult written = writer.writeText( diskPath, _text );
+        if ( written == AssetWriteResult::Refused )
+        {
+            _status = "Not saved: the file is read-only or changed on disk";
+            return false;
+        }
+        if ( written == AssetWriteResult::Failed )
         {
             _status = "Not saved: the file could not be written (see the log)";
             return false;

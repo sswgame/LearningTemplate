@@ -2,9 +2,9 @@
 자식 프로세스 하나를 돌리는 자리 — git · clang-format · 빌드 도구를 띄우는 스크립트가 이것을 쓴다.
 
 모양을 하나로 두는 이유 둘:
-- **디코딩** — `text=True` 만 주면 출력을 시스템 코드 페이지(cp949 · cp1252)로 읽는다. UTF-8 진단 · 한글 경로가 섞이면 도구가
+- 디코딩 — `text=True` 만 주면 출력을 시스템 코드 페이지(cp949 · cp1252)로 읽는다. UTF-8 진단 · 한글 경로가 섞이면 도구가
   `UnicodeDecodeError` 로 죽거나(진단 대신 트레이스백) 글자가 깨진다. 여기서는 늘 UTF-8 · `errors="replace"` 다.
-- **실패의 모양** — 실행 파일이 없으면(`FileNotFoundError`) · 시간이 넘으면(`TimeoutExpired`) 곳마다 다르게 죽었다. 여기서는 예외 대신
+- 실패의 모양 — 실행 파일이 없으면(`FileNotFoundError`) · 시간이 넘으면(`TimeoutExpired`) 곳마다 다르게 죽었다. 여기서는 예외 대신
   `ProcessResult` 의 칸으로 돌려준다(부르는 쪽이 "못 띄웠다" 와 "띄웠는데 졌다" 를 가른다).
 
 """

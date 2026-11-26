@@ -1,7 +1,7 @@
 // EditorMapCheckTest — 맵 검사 등록점: 등록된 검사의 결과가 검사 id 출처로 표에 남고, 다시 돌리면 그 검사의 결과만 바뀌며, 오브젝트 결과와 섞이지 않는다.
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Editor/Common/Commands/Scene/EditorMapCheck.h"
 

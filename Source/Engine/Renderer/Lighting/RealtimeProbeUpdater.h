@@ -2,7 +2,7 @@
  * @file RealtimeProbeUpdater.h
  * @brief 실시간 라이트 프로브 갱신의 렌더 스레드 쪽입니다 — 복셀 · 기록(history) · 입력 행 버퍼를 갖추고 컴퓨트(`probe_update.hlsl`)를 기록합니다.
  * @details 흐름: 게임 스레드의 `collectSceneLights` 가 실시간 볼륨마다 `RealtimeProbeRequest`(볼륨 원소 사본, 갱신 값, 복셀 격자)를 만든다. 이 클래스는
- *          (1) `prepare` 가 기록 전에 버퍼를 갖춘다 - 복셀 칠하기(장면이 바뀐 프레임에 바뀐 구간만 — `SceneVoxelizer::planPaint`), 기록(볼륨 정체마다 구간 — 새로 든 볼륨만 0 에서 쌓는다),
+ *          (1) `prepare` 가 기록 전에 버퍼를 갖춘다 - 복셀 칠하기(장면이 바뀐 프레임에 바뀐 구간만, `SceneVoxelizer::planPaint`), 기록(볼륨 정체마다 구간. 새로 든 볼륨만 0 에서 쌓는다),
  *          입력 행(프레임마다);
  *          (2) `recordUploads` 가 프레임 업로드 단계에서 칠할 메시의 위치 흐름(렌더 프록시 버퍼)을 위치 버퍼로 GPU 복사하고, `dispatchVoxelClear` · `dispatchVoxelPaint` 가
  *          `scene_voxelize.hlsl` 로 칸을 지우고 칠한다 — CPU 정점을 읽지 않는다(R-15);
@@ -68,7 +68,7 @@ namespace sw
         /**
          * @brief 이번 프레임 요청들의 구간을 정합니다.
          * @return 용량이 늘어 기록 버퍼를 다시 만들어야 하면 true 입니다(그때는 모든 볼륨이 새로 시작한다 — `isFresh` 가 모두 true).
-         * @details 늘어난 용량과 새 구간은 그 프레임을 갱신했다고 알릴 때(`advanceFrame`)까지 **남아 있다** — 부르는 쪽이 중간에 그만두면(버퍼 할당 실패) 다음 `assign` 이 다시 알린다.
+         * @details 늘어난 용량과 새 구간은 그 프레임을 갱신했다고 알릴 때(`advanceFrame`)까지 남아 있다 — 부르는 쪽이 중간에 그만두면(버퍼 할당 실패) 다음 `assign` 이 다시 알린다.
          *          한 번만 알리면 0 으로 채우지 않은 구간과 옛 크기 버퍼를 다음 프레임이 그대로 쓴다.
          */
         [[nodiscard]] bool assign( const vector<RealtimeProbeRequest>& listRequest );
@@ -109,14 +109,14 @@ namespace sw
 {
     /**
      * @struct RealtimeProbeAccumulation
-     * @brief 프로브 기록이 지금 입력에 수렴한 프레임 수입니다 — 사진 앞 정착 조건 `RenderRealtimeGI` 의 진척. 갱신한 프레임마다 한 번 `advance` 를 부릅니다(순수 값 — 단위 테스트가 바로 부른다).
+     * @brief 프로브 기록이 지금 입력에 수렴한 프레임 수이며 사진 앞 정착 조건 `RenderRealtimeGI` 의 진척. 갱신한 프레임마다 한 번 `advance` 를 부릅니다(순수 값이라 단위 테스트가 바로 부른다).
      * @details 되돌림(기록이 0 에서 시작)은 처음부터 센다. 입력의 변화(가리개 · 발광 · 빛 · 하늘 — `RealtimeProbeUpdater::prepare`)는 두 때를 가른다.
      *          - 변화가 이어지는 동안: 이어진 변화가 시작한 뒤의 프레임 수다. 멈추지 않는 변화(도는 기믹 · 깜빡이는 등 · 흐르는 시각)는 기록이 같은 시차로 따라가는 정상 상태에 이르면 다 된 것이다 —
      *            끝나지 않는 변화가 사진을 막지 않는다(카메라만 보는 TAA 정지 프레임과 같은 까닭). 고정 프레임 시간의 결정적 실행에서는 같은 프레임이면 같은 그림이다.
      *          - 멈춘 뒤: 마지막 변화 뒤의 프레임 수다. 막 멈춘 문 · 막 켠 등의 시차가 가라앉을 때까지 기다린다.
      *
      *          이어진 변화인지는 정한 값이 아니라 본 틈으로 정한다. 정착하기 전에 다시 바뀌면, 지금까지 본 가장 긴 틈 이하일 때 이어진 것이고 더 길면 그 틈을 새로 배워 처음부터 센다(한 번뿐인 다음 사건은
-     *          제 시차를 처음부터 기다린다). 조용한 프레임은 이어진 변화 **안에서** 본 틈 이하일 때만 아직 이어진 것이다 — 되풀이하는 변화는 틈에서도 정착해 있고, 멈춘 것은 그 틈을 넘는 프레임에 드러난다.
+     *          제 시차를 처음부터 기다린다). 조용한 프레임은 이어진 변화 안에서 본 틈 이하일 때만 아직 이어진 것이다 — 되풀이하는 변화는 틈에서도 정착해 있고, 멈춘 것은 그 틈을 넘는 프레임에 드러난다.
      *          틈은 정착에 걸리는 프레임보다 짧은 것만 배우고(정착할 만큼 조용했으면 잊는다) 처음부터 세는 일은 틈이 늘 때뿐이라, 되풀이하는 변화는 주기와 무관하게 끝내 정착한다. 시한 · 고정 대기는 없다.
      */
     struct SW_API RealtimeProbeAccumulation
@@ -194,11 +194,11 @@ namespace sw
         /** @brief 프로브 기록 버퍼(컴퓨트 u0 — 프레임을 넘어 남는다)입니다. 프레임 그래프 표가 크기와 함께 등록한다(`ProbeHistory`). */
         const RHIStructuredBuffer& getHistoryBuffer() const { return _historyBuffer; }
         /**
-         * @brief 프로브 기록이 지금 입력(가리개 · 발광 · 빛 · 하늘 — `RealtimeProbeAccumulation`)에 수렴한 프레임 수입니다(그린 프레임만 센다). 이번 프레임에 돌지 않으면 0 입니다 — 렌더 정착 조건 `RenderRealtimeGI` 의 진척.
+         * @brief 프로브 기록이 지금 입력(가리개 · 발광 · 빛 · 하늘, `RealtimeProbeAccumulation`)에 수렴한 프레임 수입니다(그린 프레임만 센다). 이번 프레임에 돌지 않으면 0 입니다. 렌더 정착 조건 `RenderRealtimeGI` 의 진척.
          * @details 입력이 바뀌어도 기록은 0 으로 돌리지 않고 섞어 따라간다 — 그래서 섞는 비율의 초기 가속(`_framesSinceReset`)과 따로 센다.
          */
         [[nodiscard]] uint32 getAccumulatedFrames() const { return _bActive == SW_TRUE ? _accumulation.getAccumulatedFrames() : 0u; }
-        /** @brief 기록에 남은 옛 값의 몫입니다(`computeError` — 이번 프레임까지). 이번 프레임에 돌지 않으면 0 입니다 — 감시 값 `Render.GIError`. */
+        /** @brief 기록에 남은 옛 값의 몫입니다(`computeError`, 이번 프레임까지). 이번 프레임에 돌지 않으면 0 입니다. 감시 값 `Render.GIError`. */
         [[nodiscard]] float32 getError() const { return _bActive == SW_TRUE ? _error : 0.0f; }
         /**
          * @brief 입력이 바뀐 뒤 @p accumulatedFrames 프레임을 갱신했을 때 기록에 남은 옛 값의 몫입니다 — 볼륨마다 (1 − 섞는 비율)^(갱신 횟수), 그 가운데 가장 큰 값. 요청이 없으면 0 입니다.

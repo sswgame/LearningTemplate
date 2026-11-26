@@ -3,9 +3,9 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/Radians.h"
 #include "Core/Math/VectorMath.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Reflection/PropertyRoleUtil.h"
 #include "Engine/Reflection/ReflectedValue.h"
 #include "Engine/Reflection/ReflectionContainers.h"
@@ -148,7 +148,7 @@ SW_TEST_CASE( ReflectionPropertyRoleTest, DerivedFlagsAreBuiltByRegistrationNotB
 }
 
 /**
- * @brief [ReflectionPropertyRoleTest] 대입은 지어 둔 파생 캐시(이름 맵 · 판정 · 상속 판)를 한 번에 비운다(`TypeDerivedCache` — `_derived = {}`) — 다시 지으면 같은 답이다
+ * @brief [ReflectionPropertyRoleTest] 대입은 지어 둔 파생 캐시(이름 맵 · 판정 · 상속 판)를 한 번에 비운다(`TypeDerivedCache`, `_derived = {}`). 다시 지으면 같은 답이다
  */
 SW_TEST_CASE( ReflectionPropertyRoleTest, AssignmentClearsEveryDerivedCache )
 {

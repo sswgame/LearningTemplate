@@ -27,7 +27,7 @@ namespace sw::editor
      * @brief 언리얼 MetaSounds 편집기의 자리입니다. 왼쪽 캔버스가 노드를 놓고 잇고(오른쪽 클릭으로 노드 넣기, Delete 로 지우기), 오른쪽이 그래프 설정과 고른 노드의 값을 고칩니다.
      * @details 캔버스와 그리드는 같은 사본(`AudioGraphViewModel::editGraph`)을 고친다. 연결의 기준은 받는 노드의 입력 목록이고 캔버스 링크는 그것을 그린 것이다(`AudioGraphEditUtil`).
      *          노드 위치는 데이터(`_editorPosition`)에 실린다. "저장" 은 검사를 통과할 때만 쓴다(`AudioGraphDef::saveToAsset`). 엔진이 이미 읽은 그래프는 저장한 파일을
-     *          에셋 핫 리로드(`AudioService::reloadDataFile` → `AudioClipCache::reloadClip`)가 다시 굳히고, 재생 중인 소리는 옛 그래프로 끝난다.
+     *          에셋 핫 리로드(`AudioSubsystem::reloadDataFile` → `AudioClipCache::reloadClip`)가 다시 굳히고, 재생 중인 소리는 옛 그래프로 끝난다.
      *          "미리 듣기" 는 저장된 파일을 2D 로 한 번 낸다(`AudioEngine::playClip`, 버스 `ui`).
      */
     class AudioGraphPanel final : public EditorDocumentPanel
@@ -41,7 +41,7 @@ namespace sw::editor
         const utf8*      getPanelTitle() const override { return "Audio Graph"; }
         EditorTextExtent getInitialPanelSize() const override { return EditorTextExtent::ofText( 147.0f, 34.0f ); }
         /** @brief 검사를 통과하면 연 문서에 씁니다. 실패하면 쓰지 않고 false 입니다(사본은 남는다). */
-        [[nodiscard]] bool saveDocument() override;
+        [[nodiscard]] bool saveDocument( AssetWriter& writer ) override;
 
     protected:
         void drawDocumentContent() override;

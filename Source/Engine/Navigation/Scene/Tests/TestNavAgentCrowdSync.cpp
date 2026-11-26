@@ -3,7 +3,7 @@
 #include "pch.h"
 
 #include "Core/Container/vector.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Navigation/Component/NavMeshAgentComponent.h"
 #include "Engine/Navigation/INavMesh.h"
@@ -32,7 +32,7 @@ namespace
         {
         }
 
-        NavCrowdAgentID addAgent( const float3&, const NavCrowdAgentParams& ) override { return 0; }
+        NavCrowdAgentID addAgent( const float3&, const NavCrowdAgentParams& ) override { return NavCrowdAgentID{ 0 }; }
         void            removeAgent( NavCrowdAgentID ) override {}
         void            updateAgentParams( NavCrowdAgentID, const NavCrowdAgentParams& ) override {}
         bool            requestMoveTarget( NavCrowdAgentID, const float3& ) override { return true; }

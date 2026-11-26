@@ -306,7 +306,7 @@ namespace sw
         AutomationActionDevice _device{ AutomationActionDevice::Any };
     };
 
-    /** @brief `RebuildModule` 의 인자입니다 — 다시 지을 모듈 타깃(실린 모듈 이름)과 판(`Config/Dev/ModuleRebuildVariants.json` 의 이름 — 비우면 지금 소스 그대로 다시 짓는다). */
+    /** @brief `RebuildModule` 의 인자입니다. 다시 지을 모듈 타깃(실린 모듈 이름)과 판(`Config/Dev/ModuleRebuildVariants.json` 의 이름, 비우면 지금 소스 그대로 다시 짓는다). */
     REFLECT()
     struct SW_API AutomationRebuildModuleParams
     {
@@ -319,7 +319,7 @@ namespace sw
     };
 
     /**
-     * @brief `OverwriteConfig` 의 인자입니다 — `Config/` 아래 파일(상대 경로)과 그 자리에 쓸 글의 리소스(비우면 지금 글을 그대로 다시 쓴다 — 바꾸지 않은 저장).
+     * @brief `OverwriteConfig` 의 인자입니다. `Config/` 아래 파일(상대 경로)과 그 자리에 쓸 글의 리소스(비우면 지금 글을 그대로 다시 쓴다. 바꾸지 않은 저장이다).
      * @details 칸 이름이 `file` 이 아니라 `configFile` 이다 — `file` · `path` 속성은 에셋 경로로 읽혀(참조 검사) `Config/` 의 파일이 "없는 에셋" 이 된다.
      */
     REFLECT()

@@ -1,8 +1,8 @@
 // 프레임 링(`FrameResourceRing` · `RHITimestampRing`) 범위 검사 — 링 칸 수를 넘는 칸 번호가 개발 구성에서 단언으로 잡히고, 경계 안은 잡히지 않는지(음성 대조).
 #include "pch.h"
 
-#include "Core/Testing/ScopedAssertCapture.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/ScopedAssertCapture.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Graphics/RHI/Backend/FrameResourceRing.h"
 #include "Engine/Graphics/RHI/Backend/RHITimestampRing.h"

@@ -92,7 +92,7 @@ namespace sw
             return; // 넘은 프레임에는 올리지 않는다
         }
 
-        // 올리기 — 화면에서 큰 것(필요한 밉 번호가 작은 것)부터. 올려서 예산을 넘으면 그 텍스처는 건너뛴다(작은 것이 그 뒤를 채울 수 있다 — 넘지 않는 한).
+        // 올리기: 화면에서 큰 것(필요한 밉 번호가 작은 것)부터. 올려서 예산을 넘으면 그 텍스처는 건너뛴다(넘지 않는 한 작은 것이 그 뒤를 채울 수 있다).
         VectorUtil::stableSort( listOrder, [&]( uint32 lhs, uint32 rhs )
         {
             if ( listWanted[lhs] != listWanted[rhs] )

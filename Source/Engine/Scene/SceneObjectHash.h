@@ -16,8 +16,8 @@
 #include "Core/Delegate/SubscriptionList.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Subsystem/Subsystem.h"
+#include "Core/Subsystem/SubsystemSlot.h"
 
 #include "Engine/Foundation/SceneIterationKey.h"
 
@@ -104,7 +104,7 @@ namespace sw
      * @class StateHashHistory
      * @brief 최근 N 틱의 해시 이력(링 버퍼)입니다. 서버가 틱마다 `record` 하고 개발 명령이 읽습니다.
      * @details 엔진 서비스입니다(`engine::findSubsystem<StateHashHistory>()`) — 서비스 범위가 소유한다. 용량은 개발 도구가 실행 인자
-     *          `-gv_stateHashHistory=N` 으로 정한다(`DevTools/Diagnostics/StateHashRecorder` — 0 이면 끈 채로 둔다. 배포 호스트는 DevTools 가 없어 늘 꺼져 있다).
+     *          `-gv_stateHashHistory=N` 으로 정한다(`DevTools/DevToolsHost.cpp` 의 `StateHashRecorder` — 0 이면 끈 채로 둔다. 배포 호스트는 DevTools 가 없어 늘 꺼져 있다).
      *          씬 해시 줄(기본) 말고 키트가 이름 붙은 줄(`registerChannel`)을 더한다 — 줄마다 같은 용량의 링이고 샘플 형식 · 비교(`findFirstDivergence`)가 같다.
      *          이름 붙은 줄은 구독이 풀려도(키트 종료) 이력을 남긴다. 같은 이름으로 다시 등록하면 그 줄을 이어 쓴다.
      */
@@ -178,7 +178,7 @@ namespace sw
         /** @brief `writeReport` 의 글을 되읽습니다. 빈 줄은 건너뛰고, 형식이 다른 줄이 하나라도 있으면 목록을 비우고 false 입니다. */
         [[nodiscard]] static bool parseReport( string_view text, vector<StateHashSample>& outListSample );
         /**
-         * @brief 두 이력에서 틱이 같은데 해시가 다른 **가장 이른 틱**을 찾습니다. 한쪽에만 있는 틱은 건너뜁니다.
+         * @brief 두 이력에서 틱이 같은데 해시가 다른 가장 이른 틱을 찾습니다. 한쪽에만 있는 틱은 건너뜁니다.
          * @return 찾았으면 true
          */
         [[nodiscard]] static bool findFirstDivergence( const vector<StateHashSample>& listLeft, const vector<StateHashSample>& listRight, uint64& outTick );
@@ -215,6 +215,6 @@ namespace sw
         /** @brief 제공자 등록의 구독입니다. 풀리면 `releaseProvider` 가 불린다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다. */
         ItemSubscriptionList<const IStateHashProvider> _subscriptions{ SW_DELEGATE_METHOD( ItemSubscriptionList<const IStateHashProvider>::ReleaseFunction, &StateHashHistory::releaseProvider, this ) };
 
-        SW_SERVICE_SLOT( StateHashHistory, Optional );
+        SW_SUBSYSTEM_SLOT( StateHashHistory, Optional );
     };
 } // namespace sw

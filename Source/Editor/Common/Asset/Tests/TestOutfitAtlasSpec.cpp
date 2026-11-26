@@ -1,7 +1,7 @@
 // 옷차림 아틀라스 명세 읽기 — XML 본문에서 부품 · 텍스처 종류 · 수치를 읽고, 부품에 없는 이름을 가리킨 명세는 거절하고 비운다(nogpu, 굽기 · 파일 없음).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Editor/Common/Asset/OutfitAtlasSpec.h"
 

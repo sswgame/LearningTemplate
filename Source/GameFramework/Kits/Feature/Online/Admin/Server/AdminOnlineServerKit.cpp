@@ -5,9 +5,9 @@
 #include "GameFramework/Kits/Feature/Online/Admin/Server/AdminKitConfig.h"
 #include "GameFramework/Kits/Feature/Online/Admin/Server/AdminService.h"
 #include "GameFramework/Kits/Feature/Online/Admin/Server/AdminStoreLogic.h"
-#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Config/LiveEventControl.h"
-#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Directory/ServerDirectoryControl.h"
-#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Ledger/IBalanceChangedListener.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/IBalanceChangedListener.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/LiveEventControl.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/ServerDirectoryControl.h"
 #include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
 #include "GameFramework/Runtime/Online/Ledger/LedgerTypes.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerConfig.h"
@@ -68,7 +68,7 @@ namespace sw
                 settings._pNameIndex           = interfaces.find<const IAccountNameIndex>(); // 접속하지 않은 계정도 이름으로 찾는다
                 settings._pLiveEventControl    = interfaces.find<ILiveEventControl>();
                 settings._sanctionLimit        = _sanctionLimit;
-                if ( _service.initialize( context._pStore, settings ) == false )
+                if ( _service.initialize( *context._pStore, settings ) == false )
                     return unexpected( Error{ ErrorKind::InvalidArgument, "the admin service needs a store" } );
                 for ( const AdminSeedEntry& seed : _listSeed )
                 {

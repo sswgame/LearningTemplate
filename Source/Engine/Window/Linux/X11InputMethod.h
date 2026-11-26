@@ -6,7 +6,7 @@
  *          - 글은 키 누름마다 한 번만 읽는다(`emitKeyText`). `Xutf8LookupString` 은 확정 글을 꺼내는 호출이라 처리기마다(ImGui · 입력 관리자) 부르면 둘째가 빈 글을 받는다 - 그래서 창이 읽어 글 이벤트로 나눠 준다.
  *          - 입력기를 원하는 쪽이 없으면 키를 넘기지 않는다(`setWanted`). 글자는 그래도 나온다(문맥의 키보드 변환).
  *
- *          **입력기가 없는 것은 정상이다.** 로캘 자료가 없거나(Xvfb 의 최소 루트) 입력기 데몬이 아직 안 떴으면 문맥 없이 키심으로 글자를 읽는다. 데몬이 나중에 뜨면 열고(`XRegisterIMInstantiateCallback`), 죽으면 문맥을 버린다(`XNDestroyCallback`).
+ *          입력기가 없는 것은 정상이다. 로캘 자료가 없거나(Xvfb 의 최소 루트) 입력기 데몬이 아직 안 떴으면 문맥 없이 키심으로 글자를 읽는다. 데몬이 나중에 뜨면 열고(`XRegisterIMInstantiateCallback`), 죽으면 문맥을 버린다(`XNDestroyCallback`).
  *          조합을 그리는 일은 받는 쪽이 한다(`XIMPreeditCallbacks`). 입력기가 그 방식을 내지 않으면 입력기가 스스로 그리고(`XIMPreeditNothing`) 조합 글은 오지 않는다.
  */
 #pragma once

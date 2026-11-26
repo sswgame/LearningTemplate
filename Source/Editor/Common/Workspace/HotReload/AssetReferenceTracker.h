@@ -26,7 +26,7 @@ namespace sw::editor
      *          (보통 몇 ms — 스캔 하나(Release 수 초, Debug 수십 초)보다 짧다). 에디터 자신의 이동은 `EditorAssetFileCommands::moveAsset` 이 색인을 그 자리에서 고친다.
      *          시나리오의 사본 쓰기는 시작 차단 조건(`AssetHotReload::pollContentWatchFence`)이 감시 사건을 기다려 막는다.
      *
-     *          **증분 갱신**: 색인이 있고 스캔이 돌지 않을 때 변경 번호가 오르면, 바뀐 파일 · 폴더의 목록(`AssetHotReload::takeChangedPaths`)만 고친다
+     *          증분 갱신: 색인이 있고 스캔이 돌지 않을 때 변경 번호가 오르면, 바뀐 파일 · 폴더의 목록(`AssetHotReload::takeChangedPaths`)만 고친다
      *          (`EditorAssetIndex::applyChanges` — 생김 · 사라짐 · 내용 변경 모두, 비용은 그 파일의 참조 수). 목록을 모를 때(감시 넘침)만 전체를 다시 스캔한다.
      */
     class AssetReferenceTracker

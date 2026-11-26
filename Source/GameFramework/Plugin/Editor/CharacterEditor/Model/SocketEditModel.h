@@ -2,7 +2,7 @@
  * @file SocketEditModel.h
  * @brief 소켓 에셋(`*.sockets.xml`) 편집 모델입니다 — 소켓 추가 · 삭제 · 이름 바꾸기 · 부모 · 종류 · 변환 편집, 좌우 대칭, 검증, 되돌리기, 파일 읽기 · 쓰기. ImGui 와 씬을 모릅니다.
  * @details 편집 대상은 사람이 고치는 원본 파일이다(조립 결과가 아니다). 편집은 모두 `SocketSet` 을 직접 고치고, 편집 직전 표를 되돌리기 기록에 넣는다.
- *          저장은 `SocketSet::saveToXMLText` 이며 **적은 필드만** 쓰므로(`SocketFieldBit`), 값을 고치는 편집은 그 필드의 비트를 함께 켠다.
+ *          저장은 `SocketSet::saveToXMLText` 이며 적은 필드만 쓰므로(`SocketFieldBit`), 값을 고치는 편집은 그 필드의 비트를 함께 켠다.
  *          이름을 바꾸면 다른 소켓의 후보 목록(`_listFallback`)이 따라간다. 부모 본 이름 검증은 본 목록(`setBoneNames`)이 있을 때만 한다.
  *          파일을 쓰면 핫 리로드가 같은 파일을 다시 읽는다 — 편집 중 다시 읽기와 겨루지 않게 하는 것(저장 직후 감시 무시 한 번)은 패널 쪽 일이다.
  */
@@ -13,8 +13,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
-#include "Core/Name/hashed_string.h"
 #include "Core/Path/AbsolutePath.h"
+#include "Core/String/Name/hashed_string.h"
 
 #include "Editor/Common/Workspace/Undo/EditorDocumentState.h"
 
@@ -24,6 +24,8 @@
 
 namespace sw::editor
 {
+    class AssetWriter;
+
     /**
      * @class SocketEditModel
      * @brief 소켓 표 하나와 그 편집 기록입니다.
@@ -49,13 +51,13 @@ namespace sw::editor
         /** @brief XML 텍스트에서 읽어 현재 내용을 바꿉니다. 실패하면 현재 내용을 그대로 두고 false 입니다. 성공하면 기록을 지우고 "저장된 상태" 로 맞춥니다. */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName );
         /** @brief 파일을 읽습니다. 파일이 없거나 읽지 못하면 false 입니다. */
-        [[nodiscard]] bool loadFromFile( const AbsolutePath& absolutePath );
+        [[nodiscard]] bool loadFromFile( const DiskPath& absolutePath );
         /** @brief 새 문서로 비웁니다. 기록을 지우고 "저장된 상태" 로 맞춥니다. */
         void clear();
         /** @brief 현재 내용을 XML 텍스트로 씁니다. */
         string saveToXMLText() const { return _sockets.saveToXMLText(); }
         /** @brief 파일에 씁니다. 성공하면 "저장된 상태" 로 맞춥니다(되돌리기 기록은 유지). */
-        [[nodiscard]] bool saveDocument( const AbsolutePath& absPath );
+        [[nodiscard]] bool saveDocument( AssetWriter& writer, const DiskPath& path );
         /** @brief 편집을 버리고 마지막으로 읽거나 저장한 상태로 돌아갑니다(창의 "Don't Save"). 기록을 지웁니다. 그 글을 다시 읽지 못하면 그대로 두고 false 입니다. */
         [[nodiscard]] bool revertToSaved() { return loadFromXMLText( string( _state.getSaved() ), "(saved socket state)" ); }
 
@@ -122,6 +124,10 @@ namespace sw::editor
         bool isKindAllowed( const hashed_string& kind ) const;
         /** @brief 값을 고치는 편집의 공통 경로입니다. 소켓을 복사해 @p fieldBit 를 켜고 되돌리기를 남긴 사본을 돌려줍니다(부르는 쪽이 고쳐 표에 되돌려 넣는다). */
         [[nodiscard]] expected<SocketDef> beginFieldEdit( const hashed_string& name, uint16 fieldBit, bool bContinuous, string_view fieldName );
+
+    private:
+        using CaptureDelegate = EditorDocumentState<SocketSet>::CaptureDelegate;
+        using ApplyDelegate   = EditorDocumentState<SocketSet>::ApplyDelegate;
 
     private:
         SocketSet                      _sockets;

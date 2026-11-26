@@ -10,7 +10,7 @@
 #include "Core/Log/Logger.h"
 
 #include "Editor/Common/Localization/LocalizationTools.h"
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 
 #include "ModuleAPI/ABI/EditorAPI.h"
 
@@ -42,10 +42,10 @@ extern "C" SW_MODULE_API int32 runEditorLocalizationTask( uint32 task, const utf
 {
     // 인스턴스가 없는 헤드리스 호출이라 서비스 범위를 이 호출 동안만 묶는다(`importEditorAssets` 와 같은 길).
     if ( pService != nullptr )
-        sw::editor::bindEditorService( *pService );
+        sw::editor::bindEditorSubsystems( *pService );
     const bool bSucceeded = sw::editor::runTask( static_cast<sw::EditorLocalizationTask>( task ), pPoPath != nullptr ? sw::FileUtil::toDiskPath( pPoPath ) : sw::AbsolutePath{},
                                                  pProjectArgument != nullptr ? pProjectArgument : "" );
     if ( pService != nullptr )
-        sw::editor::unbindEditorService();
+        sw::editor::unbindEditorSubsystems();
     return bSucceeded ? 0 : 1;
 }

@@ -6,7 +6,7 @@
 
 #include "Editor/Common/GUI/EditorPopup.h"
 #include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 
 namespace sw::editor
 {

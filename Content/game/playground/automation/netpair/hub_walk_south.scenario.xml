@@ -61,6 +61,8 @@
 	<WaitUntil watch="Object.X" target="FloorShuttle" atMost="5.5" timeoutWallSeconds="20"/>
 	<Expect watch="Hub.PawnFloor" equals="1"/>
 	<Expect watch="Object.Y" target="Player" near="0.2" tolerance="0.2"/>
+	<!-- 상대(북쪽)가 바닥 위의 이 폰을 다 보고 나갈 때까지 남는다. 먼저 끝내면 상대 화면에서 폰이 사라져, 두 프로세스의 빠르기에 따라 상대가 진다 -->
+	<WaitUntil watch="Object.Exists" target="HubRemotePawn" equals="0" timeoutWallSeconds="120"/>
 	<DevCommand line="hub.status"/>
 	<Pass/>
 </Scenario>

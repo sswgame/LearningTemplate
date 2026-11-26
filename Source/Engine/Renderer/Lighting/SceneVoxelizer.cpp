@@ -30,7 +30,7 @@ namespace sw
                 return Material::resolveDrawMaterial( mesh.getMaterial(), mesh.getRawMaterialInstance(), pSceneDefault );
             }
 
-            /** @brief 이 메시 컴포넌트가 복셀에 들어가는지입니다 — 불투명(머티리얼이 정한다 — 렌더러의 그리기 목록과 같은 근거) · 보이는 · 스킨 없는 메시. 그릴 머티리얼이 없으면 렌더러도 그리지 않는다. */
+            /** @brief 이 메시 컴포넌트가 복셀에 들어가는지입니다. 불투명(머티리얼이 정하며 렌더러의 그리기 목록과 같은 근거) · 보이는 · 스킨 없는 메시. 그릴 머티리얼이 없으면 렌더러도 그리지 않는다. */
             static bool isOccluder( const MeshComponent& mesh, Material* pSceneDefault )
             {
                 const Mesh*     pRawMesh  = mesh.getRawMesh();

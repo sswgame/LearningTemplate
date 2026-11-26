@@ -7,7 +7,7 @@
  *            그래서 쿠킹 중의 에셋 로드는 워커로 넘기지 않고 요청한 스레드에서 읽는다(`requiresCallingThreadRead` — `AssetLoadOperation::startLoad` 가 본다).
  *          - 쿠킹 세션(`CookSession`)이 열려 있는 동안 범위 밖에서 일어난 읽기는 오류다(읽기가 실패한다). 전역 캐시가 미리 읽어 둔 것을 쓰면 기록이 빠지기 때문이다.
  *          - 작업 키 = 해시(쿠커 이름, 쿠커 버전, 대상, 설정 해시, 출력 이름, 정렬한 입력 목록)이다(`computeKey`). 쿠커 버전은 쿠커 소스 옆의 사람이 올리는 상수다.
- *          - 입력은 셋이다(`CookInputKind`) — 리소스(리소스 id 의 내용 해시), 디스크 파일(리소스 루트 밖 절대 경로의 내용 해시), 목록(폴더 아래 확장자가 같은 파일 이름들의 해시 — `collectFiles`).
+ *          - 입력은 셋이다(`CookInputKind`): 리소스(리소스 id 의 내용 해시), 디스크 파일(리소스 루트 밖 절대 경로의 내용 해시), 목록(폴더 아래 확장자가 같은 파일 이름들의 해시, `collectFiles`).
  *            없는 것을 찾은 것도 해시 0 으로 남는다. 종류는 기록할 때 정하고 다시 풀 때 그 종류의 규칙으로만 푼다 — 예전에는 한 칸(`_source`)에 다섯 종류를 담고 다시 풀 때
  *            `findLooseFile` 이 글 모양으로 추측했다(절대 경로 갈래를 지우면 디스크 · 목록 입력이 조용히 0 이 되어 늘 다시 구웠다).
  *            폴더를 훑어 정한 출력(레지스트리)은 파일이 하나 더 생겨도 읽은 파일이 바뀌지 않으므로 목록이 입력이어야 한다.
@@ -158,7 +158,7 @@ namespace sw
          * @brief 디스크 경로 읽기 하나를 받아들입니다(`AssetIO::readTextFile` · `readBinaryFile`). 규칙은 `recordReadInput` 와 같고,
          *        절대 경로를 만들지 못하면 오류를 남기고 false 입니다.
          */
-        [[nodiscard]] static bool allowDiskRead( const AbsolutePath& diskPath, const uint8* pData, size_t size );
+        [[nodiscard]] static bool allowDiskRead( const DiskPath& diskPath, const uint8* pData, size_t size );
         /**
          * @brief 리소스를 요청한 스레드에서 읽어야 하면 true 입니다. 이 스레드에 작업이 있거나 쿠킹 세션이 열려 있을 때입니다.
          * @details 작업 범위는 스레드 지역 값이라 워커에서 읽으면 그 읽기가 입력에서 빠진다. 에셋 로드(`AssetLoadOperation::startLoad`)는 이때 `Async` 요청도
@@ -176,7 +176,7 @@ namespace sw
          */
         static void allowMissingRead( const AssetID& id );
         /** @brief 찾지 못한 디스크 경로 읽기를 받아들입니다(`allowMissingRead` 와 같고, 경로는 `allowDiskRead` 처럼 절대 경로로 기록한다). */
-        static void allowMissingDiskRead( const AbsolutePath& diskPath );
+        static void allowMissingDiskRead( const DiskPath& diskPath );
 
         /**
          * @brief @p folderPath 아래(하위 폴더 포함) @p extension 으로 끝나는 파일을 경로 순서로 모읍니다. 이 스레드에 작업이 있으면 그 목록을 입력으로 기록합니다.
@@ -189,9 +189,9 @@ namespace sw
         static uint64 computeListingHash( const AbsolutePath& folderPath, string_view extension );
 
         /** @brief 디스크 파일 입력 하나를 기록합니다(쿠커가 `AssetIO` 를 거치지 않고 읽은 파일). 경로는 `allowDiskRead` 처럼 맞춥니다. 절대 경로를 만들지 못하면 false 입니다. */
-        [[nodiscard]] bool recordDiskInput( const AbsolutePath& diskPath, uint64 contentHash );
+        [[nodiscard]] bool recordDiskInput( const DiskPath& diskPath, uint64 contentHash );
         /** @brief 디스크 파일 @p diskPath 의 입력 값입니다(`recordDiskInput` 이 기록하는 것 — 붙인 도메인 · 리소스 루트 아래면 리소스). 만들지 못하면 오류를 남기고 빈 값입니다. */
-        [[nodiscard]] static optional<CookInput> makeDiskInput( const AbsolutePath& diskPath, uint64 contentHash );
+        [[nodiscard]] static optional<CookInput> makeDiskInput( const DiskPath& diskPath, uint64 contentHash );
         /** @brief 입력 하나를 기록합니다. 같은 입력이 있으면 처음 것만 둡니다. 바깥 작업에도 기록합니다. */
         void recordInput( const CookInput& input );
 

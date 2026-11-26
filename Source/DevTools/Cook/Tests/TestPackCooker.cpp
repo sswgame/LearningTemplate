@@ -6,7 +6,7 @@
 #include "Core/File/ProcessRoots.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "DevTools/Cook/PackCooker.h"
 
@@ -246,8 +246,9 @@ SW_TEST_CASE( PackCookerTest, SplitIsDeterministicAndBounded )
  */
 SW_TEST_CASE( PackCookerTest, RealPackRulesExcludeLocalizationAuthoringTables )
 {
-    PackConfig config;
-    SW_REQUIRE_TRUE( ConfigManager::readConfigFile( config, ProcessRoots::get()._project.join( PackConfig::kConfigPath ) ) == ConfigReadResult::Loaded );
+    const expected<PackConfig> loadedConfig = ConfigManager::readConfig( PackConfig::kConfigFile );
+    SW_REQUIRE_TRUE( loadedConfig.has_value() );
+    const PackConfig&                       config = *loadedConfig;
     fixed_string<constant::buffer::kMax128> stringTable;
     formatstring( stringTable.data(), stringTable.capacity(), "localization/engine%#", SourceStringTable::kExtension );
     fixed_string<constant::buffer::kMax128> translationTable;
@@ -265,4 +266,27 @@ SW_TEST_CASE( PackCookerTest, RealPackRulesExcludeLocalizationAuthoringTables )
         SW_EXPECT_TRUE_MSG( includes( config, project, pBuildTarget ), label );
         SW_EXPECT_TRUE_MSG( PackCooker::shouldIncludeStagedFile( cookedTable, kShaderFolder, pBuildTarget ), label );
     }
+}
+
+/** @brief [PackCookerTest] 콘텐츠에서 사라진 도메인의 장부 팩과 청크 목록은 지우고, 살아 있는 다른 게임 팩과 장부에 없는 파일은 남긴다 */
+SW_TEST_CASE( PackCookerTest, OrphanDomainPacksAreRemovedWithTheirChunkList )
+{
+    const AbsolutePath root       = test::makeScratchPath( "PackOrphanDomains" );
+    const AbsolutePath content    = root.join( "Content" );
+    const AbsolutePath packFolder = root.join( "Packs" );
+    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( content.join( "game/playground" ) ) && FileUtil::ensureDirectoryExists( packFolder ) );
+    for ( const utf8* pName : { "engine.pack", "game_playground.pack", "game_empty.pack", "game_empty.scene_empty_a.0.pack", "packchunks.game_empty.xml", "handmade.pack" } )
+    {
+        SW_REQUIRE_TRUE( FileUtil::writeTextFile( packFolder.join( pName ), "x" ) );
+    }
+    unordered_set<string> setLedger{ "engine.pack", "game_playground.pack", "game_empty.pack", "game_empty.scene_empty_a.0.pack" };
+    SW_REQUIRE_TRUE( PackCooker::removeOrphanDomainPacks( content, packFolder, setLedger ) );
+    SW_EXPECT_EQUAL( size_t{ 2 }, setLedger.size() );
+    SW_EXPECT_TRUE( setLedger.contains( "engine.pack" ) && setLedger.contains( "game_playground.pack" ) );
+    SW_EXPECT_FALSE( FileUtil::exists( packFolder.join( "game_empty.pack" ) ) );
+    SW_EXPECT_FALSE( FileUtil::exists( packFolder.join( "game_empty.scene_empty_a.0.pack" ) ) );
+    SW_EXPECT_FALSE( FileUtil::exists( packFolder.join( "packchunks.game_empty.xml" ) ) );
+    SW_EXPECT_TRUE( FileUtil::exists( packFolder.join( "game_playground.pack" ) ) );
+    SW_EXPECT_TRUE( FileUtil::exists( packFolder.join( "handmade.pack" ) ) ); // 쿠커가 쓰지 않은 파일
+    SW_EXPECT_TRUE( FileUtil::removeDirectory( root ) );
 }

@@ -2,7 +2,7 @@
 // (참조 표 `engine/settings/datacatalogreferences.xml`), XML 안의 같은 종류 id 겹침은 오류이고 코드 추가 API 의 교체는 그대로다.
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityCatalog.h"
 

@@ -20,14 +20,14 @@ namespace sw
 
     /**
      * @class ShaderReflectionLibrary
-     * @brief 셰이더 바인딩 리플렉션을 **런타임이 아니라 쿠킹 시점에** 뽑아 두고 읽어 쓰는 라이브러리입니다.
+     * @brief 셰이더 바인딩 리플렉션을 런타임이 아니라 쿠킹 시점에 뽑아 두고 읽어 쓰는 라이브러리입니다.
      * @details DXIL 리플렉션은 `dxcompiler.dll`(IDxcUtils::CreateReflection)을 필요로 합니다. D3D12 에는
      *          독립 리플렉션 API 가 없습니다. 그것을 런타임에 하면 배포물에 셰이더 컴파일러를 같이 넣어야 하고,
      *          없으면 바인딩이 조용히 어긋나 DEVICE_HUNG 으로 갑니다(실제로 그랬습니다).
      *          상용 엔진(Unreal 의 셰이더 라이브러리 등)처럼, 바이트코드를 쿠킹할 때 리플렉션도 같이
      *          쿠킹해 배포하고 런타임은 읽기만 합니다.
      *
-     *          파일은 **RHI 폴더마다 하나**입니다: `<domain>/shaders/bin/<rhi>/reflection.manifest`.
+     *          파일은 RHI 폴더마다 하나입니다: `<domain>/shaders/bin/<rhi>/reflection.manifest`.
      *          셰이더마다 사이드카를 두면 팩 엔트리, 조회, 압축 해제가 셰이더 수만큼 늘어납니다. 변형이
      *          수천 개로 늘어도 파일 하나면 I/O 가 일정합니다.
      */
@@ -54,7 +54,7 @@ namespace sw
 
         /**
          * @brief 매니페스트 하나를 통째로 읽습니다. 캐시하지 않고 신선도도 따지지 않습니다.
-         * @details 셰이더 하나가 아니라 **쿠킹된 것 전부**를 보는 쪽이 씁니다. 계약 테스트가 C++ 가 바인딩하는 이름이 실제로 쿠킹됐는지 확인하는 경우입니다.
+         * @details 셰이더 하나가 아니라 쿠킹된 것 전부를 보는 쪽이 씁니다. 계약 테스트가 C++ 가 바인딩하는 이름이 실제로 쿠킹됐는지 확인하는 경우입니다.
          *          매니페스트는 리플렉터 없이 읽히므로 DXBC 와 DXIL 리플렉터가 없는 플랫폼에서도 네 백엔드를 다 봅니다.
          * @param binDirectoryRelative 리소스 상대 `<domain>/shaders/bin/<rhi>` 디렉터리
          * @return 파일이 없거나 형식이나 내용이 맞지 않으면 false 입니다(그때 `outMapEntry` 는 비어 있습니다).

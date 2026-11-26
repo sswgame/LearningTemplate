@@ -7,7 +7,7 @@
  *          이 핸들로 옮긴다(`RenderGraphPassContext::transition`).
  */
 #pragma once
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 
 #include "Engine/Renderer/Graph/RenderGraph.h"
 

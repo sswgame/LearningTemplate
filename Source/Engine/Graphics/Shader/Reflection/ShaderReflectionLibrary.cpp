@@ -14,7 +14,7 @@
 
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetPaths.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
@@ -241,7 +241,7 @@ namespace sw
         if ( absDirectory.empty() )
             return false;
 
-        // 항목은 **키 순서로** 쓴다. 맵은 넣은 순서로 돌므로 그대로 쓰면 같은 항목 집합이라도 쿠커가 요청을 모은 순서에 따라
+        // 항목은 키 순서로 쓴다. 맵은 넣은 순서로 돌므로 그대로 쓰면 같은 항목 집합이라도 쿠커가 요청을 모은 순서에 따라
         // 파일 바이트가 달라진다. 이 파일은 커밋되는 산출물이라, 요청 순서만 바꾼 변경이 매니페스트 넷을 바꿔 놓으면 진짜 변경을 가린다.
         vector<const EntryMap::value_type*> listEntry;
         listEntry.reserve( mapEntry.size() );
@@ -297,7 +297,7 @@ namespace sw
             return false;
 
         const AbsolutePath outPath = absDirectory.join( getManifestFileName() );
-        if ( FileUtil::ensureDirectoryExists( absDirectory ) == false || FileUtil::writeFile( outPath, bytes.data(), bytes.size() ) == false )
+        if ( FileUtil::writeFile( outPath, bytes.data(), bytes.size() ) == false )
         {
             SW_LOG_ERROR_ID( "ShaderReflectionLibrary.FailedWriteReflectionManifest", "Failed to write the reflection manifest: %#", outPath.c_str() );
             return false;

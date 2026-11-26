@@ -19,7 +19,7 @@
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Content/CookCodeFingerprint.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/ComponentStableKey.h"
@@ -131,7 +131,7 @@ namespace sw
              * @brief 데이터 레이어를 넘는 참조를 찾습니다. 대상의 레이어가 가리키는 쪽의 레이어에 모두 들어 있어야 한다 — 그래야 가리키는 쪽이 오를 때 대상이 늘 올라 있다. 셀을 넘는 참조와 같은 규칙이다.
              * @return 위반이 있으면 엔티티마다 오류를 남기고 false 입니다. 레이어를 쓰지 않는 씬은 짓지 않고 true 입니다.
              */
-            [[nodiscard]] static bool validateDataLayerReferences( const SceneEngineServices& services, const SceneDocument& doc, string_view scenePath )
+            [[nodiscard]] static bool validateDataLayerReferences( const SceneEngineSubsystems& services, const SceneDocument& doc, string_view scenePath )
             {
                 bool                                                         bHasLayered = false;
                 unordered_map<uint64, const SceneDocument::SceneObjectNode*> mapNodeByFileID;
@@ -179,7 +179,7 @@ namespace sw
             }
 
             /** @brief 씬 하나를 쿠킹해 @p outputPath 에 씁니다. 작업 범위 안에서 부릅니다 — 씬 · 프리팹 · 그 밖의 읽기가 모두 입력이 된다. */
-            static CookStep cookScene( const SceneEngineServices& services, const TypeRegistry& registry, const AbsolutePath& scenePath, string_view relativeScene,
+            static CookStep cookScene( const SceneEngineSubsystems& services, const TypeRegistry& registry, const AbsolutePath& scenePath, string_view relativeScene,
                                        string_view activePackRoot, const AbsolutePath& outputPath )
             {
                 SceneDocument doc{};
@@ -216,7 +216,7 @@ namespace sw
                     SW_LOG_ERROR_ID( "SceneCooker.SceneCookComponentsUnknown", "Scene cook: '%#' has %# components of unknown type - not cooked", scenePath.str(), missingComponentCount );
                     return CookStep::Failed;
                 }
-                // 이 비교는 **모든 빌드에서** 돌아야 한다. 아래 요약은 `SW_LOG_INFO` 라 Shipping 에서
+                // 이 비교는 모든 빌드에서 돌아야 한다. 아래 요약은 `SW_LOG_INFO` 라 Shipping 에서
                 // 통째로 사라지는데, "쿠킹했다고 했지만 실은 XML 그대로" 는 그때도 알아야 할 일이다.
                 if ( cookedCount < statefulCount )
                 {
@@ -248,7 +248,7 @@ namespace sw
              * @brief 씬 하나의 합친 HLOD 대리를 메시 하나로 구워 @p outputPath 에 씁니다(`SceneHLODMeshCooker`). 합칠 대리가 없는 씬은 건너뜁니다.
              * @details 대리를 만드는 길은 씬 쿠킹과 같다(묶기 → 셀 나누기) — 입력은 씬이 지어지며 읽은 것과 부품 메시다. 부품 메시를 고치면 이 파일만 다시 굽는다.
              */
-            static CookStep cookHLODMesh( const SceneEngineServices& services, const AbsolutePath& scenePath, const AbsolutePath& outputPath )
+            static CookStep cookHLODMesh( const SceneEngineSubsystems& services, const AbsolutePath& scenePath, const AbsolutePath& outputPath )
             {
                 // 합치기를 켜지 않은 씬은 세우지 않는다 — 글에 설정 칸이 없으면 넘긴다. 작업 안에서 읽어 씬이 이 작업의 입력이 된다.
                 string text;
@@ -280,7 +280,7 @@ namespace sw
              * @brief 씬 하나의 프리로드 목록(`ScenePreloadList`)을 만들어 @p outputPath 에 씁니다. 씬을 런타임과 같은 길로 지어 컴포넌트의 에셋 경로 프로퍼티를 모은다.
              * @details 씬 쿠킹과 따로 도는 작업이다(쿠킹 기록은 작업 하나에 출력 하나). 입력은 씬이 지어지며 읽은 모든 것이라, 프리팹을 고치면 목록도 다시 구워진다.
              */
-            static CookStep cookPreloadList( SceneIterationKey key, const SceneEngineServices& services, const AbsolutePath& scenePath, const AbsolutePath& outputPath )
+            static CookStep cookPreloadList( SceneIterationKey key, const SceneEngineSubsystems& services, const AbsolutePath& scenePath, const AbsolutePath& outputPath )
             {
                 SceneDocument doc{};
                 if ( doc.loadXMLFromDiskFile( scenePath ) == false )
@@ -310,7 +310,7 @@ namespace sw
 
 namespace sw
 {
-    uint32 SceneCooker::cookEntityState( const SceneEngineServices& services, SceneDocument& inoutDoc, uint32* pOutMissingComponentCount )
+    uint32 SceneCooker::cookEntityState( const SceneEngineSubsystems& services, SceneDocument& inoutDoc, uint32* pOutMissingComponentCount )
     {
         if ( pOutMissingComponentCount != nullptr )
             *pOutMissingComponentCount = 0;
@@ -319,7 +319,7 @@ namespace sw
             SW_LOG_ERROR_ID( "SceneCooker.SceneCookNotCooked", "Scene cook: '%#' is not cooked - the engine services have no type registry", inoutDoc._name );
             return 0;
         }
-        // **런타임이 읽는 그대로 짓고 쿠킹한다.** 엔티티를 하나씩 따로 읽으면 부모가 문서에서 뒤에 있는 자식이 부모를 찾지 못하고 저장이
+        // 런타임이 읽는 그대로 짓고 쿠킹한다. 엔티티를 하나씩 따로 읽으면 부모가 문서에서 뒤에 있는 자식이 부모를 찾지 못하고 저장이
         // 그 연결을 지운다(배포본에서 자식이 루트가 된다). 그래서 문서 전체를 `Scene::instantiate`(프리팹 스폰 · 묶음 부착까지 런타임과
         // 같은 길)로 짓고, 쿠킹된 문서를 다시 지어 엔티티마다 상태 전체를 비교한다(컴포넌트 타입 목록만 보면 값이 어긋나도 통과한다).
         // 엔티티는 파일 id 로 찾는다 — 쿠킹된 상태의 부착도 파일 id 로만 부모를 가리킨다. id 없는 엔티티는 읽는 쪽이 받지 않는 문서다.
@@ -366,7 +366,7 @@ namespace sw
             }
         }
 
-        // **쿠킹된 것을 다시 지어 본다.** 모르는 컴포넌트 타입 · 값이 바뀌는 필드 · 부모를 잃는 부착이 있으면 그 엔티티의 상태가 어긋나고, 그
+        // 쿠킹된 것을 다시 지어 본다. 모르는 컴포넌트 타입 · 값이 바뀌는 필드 · 부모를 잃는 부착이 있으면 그 엔티티의 상태가 어긋나고, 그
         // 엔티티는 XML 로 남는다. 쿠킹이 조용히 무언가를 떨어뜨리지 않는다.
         Scene verify{ "SceneCooker.Verify", services };
         verify.setBuildAllDataLayers();
@@ -410,7 +410,7 @@ namespace sw
         return cookedCount;
     }
 
-    uint32 SceneCooker::cookAllScenes( const SceneEngineServices& services, const AbsolutePath& sourceRoot, const AbsolutePath& cookedDir, const CookStore& store,
+    uint32 SceneCooker::cookAllScenes( const SceneEngineSubsystems& services, const AbsolutePath& sourceRoot, const AbsolutePath& cookedDir, const CookStore& store,
                                        const uint64 reflectionFingerprint, uint32& outFailedCount )
     {
         outFailedCount = 0;
@@ -512,7 +512,7 @@ namespace sw
         return stats.getWrittenCount();
     }
 
-    bool SceneCooker::packStaticMeshes( const SceneEngineServices& services, SceneDocument& inoutDoc, string_view scenePath )
+    bool SceneCooker::packStaticMeshes( const SceneEngineSubsystems& services, SceneDocument& inoutDoc, string_view scenePath )
     {
         // 묶을 주인: 묶는 씬을 넣은 앵커(파일 id)와, 문서 자신이 묶는 씬이면 맨 위(0).
         unordered_set<uint64> uniquePackedAnchor;

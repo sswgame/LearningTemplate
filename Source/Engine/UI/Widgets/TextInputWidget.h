@@ -15,7 +15,7 @@
 namespace sw
 {
     class TextWidget;
-    class UIClipboardService;
+    class UIClipboardSubsystem;
 } // namespace sw
 
 namespace sw
@@ -25,7 +25,7 @@ namespace sw
      * @brief 포커스를 가지면 키보드 포커스 `UI` 를 잡아(게임은 키를 보지 못합니다) 글자 이벤트를 받습니다. 확정한 텍스트는 커서 자리에 들어가고(선택이 있으면 선택을 대신하고),
      *        IME 조합 중인 텍스트는 커서 자리에 밑줄로 보여 줍니다. 줄 바꿈(Enter)은 `getOnCommitted()` 를 부릅니다.
      * @details 겉은 테두리 패널(배경)이고 안의 텍스트 위젯이 텍스트를 그린다(비어 있으면 `_hintText` 를 흐리게 보인다).
-     *          **편집.** 커서(`getCaretByte`)와 선택 기준점(`getSelectionAnchorByte`)은 원문 UTF-8 바이트 위치이고 항상 코드 포인트 경계입니다. 둘이 다르면 그 사이가 선택입니다.
+     *          편집. 커서(`getCaretByte`)와 선택 기준점(`getSelectionAnchorByte`)은 원문 UTF-8 바이트 위치이고 항상 코드 포인트 경계입니다. 둘이 다르면 그 사이가 선택입니다.
      *          액션은 `UI.TextBackspace` · `UI.TextDelete` · `UI.TextCaretLeft/Right` · `UI.TextHome/End` · `UI.TextSelectLeft/Right/Home/End` · `UI.TextSelectAll` ·
      *          `UI.TextCopy/Cut/Paste` 이고, 왼쪽과 오른쪽은 화면 기준이라 오른쪽에서 왼쪽 위젯에서는 논리 순서가 뒤집힙니다. 포인터를 누르면 가장 가까운 글자 사이로 커서가 가고,
      *          두 번 누르면 전체를 선택합니다. 복사와 붙여넣기는 `UISystem::getClipboard` 를 거칩니다(붙이는 글에서 줄 바꿈과 제어 문자는 뺍니다 — 한 줄 필드).
@@ -99,8 +99,8 @@ namespace sw
         /** @brief 편집 액션 하나를 처리합니다. 처리했으면 true 입니다. */
         bool handleEditAction( const hashed_string& action );
         /** @brief 이 위젯이 든 화면의 UI 시스템 클립보드입니다(화면 밖이면 nullptr). */
-        UIClipboardService* findClipboard() const;
-        /** @brief 클립보드에 쓰지 못했다고 이 화면의 알림(`UINotificationService`)으로 사용자에게 알립니다(화면 밖이면 아무것도 하지 않는다). */
+        UIClipboardSubsystem* findClipboard() const;
+        /** @brief 클립보드에 쓰지 못했다고 이 화면의 알림(`UINotificationSubsystem`)으로 사용자에게 알립니다(화면 밖이면 아무것도 하지 않는다). */
         void notifyClipboardWriteFailed() const;
         /** @brief 보이는 글(커서 자리에 조합을 끼운 것) 안의 바이트 위치 @p displayByte 가 놓인 가로 위치입니다(이 위젯 로컬, 마지막 그리기의 배치 기준). */
         float32 computeEdgeX( uint32 displayByte ) const;

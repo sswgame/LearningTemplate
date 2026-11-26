@@ -37,7 +37,6 @@ namespace sw::editor
         };
 
         /** @brief 되돌리기 스택의 상한입니다. 넘으면 가장 오래된 것부터 버립니다. */
-        static constexpr size_t kMaxUndoCount = EditSnapshotHistory<string>::kMaxCount;
 
         CatalogDocument();
 
@@ -152,6 +151,10 @@ namespace sw::editor
         [[nodiscard]] bool commitChildEdit( string_view text );
         /** @brief 항목 표의 행이고 훑은 문서면 true 이고, 아니면 `_error` 를 적고 false 입니다. */
         [[nodiscard]] bool validateChildRow( int32 rowIndex );
+
+    private:
+        using CaptureDelegate = EditorDocumentState<string>::CaptureDelegate;
+        using ApplyDelegate   = EditorDocumentState<string>::ApplyDelegate;
 
     private:
         string                      _text;

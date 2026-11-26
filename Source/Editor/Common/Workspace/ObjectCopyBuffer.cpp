@@ -2,7 +2,7 @@
 
 #include "Editor/Common/Workspace/ObjectCopyBuffer.h"
 
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/FormatDef.h"

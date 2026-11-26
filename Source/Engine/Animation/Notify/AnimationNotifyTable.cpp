@@ -3,13 +3,14 @@
 #include "Engine/Animation/Notify/AnimationNotifyTable.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Asset/Cache/SharedAssetCacheDefinition.h"
 #include "Engine/Character/CharacterDataReader.h"
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw
@@ -275,7 +276,7 @@ namespace sw
 
     AnimationNotifyHandlerRegistry::~AnimationNotifyHandlerRegistry() = default;
 
-    SW_ENGINE_SERVICE_SUBSYSTEM( AnimationNotifyHandlerRegistry, GameVisible, Process, Services, (), SW_ENGINE_DEFAULT_FACTORY( AnimationNotifyHandlerRegistry ) );
+    SW_ENGINE_SUBSYSTEM_WITH_SLOT( AnimationNotifyHandlerRegistry, GameVisible, Process, Shared, (), SW_ENGINE_DEFAULT_FACTORY( AnimationNotifyHandlerRegistry ) );
 
     bool AnimationNotifyHandlerRegistry::registerHandler( const hashed_string& name, unique_ptr<IAnimationNotifyHandler> handler )
     {
@@ -294,4 +295,47 @@ namespace sw
 {
     SW_SHARED_ASSET_CACHE( AnimationNotifyTable, AnimationNotifyTable,
                            AnimationNotifyTable::kAssetType.withLoader( AssetTypeLoader::with<AnimationNotifyTable, &AnimationNotifyTableInternal::loadNotifyTable>( MemoryTag::Animation ) ) );
+} // namespace sw
+
+namespace sw
+{
+    AnimationFootContactTracker::AnimationFootContactTracker()
+        : _previousHeight{ 0.0f }
+        , _bHasPrevious{ SW_FALSE }
+        , _bPlanted{ SW_FALSE }
+        , _bMissingBoneReported{ SW_FALSE }
+    {
+    }
+
+    bool AnimationFootContactTracker::update( const AnimationFootContactDef& def, float32 footHeight, float32 deltaSeconds )
+    {
+        if ( deltaSeconds <= 0.0f )
+            return false;
+        if ( _bHasPrevious == SW_FALSE )
+        {
+            _previousHeight = footHeight;
+            _bHasPrevious   = SW_TRUE;
+            _bPlanted       = footHeight <= def._contactHeight ? SW_TRUE : SW_FALSE;
+            return false;
+        }
+        const float32 verticalSpeed = MathUtil::abs( footHeight - _previousHeight ) / deltaSeconds;
+        _previousHeight             = footHeight;
+        if ( _bPlanted == SW_TRUE )
+        {
+            if ( footHeight > def._releaseHeight )
+                _bPlanted = SW_FALSE;
+            return false;
+        }
+        const bool bTouched = footHeight <= def._contactHeight && verticalSpeed <= def._maxVerticalSpeed;
+        if ( bTouched )
+            _bPlanted = SW_TRUE;
+        return bTouched;
+    }
+
+    void AnimationFootContactTracker::reset()
+    {
+        _previousHeight = 0.0f;
+        _bHasPrevious   = SW_FALSE;
+        _bPlanted       = SW_FALSE;
+    }
 } // namespace sw

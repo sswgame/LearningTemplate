@@ -12,8 +12,8 @@
 
 #include "GameFramework/Runtime/Character/Combat/Damage/DamageMath.h"
 #include "GameFramework/Runtime/Foundation/GameData/DepletingValue.h"
-#include "GameFramework/Runtime/Foundation/Service/GameEventUtil.h"
-#include "GameFramework/Runtime/Foundation/Service/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameEvents.h"
+#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 
 namespace sw
 {
@@ -191,28 +191,29 @@ namespace sw
         return count;
     }
 
-    ActionRoomFrameResult ActionRoom::update( float32 deltaTime, const ActionRoomFrameInput& input )
+    ActionRoomFrameResult ActionRoom::update( GameSeconds frameTime, const ActionRoomFrameInput& input )
     {
+        const float32         deltaTime = frameTime.count();
         ActionRoomFrameResult result{};
         // 음수 시간은 적과 탄을 거꾸로 움직인다.
         if ( _kind == ActionRoomKind::None || deltaTime < 0.0f )
             return result;
 
-        _attackCooldown.update( deltaTime );
-        _dashCooldown.update( deltaTime );
-        _invulnerable.update( deltaTime );
+        _attackCooldown.update( frameTime );
+        _dashCooldown.update( frameTime );
+        _invulnerable.update( frameTime );
 
         if ( input._bDashPressed == SW_TRUE && _dashCooldown.isActive() == false )
         {
             _dashCooldown.start( _settings._dashCooldownSeconds );
-            // **줄이지 않는다.** 그냥 대입하면 맞아서 얻은 0.7초짜리 무적이 대시 한 번에
-            // 0.22초로 **깎인다.** 대시가 피해를 덜 받게 해야 하는데 오히려 더 받게 된다.
+            // 줄이지 않는다. 그냥 대입하면 맞아서 얻은 0.7초짜리 무적이 대시 한 번에
+            // 0.22초로 깎인다. 대시가 피해를 덜 받게 해야 하는데 오히려 더 받게 된다.
             _invulnerable.extendTo( _settings._dashInvulnerableSeconds );
             result._bDashStarted = SW_TRUE;
         }
 
         tryPlayerAttack( input );
-        updateActors( deltaTime, input._playerPos._x, input._playerPos._y, result );
+        updateActors( frameTime, input._playerPos._x, input._playerPos._y, result );
         updateProjectiles( deltaTime );
         resolvePlayerHits( input._playerPos._x, input._playerPos._y, result );
         refreshCleared( result );
@@ -297,8 +298,9 @@ namespace sw
         }
     }
 
-    void ActionRoom::updateActors( float32 deltaTime, float32 playerX, float32 playerY, ActionRoomFrameResult& outResult )
+    void ActionRoom::updateActors( GameSeconds frameTime, float32 playerX, float32 playerY, ActionRoomFrameResult& outResult )
     {
+        const float32 deltaTime = frameTime.count();
         for ( Actor& actor : _listActor )
         {
             if ( actor._bAlive == SW_FALSE )
@@ -311,7 +313,7 @@ namespace sw
 
             if ( def._listShot.empty() )
                 continue;
-            actor._attackTimer.update( deltaTime );
+            actor._attackTimer.update( frameTime );
             if ( actor._attackTimer.isActive() )
                 continue;
             // 늦은 시간을 이어서 발사 빈도가 fps 에 묶이지 않게 한다(최대 한 간격까지만 이어 가므로, 멈춘 프레임 뒤에 몰아 쏘지 않는다).

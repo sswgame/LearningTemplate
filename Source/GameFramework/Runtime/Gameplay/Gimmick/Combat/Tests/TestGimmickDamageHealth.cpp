@@ -2,8 +2,8 @@
 // 결함: 기믹 피해가 센서와 "game" 채널 이벤트에만 들어 가시 · 불 · 폭발 통이 캐릭터 체력에 닿지 않았다. (nogpu).
 #include "pch.h"
 
-#include "Core/Name/hashed_string.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/String/Name/hashed_string.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -12,7 +12,7 @@
 #include "GameFramework/Runtime/Gameplay/Ability/AbilitySystemComponent.h"
 #include "GameFramework/Runtime/Gameplay/Ability/Tests/CombatAttributeTestUtil.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/Combat/ExplosiveBarrelComponent.h"
-#include "GameFramework/Runtime/Gameplay/Gimmick/Combat/GimmickDamageUtil.h"
+#include "GameFramework/Runtime/Gameplay/Gimmick/GimmickUtil.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/Trigger/GimmickSensorComponent.h"
 
 using namespace sw;
@@ -48,10 +48,10 @@ SW_TEST_CASE( GimmickDamageHealthTest, HealthSourceAndSensorBothReceive )
     SW_REQUIRE_NOT_NULL( pSensor );
     manager.beginPlay();
 
-    GimmickDamageUtil::applyDamage( *pStats->getOwner(), pCrate, hashed_string( "Hazard" ), 25.0f );
+    GimmickUtil::applyDamage( *pStats->getOwner(), pCrate, hashed_string( "Hazard" ), 25.0f );
     SW_EXPECT_NEAR( 75.0f, Internal::getHealth( *pStats ), 1.0e-4f );
 
-    GimmickDamageUtil::applyDamage( *pCrate, nullptr, hashed_string( "Hazard" ), 10.0f ); // 체력 원천이 없는 센서 대상 — 센서만 받고 조용히 지나간다
+    GimmickUtil::applyDamage( *pCrate, nullptr, hashed_string( "Hazard" ), 10.0f ); // 체력 원천이 없는 센서 대상 — 센서만 받고 조용히 지나간다
     SW_EXPECT_EQUAL( 10.0f, pSensor->consumeDamage() );
     SW_EXPECT_NEAR( 75.0f, Internal::getHealth( *pStats ), 1.0e-4f );
 }

@@ -7,7 +7,7 @@
 #include "Core/Foundation/PlatformOSHeaders.h"
 #include "Core/Process/ShutdownSignal.h"
 
-#include "Server/ServerApp.h"
+#include "Server/ServerEntry.h"
 
 namespace sw
 {
@@ -60,7 +60,7 @@ namespace sw
                 reportStatus( SERVICE_START_PENDING, kStartWaitHintMilliseconds );
                 // RUNNING 은 기동을 마친 뒤에 알린다 — 본문 앞에서 알리면 오케스트레이터가 기동 실패와 정상 기동을 가르지 못했다(감사 P-14).
                 // 기동 실패는 START_PENDING 에서 곧장 STOPPED + 종료 코드다.
-                s_exitCode = ServerApp::runMain( s_argc, s_ppArgv, []()
+                s_exitCode = ServerEntry::run( s_argc, s_ppArgv, []()
                 { reportStatus( SERVICE_RUNNING, 0 ); } );
                 reportStatus( SERVICE_STOPPED, 0 );
             }

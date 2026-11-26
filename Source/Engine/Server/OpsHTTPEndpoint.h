@@ -3,7 +3,7 @@
  * @brief 운영 HTTP 엔드포인트 — 스트림 전송 위의 아주 작은 HTTP/1.1(GET 만, 요청 하나 뒤 닫기): `/metrics`(Prometheus 텍스트) · `/healthz` · `/readyz`.
  * @details - 전송의 처리기가 되어 I/O 스레드에서 요청 머리를 읽고 바로 답한다(서비스 스레드를 기다리지 않는다 — 지표는 원자 값, 상태는 잠금 하나).
  *          - 머리가 `_maxRequestBytes` 를 넘으면 431, GET 이 아니면 405, 모르는 경로는 404, 요청 줄이 깨지면 400 — 모두 답한 뒤 닫는다.
- *          - 평문 · 따로 포트 · **기본 바인드는 이 기계만**(`NetAddress::makeLoopback`) — Prometheus 스크레이프 · 감시자는 같은 기계나 사설망에서 온다.
+ *          - 평문 · 따로 포트 · 기본 바인드는 이 기계만(`NetAddress::makeLoopback`) — Prometheus 스크레이프 · 감시자는 같은 기계나 사설망에서 온다.
  *            토큰 없이는 루프백 · 사설 주소에만 묶인다(`initialize` 가 그 밖을 거절 — 형식으로 막는다). 모든 인터페이스 · 공용 주소는 Bearer 토큰이 있어야 열리고, 그때 요청마다 401 로 거른다.
  */
 #pragma once

@@ -14,7 +14,7 @@ namespace sw
         {
             /**
              * @brief 좌표 하나를 셀 번호로 바꿉니다.
-             * @details float 을 int 로 캐스팅하는 것은 값이 int32 범위 밖이면 **정의되지 않은 동작**
+             * @details float 을 int 로 캐스팅하는 것은 값이 int32 범위 밖이면 정의되지 않은 동작
              *          이고, NaN 도 마찬가지입니다. 좌표 하나가 이상하다고 프로그램이 이상해지면 안 되므로
              *          범위 안으로 접어 넣습니다. 그렇게 접힌 범위는 어차피 셀 수 상한에 걸려
              *          "너무 넓다" 로 처리됩니다. 나눗셈을 float64 로 하는 이유는 float64 가 모든
@@ -43,7 +43,7 @@ namespace sw
         /**
          * @brief 광선이 상자를 실제로 지나는지 슬랩(slab)으로 판정합니다.
          * @param originX 광선 시작점 X. @param originY 광선 시작점 Y.
-         * @param dirX **정규화된** 방향 X. @param dirY **정규화된** 방향 Y.
+         * @param dirX 정규화된 방향 X. @param dirY 정규화된 방향 Y.
          * @param maxDist 광선 길이. @param bounds 대상 상자.
          * @details 축마다 들어가는 t 와 나오는 t 를 구해 구간을 좁힙니다. 구간이 뒤집히면 맞지 않습니다.
          *          방향 성분이 0 인 축은 그 축의 시작 좌표가 상자 안에 있어야만 통과합니다.
@@ -107,9 +107,9 @@ namespace sw
         if ( spanX <= 0 || spanY <= 0 )
             return 0;
 
-        // **곱하기 전에 넘칠지 본다.** 셀 번호는 int32 라 한 축의 폭이 2^32 까지 가고, 두 축을 곱하면
+        // 곱하기 전에 넘칠지 본다. 셀 번호는 int32 라 한 축의 폭이 2^32 까지 가고, 두 축을 곱하면
         // 2^64 라 int64 를 넘는다. 넘친 곱은 작은 수(심지어 0)가 되어 "좁은 범위" 로 읽히고, 그러면
-        // 상한 검사를 통과해서 **막으려던 순회를 그대로 돌게 된다.** 부르는 쪽은 이 값을 상한과 비교하기만
+        // 상한 검사를 통과해서 막으려던 순회를 그대로 돌게 된다. 부르는 쪽은 이 값을 상한과 비교하기만
         // 하므로, 넘칠 때는 표현 가능한 최댓값으로 붙여 두면 답이 맞는다.
         if ( spanX > MathUtil::kMaxInt64 / spanY )
             return MathUtil::kMaxInt64;
@@ -162,7 +162,7 @@ namespace sw
         auto boundIt = _mapHandleBound.find( handle );
         if ( boundIt != _mapHandleBound.end() )
         {
-            // 덮는 셀이 그대로면 셀 목록(넘친 목록 포함)이 이미 맞다 — 경계만 바꾼다. 판단은 넣기 · 빼기와 **같은 계산**
+            // 덮는 셀이 그대로면 셀 목록(넘친 목록 포함)이 이미 맞다 — 경계만 바꾼다. 판단은 넣기 · 빼기와 같은 계산
             // (`CellRange::fromBounds`)이어야 한다. 아니면 핸들이 틀린 셀에 앉은 채 남는다.
             const AABB2D&   oldBounds = boundIt->second;
             const CellRange oldRange  = CellRange::fromBounds( oldBounds._min._x, oldBounds._min._y, oldBounds._max._x, oldBounds._max._y, _cellSize );
@@ -185,7 +185,7 @@ namespace sw
         const AABB2D bounds = boundIt->second;
         _mapHandleBound.erase( boundIt );
 
-        // 넣을 때와 **같은 계산**으로 같은 셀들을 본다. 어긋나면 죽은 핸들이 셀에 남는다.
+        // 넣을 때와 같은 계산으로 같은 셀들을 본다. 어긋나면 죽은 핸들이 셀에 남는다.
         const CellRange range = CellRange::fromBounds( bounds._min._x, bounds._min._y, bounds._max._x, bounds._max._y, _cellSize );
         if ( range.getCellCount() > kMaxHandleCellCount )
         {
@@ -258,8 +258,8 @@ namespace sw
         const float32 directionX = dir._x;
         const float32 directionY = dir._y;
 
-        // 그리드에 흩뿌리기에는 너무 큰 핸들은 어느 셀에도 없다. 다른 질의들처럼 **항상 함께** 본다.
-        // 형제들이 그렇듯 여기도 **좁힘을 거친다.** 크다는 이유로 무조건 맞았다고 하지 않는다.
+        // 그리드에 흩뿌리기에는 너무 큰 핸들은 어느 셀에도 없다. 다른 질의들처럼 항상 함께 본다.
+        // 형제들이 그렇듯 여기도 좁힘을 거친다. 크다는 이유로 무조건 맞았다고 하지 않는다.
         for ( const SlotHandle handle : _listOversizedHandle )
         {
             const auto boundIt = _mapHandleBound.find( handle );
@@ -301,7 +301,7 @@ namespace sw
             {
                 for ( const SlotHandle handle : bucketIt->second )
                 {
-                    // **좁힌다** — 지나간 셀의 핸들을 모두 담으면 광선이 스치지도 않은 것이 결과에 들어간다.
+                    // 좁힌다 — 지나간 셀의 핸들을 모두 담으면 광선이 스치지도 않은 것이 결과에 들어간다.
                     // 형제 둘(`queryAABB` · `queryCircle`)도 각자의 판정을 거친다.
                     const auto boundIt = _mapHandleBound.find( handle );
                     if ( boundIt != _mapHandleBound.end() &&

@@ -14,7 +14,6 @@
 #include "Engine/Object/GameObject/Tick/TickInterval.h"
 
 #include "GameFramework/Runtime/Character/Combat/Health/IHealthSource.h"
-#include "GameFramework/Runtime/Gameplay/Gimmick/Combat/GimmickDamageUtil.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/GimmickUtil.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/Trigger/GimmickSensorComponent.h"
 
@@ -77,7 +76,7 @@ namespace sw
         // 파괴 컴포넌트가 있으면 몸을 끄지 않는다. 조각으로 부서져 날아가며, 조각의 그래픽과 바디가 그 몸이다.
         FractureBaseComponent* pSelfFracture = owner.getComponent<FractureBaseComponent>();
         if ( pSelfFracture != nullptr && pSelfFracture->hasFractureData() )
-            GimmickDamageUtil::breakAtCenter( *pSelfFracture, center, _fractureStrain * 2.0f, _blastImpulse );
+            GimmickUtil::breakAtCenter( *pSelfFracture, center, _fractureStrain * 2.0f, _blastImpulse );
         else
             GimmickUtil::setBodyActive( owner, false, this );
         if ( pManager == nullptr || _radius <= 0.0f )
@@ -91,7 +90,7 @@ namespace sw
     {
         const float3& center = _blastCenter;
         // 반경 안의 것에 거리 감쇠 피해를 준다. 다른 드럼통은 자기 스텝에 터지며 연쇄가 이어진다. 파괴 오브젝트는 경계가 반경에 닿으면 위치 기반 폭발로 깬다.
-        // 피해를 받는 쪽은 센서(`GimmickSensorComponent` — 피해를 쌓는다) · 체력 원천(`IHealthSource` — 맞음 길로 깎인다) · 파괴 컴포넌트뿐이라 그 등록 목록(`ComponentRegistry`)만 본다 — 씬 전체를 돌지 않는다
+        // 피해를 받는 쪽은 센서(`GimmickSensorComponent`, 피해를 쌓는다) · 체력 원천(`IHealthSource`, 맞음 길로 깎인다) · 파괴 컴포넌트뿐이라 그 등록 목록(`ComponentRegistry`)만 본다. 씬 전체를 돌지 않는다
         // (2D · 3D 몸 없는 센서도 든다). 조각 깨기는 새 컴포넌트를 등록하므로 고르기를 먼저 끝내고 쓰기(조각 깨기 · 피해 이벤트)는 그 뒤에 한다.
         struct BlastTarget
         {
@@ -137,7 +136,7 @@ namespace sw
             if ( target._pFracture != nullptr )
                 target._pFracture->applyRadialDamageAtWorld( center, radius, _fractureStrain, _blastImpulse );
             if ( target._distance <= radius )
-                GimmickDamageUtil::applyDamage( *target._pObject, pSource, hashed_string( "Explosion" ), _damage * ( 1.0f - target._distance / radius ) );
+                GimmickUtil::applyDamage( *target._pObject, pSource, hashed_string( "Explosion" ), _damage * ( 1.0f - target._distance / radius ) );
         }
     }
 } // namespace sw

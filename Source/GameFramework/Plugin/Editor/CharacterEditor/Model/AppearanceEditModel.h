@@ -10,7 +10,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 
 #include "Editor/Common/Workspace/Undo/EditorDocumentState.h"
 
@@ -119,6 +119,10 @@ namespace sw::editor
     private:
         void          recordUndo( string_view coalesceKey );
         static string makeKey( string_view kind, const hashed_string& target );
+
+    private:
+        using CaptureDelegate = EditorDocumentState<AppearanceSelection, AppearanceSelection>::CaptureDelegate;
+        using ApplyDelegate   = EditorDocumentState<AppearanceSelection, AppearanceSelection>::ApplyDelegate;
 
     private:
         AppearanceSelection                                           _selection;

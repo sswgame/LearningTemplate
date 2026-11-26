@@ -1,8 +1,8 @@
 /**
  * @file AnimationNotifyTable.h
  * @brief 애니메이션 알림 테이블(`*.notifies.xml`)입니다. 클립의 알림 이름에서 처리기(이름으로 고름)와 인자로 가는 매핑을 담습니다. 처리기 레지스트리와 처리기 인터페이스도 여기에 있습니다.
- * @details 클립은 알림의 **이름, 시각, 길이**만 가진다(임포트 옆 데이터 `<모델>.clips.json`). 그 이름이 무엇을 하는지(발소리, 이펙트, 칼 궤적 판정,
- *          카메라 흔들림, 게임플레이 이벤트, 모션 워핑 창)는 캐릭터마다 이 테이블의 한 항목이 정하고, 코드에는 처리기 **종류**만 있다(언리얼의 AnimationNotify 클래스,
+ * @details 클립은 알림의 이름, 시각, 길이만 가진다(임포트 옆 데이터 `<모델>.clips.json`). 그 이름이 무엇을 하는지(발소리, 이펙트, 칼 궤적 판정,
+ *          카메라 흔들림, 게임플레이 이벤트, 모션 워핑 창)는 캐릭터마다 이 테이블의 한 항목이 정하고, 코드에는 처리기 종류만 있다(언리얼의 AnimationNotify 클래스,
  *          유니티의 Animation Event 함수 이름에 해당한다). 모르는 처리기나 인자, 숫자가 아닌 값, 겹친 알림 이름은 읽기 오류다.
  *          `<FootContact>` 는 그 알림을 클립 대신 발 닿음 감지(`AnimationFootContactDef`, 3D 만)가 내게 한다. 없는 알림 이름, 겹친 알림, 높이 순서가 틀린 값은 읽기 오류다.
  *          @code
@@ -23,17 +23,73 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Name/hashed_string.h"
 #include "Core/Registry/RegistrationList.h"
-#include "Core/Subsystem/ServiceSlot.h"
+#include "Core/String/Name/hashed_string.h"
 #include "Core/Subsystem/Subsystem.h"
+#include "Core/Subsystem/SubsystemSlot.h"
 
 #include "Engine/Animation/AnimationPlayback.h"
-#include "Engine/Animation/Notify/AnimationFootContact.h"
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Foundation/GameObjectHandle.h"
+#include "Engine/Reflection/ReflectionMacros.h"
+
+namespace sw
+{
+    /**
+     * @struct AnimationFootContactDef
+     * @brief 발 하나의 닿음 감지 데이터입니다. 알림 테이블 `<FootContact notify="FootL" bone="foot.l" contact_height="0.05" release_height="0.12" max_vertical_speed="0.6"/>` 한 줄입니다.
+     * @details 모든 필드가 필수다. `release_height` 는 `contact_height` 보다 커야 한다(그 사이가 떨림을 막는 간격이다).
+     *          `notify` 는 같은 테이블의 `<Notify>` 이름이어야 하고, 그 이름의 알림은 감지만 낸다 — 클립에 같은 이름의 알림이 있어도 처리하지 않는다(출처는 하나).
+     */
+    REFLECT()
+    struct SW_API AnimationFootContactDef
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        hashed_string _notify{};
+        PROPERTY( Required )
+        hashed_string _bone{};
+        PROPERTY( Name = "contact_height", Required, Units = m )
+        float32 _contactHeight{ 0.0f }; ///< 이 높이(m) 이하로 내려오면 닿을 수 있다
+        PROPERTY( Name = "release_height", Required, Units = m )
+        float32 _releaseHeight{ 0.0f }; ///< 이 높이(m) 위로 올라가야 다음 닿음을 받는다
+        PROPERTY( Name = "max_vertical_speed", Required, Min = 0.0001, Units = "m/s" )
+        float32 _maxVerticalSpeed{ 0.0f }; ///< 세로 속도(m/s)가 이 값 이하일 때 닿았다고 본다
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @class AnimationFootContactTracker
+     * @brief 발 하나의 닿음 상태입니다. 들린 발이 `contact_height` 아래로 내려와 세로 속도가 `max_vertical_speed` 이하가 되는 프레임에 한 번 닿음을 냅니다.
+     * @details 닿은 뒤에는 `release_height` 위로 올라가야 다시 낼 수 있다. 첫 프레임은 기록만 하고 내지 않는다(땅에 선 채 시작하면 그 발은 이미 디딘 것이다).
+     */
+    class SW_API AnimationFootContactTracker
+    {
+    public:
+        AnimationFootContactTracker();
+
+        /** @brief 이번 프레임의 발 높이(m)를 넣습니다. 이번에 닿았으면 true 입니다. @p deltaSeconds 가 0 이하면 아무것도 하지 않습니다. */
+        bool update( const AnimationFootContactDef& def, float32 footHeight, float32 deltaSeconds );
+        /** @brief 기록을 버립니다(다음 프레임이 첫 프레임이 됩니다). */
+        void reset();
+        /** @brief 발이 디딘 상태인지 반환합니다. */
+        bool isPlanted() const { return _bPlanted == SW_TRUE; }
+        /** @brief 발 본을 못 찾았다는 오류를 이미 냈는지 반환합니다(프레임마다 같은 오류를 내지 않게 합니다). */
+        bool isMissingBoneReported() const { return _bMissingBoneReported == SW_TRUE; }
+        void setMissingBoneReported() { _bMissingBoneReported = SW_TRUE; }
+
+    private:
+        float32 _previousHeight;
+        uint8   _bHasPrevious;
+        uint8   _bPlanted;
+        uint8   _bMissingBoneReported;
+    };
+} // namespace sw
 
 namespace sw
 {
@@ -253,7 +309,7 @@ namespace sw
     private:
         NameRegistry<unique_ptr<IAnimationNotifyHandler>> _registry; ///< 이름 → 처리기(등록 순서)
 
-        SW_SERVICE_SLOT( AnimationNotifyHandlerRegistry, Required );
+        SW_SUBSYSTEM_SLOT( AnimationNotifyHandlerRegistry, Required );
     };
 
     /**
@@ -270,7 +326,7 @@ namespace sw
  *          |---|---|---|
  *          | `PlaySound` | 소켓 위치에서 소리를 낸다 | sound(필수), socket |
  *          | `SpawnPrefab` | 소켓 변환에 프리팹(이펙트, 탄피)을 만든다 | prefab(필수), socket, offset, attach |
- *          | `Footstep` | 소켓 아래를 표면 질의(`SurfaceSample` — 콜라이더 재질 · 지형 레이어 · 물, 땅의 젖음)로 읽어 씬의 발걸음 반응(`SurfaceFootprintSystem` — 그 종류의 마른 · 젖은 반응: 소리 · 튀는 효과 · 발자국 · 젖은 자국)에 알린다 | socket(필수), distance |
+ *          | `Footstep` | 소켓 아래를 표면 질의(`SurfaceSample`: 콜라이더 재질 · 지형 레이어 · 물, 땅의 젖음)로 읽어 씬의 발걸음 반응(`SurfaceFootprintSystem`, 그 종류의 마른 · 젖은 반응: 소리 · 튀는 효과 · 발자국 · 젖은 자국)에 알린다 | socket(필수), distance |
  *          | `HitWindow` | 구간 알림이다. 두 소켓 사이 칼날을 프레임마다 쓸어(지난 위치에서 현재 위치까지, `MeleeHit::sweep`) 맞은 오브젝트에 한 번씩 맞음 사건(`GameObjectEvents::_hitReceived`)을 낸다. 클라이언트는 기록만 한다. `foliage`(m)가 0 보다 크면 칼날이 지난 벨 수 있는 풀(`FoliageComponent::cut`)도 벤다 | socketA, socketB(필수), radius, damage, impulse, samples, foliage |
  *          | `CameraShake` | 카메라 충격을 요청한다(같은 씬의 `CameraRegistry::getShakeChannel` 을 듣는 카메라가 받는다) | amplitude, duration, frequency, radius, socket |
  *          | `AbilityEvent` | 같은 오브젝트의 알림 사건(`GameObjectEvents::_animationNotify`)을 낸다(구간이면 시작과 끝) | event(필수) |

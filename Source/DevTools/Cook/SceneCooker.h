@@ -17,7 +17,7 @@ namespace sw
 {
     struct CookJobDesc;
     struct SceneDocument;
-    struct SceneEngineServices;
+    struct SceneEngineSubsystems;
 
     class CookStore;
     class TypeRegistry;
@@ -29,7 +29,7 @@ namespace sw
      * @class SceneCooker
      * @brief 씬 문서의 엔티티 상태를 리플렉션 바이너리로 쿠킹하는 오프라인 단계입니다.
      *
-     * @details **왜 C++ 에 있는가.** 쿠킹은 모두 엔진 안이다(팩은 `PackCooker`). 특히
+     * @details 왜 C++ 에 있는가. 쿠킹은 모두 엔진 안이다(팩은 `PackCooker`). 특히
      *          엔티티 상태를 바이너리로 만들려면 리플렉션(`TypeInfo` · 프로퍼티 표)이 있어야 하고,
      *          그것은 엔진 안에만 있습니다. 그래서 이 단계만 `App.exe --cook-scenes` 로 넘어옵니다.
      *          셰이더가 `--cook-shaders` 로 넘어오는 것과 같은 이유, 같은 모양입니다.
@@ -37,7 +37,7 @@ namespace sw
      *          `.scene.bin` 이 XML 문자열을 담으면 런타임이 엔티티마다 XML 을 다시 파싱합니다. 바이너리 상태는 엔티티당
      *          4254 ns -> 1602 ns 입니다.
      *
-     *          엔진 서비스는 부르는 쪽이 묶음(`SceneEngineServices`)으로 넘깁니다 — 쿠킹용 씬도 런타임 씬과 같은 묶음으로 짓고, 전역 표를 다시 찾지 않습니다.
+     *          엔진 서비스는 부르는 쪽이 묶음(`SceneEngineSubsystems`)으로 넘깁니다 — 쿠킹용 씬도 런타임 씬과 같은 묶음으로 짓고, 전역 표를 다시 찾지 않습니다.
      *          타입 표(`_pTypeRegistry`)가 비어 있으면 쿠킹하지 않고 실패합니다.
      */
     class SceneCooker
@@ -49,11 +49,11 @@ namespace sw
          * @param pOutMissingComponentCount 주면, 모르는 타입으로 지어진 컴포넌트(`MissingComponent`) 수를 받습니다. 하나마다 오류 로그를 남깁니다.
          * @return 바이너리로 바꾼 엔티티 수입니다.
          *
-         * @details **왕복으로 검증하고 나서만 바꿉니다.** 쿠킹된 바이트를 즉시 되읽어 엔티티 상태 전체가 같은지 본 뒤에 XML 을 버립니다.
+         * @details 왕복으로 검증하고 나서만 바꿉니다. 쿠킹된 바이트를 즉시 되읽어 엔티티 상태 전체가 같은지 본 뒤에 XML 을 버립니다.
          *          모르는 컴포넌트 타입(이 프로세스에 올라오지 않은 모듈의 것 · 이름이 바뀐 타입)은 `MissingComponent` 가 원문을 맡아 왕복을
          *          통과하므로 검증으로는 걸러지지 않습니다 — 그 수를 @p pOutMissingComponentCount 로 받아 쿠킹을 실패시킵니다(`cookAllScenes`).
          */
-        static uint32 cookEntityState( const SceneEngineServices& services, SceneDocument& inoutDoc, uint32* pOutMissingComponentCount = nullptr );
+        static uint32 cookEntityState( const SceneEngineSubsystems& services, SceneDocument& inoutDoc, uint32* pOutMissingComponentCount = nullptr );
 
         /**
          * @brief 정적 메시 엔티티를 인스턴스 메시로 묶습니다(언리얼 Packed Level Actor — 레벨 인스턴스를 한 묶음으로 굽는다). 에디터 · 소스 실행은 묶지 않은 원본을 짓는다.
@@ -63,7 +63,7 @@ namespace sw
          *          층: 씬(5)은 메시(6)를 모른다 — 두 형식은 타입 표의 이름과 칸으로 읽고 쓴다. 둘 중 하나라도 표에 없으면 오류다(조용히 묶지 않고 넘어가지 않는다).
          * @return 문서를 지을 수 없거나 형식이 표에 없으면 오류를 남기고 false 이며 문서는 그대로다. 묶을 것이 없으면 true 이고 그대로다.
          */
-        [[nodiscard]] static bool packStaticMeshes( const SceneEngineServices& services, SceneDocument& inoutDoc, string_view scenePath );
+        [[nodiscard]] static bool packStaticMeshes( const SceneEngineSubsystems& services, SceneDocument& inoutDoc, string_view scenePath );
 
         /**
          * @brief @p sourceRoot 아래의 모든 `*.scene.xml` 을 `<cookedDir>/<상대경로>/<이름>.scene.bin` 으로 쿠킹합니다(이름은 `AssetCookPath`).
@@ -82,7 +82,7 @@ namespace sw
          *          "Cooked content requires the cooked scene" 으로 멈춘다.
          *          씬 작업의 입력은 씬이 지어지며 읽은 모든 것(씬, 프리팹, 그 프리팹의 중첩 원본 …)이다. 프리팹 하나를 고치면 그것을 쓰는 씬만 다시 베이크한다.
          */
-        static uint32 cookAllScenes( const SceneEngineServices& services, const AbsolutePath& sourceRoot, const AbsolutePath& cookedDir, const CookStore& store,
+        static uint32 cookAllScenes( const SceneEngineSubsystems& services, const AbsolutePath& sourceRoot, const AbsolutePath& cookedDir, const CookStore& store,
                                      uint64 reflectionFingerprint, uint32& outFailedCount );
 
         /**

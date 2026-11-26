@@ -101,7 +101,7 @@ namespace sw
     vector<string> ShaderCooker::makeCanonicalDefines( const vector<string>& listPermutation )
     {
         // `FOO` 와 `FOO=1` 은 컴파일러에게 같은 것이다. 런타임은 ShaderMacroDefine::parse 로 값 없는
-        // define 에 "1" 을 채운 **뒤** 해시하므로, 여기서 원문 그대로 해시하면 같은 퍼뮤테이션이
+        // define 에 "1" 을 채운 뒤 해시하므로, 여기서 원문 그대로 해시하면 같은 퍼뮤테이션이
         // 쿠킹과 런타임에서 서로 다른 해시가 된다. 그러면 쿠킹해 둔 변형을 아무도 못 찾는다(값을 적은
         // `SW_FORWARD=1` 은 맞고 값 없는 머티리얼 define 만 어긋나 눈에 덜 띈다). 두 오버로드가 같은 문자열을 보도록 여기서 맞춘다.
         vector<string> listSorted;
@@ -260,7 +260,7 @@ namespace sw
         // 무변경 재쿠킹이 파일을 건드리지 않는다 — 내용 해시는 도장(크기 · 시각)이 그대로면 파일을 다시 읽지 않는다.
         if ( FileUtil::isRegularFile( outputPath ) && ContentHash::computeFile( outputPath ) == compileResult._record._outputHash )
             return true;
-        if ( FileUtil::ensureParentDirectoryExists( outputPath ) == false || FileUtil::writeFile( outputPath, compileResult._bytecode.data(), compileResult._bytecode.size() ) == false )
+        if ( FileUtil::writeFile( outputPath, compileResult._bytecode.data(), compileResult._bytecode.size() ) == false )
         {
             SW_LOG_ERROR_ID( "ShaderCooker.FailedWriteCookedBytecode", "Failed to write cooked bytecode to %#", outputPath.str() );
             return false;

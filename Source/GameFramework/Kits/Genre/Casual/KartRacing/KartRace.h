@@ -7,9 +7,9 @@
  *          차는 기반 `KinematicVehicleMotor` 이고 트랙이 그 차의 땅이다. 경기는 고정 걸음(`FixedStepTimer`)으로 돌고 난수는 시드를 고정(`GameRandom`)하므로
  *          같은 입력이면 같은 경기가 나온다(리플레이, 락스텝). 차끼리의 충돌은 처리하지 않으며, 게임(물리)이 `KinematicVehicleMotor::addImpulse` 로 넣는다.
  *
- *          한 바퀴: 결승선(문 0)을 앞으로 지날 때 그 바퀴의 체크포인트(문 1..)를 **모두 차례로** 지났으면 바퀴가 오른다. 체크포인트를 뒤로 지나면 그 통과가
+ *          한 바퀴: 결승선(문 0)을 앞으로 지날 때 그 바퀴의 체크포인트(문 1..)를 모두 차례로 지났으면 바퀴가 오른다. 체크포인트를 뒤로 지나면 그 통과가
  *          취소되고, 결승선을 뒤로 넘으면 바퀴가 내려간다. 그 바퀴 기록도 지우므로 앞뒤로 넘나들며 짧은 랩 타임을 만들 수 없다.
- *          출발 격자는 결승선 **뒤**에 있으므로 처음 결승선을 지나면 1바퀴째가 시작된다. `getLapCount()` 바퀴를 마치면 결승이다.
+ *          출발 격자는 결승선 뒤에 있으므로 처음 결승선을 지나면 1바퀴째가 시작된다. `getLapCount()` 바퀴를 마치면 결승이다.
  *
  *          순위 진행값은 (바퀴 - 1) x 길이 + 중심선 거리이다. 거리는 지금 사이에 있는 두 문의 거리로 잘라, 문을 건너뛴 차가 앞선 것처럼 보이지 않게 한다.
  */
@@ -22,9 +22,10 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/Math/Radians.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 #include "Core/Time/Countdown.h"
 #include "Core/Time/FixedStepTimer.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/FormatDef.h"
@@ -121,7 +122,7 @@ namespace sw
         /** @brief 한 걸음 진행합니다. 기록이 끝났으면 false 를 반환합니다. */
         bool step();
         /** @brief 프레임 시간만큼(고정 걸음으로 나눠) 진행하고, 진행한 걸음 수를 반환합니다. */
-        int32 advance( float32 frameTime );
+        int32 advance( GameSeconds frameTime );
 
         bool                         isFinished() const;
         int32                        getFrameIndex() const { return _frameIndex; }
@@ -314,7 +315,7 @@ namespace sw
 
         void setInput( int32 racer, const KartRacerInput& input );
         /** @brief 프레임 시간만큼 고정 걸음으로 진행하고, 진행한 걸음 수를 반환합니다. */
-        int32 update( float32 frameTime );
+        int32 update( GameSeconds frameTime );
         /** @brief 한 걸음 진행합니다. */
         void step();
 
@@ -369,7 +370,7 @@ namespace sw
         void    completeLap( int32 racer );
         void    finishRacer( int32 racer );
         float32 computeProgress( const KartRacer& kart ) const;
-        void    updateItemBoxes( float32 deltaTime );
+        void    updateItemBoxes( StepSeconds step );
         void    updateProjectiles( float32 deltaTime );
         /** @brief 1등 공격이 터집니다. 범위는 탄의 폭발 반지름(`ProjectileState::_blastRadius`)이고 맞은 차의 반응은 @p def 입니다. */
         void explode( const ProjectileState& projectile, const KartItemDef& def );

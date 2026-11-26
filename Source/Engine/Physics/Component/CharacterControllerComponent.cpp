@@ -6,12 +6,12 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringUtil.h"
-#include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Subsystem/Subsystem.h"
+#include "Core/Subsystem/SubsystemSlot.h"
 
 #include "Engine/Console/DevCommandRegistry.h"
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Foundation/StateHashBuilder.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/Tick/FixedStepContext.h"
@@ -82,7 +82,7 @@ namespace sw
         _pCommandPage->editCommand( _commandSlot & CharacterCommandPage3D::kSlotMask, std::forward<TFunction>( function ) );
     }
 
-    /** @brief 모든 캐릭터의 스텝 기록 스위치입니다(물리 워커가 읽는다 — 물리가 도는 동안 바꾸지 않는다). 켬 스위치는 전역 변수다 — 자동화 단계가 시작 값으로 되돌린다. */
+    /** @brief 모든 캐릭터의 스텝 기록 스위치입니다(물리 워커가 읽으므로 물리가 도는 동안 바꾸지 않는다). 켬 스위치는 전역 변수다. 자동화 단계가 시작 값으로 되돌린다. */
     SW_GLOBAL_VARIABLE( bool, gv_movementHistory, false, "캐릭터 이동 스텝을 기록한다 (개발 명령 movement.history 와 같다)" );
 
     namespace
@@ -324,7 +324,7 @@ namespace sw
         _bFrameClimb        = bClimb ? SW_TRUE : SW_FALSE;
         if ( bManual )
         {
-            const float32 frameSeconds = context.getFrameDeltaTime();
+            const float32 frameSeconds = context.getFrameDeltaTime().count();
             _frameSurfaceVelocity      = surfaceVelocity;
             _frameMoveScale            = moveScale;
             _frameRootMotionVelocity   = frameSeconds > 0.0f ? rootMotion * ( 1.0f / frameSeconds ) : float3{}; // 시간이 서면 걸음도 없다
@@ -349,7 +349,7 @@ namespace sw
             releasePhysics( physics ); // 배율 0 — 캡슐을 지을 수 없다(`readWorldPose` 가 알렸다). 배율이 돌아오면 다시 만든다
             return;
         }
-        // 캡슐은 지을 때 배율을 굽는다 — 배율이 바뀌면 캐릭터는 두고 크기만 간다(속 바디의 접촉 · 세로 속도가 이어진다 — 강체 `applyScaledShape` 와 같다, 감사 S-4).
+        // 캡슐은 지을 때 배율을 굽는다. 배율이 바뀌면 캐릭터는 두고 크기만 간다(속 바디의 접촉 · 세로 속도가 이어진다. 강체 `applyScaledShape` 와 같다, 감사 S-4).
         // 줄인 키도 같은 길이다 — 캐릭터를 두고 크기만 바꾼다(언리얼 `SetCapsuleHalfHeight`).
         _appliedHeightReduction = requestedReduction;
         if ( bCreate == false && ( isShapeScaleStale( _worldScale ) || bResize ) )
@@ -398,7 +398,7 @@ namespace sw
     void CharacterControllerComponent::onPrePhysicsStep( const FixedStepContext& context )
     {
         ScenePhysics& physics        = context.getPhysics();
-        const float32 fixedDeltaTime = context.getFixedDeltaTime();
+        const float32 fixedDeltaTime = context.getFixedDeltaTime().count();
         const uint32  stepIndex      = context.getStepIndex();
         const uint32  stepCount      = context.getStepCount();
         _physicsStep.assumeHeld(); // 물리 스텝은 이 컴포넌트마다 한 번에 한 스레드가 돈다

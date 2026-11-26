@@ -3,7 +3,7 @@
  * @brief 게임 모듈의 수명 주기를 관리합니다. 라이브러리 로드, 게임 API 바인딩, 게임 업데이트, 게임 쪽 핫 리로드를 맡으며 App 과 Server 가 함께 씁니다.
  *
  * @note 호스트와 모듈 사이 계약(ModuleAPI)의 수명 주기를 실행 파일 쪽에서 맡습니다. 에디터 인스턴스, 에디터 리로드, 에디터 UI, RHI 교체 뒤의
- *       재초기화의 호스트 몫은 App 전용 `ClientModuleManager`(Source/App)가 이 클래스 위에 구현합니다(장치 교체의 순서는 이 클래스 — `applyPendingDeviceChange`). 의존은 그쪽에서 여기로 한 방향입니다.
+ *       재초기화의 호스트 몫은 개발 전용 `EditorGameModuleManager`(DevTools/Host, 배포는 짓지 않는다)가 이 클래스 위에 구현합니다(장치 교체의 순서는 이 클래스의 `applyPendingDeviceChange`). 의존은 그쪽에서 여기로 한 방향입니다.
  * @note 모듈을 잇는 방식(개발은 동적 라이브러리 · 리로드 매니저, 배포는 정적 링크)에 따라 다른 함수는 `GameModuleManager.cpp` 의 `SW_WITH_DYNAMIC_MODULES` 구역 한 파일이
  *       `SW_WITH_DYNAMIC_MODULES` 로 가른다. 나머지는 `GameModuleManager.cpp` 하나다.
  */
@@ -14,6 +14,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Subsystem/SubsystemScope.h"
 
+#include "Engine/Graphics/View/FrameViewports.h"
 #include "Engine/Module/HostInterfaces.h"
 
 #include "ModuleAPI/ABI/GameAPI.h"
@@ -27,6 +28,9 @@ namespace sw
 {
     struct ModuleAPISymbols;
     struct ModuleResolution;
+    struct NativeWindowEvent;
+
+    class CameraComponent;
 
     class IEngineRenderDriver;
     class GenericWindow;
@@ -58,7 +62,7 @@ namespace sw
      * @brief 한 프레임 동안 고정되는 호스트 ↔ 모듈 상태입니다.
      * @details 에디터 상태는 DLL 경계를 넘는 함수 포인터 호출로만 알 수 있다. 고정 스텝마다 다시 묻지 않고 한 번 고정해,
      *          프레임 안의 모든 단계가 같은 답을 보게 한다. 필드는 값이 만들어지는 곳에서 채운다. 게임플레이 활성 여부는
-     *          beginFrame(게임 업데이트 전)에서, 씬 틱 여부는 updateEditorUI(에디터가 이번 프레임 입력을 처리한 뒤)에서
+     *          beginFrame(게임 업데이트 전)에서, 씬 틱 여부는 updateHostModuleUI(에디터가 이번 프레임 입력을 처리한 뒤)에서
      *          채운다. 순서를 바꾸면 에디터의 Step 한 번이 틱 없이 소비된다.
      */
     struct ModuleFrameState
@@ -92,7 +96,7 @@ namespace sw
      * @brief 게임 모듈의 수명 주기와 게임 API 바인딩을 감쌉니다(App 과 Server 공통).
      *
      * @details
-     *   실행 파일이 unique_ptr 로 소유합니다. 전용 서버는 이 클래스를 그대로(`initializeDedicatedServer`), App 은 파생 클래스 `ClientModuleManager` 를 씁니다.
+     *   실행 파일이 unique_ptr 로 소유합니다. 전용 서버는 이 클래스를 그대로(`initializeDedicatedServer`), App 은 이 클래스를, 에디터를 켠 개발 실행(`-EnableEditor`)은 개발 계층이 만든 파생 클래스 `EditorGameModuleManager` 를 씁니다.
      *   - 핫 리로드 때 onBefore/onAfter 콜백이 자동으로 불립니다.
      *   - 모듈을 언로드하는 경로는 `suspendModules` 하나입니다. 호스트 모듈(에디터)이 끼어드는 지점은 아래 보호 가상 함수들입니다.
      *
@@ -118,7 +122,7 @@ namespace sw
         /**
          * @brief 타입 공급자 모듈(GameFramework, 키트, SWGame)의 라이브러리를 로드해 그 타입을 등록합니다. 인스턴스는 만들지 않습니다.
          * @details 기동 단계 `ModuleLoadStage` 의 호스트 로더(`App`, `Server`)가 부릅니다. 이것이 끝나야 엔진이 씬을 읽습니다. 게임 인스턴스는
-         *          그 뒤 기동 함수(`initializeDedicatedServer`, `ClientModuleManager::initialize`)가 만듭니다. Shipping 은 모듈이 정적 링크라 로드할 것이 없습니다.
+         *          그 뒤 기동 함수(`initializeDedicatedServer`, `initializeClient`)가 만듭니다. Shipping 은 모듈이 정적 링크라 로드할 것이 없습니다.
          *          무엇을 어떤 순서로 로드할지는 모듈 매니페스트의 해석 결과(@p resolution)가 정합니다. 켜진 GameFramework, 키트, SWGame 을 로드 순서대로
          *          (의존이 먼저) 로드합니다. 키트의 리로드 의존은 매니페스트의 `_listDependency` 입니다.
          * @param pLiveReloadManager Dev 모드 전용 모듈 매니저(Shipping 에서는 nullptr)
@@ -163,7 +167,30 @@ namespace sw
 
         /** @brief 이번 프레임의 모듈 상태를 반환합니다. beginFrame 뒤에만 유효합니다. */
         const ModuleFrameState& getFrameState() const { return _frameState; }
-        /** @brief 모듈 컴파일러입니다(개발 잇기만 만든다 — 배포는 nullptr). 에디터 모듈의 서비스 범위에 `IModuleCompiler` 로 건다(`fillModuleServiceScope`). */
+        /** @brief 호스트 모듈(에디터)이 이번 프레임에 그려 달라고 요청한 게임 뷰와 씬 뷰 RT 입니다(`updateHostModuleUI` 가 샘플한다). 둘 다 비면 백버퍼에 바로 그립니다. */
+        const FrameViewports& getViews() const { return _views; }
+        /**
+         * @brief 클라이언트 호스트(App)의 기동입니다 — 콜백을 등록하고 게임 인스턴스를 만듭니다(게임 모듈 라이브러리는 `loadModuleLibraries` 가 이미 로드했습니다).
+         * @details 에디터 구성(`DevTools/Host/Client/EditorGameModuleManager` — 개발 계층이 만든다)은 게임 다음에 에디터를 세운다. 전용 서버는 `initializeDedicatedServer` 다.
+         */
+        [[nodiscard]] virtual bool initializeClient( ILiveReloadManager* pLiveReloadManager, RHI* pRHI, GenericWindow* pWindow, IEngineRenderDriver* pRenderDriver )
+        {
+            return initializeGame( pLiveReloadManager, pRHI, pWindow, pRenderDriver );
+        }
+        // 호스트 모듈(에디터)의 프레임 지점 — App 이 프레임마다 부른다. 이 클래스(배포 App · 전용 서버)는 아무것도 하지 않는다.
+        /** @brief 호스트 모듈의 UI 프레임을 돌리고 그 결과(뷰 RT, 씬 틱 여부, 다시 그릴 까닭)를 프레임 상태에 확정합니다. 게임 업데이트 뒤 · 페이싱 앞에 부릅니다. */
+        virtual void updateHostModuleUI() {}
+        /** @brief 월드 틱 뒤에 호스트 모듈의 프레임을 닫습니다(에디터의 Step 소비). */
+        virtual void endHostModuleFrame() {}
+        /** @brief 네이티브 창 이벤트를 호스트 모듈에 먼저 보냅니다. @return 호스트 모듈이 가로챘으면 true 입니다(게임 입력에 넘기지 않는다). */
+        [[nodiscard]] virtual bool processHostModuleEvent( const NativeWindowEvent& event )
+        {
+            (void)event;
+            return false;
+        }
+        /** @brief 이번 프레임에 씬 뷰를 그리는 호스트 모듈의 카메라입니다. 호스트 모듈이 없으면 nullptr 입니다. */
+        virtual CameraComponent* getSceneViewCamera() const { return nullptr; }
+        /** @brief 모듈 컴파일러입니다(개발 잇기만 만든다 — 배포는 nullptr). 에디터 모듈의 서비스 범위에 `IModuleCompiler` 로 건다(`fillModuleSubsystemScope`). */
         IModuleCompiler* getModuleCompiler() const { return _moduleCompiler.get(); }
 
         // 3) LiveReload 콜백. 리로드 매니저에 건 주인 창구(`GameReloadClient` · `KitReloadClient`)가 부른다
@@ -186,7 +213,7 @@ namespace sw
          * @details 에디터 모듈과 에디터 확장(`GF_EditorPlugin_*`)만의 배치는 게임을 건드리지 않는다 — 언로드하면 다시 만들 쪽(게임 리로드 콜백)이 오지 않아
          *          게임 인스턴스가 사라지고 씬 저장이 막힌 채 남는다.
          * @param listModuleName 이번 배치에서 교체될 모듈 이름들
-         * @return 게임 상태를 저장하지 못해 **아무것도 언로드하지 않았으면** false 를 반환합니다. 그러면 리로드를 취소하고 옛 게임 모듈이 계속 돕니다.
+         * @return 게임 상태를 저장하지 못해 아무것도 언로드하지 않았으면 false 를 반환합니다. 그러면 리로드를 취소하고 옛 게임 모듈이 계속 돕니다.
          */
         [[nodiscard]] bool onBeforeCommitBatch( const vector<string>& listModuleName );
         /**
@@ -195,7 +222,7 @@ namespace sw
          */
         bool isGameLibraryUsable( ModuleLibraryHandle library ) const;
         /**
-         * @brief 새 게임 모듈이 리로드 직후 결함을 냈을 때 불립니다. 인스턴스와 API 테이블을 **모듈을 부르지 않고** 버립니다.
+         * @brief 새 게임 모듈이 리로드 직후 결함을 냈을 때 불립니다. 인스턴스와 API 테이블을 모듈을 부르지 않고 버립니다.
          * @param faultCode 예외 코드(Windows) 또는 시그널 번호(리눅스)
          */
         void onGameReloadFault( uint32 faultCode );
@@ -241,13 +268,15 @@ namespace sw
          */
         [[nodiscard]] bool initializeGame( ILiveReloadManager* pLiveReloadManager, RHI* pRHI, GenericWindow* pWindow, IEngineRenderDriver* pRenderDriver );
         /**
-         * @brief 호스트 서비스 범위를 새로 채워 모듈의 @p bindService 에 넘기고 @p inoutServices 를 그것으로 바꿉니다. @p bindService 가 비었으면(API 표가 없다) 아무것도 하지 않습니다.
-         * @details 새 범위를 넘긴 **뒤에** 앞 범위를 놓는다 — 모듈이 앞 범위를 들고 있는 동안 사라지지 않게. 게임 · 에디터 모듈이 같은 길을 쓴다(@p bGameModule 은 `fillModuleServiceScope` 와 같다).
+         * @brief 호스트 서브시스템 범위를 새로 채워 모듈의 @p bindService 에 넘기고 @p inoutServices 를 그것으로 바꿉니다. @p bindService 가 비었으면(API 표가 없다) 아무것도 하지 않습니다.
+         * @details 새 범위를 넘긴 뒤에 앞 범위를 놓는다 — 모듈이 앞 범위를 들고 있는 동안 사라지지 않게. 게임 · 에디터 모듈이 같은 길을 쓴다(@p bGameModule 은 `fillModuleSubsystemScope` 와 같다).
          */
-        void rebindModuleService( void ( *bindService )( const ISubsystemLocator* pService ), unique_ptr<SubsystemScope>& inoutServices, bool bGameModule ) const;
+        void rebindModuleSubsystems( void ( *bindService )( const ISubsystemLocator* pService ), unique_ptr<SubsystemScope>& inoutServices, bool bGameModule ) const;
 
         /** @brief 이번 프레임 상태를 호스트 모듈이 채웁니다(뷰 RT, 씬 틱 여부). */
-        ModuleFrameState&   getMutableFrameState() { return _frameState; }
+        ModuleFrameState& getMutableFrameState() { return _frameState; }
+        /** @brief 이번 프레임의 뷰 요청을 호스트 모듈이 채웁니다(인스턴스를 없앨 때는 비운다). */
+        FrameViewports&     getMutableViews() { return _views; }
         ILiveReloadManager* getLiveReloadManager() const { return _pLiveReloadManager; }
         /** @brief 리로드 매니저에 건 콜백의 구독을 이 객체의 수명에 묶습니다(`shutdown` 이 놓는다). */
         void holdReloadSubscription( Subscription subscription ) { _listReloadSubscription.push_back( std::move( subscription ) ); }
@@ -282,7 +311,7 @@ namespace sw
          * @return 호스트 모듈이 없거나 다시 섰으면 true 입니다. false 면 장치 교체가 종료를 요청한다.
          */
         [[nodiscard]] virtual bool recreateHostModule() { return true; }
-        /** @brief 렌더 워커와 태스크를 비우기 **앞에서** 불립니다. 호스트 모듈(에디터)의 백그라운드 일에 종료 신호를 올린다(`FlushReason::Shutdown` 일 때만 뜻이 있다). */
+        /** @brief 렌더 워커와 태스크를 비우기 앞에서 불립니다. 호스트 모듈(에디터)의 백그라운드 일에 종료 신호를 올린다(`FlushReason::Shutdown` 일 때만 뜻이 있다). */
         virtual void onBeforeFlushWorkers( FlushReason reason ) { (void)reason; }
         /** @brief 렌더 워커와 GPU 를 비운 직후, 태스크를 기다리기 전에 불립니다(에디터의 렌더 대기 표시를 버립니다). */
         virtual void onRenderWorkersFlushed() {}
@@ -299,16 +328,16 @@ namespace sw
         /** @brief `_gameAPI` 를 채웁니다. 개발은 @p library 의 심볼(ABI 대조 포함), 배포는 정적 `exportGameAPI` 다(이 클래스 cpp 의 `SW_WITH_DYNAMIC_MODULES` 구역). */
         [[nodiscard]] bool exportGameAPITable( ModuleLibraryHandle library );
         /** @brief 호스트가 모듈에 넘기는 서비스 테이블을 채웁니다. @p bGameModule 이면 게임에 허용된 것(GameVisible)만 채웁니다. */
-        void fillModuleServiceScope( SubsystemScope& outScope, bool bGameModule ) const;
+        void fillModuleSubsystemScope( SubsystemScope& outScope, bool bGameModule ) const;
         /** @brief 장치를 다시 만든 뒤 게임을 다시 만듭니다. 테이블이 비었으면 모듈에서 다시 바인딩합니다. */
         [[nodiscard]] bool recreateGameInstance();
-        /** @brief 호스트 서비스 범위를 다시 만들어 게임 모듈에 넘깁니다(게임에 허용된 것만 겁니다). */
-        void rebindGameService() { rebindModuleService( _gameAPI.bindService, _gameServices, true ); }
+        /** @brief 호스트 서브시스템 범위를 다시 만들어 게임 모듈에 넘깁니다(게임에 허용된 것만 겁니다). */
+        void rebindGameSubsystems() { rebindModuleSubsystems( _gameAPI.bindService, _gameServices, true ); }
         /** @brief 게임 인스턴스를 shutdown, destroy 하고 핸들을 비웁니다. @p bReleaseAPITable 은 `suspendModules` 와 같습니다. */
         void destroyGameInstance( bool bReleaseAPITable );
         /**
          * @brief 이미 바인딩한 API 테이블로 게임 인스턴스를 만들고 초기화합니다. 실패하면 정리한 뒤 false 를 반환합니다.
-         * @note RHI 를 받은 호스트는 **디바이스가 없으면 만들지 않습니다.** `RHI::getDevice()` 는 널 참조를 반환하므로, 디바이스가 없는 상태에서
+         * @note RHI 를 받은 호스트는 디바이스가 없으면 만들지 않습니다. `RHI::getDevice()` 는 널 참조를 반환하므로, 디바이스가 없는 상태에서
          *       호출하면 그 자리에서 죽습니다.
          */
         [[nodiscard]] bool createGameInstance();
@@ -324,7 +353,7 @@ namespace sw
          *        종료나 RHI 교체처럼 상태를 넘겨받을 새 라이브러리가 없으면 false 로 둡니다.
          */
         [[nodiscard]] bool suspendModulesInternal( ModuleScope scope, bool bReleaseAPITable, bool bKeepGameOnCaptureFailure, FlushReason reason );
-        /** @brief 보존해 둔 상태를 새 인스턴스에 복원합니다. 실패하면 **버리지 않고** 다음 리로드까지 보관합니다. */
+        /** @brief 보존해 둔 상태를 새 인스턴스에 복원합니다. 실패하면 버리지 않고 다음 리로드까지 보관합니다. */
         void restoreGameState();
 
     private:
@@ -368,7 +397,7 @@ namespace sw
 
         GameAPI    _gameAPI;
         GameHandle _game;
-        /** @brief 게임 모듈에 넘긴 호스트 서비스 범위입니다(`rebindModuleService` 가 새로 만든다 — 모듈이 들고 있는 동안 산다). */
+        /** @brief 게임 모듈에 넘긴 호스트 서브시스템 범위입니다(`rebindModuleSubsystems` 가 새로 만든다 — 모듈이 들고 있는 동안 산다). */
         unique_ptr<SubsystemScope> _gameServices;
 
         ILiveReloadManager*  _pLiveReloadManager; // 소유하지 않는다.
@@ -377,7 +406,7 @@ namespace sw
         IEngineRenderDriver* _pRenderDriver;      // 소유하지 않는다.
         /**
          * @brief 프레임 경로(`beginFrame`)가 쓰는 엔진 서비스입니다. `initializeGame` 이 바인딩된 서비스 테이블에서 한 번 읽습니다(소유하지 않음).
-         * @details 비어 있으면 그 일을 건너뜁니다. 종료 · 리로드 경로는 서비스가 이미 해제됐을 수 있어 `engine::areEngineServicesBound()` 로 확인한 뒤 전역 조회를 씁니다.
+         * @details 비어 있으면 그 일을 건너뜁니다. 종료 · 리로드 경로는 서비스가 이미 해제됐을 수 있어 `engine::areEngineSubsystemsBound()` 로 확인한 뒤 전역 조회를 씁니다.
          */
         SceneManager*    _pSceneManager;
         IEngineUIDriver* _pUIDriver;
@@ -389,6 +418,8 @@ namespace sw
 
         /** @brief 이번 프레임에 고정한 모듈 상태입니다. */
         ModuleFrameState _frameState;
+        /** @brief 이번 프레임에 호스트 모듈이 요청한 뷰입니다(호스트 모듈이 없으면 늘 비어 있다). */
+        FrameViewports _views;
         /**
          * @brief 리로드 매니저에 건 이 객체의 콜백(모듈마다의 칸 · 배치 직전 · 워커 비우기)입니다. `shutdown` 이 놓고, 놓지 않았어도 이 객체와 함께 풀립니다.
          * @details 파생 클래스(에디터 모듈 호스트)도 자기 모듈의 칸을 여기에 담습니다(`holdReloadSubscription`).

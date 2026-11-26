@@ -2,10 +2,10 @@
  * @file AndroidClipboard.cpp
  * @brief Android 클립보드입니다. JNI 로 액티비티의 `ClipboardManager` 를 부른다(NDK 에는 클립보드 API 가 없다).
  * @details 읽기: `getPrimaryClip().getItemAt( 0 ).coerceToText( activity ).toString()`, 쓰기: `setPrimaryClip( ClipData.newPlainText( "", text ) )`.
- *          글은 `AndroidJNIString`(UTF-16 단위 — `GetStringChars` · `NewString`)으로 옮긴다 — JNI 의 `NewStringUTF` · `GetStringUTFChars` 는 수정 UTF-8 이라
+ *          글은 `AndroidJNIString`(UTF-16 단위, `GetStringChars` · `NewString`)으로 옮긴다. JNI 의 `NewStringUTF` · `GetStringUTFChars` 는 수정 UTF-8 이라
  *          보충 평면 글자(이모지)가 서로게이트 두 개로 깨진다. https://developer.android.com/reference/android/content/ClipboardManager
  *          Looper 제약: API 26 부터 `ClipboardManager` 는 만들 때 Handler 를 만들지 않고(액티비티의 메인 스레드 Handler 를 받는다) 호출은 바인더라
- *          게임 스레드(android_main)에서 불러도 된다 — 이 앱의 최소 API 는 29 다(CMakePresets.json). Android 10 부터 읽기는 앱이 포커스를 가질 때만 글을 준다(그 밖은 null — false).
+ *          게임 스레드(android_main)에서 불러도 된다. 이 앱의 최소 API 는 29 다(CMakePresets.json). Android 10 부터 읽기는 앱이 포커스를 가질 때만 글을 준다(그 밖은 null 이라 false).
  *          유니티 `GUIUtility.systemCopyBuffer` · 언리얼 `FAndroidApplicationMisc::ClipboardCopy`(자바 쪽 ClipboardManager)와 같은 자리다.
  */
 #include "pch.h"

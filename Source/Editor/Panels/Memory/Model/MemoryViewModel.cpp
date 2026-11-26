@@ -14,6 +14,7 @@
 #include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/Common/Workspace/NetPlay/EditorRemoteInspector.h"
 
+#include "Engine/Config/ConfigManager.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
 
@@ -314,8 +315,8 @@ namespace sw::editor
     void MemoryViewModel::gather( MemoryViewState& outState )
     {
         MemoryPanelExportResult jobResult;
-        const EditorTaskPoll    poll = _exportJob.take( jobResult );
-        if ( poll == EditorTaskPoll::Ready )
+        const EditorJobPoll     poll = _exportJob.take( jobResult );
+        if ( poll == EditorJobPoll::Ready )
         {
             ++_finishedExportCount;
             if ( jobResult._error.empty() )
@@ -329,7 +330,7 @@ namespace sw::editor
                 _statusLine = SW_LOCKEYFORMAT( "EditorMemory", "ExportFailedStatus", TextArgumentList().addText( "reason", jobResult._error ) );
             }
         }
-        outState._bExportPending = poll == EditorTaskPoll::Running ? SW_TRUE : SW_FALSE;
+        outState._bExportPending = poll == EditorJobPoll::Running ? SW_TRUE : SW_FALSE;
 
         outState._listSnapshotLabel.clear();
         for ( const shared_ptr<const MemorySnapshot>& pSnapshot : _listSnapshot )
@@ -410,7 +411,7 @@ namespace sw::editor
 
     void MemoryViewModel::captureLocal()
     {
-        const expected<MemorySnapshotPolicy> policy = MemorySnapshotPolicy::load();
+        const expected<MemorySnapshotPolicy> policy = ConfigManager::readConfig( MemorySnapshotPolicy::kConfigFile );
         if ( policy.has_value() == false )
         {
             _statusLine = SW_LOCKEYFORMAT( "EditorMemory", "NoPolicyStatus", TextArgumentList().addText( "reason", string{ policy.error().detail() } ) );
@@ -494,7 +495,7 @@ namespace sw::editor
 
     AbsolutePath MemoryViewModel::reserveExportFolder()
     {
-        const expected<MemorySnapshotPolicy> policy = MemorySnapshotPolicy::load();
+        const expected<MemorySnapshotPolicy> policy = ConfigManager::readConfig( MemorySnapshotPolicy::kConfigFile );
         if ( policy.has_value() == false )
         {
             _statusLine = SW_LOCKEYFORMAT( "EditorMemory", "NoPolicyStatus", TextArgumentList().addText( "reason", string{ policy.error().detail() } ) );

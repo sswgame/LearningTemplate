@@ -1,7 +1,7 @@
 // ActionPlatformerGameModeTest — 액션 플랫포머 디렉터의 명령(`submitPlayerInput` · `killPlayer`)은 스테이지가 진행 중일 때만 받는다(nogpu, 에셋 없음).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"

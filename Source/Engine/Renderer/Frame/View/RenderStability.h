@@ -3,7 +3,7 @@
  * @brief 사진 앞 "렌더가 자리를 잡았다" 판정입니다 — 시간 누적 렌더(TAA 기록이 쌓인 카메라 정지 프레임 수) · 노출 적응 수렴(남은 노출 오차의 상한) · 실시간 GI 수렴(옛 기록의 남은 몫).
  * @details 주 렌더러가 프레임마다 주 시점의 값을 올리고(`RenderStabilitySample::publish`, 렌더 스레드가 쓰고 게임 스레드가 읽는다), 렌더 정착 조건 셋(`RenderTemporalAccumulation` ·
  *          `RenderAutoExposure` · `RenderRealtimeGI`, `RenderStability.cpp` 의 `SW_AUTOMATION_STABILITY_CONDITION`)과 진단 감시 값(`Render.StillFrames` · `Render.ExposureErrorEv` …)이 읽는다.
- *          사진 단계(`<Screenshot stability="Render">`)가 에셋 일과 이 조건을 기다린다. 문턱은 `Config/Dev/ScenarioRun.json` 의 `_conditions` 이다(배포 엔진 설정에 두지 않는다).
+ *          사진 단계(`<Screenshot stability="Render">`)가 에셋 일과 이 조건을 기다린다. 문턱은 `Config/Dev/ScenarioRun.json` 의 `_mapConditionThreshold` 이다(배포 엔진 설정에 두지 않는다).
  *          - 정지 프레임: TAA 기록을 버리지 않았고(컷 · 첫 프레임 · TAA 가 빠진 뒤가 아님) 카메라 뷰-투영이 그대로인 프레임이 이어진 수다. 조건은 카메라 기준이다 — 캐릭터가 늘 숨 쉬는
  *            장면은 물체 움직임이 끝나지 않아 물체까지 보면 영영 "진행 중" 이었다. 고정 프레임 시간의 결정적 실행에서는 움직이는 장면도 같은 프레임이면 같은 그림이다.
  *            지터 누적이 수렴하려면 이 수가 기록 섞는 비율의 역수 몇 배는 되어야 한다(언리얼 TAA 의 히스토리 수렴, 자동화 스크린샷 앞 "warm-up frames").

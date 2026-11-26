@@ -2,7 +2,7 @@
 // JSON 의 형 거절 · 없는 필수 멤버는 `JSONDocumentTest.TypedReadsRefuseWrongValues` 가 본다.
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Serialization/JSON/JSONDocument.h"
 #include "Engine/Serialization/XML/XMLDocument.h"

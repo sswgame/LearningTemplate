@@ -22,7 +22,7 @@ namespace sw
          * @brief @p typeHash 가 `HostOnly` 로 등록한 엔진 서비스면 true 입니다. 게임 창구가 호스트 범위 없이 엔진 범위로 내려갈 때 그 칸을 거른다 —
          *        묶인 게임 모듈이 못 찾는 서비스를 묶이지 않은 실행(테스트 · 단계 사이)에서만 찾아 결함이 가려지지 않게(`game::findSubsystem`).
          */
-        SW_API bool isHostOnlyService( uint64 typeHash );
+        SW_API bool isHostOnlySubsystem( uint64 typeHash );
         /**
          * @brief 게임 인스턴스의 수명 경계를 엔진 · 모듈 서브시스템에 알립니다 — `SubsystemLifetime::GameInstance` 로 등록한 것이 상태를 비운다. 게임 스레드에서 부릅니다.
          * @details 게임 다시 시작(`GameModuleManager::restartGame`) · 타이틀 복귀(`GameSceneFlow`) · PIE 시작과 멈춤이 모두 이 함수 하나를 부른다. 자동화 단계는 게임 다시 시작이다.

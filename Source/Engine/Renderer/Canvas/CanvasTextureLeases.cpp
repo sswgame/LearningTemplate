@@ -5,7 +5,7 @@
 #include "Core/Algorithm/VectorUtil.h"
 
 #include "Engine/Asset/AssetManager.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
@@ -27,7 +27,7 @@ namespace sw
         {
             state._bSeen = SW_FALSE;
         }
-        const bool bServices = engine::areEngineServicesBound();
+        const bool bServices = engine::areEngineSubsystemsBound();
         for ( const CanvasTargetDrawList& target : frame._listTarget )
         {
             CanvasTargetLease* pState = findTarget( target._targetPath );

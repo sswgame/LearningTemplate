@@ -203,7 +203,7 @@ namespace sw::editor
         void recordGameInputSurfaceFocused() { _uiFrame._bGameInputSurfaceFocused = SW_TRUE; }
         /**
          * @brief 프레임 앞 정리 — 지난 프레임에 패널이 알린 포커스를 "지난 프레임 값" 으로 옮기고 이번 프레임 값을 비웁니다.
-         * @details 키보드 주인 판정(`EditorInputActions::processFrame`)은 패널을 그리기 **전에** 돈다. 비운 값을 읽으면 게임 뷰 포커스가 늘 거짓이라
+         * @details 키보드 주인 판정(`EditorInputActions::processFrame`)은 패널을 그리기 전에 돈다. 비운 값을 읽으면 게임 뷰 포커스가 늘 거짓이라
          *          게임이 키를 받지 못한다 — 그래서 판정은 지난 프레임 값(`wasGameInputFocusedLastFrame`)을 읽는다.
          */
         void beginFrameFocus()

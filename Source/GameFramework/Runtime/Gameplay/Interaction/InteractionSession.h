@@ -10,6 +10,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Gameplay/Interaction/InteractionCatalog.h"
@@ -56,7 +57,7 @@ namespace sw
          * @brief 시간을 진행합니다. @p bHeld 는 지금 누르고 있는지, @p bPressed 는 이번 프레임에 새로 눌렀는지 나타냅니다.
          * @details 누르고 있기 단계에서 떼면 취소되고 진행은 처음부터 다시 시작한다. 연타 단계는 누를 때마다 1/presses 만큼 오르고, 쉬면 decay 만큼 줄어든다.
          */
-        void update( float32 deltaTime, bool bHeld, bool bPressed );
+        void update( GameSeconds frameTime, bool bHeld, bool bPressed );
         /** @brief 취소합니다. 범위를 벗어나거나, 대상이 사라지거나, 맞았을 때 씁니다. 진행 중이 아니면 아무것도 하지 않습니다. */
         void cancel();
 

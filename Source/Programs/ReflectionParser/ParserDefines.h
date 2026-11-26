@@ -45,7 +45,7 @@ namespace sw
 
         /**
          * @brief 넷 역할 필드의 정규 이름입니다.
-         * @details `FUNCTION( Server )` 는 키가 아니라 **역할** 이름을 적습니다(토큰 자체가 값).
+         * @details `FUNCTION( Server )` 는 키가 아니라 역할 이름을 적습니다(토큰 자체가 값).
          *          그래서 적용할 때는 이 이름의 필드에 역할 이름을 값으로 넘깁니다.
          */
         inline constexpr const utf8* kNetRoleField = "NetRole";

@@ -1,0 +1,449 @@
+#include "pch.h"
+
+#include "DevTools/Network/ServerPoseOverlay.h"
+
+#include "Core/Algorithm/VectorUtil.h"
+#include "Core/GlobalVariable/GlobalVariableManager.h"
+#include "Core/Log/Logger.h"
+#include "Core/Math/AABB.h"
+#include "Core/Math/MathUtil.h"
+#include "Core/Math/MatrixMath.h"
+#include "Core/String/StringBuilder.h"
+#include "Core/String/StringUtil.h"
+#include "Core/Task/TaskManager.h"
+#include "Core/Time/MonotonicClock.h"
+
+#include "DevTools/Diagnostics/DevSceneIterationAccess.h"
+
+#include "Engine/Console/DevCommandRegistry.h"
+#include "Engine/Foundation/EngineSubsystems.h"
+#include "Engine/Graphics/DebugDraw/DebugDrawQueue.h"
+#include "Engine/Object/Component/SceneComponent.h"
+#include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.inl"
+#include "Engine/Observability/DebugChannel.h"
+#include "Engine/Scene/Scene.h"
+#include "Engine/Scene/SceneManager.h"
+
+#include <algorithm>
+#include <cmath>
+
+namespace sw
+{
+    /** @brief `-gv_serverPoseOverlayPort=N`: 클라이언트가 서버의 디버그 채널(루프백 포트 N)에서 포즈를 읽어 권위 고스트를 겹칩니다(0=끄기). Shipping 에는 없습니다. */
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_serverPoseOverlayPort, 0, "서버 디버그 채널 포트 - 서버 포즈를 고스트로 겹침 (0=끄기)" );
+    SW_TEST_GLOBAL_VARIABLE( sw::GlobalSecret, gv_serverPoseOverlayToken, "", "서버 디버그 채널 토큰" );
+
+    namespace
+    {
+        struct ServerPoseOverlayInternal
+        {
+            static constexpr int64   kPollIntervalNanoseconds = 250 * constant::time::kNanosecondsPerSecond / constant::time::kMillisecondsPerSecond; ///< 4 Hz
+            static constexpr int64   kReconnectNanoseconds    = 500 * constant::time::kNanosecondsPerSecond / constant::time::kMillisecondsPerSecond;
+            static constexpr int32   kRequestTimeoutMilli     = 1000;
+            static constexpr float32 kVisibleDistance         = 0.01f; ///< 이보다 가까우면 어긋남으로 치지 않는다(선 · 글을 그리지 않음)
+            static constexpr float32 kGhostHalfExtent         = 0.5f;
+            static constexpr float32 kVisibleAngleDegrees     = 0.5f; ///< 이보다 덜 돌아갔으면 어긋남으로 치지 않는다
+
+            /**
+             * @brief @p rest 의 끝에서 `<keyword> v0 v1 …`(숫자 @p count 개) 묶음을 떼어 @p pOutValue 에 씁니다. 묶음이 없으면 false 이고 @p rest 는 그대로입니다.
+             * @details 이름이 공백을 품을 수 있으므로 앞에서가 아니라 뒤에서부터 센다.
+             */
+            static bool peelSection( string_view& rest, string_view keyword, float32* pOutValue, int32 count )
+            {
+                string_view job = rest;
+                for ( int32 index = count - 1; index >= 0; --index )
+                {
+                    const size_t space = job.rfind( ' ' );
+                    if ( space == string_view::npos || StringUtil::parseFloat( job.substr( space + 1 ), pOutValue[index] ) == false )
+                        return false;
+                    job = job.substr( 0, space );
+                }
+                const size_t keywordSpace = job.rfind( ' ' );
+                if ( keywordSpace == string_view::npos || job.substr( keywordSpace + 1 ) != keyword )
+                    return false;
+                rest = job.substr( 0, keywordSpace );
+                return true;
+            }
+
+            static float32 computeAngleDegrees( const float4& left, const float4& right )
+            {
+                const float32 dot     = std::fabs( left._x * right._x + left._y * right._y + left._z * right._z + left._w * right._w );
+                const float32 cosHalf = dot > 1.0f ? 1.0f : dot;
+                return 2.0f * std::acos( cosHalf ) * MathUtil::kRadianToDegree;
+            }
+
+            static void appendFloat3( StringBuilder<constant::buffer::kMax4096>& outText, const float3& value )
+            {
+                outText.append( value._x ).append( ' ' ).append( value._y ).append( ' ' ).append( value._z );
+            }
+
+            /** @brief 루트 씬 컴포넌트의 절대 자리(@p origin 을 더한다) · 회전 · 히트박스(`getWorldBox`, 있으면)를 @p outPose 에 씁니다. */
+            static void readPoseValues( const SceneComponent& root, const WorldOrigin& origin, AuthorityPose& outPose )
+            {
+                outPose._position     = AbsolutePosition{ origin.toAbsolute( root.getWorldPosition() ) };
+                const quaternion rot  = root.getWorldMatrix().getRotation();
+                outPose._rotation     = float4{ rot._x, rot._y, rot._z, rot._w };
+                outPose._bHasRotation = true;
+                AABB box;
+                outPose._bHasBox = root.getWorldBox( box ) && box.isValid();
+                if ( outPose._bHasBox )
+                {
+                    const float3 localCenter{ ( box._min._x + box._max._x ) * 0.5f, ( box._min._y + box._max._y ) * 0.5f, ( box._min._z + box._max._z ) * 0.5f };
+                    outPose._boxCenter     = AbsolutePosition{ origin.toAbsolute( localCenter ) };
+                    outPose._boxHalfExtent = float3{ ( box._max._x - box._min._x ) * 0.5f, ( box._max._y - box._min._y ) * 0.5f, ( box._max._z - box._min._z ) * 0.5f };
+                }
+            }
+
+            static bool runGhostReport( const vector<string>& listArgument, string& outReply )
+            {
+                if ( listArgument.empty() == false )
+                    return false;
+                if ( gv_serverPoseOverlayPort <= 0 )
+                {
+                    outReply = "authority ghost is off - start with -gv_serverPoseOverlayPort=<server debug channel port> -gv_serverPoseOverlayToken=<token>";
+                    return false;
+                }
+                const ServerPoseOverlay* pGhost = engine::findSubsystem<ServerPoseOverlay>();
+                if ( pGhost == nullptr )
+                {
+                    outReply = "authority ghost service is not running in this host";
+                    return false;
+                }
+                if ( pGhost->describe( outReply ) == false )
+                    outReply = "no server poses received yet";
+                return true;
+            }
+        };
+    } // namespace
+
+    SW_DEV_COMMAND( NetGhost, "net.serverOverlay", "net.serverOverlay", "Report the position difference between this client and the server poses (-gv_serverPoseOverlayPort)",
+                    &ServerPoseOverlayInternal::runGhostReport );
+
+    ServerPoseOverlay::ServerPoseOverlay()
+        : _mutex{}
+        , _latestText{}
+        , _parsedText{}
+        , _listServerPose{}
+        , _listLocalPose{}
+        , _localStructureGeneration{ 0 }
+        , _listDelta{}
+        , _nextPollNanoseconds{ 0 }
+        , _pClient{}
+        , _pollStage{}
+        , _bStarted{ SW_FALSE }
+        , _reserved{ 0 }
+        , _bReceived{ SW_FALSE }
+    {
+    }
+
+    ServerPoseOverlay::~ServerPoseOverlay()
+    {
+        shutdown();
+    }
+
+    void ServerPoseOverlay::parsePoses( string_view text, vector<AuthorityPose>& outListPose )
+    {
+        outListPose.clear();
+        size_t lineStart = 0;
+        while ( lineStart < text.size() )
+        {
+            size_t lineEnd = text.find( '\n', lineStart );
+            if ( lineEnd == string_view::npos )
+                lineEnd = text.size();
+            const string_view line = StringUtil::trim( text.substr( lineStart, lineEnd - lineStart ) );
+            lineStart              = lineEnd + 1;
+            // 이름은 공백을 품을 수 있으므로 뒤에서부터 떼어 낸다 — 선택 묶음(box → rot) 다음 위치 숫자 셋.
+            AuthorityPose pose;
+            string_view   rest = line;
+            float32       arrBox[6]{};
+            float32       arrRotation[4]{};
+            pose._bHasBox      = ServerPoseOverlayInternal::peelSection( rest, "box", arrBox, 6 );
+            pose._bHasRotation = ServerPoseOverlayInternal::peelSection( rest, "rot", arrRotation, 4 );
+            if ( pose._bHasBox )
+            {
+                pose._boxCenter = AbsolutePosition{
+                    float3{ arrBox[0], arrBox[1], arrBox[2] }
+                };
+                pose._boxHalfExtent = float3{ arrBox[3], arrBox[4], arrBox[5] };
+            }
+            if ( pose._bHasRotation )
+                pose._rotation = float4{ arrRotation[0], arrRotation[1], arrRotation[2], arrRotation[3] };
+            bool     bOk         = true;
+            float32* arrValue[3] = { &pose._position._value._z, &pose._position._value._y, &pose._position._value._x };
+            for ( float32* pValue : arrValue )
+            {
+                const size_t space = rest.rfind( ' ' );
+                bOk                = bOk && space != string_view::npos && StringUtil::parseFloat( rest.substr( space + 1 ), *pValue );
+                if ( bOk )
+                    rest = rest.substr( 0, space );
+            }
+            if ( bOk == false || rest.empty() )
+                continue;
+            pose._name = string( rest );
+            outListPose.push_back( pose );
+        }
+    }
+
+    void ServerPoseOverlay::writePoses( const vector<AuthorityPose>& listPose, string& outText )
+    {
+        StringBuilder<constant::buffer::kMax4096> text;
+        for ( const AuthorityPose& pose : listPose )
+        {
+            text.append( pose._name ).append( ' ' );
+            ServerPoseOverlayInternal::appendFloat3( text, pose._position._value );
+            if ( pose._bHasRotation )
+            {
+                text.append( " rot " );
+                ServerPoseOverlayInternal::appendFloat3( text, float3{ pose._rotation._x, pose._rotation._y, pose._rotation._z } );
+                text.append( ' ' ).append( pose._rotation._w );
+            }
+            if ( pose._bHasBox )
+            {
+                text.append( " box " );
+                ServerPoseOverlayInternal::appendFloat3( text, pose._boxCenter._value );
+                text.append( ' ' );
+                ServerPoseOverlayInternal::appendFloat3( text, pose._boxHalfExtent );
+            }
+            text.append( '\n' );
+        }
+        outText = string( text.view() );
+    }
+
+    void ServerPoseOverlay::collectPoses( const GameObjectManager& manager, vector<AuthorityPose>& outListPose )
+    {
+        outListPose.clear();
+        manager.forEachGameObject( DevSceneIterationAccess::getKey(), [&manager, &outListPose]( const GameObject* pObject )
+        {
+            const SceneComponent* pRoot = pObject->getName().empty() ? nullptr : pObject->getComponent<SceneComponent>();
+            if ( pRoot == nullptr )
+                return;
+            AuthorityPose& pose = outListPose.emplace_back();
+            pose._name          = pObject->getName().c_str();
+            ServerPoseOverlayInternal::readPoseValues( *pRoot, manager.getWorldOrigin(), pose );
+            pose._object = pObject->getHandle();
+        } );
+        VectorUtil::sort( outListPose, []( const AuthorityPose& left, const AuthorityPose& right )
+        { return left._name < right._name; } );
+    }
+
+    void ServerPoseOverlay::computeDeltas( const vector<AuthorityPose>& listLocal, const vector<AuthorityPose>& listServer, vector<AuthorityDelta>& outListDelta )
+    {
+        outListDelta.clear();
+        for ( const AuthorityPose& local : listLocal )
+        {
+            for ( const AuthorityPose& server : listServer )
+            {
+                if ( local._name != server._name )
+                    continue;
+                AuthorityDelta& delta      = outListDelta.emplace_back();
+                delta._name                = local._name;
+                delta._local               = local._position;
+                delta._server              = server._position;
+                delta._distance            = float3::getDistance( local._position._value, server._position._value );
+                delta._bHasServerRotation  = server._bHasRotation;
+                delta._serverRotation      = server._rotation;
+                delta._bHasServerBox       = server._bHasBox;
+                delta._serverBoxCenter     = server._boxCenter;
+                delta._serverBoxHalfExtent = server._boxHalfExtent;
+                if ( local._bHasRotation && server._bHasRotation )
+                    delta._angleDegrees = ServerPoseOverlayInternal::computeAngleDegrees( local._rotation, server._rotation );
+                delta._bHasBoxPair = local._bHasBox && server._bHasBox;
+                if ( delta._bHasBoxPair )
+                    delta._boxCenterDistance = float3::getDistance( local._boxCenter._value, server._boxCenter._value );
+                break;
+            }
+        }
+        VectorUtil::stableSort( outListDelta, []( const AuthorityDelta& left, const AuthorityDelta& right )
+        { return left._distance > right._distance; } );
+    }
+
+    void ServerPoseOverlay::writeReport( const vector<AuthorityDelta>& listDelta, string& outText )
+    {
+        StringBuilder<constant::buffer::kMax4096> text;
+        for ( const AuthorityDelta& delta : listDelta )
+        {
+            text.append( delta._name ).append( ' ' ).append( delta._distance ).append( " local " );
+            ServerPoseOverlayInternal::appendFloat3( text, delta._local._value );
+            text.append( " server " );
+            ServerPoseOverlayInternal::appendFloat3( text, delta._server._value );
+            text.append( " angle " ).append( delta._angleDegrees ).append( " box " ).append( delta._boxCenterDistance ).append( '\n' );
+        }
+        outText = string( text.view() );
+    }
+
+    void ServerPoseOverlay::schedulePoll()
+    {
+        // 잠들며 도는 전용 스레드 대신 때가 된 읽기 하나를 태스크로 낸다(언리얼 HTTP 모듈이 틱에서 요청을 내고 완료를 받는 것과 같은 모양).
+        // 읽기는 루프백 요청 하나라 워커를 길어야 요청 시한(`kRequestTimeoutMilli`)만 잡고, 낮은 우선순위라 프레임 일을 앞지르지 않는다.
+        TaskManager& taskManager = engine::getSubsystem<TaskManager>();
+        if ( taskManager.isStageComplete( _pollStage ) == false )
+            return; // 앞 읽기가 아직 돈다 — 겹쳐 내지 않는다(연결은 한 태스크만 만진다)
+        {
+            ScopedLock<mutex> lock{ _mutex };
+            if ( MonotonicClock::nowNanoseconds() < _nextPollNanoseconds )
+                return;
+        }
+        TaskHandle handle = taskManager.emplaceTask( "ServerPosePoll", SW_DELEGATE_METHOD( TaskDelegate, &ServerPoseOverlay::pollOnce, this ) );
+        handle.setPriority( TaskPriority::Low );
+        taskManager.addToStage( _pollStage, handle, "ServerPosePoll" ); // 제출 전에 넣는다
+        handle.submit();
+    }
+
+    void ServerPoseOverlay::pollOnce()
+    {
+        if ( _pClient == nullptr )
+            _pClient = make_unique<DebugChannelClient>();
+        int64 delayNanoseconds = ServerPoseOverlayInternal::kPollIntervalNanoseconds;
+        if ( _pClient->isConnected() == false &&
+             _pClient->connect( NetAddress::makeLoopback( static_cast<uint16>( gv_serverPoseOverlayPort ) ), gv_serverPoseOverlayToken.get(), ServerPoseOverlayInternal::kRequestTimeoutMilli ) == false )
+            delayNanoseconds = ServerPoseOverlayInternal::kReconnectNanoseconds;
+        string     body;
+        const bool bReceived = _pClient->isConnected() && _pClient->request( "scene.poses", ServerPoseOverlayInternal::kRequestTimeoutMilli, body );
+        if ( _pClient->isConnected() && bReceived == false )
+            _pClient->disconnect();
+        ScopedLock<mutex> lock{ _mutex };
+        if ( bReceived )
+        {
+            _latestText = std::move( body );
+            _bReceived  = SW_TRUE;
+        }
+        _nextPollNanoseconds = MonotonicClock::nowNanoseconds() + delayNanoseconds;
+    }
+
+    void ServerPoseOverlay::shutdown()
+    {
+        // 도는 읽기는 이미지가 내려가기 전에 끝낸다 — 요청 시한이 있어 길어야 그만큼이다.
+        if ( _pollStage.isValid() )
+            engine::getSubsystem<TaskManager>().waitStage( _pollStage, "ServerPoseOverlay::shutdown" );
+        if ( _pClient != nullptr )
+            _pClient->disconnect();
+        _pClient.reset();
+        _bStarted = SW_FALSE;
+    }
+
+    void ServerPoseOverlay::update( Scene* pScene, DebugDrawQueue& queue )
+    {
+        _updateThread.assumeHeld(); // update 는 게임 스레드 하나가 부른다
+        if ( gv_serverPoseOverlayPort <= 0 )
+            return;
+        if ( _bStarted == SW_FALSE )
+        {
+            _bStarted = SW_TRUE;
+            SW_LOG_INFO_ID( "ServerPoseOverlay.AuthorityGhostPollingServer", "Authority ghost polling the server debug channel on 127.0.0.1:%#", gv_serverPoseOverlayPort );
+        }
+        schedulePoll();
+        GameObjectManager* pManager = pScene != nullptr ? pScene->getObjectManager() : nullptr;
+        if ( pManager == nullptr )
+            return;
+        {
+            ScopedLock<mutex> lock{ _mutex };
+            if ( _bReceived == SW_FALSE )
+                return;
+            if ( _latestText != _parsedText )
+            {
+                _parsedText = _latestText;
+                parsePoses( _parsedText, _listServerPose );
+            }
+        }
+        // 이름 있는 오브젝트 목록(이름 순)은 구조 세대가 바뀔 때만 씬을 훑어 다시 모은다. 그 사이에는 핸들로 위치만 읽는다.
+        const uint64 structureGeneration = pManager->getStructureGeneration();
+        if ( structureGeneration != _localStructureGeneration )
+        {
+            _localStructureGeneration = structureGeneration;
+            collectPoses( *pManager, _listLocalPose );
+        }
+        else
+        {
+            for ( AuthorityPose& pose : _listLocalPose )
+            {
+                const GameObject*     pObject = pManager->resolveGameObject( pose._object );
+                const SceneComponent* pRoot   = pObject != nullptr ? pObject->getComponent<SceneComponent>() : nullptr;
+                if ( pRoot != nullptr )
+                    ServerPoseOverlayInternal::readPoseValues( *pRoot, pManager->getWorldOrigin(), pose );
+            }
+        }
+        const WorldOrigin&     origin = pManager->getWorldOrigin();
+        vector<AuthorityDelta> listDelta;
+        computeDeltas( _listLocalPose, _listServerPose, listDelta );
+        const float4        ghostColor{ 0.2f, 0.9f, 1.0f, 1.0f };
+        const float4        errorColor{ 1.0f, 0.6f, 0.1f, 1.0f };
+        const hashed_string category( "ServerPoseOverlay" );
+        for ( const AuthorityDelta& delta : listDelta )
+        {
+            // 서버의 히트박스가 있으면 그 상자(서버 회전으로 돌려서), 없으면 기본 크기 상자를 서버 위치에 그린다.
+            const AbsolutePosition ghostCenter   = delta._bHasServerBox ? delta._serverBoxCenter : delta._server;
+            const float3           ghostExtent   = delta._bHasServerBox ? delta._serverBoxHalfExtent
+                                                                        : float3{ ServerPoseOverlayInternal::kGhostHalfExtent, ServerPoseOverlayInternal::kGhostHalfExtent, ServerPoseOverlayInternal::kGhostHalfExtent };
+            const quaternion       ghostRotation = delta._bHasServerRotation ? quaternion( delta._serverRotation ) : quaternion::Identity;
+            if ( delta._bHasServerBox && delta._bHasServerRotation )
+                queue.drawOrientedBox( origin, ghostCenter, ghostExtent, ghostRotation, ghostColor, 0.0f, category );
+            else
+                queue.drawBox( origin, ghostCenter, ghostExtent, ghostColor, 0.0f, category );
+            if ( delta._bHasServerRotation )
+            {
+                // 서버가 바라보는 앞쪽(로컬 +Z)을 화살표로 보인다 — 로컬의 방향과 견주는 기준이다.
+                const float3           forward = float3{ 0.0f, 0.0f, 1.0f };
+                const AbsolutePosition tip     = delta._server + float3::transformVector( forward, float4x4::makeFromQuaternion( ghostRotation ) );
+                queue.drawArrow( origin, delta._server, tip, ghostColor, 0.0f, category );
+            }
+            const bool bAngleOff = delta._angleDegrees > ServerPoseOverlayInternal::kVisibleAngleDegrees;
+            if ( delta._distance <= ServerPoseOverlayInternal::kVisibleDistance && bAngleOff == false )
+                continue;
+            queue.drawLine( origin, delta._local, delta._server, errorColor, 0.0f, category );
+            StringBuilder<constant::buffer::kMax256> label;
+            label.append( delta._name ).append( ' ' ).append( delta._distance ).append( " m" );
+            if ( bAngleOff )
+                label.append( ' ' ).append( delta._angleDegrees ).append( " deg" );
+            queue.drawText( origin, delta._server, label.view(), errorColor, 0.0f, category );
+        }
+        ScopedLock<mutex> lock{ _mutex };
+        _listDelta = listDelta;
+    }
+
+    bool ServerPoseOverlay::describe( string& outText ) const
+    {
+        ScopedLock<mutex> lock{ _mutex };
+        if ( _bReceived == SW_FALSE )
+            return false;
+        float32 maxDistance = 0.0f;
+        float32 maxAngle    = 0.0f;
+        for ( const AuthorityDelta& delta : _listDelta )
+        {
+            maxDistance = delta._distance > maxDistance ? delta._distance : maxDistance;
+            maxAngle    = delta._angleDegrees > maxAngle ? delta._angleDegrees : maxAngle;
+        }
+        string report;
+        writeReport( _listDelta, report );
+        StringBuilder<constant::buffer::kMax4096> text;
+        text.append( "authority ghost: " ).append( static_cast<float32>( _listDelta.size() ) ).append( " matched objects, max difference " );
+        text.append( maxDistance ).append( " m, max rotation difference " ).append( maxAngle ).append( " deg\n" ).append( report );
+        outText = string( text.view() );
+        return true;
+    }
+
+    namespace
+    {
+        /** @brief `scene.poses` — 서버가 내는 포즈 글(이 고스트가 읽는 형식과 같은 파일에 둔다): 이름 있는 오브젝트의 월드 위치 · 회전 · 히트박스, 이름 순. */
+        struct ServerPoseOverlayCommands
+        {
+            static bool runPoses( const vector<string>& listArgument, string& outReply )
+            {
+                if ( listArgument.empty() == false )
+                    return false;
+                GameObjectManager* pManager = engine::findActiveObjectManager();
+                if ( pManager == nullptr )
+                {
+                    outReply = "no active scene";
+                    return false;
+                }
+                vector<AuthorityPose> listPose;
+                ServerPoseOverlay::collectPoses( *pManager, listPose );
+                ServerPoseOverlay::writePoses( listPose, outReply );
+                return true;
+            }
+        };
+    } // namespace
+
+    SW_DEV_COMMAND( ScenePoses, "scene.poses", "scene.poses", "Print the world position, rotation and hit box of every named object that has a transform (name x y z [rot qx qy qz qw] [box cx cy cz hx hy hz])", &ServerPoseOverlayCommands::runPoses );
+} // namespace sw

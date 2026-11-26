@@ -32,7 +32,7 @@
 #include "Engine/Config/GameTimeScale.h"
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Foundation/DeterministicRun.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Foundation/QuitRequest.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
@@ -781,7 +781,7 @@ namespace sw
     string AutomationRunner::findBackendName()
     {
         // 창이 없는 호스트는 디바이스를 만들지 않아 `gv_rhiBackend` 가 설정 기본값일 뿐이다 — 그때는 적지 않는다.
-        if ( engine::areEngineServicesBound() == false )
+        if ( engine::areEngineSubsystemsBound() == false )
             return string{};
         if ( MainWindowSubsystem::findMainWindow() == nullptr )
             return string{};
@@ -953,7 +953,7 @@ namespace sw
         // 기동 때 정해지는 값(첫 씬 · 렌더 파이프라인)은 시나리오가 바꿀 수 없다 — 띄운 명령줄이 선언과 다르면 다른 화면을 단언하게 되므로 멈춘다.
         for ( const AutomationAttribute& variable : _scenario.getTestOptions()._listLaunchVariable )
         {
-            const GlobalVariableInfo* pInfo           = engine::areEngineServicesBound() ? engine::getSubsystem<GlobalVariableManager>().findVariable( variable._name ) : nullptr;
+            const GlobalVariableInfo* pInfo           = engine::areEngineSubsystemsBound() ? engine::getSubsystem<GlobalVariableManager>().findVariable( variable._name ) : nullptr;
             bool                      bMatched        = false;
             const bool                bLaunchedWithIt = pInfo != nullptr && AutomationStepArgsUtil::compareVariable( *pInfo, string_view{ variable._value }, 0.0f, bMatched ) && bMatched;
             if ( bLaunchedWithIt == false )

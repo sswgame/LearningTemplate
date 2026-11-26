@@ -5,7 +5,7 @@
 #include "pch.h"
 
 #include "Core/File/FileUtil.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "DevTools/FileWatch/FileWatchService.h"
 
@@ -30,7 +30,7 @@ namespace
             }
         }
 
-        [[nodiscard]] bool startWatching( const AbsolutePath& directoryPath, bool /*bRecursive*/ ) override
+        [[nodiscard]] bool startWatching( const DiskPath& directoryPath, bool /*bRecursive*/ ) override
         {
             _directoryPath = directoryPath;
             _listOpen.push_back( this );

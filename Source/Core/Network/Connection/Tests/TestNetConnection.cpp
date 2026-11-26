@@ -4,7 +4,7 @@
 #include "Core/Network/Connection/SequenceBuffer.h"
 #include "Core/Network/Tests/NetTestUtil.h"
 #include "Core/Serialization/BitStream.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 // 연결 하나의 신뢰성 계층 — 시퀀스 감김, 재전송 · 순서 · 중복 · 옛것 버리기 · RTT, 전달 통지, 순서만 채널의 종류별 흐름, 받은 버퍼 다시 쓰기,
 // 받은 큐 넘침, 깨진 몸은 확인하지 않음, 대역폭 통계, 빠른 재전송, 크기 상한과 신뢰 창, 큰 신뢰 메시지와 순서만 메시지 번갈아 싣기, 신뢰 순서 없음, 비신뢰 나이 상한.

@@ -4,7 +4,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringBuilder.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Editor/Common/Asset/ModelImport/ModelImportConfig.h"
 #include "Editor/Common/Asset/ModelImport/ModelImportMaterial.h"
@@ -165,7 +165,7 @@ SW_TEST_CASE( ModelImportSectionsTest, SideFolderKeepsNestedSourceResults )
 {
     const AbsolutePath root  = test::makeScratchPath( "ModelImportNested" );
     const auto         write = [&root]( string_view path )
-    { return FileUtil::ensureParentDirectoryExists( root.join( path ) ) && FileUtil::writeTextFile( root.join( path ), path ); };
+    { return FileUtil::writeTextFile( root.join( path ), path ); };
     SW_REQUIRE_TRUE( write( "models_raw/hero.glb" ) && write( "models_raw/hero/sword.glb" ) && write( "models_raw/hero/readme.txt" ) );
     SW_REQUIRE_TRUE( write( "models/hero.mesh" ) && write( "models/hero/hero.animset.xml" ) && write( "models/hero/parts/cape.mesh" ) );
     SW_REQUIRE_TRUE( write( "models/hero/sword.mesh" ) && write( "models/hero/sword.fracture" ) && write( "models/hero/sword/materials/steel.material" ) );

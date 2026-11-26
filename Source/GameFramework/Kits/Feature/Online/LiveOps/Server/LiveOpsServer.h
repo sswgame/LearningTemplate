@@ -15,7 +15,7 @@
 #include "GameFramework/Kits/Feature/Online/LiveOps/Runtime/LiveOpsProtocol.h"
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/LiveOpsService.h"
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/Push/PushNotificationDispatcher.h"
-#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Service/OnlineProtocolService.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/OnlineProtocolService.h"
 #include "GameFramework/Runtime/Online/Service/Server/OnlineServiceHost.h"
 
 namespace sw

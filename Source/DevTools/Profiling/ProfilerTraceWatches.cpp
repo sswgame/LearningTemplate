@@ -7,7 +7,7 @@
 #include "DevTools/Profiling/ProfilerTraceExport.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Profiling/FrameProfiler.h"
 
 #if !defined( SW_SHIPPING )

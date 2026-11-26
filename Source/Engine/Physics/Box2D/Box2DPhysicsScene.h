@@ -2,15 +2,15 @@
  * @file Box2DPhysicsScene.h
  * @brief `IPhysicsScene2D` 의 Box2D v3 구현입니다. Box2D 헤더를 include 하므로 `Physics/Box2D` 밖에서는 보지 않습니다.
  * @details
- *  - **레이어.** 엔진 레이어 n 은 셰이프 필터의 카테고리 비트 1 << n 이고, 마스크는 레이어 테이블의 그 행이다. 테이블을 바꾸면 모든 셰이프의 필터를 다시 쓴다.
- *  - **쌍 예외.** 두 바디의 충돌을 끄는 것은 Box2D 의 필터 관절(`b2CreateFilterJoint`)이다. 관절로 연결된 두 바디는 관절의 `collideConnected` 가 막는다.
- *  - **이벤트.** 접촉 시작과 끝(`b2World_GetContactEvents`), 센서 시작과 끝(`b2World_GetSensorEvents`)을 셰이프에서 바디로 가는 테이블로 찾아 추적기에 넣는다.
+ *  - 레이어. 엔진 레이어 n 은 셰이프 필터의 카테고리 비트 1 << n 이고, 마스크는 레이어 테이블의 그 행이다. 테이블을 바꾸면 모든 셰이프의 필터를 다시 쓴다.
+ *  - 쌍 예외. 두 바디의 충돌을 끄는 것은 Box2D 의 필터 관절(`b2CreateFilterJoint`)이다. 관절로 연결된 두 바디는 관절의 `collideConnected` 가 막는다.
+ *  - 이벤트. 접촉 시작과 끝(`b2World_GetContactEvents`), 센서 시작과 끝(`b2World_GetSensorEvents`)을 셰이프에서 바디로 가는 테이블로 찾아 추적기에 넣는다.
  *    충격량 중 시작은 부딪힘 이벤트(`b2ContactHitEvent`, 다가온 속도가 1 m/s 를 넘을 때)의 속도 × 유효 질량 × (1 + 반발)이다. Box2D 의 시작은
  *    투기적 접촉(아직 떨어져 있다)에서도 발생하고 그 매니폴드는 풀기 전이라, 매니폴드로는 부딪힘을 측정할 수 없다. 유지는 그 스텝에 푼 접촉 충격량
  *    (마지막 서브 스텝의 `normalImpulse` × 서브 스텝 수)이다. `totalNormalImpulse` 는 이완 반복까지 더해서 약 두 배가 된다.
- *  - **월드에 붙는 관절.** 바디 B 가 없으면 씬이 가진 정적 바디(원점) 하나에 붙인다.
- *  - **위치 모터.** Box2D 의 관절 스프링(목표 각, 거리)으로 구현한다. 속도 모터는 Box2D 모터를 그대로 쓴다.
- *  - **스레드.** `PhysicsSettings::_workerCount2D` 가 2 이상이면 씬마다 전용 워커(`Box2DWorkerPool`)를 붙인다. 소유 규칙 · 잠금 순서 · 결정성은 그 헤더에 있다.
+ *  - 월드에 붙는 관절. 바디 B 가 없으면 씬이 가진 정적 바디(원점) 하나에 붙인다.
+ *  - 위치 모터. Box2D 의 관절 스프링(목표 각, 거리)으로 구현한다. 속도 모터는 Box2D 모터를 그대로 쓴다.
+ *  - 스레드. `PhysicsSettings::_workerCount2D` 가 2 이상이면 씬마다 전용 워커(`Box2DWorkerPool`)를 붙인다. 소유 규칙 · 잠금 순서 · 결정성은 그 헤더에 있다.
  */
 #pragma once
 #include "Core/Container/SlotHandleTable.h"

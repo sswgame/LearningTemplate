@@ -88,6 +88,10 @@ namespace sw::editor
         , _bTextEditOpen{ SW_FALSE }
         , _inheritance{}
     {
+        _state.bind( SW_DELEGATE_LAMBDA( CaptureDelegate, [this]()
+        { return _text; } ),
+                     SW_DELEGATE_LAMBDA( ApplyDelegate, [this]( const string& snapshot )
+        { _text = snapshot; _bTextEditOpen = SW_FALSE; rebuildFromText(); } ) );
     }
 
     bool CatalogDocument::load( string_view text )
@@ -464,17 +468,11 @@ namespace sw::editor
 
     void CatalogDocument::undo()
     {
-        if ( _state.undo( _text ) == false )
-            return;
-        _bTextEditOpen = SW_FALSE;
-        rebuildFromText();
+        (void)_state.undo(); // 넣기와 다시 짓기는 `bind` 의 apply 가 한다
     }
 
     void CatalogDocument::redo()
     {
-        if ( _state.redo( _text ) == false )
-            return;
-        _bTextEditOpen = SW_FALSE;
-        rebuildFromText();
+        (void)_state.redo();
     }
 } // namespace sw::editor

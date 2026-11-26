@@ -4,7 +4,7 @@
  * @details 젖음 · 웅덩이 · 눈 · 빗방울 링(material_functions.hlsli `computeRainExposure`)과 GPU 강수(`VFXCollisionMethod::RainOcclusion`)가 읽는다. 값은 씬의 `RainOcclusionComponent` 가 정하고
  *          렌더 패킷이 나른다 — 렌더러가 컴포넌트 헤더를 보지 않도록 값 타입만 따로 둔다(`SkyGradient` 와 같다).
  *          Godot `GPUParticlesCollisionHeightField3D`(카메라를 따르는 높이 맵 — 비 · 눈용)와 언리얼 · 유니티 게임이 위에서 찍은 깊이로 비를 가리는 것과 같은 자리다.
- *          게임플레이의 실내 판정(`WeatherShelter` — 캐릭터 젖음 · 소리)은 물리 광선 그대로다 — GPU 깊이를 되읽지 않는다.
+ *          게임플레이의 실내 판정(`WeatherShelter`: 캐릭터 젖음 · 소리)은 물리 광선 그대로라 GPU 깊이를 되읽지 않는다.
  */
 #pragma once
 #include "Core/Foundation/Macros.h"

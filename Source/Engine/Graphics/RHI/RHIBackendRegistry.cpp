@@ -8,12 +8,12 @@
 #include "Core/Path/AbsolutePath.h"
 #include "Core/Registry/RegistrationChain.h"
 
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/RHI/RHIBackendInfo.h"
-#include "Engine/Graphics/RHI/RHIModuleABI.h"
+#include "Engine/Graphics/RHI/RHIModuleEntry.h"
 #include "Engine/Module/EngineABIStamp.h"
 
 namespace sw
@@ -134,7 +134,7 @@ namespace sw
         if ( pEntry == nullptr || pEntry->_factory.isBound() == false )
         {
             // 숫자만 찍으면(예: "backend 0") 설정 파일에 DirectX11 을 적어 둔 사람이 원인을 알 수
-            // 없다. 배포본은 고른 백엔드 **하나만** 링크하므로(`SW_SHIPPING_RHI_BACKEND`), 무엇이 있는지
+            // 없다. 배포본은 고른 백엔드 하나만 링크하므로(`SW_SHIPPING_RHI_BACKEND`), 무엇이 있는지
             // 같이 알려 준다.
             SW_LOG_ERROR_ID( "RHIBackendRegistry.BackendNotBuildAvailable", "The %# backend is not in this build. Available: %#",
                              RHI::getBackendTypeName( backend ), describeRegisteredBackends().c_str() );
@@ -158,7 +158,7 @@ namespace sw
         if ( pModuleHandle == nullptr )
             return false;
 
-        // 백엔드 모듈이 이 엔진과 같은 헤더로 빌드됐는지 — 빌드가 모듈마다 박은 엔진 ABI 스탬프(`RHIModuleABI.h`)를 돌고 있는 엔진의 것과 대조한다.
+        // 백엔드 모듈이 이 엔진과 같은 헤더로 빌드됐는지 — 빌드가 모듈마다 박은 엔진 ABI 스탬프(`RHIModuleEntry.h`)를 돌고 있는 엔진의 것과 대조한다.
         const RHIBackendInfo* pInfo = RHIBackendInfoTable::find( backend );
         if ( pInfo == nullptr )
         {
@@ -166,13 +166,8 @@ namespace sw
             (void)ModuleLibraryUtil::unloadModuleLibrary( modulePath, pModuleHandle );
             return false;
         }
-        StringBuilder<constant::buffer::kMax128> stampSymbolName;
-        stampSymbolName.appendFormat( "sw_moduleEngineABIStamp_%#", pInfo->_pModuleName );
-        const utf8* pModuleStamp = static_cast<const utf8*>( ModuleLibraryUtil::getDynamicSymbol( pModuleHandle, stampSymbolName.view() ) );
-        if ( pModuleStamp == nullptr || StringUtil::equals( pModuleStamp, engine::getEngineABIStamp() ) == false )
+        if ( engine::isModuleBuiltWithThisEngine( pModuleHandle, pInfo->_pModuleName ) == false )
         {
-            SW_LOG_ERROR_ID( "RHIBackendRegistry.RHIMODULEABIStamp", "RHI MODULE engine ABI stamp mismatch or missing %# (%#; expected %#) - rebuild the engine and the RHI modules together.",
-                             stampSymbolName.view(), modulePath, engine::getEngineABIStamp() );
             (void)ModuleLibraryUtil::unloadModuleLibrary( modulePath, pModuleHandle );
             return false;
         }
@@ -235,5 +230,5 @@ namespace sw
 
 namespace sw
 {
-    SW_ENGINE_SERVICE_SUBSYSTEM( RHIBackendRegistry, HostOnly, Process, Services, (), SW_ENGINE_DEFAULT_FACTORY( RHIBackendRegistry ) );
+    SW_ENGINE_SUBSYSTEM_WITH_SLOT( RHIBackendRegistry, HostOnly, Process, Shared, (), SW_ENGINE_DEFAULT_FACTORY( RHIBackendRegistry ) );
 } // namespace sw

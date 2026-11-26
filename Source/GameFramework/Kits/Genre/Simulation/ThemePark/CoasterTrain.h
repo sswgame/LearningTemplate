@@ -7,6 +7,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/Time/FixedStepTimer.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/CoasterTrack.h"
@@ -54,7 +55,7 @@ namespace sw
          */
         [[nodiscard]] bool initialize( const CoasterTrack* pTrack, const CoasterPhysicsParams& params, float32 startDistance = 0.0f );
         /** @brief @p deltaTime 만큼 진행합니다(고정 간격으로 나눠 돕니다). */
-        void step( float32 deltaTime );
+        void step( GameSeconds frameTime );
 
         /** @brief 위치를 바꿉니다(속도는 그대로이고 바퀴 수는 0 이 됩니다). */
         void setDistance( float32 distance );
@@ -73,7 +74,7 @@ namespace sw
         const CoasterTrack* getTrack() const { return _pTrack; }
 
     private:
-        void integrate( float32 deltaTime );
+        void integrate( StepSeconds step );
 
     private:
         CoasterPhysicsParams _params;

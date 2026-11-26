@@ -3,7 +3,7 @@
 #include "pch.h"
 
 #include "Core/Process/ShutdownSignal.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Core/Foundation/PlatformOSHeaders.h"

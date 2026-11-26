@@ -8,7 +8,7 @@
  *          물리 바디가 있는 탈것은 `WheeledVehicleComponent`(Jolt 바퀴) 몫이고 두 모터를 섞지 않는다 — 표면 마찰만 같은 표면 종류에서 읽는다.
  *          언리얼 Chaos Vehicle(바디) 대 단순 이동 컴포넌트, 유니티 Rigidbody 대 CharacterController 의 경계와 같다.
  *          좌표는 +Y 가 위이고, 진행 방향(yaw) 0 이 +Z 이며, 양의 yaw 가 오른쪽(+X) 회전이다.
- *          **벽이나 차끼리의 충돌은 하지 않는다.** 게임(또는 물리)이 위치와 속도를 고쳐 넣는다(`setPosition`, `setVelocity`, `addImpulse`).
+ *          벽이나 차끼리의 충돌은 하지 않는다. 게임(또는 물리)이 위치와 속도를 고쳐 넣는다(`setPosition`, `setVelocity`, `addImpulse`).
  */
 #pragma once
 #include "Core/Container/vector.h"
@@ -18,6 +18,7 @@
 #include "Core/Math/Math.h"
 #include "Core/Time/Countdown.h"
 #include "Core/Time/FixedStepTimer.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Content/AssetID.h"
@@ -125,7 +126,7 @@ namespace sw
         bool _bIgnoresOffroad{ true };
     };
 
-    /** @brief 공중 제어 모듈 — 점프와 공중 조향, 공중에서의 낙하 중력(게임 손맛 — 경사 중력과 따로)입니다. 끄면 점프가 없고 공중 조향이 0 이며 낙하는 몸의 중력입니다. */
+    /** @brief 공중 제어 모듈: 점프와 공중 조향, 공중에서의 낙하 중력(게임 손맛용, 경사 중력과 따로)입니다. 끄면 점프가 없고 공중 조향이 0 이며 낙하는 몸의 중력입니다. */
     REFLECT()
     struct VehicleAirControlModule
     {
@@ -317,10 +318,10 @@ namespace sw
         /** @brief 게임이 주는 부스트(대시 판, 버섯)를 겁니다. 남은 시간보다 길 때만 바꿉니다. 부스트 모듈이 꺼져 있으면 아무 일도 없습니다. */
         void startBoost( float32 duration, int32 source = -1 );
 
-        /** @brief 한 걸음 나아갑니다. */
-        void update( const KinematicVehicleInput& input, float32 deltaTime );
+        /** @brief 고정 걸음 하나 @p step 만큼 나아갑니다. 프레임 시간은 `advance` 가 걸음으로 나눠 받는다 — 걸음이 없는 프레임의 눌림을 쥐는 자리가 거기다(결함 511b3359). */
+        void update( const KinematicVehicleInput& input, StepSeconds step );
         /** @brief 프레임 시간을 고정 걸음으로 나눠 나아갑니다. 눌림 입력은 다음 걸음 하나에 주며(걸음이 없는 프레임의 눌림은 다음 걸음까지 남는다), 진행한 걸음 수를 반환합니다. */
-        int32 advance( const KinematicVehicleInput& input, float32 frameTime );
+        int32 advance( const KinematicVehicleInput& input, GameSeconds frameTime );
         void  pollEvents( vector<KinematicVehicleEvent>& outListEvent );
 
         /** @brief 앞 속도 @p speed 에서 조향 1 의 회전 속도(라디안/초)입니다. 조향 반경은 속도를 이 값으로 나눈 것입니다. */
@@ -363,7 +364,7 @@ namespace sw
         void           endDrift( bool bReward );
         void           updateVertical( const KinematicVehicleInput& input, float32 deltaTime );
         void           updateHover( float32 deltaTime );
-        void           updateRail( const KinematicVehicleInput& input, float32 deltaTime );
+        void           updateRail( const KinematicVehicleInput& input, StepSeconds step );
         void           pushEvent( KinematicVehicleEvent::Kind kind, int32 value );
 
     private:

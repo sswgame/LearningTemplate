@@ -54,6 +54,6 @@ Windows: `py -3 -m Scripts scenario-bisect <체인> <단계> [--preset Ninja-Deb
 
 - 입력 뒤에 효과를 보는 `Expect` 가 있는가. 없으면 글자를 잃거나 엉뚱한 곳을 눌러도 통과한다.
 - 끄고 켠 두 장이 실제로 다른가(`game/playground/automation/deferredtransparent` 처럼). 값을 바꿔도 그림이 같은 시나리오는 아무것도 보지 않는다.
-- 기록 실행(`-scenario-update-golden` · Linux `chain --record`)은 그림이 틀려도 통과한다. 새 골든은 `-scenario-record-missing-golden` 으로 혼자 뜨고 그림을 본 뒤 커밋해 기록 없이 다시 돌린다([Test/Scenario/README](../../../Test/Scenario/README.md) "이미지 골든").
+- 기록 실행(`-scenario-update-golden` · Linux `chain --record`)은 그림이 틀려도 통과한다. 새 골든은 `-scenario-record-missing-golden` 으로 혼자 뜨고 그림을 본 뒤 커밋해 기록 없이 다시 돌린다([IntegrationTests/Scenario/README](../../../IntegrationTests/Scenario/README.md) "이미지 골든").
 - `changed` 단계에서 진 시나리오는 표의 `전제` · `백엔드 <이름>` 묶음부터 본다(`preflight` 2 단계). 그 실행의 로그 · 보고는 `build/Ninja-Release/Testing/Changed/scenario/<시나리오>/`.
 - 로그의 Error · Warning 을 선언한 것과 대조한다.

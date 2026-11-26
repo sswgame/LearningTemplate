@@ -1,7 +1,7 @@
 // RichTextTest(입력 몫) — 리치 텍스트의 행동 태그 [action=이름] 이 입력 맵의 글리프 글로 바뀐다. 글 층(2)은 입력(3)을 모르므로 이 케이스는 입력 쪽에 둔다(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputGlyphResolver.h"

@@ -1,6 +1,6 @@
 /**
  * @file WebGPURHIDevice.h
- * @brief WebGPU RHI 디바이스입니다(브라우저 — Emscripten emdawnwebgpu, 데스크톱 — Dawn). 바인딩은 DX11 · GL 과 같은 고정 슬롯 에뮬입니다.
+ * @brief WebGPU RHI 디바이스입니다(브라우저는 Emscripten emdawnwebgpu, 데스크톱은 Dawn). 바인딩은 DX11 · GL 과 같은 고정 슬롯 에뮬입니다.
  * @details 모델(docs/agents/Platform.md):
  *          - 셰이더는 WGSL 꾸러미(`WebGPUShaderContainer`)다. 파이프라인은 자동 레이아웃이고, 바인드 그룹 0 은 그리기마다 지금 건 슬롯으로 정한다
  *            (번호 = `shaderslot::wgpu` 의 띠 + 레지스터 — 셰이더가 쓰는 번호만 든다). 같은 (레이아웃, 항목) 의 그룹은 프레임 안에서 한 번만 짓는다(`WebGPUBindGroupCache`).

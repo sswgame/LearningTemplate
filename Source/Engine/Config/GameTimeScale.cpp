@@ -7,8 +7,8 @@
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 
 namespace sw
 {
@@ -80,12 +80,12 @@ namespace sw
         return count;
     }
 
-    void GameTimeScale::setUnscaledDeltaTime( float32 deltaSeconds )
+    void GameTimeScale::setUnscaledDeltaTime( RealSeconds deltaTime )
     {
-        _unscaledDeltaSeconds = MathUtil::max( deltaSeconds, 0.0f );
+        _unscaledDeltaSeconds = MathUtil::max( deltaTime.count(), 0.0f );
     }
 
-    float32 GameTimeScale::getUnscaledDeltaTime() const
+    RealSeconds GameTimeScale::getUnscaledDeltaTime() const
     {
         // 적은 적이 없는 값을 다른 시간(벽시계 · 배율 걸린 경과)으로 대신하지 않는다 — 대신하면 녹화와 재생이 다른 시간을 읽는다.
         SW_ASSERT( _unscaledDeltaSeconds >= 0.0f );
@@ -94,12 +94,12 @@ namespace sw
         if ( _unscaledDeltaSeconds < 0.0f )
             reportFatalError( "GameTimeScale::getUnscaledDeltaTime before setUnscaledDeltaTime (Engine::beginFrame or the test must set it)" );
 #endif
-        return _unscaledDeltaSeconds;
+        return RealSeconds{ _unscaledDeltaSeconds };
     }
 } // namespace sw
 
 namespace sw
 {
     // 정지 요청 · 이번 프레임의 실제 경과.
-    SW_ENGINE_SERVICE_SUBSYSTEM( GameTimeScale, GameVisible, Process, Services, (), SW_ENGINE_DEFAULT_FACTORY( GameTimeScale ) );
+    SW_ENGINE_SUBSYSTEM_WITH_SLOT( GameTimeScale, GameVisible, Process, Shared, (), SW_ENGINE_DEFAULT_FACTORY( GameTimeScale ) );
 } // namespace sw

@@ -30,7 +30,7 @@ namespace sw
 
         string           _path;       ///< 연 경로(로그용)
         uint64           _size;       ///< 열 때 측정한 크기(구간이면 그 길이)
-        uint64           _baseOffset; ///< OS 파일 안에서 이 파일이 시작하는 위치 — 보통 0, 묶음 안 구간(APK 안 저장된 팩 — `openNativeRange`)이면 그 시작
+        uint64           _baseOffset; ///< OS 파일 안에서 이 파일이 시작하는 위치. 보통 0 이고, 묶음 안 구간(APK 안 저장된 팩, `openNativeRange`)이면 그 시작
         NativeFileHandle _handle;     ///< OS 핸들(Windows HANDLE · POSIX fd)
         /**
          * @brief (Windows) 이 핸들을 묶은 완료 포트입니다. 핸들 하나는 포트 하나에만 묶이므로, 다른 매니저의 포트에 묶였으면 그 매니저는

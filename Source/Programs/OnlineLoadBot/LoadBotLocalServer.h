@@ -19,7 +19,7 @@
 #include "Core/Time/Clock.h"
 #include "Core/Time/TimePoint.h"
 
-#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Ledger/LedgerAuditReport.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/LedgerAuditReport.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerConfig.h"
 #include "GameFramework/Runtime/Online/Service/Server/OnlineServiceHost.h"
 

@@ -6,7 +6,7 @@
 #include "Core/Hash/HashUtil.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Editor/Common/Asset/AssetImportStamp.h"
 
@@ -21,7 +21,7 @@ namespace
     /** @brief 부모 폴더를 만들고 글을 씁니다. */
     bool writeText( const AbsolutePath& path, string_view text )
     {
-        return FileUtil::ensureParentDirectoryExists( path ) && FileUtil::writeTextFile( path, text );
+        return FileUtil::writeTextFile( path, text );
     }
 
     /** @brief `things_raw/<y>.src` 를 `things/<y>.out` 과 옆 폴더 `things/<y>/side.txt` 로 쓰는 임포터입니다. */

@@ -10,12 +10,12 @@
 
 #include "Engine/Animation/Component/SkeletalAnimatorComponent.h"
 #include "Engine/Animation/Component/SkeletalMeshComponent.h"
-#include "Engine/Animation/Facial/FacialLiveSource.h"
 #include "Engine/Animation/Facial/FacialRig.h"
+#include "Engine/Animation/Facial/LiveLinkFace.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Content/AssetIO.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -126,7 +126,7 @@ namespace sw
         , _listExpressionWeight{}
         , _listLiveWeight{}
         , _pLiveSource{ nullptr }
-        , _liveSourceSubscriptions{ SW_DELEGATE_METHOD( ItemSubscriptionList<const IFacialLiveSource>::ReleaseFunction, &FacialAnimationComponent::detachLiveSource, this ) }
+        , _liveSourceSubscriptions{ SW_DELEGATE_METHOD( ItemSubscriptionList<const LiveLinkFaceSource>::ReleaseFunction, &FacialAnimationComponent::detachLiveSource, this ) }
         , _listExpressionTarget{}
         , _listVisemeTarget{}
         , _listBlinkTarget{}
@@ -261,7 +261,7 @@ namespace sw
         return true;
     }
 
-    Subscription FacialAnimationComponent::registerLiveSource( const IFacialLiveSource* pSource )
+    Subscription FacialAnimationComponent::registerLiveSource( const LiveLinkFaceSource* pSource )
     {
         if ( pSource == nullptr )
             return {};
@@ -271,7 +271,7 @@ namespace sw
         return _liveSourceSubscriptions.issue( pSource );
     }
 
-    void FacialAnimationComponent::detachLiveSource( const IFacialLiveSource* pSource )
+    void FacialAnimationComponent::detachLiveSource( const LiveLinkFaceSource* pSource )
     {
         if ( _pLiveSource != pSource )
             return;
@@ -347,9 +347,9 @@ namespace sw
             SW_LOG_ERROR_ID( "FacialAnimation.NeitherVisemeTrackNor", "'%#': neither a viseme track nor decodable audio", string( audioPath ).c_str() );
             return false;
         }
-        // 소리는 이 오브젝트가 속한 씬이 받은 엔진 범위의 소리 창구로 낸다(`SceneEngineServices::_pEngineSubsystems` — 전역 표를 다시 찾지 않는다).
+        // 소리는 이 오브젝트가 속한 씬이 받은 엔진 범위의 소리 창구로 낸다(`SceneEngineSubsystems::_pEngineSubsystems` — 전역 표를 다시 찾지 않는다).
         const GameObjectManager* pManager = getOwner() != nullptr ? getOwner()->getManager() : nullptr;
-        ISoundPlayer*            pSound   = pManager != nullptr ? locateSubsystem<ISoundPlayer>( pManager->getSceneEngineServices()._pEngineSubsystems ) : nullptr;
+        ISoundPlayer*            pSound   = pManager != nullptr ? findSubsystemFrom<ISoundPlayer>( pManager->getSceneEngineSubsystems()._pEngineSubsystems ) : nullptr;
         if ( pSound != nullptr )
             (void)pSound->play( assetID, hashed_string{} );
         return true;
@@ -523,8 +523,8 @@ namespace sw
     const SkeletalAnimatorComponent* FacialAnimationComponent::findAnimator( const SkeletalMeshComponent* pSkeletalMesh ) const
     {
         const GameObject* pOwner      = ( pSkeletalMesh != nullptr ) ? pSkeletalMesh->getOwner() : nullptr;
-        const bool        bResolvable = _animator.isValid() && pOwner != nullptr && pOwner->getMutableManager() != nullptr;
-        return bResolvable ? pOwner->getMutableManager()->resolveComponent( _animator ) : nullptr;
+        const bool        bResolvable = _animator.isValid() && pOwner != nullptr && pOwner->getManager() != nullptr;
+        return bResolvable ? pOwner->getManager()->resolveComponent( _animator ) : nullptr;
     }
 
     float32 FacialAnimationComponent::computeExpressionWeight( size_t poseIndex, const SkeletalAnimatorComponent* pAnimator ) const

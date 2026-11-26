@@ -1,7 +1,7 @@
 // GrowthLogTest — 성장 기록: 고정 용량 링(넘치면 가장 오래된 줄을 덮고 누적 수는 이어 센다), 종류별 수, 디버그 줄(최근 것부터 · 출처)(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Console/DebugHUDRegistry.h"
 #include "Engine/Object/GameObject/Tests/SceneIterationTestAccess.h"

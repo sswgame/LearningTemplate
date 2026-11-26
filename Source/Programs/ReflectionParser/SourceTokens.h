@@ -37,7 +37,7 @@ namespace sw
     private:
         /** @brief 커서 범위의 토큰 철자 · 종류입니다. */
         struct SourceToken;
-        /** @brief 위치를 매크로를 **쓴** 자리로 옮깁니다. 매크로 정의 안(명령줄 `-D` 버퍼)의 위치로는 소스 토큰을 읽을 수 없습니다. */
+        /** @brief 위치를 매크로를 쓴 자리로 옮깁니다. 매크로 정의 안(명령줄 `-D` 버퍼)의 위치로는 소스 토큰을 읽을 수 없습니다. */
         static CXSourceLocation getExpansionPoint( CXTranslationUnit translationUnit, CXSourceLocation location );
         /**
          * @brief 커서 범위의 소스 토큰입니다.

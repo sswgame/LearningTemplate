@@ -2,14 +2,14 @@
  * @file EditorModuleExports.h
  * @brief 에디터 모듈의 진입점(C-ABI) 구현을 위한 매크로 모음입니다.
  *
- * @note 이 헤더는 **경계 계약이 아니라 모듈 쪽 접착제**입니다. 그래서 `ABI/` 와 달리 모듈 자신의
+ * @note 이 헤더는 경계 계약이 아니라 모듈 쪽 접착제입니다. 그래서 `ABI/` 와 달리 모듈 자신의
  *       서비스 로케이터(`Editor/`)를 끌어옵니다. 모듈 구현 `.cpp` 만 include 합니다.
  */
 #pragma once
 #include "Core/Memory/Memory.h"
 
 #include "Editor/Common/Backend/FileDialog.h"
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 
 #include "ModuleAPI/ABI/EditorAPI.h"
 #include "ModuleAPI/ABI/ModuleABI.h"
@@ -31,15 +31,11 @@ namespace sw
  * @details 핸들 캐스팅과 널 검사는 `ModuleForwardUtil` 이 합니다. 테이블에 항목을 하나 더
  *          붙일 때 건드릴 곳은 `EditorAPI` 구조체 한 줄과 여기 한 줄이어야 합니다.
  */
-// 이 매크로 인자는 **타입 이름**이다. 괄호로 감싸면 `sw::make_unique<(EditorClass)>()` 처럼 되어
+// 이 매크로 인자는 타입 이름이다. 괄호로 감싸면 `sw::make_unique<(EditorClass)>()` 처럼 되어
 // 문법이 깨진다. 검사기는 인자를 식으로 가정한다. 매크로 본문은 줄 연결이라 중간에
 // 주석을 넣을 수 없으므로 정의 전체를 범위로 덮는다.
 // NOLINTBEGIN(bugprone-macro-parentheses)
 #define SW_IMPLEMENT_EDITOR_MODULE( EditorClass )                                                                                                                                                                              \
-    extern "C" SW_MODULE_API uint64 getEditorModuleABIStamp()                                                                                                                                                                  \
-    {                                                                                                                                                                                                                          \
-        return sw::kEditorModuleABIStamp;                                                                                                                                                                                      \
-    }                                                                                                                                                                                                                          \
     extern "C" SW_MODULE_API bool exportEditorAPI( sw::EditorAPI* pOutAPI )                                                                                                                                                    \
     {                                                                                                                                                                                                                          \
         if ( pOutAPI == nullptr )                                                                                                                                                                                              \
@@ -71,9 +67,9 @@ namespace sw
         pOutAPI->bindService = []( const sw::ISubsystemLocator* pService )                                                                                                                                                     \
         {                                                                                                                                                                                                                      \
             if ( pService != nullptr )                                                                                                                                                                                         \
-                sw::editor::bindEditorService( *pService );                                                                                                                                                                    \
+                sw::editor::bindEditorSubsystems( *pService );                                                                                                                                                                 \
             else                                                                                                                                                                                                               \
-                sw::editor::unbindEditorService();                                                                                                                                                                             \
+                sw::editor::unbindEditorSubsystems();                                                                                                                                                                          \
         };                                                                                                                                                                                                                     \
         pOutAPI->isPlaying = []( sw::EditorHandle editorHandle ) -> bool                                                                                                                                                       \
         { return sw::EditorModuleForwardUtil::callOr<EditorClass, bool>( editorHandle, false, &EditorClass::isPlaying ); };                                                                                                    \

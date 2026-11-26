@@ -12,8 +12,8 @@
 #include "Core/Foundation/DynamicModules.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Subsystem/Subsystem.h"
+#include "Core/Subsystem/SubsystemSlot.h"
 
 #include "Engine/Config/RHIBackendType.h"
 #include "Engine/Graphics/RHI/RHICapabilities.h"
@@ -90,7 +90,7 @@ namespace sw
 
         /**
          * @brief 지금 등록된 백엔드 이름을 쉼표로 이어 반환합니다(오류 메시지용).
-         * @details 배포본은 고른 **하나만** 링크합니다(`SW_SHIPPING_RHI_BACKEND`). 요청한 백엔드가 없을 때
+         * @details 배포본은 고른 하나만 링크합니다(`SW_SHIPPING_RHI_BACKEND`). 요청한 백엔드가 없을 때
          *          무엇이 있는지 같이 알려 주지 않으면, 설정 파일을 고친 사람이 원인을 알 수 없습니다.
          */
         string describeRegisteredBackends() const;
@@ -129,6 +129,6 @@ namespace sw
         vector<LoadedModule>    _listLoadedModule;
         uint32                  _lastDeviceGeneration; ///< `createDevice` 가 마지막으로 붙인 장치 세대(0 은 "세대 없음")
 
-        SW_SERVICE_SLOT( RHIBackendRegistry, Required );
+        SW_SUBSYSTEM_SLOT( RHIBackendRegistry, Required );
     };
 } // namespace sw

@@ -4,10 +4,10 @@
  * @details 틱은 자기 오브젝트(`getSelf`)만 쓰고, 씬은 읽기 전용(`getManager`)으로 보며, 남의 컴포넌트 쓰기 · 구조 변경은 명령 버퍼(`deferPostTick` ·
  *          `deferPostTickOnComponent`, 틱 뒤 큐)로 보낸다. 유니티 `IJobEntity` + `EntityCommandBuffer`, 언리얼 `FMassExecutionContext::Defer()` 와 같은
  *          자리다. 디스패치(`SceneTickScheduler` · `TickBatchOf`)가 원소마다 스택에 세운다.
- *          **쓰기 가능한 매니저 길:** `GameObject::getManager` 는 읽기 전용(const)을 돌려주고, 쓰기 가능한 매니저는 이름이 다른 `GameObject::getMutableManager`
+ *          쓰기 가능한 매니저 길: `GameObject::getManager` 는 읽기 전용(const)을 돌려주고, 쓰기 가능한 매니저는 이름이 다른 `GameObject::getMutableManager`
  *          로만 얻는다 — 틱 본문의 습관 길(`getOwner()->getManager()`)로는 매니저를 바꾸는 호출이 컴파일되지 않는다. 틱 뒤 작업은 쓰기 가능한 매니저를 인자로 받는다.
  *          const 매니저의 찾기 · 순회(`resolveGameObject` · `resolveComponent` · `findGameObjectBy…` · `forEach…`)는 const 포인터만 낸다(`GameObjectManager::findGameObjectByName`).
- *          **남 읽기의 길:** const 는 쓰기만 막고 읽기는 연다 — 남의 컴포넌트는 다른 워커가 같은 순간 틱하며 쓰고 있을 수 있다. 그래서 병렬 틱 안에서
+ *          남 읽기의 길: const 는 쓰기만 막고 읽기는 연다 — 남의 컴포넌트는 다른 워커가 같은 순간 틱하며 쓰고 있을 수 있다. 그래서 병렬 틱 안에서
  *          남의 오브젝트 컴포넌트를 찾으면(`getComponent` · `resolveComponent`) 검사 구성에서 멈추고(`GameObject::assertParallelTickRead`), 남 읽기는
  *          틱 중에 바뀌지 않는 형식(`Component::kTickReadSafe` — 트랜스폼 · 디렉터)만 받는 `readOther` 하나로 좁힌다. 그 밖의 남 상태는 틱 뒤 작업에서 읽는다.
  *          유니티 잡 안전 시스템(`[ReadOnly]` 선언 · 경합 검출), 언리얼 Mass 처리기의 읽기 · 쓰기 요구 선언과 같은 자리다.
@@ -15,6 +15,7 @@
 #pragma once
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/GameObject/Tick/ISceneFrameSystem.h"
@@ -33,7 +34,7 @@ namespace sw
     {
     public:
         /** @brief @p self 의 매니저와 그 틱 뒤 큐로 컨텍스트를 세웁니다. @p self 는 매니저에 붙은 오브젝트여야 합니다. */
-        TickContext( GameObject& self, float32 deltaTime );
+        TickContext( GameObject& self, GameSeconds deltaTime );
         /** @brief 주기가 있는 틱의 차례 @p turn 으로 세웁니다(디스패치가 부른다). */
         TickContext( GameObject& self, const TickTurn& turn );
 

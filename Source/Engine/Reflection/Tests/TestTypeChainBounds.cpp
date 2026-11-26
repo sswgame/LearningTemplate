@@ -1,8 +1,8 @@
 // TypeChain 범위 검사 — 담긴 수(`size()`)를 넘는 색인이 개발 구성에서 단언으로 잡히고, 경계 안은 잡히지 않는지(음성 대조).
 #include "pch.h"
 
-#include "Core/Testing/ScopedAssertCapture.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/ScopedAssertCapture.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Reflection/TypeInfo.h"
 

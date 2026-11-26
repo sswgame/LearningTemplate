@@ -71,7 +71,7 @@ namespace sw::editor
         /** @brief 절대 경로에 저장합니다. */
         [[nodiscard]] bool saveToFile( const AbsolutePath& absPath ) const;
         /** @brief 절대 경로에서 읽습니다. */
-        [[nodiscard]] bool loadFromFile( const AbsolutePath& absolutePath );
+        [[nodiscard]] bool loadFromFile( const DiskPath& absolutePath );
 
         /** @brief 메시 경로(`.../x.mesh`)에 맞는 사이드카 경로(`.../x.modifiers.json`)입니다. */
         static string makeSidecarPath( string_view meshPath );

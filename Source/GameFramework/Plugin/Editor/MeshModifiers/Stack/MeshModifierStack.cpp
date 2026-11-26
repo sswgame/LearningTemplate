@@ -517,7 +517,7 @@ namespace sw::editor
         return FileUtil::writeFile( absPath, reinterpret_cast<const uint8*>( text->data() ), text->size() );
     }
 
-    bool MeshModifierStack::loadFromFile( const AbsolutePath& absolutePath )
+    bool MeshModifierStack::loadFromFile( const DiskPath& absolutePath )
     {
         string text;
         if ( FileUtil::readTextFile( absolutePath, text ) == false )

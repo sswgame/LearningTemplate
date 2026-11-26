@@ -4,14 +4,14 @@
  * @details 무엇을 담을지(이 파일)와 어떤 바이트가 되는지(`PackStreamWriter`)를 나눈다. 쿠킹은 엔진 언어 한 곳이다 — 예전 파이썬 쿠커(`CookAssets.py`)가
  *          레이아웃 · 압축 · 증분 기록을 따로 들던 것을 옮겼다.
  *          - 담는 것(쓰는 것만): 도메인 폴더의 파일 중 `PackConfig` 의 제외(전역 · 규칙별 폴더 · 패턴), 셰이더 원본, 다른 백엔드의 셰이더 바이너리, 빌드 타깃이 빼는
- *            종류(`AssetPaths::isExcludedForTarget` — 런타임이 같은 표로 읽지 않는다)를 지나고, **뿌리에서 참조로 닿는 것**(`PackReachResult` — 뿌리 규칙은
+ *            종류(`AssetPaths::isExcludedForTarget`, 런타임이 같은 표로 읽지 않는다)를 지나고, 뿌리에서 참조로 닿는 것(`PackReachResult`, 뿌리 규칙은
  *            `PackConfig::_cookRules`)과, 스테이징 폴더(`<쿠킹 폴더>/<도메인>`)의 쿠킹 산출물. 씬 · 프리팹 쿠킹본은 그 원본이 담길 때만 담고, 셰이더 바이너리 같은 나머지 산출물은 다 담는다.
  *            고르기는 굽는 모든 도메인을 한 번에 본다 — `common` 은 굽는 게임들이 쓰는 것의 합이다(`-game=` 이면 그 게임이 쓰는 것만). 예전에는 폴더째 담아
  *            `common.pack` 이 게임이 쓰지 않는 캐릭터 · 소품까지 들었다(359MB, 빈 게임 팩은 6MB).
  *            저작 원본 중 쿠킹본이 대신하는 것(번역 원문 · 번역 테이블 XML → `.locres`)은 `PackConfig` 의 제외 규칙(`Exclude_Localization_Authoring_Tables`)이 뺀다 — 언리얼도 `.locres` 만 출하한다.
- *            스테이징은 도메인 기준 **같은 상대 경로**로 들어간다. 소스 트리에 남은 쿠킹본(`AssetCookPath::isCookedOutput`)은 낡은 잔재라 넣지 않고 이름을 알린다.
+ *            스테이징은 도메인 기준 같은 상대 경로로 들어간다. 소스 트리에 남은 쿠킹본(`AssetCookPath::isCookedOutput`)은 낡은 잔재라 넣지 않고 이름을 알린다.
  *          - 증분: 팩 하나가 쿠킹 작업 하나다(`CookStore::cookFile`). 입력은 읽은 파일마다의 내용 해시와 두 폴더의 목록이고, 설정(`PackConfig` 전체 · 셰이더 폴더 ·
- *            빌드 타깃)과 **그 도메인에서 고른 파일 목록**은 작업 키의 설정 해시다 — 다른 팩의 참조가 바뀌어 고른 것이 달라지면 다시 굽고, 같으면 다시 쓰지 않는다.
+ *            빌드 타깃)과 그 도메인에서 고른 파일 목록은 작업 키의 설정 해시다 — 다른 팩의 참조가 바뀌어 고른 것이 달라지면 다시 굽고, 같으면 다시 쓰지 않는다.
  *            고르기는 팩 작업들 앞의 범위 하나(`PackReach`)에서 읽는다(쿠킹 세션은 작업 밖 읽기를 막는다). 무변경 재쿠킹은 팩을 다시 쓰지 않는다.
  *          - 요약: 고르기가 도메인마다 담은 수 · 크기와 후보 수 · 크기를 한 줄씩 남긴다(`PackCooker.PackReachDomain`).
  */
@@ -100,6 +100,13 @@ namespace sw
          *          이름 붙은 청크는 `<도메인>.<청크>.<번호>.pack` 이다(언리얼 IoStore 의 청크 컨테이너 이름 자리).
          */
         static string makePackFileName( string_view domain, string_view chunk = {}, uint32 number = 0 );
+        /**
+         * @brief 장부(@p inoutSetLedger, 쿠커가 쓴 팩)의 팩 가운데 @p contentRoot 에 없는 도메인(옮기거나 지운 게임 팩)의 팩을 그 도메인의 청크 목록과 함께 지우고 장부에서 뺍니다.
+         * @details 형제 팩 정리는 이번에 굽는 도메인만 본다. 도메인 폴더가 사라지면 아무도 그 팩을 다시 보지 않아 옛 판의 팩이 남고, 런타임이 폴더의 팩을 모두 마운트하다 거절한다.
+         *          살아 있는 도메인은 굽는 범위가 아니라 콘텐츠 폴더에서 세므로, 게임 하나만 굽는 쿠킹도 다른 게임의 팩은 지우지 않는다. 장부에 없는 파일은 건드리지 않는다.
+         * @return 도메인 목록을 못 읽거나 지우지 못하면 이유를 남기고 false 입니다.
+         */
+        [[nodiscard]] static bool removeOrphanDomainPacks( const AbsolutePath& contentRoot, const AbsolutePath& packOutputDir, unordered_set<string>& inoutSetLedger );
         /**
          * @brief 도메인 팩의 항목 @p listEntry 를 청크 규칙과 크기 한도(@p split)로 팩 몫들로 나눕니다. 결과는 기본 청크가 먼저이고 기본 청크 0 번은 늘 있다(빈 도메인도 첫 팩이 있다).
          * @details 청크는 규칙 순서대로 처음 맞는 패턴의 것, 아무것도 맞지 않으면 기본이다. 청크 안에서 경로 해시 순으로 놓고 합이 한도를 넘기 전에 다음 번호로 넘긴다 —

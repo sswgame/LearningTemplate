@@ -8,7 +8,7 @@
  *          - 록온은 `LockOnSelector`, 주무기는 `WeaponState`(탄은 `ProjectileCatalog`), 근접은 `MoveTimeline` 이 맡는다(캔슬 창이 다음 콤보 단을 연다).
  *          - 날아가는 탄은 단일 발사체 시뮬레이션(`ProjectileSimulation`)이 돌린다. 키트는 맞을 대상(적 조종사 · 판 밖)을 답하고 맞은 뒤의 반응(다운치 · 경직 · 넉백)만 한다.
  *            반응 수치는 탄이 쏜 슬롯을 가리키는 번호(`ProjectileState::_payload` = 기체 카탈로그 번호 × `kSlotStride` + 슬롯)로 기체 정의에서 읽는다 — 탄에 수치를 베껴 두지 않는다.
- *          - 판과 전력 게이지는 `MatchState` 가 맡는다. 조종사의 **덱 슬롯마다** 참가자 하나를 두고, 그 슬롯 기체의 코스트를 부활 비용으로 준다.
+ *          - 판과 전력 게이지는 `MatchState` 가 맡는다. 조종사의 덱 슬롯마다 참가자 하나를 두고, 그 슬롯 기체의 코스트를 부활 비용으로 준다.
  *            그래서 기체를 바꾸면 다음 격추 때 바뀐 기체의 코스트가 게이지에서 빠진다(통계는 조종사 단위로 모아서 읽는다).
  */
 #pragma once
@@ -19,9 +19,10 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 #include "Core/Time/Countdown.h"
 #include "Core/Time/FixedStepTimer.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
@@ -249,7 +250,7 @@ namespace sw
         [[nodiscard]] expected<int32> addPilot( const MechPilotConfig& config );
         /** @brief 팀 게이지를 정하고(코스트 합) 출격시킵니다. */
         void start();
-        void update( float32 deltaTime );
+        void update( GameSeconds frameTime );
 
         void setInput( int32 pilot, const MechInput& input );
         /** @brief 격추된 동안 다음에 탈 덱 슬롯을 고릅니다. 코스트가 팀의 남은 게이지 안이어야 합니다. */
@@ -293,16 +294,16 @@ namespace sw
 
     private:
         bool isValidPilot( int32 pilot ) const { return pilot >= 0 && pilot < static_cast<int32>( _listPilot.size() ); }
-        void step( float32 deltaTime );
+        void step( StepSeconds step );
         void spawnPilot( int32 pilot, bool bRespawn );
-        void stepPilot( int32 pilot, float32 deltaTime );
-        void stepMovement( int32 pilot, bool bControl, bool bPressedDash, bool bPressedJump, float32 deltaTime );
+        void stepPilot( int32 pilot, StepSeconds step );
+        void stepMovement( int32 pilot, bool bControl, bool bPressedDash, bool bPressedJump, StepSeconds step );
         void stepLockOn( int32 pilot, bool bPressedLockOn, float32 deltaTime );
         void stepWeapons( int32 pilot, float32 deltaTime );
         void stepMelee( int32 pilot, bool bPressedMelee );
-        void stepSkills( int32 pilot, float32 deltaTime );
+        void stepSkills( int32 pilot, StepSeconds step );
         void stepProjectiles( float32 deltaTime );
-        void stepMatch( float32 deltaTime );
+        void stepMatch( StepSeconds step );
         void fireShot( int32 pilot, int32 slotIndex, const MechWeaponSlotDef& slot, bool bPressed );
         void fireSpecial( int32 pilot, int32 slotIndex, const MechWeaponSlotDef& slot );
         /**

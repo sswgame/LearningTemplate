@@ -290,7 +290,7 @@ namespace sw::editor
     void EditorViewportClient::processContextMenu( const EditorViewportPickInput& pickInput, bool bCanvasHovered )
     {
         // 오른쪽 단추를 끌기 문턱 안에서 떼고 그 누름 동안 날지 않았으면 메뉴다(R1). 끌었거나 WASD 로 날았으면 비행이었다 — 비행과 메뉴는 이 캔버스가 가른다.
-        // 오브젝트 위면 오브젝트 메뉴(계층 창과 같은 명령 — R4), 빈 곳이면 뷰포트 메뉴(여기 만들기 · 붙여 넣기 — 확장이 없어도 열린다).
+        // 오브젝트 위면 오브젝트 메뉴(계층 창과 같은 명령, R4), 빈 곳이면 뷰포트 메뉴(여기 만들기 · 붙여 넣기. 확장이 없어도 열린다).
         const EditorPointerState pointer  = EditorInputGUI::readPointer();
         const bool               bClicked = pointer.wasClickedWithoutDrag( EditorMouseButton::Right ) && _camera.hasFlownThisRightHold() == false;
         const bool               bOpen    = bCanvasHovered && bClicked && pointer.hasModifier( ModifierKey::Alt ) == false;

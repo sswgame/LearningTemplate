@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Audio/Component/AudioAmbientEmitterComponent.h"
 #include "Engine/Audio/Component/AudioReverbZoneComponent.h"

@@ -6,11 +6,11 @@
  *          엔진 루프(`Engine`)는 활성 씬 하나만 틱하므로 하니스가 월드마다 오브젝트 매니저를 직접 틱한다.
  *          렌더러와 오디오는 쓰지 않으므로 화면 없이 nogpu 테스트와 게임 자동화에 쓸 수 있다.
  *
- *          - **결정적**: 시각은 틱 × 간격으로 계산하고 벽시계를 읽지 않는다. 망, 연결별 흉내, 챌린지 솔트는 모두 시드에서 나온다.
+ *          - 결정적: 시각은 틱 × 간격으로 계산하고 벽시계를 읽지 않는다. 망, 연결별 흉내, 챌린지 솔트는 모두 시드에서 나온다.
  *            한 스레드가 `step` 을 부르면 같은 시드와 같은 게임에서 같은 패킷이 같은 틱에 도착한다.
- *          - **연결별 조건**: 클라이언트마다 업스트림(클라이언트 → 서버)과 다운스트림(서버 → 클라이언트) 조건을 따로 준다.
+ *          - 연결별 조건: 클라이언트마다 업스트림(클라이언트 → 서버)과 다운스트림(서버 → 클라이언트) 조건을 따로 준다.
  *            조건(`NetEmulationConditions`)은 지연, 지터, 손실, 중복, 손상, 순서 뒤바뀜, 대역폭이다. 도중에 `setLinkConditions` 로 바꿀 수 있다.
- *          - **늦은 참가와 이탈**: `addClient` 와 `removeClient` 는 어느 틱 사이에서나 부를 수 있다.
+ *          - 늦은 참가와 이탈: `addClient` 와 `removeClient` 는 어느 틱 사이에서나 부를 수 있다.
  *            떠나는 클라이언트는 연결 끊김 알림을 보내므로 서버는 타임아웃이 아니라 Remote 이벤트로 이탈을 안다. 월드는 종료되고 포트는 다시 쓰지 않는다.
  *
  *          `step` 한 번의 순서는 언리얼 NetDriver의 TickDispatch(받은 메시지 분배), 월드 틱, TickFlush(송신)와 같다.
@@ -39,7 +39,7 @@
 #include "Core/Network/Transport/NetEmulation.h"
 #include "Core/Network/Transport/NetTransport.h"
 
-#include "Engine/Object/GameObject/Service/SceneEngineServices.h"
+#include "Engine/Object/GameObject/Subsystem/SceneEngineSubsystems.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -276,7 +276,7 @@ namespace sw
          * @brief @p pBorrowedScene 이 비면 월드가 @p services 로 씬을 만들어 가진다. 있으면 @p pSceneSource 에서 빌린 씬이고 `stop` 이 돌려준다.
          * @details 호스트는 만든 쪽(하니스)이 `_host.initialize` 로 세운다 — 실패를 생성자가 돌려줄 수 없기 때문이다.
          */
-        NetSimWorld( const SceneEngineServices& services, NetSimRole role, int32 worldIndex, INetTransport* pTransport, INetSimSceneSource* pSceneSource, Scene* pBorrowedScene );
+        NetSimWorld( const SceneEngineSubsystems& services, NetSimRole role, int32 worldIndex, INetTransport* pTransport, INetSimSceneSource* pSceneSource, Scene* pBorrowedScene );
         ~NetSimWorld();
 
         NetSimWorld( const NetSimWorld& )            = delete;
@@ -360,7 +360,7 @@ namespace sw
 
         /** @brief 망을 만들고 서버 월드를 만듭니다. `INetSimGame::createSession` 호출, 플레이 시작, listen 까지 처리합니다. @p pGame 은 하니스보다 오래 살아야 합니다.
          *        @p services 는 월드마다의 씬을 지을 엔진 서비스 묶음입니다(물리 · 오디오 · 에셋). 전역 표를 다시 찾지 않습니다. */
-        [[nodiscard]] bool initialize( const SceneEngineServices& services, const NetSimConfig& settings, INetSimGame* pGame );
+        [[nodiscard]] bool initialize( const SceneEngineSubsystems& services, const NetSimConfig& settings, INetSimGame* pGame );
         /** @brief 클라이언트와 서버 월드를 모두 종료합니다. 소멸자도 이 함수를 부릅니다. */
         void shutdown();
 
@@ -425,7 +425,7 @@ namespace sw
 
     private:
         NetSimConfig                    _settings;
-        SceneEngineServices             _services; ///< `initialize` 가 받은 묶음(빌림). 월드의 씬을 이것으로 짓는다
+        SceneEngineSubsystems           _services; ///< `initialize` 가 받은 묶음(빌림). 월드의 씬을 이것으로 짓는다
         unique_ptr<LoopbackNetwork>     _pNetwork;
         vector<unique_ptr<Link>>        _listLink;
         unique_ptr<NetSimWorld>         _pServer;

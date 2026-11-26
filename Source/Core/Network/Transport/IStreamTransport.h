@@ -13,9 +13,9 @@ namespace sw
 {
     /**
      * @class IStreamHandler
-     * @brief 전송이 부르는 콜백입니다. **I/O 스레드**(또는 `pollIO` 를 부른 스레드)에서 불립니다.
+     * @brief 전송이 부르는 콜백입니다. I/O 스레드(또는 `pollIO` 를 부른 스레드)에서 불립니다.
      * @details 약속: 한 연결의 `onStreamReceived` 는 받은 순서대로 하나씩 온다. `onStreamWritable` 은 다른 I/O 스레드에서 겹칠 수 있다.
-     *          `onStreamClosed` 는 그 연결의 **마지막** 콜백이고 정확히 한 번이다(열린 적 없는 연결 — 연결 실패 — 도 한 번). 콜백 안에서 `send` · `close` ·
+     *          `onStreamClosed` 는 그 연결의 마지막 콜백이고 정확히 한 번이다(열린 적 없는 연결, 곧 연결 실패도 한 번). 콜백 안에서 `send` · `close` ·
      *          `setReceivePaused` 를 불러도 된다. 콜백은 오래 막지 않는다 — 무거운 일은 게임 스레드 큐로 넘긴다(`StreamMessageEndpoint`).
      */
     class SW_API IStreamHandler
@@ -89,7 +89,10 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 이 플랫폼의 실제 스트림 전송(Windows IOCP · 리눅스 epoll)을 만듭니다. 구현이 없는 플랫폼이면 nullptr 입니다. */
+    /**
+     * @brief 이 플랫폼의 실제 스트림 전송(Windows IOCP · 리눅스 · Android epoll · 웹 WebSocket)을 만듭니다.
+     * @details 정의는 플랫폼 폴더의 전송 .cpp 끝에 하나씩 있다(`Windows/` · `LinuxKernel/` · `Web/` — 그 플랫폼에서만 지어진다). 구현이 없는 플랫폼은 링크에서 멈춘다.
+     */
     struct SW_API StreamTransportFactory
     {
         static unique_ptr<IStreamTransport> createPlatformTransport();

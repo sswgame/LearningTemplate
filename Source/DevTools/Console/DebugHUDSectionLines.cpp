@@ -9,7 +9,7 @@
 #include "Engine/Console/DebugHUDRegistry.h"
 #include "Engine/Console/DebugHUDSectionFormat.h"
 #include "Engine/Console/DevCommandRegistry.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Scene/SceneManager.h"
 
 namespace sw
@@ -43,7 +43,7 @@ namespace sw
              */
             static bool runPrint( SceneIterationKey key, const vector<string>& listArgument, string& outReply )
             {
-                if ( listArgument.size() != 1 || engine::areEngineServicesBound() == false )
+                if ( listArgument.size() != 1 || engine::areEngineSubsystemsBound() == false )
                     return false;
                 const DebugHUDSectionRegistration* const pSection = engine::getSubsystem<DebugHUDRegistry>().findSection( listArgument[0] );
                 if ( pSection == nullptr )

@@ -21,7 +21,7 @@ namespace sw
 
         uint32        _frameIndex{ 0 };
         RawInputEvent _event{};
-        uint32        _pressFrameIndex{ kNoPress }; ///< 입력 구간의 끝(`addSpanEnd` — 탭의 떼기 · 축 되돌림 · 터치 떼기)이면 그 시작 프레임 — 누르기가 이미 나갔으면 시계를 멈춰도 떼기는 제 시간에 난다(`delayEventsFrom`)
+        uint32        _pressFrameIndex{ kNoPress }; ///< 입력 구간의 끝(`addSpanEnd`: 탭의 떼기 · 축 되돌림 · 터치 떼기)이면 그 시작 프레임. 누르기가 이미 나갔으면 시계를 멈춰도 떼기는 제 시간에 난다(`delayEventsFrom`)
     };
 } // namespace sw
 

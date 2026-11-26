@@ -9,7 +9,8 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -73,10 +74,10 @@ namespace sw
      *             시간이 걸리면 작업(`waitDelay`, `waitGameplayEvent`)이나 `onTickAbility` 로 기다렸다가 끝낸다.
      *          3. 끝나면(`endAbility`, `cancelAbility`) 작업을 모두 정리하고 `onEndAbility( bWasCancelled )` 를 부른다.
      *
-     *          **스레드**: `onTickAbility` 와 작업은 컴포넌트의 틱(병렬 워커)에서 돈다. 그 안에서 **다른 오브젝트**를 바꿀 때는
+     *          스레드: `onTickAbility` 와 작업은 컴포넌트의 틱(병렬 워커)에서 돈다. 그 안에서 다른 오브젝트를 바꿀 때는
      *          `applyEffectSpecToTarget` 처럼 프레임워크가 제공하는 함수를 쓴다. 틱 중이면 이 함수들이 적용을 틱 직후로 미룬다. 오브젝트 생성은 `GameObjectManager::executeOrDeferPostTick` 로 한다.
      *
-     *          **핫 리로드**: 모듈을 내리기 전에 컴포넌트가 그 모듈 타입(`getTypeInfo` 의 모듈 이름)의 어빌리티를 정리한다(`TypeRegistry::subscribeModuleUnloading`). 모듈을 다시 로드하면
+     *          핫 리로드: 모듈을 내리기 전에 컴포넌트가 그 모듈 타입(`getTypeInfo` 의 모듈 이름)의 어빌리티를 정리한다(`TypeRegistry::subscribeModuleUnloading`). 모듈을 다시 로드하면
      *          컴포넌트의 `_abilitySetID` 가 어빌리티를 다시 부여한다. 코드로 준 어빌리티는 게임이 다시 줘야 한다.
      */
     REFLECT( Abstract )
@@ -197,7 +198,7 @@ namespace sw
         /** @brief 어빌리티를 끝냅니다. 작업을 정리하고, 컴포넌트에 알린 뒤 `onEndAbility` 를 부릅니다. */
         void finishActivation( bool bWasCancelled );
         /** @brief 작업과 `onTickAbility` 를 진행합니다. 컴포넌트의 시간 진행에서 부릅니다. */
-        void updateAbility( float32 deltaTime );
+        void updateAbility( GameSeconds frameTime );
         /** @brief 입력 상태를 기록하고, 실행 중이면 알립니다. */
         void setInputPressed( bool bPressed );
         /** @brief 끝난 작업을 지웁니다. 작업을 순회하는 중이면 지우기를 미룹니다. */
@@ -231,7 +232,7 @@ namespace sw
      * @brief 커밋하고 이펙트를 건 뒤 바로 끝나는 어빌리티입니다(카탈로그의 클래스 이름은 "ApplyEffects").
      * @details 이름 매개변수:
      *          - `selfEffect`: 주인에게 걸 이펙트 id. 회복, 버프, 패시브에 쓴다.
-     *          - `targetEffect`: 발동 이벤트의 **상대**에게 걸 이펙트 id. 이벤트의 `_target` 이 주인 자신이거나 비어 있으면(피격처럼 받은 이벤트)
+     *          - `targetEffect`: 발동 이벤트의 상대에게 걸 이펙트 id. 이벤트의 `_target` 이 주인 자신이거나 비어 있으면(피격처럼 받은 이벤트)
      *            일으킨 쪽(`_instigator`)에게 적용하고, 아니면 `_target` 에게 적용한다. 맞으면 때린 쪽에 피해를 주는 가시가 이 경로를 쓴다.
      *            이벤트 없이 발동하면 걸지 않는다.
      *          `_bActivateOnGranted` 와 무한 이펙트를 함께 쓰면 패시브가 된다.

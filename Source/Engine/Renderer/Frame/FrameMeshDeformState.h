@@ -8,7 +8,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Time/GameTimer.h"
+#include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Graphics/RHI/RHIConstantBuffer.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -58,12 +58,12 @@ namespace sw
         unordered_set<const Mesh*> _setScratchSeenMesh{};
         /**
          * @brief 시간으로 구동하는 컴퓨트에 넘기는 절대 시간(초)의 시계입니다.
-         * @details 각도를 프레임마다 누적하지 않고 **이 절대 시간에서 매번 새로 계산한다**. 누적하면 프레임
+         * @details 각도를 프레임마다 누적하지 않고 이 절대 시간에서 매번 새로 계산한다. 누적하면 프레임
          *          간격의 흔들림이 그대로 쌓여 백엔드와 실행마다 다른 각도가 나오고, 스크린샷을 비교할 수 없게 된다.
          *          렌더러가 자기 시계를 가지므로 델타를 여기까지 실어 나르지 않아도 되고, 렌더 스레드에서
          *          게임 시간을 건드리지 않는다.
          */
-        GameTimer _animationTimer{};
+        Stopwatch _animationTimer{};
         /// @brief 진단(`-gv_meshMorphDebugMode=SkipDispatch`)으로 변형 컴퓨트를 건너뛰었는지 여부입니다 — 스킨 결과가 없어 칸 표를 걸지 않는다.
         uint8 _bDeformDispatchSkipped{ SW_FALSE };
     };

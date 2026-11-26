@@ -9,7 +9,7 @@
 #include "Engine/Asset/AssetLoadProfiler.h"
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Content/AssetIO.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Object/Component/ComponentStableKey.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -154,7 +154,7 @@ namespace sw
                 inoutListPath.push_back( path );
             }
 
-            /** @brief 형식을 모르는 본문(쿠킹한 바이너리 · 직접 준 텍스트)의 형식입니다. 읽을 때 **한 번만** 부릅니다. */
+            /** @brief 형식을 모르는 본문(쿠킹한 바이너리 · 직접 준 텍스트)의 형식입니다. 읽을 때 한 번만 부릅니다. */
             static PrefabStateFormat detectStateFormat( string_view stateData )
             {
                 const string_view trimmed = StringUtil::trim( stateData );
@@ -397,7 +397,7 @@ namespace sw
             static void captureNestedParts( const GameObject& root, PrefabCache* pPrefabs, vector<PrefabInstanceNode>& outListNode )
             {
                 outListNode.clear();
-                GameObjectManager* pManager = root.getMutableManager();
+                const GameObjectManager* pManager = root.getManager();
                 if ( pManager == nullptr )
                     return;
                 const PrefabInstanceRegistry& registry = pManager->getSubsystem<PrefabInstanceRegistry>();
@@ -1020,7 +1020,7 @@ namespace sw
                                  variantText.error().detail(), absPath.str() );
                 return false;
             }
-            if ( FileUtil::ensureParentDirectoryExists( absPath ) == false || FileUtil::writeFile( absPath, reinterpret_cast<const uint8*>( variantText->data() ), variantText->size() ) == false )
+            if ( FileUtil::writeFile( absPath, reinterpret_cast<const uint8*>( variantText->data() ), variantText->size() ) == false )
             {
                 SW_LOG_ERROR_ID( "PrefabAsset.FailedWritePrefabJSON2", "Failed to write prefab JSON: %#", absPath.str() );
                 return false;
@@ -1055,8 +1055,7 @@ namespace sw
             jsonStr = *nestedText;
         }
 
-        const bool writeOk = FileUtil::ensureParentDirectoryExists( absPath ) &&
-                             FileUtil::writeFile( absPath, reinterpret_cast<const uint8*>( jsonStr.data() ), jsonStr.size() );
+        const bool writeOk = FileUtil::writeFile( absPath, reinterpret_cast<const uint8*>( jsonStr.data() ), jsonStr.size() );
         if ( writeOk == false )
         {
             SW_LOG_ERROR_ID( "PrefabAsset.FailedWritePrefabJSON", "Failed to write prefab JSON: %#", absPath.str() );
@@ -1091,7 +1090,7 @@ namespace sw
             arch << node._name << node._prefabPath << node._attachKey << node._overrideXML << node._resolvedStateXML << node._partPath << node._parentIndex << node._localID;
         }
 
-        if ( FileUtil::ensureParentDirectoryExists( absPath ) == false || arch.saveToFile( absPath ) == false )
+        if ( arch.saveToFile( absPath ) == false )
         {
             SW_LOG_ERROR_ID( "PrefabAsset.FailedWritePrefabBinary", "Failed to write prefab binary: %#", absPath.str() );
             return false;
@@ -1122,7 +1121,7 @@ namespace sw
         _bValid      = state.has_value() ? SW_TRUE : SW_FALSE;
 
         PrefabCache* pPrefabs = pNestedPrefabs;
-        if ( pPrefabs == nullptr && engine::areEngineServicesBound() )
+        if ( pPrefabs == nullptr && engine::areEngineSubsystemsBound() )
             pPrefabs = &engine::getSubsystem<AssetManager>().getAssetCache<PrefabCache>();
         PrefabAssetInternal::captureNestedParts( *pGameObject, pPrefabs, _listNestedInstance );
     }

@@ -23,6 +23,7 @@
 #include "Core/Network/NetTypes.h"
 #include "Core/Network/Replication/NetClock.h"
 #include "Core/Serialization/BitStream.h"
+#include "Core/Time/TimeSeconds.h"
 
 namespace sw
 {
@@ -197,7 +198,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 받은 메시지 하나의 컨텍스트입니다. 보낸 연결(클라이언트에서는 서버가 0), 채널, 종류(첫 바이트), 메시지 전체(종류 포함, 그대로 중계할 때 씁니다)를 담습니다. */
+    /** @brief 받은 메시지 하나의 컨텍스트입니다. 보낸 연결(처리기에 닿는 것은 늘 유효하다 — 클라이언트에서는 서버가 0), 채널, 종류(첫 바이트), 메시지 전체(종류 포함, 그대로 중계할 때 씁니다)를 담습니다. */
     struct NetMessageContext
     {
         const uint8*   _pMessage{ nullptr }; ///< 처리기 호출 동안만 유효하다.
@@ -245,10 +246,14 @@ namespace sw
          */
         virtual NetMessageDirectionMask getMessageDirectionMask() const = 0;
         /**
-         * @brief 맡은 종류의 메시지 하나를 처리합니다. @p body 는 종류 바이트 다음부터입니다.
-         * @return 본문을 읽지 못했으면 Malformed 를 반환하며, 라우터가 세고 버립니다. 낡은 것을 버린 경우는 Handled 입니다.
+         * @brief 종류 @p kind 를 서버가 한 연결에게서 `poll` 한 번에 받는 상한입니다. 표 기반 처리기는 서술자(`NetLimitedMessageDef`)에서 저절로 낸다.
+         * @details 서버로 갈 수 있는 종류의 상한이 0 이면 라우터가 등록을 거절한다(상한 없는 서버 처리기는 없다).
          */
-        virtual NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body ) = 0;
+        virtual uint32 getMaxPerPoll( uint8 kind ) const
+        {
+            (void)kind;
+            return 0;
+        }
         /** @brief 연결이 열렸습니다(서버에서는 클라이언트, 클라이언트에서는 서버 = 0). 이 연결 ID의 상태를 새로 시작합니다. */
         virtual void onConnectionOpened( int32 connectionID ) { (void)connectionID; }
         /** @brief 연결이 닫혔습니다. 이 연결 ID의 상태를 버립니다(같은 ID는 다음 연결이 다시 씁니다). */
@@ -319,6 +324,16 @@ namespace sw
         {
             return handleMessage( connectionID, buffer.data(), static_cast<int32>( buffer.size() ) );
         }
+
+    protected:
+        friend class NetMessageRouter;
+
+        /**
+         * @brief 맡은 종류의 메시지 하나를 처리합니다. @p body 는 종류 바이트 다음부터입니다.
+         * @details 부르는 쪽은 라우터와 `handleMessage` 둘이고 둘 다 연결 번호가 없는 메시지를 거른다 — 처리기는 `context._connectionID` 가 유효한지 보지 않는다.
+         * @return 본문을 읽지 못했으면 Malformed 를 반환하며, 라우터가 세고 버립니다. 낡은 것을 버린 경우는 Handled 입니다.
+         */
+        virtual NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body ) = 0;
     };
 } // namespace sw
 
@@ -344,7 +359,7 @@ namespace sw
      *          알리고(`NetMessageRange::kRouterWireVersionKind`), 상대가 알린 판은 연결마다 들고 있다가 양쪽이 같은 영역을 쓰면 견준다. 다르면 오류를 남기고 그 연결을 끊고,
      *          같은 `poll` 안의 그 연결 메시지는 처리기에 넘기지 않는다. 상대가 아직 등록하지 않은 영역은 견주지 않는다(뒤에 등록하면 그때 알려 온다).
      *          게임이 표 판을 손으로 섞던 방식(`NetWireVersion::combine`)은 빠뜨릴 수 있었다 — 섞는 게임이 하나도 없었다.
-     * @details - **보류:** 처리기가 아직 처리할 수 없는 메시지(대상이 서지 않았다 — `NotReady`)와, 처리기가 아직 없는 신뢰 메시지(씬을 읽는 중)는 버리지 않고 상한(연결마다
+     * @details - 보류: 처리기가 아직 처리할 수 없는 메시지(대상이 서지 않았다 — `NotReady`)와, 처리기가 아직 없는 신뢰 메시지(씬을 읽는 중)는 버리지 않고 상한(연결마다
      *            개수 · 바이트, 종류마다 시간) 안에서 들고 있다가 `poll` 마다 온 순서대로 다시 준다. 시한 · 상한을 넘거나 월드가 바뀌면 버리고, 보류를 선언한 종류면 보낸 쪽에 알린다
      *            (`onMessageDeliveryFailed`). 유니티 NGO `DeferredMessageManager`(스폰 앞에 온 RPC, `SpawnTimeout`) · 언리얼 GUID 대기 큐 자리 — 시한 뒤 조용히 버리는 것만 다르다.
      *          - 처리기는 빌려 쓴다. 등록은 `registerHandler` 가 돌려주는 구독(`Subscription`)이 소유한다 — 처리기와 같은 수명의 객체(보통 처리기를 가진 쪽)가 들고,
@@ -388,7 +403,7 @@ namespace sw
 
         /**
          * @brief 처리기를 등록하고 그 등록을 소유하는 구독을 반환합니다. 구독이 사라지면 처리기가 빠집니다.
-         * @details 맡으려는 종류 중 하나라도 이미 맡은 처리기가 있거나(같은 처리기를 다시 달아도 자기 종류와 겹친다), @p pHandler 가 nullptr 이면 **통째로 받지 않고**
+         * @details 맡으려는 종류 중 하나라도 이미 맡은 처리기가 있거나(같은 처리기를 다시 달아도 자기 종류와 겹친다), @p pHandler 가 nullptr 이면 통째로 받지 않고
          *          오류를 남긴 뒤 빈 구독(`isActive` 가 false)을 반환합니다(일부만 등록된 처리기는 없습니다). 영역이 겹친 게임은 빈 구독을 기동 실패로 다룬다.
          *          키트는 자기 영역(`NetKitMessageRange`)을 쓰고, 게임 처리기 여럿은 영역 안에서 서로 다른 마스크를 쓴다.
          */
@@ -425,7 +440,7 @@ namespace sw
          * @brief 이쪽 월드의 서버 시계를 프레임에 한 번 흘립니다(`SceneNetLink::update`). 서버면 `kClockSendTicks` 마다 연결된 모두에게 알립니다.
          * @details 시계는 월드 세대와 수명이 같다 — 새 월드 · 새 연결이면 처음부터다.
          */
-        void advanceWorldClock( INetPeers& peers, float32 deltaTime );
+        void advanceWorldClock( INetPeers& peers, GameSeconds frameTime );
         /** @brief 이쪽 월드의 서버 시계입니다. 서버 틱을 실은 메시지를 받은 키트는 `observe` 로 알린다. */
         NetClock&       getWorldClock() { return _worldClock; }
         const NetClock& getWorldClock() const { return _worldClock; }
@@ -444,13 +459,15 @@ namespace sw
          */
         int32 poll( INetPeers& peers, vector<NetReceivedMessage>* pOutUnhandled = nullptr, vector<NetEndpointEvent>* pOutListEvent = nullptr );
         /**
-         * @brief 서버가 받은 메시지를 보낸 연결을 뺀 모두에게 **받은 채널 그대로** 다시 보냅니다. 클라이언트에서는 하지 않고 0을 반환합니다. 반환값은 보낸 수입니다.
+         * @brief 서버가 받은 메시지를 보낸 연결을 뺀 모두에게 받은 채널 그대로 다시 보냅니다. 클라이언트에서는 하지 않고 0을 반환합니다. 반환값은 보낸 수입니다.
          * @details 처리기 안에서 부른다(@p context 의 메시지 바이트는 처리기 호출 동안만 유효하다).
          */
         static int32      relayToOtherPeers( INetPeers& peers, const NetMessageContext& context );
         const DevCounter& getMalformedCount() const { return _malformedCount; }
         /** @brief 다른 월드의 메시지라 처리기에 넘기지 않은 수입니다(월드가 바뀌는 사이 날아오던 것). */
         const DevCounter& getOtherWorldCount() const { return _otherWorldCount; }
+        /** @brief 서버 수신 상한(`NetLimitedMessageDef`)을 넘어 버린 비신뢰 메시지 수입니다. */
+        const DevCounter& getOverLimitCount() const { return _overLimitCount; }
         /** @brief 보류했다가 시한 · 상한 · 월드 바뀜으로 전하지 못한 메시지 수입니다. */
         const DevCounter& getDeliveryFailedCount() const { return _deliveryFailedCount; }
         /** @brief 그 종류를 보낸다고 등록한 처리기가 없어 버린 전달 통지 수입니다(첫 번째는 오류 로그도 남긴다 — 보낸 쪽이 처리기를 등록하지 않았다). */
@@ -530,6 +547,10 @@ namespace sw
         bool isInboundAllowed( uint8 kind, NetPeerRole role ) const;
         /** @brief 반대 방향 종류를 보낸 연결 @p connectionID 를 세고 끊습니다. 같은 `poll` 의 남은 메시지도 넘기지 않는다. */
         void refuseWrongDirection( INetPeers& peers, int32 connectionID, uint8 kind, NetPeerRole role );
+        /** @brief 서버 — 이번 `poll` 에 연결 @p connectionID 가 보낸 종류 @p kind 를 하나 세고, 상한을 넘었으면 true 입니다. 상한이 없는 종류(처리기가 없다)는 세지 않습니다. */
+        bool countOverLimit( int32 connectionID, uint8 kind );
+        /** @brief 상한을 넘은 메시지를 버립니다 — 비신뢰는 세고, 신뢰는 연결을 끊습니다. */
+        void refuseOverLimit( INetPeers& peers, int32 connectionID, uint8 kind, NetChannelKind channel );
         /** @brief 들고 있는 상대 판과 이 쪽 판을 견주어 다른 연결을 끊습니다. 다르면 true 입니다. */
         bool disconnectOnWireVersionMismatch( INetPeers& peers, int32 connectionID );
 
@@ -556,9 +577,14 @@ namespace sw
         INetMessageHandler*                           _arrKindHandler[kKindCount];
         INetMessageHandler*                           _arrNotificationHandler[kKindCount]; ///< 종류마다 그 종류를 전달 통지로 보내는 처리기(`getNotifiedKindMask`).
         uint8                                         _arrKindDirection[kKindCount];       ///< 종류마다 맡은 처리기가 적은 방향 비트(`kDirectionToServerBit` · `kDirectionToClientBit`).
+        uint16                                        _arrKindMaxPerPoll[kKindCount];      ///< 종류마다 서버 수신 상한(0 이면 세지 않는다)
+        uint8                                         _arrKindLimitIndex[kKindCount];      ///< 상한이 있는 종류의 셈 칸 번호
+        vector<uint16>                                _listPollCount;                      ///< 이번 `poll` 의 셈([연결 × `_limitedKindCount` + 칸 번호]). `poll` 마다 0 으로 채운다
+        int32                                         _limitedKindCount;                   ///< 상한이 있는 종류 수
         NetMessageKindStatsTable                      _kindStats;                          ///< `poll` 가 메시지마다 더한다(꺼내는 반복 안의 덧셈 둘 — 따로 훑지 않는다).
         NetInbound                                    _inbound;                            ///< `poll` 가 다시 쓰는 버퍼.
         DevCounter                                    _malformedCount;
+        DevCounter                                    _overLimitCount;      ///< 수신 상한을 넘어 버린 비신뢰 메시지 수
         DevCounter                                    _otherWorldCount;     ///< 앞 월드의 것이라 버린 메시지 수
         DevCounter                                    _deliveryFailedCount; ///< 보류했다가 전하지 못한 메시지 수
         uint64                                        _unclaimedNotificationCount;
@@ -572,7 +598,7 @@ namespace sw
         uint32                                        _bindSerial;            ///< 월드를 올린 횟수(`getBindSerial`)
         uint32                                        _sentClock;             ///< 서버 — 마지막으로 알린 시계(`kClockSendTicks` 단위)
         uint64                                        _worldSceneID;          ///< 서버가 연 월드의 씬(서버는 연 것, 클라이언트는 알림)
-        optional<uint64>                              _localSceneID;          ///< 클라이언트 — 이쪽에 선 씬(`setLocalScene`). 아직 없으면 비었다 — 문서 없는 월드의 씬 번호(0)와 가른다
+        optional<uint64>                              _localSceneID;          ///< 클라이언트: 이쪽에 선 씬(`setLocalScene`). 아직 없으면 비어 있어 문서 없는 월드의 씬 번호(0)와 가른다
         uint8                                         _announcedGeneration;   ///< 서버가 연 월드의 세대(서버는 연 것, 클라이언트는 알림). 0 이면 아직 없다
         uint8                                         _worldGeneration;       ///< 이쪽 월드의 세대. 클라이언트의 씬이 다르면 0
         uint8                                         _bWireVersionsChanged;  ///< 등록이 바뀌었다 — 다음 `poll` 이 상대 모두에게 알리고 들고 있는 상대 판과 견준다

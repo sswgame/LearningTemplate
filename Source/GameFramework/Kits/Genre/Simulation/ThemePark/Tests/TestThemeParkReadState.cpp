@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Reflection/TypeFqn.h"
 #include "Engine/Serialization/Format/Archive.h"
@@ -160,7 +160,7 @@ SW_TEST_CASE_F( ThemeParkReadStateTest, RealAndCraftedStatesRead )
     }
     for ( int32 frame = 0; frame < 40; ++frame )
     {
-        _park.update( 0.5f );
+        _park.update( sw::GameSeconds{ 0.5f } );
     }
 
     sw::Archive written;
@@ -216,7 +216,7 @@ SW_TEST_CASE( ThemeParkSimulationTest, ParkDeterminism )
             park.setRideOpen( 1, false );
         if ( stepIndex == 130 )
             park.setRideOpen( 1, true );
-        park.update( 0.5f );
+        park.update( sw::GameSeconds{ 0.5f } );
     };
     SW_EXPECT_TRUE( sw::StateBytesTestUtil::isDeterministic<ThemeParkRun>( setup, step, 200 ) );
 }

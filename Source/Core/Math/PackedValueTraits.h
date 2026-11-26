@@ -1,16 +1,16 @@
 /**
  * @file PackedValueTraits.h
  * @brief 저장 전용 압축 타입을 실수 성분 묶음(`PackedFloats`)으로 푸는 한 곳의 정의 `PackedValueTraits<T>` 입니다.
- * @details 리플렉션 · 직렬화 · 에디터 인스펙터가 압축 타입을 **값**으로 다루는 길은 모두 이 특성을 지납니다. 글(`0.5,1,0.25`), 인자 변환(`ReflectedValue`),
+ * @details 리플렉션 · 직렬화 · 에디터 인스펙터가 압축 타입을 값으로 다루는 길은 모두 이 특성을 지납니다. 글(`0.5,1,0.25`), 인자 변환(`ReflectedValue`),
  *          인스펙터 위젯이 타입마다 따로 분기를 갖지 않고 `toFloats` · `fromFloats` 만 부릅니다. 압축 타입을 `ReflectBuiltins.xxx` 에 더하고 여기에
  *          특수화를 빠뜨리면 글 처리기 등록(`SerializeContext::makeDefault`)이 컴파일되지 않습니다.
- *          - **성분 규칙**: `toFloats` 는 저장된 값을 정확히 나타내는 실수를 성분 순서대로 돌려주고, `fromFloats` 는 그 실수를 다시 같은 비트로 담습니다
+ *          - 성분 규칙: `toFloats` 는 저장된 값을 정확히 나타내는 실수를 성분 순서대로 돌려주고, `fromFloats` 는 그 실수를 다시 같은 비트로 담습니다
  *            (`fromFloats( toFloats( v ) )` 가 비트까지 같습니다. 예외 둘: `snorm` 의 정수 최솟값은 `-최대` 로, `half` NaN 은 페이로드 위쪽 10 비트만 남는 NaN 으로 갑니다).
  *            그래서 글 왕복이 자릿수를 잃지 않습니다. `OctahedralNormal` 의 성분은 방향 xyz 가 아니라 저장된 좌표 (u, v) 입니다 — 방향으로 풀고 다시 담으면
  *            양자화 한 칸 안에서 비트가 흔들릴 수 있어(`OctahedralNormal.h`) 글 왕복이 같은 비트를 지키지 못합니다.
- *            `Radians` 의 성분은 라디안이 아니라 **도**입니다(데이터 · 인스펙터의 단위). 도 `float32` 로 반올림하므로 왕복이 라디안 한 ulp 안에서 흔들릴 수 있고,
+ *            `Radians` 의 성분은 라디안이 아니라 도입니다(데이터 · 인스펙터의 단위). 도 `float32` 로 반올림하므로 왕복이 라디안 한 ulp 안에서 흔들릴 수 있고,
  *            `toFloats` 는 같은 라디안으로 돌아오는 도 중 가장 짧은 십진수를 고른다(손으로 쓴 `2.5` 가 다시 저장해도 `2.5` 다).
- *          - **범위**: `kRangeMin` · `kRangeMax` 는 `fromFloats` 가 조용히 자르거나 무한대로 보내지 않는 성분 범위입니다. 읽는 쪽이 범위 밖 입력을 거절할 때 씁니다
+ *          - 범위: `kRangeMin` · `kRangeMax` 는 `fromFloats` 가 조용히 자르거나 무한대로 보내지 않는 성분 범위입니다. 읽는 쪽이 범위 밖 입력을 거절할 때 씁니다
  *            (정수 필드가 범위를 넘는 글을 거절하는 것과 같은 규칙). NaN 은 범위 밖입니다.
  *          - 압축 타입이 아닌 `T` 의 `PackedValueTraits<T>` 는 비어 있어 `kIsPackedValue<T>` 가 false 입니다.
  */

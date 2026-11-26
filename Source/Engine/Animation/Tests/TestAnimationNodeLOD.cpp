@@ -1,7 +1,7 @@
 // 애니메이션 노드 LOD — 등급 한 축(주기 단계 + 예산), 노드 가중치 페이드, 그래프 레이어 · 블렌드 스페이스 · 리그 노드의 `max_lod`.
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Animation/Graph/BlendSpace.h"
 #include "Engine/Animation/Scene/AnimationLOD.h"

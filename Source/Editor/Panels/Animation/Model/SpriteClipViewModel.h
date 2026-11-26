@@ -17,6 +17,8 @@
 
 namespace sw::editor
 {
+    class AssetWriter;
+
     class DocumentEditRecorder;
     /** @brief 프레임 사각형의 가장자리 하나입니다(아틀라스 위에서 끌어 고친다). */
     enum class SpriteFrameEdge : uint8
@@ -57,7 +59,7 @@ namespace sw::editor
         /** @brief @p path 를 읽습니다. 파일이 없거나 이미지면 새 클립(이미지는 그 아틀라스, 빈 프레임 하나)으로 시작합니다 — 앞 문서의 내용이 남지 않습니다. 실패 이유는 상태 줄에 남깁니다. */
         ToolAssetLoadResult loadDocument( string_view path );
         /** @brief 지금 클립을 @p path(비면 기본 문서, `loadDocument` 와 같다)에 쓰고 결과를 상태 줄에 남깁니다. 성공하면 true 입니다(dirty 해제 · 되돌리기 기준은 패널이 한다). 이미지 경로는 거절합니다. */
-        [[nodiscard]] bool saveDocument( string_view path );
+        [[nodiscard]] bool saveDocument( AssetWriter& writer, string_view path );
         /** @brief 되돌리기 기록용 클립 글입니다. */
         string captureText() const;
         /** @brief 되돌리기 기록 글로 클립을 되돌립니다. 고른 항목은 범위 안에서 그대로입니다. 읽지 못하면 빈 클립을 보입니다. */

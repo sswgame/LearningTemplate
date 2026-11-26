@@ -1,7 +1,7 @@
 // PackagingViewModelTest — 패키징 창의 오류 줄 판정(감사 E-15): 낱말 "error" 가 든 줄이 아니라 도구가 오류로 찍은 줄만 오류다.
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Editor/Panels/Packaging/Model/PackagingViewModel.h"
 

@@ -4,13 +4,13 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/String/StringUtil.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Asset/AssetFormat.h"
 #include "Engine/Content/ContentSource.h"
 #include "Engine/Content/Pack/PackManager.h"
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Object/Component/ComponentStableKey.h"
 #include "Engine/Object/Component/MissingComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"

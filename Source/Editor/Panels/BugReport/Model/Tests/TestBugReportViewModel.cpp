@@ -1,8 +1,8 @@
-// BugReportViewModelTest — 지난 BugReport 폴더 줄: 최근 것 먼저, 메모는 info.txt 에서, 다시 읽으라고 할 때만 다시 읽는다(케이스 폴더만 쓴다 — nogpu).
+// BugReportViewModelTest: 지난 BugReport 폴더 줄: 최근 것 먼저, 메모는 info.txt 에서, 다시 읽으라고 할 때만 다시 읽는다(케이스 폴더만 쓴다, nogpu).
 #include "pch.h"
 
 #include "Core/File/FileUtil.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "DevTools/Client/Capture/BugReport.h"
 

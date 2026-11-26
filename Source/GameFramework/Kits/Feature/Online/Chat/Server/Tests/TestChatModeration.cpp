@@ -1,15 +1,13 @@
-// ChatModerationTest — 채팅 거르기: 도배 방지(토큰 버킷 — 한꺼번에 쓰기와 간격마다 하나, 같은 글 반복은 창 안 상한까지, 정규화한 글이 같으면 같은 글),
+// ChatModerationTest: 채팅 거르기: 도배 방지(토큰 버킷: 한꺼번에 쓰기와 간격마다 하나, 같은 글 반복은 창 안 상한까지, 정규화한 글이 같으면 같은 글),
 // 금칙어(가리기 · 거절, 대소문자 · 전각 정규화, 건너뛸 글자 · 0 폭 글자를 끼워도 걸린다, 빈 낱말은 버림, 잘못된 UTF-8 은 InvalidText),
 // 건너뛸 글자 파일(`Config/Server/chat_ignored_characters.txt`)과 깨진 줄 거절. 온라인 키트라 `UnitTests.OnlineKits` 가 돌린다(nogpu).
 #include "pch.h"
 
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
-#include "GameFramework/Kits/Feature/Online/Chat/Server/ChatSpamGuard.h"
-#include "GameFramework/Kits/Feature/Online/Chat/Server/ChatTextNormalizer.h"
-#include "GameFramework/Kits/Feature/Online/Chat/Server/ChatWordFilter.h"
+#include "GameFramework/Kits/Feature/Online/Chat/Server/ChatModeration.h"
 
 using namespace sw;
 

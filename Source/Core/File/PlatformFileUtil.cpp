@@ -8,7 +8,7 @@
 #include "Core/Container/unordered_set.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Path/AbsolutePath.h"
-#include "Core/Process/ProcessEnvironment.h"
+#include "Core/Process/Process.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
@@ -238,7 +238,7 @@ namespace sw
             pObserver->recordFileOpenedForRead( filePath, byteCount );
     }
 
-    PlatformFileUtil::ReadObserverRegistration PlatformFileUtil::bindReadObserver( IFileReadObserver* pObserver )
+    PlatformFileUtil::ReadObserverSubscription PlatformFileUtil::bindReadObserver( IFileReadObserver* pObserver )
     {
         return PlatformFileUtilInternal::s_readObserverSlot.bind( pObserver );
     }
@@ -254,7 +254,7 @@ namespace sw
             pObserver->recordFileWritten( filePath );
     }
 
-    PlatformFileUtil::WriteObserverRegistration PlatformFileUtil::bindWriteObserver( IFileWriteObserver* pObserver )
+    PlatformFileUtil::WriteObserverSubscription PlatformFileUtil::bindWriteObserver( IFileWriteObserver* pObserver )
     {
         return PlatformFileUtilInternal::s_writeObserverSlot.bind( pObserver );
     }
@@ -341,7 +341,7 @@ namespace sw
         const wstring wideSource = toWindowsFilePath( pSourcePath );
         const wstring wideTarget = toWindowsFilePath( pTargetPath );
 
-        // 1) POSIX 방식 이름 바꾸기(Windows 10 1709+, NTFS). **대상 파일을 누가 열고 있어도** 바꿔 끼운다 — 연 쪽은 옛 파일을 끝까지 읽는다.
+        // 1) POSIX 방식 이름 바꾸기(Windows 10 1709+, NTFS). 대상 파일을 누가 열고 있어도 바꿔 끼운다 — 연 쪽은 옛 파일을 끝까지 읽는다.
         //    `MoveFileExW` 는 대상을 연 핸들이 하나라도 있으면(삭제 공유로 열었어도) 실패해서, 에디터 · 파일 감시가 자주 읽는 파일은 저장이
         //    계속 실패한다(동시 읽기 테스트에서 재시도 열 번이 모두 실패). 이름 바꾸기 정보의 경로는 전체 경로여야 한다.
         const DWORD fullLength = GetFullPathNameW( wideTarget.c_str(), 0, nullptr, nullptr );

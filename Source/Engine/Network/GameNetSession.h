@@ -62,14 +62,14 @@
 #include "Core/Network/NetTypes.h"
 #include "Core/Network/Transport/NetEmulation.h"
 #include "Core/Network/Transport/PlatformSocketUtil.h"
-#include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Subsystem/Subsystem.h"
+#include "Core/Subsystem/SubsystemSlot.h"
 #include "Core/Task/TaskFuture.h"
 
-#include "Engine/EngineFrameHooks.h"
+#include "Engine/EngineHooks.h"
 #include "Engine/Network/GameConnectSecurity.h"
 #include "Engine/Network/NetMessageBody.h"
-#include "Engine/Object/GameObject/Service/SceneNetLink.h"
+#include "Engine/Object/GameObject/Subsystem/SceneNetLink.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Inherit/ResourceComposition.h"
 
@@ -161,7 +161,8 @@ namespace sw
     /** @brief 엔진 세션 선 형식의 상한입니다. 본문 형식(`PROPERTY( MaxCount )`)과 메시지 표가 함께 쓴다. */
     struct GameNetSessionLimit
     {
-        static constexpr int32 kMaxDigestIDBytes = 512; ///< `GameNetSessionMessage::kMaxDigestIDBytes`
+        static constexpr int32  kMaxDigestIDBytes = 512;  ///< `GameNetSessionMessage::kMaxDigestIDBytes`
+        static constexpr uint32 kMaxDigestPerPoll = 4096; ///< 한 연결이 `poll` 한 번에 보내는 합성 줄 상한 — 접속하자마자 모두 보내므로 연결의 총 상한(`ResourceDigestComparer::kMaxLinesPerPeer`)과 같다
     };
 
     /** @brief 서버 틱(서버 → 모두) 본문입니다 — 방금 끝낸 서버 틱 번호. */
@@ -203,7 +204,7 @@ namespace sw
          * @brief 클라이언트 → 서버(신뢰 순서). 로드 축 조건 · 덮어쓰기 층에 기댄 합성 한 줄씩 — 리소스 id(blob) + 합성 결과 해시(varuint, `ResourceComposition::hashText`). 접속하자마자 모두 보내고, 붙은 뒤 새로 읽거나 바뀐 합성을 그때마다 보낸다.
          * @details 서버가 같은 리소스를 다르게 합성했고 유예(`gv_netResourceDigestGraceSeconds`)가 지나도 다르면(품질 축이 시뮬레이션 값을 건드렸다 · 다른 모드 층) 그 연결을 끊는다. 일관성 검사이지 부정행위 방지가 아니다(클라이언트가 거짓을 보낼 수 있다).
          */
-        using ResourceDigest                     = NetMessageBodyDef<0x02, NetMessageDirection::ToServer, NetChannelKind::ReliableOrdered, GameResourceDigestBody>;
+        using ResourceDigest                     = NetLimitedMessageDef<NetMessageBodyDef<0x02, NetMessageDirection::ToServer, NetChannelKind::ReliableOrdered, GameResourceDigestBody>, GameNetSessionLimit::kMaxDigestPerPoll>;
         static constexpr int32 kMaxDigestIDBytes = GameNetSessionLimit::kMaxDigestIDBytes; ///< `kResourceDigest` 의 리소스 id 길이 상한(넘는 id 는 보내지 않고 오류를 남긴다)
         /**
          * @brief `net.traffic` 부하 메시지입니다. 처리기가 없어 받는 쪽 라우터가 버린다.
@@ -278,7 +279,7 @@ namespace sw
         void setRunWireContent( const GameNetWireContent& wireContent ) { _runWireContent = wireContent; }
         /**
          * @brief 와이어 버전 @p wireVersion 에 @p wireContent 의 칸을 차례로 섞습니다. 0 인 칸은 섞지 않는다 — 모드 · 복제 타입이 없는 실행의 와이어 버전은 바뀌지 않는다.
-         * @details 언리얼이 콘텐츠 해시를 넷 버전에 섞는 자리(`FNetworkVersion::GetLocalNetworkVersionOverride`)와 같다(기억에 의존). **섞는 규칙은 이 함수 하나다** —
+         * @details 언리얼이 콘텐츠 해시를 넷 버전에 섞는 자리(`FNetworkVersion::GetLocalNetworkVersionOverride`)와 같다(기억에 의존). 섞는 규칙은 이 함수 하나다 —
          *          모드 요약(`ModSetDigest::foldWireVersion`)도 이것을 부른다.
          */
         static uint32 combineWireContent( uint32 wireVersion, const GameNetWireContent& wireContent );
@@ -342,7 +343,7 @@ namespace sw
         const NetAddress& getServerAddress() const { return _serverAddress; }
         /** @brief 클라이언트가 접속 티켓으로 붙은 세션이면 true 입니다 — 돌아올 때 새 티켓이 있어야 한다(티켓은 되쓰지 않는다). */
         bool isTicketBound() const { return _bTicketBound == SW_TRUE; }
-        /** @brief 클라이언트의 접속 시도가 한 번이라도 실패했으면 true 입니다(시간 초과 — 뒤에서 다시 시도한다 — 또는 거절). 붙은 뒤에도 남으므로 `getConnectedCount` 를 먼저 본다. 세션을 다시 열면 지워진다. */
+        /** @brief 클라이언트의 접속 시도가 한 번이라도 실패했으면 true 입니다(시간 초과로 뒤에서 다시 시도하거나 거절). 붙은 뒤에도 남으므로 `getConnectedCount` 를 먼저 본다. 세션을 다시 열면 지워진다. */
         bool hasConnectFailed() const { return _bConnectFailureReported == SW_TRUE; }
         /**
          * @brief 서버가 없어진 까닭입니다 — 붙어 있던 서버를 잃었거나 서버가 거절했다. 붙는 중이거나(시간 초과는 다시 시도한다) 붙어 있으면 비어 있습니다.
@@ -422,7 +423,7 @@ namespace sw
          * @brief 복제 키트가 이름 붙인 누적 셈(갱신 수 · 바이트)을 올립니다 — 스냅숏 크기 · 오브젝트별 복제 빈도처럼 공통 원천이 없는 값의 창구입니다.
          *        같은 이름을 다시 올리면 값을 덮고(누적값이므로 키트가 자기 합을 올린다), `makeStatsReport` 가 `replicas=` 칸에 상한(`NetStatsReport::kMaxReplicaEntry`) 안에서 싣는다.
          *        싣는 이름은 앞 절반이 "지난 보고 뒤 늘어난 바이트"가 큰 순서(Profiler 표의 초당 바이트와 같은 기준 — 총량이 작아도 지금 활발한 이름이 밀리지 않는다), 나머지가 누적 바이트가 큰 순서이다.
-         * @details 읽는 쪽(에디터 Profiler 표 — `EditorNetProfilerSample::computeReplicaRates`)과의 약속: 올린 값을 그대로 싣는다(키트가 다시 시작해 줄어든 값도 덮는다 — 표는 줄어듦을 0 으로 읽는다).
+         * @details 읽는 쪽(에디터 Profiler 표, `EditorNetProfilerSample::computeReplicaRates`)과의 약속: 올린 값을 그대로 싣는다(키트가 다시 시작해 줄어든 값도 덮는다. 표는 줄어듦을 0 으로 읽는다).
          *          상위 상한 밖으로 밀렸다 돌아온 이름이나 처음 오른 이름은 표에서 한 번 0 이다(앞 보고에 없으면 기준선이 없다). 누적 값을 대신 눌러 앉히지 않는다.
          * @return 이름이 형식(`NetStatsReport::isValidReplicaName`)에 맞지 않거나, 올린 이름이 상한(`kMaxReplicaSources`)을 넘으면 false 입니다(조용히 버리지 않고 경고를 남긴다).
          */
@@ -474,6 +475,7 @@ namespace sw
             uint32                  getWireVersion() const override { return GameNetSessionMessage::Table::computeWireVersion(); }
             uint16                  getMessageKindMask() const override;
             NetMessageDirectionMask getMessageDirectionMask() const override;
+            uint32                  getMaxPerPoll( uint8 kind ) const override { return GameNetSessionMessage::Table::getMaxPerPollOf( kind ); }
             /** @brief 표(`GameNetSessionMessage::Table`)가 종류를 세션의 `receive` 오버로드로 나눈다. */
             NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body ) override;
             /** @brief 클라이언트가 서버에 붙었다 — 합성 해시를 보낸다(`sendResourceDigest`). */
@@ -577,6 +579,6 @@ namespace sw
         uint64                            _clientHostFrameNumber;   ///< 클라이언트 호스트 — 프레임 앞 훅이 센 프레임 수(리슨 호스트의 `[frame=N]`)
         uint8                             _bFrameClockShown;        ///< 클라이언트 호스트 — 로그 꼬리표를 붙여 두었다(서버가 아니게 되면 뗀다)
 
-        SW_SERVICE_SLOT( GameNetSession, Required );
+        SW_SUBSYSTEM_SLOT( GameNetSession, Required );
     };
 } // namespace sw

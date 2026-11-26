@@ -3,7 +3,7 @@
  * @brief 커서에 붙은 애노테이션을 AST 에서 찾습니다 — 소스 글을 다시 읽지 않습니다.
  * @details 두 모양이 있습니다.
  *          - 멤버 · 열거자의 매크로(`PROPERTY` · `FUNCTION` · `ENUMERATOR`)와 본문 표식(`REFLECT_BODY`)은 선언에 붙는 자식 속성(AnnotateAttr)입니다.
- *          - 형식 앞의 매크로(`REFLECT` · `ENUM` · `REFLECT_CONTAINER`)는 파서 모드에서 **표식 선언** `static_assert( true, "REFLECT;" #__VA_ARGS__ );` 입니다.
+ *          - 형식 앞의 매크로(`REFLECT` · `ENUM` · `REFLECT_CONTAINER`)는 파서 모드에서 표식 선언 `static_assert( true, "REFLECT;" #__VA_ARGS__ );` 입니다.
  *            형식 키워드 앞의 GNU 속성은 clang 이 형식 선언에서 버리므로(`-Wignored-attributes`) 속성으로는 남지 않는다. 표식은 바로 다음 형제 선언의 것입니다.
  *          "이 레코드가 REFLECT 인가" 는 본문 표식으로 묻습니다 — REFLECT 와 REFLECT_BODY 는 서로 필수라(`AstVisitor`) 다른 헤더의 선언도 자식만 보면 됩니다.
  */
@@ -43,7 +43,7 @@ namespace sw
 
         /**
          * @brief 애노테이션 토큰을 DTO 에 넣고, 필드 표(PredefinedAnnotationField.xxx)에 없는 토큰이 있으면 알립니다.
-         * @details 모르는 토큰을 **조용히 버리지 않습니다** — 예: 에디터 색 선택기 요청의 철자는 `Meta = "Color"` 인데 `PROPERTY( …, Color, … )`
+         * @details 모르는 토큰을 조용히 버리지 않습니다 — 예: 에디터 색 선택기 요청의 철자는 `Meta = "Color"` 인데 `PROPERTY( …, Color, … )`
          *          로 적으면 버려지고, 멤버 이름에 color 가 들어 있으면 인스펙터의 이름 휴리스틱이 증상을 가립니다.
          * @return 모르는 토큰이 없으면 true
          */

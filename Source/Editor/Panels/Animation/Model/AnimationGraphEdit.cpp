@@ -4,7 +4,7 @@
 
 #include "Editor/Common/Commands/Asset/EditorToolAssetCommands.h"
 #include "Editor/Common/GUI/Panel/Model/EditorGraphEditSession.h"
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 
 #include "Engine/Animation/Graph/AnimationGraphAsset.h"
 #include "Engine/Animation/Skeletal/AnimationPoseNode.h"
@@ -16,9 +16,9 @@ namespace sw::editor
         return EditorToolAssetCommands::loadAnimationGraph( outGraph, path );
     }
 
-    bool AnimationGraphEdit::saveGraph( const AnimationGraphAsset& graph, const string_view path )
+    bool AnimationGraphEdit::saveGraph( AssetWriter& writer, const AnimationGraphAsset& graph, const string_view path )
     {
-        return EditorToolAssetCommands::saveAnimationGraph( graph, path );
+        return EditorToolAssetCommands::saveAnimationGraph( writer, graph, path );
     }
 
     vector<hashed_string> AnimationGraphEdit::getPoseNodeTypeNames()

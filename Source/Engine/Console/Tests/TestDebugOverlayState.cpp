@@ -1,7 +1,7 @@
 // DebugOverlayState — 그릴 줄은 키 사전순이고 float 은 소수 둘째 자리, 빈 문자열은 빠진다.
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Console/DebugOverlayState.h"
 

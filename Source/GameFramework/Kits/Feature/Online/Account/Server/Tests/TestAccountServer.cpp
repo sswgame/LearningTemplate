@@ -6,13 +6,13 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Task/TaskManager.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "GameFramework/Kits/Feature/Online/Account/Runtime/AccountClient.h"
 #include "GameFramework/Kits/Feature/Online/Account/Runtime/AccountProtocol.h"
-#include "GameFramework/Kits/Feature/Online/Account/Server/Service/AccountServer.h"
-#include "GameFramework/Kits/Feature/Online/Account/Server/Service/LoginService.h"
-#include "GameFramework/Runtime/Foundation/Service/GameService.h"
+#include "GameFramework/Kits/Feature/Online/Account/Server/AccountServer.h"
+#include "GameFramework/Kits/Feature/Online/Account/Server/LoginService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 #include "GameFramework/Runtime/Online/Audit/Server/ServiceAuditLog.h"
 #include "GameFramework/Runtime/Online/Config/Server/RemoteConfig.h"
 #include "GameFramework/Runtime/Online/Service/OnlineServiceClient.h"
@@ -165,7 +165,7 @@ namespace
         {
             _pRig = make_unique<test::OnlineTestFixture>( false );
             const uint8 arrMasterKey[LoginTicketAuthority::kMasterKeySize]{ 1, 2, 3 };
-            SW_EXPECT_TRUE( _loginService.initialize( &_pRig->_server._store, &_crypto, &_hasher, game::findSubsystem<TaskManager>(), settings, arrMasterKey ).has_value() );
+            SW_EXPECT_TRUE( _loginService.initialize( _pRig->_server._store, _crypto, _hasher, *game::findSubsystem<TaskManager>(), settings, arrMasterKey ).has_value() );
             _accountServer.initialize( &_loginService, makeAccountServerSettings() );
             SW_EXPECT_TRUE( _pRig->_server._host.registerServerService( &_accountServer ) );
             _pRig->_server.start();
@@ -394,7 +394,7 @@ SW_TEST_CASE( AccountServerTest, SessionMethodsCheckTheirBodies )
     SW_EXPECT_NOT_EQUAL( uint64( 0 ), rig._accountServer.findSessionID( accountID ) );
 }
 
-/** @brief [AccountServerTest] 로그인 전: 세션 메서드는 호스트가 kUnauthenticated 로 막는다 — 클라이언트 결과는 공통 범주 실패다(업무 결과 InvalidToken 이 아니다 — OnlineServiceResult 계약) */
+/** @brief [AccountServerTest] 로그인 전: 세션 메서드는 호스트가 kUnauthenticated 로 막는다. 클라이언트 결과는 공통 범주 실패다(업무 결과 InvalidToken 이 아니다 — OnlineServiceResult 계약) */
 SW_TEST_CASE( AccountServerTest, SessionMethodsNeedALogin )
 {
     AccountServerFixture rig;
@@ -510,7 +510,7 @@ SW_TEST_CASE( AccountServerTest, DisconnectThenResumeOnANewConnection )
     SW_EXPECT_TRUE( reply._operation == AccountMethodName::Resume );
     SW_EXPECT_TRUE( reply._bAutomatic == SW_TRUE );
     SW_EXPECT_EQUAL( token._sessionID, rig.getAccount( second ).getToken()._sessionID );
-    SW_EXPECT_NOT_EQUAL( 0, Memory::compare( token._arrSecret, rig.getAccount( second ).getToken()._arrSecret, sizeof( token._arrSecret ) ) );
+    SW_EXPECT_FALSE( token._secret.isEqual( rig.getAccount( second ).getToken()._secret ) );
     SW_EXPECT_EQUAL( token._sessionID, rig._accountServer.findSessionID( accountID ) );
     SW_EXPECT_TRUE( rig.getHost().findConnection( accountID, connection ) );
 }
@@ -524,7 +524,7 @@ SW_TEST_CASE( AccountServerTest, CraftedResumeTokenIsRefused )
     const uint64         sessionID = rig._accountServer.findSessionID( accountID );
 
     LoginSessionToken wrongSecret     = rig.getAccount( owner ).getToken();
-    wrongSecret._arrSecret[0]         = static_cast<uint8>( wrongSecret._arrSecret[0] + 1 );
+    wrongSecret._secret.reveal()[0]   = static_cast<uint8>( wrongSecret._secret.reveal()[0] + 1 );
     const int32              attacker = rig.addClient( &wrongSecret );
     const AccountClientReply crafted  = rig.take( attacker );
     SW_EXPECT_TRUE( crafted._result == LoginResult::InvalidToken );

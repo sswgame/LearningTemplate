@@ -92,8 +92,8 @@ namespace sw
      * @brief 재생 토큰(`VFXGPUEmitterRequest::_pRunToken`)마다 GPU 상태(입자 상태 두 반쪽, 렌더 입력, 간접 인자)를 들고, 프레임마다 밀린 단계를 디스패치합니다.
      * @details 기록 전(`prepareFrame`)에 상태를 만들고 매개변수(방출기 상수 · 단계마다의 일정 · 커브 키 · 해시 상수 · 방출기 행렬 · 깊이 히스토리)를 한 버퍼로 올린다.
      *          일정은 게임 스레드와 같은 시계(`VFXEmitterClock`)를 여기서 다시 돌려 얻는다 — 요청이 누적 단계 수라 패킷을 건너뛴 프레임도 다음 프레임에 이어 돈다
-     *          (디스패치마다 상한 SW_VFX_MAX_STEPS_PER_DISPATCH, 넘친 단계는 다음 프레임). 프레임 그래프(`recordSimulation`)는 인스턴스 애니메이션 · 컬링 **앞에**
-     *          방출기마다 그룹 하나(풀이 `SW_VFX_MULTI_GROUP_MIN_POOL` 이상이면 단계마다 적분 · 접두사 합 · 압축 디스패치 셋 — 같은 결과)를 디스패치한다. 입자는 수명 내내 인스턴스 칸 하나를 쥔다 —
+     *          (디스패치마다 상한 SW_VFX_MAX_STEPS_PER_DISPATCH, 넘친 단계는 다음 프레임). 프레임 그래프(`recordSimulation`)는 인스턴스 애니메이션 · 컬링 앞에
+     *          방출기마다 그룹 하나(풀이 `SW_VFX_MULTI_GROUP_MIN_POOL` 이상이면 단계마다 적분 · 접두사 합 · 압축 디스패치 셋, 같은 결과)를 디스패치한다. 입자는 수명 내내 인스턴스 칸 하나를 쥔다.
      *          빈 칸 스택(언리얼 Niagara GPU free ID, 유니티 VFX Graph dead list)에서 꺼내고 죽으면 돌려준다. 메시 방출기는 이어서 인스턴스 칸을 쓰고 빈 칸은 컬링이 빼는 플래그를 켠다(vfx_mesh_instance.hlsl — 매 프레임. 배치 구성이 바뀌어 CPU 자리표가
      *          올라온 프레임도 그리기 전에 다시 쓴다). 빌보드 · 띠는 투명 패스가 렌더 입력을 t11 에 걸고 간접 인자로 그린다(`VFXParticleRenderer::drawBatches`).
      *          이번 프레임에 없고 재생 토큰을 이 상태만 든 재생(다시 재생했거나 컴포넌트가 사라졌다)의 상태는 놓는다. 숨었다 다시 실린 재생은 상태를 이어 쓰고,
@@ -136,7 +136,7 @@ namespace sw
         /** @brief 비 가림 맵을 읽는 방출기(`VFXCollisionMethod::RainOcclusion`)가 있으면 true 입니다 — 렌더러가 맵을 그릴지 정합니다. */
         [[nodiscard]] static bool usesRainOcclusion( const vector<GPUParticleBatch>& listBatch, const vector<GPUVFXMeshEmitter>& listMeshEmitter );
         /**
-         * @brief 이번 프레임의 GPU 배치 · GPU 메시 방출기마다 상태를 갖추고 매개변수를 올립니다. **기록 시작 전에**(GPUScene 을 올린 뒤) 부릅니다.
+         * @brief 이번 프레임의 GPU 배치 · GPU 메시 방출기마다 상태를 갖추고 매개변수를 올립니다. 기록 시작 전에(GPUScene 을 올린 뒤) 부릅니다.
          * @details PSO 가 없으면 한 번 오류를 남기고 그 방출기를 그리지 않는다 — CPU 로 바꿔 그리지 않는다(대상은 데이터가 정했다).
          *          파티클 라이트가 있는 방출기는 밀린 단계가 없어도 매 프레임 디스패치한다 — 라이트 구간의 위치(CPU 라이트 수)와 월드 변환이 프레임마다 바뀌므로 다시 쓴다.
          */

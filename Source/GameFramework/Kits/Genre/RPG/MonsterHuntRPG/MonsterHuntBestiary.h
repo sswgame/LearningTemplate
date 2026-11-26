@@ -7,7 +7,7 @@
 #include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
@@ -42,7 +42,7 @@ namespace sw
     /**
      * @class MonsterHuntBestiary
      * @brief 한 위쳐의 도감입니다. 지식은 내려가지 않습니다. 책은 그 괴물의 읽기 단계까지, 처치는 정한 수마다 한 단계씩(처치 상한까지),
-     *        조사는 조사 단계까지 올립니다. 약점의 실제 배율은 지식과 상관없이 항상 적용되고, 지식은 **보여 주는 것**만 정합니다.
+     *        조사는 조사 단계까지 올립니다. 약점의 실제 배율은 지식과 상관없이 항상 적용되고, 지식은 보여 주는 것만 정합니다.
      */
     REFLECT()
     class SW_KIT_API MonsterHuntBestiary

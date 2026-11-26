@@ -29,7 +29,7 @@ namespace sw::editor
          */
         static MeshModifier* findByPath( MeshModifierStack& inoutRoot, const vector<int32>& listPath );
         /**
-         * @brief 경로가 가리키는 모디파이어를 **담은** 스택입니다(추가 · 삭제 · 위아래 · 켜고 끄기를 거는 스택). 길이 1 이면 @p inoutRoot 입니다.
+         * @brief 경로가 가리키는 모디파이어를 담은 스택입니다(추가 · 삭제 · 위아래 · 켜고 끄기를 거는 스택). 길이 1 이면 @p inoutRoot 입니다.
          * @return `findByPath` 가 nullptr 을 줄 경로면 nullptr 입니다.
          */
         static MeshModifierStack* findOwningStack( MeshModifierStack& inoutRoot, const vector<int32>& listPath );

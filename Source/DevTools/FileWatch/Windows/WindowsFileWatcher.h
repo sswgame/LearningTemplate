@@ -37,7 +37,7 @@ namespace sw
         virtual ~WindowsFileWatcher() override;
 
         /** @brief 디렉터리 핸들과 IOCP 를 열고 워커를 띄웁니다. */
-        [[nodiscard]] bool startWatching( const AbsolutePath& directoryPath, bool bRecursive = true ) override;
+        [[nodiscard]] bool startWatching( const DiskPath& directoryPath, bool bRecursive = true ) override;
         /** @brief IOCP 로 워커를 깨워 멈춘 뒤 핸들을 닫습니다. */
         void stopWatching() override;
         /** @brief 워커가 돌고 있으면 true 입니다. 워커가 오류로 멈추면 false 가 됩니다(`reportWatchLost`). */

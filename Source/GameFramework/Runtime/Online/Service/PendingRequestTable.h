@@ -86,6 +86,34 @@ namespace sw
             notifyCancelled( listCancelled );
         }
 
+        /** @brief 주인 @p ownerTag 의 열린 요청이 있는지입니다. */
+        bool hasOwnedBy( uint64 ownerTag ) const { return getOpenCountOf( ownerTag ) > 0; }
+        /** @brief 주인 @p ownerTag 의 요청을 완료를 부르지 않고 버립니다 — 완료가 잡은 주인이 이미 사라지는 중이다(부르면 사라진 객체에 닿는다). */
+        void discardOwnedBy( uint64 ownerTag )
+        {
+            for ( auto entryIt = _mapKeyToEntry.begin(); entryIt != _mapKeyToEntry.end(); )
+            {
+                if ( entryIt->second._ownerTag == ownerTag )
+                    entryIt = _mapKeyToEntry.erase( entryIt );
+                else
+                    ++entryIt;
+            }
+        }
+        /** @brief 열린 요청을 완료를 부르지 않고 모두 버립니다. 주인이 내려가며 답을 볼 곳이 없을 때입니다. */
+        void discardAll() { _mapKeyToEntry.clear(); }
+
+        /** @brief 열린 요청을 모두 같은 답 @p result 로 끝냅니다(앞이 내려가 모두 "닿지 못함" 이다). */
+        void answerAll( const TResult& result )
+        {
+            unordered_map<TKey, Entry, THash> mapAnswered = std::move( _mapKeyToEntry );
+            _mapKeyToEntry.clear();
+            for ( auto& [key, entry] : mapAnswered )
+            {
+                (void)key;
+                entry._pCompletion->invoke( result, PendingRequestEnd::Answered );
+            }
+        }
+
         /** @brief 열린 요청을 모두 취소로 끝냅니다. 서비스가 내려갈 때 부릅니다(완료가 잡은 객체가 아직 살아 있어야 한다). */
         void cancelAll()
         {
@@ -100,6 +128,17 @@ namespace sw
             notifyCancelled( listCancelled );
         }
 
+        /** @brief 주인 @p ownerTag 가 답을 기다리는 요청 수입니다. */
+        int32 getOpenCountOf( uint64 ownerTag ) const
+        {
+            int32 count = 0;
+            for ( const auto& [key, entry] : _mapKeyToEntry )
+            {
+                (void)key;
+                count += entry._ownerTag == ownerTag ? 1 : 0;
+            }
+            return count;
+        }
         /** @brief 답을 기다리는 요청 수입니다. */
         int32 getOpenCount() const { return static_cast<int32>( _mapKeyToEntry.size() ); }
         bool  isIdle() const { return _mapKeyToEntry.empty(); }

@@ -8,7 +8,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 
 #include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Serialization/Format/FormatDef.h"
@@ -27,7 +27,7 @@ namespace sw
      * @details "(x, y) 에 무엇이 있나"의 원본은 키트마다의 격자(밭 셀, 마을 오브젝트, 도시 셀)이고, 이 테이블은 "누가 그 셀을 쓰는가"만 보관한다.
      *          언리얼 World Partition 의 셀 소유와 내비 변경 알림에 해당한다.
      *          둘 이상의 격자 키트를 한 맵에 겹칠 때 남의 셀에 놓지 못하게 한다.
-     *          - 주인 번호는 등록 순서이지만 상태 바이트에는 **이름**으로 싣는다. 다른 실행에서 등록 순서가 달라도 맞게 하려는 것이다.
+     *          - 주인 번호는 등록 순서이지만 상태 바이트에는 이름으로 싣는다. 다른 실행에서 등록 순서가 달라도 맞게 하려는 것이다.
      *          - 얻기는 사각 전체가 비었거나 내 것일 때만 된다. 반쯤 얻는 일은 없다.
      *          - 막힌 셀(`bBlocking`)은 다른 키트의 길찾기가 피한다. `getRevision` 이 바뀌면 다시 읽어야 한다.
      */
@@ -110,12 +110,12 @@ namespace sw
         int2          _origin{};
         uint16        _owner{ LandRegistry::kNoOwner };
 
-        /** @brief 땅에 바인딩합니다. @p pLand 가 nullptr 이면 해제하며, 이미 차지한 셀은 그대로 둡니다. 주인 이름은 키트 이름입니다. */
-        void bind( LandRegistry* pLand, const int2& origin, const hashed_string& ownerName )
+        /** @brief 땅에 바인딩합니다. 이미 차지한 셀은 그대로 둡니다. 주인 이름은 키트 이름입니다(단독으로 돌 키트는 부르지 않는다). */
+        void bind( LandRegistry& land, const int2& origin, const hashed_string& ownerName )
         {
-            _pLand  = pLand;
+            _pLand  = &land;
             _origin = origin;
-            _owner  = pLand != nullptr ? pLand->registerOwner( ownerName ) : LandRegistry::kNoOwner;
+            _owner  = land.registerOwner( ownerName );
         }
         bool isBound() const { return _pLand != nullptr && _owner != LandRegistry::kNoOwner; }
         /** @brief 키트 셀 사각(양 끝 포함)을 차지합니다. 바인딩하지 않았으면 true 입니다. */

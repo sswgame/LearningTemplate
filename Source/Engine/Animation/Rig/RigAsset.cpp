@@ -12,9 +12,10 @@
 
 #include "Engine/Animation/Rig/RigBuiltinNodes.h"
 #include "Engine/Animation/Rig/RigJiggleNode.h"
+#include "Engine/Asset/Cache/SharedAssetCacheDefinition.h"
 #include "Engine/Content/AssetIO.h"
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
 #include "Engine/Serialization/Inherit/DataInheritanceSchemaRegistry.h"
 #include "Engine/Serialization/Inherit/ResourceComposer.h"
@@ -69,7 +70,7 @@ namespace sw
         (void)RigNodeLibrary::registerEngineNodes( *this ); // 빈 표의 엔진 이름이다 — 겹치면 레지스트리가 오류로 알린다
     }
 
-    SW_ENGINE_SERVICE_SUBSYSTEM( RigNodeRegistry, GameVisible, Process, Services, (), SW_ENGINE_DEFAULT_FACTORY( RigNodeRegistry ) );
+    SW_ENGINE_SUBSYSTEM_WITH_SLOT( RigNodeRegistry, GameVisible, Process, Shared, (), SW_ENGINE_DEFAULT_FACTORY( RigNodeRegistry ) );
 
     bool RigNodeRegistry::registerNode( const hashed_string& typeName, RigNodeFactory factory )
     {
@@ -299,4 +300,9 @@ namespace sw
         _listNode.push_back( std::move( node ) );
         return true;
     }
+} // namespace sw
+
+namespace sw
+{
+    SW_SHARED_ASSET_CACHE( RigAsset, RigAsset, RigAsset::kAssetType.withLoader( AssetTypeLoader::of<RigAsset>( MemoryTag::Animation ) ) );
 } // namespace sw

@@ -56,7 +56,7 @@ namespace sw
 {
     /**
      * @class GlyphCache
-     * @brief 글리프 캐시입니다. `FontService` 이 하나 듭니다(`getGlyphCache()`).
+     * @brief 글리프 캐시입니다. `FontSubsystem` 이 하나 듭니다(`getGlyphCache()`).
      */
     class SW_API GlyphCache
     {
@@ -68,7 +68,7 @@ namespace sw
         GlyphCache& operator=( const GlyphCache& ) = delete;
 
         /**
-         * @brief 프레임 시계를 하나 올립니다. 엔진이 게임 프레임마다 정확히 한 번 부릅니다(`Engine::updateFrameServices`).
+         * @brief 프레임 시계를 하나 올립니다. 엔진이 게임 프레임마다 정확히 한 번 부릅니다(`Engine::updateFrameSubsystems`).
          * @details 래스터화 예산과 아틀라스 페이지 사용 표시가 쓰는 프레임 번호의 유일한 출처다. 프로파일러의 프레임 수는 프로파일러가 꺼지면 늘 0 이라
          *          예산이 되살아나지 않아 새 글리프가 영영 안 만들어졌다 — 켜고 끄는 시계에서 번호를 가져오지 않는다.
          *          지난 프레임에 아틀라스가 찼으면 여기서 압축한다(파일 머리 참고).
@@ -107,7 +107,7 @@ namespace sw
 
     private:
         /** @brief 테이블 키는 (면 << 32) | 글리프입니다. */
-        static uint64 makeKey( FontFaceID face, uint32 glyphIndex ) { return ( static_cast<uint64>( face ) << 32 ) | glyphIndex; }
+        static uint64 makeKey( FontFaceID face, uint32 glyphIndex ) { return ( static_cast<uint64>( face.getValue() ) << 32 ) | glyphIndex; }
         /** @brief 표에 없는 글리프를 래스터화해 아틀라스에 올리고 표에 넣습니다. 자리가 없으면 압축을 요청하고 `Deferred` 입니다. */
         [[nodiscard]] GlyphLookup rasterizeAndAdd( FontFaceID face, uint32 glyphIndex, uint64 frameIndex );
         /** @brief 영역을 잡고, 자리가 없으면 글리프가 모두 최근이 아닌 가장 오래된 페이지를 통째로 비워 자리를 냅니다. 그런 페이지가 없으면 false 입니다. */

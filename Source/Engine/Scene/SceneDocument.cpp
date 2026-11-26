@@ -12,7 +12,7 @@
 #include "Engine/Asset/AssetLoadProfiler.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetPaths.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Object/Prefab/PrefabOverrides.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
@@ -157,7 +157,7 @@ namespace sw
 
             /**
              * @brief 엔티티 목록을 읽습니다(`writeEntities` 의 짝). 실패하면 오류를 남기고 false 입니다.
-             * @details **파일이 말한 개수를 그대로 잡아 두지 않는다.** 남은 바이트를 엔티티 최소 크기로 나눈 것보다 많은 엔티티는 있을 수 없다 —
+             * @details 파일이 말한 개수를 그대로 잡아 두지 않는다. 남은 바이트를 엔티티 최소 크기로 나눈 것보다 많은 엔티티는 있을 수 없다 —
              *          손상된 씬 하나가 수백 기가짜리 `reserve` 가 되는 것을 여기서 막는다.
              */
             [[nodiscard]] static bool readEntities( Archive& arch, vector<SceneDocument::SceneObjectNode>& outListNode, string_view absPath )
@@ -529,7 +529,7 @@ namespace sw
         XMLDocument xmlDoc;
         if ( buildXML( xmlDoc ) == false )
             return false;
-        if ( FileUtil::ensureParentDirectoryExists( absPath ) == false || xmlDoc.saveCompleteToFile( absPath ) == false )
+        if ( xmlDoc.saveCompleteToFile( absPath ) == false )
         {
             SW_LOG_ERROR_ID( "SceneDocument.FailedWrite", "Failed to write: %#", absPath.str() );
             return false;
@@ -772,7 +772,7 @@ namespace sw
         file.writeBytes( arch.getData(), arch.getSize() );
         file.writeBytes( content.getData(), content.getSize() );
 
-        const bool bOk = FileUtil::ensureParentDirectoryExists( absPath ) && file.saveToFile( absPath );
+        const bool bOk = file.saveToFile( absPath );
         if ( bOk )
             SW_LOG_INFO_ID( "SceneDocument.SavedBinaryEntitiesStreaming", "Saved binary '%#' (%# entities, %# streaming cells) -> %#", _name, static_cast<uint32>( computeTotalEntityCount() ),
                             static_cast<uint32>( _listStreamingCell.size() ), absPath.str() );

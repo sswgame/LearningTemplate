@@ -14,8 +14,8 @@
 #include "Engine/Config/GameAutoplay.h"
 #include "Engine/Config/IGameAutoplayQuery.h"
 #include "Engine/Console/DevCommandRegistry.h"
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 
 namespace sw
 {
@@ -80,7 +80,7 @@ namespace sw
         GameAutoplayQuery _query;
     };
 
-    SW_ENGINE_SUBSYSTEM( GameAutoplaySubsystem, Process, Services, (), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
+    SW_ENGINE_SUBSYSTEM( GameAutoplaySubsystem, Process, Shared, (), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
     {
         (void)build;
         GameAutoplaySubsystem& subsystem = scope.emplaceSubsystem<GameAutoplaySubsystem>();

@@ -15,7 +15,7 @@
 #include "Editor/Common/Workspace/EditorExtensionSubsystems.h"
 #include "Editor/Common/Workspace/EditorFrameStep.h"
 #include "Editor/Common/Workspace/EditorNotificationManager.h"
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 #include "Editor/Common/Workspace/EditorWindowTitle.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/HotReload/AssetHotReload.h"
@@ -133,7 +133,7 @@ namespace sw::editor
                 SW_EDITOR_PROFILE_SCOPE( "GT.Editor.step.commands" );
                 // 대화상자는 별도 스레드가 띄우고 결과만 큐에 담는다 — 여기(메인 스레드)서 넘긴다.
                 FileDialog::pollResults();
-                context.getSubsystem<EditorInputActions>().processFrame( editor::getSubsystem<GameTimeScale>().getUnscaledDeltaTime() );
+                context.getSubsystem<EditorInputActions>().processFrame( editor::getSubsystem<GameTimeScale>().getUnscaledDeltaTime().count() );
                 EditorMenuBar::processOpenPanelRequests();
                 EditorMenuBar::processSceneSession();
             }

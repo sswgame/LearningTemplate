@@ -4,15 +4,50 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Editor/Common/Config/EditorIconName.h"
 #include "Editor/Common/EditorExtensionRegistry.h"
-#include "Editor/Viewport/EditorVisualizerStats.h"
 #include "Editor/Viewport/Model/EditorVisualizerToggles.h"
 
 struct ImDrawList;
+
+// 뷰포트 시각화가 마지막으로 그린 양입니다. 뷰포트(`EditorViewportClient`)가 값으로 들고, 에디터 자체 테스트와 시나리오 감시 값이 읽습니다. 예전에는 시각화마다 모듈 지역 단일체(`static T& get()`)에 적었다. 그 모양은 뷰포트가 둘이면 서로의 값을 덮고, 뷰포트가 없어도 값이 남는다. 그래서 값은 뷰포트가 들고 시각화는 그리기 인자(`EditorViewportVisualizerArgs::_pStats`)로 받아 적는다.
+namespace sw::editor
+{
+    /**
+     * @brief `debug_draw` 시각화가 마지막으로 그린 양입니다. 에디터 자체 테스트(`sceneView.debugDraw`)가 그려졌는지 확인할 때 읽습니다.
+     * @details 그린 프레임 번호(ImGui 프레임)를 함께 기록한다.
+     */
+    struct EditorDebugDrawStats
+    {
+        uint32          _segmentCount{ 0 };
+        uint32          _textCount{ 0 };
+        optional<int32> _frame; ///< 마지막으로 그린 ImGui 프레임(그린 적 없으면 비어 있다)
+    };
+} // namespace sw::editor
+
+namespace sw::editor
+{
+    /** @brief 물리 셰이프 · 내비메시 시각화가 지난 프레임에 그린 선분 수입니다. 시나리오 감시 값(`Editor.PhysicsShapeSegments` · `Editor.NavMeshSegments`)이 읽습니다. */
+    struct EditorShapeVisualizerStats
+    {
+        uint32 _physicsSegmentCount{ 0 };
+        uint32 _navMeshSegmentCount{ 0 };
+    };
+} // namespace sw::editor
+
+namespace sw::editor
+{
+    /** @brief 뷰포트 하나의 시각화 통계 묶음입니다. */
+    struct EditorVisualizerStats
+    {
+        EditorDebugDrawStats       _debugDraw{};
+        EditorShapeVisualizerStats _shape{};
+    };
+} // namespace sw::editor
 
 namespace sw
 {
@@ -45,7 +80,7 @@ namespace sw::editor
         const vector<BoxCollider2DComponent*>* _pListCollider{ nullptr };
         /** @brief 이번 프레임의 디버그 도형 큐입니다(`DebugDrawQueue` 엔진 서비스). 없으면 nullptr 입니다. */
         const DebugDrawQueue* _pDebugDrawQueue{ nullptr };
-        /** @brief 이 프레임의 씬 오브젝트 매니저입니다. 씬 서비스(내비게이션)를 읽는 시각화가 씁니다. 활성 씬이 없으면 nullptr 입니다. */
+        /** @brief 이 프레임의 씬 오브젝트 매니저입니다. 씬 서브시스템(내비게이션)을 읽는 시각화가 씁니다. 활성 씬이 없으면 nullptr 입니다. */
         GameObjectManager* _pObjectManager{ nullptr };
         /** @brief 변환 기즈모를 끌고 있으면 true 입니다. 콜라이더 손잡이는 이때 끌기를 시작하지 않는다. */
         bool _bGizmoDragging{ false };
@@ -132,7 +167,7 @@ namespace sw::editor
 // pToggleLabel · pTooltip 은 현지화 키다(`SW_LOCKEYREF( "EdVisualizer", "..." )`) — 툴바가 그릴 때 지금 언어로 푼다.
 #define SW_EDITOR_VISUALIZER_GATHER( name, pID, order, pIcon, pToggleLabel, pTooltip, bDefaultOn, pGather ) SW_EDITOR_REGISTER( ::sw::editor::EditorVisualizerRegistration, Visualizer_##name, { pID, order }, pIcon, pToggleLabel, pTooltip, bDefaultOn, nullptr, pGather )
 /**
- * @brief 화면 도구(`_pTool` — 값을 그리고 마우스를 명령으로 낸다)가 있는 시각화를 등록합니다. **MVVM View 파일에서만** 컴파일된다(위 주석). 앞 인자는
+ * @brief 화면 도구(`_pTool` — 값을 그리고 마우스를 명령으로 낸다)가 있는 시각화를 등록합니다. MVVM View 파일에서만 컴파일된다(위 주석). 앞 인자는
  *        `SW_EDITOR_VISUALIZER_GATHER` 와 같고, @p pGather 는 모으기가 없으면 nullptr 입니다(Model 의 모으기 함수는 그 Model 헤더가 선언한다).
  */
 #define SW_EDITOR_VISUALIZER_TOOL( name, pID, order, pIcon, pToggleLabel, pTooltip, bDefaultOn, pTool, pGather )                                                \

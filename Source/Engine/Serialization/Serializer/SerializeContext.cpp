@@ -8,13 +8,13 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/PackedTypes.h"
 #include "Core/Math/VectorMath.h"
-#include "Core/Name/TagID.h"
 #include "Core/Serialization/ByteStream.h"
+#include "Core/String/Name/TagID.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Foundation/ComponentHandle.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Reflection/ReflectedAny.h"
 #include "Engine/Reflection/ReflectedValue.h"
@@ -22,6 +22,7 @@
 #include "Engine/Serialization/Serializer/AssetRefBase.h"
 #include "Engine/Serialization/Serializer/CatalogKey.h"
 #include "Engine/Serialization/Serializer/DataPath.h"
+#include "Engine/Serialization/Serializer/SecretValue.h"
 
 #include <cmath>
 
@@ -618,7 +619,7 @@ namespace sw
 
         SerializeContext derived{ purpose };
         derived._pHandlerFallback = &defaultContext;
-        // 표만 빌리고 **설정은 물려받는다**(`= getDefault()` 와 같은 동작).
+        // 표만 빌리고 설정은 물려받는다(`= getDefault()` 와 같은 동작).
         derived.setSkipUnknownProperties( defaultContext.shouldSkipUnknownProperties() );
         derived.setSkipUnreadableProperties( defaultContext.shouldSkipUnreadableProperties() );
         return derived;
@@ -685,6 +686,7 @@ namespace sw
         DataPath::registerSerializeHandler( context );
         AssetRefBase::registerSerializeHandler( context );
         CatalogKeyBase::registerSerializeHandler( context );
+        SecretValueUtil::registerSerializeHandler( context );
         SerializeContextInternal::registerHandleTextHandlers( context );
 
         SerializeContextInternal::registerFloatVectorTextHandlers( context );

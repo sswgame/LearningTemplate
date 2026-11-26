@@ -14,7 +14,6 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
-#include "Editor/Common/Asset/ModelImport/ModelImportJSONUtil.h"
 #include "Editor/Common/Asset/ModelImport/ModelImportUtil.h"
 #include "Editor/Common/Asset/ModelImport/ModelImporter.h"
 
@@ -26,6 +25,30 @@
 
 namespace sw::editor
 {
+    namespace
+    {
+        struct ModelImportAnimationInternal
+        {
+            /** @brief @p count 개의 숫자 배열을 읽습니다. 배열이 아니거나 길이나 원소 종류가 다르면 false 를 반환합니다. */
+            [[nodiscard]] static bool readFloats( const JSONValue& value, float32* pOutValue, uint32 count )
+            {
+                if ( value.isArray() == false || value.size() != count )
+                    return false;
+                for ( uint32 index = 0; index < count; ++index )
+                {
+                    const JSONValue element = value.at( index );
+                    if ( element.isNumber() == false )
+                        return false;
+                    const optional<float32> number = element.read<float32>();
+                    if ( number.has_value() == false )
+                        return false;
+                    pOutValue[index] = *number;
+                }
+                return true;
+            }
+        };
+    } // namespace
+
     BoneTransform ModelImportAnimation::readNodeLocal( const cgltf_node& node )
     {
         BoneTransform transform{};
@@ -314,7 +337,7 @@ namespace sw::editor
                 for ( size_t keyIndex = 0; keys.isArray() && keyIndex < keys.size(); ++keyIndex )
                 {
                     float32 arrKey[2]{};
-                    if ( ModelImportJSONUtil::readFloats( keys.at( keyIndex ), arrKey, 2 ) == false )
+                    if ( ModelImportAnimationInternal::readFloats( keys.at( keyIndex ), arrKey, 2 ) == false )
                     {
                         SW_LOG_ERROR_ID( "ModelImporter.ClipDataCurveKeys", "Clip data '%#': curve '%#' keys must be [time, value] pairs", clipDataPath.c_str(), curveName.c_str() );
                         return false;

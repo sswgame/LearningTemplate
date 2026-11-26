@@ -1,7 +1,7 @@
 // 화면 배지 집기(`EditorViewportPick::findBillboardAt`) — 반지름 안의 가장 가까운 배지, 밖이면 없음, 겹치면 가까운 쪽.
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Editor/Viewport/Model/EditorViewportPick.h"
 #include "Editor/Viewport/Model/EditorVisualizerDrawList.h"

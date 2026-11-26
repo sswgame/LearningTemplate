@@ -5,8 +5,8 @@
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/Canvas/CanvasPainter.h"
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/UI/Animation/UIAnimationPlayer.h"
@@ -44,7 +44,7 @@ namespace sw
     {
         _pUI                            = &engine::getSubsystem<UISystem>();
         _pThemes                        = &engine::getSubsystem<UIThemeController>();
-        _updateSubscription             = _pUI->onUpdateAfterPaint().add( SW_DELEGATE_METHOD( Delegate<void( float32 )>, &UIOffscreenScreens::update, this ) );
+        _updateSubscription             = _pUI->onUpdateAfterPaint().add( SW_DELEGATE_METHOD( Delegate<void( RealSeconds )>, &UIOffscreenScreens::update, this ) );
         _documentReloadedSubscription   = engine::getSubsystem<UIDocumentCache>().onReloaded().add( SW_DELEGATE_METHOD( UIAssetReloadedDelegate, &UIOffscreenScreens::onDocumentReloaded, this ) );
         _styleSheetReloadedSubscription = engine::getSubsystem<UIStyleSheetCache>().onReloaded().add( SW_DELEGATE_METHOD( UIAssetReloadedDelegate, &UIOffscreenScreens::onStyleSheetReloaded, this ) );
         _widgetSkinChangedSubscription  = engine::getSubsystem<UIWidgetSkinService>().onSkinChanged().add( SW_DELEGATE_METHOD( Delegate<void()>, &UIOffscreenScreens::onWidgetSkinChanged, this ) );
@@ -183,11 +183,11 @@ namespace sw
         }
     }
 
-    void UIOffscreenScreens::update( float32 deltaSeconds )
+    void UIOffscreenScreens::update( RealSeconds unscaledDeltaTime )
     {
         if ( _listOffscreen.empty() )
             return;
-        updateAnimations( deltaSeconds );
+        updateAnimations( unscaledDeltaTime.count() );
         paintScreens( _pUI->makeLayoutContext(), _pUI->makePaintContext() );
     }
 
@@ -305,5 +305,5 @@ namespace sw
 namespace sw
 {
     // 화면 스택 밖 화면(에디터 UI 미리보기) — UI 갱신의 그리기 뒤 칸에 건다.
-    SW_ENGINE_SERVICE_SUBSYSTEM( UIOffscreenScreens, HostOnly, Process, Startup, (), SW_ENGINE_DEFAULT_FACTORY( UIOffscreenScreens ) );
+    SW_ENGINE_SUBSYSTEM_WITH_SLOT( UIOffscreenScreens, HostOnly, Process, Startup, (), SW_ENGINE_DEFAULT_FACTORY( UIOffscreenScreens ) );
 } // namespace sw

@@ -39,24 +39,26 @@
 | 폴더(층) | 두는 것 |
 | --- | --- |
 | `Foundation` · `Compression`(0) | 아래 층이 앞으로 선언만 하는 핸들 · 엔진 상수 · 서비스 창구, 압축 코덱 |
-| `Reflection` · `Serialization` · `Config` · `Content` · `Console` · `Observability` · `Curve` · `CoreServices` · `Behavior`(1) | 이름 그대로(`Behavior` 는 조건식 · 동작 어휘) |
+| `Reflection` · `Serialization` · `Config` · `Content` · `Console` · `Observability` · `Curve` · `CoreSubsystems` · `Behavior`(1) | 이름 그대로(`Behavior` 는 조건식 · 동작 어휘) |
 | `Profiling`(1) | 런타임 계측과 그 포트만 — 보고서를 쓰는 쪽은 DevTools |
 | `Asset` · `Text` · `Localization` · `Presentation`(2) | 에셋 · 글 배치 · 번역, 게임 코드가 UI · 오디오 없이 아는 표현 창구(I*Sink · I*Driver · 뷰모델) |
 | `Window` · `Input`(3), `Graphics`(4), `Object` · `Scene`(5) | |
-| 기능 폴더(6~9) | 컴포넌트는 `<기능>/Component`, 씬 서비스 · 시스템은 `<기능>/Scene`, 데이터는 `<기능>/` 바로 아래. 층: 바닥(6) → 애니메이션(7) → 합성(8) → 알림 디스패치(9). 같은 층끼리 include 하면 린트 `layer-cycles` 가 멈춘다 |
+| 기능 폴더(6~9) | 컴포넌트는 `<기능>/Component`, 씬 서브시스템 · 시스템은 `<기능>/Scene`, 데이터는 `<기능>/` 바로 아래. 층: 바닥(6) → 애니메이션(7) → 합성(8) → 알림 디스패치(9). 같은 층끼리 include 하면 린트 `layer-cycles` 가 멈춘다 |
 | `Renderer`(10) | 렌더 스레드 · 프레임 그래프 · GPU 파이프라인 |
 | `Module` · `Automation`(11) | 엔진 루프 조립 · 핫 리로드 바인딩 · 자동화 창구. 실행기 · 판정 · 녹화는 `DevTools/Client/Automation` |
 
 GameFramework 런타임(`GameFrameworkLayers.toml`): `Foundation`(0) 게임 서비스 창구 · 게임 채널 이벤트(`Service`) · 게임 모드 바탕 · 프리팹 풀(`GameMode`) · 게임 인스턴스 흐름(`Flow`) · 저장(`Save`) · 게임 데이터 · 격자 · 난수 · 조건 어휘 · 트리거 바탕(`Trigger`) · 디버그 HUD 섹션(`Debug`) → `Online`(1) 세션 · HTTP · 보안 제공자 → `World`(2) 땅 · 환경 값 · 월드 질의 → `Character`(3) 조종 · 이동 · AI · 전투 · 카메라 · 길찾기 → `Gameplay`(4) 어빌리티 · 외형 · 인벤토리 · 퀘스트 · 판 상태 · 연출 · 존 · 게임 인스턴스 조립.
 
-CMake(`cmake/` — 폴더 하나에 파일 종류 하나): `Modules/<Build·Environment·Config>/` 는 `include()` 만 하는 모듈, `Toolchain/` 플래그 · 툴체인, `Scripts/` 는 `cmake -P` 전용, `Templates/` 는 `configure_file` 입력, 빌드 정책 데이터는 `Config/Build/`, 테스트 전용 `cmake -P` 드라이버는 `Test/<영역>/Run*.cmake`.
+CMake(`cmake/` — 폴더 하나에 파일 종류 하나): `Modules/<Build·Environment·Config>/` 는 `include()` 만 하는 모듈, `Toolchain/` 플래그 · 툴체인, `Scripts/` 는 `cmake -P` 전용, `Templates/` 는 `configure_file` 입력, 빌드 정책 데이터는 `Config/Build/`, 테스트 전용 `cmake -P` 드라이버는 `IntegrationTests/<영역>/Run*.cmake`.
+
+테스트 폴더는 역할마다 이름 하나: 테스트 틀 `Source/Core/TestFramework/`, 모듈 옆 단위 테스트 `Tests/`(C++ · VS Code 확장 JS), 실행 파일을 띄워 보는 CTest 항목의 등록 · 드라이버 · 픽스처 `IntegrationTests/<영역>/`, 어느 테스트를 돌리고 빼는지의 표 `Config/Rules/TestSelection/`, 파이썬은 관례대로 `Scripts/<묶음>/tests/`. `Test` · `Testing` 폴더는 만들지 않는다(`Testing/` 은 CTest 빌드 출력 이름).
 
 ## 4 그 밖의 규칙
 
 | 규칙 | 까닭 |
 | --- | --- |
 | `Util` · `Utility` · `Helpers` · `Misc` 폴더 금지, `Common` 도 새로 만들지 않는다(`Editor/Common` 만). 린트 `folder-layout` 강제(예외 `Config/Rules/Lint/FolderLayout.json`) | 잡동사니 폴더는 하는 일로 찾을 수 없다 |
-| `<기능>/Component` 에는 `*Component` 만(린트 `folder-layout` 강제) | 씬 서비스 · 질의는 `<기능>/Scene` |
+| `<기능>/Component` 에는 `*Component` 만(린트 `folder-layout` 강제) | 씬 서브시스템 · 질의는 `<기능>/Scene` |
 | 키트 폴더는 평평하게: 장르 키트는 카탈로그 · 규칙 파일(엔진 시계 · 렌더를 모른다)을 키트 바로 아래, 하위 폴더는 `Component/`(디렉터 · 컴포넌트) · `Client/`(뷰 · 입력 · HUD — 따로 짓는 `GF_Client_<X>`, 디렉터의 명령 · 읽기 API 만 쓴다) · `Editor/` · `Tests/` 와 하위 게임만. 뼈대는 `new-kit`. 온라인 키트는 `Runtime/` · `Server/` 바로 아래(뼈대 `new-online-kit`) | 키트는 파일 10 ~ 20 개 |
 | 개발 기능은 `Source/DevTools/`. `Dev/` 폴더는 `Config/Rules/Layers/DevFolders.json` 에 까닭과 함께 적은 자리만(configure 강제) | DevTools 는 GF · 게임 · ModuleManager · App 을 못 본다 — 엔진이 확장점을 내고 DevTools 가 붙는다 |
 | 실행 중 바꾸기 · 핫스왑은 개발, 기동 때 고르기는 제품 | 언리얼도 RHI · 모듈 교체는 재시작 |

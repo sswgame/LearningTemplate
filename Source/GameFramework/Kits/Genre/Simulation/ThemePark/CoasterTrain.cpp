@@ -120,11 +120,12 @@ namespace sw
         return true;
     }
 
-    void CoasterTrain::step( float32 deltaTime )
+    void CoasterTrain::step( GameSeconds frameTime )
     {
+        const float32 deltaTime = frameTime.count();
         if ( _pTrack == nullptr || deltaTime <= 0.0f )
             return;
-        const int32 stepCount = _stepTimer.consume( deltaTime );
+        const int32 stepCount = _stepTimer.consume( frameTime );
         for ( int32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
         {
             integrate( _stepTimer.getStep() );
@@ -147,9 +148,10 @@ namespace sw
         return _pTrack != nullptr ? _pTrack->sample( _distance - static_cast<float32>( carIndex ) * carSpacing ) : CoasterTrackFrame{};
     }
 
-    void CoasterTrain::integrate( float32 deltaTime )
+    void CoasterTrain::integrate( StepSeconds step )
     {
-        const CoasterTrackFrame frame = _pTrack->sample( _distance );
+        const float32           deltaTime = step.count();
+        const CoasterTrackFrame frame     = _pTrack->sample( _distance );
 
         // 경사 방향의 중력 성분과 저항 — 탈것 · 말 · 썰매와 같은 관성 계산(`InertiaSettings`) 한 벌이다. 공기 저항 계수가 이미 질량당 값이라 질량은 1 이다.
         // 멈춰 있고 경사가 마찰을 못 이기면 그대로 선다(정지 마찰).
@@ -239,7 +241,7 @@ namespace sw
         float32 time       = 0.0f;
         while ( time < maxTime )
         {
-            train.step( deltaTime );
+            train.step( GameSeconds{ deltaTime } ); // 분석은 고정 길이로 흘린다
             time += deltaTime;
             const float32           speed  = train.getSpeed();
             const CoasterTrackFrame frame  = train.getFrame();

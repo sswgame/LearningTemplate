@@ -7,8 +7,8 @@
 #include "Core/Foundation/Constants.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/Name/NameHashIndex.h"
 #include "Core/Serialization/BitStream.h"
+#include "Core/String/Name/NameHashIndex.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Console/DebugHUDRegistry.h"
@@ -459,11 +459,11 @@ namespace sw
         }
     }
 
-    int32 GimmickCircuit::update( float32 deltaTime )
+    int32 GimmickCircuit::update( GameSeconds frameTime )
     {
         if ( isBuilt() == false )
             return 0;
-        const int32 stepCount = _timer.consume( deltaTime );
+        const int32 stepCount = _timer.consume( frameTime );
         for ( int32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
         {
             step();
@@ -471,9 +471,9 @@ namespace sw
         return stepCount;
     }
 
-    int32 GimmickCircuit::consumeTime( float32 deltaTime )
+    int32 GimmickCircuit::consumeTime( GameSeconds frameTime )
     {
-        return isBuilt() ? _timer.consume( deltaTime ) : 0;
+        return isBuilt() ? _timer.consume( frameTime ) : 0;
     }
 
     void GimmickCircuit::resetToInitial()

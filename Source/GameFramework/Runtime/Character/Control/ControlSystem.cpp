@@ -19,7 +19,7 @@
 #include "GameFramework/Runtime/Character/Control/Intent/ControlIntent.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Runtime/Foundation/Service/FrameSystemUtil.h"
-#include "GameFramework/Runtime/Foundation/Service/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 
 namespace sw
 {
@@ -164,7 +164,7 @@ namespace sw
         ControlFrameContext context{};
         context._pInput        = findInputManager();
         context._pInputCapture = findInputCapture();
-        context._deltaTime     = deltaTime;
+        context._deltaTime     = GameSeconds{ deltaTime };
         context._tick          = _tick;
         context._viewTick      = _viewTick;
 

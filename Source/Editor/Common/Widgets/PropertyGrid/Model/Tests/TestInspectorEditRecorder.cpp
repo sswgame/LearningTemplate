@@ -1,9 +1,8 @@
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Editor/Common/Widgets/PropertyGrid/Model/InspectorEditRecorder.h"
-#include "Editor/Common/Widgets/PropertyGrid/Model/PropertyEditStep.h"
 
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"

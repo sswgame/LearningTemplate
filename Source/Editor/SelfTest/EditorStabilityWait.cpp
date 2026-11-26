@@ -9,7 +9,7 @@
 #include "DevTools/Client/Automation/Scenario/AutomationEnvironmentSteps.h"
 
 #include "Editor/Common/GUI/Panel/EditorDockLayout.h"
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"

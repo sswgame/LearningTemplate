@@ -117,11 +117,11 @@ namespace sw
         return _commander._respawn.initialize( respawnRules ) && bComplete; // 거절한 까닭은 부활 흐름이 남긴다
     }
 
-    void ConquestWorld::update( float32 deltaTime )
+    void ConquestWorld::update( GameSeconds frameTime )
     {
         if ( _pCatalog == nullptr )
             return;
-        const int32 stepCount = _timer.consume( deltaTime );
+        const int32 stepCount = _timer.consume( frameTime );
         for ( int32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
         {
             step( _timer.getStep() );
@@ -510,15 +510,16 @@ namespace sw
         return squadSize;
     }
 
-    void ConquestWorld::step( float32 deltaTime )
+    void ConquestWorld::step( StepSeconds step )
     {
+        const float32 deltaTime = step.count();
         if ( _bVictory == SW_TRUE || _bDefeat == SW_TRUE )
             return;
         _elapsed += deltaTime;
-        stepCommander( deltaTime );
+        stepCommander( step );
         for ( int32 unitIndex = 0; unitIndex < static_cast<int32>( _listUnit.size() ); ++unitIndex )
         {
-            stepUnit( unitIndex, deltaTime );
+            stepUnit( unitIndex, step );
         }
         VectorUtil::removeIf( _listUnit, []( const ConquestUnit& unit )
         { return unit._bAlive == SW_FALSE; } );
@@ -529,9 +530,10 @@ namespace sw
         refreshResult();
     }
 
-    void ConquestWorld::stepCommander( float32 deltaTime )
+    void ConquestWorld::stepCommander( StepSeconds step )
     {
-        const ConquestRules& rules = _pCatalog->getRules();
+        const float32        deltaTime = step.count();
+        const ConquestRules& rules     = _pCatalog->getRules();
         if ( _commander._bAlive == SW_FALSE )
         {
             // 본진은 걸음마다 다시 본다(빼앗기거나 새로 얻는다) — 흐름의 팀 거점 정책이 이 한 지점을 고른다.
@@ -549,7 +551,7 @@ namespace sw
             RespawnContext context;
             context._pSpawnPoints                = &listHome;
             context._team                        = static_cast<int32>( ConquestTeam::Player );
-            const optional<RespawnSpawn> respawn = _commander._respawn.update( deltaTime, context );
+            const optional<RespawnSpawn> respawn = _commander._respawn.update( step, context );
             if ( respawn.has_value() == false )
                 return;
             _commander._bAlive = SW_TRUE;
@@ -564,7 +566,7 @@ namespace sw
             _commander._facing = _commander._moveAxis > 0.0f ? 1.0f : -1.0f;
             _commander._x      = clampMove( ConquestTeam::Player, _commander._x, _commander._x + _commander._moveAxis * rules._commanderSpeed * deltaTime );
         }
-        _commander._attackCooldown.update( deltaTime );
+        _commander._attackCooldown.update( step );
         if ( _commander._attackCooldown.isActive() )
             return;
         const Target target = findNearestTarget( ConquestTeam::Player, _commander._x, rules._commanderRange, true, true );
@@ -575,16 +577,17 @@ namespace sw
         _commander._attackCooldown.restart( rules._commanderAttackInterval ); // 늦은 만큼을 이어받아, 공격 빈도가 걸음 크기에 매이지 않게 한다
     }
 
-    void ConquestWorld::stepUnit( int32 unitIndex, float32 deltaTime )
+    void ConquestWorld::stepUnit( int32 unitIndex, StepSeconds step )
     {
-        ConquestUnit& unit = _listUnit[static_cast<size_t>( unitIndex )];
+        const float32 deltaTime = step.count();
+        ConquestUnit& unit      = _listUnit[static_cast<size_t>( unitIndex )];
         if ( unit._bAlive == SW_FALSE )
             return;
         const ConquestRules&   rules     = _pCatalog->getRules();
         const ConquestUnitDef& def       = *unit._pDef;
         const float32          direction = ConquestWorldInternal::computeDirection( unit._team );
         const float32          stepSize  = def._speed * deltaTime;
-        unit._attackCooldown.update( deltaTime );
+        unit._attackCooldown.update( step );
         const auto moveToward = [&]( float32 goalX )
         {
             const float32 delta = MathUtil::clamp( goalX - unit._x, -stepSize, stepSize );

@@ -1,12 +1,12 @@
 #include "pch.h"
 
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 #include "Core/String/StringBuilder.h"
 
 #include "Engine/Audio/AudioEngine.h"
-#include "Engine/Audio/AudioService.h"
+#include "Engine/Audio/AudioSubsystem.h"
 #include "Engine/Console/DevCommandRegistry.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 
 namespace sw
 {
@@ -22,7 +22,7 @@ namespace sw
             {
                 if ( listArgument.size() != 1 )
                     return false;
-                AudioService* const pAudio = engine::findSubsystem<AudioService>();
+                AudioSubsystem* const pAudio = engine::findSubsystem<AudioSubsystem>();
                 if ( pAudio == nullptr || pAudio->isInitialized() == false )
                 {
                     outReply = "audio.post: no audio service";
@@ -30,7 +30,7 @@ namespace sw
                 }
                 const AudioPlayingID                     playingID = pAudio->getEngine().postEvent( hashed_string( listArgument[0] ) ); // 모르는 이벤트는 엔진이 알린다
                 StringBuilder<constant::buffer::kMax256> replyBuilder;
-                replyBuilder.appendFormat( "audio.post '%#': playing id %#", listArgument[0].c_str(), playingID );
+                replyBuilder.appendFormat( "audio.post '%#': playing id %#", listArgument[0].c_str(), playingID.getValue() );
                 outReply = string( replyBuilder.view() );
                 return true;
             }

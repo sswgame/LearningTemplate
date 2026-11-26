@@ -143,7 +143,7 @@ namespace sw
     {
         if ( io.check( _pCatalog != nullptr ) == false )
             return;
-        // 그룹 수 · 그룹마다 칸 수는 카탈로그(설정)가 정한다 — 저장한 그룹을 읽은 뒤 지금 구성의 같은 자리에 맞춘다(감사 A-6). 줄어 밖에 남은 칸의 장착은 풀린다 —
+        // 그룹 수 · 그룹마다 칸 수는 카탈로그(설정)가 정하므로 저장한 그룹을 읽은 뒤 지금 구성의 같은 자리에 맞춘다(감사 A-6). 줄어 밖에 남은 칸의 장착은 풀린다 —
         // 장착은 가진 스킬 · 변이를 가리키는 선택일 뿐이라 풀어도 잃는 것이 없다(가진 것은 이 상태 밖에 있다). 늘어난 칸은 비어 있다.
         const vector<Group> listLayout = io.isReading() ? _listGroup : vector<Group>{};
         io.reflected( *this );

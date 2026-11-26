@@ -1,6 +1,6 @@
 /**
  * @file CodeGenerator.h
- * @brief 헤더 하나에서 모은 타입 · 열거형으로 .gen.cpp / .gen.h 의 **내용**을 만듭니다(골격은 .tpl, 분기는 CodeEmit).
+ * @brief 헤더 하나에서 모은 타입 · 열거형으로 .gen.cpp / .gen.h 의 내용을 만듭니다(골격은 .tpl, 분기는 CodeEmit).
  * @details 파일에 쓰는 일(내용이 같으면 건너뛰기 · 이름 충돌 검사 · 스탬프)은 `ReflectionPipeline` 이 합니다. 여기는 DTO 를
  *          텍스트로 바꾸기만 하므로 파일 없이 불러 볼 수 있습니다.
  */

@@ -12,7 +12,7 @@
 #include "Editor/Common/GUI/Panel/EditorDocumentPanel.h"
 #include "Editor/Common/GUI/Panel/Model/EditorDocumentOpenUtil.h"
 #include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/HotReload/AssetHotReload.h"
@@ -111,12 +111,12 @@ namespace sw::editor
         }
     }
 
-    void EditorDocumentPanel::collectFilesToSave( vector<AbsolutePath>& outListPath ) const
+    void EditorDocumentPanel::collectFilesToSave( vector<DiskPath>& outListPath ) const
     {
         appendFileToSave( _loadedAssetPath, outListPath );
     }
 
-    void EditorDocumentPanel::appendFileToSave( string_view path, vector<AbsolutePath>& outListPath )
+    void EditorDocumentPanel::appendFileToSave( string_view path, vector<DiskPath>& outListPath )
     {
         if ( path.empty() )
             return;
@@ -125,7 +125,7 @@ namespace sw::editor
             outListPath.push_back( FileUtil::toDiskPath( path ) );
             return;
         }
-        const optional<AbsolutePath> diskPath = editor::getSubsystem<AssetPaths>().toDiskPath( path );
+        const optional<DiskPath> diskPath = editor::getSubsystem<AssetPaths>().toDiskPath( path );
         if ( diskPath.has_value() )
             outListPath.push_back( *diskPath );
     }
@@ -136,8 +136,16 @@ namespace sw::editor
             ensureDocumentLoaded();
     }
 
+    bool EditorDocumentPanel::saveDocument( AssetWriter& writer )
+    {
+        const optional<DiskPath> diskPath = getDocumentDiskPath();
+        const string             text     = captureDocumentText();
+        return diskPath.has_value() && text.empty() == false && writer.writeText( *diskPath, text ) == AssetWriteResult::Written;
+    }
+
     void EditorDocumentPanel::onDocumentSaved()
     {
+        syncDocumentUndoBaseline(); // 저장한 글이 새 기준이다 — 안 그러면 앞 글로 되돌렸을 때 디스크와 달라도 "저장됨" 으로 보인다
         // 저장한 원본이 사본보다 새것이다 — 남기면 다음 기동이 이미 저장한 일을 복구하라고 묻는다(씬 자동 저장의 `onSceneSaved` 와 같다)
         EditorDocumentAutosaveEntry::remove( EditorAutosaveCommands::getSessionFolder(), _loadedAssetPath );
         _lastCopyTextHash       = 0;
@@ -151,7 +159,7 @@ namespace sw::editor
         *_pUndoTarget = nullptr; // Ctrl+Z 의 스택은 패널 id 로 찾으므로 사라질 스택을 풀 일이 없다(`setFocusedPanel`)
     }
 
-    optional<AbsolutePath> EditorDocumentPanel::getDocumentDiskPath() const
+    optional<DiskPath> EditorDocumentPanel::getDocumentDiskPath() const
     {
         if ( _loadedAssetPath.empty() )
             return nullopt;
@@ -368,7 +376,7 @@ namespace sw::editor
     void EditorDocumentPanel::recordDocumentEdit( const DocumentEdit& edit )
     {
         EditorTransaction transaction; // 씬을 바꾸는 기록은 거래 구간 안에서만 한다(`EditorTransaction` 의 기록 함수는 인스턴스 멤버다)
-        // 이 편집이 속한 문서를 적어 둔다 — 되돌리기는 **그 문서가 아직 열려 있을 때만** 적용한다. 주의: `this` 와 바뀐 구간만 잡으면
+        // 이 편집이 속한 문서를 적어 둔다 — 되돌리기는 그 문서가 아직 열려 있을 때만 적용한다. 주의: `this` 와 바뀐 구간만 잡으면
         // 다른 문서로 바꾼 뒤 Ctrl+Z 할 때 앞 문서의 구간을 지금 문서의 텍스트에 붙여, 지금 문서가 깨진 채 dirty 가 되고 저장하면
         // 그대로 쓰인다. (구간 다시 짜기는 길이가 맞지 않아도 메모리를 넘지 않으므로, 막는 곳은 적용하는 쪽 하나면 된다.)
         // 패널은 `this` 가 아니라 표지로 잡는다 — 백엔드 교체는 패널을 다시 만들지만 되돌리기 스택은 남긴다. 사라진 패널의 항목은 건너뛴다.

@@ -6,7 +6,7 @@
 #include "pch.h"
 
 #include "Core/Container/SpanAllocator.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Graphics/RHI/RHIFence.h"
 #include "Engine/Graphics/RHI/Tests/RHIFakeDevice.h"

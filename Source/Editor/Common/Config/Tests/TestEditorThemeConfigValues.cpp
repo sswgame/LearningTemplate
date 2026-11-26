@@ -1,7 +1,7 @@
 // EditorThemeConfig — 고른 테마 찾기, 사용자 덮어쓰기, 환경설정 값과의 왕복. 파일과 ImGui 없이 손으로 만든 벌로 본다.
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Editor/Common/Config/EditorAppearanceConfig.h"
 #include "Editor/Common/Config/EditorThemeConfig.h"

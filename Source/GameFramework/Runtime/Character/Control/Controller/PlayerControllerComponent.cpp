@@ -18,8 +18,8 @@
 #include "GameFramework/Runtime/Character/Control/ControlSystem.h"
 #include "GameFramework/Runtime/Character/Control/Intent/ControlIntent.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
-#include "GameFramework/Runtime/Foundation/Service/GameEventUtil.h"
-#include "GameFramework/Runtime/Foundation/Service/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameEvents.h"
+#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 
 namespace sw
 {
@@ -129,9 +129,9 @@ namespace sw
 
     void PlayerControllerComponent::onPossessed( PawnComponent& pawn )
     {
-        GameObject*        pOwner     = getOwner();
-        GameObjectManager* pManager   = pOwner != nullptr ? pOwner->getMutableManager() : nullptr;
-        GameObject*        pPawnOwner = pawn.getOwner();
+        GameObject*              pOwner     = getOwner();
+        const GameObjectManager* pManager   = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        GameObject*              pPawnOwner = pawn.getOwner();
         if ( pManager == nullptr || pPawnOwner == nullptr )
             return;
         const ControlSystem* pSystem  = ControlSystem::find( *pManager );

@@ -1,18 +1,22 @@
 /**
  * @file TaskNode.h
  * @brief TaskManager 의 내부 노드입니다(태스크 · 스테이지 · 병렬 그룹 · 조인 카운터 · 후속 목록).
- * @details **공개 API 가 아닙니다.** `Core/Task` 안의 구현 파일만 include 합니다. 바깥에서는 `TaskTypes.h` 의 핸들과
- *          `TaskManager.h` 만 봅니다. 스케줄러(`TaskManager.cpp`) · 풀(`TaskNodePool.cpp`) · 핸들 구현(`TaskTypes.cpp`)이
- *          같은 노드를 다루므로, 셋이 공유하는 정의를 여기 둡니다.
+ * @details 공개 API 가 아닙니다. `Core/Task` 안의 구현 파일만 include 합니다. 바깥에서는 `TaskTypes.h` 의 핸들과
+ *          `TaskManager.h` 만 봅니다. 스케줄러(`TaskManager.cpp`) · 풀(`TaskNode.cpp`) · 핸들 구현(`TaskTypes.cpp`)이
+ *          같은 노드와 그 풀(`TaskNodePool` — 프레임이 안정되면 힙을 건드리지 않는다)을 다루므로, 셋이 공유하는 정의를 여기 둡니다.
  */
 #pragma once
+#include "Core/Concurrency/Queue/ConcurrentQueue.h"
 #include "Core/Concurrency/SpinLock.h"
 #include "Core/Concurrency/atomic.h"
+#include "Core/Concurrency/mutex.h"
+#include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Memory/MemoryBlock.h"
 #include "Core/Memory/MemoryTag.h"
 #include "Core/Task/LockFreeObjectPool.h"
 #include "Core/Task/TaskTypes.h"
@@ -65,7 +69,7 @@ namespace sw
 
     /**
      * @struct JoinCounter
-     * @brief 남은 수와 대기자 하나를 **한 워드**에 담은 조인 카운터입니다.
+     * @brief 남은 수와 대기자 하나를 한 워드에 담은 조인 카운터입니다.
      * @details 하위 32비트는 남은 수, 상위 32비트는 대기자 슬롯 + 1(0 이면 없음)입니다. 마지막으로 끝내는 쪽의 CAS 하나가
      *          "0 이 됐는가" 와 "누구를 깨울까" 에 함께 답하고 대기자 슬롯을 비웁니다. 그 뒤로는 이 워드를 다시 건드리지 않습니다. 대기자
      *          등록도 같은 워드의 CAS 라서 "등록했는데 이미 끝났다" 는 경우를 놓치지 않습니다.
@@ -94,7 +98,7 @@ namespace sw
         }
 
         /**
-         * @brief @p count 개를 끝냅니다. 마지막이면 대기자 칸까지 비우고, **이전** 워드를 반환합니다.
+         * @brief @p count 개를 끝냅니다. 마지막이면 대기자 칸까지 비우고, 이전 워드를 반환합니다.
          * @details 반환값이 같은 @p count 로 `isLastFinish` 를 만족하면 이 호출이 마지막이고, `waiterSlotPlusOne` 이 깨울 대기자(+1)입니다.
          */
         uint64 finish( uint32 count )
@@ -145,11 +149,11 @@ namespace sw
     /**
      * @struct ParallelGroup
      * @brief 병렬 for 하나입니다(본문 · 범위 · 다음 청크 카운터 · 청크 조인).
-     * @details 청크마다 태스크 노드를 만들지 않습니다. 큐에는 **티켓** 몇 장(워커 수 이하)만 들어가고, 티켓을 가져간 스레드는
+     * @details 청크마다 태스크 노드를 만들지 않습니다. 큐에는 티켓 몇 장(워커 수 이하)만 들어가고, 티켓을 가져간 스레드는
      *          `_nextChunkStart` 를 올려 가며 남은 청크를 모두 실행합니다. 청크 하나의 비용이 원자 덧셈 하나입니다. 먼저 끝난
      *          스레드가 남은 청크를 이어서 가져가므로 부하 균형이 저절로 맞습니다(Unreal ParallelFor · TBB 와 같은 방식).
      *
-     *          **합류는 청크를 셉니다 — 티켓이 아닙니다.** `_join` 은 아직 끝나지 않은 청크 수이고, 마지막 청크를 끝낸 스레드가 대기자를 깨우고 부모의 의존성을
+     *          합류는 청크를 셉니다 — 티켓이 아닙니다. `_join` 은 아직 끝나지 않은 청크 수이고, 마지막 청크를 끝낸 스레드가 대기자를 깨우고 부모의 의존성을
      *          풉니다. 아무도 집지 않은 티켓은 합류를 늦추지 않습니다. 예전에는 티켓을 세어, 워커가 모두 긴 일을 하는 동안 호출 스레드가 자기 티켓이 큐에서 나올
      *          때까지 앞에 선 남의 일(수 ms)을 대신 돌았습니다(언리얼 `ParallelFor` 도 시작하지 않은 도우미 태스크를 기다리지 않는다).
      *          늦게 나온 티켓은 남은 청크가 없는 것을 보고 참조만 놓으므로 그룹은 풀(바닥나면 힙)에 있고 참조 수(`_refCount`)로 삽니다. 어디로 돌려줄지는
@@ -162,7 +166,7 @@ namespace sw
         /**
          * @brief 청크마다 부를 블록 본문입니다. null 이면 `_indexBody` 를 인덱스마다 부릅니다.
          * @details `runParallel` 은 호출하는 쪽의 델리게이트(호출이 끝날 때까지 살아 있다)를, `emplaceParallelBlock` 은 자기
-         *          사본(`_blockBody`)을 가리킵니다. 그래서 청크 실행의 분기가 블록 · 인덱스 둘뿐입니다. **청크를 가져간 뒤에만** 읽습니다 — 늦은 티켓이
+         *          사본(`_blockBody`)을 가리킵니다. 그래서 청크 실행의 분기가 블록 · 인덱스 둘뿐입니다. 청크를 가져간 뒤에만 읽습니다 — 늦은 티켓이
          *          나올 때는 호출한 쪽의 델리게이트가 이미 없습니다.
          */
         const ParallelBlockDelegate* _pBlockBody{ nullptr };
@@ -197,10 +201,10 @@ namespace sw
 
     /**
      * @brief 스테이지입니다. 태스크 그룹의 완료를 기다리는 단위로, 매니저의 풀에서 오고 침입형 참조 계수로 수명을 관리합니다.
-     * @details 스테이지는 **남은 수만 셉니다.** 태스크를 붙들지 않습니다. 태스크의 수명은 핸들과 큐가 잡은 참조가 정하고,
+     * @details 스테이지는 남은 수만 셉니다. 태스크를 붙들지 않습니다. 태스크의 수명은 핸들과 큐가 잡은 참조가 정하고,
      *          스테이지는 완료 통지가 올 곳일 뿐입니다(태스크 목록을 들지 않으므로 `addTask` 마다 잠금 · 참조 계수 왕복이 없습니다).
      *
-     *          참조는 두 쪽이 잡습니다. 핸들 사본과, **남은 태스크가 있는 동안의 스테이지 자신**입니다(0→1 에서 잡고 1→0 에서
+     *          참조는 두 쪽이 잡습니다. 핸들 사본과, 남은 태스크가 있는 동안의 스테이지 자신입니다(0→1 에서 잡고 1→0 에서
      *          놓습니다). 태스크 노드는 참조를 잡지 않습니다. 노드의 `_parentStage` 는 남은 태스크가 있는 동안만 유효하고,
      *          그동안은 스테이지가 스스로를 잡고 있으므로 안전합니다. 대기는 `_join` 에 적힌 대기자 하나를 마지막 태스크가 직접
      *          깨웁니다. 뮤텍스도 조건 변수도 없습니다.
@@ -242,7 +246,7 @@ namespace sw
         /**
          * @brief 후속을 붙입니다. 이 태스크가 이미 끝나 목록이 닫혔으면 붙이지 않고 false 를 돌려줍니다.
          * @details 닫힘을 모르는 `push_back` 이면 끝나 가는 태스크에 `runBefore` · `whenAll` 로 후속을 붙일 때, 완료 쪽이 이미 목록을
-         *          훑은 뒤라 후속이 영영 풀리지 않거나(유실), 붙이는 쪽이 의존 수를 올리기 전에 완료 쪽이 내려 **너무 일찍** 돕니다.
+         *          훑은 뒤라 후속이 영영 풀리지 않거나(유실), 붙이는 쪽이 의존 수를 올리기 전에 완료 쪽이 내려 너무 일찍 돕니다.
          *          언리얼 `FGraphEvent::AddSubsequent` 도 같은 방식(닫힌 목록 = 이미 끝남)입니다.
          */
         [[nodiscard]] bool tryPushBack( TaskNode* pNode )
@@ -377,7 +381,7 @@ namespace sw
         /**
          * @brief 본문 하나 + 아직 끝나지 않은 자식 수입니다. 0 으로 내리는 쪽(본문이든 마지막 자식이든)이 완료를 처리합니다.
          * @details 주의: "자식 수" 와 "상태 = 자식 대기" 를 따로 두면, 본문이 상태를 적고 자식 수를 읽는 사이에 마지막 자식이 수를 내리고
-         *          상태를 읽어 **둘 다** 완료를 처리할 수 있습니다. 본문 자신을 1 로 세어 두면 카운터 하나로 끝나고 seq_cst 도 필요 없습니다. `TaskHandle::isCompleted` 도 이 값이 0 인지를 봅니다.
+         *          상태를 읽어 둘 다 완료를 처리할 수 있습니다. 본문 자신을 1 로 세어 두면 카운터 하나로 끝나고 seq_cst 도 필요 없습니다. `TaskHandle::isCompleted` 도 이 값이 0 인지를 봅니다.
          */
         atomic<int32> _pendingChildren{ 1 };
         atomic<int32> _refCount{ 1 };
@@ -414,5 +418,98 @@ namespace sw
             copyTaskDebugName( _arrName, name );
 #endif
         }
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @class TaskNodePool
+     * @brief 태스크 노드는 64개 슬랩으로, 스테이지는 소유 목록 + 자유 목록으로, 병렬 그룹은 lock-free 풀로 재사용합니다.
+     * @details 매니저가 소유하지만, 매니저가 사라질 때 핸들이 쥔 노드 · 스테이지가 남아 있으면 그 핸들들의 책임이 됩니다(`detachOwner`).
+     *          그 뒤 놓이는 노드 · 스테이지는 남은 수를 내리고, 마지막 것이 풀을 소멸시킵니다. 참조 수를 세는 비용은 매니저가 사라질 때 한 번뿐입니다.
+     */
+    class TaskNodePool
+    {
+    public:
+        /** @brief @p pOwner 가 소유하는 풀입니다. 노드는 매니저를 이 풀로 찾습니다(`getOwner`). */
+        explicit TaskNodePool( TaskManager* pOwner );
+        /**
+         * @brief 태스크 슬랩을 돌려줍니다. 스테이지는 `_listStageAll` 이 소유하므로 여기서 할 일이 없습니다.
+         * @details 슬랩은 `MemoryBlock` 하나에 원소 64개를 한 번에 잡고 placement new 로 만듭니다. 블록은 형식이 풀지만 원소의 소멸자는
+         *          블록이 모르므로 여기서 먼저 부릅니다.
+         */
+        ~TaskNodePool();
+
+        TaskNodePool( const TaskNodePool& )            = delete;
+        TaskNodePool& operator=( const TaskNodePool& ) = delete;
+
+        /** @brief 태스크 노드를 꺼내 기본 상태로 되돌려 줍니다(소유자 · 이름 · 호출 대상은 부르는 쪽이 채웁니다). */
+        TaskNode* allocate();
+        /** @brief 태스크 노드를 비우고 돌려줍니다(후속 태스크의 참조를 놓고 호출 대상을 파괴합니다). */
+        void deallocate( TaskNode* pNode );
+
+        /** @brief 스테이지 노드를 꺼냅니다. 풀에 남은 것이 없을 때만 새로 만듭니다(늘어난 용량은 그 뒤로도 남습니다). */
+        StageNode* allocateStage();
+        /** @brief 마지막 참조가 놓인 스테이지를 돌려줍니다. */
+        void deallocateStage( StageNode* pStage );
+        /** @brief 강제 정리(`clear`)용입니다. 남은 태스크가 있는 스테이지의 수를 비우고 그 참조를 놓습니다(핸들의 참조는 둔다). 아무것도 돌고 있지 않을 때만 부르십시오. */
+        void resetAllStages();
+
+        /** @brief 병렬 그룹을 꺼냅니다. 풀이 비어 있으면 힙에서 만듭니다. */
+        ParallelGroup* allocateGroup();
+        /** @brief 병렬 그룹을 돌려줍니다. 풀의 주소면 풀로, 아니면 힙으로 돌려줍니다. */
+        void deallocateGroup( ParallelGroup* pGroup );
+
+        /**
+         * @brief 아직 끝나지 않은 태스크 하나의 이름입니다(없으면 빈 문자열, Shipping 은 이름이 없다). 대기 시간 초과 때 원인을 로그에 적는 진단용입니다.
+         * @details 슬랩을 훑어 제출됐고(`_bScheduled`) 본문이 안 끝난(`_pendingChildren` > 0) 이름 있는 노드를 찾는다. 만들기만 하고 제출하지 않은 노드는 잡히지 않는다.
+         *          이름은 노드의 참조를 하나 잡은 뒤(`TaskNode::tryRetain`)에 읽는다 — 참조가 있는 동안 노드는 풀로 돌아가 이름이 지워지거나 새 태스크로 쓰이지 않고,
+         *          제출 뒤에는 이름이 바뀌지 않으므로 이름 읽기에 데이터 레이스가 없다. 오류 경로에서만 부른다.
+         */
+        [[nodiscard]] string describeFirstUnfinished( const StageNode* pStage );
+
+        /** @brief 노드를 낸 매니저입니다. 매니저가 사라졌으면(`detachOwner` 뒤) nullptr 입니다. */
+        TaskManager* getOwner() const { return _pOwner; }
+        /**
+         * @brief 매니저가 사라질 때 부릅니다(`shutdown` 뒤, 아무것도 돌지 않을 때). 매니저를 잊고, 아직 참조가 남은 노드 · 스테이지를 셉니다.
+         * @return 남은 것이 없으면 true — 소유자가 지금 지웁니다. false 면 소유자는 풀을 놓고(지우지 않고), 마지막 참조가 풀을 소멸시킵니다.
+         */
+        [[nodiscard]] bool detachOwner();
+
+        /**
+         * @brief 의존 간선을 거는 일(사이클 검사 + 후속 목록에 붙이기)을 한 번에 하나씩만 하게 하는 잠금입니다.
+         * @details 두 스레드가 `A→B` 와 `B→A` 를 동시에 걸면 각자 검사할 때 상대 간선이 아직 없어 둘 다 통과합니다. 검사와 붙이기를
+         *          같은 잠금 안에 두어야 사이클 검사가 정확합니다. 간선을 거는 일은 드물어(만드는 단계) 경합 비용은 무시할 만합니다.
+         *          풀마다 하나라서 전역 상태가 아니고, 매니저가 사라진 뒤에도(핸들이 노드를 쥔 동안) 풀과 함께 삽니다.
+         *          잠금 안에서는 후속 목록의 스핀락을 한 번에 하나만 잡습니다(그 반대로 이 잠금을 잡는 곳은 없다 — 순서 역전 없음).
+         */
+        mutex& getDependencyMutex() { return _dependencyMutex; }
+
+    private:
+        /** @brief 매니저가 사라진 뒤 노드 · 스테이지 하나가 돌아왔습니다. 마지막이면 풀을 소멸시킵니다. */
+        void returnDetachedReference();
+
+    private:
+        static constexpr uint32 kSlabSize          = 64;
+        static constexpr uint32 kFreeQueueCapacity = 4096; ///< 돌아온 노드를 락 없이 받는 큐의 칸 수. 넘치면 `_listOverflowFree`
+
+        TaskManager*                                   _pOwner; ///< 노드를 낸 매니저. `detachOwner` 뒤 nullptr
+        ConcurrentQueue<TaskNode*, kFreeQueueCapacity> _freeQueue;
+        vector<TaskNode*> _listOverflowFree            SW_GUARDED_BY( _slabMutex );
+        vector<MemoryBlock> _listSlab                  SW_GUARDED_BY( _slabMutex ); ///< 64개 슬랩의 바이트 블록. 소유한다(노드의 소멸은 `~TaskNodePool`)
+        mutex                                          _slabMutex;
+        vector<StageNode*> _listStageFree              SW_GUARDED_BY( _stageMutex ); ///< 돌아온 스테이지. 다음 createStage 가 먼저 꺼내 쓴다. 빌려 쓰는 것이라 소유하지 않는다
+        /**
+         * @brief 지금까지 만든 스테이지 전부입니다. 소유합니다.
+         * @details 소유를 타입으로 적어 풀 소멸자에서 지우기를 빠뜨릴 수 없게 합니다(raw 포인터 목록이면 그 누락은 LeakSanitizer 만
+         *          잡습니다). 꺼내 쓰는 쪽(`_listStageFree`)은 raw 포인터라 할당 경로에 간접 참조가 늘지 않습니다.
+         */
+        vector<unique_ptr<StageNode>> _listStageAll SW_GUARDED_BY( _stageMutex );
+        mutex                                       _stageMutex;
+        ParallelGroupPool                           _groupPool;
+        atomic<uint32>                              _detachedReferenceCount; ///< `detachOwner` 뒤에도 참조가 남은 노드 · 스테이지 수
+        atomic<bool>                                _bDetached;              ///< `detachOwner` 가 남은 참조를 보고 풀을 그것들에 넘겼다
+        mutex                                       _dependencyMutex;        ///< 의존 간선 검사 + 붙이기를 직렬화한다(`getDependencyMutex`)
     };
 } // namespace sw

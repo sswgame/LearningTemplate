@@ -335,11 +335,11 @@ namespace sw
         // 모달 루프 틱 안에서 창을 부수면 그 창에서 도는 OS 모달 루프가 사라진 창을 붙든다 — 부르는 쪽(`App::runFrame`)이 건너뛴다.
         SW_ASSERT( isInModalLoopUpdate() == false );
 
-        // 다시 만들어도 **보이던 창은 보여야 한다**. 빠뜨리면 백엔드 교체 뒤 창이 사라진다.
+        // 다시 만들어도 보이던 창은 보여야 한다. 빠뜨리면 백엔드 교체 뒤 창이 사라진다.
         //
-        // **묻는 것은 화면 상태가 아니라 의도다.** `isVisible()` 은 X11 에서 "창 관리자가 이미 매핑했는가" 를 묻는다.
+        // 묻는 것은 화면 상태가 아니라 의도다. `isVisible()` 은 X11 에서 "창 관리자가 이미 매핑했는가" 를 묻는다.
         // 방금 `showWindow(true)` 한 창도 아직 아니고, 최소화됐거나 다른 워크스페이스에 있어도 아니다. 그 값으로 다시 만들면
-        // **창이 사라진다**(윈도우에서는 `IsWindowVisible` 이 WS_VISIBLE 스타일이라 둘이 같아 리눅스에서만 드러난다.
+        // 창이 사라진다(윈도우에서는 `IsWindowVisible` 이 WS_VISIBLE 스타일이라 둘이 같아 리눅스에서만 드러난다.
         // `WindowTest.RecreateKeepsVisibilityAndSize` 참고).
         const bool bWasVisible = isVisibleRequested();
         captureRestorePosition();

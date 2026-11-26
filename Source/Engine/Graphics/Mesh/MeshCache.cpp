@@ -15,7 +15,7 @@
 #include "Engine/Asset/Cache/BuiltInAssetCache.h"
 #include "Engine/Asset/Cache/WeakInternTable.h"
 #include "Engine/Content/AssetRegistry.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/Mesh/IMeshDerivedCache.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
@@ -126,7 +126,7 @@ namespace sw
                 bLoaded = createFromData( key, std::move( data ), loadScope );
         }
 
-        // 결과가 캐시에 든 **뒤에** 진행 중 표에서 뺀다 — 그 사이에 온 요청은 진행 중 로드 작업이나 캐시 둘 중 하나를 반드시 본다.
+        // 결과가 캐시에 든 뒤에 진행 중 표에서 뺀다 — 그 사이에 온 요청은 진행 중 로드 작업이나 캐시 둘 중 하나를 반드시 본다.
         {
             MeshCacheInternal::InFlightTable& inFlight = MeshCacheInternal::getState()._inFlight;
             ScopedLock<mutex>                 lock{ inFlight._mutex };
@@ -250,7 +250,7 @@ namespace sw
 
     void MeshCache::clear()
     {
-        // 자기 상태를 비운다(매니저 종료 때도 불려 서비스 칸을 거치지 않는다). 다시 읽으면 다시 알리도록 경고 기록도 잊는다.
+        // 자기 상태를 비운다(매니저 종료 때도 불려 서브시스템 칸을 거치지 않는다). 다시 읽으면 다시 알리도록 경고 기록도 잊는다.
         _pState->_sharedTable.clear();
         _pState->_warned.clear();
         MeshCacheInternal::getStats().recordClear();

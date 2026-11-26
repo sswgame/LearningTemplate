@@ -5,9 +5,9 @@ Scripts/generate/cmake_constants.py
 
 `Scripts/common/project_constants.py` 의 상수를 CMake 가 그대로 읽는 `set(SW_...)` 목록으로 찍습니다.
 
-**목록을 여기서 들지 않는다.** `set(SW_...)` 줄을 손으로 적으면 CMake 변수 이름과 파이썬 상수 이름을 **두 번**
+목록을 여기서 들지 않는다. `set(SW_...)` 줄을 손으로 적으면 CMake 변수 이름과 파이썬 상수 이름을 두 번
 철자하게 되고, 어느 상수가 왜 빠졌는지 알 수 없게 된다(옆 `toolchain_cmake.py` 도 같은 이유로 JSON 키를
-그대로 변환해 찍는다). `project_constants.py` 의 대문자 상수(PEP 8)는 **전부** 나간다. 이름은 `SW_` 만 붙는다:
+그대로 변환해 찍는다). `project_constants.py` 의 대문자 상수(PEP 8)는 전부 나간다. 이름은 `SW_` 만 붙는다:
 
     DIR_CONFIG_ENV        -> SW_DIR_CONFIG_ENV
     FILE_TOOLCHAIN_CONFIG -> SW_FILE_TOOLCHAIN_CONFIG
@@ -15,9 +15,9 @@ Scripts/generate/cmake_constants.py
 
 상수를 하나 더하면 CMake 에서 바로 쓸 수 있다 — 여기 고칠 것이 없다.
 
-**경로를 합치지 않는다.** 같은 이름은 파이썬과 CMake 에서 같은 값(파일 이름)을 뜻해야 한다. 한 상수만 디렉터리를
-붙여 내보내면, 그걸 모르는 자리가 `${SW_DIR_CONFIG_ENV}/${SW_FILE_PARSER_CONFIG}` 로 **디렉터리를 두 번** 붙이고,
-없는 경로를 `if(EXISTS)` 가 조용히 걸러 내 **`parser_config.json` 이 바뀌어도 리플렉션 코드젠이 다시 돌지 않는다.**
+경로를 합치지 않는다. 같은 이름은 파이썬과 CMake 에서 같은 값(파일 이름)을 뜻해야 한다. 한 상수만 디렉터리를
+붙여 내보내면, 그걸 모르는 자리가 `${SW_DIR_CONFIG_ENV}/${SW_FILE_PARSER_CONFIG}` 로 디렉터리를 두 번 붙이고,
+없는 경로를 `if(EXISTS)` 가 조용히 걸러 내 `parser_config.json` 이 바뀌어도 리플렉션 코드젠이 다시 돌지 않는다.
 합치는 일은 합칠 줄 아는 쪽(`ConfigConstants.h.in` · 호출부)이 한다.
 
 Usage:

@@ -80,7 +80,7 @@ target_compile_definitions(sw_global_options INTERFACE "SW_BUILD_CONFIG_NAME=\"$
 target_compile_definitions(sw_global_options INTERFACE "SW_TARGET_NAME=\"${SW_TARGET_TYPE}\"")
 message(STATUS "[BuildConfig] Target type: ${SW_TARGET_TYPE}")
 
-# 이 타깃이 짓지 않는 Engine 폴더(`Source/Engine/` 기준) — 정본은 이 목록 하나다.
+# 이 타깃이 짓지 않는 Engine 폴더(`Source/Engine/` 기준) — 정본은 `project_constants.py` 의 SERVER_EXCLUDED_ENGINE_FOLDERS 하나다.
 # Engine 은 그 폴더의 소스 · 리플렉션 헤더를 뺀다(Source/Engine/CMakeLists.txt). 헤더도 읽지 못한다 — 타깃 게이트 `serverbuild`(`sw_apply_target_layer_guard`)가 막는다.
 # 전용 서버는 렌더러를 짓지 않는다. 엔진 루프 · 호스트는 `IEngineRenderDriver`(Engine/Graphics/View)만 보고, 뷰 요청 값(`FrameViewports`)도 그 폴더에 있다.
 # 리눅스도 Windows 처럼 표시한 것(`SW_API` 등)만 공개한다. 켜 두지 않아 공개 매크로가 아무 일도 하지 않고 모든 모듈이 전부를 공개했다 - 확장 모듈의 링커가 자기 ImGui 사본 대신
@@ -96,10 +96,9 @@ if(SW_TARGET_TYPE STREQUAL "Server")
 	# 전용 서버는 그리지도 화면을 띄우지도 소리를 내지도 않는다 — 렌더러는 `IEngineRenderDriver`, 런타임 UI 는 `IEngineUIDriver`, 오디오는 `IEngineAudioDriver` ·
 	# `ISoundPlayer` · `IVoiceDecoder` 와 게임 코드의 창구(Engine/Presentation · GameFramework 의 Presentation)로만 이어진다. 클라이언트 전용 소스(`Client/`)도
 	# 짓지 않는다(`SW_CLIENT_ONLY_SOURCE_PATTERNS`). 언리얼 데디케이티드 서버는 오디오 모듈을 싣고 장치만 만들지 않는다 — 여기는 코드를 싣지 않는다(기억).
-	list(APPEND SW_EXCLUDED_ENGINE_FOLDERS "Audio" "Renderer" "UI")
 	# 창 · 입력의 리눅스 데스크톱 구현(X11 · Wayland · evdev)도 짓지 않는다 — 리눅스 서버는 `Window/Headless` · `Input/Headless` 가 같은 함수를 정의한다.
 	# Windows 서버는 Win32 구현을 그대로 짓는다(user32 는 모든 Windows Server 에 있다). 클라이언트는 거꾸로 `Headless` 를 짓지 않는다(Source/Engine/CMakeLists.txt).
-	list(APPEND SW_EXCLUDED_ENGINE_FOLDERS "Window/Linux" "Input/Linux")
+	set(SW_EXCLUDED_ENGINE_FOLDERS ${SW_SERVER_EXCLUDED_ENGINE_FOLDERS}) # Scripts/common/project_constants.py — 서버 게이트 생성기와 같은 값
 endif()
 
 # 정적 모듈 구성 — C++ 는 `SW_WITH_DYNAMIC_MODULES`(Core/Foundation/DynamicModules.h) · `build::kStaticModules`(BuildInfo.h)로 읽는다.

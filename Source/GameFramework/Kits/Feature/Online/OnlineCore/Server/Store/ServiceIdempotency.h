@@ -1,6 +1,6 @@
 /**
  * @file ServiceIdempotency.h
- * @brief 멱등 요청 기록입니다. (범위, 멱등 키 128 비트)마다 처음 낸 응답 바이트를 둡니다. 효과와 **같은 트랜잭션**에 넣어, 응답을 잃고 다시 온 요청이 효과를 두 번 내지 않게 합니다.
+ * @brief 멱등 요청 기록입니다. (범위, 멱등 키 128 비트)마다 처음 낸 응답 바이트를 둡니다. 효과와 같은 트랜잭션에 넣어, 응답을 잃고 다시 온 요청이 효과를 두 번 내지 않게 합니다.
  * @details - 기록은 `kAbsentVersion` 조건(SQL 에서는 기본 키 고유 제약)으로 넣는다. 같은 요청이 두 서버에서 동시에 커밋되어도 하나만 이긴다
  *            (다른 쪽은 `Conflict` → 기록을 읽어 그 응답을 돌려준다).
  *          - 범위는 요청을 낸 주체(계정 id 16 진수)다. 키는 클라이언트가 재시도마다 같은 값을 쓰는 멱등 키(상위 · 하위 64 비트)다.
@@ -12,21 +12,27 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
 
 namespace sw
 {
+    class ServiceCommitAttempt;
+
     /** @brief 멱등 기록 도우미입니다. 저장소 스레드(`ServiceStoreJob::run` 안)에서 씁니다. */
     struct SW_KIT_SERVER_API ServiceIdempotency
     {
-        static const hashed_string& getTable();
-        static string               makeKey( string_view scope, uint64 keyHigh, uint64 keyLow );
+        static const ServiceOpaqueTable& getTable();
+        static string                    makeKey( string_view scope, uint64 keyHigh, uint64 keyLow );
         /** @brief 이미 처리한 요청이면 Ok 와 그때의 응답, 처음이면 NotFound 입니다. */
         [[nodiscard]] static ServiceStoreResult findReply( IServiceStoreConnection& connection, string_view scope, uint64 keyHigh, uint64 keyLow, vector<uint8>& outReplyBytes );
-        /** @brief @p transaction 에 기록을 넣습니다("없어야 한다" 조건). */
-        static void addReply( ServiceTransaction& transaction, string_view scope, uint64 keyHigh, uint64 keyLow, vector<uint8> replyBytes );
+        /**
+         * @brief @p inoutTransaction 에 기록을 넣어("없어야 한다" 조건) 커밋하고, 적용됐는지 모르는 실패(`Unavailable`)면 기록을 다시 읽어 가립니다(멱등 규칙 하나).
+         * @return `Ok`(이번이든 앞이든 적용됐다), `Conflict`(시도 함수는 빈 값으로 다시 한다 — 같은 키가 그사이 커밋됐으면 다음 시도의 `findReply` 가 찾는다), 그 밖은 저장소 결과입니다.
+         */
+        [[nodiscard]] static ServiceStoreResult commit( ServiceCommitAttempt& attempt, ServiceTransaction& inoutTransaction, string_view scope, uint64 keyHigh, uint64 keyLow,
+                                                        vector<uint8> replyBytes );
     };
 } // namespace sw

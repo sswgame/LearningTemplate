@@ -1,8 +1,8 @@
-// TextLayoutTest — 줄 바꿈(UAX #14 단순판) · 정렬 · 줄임표 · 측정. 가짜 래스터라이저 — 글자 0.5 em, 공백 0.25 em, 크기 10 이면 글자 5 · 공백 2.5,
+// TextLayoutTest: 줄 바꿈(UAX #14 단순판) · 정렬 · 줄임표 · 측정. 가짜 래스터라이저: 글자 0.5 em, 공백 0.25 em, 크기 10 이면 글자 5 · 공백 2.5,
 // 상승 0.8 · 하강 -0.2 라 줄 높이 10(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Text/Tests/FakeFontRasterizer.h"
 #include "Engine/Text/TextLayout.h"
@@ -15,9 +15,9 @@ namespace
         static constexpr const utf8* kLatinPath = "test/fonts/latin.ttf";
         static constexpr const utf8* kTallPath  = "test/fonts/tall.ttf";
 
-        sw::test::FakeFontServiceFixture _fonts;
-        sw::TextLayoutEngine             _layout;
-        uint8                            _bInitialized : 1;
+        sw::test::FakeFontSubsystemFixture _fonts;
+        sw::TextLayoutEngine               _layout;
+        uint8                              _bInitialized : 1;
 
         TextLayoutTestFixture()
             : _fonts{}
@@ -28,9 +28,9 @@ namespace
             tall.addRange( 0xAC00u, 0xD7A3u );
             tall._ascender = 1.0f;
             _fonts._pRasterizer->setFaceConfig( kTallPath, tall );
-            sw::FontCatalogDef catalog = sw::test::FakeFontServiceFixture::makeCatalog( "Latin" );
-            sw::test::FakeFontServiceFixture::addFamily( catalog, "Latin", kLatinPath );
-            sw::test::FakeFontServiceFixture::addFamily( catalog, "Tall", kTallPath );
+            sw::FontCatalogDef catalog = sw::test::FakeFontSubsystemFixture::makeCatalog( "Latin" );
+            sw::test::FakeFontSubsystemFixture::addFamily( catalog, "Latin", kLatinPath );
+            sw::test::FakeFontSubsystemFixture::addFamily( catalog, "Tall", kTallPath );
             _bInitialized = _fonts.initialize( catalog );
         }
 

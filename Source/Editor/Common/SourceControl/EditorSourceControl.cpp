@@ -8,7 +8,7 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
-#include "Editor/Common/Task/EditorExternalToolJob.h"
+#include "Editor/Common/Job/EditorExternalToolJob.h"
 
 namespace sw::editor
 {
@@ -141,7 +141,7 @@ namespace sw::editor
     void EditorSourceControl::update()
     {
         EditorExternalToolResult result;
-        if ( _running._operation != SourceControlOperation::None && _pJob->take( result ) == EditorTaskPoll::Ready )
+        if ( _running._operation != SourceControlOperation::None && _pJob->take( result ) == EditorJobPoll::Ready )
         {
             const PendingOperation finished = std::move( _running );
             _running                        = PendingOperation{};

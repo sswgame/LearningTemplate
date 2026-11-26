@@ -1,7 +1,7 @@
 /**
  * @file Engine/Renderer/Frame/Packet/RenderPacketScenePreviews.h
  * @brief 호스트가 요청한 미리보기 씬 뷰(에디터 툴 창)마다 미리보기 패킷을 채웁니다(게임 스레드).
- * @details `RenderPacketBuilder` 가 값으로 소유합니다. 씬마다 씬 채우기(`RenderPacketSceneCollector` — 주 화면과 같은 객체)를 따로 둔다(스냅샷 빌더의 재구축 판단 캐시가 씬별이다) —
+ * @details `RenderPacketBuilder` 가 값으로 소유합니다. 씬마다 씬 채우기(`RenderPacketSceneCollector`, 주 화면과 같은 객체)를 따로 둔다(스냅샷 빌더의 재구축 판단 캐시가 씬별이다) —
  *          언리얼 에디터 미리보기 씬(`FPreviewScene`)이 자기 `FScene` 을 갖는 것과 같다.
  */
 #pragma once

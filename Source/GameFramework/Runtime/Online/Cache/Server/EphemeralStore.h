@@ -24,6 +24,49 @@
 
 namespace sw
 {
+    class EphemeralServerBus;
+    class MemoryEphemeralDatabase;
+    class IEphemeralStore;
+    struct EphemeralReply;
+    struct EphemeralStoreTestAccess;
+    struct EphemeralValueUtil;
+    template <typename TRecord>
+    class EphemeralRecordTable;
+
+    /**
+     * @class EphemeralValue
+     * @brief 휘발 저장소에 놓이는 값 하나의 바이트입니다. 손으로 짓지 못한다 — 값 형식(`EphemeralRecordTable` · `EphemeralValueUtil`)이 만들고, 비교 후 쓰기의
+     *        "지금 값" 은 읽은 답(`of`)에서 그대로 가져온다(옛 빌드가 쓴 바이트도 같은 바이트로 견준다).
+     * @details 서비스가 바이트를 손으로 짜고 읽으면 판 · 범위 · 깨진 값 처리가 값마다 달랐다(저장소 레코드 표 `ServiceRecordTable` 과 같은 까닭).
+     */
+    class SW_GF_API EphemeralValue
+    {
+    public:
+        EphemeralValue() = default;
+
+        /** @brief 답이 든 값입니다(비교 후 쓰기의 기대 값으로 쓴다). */
+        static EphemeralValue of( const EphemeralReply& reply );
+
+        bool empty() const { return _bytes.empty(); }
+        bool operator==( const EphemeralValue& other ) const { return _bytes == other._bytes; }
+        bool operator!=( const EphemeralValue& other ) const { return _bytes != other._bytes; }
+
+    private:
+        explicit EphemeralValue( vector<uint8> bytes )
+            : _bytes{ std::move( bytes ) }
+        {
+        }
+
+    private:
+        friend struct EphemeralRequest;
+        friend struct EphemeralValueUtil;
+        template <typename TRecord>
+        friend class EphemeralRecordTable;
+        friend struct EphemeralStoreTestAccess;
+
+        vector<uint8> _bytes{};
+    };
+
     /** @brief 휘발성 저장 호출의 결과 코드입니다. */
     enum class EphemeralResult : uint8
     {
@@ -72,8 +115,6 @@ namespace sw
     /** @brief 요청 하나입니다. `make*` 로 만듭니다. */
     struct SW_GF_API EphemeralRequest
     {
-        vector<uint8>      _value{};
-        vector<uint8>      _expected{};
         string             _key{};
         string             _member{};
         int64              _ttlMs{ 0 };
@@ -85,10 +126,10 @@ namespace sw
         EphemeralOperation _operation{ EphemeralOperation::Get };
 
         static EphemeralRequest makeGet( string_view key );
-        static EphemeralRequest makeSet( string_view key, vector<uint8> valueBytes, int64 ttlMs, EphemeralCondition condition = EphemeralCondition::Always );
+        static EphemeralRequest makeSet( string_view key, EphemeralValue value, int64 ttlMs, EphemeralCondition condition = EphemeralCondition::Always );
         static EphemeralRequest makeErase( string_view key );
-        static EphemeralRequest makeCompareAndSet( string_view key, vector<uint8> expectedBytes, vector<uint8> valueBytes, int64 ttlMs );
-        static EphemeralRequest makeCompareAndErase( string_view key, vector<uint8> expectedBytes );
+        static EphemeralRequest makeCompareAndSet( string_view key, EphemeralValue expected, EphemeralValue value, int64 ttlMs );
+        static EphemeralRequest makeCompareAndErase( string_view key, EphemeralValue expected );
         static EphemeralRequest makeIncrement( string_view key, int64 delta, int64 ttlMsWhenCreated );
         static EphemeralRequest makeExpire( string_view key, int64 ttlMs );
         static EphemeralRequest makeScoreSet( string_view key, string_view member, int64 score );
@@ -96,12 +137,22 @@ namespace sw
         static EphemeralRequest makeScoreRemove( string_view key, string_view member );
         static EphemeralRequest makeScoreRank( string_view key, string_view member );
         static EphemeralRequest makeScoreRange( string_view key, int32 offset, int32 count );
-        static EphemeralRequest makePublish( string_view channel, vector<uint8> messageBytes );
 
         /** @brief 키 규칙, 크기, 점수 범위를 검사합니다. 구현이 맡기기 전에 부르며, 어긋나면 Invalid 답을 냅니다. */
         bool isWellFormed() const;
         /** @brief 키가 키 규칙(`[0-9a-z_.:/-]`, 1..256 B)을 지키면 true 입니다. */
         static bool isValidKey( string_view key );
+
+    private:
+        friend class IEphemeralStore;
+        friend class MemoryEphemeralDatabase; // 메모리 저장소의 표 — 앞(`MemoryEphemeralStore`)이 아닌 별 형식이다
+        friend class EphemeralServerBus;      // 버스 봉투(판 · 보낸 서버 · 순번 + 버스 메시지)를 발행한다 — 버스 메시지는 `ServerBusTopic` 이 형식으로 짓는다
+        friend struct EphemeralStoreTestAccess;
+
+        static EphemeralRequest makePublish( string_view channel, vector<uint8> messageBytes );
+
+        vector<uint8> _value{};
+        vector<uint8> _expected{};
     };
 } // namespace sw
 
@@ -120,13 +171,31 @@ namespace sw
     /** @brief 답 하나입니다. */
     struct EphemeralReply
     {
-        vector<uint8>                 _value{};
         vector<EphemeralScoredMember> _listMember{};
         uint64                        _requestID{ 0 };
         int64                         _integer{ 0 };
         int64                         _score{ 0 };
         EphemeralResult               _result{ EphemeralResult::Ok };
         EphemeralOperation            _operation{ EphemeralOperation::Get };
+
+        /** @brief 앞에 닿지 못한 답입니다(라우터가 내려갔거나 맡기지 못했다). */
+        static EphemeralReply makeUnavailable()
+        {
+            EphemeralReply reply;
+            reply._result = EphemeralResult::Unavailable;
+            return reply;
+        }
+
+    private:
+        friend class EphemeralValue;
+        friend class IEphemeralStore;
+        friend class MemoryEphemeralDatabase; // 메모리 저장소의 표 — 앞(`MemoryEphemeralStore`)이 아닌 별 형식이다
+        friend struct EphemeralValueUtil;
+        template <typename TRecord>
+        friend class EphemeralRecordTable;
+        friend struct EphemeralStoreTestAccess;
+
+        vector<uint8> _value{}; ///< Get 의 값 — 값 형식이 읽는다
     };
 } // namespace sw
 
@@ -135,8 +204,15 @@ namespace sw
     /** @brief 구독한 채널에 온 메시지입니다. */
     struct EphemeralMessage
     {
+        string _channel{};
+
+    private:
+        friend class IEphemeralStore;
+        friend class MemoryEphemeralDatabase; // 메모리 저장소의 표 — 앞(`MemoryEphemeralStore`)이 아닌 별 형식이다
+        friend class EphemeralServerBus;
+        friend struct EphemeralStoreTestAccess;
+
         vector<uint8> _bytes{};
-        string        _channel{};
     };
 } // namespace sw
 
@@ -174,5 +250,12 @@ namespace sw
         virtual int32 getPendingCount() const = 0;
         /** @brief 남은 요청은 Unavailable 로 답하고 구독을 풉니다. 그 뒤에 맡긴 요청도 Unavailable 입니다. */
         virtual void shutdown() = 0;
+
+    protected:
+        // 값 바이트는 저장소 구현(이 형식의 파생)만 옮긴다 — 서비스 코드는 값 형식으로만 짓고 읽는다
+        static const vector<uint8>& accessValue( const EphemeralRequest& request ) { return request._value; }
+        static const vector<uint8>& accessExpected( const EphemeralRequest& request ) { return request._expected; }
+        static vector<uint8>&       accessValue( EphemeralReply& reply ) { return reply._value; }
+        static vector<uint8>&       accessBytes( EphemeralMessage& message ) { return message._bytes; }
     };
 } // namespace sw

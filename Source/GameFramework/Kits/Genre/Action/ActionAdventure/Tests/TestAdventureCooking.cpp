@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "GameFramework/Kits/Genre/Action/ActionAdventure/AdventureCooking.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Crafting.h"
@@ -65,7 +65,7 @@ namespace
             const bool bLoaded = _cooking.loadFromXMLText( kCookXML, "cooking" ) && _items.loadFromXMLText( kCookItemXML, "items" ) && _recipes.loadFromXMLText( kCookRecipeXML, "recipes" );
             if ( bLoaded == false )
                 return false;
-            _crafter.initialize( &_recipes );
+            _crafter.initialize( _recipes );
             return _inventory.initialize( _items, slotCount );
         }
 

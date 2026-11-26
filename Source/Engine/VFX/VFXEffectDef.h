@@ -4,7 +4,7 @@
  * @details 시뮬레이션이 CPU(`VFXCPUSimulation`)든 GPU든 같은 형식을 읽습니다(렌더 입력 형식 `GPUParticle` 도 하나).
  *          유니티 ParticleSystem 의 모듈, 언리얼 Niagara 의 방출기에 해당하는 고정 모듈 묶음입니다. 다형 목록과 그래프는 두지 않습니다.
  *
- *          파일은 리플렉션 구조체로 읽는다(`ReflectedXMLFile` — 모르는 이름 · 읽지 못한 값 · 범위 밖 값은 오류). 필수 칸의 기본값은 **틀린 값**
+ *          파일은 리플렉션 구조체로 읽는다(`ReflectedXMLFile` — 모르는 이름 · 읽지 못한 값 · 범위 밖 값은 오류). 필수 칸의 기본값은 틀린 값
  *          (비어 있거나 0)이라 파일에서 빠지면 `validate` 가 로드를 실패시킨다. 코드에 내장 효과나 기본 텍스처가 없다.
  *          좌표는 시뮬레이션 공간이고, 커브의 시간은 입자 수명의 비율(0..1)이다.
  */
@@ -42,7 +42,7 @@ namespace sw
     enum class VFXRenderMode : uint8
     {
         Billboard, ///< 카메라를 보는 사각형 하나(`particle.hlsl`)
-        Ribbon,    ///< 태어난 순서로 이웃 입자를 잇는 띠 — 꼬리 · 칼 궤적(`particle.hlsl` 의 띠 경로). 텍스처 u 는 길이(수명 비율), v 는 폭이다(언리얼 · 유니티 띠와 같다) — 세로로 그린 줄 텍스처(Kenney `trace_*`)는 한 열만 읽혀 보이지 않는다
+        Ribbon,    ///< 태어난 순서로 이웃 입자를 잇는 띠: 꼬리 · 칼 궤적(`particle.hlsl` 의 띠 경로). 텍스처 u 는 길이(수명 비율), v 는 폭이다(언리얼 · 유니티 띠와 같다). 세로로 그린 줄 텍스처(Kenney `trace_*`)는 한 열만 읽혀 보이지 않는다
         Mesh,      ///< 입자마다 메시 하나(`_mesh` — 메시 인스턴스 배치로 메시 경로를 그대로 탄다)
     };
 
@@ -143,7 +143,7 @@ namespace sw
      * @brief 입자 충돌입니다. 방법(`_method`)이 시뮬레이션 대상을 정합니다.
      * @details `PhysicsRaycast`(CPU): 한 단계에 움직인 선분을 물리 씬(3D)에 쏘아 처음 닿은 면에서 반응한다(언리얼 Niagara 의 CPU 레이 트레이스 충돌).
      *          좌표는 시뮬레이션 공간이고 월드 변환은 부르는 쪽이 한다(`IVFXCollisionScene`).
-     *          `SceneDepth`(GPU): 입자를 주 시점의 **지난 프레임** 깊이(`FrameRenderer` 의 깊이 히스토리)에 투영해, 깊이 면 뒤로 `_depthThickness` 안쪽에
+     *          `SceneDepth`(GPU): 입자를 주 시점의 지난 프레임 깊이(`FrameRenderer` 의 깊이 히스토리)에 투영해, 깊이 면 뒤로 `_depthThickness` 안쪽에
      *          들어가면 닿은 것으로 본다. 법선은 깊이의 이웃 텍셀 기울기다(언리얼 Niagara GPU 깊이 버퍼 충돌). 한계: 화면 밖과 가려진 면(다른 물체 뒤)은
      *          보지 못하고, 깊이 두께보다 빨리 지나가면 뚫고, 한 프레임 늦은 깊이라 빠르게 움직이는 면은 어긋난다. 추가 뷰의 깊이는 쓰지 않는다.
      *          `RainOcclusion`(GPU): 지난 프레임의 비 가림 맵(위에서 내려다본 깊이)보다 아래면 사라진다 — 많은 빗방울을 물리 광선 없이 실내에서 뺀다(Godot GPUParticles 의 높이 맵 충돌).
@@ -185,7 +185,7 @@ namespace sw
      * @details 빛 색은 입자 색(RGB), 세기는 `_intensity` × 입자 알파, 반경은 `_radius` × 방출기 배율이다. `_maxLights` 가 0 이면 빛을 내지 않는다.
      *          CPU 방출기의 빛은 게임 스레드가 씬 라이트 목록에 붙이고(`collectSceneLights`), GPU 방출기의 빛은 시뮬레이션 컴퓨트가 라이트 버퍼의 GPU 구간에
      *          쓴다(`GPULightBuffer` 의 구간, vfx_simulate.hlsl). 둘 다 점광이고 그림자가 없으며 라이트 그리드(`LightGrid`)에 들어간다.
-     *          GPU 방출기의 빛은 **GPU 라이트 그리드 생산자**(`gv_lightCulling=GPU`, Shipping 은 고정)에서만 그려진다 — 다른 생산자에서는 오류를 한 번 남기고 그리지 않는다.
+     *          GPU 방출기의 빛은 GPU 라이트 그리드 생산자(`gv_lightCulling=GPU`, Shipping 은 고정)에서만 그려진다 — 다른 생산자에서는 오류를 한 번 남기고 그리지 않는다.
      *          GPU 구간이 받는 슬롯 합에는 상한(`GPULightBuffer::kMaxGPULight`)이 있다 — 넘는 방출기는 빛이 없고 오류를 한 번 남긴다.
      */
     REFLECT()
@@ -347,7 +347,7 @@ namespace sw
         /** @brief @p target 을 지원하지 않는 첫 모듈 칸의 이름입니다(로그용). 모두 지원하면 nullptr 입니다. */
         [[nodiscard]] const utf8* findModuleExcluding( VFXSimulationTarget target ) const;
         /**
-         * @brief 모든 모듈이 입자의 수명을 `_lifetimeMax` 보다 늘리지 않으면 true 입니다(줄이는 것 — 충돌의 없애기 — 은 된다).
+         * @brief 모든 모듈이 입자의 수명을 `_lifetimeMax` 보다 늘리지 않으면 true 입니다(충돌의 없애기처럼 줄이는 것은 된다).
          * @details GPU 방출기가 입자 수를 모른 채 "끝났다" 를 일정에서 구하는 근거다(`VFXGPUEmitter::isFinished`). 모듈 표의 줄이 선언한다.
          */
         [[nodiscard]] bool isLifetimeBoundedByMax() const;

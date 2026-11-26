@@ -10,8 +10,8 @@
 #include "Core/Task/TaskManager.h"
 #include "Core/Time/MonotonicClock.h"
 
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Profiling/FrameProfiler.h"
 
 #include <algorithm>
@@ -92,7 +92,7 @@ namespace sw
     void AssetLoadProfiler::refreshEnabled()
     {
         // 변수는 게임 스레드(콘솔 · 명령줄 · 이 서비스)만 쓰고 읽는다 — 다른 스레드의 `submit` 은 이 사본을 본다.
-        if ( engine::areEngineServicesBound() )
+        if ( engine::areEngineSubsystemsBound() )
             engine::getSubsystem<TaskManager>().ensureMainThread();
         _bEnabled.store( gv_assetLoadProfile != 0 ? SW_TRUE : SW_FALSE, std::memory_order_relaxed );
     }
@@ -107,7 +107,7 @@ namespace sw
         if ( isEnabled() == false || _bSceneUpdateActive.load( std::memory_order_relaxed ) == SW_FALSE )
             return;
         // 워커의 동기 로드(씬 로드 잡 · 병렬 틱)는 게임 스레드를 멈추지 않는다.
-        if ( engine::areEngineServicesBound() && engine::getSubsystem<TaskManager>().isMainThread() == false )
+        if ( engine::areEngineSubsystemsBound() && engine::getSubsystem<TaskManager>().isMainThread() == false )
             return;
         bool bReport = false;
         {
@@ -133,7 +133,7 @@ namespace sw
             return;
         // 프레임 프로파일러 구간은 잠금 밖에서 더한다(그쪽도 스레드 안전하다). 번호는 종류마다 한 번 받는다.
         EnumArray<AssetLoadPhase, uint32> arrSlot{};
-        const bool                        bFrameProfiler = engine::areEngineServicesBound();
+        const bool                        bFrameProfiler = engine::areEngineSubsystemsBound();
         {
             const ScopedDeferredLog deferredLog;
             ScopedLock<mutex>       lock{ _mutex };
@@ -290,7 +290,7 @@ namespace sw
             return;
         _record._kind       = hashed_string( pKind );
         _record._path       = string( path );
-        const bool bWorker  = engine::areEngineServicesBound() && engine::getSubsystem<TaskManager>().isMainThread() == false;
+        const bool bWorker  = engine::areEngineSubsystemsBound() && engine::getSubsystem<TaskManager>().isMainThread() == false;
         _record._bAsync     = ( bAsync || bWorker ) ? SW_TRUE : SW_FALSE;
         _record._bSucceeded = SW_FALSE;
         _phaseStartNanos    = MonotonicClock::nowNanoseconds();
@@ -319,5 +319,5 @@ namespace sw
 
 namespace sw
 {
-    SW_ENGINE_SERVICE_SUBSYSTEM( AssetLoadProfiler, HostOnly, Process, Services, (), SW_ENGINE_DEFAULT_FACTORY( AssetLoadProfiler ) );
+    SW_ENGINE_SUBSYSTEM_WITH_SLOT( AssetLoadProfiler, HostOnly, Process, Shared, (), SW_ENGINE_DEFAULT_FACTORY( AssetLoadProfiler ) );
 } // namespace sw

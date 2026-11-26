@@ -80,12 +80,12 @@ namespace sw
      *         </Selector>
      *     </BehaviorTree>
      * @endcode
-     * @details **노드 원소와 속성**(원소 이름은 `BehaviorNodeKind` 의 열거자 이름이고 대소문자를 가리지 않는다. 형제 순서가 곧 우선순위다).
+     * @details 노드 원소와 속성(원소 이름은 `BehaviorNodeKind` 의 열거자 이름이고 대소문자를 가리지 않는다. 형제 순서가 곧 우선순위다).
      *          종류마다 받는 속성 · 필수 · 범위는 스키마 구조체(`BehaviorTreeNodeParams.h`)가 정본이고 `BehaviorTreeXML` 이 읽는다 — 아래는 그 요약이다(`compare` · `abort` 값은 열거자 이름 그대로):
      *          - `Selector` (`name`, `reactive`) · `Sequence` (`name`) · `Inverter` · `ForceSuccess` — 자식은 컴포짓이 하나 이상, 데코레이터가 정확히 하나다.
      *          - `Repeat` (`count` 필수, 0 이면 실패할 때까지) · `Cooldown` · `TimeLimit` (`seconds` 필수).
-     *          - `BlackboardCondition` (`test` 필수 — 공통 조건식, `abort` 기본 `None` | `Self` | `LowerPriority` | `Both`) — 데코레이터다.
-     *          - `Action` (`task` 필수 — `ActionRegistry` 에 등록된 동작 이름, 나머지 속성은 그 동작의 칸) · `Condition` (`test` 필수) — 잎이라 자식이 없다.
+     *          - `BlackboardCondition` (`test` 필수, 공통 조건식, `abort` 기본 `None` | `Self` | `LowerPriority` | `Both`): 데코레이터다.
+     *          - `Action` (`task` 필수, `ActionRegistry` 에 등록된 동작 이름, 나머지 속성은 그 동작의 칸) · `Condition` (`test` 필수): 잎이라 자식이 없다.
      *          - `Wait` (`seconds` 필수) · `MoveTo` (`key` 필수, `repathDistance` 기본 0.5) — 잎이다.
      *          - `SubTree` (`tree` 또는 `slot`) — `tree` 는 읽을 때 그 자리에 펼친다(순환은 오류). `slot` 은 쓰는 쪽이 `BehaviorTreeRunner::setSlotTree` 로 채운다.
      *          어느 노드든 `id` · `name` 을 적을 수 있다. 루트의 `_base="<리소스 id>"` 는 부모 트리에서 `id` 가 같은 노드만 고친다(`_op` · `_before` · `_after` — `docs/agents/DataInheritance.md`).

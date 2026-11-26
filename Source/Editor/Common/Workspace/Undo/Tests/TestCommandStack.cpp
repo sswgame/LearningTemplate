@@ -1,10 +1,10 @@
 /**
  * @file TestCommandStack.cpp
- * @brief 되돌리기 스택의 입구 판정(열린 편집 동안 거절 — 감사 E-2)과 한도(명령 수 · 쥔 바이트 — 감사 E-13)를 봅니다.
+ * @brief 되돌리기 스택의 입구 판정(열린 편집 동안 거절, 감사 E-2)과 한도(명령 수 · 쥔 바이트, 감사 E-13)를 봅니다.
  */
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Editor/Common/Workspace/Undo/CommandStack.h"
 #include "Editor/Common/Workspace/Undo/UndoStep.h"

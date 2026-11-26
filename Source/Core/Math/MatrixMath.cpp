@@ -10,7 +10,7 @@ namespace sw
     {
         struct MatrixMathInternal
         {
-            /// 정규화한 축의 길이 제곱은 0(퇴화 — normalize 가 0 벡터를 돌려줌)이거나 1 이다 — 그 사이를 가르는 문턱.
+            /// 정규화한 축의 길이 제곱은 0(퇴화, normalize 가 0 벡터를 돌려줌)이거나 1 이다. 그 사이를 가르는 문턱.
             static constexpr float32 kDegenerateAxisLengthSquared = 0.5f;
             /// `orthogonalize` 가 1 행에 수직인 보조 축을 고를 때, 1 행의 y 가 이보다 크면 위(+Y) 대신 앞(+Z)을 쓴다(나란한 축의 외적을 피한다).
             static constexpr float32 kHelperAxisParallelLimit = 0.9f;
@@ -807,7 +807,7 @@ namespace sw
 
     float4x4 float4x4::invert() const noexcept
     {
-        // 뒤집을 수 없으면 항등 행렬이다(언리얼 FMatrix::Inverse 와 같은 규칙: 행렬식이 **정확히** 0 이거나 수가 아닐 때).
+        // 뒤집을 수 없으면 항등 행렬이다(언리얼 FMatrix::Inverse 와 같은 규칙: 행렬식이 정확히 0 이거나 수가 아닐 때).
         // 주의: |det| < 1e-7 같은 절대 임계값을 쓰면 균일 스케일 0.004 이하의 부모(det 6.4e-8)나 높이 200 인 직교 카메라의
         // 뷰-투영(det 5.6e-8)처럼 멀쩡히 뒤집히는 행렬이 항등 행렬이 된다 — 자식이 재부모화 · 드래그 때 튀고, 마우스 피킹이 틀린다.
         // 행렬식은 스케일의 세제곱으로 줄어서 "작다" 는 기준을 절대값으로 정할 수 없다.

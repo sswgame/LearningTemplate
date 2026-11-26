@@ -52,8 +52,8 @@ namespace sw
             caps._bGPUCulling        = SW_FALSE;
             caps._bGPUMeshMorph      = SW_TRUE; // 구조버퍼 SRV/UAV 만 쓴다. 간접 인자 제약과 무관하다
             caps._bMultiDrawIndirect = SW_TRUE;
-            // **디바이스가 있으면 이 값을 믿지 말 것.** `D3D11RHIDevice::getCapabilities` 가
-            // `D3D11_FEATURE_THREADING` 조회 결과로 이 항목을 덮어 **참이 될 수 있다**. 여기 FALSE 는
+            // 디바이스가 있으면 이 값을 믿지 말 것. `D3D11RHIDevice::getCapabilities` 가
+            // `D3D11_FEATURE_THREADING` 조회 결과로 이 항목을 덮어 참이 될 수 있다. 여기 FALSE 는
             // "드라이버를 모를 때의 보수적 기본값" 이지 "DX11 은 병렬로 기록하지 않는다" 가 아니다.
             // 둘을 혼동하면 병렬 테스트가 DX11 병렬 경로를 건너뛴다.
             caps._bParallelCommandRecording   = SW_FALSE;
@@ -92,7 +92,7 @@ namespace sw
             caps._bNativeBindless = SW_TRUE; // 후보. 런타임은 supportsNativeBindlessSampling()
             caps._bCompute        = SW_TRUE;
             caps._bGPUCulling     = SW_TRUE;
-            // 주의: 백엔드 하나가 다른 이미지를 내면 **쿠킹된 셰이더 산출물이 낡았는지부터 의심할 것**
+            // 주의: 백엔드 하나가 다른 이미지를 내면 쿠킹된 셰이더 산출물이 낡았는지부터 의심할 것
             // (`App.exe --cook-shaders` 로 다시 쿠킹하고 비교한다). Vulkan 의 모프는 DX12, DX11 과 픽셀 수가 같다.
             caps._bGPUMeshMorph      = SW_TRUE;
             caps._bMultiDrawIndirect = SW_TRUE;
@@ -138,7 +138,7 @@ namespace sw
             caps._bCompute        = SW_TRUE;
             caps._bGPUCulling     = SW_TRUE;
             // 주의: GL 드라이버는 early-return 형태의 `MorphPool::computeElement`(DXC 가 OpSwitch(0) 구조로 내는 코드)를
-            // 잘못 컴파일해 풀에서 **한 슬롯 앞 원소**를 읽는다. 셰이더 쪽은 분기 없는 한 식이어야 한다(binding.hlsli 주석).
+            // 잘못 컴파일해 풀에서 한 슬롯 앞 원소를 읽는다. 셰이더 쪽은 분기 없는 한 식이어야 한다(binding.hlsli 주석).
             // 회귀는 RenderPassGPUTest.MorphPoolIdentityMatchesRest 가 잡는다.
             caps._bGPUMeshMorph             = SW_TRUE;
             caps._bMultiDrawIndirect        = SW_TRUE;

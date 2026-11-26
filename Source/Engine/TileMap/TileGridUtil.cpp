@@ -72,7 +72,7 @@ namespace sw
                         break;
                     ++runWidth;
                 }
-                // 아래 행의 같은 위치에 **같은 폭의 줄**이 있을 때만 내려간다(그 줄이 양옆으로 더 이어지면 멈춘다). 바닥 줄 위에 기둥 하나가
+                // 아래 행의 같은 위치에 같은 폭의 줄이 있을 때만 내려간다(그 줄이 양옆으로 더 이어지면 멈춘다). 바닥 줄 위에 기둥 하나가
                 // 서 있으면 기둥이 바닥을 쪼개지 않고 바닥 하나와 기둥 하나가 된다.
                 int32 runHeight = 1;
                 while ( y + runHeight < height && Internal::hasSameRunBelow( listSolid, listUsed, width, x, y + runHeight, runWidth ) )

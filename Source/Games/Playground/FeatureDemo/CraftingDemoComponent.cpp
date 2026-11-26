@@ -108,7 +108,7 @@ namespace sw
     {
         if ( acquireRequired( _recipePath, _pRecipes ) == false )
             return false;
-        _crafter.initialize( _pRecipes.get() );
+        _crafter.initialize( *_pRecipes );
         _level = _startLevel;
         return true;
     }
@@ -141,9 +141,10 @@ namespace sw
         return bCancelled;
     }
 
-    void CraftingDemoComponent::updateGame( float32 deltaTime )
+    void CraftingDemoComponent::updateGame( GameSeconds frameTime )
     {
-        Inventory* pBag = findBag();
+        const float32 deltaTime = frameTime.count();
+        Inventory*    pBag      = findBag();
         if ( pBag == nullptr )
             return;
         vector<hashed_string> listFinished;
@@ -157,7 +158,9 @@ namespace sw
         io.header( CraftingDemoComponentInternal::kStateFormat );
         (void)io.valueOpened( _crafter, [this]( Crafter& crafter )
         {
-            crafter.initialize( _pRecipes.get() );
+            if ( _pRecipes == nullptr )
+                return false; // 조합표 없이 연 상태는 읽지 않는다
+            crafter.initialize( *_pRecipes );
             return true;
         } ); // 실패는 아카이브에 남는다
     }

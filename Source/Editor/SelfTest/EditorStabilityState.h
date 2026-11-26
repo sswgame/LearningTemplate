@@ -1,6 +1,6 @@
 /**
  * @file EditorStabilityState.h
- * @brief `EditorWaitStable` 의 판정입니다 — 정지했나(`AutomationReadiness::ready`), 아직 일이 남았나(진척이 는다), 할 일 없이 화면이 계속 움직이나(진척 없음 — 진동).
+ * @brief `EditorWaitStable` 의 판정입니다. 정지했나(`AutomationReadiness::ready`), 아직 일이 남았나(진척이 는다), 할 일 없이 화면이 계속 움직이나(진척 없음, 진동).
  * @details 단계(`EditorScenarioSteps.cpp`)가 프레임마다 재료(화면이 자리 잡았나 · 할 일이 끝났나)를 넘기고 이 판정을 따른다. 테스트가 갈래를 직접 본다.
  *          시나리오 대기와 같은 형식이다(`AutomationReadiness` 의 진척 수 + `AutomationStallClock`) — 예전에는 따로 센 bool 판정(`_idleMovingFrames`)이라 진척을 보고하지 못했다.
  */

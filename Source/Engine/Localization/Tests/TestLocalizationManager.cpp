@@ -3,12 +3,12 @@
 #include "pch.h"
 
 #include "Core/File/FileUtil.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 #include "Core/String/StringUtil.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/LocalizationDocuments.h"
 #include "Engine/Localization/LocalizationManager.h"
@@ -339,8 +339,8 @@ SW_TEST_CASE_F( LocalizationManagerEngineTest, LocTextMacroLooksUpNamespaceDotKe
 }
 
 /**
- * @brief [LocalizationManagerTest] 언어 코드가 **값으로** 돌아오는지 검증
- * @details `getCurrentLanguage()` 가 `_mutex` 로 지키는 `_currentLanguage` 의 **참조**를 돌려주면, 락은 함수가 끝나며
+ * @brief [LocalizationManagerTest] 언어 코드가 값으로 돌아오는지 검증
+ * @details `getCurrentLanguage()` 가 `_mutex` 로 지키는 `_currentLanguage` 의 참조를 돌려주면, 락은 함수가 끝나며
  *          풀리므로 받아 든 쪽이 그것을 들고 있는 동안 `setCurrentLanguage` 가 길이가 다른 코드를 넣을 때 `string` 이
  *          버퍼를 새로 잡고 참조는 사라진 메모리를 가리킨다.
  */

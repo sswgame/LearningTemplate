@@ -15,11 +15,11 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
-#include "Engine/Object/GameObject/Service/SceneSpatialGrid.h"
+#include "Engine/Object/GameObject/Subsystem/SceneSpatialGrid.h"
 
 #include "GameFramework/Runtime/Character/Combat/TargetFilter.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
-#include "GameFramework/Runtime/Foundation/Service/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilitySystemComponent.h"
 #include "GameFramework/Runtime/Gameplay/Interaction/InteractableComponent.h"
 #include "GameFramework/Runtime/Gameplay/Interaction/InteractionAuthority.h"
@@ -378,7 +378,7 @@ namespace sw
         } );
     }
 
-    void InteractorComponent::updateActiveSession( const GameObjectManager& manager, const InteractionView& viewer, float32 deltaTime, bool bHeld, bool bPressed )
+    void InteractorComponent::updateActiveSession( const GameObjectManager& manager, const InteractionView& viewer, GameSeconds frameTime, bool bHeld, bool bPressed )
     {
         const InteractableComponent* pTarget = manager.resolveComponent( _focusComponent );
         bool                         bKeep   = pTarget != nullptr && pTarget->isActive() && pTarget->getDefinition() != nullptr;
@@ -392,7 +392,7 @@ namespace sw
             bKeep = InteractionView::isInReach( viewer, candidate, distance );
         }
         if ( bKeep )
-            _session.update( deltaTime, bHeld, bPressed );
+            _session.update( frameTime, bHeld, bPressed );
         else
             _session.cancel();
     }

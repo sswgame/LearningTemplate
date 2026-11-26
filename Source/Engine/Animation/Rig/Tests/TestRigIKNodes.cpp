@@ -1,7 +1,7 @@
 #include "pch.h"
 
 #include "Core/Math/MathUtil.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Animation/Rig/RigAsset.h"
 #include "Engine/Animation/Rig/RigInstance.h"
@@ -566,7 +566,7 @@ SW_TEST_CASE_F( RigIKTest, FootPlacementRaisesByTheHeelLift )
     SW_EXPECT_NEAR( position( kFootL )._y, 0.18f, 2.0e-3f );
 }
 
-// 체형이 다리를 1.2 배로 늘이면(허벅지 스케일 — 체형 비율이 거는 길) 디딘 발이 땅 아래로 간다 — 골반을 다리 길이 비만큼 올려 발목이 레퍼런스 높이(0.1)에 선다. 발바닥 틈은 0 이다.
+// 체형이 다리를 1.2 배로 늘이면(허벅지 스케일, 체형 비율이 거는 길) 디딘 발이 땅 아래로 가므로 골반을 다리 길이 비만큼 올려 발목이 레퍼런스 높이(0.1)에 선다. 발바닥 틈은 0 이다.
 SW_TEST_CASE_F( RigIKTest, FootPlacementLiftsThePelvisForLongerLegs )
 {
     SW_REQUIRE_TRUE( load( makeFootPlacement( R"(interp_speed="0")" ) ) );

@@ -5,7 +5,7 @@
  *          (`NavMeshAssetEntry::_clusterGraph`). 런타임은 타일이 오르지 않은 구역도 이 그래프로 지나갈 클러스터 열을 정하고, 오른 구간만 Detour 로 세밀하게 걷습니다
  *          (`NavStreamRoute`). 언리얼 Recast 의 클러스터 링크(`dtNavMesh` cluster · `FindHierarchicalPath`) · World Partition 내비 청크의 자리입니다.
  *
- *          **모양.** 클러스터는 (타일 Z, 타일 X) 순으로 놓이고 간선은 출발 클러스터 순의 묶음(CSR)입니다. 간선은 방향이 있습니다(한 방향 링크).
+ *          모양. 클러스터는 (타일 Z, 타일 X) 순으로 놓이고 간선은 출발 클러스터 순의 묶음(CSR)입니다. 간선은 방향이 있습니다(한 방향 링크).
  *          비용은 두 중심 사이 거리입니다 — 영역 비용 · 막힌 링크는 보지 않는다(세밀 경로가 본다. 막혀 있으면 다가가며 다시 계획한다).
  */
 #pragma once

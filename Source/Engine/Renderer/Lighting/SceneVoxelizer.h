@@ -1,11 +1,11 @@
 /**
  * @file SceneVoxelizer.h
  * @brief 씬의 정적 불투명 메시를 점유 복셀로 칠할 장면(`SceneVoxelScene`)을 모으고, GPU 가 칠할 일(`scene_voxelize.hlsl` 의 입력 행)을 짭니다.
- * @details 실시간 프로브 갱신(R6)이 GPU 에서 광선을 쏠 장면 표현을 만든다. 모으는 것은 프리미티브 레지스트리의 메시 컴포넌트 중 **불투명 · 보이는 · 스킨 없는** 것이다
- *          (스킨 메시와 반투명은 빛을 가리지 않는다 — 한계로 둔다). 칠하기는 GPU 다 — 렌더 프록시의 위치 흐름을 복사한 버퍼와 CPU 인덱스(LOD 0)를 컴퓨트가 읽어 격자의 점유 비트에
+ * @details 실시간 프로브 갱신(R6)이 GPU 에서 광선을 쏠 장면 표현을 만든다. 모으는 것은 프리미티브 레지스트리의 메시 컴포넌트 중 불투명 · 보이는 · 스킨 없는 것이다
+ *          (스킨 메시와 반투명은 빛을 가리지 않는다, 한계로 둔다). 칠하기는 GPU 가 한다. 렌더 프록시의 위치 흐름을 복사한 버퍼와 CPU 인덱스(LOD 0)를 컴퓨트가 읽어 격자의 점유 비트에
  *          원자 OR 로 쓴다. CPU 정점을 읽지 않는다(R-15). 면의 반사율은 메시가 아니라 볼륨 한 값이다(`LightProbeVolumeComponent::getBounceAlbedo` — 베이커와 같은 규칙).
  *
- *          래스터가 아니라 컴퓨트인 까닭: 픽셀 셰이더의 3D UAV 원자 쓰기는 다섯 백엔드에 없다 — WGSL 의 원자 형식은 workgroup 변수와 read_write 저장 **버퍼**뿐이다
+ *          래스터가 아니라 컴퓨트인 까닭: 픽셀 셰이더의 3D UAV 원자 쓰기는 다섯 백엔드에 없다 — WGSL 의 원자 형식은 workgroup 변수와 read_write 저장 버퍼뿐이다
  *          (https://www.w3.org/TR/WGSL/#atomic-types). 구조 버퍼의 원자 연산은 다섯 백엔드 모두의 컴퓨트에 있다(HLSL SM 5 —
  *          https://learn.microsoft.com/windows/win32/direct3dhlsl/interlockedor). 삼각형 토막마다 스레드 하나가 노멀의 가장 큰 축으로 투영한 칸(3 축 투영 — 기하 셰이더 없음)을 돌며
  *          그 칸 기둥에서 평면이 지나는 층만 분리축으로 판정한다 — 보존 래스터 없이 보수적이고, 예전 CPU 복셀화와 같은 칸이 켜진다.
@@ -95,7 +95,7 @@ namespace sw
          */
         [[nodiscard]] static bool updateScene( SceneVoxelScene& inoutScene, const PrimitiveRegistry& primitives, Material* pSceneDefault, const vector<uint32>& listChangedSlot );
         /**
-         * @brief 지난 장면 @p painted 를 칠한 격자를 @p scene 으로 바꾸려면 다시 칠할 **정적 층**의 칸 구간들을 @p outListRange 에 적습니다(바뀐 원천이 덮던 · 덮는 구간).
+         * @brief 지난 장면 @p painted 를 칠한 격자를 @p scene 으로 바꾸려면 다시 칠할 정적 층의 칸 구간들을 @p outListRange 에 적습니다(바뀐 원천이 덮던 · 덮는 구간).
          * @details 격자 모양이나 발광 목록(순위)이 다르거나 구간들의 칸 합이 격자보다 많으면 격자 전체 하나다. 바뀐 것이 없으면 빈 목록이다.
          */
         static void collectDirtyRanges( const SceneVoxelScene& painted, const SceneVoxelScene& scene, vector<SceneVoxelGrid::CellRange>& outListRange );

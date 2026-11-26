@@ -19,9 +19,9 @@
 #include "GameFramework/Kits/Feature/Online/Mailbox/Runtime/MailboxProtocol.h"
 #include "GameFramework/Kits/Feature/Online/Mailbox/Server/MailboxKitConfig.h"
 #include "GameFramework/Kits/Feature/Online/Mailbox/Server/MailboxStoreLogic.h"
-#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Identity/AccountPresenceTracker.h"
-#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Mail/ServiceMailCampaign.h"
-#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Service/OnlineProtocolService.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/AccountPresenceTracker.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/OnlineProtocolService.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/ServiceMailCampaign.h"
 #include "GameFramework/Runtime/Online/Schedule/Server/ServicePeriodicJob.h"
 #include "GameFramework/Runtime/Online/Schedule/Server/ServiceScheduler.h"
 #include "GameFramework/Runtime/Online/Service/Server/OnlineServiceHost.h"
@@ -72,7 +72,7 @@ namespace sw
         MailboxService& operator=( const MailboxService& ) = delete;
 
         /** @brief 저장소가 없으면 false 를 반환합니다. 첫 `tick` 이 캠페인 읽기를 맡깁니다. */
-        [[nodiscard]] bool initialize( ServiceStore* pStore, const MailboxServiceConfig& settings );
+        [[nodiscard]] bool initialize( ServiceStore& store, const MailboxServiceConfig& settings );
         /** @brief 맡긴 작업(요청, 만료 정리, 캠페인)이 끝날 때까지 저장소를 회수합니다. 상한은 5초이며 저장소를 종료하기 전에 부릅니다. */
         void shutdown();
 

@@ -2,7 +2,7 @@
  * @file TelemetryUploader.h
  * @brief 닫힌 스풀 파일(JSON lines) 하나를 바깥으로 보내는 창구 — 인터페이스, 아무것도 보내지 않는 기본값, HTTP 창구로 보내는 구현입니다.
  * @details 언리얼 `IAnalyticsProvider` 의 자리입니다(공급자를 갈아 끼운다). 업로더는 동의를 모릅니다 — 동의 · 표본 · 묶음 · 상한은
- *          `TelemetryService` 가 지키고, 업로더는 동의가 켜져 있을 때만 불립니다.
+ *          `TelemetrySubsystem` 가 지키고, 업로더는 동의가 켜져 있을 때만 불립니다.
  */
 #pragma once
 #include "Core/Container/string.h"

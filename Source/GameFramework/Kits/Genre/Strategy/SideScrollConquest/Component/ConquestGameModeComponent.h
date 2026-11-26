@@ -11,6 +11,8 @@
 #include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
+#include "Core/Time/Countdown.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Serializer/CatalogKey.h"
@@ -68,7 +70,7 @@ namespace sw
     protected:
         [[nodiscard]] bool startGame() override;
         void               onGameStarted() override;
-        void               updateMatch( float32 deltaTime ) override;
+        void               updateMatch( GameSeconds frameTime ) override;
 
     private:
         /** @brief 씬 데이터의 시작 건물을 지을 수 있는지 봅니다(건물이 병사를 훈련하고 거점 · 병종이 카탈로그에 있다). 틀렸으면 오류를 남기고 false 입니다. */

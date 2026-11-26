@@ -51,7 +51,7 @@ namespace sw
         void commitText( string_view text, vector<AndroidTextAction>& outListAction );
         /** @brief 커서 앞 @p beforeLength · 뒤 @p afterLength 글자를 지웁니다(`deleteSurroundingText`). 조합은 그대로이고 지우기 키를 낸다(각 `kMaxDeleteKeys` 까지). */
         void deleteSurroundingText( uint32 beforeLength, uint32 afterLength, vector<AndroidTextAction>& outListAction );
-        /** @brief 포커스를 잃었거나 입력기가 닫혔습니다 — 조합 중이었으면 조합(빈 글)을 내고 비운다(확정하지 않는다 — 데스크톱 입력기의 취소와 같다). */
+        /** @brief 포커스를 잃었거나 입력기가 닫혔습니다. 조합 중이었으면 조합(빈 글)을 내고 비운다(확정하지 않는다. 데스크톱 입력기의 취소와 같다). */
         void cancelComposition( vector<AndroidTextAction>& outListAction );
 
         const string& getComposingText() const { return _composingText; }

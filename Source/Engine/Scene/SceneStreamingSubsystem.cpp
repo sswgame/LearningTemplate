@@ -10,13 +10,13 @@
 
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Foundation/DeterministicRun.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
-#include "Engine/Object/GameObject/Service/NetObjectTable.h"
-#include "Engine/Object/GameObject/Service/SceneServiceRegistry.h"
+#include "Engine/Object/GameObject/Subsystem/NetObjectTable.h"
+#include "Engine/Object/GameObject/Subsystem/SceneSubsystemRegistry.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDataLayerSubsystem.h"
 #include "Engine/Serialization/Format/Archive.h"
@@ -24,7 +24,7 @@
 namespace sw
 {
     // 셀을 짓는 일은 파괴를 처리한 뒤(`DestroyPost`)다 — 이번 프레임에 내린 셀의 오브젝트와 겹치지 않고, 만든 오브젝트는 다음 프레임 병합에서 틱에 든다.
-    SW_SCENE_SERVICE( SceneStreamingSubsystem, DestroyPost, makeSceneFrameAccess( SceneDataKindSet{ SceneDataKind::Structure }, SceneDataKindSet{}, SceneDataKindSet{ SceneDataKind::Transform } ) )
+    SW_SCENE_SUBSYSTEM( SceneStreamingSubsystem, DestroyPost, makeSceneFrameAccess( SceneDataKindSet{ SceneDataKind::Structure }, SceneDataKindSet{}, SceneDataKindSet{ SceneDataKind::Transform } ) )
 
     /** @brief 워커가 채우는 읽기 결과입니다. 워커는 `_listNode` 를 채운 뒤 `_state` 를 release 로 올리고, 게임 스레드는 acquire 로 본 뒤에만 `_listNode` 를 가져간다. */
     struct SceneStreamingSubsystem::CellContentRead
@@ -168,7 +168,7 @@ namespace sw
     {
         if ( _pScene == nullptr )
             return;
-        // 매니저가 오브젝트를 이미 비웠다(세이브 복원) — 걸린 읽기를 거두고 조각을 문서 내용으로 되돌린다. 월드는 놓지 않는다 — 복원이 세이브의 상태를 얹고(`applySaveState`) 다음 갱신이 다시 짓는다.
+        // 매니저가 오브젝트를 이미 비웠다(세이브 복원). 걸린 읽기를 거두고 조각을 문서 내용으로 되돌린다. 월드는 놓지 않는다. 복원이 세이브의 상태를 얹고(`applySaveState`) 다음 갱신이 다시 짓는다.
         for ( unique_ptr<CellSlot>& pSlot : _listCell )
         {
             if ( pSlot->_state == CellState::Loading )

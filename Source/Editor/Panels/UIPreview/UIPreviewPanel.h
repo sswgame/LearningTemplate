@@ -10,7 +10,7 @@
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/GUI/Panel/EditorDocumentPanel.h"
@@ -32,10 +32,10 @@ namespace sw::editor
 {
     /**
      * @class UIPreviewPanel
-     * @brief UI 문서를 게임 UI 와 따로 **오프스크린 화면**(`UIOffscreenScreens::open` — 렌더 텍스처 대상 캔버스)으로 지어 ImGui 이미지로 봅니다
+     * @brief UI 문서를 게임 UI 와 따로 오프스크린 화면(`UIOffscreenScreens::open` — 렌더 텍스처 대상 캔버스)으로 지어 ImGui 이미지로 봅니다
      *        (유니티 UI Builder · UMG 디자이너의 미리보기에 해당합니다).
      * @details 해상도 견본은 게임과 같은 배율 규칙(`UISystem::getScaleSettings`)으로 뷰포트를 만들고, UI 배율 · 글자 배율 · 안전 영역 · 테마 · 언어는 이 미리보기에만 겁니다.
-     *          언어는 문화권이 전역이라 게임 UI 를 건드리지 않도록 **관리자 사본**(`LocalizationManager::copyStateFrom`)을 모델이 소유하고 화면에 겁니다(`qps-ploc`, `qps-plocm` 포함).
+     *          언어는 문화권이 전역이라 게임 UI 를 건드리지 않도록 관리자 사본(`LocalizationManager::copyStateFrom`)을 모델이 소유하고 화면에 겁니다(`qps-ploc`, `qps-plocm` 포함).
      *          문서를 고치면 핫 리로드가 미리보기도 다시 만듭니다. 레이아웃 사각형 · 고른 위젯은 ImGui 그리기 목록으로 이미지 위에 추가합니다(캔버스를 바꾸지 않는다).
      *
      *          고른 위젯의 프로퍼티는 `EditorPropertyGrid` 로 고치고, 고칠 때마다 되돌리기 항목이 하나 쌓입니다(`EditorTransaction::push`). Ctrl+S 나 Save 는 `UIDocumentWriter` 로
@@ -71,7 +71,7 @@ namespace sw::editor
 
     protected:
         /** @brief 고친 문서를 `UIDocumentWriter` 로 파일에 씁니다. 입력 흉내나 애니메이션으로 트리 값이 바뀐 상태면 `canSaveDocument` 가 막습니다. */
-        [[nodiscard]] bool saveDocument() override;
+        [[nodiscard]] bool saveDocument( AssetWriter& writer ) override;
         /** @brief 문서를 읽었고(기반) 미리보기 트리가 문서 값 그대로일 때만(모델) 저장합니다. */
         [[nodiscard]] bool canSaveDocument() const override;
         /** @brief 받아들인 문서(없으면 처음 문서)를 미리볼 문서로 정하고 미리보기를 닫습니다 — 다음 그리기의 `syncPreview` 가 디스크에서 다시 짓는다. 고친 값은 버린다. */

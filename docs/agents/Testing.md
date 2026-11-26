@@ -1,6 +1,6 @@
 # Testing
 
-테스트는 부하 · 앞선 실행과 무관하게 결과가 같아야 한다. 쓰는 법은 [Test/README](../../Test/README.md)(단위 테스트) · [Test/Scenario/README](../../Test/Scenario/README.md)(시나리오), 시나리오 실패 추적은 스킬 `scenario-debug`.
+테스트는 부하 · 앞선 실행과 무관하게 결과가 같아야 한다. 쓰는 법은 [IntegrationTests/README](../../IntegrationTests/README.md)(단위 테스트) · [IntegrationTests/Scenario/README](../../IntegrationTests/Scenario/README.md)(시나리오), 시나리오 실패 추적은 스킬 `scenario-debug`.
 
 ## 단위 테스트
 

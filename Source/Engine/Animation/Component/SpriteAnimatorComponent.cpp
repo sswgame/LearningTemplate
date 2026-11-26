@@ -171,7 +171,7 @@ namespace sw
 
         // 시간 · 반복 · 끝 · "끝나면 다음" 은 상태 기계가 한다(스켈레탈 애니메이터와 같은 `AnimationGraphPlayer`).
         _listFiredNotify.clear();
-        _graphPlayer.update( context.getDeltaTime(), nullptr, _pNotifyListener != nullptr ? &_listFiredNotify : nullptr );
+        _graphPlayer.update( context.getDeltaTime().count(), nullptr, _pNotifyListener != nullptr ? &_listFiredNotify : nullptr );
         syncStateFromPlayer();
         if ( _pNotifyListener != nullptr )
         {
@@ -180,7 +180,7 @@ namespace sw
             AnimationNotifyFrame            frame{};
             frame._listFired          = vector_reference<const AnimationFiredNotify>{ _listFiredNotify.data(), _listFiredNotify.size() };
             frame._listActivePlayable = vector_reference<const IAnimationPlayable* const>{ arrActive, 1 };
-            frame._deltaSeconds       = context.getDeltaTime();
+            frame._deltaSeconds       = context.getDeltaTime().count();
             frame._bFromTick          = SW_TRUE;
             frame._bRestarted         = _bRangeChanged;
             _bRangeChanged            = SW_FALSE;

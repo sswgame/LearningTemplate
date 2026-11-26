@@ -11,6 +11,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/Time/Countdown.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
@@ -193,7 +194,7 @@ namespace sw
         void setVelocity( const float2& velocity ) { _velocity = velocity; }
         /** @brief 넉백이나 튕기기입니다. 속도를 더하고 대시를 끊습니다. */
         void addImpulse( const float2& impulse );
-        void update( const PlatformTileMap& map, const PlatformerInput& input, float32 deltaTime );
+        void update( const PlatformTileMap& map, const PlatformerInput& input, GameSeconds frameTime );
 
         const float2& getPosition() const { return _position; }
         const float2& getVelocity() const { return _velocity; }

@@ -212,7 +212,7 @@ namespace sw
             } );
         }
 
-        // t# · u# → 오프라인 뷰 표. **뷰가 실제로 달라질 때만** 테이블을 더럽힌다 — 바인더는 드로우마다 같은 버퍼를 다시 걸므로(PSO 가 바뀌어도 인스턴스 버퍼 · 머티리얼 버퍼는
+        // t# · u# → 오프라인 뷰 표. 뷰가 실제로 달라질 때만 테이블을 더럽힌다 — 바인더는 드로우마다 같은 버퍼를 다시 걸므로(PSO 가 바뀌어도 인스턴스 버퍼 · 머티리얼 버퍼는
         // 대개 그대로다) 무조건 표시하면 드로우마다 디스크립터를 온라인 힙에 복사한다. 언리얼 FD3D12DescriptorCache 도 테이블 내용이 그대로면 이미 건 테이블을 그대로 쓴다.
         const auto resolveView = [&]( const utf8* pKind, uint32 slot, RHIDescriptorIndex index, bool bUAV )
         {
@@ -699,7 +699,7 @@ namespace sw
         Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList2> list2;
         if ( FAILED( commandListForRecord()->QueryInterface( IID_PPV_ARGS( list2.GetAddressOf() ) ) ) )
             return;
-        // 시작 표지는 [0] 칸에 MARKER_IN(앞선 명령이 모두 **시작**한 뒤), 끝 표지(GPUBreadcrumbs::kEndMarkerBit)는 [1] 칸에 MARKER_OUT(앞선 명령이 모두 **끝난** 뒤)으로 쓴다.
+        // 시작 표지는 [0] 칸에 MARKER_IN(앞선 명령이 모두 시작한 뒤), 끝 표지(GPUBreadcrumbs::kEndMarkerBit)는 [1] 칸에 MARKER_OUT(앞선 명령이 모두 끝난 뒤)으로 쓴다.
         // 소실 뒤 [0] 은 GPU 가 시작한 마지막 패스, [1] 은 끝낸 마지막 패스다.
         // https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_writebufferimmediate_mode
         const bool                                 bEnd = ( markerID & GPUBreadcrumbs::kEndMarkerBit ) != 0;

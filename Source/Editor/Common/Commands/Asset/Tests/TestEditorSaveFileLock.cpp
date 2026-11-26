@@ -3,11 +3,11 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/Subsystem/SubsystemScope.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Editor/Common/Commands/Asset/EditorSaveFileLock.h"
-#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorStateStore.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 
 using namespace sw;
 using namespace sw::editor;
@@ -18,7 +18,6 @@ namespace
     AbsolutePath makeLockTarget( const utf8* pName, const utf8* pText )
     {
         const AbsolutePath path = test::makeScratchPath( pName );
-        (void)FileUtil::ensureParentDirectoryExists( path );
         (void)FileUtil::writeTextFile( path, pText );
         return path;
     }

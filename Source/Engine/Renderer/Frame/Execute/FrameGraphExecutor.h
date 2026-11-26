@@ -70,7 +70,7 @@ namespace sw
         /** @brief 이번 프레임에 그린 뷰마다 그 뷰-투영과 눈 위치를 적어 둡니다(다음 프레임의 깊이 히스토리가 짝이 된다). 모든 뷰를 그린 뒤 부릅니다. */
         void rememberDepthHistoryViews();
         /**
-         * @brief 뷰 그래프가 이 뷰 @p view 에서 쓰는 엔진 자원(깊이 사본 · HZB · 가림 타일 — 이번 장면 깊이로 짓는 패스가 있을 때, 주 시점 컬링 버퍼 · 차례 표시 · 장면 깊이 — 2 단계 가림의
+         * @brief 뷰 그래프가 이 뷰 @p view 에서 쓰는 엔진 자원(깊이 사본 · HZB · 가림 타일: 이번 장면 깊이로 짓는 패스가 있을 때, 주 시점 컬링 버퍼 · 차례 표시 · 장면 깊이: 2 단계 가림의
          *        뒤 단계가 도는 프레임)을 뷰 자원 표 @p table 의 칸 0 으로 등록합니다(`ViewGraphResource`). 뷰 그래프를 돌리기 전에 뷰마다 부른다.
          * @details 등록 조건이 곧 실행 조건이다 — 뒤 단계 패스(`LateOcclusion`)는 차례 표시가 등록됐는지만 보고 돈다. 이 판정이 이번 프레임 "뒤 단계를 기록했는가"(`hasLatePhaseRun`)이기도 하다.
          * @param bBuildsSceneDepthHZB 이 뷰에서 이번 장면 깊이로 HZB 를 짓는 패스(화면 공간 반사)가 켜져 있는지입니다.
@@ -92,7 +92,7 @@ namespace sw
          *          깊이 사본 · HZB · 가림 타일은 부르는 패스가 선언했다(`ViewGraphResource`) — 등록이 없으면 짓지 않는다.
          */
         [[nodiscard]] bool recordSceneDepthHZB( const RenderGraphPassContext& graphContext, FrameViewTarget& view ) const;
-        /** @brief 2 단계 가림을 이번 프레임에 쓸 수 있는지입니다 — 가림 판정 켬 · 설정 `_bTwoPhase` · 간접 멀티 드로우 능력(WebGPU 는 없다 — 웹 깃발). */
+        /** @brief 2 단계 가림을 이번 프레임에 쓸 수 있는지입니다: 가림 판정 켬 · 설정 `_bTwoPhase` · 간접 멀티 드로우 능력(WebGPU 는 없다, 웹 깃발). */
         bool isTwoPhaseOcclusionEnabled() const;
         /** @brief 이번 프레임에 2 단계 가림의 뒤 단계 컬링을 기록했는지입니다(감시 값 `Render.OcclusionLatePhase`). */
         bool hasLatePhaseRun() const { return _bLatePhaseRan != 0; }
@@ -108,7 +108,7 @@ namespace sw
         /** @brief @p mode(`-gv_meshMorphDebugMode` 의 사본)가 모드 열거자인지 봅니다. 에디터 · 콘솔이 숫자로 넣은 범위 밖 값이면 오류를 남기고 false 입니다(`initialize` 가 멈춘다). */
         [[nodiscard]] static bool isMeshMorphDiagValid( MeshMorphDiagMode mode );
         /**
-         * @brief 모프 풀을 이번 프레임의 배치 메시에 맞추고 배치에 풀 오프셋을 기록합니다. **업로드 전에** 부릅니다.
+         * @brief 모프 풀을 이번 프레임의 배치 메시에 맞추고 배치에 풀 오프셋을 기록합니다. 업로드 전에 부릅니다.
          * @details 오프셋은 배치 테이블(g_SwBatches)에 실려 upload() 가 올리므로 테이블은 업로드 시점에 완성되어 있어야 한다. 디스패치는 프레임 그래프의 MeshMorph · MeshSkin 패스다.
          *          파이프라인이 두 패스 중 하나도 선언하지 않으면 백엔드가 못 하는 때와 같이 풀을 만들지 않는다(결과 버퍼를 채울 쪽이 없다).
          */

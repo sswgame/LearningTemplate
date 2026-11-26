@@ -7,7 +7,8 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/FormatDef.h"
@@ -127,13 +128,13 @@ namespace sw
          *              전리품 테이블을 적은 동물이 없는 카탈로그면 둘 다 nullptr 이어도 된다 — 적은 동물이 있는데 없으면 시작하지 않는다.
          * @return 카탈로그가 없거나, 전리품을 적은 동물이 있는데 전리품 카탈로그 · 가방이 없거나, 지역이 카탈로그에 없거나, 생존 수치를 열지 못하면 오류를 남기고 false 입니다(시작하지 않는다).
          */
-        [[nodiscard]] bool initialize( const WesternCatalog* pCatalog, const LootCatalog* pLoot, Wallet& wallet, ReputationState& reputation, WorldClock& clock, GameFlags& flags,
+        [[nodiscard]] bool initialize( const WesternCatalog& catalog, const LootCatalog* pLoot, Wallet& wallet, ReputationState& reputation, WorldClock& clock, GameFlags& flags,
                                        WeatherSystem& weather, Inventory* pInventory, const hashed_string& regionID, float32 regionBaseTemperature,
                                        const AIPerceptionSettings& sight );
         /** @brief 빌린 카탈로그만 @p catalog 로 바꿉니다(지갑 · 평판 · 시계는 그대로). 법 · 생존 · 동물은 이어 읽는 `readState` 가 새 판으로 다시 연다 — 읽기 앞에서만 부른다. */
         void rebindCatalog( const WesternCatalog& catalog );
         /** @brief 실제 @p deltaTime 초와 빌린 시계가 지난번 뒤로 흐른 만큼 흘립니다. 대사 플래그를 맞춥니다. */
-        void update( float32 deltaTime );
+        void update( GameSeconds frameTime );
         /** @brief 행동을 규칙에 넘깁니다. @p listCandidate 는 범죄를 볼 수 있는 후보입니다. 받아들였으면 true 입니다(모르는 id · 벗길 사체 없음 · 낼 현상금 없음 · 돈 모자람은 false). */
         [[nodiscard]] bool perform( const WesternDeed& deed, const vector<WesternWitness>& listCandidate );
         /** @brief 법이 지금 플레이어를 보는지 알립니다(보는 동안 수배가 식지 않는다). 후보 가운데 보안관이 플레이어 자리 @p position 을 보면 그렇습니다. */

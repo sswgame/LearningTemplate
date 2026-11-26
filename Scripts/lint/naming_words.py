@@ -3,16 +3,16 @@ Scripts/lint/naming_words.py
 
 이름이 업계 용어(언리얼 · 유니티 · Godot · 일반 프로그래밍)를 쓰는지 표(`Config/Rules/Lint/NamingWords.json`)와 대조한다.
 
-**왜 린트인가.** 이름이 업계 용어인지는 형식이 말할 수 없다. 표 없이 눈에 띈 이름만 고치면 `drain` · `Since` 처럼 같은 일에 새 낱말이
+왜 린트인가. 이름이 업계 용어인지는 형식이 말할 수 없다. 표 없이 눈에 띈 이름만 고치면 `drain` · `Since` 처럼 같은 일에 새 낱말이
 계속 들어온다(2026-11-07). 예전 검사는 함수 첫 단어와 형식 끝 단어만 봐서, 이름 가운데의 금지어(`hasPendingWork` · `XMLFields::readProperties`)와
 3인칭 문장형 술어(`shouldDrawBatchInPass`) · 동사 없는 게터(`materialGroupFor`)가 그대로 통과했다(2026-11-12 Source 전체 점검 약 470 건).
 
 규칙:
 - verb — 함수 첫 단어가 금지 동사(`_banned`)면 실패한다.
-- term — 금지 명사(`_bannedTerms`)는 모든 식별자(함수 · 형식 · 멤버 · 지역)의 **모든 단어**에서 본다. 표준 합성어(`WorkArea` — Win32 `SPI_GETWORKAREA`)는 `_keepTerms`.
+- term: 금지 명사(`_bannedTerms`)는 모든 식별자(함수 · 형식 · 멤버 · 지역)의 모든 단어에서 본다. 표준 합성어(`WorkArea`, Win32 `SPI_GETWORKAREA`)는 `_keepTerms`.
 - predicate — `bool` 을 돌려주는 함수의 첫 단어가 3인칭 동사(끝이 s)면 `_predicateWords`(언리얼 `Is · Has · Can · Should · Uses · Needs · Requires · Supports …`)여야 한다.
-- lookup — 끝 단어가 `For` · `Of` 인 함수는 조회 동사(`_lookupWords` — get · find · compute …)로 시작해야 한다(`materialGroupFor` 는 "찾거나 만든다" 를 숨겼다).
-- kind — 값의 갈래를 고르는 열거형(`enum class`)은 끝이 `Kind` 다 — `…Type` 은 C++ · 리플렉션 형식을 뜻한다(NamingCpp). 프로토콜 · 외부 API 의 자기 용어(`HTTP2FrameType`)는 `_keep`.
+- lookup: 끝 단어가 `For` · `Of` 인 함수는 조회 동사(`_lookupWords`: get · find · compute …)로 시작해야 한다(`materialGroupFor` 는 "찾거나 만든다" 를 숨겼다).
+- kind: 값의 갈래를 고르는 열거형(`enum class`)은 끝이 `Kind` 다. `…Type` 은 C++ · 리플렉션 형식을 뜻한다(NamingCpp). 프로토콜 · 외부 API 의 자기 용어(`HTTP2FrameType`)는 `_keep`.
   낱말 표는 낱말 하나씩만 봐서 열거형 끝말 모양을 막지 못했다 — 2026-11-19 24 개를 전수 개명한 뒤 새로 들어오지 않게 둔다.
 - component — `…Component` 를 이어받은 형식(정의의 첫 기반 이름이 `Component` 로 끝난다)은 이름도 `Component` 로 끝나고, 컴포넌트가 아닌 형식은 `Component` 로
   끝나지 않는다(언리얼 `U…Component` · 유니티 `Component` 파생 관례 — docs/agents/NamingCpp.md "컴포넌트 이름"). 둘을 함께 보면 "끝이 Component 인 기반 = 컴포넌트" 가
@@ -20,14 +20,14 @@ Scripts/lint/naming_words.py
 - interface — `REFLECT( Interface )` 형식(상태 없는 리플렉션 인터페이스)은 `I` + 대문자로 시작한다(NamingCpp 인터페이스 규칙). 상태가 붙는 것은 생성 코드의 `static_assert` 가 막고,
   이름은 형식이 말하지 못해 여기서 본다 — 역할을 베이스로 만들어 `I` 없는 계약(옛 체력 원천 베이스)이 생겼던 자리다.
 - word — 모든 선언 이름(형식 · 열거자 · 별칭 · 함수 · 멤버 · 상수 · 변수 · 매크로)과 `Source` 의 파일 · 폴더 이름, 스크립트(`Scripts` · `.claude/hooks` ·
-  `.claude/skills` · `cmake` 의 함수 · 클래스 · 상수 · CLI 명령 · 규칙 id · CMake 함수 · 옵션 · 파일 · 폴더 이름)의 **모든 낱말**이 낱말 표
+  `.claude/skills` · `cmake` 의 함수 · 클래스 · 상수 · CLI 명령 · 규칙 id · CMake 함수 · 옵션 · 파일 · 폴더 이름)의 모든 낱말이 낱말 표
   (`_words` 의 a 업계 · b 게임)에 있어야 한다. 앞 규칙들은 함수 첫 단어 · 형식 끝 단어만 허용 표로 봐서, 멤버 · 파일 이름 · 이름 가운데의 조어
   (`SceneWalkKey` · `aimAtMark` · `parkHistory`)가 들어왔다(2026-11-13). 함수 첫 단어 · 형식 끝 단어 허용 표(`_functionWords` 1100 · `_typeSuffixes` 1240)는
   2026-11-18 지웠다 — 본 낱말을 모두 올린 허용 목록(`two` · `from` · `days`)이 되어 동사 · 접미 규율을 더는 지키지 못했고, 선언의 첫 · 끝 낱말은 이 규칙이 본다. 문맥에 따라 맞기도 틀리기도 한 낱말은 `_scopedWords` 가 쓸 경로를 정한다
   (게임의 walk 는 맞고 엔진의 walk 는 순회다). 바깥 철자(`PFN_` · `VK_` · ImGui 깃발)는 `_externalPatterns`, 받아 온 스킬은 `_externalPaths` 가 뺀다.
   파이썬 이름의 PEP 8 꼴(모듈 · 함수 snake_case, 클래스 PascalCase, 상수 UPPER_CASE — docs/agents/NamingCpp.md)도 여기서 막는다.
   CMake 함수는 `sw_snake_case` 꼴만 받는다(내장 명령 꼴 + 우리 접두 — Qt qt_add_executable · KDE ecm_add_test). CMake 함수 꼴은 cmake 밖
-  (Source · Test · ThirdParty 감싸기 · 뿌리 CMakeLists, vcpkg 포트 제외)의 정의도 본다. 전수 집계는 `py -3 -m Scripts naming-census`.
+  (Source · IntegrationTests · ThirdParty 감싸기 · 뿌리 CMakeLists, vcpkg 포트 제외)의 정의도 본다. 전수 집계는 `py -3 -m Scripts naming-census`.
 - timing — 배포에 컴파일되는 헤더(`Source/Core` · `Engine` · `GameFramework` 의 `DevTools` · `Editor` · `Tests` · `Dev` 밖)에 `get…(Nanoseconds|Microseconds|Milliseconds)`
   꼴 접근자를 선언하면 실패한다 — 감시 값 재료로 프레임마다 시계를 읽어 칸에 쌓고 공개 접근자로 읽는 모양이 배포에 남았다(2026-11-21 `GameModeComponent::getLastStepMicroseconds`).
   시간은 프로파일러 구간(`SW_PROFILE_SCOPE`)으로 재고 감시 값이 그 구간을 읽는다. 시계 형식 자체 · 계산한 예산처럼 측정이 아닌 이름은 `_timingAccessorKeep` 에 까닭과 함께.
@@ -217,7 +217,7 @@ class NameTable:
         return list_row
 
     def find_word_problem(self, kind: str, name: str, path: str) -> str | None:
-        """word 판정 — 이름의 **모든 낱말**이 낱말 표(`_words` 의 a 업계 · b 게임)에 있는가. 어긋나면 안내다.
+        """word 판정 — 이름의 모든 낱말이 낱말 표(`_words` 의 a 업계 · b 게임)에 있는가. 어긋나면 안내다.
         `_scopedWords` 의 낱말은 그 경로 아래에서만 받는다(게임의 walk 는 맞고 엔진의 walk 는 순회다). 표준 합성어(`_keepTerms`) · 바깥 이름(`_externalPatterns`) · `_keep` 은 뺀다."""
         if name in self.keep or is_external_name(name, self.externals) or is_under(path, self.external_paths):
             return None

@@ -46,7 +46,7 @@ namespace sw
                 bool          _bFound{ false };
             };
 
-            /** @brief 라이브러리가 주소를 담는가(첫 라이브러리 — 실행 파일 — 를 찾을 때는 늘 참). */
+            /** @brief 라이브러리가 주소를 담는가(첫 라이브러리인 실행 파일을 찾을 때는 늘 참). */
             static bool containsAddress( const dl_phdr_info* pInfo, uintptr_t address )
             {
                 for ( uint16 headerIndex = 0; headerIndex < pInfo->dlpi_phnum; ++headerIndex )

@@ -12,7 +12,7 @@
  *          - `PROPERTY( …, Meta = "Shape=Capsule, ShapeRange=_halfHeight, ShapeOrigin=Base" ) float32 _radius;`(축 로컬 +Y, `Base` 면 바닥이 원점)
  *          - `ShapeScale=Physics` · `ShapeScale=Physics2D` 는 값을 쓰는 쪽이 월드 배율을 먹이는 규칙(`PhysicsComponent::makeScaledShape`)으로 그리고, 손잡이는 배율을 나눠 되쓴다.
  *            적지 않으면 배율을 보지 않는다(점광 반경 · 오디오 존 · 부력 상자처럼 쓰는 쪽이 값을 미터 그대로 쓴다).
- *          - `ShapeAxes=World` 는 회전을 보지 않는다(축 정렬 부피 — 오디오 존). `ShapeAxes=Yaw` 는 요만 따른다(세운 부피 — 내비 장애물: Detour 상자는 요만 돈다).
+ *          - `ShapeAxes=World` 는 회전을 보지 않는다(축 정렬 부피, 예: 오디오 존). `ShapeAxes=Yaw` 는 요만 따른다(세운 부피, 예: 내비 장애물. Detour 상자는 요만 돈다).
  *            프로퍼티의 `EditCondition` 이 거짓이면 그 모양을 그리지 않는다(모양 열거로 갈리는 부피).
  *          - `PROPERTY( …, Meta = "Shape=Box|Cylinder, ShapeSelector=_shape, ShapeCenter=_center" ) float3 _halfExtents;` — 값 하나를 여러 모양이 함께 쓰면
  *            열거 프로퍼티(`ShapeSelector=`)의 열거자 이름이 그릴 모양을 고른다(열거자 이름 = 모양 이름, 둘의 집합이 같아야 한다). `ShapeCenter=` 는

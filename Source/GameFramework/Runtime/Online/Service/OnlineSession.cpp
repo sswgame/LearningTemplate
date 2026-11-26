@@ -13,7 +13,7 @@
 #include "Engine/Console/DevCommandRegistry.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/GameSettings.h"
-#include "GameFramework/Runtime/Foundation/Service/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 #include "GameFramework/Runtime/Online/Security/NetSecurity.h"
 #include "GameFramework/Runtime/Online/Service/IOnlineLocalServer.h"
 #include "GameFramework/Runtime/Online/Service/OnlineClientRegistry.h"

@@ -182,7 +182,7 @@ namespace sw
         void finishDialogue();
         void executeAction( int32 nodeID, string actionCmd );
         /**
-         * @brief `_bPostSubtitles` 면 줄을 자막으로 보내고, `_onLine` 을 **사본으로** 부릅니다. 핸들러가 그 안에서 진행시켜도 안전합니다.
+         * @brief `_bPostSubtitles` 면 줄을 자막으로 보내고, `_onLine` 을 사본으로 부릅니다. 핸들러가 그 안에서 진행시켜도 안전합니다.
          * @details 델리게이트가 받는 `const string&` 가 이 객체의 멤버를 그대로 가리키면,
          *          핸들러가 `advance()` 나 `stopDialogue()` 를 부르는 순간 자기가 받은 참조가 바뀌거나 비워진다.
          *          대화 UI 에서 가장 흔한 사용법이 바로 그것이다.

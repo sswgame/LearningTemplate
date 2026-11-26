@@ -7,11 +7,11 @@
 #include "Core/Container/unordered_set.h"
 #include "Core/File/FileUtil.h"
 #include "Core/String/StringUtil.h"
-#include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Subsystem/Subsystem.h"
+#include "Core/Subsystem/SubsystemSlot.h"
 
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 
 namespace sw
 {
@@ -92,7 +92,7 @@ namespace sw
         mutable shared_mutex    _mutex;
         AssetRegistry _registry SW_GUARDED_BY( _mutex );
 
-        SW_SERVICE_SLOT( AssetRegistryTable, Required );
+        SW_SUBSYSTEM_SLOT( AssetRegistryTable, Required );
     };
 
     expected<AssetRegistry> AssetRegistry::merge( const vector<AssetRegistryLayer>& listLayer )
@@ -271,5 +271,5 @@ namespace sw
 namespace sw
 {
     // GUID ↔ 리소스 id 색인 — 에셋 매니저가 마운트 때 채우고(`AssetManager::mountContent`) 참조 읽기(`AssetRefBase`)가 묻는다.
-    SW_ENGINE_SERVICE_SUBSYSTEM( AssetRegistryTable, HostOnly, Process, Services, (), SW_ENGINE_DEFAULT_FACTORY( AssetRegistryTable ) );
+    SW_ENGINE_SUBSYSTEM_WITH_SLOT( AssetRegistryTable, HostOnly, Process, Shared, (), SW_ENGINE_DEFAULT_FACTORY( AssetRegistryTable ) );
 } // namespace sw

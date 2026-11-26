@@ -2,7 +2,7 @@
  * @file LocalizationDocuments.h
  * @brief 로컬라이제이션 저작 파일 세트를 정의합니다. 원문 문자열 테이블(`*.strings.xml`), 문화권 번역 테이블(`<culture>.translation.xml`), 프로젝트(`*.locproject.xml`)입니다.
  * @details 원문 테이블이 원본이다(언리얼 String Table, 유니티 Shared Table Data). 키마다 원문, 맥락, 설명, 최대 길이, 나온 위치를 가진다.
- *          번역 테이블은 번역마다 **번역할 때의 원문 해시**를 가지며, 원문이 바뀌면 그 번역은 낡은(stale) 것이 되어 화면에 나오지 않는다(언리얼과 같다.
+ *          번역 테이블은 번역마다 번역할 때의 원문 해시를 가지며, 원문이 바뀌면 그 번역은 낡은(stale) 것이 되어 화면에 나오지 않는다(언리얼과 같다.
  *          낡은 번역 대신 다음 문화권으로 넘어간다). 모르는 속성 · 자식은 로드 오류이고, 쓰기는 키 사전 순이라 diff 가 작다. 형식은 XML 이다(키는 `<entry key="…">` 의 속성 — 키가 값마다 다른 맵이라 칸 이름으로 쓸 수 없다).
  */
 #pragma once
@@ -62,7 +62,7 @@ namespace sw
         /** @brief 글을 읽습니다. 틀리면 그 까닭(대상 앞에 원본 이름)이고 내용은 그대로입니다. */
         [[nodiscard]] expected<void> loadFromXMLText( string_view xmlText, string_view sourceName );
         /** @brief 파일을 읽습니다. 못 읽거나 틀리면 그 까닭입니다. */
-        [[nodiscard]] expected<void> loadFromFile( const AbsolutePath& absolutePath );
+        [[nodiscard]] expected<void> loadFromFile( const DiskPath& absolutePath );
         string                       saveToXMLText() const;
         [[nodiscard]] bool           saveToFile( const AbsolutePath& absPath ) const;
 
@@ -165,7 +165,7 @@ namespace sw
         /** @brief 글을 읽습니다. 틀리면 그 까닭(대상 앞에 원본 이름)이고 내용은 그대로입니다. */
         [[nodiscard]] expected<void> loadFromXMLText( string_view xmlText, string_view sourceName );
         /** @brief 파일을 읽습니다. 못 읽거나 틀리면 그 까닭입니다. */
-        [[nodiscard]] expected<void> loadFromFile( const AbsolutePath& absolutePath );
+        [[nodiscard]] expected<void> loadFromFile( const DiskPath& absolutePath );
         string                       saveToXMLText() const;
         [[nodiscard]] bool           saveToFile( const AbsolutePath& absPath ) const;
 
@@ -245,16 +245,16 @@ namespace sw
         /** @brief 글을 읽습니다. 틀리면 그 까닭(대상 앞에 원본 이름)이고 내용은 그대로입니다. */
         [[nodiscard]] expected<void> loadFromXMLText( string_view xmlText, string_view sourceName );
         /** @brief 파일을 읽습니다. 못 읽거나 틀리면 그 까닭입니다. */
-        [[nodiscard]] expected<void> loadFromFile( const AbsolutePath& absolutePath );
+        [[nodiscard]] expected<void> loadFromFile( const DiskPath& absolutePath );
 
         /** @brief 프로젝트 파일 옆 @p fileName 의 경로입니다. */
         static string makeSiblingPath( string_view projectPath, string_view fileName );
         /** @brief `makeSiblingPath` 의 디스크 경로 판입니다. */
-        static AbsolutePath makeSiblingPath( const AbsolutePath& projectPath, string_view fileName );
+        static DiskPath makeSiblingPath( const DiskPath& projectPath, string_view fileName );
         /** @brief 문화권 번역 테이블 경로(`<폴더>/<culture>.translation.xml`)입니다. */
         static string makeTranslationPath( string_view projectPath, string_view culture );
         /** @brief `makeTranslationPath` 의 디스크 경로 판입니다. */
-        static AbsolutePath makeTranslationPath( const AbsolutePath& projectPath, string_view culture );
+        static DiskPath makeTranslationPath( const DiskPath& projectPath, string_view culture );
         /** @brief @p culture 가 출시 문화권(`stagedCultures`)이면 true 입니다. */
         bool isStagedCulture( string_view culture ) const;
         /** @brief 쿠킹이 이진 번역 표(`.locres`)로 굽는 문화권입니다 — 원문 문화권 다음에 출시 문화권(정규화, 겹침 없음). */

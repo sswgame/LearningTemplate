@@ -63,7 +63,7 @@ namespace sw
         /**
          * @brief 호스트 범위를 세웁니다 — 이 창구를 @p hostScope 에 더해 `IModuleLoader` 로, 그 맡김 칸을 `IModuleStateStore` 로 드러내고, 범위의 서브시스템을 모두 초기화합니다.
          *        엔진을 세우기 전에 부릅니다.
-         * @details App 과 Server 가 같은 순서로 세우는 곳은 여기 하나입니다. 호스트가 더 넣을 서브시스템(App 의 자동화 구동기)은 이 함수 **전에** 범위에 더합니다.
+         * @details App 과 Server 가 같은 순서로 세우는 곳은 여기 하나입니다. 호스트가 더 넣을 서브시스템(App 의 자동화 구동기)은 이 함수 전에 범위에 더합니다.
          *          로거가 서기 전이라 실패는 표준 오류에 @p pHostName 을 붙여 남깁니다.
          * @return 세운 창구(범위 소유 — 빌려 쓴다)입니다. 초기화에 실패하면 nullptr 입니다.
          */

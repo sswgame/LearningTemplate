@@ -69,7 +69,7 @@ namespace sw
     class RHIBindlessIndexAllocator
     {
     public:
-        /** @brief @p firstIndex 부터 @p capacity 미만의 번호를 내는 발급기입니다(앞 번호는 고정 디스크립터 — DX12 null 텍스처 — 의 자리일 수 있다). */
+        /** @brief @p firstIndex 부터 @p capacity 미만의 번호를 내는 발급기입니다(앞 번호는 DX12 null 텍스처 같은 고정 디스크립터의 자리일 수 있다). */
         explicit RHIBindlessIndexAllocator( uint32 capacity = kInvalidDescriptorIndex, uint32 firstIndex = 0 )
             : _freeIndex{}
             , _nextIndex{ firstIndex }
@@ -179,7 +179,7 @@ namespace sw
         }
         /**
          * @brief 발급기에서 먼저 받은 번호 @p index 에 값을 넣습니다(그 번호에 디스크립터를 먼저 만드는 쪽 — DX12 의 뷰 생성은 번호로 핸들을 계산한다).
-         * @details 같은 번호가 이미 산 칸이면 덮지 않고 false 다 — 발급기를 거치지 않은 번호가 들어온 결함이다. @p link 는 번호가 누구의 것인가다 — 예약한 번호를
+         * @details 같은 번호가 이미 산 칸이면 덮지 않고 false 다. 발급기를 거치지 않은 번호가 들어온 결함이다. @p link 는 번호가 누구의 것인가다. 예약한 번호를
          *          살리는 쪽은 `Borrowed` 를 준다(가리키는 자원을 부숴도 놓이지 않는다). 기본값을 두지 않는다 — 부르는 쪽마다 정한다.
          */
         bool assign( RHIDescriptorIndex index, const TEntry& entry, RHIBindlessLink link )

@@ -2,7 +2,7 @@
  * @file ITextShaper.h
  * @brief 셰이핑 계약을 정의합니다. 같은 면과 같은 방향의 텍스트 한 런을 글리프 열(번호, 클러스터, 전진, 오프셋)로 바꿉니다.
  * @details 언리얼 `FShapedGlyphSequence` 와 HarfBuzz `hb_shape` 의 입출력과 같은 구조다. 길이는 em 비율이고 크기는 배치가 곱한다.
- *          클러스터는 그 글리프가 나온 텍스트의 **바이트 위치**다. 커서, 선택, 줄 바꿈이 텍스트 위치로 되돌아가는 근거가 된다.
+ *          클러스터는 그 글리프가 나온 텍스트의 바이트 위치다. 커서, 선택, 줄 바꿈이 텍스트 위치로 되돌아가는 근거가 된다.
  *          HarfBuzz 는 같은 계약으로 끼운다(런 하나이며, 같은 폰트 바이트 `IFontRasterizer::findFaceBytes` 로 `hb_face` 를 만든다).
  */
 #pragma once
@@ -57,7 +57,7 @@ namespace sw
 {
     /**
      * @class ITextShaper
-     * @brief 런 하나를 셰이핑합니다. 결과는 **논리 순서**(텍스트 순서)로 붙입니다. RTL 을 눈에 보이는 순서로 뒤집는 것은 배치가 합니다.
+     * @brief 런 하나를 셰이핑합니다. 결과는 논리 순서(텍스트 순서)로 붙입니다. RTL 을 눈에 보이는 순서로 뒤집는 것은 배치가 합니다.
      */
     class SW_API ITextShaper
     {

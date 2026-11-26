@@ -4,20 +4,21 @@
 #include "pch.h"
 
 #include "Core/Foundation/Constants.h"
-#include "Core/Serialization/BitStream.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "GameFramework/Kits/Feature/Online/Economy/Runtime/CurrencyCatalog.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Runtime/OfferCatalog.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Runtime/ReceiptBuyerToken.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/EconomyService.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/EconomyStoreLogic.h"
+#include "GameFramework/Kits/Feature/Online/Economy/Server/EconomyStoreRecords.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/Provider/Fake/FakeReceiptValidator.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/Provider/Steam/SteamReceiptValidator.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/ReceiptValidator.h"
-#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Ledger/LedgerAuditReport.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/LedgerAuditReport.h"
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordTable.h"
 #include "GameFramework/Runtime/Online/Store/Server/Tests/ServiceStoreEntryTestUtil.h"
 
 using namespace sw;
@@ -383,7 +384,7 @@ namespace
             settings._pReceiptRegistry              = &_registry;
             settings._bAcceptSandboxReceipts        = bAcceptSandbox ? SW_TRUE : SW_FALSE;
             settings._refundRecovery                = EconomyRefundRecoveryMode::Debt;
-            SW_EXPECT_TRUE( _service.initialize( &_store, settings ) );
+            SW_EXPECT_TRUE( _service.initialize( _store, settings ) );
         }
 
         ~EconomyServiceFixture()
@@ -454,7 +455,7 @@ namespace
             settings._deliveryScanIntervalMs        = 1000;
             settings._deliveryAlarmMarginMs         = 100;
             settings._refundRecovery                = EconomyRefundRecoveryMode::Debt;
-            SW_EXPECT_TRUE( _service.initialize( &store, settings ) );
+            SW_EXPECT_TRUE( _service.initialize( store, settings ) );
         }
 
         ~DeliveryServiceFixture()
@@ -621,7 +622,7 @@ SW_TEST_CASE( EconomyReceiptsTest, RedeemStaysSpentAfterTheJournalIsSwept )
 /**
  * @brief [EconomyReceiptsTest] 구매 → 계정 삭제 → 감사 균형이 맞고 영수증에 계정 id 가 없다. 뒤에 온 환불은 회수 없이 상태만 바꾼다(감사 P0-7)
  * @details 계정 삭제는 탈퇴 정리(`LoginStoreLogic::purgeAccount`)와 같은 원장 길이다 — 계정 지우기 트랜잭션의 묘비 · 소각 대기, 그 뒤 소각.
- *          변이: 소각을 빼면 지운 계정의 잔액 레코드가 남고, 영수증에 계정을 다시 담으면 값이 `[판][상태]` 와 달라지고,
+ *          변이: 소각을 빼면 지운 계정의 잔액 레코드가 남고, 영수증에 계정을 다시 담으면 값이 상태만 든 레코드의 바이트와 달라지고,
  *          환불의 AccountDeleted 처리를 빼면 환불이 InvalidRequest 로 져 영수증이 환불로 바뀌지 않는다.
  */
 SW_TEST_CASE( EconomyReceiptsTest, AccountDeletionKeepsAuditBalancedAndReceiptAnonymous )
@@ -643,14 +644,16 @@ SW_TEST_CASE( EconomyReceiptsTest, AccountDeletionKeepsAuditBalancedAndReceiptAn
     SW_REQUIRE_TRUE( LedgerAuditReport::computeReport( rig._database, audit ) == ServiceStoreResult::Ok );
     SW_EXPECT_TRUE( audit.isBalanced() );
 
-    // 영수증은 남지만(다시 내면 AlreadyRedeemed) 값은 [판][상태] 뿐이다
+    // 영수증은 남지만(다시 내면 AlreadyRedeemed) 값은 상태 하나뿐이다 — 상태만 든 레코드를 인코딩한 바이트와 같다
     vector<ServiceRecord> listMark;
     SW_REQUIRE_TRUE( rig._database.listRecords( EconomyStoreLogic::getReceiptTable(), "", "", 10, false, listMark ) == ServiceStoreResult::Ok );
     SW_REQUIRE_EQUAL( size_t( 1 ), listMark.size() );
-    BitWriter expected;
-    expected.writeVarUint( 0 ); // 판
-    expected.writeVarUint( 1 ); // Redeemed
-    SW_EXPECT_TRUE( listMark[0]._bytes == expected.getBytes() );
+    EconomyReceiptRecord mark;
+    SW_REQUIRE_TRUE( EconomyStoreLogic::getReceiptTable().decode( listMark[0], mark ) );
+    SW_EXPECT_TRUE( mark._state == EconomyReceiptState::Redeemed );
+    vector<uint8> expected;
+    SW_REQUIRE_TRUE( EconomyStoreLogic::getReceiptTable().encode( EconomyReceiptRecord{ EconomyReceiptState::Redeemed, {} }, expected ) );
+    SW_EXPECT_TRUE( ServiceStoreTestAccess::getBytes( listMark[0] ) == expected );
     SW_EXPECT_TRUE( rig.redeem( kOther )._result == EconomyResult::AlreadyRedeemed );
 
     // 지운 계정의 환불: 거둘 이가 없어 회수하지 않고 영수증만 환불로 바꾼다 — 지운 계정에 빚 레코드가 생기지 않는다
@@ -737,12 +740,12 @@ SW_TEST_CASE( EconomyReceiptsTest, ServiceRefusesLinkedBindingWithoutThePort )
     settings._pReceiptRegistry              = &registry;
     settings._refundRecovery                = EconomyRefundRecoveryMode::Debt;
     EconomyService refused;
-    SW_EXPECT_FALSE( refused.initialize( &store, settings ) );
+    SW_EXPECT_FALSE( refused.initialize( store, settings ) );
 
     FakeExternalLinks links;
     settings._pExternalLinks = &links;
     EconomyService accepted;
-    SW_EXPECT_TRUE( accepted.initialize( &store, settings ) );
+    SW_EXPECT_TRUE( accepted.initialize( store, settings ) );
     accepted.shutdown();
 }
 
@@ -862,14 +865,14 @@ SW_TEST_CASE( EconomyReceiptsTest, UnspentRecoveryTakesOnlyWhatIsLeft )
 /** @brief [EconomyReceiptsTest] 영수증 상태 레코드가 깨지면 지급 · 환불 · 철회 모두 오류 로그와 Unavailable 이고 아무것도 움직이지 않는다 */
 SW_TEST_CASE( EconomyReceiptsTest, UnreadableReceiptRecordHoldsTheTransaction )
 {
-    SW_EXPECT_LOG( "EconomyStoreLogic.ReceiptRecordUnreadable" );
+    SW_EXPECT_LOG( "ServiceRecordUtil.DurableRecordVersionBytes" );
     ReceiptFixture rig;
     SW_REQUIRE_TRUE( rig.redeem( kBuyer )._result == EconomyResult::Ok );
     vector<ServiceRecord> listMark;
     SW_REQUIRE_TRUE( rig._database.listRecords( EconomyStoreLogic::getReceiptTable(), "", "", 10, false, listMark ) == ServiceStoreResult::Ok );
     SW_REQUIRE_EQUAL( size_t( 1 ), listMark.size() );
     ServiceTransaction broken;
-    broken.put( EconomyStoreLogic::getReceiptTable(), listMark[0]._key, vector<uint8>{ 9 } );
+    ServiceStoreTestAccess::putBytes( broken, EconomyStoreLogic::getReceiptTable(), listMark[0]._key, vector<uint8>{ 9 } );
     SW_REQUIRE_TRUE( rig._database.commit( broken ) == ServiceStoreResult::Ok );
 
     SW_EXPECT_TRUE( rig.refund().hasError( OnlineError::kUnavailable ) );
@@ -1134,7 +1137,7 @@ SW_TEST_CASE( EconomyReceiptsTest, DeliveryNearTheDeadlineAlarmsOnce )
 /** @brief [EconomyReceiptsTest] 지급 알림 레코드: 판 번호가 다르거나 깨진 레코드는 오류와 함께 건너뛰고 나머지를 읽는다. 알림 키가 없는 결과는 일감을 만들지 않는다 */
 SW_TEST_CASE( EconomyReceiptsTest, DeliveryRecordRules )
 {
-    SW_EXPECT_LOG( "EconomyStoreLogic.DeliveryRecordUnreadable" );
+    SW_EXPECT_LOG( "ServiceRecordUtil.DurableRecordVersionBytes" );
     ReceiptFixture          rig;
     ReceiptValidationResult receipt;
     receipt._storeName     = "fake";
@@ -1146,7 +1149,7 @@ SW_TEST_CASE( EconomyReceiptsTest, DeliveryRecordRules )
     SW_EXPECT_FALSE( task._recordKey.empty() );
 
     ServiceTransaction broken;
-    broken.put( EconomyStoreLogic::getDeliveryTable(), "a", vector<uint8>{ 0xFF } );
+    ServiceStoreTestAccess::putBytes( broken, EconomyStoreLogic::getDeliveryTable(), "a", vector<uint8>{ 0xFF } );
     SW_EXPECT_TRUE( rig._database.commit( broken ) == ServiceStoreResult::Ok );
     vector<ReceiptDeliveryTask> listTask;
     SW_EXPECT_TRUE( EconomyStoreLogic::listDeliveries( rig._database, 10, listTask ) == ServiceStoreResult::Ok );
@@ -1184,7 +1187,7 @@ SW_TEST_CASE( EconomyReceiptsTest, RefundCursorSurvivesARestart )
         ReceiptValidatorRegistry registry;
         SW_EXPECT_TRUE( registry.registerValidator( &validator ) );
         EconomyService service;
-        SW_EXPECT_TRUE( service.initialize( &store, makeSettings( registry ) ) );
+        SW_EXPECT_TRUE( service.initialize( store, makeSettings( registry ) ) );
         poll( service, kNowMs );
         SW_REQUIRE_EQUAL( size_t( 1 ), validator._listRestored.size() );
         SW_EXPECT_EQUAL( int64( 0 ), validator._listRestored[0] ); // 첫 기동이라 기준이 없다
@@ -1196,7 +1199,7 @@ SW_TEST_CASE( EconomyReceiptsTest, RefundCursorSurvivesARestart )
     ReceiptValidatorRegistry registry;
     SW_EXPECT_TRUE( registry.registerValidator( &validator ) );
     EconomyService service;
-    SW_EXPECT_TRUE( service.initialize( &store, makeSettings( registry ) ) );
+    SW_EXPECT_TRUE( service.initialize( store, makeSettings( registry ) ) );
     poll( service, kNowMs + 100 );
     SW_REQUIRE_EQUAL( size_t( 1 ), validator._listRestored.size() ); // 한 번만 넘긴다
     SW_EXPECT_EQUAL( kNowMs + 5, validator._listRestored[0] );
@@ -1220,7 +1223,7 @@ SW_TEST_CASE( EconomyReceiptsTest, UnreadableRefundCursorHoldsThePolling )
     settings._refundCursorRetryMs           = 1000;
     settings._refundRecovery                = EconomyRefundRecoveryMode::Debt;
     EconomyService service;
-    SW_EXPECT_TRUE( service.initialize( &store, settings ) );
+    SW_EXPECT_TRUE( service.initialize( store, settings ) );
 
     data._database.armFault( ServiceStoreFault::RejectRead );
     service.update( UnixMilliseconds{ kNowMs } );
@@ -1244,7 +1247,7 @@ SW_TEST_CASE( EconomyReceiptsTest, UnreadableRefundCursorHoldsThePolling )
 /** @brief [EconomyReceiptsTest] 기준 시각의 저장 규칙: 없으면 0, 쓴 값을 읽고, 깨진 값은 오류와 Invalid 다 */
 SW_TEST_CASE( EconomyReceiptsTest, RefundCursorRecord )
 {
-    SW_EXPECT_LOG( "EconomyStoreLogic.RefundCursorUnreadable" );
+    SW_EXPECT_LOG( "ServiceRecordUtil.DurableRecordVersionBytes" );
     ReceiptFixture rig;
     int64          lastReadMs = 7;
     SW_EXPECT_TRUE( EconomyStoreLogic::readRefundCursor( rig._database, "google", lastReadMs ) == ServiceStoreResult::Ok );
@@ -1254,24 +1257,24 @@ SW_TEST_CASE( EconomyReceiptsTest, RefundCursorRecord )
     SW_EXPECT_EQUAL( kNowMs, lastReadMs );
 
     ServiceTransaction broken;
-    broken.put( EconomyStoreLogic::getRefundCursorTable(), "apple", vector<uint8>{} );
+    ServiceStoreTestAccess::putBytes( broken, EconomyStoreLogic::getRefundCursorTable(), "apple", vector<uint8>{} );
     SW_EXPECT_TRUE( rig._database.commit( broken ) == ServiceStoreResult::Ok );
     SW_EXPECT_TRUE( EconomyStoreLogic::readRefundCursor( rig._database, "apple", lastReadMs ) == ServiceStoreResult::Invalid );
 }
 
-/** @brief [EconomyReceiptsTest] 시작: 저장소 · 카탈로그가 없거나 환불 회수 정책을 정하지 않으면 서지 않는다 */
+/** @brief [EconomyReceiptsTest] 시작: 카탈로그가 없거나 환불 회수 정책을 정하지 않으면 서지 않는다 */
 SW_TEST_CASE( EconomyReceiptsTest, ServiceNeedsDependencies )
 {
-    SW_EXPECT_LOG( "EconomyService.EconomyServiceNeedsStoreBoth" );
+    SW_EXPECT_LOG( "EconomyService.EconomyServiceNeedsCatalogs" );
     SW_EXPECT_LOG( "EconomyService.EconomyServiceNeedsRefundRecovery" );
     EconomyService service;
-    SW_EXPECT_FALSE( service.initialize( nullptr, EconomyServiceConfig{} ) );
 
-    ReceiptFixture       data;
-    MemoryServiceStore   store{ &data._database };
+    ReceiptFixture     data;
+    MemoryServiceStore store{ &data._database };
+    SW_EXPECT_FALSE( service.initialize( store, EconomyServiceConfig{} ) );
     EconomyServiceConfig settings;
     static_cast<EconomyPolicy&>( settings ) = makeEconomyPolicy();
     settings._pCurrencyCatalog              = &data._currencies;
     settings._pOfferCatalog                 = SharedAssetRef<OfferCatalog>::borrow( &data._offers );
-    SW_EXPECT_FALSE( service.initialize( &store, settings ) ); // 회수 정책은 코드 기본값이 없다 — 설정 `_refundRecovery` 가 고른다
+    SW_EXPECT_FALSE( service.initialize( store, settings ) ); // 회수 정책은 코드 기본값이 없다 — 설정 `_refundRecovery` 가 고른다
 }

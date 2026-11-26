@@ -2,7 +2,7 @@
  * @file MaterialGraphNodeRegistry.h
  * @brief 머티리얼 그래프 노드 종류의 등록표입니다. 새 노드는 `SW_MATERIAL_GRAPH_NODE` 한 줄이고(`MaterialGraphNodes.cpp`), 컴파일러와 편집기 메뉴가 이 표를 읽습니다.
  * @details 글은 짧은 기호로 적는다(문법은 `docs/agents/Rendering.md "머티리얼 그래프"`). 등록은 정적 초기화에서 글 조각(`string_view`)만 나눠 힙을 쓰지 않는다.
- *          **등록은 엔진 안에만 둔다.** 팩 쿠킹은 게임 모듈을 올리기 전에 돌아(`HeadlessSubsystem::runCookTask`) 키트 · 게임의 등록을 보지 못한다 — 게임 전용 재사용은 하위 그래프로 한다.
+ *          등록은 엔진 안에만 둔다. 팩 쿠킹은 게임 모듈을 올리기 전에 돌아(`HeadlessSubsystem::runCookTask`) 키트 · 게임의 등록을 보지 못한다 — 게임 전용 재사용은 하위 그래프로 한다.
  */
 #pragma once
 #include "Core/Container/string.h"

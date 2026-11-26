@@ -114,7 +114,7 @@ namespace sw
             return true;
         }
 
-        /** @brief 감시 값 `Vehicle.RiderLean` 입니다. 앉은 탑승자의 앞으로 숙인 각(rad, + 앞 — 급정거, − 뒤 — 가속)입니다. */
+        /** @brief 감시 값 `Vehicle.RiderLean` 입니다. 앉은 탑승자의 앞으로 숙인 각(rad, + 는 앞으로 급정거, − 는 뒤로 가속)입니다. */
         [[nodiscard]] bool readRiderLean( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
         {
             const VehicleSeatComponent* pSeat = findOccupiedSeat( query, outValue );

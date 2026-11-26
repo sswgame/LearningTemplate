@@ -1,6 +1,6 @@
 /**
  * @file SceneWatches.cpp
- * @brief 씬의 자동화 감시 값입니다(`Scene.*` — 오브젝트 수 · 올라 있는 스트리밍 셀 수 · 로드 큐 · HLOD 대리 · 전환 중 · 트랜스폼 해시 · 게임 카메라 요). 감시 값 레지스트리(`Engine/Automation/Watch`)가 Scene 보다 아래라 씬이 자기 감시 값을 등록합니다 — 실행기가 대신 정의하지 않습니다.
+ * @brief 씬의 자동화 감시 값입니다(`Scene.*`: 오브젝트 수 · 올라 있는 스트리밍 셀 수 · 로드 큐 · HLOD 대리 · 전환 중 · 트랜스폼 해시 · 게임 카메라 요). 감시 값 레지스트리(`Engine/Automation/Watch`)가 Scene 보다 아래라 실행기가 대신 정의하지 않고 씬이 자기 감시 값을 등록합니다.
  * @details 감시 값과 결정성 진단 스위치(`gv_automationHashDump`)만 든 개발 장치라 DevTools 에 둔다 — 배포 구성은 이 파일을 짓지 않는다(`SW_DEV_ONLY_SOURCE_PATTERNS`).
  */
 #include "pch.h"
@@ -14,7 +14,7 @@
 #include "DevTools/Diagnostics/DevSceneStreamingAccess.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -83,7 +83,7 @@ namespace sw
         /** @brief 감시 값 `Scene.WorldOriginX` · `Scene.WorldOriginZ` 입니다. 활성 씬의 월드 원점(절대 = 로컬 + 원점)입니다 — 원점 이동 시나리오가 옮긴 뒤 본다. */
         [[nodiscard]] bool readSceneWorldOrigin( bool bZ, float64& outValue )
         {
-            if ( engine::areEngineServicesBound() == false )
+            if ( engine::areEngineSubsystemsBound() == false )
                 return false;
             const Scene* pScene = engine::getSubsystem<SceneManager>().getActiveScene();
             if ( pScene == nullptr )
@@ -133,7 +133,7 @@ namespace sw
          */
         [[nodiscard]] bool readSceneTransitioning( const GameObjectManager* /*pManager*/, float64& outValue )
         {
-            if ( engine::areEngineServicesBound() == false )
+            if ( engine::areEngineSubsystemsBound() == false )
                 return false;
             outValue = engine::getSubsystem<SceneManager>().isTransitioning() ? 1.0 : 0.0;
             return true;
@@ -145,7 +145,7 @@ namespace sw
          */
         [[nodiscard]] bool readSceneCameraYaw( const GameObjectManager* /*pManager*/, float64& outValue )
         {
-            if ( engine::areEngineServicesBound() == false )
+            if ( engine::areEngineSubsystemsBound() == false )
                 return false;
             const Scene*           pScene  = engine::getSubsystem<SceneManager>().getActiveScene();
             const CameraComponent* pCamera = pScene != nullptr ? pScene->getActiveGameCamera() : nullptr;

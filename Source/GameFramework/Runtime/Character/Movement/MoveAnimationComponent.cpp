@@ -48,16 +48,16 @@ namespace sw
         _bHasLast                  = SW_TRUE;
         if ( bCounts == false )
             return;
-        _speed = smoothSpeed( _speed, stepDistance, context.getDeltaTime(), _smoothingSeconds );
+        _speed = smoothSpeed( _speed, stepDistance, context.getDeltaTime().count(), _smoothingSeconds );
 
         SkeletalAnimatorComponent* pAnimator = pOwner->getComponent<SkeletalAnimatorComponent>();
         if ( pAnimator != nullptr )
             pAnimator->getParameters().setFloat( _speedParameter, _speed );
-        if ( context.getDeltaTime() > 0.0f && stepDistance / context.getDeltaTime() > _faceMinSpeed )
+        if ( context.getDeltaTime().count() > 0.0f && stepDistance / context.getDeltaTime().count() > _faceMinSpeed )
         {
             const float3  rotation  = pBody->getLocalRotation();
             const float32 targetYaw = MathUtil::atan2( step._x, step._z );
-            const float32 maxStep   = _turnRate.radians() * context.getDeltaTime();
+            const float32 maxStep   = _turnRate.radians() * context.getDeltaTime().count();
             pBody->setLocalRotation( float3{ rotation._x, turnTowards( rotation._y, targetYaw, maxStep ), rotation._z } );
         }
     }

@@ -12,6 +12,8 @@
 
 namespace sw::editor
 {
+    class AssetWriter;
+
     class EditorGraphEditSession;
     /**
      * @struct DialogueGraphEdit
@@ -20,7 +22,7 @@ namespace sw::editor
     struct DialogueGraphEdit
     {
         // ------------------------------------------------------------------------------
-        // 편집 명령 — 고친 뒤 이 명령이 정한 되돌리기 이름으로 @p session 에 알린다(감사 E-16 — 창은 알림 · 이름을 모른다)
+        // 편집 명령: 고친 뒤 이 명령이 정한 되돌리기 이름으로 @p session 에 알린다(감사 E-16, 창은 알림 · 이름을 모른다)
         // ------------------------------------------------------------------------------
         /** @brief 창이 노드를 하나 더했습니다 — "Add Dialogue Node". */
         static void commitNodeAdded( const EditorGraphEditSession& session );
@@ -52,7 +54,7 @@ namespace sw::editor
         /** @brief Resource 상대 경로 @p path 의 대화 그래프 문서를 읽습니다(`EditorToolAssetCommands::loadDialogueGraph`). 창(View)이 커맨드 헤더를 보지 않게 여기를 지난다. */
         static ToolAssetLoadResult loadGraph( DialogueGraphAsset& outGraph, string_view path );
         /** @brief 대화 그래프 문서를 @p path 에 씁니다. 실패하면 커맨드가 오류를 남기고 false 입니다. */
-        [[nodiscard]] static bool saveGraph( const DialogueGraphAsset& graph, string_view path );
+        [[nodiscard]] static bool saveGraph( AssetWriter& writer, const DialogueGraphAsset& graph, string_view path );
         /** @brief 그래프를 새 문서의 예시(시작 · 대사 · 선택 · 동작 · 끝)로 바꿉니다. */
         static void makeDefaultGraph( DialogueGraphAsset& outGraph );
         /** @brief @p nodeID 노드를 더합니다. 위치는 번호로 어긋나게 놓아 겹치지 않게 합니다. 화자를 쓰는 종류면 목록의 첫 화자를 넣습니다(목록이 비면 화자 없음). */

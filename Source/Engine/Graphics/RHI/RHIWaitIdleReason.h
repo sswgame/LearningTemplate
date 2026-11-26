@@ -13,7 +13,7 @@ namespace sw
 {
     /**
      * @enum RHIWaitIdleReason
-     * @brief 장치 · 렌더 스레드를 비우는 이유입니다(리플렉션 열거형 — 이름은 `getEnumName` 이 준다). 프레임마다 도는 경로에는 어느 이유도 맞지 않는다 — 맞는 이유가 없으면 대기를 쓰지 않고 지연 해제 · 티켓 폴링으로 푼다.
+     * @brief 장치 · 렌더 스레드를 비우는 이유입니다(리플렉션 열거형, 이름은 `getEnumName` 이 준다). 프레임마다 도는 경로에는 어느 이유도 맞지 않는다. 맞는 이유가 없으면 대기를 쓰지 않고 지연 해제 · 티켓 폴링으로 푼다.
      */
     ENUM()
     enum class RHIWaitIdleReason : uint8

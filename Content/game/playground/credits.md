@@ -32,7 +32,7 @@
 - 테스트 머리 · 음성은 얼굴 애니메이션 테스트(`FacialAnimationTest`) 자료입니다 — KayKit 캐릭터에는 모프 타깃이 없습니다.
 - 서부 평원(`maps/prairie.scene.xml`)의 선인장 · 울타리 · 말은 `wildwest/models_raw/` 의 모델이고(Farm Animals 라이선스 근거: 묶음의 `License.txt` 원문 "License: (Creative Commons Zero, CC0)"),
   땅 · 목장 · 기수는 아직 엔진 기본 도형과 색만 바꾼 머티리얼이다. 말 클립 이름에는 임포트가 `armature_` 접두어를 붙인다.
-- 액션 어드벤처 미니게임(`velmora/`)과 그 확장 팩(`Test/Mods/velmora_tidecaves`)은 바깥 에셋을 쓰지 않는다 — 땅은 엔진 기본 도형에 색만 바꾼 머티리얼이고 나머지는 디버그 그리기다.
+- 액션 어드벤처 미니게임(`velmora/`)과 그 확장 팩(`IntegrationTests/Mods/velmora_tidecaves`)은 바깥 에셋을 쓰지 않는다 — 땅은 엔진 기본 도형에 색만 바꾼 머티리얼이고 나머지는 디버그 그리기다.
 - 허브 농장의 Nature Kit 모델(`harvestvalley/models_raw/`)은 내려받은 그대로다 — UniGLTF 출력이라 씬 루트로 자식 노드를 적어 glTF 2.0 을 어기지만 임포터가 맨 위 조상(`tmpParent`)으로 바꿔 읽고 경고한다. 텍스처가 없고 색은 임포터가 정점 색으로 굽는다.
 - RTS 매치의 Kenney Space Kit 원본 glb(`starskirmish/models_raw/`)는 내려받은 그대로다(UniGLTF 출력 — 위 농장 모델과 같은 경고). 모델 노드마다 키트 배치용 오프셋 (2, 0, 1.5) 이 들어 있어, 임포트 규칙
   (`Config/Editor/ModelImportConfig.json` 의 `StarSkirmish_KitLayoutOffset`, `translation: [-2, 0, -1.5]`)이 그것을 지워 모델 원점(바닥 가운데)이 엔진 원점에 온다. 경계 상자 중심(`recenter: xz`)은 발전기 · 결정 · 포탑처럼

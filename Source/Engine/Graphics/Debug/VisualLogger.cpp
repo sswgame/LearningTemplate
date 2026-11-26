@@ -8,8 +8,8 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/DebugDraw/DebugDrawQueue.h"
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
@@ -391,5 +391,5 @@ namespace sw
 
 namespace sw
 {
-    SW_ENGINE_SERVICE_SUBSYSTEM( VisualLogger, GameVisible, GameInstance, Services, (), SW_ENGINE_DEFAULT_FACTORY( VisualLogger ) );
+    SW_ENGINE_SUBSYSTEM_WITH_SLOT( VisualLogger, GameVisible, GameInstance, Shared, (), SW_ENGINE_DEFAULT_FACTORY( VisualLogger ) );
 } // namespace sw

@@ -61,7 +61,7 @@ namespace sw
 {
     /**
      * @enum SchemaVersionSource
-     * @brief 버전 번호를 **어디서 얻는지** 나타냅니다. 포맷마다 다릅니다.
+     * @brief 버전 번호를 어디서 얻는지 나타냅니다. 포맷마다 다릅니다.
      */
     enum class SchemaVersionSource : uint8
     {
@@ -70,14 +70,14 @@ namespace sw
     };
 
     /**
-     * @brief 공통 절차가 포맷에 맡기는 **유일한 일**입니다. 본문을 읽어 값과 orphan 을 채웁니다.
+     * @brief 공통 절차가 포맷에 맡기는 유일한 일입니다. 본문을 읽어 값과 orphan 을 채웁니다.
      * @details 인자는 (대상 객체의 주소, 그 타입, orphan 수집함, 버전 출력)입니다. 버전을 본문에서 얻지 않는
      *          포맷(Binary)은 마지막 인자를 건드리지 않습니다.
      */
     using SoftDeserializeFn = Delegate<bool( MutableObjectAddress, const TypeInfo&, vector<SchemaOrphanValue>&, uint32& )>;
 
     /**
-     * @brief `deserializeVersioned` 의 **공통 절차**입니다. 세 포맷이 함께 씁니다.
+     * @brief `deserializeVersioned` 의 공통 절차입니다. 세 포맷이 함께 씁니다.
      *
      * @param streamVersion `SchemaVersionSource::Stream` 이면 본문 앞에서 이미 읽은 판입니다. `Payload` 면 쓰지 않습니다(판은 soft 읽기가 본문에서 낸다).
      * @return 판이 @p currentVersion 과 같고 읽었으면 true 입니다. 읽은 판은 돌려주지 않는다 — 성공이면 @p currentVersion 이고, 다른 판의 거절은 `Schema.VersionMismatch` 로그가 판을 적는다.
@@ -114,7 +114,7 @@ namespace sw
     {
         /**
          * @brief 값을 바이너리로 직렬화합니다(이 빌드의 버전, `kCurrentBinaryWireVersion`). @p value 는 값 하나 자체의 주소입니다(프로퍼티 오프셋을 더하지 않는다).
-         * @details enum 은 **열거자 정체성**으로 적는다. 값이 아니라 열거자 이름의 해시(uint32)를 적고, 비트플래그는 켜진 이름의 수(uint32)와 그 해시들을
+         * @details enum 은 열거자 정체성으로 적는다. 값이 아니라 열거자 이름의 해시(uint32)를 적고, 비트플래그는 켜진 이름의 수(uint32)와 그 해시들을
          *          (해시 오름차순이므로 같은 값이면 같은 바이트다) 적는다. 이름이 없는 값이나 이름이 덮지 못한 비트는 해시 위치에 0 을 두고 int64 값을 이어 붙인다.
          *          XML 과 JSON 이 이름을 적는 것과 같은 규칙이라, 열거자 순서를 바꾸거나 사이에 넣어도 저장된 뜻이 그대로다.
          * @return 바이너리 처리기 · 열거형 · 구조체 · 텍스트 처리기 어디에도 없는 타입이면(`hasBinaryValueCodec` 이 거짓) 아무 바이트도 쓰지 않고 false 입니다.
@@ -217,10 +217,10 @@ namespace sw
         // 프로퍼티 값 하나: 비트필드, 컨테이너, 값 세 경우를 한 벌로 처리한다. 직렬화기 셋, 프리팹 오버라이드 도구, 인스펙터가 함께 쓴다
         // (비트필드를 바이트째 비교하고 옮기면 같은 바이트의 다른 플래그까지 바뀐다).
         // ------------------------------------------------------------------------------
-        /** @brief 한 인스턴스의 프로퍼티 값을 다른 인스턴스로 옮깁니다(같은 타입). 비트필드는 그 비트만, 컨테이너는 원소째 옮깁니다. 두 주소는 프로퍼티를 가진 **객체**의 주소입니다. */
+        /** @brief 한 인스턴스의 프로퍼티 값을 다른 인스턴스로 옮깁니다(같은 타입). 비트필드는 그 비트만, 컨테이너는 원소째 옮깁니다. 두 주소는 프로퍼티를 가진 객체의 주소입니다. */
         [[nodiscard]] SW_API static bool copyPropertyValue( const PropertyInfo& prop, ObjectAddress srcInstance, MutableObjectAddress dstInstance, const SerializeContext& context );
         /**
-         * @brief 두 인스턴스의 프로퍼티 값이 같은지 확인합니다. 비트필드는 그 비트만 비교합니다. 두 주소는 프로퍼티를 가진 **객체**의 주소입니다.
+         * @brief 두 인스턴스의 프로퍼티 값이 같은지 확인합니다. 비트필드는 그 비트만 비교합니다. 두 주소는 프로퍼티를 가진 객체의 주소입니다.
          * @details 값 비교는 이 함수 하나다(diff · 프리팹 덮어쓰기 · 인스펙터의 기본값 · 혼합 값 표시) — 형식이 정한 길로 값을 바로 견주고, 처리기만 아는 값만 바이트로 옮겨 견준다.
          *          구조체 안의 칸은 @p context 의 저장 목적이 다루는 것만 본다. 옮길 수 없는 값(`canCarryProperty` 가 거짓)은 같은지 알 수 없어 다르다고 답한다.
          */
@@ -234,10 +234,10 @@ namespace sw
          */
         [[nodiscard]] SW_API static bool writePropertyBinary( const PropertyInfo& prop, ObjectAddress instance, vector<uint8>& outBytes, const SerializeContext& context );
         /**
-         * @brief 바이너리 페이로드 하나(그 프로퍼티 값 전부)를 프로퍼티에 읽어 씁니다. 페이로드를 **끝까지** 읽어야 `Read` 입니다. @p instance 는 프로퍼티를 가진 **객체**의 주소입니다.
+         * @brief 바이너리 페이로드 하나(그 프로퍼티 값 전부)를 프로퍼티에 읽어 씁니다. 페이로드를 끝까지 읽어야 `Read` 입니다. @p instance 는 프로퍼티를 가진 객체의 주소입니다.
          * @details 바이트가 남으면 스트림이 이 필드를 다른 형태로 적은 것이다(`int32` 0 을 `vector<int32>` 로 읽으면 원소 수 0 으로 성공한다). 그래서 오프셋을
          *          부른 쪽에 돌려주지 않고 여기서 끝을 본다 — 태그 스트림, diff, 값 복사가 "읽힌 만큼" 받는 사본을 따로 두지 않게.
-         *          실패하면 그 필드는 **읽다 만 값**일 수 있다(컨테이너 · 구조체는 원소와 필드를 채운 뒤 끝에서 실패한다). 실패한 뒤에도 이어 읽는 쪽은
+         *          실패하면 그 필드는 읽다 만 값일 수 있다(컨테이너 · 구조체는 원소와 필드를 채운 뒤 끝에서 실패한다). 실패한 뒤에도 이어 읽는 쪽은
          *          `PropertyReadRollback` 으로 읽기 전 값을 담아 두고 실패하면 되돌린다.
          * @return `FieldFailed` 는 이 필드만의 실패이고, `ObjectRejected` 는 안쪽(구조체 칸, 컨테이너 원소인 구조체 · 컴포넌트)에 객체째 실패여야 할 것이 있었다는 뜻입니다.
          *         받는 쪽은 `default` 없는 `switch` 로 세 값을 다 다룹니다(`FieldReadResult`).
@@ -246,7 +246,7 @@ namespace sw
                                                                          const SerializeContext& context, BinaryWireVersion wireVersion = kCurrentBinaryWireVersion );
         /**
          * @brief 이 프로퍼티의 값을 세 형식(XML, JSON, 바이너리)이 모두 실어 나를 수 있으면 true 입니다. 직렬화기의 분기와 같은 판정입니다.
-         * @details 직렬화기는 다룰 줄 모르는 타입을 **조용히** 텍스트 `null`, 바이너리 0 바이트로 쓰고, 읽을 때는 그 필드가 기본값이 된다(저장한 줄 알았던
+         * @details 직렬화기는 다룰 줄 모르는 타입을 조용히 텍스트 `null`, 바이너리 0 바이트로 쓰고, 읽을 때는 그 필드가 기본값이 된다(저장한 줄 알았던
          *          값이 사라진다). 컨테이너는 원소와 키 타입을, 소유 포인터 원소는 런타임 팩토리를 믿는다. 모든 PROPERTY 를 이 함수로 훑는 테스트가 있다.
          */
         SW_API static bool canCarryProperty( const PropertyInfo& prop, const SerializeContext& context );
@@ -260,7 +260,7 @@ namespace sw
 
         /**
          * @brief 객체 안 프로퍼티 값을 사람이 읽을 수 있는 텍스트로 씁니다(XML 속성 값과 같은 형태). 비트필드는 `true` 나 `false`, 컨테이너는 `[n]`(원소 수)입니다.
-         * @param instance 프로퍼티를 가진 **객체**의 주소입니다. 프로퍼티 오프셋(또는 접근자)으로 값을 찾습니다. 값 자체의 주소(`ValueAddress`)는 받지 않고 `formatValueText` 로 넘깁니다.
+         * @param instance 프로퍼티를 가진 객체의 주소입니다. 프로퍼티 오프셋(또는 접근자)으로 값을 찾습니다. 값 자체의 주소(`ValueAddress`)는 받지 않고 `formatValueText` 로 넘깁니다.
          */
         [[nodiscard]] SW_API static string formatPropertyText( const PropertyInfo& prop, ObjectAddress instance, const SerializeContext& context );
         /**
@@ -287,7 +287,7 @@ namespace sw
         SW_API static hashed_string resolveHandlerTypeName( const hashed_string& typeName, const SerializeContext& context );
 
         /**
-         * @brief 이 타입 이름이 **중첩 객체**(프로퍼티를 풀어 쓰는 REFLECT 타입)이면 그 TypeInfo 를, 아니면 nullptr 를 반환합니다.
+         * @brief 이 타입 이름이 중첩 객체(프로퍼티를 풀어 쓰는 REFLECT 타입)이면 그 TypeInfo 를, 아니면 nullptr 를 반환합니다.
          * @details 텍스트 핸들러가 있거나(값을 한 줄로 쓴다) enum 이거나 기본형이면 중첩 객체가 아니다. `JSONSerializer` 와
          *          `XMLSerializer` 가 함께 쓴다. 한쪽만 규칙이 바뀌면 두 포맷이 같은 필드를 다르게 쓴다.
          * @param pBinding @p typeName 에 묶은 사실(프로퍼티 · 컨테이너 원소)입니다. 값마다 불리므로 이름 조회 · 공유 잠금 없이 답하게 늘 넘기고, 묶음이 없을 때만 nullptr 입니다.
@@ -320,7 +320,7 @@ namespace sw
         SW_API static bool isNameValueType( const hashed_string& typeName );
 
         /**
-         * @brief 원소 타입 이름이 **소유 포인터**인지 확인합니다(이름에 `*` 가 있으면 소유 포인터입니다).
+         * @brief 원소 타입 이름이 소유 포인터인지 확인합니다(이름에 `*` 가 있으면 소유 포인터입니다).
          * @details `JSONSerializer` 와 `XMLSerializer` 가 함께 쓴다. 판정 기준이
          *          "이름에 별표가 있는가"라는 문자열 규칙이라, 한쪽만 고치면 두 포맷이 서로 다른
          *          컨테이너를 소유로 보게 된다.
@@ -350,7 +350,7 @@ namespace sw
          */
         [[nodiscard]] SW_API static bool isWithinDeclaredRanges( const TypeInfo& typeInfo, ObjectAddress instance );
         /**
-         * @brief 로그 없이 범위만 봅니다 — 남이 보낸 상태 바이트(롤백 · 넷 · 세이브)의 읽기용. 거절은 읽기 실패로만 알린다(손 `io.check` 와 같은 계약 — 깨진 바이트로 오류 로그를 쏟게 하지 않는다).
+         * @brief 로그 없이 범위만 봅니다. 남이 보낸 상태 바이트(롤백 · 넷 · 세이브)의 읽기용. 거절은 읽기 실패로만 알린다(손 `io.check` 와 같은 계약, 깨진 바이트로 오류 로그를 쏟게 하지 않는다).
          */
         [[nodiscard]] SW_API static bool areValuesWithinDeclaredRanges( const TypeInfo& typeInfo, ObjectAddress instance );
         /**
@@ -418,7 +418,7 @@ namespace sw
 {
     /**
      * @class PropertyReadRollback
-     * @brief 읽지 못한 필드를 넘기고 이어 읽는 읽기가 그 필드를 **읽기 전 값**으로 남기게 합니다. 세 형식(바이너리 태그 스트림, JSON, XML)의 소프트 읽기가 함께 씁니다.
+     * @brief 읽지 못한 필드를 넘기고 이어 읽는 읽기가 그 필드를 읽기 전 값으로 남기게 합니다. 세 형식(바이너리 태그 스트림, JSON, XML)의 소프트 읽기가 함께 씁니다.
      * @details 컨테이너 · 구조체는 원소와 필드를 채운 뒤 끝에서 실패하므로, 담지 않고 넘기면 읽다 만 값이 남는다. 그래서 필드를 읽기 전에
      *          `keepValueBeforeRead` 로 값을 이 빌드의 바이트(`SerializerUtil::writePropertyBinary`)로 담고, 읽기가 실패하면 `restoreValueBeforeRead` 로 되읽는다.
      *          되돌리는 단위는 실패를 받은 필드 하나다. 구조체 칸 안의 실패는 안쪽 읽기가 같은 규칙으로 그 안쪽 필드만 되돌린다.

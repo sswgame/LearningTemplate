@@ -13,7 +13,9 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Path/AbsolutePath.h"
 
+#include "Engine/Config/ConfigFileID.h"
 #include "Engine/Content/CookJob.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
 {
@@ -62,6 +64,7 @@ namespace sw
     };
 
     /** @enum DerivedDataAccess @brief DDC 층에 이 머신이 쓸 수 있는지입니다. */
+    ENUM()
     enum class DerivedDataAccess : uint8
     {
         ReadOnly,  ///< 찾기만 한다(공유 층의 기본 — 쓰기는 설정이 허락한 머신만)
@@ -99,6 +102,53 @@ namespace sw
         optional<DerivedDataEvictionPolicy> _evictionPolicy{}; ///< 없으면 이 프로세스가 지우지 않는다(읽기 전용 층 · 테스트 층)
     };
 
+    /** @struct DerivedDataLayerConfig @brief 설정의 층 한 줄입니다. 폴더와 환경 변수 중 정확히 하나를 적는다. */
+    REFLECT()
+    struct SW_API DerivedDataLayerConfig
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        string _name;
+        PROPERTY( Required )
+        string _root; ///< 파생 데이터 루트(`<프로젝트>/Saved`) 기준 폴더
+        PROPERTY( Required )
+        string _rootEnvironment; ///< 머신마다 다른 절대 경로를 담은 환경 변수 — 비었으면 그 층은 없는 것이다
+        PROPERTY( Required )
+        DerivedDataAccess _access{ DerivedDataAccess::ReadOnly };
+        PROPERTY()
+        uint32 _unusedFileAgeDays{ 0 }; ///< 쓰는 층의 정리 나이(1 이상 — `DerivedDataEvictionPolicy`). 읽기 전용 층은 적지 않는다
+    };
+
+    /** @struct DerivedDataBucketConfig @brief 설정의 버킷 한 줄(이름 · 크기 상한)입니다. */
+    REFLECT()
+    struct SW_API DerivedDataBucketConfig
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        string _name;
+        PROPERTY( Required, Min = 1 )
+        uint32 _maxSizeGB{ 0 };
+    };
+
+    /** @struct DerivedDataConfig @brief DDC 설정(`Config/Dev/DerivedData.json`)입니다. */
+    REFLECT()
+    struct SW_API DerivedDataConfig
+    {
+        REFLECT_BODY();
+
+        static constexpr ConfigFileID<DerivedDataConfig> kConfigFile{ "Config/Dev/DerivedData.json" };
+
+        PROPERTY( Required )
+        vector<DerivedDataLayerConfig> _listLayer; ///< 앞이 먼저(로컬 · 공유)
+        PROPERTY( Required )
+        vector<DerivedDataBucketConfig> _listBucket;
+
+        /** @brief 층이 하나 이상이고, 층마다 자리가 하나이며, 쓰는 층에 정리 나이가 있는지 봅니다(`ConfigManager::readConfig` 가 부른다). */
+        [[nodiscard]] expected<void> validate() const;
+    };
+
     /**
      * @class DerivedDataCache
      * @brief 키로 쿠킹 · 임포트 출력을 저장하고 찾는 폴더 층 목록입니다(앞이 먼저 — 로컬, 공유).
@@ -106,7 +156,7 @@ namespace sw
      *          항목은 머리(형식 · 키 서술 길이 · 본문 해시) + 키 서술 + 본문이다. 서술이 글자 그대로 같고 본문 해시가 맞을 때만 히트다 — 64 비트 키 충돌과
      *          다른 머신이 쓴 깨진 바이트(공유 층은 신뢰 경계)가 조용히 틀린 산출물 대신 미스 + 경고가 된다.
      *          폴더가 아닌 백엔드(HTTP · 버킷)는 호스팅이 정해질 때 가상 인터페이스로 낸다 — 지금은 층이 모두 폴더다.
-     *          쓰기는 임시 파일 + 원자 교체(`AtomicFileWriter` — 본문을 조각으로 흘린다)이고, 같은 서술 · 같은 본문의 항목이 이미 있으면 그대로 둔다 — 같은 내용의 원본 둘(병렬 임포트) ·
+     *          쓰기는 임시 파일 + 원자 교체(`AtomicFileWriter`, 본문을 조각으로 흘린다)이고, 같은 서술 · 같은 본문의 항목이 이미 있으면 그대로 둔다. 같은 내용의 원본 둘(병렬 임포트) ·
      *          같은 셰이더를 함께 컴파일하는 프로세스가 한 파일을 다투지 않고, 교체를 진 쪽도 이긴 쪽의 같은 항목을 보면 성공이다.
      *          여는 길은 `open( 버킷 )` 하나다 — 쿠킹 · 임포트 · 셰이더 컴파일이 같은 층 설정 · 같은 정리 규칙을 쓴다. 예전에는 셰이더가 자기 폴더로 층을 손으로 지어 정리 규칙 · 공유 층이 없었다.
      *          기록(`readRecord` · `writeRecord`)은 입력을 컴파일해야 아는 작업(셰이더)의 "동작 키 → 기록" 이다 — 기록의 입력이 새것이면 그 키로 항목을 찾는다.
@@ -116,9 +166,6 @@ namespace sw
     public:
         /** @brief 항목 머리의 형식 글입니다. 형식을 바꾸면 올린다 — 옛 항목은 미스가 된다. */
         static constexpr string_view kEntryHeader{ "SWDDC 1" };
-        /** @brief 층 목록 설정 파일(프로젝트 루트 기준)입니다. */
-        static constexpr const utf8* kConfigFile = "Config/Dev/DerivedData.json";
-
         /**
          * @brief @p bucket 칸을 `Config/Dev/DerivedData.json` 의 층 목록으로 엽니다. 파일이 없거나 칸이 틀리면 오류입니다(폴백 없음).
          * @details 층은 `_root`(파생 데이터 루트 `<프로젝트>/Saved` 기준 폴더)나 `_rootEnvironment`(머신마다 다른 절대 경로를 담은 환경 변수) 중 하나를 쓴다.

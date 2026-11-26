@@ -5,12 +5,12 @@
 #include "Core/File/FileUtil.h"
 #include "Core/File/PlatformFileUtil.h"
 #include "Core/Foundation/Macros.h"
-#include "Core/Process/ProcessEnvironment.h"
+#include "Core/Process/Process.h"
 #include "Core/String/StringUtil.h"
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
-#include "Core/Testing/ScopedAssertCapture.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/ScopedAssertCapture.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include <type_traits>
 
@@ -207,7 +207,7 @@ SW_TEST_CASE( FileTest, ReadWritePreservesPathCase )
 
 /**
  * @brief [FileTest] ensureParentDirectoryExists 는 없는 상위 폴더를 여러 단 만들고, 폴더가 없는 파일 이름에는 아무것도 하지 않는다
- * @details 에셋 셋(애니메이션 그래프 · 대화 그래프 · 시퀀스) · 전역 변수 프리셋 · 셰이더 디스크 캐시가 저장 전에 이것을 부른다.
+ * @details `FileUtil` 의 쓰기 입구가 모두 이것을 지난다.
  *          구분자가 섞여 있어도(`\\` · `/`) 만든다 — `ensureDirectoryExists` 와 같은 정규화를 거친다.
  */
 SW_TEST_CASE( FileTest, CreateParentDirectoryMakesNestedFolders )
@@ -221,6 +221,23 @@ SW_TEST_CASE( FileTest, CreateParentDirectoryMakesNestedFolders )
     SW_EXPECT_TRUE( sw::FileUtil::isDirectory( sw::FileUtil::toDiskPath( leafFolder.view() ) ) );
     SW_EXPECT_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::toDiskPath( filePath.view() ), "leaf" ) );
 
+    SW_EXPECT_TRUE( sw::FileUtil::removeDirectory( root ) );
+}
+
+/** @brief [FileTest] 쓰기 입구는 없는 부모 폴더를 스스로 만든다 — 덮어쓰기 · 덧붙이기 · 스트리밍 쓰기 */
+SW_TEST_CASE( FileTest, WritesMakeTheirParentFolder )
+{
+    const sw::AbsolutePath root = sw::test::makeScratchPath( "SwWriteParentTest" );
+    SW_EXPECT_TRUE( sw::FileUtil::writeTextFile( root.join( "text/a/leaf.txt" ), "x" ) );
+    const uint8 byte = 1;
+    SW_EXPECT_TRUE( sw::FileUtil::writeFile( root.join( "bytes/a/leaf.bin" ), &byte, 1 ) );
+    SW_EXPECT_TRUE( sw::FileUtil::appendTextFile( root.join( "append/a/leaf.txt" ), "x" ) );
+    sw::AtomicFileWriter writer;
+    SW_REQUIRE_TRUE( writer.open( root.join( "stream/a/leaf.bin" ) ).has_value() );
+    SW_EXPECT_TRUE( writer.append( &byte, 1 ).has_value() );
+    SW_EXPECT_TRUE( writer.commit().has_value() );
+    for ( const utf8* pPath : { "text/a/leaf.txt", "bytes/a/leaf.bin", "append/a/leaf.txt", "stream/a/leaf.bin" } )
+        SW_EXPECT_TRUE( sw::FileUtil::isRegularFile( root.join( pPath ) ) );
     SW_EXPECT_TRUE( sw::FileUtil::removeDirectory( root ) );
 }
 
@@ -277,11 +294,11 @@ SW_TEST_CASE( FileTest, FileStampReportsSizeAndDetectsChanges )
 
 /**
  * @brief [FileTest] 디렉터리 수집이 경로 대소문자 유지
- * @details collectFiles/collectFolders 는 **실제 파일시스템을 훑어** 경로를 만든다. 그래서 돌려준 경로는
+ * @details collectFiles/collectFolders 는 실제 파일시스템을 훑어 경로를 만든다. 그래서 돌려준 경로는
  *          그대로 열 수 있어야 한다. 결과를 normalizePath 로 통째 소문자화하면, 대소문자를 가리는
  *          파일시스템(리눅스 CI)에서는 상위 디렉터리 이름(`/home/runner/work/LearningTemplate/.../Resource`)
  *          까지 소문자가 되어 열거한 파일이 곧바로 "File not found" 가 된다. 윈도우에서는 파일이
- *          그냥 열려서 드러나지 않으므로, 여기서는 **문자열이 만든 그대로인지**를 본다.
+ *          그냥 열려서 드러나지 않으므로, 여기서는 문자열이 만든 그대로인지를 본다.
  */
 SW_TEST_CASE( FileTest, CollectPreservesPathCase )
 {
@@ -304,7 +321,7 @@ SW_TEST_CASE( FileTest, CollectPreservesPathCase )
     SW_EXPECT_EQUAL( 1u, static_cast<uint32>( listFile.size() ) );
     if ( listFile.empty() == false )
     {
-        // 수집한 경로를 **가공 없이** 다시 열 수 있어야 한다 — 이게 이 함수의 계약이다.
+        // 수집한 경로를 가공 없이 다시 열 수 있어야 한다 — 이게 이 함수의 계약이다.
         SW_EXPECT_EQUAL( filePath.str(), listFile[0].str() );
         sw::vector<uint8> readBuffer;
         SW_EXPECT_TRUE( sw::FileUtil::readFile( listFile[0], readBuffer ) );
@@ -333,11 +350,11 @@ SW_TEST_CASE( FileTest, WriteAndReadFile )
 }
 
 /**
- * @brief [FileTest] 실행 파일 경로는 **실제로 있는 파일**을 가리킨다
- * @details 윈도우의 `GetModuleFileNameW` 는 버퍼가 모자라면 **잘라서** 돌려주고 그 사실을
+ * @brief [FileTest] 실행 파일 경로는 실제로 있는 파일을 가리킨다
+ * @details 윈도우의 `GetModuleFileNameW` 는 버퍼가 모자라면 잘라서 돌려주고 그 사실을
  *          반환값으로만 알린다. 260자 고정 버퍼에 담고 반환값을 보지 않으면 그보다
  *          깊은 경로에 설치될 때 exe 위치가 조용히 틀려지고, 그 자리를 기준으로 찾는 모듈 DLL ·
- *          RHI 백엔드 · 셰이더 · 리소스가 **전부** "없다" 가 된다. 원인은 어디에도 남지 않는다.
+ *          RHI 백엔드 · 셰이더 · 리소스가 전부 "없다" 가 된다. 원인은 어디에도 남지 않는다.
  *
  *          260자를 넘는 설치 경로를 여기서 만들어 낼 수는 없으므로, 이 검사는 **정상 경로가
  *          여전히 온전한지**를 본다(잘림 처리를 잘못 넣으면 여기서 빈 문자열이나 깨진 경로가
@@ -363,7 +380,7 @@ SW_TEST_CASE( FileTest, ExecutablePathPointsAtARealFile )
 /**
  * @brief [FileTest] 디렉터리 순회가 재귀·비재귀 모두 같은 규칙으로 걷는지 검증
  * @details `collectFiles` · `collectFolders` 는 네 경우(파일/폴더 × 재귀/비재귀)를 헬퍼 하나로 걷는다.
- *          순회자를 `std::error_code` 없이 만들면 권한이 없는 폴더나 순회 중 지워진 폴더에서 **예외를 던지고**,
+ *          순회자를 `std::error_code` 없이 만들면 권한이 없는 폴더나 순회 중 지워진 폴더에서 예외를 던지고,
  *          `bool` 로 실패를 알리는 두 함수의 호출부를 뚫고 나간다. 여기서는 네 경우가 모두 같은 규칙으로 걷는지 본다.
  */
 SW_TEST_CASE( FileTest, DirectoryWalkCollectsFilesAndFolders )
@@ -496,8 +513,10 @@ SW_TEST_CASE( FileTest, FailedWriteReportsFalseAndKeepsOriginal )
     SW_EXPECT_TRUE( sw::FileUtil::collectFiles( dir, "", listFile, false ) );
     SW_EXPECT_EQUAL( 0u, static_cast<uint32>( listFile.size() ) );
 
-    // 없는 폴더에 쓰기도 false 다.
-    SW_EXPECT_FALSE( sw::FileUtil::writeTextFile( dir.join( "missing/leaf.txt" ), "x" ) );
+    // 길을 파일이 막아 부모 폴더를 만들 수 없으면 false 다.
+    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( dir.join( "blocker" ), "a file" ) );
+    SW_EXPECT_LOG( "File.CreateDirectoryFailed" );
+    SW_EXPECT_FALSE( sw::FileUtil::writeTextFile( dir.join( "blocker/leaf.txt" ), "x" ) );
 
     SW_EXPECT_TRUE( sw::FileUtil::removeDirectory( dir ) );
 }
@@ -560,7 +579,6 @@ SW_TEST_CASE( FileTest, ReadOnlyFileIsReported )
 {
     const sw::AbsolutePath root     = sw::test::makeScratchPath( "SwReadOnlyTest" );
     const sw::AbsolutePath filePath = root.join( "locked.txt" );
-    SW_REQUIRE_TRUE( sw::FileUtil::ensureParentDirectoryExists( filePath ) );
     SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( filePath, "locked" ) );
     SW_EXPECT_FALSE( sw::FileUtil::isReadOnlyFile( filePath ) );
 
@@ -582,7 +600,6 @@ SW_TEST_CASE( FileTest, WriteRefusesAReadOnlyFile )
 {
     SW_EXPECT_LOG( "File.WriteReadOnly" );
     const sw::AbsolutePath filePath = sw::test::makeScratchPath( "locked.txt" );
-    SW_REQUIRE_TRUE( sw::FileUtil::ensureParentDirectoryExists( filePath ) );
     SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( filePath, "kept" ) );
     SW_REQUIRE_TRUE( sw::FileUtil::setWritable( filePath, false ) );
 
@@ -606,8 +623,6 @@ SW_TEST_CASE( FileTest, CheckedInReadOnlyFileIsNotRemovedOrMoved )
     const sw::AbsolutePath controlled = sw::test::makeScratchPath( "controlled" );
     const sw::AbsolutePath locked     = controlled.join( "deep/locked.txt" );
     const sw::AbsolutePath loose      = sw::test::makeScratchPath( "loose_copy.txt" );
-    SW_REQUIRE_TRUE( sw::FileUtil::ensureParentDirectoryExists( locked ) );
-    SW_REQUIRE_TRUE( sw::FileUtil::ensureParentDirectoryExists( loose ) );
     SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( locked, "kept" ) );
     SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( loose, "copy" ) );
     SW_REQUIRE_TRUE( sw::FileUtil::setWritable( locked, false ) );
@@ -769,7 +784,7 @@ SW_TEST_CASE( FileTest, WriteFilterRefusesEveryMutatingEntry )
     bool bRemoved  = true;
     {
         SW_EXPECT_LOG( "File.WriteRefused" ); // 게이트가 거절한 쓰기는 오류로 남는다
-        sw::FileUtil::WriteFilterRegistration filter = sw::FileUtil::bindWriteFilter( &refuseEveryWrite );
+        sw::FileUtil::WriteFilterSubscription filter = sw::FileUtil::bindWriteFilter( &refuseEveryWrite );
         bWritten                                     = sw::FileUtil::writeTextFile( path, "changed" );
         bAppended                                    = sw::FileUtil::appendTextFile( path, "more" );
         bTrashed                                     = sw::FileUtil::moveToRecycleBin( sw::vector<sw::AbsolutePath>{ path } );
@@ -884,7 +899,6 @@ SW_TEST_CASE( FileTest, TryWriteFileReportsTheResult )
     using namespace sw;
     const sw::AbsolutePath path = test::makeScratchPath( "TryWrite" ).join( "entry.bin" );
     const vector<uint8>    bytes{ 1, 2, 3 };
-    SW_REQUIRE_TRUE( FileUtil::ensureParentDirectoryExists( path ) );
     SW_EXPECT_TRUE( FileUtil::tryWriteFile( path, bytes.data(), bytes.size() ) == FileWriteResult::Written );
     vector<uint8> read;
     SW_REQUIRE_TRUE( FileUtil::readFile( path, read ) );
@@ -905,7 +919,7 @@ SW_TEST_CASE( FileTest, TryWriteFileReportsTheResult )
 SW_TEST_CASE( FileTest, OpenFileSizeRewindsToTheStart )
 {
     const sw::AbsolutePath path = sw::test::makeScratchPath( "SwOpenFileSizeTest" ).join( "five.bin" );
-    SW_REQUIRE_TRUE( sw::FileUtil::ensureParentDirectoryExists( path ) && sw::FileUtil::writeTextFile( path, "12345" ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( path, "12345" ) );
 
     FILE* pFile = sw::PlatformFileUtil::openFile( path.c_str(), "rb" );
     SW_REQUIRE_NOT_NULL( pFile );
@@ -953,9 +967,9 @@ SW_TEST_CASE( FileTest, SecondFileObserverOrWriteFilterBindAsserts )
     sw::test::ScopedAssertCapture capture;
     SW_EXPECT_LOG( SW_ASSERT_LOG_ID ); // 이중 등록 단언은 이 테스트가 보려는 대상이다
     {
-        const sw::PlatformFileUtil::ReadObserverRegistration  read   = sw::PlatformFileUtil::bindReadObserver( &firstRead );
-        const sw::PlatformFileUtil::WriteObserverRegistration write  = sw::PlatformFileUtil::bindWriteObserver( &firstWrite );
-        const sw::FileUtil::WriteFilterRegistration           filter = sw::FileUtil::bindWriteFilter( &allowEveryWriteForTest );
+        const sw::PlatformFileUtil::ReadObserverSubscription  read   = sw::PlatformFileUtil::bindReadObserver( &firstRead );
+        const sw::PlatformFileUtil::WriteObserverSubscription write  = sw::PlatformFileUtil::bindWriteObserver( &firstWrite );
+        const sw::FileUtil::WriteFilterSubscription           filter = sw::FileUtil::bindWriteFilter( &allowEveryWriteForTest );
         SW_EXPECT_TRUE( read.isActive() && write.isActive() && filter.isActive() );
 
         SW_EXPECT_FALSE( sw::PlatformFileUtil::bindReadObserver( &secondRead ).isActive() );
@@ -965,7 +979,7 @@ SW_TEST_CASE( FileTest, SecondFileObserverOrWriteFilterBindAsserts )
             SW_EXPECT_EQUAL( 3u, capture.getCount() );
     }
     // 토큰이 사라져 칸이 비었다 — 다시 걸린다(앞 등록이 남아 있으면 단언이 하나 더 센다)
-    const sw::PlatformFileUtil::ReadObserverRegistration again = sw::PlatformFileUtil::bindReadObserver( &secondRead );
+    const sw::PlatformFileUtil::ReadObserverSubscription again = sw::PlatformFileUtil::bindReadObserver( &secondRead );
     SW_EXPECT_TRUE( again.isActive() );
     if ( sw::test::ScopedAssertCapture::kAssertsAreActive )
         SW_EXPECT_EQUAL( 3u, capture.getCount() );

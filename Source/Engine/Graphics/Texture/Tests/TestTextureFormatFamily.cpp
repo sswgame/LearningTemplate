@@ -7,14 +7,14 @@
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Asset/Cook/AssetCompanion.h"
 #include "Engine/Asset/Image/DDSFormat.h"
 #include "Engine/Asset/Image/DDSLoader.h"
 #include "Engine/Asset/Image/ImageFileWriter.h"
 #include "Engine/Config/EngineConfig.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/RHI/Tests/RHIFakeDevice.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Graphics/Texture/TextureFormatFamily.h"
@@ -177,7 +177,6 @@ SW_TEST_CASE( TextureFormatSelectionTest, CookedVariantDDSRoundTrips )
     const vector<uint8> payload( ( 4 + 1 + 1 + 1 ) * 16, 0x5A ); // 8x8 · 4x4 · 2x2 · 1x1 = 블록 4 + 1 + 1 + 1
     const AbsolutePath  root = test::makeScratchPath( "TextureVariantDDS" );
     const AbsolutePath  path = root.join( "a.astc.dds" );
-    SW_REQUIRE_TRUE( FileUtil::ensureParentDirectoryExists( path ) );
     SW_REQUIRE_TRUE( ImageFileWriter::writeDDS( path, payload, kWidth, kHeight, 4, DDSFormat::kDXGIASTC4x4Unorm, 32 ) );
     vector<uint8> bytes;
     SW_REQUIRE_TRUE( FileUtil::readFile( path, bytes ) );

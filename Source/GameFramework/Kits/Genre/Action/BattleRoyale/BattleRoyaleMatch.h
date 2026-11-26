@@ -12,6 +12,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/Time/FixedStepTimer.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
@@ -131,7 +132,7 @@ namespace sw
         /** @brief 사람을 추가하고 번호를 반환합니다(`start` 전에 호출합니다). 없는 팀이거나 카탈로그의 체력 설정이 범위 밖이면 이유를 돌려줍니다. */
         [[nodiscard]] expected<int32> addPlayer( int32 team );
         void                          start();
-        void                          update( float32 deltaTime );
+        void                          update( GameSeconds frameTime );
 
         void setPlayerPosition( int32 player, const float2& position );
         /**
@@ -169,7 +170,7 @@ namespace sw
         bool isValidPlayer( int32 player ) const { return player >= 0 && player < static_cast<int32>( _listPlayer.size() ); }
         /** @brief 카탈로그 설정으로 사람 하나를 만듭니다(체력, 부활, 장비, 가방). 체력 설정이 범위 밖이라 거절되면 false 입니다. */
         [[nodiscard]] bool initializePlayer( BattleRoyalePlayer& outPlayer, int32 team, int32 participant ) const;
-        void               stepFixed( float32 deltaTime );
+        void               stepFixed( StepSeconds step );
         void               processHealthMachine( int32 player );
         void               handleDowned( int32 player, optional<int32> instigator );
         void               handleDeath( int32 player, optional<int32> instigator );

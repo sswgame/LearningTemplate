@@ -17,7 +17,7 @@
 #include "Engine/Audio/AudioEngine.h"
 #include "Engine/Audio/AudioPCM.h"
 #include "Engine/Audio/AudioRenderThread.h"
-#include "Engine/Audio/AudioService.h"
+#include "Engine/Audio/AudioSubsystem.h"
 #include "Engine/Audio/IAudioOutputDevice.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Foundation/EnginePlatformHeaders.h"
@@ -34,7 +34,7 @@ namespace sw
     {
     public:
         /** @brief 장치를 잡지 않은 채로 만듭니다(대체 디코더만 겁니다). */
-        explicit XAudio2AudioBackend( AudioService& service );
+        explicit XAudio2AudioBackend( AudioSubsystem& service );
         /** @brief 장치를 닫고 엔진을 내립니다. */
         ~XAudio2AudioBackend() override;
 
@@ -50,7 +50,7 @@ namespace sw
         uint64 getUnderrunCount() const override;
 
     private:
-        AudioService&                       _service; ///< 이 장치가 당기는 서비스(엔진 · 유실 알림) — 서비스가 장치를 들고 먼저 내린다
+        AudioSubsystem&                     _service; ///< 이 장치가 당기는 서비스(엔진 · 유실 알림) — 서비스가 장치를 들고 먼저 내린다
         unique_ptr<XAudio2AudioBackendImpl> _impl;    /**< Windows 전용 상태입니다. */
     };
 
@@ -72,7 +72,7 @@ namespace sw
 
             /**
              * @brief Media Foundation · XAudio2 함수 표입니다. 처음 쓸 때 시스템 DLL 을 올려 한 번 채우고 프로세스 끝까지 둡니다.
-             * @details **수명.** 표는 DLL 마다 참조 하나(`LoadLibraryExW`)를 가지고(`_hMfPlat` …) 프로세스 끝까지 놓지 않는다. 함수 포인터가 그 참조에 기대므로
+             * @details 수명. 표는 DLL 마다 참조 하나(`LoadLibraryExW`)를 가지고(`_hMfPlat` …) 프로세스 끝까지 놓지 않는다. 함수 포인터가 그 참조에 기대므로
              *          `GetModuleHandleW`(참조를 늘리지 않는다)로 빌린 모듈은 쓰지 않는다 — 다른 코드가 같은 DLL 을 내리면 포인터가 허공을 가리킨다.
              *          백엔드를 닫을 때 내리지 않는 이유: 대체 디코더(`decodeWithMediaFoundation`)는 클립 캐시의 워커 태스크가 백엔드와 무관하게 부르고,
              *          정적 소멸자 · `DllMain` 에서의 `FreeLibrary` 는 로더 잠금 아래라 금지다. 라이브러리 안의 전역 상태(Media Foundation 플랫폼 · COM)는
@@ -273,7 +273,7 @@ namespace sw
             struct StreamCallback : public IXAudio2VoiceCallback
             {
                 AudioRenderThread*   _pRenderThread{ nullptr }; ///< 앞서 렌더한 링 — 이 스레드는 믹스하지 않는다
-                AudioService*        _pService{ nullptr };      ///< 보이스 오류를 알릴 곳(`notifyOutputLost`)
+                AudioSubsystem*      _pService{ nullptr };      ///< 보이스 오류를 알릴 곳(`notifyOutputLost`)
                 IXAudio2SourceVoice* _pVoice{ nullptr };
                 uint32               _channelCount{ 0 }; ///< 엔진 레이아웃의 채널 수다. 장치로 보내는 교차 버퍼의 프레임 크기다.
                 vector<float32>      _listBuffer{};      ///< 버퍼 `kStreamBufferCount` 개를 이어 붙인 것이다.
@@ -315,7 +315,7 @@ namespace sw
              */
             struct EngineCallback : public IXAudio2EngineCallback
             {
-                AudioService* _pService{ nullptr };
+                AudioSubsystem* _pService{ nullptr };
 
                 virtual ~EngineCallback() = default;
                 void STDMETHODCALLTYPE OnProcessingPassStart() noexcept override {}
@@ -362,7 +362,7 @@ namespace sw
         }
     };
 
-    XAudio2AudioBackend::XAudio2AudioBackend( AudioService& service )
+    XAudio2AudioBackend::XAudio2AudioBackend( AudioSubsystem& service )
         : _service{ service }
         , _impl{ make_unique<XAudio2AudioBackendImpl>( service.getEngine() ) }
     {
@@ -371,7 +371,7 @@ namespace sw
 
     XAudio2AudioBackend::~XAudio2AudioBackend()
     {
-        // 서비스가 소멸자에서 출력 · 장치를 먼저 내린다(`AudioService::~AudioService`) — 여기서는 남은 것을 놓기만 한다.
+        // 서비스가 소멸자에서 출력 · 장치를 먼저 내린다(`AudioSubsystem::~AudioSubsystem`) — 여기서는 남은 것을 놓기만 한다.
     }
 
     bool XAudio2AudioBackend::openDevice( AudioOutputDevice& outDevice )
@@ -541,5 +541,5 @@ namespace sw
         return performance.GlitchesSinceEngineStarted + _impl->_renderThread.getUnderrunCount();
     }
 
-    SW_REGISTER_AUDIO_BACKEND( XAudio2AudioBackend ); // Windows 클라이언트의 장치 백엔드(`AudioService::create` 가 등록표에서 고른다)
+    SW_REGISTER_AUDIO_BACKEND( XAudio2AudioBackend ); // Windows 클라이언트의 장치 백엔드(`AudioSubsystem::create` 가 등록표에서 고른다)
 } // namespace sw

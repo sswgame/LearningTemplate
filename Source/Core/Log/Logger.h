@@ -5,7 +5,7 @@
  * 로그 태그(Engine / Editor / Game)는 호출하는 모듈의 컴파일 정의 SW_LOG_TAG 로 정해집니다. 전역 _target 을 덮어쓰지
  * 않으므로 모듈을 로드한 뒤에도 출처가 유지됩니다. 에디터 표시 등은 registerLogWrittenListener 로 구독합니다.
  *
- * **줄의 종류 id.** 테스트가 로그 문장을 부분 문자열로 맞추면 문구를 고칠 때마다 지므로(그래서 `countContaining` 을 없앴다), 테스트가 찾을 줄에는 `SW_LOG_ERROR_ID` · `SW_LOG_WARNING_ID` 로
+ * 줄의 종류 id. 테스트가 로그 문장을 부분 문자열로 맞추면 문구를 고칠 때마다 지므로(그래서 `countContaining` 을 없앴다), 테스트가 찾을 줄에는 `SW_LOG_ERROR_ID` · `SW_LOG_WARNING_ID` 로
  * 글자 상수 id 를 붙인다(`LogEntry::_pID`, 테스트는 `ScopedLogCollector::countWithID`). 감싸는 싱크(`ILogSink::writeEvent`)는 사건을 그대로 넘겨야 한다.
  */
 #pragma once
@@ -33,7 +33,7 @@ namespace sw
     /**
      * @class ILogSink
      * @brief 로깅 파사드입니다. 포맷, 리스너, 로그 폴더까지 책임지는 "로거 전체"의 연결 지점입니다.
-     * @details **출력 장치 인터페이스가 아닙니다.** 한 줄이 실제로 나가는 곳은 `ILogOutput`(`ConsoleLogOutput` ·
+     * @details 출력 장치 인터페이스가 아닙니다. 한 줄이 실제로 나가는 곳은 `ILogOutput`(`ConsoleLogOutput` ·
      *          `FileLogOutput`)이고, 그것들을 여러 개 들고 있는 것이 기본 싱크 `AsyncLogSink` 입니다. 이 인터페이스는 **로거 전체를 감싸거나
      *          바꿔 끼우는** 곳입니다. 테스트 프레임워크가 로그를 가로채려고 이것을 구현해 기존 싱크를 감쌉니다(`TestFramework.h`).
      */
@@ -70,7 +70,7 @@ namespace sw
          */
         virtual string getLogFilePath() = 0;
         /**
-         * @brief 크래시 경로에서 부릅니다: 큐에 남은 줄과 장치 버퍼를 **지금 이 스레드에서** 내보냅니다. 락을 바로 잡지 못하면 포기합니다.
+         * @brief 크래시 경로에서 부릅니다: 큐에 남은 줄과 장치 버퍼를 지금 이 스레드에서 내보냅니다. 락을 바로 잡지 못하면 포기합니다.
          * @details 감싸는 싱크(테스트 프레임워크)는 감싼 싱크로 넘깁니다. 비동기 큐가 없는 싱크는 아무것도 하지 않아도 됩니다.
          */
         virtual void waitUpToCrash() {}
@@ -128,7 +128,7 @@ namespace sw
         /**
          * @brief 전역 싱크에 리스너를 붙이고 그 구독을 돌려줍니다. 싱크가 없으면 순서 위반이라 `SW_LOW_LEVEL_ASSERT` 로 보고하고(Debug 는 멈춘다) 빈 구독을 돌려줍니다.
          * @details 구독은 붙인 싱크를 가리킨다 — 그 뒤 전역 싱크가 바뀌어도 붙인 곳에서 떼고, 싱크가 먼저 사라지면 무효가 된다(종료 순서에서 정상).
-         *          구독을 풀면 진행 중인 방송이 끝날 때까지 기다린다(최대 2 초). 그래서 리스너 콜백이 얻는 락을 **쥔 채** 풀지 않는다 — 콜백이 그 락을 기다리면
+         *          구독을 풀면 진행 중인 방송이 끝날 때까지 기다린다(최대 2 초). 그래서 리스너 콜백이 얻는 락을 쥔 채 풀지 않는다 — 콜백이 그 락을 기다리면
          *          2 초 뒤 stderr 경고로 풀린다. 리스너 콜백 안에서 푸는 것은 기다리지 않는다(자기 방송을 기다리지 않게 막아 두었다).
          */
         [[nodiscard]] static Subscription registerGlobalListener( const LogWrittenDelegate& listener );
@@ -163,10 +163,10 @@ namespace sw
 } // namespace sw
 
 // ------------------------------------------------------------------------------
-// 4) SW_LOG_*. 빌드 구성으로 통째로 끄지 않고 **상세도 상한**으로 자른다.
+// 4) SW_LOG_*. 빌드 구성으로 통째로 끄지 않고 상세도 상한으로 자른다.
 //
 //    SW_DEBUG 가 아닐 때 매크로 전체를 빈 껍데기로 만들면 배포본에서 문제가 생겼을 때 남는 것이 하나도
-//    없어서 덤프만으로 원인을 찾아야 한다. 그래서 언리얼처럼 **카테고리 상세도**로 자른다. 상한을 넘는 호출만 컴파일에서 사라지고, 그 아래는 Shipping 에도 남는다. 관례대로 Warning
+//    없어서 덤프만으로 원인을 찾아야 한다. 그래서 언리얼처럼 카테고리 상세도로 자른다. 상한을 넘는 호출만 컴파일에서 사라지고, 그 아래는 Shipping 에도 남는다. 관례대로 Warning
 //    이상은 어떤 빌드에서도 남긴다.
 //
 //    SW_LOG_COMPILED_VERBOSITY 는 LogLevel 의 순서와 같은 숫자다. 아래 SW_LOG_VERBOSITY_* 가 그 이름이고,
@@ -272,7 +272,7 @@ namespace sw::internal
 {
     /**
      * @brief 서식을 8KB 칸에 짓고 `Logger::writeLogGlobal` 로 넘깁니다. `SW_LOG_WRITE` 의 몸통입니다.
-     * @details **줄 밖(noinline)에 둡니다.** 매크로 안에 8KB 배열을 두면 로그 줄이 있는 함수마다 그 배열이 프레임에 들어가 로그가 나가지 않는 호출에도
+     * @details 줄 밖(noinline)에 둡니다. 매크로 안에 8KB 배열을 두면 로그 줄이 있는 함수마다 그 배열이 프레임에 들어가 로그가 나가지 않는 호출에도
      *          스택 탐침(`__chkstk`) · 스택 보호 쿠키 비용을 치르고, 줄이 여럿이면 프레임이 수십 KB 가 된다. 버퍼는 이 함수 프레임에만 있고 부르는 쪽에는
      *          상세도 검사와 호출 하나가 남는다(언리얼 `UE_LOG` 가 `FMsg::Logf_Internal` 을 줄 밖으로 부르는 것과 같은 자리).
      */
@@ -301,7 +301,7 @@ namespace sw::internal
 
 /**
  * @brief 포맷 문자열(과 인자)을 포맷해 Logger::writeLogGlobal 로 넘기는 핵심 매크로입니다.
- * @details **런타임 상세도를 먼저 확인합니다.** 버려질 줄은 포맷 비용도 치르지 않습니다. 버퍼는 줄 밖 함수(`internal::writeFormattedLog`)의 프레임에만 있습니다.
+ * @details 런타임 상세도를 먼저 확인합니다. 버려질 줄은 포맷 비용도 치르지 않습니다. 버퍼는 줄 밖 함수(`internal::writeFormattedLog`)의 프레임에만 있습니다.
  * @note 메시지 문자열을 __VA_ARGS__ 의 첫 인자로 받으므로, 가변 인자 생략(C++20) 확장을 쓰지 않습니다.
  */
 #define SW_LOG_WRITE( level, pID, ... )                                                                                         \
@@ -329,7 +329,7 @@ namespace sw
     };
 
     /**
-     * @brief 이어 갈 수 없는 결함을 한 줄로 남기고 **모든 구성에서** 멈춥니다(언리얼 `UE_LOG(Fatal)` · LLVM `report_fatal_error` 자리).
+     * @brief 이어 갈 수 없는 결함을 한 줄로 남기고 모든 구성에서 멈춥니다(언리얼 `UE_LOG(Fatal)` · LLVM `report_fatal_error` 자리).
      * @details 서식은 `SW_LOG_*` 와 같은 `formatstring`(`%#`)입니다. 줄은 stderr 에 먼저 동기로 쓰이고 로그로도 가며, 비동기 싱크를 비운 뒤
      *          `std::abort` 합니다(`sw::internal::reportFatal`). 로그 수준 필터 · 컴파일 제외를 타지 않습니다. 로그보다 아래 티어는 `SW_LOW_LEVEL_FATAL`.
      *          버퍼를 부르는 쪽 프레임에 두지 않게 줄 밖에 둔다(`writeFormattedLog` 와 같은 까닭).
@@ -354,7 +354,7 @@ namespace sw
 #if SW_LOG_LEVEL_COMPILED( SW_LOG_VERBOSITY_ERROR )
     /**
      * @brief Error 수준으로 포맷해 남깁니다. 모든 빌드에 남습니다. 테스트는 줄의 문장이 아니라 id 로 찾는다(`test::ScopedLogCollector::countWithID`) — 문구를 고쳐도 테스트가 지지 않는다.
-     * @param id `"영역.사건"` 꼴의 **글자 상수**(예: `"Cook.RemovedOutput"`)입니다. 변수는 받지 않습니다(`"" id` 로 글자 상수를 강제한다). 같은 사건은 같은 id 를 씁니다.
+     * @param id `"영역.사건"` 꼴의 글자 상수(예: `"Cook.RemovedOutput"`)입니다. 변수는 받지 않습니다(`"" id` 로 글자 상수를 강제한다). 같은 사건은 같은 id 를 씁니다.
      */
     #define SW_LOG_ERROR_ID( id, ... ) SW_LOG_WRITE( sw::LogLevel::Error, "" id, __VA_ARGS__ )
 #else
@@ -407,7 +407,7 @@ namespace sw
     } while ( false )
 
 /**
- * @brief `SW_LOG_ASSERT` 와 같이 보고하고 **조건의 참 · 거짓을 돌려주는 식**입니다(언리얼 `ensureMsgf` 자리). `if ( !SW_ENSURE( p != nullptr, "…" ) ) return;`
+ * @brief `SW_LOG_ASSERT` 와 같이 보고하고 조건의 참 · 거짓을 돌려주는 식입니다(언리얼 `ensureMsgf` 자리). `if ( !SW_ENSURE( p != nullptr, "…" ) ) return;`
  * @details 단언한 뒤 같은 조건을 다시 적어 빠져나가는 두 줄(`SW_LOG_ASSERT( x, … ); if ( !x ) return;`)은 두 조건이 어긋날 수 있다 — 한 식으로 묶는다.
  *          모든 구성에서 식을 평가하고 실패를 로그로 남긴다. 검사 구성에서는 부른 자리에서 멈춘다(가로채기 · 대화상자는 `SW_LOG_ASSERT` 와 같다).
  */

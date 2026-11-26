@@ -35,26 +35,21 @@ namespace sw
     {
     }
 
-    bool AchievementTracker::initialize( const StatCatalog* pCatalog, PlayerStats* pStats, IPlatformServices* pPlatform )
+    bool AchievementTracker::initialize( const StatCatalog& catalog, PlayerStats& stats, IPlatformServices& platform )
     {
         shutdown();
-        if ( pCatalog == nullptr || pStats == nullptr || pPlatform == nullptr )
+        for ( const AchievementDef& achievement : catalog.getAchievements() )
         {
-            SW_LOG_ERROR_ID( "AchievementTracker.MissingParts", "Achievements need a stat catalog, the player stats and a platform service" );
-            return false;
-        }
-        for ( const AchievementDef& achievement : pCatalog->getAchievements() )
-        {
-            if ( pCatalog->findStat( achievement._statID ) == nullptr )
+            if ( catalog.findStat( achievement._statID ) == nullptr )
             {
                 SW_LOG_ERROR_ID( "AchievementTracker.UnknownStat", "Achievement '%#' watches stat '%#', which the stat catalog does not define", achievement._id.c_str(), achievement._statID.c_str() );
                 return false;
             }
         }
-        _pCatalog         = pCatalog;
-        _pStats           = pStats;
-        _pPlatform        = pPlatform;
-        _statSubscription = pStats->registerChangeListener( SW_DELEGATE_METHOD( PlayerStats::ChangeDelegate, &AchievementTracker::onStatChanged, this ) );
+        _pCatalog         = &catalog;
+        _pStats           = &stats;
+        _pPlatform        = &platform;
+        _statSubscription = stats.registerChangeListener( SW_DELEGATE_METHOD( PlayerStats::ChangeDelegate, &AchievementTracker::onStatChanged, this ) );
         return true;
     }
 

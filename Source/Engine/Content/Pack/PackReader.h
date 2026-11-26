@@ -31,7 +31,7 @@ namespace sw
      * @brief .pack(SWPK) 바이너리 아카이브 하나를 열고 64비트 경로 해시로 항목을 읽는 VFS 리더입니다.
      * @details 파일은 `AsyncFileHandle`(위치 지정 읽기)로 엽니다. 공유 파일 위치가 없어 여러 스레드의 `readFile` 이 잠금 없이 동시에 읽고,
      *          잠금은 색인을 찾는 동안만 쥡니다(압축 해제 · CRC 는 잠금 밖). 같은 핸들로 `readFileAsync` 가 비동기 IO 에 구간 읽기를 겁니다.
-     *          **색인은 디스크 그대로다.** FAT(경로 해시 오름차순 — 아니면 열지 않는다)을 정렬 배열로 들고 이진 탐색하며, 경로는 스트링 풀을 가리키고
+     *          색인은 디스크 그대로다. FAT(경로 해시 오름차순 — 아니면 열지 않는다)을 정렬 배열로 들고 이진 탐색하며, 경로는 스트링 풀을 가리키고
      *          폴더 나열은 (폴더 해시, 항목 번호) 정렬 배열이다. 예전에는 항목마다 경로 사본을 지은 해시 맵 둘을 들었다(감사 A-12) — 항목당 48 B + 풀이다.
      *          범위 읽기(`readRange`)는 걸친 블록만 읽어 푼다(밉 범위 읽기 R-6 의 자리).
      */
@@ -200,7 +200,7 @@ namespace sw
         static bool decodeStoredBytes( const PackReadPlan& plan, string_view packPath, const vector<uint8>& storedBytes, vector<uint8>& outBytes );
 
         /**
-         * @brief 헤더가 말하는 인덱스 · 블록 표 · 스트링 풀 구역이 **실제 파일 안에** 있는지 확인합니다.
+         * @brief 헤더가 말하는 인덱스 · 블록 표 · 스트링 풀 구역이 실제 파일 안에 있는지 확인합니다.
          * @details 헤더의 수는 파일에서 온 값입니다. 그것을 그대로 믿고 `resize` 하면 손상된 팩
          *          하나가 거대한 할당 요청이 됩니다. `_indexSize` 와 `_fileCount` 가 같은 것을
          *          두 번 말하는 것도 여기서 맞춰 봅니다.

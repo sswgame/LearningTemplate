@@ -10,7 +10,7 @@
 #include "Core/Task/TaskManager.h"
 #include "Core/Time/MonotonicClock.h"
 
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 
 namespace sw
 {
@@ -46,7 +46,7 @@ namespace sw
 
     bool RHIPipelineCacheFile::isIntervalPassed() const
     {
-        return isOpen() && engine::areEngineServicesBound() && MonotonicClock::nowNanoseconds() - _lastSaveNanoseconds >= _saveIntervalNanoseconds;
+        return isOpen() && engine::areEngineSubsystemsBound() && MonotonicClock::nowNanoseconds() - _lastSaveNanoseconds >= _saveIntervalNanoseconds;
     }
 
     void RHIPipelineCacheFile::saveIfDue( uint64 cacheBytes )
@@ -71,7 +71,7 @@ namespace sw
     {
         if ( isOpen() == false )
             return;
-        if ( engine::areEngineServicesBound() )
+        if ( engine::areEngineSubsystemsBound() )
             engine::getSubsystem<TaskManager>().waitStage( _saveStage, "RHIPipelineCacheFile::saveAndClose" );
         write();
         _serialize = RHIPipelineCacheSerializeDelegate{};
@@ -89,7 +89,7 @@ namespace sw
                                 Memory::compare( listSavedData.data(), listCacheData.data(), listCacheData.size() ) == 0;
         if ( bUnchanged )
             SW_LOG_INFO_ID( "RHI.PipelineCacheUnchanged", "Pipeline cache unchanged (%# bytes) - not saved.", listCacheData.size() );
-        else if ( FileUtil::ensureParentDirectoryExists( _path ) && FileUtil::writeFile( _path, listCacheData.data(), static_cast<uint64>( listCacheData.size() ) ) )
+        else if ( FileUtil::writeFile( _path, listCacheData.data(), static_cast<uint64>( listCacheData.size() ) ) )
             SW_LOG_INFO_ID( "RHI.SavedPipelineCacheBytes", "Saved pipeline cache (%# bytes).", listCacheData.size() );
         else
             SW_LOG_WARNING_ID( "RHI.CouldNotSavePipelineCache", "Could not save the pipeline cache - the next run builds pipelines from scratch" );

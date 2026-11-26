@@ -26,7 +26,7 @@
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Console/DevCommandRegistry.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/RHI/RHIDescriptors.h"
 #include "Engine/Input/IInputDevice.h"
@@ -96,7 +96,7 @@ namespace sw
             /** @brief `name` 이 등록된 전역 변수인지 봅니다. 아니면 그 이름이 대상인 오류입니다(`Variable` · `ExpectVariable` 이 함께 씁니다). */
             static expected<GlobalVariableInfo*> findRegisteredVariable( const string& name )
             {
-                GlobalVariableInfo* pInfo = engine::areEngineServicesBound() ? engine::getSubsystem<GlobalVariableManager>().findVariable( name ) : nullptr;
+                GlobalVariableInfo* pInfo = engine::areEngineSubsystemsBound() ? engine::getSubsystem<GlobalVariableManager>().findVariable( name ) : nullptr;
                 if ( pInfo == nullptr )
                     return unexpected( Error{ ErrorKind::NotFound, "unknown global variable", name } );
                 return pInfo;
@@ -523,12 +523,9 @@ namespace sw
 
         static bool runScreenshot( IAutomationStepContext& context, const AutomationStep& step )
         {
-            AutomationRunner&  runner    = asRunner( context );
-            const AbsolutePath path      = runner.resolveOutputPath( step.readValidatedProperties<AutomationScreenshotParams>()._file );
-            const AbsolutePath directory = path.getParent();
-            if ( directory.empty() == false )
-                (void)FileUtil::ensureDirectoryExists( directory ); // 못 만들면 ensure 가 폴더와 이유를 남기고 뒤따르는 쓰기가 실패로 답한다
-            (void)FileUtil::tryRemoveFile( path );                  // 지난 실행의 이미지를 읽지 않게 지운다
+            AutomationRunner&  runner = asRunner( context );
+            const AbsolutePath path   = runner.resolveOutputPath( step.readValidatedProperties<AutomationScreenshotParams>()._file );
+            (void)FileUtil::tryRemoveFile( path ); // 지난 실행의 이미지를 읽지 않게 지운다
             if ( path.empty() )
             {
                 SW_LOG_ERROR_ID( "Automation.ScreenshotPathNotAbsolute", "Screenshot '%#' was not taken: the output path is not absolute", step.readValidatedProperties<AutomationScreenshotParams>()._file );
@@ -655,7 +652,7 @@ namespace sw
         }
 
         /**
-         * @brief 렌더 정착 — 에셋 일이 0 이고 정착 조건(`AutomationStepRegistry::findStabilityCondition` — TAA 기록 · 노출 적응, 해당 없음은 막지 않는다)이 모두 설 때까지 붙잡습니다.
+         * @brief 렌더 정착: 에셋 일이 0 이고 정착 조건(`AutomationStepRegistry::findStabilityCondition`: TAA 기록 · 노출 적응, 해당 없음은 막지 않는다)이 모두 설 때까지 붙잡습니다.
          * @return 섰으면 Run(이 프레임은 붙잡지 않고 붙잡기를 놓았다 — `holdUntilReady`), 아직이면 Hold, 정지 시한 · 벽시계 상한에 걸려 시나리오를 끝냈으면 Skip
          * @details 정지 시한은 그린 프레임(`RenderPresentCounter`)으로 센다 — 장치를 다시 만드는 동안처럼 그리지 않는 프레임에는 조건이 나아갈 기회가 없다. 에셋 일은 바깥 일(워커 로드)이라
          *          진척을 세지 않고 벽시계 상한(`kMaxRenderStableWallSeconds`)만 본다. 카메라가 계속 움직이면 TAA 조건의 진척(정지 프레임)이 0 에 머물러 정지 시한에 바로 진다 —

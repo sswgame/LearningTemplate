@@ -1,7 +1,7 @@
 // ServerSecret — 비밀은 환경 변수에서만 온다(nogpu). 서버 코드라 클라이언트 구성은 이 폴더를 짓지 않는다.
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Config/Server/ServerSecret.h"
 

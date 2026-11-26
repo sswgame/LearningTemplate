@@ -4,13 +4,13 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
+#include "Core/Log/DebugReplyLine.h"
 #include "Core/Log/Logger.h"
-#include "Core/Network/DebugReplyLine.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Console/DevCommandRegistry.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 
 namespace sw
 {
@@ -161,7 +161,7 @@ namespace sw
     {
         if ( _pVariables != nullptr )
             return _pVariables;
-        return engine::areEngineServicesBound() ? &engine::getSubsystem<GlobalVariableManager>() : nullptr;
+        return engine::areEngineSubsystemsBound() ? &engine::getSubsystem<GlobalVariableManager>() : nullptr;
     }
 
     DevConsoleResult DevConsole::execute( string_view line, string& outReply ) const

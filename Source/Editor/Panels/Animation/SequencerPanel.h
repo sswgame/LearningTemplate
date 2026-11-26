@@ -7,7 +7,6 @@
 
 #include "Editor/Common/GUI/Panel/EditorDocumentPanel.h"
 #include "Editor/Common/Widgets/EditorCurveEditorState.h"
-#include "Editor/Panels/Animation/Model/SequenceClipTiming.h"
 #include "Editor/Panels/Animation/Model/SequenceEditModel.h"
 #include "Editor/Panels/Animation/Model/SequencerViewModel.h"
 
@@ -24,7 +23,7 @@ namespace sw::editor
 
     /**
      * @brief 바인딩 · 카메라 컷 차선 · 키 트랙(트랜스폼 · 프로퍼티 · 리그 슬롯 · 렌즈) · 구간 항목 타임라인을 편집하는 시퀀서입니다. SequenceAsset XML 을 읽고 씁니다.
-     * @details **바인딩 문맥**: 미리보기와 "선택을 묶기" 는 지금 씬에서 이 시퀀스를 트는 `SequencePlayerComponent` 하나의 바인딩 표를 쓴다(언리얼 Sequencer 가 레벨의 Level Sequence Actor 로 여는 것과 같다).
+     * @details 바인딩 문맥: 미리보기와 "선택을 묶기" 는 지금 씬에서 이 시퀀스를 트는 `SequencePlayerComponent` 하나의 바인딩 표를 쓴다(언리얼 Sequencer 가 레벨의 Level Sequence Actor 로 여는 것과 같다).
      *          그런 플레이어가 없으면 바인딩을 묶을 곳이 없다고 알리고, 시퀀스 편집은 그대로 된다. 묶기는 그 플레이어 오브젝트의 수정으로 되돌리기에 남는다.
      *          MVVM View — 씬 쪽(문맥 · 선택 · 바인딩 대상 · 미리보기 · 파일)은 `SequencerViewModel` 이 맡고 값은 `SequencerSceneViewState` 로 읽는다. 시퀀스 문서는 창 문서라 이 창이 든다.
      *          시간 막대를 옮기면(끄는 동안에도) 그 프레임을 씬에 바로 적용합니다(뷰포트 미리보기 — 구간 동작 포함). 키 트랙 채널 값을 고치면 지금 프레임에
@@ -49,7 +48,7 @@ namespace sw::editor
         ~SequencerPanel() override;
 
         void               drawDocumentContent() override;
-        [[nodiscard]] bool saveDocument() override;
+        [[nodiscard]] bool saveDocument( AssetWriter& writer ) override;
 
         /** @brief 고른 키 트랙의 키 프레임 수입니다(채널마다 같은 프레임의 키는 하나로 센다). 고른 트랙이 없으면 false 입니다. */
         [[nodiscard]] bool findSelectedTrackKeyFrameCount( uint32& outCount ) const;
@@ -69,7 +68,6 @@ namespace sw::editor
         void   applyDocumentText( string_view text ) override;
         /** @brief 문서를 읽어 내용을 채웁니다. 읽음 표시는 기반이 결과로 합니다(`EditorDocumentPanel::reloadDocument`). */
         ToolAssetLoadResult loadDocument() override;
-        void                saveToLoadedPath();
         void                applyAsset( const SequenceAsset& asset );
         SequenceAsset       captureAsset() const;
         void                syncPreviewPlayer();

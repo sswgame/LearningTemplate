@@ -18,7 +18,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
-#include "Engine/Object/GameObject/Service/SceneNetLink.h"
+#include "Engine/Object/GameObject/Subsystem/SceneNetLink.h"
 #include "Engine/Physics/IPhysicsScene.h"
 #include "Engine/Physics/Scene/ScenePhysics.h"
 #include "Engine/Serialization/Fixed/ReplicatedLayout.h"
@@ -31,7 +31,7 @@
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Minigame/MinigameFlow.h"
-#include "GameFramework/Runtime/Foundation/Service/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterAppearanceComponent.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/Movement/TickedFloorStep.h"
 
@@ -277,7 +277,7 @@ namespace sw
         _bSeatsReported   = SW_FALSE;
         pMovement->setNetDriven( true );
         // 클라이언트가 알리는 서버 틱을 읽는 바닥이 이 틱 뒤에 돌게 한다(바닥 서브틱의 선행 조건).
-        ControlSystem* pControl = _role == Role::Client ? ControlSystem::find( *getOwner()->getMutableManager() ) : nullptr;
+        ControlSystem* pControl = _role == Role::Client ? ControlSystem::find( *getOwner()->getManager() ) : nullptr;
         if ( pControl != nullptr )
             pControl->setServerTickSource( getTickHandle() );
         SW_LOG_INFO_ID( "ShooterNetPawn.ShooterNetPawnMovement", "Shooter net pawn: %# movement at %# Hz", _role == Role::Server ? "server-authoritative" : "predicted", static_cast<int32>( MathUtil::round( 1.0f / _tickInterval ) ) );
@@ -292,9 +292,9 @@ namespace sw
     void ShooterNetPawnComponent::stopRole()
     {
         _routerSubscription.reset();
-        if ( _role == Role::Server && getOwner() != nullptr && getOwner()->getMutableManager() != nullptr )
+        if ( _role == Role::Server && getOwner() != nullptr && getOwner()->getManager() != nullptr )
             MeleeSweepHistory::release( *getOwner()->getMutableManager() );
-        ControlSystem* pControl = getOwner() != nullptr && getOwner()->getMutableManager() != nullptr ? ControlSystem::find( *getOwner()->getMutableManager() ) : nullptr;
+        ControlSystem* pControl = getOwner() != nullptr && getOwner()->getManager() != nullptr ? ControlSystem::find( *getOwner()->getManager() ) : nullptr;
         if ( pControl != nullptr && pControl->getServerTickSource() == getTickHandle() )
             pControl->setServerTickSource( SubTickHandle{} );
         ShooterBodyMovementComponent* pMovement = findMovement();
@@ -336,7 +336,7 @@ namespace sw
             return;
         }
         ShooterBodyMovementComponent* pMovement = findMovement();
-        const bool                    bIdle     = _role == Role::None || pMovement == nullptr || findGameMode() == nullptr || context.getDeltaTime() <= 0.0f;
+        const bool                    bIdle     = _role == Role::None || pMovement == nullptr || findGameMode() == nullptr || context.getDeltaTime().count() <= 0.0f;
         if ( bIdle )
             return;
         // 발동은 한 프레임만 참이다 — 입력 틱(30 Hz)이 없던 프레임의 발동이 사라지지 않게 매 프레임 모은다.
@@ -346,12 +346,12 @@ namespace sw
         if ( _role == Role::Server )
         {
             // 입력 몫도 틱과 같은 시계(게임 시간)로 채운다 — 클라이언트의 입력 틱이 이 시계로 돌고, 고정 간격으로 되풀이하는 넷 재생에서도 같은 몫이 된다.
-            _server.accumulateInputBudget( context.getDeltaTime() );
+            _server.accumulateInputBudget( context.getDeltaTime().count() );
             context.deferPostTickOnComponent( *this, []( ShooterNetPawnComponent& netPawn, GameObjectManager& manager )
             { netPawn.runServerFrame( manager ); } );
             return;
         }
-        _accumulator += context.getDeltaTime();
+        _accumulator += context.getDeltaTime().count();
         int32 tickCount = 0;
         while ( _accumulator >= _tickInterval && tickCount < ShooterNetPawnComponentInternal::kMaxTicksPerFrame )
         {
@@ -361,7 +361,7 @@ namespace sw
         if ( _accumulator >= _tickInterval )
             _accumulator = 0.0f; // 따라잡지 못한 시간은 버린다 — 몰아 돌린 틱이 다음 프레임을 또 밀지 않게
         _pendingStepCount += tickCount;
-        _smoother.update( context.getDeltaTime() );
+        _smoother.update( context.getDeltaTime().count() );
         context.deferPostTickOnComponent( *this, []( ShooterNetPawnComponent& netPawn, GameObjectManager& manager )
         { netPawn.runClientFrame( manager ); } );
     }
@@ -434,7 +434,7 @@ namespace sw
         }
         if ( bFreeSeat == false )
             return;
-        // 주체는 접속 티켓이 정한 계정이다 — 클라이언트가 보낸 값이 아니다. 매칭이 배정한 서버에서는 주체 없는 연결(티켓 없이 들어온 것)에 몸을 맡기지 않는다 —
+        // 주체는 접속 티켓이 정한 계정이며 클라이언트가 보낸 값이 아니다. 매칭이 배정한 서버에서는 주체 없는 연결(티켓 없이 들어온 것)에 몸을 맡기지 않는다 —
         // 세션 역할만 보면 티켓을 요구하지 않는 설정의 매치 서버가 아무 연결에나 배정받은 사람의 몸을 넘긴다. 매칭 없는 서버(개발 접속 · 한 프로세스 재생)는 붙은 차례다.
         const bool bAccountRequired = ShooterNetPawnComponentInternal::findBackfillSender() != nullptr;
         _listConnectionScratch.clear();
@@ -504,7 +504,7 @@ namespace sw
             pawn._floorTick = TickedFloorOffset::findTick( pawn._floorTickOffset, pawn._bFloorTickKnown, *inputTick ).value_or( static_cast<int64>( _tick ) );
             stepMovement( *pMovement, gameMode, pawn._floorTick, bDown ? Internal::makeStillIntent( intent ) : intent );
             if ( pPlayer != nullptr )
-                pPlayer->stepNetCommand( manager, intent, _tickInterval, *inputTick ); // 이동한 자리에서 바로 쏜다 — 명령 하나가 한 걸음이다
+                pPlayer->stepNetCommand( manager, intent, StepSeconds{ _tickInterval }, *inputTick ); // 이동한 자리에서 바로 쏜다 — 명령 하나가 한 걸음이다
             inputTick = _server.popNextIntent( pawn._connectionID, intent, pawnEntityID, _listClaim );
         }
         // 조종자가 있는데 입력이 오지 않았으면 그 자리다(언리얼 서버의 원격 폰 — 온 입력은 다음 틱에 몰아서 걷는다). 조종자가 없는 몸은 빈 의도로 계속 돈다(떨어지던 몸이 공중에 남지 않게).
@@ -851,7 +851,7 @@ namespace sw
         // 서버와 같은 순서다 — 이동한 자리에서 이 명령의 발동을 예측한다.
         ShooterPlayerComponent* const pPlayer = getOwner()->getComponent<ShooterPlayerComponent>();
         if ( pPlayer != nullptr && movement.isSuspended() == false )
-            pPlayer->stepNetCommand( manager, intent, _tickInterval, _tick );
+            pPlayer->stepNetCommand( manager, intent, StepSeconds{ _tickInterval }, _tick );
     }
 
     ShooterBodyMovementComponent* ShooterNetPawnComponent::findMovement() const

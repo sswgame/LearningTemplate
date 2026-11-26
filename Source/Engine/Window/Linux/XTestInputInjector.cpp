@@ -14,12 +14,12 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/LifetimeScope.h"
 #include "Core/String/StringUtil.h"
-#include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Subsystem/Subsystem.h"
+#include "Core/Subsystem/SubsystemSlot.h"
 
 #include "Engine/Console/DevCommandRegistry.h"
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 
 namespace sw
 {
@@ -57,7 +57,7 @@ namespace sw
     private:
         [[maybe_unused]] void* _pDisplay; ///< `Display*` — X11 헤더는 XTest 구성에서만 들어와 불투명하게 둔다. XTest 없는 구성(빈 구현)은 읽지 않는다.
 
-        SW_SERVICE_SLOT( XTestInputInjector, Optional );
+        SW_SUBSYSTEM_SLOT( XTestInputInjector, Optional );
     };
 } // namespace sw
 
@@ -181,7 +181,7 @@ namespace sw
 
 #endif
 
-// 등록 · 명령은 두 갈래(XTest 있음 · 없음)가 함께 쓴다. 서비스 칸은 헤더의 클래스 바로 뒤다.
+// 등록 · 명령은 두 갈래(XTest 있음 · 없음)가 함께 쓴다. 서브시스템 칸은 헤더의 클래스 바로 뒤다.
 namespace sw
 {
     namespace
@@ -279,7 +279,7 @@ namespace sw
         }
     } // namespace
 
-    SW_ENGINE_SERVICE_SUBSYSTEM( XTestInputInjector, HostOnly, Process, Services, (), SW_ENGINE_DEFAULT_FACTORY( XTestInputInjector ) ); // 엔진 범위 서비스(아래 층이라 모듈 부분 `SW_MODULE_PART` 를 쓸 수 없다)
+    SW_ENGINE_SUBSYSTEM_WITH_SLOT( XTestInputInjector, HostOnly, Process, Shared, (), SW_ENGINE_DEFAULT_FACTORY( XTestInputInjector ) ); // 엔진 범위 서비스(아래 층이라 모듈 부분 `SW_MODULE_PART` 를 쓸 수 없다)
 
     SW_DEV_COMMAND( XTestInput, "input.xtest", "input.xtest move <x> <y> | button <1-9> <down|up|click> | key <keysym> <down|up|tap>",
                     "Inject mouse / key input into the X server through XTest (screen coordinates; X11 window input checks)", &runXTest );

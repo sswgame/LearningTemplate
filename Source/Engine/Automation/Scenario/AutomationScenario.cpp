@@ -18,7 +18,7 @@
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Content/Pack/PackManager.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
 
@@ -36,9 +36,9 @@ namespace sw
              */
             [[nodiscard]] static string describeReadFailure( string_view path )
             {
-                const optional<AbsolutePath>             looseFile = engine::getSubsystem<AssetPaths>().findLooseFile( path );
+                const optional<DiskPath>                 looseFile = engine::getSubsystem<AssetPaths>().findLooseFile( path );
                 const string                             loosePath = looseFile.has_value() ? looseFile->str() : string{};
-                const bool                               bPackOnly = engine::areEngineServicesBound() && engine::getSubsystem<AssetManager>().getPackManager().isAllowLooseFiles() == false;
+                const bool                               bPackOnly = engine::areEngineSubsystemsBound() && engine::getSubsystem<AssetManager>().getPackManager().isAllowLooseFiles() == false;
                 StringBuilder<constant::buffer::kMax512> reason;
                 reason.appendFormat( "[read] not found (content root '%#', working folder '%#', ", engine::getSubsystem<AssetPaths>().getRootFolderPath().str(), FileUtil::getCurrentPath().str() );
                 if ( loosePath.empty() )

@@ -40,7 +40,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief CRC32(IEEE 802.3, 다항식 0xEDB88320) 바이트 표입니다. `HashUtil::computeCRC32` 가 쓴다 — 표는 컴파일 타임에 한 번 만든다. */
+    /** @brief CRC32(IEEE 802.3, 다항식 0xEDB88320) 바이트 표입니다. `HashUtil::computeCRC32` 가 쓰고, 표는 컴파일 타임에 한 번 만든다. */
     struct CRC32Table
     {
         uint32 _arr[256]{};
@@ -86,7 +86,7 @@ namespace sw
         static constexpr uint64 kFNVOffset64 = 14695981039346656037ull;
         /** @brief FNV-1a 64 비트 소수입니다. */
         static constexpr uint64 kFNVPrime64 = 1099511628211ull;
-        /** @brief 좌표 해시(`hashCoord`)의 축마다 곱수입니다 — 축을 맞바꾸면 다른 값이 나오게 서로 다른 홀수다. */
+        /** @brief 좌표 해시(`hashCoord`)의 축마다 곱수입니다. 축을 맞바꾸면 다른 값이 나오도록 서로 다른 홀수를 쓴다. */
         static constexpr uint32 kCoordMultiplierX = 0x9e3779b1u;
         static constexpr uint32 kCoordMultiplierY = 0xc2b2ae35u;
         static constexpr uint32 kCoordMultiplierZ = 0x85ebca77u;
@@ -101,7 +101,7 @@ namespace sw
             return value ^ ( value >> 31 );
         }
 
-        /** @brief 32 비트 섞기(lowbias32 — 상태 없는 정수 해시)입니다. 좌표 · 씨앗을 고르게 퍼뜨린다(절차 생성 · 노이즈). */
+        /** @brief 32 비트 섞기(lowbias32, 상태 없는 정수 해시)입니다. 좌표 · 씨앗을 고르게 퍼뜨린다(절차 생성 · 노이즈). */
         [[nodiscard]] static constexpr uint32 mix32( uint32 value ) noexcept
         {
             value = ( value ^ ( value >> 16 ) ) * 0x7feb352du;
@@ -111,7 +111,7 @@ namespace sw
 
         /**
          * @brief 2 차원 정수 좌표의 해시입니다(`mix32` 섞기). 상태가 없어 어느 셀부터 물어도 같은 값이라 절차 생성(지형 · 나무 · 광석 · 값 노이즈)에 씁니다.
-         * @details 예전에는 GameFramework `GameHash` 에 있어 Core 의 노이즈(`ValueNoise`)가 쓸 수 없었다. 언리얼 `FMath::Hash`/`HashCombine` 처럼 Core 해시 도구다.
+         * @details Core 의 노이즈(`ValueNoise`)도 쓰도록 GameFramework `GameHash` 에서 옮겼다. 언리얼 `FMath::Hash`/`HashCombine` 처럼 Core 해시 도구다.
          */
         [[nodiscard]] static constexpr uint32 hashCoord( int32 x, int32 z, uint32 seed ) noexcept
         {
@@ -127,17 +127,17 @@ namespace sw
         /** @brief 해시의 아래 24 비트를 [0, 1] 실수로 바꿉니다. 확률 비교 · 노이즈 값에 씁니다. */
         [[nodiscard]] static constexpr float32 toUnitFloat( uint32 hash ) noexcept { return static_cast<float32>( hash & kUnitFloatMask ) / static_cast<float32>( kUnitFloatMask ); }
 
-        /** @brief splitmix64 수열의 다음 값입니다 — 상태에 황금비를 더하고 마무리 섞기를 합니다. 씨앗 0 도 쓸 수 있습니다(고정점이 없다). */
+        /** @brief splitmix64 수열의 다음 값입니다. 상태에 황금비를 더하고 마무리 섞기를 합니다. 고정점이 없어 씨앗 0 도 쓸 수 있습니다. */
         [[nodiscard]] static constexpr uint64 splitMix64Next( uint64& inoutState ) noexcept
         {
             inoutState += kGoldenRatio64;
             return mix64( inoutState );
         }
 
-        /** @brief FNV-1a 32 비트의 한 걸음입니다 — @p hash 에 @p value 를 `xor` 한 뒤 소수를 곱합니다. 바이트가 아닌 값(헤더 · 칸 필드)을 하나씩 섞을 때 씁니다. */
+        /** @brief FNV-1a 32 비트의 한 걸음입니다. @p hash 에 @p value 를 `xor` 한 뒤 소수를 곱합니다. 바이트가 아닌 값(헤더 · 칸 필드)을 하나씩 섞을 때 씁니다. */
         [[nodiscard]] static constexpr uint32 fnvStep32( const uint32 hash, const uint32 value ) noexcept { return ( hash ^ value ) * kFNVPrime32; }
 
-        /** @brief FNV-1a 64 비트의 한 걸음입니다 — @p hash 에 @p value 를 `xor` 한 뒤 소수를 곱합니다. */
+        /** @brief FNV-1a 64 비트의 한 걸음입니다. @p hash 에 @p value 를 `xor` 한 뒤 소수를 곱합니다. */
         [[nodiscard]] static constexpr uint64 fnvStep64( const uint64 hash, const uint64 value ) noexcept { return ( hash ^ value ) * kFNVPrime64; }
 
         /**
@@ -179,12 +179,12 @@ namespace sw
 
         /**
          * @brief 64 비트 FNV-1a 문자열 해시입니다(포인터 + 길이). 쿠킹 산출물 · 저장 · 네트워크의 문자열 키가 쓰므로 값을 바꾸지 않습니다.
-         * @details **두 경로 모두 CharT 의 부호 없는 짝 타입을 거친다.** 부호 확장을 막기 위해서다. `char` 가 음수면(UTF-8 의 0x80
+         * @details 두 경로 모두 CharT 의 부호 없는 짝 타입을 거친다. 부호 확장을 막기 위해서다. `char` 가 음수면(UTF-8 의 0x80
          *          이상 바이트) 0xFFFFFFFFFFFFFF80 같은 값이 섞여 들어가고, `char` 의 부호 여부는 구현 정의라서 **플랫폼이 바뀌면
          *          해시가 달라진다**(ARM 은 unsigned char 다).
          *          다만 `uint8` 로 고정하면 안 된다. 이 템플릿은 `utf16` 으로도 불리는데(`computeStringHash64( wstring )`), 그러면 넓은
-         *          문자가 **하위 한 바이트로 잘려** 한글처럼 상위 바이트만 다른 문자들이 모두 같은 값으로 해시된다.
-         *          @p bIgnoreCase 가 참이면 ASCII 대문자를 소문자로 바꿔 섞는다(기본값이 참이다 — 대소문자를 구분하려면 거짓을 넘긴다).
+         *          문자가 하위 한 바이트로 잘려 한글처럼 상위 바이트만 다른 문자들이 모두 같은 값으로 해시된다.
+         *          @p bIgnoreCase 가 참(기본값)이면 ASCII 대문자를 소문자로 바꿔 섞는다. 대소문자를 구분하려면 거짓을 넘긴다.
          */
         template <typename CharT>
         [[nodiscard]] static constexpr uint64 computeStringHash64( const CharT* pStr, const size_t length, const bool bIgnoreCase = true, const uint64 seed = kFNVOffset64 ) noexcept
@@ -205,7 +205,7 @@ namespace sw
             return computeStringHash64( str.data(), str.size(), bIgnoreCase, seed );
         }
 
-        /** @brief 32 비트 FNV-1a 문자열 해시입니다(포인터 + 길이). 64 비트 쪽과 **같은 규칙**이다(@p bIgnoreCase 경로 포함) — 다르면 같은 문자열이 두 경로에서 다르게 해시된다. */
+        /** @brief 32 비트 FNV-1a 문자열 해시입니다(포인터 + 길이). 64 비트 쪽과 규칙이 같다(@p bIgnoreCase 경로 포함). 다르면 같은 문자열이 두 경로에서 다르게 해시된다. */
         template <typename CharT>
         [[nodiscard]] static constexpr uint32 computeStringHash32( const CharT* pStr, const size_t length, const bool bIgnoreCase = true, const uint32 seed = kFNVOffset32 ) noexcept
         {
@@ -234,7 +234,7 @@ namespace sw
         /**
          * @brief 여러 값의 해시를 차례로 `combine` 해 하나로 만듭니다. 키 구조체의 `computeHash()` 본문입니다(`return HashUtil::makeHash( _a, _b );`).
          * @details 값마다 `DefaultHash` 를 씁니다(정수 · 열거형 · 문자열 · `computeHash()` 를 가진 키가 섞여도 됩니다). 프로세스 안에서만 쓰는
-         *          해시입니다 — `std::hash` 는 구현마다 다르므로 파일 · 네트워크로 나가는 해시에는 쓰지 않습니다. 인자가 없으면 컴파일되지 않습니다.
+         *          해시입니다. `std::hash` 는 구현마다 다르므로 파일 · 네트워크로 나가는 해시에는 쓰지 않습니다. 인자가 없으면 컴파일되지 않습니다.
          */
         template <typename TFirst, typename... TRest>
         [[nodiscard]] static uint64 makeHash( const TFirst& first, const TRest&... rest )

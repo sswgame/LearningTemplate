@@ -395,7 +395,7 @@ namespace sw
 
     void Win32Window::onSizeMessage( WPARAM wParam, LPARAM lParam )
     {
-        // **최소화한 크기를 창 크기로 기억하지 않는다.** 최소화는 클라이언트 영역
+        // 최소화한 크기를 창 크기로 기억하지 않는다. 최소화는 클라이언트 영역
         // 0x0 짜리 WM_SIZE 로 온다. 그 값을 `_width`/`_height` 에 적어 두면 창이
         // 크기 0 이 됐다는 뜻이 되어 버린다. 그 상태에서 `recreate()`(백엔드 교체가
         // 이 경로로 온다)가 돌면 기억해 둔 0x0 으로 창을 다시 만들고, 복원해도 그 크기가

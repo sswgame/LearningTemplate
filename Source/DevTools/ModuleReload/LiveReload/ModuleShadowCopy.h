@@ -15,7 +15,7 @@ namespace sw
 {
     /**
      * @brief 모듈 라이브러리 이름 세 가지입니다 — 리눅스는 SONAME, Windows 는 DLL 파일 이름(로더가 import 를 맞추는 이름)입니다.
-     * @details `_original` 은 원본 파일의 이름이라 의존 모듈의 NEEDED · import 표가 이것을 적고 있고, `_current` 는 의존 모듈이 **지금**
+     * @details `_original` 은 원본 파일의 이름이라 의존 모듈의 NEEDED · import 표가 이것을 적고 있고, `_current` 는 의존 모듈이 지금
      *          적어야 할 이름(복사본을 쓸 때 세대 이름으로 바꾼다), `_loaded` 는 commit 된 복사본의 이름입니다. prepare 가 실패하면
      *          `_current` 를 `_loaded` 로 되돌립니다.
      */
@@ -80,7 +80,7 @@ namespace sw
          * @brief 모듈 라이브러리 바이트 @p bytes 에 지연 import 가 있으면 원인을 남기고 true 를 반환합니다 — 그런 라이브러리는 올리지 않습니다.
          * @details 모듈 라이브러리는 모든 import 를 로드할 때 묶어야 한다. lld 20 의 x64 지연 로드 썽크(`__tailMerge_<dll>`)는 xmm0~3 을
          *          `__delayLoadHelper2` 호출의 홈 공간에 저장해, 첫 호출이 묶으면 그 호출의 float 인자가 망가진다.
-         *          빌드는 `/DELAYLOAD` 를 쓰지 않고(`ArchitectureTest.NoBuiltLibraryHasDelayLoadedImports` 가 산출물을 본다), 이것은 그 규칙을 어긴 라이브러리를 올리기 **전에** 거절하는 마지막 그물이다.
+         *          빌드는 `/DELAYLOAD` 를 쓰지 않고(`ArchitectureTest.NoBuiltLibraryHasDelayLoadedImports` 가 산출물을 본다), 이것은 그 규칙을 어긴 라이브러리를 올리기 전에 거절하는 마지막 그물이다.
          */
         static bool shouldRejectDelayImports( string_view moduleName, string_view modulePath, const vector<uint8>& bytes );
 
@@ -90,7 +90,7 @@ namespace sw
          * @param outShadowPath 쓴 복사본 경로입니다. 실패하면 건드리지 않습니다.
          * @return 원본을 못 읽었거나, 엔진 ABI 스탬프가 다르거나 없거나, 지연 import 가 있거나, 세대 이름을 붙이지 못했거나, 쓰지 못했으면 false 입니다.
          *         실패하면 쓰다 만 복사본을 지웁니다.
-         * @details 로드하기 **전에** 확인한다. 로드하면 정적 초기화가 돌므로, 돌고 있는 엔진과 다른 헤더로 빌드된 모듈은 그 전에 거절해야 한다.
+         * @details 로드하기 전에 확인한다. 로드하면 정적 초기화가 돌므로, 돌고 있는 엔진과 다른 헤더로 빌드된 모듈은 그 전에 거절해야 한다.
          */
         [[nodiscard]] static bool writeShadowCopy( const ShadowCopyParams& params, ShadowCopySerials& inoutSerials, ShadowLibraryNameState& inoutLibraryName, AbsolutePath& outShadowPath );
 

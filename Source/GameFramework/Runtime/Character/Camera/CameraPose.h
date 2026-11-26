@@ -48,7 +48,7 @@ namespace sw
          */
         static void applyToCamera( CameraComponent& camera, const CameraPose& pose );
         /**
-         * @brief 포즈를 카메라의 **부모 공간**에 씁니다. 렌즈와 로컬 위치, 회전을 씁니다. 대상이 카메라 주인의 로컬 값(1인칭의 눈 위치)일 때 씁니다.
+         * @brief 포즈를 카메라의 부모 공간에 씁니다. 렌즈와 로컬 위치, 회전을 씁니다. 대상이 카메라 주인의 로컬 값(1인칭의 눈 위치)일 때 씁니다.
          * @details 부모(몸 · 탈것)가 움직이고 돌면 카메라도 계층을 따라간다. 월드로 쓰면 부모를 버리고 원점 근처에 남는다.
          */
         static void applyToCameraLocal( CameraComponent& camera, const CameraPose& pose );

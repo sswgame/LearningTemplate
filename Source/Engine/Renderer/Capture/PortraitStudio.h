@@ -1,6 +1,6 @@
 /**
  * @file PortraitStudio.h
- * @brief 프리팹 하나를 **따로 떨어진 스튜디오**(자기 씬, 카메라, 조명, 렌더러)에서 그려 초상화(썸네일) 이미지를 얻습니다.
+ * @brief 프리팹 하나를 따로 떨어진 스튜디오(자기 씬, 카메라, 조명, 렌더러)에서 그려 초상화(썸네일) 이미지를 얻습니다.
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -12,7 +12,7 @@
 #include "Core/Path/AbsolutePath.h"
 
 #include "Engine/EngineMinimal.h"
-#include "Engine/Object/GameObject/Service/SceneEngineServices.h"
+#include "Engine/Object/GameObject/Subsystem/SceneEngineSubsystems.h"
 #include "Engine/Renderer/Capture/SceneCapture.h"
 
 namespace sw
@@ -48,7 +48,7 @@ namespace sw
     /**
      * @class PortraitStudio
      * @brief 프리팹을 스튜디오 씬에 스폰해 경계 구에 맞춘 카메라와 키 라이트, 채움 조명으로 그리고, 화면에 나간 이미지(RGBA8)를 돌려줍니다.
-     * @details **격리 방식: 따로 만든 씬 + 따로 만든 렌더러.** 엔진 루프는 활성 씬 하나만 틱하고 그리므로, 스튜디오 씬은 씬 매니저에 등록하지 않습니다.
+     * @details 격리 방식: 따로 만든 씬 + 따로 만든 렌더러. 엔진 루프는 활성 씬 하나만 틱하고 그리므로, 스튜디오 씬은 씬 매니저에 등록하지 않습니다.
      *          틱하지 않고 플레이어 화면에 나오지 않으며, 조명은 스튜디오의 빛뿐입니다. 렌더러도 자기 것(`SceneCapture`: GPUScene, 트랜지언트, 출력 타깃,
      *          PSO)이라 주 렌더러의 상태를 건드리지 않습니다. 숨김 레이어(같은 씬에 두고 마스크로 가리기)는 고르지 않았습니다. 조명, 그림자, 후처리가 씬
      *          전체의 것이라 스튜디오가 게임의 해와 점광을 받고, 게임 화면이 스튜디오의 빛을 받기 때문입니다. 다중 월드가 생기면 스튜디오가 미리보기 월드가 됩니다.
@@ -69,7 +69,7 @@ namespace sw
          * @brief 이 디바이스로 스튜디오 렌더러(포워드 파이프라인)를 만듭니다.
          * @param services 스튜디오 씬을 지을 엔진 서비스 묶음(씬 매니저의 것)입니다. 에셋 매니저와 기본 에셋 칸이 비면 false 입니다 — 전역 표를 다시 찾지 않습니다.
          */
-        [[nodiscard]] bool initialize( RenderThread& renderThread, const SceneEngineServices& services );
+        [[nodiscard]] bool initialize( RenderThread& renderThread, const SceneEngineSubsystems& services );
         void               shutdown();
 
         /**
@@ -83,7 +83,7 @@ namespace sw
          * @details 스튜디오 하나를 세워 장마다 `renderPrefab` 으로 그리고 읽으며(@p renderThread 의 명령), 옮기기 · 인코딩 · 쓰기는 워커가 한다. 게임 스레드에서, 모듈(게임 컴포넌트 타입)이 로드된 뒤에 부릅니다.
          *          @p size 는 16 ~ 4096 으로 제한합니다. @p services 는 스튜디오 씬을 지을 묶음입니다.
          */
-        [[nodiscard]] static bool renderPrefabList( RenderThread& renderThread, const SceneEngineServices& services, string_view prefabList, const AbsolutePath& outputDirectory,
+        [[nodiscard]] static bool renderPrefabList( RenderThread& renderThread, const SceneEngineSubsystems& services, string_view prefabList, const AbsolutePath& outputDirectory,
                                                     uint32 size );
 
     private:
@@ -91,7 +91,7 @@ namespace sw
         static string_view makeFileStem( string_view prefabPath );
 
     private:
-        SceneCapture        _capture;  ///< 그리기 · 읽기(렌더 스레드 명령)
-        SceneEngineServices _services; ///< `initialize` 가 받은 묶음(빌림). 스튜디오 씬과 프리팹 · 머티리얼 캐시를 이것으로 찾는다
+        SceneCapture          _capture;  ///< 그리기 · 읽기(렌더 스레드 명령)
+        SceneEngineSubsystems _services; ///< `initialize` 가 받은 묶음(빌림). 스튜디오 씬과 프리팹 · 머티리얼 캐시를 이것으로 찾는다
     };
 } // namespace sw

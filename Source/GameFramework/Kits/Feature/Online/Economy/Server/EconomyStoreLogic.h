@@ -2,19 +2,19 @@
  * @file EconomyStoreLogic.h
  * @brief 경제 서비스의 저장 부분입니다. 저장소 스레드(`ServiceStoreJob::run`)에서 부르는 동기 함수이며 서비스 멤버는 모릅니다. 입력은 값으로 받습니다.
  * @details - 구매는 원장 이동 한 건과 계정당 구매 수 레코드(`econ_purchase`, 한도가 있을 때)를 한 트랜잭션으로 처리한다. 원장 이동은 계정에서 소각으로 가격을 내고, 발행에서 계정으로 지급하는 것이다.
- *            분개 키는 클라이언트의 멱등 키이므로, 응답을 잃고 재시도하면 **잔액과 한도 판정보다 먼저** 지난 결과를 받는다.
+ *            분개 키는 클라이언트의 멱등 키이므로, 응답을 잃고 재시도하면 잔액과 한도 판정보다 먼저 지난 결과를 받는다.
  *          - 가상 화폐의 가격은 재원 자산의 현재 잔액을 적힌 순서대로 나눠서 분개 항목을 만든다. 무상 재화를 먼저 쓰는 것이 관례이다.
  *            커밋 사이에 잔액이 바뀌면 버전 충돌이 나므로 다시 짠다. 재원 중 하나라도 빚(환불 회수로 생긴 음수)이면 그 가상 화폐로는 살 수 없으며(`InsufficientFunds`) 빚을 먼저 갚아야 한다.
  *          - 영수증 지급의 분개 키는 거래 id(`rcpt.<스토어>/<거래 id 16진>`)이다. 그래서 같은 영수증은 어느 계정으로든 한 번만 지급된다.
  *            "누구에게" 는 구매자 대조가 정한다(`ReceiptBuyerBinding`) — 스토어 답의 구매자가 이 계정이 아니면 `NotPurchaser` 이고 지급 분개를 쓰지 않는다.
- *          - 지급 뒤 스토어에 알려야 하는 영수증(`_deliveryKey`)은 지급 분개와 **같은 트랜잭션**으로 `econ_delivery` 레코드를 쓴다. 지급이 진 영수증에는 레코드가 없어 알리지 않고(스토어가 환불한다),
+ *          - 지급 뒤 스토어에 알려야 하는 영수증(`_deliveryKey`)은 지급 분개와 같은 트랜잭션으로 `econ_delivery` 레코드를 쓴다. 지급이 진 영수증에는 레코드가 없어 알리지 않고(스토어가 환불한다),
  *            지급이 커밋되면 레코드도 있어 서버가 죽어도 다음 기동이 다시 알린다(트랜잭션 아웃박스 — 언리얼 · 유니티는 이 일을 게임 백엔드에 맡긴다).
  */
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Runtime/EconomyProtocol.h"
@@ -26,6 +26,13 @@
 
 namespace sw
 {
+    struct EconomyDeliveryRecord;
+    struct EconomyPurchaseCountRecord;
+    struct EconomyReceiptRecord;
+    struct EconomyRefundCursorRecord;
+    template <typename TRecord>
+    class ServiceRecordTable;
+
     /** @brief 회수로 잔액이 바뀐 계정 하나와 그 자산의 잔액입니다. */
     struct EconomyBalanceChange
     {
@@ -81,17 +88,17 @@ namespace sw
     /** @brief 경제 저장 함수 모음입니다. 저장소 스레드에서 부릅니다. */
     struct SW_KIT_SERVER_API EconomyStoreLogic
     {
-        static const hashed_string& getPurchaseCountTable(); ///< "econ_purchase" — 키 `<계정 16 진>/<상품 id>`
-        static const hashed_string& getRefundCursorTable();  ///< "econ_refund_cursor" — 키는 스토어 이름, 값은 환불 조회의 기준 시각(가변 정수)
+        static const ServiceRecordTable<EconomyPurchaseCountRecord>& getPurchaseCountTable(); ///< "econ_purchase" — 키 `<계정 16 진>/<상품 id>`
+        static const ServiceRecordTable<EconomyRefundCursorRecord>&  getRefundCursorTable();  ///< "econ_refund_cursor" — 키는 스토어 이름, 값은 환불 조회의 기준 시각
         /**
-         * @brief 영수증 상태 표입니다(키 = 지급 분개 키 `rcpt.<스토어>/<거래 id>`, 값 `[판 번호][상태]`). 보존 정리가 지우지 않는다.
+         * @brief 영수증 상태 표입니다(키 = 지급 분개 키 `rcpt.<스토어>/<거래 id>`). 보존 정리가 지우지 않는다.
          * @details 거래 하나의 상태(지급 · 지급 전 환불 · 환불 회수 · 청약철회)가 레코드 하나라서 지급과 환불 · 철회가 서로 이 레코드의 버전을 커밋 조건으로 건다 —
          *          어느 쪽이 먼저 커밋해도 다른 쪽은 Conflict 로 다시 읽으므로 "환불된 구매의 지급" 이 통과하지 않는다(감사 O-1). 분개는 감사 내역이라 지워지고 이 레코드가 멱등 기록이다(감사 P0-7).
          *          지우지 않는 레코드라 받은 계정은 담지 않는다 — 탈퇴한 사람과 이어지지 않는다(받은 계정은 보존 기간이 있는 지급 분개에만 있다).
          */
-        static const hashed_string& getReceiptTable();
-        static const hashed_string& getDeliveryTable(); ///< "econ_delivery" — 스토어에 아직 알리지 못한 지급. 키는 지급 분개 키, 값은 `[판 번호][스토어][알림 키][기한]`
-        static EconomyServiceResult toEconomyResult( LedgerResult result );
+        static const ServiceRecordTable<EconomyReceiptRecord>&  getReceiptTable();
+        static const ServiceRecordTable<EconomyDeliveryRecord>& getDeliveryTable(); ///< "econ_delivery" — 스토어에 아직 알리지 못한 지급. 키는 지급 분개 키
+        static EconomyServiceResult                             toEconomyResult( LedgerResult result );
 
         /** @brief 검증 결과의 지급 알림 하나를 만듭니다. 결과에 알림 키가 없거나 거래 id 로 레코드 키를 만들 수 없으면 false 입니다. */
         [[nodiscard]] static bool makeDeliveryTask( const ReceiptValidationResult& receipt, ReceiptDeliveryTask& outTask );

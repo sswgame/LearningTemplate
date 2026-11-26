@@ -1,8 +1,8 @@
-// RigidBodyStateTest — 강체의 속도가 상태 코덱으로 실리는지 본다(멈춘 바디는 쓰는 것이 없다, nogpu — 바디 없이 값 칸으로).
+// RigidBodyStateTest: 강체의 속도가 상태 코덱으로 실리는지 본다(멈춘 바디는 쓰는 것이 없다, nogpu, 바디 없이 값 칸으로).
 #include "pch.h"
 
 #include "Core/Encoding/FourCCUtil.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"

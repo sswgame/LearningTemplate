@@ -1,11 +1,12 @@
 /**
  * @file TextTypes.h
  * @brief 텍스트 계층이 함께 쓰는 값 타입을 정의합니다. 폰트 굵기, 기울기, 면 번호, 메트릭, SDF 비트맵이 있습니다.
- * @details 길이는 둘로 나뉜다. 면과 글리프 메트릭은 **em 비율**(1 = 폰트 크기)이고, 래스터 결과는 **래스터 픽셀**(`SDFRasterParams::_pixelSize` 기준)이다.
+ * @details 길이는 둘로 나뉜다. 면과 글리프 메트릭은 em 비율(1 = 폰트 크기)이고, 래스터 결과는 래스터 픽셀(`SDFRasterParams::_pixelSize` 기준)이다.
  *          화면 크기는 em 비율 × 폰트 크기(UI 단위)로 구하며, 래스터 크기와 화면 크기를 섞지 않는다.
  */
 #pragma once
 #include "Core/Container/vector.h"
+#include "Core/Foundation/TypedID.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
@@ -41,9 +42,9 @@ namespace sw
 namespace sw
 {
     /** @brief 로드한 폰트 면(파일 하나 + 면 번호) 하나를 가리키는 번호입니다. 래스터라이저가 1 부터 부여합니다. */
-    using FontFaceID = uint32;
+    using FontFaceID = TypedID<struct FontFaceIDTag, uint32>;
     /** @brief 면이 없음을 뜻하는 번호입니다(래스터라이저가 주는 번호는 1 부터다). */
-    inline constexpr FontFaceID kInvalidFontFaceID = 0;
+    inline constexpr FontFaceID kInvalidFontFaceID{};
 
     /** @brief 면 하나의 세로 메트릭입니다(em 비율 — 위는 +). */
     struct FontFaceMetrics

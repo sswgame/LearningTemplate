@@ -43,10 +43,10 @@ namespace sw
     {
     }
 
-    bool WesternHorse::initialize( const WesternCatalog* pCatalog, const hashed_string& horseID, uint32 seed )
+    bool WesternHorse::initialize( const WesternCatalog& catalog, const hashed_string& horseID, uint32 seed )
     {
-        _pCatalog = pCatalog;
-        _pDef     = pCatalog != nullptr ? pCatalog->findHorse( horseID ) : nullptr;
+        _pCatalog = &catalog;
+        _pDef     = catalog.findHorse( horseID );
         if ( _pDef == nullptr )
             return false;
         ResourceGaugeSettings healthSettings;
@@ -72,7 +72,7 @@ namespace sw
         _bond            = LevelProgress{};
         _bondXPCarry     = 0.0f;
         _fear            = 0.0f;
-        _hoursSinceBrush = pCatalog->getBondExperience()._brushCooldownHours;
+        _hoursSinceBrush = catalog.getBondExperience()._brushCooldownHours;
         _bRidden         = SW_FALSE;
         _bGalloping      = SW_FALSE;
         applyBondLevel( getBondLevel() );
@@ -80,16 +80,17 @@ namespace sw
         return true;
     }
 
-    void WesternHorse::update( float32 deltaTime, float32 gameHours )
+    void WesternHorse::update( GameSeconds frameTime, float32 gameHours )
     {
+        const float32 deltaTime = frameTime.count();
         if ( _pDef == nullptr )
             return;
         if ( deltaTime > 0.0f )
         {
             _health.setRegenScale( computeRegenScale( _healthCore ) );
             _stamina.setRegenScale( computeRegenScale( _staminaCore ) );
-            _health.update( deltaTime );
-            _stamina.update( deltaTime );
+            _health.update( frameTime );
+            _stamina.update( frameTime );
             _fear = MathUtil::max( 0.0f, _fear - _pDef->_fearDecayPerSecond * deltaTime );
             if ( _bRidden != SW_FALSE )
                 addBondExperience( _pCatalog->getBondExperience()._ridePerSecond * deltaTime );
@@ -208,7 +209,7 @@ namespace sw
         if ( io.isOk() == false )
             return;
         // 품종이 다르면 그 품종으로 열어 게이지 설정을 맞춘다(값은 아래에서 덮어쓴다).
-        if ( io.isReading() && ( _pDef == nullptr || _pDef->_id != horseID ) && io.check( initialize( _pCatalog, horseID, 1 ) ) == false )
+        if ( io.isReading() && ( _pDef == nullptr || _pDef->_id != horseID ) && io.check( _pCatalog != nullptr && initialize( *_pCatalog, horseID, 1 ) ) == false )
             return;
         io.reflected( *this );
         io.value( _health ); // 리플렉션 밖 값 — 게이지는 제 본문(남은 과열 시간), 난수는 손 코덱이다

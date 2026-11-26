@@ -39,7 +39,7 @@ namespace sw::editor
         /** @brief 팝업이 열려 있고 파일 목록(일 스레드)이 아직 안 왔으면 true 입니다. 자동화 시계 잡기 조건이 읽습니다(`QuickLauncherPopup.cpp`). */
         static bool isIndexing();
         /**
-         * @brief 결과 줄의 종류 표시(`[Material]`) 열 폭입니다 — 두 목록의 배지와 **에셋 종류 등록 표 전부**의 가장 넓은 폭(지금 글꼴, ImGui 프레임 안에서).
+         * @brief 결과 줄의 종류 표시(`[Material]`) 열 폭입니다 — 두 목록의 배지와 에셋 종류 등록 표 전부의 가장 넓은 폭(지금 글꼴, ImGui 프레임 안에서).
          * @details 파일 색인은 일 스레드에서 늦게 와서 온 에셋만 재면 첫 글자를 칠 즈음 이름 열이 한 번 밀린다. 색인과 무관하게 같은 값이어야 한다(자체 테스트 `quickOpen.columnIgnoresTheIndex`).
          */
         static float32 measureBadgeColumn( const vector<EditorSearchItem>& listItem, const vector<EditorSearchItem>& listTailItem );

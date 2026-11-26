@@ -1,7 +1,7 @@
 // UserSettingsSchema — 정의 구조체를 스키마로 읽기: 이름 · 열거자 · 기본값 · 작은 문법 칸 · 칸 오류(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/UserSettings/HardwareDetectionResult.h"
 #include "Engine/UserSettings/UserSettingsSchema.h"

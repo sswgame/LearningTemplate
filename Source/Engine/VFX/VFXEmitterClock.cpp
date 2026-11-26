@@ -19,7 +19,7 @@ namespace sw
         , _bWarnedStepLimit{ SW_FALSE }
     {
         if ( _pDef == nullptr )
-            ::sw::internal::reportMissingRequiredService( SW_FUNCTION_SIGNATURE );
+            ::sw::internal::reportMissingRequiredSubsystem( SW_FUNCTION_SIGNATURE );
         SW_ASSERT( _spawnScale >= 0.0f );
         _listBurstFired.resize( _pDef->_listBurst.size(), 0 );
     }

@@ -42,6 +42,22 @@ class ProcessGroupTest(unittest.TestCase):
             patch.stop()
         self._folder.cleanup()
 
+    def test_each_child_starts_with_its_own_empty_user_data(self) -> None:
+        stale = Path(self._folder.name) / "Bin" / "Saved" / "Automation" / "UserData" / "Run" / "child" / "slot0.info"
+        stale.parent.mkdir(parents=True)
+        stale.write_text("old build", encoding="utf-8")   # 앞선 실행이 남긴 세이브
+        printer = "import os\nprint(os.environ['SW_USER_DATA_ROOT'])\nprint(len(os.listdir(os.environ['SW_USER_DATA_ROOT'])))"
+        with ProcessGroup("test", "Preset", "Run") as group:
+            first = group.start("child", [sys.executable, "-c", printer], stdin=False)
+            second = group.start("other", [sys.executable, "-c", printer], stdin=False)
+            first.process.wait(30)
+            second.process.wait(30)
+        first_lines = first.text().split()
+        second_lines = second.text().split()
+        self.assertEqual(str(stale.parent), first_lines[0])
+        self.assertEqual("0", first_lines[1])              # 남은 세이브가 지워졌다
+        self.assertNotEqual(first_lines[0], second_lines[0])
+
     def test_wait_send_and_quit(self) -> None:
         with ProcessGroup("test", "Preset", "Run") as group:
             child = group.start("child", [sys.executable, "-c", _ECHO_CHILD])

@@ -14,10 +14,10 @@
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Name/hashed_string.h"
 #include "Core/Path/AbsolutePath.h"
-#include "Core/Subsystem/ServiceSlot.h"
+#include "Core/String/Name/hashed_string.h"
 #include "Core/Subsystem/Subsystem.h"
+#include "Core/Subsystem/SubsystemSlot.h"
 
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Content/AssetID.h"
@@ -146,7 +146,7 @@ namespace sw
     /**
      * @class UserSettingsManager
      * @brief 엔진 서비스(`engine::getUserSettingsManager`, 게임에서도 보입니다)입니다. 스키마, 값, 사용자 파일, 핸들러 레지스트리를 가집니다.
-     * @details **게임 스레드 전용**이다. 대상 적용은 게임 스레드에서 일어나고, 창과 스왑체인 변경은 화면 요청으로 미뤄 호스트가 프레임 맨 앞에서
+     * @details 게임 스레드 전용이다. 대상 적용은 게임 스레드에서 일어나고, 창과 스왑체인 변경은 화면 요청으로 미뤄 호스트가 프레임 맨 앞에서
      *          처리한다(`consumeDisplayRequest`). 모듈이 등록한 통보와 핸들러는 모듈을 언로드하기 전에 제거한다(언로드 처리기).
      */
     class SW_API UserSettingsManager : public Subsystem
@@ -316,7 +316,7 @@ namespace sw
         void captureStageBaseline();
         /**
          * @brief 기준과 다른 확정 값(보류 · 확인 대기 포함)을 기준으로 되돌려 대상에 다시 넣습니다. 파일에는 쓰지 않습니다. 기준이 없으면 아무 일도 하지 않습니다.
-         * @details 자동화 세션이 다음 단계 앞에서 전역 변수와 함께 부른다(`AutomationSession::startStage`) — 게임을 다시 시작해도 남는 사용자 설정이라 게임 인스턴스 수명이 아니다. 전역 변수 대상은 기동 적용처럼 넣는다 — 명령줄로 준 변수(`<Launch>`)를 덮지 않는다.
+         * @details 자동화 세션이 다음 단계 앞에서 전역 변수와 함께 부른다(`AutomationSession::startStage`). 게임을 다시 시작해도 남는 사용자 설정이라 게임 인스턴스 수명이 아니다. 전역 변수 대상은 기동 적용처럼 넣는다 — 명령줄로 준 변수(`<Launch>`)를 덮지 않는다.
          *          다음 실행에 닿는 설정(`NeedsRestart`)은 확정 값만 되돌린다.
          * @return 되돌린 설정 수입니다.
          */
@@ -417,7 +417,7 @@ namespace sw
         /** @brief 키 바인딩 대상 맵 등록의 구독입니다. 풀리면 `releaseKeyBindingInputMap` 이 불린다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다. */
         ItemSubscriptionList<const InputMap> _subscriptions{ SW_DELEGATE_METHOD( ItemSubscriptionList<const InputMap>::ReleaseFunction, &UserSettingsManager::releaseKeyBindingInputMap, this ) };
 
-        SW_SERVICE_SLOT( UserSettingsManager, Required );
+        SW_SUBSYSTEM_SLOT( UserSettingsManager, Required );
     };
 
     template <typename T>

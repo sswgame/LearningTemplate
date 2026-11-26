@@ -11,9 +11,10 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Name/hashed_string.h"
-#include "Core/Subsystem/ServiceSlot.h"
+#include "Core/String/Name/hashed_string.h"
 #include "Core/Subsystem/Subsystem.h"
+#include "Core/Subsystem/SubsystemSlot.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Foundation/EngineSubsystemHost.h"
@@ -30,13 +31,12 @@
 #include "Engine/UI/Render/UICanvasPaintState.h"
 #include "Engine/UI/Render/UIPaintContext.h"
 #include "Engine/UI/Screen/UIScreenTypes.h"
-#include "Engine/UI/UIEngineDocuments.h"
 #include "Engine/UI/WidgetTree/Widget.h"
 #include "Engine/UI/WidgetTree/WidgetTypes.h"
 
 namespace sw
 {
-    class FontService;
+    class FontSubsystem;
     class InputManager;
     class InputMap;
     class LocalizationManager;
@@ -47,12 +47,50 @@ namespace sw
     class UIThemeController;
     class SubscriptionList;
     class UserSettingsManager;
+    struct EngineDefaultAssets;
 } // namespace sw
 
 namespace sw
 {
-    /** @brief UI 갱신(`UISystem::update`)의 정해진 자리에서 도는 UI 서비스의 함수 칸입니다. 인자는 실제 프레임 시간(초)입니다. */
-    using UIUpdateDelegate = MulticastDelegate<void( float32 deltaSeconds )>;
+    /**
+     * @struct UIEngineDocuments
+     * @brief 엔진 UI 문서 경로입니다. 기준은 `EngineDefaultAssets`(enginedefaultassets.xml)이고, UI 시스템은 기동 때 그 표에서 받는다(`UISystem::setEngineDocuments`).
+     * @details 코드에 기본 경로를 두지 않는다 — 받지 않은 묶음은 모두 비고, 빈 경로의 화면은 열리지 않는다(여는 쪽이 오류를 남긴다).
+     *          테스트도 같은 표(`test::getEngineDefaultAssets`)에서 받는다.
+     */
+    struct SW_API UIEngineDocuments
+    {
+        string _optionsMenu;          ///< 옵션 메뉴(팩 설정이 덮어쓸 수 있다 — `UISystem::setOptionsMenuDocument`)
+        string _optionsRowBool;       ///< 옵션 메뉴 행 견본: 불리언
+        string _optionsRowInt;        ///< 옵션 메뉴 행 견본: 정수
+        string _optionsRowFloat;      ///< 옵션 메뉴 행 견본: 실수
+        string _optionsRowEnum;       ///< 옵션 메뉴 행 견본: 고르기(마우스 · 키보드)
+        string _optionsRowEnumPad;    ///< 옵션 메뉴 행 견본: 고르기(패드 탐색)
+        string _optionsRowKeyBinding; ///< 옵션 메뉴 행 견본: 키 바인딩
+        string _optionsRowString;     ///< 옵션 메뉴 행 견본: 글
+        string _settingsConfirm;      ///< 되돌리기 전 카운트다운 확인 창
+        string _settingsUnsaved;      ///< 저장하지 않고 닫을 때의 확인 창
+        string _confirmDialog;        ///< 공통 확인 대화 상자(`ConfirmDialogScreen`)
+        string _screenFade;           ///< 씬 이동 페이드 판(`LoadingScreenController`)
+        string _objectiveMarker;      ///< 목표 마커의 내용(`ObjectiveMarkerComponent`)
+        string _quantityDialog;       ///< 수량 대화 상자(`QuantityDialogScreen`)
+        string _mainMenu;             ///< 메인 메뉴(`MainMenuScreen`)
+        string _keyRebind;            ///< 키 바인딩을 받는 창
+        string _notifications;        ///< 알림 화면
+        string _notificationEntry;    ///< 알림 한 줄 견본
+        string _subtitles;            ///< 자막 화면
+        string _tooltip;              ///< 툴팁 화면(`UITooltipSubsystem`)
+        string _debugHUD;             ///< 디버그 HUD 설정 창(개발 빌드)
+
+        /** @brief 엔진 기본 에셋 표에서 경로를 옮겨 담습니다. */
+        static UIEngineDocuments makeFromDefaultAssets( const EngineDefaultAssets& assets );
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief UI 갱신(`UISystem::update`)의 정해진 자리에서 도는 UI 서비스의 함수 칸입니다. 인자는 실제 프레임 시간입니다 — 정지 메뉴 아래서도 흐르며, 게임과 같이 서야 하는 서비스(자막)는 정지 여부를 따로 받습니다. */
+    using UIUpdateDelegate = MulticastDelegate<void( RealSeconds unscaledDeltaTime )>;
 
     /**
      * @class UISystem
@@ -63,29 +101,29 @@ namespace sw
      *          엔진에서는 서브시스템 `UI`(Client 대상)입니다 — 배율 규칙 · 기본 메뉴를 엔진 데이터(팩 설정 `PackEngineSettings` 가 덮어씀)로 정하고
      *          문서 · 스타일 시트 캐시(서브시스템 `UIDocuments` · `UIStyleSheets`)의 다시 읽기 알림을 받으며, Dev 에서는 디버그 HUD 를 붙입니다(`initializeSubsystem`).
      *
-     *          **화면 스택**: 화면은 레이어(`UILayer`)마다 쌓인다. 그리기 순서는 레이어 순서, 같은 레이어 안에서는 쌓인 순서이고, 입력은 그 역순이다.
-     *          맨 위에서 포커스를 받는 화면이 **활성 화면**이며 포커스와 UI 액션을 받는다.
+     *          화면 스택: 화면은 레이어(`UILayer`)마다 쌓인다. 그리기 순서는 레이어 순서, 같은 레이어 안에서는 쌓인 순서이고, 입력은 그 역순이다.
+     *          맨 위에서 포커스를 받는 화면이 활성 화면이며 포커스와 UI 액션을 받는다.
      *          모달 화면과 로딩 화면은 아래 화면과 게임의 입력을 막는다(`isGameInputBlocked`, 플레이어 컨트롤러가 확인한다).
      *          다른 화면에 덮인 화면은 그때의 포커스를 기억했다가 다시 활성이 되면 돌려준다. 닫기는 지연 처리하며, 이번 입력 처리가 끝난 뒤에 실행한다.
      *
-     *          **액션 입력**: UI 는 키와 버튼을 직접 보지 않고 자기 입력 맵(`EngineDefaultAssets::_uiInputMap`, 레이어 `UI`, 활성 화면이 있을 때만 켠다)의
+     *          액션 입력: UI 는 키와 버튼을 직접 보지 않고 자기 입력 맵(`EngineDefaultAssets::_uiInputMap`, 레이어 `UI`, 활성 화면이 있을 때만 켠다)의
      *          액션(`UI.Navigate*`, `UI.Accept`, `UI.Back`, `UI.FocusNext` 등)을 받아 활성 화면의 포커스 경로로 보낸다.
-     *          UI 가 사용한 액션의 물리 입력은 뗄 때까지 **소비된 입력**이다(`isActionConsumed`). 플레이어 컨트롤러가 의도를 만들 때 이것만 확인하면 되므로,
+     *          UI 가 사용한 액션의 물리 입력은 뗄 때까지 소비된 입력이다(`isActionConsumed`). 플레이어 컨트롤러가 의도를 만들 때 이것만 확인하면 되므로,
      *          패드 A 로 메뉴를 눌러도 점프하지 않는다. 위젯이 처리한 마우스 버튼도 소비된다.
      *          입력 방식(포인터 또는 탐색)은 이번 프레임에 마지막으로 쓴 장치로 정한다. 텍스트 입력 위젯이 포커스를 가지면
      *          키보드 포커스 `UI` 를 잡는다. 그동안 게임은 키를 보지 못하고, UI 액션은 Back 과 Tab 만 받는다.
      *
      *          핫 리로드: 언로드되는 모듈 라이브러리에 vtable 이 있는 화면과 위젯(게임이나 키트가 만든 타입)을 가진 화면은 그 자리에서 닫는다. 게임 스레드에서만 호출한다.
      *
-     *          **화면 스택 자신의 책임**(값 멤버, 비가상 직접 호출 — 화면 목록 · 포커스 경로와 떼면 매 프레임 서로를 되묻는 것들이라 남긴다):
+     *          화면 스택 자신의 책임(값 멤버, 비가상 직접 호출 — 화면 목록 · 포커스 경로와 떼면 매 프레임 서로를 되묻는 것들이라 남긴다):
      *          입력 라우팅 `UIInputRouter`(포인터 · 포커스 · 소비는 화면 트리를 따라 간다 — `getInputRouter`, 포커스를 함께 옮기는 `setInputMode`),
      *          그리기 목록과 재사용 판정 상태 · 레이어 숨김 요청 수 `UICanvasPaintState`(스택을 칠한 결과다 — `getPaintState`. 숨김 요청은 화면마다 `_bHiddenByLayer` 를 맞추므로
      *          `addLayerHideRequest` 가 이 클래스에 있다). 화면 스택과 프레임 순서도 이 클래스에 남는다(순서는 `processInput` 과 `update` 본문이 기준이다).
-     *          **따로 선 서브시스템**(값 멤버가 아니다 — `engine::getSubsystem<T>()`): 이 시스템이 의존하는 것 — 클립보드 `UIClipboardService` · 전역 명령 표 `UIGlobalCommandRegistry` ·
+     *          따로 선 서브시스템(값 멤버가 아니다, `engine::getSubsystem<T>()`): 이 시스템이 의존하는 것: 클립보드 `UIClipboardSubsystem` · 전역 명령 표 `UIGlobalCommandRegistry` ·
      *          바인딩 변환기 `UIBindingConverterRegistry` · 문서 캐시 `UIDocumentCache` · 스타일 시트 캐시 `UIStyleSheetCache` · 테마 `UIThemeController`.
      *          이 시스템에 의존하고 UI 갱신 칸(`onPointerProcessed` · `onUpdateBeforeScreens` · `onUpdateAfterScreens` · `onUpdateBeforeLayout` · `onUpdateAfterPaint`)에 거는 것 —
-     *          알림 `UINotificationService` · 자막 `UISubtitleService` · 툴팁 `UITooltipService` · 접근성 `UIAccessibilityService` ·
-     *          위젯 컴포넌트(화면 마커 · World 위젯) `UIWidgetComponentService` · 오프스크린 화면 `UIOffscreenScreens`.
+     *          알림 `UINotificationSubsystem` · 자막 `UISubtitleSubsystem` · 툴팁 `UITooltipSubsystem` · 접근성 `UIAccessibilitySubsystem` ·
+     *          위젯 컴포넌트(화면 마커 · World 위젯) `UIWidgetComponentSubsystem` · 오프스크린 화면 `UIOffscreenScreens`.
      */
     class SW_API UISystem final : public Subsystem
     {
@@ -98,11 +136,11 @@ namespace sw
         /**
          * @brief 입력을 연결하고 시작합니다.
          * @param inputManager 액션과 포인터를 읽는 입력입니다(테스트는 자기 것을 넘깁니다).
-         * @param pFontService 텍스트 측정과 그리기가 쓰는 글꼴입니다(레이아웃부터 사용). 없으면 텍스트 위젯의 크기가 0 입니다.
+         * @param pFontSubsystem 텍스트 측정과 그리기가 쓰는 글꼴입니다(레이아웃부터 사용). 없으면 텍스트 위젯의 크기가 0 입니다.
          * @param uiInputMapPath UI 액션 맵 리소스(`engine/input/ui.input.xml`)입니다. 비우면 UI 액션이 없습니다(포인터만 동작).
          * @return 액션 맵을 지정했는데 읽지 못하면 false 입니다.
          */
-        [[nodiscard]] bool initialize( InputManager& inputManager, FontService* pFontService, const AssetID& assetID = {} );
+        [[nodiscard]] bool initialize( InputManager& inputManager, FontSubsystem* pFontSubsystem, const AssetID& assetID = {} );
         /** @brief 화면을 모두 즉시 닫고 입력을 놓습니다. 걸어 둔 게임 정지 요청도 해제합니다. */
         void shutdown();
         bool isInitialized() const { return _input.getInputManager() != nullptr; }
@@ -120,16 +158,16 @@ namespace sw
         span<const utf8* const> getSubsystemDependencies() const override;
         SubsystemHostMask       getSubsystemHost() const override { return EngineSubsystemHost::kClient; }
         /** @brief 입력을 UI 이벤트로 처리합니다(게임 틱 앞). 순서는 뗀 입력 해제, UI 맵 갱신, 입력 방식 결정, 포인터, 액션, 텍스트 포커스, 닫기 요청 적용입니다. */
-        void processInput( float32 deltaSeconds );
+        void processInput( RealSeconds unscaledDeltaTime );
         // 엔진 루프가 UI 헤더 없이 부르는 프레임 단계다(`IEngineUIDriver` — `getEngineUIDriver`). 서지 않았으면 아무 일도 하지 않는다.
-        void processFrameInput( float32 unscaledDeltaSeconds );
+        void processFrameInput( RealSeconds unscaledDeltaTime );
         void updateFrame( const EngineUIFrame& frame );
         /**
          * @brief 애니메이션, 바인딩, 스타일, 레이아웃, 그리기를 순서대로 처리합니다(게임 틱 뒤). @p viewport 는 이번 프레임에 UI 를 그릴 화면입니다.
          * @details 레이아웃은 화면 트리마다 `UILayoutPass::update( 트리, makeLayoutContext() )` 로 돌린다. 화면마다 뷰포트(UI 단위) 전체가 루트 사각형이다.
          *          포인터 위치는 다음 `processInput` 이 이 뷰포트의 배율로 UI 단위로 바꾼다.
          */
-        void update( float32 deltaSeconds, const UIViewport& viewport );
+        void update( RealSeconds unscaledDeltaTime, const UIViewport& viewport );
 
         // --- 화면 스택 ---------------------------------------------------------------
         /** @brief 화면을 해당 레이어의 맨 위에 올립니다. 활성 화면이 바뀌면 포커스를 옮깁니다(탐색 방식이면 기본 포커스). */
@@ -141,7 +179,7 @@ namespace sw
         /** @brief 게임 화면 수입니다 — 개발 겹치기 화면(`UIScreen::isDevOverlay`)은 세지 않아 HUD 를 띄운 실행과 아닌 실행의 값이 같다(`<ExpectUI screens>`). */
         uint32 getGameScreenCount() const;
         /**
-         * @brief 메뉴 스택 깊이 — 닫히는 중이 아니고 포커스를 받을 수 있는 화면(`UIScreen::canTakeFocus` — HUD · Overlay 제외) 수입니다. 시나리오 단언(`ExpectUI screens`)이 쓴다.
+         * @brief 메뉴 스택 깊이: 닫히는 중이 아니고 포커스를 받을 수 있는 화면(`UIScreen::canTakeFocus`, HUD · Overlay 제외) 수입니다. 시나리오 단언(`ExpectUI screens`)이 쓴다.
          * @details HUD · 알림 · 로딩 뒤 검은 페이드(Overlay)와 닫기 애니메이션 중인 화면을 세면 값이 게임 · 프레임 타이밍에 달린다(일시정지 → 옵션이 2 가 아니라 3 이었다).
          */
         uint32 getMenuStackDepth() const;
@@ -225,7 +263,7 @@ namespace sw
         bool setResourceTagOverride( UIScreen& screen, const ResourceTagSet& tagOverride );
 
         // --- 핫 리로드 ---------------------------------------------------------------
-        // 문서(`.ui.xml`)와 스타일 시트의 파일 변화는 **에디터**의 파일 감시가 캐시 다시 읽기로 이어 준다(`EditorAssetType` 표의 `kAnyCacheHoldingPath`).
+        // 문서(`.ui.xml`)와 스타일 시트의 파일 변화는 에디터의 파일 감시가 캐시 다시 읽기로 이어 준다(`EditorAssetType` 표의 `kAnyCacheHoldingPath`).
         // 에디터 없이(`-EnableEditor` 없이) 띄운 App 은 파일을 고쳐도 반영되지 않는다 — 정상이다.
         /**
          * @brief 문서 @p documentPath 가 바뀌었을 때, 그 문서(또는 그것을 조각으로 쓰는 문서)로 연 화면을 새로 생성합니다(캐시의 다시 읽기 알림이 부릅니다).
@@ -240,26 +278,26 @@ namespace sw
 
         // --- 화면 스택 위의 UI 서비스 -------------------------------------------------------
         /**
-         * @brief 화면 틱 **앞**에서 도는 UI 서비스의 칸입니다(자막 `UISubtitleService` · 툴팁 `UITooltipService`). 인자는 실제 프레임 시간입니다.
-         * @details 화면 스택 위에서 자기 화면을 여닫는 서비스는 이 시스템의 값 멤버가 아니라 서브시스템이다(UI 에 의존 — `engine::getSubsystem<UINotificationService>()` 처럼
+         * @brief 화면 틱 앞에서 도는 UI 서비스의 칸입니다(자막 `UISubtitleSubsystem` · 툴팁 `UITooltipSubsystem`). 인자는 실제 프레임 시간입니다.
+         * @details 화면 스택 위에서 자기 화면을 여닫는 서비스는 이 시스템의 값 멤버가 아니라 서브시스템이다(UI 에 의존 — `engine::getSubsystem<UINotificationSubsystem>()` 처럼
          *          찾는다). 기동에서 이 칸에 걸고 종료에서 푼다 — 언리얼 Slate 의 `OnPreTick` · Godot `SceneTree.process_frame` 신호와 같은 자리다.
          *          화면 그리기를 막은 동안(`isOnScreenSuppressed`)에도 불린다 — 포인터를 보는 서비스(툴팁)는 스스로 거른다.
          */
         UIUpdateDelegate& onUpdateBeforeScreens() { return _onUpdateBeforeScreens; }
-        /** @brief 화면 틱 **뒤**에서 도는 UI 서비스의 칸입니다(알림 `UINotificationService` — 이번 프레임에 화면이 올린 알림까지 본다). */
+        /** @brief 화면 틱 뒤에서 도는 UI 서비스의 칸입니다(알림 `UINotificationSubsystem` — 이번 프레임에 화면이 올린 알림까지 본다). */
         UIUpdateDelegate& onUpdateAfterScreens() { return _onUpdateAfterScreens; }
         /**
-         * @brief 스타일 뒤, 레이아웃 **앞**에서 도는 UI 서비스의 칸입니다(위젯 컴포넌트 `UIWidgetComponentService` 의 화면 마커 투영 — 같은 프레임에 배치된다).
+         * @brief 스타일 뒤, 레이아웃 앞에서 도는 UI 서비스의 칸입니다(위젯 컴포넌트 `UIWidgetComponentSubsystem` 의 화면 마커 투영 — 같은 프레임에 배치된다).
          * @details 게임 틱과 트랜스폼 적용 뒤의 월드 점을 이번 뷰포트(`getViewport`)로 투영하는 자리다. 화면 그리기를 막은 동안에도 불린다.
          */
         UIUpdateDelegate& onUpdateBeforeLayout() { return _onUpdateBeforeLayout; }
         /**
-         * @brief 화면 스택을 다 그린 **뒤**에서 도는 UI 서비스의 칸입니다(오프스크린 화면 `UIOffscreenScreens` — 이번 프레임의 레이아웃 · 그리기 컨텍스트로 자기 화면을 그린다).
+         * @brief 화면 스택을 다 그린 뒤에서 도는 UI 서비스의 칸입니다(오프스크린 화면 `UIOffscreenScreens` — 이번 프레임의 레이아웃 · 그리기 컨텍스트로 자기 화면을 그린다).
          * @details 화면 그리기를 막은 동안(`isOnScreenSuppressed`)에도 불린다 — 스택 밖 화면은 계속 그린다. 언리얼 Slate `OnPostTick` 자리다.
          */
         UIUpdateDelegate& onUpdateAfterPaint() { return _onUpdateAfterPaint; }
         /**
-         * @brief 입력 처리(`processInput`)에서 화면 위젯의 포인터를 보낸 **뒤**에 도는 칸입니다(위젯 컴포넌트 서비스 — 화면 위젯 아래가 아닌 마우스 이벤트를 월드 광선으로).
+         * @brief 입력 처리(`processInput`)에서 화면 위젯의 포인터를 보낸 뒤에 도는 칸입니다(위젯 컴포넌트 서비스 — 화면 위젯 아래가 아닌 마우스 이벤트를 월드 광선으로).
          * @details 이번 프레임의 포인터 이벤트는 `getInputRouter().getFramePointerEvents()` 다. 화면 그리기를 막은 동안(`isOnScreenSuppressed`)에는 포인터를 보내지 않으므로 이 칸도 불리지 않는다.
          */
         UIUpdateDelegate& onPointerProcessed() { return _onPointerProcessed; }
@@ -287,7 +325,7 @@ namespace sw
          */
         [[nodiscard]] Subscription addLayerHideRequest( UILayerMask layers );
         /**
-         * @brief 이 시스템이 공개하는 창구들입니다 — 기동이 이 멤버를 그 타입으로 건다(`SubsystemScope::exposeMember`). 시스템이 창구 인터페이스를 함께 상속하지 않는다(다중 상속 금지 — 린트 `cpp-shape`).
+         * @brief 이 시스템이 공개하는 창구들입니다. 기동이 이 멤버를 그 타입으로 건다(`SubsystemScope::exposeMember`). 시스템이 창구 인터페이스를 함께 상속하지 않는다(다중 상속 금지, 린트 `cpp-shape`).
          * @details `IInputCaptureQuery` 는 게임 코드의 입력 판정, `IUILayerVisibility` 는 레이어 숨김 요청, `IEngineUIDriver` 는 엔진 루프의 프레임 단계다.
          */
         IInputCaptureQuery& getInputCaptureQuery() { return _inputCaptureQuery; }
@@ -308,7 +346,7 @@ namespace sw
         void setInputMode( UIInputMode mode );
 
         InputManager*     getInputManager() const { return _input.getInputManager(); }
-        FontService*      getFontService() const { return _pFontService; }
+        FontSubsystem*    getFontSubsystem() const { return _pFontSubsystem; }
         const UIViewport& getViewport() const { return _viewport; }
         /** @brief 텍스트 측정 엔진입니다(글꼴이 없으면 nullptr). 레이아웃 컨텍스트가 넘깁니다. */
         TextLayoutEngine* getTextLayout() const { return _textLayout.get(); }
@@ -393,7 +431,7 @@ namespace sw
         /** @brief 등록된 화면 스위치(`UIScreenSwitches`, 견본 · 벤치 · 옵션 메뉴 등)를 순서대로 돌려 개발 스위치에 맞게 화면을 열고 닫습니다. */
         void syncScreenSwitches();
         /**
-         * @brief 뷰포트에서 화면 등급(`screen` — compact · regular)과 방향(`orientation`)을 정해 리소스 태그로 올립니다. 바뀐 프레임에만 올린다 — 그 태그를 쓴 문서는 다시 읽힌다.
+         * @brief 뷰포트에서 화면 등급(`screen`: compact · regular)과 방향(`orientation`)을 정해 리소스 태그로 올립니다. 바뀐 프레임에만 올리고, 그 태그를 쓴 문서는 다시 읽힌다.
          * @details 좁은 화면 재배치는 데이터다(문서의 `_when` 변형) — 코드가 배치를 고르지 않는다. 규칙은 `UIScaleSettings::makeScreenTags` 한 곳이다(에디터 미리보기도 같은 함수).
          *          Android 의 smallestWidth 자원 한정자 · 유니티 Device Simulator 의 방향과 같은 자리다(기억).
          */
@@ -462,7 +500,7 @@ namespace sw
             {
             }
 
-            void processFrameInput( float32 unscaledDeltaSeconds ) override { _owner.processFrameInput( unscaledDeltaSeconds ); }
+            void processFrameInput( RealSeconds unscaledDeltaTime ) override { _owner.processFrameInput( unscaledDeltaTime ); }
             void updateFrame( const EngineUIFrame& frame ) override { _owner.updateFrame( frame ); }
             void setOnScreenSuppressed( bool bSuppressed ) override { _owner.setOnScreenSuppressed( bSuppressed ); }
 
@@ -498,7 +536,7 @@ namespace sw
         UIUpdateDelegate             _onPointerProcessed;             ///< 포인터 처리 뒤의 UI 서비스(World 위젯 광선)
         UIActionGlyphSource          _actionGlyphs;                   ///< 입력 관리자와 UI 맵에서 가져오는 글리프 출처입니다(초기화 때 채웁니다).
         UIInputRouter                _input;                          ///< 포커스, 포인터, 소비된 입력, UI 액션 맵, 입력 방식입니다.
-        FontService*                 _pFontService;
+        FontSubsystem*               _pFontSubsystem;
         const LocalizationManager*   _pLocalization; ///< 문화권 출처입니다(기동이 엔진 서비스를 넘긴다, nullptr 이면 없음).
         UserSettingsManager*         _pUserSettings; ///< 설정 바인딩 출처입니다(기동이 엔진 서비스를 넘긴다, nullptr 이면 없음).
         unique_ptr<TextLayoutEngine> _textLayout;
@@ -512,7 +550,7 @@ namespace sw
         UIEngineDocuments            _engineDocuments;     ///< 엔진 UI 문서 경로입니다(`setEngineDocuments`).
         string                       _optionsMenuDocument; ///< 옵션 메뉴 문서입니다.
         string                       _pauseMenuDocument;   ///< 일시정지 메뉴 문서입니다(비면 일시정지 메뉴가 없습니다).
-        UIScreenHandle               _nextScreenHandle;
+        uint32                       _nextScreenHandle;
         uint32                       _nextPushOrder;
         uint32                       _textRevision;             ///< 마지막 바인딩 단계가 본 텍스트 버전입니다.
         uint32                       _converterRevision;        ///< 마지막 바인딩 단계가 본 변환기 표 번호입니다(`UIBindingConverterRegistry::getRevision`).
@@ -527,6 +565,6 @@ namespace sw
         unique_ptr<SubscriptionList> _screenCloseSubscriptions; ///< 소유한 쪽이 닫을 화면의 구독입니다(`ownScreen`).
         unique_ptr<SubscriptionList> _layerHideSubscriptions;   ///< 레이어 숨김 요청의 구독입니다(`addLayerHideRequest`).
 
-        SW_SERVICE_SLOT( UISystem, Required );
+        SW_SUBSYSTEM_SLOT( UISystem, Required );
     };
 } // namespace sw

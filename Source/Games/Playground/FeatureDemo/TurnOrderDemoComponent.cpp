@@ -165,8 +165,9 @@ namespace sw
         refreshState();
     }
 
-    void TurnOrderDemoComponent::updateGame( float32 deltaTime )
+    void TurnOrderDemoComponent::updateGame( GameSeconds frameTime )
     {
+        const float32 deltaTime = frameTime.count();
         (void)deltaTime;
     }
 

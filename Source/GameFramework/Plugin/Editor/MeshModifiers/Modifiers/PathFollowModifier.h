@@ -1,7 +1,7 @@
 /**
  * @file PathFollowModifier.h
  * @brief 스플라인 경로를 따라 정점을 놓는 모디파이어(Path Deform · World Path Deform · Rope Deform)의 공통 바탕입니다.
- * @details 셋이 저마다 적던 것 — 경로 참조 칸, `applyToMesh` 동안의 회전 최소화 프레임 표, GPU 경로 표 싣기 — 을 한 곳에 둔다. 파생은 자기 칸과
+ * @details 셋이 저마다 적던 것(경로 참조 칸, `applyToMesh` 동안의 회전 최소화 프레임 표, GPU 경로 표 싣기)을 한 곳에 둔다. 파생은 자기 칸과
  *          `deformPoint`(주축 좌표 → 호 길이 · 단면 좌표)만 정한다. 경로 칸은 늘 첫 매개변수다(바탕 생성자가 먼저 돈다 — 저장된 스택 · GPU 매개변수 순서가 그대로다).
  *          언리얼 Spline Mesh · 3ds Max Path Deform 처럼 경로 공간(자기 공간 · 월드)만 다른 같은 사상이다.
  */

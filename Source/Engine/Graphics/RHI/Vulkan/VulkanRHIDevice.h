@@ -723,7 +723,7 @@ namespace sw
         VulkanCommandListEntry acquireCommandListEntry();
         /** @brief 빌린 쌍을 GPU 펜스를 통과한 뒤 재사용 풀로 돌려보냅니다. */
         void recycleCommandListEntryDeferred( VulkanCommandListEntry entry );
-        /** @brief 빌린 쌍을 **지금** 파괴합니다. 디바이스가 종료되면서 살아 있는 리스트를 분리할 때만 씁니다. */
+        /** @brief 빌린 쌍을 지금 파괴합니다. 디바이스가 종료되면서 살아 있는 리스트를 분리할 때만 씁니다. */
         void destroyCommandListEntryImmediate( VulkanCommandListEntry& entry );
         /** @brief 살아 있는 리스트를 기록해 둡니다. 디바이스가 먼저 종료되면 종료할 때 연결을 끊어 줍니다. */
         void registerCommandList( VulkanRHICommandList* pCmdList );
@@ -758,7 +758,7 @@ namespace sw
                                  VkPipelineStageFlags srcStage, VkPipelineStageFlags dstStage );
 
         /**
-         * @brief 텍스처를 `targetLayout` 으로 전이합니다. **확인, 배리어, 기록이 한 덩어리입니다.**
+         * @brief 텍스처를 `targetLayout` 으로 전이합니다. 확인, 배리어, 기록이 한 덩어리입니다.
          * @details "현재 레이아웃을 읽고, 배리어를 쏘고, 레코드를 갱신" 하는 세 동작을 호출 지점에서 따로 하지 않는다.
          *          병렬 패스 기록에서 그 셋이 갈라지면 두 스레드가 같은
          *          "이전 레이아웃" 을 보고 각자 배리어를 쏘거나, 한쪽이 이미 바꿔 놓은 뒤라 실제
@@ -965,7 +965,7 @@ namespace sw
 
         /**
          * @brief GPU 타임스탬프입니다. 링 슬롯마다 `constant::render::kMaxGPUTimestampSlot` 개의 슬롯을 씁니다.
-         * @details 읽기는 `vkWaitForFences` 를 통과한 **직후**에 한다. 그 슬롯의 GPU 작업이 이미
+         * @details 읽기는 `vkWaitForFences` 를 통과한 직후에 한다. 그 슬롯의 GPU 작업이 이미
          *          끝났음이 보장된 유일한 지점이라, 측정하려고 파이프라인을 멈춰 세우지 않는다.
          */
         VkQueryPool _timestampPool SW_GUARDED_BY( _renderThread ); ///< 없으면 VK_NULL_HANDLE 이다(이 헤더는 vulkan.h 를 include 하지 않는다).

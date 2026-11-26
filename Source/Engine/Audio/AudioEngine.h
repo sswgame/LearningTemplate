@@ -1,18 +1,18 @@
 /**
  * @file AudioEngine.h
  * @brief 플랫폼과 무관한 오디오 엔진입니다. 명령 큐, 보이스, 믹서 그래프, 이벤트, 파라미터, 스냅샷, 공간화를 보관하고, 출력 장치가 호출하는 `render` 하나로 소리를 만듭니다.
- * @details **스레드.** 게임 스레드는 명령만 쌓는다(`postEvent`, `playClip`, `setParameter` 등). 명령 큐는 잠금 없는 SPSC(`SpscQueue`)이고 생산자는 게임 스레드 하나다
+ * @details 스레드. 게임 스레드는 명령만 쌓는다(`postEvent`, `playClip`, `setParameter` 등). 명령 큐는 잠금 없는 SPSC(`SpscQueue`)이고 생산자는 게임 스레드 하나다
  *          (`_gameThread` 역할). 워커(병렬 틱)가 낸 요청은 잠금 있는 대기 목록에 쌓였다가 게임 스레드가 다음 요청 · 프레임(`flushCommands`)에 순서 그대로 큐에 넣는다 —
  *          재생 id 는 대기 목록에 넣는 잠금 안에서 매겨 큐 순서 = id 순서가 지켜진다(`isPlaying`). 오디오 스레드는 잠그지 않는다.
  *          명령이 든 `shared_ptr`(믹서 · 라이브러리 · 음악)와 그것이 갈아 낸 옛 객체는 오디오 스레드가 놓지 않고 반납 큐로 게임 스레드에 돌려보낸다(`flushCommands` 가 놓는다).
  *          오디오 스레드가 `render` 에서 블록마다 명령을 꺼내 적용한다. 오디오 스레드는 장치 백엔드의 렌더 스레드(`AudioRenderThread` · ALSA · 웹 믹서)이고 장치 콜백이 아니다 —
- *          장치가 없으면 게임 스레드의 `AudioService::update` 다.
+ *          장치가 없으면 게임 스레드의 `AudioSubsystem::update` 다.
  *          오디오 상태는 오디오 스레드만 만진다. 게임 스레드가 읽는 값(재생 중인지, 보이스 수)은 블록마다 게시한 사본이다.
  *
- *          **블록 순서.** 명령, 파라미터(seek), 스냅샷 세기와 적용, 에미터 가림 추종, 보이스 목표(볼륨, 팬, 피치, 로우패스, 들림 정도),
+ *          블록 순서. 명령, 파라미터(seek), 스냅샷 세기와 적용, 에미터 가림 추종, 보이스 목표(볼륨, 팬, 피치, 로우패스, 들림 정도),
  *          실제/가상 보이스 선택(우선순위와 들림), 믹싱(가상 보이스는 위치만 진행), 버스 그래프, 게시 순서로 처리한다.
  *
- *          **결정성.** 같은 명령과 같은 시드(`setRandomSeed`)를 주면 `render` 는 같은 샘플을 만든다.
+ *          결정성. 같은 명령과 같은 시드(`setRandomSeed`)를 주면 `render` 는 같은 샘플을 만든다.
  *          장치 없이 버퍼에 렌더해 측정값을 확인하는 테스트가 이 성질에 의존한다.
  */
 #pragma once
@@ -29,7 +29,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/DeterministicRandom.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 
 #include "Engine/Audio/AudioBlock.h"
 #include "Engine/Audio/AudioChannelLayout.h"
@@ -50,7 +50,7 @@ namespace sw
 
     class AudioMixer;
 
-    /** @brief 클립 하나를 이벤트 없이 바로 재생할 때의 설정입니다. `AudioService::play` 와 `playMusic` 이 씁니다. */
+    /** @brief 클립 하나를 이벤트 없이 바로 재생할 때의 설정입니다. `AudioSubsystem::play` 와 `playMusic` 이 씁니다. */
     struct AudioClipPlayParams
     {
         hashed_string    _attenuation{};          ///< 감쇠 프리셋 이름이다. 비었거나 에미터가 0 이면 공간화하지 않는다(2D).
@@ -69,7 +69,7 @@ namespace sw
 {
     /**
      * @class AudioEngine
-     * @brief 오디오 엔진 하나입니다. `AudioService` 이 하나를 가지고 있고, 테스트는 장치 없이 직접 만들어 `render` 로 버퍼에 렌더합니다.
+     * @brief 오디오 엔진 하나입니다. `AudioSubsystem` 이 하나를 가지고 있고, 테스트는 장치 없이 직접 만들어 `render` 로 버퍼에 렌더합니다.
      * @details 적응형 음악은 `AudioMusicPlayer`, 스냅샷 · 버스 사용자 상태는 `AudioSnapshotMixer` 가 맡는다. 엔진은 명령 큐 · 이벤트 라이브러리 · 보이스 · 에미터를 들고,
      *          음악 플레이어에게는 보이스 풀의 창(`IAudioMusicVoices`)만 비공개 상속으로 내준다 — 플레이어는 보이스 슬롯의 생김새를 모른다.
      */
@@ -134,7 +134,7 @@ namespace sw
         void setRandomSeed( uint64 seed );
         /**
          * @brief (게임 스레드) 워커가 쌓은 요청을 순서 그대로 명령 큐에 넣고, 오디오 스레드가 돌려보낸 객체(믹서 · 라이브러리 · 음악)를 놓습니다.
-         * @details 서비스가 프레임마다 부른다(`AudioService::update`). 게임 스레드의 요청은 쌓는 자리에서 바로 들어가므로 이것을 기다리지 않는다.
+         * @details 서비스가 프레임마다 부른다(`AudioSubsystem::update`). 게임 스레드의 요청은 쌓는 자리에서 바로 들어가므로 이것을 기다리지 않는다.
          */
         void flushCommands();
 
@@ -145,7 +145,7 @@ namespace sw
          * @param emitterID 0 이면 공간화하지 않습니다(UI, 2D).
          * @return 재생 id 입니다. 모르는 이벤트면 0 을 반환하고 경고를 남깁니다. 쿨다운이나 상한 때문에 버려진 재생은 다음 블록부터 `isPlaying` 이 false 입니다.
          */
-        AudioPlayingID postEvent( const hashed_string& eventName, AudioEmitterID emitterID = 0 );
+        AudioPlayingID postEvent( const hashed_string& eventName, AudioEmitterID emitterID = AudioEmitterID{} );
         /**
          * @brief 클립을 버스 하나로 재생합니다. 클립이 캐시에 없으면 디코드를 요청하고, 준비되면 시작합니다.
          * @param bus 비었거나 모르는 이름이면 `sfx` 입니다.

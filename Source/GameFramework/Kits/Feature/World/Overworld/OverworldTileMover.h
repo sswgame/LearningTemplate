@@ -8,6 +8,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/FormatDef.h"
@@ -63,7 +64,7 @@ namespace sw
         /** @brief 충돌과 워프 조회에 쓸 타일맵을 설정합니다. */
         void setTileMap( TileMap* pTileMap ) { _pTileMap = pTileMap; }
         /**
-         * @brief 조우 타일에서 전투가 날 확률을 설정합니다. **0 이면 나지 않습니다.**
+         * @brief 조우 타일에서 전투가 날 확률을 설정합니다. 0 이면 나지 않습니다.
          * @details 0 ~ 1 로 읽습니다. 0.33 이면 세 걸음마다 한 번꼴이고, 1 이상이면 매 걸음입니다.
          */
         void                              setEncounterRate( float32 rate ) { _settings._encounterRate = rate; }
@@ -83,7 +84,7 @@ namespace sw
          * @param intent 이번 틱의 의도입니다. 이동 축(`_move`, y 가 위쪽 타일)을 데드존으로 걸러 네 방향 한 칸으로 읽습니다.
          * @param interactButton 상호작용 버튼의 슬롯(`PawnComponent::findButton`)입니다. 그 버튼이 발동하면 상호작용합니다. 비어 있으면 버튼이 없습니다.
          */
-        void update( float32 deltaTime, const ControlIntent& intent, optional<int32> interactButton );
+        void update( GameSeconds frameTime, const ControlIntent& intent, optional<int32> interactButton );
 
         /** @brief 현재 타일 X 를 반환합니다. */
         int32 getTileX() const { return _tile._x; }

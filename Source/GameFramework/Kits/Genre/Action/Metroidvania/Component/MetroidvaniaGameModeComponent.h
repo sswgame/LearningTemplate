@@ -4,7 +4,7 @@
  * @details 키트 세 갈래의 가운데다: 규칙(키트 루트 — 능력 · 지도 · 부적 · 죽음과 휴식 · 전투원)과 공용 2D 몸(`PlatformerMotor2D`) · 방 그래프(`AreaGraph`)를 들고 씬과 잇는다.
  *          입력 · 모습 · HUD 는 클라이언트 모듈(`GF_Client_Metroidvania` 의 `MetroidvaniaViewComponent`)이 이 디렉터의 명령 · 읽기 API 로만 다룬다 — 전용 서버는 그 모듈을 짓지 않는다.
  *          지형은 씬 데이터(칸 글자 줄 — `PlatformTileMap` 과 같은 글자)이고, 방은 방 그래프의 사각형(x · y · w · h, 칸 좌표)으로 알며, 적 · 줍는 것 · 지점은 카탈로그 id 에 씬의 자리를 맞춘 것이다.
- *          죽으면 가진 통화가 그 자리의 시체가 되고 마지막으로 쉰 곳에서 되살아난다 — 시체 곁에 서면 되찾는다. 목표 플래그(`_goalFlag` — 보스 플래그)가 켜지면 이기고 `_resultHoldSeconds` 뒤
+ *          죽으면 가진 통화가 그 자리의 시체가 되고 마지막으로 쉰 곳에서 되살아난다. 시체 곁에 서면 되찾는다. 목표 플래그(`_goalFlag` — 보스 플래그)가 켜지면 이기고 `_resultHoldSeconds` 뒤
  *          미니게임을 끝낸다(디렉터 계약 ③) — 가진 통화를 결과 값 `money` 로 내보낸다. 도중에 나가도 가진 통화는 나간다.
  *          장르 완결 루프 시나리오: `game/playground/automation/metroidvania_slice.scenario.xml`.
  */
@@ -15,9 +15,10 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 #include "Core/Time/Countdown.h"
 #include "Core/Time/FixedStepTimer.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Foundation/WorldOrigin.h"
@@ -126,7 +127,7 @@ namespace sw
     protected:
         [[nodiscard]] bool startGame() override;
         void               onGameStarted() override;
-        void               updateMatch( float32 deltaTime ) override;
+        void               updateMatch( GameSeconds frameTime ) override;
         /** @brief 가진 통화를 결과 값 `money` 로 냅니다. */
         void collectMinigameResult( vector<MinigameResultValue>& outListValue ) const override;
 
@@ -136,10 +137,10 @@ namespace sw
         [[nodiscard]] bool populateTerrain();
         /** @brief 씬 배치로 적을 세웁니다. 카탈로그 체력 규칙이 거절되면 false 입니다. */
         [[nodiscard]] bool populateEnemies( vector<MetroidvaniaEnemy>& outListEnemy ) const;
-        void               stepExplore( float32 deltaTime );
-        void               stepMovement( float32 deltaTime );
-        void               stepPlayerCombat( float32 deltaTime );
-        void               stepEnemies( float32 deltaTime );
+        void               stepExplore( StepSeconds step );
+        void               stepMovement( StepSeconds step );
+        void               stepPlayerCombat( StepSeconds step );
+        void               stepEnemies( StepSeconds step );
         /** @brief 지금 자리의 방 · 줍는 것 · 시체를 봅니다. */
         void stepMarkers();
         /** @brief 바라보는 쪽 사거리 안의 적을 모두 칩니다. */

@@ -4,7 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Foundation/StateHashBuilder.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/Tick/FixedStepContext.h"
@@ -178,7 +178,7 @@ namespace sw
             return;
         }
         const float2 position{ _worldPosition._x, _worldPosition._y };
-        // 캡슐은 지을 때 배율을 굽는다 — 배율이 바뀌면 캐릭터는 두고 크기만 간다(이동 상태 · 세로 속도가 이어진다 — 3D 컨트롤러와 같다).
+        // 캡슐은 지을 때 배율을 굽는다. 배율이 바뀌면 캐릭터는 두고 크기만 간다(이동 상태 · 세로 속도가 이어진다. 3D 컨트롤러와 같다).
         if ( bCreate == false && isShapeScaleStale( _worldScale ) )
         {
             const PhysicsShapeDesc2D capsule = getScaledCapsule();
@@ -222,7 +222,7 @@ namespace sw
     void CharacterController2DComponent::onPrePhysicsStep( const FixedStepContext& context )
     {
         ScenePhysics&    physics        = context.getPhysics();
-        const float32    fixedDeltaTime = context.getFixedDeltaTime();
+        const float32    fixedDeltaTime = context.getFixedDeltaTime().count();
         IPhysicsScene2D* pScene         = physics.findScene2D();
         if ( pScene == nullptr || _character.isValid() == false )
             return;

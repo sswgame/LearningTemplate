@@ -3,7 +3,7 @@
  * @brief 자동화 실행기(개발 도구 `DevTools/Client/Automation`)가 스스로 공개하는 창구 `IAutomationRuntime` 입니다.
  * @details 실행기는 엔진 밖 개발 도구에 있다 — 언리얼 Automation 컨트롤러 · Gauntlet 이 Developer 모듈이고 엔진은 테스트 등록 틀만 드는 것과 같은 나눔이다.
  *          실행기 세션이 개발 도구 이미지의 모듈 서브시스템으로 엔진 범위에 서며 이 인터페이스를 공개한다(`SW_MODULE_SUBSYSTEM`). 호스트(App)와 헤드리스 작업은
- *          `engine::findSubsystem<IAutomationRuntime>()` 으로 찾기만 한다 — 실행기를 짓지 않은 구성(Shipping — 개발 도구가 없다 · 전용 서버 — `DevTools/Client` 를 짓지 않는다)은 등록이 없어 nullptr 이고,
+ *          `engine::findSubsystem<IAutomationRuntime>()` 으로 찾기만 한다. 실행기를 짓지 않은 구성(개발 도구가 없는 Shipping, `DevTools/Client` 를 짓지 않는 전용 서버)은 등록이 없어 nullptr 이고,
  *          그 실행이 `-scenario` 를 받았으면 찾는 쪽이 기동 오류로 멈춘다. 빈 구현 파일을 두지 않는다(`docs/agents/CppStyle.md "Build configuration switches"`).
  */
 #pragma once
@@ -44,7 +44,7 @@ namespace sw
     class CommandLineManager;
     class Engine;
     class SubsystemScope;
-    struct HeadlessTaskState;
+    struct CommandletState;
 
     /**
      * @class IAutomationShutdownWatch
@@ -78,7 +78,7 @@ namespace sw
          * @brief `-scenario-backends=<목록>` 작업 — 시나리오를 백엔드마다 자식 App 으로 동시에 돌리고 모읍니다(`AutomationPerBackend`). 결과는 @p inoutState 에 적습니다.
          * @param backends `-scenario-backends` 값(비어 있지 않다)
          */
-        virtual void runPerBackend( string_view backends, CommandLineManager& commandLine, HeadlessTaskState& inoutState ) = 0;
+        virtual void runPerBackend( string_view backends, CommandLineManager& commandLine, CommandletState& inoutState ) = 0;
         /**
          * @brief 지금 시나리오의 진행 · 판정 상태입니다. 시나리오가 없으면 nullptr 입니다(끝난 뒤 결과를 남기는 프레임 동안은 끝난 상태를 준다).
          * @details 포인터는 이 프레임 안에서만 쓴다(세션이 프레임 끝마다 다시 쓴다). 게임 스레드에서만 읽는다.

@@ -2,7 +2,7 @@
 // 확장 팩 퀘스트가 든 일지를 확장 팩 없는 표로 불러도 기본 진행이 이어지는 승계.
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Serialization/Format/Archive.h"
 

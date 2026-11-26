@@ -60,7 +60,7 @@ namespace sw
         if ( updateClimb( context, intent, constraint, *pController ) )
             return;
         const float32 moveInput = constraint._bMoveBlocked == SW_TRUE ? 0.0f : intent._move._x;
-        _velocity               = computeVelocity( _velocity, moveInput, _walkSpeed * constraint._speedScale, _acceleration, _deceleration, context.getDeltaTime() );
+        _velocity               = computeVelocity( _velocity, moveInput, _walkSpeed * constraint._speedScale, _acceleration, _deceleration, context.getDeltaTime().count() );
         pController->setMoveVelocity( _velocity );
         if ( intent.wasTriggered( _jumpIndex ) && pController->isGrounded() && constraint._bJumpBlocked == SW_FALSE )
             pController->jump( _jumpSpeed );
@@ -70,7 +70,7 @@ namespace sw
     {
         const bool bWasClimbing = _bClimbing;
         _bClimbing              = false;
-        _climbReleaseLeft       = MathUtil::max( 0.0f, _climbReleaseLeft - context.getDeltaTime() );
+        _climbReleaseLeft       = MathUtil::max( 0.0f, _climbReleaseLeft - context.getDeltaTime().count() );
         if ( _climbReleaseLeft > 0.0f )
             return false;
         const ClimbZoneComponent* const pZone = ClimbZoneComponent::findClimbZone( context.getManager(), context.getSelf().getHandle() );

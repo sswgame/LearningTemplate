@@ -1,7 +1,7 @@
 // GPUInstanceMotionHistoryTest — 화면 속도의 지난 위치 기록(렌더 쪽): 인스턴스 월드 행렬(처음 · 순간이동 · 기록 없음, 멈추면 지난 것 = 이번 것)과 스킨 결과의 두 벌(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Renderer/Scene/GPUInstanceMotionHistory.h"
 #include "Engine/Renderer/Scene/GPUMeshMorphPool.h"

@@ -51,7 +51,7 @@ namespace sw
 
 #if defined( SW_PLATFORM_WINDOWS )
         /**
-         * @brief FXC 판 — 이 프로세스가 실은 d3dcompiler(System32 — vcpkg 기록에 없고 OS 업데이트로 바뀐다)의 내용 해시입니다. 못 읽으면 0 이고 오류를 한 번 남긴다.
+         * @brief FXC 판: 이 프로세스가 실은 d3dcompiler(System32, vcpkg 기록에 없고 OS 업데이트로 바뀐다)의 내용 해시입니다. 못 읽으면 0 이고 오류를 한 번 남긴다.
          * @details DXBC 캐시 키에만 든다(언리얼이 셰이더 형식마다 컴파일러 판을 셰이더 맵 키에 넣는 자리). 도구 지문(`getToolchainFingerprint`)에 넣지 않는 것은
          *          쿠킹 기록이 기계마다(OS 판마다) 갈려 모든 셰이더를 다시 굽지 않게다. d3dcompiler 는 일반 import 라 기동 때 이미 실려 있다.
          */

@@ -100,7 +100,7 @@ namespace sw
             }
             applyPendingState();
         }
-        _horse.update( context.getDeltaTime(), context.getDeltaTime() * _gameHoursPerSecond );
+        _horse.update( context.getDeltaTime(), context.getDeltaTime().count() * _gameHoursPerSecond );
         vector<WesternHorseEvent> listEvent;
         _horse.pollEvents( listEvent );
         const GameObject* pOwner = getOwner();
@@ -128,7 +128,7 @@ namespace sw
             SW_LOG_ERROR_ID( "WesternHorse.HorseNoWesternHorse", "[Western] horse '%#' has no Western Horse Mount on its object", pName );
             return false;
         }
-        if ( _horse.initialize( pCatalog, _breed.key(), static_cast<uint32>( _seed ) ) == false )
+        if ( _horse.initialize( *pCatalog, _breed.key(), static_cast<uint32>( _seed ) ) == false )
         {
             SW_LOG_ERROR_ID( "WesternHorse.HorseBreedNotWestern", "[Western] horse '%#' breed '%#' is not in the western catalog", pName, _breed.c_str() );
             return false;

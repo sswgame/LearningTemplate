@@ -9,7 +9,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Content/AssetTypeRegistry.h"
@@ -95,7 +95,7 @@ namespace sw
 namespace sw
 {
     /**
-     * @brief 진화 분기 하나입니다. 적힌 조건이 **모두** 맞아야 합니다.
+     * @brief 진화 분기 하나입니다. 적힌 조건이 모두 맞아야 합니다.
      * @details 아이템 조건이 있으면 그 아이템을 쓸 때만 보고, 없으면 레벨업할 때만 본다(돌 진화, 레벨 진화, 친밀도 진화).
      */
     REFLECT()

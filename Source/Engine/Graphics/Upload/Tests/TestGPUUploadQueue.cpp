@@ -1,9 +1,9 @@
-// GPUUploadQueueTest — 게임 스레드가 앞당겨 만드는 메시 업로드: 워커 생성을 못 하는 백엔드는 받지 않고, 같은 메시는 한 번, 비우면 모두 상주하고, 디바이스를 바꾸면 쌓인 요청을 버린다(가짜 RHI — nogpu).
+// GPUUploadQueueTest: 게임 스레드가 앞당겨 만드는 메시 업로드: 워커 생성을 못 하는 백엔드는 받지 않고, 같은 메시는 한 번, 비우면 모두 상주하고, 디바이스를 바꾸면 쌓인 요청을 버린다(가짜 RHI, nogpu).
 #include "pch.h"
 
 #include "Core/Container/vector.h"
 #include "Core/Task/TaskManager.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshRenderData.h"

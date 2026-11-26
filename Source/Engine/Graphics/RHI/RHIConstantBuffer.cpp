@@ -39,7 +39,7 @@ namespace sw
             return;
         }
 
-        // **인덱스를 먼저 놓는다.** 버퍼를 먼저 지우면 레지스트리에 죽은 핸들을 가리키는 항목이 남는다.
+        // 인덱스를 먼저 놓는다. 버퍼를 먼저 지우면 레지스트리에 죽은 핸들을 가리키는 항목이 남는다.
         if ( _index != kInvalidDescriptorIndex )
             pDevice->getResourceFactory()->unregisterBindlessResource( _index );
         if ( _buffer != 0 )

@@ -1,6 +1,6 @@
 /**
  * @file SourceControlProvider.h
- * @brief 에디터의 버전 관리 잠금(체크아웃) 추상 — 공급자는 **명령을 만들고 출력을 읽기만** 합니다. 띄우는 것은 `EditorSourceControl` 입니다.
+ * @brief 에디터의 버전 관리 잠금(체크아웃) 추상 — 공급자는 명령을 만들고 출력을 읽기만 합니다. 띄우는 것은 `EditorSourceControl` 입니다.
  */
 #pragma once
 #include "Core/Container/string.h"

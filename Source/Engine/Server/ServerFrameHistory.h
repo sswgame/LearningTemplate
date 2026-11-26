@@ -52,7 +52,7 @@ namespace sw
          */
         /**
          * @brief 가장 새 칸부터 최대 @p maxTicks 칸을 오래된 순서로 @p pOutText 에 씁니다(`tick=N body_us=N connections=N dropped=N` 한 줄씩, 앞에 머리 한 줄).
-         * @details **할당 · 잠금이 없습니다** — 크래시 경로가 부릅니다. 게임 스레드가 쓰는 도중에 읽으면 한 칸이 어긋나 보일 수 있으나 진단용이라 받아들입니다.
+         * @details 할당 · 잠금이 없습니다 — 크래시 경로가 부릅니다. 게임 스레드가 쓰는 도중에 읽으면 한 칸이 어긋나 보일 수 있으나 진단용이라 받아들입니다.
          *          용량이 모자라면 새 칸을 우선해 앞쪽을 줄입니다. 쓴 길이를 돌려줍니다(널 종료).
          */
         uint32 writeCrashTail( utf8* pOutText, uint32 capacity, uint32 maxTicks ) const;

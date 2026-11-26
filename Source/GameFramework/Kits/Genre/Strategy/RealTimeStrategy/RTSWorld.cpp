@@ -14,7 +14,7 @@
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSCommand.h"
 #include "GameFramework/Runtime/Foundation/GameData/ConfigRangeUtil.h"
 #include "GameFramework/Runtime/Foundation/GameData/DepletingValue.h"
-#include "GameFramework/Runtime/Foundation/Service/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Wallet.h"
 #include "GameFramework/Runtime/Gameplay/Match/TeamAttitude.h"
 
@@ -212,14 +212,9 @@ namespace sw
     {
     }
 
-    bool RTSWorld::initialize( const RTSCatalog* pCatalog, int32 width, int32 height )
+    bool RTSWorld::initialize( const RTSCatalog& catalog, int32 width, int32 height )
     {
-        if ( pCatalog == nullptr )
-        {
-            SW_LOG_ERROR_ID( "RTSWorld.RTSWorldNeedsCatalog", "RTSWorld: no unit catalog - the rules are read from its <Rules>" );
-            return false;
-        }
-        const RTSSettings& settings   = pCatalog->getRules();
+        const RTSSettings& settings   = catalog.getRules();
         const string       rangeError = ConfigRangeUtil::describeRangeErrors( settings );
         if ( rangeError.empty() == false )
         {
@@ -231,7 +226,7 @@ namespace sw
             SW_LOG_ERROR_ID( "RTSWorld.RTSWorldRefusedSizeX", "RTSWorld: refused size %#x%# (both need 1 or more)", width, height );
             return false;
         }
-        _pCatalog = pCatalog;
+        _pCatalog = &catalog;
         _settings = settings;
         if ( _grid.initialize( width, height, 1.0f, float3{ 0.0f, 0.0f, 0.0f } ) == false || _airGrid.initialize( width, height, 1.0f, float3{ 0.0f, 0.0f, 0.0f } ) == false )
             return false;
@@ -263,9 +258,9 @@ namespace sw
         return _grid.isInside( x, y ) && _listTerrainBlocked[static_cast<size_t>( _grid.computeIndex( int2{ x, y } ) )] != SW_FALSE;
     }
 
-    void RTSWorld::bindLand( LandRegistry* pLand, const int2& origin )
+    void RTSWorld::bindLand( LandRegistry& land, const int2& origin )
     {
-        _land.bind( pLand, origin, hashed_string( "RealTimeStrategy" ) );
+        _land.bind( land, origin, hashed_string( "RealTimeStrategy" ) );
         repaintGrid();
         _landRevision = _land.getRevision();
     }
@@ -485,7 +480,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 시간
     // ------------------------------------------------------------------------------
-    float32 RTSWorld::update( float32 deltaTime, float32 timeScale )
+    float32 RTSWorld::update( GameSeconds frameTime, float32 timeScale )
     {
         if ( _pCatalog == nullptr )
             return 0.0f;
@@ -495,12 +490,12 @@ namespace sw
             repaintGrid();
             _landRevision = _land.getRevision();
         }
-        const int32 stepCount = _stepTimer.consumeScaled( deltaTime, timeScale );
+        const int32 stepCount = _stepTimer.consumeScaled( frameTime, timeScale );
         for ( int32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
         {
             stepFixed( _stepTimer.getStep() );
         }
-        return static_cast<float32>( stepCount ) * _stepTimer.getStep();
+        return static_cast<float32>( stepCount ) * _stepTimer.getStep().count();
     }
 
     void RTSWorld::pollEvents( const ConsumerLease& lease, vector<RTSEvent>& outListEvent )
@@ -508,8 +503,9 @@ namespace sw
         _eventBuffer.moveAllTo( lease, outListEvent );
     }
 
-    void RTSWorld::stepFixed( float32 deltaTime )
+    void RTSWorld::stepFixed( StepSeconds step )
     {
+        const float32 deltaTime = step.count();
         _time += deltaTime;
         // 시각은 알림 간격(차이)만 본다 — float32 걸음을 지키려 기준을 옮기고, 비교하는 알림 시각도 같이 옮긴다(감사 K-5).
         if ( TimeRolloverUtil::rebase( _time ) )
@@ -527,10 +523,10 @@ namespace sw
         {
             RTSUnit& unit = _listUnit[index];
             if ( unit._bAlive )
-                updateUnit( unit, deltaTime );
+                updateUnit( unit, step );
         }
         applyPathResults();
-        if ( _vision.updateRepaintTimer( deltaTime, _settings._visionInterval ) )
+        if ( _vision.updateRepaintTimer( step, _settings._visionInterval ) )
             updateVision();
         updateDefeat();
         freeDeadUnits();
@@ -1498,10 +1494,11 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 유닛 한 걸음
     // ------------------------------------------------------------------------------
-    void RTSWorld::updateUnit( RTSUnit& unit, float32 deltaTime )
+    void RTSWorld::updateUnit( RTSUnit& unit, StepSeconds step )
     {
-        unit._cooldown.update( deltaTime );
-        unit._repathTimer.update( deltaTime );
+        const float32 deltaTime = step.count();
+        unit._cooldown.update( step );
+        unit._repathTimer.update( step );
         if ( unit.isResource() )
             return;
         if ( unit.isBuilding() )

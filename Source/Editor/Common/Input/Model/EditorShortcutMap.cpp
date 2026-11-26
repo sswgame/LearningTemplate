@@ -14,7 +14,7 @@
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/Config/EditorToolDefaults.h"
 #include "Editor/Common/Input/EditorInputActionNames.h"
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 
 #include "Engine/Input/DebugKeyActions.h"
 #include "Engine/Input/InputManager.h"

@@ -8,7 +8,7 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/String/StringUtil.h"
 
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Content/AssetPaths.h"
@@ -47,10 +47,10 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    AbsolutePath EditorPaths::findContentFolder( string_view folderID )
+    DiskPath EditorPaths::findContentFolder( string_view folderID )
     {
-        const optional<AbsolutePath> folder = editor::getSubsystem<AssetPaths>().toDiskPath( folderID );
-        return folder.has_value() && FileUtil::isDirectory( *folder ) ? *folder : AbsolutePath{};
+        const optional<DiskPath> folder = editor::getSubsystem<AssetPaths>().toDiskPath( folderID );
+        return folder.has_value() && FileUtil::isDirectory( *folder ) ? *folder : DiskPath{};
     }
 
     string EditorPaths::getSceneDialogFolderPath()

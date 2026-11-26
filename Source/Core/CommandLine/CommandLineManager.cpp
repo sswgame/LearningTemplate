@@ -27,8 +27,8 @@ namespace sw
     // 인덱싱으로 끝난다. 이 일치가 깨지는 경우는 하나뿐이다. initialize 를 두 번 부르거나, 그 전에 addArgument 를
     // 먼저 부르는 것이다.
     //
-    // 그래서 표를 **먼저 비운다.** 줄마다 거는 assert 는 Debug 에서만 살아 있고, Shipping 에서 어긋난 표는 조용히
-    // **다른 인자의 값을 돌려준다.** `getArgument(WIDTH)` 가 VSYNC 를 읽는 식이다. 비우고 시작하면 최악의 경우라도
+    // 그래서 표를 먼저 비운다. 줄마다 거는 assert 는 Debug 에서만 살아 있고, Shipping 에서 어긋난 표는 조용히
+    // 다른 인자의 값을 돌려준다. `getArgument(WIDTH)` 가 VSYNC 를 읽는 식이다. 비우고 시작하면 최악의 경우라도
     // "먼저 넣은 커스텀 인자가 사라진다" 로 끝나고, initialize 는 몇 번을 불러도 같은 표가 된다.
     //
     // 정책이 받지 않는 줄(배포의 Dev · Test 인자)은 자리만 두고 철자를 넣지 않는다 — 열거값 = 인덱스가 구성마다 같고, 그 철자를 주면 parse 가 모르는 인자로 거절한다.
@@ -219,7 +219,7 @@ namespace sw
 
         if ( iter == _mapArgument.end() )
         {
-            // 모듈(EditorModule · SWGame)이 선언하는 전역 변수는 **이 시점에 아직 없다.** 커맨드라인은 모듈이 로드되기 전에
+            // 모듈(EditorModule · SWGame)이 선언하는 전역 변수는 이 시점에 아직 없다. 커맨드라인은 모듈이 로드되기 전에
             // 파싱되기 때문이다. 버리면 그 스위치는 영영 적용되지 않으므로 보류표에 남겨 두고, 모듈이 나중에 등록할 때
             // GlobalVariableManager::registerVariable 이 꺼내 적용한다.
             // 표는 비우지 않는다. 핫 리로드로 모듈이 다시 올라와도 커맨드라인 값은 프로세스가 끝날 때까지 유효해야 한다.
@@ -242,7 +242,7 @@ namespace sw
 
         // 필수 값이 빠졌는지 검사한다. 값 없이 적어도 되는 것은 bool 뿐이다. `-dx12` 는 "true" 라는 뜻이지만 `-W` 나
         // `-gv_stressTestMeshes` 에는 그런 뜻이 없다. 판단은 타입이 한다(`isFlagArgument`) — 받아 주면 값을 빠뜨린 `-gv_stressTestMeshes` 가
-        // int32 항목에 bool 을 밀어 넣고 **경고 한 줄 없이 아무 일도 하지 않는다**(readValue 의 get_if 가 nullptr).
+        // int32 항목에 bool 을 밀어 넣고 경고 한 줄 없이 아무 일도 하지 않는다(readValue 의 get_if 가 nullptr).
         if ( bHasValue == false && argument.isFlagArgument() == false )
         {
             StringBuilder<constant::buffer::kMax256> textBuilder;

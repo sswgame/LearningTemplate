@@ -3,6 +3,7 @@
  * @brief 씬의 워프 오브젝트 하나에 묶인 공유 모디파이어 스택(월드 공간 워프)을 이 메시에 거는 모디파이어입니다(MegaFiers World Space Warp, 블렌더 변형자의 기준 오브젝트).
  */
 #pragma once
+#include "Core/Foundation/Types.h"
 #include "Core/Path/AbsolutePath.h"
 
 #include "GameFramework/Plugin/Editor/MeshModifiers/Stack/MeshModifier.h"
@@ -10,10 +11,13 @@
 
 namespace sw::editor
 {
+    class AssetWriter;
+    enum class AssetWriteResult : uint8;
+
     /**
      * @class WorldWarpModifier
      * @brief 워프 정의 파일(`.mfwarp`, 스택 저장 문서 글)의 스택을 워프 오브젝트의 공간에서 겁니다. 여러 메시가 같은 파일 · 같은 오브젝트를 가리키면 한 워프를 함께 받습니다.
-     * @details 워프는 두 조각으로 나뉜다 — **어디에**(씬 오브젝트, 모디파이어의 공간 기준 `Space Reference`)와 **무엇을**(정의 파일 하나). 오브젝트를 옮기면
+     * @details 워프는 두 조각으로 나뉜다 — 어디에(씬 오브젝트, 모디파이어의 공간 기준 `Space Reference`)와 무엇을(정의 파일 하나). 오브젝트를 옮기면
      *          묶인 메시가 모두 그 자리에서 휘고, 파일을 고치면 모두 같이 바뀐다. 이 모디파이어는 늘 월드 공간으로 시작한다(`setWorldSpace`) — 기준 오브젝트가
      *          없으면 월드 원점이 워프 공간이다. 하위 스택에게는 워프 공간이 "메시 로컬" 이다(`DeformableModifier` 와 같은 규칙).
      *          파일 경로가 비면 항등이고, 못 읽거나 형식이 틀리면 경고 한 번 뒤 항등이다. 읽은 스택은 경로가 같은 동안 붙잡아 둔다(다시 읽으려면 경로를 바꾸거나
@@ -27,8 +31,8 @@ namespace sw::editor
 
         WorldWarpModifier();
 
-        /** @brief 스택 @p stack 을 워프 정의 파일 @p absPath 로 씁니다(스택 저장 문서 글). 묶음(`DeformableModifier`)의 하위 스택을 워프로 내보낼 때 씁니다. */
-        [[nodiscard]] static bool writeWarpFile( const MeshModifierStack& stack, const AbsolutePath& absPath );
+        /** @brief 스택 @p stack 을 워프 정의 파일 @p absPath 로 씁니다(스택 저장 문서 글). 묶음(`DeformableModifier`)의 하위 스택을 워프로 내보낼 때 씁니다. 글로 못 만들면 오류를 남기고 `Failed` 입니다. */
+        [[nodiscard]] static AssetWriteResult writeWarpFile( AssetWriter& writer, const MeshModifierStack& stack, const DiskPath& path );
         /** @brief 워프 정의 리소스 @p assetID 를 @p outStack 으로 읽습니다(`AssetIO`). 못 읽거나 형식이 틀리면 false 입니다. */
         [[nodiscard]] static bool readWarpFile( string_view assetID, MeshModifierStack& outStack );
 

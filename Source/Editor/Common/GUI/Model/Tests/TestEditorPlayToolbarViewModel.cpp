@@ -1,7 +1,7 @@
 // EditorPlayToolbarViewModelTest — Step N 칸의 프레임 수는 1 과 세션 상한 사이로 자른다(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Editor/Common/GUI/Model/EditorPlayToolbarViewModel.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"

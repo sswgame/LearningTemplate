@@ -4,7 +4,7 @@
 
 #include "Engine/Animation/Skeletal/Pose.h"
 #include "Engine/Destruction/Fracture/FractureAsset.h"
-#include "Engine/Destruction/Fracture/FractureRenderUtil.h"
+#include "Engine/Destruction/Fracture/FractureRenderUnits.h"
 #include "Engine/Destruction/Fracture/PolygonFracture.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -78,9 +78,9 @@ namespace sw
         vector<BoneTransform> listRest( _asset2D->getPieceCount() );
         for ( uint32 piece = 0; piece < _asset2D->getPieceCount(); ++piece )
         {
-            listRest[piece] = FractureRenderUtil::makeBoneTransform( _asset2D->_graph._listNode[piece]._centroid, quaternion::Identity, float3{}, 1.0f );
+            listRest[piece] = FractureRenderUnits::makeBoneTransform( _asset2D->_graph._listNode[piece]._centroid, quaternion::Identity, float3{}, 1.0f );
         }
-        shared_ptr<Mesh> intact = FractureRenderUtil::createBakedMesh( *_asset2D, FractureSurfaceSlot::Outer, listRest );
+        shared_ptr<Mesh> intact = FractureRenderUnits::createBakedMesh( *_asset2D, FractureSurfaceSlot::Outer, listRest );
         MeshComponent*   pMesh  = pOwner->addComponent<MeshComponent>();
         if ( pMesh != nullptr && intact != nullptr )
             pMesh->setMesh( std::move( intact ) );

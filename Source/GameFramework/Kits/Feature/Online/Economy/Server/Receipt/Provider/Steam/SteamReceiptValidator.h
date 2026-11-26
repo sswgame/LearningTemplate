@@ -34,7 +34,7 @@ namespace sw
         string           _key{};   ///< 퍼블리셔 웹 API 키(쿼리에 실을 수 있는 글)
         string           _baseURL{ kDefaultBaseURL };
         ReceiptBuyerRule _buyerRule{}; ///< 설정의 `buyerBinding`(`ReceiptProviderManager`). 스팀은 `LinkedLogin` 이나 명시적 `None` 이다
-        int64            _requestTimeoutMs{ 10000 };
+        int64            _requestTimeoutMs{ HTTPConstant::kDefaultTimeoutMs };
         int64            _reportPollIntervalMs{ 3600000 };
         int64            _reportLookbackMs{ 172800000 }; ///< 보고서를 지난 조회 시각보다 이만큼 앞에서부터 읽는다(2 일)
         uint8            _bSandbox{ SW_FALSE };

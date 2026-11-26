@@ -26,7 +26,7 @@ Web · Android 는 클라이언트뿐이고 백엔드가 프리셋에 묶여 있
 타깃이 호스트 개발 빌드의 `--cook-all` 로 한다(DevTools 의 `PackCooker`, 팩 파일 이름 규칙 `PackCooker::makePackFileName`). 이름이 어긋나면 스테이징이 빠진 팩을 알리고 멈춘다.
 Dev 산출물(`Modules/` · `Saved/` · `Symbols/`)과 다른 실행 파일(테스트 · 부하 봇)은 들이지 않는다. 서버는 `Config/Server/<게임>.json` 을 함께 둔다
 (서버는 Shipping 에서도 운영 설정을 디스크에서 읽는다).
-모드 설치 폴더 `Mods/`(실행 파일 옆 — `ModSession::getInstallFolder`)는 늘 만든다. `--mods a,b` 로 고른 모드는 묶은 배포 형태(`mod.xml` + `content.pack`)만 담는다 —
+모드 설치 폴더 `Mods/`(실행 파일 옆, `ModSession::getInstallFolder`)는 늘 만든다. `--mods a,b` 로 고른 모드는 묶은 배포 형태(`mod.xml` + `content.pack`)만 담는다 —
 배포 게임은 소스 모드(`content/`)를 읽지 않는다. 묶은 형태는 개발 빌드의 개발 명령 `mod.pack <id>` 가 `Saved/ModPacks/<id>/` 에 만든다(없으면 실패 — 짐작해 묶지 않는다).
 서버 패키지에도 같은 모드를 담는다 — 서버와 클라이언트의 구성 해시가 같아야 핸드셰이크가 통한다.
 

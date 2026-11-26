@@ -3,7 +3,7 @@
  * @brief 컴포넌트 종류마다 내비메시 베이크 기하를 내는 함수의 레지스트리입니다. 메시 · 강체로 모양을 알 수 없는 위층 컴포넌트(지형 높이장)가 등록합니다.
  * @details 기하 모으기(`NavGeometryCollector`)는 오브젝트를 훑다가 등록된 종류의 컴포넌트를 만나면 그 함수를 부릅니다. 런타임 베이크와 쿠킹이 같은 길을
  *          지나므로 플레이 전(쿠킹)에도 들어갑니다. 내비게이션(Object 층)은 위층 타입(Environment)을 include 하지 않고, 위층이 자기 .cpp 에서
- *          `SW_NAV_GEOMETRY_CONTRIBUTOR` 한 줄로 등록합니다 — `SW_SCENE_SERVICE` 와 같은 방향입니다.
+ *          `SW_NAV_GEOMETRY_CONTRIBUTOR` 한 줄로 등록합니다 — `SW_SCENE_SUBSYSTEM` 와 같은 방향입니다.
  *          언리얼 `INavRelevantInterface::GetNavigationData`(컴포넌트가 내비 기하를 낸다)에 해당합니다.
  *
  *          `INavGeometrySource`(오브젝트 하나의 기하를 대신 내는 런타임 등록, 파괴 오브젝트)와 다른 점: 이것은 종류 단위 규칙이라 인스턴스가 등록하지 않아도 되고,

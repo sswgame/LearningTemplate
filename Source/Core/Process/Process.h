@@ -1,6 +1,8 @@
 /**
  * @file Process.h
- * @brief 외부 프로세스를 만들고, 출력을 스트리밍하고, 제어 · 종료하는 크로스 플랫폼 유틸리티입니다.
+ * @brief 프로세스 한 헤더입니다 — 자식 프로세스(띄우기 · 출력 스트리밍 · 제어 · 종료, 엔진 자식 명령)와 이 프로세스의 값(환경 변수 · 세션 ID · 스레드 크래시 스택 · 표준 출력).
+ * @details 언리얼 `FPlatformProcess` · Godot `OS` 처럼 프로세스의 일을 한 형식 묶음에 두고, 플랫폼 구현은 플랫폼마다 한 파일(`Windows/WindowsProcess.cpp` ·
+ *          `Posix/PosixProcess.cpp` · `Web/WebProcess.cpp`)이다. 표준 입력 읽기(`StandardInputReader.h`, 읽기 스레드를 쥔다)와 종료 신호(`ShutdownSignal.h`, 서버 메인 루프)는 따로 둔다.
  */
 #pragma once
 #include "Core/Concurrency/atomic.h"
@@ -14,14 +16,16 @@
 
 namespace sw
 {
+    class CommandLineManager;
+
     /**
      * @struct ProcessCommand
      * @brief 띄울 실행 파일과 인자 목록입니다. `Process` 는 명령을 글 하나로 받지 않습니다 — 인자를 인용하는 일은 `Process` 안 한 곳만 합니다.
-     * @details **셸을 거치지 않습니다.** POSIX 는 `execv` 로 인자 배열을 그대로 넘기고, Windows 는 `toCommandLine`(CommandLineToArgvW 규칙)으로
+     * @details 셸을 거치지 않습니다. POSIX 는 `execv` 로 인자 배열을 그대로 넘기고, Windows 는 `toCommandLine`(CommandLineToArgvW 규칙)으로
      *          인용한 줄을 `CreateProcessW` 에 줍니다. 그래서 인자 안의 공백 · 따옴표 · 역슬래시 · `;` `&` `$` 는 그 인자의 글자일 뿐입니다.
      *          예전에는 부르는 쪽이 따옴표를 손으로 붙였고(이스케이프가 빠진 자리가 여럿이었다), POSIX 는 그 글을 `sh -c` 에 넘겼다.
      *          셸 문법(파이프 · 리디렉션 · `&&`)이 필요하면 셸을 실행 파일로 적는다(`/bin/sh` + `-c`, `cmd.exe` + `/c`) — 그때 셸 문법은 부르는 쪽 몫이다.
-     *          실행 파일은 **만드는 함수가 종류를 정한다** - 절대 경로(`at`)이거나 검색 경로에서 찾을 이름(`fromSearchPath` - `cmake` · `git`)이다.
+     *          실행 파일은 만드는 함수가 종류를 정한다 - 절대 경로(`at`)이거나 검색 경로에서 찾을 이름(`fromSearchPath` - `cmake` · `git`)이다.
      *          예전에는 글에 `/` 가 있는지로 경로인지 이름인지 추측했고(POSIX), Windows 는 `CreateProcessW` 가 작업 폴더까지 뒤졌다 - 상대 경로가 작업 폴더에 따라 달리 풀렸다.
      */
     struct SW_API ProcessCommand
@@ -37,6 +41,15 @@ namespace sw
         [[nodiscard]] static ProcessCommand at( const AbsolutePath& executable, vector<string> listArgument );
         /** @brief 이름 @p executableName(`git` · `py`)을 검색 경로(PATH)에서 찾아 띄우는 명령입니다. 이름에 구분자가 있으면 띄울 때 실패한다(경로는 `at`). */
         [[nodiscard]] static ProcessCommand fromSearchPath( string_view executableName, vector<string> listArgument );
+        /**
+         * @brief 엔진 실행 파일(App · Server) @p executablePath 를 @p listArgument 로 띄우는 명령입니다. @p parent 가 자동화 실행이면 `-unattended` 를 더합니다(이미 있으면 그대로).
+         * @details 자동화 실행(`-unattended` · `-scenario` — `CommandLineManager::isAutomatedRun`)의 자식도 자동화 실행이어야 한다. 빠지면 자식이 사람의 실행으로 떠
+         *          사용자 설정을 읽고 사양으로 품질을 골라(WSL 의 클라이언트가 low) 서버와 합성이 갈렸고, 사람의 설정 · 세이브를 건드렸다.
+         *          엔진 자식은 이것으로만 만든다 — 엔진 자식에 `at` 을 직접 부르는 모양은 린트(common-shapes 의 engineChildCommand)가 막고, 자기 자신을 띄울 때는
+         *          `FileUtil::getExecutablePath()` 를 넘긴다(File 은 위 티어라 여기서 부르지 않는다). 엔진이 아닌 도구(Tracy · tint · 편집기)는 그 예외 표에 까닭과 함께 있다.
+         * @return 경로가 비었으면 빈 명령입니다 — 띄우기가 실패로 알린다.
+         */
+        [[nodiscard]] static ProcessCommand forEngineChild( const CommandLineManager& parent, const AbsolutePath& executablePath, vector<string> listArgument );
 
         /** @brief 실행 파일을 포함해 CommandLineToArgvW 규칙으로 인용한 명령줄입니다. Windows 가 `CreateProcessW` 에 넘기는 글이고, 양쪽 모두 로그에 씁니다. */
         [[nodiscard]] string toCommandLine() const;
@@ -47,9 +60,9 @@ namespace sw
 {
     /**
      * @brief 프로세스 출력 한 줄을 받는 콜백입니다.
-     * @details **표준 에러는 표준 출력에 합쳐져 들어옵니다.** 두 구현 모두 일부러 그렇게 합니다(Windows 는
+     * @details 표준 에러는 표준 출력에 합쳐져 들어옵니다. 두 구현 모두 일부러 그렇게 합니다(Windows 는
      *          `si.hStdError = hStdOutWrite`, POSIX 는 자식 프로세스에서 `dup2` 로 둘을 같은 파이프에 겁니다). 빌드 로그처럼 두
-     *          스트림이 **원래 순서대로** 섞여야 읽을 수 있는 출력을 다루는 것이 이 클래스의 용도이기 때문입니다. 그래서 어느 쪽에서
+     *          스트림이 원래 순서대로 섞여야 읽을 수 있는 출력을 다루는 것이 이 클래스의 용도이기 때문입니다. 그래서 어느 쪽에서
      *          온 줄인지 가려낼 방법은 없습니다.
      */
     using ProcessOutputDelegate = Delegate<void( string_view line )>;
@@ -68,7 +81,7 @@ namespace sw
 namespace sw
 {
     /**
-     * @brief `Process` 가 아직 도는 자식을 놓을 때(소멸 · 다시 `launch`) 하는 일입니다. 어느 쪽이든 자식을 **거둔 뒤** 놓는다 — 좀비를 남기지 않는다.
+     * @brief `Process` 가 아직 도는 자식을 놓을 때(소멸 · 다시 `launch`) 하는 일입니다. 어느 쪽이든 자식을 거둔 뒤 놓는다 — 좀비를 남기지 않는다.
      * @details 언리얼 `FProcState`(Linux)도 도는 자식의 핸들을 닫을 때 끝날 때까지 기다린다. 기다리지 않고 버릴 실행은 `Process::launchDetached`(두 번 fork — init 이 거둔다)다.
      */
     enum class ProcessReleaseMode : uint8
@@ -96,7 +109,7 @@ namespace sw
          * @brief 자식 트리가 이 프로세스(부모)와 함께 끝나게 합니다 — 부모가 비정상 종료해도 자식이 고아로 남지 않는다(감사 E-15: 에디터가 죽으면 넷 플레이 서버 · 클라이언트가 남았다).
          * @details Windows 는 자식을 묶는 Job 에 `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE` 를 걸어 마지막 핸들이 닫힐 때(이 `Process` 를 놓거나 부모가 죽을 때) 트리째 끝낸다.
          *          Linux · Android 는 자식이 `PR_SET_PDEATHSIG`(SIGKILL)을 걸고, 이 `Process` 를 놓을 때도 그룹에 SIGKILL 을 보낸다 — 두 구현이 같은 뜻이다
-         *          (그 밖의 POSIX 는 놓을 때만 끝낸다 — 부모 사망 신호가 없다). `launch` 만 받는다 — `launchDetached` 는 켜면 거절한다(분리한 자식은 부모와 묶지 않는다).
+         *          (그 밖의 POSIX 는 부모 사망 신호가 없어 놓을 때만 끝낸다). `launch` 만 받는다. `launchDetached` 는 켜면 거절한다(분리한 자식은 부모와 묶지 않는다).
          *          언리얼 `FPlatformProcess::CreateProc` 의 `bLaunchDetached=false` 자식이 에디터 Job 에 묶이는 것과 같은 자리다.
          */
         bool _bEndWithParent{ false };
@@ -122,8 +135,8 @@ namespace sw
     /**
      * @class Process
      * @brief 외부 OS 프로세스를 만들고, 표준 출력을 파이프로 받아 오고, 종료를 기다리는 클래스입니다.
-     * @details **두 구현이 같은 일을 합니다.** Windows 는 `CreateProcess`, POSIX 는 `fork` + `exec` 으로 자식을 만들고, 양쪽 모두
-     *          **자식을 직접 들고 있습니다.** 그래서 pid 조회 · 강제 종료 · 실행 중인지 확인이 모두 됩니다. 달라지는 곳은 두
+     * @details 두 구현이 같은 일을 합니다. Windows 는 `CreateProcess`, POSIX 는 `fork` + `exec` 으로 자식을 만들고, 양쪽 모두
+     *          자식을 직접 들고 있습니다. 그래서 pid 조회 · 강제 종료 · 실행 중인지 확인이 모두 됩니다. 달라지는 곳은 두
      *          군데뿐이고 각 함수 주석에 적어 두었습니다. 종료 코드를 정해 줄 수 있는지(`terminate`), 그리고 시그널로 죽은
      *          자식의 종료 코드를 무엇으로 볼지(`waitForExit`)입니다.
      */
@@ -133,7 +146,7 @@ namespace sw
         /** @brief 빈 프로세스 핸들로 만듭니다. */
         Process();
         /**
-         * @brief 파이프를 닫고 자식을 **거둔 뒤** 자원을 정리합니다. 아직 돌면 `ProcessOptions::_releaseMode` 대로 기다리거나 죽인 뒤 거둡니다.
+         * @brief 파이프를 닫고 자식을 거둔 뒤 자원을 정리합니다. 아직 돌면 `ProcessOptions::_releaseMode` 대로 기다리거나 죽인 뒤 거둡니다.
          * @details 예전에는 도는 자식을 분리했다 — POSIX 에서는 그 자식이 나중에 끝나면 이 프로세스(에디터 · 서버)가 끝날 때까지 좀비로 남았다.
          *          기다리지 않을 실행은 `launchDetached` 를 쓴다. 파이프를 먼저 닫으므로 출력에 막힌 자식은 EPIPE 로 끝난다.
          */
@@ -170,22 +183,22 @@ namespace sw
         /**
          * @brief 프로세스가 끝나기를 기다리고 종료 코드를 반환합니다.
          * @return 프로세스 종료 코드. 기다릴 자식이 없거나(띄우지 않음 · 이미 거둠 · 웹) OS 대기가 실패하면 그 까닭의 오류입니다 — 예전에는 -1 이라
-         *         -1 로 끝난 프로세스와 갈리지 않았다. **POSIX 에서 시그널로 죽은 자식은 `128 + 시그널 번호`** 입니다(셸 규약.
+         *         -1 로 끝난 프로세스와 갈리지 않았다. POSIX 에서 시그널로 죽은 자식은 `128 + 시그널 번호` 입니다(셸 규약.
          *         예: SIGKILL 이면 137). 시그널로 죽은 프로세스에는 종료 코드가 없기 때문입니다.
-         * @details POSIX 는 여기서 자식을 회수하고 **pid 를 놓습니다.** 그 번호는 OS 가 곧 재사용하므로, 계속 보관하면 나중에 다른
+         * @details POSIX 는 여기서 자식을 회수하고 pid 를 놓습니다. 그 번호는 OS 가 곧 재사용하므로, 계속 보관하면 나중에 다른
          *          프로세스의 자식을 회수하게 됩니다. 그래서 `waitForExit` 뒤의 `getProcessID` 는 0 이고, 두 번째 `waitForExit` 은
          *          오류입니다.
          */
         [[nodiscard]] expected<int32> waitForExit();
 
         /**
-         * @brief 프로세스에 강제 종료를 **요청**합니다.
-         * @param exitCode 자식에게 줄 종료 코드. **POSIX 에서는 이 값을 쓸 수 없습니다.** 시그널로 죽이므로 종료 코드를 정해 줄
+         * @brief 프로세스에 강제 종료를 요청합니다.
+         * @param exitCode 자식에게 줄 종료 코드. POSIX 에서는 이 값을 쓸 수 없습니다. 시그널로 죽이므로 종료 코드를 정해 줄
          *                 방법이 없고, `waitForExit` 이 `128 + SIGKILL` 을 반환합니다.
          * @return 요청이 받아들여지면 true
          * @details 반환됐다고 해서 자식이 이미 죽은 것은 아닙니다. 죽었는지 확인해야 한다면 `waitForExit` 으로 기다리십시오.
          *          그 전까지는 `isRunning` 도 true 일 수 있습니다. 다른 스레드가 `readOutputLine` 을 돌고 있어도 안전합니다. 자식이
-         *          죽으면 파이프의 쓰기 쪽이 닫혀 그 스레드의 읽기가 false 를 반환합니다. POSIX 는 **프로세스 그룹째** 죽입니다.
+         *          죽으면 파이프의 쓰기 쪽이 닫혀 그 스레드의 읽기가 false 를 반환합니다. POSIX 는 프로세스 그룹째 죽입니다.
          *          자식이 띄운 손자 프로세스(빌드라면 cmake 가 띄운 컴파일러)까지 멈춰야 취소가 끝나기 때문입니다. Windows 는 같은 뜻으로 Job 객체째 죽입니다 —
          *          루트만 죽이면 손자(`git` 이 띄운 `git-lfs`)가 출력 파이프를 쥐고 있어 읽는 스레드가 손자가 끝날 때까지 막힌다.
          */
@@ -196,7 +209,7 @@ namespace sw
         /** @brief 자식의 표준 입력을 닫습니다(자식은 EOF 를 받는다). 두 번 불러도 됩니다. */
         void closeInput();
         /**
-         * @brief 자식에게 **정상 종료**를 요청합니다(강제 종료인 `terminate` 와 다르다). 보냈으면 true 입니다.
+         * @brief 자식에게 정상 종료를 요청합니다(강제 종료인 `terminate` 와 다르다). 보냈으면 true 입니다.
          * @details POSIX 는 자식의 프로세스 그룹에 SIGTERM(`launch` 가 자식을 제 그룹의 우두머리로 만든다 — 자식이 띄운 손자까지 닿는다).
          *          Windows 는 `CTRL_BREAK_EVENT` 를 자식의 프로세스 그룹에 보낸다(`_bNewProcessGroup` 으로 띄운 자식만). 이 프로세스가 콘솔에
          *          붙어 있지 않으면 보낼 수 없어 false 입니다(서비스 · 콘솔 없는 CI) — 부르는 쪽은 표준 입력 명령 같은 다른 길을 씁니다.
@@ -206,7 +219,7 @@ namespace sw
         /**
          * @brief 죽이기 전에 자식의 모든 스레드 스택을 남깁니다 — 멈춘 자식을 시한으로 죽이는 부모가 부른다(`AutomationPerBackend`, 언리얼 Gauntlet 의 시한 덤프 자리).
          * @details Windows 는 자식 핸들로 미니덤프(모든 스레드의 스택 · 스레드 정보)를 @p dumpPath 에 쓴다 — 쓰는 동안 자식의 스레드가 멈추고 다 쓰면 다시 돈다.
-         *          POSIX 는 살아 있는 남의 프로세스를 할당 없이 덤프할 길이 없어 자식에게 SIGABRT 를 보내 **자식의 크래시 처리기**가 제 보고를 쓰게 하고, 끝나기를 잠깐 기다린다
+         *          POSIX 는 살아 있는 남의 프로세스를 할당 없이 덤프할 길이 없어 자식에게 SIGABRT 를 보내 자식의 크래시 처리기가 제 보고를 쓰게 하고, 끝나기를 잠깐 기다린다
          *          (@p dumpPath 는 쓰지 않는다). 어느 쪽이든 자식을 죽이는 것은 부른 쪽의 `terminate` 다.
          * @return 남긴 자리(Windows 는 @p dumpPath, POSIX 는 자식의 크래시 보고)를 적은 글입니다. 띄우지 않았거나 쓰지 못하면 그 까닭입니다.
          */
@@ -214,7 +227,7 @@ namespace sw
 
         /**
          * @brief 프로세스가 아직 실행 중인지 반환합니다.
-         * @details 양쪽 모두 **OS 에 직접 묻습니다.** POSIX 는 `waitid(WNOHANG | WNOWAIT)` 라서 묻기만 하고 회수하지는 않습니다.
+         * @details 양쪽 모두 OS 에 직접 묻습니다. POSIX 는 `waitid(WNOHANG | WNOWAIT)` 라서 묻기만 하고 회수하지는 않습니다.
          *          회수하면 이어서 부를 `waitForExit` 이 종료 코드를 잃기 때문입니다. 자기가 보관한 플래그만 보면 자식이 스스로
          *          끝나도 true 로 남습니다.
          */
@@ -222,7 +235,7 @@ namespace sw
 
         /**
          * @brief 프로세스 ID 를 반환합니다. 시작하기 전에는 0 입니다.
-         * @details **POSIX 는 `waitForExit` 이 거둔 뒤에도 0 입니다.** 그 시점에 pid 를 놓기 때문입니다. Windows 는 핸들을 닫을
+         * @details POSIX 는 `waitForExit` 이 거둔 뒤에도 0 입니다. 그 시점에 pid 를 놓기 때문입니다. Windows 는 핸들을 닫을
          *          때까지 값이 남습니다.
          */
         int32 getProcessID() const { return _processID.load(); }
@@ -240,8 +253,8 @@ namespace sw
         [[nodiscard]] static expected<int32> execute( const ProcessCommand& command, const ProcessOptions& options = {}, const ProcessOutputDelegate& onOutput = {} );
 
         /**
-         * @brief 출력을 받지 않고 **기다리지도 않고** 프로세스를 띄웁니다. 띄웠으면 true 입니다(종료 코드는 볼 수 없습니다).
-         * @details 뷰어 · 새 창 게임처럼 **사용자가 닫을 때까지 사는** 프로그램을 띄울 때 씁니다. `execute` 는 출력 파이프가 닫힐
+         * @brief 출력을 받지 않고 기다리지도 않고 프로세스를 띄웁니다. 띄웠으면 true 입니다(종료 코드는 볼 수 없습니다).
+         * @details 뷰어 · 새 창 게임처럼 사용자가 닫을 때까지 사는 프로그램을 띄울 때 씁니다. `execute` 는 출력 파이프가 닫힐
          *          때까지 기다리므로, 그런 프로그램(또는 그것이 띄운 손자)이 파이프를 물고 있으면 부른 스레드가 그동안 멈춥니다.
          *          언리얼의 `CreateProc( bLaunchDetached )` 에 해당합니다.
          *          자식은 이 프로세스의 핸들 · 서술자를 하나도 물려받지 않습니다(POSIX 는 표준 입출력을 /dev/null 로, 두 번 fork 해
@@ -251,7 +264,7 @@ namespace sw
         static optional<DetachedProcessID> launchDetached( const ProcessCommand& command, const ProcessOptions& options = {} );
         /**
          * @brief 분리 실행한 프로세스 @p id 가 끝날 때까지 많아야 @p timeoutMilliseconds 기다립니다. 끝났거나 이미 없으면 true 입니다.
-         * @details 핸들을 들지 않은 실행이라 id 로 찾는다 — 끝난 뒤 같은 id 를 다른 프로세스가 받으면 그것을 기다릴 수 있다(짧게 기다리는 쪽 — 테스트 · 도구 — 만 쓴다).
+         * @details 핸들을 들지 않은 실행이라 id 로 찾는다. 끝난 뒤 같은 id 를 다른 프로세스가 받으면 그것을 기다릴 수 있다(짧게 기다리는 테스트 · 도구만 쓴다).
          *          Windows 는 `OpenProcess( SYNCHRONIZE )` 의 대기, POSIX 는 손자를 init 이 거둘 때까지 `kill( pid, 0 )` 을 짧은 간격으로 본다.
          */
         [[nodiscard]] static bool waitForDetachedExit( DetachedProcessID id, uint32 timeoutMilliseconds );
@@ -314,7 +327,7 @@ namespace sw
         void*  _pStdInWrite; ///< 표준 입력 파이프의 쓰는 끝(Windows HANDLE, POSIX 는 서술자 + 1 — 0 은 없음)
         string _bufferedOutput;
         /**
-         * @brief 자식의 pid(없으면 0). **원자다** — `terminate` 는 다른 스레드가 `readOutputLine` · `waitForExit` 을 도는 중에 불리는 것이
+         * @brief 자식의 pid(없으면 0). 원자다 — `terminate` 는 다른 스레드가 `readOutputLine` · `waitForExit` 을 도는 중에 불리는 것이
          *        계약이고(`ModuleCompiler::cancel` · 테스트의 자식 시한), `waitForExit` 은 거둔 뒤 이것을 0 으로 쓴다(보통 정수면 ThreadSanitizer 가
          *        두 스레드의 쓰기를 짚는다).
          */
@@ -322,5 +335,97 @@ namespace sw
         ProcessReleaseMode _releaseMode;      ///< 아직 도는 자식을 놓을 때 할 일(`launch` 의 옵션)
         bool               _bNewProcessGroup; ///< `requestStop` 이 보낼 수 있는 자식인가(Windows) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         bool               _bEndWithParent;   ///< 놓을 때 자식 트리를 끝낸다(`ProcessOptions::_bEndWithParent` — POSIX 의 shutdown 이 본다) NOLINT(sw-bool-flag): 위 칸과 같은 형식으로 둔다(이동 생성이 칸마다 옮긴다)
+    };
+} // namespace sw
+
+// ------------------------------------------------------------------------------
+// ProcessEnvironment — 프로세스의 환경 변수를 읽고 정하는 유일한 자리입니다. `std::getenv` · `GetEnvironmentVariable` 을 부르는 곳은 플랫폼 Process 구현 파일의 이 절뿐입니다.
+//   환경 변수에는 세 상태가 있다 — 없음(unset), 빈 값(`FOO=`), 값 있음. 곳곳에서 `getenv` 를 직접 부르면 빈 값을 없음으로 읽는 곳과 있음으로 읽는 곳이 갈린다.
+//   그래서 읽기를 두 함수로 나눠 호출 쪽이 정책을 이름으로 고른다.
+//   - `tryRead`: 빈 값도 "정해져 있음"으로 읽는다. 사용자가 일부러 비워 정한 값을 존중해야 하는 변수(허용 목록 · 비밀 · 명시적 선택)가 쓴다.
+//   - `tryReadNonEmpty`: 없음과 빈 값을 같게 읽는다. 경로 · 포트처럼 빈 글이 쓸모없는 변수가 쓴다(빈 `HOME` 으로 상대 경로를 만들지 않는다).
+//   Windows 는 `GetEnvironmentVariableW` 로 읽어 UTF-8 로 돌려준다(CRT 의 `getenv` 는 ANSI 코드 페이지라 한글 사용자 이름이 든 `LOCALAPPDATA` 가 깨진다). 정하기는 OS 환경과
+//   CRT 복사본을 함께 바꾼다(CRT 를 쓰는 서드파티 코드인 Tracy 클라이언트가 `getenv` 로 읽는다). 메인 스레드 설정 단계에서 쓰는 것을 전제로 한다(`setenv` 는 스레드 안전하지 않다).
+// ------------------------------------------------------------------------------
+namespace sw
+{
+    /** @struct ProcessEnvironment @brief 환경 변수 읽기 · 정하기입니다(모두 정적). 씬 환경(`EnvironmentUtil`)과 무관합니다. */
+    struct SW_API ProcessEnvironment
+    {
+        /**
+         * @brief 변수 @p name 이 정해져 있으면 값을 @p outValue 에 담고 true 입니다. 빈 값도 true 이며 @p outValue 는 빈 글입니다.
+         * @return 변수가 없으면 false 이고 @p outValue 는 비어 있습니다.
+         */
+        [[nodiscard]] static bool tryRead( string_view name, string& outValue );
+        /** @brief `tryRead` 와 같지만 빈 값을 없음으로 읽습니다 — 값이 있을 때만 true 입니다. */
+        [[nodiscard]] static bool tryReadNonEmpty( string_view name, string& outValue );
+        /** @brief 변수 @p name 을 @p value 로 정합니다(이미 있으면 바꿉니다). 이름이 비었거나 `=` 를 품었거나 OS 가 거절하면 false 입니다. */
+        [[nodiscard]] static bool trySet( string_view name, string_view value );
+        /** @brief 변수 @p name 이 정해져 있는지(빈 값 포함)만 묻습니다 — 값이 필요 없는 "자식 역할이다" 같은 표식 검사용입니다. */
+        [[nodiscard]] static bool isSet( string_view name );
+        /** @brief 변수 @p name 을 지웁니다(없던 변수도 true). 이름이 비었거나 `=` 를 품었거나 OS 가 거절하면 false 입니다. */
+        [[nodiscard]] static bool tryUnset( string_view name );
+    };
+} // namespace sw
+
+// ------------------------------------------------------------------------------
+// ProcessSession — 이 실행을 다른 실행과 가르는 세션 ID 입니다. 로그 파일 이름 · 크래시 파일 이름 · 텔레메트리가 같은 값을 써서 서로 짝지어집니다.
+//   프로세스 ID 처럼 실행마다 하나이고 한 번 정해지면 바뀌지 않는 값이라 프로세스 값입니다(크래시 처리기의 상태가 아니다 — 로그가 크래시 모듈에 기대지 않게 여기에 둔다).
+// ------------------------------------------------------------------------------
+namespace sw
+{
+    /** @struct ProcessSession @brief 이 실행의 세션 ID 입니다. */
+    struct SW_API ProcessSession
+    {
+        /**
+         * @brief 16 자리 16진수 세션 ID 입니다. 처음 부를 때 시각과 난수를 섞어 정하고, 그 뒤로는 같은 값입니다.
+         * @details 처음 부르는 스레드가 여럿일 수 있다(로그 워커가 파일을 여는 순간과 크래시 보고 스레드가 덤프 경로를 만드는 순간). 함수 지역 정적 초기화(스레드 안전)로
+         *          한 값만 보이게 한다. 크래시 처리기는 설치할 때 미리 불러 크래시 경로에서 만들지 않는다. 할당하지 않는다.
+         */
+        static const utf8* getID();
+    };
+} // namespace sw
+
+// ------------------------------------------------------------------------------
+// ThreadCrashStack — 스레드마다 크래시 보고가 쓸 스택 영역을 준비합니다(스택 오버플로 대비).
+// ------------------------------------------------------------------------------
+namespace sw
+{
+    // ------------------------------------------------------------------------------
+    // 1) ThreadCrashStack — 스레드 시작 때 부르는 준비. 크래시 보고(`CrashHandler`, Diagnostics)보다 아래층이라
+    //    작업 스레드를 띄우는 곳(로그 싱크 · 파일 · 태스크)이 보고기를 몰라도 부를 수 있다
+    // ------------------------------------------------------------------------------
+    /** @brief 스레드별 크래시 스택 준비입니다. */
+    struct SW_API ThreadCrashStack
+    {
+        /**
+         * @brief 이 스레드에서 스택 오버플로가 나도 리포트를 쓸 수 있게 준비합니다. 엔진이 만드는 스레드는 시작할 때 부릅니다.
+         * @details 스택 오버플로는 스택이 바닥난 채로 핸들러에 들어옵니다. 준비가 없으면 핸들러가 첫 호출에서 다시 넘쳐 **아무것도 남기지
+         *          못합니다**(실측: 덤프 파일 0 바이트). Windows 는 `SetThreadStackGuarantee` 로 넘친 뒤에 쓸 영역을 남겨 두고, POSIX 는
+         *          이 스레드 전용 대체 시그널 스택을 깝니다 — `sigaltstack` 은 스레드마다라, `CrashHandler::install` 을 부른 스레드만으로는 덮이지 않습니다.
+         *          핸들러 설치 전에 불러도 됩니다(로거 작업 스레드가 그렇다). 두 번 불러도 됩니다.
+         */
+        static void initializeCurrentThread();
+
+        /**
+         * @brief 이 스레드의 준비를 정리합니다(POSIX 는 대체 스택을 끄고 돌려줍니다, Windows 는 할 일이 없습니다).
+         * @details `CrashHandler::uninstall`(마지막 처리기)이 부른 스레드의 것을 정리합니다. 다른 스레드의 것은 그 스레드가 끝날 때 돌려줍니다.
+         */
+        static void releaseCurrentThread();
+    };
+} // namespace sw
+
+// ------------------------------------------------------------------------------
+// StandardOutput — 명령줄 도구의 결과 글(도움말 · 목록)을 표준 출력에 그대로 씁니다.
+//   로그(`SW_LOG_*`)는 시각 · 범주 머리를 붙이고 로그 수준에 따라 사라지므로, 사람이나 스크립트가 그대로 읽는 출력(`-help` 의 인자 목록)은 이것으로 씁니다.
+//   실패 알림은 이것이 아니라 로그이고, 로거가 서기 전이면 `SW_LOW_LEVEL_ERROR` 입니다. 표준 출력을 직접 부르는 자리는 `Process.cpp` 의 이 절 하나입니다.
+// ------------------------------------------------------------------------------
+namespace sw
+{
+    /** @brief 표준 출력 쓰기입니다(전부 static). */
+    struct SW_API StandardOutput
+    {
+        /** @brief @p text 를 그대로 쓰고 바로 비웁니다(줄바꿈을 붙이지 않습니다). 다 썼으면 true 입니다. */
+        [[nodiscard]] static bool write( string_view text );
     };
 } // namespace sw

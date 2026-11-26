@@ -10,7 +10,7 @@
 
 #include "Editor/Common/EditorSubsystem.h"
 #include "Editor/Common/Workspace/EditorExtensionSubsystems.h"
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 #include "Editor/SelfTest/EditorStabilityWait.h"
 
@@ -168,7 +168,7 @@ namespace sw::editor
                 const AbsolutePath reportPath = gv_editorSelfTestReport.getPath();
                 if ( reportPath.empty() == false )
                 {
-                    if ( FileUtil::ensureParentDirectoryExists( reportPath ) == false || FileUtil::writeTextFile( reportPath, _report ) == false )
+                    if ( FileUtil::writeTextFile( reportPath, _report ) == false )
                         SW_LOG_ERROR_ID( "EditorSelfTest.CouldNotWriteEditor", "Could not write the editor self test report to %#", reportPath.c_str() );
                 }
 

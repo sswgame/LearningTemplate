@@ -446,7 +446,7 @@ namespace sw
         if ( bInvalidBufferRecord )
             return;
 
-        // 컴퓨트 쓰기 → 컴퓨트 읽기 · 쓰기. 상태는 그대로라 레이아웃 전이가 아니라 **가시성**만 맞춘다.
+        // 컴퓨트 쓰기 → 컴퓨트 읽기 · 쓰기. 상태는 그대로라 레이아웃 전이가 아니라 가시성만 맞춘다.
         VkBufferMemoryBarrier barrier{};
         barrier.sType               = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
         barrier.srcAccessMask       = VK_ACCESS_SHADER_WRITE_BIT;

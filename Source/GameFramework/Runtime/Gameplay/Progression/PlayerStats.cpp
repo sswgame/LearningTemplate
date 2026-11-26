@@ -124,9 +124,15 @@ namespace sw
     {
     }
 
-    void PlayerStats::initialize( const StatCatalog* pCatalog )
+    void PlayerStats::initialize( const StatCatalog& catalog )
     {
-        _pCatalog = pCatalog;
+        _pCatalog = &catalog;
+        _mapValue.clear();
+    }
+
+    void PlayerStats::shutdown()
+    {
+        _pCatalog = nullptr;
         _mapValue.clear();
     }
 
@@ -270,7 +276,7 @@ namespace sw
     {
         Archive archive;
         writeState( archive );
-        return FileUtil::ensureParentDirectoryExists( absPath ) && FileUtil::writeFile( absPath, archive.getData(), archive.getSize() );
+        return FileUtil::writeFile( absPath, archive.getData(), archive.getSize() );
     }
 
     bool PlayerStats::loadFromFile( const AbsolutePath& path )

@@ -7,7 +7,7 @@
 #include "Core/Network/Tests/LoopbackCluster.h"
 #include "Core/Network/Transport/NetEmulation.h"
 #include "Core/Serialization/BitStream.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "GameFramework/Kits/Feature/Network/NetLockstep/LockstepSession.h"
 #include "GameFramework/Kits/Feature/Network/NetLockstep/RollbackSession.h"

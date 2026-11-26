@@ -1,13 +1,13 @@
 #include "pch.h"
 
 #include "Core/Foundation/StdHeaders.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 #include "Core/UUID/UUID.h"
 
 using namespace sw;
 
 // ------------------------------------------------------------------------------
-// 1) UUIDTest — 생성, 속성, 포맷팅 및 해시 검증
+// 1) UUIDTest: 생성, 속성, 포맷팅 및 해시 검증
 // ------------------------------------------------------------------------------
 
 /**

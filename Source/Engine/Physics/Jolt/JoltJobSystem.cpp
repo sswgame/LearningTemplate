@@ -7,7 +7,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Task/TaskManager.h"
 
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 
 #include <algorithm>
 #include <cstdlib>
@@ -38,7 +38,7 @@ namespace sw
         , _maxConcurrency{ 1 }
     {
         _jobs.Init( maxJobCount, maxJobCount );
-        if ( engine::areEngineServicesBound() )
+        if ( engine::areEngineSubsystemsBound() )
         {
             _pTaskManager = &engine::getSubsystem<TaskManager>();
             // 스테이지는 만들 때 한 번만 쓴다 — 이후 `addTask` 는 원자 연산이라 여러 스레드가 동시에 `QueueJob` 해도 된다.

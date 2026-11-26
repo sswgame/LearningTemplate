@@ -1,7 +1,7 @@
 /**
  * @file ResolvedSocketTable.h
  * @brief 해석된 외형의 소켓 테이블입니다. 몸 소켓과 장착 부품 소켓을 한 이름 공간으로 내보냅니다(부품 소켓은 슬롯 이름이 앞에 붙습니다. 예: `MainHand.Muzzle`).
- * @details 외형을 해석할 때마다(`beginResolve`, 유닛마다 `addUnit`, `endResolve`) 다시 만들지만 **이름에서 번호(`SocketID`)로 가는 매핑은 유지**한다. 무기를
+ * @details 외형을 해석할 때마다(`beginResolve`, 유닛마다 `addUnit`, `endResolve`) 다시 만들지만 이름에서 번호(`SocketID`)로 가는 매핑은 유지한다. 무기를
  *          바꿔도 `MainHand.Muzzle` 은 같은 번호이고 새 무기의 총구를 가리키므로, 붙어 있던 이펙트, 사운드, 게임 코드가 끊기지 않는다. 이번 해석에
  *          없는 이름은 번호를 지우지 않고 꺼 둔다(`isSocketActive`). 후보 목록(`SocketDef::_listFallback`)은 `endResolve` 가 해석한다.
  *
@@ -15,9 +15,10 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
+#include "Core/Foundation/TypedID.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 
 #include "Engine/Character/Fit/SurfaceTransfer.h"
 #include "Engine/Character/Socket/SocketSet.h"
@@ -28,9 +29,9 @@ namespace sw
     struct CharacterBoneArray;
 
     /** @brief 해석된 소켓 테이블의 번호입니다. 같은 테이블에서 같은 이름은 해석을 다시 해도 같은 번호입니다. */
-    using SocketID = uint32;
+    using SocketID = TypedID<struct SocketIDTag, uint32, 0xFFFFFFFFu>;
     /** @brief 없는 소켓 번호입니다. */
-    inline constexpr SocketID kInvalidSocketID = 0xFFFFFFFFu;
+    inline constexpr SocketID kInvalidSocketID{};
 
     /**
      * @brief 유닛마다의 본 배열과 월드 행렬 모음입니다(유닛 번호로 찾습니다). 호출하는 동안만 쓰는 뷰입니다.
@@ -90,13 +91,13 @@ namespace sw
         uint32 getSocketCount() const { return static_cast<uint32>( _listSlot.size() ); }
 
         /**
-         * @brief 소켓(후보를 따라간 실제 소켓)의 **부모 본 기준** 로컬 변환입니다. 표면 기준 소켓은 체형 보정(`applyShapedGeometry`)을 더합니다.
+         * @brief 소켓(후보를 따라간 실제 소켓)의 부모 본 기준 로컬 변환입니다. 표면 기준 소켓은 체형 보정(`applyShapedGeometry`)을 더합니다.
          * @details 후처리 리그처럼 부모 본과 로컬을 따로 받는 쪽이 쓴다. 체형을 바꾼 뒤에는 받는 쪽이 다시 읽어야 한다(`PoseModifierComponent::setSocketTable`).
          * @return 꺼진 소켓이면 false 입니다.
          */
         bool computeLocalTransform( SocketID socketID, float4x4& outLocalTransform ) const;
         /**
-         * @brief 소켓(후보를 따라간 실제 소켓)의 **유닛 공간** 변환을 그 유닛의 본 배열로 계산합니다.
+         * @brief 소켓(후보를 따라간 실제 소켓)의 유닛 공간 변환을 그 유닛의 본 배열로 계산합니다.
          * @param unitBones `getSocketUnit( resolveTarget( socketID ) )` 유닛의 지금 본 배열입니다.
          */
         bool computeUnitTransform( SocketID socketID, const CharacterBoneArray& unitBones, float4x4& outUnitTransform ) const;

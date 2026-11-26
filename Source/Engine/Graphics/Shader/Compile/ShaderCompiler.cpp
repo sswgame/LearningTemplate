@@ -18,7 +18,8 @@
 #include "Engine/Content/CookCodeFingerprint.h"
 #include "Engine/Content/CookJob.h"
 #include "Engine/Foundation/EngineParallel.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EnginePlatformHeaders.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/RHI/RHIDescriptors.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompileClaims.h"
@@ -95,7 +96,7 @@ namespace sw
                 CompileAction action;
                 action._bUseCache  = true;
                 action._sourceHash = sourceHash;
-                // define 은 정본(정렬)으로 적는다 — 받은 차례로 적으면 같은 조합이 차례만 달라 두 벌이 쌓인다. 헤더는 키에 넣지 않는다 — 어느 헤더를 열었는지는
+                // define 은 정본(정렬)으로 적는다. 받은 차례로 적으면 같은 조합이 차례만 달라 두 벌이 쌓인다. 헤더는 키에 넣지 않는다. 어느 헤더를 열었는지는
                 // 컴파일하고 나서야 알아(키는 컴파일 전에 필요하다) 작업의 입력으로 기록하고, 맞출 때 그 기록의 입력이 지금도 같은지 본다(`CookRecord::isFresh`).
                 string text;
                 text.append( "source=" ).append( desc._source.str() ).append( "\nentry=" ).append( desc._entryPoint );
@@ -320,9 +321,9 @@ namespace sw
                 // 같은 이름의 헤더가 엔진 헤더를 가리면 어느 쪽이 쓰였는지 알 수 없다 — 실제로 컴파일하기 전에 오류로 멈춘다. DDC 적중 뒤에 본다: 폴더를 재귀로 훑는 검사라
                 // 요청마다 하면 적중도 느려지고, 맞은 항목의 기록은 없던 후보 자리까지 적어 가리는 헤더가 새로 생기면 이미 낡음이다(`CookRecord::isFresh`).
                 // 언리얼도 셰이더 맵 DDC 조회가 컴파일 준비(include 검사)보다 먼저다.
-                vector<string>      listShadowed;
-                const AbsolutePath& shadersFolder = setup._call._input._shadersFolder;
-                const bool          bClean        = pSession != nullptr ? pSession->findShadowedHeaders( shadersFolder, listShadowed ) : setup._call._pIncludeResolver->findShadowedHeaders( shadersFolder, listShadowed );
+                vector<string>  listShadowed;
+                const DiskPath& shadersFolder = setup._call._input._shadersFolder;
+                const bool      bClean        = pSession != nullptr ? pSession->findShadowedHeaders( shadersFolder, listShadowed ) : setup._call._pIncludeResolver->findShadowedHeaders( shadersFolder, listShadowed );
                 if ( bClean == false )
                 {
                     for ( const string& problem : listShadowed )

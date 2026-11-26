@@ -5,12 +5,12 @@
  *          순서 없이 돈다. 그래서 순회는 열쇠를 받고, 열쇠는 아래 주인만 만든다 — 컴포넌트 코드에는 열쇠를 얻는 길이 없어 틱에서 씬을 도는 코드는 컴파일되지 않는다
  *          (예전 린트 `tick-scene-walk` 자리). 틱이 쓸 것은 `docs/agents/Gameplay.md` — 찾기는 `ComponentRegistry`, 이름은 `findGameObjectsByBaseName`,
  *          자리는 씬 공간 색인(`SceneSpatialGrid`), 씬 전체 집계는 프레임 시스템이다.
- *          - **틀이 인자로 넘긴다:** 감시 값(`SW_AUTOMATION_SCENE_WATCH`), 개발 명령(`SW_DEV_SCENE_COMMAND`), 디버그 HUD 섹션(`DebugHUDSectionWriter::getSceneIterationKey` — 글쓴이를 만드는 HUD 틀은 개발 도구 · 에디터 공급자나 `hud.print` 명령의 열쇠를 쓴다),
+ *          - 틀이 인자로 넘긴다: 감시 값(`SW_AUTOMATION_SCENE_WATCH`), 개발 명령(`SW_DEV_SCENE_COMMAND`), 디버그 HUD 섹션(`DebugHUDSectionWriter::getSceneIterationKey` — 글쓴이를 만드는 HUD 틀은 개발 도구 · 에디터 공급자나 `hud.print` 명령의 열쇠를 쓴다),
  *            저장(`StatefulComponentRegistrar` 의 캡처 · 복원 함수)이 받는다 — 그 틀만 열쇠를 만든다.
- *          - **엔진 주인:** 씬 저장 · 로드 · 쿡 · 틱 등록 · 렌더 묶기 · 넷 세션 시작(번호표) · 내비 기하 · 스트리밍 셀 경계 · 초상 스튜디오 — 아래 친구 목록, 줄마다 까닭.
- *          - **공용 공급자는 위층에만:** 에디터(`editor::EditorSceneIterationAccess`)와 개발 도구(`DevSceneIterationAccess`)는 누구나 열쇠를 꺼내 쓰는 공급자다. 게임 · 키트 · 런타임
+ *          - 엔진 주인: 씬 저장 · 로드 · 쿡 · 틱 등록 · 렌더 묶기 · 넷 세션 시작(번호표) · 내비 기하 · 스트리밍 셀 경계 · 초상 스튜디오 — 아래 친구 목록, 줄마다 까닭.
+ *          - 공용 공급자는 위층에만: 에디터(`editor::EditorSceneIterationAccess`)와 개발 도구(`DevSceneIterationAccess`)는 누구나 열쇠를 꺼내 쓰는 공급자다. 게임 · 키트 · 런타임
  *            타깃은 그 층을 include 할 수 없다(`Config/Rules/Layers/TargetLayers.toml`).
- *          - **테스트:** `Engine/Object/GameObject/Tests/SceneIterationTestAccess.h`(배포 구성에서 include 하면 `#error`).
+ *          - 테스트: `Engine/Object/GameObject/Tests/SceneIterationTestAccess.h`(배포 구성에서 include 하면 `#error`).
  *          유니티 `FindObjectsOfType` · 언리얼 `TActorIterator` 는 아무 데서나 부르지만, 우리는 병렬 틱이 기본이라 순회의 주인을 형식으로 둔다.
  */
 #pragma once

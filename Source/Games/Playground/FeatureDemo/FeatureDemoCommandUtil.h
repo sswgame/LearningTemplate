@@ -3,7 +3,7 @@
  * @brief 기능 시연 컴포넌트의 개발 명령이 함께 쓰는 대상 찾기 · 답 적기입니다.
  */
 #pragma once
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 #include "Core/String/StringBuilder.h"
 
 #include "Engine/Object/GameObject/GameObject.h"

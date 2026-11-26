@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Environment/Wind/WindComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -9,8 +9,7 @@
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Visual/Component/DirectionalLightComponent.h"
 
-#include "GameFramework/Runtime/Foundation/Service/GameService.h"
-#include "GameFramework/Runtime/World/Environment/WeatherMaterialWriter.h"
+#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 #include "GameFramework/Runtime/World/Environment/WeatherSceneWriter.h"
 #include "GameFramework/Runtime/World/Environment/WeatherSystem.h"
 

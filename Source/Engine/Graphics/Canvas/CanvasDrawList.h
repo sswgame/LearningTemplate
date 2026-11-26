@@ -2,7 +2,7 @@
  * @file CanvasDrawList.h
  * @brief 화면 2D 그리기 목록을 정의합니다. 사각형(셰이더 원소와 같은 배치), 일괄(텍스처 4개와 가위), 글리프 아틀라스 업로드로 이루어집니다.
  * @details 게임 스레드가 채우고 렌더 프레임 패킷에 실려 렌더 스레드가 읽는다(렌더 스레드는 위젯을 보지 못한다. 씬을 못 보는 것과 같은 규칙이다).
- *          좌표는 **물리 픽셀**이다(대상 왼쪽 위 원점). UI 단위에서 픽셀로의 변환은 칠하는 쪽(`CanvasPainter`)이 한다.
+ *          좌표는 물리 픽셀이다(대상 왼쪽 위 원점). UI 단위에서 픽셀로의 변환은 칠하는 쪽(`CanvasPainter`)이 한다.
  *          `CanvasQuad` 의 배치는 `canvas.hlsl` 의 `SwCanvasQuad` 와 같아야 한다(static_assert 크기와 `CanvasDrawListTest` 의 오프셋 단언).
  *          언리얼 `FSlateWindowElementList`, Godot canvas item 명령 목록에 해당한다.
  */
@@ -16,7 +16,7 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 
 #include "Engine/Text/GlyphAtlas.h"
 
@@ -225,12 +225,12 @@ namespace sw
         /**
          * @brief 주 출력(백버퍼, 게임 뷰 RT, 스크린샷 캡처)에 Present 뒤 그리는 목록입니다. 없으면 nullptr 입니다(`getMainOutput` 은 빈 목록).
          * @details 불변 공유 값이다 — UI 가 칠한 목록(`UICanvasPaintState::getSharedCanvas`)을 포인터로 싣고 베끼지 않는다. 예전에는 내용 번호가 같아도 프레임마다
-         *          사각형(144 바이트)을 모두 패킷에 베꼈다. 디버그 그리기 · 테스트 그림을 겹치는 프레임만 사본을 만들어 그 위에 칠한다(`RenderPacketCanvasCollector`).
+         *          사각형(144 바이트)을 모두 패킷에 베꼈다. 디버그 그리기 · 테스트 그림을 겹치는 프레임만 사본을 만들어 그 위에 칠한다(`RenderPacketBuilder::populateCanvas`).
          */
         shared_ptr<const CanvasDrawList> _pMainOutput{};
         /**
          * @brief 개발 겹치기 목록(디버그 HUD — `UIScreen::isDevOverlay`)입니다. 없으면 nullptr 입니다(`getDevOverlay` 는 빈 목록).
-         * @details 주 출력 목록과 달리 **사진 캡처가 읽는 지점 뒤**, 화면에 내보내기 직전의 대상(백버퍼)에 그린다(`FramePassExecutor::drawDevOverlay`) — 그래서 스크린샷 ·
+         * @details 주 출력 목록과 달리 사진 캡처가 읽는 지점 뒤, 화면에 내보내기 직전의 대상(백버퍼)에 그린다(`FramePassExecutor::drawDevOverlay`) — 그래서 스크린샷 ·
          *          `<ExpectImage>` 골든에 들지 않는다. 주 출력이 호스트 렌더 타깃(에디터 게임 뷰)이면 그 타깃에 그리지 않고 자기 렌더 텍스처 대상(`kDevOverlayTargetPath`)으로 싣는다 —
          *          에디터가 게임 뷰 위에 겹치고 에디터 UI 캡처는 그 텍스처를 빼고 다시 그린다.
          */

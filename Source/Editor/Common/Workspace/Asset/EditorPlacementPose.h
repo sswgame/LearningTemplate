@@ -1,7 +1,7 @@
 /**
  * @file EditorPlacementPose.h
  * @brief 씬 뷰에 애셋을 놓을 자세 — 자리와 위 축 둘레 회전입니다. 종류의 놓기(`IEditorAssetTypeActions::placeInViewport`)와 스폰 명령이 받습니다.
- * @details 회전은 놓기 전에 고른다(끄는 동안 회전 키 — `EditorViewportAssetPlacement`). 언리얼 · 유니티는 놓은 뒤 기즈모로 돌리고, 하우징 · 건설 게임은 놓기 전에 돌린다 —
+ * @details 회전은 놓기 전에 고른다(끄는 동안 회전 키, `EditorViewportAssetPlacement`). 언리얼 · 유니티는 놓은 뒤 기즈모로 돌리고, 하우징 · 건설 게임은 놓기 전에 돌린다 —
  *          여기서는 놓기 전에 고르고, 같은 값이 되돌리기 기록보다 먼저 입혀져 다시 실행해도 같은 자세로 돌아온다(위치와 같은 규칙).
  */
 #pragma once

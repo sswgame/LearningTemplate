@@ -1,8 +1,8 @@
 // EmoteTest — 이모트는 폰과 애니메이터가 있어야 한다(없으면 오류이고 아무것도 틀지 않는다). 동작 재생 · 걸으면 그침은 시나리오 game.playground.outdoors 가 본다(nogpu).
 #include "pch.h"
 
-#include "Core/Name/hashed_string.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/String/Name/hashed_string.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Animation/Component/SkeletalAnimatorComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"

@@ -21,7 +21,7 @@ namespace sw
         SBAlgorithmRef algorithm = SBAlgorithmCreate( &sequence );
         const SBLevel  baseLevel = paragraphDirection == TextDirection::RightToLeft ? SBLevel{ 1 } : SBLevel{ 0 };
 
-        // 단락 구분(B 부류 — `\n` 포함)마다 새 문단이다. 문단 수준은 위젯의 흐름 방향이 정한다(첫 강한 문자로 정하지 않는다 — 단순 버전과 같은 계약).
+        // 단락 구분(B 부류, `\n` 포함)마다 새 문단이다. 문단 수준은 위젯의 흐름 방향이 정한다(첫 강한 문자로 정하지 않는다. 단순 버전과 같은 계약).
         SBUInteger offset = 0;
         while ( offset < sequence.stringLength )
         {

@@ -5,6 +5,7 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Character/CharacterDataReader.h"
+#include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
 
@@ -181,4 +182,7 @@ namespace sw::editor
         }
         return rotation;
     }
+
+    /** @brief `MirrorNameRules` 의 데이터 파일 종류입니다(스키마 테스트와 카탈로그 편집기가 이 줄로 어떤 파일을 어떻게 읽는지 압니다). */
+    SW_ASSET_TYPE( MirrorNames, AssetTypeDef::makeDataFile( "mirrornames", AssetPathRule{ {}, {}, ".mirrornames.xml" }, AssetTypeLoader::of<MirrorNameRules>() ) );
 } // namespace sw::editor

@@ -12,7 +12,7 @@
 #if defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_ANDROID ) || defined( SW_PLATFORM_WEB )
     #include "Core/File/PlatformFileSystem.h"
     #include "Core/File/PlatformFileUtil.h"
-    #include "Core/Process/ProcessEnvironment.h"
+    #include "Core/Process/Process.h"
     #include "Core/String/StringUtil.h"
 
     #include <cerrno>

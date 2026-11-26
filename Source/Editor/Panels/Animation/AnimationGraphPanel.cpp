@@ -12,7 +12,6 @@
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
-#include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorNodeGraphID.h"
@@ -39,9 +38,9 @@ namespace sw::editor
     namespace
     {
         /**
-         * @brief 핀 번호 계약입니다. **만드는 것과 푸는 것이 한곳에 있습니다.**
+         * @brief 핀 번호 계약입니다. 만드는 것과 푸는 것이 한곳에 있습니다.
          * @details 핀 번호는 `노드 id * kPinScale + 오프셋` 입니다. 푸는 쪽을 따로 적으면 자릿수 기준을 바꿀 때 한쪽만 따라가서
-         *          **링크가 엉뚱한 노드에 붙습니다.** `DialogueGraphAsset` 도 같은 이유로 한곳에 둡니다(그 파일의 "핀 번호 계약" 절).
+         *          링크가 엉뚱한 노드에 붙습니다. `DialogueGraphAsset` 도 같은 이유로 한곳에 둡니다(그 파일의 "핀 번호 계약" 절).
          */
         struct AnimationGraphPanelInternal
         {
@@ -224,7 +223,7 @@ namespace sw::editor
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationGraph", "LoadTip" ) );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Save" ) ) );
             if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Save" ) ) )
-                (void)saveGraphData(); // 실패는 저장 커맨드가 알린다
+                (void)saveDocumentAndClearDirty(); // 실패는 저장 커맨드가 알린다
             EditorSelfTestMarks::record( "animationGraph.save" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationGraph", "SaveTip" ) );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Play" ) ) );
@@ -444,22 +443,10 @@ namespace sw::editor
         _poseDraftNodeID = 0; // 초안은 되돌리기 앞 문서의 것이다
     }
 
-    bool AnimationGraphPanel::saveGraphData()
+    bool AnimationGraphPanel::saveDocument( AssetWriter& writer )
     {
         // 노드 자리는 그린 프레임마다 `cacheNodeLayout` 이 문서에 싣는다 — 저장이 캔버스에 다시 물으면 아직 그리지 않은 노드(되돌리기 직후)는 FLT_MAX 가 파일에 남는다.
-        // **저장이 실패하면 아무것도 지우지 않는다.** 실패를 "저장됨" 으로 표시하면 문서를 바꾸거나 에디터를 닫을 때
-        // 종료 확인이 뜨지 않고 편집이 조용히 사라진다.
-        if ( AnimationGraphEdit::saveGraph( captureGraphData(), getLoadedAssetPath() ) == false )
-            return false;
-
-        clearDocumentDirty();
-        syncDocumentUndoBaseline();
-        return true;
-    }
-
-    bool AnimationGraphPanel::saveDocument()
-    {
-        return saveGraphData();
+        return AnimationGraphEdit::saveGraph( writer, captureGraphData(), getLoadedAssetPath() );
     }
 
     int32 AnimationGraphPanel::addNamedNode( const utf8* pName )
@@ -548,7 +535,7 @@ namespace sw::editor
         {
             VectorUtil::addUnique( listOrdered, nodeID );
         }
-        // 편집 대상은 캔버스 선택이 **바뀐 프레임에만** 따라간다 — 인스펙터의 전이 목록으로 고른 것을 매 프레임 덮지 않는다.
+        // 편집 대상은 캔버스 선택이 바뀐 프레임에만 따라간다 — 인스펙터의 전이 목록으로 고른 것을 매 프레임 덮지 않는다.
         const bool bNodesChanged = listOrdered != _listSelectionOrder;
         _listSelectionOrder.swap( listOrdered );
         if ( bNodesChanged && _listSelectionOrder.empty() == false )

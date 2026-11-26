@@ -179,7 +179,7 @@ namespace sw::editor
             }
 
             /**
-             * @brief `netplay.sync save <경로>` — 세션 전용 서버의 이력을 A 에 담아 파일로 씁니다. `netplay.sync compare <경로>` — 세션 서버를 A, 파일을 B 로 담아 비교합니다.
+             * @brief `netplay.sync save <경로>` 는 세션 전용 서버의 이력을 A 에 담아 파일로 씁니다. `netplay.sync compare <경로>` 는 세션 서버를 A, 파일을 B 로 담아 비교합니다.
              * @details 탭의 "Session server" · "Load file" · "Save" · "Compare" 와 같은 길이다. 시나리오는 이 명령과 감시 값 `Editor.NetPlaySync*` 로 확인한다.
              */
             static bool runSync( const vector<string>& listArgument, string& outReply )

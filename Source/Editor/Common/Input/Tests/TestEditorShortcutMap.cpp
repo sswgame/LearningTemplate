@@ -7,7 +7,7 @@
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Input/EditorInputActionNames.h"
@@ -35,13 +35,13 @@ namespace
         static vector<string> pressDelete( InputManager& input, EditorShortcutMap& shortcuts, const vector<EditorCommandDesc>& listCommand )
         {
             SW_EXPECT_TRUE( input.postRawEvent( RawInputEvent::makeKeyDown( Key::Delete ) ) );
-            input.beginFrame( 0.016f );
+            input.beginFrame( RealSeconds{ 0.016f } );
             shortcuts.update( 0.016f );
             vector<string> listCommandID;
             shortcuts.collectTriggeredCommands( listCommand, listCommandID );
             input.endFrame();
             SW_EXPECT_TRUE( input.postRawEvent( RawInputEvent::makeKeyUp( Key::Delete ) ) );
-            input.beginFrame( 0.016f );
+            input.beginFrame( RealSeconds{ 0.016f } );
             shortcuts.update( 0.016f );
             input.endFrame();
             return listCommandID;

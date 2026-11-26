@@ -3,7 +3,7 @@ Scripts/lint/platform_chains.py
 
 플랫폼 `#if` 사슬의 모양을 본다.
 
-**왜 린트인가.** 전처리 갈래는 형식으로 막을 수 없다. `#if Windows #else` 는 "Windows 가 아니면 POSIX" 를 가정하고, `#if Windows #elif Linux` 뒤에 `#else` 가 없으면 새 플랫폼에서 몸이 조용히
+왜 린트인가. 전처리 갈래는 형식으로 막을 수 없다. `#if Windows #else` 는 "Windows 가 아니면 POSIX" 를 가정하고, `#if Windows #elif Linux` 뒤에 `#else` 가 없으면 새 플랫폼에서 몸이 조용히
 비어, 새 플랫폼이 컴파일은 되고 틀린 가지를 타며 찾는 길이 런타임 실패뿐이다(2026-11-07 조사 — 92 + 24 곳). 언리얼 `PLATFORM_*` 처럼 빠진 플랫폼은 컴파일 오류로 낸다.
 
 규칙:

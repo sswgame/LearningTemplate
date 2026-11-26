@@ -1,6 +1,6 @@
 /**
  * @file MeshLODSystem.h
- * @brief 메시 LOD 고르기입니다 — LOD 단계가 여럿인 메시(`Mesh::getLODs`)를 그리는 컴포넌트마다 화면 크기로 단계를 정합니다. 씬 서비스(`ISceneService`)라 매니저마다 하나 있고,
+ * @brief 메시 LOD 고르기입니다 — LOD 단계가 여럿인 메시(`Mesh::getLODs`)를 그리는 컴포넌트마다 화면 크기로 단계를 정합니다. 씬 서브시스템(`ISceneSubsystem`)라 매니저마다 하나 있고,
  *        `SceneFrameStep::FlushEnd` 단계(그리기 전, 트랜스폼을 펼친 뒤)에서 돕니다. 얻기는 `manager.getSubsystem<MeshLODSystem>()` 입니다.
  * @details 뷰는 렌더 패킷 빌더가 프레임마다 넣는다(주 시점과 이번 프레임에 그리는 추가 뷰 — 애니메이션 LOD 와 같은 목록, `RenderPacketSceneCollector::updateLODViews`).
  *          대기 뷰(컷 프리롤의 카메라, `CameraManagerComponent`)가 있으면 그 시점의 화면 크기도 본다 — 컷 첫 프레임에 그 시점의 단계로 바로 그린다.
@@ -15,8 +15,8 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
-#include "Engine/Graphics/LOD/LODView.h"
-#include "Engine/Object/GameObject/Service/ISceneService.h"
+#include "Engine/Graphics/View/LODView.h"
+#include "Engine/Object/GameObject/Subsystem/ISceneSubsystem.h"
 
 namespace sw
 {
@@ -26,11 +26,11 @@ namespace sw
     class PrimitiveComponent;
 
     /** @class MeshLODSystem @brief 씬 하나의 메시 LOD 고르기입니다. 파일 머리말 참고. */
-    class SW_API MeshLODSystem final : public ISceneService
+    class SW_API MeshLODSystem final : public ISceneSubsystem
     {
     public:
-        /** @brief 씬 서비스 등록 줄입니다(`SW_SCENE_SERVICE` 가 정의한다). */
-        static const SceneServiceRegistration& getSceneServiceRegistration();
+        /** @brief 씬 서브시스템 등록 줄입니다(`SW_SCENE_SUBSYSTEM` 가 정의한다). */
+        static const SceneSubsystemRegistration& getSceneSubsystemRegistration();
         /** @brief 서브시스템 이름입니다. */
         static constexpr const utf8* kSubsystemName = "MeshLODSystem";
         /** @brief 고정 단계가 없음(화면 크기로 고른다)을 뜻하는 `setForcedLOD` 값입니다. */
@@ -60,7 +60,7 @@ namespace sw
         bool needsCPUSelection() const;
         /**
          * @brief @p mesh 를 스킨 칸 @p skinSlot 으로 그리는 것의 단계를 GPU 컬링이 고를 수 있으면 true 입니다. GPU 그룹(`GPUSceneBuilder::applyGPULODGroup`)과 CPU 선택(`update`)이 같은 규칙을 쓴다.
-         * @details 스킨 칸이 있으면(칸마다 그리는 단계 하나만 스키닝한다 — `GPUMeshMorphPool`) 구간 메시면(구간마다 단계 범위 — `MeshComponent::findDrawSection`) 컴포넌트가 고른 단계를 그려야 하므로
+         * @details 스킨 칸이 있으면(칸마다 그리는 단계 하나만 스키닝한다, `GPUMeshMorphPool`) 구간 메시면(구간마다 단계 범위, `MeshComponent::findDrawSection`) 컴포넌트가 고른 단계를 그려야 하므로
          *          늘 CPU 가 고른다(언리얼도 스켈레탈 메시 LOD 는 컴포넌트가 CPU 에서 고르고 GPU 인스턴스 LOD 는 정적 메시만이다).
          */
         static bool isGPUSelectable( const Mesh& mesh, uint32 skinSlot );

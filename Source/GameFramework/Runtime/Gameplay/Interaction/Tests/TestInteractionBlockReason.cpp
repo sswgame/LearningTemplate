@@ -1,7 +1,7 @@
 // 상호작용 진단 — 시작할 수 없는 까닭(사유별)과 정의의 효과 칸(시작 · 완료 · 취소)을 데이터에서 읽는다(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"

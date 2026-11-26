@@ -257,14 +257,14 @@ namespace sw
                 optional<VFXPhysicsCollisionScene> collision;
                 if ( pPhysicsScene != nullptr && def._collision._mode != VFXCollisionMode::None )
                     collision.emplace( *pPhysicsScene, getEmitterWorldMatrix( emitterIndex ) );
-                pCPUSimulation->update( context.getDeltaTime(), collision.has_value() ? &*collision : nullptr );
+                pCPUSimulation->update( context.getDeltaTime().count(), collision.has_value() ? &*collision : nullptr );
                 bAllFinished = bAllFinished && pCPUSimulation->isFinished();
             }
             else
             {
                 if ( def._space == VFXSimulationSpace::World )
                     pGPUEmitter->setEmitterTransform( emitterToFrame );
-                pGPUEmitter->update( context.getDeltaTime() );
+                pGPUEmitter->update( context.getDeltaTime().count() );
                 bAllFinished = bAllFinished && pGPUEmitter->isFinished();
             }
         }
@@ -322,7 +322,7 @@ namespace sw
                 _listEmitterEnabled = listEnabled;
         }
         restartSimulations();
-        // 월드 공간 입자의 기준 틀 — 재생 시작의 자리와 배율이다(회전은 없다 — 월드 축). 원점에서 먼 곳에서도 입자 좌표가 작아 정밀도를 지킨다(언리얼 Niagara LWC 타일과 같은 까닭).
+        // 월드 공간 입자의 기준 틀은 재생 시작의 자리와 배율이다(회전은 없다, 월드 축). 원점에서 먼 곳에서도 입자 좌표가 작아 정밀도를 지킨다(언리얼 Niagara LWC 타일과 같은 까닭).
         const float32 frameScale = getWorldMatrix().getMaximumAxisScale();
         _worldSpaceFrame         = float4x4::makeScale( frameScale > MathUtil::kEpsilon ? frameScale : 1.0f ) * float4x4::makeTranslation( getWorldPosition() ); // 배율 0 은 보이지 않는 방출기다 — 틀이 특이 행렬이 되지 않게만 한다
         _bPlaying                = _listSimulation.empty() == false;
@@ -716,5 +716,40 @@ namespace sw
             writeMeshEntries( emitterIndex, pListParticle.get() );
             _listPublished[emitterIndex] = std::move( pListParticle );
         }
+    }
+} // namespace sw
+
+namespace sw
+{
+    void VFXMeshSlotVisibility::reset( MeshInstanceBatch& batch )
+    {
+        for ( uint32 entry = 0; entry < batch.getCount(); ++entry )
+        {
+            batch.setEntryVisible( entry, false );
+        }
+        _listVisibleSlot.clear();
+        _listSlotMark.assign( batch.getCount(), 0 );
+    }
+
+    void VFXMeshSlotVisibility::update( MeshInstanceBatch& batch, const vector<uint32>& listSlot )
+    {
+        SW_ASSERT( _listSlotMark.size() == batch.getCount() ); // `reset` 을 먼저 부른다
+        for ( const uint32 slot : listSlot )
+        {
+            SW_ASSERT( slot < _listSlotMark.size() );
+            _listSlotMark[slot] = 1;
+            batch.setEntryVisible( slot, true ); // 이미 보이면 아무것도 하지 않는다
+        }
+        // 지난번 보였고 이번 표시가 없으면 이번에 죽은 칸이다. 표시는 이번 칸만 켰으므로 여기서 다시 끈다.
+        for ( const uint32 slot : _listVisibleSlot )
+        {
+            if ( _listSlotMark[slot] == 0 )
+                batch.setEntryVisible( slot, false );
+        }
+        for ( const uint32 slot : listSlot )
+        {
+            _listSlotMark[slot] = 0;
+        }
+        _listVisibleSlot = listSlot;
     }
 } // namespace sw

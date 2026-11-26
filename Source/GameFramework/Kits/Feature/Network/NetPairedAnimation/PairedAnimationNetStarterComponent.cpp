@@ -6,9 +6,9 @@
 #include "Engine/Network/GameNetSession.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
-#include "Engine/Object/GameObject/Service/SceneNetLink.h"
+#include "Engine/Object/GameObject/Subsystem/SceneNetLink.h"
 
-#include "GameFramework/Runtime/Foundation/Service/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 
 namespace sw
 {
@@ -54,7 +54,7 @@ namespace sw
             _endedSeconds = 0.0f;
             return;
         }
-        _endedSeconds += context.getDeltaTime();
+        _endedSeconds += context.getDeltaTime().count();
         if ( _endedSeconds < _restartDelay )
             return;
         // 세션은 다른 오브젝트의 애니메이터를 바꾼다 — 틱 뒤에 시작한다.

@@ -29,7 +29,7 @@ from common.log_lines import count_id, read_log
 from common.paths import get_bin_dir, get_project_root
 
 NET_LISTENING_ID = "GameNetSession.NetSessionListeningUDP"  # 서버(리슨 호스트)가 게임 UDP 포트를 열었다
-DEFAULT_PRESET = "Ninja-Release"  # 손으로 부를 때의 build/<프리셋>/Bin (ctest 는 제 빌드 폴더를 준다 — Test/Net)
+DEFAULT_PRESET = "Ninja-Release"  # 손으로 부를 때의 build/<프리셋>/Bin (ctest 는 제 빌드 폴더를 준다 — IntegrationTests/Net)
 USER_DATA_ROOT_ENVIRONMENT = "SW_USER_DATA_ROOT"  # Core/File/UserDataPath.h 의 kUserDataRootVariable — 띄운 App · Server 의 사용자 데이터 폴더를 옮긴다
 _POLL_SECONDS = 0.25  # 로그 줄을 다시 읽는 간격
 
@@ -210,13 +210,23 @@ class ProcessGroup:
         return self.start(name, command, stdin=stdin, report_path=report_path)
 
     def start(self, name: str, command: Sequence[str | Path], *, environment: Mapping[str, str] | None = None, stdin: bool = True, report_path: Path | None = None) -> ChildProcess:
-        """@p command 를 `Bin` 에서 띄운다. 출력은 `<out_dir>/<name>.log`, @p environment 는 이 프로세스의 환경 위에 더한다."""
+        """
+        @p command 를 `Bin` 에서 띄운다. 출력은 `<out_dir>/<name>.log`, @p environment 는 이 프로세스의 환경 위에 더한다.
+        사용자 데이터 폴더를 주지 않으면 프로세스마다 빈 제 폴더(`Bin/Saved/Automation/UserData/<out_name>/<name>`)를 준다. 공용 폴더를 쓰면 앞선 실행(다른 판의 빌드)이
+        남긴 세이브를 읽어 결과가 앞선 실행에 달린다(online-local 서버가 옛 자동 저장 칸을 Corrupt 로 읽었다).
+        """
+        environment = dict(environment or {})
+        if USER_DATA_ROOT_ENVIRONMENT not in environment:
+            user_data_root = self.bin_dir / "Saved" / "Automation" / "UserData" / self.out_dir.name / name
+            shutil.rmtree(user_data_root, ignore_errors=True)
+            user_data_root.mkdir(parents=True)
+            environment[USER_DATA_ROOT_ENVIRONMENT] = str(user_data_root)
         list_argument = [str(part) for part in command]
         print(f"[{self.tag}] {name}: {' '.join(list_argument)}")
         log = self.out_dir / f"{name}.log"
         log_file = log.open("wb")
         self._list_log_file.append(log_file)
-        process = subprocess.Popen(list_argument, cwd=str(self.bin_dir), env={**os.environ, **environment} if environment else None,
+        process = subprocess.Popen(list_argument, cwd=str(self.bin_dir), env={**os.environ, **environment},
                                    stdin=subprocess.PIPE if stdin else None, stdout=log_file, stderr=subprocess.STDOUT)
         child = ChildProcess(name, process, log, report_path, self._list_process)
         self._list_process.append(child)

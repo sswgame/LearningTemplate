@@ -44,7 +44,7 @@ namespace sw
      * @details 속성 키를 더할 때마다 바뀌는 메타데이터 구조를 이 헤더(`GameObject.h` · `Component.h` 를 거쳐 TU 약 1,200 개가 읽는다)에서 빼려는 것이다.
      *          복사와 소멸은 만들 때 적은 함수 표로 하므로 메타데이터 정의가 필요한 것은 기본 생성뿐이다. 기본 생성은 `TypeInfo.cpp` · `PropertyInfo.cpp` · `FunctionInfo.cpp` 의
      *          `TypeInfo` · `PropertyInfo` · `FunctionInfo` · `EventInfo` 생성자만 한다(함수 표 · 기본값이 엔진 모듈에 있어 게임 모듈을 내려도 남는다).
-     *          **쓰기 때 복사**다 — 처음에는 공유 기본값(`T` 의 정적 `const` 객체)을 가리키고, `edit()` 가 처음 불릴 때만 제 것을 힙에 짓는다.
+     *          쓰기 때 복사다 — 처음에는 공유 기본값(`T` 의 정적 `const` 객체)을 가리키고, `edit()` 가 처음 불릴 때만 제 것을 힙에 짓는다.
      *          적은 것이 없는 프로퍼티(대부분)는 등록에서 힙을 쓰지 않는다(등록 할당 타입당 3 이하). 읽기는 `->`(`prop._metadata->_bTransient`),
      *          쓰기는 `edit()`(`prop._metadata.edit()._bTransient = SW_TRUE`)라 쓰는 자리가 형식으로 드러난다. 값 의미다 — 복사는 깊은 복사(공유 기본값이면 공유)다.
      *          이동한 뒤의 원본은 소멸과 대입만 할 수 있다. 칸을 읽는 TU 는 `ReflectionMetadata.h` 를 include 한다.

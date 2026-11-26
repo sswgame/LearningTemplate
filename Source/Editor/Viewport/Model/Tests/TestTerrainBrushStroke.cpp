@@ -1,7 +1,7 @@
 // 지형 붓질 명령 순서(`TerrainBrushEdit::stepStroke`) — 누름은 시작 + 적용, 끄는 동안 닿으면 적용, 놓거나 쓸 수 없으면 끝, 붓질 밖의 쓸 수 없는 프레임은 아무것도 없다.
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Editor/Viewport/Model/TerrainBrushEdit.h"
 

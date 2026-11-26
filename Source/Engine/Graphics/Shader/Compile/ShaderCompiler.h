@@ -227,7 +227,7 @@ namespace sw
         ShaderTargetFormat        _targetFormat = ShaderTargetFormat::SPIRV_Vulkan; ///< 출력 포맷
         /**
          * @brief 디버그 정보를 넣고 최적화를 끄는(`-Zi -Od` / `D3DCOMPILE_DEBUG|SKIP_OPTIMIZATION`) 컴파일인지 나타냅니다.
-         * @details **요청하는 쪽**이 정한다. 주의: **빌드 구성**(SW_DEBUG)이 정하면 쿠킹된 바이너리(저장소에 커밋되고 배포에
+         * @details 요청하는 쪽이 정한다. 주의: 빌드 구성(SW_DEBUG)이 정하면 쿠킹된 바이너리(저장소에 커밋되고 배포에
          *          실리는 것)의 내용이 "어느 App.exe 가 쿠커로 돌았나" 에 따라 달라지고, 쿠커가 Debug 를 먼저 집으면
          *          커밋된 셰이더가 모두 무최적화가 된다. 런타임
          *          라이브 컴파일(ShaderCache)은 Debug 에서 켜고, 쿠커는 절대 켜지 않는다.
@@ -252,7 +252,7 @@ namespace sw
         vector<uint8> _bytecode;     ///< 컴파일된 바이트코드
         string        _errorMessage; ///< 실패했을 때의 컴파일러 오류 메시지
         /**
-         * @brief 이 바이트코드의 쿠킹 기록입니다 — 작업(`CookJob`)이 기록한 입력(주 소스 · 연 헤더 · **찾아봤지만 없던 앞자리 후보**)과 그 키, 바이트코드 해시.
+         * @brief 이 바이트코드의 쿠킹 기록입니다 — 작업(`CookJob`)이 기록한 입력(주 소스 · 연 헤더 · 찾아봤지만 없던 앞자리 후보)과 그 키, 바이트코드 해시.
          * @details "이 바이트코드가 지금도 맞는가" 는 이 기록 하나로 본다(`CookRecord::isFresh`) — 셰이더 DDC · 메모리 캐시 · 쿠킹본 판정이 같은 답을 낸다.
          *          어느 헤더를 열었는지는 바이트코드의 리플렉션에 없어 include 처리기가 소스를 읽는 순간 작업에 적는다. 없던 후보도 입력이다 — 거기에 같은 이름의 헤더가 생기면
          *          다음 컴파일은 그것을 연다(가림). 쿠킹본에서 온 결과와 실패한 결과에는 입력이 없다.
@@ -295,7 +295,7 @@ namespace sw
         static ShaderCompileResult compileHLSL( const ShaderCompileDesc& desc, ShaderCompileClaims* pClaims = nullptr );
         /**
          * @brief 요청 묶음을 병렬로 컴파일하고 요청마다 결과를 @p onCompiled 에 한 번씩 넘깁니다(쿠킹 · 데우기).
-         * @details 요청마다 DDC 를 보고, 없는 것만 **한 번** 전처리해 닿는 글이 서로 다른 것만 하나씩 컴파일한다 — 글이 같은 변형은 그 결과를 함께 받는다(지면 같은 오류를 받는다).
+         * @details 요청마다 DDC 를 보고, 없는 것만 한 번 전처리해 닿는 글이 서로 다른 것만 하나씩 컴파일한다 — 글이 같은 변형은 그 결과를 함께 받는다(지면 같은 오류를 받는다).
          *          같은 글 가운데 목록에서 가장 앞선 요청이 컴파일하므로 워커 수와 무관하게 같은 바이트다. 소스는 묶음 동안 한 번만 읽는다(`ShaderCompileSession`).
          *          언리얼 `FShaderCompilingManager` 의 작업 묶음 · 중복 작업 합치기(`FShaderJobCache`) 자리다.
          * @param recordScope 기록을 요청마다 쓸지 소스마다 한 번 쓸지

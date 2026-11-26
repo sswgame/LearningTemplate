@@ -5,7 +5,7 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 #include "Core/Subsystem/SubsystemCollection.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 using namespace sw;
 
@@ -231,7 +231,7 @@ SW_TEST_CASE( SubsystemCollectionTest, SkipDependentsSkipsEveryDependent )
 }
 
 /**
- * @brief 소멸은 모든 종료가 끝난 **뒤에** 모두를 초기화 순서의 역순으로 지운다(소멸자도 같다)
+ * @brief 소멸은 모든 종료가 끝난 뒤에 모두를 초기화 순서의 역순으로 지운다(소멸자도 같다)
  */
 SW_TEST_CASE( SubsystemCollectionTest, DestroyRunsAfterEveryShutdownInReverseOrder )
 {

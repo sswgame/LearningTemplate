@@ -8,7 +8,7 @@
 #include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 
 #include "Engine/Audio/AudioTypes.h"
 #include "Engine/Object/Component/SceneComponent.h"
@@ -63,7 +63,7 @@ namespace sw
         void setParameter( const hashed_string& name, float32 value );
 
         /** @brief 엔진의 에미터 id 입니다(컴포넌트 id). */
-        AudioEmitterID getEmitterID() const { return getComponentID(); }
+        AudioEmitterID getEmitterID() const { return AudioEmitterID{ getComponentID() }; }
         /** @brief 시작할 때 내는 이벤트입니다. */
         const hashed_string& getEvent() const { return _event; }
         /** @brief 시작할 때 낼 이벤트를 정합니다. */

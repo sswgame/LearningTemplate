@@ -86,7 +86,7 @@ def make_staged_scope(project_root: Path) -> LintScope:
     """
     스테이지된 변경. 옮기기는 지우기 + 더하기로 본다(`--no-renames`) — 옮기며 고친 파일도 검사에서 빠지지 않는다.
 
-    병합 중이면 스테이지 내용이 **모든 부모와 다른** 파일(손으로 푼 충돌 · 병합하며 고친 파일)만 본다 — 한쪽 부모와 같은 파일은 그 브랜치의 커밋에서
+    병합 중이면 스테이지 내용이 모든 부모와 다른 파일(손으로 푼 충돌 · 병합하며 고친 파일)만 본다 — 한쪽 부모와 같은 파일은 그 브랜치의 커밋에서
     이미 린트를 지났다. 두 브랜치가 따로는 맞고 합치면 어긋나는 의미 충돌(한쪽이 지운 이름을 다른 쪽이 새로 쓴다)은 묶음 검증 첫 단계 `lint --all` 이 본다.
     """
     list_changed = run_git_lines(project_root, ["diff", "--cached", "--name-only", "--no-renames", "--diff-filter=ACM"])
@@ -133,7 +133,7 @@ def _read_bytes(key: str) -> bytes | None:
 
 def read_bytes(path: Path | str) -> bytes | None:
     """
-    파일 바이트(없으면 None, 그 밖의 OSError 는 올린다). **규칙은 파일 내용을 이것(`SourceFile` · `read_text` · `read_texts`)이나 `index_cache` 로만 얻는다** — 커밋 훅은
+    파일 바이트(없으면 None, 그 밖의 OSError 는 올린다). 규칙은 파일 내용을 이것(`SourceFile` · `read_text` · `read_texts`)이나 `index_cache` 로만 얻는다 — 커밋 훅은
     규칙 스물 몇 개가 같은 스테이지 파일을 보므로 한 번 읽어 함께 쓴다. `pre_commit.check_read_bound` 가 스테이지 파일 하나에 모든 규칙이 연 파일이 그 파일
     한 번뿐인지 본다(직접 `read_text` 하면 두 번째 열기로 걸린다). 크기 한도는 `--all` 이 저장소 전체를 붙잡지 않게 둔다(커밋 훅의 스테이지는 다 담는다).
     """

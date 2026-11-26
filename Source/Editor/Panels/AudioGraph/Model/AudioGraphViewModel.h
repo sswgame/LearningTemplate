@@ -11,7 +11,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 
 #include "Editor/Common/Widgets/EditorNodeGraphRules.h"
 
@@ -20,11 +20,13 @@
 
 namespace sw
 {
-    class AbsolutePath;
+    class DiskPath;
 } // namespace sw
 
 namespace sw::editor
 {
+    class AssetWriter;
+
     class DocumentEditRecorder;
     /**
      * @struct AudioGraphEdit
@@ -62,7 +64,7 @@ namespace sw::editor
         /** @brief 되돌리기 · dirty 판정에 쓰는 사본의 글입니다. */
         string captureText() const { return _editGraph.saveToXMLText(); }
         /** @brief 검사를 통과하면 @p diskPath 에 쓰고 true 입니다. 통과하지 못하면 쓰지 않고 오류를 남긴다(사본은 남아 계속 고칠 수 있다). */
-        [[nodiscard]] bool saveDocument( const AbsolutePath& diskPath ) const;
+        [[nodiscard]] bool saveDocument( AssetWriter& writer, const DiskPath& diskPath ) const;
         /** @brief 미리 듣기를 낼 오디오가 준비됐으면 true 입니다(에디터 오디오 서비스 — 창은 오디오를 직접 보지 않는다, MVVM 계약). */
         [[nodiscard]] static bool isPreviewAudioReady();
         /** @brief 저장된 @p path 의 파일을 2D 로 한 번 냅니다(버스 `ui`). 앞의 미리 듣기는 멈춘다. 오디오가 준비되지 않았으면 아무것도 하지 않는다. */
@@ -71,7 +73,7 @@ namespace sw::editor
         void stopPreview();
         /** @brief 미리 듣기가 끝났으면 재생 id 를 잊습니다(멈춤 단추가 끝난 소리를 가리키지 않는다). 그리기마다 부릅니다. */
         void refreshPreview();
-        bool isPreviewPlaying() const { return _previewID != 0; }
+        bool isPreviewPlaying() const { return _previewID.isValid(); }
 
         const AudioGraphDef& getGraph() const { return _editGraph; }
         /** @brief 속성 그리드가 바로 고치는 사본입니다. 고치면 `markEdited` 를 부릅니다. */

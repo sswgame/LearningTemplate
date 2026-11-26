@@ -42,7 +42,7 @@ namespace sw
     bool SkirmishMatch::initialize( const RTSCatalog* pCatalog, const SkirmishMap& map, const TileMapXMLData& tileMap, uint8 humanMask, const SkirmishMatchSettings& matchSettings,
                                     int32 startMinerals, const BehaviorTreeAsset* pCommanderTree )
     {
-        if ( _world.initialize( pCatalog, tileMap._width, tileMap._height ) == false )
+        if ( pCatalog == nullptr || _world.initialize( *pCatalog, tileMap._width, tileMap._height ) == false )
             return false;
         if ( _world.claimEvents( _eventLease ) == false )
             return false; // 이 매치의 표뿐이라 일어날 수 없다 — 둘째 소비자가 생기면 게이트가 어서션을 남긴다
@@ -199,10 +199,11 @@ namespace sw
         }
     }
 
-    void SkirmishMatch::update( float32 deltaTime, float32 timeScale )
+    void SkirmishMatch::update( GameSeconds frameTime, float32 timeScale )
     {
+        const float32 deltaTime = frameTime.count();
         // AI 는 월드가 실제로 진행한 시간으로 돈다 — 자르지 않은 델타를 받으면 배속 · 히치에서 AI 시계가 월드보다 앞선다(감사 K-6).
-        const float32 worldDelta = _world.update( deltaTime, timeScale );
+        const GameSeconds worldDelta{ _world.update( frameTime, timeScale ) }; // 월드가 걸음으로 진행한 게임 시간
         for ( Player& player : _listPlayer )
         {
             if ( player._pAI != nullptr )

@@ -30,7 +30,7 @@ namespace sw::editor
 
         const utf8*        getPanelTitle() const override { return "Tile Set Editor"; }
         void               drawDocumentContent() override;
-        [[nodiscard]] bool saveDocument() override;
+        [[nodiscard]] bool saveDocument( AssetWriter& writer ) override;
         void               shutdown() override;
 
         bool                    isTileSetDocumentLoaded() const { return isDocumentLoaded(); }

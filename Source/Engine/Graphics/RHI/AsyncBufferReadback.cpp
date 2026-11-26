@@ -48,7 +48,7 @@ namespace sw
 
         /**
          * @brief 요청 하나의 GPU 완료 통지를 받습니다. `Completed` 면 읽어 오고 칸을 비웁니다.
-         * @details 칸은 읽은 **뒤에만** 비운다 — 예전에는 먼저 비워, 못 기다린 비우기(옛 한 채널 콜백)나 읽기 실패에서 매핑이 걸린 버퍼가 다음 복사의 목적지가 됐다.
+         * @details 칸은 읽은 뒤에만 비운다 — 예전에는 먼저 비워, 못 기다린 비우기(옛 한 채널 콜백)나 읽기 실패에서 매핑이 걸린 버퍼가 다음 복사의 목적지가 됐다.
          *          `Completed` 는 그 프레임 앞의 GPU 일이 모두 끝났다는 뜻이라(큐 순서) 앞서 격리한 칸도 함께 푼다.
          */
         void onGPUCompletion( uint32 slot, RHIFrameCompletion result )

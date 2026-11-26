@@ -9,7 +9,6 @@
 #include "Core/String/StringUtil.h"
 
 #include "Editor/Common/GUI/EditorChrome.h"
-#include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Input/EditorPopupManager.h"
@@ -256,7 +255,7 @@ namespace sw::editor
     void QuickLauncherPopup::pollFileIndex()
     {
         vector<EditorAssetIndexEntry> listFileEntry;
-        if ( _fileIndexJob.take( listFileEntry ) != EditorTaskPoll::Ready )
+        if ( _fileIndexJob.take( listFileEntry ) != EditorJobPoll::Ready )
             return;
         EditorSearchItem::appendAssets( listFileEntry, _listItem ); // 배지 폭은 그대로다 — 에셋 종류는 미리 다 쟀다(`getWidestBadgeWidth`)
     }
@@ -349,7 +348,7 @@ namespace sw::editor
 
     void QuickLauncherPopup::drawContent()
     {
-        // 파일 목록이 아직 안 왔는지는 꺼내기 **전에** 한 번 읽고, 이 프레임은 그 값만 쓴다. 꺼낸 뒤에 다시 물으면 그 사이 워커가 끝낸 결과가
+        // 파일 목록이 아직 안 왔는지는 꺼내기 전에 한 번 읽고, 이 프레임은 그 값만 쓴다. 꺼낸 뒤에 다시 물으면 그 사이 워커가 끝낸 결과가
         // "대기 아님 · 목록 비어 있음" 으로 보여 미뤄 둔 Enter 를 버린다(결과는 다음 프레임에야 꺼낸다).
         const bool bIndexOutstanding = _fileIndexJob.isPending();
         pollFileIndex();

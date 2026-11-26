@@ -1,7 +1,7 @@
 #include "pch.h"
 
 #include "Core/Memory/Memory.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Character/Fit/CharacterGeometry.h"
 #include "Engine/Character/Fit/CharacterLODSettings.h"

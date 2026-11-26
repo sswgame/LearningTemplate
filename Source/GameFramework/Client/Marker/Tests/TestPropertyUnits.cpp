@@ -2,7 +2,7 @@
 
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringUtil.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Reflection/ReflectionEditorMetadata.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
@@ -11,14 +11,14 @@
 #include "Engine/Reflection/TypeRegistry.h"
 
 #include "GameFramework/Client/Marker/HealthBarComponent.h"
-#include "GameFramework/Runtime/Foundation/Service/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 
 // PropertyUnitsTest — PROPERTY 의 `Units` 메타가 값이 저장된 단위와 맞는지 등록된 모든 타입에서 본다(GameFramework 에 둬 HP 바 비율도 늘 본다).
 
 namespace
 {
     /**
-     * @brief 각도를 담는 이름인가 — 회전 · 각 · 시야각이 **낱말로** 들어 있다(이름의 처음, `_` 뒤, 낙타 표기의 대문자 시작).
+     * @brief 각도를 담는 이름인가 — 회전 · 각 · 시야각이 낱말로 들어 있다(이름의 처음, `_` 뒤, 낙타 표기의 대문자 시작).
      * @details 낱말 경계를 보지 않으면 `triangle_ratio` 의 "angle" 을 각도로 읽었다(캐릭터 LOD 규칙).
      */
     bool isAngleName( const sw::hashed_string& name )

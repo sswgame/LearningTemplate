@@ -3,7 +3,7 @@
  * @brief Live Link Face(iOS · ARKit 얼굴 추적) UDP 패킷을 읽어 얼굴 리그의 표정 채널로 내는 쪽입니다 — 패킷 배치 표 · 리그별 채널 연결 표 · 패킷 해석 · 실시간 입력.
  * @details 패킷은 언리얼 `FArchive` 직렬화를 빅 엔디언으로 쓴 것이다: 판 번호(uint8) · 장치 id(FString) · 주체 이름(FString) · 프레임 시각(int32 프레임,
  *          float 서브프레임, int32 분자, int32 분모) · 채널 수(uint8) · 채널 값(float × 수). FString 은 int32 길이(끝 널 포함) 뒤 ANSI 바이트다.
- *          채널의 순서와 판 번호는 데이터(배치 표, 엔진 기본 `engine/animation/livelinkface.xml` — 연결 표가 고른다)가 기준이다 — 앱 판이 바뀌면 데이터를 고친다.
+ *          채널의 순서와 판 번호는 데이터(배치 표, 엔진 기본 `engine/animation/livelinkface.xml`, 연결 표가 고른다)가 기준이다. 앱 판이 바뀌면 데이터를 고친다.
  *          다른 판의 패킷은 오류다.
  *          실제 장치로는 확인하지 않았다(합성 패킷 테스트만). 언리얼 Live Link Face · ARKit `ARFaceAnchor.blendShapes` 에 해당한다.
  */
@@ -13,9 +13,8 @@
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 
-#include "Engine/Animation/Facial/FacialLiveSource.h"
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -143,8 +142,10 @@ namespace sw
     /**
      * @class LiveLinkFaceSource
      * @brief 푼 패킷을 표정 채널로 내는 실시간 입력입니다(`FacialAnimationComponent::registerLiveSource`). 받은 패킷이 없으면 어떤 채널도 내지 않습니다.
+     * @details 게임 스레드에서 프레임마다 읽는다(얼굴 단계 앞, `prepareAnimationFrame`). 채널 이름은 얼굴 리그의 표정 이름이다(애니메이터의 표정 커브와 같은 자리, 값이 더해진다).
+     *          실시간 얼굴 입력은 이 형식 하나다 — 다른 장치(ARKit 블렌드셰이프 등)가 생기면 그때 창구 인터페이스를 둔다.
      */
-    class SW_API LiveLinkFaceSource final : public IFacialLiveSource
+    class SW_API LiveLinkFaceSource
     {
     public:
         LiveLinkFaceSource();
@@ -156,7 +157,8 @@ namespace sw
         /** @brief 받은 프레임이 있는지입니다. */
         bool hasFrame() const { return _bHasFrame; }
 
-        [[nodiscard]] bool tryGetChannel( const hashed_string& channel, float32& outWeight ) const override;
+        /** @brief 채널 @p channel 의 지금 값(보통 0..1)입니다. 이 입력이 내지 않는 채널이면 false 입니다. */
+        [[nodiscard]] bool tryGetChannel( const hashed_string& channel, float32& outWeight ) const;
 
     private:
         struct ExpressionInput

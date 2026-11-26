@@ -35,7 +35,7 @@ namespace sw
             snapshot._listResource.push_back( std::move( resource ) );
         }
 
-        // 실행과 같은 추론을 빈 문맥으로 — 들인 버퍼는 처음 접근을 심고(전이로 세지 않는다 — `RenderGraph::importResource`), 패스마다 늘어난 수가 그 패스의 전이다.
+        // 실행과 같은 추론을 빈 문맥으로 돌린다. 들인 버퍼는 처음 접근을 심고(전이로 세지 않는다, `RenderGraph::importResource`), 패스마다 늘어난 수가 그 패스의 전이다.
         RenderGraphExecutionContext context{};
         context.reset();
         for ( const RenderGraphResourceAccess& imported : graph.getImportedResources() )

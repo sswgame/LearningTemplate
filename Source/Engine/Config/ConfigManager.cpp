@@ -7,14 +7,13 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/String/StringBuilder.h"
 
+#include "Engine/Config/ConfigOverride.h"
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Config/GameSelection.h"
-#include "Engine/Config/PlatformConfigOverride.h"
-#include "Engine/Config/RenderQualityOverride.h"
 #include "Engine/Content/AssetPaths.h"
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Serialization/Format/JSONSerializer.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
@@ -143,6 +142,21 @@ namespace sw
     {
         (void)pInfo;
         (void)applyRenderQuality( gv_renderQuality.get() );
+    }
+
+    expected<string> ConfigManager::readProjectText( const utf8* pPath )
+    {
+        string text;
+        switch ( FileUtil::readOptionalTextFile( ProcessRoots::get()._project.join( pPath ), text ) )
+        {
+            case OptionalFileRead::Read:
+                return text;
+            case OptionalFileRead::Missing:
+                return unexpected( Error{ ErrorKind::NotFound, "the config file is missing", pPath } );
+            case OptionalFileRead::Failed:
+                break;
+        }
+        return unexpected( Error{ ErrorKind::ExternalFailure, "the config file could not be read", pPath } );
     }
 
     bool ConfigManager::readConfigJSON( void* pInstance, const TypeInfo& typeInfo, string_view jsonStr, const utf8* pSourceLabel )
@@ -326,17 +340,17 @@ namespace sw
     {
         ConfigManager& configManager = scope.emplaceSubsystem<ConfigManager>();
         (void)build;
-        // 호스트 설정 둘은 Config 가 소유한다 - 읽는 것은 Config 의 초기화이고, 서비스 칸(`engine::getSubsystem<EngineConfig>()`)은 이 자리의 주소를 묶는다.
+        // 호스트 설정 둘은 Config 가 소유한다 - 읽는 것은 Config 의 초기화이고, 서브시스템 칸(`engine::getSubsystem<EngineConfig>()`)은 이 자리의 주소를 묶는다.
         (void)scope.exposeMember( configManager, configManager.getHostEngineConfig() );                     // 새 범위 - 겹치지 않는다
         (void)scope.exposeMember( configManager, configManager.getHostGameConfig() );                       // 새 범위 - 겹치지 않는다
         (void)scope.exposeMember( configManager, configManager.getHostEngineConfig()._characterMeshCache ); // 게임에 보이는 조각 - 엔진 설정 안의 자리라 다시 읽어도 주소가 같다
         (void)scope.exposeMember( configManager, configManager.getHostEngineConfig()._minigame );           // 게임에 보이는 조각 - 같은 자리
     } );
 
-    // 위 공장이 건 호스트 설정 둘의 서비스 칸(읽기 전용). 정적 활성본(`EngineConfig::getActive()` 따위)을 대신한다 — 다시 읽기는 같은 자리에서 일어나 칸의 주소가 바뀌지 않는다.
+    // 위 공장이 건 호스트 설정 둘의 서브시스템 칸(읽기 전용). 정적 활성본(`EngineConfig::getActive()` 따위)을 대신한다 — 다시 읽기는 같은 자리에서 일어나 칸의 주소가 바뀌지 않는다.
     // 엔진 설정은 엔진과 에디터가 읽고, 게임은 게임 설정만 본다.
-    SW_ENGINE_SERVICE( EngineConfig, HostOnly );
-    SW_ENGINE_SERVICE( GameConfig, GameVisible );
-    SW_ENGINE_SERVICE( CharacterMeshCacheConfig, GameVisible ); // 게임 모듈의 캐릭터 메시 캐시가 예산을 읽는다(엔진 설정 전체는 호스트 전용)
-    SW_ENGINE_SERVICE( MinigameConfig, GameVisible );           // 게임 모듈의 미니게임 흐름이 쌓기 깊이 한도를 읽는다
+    SW_ENGINE_SUBSYSTEM_SLOT( EngineConfig, HostOnly );
+    SW_ENGINE_SUBSYSTEM_SLOT( GameConfig, GameVisible );
+    SW_ENGINE_SUBSYSTEM_SLOT( CharacterMeshCacheConfig, GameVisible ); // 게임 모듈의 캐릭터 메시 캐시가 예산을 읽는다(엔진 설정 전체는 호스트 전용)
+    SW_ENGINE_SUBSYSTEM_SLOT( MinigameConfig, GameVisible );           // 게임 모듈의 미니게임 흐름이 쌓기 깊이 한도를 읽는다
 } // namespace sw

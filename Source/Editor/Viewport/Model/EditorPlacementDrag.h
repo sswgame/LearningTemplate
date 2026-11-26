@@ -75,7 +75,7 @@ namespace sw::editor
     /**
      * @class EditorPlacementDrag
      * @brief 끌기 한 번의 놓기입니다. 끄는 동안만 정적 물리 사본을 들고(`ScenePhysics::createStaticScene3D`), 끌기가 끝나면 버린다.
-     * @details 편집 중에는 플레이 물리 씬이 없다 — 사본은 끌기가 시작된 뒤 처음 캔버스 위에 왔을 때 한 번 만든다(라이트 프로브 베이크와 같은 길). 표면이 없으면 놓지 않는다(예전에는 원점에 놓았다).
+     * @details 편집 중에는 플레이 물리 씬이 없다 — 사본은 끌기가 시작된 뒤 처음 캔버스 위에 왔을 때 한 번 만든다(라이트 프로브 베이크와 같은 길). 표면이 없으면 놓지 않는다.
      */
     class SW_EDITOR_API EditorPlacementDrag
     {

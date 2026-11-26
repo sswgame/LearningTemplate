@@ -6,9 +6,9 @@
 
 #include "Core/Concurrency/atomic.h"
 #include "Core/Task/TaskManager.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
 #include "Engine/Graphics/RHI/Tests/RHIFakeDevice.h"
 #include "Engine/Renderer/Graph/FrameBufferTable.h"
@@ -39,7 +39,7 @@ namespace
 } // namespace
 
 /**
- * @brief [RenderGraphTest] 그래프가 상태를 들고 있다가 **바뀌는 전이만** 낸다
+ * @brief [RenderGraphTest] 그래프가 상태를 들고 있다가 바뀌는 전이만 낸다
  * @details 레벨이 읽고 쓰는 자원 이름을 전부 넘기면 같은 자원을 세 패스가 읽을 때 읽기 전이를 세 번 걸고, 이미 그 상태인 것도 다시 건다.
  *          그래프가 원본이다 — 여기서는 그 추론만 커맨드 리스트 없이 본다.
  */

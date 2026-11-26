@@ -5,12 +5,12 @@
 
 #include "Core/Delegate/Delegate.h"
 #include "Core/File/FileUtil.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Config/ConfigManager.h"
+#include "Engine/Config/ConfigOverride.h"
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/GameConfig.h"
-#include "Engine/Config/PlatformConfigOverride.h"
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Serialization/Format/JSONSerializer.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
@@ -45,7 +45,7 @@ namespace
 } // namespace
 
 /**
- * @brief [ConfigManagerTest] 설정 표의 열쇠가 **타입**인지 검증
+ * @brief [ConfigManagerTest] 설정 표의 열쇠가 타입인지 검증
  * @details 호출부가 이름(`hashed_string( "EngineConfig" )`)을 손으로 적어 넘기지 않으므로 철자가 어긋날 자리가 없고,
  *          다른 타입을 물으면 그 타입이 없다고 답한다.
  */

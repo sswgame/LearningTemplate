@@ -6,7 +6,7 @@
 
 끝점은 gamesettings 칸(`_telemetryUploadEndpoint` · `_crashUploadEndpoint`)이고 저장소의 팩은 적지 않는다 - 이 스크립트는 `-gv_telemetryUploadEndpoint` ·
 `-gv_crashUploadEndpoint` 로 수신기를 가리킨다. 사용자 설정은 `-gv_userSettingsFile` 로 출력 폴더에 따로 두어 사람의 동의 설정을 바꾸지 않는다.
-1 회: 동의를 켜고(`settings.apply telemetry.enabled=true`) 끝낸다. 종료가 업로더를 떼며 스풀 파일을 닫아 보낸다(`TelemetryService::releaseUploader`).
+1 회: 동의를 켜고(`settings.apply telemetry.enabled=true`) 끝낸다. 종료가 업로더를 떼며 스풀 파일을 닫아 보낸다(`TelemetrySubsystem::releaseUploader`).
      로그의 크래시 보고 줄(id `TelemetryUploadLink.CrashReportsSent`, 본문 JSON)에서 묶음 폴더를 읽는다.
 2 회: 그 폴더에 보낼 줄(queued)의 가짜 묶음을 하나 두고 띄운다. 기동이 전용 스레드로 묶음을 올린다(`TelemetryUploadLink`).
 판정: 수신기가 `/telemetry` 로 문맥 줄과 `session.start` 를 담은 ndjson 을, `/crash` 로 그 묶음 세션의 multipart 를 받았고, 두 로그에 허용 밖 `[Error]` · `[Warning]` 이 없다.
@@ -96,7 +96,7 @@ def check_run(sink: Sink, list_log_text: list[str]) -> list[str]:
 
 
 def _write_fake_bundle(reports_folder: Path) -> Path:
-    """보낼 줄(queued)의 묶음 하나를 둔다. 매니페스트 모양은 `CrashReportService::createBundle` 과 같다(파일은 글 하나)."""
+    """보낼 줄(queued)의 묶음 하나를 둔다. 매니페스트 모양은 `CrashReportSubsystem::createBundle` 과 같다(파일은 글 하나)."""
     bundle = reports_folder / f"crash_{_FAKE_SESSION}"
     bundle.mkdir(parents=True, exist_ok=True)
     (bundle / "crash.txt").write_text("reason : TelemetryLocalRun fake crash\n", encoding="utf-8")

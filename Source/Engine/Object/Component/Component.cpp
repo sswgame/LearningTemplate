@@ -4,7 +4,7 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Foundation/StateHashBuilder.h"
 #include "Engine/Object/Component/ComponentDefaults.h"
@@ -228,8 +228,8 @@ namespace sw
         , _listSubTick{}
         , _tickInterval{ 0.0f }
     {
-        // **여기서 기본값을 적용하지 않는다.** 생성 중에는 객체가 아직 Component 라 가상
-        // `getTypeInfo()` 가 **파생 타입이 아니라 기반 타입의 TypeInfo** 를 내놓는다 — MeshComponent 를
+        // 여기서 기본값을 적용하지 않는다. 생성 중에는 객체가 아직 Component 라 가상
+        // `getTypeInfo()` 가 파생 타입이 아니라 기반 타입의 TypeInfo 를 내놓는다 — MeshComponent 를
         // 만들어도 "Component" 이름으로 기본값을 찾게 된다.
         //
         // 실제 생성 경로는 타입을 아는 쪽이 이미 올바르게 넘겨 준다.
@@ -516,7 +516,7 @@ namespace sw
     void Component::applyTypeDefaults( const TypeInfo* pTypeInfo )
     {
         // 기본값은 엔진 범위의 `ComponentDefaults` 가 든다. 서비스가 묶이지 않은 곳(서비스 없는 도구 · 테스트)은 기본값 없이 만든다.
-        if ( pTypeInfo != nullptr && engine::areEngineServicesBound() )
+        if ( pTypeInfo != nullptr && engine::areEngineSubsystemsBound() )
             engine::getSubsystem<ComponentDefaults>().apply( this, *pTypeInfo );
     }
 
@@ -538,7 +538,7 @@ namespace sw
     void Component::setCanEverTick( bool bCanEverTick )
     {
         // 틱 중이면 틱 뒤로 — 이 비트는 다른 워커가 읽는 비트(`_bIsSceneComponent` · `_bHasBegunPlay`)와 한 바이트다.
-        // 지금 값과 견주기 **전에** 미룬다: 앞서 미룬 반대 값(끄기 → 다시 켜기)이 큐에 있으면 지금 값과 같다고 버려 마지막 요청을 잃는다. 큐는 부른 순서대로 돈다.
+        // 지금 값과 견주기 전에 미룬다: 앞서 미룬 반대 값(끄기 → 다시 켜기)이 큐에 있으면 지금 값과 같다고 버려 마지막 요청을 잃는다. 큐는 부른 순서대로 돈다.
         if ( deferIfStructureFrozen( Delegate<void( Component& )>( [bCanEverTick]( Component& self )
         { self.setCanEverTick( bCanEverTick ); } ) ) )
             return;

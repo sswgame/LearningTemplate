@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Content/Pack/PackTypes.h"
 
@@ -327,6 +327,8 @@ SW_TEST_CASE( ModAllowListTest, AllowsOnlyListedContent )
     } ) ) );
     SW_EXPECT_LOG( "ModAllowList.BadEntry" );
     SW_EXPECT_FALSE( ModAllowList::parseXMLText( R"(<ModAllowList><Mod id="lantern" version="1.0.0" contentHash="abcd"/></ModAllowList>)", "test", list ) );
+    SW_EXPECT_LOG( "XMLFields.UnknownField" ); // 운영자가 손으로 쓰는 파일이다 — 오타 속성이 조용히 지나가지 않는다
+    SW_EXPECT_FALSE( ModAllowList::parseXMLText( R"(<ModAllowList><Mod id="lantern" version="1.0.0" contentHash="000000000000abcd" conentHash="0"/></ModAllowList>)", "test", list ) );
     SW_EXPECT_LOG( "ModAllowList.DuplicateID" );
     SW_EXPECT_FALSE( ModAllowList::parseXMLText(
         R"(<ModAllowList><Mod id="a" version="1.0.0" contentHash="000000000000abcd"/><Mod id="a" version="1.0.1" contentHash="000000000000abcd"/></ModAllowList>)", "test", list ) );

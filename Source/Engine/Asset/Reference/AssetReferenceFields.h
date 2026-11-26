@@ -1,6 +1,6 @@
 /**
  * @file AssetReferenceFields.h
- * @brief 에셋 참조 규칙(`Config/Dev/AssetReferenceFields.json` — 도메인 · 글 확장자 · CMake)과 칸 목록입니다 — 글 에셋에서 경로를 뽑고, 없는지 가리고, 옮긴 경로로 고칩니다.
+ * @brief 에셋 참조 규칙(`Config/Dev/AssetReferenceFields.json`: 도메인 · 글 확장자 · CMake)과 칸 목록입니다. 글 에셋에서 경로를 뽑고, 없는지 가리고, 옮긴 경로로 고칩니다.
  * @details 칸 이름은 파서가 낸 표(`kGeneratedFile`) 하나다 — 경로 칸은 모두 리플렉션 선언(`AssetRef<T>` · `DataPath`)이고 손으로 적는 이름 표는 없다
  *          (손으로 읽던 XML 칸은 `XMLFields` 로 읽는 스키마 구조체로 옮겼다 — 언리얼이 `FSoftObjectPath` 칸만 참조로 보는 것과 같다).
  *          참조 글은 GUID(`guid:<32자>`)이거나 경로다(정체성이 없는 폴더 · 작업 사본 · 임포트 산출물끼리 · 코드 · CMake). 둘 다 끊어지면 여기서 잡고, 같은 데이터 파일을

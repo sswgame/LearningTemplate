@@ -8,7 +8,7 @@
 
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Content/AssetIO.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
 #include "Engine/Serialization/Inherit/ResourceComposer.h"
 
@@ -133,7 +133,7 @@ namespace sw
         return readText( text, path, ResourceContext::forType( *StaticType() ).withAsset( assetID ) );
     }
 
-    bool DialogueGraphAsset::loadFromDiskFile( const AbsolutePath& diskPath )
+    bool DialogueGraphAsset::loadFromDiskFile( const DiskPath& diskPath )
     {
         const ScopedMemoryTag memoryScope{ kMemoryTag };
         _listSpeaker.clear();
@@ -318,7 +318,7 @@ namespace sw
 
     int32 DialogueGraphAsset::encodePin( int32 nodeID, int32 pinOffset )
     {
-        // 오프셋이 자릿수를 넘으면 노드 id 를 오염시켜, 링크가 **다른 노드**를 가리키게 된다.
+        // 오프셋이 자릿수를 넘으면 노드 id 를 오염시켜, 링크가 다른 노드를 가리키게 된다.
         // 그런 값을 조용히 만들지 않고 0(없는 핀)을 반환한다.
         const bool bInvalidPinID = nodeID <= 0 || pinOffset <= 0 || pinOffset >= kPinScale;
         if ( bInvalidPinID )

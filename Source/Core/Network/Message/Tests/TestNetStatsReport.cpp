@@ -1,11 +1,11 @@
 #include "pch.h"
 
-#include "Core/Network/DebugReplyLine.h"
+#include "Core/Log/DebugReplyLine.h"
 #include "Core/Network/Message/NetStatsReport.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 using namespace sw;
 

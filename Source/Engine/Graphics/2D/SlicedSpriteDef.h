@@ -19,7 +19,7 @@ namespace sw
     /**
      * @struct SW_API SlicedSpriteDef
      * @brief 9-슬라이스와 타일 메시 하나를 정하는 값입니다. 같은 값이면 같은 메시를 공유합니다(`SlicedSpriteDef::acquireSlicedMesh`).
-     * @details 테두리는 **프레임에 대한 비율**(0..1)이며 (왼쪽, 아래, 오른쪽, 위) 순서입니다. 스프라이트의 자연 크기는 단위 사각형(1 × 1)이므로
+     * @details 테두리는 프레임에 대한 비율(0..1)이며 (왼쪽, 아래, 오른쪽, 위) 순서입니다. 스프라이트의 자연 크기는 단위 사각형(1 × 1)이므로
      *          테두리의 월드 크기도 그 비율과 같습니다. 크기를 바꿔도 모서리는 자연 크기에서 보이던 크기로 남고, 가운데만 늘어나거나(Sliced) 반복됩니다(Tiled).
      */
     struct SlicedSpriteDef

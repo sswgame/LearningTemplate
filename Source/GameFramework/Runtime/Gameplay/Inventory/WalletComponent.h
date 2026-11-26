@@ -22,8 +22,8 @@ namespace sw
     /**
      * @class WalletComponent
      * @brief 플레이어 한 명의 지갑입니다. 조종자 오브젝트에 다른 플레이어 상태 컴포넌트(`InventoryComponent` · `QuestLogComponent` · `ReputationComponent`)와 함께 둡니다.
-     * @details - **열기**: 카탈로그가 없어 만들 때부터 열려 있다. 새 판인지(`isFreshGame`)는 복원 바이트를 받았는지로 정한다 — 디렉터가 시작 돈을 넣을지 볼 때 묻는다.
-     *          - **찾기 · 세이브**: `PlayerComponentUtil` · `DeferredStateRestore`. 정의한 .cpp 가 `StatefulComponentRegistrar` 로 모든 게임의 스냅샷에 올린다.
+     * @details - 열기: 카탈로그가 없어 만들 때부터 열려 있다. 새 판인지(`isFreshGame`)는 복원 바이트를 받았는지로 정한다 — 디렉터가 시작 돈을 넣을지 볼 때 묻는다.
+     *          - 찾기 · 세이브: `PlayerComponentUtil` · `DeferredStateRestore`. 정의한 .cpp 가 `StatefulComponentRegistrar` 로 모든 게임의 스냅샷에 올린다.
      */
     REFLECT( Category = "Framework", DisplayName = "Wallet", Tooltip = "One player's wallet, on the controller object (or the director object in a scene without a controller)" )
     class SW_GF_API WalletComponent : public Component

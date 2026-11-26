@@ -20,22 +20,22 @@ namespace sw
     struct CanvasFrameData;
     struct CanvasTargetDrawList;
 
-    class FontService;
+    class FontSubsystem;
 
     /** @brief 겹치기가 칠할 층입니다. */
     enum class CanvasOverlayLayer : uint8
     {
         MainOutput, ///< 주 출력(UI 위) — 사진 캡처 · `<ExpectImage>` 골든에 든다. 그림 자체가 확인 대상일 때만 쓴다(캔버스 테스트 그림).
-        DevOverlay  ///< 개발 겹치기 층(디버그 HUD 와 같은 목록 — `CanvasFrameData::getDevOverlay`) — 사진 캡처 뒤에 화면에만 합친다. 개발 그림의 기본 자리다.
+        DevOverlay  ///< 개발 겹치기 층(디버그 HUD 와 같은 목록, `CanvasFrameData::getDevOverlay`). 사진 캡처 뒤에 화면에만 합친다. 개발 그림의 기본 자리다.
     };
 
     /** @struct CanvasOverlayContext @brief 겹치기 하나에 넘기는 이번 프레임 값입니다(게임 스레드, 패킷을 채우는 동안만 유효). */
     struct CanvasOverlayContext
     {
-        const float4x4* _pViewProj{ nullptr };    ///< 주 시점의 뷰-투영입니다. 패킷의 시점이 카메라에서 오지 않았으면 nullptr 입니다(월드 도형을 투영할 눈이 없다).
-        float2          _targetSize{};            ///< 주 출력의 픽셀 크기입니다(물리 픽셀 = UI 단위).
-        FontService*    _pFontService{ nullptr }; ///< 글꼴 시스템입니다. 없거나 초기화 전이면 글자를 칠하지 않습니다.
-        uint64          _glyphFrameIndex{ 0 };    ///< 글리프 캐시의 프레임 시계입니다(`GlyphCache::getFrameIndex`).
+        const float4x4* _pViewProj{ nullptr };      ///< 주 시점의 뷰-투영입니다. 패킷의 시점이 카메라에서 오지 않았으면 nullptr 입니다(월드 도형을 투영할 눈이 없다).
+        float2          _targetSize{};              ///< 주 출력의 픽셀 크기입니다(물리 픽셀 = UI 단위).
+        FontSubsystem*  _pFontSubsystem{ nullptr }; ///< 글꼴 시스템입니다. 없거나 초기화 전이면 글자를 칠하지 않습니다.
+        uint64          _glyphFrameIndex{ 0 };      ///< 글리프 캐시의 프레임 시계입니다(`GlyphCache::getFrameIndex`).
     };
 
     /**

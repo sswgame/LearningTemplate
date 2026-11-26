@@ -62,7 +62,7 @@ namespace sw
             setState( bWanted ? GPUFrameClockState::Unsupported : GPUFrameClockState::Off );
             return nullptr;
         }
-        // **여기가 계측 스위치다.** 아무도 원하지 않으면 백엔드는 쿼리 자원조차 만들지 않는다.
+        // 여기가 계측 스위치다. 아무도 원하지 않으면 백엔드는 쿼리 자원조차 만들지 않는다.
         pTimestamps->setTimestampEnabled( bEnabled );
         if ( bEnabled == false )
         {

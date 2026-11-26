@@ -10,12 +10,12 @@
 #include "Engine/Automation/Watch/AutomationWatchComponent.h"
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Foundation/EngineParallel.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
-#include "Engine/Object/GameObject/Service/SceneServiceRegistry.h"
+#include "Engine/Object/GameObject/Subsystem/SceneSubsystemRegistry.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Visual/Component/MeshComponent.h"
@@ -24,7 +24,7 @@
 
 namespace sw
 {
-    SW_SCENE_SERVICE( MeshLODSystem, FlushEnd, makeSceneFrameAccess( SceneDataKindSet{}, SceneDataKindSet{}, SceneDataKindSet{ SceneDataKind::Structure, SceneDataKind::Transform } ) )
+    SW_SCENE_SUBSYSTEM( MeshLODSystem, FlushEnd, makeSceneFrameAccess( SceneDataKindSet{}, SceneDataKindSet{}, SceneDataKindSet{ SceneDataKind::Structure, SceneDataKind::Transform } ) )
 
     MeshLODSystem::MeshLODSystem( GameObjectManager& manager )
         : _manager{ manager }
@@ -181,7 +181,7 @@ namespace sw
             /** @brief @p object 의 메시 컴포넌트마다 판정 한 줄을 @p outText 에 잇습니다. 메시 컴포넌트가 없으면 false 입니다. */
             static bool describeObject( const GameObject& object, string& outText )
             {
-                GameObjectManager* const pManager = object.getMutableManager();
+                const GameObjectManager* const pManager = object.getManager();
                 if ( pManager == nullptr )
                     return false;
                 const MeshLODSystem& system = pManager->getSubsystem<MeshLODSystem>();

@@ -6,7 +6,7 @@
  *          "A 가 잠금 M 을 쥔 채 B 를 join, B 는 M 을 기다림" 같은 순환이 `sw::mutex` 끼리의 순환과 같은 대기 그래프에 잡힌다.
  *          합류 키는 스레드 식별자로 만든 홀수 값이라 정렬된 `mutex` 주소와 겹치지 않고 할당도 없다.
  *          언리얼 `FRunnableThread` 처럼 스레드를 엔진 타입으로 감싸 진단을 붙이는 자리다.
- *          C++20 `std::jthread` 처럼 **정지 요청 칸**과 **소멸자 합류**를 가진다(C++17 이라 자체 구현). 그래서 소유자가 `join` 을 빠뜨려도
+ *          C++20 `std::jthread` 처럼 정지 요청 칸과 소멸자 합류를 가진다(C++17 이라 자체 구현). 그래서 소유자가 `join` 을 빠뜨려도
  *          `std::terminate` 로 끝나지 않고, 스레드 함수가 첫 인자로 `StopToken` 을 받으면 소멸이 정지를 요청한 뒤 합류한다.
  * @note 주의: 로더 락을 쥔 스레드(Windows `DllMain`, DLL 을 내릴 때 도는 모듈 안 정적 소멸자)에서 `join` 하면 영원히 멈춘다 — 끝나는 스레드도
  *       `DLL_THREAD_DETACH` 를 돌리려고 로더 락을 기다린다. `join` 은 이 경우 단언하고 스레드를 떼어(detach) 프로세스가 멈추지 않게 한다.
@@ -53,12 +53,12 @@ namespace sw
     class SQLConnectionPool;            // DB 드라이버 호출이 망을 막고 기다린다 — 연결 하나가 스레드 하나
     class MaterialPSOBuilder;           // PSO 생성 — 드라이버가 직렬이라 하나가 워커를 수 ms 막는다(DedicatedWorker)
     class ShaderCache;                  // 디스크를 읽지 않는 스레드(렌더 스레드)가 기다리는 셰이더 로드 · 컴파일(DedicatedWorker)
-    class TelemetryService;             // 텔레메트리 스풀 쓰기 · 올리기(DedicatedWorker)
+    class TelemetrySubsystem;           // 텔레메트리 스풀 쓰기 · 올리기(DedicatedWorker)
     class TelemetryUploadLink;          // 크래시 보고 올리기 — 막히는 HTTP(DedicatedWorker)
     class HTTPClient;                   // 이름 해석(getaddrinfo)(DedicatedWorker)
     class HTTP2Client;                  // 이름 해석(getaddrinfo)(DedicatedWorker)
     class ThreadedLocalStore;           // 순서 있는 디스크 쓰기 · fsync(DedicatedWorker)
-    struct ThreadTestAccess;            // 테스트 · 테스트 실행기(`Core/Testing/ThreadTestAccess.h`) — 경합을 일부러 만든다
+    struct ThreadTestAccess;            // 테스트 · 테스트 실행기(`Core/TestFramework/ThreadTestAccess.h`) — 경합을 일부러 만든다
     namespace editor
     {
         class EditorExternalToolJob; // 외부 도구 프로세스가 끝나기를 기다린다
@@ -102,7 +102,7 @@ namespace sw
         friend class SQLConnectionPool;
         friend class MaterialPSOBuilder;
         friend class ShaderCache;
-        friend class TelemetryService;
+        friend class TelemetrySubsystem;
         friend class TelemetryUploadLink;
         friend class HTTPClient;
         friend class HTTP2Client;

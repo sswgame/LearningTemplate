@@ -9,7 +9,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/Math/Radians.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 #include "Core/String/formatString.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -75,7 +75,7 @@ namespace sw
     public:
         /**
          * @brief 사건 id 가 붙은 오류를 더합니다. id 없는 형태는 없다. 경고 로그에도 같은 id 가 붙는다(`SW_LOG_WARNING_ID` 와 같다).
-         * @param pID `"영역.사건"` 꼴의 **글자 상수**입니다. 같은 사건은 같은 id 를 쓴다.
+         * @param pID `"영역.사건"` 꼴의 글자 상수입니다. 같은 사건은 같은 id 를 쓴다.
          */
         template <typename... Args>
         void addErrorWithID( const utf8* pID, string_view format, Args&&... args )

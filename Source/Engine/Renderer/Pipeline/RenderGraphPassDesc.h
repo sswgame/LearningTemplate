@@ -58,7 +58,7 @@ namespace sw
          */
         Sky,
         /**
-         * @brief 화면 2D(UI, 월드 글자)를 주 시점 출력(백버퍼, 게임 뷰 RT, 스크린샷 캡처)에 **기존 내용을 유지한 채(Load)** 그립니다. Present(톤맵) 뒤에 두고,
+         * @brief 화면 2D(UI, 월드 글자)를 주 시점 출력(백버퍼, 게임 뷰 RT, 스크린샷 캡처)에 기존 내용을 유지한 채(Load) 그립니다. Present(톤맵) 뒤에 두고,
          *        Swapchain 을 쓰는 마지막 패스여야 합니다(검증). 추가 뷰에서는 그리지 않습니다(UI 는 주 시점에만 있습니다).
          */
         Canvas,
@@ -89,7 +89,7 @@ namespace sw
         /** @brief 감각 모드 외곽선입니다. 강조 방식이 Sense 인 인스턴스만 깊이 테스트 없이 그려 벽 너머에서도 보입니다(반투명 뒤, 톤맵 앞에 둡니다). */
         HighlightSense,
         /**
-         * @brief 높이 · 거리 지수 안개입니다(fog.hlsl). 장면 깊이로 시선 위 광학 두께를 구해 선언한 컬러 출력 **위에 블렌드**(프리멀티플라이: 안개색 × 불투명도 + 장면 × (1 - 불투명도))합니다 —
+         * @brief 높이 · 거리 지수 안개입니다(fog.hlsl). 장면 깊이로 시선 위 광학 두께를 구해 선언한 컬러 출력 위에 블렌드(프리멀티플라이: 안개색 × 불투명도 + 장면 × (1 - 불투명도))합니다 —
          *        그래서 입력은 장면 깊이뿐이고 출력은 앞 패스가 칠한 색 첨부입니다(복사 첨부를 따로 두지 않는다). 불투명 · 하늘 · 반투명 뒤, 후처리 앞에 둡니다.
          *        씬에 안개(`FogComponent` · 물속)가 없거나 후처리를 끈 뷰 · 표면 값 보기에서는 그리지 않습니다(전용 실행: `FramePassExecutor::executeFogPass`).
          *        볼륨 안개를 켠 씬은 볼륨(froxel, `RenderPassKind::VolumetricFog` 컴퓨트)의 산란과 투과율을 같은 블렌드로 더합니다.
@@ -120,7 +120,7 @@ namespace sw
         DistortionApply,
         /**
          * @brief 화면 공간 반사입니다(screen_space_reflection.hlsl). G버퍼 노멀로 반사한 광선을 장면 깊이에 대고 나아가 맞은 자리의 장면 색 사본(`SceneColorCopy`)을 읽어
-         *        선언한 컬러 출력(장면 색) **위에 프리멀티플라이 블렌드**합니다 — 안개와 같은 모양이라 출력이 장면 색 그대로이고 반투명이 그 위에 그린다. 디퍼드에서 하늘 · 사본 뒤, 반투명 앞에 둡니다.
+         *        선언한 컬러 출력(장면 색) 위에 프리멀티플라이 블렌드합니다 — 안개와 같은 모양이라 출력이 장면 색 그대로이고 반투명이 그 위에 그린다. 디퍼드에서 하늘 · 사본 뒤, 반투명 앞에 둡니다.
          *        뷰의 후처리 값 `_screenSpaceReflectionIntensity` 가 0 이거나 후처리를 끈 뷰 · 표면 값 보기에서는 그리지 않습니다(전용 실행: `FramePassExecutor::executeScreenSpaceReflectionPass`).
          *        끄는 길이 "원본을 가리킴"(`kBypassesToSource`)이 아닌 까닭: 그 길은 출력을 그 패스만 써야 하는데(로드 검증 3-6), 반투명이 같은 장면 색에 그려야 한다.
          */
@@ -134,7 +134,7 @@ namespace sw
         ContactShadow,
         /**
          * @brief 화면 공간 간접 확산광(SSGI)입니다(ssgi.hlsl). 반투명 앞에 떠 둔 장면 색(`SceneColorCopy`)을 깊이 · G버퍼 노멀로 반구에서 걸어 가까운 면이 튕긴 빛을 모으고,
-         *        G버퍼 알베도를 곱해 선언한 컬러 출력(조명 첨부)에 **더한다**(XML `_blendPreset="Additive"`). 프로브 GI(먼 빛)는 조명 패스가 이미 그렸고 이 패스는 가까운 튐만 더한다
+         *        G버퍼 알베도를 곱해 선언한 컬러 출력(조명 첨부)에 더한다(XML `_blendPreset="Additive"`). 프로브 GI(먼 빛)는 조명 패스가 이미 그렸고 이 패스는 가까운 튐만 더한다
          *        (언리얼 UE4 의 화면 공간 GI 가 라이트맵 · 스카이 위에 더하는 것과 같은 자리). 세기 · 반경 · 걸음 수는 XML 퍼뮤테이션 값이다(셰이더에 기본값이 없다 — `kRequiresPassDesc`).
          *        출력(조명 첨부)을 여러 패스가 쓰므로 뷰마다 건너뛰는 효과가 아니다 — 켜고 끄는 것은 파이프라인 XML 이다(engine/pipeline/deferredpipeline_gi.xml). SceneColorCopy 뒤 · 반투명 앞에 둔다.
          */
@@ -147,7 +147,7 @@ namespace sw
         LensFlare,
         /**
          * @brief 후처리 머티리얼입니다(언리얼 Post Process Material · 유니티 Full Screen Pass). 뷰의 블렌더블(`PostProcessValues::_listBlendable`) 가운데 이 패스의 자리(`_blendableLocation`)의 것을
-         *        목록 차례로 원본 위에 그린다 — 머티리얼마다 풀스크린 삼각형 하나, 머티리얼 셰이더(PostProcess 영역 — post_process_material.hlsli)와 원소 버퍼 하나(`FramePostProcessMaterials`).
+         *        목록 차례로 원본 위에 그린다. 머티리얼마다 풀스크린 삼각형 하나, 머티리얼 셰이더(PostProcess 영역, post_process_material.hlsli)와 원소 버퍼 하나(`FramePostProcessMaterials`).
          *        톤맵 앞 · 뒤 자리는 원본(SourceColor)을 출력에 복사한 뒤 무게만큼 프리멀티플라이 블렌드하고, 그릴 머티리얼이 없는 뷰는 출력이 원본을 가리킨다(`kBypassesToSource`).
          *        톤맵 대신 자리는 HDR 원본을 읽어 톤맵 출력(다른 패스와 함께 쓰는 출력) 위에 무게만큼 덮는다 — 복사도 고르기도 없다(전용 실행 `FramePassExecutor::executePostProcessMaterialPass`).
          */
@@ -423,7 +423,7 @@ namespace sw
         /**
          * @brief 이 첨부가 패스에 바인딩될 때의 역할입니다(`RenderPassInputRole` 이름: GBufferAlbedo, GBufferNormal, GBufferMaterial, ShadowMap, AmbientOcclusion,
          *        BloomBright, SceneDepth, SourceColor). 비어 있으면 원본 이름(GBufferAlbedo 등)과 포맷으로 정합니다.
-         * @details 역할을 **이름으로만** 정하면 G버퍼, 그림자 맵, AO 첨부의 이름을 바꿀 때 Lighting 의 입력 계약이 깨진다(역할 없는 컬러는
+         * @details 역할을 이름으로만 정하면 G버퍼, 그림자 맵, AO 첨부의 이름을 바꿀 때 Lighting 의 입력 계약이 깨진다(역할 없는 컬러는
          *          모두 SourceColor). 언리얼 RDG 는 패스 파라미터 구조체의 멤버로, 유니티 RenderGraph 는 셰이더 프로퍼티 이름으로 텍스처를 바인딩한다.
          *          어느 쪽도 텍스처의 이름이 바인딩을 정하지 않는다. 여기서는 첨부가 자기 역할을 선언하고, 이름은 파이프라인이 자유롭게 짓는다.
          */
@@ -453,7 +453,7 @@ namespace sw
 {
     /**
      * @brief 프레임 그래프의 자원 하나(이름, 수명 종류)입니다. 파이프라인 XML 의 `_listResource` 원소입니다.
-     * @details 첨부가 아닌 자원 — 서브시스템이 가진 버퍼(인스턴스 · 라이트 · 컬링 결과)와 프레임을 넘는 히스토리(깊이 히스토리 · 가림 타일 · 입자 상태 · 프로브) — 의 이름이다.
+     * @details 첨부가 아닌 자원, 곧 서브시스템이 가진 버퍼(인스턴스 · 라이트 · 컬링 결과)와 프레임을 넘는 히스토리(깊이 히스토리 · 가림 타일 · 입자 상태 · 프로브)의 이름이다.
      *          프레임 패스가 이 이름으로 읽기 · 쓰기를 선언하면 그래프가 순서를 정한다. 그래프는 버퍼를 만들지 않는다(주인은 서브시스템이다 — 언리얼 RDG 의 외부 버퍼 등록과 같다).
      *          `_kind` 는 Persistent 또는 External 이다(Transient 는 첨부의 몫이라 검증이 막는다).
      *          `_viewable` 은 버퍼(기본) · 텍스처다 — 패스의 입력 · 출력이 그것과 함께 접근을 정한다(`RenderPipelineAsset::buildFramePassAccesses`, 언리얼 RDG 의 버퍼 · 텍스처 등록이 나뉜 것과 같다).
@@ -484,7 +484,7 @@ namespace sw
     /**
      * @brief 렌더 파이프라인 그래프 안의 패스 노드 하나입니다.
      * @details 그래프 연결(입력과 출력)과 PSO 설정(셰이더, 진입점, 렌더 상태, 퍼뮤테이션)을 담는다. 렌더 상태의 칸은 기반 `FixedRenderState` 이고 머티리얼과 같은 형식이다.
-     *          **여기 적힌 값이 곧 실행되는 값이다**(`FramePSOManager::applyPassRenderState`) —
+     *          여기 적힌 값이 곧 실행되는 값이다(`FramePSOManager::applyPassRenderState`) —
      *          코드를 고치지 않고 데이터로 패스를 바꾼다. 패스 실행이 받아 줄 수 없는 조합(깊이를 붙이지 않는 패스의 깊이 테스트 등)은 무시하지 않고 읽기 오류다(`RenderPipelineAsset::validate`).
      */
     REFLECT()
@@ -507,7 +507,7 @@ namespace sw
         vector<string> _listOutput;
 
         /**
-         * @brief 입력 · 출력 규칙(버퍼 입력 = SRV, 출력 = UAV — `RenderPipelineAsset::buildFramePassAccesses`) 밖의 접근입니다. 프레임 패스만 적는다(검증) — 이름은 `_listResource` 의 버퍼다.
+         * @brief 입력 · 출력 규칙(버퍼 입력 = SRV, 출력 = UAV, `RenderPipelineAsset::buildFramePassAccesses`) 밖의 접근입니다. 프레임 패스만 적는다(검증). 이름은 `_listResource` 의 버퍼다.
          * @details 간접 인자(그리기 · 디스패치가 읽는 인자 버퍼), 복사 원본, 복사 대상. 한 이름은 한 패스에서 한 접근이다(입출력과 겹치면 로드 오류 — 언리얼 RDG 패스 파라미터의 접근 하나).
          */
         PROPERTY( SkipIfEmpty )
@@ -520,12 +520,12 @@ namespace sw
         vector<string> _listCopyDest;
 
         /**
-         * @brief 이 패스가 바인딩할 뎁스 첨부 이름입니다. **비어 있으면 뎁스 없이 엽니다.**
+         * @brief 이 패스가 바인딩할 뎁스 첨부 이름입니다. 비어 있으면 뎁스 없이 엽니다.
          * @details 패스 타입마다 코드에 박으면("GBuffer 면 SceneDepth") "이 패스는 일부러 뎁스를 쓰지 않는다" 를
          *          표현할 방법이 없어, DepthPrepass 를 넣거나 빼는 구성을 바꾸려면 엔진 코드를 고쳐야 한다.
          *          선언으로 두면 파이프라인 XML 만으로 바뀐다.
          * @note 읽기와 쓰기 여부는 `_listInput` 과 `_listOutput` 이 따로 말해 준다. Transparent 는 SceneDepth 를
-         *       **입력으로 읽으면서** 뎁스로 바인딩한다(테스트만 하고 쓰지 않는다). 그래서 출력에서
+         *       입력으로 읽으면서 뎁스로 바인딩한다(테스트만 하고 쓰지 않는다). 그래서 출력에서
          *       유추하지 않고 별도 필드로 둔다.
          */
         PROPERTY( SkipIfEmpty )
@@ -567,7 +567,7 @@ namespace sw
         vector<hashed_string> _listResolvedOutput;
 
         /**
-         * @brief `_listOutput` 중 **컬러 첨부**만 선언 순서대로 모은 목록입니다(뎁스 포맷, 스왑체인, 선언되지 않은 이름은 빠집니다). 역할도 함께 가집니다.
+         * @brief `_listOutput` 중 컬러 첨부만 선언 순서대로 모은 목록입니다(뎁스 포맷, 스왑체인, 선언되지 않은 이름은 빠집니다). 역할도 함께 가집니다.
          *        XML 로드 시 RenderPipelineAsset 가 채웁니다.
          * @details 지오메트리 패스(ForwardOpaque, GBuffer, Transparent)는 이 목록에서 컬러 타깃을 고른다. GBuffer 는 역할(GBufferAlbedo,
          *          GBufferNormal, GBufferMaterial)로 고르고, 역할이 없으면 선언 순서([0] 알베도, [1] 노멀, [2] 머티리얼)로 고른다. 주의: 첨부 이름(SceneColor, GBufferAlbedo 등)을 코드에

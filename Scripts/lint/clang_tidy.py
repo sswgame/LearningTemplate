@@ -10,7 +10,7 @@ clang-tidy 를 병렬로 돌리고 진단을 검사 이름별로 모아 센다. 
   py -3 -m Scripts tidy --out 진단.json      # 진단 전체를 JSON 으로
   py -3 -m Scripts tidy --files a.cpp -- --fix                       # `--` 뒤는 clang-tidy 에 그대로
 
-컴파일 DB 는 **본 트리** `build/<프리셋>/compile_commands.json` 을 읽기만 한다 — 빌드하지 않고 빌드 폴더에 쓰지도 않는다.
+컴파일 DB 는 본 트리 `build/<프리셋>/compile_commands.json` 을 읽기만 한다 — 빌드하지 않고 빌드 폴더에 쓰지도 않는다.
 워크트리에서 돌리면 DB 의 본 트리 경로(build · Tools 밖)를 이 트리로 바꾼 사본을 임시 폴더에 두고 그것을 쓴다(헤더도 이 트리 것을 본다).
 PCH 사용 플래그(/Yu · /Fp)는 뺀다 — clang-tidy 가 남이 짓는 중인 .pch 를 읽지 않게. 강제 포함(/FI)은 둔다(TU 가 그 헤더에 기댄다).
 

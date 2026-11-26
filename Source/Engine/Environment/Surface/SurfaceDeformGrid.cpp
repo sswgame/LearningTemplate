@@ -108,7 +108,7 @@ namespace sw
             _dirtyRect  = TexelRect{ 0, 0, _resolution, _resolution };
             return true;
         }
-        // 새 칸 (x, z) 는 옛 칸 (x + shiftX, z + shiftZ) 다 — 사본에서 읽어 겹치는 칸만 옮긴다(움직임은 드물다 — 창 너비의 일부만큼 벗어날 때).
+        // 새 칸 (x, z) 는 옛 칸 (x + shiftX, z + shiftZ) 다. 사본에서 읽어 겹치는 칸만 옮긴다(움직임은 드물다. 창 너비의 일부만큼 벗어날 때).
         const vector<float32> listOldHeight    = _listHeight;
         const vector<float32> listOldFillSpeed = _listFillSpeed;
         const vector<float32> listOldWet       = _listWet;

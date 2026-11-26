@@ -36,6 +36,10 @@ namespace sw::editor
         static bool isValidAssetName( string_view name );
         /** @brief 파일 이름을 줄기와 붙은 확장자로 나눕니다. 확장자는 첫 `.` 부터입니다(`a.scene.xml` → `a`, `.scene.xml`). */
         static void splitAssetName( string_view fileName, string& outStem, string& outSuffix );
+        /** @brief 리소스 id 가 가리키는 있는 파일 · 폴더의 자리입니다 — 옮기기 · 지우기 · 복제 · 가져오기의 대상(내용을 쓰는 자리는 `AssetWriter` 다). 없으면 빈 값입니다. */
+        [[nodiscard]] static optional<AbsolutePath> findOperationPath( string_view resourceID );
+        /** @brief 리소스 id 의 새 자리입니다(옮길 곳 · 가져올 폴더 — 아직 없어도 된다). 풀지 못하면 빈 값입니다. */
+        [[nodiscard]] static optional<AbsolutePath> makeOperationPath( string_view resourceID );
         /** @brief @p folderAbs 안에 `<stem><suffix>`(있으면 `<stem>_2<suffix>` 부터)를 만들어 자리를 잡고 그 경로를 돌려줍니다(`FileUtil::reserveUniquePath`, 접미사가 비면 폴더). 못 잡으면 빈 글입니다. */
         static AbsolutePath makeUniquePath( const AbsolutePath& folderAbs, string_view stem, string_view suffix );
         /**
@@ -63,7 +67,7 @@ namespace sw::editor
          */
         [[nodiscard]] static bool planAssetMoves( const vector<EditorAssetMove>& listMove, const EditorAssetIndex& index, EditorAssetMovePlan& outPlan );
         /**
-         * @brief 지금 열린 문서를 모읍니다 — 에셋 파일을 연 문서 패널(`IEditorPanelService::collectOpenDocuments`)과 소스 파일이 있는 활성 씬(미저장은 `EditorWorkspace::isSceneDirty`).
+         * @brief 지금 열린 문서를 모읍니다 — 에셋 파일을 연 문서 패널(`IEditorPanelSubsystem::collectOpenDocuments`)과 소스 파일이 있는 활성 씬(미저장은 `EditorWorkspace::isSceneDirty`).
          * @details 패널 서비스가 없는 호스트(셸 없는 테스트)는 연 패널이 없다 — 씬만 본다.
          */
         static void collectOpenDocuments( vector<EditorOpenDocument>& outList );

@@ -16,7 +16,7 @@
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Admin/Runtime/AdminProtocol.h"
 #include "GameFramework/Kits/Feature/Online/Admin/Server/AdminStoreLogic.h"
-#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Service/OnlineProtocolService.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/OnlineProtocolService.h"
 #include "GameFramework/Runtime/Online/Service/Server/OnlineServiceHost.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
 
@@ -78,7 +78,7 @@ namespace sw
         AdminService& operator=( const AdminService& ) = delete;
 
         /** @brief 저장소가 없으면 false 를 반환합니다. */
-        [[nodiscard]] bool initialize( ServiceStore* pStore, const AdminServiceConfig& settings );
+        [[nodiscard]] bool initialize( ServiceStore& store, const AdminServiceConfig& settings );
         /** @brief 맡긴 작업이 끝날 때까지 저장소를 회수합니다. 상한은 5초이며 저장소를 종료하기 전에 부릅니다. */
         void shutdown();
 

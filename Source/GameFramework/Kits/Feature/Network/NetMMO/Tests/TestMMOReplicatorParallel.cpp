@@ -4,7 +4,7 @@
 #include "Core/Network/Connection/NetEndpoint.h"
 #include "Core/Network/Tests/LoopbackCluster.h"
 #include "Core/Task/TaskManager.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Scene/StreamingCellGrid.h"
 

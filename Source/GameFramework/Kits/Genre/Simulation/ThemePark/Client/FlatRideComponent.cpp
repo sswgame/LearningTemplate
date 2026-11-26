@@ -44,7 +44,7 @@ namespace sw
         const ParkRide*         pRide    = bInRange ? listRide.data() + _rideIndex : nullptr;
         if ( pRide == nullptr || pRide->_listRider.empty() )
             return;
-        _angle += _spin * context.getDeltaTime();
+        _angle += _spin * context.getDeltaTime().count();
         pMesh->setLocalRotation( float3{ 0.0f, _angle, 0.0f } );
     }
 } // namespace sw

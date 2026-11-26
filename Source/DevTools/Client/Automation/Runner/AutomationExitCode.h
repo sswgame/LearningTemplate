@@ -7,14 +7,14 @@
 #include "Core/Log/Logger.h"
 
 #include "Engine/Automation/AutomationResult.h"
-#include "Engine/EngineFrameHooks.h"
+#include "Engine/EngineHooks.h"
 
 #include "sw/config/ProcessExitCodes.gen.h"
 
 namespace sw
 {
     /**
-     * @brief 결과의 프로세스 종료 코드입니다(아직 도는 중이면 `kEngineFrameRunning` — 빈 값). 숫자는 종료 코드 표(`Config/Engine/ProcessExitCodes.json` → `ProcessExitCode`)에만 있다 —
+     * @brief 결과의 프로세스 종료 코드입니다(아직 도는 중이면 빈 값 `kEngineFrameRunning`). 숫자는 종료 코드 표(`Config/Engine/ProcessExitCodes.json` → `ProcessExitCode`)에만 있고,
      *        백엔드마다 실행(`AutomationPerBackend`)과 CTest(`SW_EXIT_CODE_Skipped`)도 같은 표를 읽는다.
      */
     inline EngineFrameExit getAutomationExitCode( AutomationResult result )

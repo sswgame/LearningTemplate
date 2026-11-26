@@ -8,7 +8,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 
@@ -22,6 +22,8 @@ namespace sw
 
 namespace sw::editor
 {
+    class AssetWriter;
+
     class EditorGraphEditSession;
     /**
      * @struct AnimationGraphEdit
@@ -30,7 +32,7 @@ namespace sw::editor
     struct AnimationGraphEdit
     {
         // ------------------------------------------------------------------------------
-        // 편집 명령 — 고친 뒤 이 명령이 정한 되돌리기 이름으로 @p session 에 알린다(감사 E-16 — 창은 알림 · 이름을 모른다)
+        // 편집 명령: 고친 뒤 이 명령이 정한 되돌리기 이름으로 @p session 에 알린다(감사 E-16, 창은 알림 · 이름을 모른다)
         // ------------------------------------------------------------------------------
         /** @brief 레이어 편집(`AnimationGraphLayerEdit` — 이름은 그 모델이 정했다)을 알립니다. */
         static void commitLayerEdit( const EditorGraphEditSession& session, const utf8* pLayerEditLabel );
@@ -49,7 +51,7 @@ namespace sw::editor
         /** @brief Resource 상대 경로 @p path 의 애니메이션 그래프 문서를 읽습니다(`EditorToolAssetCommands::loadAnimationGraph`). */
         static ToolAssetLoadResult loadGraph( AnimationGraphAsset& outGraph, string_view path );
         /** @brief 애니메이션 그래프 문서를 @p path 에 씁니다. 실패하면 커맨드가 오류를 남기고 false 입니다. */
-        [[nodiscard]] static bool saveGraph( const AnimationGraphAsset& graph, string_view path );
+        [[nodiscard]] static bool saveGraph( AssetWriter& writer, const AnimationGraphAsset& graph, string_view path );
 
         // 포즈 노드 종류 표(`AnimationPoseNodeRegistry` — 엔진 서비스)를 읽는 창구다. 패널 뷰는 서비스를 찾지 않는다(EditorLayers.toml).
         /** @brief 등록된 포즈 노드 종류 이름들입니다. 게임 · 플러그인이 더할 수 있어 메뉴를 열 때마다 다시 읽는다. */

@@ -21,7 +21,7 @@
 #include "GameFramework/Runtime/Character/Control/ControlSystem.h"
 #include "GameFramework/Runtime/Character/Control/Intent/ControlIntent.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
-#include "GameFramework/Runtime/Foundation/Service/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 #include "GameFramework/Runtime/Gameplay/GameState/GameStateComponent.h"
 #include "GameFramework/Runtime/Gameplay/GameState/PlayerComponentUtil.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
@@ -172,8 +172,9 @@ namespace sw
             addMoneyResult( outListValue, pWallet->getWallet().getBalance( _shipment.getCurrency() ) - _startingGold );
     }
 
-    void FarmGameModeComponent::updateGame( float32 deltaTime )
+    void FarmGameModeComponent::updateGame( GameSeconds frameTime )
     {
+        const float32 deltaTime = frameTime.count();
         if ( deltaTime <= 0.0f )
             return;
 

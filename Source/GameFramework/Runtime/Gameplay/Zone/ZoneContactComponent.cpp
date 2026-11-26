@@ -21,7 +21,7 @@
 #include "Engine/Physics/PhysicsSettings.h"
 #include "Engine/Physics/Scene/ScenePhysics.h"
 
-#include "GameFramework/Runtime/Foundation/Service/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityCatalog.h"
 #include "GameFramework/Runtime/Gameplay/Ability/MovementConstraint.h"
 #include "GameFramework/Runtime/Gameplay/Zone/ZoneOccupantIndex.h"
@@ -181,7 +181,7 @@ namespace sw
             SW_LOG_ERROR_ID( "Zone.ProfileMissing", "%#: zone profile could not be read", sourceName );
         else if ( pZone->_compiled.compile( *pProfile, sourceName, game::findSubsystem<const AbilityCatalog>() ) )
             pZone->_bValid = SW_TRUE;
-        if ( pZone->_bValid == SW_TRUE && pOwner != nullptr && pOwner->getMutableManager() != nullptr )
+        if ( pZone->_bValid == SW_TRUE && pOwner != nullptr && pOwner->getManager() != nullptr )
             ZoneTracker::onZoneOpened( *pOwner->getMutableManager(), pZone->_compiled );
         _listSurfaceZone.push_back( std::move( pZone ) );
         return *_listSurfaceZone.back();

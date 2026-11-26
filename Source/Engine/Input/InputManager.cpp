@@ -5,12 +5,12 @@
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
-#include "Core/String/UTF8Util.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Config/EngineConfig.h"
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Input/Devices/GamepadDevice.h"
 #include "Engine/Input/Devices/KeyboardDevice.h"
 #include "Engine/Input/Devices/MouseDevice.h"
@@ -394,8 +394,9 @@ namespace sw
     }
 
     // 프레임 단계(폴링 → 큐 비우기 → 가상 입력 → 적용 → 마무리 → 글리프 감지 → 맵 갱신)의 순서가 곧 의미인 선형 본문이라 나누지 않는다.
-    void InputManager::beginFrame( float32 unscaledDeltaSeconds )
+    void InputManager::beginFrame( RealSeconds unscaledDeltaTime )
     {
+        const float32         unscaledDeltaSeconds = unscaledDeltaTime.count();
         const ScopedMemoryTag memoryScope{ kSubsystemMemoryTag };
         ++_beginFrameCount;
         const uint32 droppedCount = _droppedRawEventCount.exchange( 0, std::memory_order_relaxed );
@@ -1152,7 +1153,7 @@ namespace sw
         string_view rest = event._text;
         while ( rest.empty() == false )
         {
-            const size_t length = rest.size() <= RawInputEvent::kMaxTextBytes ? rest.size() : UTF8Util::backOffToCharacterStart( rest.data(), RawInputEvent::kMaxTextBytes );
+            const size_t length = rest.size() <= RawInputEvent::kMaxTextBytes ? rest.size() : StringUtil::backOffToUTF8CharacterStart( rest.data(), RawInputEvent::kMaxTextBytes );
             if ( length == 0 )
                 return; // UTF-8 이 아닌 글이다(연속 바이트만 있다) - 나눌 경계가 없다
             (void)postRawEvent( RawInputEvent::makeTextInput( rest.substr( 0, length ) ) );
@@ -1165,7 +1166,7 @@ namespace sw
         string_view rest = text;
         do
         {
-            size_t length = rest.size() <= RawInputEvent::kMaxTextBytes ? rest.size() : UTF8Util::backOffToCharacterStart( rest.data(), RawInputEvent::kMaxTextBytes );
+            size_t length = rest.size() <= RawInputEvent::kMaxTextBytes ? rest.size() : StringUtil::backOffToUTF8CharacterStart( rest.data(), RawInputEvent::kMaxTextBytes );
             if ( length == 0 && rest.empty() == false )
                 length = rest.size(); // UTF-8 이 아닌 글이다(나눌 경계가 없다) - 마지막 조각으로 넣어 칸에서 잘린다, 이어짐을 남기지 않는다
             const string_view piece = rest.substr( 0, length );
@@ -1361,7 +1362,7 @@ namespace sw
             return;
         for ( const float32 deltaSeconds : listDeltaSeconds )
         {
-            beginFrame( deltaSeconds );
+            beginFrame( RealSeconds{ deltaSeconds } ); // 가상 입력의 프레임도 실제 시간이다
             endFrame();
         }
         popVirtualInputs( index, false );
@@ -1498,5 +1499,5 @@ namespace sw
 
 namespace sw
 {
-    SW_ENGINE_SERVICE_SUBSYSTEM( InputManager, GameVisible, GameInstance, Startup, (), SW_ENGINE_DEFAULT_FACTORY( InputManager ) );
+    SW_ENGINE_SUBSYSTEM_WITH_SLOT( InputManager, GameVisible, GameInstance, Startup, (), SW_ENGINE_DEFAULT_FACTORY( InputManager ) );
 } // namespace sw

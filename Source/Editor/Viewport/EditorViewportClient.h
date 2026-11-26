@@ -10,7 +10,7 @@
 #include "Editor/Viewport/EditorViewportGizmo.h"
 #include "Editor/Viewport/EditorViewportOverlays.h"
 #include "Editor/Viewport/EditorViewportPicker.h"
-#include "Editor/Viewport/EditorVisualizerStats.h"
+#include "Editor/Viewport/EditorViewportVisualizer.h"
 #include "Editor/Viewport/Model/EditorDebugHUDViewModel.h"
 #include "Editor/Viewport/Model/EditorVisualizerDrawList.h"
 #include "Editor/Viewport/ViewportToolbarSettings.h"

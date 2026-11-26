@@ -1,7 +1,7 @@
 // AndroidInputConnectionState — Android InputConnection 호출을 조합 · 확정 글과 지우기 키로 옮긴다: 한글 조합 뒤 확정, 일본어 변환 뒤 조합 끝, 조합 없는 확정, 커서 주변 지우기(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Window/AndroidInputConnectionState.h"
 

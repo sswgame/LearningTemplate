@@ -443,8 +443,8 @@ namespace sw
         WindSettings wind;
         if ( WindComponent::findWind( *pManager, wind ) == false )
             return;
-        _windTime += context.getFixedDeltaTime();
-        pScene->applySoftBodyWind( _softBody, wind.computeVelocity( getWorldPosition(), _windTime ), WindSettings::kAirDensity * _windDrag, context.getFixedDeltaTime() );
+        _windTime += context.getFixedDeltaTime().count();
+        pScene->applySoftBodyWind( _softBody, wind.computeVelocity( getWorldPosition(), _windTime ), WindSettings::kAirDensity * _windDrag, context.getFixedDeltaTime().count() );
     }
 
     void ClothComponent::applySkinningPose( ScenePhysics& physics, bool bHardSkinAll )
@@ -502,7 +502,7 @@ namespace sw
                 const uint32 bottomLeft  = topLeft + _columnCount;
                 const uint32 topRight    = topLeft + 1;
                 const uint32 bottomRight = bottomLeft + 1;
-                // 앞면 — 격자 삼각형 그대로(정면에서 바깥을 향한 감김). 뒷면 — 감김과 노멀을 뒤집는다.
+                // 앞면은 격자 삼각형 그대로(정면에서 바깥을 향한 감김). 뒷면은 감김과 노멀을 뒤집는다.
                 const uint32 arrFaceIndex[2][6] = {
                     {topLeft, bottomLeft,   topRight, topRight,  bottomLeft, bottomRight},
                     {topLeft,   topRight, bottomLeft, topRight, bottomRight,  bottomLeft}

@@ -11,7 +11,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 
 #include "Editor/Common/Widgets/EditableAssetPath.h"
 #include "Editor/Panels/UIPreview/Model/UIPreviewLogic.h"
@@ -40,6 +40,8 @@ namespace sw
 
 namespace sw::editor
 {
+    class AssetWriter;
+
     class UndoStepOwner;
 
     /**
@@ -133,7 +135,7 @@ namespace sw::editor
         /** @brief 입력 흉내나 애니메이션이 트리 값을 바꾸지 않았고 문서가 열려 있으면 true 입니다. */
         bool canSaveDocument() const;
         /** @brief 미리보기 트리를 `UIDocumentWriter` 로 문서 파일에 씁니다. 핫 리로드가 다시 읽기를 기다립니다. */
-        [[nodiscard]] bool saveDocument();
+        [[nodiscard]] bool saveDocument( AssetWriter& writer );
 
         // --- 보기 설정 ---------------------------------------------------------------
         /** @brief 고른 해상도 견본입니다. 테이블을 처음 쓸 때 읽고, 읽지 못했으면 nullptr 입니다. */
@@ -194,7 +196,7 @@ namespace sw::editor
         /** @brief 위젯 타입 @p typeName 을 @p pTarget 에 붙이고(패널이면 그 안에, 아니면 그 뒤에) 되돌리기 항목을 남깁니다. 붙였으면 true 입니다. */
         bool addWidget( UIScreen& screen, const hashed_string& typeName, Widget* pTarget );
         /**
-         * @brief 위젯 타입 @p typeName 을 @p pTarget 에 붙일 수 있으면 true 입니다(`addWidget` 이 실패하는 두 까닭 — 모르는 타입 · 받을 패널 없음 — 을 미리 본다). 트리를 바꾸지 않는다.
+         * @brief 위젯 타입 @p typeName 을 @p pTarget 에 붙일 수 있으면 true 입니다(`addWidget` 이 실패하는 두 까닭(모르는 타입 · 받을 패널 없음)을 미리 본다). 트리를 바꾸지 않는다.
          * @details 팔레트 끌기가 놓을 자리를 열기 전에 부른다(EditorUI R11) — 붙지 않을 자리는 강조하지 않고 끄는 쪽이 금지 표시를 한다.
          */
         [[nodiscard]] bool canAddWidget( WidgetTree& tree, const hashed_string& typeName, Widget* pTarget ) const;

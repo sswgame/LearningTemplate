@@ -9,7 +9,7 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Automation/AutomationRuntime.h"
-#include "Engine/EngineFrameHooks.h"
+#include "Engine/EngineHooks.h"
 #include "Engine/Window/IWindowTitleTarget.h"
 
 #include "sw/config/CookContract.gen.h"

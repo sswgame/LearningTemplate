@@ -4,8 +4,8 @@
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Asset/Cache/BuiltInAssetCache.h"
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/UI/Document/UIDocument.h"
 #include "Engine/UI/Document/UIDocumentLoader.h"
 
@@ -67,5 +67,5 @@ namespace sw
 namespace sw
 {
     // UI 문서 · 스타일 시트 캐시 — 화면 스택 · 오프스크린 화면 · 테마 · 에디터 미리보기가 같이 읽는 에셋 캐시라 화면 스택 앞에 따로 선다.
-    SW_ENGINE_SERVICE_SUBSYSTEM( UIDocumentCache, HostOnly, Process, Startup, (), SW_ENGINE_DEFAULT_FACTORY( UIDocumentCache ) );
+    SW_ENGINE_SUBSYSTEM_WITH_SLOT( UIDocumentCache, HostOnly, Process, Startup, (), SW_ENGINE_DEFAULT_FACTORY( UIDocumentCache ) );
 } // namespace sw

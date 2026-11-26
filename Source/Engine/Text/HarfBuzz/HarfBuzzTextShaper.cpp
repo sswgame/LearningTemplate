@@ -17,7 +17,7 @@ namespace sw
         /**
          * @class HarfBuzzTextShaper
          * @brief `ITextShaper` 의 HarfBuzz 구현입니다. 면마다 `hb_font` 하나를 캐시합니다(게임 스레드 — 래스터라이저와 같은 규칙).
-         * @details 결과는 `ITextShaper` 계약대로 **논리 순서**다. HarfBuzz 는 RTL 런을 눈에 보이는 순서로 내므로 뒤집어 붙인다(배치가 다시 뒤집는다).
+         * @details 결과는 `ITextShaper` 계약대로 논리 순서다. HarfBuzz 는 RTL 런을 눈에 보이는 순서로 내므로 뒤집어 붙인다(배치가 다시 뒤집는다).
          *          길이는 em 비율이다 — 글꼴 단위(upem)로 셰이핑하고 upem 으로 나눈다. y 오프셋은 HarfBuzz 의 위 + 를 배치의 아래 + 로 뒤집는다.
          */
         class HarfBuzzTextShaper final : public ITextShaper
@@ -80,7 +80,7 @@ namespace sw
                 const vector<uint8>* pBytes = rasterizer.findFaceBytes( face );
                 if ( pBytes == nullptr || pBytes->empty() )
                 {
-                    SW_LOG_ERROR_ID( "HarfBuzzTextShaper.TextFaceNoFont", "Text face %# has no font bytes to shape with", static_cast<uint32>( face ) );
+                    SW_LOG_ERROR_ID( "HarfBuzzTextShaper.TextFaceNoFont", "Text face %# has no font bytes to shape with", face.getValue() );
                     return nullptr;
                 }
                 const auto it         = _mapFont.find( face );
@@ -103,7 +103,7 @@ namespace sw
                 hb_face_destroy( pFace );
                 if ( entry._upem == 0 )
                 {
-                    SW_LOG_ERROR_ID( "HarfBuzzTextShaper.TextFaceNoUnits", "Text face %# has no units per em - it cannot be shaped", static_cast<uint32>( face ) );
+                    SW_LOG_ERROR_ID( "HarfBuzzTextShaper.TextFaceNoUnits", "Text face %# has no units per em - it cannot be shaped", face.getValue() );
                     hb_font_destroy( entry._pFont );
                     return nullptr;
                 }

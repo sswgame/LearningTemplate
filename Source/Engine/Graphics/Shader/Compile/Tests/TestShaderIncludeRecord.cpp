@@ -2,7 +2,7 @@
 #include "pch.h"
 
 #include "Core/File/FileUtil.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Asset/Cook/CookRecord.h"
 #include "Engine/Content/CookJob.h"
@@ -41,7 +41,7 @@ namespace
             };
         }
         ShaderCompileInput makeInput() const { return ShaderCompileInput{
-            _ownShaders.join( "a.hlsl" ), _ownShaders, vector<AbsolutePath>{ _ownShaders, _engineShaders, _commonShaders }
+            _ownShaders.join( "a.hlsl" ), _ownShaders, vector<DiskPath>{ _ownShaders, _engineShaders, _commonShaders }
  }; }
     };
 } // namespace

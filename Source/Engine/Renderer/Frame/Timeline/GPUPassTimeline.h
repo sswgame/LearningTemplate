@@ -1,7 +1,7 @@
 /**
  * @file GPUPassTimeline.h
  * @brief 패스별 GPU 타임스탬프를 읽어 프레임 프로파일러(`GPU.<패스>`)와 외부 프로파일러(Tracy)의 GPU 타임라인으로 내보냅니다.
- * @details 렌더 스레드가 프레임 끝에 한 번 부릅니다(패스 수만큼 도는 루프 하나). 타임스탬프를 **쓰는** 일은 패스를 기록하는 쪽
+ * @details 렌더 스레드가 프레임 끝에 한 번 부릅니다(패스 수만큼 도는 루프 하나). 타임스탬프를 쓰는 일은 패스를 기록하는 쪽
  *          (`FramePassExecutor::submitGraph` 와 `onGraphPassExecute`)이 하고, 패스 시간을 쓸지 말지는 이 클래스의 `isRecording` 이 정합니다.
  *          계측 스위치와 읽기의 주인은 `GPUFrameClock` 이고, 이 클래스는 시계가 읽은 프레임을 받아 보고합니다(쿼리는 한 벌).
  *          프로파일러는 렌더러 초기화 때 주입받으므로 테스트가 자기 `FrameProfiler` 로 보고 결과를 확인할 수 있습니다.
@@ -44,7 +44,7 @@ namespace sw
 
         /**
          * @brief `GPUFrameClock::readBack` 이 읽은 지난 프레임의 타임스탬프를 프로파일러와 외부 GPU 타임라인으로 냅니다. 프레임 끝에 한 번 부릅니다.
-         * @details **몇 프레임 늦은 값입니다.** 기다려서 최신 값을 받으면 측정하려던 파이프라인을 멈춰 세워 측정값이 거짓이 됩니다.
+         * @details 몇 프레임 늦은 값입니다. 기다려서 최신 값을 받으면 측정하려던 파이프라인을 멈춰 세워 측정값이 거짓이 됩니다.
          *          Shipping 에서는 본문이 없습니다.
          */
         void reportAndExport( IRHIDevice* pDevice, const RHITimestampFrame& frame, const vector<RenderGraphPassDesc>& listPass, const vector<RenderGraphPassDesc>& listFramePass );
@@ -84,7 +84,7 @@ namespace sw
         /**
          * @brief 패스 번호에서 GPU 스코프 슬롯을 찾는 목록입니다. 패스 이름이 그대로면 매 프레임 슬롯만 꺼냅니다.
          * @details `registerScope` 는 등록된 스코프 모두(약 80개)를 문자열 비교로 훑습니다. 그래서 렌더 스레드가 매 프레임 부르지 않고,
-         *          슬롯의 패스 이름이 바뀔 때만 부릅니다. 프로파일러는 이름 **포인터**를 보관하므로 이름은 intern 아레나(프로세스가 끝날 때까지
+         *          슬롯의 패스 이름이 바뀔 때만 부릅니다. 프로파일러는 이름 포인터를 보관하므로 이름은 intern 아레나(프로세스가 끝날 때까지
          *          제자리에 있습니다)에 둡니다. 주의: 늘어나며 옮겨지는 저장소의 `string` 을 넘기면, 짧은 이름(`GPU.Shadow` 처럼 문자열 객체 안에
          *          들어가는 것)의 포인터가 옮겨진 뒤의 빈 공간을 가리킵니다.
          */

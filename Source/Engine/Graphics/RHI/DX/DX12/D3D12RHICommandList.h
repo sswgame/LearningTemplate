@@ -23,7 +23,7 @@ namespace sw
      * @details `IRHICommandList` 호출을 그 자리에서 바로 자신의 네이티브 리스트에 기록합니다
      *          (`D3D12RHICommandContext` 로직을 재사용하고, 컨텍스트의 `_pCmdList` 와 `_pState` 가 이 리스트의
      *          `_entry._list`, `_state` 를 가리킵니다).
-     *          얼로케이터는 **리스트마다 전용**입니다. `RenderGraph::executeParallel` 이 패스마다 리스트를
+     *          얼로케이터는 리스트마다 전용입니다. `RenderGraph::executeParallel` 이 패스마다 리스트를
      *          만들어 동시에 기록하므로, 여러 리스트가 한 얼로케이터를 공유하면 D3D12 계약 위반(기록 중 Reset,
      *          동시 기록)이 되어 커맨드 메모리가 서로 덮어써지고 GPU 가 쓰레기를 실행해 PageFault/DEVICE_HUNG
      *          으로 이어집니다. 그래서 디바이스 풀에서 리스트와 얼로케이터 쌍을 빌리고, 다 쓰면 GPU 펜스 통과 후
@@ -53,7 +53,7 @@ namespace sw
         void endCommandList() override;
 
         /**
-         * @brief 디바이스와의 연결을 끊습니다. **디바이스가 종료될 때 디바이스가 부릅니다.**
+         * @brief 디바이스와의 연결을 끊습니다. 디바이스가 종료될 때 디바이스가 부릅니다.
          * @details 커맨드 리스트는 디바이스보다 오래 살 수 있습니다. 그러면 소멸자가 이미 파괴된
          *          디바이스에 반납을 시도합니다(`releaseOnlineBlocksDeferred`,
          *          `recycleCommandListEntryDeferred`). 주의: 이 연결을 끊지 않으면 커맨드 리스트를 보유한 채

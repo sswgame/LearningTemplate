@@ -11,8 +11,8 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Registry/RegistrationList.h"
-#include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Subsystem/Subsystem.h"
+#include "Core/Subsystem/SubsystemSlot.h"
 
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Foundation/SceneIterationKey.h"
@@ -198,7 +198,7 @@ namespace sw
         uint64 _revision                                                  SW_GUARDED_BY( _mutex );
         GameObjectHandle _target                                          SW_GUARDED_BY( _mutex ); ///< `setTarget` 이 정한 대상(무효면 없음)
 
-        SW_SERVICE_SLOT( DebugHUDRegistry, Required );
+        SW_SUBSYSTEM_SLOT( DebugHUDRegistry, Required );
     };
 } // namespace sw
 

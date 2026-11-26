@@ -12,7 +12,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Process/ThreadCrashStack.h"
+#include "Core/Process/Process.h"
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
 
@@ -49,7 +49,7 @@ namespace sw
         stopWatching();
     }
 
-    bool LinuxFileWatcher::startWatching( const AbsolutePath& directoryPath, bool bRecursive )
+    bool LinuxFileWatcher::startWatching( const DiskPath& directoryPath, bool bRecursive )
     {
         if ( _bIsWatching.load( std::memory_order_relaxed ) == true )
         {
@@ -86,7 +86,7 @@ namespace sw
         const bool bAdded = _bRecursive ? addWatchRecursive( _directoryPath ) : addWatchDirectory( _directoryPath );
         if ( bAdded == false )
         {
-            // 하위 디렉터리의 실패는 addWatchRecursive 가 모아서 경고하고 넘어간다. 여기에 오는 것은 **루트조차** 걸지 못한
+            // 하위 디렉터리의 실패는 addWatchRecursive 가 모아서 경고하고 넘어간다. 여기에 오는 것은 루트조차 걸지 못한
             // 경우뿐이라, 감시 자체가 성립하지 않는다.
             SW_LOG_ERROR_ID( "LinuxFileWatcher.InotifyAddWatchFailed", "inotify_add_watch failed for root (%#): %#", _directoryPath.c_str(), strerror( errno ) );
             stopWatching();
@@ -119,7 +119,7 @@ namespace sw
 
         {
             ScopedLock<mutex> lock{ _watchMutex };
-            for ( const pair<int32, AbsolutePath>& pair : _mapWatchDescriptorToPath )
+            for ( const pair<int32, DiskPath>& pair : _mapWatchDescriptorToPath )
             {
                 inotify_rm_watch( _inotifyFd, pair.first );
             }
@@ -223,7 +223,7 @@ namespace sw
             return true;
         }
 
-        AbsolutePath watchedDir;
+        DiskPath watchedDir;
         {
             ScopedLock<mutex> lock{ _watchMutex };
             auto              it = _mapWatchDescriptorToPath.find( watchDescriptor );
@@ -250,7 +250,7 @@ namespace sw
         const bool bNewRecursiveDirectory = ( mask & IN_CREATE ) && ( mask & IN_ISDIR ) && _bRecursive;
         if ( bNewRecursiveDirectory )
         {
-            const AbsolutePath childDir = watchedDir.join( name );
+            const DiskPath childDir = watchedDir.join( name );
             if ( addWatchDirectory( childDir ) == false )
                 SW_LOG_WARNING_ID( "LinuxFileWatcher.FailedWatchNewDirectory", "Failed to watch new directory: %#", childDir.c_str() );
             pushRelativeChange( FileWatcherAction::Added, watchedDir, name );
@@ -270,7 +270,7 @@ namespace sw
         return true;
     }
 
-    bool LinuxFileWatcher::addWatchRecursive( const AbsolutePath& directoryPath )
+    bool LinuxFileWatcher::addWatchRecursive( const DiskPath& directoryPath )
     {
         if ( addWatchDirectory( directoryPath ) == false )
             return false;
@@ -294,7 +294,7 @@ namespace sw
         return true;
     }
 
-    bool LinuxFileWatcher::addWatchDirectory( const AbsolutePath& directoryPath )
+    bool LinuxFileWatcher::addWatchDirectory( const DiskPath& directoryPath )
     {
         const int32 wd = inotify_add_watch( _inotifyFd, directoryPath.c_str(), kInotifyMask );
         if ( wd < 0 )
@@ -318,7 +318,7 @@ namespace sw
         _mapWatchDescriptorToPath.erase( it );
     }
 
-    void LinuxFileWatcher::pushRelativeChange( FileWatcherAction action, const AbsolutePath& absoluteDirectory, string_view name )
+    void LinuxFileWatcher::pushRelativeChange( FileWatcherAction action, const DiskPath& absoluteDirectory, string_view name )
     {
         // inotify 는 watch 를 건 디렉터리를 기준으로 이름을 준다. 소비자는 `_directory` 와 `_filename` 을 이어 붙여 쓰므로
         // (감시 루트 기준 상대 경로) 여기서 루트 기준으로 되돌린다.

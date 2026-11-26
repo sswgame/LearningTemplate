@@ -14,6 +14,7 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
+#include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Online/Directory/ServerRecord.h"
 #include "GameFramework/Runtime/Online/Identity/AccountIdentity.h"
 #include "GameFramework/Runtime/Online/Service/OnlineProtocol.h"
@@ -76,7 +77,7 @@ namespace sw
      * @details 서버만 씁니다. 저장소 레코드는 자기 기술형(A)이며 와이어에는 싣지 않습니다. 클라이언트에는 `MaintenanceView` 로 보냅니다.
      */
     REFLECT()
-    struct MaintenanceWindow
+    struct SW_KIT_API MaintenanceWindow
     {
         REFLECT_BODY();
         static constexpr const utf8* kScopeAll = "all";
@@ -107,7 +108,7 @@ namespace sw
 {
     /** @brief 공지 하나입니다. 상태 응답(B)과 저장소 레코드(A)가 같은 선언을 씁니다. */
     REFLECT()
-    struct ServiceAnnouncement
+    struct SW_KIT_API ServiceAnnouncement
     {
         REFLECT_BODY();
         PROPERTY( MaxCount = ServerDirectoryLimit::kMaxAnnouncementTextSize )

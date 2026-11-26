@@ -3,8 +3,8 @@
 #include "Core/Math/BitUtil.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Serialization/BitStream.h"
-#include "Core/Testing/ScopedAssertCapture.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/ScopedAssertCapture.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include <limits>
 

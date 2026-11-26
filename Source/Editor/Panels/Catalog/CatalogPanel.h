@@ -17,7 +17,6 @@
 #include "Editor/Common/Commands/EditorBackgroundIO.h"
 #include "Editor/Common/GUI/Panel/EditorDocumentPanel.h"
 #include "Editor/Panels/Catalog/CatalogTableEditor.h"
-#include "Editor/Panels/Catalog/Model/CatalogFileList.h"
 #include "Editor/Panels/Catalog/Model/CatalogFileSession.h"
 
 #include "Engine/Serialization/Inherit/DataInheritance.h"
@@ -41,7 +40,7 @@ namespace sw::editor
         EditorDockSlot     getDefaultDockSlot() const override { return EditorDockSlot::Floating; } // 도구 창 — 문서 기반의 기본(가운데 탭)이 아니라 옮기기 전처럼 떠 있는 창
         EditorTextExtent   getInitialPanelSize() const override { return EditorTextExtent::ofText( 133.0f, 36.0f ); }
         void               drawDocumentContent() override;
-        [[nodiscard]] bool saveDocument() override;
+        [[nodiscard]] bool saveDocument( AssetWriter& writer ) override;
 
         /** @brief 목록의 파일 수입니다. 찾기가 끝나기 전에는 0 입니다(감시 값). */
         uint32 getFileCount() const { return static_cast<uint32>( _fileList.getRows().size() ); }
@@ -67,9 +66,7 @@ namespace sw::editor
         void               drawDocumentArea();
         void               drawToolbar();
         void               drawValidation();
-        [[nodiscard]] bool writeCurrentFile();
-        /** @brief 이 창은 쓰기 직전의 디스크 글을 세션이 본다(`CatalogFileSession::validateDiskBeforeSave` — 덮기 전 글을 이전 파일로 남긴다). */
-        [[nodiscard]] bool validateDiskBeforeSave( const vector<AbsolutePath>& /*listPath*/ ) override { return true; }
+        [[nodiscard]] bool writeCurrentFile( AssetWriter& writer );
         void               validateCurrentFile();
         /** @brief 툴바 Revert — 마지막으로 저장한 글로 되돌립니다. 되돌리기 기록은 남아 Undo 가 편집을 되살린다(디스크를 다시 읽는 문서 되돌리기와 다르다). */
         void revertToSavedText();

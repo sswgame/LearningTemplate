@@ -97,7 +97,7 @@ namespace sw
             const uint64                bytes   = meter.getRetainedBytes();
             if ( bLoaded )
                 outAsset = _table.insertOrGetLive( key, std::move( loaded ) );
-            // 결과가 표에 든 **뒤에** 진행 중 표에서 뺀다 — 그 사이에 온 요청은 진행 중 로드 작업이나 표 둘 중 하나를 반드시 본다.
+            // 결과가 표에 든 뒤에 진행 중 표에서 뺀다 — 그 사이에 온 요청은 진행 중 로드 작업이나 표 둘 중 하나를 반드시 본다.
             ScopedLock<mutex> lock{ _loadingMutex };
             _mapKeyToLoading.erase( key );
             if constexpr ( kMemoryTagScopesEnabled )

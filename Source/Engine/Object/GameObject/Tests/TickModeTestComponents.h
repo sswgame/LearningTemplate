@@ -45,7 +45,7 @@ namespace sw
 
         void onTick( TickContext& context ) override
         {
-            _value += context.getDeltaTime() * _speed;
+            _value += context.getDeltaTime().count() * _speed;
             writeOwnPosition( float3{ _value, 0.0f, 0.0f } );
             if ( _pShared != nullptr )
                 _pShared->setLocalPosition( float3{ 0.0f, 0.0f, _value } );
@@ -131,7 +131,7 @@ namespace sw
     };
 
     /**
-     * @brief 앞 고리의 값을 **멤버로 직접** 읽는 사슬 고리입니다(자리가 아니라서 순서만 선행 조건이면 된다 — 게임 모드 규칙 틱과 같은 모양).
+     * @brief 앞 고리의 값을 멤버로 직접 읽는 사슬 고리입니다(자리가 아니라서 순서만 선행 조건이면 된다 — 게임 모드 규칙 틱과 같은 모양).
      * @details 값은 그 프레임의 앞 고리 값만으로 정해진다 — 순서가 하나라도 틀리면(앞 고리보다 먼저 돌면) 지난 프레임 값을 읽어 기대값과 달라진다.
      */
     REFLECT( HideInMenu )
@@ -158,7 +158,7 @@ namespace sw
             (void)subTickID;
             ++_frame;
             const float32 previous = _pPrev != nullptr ? _pPrev->_value : static_cast<float32>( _frame );
-            _value                 = previous * 0.5f + _gain + context.getDeltaTime();
+            _value                 = previous * 0.5f + _gain + context.getDeltaTime().count();
         }
     };
 
@@ -239,7 +239,7 @@ namespace sw
         void onTick( TickContext& context ) override
         {
             ++_tickCount;
-            _tickSeconds += context.getDeltaTime();
+            _tickSeconds += context.getDeltaTime().count();
             for ( int32 index = 0; index < context.getIntervalCount(); ++index )
             {
                 _listTickFrame.push_back( *_pFrame );

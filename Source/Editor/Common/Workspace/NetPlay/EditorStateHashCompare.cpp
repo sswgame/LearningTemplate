@@ -258,9 +258,6 @@ namespace sw::editor
         const bool bValid = 0 <= sourceIndex && sourceIndex < kSourceCount && _arrSource[sourceIndex]._listSample.empty() == false;
         if ( bValid == false )
             return false;
-        const AbsolutePath directory = path.getParent();
-        if ( directory.empty() == false && FileUtil::ensureDirectoryExists( directory ) == false )
-            return false;
         string text;
         StateHashHistory::writeReport( _arrSource[sourceIndex]._listSample, text );
         return FileUtil::writeTextFile( path, text );

@@ -1,6 +1,6 @@
 /**
  * @file SkirmishMatch.h
- * @brief RTS 교전 한 판의 규칙 — 지도 데이터(`SkirmishMap` — 절벽 · 시작 지점 · 처음 놓이는 유닛과 자원)로 판을 열고, 컴퓨터 상대(`RTSCommanderAI`), 정리 사냥, 상태 · 승패 로그를 맡습니다.
+ * @brief RTS 교전 한 판의 규칙입니다. 지도 데이터(`SkirmishMap`: 절벽 · 시작 지점 · 처음 놓이는 유닛과 자원)로 판을 열고, 컴퓨터 상대(`RTSCommanderAI`), 정리 사냥, 상태 · 승패 로그를 맡습니다.
  *
  * @details 화면 · 입력을 모르는 순수 규칙이라 엔진 밖 하네스에서 그대로 돌려 볼 수 있습니다(`RTSWorld` · `RTSCommanderAI` 만 씁니다).
  *          사람이 맡은 플레이어(`kHumanPlayer0` · `kHumanPlayer1` 깃발)는 AI 가 돌지 않습니다 — 혼자 하면 0 번만, 2 인 락스텝이면 둘 다, 자동 플레이면 아무도 사람이 아닙니다.
@@ -13,6 +13,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -159,7 +160,7 @@ namespace sw
         [[nodiscard]] bool initialize( const RTSCatalog* pCatalog, const SkirmishMap& map, const TileMapXMLData& tileMap, uint8 humanMask, const SkirmishMatchSettings& matchSettings,
                                        int32 startMinerals, const BehaviorTreeAsset* pCommanderTree );
         /** @brief 월드를 배속 @p timeScale 로 돌리고 AI 는 월드가 진행한 시간만큼 돌려 알림을 넘깁니다. 상태는 30 초마다, 승패는 한 번 로그로 남깁니다. */
-        void update( float32 deltaTime, float32 timeScale );
+        void update( GameSeconds frameTime, float32 timeScale );
         /** @brief 이번까지 쌓인 월드 알림(화면용 사본)을 꺼냅니다. */
         void pollEvents( vector<RTSEvent>& outListEvent );
 

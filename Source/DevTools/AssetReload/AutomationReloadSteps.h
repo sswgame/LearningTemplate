@@ -8,6 +8,7 @@
  *          언리얼 Live Coding 자동화와 유니티 Test Framework 의 "고친 뒤 되돌림"(정리 단계) 자리다. 판 표는 데이터(`Config/Dev/ModuleRebuildVariants.json`)이고 없으면 단계가 진다.
  */
 #pragma once
+#include "Core/Container/map.h"
 #include "Core/Container/string.h"
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
@@ -15,13 +16,38 @@
 
 #include "DevTools/DevToolsAPI.h"
 
+#include "Engine/Config/ConfigFileID.h"
+#include "Engine/Reflection/ReflectionMacros.h"
+
 namespace sw
 {
     /** @struct ModuleRebuildVariant @brief 모듈 다시 짓기 판 하나입니다 — 빌드 트리의 판 머리(`generated/` 아래 상대 경로)에 쓸 글. */
-    struct ModuleRebuildVariant
+    REFLECT()
+    struct SW_DEVTOOLS_API ModuleRebuildVariant
     {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
         string _header; ///< `<빌드>/generated/` 아래 상대 경로(예: `sw/dev/HotReloadProbeVariant.h`)
-        string _text;   ///< 그 자리에 쓸 글(컴파일 오류 판은 `#error` 줄)
+        PROPERTY( Required )
+        string _text; ///< 그 자리에 쓸 글(컴파일 오류 판은 `#error` 줄)
+    };
+
+    /** @struct ModuleRebuildVariantTable @brief 판 표입니다 — `{ "_mapVariant": { "<판>": { "_header": "sw/dev/…h", "_text": "…" } } }`. */
+    REFLECT()
+    struct SW_DEVTOOLS_API ModuleRebuildVariantTable
+    {
+        REFLECT_BODY();
+
+        static constexpr ConfigFileID<ModuleRebuildVariantTable> kConfigFile{ "Config/Dev/ModuleRebuildVariants.json" };
+
+        PROPERTY( Required )
+        map<string, ModuleRebuildVariant> _mapVariant;
+
+        /** @brief 판마다 글이 비지 않았고 머리가 빌드 트리 `generated/` 아래 상대 경로인지 봅니다(`ConfigManager::readConfig` 가 부른다). */
+        [[nodiscard]] expected<void> validate() const;
+        /** @brief 이름이 @p variantName 인 판입니다. 없으면 까닭입니다. */
+        [[nodiscard]] expected<ModuleRebuildVariant> find( string_view variantName ) const;
     };
 
     /**
@@ -31,14 +57,6 @@ namespace sw
      */
     struct SW_DEVTOOLS_API AutomationReloadSteps
     {
-        /** @brief 판 표 파일입니다(프로젝트 루트 기준). */
-        static constexpr const utf8* kVariantFile = "Config/Dev/ModuleRebuildVariants.json";
-
-        /**
-         * @brief 판 표 글에서 @p variantName 판을 읽습니다. 표가 JSON 이 아니거나, 그 판이 없거나, 칸(`_header` · `_text`)이 비었거나, 머리 경로가 `..` · 절대 경로면 오류입니다.
-         * @details 표 모양: `{ "_variants": { "<판>": { "_header": "sw/dev/…h", "_text": "…" } } }`.
-         */
-        [[nodiscard]] static expected<ModuleRebuildVariant> parseVariant( string_view jsonText, string_view sourceName, string_view variantName );
         /** @brief 비지 않았고, 절대 경로가 아니며, `..` 마디가 없는 상대 경로면 true 입니다(글 연산 — 판 머리 · 설정 파일 경로의 공통 판정). */
         [[nodiscard]] static bool isPlainRelativePath( string_view path );
         /** @brief `OverwriteConfig configFile` 이 `Config/` 아래 `.json` 상대 경로인지 봅니다(빈 글 · 절대 경로 · `..` · 다른 확장자는 오류). 쓰기 허락은 쓰기 게이트가 따로 본다. */

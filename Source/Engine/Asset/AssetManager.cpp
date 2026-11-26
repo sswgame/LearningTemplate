@@ -24,9 +24,9 @@
 #include "Engine/Content/AssetRegistry.h"
 #include "Engine/Content/AssetScanCache.h"
 #include "Engine/Content/Pack/PackManager.h"
-#include "Engine/Content/Pack/PackPatchTrustSource.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Content/Pack/PackPatch.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Serialization/Inherit/ResourceComposition.h"
 
@@ -141,7 +141,7 @@ namespace sw
 
     bool AssetManager::mountContent( const vector<string>& listSearchPriority, ContentSource source )
     {
-        // 우선순위 적용과 마운트를 **여기서 붙여 둔다.** 둘을 호출자에게 맡기면 순서를 뒤집거나
+        // 우선순위 적용과 마운트를 여기서 붙여 둔다. 둘을 호출자에게 맡기면 순서를 뒤집거나
         // 사이에 다른 것을 끼워 넣을 수 있고, 실제로 그래서 팩이 게임 도메인 없이 실린 적이 있다.
         if ( listSearchPriority.empty() == false )
             engine::getSubsystem<AssetPaths>().setSearchPriority( listSearchPriority );
@@ -162,7 +162,7 @@ namespace sw
         if ( const EngineConfig* pEngineConfig = engine::findSubsystem<EngineConfig>() )
         {
             PackPatchTrust trust;
-            const auto     trustResult = PackPatchTrustSource::resolve( *pEngineConfig, trust );
+            const auto     trustResult = PackPatchTrust::resolve( *pEngineConfig, trust );
             if ( trustResult == PackPatchTrustResult::Invalid )
                 return false;
             if ( trustResult == PackPatchTrustResult::Ready && _pPackManager->setPatchTrust( trust ) == false )
@@ -201,7 +201,7 @@ namespace sw
             _pPackManager->unmountAll();
 
         clearAssetCaches();
-        // 비운 **뒤에** 말한다. 여기까지 왔다는 것은 죽은 포인터를 아직 밟지 않았다는 뜻이고,
+        // 비운 뒤에 말한다. 여기까지 왔다는 것은 죽은 포인터를 아직 밟지 않았다는 뜻이고,
         // 다음 실행에서 같은 일이 반복되지 않게 이름을 남겨야 한다.
         warnAboutRemainingModuleCaches();
     }
@@ -345,7 +345,7 @@ namespace sw
             if ( isBuiltInAssetCache( _registeredAssetCache.getAt( index ) ) )
                 continue;
 
-            // 이름은 사본이라 안전하다. 포인터는 이미 죽었을 수도 있어 **역참조하지 않는다.**
+            // 이름은 사본이라 안전하다. 포인터는 이미 죽었을 수도 있어 역참조하지 않는다.
             SW_LOG_WARNING_ID( "AssetManager.AssetCacheStillRegistered", "Asset cache '%#' is still registered - the registering side (module) must call "
                                                                          "release its registerAssetCache subscription before it goes down. Otherwise the next clear jumps into dead code.",
                                _registeredAssetCache.getNameAt( index ).c_str() );
@@ -358,7 +358,7 @@ namespace sw
         if ( pCache == nullptr || isBuiltInAssetCache( pCache ) == false )
             SW_LOG_ERROR_ID( "AssetManager.BuiltAssetCacheNot", "Built-in asset cache '%#' is not registered - its .cpp needs SW_BUILT_IN_ASSET_CACHE", assetKindName );
         if ( pCache == nullptr )
-            ::sw::internal::reportMissingRequiredService( SW_FUNCTION_SIGNATURE ); // 위 오류가 어느 종류인지 남겼다 — Release 에서도 멈춘다
+            ::sw::internal::reportMissingRequiredSubsystem( SW_FUNCTION_SIGNATURE ); // 위 오류가 어느 종류인지 남겼다 — Release 에서도 멈춘다
         return *pCache;
     }
 
@@ -383,7 +383,7 @@ namespace sw
         // 쿠킹(씬 · 팩)은 배포 구성에서도 소스를 읽는다 — 팩은 쿠킹의 산출물이라 자기 팩을 읽으면 순환이다.
         // 개발 구성도 `-cooked-content` 면 배포와 같은 길(쿠킹한 팩만)을 읽는다 — 배포 읽기 경로를 배포 빌드 없이 돌려 본다.
         ContentSource source = kBuildContentSource;
-        if ( engine::areEngineServicesBound() )
+        if ( engine::areEngineSubsystemsBound() )
         {
             const CommandLineManager& commandLine = engine::getSubsystem<CommandLineManager>();
             const auto                isGiven     = [&commandLine]( CommandLineArgument argument )
@@ -548,14 +548,14 @@ namespace sw
 
 namespace sw
 {
-    SW_ENGINE_SERVICE_SUBSYSTEM( AssetManager, GameVisible, Process, Startup, (), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
+    SW_ENGINE_SUBSYSTEM_WITH_SLOT( AssetManager, GameVisible, Process, Startup, (), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
     {
         (void)build;
         AssetManager& assetManager = scope.emplaceSubsystem<AssetManager>();
-        (void)scope.exposeMember( assetManager, assetManager.getPackManager() ); // 새 범위 — 겹치지 않는다. 리소스 입구(`AssetIO`)가 서비스 칸으로 찾는다
+        (void)scope.exposeMember( assetManager, assetManager.getPackManager() ); // 새 범위 — 겹치지 않는다. 리소스 입구(`AssetIO`)가 서브시스템 칸으로 찾는다
     } );
 
-    // 위 공장이 건 팩 매니저의 서비스 칸(아래 층 · 아무 스레드의 리소스 입구가 읽는다). 비어 있을 수 있다 — 엔진 없이 도는 도구 · 쿠커 · 테스트는 팩이 없고
+    // 위 공장이 건 팩 매니저의 서브시스템 칸(아래 층 · 아무 스레드의 리소스 입구가 읽는다). 비어 있을 수 있다 — 엔진 없이 도는 도구 · 쿠커 · 테스트는 팩이 없고
     // 빌드 기본 정책을 읽는다(언리얼 `FPakPlatformFile` 이 플랫폼 파일 계층에 걸리는 자리).
-    SW_ENGINE_SERVICE( PackManager, HostOnly );
+    SW_ENGINE_SUBSYSTEM_SLOT( PackManager, HostOnly );
 } // namespace sw

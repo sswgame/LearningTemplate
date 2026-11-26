@@ -22,7 +22,7 @@ namespace sw
     enum class ShaderCookScope : uint8
     {
         All,    ///< 요청 모두(배포 · 팩 쿠킹)
-        Sample, ///< 표본 규칙(`ShaderCookDriver::kSampleRuleFile`)이 고른 요청만 — 빈 스테이징에만 쓴다(`-cook-shaders-sample`, 테스트 ShaderCache.RebuildFromEmpty)
+        Sample, ///< 표본 규칙(`ShaderCookSampleRule`)이 고른 요청만 — 빈 스테이징에만 쓴다(`-cook-shaders-sample`, 테스트 ShaderCache.RebuildFromEmpty)
     };
 
     /** @class IShaderCookService @brief 셰이더 쿠킹을 맡는 쪽입니다. 헤드리스 작업 스레드에서 부릅니다. */
@@ -52,10 +52,10 @@ namespace sw
         /** @brief 걸린 창구를 뗍니다(건 이미지가 내려갈 때). 걸려 있지 않으면 할 일이 없다. */
         static void detach( IShaderCookService* pService );
 
-        /** @struct Registration @brief 렌더러가 정적 객체로 창구를 겁니다(이미지에 하나) — 공통 틀 `StaticRegistrar` 라 건 이미지가 내려가면 뗀다. */
-        struct Registration final : StaticRegistrar<IShaderCookService*>
+        /** @struct Registrar @brief 렌더러가 정적 객체로 창구를 겁니다(이미지에 하나) — 공통 틀 `StaticRegistrar` 라 건 이미지가 내려가면 뗀다. */
+        struct Registrar final : StaticRegistrar<IShaderCookService*>
         {
-            explicit Registration( IShaderCookService& service )
+            explicit Registrar( IShaderCookService& service )
                 : StaticRegistrar{ &service, &IShaderCookService::attach, &IShaderCookService::detach }
             {
             }

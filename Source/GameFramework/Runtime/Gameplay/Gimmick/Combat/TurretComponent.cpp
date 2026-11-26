@@ -21,7 +21,7 @@
 #include "GameFramework/Runtime/Character/Combat/TargetFilter.h"
 #include "GameFramework/Runtime/Character/Combat/Weapon/Ballistics.h"
 #include "GameFramework/Runtime/Foundation/Save/StatefulComponentRegistrar.h"
-#include "GameFramework/Runtime/Gameplay/Gimmick/Combat/GimmickDamageUtil.h"
+#include "GameFramework/Runtime/Gameplay/Gimmick/GimmickUtil.h"
 #include "GameFramework/Runtime/Gameplay/Interaction/InteractionView.h"
 #include "GameFramework/Runtime/World/Query/WorldQuery.h"
 
@@ -137,7 +137,7 @@ namespace sw
 
     void TurretComponent::stepProjectiles( GameObject& owner )
     {
-        const GameObjectManager* pManager = owner.getManager(); // 틱에서 부른다 — 읽기 · 피해는 명령 버퍼(`GimmickDamageUtil`)
+        const GameObjectManager* pManager = owner.getManager(); // 틱에서 부른다 — 읽기 · 피해는 명령 버퍼(`GimmickUtil`)
         if ( _projectiles.getProjectiles().empty() || pManager == nullptr )
             return;
         _listShotTarget.clear();
@@ -157,7 +157,7 @@ namespace sw
             if ( pVictim == nullptr )
                 continue;
             ++_hitCount;
-            GimmickDamageUtil::applyDamage( *pVictim, &owner, hashed_string( "Turret" ), event._projectile._damage );
+            GimmickUtil::applyDamage( *pVictim, &owner, hashed_string( "Turret" ), event._projectile._damage );
         }
     }
 
@@ -167,7 +167,7 @@ namespace sw
         if ( _projectileSpeed <= 0.0f )
         {
             ++_hitCount;
-            GimmickDamageUtil::applyDamage( victim, &owner, hashed_string( "Turret" ), _damage );
+            GimmickUtil::applyDamage( victim, &owner, hashed_string( "Turret" ), _damage );
             return;
         }
         ResolvedShot shot;

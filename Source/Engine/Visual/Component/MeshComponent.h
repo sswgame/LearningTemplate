@@ -61,7 +61,7 @@ namespace sw
          *          "메시가 있으면 그대로"로 판정하면 id 를 바꿔도(인스펙터, 붙여넣기, 되돌리기) 이전 메시를 그린다. 비어 있으면 타입의
          *          기본(`getDefaultMeshID`)을 쓴다. 메시는 단위 큐브, 스프라이트는 사각형이다.
          *
-         *          에셋이 아직 읽는 중이면 **메시 없이 둔다**(그리지 않는다 — 기본 메시로 대신 그리지 않는다). 도착하면 씬 프레임의 `AssetArrival` 단계가
+         *          에셋이 아직 읽는 중이면 메시 없이 둔다(그리지 않는다 — 기본 메시로 대신 그리지 않는다). 도착하면 씬 프레임의 `AssetArrival` 단계가
          *          메시를 넣고 렌더 에셋을 다시 해석한다(`resolveRenderAssets` — 파생 타입의 스킨 사본도 그때 만든다). 읽지 못한 에셋은 메시 없이 남는다.
          */
         void resolveRuntimeMesh();
@@ -84,7 +84,7 @@ namespace sw
         /** @brief 원시 메시 포인터를 반환합니다. */
         Mesh* getRawMesh() const { return _mesh.get(); }
 
-        /** @brief 머티리얼을 설정합니다. **저장되지 않는** 런타임 지정이며, 저장되는 참조는 `setMaterialPath` 로 정합니다. */
+        /** @brief 머티리얼을 설정합니다. 저장되지 않는 런타임 지정이며, 저장되는 참조는 `setMaterialPath` 로 정합니다. */
         void setMaterial( Material* pMaterial );
         /** @brief 머티리얼을 반환합니다. 없으면 렌더러가 씬 기본 머티리얼을 씁니다. */
         Material* getMaterial() const { return _pMaterial; }
@@ -101,7 +101,7 @@ namespace sw
          * @brief `_materialPath`(비어 있으면 타입의 기본 `getDefaultMaterialPath`)의 머티리얼을 캐시에서 잡아 등록합니다. 이미 그 경로를 잡았으면 아무것도 하지 않습니다.
          * @details 로드는 값만 채우므로 시작(`onBeginPlay`), 씬 초기화, 프로퍼티 편집, 세터가 이 함수를 부른다(`resolveRuntimeMesh` 와 같은 역할이다).
          *          컴포넌트는 디바이스를 모르므로 디바이스 없이 잡고 GPU 업로드를 캐시에 맡긴다(`MaterialCache::requestInitialize`).
-         *          새 것을 등록한 **뒤에** 이전 것을 해제한다. 해제하는 순간 캐시가 지울 수 있기 때문이다. 경로가 비면 런타임 지정(`setMaterial`)은 건드리지
+         *          새 것을 등록한 뒤에 이전 것을 해제한다. 해제하는 순간 캐시가 지울 수 있기 때문이다. 경로가 비면 런타임 지정(`setMaterial`)은 건드리지
          *          않는다(잡아 둔 것이 있을 때만 해제하고 비운다).
          */
         void resolveMaterialAsset();
@@ -116,7 +116,7 @@ namespace sw
         /**
          * @brief GPU 회전 애니메이션 시드를 설정합니다(0 이면 애니메이션 없음).
          * @details 0 이 아니면 GPUScene 인스턴스에 실려 `instance_animation.hlsl` 이 이 값을 해시해
-         *          **인스턴스마다 다른 각속도**로 회전을 적용한다. CPU 는 매 프레임 트랜스폼을 다시 쓰지 않아도
+         *          인스턴스마다 다른 각속도로 회전을 적용한다. CPU 는 매 프레임 트랜스폼을 다시 쓰지 않아도
          *          되고, 회전은 전적으로 컴퓨트가 만든다. 시드가 다르면 속도도 다르므로 보통 인덱스 + 1 을 준다.
          */
         void setGPUSpinSeed( uint32 seed );

@@ -14,8 +14,8 @@ namespace sw
     /**
      * @brief GameObject 를 objectID 와 핸들 세대로 가리키는 값 타입 핸들입니다.
      * @details 오브젝트·컴포넌트를 가리키는 방법은 둘뿐입니다.
-     *          - `GameObject*` / `Component*` — **빌리기**. 지금 부른 함수 안에서, 길어야 이번 프레임 안에서만 씁니다.
-     *          - `GameObjectHandle` / `ComponentHandle` — **보관**. 프레임을 넘겨 들고 있을 때 씁니다. 쓸 때마다
+     *          - `GameObject*` / `Component*` — 빌리기. 지금 부른 함수 안에서, 길어야 이번 프레임 안에서만 씁니다.
+     *          - `GameObjectHandle` / `ComponentHandle` — 보관. 프레임을 넘겨 들고 있을 때 씁니다. 쓸 때마다
      *            `GameObjectManager::resolveGameObject` / `resolveComponent` 로 풀고, 대상이 파괴됐으면 nullptr 을 받습니다.
      *
      *          objectID 는 매니저가 단조 증가로 발급하고 다시 쓰지 않으므로, 파괴된 대상의 핸들이 다른 오브젝트로
@@ -26,7 +26,7 @@ namespace sw
      *          (`GameObject::invalidateHandles`) — 앞 생을 가리키던 핸들은 파괴된 대상처럼 nullptr 로 풀리고, 다시 꺼낸 생을 보지 못합니다
      *          (유니티 DOTS `Entity` 의 Index · Version, 언리얼 `FWeakObjectPtr` 의 일련번호 자리).
      *
-     *          objectID 는 **매니저마다 따로 셉니다.** 그래서 핸들은 자기를 만든 매니저 안에서만 뜻이 있습니다.
+     *          objectID 는 매니저마다 따로 셉니다. 그래서 핸들은 자기를 만든 매니저 안에서만 뜻이 있습니다.
      *
      * @note 이름으로 찾는 참조를 두지 말 것 — 이름을 바꾸면 끊기고, 옛 이름으로 새 오브젝트가 생기면 조용히 그쪽을 가리키며,
      *       타입으로 찾으면 같은 타입 컴포넌트가 둘일 때 첫 번째를 잡습니다.

@@ -1,7 +1,7 @@
 // GameModeViewTest — 디렉터 뷰의 공통 몫(`GameModeViewComponent`): 열린 판에서만 갱신하고, 디렉터가 없으면 플레이가 시작될 때 오류다(nogpu, 에셋 없음).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"

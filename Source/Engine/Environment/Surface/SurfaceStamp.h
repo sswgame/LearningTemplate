@@ -67,7 +67,7 @@ namespace sw
         [[nodiscard]] bool validate( string_view path, string_view owner ) const;
 
         /**
-         * @brief 도장 중심 기준 자리(@p right — 도장의 오른쪽, @p forward — 도장의 앞, m)의 높이(m, 음수 = 꺼짐)입니다. 도장 밖은 0 이다.
+         * @brief 도장 중심 기준 자리(@p right 는 도장의 오른쪽, @p forward 는 도장의 앞, m)의 높이(m, 음수 = 꺼짐)입니다. 도장 밖은 0 이다.
          * @param length Trail 이 두 점 사이에 찍힐 때의 길이(m). 0 이면 `_size.y` 다
          * @param phase  Funnel 홈의 회전(라디안) — 붙잡은 도장이 시간에 따라 올린다
          */

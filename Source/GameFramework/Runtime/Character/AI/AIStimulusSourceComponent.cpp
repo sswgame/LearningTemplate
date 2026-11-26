@@ -8,7 +8,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
-#include "Engine/Object/GameObject/Service/SceneSpatialGrid.h"
+#include "Engine/Object/GameObject/Subsystem/SceneSpatialGrid.h"
 
 #include "GameFramework/Runtime/Character/AI/AIPerception.h"
 #include "GameFramework/Runtime/Character/Combat/TargetFilter.h"

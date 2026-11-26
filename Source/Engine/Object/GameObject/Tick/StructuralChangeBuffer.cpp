@@ -10,7 +10,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Foundation/EngineParallel.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Object/Component/SceneTransformHierarchy.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -170,7 +170,7 @@ namespace sw
 
     void StructuralChangeBuffer::flush( GameObjectManager& manager )
     {
-        // 지연된 구조 변경(컴포넌트 추가 · attach · detach · 태그 · 활성)을 **(디스패치, 쓴 오브젝트, 부른 순서) 순으로** 먼저 적용한다. 지연 큐 · 파괴보다 앞이다.
+        // 지연된 구조 변경(컴포넌트 추가 · attach · detach · 태그 · 활성)을 (디스패치, 쓴 오브젝트, 부른 순서) 순으로 먼저 적용한다. 지연 큐 · 파괴보다 앞이다.
         {
             SW_PROFILE_SCOPE( "GT.Scene.tick.deferredTransforms" );
             _structuralQueue.flush();

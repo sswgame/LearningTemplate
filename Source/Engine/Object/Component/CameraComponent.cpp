@@ -7,7 +7,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Foundation/RenderTargetDeclaration.h"
 #include "Engine/Graphics/View/SceneViewQuery.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -159,7 +159,7 @@ namespace sw
     void CameraComponent::declareRenderTexture() const
     {
         // 렌더 텍스처의 크기를 먼저 알린다 — 그 텍스처를 읽는 머티리얼이 카메라보다 먼저 빌려도 같은 크기로 만들어지게.
-        const bool bNoRenderTextureToDeclare = _renderOutput._target != CameraOutputTarget::RenderTexture || _renderOutput._renderTexture.empty() || engine::areEngineServicesBound() == false;
+        const bool bNoRenderTextureToDeclare = _renderOutput._target != CameraOutputTarget::RenderTexture || _renderOutput._renderTexture.empty() || engine::areEngineSubsystemsBound() == false;
         if ( bNoRenderTextureToDeclare )
             return;
         IRenderTargetDeclarationSink* pSink = engine::findSubsystem<IRenderTargetDeclarationSink>();
@@ -186,7 +186,7 @@ namespace sw
         const float32 yaw   = MathUtil::atan2( forward._x, forward._z );
         const float32 pitch = -MathUtil::asin( MathUtil::clamp( forward._y, -1.0f, 1.0f ) );
         (void)up;
-        // 요 · 피치는 **월드** 방향이다 — 월드 행렬로 만들어 부모 기준으로 분해해 적는다(`setWorldTransform`). 그대로 로컬 회전에 넣으면
+        // 요 · 피치는 월드 방향이다 — 월드 행렬로 만들어 부모 기준으로 분해해 적는다(`setWorldTransform`). 그대로 로컬 회전에 넣으면
         // 돌아간 부모(플레이어에 붙인 카메라 · 회전한 리그) 아래에서 부모의 회전만큼 엉뚱한 곳을 본다.
         float3     worldScale{};
         quaternion worldRotation{};

@@ -339,7 +339,7 @@ namespace sw
         return _startPosition; // 쉰 적이 없으면 시작 자리다
     }
 
-    void MetroidvaniaGameModeComponent::stepMovement( float32 deltaTime )
+    void MetroidvaniaGameModeComponent::stepMovement( StepSeconds step )
     {
         PlatformerInput input;
         input._move         = _command._move;
@@ -349,7 +349,7 @@ namespace sw
         input               = _abilities.filterInput( input );
         if ( input._bDashPressed == SW_TRUE && _player.tryDodge() == false )
             input._bDashPressed = SW_FALSE; // 스태미나가 모자라면 대시하지 못한다
-        _motor.update( _terrain, input, deltaTime );
+        _motor.update( _terrain, input, step );
     }
 
     void MetroidvaniaGameModeComponent::hitEnemy( MetroidvaniaEnemy& enemy )
@@ -378,14 +378,14 @@ namespace sw
         }
     }
 
-    void MetroidvaniaGameModeComponent::stepPlayerCombat( float32 deltaTime )
+    void MetroidvaniaGameModeComponent::stepPlayerCombat( StepSeconds step )
     {
         _player.setDamageTakenScale( _loadout.computeDamageTakenScale() ); // 넘겨 낀 부적의 대가(아니면 1)
         _player.setGuarding( _command._bGuardHeld == SW_TRUE );
         if ( _command._bParryPressed == SW_TRUE )
             _player.pressParry();
-        _player.update( deltaTime );
-        (void)_attackCooldown.update( deltaTime ); // 끝났는지는 아래 isActive 로 본다
+        _player.update( step );
+        (void)_attackCooldown.update( step ); // 끝났는지는 아래 isActive 로 본다
         const bool bCanSwing = _command._bAttackPressed == SW_TRUE && _attackCooldown.isActive() == false && _player.tryAttack();
         if ( bCanSwing )
         {
@@ -397,15 +397,15 @@ namespace sw
             (void)_deathRest.drinkFlask( _player.getHealthMachine() ); // 충전이 없으면 할 일이 없다
     }
 
-    void MetroidvaniaGameModeComponent::stepEnemies( float32 deltaTime )
+    void MetroidvaniaGameModeComponent::stepEnemies( StepSeconds step )
     {
         for ( MetroidvaniaEnemy& enemy : _listEnemy )
         {
             if ( _deathRest.isSpawnAlive( enemy._spawnID ) == false )
                 continue;
-            enemy._duelist.update( deltaTime );
+            enemy._duelist.update( step );
             enemy._duelist.getHealthMachine().discardEvents();
-            (void)enemy._cooldown.update( deltaTime ); // 끝났는지는 아래 isActive 로 본다
+            (void)enemy._cooldown.update( step ); // 끝났는지는 아래 isActive 로 본다
             const bool bStaggered = enemy._duelist.getHealthMachine().isPoiseBroken();
             const bool bInReach   = float2::getDistanceSquared( enemy._position, _motor.getPosition() ) <= _enemyReach * _enemyReach;
             if ( bStaggered )
@@ -413,7 +413,7 @@ namespace sw
                 enemy._startup.clear(); // 무너진 적의 준비 동작은 끊긴다
                 continue;
             }
-            if ( enemy._startup.update( deltaTime ) )
+            if ( enemy._startup.update( step ) )
             {
                 enemy._cooldown.start( _enemyInterval );
                 if ( bInReach == false )
@@ -520,11 +520,11 @@ namespace sw
         _motor.setVelocity( float2{ 0.0f, 0.0f } );
     }
 
-    void MetroidvaniaGameModeComponent::stepExplore( float32 deltaTime )
+    void MetroidvaniaGameModeComponent::stepExplore( StepSeconds step )
     {
-        stepMovement( deltaTime );
-        stepPlayerCombat( deltaTime );
-        stepEnemies( deltaTime );
+        stepMovement( step );
+        stepPlayerCombat( step );
+        stepEnemies( step );
         const bool bKilledByTerrain = _motor.getPosition()._y < _fallY || _motor.hasEvent( PlatformerEvent::kTouchedHazard );
         if ( bKilledByTerrain )
             _player.getHealthMachine().kill();
@@ -568,9 +568,10 @@ namespace sw
         }
     }
 
-    void MetroidvaniaGameModeComponent::updateMatch( float32 deltaTime )
+    void MetroidvaniaGameModeComponent::updateMatch( GameSeconds frameTime )
     {
-        const int32 stepCount = _timer.consume( deltaTime );
+        const float32 deltaTime = frameTime.count();
+        const int32   stepCount = _timer.consume( frameTime );
         for ( int32 step = 0; step < stepCount && _phase != MetroidvaniaPhase::Won; ++step )
         {
             if ( _phase == MetroidvaniaPhase::Explore )

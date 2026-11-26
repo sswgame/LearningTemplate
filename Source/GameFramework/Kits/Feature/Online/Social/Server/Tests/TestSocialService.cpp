@@ -3,7 +3,7 @@
 #include "pch.h"
 
 #include "Core/Algorithm/VectorUtil.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 #include "Core/Time/Clock.h"
 
 #include "GameFramework/Kits/Feature/Online/Social/Runtime/SocialProtocol.h"
@@ -72,7 +72,7 @@ namespace
             , _bus{}
             , _service{}
         {
-            _router.initialize( &_cache );
+            _router.initialize( _cache );
             SocialServiceDependencies dependencies;
             dependencies._pStore     = &_store;
             dependencies._pRouter    = &_router;

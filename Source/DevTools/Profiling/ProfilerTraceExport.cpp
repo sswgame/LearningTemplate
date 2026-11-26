@@ -9,7 +9,7 @@
 #include "Core/String/formatString.h"
 
 #include "Engine/Console/DevCommandRegistry.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Profiling/FrameProfiler.h"
 
 #if !defined( SW_SHIPPING )
@@ -640,7 +640,7 @@ namespace sw
         /** @brief `profile.trace save [<경로>] [<프레임 수>]` — 최근 프레임의 타임라인을 트레이스 파일로 저장합니다. */
         bool runTrace( const vector<string>& listArgument, string& outReply )
         {
-            if ( engine::areEngineServicesBound() == false )
+            if ( engine::areEngineSubsystemsBound() == false )
                 return false;
             bool       bOn{ false };
             const auto word = listArgument.empty() ? ProfilerTraceExport::CommandWord::Unknown : ProfilerTraceExport::parseCommandWord( listArgument[0], bOn );
@@ -836,13 +836,6 @@ namespace sw
         [[nodiscard]] bool writeTraceFile( const AbsolutePath& path, const vector<ProfilerTimelineThread>& listThread, const vector<uint64>& listFrameBegin,
                                            const vector<string>& listSlotName, const ProfilerTraceMeta& meta, string& outReply )
         {
-            if ( FileUtil::ensureParentDirectoryExists( path ) == false )
-            {
-                StringBuilder<constant::buffer::kMax1024> reply;
-                reply.appendFormat( "cannot create the folder of %#", path.str() );
-                outReply = string( reply.view() );
-                return false;
-            }
             // 네트워크 흐름은 저장하는 사건의 시간 구간만 담는다(흐름 링은 프로세스 하나 — `NetFlowLog::collect`).
             ProfilerTraceMeta metaWithFlow = meta;
             uint64            beginNanos   = ~0ull;
@@ -1130,7 +1123,7 @@ namespace sw
         }
         const AbsolutePath                        path( outputPath );
         StringBuilder<constant::buffer::kMax1024> reply;
-        if ( FileUtil::ensureParentDirectoryExists( path ) == false || FileUtil::writeTextFile( path, json ) == false )
+        if ( FileUtil::writeTextFile( path, json ) == false )
         {
             reply.appendFormat( "cannot write %#", path.str() );
             outReply = string( reply.view() );

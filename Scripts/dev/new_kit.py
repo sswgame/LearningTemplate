@@ -62,7 +62,7 @@ def make_files(name: str, group: str) -> dict[str, str]:
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Content/AssetTypeRegistry.h"
@@ -245,7 +245,7 @@ namespace sw
 '''
     files[f"Tests/Test{name}Catalog.cpp"] = f'''#include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "{include}/{name}Catalog.h"
 

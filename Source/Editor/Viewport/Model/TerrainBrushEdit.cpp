@@ -9,8 +9,9 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Asset/AssetWriter.h"
 #include "Editor/Common/Workspace/EditorStateStore.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 
@@ -225,30 +226,28 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief 지금 높이를 `.heightfield` 형식으로 절대 경로에 씁니다(높이는 지형의 높이 범위로 양자화). 높이장이 없으면 false 입니다. */
-            [[nodiscard]] static bool saveHeightfield( const TerrainComponent& terrain, string_view filePath )
+            /** @brief 지금 높이를 `.heightfield` 형식으로 쓸 자리에 씁니다(높이는 지형의 높이 범위로 양자화). 높이장이 없으면 `Failed` 입니다. */
+            [[nodiscard]] static AssetWriteResult saveHeightfield( AssetWriter& writer, const TerrainComponent& terrain, const DiskPath& filePath )
             {
                 const TerrainHeightfield& heightfield = terrain.getHeightfield();
                 if ( heightfield.isValid() == false )
-                    return false;
+                    return AssetWriteResult::Failed;
                 HeightfieldAsset data;
                 heightfield.makeHeightfieldAsset( terrain.getHeightMin(), terrain.getHeightMax(), data );
-                const optional<AbsolutePath> heightfieldFile = FileUtil::requireAbsolutePath( filePath );
-                return heightfieldFile.has_value() && data.saveToFile( *heightfieldFile );
+                return writer.saveAsset( filePath, data );
             }
 
-            /** @brief 지금 CPU 가중치를 `.layerweights` 형식(`LayerWeightsAsset`)으로 절대 경로에 씁니다. 가중치가 없으면 false 입니다. */
-            [[nodiscard]] static bool saveSplat( const TerrainComponent& terrain, string_view filePath )
+            /** @brief 지금 CPU 가중치를 `.layerweights` 형식(`LayerWeightsAsset`)으로 쓸 자리에 씁니다. 가중치가 없으면 `Failed` 입니다. */
+            [[nodiscard]] static AssetWriteResult saveSplat( AssetWriter& writer, const TerrainComponent& terrain, const DiskPath& filePath )
             {
                 const TerrainHeightfield& heightfield = terrain.getHeightfield();
                 if ( heightfield.getSplatWidth() == 0 )
-                    return false;
+                    return AssetWriteResult::Failed;
                 LayerWeightsAsset data;
-                data._width                            = heightfield.getSplatWidth();
-                data._height                           = heightfield.getSplatHeight();
-                data._bytes                            = heightfield.getSplatBytes();
-                const optional<AbsolutePath> splatFile = FileUtil::requireAbsolutePath( filePath );
-                return splatFile.has_value() && data.saveToFile( *splatFile );
+                data._width  = heightfield.getSplatWidth();
+                data._height = heightfield.getSplatHeight();
+                data._bytes  = heightfield.getSplatBytes();
+                return writer.saveAsset( filePath, data );
             }
         };
 
@@ -302,7 +301,7 @@ namespace sw::editor
             {
                 // 칠하는 양은 세기 × 경과 시간입니다. 경과는 엔진 프레임의 실제 경과를 씁니다(씬 뷰 카메라와 같은 시계). ImGui 의 경과는 벽시계라
                 // 고정 프레임 시간으로 도는 시나리오에서도 프레임 비용을 따라 바뀌고, 프레임이 빠른 Release 에서는 같은 드래그가 덜 칠합니다.
-                const float32 deltaTime = editor::getSubsystem<GameTimeScale>().getUnscaledDeltaTime();
+                const float32 deltaTime = editor::getSubsystem<GameTimeScale>().getUnscaledDeltaTime().count();
                 for ( const TerrainBrushCommand& command : listCommand )
                 {
                     switch ( command._kind )
@@ -669,21 +668,20 @@ namespace sw::editor
                 TerrainComponent* pTerrain = TerrainBrushToolInternal::findTerrain( _lastEdited );
                 if ( pTerrain == nullptr )
                     return;
-                bool                         bSaved          = true;
-                const optional<AbsolutePath> heightfieldPath = editor::getSubsystem<AssetPaths>().toDiskPath( pTerrain->getHeightfieldPath() ); // 쓰기다 - 읽기 해석이 아니라 쓸 자리
-                if ( heightfieldPath.has_value() == false || TerrainBrushToolInternal::saveHeightfield( *pTerrain, heightfieldPath->str() ) == false )
-                {
+                bool                     bSaved = false;
+                AssetWriter              writer;
+                const optional<DiskPath> heightfieldPath  = editor::getSubsystem<AssetPaths>().toDiskPath( pTerrain->getHeightfieldPath() ); // 쓰기다 - 읽기 해석이 아니라 쓸 자리
+                const AssetWriteResult   heightfieldSaved = heightfieldPath.has_value() ? TerrainBrushToolInternal::saveHeightfield( writer, *pTerrain, *heightfieldPath ) : AssetWriteResult::Failed;
+                if ( heightfieldSaved == AssetWriteResult::Failed ) // 거절은 문이 이미 알렸다
                     SW_LOG_ERROR_ID( "TerrainBrushTool.TerrainHeightfieldNotSaved", "Terrain heightfield '%#' was not saved", pTerrain->getHeightfieldPath().c_str() );
-                    bSaved = false;
-                }
+                bSaved = heightfieldSaved == AssetWriteResult::Written;
                 if ( pTerrain->getLayerWeightsPath().empty() == false )
                 {
-                    const optional<AbsolutePath> splatPath = editor::getSubsystem<AssetPaths>().toDiskPath( pTerrain->getLayerWeightsPath() );
-                    if ( splatPath.has_value() == false || TerrainBrushToolInternal::saveSplat( *pTerrain, splatPath->str() ) == false )
-                    {
+                    const optional<DiskPath> splatPath  = editor::getSubsystem<AssetPaths>().toDiskPath( pTerrain->getLayerWeightsPath() );
+                    const AssetWriteResult   splatSaved = splatPath.has_value() ? TerrainBrushToolInternal::saveSplat( writer, *pTerrain, *splatPath ) : AssetWriteResult::Failed;
+                    if ( splatSaved == AssetWriteResult::Failed ) // 거절은 문이 이미 알렸다
                         SW_LOG_ERROR_ID( "TerrainBrushTool.TerrainSplatNotSaved", "Terrain splat '%#' was not saved", pTerrain->getLayerWeightsPath().c_str() );
-                        bSaved = false;
-                    }
+                    bSaved = bSaved && splatSaved == AssetWriteResult::Written;
                 }
                 if ( bSaved )
                 {

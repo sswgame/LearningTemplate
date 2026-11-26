@@ -5,7 +5,7 @@
 #include "Core/Network/Connection/NetEndpoint.h"
 #include "Core/Network/Tests/LoopbackCluster.h"
 #include "Core/Serialization/BitStream.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Reflection/TypeRegistry.h"

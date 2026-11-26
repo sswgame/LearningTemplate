@@ -1,7 +1,7 @@
 // RichTextTest — BBCode 꼴 리치 텍스트(굵게 · 기울임 · 색 · 크기 · [[) 파싱과 배치의 구간 경계(가짜 래스터라이저, nogpu). 액션 글리프는 입력 층이라 `Input/Map/Tests` 에 있다.
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Text/RichTextParser.h"
 #include "Engine/Text/Tests/FakeFontRasterizer.h"
@@ -78,9 +78,9 @@ SW_TEST_CASE( RichTextTest, NamedColorSizeAndItalic )
 /** @brief [RichTextTest] 배치는 구간 경계에서 런을 끊는다 — 굵게는 가짜 굵게, 색은 글리프 색, 크기 배율은 글리프 크기 · 펜 진행 · 줄 높이에 든다 */
 SW_TEST_CASE( RichTextTest, LayoutSplitsRunsAtSpanBoundaries )
 {
-    sw::test::FakeFontServiceFixture fixture;
-    sw::FontCatalogDef               catalog = sw::test::FakeFontServiceFixture::makeCatalog( "Latin" );
-    sw::test::FakeFontServiceFixture::addFamily( catalog, "Latin", "test/fonts/latin.ttf" );
+    sw::test::FakeFontSubsystemFixture fixture;
+    sw::FontCatalogDef                 catalog = sw::test::FakeFontSubsystemFixture::makeCatalog( "Latin" );
+    sw::test::FakeFontSubsystemFixture::addFamily( catalog, "Latin", "test/fonts/latin.ttf" );
     SW_REQUIRE_TRUE( fixture.initialize( catalog ) );
     sw::TextLayoutEngine layout( *fixture._fontService );
 

@@ -117,14 +117,15 @@ namespace sw
         return true;
     }
 
-    AdventureStaminaResult AdventureVitals::updateStamina( AdventureStaminaAction action, float32 deltaTime )
+    AdventureStaminaResult AdventureVitals::updateStamina( AdventureStaminaAction action, GameSeconds frameTime )
     {
-        float32 rate = 0.0f;
+        const float32 deltaTime = frameTime.count();
+        float32       rate      = 0.0f;
         switch ( action )
         {
             case AdventureStaminaAction::Idle:
             {
-                _stamina.update( deltaTime );
+                _stamina.update( frameTime );
                 return AdventureStaminaResult::Continue;
             }
             case AdventureStaminaAction::Climb:

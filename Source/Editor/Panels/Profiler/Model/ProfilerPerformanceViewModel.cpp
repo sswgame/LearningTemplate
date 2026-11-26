@@ -61,10 +61,10 @@ namespace sw::editor
     void ProfilerPerformanceViewModel::pollCatalog()
     {
         EditorResourceCatalogCounts counts{};
-        const EditorTaskPoll        catalogPoll = _catalogJob.take( counts );
-        if ( catalogPoll == EditorTaskPoll::Ready )
+        const EditorJobPoll         catalogPoll = _catalogJob.take( counts );
+        if ( catalogPoll == EditorJobPoll::Ready )
             _catalogCounts = counts;
-        if ( _bCatalogDirty == SW_TRUE && catalogPoll != EditorTaskPoll::Running )
+        if ( _bCatalogDirty == SW_TRUE && catalogPoll != EditorJobPoll::Running )
         {
             _catalogJob.request();
             _bCatalogDirty = SW_FALSE;

@@ -36,11 +36,11 @@ namespace sw
         /** @brief float32 를 "거의 같다" 고 볼 때 쓰는 허용치(1e-6)입니다. 머신 엡실론(FLT_EPSILON)보다 넉넉합니다. */
         static constexpr float32 kEpsilon = 1e-6f;
         /**
-         * @brief **제곱 거리 · 제곱 길이**를 `kEpsilon` 과 같은 뜻으로 비교할 때 쓰는 허용치입니다.
+         * @brief 제곱 거리 · 제곱 길이를 `kEpsilon` 과 같은 뜻으로 비교할 때 쓰는 허용치입니다.
          * @details `getDistanceSquared(...) <= kEpsilon` 은 실제 거리로 `1e-3` 까지를 같다고 봅니다. 제곱한 값을 제곱하지 않은
          *          허용치와 비교하기 때문입니다. 같은 허용치를 뜻하려면 `kEpsilon` 도 제곱해야 하고, 그 한 걸음을 잊기 쉬워서
          *          이름을 따로 두었습니다.
-         * @note 정규화하기 직전의 **퇴화 벡터 검사**에는 쓰지 마십시오. 그쪽은 "같은가" 가 아니라 "0 으로 나눌 만큼 짧은가" 를
+         * @note 정규화하기 직전의 퇴화 벡터 검사에는 쓰지 마십시오. 그쪽은 "같은가" 가 아니라 "0 으로 나눌 만큼 짧은가" 를
          *       묻는 것이라 넉넉한 `kEpsilon` 이 오히려 맞습니다.
          */
         static constexpr float32 kEpsilonSquared = kEpsilon * kEpsilon;

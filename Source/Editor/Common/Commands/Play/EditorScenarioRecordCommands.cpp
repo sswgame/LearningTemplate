@@ -12,12 +12,13 @@
 
 #include "DevTools/Client/Automation/Scenario/ScenarioRecorder.h"
 
+#include "Editor/Common/Asset/AssetWriter.h"
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorFrameStep.h"
-#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorStateStore.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 
 #include "Engine/Automation/Scenario/AutomationScenario.h"
 #include "Engine/Config/GameTimeScale.h"
@@ -80,7 +81,8 @@ namespace sw::editor
                 settings._clientHeight              = pWindow != nullptr ? pWindow->getHeight() : 0;
                 const ScenarioRecordOutput output   = getState()._recorder.stop( settings );
                 const AbsolutePath         diskPath = ScenarioRecorder::makeOutputDiskPath( getState()._outputPath );
-                if ( FileUtil::ensureParentDirectoryExists( diskPath ) == false || FileUtil::writeTextFile( diskPath, output._xmlText ) == false )
+                AssetWriter                writer;
+                if ( writer.writeText( diskPath, output._xmlText ) != AssetWriteResult::Written )
                 {
                     StringBuilder<constant::buffer::kMax256> replyBuilder;
                     replyBuilder.appendFormat( "could not write '%#'", getState()._outputPath );
@@ -118,7 +120,7 @@ namespace sw::editor
             {
                 if ( getState()._recorder.isRecording() == false )
                     return;
-                getState()._recorder.update( editor::getSubsystem<InputManager>(), editor::getSubsystem<GameTimeScale>().getUnscaledDeltaTime() );
+                getState()._recorder.update( editor::getSubsystem<InputManager>(), editor::getSubsystem<GameTimeScale>().getUnscaledDeltaTime().count() );
             }
         };
     } // namespace

@@ -33,14 +33,27 @@ class ToolPolicyTest(unittest.TestCase):
         target = {"file_path": "D:/P/Source/Editor/Panels/X.cpp"}
         self.assertIn("ponytail", self.pre("Edit", target)["hookSpecificOutput"]["permissionDecisionReason"])
         self.post("Skill", {"skill": "ponytail"})
+        self.post("Skill", {"skill": "humanizer"})
         self.assertIn("taste-skill", self.pre("Edit", target)["hookSpecificOutput"]["permissionDecisionReason"])
         self.post("Skill", {"skill": "taste-skill"})
         self.assertIsNone(self.pre("Edit", target))
+
+    def test_comments_and_commits_need_the_writing_skill(self):
+        self.post("Skill", {"skill": "ponytail"})
+        self.assertIn("humanizer", self.pre("Edit", {"file_path": "D:/P/Source/Core/A.h"})["hookSpecificOutput"]["permissionDecisionReason"])
+        self.assertIsNotNone(self.pre("Bash", {"command": "git commit -q -F msg.txt"}))
+        self.assertIsNotNone(self.pre("Bash", {"command": "git -C D:/P/LT-wt/x commit -m a"}))
+        self.assertIsNone(self.pre("Bash", {"command": "git commit-tree abc"}))
+        self.assertIn("humanizer", self.pre("Edit", {"file_path": "D:/P/docs/NEXT.md"})["hookSpecificOutput"]["permissionDecisionReason"])
+        self.post("Skill", {"skill": "humanizer"})
+        self.assertIsNone(self.pre("Edit", {"file_path": "D:/P/Source/Core/A.h"}))
+        self.assertIsNone(self.pre("Bash", {"command": "git commit -q -F msg.txt"}))
 
     def test_push_needs_preflight_and_other_commands_pass(self):
         self.assertIsNotNone(self.pre("Bash", {"command": "git push origin abc:main"}))
         self.assertIsNotNone(self.pre("Bash", {"command": "bash Scripts/dev/preflight.sh --dry-run"}))
         self.assertIsNone(self.pre("Bash", {"command": "git status"}))
+        self.post("Skill", {"skill": "humanizer"})
         self.assertIsNone(self.pre("Edit", {"file_path": "D:/P/docs/NEXT.md"}))
 
     def test_hook_call_latency_is_reported(self):
@@ -88,6 +101,7 @@ class ToolPolicyTest(unittest.TestCase):
     def test_any_of_requirement(self):
         target = {"file_path": "D:/P/Source/Engine/Graphics/RHI/Vulkan/V.cpp"}
         self.post("Skill", {"skill": "ponytail"})
+        self.post("Skill", {"skill": "humanizer"})
         self.assertIsNotNone(self.pre("Edit", target))
         self.post("mcp__plugin_context7_context7__query-docs", {})
         self.assertIsNotNone(self.pre("Edit", target))
@@ -105,6 +119,7 @@ class ToolPolicyTest(unittest.TestCase):
             "no-per-folder-constants-header": [("Write", {"file_path": "D:/P/Source/Engine/Audio/AudioConstants.h"})],
         }
         self.post("Skill", {"skill": "ponytail"})
+        self.post("Skill", {"skill": "humanizer"})
         for name, calls in refused.items():
             for tool, tool_input in calls:
                 self.assertIn(name, self.pre(tool, tool_input)["hookSpecificOutput"]["permissionDecisionReason"], (tool, tool_input))
@@ -114,6 +129,34 @@ class ToolPolicyTest(unittest.TestCase):
                                  ("Write", {"file_path": "D:/P/Source/Core/Foundation/Constants.h"}),
                                  ("Edit", {"file_path": "D:/P/Source/Engine/Audio/AudioConstants.h"})):
             self.assertIsNone(self.pre(tool, tool_input), (tool, tool_input))
+
+
+class AgentDispatchTest(unittest.TestCase):
+    """agent_prompt_check: 작업 종류 표에 맞는 종류 · 모델 · effort 만 받는다."""
+
+    def setUp(self):
+        import agent_prompt_check
+        self.check = agent_prompt_check.check
+        with open(agent_prompt_check.RULES_PATH, encoding="utf-8") as file:
+            self.rules = json.load(file)["agentPrompt"]
+
+    def test_read_only_kind_needs_only_matching_choice(self):
+        call = {"subagent_type": "Explore", "model": "haiku", "effort": "low", "prompt": "작업 종류: find\nX 를 찾는다"}
+        self.assertIsNone(self.check(call, self.rules))
+        self.assertIn("model", self.check({**call, "model": "opus"}, self.rules))
+        self.assertIn("effort", self.check({**call, "effort": None}, self.rules))
+
+    def test_missing_or_unknown_kind_is_refused(self):
+        self.assertIn("작업 종류", self.check({"subagent_type": "Explore", "prompt": "찾는다"}, self.rules))
+        self.assertIn("작업 종류", self.check({"prompt": "작업 종류: whatever"}, self.rules))
+
+    def test_editing_kind_also_needs_the_required_text(self):
+        call = {"model": "opus", "effort": "high", "prompt": "작업 종류: implement\n고친다"}
+        self.assertIn("빠진 것", self.check(call, self.rules))
+
+    def test_inherited_call_and_refused_isolation(self):
+        self.assertIsNone(self.check({"subagent_type": "fork", "prompt": "이어서"}, self.rules))
+        self.assertIsNotNone(self.check({"subagent_type": "fork", "isolation": "worktree", "prompt": "x"}, self.rules))
 
 
 if __name__ == "__main__":

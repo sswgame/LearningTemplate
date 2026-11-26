@@ -72,7 +72,7 @@ namespace sw
 
     bool CreatureTownGameModeComponent::initializeTown( CreatureTown& outTown, GameStateComponent& state, ReputationComponent& reputation, QuestLogComponent& questLog ) const
     {
-        return _pCatalog != nullptr && outTown.initialize( _pCatalog.get(), reputation.getReputation(), questLog.getQuestLog(), state.getClock(), _townSize, _townSize );
+        return _pCatalog != nullptr && outTown.initialize( *_pCatalog, reputation.getReputation(), questLog.getQuestLog(), state.getClock(), _townSize, _townSize );
     }
 
     bool CreatureTownGameModeComponent::startGame()
@@ -115,8 +115,9 @@ namespace sw
         return result == CreatureInteractResult::Ok;
     }
 
-    void CreatureTownGameModeComponent::updateGame( float32 deltaTime )
+    void CreatureTownGameModeComponent::updateGame( GameSeconds frameTime )
     {
+        const float32 deltaTime = frameTime.count();
         (void)deltaTime;
         GameStateComponent* pState    = GameStateComponent::findOnOwner( *this );
         QuestLogComponent*  pQuestLog = findOnPlayerState<QuestLogComponent>();

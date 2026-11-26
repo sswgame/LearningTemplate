@@ -12,7 +12,7 @@
 #include "Core/String/formatString.h"
 #include "Core/Time/MonotonicClock.h"
 
-#include "Engine/Serialization/Format/JSONSerializer.h"
+#include "Engine/Config/ConfigManager.h"
 
 namespace sw
 {
@@ -20,8 +20,6 @@ namespace sw
     {
         struct SavedCleanupSubsystemInternal
         {
-            /** @brief 정리 규칙 파일(프로젝트 루트 기준)입니다 — 무엇을 몇 개 남길지는 데이터가 정한다. */
-            static constexpr const utf8* kConfigFile = "Config/Dev/SavedCleanup.json";
             /** @brief 지우려고 차지한 더미의 이름 머리입니다(`claimed-<프로세스>-<시각>-<번호>`). */
             static constexpr const utf8* kClaimPrefix = "claimed-";
 
@@ -75,32 +73,24 @@ namespace sw
         return SubsystemInitResult::Succeeded;
     }
 
-    bool SavedCleanupSubsystem::readSettings( RetentionSettings& outSettings )
+    expected<void> SavedCleanupSubsystem::RetentionSettings::validate() const
     {
-        const AbsolutePath path = ProcessRoots::get()._project.join( SavedCleanupSubsystemInternal::kConfigFile );
-        string             text;
-        if ( FileUtil::readTextFile( path, text ) == false )
-        {
-            SW_LOG_ERROR_ID( "SavedCleanup.ConfigUnreadable", "Saved retention rules %# could not be read - nothing is removed", path.str() );
-            return false;
-        }
-        // 빠진 칸 · 모르는 키 · 틀린 값은 직렬화기가 칸 이름과 함께 알린다. 빈 글은 스키마로 막지 못해 여기서 본다.
-        const bool bRead  = JSONSerializer::deserialize( &outSettings, *RetentionSettings::StaticType(), text );
-        const bool bEmpty = outSettings._trashFolder.empty() || VectorUtil::containsIf( outSettings._listRule, []( const RetentionRule& rule )
+        const bool bEmpty = _trashFolder.empty() || VectorUtil::containsIf( _listRule, []( const RetentionRule& rule )
         { return rule._folder.empty(); } );
-        if ( bRead == false || bEmpty )
-        {
-            SW_LOG_ERROR_ID( "SavedCleanup.ConfigInvalid", "Saved retention rules %# need _minAgeSeconds, a non-empty _trashFolder and a _listRule array of non-empty _folder, _keepCount, _bPerChild, _listSkipChild - nothing is removed", path.str() );
-            return false;
-        }
-        return true;
+        if ( bEmpty )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "_trashFolder and every _folder must not be empty", kConfigFile.getPath() } );
+        return {};
     }
 
     void SavedCleanupSubsystem::run( const StopToken& stopToken )
     {
-        RetentionSettings settings;
-        if ( readSettings( settings ) == false )
+        const expected<RetentionSettings> loaded = ConfigManager::readConfig( RetentionSettings::kConfigFile );
+        if ( loaded.has_value() == false )
+        {
+            SW_LOG_ERROR_ID( "SavedCleanup.ConfigInvalid", "Saved retention rules: %# (%#) - nothing is removed", loaded.error().message(), loaded.error().detail() );
             return;
+        }
+        const RetentionSettings&               settings  = *loaded;
         const AbsolutePath                     saved     = ProcessRoots::get()._saved;
         const AbsolutePath                     trashRoot = saved.join( settings._trashFolder );
         fixed_string<constant::buffer::kMax64> trashName;
@@ -126,7 +116,7 @@ namespace sw
             }
         }
         if ( moved > 0 )
-            SW_LOG_INFO_ID( "SavedCleanup.Pruned", "Saved: moved %# old run output(s) aside to delete (%#)", moved, SavedCleanupSubsystemInternal::kConfigFile );
+            SW_LOG_INFO_ID( "SavedCleanup.Pruned", "Saved: moved %# old run output(s) aside to delete (%#)", moved, RetentionSettings::kConfigFile.getPath() );
         // 버릴 자리를 통째로 지운다 — 앞 실행이 덜 지운 것도 함께. 종료가 멈추라 하면 그만두고 다음 기동이 잇는다.
         // 나란히 뜬 다른 프로세스(넷 플레이의 서버 · 클라이언트, ctest 의 백엔드 넷)도 같은 자리를 비운다 — 둘이 한 더미를 함께 지우면 한쪽이 "비어 있지 않음" 으로 진다.
         // 그래서 이름을 바꿔 차지한 더미만 지운다(같은 더미를 두 프로세스가 바꾸면 하나만 이긴다). 남이 차지한 더미는 오래된 것(그 프로세스가 지우다 죽었다)만 다시 차지한다.

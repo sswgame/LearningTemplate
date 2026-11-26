@@ -14,9 +14,10 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 #include "Core/Time/Countdown.h"
 #include "Core/Time/FixedStepTimer.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
@@ -313,13 +314,13 @@ namespace sw
          */
         [[nodiscard]] bool initialize( const ThemeParkSettings& settings, Wallet& wallet, const NavGrid& walkGrid );
         /** @brief 시간을 진행합니다. 큰 시간은 0.25초씩 나눠 처리합니다. */
-        void update( float32 deltaTime );
+        void update( GameSeconds frameTime );
 
         /**
-         * @brief 공유 땅을 빌립니다. 월드 원점이 땅의 원점과 셀 크기를 따릅니다(공원은 셀 격자가 없으므로 월드 사각형으로 얻습니다). @p pLand 가 nullptr 이면 빌린 땅을 반납합니다.
+         * @brief 공유 땅을 빌립니다. 월드 원점이 땅의 원점과 셀 크기를 따릅니다(공원은 셀 격자가 없으므로 월드 사각형으로 얻습니다).
          * @details 그 뒤로 놀이기구는 지을 때 영역(`_footprintCenter`, `_footprintSize`)을 막힘으로 얻는다.
          */
-        void bindLand( LandRegistry* pLand );
+        void bindLand( LandRegistry& land );
         /**
          * @brief @p from 에서 @p to 로 걷는 길의 점(시작은 뺀다, 마지막이 @p to)을 @p outListPoint 에 채웁니다. 곧게 지날 수 있거나 격자 밖이면 @p to 하나입니다.
          * @details 손님의 걸음과 깔리는 길의 모습이 같은 함수를 부른다 — 길은 손님이 걷는 자리에 놓인다.
@@ -361,10 +362,10 @@ namespace sw
         SW_DECLARE_STATE_IO();
 
     private:
-        void stepFixed( float32 deltaTime );
+        void stepFixed( StepSeconds step );
         void spawnGuests( float32 deltaTime );
         void updateGuests( float32 deltaTime );
-        void runRides( float32 deltaTime );
+        void runRides( StepSeconds step );
         void chooseNextRide( ParkGuest& guest );
         /** @brief @p destination 까지의 길을 정하고 첫 다리를 걷기 시작합니다. */
         void startWalking( ParkGuest& guest, const float3& destination );

@@ -1,6 +1,6 @@
 /**
  * @file FacingDirection.h
- * @brief 2D 캐릭터가 바라보는 4방향입니다. **킷들이 나눠 쓰는 한 벌입니다.**
+ * @brief 2D 캐릭터가 바라보는 4방향입니다. 킷들이 나눠 쓰는 한 벌입니다.
  */
 #pragma once
 #include "Core/Foundation/Types.h"

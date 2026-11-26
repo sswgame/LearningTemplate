@@ -1,7 +1,7 @@
 // CatalogKeyTest — 카탈로그 키 칸(`CatalogKey<Tag>`): 다른 종류 사이 변환 없음, 글 처리기("CatalogKey")의 읽기 · 쓰기, 빈 값.
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Serialization/Serializer/CatalogKey.h"
 #include "Engine/Serialization/Serializer/SerializeContext.h"

@@ -16,12 +16,11 @@
 
 #include "GameFramework/Runtime/Character/AI/Schedule/ScheduleActivity.h"
 #include "GameFramework/Runtime/Character/AI/Schedule/ScheduleCatalog.h"
-#include "GameFramework/Runtime/Character/AI/Schedule/ScheduleHash.h"
 #include "GameFramework/Runtime/Character/AI/Schedule/ScheduleSaveState.h"
 #include "GameFramework/Runtime/Foundation/Condition/GameFlags.h"
 #include "GameFramework/Runtime/Foundation/GameData/ConfigRangeUtil.h"
 #include "GameFramework/Runtime/Foundation/Random/GameRandom.h"
-#include "GameFramework/Runtime/Foundation/Service/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 
 #include <mutex>
 
@@ -29,6 +28,52 @@ namespace sw
 {
     namespace
     {
+        /**
+         * @struct ScheduleHash
+         * @brief 일정 시스템이 쓰는 해시 함수 모음입니다(구간의 식별 키, 이름 키, 키 섞기). 모두 static 입니다.
+         * @details 계획, 실행, 저장, 디버그가 같은 구간에서 같은 키를 얻어야 합니다. 사건, 경로 캐시, 계획 비교, 저장 해시가 이 키를 씁니다.
+         *          바이트를 섞는 규칙과 상수는 `HashUtil` 에 있습니다. 저장과 네트워크로 나가는 값이라 섞는 순서를 바꾸지 않습니다.
+         */
+        struct ScheduleHash
+        {
+            static constexpr uint32 kGoldenRatio32 = 0x9e3779b1u; ///< 2^32 / 황금비 — 키 섞기의 곱수(저장 · 네트워크 값이라 바꾸지 않는다)
+            static constexpr uint32 kMixOffset     = 0x7f4a7c15u; ///< 둘째 키에 더하는 값(저장 · 네트워크 값이라 바꾸지 않는다)
+
+            /** @brief 이름의 글자 바이트를 @p hash 에 이어 섞습니다. */
+            [[nodiscard]] static uint64 appendName( const uint64 hash, const hashed_string& name ) { return HashUtil::appendBytes64( hash, name.c_str(), name.size() ); }
+
+            /** @brief 위치의 x, y, z 를 @p hash 에 이어 섞습니다. */
+            [[nodiscard]] static uint64 appendPosition( uint64 hash, const float3& position )
+            {
+                hash = HashUtil::appendValue64( hash, position._x );
+                hash = HashUtil::appendValue64( hash, position._y );
+                return HashUtil::appendValue64( hash, position._z );
+            }
+
+            /** @brief 이름 하나의 32 비트 키입니다(64 비트 해시의 아래 32 비트). */
+            [[nodiscard]] static uint32 computeNameKey( const hashed_string& name ) { return static_cast<uint32>( appendName( HashUtil::kFNVOffset64, name ) ); }
+
+            /** @brief 두 32 비트 키를 섞습니다(순서가 있다). */
+            [[nodiscard]] static uint32 mixKey( const uint32 lhs, const uint32 rhs ) { return HashUtil::mix32( lhs * kGoldenRatio32 ^ HashUtil::mix32( rhs + kMixOffset ) ); }
+
+            /** @brief 구간의 식별 키입니다. 출처, 블록, 시간, 위치, 출발이 같으면 같은 값입니다. 사건, 경로 캐시, 계획 비교가 씁니다. 0 은 쓰지 않습니다. */
+            [[nodiscard]] static uint64 computeSegmentKey( const ScheduleSegment& segment )
+            {
+                uint64 hash = HashUtil::kFNVOffset64;
+                hash        = appendName( hash, segment._sourceID );
+                hash        = appendName( hash, segment._activity );
+                hash        = HashUtil::appendValue64( hash, segment._startMinute );
+                hash        = HashUtil::appendValue64( hash, segment._endMinute );
+                hash        = HashUtil::appendValue64( hash, segment._blockIndex );
+                hash        = HashUtil::appendValue64( hash, segment._ownerIndex );
+                hash        = HashUtil::appendValue64( hash, segment._source );
+                hash        = appendPosition( hash, segment._target._position );
+                hash        = HashUtil::appendValue64( hash, segment._departMinute );
+                hash        = HashUtil::appendValue64( hash, segment._travelMinutes );
+                return hash == 0 ? 1 : hash;
+            }
+        };
+
         struct ScheduleSystemInternal
         {
             static int32 toDay( int32 absoluteMinute ) { return absoluteMinute / kScheduleMinutesPerDay; }
@@ -114,7 +159,7 @@ namespace sw
      * @brief 살아 있는 일정 시스템 목록입니다. 에디터 디버그 창 · 감시 값(`collectLiveSystems`)만 읽습니다.
      * @details GameFramework 의 모듈 서브시스템이다(`SW_MODULE_SUBSYSTEM( Engine, … )`) — 엔진 범위 아래 GameFramework 의 자식 범위에 서고 `game::findSubsystem` 으로 찾힌다.
      *          일정 시스템은 게임 컴포넌트의 값 멤버이거나 테스트의 지역 객체라 서비스 범위 없이도 선다. 그래서 생성자가 찾은 목록에 오르고 그 목록을 들어 소멸자가 빠진다
-     *          (목록이 없으면 — 게임 서비스 없는 테스트 — 오르지 않는다). 예전에는 소유자 없는 엔진 수명 값(`ScopeOwned`)이 들었다. 언리얼 `UWorldSubsystem` 의 등록 목록 자리.
+     *          (게임 서비스 없는 테스트처럼 목록이 없으면 오르지 않는다). 언리얼 `UWorldSubsystem` 의 등록 목록 자리.
      */
     class ScheduleSystemRegistry final : public Subsystem
     {
@@ -205,7 +250,7 @@ namespace sw
         }
     }
 
-    bool ScheduleSystem::initialize( const ScheduleCatalog* pCatalog, const ScheduleSystemSettings& settings, int32 absoluteMinute )
+    bool ScheduleSystem::initialize( const ScheduleCatalog& catalog, const ScheduleSystemSettings& settings, int32 absoluteMinute )
     {
         // 값을 범위 안으로 맞춰 돌지 않는다. 상태를 바꾸기 전에 본다.
         const string rangeError = ConfigRangeUtil::describeRangeErrors( settings );
@@ -215,15 +260,13 @@ namespace sw
             return false;
         }
         shutdown();
-        _pCatalog = pCatalog;
+        _pCatalog = &catalog;
         _settings = settings;
         if ( _settings._clock._listSeason.empty() ) // `WorldClockSettings::_listSeason` 의 계약(계절 없음 = 이름 하나)을 시계와 똑같이 따른다
             _settings._clock._listSeason.push_back( hashed_string( "Default" ) );
         _minute = absoluteMinute;
-        _defaultLocator.initialize( pCatalog );
+        _defaultLocator.initialize( catalog );
         _flagsRevision = _services._pFlags != nullptr ? _services._pFlags->getRevision() : 0;
-        if ( _pCatalog == nullptr )
-            return true;
 
         const vector<NPCScheduleDef>& listDef = _pCatalog->getNPCs();
         for ( int32 defIndex = 0; defIndex < static_cast<int32>( listDef.size() ); ++defIndex )
