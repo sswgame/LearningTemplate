@@ -4,8 +4,8 @@
 		<entry source="Connect" text="연결" />
 		<entry source="Kind" text="종류" />
 		<entry source="Name" text="이름" />
-		<entry source="Reload" text="다시 불러오기" />
-		<entry source="Remove" text="지우기" />
+		<entry source="Reload" text="다시 읽기" />
+		<entry source="Remove" text="제거" />
 		<entry source="Save" text="저장" />
 	</entries>
 </TranslationMemory>

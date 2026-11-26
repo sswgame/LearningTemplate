@@ -29,7 +29,7 @@
 		       text="デフォルト: {hasDefault, select, yes {{value}} other {(なし)}}" />
 		<entry source="Delete" text="削除" />
 		<entry source="Delete node" text="ノードを削除" />
-		<entry source="Down" text="下へ" />
+		<entry source="Down" text="下" />
 		<entry source="Drop this placement override and use the preset again."
 		       text="この配置の上書きを削除してプリセットを再び使います。" />
 		<entry source="Duplicate" text="複製" />
@@ -72,7 +72,7 @@
 		<entry source="Problems" text="問題" />
 		<entry source="Raw timeline" text="生のタイムライン" />
 		<entry source="Recent effects" text="最近のエフェクト" />
-		<entry source="Redo" text="やり直し" />
+		<entry source="Redo" text="やり直す" />
 		<entry source="Remaining" text="残り" />
 		<entry source="Remove" text="削除" />
 		<entry source="Remove broken wires" text="切れた配線を削除" />

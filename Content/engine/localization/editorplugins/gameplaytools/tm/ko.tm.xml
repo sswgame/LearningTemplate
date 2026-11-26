@@ -29,7 +29,7 @@
 		       text="기본값: {hasDefault, select, yes {{value}} other {(없음)}}" />
 		<entry source="Delete" text="삭제" />
 		<entry source="Delete node" text="노드 삭제" />
-		<entry source="Down" text="아래로" />
+		<entry source="Down" text="아래" />
 		<entry source="Drop this placement override and use the preset again."
 		       text="이 배치 덮어쓰기를 지우고 프리셋을 다시 씁니다." />
 		<entry source="Duplicate" text="복제" />

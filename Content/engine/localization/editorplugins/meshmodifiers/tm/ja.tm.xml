@@ -58,7 +58,7 @@
 		<entry source="The target object no longer exists."
 		       text="対象のオブジェクトはもう存在しません。" />
 		<entry source="Undo" text="元に戻す" />
-		<entry source="Up" text="上" />
+		<entry source="Up" text="上へ" />
 		<entry source="Use Selection" text="選択を使用" />
 		<entry source="Warp File (.mfwarp)" text="ワープファイル (.mfwarp)" />
 		<entry source="World Space" text="ワールド空間" />

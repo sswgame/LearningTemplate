@@ -4915,14 +4915,12 @@
 		</entry>
 		<entry key="EdWidget.Prefab" source="Prefab">
 			<origins>
-				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 				<item>Source/Editor/Panels/Inspector/InspectorPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdWidget.Preset" source="Preset">
 			<origins>
 				<item>Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp</item>
-				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdWidget.Preview" source="Preview">

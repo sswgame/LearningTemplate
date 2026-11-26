@@ -187,7 +187,7 @@
 		<entry source="Undo body edit" text="ボディ編集を元に戻す" />
 		<entry source="Undo pose" text="ポーズを元に戻す" />
 		<entry source="Unsupported" text="非対応" />
-		<entry source="Up" text="上" />
+		<entry source="Up" text="上へ" />
 		<entry source="Viewport gizmo editing needs the preview scene (EditorMultiWorld)."
 		       text="ビューポートギズモ編集にはプレビューシーン(EditorMultiWorld)が必要です。" />
 		<entry source="Warp end (s)" text="ワープ終了(秒)" />

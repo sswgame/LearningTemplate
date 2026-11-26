@@ -35,7 +35,7 @@
 		<entry source="Position" text="위치" />
 		<entry source="Preview Time" text="미리보기 시간" />
 		<entry source="Recompute Normals" text="법선 다시 계산" />
-		<entry source="Redo" text="다시 실행" />
+		<entry source="Redo" text="다시 하기" />
 		<entry source="Reference Object" text="기준 오브젝트" />
 		<entry source="Reload Stack" text="스택 다시 읽기" />
 		<entry source="Remove row" text="행 삭제" />
@@ -53,8 +53,8 @@
 		<entry source="Shaded Preview" text="셰이딩 미리보기" />
 		<entry source="Stage" text="단계" />
 		<entry source="The target object no longer exists." text="대상 오브젝트가 더 이상 없습니다." />
-		<entry source="Undo" text="실행 취소" />
-		<entry source="Up" text="위" />
+		<entry source="Undo" text="되돌리기" />
+		<entry source="Up" text="위로" />
 		<entry source="Use Selection" text="선택 사용" />
 		<entry source="Warp File (.mfwarp)" text="워프 파일(.mfwarp)" />
 		<entry source="World Space" text="월드 공간" />
