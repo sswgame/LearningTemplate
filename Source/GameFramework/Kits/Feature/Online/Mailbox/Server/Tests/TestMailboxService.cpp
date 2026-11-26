@@ -10,6 +10,7 @@
 #include "GameFramework/Kits/Feature/Online/Mailbox/Runtime/MailboxClient.h"
 #include "GameFramework/Kits/Feature/Online/Mailbox/Runtime/MailboxProtocol.h"
 #include "GameFramework/Kits/Feature/Online/Mailbox/Server/MailboxService.h"
+#include "GameFramework/Runtime/Online/Identity/Server/IOfflinePushSender.h"
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
 #include "GameFramework/Runtime/Online/Mail/Server/ServiceMail.h"
 #include "GameFramework/Runtime/Online/Mail/Server/ServiceMailCampaign.h"

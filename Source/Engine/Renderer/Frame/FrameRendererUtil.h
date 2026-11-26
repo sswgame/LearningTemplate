@@ -17,6 +17,7 @@
 #include "Engine/Graphics/RenderState/RenderState.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Graphics/View/RenderViewSettings.h"
+#include "Engine/Renderer/Frame/RenderPassNames.h"
 #include "Engine/Renderer/Pipeline/RenderGraphPassDesc.h"
 #include "Engine/Renderer/Pipeline/RenderPassKindInfo.h"
 
@@ -245,7 +246,7 @@ namespace sw
             {
                 if ( colorCount >= capacity )
                     break;
-                if ( outName == Attachment::kSwapchain )
+                if ( outName == AttachmentNames::kSwapchain )
                 {
                     if ( pOutFormat != nullptr )
                         pOutFormat[colorCount] = RHIFormat::Unknown;

@@ -6,6 +6,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/String/Name/hashed_string.h"
 
+#include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
+
 namespace sw
 {
     /**

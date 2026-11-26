@@ -24,7 +24,7 @@
 #include "DevTools/Console/DevConsoleController.h"
 #include "DevTools/DevToolsClientPart.h"
 #include "DevTools/Diagnostics/CrashInjector.h"
-#include "DevTools/Host/Editor/EditorGameModuleManager.h"
+#include "DevTools/Host/Client/EditorGameModuleManager.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Engine.h"

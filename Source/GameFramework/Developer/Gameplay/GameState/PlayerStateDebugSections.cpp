@@ -35,8 +35,6 @@ namespace sw
             static constexpr int32 kQuestHUDOrder    = 200; ///< HUD 섹션 순서 — 게임플레이 섹션 무리
             static constexpr int32 kProgressHUDOrder = 210;
 
-            /** @brief 활성 씬의 열린 @p T(씬에 하나)입니다. 없으면 답을 채우고 nullptr 입니다. */
-            template <typename T>
             /** @brief 디버그 섹션의 대상(`debug.target`, 없으면 오브젝트 id 가 가장 낮은 것)의 열린 @p T 입니다. 없으면 그렇게 적고 nullptr 입니다. */
             template <typename T>
             static const T* findDebugTarget( DebugHUDSectionWriter& writer )

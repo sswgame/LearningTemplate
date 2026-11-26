@@ -56,8 +56,6 @@ namespace sw
                 outReply = string( replyBuilder.view() );
                 return true;
             }
-
-            template <bool bWritten>
         };
     } // namespace
 

@@ -23,6 +23,7 @@
 #include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
 #include "GameFramework/Runtime/Online/HTTP/HTTPLink.h"
 #include "GameFramework/Runtime/Online/HTTP/HTTPServer.h"
+#include "GameFramework/Runtime/Online/Identity/Server/IOfflinePushSender.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerConfig.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerKit.h"
 #include "GameFramework/Runtime/Online/Server/Tests/OnlineEndpointTestUtil.h"

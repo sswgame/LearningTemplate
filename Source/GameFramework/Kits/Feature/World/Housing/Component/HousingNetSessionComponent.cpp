@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Feature/World/Housing/Component/HousingNetSessionComponent.h"
 
 #include "Core/Log/Logger.h"
+#include "Core/Network/Message/NetMessageRouter.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"

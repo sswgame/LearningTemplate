@@ -32,6 +32,27 @@ namespace sw
     {
         struct PlayerStateDevCommandsInternal
         {
+            /** @brief 활성 씬의 열린 @p T(씬에 하나)입니다. 없으면 답을 채우고 nullptr 입니다. */
+            template <typename T>
+            static T* findInActiveScene( string& outReply )
+            {
+                SceneManager* const      pSceneManager = game::findSubsystem<SceneManager>();
+                const GameObjectManager* pManager      = pSceneManager != nullptr ? pSceneManager->findActiveObjectManager() : nullptr;
+                if ( pManager == nullptr )
+                {
+                    outReply = "cheat: no active scene";
+                    return nullptr;
+                }
+                T* const pFound = PlayerComponentUtil::findOpen<T>( pManager );
+                if ( pFound == nullptr )
+                {
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "cheat: no single open %# in the active scene", T::StaticType()->_name.c_str() );
+                    outReply = string( replyBuilder.view() );
+                }
+                return pFound;
+            }
+
             /** @brief `cheat.give <itemID> [count]` — 플레이어 가방에 아이템을 넣습니다(슬롯 · 무게가 모자라면 일부만). */
             static bool runGive( const vector<string>& listArgument, string& outReply )
             {
@@ -70,9 +91,6 @@ namespace sw
                 outReply = string( replyBuilder.view() );
                 return true;
             }
-
-            /** @brief 디버그 섹션의 대상(`debug.target`, 없으면 오브젝트 id 가 가장 낮은 것)의 열린 @p T 입니다. 없으면 그렇게 적고 nullptr 입니다. */
-            template <typename T>
         };
     } // namespace
 

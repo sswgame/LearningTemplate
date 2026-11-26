@@ -3,6 +3,7 @@
  * @brief 렌더 패스가 그리는 크기와 뷰포트입니다.
  */
 #pragma once
+#include "Engine/Foundation/EngineDefines.h"
 #include "Engine/Graphics/RHI/RHIEnums.h"
 
 namespace sw

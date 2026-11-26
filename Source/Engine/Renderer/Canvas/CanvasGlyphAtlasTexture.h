@@ -8,6 +8,8 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
+#include "Engine/Foundation/RHIDescriptorIndex.h"
+#include "Engine/Graphics/RHI/RHIHandles.h"
 #include "Engine/Graphics/RHI/RHITransferTicket.h"
 #include "Engine/Text/GlyphAtlas.h"
 

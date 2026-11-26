@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Feature/Network/NetSequence/SequenceNetSessionComponent.h"
 
 #include "Core/Log/Logger.h"
+#include "Core/Network/Message/NetMessageRouter.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"

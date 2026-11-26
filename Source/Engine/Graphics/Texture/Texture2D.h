@@ -10,7 +10,9 @@
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetTypeRegistry.h"
+#include "Engine/Foundation/RHIDescriptorIndex.h"
 #include "Engine/Foundation/RenderTargetDeclaration.h"
+#include "Engine/Graphics/RHI/RHIHandles.h"
 #include "Engine/Graphics/RHI/RHIRenderResource.h"
 #include "Engine/Graphics/RHI/RHITextureDesc.h"
 #include "Engine/Graphics/RHI/RHITransferTicket.h"

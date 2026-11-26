@@ -213,7 +213,8 @@ SW_TEST_CASE( ModuleHotReloadLogicTest, ShadowCopyRefusesFileWithoutDigest )
 {
     SW_EXPECT_LOG( "ModuleHotReloadManager.ModuleBuiltAgainstDifferent" );
     const AbsolutePath original = test::makeScratchPath( "NotAModule.bin" );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( original, "no digest in here" ) );
+    const string_view  content  = "no digest in here";
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( original, content ) );
 
     ShadowCopyParams params{};
     params._moduleName         = "NotAModule";
@@ -230,7 +231,7 @@ SW_TEST_CASE( ModuleHotReloadLogicTest, ShadowCopyRefusesFileWithoutDigest )
 
     vector<uint8> bytes;
     SW_REQUIRE_TRUE( ModuleShadowCopy::readModuleFile( original, bytes ) );
-    SW_EXPECT_EQUAL( size_t( 16 ), bytes.size() );
+    SW_EXPECT_EQUAL( content.size(), bytes.size() );
     SW_EXPECT_FALSE( ModuleShadowCopy::shouldRejectDelayImports( "NotAModule", original.str(), bytes ) ); // PE 가 아니면 지연 import 표도 없다
 
     ModuleShadowCopy::removeArtifacts( {} );

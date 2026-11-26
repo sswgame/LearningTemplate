@@ -3,6 +3,7 @@
 #include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Graphics/Debug/RenderTargetRegistry.h"
+#include "Engine/Graphics/RHI/RHIHandles.h"
 
 using namespace sw;
 

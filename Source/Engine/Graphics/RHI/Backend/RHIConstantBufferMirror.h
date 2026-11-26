@@ -11,6 +11,7 @@
 #include "Core/Hash/HashUtil.h"
 
 #include "Engine/Graphics/RHI/RHIConstants.h"
+#include "Engine/Graphics/RHI/RHIHandles.h"
 #include "Engine/Profiling/FrameProfiler.h"
 
 namespace sw

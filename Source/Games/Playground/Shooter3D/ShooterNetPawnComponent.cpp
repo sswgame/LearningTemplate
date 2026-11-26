@@ -6,6 +6,7 @@
 #include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/Connection/NetEndpoint.h"
+#include "Core/Network/Message/NetMessageRouter.h"
 #include "Core/Network/Message/NetRequest.h"
 #include "Core/Serialization/BitStream.h"
 #include "Core/Time/WallClock.h"
