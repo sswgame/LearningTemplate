@@ -44,7 +44,7 @@ namespace sw::editor
         {
             /**
              * @brief 패널 목록 @p listPanel(패널 관리자의 줄 그대로) 을 보고 주기가 되었으면 사본을 냅니다.
-             * @details 주기가 되지 않은 프레임(거의 모든 프레임)은 목록을 읽지 않고 돌아온다 — 예전에는 부르는 쪽이 프레임마다 패널 포인터 목록을 새로 지어 넘겼다.
+             * @details 주기가 되지 않은 프레임(거의 모든 프레임)은 목록을 읽지 않고 돌아온다. 부르는 쪽이 프레임마다 패널 포인터 목록을 새로 짓지 않게 하려는 것이다.
              */
             static void update( const vector<EditorPanelEntry>& listPanel );
             /** @brief 이번 세션에 워커가 쓴 문서 사본 수입니다(감시 값 `Editor.AutosaveDocumentCopyCount`). */

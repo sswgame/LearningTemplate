@@ -73,9 +73,9 @@ namespace sw::editor
     SW_EDITOR_API void setEditorScope( SubsystemScope* pScope );
 
     /**
-     * @brief 에디터 서비스를 찾습니다. **없으면 nullptr 이므로** 받는 쪽이 확인해야 합니다.
+     * @brief 에디터 서비스를 찾습니다. 없으면 nullptr 이므로 받는 쪽이 확인해야 합니다.
      * @details 지금 에디터 범위와 그 상위 범위에서 먼저 찾고, 없으면 호스트 서브시스템 범위를 본다. 게임 쪽 `game::findSubsystem<T>()` 와 계약이 같다.
-     *          한쪽만 실패 위치에 assert 를 두면 **Debug 에서만** 프로세스가 죽는다. 그래서 두 함수 모두 받는 쪽이 널을 검사해야 한다.
+     *          한쪽만 실패 위치에 assert 를 두면 Debug 에서만 프로세스가 죽는다. 그래서 두 함수 모두 받는 쪽이 널을 검사해야 한다.
      *          에디터 컨텍스트도 이 창구로 찾는다(컨텍스트가 자기 범위에 자신을 등록한다): 컨텍스트가 있어야 도는 곳(그리기 · 패널 · 팝업 · 명령)은
      *          `getSubsystem<EditorContext>()`, 없는 채로 계속하는 정상 경로(종료 정리 · 컨텍스트 없이 도는 테스트가 부르는 함수 · 감시 값)는 `findSubsystem<EditorContext>()` 다.
      */
@@ -164,7 +164,7 @@ namespace sw::editor
     /** @brief 툴이 대상으로 삼는 씬입니다. 포커스된 미리보기 창의 씬이고, 없으면 활성 씬입니다(`SceneManager::getFocusedScene`). */
     SW_EDITOR_API Scene* getFocusedScene();
     /**
-     * @brief Ctrl+Z 와 Ctrl+Y 가 쓰는 스택입니다. **부르는 순간**의 키보드 포커스 창으로 고른다(`IEditorPanelSubsystem::chooseFocusedCommandStack`) — 포커스 패널의 답,
+     * @brief Ctrl+Z 와 Ctrl+Y 가 쓰는 스택입니다. 부르는 순간의 키보드 포커스 창으로 고른다(`IEditorPanelSubsystem::chooseFocusedCommandStack`) — 포커스 패널의 답,
      *        패널이 아닌 창(메뉴 · 팝업) · History 면 앞 포커스 패널의 지금 답, 그 패널이 열려 있지 않으면 엔진의 전역 `CommandStack`, 그것도 없으면 nullptr 입니다.
      */
     SW_EDITOR_API CommandStack* getFocusedCommandStack();

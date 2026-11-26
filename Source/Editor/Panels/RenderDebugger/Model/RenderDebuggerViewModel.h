@@ -17,7 +17,7 @@
 #include "Engine/Renderer/Debug/RenderDebugRegistry.h"
 #include "Engine/Renderer/Graph/RenderGraphSnapshot.h"
 
-// 렌더 그래프 사본(`RenderGraphSnapshot`)을 노드 그래프 배치로 옮깁니다 — 레벨 = 열, 같은 레벨의 패스 = 행, 쓴 패스 → 읽는 패스 = 링크(언리얼 RDG Insights 의 패스 그림). ImGui 를 모른다(MVVM — 창은 이 값으로 `EditorNodeGraph` 에 노드 · 핀 · 링크를 그린다). 노드 id · 핀 id 는 이 배치가 정해 링크와 어긋나지 않는다.
+// 렌더 그래프 사본(`RenderGraphSnapshot`)을 노드 그래프 배치로 옮깁니다. 레벨 = 열, 같은 레벨의 패스 = 행, 쓴 패스 → 읽는 패스 = 링크(언리얼 RDG Insights 의 패스 그림). ImGui 를 모른다(MVVM — 창은 이 값으로 `EditorNodeGraph` 에 노드 · 핀 · 링크를 그린다). 노드 id · 핀 id 는 이 배치가 정해 링크와 어긋나지 않는다.
 // 구조 버퍼 바이트를 표 행으로 푸는 규칙입니다 — 원소 보폭(등록 크기 `RenderBufferEntry::_elementSize`)마다 한 행, 4 바이트 칸마다 한 열(언리얼 RDG Insights 의 버퍼 보기 · RenderDoc Buffer Viewer 의 형식 지정 자리). 칸의 해석은 버퍼를 거는 컴퓨트 셰이더의 멤버(`RenderBufferEntry::_listMember`)이고, 모르거나 다르게 보려면 사람이 고른다(실수 · 부호 없는 정수 · 정수 · 16 진수).
 namespace sw::editor
 {

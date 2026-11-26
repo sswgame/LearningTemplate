@@ -29,7 +29,7 @@
 #include "Engine/Reflection/ReflectionInvoke.h"
 #include "Engine/Reflection/TextAddress.h"
 
-// 인스펙터가 마지막으로 부른 FUNCTION 의 결과입니다 — 실패 갈래(`ReflectCallResult`), 부른 대상 수와 실패 수, 첫 성공 대상의 반환값 글. 다중 선택은 같은 메서드를 대상마다 부르므로 결과가 대상 수만큼 온다. 패널은 한 줄(성공이면 반환값, 실패면 첫 실패 갈래와 실패 수/대상 수)만 보인다. 언리얼 Details 의 CallInEditor 는 결과를 보이지 않는다 — 우리는 틀린 인자 · 없는 함수를 삼키지 않으려고 둔다.
+// 인스펙터가 마지막으로 부른 FUNCTION 의 결과입니다: 실패 갈래(`ReflectCallResult`), 부른 대상 수와 실패 수, 첫 성공 대상의 반환값 글. 다중 선택은 같은 메서드를 대상마다 부르므로 결과가 대상 수만큼 온다. 패널은 한 줄(성공이면 반환값, 실패면 첫 실패 갈래와 실패 수/대상 수)만 보인다. 언리얼 Details 의 CallInEditor 는 결과를 보이지 않는다 — 우리는 틀린 인자 · 없는 함수를 삼키지 않으려고 둔다.
 namespace sw::editor
 {
     /** @brief 마지막 FUNCTION 호출(대상 하나 이상)의 결과입니다. `begin` 으로 비우고 대상마다 `record` 합니다. */
