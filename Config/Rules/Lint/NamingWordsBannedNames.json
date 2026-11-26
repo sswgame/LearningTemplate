@@ -2544,7 +2544,7 @@
     "NetMessageIsHeld": "NetMessageTraits<T>::kIsHeld — 메시지 서술자의 컴파일 시간 특성은 형식 하나로 읽는다(std::iterator_traits 꼴)(2026-11-27)",
     "NetMessageMaxPerPoll": "NetMessageTraits<T>::kMaxPerPoll — 메시지 서술자의 컴파일 시간 특성은 형식 하나로 읽는다(std::iterator_traits 꼴)(2026-11-27)",
     "LoadBotMainInternal": "LoadBotModuleEntryInternal — LoadBotModuleEntry.cpp 의 내부 이름공간 — 파일 이름(진입점 선언 LoadBotModuleEntry.h)과 맞춘다(2026-11-27)",
-    "NetMessageInternal": "NetMessageRouterInternal — NetMessageRouter.cpp 의 내부 이름공간 — NetMessage.cpp 를 작성기 · 처리기 · 라우터로 나눴다(2026-11-27)"
+    "NetMessageInternal": "NetMessageRouterInternal — NetMessageRouter.cpp 의 내부 이름공간 — NetMessage.cpp 를 작성기 · 처리기 · 라우터로 나눴다(2026-11-27)",
     "FrameBufferTable": "RenderGraphImportedResourceTable — 그래프 밖 자원(가져온 자원)의 이름 → RHI 핸들 표다. FrameBuffer 는 렌더 타깃 묶음 뜻(언리얼 RDG RegisterExternal*, 유니티 RenderGraph Import*)(2026-11-27)",
     "FrameBufferTableTest": "RenderGraphImportedResourceTableTest — 형식 개명을 따른다(2026-11-27)",
     "_frameBufferTable": "_importedResourceTable — RenderGraphImportedResourceTable 개명을 따른다(2026-11-27)",
