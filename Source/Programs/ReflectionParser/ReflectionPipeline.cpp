@@ -492,8 +492,11 @@ namespace sw
         }
     }
 
-    int32 ReflectionPipeline::run()
+    int32 ReflectionPipeline::run( const float32 setupSeconds )
     {
+        Stopwatch runTimer;
+        Stopwatch phaseTimer;
+        addPhaseTime( ParsePhase::Setup, setupSeconds );
         int32                   errorCount = 0;
         [[maybe_unused]] uint32 upToDate   = 0;
         [[maybe_unused]] uint32 noReflect  = 0;
@@ -553,13 +556,14 @@ namespace sw
             listTarget.push_back( PendingInput{ &inputFile, std::move( content ), std::move( paths ), inputWriteTime } );
         }
 
+        addPhaseTime( ParsePhase::Check, static_cast<float32>( phaseTimer.lapSeconds() ) );
         SW_LOG_INFO_ID( "ReflectionPipeline.ParsingInputUpDate", "Parsing %# of %# input(s) (%# up to date, %# without annotations).", listPending.size() + listPendingSource.size(),
                         _pOptions->_listInputFile.size(), upToDate, noReflect );
         errorCount += parsePending( listPending );
         // .cpp 는 한 TU 로 묶지 않는다. 내부 연결 이름(익명 이름공간 · static)과 using 지시문이 .cpp 끼리 부딪힌다(헤더만 읽는 UHT 는 없는 문제다).
         errorCount += parseEachInParallel( listPendingSource );
         logEmitBytes();
-        logPhaseTimes( listPending.size() + listPendingSource.size() );
+        static_cast<void>( phaseTimer.lapSeconds() ); // 파싱 · 방문 · 쓰기는 입력마다 더했다
 
         if ( writeFlagOpsUmbrella() == false )
             ++errorCount;
@@ -571,6 +575,8 @@ namespace sw
             ++errorCount;
         if ( writeDepfile() == false )
             ++errorCount;
+        addPhaseTime( ParsePhase::Lists, static_cast<float32>( phaseTimer.lapSeconds() ) );
+        logPhaseTimes( listPending.size() + listPendingSource.size(), static_cast<float64>( setupSeconds ) + runTimer.getElapsedSeconds() );
         return errorCount;
     }
 
@@ -1008,14 +1014,14 @@ namespace sw
         _arrPhaseMicroseconds[static_cast<size_t>( phase )].fetch_add( microseconds > 0.0 ? static_cast<uint64>( microseconds ) : 0u, std::memory_order_relaxed );
     }
 
-    void ReflectionPipeline::logPhaseTimes( const size_t parsedCount ) const
+    void ReflectionPipeline::logPhaseTimes( const size_t parsedCount, const float64 totalSeconds ) const
     {
-        if ( parsedCount == 0 )
-            return;
         const auto toMs = [this]( const ParsePhase phase )
         { return static_cast<float64>( _arrPhaseMicroseconds[static_cast<size_t>( phase )].load( std::memory_order_relaxed ) ) / static_cast<float64>( constant::time::kMicrosecondsPerMillisecond ); };
-        SW_LOG_INFO_ID( "ReflectionParser.PhaseTime", "Module %# (%# input(s)): parse %# ms, visit %# ms, emit %# ms", _pOptions->_moduleName, parsedCount, toMs( ParsePhase::Parse ),
-                        toMs( ParsePhase::Visit ), toMs( ParsePhase::Emit ) );
+        SW_LOG_INFO_ID( "ReflectionParser.PhaseTime", "Module %# (%# of %# input(s) parsed): total %# ms, setup %# ms, check %# ms, parse %# ms, visit %# ms, emit %# ms, lists %# ms",
+                        _pOptions->_moduleName, parsedCount, _pOptions->_listInputFile.size(), totalSeconds * static_cast<float64>( constant::time::kMillisecondsPerSecond ),
+                        toMs( ParsePhase::Setup ), toMs( ParsePhase::Check ), toMs( ParsePhase::Parse ), toMs( ParsePhase::Visit ), toMs( ParsePhase::Emit ),
+                        toMs( ParsePhase::Lists ) );
     }
 
     bool ReflectionPipeline::writeFlagOpsUmbrella() const

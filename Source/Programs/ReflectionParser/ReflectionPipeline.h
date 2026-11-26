@@ -21,9 +21,12 @@ namespace sw
     /** @brief 파서 실행의 단계입니다(단계별 시간 로그 `ReflectionParser.PhaseTime`). */
     enum class ParsePhase : uint8
     {
+        Setup, ///< 명령줄 · 설정 · 표 · 템플릿 읽기와 도구 시각 측정(파이프라인을 세우기까지, `main` 이 잰다)
+        Check, ///< 입력마다 증분 판정 · 내용 읽기 · 키워드 거르기
         Parse, ///< clang 이 번역 단위를 만든다(공통 include 가 거의 전부)
         Visit, ///< AST 를 돌며 리플렉션 사실을 모은다
         Emit,  ///< 코드젠 · 산출물 쓰기 · 스탬프
+        Lists, ///< 대상 전체의 목록(FlagOps 우산 · 형식 · 경로 칸 · 고정 배치형 · depfile)
         Count,
     };
 
@@ -34,9 +37,10 @@ namespace sw
 
         /**
          * @brief 입력을 모두 처리하고 FlagOps 우산을 씁니다.
+         * @param setupSeconds 프로세스 시작부터 이 파이프라인을 세우기까지 걸린 시간(단계 시간 로그의 `setup`)
          * @return 실패한 수(우산 쓰기 실패 포함). 0 이면 성공입니다.
          */
-        int32 run();
+        int32 run( float32 setupSeconds );
 
     private:
         /** @brief 파싱해야 하는 입력 하나입니다. 키워드를 거를 때 읽은 내용을 파서에 그대로 넘깁니다(이중 I/O 방지). */
@@ -88,10 +92,11 @@ namespace sw
         /** @brief 이번 실행이 만든 `.gen.cpp` 바이트를 방출 함수 구역마다 로그 `ReflectionParser.EmitBytes` 한 줄로 남깁니다(만든 것이 없으면 남기지 않는다). */
         void logEmitBytes() const;
         /**
-         * @brief 단계마다 걸린 시간을 로그 `ReflectionParser.PhaseTime` 한 줄로 남깁니다(파싱한 입력이 없으면 남기지 않는다).
-         * @details 재는 장치만이다 — 공통 include 의 PCH(파서 시간이 문턱을 넘을 때)를 판정할 근거다. 헤더마다 다시 파싱하는 길은 워커 시간을 더한 값이다.
+         * @brief 단계마다 걸린 시간을 로그 `ReflectionParser.PhaseTime` 한 줄로 남깁니다. 파싱한 입력이 없는 실행도 남긴다(모두 최신인 실행의 비용도 잰다).
+         * @details 재는 장치만이다 — 통합이 Release 빌드 로그에서 최적화마다 단계별로 견준다. parse · visit · emit 은 워커 시간을 더한 값이라
+         *          병렬로 돌면 벽시계 합(`total`)보다 클 수 있다.
          */
-        void logPhaseTimes( size_t parsedCount ) const;
+        void logPhaseTimes( size_t parsedCount, float64 totalSeconds ) const;
         /** @brief @p phase 에 걸린 시간을 더합니다(워커가 함께 부른다). */
         void addPhaseTime( ParsePhase phase, float32 seconds ) const;
         /** @brief 대상의 `.gen.cpp` 들에서 고정 배치형 정규 문자열 줄을 모아 `FixedSchemas.gen.txt` 를 씁니다. */
