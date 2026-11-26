@@ -884,7 +884,6 @@
     "Source/GameFramework/Runtime/Online/HTTP/HTTPTypes.cpp": {"integer": 16},
     "Source/GameFramework/Runtime/Online/Schedule/Server/ServiceScheduler.cpp": {"integer": 4},
     "Source/GameFramework/Runtime/Online/Security/OpenSSL/OpenSSLNetSecurityProvider.cpp": {"minus-one": 8, "integer": 11, "hex": 6},
-    "Source/GameFramework/Runtime/Online/Server/OnlineServerService.cpp": {"integer": 1},
     "Source/GameFramework/Runtime/Online/Service/OnlineProtocol.h": {"hex": 2},
     "Source/GameFramework/Runtime/Online/Service/OnlineServiceClient.cpp": {"float": 1},
     "Source/GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.cpp": {"hex": 1},

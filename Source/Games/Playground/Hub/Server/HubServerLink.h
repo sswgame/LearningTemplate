@@ -64,11 +64,12 @@ namespace sw
          * @return 규칙 · 관심 격자 · 복제 설정이 틀렸거나 라우터 등록이 겹치면 오류를 남기고 false 입니다(링크는 서지 않는다)
          */
         [[nodiscard]] bool initialize( INetPeers& peers, NetMessageRouter& router, const HubRules& rules, const StreamingCellGridDef& gridDef, HubServiceStoreSource storeSource );
-        /** @brief 접속한 모두의 진행 쓰기를 맡기고 라우터에서 뗍니다(맡긴 쓰기는 저장소가 끝낸다). 두 번 불러도 됩니다. */
+        /** @brief 접속한 모두의 진행을 저장소에 닿을 때까지 맡기고(`flushProfiles`) 라우터에서 뗍니다. 두 번 불러도 됩니다. */
         void shutdown() override;
         /**
          * @brief 접속한 모두의 진행을 맡기고 저장소에 모두 닿을 때까지 기다립니다 — 진행 저장소(온라인 조립)가 내려가기 직전에 부른다(`IServerKitLocator::subscribeBeforeWithdraw`).
-         * @details 이 링크는 조립보다 늦게 내려간다 — 그때의 저장은 갈 곳이 없어 마지막 진행을 잃는다. 한도(`ServiceStore::kStopDrainMilliseconds`)를 넘으면 오류를 남긴다.
+         * @details 서버 종료는 조립을 링크보다 먼저 내린다. 그때의 저장은 갈 곳이 없어 마지막 진행을 잃으므로 여기서 미리 맡긴다. 모듈 리로드는 거꾸로 링크가 먼저 내려가
+         *          `shutdown` 이 부른다(조립은 모듈이 내려가기 직전에 내린다). 한도(`ServiceStore::kStopDrainMilliseconds`)를 넘으면 오류를 남긴다.
          */
         void flushProfiles();
         /** @brief 저장소가 내려가기 직전의 알림 구독을 맡깁니다(`shutdown` 이 푼다). */
