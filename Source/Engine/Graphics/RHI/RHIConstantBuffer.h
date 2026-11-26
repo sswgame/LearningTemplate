@@ -15,6 +15,8 @@
  *       것인가" 를 함께 알아야 하고(디바이스 수명 통보를 받습니다) 여기는 소유자가 해제 시점을 이미 압니다.
  */
 #pragma once
+#include "Core/Foundation/Macros.h"
+
 #include "Engine/Graphics/RHI/RHIHandles.h"
 
 namespace sw
@@ -27,7 +29,7 @@ namespace sw
      * @struct RHIConstantBuffer
      * @brief 상수 버퍼와 bindless 인덱스입니다. 생성, 갱신, 해제를 한 곳에 모읍니다. 옮기기만 됩니다(사본이 있으면 같은 버퍼를 두 번 놓는다).
      */
-    struct RHIConstantBuffer
+    struct SW_API RHIConstantBuffer
     {
         RHIBufferHandle   _buffer{ 0 };
         RHIBufferSRVIndex _index{ kInvalidDescriptorIndex };
