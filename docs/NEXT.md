@@ -23,7 +23,7 @@
 
 | 누가 | 몫 |
 | --- | --- |
-| 에셋 받기 | 두 카탈로그(tmhsdigital Free-Game-Dev-Assets · skyzhao1223 free-for-creators)에서 CC0 · 공개 라이선스만, 원본 페이지에서 라이선스 확인 뒤 `/AssetLibrary/<출처>/<묶음>/` 에(저장소 밖, INDEX.md). 쓸 때만 `Content/common/*_raw/` 로 옮기고 credits 에 적는다 |
+| (없음) | |
 
 ### 아직 아무도 맡지 않은 몫 [코드]
 
@@ -116,12 +116,15 @@
 
 ## 사용자에게 받을 것
 
+에셋 손으로 받기(브라우저 · 계정이 필요해 자동으로 못 받은 CC0 팩 — 받으면 `/AssetLibrary/<출처>/<묶음>/` 에 두고 INDEX.md 에 줄을 더한다): KayKit itch 전용(Character Animations 등), 3dmodelscc0 City · Guns · Melee, Avramania, GGBotNet PSX Cars, cgbookcase, 3DTextures.me, TextureCan, 0x72 Dungeon I · II, Ninja Adventure, SunnyLand, LuizMelo, Urizen 1Bit, PlayPug UI, BigSoundBank, Abstraction Music Loop Bundle.
+
 영수증 · 푸시 · 외부 로그인 계정 · 키, 인코더 라이선스, 공유 DDC 머신, 원본 Git LFS(S1)와 이력 다시 쓰기, 원본 별도 저장소, 외부 CI 러너.
 
 ## 지킬 결정
 
 코드 규칙에 들지 않는 제품 범위 결정이다. 다시 열려면 조건이 바뀌었는지 먼저 본다.
 
+- **받아 둔 에셋:** `/AssetLibrary/INDEX.md`(저장소 밖, 2026-11-27 — 52 묶음 약 2 GB: KayKit · The Base Mesh · ambientCG · Open HDRI · Glitch · Tabler · Phosphor · Lucide · Xelu · GameArt2D · Effekseer · GGBotNet 글꼴). 저장소에 넣을 때 폴더 LICENSE 와 파일 안 메타데이터(작가 · 라이선스 글)를 다시 대조한다 — Blender Human Base Meshes 는 .blend 안에 CC-BY 글이 있어 뺐다. Xelu 의 콘솔 로고 · Glitch 로고는 상표라 쓰지 않는다.
 - **리소스:** 무료 · 공개 라이선스만(CC0 우선, MIT 류는 고지). 금지: 새 Quaternius QAL(기존 여덟 묶음은 둔다) · CC-BY · NC · ND · 불명확 · 상표 · 초상 · 유명 IP. credits 에 파일 · 원본 · 라이선스 URL · SHA-256 · 날짜 · 변환 경로. 직접 그리기 · 유료 생성 API · 자동 다운로드 금지. 받은 팩은 `/AssetLibrary/`, 쓰는 것만 `common/*_raw/<출처>/<묶음>/`(LFS). 온라인 키트는 합성 fixture.
 - **들이지 않는 것:** 범용 스크립팅 VM(대신 [Gameplay](agents/Gameplay.md) "게임 기능 · 미니게임"), 네이티브 모드 DLL, 원격 명령 서버, 엔진 안 MCP, 런타임 아틀라스, GC, 별도 테스트 프레임워크, taskflow · magic_enum · FidelityFX SDK, 파이버 잡, 범용 할당기 자체 구현, 전면 ECS · Replication Graph, 물리 step 겹침, 컴포넌트 청크 풀, 모션 매칭, 롤백 넷코드, sccache · C++20 모듈 · 분산 빌드, 테스트 자동 재시도, 함수 핫 패치.
 - **게임 · 키트:** 시험용 게임은 Playground 하나 — 모든 기능은 Playground 장소 · 미니게임에서 쓰이고 시나리오로 확인된다. 키트를 켜고 끄는 법은 [Gameplay](agents/Gameplay.md) "게임 기능 · 미니게임". 게임 이름 · "대형 오픈월드" 키트 금지, 장르 키트는 두 번째 사용처에서 같은 계약이 확인될 때 나눈다. DLC 는 세이브를 깨지 않는 선택 확장. 하우징 구조 시뮬 · 동시 건축 제외. 모드는 쿠킹된 데이터만(외부 모드는 서명 · 권한 먼저). 비행 · 코드 에디터 · 마켓 · 클라우드 협업 · 멀티 유저 편집은 범위 밖.
