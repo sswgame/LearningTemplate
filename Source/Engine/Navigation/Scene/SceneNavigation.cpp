@@ -12,13 +12,10 @@
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Automation/Watch/AutomationWatchComponent.h"
 #include "Engine/Config/EngineDefaultAssets.h"
-#include "Engine/Console/DebugHUDRegistry.h"
-#include "Engine/Console/DebugHUDSectionFormat.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Foundation/DeterministicRun.h"
 #include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Foundation/WorldOrigin.h"
-#include "Engine/Graphics/DebugDraw/DebugDrawQueue.h"
 #include "Engine/Navigation/Component/NavMeshAgentComponent.h"
 #include "Engine/Navigation/Component/NavMeshLinkComponent.h"
 #include "Engine/Navigation/Component/NavMeshObstacleComponent.h"
@@ -1361,90 +1358,4 @@ namespace sw
     SW_AUTOMATION_WATCH( navVirtualAgents, "Nav.VirtualAgents", "Navmesh agents moving virtually over streamed-out tiles along the coarse cluster graph", &SceneNavigationWatchesInternal::readVirtualAgents );
     SW_AUTOMATION_QUERY_WATCH( navPathLinkCount, "Nav.PathLinkCount", "Off-mesh links the fine part of the navmesh path from the target to the object named by key crosses (links past streamed-out tiles are not counted)",
                                &SceneNavigationWatchesInternal::readPathLinkCount, true, true );
-} // namespace sw
-
-namespace sw
-{
-    namespace
-    {
-        struct SceneNavigationDebugInternal
-        {
-            /** @brief HUD 섹션 순서 — NPC 섹션(230) 바로 아래다(대상 NPC 의 판단 다음에 그 길찾기를 읽는다). */
-            static constexpr int32 kStreamSectionOrder = 231;
-
-            // 내비 범주(선 · 걷는 면) — 스트리밍 섹션 아래에 이어 놓는다.
-            static constexpr int32 kMeshSectionOrder     = 232;
-            static constexpr int32 kAgentSectionOrder    = 233;
-            static constexpr int32 kObstacleSectionOrder = 234;
-            static constexpr int32 kSurfaceSectionOrder  = 235;
-
-            static void drawFlags( const DebugHUDSectionDraw& draw, const utf8* pCategory, uint32 flags )
-            {
-                PhysicsDebugQueueRenderer renderer{ draw._queue, hashed_string( pCategory ) };
-                draw._scene.getObjectManager()->getSubsystem<SceneNavigation>().drawDebug( renderer, flags );
-            }
-
-            static void drawStream( const DebugHUDSectionDraw& draw ) { drawFlags( draw, "navstream", NavDebugDrawFlag::kCluster ); }
-            static void drawMesh( const DebugHUDSectionDraw& draw ) { drawFlags( draw, "navmesh", NavDebugDrawFlag::kMesh ); }
-            static void drawAgents( const DebugHUDSectionDraw& draw ) { drawFlags( draw, "navagents", NavDebugDrawFlag::kPath | NavDebugDrawFlag::kVelocity ); }
-            static void drawObstacles( const DebugHUDSectionDraw& draw ) { drawFlags( draw, "navobstacles", NavDebugDrawFlag::kObstacle ); }
-            static void drawSurface( const DebugHUDSectionDraw& draw ) { draw._scene.getObjectManager()->getSubsystem<SceneNavigation>().updateDebugView( draw._bShown ); }
-
-            /** @brief 디버그 HUD `navstream` — 종류마다 타일(내비 데이터 청크) 로드 상태 · 대략 그래프 · 먼 경로 수, 대상 에이전트의 먼 경로 상태입니다. */
-            static void writeStreamSection( DebugHUDSectionWriter& writer )
-            {
-                GameObjectManager* pManager = engine::findActiveObjectManager();
-                if ( pManager == nullptr )
-                {
-                    writer.addLine( "navigation", "no active scene" );
-                    return;
-                }
-                const SceneNavigation& navigation = pManager->getSubsystem<SceneNavigation>();
-                vector<NavStreamStats> listStats;
-                navigation.collectStreamStats( listStats );
-                if ( listStats.empty() )
-                    writer.addLine( "navmesh", "none prepared" );
-                for ( const NavStreamStats& stats : listStats )
-                {
-                    const string_view                      name = stats._agentType.empty() ? string_view( "default" ) : string_view( stats._agentType.c_str() );
-                    fixed_string<constant::buffer::kMax64> label;
-                    formatstring( label.data(), label.capacity(), "%# tiles", name );
-                    writer.addLineFormat( label, "%# / %# loaded, %# loading", stats._loadedTileCount, stats._streamTileCount, stats._loadingTileCount );
-                    if ( stats._failedTileCount > 0 )
-                    {
-                        fixed_string<constant::buffer::kMax32> failedCount;
-                        formatstring( label.data(), label.capacity(), "%# failed tiles", name );
-                        formatstring( failedCount.data(), failedCount.capacity(), "%#", static_cast<uint64>( stats._failedTileCount ) );
-                        writer.addLine( label, failedCount, DebugHUDLineStyle::Warning );
-                    }
-                    formatstring( label.data(), label.capacity(), "%# clusters", name );
-                    writer.addLineFormat( label, "%# nodes, %# edges", stats._clusterCount, stats._clusterEdgeCount );
-                    formatstring( label.data(), label.capacity(), "%# routes", name );
-                    writer.addLineFormat( label, "%# coarse, %# virtual, %# replans", stats._coarseRouteAgentCount, stats._virtualAgentCount, stats._replanCount );
-                }
-                const uint32 pendingPathCount = pManager->getSubsystem<SceneNavigation>().getPendingPathRequestCount();
-                writer.addLineFormat( "path requests waiting", "%#", pendingPathCount );
-                const DebugHUDRegistry*      pRegistry = engine::findSubsystem<DebugHUDRegistry>();
-                const GameObjectHandle       target    = pRegistry != nullptr ? pRegistry->getTarget() : GameObjectHandle{};
-                const GameObject*            pTarget   = target.isValid() ? pManager->resolveGameObject( target ) : nullptr;
-                const NavMeshAgentComponent* pAgent    = pTarget != nullptr ? pTarget->getComponent<NavMeshAgentComponent>() : nullptr;
-                if ( pAgent == nullptr )
-                    return;
-                const utf8* pMode = pAgent->isInVirtualMove() ? "virtual (coarse graph)" : ( pAgent->isFollowingCoarseRoute() ? "intermediate target" : "fine path" );
-                writer.addLine( "agent", string( pTarget->getName().c_str() ) );
-                writer.addLine( "agent route", pMode );
-                writer.addLineFormat( "agent replans", "%# (%# coarse points)", pAgent->getRouteReplanCount(), static_cast<uint32>( pAgent->getCoarseRoutePoints().size() ) );
-            }
-        };
-    } // namespace
-
-    SW_DEBUG_HUD_CATEGORY( navstream, "navstream", "Navigation streaming (tiles, coarse graph, routes)", SceneNavigationDebugInternal::kStreamSectionOrder, DebugHUDSectionFlag::kNone,
-                           &SceneNavigationDebugInternal::writeStreamSection, &SceneNavigationDebugInternal::drawStream, "Nav" );
-    SW_DEBUG_HUD_CATEGORY( navmesh, "navmesh", "Navigation mesh polygons", SceneNavigationDebugInternal::kMeshSectionOrder, DebugHUDSectionFlag::kNone, nullptr, &SceneNavigationDebugInternal::drawMesh, nullptr );
-    SW_DEBUG_HUD_CATEGORY( navagents, "navagents", "Navigation agents (path, velocity)", SceneNavigationDebugInternal::kAgentSectionOrder, DebugHUDSectionFlag::kNone, nullptr,
-                           &SceneNavigationDebugInternal::drawAgents, nullptr );
-    SW_DEBUG_HUD_CATEGORY( navobstacles, "navobstacles", "Navigation obstacles", SceneNavigationDebugInternal::kObstacleSectionOrder, DebugHUDSectionFlag::kNone, nullptr,
-                           &SceneNavigationDebugInternal::drawObstacles, nullptr );
-    SW_DEBUG_HUD_CATEGORY( navsurface, "navsurface", "Navigation walkable surface (mesh in the game view)", SceneNavigationDebugInternal::kSurfaceSectionOrder, DebugHUDSectionFlag::kDrawsWhileHidden, nullptr,
-                           &SceneNavigationDebugInternal::drawSurface, nullptr );
 } // namespace sw
