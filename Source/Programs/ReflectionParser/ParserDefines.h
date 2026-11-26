@@ -206,7 +206,8 @@ namespace sw
         inline constexpr const utf8* kParsingStateSkipPaths       = "state_declaration_skip_paths";
 
         // tuning.*
-        inline constexpr const utf8* kMaxParallelParses = "max_parallel_parses";
+        inline constexpr const utf8* kMaxParallelParses         = "max_parallel_parses";
+        inline constexpr const utf8* kMinTranslationUnitsForPch = "min_translation_units_for_pch";
 
         // toolchain_config.json
         inline constexpr const utf8* kLlvmPath          = sw::config::kKeyLlvmPath;

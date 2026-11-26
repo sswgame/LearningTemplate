@@ -184,7 +184,8 @@ namespace sw
 
             static void applyTuningSection( ParserConfig& config, const nlohmann::json& obj )
             {
-                config._maxParallelParses = getUintOrDefault( obj, jsonkey::kMaxParallelParses, config._maxParallelParses );
+                config._maxParallelParses         = getUintOrDefault( obj, jsonkey::kMaxParallelParses, config._maxParallelParses );
+                config._minTranslationUnitsForPch = getUintOrDefault( obj, jsonkey::kMinTranslationUnitsForPch, config._minTranslationUnitsForPch );
             }
 
             /**
@@ -284,6 +285,12 @@ namespace sw
                 if ( config._maxParallelParses == 0 )
                 {
                     SW_LOG_ERROR_ID( "ParserConfig.TuningMaxParallelParses", "%#: 'tuning.max_parallel_parses' is required (a positive number)", defaultsPath );
+                    bComplete = false;
+                }
+                if ( config._minTranslationUnitsForPch < 2 )
+                {
+                    SW_LOG_ERROR_ID( "ParserConfig.TuningMinTranslationUnitsForPch", "%#: 'tuning.min_translation_units_for_pch' is required (2 or more - one unit gains nothing from a PCH)",
+                                     defaultsPath );
                     bComplete = false;
                 }
                 return bComplete;
@@ -448,6 +455,7 @@ namespace sw
         , _listStateSkipPath{}
         , _listLoadedFile{}
         , _maxParallelParses{ 0 }
+        , _minTranslationUnitsForPch{ 0 }
         , _bLoaded{ SW_FALSE }
         , _reserved{ 0 }
         , _padding{ 0 }
