@@ -1,115 +1,31 @@
 #include "pch.h"
 
-#include "Core/Container/vector.h"
-#include "Core/Foundation/Types.h"
+#include "Games/Playground/FeatureDemo/SmartObjectDemoComponent.h"
+
 #include "Core/Log/Logger.h"
 #include "Core/String/StringUtil.h"
-#include "Core/Time/TimeSeconds.h"
 
-#include "Engine/Asset/AssetRef.h"
 #include "Engine/Asset/Cache/SharedAssetCache.h"
-#include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
-#include "GameFramework/Runtime/Character/AI/Schedule/ScheduleCatalog.h"
-#include "GameFramework/Runtime/Character/AI/Schedule/ScheduleSystem.h"
-#include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
-#include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
-#include "GameFramework/Runtime/Gameplay/Interaction/SmartObjectScheduleLocator.h"
-
-#include "Games/Playground/FeatureDemo/FeatureDemoCommandUtil.h"
 
 namespace sw
 {
-    /**
-     * @class SmartObjectDemoComponent
-     * @brief 일정 시스템과 스마트 오브젝트 예약 어댑터(`SmartObjectScheduleLocator`)를 들고, 일정 이벤트를 슬롯 점유 · 비우기로 잇습니다.
-     */
-    REFLECT( Category = "FeatureDemo", DisplayName = "Smart Object Demo", Tooltip = "Daily schedule whose UseObject blocks reserve and claim smart object slots of the scene" )
-    class SmartObjectDemoComponent : public GameModeComponent
-    {
-    public:
-        REFLECT_BODY();
-
-        SmartObjectDemoComponent();
-        virtual ~SmartObjectDemoComponent() override;
-
-        /** @brief 첫날 @p minute 분까지 일정을 흘리고, 그 사이의 활동 시작 · 끝을 점유 · 비우기로 잇고, 몸을 그 시각의 자리에 둡니다. 뒤로는 가지 않습니다. */
-        void advanceToMinute( int32 minute );
-
-    protected:
-        void               serializeGameState( StateIO& io ) override;
-        [[nodiscard]] bool startGame() override;
-        void               updateGame( GameSeconds frameTime ) override;
-
-    private:
-        /** @brief 쌓인 일정 이벤트를 점유 · 비우기로 잇습니다. */
-        void processEvents();
-        /** @brief NPC @p npcIndex 의 지금 칸이 예약한 슬롯을 점유하고 결과를 셉니다. 예약이 없는 활동이면 아무 일도 하지 않습니다. */
-        void claimSlot( int32 npcIndex );
-        /** @brief NPC @p npcIndex 의 지금 칸이 든 예약 번호입니다. 슬롯을 쓰지 않는 활동이면 0 입니다. */
-        [[nodiscard]] uint32 findReservation( int32 npcIndex ) const;
-        /** @brief NPC @p npcIndex 가 점유한 슬롯을 비웁니다. */
-        void releaseSlot( int32 npcIndex );
-        /** @brief 일정 NPC 의 몸(같은 이름의 씬 오브젝트)입니다. */
-        GameObject* findBody( int32 npcIndex );
-
-    private:
-        PROPERTY( Category = "Data", DisplayName = "Schedules", Tooltip = "Schedule catalog (*.schedules.xml)" )
-        AssetRef<ScheduleCatalog> _scheduleDataPath;
-        PROPERTY( Category = "Data", DisplayName = "Start Minute", Min = 0, Max = 1439, Tooltip = "Minute of day 0 the schedule starts at" )
-        int32 _startMinute;
-
-        PROPERTY( RuntimeState, Min = 0 )
-        int32 _minute; ///< 흘린 시각(첫날의 분)
-        PROPERTY( RuntimeState, Min = 0 )
-        int32 _claimCount;
-        PROPERTY( RuntimeState, Min = 0 )
-        int32 _refusedCount; ///< 예약했지만 다른 쪽(플레이어)이 차지해 앉지 못한 수
-        PROPERTY( RuntimeState, Min = 0 )
-        int32 _releaseCount;
-
-        BoundAssetRef<ScheduleCatalog>            _pCatalog; ///< 일정이 빌려 쓴다
-        SW_CODEC_STATE SmartObjectScheduleLocator _locator;  ///< 일정이 빌려 쓴다(`_schedule` 앞에 선언 — 뒤에 사라진다)
-        SW_CODEC_STATE ScheduleSystem             _schedule;
-        SW_CODEC_STATE vector<uint32> _listClaim; ///< NPC 마다 점유 중인 예약 번호(0 은 없음)
-    };
-
     namespace
     {
         struct SmartObjectDemoComponentInternal
         {
             static constexpr FormatDef kStateFormat{ "FDSO" };
-            static constexpr int32     kMinutesPerHour = 60;
-            static constexpr float32   kMaxHour        = 24.0f; ///< 첫날의 끝
-
-            /** @brief `schedule.advance <demo object> <hour>` — 첫날 그 시각(소수 시간)까지 일정을 흘립니다. */
-            static bool runAdvance( const vector<string>& listArgument, string& outReply )
-            {
-                float32 hour = 0.0f;
-                if ( listArgument.size() != 2 || StringUtil::parseFloat( listArgument[1], hour ) == false || hour < 0.0f || hour > kMaxHour )
-                    return false;
-                SmartObjectDemoComponent* pDemo = FeatureDemoCommandUtil::findStarted<SmartObjectDemoComponent>( listArgument[0], outReply );
-                if ( pDemo == nullptr )
-                    return false;
-                pDemo->advanceToMinute( static_cast<int32>( hour * static_cast<float32>( kMinutesPerHour ) ) );
-                FeatureDemoCommandUtil::reply( outReply, "schedule at hour %#", hour );
-                return true;
-            }
         };
     } // namespace
-
-    SW_DEV_COMMAND( ScheduleAdvance, "schedule.advance", "schedule.advance <demo object> <hour>", "Advance the schedule of a smart object demo to an hour of day 0",
-                    &SmartObjectDemoComponentInternal::runAdvance );
 
     SmartObjectDemoComponent::SmartObjectDemoComponent()
         : _scheduleDataPath{}
@@ -248,5 +164,3 @@ namespace sw
         }
     }
 } // namespace sw
-
-#include "SmartObjectDemoComponent.cpp.gen.inl"

@@ -1,6 +1,7 @@
 {
   "_comment": "전수 개명한 옛 이름 → 새 이름 · 까닭(Scripts/lint/naming_words.py 의 naming-words 규칙이 되살린 옛 이름을 막는다). 언리얼 CoreRedirects 의 옛 이름 → 새 이름 자리이되 고쳐 주지 않고 막는다. 개명 도구(py -3 -m Scripts rename-symbol)가 줄을 더한다 — 키(옛 이름)는 개명 도구가 바꾸지 않는다.",
   "_bannedNames": {
+    "ShadowCopyName": "ModuleShadowCopy 의 makeCopyName · getCopyDirectory · removeCopies — 섀도 복사본의 쓰기 · 이름 · 치우기를 형식 하나로(2026-11-26)",
     "RHILiveCommandListUtil": "RHILiveCommandListSet — 네 백엔드의 살아 있는 리스트 잠금 · 목록 · 끊기를 형식 하나로(2026-11-26)",
     "RHIBufferSizeUtil": "IRHIResourceFactory 공통 입구의 원소 수 검사(RHIResourceFactoryInternal::isValidElements) — 쓰는 곳이 하나다(2026-11-26)",
     "RHIAllocationLeakUtil": "RHIMemoryTracker::reportAllocatorLeaks · collectAllocatorStatsNames(2026-11-26)",
@@ -2513,7 +2514,10 @@
     "EditorTaskPoll": "EditorJobPoll — 에디터 백그라운드 잡은 TaskManager 실행 단위(Task)와 뜻이 달라(최신 요청 · 결과 칸) 같은 폴더의 EditorExternalToolJob 처럼 Job 으로 가른다(2026-11-26)(2026-11-26)",
     "GimmickDamageUtil": "GimmickUtil — 기믹 도구는 GimmickUtil 하나로 합쳤다(피해 · 파괴도 같은 주인 없는 도구)(2026-11-26)",
     "sw_scan_reflection_headers": "sw_scan_reflection_inputs — 헤더와 함께 REFLECT · ENUM 이 든 .cpp 도 훑는다(2026-11-26)",
+    "SRPGCombat": "SRPGBattlefield::computeStrike · computeForecast · computeForecastFrom · findCounterWeapon · executeAttack · executeMapAttack — 전투 계산은 전장의 멤버다(2026-11-26)",
+    "FeatureDemoCommandUtil": "FeatureDemo/Dev/FeatureDemoDevCommands.cpp 의 내부 구조 — 시연 개발 명령만 쓴다(2026-11-26)",
     "makePaths": "GeneratedPaths::make — 리플렉션 산출물 경로는 주인 형식의 멤버다(GeneratedFileUtil 은 주인 없는 파일 쓰기 · 시각만)(2026-11-26)",
-    "writeStamp": "GeneratedStamp::write — 스탬프 쓰기 · 읽기(GeneratedStamp::read)는 스탬프 형식의 멤버다(2026-11-26)"
+    "writeStamp": "GeneratedStamp::write — 스탬프 쓰기 · 읽기(GeneratedStamp::read)는 스탬프 형식의 멤버다(2026-11-26)",
+    "isRawShaderSource": "ShaderSourceAsset::isRawSource — 원본 · include 조각 판정은 셰이더 종류의 접미사 표가 한다(2026-11-26)"
   }
 }

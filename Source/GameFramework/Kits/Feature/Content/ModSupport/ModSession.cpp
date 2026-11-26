@@ -16,11 +16,9 @@
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Asset/AssetPackIndex.h"
-#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Config/PackStorageSettings.h"
-#include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Content/AssetRegistry.h"
@@ -48,7 +46,6 @@ namespace sw
             static constexpr const utf8* kInstallFolderName       = "Mods";                  ///< 패키지(실행 파일 폴더) 아래 모드 설치 폴더
             static constexpr const utf8* kSourceTreeInstallFolder = "IntegrationTests/Mods"; ///< 저장소에서의 설치 폴더 — 시연 모드는 시나리오 · 테스트 자료다
             static constexpr const utf8* kExportFolderName        = "ModPacks";              ///< Saved 아래 배포용 묶은 모드 폴더(`mod.pack`)
-            static constexpr size_t      kReplyLineLimit          = 200;                     ///< `mod.read` 답의 글자 수 상한
 
             /**
              * @brief 모드 팩 색인(`assetindex.xml`)이 모드 자기 에셋만 담는지 봅니다 — 경로는 `mods/<id>/` 아래 팩에 든 파일이고, GUID 는 이미 풀리는 것(기본 · 다른 모드)이 아니어야 한다.
@@ -94,79 +91,6 @@ namespace sw
                     listID.emplace_back( part );
                 }
                 return listID;
-            }
-
-            static bool runStatus( const vector<string>& listArgument, string& outReply )
-            {
-                if ( listArgument.empty() == false )
-                    return false;
-                const ModSession* const pSession = game::findSubsystem<ModSession>();
-                if ( pSession == nullptr )
-                {
-                    outReply = "mods: no mod session";
-                    return true;
-                }
-                const ModSetDigest&                      digest = pSession->getDigest();
-                StringBuilder<constant::buffer::kMax256> replyBuilder;
-                replyBuilder.appendFormat( "mods: %# active [%#] config %#", digest._listEntry.size(), digest.toText(), digest._configHash );
-                outReply = string( replyBuilder.view() );
-                return true;
-            }
-
-            static bool runRead( const vector<string>& listArgument, string& outReply )
-            {
-                if ( listArgument.size() != 1 )
-                    return false;
-                string text;
-                if ( XMLReadUtil::readText( AssetID{ listArgument[0] }, text ) == false ) // 팩의 카탈로그는 이진 쿠킹본이다
-                {
-                    StringBuilder<constant::buffer::kMax256> replyBuilder;
-                    replyBuilder.appendFormat( "mod.read %#: not found", listArgument[0] );
-                    outReply = string( replyBuilder.view() );
-                    return true;
-                }
-                string line{ StringUtil::trim( text ) };
-                for ( utf8& ch : line )
-                {
-                    if ( ch == '\r' || ch == '\n' || ch == '\t' )
-                        ch = ' ';
-                }
-                if ( line.size() > kReplyLineLimit )
-                    line.resize( kReplyLineLimit );
-                StringBuilder<constant::buffer::kMax256> replyBuilder;
-                replyBuilder.appendFormat( "mod.read %#: %#", listArgument[0], line );
-                outReply = string( replyBuilder.view() );
-                return true;
-            }
-
-            /** @brief `mod.pack <id>` — 소스 모드를 배포 형태로 묶어 내보내기 폴더에 둔다(`ModSession::exportPackedMod`). */
-            static bool runPack( const vector<string>& listArgument, string& outReply )
-            {
-                const GameConfig* const pGameConfig = game::findSubsystem<const GameConfig>();
-                if ( listArgument.size() != 1 || pGameConfig == nullptr )
-                    return false;
-                AbsolutePath folder;
-                if ( ModSession::exportPackedMod( listArgument[0], pGameConfig->_packRoot.get(), folder ) == false )
-                {
-                    StringBuilder<constant::buffer::kMax256> replyBuilder;
-                    replyBuilder.appendFormat( "mod.pack %#: failed (see the error above)", listArgument[0] );
-                    outReply = string( replyBuilder.view() );
-                    return false;
-                }
-                StringBuilder<constant::buffer::kMax256> replyBuilder;
-                replyBuilder.appendFormat( "mod.pack %#: %#", listArgument[0], folder.str() );
-                outReply = string( replyBuilder.view() );
-                return true;
-            }
-
-            [[nodiscard]] static bool readActiveCount( const GameObjectManager* pManager, float64& outValue )
-            {
-                (void)pManager;
-                const ModSession* const pSession = game::findSubsystem<ModSession>();
-                if ( pSession == nullptr )
-                    return false;
-                outValue = static_cast<float64>( pSession->getDigest()._listEntry.size() );
-                return true;
             }
         };
     } // namespace
@@ -653,15 +577,6 @@ namespace sw
 
 namespace sw
 {
-    SW_DEV_COMMAND( ModStatus, "mod.status", "mod.status", "Show the mods of this session: count, id@version#content hash list and the config hash", &ModSessionInternal::runStatus );
-    SW_DEV_COMMAND( ModRead, "mod.read", "mod.read <resource id>", "Read a text resource through the resource entrance (mod packs included) and reply its text on one line",
-                    &ModSessionInternal::runRead );
-
-    SW_DEV_COMMAND( ModPack, "mod.pack", "mod.pack <mod id>", "Pack the source mod <id> from the Mods folder into Saved/ModPacks/<id> (mod.xml + content.pack) for a shipping package",
-                    &ModSessionInternal::runPack );
-
-    SW_AUTOMATION_WATCH( modActiveCount, "Mods.ActiveCount", "Mods mounted for this game session", &ModSessionInternal::readActiveCount );
-
     bool ModSession::validateSaveCompatible( string_view savedText ) const
     {
         // 세이브 머리는 신뢰하지 않는 파일의 글이다 — 읽지 못하면 거절한다(구성을 짐작하지 않는다).

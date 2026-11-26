@@ -25,7 +25,7 @@ elseif(SW_TARGET_TYPE STREQUAL "Client")
 endif()
 
 # 정적 모듈 구성(웹 · Android 개발 — `SW_STATIC_MODULES`)은 정적 라이브러리로 한 실행 파일에 들고, 핫 리로드(`ModuleReload/` — 모듈 DLL 을 갈아 끼운다)를 짓지 않는다.
-# 그 창구(`IHostDevLayer` 의 리로드 함수)도 그 구성에서 형식에 없다(`SW_WITH_DYNAMIC_MODULES`). 자동화 실행기 · 콘솔 · 설정 리로드는 남는다.
+# 그 창구(`IHostDevLayer` 의 리로드 함수)는 그 구성에서 리로드가 없다고 답한다(`Host/HostDevLayer.cpp`). 자동화 실행기 · 콘솔 · 설정 리로드는 남는다.
 if(SW_STATIC_MODULES)
 	set(devtools_lib_type STATIC)
 	sw_remove_excluded_sources(DEVTOOLS_SOURCES "/Source/DevTools/ModuleReload/")
@@ -92,5 +92,4 @@ endif()
 # ------------------------------------------------------------------------------
 sw_add_reflection_step(DevTools
 	MODULE DevTools
-	INCLUDES "${CMAKE_SOURCE_DIR}/Source"
 )

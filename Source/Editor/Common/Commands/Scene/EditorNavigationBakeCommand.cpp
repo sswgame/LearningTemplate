@@ -27,40 +27,37 @@ namespace sw::editor
     {
         struct EditorNavigationBakeCommandInternal
         {
-            /**
-             * @brief 이미 마련한 내비메시를 버리고 설정 테이블의 에이전트 종류마다 다시 베이크합니다(언리얼 Build Paths · 유니티 Navigation > Bake).
-             * @details 플레이 중에는 부르지 않는다 — 설정을 다시 걸면 군중과 에이전트의 내비메시를 놓는다(`SceneNavigation::setSettings`). 커맨드는 편집 상태에서만 켜진다.
-             * @return 내비메시가 선 에이전트 종류 수입니다. 기하가 없는 종류는 세지 않으며 씬에 기하가 없으면 0 입니다.
-             */
-            static uint32 bakeAll( GameObjectManager& manager )
-            {
-                SceneNavigation&      navigation = manager.getSubsystem<SceneNavigation>();
-                const NavMeshSettings settings   = navigation.getSettings();
-                navigation.setSettings( settings ); // 같은 테이블을 다시 걸어 마련해 둔 내비메시를 버린다
-                uint32 bakedCount{ 0 };
-                for ( const NavAgentTypeDef& agentType : settings._listAgentType )
-                {
-                    const INavMeshTileStore* pNavMesh = navigation.ensureNavMesh( agentType._name );
-                    if ( pNavMesh != nullptr && pNavMesh->getPolygonCount() > 0 ) // 기하가 없는 씬도 ±1 상자로 초기화돼 빈 메시가 서지만 그것은 베이크가 아니다
-                        ++bakedCount;
-                }
-                navigation.flushTileBakes();
-                SW_LOG_INFO_ID( "EditorNavigationCommands.NavigationBakedAgentType", "Navigation baked: %# of %# agent type(s) have a navmesh", bakedCount, static_cast<uint32>( settings._listAgentType.size() ) );
-                return bakedCount;
-            }
-
             /** @brief 지금 베이크해 둔 에이전트 종류 수입니다(감시 값 `Editor.NavMeshCount`). */
             static uint32 countBakedMeshes( GameObjectManager& manager )
             {
-                SceneNavigation& navigation = manager.getSubsystem<SceneNavigation>();
-                uint32           count{ 0 };
-                for ( const NavAgentTypeDef& agentType : navigation.getSettings()._listAgentType )
+                const SceneNavigation& navigation = manager.getSubsystem<SceneNavigation>();
+                vector<hashed_string>  listAgentType;
+                navigation.collectBakedAgentTypes( listAgentType );
+                uint32 count{ 0 };
+                for ( const hashed_string& agentType : listAgentType )
                 {
-                    const INavMeshTileStore* pNavMesh = navigation.findNavMesh( agentType._name );
-                    if ( pNavMesh != nullptr && pNavMesh->getPolygonCount() > 0 )
+                    const INavMeshTileStore* pNavMesh = navigation.findNavMesh( agentType );
+                    if ( pNavMesh != nullptr && pNavMesh->getPolygonCount() > 0 ) // 기하가 없는 씬도 ±1 상자로 초기화돼 빈 메시가 서지만 그것은 베이크가 아니다
                         ++count;
                 }
                 return count;
+            }
+
+            /**
+             * @brief 마련한 내비메시를 버리고 다시 베이크합니다(`SceneNavigation::rebakeAllNavMeshes` — 언리얼 Build Paths · 유니티 Navigation > Bake).
+             * @details 플레이 중에는 부르지 않는다 — 군중이 내비메시를 잃는다. 커맨드는 편집 상태에서만 켜진다. 베이크 자체는 엔진 함수라 헤드리스 단위 테스트가 본다
+             *          (`SceneNavigationBakeTest`).
+             * @return 폴리곤이 선 에이전트 종류 수입니다. 씬에 기하가 없으면 0 입니다.
+             */
+            static uint32 bakeAll( GameObjectManager& manager )
+            {
+                SceneNavigation& navigation = manager.getSubsystem<SceneNavigation>();
+                (void)navigation.rebakeAllNavMeshes();
+                navigation.flushTileBakes();
+                const uint32 bakedCount = countBakedMeshes( manager );
+                SW_LOG_INFO_ID( "EditorNavigationCommands.NavigationBakedAgentType", "Navigation baked: %# of %# agent type(s) have a navmesh", bakedCount,
+                                static_cast<uint32>( navigation.getSettings()._listAgentType.size() ) );
+                return bakedCount;
             }
 
             /** @brief 이 에디터 세션에서 `navigation.bake` 가 끝난 횟수(감시 값 `Editor.NavigationBakeCount`)의 상태입니다. 에디터 범위의 상태 저장소가 소유한다. */

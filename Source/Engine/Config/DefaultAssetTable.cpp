@@ -7,8 +7,8 @@
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetPaths.h"
-#include "Engine/Content/Pack/PackConfig.h"
 #include "Engine/Foundation/EngineSubsystems.h"
+#include "Engine/Graphics/Shader/ShaderSourceAssetKind.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
@@ -38,7 +38,7 @@ namespace sw
                 bComplete = false;
                 continue;
             }
-            const bool bNotInThisPackage = engine::getSubsystem<AssetPaths>().isExcludedForHost( pValue->get() ) || ( AssetIO::getContentSource() == ContentSource::Cooked && PackConfig::isRawShaderSource( pValue->get() ) );
+            const bool bNotInThisPackage = engine::getSubsystem<AssetPaths>().isExcludedForHost( pValue->get() ) || ( AssetIO::getContentSource() == ContentSource::Cooked && ShaderSourceAsset::isRawSource( pValue->get() ) );
             if ( bNotInThisPackage == false && AssetIO::hasAsset( AssetID{ pValue->get() } ) == false )
             {
                 SW_LOG_ERROR_ID( "DefaultAssetTable.PointsWhichDoesNot", "%#: <%#> points to '%#', which does not exist", path, prop._name.c_str(), pValue->c_str() );

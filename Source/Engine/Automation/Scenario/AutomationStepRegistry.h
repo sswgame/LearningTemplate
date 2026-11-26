@@ -281,17 +281,12 @@ namespace sw
 
 #else
 
-// 자동화를 뺀 배포본(`SW_SHIPPING`): 등록하지 않고 본문 함수만 붙잡는다.
-    #define SW_AUTOMATION_STEP( id, pKind, pRun, pValidate, options )                                                   \
-        [[maybe_unused]] static constexpr auto                        sw_automationStepRunUnused_##id      = pRun;      \
-        [[maybe_unused]] static constexpr auto                        sw_automationStepValidateUnused_##id = pValidate; \
-        [[maybe_unused]] static constexpr ::sw::AutomationStepOptions sw_automationStepOptionsUnused_##id  = options
-    #define SW_AUTOMATION_START_BLOCKER( id, pName, pReadiness )   [[maybe_unused]] static constexpr auto sw_automationStartBlockerUnused_##id = pReadiness
-    #define SW_AUTOMATION_CLOCK_HOLDER( id, pName, pReadiness )    [[maybe_unused]] static constexpr auto sw_automationClockHolderUnused_##id = pReadiness
-    #define SW_AUTOMATION_FINISH_BLOCKER( id, pName, pReadiness )  [[maybe_unused]] static constexpr auto sw_automationFinishBlockerUnused_##id = pReadiness
-    #define SW_AUTOMATION_CAPTURE_BLOCKER( id, pName, pReadiness ) [[maybe_unused]] static constexpr auto sw_automationCaptureBlockerUnused_##id = pReadiness
-    #define SW_AUTOMATION_STABILITY_CONDITION( id, pName, pReadiness, pConfigure )                               \
-        [[maybe_unused]] static constexpr auto sw_automationStabilityConditionUnused_##id          = pReadiness; \
-        [[maybe_unused]] static constexpr auto sw_automationStabilityConditionConfigureUnused_##id = pConfigure
+// 자동화를 뺀 배포본(`SW_SHIPPING`): 시나리오 단계 · 막는 것은 개발 전용 소스에만 둔다 — 배포가 짓는 TU 에 두면 컴파일되지 않는다.
+    #define SW_AUTOMATION_STEP( id, pKind, pRun, pValidate, options )              static_assert( false, "SW_AUTOMATION_STEP is a development registration: move it to a development-only source (a Dev/ folder of DevFolders.json, Tests/, DevTools or GameFrameworkDev) - shipping does not build those" )
+    #define SW_AUTOMATION_START_BLOCKER( id, pName, pReadiness )                   static_assert( false, "SW_AUTOMATION_START_BLOCKER is a development registration: move it to a development-only source (a Dev/ folder of DevFolders.json, Tests/, DevTools or GameFrameworkDev) - shipping does not build those" )
+    #define SW_AUTOMATION_CLOCK_HOLDER( id, pName, pReadiness )                    static_assert( false, "SW_AUTOMATION_CLOCK_HOLDER is a development registration: move it to a development-only source (a Dev/ folder of DevFolders.json, Tests/, DevTools or GameFrameworkDev) - shipping does not build those" )
+    #define SW_AUTOMATION_FINISH_BLOCKER( id, pName, pReadiness )                  static_assert( false, "SW_AUTOMATION_FINISH_BLOCKER is a development registration: move it to a development-only source (a Dev/ folder of DevFolders.json, Tests/, DevTools or GameFrameworkDev) - shipping does not build those" )
+    #define SW_AUTOMATION_CAPTURE_BLOCKER( id, pName, pReadiness )                 static_assert( false, "SW_AUTOMATION_CAPTURE_BLOCKER is a development registration: move it to a development-only source (a Dev/ folder of DevFolders.json, Tests/, DevTools or GameFrameworkDev) - shipping does not build those" )
+    #define SW_AUTOMATION_STABILITY_CONDITION( id, pName, pReadiness, pConfigure ) static_assert( false, "SW_AUTOMATION_STABILITY_CONDITION is a development registration: move it to a development-only source (a Dev/ folder of DevFolders.json, Tests/, DevTools or GameFrameworkDev) - shipping does not build those" )
 
 #endif // !SW_SHIPPING

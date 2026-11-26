@@ -9,11 +9,11 @@
 #include "Engine/Animation/Component/SkeletalAnimatorComponent.h"
 #include "Engine/Animation/Component/SkeletalMeshComponent.h"
 #include "Engine/Animation/Skeletal/LocomotionSpeedUtil.h"
-#include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Character/PoseModifier/PoseModifierComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Tick/TickContext.h"
 
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterAppearanceComponent.h"
 
@@ -45,37 +45,6 @@ namespace sw
                         return ShooterAnimationParameter::kMoveAir;
                 }
                 return ShooterAnimationParameter::kMoveIdle;
-            }
-
-            /** @brief 첫 몸이 보폭 워핑 노드에 마지막으로 넣은 배율입니다. 리그가 아직 묶이지 않았으면 프로브가 없는 것으로 보고합니다. */
-            [[nodiscard]] static bool readStrideScale( const ShooterAvatarComponent& avatar, float64& outValue )
-            {
-                if ( avatar.getStrideAppliedCount() == 0 )
-                    return false;
-                outValue = static_cast<float64>( avatar.getLastStrideScale() );
-                return true;
-            }
-
-            /**
-             * @brief 첫 몸의 리그에서 지금 켜진(가중치 > 0) 2 본 IK 노드의 `reach_error` 중 가장 큰 값입니다(미터). 손이 총의 Grip · SupportHand 에 닿지 않으면 0 보다 크다.
-             * @details 1인칭 · 3인칭 · 두 손 견착이 켜는 손 IK 를 노드 이름 없이 한 번에 본다 — 슬롯이 바뀌면 켜진 노드가 바뀐다. 리그가 묶이지 않았으면 프로브가 없는 것으로 보고한다.
-             */
-            [[nodiscard]] static bool readHandReachError( const ShooterAvatarComponent& avatar, float64& outValue )
-            {
-                const GameObject*            pOwner = avatar.getOwner();
-                const PoseModifierComponent* pRig   = pOwner != nullptr ? pOwner->getComponent<PoseModifierComponent>() : nullptr;
-                if ( pRig == nullptr || pRig->isRigReady() == false )
-                    return false;
-                const RigInstance& instance = pRig->getRigInstance();
-                float32            largest  = 0.0f;
-                for ( uint32 nodeIndex = 0; nodeIndex < instance.getNodeCount(); ++nodeIndex )
-                {
-                    float32 reachError = 0.0f;
-                    if ( instance.computeNodeWeight( nodeIndex ) > 0.0f && instance.getNode( nodeIndex ).getOutputValue( hashed_string( "reach_error" ), reachError ) )
-                        largest = MathUtil::max( largest, reachError );
-                }
-                outValue = static_cast<float64>( largest );
-                return true;
             }
         };
     } // namespace
@@ -333,15 +302,4 @@ namespace sw
         if ( pRig != nullptr )
             pRig->setSlotWeight( _twoHandHoldSlot, bTwoHanded ? _aimWeight : 0.0f );
     }
-} // namespace sw
-
-namespace sw
-{
-    SW_AUTOMATION_COMPONENT_WATCH( shooterStrideScale, "Shooter.StrideScale", "Stride scale the first shooter body last gave its StrideWarping node (1 = clip as is); absent until the rig is bound", ShooterAvatarComponent, &ShooterAvatarComponentInternal::readStrideScale );
-    SW_AUTOMATION_COMPONENT_WATCH( shooterHandReachError, "Shooter.HandReachError",
-                                   "Largest reach error of the first shooter body's active two-bone IK hand nodes (m; 0 = every hand reaches its gun grip or support), absent until the rig is bound",
-                                   ShooterAvatarComponent, &ShooterAvatarComponentInternal::readHandReachError );
-    SW_AUTOMATION_GETTER_WATCH( shooterGunJerkMax, "Shooter.GunJerkMax", "Largest frame-to-frame second difference of the first shooter body's weapon position in body space during the current walk (m; 0 while standing)",
-                                ShooterAvatarComponent, &ShooterAvatarComponent::getGunJerkMax );
-    SW_AUTOMATION_GETTER_WATCH( shooterStrideAppliedCount, "Shooter.StrideAppliedCount", "Frames the first shooter body gave its StrideWarping node a value (0 while the rig is not bound to the mesh)", ShooterAvatarComponent, &ShooterAvatarComponent::getStrideAppliedCount );
 } // namespace sw

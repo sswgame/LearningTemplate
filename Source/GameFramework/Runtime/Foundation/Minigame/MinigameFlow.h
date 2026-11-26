@@ -67,6 +67,9 @@ namespace sw
         /** @brief 플레이어가 그만두고 나온 결과의 이름입니다(`requestQuit`). */
         static constexpr const utf8* kQuitResult = "quit";
 
+        /** @brief 오브젝트 매니저가 선 활성 씬입니다(미니게임이 들어가고 나오는 씬). 없으면 nullptr 입니다. 개발 명령(GameFrameworkDev)도 같은 기준으로 고른다. */
+        static Scene* findActivePlayScene();
+
         /** @brief 미니게임이 끝나 결과를 넘길 때 부르는 함수 목록입니다(돌아올 자리를 복원한 뒤). */
         using FinishedDelegate = MulticastDelegate<void( const MinigameResult& result )>;
 

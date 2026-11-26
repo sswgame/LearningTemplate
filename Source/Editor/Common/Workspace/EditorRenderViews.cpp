@@ -5,6 +5,7 @@
 #include "Core/Algorithm/VectorUtil.h"
 
 #include "Editor/Common/Backend/ImGuiRenderer.h"
+#include "Editor/Common/Backend/Model/EditorDrawReleaseQueue.h"
 #include "Editor/Common/Workspace/EditorSubsystems.h"
 
 #include "Engine/Asset/AssetManager.h"

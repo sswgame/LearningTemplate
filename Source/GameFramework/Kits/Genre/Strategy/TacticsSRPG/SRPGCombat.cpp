@@ -44,7 +44,7 @@ namespace sw
                     if ( SRPGBattlefield::isInWeaponRange( weapon, pUnit->_cell, pTarget->_cell ) == false )
                         continue;
                     const SRPGStrikePreview preview =
-                        SRPGCombat::computeStrike( field, unitIndex, pUnit->_cell, weaponIndex, targetIndex, pTarget->_cell, damagePercent );
+                        field.computeStrike( unitIndex, pUnit->_cell, weaponIndex, targetIndex, pTarget->_cell, damagePercent );
                     if ( best.isValid() == false || computeExpected( preview ) > computeExpected( best ) )
                         best = preview;
                 }
@@ -67,8 +67,8 @@ namespace sw
                                             ally._bSupportUsed == SW_FALSE && SRPGBattlefield::computeDistance( ally._cell, pDefender->_cell ) == 1;
                     if ( bCandidate == false )
                         continue;
-                    const SRPGStrikePreview preview = SRPGCombat::computeStrike( field, attackerIndex, attackerCell, weaponIndex, index, ally._cell,
-                                                                                 100 - settings._supportDefenseReduction );
+                    const SRPGStrikePreview preview = field.computeStrike( attackerIndex, attackerCell, weaponIndex, index, ally._cell,
+                                                                           100 - settings._supportDefenseReduction );
                     if ( preview._critDamage >= ally._hp )
                         continue; // 대신 맞다가 쓰러질 수 있으면 나서지 않는다
                     if ( bestIndex.has_value() == false || ally._hp > bestHP )
@@ -167,21 +167,21 @@ namespace sw
 
 namespace sw
 {
-    SRPGStrikePreview SRPGCombat::computeStrike( const SRPGBattlefield& field, int32 attackerIndex, const int2& attackerCell, int32 weaponIndex, int32 defenderIndex,
-                                                 const int2& defenderCell, int32 damagePercent )
+    SRPGStrikePreview SRPGBattlefield::computeStrike( int32 attackerIndex, const int2& attackerCell, int32 weaponIndex, int32 defenderIndex,
+                                                      const int2& defenderCell, int32 damagePercent ) const
     {
         SRPGStrikePreview    preview{};
-        const SRPGUnit*      pAttacker          = field.findUnit( attackerIndex );
-        const SRPGUnit*      pDefender          = field.findUnit( defenderIndex );
-        const SRPGWeaponDef* pWeapon            = pAttacker != nullptr ? field.findWeapon( *pAttacker, weaponIndex ) : nullptr;
+        const SRPGUnit*      pAttacker          = findUnit( attackerIndex );
+        const SRPGUnit*      pDefender          = findUnit( defenderIndex );
+        const SRPGWeaponDef* pWeapon            = pAttacker != nullptr ? findWeapon( *pAttacker, weaponIndex ) : nullptr;
         const bool           bMissingStrikeData = pAttacker == nullptr || pDefender == nullptr || pWeapon == nullptr;
         if ( bMissingStrikeData )
             return preview;
-        const SRPGSettings&   settings = field.getSettings();
+        const SRPGSettings&   settings = getSettings();
         const SRPGUnit&       attacker = *pAttacker;
         const SRPGUnit&       defender = *pDefender;
-        const SRPGTerrainDef* pTerrain = field.findTerrainAt( defenderCell );
-        const int32           aptitude = field.computeAptitude( attacker, attackerCell );
+        const SRPGTerrainDef* pTerrain = findTerrainAt( defenderCell );
+        const int32           aptitude = computeAptitude( attacker, attackerCell );
 
         const int32 stat        = attacker.computeStat( SRPGCombatInternal::findWeaponStat( pWeapon->_kind ) );
         int32       attackPower = pWeapon->_power * ( 100 + stat ) / 100;
@@ -208,59 +208,59 @@ namespace sw
         return preview;
     }
 
-    SRPGWeaponStatus SRPGCombat::computeForecast( const SRPGBattlefield& field, int32 attackerIndex, int32 weaponIndex, int32 defenderIndex, SRPGForecast& outForecast )
+    SRPGWeaponStatus SRPGBattlefield::computeForecast( int32 attackerIndex, int32 weaponIndex, int32 defenderIndex, SRPGForecast& outForecast ) const
     {
-        const SRPGUnit* pAttacker = field.findUnit( attackerIndex );
+        const SRPGUnit* pAttacker = findUnit( attackerIndex );
         if ( pAttacker == nullptr )
         {
             outForecast = SRPGForecast{};
             return outForecast._status;
         }
-        return computeForecastFrom( field, attackerIndex, pAttacker->_cell, weaponIndex, defenderIndex, pAttacker->_bMoved == SW_TRUE, outForecast );
+        return computeForecastFrom( attackerIndex, pAttacker->_cell, weaponIndex, defenderIndex, pAttacker->_bMoved == SW_TRUE, outForecast );
     }
 
-    SRPGWeaponStatus SRPGCombat::computeForecastFrom( const SRPGBattlefield& field, int32 attackerIndex, const int2& attackerCell, int32 weaponIndex, int32 defenderIndex,
-                                                      bool bAfterMove, SRPGForecast& outForecast )
+    SRPGWeaponStatus SRPGBattlefield::computeForecastFrom( int32 attackerIndex, const int2& attackerCell, int32 weaponIndex, int32 defenderIndex,
+                                                           bool bAfterMove, SRPGForecast& outForecast ) const
     {
         outForecast               = SRPGForecast{};
         outForecast._defender     = defenderIndex;
-        const SRPGUnit* pAttacker = field.findUnit( attackerIndex );
-        const SRPGUnit* pDefender = field.findUnit( defenderIndex );
+        const SRPGUnit* pAttacker = findUnit( attackerIndex );
+        const SRPGUnit* pDefender = findUnit( defenderIndex );
         const bool      bTargetOk = pAttacker != nullptr && pDefender != nullptr && pAttacker->_bAlive == SW_TRUE && pDefender->_bAlive == SW_TRUE &&
                                SRPGBattlefield::isHostile( pAttacker->_team, pDefender->_team );
         if ( bTargetOk == false )
             return outForecast._status = SRPGWeaponStatus::InvalidTarget;
-        outForecast._status = field.computeWeaponStatus( *pAttacker, weaponIndex, bAfterMove );
+        outForecast._status = computeWeaponStatus( *pAttacker, weaponIndex, bAfterMove );
         if ( outForecast._status != SRPGWeaponStatus::Ok )
             return outForecast._status;
-        const SRPGWeaponDef& weapon = *field.findWeapon( *pAttacker, weaponIndex );
+        const SRPGWeaponDef& weapon = *findWeapon( *pAttacker, weaponIndex );
         if ( weapon.isMap() )
             return outForecast._status = SRPGWeaponStatus::InvalidWeapon;
         if ( SRPGBattlefield::isInWeaponRange( weapon, attackerCell, pDefender->_cell ) == false )
             return outForecast._status = SRPGWeaponStatus::OutOfRange;
 
-        const optional<int32> supportDefender = SRPGCombatInternal::findSupportDefender( field, attackerIndex, attackerCell, weaponIndex, defenderIndex );
+        const optional<int32> supportDefender = SRPGCombatInternal::findSupportDefender( *this, attackerIndex, attackerCell, weaponIndex, defenderIndex );
         outForecast._supportDefender          = supportDefender;
         if ( supportDefender.has_value() )
         {
-            outForecast._attack = computeStrike( field, attackerIndex, attackerCell, weaponIndex, *supportDefender, field.findUnit( *supportDefender )->_cell,
-                                                 100 - field.getSettings()._supportDefenseReduction );
+            outForecast._attack = computeStrike( attackerIndex, attackerCell, weaponIndex, *supportDefender, findUnit( *supportDefender )->_cell,
+                                                 100 - getSettings()._supportDefenseReduction );
         }
         else
         {
-            outForecast._attack = computeStrike( field, attackerIndex, attackerCell, weaponIndex, defenderIndex, pDefender->_cell );
+            outForecast._attack = computeStrike( attackerIndex, attackerCell, weaponIndex, defenderIndex, pDefender->_cell );
         }
-        outForecast._supportAttack = SRPGCombatInternal::findSupportAttack( field, attackerIndex, attackerCell, defenderIndex );
-        SRPGCombatInternal::collectSyncStrikes( field, attackerIndex, outForecast._supportAttack._attacker, defenderIndex, outForecast._listSync );
-        const optional<int32> counterWeapon = findCounterWeapon( field, defenderIndex, attackerIndex, attackerCell );
+        outForecast._supportAttack = SRPGCombatInternal::findSupportAttack( *this, attackerIndex, attackerCell, defenderIndex );
+        SRPGCombatInternal::collectSyncStrikes( *this, attackerIndex, outForecast._supportAttack._attacker, defenderIndex, outForecast._listSync );
+        const optional<int32> counterWeapon = findCounterWeapon( defenderIndex, attackerIndex, attackerCell );
         if ( counterWeapon.has_value() )
-            outForecast._counter = computeStrike( field, defenderIndex, pDefender->_cell, *counterWeapon, attackerIndex, attackerCell );
+            outForecast._counter = computeStrike( defenderIndex, pDefender->_cell, *counterWeapon, attackerIndex, attackerCell );
         return outForecast._status;
     }
 
-    optional<int32> SRPGCombat::findCounterWeapon( const SRPGBattlefield& field, int32 defenderIndex, int32 attackerIndex, const int2& attackerCell )
+    optional<int32> SRPGBattlefield::findCounterWeapon( int32 defenderIndex, int32 attackerIndex, const int2& attackerCell ) const
     {
-        const SRPGUnit* pDefender = field.findUnit( defenderIndex );
+        const SRPGUnit* pDefender = findUnit( defenderIndex );
         if ( pDefender == nullptr || pDefender->_bAlive == SW_FALSE )
             return nullopt;
         optional<int32> bestWeapon;
@@ -269,11 +269,11 @@ namespace sw
         {
             const SRPGWeaponDef& weapon  = *pDefender->_listWeapon[static_cast<size_t>( weaponIndex )];
             const bool           bUsable = weapon._bCounter == SW_TRUE && weapon.isMap() == false &&
-                                 field.computeWeaponStatus( *pDefender, weaponIndex, false ) == SRPGWeaponStatus::Ok;
+                                 computeWeaponStatus( *pDefender, weaponIndex, false ) == SRPGWeaponStatus::Ok;
             if ( bUsable == false || SRPGBattlefield::isInWeaponRange( weapon, pDefender->_cell, attackerCell ) == false )
                 continue;
             const int32 expected =
-                SRPGCombatInternal::computeExpected( computeStrike( field, defenderIndex, pDefender->_cell, weaponIndex, attackerIndex, attackerCell ) );
+                SRPGCombatInternal::computeExpected( computeStrike( defenderIndex, pDefender->_cell, weaponIndex, attackerIndex, attackerCell ) );
             if ( expected > bestExpected )
             {
                 bestExpected = expected;
@@ -283,80 +283,80 @@ namespace sw
         return bestWeapon;
     }
 
-    SRPGWeaponStatus SRPGCombat::executeAttack( SRPGBattlefield& field, int32 attackerIndex, int32 weaponIndex, int32 defenderIndex, SRPGCombatResult& outResult )
+    SRPGWeaponStatus SRPGBattlefield::executeAttack( int32 attackerIndex, int32 weaponIndex, int32 defenderIndex, SRPGCombatResult& outResult )
     {
         outResult                          = SRPGCombatResult{};
-        const SRPGUnit* pAttacker          = field.findUnit( attackerIndex );
-        const bool      bAttackerCannotAct = pAttacker == nullptr || field.canAct( attackerIndex ) == false || pAttacker->_bAttacked == SW_TRUE;
+        const SRPGUnit* pAttacker          = findUnit( attackerIndex );
+        const bool      bAttackerCannotAct = pAttacker == nullptr || canAct( attackerIndex ) == false || pAttacker->_bAttacked == SW_TRUE;
         if ( bAttackerCannotAct )
             return outResult._status = SRPGWeaponStatus::CannotAct;
         SRPGForecast forecast;
-        outResult._status = computeForecast( field, attackerIndex, weaponIndex, defenderIndex, forecast );
+        outResult._status = computeForecast( attackerIndex, weaponIndex, defenderIndex, forecast );
         if ( outResult._status != SRPGWeaponStatus::Ok )
             return outResult._status;
 
-        field.consumeWeapon( attackerIndex, weaponIndex );
-        SRPGUnit* pMutableAttacker   = field.findUnit( attackerIndex );
+        consumeWeapon( attackerIndex, weaponIndex );
+        SRPGUnit* pMutableAttacker   = findUnit( attackerIndex );
         pMutableAttacker->_bAttacked = SW_TRUE;
         pMutableAttacker->_bMoved    = SW_TRUE; // 공격한 뒤에는 움직이지 않는다
         if ( forecast._supportDefender.has_value() )
-            field.findUnit( *forecast._supportDefender )->_bSupportUsed = SW_TRUE;
+            findUnit( *forecast._supportDefender )->_bSupportUsed = SW_TRUE;
 
-        SRPGCombatInternal::resolveStrike( field, forecast._attack, SRPGStrikeRole::Main, outResult );
+        SRPGCombatInternal::resolveStrike( *this, forecast._attack, SRPGStrikeRole::Main, outResult );
         for ( const SRPGStrikePreview& sync : forecast._listSync )
         {
-            SRPGCombatInternal::resolveStrike( field, sync, SRPGStrikeRole::Sync, outResult ); // 동기 공격은 EN 과 탄을 쓰지 않는다
+            SRPGCombatInternal::resolveStrike( *this, sync, SRPGStrikeRole::Sync, outResult ); // 동기 공격은 EN 과 탄을 쓰지 않는다
         }
-        if ( forecast._supportAttack.isValid() && field.findUnit( defenderIndex )->_bAlive == SW_TRUE )
+        if ( forecast._supportAttack.isValid() && findUnit( defenderIndex )->_bAlive == SW_TRUE )
         {
-            field.consumeWeapon( forecast._supportAttack._attacker, forecast._supportAttack._weapon );
-            field.findUnit( forecast._supportAttack._attacker )->_bSupportUsed = SW_TRUE;
-            SRPGCombatInternal::resolveStrike( field, forecast._supportAttack, SRPGStrikeRole::Support, outResult );
+            consumeWeapon( forecast._supportAttack._attacker, forecast._supportAttack._weapon );
+            findUnit( forecast._supportAttack._attacker )->_bSupportUsed = SW_TRUE;
+            SRPGCombatInternal::resolveStrike( *this, forecast._supportAttack, SRPGStrikeRole::Support, outResult );
         }
-        const bool bCounterPossible = forecast._counter.isValid() && field.findUnit( defenderIndex )->_bAlive == SW_TRUE && field.findUnit( attackerIndex )->_bAlive == SW_TRUE;
+        const bool bCounterPossible = forecast._counter.isValid() && findUnit( defenderIndex )->_bAlive == SW_TRUE && findUnit( attackerIndex )->_bAlive == SW_TRUE;
         if ( bCounterPossible )
         {
-            field.consumeWeapon( defenderIndex, forecast._counter._weapon );
-            SRPGCombatInternal::resolveStrike( field, forecast._counter, SRPGStrikeRole::Counter, outResult );
+            consumeWeapon( defenderIndex, forecast._counter._weapon );
+            SRPGCombatInternal::resolveStrike( *this, forecast._counter, SRPGStrikeRole::Counter, outResult );
         }
         return outResult._status;
     }
 
-    SRPGWeaponStatus SRPGCombat::executeMapAttack( SRPGBattlefield& field, int32 attackerIndex, int32 weaponIndex, const int2& aimCell, SRPGCombatResult& outResult )
+    SRPGWeaponStatus SRPGBattlefield::executeMapAttack( int32 attackerIndex, int32 weaponIndex, const int2& aimCell, SRPGCombatResult& outResult )
     {
         outResult                             = SRPGCombatResult{};
-        const SRPGUnit* pAttacker             = field.findUnit( attackerIndex );
-        const bool      bAttackerCannotAttack = pAttacker == nullptr || field.canAct( attackerIndex ) == false || pAttacker->_bAttacked == SW_TRUE;
+        const SRPGUnit* pAttacker             = findUnit( attackerIndex );
+        const bool      bAttackerCannotAttack = pAttacker == nullptr || canAct( attackerIndex ) == false || pAttacker->_bAttacked == SW_TRUE;
         if ( bAttackerCannotAttack )
             return outResult._status = SRPGWeaponStatus::CannotAct;
-        outResult._status = field.computeWeaponStatus( *pAttacker, weaponIndex, pAttacker->_bMoved == SW_TRUE );
+        outResult._status = computeWeaponStatus( *pAttacker, weaponIndex, pAttacker->_bMoved == SW_TRUE );
         if ( outResult._status != SRPGWeaponStatus::Ok )
             return outResult._status;
         vector<int2> listCell;
-        if ( field.collectMapCells( attackerIndex, weaponIndex, aimCell, listCell ) == false )
+        if ( collectMapCells( attackerIndex, weaponIndex, aimCell, listCell ) == false )
             return outResult._status = SRPGWeaponStatus::InvalidWeapon;
 
-        const bool                bFriendlyFire = field.getSettings()._bMapFriendlyFire;
+        const bool                bFriendlyFire = getSettings()._bMapFriendlyFire;
         vector<SRPGStrikePreview> listStrike;
         for ( const int2& cell : listCell )
         {
-            const optional<int32> targetIndex = field.findUnitAt( cell );
+            const optional<int32> targetIndex = findUnitAt( cell );
             if ( targetIndex.has_value() == false || targetIndex == attackerIndex )
                 continue;
-            if ( bFriendlyFire == false && SRPGBattlefield::isHostile( pAttacker->_team, field.findUnit( *targetIndex )->_team ) == false )
+            if ( bFriendlyFire == false && SRPGBattlefield::isHostile( pAttacker->_team, findUnit( *targetIndex )->_team ) == false )
                 continue;
-            listStrike.push_back( computeStrike( field, attackerIndex, pAttacker->_cell, weaponIndex, *targetIndex, cell ) );
+            listStrike.push_back( computeStrike( attackerIndex, pAttacker->_cell, weaponIndex, *targetIndex, cell ) );
         }
         if ( listStrike.empty() )
             return outResult._status = SRPGWeaponStatus::InvalidTarget;
 
-        field.consumeWeapon( attackerIndex, weaponIndex );
-        SRPGUnit* pMutableAttacker   = field.findUnit( attackerIndex );
+        consumeWeapon( attackerIndex, weaponIndex );
+        SRPGUnit* pMutableAttacker   = findUnit( attackerIndex );
         pMutableAttacker->_bAttacked = SW_TRUE;
         pMutableAttacker->_bMoved    = SW_TRUE;
         for ( const SRPGStrikePreview& strike : listStrike )
         {
-            SRPGCombatInternal::resolveStrike( field, strike, SRPGStrikeRole::Map, outResult );
+            SRPGCombatInternal::resolveStrike( *this, strike, SRPGStrikeRole::Map, outResult );
         }
         return outResult._status;
     }

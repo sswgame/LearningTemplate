@@ -7,7 +7,6 @@
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Path/AbsolutePath.h"
-#include "Core/Process/Process.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
@@ -330,6 +329,68 @@ namespace sw
                 return outList;
             }
 
+            /** @brief @p text 가 @p arr(글 배열)의 접두어 하나로 시작하면 true 입니다. */
+            static bool startsWithAnyPrefix( const string_view text, const nlohmann::json& arr )
+            {
+                for ( const string& prefix : collectStringArray( arr ) )
+                {
+                    if ( prefix.empty() == false && StringUtil::startsWith( text, prefix ) )
+                        return true;
+                }
+                return false;
+            }
+
+            /**
+             * @brief 타깃 컴파일 옵션을 libclang 인자로 바꿔 @p outListArg 에 더합니다. 표 셋 중 하나에 있어야 한다 — 바꾸는 표(`target_options`: 옵션 → 인자),
+             *        그대로 넘기는 접두어(`target_option_pass_prefixes`: `-march=` 같은 대상 기능), 파싱 뜻이 없어 버리는 접두어(`target_option_ignored_prefixes`: 경고 · 최적화 · `/FI`).
+             * @details 어느 표에도 없는 옵션은 생성 오류다. 조용히 버리면 뜻 있는 옵션(매크로를 정의하거나 언어 규칙을 바꾸는 것)이 새로 생겨도 파서만 옛 규칙으로 읽는다.
+             */
+            [[nodiscard]] static bool appendTargetOptions( const nlohmann::json& defaultsDoc, const vector<string>& listTargetOption, vector<string>& outListArg )
+            {
+                const auto mapIt          = defaultsDoc.find( jsonkey::kTargetOptionMap );
+                const auto passIt         = defaultsDoc.find( jsonkey::kTargetOptionPass );
+                const auto ignoreIt       = defaultsDoc.find( jsonkey::kTargetOptionIgnore );
+                const bool bTablesMissing = mapIt == defaultsDoc.end() || mapIt->is_object() == false || passIt == defaultsDoc.end() || passIt->is_array() == false ||
+                                            ignoreIt == defaultsDoc.end() || ignoreIt->is_array() == false;
+                if ( bTablesMissing )
+                {
+                    SW_LOG_ERROR_ID( "ParserConfig.NoTargetOptionMap", "parser config needs '%#' (object), '%#' and '%#' (arrays) for the target compile options", jsonkey::kTargetOptionMap,
+                                     jsonkey::kTargetOptionPass, jsonkey::kTargetOptionIgnore );
+                    return false;
+                }
+                bool bAllKnown = true;
+                for ( const string& targetOption : listTargetOption )
+                {
+                    const auto rowIt = mapIt->find( targetOption );
+                    if ( rowIt != mapIt->end() )
+                    {
+                        if ( rowIt->is_array() == false )
+                        {
+                            SW_LOG_ERROR_ID( "ParserConfig.BadTargetOptionRow", "'%#.%#' must be an array of clang arguments", jsonkey::kTargetOptionMap, targetOption );
+                            return false;
+                        }
+                        for ( const string& arg : collectStringArray( *rowIt ) )
+                            outListArg.push_back( arg );
+                        continue;
+                    }
+                    if ( startsWithAnyPrefix( targetOption, *passIt ) )
+                    {
+                        outListArg.push_back( targetOption );
+                        continue;
+                    }
+                    if ( startsWithAnyPrefix( targetOption, *ignoreIt ) )
+                    {
+                        SW_LOG_TRACE_ID( "ParserConfig.TargetOptionDropped", "Target compile option '%#' does not change parsing; dropped.", targetOption );
+                        continue;
+                    }
+                    SW_LOG_ERROR_ID( "ParserConfig.UnknownTargetOption",
+                                     "Target compile option '%#' is in none of %# / %# / %# (Config/Environment/parser_config.defaults.json) - say whether it changes parsing",
+                                     targetOption, jsonkey::kTargetOptionMap, jsonkey::kTargetOptionPass, jsonkey::kTargetOptionIgnore );
+                    bAllKnown = false;
+                }
+                return bAllKnown;
+            }
+
             static vector<string> loadForceIncludeFromDocument( const nlohmann::json& doc )
             {
                 const auto itArgs = doc.find( jsonkey::kParserArgsSection );
@@ -393,7 +454,7 @@ namespace sw
     {
     }
 
-    bool ParserConfig::load( const AbsolutePath& defaultsPath, const vector<string>& listTargetArg )
+    bool ParserConfig::load( const AbsolutePath& defaultsPath, const vector<string>& listTargetArg, const vector<string>& listTargetOption )
     {
         _listBaseArg.clear();
         _listForceInclude.clear();
@@ -482,65 +543,14 @@ namespace sw
             // 파서 자신의 매크로를 쓰지 않는다 — 교차 빌드(웹 · Android)는 호스트에서 지은 파서가 다른 대상을 읽는다. libclang 은 언제나 clang 이다.
             for ( const string& targetArg : listTargetArg )
                 _listBaseArg.push_back( targetArg );
+            // 타깃의 컴파일 옵션(clang-cl 의 `/GR-` · `/EHsc` · `-clang:…` 등)은 표 `target_options` 가 libclang 이 받는 꼴로 바꾼다. 표에 없는 옵션
+            // (경고 · 최적화 · 코드 생성 · `/FI`)은 파싱 뜻이 없어 버린다 — 옵션마다 손으로 파서 설정에 다시 적지 않는다.
+            if ( ParserConfigInternal::appendTargetOptions( defaultsDoc, listTargetOption, _listBaseArg ) == false )
+                return false;
             _listBaseArg.emplace_back( "-DSW_COMPILER_CLANG" );
         }
 
-        BLOCK( "Locate LLVM and Clang Resource Directory" )
-        {
-            if ( llvmPath.empty() )
-            {
-                sw::string  pEnvLlvmText;
-                const utf8* pEnvLlvm = sw::Process::tryReadEnvironment( jsonkey::kEnvLlvmDir, pEnvLlvmText ) ? pEnvLlvmText.c_str() : nullptr;
-                if ( pEnvLlvm == nullptr )
-                    pEnvLlvm = sw::Process::tryReadEnvironment( jsonkey::kEnvLlvmHome, pEnvLlvmText ) ? pEnvLlvmText.c_str() : nullptr;
-                if ( pEnvLlvm != nullptr )
-                    llvmPath = pEnvLlvm;
-            }
-
-            const AbsolutePath llvmClangDir = FileUtil::toDiskPath( llvmPath ).join( _llvmClangRel );
-            if ( FileUtil::isDirectory( llvmClangDir ) )
-            {
-                vector<AbsolutePath> listClangSubFolder;
-                if ( FileUtil::collectFolders( llvmClangDir, listClangSubFolder, false ) == false )
-                    SW_LOG_ERROR_ID( "ParserConfig.ClangResourceFoldersUnder", "clang resource folders under '%#' could not all be listed - the built-in headers may be left out", llvmClangDir.str() );
-                for ( const AbsolutePath& folder : listClangSubFolder )
-                {
-                    const string       resourceDir = FileUtil::normalizeSeparators( folder.str() );
-                    const AbsolutePath clangInc    = folder.join( _clangIncludeRel );
-                    if ( FileUtil::isDirectory( clangInc ) == false )
-                        continue;
-
-                    _listBaseArg.emplace_back( _flagResourceDir );
-                    _listBaseArg.emplace_back( resourceDir );
-                    _listBaseArg.emplace_back( _flagIsystem );
-                    _listBaseArg.emplace_back( clangInc.str() );
-                    break;
-                }
-            }
-        }
-
-#if defined( SW_PLATFORM_WINDOWS )
-        if ( kPlatformParserKey == "windows" ) // 대상이 Windows 일 때만 MSVC · SDK 헤더를 읽는다(교차 대상은 자기 sysroot 를 `--target-arg` 로 받는다)
-            BLOCK( "Locate MSVC and Windows SDK Includes" )
-            {
-                const AbsolutePath msvcInc = FileUtil::toDiskPath( msvcToolsDir ).join( _msvcIncludeRel );
-                if ( msvcToolsDir.empty() == false && FileUtil::isDirectory( msvcInc ) )
-                {
-                    _listBaseArg.emplace_back( _flagIsystem );
-                    _listBaseArg.emplace_back( msvcInc.str() );
-                }
-
-                if ( winSdkDir.empty() == false && winSdkVer.empty() == false )
-                {
-                    const AbsolutePath ucrtPath = FileUtil::toDiskPath( winSdkDir ).join( _winSdkIncludeRel ).join( winSdkVer ).join( _winSdkUcrtRel );
-                    if ( FileUtil::isDirectory( ucrtPath ) )
-                    {
-                        _listBaseArg.emplace_back( _flagIsystem );
-                        _listBaseArg.emplace_back( ucrtPath.str() );
-                    }
-                }
-            }
-#endif
+        appendToolchainIncludes( std::move( llvmPath ), msvcToolsDir, winSdkDir, winSdkVer, kPlatformParserKey );
 
         _bLoaded = SW_TRUE;
         SW_LOG_TRACE_ID( "ParserConfig.LoadedClangConfigBase", "Loaded clang config (%# base args).", static_cast<uint32>( _listBaseArg.size() ) );

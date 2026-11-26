@@ -259,6 +259,11 @@ namespace sw
         {
             hash = Internal::combineText( hash, includePath );
         }
+        hash = HashUtil::combine( hash, static_cast<uint64>( options._listTargetOption.size() ) );
+        for ( const string& targetOption : options._listTargetOption )
+        {
+            hash = Internal::combineText( hash, targetOption );
+        }
         hash = HashUtil::combine( hash, static_cast<uint64>( options._listTargetArg.size() ) );
         for ( const string& targetArg : options._listTargetArg )
         {

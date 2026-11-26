@@ -12,7 +12,6 @@
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Delegate/Subscription.h"
-#include "Core/Foundation/DynamicModules.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
@@ -55,8 +54,7 @@ namespace sw
         virtual void addToHostScope( SubsystemScope& host, Engine& engine ) = 0;
         /** @brief 셸 액션(디버그 키: 개발 콘솔 키, 동적 모듈 구성이면 리로드 단축키도)을 이번 프레임 것으로 갱신하고 리로드 단축키를 요청으로 바꿉니다. App 이 프레임마다 부르고, Ctrl+F6 에디터는 @p bEnableEditor 일 때만 받는다. */
         virtual void pollShellActions( float32 deltaTime, bool bEnableEditor ) = 0;
-#if SW_WITH_DYNAMIC_MODULES
-        // ---- 핫 리로드 — 동적 모듈 구성에만 있다. 정적 구성(배포 · 웹 · Android 개발)에서 부르는 코드는 컴파일되지 않는다(`SW_WITH_DYNAMIC_MODULES`) ----
+        // ---- 핫 리로드 — 정적 모듈 구성(웹 · Android 개발)의 구현은 리로드가 없다고 답한다(매니저 nullptr, 요청 · 갱신은 하지 않는다) ----
         /**
          * @brief 모듈 매니페스트를 읽어 @p outCatalog · @p outResolution 을 채우고 핫 리로드 매니저를 세웁니다(호스트 범위에 겁니다).
          * @param targetMask 이 호스트가 올릴 모듈 대상(`ModuleTarget` 비트)입니다.
@@ -72,7 +70,6 @@ namespace sw
         virtual void requestReload( const utf8* pModuleName ) = 0;
         /** @brief 바뀐 모듈 라이브러리를 보고 리로드를 돌립니다. 틱 직전에 부릅니다. */
         virtual void updateModuleReload() = 0;
-#endif
 
         /**
          * @brief 헤드리스로 선 호스트가 명령줄이 청한 에디터 모듈 작업(현지화 도구 · 원본 임포트 · 대조 · 에셋 참조 검사)을 차례로 돌립니다. 엔진이 선 뒤에 부릅니다.

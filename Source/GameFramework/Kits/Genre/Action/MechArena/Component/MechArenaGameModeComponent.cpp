@@ -7,8 +7,6 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
-#include "Engine/Automation/Watch/AutomationComponentWatch.h"
-#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
@@ -109,12 +107,6 @@ namespace sw
             }
         };
     } // namespace
-
-    SW_AUTOMATION_GETTER_WATCH( mechArenaEnded, "MechArena.Ended", "1 when the mech arena match is over", MechArenaGameModeComponent, &MechArenaGameModeComponent::getEnded );
-    SW_AUTOMATION_GETTER_WATCH( mechArenaPlayerState, "MechArena.PlayerState", "Player pilot state (0 waiting, 1 active, 2 down, 3 destroyed, 4 retired)", MechArenaGameModeComponent,
-                                &MechArenaGameModeComponent::getPlayerState );
-    SW_AUTOMATION_GETTER_WATCH( mechArenaPlayerAmmo, "MechArena.PlayerAmmo", "Magazine of the player's main weapon", MechArenaGameModeComponent, &MechArenaGameModeComponent::getPlayerAmmo );
-    SW_AUTOMATION_GETTER_WATCH( mechArenaEnemyGauge, "MechArena.EnemyGauge", "Cost gauge left for the enemy team", MechArenaGameModeComponent, &MechArenaGameModeComponent::getEnemyGauge );
 
     MechArenaGameModeComponent::MechArenaGameModeComponent()
         : _rules{}
