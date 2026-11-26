@@ -15,6 +15,7 @@
 #include "Editor/Common/GUI/Theme/EditorComponentIconRow.h"
 
 #include "Engine/Physics/PhysicsDebugDraw.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
 {
@@ -26,18 +27,22 @@ namespace sw::editor
     struct EditorViewportVisualizerArgs;
     class EditorVisualizerToggles;
 
-    /** @brief 선 색을 어디서 정하는지입니다. `Explicit` 이 아니면 그리는 쪽이 테마 토큰으로 풀고 값의 `_color` 알파를 곱한다(값에는 테마가 없다). */
+    /**
+     * @brief 선 색을 어디서 정하는지입니다. `Explicit` 이 아니면 그리는 쪽이 테마 색으로 풀고 값의 `_color` 알파를 곱한다(값에는 테마가 없다).
+     * @details 토큰 하나로 정해지는 역할은 열거자에 토큰을 적는다(`Color`). 나머지 셋은 그리는 쪽이 따로 푼다.
+     */
+    ENUM()
     enum class EditorVisualizerColorRole : uint8
     {
-        Explicit,         ///< 값의 `_color` 를 그대로 쓴다
-        ColliderWire,     ///< 테마 `Viewport.ColliderWire`
-        CameraWire,       ///< 테마 `Viewport.CameraWire`
-        SelectionOutline, ///< 테마 `Viewport.SelectionOutline`
-        Hover,            ///< 테마 뷰포트 호버 색
-        AxisX,            ///< 테마 `Viewport.AxisX`
-        AxisY,            ///< 테마 `Viewport.AxisY`
-        AxisZ,            ///< 테마 `Viewport.AxisZ`
-        ThemeToken,       ///< 값의 `_themeKey`(테마 토큰 이름, 예 `Viewport.Label`) — 확장 시각화가 제 토큰을 쓴다
+        Explicit, ///< 값의 `_color` 를 그대로 쓴다
+        ColliderWire     ENUMERATOR( Color = "Viewport.ColliderWire" ),
+        CameraWire       ENUMERATOR( Color = "Viewport.CameraWire" ),
+        SelectionOutline ENUMERATOR( Color = "Viewport.SelectionOutline" ),
+        Hover, ///< 테마 뷰포트 호버 색(강조색에서 만든다 — `EditorThemeUtil::getViewportHoverColor`)
+        AxisX ENUMERATOR( Color = "Viewport.AxisX" ),
+        AxisY ENUMERATOR( Color = "Viewport.AxisY" ),
+        AxisZ ENUMERATOR( Color = "Viewport.AxisZ" ),
+        ThemeToken, ///< 값의 `_themeKey`(테마 토큰 이름, 예 `Viewport.Label`) — 확장 시각화가 제 토큰을 쓴다
     };
 
     /** @brief 그린 선 · 글자를 어느 통계(`EditorVisualizerStats`)에 셀지입니다. 통계는 화면에 실제로 그린 수(근평면에서 다 잘린 것은 빼고)라 그리는 쪽이 센다. */

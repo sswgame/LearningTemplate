@@ -55,26 +55,6 @@ namespace sw::editor
         VolumetricFogViewState _viewState; ///< 프레임마다 `gather` 가 채운다
     };
 
-    namespace
-    {
-        struct VolumetricFogPanelInternal
-        {
-            static Color getSeverityColor( VolumetricFogSeverity severity )
-            {
-                switch ( severity )
-                {
-                    case VolumetricFogSeverity::Neutral:
-                        return SW_THEME_COLOR( "Base", "TextMuted" );
-                    case VolumetricFogSeverity::Active:
-                        return SW_THEME_COLOR( "Signal", "Success" );
-                    case VolumetricFogSeverity::Problem:
-                        return SW_THEME_COLOR( "Signal", "Warning" );
-                }
-                return SW_THEME_COLOR( "Base", "Text" );
-            }
-        };
-    } // namespace
-
     SW_EDITOR_PANEL( VolumetricFogPanel, VolumetricFogPanel::kPanelID, EditorPanelCategory::Tool, 910 );
 
     VolumetricFogPanel::VolumetricFogPanel()
@@ -86,11 +66,10 @@ namespace sw::editor
 
     void VolumetricFogPanel::drawContent()
     {
-        using Internal = VolumetricFogPanelInternal;
         gatherViewState( _viewModel, _viewState );
         const FogVolumeState state = _viewState._volumeState;
         // 상태는 문장으로 — 색만으로 알리지 않는다. 켜짐은 Success, 못 켬은 Warning, 고른 꺼짐은 흐린 글이다.
-        ImGui::PushStyleColor( ImGuiCol_Text, EditorColorUtil::toImVec4( Internal::getSeverityColor( VolumetricFogStatus::getSeverity( state ) ) ) );
+        ImGui::PushStyleColor( ImGuiCol_Text, EditorColorUtil::toImVec4( EditorThemeUtil::findEnumColor( VolumetricFogStatus::getSeverity( state ) ) ) );
         ImGui::TextWrapped( "%s", VolumetricFogStatus::describe( state ) );
         ImGui::PopStyleColor();
         EditorSelfTestMarks::record( "volumetricFog.state" );

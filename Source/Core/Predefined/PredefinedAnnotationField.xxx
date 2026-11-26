@@ -79,6 +79,9 @@ REGISTER_ANNOTATION_FIELD( Enumerator, DisplayName, _displayName, Display )
 REGISTER_ANNOTATION_FIELD( Enumerator, Tooltip, _tooltip, Display )
 // 에디터 선택지(콤보 · 체크박스)에서 숨긴다. 값은 그대로 읽고 쓴다
 REGISTER_ANNOTATION_FIELD( Enumerator, Hidden, _bHidden, Display )
+// 에디터가 그 값을 그릴 색 · 단위(`Color = "Signal.Error"` 는 테마 색 토큰 이름, `Unit = "B/s"`). 값마다 고르는 switch 를 두지 않는다(언리얼 UMETA 의 임의 키 자리)
+REGISTER_ANNOTATION_FIELD( Enumerator, Color, _color, Display )
+REGISTER_ANNOTATION_FIELD( Enumerator, Unit, _unit, Display )
 REGISTER_ANNOTATION_FIELD_FN( Enumerator, Meta, _listCustomMeta, appendCustomMeta, Display )
 
 // ── PROPERTY ─────────────────────────────────────────────────────

@@ -5,16 +5,18 @@
 #pragma once
 #include "Core/Foundation/Types.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Renderer/Frame/PostProcess/FrameFog.h"
 
 namespace sw::editor
 {
     /** @brief 상태 줄의 무게입니다. 색은 상태에만 쓴다(켜짐은 Success, 문제는 Warning, 그 밖은 흐린 글). */
+    ENUM()
     enum class VolumetricFogSeverity : uint8
     {
-        Neutral, ///< 안개가 없거나 설정이 껐다 — 고칠 것이 아니라 고른 것이다
-        Active,  ///< 볼륨이 돈다
-        Problem, ///< 켜려 했는데 못 켰다(파이프라인 · 버퍼 · 디바이스)
+        Neutral ENUMERATOR( Color = "Base.TextMuted" ), ///< 안개가 없거나 설정이 껐다 — 고칠 것이 아니라 고른 것이다
+        Active  ENUMERATOR( Color = "Signal.Success" ), ///< 볼륨이 돈다
+        Problem ENUMERATOR( Color = "Signal.Warning" ), ///< 켜려 했는데 못 켰다(파이프라인 · 버퍼 · 디바이스)
     };
 
     /**

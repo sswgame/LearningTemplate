@@ -84,21 +84,6 @@ namespace sw::editor
                 outValue = static_cast<float64>( pPanel->getIssueCount() );
                 return true;
             }
-
-            /** @brief 이웃 조건의 단추 글자입니다 — 파일의 패턴 글자 그대로(`. o x`)라 파일과 화면이 같은 말이다. */
-            static const utf8* getNeighborLabel( TileNeighborRule rule )
-            {
-                switch ( rule )
-                {
-                    case TileNeighborRule::Any:
-                        return ".";
-                    case TileNeighborRule::Same:
-                        return "o";
-                    case TileNeighborRule::Other:
-                        return "x";
-                }
-                return ".";
-            }
         };
     } // namespace
 
@@ -358,7 +343,8 @@ namespace sw::editor
                 continue;
             }
             ImGui::PushID( 2000 + neighbor );
-            if ( ImGui::Button( Internal::getNeighborLabel( rule._arrNeighbor[neighbor] ), ImVec2{ buttonSide, buttonSide } ) )
+            const utf8 arrLabel[2] = { TileRule::getPatternCharacter( rule._arrNeighbor[neighbor] ), 0 }; // 파일의 패턴 글자 그대로라 파일과 화면이 같은 말이다
+            if ( ImGui::Button( arrLabel, ImVec2{ buttonSide, buttonSide } ) )
                 (void)_model.cycleNeighbor( neighbor ); // 바꿨으면 모델이 되돌리기 이름으로 알린다(감사 E-16)
             EditorSelfTestMarks::recordFormat( "tileSet.neighbor.%#", neighbor );
             ImGui::PopID();

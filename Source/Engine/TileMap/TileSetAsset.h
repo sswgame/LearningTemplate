@@ -63,6 +63,9 @@ namespace sw
     {
         TileNeighborRule _arrNeighbor[8]{};
         TileVisual       _visual;
+
+        /** @brief 이웃 조건 하나의 패턴 글자(`.` · `o` · `x`)입니다. 파일 읽기 · 쓰기와 에디터 단추가 이 하나를 쓴다 — 파일과 화면이 같은 글자다. */
+        SW_API static utf8 getPatternCharacter( TileNeighborRule rule );
     };
 } // namespace sw
 

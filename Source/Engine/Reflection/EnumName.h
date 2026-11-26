@@ -28,6 +28,9 @@ namespace sw
      * @details 표시용 `getEnumName` 과 달리 대신 쓸 이름이 없습니다. 이름이 와이어 해시에 들어가는 곳(`OnlineProtocolEntry::computeMethodHash`)처럼 없으면 멈춰야 하는 쪽이 씁니다.
      */
     SW_API const utf8* findEnumName( const hashed_string& enumTypeFqn, int64 value );
+
+    /** @brief @p pInfo 의 값 @p value 에 적은 표시 메타(`ENUMERATOR( … )`)입니다. 정보가 없거나 범위 밖이거나 적지 않았거나 배포(메타 없음)면 기본값입니다. 템플릿 `getEnumeratorEditorMetadata` 를 씁니다. */
+    SW_API const EnumeratorEditorMetadata& findEnumValueEditorMetadata( const EnumInfo* pInfo, int64 value );
 } // namespace sw
 
 namespace sw
@@ -60,6 +63,15 @@ namespace sw
         const EnumInfo*            pInfo = s_cache.find( typeFqn<E>() );
         const utf8*                pName = pInfo != nullptr ? pInfo->valueToCString( static_cast<int64>( value ) ) : nullptr;
         return pName != nullptr ? pName : EnumNameCache::kUnknownName;
+    }
+
+    /** @brief @p value 의 표시 메타(`ENUMERATOR( Color = … )`)입니다. 에디터가 값마다 색 · 단위 · 기호를 switch 로 고르지 않고 이것을 읽는다. 표시 글은 `LocalizedText::findEnum` 이다. */
+    template <typename E>
+    const EnumeratorEditorMetadata& getEnumeratorEditorMetadata( E value )
+    {
+        static_assert( std::is_enum_v<E>, "getEnumeratorEditorMetadata requires an enum type" );
+        static const EnumNameCache s_cache;
+        return findEnumValueEditorMetadata( s_cache.find( typeFqn<E>() ), static_cast<int64>( value ) );
     }
 
     /**

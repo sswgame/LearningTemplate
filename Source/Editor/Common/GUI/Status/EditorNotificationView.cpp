@@ -15,27 +15,6 @@
 
 namespace sw::editor
 {
-    namespace
-    {
-        /** @brief 알림 종류의 의미 색(테마 토큰)입니다. 토스트의 테두리와 제목이 함께 씁니다. */
-        const Color& getNotificationTypeColor( NotificationKind type )
-        {
-            switch ( type )
-            {
-                case NotificationKind::Success:
-                    return SW_THEME_COLOR( "Signal", "Success" );
-                case NotificationKind::Warning:
-                    return SW_THEME_COLOR( "Signal", "Warning" );
-                case NotificationKind::Error:
-                    return SW_THEME_COLOR( "Signal", "Error" );
-                case NotificationKind::Info:
-                    return SW_THEME_COLOR( "Signal", "Info" );
-            }
-            SW_ASSERT( false ); // 열거자 밖의 값은 들어오지 않는다
-            return SW_THEME_COLOR( "Signal", "Info" );
-        }
-    } // namespace
-
     void EditorNotificationView::draw( const vector<NotificationItem>& listNotification )
     {
         if ( listNotification.empty() )
@@ -67,7 +46,7 @@ namespace sw::editor
                 alpha = remainingTime / 0.5f;
 
             const Color bgColor   = SW_THEME_COLOR( "Base", "OverlayBg" ).withAlpha( 0.92f * alpha );
-            const Color typeColor = getNotificationTypeColor( item._type ).withAlpha( alpha );
+            const Color typeColor = EditorThemeUtil::findEnumColor( item._type ).withAlpha( alpha );
 
             float32 posX = viewportPos._x + screenWidth - EditorChrome::resolveTextExtent( EditorTextExtent::ofText( toastColumns, 0.0f ) )._x - toastMargin;
             currentY -= toastSlotHeight;

@@ -7,6 +7,7 @@
 #include "Core/TestFramework/ThreadTestAccess.h"
 
 #include "Engine/Foundation/EngineSubsystems.h"
+#include "Engine/Reflection/EnumName.h"
 #include "Engine/Reflection/PropertyHandle.h"
 #include "Engine/Reflection/ReflectedAny.h"
 #include "Engine/Reflection/ReflectedValue.h"
@@ -783,7 +784,7 @@ SW_TEST_CASE( ReflectionMetadataTest, EnumMetadataQuery )
 }
 
 /**
- * @brief [ReflectionMetadataTest] 열거자 뒤의 `ENUMERATOR( … )` 가 열거자마다의 표시 메타(DisplayName · Tooltip · Hidden · Meta)가 된다
+ * @brief [ReflectionMetadataTest] 열거자 뒤의 `ENUMERATOR( … )` 가 열거자마다의 표시 메타(DisplayName · Tooltip · Hidden · Meta · Color · Unit)가 된다
  */
 SW_TEST_CASE( ReflectionMetadataTest, EnumeratorMetadataQuery )
 {
@@ -797,6 +798,11 @@ SW_TEST_CASE( ReflectionMetadataTest, EnumeratorMetadataQuery )
     const sw::string* pIcon = first.findCustomMeta( sw::hashed_string( "Icon" ) );
     SW_REQUIRE_NOT_NULL( pIcon );
     SW_EXPECT_TRUE( *pIcon == "One" );
+    // 값으로 찾는 길(`getEnumeratorEditorMetadata`)이 이름으로 찾는 것과 같은 칸을 준다. 음성 대조: 생성기가 두 키를 줄로 내지 않으면 빈 칸이라 진다.
+    const sw::EnumeratorEditorMetadata& byValue = sw::getEnumeratorEditorMetadata( sw::TestMetaEnum::First );
+    SW_EXPECT_TRUE( &byValue == &first );
+    SW_EXPECT_TRUE( first._color == sw::hashed_string( "Signal.Error" ) );
+    SW_EXPECT_TRUE( first._unit == "B/s" );
 
     SW_EXPECT_TRUE( pEnumInfo->findEnumeratorEditorMetadata( sw::hashed_string( "Legacy" ) )._bHidden != SW_FALSE );
     const sw::EnumeratorEditorMetadata& second = pEnumInfo->findEnumeratorEditorMetadata( sw::hashed_string( "Second" ) );

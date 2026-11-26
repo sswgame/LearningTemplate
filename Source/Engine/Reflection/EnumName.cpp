@@ -3,6 +3,7 @@
 #include "Engine/Reflection/EnumName.h"
 
 #include "Engine/Foundation/EngineSubsystems.h"
+#include "Engine/Reflection/ReflectionEditorMetadata.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
 namespace sw
@@ -19,6 +20,13 @@ namespace sw
             return nullptr;
         const EnumInfo* pInfo = engine::getSubsystem<TypeRegistry>().findEnumByTypeFqn( enumTypeFqn );
         return pInfo != nullptr ? pInfo->valueToCString( value ) : nullptr;
+    }
+
+    const EnumeratorEditorMetadata& findEnumValueEditorMetadata( const EnumInfo* pInfo, int64 value )
+    {
+        if ( pInfo == nullptr || pInfo->isValidValue( value ) == false )
+            return EnumeratorEditorMetadata::getDefault();
+        return pInfo->findEnumeratorEditorMetadata( pInfo->getNameByValue( value ) );
     }
 
     const EnumInfo* EnumNameCache::find( const hashed_string& enumTypeFqn ) const
