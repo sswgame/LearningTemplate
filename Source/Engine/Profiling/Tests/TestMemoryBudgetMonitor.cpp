@@ -54,7 +54,7 @@ SW_TEST_CASE( MemoryBudgetMonitorTest, RejectsMalformedBudgetsWithoutApplyingAny
  */
 SW_TEST_CASE( MemoryBudgetMonitorTest, RejectsUnknownKey )
 {
-    SW_EXPECT_LOG( "Config.KeyUnknown" );
+    SW_EXPECT_LOG( "Serialization.OrphanValue" );
     MemoryProfiler profiler;
     profiler.setBudget( MemoryTag::Mesh, 777 );
     SW_EXPECT_FALSE( MemoryBudgetMonitor::applyBudgetJSON( R"({ "_listBudget": [ { "_tag": "Texture", "_megabytes": 1, "_limit": 2 } ] })", profiler ).has_value() );

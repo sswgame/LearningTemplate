@@ -56,11 +56,11 @@ SW_TEST_CASE( ShaderCookSampleTest, RuleNeedsKnownAxesOnce )
     const expected<ShaderCookSampleRule> rule = ConfigManager::parseConfig<ShaderCookSampleRule>( R"({ "_listCoverAxis": [ "Stage", "Source" ] })", "test" );
     SW_REQUIRE_TRUE( rule.has_value() );
     SW_EXPECT_TRUE( rule->_listCoverAxis == ( vector<ShaderCookSampleAxis>{ ShaderCookSampleAxis::Stage, ShaderCookSampleAxis::Source } ) );
-    SW_EXPECT_LOG( "Config.KeyMissing" );
+    SW_EXPECT_LOG( "Serialization.RequiredMissing" );
     SW_EXPECT_FALSE( ConfigManager::parseConfig<ShaderCookSampleRule>( R"({})", "test" ).has_value() );
     SW_EXPECT_FALSE( ConfigManager::parseConfig<ShaderCookSampleRule>( R"({ "_listCoverAxis": [] })", "test" ).has_value() );
     SW_EXPECT_LOG( "Serialization.UnknownEnumerator" );
-    SW_EXPECT_LOG( "Config.KeyUnknown" );
+    SW_EXPECT_LOG( "Serialization.OrphanValue" );
     SW_EXPECT_FALSE( ConfigManager::parseConfig<ShaderCookSampleRule>( R"({ "_listCoverAxis": [ "Format" ] })", "test" ).has_value() );
     SW_EXPECT_FALSE( ConfigManager::parseConfig<ShaderCookSampleRule>( R"({ "_listCoverAxis": [ "Stage", "Stage" ] })", "test" ).has_value() );
 }

@@ -301,7 +301,7 @@ SW_TEST_CASE( AssetDatabaseTest, MetaTextRoundTripsAndRejectsOtherShapes )
     SW_EXPECT_TRUE( AssetMeta::makePath( diskSource ) == diskSource.getParent().join( "hit.ogg.meta" ) ); // 디스크 판은 형식으로 곁 파일을 잇는다
 
     SW_EXPECT_LOG( "AssetMeta.InvalidGUID" );
-    SW_EXPECT_LOG( "Config.KeyUnknown" );
+    SW_EXPECT_LOG( "Serialization.OrphanValue" );
     AssetMeta badGUID;
     SW_EXPECT_FALSE( badGUID.parseXML( "<AssetMeta _guid=\"ABC\" _source=\"hit.ogg\"/>", "bad.meta" ).has_value() );
     AssetMeta unknownField;
@@ -396,7 +396,7 @@ SW_TEST_CASE( AssetDatabaseTest, StoredSourceIsIndexedWithoutAFile )
 SW_TEST_CASE( AssetMetaTest, UnknownAttributeIsStillAnError )
 {
     // 예외 칸이 생겨도 엄격한 읽기는 그대로다 — 겉 · 예외 원소의 모르는 속성이 모두 오류다.
-    SW_EXPECT_LOG( "Config.KeyUnknown" );
+    SW_EXPECT_LOG( "Serialization.OrphanValue" );
     AssetMeta outer;
     SW_EXPECT_FALSE( outer.parseXML( "<AssetMeta _guid=\"0123456789abcdef0011223344556677\" _source=\"horse.glb\" _codec=\"raw\"/>", "outer.meta" ).has_value() );
     AssetMeta inner;

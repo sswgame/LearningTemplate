@@ -253,6 +253,7 @@ SW_TEST_CASE( ReflectionEnumInfoTest, TextParseRejectsUnknownNamesInsteadOfZero 
     const sw::TypeInfo* pHostType = sw::NarrowEnumHost::StaticType();
     SW_REQUIRE_NOT_NULL( pHostType );
     SW_EXPECT_LOG( "Serialization.UnknownEnumerator" ); // 모르는 열거자 글의 거절이 이 케이스가 보려는 동작이다
+    SW_EXPECT_LOG( "Serialization.OrphanValue" );       // 엄격한 읽기가 읽지 못한 칸을 알린다
     sw::NarrowEnumHost fromJSON;
     fromJSON._mode = sw::NarrowEnum::One;
     (void)sw::JSONSerializer::deserialize( &fromJSON, *pHostType, R"({"_mode":"Bogus"})" ); // 거절이 기대값 — 아래 단언이 원래 값이 남았는지 본다

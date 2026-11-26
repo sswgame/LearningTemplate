@@ -10,6 +10,7 @@
 #include "Engine/EngineMinimal.h"
 #include "Engine/Serialization/Format/SchemaMigrate.h"
 #include "Engine/Serialization/Serializer/SerializeContext.h"
+#include "Engine/Serialization/Serializer/StrictRead.h"
 
 namespace sw
 {
@@ -210,10 +211,19 @@ namespace sw
                                  const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring ) );
         /**
          * @brief 기본 XMLDocumentBackend 로 XML 에서 객체를 엄격하게 역직렬화합니다. 모르는 칸, 읽지 못한 칸, 범위 밖 값, 빠진 필수 칸(`PROPERTY( Required )`)은 실패입니다.
-         * @details 빠진 필수 칸은 경로마다 `Serialization.RequiredMissing` 으로 알린다(`collectMissingRequired`). 층을 겹쳐 읽는 쪽(설정)은 `deserializeSoft` 로 읽고 다 겹친 뒤에 본다.
+         * @details `readStrict` 의 결과를 타입 이름으로 알린다(`StrictRead::report`). 층을 겹쳐 읽는 쪽(설정)은 `deserializeSoft` 로 읽고 다 겹친 뒤에 본다.
          */
         [[nodiscard]] static bool deserialize( void* pInstance, const TypeInfo& typeInfo, string_view xmlStr,
                                                const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring ) );
+        /**
+         * @brief 문서 루트(이름이 @p typeInfo)를 엄격하게 읽습니다. 모르는 칸 · 읽지 못한 값 · 범위 밖 값 · 빠진 필수 칸을 모두 결과에 담고 로그는 남기지 않습니다.
+         * @details 알리는 일은 부르는 쪽이 결과로 한다(`StrictRead::report` · `describe`). `deserialize` 는 이것에 `report` 를 붙인 것이다.
+         */
+        [[nodiscard]] static StrictRead readStrict( void* pInstance, const TypeInfo& typeInfo, string_view xmlStr,
+                                                    const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring ) );
+        /** @brief 부르는 쪽이 고른 요소 하나를 엄격하게 읽습니다. 요소의 이름은 보지 않습니다(`deserializeElementSoft` 와 같은 자리). */
+        [[nodiscard]] static StrictRead readStrictElement( void* pInstance, const TypeInfo& typeInfo, const XMLNode& element,
+                                                           const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring ) );
         /** @brief 이름이 @p typeInfo 인 문서 루트를 찾습니다. 없으면 `Xml.WrongRoot` 를 남기고 무효 노드입니다(다른 종류의 파일을 조용히 읽지 않는다). */
         [[nodiscard]] static XMLNode findDocumentRoot( const XMLDocument& document, const TypeInfo& typeInfo );
         /**

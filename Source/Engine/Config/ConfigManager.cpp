@@ -161,45 +161,13 @@ namespace sw
 
     bool ConfigManager::readConfigJSON( void* pInstance, const TypeInfo& typeInfo, string_view jsonStr, const utf8* pSourceLabel )
     {
-        // 키는 대소문자까지 맞아야 한다(직렬화기는 키를 철자 그대로 찾는다 — `_Width` 오타는 모르는 키다).
-        SerializeContext context = SerializeContext::deriveFromDefault( SerializePurpose::Authoring );
-        // JSON 객체가 아닌 본문(`SoftReadResult::NotParsed`)만 여기서 멈춘다. 범위 밖 값(`Rejected`)에서 바로 돌아가면
-        // 그 값 하나가 모르는 키 · 빠진 필수 칸의 오류를 삼킨다 — 모두 알린다는 계약(헤더)이 깨진다.
-        JSONDocument document;
-        if ( document.parse( jsonStr ) == false || document.getRoot().isObject() == false )
-        {
-            SW_LOG_ERROR_ID( "Config.NotJSONObject", "Config %#: not a JSON object for %#", pSourceLabel, typeInfo._fullyQualifiedName.c_str() );
-            return false;
-        }
-        vector<SchemaOrphanValue> listOrphan;
-        // 본문은 위에서 객체로 읽혔으므로 `Read` 가 아니면 범위 밖 값이다 — 읽기 공통 끝(`PropertyConstraints::isWithinDeclaredRanges`)이 칸마다 이미 알렸다.
-        const bool bWithinRange = JSONSerializer::deserializeSoft( pInstance, typeInfo, jsonStr, &listOrphan, nullptr, context ) == SoftReadResult::Read;
-        for ( const SchemaOrphanValue& orphan : listOrphan )
-        {
-            const utf8* const pName = orphan.getDisplayName();
-            SW_LOG_ERROR_ID( "Config.KeyUnknown", "Config %#: key '%#' is unknown to %# or its value %# cannot be read", pSourceLabel, pName, typeInfo._fullyQualifiedName.c_str(),
-                             orphan._text.c_str() );
-        }
-        // 필수 칸(`PROPERTY( Required )`)이 빠졌으면 초기값으로 읽지 않고 오류다 — 초기값은 형식이지 기본값이 아니다.
-        vector<string> listMissing;
-        JSONSerializer::collectMissingRequired( document.getRoot(), typeInfo, listMissing );
-        for ( const string& missingPath : listMissing )
-        {
-            SW_LOG_ERROR_ID( "Config.KeyMissing", "Config %#: required key '%#' of %# is missing", pSourceLabel, missingPath.c_str(), typeInfo._fullyQualifiedName.c_str() );
-        }
-        return bWithinRange && listOrphan.empty() && listMissing.empty();
+        // 키는 대소문자까지 맞아야 한다(직렬화기는 키를 철자 그대로 찾는다 — `_Width` 오타는 모르는 키다). 문제는 모두 알린다(`StrictRead::report`).
+        return JSONSerializer::readStrict( pInstance, typeInfo, jsonStr, SerializeContext::deriveFromDefault( SerializePurpose::Authoring ) ).report( pSourceLabel );
     }
 
     bool ConfigManager::readConfigXMLDocument( void* pInstance, const TypeInfo& typeInfo, string_view documentXML, const utf8* pSourceLabel )
     {
-        XMLDocument document;
-        if ( document.parse( documentXML, pSourceLabel ) == false || document.getRoot().isValid() == false )
-        {
-            SW_LOG_ERROR_ID( "Config.NotXMLElement", "Config %#: not an XML element for %#", pSourceLabel, typeInfo._fullyQualifiedName.c_str() );
-            return false;
-        }
-        const XMLNode root = XMLSerializer::findDocumentRoot( document, typeInfo );
-        return root.isValid() && readConfigXMLElement( pInstance, typeInfo, root, pSourceLabel );
+        return XMLSerializer::readStrict( pInstance, typeInfo, documentXML, SerializeContext::deriveFromDefault( SerializePurpose::Authoring ) ).report( pSourceLabel );
     }
 
     bool ConfigManager::readComposedXMLDocument( void* pInstance, const TypeInfo& typeInfo, string_view documentXML, string_view sourceLabel, const AssetComposeContext& context )
@@ -214,23 +182,8 @@ namespace sw
 
     bool ConfigManager::readConfigXMLElement( void* pInstance, const TypeInfo& typeInfo, const XMLNode& element, const utf8* pSourceLabel )
     {
-        // 키는 대소문자까지 맞아야 한다(`readConfigJSON` 과 같다). 범위 밖 값은 칸마다 읽기 공통 끝이 이미 알렸다.
-        SerializeContext          context = SerializeContext::deriveFromDefault( SerializePurpose::Authoring );
-        vector<SchemaOrphanValue> listOrphan;
-        const bool                bWithinRange = XMLSerializer::deserializeElementSoft( pInstance, typeInfo, element, &listOrphan, nullptr, context ) == SoftReadResult::Read;
-        for ( const SchemaOrphanValue& orphan : listOrphan )
-        {
-            const utf8* const pName = orphan.getDisplayName();
-            SW_LOG_ERROR_ID( "Config.KeyUnknown", "Config %#: '%#' is unknown to %# or its value %# cannot be read", pSourceLabel, pName, typeInfo._fullyQualifiedName.c_str(), orphan._text.c_str() );
-        }
-        // 필수 칸은 속성이나 자식으로 적혀 있어야 한다(구조체 칸 · 목록 원소 안까지) — 초기값은 형식이지 기본값이 아니다.
-        vector<string> listMissing;
-        XMLSerializer::collectMissingRequired( element, typeInfo, listMissing );
-        for ( const string& missingPath : listMissing )
-        {
-            SW_LOG_ERROR_ID( "Config.KeyMissing", "Config %#: required '%#' of %# is missing", pSourceLabel, missingPath.c_str(), typeInfo._fullyQualifiedName.c_str() );
-        }
-        return bWithinRange && listOrphan.empty() && listMissing.empty();
+        // 키는 대소문자까지 맞아야 한다(`readConfigJSON` 과 같다).
+        return XMLSerializer::readStrictElement( pInstance, typeInfo, element, SerializeContext::deriveFromDefault( SerializePurpose::Authoring ) ).report( pSourceLabel );
     }
 
     bool ConfigManager::collectEqualKeys( const void* pLeft, const void* pRight, const TypeInfo& typeInfo, string_view jsonStr, vector<string>& outListKey )

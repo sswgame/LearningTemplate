@@ -124,24 +124,18 @@ namespace sw
 
             /**
              * @brief 합친(부모 없는) `<CultureInfo>` 원소 하나를 리플렉션으로 읽고, 규칙 글 · 숫자 체계 · 목록 개수를 확인합니다.
-             * @details 필수 칸은 읽기 전에 모은다(`collectMissingRequired`) — 표 읽기는 까닭을 오류 값으로 돌려주는 API 다.
+             * @details 표 읽기는 까닭을 오류 값으로 돌려주는 API 라 엄격한 읽기 결과를 로그 대신 글로 옮긴다(`StrictRead::describe`).
              */
             [[nodiscard]] static expected<CultureInfo> readCulture( const XMLNode& element, const map<string, vector<string>>& mapNumberingSystem )
             {
-                const TypeInfo& type = *CultureInfo::StaticType();
-                const string    rawCode{ element.getAttributeText( "_code" ) };
-                vector<string>  listMissing;
-                XMLSerializer::collectMissingRequired( element, type, listMissing );
-                if ( listMissing.empty() == false )
-                    return unexpected( Error{ ErrorKind::InvalidArgument, "a required culture field is missing - the root of the _base chain writes it", rawCode }
+                const TypeInfo&  type = *CultureInfo::StaticType();
+                const string     rawCode{ element.getAttributeText( "_code" ) };
+                CultureInfo      info;
+                const StrictRead read = XMLSerializer::readStrictElement( &info, type, element );
+                if ( read.isRead() == false )
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "a culture field is unknown, unreadable or missing - the root of the _base chain writes the required ones", rawCode }
                                            .appendDetail( ": " )
-                                           .appendDetail( listMissing.front() ) );
-                CultureInfo               info;
-                vector<SchemaOrphanValue> listOrphan;
-                if ( XMLSerializer::deserializeElementSoft( &info, type, element, &listOrphan ) != SoftReadResult::Read || listOrphan.empty() == false )
-                    return unexpected( Error{ ErrorKind::InvalidArgument, "a culture field is unknown or unreadable", rawCode }
-                                           .appendDetail( ": " )
-                                           .appendDetail( listOrphan.empty() ? string_view{} : string_view{ listOrphan.front()._writtenName } ) );
+                                           .appendDetail( read.describe() ) );
                 const string code = CultureTable::normalizeCode( info._code );
                 if ( code != info._code )
                     return unexpected( Error{ ErrorKind::InvalidArgument, "a culture code must be written in its normalized form", info._code }.appendDetail( " -> " ).appendDetail( code ) );

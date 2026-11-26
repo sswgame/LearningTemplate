@@ -660,6 +660,7 @@ SW_TEST_CASE( XMLSerializerPropertyTest, RepeatedAndMisplacedPropertiesAreReport
     SW_EXPECT_EQUAL( size_t{ 1 }, readOrphanCount( R"(<SerializerSampleGroup _listText="a" />)" ) );                                          // 원소여야 할 값
     SW_EXPECT_EQUAL( size_t{ 1 }, readOrphanCount( R"(<SerializerSampleGroup><_part><_count>5</_count></_part></SerializerSampleGroup>)" ) ); // 안쪽 원소도 같다
 
+    SW_EXPECT_LOG( "Serialization.OrphanValue" );
     SerializerSampleGroup group;
     SW_EXPECT_FALSE( XMLSerializer::deserialize( &group, *SerializerSampleGroup::StaticType(), R"(<SerializerSampleGroup><_count>5</_count></SerializerSampleGroup>)" ) );
 }

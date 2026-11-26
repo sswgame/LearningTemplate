@@ -999,25 +999,29 @@ namespace sw
 
     bool XMLSerializer::deserialize( void* pInstance, const TypeInfo& typeInfo, string_view xmlStr, const SerializeContext& context )
     {
-        if ( xmlStr.empty() )
-            return false;
+        return readStrict( pInstance, typeInfo, xmlStr, context ).report( typeInfo._name.c_str() );
+    }
+
+    StrictRead XMLSerializer::readStrict( void* pInstance, const TypeInfo& typeInfo, string_view xmlStr, const SerializeContext& context )
+    {
         XMLDocument document;
-        if ( document.parse( xmlStr ) == false )
-            return false;
+        if ( xmlStr.empty() || document.parse( xmlStr ) == false )
+            return StrictRead( typeInfo, SoftReadResult::NotParsed, {}, {} );
         const XMLNode root = findDocumentRoot( document, typeInfo );
         if ( root.isValid() == false )
-            return false;
+            return StrictRead( typeInfo, SoftReadResult::NotParsed, {}, {} );
+        return readStrictElement( pInstance, typeInfo, root, context );
+    }
+
+    StrictRead XMLSerializer::readStrictElement( void* pInstance, const TypeInfo& typeInfo, const XMLNode& element, const SerializeContext& context )
+    {
         vector<SchemaOrphanValue> listOrphan;
-        const bool                bRead = deserializeElementSoft( pInstance, typeInfo, root, &listOrphan, nullptr, context ) == SoftReadResult::Read && listOrphan.empty();
-        // 필수 칸은 초기값으로 대신하지 않는다.
+        const SoftReadResult      result = deserializeElementSoft( pInstance, typeInfo, element, &listOrphan, nullptr, context );
+        // 필수 칸은 초기값으로 대신하지 않는다(구조체 칸 · 목록 원소 안까지).
         vector<string> listMissing;
-        collectMissingRequired( root, typeInfo, listMissing );
-        for ( const string& missingPath : listMissing )
-        {
-            SW_LOG_ERROR_ID( "Serialization.RequiredMissing", "<%#> has no required '%#' (PROPERTY( Required ) - the initial value is not a default)", typeInfo._name.c_str(),
-                             missingPath.c_str() );
-        }
-        return bRead && listMissing.empty();
+        if ( result != SoftReadResult::NotParsed )
+            collectMissingRequired( element, typeInfo, listMissing );
+        return StrictRead( typeInfo, result, std::move( listOrphan ), std::move( listMissing ) );
     }
 
     XMLNode XMLSerializer::findDocumentRoot( const XMLDocument& document, const TypeInfo& typeInfo )
