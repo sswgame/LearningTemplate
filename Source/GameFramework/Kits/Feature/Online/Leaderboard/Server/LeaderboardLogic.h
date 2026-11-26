@@ -42,17 +42,17 @@
 
 namespace sw
 {
-    struct EphemeralReply;
+    struct CacheReply;
     struct LeaderboardWriteInput;
 
-    class EphemeralStoreRouter;
+    class CacheStoreRouter;
     class ServiceStore;
 
     /** @brief 빌려 쓰는 객체들입니다. */
     struct LeaderboardLogicDependencies
     {
         ServiceStore*            _pStore{ nullptr };     ///< 필수
-        EphemeralStoreRouter*    _pRouter{ nullptr };    ///< 필수이다. 순위에 쓴다
+        CacheStoreRouter*        _pRouter{ nullptr };    ///< 필수이다. 순위에 쓴다
         const IAccountNameIndex* _pNameIndex{ nullptr }; ///< 이름 없이 낸 점수(게임 서버의 제출 — 이 프로세스에 로그인하지 않은 계정)의 표시 이름을 저장소에서 찾는다. null 이면 빈 이름으로 남는다
     };
 } // namespace sw
@@ -292,10 +292,10 @@ namespace sw
         };
 
         void startRead( const PendingRead& read );
-        void onReadyReply( const PendingRead& read, const EphemeralReply& reply );
-        void onRankReply( uint64 queryID, const EphemeralReply& reply );
-        void onRangeReply( uint64 queryID, const EphemeralReply& reply );
-        void onNameReply( uint64 queryID, size_t entryIndex, const EphemeralReply& reply );
+        void onReadyReply( const PendingRead& read, const CacheReply& reply );
+        void onRankReply( uint64 queryID, const CacheReply& reply );
+        void onRangeReply( uint64 queryID, const CacheReply& reply );
+        void onNameReply( uint64 queryID, size_t entryIndex, const CacheReply& reply );
         void finishQuery( uint64 queryID );
         void completeRead( const PendingRead& read, LeaderboardServiceResult result );
         void pushCompletion( uint64 requestTag, LeaderboardOperation operation, LeaderboardServiceResult result );

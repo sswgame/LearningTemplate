@@ -1,7 +1,7 @@
 /**
  * @file HubServerLink.h
  * @brief 허브의 서버 쪽 망 잇기입니다 — 허브 규칙 · 원격 호출 · MMO 복제 · 진행 저장을 묶습니다. 서버 전용 코드라 이 폴더(`Server/`)에 둔다.
- * @details 공유 쪽(`HubNetLink.h`)은 창구(`IHubServer` · `IHubServerFactory`)만 알고, 공장은 모듈 부분으로 공개한다(`HubServerFactory` — `HubServerLink.cpp` 끝).
+ * @details 공유 쪽(`HubNetSession.h`)은 창구(`IHubServer` · `IHubServerFactory`)만 알고, 공장은 모듈 부분으로 공개한다(`HubServerFactory` — `HubServerLink.cpp` 끝).
  *          진행 저장소는 전용 서버의 온라인 조립 저장소다(`HubProfileStore` — 저장소 계약 `ServiceStore`).
  */
 #pragma once
@@ -19,8 +19,8 @@
 #include "GameFramework/Kits/Feature/Network/NetClientServer/RemoteCall.h"
 #include "GameFramework/Kits/Feature/Network/NetMMO/MMOReplicator.h"
 
-#include "Games/Playground/Hub/HubNetLink.h"
-#include "Games/Playground/Hub/HubWorld.h"
+#include "Games/Playground/Hub/HubNetSession.h"
+#include "Games/Playground/Hub/HubSimulation.h"
 #include "Games/Playground/Hub/Server/HubProfileStore.h"
 
 namespace sw
@@ -95,8 +95,8 @@ namespace sw
         void onConnectionClosed( int32 connectionID, NetDisconnectReason reason );
 
         bool                   isActive() const { return _pPeers != nullptr; }
-        HubWorld&              getWorld() { return _world; }
-        const HubWorld&        getWorld() const { return _world; }
+        HubSimulation&         getWorld() { return _world; }
+        const HubSimulation&   getWorld() const { return _world; }
         const HubServerStats&  getStats() const { return _stats; }
         const RemoteCallStats& getRemoteCallStats() const { return _remoteCalls.getStats(); }
         const HubProfileStore& getProfiles() const { return _profiles; }
@@ -139,7 +139,7 @@ namespace sw
         void removePublishedEntity( uint32 entityID );
 
     private:
-        HubWorld                                         _world;
+        HubSimulation                                    _world;
         HubProfileStore                                  _profiles;
         NetEvents                                        _netEvents;
         RemoteCallServer                                 _remoteCalls;

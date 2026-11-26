@@ -11,8 +11,8 @@
 #include "GameFramework/Kits/Feature/Online/Account/Server/LoginSecretVault.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/LoginStoreLogic.h"
 #include "GameFramework/Runtime/Foundation/GameData/ConfigRangeUtil.h"
-#include "GameFramework/Runtime/Online/Cache/Server/EphemeralRecordTable.h"
-#include "GameFramework/Runtime/Online/Cache/Server/EphemeralStoreRouter.h"
+#include "GameFramework/Runtime/Online/Cache/Server/CacheRecordTable.h"
+#include "GameFramework/Runtime/Online/Cache/Server/CacheStoreRouter.h"
 #include "GameFramework/Runtime/Online/Config/Server/RemoteConfig.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
@@ -497,7 +497,7 @@ namespace sw
         return _store.getOpenCount() + _verifications.getOpenCount() + cacheCount + _hashQueue.getOpenCount();
     }
 
-    void LoginLogic::attachCache( EphemeralStoreRouter* pRouter )
+    void LoginLogic::attachCache( CacheStoreRouter* pRouter )
     {
         SW_ASSERT( pRouter != nullptr );
         _pRouter         = pRouter;
@@ -514,9 +514,9 @@ namespace sw
         }
         StringBuilder<constant::buffer::kMax64> key;
         key.appendFormat( "%#%#", LoginLogicInternal::kAttemptKeyPrefix, ServiceKeyUtil::makeHex64( clientKey ) );
-        _pRouter->submit( EphemeralRequest::makeIncrement( key.view(), 1, _settings._sharedAttemptWindowMs ), _cacheReplyOwner, [this, operation, requestTag, grant, onAllowed = std::forward<TContinue>( onAllowed )]( const EphemeralReply& reply ) mutable
+        _pRouter->submit( CacheRequest::makeIncrement( key.view(), 1, _settings._sharedAttemptWindowMs ), _cacheReplyOwner, [this, operation, requestTag, grant, onAllowed = std::forward<TContinue>( onAllowed )]( const CacheReply& reply ) mutable
         {
-            const bool bOverLimit = reply._result == EphemeralResult::Ok && reply._integer > _settings._sharedAttemptLimit;
+            const bool bOverLimit = reply._result == CacheResult::Ok && reply._integer > _settings._sharedAttemptLimit;
             if ( bOverLimit == false )
             {
                 onAllowed(); // 캐시에 닿지 못했거나 맡기지 못했으면(Unavailable) 이 서버의 버킷만으로 막는다
@@ -554,13 +554,13 @@ namespace sw
         Memory::wipe( arrNonce, sizeof( arrNonce ) );
         StringBuilder<constant::buffer::kMax128> nonceKey;
         nonceKey.appendFormat( "%#%#", LoginLogicInternal::kNonceKeyPrefix, nonce );
-        _pRouter->submit( EphemeralRequest::makeSet( nonceKey.view(), EphemeralValueUtil::makeMarker(), _settings._loginNonceLifetimeMs, EphemeralCondition::IfAbsent ), _cacheReplyOwner, [this, requestTag, nonce = std::move( nonce )]( const EphemeralReply& reply )
+        _pRouter->submit( CacheRequest::makeSet( nonceKey.view(), CacheValueUtil::makeMarker(), _settings._loginNonceLifetimeMs, CacheCondition::IfAbsent ), _cacheReplyOwner, [this, requestTag, nonce = std::move( nonce )]( const CacheReply& reply )
         {
             LoginCompletion completion;
             completion._operation  = LoginOperation::IssueLoginNonce;
             completion._requestTag = requestTag;
-            completion._result     = reply._result == EphemeralResult::Ok ? LoginServiceResult{ LoginResult::Ok } : LoginServiceResult::fail( OnlineError::kUnavailable );
-            if ( reply._result == EphemeralResult::Ok )
+            completion._result     = reply._result == CacheResult::Ok ? LoginServiceResult{ LoginResult::Ok } : LoginServiceResult::fail( OnlineError::kUnavailable );
+            if ( reply._result == CacheResult::Ok )
                 completion._loginNonce = nonce;
             if ( requestTag != 0 )
                 _completionBuffer.push( std::move( completion ) );
@@ -1170,11 +1170,11 @@ namespace sw
         }
         StringBuilder<constant::buffer::kMax128> nonceKey;
         nonceKey.appendFormat( "%#%#", LoginLogicInternal::kNonceKeyPrefix, nonce );
-        _pRouter->submit( EphemeralRequest::makeErase( nonceKey.view() ), _cacheReplyOwner, [this, operation, provider = string( provider ), ticketBytes, token, buildGrant, nowMs, requestTag]( const EphemeralReply& reply )
+        _pRouter->submit( CacheRequest::makeErase( nonceKey.view() ), _cacheReplyOwner, [this, operation, provider = string( provider ), ticketBytes, token, buildGrant, nowMs, requestTag]( const CacheReply& reply )
         {
-            if ( reply._result == EphemeralResult::Ok )
+            if ( reply._result == CacheResult::Ok )
                 startVerification( operation, provider, ticketBytes, token, buildGrant, nowMs, requestTag );
-            else if ( reply._result == EphemeralResult::NotFound )
+            else if ( reply._result == CacheResult::NotFound )
                 pushImmediate( operation, requestTag, LoginResult::ProviderRejected, LoginGrant{} ); // 다시 쓴 토큰이거나 지난 nonce 다
             else
                 pushImmediate( operation, requestTag, LoginResult::ProviderUnavailable, LoginGrant{} ); // 캐시에 닿지 못했다 — 새 nonce 로 다시 한다

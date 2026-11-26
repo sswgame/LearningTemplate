@@ -42,7 +42,7 @@
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceDatabase.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
 #include "GameFramework/Runtime/Gameplay/Progression/PlayerStatsSubsystem.h"
-#include "GameFramework/Runtime/Online/HTTP/TelemetryUploadLink.h"
+#include "GameFramework/Runtime/Online/HTTP/TelemetryUploadAdapter.h"
 #include "GameFramework/Runtime/Online/Security/NetSecurity.h"
 #include "GameFramework/Runtime/Online/Service/OnlineSession.h"
 

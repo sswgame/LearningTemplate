@@ -18,7 +18,7 @@
 
 namespace sw
 {
-    class IEphemeralStore;
+    class ICacheStore;
     class ServiceStore;
 
     /** @brief 서버 설정의 `memory` 드라이버 이름입니다(저장소 · 캐시 공통). */
@@ -39,15 +39,15 @@ namespace sw
     };
 
     /**
-     * @class IEphemeralStoreDriver
+     * @class ICacheStoreDriver
      * @brief 캐시 드라이버입니다(캐시 키트 `GF_Server_CacheStore` 의 모듈 서브시스템이 멤버로 들고 공개한다).
      */
-    class IEphemeralStoreDriver
+    class ICacheStoreDriver
     {
     public:
-        virtual ~IEphemeralStoreDriver() = default;
+        virtual ~ICacheStoreDriver() = default;
 
         /** @brief 캐시를 만들고 초기화합니다. 실패하면 까닭입니다(대상에 비밀을 담지 않는다). */
-        virtual expected<unique_ptr<IEphemeralStore>> createEphemeralStore( string_view driverName, string_view endpoint, string_view secret ) = 0;
+        virtual expected<unique_ptr<ICacheStore>> createCacheStore( string_view driverName, string_view endpoint, string_view secret ) = 0;
     };
 } // namespace sw

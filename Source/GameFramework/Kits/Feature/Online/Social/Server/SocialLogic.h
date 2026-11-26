@@ -35,10 +35,10 @@ namespace sw
 {
     enum class SocialLinkOperation : uint8;
 
-    struct EphemeralReply;
+    struct CacheReply;
     struct SocialLinkDecision;
 
-    class EphemeralStoreRouter;
+    class CacheStoreRouter;
     class IAccountNameIndex;
     class ServiceStore;
     class ServerBus;
@@ -48,7 +48,7 @@ namespace sw
     struct SocialLogicDependencies
     {
         ServiceStore*            _pStore{ nullptr };     ///< 필수이다
-        EphemeralStoreRouter*    _pRouter{ nullptr };    ///< 접속 상태에 쓴다. null 이면 이 서버의 계정만 다룬다
+        CacheStoreRouter*        _pRouter{ nullptr };    ///< 접속 상태에 쓴다. null 이면 이 서버의 계정만 다룬다
         ServerBus*               _pBus{ nullptr };       ///< null 이면 서버가 한 대이다
         const IAccountNameIndex* _pNameIndex{ nullptr }; ///< 이름으로 친구 신청할 때 쓴다. null 이면 NotFound 로 끝낸다
         SocialLinkPolicy         _linkPolicy{};          ///< 필수이다 — 관계 수 상한(서버 설정 `SocialKitConfig::_links`)
@@ -162,7 +162,7 @@ namespace sw
         void notifyFriendsOfPresence( const SocialPresence& presence );
         /** @brief 접속 상태 캐시 값을 씁니다. 값을 못 쓰면 오류 로그를 남기고 false 이며 캐시에 아무것도 보내지 않습니다. */
         [[nodiscard]] bool writePresenceRecord( const SocialPresence& presence );
-        void               onPresenceReply( uint64 queryID, AccountID friendID, const EphemeralReply& reply );
+        void               onPresenceReply( uint64 queryID, AccountID friendID, const CacheReply& reply );
         void               pushCompletion( uint64 requestTag, SocialServiceResult result );
 
     private:

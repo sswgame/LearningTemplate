@@ -12,7 +12,7 @@
 #include "GameFramework/Runtime/Gameplay/Ability/AbilitySystemComponent.h"
 #include "GameFramework/Runtime/Gameplay/Ability/CombatAttributeSet.h"
 #include "GameFramework/Runtime/Gameplay/Ability/MinigameRewardComponent.h"
-#include "GameFramework/Runtime/Gameplay/Ability/TagCountTable.h"
+#include "GameFramework/Runtime/Gameplay/Ability/TagCountContainer.h"
 #include "GameFramework/Runtime/Gameplay/Ability/Tests/CombatAttributeTestUtil.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/WalletComponent.h"
 #include "GameFramework/Runtime/Gameplay/Progression/ReputationComponent.h"

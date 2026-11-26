@@ -7,8 +7,8 @@
 끝점은 gamesettings 칸(`_telemetryUploadEndpoint` · `_crashUploadEndpoint`)이고 저장소의 팩은 적지 않는다 - 이 스크립트는 `-gv_telemetryUploadEndpoint` ·
 `-gv_crashUploadEndpoint` 로 수신기를 가리킨다. 사용자 설정은 `-gv_userSettingsFile` 로 출력 폴더에 따로 두어 사람의 동의 설정을 바꾸지 않는다.
 1 회: 동의를 켜고(`settings.apply telemetry.enabled=true`) 끝낸다. 종료가 업로더를 떼며 스풀 파일을 닫아 보낸다(`TelemetrySubsystem::releaseUploader`).
-     로그의 크래시 보고 줄(id `TelemetryUploadLink.CrashReportsSent`, 본문 JSON)에서 묶음 폴더를 읽는다.
-2 회: 그 폴더에 보낼 줄(queued)의 가짜 묶음을 하나 두고 띄운다. 기동이 전용 스레드로 묶음을 올린다(`TelemetryUploadLink`).
+     로그의 크래시 보고 줄(id `TelemetryUploadAdapter.CrashReportsSent`, 본문 JSON)에서 묶음 폴더를 읽는다.
+2 회: 그 폴더에 보낼 줄(queued)의 가짜 묶음을 하나 두고 띄운다. 기동이 전용 스레드로 묶음을 올린다(`TelemetryUploadAdapter`).
 판정: 수신기가 `/telemetry` 로 문맥 줄과 `session.start` 를 담은 ndjson 을, `/crash` 로 그 묶음 세션의 multipart 를 받았고, 두 로그에 허용 밖 `[Error]` · `[Warning]` 이 없다.
 """
 
@@ -32,8 +32,8 @@ from net.ctest_items import CtestItem
 
 CTEST_ITEMS = (CtestItem("telemetry", ("telemetry-local", "run"), 400),)
 
-_TELEMETRY_LINKED_ID = "TelemetryUploadLink.TelemetryLinked"
-_CRASH_SENT_ID = "TelemetryUploadLink.CrashReportsSent"  # 본문 JSON: sent · folder
+_TELEMETRY_LINKED_ID = "TelemetryUploadAdapter.TelemetryLinked"
+_CRASH_SENT_ID = "TelemetryUploadAdapter.CrashReportsSent"  # 본문 JSON: sent · folder
 _FAKE_SESSION = "telemetrylocalrun"
 _CLIENT_DELAY_SECONDS = 8.0  # 기동 줄을 본 뒤 명령을 보낼 때까지
 _TIMEOUT_SECONDS = 60.0  # 기동 줄을 기다리는 최대 초
@@ -90,7 +90,7 @@ def check_run(sink: Sink, list_log_text: list[str]) -> list[str]:
         problems.append(f"the sink got no crash POST for the queued bundle '{_FAKE_SESSION}'")
     for index, text in enumerate(list_log_text):
         if count_id(text, _TELEMETRY_LINKED_ID) == 0:
-            problems.append(f"run {index + 1}: no telemetry link line - TelemetryUploadLink did not take the endpoint")
+            problems.append(f"run {index + 1}: no telemetry link line - TelemetryUploadAdapter did not take the endpoint")
         problems += problem_lines(f"run {index + 1}", text)
     return problems
 

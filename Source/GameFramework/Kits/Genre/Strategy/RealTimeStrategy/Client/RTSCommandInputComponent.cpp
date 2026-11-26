@@ -228,11 +228,11 @@ namespace sw
 
     void RTSCommandInputComponent::updateHumanCommands( GameObjectManager& manager, SkirmishGameModeComponent& director, const InputManager& input, const GameInputView& inputMap )
     {
-        const RTSWorld& world = director.getWorld();
-        float3          point{};
-        const bool      bPointValid = findGroundPoint( manager, director, input, point );
-        const bool      bShift      = inputMap.isActionDown( _addToSelectionAction );
-        const bool      bControl    = inputMap.isActionDown( _groupModifierAction );
+        const RTSSimulation& world = director.getWorld();
+        float3               point{};
+        const bool           bPointValid = findGroundPoint( manager, director, input, point );
+        const bool           bShift      = inputMap.isActionDown( _addToSelectionAction );
+        const bool           bControl    = inputMap.isActionDown( _groupModifierAction );
         updateDrag( director, inputMap, point, bPointValid );
 
         if ( bPointValid && inputMap.wasActionTriggered( _orderAction ) )
@@ -291,7 +291,7 @@ namespace sw
 
     void RTSCommandInputComponent::updateDrag( SkirmishGameModeComponent& director, const GameInputView& inputMap, const float3& point, bool bPointValid )
     {
-        const RTSWorld&      world        = director.getWorld();
+        const RTSSimulation& world        = director.getWorld();
         const hashed_string& selectAction = _selectAction;
         const bool           bShift       = inputMap.isActionDown( _addToSelectionAction );
         if ( bPointValid && inputMap.wasActionPressed( selectAction ) )
@@ -343,7 +343,7 @@ namespace sw
 
     void RTSCommandInputComponent::issueOrder( SkirmishGameModeComponent& director, const float3& point, bool bQueue )
     {
-        const RTSWorld& world = director.getWorld();
+        const RTSSimulation& world = director.getWorld();
         if ( _selection.getSelected().empty() || _selection.isCommandable( world ) == false )
             return;
         // 유닛이나 자원을 눌렀으면 하나씩 상황에 맞는 명령(공격, 채취, 이어 짓기)을 낸다. 빈 땅이면 움직이는 것은 무리 이동, 건물은 집결지 지정이다.
@@ -381,7 +381,7 @@ namespace sw
 
     void RTSCommandInputComponent::orderBuild( SkirmishGameModeComponent& director, const hashed_string& buildingID, const float3& point )
     {
-        const RTSWorld&         world = director.getWorld();
+        const RTSSimulation&    world = director.getWorld();
         const RTSUnitDef* const pDef  = director.findCatalog()->find( buildingID );
         if ( pDef == nullptr )
             return;
@@ -584,7 +584,7 @@ namespace sw
         _listSelected.push_back( unitID );
     }
 
-    void RTSSelection::selectInRect( const RTSWorld& world, const float3& cornerA, const float3& cornerB, bool bAdd )
+    void RTSSelection::selectInRect( const RTSSimulation& world, const float3& cornerA, const float3& cornerB, bool bAdd )
     {
         float3 minCorner{};
         float3 maxCorner{};
@@ -635,7 +635,7 @@ namespace sw
         }
     }
 
-    void RTSSelection::selectUnit( const RTSWorld& world, RTSUnitID unitID, bool bToggle )
+    void RTSSelection::selectUnit( const RTSSimulation& world, RTSUnitID unitID, bool bToggle )
     {
         const RTSUnit* pUnit = world.findUnit( unitID );
         if ( pUnit == nullptr )
@@ -651,7 +651,7 @@ namespace sw
         _listSelected.push_back( unitID );
     }
 
-    void RTSSelection::selectSameType( const RTSWorld& world, RTSUnitID unitID, const float3& cornerA, const float3& cornerB )
+    void RTSSelection::selectSameType( const RTSSimulation& world, RTSUnitID unitID, const float3& cornerA, const float3& cornerB )
     {
         const RTSUnit* pUnit = world.findUnit( unitID );
         if ( pUnit == nullptr )
@@ -693,7 +693,7 @@ namespace sw
         }
     }
 
-    bool RTSSelection::recallGroup( const RTSWorld& world, int32 group )
+    bool RTSSelection::recallGroup( const RTSSimulation& world, int32 group )
     {
         if ( group < 0 || group >= kGroupCount )
             return false;
@@ -704,7 +704,7 @@ namespace sw
         return true;
     }
 
-    void RTSSelection::prune( const RTSWorld& world )
+    void RTSSelection::prune( const RTSSimulation& world )
     {
         const auto isDead = [&world]( RTSUnitID unitID )
         { return world.findUnit( unitID ) == nullptr; };
@@ -726,7 +726,7 @@ namespace sw
         return VectorUtil::contains( _listSelected, unitID );
     }
 
-    bool RTSSelection::isCommandable( const RTSWorld& world ) const
+    bool RTSSelection::isCommandable( const RTSSimulation& world ) const
     {
         for ( const RTSUnitID unitID : _listSelected )
         {

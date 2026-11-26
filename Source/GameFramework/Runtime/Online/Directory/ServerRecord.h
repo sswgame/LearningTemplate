@@ -18,8 +18,8 @@
 
 namespace sw
 {
-    class EphemeralValue;
-    struct EphemeralReply;
+    class CacheValue;
+    struct CacheReply;
 } // namespace sw
 
 namespace sw
@@ -115,7 +115,7 @@ namespace sw
         static string makeRecordKey( uint64 serverID );
         /**
          * @brief 서버 하나의 좌석 예약 셈(`sd/seat/<id>`, 정수, 고정 창 TTL)의 키입니다. 배정하는 서버들이 나눠 쓴다(감사 O-18).
-         * @details 배정이 더하고(`ServerRegistryReader::pickServer`) 게임 서버가 받은 사람을 부하로 알리면서 뺀다(`ServerRegistration::confirmSeats`). 확정되지 않은 예약은 창이 끝나면 사라진다 —
+         * @details 배정이 더하고(`ServerDirectoryReader::pickServer`) 게임 서버가 받은 사람을 부하로 알리면서 뺀다(`ServerRegistration::confirmSeats`). 확정되지 않은 예약은 창이 끝나면 사라진다 —
          *          Agones `GameServerAllocation` 이 Ready 서버를 Allocated 로 잡아 두고, 게임 서버가 받지 않으면 풀리는 것과 같은 자리다.
          */
         static string             makeSeatKey( uint64 serverID );
@@ -125,9 +125,9 @@ namespace sw
         /** @brief 종류 · 지역 이름 규칙(`[0-9a-z_-]`, 1..16 바이트)을 지키는가입니다. */
         static bool isValidName( string_view name );
 
-        /** @brief 서버 기록의 휘발 값입니다(`EphemeralRecordTable<ServerStatus>`). 선언 범위 밖이면 오류 로그를 남기고 false 입니다. */
-        [[nodiscard]] static bool makeValue( const ServerStatus& status, EphemeralValue& outValue );
+        /** @brief 서버 기록의 휘발 값입니다(`CacheRecordTable<ServerStatus>`). 선언 범위 밖이면 오류 로그를 남기고 false 입니다. */
+        [[nodiscard]] static bool makeValue( const ServerStatus& status, CacheValue& outValue );
         /** @brief 서버 기록을 읽습니다. 없거나 다른 판 · 깨진 값 · 누구도 가질 수 없는 상태면 false 입니다. */
-        [[nodiscard]] static bool decode( const EphemeralReply& reply, ServerStatus& outStatus );
+        [[nodiscard]] static bool decode( const CacheReply& reply, ServerStatus& outStatus );
     };
 } // namespace sw

@@ -12,8 +12,8 @@
 #include "Engine/Module/ModuleSubsystemRegistrar.h"
 
 #include "GameFramework/Runtime/Foundation/Save/Local/LocalDeviceKeyProvider.h"
-#include "GameFramework/Runtime/Foundation/Save/Local/LocalStoreBackend.h"
 #include "GameFramework/Runtime/Foundation/Save/Local/LocalStoreChannel.h"
+#include "GameFramework/Runtime/Foundation/Save/Local/LocalStoreFactory.h"
 #include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 
 namespace sw

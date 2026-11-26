@@ -11,7 +11,7 @@
 #include "GameFramework/Runtime/Gameplay/Ability/AbilitySystemComponent.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AttributeSet.h"
 #include "GameFramework/Runtime/Gameplay/Ability/MovementConstraint.h"
-#include "GameFramework/Runtime/Gameplay/Ability/TagCountTable.h"
+#include "GameFramework/Runtime/Gameplay/Ability/TagCountContainer.h"
 
 using namespace sw;
 

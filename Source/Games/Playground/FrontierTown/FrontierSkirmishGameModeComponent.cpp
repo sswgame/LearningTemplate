@@ -11,7 +11,7 @@
 
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/Component/RTSGameModeComponent.h"
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSCatalog.h"
-#include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSWorld.h"
+#include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSSimulation.h"
 #include "GameFramework/Runtime/Gameplay/GameState/GameStateComponent.h"
 #include "GameFramework/Runtime/Gameplay/GameState/PlayerComponentUtil.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/WalletComponent.h"
@@ -24,7 +24,7 @@ namespace sw
     /**
      * @class FrontierSkirmishGameModeComponent
      * @brief RTS 한 판입니다. 앞에 붙은 도시 디렉터(`CityGameModeComponent`)가 연 공유 상태를 빌리고, 새 판이면 시작 광물 · 일꾼 · 해병을 놓습니다.
-     * @details RTS 는 공유 땅을 빌린다(`RTSWorld::bindLand`, 원점 (0, 0)) — 도시가 지은 칸은 막혀 짓지 못하고 경로가 돌아간다. 돈은 공유 지갑(플레이어 0)이다.
+     * @details RTS 는 공유 땅을 빌린다(`RTSSimulation::bindLand`, 원점 (0, 0)) — 도시가 지은 칸은 막혀 짓지 못하고 경로가 돌아간다. 돈은 공유 지갑(플레이어 0)이다.
      *          둘째 틱에 일꾼에게 `_barracksX`, `_barracksY` 에 병영 짓기를, 해병에게 두 지점(`_patrol*`) 사이 이동을 준다. 해병은 도착할 때마다 반대쪽으로 다시 간다.
      *          이 디렉터는 입력과 시계를 만지지 않는다(도시 디렉터가 민다). 모습은 키트 클라이언트 뷰가 세운다.
      */
@@ -41,7 +41,7 @@ namespace sw
 
         void serializeGameState( StateIO& io ) override;
 
-        const RTSWorld& getWorld() const override { return _world; }
+        const RTSSimulation& getWorld() const override { return _world; }
 
     protected:
         [[nodiscard]] bool startGame() override;
@@ -49,7 +49,7 @@ namespace sw
 
     private:
         /** @brief 빈 월드를 열고 공유 땅과 지갑을 겁니다(시작과 복원이 같은 설정으로 연다). 격자 크기는 공유 땅의 크기이고, 월드가 열리지 않으면 false 입니다. */
-        [[nodiscard]] bool initializeWorld( RTSWorld& outWorld, GameStateComponent& state, WalletComponent& wallet ) const;
+        [[nodiscard]] bool initializeWorld( RTSSimulation& outWorld, GameStateComponent& state, WalletComponent& wallet ) const;
         /** @brief 둘째 틱의 명령 — 병영 짓기와 첫 순찰 이동입니다. 거절되면 이유를 남긴다(데이터 오류). */
         void issueOpeningOrders();
         /** @brief 해병이 멈췄으면 순찰의 다른 끝으로 보냅니다. */
@@ -75,9 +75,9 @@ namespace sw
         PROPERTY( Category = "Layout", DisplayName = "Patrol B", Units = m )
         float3 _patrolB;
 
-        SW_CODEC_STATE RTSWorld  _world;
-        SW_CODEC_STATE RTSUnitID _worker;
-        SW_CODEC_STATE RTSUnitID _soldier;
+        SW_CODEC_STATE RTSSimulation _world;
+        SW_CODEC_STATE RTSUnitID     _worker;
+        SW_CODEC_STATE RTSUnitID     _soldier;
         PROPERTY( RuntimeState, Min = 0 )
         int32 _tickCount;
         PROPERTY( RuntimeState )
@@ -120,7 +120,7 @@ namespace sw
         io.value( soldierValue );
         if ( io.isOk() == false )
             return;
-        // RTSWorld 는 옮길 수 없다(경로 풀이가 같은 객체의 격자를 참조한다) — 읽기는 지형을 다시 세운 _world 에 바로 한다. 유닛 · 시야 복원은 RTSWorld 직렬화가 임시 값에 읽고 다 읽은 뒤에만 옮긴다.
+        // RTSSimulation 는 옮길 수 없다(경로 풀이가 같은 객체의 격자를 참조한다) — 읽기는 지형을 다시 세운 _world 에 바로 한다. 유닛 · 시야 복원은 RTSSimulation 직렬화가 임시 값에 읽고 다 읽은 뒤에만 옮긴다.
         if ( io.isReading() && io.check( initializeWorld( _world, *pState, *pWallet ) ) == false )
             return;
         io.value( _world );
@@ -131,7 +131,7 @@ namespace sw
         _soldier = RTSUnitID::fromPacked( soldierValue );
     }
 
-    bool FrontierSkirmishGameModeComponent::initializeWorld( RTSWorld& outWorld, GameStateComponent& state, WalletComponent& wallet ) const
+    bool FrontierSkirmishGameModeComponent::initializeWorld( RTSSimulation& outWorld, GameStateComponent& state, WalletComponent& wallet ) const
     {
         const GridTopology& land         = state.getLand().getTopology();
         const bool          bStartOnLand = 0.0f <= _playerStart._x && _playerStart._x < static_cast<float32>( land._width ) && 0.0f <= _playerStart._z && _playerStart._z < static_cast<float32>( land._height );

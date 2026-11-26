@@ -38,7 +38,7 @@
 #include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 #include "GameFramework/Runtime/Online/Service/OnlineSession.h"
 
-#include "Games/Playground/Hub/HubNetLink.h"
+#include "Games/Playground/Hub/HubNetSession.h"
 #include "Games/Playground/Hub/HubPawnReplicationComponent.h"
 #include "Games/Playground/Online/PlaygroundOnlineFlow.h"
 #include "Games/Playground/Shooter3D/ShooterBodyMovementComponent.h"

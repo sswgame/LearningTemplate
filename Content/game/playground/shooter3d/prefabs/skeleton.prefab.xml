@@ -14,13 +14,13 @@
 			<RagdollComponent _physicsAssetPath="guid:838a817bb59114526689cc7f27a02f17" />
 		</Override>
 		<Add after="#35e161a3a492d464">
-			<SkeletalSeveringComponent _localID="12034596935017574515" _componentName="SkeletalSeveringComponent" _bActive="true" _severedSurfaceChannel="Blood" _regionTablePath="guid:9fb8f706daaf99963cf9c891924fce5a">
+			<SkeletalDismembermentComponent _localID="12034596935017574515" _componentName="SkeletalDismembermentComponent" _bActive="true" _severedSurfaceChannel="Blood" _regionTablePath="guid:9fb8f706daaf99963cf9c891924fce5a">
 				<_listSeverableRegion>
 					<item>Head</item>
 					<item>Arm_L</item>
 					<item>Arm_R</item>
 				</_listSeverableRegion>
-			</SkeletalSeveringComponent>
+			</SkeletalDismembermentComponent>
 		</Add>
 		<Override key="#bfe4aa906b270582">
 			<CharacterAppearanceComponent _presetID="SkeletonMinion" _bMergeParts="true" _surfaceChannelsPath="guid:480309ac75a2431aeb227f392cf1e577" />

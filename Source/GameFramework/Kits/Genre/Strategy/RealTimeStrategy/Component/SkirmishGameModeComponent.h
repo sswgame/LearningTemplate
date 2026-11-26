@@ -1,7 +1,7 @@
 /**
  * @file SkirmishGameModeComponent.h
  * @brief RTS 키트의 교전 한 판 디렉터입니다(지도 · 플레이어 수는 씬 데이터 `SkirmishMap`). 한 판(`SkirmishMatch`), 속도 · 일시정지를 맡고 사람의 명령을 값(`RTSCommand`)으로 받습니다.
- * @details 언리얼의 GameMode/GameState 에 해당합니다. 씬에 하나만 둡니다. 규칙(채취, 생산, 전투, 안개, AI)은 `RTSWorld`, `RTSCommanderAI`, `SkirmishMatch` 가 맡는다.
+ * @details 언리얼의 GameMode/GameState 에 해당합니다. 씬에 하나만 둡니다. 규칙(채취, 생산, 전투, 안개, AI)은 `RTSSimulation`, `RTSCommanderAI`, `SkirmishMatch` 가 맡는다.
  *          고르기 · 명령 입력(`RTSCommandInputComponent`)과 모습(`RTSBattlefieldViewComponent` · `RTSUnitViewComponent`)은 클라이언트 모듈(`GF_Client_RealTimeStrategy`)의 것이고,
  *          이 디렉터의 명령 · 읽기 API 로만 판을 본다.
  *
@@ -56,7 +56,7 @@ namespace sw
         void serializeGameState( StateIO& io ) override;
 
         // ---- 읽기(클라이언트 모듈) ----
-        const RTSWorld&      getWorld() const override { return _match.getWorld(); }
+        const RTSSimulation& getWorld() const override { return _match.getWorld(); }
         const SkirmishMatch& getMatch() const { return _match; }
         bool                 isLocalPlayerHuman() const override { return _match.isHumanPlayer( getLocalPlayer() ); }
         /** @brief 마지막 걸음(`updateGame`)에 나온 알림입니다. 다음 걸음이 비운다(시간이 멈춘 걸음도 비운다). */

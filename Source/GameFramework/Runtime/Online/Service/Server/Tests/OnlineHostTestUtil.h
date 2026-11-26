@@ -2,7 +2,7 @@
  * @file OnlineHostTestUtil.h
  * @brief 온라인 서비스 틀 테스트 하니스 — 루프백 망 위의 서버(호스트 · 메모리 저장소 · 메모리 캐시 · 로컬 버스)와 엔드포인트 하나에 연결 여럿인 클라이언트 묶음입니다.
  * @details - 로그인은 테스트 서비스(영역 `OnlineMethodRange::kGame`)가 몸의 계정 id 로 `host.bindAccount` 한다 — 계정 키트 없이 "로그인한 연결" 을 만든다.
- *          - I/O 스레드 없이 `updateAll` 로 돈다(결정적). 서버 여럿은 같은 데이터(`MemoryServiceDatabase` · `MemoryEphemeralDatabase` · `LocalServerBusHub`)를 나눠 쓴다.
+ *          - I/O 스레드 없이 `updateAll` 로 돈다(결정적). 서버 여럿은 같은 데이터(`MemoryServiceDatabase` · `MemoryCacheDatabase` · `LocalServerBusHub`)를 나눠 쓴다.
  *          - 클라이언트는 공유 엔드포인트 모드(`OnlineServiceClient::initializeOnSharedEndpoint`) — 연결이 열리면 붙는다. `connect` 뒤 `updateAll` 한 번이면 Hello 까지 끝난다.
  *          - 내리는 순서는 실제 서버와 같다: 저장소 → 호스트 → 남은 저장소 완료 → 캐시.
  *          스위트 파일이 아니다. 서비스 틀 테스트(`ServiceClientCallTableTest`)와 키트 끝단 테스트(`ServerListTest`, 키트 DLL)가 include 한다.
@@ -21,7 +21,7 @@
 #include "Core/Time/TimePoint.h"
 
 #include "GameFramework/Runtime/Online/Bus/Server/LocalServerBus.h"
-#include "GameFramework/Runtime/Online/Cache/Server/MemoryEphemeralStore.h"
+#include "GameFramework/Runtime/Online/Cache/Server/MemoryCacheStore.h"
 #include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
 #include "GameFramework/Runtime/Online/Service/OnlineProtocol.h"
 #include "GameFramework/Runtime/Online/Service/OnlineProtocolRegistry.h"
@@ -100,14 +100,14 @@ namespace sw::test
         static constexpr uint16 kFirstPort = 7400;
 
         MemoryServiceStore           _store;
-        MemoryEphemeralStore         _cache;
+        MemoryCacheStore             _cache;
         LocalServerBus               _bus;
         TestLoginLogic               _loginLogic;
         unique_ptr<IStreamTransport> _transport;
         OnlineServiceHost            _host;
         uint16                       _port;
 
-        OnlineTestServer( LoopbackStreamNetwork& network, MemoryServiceDatabase* pDatabase, MemoryEphemeralDatabase* pCacheDatabase, LocalServerBusHub* pBusHub,
+        OnlineTestServer( LoopbackStreamNetwork& network, MemoryServiceDatabase* pDatabase, MemoryCacheDatabase* pCacheDatabase, LocalServerBusHub* pBusHub,
                           uint64 serverID )
             : _store{ pDatabase }
             , _cache{ pCacheDatabase }
@@ -138,7 +138,7 @@ namespace sw::test
             settings._transportSettings._ioThreadCount = 0;
             settings._listenAddress                    = NetAddress::makeLoopback( _port );
             settings._pServiceStore                    = &_store;
-            settings._pEphemeralStore                  = &_cache;
+            settings._pCacheStore                      = &_cache;
             settings._pServerBusTransport              = &_bus;
             settings._requestBurstPerRemote            = 1000; // 테스트 클라이언트는 모두 127.0.0.1 이다
             settings._requestBurstPerAccount           = 1000;
@@ -275,13 +275,13 @@ namespace sw::test
      */
     struct OnlineTestFixture
     {
-        LoopbackStreamNetwork   _network{ 5u };
-        MemoryServiceDatabase   _database{};
-        SystemMonotonicClock    _cacheClock{};
-        MemoryEphemeralDatabase _cacheDatabase{ _cacheClock };
-        LocalServerBusHub       _hub{};
-        OnlineTestServer        _server{ _network, &_database, &_cacheDatabase, &_hub, 1 };
-        OnlineTestClients       _clients{ _network };
+        LoopbackStreamNetwork _network{ 5u };
+        MemoryServiceDatabase _database{};
+        SystemMonotonicClock  _cacheClock{};
+        MemoryCacheDatabase   _cacheDatabase{ _cacheClock };
+        LocalServerBusHub     _hub{};
+        OnlineTestServer      _server{ _network, &_database, &_cacheDatabase, &_hub, 1 };
+        OnlineTestClients     _clients{ _network };
 
         explicit OnlineTestFixture( bool bStart = true )
         {

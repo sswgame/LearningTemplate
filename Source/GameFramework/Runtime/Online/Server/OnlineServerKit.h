@@ -40,10 +40,10 @@ namespace sw
 {
     struct OnlineServerConfig;
 
-    class EphemeralStoreRouter;
+    class CacheStoreRouter;
     class IAfterDeleteAccount;
     class IClock;
-    class IEphemeralStore;
+    class ICacheStore;
     class IOnlineServerKit;
     class IOnlineServerService;
     class ServiceStore;
@@ -74,9 +74,9 @@ namespace sw
         // 런타임이 채운다.
         OnlineServiceHost*        _pHost{ nullptr };
         ServiceStore*             _pStore{ nullptr };
-        IEphemeralStore*          _pCache{ nullptr };
+        ICacheStore*              _pCache{ nullptr };
         ServerBus*                _pBus{ nullptr };    ///< 버스의 타입 있는 앞이다. 발행은 주제 정의(`ServerBusTopic`)로만 한다
-        EphemeralStoreRouter*     _pRouter{ nullptr }; ///< 호스트를 띄운 뒤(`start`)부터 있다
+        CacheStoreRouter*         _pRouter{ nullptr }; ///< 호스트를 띄운 뒤(`start`)부터 있다
         ServiceScheduler*         _pScheduler{ nullptr };
         RemoteConfig*             _pRemoteConfig{ nullptr };
         MetricRegistry*           _pMetricRegistry{ nullptr }; ///< 없으면 세지 않는다

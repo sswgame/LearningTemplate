@@ -6,7 +6,7 @@
 
 #include "Engine/Serialization/Fixed/ReplicatedLayout.h"
 
-#include "Games/Playground/Hub/HubNetLink.h"
+#include "Games/Playground/Hub/HubNetSession.h"
 
 using namespace sw;
 

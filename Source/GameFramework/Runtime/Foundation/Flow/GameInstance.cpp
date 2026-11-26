@@ -38,7 +38,7 @@
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceDatabase.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
 #include "GameFramework/Runtime/Gameplay/Progression/PlayerStatsSubsystem.h"
-#include "GameFramework/Runtime/Online/HTTP/TelemetryUploadLink.h"
+#include "GameFramework/Runtime/Online/HTTP/TelemetryUploadAdapter.h"
 #include "GameFramework/Runtime/Online/Security/NetSecurity.h"
 #include "GameFramework/Runtime/Online/Service/OnlineSession.h"
 
@@ -84,7 +84,7 @@ namespace sw
         , _bSecuritySet{ SW_FALSE }
     {
         // 인스턴스 서브시스템 — initialize 가 onInitialize 앞에 초기화하고 shutdown 이 onShutdown 뒤에 역순으로 종료한다.
-        ScreenTransitionManager& screenTransition = _gameScope.emplaceSubsystem<ScreenTransitionManager>();
+        ScreenTransitionController& screenTransition = _gameScope.emplaceSubsystem<ScreenTransitionController>();
         // 로딩 화면은 클라이언트 전용 부분이 세운다 — 그 소스를 짓지 않는 전용 서버에는 없다(`IGameInstanceClientHook`).
         IGameInstanceClientHook* const pClientHook    = IGameInstanceClientHook::find();
         ILoadingScreen* const          pLoadingScreen = pClientHook != nullptr ? pClientHook->emplaceLoadingScreen( _gameScope ) : nullptr;
@@ -97,7 +97,7 @@ namespace sw
         // 온라인 세션은 키트 클라이언트를 묶을 뿐 연결은 게임이 연다 - 온라인을 쓰지 않는 게임에는 비용이 없다.
         _gameScope.emplaceSubsystem<OnlineSession>( _packConfig._data );
         // 텔레메트리 · 크래시 업로드는 gamesettings 에 끝점이 있을 때만 엔진 업로더에 HTTP 클라이언트를 끼운다 - 없으면 아무 일도 하지 않는다.
-        _gameScope.emplaceSubsystem<TelemetryUploadLink>( _packConfig._data );
+        _gameScope.emplaceSubsystem<TelemetryUploadAdapter>( _packConfig._data );
         // 플레이어 통계 · 업적은 gamesettings 에 통계 카탈로그가 있을 때만 선다 - 플랫폼 서비스(지금은 로컬 구현)까지 잇는다.
         _gameScope.emplaceSubsystem<PlayerStatsSubsystem>( _packConfig._data );
         // 게임 기능이 붙이는 컴포넌트의 규칙 — 기능 범위(게임 · 미니게임)보다 먼저 서고 늦게 사라진다.
@@ -398,14 +398,14 @@ namespace sw
             SW_LOG_ERROR_ID( "GameInstance.GameSettingsAutosaveCouldNot", "GameSettings autosaveSettings '%#' could not be loaded (missing or invalid - see the messages above) - the game does not start", settingsPath.c_str() );
             return false;
         }
-        _pAutosave = make_unique<AutosaveManager>();
+        _pAutosave = make_unique<AutosaveController>();
         if ( _pAutosave->initialize( settings, getSubsystem<GameLocalStore>(), _saveLock,
-                                     SW_DELEGATE_LAMBDA( AutosaveManager::SaveDelegate, [this]( vector<uint8>& outBytes, float64& outPlayTime )
+                                     SW_DELEGATE_LAMBDA( AutosaveController::SaveDelegate, [this]( vector<uint8>& outBytes, float64& outPlayTime )
         {
             outPlayTime = getSubsystem<GameSaveSlots>().getPlayTime();
             return captureSnapshot( SerializePurpose::SaveGame, outBytes );
         } ),
-                                     SW_DELEGATE_LAMBDA( AutosaveManager::LoadDelegate, [this]( const string& slot, const AutosaveManager::RestoreCompletedFunction& onCompleted )
+                                     SW_DELEGATE_LAMBDA( AutosaveController::LoadDelegate, [this]( const string& slot, const AutosaveController::RestoreCompletedFunction& onCompleted )
         { return getSubsystem<GameSaveSlots>().loadSlot( slot, onCompleted ); } ) ) == false ) // 슬롯 불러오기와 같은 길 — 찍은 씬으로 옮긴 뒤 적용한다(감사 G-7)
             return false;                                                                      // 까닭은 관리자가 남겼다
         return bindScopedSubsystem( _pAutosave.get() );

@@ -1,6 +1,6 @@
 /**
  * @file HubDevCommands.cpp
- * @brief 허브 월드(`HubWorldComponent`)와 카드 탁자(`HubCardTableComponent`)의 개발 명령(`hub.*`)과 감시 값(`Hub.*`)입니다. `Dev/` 라 배포 구성은 짓지 않는다.
+ * @brief 허브 월드(`HubSimulationComponent`)와 카드 탁자(`HubCardTableComponent`)의 개발 명령(`hub.*`)과 감시 값(`Hub.*`)입니다. `Dev/` 라 배포 구성은 짓지 않는다.
  */
 #include "pch.h"
 
@@ -22,26 +22,26 @@
 
 #include "Games/Playground/Hub/HubCardTableComponent.h"
 #include "Games/Playground/Hub/HubPawnReplicationComponent.h"
-#include "Games/Playground/Hub/HubWorldComponent.h"
+#include "Games/Playground/Hub/HubSimulationComponent.h"
 
 namespace sw
 {
     namespace
     {
         /** @brief 개발 명령과 감시 값입니다. 허브 컴포넌트는 활성 씬에서 찾습니다. */
-        struct HubWorldComponentDevInternal
+        struct HubSimulationComponentDevInternal
         {
             /** @brief 허브 컴포넌트가 없을 때의 명령 답입니다. */
             static constexpr const utf8* kNoHubReply = "hub: no connected hub client in the active scene";
 
             /** @brief 활성 씬의 연결된 허브 컴포넌트입니다. 없으면 nullptr 이고 부르는 쪽이 `kNoHubReply` 로 답한다. */
-            [[nodiscard]] static HubWorldComponent* findHub()
+            [[nodiscard]] static HubSimulationComponent* findHub()
             {
                 const SceneManager* const pScenes  = game::findSubsystem<SceneManager>();
                 const Scene* const        pScene   = pScenes != nullptr ? pScenes->getActiveScene() : nullptr;
                 GameObjectManager* const  pManager = pScene != nullptr ? pScene->getObjectManager() : nullptr;
                 // 연결된 허브 클라이언트는 씬에 하나다 — 둘이면 오류로 명령을 보내지 않는다(등록 순서로 고르지 않는다).
-                return pManager != nullptr ? pManager->getComponentRegistry().findUnique<HubWorldComponent>( []( const HubWorldComponent& hub )
+                return pManager != nullptr ? pManager->getComponentRegistry().findUnique<HubSimulationComponent>( []( const HubSimulationComponent& hub )
                 { return hub.getClient().isActive(); } )
                                            : nullptr;
             }
@@ -61,7 +61,7 @@ namespace sw
                 uint32 targetID = 0;
                 if ( listArgument.size() != 1 || parseID( listArgument[0], targetID ) == false )
                     return false;
-                HubWorldComponent* const pHub = findHub();
+                HubSimulationComponent* const pHub = findHub();
                 if ( pHub == nullptr )
                 {
                     outReply = kNoHubReply;
@@ -83,7 +83,7 @@ namespace sw
             {
                 if ( listArgument.empty() == false )
                     return false;
-                HubWorldComponent* const pHub = findHub();
+                HubSimulationComponent* const pHub = findHub();
                 if ( pHub == nullptr )
                 {
                     outReply = kNoHubReply;
@@ -99,7 +99,7 @@ namespace sw
             {
                 if ( listArgument.empty() == false )
                     return false;
-                const HubWorldComponent* const pHub = findHub();
+                const HubSimulationComponent* const pHub = findHub();
                 if ( pHub == nullptr )
                 {
                     outReply = kNoHubReply;
@@ -115,83 +115,83 @@ namespace sw
             }
 
             /** @brief 클라이언트가 서버의 값을 받았을 때만 값이 있습니다(받기 전에는 "값 없음" — 0 과 구분한다). */
-            static const HubAvatarAgent* findShownAgent( const HubWorldComponent& hub )
+            static const HubAvatarAgent* findShownAgent( const HubSimulationComponent& hub )
             {
                 const HubAvatarAgent& agent = hub.getClient().getAgent();
                 return hub.getClient().isActive() && agent._avatarID != 0 ? &agent : nullptr;
             }
 
-            [[nodiscard]] static bool readAvatarID( const HubWorldComponent& hub, float64& outValue )
+            [[nodiscard]] static bool readAvatarID( const HubSimulationComponent& hub, float64& outValue )
             {
                 const HubAvatarAgent* pAgent = findShownAgent( hub );
                 outValue                     = pAgent != nullptr ? static_cast<float64>( pAgent->_avatarID ) : 0.0;
                 return pAgent != nullptr;
             }
 
-            [[nodiscard]] static bool readLevel( const HubWorldComponent& hub, float64& outValue )
+            [[nodiscard]] static bool readLevel( const HubSimulationComponent& hub, float64& outValue )
             {
                 const HubAvatarAgent* pAgent = findShownAgent( hub );
                 outValue                     = pAgent != nullptr ? static_cast<float64>( pAgent->_shownLevel ) : 0.0;
                 return pAgent != nullptr;
             }
 
-            [[nodiscard]] static bool readExperience( const HubWorldComponent& hub, float64& outValue )
+            [[nodiscard]] static bool readExperience( const HubSimulationComponent& hub, float64& outValue )
             {
                 const HubAvatarAgent* pAgent = findShownAgent( hub );
                 outValue                     = pAgent != nullptr ? static_cast<float64>( pAgent->_shownExperience ) : 0.0;
                 return pAgent != nullptr;
             }
 
-            [[nodiscard]] static bool readCoins( const HubWorldComponent& hub, float64& outValue )
+            [[nodiscard]] static bool readCoins( const HubSimulationComponent& hub, float64& outValue )
             {
                 const HubAvatarAgent* pAgent = findShownAgent( hub );
                 outValue                     = pAgent != nullptr ? static_cast<float64>( pAgent->_shownCoins ) : 0.0;
                 return pAgent != nullptr;
             }
 
-            [[nodiscard]] static bool readHerbs( const HubWorldComponent& hub, float64& outValue )
+            [[nodiscard]] static bool readHerbs( const HubSimulationComponent& hub, float64& outValue )
             {
                 const HubAvatarAgent* pAgent = findShownAgent( hub );
                 outValue                     = pAgent != nullptr ? static_cast<float64>( pAgent->_shownHerbCount ) : 0.0;
                 return pAgent != nullptr;
             }
 
-            [[nodiscard]] static bool readDefeats( const HubWorldComponent& hub, float64& outValue )
+            [[nodiscard]] static bool readDefeats( const HubSimulationComponent& hub, float64& outValue )
             {
                 const HubAvatarAgent* pAgent = findShownAgent( hub );
                 outValue                     = pAgent != nullptr ? static_cast<float64>( pAgent->_shownDefeatCount ) : 0.0;
                 return pAgent != nullptr;
             }
 
-            [[nodiscard]] static bool readPartySize( const HubWorldComponent& hub, float64& outValue )
+            [[nodiscard]] static bool readPartySize( const HubSimulationComponent& hub, float64& outValue )
             {
                 const HubAvatarAgent* pAgent = findShownAgent( hub );
                 outValue                     = pAgent != nullptr ? static_cast<float64>( pAgent->_shownPartySize ) : 0.0;
                 return pAgent != nullptr;
             }
 
-            [[nodiscard]] static bool readResultCount( const HubWorldComponent& hub, float64& outValue )
+            [[nodiscard]] static bool readResultCount( const HubSimulationComponent& hub, float64& outValue )
             {
                 outValue = static_cast<float64>( hub.getClient().getAgent()._resultCount );
                 return hub.getClient().isActive();
             }
 
-            [[nodiscard]] static bool readLastResult( const HubWorldComponent& hub, float64& outValue )
+            [[nodiscard]] static bool readLastResult( const HubSimulationComponent& hub, float64& outValue )
             {
                 outValue = static_cast<float64>( static_cast<int32>( hub.getClient().getAgent()._lastResult ) );
                 return hub.getClient().isActive() && hub.getClient().getAgent()._resultCount > 0;
             }
 
-            [[nodiscard]] static bool readVisibleEntities( const HubWorldComponent& hub, float64& outValue )
+            [[nodiscard]] static bool readVisibleEntities( const HubSimulationComponent& hub, float64& outValue )
             {
                 outValue = static_cast<float64>( hub.getClient().getView().getEntityCount() );
                 return hub.getClient().isActive();
             }
 
-            /** @brief 첫 짐승(`HubWorld::kPlacementIDBase`)의 복제된 체력입니다. 보이지 않거나 쓰러졌으면 값이 없습니다. */
-            [[nodiscard]] static bool readFirstCreatureHealth( const HubWorldComponent& hub, float64& outValue )
+            /** @brief 첫 짐승(`HubSimulation::kPlacementIDBase`)의 복제된 체력입니다. 보이지 않거나 쓰러졌으면 값이 없습니다. */
+            [[nodiscard]] static bool readFirstCreatureHealth( const HubSimulationComponent& hub, float64& outValue )
             {
-                const MMOEntity* pEntity = hub.getClient().isActive() ? hub.getClient().getView().findEntity( HubWorld::kPlacementIDBase ) : nullptr;
+                const MMOEntity* pEntity = hub.getClient().isActive() ? hub.getClient().getView().findEntity( HubSimulation::kPlacementIDBase ) : nullptr;
                 if ( pEntity == nullptr )
                     return false;
                 BitReader         reader( pEntity->_listState.data(), static_cast<int32>( pEntity->_listState.size() ) );
@@ -207,7 +207,7 @@ namespace sw
              * @details 대기는 서버의 게임 시간이라 실제 시간으로 재면 서버가 밀리거나 멈춘 만큼 어긋난다. 클라이언트의 시계 추정은 받은 틱보다 `NetClock::kMaxLeadSeconds` 까지 앞설 수 있어 그만큼을 뺀다 —
              *          그 틱은 서버가 이미 지난 틱이다.
              */
-            [[nodiscard]] static bool readAttackReady( const HubWorldComponent& hub, float64& outValue )
+            [[nodiscard]] static bool readAttackReady( const HubSimulationComponent& hub, float64& outValue )
             {
                 const NetLinkValue* const pLink = SceneNetLink::findBoundFor( hub );
                 if ( hub.getClient().isActive() == false || pLink == nullptr )
@@ -255,30 +255,30 @@ namespace sw
         };
     } // namespace
 
-    SW_DEV_COMMAND( HubAttack, "hub.attack", "hub.attack <creatureID>", "Ask the hub server to strike a creature (ids start at 100000 in spawn order)", &HubWorldComponentDevInternal::runAttack );
-    SW_DEV_COMMAND( HubGather, "hub.gather", "hub.gather <herbID>", "Ask the hub server to gather a herb", &HubWorldComponentDevInternal::runGather );
-    SW_DEV_COMMAND( HubInvite, "hub.invite", "hub.invite <avatarID>", "Invite another avatar to this avatar's party", &HubWorldComponentDevInternal::runInvite );
-    SW_DEV_COMMAND( HubAccept, "hub.accept", "hub.accept <leaderAvatarID>", "Accept the party invite of an avatar", &HubWorldComponentDevInternal::runAccept );
-    SW_DEV_COMMAND( HubLeave, "hub.leave", "hub.leave", "Leave the party", &HubWorldComponentDevInternal::runLeave );
-    SW_DEV_COMMAND( HubStatus, "hub.status", "hub.status", "Show the progress the hub server last sent", &HubWorldComponentDevInternal::runStatus );
+    SW_DEV_COMMAND( HubAttack, "hub.attack", "hub.attack <creatureID>", "Ask the hub server to strike a creature (ids start at 100000 in spawn order)", &HubSimulationComponentDevInternal::runAttack );
+    SW_DEV_COMMAND( HubGather, "hub.gather", "hub.gather <herbID>", "Ask the hub server to gather a herb", &HubSimulationComponentDevInternal::runGather );
+    SW_DEV_COMMAND( HubInvite, "hub.invite", "hub.invite <avatarID>", "Invite another avatar to this avatar's party", &HubSimulationComponentDevInternal::runInvite );
+    SW_DEV_COMMAND( HubAccept, "hub.accept", "hub.accept <leaderAvatarID>", "Accept the party invite of an avatar", &HubSimulationComponentDevInternal::runAccept );
+    SW_DEV_COMMAND( HubLeave, "hub.leave", "hub.leave", "Leave the party", &HubSimulationComponentDevInternal::runLeave );
+    SW_DEV_COMMAND( HubStatus, "hub.status", "hub.status", "Show the progress the hub server last sent", &HubSimulationComponentDevInternal::runStatus );
 
-    SW_AUTOMATION_GETTER_WATCH( hubRulesValid, "Hub.RulesValid", "1 when the scene's hub rules build a valid hub", HubWorldComponent, &HubWorldComponent::getRulesValid );
-    SW_AUTOMATION_GETTER_WATCH( hubNetRole, "Hub.NetRole", "0 alone, 1 hub server, 2 hub client", HubWorldComponent, &HubWorldComponent::getNetRoleValue );
-    SW_AUTOMATION_COMPONENT_WATCH( hubAvatarID, "Hub.AvatarID", "Avatar id the server gave this client", HubWorldComponent, &HubWorldComponentDevInternal::readAvatarID );
-    SW_AUTOMATION_COMPONENT_WATCH( hubLevel, "Hub.Level", "Level the server last sent", HubWorldComponent, &HubWorldComponentDevInternal::readLevel );
-    SW_AUTOMATION_COMPONENT_WATCH( hubExperience, "Hub.Experience", "Experience the server last sent", HubWorldComponent, &HubWorldComponentDevInternal::readExperience );
-    SW_AUTOMATION_COMPONENT_WATCH( hubCoins, "Hub.Coins", "Coins the server last sent", HubWorldComponent, &HubWorldComponentDevInternal::readCoins );
-    SW_AUTOMATION_COMPONENT_WATCH( hubHerbs, "Hub.Herbs", "Herbs gathered, as the server last sent", HubWorldComponent, &HubWorldComponentDevInternal::readHerbs );
-    SW_AUTOMATION_COMPONENT_WATCH( hubDefeats, "Hub.Defeats", "Creatures felled, as the server last sent", HubWorldComponent, &HubWorldComponentDevInternal::readDefeats );
-    SW_AUTOMATION_COMPONENT_WATCH( hubPartySize, "Hub.PartySize", "Party size the server last sent (1 alone)", HubWorldComponent, &HubWorldComponentDevInternal::readPartySize );
-    SW_AUTOMATION_COMPONENT_WATCH( hubResultCount, "Hub.ResultCount", "Action results the server sent", HubWorldComponent, &HubWorldComponentDevInternal::readResultCount );
-    SW_AUTOMATION_COMPONENT_WATCH( hubLastResult, "Hub.LastResult", "Last HubActionResult the server sent (0 Ok)", HubWorldComponent, &HubWorldComponentDevInternal::readLastResult );
-    SW_AUTOMATION_COMPONENT_WATCH( hubVisibleEntities, "Hub.VisibleEntities", "Creatures, herbs and avatars the MMO replication shows this client", HubWorldComponent,
-                                   &HubWorldComponentDevInternal::readVisibleEntities );
-    SW_AUTOMATION_COMPONENT_WATCH( hubFirstCreatureHealth, "Hub.FirstCreatureHealth", "Replicated health of creature 100000 (no value while felled or unseen)", HubWorldComponent,
-                                   &HubWorldComponentDevInternal::readFirstCreatureHealth );
-    SW_AUTOMATION_COMPONENT_WATCH( hubAttackReady, "Hub.AttackReady", "1 once the world's server clock is past the attack cooldown the server last sent", HubWorldComponent,
-                                   &HubWorldComponentDevInternal::readAttackReady );
+    SW_AUTOMATION_GETTER_WATCH( hubRulesValid, "Hub.RulesValid", "1 when the scene's hub rules build a valid hub", HubSimulationComponent, &HubSimulationComponent::getRulesValid );
+    SW_AUTOMATION_GETTER_WATCH( hubNetRole, "Hub.NetRole", "0 alone, 1 hub server, 2 hub client", HubSimulationComponent, &HubSimulationComponent::getNetRoleValue );
+    SW_AUTOMATION_COMPONENT_WATCH( hubAvatarID, "Hub.AvatarID", "Avatar id the server gave this client", HubSimulationComponent, &HubSimulationComponentDevInternal::readAvatarID );
+    SW_AUTOMATION_COMPONENT_WATCH( hubLevel, "Hub.Level", "Level the server last sent", HubSimulationComponent, &HubSimulationComponentDevInternal::readLevel );
+    SW_AUTOMATION_COMPONENT_WATCH( hubExperience, "Hub.Experience", "Experience the server last sent", HubSimulationComponent, &HubSimulationComponentDevInternal::readExperience );
+    SW_AUTOMATION_COMPONENT_WATCH( hubCoins, "Hub.Coins", "Coins the server last sent", HubSimulationComponent, &HubSimulationComponentDevInternal::readCoins );
+    SW_AUTOMATION_COMPONENT_WATCH( hubHerbs, "Hub.Herbs", "Herbs gathered, as the server last sent", HubSimulationComponent, &HubSimulationComponentDevInternal::readHerbs );
+    SW_AUTOMATION_COMPONENT_WATCH( hubDefeats, "Hub.Defeats", "Creatures felled, as the server last sent", HubSimulationComponent, &HubSimulationComponentDevInternal::readDefeats );
+    SW_AUTOMATION_COMPONENT_WATCH( hubPartySize, "Hub.PartySize", "Party size the server last sent (1 alone)", HubSimulationComponent, &HubSimulationComponentDevInternal::readPartySize );
+    SW_AUTOMATION_COMPONENT_WATCH( hubResultCount, "Hub.ResultCount", "Action results the server sent", HubSimulationComponent, &HubSimulationComponentDevInternal::readResultCount );
+    SW_AUTOMATION_COMPONENT_WATCH( hubLastResult, "Hub.LastResult", "Last HubActionResult the server sent (0 Ok)", HubSimulationComponent, &HubSimulationComponentDevInternal::readLastResult );
+    SW_AUTOMATION_COMPONENT_WATCH( hubVisibleEntities, "Hub.VisibleEntities", "Creatures, herbs and avatars the MMO replication shows this client", HubSimulationComponent,
+                                   &HubSimulationComponentDevInternal::readVisibleEntities );
+    SW_AUTOMATION_COMPONENT_WATCH( hubFirstCreatureHealth, "Hub.FirstCreatureHealth", "Replicated health of creature 100000 (no value while felled or unseen)", HubSimulationComponent,
+                                   &HubSimulationComponentDevInternal::readFirstCreatureHealth );
+    SW_AUTOMATION_COMPONENT_WATCH( hubAttackReady, "Hub.AttackReady", "1 once the world's server clock is past the attack cooldown the server last sent", HubSimulationComponent,
+                                   &HubSimulationComponentDevInternal::readAttackReady );
 
     SW_DEV_COMMAND( HubCards, "hub.cards", "hub.cards join | leave | play | draw", "Sit at or leave a card table of the connected hub, play the first legal card (draw without one), or draw", &HubCardTableDevInternal::runCards );
     SW_AUTOMATION_GETTER_WATCH( hubCardsSeat, "Hub.CardsSeat", "Seat at the card table (-1 without one)", HubCardTableComponent, &HubCardTableComponent::getSeat );

@@ -14,7 +14,7 @@
 #include "GameFramework/Client/View/GameModeViewComponent.h"
 #include "GameFramework/Client/View/PrefabViewBatch.h"
 #include "GameFramework/Kits/Genre/Action/ActionAdventure/Component/AdventureGameModeComponent.h"
-#include "GameFramework/Kits/Genre/Action/ActionCombat/ActionRoomLook.h"
+#include "GameFramework/Kits/Genre/Action/ActionCombat/ActionCombatRoomLook.h"
 #include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 #include "GameFramework/Runtime/Gameplay/GameState/PlayerComponentUtil.h"
 
@@ -59,7 +59,7 @@ namespace sw
         PROPERTY( Category = "View", DisplayName = "Sphere Prefab", Required, Tooltip = "1 m diameter sphere scaled to the actors, projectiles and the invulnerable player" )
         AssetRef<PrefabAsset> _spherePrefab;
         PROPERTY( Category = "View", DisplayName = "Room Look" )
-        ActionRoomLook _roomLook;
+        ActionCombatRoomLook _roomLook;
         PROPERTY( Category = "View", DisplayName = "Invulnerable Radius", Tooltip = "Sphere around the invulnerable player; a little larger than the player sphere of the kit", Min = 0.01, Units = m )
         float32 _invulnerableRadius;
         PROPERTY( Category = "View", DisplayName = "Invulnerable Height", Tooltip = "Height of that sphere's center above the floor", Units = m )
@@ -114,7 +114,7 @@ namespace sw
             { (void)_sphereViews.show( manager, _spherePrefab, position, float3{ radius * 2.0f }, 0.0f, color ); } );
             const AdventureGameModeComponent* const pDirector = encounter.getRoom().isPlayerInvulnerable() ? PlayerComponentUtil::findOnOwner<AdventureGameModeComponent>( *this ) : nullptr;
             if ( pDirector != nullptr )
-                (void)_sphereViews.show( manager, _spherePrefab, ActionRoomLook::makePosition( pDirector->getPlayerPosition(), _invulnerableHeight ), float3{ _invulnerableRadius * 2.0f }, 0.0f,
+                (void)_sphereViews.show( manager, _spherePrefab, ActionCombatRoomLook::makePosition( pDirector->getPlayerPosition(), _invulnerableHeight ), float3{ _invulnerableRadius * 2.0f }, 0.0f,
                                          _invulnerableColor );
         }
         _sphereViews.end( manager );

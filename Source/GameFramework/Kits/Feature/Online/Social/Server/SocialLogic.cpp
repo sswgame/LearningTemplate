@@ -9,9 +9,9 @@
 #include "GameFramework/Kits/Feature/Online/Social/Server/SocialCounts.h"
 #include "GameFramework/Kits/Feature/Online/Social/Server/SocialStoreRecords.h"
 #include "GameFramework/Runtime/Online/Bus/ServerBusTopic.h"
-#include "GameFramework/Runtime/Online/Cache/Server/EphemeralRecordTable.h"
-#include "GameFramework/Runtime/Online/Cache/Server/EphemeralStore.h"
-#include "GameFramework/Runtime/Online/Cache/Server/EphemeralStoreRouter.h"
+#include "GameFramework/Runtime/Online/Cache/Server/CacheRecordTable.h"
+#include "GameFramework/Runtime/Online/Cache/Server/CacheStore.h"
+#include "GameFramework/Runtime/Online/Cache/Server/CacheStoreRouter.h"
 #include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
 #include "GameFramework/Runtime/Online/Service/OnlineLimit.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceCommitRunner.h"
@@ -634,7 +634,7 @@ namespace sw
             _mapQuery[queryID]      = std::move( query );
             for ( const AccountID friendID : listCachedFriend )
             {
-                _dependencies._pRouter->submit( EphemeralRequest::makeGet( SocialLogicInternal::makePresenceKey( friendID ) ), _replyOwner, [this, queryID, friendID]( const EphemeralReply& reply )
+                _dependencies._pRouter->submit( CacheRequest::makeGet( SocialLogicInternal::makePresenceKey( friendID ) ), _replyOwner, [this, queryID, friendID]( const CacheReply& reply )
                 { onPresenceReply( queryID, friendID, reply ); } );
             }
             return;
@@ -656,7 +656,7 @@ namespace sw
             localIt->second._activity.clear();
             publishPresence( accountID, localIt->second );
             if ( _dependencies._pRouter != nullptr )
-                _dependencies._pRouter->submit( EphemeralRequest::makeErase( SocialLogicInternal::makePresenceKey( accountID ) ) );
+                _dependencies._pRouter->submit( CacheRequest::makeErase( SocialLogicInternal::makePresenceKey( accountID ) ) );
         }
         removeFriendWatcher( accountID, localIt->second._listLink );
         _mapAccountToLocal.erase( localIt );
@@ -739,13 +739,13 @@ namespace sw
 
     bool SocialLogic::writePresenceRecord( const SocialPresence& presence )
     {
-        EphemeralValue value;
-        if ( EphemeralRecordTable<SocialPresence>{}.makeValue( presence, value ) == false )
+        CacheValue value;
+        if ( CacheRecordTable<SocialPresence>{}.makeValue( presence, value ) == false )
             return false;
         if ( _dependencies._pRouter == nullptr )
             return true;
-        _dependencies._pRouter->submit( EphemeralRequest::makeSet( SocialLogicInternal::makePresenceKey( presence._accountID ), std::move( value ),
-                                                                   SocialLogicInternal::kPresenceTTLMs ) );
+        _dependencies._pRouter->submit( CacheRequest::makeSet( SocialLogicInternal::makePresenceKey( presence._accountID ), std::move( value ),
+                                                               SocialLogicInternal::kPresenceTTLMs ) );
         return true;
     }
 
@@ -769,16 +769,16 @@ namespace sw
         }
     }
 
-    void SocialLogic::onPresenceReply( uint64 queryID, AccountID friendID, const EphemeralReply& reply )
+    void SocialLogic::onPresenceReply( uint64 queryID, AccountID friendID, const CacheReply& reply )
     {
         const auto queryIt = _mapQuery.find( queryID );
         if ( queryIt == _mapQuery.end() )
             return;
         PresenceQuery& query = queryIt->second;
         SocialPresence presence{ string{}, friendID, SocialPresenceStatus::Offline };
-        if ( reply._result == EphemeralResult::Ok )
+        if ( reply._result == CacheResult::Ok )
         {
-            if ( EphemeralRecordTable<SocialPresence>{}.decode( reply, presence ) == false || presence._accountID != friendID )
+            if ( CacheRecordTable<SocialPresence>{}.decode( reply, presence ) == false || presence._accountID != friendID )
                 presence = SocialPresence{ string{}, friendID, SocialPresenceStatus::Offline };
         }
         query._listPresence.push_back( std::move( presence ) );

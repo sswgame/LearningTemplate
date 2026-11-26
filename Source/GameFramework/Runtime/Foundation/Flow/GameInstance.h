@@ -20,7 +20,7 @@
 #include "GameFramework/Runtime/Foundation/Flow/GameSceneFlow.h"
 #include "GameFramework/Runtime/Foundation/Flow/IContentConfiguration.h"
 #include "GameFramework/Runtime/Foundation/Flow/IGame.h"
-#include "GameFramework/Runtime/Foundation/Flow/ScreenTransitionManager.h"
+#include "GameFramework/Runtime/Foundation/Flow/ScreenTransitionController.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameSettings.h"
 #include "GameFramework/Runtime/Foundation/Save/GameStateSnapshot.h"
 #include "GameFramework/Runtime/Foundation/Save/SaveLock.h"
@@ -31,7 +31,7 @@ namespace sw
 
     class AppearanceDatabase;
     class AppearanceDataWatcher;
-    class AutosaveManager;
+    class AutosaveController;
     class GameFeatureScope;
     class GameLocalStore;
     class IGameDevPart;
@@ -132,7 +132,7 @@ namespace sw
         // 게임 인스턴스 서브시스템
         // --------------------------------------------------------------------------
         /**
-         * @brief 이 인스턴스가 소유한 서브시스템 @p T 입니다(`ScreenTransitionManager` · `LoadingScreenController` · `GameSceneFlow` · `GameLocalStore`). 생성 뒤에는 늘 있다.
+         * @brief 이 인스턴스가 소유한 서브시스템 @p T 입니다(`ScreenTransitionController` · `LoadingScreenController` · `GameSceneFlow` · `GameLocalStore`). 생성 뒤에는 늘 있다.
          * @details 언리얼 `UGameInstance::GetSubsystem<T>()` 자리다. 게임 범위에 있으므로 키트는 인스턴스 없이 `game::findSubsystem<T>()` 로도 찾는다.
          *          화면 전환은 FadeOut → 실행 → FadeIn 을, 로딩 화면은 씬 로드 동안 gamesettings 의 `_loadingScreen` 문서를, 씬 흐름은 첫 씬 · 타이틀 요청과 로드 알림을 맡는다
          *          (파생 초기화 뒤 `startFirstScene` 이 `GameSceneFlow::requestFirstScene` 으로 첫 씬을 연다).
@@ -327,7 +327,7 @@ namespace sw
         /** @brief gamesettings 의 사운드 이벤트 라이브러리(`_audioEvents`)를 올립니다. 적었는데 못 읽으면 오류를 남기고 false 입니다(적지 않았으면 true). */
         [[nodiscard]] bool loadAudioEvents();
         /**
-         * @brief gamesettings 의 자동 저장 정책(`_autosaveSettings`)이 있으면 `AutosaveManager` 를 세워 게임 범위에 겁니다. 적었는데 못 읽으면 오류를 남기고 false 입니다(적지 않았으면 true).
+         * @brief gamesettings 의 자동 저장 정책(`_autosaveSettings`)이 있으면 `AutosaveController` 를 세워 게임 범위에 겁니다. 적었는데 못 읽으면 오류를 남기고 false 입니다(적지 않았으면 true).
          * @details 저장 바이트는 세이브 슬롯과 같은 봉투다(`captureSnapshot` · `restoreSnapshot` 의 `SerializePurpose::SaveGame`). `update` 가 돌리고 `shutdown` 앞머리가 종료 저장을 맡긴다.
          */
         [[nodiscard]] bool startAutosave();
@@ -375,7 +375,7 @@ namespace sw
         SharedAssetRef<ItemCatalog>       _pItemCatalog;         ///< `<RequiredData kind="items">` 를 적은 게임의 아이템 카탈로그(공유 캐시의 한 벌, 게임 범위 서비스)
         unique_ptr<AppearanceDatabase>    _pAppearanceDatabase;  ///< `<RequiredData kind="appearance">` 를 적은 게임의 외형 데이터(게임 범위 서비스)
         unique_ptr<AppearanceDataWatcher> _pAppearanceWatcher;   ///< 외형 데이터 핫 리로드(`update` 가 돌린다)
-        unique_ptr<AutosaveManager>       _pAutosave;            ///< `<autosaveSettings>` 를 적은 게임의 자동 저장(게임 범위 서비스)
+        unique_ptr<AutosaveController>    _pAutosave;            ///< `<autosaveSettings>` 를 적은 게임의 자동 저장(게임 범위 서비스)
         unique_ptr<GameFeatureScope>      _pGameFeatureScope;    ///< gamesettings `gameFeatures` 의 게임 범위 기능(`activateGameFeatures` 가 켜고 서브시스템 종료 뒤에 끈다)
         unique_ptr<IGameDevPart>          _pDevPart;             ///< 게임 `Dev/` 의 개발 전용 부분(`IGameDevPartFactory` — 배포 구성에는 공장이 없어 비었다). `onInitialize` 뒤에 서고 `onShutdown` 앞에 진다
         string                            _loadedAudioEvents;    ///< `loadAudioEvents` 가 올린 사운드 이벤트 파일 — `shutdown` 이 내린다(비면 올린 것 없음)

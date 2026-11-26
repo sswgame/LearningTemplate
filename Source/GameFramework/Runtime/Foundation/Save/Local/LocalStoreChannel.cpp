@@ -10,7 +10,7 @@
 #include "Engine/Module/ModuleSubsystemRegistrar.h"
 
 #include "GameFramework/Runtime/Foundation/Save/Local/LocalDeviceKeyProvider.h"
-#include "GameFramework/Runtime/Foundation/Save/Local/LocalStoreBackend.h"
+#include "GameFramework/Runtime/Foundation/Save/Local/LocalStoreFactory.h"
 #include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 
 namespace sw
@@ -99,8 +99,8 @@ namespace sw
             _keyProvider = make_unique<LocalDeviceKeyProvider>( UserDataPath::getDataDirectory( gameName ).join( LocalDeviceKeyProvider::kKeyFileName ), pSecurityProvider );
             _sealContext = LocalSealContext{ pSecurityProvider, _keyProvider.get(), nullptr };
         }
-        const LocalStoreConfig            config{ LocalStoreBackend::kFileBackendName, location };
-        expected<unique_ptr<ILocalStore>> store = LocalStoreBackend::createLocalStore( gameName, config, _sealContext );
+        const LocalStoreConfig            config{ LocalStoreFactory::kFileBackendName, location };
+        expected<unique_ptr<ILocalStore>> store = LocalStoreFactory::createLocalStore( gameName, config, _sealContext );
         if ( store.has_value() )
         {
             _store = std::move( *store );

@@ -303,7 +303,7 @@ namespace sw
         if ( bLoaded )
         {
             ++_counts._loaded;
-            if ( AutosaveManager* const pAutosave = game::findSubsystem<AutosaveManager>() )
+            if ( AutosaveController* const pAutosave = game::findSubsystem<AutosaveController>() )
                 pAutosave->resetProgress(); // 앞 진행의 체크포인트 · 요청으로 되돌린 진행을 저장하지 않는다(자동 저장 되돌리기는 아래 완료가 제 슬롯의 것으로 잇는다)
         }
         GameSceneFlow&      sceneFlow = _owner.getSubsystem<GameSceneFlow>();

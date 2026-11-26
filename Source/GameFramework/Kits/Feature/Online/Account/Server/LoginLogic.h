@@ -32,7 +32,7 @@
 #include "GameFramework/Kits/Feature/Online/Account/Server/LoginTypes.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/PasswordHashQueue.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/PlatformLoginProvider.h"
-#include "GameFramework/Runtime/Online/Cache/Server/EphemeralStore.h"
+#include "GameFramework/Runtime/Online/Cache/Server/CacheStore.h"
 #include "GameFramework/Runtime/Online/Guard/Server/TokenBucketMap.h"
 #include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
 #include "GameFramework/Runtime/Online/Schedule/Server/ServicePeriodicJob.h"
@@ -47,7 +47,7 @@ namespace sw
     struct LoginRevocationEntry;
     struct LoginStoreResult;
 
-    class EphemeralStoreRouter;
+    class CacheStoreRouter;
     class ServiceStore;
     class LoginSecretVault;
     class RemoteConfig;
@@ -133,7 +133,7 @@ namespace sw
          * @details 쓰는 곳: 주소 단위 시도 창(`login/attempt/<주소 해시>`, INCR + TTL — 서버 여럿 · 워커 여럿이 한 셈을 나눈다, 감사 O-14)과
          *          외부 로그인 nonce(`login/nonce/<nonce>`, 없을 때만 쓰고 로그인에서 지운다 — 한 번만 쓴다, 감사 O-13).
          */
-        void attachCache( EphemeralStoreRouter* pRouter );
+        void attachCache( CacheStoreRouter* pRouter );
         /** @brief 외부 로그인에 쓸 nonce 를 냅니다. 결과는 `IssueLoginNonce` 완료의 `_loginNonce` 입니다. 주소마다의 시도 버킷을 함께 씁니다(nonce 로 캐시를 채우지 못하게). */
         void issueLoginNonce( uint64 clientKey, UnixMilliseconds nowMs, uint64 requestTag );
 
@@ -280,7 +280,7 @@ namespace sw
         ServicePeriodicJob                                                 _revocationScanJob;      ///< 철회 대기열 읽기이다(`_revocationScanMs` 주기)
         ServiceStoreTracker                                                _store;                  ///< 저장소에 맡긴 일의 앞이다
         Subscription                                                       _cacheReplyOwner;        ///< 라우터 답의 주인 몫(`attachCache` 가 열고 `shutdown` 이 놓는다)
-        EphemeralStoreRouter*                                              _pRouter{ nullptr };     ///< 서버 사이에 나누는 휘발 저장소이다(빌려 쓴다, `attachCache`)
+        CacheStoreRouter*                                                  _pRouter{ nullptr };     ///< 서버 사이에 나누는 휘발 저장소이다(빌려 쓴다, `attachCache`)
         vector<const IAfterDeleteAccount*>                                 _listAfterDeleteAccount; ///< 탈퇴 뒤 키트 정리 훅(`setAfterDeleteAccount`)
         PasswordHashQueue                                                  _hashQueue;              ///< 비밀번호 해시 줄(작업 풀 위, 상한 있음). 아래 요청 표보다 먼저 선다 — 요청이 든 티켓이 먼저 사라진다
         unordered_map<uint64, unique_ptr<LoginPasswordCall>>               _mapPasswordCall;        ///< 진행 중인 비밀번호 요청(단계 사이에 입력 · 티켓 · 문제를 든다)

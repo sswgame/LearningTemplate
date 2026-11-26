@@ -12,9 +12,9 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Store/ServiceIdempotency.h"
-#include "GameFramework/Runtime/Online/Cache/Server/EphemeralRecordTable.h"
-#include "GameFramework/Runtime/Online/Cache/Server/EphemeralStore.h"
-#include "GameFramework/Runtime/Online/Cache/Server/EphemeralStoreRouter.h"
+#include "GameFramework/Runtime/Online/Cache/Server/CacheRecordTable.h"
+#include "GameFramework/Runtime/Online/Cache/Server/CacheStore.h"
+#include "GameFramework/Runtime/Online/Cache/Server/CacheStoreRouter.h"
 #include "GameFramework/Runtime/Online/Ledger/LedgerTypes.h"
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"
 #include "GameFramework/Runtime/Online/Mail/Server/ServiceMail.h"
@@ -1227,12 +1227,12 @@ namespace sw
         // 기간 보드의 정렬 집합은 기간이 끝나면 캐시가 지우게 한다. 기간마다 이 프로세스에서 한 번만 건다(점수 쓰기마다 요청이 늘지 않게).
         const int64 expireAfterMs = computeRankRetentionMs( *pBoard, periodID, nowMs );
         if ( expireAfterMs > 0 && _uniqueExpiringRankKeys.insert( rankKey ).second )
-            _dependencies._pRouter->submit( EphemeralRequest::makeExpire( rankKey, expireAfterMs ) );
+            _dependencies._pRouter->submit( CacheRequest::makeExpire( rankKey, expireAfterMs ) );
         if ( displayName.empty() == false )
         {
-            EphemeralValue nameValue;
-            if ( EphemeralRecordTable<LeaderboardNameCacheRecord>{}.makeValue( LeaderboardNameCacheRecord{ string( displayName ) }, nameValue ) )
-                _dependencies._pRouter->submit( EphemeralRequest::makeSet( LeaderboardLogicInternal::makeNameKey( accountID ), std::move( nameValue ), _nameCacheTTLMs ) );
+            CacheValue nameValue;
+            if ( CacheRecordTable<LeaderboardNameCacheRecord>{}.makeValue( LeaderboardNameCacheRecord{ string( displayName ) }, nameValue ) )
+                _dependencies._pRouter->submit( CacheRequest::makeSet( LeaderboardLogicInternal::makeNameKey( accountID ), std::move( nameValue ), _nameCacheTTLMs ) );
         }
     }
 
@@ -1276,7 +1276,7 @@ namespace sw
         const auto waitIt = _mapRankKeyToWaitingRead.find( rankKey );
         if ( waitIt != _mapRankKeyToWaitingRead.end() )
             _mapRankKeyToLateWrite[rankKey].push_back( LeaderboardScoreRow{ accountID, cacheScore } ); // 다시 채우는 중이므로 채운 뒤에 한 번 더 싣는다. 이전 값을 덮기 위해서이다
-        _dependencies._pRouter->submit( EphemeralRequest::makeScoreSet( rankKey, LeaderboardLogicInternal::makeRankMember( accountID ), cacheScore ) );
+        _dependencies._pRouter->submit( CacheRequest::makeScoreSet( rankKey, LeaderboardLogicInternal::makeRankMember( accountID ), cacheScore ) );
     }
 
     void LeaderboardLogic::readTop( string_view boardID, int32 offset, int32 count, UnixMilliseconds nowMs, uint64 requestTag )
@@ -1328,19 +1328,19 @@ namespace sw
             waitIt->second.push_back( read ); // 다시 채우는 중이므로 대기시킨다
             return;
         }
-        _dependencies._pRouter->submit( EphemeralRequest::makeGet( LeaderboardLogicInternal::makeReadyKey( rankKey ) ), _replyOwner, [this, read]( const EphemeralReply& reply )
+        _dependencies._pRouter->submit( CacheRequest::makeGet( LeaderboardLogicInternal::makeReadyKey( rankKey ) ), _replyOwner, [this, read]( const CacheReply& reply )
         { onReadyReply( read, reply ); } );
     }
 
-    void LeaderboardLogic::onReadyReply( const PendingRead& read, const EphemeralReply& reply )
+    void LeaderboardLogic::onReadyReply( const PendingRead& read, const CacheReply& reply )
     {
-        if ( reply._result == EphemeralResult::Unavailable || reply._result == EphemeralResult::Invalid )
+        if ( reply._result == CacheResult::Unavailable || reply._result == CacheResult::Invalid )
         {
             completeRead( read, LeaderboardServiceResult::fail( OnlineError::kUnavailable ) );
             return;
         }
         const string rankKey = makeRankKey( read._boardID, read._periodID );
-        if ( reply._result == EphemeralResult::NotFound ) // 캐시를 잃었거나 처음이므로 영속 저장소에서 다시 채운다
+        if ( reply._result == CacheResult::NotFound ) // 캐시를 잃었거나 처음이므로 영속 저장소에서 다시 채운다
         {
             vector<PendingRead>& listWaiting = _mapRankKeyToWaitingRead[rankKey];
             listWaiting.push_back( read );
@@ -1362,11 +1362,11 @@ namespace sw
         query._read          = read;
         if ( read._operation == LeaderboardOperation::Top )
         {
-            _dependencies._pRouter->submit( EphemeralRequest::makeScoreRange( rankKey, read._offset, read._count ), _replyOwner, [this, queryID]( const EphemeralReply& rangeReply )
+            _dependencies._pRouter->submit( CacheRequest::makeScoreRange( rankKey, read._offset, read._count ), _replyOwner, [this, queryID]( const CacheReply& rangeReply )
             { onRangeReply( queryID, rangeReply ); } );
             return;
         }
-        _dependencies._pRouter->submit( EphemeralRequest::makeScoreRank( rankKey, LeaderboardLogicInternal::makeRankMember( read._accountID ) ), _replyOwner, [this, queryID]( const EphemeralReply& rankReply )
+        _dependencies._pRouter->submit( CacheRequest::makeScoreRank( rankKey, LeaderboardLogicInternal::makeRankMember( read._accountID ) ), _replyOwner, [this, queryID]( const CacheReply& rankReply )
         { onRankReply( queryID, rankReply ); } );
     }
 
@@ -1398,17 +1398,17 @@ namespace sw
         const LeaderboardOrder order  = pBoard != nullptr ? pBoard->_order : LeaderboardOrder::Descending;
         for ( const LeaderboardScoreRow& row : listScore )
         {
-            _dependencies._pRouter->submit( EphemeralRequest::makeScoreSet( rankKey, LeaderboardLogicInternal::makeRankMember( row._accountID ), toCacheScore( order, row._score ) ) );
+            _dependencies._pRouter->submit( CacheRequest::makeScoreSet( rankKey, LeaderboardLogicInternal::makeRankMember( row._accountID ), toCacheScore( order, row._score ) ) );
         }
         for ( const LeaderboardScoreRow& row : listLateWrite ) // 다시 채우는 동안 쓴 점수이다. 영속 저장소에서 읽은 이전 값을 덮으며 이미 캐시 점수이다
         {
-            _dependencies._pRouter->submit( EphemeralRequest::makeScoreSet( rankKey, LeaderboardLogicInternal::makeRankMember( row._accountID ), row._score ) );
+            _dependencies._pRouter->submit( CacheRequest::makeScoreSet( rankKey, LeaderboardLogicInternal::makeRankMember( row._accountID ), row._score ) );
         }
         // 기간 보드면 다시 채운 집합과 준비 표시도 기간이 끝나면 사라지게 한다(0 이면 만료 없음).
         const int64 expireAfterMs = pBoard != nullptr ? computeRankRetentionMs( *pBoard, listWaiting.front()._periodID, listWaiting.front()._nowMs ) : 0;
         if ( expireAfterMs > 0 )
-            _dependencies._pRouter->submit( EphemeralRequest::makeExpire( rankKey, expireAfterMs ) );
-        _dependencies._pRouter->submit( EphemeralRequest::makeSet( LeaderboardLogicInternal::makeReadyKey( rankKey ), EphemeralValueUtil::makeMarker(), expireAfterMs ) );
+            _dependencies._pRouter->submit( CacheRequest::makeExpire( rankKey, expireAfterMs ) );
+        _dependencies._pRouter->submit( CacheRequest::makeSet( LeaderboardLogicInternal::makeReadyKey( rankKey ), CacheValueUtil::makeMarker(), expireAfterMs ) );
         // 캐시는 맡긴 순서대로 응답한다. 아래 읽기는 위 쓰기 뒤에 처리된다
         for ( const PendingRead& read : listWaiting )
         {
@@ -1416,15 +1416,15 @@ namespace sw
         }
     }
 
-    void LeaderboardLogic::onRankReply( uint64 queryID, const EphemeralReply& reply )
+    void LeaderboardLogic::onRankReply( uint64 queryID, const CacheReply& reply )
     {
         const auto queryIt = _mapQuery.find( queryID );
         if ( queryIt == _mapQuery.end() )
             return;
         RankQuery& query = queryIt->second;
-        if ( reply._result != EphemeralResult::Ok )
+        if ( reply._result != CacheResult::Ok )
         {
-            completeRead( query._read, reply._result == EphemeralResult::NotFound ? LeaderboardResult::NotRanked : LeaderboardServiceResult::fail( OnlineError::kUnavailable ) );
+            completeRead( query._read, reply._result == CacheResult::NotFound ? LeaderboardResult::NotRanked : LeaderboardServiceResult::fail( OnlineError::kUnavailable ) );
             _mapQuery.erase( queryIt );
             return;
         }
@@ -1433,17 +1433,17 @@ namespace sw
         const int32 offset  = MathUtil::max( 0, myIndex - radius );
         const int32 count   = myIndex + radius + 1 - offset;
         query._read._offset = offset;
-        _dependencies._pRouter->submit( EphemeralRequest::makeScoreRange( makeRankKey( query._read._boardID, query._read._periodID ), offset, count ), _replyOwner, [this, queryID]( const EphemeralReply& rangeReply )
+        _dependencies._pRouter->submit( CacheRequest::makeScoreRange( makeRankKey( query._read._boardID, query._read._periodID ), offset, count ), _replyOwner, [this, queryID]( const CacheReply& rangeReply )
         { onRangeReply( queryID, rangeReply ); } );
     }
 
-    void LeaderboardLogic::onRangeReply( uint64 queryID, const EphemeralReply& reply )
+    void LeaderboardLogic::onRangeReply( uint64 queryID, const CacheReply& reply )
     {
         const auto queryIt = _mapQuery.find( queryID );
         if ( queryIt == _mapQuery.end() )
             return;
         RankQuery& query = queryIt->second;
-        if ( reply._result != EphemeralResult::Ok && reply._result != EphemeralResult::NotFound )
+        if ( reply._result != CacheResult::Ok && reply._result != CacheResult::NotFound )
         {
             completeRead( query._read, LeaderboardServiceResult::fail( OnlineError::kUnavailable ) );
             _mapQuery.erase( queryIt );
@@ -1473,19 +1473,19 @@ namespace sw
         query._outstandingNameCount = static_cast<int32>( listAccount.size() ); // 먼저 다 세 둔다 — 맡기지 못한 요청은 그 자리에서 끝나 질의를 마칠 수 있다
         for ( size_t entryIndex = 0; entryIndex < listAccount.size(); ++entryIndex )
         {
-            _dependencies._pRouter->submit( EphemeralRequest::makeGet( LeaderboardLogicInternal::makeNameKey( listAccount[entryIndex] ) ), _replyOwner, [this, queryID, entryIndex]( const EphemeralReply& nameReply )
+            _dependencies._pRouter->submit( CacheRequest::makeGet( LeaderboardLogicInternal::makeNameKey( listAccount[entryIndex] ) ), _replyOwner, [this, queryID, entryIndex]( const CacheReply& nameReply )
             { onNameReply( queryID, entryIndex, nameReply ); } );
         }
     }
 
-    void LeaderboardLogic::onNameReply( uint64 queryID, size_t entryIndex, const EphemeralReply& reply )
+    void LeaderboardLogic::onNameReply( uint64 queryID, size_t entryIndex, const CacheReply& reply )
     {
         const auto queryIt = _mapQuery.find( queryID );
         if ( queryIt == _mapQuery.end() )
             return;
         RankQuery&                 query = queryIt->second;
         LeaderboardNameCacheRecord name;
-        if ( EphemeralRecordTable<LeaderboardNameCacheRecord>{}.decode( reply, name ) )
+        if ( CacheRecordTable<LeaderboardNameCacheRecord>{}.decode( reply, name ) )
             query._listEntry[entryIndex]._displayName = std::move( name._displayName );
         if ( --query._outstandingNameCount == 0 )
             finishQuery( queryID );

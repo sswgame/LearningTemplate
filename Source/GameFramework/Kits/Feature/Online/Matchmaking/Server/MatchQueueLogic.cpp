@@ -12,9 +12,9 @@
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/AccountStatSource.h"
 #include "GameFramework/Runtime/Online/Bus/MixedBuildCodec.h"
 #include "GameFramework/Runtime/Online/Bus/ServerBusTopic.h"
-#include "GameFramework/Runtime/Online/Cache/Server/EphemeralRecordTable.h"
-#include "GameFramework/Runtime/Online/Cache/Server/EphemeralStore.h"
-#include "GameFramework/Runtime/Online/Cache/Server/EphemeralStoreRouter.h"
+#include "GameFramework/Runtime/Online/Cache/Server/CacheRecordTable.h"
+#include "GameFramework/Runtime/Online/Cache/Server/CacheStore.h"
+#include "GameFramework/Runtime/Online/Cache/Server/CacheStoreRouter.h"
 #include "GameFramework/Runtime/Online/Directory/ServerRecord.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
@@ -108,18 +108,18 @@ namespace sw
     {
         const auto modeIt = _mapMode.find( placement._match._modeID );
         SW_ASSERT( modeIt != _mapMode.end() ); // 배정은 등록한 모드만 한다(로비 · 백필도 모드 상태를 찾은 뒤에 온다)
-        EphemeralValue value;
-        if ( modeIt == _mapMode.end() || EphemeralRecordTable<MatchFormed>{}.makeValue( placement._match, value ) == false )
+        CacheValue value;
+        if ( modeIt == _mapMode.end() || CacheRecordTable<MatchFormed>{}.makeValue( placement._match, value ) == false )
         {
             failPlacement( placement ); // encode 가 오류 로그를 남겼다
             return;
         }
-        const int64 ttlMs            = modeIt->second._matchTimeLimitMs;
-        placement._expiresMs         = placement._match._placedMs + ttlMs;
-        const EphemeralRequest write = EphemeralRequest::makeSet( makeMatchRecordKey( placement._serverID, placement._recordName ), std::move( value ), ttlMs );
-        _dependencies._pRouter->submit( write, _replyOwner, [this, placement = std::move( placement )]( const EphemeralReply& reply ) mutable
+        const int64 ttlMs        = modeIt->second._matchTimeLimitMs;
+        placement._expiresMs     = placement._match._placedMs + ttlMs;
+        const CacheRequest write = CacheRequest::makeSet( makeMatchRecordKey( placement._serverID, placement._recordName ), std::move( value ), ttlMs );
+        _dependencies._pRouter->submit( write, _replyOwner, [this, placement = std::move( placement )]( const CacheReply& reply ) mutable
         {
-            if ( reply._result == EphemeralResult::Ok )
+            if ( reply._result == CacheResult::Ok )
                 listMatchRecord( std::move( placement ) );
             else
                 failPlacement( placement );
@@ -129,10 +129,10 @@ namespace sw
     void MatchQueueLogic::listMatchRecord( PendingPlacement placement )
     {
         // 목록에 올라야 게임 서버가 기록을 찾는다. 목록 쓰기의 답까지 본 뒤에 Found 를 낸다
-        const EphemeralRequest write = EphemeralRequest::makeScoreSet( makeMatchListKey( placement._serverID ), placement._recordName, placement._expiresMs );
-        _dependencies._pRouter->submit( write, _replyOwner, [this, placement = std::move( placement )]( const EphemeralReply& reply )
+        const CacheRequest write = CacheRequest::makeScoreSet( makeMatchListKey( placement._serverID ), placement._recordName, placement._expiresMs );
+        _dependencies._pRouter->submit( write, _replyOwner, [this, placement = std::move( placement )]( const CacheReply& reply )
         {
-            if ( reply._result == EphemeralResult::Ok )
+            if ( reply._result == CacheResult::Ok )
                 completePlacement( placement );
             else
                 failPlacement( placement ); // 남은 기록은 게임 서버가 찾지 못한 채 수명으로 사라진다
@@ -143,9 +143,9 @@ namespace sw
     {
         const auto modeIt = _mapMode.find( placement._match._modeID );
         if ( modeIt != _mapMode.end() )
-            _dependencies._pRouter->submit( EphemeralRequest::makeExpire( makeMatchListKey( placement._serverID ), modeIt->second._matchTimeLimitMs ) ); // 목록은 마지막 기록과 함께 사라진다. 지난 멤버는 게임 서버가 지운다
-        if ( _dependencies._pBus != nullptr )                                                                                                            // 빠른 길이다. 잃어도 게임 서버가 기록을 읽는다
-            (void)MatchQueueBus::kAssignTopic.publish( *_dependencies._pBus, ServiceKeyUtil::makeHex64( placement._serverID ), placement._match );       // 실패는 발행이 로그에 남겼다
+            _dependencies._pRouter->submit( CacheRequest::makeExpire( makeMatchListKey( placement._serverID ), modeIt->second._matchTimeLimitMs ) ); // 목록은 마지막 기록과 함께 사라진다. 지난 멤버는 게임 서버가 지운다
+        if ( _dependencies._pBus != nullptr )                                                                                                        // 빠른 길이다. 잃어도 게임 서버가 기록을 읽는다
+            (void)MatchQueueBus::kAssignTopic.publish( *_dependencies._pBus, ServiceKeyUtil::makeHex64( placement._serverID ), placement._match );   // 실패는 발행이 로그에 남겼다
         for ( const PendingDelivery& delivery : placement._listDelivery )
         {
             deliverPending( delivery );
@@ -224,7 +224,7 @@ namespace sw
             _mapMode[mode._modeID] = mode;
             ModeState& state       = _mapModeState[mode._modeID];
             state._maker           = std::move( maker );
-            state._reader          = make_unique<ServerRegistryReader>();
+            state._reader          = make_unique<ServerDirectoryReader>();
             state._reader->initialize( dependencies._pRouter, mode._serverKind, dependencies._registryRefreshPeriodMs, dependencies._seatReservationTTLMs );
             if ( dependencies._pBus == nullptr )
                 state._bAuthority = SW_TRUE; // 서버가 한 대이므로 항상 권한을 가진다
@@ -334,26 +334,26 @@ namespace sw
             return; // 응답을 기다린다
         if ( state._bLeaseAttempted != SW_FALSE && nowMs.count() - state._leaseAttemptMs < _dependencies._policy._leaseRenewMs )
             return;
-        const EphemeralValue   selfValue = EphemeralValueUtil::makeID( _dependencies._serverID );
-        const EphemeralRequest request   = state._bAuthority != SW_FALSE
-                                             ? EphemeralRequest::makeCompareAndSet( makeLeaseKey( modeID ), selfValue, selfValue, _dependencies._policy._leaseTTLMs )
-                                             : EphemeralRequest::makeSet( makeLeaseKey( modeID ), selfValue, _dependencies._policy._leaseTTLMs, EphemeralCondition::IfAbsent );
-        state._leaseAttemptMs            = nowMs.count();
-        state._bLeaseAttempted           = SW_TRUE;
-        state._bLeasePending             = SW_TRUE;
-        _dependencies._pRouter->submit( request, _replyOwner, [this, modeID]( const EphemeralReply& reply )
+        const CacheValue   selfValue = CacheValueUtil::makeID( _dependencies._serverID );
+        const CacheRequest request   = state._bAuthority != SW_FALSE
+                                         ? CacheRequest::makeCompareAndSet( makeLeaseKey( modeID ), selfValue, selfValue, _dependencies._policy._leaseTTLMs )
+                                         : CacheRequest::makeSet( makeLeaseKey( modeID ), selfValue, _dependencies._policy._leaseTTLMs, CacheCondition::IfAbsent );
+        state._leaseAttemptMs        = nowMs.count();
+        state._bLeaseAttempted       = SW_TRUE;
+        state._bLeasePending         = SW_TRUE;
+        _dependencies._pRouter->submit( request, _replyOwner, [this, modeID]( const CacheReply& reply )
         { onLeaseReply( modeID, reply ); } );
     }
 
-    void MatchQueueLogic::onLeaseReply( const string& modeID, const EphemeralReply& reply )
+    void MatchQueueLogic::onLeaseReply( const string& modeID, const CacheReply& reply )
     {
         ModeState* pState = findModeState( modeID );
         if ( pState == nullptr )
             return;
         pState->_bLeasePending = SW_FALSE;
-        if ( reply._result == EphemeralResult::Unavailable || reply._result == EphemeralResult::Invalid )
+        if ( reply._result == CacheResult::Unavailable || reply._result == CacheResult::Invalid )
             return; // 캐시에 문제가 있으므로 지금 상태로 두고 다음 주기에 다시 시도한다
-        const bool bHold = reply._result == EphemeralResult::Ok;
+        const bool bHold = reply._result == CacheResult::Ok;
         if ( bHold == ( pState->_bAuthority != SW_FALSE ) )
             return;
         pState->_bAuthority = bHold ? SW_TRUE : SW_FALSE;

@@ -40,7 +40,7 @@ Stop at the first yes.
 
 - 탄 효과는 탄 × 표면 맞음 표(`ProjectileCatalog::findImpact`)가 정한다 — 탄에 반응 수치를 베끼지 않는다. 무기 호환은 탄 태그 식(`_accepts`).
 - 2D 는 평면 제약 3D — 차원마다 관통 · 튕김 · 유도를 두 벌 쓰지 않는다. 걸음 안에서 세계를 바꾸지 않는다(사건은 걸음 뒤). 복제가 생기면 시뮬레이션과 짐(`ProjectileCargo`)은 서버 권위.
-- 리스폰: `MechArenaWorld`(비트 동일) · `TrampolineArena` · 카트 관문은 공통 키트로 옮기지 않는다. 목숨 · 시체 · 적 리셋 · 팀 코스트는 장르 규칙, 동료 부활은 `HealthStateMachine`. 클라이언트는 정책 종류 · 지점 id 해시만 보낸다 — 자리 · 비용 · 잔액은 서버가 판정.
+- 리스폰: `MechArenaSimulation`(비트 동일) · `TrampolineArena` · 카트 관문은 공통 키트로 옮기지 않는다. 목숨 · 시체 · 적 리셋 · 팀 코스트는 장르 규칙, 동료 부활은 `HealthStateMachine`. 클라이언트는 정책 종류 · 지점 id 해시만 보낸다 — 자리 · 비용 · 잔액은 서버가 판정.
 - `GameActionCall` · `ActionRegistry` 와 GAS 형 `Ability` 는 합치지 않는다.
 - 잔상은 품질 단계별 상한. 분신은 별도 프리팹 · 애니메이션 인스턴스로(포즈 재생형인지 독립 개체인지 먼저 가른다) — 임의 그래프 · 모듈 시스템을 먼저 들이지 않는다.
 - 런타임 UI 화면 전환은 화면마다 문서 애니메이션(`Open` · `Close`), 스택 공통 전환은 두지 않는다. 결제 상품(`<Product>`)은 `StorePurchaseFlow` 길이라 상점 화면에 싣지 않는다. 인벤토리 명령의 요청 모양 · 검사는 `InventoryCommand`.

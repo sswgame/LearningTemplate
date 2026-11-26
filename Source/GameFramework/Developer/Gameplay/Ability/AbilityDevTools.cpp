@@ -147,9 +147,9 @@ namespace sw
                     if ( isPlayerControlled( *pManager, *pComponent ) == false )
                         continue;
                     ++playerCount;
-                    TagCountTable& tags     = pComponent->getOwnedTagCounts();
-                    const bool     bCheatOn = tags.getCount( tag ) > 0;
-                    const bool     bWantOn  = bExplicit ? bArgumentOn : bCheatOn == false;
+                    TagCountContainer& tags     = pComponent->getOwnedTagCounts();
+                    const bool         bCheatOn = tags.getCount( tag ) > 0;
+                    const bool         bWantOn  = bExplicit ? bArgumentOn : bCheatOn == false;
                     if ( bWantOn && bCheatOn == false )
                         tags.updateCount( tag, 1 );
                     else if ( bWantOn == false && bCheatOn )

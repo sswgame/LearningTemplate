@@ -15,8 +15,8 @@
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/AccountStatSource.h"
 #include "GameFramework/Runtime/Online/Bus/Server/LocalServerBus.h"
 #include "GameFramework/Runtime/Online/Bus/ServerBus.h"
-#include "GameFramework/Runtime/Online/Cache/Server/EphemeralStoreRouter.h"
-#include "GameFramework/Runtime/Online/Cache/Server/MemoryEphemeralStore.h"
+#include "GameFramework/Runtime/Online/Cache/Server/CacheStoreRouter.h"
+#include "GameFramework/Runtime/Online/Cache/Server/MemoryCacheStore.h"
 #include "GameFramework/Runtime/Online/Directory/Server/ServerRegistration.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerConfig.h"
 
@@ -74,48 +74,48 @@ namespace
     };
 
     /** @brief 메모리 캐시 앞에서 명단 기록(`mm/match/`) 쓰기를 지게 할 수 있는 캐시입니다. 진 쓰기는 키를 비워 Invalid 답을 받는다. */
-    class RecordFaultEphemeralStore final : public IEphemeralStore
+    class RecordFaultCacheStore final : public ICacheStore
     {
     public:
         uint8 _bFailMatchRecord{ SW_FALSE };
 
-        explicit RecordFaultEphemeralStore( IEphemeralStore* pInner )
+        explicit RecordFaultCacheStore( ICacheStore* pInner )
             : _pInner{ pInner }
         {
         }
 
-        uint64 submit( const EphemeralRequest& request ) override
+        uint64 submit( const CacheRequest& request ) override
         {
-            const bool bFail = _bFailMatchRecord != SW_FALSE && request._operation == EphemeralOperation::Set && request._key.rfind( "mm/match/", 0 ) == 0;
+            const bool bFail = _bFailMatchRecord != SW_FALSE && request._operation == CacheOperation::Set && request._key.rfind( "mm/match/", 0 ) == 0;
             if ( bFail == false )
                 return _pInner->submit( request );
-            EphemeralRequest broken = request;
+            CacheRequest broken = request;
             broken._key.clear();
             return _pInner->submit( broken );
         }
 
-        int32 pollReplies( vector<EphemeralReply>& outListReply ) override { return _pInner->pollReplies( outListReply ); }
+        int32 pollReplies( vector<CacheReply>& outListReply ) override { return _pInner->pollReplies( outListReply ); }
         void  subscribe( string_view channel ) override { _pInner->subscribe( channel ); }
         void  unsubscribe( string_view channel ) override { _pInner->unsubscribe( channel ); }
-        int32 pollMessages( vector<EphemeralMessage>& outListMessage ) override { return _pInner->pollMessages( outListMessage ); }
+        int32 pollMessages( vector<CacheMessage>& outListMessage ) override { return _pInner->pollMessages( outListMessage ); }
         int32 getPendingCount() const override { return _pInner->getPendingCount(); }
         void  shutdown() override { _pInner->shutdown(); }
 
     private:
-        IEphemeralStore* _pInner;
+        ICacheStore* _pInner;
     };
 
     /** @brief 서버 하나입니다. 캐시 데이터와 버스 허브는 빌립니다. @p pHub 가 없으면 서버 한 대(항상 권한)입니다. */
     struct QueueServer
     {
-        MemoryEphemeralStore       _cache;
-        RecordFaultEphemeralStore  _faultCache;
-        EphemeralStoreRouter       _router;
+        MemoryCacheStore           _cache;
+        RecordFaultCacheStore      _faultCache;
+        CacheStoreRouter           _router;
         unique_ptr<LocalServerBus> _transport;
         unique_ptr<ServerBus>      _bus;
         MatchQueueLogic            _queue;
 
-        QueueServer( MemoryEphemeralDatabase& cacheData, LocalServerBusHub* pHub, uint64 serverID )
+        QueueServer( MemoryCacheDatabase& cacheData, LocalServerBusHub* pHub, uint64 serverID )
             : _cache{ &cacheData }
             , _faultCache{ &_cache }
             , _router{}
@@ -217,7 +217,7 @@ namespace
     {
         ServerRegistration _registration;
 
-        void start( EphemeralStoreRouter& router, int64 nowMs, string_view region = "kr", uint64 serverID = kGameID, int32 capacity = 100 )
+        void start( CacheStoreRouter& router, int64 nowMs, string_view region = "kr", uint64 serverID = kGameID, int32 capacity = 100 )
         {
             ServerDescriptor descriptor;
             descriptor._serverID  = serverID;
@@ -236,10 +236,10 @@ namespace
     /** @brief 서버 한 대 묶음입니다. */
     struct SoloWorld
     {
-        ManualClock             _clock;
-        MemoryEphemeralDatabase _cacheData;
-        QueueServer             _server;
-        GameServerEntry         _game;
+        ManualClock         _clock;
+        MemoryCacheDatabase _cacheData;
+        QueueServer         _server;
+        GameServerEntry     _game;
 
         SoloWorld()
             : _clock{ MonotonicMilliseconds{ 1000 } }
@@ -263,12 +263,12 @@ namespace
     /** @brief 서버 둘(캐시 · 버스를 같이 씀) 묶음입니다. 임대 시한을 시계로 민다. */
     struct PairWorld
     {
-        ManualClock             _clock;
-        MemoryEphemeralDatabase _cacheData;
-        LocalServerBusHub       _hub;
-        QueueServer             _serverA;
-        QueueServer             _serverB;
-        GameServerEntry         _game;
+        ManualClock         _clock;
+        MemoryCacheDatabase _cacheData;
+        LocalServerBusHub   _hub;
+        QueueServer         _serverA;
+        QueueServer         _serverB;
+        GameServerEntry     _game;
 
         PairWorld()
             : _clock{ MonotonicMilliseconds{ 1000 } }

@@ -12,8 +12,8 @@
 #include "GameFramework/Kits/Feature/Online/Social/Server/Tests/SocialTestPolicy.h"
 #include "GameFramework/Runtime/Online/Bus/Server/LocalServerBus.h"
 #include "GameFramework/Runtime/Online/Bus/ServerBus.h"
-#include "GameFramework/Runtime/Online/Cache/Server/EphemeralStoreRouter.h"
-#include "GameFramework/Runtime/Online/Cache/Server/MemoryEphemeralStore.h"
+#include "GameFramework/Runtime/Online/Cache/Server/CacheStoreRouter.h"
+#include "GameFramework/Runtime/Online/Cache/Server/MemoryCacheStore.h"
 #include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
 #include "GameFramework/Runtime/Online/Service/Server/Tests/OnlineHostTestUtil.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
@@ -55,15 +55,15 @@ namespace
     struct SocialFixture
     {
         MemoryServiceStore         _store;
-        MemoryEphemeralStore       _cache;
-        EphemeralStoreRouter       _router;
+        MemoryCacheStore           _cache;
+        CacheStoreRouter           _router;
         FakeNameIndex              _nameIndex;
         unique_ptr<LocalServerBus> _transport;
         unique_ptr<ServerBus>      _bus;
         SocialLogic                _service;
         uint64                     _nextTag{ 1 };
 
-        SocialFixture( MemoryServiceDatabase& database, MemoryEphemeralDatabase& cacheData, LocalServerBusHub* pHub, uint64 serverID )
+        SocialFixture( MemoryServiceDatabase& database, MemoryCacheDatabase& cacheData, LocalServerBusHub* pHub, uint64 serverID )
             : _store{ &database }
             , _cache{ &cacheData }
             , _router{}
@@ -174,11 +174,11 @@ namespace
     /** @brief 시계 · 데이터와 서버 하나의 묶음입니다. */
     struct SocialWorld
     {
-        ManualClock             _clock;
-        MemoryServiceDatabase   _database;
-        MemoryEphemeralDatabase _cacheData;
-        LocalServerBusHub       _hub;
-        SocialFixture           _rig;
+        ManualClock           _clock;
+        MemoryServiceDatabase _database;
+        MemoryCacheDatabase   _cacheData;
+        LocalServerBusHub     _hub;
+        SocialFixture         _rig;
 
         explicit SocialWorld( bool bBus = false )
             : _clock{ MonotonicMilliseconds{ 1000 } }

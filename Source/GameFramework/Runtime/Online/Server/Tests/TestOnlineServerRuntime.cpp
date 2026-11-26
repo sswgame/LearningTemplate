@@ -7,7 +7,7 @@
 #include "Engine/Config/ServerConfig.h"
 #include "Engine/Server/ServiceHealthRegistry.h"
 
-#include "GameFramework/Runtime/Online/Cache/Server/EphemeralStoreRouter.h"
+#include "GameFramework/Runtime/Online/Cache/Server/CacheStoreRouter.h"
 #include "GameFramework/Runtime/Online/Directory/ServerRecord.h"
 #include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
 #include "GameFramework/Runtime/Online/Ledger/LedgerTypes.h"
@@ -257,7 +257,7 @@ namespace
     {
         int32 _replyCount{ 0 };
         int32 _memberCount{ 0 };
-        void  onReply( const EphemeralReply& reply )
+        void  onReply( const CacheReply& reply )
         {
             ++_replyCount;
             _memberCount = static_cast<int32>( reply._listMember.size() );
@@ -269,7 +269,7 @@ namespace
     {
         int32        _replyCount{ 0 };
         ServerStatus _status{};
-        void         onReply( const EphemeralReply& reply )
+        void         onReply( const CacheReply& reply )
         {
             ++_replyCount;
             SW_EXPECT_TRUE( ServerRecord::decode( reply, _status ) );
@@ -643,11 +643,11 @@ SW_TEST_CASE_F( OnlineServerRuntimeTest, GameServerIsInTheDirectoryBeforeTheFirs
     settings._config._publicAddress    = "127.0.0.1";
     OnlineServerRuntime runtime;
     SW_REQUIRE_TRUE( runtime.initialize( settings, UnixMilliseconds{ 1000 } ).has_value() );
-    EphemeralStoreRouter& router = *runtime.getContext()._pRouter;
-    const Subscription    owner  = router.openReplyOwner();
-    DirectoryIndexProbe   probe;
-    router.submit( EphemeralRequest::makeScoreRange( ServerRecord::makeIndexKey( settings._config._serverKind ), 0, 16 ),
-                   owner, [&probe]( const EphemeralReply& reply )
+    CacheStoreRouter&   router = *runtime.getContext()._pRouter;
+    const Subscription  owner  = router.openReplyOwner();
+    DirectoryIndexProbe probe;
+    router.submit( CacheRequest::makeScoreRange( ServerRecord::makeIndexKey( settings._config._serverKind ), 0, 16 ),
+                   owner, [&probe]( const CacheReply& reply )
     { probe.onReply( reply ); } );
     for ( int64 tick = 0; tick < 10 && probe._replyCount == 0; ++tick )
     {
@@ -667,11 +667,11 @@ SW_TEST_CASE_F( OnlineServerRuntimeTest, DirectoryLoadIsTheGameConnectionCount )
     SW_REQUIRE_TRUE( runtime.initialize( settings, UnixMilliseconds{ 1000 } ).has_value() );
     runtime.setGameConnectionCount( 3 );
     runtime.update( UnixMilliseconds{ 1001 } );
-    EphemeralStoreRouter& router = *runtime.getContext()._pRouter;
-    const Subscription    owner  = router.openReplyOwner();
-    DirectoryRecordProbe  probe;
-    router.submit( EphemeralRequest::makeGet( ServerRecord::makeRecordKey( runtime.getContext()._serverID ) ),
-                   owner, [&probe]( const EphemeralReply& reply )
+    CacheStoreRouter&    router = *runtime.getContext()._pRouter;
+    const Subscription   owner  = router.openReplyOwner();
+    DirectoryRecordProbe probe;
+    router.submit( CacheRequest::makeGet( ServerRecord::makeRecordKey( runtime.getContext()._serverID ) ),
+                   owner, [&probe]( const CacheReply& reply )
     { probe.onReply( reply ); } );
     for ( int64 tick = 0; tick < 10 && probe._replyCount == 0; ++tick )
     {

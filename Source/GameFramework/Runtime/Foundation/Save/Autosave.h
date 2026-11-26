@@ -104,7 +104,7 @@ namespace sw
 namespace sw
 {
     /**
-     * @class AutosaveManager
+     * @class AutosaveController
      * @brief 자동 저장의 시점, 위치, 되돌리기를 맡습니다.
      * @details 상태 바이트를 만들고 되살리는 일은 게임이 넘긴 델리게이트(보통 `GameInstance::captureSnapshot` 과 `restoreSnapshot` 의 `SerializePurpose::SaveGame`)가 하고,
      *          슬롯 읽기 · 쓰기는 이 관리자가 로컬 저장소(`GameLocalStore`)에 맡긴다 - 게임 스레드는 디스크를 기다리지 않는다.
@@ -122,7 +122,7 @@ namespace sw
      *            되돌리기 하나가 끝날 때까지(읽기 · 적용) 다음 되돌리기는 false 다.
      *          첫 프레임(`update`)에 슬롯 기록 읽기를 맡겨 순번과 다음 슬롯을 잇는다. 다 읽을 때까지(`isScanning`) 저장 요청은 기다리고 되돌리기는 false 다.
      */
-    class SW_GF_API AutosaveManager
+    class SW_GF_API AutosaveController
     {
     public:
         /** @brief 지금 상태를 바이트로 만들고 그 진행의 플레이 시간(초)을 @p outPlayTime 에 적습니다. 성공하면 true 입니다. */
@@ -135,7 +135,7 @@ namespace sw
          */
         using LoadDelegate = Delegate<bool( const string& slot, const RestoreCompletedFunction& onCompleted )>;
 
-        AutosaveManager();
+        AutosaveController();
 
         /**
          * @brief 정책, 로컬 저장소, 막기 문, 델리게이트를 두고 슬롯 기록 읽기를 맡겨 순번을 잇습니다. 타이머와 요청은 비웁니다.

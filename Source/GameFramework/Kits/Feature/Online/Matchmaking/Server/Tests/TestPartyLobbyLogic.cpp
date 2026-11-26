@@ -7,8 +7,8 @@
 
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/PartyLobbyLogic.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Tests/MatchmakingTestPolicy.h"
-#include "GameFramework/Runtime/Online/Cache/Server/EphemeralStoreRouter.h"
-#include "GameFramework/Runtime/Online/Cache/Server/MemoryEphemeralStore.h"
+#include "GameFramework/Runtime/Online/Cache/Server/CacheStoreRouter.h"
+#include "GameFramework/Runtime/Online/Cache/Server/MemoryCacheStore.h"
 
 using namespace sw;
 
@@ -37,11 +37,11 @@ namespace
 
     struct PartyFixture
     {
-        ManualClock             _clock;
-        MemoryEphemeralDatabase _cacheData;
-        MemoryEphemeralStore    _cache;
-        EphemeralStoreRouter    _router;
-        PartyLobbyLogic         _service;
+        ManualClock         _clock;
+        MemoryCacheDatabase _cacheData;
+        MemoryCacheStore    _cache;
+        CacheStoreRouter    _router;
+        PartyLobbyLogic     _service;
 
         explicit PartyFixture( int32 maxPartySize = 3 )
             : _clock{ MonotonicMilliseconds{ 1000 } }

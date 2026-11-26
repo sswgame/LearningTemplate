@@ -4,7 +4,7 @@
  * @details - 점검과 공지는 영속 테이블(`sd_maintenance`, `sd_notice`)에 있다. 주기(기본 30초)마다 다시 읽고, 다른 서버가 바꿨다는 버스 알림(`notifyChanged`, 바인딩이 부른다)이 오면 바로 읽는다.
  *            버스는 최대 한 번만 배달하므로 주기적인 읽기가 놓친 변경을 메운다. 바꾼 서버는 쓰기가 끝나면 버스 `sd.changed` 를 낸다.
  *          - 보이는 내용(기간 안의 점검과 공지)의 해시가 바뀌면 `takeStatusChange` 가 true 이다. 다시 읽기나 기간 경계에서 바뀌며, 시작과 끝은 다시 읽지 않아도 보이는 내용이 바뀐다. 바인딩이 이 서버의 모든 클라이언트에 알린다.
- *          - 배정은 서버 종류마다 기반 계층의 `ServerRegistryReader` 하나(설정 `_listServerKind`)의 스냅샷으로 고른다. 기반 계층의 `ServerSelectionQuery` 규칙을 따른다.
+ *          - 배정은 서버 종류마다 기반 계층의 `ServerDirectoryReader` 하나(설정 `_listServerKind`)의 스냅샷으로 고른다. 기반 계층의 `ServerSelectionQuery` 규칙을 따른다.
  *            점검이 걸린 종류는 허용 계정만 배정받으며, 그들은 Maintenance 상태의 서버도 후보가 된다.
  *          - 변경 API 는 클라이언트 네트워크 메서드로 열지 않는다. GM 도구(GF_Admin)는 서버 조립 문맥의 `IServerDirectoryControl` 로 부르고 완료를 `takeControlCompletions` 로 받는다.
  *            같은 프로세스의 다른 코드와 테스트는 `setMaintenance` 등을 직접 부르고 `takeCompletions` 로 받는다. 한 서비스의 완료를 두 쪽이 함께 거두지 않는다.
@@ -23,7 +23,7 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/ServerDirectoryControl.h"
-#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/ServerRegistryReader.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/ServerDirectoryReader.h"
 #include "GameFramework/Kits/Feature/Online/ServerDirectory/Runtime/ServerDirectoryTypes.h"
 #include "GameFramework/Kits/Feature/Online/ServerDirectory/Server/ServerDirectoryKitConfig.h"
 #include "GameFramework/Runtime/Online/Audit/Server/ServiceAuditLog.h"
@@ -34,7 +34,7 @@
 
 namespace sw
 {
-    class EphemeralStoreRouter;
+    class CacheStoreRouter;
     class ServiceStore;
     class ServerBus;
 
@@ -51,9 +51,9 @@ namespace sw
     /** @brief 빌려 쓰는 객체들입니다. 로직보다 오래 살아야 합니다. */
     struct ServerDirectoryDependencies
     {
-        ServiceStore*         _pStore{ nullptr };  ///< 필수
-        EphemeralStoreRouter* _pRouter{ nullptr }; ///< 필수이다. 서버 목록에 쓴다
-        ServerBus*            _pBus{ nullptr };    ///< 서버가 한 대이면 null 이다. 바꾼 뒤 알리기만 하며 받기는 바인딩이 구독한다
+        ServiceStore*     _pStore{ nullptr };  ///< 필수
+        CacheStoreRouter* _pRouter{ nullptr }; ///< 필수이다. 서버 목록에 쓴다
+        ServerBus*        _pBus{ nullptr };    ///< 서버가 한 대이면 null 이다. 바꾼 뒤 알리기만 하며 받기는 바인딩이 구독한다
     };
 } // namespace sw
 
@@ -146,25 +146,25 @@ namespace sw
         void applyWrite( uint64 requestTag, ServerDirectoryServiceResult result );
 
     private:
-        void                  startReload( UnixMilliseconds nowMs );
-        void                  markStatusIfChanged( UnixMilliseconds nowMs );
-        uint64                computeVisibleHash( UnixMilliseconds nowMs ) const;
-        ServerRegistryReader* findReader( string_view kind ) const;
+        void                   startReload( UnixMilliseconds nowMs );
+        void                   markStatusIfChanged( UnixMilliseconds nowMs );
+        uint64                 computeVisibleHash( UnixMilliseconds nowMs ) const;
+        ServerDirectoryReader* findReader( string_view kind ) const;
         /** @brief 아는 종류 · 맞는 지역의 배정입니다(`assignServer` 가 먼저 가린다). */
         ServerAssignment pickAssignment( AccountID accountID, const ServerAssignmentRequest& request, UnixMilliseconds nowMs );
         void             submitWrite( ServiceAuditedWrite&& job, uint64 requestTag );
 
     private:
-        vector<unique_ptr<ServerRegistryReader>> _listReader;
-        vector<MaintenanceWindow>                _listMaintenance;
-        vector<ServiceAnnouncement>              _listAnnouncement; ///< 우선순위 내림차순이다
-        EventBuffer<ServerDirectoryCompletion>   _completionBuffer;
-        ServerDirectoryLogicConfig               _settings;
-        ServerDirectoryDependencies              _dependencies;
-        uint64                                   _lastVisibleHash;
-        uint64                                   _statusRevision;
-        ServicePeriodicJob                       _reloadJob; ///< 다시 읽기 일정(요청 · 주기 · 읽는 중)
-        ServiceStoreTracker                      _store;     ///< 저장소에 맡긴 일의 앞이다
-        uint8                                    _bStatusChanged;
+        vector<unique_ptr<ServerDirectoryReader>> _listReader;
+        vector<MaintenanceWindow>                 _listMaintenance;
+        vector<ServiceAnnouncement>               _listAnnouncement; ///< 우선순위 내림차순이다
+        EventBuffer<ServerDirectoryCompletion>    _completionBuffer;
+        ServerDirectoryLogicConfig                _settings;
+        ServerDirectoryDependencies               _dependencies;
+        uint64                                    _lastVisibleHash;
+        uint64                                    _statusRevision;
+        ServicePeriodicJob                        _reloadJob; ///< 다시 읽기 일정(요청 · 주기 · 읽는 중)
+        ServiceStoreTracker                       _store;     ///< 저장소에 맡긴 일의 앞이다
+        uint8                                     _bStatusChanged;
     };
 } // namespace sw

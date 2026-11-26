@@ -4,7 +4,7 @@
 
 namespace sw
 {
-    ThreadedLocalStore::ThreadedLocalStore( unique_ptr<ILocalSlotStorage> storage, const LocalSealContext& sealContext )
+    ThreadedLocalStore::ThreadedLocalStore( unique_ptr<ILocalStoreBackend> storage, const LocalSealContext& sealContext )
         : _listCompletion{}
         , _sealContext{ sealContext }
         , _storage{ std::move( storage ) }

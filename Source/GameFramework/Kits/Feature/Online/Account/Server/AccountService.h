@@ -8,7 +8,7 @@
  *            저장소 작업 전에 쓸 수 없다.
  *          - 저장소 완료는 호스트 `tick` 이 회수한다. 탈퇴 정리와 세션 다시 읽기는 이 객체의 틱이 주기적으로 작업을 맡긴다.
  *          - `IAccountSessionControl` 을 멤버로 든다(`getSessionControl`). GM 과 제재가 계정의 세션을 끊을 수 있고, 사유 코드를 알림에 싣는다.
- *          - 서버가 여러 대일 때(호스트에 캐시와 버스가 있으면) 접속 상태(`OnlinePresence`)를 소유한다. 다른 키트는 `getPresence` 로 접근한다.
+ *          - 서버가 여러 대일 때(호스트에 캐시와 버스가 있으면) 접속 상태(`CacheAccountPresence`)를 소유한다. 다른 키트는 `getPresence` 로 접근한다.
  *            다른 서버에 접속한 세션을 끊으면 버스 `account.revoke` 로 알리고, 받은 서버가 그 연결을 닫는다. 버스를 놓쳐도 세션 다시 읽기가 찾아낸다.
  */
 #pragma once
@@ -23,8 +23,8 @@
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Account/Runtime/AccountProtocol.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/AccountKitConfig.h"
+#include "GameFramework/Kits/Feature/Online/Account/Server/CacheAccountPresence.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/LoginLogic.h"
-#include "GameFramework/Kits/Feature/Online/Account/Server/OnlinePresence.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/OnlineProtocolService.h"
 #include "GameFramework/Runtime/Online/Bus/ServerBusTopic.h"
 #include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
@@ -158,7 +158,7 @@ namespace sw
         vector<LoginCompletion>                      _listCompletionScratch;
         vector<LoginEvent>                           _listEventScratch;
         vector<Subscription>                         _listBusSubscription; ///< 취소 주제와 이 서버의 알림 주제 구독(`attachHost`). 호스트가 내려가면 `onHostShutdown` 이 푼다
-        OnlinePresence                               _presence;
+        CacheAccountPresence                         _presence;
         SessionControl                               _sessionControl; ///< 세션 끊기 창구(`getSessionControl`)
         AccountServiceConfig                         _settings;
         LoginLogic*                                  _pLoginLogic;

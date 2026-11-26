@@ -1,7 +1,7 @@
 /**
  * @file HubPawnReplicationComponent.h
  * @brief 허브에 접속한 계정마다 폰을 세우고 그 움직임을 맞춥니다 — 서버 권위, 자기 폰(걷기 · 말)은 예측 · 재조정 · 보정 녹이기, 남의 폰과 말은 보간.
- * @details 허브 오브젝트(`HubWorldComponent`)에 함께 붙는다. 넷 링크가 걸리고 허브 링크(서버 `IHubServer` · 클라이언트 `HubClientLink`)가 선 뒤에만 일한다 — 혼자 하는 허브는 예전 그대로다.
+ * @details 허브 오브젝트(`HubSimulationComponent`)에 함께 붙는다. 넷 링크가 걸리고 허브 링크(서버 `IHubServer` · 클라이언트 `HubClientLink`)가 선 뒤에만 일한다 — 혼자 하는 허브는 예전 그대로다.
  *          선의 입력은 조종 의도(`ControlIntent`) 하나와 그 의도를 낸 폰의 엔티티 id 다 — 자리 · 속도 · 명중을 클라이언트가 보내지 않는다(언리얼 `ServerMove` 와 달리 클라이언트의 끝 자리도 싣지 않는다).
  *          - 서버: 들인 아바타(`IHubServer::collectAvatars`)마다 폰 프리팹을 세우고 원격 조종자(`RemoteControllerComponent::spawnForConnection`)로 소유 연결을 준다. 연결이 나가면 내리게 하고 거둔다.
  *            걸음은 도착한 입력만큼, 흐른 시간의 몫 안에서 돈다(`ReplicationServer::popNextIntent` — 속도 치트 · 끊김). 튜닝은 씬의 플레이어 몸에서 옮긴다(데이터가 한 벌).
@@ -38,7 +38,7 @@
 #include "GameFramework/Runtime/Character/Control/Pawn/CharacterMovementComponent.h"
 #include "GameFramework/Runtime/Gameplay/Vehicle/MountMovementComponent.h"
 
-#include "Games/Playground/Hub/HubNetLink.h"
+#include "Games/Playground/Hub/HubNetSession.h"
 
 namespace sw
 {
@@ -47,7 +47,7 @@ namespace sw
     class ControlSystem;
     class GameObject;
     class GameObjectManager;
-    class HubWorldComponent;
+    class HubSimulationComponent;
     class PawnComponent;
 
     /**
@@ -130,7 +130,7 @@ namespace sw
         static constexpr uint32 kMountTypeID        = 6;  ///< 말 엔티티(`HubPawnPose`)
         static constexpr uint32 kMaxMount           = 8;  ///< 씬에 둘 수 있는 말 수(`_mountNumber` 의 Max)
         static constexpr uint32 kMaxFloor           = 16; ///< 씬에 둘 수 있는 움직이는 바닥 수(`_floorNumber` 의 Max)
-        /** @brief 말 n 의 엔티티 id 는 이 수 + n 입니다. 아바타 번호(`HubWorld::kPlacementIDBase` 아래) 위다. */
+        /** @brief 말 n 의 엔티티 id 는 이 수 + n 입니다. 아바타 번호(`HubSimulation::kPlacementIDBase` 아래) 위다. */
         static constexpr uint32 kMountEntityIDBase = 200000;
 
         HubPawnReplicationComponent();
@@ -206,7 +206,7 @@ namespace sw
         /** @brief 넷 걸음 한 프레임입니다(틱 뒤 · 게임 스레드). */
         void runNetFrame( GameObjectManager& manager );
         /** @brief 허브 링크가 섰으면 역할에 맞는 복제기를 한 번 세웁니다. */
-        void startRole( const NetLinkValue& link, const HubWorldComponent& hub );
+        void startRole( const NetLinkValue& link, const HubSimulationComponent& hub );
         /** @brief 복제기를 떼고 움직이던 몸을 되돌립니다. 두 번 불러도 됩니다. */
         void stopRole( GameObjectManager& manager );
         /** @brief 지난 프레임 뒤 흐른 실제 시간(초)입니다. */
@@ -215,20 +215,20 @@ namespace sw
         int32 consumeTicks( float32 seconds );
 
         // 서버
-        void runServerFrame( GameObjectManager& manager, const HubWorldComponent& hub, const NetLinkValue& link, float32 seconds );
-        void syncServerPawnList( GameObjectManager& manager, const HubWorldComponent& hub );
-        void spawnServerPawn( GameObjectManager& manager, const HubWorldComponent& hub, const HubAvatarSession& session );
+        void runServerFrame( GameObjectManager& manager, const HubSimulationComponent& hub, const NetLinkValue& link, float32 seconds );
+        void syncServerPawnList( GameObjectManager& manager, const HubSimulationComponent& hub );
+        void spawnServerPawn( GameObjectManager& manager, const HubSimulationComponent& hub, const HubAvatarSession& session );
         void removeServerPawn( GameObjectManager& manager, const ServerPawn& pawn );
-        void stepServerPawn( GameObjectManager& manager, const HubWorldComponent& hub, ServerPawn& pawn );
+        void stepServerPawn( GameObjectManager& manager, const HubSimulationComponent& hub, ServerPawn& pawn );
         void publishPoses( GameObjectManager& manager );
         /** @brief 탄 말만 넷이 움직이게 하고 나머지는 말 AI 에게 돌려줍니다. */
         void syncServerMountList( GameObjectManager& manager );
 
         // 클라이언트
-        void runClientFrame( GameObjectManager& manager, const HubWorldComponent& hub, float32 seconds );
+        void runClientFrame( GameObjectManager& manager, const HubSimulationComponent& hub, float32 seconds );
         /** @brief 씬의 플레이어 폰을 자기 폰으로 잡고 예측을 시작합니다. 아직 몸이 서지 않았으면 false 이고 다음 프레임에 다시 합니다. */
         [[nodiscard]] bool startPrediction( GameObjectManager& manager, uint32 avatarID );
-        void               stepClient( GameObjectManager& manager, const HubWorldComponent& hub, GameObject& pawnObject );
+        void               stepClient( GameObjectManager& manager, const HubSimulationComponent& hub, GameObject& pawnObject );
         /** @brief 서버가 정한 탈것 번호에 로컬 좌석을 맞춥니다. */
         void syncLocalMount( GameObjectManager& manager, GameObject& pawnObject, uint8 mountNumber );
         void collectPendingTriggers( const PawnComponent& controlledPawn, uint32 pawnEntityID );
@@ -239,7 +239,7 @@ namespace sw
 
         // 공용
         /** @brief 한 틱의 다음 상태입니다(절대 → 절대) — 서버 · 예측 · 다시 돌리기가 이 한 함수다(끝 자리는 허브 경계 안으로 자른다). */
-        HubPawnState simulateTick( GameObjectManager& manager, const HubWorldComponent& hub, GameObject& pawnObject, const HubPawnState& state, const HubPawnInput& input, uint32 avatarID,
+        HubPawnState simulateTick( GameObjectManager& manager, const HubSimulationComponent& hub, GameObject& pawnObject, const HubPawnState& state, const HubPawnInput& input, uint32 avatarID,
                                    CharacterMotionPass pass ) const;
         HubPawnState captureState( GameObjectManager& manager, const GameObject& pawnObject ) const;
         /** @brief 상태를 몸(걷는 몸 또는 탄 말)에 옮깁니다. */

@@ -236,7 +236,7 @@ namespace
             settings._transportSettings._ioThreadCount = 0;
             settings._listenAddress                    = NetAddress::makeLoopback( server._port );
             settings._pServiceStore                    = &server._store;
-            settings._pEphemeralStore                  = &server._cache;
+            settings._pCacheStore                      = &server._cache;
             settings._pServerBusTransport              = &server._bus;
             settings._pRemoteConfig                    = &_remoteConfig;
             settings._requestBurstPerRemote            = 1000;

@@ -4,7 +4,7 @@
  *        계정을 다루는 다른 포트(차단 목록 `IAccountBlockList`, 세션 끊기 `IAccountSessionControl`, 이름 색인 `IAccountNameIndex`, 외부 로그인 연동 `IAccountExternalLinks`, 오프라인 푸시 `IOfflinePushSender`,
  *        탈퇴 뒤 키트 정리 `IAfterDeleteAccount`)도 여기 둔다.
  * @details 발급은 계정 키트(GF_Account, GF_Server_Account)가 한다. 다른 키트(Trade, Economy, Mailbox, Admin)는 이 인터페이스만 보고 계정 키트를 include 하지 않는다
- *          (키트끼리는 include 하지 않는다). 서버가 여럿이면 다른 서버에 붙은 계정은 캐시 층의 접속 상태(`IEphemeralStore`)로 본다.
+ *          (키트끼리는 include 하지 않는다). 서버가 여럿이면 다른 서버에 붙은 계정은 캐시 층의 접속 상태(`ICacheStore`)로 본다.
  *          세션 토큰 검증은 따로 인터페이스를 두지 않는다. 스트림 연결은 로그인할 때 한 번 확인되고 그 뒤로는 연결의 주체로 다니며, UDP 게임 서버는 계정 키트의 접속 테이블이 확인한다.
  *          언리얼에서 친구, 세션, 업적 인터페이스가 `IOnlineIdentity`(`FUniqueNetId`, 닉네임, 로그인 상태)를 같이 보는 것에 해당한다.
  */

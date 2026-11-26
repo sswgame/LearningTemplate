@@ -63,9 +63,9 @@ namespace sw
 
 namespace sw
 {
-    struct EphemeralReply;
+    struct CacheReply;
 
-    class EphemeralStoreRouter;
+    class CacheStoreRouter;
     class ServerBusMessage;
 
     /**
@@ -86,7 +86,7 @@ namespace sw
         /** @brief 정원을 바꿉니다. 넘친 명단은 오래된 경기부터 받지 않습니다. 서버 루프에서 부릅니다. */
         void setSeatCapacity( int32 seatCapacity );
         /** @brief 명단 기록을 읽을 캐시 라우터를 받습니다(빌려 쓴다, 필수). 라우터보다 먼저 `shutdown` 해야 합니다. */
-        void startReading( EphemeralStoreRouter* pRouter );
+        void startReading( CacheStoreRouter* pRouter );
         /** @brief 기다리던 캐시 요청을 버립니다. 받은 명단은 남습니다. */
         void   shutdown();
         string getAssignTopic() const;
@@ -104,8 +104,8 @@ namespace sw
         [[nodiscard]] bool takeSeat( AccountID accountID, MatchSeat& outSeat );
 
     private:
-        void onListReply( const EphemeralReply& reply );
-        void onRecordReply( const string& recordName, const EphemeralReply& reply );
+        void onListReply( const CacheReply& reply );
+        void onRecordReply( const string& recordName, const CacheReply& reply );
         /** @brief 명단의 계정을 @p expiresMs 까지 받습니다. 이미 더 늦게까지 받는 계정은 그대로 둡니다. */
         void acceptMatch( const MatchFormed& match, int64 expiresMs );
         /** @brief 받을 사람이 정원을 넘으면 가장 오래된 경기의 사람부터 받지 않습니다(경기 하나만 남으면 그만둔다). */
@@ -117,7 +117,7 @@ namespace sw
         mutable uint8 _bReadRequested                          SW_GUARDED_BY( _mutex ); ///< 명단에 없는 계정이 접속을 시도했다. 다음 `update` 가 목록을 바로 읽는다
         unordered_map<string, int64>                           _mapRecordToExpiresMs;   ///< 읽었거나 읽는 중인 기록 이름과 끝나는 시각이다. 같은 기록을 다시 읽지 않는다
         unordered_map<AccountID, MatchSeat>                    _mapAccountToSeat;       ///< 명단의 계정마다 경기 · 팀이다(서버 루프만 쓴다)
-        EphemeralStoreRouter*                                  _pRouter;
+        CacheStoreRouter*                                      _pRouter;
         Subscription                                           _replyOwner; ///< 라우터 답의 주인 몫(`startReading` 이 열고 `shutdown` 이 놓는다)
         uint64                                                 _serverID;
         MatchServerAgentPolicy                                 _policy;       ///< 운영 값(`initialize`)

@@ -4,11 +4,11 @@
 #include "Core/Time/Clock.h"
 #include "Core/Time/TimePoint.h"
 
-#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/ServerRegistryReader.h"
-#include "GameFramework/Runtime/Online/Cache/Server/EphemeralStore.h"
-#include "GameFramework/Runtime/Online/Cache/Server/EphemeralStoreRouter.h"
-#include "GameFramework/Runtime/Online/Cache/Server/MemoryEphemeralStore.h"
-#include "GameFramework/Runtime/Online/Cache/Server/Tests/EphemeralStoreTestUtil.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/ServerDirectoryReader.h"
+#include "GameFramework/Runtime/Online/Cache/Server/CacheStore.h"
+#include "GameFramework/Runtime/Online/Cache/Server/CacheStoreRouter.h"
+#include "GameFramework/Runtime/Online/Cache/Server/MemoryCacheStore.h"
+#include "GameFramework/Runtime/Online/Cache/Server/Tests/CacheStoreTestUtil.h"
 #include "GameFramework/Runtime/Online/Directory/Server/ServerRegistration.h"
 #include "GameFramework/Runtime/Online/Directory/ServerRecord.h"
 
@@ -49,10 +49,10 @@ namespace
     struct DirectoryFixture
     {
 
-        sw::ManualClock             _clock;
-        sw::MemoryEphemeralDatabase _database;
-        sw::MemoryEphemeralStore    _store;
-        sw::EphemeralStoreRouter    _router;
+        sw::ManualClock         _clock;
+        sw::MemoryCacheDatabase _database;
+        sw::MemoryCacheStore    _store;
+        sw::CacheStoreRouter    _router;
         DirectoryFixture()
             : _clock{ sw::MonotonicMilliseconds{ 0 } }
             , _database{ _clock }
@@ -81,7 +81,7 @@ SW_TEST_CASE( ServerDirectoryTest, RecordKeysAndNameRule )
 {
     SW_EXPECT_EQUAL( sw::string( "sd/srv/00000000000000ab" ), sw::ServerRecord::makeRecordKey( 0xAB ) );
     SW_EXPECT_EQUAL( sw::string( "sd/idx/game" ), sw::ServerRecord::makeIndexKey( "game" ) );
-    SW_EXPECT_TRUE( sw::EphemeralRequest::isValidKey( sw::ServerRecord::makeRecordKey( ~uint64( 0 ) ) ) );
+    SW_EXPECT_TRUE( sw::CacheRequest::isValidKey( sw::ServerRecord::makeRecordKey( ~uint64( 0 ) ) ) );
 
     uint64 parsed = 0;
     SW_REQUIRE_TRUE( sw::ServerRecord::parseMember( sw::ServerRecord::makeMember( 0x123456789abcdef0ull ), parsed ) );
@@ -106,13 +106,13 @@ SW_TEST_CASE( ServerDirectoryTest, RecordRoundTripsAndRejectsBadProperties )
     SW_EXPECT_LOG( "ServiceRecordUtil.RecordVersionNotWritten" ); // 선언 범위 밖 포트 수는 짓지 않는다
     sw::ServerStatus status = makeStatus( 0xBEEF, "kr", 12, 100 );
     status._state           = sw::ServerState::Maintenance;
-    sw::EphemeralValue value;
+    sw::CacheValue value;
     SW_REQUIRE_TRUE( sw::ServerRecord::makeValue( status, value ) );
-    const sw::vector<uint8> listBytes = sw::EphemeralStoreTestAccess::getBytes( value );
+    const sw::vector<uint8> listBytes = sw::CacheStoreTestAccess::getBytes( value );
     SW_REQUIRE_TRUE( listBytes.empty() == false );
 
     sw::ServerStatus read;
-    SW_REQUIRE_TRUE( sw::ServerRecord::decode( sw::EphemeralStoreTestAccess::makeReply( listBytes ), read ) );
+    SW_REQUIRE_TRUE( sw::ServerRecord::decode( sw::CacheStoreTestAccess::makeReply( listBytes ), read ) );
     SW_EXPECT_EQUAL( uint64( 0xBEEF ), read._descriptor._serverID );
     SW_EXPECT_EQUAL( sw::string( "game" ), read._descriptor._kind );
     SW_EXPECT_EQUAL( sw::string( "kr" ), read._descriptor._region );
@@ -125,8 +125,8 @@ SW_TEST_CASE( ServerDirectoryTest, RecordRoundTripsAndRejectsBadProperties )
     SW_EXPECT_EQUAL( 12, read._load );
     SW_EXPECT_TRUE( read._state == sw::ServerState::Maintenance );
 
-    sw::EphemeralValue rejected;
-    sw::ServerStatus   noPort     = status;
+    sw::CacheValue   rejected;
+    sw::ServerStatus noPort       = status;
     noPort._descriptor._portCount = 0;
     SW_EXPECT_FALSE( sw::ServerRecord::makeValue( noPort, rejected ) );
     sw::ServerStatus tooManyPorts       = status;
@@ -135,18 +135,18 @@ SW_TEST_CASE( ServerDirectoryTest, RecordRoundTripsAndRejectsBadProperties )
     sw::ServerStatus maxPorts       = status;
     maxPorts._descriptor._portCount = static_cast<uint8>( sw::ServerDescriptor::kMaxPortCount );
     SW_REQUIRE_TRUE( sw::ServerRecord::makeValue( maxPorts, value ) );
-    SW_EXPECT_TRUE( sw::ServerRecord::decode( sw::EphemeralStoreTestAccess::makeReply( sw::EphemeralStoreTestAccess::getBytes( value ) ), read ) );
+    SW_EXPECT_TRUE( sw::ServerRecord::decode( sw::CacheStoreTestAccess::makeReply( sw::CacheStoreTestAccess::getBytes( value ) ), read ) );
 
     sw::ServerStatus unknownState = status;
     unknownState._state           = sw::ServerState::Count;
     if ( sw::ServerRecord::makeValue( unknownState, value ) ) // 열거 끝 값은 짓더라도 읽지 않는다
-        SW_EXPECT_FALSE( sw::ServerRecord::decode( sw::EphemeralStoreTestAccess::makeReply( sw::EphemeralStoreTestAccess::getBytes( value ) ), read ) );
+        SW_EXPECT_FALSE( sw::ServerRecord::decode( sw::CacheStoreTestAccess::makeReply( sw::CacheStoreTestAccess::getBytes( value ) ), read ) );
 
     sw::vector<uint8> listTruncated = listBytes;
     listTruncated.resize( listTruncated.size() - 2 );
-    SW_EXPECT_FALSE( sw::ServerRecord::decode( sw::EphemeralStoreTestAccess::makeReply( listTruncated ), read ) );
-    SW_EXPECT_FALSE( sw::ServerRecord::decode( sw::EphemeralStoreTestAccess::makeReply( {} ), read ) );
-    SW_EXPECT_FALSE( sw::ServerRecord::decode( sw::EphemeralReply{}, read ) );
+    SW_EXPECT_FALSE( sw::ServerRecord::decode( sw::CacheStoreTestAccess::makeReply( listTruncated ), read ) );
+    SW_EXPECT_FALSE( sw::ServerRecord::decode( sw::CacheStoreTestAccess::makeReply( {} ), read ) );
+    SW_EXPECT_FALSE( sw::ServerRecord::decode( sw::CacheReply{}, read ) );
 }
 
 /**
@@ -320,8 +320,8 @@ SW_TEST_CASE( ServerDirectoryTest, RegistrationWritesOnChangeAndHeartbeatOnly )
 
     // 캐시에 쓴 기록은 마지막 상태다(쓰기 답을 라우터가 먼저 비운 뒤 앞에서 직접 읽는다)
     rig.pollAll();
-    (void)rig._store.submit( sw::EphemeralRequest::makeGet( sw::ServerRecord::makeRecordKey( 5 ) ) );
-    sw::vector<sw::EphemeralReply> listReply;
+    (void)rig._store.submit( sw::CacheRequest::makeGet( sw::ServerRecord::makeRecordKey( 5 ) ) );
+    sw::vector<sw::CacheReply> listReply;
     (void)rig._store.pollReplies( listReply );
     SW_REQUIRE_EQUAL( size_t( 1 ), listReply.size() );
     sw::ServerStatus stored;
@@ -348,7 +348,7 @@ SW_TEST_CASE( ServerDirectoryTest, ReaderSnapshotsRegisteredServersAndCountsPick
     second.update( now );
     rig.pollAll();
 
-    sw::ServerRegistryReader reader;
+    sw::ServerDirectoryReader reader;
     reader.initialize( &rig._router, "game", 2000, kSeatReservationMs );
     reader.update( now );
     SW_EXPECT_TRUE( reader.isRefreshing() );
@@ -399,20 +399,20 @@ SW_TEST_CASE( ServerDirectoryTest, ReaderDropsExpiredServerAndCleansIndex )
     alive.update( now + sw::ServerRegistration::kRecordTTLMs ); // 살아 있는 쪽만 하트비트를 썼다
     rig.pollAll();
 
-    sw::ServerRegistryReader reader;
+    sw::ServerDirectoryReader reader;
     reader.initialize( &rig._router, "game", 2000, kSeatReservationMs );
     reader.update( now + sw::ServerRegistration::kRecordTTLMs );
     rig.pollAll();
     SW_REQUIRE_EQUAL( size_t( 1 ), reader.getSnapshot().size() );
     SW_EXPECT_EQUAL( uint64( 1 ), reader.getSnapshot()[0]._descriptor._serverID );
 
-    (void)rig._store.submit( sw::EphemeralRequest::makeScoreRank( sw::ServerRecord::makeIndexKey( "game" ), sw::ServerRecord::makeMember( 2 ) ) );
-    (void)rig._store.submit( sw::EphemeralRequest::makeScoreRank( sw::ServerRecord::makeIndexKey( "game" ), sw::ServerRecord::makeMember( 1 ) ) );
-    sw::vector<sw::EphemeralReply> listReply;
+    (void)rig._store.submit( sw::CacheRequest::makeScoreRank( sw::ServerRecord::makeIndexKey( "game" ), sw::ServerRecord::makeMember( 2 ) ) );
+    (void)rig._store.submit( sw::CacheRequest::makeScoreRank( sw::ServerRecord::makeIndexKey( "game" ), sw::ServerRecord::makeMember( 1 ) ) );
+    sw::vector<sw::CacheReply> listReply;
     (void)rig._store.pollReplies( listReply );
     SW_REQUIRE_EQUAL( size_t( 2 ), listReply.size() );
-    SW_EXPECT_TRUE( listReply[0]._result == sw::EphemeralResult::NotFound );
-    SW_EXPECT_TRUE( listReply[1]._result == sw::EphemeralResult::Ok );
+    SW_EXPECT_TRUE( listReply[0]._result == sw::CacheResult::NotFound );
+    SW_EXPECT_TRUE( listReply[1]._result == sw::CacheResult::Ok );
 }
 
 /**
@@ -428,7 +428,7 @@ SW_TEST_CASE( ServerDirectoryTest, ReaderShutdownCancelsPendingReads )
     rig.pollAll();
 
     {
-        sw::ServerRegistryReader reader;
+        sw::ServerDirectoryReader reader;
         reader.initialize( &rig._router, "game", 2000, kSeatReservationMs );
         reader.update( now );
         SW_EXPECT_EQUAL( 1, rig._router.getPendingCount() );
@@ -456,8 +456,8 @@ SW_TEST_CASE( ServerDirectoryTest, SeatReservationsAreSharedConfirmedAndExpire )
     game.update( now );
     rig.pollAll();
 
-    sw::ServerRegistryReader readerA; // 배정하는 서버 둘
-    sw::ServerRegistryReader readerB;
+    sw::ServerDirectoryReader readerA; // 배정하는 서버 둘
+    sw::ServerDirectoryReader readerB;
     readerA.initialize( &rig._router, "game", 2000, kSeatReservationMs );
     readerB.initialize( &rig._router, "game", 2000, kSeatReservationMs );
     readerA.update( now );

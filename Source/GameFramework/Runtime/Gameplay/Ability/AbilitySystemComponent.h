@@ -27,7 +27,7 @@
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityEffect.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityTypes.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AttributeSet.h"
-#include "GameFramework/Runtime/Gameplay/Ability/TagCountTable.h"
+#include "GameFramework/Runtime/Gameplay/Ability/TagCountContainer.h"
 
 namespace sw
 {
@@ -249,8 +249,8 @@ namespace sw
          * @brief 가진 태그와 개수입니다. 이펙트 · 어빌리티가 준 태그와 이펙트 없이 붙인 태그(언리얼 Loose Tag, `updateCount`)를 함께 셉니다.
          * @details 태그가 생기거나 사라질 때의 알림은 `registerChanged` 입니다. 조회는 `hasMatchingTag`, `hasAllMatchingTags`, `hasAnyMatchingTags`, `getCount` 입니다.
          */
-        TagCountTable&       getOwnedTagCounts() { return _ownedTagCounts; }
-        const TagCountTable& getOwnedTagCounts() const { return _ownedTagCounts; }
+        TagCountContainer&       getOwnedTagCounts() { return _ownedTagCounts; }
+        const TagCountContainer& getOwnedTagCounts() const { return _ownedTagCounts; }
         /** @brief 지금 적용 중인 즉시 이펙트를 건 쪽입니다. 이펙트 밖(코드가 쓴 값 · 지속 이펙트 해제)이면 빈 핸들입니다. */
         GameObjectHandle getExecutingInstigator() const { return _pExecutingContext != nullptr ? _pExecutingContext->_instigator : GameObjectHandle{}; }
         /**
@@ -555,10 +555,10 @@ namespace sw
         SW_CODEC_STATE vector<unique_ptr<AttributeSet>> _listAttributeSet;
         SW_CODEC_STATE ActiveEffectContainer            _activeEffects;
         SW_CODEC_STATE AbilitySpecContainer             _abilitySpecs;
-        SW_CODEC_STATE TagCountTable                    _ownedTagCounts;
+        SW_CODEC_STATE TagCountContainer                _ownedTagCounts;
         Subscription                                    _ownedTagSubscription;        ///< `_ownedTagCounts` 의 변화를 자기가 듣는 구독(`onOwnedTagChanged`)
         Subscription                                    _moduleUnloadingSubscription; ///< 등록된 동안 모듈 내림을 듣는 구독(`onModuleUnloading`)
-        SW_TRANSIENT TagCountTable                      _blockedAbilityTagCounts;     ///< `_blockAbilitiesWithTags` 가 막은 어빌리티 태그(알림 없이 센다)
+        SW_TRANSIENT TagCountContainer                  _blockedAbilityTagCounts;     ///< `_blockAbilitiesWithTags` 가 막은 어빌리티 태그(알림 없이 센다)
         SW_TRANSIENT unordered_map<hashed_string, unique_ptr<MulticastDelegate<void( const AttributeChangeData& )>>> _mapAttributeChangedMulticast;
         SW_TRANSIENT unordered_map<uint64, unique_ptr<MulticastDelegate<void( const AbilityEventData& )>>> _mapGameplayEventMulticast;
         MulticastDelegate<void( const AttributeChangeData& )>                                              _anyAttributeChangedMulticast;

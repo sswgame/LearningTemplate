@@ -8,8 +8,8 @@
 #include "GameFramework/Kits/Feature/Online/ServerDirectory/Runtime/ServerDirectoryProtocol.h"
 #include "GameFramework/Kits/Feature/Online/ServerDirectory/Server/ServerDirectoryLogic.h"
 #include "GameFramework/Runtime/Online/Audit/Server/ServiceAuditLog.h"
-#include "GameFramework/Runtime/Online/Cache/Server/EphemeralStoreRouter.h"
-#include "GameFramework/Runtime/Online/Cache/Server/MemoryEphemeralStore.h"
+#include "GameFramework/Runtime/Online/Cache/Server/CacheStoreRouter.h"
+#include "GameFramework/Runtime/Online/Cache/Server/MemoryCacheStore.h"
 #include "GameFramework/Runtime/Online/Directory/Server/ServerRegistration.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceRecordTable.h"
@@ -90,14 +90,14 @@ namespace
 
     struct DirectoryServiceFixture
     {
-        ManualClock             _clock;
-        MemoryEphemeralDatabase _cacheData;
-        MemoryEphemeralStore    _cache;
-        EphemeralStoreRouter    _router;
-        MemoryServiceDatabase   _database;
-        MemoryServiceStore      _store;
-        ServerRegistration      _registration;
-        ServerDirectoryLogic    _service;
+        ManualClock           _clock;
+        MemoryCacheDatabase   _cacheData;
+        MemoryCacheStore      _cache;
+        CacheStoreRouter      _router;
+        MemoryServiceDatabase _database;
+        MemoryServiceStore    _store;
+        ServerRegistration    _registration;
+        ServerDirectoryLogic  _service;
 
         DirectoryServiceFixture()
             : _clock{ MonotonicMilliseconds{ 0 } }

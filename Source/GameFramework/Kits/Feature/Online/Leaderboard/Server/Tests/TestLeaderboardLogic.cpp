@@ -10,9 +10,9 @@
 #include "GameFramework/Kits/Feature/Online/Leaderboard/Server/LeaderboardKitConfig.h"
 #include "GameFramework/Kits/Feature/Online/Leaderboard/Server/LeaderboardLogic.h"
 #include "GameFramework/Kits/Feature/Online/Leaderboard/Server/LeaderboardScoreSender.h"
-#include "GameFramework/Runtime/Online/Cache/Server/EphemeralStore.h"
-#include "GameFramework/Runtime/Online/Cache/Server/EphemeralStoreRouter.h"
-#include "GameFramework/Runtime/Online/Cache/Server/MemoryEphemeralStore.h"
+#include "GameFramework/Runtime/Online/Cache/Server/CacheStore.h"
+#include "GameFramework/Runtime/Online/Cache/Server/CacheStoreRouter.h"
+#include "GameFramework/Runtime/Online/Cache/Server/MemoryCacheStore.h"
 #include "GameFramework/Runtime/Online/Mail/Server/ServiceMail.h"
 #include "GameFramework/Runtime/Online/Schedule/Server/ServiceScheduler.h"
 #include "GameFramework/Runtime/Online/Service/Server/Tests/OnlineHostTestUtil.h"
@@ -64,12 +64,12 @@ namespace
     /** @brief 서버 하나입니다. 캐시는 자기 것이고 영속 데이터는 빌립니다 — 같은 데이터로 둘째를 만들면 "캐시를 잃고 다시 뜬 서버" 입니다. */
     struct LeaderboardFixture
     {
-        MemoryEphemeralDatabase _cacheData;
-        MemoryEphemeralStore    _cache;
-        EphemeralStoreRouter    _router;
-        MemoryServiceStore      _store;
-        LeaderboardLogic        _service;
-        uint64                  _nextTag{ 1 };
+        MemoryCacheDatabase _cacheData;
+        MemoryCacheStore    _cache;
+        CacheStoreRouter    _router;
+        MemoryServiceStore  _store;
+        LeaderboardLogic    _service;
+        uint64              _nextTag{ 1 };
 
         LeaderboardFixture( ManualClock& clock, MemoryServiceDatabase& database, const IAccountNameIndex* pNameIndex = nullptr )
             : _cacheData{ clock }

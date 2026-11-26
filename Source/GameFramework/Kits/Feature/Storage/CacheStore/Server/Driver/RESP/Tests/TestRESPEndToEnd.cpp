@@ -8,8 +8,8 @@
 #include "Core/TestFramework/TestFramework.h"
 
 #include "GameFramework/Kits/Feature/Storage/CacheStore/Server/Driver/RESP/RESPCodec.h"
-#include "GameFramework/Runtime/Online/Cache/Server/EphemeralStoreRouter.h"
-#include "GameFramework/Runtime/Online/Cache/Server/Tests/EphemeralStoreTestUtil.h"
+#include "GameFramework/Runtime/Online/Cache/Server/CacheStoreRouter.h"
+#include "GameFramework/Runtime/Online/Cache/Server/Tests/CacheStoreTestUtil.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerKit.h"
 #include "GameFramework/Runtime/Online/Server/Tests/OnlineEndpointTestUtil.h"
 #include "GameFramework/Runtime/Online/Server/Tests/OnlineRuntimeTestUtil.h"
@@ -30,7 +30,7 @@ namespace
 } // namespace
 
 // RESPEndToEndTest — 서버 설정이 고른 `resp` 캐시: 조립(`OnlineServerRuntime`)이 드라이버 키트에서 저장소를 만들고, 실제 TCP 로 로컬 가짜 RESP 서버에 붙어 AUTH(환경 변수 비밀) · 쓰기 · 읽기 · 발행 · 구독을 끝까지 돈다.
-// 가짜 서버는 Valkey 의 명령 부분집합을 값으로 흉내 낸다 — 답을 대본으로 주는 `TestRESPEphemeralStore.cpp` 와 달리 무엇이 키로 닿았는지 본다. 드라이버 표에 없는 이름 · 없는 환경 변수는 메모리로 물러나지 않고 기동이 멈춘다(nogpu).
+// 가짜 서버는 Valkey 의 명령 부분집합을 값으로 흉내 낸다 — 답을 대본으로 주는 `TestRESPCacheStore.cpp` 와 달리 무엇이 키로 닿았는지 본다. 드라이버 표에 없는 이름 · 없는 환경 변수는 메모리로 물러나지 않고 기동이 멈춘다(nogpu).
 
 using namespace sw;
 
@@ -239,30 +239,30 @@ SW_TEST_CASE( RESPEndToEndTest, ConfigSelectsRESPAndReachesTheEndpoint )
         rig.updateAll( kNowMs, 1 );
     };
 
-    EphemeralStoreRouter& router = *rig._runtime.getContext()._pRouter;
-    string                readBack;
-    string                message;
-    int32                 repliedCount = 0;
-    const Subscription    owner        = router.openReplyOwner();
-    const Subscription    subscription = router.subscribe( "e2e.topic", SW_DELEGATE_LAMBDA( EphemeralStoreRouter::MessageDelegate, [&message]( const EphemeralMessage& received )
-       { message.assign( sw::EphemeralStoreTestAccess::getBytes( received ).begin(), sw::EphemeralStoreTestAccess::getBytes( received ).end() ); } ) );
-    const auto            onReply      = [&repliedCount, &readBack]( const EphemeralReply& reply )
+    CacheStoreRouter&  router = *rig._runtime.getContext()._pRouter;
+    string             readBack;
+    string             message;
+    int32              repliedCount = 0;
+    const Subscription owner        = router.openReplyOwner();
+    const Subscription subscription = router.subscribe( "e2e.topic", SW_DELEGATE_LAMBDA( CacheStoreRouter::MessageDelegate, [&message]( const CacheMessage& received )
+    { message.assign( sw::CacheStoreTestAccess::getBytes( received ).begin(), sw::CacheStoreTestAccess::getBytes( received ).end() ); } ) );
+    const auto         onReply      = [&repliedCount, &readBack]( const CacheReply& reply )
     {
         ++repliedCount;
-        SW_EXPECT_TRUE( reply._result == EphemeralResult::Ok );
-        if ( reply._operation == EphemeralOperation::Get )
-            readBack.assign( sw::EphemeralStoreTestAccess::getBytes( reply ).begin(), sw::EphemeralStoreTestAccess::getBytes( reply ).end() );
+        SW_EXPECT_TRUE( reply._result == CacheResult::Ok );
+        if ( reply._operation == CacheOperation::Get )
+            readBack.assign( sw::CacheStoreTestAccess::getBytes( reply ).begin(), sw::CacheStoreTestAccess::getBytes( reply ).end() );
     };
 
-    router.submit( EphemeralRequest::makeSet( "e2e:key", sw::EphemeralStoreTestAccess::makeValue( StringUtil::toBytes( "value" ) ), 0 ), owner, onReply );
-    router.submit( EphemeralRequest::makeGet( "e2e:key" ), owner, onReply );
+    router.submit( CacheRequest::makeSet( "e2e:key", sw::CacheStoreTestAccess::makeValue( StringUtil::toBytes( "value" ) ), 0 ), owner, onReply );
+    router.submit( CacheRequest::makeGet( "e2e:key" ), owner, onReply );
     SW_REQUIRE_TRUE( test::pollUntil( poll, [&repliedCount]()
     { return repliedCount == 2; } ) );
     SW_EXPECT_EQUAL( string( "value" ), readBack );
     SW_EXPECT_EQUAL( string( "value" ), server.findValue( "g:e2e:key" ) );
     SW_EXPECT_TRUE( server.getAuthCount() >= 2 ); // 명령 연결과 구독 연결이 각각 AUTH 한다
 
-    router.submit( sw::EphemeralStoreTestAccess::makePublish( "e2e.topic", StringUtil::toBytes( "hello" ) ) );
+    router.submit( sw::CacheStoreTestAccess::makePublish( "e2e.topic", StringUtil::toBytes( "hello" ) ) );
     SW_REQUIRE_TRUE( test::pollUntil( poll, [&message]()
     { return message.empty() == false; } ) );
     SW_EXPECT_EQUAL( string( "hello" ), message );

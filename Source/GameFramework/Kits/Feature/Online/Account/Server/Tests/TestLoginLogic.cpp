@@ -12,8 +12,8 @@
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/FakePlatformLoginProvider.h"
 #include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 #include "GameFramework/Runtime/Online/Audit/Server/ServiceAuditLog.h"
-#include "GameFramework/Runtime/Online/Cache/Server/EphemeralStoreRouter.h"
-#include "GameFramework/Runtime/Online/Cache/Server/MemoryEphemeralStore.h"
+#include "GameFramework/Runtime/Online/Cache/Server/CacheStoreRouter.h"
+#include "GameFramework/Runtime/Online/Cache/Server/MemoryCacheStore.h"
 #include "GameFramework/Runtime/Online/Config/Server/RemoteConfig.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
 
@@ -125,9 +125,9 @@ namespace
     struct LoginFixture
     {
         ManualClock               _clock;
-        MemoryEphemeralDatabase   _ownCacheData;
-        MemoryEphemeralStore      _cache;
-        EphemeralStoreRouter      _router;
+        MemoryCacheDatabase       _ownCacheData;
+        MemoryCacheStore          _cache;
+        CacheStoreRouter          _router;
         MemoryServiceStore        _store;
         FakeServiceCrypto         _crypto;
         FakeWorkerHasher          _hasher;
@@ -135,7 +135,7 @@ namespace
         LoginLogic                _service;
         uint64                    _nextTag{ 1 };
 
-        explicit LoginFixture( MemoryServiceDatabase& database, const LoginLogicConfig& settings = makeLoginLogicSettings(), MemoryEphemeralDatabase* pSharedCache = nullptr )
+        explicit LoginFixture( MemoryServiceDatabase& database, const LoginLogicConfig& settings = makeLoginLogicSettings(), MemoryCacheDatabase* pSharedCache = nullptr )
             : _clock{ MonotonicMilliseconds{ 1000 } }
             , _ownCacheData{ _clock }
             , _cache{ pSharedCache != nullptr ? pSharedCache : &_ownCacheData }

@@ -1,6 +1,6 @@
 /**
  * @file MechArenaGameModeComponent.h
- * @brief 기체 대전 키트(`GF_MechArena`)의 디렉터 — 팀 대 팀 한 판을 진행합니다. 키트의 판(`MechArenaWorld`)을 플레이어 입력 명령과 컴퓨터 조종사로 고정 걸음마다 돌립니다.
+ * @brief 기체 대전 키트(`GF_MechArena`)의 디렉터 — 팀 대 팀 한 판을 진행합니다. 키트의 판(`MechArenaSimulation`)을 플레이어 입력 명령과 컴퓨터 조종사로 고정 걸음마다 돌립니다.
  * @details 키트 세 갈래의 가운데다: 규칙(키트 루트, 엔진 시계 · 렌더를 모른다)을 들고 씬과 잇는다. 입력 · 모습 · HUD 는 클라이언트 모듈
  *          (`GF_Client_MechArena` 의 `MechArenaViewComponent`)이 이 디렉터의 명령 · 읽기 API 로만 다룬다 — 전용 서버는 그 모듈을 짓지 않는다.
  *          조종사 번호는 플레이어(0) → 동료 → 적 순서다. 기체는 게임 기능이 건 `MechCatalog`, 무기 · 탄은 게임 범위의 `WeaponCatalog` · `ProjectileCatalog`, 근접 기술은 씬이 가리키는 `MoveCatalog` 다.
@@ -23,7 +23,7 @@
 #include "Engine/Serialization/Serializer/CatalogKey.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Kits/Genre/Action/MechArena/MechArenaWorld.h"
+#include "GameFramework/Kits/Genre/Action/MechArena/MechArenaSimulation.h"
 #include "GameFramework/Kits/Genre/Action/MechArena/MechCatalog.h"
 #include "GameFramework/Runtime/Character/Combat/FrameData.h"
 #include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
@@ -63,8 +63,8 @@ namespace sw
 
         // ---- 읽기(클라이언트 모듈 · 감시 값) ----
         /** @brief 판이 열렸고 끝나지 않아 입력 명령을 받으면 true 입니다. */
-        bool                  isAcceptingInput() const override { return isStarted() && _world.isEnded() == false; }
-        const MechArenaWorld& getWorld() const { return _world; }
+        bool                       isAcceptingInput() const override { return isStarted() && _world.isEnded() == false; }
+        const MechArenaSimulation& getWorld() const { return _world; }
         /** @brief 조종사의 절대 자리(발밑)입니다. 없는 번호면 원점입니다. */
         AbsolutePosition getPilotPosition( int32 pilot ) const;
         /** @brief 조종사의 체력 비율(0..1)입니다. 격추됐으면 0 입니다. */
@@ -96,9 +96,9 @@ namespace sw
         };
 
         /** @brief 씬 데이터의 두 팀으로 판을 엽니다(출격은 `startGame`). 목록 길이가 다르거나 기체를 놓을 수 없으면 오류를 남기고 false 입니다. */
-        [[nodiscard]] bool openWorld( MechArenaWorld& outWorld ) const;
+        [[nodiscard]] bool openWorld( MechArenaSimulation& outWorld ) const;
         /** @brief 조종사 하나를 판에 더합니다. 거절되면 오류를 남기고 false 입니다. */
-        [[nodiscard]] static bool addPilot( MechArenaWorld& inoutWorld, const MechPilotConfig& config );
+        [[nodiscard]] static bool addPilot( MechArenaSimulation& inoutWorld, const MechPilotConfig& config );
         /** @brief 받아 둔 입력 명령으로 한 걸음의 입력을 만듭니다. 모은 누름은 여기서 비운다. */
         MechInput consumePlayerInput();
         /** @brief 컴퓨터가 쥔 @p pilot 의 한 걸음 입력입니다 — 가까운 적에게 다가가 쏘고, 거리를 지키며 옆으로 돌고, 닿으면 벤다. */
@@ -142,13 +142,13 @@ namespace sw
         PROPERTY( Category = "Result", DisplayName = "Victory Money", Tooltip = "Result value 'money' reported on victory", Min = 0 )
         int32 _victoryMoney;
 
-        BoundAssetRef<MechCatalog>       _pMechs;
-        BoundAssetRef<WeaponCatalog>     _pWeapons;
-        BoundAssetRef<ProjectileCatalog> _pProjectiles;
-        BoundAssetRef<MoveCatalog>       _pMoves;
-        SW_CODEC_STATE MechArenaWorld    _world;
-        SW_CODEC_STATE FixedStepTimer    _timer; ///< 걸음 하나가 판의 고정 걸음 하나다 — 누름은 걸음에 한 번만 든다
-        SW_CODEC_STATE GameRandom        _random;
+        BoundAssetRef<MechCatalog>         _pMechs;
+        BoundAssetRef<WeaponCatalog>       _pWeapons;
+        BoundAssetRef<ProjectileCatalog>   _pProjectiles;
+        BoundAssetRef<MoveCatalog>         _pMoves;
+        SW_CODEC_STATE MechArenaSimulation _world;
+        SW_CODEC_STATE FixedStepTimer      _timer; ///< 걸음 하나가 판의 고정 걸음 하나다 — 누름은 걸음에 한 번만 든다
+        SW_CODEC_STATE GameRandom          _random;
         SW_CODEC_STATE vector<BotHand> _listBotHand;
         SW_TRANSIENT vector<MechArenaEvent> _listEvent;
         SW_TRANSIENT MechInput              _command; ///< 마지막 입력 명령(누름은 다음 걸음까지 모은다) — 클라이언트 입력이라 싣지 않는다

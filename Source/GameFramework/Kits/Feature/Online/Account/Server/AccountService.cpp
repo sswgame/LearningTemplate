@@ -451,7 +451,7 @@ namespace sw
         if ( _presence.isEnabled() == false )
             return; // 서버가 한 대이다
         _listBusSubscription.push_back( host.subscribeServerBus( AccountBus::kRevokeTopic.getName(), this ) );
-        _listBusSubscription.push_back( host.subscribeServerBus( OnlinePresence::makePushTopic( host.getServerBus()->getServerID() ), this ) );
+        _listBusSubscription.push_back( host.subscribeServerBus( CacheAccountPresence::makePushTopic( host.getServerBus()->getServerID() ), this ) );
     }
 
     void AccountService::publishRemoteRevocations( OnlineServiceHost& host )

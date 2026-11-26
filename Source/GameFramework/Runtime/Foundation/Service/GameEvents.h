@@ -3,11 +3,11 @@
  * @brief EventDispatcher 채널 "game" 의 장르 공통 수명주기 이벤트와, 이벤트를 그 채널에 내는 단일 경로(`GameEventUtil` — 버스 스레드면 즉시, 아니면 큐)를 정의합니다.
  * @details 프레임워크가 정해진 시점에 이 이벤트를 낸다.
  *          모두 `GameEventUtil::send` 로 내며, 버스 스레드면 즉시, 아니면 다음 `processEvents` 에서 전달된다.
- *          - `SaveGameSavedEvent` 와 `SaveGameLoadedEvent`: `GameSaveSlots::save` 과 `load`(자동 저장 되돌리기 `AutosaveManager::restoreLatest` · `restoreCheckpoint` 도 같은 적용 길)이 맡긴 슬롯 쓰기 · 읽기가 끝난 뒤 낸다 — 세이브가 다른 씬이면 그 씬이 열려 적용한 뒤다. 성공과 실패 모두 낸다.
+ *          - `SaveGameSavedEvent` 와 `SaveGameLoadedEvent`: `GameSaveSlots::save` 과 `load`(자동 저장 되돌리기 `AutosaveController::restoreLatest` · `restoreCheckpoint` 도 같은 적용 길)이 맡긴 슬롯 쓰기 · 읽기가 끝난 뒤 낸다 — 세이브가 다른 씬이면 그 씬이 열려 적용한 뒤다. 성공과 실패 모두 낸다.
  *          - `SceneLoadCompletedEvent`: 게임 이동 씬 로드가 활성 씬이 되었거나 실패한 뒤의 첫 `GameInstance::update` 에서 낸다. 요청은 씬 매니저가 알린다(`SceneManager::onSceneLoadRequested`).
  *
  *          언리얼의 `FCoreUObjectDelegates::PostLoadMapWithWorld` 에 해당한다. 낼 시점이 없는 이벤트(일시정지 등)는 두지 않는다.
- *          다른 채널 이벤트는 킷이 자기 헤더에 둔다(`ActionRoom.h` 의 룸 이벤트). 유닛의 피해는 `DamageEvents.h` 다.
+ *          다른 채널 이벤트는 킷이 자기 헤더에 둔다(`ActionCombatRoom.h` 의 룸 이벤트). 유닛의 피해는 `DamageEvents.h` 다.
  *          `SceneManager` 를 직접 불러 한 씬 로드는 레벨 이벤트를 내지 않는다. 엔진은 GameFramework 를 모르기 때문이다.
  */
 #pragma once

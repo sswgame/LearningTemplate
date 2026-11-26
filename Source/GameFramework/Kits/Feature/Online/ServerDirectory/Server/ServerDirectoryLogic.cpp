@@ -199,7 +199,7 @@ namespace sw
         _settings     = settings;
         for ( const string& kind : settings._listServerKind )
         {
-            unique_ptr<ServerRegistryReader>& reader = _listReader.emplace_back( make_unique<ServerRegistryReader>() );
+            unique_ptr<ServerDirectoryReader>& reader = _listReader.emplace_back( make_unique<ServerDirectoryReader>() );
             reader->initialize( dependencies._pRouter, kind, settings._registryRefreshPeriodMs, settings._seatReservationTTLMs );
         }
         _store.bindStore( dependencies._pStore );
@@ -209,7 +209,7 @@ namespace sw
 
     void ServerDirectoryLogic::shutdown()
     {
-        for ( unique_ptr<ServerRegistryReader>& reader : _listReader )
+        for ( unique_ptr<ServerDirectoryReader>& reader : _listReader )
         {
             reader->shutdown();
         }
@@ -223,7 +223,7 @@ namespace sw
     {
         if ( _store.hasStore() == false || _dependencies._pRouter == nullptr )
             return;
-        for ( unique_ptr<ServerRegistryReader>& reader : _listReader )
+        for ( unique_ptr<ServerDirectoryReader>& reader : _listReader )
         {
             reader->update( nowMs );
         }
@@ -342,9 +342,9 @@ namespace sw
 
     ServerAssignment ServerDirectoryLogic::pickAssignment( AccountID accountID, const ServerAssignmentRequest& request, UnixMilliseconds nowMs )
     {
-        ServerAssignment      assignment;
-        ServerRegistryReader* pReader = findReader( request._kind );
-        MaintenanceWindow     window;
+        ServerAssignment       assignment;
+        ServerDirectoryReader* pReader = findReader( request._kind );
+        MaintenanceWindow      window;
         if ( isBlockedByMaintenance( request._kind, accountID, nowMs, &window ) )
         {
             assignment._result           = ServerDirectoryResult::Maintenance;
@@ -381,7 +381,7 @@ namespace sw
 
     ServerDirectoryServiceResult ServerDirectoryLogic::listServers( string_view kind, UnixMilliseconds nowMs, vector<ServerListEntry>& outListEntry ) const
     {
-        const ServerRegistryReader* pReader = findReader( kind );
+        const ServerDirectoryReader* pReader = findReader( kind );
         if ( pReader == nullptr )
             return ServerDirectoryServiceResult::fail( ServerDirectoryError::kUnknownKind );
         for ( const ServerStatus& status : pReader->getSnapshot() )
@@ -403,9 +403,9 @@ namespace sw
         return ServerDirectoryResult::Ok;
     }
 
-    ServerRegistryReader* ServerDirectoryLogic::findReader( string_view kind ) const
+    ServerDirectoryReader* ServerDirectoryLogic::findReader( string_view kind ) const
     {
-        for ( const unique_ptr<ServerRegistryReader>& reader : _listReader )
+        for ( const unique_ptr<ServerDirectoryReader>& reader : _listReader )
         {
             if ( reader->getKind() == kind )
                 return reader.get();

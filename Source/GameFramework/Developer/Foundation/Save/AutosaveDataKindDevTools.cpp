@@ -22,7 +22,7 @@ namespace sw
             [[nodiscard]] static bool readSaveCount( const GameObjectManager* pManager, float64& outValue )
             {
                 (void)pManager;
-                const AutosaveManager* pAutosave = game::findSubsystem<AutosaveManager>();
+                const AutosaveController* pAutosave = game::findSubsystem<AutosaveController>();
                 if ( pAutosave == nullptr )
                     return false;
                 outValue = static_cast<float64>( pAutosave->getSaveCount() );
@@ -33,7 +33,7 @@ namespace sw
             [[nodiscard]] static bool readLastCheckpoint( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
                 (void)query;
-                const AutosaveManager* pAutosave = game::findSubsystem<AutosaveManager>();
+                const AutosaveController* pAutosave = game::findSubsystem<AutosaveController>();
                 if ( pAutosave == nullptr )
                 {
                     outValue.setText( "this game has no autosave (gamesettings autosaveSettings)" );

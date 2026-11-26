@@ -47,8 +47,8 @@ namespace sw
 
 namespace sw
 {
-    struct EphemeralReply;
-    struct EphemeralRequest;
+    struct CacheReply;
+    struct CacheRequest;
 
     /** @brief 파티와 로비 연산 종류입니다. */
     enum class PartyLobbyOperation : uint8
@@ -147,7 +147,7 @@ namespace sw
          * @details @p maxPartySize 가 [`PartyLobbyLimit::kMinPartySize`, `kMaxPartySize`] 밖이면 오류를 남기고 false 를 반환하며 라우터를 잡지 않는다.
          *          예전에는 범위 안으로 조용히 맞췄다(폴백 금지 원칙).
          */
-        [[nodiscard]] bool initialize( EphemeralStoreRouter* pRouter, uint64 serverID, const PartyLobbyPolicy& policy, int32 maxPartySize );
+        [[nodiscard]] bool initialize( CacheStoreRouter* pRouter, uint64 serverID, const PartyLobbyPolicy& policy, int32 maxPartySize );
         /** @brief 기다리던 캐시 요청을 취소합니다. 라우터보다 먼저 종료될 때 부릅니다. */
         void shutdown();
 
@@ -232,11 +232,11 @@ namespace sw
             int32                 _remainingCount{ 0 };
         };
 
-        void   submitStep( const EphemeralRequest& cacheRequest, StepKind kind, const Request& request, uint64 listID = 0, int32 slot = 0 );
-        void   submitFireAndForget( const EphemeralRequest& cacheRequest );
-        void   onStepReply( const PendingStep& step, const EphemeralReply& reply );
-        void   handleIndexRead( const Request& request, const EphemeralReply& reply );
-        void   handleListGet( uint64 listID, int32 slot, const EphemeralReply& reply );
+        void   submitStep( const CacheRequest& cacheRequest, StepKind kind, const Request& request, uint64 listID = 0, int32 slot = 0 );
+        void   submitFireAndForget( const CacheRequest& cacheRequest );
+        void   onStepReply( const PendingStep& step, const CacheReply& reply );
+        void   handleIndexRead( const Request& request, const CacheReply& reply );
+        void   handleListGet( uint64 listID, int32 slot, const CacheReply& reply );
         void   startPartyMutation( const Request& request );
         void   startLobbyMutation( const Request& request );
         void   refreshIndexTTL( const PartySnapshot& party );
@@ -256,7 +256,7 @@ namespace sw
         EventBuffer<PartyLobbyNotification> _notificationBuffer;
         EventBuffer<LobbyStartRequest>      _lobbyStartBuffer;
         EventBuffer<uint64>                 _brokenTicketBuffer;
-        EphemeralStoreRouter*               _pRouter;
+        CacheStoreRouter*                   _pRouter;
         Subscription                        _replyOwner; ///< 라우터 답의 주인 몫(`initialize` 가 열고 `shutdown` 이 놓는다)
         uint64                              _serverID;
         IDAllocator<uint64>                 _lobbyListIDAllocator;

@@ -600,7 +600,7 @@ namespace sw
 
     void AbilitySystemComponent::engageActiveEffect( ActiveGameplayEffect& activeEffect )
     {
-        _ownedTagCounts.updateCounts( activeEffect._grantedTags, TagCountTable::kGrantDelta );
+        _ownedTagCounts.updateCounts( activeEffect._grantedTags, TagCountContainer::kGrantDelta );
         for ( const hashed_string& abilityID : activeEffect._spec._pDef->_listGrantedAbility )
         {
             const AbilitySpecHandle handle = giveAbilityByID( abilityID, activeEffect._spec._level );
@@ -615,7 +615,7 @@ namespace sw
 
     void AbilitySystemComponent::disengageActiveEffect( ActiveGameplayEffect& activeEffect )
     {
-        _ownedTagCounts.updateCounts( activeEffect._grantedTags, TagCountTable::kRevokeDelta );
+        _ownedTagCounts.updateCounts( activeEffect._grantedTags, TagCountContainer::kRevokeDelta );
         for ( const AbilitySpecHandle& handle : activeEffect._listGrantedAbilityHandle )
         {
             (void)clearAbility( handle ); // 게임이 먼저 거뒀으면 없다 — 거둔 것이 뜻이다

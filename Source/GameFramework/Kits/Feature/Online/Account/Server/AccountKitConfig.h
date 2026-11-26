@@ -42,7 +42,7 @@ namespace sw
 
     /** @brief 접속 상태 기록의 운영 값입니다. 코드 기본값이 없다. */
     REFLECT()
-    struct SW_KIT_SERVER_API OnlinePresenceConfig
+    struct SW_KIT_SERVER_API CacheAccountPresenceConfig
     {
         REFLECT_BODY();
         PROPERTY( Required, Min = 1 )
@@ -65,7 +65,7 @@ namespace sw
         PROPERTY( Required, Min = 1 )
         int32 _purgeCount{ 0 };
         PROPERTY( Required )
-        OnlinePresenceConfig _presence{}; ///< 접속 상태 기록
+        CacheAccountPresenceConfig _presence{}; ///< 접속 상태 기록
     };
 } // namespace sw
 

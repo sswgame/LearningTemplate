@@ -1,6 +1,6 @@
 /**
  * @file ConquestGameModeComponent.h
- * @brief 횡스크롤 정복 키트(`GF_SideScrollConquest`)의 디렉터 — 정복 한 판을 진행합니다. 키트의 판(`ConquestWorld`)을 카탈로그로 열고 시작 건물을 지은 뒤, 지휘관 이동 · 부대 명령 · 훈련을 명령으로 받아 돌립니다.
+ * @brief 횡스크롤 정복 키트(`GF_SideScrollConquest`)의 디렉터 — 정복 한 판을 진행합니다. 키트의 판(`ConquestSimulation`)을 카탈로그로 열고 시작 건물을 지은 뒤, 지휘관 이동 · 부대 명령 · 훈련을 명령으로 받아 돌립니다.
  * @details 키트 세 갈래의 가운데다: 규칙(키트 루트, 엔진 시계 · 렌더를 모른다)을 들고 씬과 잇는다. 입력 · 모습 · HUD 는 클라이언트 모듈(`GF_Client_SideScrollConquest` 의 `ConquestViewComponent`)이
  *          이 디렉터의 명령 · 읽기 API 로만 다룬다 — 전용 서버는 그 모듈을 짓지 않는다. 자동 플레이(`isAutoPlayOn`)면 훈련하고 돌격하며 지휘관이 전선을 따라 나아간다.
  *          판의 x 는 절대 자리의 X 다(높이 0, 깊이 0). 거점을 모두 얻으면 `win`(상금), 첫 마을을 잃으면 `lose` 로 미니게임을 끝낸다.
@@ -19,7 +19,7 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Strategy/SideScrollConquest/ConquestCatalog.h"
-#include "GameFramework/Kits/Genre/Strategy/SideScrollConquest/ConquestWorld.h"
+#include "GameFramework/Kits/Genre/Strategy/SideScrollConquest/ConquestSimulation.h"
 #include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
 #include "GameFramework/Runtime/Foundation/GameMode/MatchGameModeComponent.h"
 
@@ -54,9 +54,9 @@ namespace sw
 
         // ---- 읽기(클라이언트 모듈 · 감시 값) ----
         /** @brief 판이 열렸고 승패가 나지 않았으며 사람이 지휘하면 true 입니다(자동 플레이면 false). */
-        bool                 isAwaitingCommand() const;
-        bool                 isAcceptingInput() const override { return isAwaitingCommand(); }
-        const ConquestWorld& getWorld() const { return _world; }
+        bool                      isAwaitingCommand() const;
+        bool                      isAcceptingInput() const override { return isAwaitingCommand(); }
+        const ConquestSimulation& getWorld() const { return _world; }
         /** @brief 이 판의 카탈로그입니다. 열기 전이면 nullptr 입니다. */
         const ConquestCatalog* findCatalog() const { return _pCatalog.get(); }
         /** @brief 판의 x 를 절대 자리로 옮깁니다. */
@@ -90,9 +90,9 @@ namespace sw
         PROPERTY( Category = "Match", DisplayName = "Win Reward", Tooltip = "Money for taking every site", Min = 0 )
         int32 _winReward;
 
-        BoundAssetRef<ConquestCatalog> _pCatalog;
-        SW_CODEC_STATE ConquestWorld   _world;
-        ConsumerLease                  _eventLease;
+        BoundAssetRef<ConquestCatalog>    _pCatalog;
+        SW_CODEC_STATE ConquestSimulation _world;
+        ConsumerLease                     _eventLease;
         SW_TRANSIENT vector<ConquestEvent> _listEvent;
     };
 } // namespace sw

@@ -24,10 +24,10 @@ namespace
     /** @brief 자동 저장 관리자를 게임 범위에 걸고 볼륨과 걷는 오브젝트를 둔 씬입니다. */
     struct AutosaveVolumeRig
     {
-        MemoryLocalDatabase        _database;
+        MemoryLocalStoreBackend    _database;
         unique_ptr<GameLocalStore> _pStore;
         SaveLock                   _saveLock;
-        AutosaveManager            _autosave;
+        AutosaveController         _autosave;
         SubsystemScope             _scope;
         GameObjectManager          _manager;
         GameObject*                _pWalker{ nullptr };
@@ -39,13 +39,13 @@ namespace
         {
             AutosaveSettings settings;
             settings._interval = 0.0f;
-            SW_REQUIRE_TRUE( _autosave.initialize( settings, *_pStore, _saveLock, SW_DELEGATE_LAMBDA( AutosaveManager::SaveDelegate, []( vector<uint8>& outBytes, float64& outPlayTime )
+            SW_REQUIRE_TRUE( _autosave.initialize( settings, *_pStore, _saveLock, SW_DELEGATE_LAMBDA( AutosaveController::SaveDelegate, []( vector<uint8>& outBytes, float64& outPlayTime )
             {
                 outBytes.push_back( 1 );
                 outPlayTime = 0.0;
                 return true;
             } ),
-                                                   SW_DELEGATE_LAMBDA( AutosaveManager::LoadDelegate, []( const string& slot, const AutosaveManager::RestoreCompletedFunction& onCompleted )
+                                                   SW_DELEGATE_LAMBDA( AutosaveController::LoadDelegate, []( const string& slot, const AutosaveController::RestoreCompletedFunction& onCompleted )
             {
                 (void)slot;
                 onCompleted( true );

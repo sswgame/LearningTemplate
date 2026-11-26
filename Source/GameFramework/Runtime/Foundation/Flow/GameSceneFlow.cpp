@@ -12,7 +12,7 @@
 #include "Engine/Scene/SceneManager.h"
 
 #include "GameFramework/Runtime/Foundation/Flow/GameInstanceClientHook.h"
-#include "GameFramework/Runtime/Foundation/Flow/ScreenTransitionManager.h"
+#include "GameFramework/Runtime/Foundation/Flow/ScreenTransitionController.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameSettings.h"
 #include "GameFramework/Runtime/Foundation/Save/Autosave.h"
 #include "GameFramework/Runtime/Foundation/Save/GameSaveSlots.h"
@@ -30,7 +30,7 @@ namespace sw
      */
     SW_GLOBAL_VARIABLE( sw::GlobalString, gv_firstScene, "", "팩 설정의 시작 씬 대신 처음 열 씬의 리소스 경로 (비우면 사용 안 함)" );
 
-    GameSceneFlow::GameSceneFlow( const GameSettings& settings, ScreenTransitionManager& screenTransition, ILoadingScreen* pLoadingScreen, SaveLock& saveLock )
+    GameSceneFlow::GameSceneFlow( const GameSettings& settings, ScreenTransitionController& screenTransition, ILoadingScreen* pLoadingScreen, SaveLock& saveLock )
         : _settings{ settings }
         , _screenTransition{ screenTransition }
         , _pLoadingScreen{ pLoadingScreen }
@@ -49,7 +49,7 @@ namespace sw
 
     span<const utf8* const> GameSceneFlow::getSubsystemDependencies() const
     {
-        static constexpr const utf8* kArrDependency[] = { ScreenTransitionManager::kSubsystemName }; // 로딩 화면(클라이언트 전용)은 생성자에서 받고 갱신 때만 부른다
+        static constexpr const utf8* kArrDependency[] = { ScreenTransitionController::kSubsystemName }; // 로딩 화면(클라이언트 전용)은 생성자에서 받고 갱신 때만 부른다
         return kArrDependency;
     }
 
@@ -138,7 +138,7 @@ namespace sw
 
     void GameSceneFlow::resetRunningProgress()
     {
-        if ( AutosaveManager* const pAutosave = game::findSubsystem<AutosaveManager>() )
+        if ( AutosaveController* const pAutosave = game::findSubsystem<AutosaveController>() )
             pAutosave->beginNewGame();
         if ( GameSaveSlots* const pSaveSlots = game::findSubsystem<GameSaveSlots>() )
             pSaveSlots->setPlayTime( 0.0 );

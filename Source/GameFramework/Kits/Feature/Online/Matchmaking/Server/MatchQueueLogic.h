@@ -8,7 +8,7 @@
  *            메모리에 없는 계정(다른 서버의 파티원, 막 접속한 사람)은 올려 달라고 한 뒤 3초까지 기다리고, 그래도 없으면 RatingUnavailable 이다.
  *            권한이 있으면 바로 매처에 넣고, 없으면 버스 `mm.queue.<모드>` 로 보낸다. 빠지기는 `mm.cancel.<모드>` 로 보낸다.
  *            다른 서버가 낸 파티 티켓의 빠지기는 낸 서버에도 `mm.origincancel.<서버>` 로 보낸다 — 파티 기록에 잡혔지만 아직 대기열에 넣지 않은 티켓은 낸 서버만 안다.
- *          - 배정: 경기가 만들어지면 기반 계층의 `ServerRegistryReader` 로 모드의 서버 종류, 경기 지역, 인원 슬롯에 맞는 서버를 고른다.
+ *          - 배정: 경기가 만들어지면 기반 계층의 `ServerDirectoryReader` 로 모드의 서버 종류, 경기 지역, 인원 슬롯에 맞는 서버를 고른다.
  *            게임 서버에는 명단을 캐시 기록 `mm/match/<서버>/<경기>`(수명은 모드의 경기 시한, 목록은 정렬 집합 `mm/matches/<서버>`, 점수는 끝나는 시각)으로 남기고
  *            `mm.assign.<서버>` 로도 알린다. 버스 배정과 Found 는 기록 · 목록 쓰기가 Ok 를 받은 뒤에 나가고, 쓰기가 지면 NoServer 로 끝난다. 버스는 "최대 한 번" 이라 잃을 수 있으므로 게임 서버(`MatchServerAgent`)는 기록을 주기적으로 읽어 수락을 판정한다(Agones Allocation · PlayFab MPS 의 영속 배정).
  *            티켓을 낸 서버에는 `mm.result.<서버>` 로 결과를 보낸다. 결과를 받은 서버가 멤버에게 알린다.
@@ -33,7 +33,7 @@
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Runtime/MatchmakingProtocol.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/MatchMaker.h"
-#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/ServerRegistryReader.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/ServerDirectoryReader.h"
 #include "GameFramework/Runtime/Online/Bus/ServerBusTopic.h"
 #include "GameFramework/Runtime/Online/Service/PendingRequestTable.h"
 
@@ -64,9 +64,9 @@ namespace sw
 
 namespace sw
 {
-    struct EphemeralReply;
+    struct CacheReply;
 
-    class EphemeralStoreRouter;
+    class CacheStoreRouter;
     class IAccountStatSource;
     class PartyLobbyLogic;
     class ServerBus;
@@ -78,15 +78,15 @@ namespace sw
     /** @brief 빌려 쓰는 객체들입니다. 대기열보다 오래 살아야 합니다. */
     struct MatchQueueDependencies
     {
-        EphemeralStoreRouter* _pRouter{ nullptr };     ///< 필수이다. 임대와 서버 목록에 쓴다
-        ServerBus*            _pBus{ nullptr };        ///< 서버가 한 대이면 null 이며 이 서버가 항상 권한을 가진다
-        PartyLobbyLogic*      _pPartyLobby{ nullptr }; ///< 파티 티켓과 로비 다시 열기에 쓴다. 없으면 혼자 티켓만 다룬다
-        IAccountStatSource*   _pStatSource{ nullptr }; ///< 실력 모드(`_ratingStat` 이 있는 모드)가 있으면 필수이다. 클라이언트는 실력을 보내지 않는다
-        uint64                _serverID{ 1 };          ///< 32비트 안의 값이다. 티켓과 경기 id 의 위쪽 32비트가 된다
-        int64                 _registryRefreshPeriodMs{ 2000 };
-        int64                 _cancelConfirmWaitMs{ 0 };  ///< 필수 — 빠지기가 권한 서버의 확인 답을 기다리는 시간(키트 설정 `_cancelConfirmWaitMs`). 넘으면 권한이 없는 것으로 보고 끝낸다
-        MatchQueuePolicy      _policy{};                  ///< 필수 — 임대 · 포기 · 통계 대기 시한(키트 설정 `_queue`)
-        int64                 _seatReservationTTLMs{ 0 }; ///< 필수 — 서버 사이의 좌석 예약 창(서버 설정 `_seatReservationSeconds`). 0 이면 `initialize` 가 거절한다
+        CacheStoreRouter*   _pRouter{ nullptr };     ///< 필수이다. 임대와 서버 목록에 쓴다
+        ServerBus*          _pBus{ nullptr };        ///< 서버가 한 대이면 null 이며 이 서버가 항상 권한을 가진다
+        PartyLobbyLogic*    _pPartyLobby{ nullptr }; ///< 파티 티켓과 로비 다시 열기에 쓴다. 없으면 혼자 티켓만 다룬다
+        IAccountStatSource* _pStatSource{ nullptr }; ///< 실력 모드(`_ratingStat` 이 있는 모드)가 있으면 필수이다. 클라이언트는 실력을 보내지 않는다
+        uint64              _serverID{ 1 };          ///< 32비트 안의 값이다. 티켓과 경기 id 의 위쪽 32비트가 된다
+        int64               _registryRefreshPeriodMs{ 2000 };
+        int64               _cancelConfirmWaitMs{ 0 };  ///< 필수 — 빠지기가 권한 서버의 확인 답을 기다리는 시간(키트 설정 `_cancelConfirmWaitMs`). 넘으면 권한이 없는 것으로 보고 끝낸다
+        MatchQueuePolicy    _policy{};                  ///< 필수 — 임대 · 포기 · 통계 대기 시한(키트 설정 `_queue`)
+        int64               _seatReservationTTLMs{ 0 }; ///< 필수 — 서버 사이의 좌석 예약 창(서버 설정 `_seatReservationSeconds`). 0 이면 `initialize` 가 거절한다
     };
 } // namespace sw
 
@@ -191,13 +191,13 @@ namespace sw
 
         struct ModeState
         {
-            MatchMaker                       _maker{};
-            unique_ptr<ServerRegistryReader> _reader{};
-            vector<UnplacedMatch>            _listUnplaced{}; ///< 배정할 서버가 없어 기다리는 경기이다
-            int64                            _leaseAttemptMs{ 0 };
-            uint8                            _bAuthority{ SW_FALSE };
-            uint8                            _bLeaseAttempted{ SW_FALSE };
-            uint8                            _bLeasePending{ SW_FALSE }; ///< 임대 요청의 답을 기다린다
+            MatchMaker                        _maker{};
+            unique_ptr<ServerDirectoryReader> _reader{};
+            vector<UnplacedMatch>             _listUnplaced{}; ///< 배정할 서버가 없어 기다리는 경기이다
+            int64                             _leaseAttemptMs{ 0 };
+            uint8                             _bAuthority{ SW_FALSE };
+            uint8                             _bLeaseAttempted{ SW_FALSE };
+            uint8                             _bLeasePending{ SW_FALSE }; ///< 임대 요청의 답을 기다린다
         };
 
         struct LocalTicket
@@ -313,7 +313,7 @@ namespace sw
         void               failPlacement( const PendingPlacement& placement );
         void               deliverPending( const PendingDelivery& delivery );
         void               updateLease( const string& modeID, ModeState& state, UnixMilliseconds nowMs );
-        void               onLeaseReply( const string& modeID, const EphemeralReply& reply );
+        void               onLeaseReply( const string& modeID, const CacheReply& reply );
         void               placeMatches( ModeState& state, UnixMilliseconds nowMs );
         [[nodiscard]] bool placeMatch( ModeState& state, const MatchFormed& match, MatchQueueResult failResult, UnixMilliseconds nowMs );
         void               deliverToTicket( uint64 originServerID, const MatchAssignment& assignment );

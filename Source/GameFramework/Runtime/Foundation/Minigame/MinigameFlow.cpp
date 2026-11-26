@@ -307,7 +307,7 @@ namespace sw
             return true;
         }
         // 들어가기 직전에 저장을 한 번 맡긴다 — 저장을 막는 미니게임이면 바깥 진행의 마지막 좋은 저장이 여기 남는다. 정책이 없는 게임은 자동 저장이 없다.
-        if ( AutosaveManager* const pAutosave = game::findSubsystem<AutosaveManager>() )
+        if ( AutosaveController* const pAutosave = game::findSubsystem<AutosaveController>() )
             (void)pAutosave->saveNow( AutosaveTrigger::AreaChanged, definition._name ); // 맡기지 못했으면(쓰는 중 · 막힘 — 쌓인 진입) 마지막 저장이 그대로 남는다
         MinigameSuspendedScene suspended;
         suspended._scenePath    = pScene->getSourcePath();
