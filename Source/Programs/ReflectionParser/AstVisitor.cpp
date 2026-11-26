@@ -171,7 +171,9 @@ namespace sw
         if ( kind == CXCursor_Namespace )
         {
             self->reportUnpairedMarker( marker, cursor );
-            return CXChildVisit_Recurse;
+            // 대상 밖 파일에서 연 이름공간(표준 헤더의 `std`, include 한 엔진 헤더마다의 `sw`)은 내려가지 않는다. 대상의 선언은 대상 파일에서 연
+            // 이름공간 안에만 있다(입력은 이름공간 밖에서 include 된다). 내려가면 그 안의 선언마다 위치를 물어 버리는 일이 순회의 대부분이다.
+            return self->findTargetIndex( cursor ) == kNoTarget ? CXChildVisit_Continue : CXChildVisit_Recurse;
         }
 
         // include 된 외부 · 시스템 헤더의 선언은 바로 건너뛴다(AST 순회 비용을 크게 줄인다)
