@@ -921,10 +921,11 @@ SW_TEST_CASE( RenderPipelineAssetTest, DiscardedAttachmentCannotBeRead )
     SW_EXPECT_EQUAL( 3, static_cast<int32>( ops._clearStencil ) );
     SW_EXPECT_TRUE( ops._storeOp == RHIRenderPassStoreOp::DontCare );
 
-    // 같은 첨부를 여는 패스가 둘이면 뒤 패스가 정의되지 않은 값을 읽는다.
+    // 같은 첨부를 여는 패스가 둘이면 뒤 패스가 정의되지 않은 값을 읽는다. 뒤 패스는 다른 종류다 — 같은 종류를 두 번 두면 그 규칙(`PassTypeDuplicated`)이 먼저 난다.
     string                                   xml = Util::makeXML( passAttributes, "", "", "<RenderPassAttachment _name=\"SceneDepth\" _format=\"D24_UNORM_S8_UINT\" _storeOp=\"DontCare\"/>" );
     StringBuilder<constant::buffer::kMax512> secondPass;
-    secondPass.appendFormat( "<RenderGraphPassDesc _name=\"Second\" %#><_listOutput><item>SceneColor</item></_listOutput></RenderGraphPassDesc>", passAttributes );
+    secondPass.appendFormat( "<RenderGraphPassDesc _name=\"Second\" _type=\"ForwardOnlyOpaque\" _depthAttachment=\"SceneDepth\" %#><_listOutput><item>SceneColor</item></_listOutput></RenderGraphPassDesc>",
+                             Util::kOpaqueState );
     xml.insert( xml.find( "</_listPass>" ), secondPass.c_str(), secondPass.size() );
     SW_EXPECT_FALSE( Util::load( asset, xml ) );
 }

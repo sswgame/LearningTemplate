@@ -1533,6 +1533,15 @@ namespace sw
                 const RenderPipelineDesc& desc = asset.getDesc();
                 if ( desc._listPass.empty() == false )
                 {
+                    // 시험 그래프는 순서(순환 · 섞인 읽기)만 본다. 로드에는 모듈 · 확장 패스와 엔진이 채우는 자원이 없어 "아무도 쓰지 않는 읽기" 를 판정할 수 없다 —
+                    // 그 판정은 모든 패스가 든 프레임 그래프의 경고(`RenderGraph.ResourceReadButNever`)가 한다. 그래서 XML 패스가 쓰지 않는 입력은 시험 그래프에 넣지 않는다(간선이 없어 순서에도 영향이 없다).
+                    vector<hashed_string> listWritten;
+                    for ( const RenderGraphPassDesc& pass : desc._listPass )
+                    {
+                        listWritten.insert( listWritten.end(), pass._listResolvedOutput.begin(), pass._listResolvedOutput.end() );
+                        if ( pass._resolvedDepthAttachment.empty() == false )
+                            listWritten.push_back( pass._resolvedDepthAttachment );
+                    }
                     RenderGraph viewGraph;
                     for ( const RenderGraphPassDesc& pass : desc._listPass )
                     {
@@ -1542,7 +1551,7 @@ namespace sw
                         vector<hashed_string> listInput;
                         for ( const RenderGraphPassDesc::ResolvedAttachment& input : pass._listResolvedInput )
                         {
-                            if ( VectorUtil::contains( listOutput, input._attachment ) == false )
+                            if ( VectorUtil::contains( listOutput, input._attachment ) == false && VectorUtil::contains( listWritten, input._attachment ) )
                                 listInput.push_back( input._attachment );
                         }
                         (void)viewGraph.addPass( pass._resolvedName, std::move( listInput ), std::move( listOutput ) ); // 이름 겹침은 앞 규칙(2-0)이 막았다
