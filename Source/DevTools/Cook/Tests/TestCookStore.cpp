@@ -213,16 +213,29 @@ SW_TEST_CASE( CookRecordTest, RoundTripsAndRejectsBrokenRecords )
 
     SW_EXPECT_FALSE( CookRecord::read( root.join( "missing.cookrec" ), readBack ) ); // 처음 굽는 작업 — 조용히 false
 
-    SW_EXPECT_LOG( "Cook.RecordInvalid" );
-    const AbsolutePath oldFormat = root.join( "old.cookrec" );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( oldFormat, "SWCOOKREC 1\nkey 0123456789abcdef\noutput 0123456789abcdef\n" ) );
-    SW_EXPECT_FALSE( CookRecord::read( oldFormat, readBack ) );
+    SW_EXPECT_LOG( "Cook.RecordInvalid" ); // 같은 판인데 깨진 기록만 경고한다
     const AbsolutePath                       shortHash = root.join( "short.cookrec" );
     StringBuilder<constant::buffer::kMax128> shortHashText;
-    shortHashText.appendFormat( "%#\nkey 0123\noutput 0123456789abcdef\n", CookRecord::kHeader );
+    shortHashText.appendFormat( "%#\nkey 0123\noutput 0123456789abcdef\n", CookRecord::makeHeader() );
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( shortHash, shortHashText.view() ) );
     SW_EXPECT_FALSE( CookRecord::read( shortHash, readBack ) );
     SW_EXPECT_EQUAL( 0ull, readBack._key ); // 거절한 기록은 빈 값으로 돌려준다
+}
+
+/**
+ * @brief [CookRecordTest] 다른 판(`kCookFormatVersion`)의 기록은 경고 없이 미스다 — 판을 올리면 모든 기록이 한 번 이 길로 온다
+ * @details 결함: 판 번호를 올리지 않고 입력 줄 철자를 바꿔 옛 기록마다 `Cook.RecordInvalid` 경고가 났고, 그 경고를 본 시나리오가 UnhandledLog 로 졌다.
+ *          이 케이스는 로그를 기대하지 않는다 — 경고가 나면 케이스가 진다.
+ */
+SW_TEST_CASE( CookRecordTest, OtherFormatVersionIsSilentMiss )
+{
+    const AbsolutePath root = test::makeScratchPath( "RecordOtherVersion" );
+    CookRecord         readBack;
+    const AbsolutePath oldFormat = root.join( "old.cookrec" );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( oldFormat, "SWCOOKREC 4\nkey 0123456789abcdef\noutput 0123456789abcdef\nresource 0123456789abcdef game/x.xml\n" ) );
+    SW_EXPECT_FALSE( CookRecord::read( oldFormat, readBack ) );
+    SW_EXPECT_EQUAL( 0ull, readBack._key );
+    SW_EXPECT_TRUE( CookRecord::makeHeader() != "SWCOOKREC 4" ); // 판을 올렸다(입력 줄 머리가 열거자 이름)
 }
 
 /** @brief [CookStoreTest] 대상 플랫폼 태그가 다르면 다른 작업이다 — 쿠커가 읽는 글의 조건이 그 값으로 풀리는데 키에 없으면 한 DDC 열쇠에 플랫폼마다 다른 바이트를 번갈아 쓴다 */

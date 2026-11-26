@@ -59,6 +59,8 @@ namespace sw
         static void               remove( const LocalizationModuleProject* pProject );
         /** @brief 올라온 프로젝트 경로입니다(올린 순서, 사본). */
         static vector<string> collectProjectPaths();
+        /** @brief 등록 목록이 바뀔 때마다(올리기 · 빼기) 오르는 번호입니다. 맞추는 쪽(`LocalizationManager::syncModuleProjects`)이 앞에 본 번호와 비교해 다시 맞출 때를 안다. */
+        [[nodiscard]] static uint32 getRegistrationGeneration();
     };
 
     /** @brief 키트 모듈이 두는 현지화 프로젝트 정적 등록자입니다(모듈이 내려가면 뺀다). */
@@ -142,6 +144,8 @@ namespace sw
         /**
          * @brief 키트 모듈이 등록한 프로젝트(`LocalizationModuleProject`)와 `Module` 범위의 탑재를 맞춥니다 — 새 등록은 올리고, 사라진 등록(내려간 모듈)은 뗀다.
          * @details 모듈 적재 단계(`ModuleLoadStage`)와 엔진 프로젝트 탑재(`EngineDefaultAssetsSubsystem`) 뒤에 부른다. 두 순서 어느 쪽이 먼저여도 같은 결과다.
+         *          등록 목록이 앞에 맞춘 때와 같으면(`LocalizationModuleProject::getRegistrationGeneration`) 아무것도 하지 않고 그때의 결과를 돌려주므로 프레임마다 불러도 된다 —
+         *          에디터 확장 모듈은 에디터가 선 뒤에도 올라오고 내려가서 에디터가 프레임 앞에서 부른다(`EditorSubsystemSet::syncExtensionRegistrations`).
          * @return 올리지 못한 등록이 있으면 false 입니다(그 프로젝트의 읽기가 이유를 남겼다 — 키트 글이 빠진 채로 돌지 않게 기동을 멈춘다).
          */
         [[nodiscard]] bool syncModuleProjects();
@@ -314,6 +318,8 @@ namespace sw
         void notifyLanguageChanged( string_view oldLanguage, string_view newLanguage );
         /** @brief 지금 언어를 엔진의 리소스 조건(`locale` 축)에 적습니다 — 언어가 정해지는 자리(바꾸기 · 프로젝트 올리기 · 표 읽기 · 비우기)마다 부른다. `_mutex` 밖에서 부른다. */
         void syncLocaleTag() const;
+        /** @brief `syncModuleProjects` 의 몸통입니다(등록 목록과 탑재를 맞춥니다). */
+        [[nodiscard]] bool syncModuleProjectsInternal();
 
     private:
         mutable shared_mutex                                            _mutex;
@@ -338,9 +344,12 @@ namespace sw
         mutable set<string> _uniqueMissingKey SW_GUARDED_BY( _missingMutex );
 
         atomic<uint32> _textRevision;
+        uint32         _syncedModuleProjectGeneration; ///< 마지막 `syncModuleProjects` 가 본 등록 목록의 번호입니다(맞추는 스레드 하나만 읽고 쓴다)
         /// @brief 엔진 서비스로 선 관리자입니다. 따로 지은 관리자(에디터 UI 미리보기 · 도구 · 테스트)가 언어를 바꿔도 엔진 전체의 리소스 조건은 바뀌지 않는다.
-        uint8                  _bEngineInstance : 1;
-        [[maybe_unused]] uint8 _reserved        : 7;
+        uint8                  _bEngineInstance         : 1;
+        uint8                  _bModuleProjectsSynced   : 1; ///< `syncModuleProjects` 가 한 번이라도 맞췄다
+        uint8                  _bModuleProjectsComplete : 1; ///< 그 맞추기에서 올리지 못한 등록이 없었다(같은 번호로 다시 부르면 이 결과를 돌려준다 — 오류 로그가 프레임마다 나지 않게)
+        [[maybe_unused]] uint8 _reserved                : 5;
         /** @brief 텍스트 바뀜 콜백입니다(`registerLanguageChangedCallback`). 자기 잠금을 가진 스레드 안전 멀티캐스트라 `_mutex` 밖에서 부른다. */
         LockedMulticastDelegate<void( string_view, string_view )> _onLanguageChanged;
 

@@ -186,6 +186,41 @@ namespace sw
         }
     }
 
+    void ReloadTracker::recordBatch( ReloadSource source, const vector<ReloadBatchResult>& listResult )
+    {
+        // 경로마다 가장 나쁜 결과로 접는다(처음 나온 차례를 지킨다 — 표의 차례가 묶음 안 차례다).
+        vector<ReloadBatchResult> listFolded;
+        for ( const ReloadBatchResult& result : listResult )
+        {
+            ReloadBatchResult* pFolded = nullptr;
+            for ( ReloadBatchResult& folded : listFolded )
+            {
+                if ( folded._path == result._path )
+                {
+                    pFolded = &folded;
+                    break;
+                }
+            }
+            if ( pFolded == nullptr )
+            {
+                listFolded.push_back( result );
+                continue;
+            }
+            if ( result._kind > pFolded->_kind )
+            {
+                pFolded->_kind   = result._kind;
+                pFolded->_reason = result._reason;
+            }
+        }
+        for ( const ReloadBatchResult& folded : listFolded )
+        {
+            if ( folded._kind == ReloadBatchResultKind::Failed )
+                record( source, folded._path, ReloadResult::Failed, folded._reason );
+            else if ( folded._kind == ReloadBatchResultKind::Reloaded || isStale( source, folded._path ) )
+                record( source, folded._path, ReloadResult::Reloaded ); // 모두 같은 바이트면 되돌린 파일이다 — 갱신은 아니지만 낡음은 풀린다. 낡지 않은 경로는 적지 않는다
+        }
+    }
+
     bool ReloadTracker::isStale( ReloadSource source, string_view path ) const
     {
         ScopedLock<mutex> lock{ _mutex };

@@ -92,7 +92,7 @@ namespace sw
 
         /** @brief 이 세션의 네 훅을 묶습니다(`EngineFrameHookList::add` 에 넘긴다). */
         EngineFrameHooks makeFrameHooks();
-        /** @brief 프레임 시작(입력 `beginFrame` 전)입니다. 지금 단계의 시작 조건 · 가상 입력 붙이기 · 입력 전 단계를 돌립니다. 입력이 없으면 아무것도 하지 않습니다. */
+        /** @brief 프레임 시작(입력 `beginFrame` 전)입니다. 지금 단계의 시작 조건 · 가상 입력 붙이기 · 입력 전 단계를 돌리고, 시작한 프레임이면 렌더러의 뷰 대상을 버립니다. 입력이 없으면 아무것도 하지 않습니다. */
         void onFrameBegin( const EngineFrameContext& context );
         /**
          * @brief 프레임 끝(씬 틱과 렌더 제출 뒤, 입력 프레임을 닫기 전)입니다. 문맥의 스크린샷 수(프로세스 전체)에서 단계 기준선을 빼 실행기에 넘깁니다.

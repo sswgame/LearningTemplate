@@ -44,6 +44,22 @@ namespace sw
         bool isStale() const { return _lastResult == ReloadResult::Failed; }
     };
 
+    /** @brief 묶음 리로드에서 결과 하나(파일 하나의 변형 하나)의 결과입니다. 경로마다 가장 나쁜 것이 그 파일의 결과다(`Failed` > `Reloaded` > `Unchanged`). */
+    enum class ReloadBatchResultKind : uint8
+    {
+        Unchanged, ///< 다시 읽었지만 쓰는 값이 같다(셰이더 바이트가 같다) — 갱신으로 세지 않되, 파일 전체가 이것이면 앞의 낡음을 푼다
+        Reloaded,  ///< 다시 읽어 바뀐 값을 입혔다
+        Failed,    ///< 다시 읽지 못해 이전 값으로 돈다
+    };
+
+    /** @struct ReloadBatchResult @brief 묶음 리로드의 결과 하나입니다(`ReloadTracker::recordBatch`). */
+    struct ReloadBatchResult
+    {
+        string                _path;   ///< 그 결과를 낸 파일(셰이더는 소스 경로 — 한 파일에 변형이 여럿이다)
+        string                _reason; ///< 실패의 까닭(성공이면 빈 값)
+        ReloadBatchResultKind _kind{ ReloadBatchResultKind::Unchanged };
+    };
+
     /**
      * @struct ModuleReloadPhases
      * @brief 모듈 연쇄 리로드 한 번의 단계별 시간(ms)입니다. 사람이 기다리는 시간은 빌드 끝 감지부터 화면이 돌아오기까지라 대기 구간을 함께 잰다.
@@ -84,11 +100,18 @@ namespace sw
          */
         void record( ReloadSource source, string_view path, ReloadResult result, string_view reason = {} );
 
+        /**
+         * @brief 묶음 리로드 한 번(셰이더 재컴파일 묶음)의 결과를 경로마다 한 번씩 적습니다. 실패 수와 낡음을 같은 판정이 매긴다.
+         * @details 한 파일의 변형이 여럿이라 결과를 하나씩 적으면 뒤의 성공(바이트가 같은 정점 셰이더)이 앞의 실패(픽셀 셰이더)가 만든 낡음을 지웠다.
+         *          경로마다 가장 나쁜 결과 하나를 적는다: 하나라도 실패면 `Failed`(첫 까닭), 바뀐 것이 있으면 `Reloaded`, 모두 같으면 낡은 경로만 `Reloaded` 로 낡음을 푼다.
+         */
+        void recordBatch( ReloadSource source, const vector<ReloadBatchResult>& listResult );
+
         /** @brief 경로마다 마지막 상태의 복사본입니다(마지막 차례가 늦은 것부터). */
         [[nodiscard]] vector<ReloadTrackerEntry> copyEntries() const;
         /** @brief 지금 이전 값으로 돌고 있는(마지막 시도가 실패한) 경로 수입니다. */
         [[nodiscard]] uint32 countStale() const;
-        /** @brief 그 길의 그 경로가 지금 이전 값으로 돌고 있으면 true 입니다(바이트가 같아 적지 않는 성공도 낡음을 풀어야 하는 셰이더가 묻는다). */
+        /** @brief 그 길의 그 경로가 지금 이전 값으로 돌고 있으면 true 입니다. */
         [[nodiscard]] bool isStale( ReloadSource source, string_view path ) const;
 
         /** @brief 리로드 한 번(설정 파일 하나 · 에셋 하나 · 셰이더 묶음 하나 · 모듈 연쇄 하나)에 걸린 시간을 적습니다. 감시 값 `Reload.LastMs.<길>` 이 읽는다. */
