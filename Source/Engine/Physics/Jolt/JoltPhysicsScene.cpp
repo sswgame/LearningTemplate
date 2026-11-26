@@ -2208,7 +2208,7 @@ namespace sw
             if ( result._body.isValid() )
                 outListHit.push_back( result );
         }
-        return PhysicsQueryUtil::keepNearestHitPerBody( outListHit, firstIndex );
+        return PhysicsCastHit3D::keepNearestPerBody( outListHit, firstIndex );
     }
 
     uint32 JoltPhysicsScene::shapeCastAll( const PhysicsShapeDesc3D& shape, const float3& position, const quaternion& rotation, const float3& direction,
@@ -2234,7 +2234,7 @@ namespace sw
             if ( result._body.isValid() )
                 outListHit.push_back( result );
         }
-        return PhysicsQueryUtil::keepNearestHitPerBody( outListHit, firstIndex );
+        return PhysicsCastHit3D::keepNearestPerBody( outListHit, firstIndex );
     }
 
     void JoltPhysicsScene::makeRayHit( const JPH::RRayCast& ray, const JPH::RayCastResult& hit, float32 maxDistance, PhysicsCastHit3D& outHit ) const

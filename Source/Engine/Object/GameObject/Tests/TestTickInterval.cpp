@@ -91,7 +91,7 @@ namespace
             time._startSeconds = time._endSeconds;
             time._endSeconds += static_cast<float64>( kFrameSeconds );
             time._deltaTime     = kFrameSeconds;
-            const TickTurn turn = TickIntervalUtil::computeTurn( TickIntervalTestComponent::kTickInterval, component.getComponentID(), time );
+            const TickTurn turn = TickTurn::compute( TickIntervalTestComponent::kTickInterval, component.getComponentID(), time );
             for ( uint32 index = 0; index < turn._intervalCount; ++index )
             {
                 listExpected.push_back( frame );
@@ -165,7 +165,7 @@ SW_TEST_CASE( TickIntervalTest, LongFrameCountsIntervalsAndDisabledTimeIsDropped
 SW_TEST_CASE( TickIntervalTest, FixedStepIntervalFillsOncePerFrame )
 {
     constexpr float32 kStep = 1.0f / 60.0f;
-    for ( uint64 tickKey = 1; tickKey <= TickIntervalUtil::kPhaseCount; ++tickKey )
+    for ( uint64 tickKey = 1; tickKey <= TickTurn::kPhaseCount; ++tickKey )
     {
         TickFrameTime time{};
         bool          bOncePerFrame = true;
@@ -174,12 +174,12 @@ SW_TEST_CASE( TickIntervalTest, FixedStepIntervalFillsOncePerFrame )
             time._startSeconds = time._endSeconds;
             time._endSeconds += static_cast<float64>( kStep );
             time._deltaTime = kStep;
-            bOncePerFrame   = bOncePerFrame && TickIntervalUtil::computeTurn( kStep, tickKey, time )._intervalCount == 1u;
+            bOncePerFrame   = bOncePerFrame && TickTurn::compute( kStep, tickKey, time )._intervalCount == 1u;
         }
         SW_EXPECT_TRUE( bOncePerFrame );
     }
-    SW_EXPECT_EQUAL( 90, TickIntervalUtil::secondsToCount( kStep, 1.5f, 1 ) );
-    SW_EXPECT_EQUAL( 1, TickIntervalUtil::secondsToCount( kStep, 0.0f, 1 ) );
+    SW_EXPECT_EQUAL( 90, TickTurn::secondsToIntervalCount( kStep, 1.5f, 1 ) );
+    SW_EXPECT_EQUAL( 1, TickTurn::secondsToIntervalCount( kStep, 0.0f, 1 ) );
 }
 
 /** @brief [TickIntervalTest] 음수 · NaN 주기의 서브틱은 등록하지 않는다 */

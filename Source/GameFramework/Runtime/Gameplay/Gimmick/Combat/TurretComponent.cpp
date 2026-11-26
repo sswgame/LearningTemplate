@@ -286,7 +286,7 @@ namespace sw
         const bool bAimed = MathUtil::abs( delta ) <= _aimTolerance.radians() + maxTurn;
         if ( bAimed == false || bCanHit == false || _cooldownSteps > 0 )
             return;
-        _cooldownSteps            = TickIntervalUtil::secondsToCount( kTickInterval, _fireInterval, 1 );
+        _cooldownSteps            = TickTurn::secondsToIntervalCount( kTickInterval, _fireInterval, 1 );
         const GameObject* pVictim = pManager->resolveGameObject( _target );
         if ( pVictim == nullptr )
             return;

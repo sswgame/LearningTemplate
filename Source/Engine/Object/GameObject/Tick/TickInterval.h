@@ -26,11 +26,8 @@ namespace sw
     {
         float32 _deltaTime{ 0.0f };  ///< 틱에 넘길 시간 — 주기가 있으면 찬 주기 수만큼의 시간이다
         uint32  _intervalCount{ 0 }; ///< 이번 프레임에 찬 주기 수(주기가 없으면 1)
-    };
 
-    /** @struct TickIntervalUtil @brief 틱 주기의 셈입니다(파일 머리말). */
-    struct TickIntervalUtil
-    {
+        // 틱 주기의 셈(파일 머리말)
         static constexpr uint32  kPhaseBitCount    = 6;                     ///< 위상 칸 번호의 비트 수
         static constexpr uint32  kPhaseCount       = 1u << kPhaseBitCount;  ///< 주기를 나누는 위상 칸 수. 60 fps 에서 1 초 주기까지 한 프레임에 한 칸꼴이다
         static constexpr uint64  kGoldenRatioScale = 0x9E3779B97F4A7C15ull; ///< 2^64 / 황금비 — 곱의 위 비트가 잇따른 id 를 고르게 흩는다
@@ -48,7 +45,7 @@ namespace sw
         }
 
         /** @brief 주기 @p interval 초인 틱이 이번 프레임에 돌 차례인지, 돌면 얼마만큼인지 셉니다. 주기가 0 이면 늘 한 번(프레임 델타)입니다. */
-        static TickTurn computeTurn( float32 interval, uint64 tickKey, const TickFrameTime& time )
+        static TickTurn compute( float32 interval, uint64 tickKey, const TickFrameTime& time )
         {
             if ( interval <= 0.0f )
                 return TickTurn{ time._deltaTime, 1 };
@@ -61,7 +58,7 @@ namespace sw
         }
 
         /** @brief 초를 주기 @p interval 의 횟수로 바꿉니다. 반올림하며 최소 @p minCount 입니다(주기로 세는 지연 · 간격). */
-        [[nodiscard]] static int32 secondsToCount( float32 interval, float32 seconds, int32 minCount )
+        [[nodiscard]] static int32 secondsToIntervalCount( float32 interval, float32 seconds, int32 minCount )
         {
             return MathUtil::max( minCount, static_cast<int32>( MathUtil::round( seconds / interval ) ) );
         }
@@ -77,7 +74,7 @@ namespace sw
         uint32        _subTickID{ 0 };
         float32       _interval{ 0.0f }; ///< 주기(초). 0 이면 매 프레임
 
-        /** @brief 컴포넌트 @p componentID 의 이번 프레임 차례입니다(`TickIntervalUtil::computeTurn`). */
-        TickTurn computeTurn( uint64 componentID ) const { return TickIntervalUtil::computeTurn( _interval, componentID + _subTickID, _time ); }
+        /** @brief 컴포넌트 @p componentID 의 이번 프레임 차례입니다(`TickTurn::compute`). */
+        TickTurn computeTurn( uint64 componentID ) const { return TickTurn::compute( _interval, componentID + _subTickID, _time ); }
     };
 } // namespace sw

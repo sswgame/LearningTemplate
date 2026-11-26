@@ -1611,7 +1611,7 @@ namespace sw
         Box2DPhysicsSceneInternal::CastAllContext context{ this, &filter, &_settings._listMaterial, &outListHit, maxDistance };
         b2World_CastRay( _worldID, Box2DUtil::toBox2D( origin ), Box2DUtil::toBox2D( direction * maxDistance ), queryFilter,
                          &Box2DPhysicsSceneInternal::castAllResult, &context );
-        return PhysicsQueryUtil::keepNearestHitPerBody( outListHit, firstIndex );
+        return PhysicsCastHit2D::keepNearestPerBody( outListHit, firstIndex );
     }
 
     uint32 Box2DPhysicsScene::shapeCastAll( const PhysicsShapeDesc2D& shape, const float2& position, const float32& rotation, const float2& direction,
@@ -1629,7 +1629,7 @@ namespace sw
         const size_t                              firstIndex = outListHit.size();
         Box2DPhysicsSceneInternal::CastAllContext context{ this, &filter, nullptr, &outListHit, maxDistance };
         b2World_CastShape( _worldID, &proxy, Box2DUtil::toBox2D( direction * maxDistance ), queryFilter, &Box2DPhysicsSceneInternal::castAllResult, &context );
-        return PhysicsQueryUtil::keepNearestHitPerBody( outListHit, firstIndex );
+        return PhysicsCastHit2D::keepNearestPerBody( outListHit, firstIndex );
     }
 
     uint32 Box2DPhysicsScene::overlapShape( const PhysicsShapeDesc2D& shape, const float2& position, const float32& rotation, const PhysicsQueryFilter& filter,

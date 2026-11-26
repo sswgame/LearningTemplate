@@ -10,17 +10,27 @@
 
 namespace sw
 {
-    void SecretValueUtil::registerSerializeHandler( SerializeContext& context )
+    namespace
     {
-        for ( const utf8* pTypeName : { "Secret32", "SecretText" } )
+        void registerSecretRedactedTextHandler( SerializeContext& context, const utf8* pTypeName )
         {
             context.registerTextHandler(
                 hashed_string( pTypeName ),
                 []( const void* )
-            { return string( kRedactedText ); },
+            { return string( kSecretRedactedText ); },
                 []( void*, string_view )
             { return false; } ); // 글에는 값이 없다 — 가린 글을 값으로 읽지 않는다
         }
+    } // namespace
+
+    void Secret32::registerSerializeHandler( SerializeContext& context )
+    {
+        registerSecretRedactedTextHandler( context, "Secret32" );
+    }
+
+    void SecretText::registerSerializeHandler( SerializeContext& context )
+    {
+        registerSecretRedactedTextHandler( context, "SecretText" );
     }
 
     Secret32::~Secret32()

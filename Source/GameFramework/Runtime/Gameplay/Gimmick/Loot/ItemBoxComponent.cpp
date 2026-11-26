@@ -104,7 +104,7 @@ namespace sw
         ++_openCount;
         const bool bSpent = _maxOpenCount > 0 && _openCount >= _maxOpenCount;
         if ( bSpent == false && _respawnDelay > 0.0f )
-            _respawnStepsLeft = TickIntervalUtil::secondsToCount( kTickInterval, _respawnDelay, 1 );
+            _respawnStepsLeft = TickTurn::secondsToIntervalCount( kTickInterval, _respawnDelay, 1 );
         if ( isAvailable() )
             return choice._item; // 늘 있는 상자(낚시터)
         if ( _bHideWhenOpened )
