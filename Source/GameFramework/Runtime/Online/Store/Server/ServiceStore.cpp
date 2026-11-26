@@ -68,13 +68,13 @@ namespace sw
         write._kind            = ServiceWrite::Kind::Require;
     }
 
-    void ServiceTransaction::requireRange( const hashed_string& table, string_view keyPrefix, string_view cursorKey, int32 maxCount, bool bDescending, uint64 fingerprint )
+    void ServiceTransaction::requireRange( const hashed_string& table, string_view keyPrefix, string_view cursorKey, int32 maxCount, bool bDescending, uint64 digest )
     {
         ServiceWrite& write       = _listWrite.emplace_back();
         write._key                = string{ keyPrefix };
         write._table              = table;
         write._range._cursorKey   = string{ cursorKey };
-        write._range._fingerprint = fingerprint;
+        write._range._digest      = digest;
         write._range._maxCount    = maxCount;
         write._range._bDescending = bDescending ? SW_TRUE : SW_FALSE;
         write._kind               = ServiceWrite::Kind::RequireRange;
@@ -116,7 +116,7 @@ namespace sw
         return true;
     }
 
-    uint64 ServiceTransaction::computeRangeFingerprint( const vector<ServiceRecord>& listRecord, size_t first )
+    uint64 ServiceTransaction::computeRangeDigest( const vector<ServiceRecord>& listRecord, size_t first )
     {
         const uint64 count = first < listRecord.size() ? static_cast<uint64>( listRecord.size() - first ) : 0;
         uint64       hash  = HashUtil::appendBytes64( HashUtil::kFNVOffset64, &count, sizeof( count ) );

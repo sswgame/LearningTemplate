@@ -218,11 +218,11 @@ namespace sw
 
     uint64 GeneratedFileUtil::getWriteTime( const AbsolutePath& path )
     {
-        // `getFileTimestamp` 는 초 단위라 생성 직후 같은 초에 고친 편집을 "최신" 으로 본다. 파일끼리 선후만 비교하므로 플랫폼 단위 그대로의 `getFileStamp` 시각을 쓴다.
-        FileStamp stamp;
-        if ( path.empty() || FileUtil::getFileStamp( path, stamp ) == false )
+        // `getFileTimestamp` 는 초 단위라 생성 직후 같은 초에 고친 편집을 "최신" 으로 본다. 파일끼리 선후만 비교하므로 플랫폼 단위 그대로의 `getFileStat` 시각을 쓴다.
+        FileStat fileStat;
+        if ( path.empty() || FileUtil::getFileStat( path, fileStat ) == false )
             return 0;
-        return stamp._writeTime;
+        return fileStat._writeTime;
     }
 
     bool GeneratedStamp::read( const AbsolutePath& stampPath, GeneratedStamp& outStamp )

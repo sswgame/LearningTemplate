@@ -1,6 +1,6 @@
 /**
  * @file DevTools/ModuleReload/HotReload/ModuleLibraryPatch.h
- * @brief 섀도 복사본을 올리기 전에 파일 바이트를 읽고 고칩니다(엔진 ABI 스탬프 · 리눅스 SONAME · Windows import DLL 이름).
+ * @brief 섀도 복사본을 올리기 전에 파일 바이트를 읽고 고칩니다(엔진 ABI 다이제스트 · 리눅스 SONAME · Windows import DLL 이름).
  *
  * @note 핫 리로드(`ModuleHotReloadManager`)와 그 테스트만 쓰고, Shipping 빌드에서 함께 빠집니다(`Source/ModuleManager/CMakeLists.txt` 의 제외 목록).
  */
@@ -9,7 +9,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 
-#include "Engine/Module/EngineABIStampMarker.h"
+#include "Engine/Module/EngineABIDigestMarker.h"
 
 namespace sw
 {
@@ -36,9 +36,9 @@ namespace sw
             Load,  ///< 일반 import(IMAGE_DIRECTORY_ENTRY_IMPORT). 로더가 로드할 때 바인딩한다
             Delay, ///< 지연 import(IMAGE_DIRECTORY_ENTRY_DELAY_IMPORT). 첫 호출이 썽크를 지나 바인딩한다
         };
-        /** @brief 엔진 ABI 스탬프 문자열의 머리입니다. 뒤에 SHA-1 16진 40 글자가 옵니다(정본 `EngineABIStampMarker.h`). */
-        static constexpr const utf8* kEngineABIStampMarker = SW_ENGINE_ABI_STAMP_MARKER;
-        static constexpr uint32      kEngineABIStampDigits = 40;
+        /** @brief 엔진 ABI 다이제스트 문자열의 머리입니다. 뒤에 SHA-1 16진 40 글자가 옵니다(정본 `EngineABIDigestMarker.h`). */
+        static constexpr const utf8* kEngineABIDigestMarker = SW_ENGINE_ABI_DIGEST_MARKER;
+        static constexpr uint32      kEngineABIDigestDigits = 40;
 
         /** @brief 동적 섹션의 DT_SONAME 을 읽습니다. ELF64 LE 가 아니거나 SONAME 이 없으면 false 입니다. */
         [[nodiscard]] static bool readSoname( const vector<uint8>& bytes, string& outSoname );
@@ -74,11 +74,11 @@ namespace sw
         static uint32 replaceImportDLLName( vector<uint8>& inoutBytes, string_view from, string_view to );
 
         /**
-         * @brief 모듈 파일 바이트에서 엔진 ABI 스탬프(`swEngineABIStamp:<sha1>`)을 찾습니다. 이 함수만은 ELF 에 한정되지 않습니다(DLL · SO 모두).
+         * @brief 모듈 파일 바이트에서 엔진 ABI 다이제스트(`swEngineABIDigest:<sha1>`)을 찾습니다. 이 함수만은 ELF 에 한정되지 않습니다(DLL · SO 모두).
          * @details 핫 리로드는 모듈 코드가 한 줄도 돌기 전에(정적 초기화 전) 돌고 있는 엔진과 같은 헤더로 빌드됐는지 봐야 하므로, 심볼을
          *          찾지 않고 파일에서 표식 문자열을 찾습니다.
-         * @return 표식과 그 뒤 16진 40 글자가 온전히 있으면 true 입니다(@p outStamp 는 표식을 포함한 전체).
+         * @return 표식과 그 뒤 16진 40 글자가 온전히 있으면 true 입니다(@p outDigest 는 표식을 포함한 전체).
          */
-        [[nodiscard]] static bool findEngineABIStamp( const vector<uint8>& bytes, string& outStamp );
+        [[nodiscard]] static bool findEngineABIDigest( const vector<uint8>& bytes, string& outDigest );
     };
 } // namespace sw

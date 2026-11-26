@@ -12,7 +12,7 @@
 `kImporterVersion` 입니다. 텍스처 BC7 은 장당 수 분이라 소스를 고칠 때마다 모두 다시 임포트할 수 없고, DDC 는 어긋난 원본을 임포트하기 전에만 찾으므로
 지문이 바뀌어도 임포트가 늘지 않습니다(다른 코드가 쓴 항목을 받지 않을 뿐입니다).
 
-사용법: py -3 Scripts/generate/cook_code_fingerprint.py --root <repo> --inputs <json> --vcpkg-status <status> --out <path/CookCodeFingerprint.gen.h> --cache <빌드 트리 안 json>
+사용법: py -3 Scripts/generate/cook_code_digest.py --root <repo> --inputs <json> --vcpkg-status <status> --out <path/CookCodeDigest.gen.h> --cache <빌드 트리 안 json>
 """
 from __future__ import annotations
 
@@ -55,7 +55,7 @@ def _collect_files(repository_root: Path, list_input: Sequence[str]) -> list[str
     return sorted(set(list_path))
 
 
-def _compute_fingerprint(repository_root: Path, list_input: Sequence[str], cache: FileDigestCache) -> int:
+def _compute_digest(repository_root: Path, list_input: Sequence[str], cache: FileDigestCache) -> int:
     """경로와 내용 지문(줄 끝은 LF)을 차례로 넣은 SHA-1 의 앞 64 비트입니다. 0 은 "없음" 이라 쓰지 않습니다."""
     return int.from_bytes(cache.tree_digest(repository_root, _collect_files(repository_root, list_input))[:8], "big") or 1
 
@@ -76,22 +76,22 @@ def _make_tool_version_text(status_path: Path) -> str:
     return "; ".join(f"{name} {_read_installed_version(status_path, name)}" for name in LIST_SHADER_TOOL_PACKAGE)
 
 
-def _make_header_text(map_fingerprint: dict[str, int], compiler_version: str) -> str:
-    list_row = [f'        {{ "{name}", 0x{value:016x}ull }},\n' for name, value in sorted(map_fingerprint.items())]
+def _make_header_text(map_digest: dict[str, int], compiler_version: str) -> str:
+    list_row = [f'        {{ "{name}", 0x{value:016x}ull }},\n' for name, value in sorted(map_digest.items())]
     return (
-        "// 생성 파일 - Scripts/generate/cook_code_fingerprint.py. 고치지 마십시오.\n"
+        "// 생성 파일 - Scripts/generate/cook_code_digest.py. 고치지 마십시오.\n"
         "#pragma once\n\n"
         "namespace sw::cookcode\n{\n"
         f'    inline constexpr const utf8* kShaderCompilerVersion = "{compiler_version}";\n\n'
-        "    inline constexpr CookCodeFingerprintRow kArrRow[] = {\n"
+        "    inline constexpr CookCodeDigestRow kArrRow[] = {\n"
         + "".join(list_row)
         + "    };\n"
         "} // namespace sw::cookcode\n"
     )
 
 
-class CookCodeFingerprintCommand(Command):
-    name = "cook-code-fingerprint"
+class CookCodeDigestCommand(Command):
+    name = "cook-code-digest"
     help = "쿠커 코드 지문과 셰이더 컴파일러 버전을 C++ 헤더로 쓴다(빌드 단계)"
 
     def add_arguments(self, parser: argparse.ArgumentParser) -> None:
@@ -106,15 +106,15 @@ class CookCodeFingerprintCommand(Command):
         try:
             map_input: dict[str, list[str]] = json.loads(Path(args.inputs).read_text(encoding="utf-8"))
             cache = FileDigestCache(Path(args.cache))
-            map_fingerprint = {name: _compute_fingerprint(repository_root, list_input, cache) for name, list_input in map_input.items()}
+            map_digest = {name: _compute_digest(repository_root, list_input, cache) for name, list_input in map_input.items()}
             cache.save()
             compiler_version = _make_tool_version_text(Path(args.vcpkg_status))
         except (OSError, ValueError, TypeError, AttributeError) as error:
             raise GeneratorError(str(error)) from error
         # 빌드마다 도는 단계라 바뀐 때만 한 줄 찍는다. 내용이 같으면 파일을 다시 쓰지 않아 Ninja 의 restat 이 그 뒤를 멈춘다.
-        write_generated_file(Path(args.out), _make_header_text(map_fingerprint, compiler_version), tag="CookCodeFingerprint", newline="\n", report_unchanged=False)
+        write_generated_file(Path(args.out), _make_header_text(map_digest, compiler_version), tag="CookCodeDigest", newline="\n", report_unchanged=False)
         return ExitCode.PASSED
 
 
 if __name__ == "__main__":
-    sys.exit(CookCodeFingerprintCommand.main())
+    sys.exit(CookCodeDigestCommand.main())

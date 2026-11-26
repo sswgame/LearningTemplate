@@ -53,7 +53,7 @@ namespace sw
      * @brief 모듈을 섀도 경로에 복사해 로드하는 핫 리로드 매니저입니다.
      * @note 연쇄 교체는 의존 순서(위상 정렬)대로 합니다. 모든 모듈의 prepare 가 성공한 뒤에만 commit 합니다. 언로드는 위상 역순
      *       (의존하는 쪽 먼저)입니다.
-     *       - 적용 전 실패는 옛 라이브러리를 그대로 두고 계속 돕니다(그래프를 막지 않습니다). 엔진 ABI 스탬프 불일치, 로드 실패, 라이브러리 검사
+     *       - 적용 전 실패는 옛 라이브러리를 그대로 두고 계속 돕니다(그래프를 막지 않습니다). 엔진 ABI 다이제스트 불일치, 로드 실패, 라이브러리 검사
      *         거절(`IReloadableModuleClient::isLibraryUsable`), 배치 직전 콜백의 거절(`addOnBeforeCommitBatch`)이 여기에 해당합니다. 새 라이브러리가 상태를 넘겨받기 전이라 잃는 것이 없습니다.
      *       - 적용 뒤 결함은 되돌리지 않습니다. commit 중 실패, onAfter 의 결함, 그래프 막힘은 남은 commit 을 멈추고 그래프를 막습니다
      *         (재시작 안내). 이미 교체된 DLL 은 되돌릴 수 없습니다. UE Live Coding 과 Unity 의 도메인 리로드도 적용 뒤 결함을 되돌리지 않습니다.
@@ -103,7 +103,7 @@ namespace sw
          *          그 정적 레지스트리(타입, 컴포넌트 팩토리, 전역 변수)가 그때 등록을 모으는 모듈(SWGame 이나 첫 키트)의 이름으로 들어간다.
          *          그러면 SWGame 의 팩토리 캐시를 덮어써서 그 뒤에 만든 씬에 SWGame 컴포넌트가 없어지고, 첫 SWGame 리로드가 공용 모듈의 컴포넌트와 타입을 모든
          *          씬에서 지운다. 공용 모듈은 다시 로드되지 않으므로 돌아오지도 않는다. 그래서 그 모듈을 링크하는 모듈을 등록하기 전에 이 함수를 부른다.
-         *          로드하기 전에 엔진 ABI 스탬프를 대조한다. 라이브러리는 리로드하지 않고, 이 매니저가 `shutdown` 에서 그것을 링크하는 모듈을 모두 내린 뒤 마지막에 내린다(의존 모듈의 import 가 그 라이브러리를 가리킨다).
+         *          로드하기 전에 엔진 ABI 다이제스트를 대조한다. 라이브러리는 리로드하지 않고, 이 매니저가 `shutdown` 에서 그것을 링크하는 모듈을 모두 내린 뒤 마지막에 내린다(의존 모듈의 import 가 그 라이브러리를 가리킨다).
          * @return 로드했거나 이 매니저가 이미 로드했으면 true 입니다. 파일이 없으면(그 모듈을 쓰지 않는 구성) 아무것도 하지 않고 true 를 반환합니다.
          */
         [[nodiscard]] bool loadSharedModule( string_view moduleName ) override;
@@ -122,7 +122,7 @@ namespace sw
         /**
          * @brief 이 프로세스가 시작한 빌드(`ModuleCompiler`)가 시작됐음을 알립니다. 끝날 때까지 파일 감시가 본 모듈 변경을 적용하지 않습니다. 어느 스레드에서나 부를 수 있습니다.
          * @details 연쇄 빌드는 모듈 DLL 을 하나씩 다시 쓴다. mtime 이 디바운스 시간만큼 멈췄다고 적용하면, 의존하는 모듈의 링크가 아직 끝나지 않은
-         *          반쯤 완성된 집합이 로드된다(헤더가 어긋나면 ABI 스탬프가 막지만, 같은 헤더의 반쯤 완성된 집합은 막지 못한다). 언리얼 Live Coding 도 빌드가
+         *          반쯤 완성된 집합이 로드된다(헤더가 어긋나면 ABI 다이제스트가 막지만, 같은 헤더의 반쯤 완성된 집합은 막지 못한다). 언리얼 Live Coding 도 빌드가
          *          끝난 뒤에 패치한다. 바깥에서 돌린 빌드(터미널, IDE)는 빌드 성공 스탬프(`config::kFileModuleBuildStamp`)가 바뀔 때만 올린다 — 빌드가 동적
          *          모듈을 모두 링크한 뒤에만 쓰는 파일이다(`sw_add_module_build_stamp`). 모듈 DLL 의 쓰기 자체는 리로드를 부르지 않는다.
          */
@@ -181,7 +181,7 @@ namespace sw
          *          (`ModuleShadowCopy::writeShadowCopy`). 바꾸기가 빠지면 Windows 는 원본 DLL 을 한 벌 더 로드하고, 리눅스는 SONAME 이 같은 먼저 로드된
          *          라이브러리에 바인딩된다. 어긋나면 한 프로세스에서 같은 모듈이 두 벌 돌고(정적 상태와 타입 등록이 갈린다), 옛 라이브러리를 언로드하는 순간
          *          거기로 점프하는 코드가 죽는다. 등록과 연쇄 리로드 끝에 호출하고, 어긋나면 그래프를 막는다. 섞인 채 조용히 도는 것보다 낫기 때문이다.
-         *          Windows 는 import 테이블 첫 항목이 가리키는 라이브러리로, 리눅스는 모듈마다 박힌 스탬프 상수(`sw_moduleEngineABIStamp_<이름>`,
+         *          Windows 는 import 테이블 첫 항목이 가리키는 라이브러리로, 리눅스는 모듈마다 박힌 다이제스트 상수(`sw_moduleEngineABIDigest_<이름>`,
          *          `sw_register_dynamic_module` 이 넣는다)의 주소로 판단한다.
          */
         bool verifyModuleBindings() const;
@@ -226,7 +226,7 @@ namespace sw
         {
             void*                        _pHandle{ nullptr };
             AbsolutePath                 _tempPath;
-            FileStamp                    _sourceStamp{}; ///< 원본의 도장(크기 · 100 ns 쓰기 시각) — 커밋하면 "로드한 원본" 이 된다
+            FileStat                     _sourceStat{};  ///< 원본의 도장(크기 · 100 ns 쓰기 시각) — 커밋하면 "로드한 원본" 이 된다
             engine::ModuleRegistrarHeads _heads;         ///< 로드한 라이브러리의 정적 등록자 머리(커밋 때 올린다)
             engine::ModuleRegistrarHeads _previousHeads; ///< 로드 전 전역 머리(중단하면 되돌린다)
         };
@@ -247,8 +247,8 @@ namespace sw
             AbsolutePath             _tempModulePath;
             ShadowLibraryNameState   _libraryName;
             void*                    _pLibraryModule;
-            FileStamp                _loadedSourceStamp; ///< 로드한 원본의 도장. 이것과 다르면 다시 빌드된 것이다(초 단위 크기 비교는 같은 초 안의 빌드를 놓쳤다)
-            FileStamp                _debounceStamp;     ///< 조용해지기를 기다리는 동안 마지막으로 본 원본의 도장
+            FileStat                 _loadedSourceStat; ///< 로드한 원본의 도장. 이것과 다르면 다시 빌드된 것이다(초 단위 크기 비교는 같은 초 안의 빌드를 놓쳤다)
+            FileStat                 _debounceStat;     ///< 조용해지기를 기다리는 동안 마지막으로 본 원본의 도장
             Stopwatch                _debounceTimer;
             atomic<bool>             _bPendingReload;
             atomic<bool>             _bMtimeDebouncing;

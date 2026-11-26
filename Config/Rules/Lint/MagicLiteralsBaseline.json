@@ -138,7 +138,7 @@
     "Source/Editor/AssetTypeActions/Model/ShaderAssetTypeActions.cpp": {"integer": 1},
     "Source/Editor/AssetTypeActions/Model/TextureAssetTypeActions.cpp": {"integer": 1},
     "Source/Editor/Common/Asset/AssetImportEntry.cpp": {"minus-one": 5},
-    "Source/Editor/Common/Asset/AssetImportStamp.cpp": {"integer": 3},
+    "Source/Editor/Common/Asset/AssetImportDigest.cpp": {"integer": 3},
     "Source/Editor/Common/Asset/AssetReferenceCheckEntry.cpp": {"minus-one": 4},
     "Source/Editor/Common/Asset/ImportedAssetStore.cpp": {"integer": 1},
     "Source/Editor/Common/Asset/ModelImport/MeshFracture.cpp": {"float": 13, "integer": 1, "hex": 1},

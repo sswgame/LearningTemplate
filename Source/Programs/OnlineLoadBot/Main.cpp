@@ -18,7 +18,7 @@
 #include "Core/Subsystem/SubsystemScope.h"
 
 #include "Engine/Engine.h"
-#include "Engine/Module/EngineABIStamp.h"
+#include "Engine/Module/EngineABIDigest.h"
 #include "Engine/Module/ModuleTypeRegistry.h"
 
 #include "ModuleManager/Host/HostLaunch.h"

@@ -136,10 +136,10 @@ namespace sw
         return bLists && reader.isFullyRead();
     }
 
-    string ShaderSourceRecord::makeKeyDescription( string_view source, string_view target, uint64 toolchainFingerprint, uint64 sourceHash )
+    string ShaderSourceRecord::makeKeyDescription( string_view source, string_view target, uint64 toolchainDigest, uint64 sourceHash )
     {
         string description;
-        description.append( "Shader source record\nsource=" ).append( source ).append( "\ntarget=" ).append( target ).append( "\ntoolchain=" ).append( to_string( toolchainFingerprint ) );
+        description.append( "Shader source record\nsource=" ).append( source ).append( "\ntarget=" ).append( target ).append( "\ntoolchain=" ).append( to_string( toolchainDigest ) );
         description.append( "\nsourceHash=" ).append( to_string( sourceHash ) ).append( "\n" );
         return description;
     }

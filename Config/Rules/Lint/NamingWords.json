@@ -18,7 +18,8 @@
     "Work": "Job",
     "Judgement": "Result(판정의 결과 — 금지어 Verdict 와 같은 자리)",
     "Tally": "Stats · Count(형식은 이미 …Stats 다)",
-    "Dirtied": "Dirty — markDirty(언리얼 MarkRenderStateDirty)"
+    "Dirtied": "Dirty — markDirty(언리얼 MarkRenderStateDirty)",
+    "Fingerprint": "Digest(내용 해시 — 한 개념에 낱말 하나, 2026-11-27 N10)"
   },
   "_keepTerms": [
     "WorkArea",
@@ -2447,7 +2448,6 @@
       "finds",
       "fine",
       "finger",
-      "fingerprint",
       "finish",
       "finished",
       "finishes",

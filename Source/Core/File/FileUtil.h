@@ -26,15 +26,15 @@ namespace sw
      *          이 프로세스의 쓰기를 쓰기 관찰자(`IFileWriteObserver`)로 받고, 바깥 도구의 쓰기만 시간 창으로 거른다(`ContentHashCache`). "바뀌었나" 를 묻는 쪽은
      *          도장이 아니라 내용 해시(`ContentHash::computeFile`)를 비교한다.
      */
-    struct FileStamp
+    struct FileStat
     {
         uint64 _sizeBytes{ 0 }; ///< 바이트 수
         uint64 _writeTime{ 0 }; ///< 마지막 쓰기 시각(1601 기원 100 ns 눈금 - 플랫폼이 같다. 같은지만 비교한다)
 
         /** @brief 크기와 시각이 모두 같은지 확인합니다. */
-        bool operator==( const FileStamp& other ) const { return _sizeBytes == other._sizeBytes && _writeTime == other._writeTime; }
+        bool operator==( const FileStat& other ) const { return _sizeBytes == other._sizeBytes && _writeTime == other._writeTime; }
         /** @brief 크기나 시각이 다른지 확인합니다. */
-        bool operator!=( const FileStamp& other ) const { return ( *this == other ) == false; }
+        bool operator!=( const FileStat& other ) const { return ( *this == other ) == false; }
     };
 } // namespace sw
 
@@ -47,7 +47,7 @@ namespace sw
     struct DirectoryEntry
     {
         string_view _path;                ///< 순회 루트로 시작하는 `/` 구분 UTF-8 경로(대소문자는 디스크 그대로)
-        FileStamp   _fileStamp{};         ///< 파일의 크기 · 쓰기 시각 — 나열이 함께 준 값이라 파일마다 `getFileStamp` 를 묻지 않아도 된다. 폴더 · 파일이 아닌 것은 0 이다
+        FileStat    _fileStat{};          ///< 파일의 크기 · 쓰기 시각 — 나열이 함께 준 값이라 파일마다 `getFileStat` 를 묻지 않아도 된다. 폴더 · 파일이 아닌 것은 0 이다
         bool        _bDirectory{ false }; ///< 디렉터리면 true(링크는 가리키는 쪽 기준)
 
         /** @brief 항목의 디스크 경로입니다(순회가 끝난 뒤에도 들 사본). 순회 루트가 절대 경로라 늘 절대 경로다. */
@@ -274,7 +274,7 @@ namespace sw
          * @details 파일 내용에서 뽑은 값(해시 등)을 캐시해 두고 "그 뒤로 파일이 바뀌었나" 만 확인할 때 씁니다. 파일을 여는 것보다
          *          쌉니다(이 PC 에서 열기는 ~200 us, 이 조회는 ~75 us 입니다. 둘 다 필터 드라이버를 거칩니다).
          */
-        [[nodiscard]] static bool getFileStamp( const DiskPath& fileName, FileStamp& outStamp );
+        [[nodiscard]] static bool getFileStat( const DiskPath& fileName, FileStat& outStat );
         /**
          * @brief 이 프로세스가 파일 · 폴더를 만들었거나 바꿔 끼운 횟수입니다(`writeFile` · `writeTextFile` · `copyFile` 이 성공할 때, `ensureDirectoryExists` 가 폴더를 만들 때마다 오릅니다).
          * @details "없는 파일" 을 기억하는 캐시(`AssetPaths`)가 이 값이 바뀌면 기억을 버립니다 — 파일이 생겼는데 옛 "없음" 을 돌려주지 않게. 이 값을 보는 쪽은

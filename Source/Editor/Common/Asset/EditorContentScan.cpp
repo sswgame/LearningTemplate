@@ -34,18 +34,18 @@ namespace sw::editor
                 const AbsolutePath folderPath = folder;
                 if ( FileUtil::isDirectory( folderPath ) == false )
                     return false;
-                const size_t                     firstFile = outListFile.size();
-                unordered_map<string, FileStamp> mapSidecarStamp; // 키: 원본의 디스크 경로
-                auto                             collectEntry = [&outListFile, &mapSidecarStamp, &stopToken]( const DirectoryEntry& entry )
+                const size_t                    firstFile = outListFile.size();
+                unordered_map<string, FileStat> mapSidecarStat; // 키: 원본의 디스크 경로
+                auto                            collectEntry = [&outListFile, &mapSidecarStat, &stopToken]( const DirectoryEntry& entry )
                 {
                     if ( stopToken.isStopRequested() )
                         return false;
                     if ( entry._bDirectory || isLeftoverScratch( entry._path ) )
                         return true;
                     if ( EditorContentScan::isListedFile( entry._path ) )
-                        outListFile.push_back( EditorContentFile{ string( entry._path ), entry._fileStamp, {} } );
+                        outListFile.push_back( EditorContentFile{ string( entry._path ), entry._fileStat, {} } );
                     else
-                        mapSidecarStamp.emplace( string( entry._path.substr( 0, entry._path.size() - AssetMeta::kExtension.size() ) ), entry._fileStamp );
+                        mapSidecarStat.emplace( string( entry._path.substr( 0, entry._path.size() - AssetMeta::kExtension.size() ) ), entry._fileStat );
                     return true;
                 };
                 const bool bListed = FileUtil::forEachDirectoryEntry( folderPath, true, collectEntry );
@@ -53,9 +53,9 @@ namespace sw::editor
                     SW_LOG_WARNING_ID( "EditorContentScan.FolderUnreadable", "Content folder '%#' could not be walked - the list is incomplete", folder.str() );
                 for ( size_t index = firstFile; index < outListFile.size(); ++index )
                 {
-                    const auto itSidecar = mapSidecarStamp.find( outListFile[index]._path );
-                    if ( itSidecar != mapSidecarStamp.end() )
-                        outListFile[index]._sidecarStamp = itSidecar->second;
+                    const auto itSidecar = mapSidecarStat.find( outListFile[index]._path );
+                    if ( itSidecar != mapSidecarStat.end() )
+                        outListFile[index]._sidecarStat = itSidecar->second;
                 }
                 return bListed;
             }

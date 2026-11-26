@@ -13,7 +13,7 @@
 
 #include "DevTools/ModuleReload/HotReload/ModuleLibraryPatch.h"
 
-#include "Engine/Module/EngineABIStamp.h"
+#include "Engine/Module/EngineABIDigest.h"
 
 namespace sw
 {
@@ -176,17 +176,17 @@ namespace sw
             return false;
         }
 
-        // 스탬프가 없는 모듈도 거절한다. 스탬프를 박지 않는 빌드 규칙으로 만든 모듈이 대조 없이 로드되지 않게 하기 위해서다(동적 모듈은 모두
-        // `sw_register_dynamic_module` 이 스탬프를 박는다).
-        string     moduleStamp;
-        const bool bEngineABIMismatch = ModuleLibraryPatch::findEngineABIStamp( bytes, moduleStamp ) == false || moduleStamp != engine::getEngineABIStamp();
+        // 다이제스트가 없는 모듈도 거절한다. 다이제스트를 박지 않는 빌드 규칙으로 만든 모듈이 대조 없이 로드되지 않게 하기 위해서다(동적 모듈은 모두
+        // `sw_register_dynamic_module` 이 다이제스트를 박는다).
+        string     moduleDigest;
+        const bool bEngineABIMismatch = ModuleLibraryPatch::findEngineABIDigest( bytes, moduleDigest ) == false || moduleDigest != engine::getEngineABIDigest();
         if ( bEngineABIMismatch )
         {
             // 첫 로드면 지킬 옛 모듈이 없다. 엔진과 모듈 중 한쪽만 다시 빌드된 것이므로 둘을 함께 빌드해야 한다.
             const utf8* pHint = params._bReplacingLoadedLibrary ? "keeping the old module; restart to pick up the engine change"
                                                                 : "rebuild the engine and its modules together";
             SW_LOG_ERROR_ID( "ModuleHotReloadManager.ModuleBuiltAgainstDifferent", "Module %# was built against different Core/Engine headers than the running engine (module %#, engine %#) — %#",
-                             params._moduleName, moduleStamp, engine::getEngineABIStamp(), pHint );
+                             params._moduleName, moduleDigest, engine::getEngineABIDigest(), pHint );
             return false;
         }
         if ( shouldRejectDelayImports( params._moduleName, params._originalModulePath.str(), bytes ) )

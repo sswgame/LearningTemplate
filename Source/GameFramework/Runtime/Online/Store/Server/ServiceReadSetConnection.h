@@ -60,7 +60,7 @@ namespace sw
             hashed_string _table{};
             string        _keyPrefix{};
             string        _cursorKey{};
-            uint64        _fingerprint{ 0 };
+            uint64        _digest{ 0 };
             int32         _maxCount{ 0 };
             uint8         _bDescending{ SW_FALSE };
         };

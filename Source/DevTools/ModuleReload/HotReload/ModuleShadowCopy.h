@@ -67,7 +67,7 @@ namespace sw
     /**
      * @struct ModuleShadowCopy
      * @brief 섀도 복사본 파일을 만들고 지웁니다. 복사본은 실행 뿌리 아래 이 프로세스의 폴더(`getCopyDirectory`)에 `<모듈>_<번호>` 이름으로 둡니다.
-     * @details 원본을 한 번 읽어 엔진 ABI 스탬프와 지연 import 를 대조하고, 세대 이름을 붙여(`ModuleLibraryPatch`) 이 프로세스의 섀도 폴더(`ModuleShadowCopy::getCopyDirectory`)에 씁니다.
+     * @details 원본을 한 번 읽어 엔진 ABI 다이제스트와 지연 import 를 대조하고, 세대 이름을 붙여(`ModuleLibraryPatch`) 이 프로세스의 섀도 폴더(`ModuleShadowCopy::getCopyDirectory`)에 씁니다.
      *          Windows 는 복사본마다 제 폴더(`<모듈>_<번호>/<세대 이름>.dll`)를 쓰고, 리눅스는 파일 하나(`<모듈>_<번호>.so`)입니다.
      *          복사본 이름의 일련번호와 세대 번호는 프로세스 하나에 하나씩 오릅니다.
      */
@@ -118,7 +118,7 @@ namespace sw
          * @brief 원본을 읽어 대조하고, 세대 이름을 붙인 섀도 복사본(과 디버그 심볼)을 씁니다. 아직 로드하지 않습니다.
          * @param inoutLibraryName 이 모듈의 라이브러리 이름입니다. `_current` 가 세대 이름으로 바뀝니다. 이름을 바꾼 뒤 실패하면 `_loaded` 로 되돌립니다.
          * @param outShadowPath 쓴 복사본 경로입니다. 실패하면 건드리지 않습니다.
-         * @return 원본을 못 읽었거나, 엔진 ABI 스탬프가 다르거나 없거나, 지연 import 가 있거나, 세대 이름을 붙이지 못했거나, 쓰지 못했으면 false 입니다.
+         * @return 원본을 못 읽었거나, 엔진 ABI 다이제스트가 다르거나 없거나, 지연 import 가 있거나, 세대 이름을 붙이지 못했거나, 쓰지 못했으면 false 입니다.
          *         실패하면 쓰다 만 복사본을 지웁니다.
          * @details 로드하기 전에 확인한다. 로드하면 정적 초기화가 돌므로, 돌고 있는 엔진과 다른 헤더로 빌드된 모듈은 그 전에 거절해야 한다.
          */

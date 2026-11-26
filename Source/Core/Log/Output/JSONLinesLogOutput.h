@@ -15,8 +15,8 @@ namespace sw
     /** @brief JSON 한 줄의 재료입니다. 글 칸은 줄을 만드는 동안만 빌려 씁니다. */
     struct JSONLogFields
     {
-        LogStamp    _stamp{}; ///< 남긴 순간 — 유닉스 밀리초 · 순번 · 스레드 · 시계 · 문맥 칸의 값이다
-        string_view _time{};  ///< 지역 시각 글(`2026-10-28 9:5:3.042`)
+        LogMetadata _metadata{}; ///< 남긴 순간 — 유닉스 밀리초 · 순번 · 스레드 · 시계 · 문맥 칸의 값이다
+        string_view _time{};     ///< 지역 시각 글(`2026-10-28 9:5:3.042`)
         LogLevel    _level{ LogLevel::Info };
         string_view _tag{};
         string_view _message{}; ///< 유효한 UTF-8 이어야 한다(잘못된 바이트는 부르는 쪽이 `\xNN` 으로 바꾼다)

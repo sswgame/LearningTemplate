@@ -16,7 +16,7 @@ namespace
 {
     struct CookRecordStalenessTestInternal
     {
-        static CookJobDesc makeDesc() { return CookJobDesc{ ._cookerName = "Fake", ._codeFingerprint = 1, ._target = "Test", ._settingsHash = 0 }; }
+        static CookJobDesc makeDesc() { return CookJobDesc{ ._cookerName = "Fake", ._codeDigest = 1, ._target = "Test", ._settingsHash = 0 }; }
 
         /** @brief 끝난 작업 @p job 의 기록을 디스크에 썼다가 다시 읽습니다 — 판정은 쿠킹이 다음 실행에서 하듯 읽은 기록으로 한다. */
         static CookRecord roundTrip( const CookJob& job, const AbsolutePath& recordPath )

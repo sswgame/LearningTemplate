@@ -18,9 +18,9 @@ namespace sw::editor
     /** @brief 트리 훑기가 찾은 파일 하나입니다. 도장은 나열이 함께 준 값이라 파일마다 다시 묻지 않는다. */
     struct EditorContentFile
     {
-        string    _path;           ///< 디스크 경로(대소문자 그대로)
-        FileStamp _fileStamp{};    ///< 파일의 크기 · 쓰기 시각
-        FileStamp _sidecarStamp{}; ///< 곁 서술(`<파일>.meta`)의 크기 · 쓰기 시각. 없으면 0 이다
+        string   _path;          ///< 디스크 경로(대소문자 그대로)
+        FileStat _fileStat{};    ///< 파일의 크기 · 쓰기 시각
+        FileStat _sidecarStat{}; ///< 곁 서술(`<파일>.meta`)의 크기 · 쓰기 시각. 없으면 0 이다
     };
 
     /**

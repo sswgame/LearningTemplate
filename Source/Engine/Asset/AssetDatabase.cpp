@@ -78,8 +78,8 @@ namespace sw
             /** @brief 훑은 파일 하나입니다. */
             struct ScannedFile
             {
-                string    _assetID;
-                FileStamp _fileStamp{};
+                string   _assetID;
+                FileStat _fileStat{};
             };
         };
     } // namespace
@@ -595,7 +595,7 @@ namespace sw
             // 작업 도메인(시나리오 · 테스트 사본 — 실행이 쓰고 지운다)은 기동 색인에 넣지 않는다: 원본을 머리째 복사해 GUID 가 겹친다. 정체성 규칙(`classify`)은
             // 그 안도 보통 에셋으로 본다 — 사본 안의 가져오기 · 내용 바꾸기가 GUID 를 주고 읽어야 한다(editor.assetidentity).
             if ( FileUtil::startsWithPathComponent( FileUtil::normalizePath( assetID ), AssetPaths::kScratchDomain ) == false )
-                listScanned.push_back( Internal::ScannedFile{ std::move( assetID ), entry._fileStamp } );
+                listScanned.push_back( Internal::ScannedFile{ std::move( assetID ), entry._fileStat } );
             return true;
         };
         if ( FileUtil::isDirectory( rootPath ) == false || FileUtil::forEachDirectoryEntry( rootPath, true, collectEntry ) == false )
@@ -613,7 +613,7 @@ namespace sw
             AssetIdentityFile file{ assetID, {} };
             if ( kind == AssetIdentityKind::Header || kind == AssetIdentityKind::Sidecar )
             {
-                const vector<uint8>* pCached = pCache != nullptr ? pCache->find( assetID, scanned._fileStamp ) : nullptr;
+                const vector<uint8>* pCached = pCache != nullptr ? pCache->find( assetID, scanned._fileStat ) : nullptr;
                 if ( pCached != nullptr )
                 {
                     file._text.assign( pCached->begin(), pCached->end() );
@@ -627,7 +627,7 @@ namespace sw
                 {
                     const optional<string> payload = Internal::makeScanPayload( kind, assetID, file._text );
                     if ( payload.has_value() )
-                        pCache->record( assetID, scanned._fileStamp, vector<uint8>( payload->begin(), payload->end() ) );
+                        pCache->record( assetID, scanned._fileStat, vector<uint8>( payload->begin(), payload->end() ) );
                 }
             }
             listFile.push_back( std::move( file ) );

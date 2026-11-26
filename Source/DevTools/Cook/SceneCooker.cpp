@@ -18,7 +18,7 @@
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetPaths.h"
-#include "Engine/Content/CookCodeFingerprint.h"
+#include "Engine/Content/CookCodeDigest.h"
 #include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Object/Component/Component.h"
@@ -412,7 +412,7 @@ namespace sw
     }
 
     uint32 SceneCooker::cookAllScenes( const SceneEngineSubsystems& services, const AbsolutePath& sourceRoot, const AbsolutePath& cookedDir, const CookStore& store,
-                                       const uint64 reflectionFingerprint, uint32& outFailedCount )
+                                       const uint64 reflectionDigest, uint32& outFailedCount )
     {
         outFailedCount = 0;
         if ( cookedDir.empty() )
@@ -456,9 +456,9 @@ namespace sw
 
         const string      normalizedRoot = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( resourceRoot.str() ) );
         const string      activePackRoot = FileUtil::trimTrailingSlashes( FileUtil::normalizePath( engine::getSubsystem<GameConfig>()._packRoot.get() ).str() );
-        const CookJobDesc desc           = makeCookJobDesc( reflectionFingerprint );
-        const CookJobDesc preloadDesc    = makePreloadCookJobDesc( reflectionFingerprint );
-        const CookJobDesc meshDesc       = makeHLODMeshCookJobDesc( reflectionFingerprint );
+        const CookJobDesc desc           = makeCookJobDesc( reflectionDigest );
+        const CookJobDesc preloadDesc    = makePreloadCookJobDesc( reflectionDigest );
+        const CookJobDesc meshDesc       = makeHLODMeshCookJobDesc( reflectionDigest );
 
         // 다시 구운 씬의 시간 합과 가장 느린 씬(요약 로그). 씬은 차례로 굽는다 — 에셋 캐시와 결과가 프로세스 하나의 것이라, 나눈다면 언리얼 멀티프로세스 쿡처럼 프로세스를 가른다.
         CookStats stats;
@@ -715,34 +715,34 @@ namespace sw
         return true;
     }
 
-    CookJobDesc SceneCooker::makePreloadCookJobDesc( const uint64 reflectionFingerprint )
+    CookJobDesc SceneCooker::makePreloadCookJobDesc( const uint64 reflectionDigest )
     {
         CookJobDesc desc;
-        desc._cookerName      = "ScenePreload";
-        desc._codeFingerprint = CookCodeFingerprint::find( "ScenePreload" );
-        desc._target          = "Any";
-        desc._settingsHash    = reflectionFingerprint; // 어느 칸이 경로인지 · 파일에 없는 칸의 기본값은 타입 표가 정한다 — 입력 파일만으로는 모른다
+        desc._cookerName   = "ScenePreload";
+        desc._codeDigest   = CookCodeDigest::find( "ScenePreload" );
+        desc._target       = "Any";
+        desc._settingsHash = reflectionDigest; // 어느 칸이 경로인지 · 파일에 없는 칸의 기본값은 타입 표가 정한다 — 입력 파일만으로는 모른다
         return desc;
     }
 
-    CookJobDesc SceneCooker::makeHLODMeshCookJobDesc( const uint64 reflectionFingerprint )
+    CookJobDesc SceneCooker::makeHLODMeshCookJobDesc( const uint64 reflectionDigest )
     {
         CookJobDesc desc;
-        desc._cookerName      = "SceneHLODMesh";
-        desc._codeFingerprint = CookCodeFingerprint::find( "SceneHLODMesh" );
-        desc._target          = "Any";
-        desc._settingsHash    = reflectionFingerprint; // 대리를 짓는 씬의 값이 타입 표에서 온다(씬 쿠킹과 같다)
+        desc._cookerName   = "SceneHLODMesh";
+        desc._codeDigest   = CookCodeDigest::find( "SceneHLODMesh" );
+        desc._target       = "Any";
+        desc._settingsHash = reflectionDigest; // 대리를 짓는 씬의 값이 타입 표에서 온다(씬 쿠킹과 같다)
         return desc;
     }
 
-    CookJobDesc SceneCooker::makeCookJobDesc( const uint64 reflectionFingerprint )
+    CookJobDesc SceneCooker::makeCookJobDesc( const uint64 reflectionDigest )
     {
         CookJobDesc desc;
-        desc._cookerName      = "Scene";
-        desc._codeFingerprint = CookCodeFingerprint::find( "Scene" );
-        desc._target          = "Any";
+        desc._cookerName = "Scene";
+        desc._codeDigest = CookCodeDigest::find( "Scene" );
+        desc._target     = "Any";
         // 쿠킹된 상태는 리플렉션 표로 쓴다 — 타입 · 프로퍼티가 바뀌면 같은 XML 이라도 다시 베이크한다.
-        desc._settingsHash = reflectionFingerprint;
+        desc._settingsHash = reflectionDigest;
         return desc;
     }
 

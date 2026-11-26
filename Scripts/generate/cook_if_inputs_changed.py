@@ -38,7 +38,7 @@ def is_cooker_binary(name: str) -> bool:
     return Path(name).suffix.lower() in LIST_BINARY_SUFFIX or ".so" in Path(name).suffixes
 
 
-def fingerprint(list_path: Sequence[Path], list_flat: Sequence[Path] = ()) -> str:
+def compute_inputs_digest(list_path: Sequence[Path], list_flat: Sequence[Path] = ()) -> str:
     """
     경로들(폴더면 그 아래 모든 파일)과 바로 아래 파일만 볼 폴더들(`list_flat` — 실행 파일 폴더: 그 아래 `Saved/` 같은 실행 산출물 20 만 개를 훑지 않는다)의
     (경로, 크기, 수정 시각) 목록 지문. 없는 경로도 '없음' 으로 들어간다(생기면 바뀐다).
@@ -93,7 +93,7 @@ def split_commands(list_argument: Sequence[str]) -> list[list[str]]:
 def run(stamp: Path, list_input: Sequence[Path], list_binary: Sequence[Path], list_output: Sequence[Path],
         list_command: Sequence[Sequence[str]]) -> int:
     list_watched = [*list_input, *list_output]
-    before = fingerprint(list_watched, list_binary)
+    before = compute_inputs_digest(list_watched, list_binary)
     if stamp.is_file() and stamp.read_text(encoding="utf-8").strip() == before:
         print(f"[{TAG}] inputs and outputs unchanged since the last cook - skipped ({stamp})")
         return 0
@@ -103,7 +103,7 @@ def run(stamp: Path, list_input: Sequence[Path], list_binary: Sequence[Path], li
             stamp.unlink(missing_ok=True)   # 실패한 쿠킹 뒤에는 다음 빌드가 반드시 다시 돈다
             return result.returncode
     stamp.parent.mkdir(parents=True, exist_ok=True)
-    stamp.write_text(fingerprint(list_watched, list_binary) + "\n", encoding="utf-8")
+    stamp.write_text(compute_inputs_digest(list_watched, list_binary) + "\n", encoding="utf-8")
     return 0
 
 

@@ -1,5 +1,5 @@
 /**
- * @file AssetImportStamp.h
+ * @file AssetImportDigest.h
  * @brief 원본 폴더(`<kind>_raw/`)와 임포트 결과를 내용 해시 스탬프(`import.stamp`)로 대조하고, 어긋난 것을 임포트하는 공통 절차입니다.
  * @details 텍스처(`textures_raw/` → DDS)와 모델(`models_raw/` → `.mesh`)이 같은 절차를 쓴다. 종류마다 다른 것은 `IRawAssetImporter` 가 답한다.
  *          원본 확장자, 결과 경로, 원본 해시, 임포트 자체가 그 예다. 폴더 스캔, 스탬프 읽기와 쓰기, 어긋남 판정은 여기에 한 벌만 있다.
@@ -102,7 +102,7 @@ namespace sw::editor
     /**
      * @struct AssetSourceBatch
      * @brief 에디터 핫 리로드가 한 임포터에 한 번에 넘기는 바뀐 원본들입니다(`TextureImporter::importChangedSources` 등). 워커에서 불린다.
-     * @details 원본마다 따로 부르지 않는다 — 한 묶음이라야 같은 원본 폴더의 스탬프를 한 번에 쓰고, 다른 원본의 결과를 읽는 원본(장비 메시 → 몸 메시)이 그 원본 뒤에 임포트된다(`AssetImportStampUtil::importSources`).
+     * @details 원본마다 따로 부르지 않는다 — 한 묶음이라야 같은 원본 폴더의 스탬프를 한 번에 쓰고, 다른 원본의 결과를 읽는 원본(장비 메시 → 몸 메시)이 그 원본 뒤에 임포트된다(`AssetImportDigestUtil::importSources`).
      *          예전에는 폴더 묶음마다 동시에 따로 불러 같은 `import.stamp` 를 서로 덮었고, 몸과 장비를 함께 고치면 장비가 옛 몸을 읽을 수 있었다.
      */
     struct AssetSourceBatch
@@ -125,7 +125,7 @@ namespace sw::editor
 {
     /**
      * @class IRawAssetImporter
-     * @brief 원본 종류 하나가 일괄 임포트(`AssetImportStampUtil::importAll`)에 제공하는 함수들입니다.
+     * @brief 원본 종류 하나가 일괄 임포트(`AssetImportDigestUtil::importAll`)에 제공하는 함수들입니다.
      * @details 임포터 규칙(일괄 임포트는 원본 파일을 병렬로 임포트한다).
      *          - 모든 `const` 함수는 여러 스레드에서 동시에 불립니다. 임포터는 무상태여야 합니다. 원본 하나의 결과는 반환값으로만 돌려주고(공유 가변 상태 · 함수 밖 static 금지),
      *            로그는 마음대로 남깁니다(로거는 스레드 안전입니다).
@@ -169,8 +169,8 @@ namespace sw::editor
          * @details DDC 가 이 파일들을 (이름, 바이트) 한 덩어리로 담고 히트에서 그대로 되살린다 — 빠진 파일은 히트 뒤에 없다.
          */
         virtual void collectImportedFiles( const AbsolutePath& importedPath, vector<AbsolutePath>& outListPath ) const;
-        /** @brief DDC 키에 넣는 임포터 코드 지문(`CookCodeFingerprint::find`)입니다. 0 이면 `Config/Dev/CookCodeInputs.json` 에 없는 것이라 DDC 를 쓰는 임포트가 오류로 멈춥니다. */
-        virtual uint64 findCodeFingerprint() const = 0;
+        /** @brief DDC 키에 넣는 임포터 코드 지문(`CookCodeDigest::find`)입니다. 0 이면 `Config/Dev/CookCodeInputs.json` 에 없는 것이라 DDC 를 쓰는 임포트가 오류로 멈춥니다. */
+        virtual uint64 findCodeDigest() const = 0;
         /**
          * @brief 결과 글에 자기 에셋 경로가 박히면 true 입니다(기본 false). 모델은 `_shared/` · 머티리얼 경로를 적는다.
          * @details true 면 DDC 키에 에셋 경로를 넣고 결과 파일 이름을 콘텐츠 루트 기준으로 담는다. false 면 경로를 키에 넣지 않아 복제본 · 옮긴 원본도 같은 항목을 쓰고
@@ -196,10 +196,10 @@ namespace sw::editor
 namespace sw::editor
 {
     /**
-     * @struct AssetImportStampUtil
+     * @struct AssetImportDigestUtil
      * @brief 원본 폴더를 스캔해 스탬프와 대조하고 어긋난 것을 임포트합니다.
      */
-    struct AssetImportStampUtil
+    struct AssetImportDigestUtil
     {
         /**
          * @brief 콘텐츠 루트 아래 모든 원본 폴더(@p importer 의 이름)의 원본을 그 폴더의 `import.stamp` 와 대조합니다. @p mode 가 ImportStale 이면

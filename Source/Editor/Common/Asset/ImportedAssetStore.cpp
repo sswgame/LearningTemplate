@@ -12,7 +12,7 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
-#include "Editor/Common/Asset/AssetImportStamp.h"
+#include "Editor/Common/Asset/AssetImportDigest.h"
 #include "Editor/Common/Asset/EditorContentScan.h"
 #include "Editor/Common/Asset/ModelImport/ModelImportUtil.h"
 #include "Editor/Common/Asset/ModelImport/ModelImporter.h"
@@ -138,7 +138,7 @@ namespace sw::editor
             if ( rootEnd != string::npos )
             {
                 const AbsolutePath resourceRoot = FileUtil::toDiskPath( string_view( normalized ).substr( 0, rootEnd ) );
-                fileHash                        = AssetImportStampUtil::computeFileHash( resourceRoot.join( reference ) );
+                fileHash                        = AssetImportDigestUtil::computeFileHash( resourceRoot.join( reference ) );
             }
             hash = HashUtil::computeStringHash64( reinterpret_cast<const utf8*>( &fileHash ), sizeof( fileHash ), false, hash );
         }

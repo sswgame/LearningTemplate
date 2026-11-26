@@ -8,7 +8,7 @@
 #include "Core/Log/Logger.h"
 
 #include "Engine/Graphics/RHI/RHI.h"
-#include "Engine/Module/EngineABIStamp.h"
+#include "Engine/Module/EngineABIDigest.h"
 #include "Engine/Module/ModuleTypeRegistry.h"
 
 #include "ModuleAPI/ABI/EditorAPI.h"
@@ -28,7 +28,7 @@ namespace sw
      */
     struct ModuleAPISymbols
     {
-        const utf8* _pModuleName; ///< 모듈 이름 — 빌드가 박은 엔진 ABI 스탬프 심볼(`sw_moduleEngineABIStamp_<이름>`)을 고른다
+        const utf8* _pModuleName; ///< 모듈 이름 — 빌드가 박은 엔진 ABI 다이제스트 심볼(`sw_moduleEngineABIDigest_<이름>`)을 고른다
         const utf8* _pExportSymbol;
         const utf8* _pModuleLabel;
     };
@@ -50,7 +50,7 @@ namespace sw
         using InstanceHandleOf = decltype( std::declval<const TAPI&>().create() );
 
         /**
-         * @brief 모듈이 이 호스트와 같은 헤더(표 구조 · 경계 구조체)로 빌드됐는지 대조합니다 — 모든 동적 모듈과 같은 엔진 ABI 스탬프 대조다(`engine::isModuleBuiltWithThisEngine`).
+         * @brief 모듈이 이 호스트와 같은 헤더(표 구조 · 경계 구조체)로 빌드됐는지 대조합니다 — 모든 동적 모듈과 같은 엔진 ABI 다이제스트 대조다(`engine::isModuleBuiltWithThisEngine`).
          * @details `create != nullptr && destroy != nullptr` 만으로는 막지 못합니다 — 그 둘은 표 맨 앞이라 가운데에 끼워도 채워진다. 핫 리로드는 모듈만 다시 빌드해 이 어긋남이 생기는 바로 그 상황이다.
          */
         static bool matchesModuleABI( ModuleLibraryHandle library, const ModuleAPISymbols& symbols )

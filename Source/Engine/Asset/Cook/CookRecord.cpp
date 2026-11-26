@@ -426,11 +426,11 @@ namespace sw
             uint64        totalBytes = 0;
             const bool    bScanned   = FileUtil::forEachDirectoryEntry( layer._rootPath, true, [&]( const DirectoryEntry& entry )
                  {
-                FileStamp stamp;
-                if ( entry._bDirectory == false && FileUtil::getFileStamp( entry.makePath(), stamp ) )
+                FileStat fileStat;
+                if ( entry._bDirectory == false && FileUtil::getFileStat( entry.makePath(), fileStat ) )
                 {
-                    listEntry.push_back( Entry{ entry.makePath(), stamp._sizeBytes, stamp._writeTime } );
-                    totalBytes += stamp._sizeBytes;
+                    listEntry.push_back( Entry{ entry.makePath(), fileStat._sizeBytes, fileStat._writeTime } );
+                    totalBytes += fileStat._sizeBytes;
                 }
                 return true;
             } );

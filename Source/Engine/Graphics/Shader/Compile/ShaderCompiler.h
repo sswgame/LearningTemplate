@@ -322,13 +322,13 @@ namespace sw
         [[nodiscard]] static bool isResultCurrent( const ShaderCompileResult& result, const ShaderCompileDesc& desc );
 
         /**
-         * @brief 컴파일러 도구의 지문입니다. 컴파일러를 부르는 코드의 지문(`CookCodeFingerprint` "ShaderCompiler" — 인자 · 플래그를 고치면 저절로 바뀐다), Vulkan 타깃 버전, 설치된 컴파일러 버전(vcpkg 설치 기록)을 섞는다.
+         * @brief 컴파일러 도구의 지문입니다. 컴파일러를 부르는 코드의 지문(`CookCodeDigest` "ShaderCompiler" — 인자 · 플래그를 고치면 저절로 바뀐다), Vulkan 타깃 버전, 설치된 컴파일러 버전(vcpkg 설치 기록)을 섞는다.
          * @details 소스 내용 해시만 보면 DXC 를 바꾸거나 옵션을 고쳐도 아무것도 다시 쿠킹하지 않는다. 슬롯 계약 숫자(시프트 포함)는 `binding_slots.hlsli` 에 있고 그 파일은 입력이다.
          *          엔진 define(`appendEngineDefines`)은 섞지 않는다 — 동작 키의 define 에 이미 들고, 글 키는 값이 글에 나온 셰이더만 갈라야 한다(정책 값 하나를 고쳐 모두 다시 컴파일하지 않는다).
          */
-        static uint64 getToolchainFingerprint();
+        static uint64 getToolchainDigest();
         /** @brief 지문 계산의 본체입니다. 입력만으로 정해집니다(테스트가 상수만으로 같은 값이 나오는지 확인합니다). */
-        static uint64 makeToolchainFingerprint( uint64 compilerCodeFingerprint, uint32 vulkanTargetVersion, string_view compilerVersion );
+        static uint64 makeToolchainDigest( uint64 compilerCodeDigest, uint32 vulkanTargetVersion, string_view compilerVersion );
 
         /**
          * @brief DXC 의 `DxcCreateInstance` 주소입니다(`DxcCreateInstanceProc` 로 바꿔 쓴다). 라이브러리는 처음 부를 때 실행 파일 옆에서 한 번 로드한다. 없으면 nullptr 입니다.

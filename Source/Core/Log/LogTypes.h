@@ -59,7 +59,7 @@ namespace sw
      * @details 미룬 줄(`ScopedDeferredLog`) · 백엔드 앞의 backlog · 비동기 큐가 모두 이 값을 나른다 — 쓰는 순간에 다시 재면 늦게 쓴 줄의 시각 · 프레임이 틀린다.
      *          spdlog `log_msg`(시각 · 스레드를 부른 자리에서 담는다) · 언리얼 `FOutputDevice::Serialize` 의 `Time` 인자와 같은 자리다.
      */
-    struct SW_API LogStamp
+    struct SW_API LogMetadata
     {
         friend struct LogEvent;
 
@@ -75,7 +75,7 @@ namespace sw
         static uint64 getNextSequence();
 
     private:
-        static LogStamp captureNow();
+        static LogMetadata captureNow();
     };
 
     /**
@@ -84,7 +84,7 @@ namespace sw
      */
     struct SW_API LogEvent
     {
-        LogStamp    _stamp{};
+        LogMetadata _metadata{};
         const utf8* _pTag{ nullptr };
         const utf8* _pMessage{ nullptr };
         const utf8* _pFile{ nullptr };
@@ -115,8 +115,8 @@ namespace sw
         string      _tag;
         string      _message;
         string      _file;
-        string      _timeStamp;      ///< `_stamp._time` 의 지역 시각 글
-        LogStamp    _stamp{};        ///< 줄을 남긴 순간(시각 · 순번 · 시계 · 스레드 · 문맥) — 리스너가 줄을 거르고 순서를 견준다
+        string      _timeStamp;      ///< `_metadata._time` 의 지역 시각 글
+        LogMetadata _metadata{};     ///< 줄을 남긴 순간(시각 · 순번 · 시계 · 스레드 · 문맥) — 리스너가 줄을 거르고 순서를 견준다
         const utf8* _pID{ nullptr }; ///< 줄의 종류 id(`SW_LOG_ERROR_ID`)의 정적 글자. id 없이 남긴 줄은 nullptr — 문구가 바뀌어도 같은 사건을 가리킨다
         int32       _line{ 0 };
         LogLevel    _level = LogLevel::Info;
@@ -184,7 +184,7 @@ namespace sw
 
     /**
      * @brief 비동기 lock-free 큐로 보내는 로그 레코드입니다. 출력 장치에 필요한 것이 모두 들어 있습니다.
-     * @details 포맷은 이미 끝나 있고(`_formatted`), 날짜 필드는 남긴 순간의 시각(`LogStamp::_time`)이고 파일 출력이 시간별로 파일을 바꿀지 판단할 때 씁니다.
+     * @details 포맷은 이미 끝나 있고(`_formatted`), 날짜 필드는 남긴 순간의 시각(`LogMetadata::_time`)이고 파일 출력이 시간별로 파일을 바꿀지 판단할 때 씁니다.
      *          콘솔은 `_level` 로 색만 고릅니다.
      */
     struct LogRecord

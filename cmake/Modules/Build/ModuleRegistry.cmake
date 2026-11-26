@@ -1,6 +1,6 @@
 # ==============================================================================
 # @file cmake/Modules/Build/ModuleRegistry.cmake
-# @brief 동적 모듈 레지스트리 — 등록(ABI 스탬프 · 서버 전용 표식을 같이 단다) · 종류별 조회 · 빌드 순서 · 빠진 등록 대조
+# @brief 동적 모듈 레지스트리 — 등록(ABI 다이제스트 · 서버 전용 표식을 같이 단다) · 종류별 조회 · 빌드 순서 · 빠진 등록 대조
 # ==============================================================================
 
 # ------------------------------------------------------------------------------
@@ -46,7 +46,7 @@ namespace
 	set_source_files_properties("${marker_source}" PROPERTIES SKIP_PRECOMPILE_HEADERS ON SKIP_UNITY_BUILD_INCLUSION ON)
 endfunction()
 
-# MODULE_NAME 은 매니페스트 · ABI 스탬프의 모듈 이름이다(기본 타깃 이름 — 게임은 타깃 `SWGame_<게임>`, 모듈 `SWGame`). 레지스트리에는 타깃 이름이 든다.
+# MODULE_NAME 은 매니페스트 · ABI 다이제스트의 모듈 이름이다(기본 타깃 이름 — 게임은 타깃 `SWGame_<게임>`, 모듈 `SWGame`). 레지스트리에는 타깃 이름이 든다.
 function(sw_register_dynamic_module TARGET_NAME KIND)
 	cmake_parse_arguments(ARG "" "MODULE_NAME" "" ${ARGN})
 	set(module_name ${TARGET_NAME})
@@ -60,7 +60,7 @@ function(sw_register_dynamic_module TARGET_NAME KIND)
 	endif()
 	set_property(GLOBAL APPEND PROPERTY SW_DYNAMIC_MODULES ${TARGET_NAME})
 	set_property(GLOBAL APPEND PROPERTY SW_DYNAMIC_MODULES_${KIND} ${TARGET_NAME})
-	sw_add_module_engine_stamp(${TARGET_NAME} MODULE_NAME ${module_name})
+	sw_add_module_engine_abi_digest(${TARGET_NAME} MODULE_NAME ${module_name})
 	sw_add_server_only_marker(${TARGET_NAME} ${module_name})
 endfunction()
 

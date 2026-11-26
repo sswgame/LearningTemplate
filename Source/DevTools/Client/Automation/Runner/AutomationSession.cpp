@@ -118,7 +118,7 @@ namespace sw
         , _startWindowWidth{ 0 }
         , _startWindowHeight{ 0 }
         , _listStartVariable{}
-        , _stageFingerprint{}
+        , _stageSnapshot{}
         , _reproduceInput{}
         , _screenshotBaseline{ 0 }
         , _bUnattended{ SW_FALSE }
@@ -405,10 +405,10 @@ namespace sw
 
     string AutomationSession::findStageStateLeak()
     {
-        const bool                 bFirstStage = _pChain->getStageIndex() == 0;
-        AutomationStageFingerprint current     = AutomationStageFingerprint::capture( bFirstStage == false && _reproduceInput._bEditor == false );
-        const vector<string>       listLeak    = bFirstStage ? vector<string>{} : AutomationStageFingerprint::describeLeaks( _stageFingerprint, current );
-        _stageFingerprint                      = std::move( current );
+        const bool              bFirstStage = _pChain->getStageIndex() == 0;
+        AutomationStageSnapshot current     = AutomationStageSnapshot::capture( bFirstStage == false && _reproduceInput._bEditor == false );
+        const vector<string>    listLeak    = bFirstStage ? vector<string>{} : AutomationStageSnapshot::describeLeaks( _stageSnapshot, current );
+        _stageSnapshot                      = std::move( current );
         StringBuilder<constant::buffer::kMax512> text;
         for ( const string& leak : listLeak )
         {

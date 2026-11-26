@@ -224,14 +224,14 @@ namespace sw::editor
         /**
          * @brief 핫 리로드가 넘긴 파일 가운데 모델 원본을 임포트합니다. `models_raw/` 아래의 원본을 옆 `models/` 의 `.mesh` 로 만듭니다.
          * @details 임포트한 `.mesh` 를 쓰면 다음 감시 이벤트로 들어오고, 메시 캐시가 그 즉시 다시 읽는다. `models_raw/` 밖의 원본은 경고만 한다.
-         *          바뀐 원본만 임포트한다(`AssetImportStampUtil::importSources`). 루트 전체의 대조는 `importAllModels`(`App --import-models`)가 한다.
+         *          바뀐 원본만 임포트한다(`AssetImportDigestUtil::importSources`). 루트 전체의 대조는 `importAllModels`(`App --import-models`)가 한다.
          *          워커에서 불린다(`AssetHotReload` 의 임포트 잡) — UI 서브시스템을 건드리지 않고 공유 상태를 두지 않는다. 모델 원본은 임포트했든 경고만 했든 처리한 것이고 `.mesh` 는 처리하지 않은 것이다.
          */
         static void importChangedSources( AssetSourceBatch& batch );
 
         /**
          * @brief 콘텐츠 루트 아래 모든 `models_raw/` 의 원본을 그 폴더의 `import.stamp` 와 대조합니다. @p mode 가 ImportStale 이면 어긋난 원본을 임포트합니다.
-         * @details 절차는 `AssetImportStampUtil::importAll` 을 따른다. 텍스처와 같은 스탬프 형식과 판정을 쓴다. 원본마다 @p config 에서 규칙을 고른다.
+         * @details 절차는 `AssetImportDigestUtil::importAll` 을 따른다. 텍스처와 같은 스탬프 형식과 판정을 쓴다. 원본마다 @p config 에서 규칙을 고른다.
          *          @p assetPaths 는 워커의 임포트가 산출물을 에셋 id 로 바꿀 때 쓴다(부른 스레드가 찾아 넘긴다).
          */
         [[nodiscard]] static AssetImportSummary importAllModels( const AssetPaths& assetPaths, const AbsolutePath& resourceRoot, const ModelImportConfig& config, AssetImportMode mode );

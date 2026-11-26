@@ -1,4 +1,4 @@
-"""Core · Engine 헤더 내용의 지문을 C++ 헤더로 씁니다 — 핫 리로드의 엔진 ABI 스탬프.
+"""Core · Engine 헤더 내용의 지문을 C++ 헤더로 씁니다 — 핫 리로드의 엔진 ABI 다이제스트.
 
 핫 리로드는 모듈 DLL/SO 만 갈아 끼우고 Engine 은 그대로 둡니다. 그런데 Engine 헤더를 고친 빌드에서 `Engine.dll` 은 실행 중이라
 다시 링크되지 못해도(잠김) 모듈은 새 헤더로 빌드되어 써질 수 있습니다. 그 모듈을 올리면 돌고 있는 엔진과 구조체 배치 · vtable 이
@@ -9,7 +9,7 @@
 핫 리로드가 거절됩니다(C++ 모듈 인터페이스 · Rust 크레이트의 ABI 지문도 토큰만 본다). 내용이 같으면 파일을 다시 쓰지 않아(재빌드를 부르지 않는다)
 Ninja 의 restat 이 그 뒤를 멈춥니다.
 
-사용법: py -3 Scripts/generate/engine_abi_stamp.py --root <repo> --out <path/EngineABIStamp.gen.h> --cache <빌드 트리 안 json>
+사용법: py -3 Scripts/generate/engine_abi_digest.py --root <repo> --out <path/EngineABIDigest.gen.h> --cache <빌드 트리 안 json>
 """
 from __future__ import annotations
 
@@ -28,7 +28,7 @@ from common.exit_code import ExitCode  # noqa: E402
 
 # 핫 리로드가 갈아 끼우지 않는 쪽의 헤더다: Core · Engine, 모듈과 호스트의 계약(ModuleAPI), 공용 모듈(GameFramework — 섀도 복사 없이 한 번
 # 올리고 다시 올리지 않는다). 키트(GameFramework/Kits)는 스스로 리로드되는 모듈이라 뺀다. X 매크로 표(.xxx)도 넣는다 — `PredefinedNameType.xxx` 가
-# 예약 이름 색인을 정한다. 주의: 표를 빼면 거기에 줄을 더한 모듈이 같은 스탬프로 옛 엔진에 올라 엉뚱한 이름을 읽는다.
+# 예약 이름 색인을 정한다. 주의: 표를 빼면 거기에 줄을 더한 모듈이 같은 다이제스트로 옛 엔진에 올라 엉뚱한 이름을 읽는다.
 HEADER_ROOTS = ("Source/Core", "Source/Engine", "Source/ModuleAPI", "Source/GameFramework")
 EXCLUDED_ROOTS = ("Source/GameFramework/Kits",)
 HEADER_EXTENSIONS = (".h", ".hpp", ".inl", ".xxx")
@@ -45,7 +45,7 @@ def drop_comments(content: bytes) -> bytes:
 
 
 def _collect_header_paths(repository_root: Path) -> list[str]:
-    """해시할 헤더를 저장소 기준 경로 순으로 모읍니다. 순서가 스탬프에 들어가므로 정렬합니다."""
+    """해시할 헤더를 저장소 기준 경로 순으로 모읍니다. 순서가 다이제스트에 들어가므로 정렬합니다."""
     list_path: list[str] = []
     for header_root in HEADER_ROOTS:
         for dir_path, _, list_file_name in os.walk(repository_root / header_root):
@@ -60,24 +60,24 @@ def _collect_header_paths(repository_root: Path) -> list[str]:
     return list_path
 
 
-def _compute_stamp(repository_root: Path, cache: FileDigestCache) -> str:
-    """헤더 경로와 코드 지문(줄 끝은 LF 로 맞춤)을 차례로 넣은 SHA-1 입니다. 체크아웃마다 다른 CRLF 가 스탬프를 바꾸지 않게 합니다."""
+def _compute_digest(repository_root: Path, cache: FileDigestCache) -> str:
+    """헤더 경로와 코드 지문(줄 끝은 LF 로 맞춤)을 차례로 넣은 SHA-1 입니다. 체크아웃마다 다른 CRLF 가 다이제스트를 바꾸지 않게 합니다."""
     return cache.tree_digest(repository_root, _collect_header_paths(repository_root)).hex()
 
 
-def _make_header_text(stamp: str) -> str:
+def _make_header_text(digest: str) -> str:
     return (
-        "// 생성 파일 - Scripts/generate/engine_abi_stamp.py. 고치지 마십시오.\n"
+        "// 생성 파일 - Scripts/generate/engine_abi_digest.py. 고치지 마십시오.\n"
         "// Core · Engine 헤더 내용의 지문입니다. Engine 과 모듈이 같은 값을 박고, 핫 리로드가 올리기 전에 대조합니다.\n"
         "#pragma once\n"
-        "// 머리(swEngineABIStamp:)는 C++ 한 곳(Engine/Module/EngineABIStampMarker.h)이 정한다 — 생성기는 지문만 낸다.\n"
-        "#define SW_ENGINE_ABI_STAMP_DIGEST \"" + stamp + "\"\n"
+        "// 머리(swEngineABIDigest:)는 C++ 한 곳(Engine/Module/EngineABIDigestMarker.h)이 정한다 — 생성기는 지문만 낸다.\n"
+        "#define SW_ENGINE_ABI_DIGEST \"" + digest + "\"\n"
     )
 
 
-class EngineABIStampCommand(Command):
-    name = "engine-abi-stamp"
-    help = "Core · Engine 헤더 지문(핫 리로드 ABI 도장)을 쓴다(빌드 단계)"
+class EngineABIDigestCommand(Command):
+    name = "engine-abi-digest"
+    help = "Core · Engine 헤더 다이제스트(핫 리로드 ABI 대조)를 쓴다(빌드 단계)"
 
     def add_arguments(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument("--root", required=True, help="저장소 루트")
@@ -86,12 +86,12 @@ class EngineABIStampCommand(Command):
 
     def run(self, context: ScriptContext, args: argparse.Namespace) -> int:
         cache = FileDigestCache(Path(args.cache), drop_comments)
-        text = _make_header_text(_compute_stamp(Path(os.path.normpath(Path(args.root).absolute())), cache))
+        text = _make_header_text(_compute_digest(Path(os.path.normpath(Path(args.root).absolute())), cache))
         cache.save()
         # 빌드마다 도는 단계라 바뀐 때만 한 줄 찍는다. 줄끝은 LF(어느 체크아웃에서나 같은 바이트).
-        write_generated_file(Path(args.out), text, tag="EngineABIStamp", newline="\n", report_unchanged=False)
+        write_generated_file(Path(args.out), text, tag="EngineABIDigest", newline="\n", report_unchanged=False)
         return ExitCode.PASSED
 
 
 if __name__ == "__main__":
-    sys.exit(EngineABIStampCommand.main())
+    sys.exit(EngineABIDigestCommand.main())

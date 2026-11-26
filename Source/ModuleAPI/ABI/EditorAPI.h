@@ -115,7 +115,7 @@ namespace sw
 
     /**
      * @brief 이름으로 찾는 헤드리스 진입점(에디터 인스턴스 없이 모듈만 올려 부른다)의 목록입니다 — `X( 반환형, 형 이름, ( 매개변수 ) )` 가 `PFN_<형 이름>` 이 됩니다.
-     * @details 시그니처가 바뀌면 헤더 지문(엔진 ABI 스탬프)이 바뀝니다(v2 에서 `importEditorAssets` 가 서비스 표를 받게 된 변경이 이 자리).
+     * @details 시그니처가 바뀌면 헤더 지문(엔진 ABI 다이제스트)이 바뀝니다(v2 에서 `importEditorAssets` 가 서비스 표를 받게 된 변경이 이 자리).
      *          심볼 이름은 아래 `k...Symbol` 이고, 구현은 아래 extern "C" 선언입니다.
      */
 #define SW_EDITOR_HEADLESS_ENTRIES( X )                                                                                                          \

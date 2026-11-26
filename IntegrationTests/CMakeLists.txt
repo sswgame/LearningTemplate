@@ -191,7 +191,7 @@ add_test(NAME Pack.MakePatch
 	WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin")
 set_tests_properties(Pack.MakePatch PROPERTIES LABELS nogpu TIMEOUT 300)
 
-# 스크립트 자체 테스트 — `Scripts/<폴더>/tests/test_*.py` 를 모두 돈다. 손으로 한 줄씩 등록하면 빠뜨린다(test_cook_code_fingerprint ·
+# 스크립트 자체 테스트 — `Scripts/<폴더>/tests/test_*.py` 를 모두 돈다. 손으로 한 줄씩 등록하면 빠뜨린다(test_cook_code_digest ·
 # test_shipping_host_defaults 가 빠져 있었다). 무엇을 보는지는 각 파일 머리말에 있다.
 # 이름은 `Scripts.<줄기의 낙타 이름>`(test_move_asset.py → Scripts.MoveAsset). cmake 를 부르는 테스트(vcpkg 설치 보호)는 SW_CMAKE_COMMAND 로 받는다.
 # 도구 정책 훅의 판정 테스트(`.claude/hooks/test_*.py`)도 함께 돈다 — 손으로만 돌면 규칙 데이터가 바뀌어도 모른다.

@@ -53,7 +53,7 @@ target_link_libraries(OnlineLoadBotCore
 		sw_global_options
 )
 # 봇 실행 파일이 올리는 모듈이라 엔진 ABI 도장이 있어야 한다(모듈 로더가 올리기 전에 대조한다). sw_add_module 을 거치지 않아 여기서 붙인다.
-sw_add_module_engine_stamp(OnlineLoadBotCore)
+sw_add_module_engine_abi_digest(OnlineLoadBotCore)
 target_compile_definitions(OnlineLoadBotCore PRIVATE "SW_LOG_TAG=\"OnlineLoadBot\"" "SW_REGISTRAR_MODULE=\"OnlineLoadBotCore\"")
 sw_configure_dll_exports(OnlineLoadBotCore SHARED MODULE_SHARED)
 sw_configure_pch(OnlineLoadBotCore "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")

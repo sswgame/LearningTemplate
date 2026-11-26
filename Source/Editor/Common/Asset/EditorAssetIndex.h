@@ -68,7 +68,7 @@ namespace sw::editor
     struct EditorAssetEntry
     {
         string                  _displayPath; ///< 디스크 표기의 에셋 id(대소문자 그대로) — 목록 · 제목에 쓴다. 열쇠는 소문자 id 다
-        FileStamp               _fileStamp{}; ///< 크기 · 쓰기 시각 — 같으면 파일을 열지 않는다
+        FileStat                _fileStat{};  ///< 크기 · 쓰기 시각 — 같으면 파일을 열지 않는다
         vector<EditorAssetLink> _listLink;    ///< 나가는 참조(텍스트 에셋만)
     };
 
@@ -114,7 +114,7 @@ namespace sw::editor
          */
         void applyChanges( const AbsolutePath& resourceRoot, const vector<string>& listChangedID );
         /** @brief 파일 하나의 글을 디스크 없이 넣습니다(테스트 · 저장 직후의 글). @p assetID 는 디스크 표기 그대로 받는다. @p text 는 텍스트 에셋일 때만 읽는다. */
-        void applyText( string_view assetID, string_view text, const FileStamp& fileStamp = {} );
+        void applyText( string_view assetID, string_view text, const FileStat& fileStat = {} );
 
         /** @brief @p targetPath 를 적은 참조를 모읍니다(경로로 적은 것과 GUID 로 적은 것 모두). 먼저 출력 목록을 비우며, 참조자 · 줄 순서입니다. 없는 파일이면 비어 있습니다. */
         void findReferrers( string_view targetPath, vector<EditorAssetReference>& outListReference ) const;
@@ -164,7 +164,7 @@ namespace sw::editor
         /** @brief 파일 @p assetID 의 줄과 그 줄이 만든 역방향 표 · GUID 줄을 뺍니다. */
         static void removeEntry( EditorAssetIndexData& inoutData, const string& assetID );
         /** @brief 파일 @p displayPath(디스크 표기)의 줄을 넣습니다(있던 줄은 먼저 뺀다). */
-        static void insertEntry( EditorAssetIndexData& inoutData, string_view displayPath, const FileStamp& fileStamp, EditorAssetContent&& content );
+        static void insertEntry( EditorAssetIndexData& inoutData, string_view displayPath, const FileStat& fileStat, EditorAssetContent&& content );
         /** @brief 파일 @p displayPath 를 디스크에서 읽어 줄을 고칩니다. 크기 · 시각이 같으면(@p bForce 가 아니면) 열지 않는다. 없으면 줄을 뺀다. */
         static void refreshFromDisk( EditorAssetIndexData& inoutData, const AbsolutePath& resourceRoot, string_view displayPath, bool bForce );
 

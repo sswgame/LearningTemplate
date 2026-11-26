@@ -519,15 +519,15 @@ SW_TEST_CASE( LogTest, DeferredLineKeepsTheMomentItWasLogged )
     const sw::LogEntry& deferred = capture.getEntries()[1];
     SW_REQUIRE_TRUE( deferred._message == "[TestLog] deferred" );
 
-    SW_EXPECT_TRUE( loggedFrom <= deferred._stamp._time && deferred._stamp._time <= loggedTo );
-    SW_EXPECT_TRUE( deferred._stamp._time < other._stamp._time );
-    SW_EXPECT_TRUE( deferred._stamp._sequence < other._stamp._sequence );
-    SW_EXPECT_TRUE( deferred._stamp._bHasClock && deferred._stamp._clock == sw::LogClock::Frame );
-    SW_EXPECT_EQUAL( uint64( 10 ), deferred._stamp._clockNumber );
-    SW_EXPECT_EQUAL( uint64( 11 ), other._stamp._clockNumber );
-    SW_EXPECT_EQUAL( uint64( 0x42 ), deferred._stamp._context._principalID );
-    SW_EXPECT_TRUE( other._stamp._context.isEmpty() );
-    SW_EXPECT_TRUE( deferred._stamp._threadID != 0 && deferred._stamp._threadID != other._stamp._threadID );
+    SW_EXPECT_TRUE( loggedFrom <= deferred._metadata._time && deferred._metadata._time <= loggedTo );
+    SW_EXPECT_TRUE( deferred._metadata._time < other._metadata._time );
+    SW_EXPECT_TRUE( deferred._metadata._sequence < other._metadata._sequence );
+    SW_EXPECT_TRUE( deferred._metadata._bHasClock && deferred._metadata._clock == sw::LogClock::Frame );
+    SW_EXPECT_EQUAL( uint64( 10 ), deferred._metadata._clockNumber );
+    SW_EXPECT_EQUAL( uint64( 11 ), other._metadata._clockNumber );
+    SW_EXPECT_EQUAL( uint64( 0x42 ), deferred._metadata._context._principalID );
+    SW_EXPECT_TRUE( other._metadata._context.isEmpty() );
+    SW_EXPECT_TRUE( deferred._metadata._threadID != 0 && deferred._metadata._threadID != other._metadata._threadID );
 }
 
 /**
@@ -542,12 +542,12 @@ SW_TEST_CASE( LogTest, CrashFlushWritesDeferredLinesWithTheirOwnMoment )
     {
         const sw::ScopedDeferredLog deferredLog;
         SW_LOG_INFO_ID( "TestLog.DeferredMoment", "%#deferred", kCapturePrefix );
-        const uint64 sequenceAfter = sw::LogStamp::getNextSequence();
+        const uint64 sequenceAfter = sw::LogMetadata::getNextSequence();
         sw::Logger::setClockNumber( sw::LogClock::Tick, 11 );
         sw::ScopedDeferredLog::flushForCrash();
         SW_REQUIRE_EQUAL( 1u, capture.getCount() );
-        SW_EXPECT_EQUAL( uint64( 10 ), capture.getEntries()[0]._stamp._clockNumber );
-        SW_EXPECT_TRUE( capture.getEntries()[0]._stamp._sequence < sequenceAfter );
+        SW_EXPECT_EQUAL( uint64( 10 ), capture.getEntries()[0]._metadata._clockNumber );
+        SW_EXPECT_TRUE( capture.getEntries()[0]._metadata._sequence < sequenceAfter );
     }
     SW_EXPECT_EQUAL( 1u, capture.getCount() );
 }
@@ -569,19 +569,19 @@ SW_TEST_CASE( LogTest, BackendWritesTheMomentOfTheEvent )
     const ClockNumberReset clockReset;
     sw::Logger::setClockNumber( sw::LogClock::Tick, 10 );
     sw::LogEvent event{ sw::LogLevel::Info, "Test", "moment", __FILE__, __LINE__ };
-    event._stamp._time = sw::UnixMilliseconds{ ( event._stamp._time.toSeconds() - 3600 ) * 1000 + 42 }; // 한 시간 전, 42 ms
+    event._metadata._time = sw::UnixMilliseconds{ ( event._metadata._time.toSeconds() - 3600 ) * 1000 + 42 }; // 한 시간 전, 42 ms
     sw::Logger::setClockNumber( sw::LogClock::Tick, 11 );
     logger.writeEvent( event );
     logger.shutdown();
 
     SW_REQUIRE_EQUAL( size_t( 1 ), listEntry.size() );
-    SW_EXPECT_TRUE( listEntry[0]._stamp._time == event._stamp._time );
-    SW_EXPECT_EQUAL( event._stamp._sequence, listEntry[0]._stamp._sequence );
+    SW_EXPECT_TRUE( listEntry[0]._metadata._time == event._metadata._time );
+    SW_EXPECT_EQUAL( event._metadata._sequence, listEntry[0]._metadata._sequence );
     SW_REQUIRE_EQUAL( size_t( 1 ), pCapturing->_listFormatted.size() );
     const sw::string& line = pCapturing->_listFormatted[0];
     SW_EXPECT_TRUE_MSG( sw::StringUtil::contains( line, ".042] [Test] [Info] [tick=10] - moment" ), line.c_str() );
     sw::LocalCalendarTime calendar;
-    SW_REQUIRE_TRUE( sw::WallClock::toLocalCalendar( event._stamp._time.toSeconds(), calendar ) );
+    SW_REQUIRE_TRUE( sw::WallClock::toLocalCalendar( event._metadata._time.toSeconds(), calendar ) );
     sw::fixed_string<sw::constant::buffer::kMax64> expectedTime;
     sw::formatstring( expectedTime.data(), expectedTime.capacity(), "%#-%#-%# %#:%#:%#.042", calendar._year, calendar._month, calendar._day, calendar._hour, calendar._minute, calendar._second );
     SW_EXPECT_EQUAL( sw::string_view( expectedTime.c_str() ), sw::string_view( listEntry[0]._timeStamp ) );

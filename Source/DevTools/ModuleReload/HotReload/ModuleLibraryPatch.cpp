@@ -346,16 +346,16 @@ namespace sw
         return replacedCount;
     }
 
-    bool ModuleLibraryPatch::findEngineABIStamp( const vector<uint8>& bytes, string& outStamp )
+    bool ModuleLibraryPatch::findEngineABIDigest( const vector<uint8>& bytes, string& outDigest )
     {
         const string_view view{ reinterpret_cast<const utf8*>( bytes.data() ), bytes.size() };
-        const string_view marker{ kEngineABIStampMarker };
+        const string_view marker{ kEngineABIDigestMarker };
         // 표식 문자열 자체가 다른 자리(예: 이 함수가 든 모듈의 상수)에도 있을 수 있다. 뒤에 16진 40 글자가 온전히 붙은 것을 찾을 때까지 넘긴다.
         for ( size_t markerPos = view.find( marker ); markerPos != string_view::npos; markerPos = view.find( marker, markerPos + 1 ) )
         {
-            if ( view.size() - markerPos < marker.size() + kEngineABIStampDigits )
+            if ( view.size() - markerPos < marker.size() + kEngineABIDigestDigits )
                 return false;
-            const string_view digits = view.substr( markerPos + marker.size(), kEngineABIStampDigits );
+            const string_view digits = view.substr( markerPos + marker.size(), kEngineABIDigestDigits );
             bool              bAllHex{ true };
             for ( const utf8 digit : digits )
             {
@@ -368,7 +368,7 @@ namespace sw
             }
             if ( bAllHex == false )
                 continue;
-            outStamp = string{ view.substr( markerPos, marker.size() + kEngineABIStampDigits ) };
+            outDigest = string{ view.substr( markerPos, marker.size() + kEngineABIDigestDigits ) };
             return true;
         }
         return false;

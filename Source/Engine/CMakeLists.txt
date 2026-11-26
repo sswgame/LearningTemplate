@@ -1,6 +1,6 @@
 # ==============================================================================
 # @file Source/Engine/CMakeLists.txt
-# @brief Engine 라이브러리 — 소스 목록 · 타깃(ABI 스탬프 · PCH · 내보내기) · 서드파티 링크 · RHI · 시스템 라이브러리 · 유니티 · 리플렉션 코드젠 · Jolt 오브젝트
+# @brief Engine 라이브러리 — 소스 목록 · 타깃(ABI 다이제스트 · PCH · 내보내기) · 서드파티 링크 · RHI · 시스템 라이브러리 · 유니티 · 리플렉션 코드젠 · Jolt 오브젝트
 # @details
 # 폴더(Common/Reflection/...)는 소스를 나눠 두기 위한 것이고, 모듈 사이의
 # 순환 참조(Reflection <-> Graphics 등) 때문에 하나의 라이브러리로 링크한다
@@ -111,7 +111,7 @@ list(REMOVE_ITEM ENGINE_SOURCES ${list_engine_layer_source})
 sw_find_engine_compression_libraries(list_engine_compression_lib)
 
 # ------------------------------------------------------------------------------
-# 3) Engine 타겟 — ABI 스탬프 · include 전파 · 정의 · PCH · Core OBJECT 재사용 · 내보내기
+# 3) Engine 타겟 — ABI 다이제스트 · include 전파 · 정의 · PCH · Core OBJECT 재사용 · 내보내기
 # Core 소스는 한 번만 컴파일. 동일 .obj를 Engine에 넣어
 # Dev에서 App/Editor가 Engine.dll로부터 FileUtil/Logger를 dllimport
 # ReflectionParser는 Core STATIC만 링크해 Engine.dll 순환을 피함
@@ -120,15 +120,15 @@ add_library(Engine ${core_lib_type} ${ENGINE_SOURCES})
 sw_apply_target_layer_guard(Engine engine) # 타깃 경계 — Engine 은 GameFramework · Editor · 호스트를 보지 못한다. 층 부분 · Jolt 오브젝트는 이 include 자리를 복사한다
 sw_require_template_definitions(Engine) # `.inl` 누락을 링크가 아니라 컴파일에서 — 층 부분 · Jolt 오브젝트도 이 옵션을 복사한다
 
-# 핫 리로드 ABI 스탬프 — Engine 이 자기 헤더 지문을 박는다(`Engine/Module/EngineABIStamp.cpp`). 모듈도 같은 값을 박는다.
-sw_define_engine_abi_stamp()
-add_dependencies(Engine SwEngineABIStamp)
+# 핫 리로드 ABI 다이제스트 — Engine 이 자기 헤더 지문을 박는다(`Engine/Module/EngineABIDigest.cpp`). 모듈도 같은 값을 박는다.
+sw_define_engine_abi_digest()
+add_dependencies(Engine SwEngineABIDigest)
 target_include_directories(Engine PRIVATE "${CMAKE_BINARY_DIR}/generated/engineabi")
-set_source_files_properties("${CMAKE_CURRENT_SOURCE_DIR}/Module/EngineABIStamp.cpp" PROPERTIES
-	OBJECT_DEPENDS "${SW_ENGINE_ABI_STAMP_HEADER}"
+set_source_files_properties("${CMAKE_CURRENT_SOURCE_DIR}/Module/EngineABIDigest.cpp" PROPERTIES
+	OBJECT_DEPENDS "${SW_ENGINE_ABI_DIGEST_HEADER}"
 )
 
-# 쿠커 코드 지문 — 쿠킹 재사용 판단의 입력을 소스 내용에서 산출한다(`Engine/Content/CookCodeFingerprint.h`). 엔진 소스 어디가 바뀌어도 돌지만 결과가 같으면 파일을 다시 쓰지 않는다.
+# 쿠커 코드 지문 — 쿠킹 재사용 판단의 입력을 소스 내용에서 산출한다(`Engine/Content/CookCodeDigest.h`). 엔진 소스 어디가 바뀌어도 돌지만 결과가 같으면 파일을 다시 쓰지 않는다.
 sw_glob_source_tree(cook_code_inputs RECURSE
 	"${CMAKE_SOURCE_DIR}/Source/Engine/*.h"
 	"${CMAKE_SOURCE_DIR}/Source/Engine/*.hpp"
@@ -138,7 +138,7 @@ sw_glob_source_tree(cook_code_inputs RECURSE
 	"${CMAKE_SOURCE_DIR}/Source/DevTools/Cook/*.h" # 쿠커는 DevTools 에 있다 — 지문은 소스 글만 읽는다
 	"${CMAKE_SOURCE_DIR}/Source/DevTools/Cook/*.cpp"
 )
-set(cook_code_header "${CMAKE_BINARY_DIR}/generated/engineabi/CookCodeFingerprint.gen.h")
+set(cook_code_header "${CMAKE_BINARY_DIR}/generated/engineabi/CookCodeDigest.gen.h")
 # 쿠커 도구 판은 쿠킹하는 쪽의 vcpkg 기록이다 — 교차 빌드는 호스트 빌드의 것(HostTools.cmake), 아니면 이 빌드의 것.
 if(CMAKE_CROSSCOMPILING)
 	set(cook_vcpkg_status "${SW_HOST_VCPKG_STATUS}")
@@ -147,18 +147,18 @@ else()
 endif()
 add_custom_command(
 	OUTPUT "${cook_code_header}"
-	COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/Scripts/generate/cook_code_fingerprint.py"
+	COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/Scripts/generate/cook_code_digest.py"
 		--root "${CMAKE_SOURCE_DIR}" --inputs "${CMAKE_SOURCE_DIR}/Config/Dev/CookCodeInputs.json"
 		--vcpkg-status "${cook_vcpkg_status}" --out "${cook_code_header}"
-		--cache "${CMAKE_BINARY_DIR}/generated/engineabi/CookCodeFingerprint.cache.json" # 파일 지문 캐시 — 바뀐 소스만 다시 읽는다
+		--cache "${CMAKE_BINARY_DIR}/generated/engineabi/CookCodeDigest.cache.json" # 파일 지문 캐시 — 바뀐 소스만 다시 읽는다
 	DEPENDS ${cook_code_inputs} "${CMAKE_SOURCE_DIR}/Config/Dev/CookCodeInputs.json" "${cook_vcpkg_status}"
-		"${CMAKE_SOURCE_DIR}/Scripts/generate/cook_code_fingerprint.py"
-	COMMENT "Fingerprinting cooker code"
+		"${CMAKE_SOURCE_DIR}/Scripts/generate/cook_code_digest.py"
+	COMMENT "Hashing cooker code"
 	VERBATIM
 )
-add_custom_target(SwCookCodeFingerprint DEPENDS "${cook_code_header}")
-set_target_properties(SwCookCodeFingerprint PROPERTIES FOLDER "CMakePredefinedTargets")
-set_source_files_properties("${CMAKE_CURRENT_SOURCE_DIR}/Content/CookCodeFingerprint.cpp" PROPERTIES OBJECT_DEPENDS "${cook_code_header}")
+add_custom_target(SwCookCodeDigest DEPENDS "${cook_code_header}")
+set_target_properties(SwCookCodeDigest PROPERTIES FOLDER "CMakePredefinedTargets")
+set_source_files_properties("${CMAKE_CURRENT_SOURCE_DIR}/Content/CookCodeDigest.cpp" PROPERTIES OBJECT_DEPENDS "${cook_code_header}")
 
 # `Source/Engine` 자체는 include 경로가 아니다 — `#include "pch.h"` 만 진입 헤더로 푼다(소비하는 타깃 모두가 받는다).
 sw_add_pch_entry_directory(Engine PUBLIC engine "Engine/pch.h")
@@ -380,7 +380,7 @@ foreach(tier IN LISTS SW_ENGINE_TIER_LIST)
 	)
 	sw_add_layer_stubs(EngineLayer${tier} ${tier} SW_ENGINE_TIER Engine)
 	target_include_directories(EngineLayer${tier} PRIVATE "${CMAKE_BINARY_DIR}/generated/engineabi")
-	add_dependencies(EngineLayer${tier} SwCookCodeFingerprint)
+	add_dependencies(EngineLayer${tier} SwCookCodeDigest)
 endforeach()
 
 # ------------------------------------------------------------------------------

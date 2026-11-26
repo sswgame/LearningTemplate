@@ -53,7 +53,7 @@ namespace sw::editor
     using AssetSourceImporterFunc = bool ( * )( const AssetPaths& assetPaths, string_view relativePath );
     /**
      * @brief 바뀐 원본들을 백그라운드 잡(`EditorAssetImportJob`)의 워커에서 한 번에 임포트하는 임포터입니다(`AssetSourceBatch`) — 긴 일은 에디터 스레드에서 동기로 돌지 않는다.
-     * @details UI 와 공유 상태를 건드리지 않고 에디터 서비스 범위를 읽지 않습니다. 원본을 나눠 도는 일 · 순서 의존 · 스탬프는 일괄 임포트(`AssetImportStampUtil`)가 합니다. 결과 적용(캐시 리로드 · 씬 알림)은 에디터 스레드가 합니다.
+     * @details UI 와 공유 상태를 건드리지 않고 에디터 서비스 범위를 읽지 않습니다. 원본을 나눠 도는 일 · 순서 의존 · 스탬프는 일괄 임포트(`AssetImportDigestUtil`)가 합니다. 결과 적용(캐시 리로드 · 씬 알림)은 에디터 스레드가 합니다.
      */
     using AssetSourceBatchImporterFunc = void ( * )( AssetSourceBatch& batch );
 

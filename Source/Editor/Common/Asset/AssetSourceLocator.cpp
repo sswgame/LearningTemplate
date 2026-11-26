@@ -8,7 +8,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Process/Process.h"
 
-#include "Editor/Common/Asset/AssetImportStamp.h"
+#include "Editor/Common/Asset/AssetImportDigest.h"
 #include "Editor/Common/Asset/EditorContentScan.h"
 
 #include "Engine/Config/ConfigManager.h"
@@ -79,7 +79,7 @@ namespace sw::editor
     uint64 AssetSourceLocator::computeHash( const DiskPath& sourcePath )
     {
         const optional<DiskPath> contentPath = AssetSourceLocatorInternal::resolveOrReport( sourcePath );
-        return contentPath.has_value() ? AssetImportStampUtil::computeFileHash( *contentPath ) : 0;
+        return contentPath.has_value() ? AssetImportDigestUtil::computeFileHash( *contentPath ) : 0;
     }
 
     void AssetSourceLocator::collectStoredSources( const AbsolutePath& folder, vector<AbsolutePath>& inoutListSourcePath )

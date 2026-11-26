@@ -163,9 +163,9 @@ namespace sw::editor
             /** @brief 전체 스캔의 파일 하나입니다(목록 순서 — 표시 경로 순). */
             struct ScanFile
             {
-                string    _displayPath;
-                FileStamp _fileStamp{};
-                FileStamp _sidecarStamp{};
+                string   _displayPath;
+                FileStat _fileStat{};
+                FileStat _sidecarStat{};
             };
 
             /** @brief 파일 하나의 읽기 결과입니다 — 워커가 자기 칸에 쓰고 호출 스레드가 차례로 합친다. */
@@ -210,12 +210,12 @@ namespace sw::editor
             };
 
             /** @brief 훑기 캐시에 둘 바이트입니다 — 곁 서술의 도장(원본은 서술이 바뀌면 다시 읽는다) · 정체성 · 참조 줄. */
-            [[nodiscard]] static vector<uint8> encodeContent( const FileStamp& sidecarStamp, const EditorAssetContent& content )
+            [[nodiscard]] static vector<uint8> encodeContent( const FileStat& sidecarStat, const EditorAssetContent& content )
             {
                 vector<uint8> bytes;
                 ByteWriter    writer{ bytes };
-                writer.writeUint64( sidecarStamp._sizeBytes );
-                writer.writeUint64( sidecarStamp._writeTime );
+                writer.writeUint64( sidecarStat._sizeBytes );
+                writer.writeUint64( sidecarStat._writeTime );
                 writer.writeString( content._guid.has_value() ? content._guid->toString() : string{} );
                 writer.writeUint32( static_cast<uint32>( content._listLink.size() ) );
                 for ( const EditorAssetLink& link : content._listLink )
@@ -228,7 +228,7 @@ namespace sw::editor
             }
 
             /** @brief `encodeContent` 의 짝입니다. 곁 서술의 도장이 다르거나 바이트가 그 꼴이 아니면 없음입니다. */
-            [[nodiscard]] static optional<EditorAssetContent> decodeContent( const vector<uint8>& bytes, const FileStamp& sidecarStamp )
+            [[nodiscard]] static optional<EditorAssetContent> decodeContent( const vector<uint8>& bytes, const FileStat& sidecarStat )
             {
                 /** @brief 참조 줄 하나의 최소 바이트입니다(빈 글 길이 4 + 줄 4 + 깃발 1). */
                 constexpr size_t   kMinLinkBytes = 9;
@@ -243,7 +243,7 @@ namespace sw::editor
                     outLink._line     = reader.readUint32();
                     outLink._bInlined = reader.readUint8() != 0;
                 } );
-                if ( bLinks == false || reader.isFullyRead() == false || FileStamp{ sidecarSize, sidecarTime } != sidecarStamp )
+                if ( bLinks == false || reader.isFullyRead() == false || FileStat{ sidecarSize, sidecarTime } != sidecarStat )
                     return nullopt;
                 if ( guidText.empty() == false )
                 {
@@ -370,13 +370,13 @@ namespace sw::editor
         return content;
     }
 
-    void EditorAssetIndex::insertEntry( EditorAssetIndexData& inoutData, string_view displayPath, const FileStamp& fileStamp, EditorAssetContent&& content )
+    void EditorAssetIndex::insertEntry( EditorAssetIndexData& inoutData, string_view displayPath, const FileStat& fileStat, EditorAssetContent&& content )
     {
         const string assetID = EditorAssetIndexInternal::makeKey( displayPath );
         removeEntry( inoutData, assetID );
         EditorAssetEntry& entry = inoutData._mapEntry[assetID];
         entry._displayPath      = string( displayPath );
-        entry._fileStamp        = fileStamp;
+        entry._fileStat         = fileStat;
         entry._listLink         = std::move( content._listLink );
         for ( const EditorAssetLink& link : entry._listLink )
         {
@@ -395,24 +395,24 @@ namespace sw::editor
     {
         const string       assetID = EditorAssetIndexInternal::makeKey( displayPath );
         const AbsolutePath absPath = EditorAssetIndexInternal::makeDiskPath( resourceRoot, displayPath );
-        FileStamp          stamp{};
-        if ( FileUtil::getFileStamp( absPath, stamp ) == false )
+        FileStat           fileStat{};
+        if ( FileUtil::getFileStat( absPath, fileStat ) == false )
         {
             removeEntry( inoutData, assetID );
             return;
         }
         const auto itEntry = inoutData._mapEntry.find( assetID );
-        if ( bForce == false && itEntry != inoutData._mapEntry.end() && itEntry->second._fileStamp == stamp && itEntry->second._displayPath == displayPath )
+        if ( bForce == false && itEntry != inoutData._mapEntry.end() && itEntry->second._fileStat == fileStat && itEntry->second._displayPath == displayPath )
             return; // 크기 · 시각 · 표기가 같다 — 열지 않는다
         string text;
         if ( isTextAsset( assetID ) )
         {
             const bool bRead = FileUtil::readOptionalTextFile( absPath, text ) == OptionalFileRead::Read;
-            insertEntry( inoutData, displayPath, stamp, makeContent( bRead ? &text : nullptr, nullptr ) ); // 읽지 못한 글은 참조가 없는 것과 같다
+            insertEntry( inoutData, displayPath, fileStat, makeContent( bRead ? &text : nullptr, nullptr ) ); // 읽지 못한 글은 참조가 없는 것과 같다
             return;
         }
         const bool bMeta = EditorAssetIndexInternal::readMetaText( absPath, text );
-        insertEntry( inoutData, displayPath, stamp, makeContent( nullptr, bMeta ? &text : nullptr ) );
+        insertEntry( inoutData, displayPath, fileStat, makeContent( nullptr, bMeta ? &text : nullptr ) );
     }
 
     void EditorAssetIndex::scan( const AbsolutePath& resourceRoot, const AbsolutePath& scratchFolder, EditorAssetIndexData& outData, TaskManager* pTaskManager, const StopToken& stopToken, AssetScanCache* pCache )
@@ -431,7 +431,7 @@ namespace sw::editor
         {
             string displayPath = Internal::makeDisplayPath( resourceRoot.str(), file._path );
             if ( displayPath.empty() == false )
-                listScan.push_back( Internal::ScanFile{ std::move( displayPath ), file._fileStamp, file._sidecarStamp } );
+                listScan.push_back( Internal::ScanFile{ std::move( displayPath ), file._fileStat, file._sidecarStat } );
         }
         // 같은 GUID 를 든 두 파일(복사본)의 승자가 실행마다 같게 — 파일 순서로 합친다
         VectorUtil::sort( listScan, []( const Internal::ScanFile& left, const Internal::ScanFile& right )
@@ -444,10 +444,10 @@ namespace sw::editor
             const Internal::ScanFile& file = listScan[fileIndex];
             Internal::FileRead&       read = listRead[fileIndex];
             read._bTextAsset               = isTextAsset( file._displayPath ) ? SW_TRUE : SW_FALSE;
-            const vector<uint8>* pCached   = pCache != nullptr ? pCache->find( file._displayPath, file._fileStamp ) : nullptr;
+            const vector<uint8>* pCached   = pCache != nullptr ? pCache->find( file._displayPath, file._fileStat ) : nullptr;
             if ( pCached == nullptr )
                 continue;
-            optional<EditorAssetContent> content = Internal::decodeContent( *pCached, file._sidecarStamp );
+            optional<EditorAssetContent> content = Internal::decodeContent( *pCached, file._sidecarStat );
             if ( content.has_value() == false )
                 continue; // 곁 서술이 바뀌었다 — 다시 읽어 줄을 새로 적는다
             read._content = std::move( *content );
@@ -477,10 +477,10 @@ namespace sw::editor
             if ( read._bTextAsset == SW_TRUE && read._bRead == SW_TRUE )
                 ++outData._scannedFileCount;
             // 읽는 동안 멈춘 스캔의 칸은 비어 있다 — 캐시에 빈 줄을 적지 않는다. 작업 도메인은 실행마다 새 사본이고, 막 쓴 서술은 도장으로 가릴 수 없다(파일 자신의 도장은 `record` 가 본다).
-            const bool bNewRow = pCache != nullptr && read._bRead == SW_TRUE && read._bCached == SW_FALSE && ContentHash::isStampStable( file._sidecarStamp );
+            const bool bNewRow = pCache != nullptr && read._bRead == SW_TRUE && read._bCached == SW_FALSE && ContentHash::isStatStable( file._sidecarStat );
             if ( bNewRow && FileUtil::startsWithPathComponent( FileUtil::normalizePath( file._displayPath ), AssetPaths::kScratchDomain ) == false )
-                pCache->record( file._displayPath, file._fileStamp, Internal::encodeContent( file._sidecarStamp, read._content ) );
-            insertEntry( outData, file._displayPath, file._fileStamp, std::move( read._content ) );
+                pCache->record( file._displayPath, file._fileStat, Internal::encodeContent( file._sidecarStat, read._content ) );
+            insertEntry( outData, file._displayPath, file._fileStat, std::move( read._content ) );
         }
         outData._scanMilliseconds = stopwatch.getElapsedMilliseconds();
     }
@@ -541,14 +541,14 @@ namespace sw::editor
         }
     }
 
-    void EditorAssetIndex::applyText( string_view assetID, string_view text, const FileStamp& fileStamp )
+    void EditorAssetIndex::applyText( string_view assetID, string_view text, const FileStat& fileStat )
     {
         const string displayPath = FileUtil::normalizeSeparators( assetID );
         const string copy{ text };
         // 붙인 디스크 도메인(테스트 · 도구)의 글도 넣으므로 그 도메인 이름을 참조 앞머리로 함께 본다 — 이 함수는 에디터 스레드에서만 부른다.
         vector<string> listMountedDomain;
         editor::getSubsystem<AssetPaths>().collectMountedDiskDomains( listMountedDomain );
-        insertEntry( _data, displayPath, fileStamp, makeContent( isTextAsset( displayPath ) ? &copy : nullptr, nullptr, listMountedDomain ) );
+        insertEntry( _data, displayPath, fileStat, makeContent( isTextAsset( displayPath ) ? &copy : nullptr, nullptr, listMountedDomain ) );
     }
 
     const EditorAssetEntry* EditorAssetIndex::find( string_view assetID ) const
