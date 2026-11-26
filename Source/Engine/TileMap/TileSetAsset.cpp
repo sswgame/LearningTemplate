@@ -15,6 +15,7 @@
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
+#include "Engine/TileMap/TileGridUtil.h"
 
 namespace sw
 {
