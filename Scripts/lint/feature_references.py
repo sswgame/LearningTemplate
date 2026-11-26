@@ -63,7 +63,7 @@ class Sources:
     dict_header: dict[str, str] = field(default_factory=dict)      # 경로 → 글(`Tests/` 밖 C++)
     dict_test_code: dict[str, str] = field(default_factory=dict)    # 경로 → 글(`Tests/` 안 C++)
     dict_content: dict[str, str] = field(default_factory=dict)     # 경로 → 글(Content 글 파일)
-    dict_script: dict[str, str] = field(default_factory=dict)      # 경로 → 글(Scripts · Test · CMake)
+    dict_script: dict[str, str] = field(default_factory=dict)      # 경로 → 글(Scripts · IntegrationTests · CMake)
 
 
 def classify_path(relative: str) -> str | None:
@@ -73,7 +73,7 @@ def classify_path(relative: str) -> str | None:
         return "dict_test_code" if "/Tests/" in relative else "dict_header"
     if relative.startswith("Content/") and suffix in CONTENT_EXTENSIONS:
         return "dict_content"
-    if relative.startswith(("Scripts/", "Test/")) and suffix in SCRIPT_EXTENSIONS and relative != "Scripts/lint/feature_references.py":
+    if relative.startswith(("Scripts/", "IntegrationTests/")) and suffix in SCRIPT_EXTENSIONS and relative != "Scripts/lint/feature_references.py":
         return "dict_script"
     return None
 

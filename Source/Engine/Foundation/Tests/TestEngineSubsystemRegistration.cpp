@@ -9,7 +9,7 @@
 #include "Core/Subsystem/Subsystem.h"
 #include "Core/Subsystem/SubsystemScope.h"
 #include "Core/Subsystem/SubsystemSlot.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Foundation/EngineSubsystems.h"

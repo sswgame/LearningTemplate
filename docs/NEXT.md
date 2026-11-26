@@ -23,7 +23,7 @@
 - **합친 묶음:** `net-pair` 전체(mmo · match · respawn), `lockstep-pair`, `online-local run`, `telemetry-local`, Server · Shipping · 웹 · Android 구성이 온라인 키트와 클라이언트 키트를 링크.
 - **RHI 메모리(VMA · D3D12MA):** 네 백엔드 체인 `-rhi-validation`, 장치 소실 · 창 크기 · 되읽기, 종료 로그 `RHI.AllocationLeak` 없음.
 - **셰이더:** `--cook-shaders -webgpu`(Tint 변환 — `vfx_simulate` · `mesh_morph` · `scene_voxelize`).
-- **쿠킹본 실행:** `Test/Pack/RunCookedContent.cmake`(A-13 [36]), 모든 쿠킹에서 `PackCookNoIdentity` 0.
+- **쿠킹본 실행:** `IntegrationTests/Pack/RunCookedContent.cmake`(A-13 [36]), 모든 쿠킹에서 `PackCookNoIdentity` 0.
 - **배포 도구:** N2 `py -3 -m Scripts server-image`.
 - **임포트 산출물:** 모델 전체 다시 임포트(`.mesh` 판), `--gather-text` 결과 커밋.
 - **슈터 적 풀링(K-11 [50]):** `enemydeath` · `dismemberment` · `effectpool` 로 다시 꺼낸 적이 래그돌 · 절단 · 무기 · 빙의 없이 서는지.
@@ -105,4 +105,4 @@
 - **에디터:** UI 스레드는 나누지 않고 MVVM 까지(비동기화로도 응답이 기준을 넘는 측정값이 나오면 다시 연다). 소스 관리는 Git 만.
 - **길드 창고(O-10):** 이전 불가 자산은 맡긴 당사자가 허용한 권한 안에서만 다른 계정으로.
 - **플랫폼 · 빌드:** 웹은 wasm32(memory64 는 Safari 미지원). 교차 빌드는 호스트 빌드(`SW_HOST_BUILD_DIR`)의 ReflectionParser · App. xxh3 금지(느리면 CRC32C). Server 배포 구성은 묶음마다 검증.
-- 최상위 `Mods/` 는 `Test/Mods/`. App 의 `Dev/` 는 남긴다. 줄끝은 `* text=auto eol=lf`.
+- 최상위 `Mods/` 는 `IntegrationTests/Mods/`. App 의 `Dev/` 는 남긴다. 줄끝은 `* text=auto eol=lf`.

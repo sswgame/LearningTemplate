@@ -2,7 +2,7 @@
 // 월드 단(Object/Prefab) 테스트가 아니라 여기에 둔다 — 아래 층 부분은 위 층 헤더를 include 하지 못한다(EngineLayers.toml).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Animation/Component/LocomotionWarpingComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"

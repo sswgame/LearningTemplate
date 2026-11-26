@@ -1,7 +1,7 @@
 // MeshPreviewViewModelTest — 미리보기 씬의 메시 오브젝트 세우기 · 찾기, 메시를 읽기 전의 LOD 표와 상태 줄(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Editor/Panels/Mesh/Model/MeshPreviewViewModel.h"
 

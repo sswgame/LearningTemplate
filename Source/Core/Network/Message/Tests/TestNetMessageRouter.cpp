@@ -9,7 +9,7 @@
 #include "Core/Network/Tests/NetTestUtil.h"
 #include "Core/Network/Transport/NetTransport.h"
 #include "Core/Serialization/BitStream.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 // 메시지 라우터 — 영역 · 종류로 나눠 주기, 겹치는 처리기 거절, 라우터가 먼저 사라짐, 깨진 메시지 세기, 사건이 메시지보다 먼저, 상대 모두에게 보내기 · 중계.
 

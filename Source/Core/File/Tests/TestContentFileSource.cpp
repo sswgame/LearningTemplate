@@ -3,7 +3,7 @@
 #include "Core/File/AsyncFileIO.h"
 #include "Core/File/ContentFileSource.h"
 #include "Core/File/FileUtil.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 using namespace sw;
 

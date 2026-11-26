@@ -2,7 +2,7 @@
 #include "pch.h"
 
 #include "Core/Concurrency/DiskIOScope.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Graphics/Shader/Compile/ShaderBytecodeProvider.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"

@@ -6,7 +6,7 @@
 #include "Core/File/ProcessRoots.h"
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Editor/Common/Asset/Texture/TextureImportConfig.h"
 #include "Editor/Common/Asset/Texture/TextureImporter.h"

@@ -2,7 +2,7 @@
 // 컴포넌트가 사라지면 구독이 풀린다. 듣는 쪽이 없는 오브젝트는 묶음을 만들지 않는다(nogpu, 물리 없음).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"

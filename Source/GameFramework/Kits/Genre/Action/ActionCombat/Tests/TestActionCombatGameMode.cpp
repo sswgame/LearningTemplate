@@ -1,7 +1,7 @@
 // ActionCombatGameModeTest — 액션 컴뱃 디렉터의 입력 명령(`submitPlayerInput`)은 판이 열린 동안만 받는다: 열기 전에는 거절하고, 판을 열면 받는다(nogpu, 에셋 없음).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"

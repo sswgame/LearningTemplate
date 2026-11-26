@@ -2,7 +2,7 @@
 // 상한을 넘는 수령은 우편을 그대로 두며(CapExceeded), 남의 우편은 NotFound, 모두 받기는 상한에 걸린 우편만 남기고, 받은 우편은 보관 기간 뒤 만료 정리가 지운다. 온라인 키트라 `UnitTests.OnlineKits` 가 돌린다(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "GameFramework/Kits/Feature/Online/Mailbox/Server/MailboxStoreLogic.h"
 #include "GameFramework/Runtime/Online/Ledger/Server/Ledger.h"

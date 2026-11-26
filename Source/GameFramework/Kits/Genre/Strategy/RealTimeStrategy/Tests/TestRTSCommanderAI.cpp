@@ -1,7 +1,7 @@
 // RTSCommanderAITest — 지휘관 AI: 생각 빈도, 공격 알림 거르기, 작업 일곱의 조건과 내리는 명령, 상태 바이트. 작업 하나만 잎으로 둔 트리로 돌려 작업의 규칙만 본다. 키트 GF_RealTimeStrategy(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Behavior/ActionRegistry.h"
 #include "Engine/Reflection/TypeFqn.h"

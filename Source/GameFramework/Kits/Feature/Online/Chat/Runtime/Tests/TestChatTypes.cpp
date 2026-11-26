@@ -2,7 +2,7 @@
 // 귓속말 키는 두 계정의 순서와 무관하다. 서버는 받은 채널 id 를 이 함수로 거른다(ChatService).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "GameFramework/Kits/Feature/Online/Chat/Runtime/ChatLog.h"
 #include "GameFramework/Kits/Feature/Online/Chat/Runtime/ChatTypes.h"

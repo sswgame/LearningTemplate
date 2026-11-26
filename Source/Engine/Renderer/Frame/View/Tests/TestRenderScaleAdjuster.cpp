@@ -1,7 +1,7 @@
 #include "pch.h"
 
 #include "Core/Math/MathUtil.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Renderer/Frame/View/RenderScaleAdjuster.h"
 

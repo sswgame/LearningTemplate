@@ -1,7 +1,7 @@
 // ProcessExitCodeTest — 종료 요청은 표(ProcessExitCodes.json)의 열거형만 받고, 표는 초기화 실패 · 사진 쓰기 실패를 크래시와 가른다(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "DevTools/Client/Automation/Runner/AutomationExitCode.h"
 

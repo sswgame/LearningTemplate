@@ -5,7 +5,7 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 // 네트워크 흉내 — 지연 · 흔들림, 손실 · 중복 비율, 일부러 늦춘 패킷이 앞지르기를 당함, 대역폭 줄과 큐 넘침, 연결별 덮어쓰기, 깨짐(한 바이트), 꺼지면 그대로.
 // 전역 변수(-gv_netEmu*)로 조건을 만드는 것은 EngineTest 의 NetClientServerTest 가 본다(전역 변수 표가 엔진에 있다).

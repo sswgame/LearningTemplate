@@ -6,7 +6,7 @@
 
 #include "Core/Concurrency/atomic.h"
 #include "Core/Task/TaskManager.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/RHI/RHIStructuredBuffer.h"

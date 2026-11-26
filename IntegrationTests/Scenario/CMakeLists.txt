@@ -1,5 +1,5 @@
 # ==============================================================================
-# @file Test/Scenario/CMakeLists.txt
+# @file IntegrationTests/Scenario/CMakeLists.txt
 # @brief 시나리오를 CTest 항목으로 — 이 구성이 짓는 게임마다(활성 게임 `SW_ACTIVE_GAME` + 함께 짓는 게임 `SW_GAMES`) 그 게임의 `Content/game/<팩>/automation/` 바로 아래
 #        `*.scenario.xml` 모두를 체인 하나(`Scenario.<팩>` — `App -scenario=a,b,c -scenario-keep-going -scenario-backends=all -unattended`, 라벨 hostgpu — 창과 GPU 가 있는 PC 에서)로 돌린다.
 #        엔진 시나리오(`Content/engine/automation/`)는 활성 게임의 체인에 든다. 활성 게임이 아닌 게임은 `-game=<게임>` 을 붙인다(App 이 그 게임 팩 `Bin/Games/<게임>` 을 싣는다).
@@ -10,8 +10,8 @@
 #        골든이 백엔드별이라 자식마다 제 골든과 견준다. 이 PC 에서 못 도는 백엔드는 그 백엔드만 건너뛴다.
 # @details 종료 코드는 표 하나(`Config/Engine/ProcessExitCodes.json` → `SW_EXIT_CODE_<이름>`)다 — 건너뜀(`SW_EXIT_CODE_Skipped`)은 CTest 의 건너뜀이다. 행렬은 첫 실패 백엔드의 코드를 낸다.
 #          단계별 결과는 `<빌드>/Testing/Logs/Scenario.<팩>.<백엔드>.log` 의 `chain stage i/n` 줄에 있다.
-#          하위 폴더는 조건이 붙은 시나리오라 체인이 줍지 않고 폴더마다 제 항목이 있다(`rhiswap/` — 네 백엔드가 있는 Windows, `netpair/` — 여러 프로세스, Test/Net).
-#          어느 항목도 띄우지 않는 시나리오가 있으면 구성이 선다(이 파일 끝) — 돌릴 수 없는 것(디버거 · 브라우저)만 까닭과 함께 `Config/Rules/Test/ManualScenarios.json` 에 둔다.
+#          하위 폴더는 조건이 붙은 시나리오라 체인이 줍지 않고 폴더마다 제 항목이 있다(`rhiswap/` — 네 백엔드가 있는 Windows, `netpair/` — 여러 프로세스, IntegrationTests/Net).
+#          어느 항목도 띄우지 않는 시나리오가 있으면 구성이 선다(이 파일 끝) — 돌릴 수 없는 것(디버거 · 브라우저)만 까닭과 함께 `Config/Rules/TestSelection/ManualScenarios.json` 에 둔다.
 #          게임의 하위 폴더 다섯은 게임마다 같은 `-game=` 규칙으로 따로 항목이 된다: `showcase/`(쇼케이스 체인 `Scenario.<팩>.showcase`), `desktop/`(혼자 도는 데스크톱 시나리오),
 #          `sequence/`(두 번 기동 쌍), `editor/`(그 게임의 편집기 체인 `Scenario.<팩>.editor`), `load/`(부하 측정 — 라벨 load, 엔진 폴더도).
 #          항목이 GPU 자식을 백엔드 수만큼 띄우므로 그 수를 슬롯으로 선언한다(`PROCESSORS`) — `ctest -j` 의 다른 항목(단위 테스트)과 겹쳐도 GPU 자식이 늘지 않는다.
@@ -283,7 +283,7 @@ if(WIN32 AND TARGET EditorModule AND TARGET Server AND CMAKE_BUILD_TYPE STREQUAL
 	sw_glob_source_tree(list_unregistered RECURSE RELATIVE "${scenario_root}" ${list_all_scenario_glob})
 	get_property(list_registered GLOBAL PROPERTY SW_REGISTERED_SCENARIOS)
 	list(REMOVE_ITEM list_unregistered ${list_registered})
-	set(manual_scenarios_file "${CMAKE_SOURCE_DIR}/Config/Rules/Test/ManualScenarios.json")
+	set(manual_scenarios_file "${CMAKE_SOURCE_DIR}/Config/Rules/TestSelection/ManualScenarios.json")
 	set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${manual_scenarios_file}")
 	sw_require_json_value(manual_count "${manual_scenarios_file}" LENGTH _scenarios)
 	if(manual_count GREATER 0)
@@ -304,9 +304,9 @@ if(WIN32 AND TARGET EditorModule AND TARGET Server AND CMAKE_BUILD_TYPE STREQUAL
 	endif()
 endif()
 
-# 모든 시나리오가 임포트한 산출물을 요구한다(Test/CMakeLists.txt 의 `Import.*`).
+# 모든 시나리오가 임포트한 산출물을 요구한다(IntegrationTests/CMakeLists.txt 의 `Import.*`).
 get_property(all_scenario_test DIRECTORY PROPERTY TESTS)
 set_tests_properties(${all_scenario_test} PROPERTIES FIXTURES_REQUIRED ImportedAssets)
 if(SW_CPU_HEAVY_TEST)
-	set_tests_properties(${all_scenario_test} PROPERTIES DEPENDS ${SW_CPU_HEAVY_TEST}) # 시간 판정이 있는 시나리오는 CPU 를 다 쓰는 항목 뒤에 돈다(Test/CMakeLists.txt 의 SW_CPU_HEAVY_TEST)
+	set_tests_properties(${all_scenario_test} PROPERTIES DEPENDS ${SW_CPU_HEAVY_TEST}) # 시간 판정이 있는 시나리오는 CPU 를 다 쓰는 항목 뒤에 돈다(IntegrationTests/CMakeLists.txt 의 SW_CPU_HEAVY_TEST)
 endif()

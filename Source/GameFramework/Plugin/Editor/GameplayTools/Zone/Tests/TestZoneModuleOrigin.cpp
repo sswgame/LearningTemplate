@@ -1,7 +1,7 @@
 // ZoneModuleOriginTest — 지역 볼륨 모듈 줄의 출처: 덮어쓰기가 없으면 물려받음, 프리셋에 없으면 더함, 있으면 방식대로(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneModuleOrigin.h"
 

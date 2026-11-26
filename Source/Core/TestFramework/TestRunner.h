@@ -5,7 +5,7 @@
  *          프로세스 여럿이 돈다(CTest `SW_UNIT_TEST_SHARDS`, GoogleTest 샤딩과 같다). 결과는 표준 출력(사람)과 JSON 보고(`--test-report`)로 낸다.
  *          보고에는 거른 케이스 수 · 돈 케이스 수 · 씨앗 · 케이스별 시간 · 실패 글 · 갱신한 스냅숏이 든다 — 구성마다 실제로 몇 개가 돌았는지가 보인다.
  *          보고 형식은 판 번호(`kReportSchemaVersion`)를 단다. 케이스마다 이름 · 정의한 파일과 줄 · 회차 · 결과 · 시간 · 격리 여부 · 실패 글(`파일(줄): error:` 꼴)이다.
- *          CTest 는 실행마다 빌드 폴더의 고정 경로(`Testing/Reports/<항목>.json`)에 보고를 남긴다(`Test/CMakeLists.txt`) — 통과한 실행도 시간 추세가 남는다.
+ *          CTest 는 실행마다 빌드 폴더의 고정 경로(`Testing/Reports/<항목>.json`)에 보고를 남긴다(`IntegrationTests/CMakeLists.txt`) — 통과한 실행도 시간 추세가 남는다.
  *          격리 케이스(`._bIsolated`)는 이 실행 파일을 자식으로 다시 띄워(`--test-isolated-case`) 돌린다 — 크래시 · 교착 · 강제 종료가 그 케이스의 실패로 남고 나머지는 이어진다.
  */
 #pragma once

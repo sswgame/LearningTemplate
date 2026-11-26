@@ -22,7 +22,7 @@ set(templates "${TEMPLATES}")
 set(config "${CONFIG}")
 set(module_name "ParserFixture")
 
-# 빌드와 같은 대상 인자 — Test/CMakeLists.txt 가 '|' 로 이어 넘긴다(sw_collect_reflection_target_args).
+# 빌드와 같은 대상 인자 — IntegrationTests/CMakeLists.txt 가 '|' 로 이어 넘긴다(sw_collect_reflection_target_args).
 string(REPLACE "|" ";" list_target_arg_value "${TARGET_ARGS}")
 set(list_target_arg "")
 foreach(target_arg IN LISTS list_target_arg_value)

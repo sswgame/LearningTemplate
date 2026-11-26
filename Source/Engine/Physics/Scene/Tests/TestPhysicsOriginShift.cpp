@@ -1,7 +1,7 @@
 // PhysicsOriginShiftTest — 월드 원점 이동은 컴포넌트가 주인이 아닌 바디(래그돌 · 파편 자리)도 옮기고 속도를 지킨다. 디바이스 없음(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"

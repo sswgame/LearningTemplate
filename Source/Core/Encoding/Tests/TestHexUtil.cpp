@@ -2,7 +2,7 @@
 #include "pch.h"
 
 #include "Core/Encoding/HexUtil.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 using namespace sw;
 

@@ -1,7 +1,7 @@
 #include "pch.h"
 
 #include "Core/Network/Replication/NetClock.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include <type_traits>
 

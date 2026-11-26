@@ -2,7 +2,7 @@
 
 #include "Core/Container/vector.h"
 #include "Core/String/StringUtil.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputKeyTable.h"

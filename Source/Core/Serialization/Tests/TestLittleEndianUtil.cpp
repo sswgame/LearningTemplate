@@ -3,7 +3,7 @@
 
 #include "Core/Serialization/ByteStream.h"
 #include "Core/Serialization/LittleEndianUtil.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include <type_traits>
 

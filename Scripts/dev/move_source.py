@@ -22,7 +22,7 @@ from pathlib import Path
 from common.command import Command, ScriptContext
 from common.exit_code import ExitCode
 from common.git import run_git
-from dev.rename_scope import CPP_SUFFIX, C_LIKE_SUFFIX, list_tracked_text, read_text, rewrite_unmarked_lines, write_text
+from dev.rename_scope import CPP_SUFFIX, C_LIKE_SUFFIX, TEXT_SUFFIX, list_tracked_text, read_text, rewrite_unmarked_lines, write_text
 
 BARE_INCLUDE = re.compile(r'^(\s*#\s*include\s*")([^"/]+)(")', re.M)
 
@@ -125,6 +125,17 @@ def make_path_rule(map_file: dict[str, str], list_folder_prefix: list[tuple[str,
     return pattern, lambda match: map_new[match.group(0)]
 
 
+def make_file_tag_rules(map_file: dict[str, str]) -> list[tuple[re.Pattern[str], object]]:
+    """`@file` 은 최상위 폴더 없이 적은 곳도 있다(`@file Utility/X.h`). 폴더가 하나 남는 것만 받는다 — 최상위 폴더를 옮기면(`IntegrationTests/CMakeLists.txt`)
+    남는 것이 파일 이름뿐이라 다른 폴더의 같은 이름(뿌리의 `@file CMakeLists.txt`)까지 바꿨다."""
+    list_rule = []
+    for old, new in map_file.items():
+        short_old = old.partition("/")[2]
+        if "/" in short_old:
+            list_rule.append((re.compile(r"(@file\s+)" + re.escape(short_old) + r"\b"), lambda match, new=new: match.group(1) + new))
+    return list_rule
+
+
 class MoveSourceCommand(Command):
     name = "move-source"
     help = "소스 파일 · 폴더를 옮기고 include · CMake · 문서 참조를 고친다(Source 기준 old=new)"
@@ -185,10 +196,11 @@ class MoveSourceCommand(Command):
                 folder = folder.parent
 
         list_rule = [make_path_rule(map_file, list_folder_prefix, root_base=base_prefix == "", list_stem=list_stem)]
-        # `@file` 은 최상위 폴더 없이 적은 곳도 있다(`@file Utility/X.h`).
-        list_rule += [(re.compile(r"(@file\s+)" + re.escape(old.partition("/")[2]) + r"\b"), lambda match, new=new: match.group(1) + new) for old, new in map_file.items() if "/" in old]
+        list_rule += make_file_tag_rules(map_file)
         changed_cpp_set = {source / new for new in map_moved_text} | set(list_neighbour_text)
-        for path in list_tracked_text(root):
+        # 옮긴 파일은 새 자리로 훑는다 — 훑는 뿌리 자체를 옮기면(`Test` → `IntegrationTests`) 뿌리 목록에 새 이름이 없어 그 안의 참조가 그대로 남았다.
+        list_moved_text = [source / new for new in map_file.values() if Path(new).suffix.lower() in TEXT_SUFFIX]
+        for path in sorted(set(list_tracked_text(root)) | set(list_moved_text)):
             text = read_text(path)
             def rewrite_paths(part: str) -> str:
                 for pattern, replacement in list_rule:

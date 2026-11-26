@@ -2,8 +2,8 @@
 #include "pch.h"
 
 #include "Core/GlobalVariable/GlobalVariableManager.h"
-#include "Core/Testing/ScopedGlobalVariableValue.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/ScopedGlobalVariableValue.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/UI/Screen/UIScreenSwitch.h"

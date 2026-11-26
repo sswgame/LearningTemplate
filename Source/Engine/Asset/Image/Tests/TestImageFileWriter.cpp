@@ -2,7 +2,7 @@
 
 #include "Core/Hash/HashUtil.h"
 #include "Core/String/StringUtil.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Asset/Image/ImageFileWriter.h"
 #include "Engine/Compression/EngineCompressionCodecs.h"

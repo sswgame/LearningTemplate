@@ -25,7 +25,7 @@
         "Write",
         "NotebookEdit"
       ],
-      "path": "/(Source|Scripts|cmake|Content|Test|Config)/",
+      "path": "/(Source|Scripts|cmake|Content|IntegrationTests|Config)/",
       "requiresAny": [
         "skill:ponytail"
       ],

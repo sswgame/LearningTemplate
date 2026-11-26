@@ -8,7 +8,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Path/AbsolutePath.h"
 #include "Core/String/StringBuilder.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Animation/AnimationClip.h"
 #include "Engine/Animation/Codec/AnimationCodec.h"

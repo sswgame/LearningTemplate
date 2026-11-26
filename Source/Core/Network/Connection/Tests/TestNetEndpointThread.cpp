@@ -8,9 +8,9 @@
 #include "Core/Network/Tests/LoopbackCluster.h"
 #include "Core/Network/Tests/NetTestUtil.h"
 #include "Core/Network/Transport/UDPNetTransport.h"
-#include "Core/Testing/TestFramework.h"
-#include "Core/Testing/TestWait.h"
-#include "Core/Testing/ThreadTestAccess.h"
+#include "Core/TestFramework/TestFramework.h"
+#include "Core/TestFramework/TestWait.h"
+#include "Core/TestFramework/ThreadTestAccess.h"
 #include "Core/Time/MonotonicClock.h"
 
 // 네트워크 스레드 · 비동기 — 전용 스레드가 도는 엔드포인트(루프백 · 실제 UDP), 비동기 연결(성공 · 가득 참 · 타임아웃 · 끊음 · 잘못된 주소),

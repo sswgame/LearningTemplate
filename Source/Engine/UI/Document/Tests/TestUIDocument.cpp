@@ -1,7 +1,7 @@
 // UIDocumentTest — UI 문서: 읽기 오류(경로 · 줄을 담는다), 위젯 만들기 · 이름 · 바인딩 분리, 조각(이름 감싸기 · 자기 참조), 쓰기와 다시 읽기(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Reflection/TypeInfo.h"

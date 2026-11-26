@@ -1,7 +1,7 @@
 // ProgressionCatalogsTest — 통계 · 경험치 곡선 · 날씨 표의 칸 읽기(스키마: StatDef · ExperienceCurveParams · ExperienceLevelParams · WeatherDef).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "GameFramework/Runtime/Gameplay/Progression/LevelProgress.h"
 #include "GameFramework/Runtime/Gameplay/Progression/PlayerStats.h"

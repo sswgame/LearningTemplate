@@ -2,7 +2,7 @@
 // 리플렉션 XML 수집 케이스는 손으로 만든 타입을 전역 TypeRegistry 에 영구히 올려야 해 아직 옮기지 않았다(반사 테스트 타입 자리로 옮길 일).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Editor/Common/Localization/TextGatherer.h"
 

@@ -1,7 +1,7 @@
 // ConfirmDialogTest — 공통 확인 대화 상자의 답 규칙: 단추 · 뒤로 가기의 답, 답은 한 번뿐(중복 누름), 화면 스택 밖에서도 닫기 표시(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/UI/Layout/CanvasPanel.h"
 #include "Engine/UI/Menu/ConfirmDialogScreen.h"

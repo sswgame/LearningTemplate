@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "GameFramework/Runtime/Foundation/GameMode/GameSpeedControl.h"
 #include "GameFramework/Runtime/Foundation/Presentation/SimulationViewSync.h"

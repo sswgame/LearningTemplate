@@ -2,7 +2,7 @@
 
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "DevTools/Client/Automation/Runner/AutomationGoldenUtil.h"
 #include "DevTools/Client/Automation/Runner/AutomationImage.h"

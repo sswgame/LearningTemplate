@@ -5,7 +5,7 @@
 #include "Core/Concurrency/ScopedLock.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/vector.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Window/Linux/LinuxSplashThread.h"
 

@@ -8,7 +8,7 @@
 #include "Core/Network/Transport/DelayedStreamTransport.h"
 #include "Core/Network/Transport/IStreamTransport.h"
 #include "Core/Network/Transport/StreamSendQueue.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 #include "Core/Time/MonotonicClock.h"
 
 // 스트림 전송의 계약 — 열기 · 순서대로 받기 · 우아한 종료(양쪽 닫힘 까닭) · 끊기(Reset) · 연결 실패 · 낡은 핸들 · 보낼 줄 물금 · 상한 · 읽기 멈춤 뒤 다시 받기.

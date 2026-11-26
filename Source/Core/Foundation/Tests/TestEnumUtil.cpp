@@ -1,7 +1,7 @@
 #include "pch.h"
 
 #include "Core/Foundation/EnumUtil.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 // ------------------------------------------------------------------------------
 // 1) Core_EnumUtil — hasFlag / hasAnyFlag / setFlag / clearFlag

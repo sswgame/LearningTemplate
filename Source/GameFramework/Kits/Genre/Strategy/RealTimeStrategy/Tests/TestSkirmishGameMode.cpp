@@ -1,7 +1,7 @@
 // SkirmishGameModeTest — 1 대 1 디렉터: 찾기(`findInScene`)는 씬에 하나를 지키고, 명령은 판이 열린 동안만 받으며, 유닛 카탈로그가 없으면 판을 열지 않는다(nogpu, 에셋 없음).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"

@@ -7,7 +7,7 @@
 #include "Core/Network/Tests/LoopbackStreamTransport.h"
 #include "Core/Network/Transport/WebSocketAcceptTransport.h"
 #include "Core/Network/Transport/WebSocketProtocol.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 #include "Core/Time/MonotonicClock.h"
 
 // WebSocket 수락 장식자 — 업그레이드 응답(RFC 6455 의 예시 키) · 가린 클라이언트 프레임의 몸만 위로 · 서버 보내기는 이진 프레임 · 원시 스트림은 그대로 · 잘못된 요청은 400.

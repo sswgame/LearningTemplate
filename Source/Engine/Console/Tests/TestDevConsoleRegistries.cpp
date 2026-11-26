@@ -1,7 +1,7 @@
 // DevConsoleRegistryTest — 개발 명령 · 디버그 HUD 레지스트리: 등록 규칙, 찾기 · 이름 모으기, 인자 읽기, HUD 켜짐 상태 글(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Console/DebugHUDRegistry.h"
 #include "Engine/Console/DevCommandRegistry.h"

@@ -3,7 +3,7 @@
 #include "pch.h"
 
 #include "Core/Foundation/BuildInfo.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Foundation/EngineSubsystems.h"

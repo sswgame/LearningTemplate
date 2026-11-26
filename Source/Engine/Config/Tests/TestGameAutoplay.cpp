@@ -5,7 +5,7 @@
 #include "Core/Foundation/DynamicModules.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Registry/RegistrationList.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Config/GameAutoplay.h"
 #include "Engine/Foundation/EngineSubsystems.h"

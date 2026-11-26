@@ -2,7 +2,7 @@
 // 모르는 낱말이나 풀 종류에 맞지 않는 낱말이 든 프로필은 오류를 남기고 거절한다(그 프로필로는 감독이 서지 않는다). 파일 · 씬 없음.
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "GameFramework/Runtime/Character/AI/Director/AIDirectorProfile.h"
 #include "GameFramework/Runtime/Character/AI/SpawnDirector.h"

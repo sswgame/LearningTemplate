@@ -2,7 +2,7 @@
 // 예전에는 열쇠에 방식이 없어 군중 묶음을 모두 선형으로 그렸고, 듀얼 쿼터니언 유닛이 묶음에 들면 방식이 바뀌었다. nogpu.
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Animation/Scene/AnimationCrowd.h"
 

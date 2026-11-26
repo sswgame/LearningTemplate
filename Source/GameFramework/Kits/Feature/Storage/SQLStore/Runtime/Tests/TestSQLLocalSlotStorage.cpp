@@ -2,7 +2,7 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "GameFramework/Kits/Feature/Storage/SQLStore/Runtime/SQLLocalSlotStorage.h"
 #include "GameFramework/Runtime/Foundation/Save/Local/Tests/LocalStoreContract.h"

@@ -5,7 +5,7 @@
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/StringUtil.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "DevTools/Client/Automation/Runner/AutomationLogPolicy.h"
 

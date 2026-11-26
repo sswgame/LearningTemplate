@@ -1,7 +1,7 @@
 // GameFlagsTest — 월드 플래그와 조건식: 값 · 지우기 · 리비전, 조건식 문법(우선순위 · 괄호 · 비교 · 오류), 저장 순서와 복원(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Behavior/ConditionExpr.h"
 #include "Engine/Serialization/Format/Archive.h"

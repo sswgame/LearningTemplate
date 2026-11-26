@@ -1,7 +1,7 @@
 #include "pch.h"
 
 #include "Core/Network/Connection/SequenceBuffer.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 // SequenceBuffer — 칸을 다시 쓰는 방법은 원소가 `kSlotReset` 으로 밝힌다. 이름으로 찾아 고르지 않으므로
 // `resetForReuse` 이름을 틀리거나 `kSlotReset` 을 빠뜨린 원소는 `SequenceBuffer` 가 컴파일 오류로 멈춘다(아래 static_assert 가 그 판정이다).

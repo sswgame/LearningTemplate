@@ -1,7 +1,7 @@
 // IntentReplayBarTest — 되감기 막대를 열기 전의 계약: 호스트는 평소처럼 돌고 닫기 · 갱신은 할 일이 없으며, 틱 길이 · 되감기 틱 수가 0 이면 열지 않는다(화면 없음 — nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/UI/UISystem.h"
 

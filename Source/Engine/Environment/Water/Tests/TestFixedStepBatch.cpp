@@ -1,7 +1,7 @@
 #include "pch.h"
 
 #include "Core/Container/vector.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Environment/Water/BuoyancyComponent.h"
 #include "Engine/Environment/Water/WaterBodyComponent.h"

@@ -1,7 +1,7 @@
 // 콜라이더 손잡이 명령 순서(`EditorColliderHandleDragTracker`) — 누름은 잡기, 끄는 동안 레이마다 끌기, 놓으면 커밋하는 놓기, 대상이 사라지면 커밋 없는 놓기.
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Editor/Viewport/Model/EditorColliderHandleEdit.h"
 

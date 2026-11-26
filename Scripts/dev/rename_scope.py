@@ -22,7 +22,7 @@ RENAME_PAIRS_FOLDER = "Config/Rules/Renames/"   # 병합 뒤 다시 돌릴 쌍 �
 TEXT_SUFFIX = {".h", ".hpp", ".inl", ".cpp", ".c", ".cmake", ".txt", ".md", ".json", ".in", ".py", ".toml", ".xxx", ".natvis", ".hlsl", ".hlsli", ".xml", ".po", ".tpl",
                ".manifest", ".sh", ".js"}   # .js — `Tools/` 의 우리 VS Code 확장(launch-args · comment-fold)
 CPP_SUFFIX = {".h", ".hpp", ".inl", ".cpp"}
-SCAN_ROOT = ["Source", "Content", "Source/Programs/ReflectionParser", "Source/Programs/OnlineLoadBot", "cmake", "Scripts", "Tools", "docs", "Config", "Test", "ThirdParty",
+SCAN_ROOT = ["Source", "Content", "Source/Programs/ReflectionParser", "Source/Programs/OnlineLoadBot", "cmake", "Scripts", "Tools", "docs", "Config", "IntegrationTests", "ThirdParty",
              "CMakeLists.txt", "CMakePresets.json", "AGENTS.md", "CLAUDE.md", ".claude/skills", ".claude/hooks"]
 SKIP_SCAN_PART = "/vcpkg-port/"   # ThirdParty 는 우리 감싸기 CMake 만 — vcpkg 포트는 남의 코드다
 #: 소스 이름 바꾸기에서 문자열을 건너뛰는 C 계열 형식(`rename_symbol`) — 파일 줄기 바꾸기도 이 형식은 짧은 이름 규칙을 쓰지 않는다.

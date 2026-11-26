@@ -1,7 +1,7 @@
 // 에셋 경로 순회(`ComponentAssetPathUtil::forEachAssetPath`) — 중첩 구조체 · 구조체 시퀀스 · 참조 시퀀스 안까지 내려가고 그 자리를 바꾼다.
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Asset/Tests/AssetRefTestTypes.h"

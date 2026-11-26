@@ -1,7 +1,7 @@
 // PlaygroundOnlineFlowTest — 잃은 허브에 다시 붙을지의 판정(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Games/Playground/Online/PlaygroundOnlineFlow.h"
 

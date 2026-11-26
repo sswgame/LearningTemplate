@@ -1,7 +1,7 @@
 // SkeletonBoneLODTest — 본 LOD 경로에서 스켈레톤 후보 둘을 구하고, 그 둘이 `makePathForSkeleton` 으로 같은 본 LOD 경로에 돌아온다(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Animation/Skeletal/SkeletonBoneLOD.h"
 

@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Core/Testing/TestRunner.h"
+#include "Core/TestFramework/TestRunner.h"
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Concurrency/atomic.h"
@@ -25,8 +25,8 @@
 #include "Core/String/StringUtil.h"
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
-#include "Core/Testing/TestFramework.h"
-#include "Core/Testing/ThreadTestAccess.h"
+#include "Core/TestFramework/TestFramework.h"
+#include "Core/TestFramework/ThreadTestAccess.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include <algorithm>

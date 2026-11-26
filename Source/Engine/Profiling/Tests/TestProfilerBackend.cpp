@@ -2,7 +2,7 @@
 #include "pch.h"
 
 #include "Core/Task/TaskTypes.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Profiling/ProfilerBackend.h"
 

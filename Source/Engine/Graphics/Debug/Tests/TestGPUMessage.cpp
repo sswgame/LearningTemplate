@@ -4,7 +4,7 @@
 #include "Core/Math/BitUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/formatString.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Graphics/Debug/GPUMessage.h"
 #include "Engine/Graphics/Debug/RenderTargetRegistry.h"

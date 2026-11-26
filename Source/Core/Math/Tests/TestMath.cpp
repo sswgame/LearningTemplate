@@ -10,8 +10,8 @@
 #include "Core/Math/SecureRandom.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Math/XorShift32.h"
-#include "Core/Testing/ScopedAssertCapture.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/ScopedAssertCapture.h"
+#include "Core/TestFramework/TestFramework.h"
 
 using namespace sw;
 

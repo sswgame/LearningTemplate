@@ -1,7 +1,7 @@
 // EditorAssetReferenceUtilTest — 에셋을 옮기면 메모리의 씬이 든 참조를 다시 읽지 않고 새 id 로 바꿔 끼운다(감사 P0-4): 컴포넌트의 에셋 경로 칸 · 엔티티의 프리팹 경로.
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Editor/Common/Workspace/Asset/EditorAssetReferenceUtil.h"
 

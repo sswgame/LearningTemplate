@@ -5,7 +5,7 @@
 #include "Core/Math/RGB10A2.h"
 #include "Core/Math/XorShift32.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 /**
  * @brief [RGB10A2Test] 비트 배치 — R 은 낮은 10 비트, G 는 10..19, B 는 20..29, A 는 위쪽 2 비트(DXGI R10G10B10A2_UNORM)

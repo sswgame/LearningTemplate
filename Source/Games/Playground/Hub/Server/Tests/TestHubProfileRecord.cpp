@@ -2,7 +2,8 @@
 // 레코드는 왕복하고, 깨진 바이트 · 범위 밖 값은 쓰지도 읽지도 않는다(nogpu, 에셋 없음).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/Serialization/BitStream.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceCommitRunner.h"

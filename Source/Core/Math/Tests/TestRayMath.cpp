@@ -3,7 +3,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/OrientationUtil.h"
 #include "Core/Math/Ray.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 // RayMathTest — 광선 판정(구 · 상자 · 캡슐 · 수평면 · 삼각형: 앞쪽 가장 가까운 거리, 시작점이 안이면 0, 뒤 · 최대 거리 밖은 놓침), 시선 방향, 원뿔 시야(3D · 평면),
 // 앞 · 위 방향 → 오일러(요 · 피치 · 롤, 수직 앞의 요), 짧은 쪽으로 돌기(±π 를 넘는 쪽). nogpu.

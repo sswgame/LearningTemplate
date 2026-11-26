@@ -1,7 +1,7 @@
 // AnimationGraphEditTest — 애니메이션 그래프 편집 명령은 공용 그래프 입구로 알리고 되돌리기 이름을 정한다(감사 E-16).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Editor/Common/GUI/Panel/Model/EditorGraphEditSession.h"
 #include "Editor/Common/Workspace/Undo/DocumentEditRecorder.h"

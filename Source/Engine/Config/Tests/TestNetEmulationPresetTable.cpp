@@ -3,7 +3,7 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/Network/Transport/NetEmulation.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/NetEmulationPresetTable.h"

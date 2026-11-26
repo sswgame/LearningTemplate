@@ -1,7 +1,7 @@
 // CacheEndpointTest — RESP 엔드포인트 문자열의 해석(기본값 · 인자 · 거절)을 본다. 숫자 주소만 써 이름 해석기를 부르지 않는다(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "GameFramework/Kits/Feature/Storage/CacheStore/Server/CacheEndpoint.h"
 

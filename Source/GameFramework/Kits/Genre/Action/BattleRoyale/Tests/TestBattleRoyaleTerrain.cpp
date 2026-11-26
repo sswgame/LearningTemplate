@@ -1,7 +1,7 @@
 // BattleRoyaleTerrainTest — 판이 씬의 정적 바디에 묻는 것: 걷기는 벽에서 멈추고 따라 미끄러지며, 시야는 벽 뒤를 보지 못하고 낮은 엄폐 너머는 보고, 건물 안은 설 자리 · 원 중심이 아니다(nogpu, 에셋 없음).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"

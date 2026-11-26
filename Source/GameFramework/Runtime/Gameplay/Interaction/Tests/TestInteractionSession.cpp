@@ -1,7 +1,7 @@
 // InteractionSessionTest — 연타 단계의 진행량은 누를 때 오르고 쉬면 줄며 0 에서 멈춘다(DepletingValue). 다 차면 끝난다(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "GameFramework/Runtime/Gameplay/Interaction/InteractionSession.h"
 

@@ -1,7 +1,7 @@
 #include "pch.h"
 
 #include "Core/Network/Replication/InterpolationBuffer.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 // 보간 표본 줄 — 틱 순 끼우기(같은 틱은 바꾸기 인자로), 상한, 구간 넷(빔 · 첫 것 앞 · 사이 · 끝 뒤 — 내다보지 않는다), 다 쓴 표본 버리기, 비율 식.
 

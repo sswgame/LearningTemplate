@@ -3,7 +3,7 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/Path/AbsolutePath.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Animation/Retarget/RetargetProfile.h"
 #include "Engine/Animation/Rig/RigAsset.h"

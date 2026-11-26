@@ -1,7 +1,7 @@
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
-#include "Core/Testing/TestWait.h"
+#include "Core/TestFramework/TestFramework.h"
+#include "Core/TestFramework/TestWait.h"
 
 #include "Engine/Asset/AssetStreamingQueue.h"
 

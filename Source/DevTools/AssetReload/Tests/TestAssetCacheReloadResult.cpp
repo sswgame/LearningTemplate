@@ -3,7 +3,7 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/String/Name/hashed_string.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "DevTools/AssetReload/ReloadSource.h"
 #include "DevTools/AssetReload/ReloadTracker.h"

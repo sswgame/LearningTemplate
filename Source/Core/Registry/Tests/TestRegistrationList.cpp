@@ -3,7 +3,7 @@
 
 #include "Core/Foundation/DynamicModules.h"
 #include "Core/Registry/RegistrationList.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 using namespace sw;
 

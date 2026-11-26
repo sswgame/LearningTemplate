@@ -5,7 +5,7 @@
 
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/Tests/LoopbackCluster.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Physics/Collision/PhysicsShape.h"
 #include "Engine/Physics/Component/RigidBodyComponent.h"

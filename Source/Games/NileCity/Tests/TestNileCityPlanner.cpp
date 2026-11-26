@@ -2,7 +2,8 @@
 // 진행 상태 바이트의 왕복과 순서표 밖 단계 거절. 순서표 파일(`reset`)은 에셋을 읽어 여기서 다루지 않는다.
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/Math/MathUtil.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/TileMap/TileMapXML.h"

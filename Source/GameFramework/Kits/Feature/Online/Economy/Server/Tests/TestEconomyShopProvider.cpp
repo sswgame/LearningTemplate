@@ -2,7 +2,7 @@
 // 화면에 실을 상품 고르기(결제 상품 · 값 둘 제외). 온라인 키트라 `UnitTests.OnlineKits` 가 돌린다(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "GameFramework/Kits/Feature/Online/Economy/Runtime/EconomyShopPurchaseProvider.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Runtime/OfferCatalog.h"

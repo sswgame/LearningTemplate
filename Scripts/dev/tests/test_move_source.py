@@ -12,7 +12,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts
 
-from dev.move_source import make_path_rule  # noqa: E402
+from dev.move_source import make_file_tag_rules, make_path_rule  # noqa: E402
 
 
 class PathRuleTest(unittest.TestCase):
@@ -33,6 +33,12 @@ class PathRuleTest(unittest.TestCase):
         text = '"Config/Server/Old.json" "Config/Server/Old.online.json" "Config/Server/Old" Config/Server/Older.json'
         expected = '"Config/Server/New.json" "Config/Server/New.online.json" "Config/Server/New" Config/Server/Older.json'   # 곁 이름 · 확장자 없는 이름
         assert pattern.sub(replacement, text) == expected, pattern.sub(replacement, text)
+
+    def test_file_tag_keeps_bare_name(self) -> None:
+        text = "@file CMakeLists.txt @file Util/X.h"
+        for pattern, replacement in make_file_tag_rules({"IntegrationTests/CMakeLists.txt": "IntegrationTests/CMakeLists.txt", "Engine/Util/X.h": "Engine/Misc/X.h"}):
+            text = pattern.sub(replacement, text)
+        assert text == "@file CMakeLists.txt @file Engine/Misc/X.h", text   # 파일 이름만 남는 것은 다른 폴더의 같은 이름이다
 
 
 if __name__ == "__main__":

@@ -2,7 +2,7 @@
 
 #include "Core/Container/vector.h"
 #include "Core/Network/Message/StreamFrame.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include <initializer_list>
 

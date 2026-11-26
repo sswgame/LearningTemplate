@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "GameFramework/Kits/Genre/Action/ActionAdventure/AdventureCooking.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Crafting.h"

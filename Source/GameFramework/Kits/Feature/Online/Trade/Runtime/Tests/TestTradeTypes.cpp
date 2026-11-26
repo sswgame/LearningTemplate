@@ -1,7 +1,7 @@
 // TradeTypesTest — 거래 스냅샷의 쪽 찾기: 신청한 쪽이 0, 받은 쪽이 1, 거래 밖 계정과 무효 계정은 없음이다. 둘 다 확정해야 확정이다(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "GameFramework/Kits/Feature/Online/Trade/Runtime/TradeTypes.h"
 

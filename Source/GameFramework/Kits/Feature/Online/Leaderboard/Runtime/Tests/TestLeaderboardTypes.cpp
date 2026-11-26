@@ -1,7 +1,7 @@
 // LeaderboardTypesTest — 순위표 · 통계 id 규칙: 소문자 · 숫자 · 밑줄만, 빈 id 와 상한 + 1 은 거절한다. 서버는 받은 id 를 이 함수로 거른다(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "GameFramework/Kits/Feature/Online/Leaderboard/Runtime/LeaderboardTypes.h"
 

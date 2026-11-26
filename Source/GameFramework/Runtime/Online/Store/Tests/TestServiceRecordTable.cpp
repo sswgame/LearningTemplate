@@ -2,7 +2,7 @@
 // 연결 표는 id 를 왕복하고 0 · 깨진 값을 거절한다(결함: 깨진 연결을 0 = 없음으로 읽어 세션 폐기가 산 세션을 놓쳤다). 색인 표는 값이 없다.
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceCommitRunner.h"

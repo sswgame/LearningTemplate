@@ -2,7 +2,7 @@
 // 상승 0.8 · 하강 -0.2 라 줄 높이 10(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Text/Tests/FakeFontRasterizer.h"
 #include "Engine/Text/TextLayout.h"

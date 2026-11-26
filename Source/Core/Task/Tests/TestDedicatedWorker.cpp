@@ -2,8 +2,8 @@
 #include "pch.h"
 
 #include "Core/Task/DedicatedWorker.h"
-#include "Core/Testing/TestFramework.h"
-#include "Core/Testing/ThreadTestAccess.h"
+#include "Core/TestFramework/TestFramework.h"
+#include "Core/TestFramework/ThreadTestAccess.h"
 
 using namespace sw;
 

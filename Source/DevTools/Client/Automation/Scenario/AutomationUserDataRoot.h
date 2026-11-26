@@ -5,7 +5,7 @@
  *          러너가 환경 변수를 잘 주는 데 기대지 않는다 — 자동화 실행은 기동 때(호스트 서브시스템 · 게임 · 로컬 저장보다 먼저) 뿌리를 정하고, 자동화 폴더 밖이면 거절한다(종료 11, 로드 오류 —
  *          시나리오를 시작할 수 없는 실행이다). 뿌리가 없으면 실행 뿌리(`ProcessRoots::_run`) 아래 `userdata` 를 건다 — 실행 뿌리가 실행마다 새 폴더라 pid 꼬리도 형제 거두기도 없다.
  *          백엔드별 부모는 자식마다 제 실행 뿌리(`<부모 실행 뿌리>/<백엔드>`)를 주고 그 아래 `userdata` 를 건다(`AutomationPerBackend`).
- *          두 번 기동 쌍(`sequence/` · `statedir/`)은 러너가 묶음마다 같은 뿌리를 둘 모두에 건다(`Test/Scenario/RunStateDirPair.cmake`).
+ *          두 번 기동 쌍(`sequence/` · `statedir/`)은 러너가 묶음마다 같은 뿌리를 둘 모두에 건다(`IntegrationTests/Scenario/RunStateDirPair.cmake`).
  *          사람이 일부러 실제 폴더(또는 자동화 폴더 밖 뿌리)를 쓰려면 `-gv_automationAllowOutsideUserData=true` 를 명시한다.
  *          실행마다 따로 써야 하는 상태 자리 변수(`gv_editorStateDir` · `gv_userSettingsFile`)를 명령줄로 주면 그 자리도 사람의 폴더(`Saved/Editor` · OS 사용자 폴더)면 거절하고,
  *          백엔드별 부모는 그 변수를 자식 모두에 넘기지 않는다(한 자리를 함께 쓰게 된다 — 거절).

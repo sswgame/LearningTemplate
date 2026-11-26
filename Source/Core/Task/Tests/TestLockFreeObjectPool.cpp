@@ -6,9 +6,9 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Task/LockFreeObjectPool.h"
-#include "Core/Testing/ScopedAssertCapture.h"
-#include "Core/Testing/TestFramework.h"
-#include "Core/Testing/ThreadTestAccess.h"
+#include "Core/TestFramework/ScopedAssertCapture.h"
+#include "Core/TestFramework/TestFramework.h"
+#include "Core/TestFramework/ThreadTestAccess.h"
 
 using namespace sw;
 

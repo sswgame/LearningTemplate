@@ -1,7 +1,7 @@
 // TimeSecondsTest — 시계 꼬리표가 붙은 초 길이(GameSeconds · RealSeconds · StepSeconds): 서로 · float 와 암시적으로 바뀌지 않는다(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 #include "Core/Time/TimeSeconds.h"
 
 #include <functional>

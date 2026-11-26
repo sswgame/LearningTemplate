@@ -6,8 +6,8 @@
 #include "Core/Network/Tests/LoopbackStreamTransport.h"
 #include "Core/Network/Transport/UDPNetTransport.h"
 #include "Core/String/StringUtil.h"
-#include "Core/Testing/TestFramework.h"
-#include "Core/Testing/TestWait.h"
+#include "Core/TestFramework/TestFramework.h"
+#include "Core/TestFramework/TestWait.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Foundation/EngineSubsystems.h"

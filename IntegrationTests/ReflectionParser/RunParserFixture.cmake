@@ -65,7 +65,7 @@ if(NOT list_expect_error AND NOT list_expect_gen AND NOT list_expect_type)
 	message(FATAL_ERROR "${FIXTURE}: no expectation - a fixture must say what it checks")
 endif()
 
-# 빌드와 같은 대상 인자 — Test/CMakeLists.txt 가 '|' 로 이어 넘긴다(sw_collect_reflection_target_args).
+# 빌드와 같은 대상 인자 — IntegrationTests/CMakeLists.txt 가 '|' 로 이어 넘긴다(sw_collect_reflection_target_args).
 string(REPLACE "|" ";" list_target_arg_value "${TARGET_ARGS}")
 set(list_target_arg "")
 foreach(target_arg IN LISTS list_target_arg_value)

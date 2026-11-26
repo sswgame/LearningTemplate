@@ -2,7 +2,7 @@
 // 그 스택으로 되돌리면 글과 dirty 가 돌아오며, 문서를 다시 읽으면 앞 글의 기록을 비운다.
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Editor/Common/GUI/Panel/EditorDocumentPanel.h"
 #include "Editor/Common/Workspace/EditorSubsystems.h"

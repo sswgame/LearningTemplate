@@ -2,7 +2,7 @@
 // 파티 · 로비 멤버 찾기. 대기열 · 로비 서비스는 Matchmaking/Server 테스트가 본다.
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Runtime/MatchmakingTypes.h"
 

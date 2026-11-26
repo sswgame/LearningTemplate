@@ -1,7 +1,7 @@
 #include "pch.h"
 
 #include "Core/Container/unordered_map.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Serialization/Inherit/DataCatalogInheritance.h"
 #include "Engine/Serialization/XML/XMLDocument.h"

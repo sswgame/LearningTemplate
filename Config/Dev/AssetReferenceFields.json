@@ -2,6 +2,6 @@
     "listDomain": [ "engine", "common", "game", "editor", "scratch" ],
     "listUncheckedDomain": [ "scratch" ],
     "listTextExtension": [ ".xml", ".json", ".material" ],
-    "listCMakeFile": [ "Test/CMakeLists.txt", "Test/Scenario/CMakeLists.txt" ],
+    "listCMakeFile": [ "IntegrationTests/CMakeLists.txt", "IntegrationTests/Scenario/CMakeLists.txt" ],
     "listCMakeArgument": [ "--render-portraits", "-scenario" ]
 }

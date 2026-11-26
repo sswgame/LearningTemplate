@@ -1,7 +1,7 @@
 // AudioMixerViewModelTest — 미터 채움 비율과, 버스 · 이벤트가 없을 때의 명령(오디오 서비스를 찾지 않는다)(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Editor/Panels/AudioMixer/Model/AudioMixerViewModel.h"
 

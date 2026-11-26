@@ -7,7 +7,7 @@
 #include "Core/Network/Message/StreamMessageEndpoint.h"
 #include "Core/Network/Message/Tests/StreamEndpointPair.h"
 #include "Core/Network/Tests/LoopbackStreamTransport.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 #include "Core/Time/Clock.h"
 
 // 서비스 요청-응답 — 응답 · 모르는 메서드, 시한(늦은 응답은 무시), 취소, 재접속 뒤 같은 멱등 키는 한 번만 처리, 처리 중인 같은 키는 첫 응답을 같이,

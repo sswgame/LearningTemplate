@@ -5,7 +5,7 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Task/TaskManager.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 #include "Core/Time/Clock.h"
 
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/FakePlatformLoginProvider.h"

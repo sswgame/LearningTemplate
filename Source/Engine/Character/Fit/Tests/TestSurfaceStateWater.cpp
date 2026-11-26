@@ -1,7 +1,7 @@
 // CharacterSurfaceState::applyWater — 물은 씻김 빠르기가 있는 채널(흙 · 피)만 잠긴 비율만큼 더 내리고, 젖음 · 상처 · 찢김은 그대로 둔다(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Character/Fit/SurfaceState.h"
 

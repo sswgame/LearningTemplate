@@ -3,7 +3,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Asset/AssetDatabase.h"
 #include "Engine/Content/AssetScanCache.h"

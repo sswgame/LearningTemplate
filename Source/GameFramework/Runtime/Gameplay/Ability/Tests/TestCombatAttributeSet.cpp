@@ -1,7 +1,7 @@
 // CombatAttributeSetTest — 전투 어트리뷰트 규칙: 범위 자르기, 최대치가 줄 때 현재치 따라 줄이기, 메타 피해 · 회복 옮기기, 피격 · 쓰러짐 이벤트와 한 번만 죽기, 맞음 사건이 피해 이펙트로 드는 길.
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Character/Hit/CharacterHit.h"
 #include "Engine/Object/GameObject/GameObject.h"

@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "GameFramework/Kits/Genre/Casual/CardGame/CardDeck.h"
 #include "GameFramework/Kits/Genre/Casual/CardGame/Klondike/KlondikeGame.h"

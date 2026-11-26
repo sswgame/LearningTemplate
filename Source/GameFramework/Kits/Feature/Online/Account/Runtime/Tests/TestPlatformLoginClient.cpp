@@ -2,7 +2,7 @@
 // 결과는 요청마다 꼭 한 번 나온다(인터페이스 약속). PC 의 실제 길(`LoopbackPkceLoginClient`)은 LoopbackPkceLoginClientTest 가 본다. 온라인 키트라 `UnitTests.OnlineKits` 가 돌린다(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "GameFramework/Kits/Feature/Online/Account/Runtime/PlatformLoginClient.h"
 

@@ -5,8 +5,8 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Testing/ScopedGlobalVariableValue.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/ScopedGlobalVariableValue.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Object/GameObject/GameObject.h"

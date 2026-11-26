@@ -3,7 +3,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/Network/Security/NetPacketSealer.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include <cstring>
 

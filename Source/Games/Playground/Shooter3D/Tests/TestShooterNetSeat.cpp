@@ -1,7 +1,7 @@
 // ShooterNetSeatTest — 매치 서버의 자리: 접속마다 몸이 하나고, 자리가 다 차면 더 앉히지 않으며, 떠난 사람의 몸은 거두고 같은 연결 id 의 다른 계정은 앞사람의 몸을 물려받지 않는다(nogpu, 에셋 없음).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Games/Playground/Shooter3D/Tests/ShooterServerTestWorld.h"
 

@@ -29,7 +29,7 @@ from common.log_lines import count_id, read_log
 from common.paths import get_bin_dir, get_project_root
 
 NET_LISTENING_ID = "GameNetSession.NetSessionListeningUDP"  # 서버(리슨 호스트)가 게임 UDP 포트를 열었다
-DEFAULT_PRESET = "Ninja-Release"  # 손으로 부를 때의 build/<프리셋>/Bin (ctest 는 제 빌드 폴더를 준다 — Test/Net)
+DEFAULT_PRESET = "Ninja-Release"  # 손으로 부를 때의 build/<프리셋>/Bin (ctest 는 제 빌드 폴더를 준다 — IntegrationTests/Net)
 USER_DATA_ROOT_ENVIRONMENT = "SW_USER_DATA_ROOT"  # Core/File/UserDataPath.h 의 kUserDataRootVariable — 띄운 App · Server 의 사용자 데이터 폴더를 옮긴다
 _POLL_SECONDS = 0.25  # 로그 줄을 다시 읽는 간격
 

@@ -12,7 +12,7 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Localization/LocalizationDocuments.h"

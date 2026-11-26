@@ -1,7 +1,7 @@
 // HidingSpotTest — 숨는 곳: 들어가면 숨음 태그, 나오면 뗌. 걸어 나가거나 숨는 곳이 사라져도 태그가 남지 않는다(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"

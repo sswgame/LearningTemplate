@@ -3,7 +3,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringUtil.h"
 #include "Core/Subsystem/SubsystemScope.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 using namespace sw;
 

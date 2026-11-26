@@ -19,9 +19,9 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Task/TaskFuture.h"
 #include "Core/Task/TaskManager.h"
-#include "Core/Testing/TestFramework.h"
-#include "Core/Testing/TestWait.h"
-#include "Core/Testing/ThreadTestAccess.h"
+#include "Core/TestFramework/TestFramework.h"
+#include "Core/TestFramework/TestWait.h"
+#include "Core/TestFramework/ThreadTestAccess.h"
 #include "Core/Time/MonotonicClock.h"
 
 namespace

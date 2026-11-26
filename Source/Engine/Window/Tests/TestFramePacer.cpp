@@ -1,7 +1,7 @@
 #include "pch.h"
 
 #include "Core/Foundation/Constants.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Window/FramePacer.h"
 #include "Engine/Window/GenericWindow.h"

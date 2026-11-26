@@ -97,7 +97,7 @@ class MoveAssetPackRenameTest(unittest.TestCase):
     def test_string_files_are_code_and_data_but_not_redirect_tables_or_docs(self) -> None:
         self.assertTrue(is_pack_string_file("Source/Engine/Content/Pack/Tests/TestPack.cpp"))
         self.assertTrue(is_pack_string_file("Scripts/net/net_pair_run.py"))
-        self.assertTrue(is_pack_string_file("Test/Scenario/CMakeLists.txt"))
+        self.assertTrue(is_pack_string_file("IntegrationTests/Scenario/CMakeLists.txt"))
         self.assertTrue(is_pack_string_file("Config/Game/Playground.json"))
         self.assertTrue(is_pack_string_file("Content/game/oldpack/data/localization/po/ko.po"))
         self.assertTrue(is_pack_string_file(".gitignore"))

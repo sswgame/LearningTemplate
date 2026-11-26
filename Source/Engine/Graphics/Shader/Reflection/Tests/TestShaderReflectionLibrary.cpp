@@ -1,7 +1,7 @@
 #include "pch.h"
 
 #include "Core/File/FileUtil.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Graphics/Shader/Reflection/ShaderReflectionData.h"
 #include "Engine/Graphics/Shader/Reflection/ShaderReflectionLibrary.h"

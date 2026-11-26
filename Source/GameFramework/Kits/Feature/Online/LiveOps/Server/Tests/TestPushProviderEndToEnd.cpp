@@ -9,7 +9,7 @@
 #include "Core/Network/Transport/StreamTypes.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 #include "Core/Time/Clock.h"
 #include "Core/Time/WallClock.h"
 

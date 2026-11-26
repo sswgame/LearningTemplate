@@ -2,7 +2,7 @@
 #include "pch.h"
 
 #include "Core/Math/MathUtil.h"
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Editor/Common/Asset/ModelImport/ModelImportGeometry.h"
 #include "Editor/Common/Asset/ModelImport/ModelImportUtil.h"

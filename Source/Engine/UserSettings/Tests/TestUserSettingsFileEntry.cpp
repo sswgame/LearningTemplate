@@ -1,7 +1,7 @@
 // UserSettingsFileEntry — 사용자 파일의 주인별 판 · 올림 · 새 판 파일 · 모르는 키 보존(nogpu).
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Serialization/JSON/JSONDocument.h"
 #include "Engine/UserSettings/UserSettingsFileEntry.h"

@@ -2,7 +2,7 @@
  * @file TestFramework.h
  * @brief 엔진 안 단위 테스트 — 케이스 등록(`SW_TEST_CASE`)과 단언(`SW_EXPECT_*` · `SW_REQUIRE_*` · `SW_EXPECT_SNAPSHOT` · `SW_EXPECT_LOG`)입니다.
  * @details 케이스는 기능 폴더 옆 `Tests/` 에 두고 그 모듈과 함께 짓는다(배포 구성은 `Tests/` 폴더째 짓지 않는다). 실행은 `App --test` 하나가 헤드리스로 선 엔진
- *          위에서 한다 — 엔진 서비스(`engine::getSubsystem`)를 그대로 쓴다(언리얼 Automation Spec). 실행기는 `Core/Testing/TestRunner.h`.
+ *          위에서 한다 — 엔진 서비스(`engine::getSubsystem`)를 그대로 쓴다(언리얼 Automation Spec). 실행기는 `Core/TestFramework/TestRunner.h`.
  *          옛 틀의 문제를 형식으로 막는다:
  *          - 단언이 하나도 없는 케이스는 실패다(0 건 통과 금지).
  *          - 환경이 없어 돌 수 없는 케이스는 `SW_TEST_SKIP( "까닭" )` 으로 건너뜀을 명시한다 — 통과로 세지 않고 건너뜀 수 · 까닭이 요약 줄과 보고에 따로 남는다

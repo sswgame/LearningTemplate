@@ -2,7 +2,7 @@
 // 이미지(textures/splash.dds)는 읽지 않는다 — `initialize` 는 에셋을 읽지 않고(`loadSplashImage` 는 부른 쪽의 몫), 이미지 없는 빈 스플래시로 창 응답만 본다.
 #include "pch.h"
 
-#include "Core/Testing/TestFramework.h"
+#include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Foundation/EnginePlatformHeaders.h"
 #include "Engine/Window/Windows/Win32SplashWindow.h"

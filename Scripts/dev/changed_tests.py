@@ -261,8 +261,8 @@ def make_scenario_command(item: CtestItem, scenario: str, output: Path) -> list[
 
 
 def read_manual_scenarios(project_root: Path) -> dict[str, str]:
-    """ctest 가 띄울 수 없는 시나리오 → 까닭과 명령(`Config/Rules/Test/ManualScenarios.json`)."""
-    table = json.loads((project_root / "Config" / "Rules" / "Test" / "ManualScenarios.json").read_text(encoding="utf-8"))
+    """ctest 가 띄울 수 없는 시나리오 → 까닭과 명령(`Config/Rules/TestSelection/ManualScenarios.json`)."""
+    table = json.loads((project_root / "Config" / "Rules" / "TestSelection" / "ManualScenarios.json").read_text(encoding="utf-8"))
     return {entry["path"]: f"손으로 돈다: {entry['reason']} — `{entry['command']}`" for entry in table["_scenarios"]}
 
 
@@ -303,7 +303,7 @@ def make_scenario_runs(list_item: Sequence[CtestItem], map_scenario: dict[str, l
                                            folder, net_item.timeout_seconds))
             continue
         manual = (map_manual or {}).get(scenario)
-        list_row.append(ChangedRow(scenario, describe_change(list_changed), "" if manual else "NotRun", manual or "어느 ctest 항목도 띄우지 않는다 — 항목을 만들거나 Config/Rules/Test/ManualScenarios.json 에 까닭을 적는다",
+        list_row.append(ChangedRow(scenario, describe_change(list_changed), "" if manual else "NotRun", manual or "어느 ctest 항목도 띄우지 않는다 — 항목을 만들거나 Config/Rules/TestSelection/ManualScenarios.json 에 까닭을 적는다",
                                    find_branch(list_changed[0].path)))
     return list_run, list_row
 
