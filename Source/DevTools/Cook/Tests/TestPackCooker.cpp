@@ -280,7 +280,8 @@ SW_TEST_CASE( PackCookerTest, OrphanDomainPacksAreRemovedWithTheirChunkList )
     }
     unordered_set<string> setLedger{ "engine.pack", "game_playground.pack", "game_empty.pack", "game_empty.scene_empty_a.0.pack" };
     SW_REQUIRE_TRUE( PackCooker::removeOrphanDomainPacks( content, packFolder, setLedger ) );
-    SW_EXPECT_TRUE( setLedger == ( unordered_set<string>{ "engine.pack", "game_playground.pack" } ) );
+    SW_EXPECT_EQUAL( size_t{ 2 }, setLedger.size() );
+    SW_EXPECT_TRUE( setLedger.contains( "engine.pack" ) && setLedger.contains( "game_playground.pack" ) );
     SW_EXPECT_FALSE( FileUtil::exists( packFolder.join( "game_empty.pack" ) ) );
     SW_EXPECT_FALSE( FileUtil::exists( packFolder.join( "game_empty.scene_empty_a.0.pack" ) ) );
     SW_EXPECT_FALSE( FileUtil::exists( packFolder.join( "packchunks.game_empty.xml" ) ) );
