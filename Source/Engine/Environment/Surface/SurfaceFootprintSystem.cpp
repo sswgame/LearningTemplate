@@ -5,7 +5,6 @@
 #include "Core/Foundation/BuildInfo.h"
 #include "Core/Subsystem/SubsystemScope.h"
 
-#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Environment/Surface/SurfaceDeformSystem.h"
 #include "Engine/Environment/Surface/SurfaceKind.h"
 #include "Engine/Environment/Surface/SurfaceSample.h"

@@ -9,7 +9,6 @@
 #include "Core/Subsystem/Subsystem.h"
 #include "Core/Subsystem/SubsystemSlot.h"
 
-#include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Foundation/StateHashBuilder.h"
@@ -89,16 +88,6 @@ namespace sw
     {
         struct CharacterControllerHistoryInternal
         {
-            /** @brief `movement.history on|off` — 캐릭터 이동 디버거(HUD 섹션 `movement`)의 스텝 기록. */
-            static bool runHistory( const vector<string>& listArgument, string& outReply )
-            {
-                bool bEnabled = false;
-                if ( listArgument.size() != 1 || StringUtil::tryParseBool( listArgument[0], bEnabled ) == false )
-                    return false;
-                CharacterControllerComponent::setStepHistoryEnabled( bEnabled );
-                outReply = bEnabled ? "movement.history on" : "movement.history off";
-                return true;
-            }
         };
     } // namespace
 
@@ -780,6 +769,4 @@ namespace sw
     {
         PhysicsNameValidation::validateLayer( context, "_layer", _layer );
     }
-    SW_DEV_COMMAND( MovementHistory, "movement.history", "movement.history on|off",
-                    "Record the last character controller steps (request, result) for the movement debugger (hud.print movement)", &CharacterControllerHistoryInternal::runHistory );
 } // namespace sw

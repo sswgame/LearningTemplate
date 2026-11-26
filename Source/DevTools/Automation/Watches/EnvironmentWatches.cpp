@@ -5,24 +5,36 @@
  */
 #include "pch.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Concurrency/atomic.h"
+#include "Core/Container/unordered_map.h"
+#include "Core/Container/vector.h"
 #include "Core/Foundation/BuildInfo.h"
+#include "Core/Foundation/Types.h"
+#include "Core/Hash/HashUtil.h"
 #include "Core/Log/LogOnce.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/AABB.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 #include "Core/Subsystem/SubsystemScope.h"
+#include "Core/Task/TaskManager.h"
+#include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Asset/AssetManager.h"
+#include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Automation/Watch/AutomationWatchComponent.h"
 #include "Engine/Config/EngineDefaultAssets.h"
+#include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Environment/EnvironmentUtil.h"
+#include "Engine/Environment/Foliage/FoliageComponent.h"
 #include "Engine/Environment/Foliage/FoliageInfluencerComponent.h"
 #include "Engine/Environment/SceneEnvironment.h"
+#include "Engine/Environment/Surface/GroundSurfaceComponent.h"
 #include "Engine/Environment/Surface/SurfaceDeformSystem.h"
 #include "Engine/Environment/Surface/SurfaceFootprintSystem.h"
 #include "Engine/Environment/Surface/SurfaceKind.h"
@@ -37,21 +49,29 @@
 #include "Engine/Environment/Water/WaterBodyComponent.h"
 #include "Engine/Environment/Wind/WindComponent.h"
 #include "Engine/Foundation/DeterministicRun.h"
+#include "Engine/Foundation/EngineParallel.h"
 #include "Engine/Foundation/EngineSubsystems.h"
+#include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
+#include "Engine/Graphics/Mesh/MeshAssetFormat.h"
+#include "Engine/Graphics/Mesh/MeshCache.h"
+#include "Engine/Graphics/Mesh/MeshUtil.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
+#include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
+#include "Engine/Object/GameObject/Subsystem/ISceneSubsystem.h"
 #include "Engine/Object/GameObject/Subsystem/SceneEngineSubsystems.h"
 #include "Engine/Object/GameObject/Subsystem/SceneSubsystemRegistry.h"
 #include "Engine/Object/GameObject/Tick/FixedStepContext.h"
 #include "Engine/Physics/Collision/PhysicsQuery.h"
 #include "Engine/Physics/Collision/PhysicsShape.h"
+#include "Engine/Physics/Component/CharacterControllerComponent.h"
 #include "Engine/Physics/Component/RigidBodyComponent.h"
 #include "Engine/Physics/IPhysicsScene.h"
 #include "Engine/Physics/PhysicsDesc.h"
@@ -62,6 +82,8 @@
 #include "Engine/Presentation/ISoundPlayer.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Reflection/ReflectionValidation.h"
+#include "Engine/Scene/SceneManager.h"
+#include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Visual/MeshInstanceBatch.h"
 
 // Engine/Environment/Surface/SurfaceFootprintSystem.cpp 에서 옮긴 개발 등록(배포 엔진에 컴파일되지 않게).
@@ -518,4 +540,115 @@ namespace sw
     } // namespace
 
     SW_AUTOMATION_QUERY_WATCH( windSpeed, "Wind.Speed", "Wind speed of the scene (m/s, authored speed x weather scale, without gusts)", &WindWatchesInternal::readSpeed, false, false );
+} // namespace sw
+
+// Engine/Environment/Surface/GroundSurfaceComponent.cpp 에서 옮긴 개발 등록(배포 엔진에 컴파일되지 않게).
+namespace sw
+{
+    namespace
+    {
+        struct GroundSurfaceComponentWatchesInternal
+        {
+            /** @brief 감시 값 `Surface.GroundKind` 입니다. 대상의 `GroundSurfaceComponent` 가 마지막으로 읽은 표면 종류입니다(디딘 것이 없으면 값이 없다). */
+            [[nodiscard]] static bool readGroundKind( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
+            {
+                const GroundSurfaceComponent* pGround = query.findTargetComponent<GroundSurfaceComponent>( "GroundSurfaceComponent", outValue );
+                if ( pGround == nullptr )
+                    return false;
+                if ( pGround->getGroundKind().empty() )
+                {
+                    outValue.setText( "no ground under the target" );
+                    return false;
+                }
+                outValue.setText( pGround->getGroundKind().c_str() );
+                return true;
+            }
+
+            /** @brief 감시 값 `Surface.MoveScale` 입니다. 대상 캐릭터 컨트롤러가 지난 물리 프레임에 걷는 속도에 곱한 계수입니다. */
+            [[nodiscard]] static bool readMoveScale( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
+            {
+                const CharacterControllerComponent* pController = query.findTargetComponent<CharacterControllerComponent>( "CharacterControllerComponent", outValue );
+                if ( pController == nullptr )
+                    return false;
+                outValue.setNumber( static_cast<float64>( pController->getMoveScale() ) );
+                return true;
+            }
+
+            /** @brief `surface.probe <object> [length]` — 오브젝트 발 아래의 표면(종류 · 형식 · 재질 · 지형 레이어 · 법선 · 표면 속도 · 물 깊이 · 젖음 · 이동 계수)을 적습니다. */
+            static bool runProbe( const vector<string>& listArgument, string& outReply )
+            {
+                float32    length  = 1.0f;
+                const bool bParsed = ( listArgument.size() == 1 || listArgument.size() == 2 ) && ( listArgument.size() == 1 || StringUtil::parseFloat( listArgument[1], length ) );
+                if ( bParsed == false || length <= 0.0f )
+                    return false;
+                GameObject* pObject = engine::findActiveObject( hashed_string( listArgument[0] ) );
+                if ( pObject == nullptr )
+                {
+                    StringBuilder<constant::buffer::kMax256> missingReply;
+                    missingReply.appendFormat( "surface.probe: no object named '%#' in the active scene", listArgument[0] );
+                    outReply.assign( missingReply.view() );
+                    return true;
+                }
+                SurfaceSample sample;
+                if ( GroundSurfaceComponent::sampleUnder( *pObject, length, sample ) == false )
+                {
+                    StringBuilder<constant::buffer::kMax256> missingReply;
+                    missingReply.appendFormat( "surface.probe: nothing with a surface kind under '%#' (see Surface.KindMissing in the log)", listArgument[0] );
+                    outReply.assign( missingReply.view() );
+                    return true;
+                }
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "surface %# kind=%# source=%# material=%# layer=%# point=%#,%#,%# normal=%#,%#,%# velocity=%#,%#,%# water=%# wetness=%# moveScale=%#", listArgument[0],
+                                           sample._pKind->_name.c_str(), SurfaceSample::getSourceName( sample._source ), sample._material.c_str(),
+                                           sample._terrainLayer == SurfaceSample::kNoTerrainLayer ? -1 : static_cast<int32>( sample._terrainLayer ), sample._point._x, sample._point._y,
+                                           sample._point._z, sample._normal._x, sample._normal._y, sample._normal._z, sample._surfaceVelocity._x, sample._surfaceVelocity._y,
+                                           sample._surfaceVelocity._z, sample._waterDepth, sample._wetness, sample._pKind->_moveScale );
+                outReply = string( replyBuilder.view() );
+                return true;
+            }
+        };
+    } // namespace
+
+    SW_AUTOMATION_QUERY_WATCH( surfaceGroundKind, "Surface.GroundKind", "Surface kind the target's GroundSurfaceComponent stood on last", &GroundSurfaceComponentWatchesInternal::readGroundKind, true, false );
+    SW_AUTOMATION_QUERY_WATCH( surfaceMoveScale, "Surface.MoveScale", "Move scale the target's character controller applied to its walk speed last physics frame",
+                               &GroundSurfaceComponentWatchesInternal::readMoveScale, true, false );
+    SW_DEV_COMMAND( SurfaceProbe, "surface.probe", "surface.probe <object> [length]",
+                    "Print the surface under an object's feet: kind, source (collider, terrain layer, water), material, normal, surface velocity, water depth, wetness, move scale",
+                    &GroundSurfaceComponentWatchesInternal::runProbe );
+} // namespace sw
+
+// Engine/Environment/Foliage/FoliageTerrainFollower.cpp 에서 옮긴 감시 읽기(아래 등록이 부른다).
+namespace sw
+{
+    namespace
+    {
+        /**
+         * @brief 활성 씬의 폴리지가 지형 편집을 아직 따라가지 못했으면 진행 중(따라가는 폴리지 수)입니다 - 편집 뒤 가라앉는 시간과 다시 계산 사이에 찍힌 사진은 편집 전 배치를 담는다.
+         *        시나리오가 고정 대기로 그 시간을 넉넉히 흘려 숨기던 것을 캡처 쪽이 기다린다(flowterrain 의 지형 편집 뒤 나무 한 그루가 남았다).
+         *        주인 곁에서 등록한다 - 예전에는 자동화 층(11)의 공용 파일이 이 층(8) 헤더를 읽었다.
+         */
+        AutomationReadiness readFoliageFollowingTerrain()
+        {
+            const GameObjectManager* pManager = engine::findActiveObjectManager();
+            uint64                   behind   = 0;
+            if ( pManager != nullptr )
+                for ( const FoliageComponent* pFoliage : pManager->getComponentRegistry().getAll<FoliageComponent>() )
+                {
+                    behind += pFoliage->isBehindTerrainEdits() ? 1u : 0u;
+                }
+            return behind > 0 ? AutomationReadiness::waiting( behind, "foliage still follows a terrain edit" ) : AutomationReadiness::ready();
+        }
+    } // namespace
+} // namespace sw
+
+// Engine/Environment/Foliage/FoliageTerrainFollower.cpp 에서 옮긴 개발 등록(배포 엔진에 컴파일되지 않게).
+namespace sw
+{
+    SW_AUTOMATION_CAPTURE_BLOCKER( foliageFollowingTerrain, "FoliageFollowingTerrain", &readFoliageFollowingTerrain );
+} // namespace sw
+
+// Engine/Environment/Foliage/FoliageComponent.cpp 에서 옮긴 개발 등록(배포 엔진에 컴파일되지 않게).
+namespace sw
+{
+    SW_AUTOMATION_GETTER_WATCH( foliageCutCount, "Foliage.CutCount", "Instances of the first foliage component hidden by cuts now", FoliageComponent, &FoliageComponent::getCutInstanceCount );
 } // namespace sw

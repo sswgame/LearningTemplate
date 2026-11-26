@@ -6,19 +6,39 @@
  */
 #include "pch.h"
 
+#include "Core/Concurrency/atomic.h"
+#include "Core/GlobalVariable/GlobalVariableManager.h"
+#include "Core/Math/MathUtil.h"
+#include "Core/String/StringUtil.h"
+#include "Core/Subsystem/Subsystem.h"
+#include "Core/Subsystem/SubsystemSlot.h"
+
+#include "Engine/Animation/Component/SkeletalMeshComponent.h"
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
+#include "Engine/Automation/Watch/AutomationWatchComponent.h"
+#include "Engine/Console/DevCommandRegistry.h"
+#include "Engine/Environment/Wind/WindComponent.h"
+#include "Engine/Foundation/EngineSubsystemRegistration.h"
+#include "Engine/Foundation/EngineSubsystems.h"
+#include "Engine/Foundation/StateHashBuilder.h"
+#include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Object/GameObject/Tick/FixedStepContext.h"
+#include "Engine/Physics/Cloth/ClothComponent.h"
 #include "Engine/Physics/Component/CharacterController2DComponent.h"
 #include "Engine/Physics/Component/CharacterControllerComponent.h"
 #include "Engine/Physics/Component/JointComponent.h"
 #include "Engine/Physics/Component/RigidBody2DComponent.h"
 #include "Engine/Physics/Component/RigidBodyComponent.h"
 #include "Engine/Physics/IPhysicsScene.h"
+#include "Engine/Physics/Scene/PhysicsNameValidation.h"
+#include "Engine/Physics/Scene/PhysicsPoseStore.h"
 #include "Engine/Physics/Scene/ScenePhysics.h"
+#include "Engine/Reflection/ReflectionValidation.h"
+#include "Engine/Visual/Component/MeshComponent.h"
 
 namespace sw
 {
@@ -163,4 +183,79 @@ namespace sw
 namespace sw
 {
     SW_AUTOMATION_GETTER_WATCH( jointPosition, "Joint.Position", "Hinge angle (rad), slider distance or distance length of the first joint", JointComponent, &JointComponent::getJointPosition );
+} // namespace sw
+
+// Engine/Physics/Cloth/ClothComponent.cpp 에서 옮긴 개발 등록(배포 엔진에 컴파일되지 않게).
+namespace sw
+{
+    namespace
+    {
+        /** @brief 감시 값 `Cloth.HorizontalOffset` 입니다. 대상 천의 아랫줄 가운데가 윗줄 가운데에서 수평으로 벗어난 거리(m)입니다 — 바람에 날린 정도. */
+        [[nodiscard]] bool readClothHorizontalOffset( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
+        {
+            const ClothComponent* pCloth = query.findTargetComponent<ClothComponent>( "Cloth", outValue );
+            if ( pCloth == nullptr )
+                return false;
+            const vector<float3>& listVertex = pCloth->getVertices();
+            const size_t          columns    = pCloth->getColumnCount();
+            if ( columns == 0 || listVertex.size() < columns * 2 )
+            {
+                outValue.setText( "cloth not created" );
+                return false;
+            }
+            float3 offset{};
+            for ( size_t column = 0; column < columns; ++column )
+                offset += listVertex[listVertex.size() - columns + column] - listVertex[column];
+            outValue.setNumber( static_cast<float64>( float2{ offset._x, offset._z }.getLength() / static_cast<float32>( columns ) ) );
+            return true;
+        }
+
+        /** @brief 감시 값 `Cloth.HighestY` · `Cloth.LowestY` 입니다 — 대상 천의 정점 월드 높이(m) 가운데 가장 높은 · 낮은 값. 천이 없으면(아직 만들지 않았거나 실패) 값이 없습니다. */
+        template <bool bHighest>
+        [[nodiscard]] bool readClothHeight( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
+        {
+            const ClothComponent* pCloth = query.findTargetComponent<ClothComponent>( "cloth", outValue );
+            if ( pCloth == nullptr || pCloth->getVertices().empty() )
+                return false;
+            float32 height = pCloth->getVertices().front()._y;
+            for ( const float3& vertex : pCloth->getVertices() )
+            {
+                height = bHighest ? MathUtil::max( height, vertex._y ) : MathUtil::min( height, vertex._y );
+            }
+            outValue.setNumber( static_cast<float64>( height ) );
+            return true;
+        }
+    } // namespace
+
+    SW_AUTOMATION_QUERY_WATCH( clothHorizontalOffset, "Cloth.HorizontalOffset", "Horizontal distance (m) from the top edge centre to the bottom edge centre of the target's cloth", &readClothHorizontalOffset, true, false );
+    SW_AUTOMATION_QUERY_WATCH( clothHighestY, "Cloth.HighestY", "World height (m) of the target cloth's highest vertex", &readClothHeight<true>, true, false );
+    SW_AUTOMATION_QUERY_WATCH( clothLowestY, "Cloth.LowestY", "World height (m) of the target cloth's lowest vertex", &readClothHeight<false>, true, false );
+    // 천 LOD 감시 값(시나리오 `game/playground/automation/clothlod`) — 씬의 첫 천을 읽는다.
+    SW_AUTOMATION_GETTER_WATCH( clothIterationCount, "Cloth.IterationCount", "Solver iterations given to the first cloth's soft body (0: no soft body, e.g. suspended by LOD)", ClothComponent, &ClothComponent::getAppliedIterationCount );
+    SW_AUTOMATION_GETTER_WATCH( clothLODSuspended, "Cloth.LODSuspended", "1 while the first cloth is suspended by its LOD (_maxLOD) and shows its rest grid", ClothComponent, &ClothComponent::isLODSuspended );
+    SW_AUTOMATION_GETTER_WATCH( clothLODGrade, "Cloth.LODGrade", "Animation LOD grade the first cloth reads from its ancestor skeletal mesh", ClothComponent, &ClothComponent::readLODGrade );
+} // namespace sw
+
+// Engine/Physics/Component/CharacterControllerComponent.cpp 에서 옮긴 개발 등록(배포 엔진에 컴파일되지 않게).
+namespace sw
+{
+    namespace
+    {
+        struct CharacterControllerHistoryWatchesInternal
+        {
+            /** @brief `movement.history on|off` — 캐릭터 이동 디버거(HUD 섹션 `movement`)의 스텝 기록. */
+            static bool runHistory( const vector<string>& listArgument, string& outReply )
+            {
+                bool bEnabled = false;
+                if ( listArgument.size() != 1 || StringUtil::tryParseBool( listArgument[0], bEnabled ) == false )
+                    return false;
+                CharacterControllerComponent::setStepHistoryEnabled( bEnabled );
+                outReply = bEnabled ? "movement.history on" : "movement.history off";
+                return true;
+            }
+        };
+    } // namespace
+
+    SW_DEV_COMMAND( MovementHistory, "movement.history", "movement.history on|off",
+                    "Record the last character controller steps (request, result) for the movement debugger (hud.print movement)", &CharacterControllerHistoryWatchesInternal::runHistory );
 } // namespace sw

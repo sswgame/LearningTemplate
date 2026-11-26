@@ -9,7 +9,6 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Asset/AssetManager.h"
-#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Environment/EnvironmentUtil.h"
 #include "Engine/Environment/SceneEnvironment.h"
 #include "Engine/Environment/Surface/SurfaceKind.h"

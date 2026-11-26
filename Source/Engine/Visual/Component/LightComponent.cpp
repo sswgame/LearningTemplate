@@ -9,8 +9,6 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/OrientationUtil.h"
 
-#include "Engine/Automation/Watch/AutomationWatch.h"
-#include "Engine/Automation/Watch/AutomationWatchComponent.h"
 #include "Engine/Graphics/Lighting/LensFlareAsset.h"
 #include "Engine/Graphics/Shader/Binding/GPULight.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"

@@ -11,8 +11,6 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Asset/Cache/SharedAssetRef.h"
-#include "Engine/Automation/Watch/AutomationWatch.h"
-#include "Engine/Automation/Watch/AutomationWatchComponent.h"
 #include "Engine/Environment/EnvironmentUtil.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
@@ -125,48 +123,7 @@ namespace sw
                 return VFXSimulationTarget::GPU;
             }
         };
-
-        struct VFXComponentWatchesInternal
-        {
-            /** @brief 감시 값 `VFX.ParticlesInBox` 입니다. 대상 효과의 CPU 입자 가운데 월드 상자 key("최소 x y z 최대 x y z") 안에 있는 수입니다. */
-            [[nodiscard]] static bool readParticlesInBox( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
-            {
-                const VFXComponent* pEffect = query.findTargetComponent<VFXComponent>( "VFXComponent", outValue );
-                if ( pEffect == nullptr )
-                    return false;
-                float32                   arrBound[6]{};
-                const vector<string_view> listToken = StringUtil::split( query._key, " " );
-                bool                      bParsed   = listToken.size() == SW_COUNT_OF( arrBound );
-                for ( size_t index = 0; bParsed && index < listToken.size(); ++index )
-                    bParsed = StringUtil::parseFloat( listToken[index], arrBound[index] );
-                if ( bParsed == false )
-                {
-                    outValue.setText( "key must be 'minX minY minZ maxX maxY maxZ'" );
-                    return false;
-                }
-                uint32 count = 0;
-                for ( uint32 emitterIndex = 0; emitterIndex < pEffect->getEmitterCount(); ++emitterIndex )
-                {
-                    const float4x4                               world         = pEffect->getEmitterWorldMatrix( emitterIndex );
-                    const shared_ptr<const vector<GPUParticle>>& pListParticle = pEffect->getEmitterParticles( emitterIndex );
-                    if ( pListParticle == nullptr )
-                        continue;
-                    for ( const GPUParticle& particle : *pListParticle )
-                    {
-                        const float3 position = float3::transform( float3{ particle._positionSize._x, particle._positionSize._y, particle._positionSize._z }, world );
-                        const bool   bAbove   = position._x >= arrBound[0] && position._y >= arrBound[1] && position._z >= arrBound[2];
-                        const bool   bBelow   = position._x <= arrBound[3] && position._y <= arrBound[4] && position._z <= arrBound[5];
-                        count += bAbove && bBelow ? 1u : 0u;
-                    }
-                }
-                outValue.setNumber( static_cast<float64>( count ) );
-                return true;
-            }
-        };
     } // namespace
-
-    SW_AUTOMATION_QUERY_WATCH( vfxParticlesInBox, "VFX.ParticlesInBox", "CPU particles of the target's effect inside the world box key 'minX minY minZ maxX maxY maxZ'",
-                               &VFXComponentWatchesInternal::readParticlesInBox, true, true );
 } // namespace sw
 
 namespace sw

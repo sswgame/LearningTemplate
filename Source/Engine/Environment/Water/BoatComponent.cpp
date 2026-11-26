@@ -5,8 +5,6 @@
 #include "Core/Log/LogOnce.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Automation/Watch/AutomationWatch.h"
-#include "Engine/Automation/Watch/AutomationWatchComponent.h"
 #include "Engine/Environment/Water/BuoyancyComponent.h"
 #include "Engine/Environment/Water/WaterBodyComponent.h"
 #include "Engine/Environment/Wind/WindComponent.h"

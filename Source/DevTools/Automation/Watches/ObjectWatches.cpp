@@ -5,17 +5,29 @@
  */
 #include "pch.h"
 
+#include "Core/Concurrency/atomic.h"
+#include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
+#include "Core/GlobalVariable/GlobalVariableManager.h"
+#include "Core/Log/Logger.h"
 #include "Core/String/Name/hashed_string.h"
+#include "Core/String/StringUtil.h"
+#include "Core/Subsystem/Subsystem.h"
+#include "Core/Subsystem/SubsystemSlot.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Automation/Watch/AutomationWatchComponent.h"
+#include "Engine/Behavior/ActionRegistry.h"
+#include "Engine/Console/DebugHUDRegistry.h"
+#include "Engine/Console/DevCommandRegistry.h"
+#include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/View/SceneViewQuery.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Reflection/EnumName.h"
 #include "Engine/Reflection/ReflectValueBinding.h"
 #include "Engine/Reflection/ReflectedValue.h"
 #include "Engine/Reflection/TypeInfo.h"
@@ -226,4 +238,66 @@ namespace sw
                                "On-screen size (bounds diameter / screen height, as LOD uses) of the target object for the camera drawing this frame; 0 outside the frustum",
                                &readCameraObjectScreenSize, true, false );
     SW_AUTOMATION_QUERY_WATCH( cameraFrameObject, "Camera.FrameObject", "Name of the object whose camera draws this frame (a sequencer cut camera while one covers the frame)", &readFrameCameraObject, false, false );
+} // namespace sw
+
+// Engine/Behavior/ActionRegistry.cpp 에서 옮긴 개발 등록(배포 엔진에 컴파일되지 않게).
+namespace sw
+{
+    namespace
+    {
+        struct ActionTraceWatchesInternal
+        {
+            static constexpr uint32 kSectionLines = 24; ///< 섹션 하나가 쓰는 줄의 상한
+
+            /** @brief `action.trace on|off|clear` — 범용 Action 추적(HUD 섹션 `action`). */
+            static bool runTrace( const vector<string>& listArgument, string& outReply )
+            {
+                if ( listArgument.size() != 1 )
+                    return false;
+                if ( listArgument[0] == "clear" )
+                {
+                    ActionTrace::clear();
+                    outReply = "action.trace cleared";
+                    return true;
+                }
+                bool bEnabled = false;
+                if ( StringUtil::tryParseBool( listArgument[0], bEnabled ) == false )
+                    return false;
+                ActionTrace::setEnabled( bEnabled );
+                outReply = bEnabled ? "action.trace on" : "action.trace off";
+                return true;
+            }
+
+            /** @brief HUD 섹션 `action` — 최근 동작 호출(늦은 것부터): 이름 · 결과 · 시작/중단. */
+            static void writeSection( DebugHUDSectionWriter& writer )
+            {
+                if ( ActionTrace::isEnabled() == false )
+                {
+                    writer.addLine( "trace", "off (action.trace on)" );
+                    return;
+                }
+                vector<ActionTraceEntry> listEntry;
+                ActionTrace::collect( listEntry );
+                if ( listEntry.empty() )
+                    writer.addLine( "trace", "on, no call yet" );
+                uint32 lineCount = 0;
+                for ( auto it = listEntry.rbegin(); it != listEntry.rend() && lineCount < kSectionLines; ++it, ++lineCount )
+                {
+                    StringBuilder<constant::buffer::kMax128> value;
+                    value.appendFormat( "%# %#", it->_arrName, getEnumName( it->_result ) );
+                    if ( it->_bAborted == SW_TRUE )
+                        value.append( " (aborted)" );
+                    else if ( it->_bJustStarted == SW_TRUE )
+                        value.append( " (started)" );
+                    fixed_string<constant::buffer::kMax32> label;
+                    formatstring( label.data(), label.capacity(), "#%#", it->_sequence );
+                    writer.addLine( label, value.view() );
+                }
+            }
+        };
+    } // namespace
+
+    SW_DEV_COMMAND( ActionTraceCommand, "action.trace", "action.trace on|off|clear",
+                    "Record every game action call (dialogue, schedule, reward, behavior tree) for the action debugger (hud.print action)", &ActionTraceWatchesInternal::runTrace );
+    SW_DEBUG_HUD_SECTION( action, "action", "Action calls", 260, DebugHUDSectionFlag::kNone, &ActionTraceWatchesInternal::writeSection );
 } // namespace sw
