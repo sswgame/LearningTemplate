@@ -8,6 +8,21 @@
 
 namespace sw
 {
+    // 휘발 저장소는 서버 전용(Cache/Server/)이라 기록 값을 짓고 읽는 정의는 공용 ServerRecord.cpp 가 아닌 서버 TU 에 둔다(클라이언트 빌드 게이트).
+    bool ServerRecord::makeValue( const ServerStatus& status, EphemeralValue& outValue )
+    {
+        return EphemeralRecordTable<ServerStatus>{}.makeValue( status, outValue );
+    }
+
+    bool ServerRecord::decode( const EphemeralReply& reply, ServerStatus& outStatus )
+    {
+        ServerStatus status;
+        if ( EphemeralRecordTable<ServerStatus>{}.decode( reply, status ) == false || status._state == ServerState::Count )
+            return false;
+        outStatus = std::move( status );
+        return true;
+    }
+
     ServerRegistration::ServerRegistration()
         : _status{}
         , _pRouter{ nullptr }
