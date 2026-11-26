@@ -16,7 +16,7 @@
 
 - 합친 것: .cpp 리플렉션 · 모듈 PCH(1535cc90ef) · 헤더만 읽던 도구, Core 정리, 렌더 데이터 R1~R4 · R4 나머지(쿠킹 단계 스트리핑 · 머티리얼 색인 층 · `matfind`), E1~E5 · H1~H4 · D1a · D1b · G2 · P1~P4, Enum 메타 · 키트 현지화 프로젝트, GameFramework 개발 코드 분리 · 배포 매크로 오류, DevTools 합치기 · 키트 Editor 글 표, 서버 서비스 모듈 서브시스템 · `_bOnlineServices`, 셰이더 리로드 · 데이터 철자 열거 6 건, ReflectionParser 정리.
 - 남은 검증: Release · Server · Shipping 빌드와 단위 · 파서 · Scripts 테스트 → `App --gather-text` 로 키트 · 엔진 표를 맞춰 커밋 → 쿠킹 한 번(쿠킹 키 철자가 바뀌어 전부 다시 굽는다) → preflight(렌더 골든 네 백엔드) → push.
-- 잴 것: 모듈 PCH 앞 · 뒤 parse + pch 합(앞 측정 합 235.3 초). 잡음(±10 %) 안이면 1535cc90ef 를 되돌린다.
+- 모듈 PCH 는 쟀고 남긴다(최대 12.0→9.6 초, 스레드 합 parse 300.8→210.4 초). visit 8.8→31.3 초 · 작은 키트 굽기 손해는 w-cpp-reflect 몫.
 - 그림 확인: 카메라 흔들림 · 메시 모디파이어 노이즈, RigIK 정반대 방향(-q), TAA · 구름 기록 칸, 파이프라인 선택 경로, 픽셀 마을 스프라이트 이름(`walk_Down`).
 - 판단 남음: TAA 출력의 앨리어싱 제외를 지울지(`-gv_transientAliasing=0` 비교).
 
@@ -26,7 +26,7 @@
 | --- | --- |
 | w-shaderreload · LT-wt/shaderreload | 끝(b58d3c91df — 열거형 여섯을 `ENUM()` 으로) — 다음 묶음에 합친다 |
 | w-pimpl · LT-wt/pimpl | 끝(d7a634aef5 — .meta 산출물 표) — 다음 묶음에 합친다. 합친 뒤 `App --import-models --import-textures --import-heightfields -unattended` 로 원본 .meta 약 1486 개를 채우고 `py -3 -m Scripts asset-ids` 확인 뒤 커밋 |
-| w-cpp-reflect · LT-wt/cppreflect | ReflectionValidation 나누기 끝(…ee8f658c0a — 다음 묶음), 타입 검증으로 적힌 에디터 검사(HousingPlot `validatePlot` 등)를 개발 전용으로 |
+| w-cpp-reflect · LT-wt/cppreflect | ReflectionValidation 나누기 끝(…ee8f658c0a — 다음 묶음), 타입 검증으로 적힌 에디터 검사(HousingPlot `validatePlot` 등)를 개발 전용으로, 모듈 PCH 퇴행 둘(visit 이 PCH 선언까지 훑음, 작은 키트 굽기 문턱) |
 | w-devtools-merge · LT-wt/devtoolsmerge | 여러 에디터 플러그인이 함께 쓰는 키(`EdPlugin.Connect · Name · Reload · Remove · Save`, `EdPluginWidget.Kind`)의 자리 — `App -gather-text` rc=17 |
 
 나머지 갈래(enum-meta · gf-dev · devtools-merge · server-subsystem · engine-owner · core-lift · render-data)는 main 에 합쳤다. push 뒤 워크트리를 지운다.
