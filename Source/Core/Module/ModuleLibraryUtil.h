@@ -24,7 +24,7 @@ namespace sw
     struct SW_API ModuleLibraryUtil
     {
         // ------------------------------------------------------------------------------
-        // 1) 이름. 플랫폼 접두어, 확장자, 디버그 심볼 파일.
+        // 1) 이름. 플랫폼 접두어, 확장자.
         // ------------------------------------------------------------------------------
         /** @brief 플랫폼의 공유 라이브러리 접두어(예: lib)를 반환합니다. */
         static string_view getSharedLibraryPrefix();
@@ -32,17 +32,6 @@ namespace sw
         static string_view getSharedLibraryExtension();
         /** @brief baseName 에 접두어와 확장자를 붙여 공유 라이브러리 이름을 만듭니다. */
         static string formatSharedLibraryName( string_view baseName );
-        /**
-         * @brief 라이브러리 옆에 있는 디버그 심볼 파일의 경로를 반환합니다(섀도 복사본의 심볼 위치).
-         * @note Windows 는 `.pdb`, Linux 는 `.debug` 입니다(없으면 DWARF 가 .so 안에 들어 있는 경우가 많습니다).
-         */
-        static AbsolutePath getDebugSymbolPath( const AbsolutePath& libraryPath );
-        /**
-         * @brief 빌드가 낸 라이브러리의 디버그 심볼 파일을 찾습니다. `Bin/Symbols/<이름>` 을 먼저 보고, 없으면 라이브러리 옆을 봅니다. 둘 다 없으면 빈 문자열을 반환합니다.
-         * @details Dev 빌드는 PDB 를 `Bin/Symbols` 에 낸다(`cmake/Modules/Build/BuildLayout.cmake`). `setModuleSubdirectory` 로 옮긴 모듈은 `Bin/Symbols/<그 폴더>` 다 —
-         *          게임 팩마다 PDB 이름이 같아(`SWGame.pdb`) 폴더로 가른다.
-         */
-        static AbsolutePath findBuiltDebugSymbolPath( const AbsolutePath& libraryPath );
 
         // ------------------------------------------------------------------------------
         // 1-1) 위치. 모듈 DLL 은 `Bin/Modules`, 엔진, GameFramework, 서드파티 DLL 은 `Bin` 에 둔다.
@@ -109,13 +98,10 @@ namespace sw
         // 3) 로드된 라이브러리 조회.
         // ------------------------------------------------------------------------------
         /**
-         * @brief 모듈 @p pHandle 이 DLL @p dependencyFileName(예: `GameFramework.dll`)을 어느 라이브러리에 바인딩했는지 import 테이블에서 읽습니다.
-         * @details import 는 로드할 때 해석되므로 IAT 첫 항목이 가리키는 주소의 모듈이 바인딩된 라이브러리다(모듈 라이브러리에는 지연 import 가 없다.
-         *          `LiveReloadManager` 가 그런 라이브러리를 거절한다). Windows 전용이며, 리눅스는 import 테이블에서 바인딩을 읽을 수 없어
-         *          부르는 쪽이 심볼로 판단한다(`LiveReloadManager` 의 바인딩 검사).
-         * @return 바인딩된 라이브러리의 핸들을 반환합니다. 그 DLL 을 import 하지 않으면(그 밖의 플랫폼 포함) nullptr 입니다.
+         * @brief 로드된 이미지의 기준 주소 @p pBase 가 가리키는 PE NT 머리(`IMAGE_NT_HEADERS`)를 반환합니다. DOS · NT 서명이 맞지 않거나 Windows 가 아니면 nullptr 입니다.
+         * @details PE 머리를 읽는 식은 이 함수 한 곳에만 둔다. 부르는 쪽이 `IMAGE_NT_HEADERS` 로 형변환해 import · 디버그 디렉터리를 읽는다.
          */
-        static void* findBoundImportLibrary( void* pHandle, string_view dependencyFileName );
+        [[nodiscard]] static const void* findImageNtHeaders( const void* pBase );
 
 #if SW_WITH_DYNAMIC_MODULES
         // ------------------------------------------------------------------------------

@@ -45,14 +45,9 @@ namespace sw
     /** @brief 응답 상태입니다. 값은 와이어 형식입니다. */
     enum class NetRequestStatus : uint8
     {
-        Ok = 0,
-        ApplicationError, ///< 처리기가 거절했다. 본문에 키트의 오류 코드가 있다.
-        DeadlineExceeded, ///< 시한 안에 응답이 없다(클라이언트가 스스로 끝낸다).
-        Cancelled,        ///< 이쪽이 취소했다.
-        ConnectionLost,   ///< 응답 전에 연결이 닫혔다.
-        UnknownMethod,    ///< 서버에 그 메서드가 없다.
-        Malformed,        ///< 요청 헤더가 깨졌다.
-        Overloaded,       ///< 서버의 진행 중 요청이 상한을 넘었다.
+#define SW_NET_REQUEST_STATUS( Name ) Name,
+#include "Core/Network/Message/NetRequestStatusList.xxx"
+#undef SW_NET_REQUEST_STATUS
         Count
     };
 

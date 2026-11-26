@@ -50,15 +50,6 @@ namespace sw
         static bool startsWithReflectMacro( string_view line );
         /** @brief 커서가 적힌 파일이 몇 번째 대상인지 찾습니다. 대상이 아니면 kNoTarget 입니다. */
         int32 findTargetIndex( CXCursor cursor ) const;
-        /**
-         * @brief 대상 파일을 include 한 자리(`#include` 줄)를 모두 모읍니다. 대상에 이르는 include 사슬의 모든 고리다.
-         * @details 대상 밖 파일의 이름공간은 내려가지 않는다(`visitCursor`). 그 이름공간 안에서 대상을 include 하면 대상의 선언이 그 이름공간의 자식이 되어
-         *          조용히 빠진다 — 그런 이름공간만 내려가려고 자리를 안다.
-         */
-        void collectTargetIncludeSites();
-        /** @brief 대상 밖 파일의 이름공간 @p cursor 가 대상을 include 한 자리를 품고 있으면 true 입니다(그 이름공간은 내려간다). */
-        bool        containsTargetIncludeSite( CXCursor cursor ) const;
-        static void collectTargetIncludeSite( CXFile includedFile, CXSourceLocation* pInclusionStack, uint32 stackLength, CXClientData clientData );
         /** @brief 그 헤더를 실패로 표시합니다(산출물을 쓰지 않는다). 순회는 계속합니다. */
         void markHeaderError( ParsedHeader& header );
         /**
@@ -98,18 +89,11 @@ namespace sw
         static CXChildVisitResult collectEnumeratorCursor( CXCursor cursor, CXCursor parent, CXClientData clientData );
 
     private:
-        CXTranslationUnit    _translationUnit;
-        const ParserSession* _pSession;
-        vector<string>       _listTargetPath;
-        vector<CXFile>       _listTargetFile;
-        vector<ParsedHeader> _listHeader;
-        /** @brief 대상에 이르는 include 사슬의 `#include` 자리(파일 · 바이트 위치)입니다(`collectTargetIncludeSites`). */
-        struct IncludeSite
-        {
-            CXFile _file;
-            uint32 _offset;
-        };
-        vector<IncludeSite>    _listTargetIncludeSite;
+        CXTranslationUnit      _translationUnit;
+        const ParserSession*   _pSession;
+        vector<string>         _listTargetPath;
+        vector<CXFile>         _listTargetFile;
+        vector<ParsedHeader>   _listHeader;
         mutable CXFile         _pLastFile;       ///< 직전에 본 파일 — 같은 헤더의 선언은 몰려 나온다
         mutable int32          _lastTargetIndex; ///< `_pLastFile` 의 답
         PendingMarker          _pendingMarker;   ///< 짝을 기다리는 표식(없으면 `_pDesc` 가 nullptr)

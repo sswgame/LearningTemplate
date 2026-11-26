@@ -4,6 +4,7 @@
 #include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Input/Devices/KeyboardDevice.h"
+#include "Engine/Input/InputKeyboardFocus.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Input/RawInputEvent.h"
@@ -139,4 +140,57 @@ SW_TEST_CASE( InputMapChordTest, DebugActionStatesMatchThePerActionQueries )
     {
         SW_EXPECT_TRUE( state._bDown == 0 );
     }
+}
+
+/**
+ * @brief [InputMapChordTest] 셸 디버그 키 맵(포커스 무시 + `setToolShortcutReader`)은 에디터 패널이 키보드를 쥔 동안에도 Ctrl 단축키를 받고, 맨 키와 Shift 조합은 가린다
+ * @details 결함: 편집 모드에서 에디터가 도구 포커스를 쥐면 셸 맵이 키보드를 통째로 가려 Ctrl+F8(셰이더 재컴파일)이 발동하지 않았다(editor.shaderreload 시나리오).
+ */
+SW_TEST_CASE( InputMapChordTest, ShellShortcutReadsThroughToolFocus )
+{
+    InputManager input;
+    SW_REQUIRE_TRUE( input.initialize() );
+    InputMap            shell;
+    InputMap            plain; // 깃발이 없는 포커스 무시 맵은 그대로 가린다
+    const hashed_string reload{ "ReloadShaders" };
+    const hashed_string console{ "DevConsoleToggle" };
+    const hashed_string shiftChord{ "ShiftChord" };
+    for ( InputMap* pMap : { &shell, &plain } )
+    {
+        pMap->setInputManager( &input );
+        pMap->setKeyboardFocusIgnored( true );
+        pMap->bindShortcut( reload, Key::F8, ModifierKey::Ctrl );
+        pMap->bind( console, Key::Grave );
+        pMap->bindShortcut( shiftChord, Key::F9, ModifierKey::Shift );
+    }
+    shell.setToolShortcutReader( true );
+    Subscription toolFocus = input.claimKeyboardFocus( InputKeyboardFocus::Tool );
+
+    // 수정 키는 누른 채로 맵을 갱신하고 그 뒤에 뗀다(단축키는 수정 키의 지금 상태를 본다). 방아쇠 키는 한 프레임 안에 눌렀다 뗀다.
+    const auto tap = [&]( Key modifier, Key key )
+    {
+        input.beginFrame( RealSeconds{ ChordScene::kFrameSeconds } );
+        if ( modifier != Key::Unknown )
+            input.getKeyboard()->setKeyDown( modifier, true );
+        input.getKeyboard()->setKeyDown( key, true );
+        input.getKeyboard()->setKeyDown( key, false );
+        shell.update( ChordScene::kFrameSeconds );
+        plain.update( ChordScene::kFrameSeconds );
+        input.endFrame();
+        if ( modifier != Key::Unknown )
+            input.getKeyboard()->setKeyDown( modifier, false );
+    };
+
+    tap( Key::LeftControl, Key::F8 );
+    SW_EXPECT_TRUE( shell.wasActionPressed( reload ) );
+    SW_EXPECT_FALSE( plain.wasActionPressed( reload ) );
+
+    tap( Key::LeftShift, Key::F9 );
+    SW_EXPECT_FALSE( shell.wasActionPressed( shiftChord ) );
+
+    tap( Key::Unknown, Key::Grave );
+    SW_EXPECT_FALSE( shell.wasActionPressed( console ) );
+
+    toolFocus.reset();
+    input.shutdown();
 }

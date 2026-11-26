@@ -33,16 +33,9 @@ namespace sw
     /** @brief 스트림 연결이 닫힌 까닭입니다. */
     enum class StreamCloseReason : uint8
     {
-        None = 0,
-        LocalClose,        ///< 이쪽이 닫았다(우아한 종료가 끝났거나 끊었다)
-        RemoteClose,       ///< 저쪽이 닫았다(FIN)
-        Reset,             ///< 저쪽이 끊었다(RST) · 소켓 오류
-        IdleTimeout,       ///< `_idleTimeoutSeconds` 동안 받은 바이트가 없다
-        ConnectFailed,     ///< 연결하지 못했다(거절 · 시한 · 주소)
-        ProtocolError,     ///< 프레임이 상한을 넘거나 깨졌다(위 층이 닫았다)
-        SendQueueOverflow, ///< 보낼 줄이 `_maxQueuedSendBytes` 를 넘었다(느린 상대)
-        SecurityFailure,   ///< TLS 핸드셰이크 · 레코드 검증 실패
-        Shutdown           ///< 전송을 내렸다
+#define SW_STREAM_CLOSE_REASON( Name ) Name,
+#include "Core/Network/Transport/StreamCloseReasonList.xxx"
+#undef SW_STREAM_CLOSE_REASON
     };
 
     SW_API const utf8* toString( StreamCloseReason reason );

@@ -9,6 +9,7 @@
 #include "Core/Log/ScopedDeferredLog.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/Connection/NetConnection.h"
+#include "Core/Network/DevOnlineExtension.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/Network/Transport/NetTransport.h"
 #include "Core/Process/Process.h"
@@ -76,12 +77,10 @@ namespace sw
                 const uint64 high = reader.readBits( 32 );
                 return low | ( high << 32 );
             }
-#if !defined( SW_SHIPPING )
             /** @brief 디버거 대기 중 `update` 사이가 이 값보다 벌어지면 프로세스가 멈췄던 것으로 보고 연결 시계를 민다. 평소 간격(수 ms)보다 훨씬 길게 잡는다. */
             static constexpr float64 kDebugStallSeconds = 0.5;
             /** @brief 디버거가 붙었는지 다시 확인하는 간격입니다. Linux 에서는 파일을 읽어 확인합니다. */
             static constexpr float64 kDebuggerPollSeconds = 1.0;
-#endif
 
             /** @brief 거절 패킷이 싣는 이유를 읽습니다. 모르는 값은 Rejected 로 읽으므로, 다른 버전이 이유를 늘려도 클라이언트는 연결이 끊깁니다. */
             static NetDisconnectReason readDeniedReason( uint64 value )
@@ -110,6 +109,41 @@ namespace sw
             }
         };
     } // namespace
+} // namespace sw
+
+namespace sw
+{
+    namespace
+    {
+        /**
+         * @struct NetEndpointSecurityPolicy
+         * @brief 엔드포인트가 자기 설정과 상대의 알림을 어디까지 믿는지입니다. 배포 구성은 값을 걸지 않아 `kShippingPolicy`(엄격한 쪽)로 돈다.
+         * @details 개발 구성은 아래 등록이 `kDevelopmentPolicy` 를 건다(`DevOnlineExtension.h` — 배포는 등록하지 않는다). 구성 이름이 아니라 등록으로 묻으므로
+         *          등록이 빠진 구성도 배포 규칙을 따른다. 언리얼이 넷 디버그 cvar(`net.PktLag` 등)를 `UE_BUILD_SHIPPING` 에서 빼는 자리다.
+         */
+        struct NetEndpointSecurityPolicy
+        {
+            uint8 _bAllowEncryptionWithoutAuthenticator : 1; ///< 인증기 없는 암호화(일회용 키라 도청만 막고 중간자는 못 막는다) 서버를 연다
+            uint8 _bHonorRemoteDebugHold                : 1; ///< 상대가 알린 디버거 대기로 그 연결의 타임아웃을 늘린다. 배포가 믿으면 클라이언트가 비트를 켜서 슬롯을 붙잡는다
+            bool ( *_pIsDebuggerAttached )();                ///< 디버거 대기를 알릴지 묻는다. nullptr 면 알리지 않는다(`NetDebugHold` 설정을 보지 않는다)
+
+            static RegistrationSlot<const NetEndpointSecurityPolicy>& getDevOnline();
+            /** @brief 지금 구성의 정책입니다. 개발 등록이 없으면 배포 정책입니다. */
+            static const NetEndpointSecurityPolicy& getActive();
+        };
+
+        constexpr NetEndpointSecurityPolicy kShippingPolicy{ 0, 0, nullptr };
+        constexpr NetEndpointSecurityPolicy kDevelopmentPolicy{ 1, 1, SW_DEV_ONLY_FUNCTION( &Process::isDebuggerPresent ) }; // 배포에는 이 함수가 없다(등록도 하지 않는다)
+
+        const NetEndpointSecurityPolicy& NetEndpointSecurityPolicy::getActive()
+        {
+            const NetEndpointSecurityPolicy* const pDevelopment = getDevOnline().get();
+            return pDevelopment != nullptr ? *pDevelopment : kShippingPolicy;
+        }
+    } // namespace
+
+    SW_DEFINE_DEV_ONLINE_EXTENSION( NetEndpointSecurityPolicy, "the development endpoint policy (encryption without a session token authenticator, debug hold)" )
+    SW_REGISTER_DEV_ONLINE_EXTENSION( NetEndpointSecurityPolicy, kDevelopmentPolicy );
 } // namespace sw
 
 namespace sw
@@ -246,14 +280,11 @@ namespace sw
             SW_LOG_ERROR_ID( "NetEndpoint.NetEndpointEncryptedModeNeeds", "NetEndpoint: encrypted mode needs a security provider (the INetSecurityProvider subsystem GameFramework publishes)" );
             return false;
         }
-#if defined( SW_SHIPPING )
-        if ( isEncrypted() && _settings._security._pAuthenticator == nullptr )
+        if ( isEncrypted() && _settings._security._pAuthenticator == nullptr && NetEndpointSecurityPolicy::getActive()._bAllowEncryptionWithoutAuthenticator == 0 )
         {
-            // 인증기 없는 암호화(일회용 키)는 도청만 막고 중간자 공격은 막지 못하므로 개발 빌드에서만 쓴다.
             SW_LOG_ERROR_ID( "NetEndpoint.NetEndpointShippingServerMust", "NetEndpoint: a shipping server must bind encrypted connections to session tokens (set NetSecurityConfig::_pAuthenticator)" );
             return false;
         }
-#endif
         _bServer    = SW_TRUE;
         _protocolID = NetProtocol::makeProtocolID( _settings._gameID, _settings._wireVersion, computeFeatureMask() );
         resetSlots( MathUtil::max( 1, _settings._maxConnections ) );
@@ -637,9 +668,13 @@ namespace sw
 
     void NetEndpoint::updateDebugHold( float64 nowSeconds )
     {
-#if defined( SW_SHIPPING )
-        (void)nowSeconds;
-#else
+        const NetEndpointSecurityPolicy& policy = NetEndpointSecurityPolicy::getActive();
+        if ( policy._pIsDebuggerAttached == nullptr )
+        {
+            _bDebugHold     = SW_FALSE; // 배포는 알리지 않는다
+            _lastUpdateTime = nowSeconds;
+            return;
+        }
         switch ( _settings._debugHold )
         {
             case NetDebugHold::Off:
@@ -656,7 +691,7 @@ namespace sw
             {
                 if ( nowSeconds >= _nextDebuggerPollTime )
                 {
-                    _bDebugHold           = Process::isDebuggerPresent() ? SW_TRUE : SW_FALSE;
+                    _bDebugHold           = policy._pIsDebuggerAttached() ? SW_TRUE : SW_FALSE;
                     _nextDebuggerPollTime = nowSeconds + NetEndpointInternal::kDebuggerPollSeconds;
                 }
                 break;
@@ -675,18 +710,14 @@ namespace sw
             }
             _slotTable.markAllDue(); // 기한을 시계에서 셈했으니 민 시계로 다시 센다
         }
-#endif
         _lastUpdateTime = nowSeconds;
     }
 
     float64 NetEndpoint::computeTimeoutSeconds( const NetEndpointSlot& slot ) const
     {
-#if defined( SW_SHIPPING )
-        (void)slot;
-        return _settings._timeoutSeconds; // 배포 빌드는 알림을 믿지 않는다. 클라이언트가 비트를 켜서 슬롯을 붙잡는 것을 막기 위해서다.
-#else
-        return slot._bRemoteDebugHold == SW_TRUE ? MathUtil::max( _settings._timeoutSeconds, _settings._debugHoldTimeoutSeconds ) : _settings._timeoutSeconds;
-#endif
+        if ( slot._bRemoteDebugHold == SW_FALSE || NetEndpointSecurityPolicy::getActive()._bHonorRemoteDebugHold == 0 )
+            return _settings._timeoutSeconds;
+        return MathUtil::max( _settings._timeoutSeconds, _settings._debugHoldTimeoutSeconds );
     }
 
     bool NetEndpoint::isDebugHoldAnnounced() const

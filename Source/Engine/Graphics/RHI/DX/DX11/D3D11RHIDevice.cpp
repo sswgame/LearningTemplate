@@ -24,7 +24,6 @@
     #include "Engine/Graphics/RHI/Backend/RHILiveCommandListSet.h"
     #include "Engine/Graphics/RHI/DX/DXGIAdapter.h"
     #include "Engine/Graphics/RHI/DX/DXGIFormat.h"
-    #include "Engine/Graphics/RHI/DX/DXGIMemoryBudget.h"
     #include "Engine/Graphics/RHI/DX/DXGITearing.h"
     #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 
@@ -34,6 +33,30 @@ namespace sw
 {
     namespace
     {
+        /**
+         * @brief 어댑터에게 이 프로세스의 GPU 메모리 사용량과 예산을 묻습니다. 아무 스레드에서나 불러도 됩니다.
+         * @return 로컬 세그먼트를 묻지 못하면 false 이고 `outBudget` 은 건드리지 않습니다.
+         */
+        inline bool queryDXGIMemoryBudget( IDXGIAdapter3* pAdapter, RHIMemoryBudget& outBudget )
+        {
+            if ( pAdapter == nullptr )
+                return false;
+            DXGI_QUERY_VIDEO_MEMORY_INFO localInfo{};
+            if ( FAILED( pAdapter->QueryVideoMemoryInfo( 0, DXGI_MEMORY_SEGMENT_GROUP_LOCAL, &localInfo ) ) )
+                return false;
+            DXGI_QUERY_VIDEO_MEMORY_INFO nonLocalInfo{};
+            const bool                   bNonLocal = SUCCEEDED( pAdapter->QueryVideoMemoryInfo( 0, DXGI_MEMORY_SEGMENT_GROUP_NON_LOCAL, &nonLocalInfo ) );
+
+            outBudget._usageBytes      = localInfo.CurrentUsage + ( bNonLocal ? nonLocalInfo.CurrentUsage : 0 );
+            outBudget._budgetBytes     = localInfo.Budget;
+            outBudget._availableBytes  = localInfo.Budget > localInfo.CurrentUsage ? localInfo.Budget - localInfo.CurrentUsage : 0;
+            outBudget._scope           = RHIMemoryScope::Process;
+            outBudget._bUsageKnown     = SW_TRUE;
+            outBudget._bBudgetKnown    = SW_TRUE;
+            outBudget._bAvailableKnown = SW_TRUE;
+            return true;
+        }
+
     #if defined( SW_DO_CHECKS )
         // 아래 목록과 판별 함수는 디버그 레이어 메시지를 거르는 `flushDebugMessages` 전용이고, 그 함수의
         // 본문 전체가 SW_DO_CHECKS 안에 있다. 가드를 맞추지 않으면 배포 빌드에서 "정의했는데 아무도

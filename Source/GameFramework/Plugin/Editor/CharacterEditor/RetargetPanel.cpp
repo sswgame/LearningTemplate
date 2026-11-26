@@ -1,19 +1,26 @@
 #include "pch.h"
 
-#include "GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.h"
-
+#include "Core/Container/string.h"
+#include "Core/Container/vector.h"
+#include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
+#include "Core/Math/VectorMath.h"
+#include "Core/String/Name/hashed_string.h"
 #include "Core/String/StringUtil.h"
+#include "Core/String/fixed_string.h"
 
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
+#include "Editor/Common/GUI/Panel/EditorPreviewPanel.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 #include "Editor/Viewport/EditorProjectedLineRenderer.h"
 
+#include "Engine/Animation/Retarget/RetargetProfile.h"
 #include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Content/AssetIO.h"
@@ -21,12 +28,106 @@
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
 
+#include "GameFramework/Plugin/Editor/CharacterEditor/Model/RetargetPreviewViewModel.h"
 #include "GameFramework/Plugin/Editor/CharacterEditor/Model/RetargetProfileEdit.h"
+#include "GameFramework/Plugin/Editor/CharacterEditor/Model/RetargetProfileEditModel.h"
+#include "GameFramework/Plugin/Editor/CharacterEditor/Model/RetargetProfileInspection.h"
 
 #include <imgui.h>
 
 namespace sw::editor
 {
+    class EditorProjectedLineRenderer;
+
+    /**
+     * @class RetargetPanel
+     * @brief 리타깃 프로필 편집 창입니다. 파일 머리말 참고.
+     */
+    class RetargetPanel final : public EditorPreviewPanel
+    {
+    public:
+        /** @brief 패널 id 입니다. */
+        static constexpr const utf8* kPanelID = "charactereditor.retarget";
+        /** @brief 처음 패널 크기를 정하는 글 칸 수입니다(폭 · 높이). */
+        static constexpr float32 kInitialTextWidth  = 120.0f;
+        static constexpr float32 kInitialTextHeight = 47.0f;
+
+        /** @brief 자동화 감시 값이 읽는 값입니다. 패널이 그릴 때마다 게시합니다(게임 스레드). 값은 이 패널 인스턴스의 것이라 에디터마다 따로이고 패널과 함께 사라집니다. */
+        struct Published
+        {
+            uint32 _targetPoseCount{ 0 };     ///< 프로필의 리타깃 포즈 줄 수
+            uint32 _previewSegmentCount{ 0 }; ///< 지난 그리기에 미리보기가 그은 선분 수
+            uint32 _chainCount{ 0 };          ///< 프로필의 사슬 수
+            uint32 _poseTurnDegrees{ 0 };     ///< 프로필의 리타깃 포즈 돌림 크기 합(도, 반올림) — 끌기가 프로필에 들어갔는지 본다
+        };
+
+        RetargetPanel();
+
+        const utf8*        getPanelTitle() const override { return "Retarget Profile"; }
+        EditorTextExtent   getInitialPanelSize() const override { return EditorTextExtent::ofText( kInitialTextWidth, kInitialTextHeight ); }
+        void               drawDocumentContent() override;
+        [[nodiscard]] bool saveDocument( AssetWriter& writer ) override;
+
+        const RetargetProfile&           getProfile() const { return _model.getProfile(); }
+        const RetargetProfileInspection& getInspection() const { return _inspection; }
+        /** @brief 지난 점검이 실패한 까닭입니다. 묶였으면 비어 있습니다. */
+        const string&    getInspectionError() const { return _inspectionError; }
+        const Published& getPublished() const { return _published; }
+
+    private:
+        /** @brief 사슬 한 줄의 편집 글(이름과 쉼표로 나눈 본 이름)입니다. 프로필과 같은 순서입니다. 본이 많은 사슬이 잘리지 않게 길이 제한 없는 글로 둔다. */
+        struct ChainText
+        {
+            string _name{};
+            string _source{};
+            string _target{};
+        };
+
+        bool                canAcceptDocumentPath( string_view assetPath ) const override;
+        ToolAssetLoadResult loadDocument() override;
+        string              captureDocumentText() const override { return _model.getProfile().toXML(); }
+        void                applyDocumentText( string_view text ) override;
+        /** @brief 맞춤(F)이 담을 구입니다. 처음 열 때의 카메라와 같은 값입니다. */
+        bool findPreviewFrameSphere( float3& outCenter, float32& outRadius ) const override { return _preview.findFrameSphere( outCenter, outRadius ); }
+
+        void drawNewDocumentRow();
+        void drawSkeletonRows();
+        void drawPreviewSection();
+        void drawRootAndPelvisRows();
+        void drawOptionRows();
+        void drawChainRows();
+        /** @brief 사슬 본 목록 칸 하나입니다. 칸을 떠날 때 목록을 바꾸면 true 이고, 비어 있으면 받지 않고 글을 되돌립니다. */
+        [[nodiscard]] bool drawChainBoneField( const utf8* pID, string& inoutText, vector<hashed_string>& inoutListBone );
+        void               drawTargetPoseRows();
+        void               drawBonePairRows();
+        void               drawInspection();
+        /** @brief 두 스켈레톤을 겹쳐 긋습니다(뷰포트를 그린 직후). */
+        void drawSkeletonLines();
+        /** @brief 모델 편집 연산 뒤에 상태 줄을 비우고 칸 · 미리보기 · 점검을 다시 맞춥니다(알림은 모델이 이미 냈다). */
+        void refreshAfterEdit();
+        /** @brief 프로필에서 편집 글(스켈레톤 경로 · 사슬 본 목록)을 다시 채우고 미리보기와 점검을 맞춥니다. 스켈레톤 경로가 그대로면 디스크를 읽지 않고 카메라도 그대로입니다. */
+        void syncFromProfile();
+
+    private:
+        RetargetProfileEditModel                   _model; ///< 편집 중인 프로필과 편집 연산(연산이 알린다 — 감사 E-16)
+        RetargetProfileInspection                  _inspection;
+        RetargetPreviewViewModel                   _preview;
+        vector<ChainText>                          _listChainText;
+        string                                     _inspectionError;
+        string                                     _status;
+        fixed_string<constant::file::kMaxPathSize> _sourceSkeleton;
+        fixed_string<constant::file::kMaxPathSize> _targetSkeleton;
+        fixed_string<constant::file::kMaxPathSize> _newDocumentPath;
+        fixed_string<constant::buffer::kMax64>     _arrPairName[4]; ///< 루트 원본 · 루트 대상 · 골반 원본 · 골반 대상
+        fixed_string<constant::buffer::kMax64>     _newChainName;
+        string                                     _newChainSource;
+        string                                     _newChainTarget;
+        fixed_string<constant::buffer::kMax64>     _newPairSource;
+        fixed_string<constant::buffer::kMax64>     _newPairTarget;
+        fixed_string<constant::buffer::kMax64>     _newPoseBone;
+        Published                                  _published; ///< 감시 값이 읽는 게시 값
+    };
+
     namespace
     {
         struct RetargetPanelInternal

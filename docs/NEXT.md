@@ -6,10 +6,36 @@
 - 게임이 완성되기 전의 측정값은 고칠지를 정하는 기준이 아니다(사용자 결정). 5 절과 "측정 뒤" 줄은 상용 엔진과 구조를 견줘 정한다: 틀린 모양 · 규모에 따라 나빠지는 모양이면 재지 말고 고치고, 이미 정본이거나 상용 엔진도 하지 않으면 줄을 지운다. 측정은 조절 값(합성 벤치)과 고친 뒤 느려지지 않았는지 보는 데만 쓴다.
 - 차례: 결함 · 계약 → 구조 장치(형식으로 막기) → 정본과 다른 성능 구조.
 
-## 0. 인계(2026-11-24 — 다음 세션은 여기부터)
+## 0. 인계(2026-11-26 — 다음 세션은 여기부터)
 
-- 다음 차례: ① 합친 묶음 검증 · push(2 절) → ② Linux 검증(`linux-verify`) → ③ 에셋 GUID 데이터 이전(8 절).
+- 다음 차례: ① 통합 묶음 검증 · push(아래 "통합 중") → ② Linux 검증(`linux-verify`) → ③ 에셋 GUID 데이터 이전(8 절).
 - `[코드]` 는 빌드 없이 지금 짤 수 있는 일, 나머지는 실행 · 실기기 · 계정이 있어야 한다.
+- 맡긴 갈래는 아래 표에 있는 동안 다른 작업자에게 다시 주지 않는다. 합쳐 push 하면 그 줄을 지운다.
+
+### 통합 중(main, push 전)
+
+- 합친 것: .cpp 리플렉션 · 헤더만 읽던 도구, Core 정리(C1 · normalize 제자리 판 삭제), 렌더 데이터 R1~R4, E1 · E2a · E2b · P2, E3 · E5 · H1~H4 · D1a · D1b, G2 · E4, ReflectionParser 정리 · 최적화 2 개.
+- 남은 검증: 단위 테스트 두 실패(렌더 XML 도우미 · 현지화 테스트 표) 수정 확인 → preflight(렌더 골든 네 백엔드) → push. ReflectionParser 최적화는 재서 정했다(이름공간 건너뛰기 되돌림, 스탬프 한 번 읽기는 정리로 남김).
+- 그림 확인: 카메라 흔들림 · 메시 모디파이어 노이즈(Core 결정성 TU 로 합침), RigIK 정반대 방향(-q), TAA · 구름 기록 칸, 파이프라인 선택 경로.
+- 판단 남음: TAA 출력의 앨리어싱 제외를 지울지(`-gv_transientAliasing=0` 비교), `--gather-text --check` 가 지면 수집기를 다시 돌려 커밋.
+
+### 맡긴 갈래(작업 중)
+
+| 갈래 · 워크트리 | 몫 |
+| --- | --- |
+| w-cpp-reflect · LT-wt/cppreflect | 파서 정의 · include 를 타깃 속성에서(671f8c8988 · fd2dac7d65 끝), 컴파일 옵션 · 옵션 표 엄격화 · 구성 경로 ctest(9d9872a619 · 4de5136b58 · 1f9504d287 끝), Core (c) 열거 이름 · (a) 23 건(9d545b213c · 8214df6dac · 7b6953c4d2 끝 — 바꿈 2 · 이미 됨 8 · 데이터 철자라 둠 13), 파싱 단계 앞부분 재사용 |
+| w-enum-meta · LT-wt/enummeta | ENUM 잎 헤더 · 열거형 둘(2898146f6c 끝), 키트별 현지화 표(모듈 단위 탑재 · 수집 대상 · 쿠킹 · 표 이전), AssetTypeDef 접미사 중복(AudioPlayableAsset) |
+| w-gf-dev · LT-wt/gfdev | 배포 매크로 오류 · 확장자 글 · 내비 베이크(1994afb762 · 300285e7e5 · d46c67287a 끝), 에디터 `.hlsl` · `.hlsli` 글 셋, 개발 구성에서도 등록 자리 막기 |
+| w-pimpl · LT-wt/pimpl | P1 · P3 · P4(bf52a2d679 · 32ac84a437 · ac9a1f1bf7 끝), 렌더 R4 나머지(쿠킹 컴파일 스트리핑 · 패치 팩 색인 합치기 · 색인 첫 사용처) |
+| w-devtools-merge · LT-wt/devtoolsmerge | T1(605e855120 · 1eeddfc3ae 끝), PE 헤더 · 단일 헤더 43 개 · VulkanRHISamplerPreset(…7049625e66 · 68412caa1e~2a4f7ba666 끝), 남은 단일 헤더 7 개 |
+| w-server-subsystem · LT-wt/serversub | 서버 서비스 모듈 서브시스템(1469af8976 끝 — 합치면 6 절 줄 삭제), 서비스 없음 기동 오류, 모듈 수명 정적 등록 목록 |
+| w-shaderreload · LT-wt/shaderreload | 셰이더 리로드 · shortcut · 노이즈 · 구성 표 테스트(ece90ecaea · 4686edfe1e 끝), 소문자 데이터 철자 열거 7 건, configure_files 생성기 음성 사례 |
+| w-engine-owner · LT-wt/engineowner | 끝남(3c5d1c924a 까지) — 다음 묶음에 합친다 |
+
+### 아직 아무도 맡지 않은 몫 [코드]
+
+- 보류(조사 먼저): ReflectionValidation → TypeInfo, PROPERTY 검증기를 개발 전용으로 빼도 배포 안전이 지켜지는가.
+- AssertDialog 합치기 — 사용자에게 물을 것.
 
 ## 1. 다음 순서
 
@@ -29,7 +55,6 @@
 
 ## 3. 알려진 실패 · 흔들림
 
-- 셰이더 리로드 시나리오(`desktop/editor/shaderreload`)가 묶음 검증에서 한 번도 돌지 않았다 — 재컴파일기가 Debug 전용이다. 개발 빌드에서 켤 수 있게(시나리오가 `<Launch>` 로 켬) 하고, 켰을 때 Ctrl+F8 이 재컴파일 묶음을 끝내지 않는 단축키 경로(편집 모드의 디버그 키)를 고친 뒤 격리(만료 2026-12-10)를 뺀다.
 
 - **Linux:** sequencercuts · sequencerkeys `SequencerUnboundCount`(`--gpu software chain editor`), netresourcedigest, 에디터 체인 약 18 단계(입력 초점), themepark 체인 멈춤, lavapipe `blendEnable` + `R16G16_SNORM`(재현 안 되면 지운다), `editor.screenrectview` 1.09375 %(`all` 에서만 — 사진 앞 대기를 정착 조건으로). 빈 골든은 `scenario_bisect.py --golden-coverage` 로 찾아 채운다.
 - 흔들리는 게임 골든: 다시 지면 단계 · 백엔드 · 직전 `Assets.Pending` 을 적는다.
@@ -69,6 +94,8 @@
 
 ## 8. 에셋 정체성(GUID)
 
+- 임포트 산출물 이름을 원본 .meta 에 적기(유니티 .meta 하위 에셋 표 자리) — 임포터 · .meta 형식 · EditorAssetIndex · asset_identity.py 를 함께 바꾸고 모델 전체 다시 임포트. 그러면 Scripts/dev/scenario_reach.py 의 `shortcut:` 이 풀린다.
+
 - **3 단계 원본 저장소 떼기:** 코드(`store:<SHA-256>` · `AssetSourceLocator`)는 있다. 데이터는 원본 2 GB 또는 LFS 비용이 문제일 때.
 
 ## 9. 감사 열린 항목
@@ -78,10 +105,6 @@
 - **P-4 [14] Android IME 조합:** 실기기(4 절).
 - **O-12 [30] 원장 경로 부하:** PostgreSQL · RESP 로 `OnlineLoadBot` `ledger_mix`(`--store-config=Config/Server/Online/Playground.external.json`) — 재시도 · busy · 버린 도착 수. 종료 코드 5 는 재화 보존 깨짐.
 - **A-13 [36] · K-11 [50]:** 2 절.
-
-## 10. 코드 `shortcut:` 정리
-
-정본 모양이 있으면 크기와 무관하게 고친다. 문턱이 규모인 것(`PackWriter` · `LinkJobPool` · `AssetAndToolTargets` · `GPUSceneBuilder` 둘 · `SceneVoxelizer`)만 남긴다.
 
 ## 11. 리소스
 

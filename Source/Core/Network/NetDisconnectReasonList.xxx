@@ -1,0 +1,18 @@
+/**
+ * @file Core/Network/NetDisconnectReasonList.xxx
+ * @brief `NetDisconnectReason`(연결이 끊긴 사유)의 열거자 단일 표입니다(X-macro). 열거형과 이름 표(로그 · 지표가 읽는 철자 = 열거자 이름)가 이 한 벌에서 나옵니다.
+ * @details include 하기 전에 `SW_NET_DISCONNECT_REASON( Name )` 를 정의합니다(#pragma once 없음). 줄 차례가 열거자 값입니다 — 값을 저장하거나 보내는 쪽이 있으면 끝에만 더합니다.
+ *          Core 는 리플렉션(Engine)을 볼 수 없고, 리플렉션 파서가 Core 를 링크해 생성 이름 표는 빌드 순환이 된다 — 그래서 손 switch 대신 이 표다(`CommandLineManager` 의 `ArgumentList.xxx` 와 같은 꼴).
+ */
+
+SW_NET_DISCONNECT_REASON( None )
+SW_NET_DISCONNECT_REASON( Requested )            // 이쪽이 끊었다.
+SW_NET_DISCONNECT_REASON( Remote )               // 상대가 끊었다.
+SW_NET_DISCONNECT_REASON( Timeout )
+SW_NET_DISCONNECT_REASON( ServerFull )
+SW_NET_DISCONNECT_REASON( Rejected )             // 다른 게임(게임 ID가 다르다)이거나 시작할 수 없는 연결이다.
+SW_NET_DISCONNECT_REASON( VersionMismatch )      // 같은 게임의 다른 와이어 버전(`NetWireVersion`).
+SW_NET_DISCONNECT_REASON( SecurityMismatch )     // 한쪽만 암호화나 토큰 결속을 켰다(협상하지 않으므로 다운그레이드는 없다).
+SW_NET_DISCONNECT_REASON( AuthenticationFailed ) // 토큰을 모르거나 세션 비밀 증명이나 키 확인이 틀렸다.
+SW_NET_DISCONNECT_REASON( ReceiveOverflow )      // 신뢰 채널의 받은 큐가 `NetConnection::kMaxPendingReceiveBytes` 를 넘었다(게임이 꺼내는 속도보다 상대가 빨리 넣는다).
+SW_NET_DISCONNECT_REASON( ReliableOverflow )     // 신뢰 창이 차 신뢰 메시지를 넣지 못했다(상대가 확인하지 않는다) — 버리면 받는 쪽의 순서가 영영 끊기므로 닫는다(언리얼은 신뢰 버퍼가 넘치면 연결을 닫는다).

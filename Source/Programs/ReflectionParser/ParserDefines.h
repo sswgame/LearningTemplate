@@ -159,6 +159,7 @@ namespace sw
         inline constexpr const utf8* kDepfile         = "--depfile";
         inline constexpr const utf8* kModuleLocal     = "--module-local";
         inline constexpr const utf8* kTargetArg       = "--target-arg";
+        inline constexpr const utf8* kTargetOption    = "--target-option";
     } // namespace cli
 
     // 5) emit — *.tpl 골격 이름은 `EmitTemplate`(EmitTemplateStore.h) 열거형 하나다.
@@ -169,15 +170,18 @@ namespace sw
     namespace jsonkey
     {
         // 중첩 스키마
-        inline constexpr const utf8* kParserArgsSection = "parser_args";
-        inline constexpr const utf8* kArgsDefault       = "default";
-        inline constexpr const utf8* kArgsPlatform      = "platform";
-        inline constexpr const utf8* kArgsExtra         = "extra";
-        inline constexpr const utf8* kArgsForceInclude  = "force_include";
-        inline constexpr const utf8* kPaths             = "paths";
-        inline constexpr const utf8* kClangFlags        = "clang_flags";
-        inline constexpr const utf8* kParsing           = "parsing";
-        inline constexpr const utf8* kTuning            = "tuning";
+        inline constexpr const utf8* kParserArgsSection  = "parser_args";
+        inline constexpr const utf8* kArgsDefault        = "default";
+        inline constexpr const utf8* kArgsPlatform       = "platform";
+        inline constexpr const utf8* kArgsExtra          = "extra";
+        inline constexpr const utf8* kArgsForceInclude   = "force_include";
+        inline constexpr const utf8* kPaths              = "paths";
+        inline constexpr const utf8* kClangFlags         = "clang_flags";
+        inline constexpr const utf8* kParsing            = "parsing";
+        inline constexpr const utf8* kTuning             = "tuning";
+        inline constexpr const utf8* kTargetOptionMap    = "target_options";
+        inline constexpr const utf8* kTargetOptionPass   = "target_option_pass_prefixes";
+        inline constexpr const utf8* kTargetOptionIgnore = "target_option_ignored_prefixes";
 
         // paths.*
         inline constexpr const utf8* kLlvmClangRel     = "llvm_clang_rel";

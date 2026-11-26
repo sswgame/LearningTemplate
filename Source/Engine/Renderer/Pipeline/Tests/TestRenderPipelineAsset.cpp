@@ -52,6 +52,19 @@ namespace
             return xml;
         }
 
+        /**
+         * @brief @p inoutXML 의 첫 @p marker 앞에 @p text 를 넣습니다. 표시가 없으면(기준 XML 이 바뀌었다) 테스트 실패로 남기고 false 다 — 찾지 못한 자리(npos)에 넣어 멈추지 않는다.
+         */
+        [[nodiscard]] static bool insertBefore( string& inoutXML, string_view marker, string_view text )
+        {
+            const size_t position = inoutXML.find( marker );
+            SW_EXPECT_TRUE( position != string::npos );
+            if ( position == string::npos )
+                return false;
+            inoutXML.insert( position, text.data(), text.size() );
+            return true;
+        }
+
         [[nodiscard]] static bool load( RenderPipelineAsset& asset, const string& xml )
         {
             const AbsolutePath path = test::makeScratchPath( "pipeline.xml" );
@@ -931,11 +944,12 @@ SW_TEST_CASE( RenderPipelineAssetTest, BlendDeclarationsFollowTheRules )
     {
         StringBuilder<constant::buffer::kMax256> passAttributes;
         passAttributes.appendFormat( "_type=\"ForwardOpaque\" _depthAttachment=\"SceneDepth\" %#", passExtra );
-        string                                   xml     = RenderPipelineTestUtil::makeXML( passAttributes.view() );
-        const utf8* const                        pMarker = "<_listPermutation/>";
+        string                                   xml = RenderPipelineTestUtil::makeXML( passAttributes.view() );
         StringBuilder<constant::buffer::kMax512> blendTargets;
         blendTargets.appendFormat( "<_listBlendTarget>%#</_listBlendTarget>", targets );
-        xml.insert( xml.find( pMarker ), blendTargets.c_str(), blendTargets.size() );
+        // 패스 서술 안, 퍼뮤테이션 목록 앞이다(`makeXML` 이 여는 태그 · 닫는 태그로 적는다).
+        if ( RenderPipelineTestUtil::insertBefore( xml, "<_listPermutation>", blendTargets.view() ) == false )
+            xml.clear();
         return xml;
     };
     constexpr string_view kTarget = "<BlendTargetState _bEnableBlend=\"true\" _srcColor=\"One\" _dstColor=\"One\" _colorWriteMask=\"RGB\"/>";
@@ -986,7 +1000,7 @@ SW_TEST_CASE( RenderPipelineAssetTest, DiscardedAttachmentCannotBeRead )
     StringBuilder<constant::buffer::kMax512> secondPass;
     secondPass.appendFormat( "<RenderGraphPassDesc _name=\"Second\" _type=\"ForwardOnlyOpaque\" _depthAttachment=\"SceneDepth\" %#><_listOutput><item>SceneColor</item></_listOutput></RenderGraphPassDesc>",
                              Util::kOpaqueState );
-    xml.insert( xml.find( "</_listPass>" ), secondPass.c_str(), secondPass.size() );
+    SW_REQUIRE_TRUE( RenderPipelineTestUtil::insertBefore( xml, "</_listPass>", secondPass.view() ) );
     SW_EXPECT_FALSE( Util::load( asset, xml ) );
 }
 

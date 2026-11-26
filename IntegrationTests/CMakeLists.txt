@@ -314,6 +314,8 @@ if(TARGET ReflectionParser)
 	if(NOT list_parser_test_target_arg)
 		message(FATAL_ERROR "[ReflectionParser tests] no target macros found on sw_global_options / SW_FLAG_LIBRARIES")
 	endif()
+	# 언어 판은 빌드에서는 타깃 속성(CXX_STANDARD)이 넘긴다(ReflectionParser.target.rsp). 사례는 타깃이 없어 같은 값을 여기서 준다.
+	list(APPEND list_parser_test_target_arg "-std=c++${CMAKE_CXX_STANDARD}")
 	string(JOIN "|" parser_test_target_args ${list_parser_test_target_arg})
 	# 사례 파일은 리플렉션 입력 확장자 전부다(`sw_get_reflection_input_globs`). .cpp 사례는 .cpp 입력의 길(`<이름>.cpp.gen.inl`)을 지난다. 사례 이름(확장자를 뺀 것)은 서로 겹치지 않게 짓는다.
 	sw_get_reflection_input_globs(list_parser_fixture_glob "${CMAKE_CURRENT_SOURCE_DIR}/ReflectionParser/Fixtures")
@@ -357,6 +359,27 @@ if(TARGET ReflectionParser)
 				-P "${CMAKE_CURRENT_SOURCE_DIR}/ReflectionParser/RunParserToolInputs.cmake")
 		set_tests_properties(ReflectionParser.ToolInputs.${parser_tool_mode} PROPERTIES LABELS nogpu TIMEOUT 120)
 	endforeach()
+	# 타깃 인자 응답 파일(컴파일 정의 · include 자리, `sw_write_reflection_target_args`)은 구성 · 생성 때만 도는 file(GENERATE) 라 사례가 지나지 않는다 — 작은 프로젝트를 구성해 본다.
+	add_test(NAME ReflectionParser.TargetArgs
+		COMMAND ${CMAKE_COMMAND}
+			"-DSOURCE_ROOT=${CMAKE_SOURCE_DIR}"
+			"-DWORK_DIR=${CMAKE_BINARY_DIR}/Testing/ReflectionParser/TargetArgs"
+			"-DGENERATED_CMAKE_VARS=${SW_GENERATED_CMAKE_VARS}"
+			"-DGENERATOR=${CMAKE_GENERATOR}"
+			"-DMAKE_PROGRAM=${CMAKE_MAKE_PROGRAM}"
+			-P "${CMAKE_CURRENT_SOURCE_DIR}/ReflectionParser/RunTargetArgsCheck.cmake")
+	set_tests_properties(ReflectionParser.TargetArgs PROPERTIES LABELS nogpu TIMEOUT 120)
+	# 리플렉션 단계의 구성 경로(자리 표시자 · .cpp 의 OBJECT_DEPENDS · 후보 검사 명령 · 응답 파일의 전이) — 작은 프로젝트를 같은 컴파일러로 구성해 본다(링크 없음).
+	add_test(NAME ReflectionParser.ReflectionStep
+		COMMAND ${CMAKE_COMMAND}
+			"-DSOURCE_ROOT=${CMAKE_SOURCE_DIR}"
+			"-DWORK_DIR=${CMAKE_BINARY_DIR}/Testing/ReflectionParser/ReflectionStep"
+			"-DGENERATED_CMAKE_VARS=${SW_GENERATED_CMAKE_VARS}"
+			"-DGENERATOR=${CMAKE_GENERATOR}"
+			"-DMAKE_PROGRAM=${CMAKE_MAKE_PROGRAM}"
+			"-DCXX_COMPILER=${CMAKE_CXX_COMPILER}"
+			-P "${CMAKE_CURRENT_SOURCE_DIR}/ReflectionParser/RunReflectionStepCheck.cmake")
+	set_tests_properties(ReflectionParser.ReflectionStep PROPERTIES LABELS nogpu TIMEOUT 180)
 	# 틀린 명령줄은 파서를 멈춘다 — 모르는 인자 · 필수 인자 빠짐. 입력을 읽기 전이라 사례 헤더가 필요 없다.
 	add_test(NAME ReflectionParser.RejectsUnknownArgument COMMAND $<TARGET_FILE:ReflectionParser> --no-such-argument)
 	add_test(NAME ReflectionParser.RejectsMissingOutput COMMAND $<TARGET_FILE:ReflectionParser> --input nothing.h)

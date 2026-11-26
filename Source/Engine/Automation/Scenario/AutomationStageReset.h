@@ -53,7 +53,7 @@ namespace sw
 
 #else
 
-// 자동화를 뺀 배포본(`SW_SHIPPING`): 등록하지 않고 본문 함수만 붙잡는다.
-    #define SW_AUTOMATION_STAGE_RESET( id, pName, pFunction ) [[maybe_unused]] static constexpr auto sw_automationStageResetUnused_##id = pFunction
+// 자동화를 뺀 배포본(`SW_SHIPPING`): 단계 되돌리기는 개발 전용 소스에만 둔다 — 배포가 짓는 TU 에 두면 컴파일되지 않는다.
+    #define SW_AUTOMATION_STAGE_RESET( id, pName, pFunction ) static_assert( false, "SW_AUTOMATION_STAGE_RESET is a development registration: move it to a development-only source (a Dev/ folder of DevFolders.json, Tests/, DevTools or GameFrameworkDev) - shipping does not build those" )
 
 #endif // !SW_SHIPPING

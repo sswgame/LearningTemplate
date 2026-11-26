@@ -5,7 +5,6 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Input/IInputCaptureQuery.h"
@@ -49,29 +48,8 @@ namespace sw
     {
         struct GameInstanceInternal
         {
-            /** @brief 세이브 찍기(`captureSnapshot( SaveGame )`)의 프로파일러 구간 이름입니다 — 감시 값 `Save.CaptureMs` · `Save.CapturePeakMs` 의 재료(배포에는 재는 일도 칸도 없다). */
-            static constexpr const utf8* kSaveCaptureScopeName = "GT.Save.capture";
             /** @brief 세션 전 자리를 되살릴 때의 슬롯 이름입니다(`SaveGameLoadedEvent` · 로그). 파일 슬롯이 아니다. */
             static constexpr const utf8* kPreSessionName = "session/before";
-            /** @brief `Save.CapturePeakMs` 가 읽는 백분위입니다 — p100(창 안 최대). */
-            static constexpr uint32 kPeakPercent = 100;
-
-            /**
-             * @brief 감시 값 `Save.CaptureMs` · `Save.CapturePeakMs` 입니다 — 세이브 찍기 구간의 마지막 프레임 시간 · 측정 창 p100(밀리초).
-             * @details 프로파일러가 없거나 꺼져 있으면 값이 없다(`Scene.ComponentTickMs` 와 같은 길). 마지막 프레임 값은 찍은 프레임이 지나면 0 이다.
-             */
-            template <bool bPeak>
-            [[nodiscard]] static bool readCaptureMilliseconds( const GameObjectManager* pManager, float64& outValue )
-            {
-                (void)pManager;
-                FrameProfiler* const pProfiler = game::findSubsystem<FrameProfiler>();
-                if ( pProfiler == nullptr || pProfiler->isEnabled() == false )
-                    return false;
-                const uint32 slot  = pProfiler->registerScope( kSaveCaptureScopeName );
-                const uint64 nanos = bPeak ? pProfiler->getPercentileNanos( slot, kPeakPercent ) : pProfiler->getLastFrameNanos( slot );
-                outValue           = static_cast<float64>( nanos ) / static_cast<float64>( constant::time::kNanosecondsPerMillisecond );
-                return true;
-            }
         };
     } // namespace
 
@@ -635,7 +613,7 @@ namespace sw
         if ( purpose == SerializePurpose::SaveGame )
         {
             // 세이브 찍기만 잰다 — 되감기 · 미니게임 스냅샷(`Snapshot`)은 프레임마다 돌 수 있어 구간을 흐린다.
-            SW_PROFILE_SCOPE( GameInstanceInternal::kSaveCaptureScopeName );
+            SW_PROFILE_SCOPE( GameInstance::kSaveCaptureScopeName );
             return capture();
         }
         return capture();
@@ -663,9 +641,4 @@ namespace sw
             return false;
         return readStateEnvelope( purpose, inBytes.data(), static_cast<uint32>( inBytes.size() ) ).has_value();
     }
-
-    SW_AUTOMATION_WATCH( saveCaptureMs, "Save.CaptureMs", "Game-thread milliseconds of the save-game capture in the last profiled frame (profiler scope GT.Save.capture; no value while the profiler is off)",
-                         &GameInstanceInternal::readCaptureMilliseconds<false> );
-    SW_AUTOMATION_WATCH( saveCapturePeakMs, "Save.CapturePeakMs", "Longest save-game capture in game-thread milliseconds over the profiler window (p100 of GT.Save.capture; no value while the profiler is off)",
-                         &GameInstanceInternal::readCaptureMilliseconds<true> );
 } // namespace sw
