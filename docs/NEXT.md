@@ -29,12 +29,11 @@
 | w-pimpl · LT-wt/pimpl | P1 · P3 · P4(bf52a2d679 · 32ac84a437 · ac9a1f1bf7 끝), 렌더 R4 나머지(쿠킹 컴파일 스트리핑 · 패치 팩 색인 합치기 · 색인 첫 사용처) |
 | w-devtools-merge · LT-wt/devtoolsmerge | T1(605e855120 · 1eeddfc3ae 끝), PE 헤더 · 단일 헤더 4 개(7cd17031ac · 432e884715 · 7049625e66 끝), 리플렉션 형식 단일 .cpp 헤더 약 45 개, VulkanRHISamplerPreset |
 | w-server-subsystem · LT-wt/serversub | 6 절 서버 서비스를 모듈 서브시스템으로 |
-| w-shaderreload · LT-wt/shaderreload | 3 절 셰이더 리로드 시나리오(개발 빌드에서 켜기 · Ctrl+F8 단축키 경로 · 격리 해제), 10 절 `shortcut:` 정리 |
+| w-shaderreload · LT-wt/shaderreload | 셰이더 리로드 · Source shortcut(3b97e3a2c6 · ab3f9659f4 끝), Scripts · cmake 의 shortcut, mesh_modifier.hlsli 노이즈 대조 |
 | w-engine-owner · LT-wt/engineowner | 끝남(3c5d1c924a 까지) — 다음 묶음에 합친다 |
 
 ### 아직 아무도 맡지 않은 몫 [코드]
 
-- `mesh_modifier.hlsli` 노이즈 복사본이 CPU(Core ValueNoise)와 비트가 같은지.
 - 보류(조사 먼저): ReflectionValidation → TypeInfo, PROPERTY 검증기를 개발 전용으로 빼도 배포 안전이 지켜지는가.
 - AssertDialog 합치기 — 사용자에게 물을 것.
 - 나머지 `sw_*` CMake 함수(모듈 매니페스트 · 층 문지기 · 쿠킹 표)의 구성 단계 경로 테스트.
