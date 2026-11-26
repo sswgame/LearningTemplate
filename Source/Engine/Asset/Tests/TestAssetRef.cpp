@@ -5,6 +5,7 @@
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Asset/Tests/AssetRefTestTypes.h"
 #include "Engine/Content/AssetRegistry.h"
+#include "Engine/Presentation/AudioPlayableAsset.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
@@ -270,4 +271,16 @@ SW_TEST_CASE( AssetRefTest, EmptyRequiredReferenceIsMissing )
     const PropertyInfo& prop = XTestUtil::getReference();
     SW_REQUIRE_TRUE( prop._typeName == hashed_string( AssetRefBase::kTypeName ) );
     SW_EXPECT_TRUE( SerializerUtil::isNameValueType( prop._typeName ) );
+}
+
+/**
+ * @brief [AssetRefTest] 합 종류(소리 참조)는 자기 접미사 없이 구성 종류(소리 파일 · 소리 그래프)의 경로를 받는다
+ * @details 음성 대조: 합 종류가 구성 종류를 보지 않으면 `.ogg` · `.audiograph.xml` 기대가 지고, 아무 경로나 받으면 `.music.xml` 기대가 진다.
+ */
+SW_TEST_CASE( AssetRefTest, UnionKindAcceptsItsMemberKindsPaths )
+{
+    static_assert( AudioPlayableAsset::kAssetType._suffixCount == 0 && AudioPlayableAsset::kAssetType.canTellPath(), "the sound reference owns no suffix of its own" );
+    SW_EXPECT_TRUE( AssetRefBase::isPathOfTarget( "game/sfx/step.OGG", AudioPlayableAsset::kAssetType ) );
+    SW_EXPECT_TRUE( AssetRefBase::isPathOfTarget( "game/sfx/wind.audiograph.xml", AudioPlayableAsset::kAssetType ) );
+    SW_EXPECT_FALSE( AssetRefBase::isPathOfTarget( "game/music/theme.music.xml", AudioPlayableAsset::kAssetType ) );
 }

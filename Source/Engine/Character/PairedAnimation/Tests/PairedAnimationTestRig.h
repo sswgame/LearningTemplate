@@ -42,7 +42,7 @@ namespace sw::test
             shared_ptr<PairedAnimationDef> def = make_shared<PairedAnimationDef>();
             SW_REQUIRE_TRUE( def->loadFromXMLText( R"(<PairedAnimation duration="1">
                 <Role name="Attacker" anchor="true" required="true" clip="testproject/paired/attacker" enterBlend="0" exitState="testproject/paired/idle" exitBlend="0"/>
-                <Role name="Victim" required="true" clip="testproject/paired/victim" align="none" enterBlend="0" exitState="testproject/paired/idle" exitBlend="0"/>
+                <Role name="Victim" required="true" clip="testproject/paired/victim" align="None" enterBlend="0" exitState="testproject/paired/idle" exitBlend="0"/>
             </PairedAnimation>)",
                                                    "rig" ) );
             _pAttacker = _manager.createGameObject( hashed_string( "Attacker" ) )->addComponent<SkeletalAnimatorComponent>();

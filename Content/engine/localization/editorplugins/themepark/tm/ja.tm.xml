@@ -1,0 +1,27 @@
+<?asset guid="1e35e9a78a6f40c59ea775f17ffaca7e"?>
+<TranslationMemory culture="ja">
+	<entries>
+		<entry source="Capacity" text="定員" />
+		<entry source="Check" text="チェック" />
+		<entry source="Cost" text="費用" />
+		<entry source="Entrance is inside the footprint" text="入口が敷地の内側にある" />
+		<entry source="Focus gate" text="正門を表示" />
+		<entry source="Move the scene view camera to the park gate"
+		       text="シーンビューのカメラを公園の正門へ移動します" />
+		<entry source="Overlaps {name}" text="{name}と重なっている" />
+		<entry source="Park" text="パーク" />
+		<entry source="Reload" text="再読み込み" />
+		<entry source="Ride" text="アトラクション" />
+		<entry source="Ride footprints, entrances and coaster tracks of the ThemePark layout file (rides.xml)"
+		       text="ThemePark 配置ファイル(rides.xml)のアトラクションの足跡、入口、コースターのトラック" />
+		<entry source="Same id as {name}" text="{name}と ID が同じ" />
+		<entry source="The park layout could not be read ({path}). Fix the file (see the log) and press Reload."
+		       text="パーク配置を読み込めませんでした({path})。ログを確認してファイルを修正し、再読み込みしてください。" />
+		<entry source="This game has no park layout data ({path})"
+		       text="このゲームにはパーク配置データがありません({path})" />
+		<entry source="Ticket" text="料金" />
+		<entry source="Time (s)" text="時間(秒)" />
+		<entry source="Total cost {cost}  ·  starting cash {cash}  ·  entry fee {fee}  ·  layout issues {issues}"
+		       text="総費用 {cost}  ·  初期資金 {cash}  ·  入場料 {fee}  ·  配置の問題 {issues}" />
+	</entries>
+</TranslationMemory>

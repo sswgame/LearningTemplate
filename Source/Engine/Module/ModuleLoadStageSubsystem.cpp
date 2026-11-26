@@ -5,6 +5,7 @@
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Foundation/EngineSubsystems.h"
+#include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Module/HostInterfaces.h"
 #include "Engine/Reflection/ReflectionSubsystem.h"
 #include "Engine/Reflection/TypeRegistry.h"
@@ -26,14 +27,17 @@ namespace sw
             return SubsystemInitResult::Failed;
         }
         engine::getSubsystem<TypeRegistry>().markAllModuleTypesRegistered();
+        // 올라온 키트의 현지화 프로젝트를 붙인다(언리얼 플러그인 현지화 타깃). 엔진 프로젝트를 올리는 단계와 순서가 바뀌어도 같은 결과다.
+        if ( engine::getSubsystem<LocalizationManager>().syncModuleProjects() == false )
+            return SubsystemInitResult::Failed;
         return SubsystemInitResult::Succeeded;
     }
 
     span<const utf8* const> ModuleLoadStageSubsystem::getSubsystemDependencies() const
     {
         // 씬 관리자: 모듈 타입 등록이 진행 중인 씬 로드를 기다리고 로드된 씬의 틱 표를 다시 짓게 한다(`registerModuleTypes`) — 선 뒤에 올린다(초기화 의존 검사가 잡은 자리).
-        static constexpr const utf8* kArrDependency[] = { ConfigManager::kSubsystemName, ModuleUnloadStageSubsystem::kSubsystemName, ReflectionSubsystem::kSubsystemName,
-                                                          SceneManager::kSubsystemName };
+        static constexpr const utf8* kArrDependency[] = { ConfigManager::kSubsystemName, LocalizationManager::kSubsystemName, ModuleUnloadStageSubsystem::kSubsystemName,
+                                                          ReflectionSubsystem::kSubsystemName, SceneManager::kSubsystemName };
         return kArrDependency;
     }
 } // namespace sw

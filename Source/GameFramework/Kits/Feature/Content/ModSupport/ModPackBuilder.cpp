@@ -11,8 +11,11 @@
 #include "Engine/Asset/AssetPackIndex.h"
 #include "Engine/Config/PackStorageSettings.h"
 #include "Engine/Content/AssetPaths.h"
+#include "Engine/Content/AssetRegistry.h"
 #include "Engine/Content/Pack/PackConfig.h"
 #include "Engine/Content/Pack/PackWriter.h"
+#include "Engine/Graphics/Material/Material.h"
+#include "Engine/Graphics/Material/MaterialTagIndex.h"
 
 namespace sw
 {
@@ -33,6 +36,23 @@ namespace sw
             inoutIndex._listEntry.push_back( AssetPackIndexEntry{ *header._guid, relativePath } );
     }
 
+    bool ModPackBuilder::addMaterialTags( const string& relativePath, const vector<uint8>& bytes, MaterialTagIndex& inoutIndex )
+    {
+        if ( StringUtil::endsWith( relativePath, Material::kExtension ) == false )
+            return true;
+        const string_view          text( reinterpret_cast<const utf8*>( bytes.data() ), bytes.size() );
+        const shared_ptr<Material> material = Material::create();
+        if ( material->loadFromXML( text ) == false )
+        {
+            SW_LOG_ERROR_ID( "ModPackBuilder.MaterialUnreadable", "Mod material '%#' could not be read for the material index", relativePath );
+            return false;
+        }
+        // 열쇠는 팩 색인과 같은 참조 글이다 — 머리 GUID 가 있으면 GUID 참조(덮어쓴 기본 머티리얼은 기본 줄을 이긴다), 없으면 전체 리소스 id.
+        const AssetGUIDHeader header = AssetGUIDHeader::read( text );
+        inoutIndex._listEntry.push_back( MaterialTagIndex::makeEntry( AssetRegistry::makeReferenceText( relativePath, header._guid ), *material ) );
+        return true;
+    }
+
     bool ModPackBuilder::buildFromFolder( const AbsolutePath& contentFolder, const AbsolutePath& packPath, const ModSupportSettings& settings, const PackStorageSettings& storage )
     {
         vector<AbsolutePath> listFilePath;
@@ -47,7 +67,8 @@ namespace sw
                              settings._maxEntryCount );
             return false;
         }
-        AssetPackIndex identityIndex; // 모드 에셋의 GUID 색인 — 런타임이 도메인 색인 뒤 층으로 합친다(`AssetManager`, 줄은 전체 리소스 id)
+        AssetPackIndex   identityIndex; // 모드 에셋의 GUID 색인 — 런타임이 도메인 색인 뒤 층으로 합친다(`AssetManager`, 줄은 전체 리소스 id)
+        MaterialTagIndex materialIndex; // 모드 머티리얼의 태그 색인 — 같은 층 규칙(`MaterialTagIndex::loadMounted`)
         // 스트림 쓰기는 경로 해시 순만 받는다 — 경로를 먼저 다 보고(정규형 · 크기) 해시로 세운 뒤 하나씩 읽어 담는다(팩 전체를 들지 않는다).
         vector<std::pair<uint64, AbsolutePath>> listOrdered; // (경로 해시, 원본 파일 경로)
         listOrdered.reserve( listFilePath.size() );
@@ -87,9 +108,13 @@ namespace sw
                 SW_LOG_ERROR_ID( "ModPackBuilder.CannotRead", "Mod source file '%#' could not be read", ordered.second.str() );
                 return false;
             }
-            addIdentity( FileUtil::normalizeSeparators( relativePath ), bytes, identityIndex );
+            const string normalizedPath = FileUtil::normalizeSeparators( relativePath );
+            addIdentity( normalizedPath, bytes, identityIndex );
+            if ( addMaterialTags( normalizedPath, bytes, materialIndex ) == false )
+                return false;
         }
-        vector<uint8> indexBytes;
+        // 만든 색인(팩 루트의 글 파일) — 빈 원본 경로 항목이 경로 해시로 이것을 찾는다.
+        vector<std::pair<string_view, vector<uint8>>> listGenerated;
         if ( identityIndex._listEntry.empty() == false )
         {
             const expected<string> indexText = identityIndex.makeText();
@@ -98,11 +123,24 @@ namespace sw
                 SW_LOG_ERROR_ID( "ModPackBuilder.IndexInvalid", "Mod '%#' asset index - %# '%#'", contentFolder.str(), indexText.error().message(), indexText.error().detail() );
                 return false;
             }
-            indexBytes.assign( indexText->begin(), indexText->end() );
-            listOrdered.emplace_back( PackStreamWriter::makePathHash( AssetPackIndex::kFileName ), AbsolutePath{} ); // 빈 원본 경로 = 색인 항목
-            VectorUtil::sort( listOrdered, []( const std::pair<uint64, AbsolutePath>& left, const std::pair<uint64, AbsolutePath>& right )
-            { return left.first < right.first; } );
+            listGenerated.emplace_back( AssetPackIndex::kFileName, vector<uint8>( indexText->begin(), indexText->end() ) );
         }
+        if ( materialIndex._listEntry.empty() == false )
+        {
+            const expected<string> indexText = materialIndex.makeText();
+            if ( indexText.has_value() == false )
+            {
+                SW_LOG_ERROR_ID( "ModPackBuilder.MaterialIndexInvalid", "Mod '%#' material index - %# '%#'", contentFolder.str(), indexText.error().message(), indexText.error().detail() );
+                return false;
+            }
+            listGenerated.emplace_back( MaterialTagIndex::kFileName, vector<uint8>( indexText->begin(), indexText->end() ) );
+        }
+        for ( const std::pair<string_view, vector<uint8>>& generated : listGenerated )
+        {
+            listOrdered.emplace_back( PackStreamWriter::makePathHash( generated.first ), AbsolutePath{} ); // 빈 원본 경로 = 만든 색인 항목
+        }
+        VectorUtil::sort( listOrdered, []( const std::pair<uint64, AbsolutePath>& left, const std::pair<uint64, AbsolutePath>& right )
+        { return left.first < right.first; } );
 
         PackWriterDesc desc; // 도메인 없음 — 항목이 전체 리소스 경로인 패치 팩이다(`mods/<id>/…` 와 덮어쓰는 기본 리소스가 한 팩에 든다)
         desc._blockSize        = settings._packBlockSize;
@@ -114,10 +152,13 @@ namespace sw
             const AbsolutePath& filePath = listOrdered[index].second;
             if ( filePath.empty() )
             {
-                const expected<PackEntryStorage> entryStorage = PackEntryStorageRule::select( AssetPackIndex::kFileName, storage._listStoredExtension );
+                const auto generatedIt = std::find_if( listGenerated.begin(), listGenerated.end(), [&listOrdered, index]( const std::pair<string_view, vector<uint8>>& generated )
+                { return PackStreamWriter::makePathHash( generated.first ) == listOrdered[index].first; } );
+                SW_ASSERT( generatedIt != listGenerated.end() ); // 빈 원본 경로는 위에서 만든 색인에만 쓴다
+                const expected<PackEntryStorage> entryStorage = PackEntryStorageRule::select( generatedIt->first, storage._listStoredExtension );
                 if ( entryStorage.has_value() == false )
                     return false;
-                step = writer.append( AssetPackIndex::kFileName, *entryStorage, std::move( indexBytes ) );
+                step = writer.append( generatedIt->first, *entryStorage, std::move( generatedIt->second ) );
                 continue;
             }
             string        relativePath;

@@ -48,12 +48,44 @@
 #include "Engine/Graphics/RHI/RHIPipelineStateDesc.h"
 #include "Engine/Graphics/RHI/Transfer/RHIStagingRingUtil.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIRequiredVersion.h"
-#include "Engine/Graphics/RHI/Vulkan/VulkanRHISamplerPreset.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIUtil.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanResultCheck.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Reflection/EnumName.h"
+
+namespace sw
+{
+    namespace
+    {
+        /**
+         * @struct VulkanRHISamplerPreset
+         * @brief 자주 쓰는 샘플러 설정을 이름으로 반환합니다.
+         */
+        struct VulkanRHISamplerPreset
+        {
+            /**
+             * @brief 선형 보간 + 가장자리 고정 샘플러 설정입니다.
+             * @details UI 텍스처와 기본 씬 텍스처처럼 타일링하지 않고 부드럽게 읽고 싶은 것에 씁니다.
+             *          `maxLod` 를 크게 열어 두어 밉이 있는 텍스처도 그대로 쓸 수 있습니다.
+             */
+            static VkSamplerCreateInfo linearClamp()
+            {
+                VkSamplerCreateInfo samplerInfo{};
+                samplerInfo.sType        = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+                samplerInfo.magFilter    = VK_FILTER_LINEAR;
+                samplerInfo.minFilter    = VK_FILTER_LINEAR;
+                samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+                samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+                samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+                // 비등방을 켜지 않았으므로 1.0 이 곧 "쓰지 않는다"는 뜻이다.
+                samplerInfo.maxAnisotropy = 1.0f;
+                samplerInfo.maxLod        = 1000.0f;
+                return samplerInfo;
+            }
+        };
+    } // namespace
+} // namespace sw
 
 namespace sw
 {

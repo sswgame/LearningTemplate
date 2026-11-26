@@ -9,6 +9,7 @@
  */
 #pragma once
 #include "Core/Container/string.h"
+#include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
@@ -95,20 +96,24 @@ namespace sw
          * @param targetFormat 대상 포맷(Count 면 DX11, DX12, Vulkan, OpenGL 모두 쿠킹)
          * @param scope Sample 이면 표본(`selectSample`)만 굽는다. 쿠커는 요청 밖의 바이너리를 지우므로 표본은 빈(없는) 스테이징에만 굽는다 —
          *              채워진 스테이징이면 실패다(쿠킹본을 표본으로 덮지 않는다)
+         * @param pReachedAsset 팩이 담을 원본의 리소스 id(`PackCooker::collectReachedAssets`)입니다. 주면 출처가 하나도 닿지 않은 요청은 굽지 않는다(스테이징에서도 지워진다).
+         *                      nullptr 이면 요청을 모두 굽는다(`--cook-shaders`)
          * @return 쿠킹된 수, 실패 수, 계약 위반 수, 지운 옛 바이너리 수. 요청이 하나도 없어도 실패다
          */
-        static ShaderCookSummary cookAllShaders( const AbsolutePath& cookedDir,
-                                                 const AbsolutePath& resourceRoot = {},
-                                                 ShaderTargetFormat  targetFormat = ShaderTargetFormat::Count,
-                                                 ShaderCookScope     scope        = ShaderCookScope::All );
+        static ShaderCookSummary cookAllShaders( const AbsolutePath&          cookedDir,
+                                                 const AbsolutePath&          resourceRoot  = {},
+                                                 ShaderTargetFormat           targetFormat  = ShaderTargetFormat::Count,
+                                                 ShaderCookScope              scope         = ShaderCookScope::All,
+                                                 const unordered_set<string>* pReachedAsset = nullptr );
 
         /** @brief 요청 @p listRequest 가 쿠킹하는 도메인(`engine` · `game/<팩>`)을 처음 나온 순서로 모읍니다. `shaders` 폴더 칸이 없는 요청은 쿠킹도 실패하므로 여기서는 건너뜁니다. */
         static void collectCookedDomains( const vector<ShaderCookRequest>& listRequest, vector<string>& outListDomain );
         /**
          * @brief 이 리소스 트리의 요청이 굽는 도메인마다 쿠킹 스테이징(@p cookedDir)의 @p targetFormat 바이너리가 소스와 맞는지 판정해 문제를 @p outListProblem 에 적습니다.
          * @details 굽는 것(`collectAllRequests`)과 판정하는 것이 같은 목록을 본다 — 설정의 도메인을 따로 훑으면 굽지 않는 폴더(에디터가 실행 때 컴파일하는 `editor/shaders`)를 "쿠킹되지 않음" 으로 잡는다.
+         *          @p pReachedAsset 은 굽기(`cookAllShaders`)에 준 것과 같아야 한다 — 굽지 않은 변형을 빠진 것으로 잡지 않는다.
          */
-        static void verifyCookedShaders( const AbsolutePath& cookedDir, ShaderTargetFormat targetFormat, vector<string>& outListProblem );
+        static void verifyCookedShaders( const AbsolutePath& cookedDir, ShaderTargetFormat targetFormat, const unordered_set<string>* pReachedAsset, vector<string>& outListProblem );
         /**
          * @brief 이 리소스 트리의 요청이 @p targetFormat 으로 만드는 바이너리의 스테이징 기준 id(`engine/shaders/bin/dx12/<파일>`, `FileUtil::normalizePath`)와 그 출처 묶음을 모읍니다.
          * @details 팩 쿠커가 "닿은 출처가 요청했는데 팩에서 버리는" 바이너리를 경고로 가른다(`PackCookParams::_mapRequestedShaderBinary`). 요청을 모으지 못하면 false 입니다.

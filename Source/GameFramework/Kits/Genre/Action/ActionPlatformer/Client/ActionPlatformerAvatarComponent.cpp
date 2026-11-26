@@ -1,17 +1,84 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Genre/Action/ActionPlatformer/Client/ActionPlatformerAvatarComponent.h"
+#include "Core/Foundation/Types.h"
+#include "Core/Math/VectorMath.h"
+#include "Core/String/Name/hashed_string.h"
 
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Input/Map/CommonInputActions.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/Prefab/PrefabAsset.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
+#include "GameFramework/Client/View/GameModeViewComponent.h"
+#include "GameFramework/Client/View/PrefabViewBatch.h"
+#include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Action/ActionPlatformer/Component/ActionPlatformerGameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 
 namespace sw
 {
+    class ActionPlatformerGameModeComponent;
+    class GameObjectManager;
+
+    /**
+     * @class ActionPlatformerAvatarComponent
+     * @brief `Move` 축의 가로 값과 점프 액션을 누른 채인지를 프레임마다 디렉터 입력 명령으로 넘기고 스테이지를 그립니다.
+     */
+    REFLECT( Category = "ActionPlatformer", DisplayName = "Action Platformer Avatar",
+             Tooltip = "Client side of an ActionPlatformer stage: sends input commands to the Action Platformer Game Mode on the same object and draws the stage" )
+    class ActionPlatformerAvatarComponent : public GameModeViewComponent
+    {
+    public:
+        REFLECT_BODY();
+
+        static constexpr TickGroup kTickGroup = TickGroup::PostUpdate;
+
+        ActionPlatformerAvatarComponent();
+        virtual ~ActionPlatformerAvatarComponent() override;
+
+        /** @brief 세운 모습을 지웁니다. */
+        void onEndPlay() override;
+
+    private:
+        /** @brief 틱 뒤 게임 스레드: 입력을 명령으로 넘기고 스테이지를 그립니다. */
+        void updateAvatar( GameObjectManager& manager, ActionPlatformerGameModeComponent& director );
+        void submitInput( const GameModeInput& input, ActionPlatformerGameModeComponent& director );
+        /** @brief 스테이지를 보입니다. 타일 · 플레이어 자리는 절대 자리다. */
+        void showStage( const ActionPlatformerGameModeComponent& director, GameObjectManager& manager );
+
+    private:
+        PROPERTY( Category = "Input", DisplayName = "Move Action", Tooltip = "InputMap 2D action whose X runs the body (required)" )
+        hashed_string _moveAction;
+        PROPERTY( Required, Category = "Input", DisplayName = "Jump Action", Tooltip = "InputMap action held to jump (required, trigger Down - the game mode finds the press edge)" )
+        hashed_string _jumpAction;
+        PROPERTY( Category = "View", DisplayName = "Cube Prefab", Required, Tooltip = "1 m cube stretched into the tiles, the player and the goal post" )
+        AssetRef<PrefabAsset> _cubePrefab;
+        PROPERTY( Category = "View", DisplayName = "Sphere Prefab", Required, Tooltip = "1 m diameter sphere scaled to a secret" )
+        AssetRef<PrefabAsset> _spherePrefab;
+        PROPERTY( Category = "View", DisplayName = "Tile Color" )
+        float4 _tileColor;
+        PROPERTY( Category = "View", DisplayName = "Secret Radius", Min = 0.01, Units = m )
+        float32 _secretRadius;
+        PROPERTY( Category = "View", DisplayName = "Secret Color" )
+        float4 _secretColor;
+        PROPERTY( Category = "View", DisplayName = "Player Half Extent", Units = m )
+        float3 _playerHalfExtent;
+        PROPERTY( Category = "View", DisplayName = "Player Color" )
+        float4 _playerColor;
+        PROPERTY( Category = "View", DisplayName = "Goal Height", Min = 0.01, Units = m )
+        float32 _goalHeight;
+        PROPERTY( Category = "View", DisplayName = "Goal Width", Min = 0.01, Units = m )
+        float32 _goalWidth;
+        PROPERTY( Category = "View", DisplayName = "Goal Color" )
+        float4 _goalColor;
+
+        SW_TRANSIENT PrefabViewBatch _cubeViews;
+        SW_TRANSIENT PrefabViewBatch _secretViews;
+    };
+
     ActionPlatformerAvatarComponent::ActionPlatformerAvatarComponent()
         : GameModeViewComponent( GameModeViewBinding::of<&ActionPlatformerAvatarComponent::updateAvatar, &ActionPlatformerAvatarComponent::submitInput>() )
         , _moveAction{ CommonInputActions::kMove }
@@ -99,3 +166,5 @@ namespace sw
         _secretViews.end( manager );
     }
 } // namespace sw
+
+#include "ActionPlatformerAvatarComponent.cpp.gen.inl"

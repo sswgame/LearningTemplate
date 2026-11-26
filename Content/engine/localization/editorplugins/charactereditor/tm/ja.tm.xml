@@ -1,0 +1,214 @@
+<?asset guid="af223d0b6bd84747b7e660d576ff00ae"?>
+<TranslationMemory culture="ja">
+	<entries>
+		<entry source="(none)" text="(なし)" />
+		<entry source="A scene's Character Appearance component names this id."
+		       text="シーンのキャラクター外見コンポーネントがこの id を指します。" />
+		<entry source="Add" text="追加" />
+		<entry source="Add bone turn" text="ボーン回転を追加" />
+		<entry source="Add chain" text="チェーンを追加" />
+		<entry source="Add layer" text="レイヤーを追加" />
+		<entry source="Add notify at t" text="t に通知を追加" />
+		<entry source="Add pair" text="ペアを追加" />
+		<entry source="Add point" text="点を追加" />
+		<entry source="Add slot" text="スロットを追加" />
+		<entry source="Alias" text="エイリアス" />
+		<entry source="Anchor" text="アンカー" />
+		<entry source="Anchor-relative root position and yaw at alignment time; select the role object in the viewport to move it with the gizmo"
+		       text="位置合わせ時点のアンカー基準のルート位置とヨー — ビューポートで役割オブジェクトを選びギズモで動かします" />
+		<entry source="Appearance" text="外見" />
+		<entry source="Base preset" text="基準プリセット" />
+		<entry source="Binds: {mappedTargetBoneCount} of {targetBoneCount} target bones follow the source, height ratio {heightRatio}"
+		       text="バインド: ターゲットボーン {targetBoneCount} 個中 {mappedTargetBoneCount} 個がソースに追従、身長比 {heightRatio}" />
+		<entry source="Body" text="ボディ" />
+		<entry source="Body channels" text="ボディチャンネル" />
+		<entry source="Body data has unsaved edits" text="ボディデータに未保存の編集があります" />
+		<entry source="Body dynamics preview" text="ボディダイナミクスのプレビュー" />
+		<entry source="Body shape" text="体型" />
+		<entry source="Body type" text="体の種類" />
+		<entry source="Bone map" text="ボーンマップ" />
+		<entry source="Bone rotation" text="ボーン回転" />
+		<entry source="Bone scale" text="ボーンスケール" />
+		<entry source="Bone translation" text="ボーン移動" />
+		<entry source="Chains" text="チェーン" />
+		<entry source="Check" text="チェック" />
+		<entry source="Clamped to range: {clamped}" text="範囲に収めた: {clamped}" />
+		<entry source="Clear smears" text="にじみを消す" />
+		<entry source="Click the body in the viewport (Esc cancels)"
+		       text="ビューポートでボディをクリックしてください(Esc で取り消し)" />
+		<entry source="Customization values" text="カスタマイズ値" />
+		<entry source="Customize (release a slider to refit)"
+		       text="カスタマイズ(スライダーを離すと再フィット)" />
+		<entry source="Data preset (scene use)" text="データプリセット(シーン用)" />
+		<entry source="Down" text="下へ" />
+		<entry source="Dropped: {dropped}" text="除外: {dropped}" />
+		<entry source="Duration (s)" text="長さ(秒)" />
+		<entry source="Dye channels" text="染色チャンネル" />
+		<entry source="Dye sections" text="染色セクション" />
+		<entry source="Dyeable" text="染色可" />
+		<entry source="Enter / exit blend (s)" text="入り・出のブレンド(秒)" />
+		<entry source="Equip set" text="装備セット" />
+		<entry source="Export data preset" text="データプリセットを書き出す" />
+		<entry source="Face" text="顔" />
+		<entry source="Fit check (view only)" text="フィットチェック(表示のみ)" />
+		<entry source="Fluid paths" text="体液の経路" />
+		<entry source="Foot lift (m)" text="足の持ち上げ(m)" />
+		<entry source="Groups" text="グループ" />
+		<entry source="Height ratio (0 = pelvis)" text="高さ比(0 = 骨盤)" />
+		<entry source="Highlight drive" text="ハイライトするドライブ" />
+		<entry source="Hit" text="被弾" />
+		<entry source="How root and pelvis movement is carried over (scaled by the pelvis height ratio, copied, or kept in place)"
+		       text="ルートと骨盤の動きの移し方(骨盤の高さ比で拡縮・コピー・その場)" />
+		<entry source="How strongly the layer covers the skin" text="レイヤーが肌を覆う強さ" />
+		<entry source="IK goal" text="IK ゴール" />
+		<entry source="Jiggle" text="揺れ" />
+		<entry source="Jiggle (m)" text="揺れ(m)" />
+		<entry source="Kind" text="種類" />
+		<entry source="Light at the eye" text="目に届く光" />
+		<entry source="Load" text="読み込み" />
+		<entry source="Load a skeleton to see its bones. The skeleton is read-only; edits go to the reference pose file."
+		       text="スケルトンを読み込むとボーンが見えます。スケルトンは読み取り専用で、編集は基準ポーズファイルに入ります。" />
+		<entry source="Load appearance data to see which rules hid or changed what."
+		       text="外見データを読み込むと、どのルールが何を隠した・変えたかが見えます。" />
+		<entry source="Load data" text="データを読み込む" />
+		<entry source="Load pose" text="ポーズを読み込む" />
+		<entry source="Load presets" text="プリセットを読み込む" />
+		<entry source="Load skeleton" text="スケルトンを読み込む" />
+		<entry source="Load the appearance data (Appearance tab) to dress the preview body."
+		       text="外見データ(外見タブ)を読み込むとプレビューの体に着せます。" />
+		<entry source="Load the items file and the appearance folder to pick items and see rule explanations."
+		       text="アイテムファイルと外見フォルダを読み込むと、アイテムを選んでルールの説明を見られます。" />
+		<entry source="Loop" text="ループ" />
+		<entry source="Makeup smear" text="メイクのにじみ" />
+		<entry source="Map" text="軸を追加" />
+		<entry source="Map same names" text="同名同士をつなぐ" />
+		<entry source="Mirror" text="ミラー" />
+		<entry source="Mirror bone" text="ボーンをミラー" />
+		<entry source="New" text="新規" />
+		<entry source="New socket name" text="新しいソケット名" />
+		<entry source="No animation clips in ''{clipFolder}''"
+		       text="''{clipFolder}'' にアニメーションクリップがありません" />
+		<entry source="No body channels. Sliders, body profiles and equipment set them."
+		       text="ボディチャンネルがありません。スライダー・ボディプロファイル・装備が設定します。" />
+		<entry source="No customization schema for this selection (load the appearance data and pick a base preset with a schema)."
+		       text="この選択にはカスタマイズスキーマがありません(外見データを読み込み、スキーマのある基準プリセットを選んでください)。" />
+		<entry source="No fit result yet. The preview scene solves the fit when a slider is released."
+		       text="まだフィット結果がありません。スライダーを離すとプレビューシーンがフィットします。" />
+		<entry source="No mesh sections. List sections with aliases in the item visual."
+		       text="メッシュセクションがありません。アイテム外観にエイリアス付きでセクションを記述してください。" />
+		<entry source="No penetration." text="貫通なし。" />
+		<entry source="No rule fired." text="発動したルールはありません。" />
+		<entry source="No skin layers. Add makeup or a tattoo from the list above."
+		       text="スキンレイヤーがありません。上のリストからメイクやタトゥーを追加してください。" />
+		<entry source="Offset" text="位置" />
+		<entry source="Offset (m)" text="オフセット(m)" />
+		<entry source="Opacity" text="不透明度" />
+		<entry source="Open a .pairedanim.xml to scrub its roles on one clock, move alignment offsets and edit shared notifies."
+		       text=".pairedanim.xml を開いて役割を一つの時計でスクラブし、位置合わせオフセットを動かし、共有通知を編集します。" />
+		<entry source="Open a .retarget.xml, or type a new path and press New, to pair the chains of two skeletons and check how they bind."
+		       text=".retarget.xml を開くか、新しいパスを入力して新規を押し、二つのスケルトンのチェーンを対にして結び付きを確認します。" />
+		<entry source="Options" text="オプション" />
+		<entry source="Parent" text="親" />
+		<entry source="Penetration {partA} / {partB}: {vertexCount} points, depth {maxDepth}"
+		       text="貫通 {partA} / {partB}: 点 {vertexCount} 個、深さ {maxDepth}" />
+		<entry source="Pick a base preset to see which rules hid or changed what."
+		       text="基準プリセットを選ぶと、どのルールが何を隠した・変えたかが見えます。" />
+		<entry source="Pick section in Preview" text="プレビューで区間を選ぶ" />
+		<entry source="Place in Preview" text="プレビューで配置" />
+		<entry source="Play" text="再生" />
+		<entry source="Presets (user data)" text="プリセット(ユーザーデータ)" />
+		<entry source="Preview" text="プレビュー" />
+		<entry source="Preview constraint rig" text="拘束リグをプレビュー" />
+		<entry source="Preview mesh" text="プレビューメッシュ" />
+		<entry source="Pupil size" text="瞳孔サイズ" />
+		<entry source="Read the edited content with the runtime loader to check every rule"
+		       text="編集内容をランタイムローダーで読み、すべてのルールを確認します" />
+		<entry source="Redo" text="やり直し" />
+		<entry source="Redo appearance" text="外見をやり直し" />
+		<entry source="Redo body edit" text="ボディ編集をやり直す" />
+		<entry source="Redo pose" text="ポーズをやり直し" />
+		<entry source="Reload from disk (discard edits)" text="ディスクから再読み込み(編集を破棄)" />
+		<entry source="Remove" text="削除" />
+		<entry source="Remove point" text="点を削除" />
+		<entry source="Rename" text="名前を変更" />
+		<entry source="Reset bone" text="ボーンをリセット" />
+		<entry source="Retarget pose" text="リターゲットポーズ" />
+		<entry source="Roles" text="役割" />
+		<entry source="Root and pelvis" text="ルートと骨盤" />
+		<entry source="Rotation" text="回転" />
+		<entry source="Rotation of the layer in degrees" text="レイヤーの回転(度)" />
+		<entry source="Save as preset" text="プリセットとして保存" />
+		<entry source="Save body data" text="ボディデータを保存" />
+		<entry source="Save pose" text="ポーズを保存" />
+		<entry source="Save thumbnail" text="サムネイルを保存" />
+		<entry source="Scale" text="スケール" />
+		<entry source="Section" text="セクション" />
+		<entry source="Select a bone to edit its reference pose."
+		       text="ボーンを選ぶと基準ポーズを編集します。" />
+		<entry source="Select a socket in the list to edit it."
+		       text="一覧からソケットを選んで編集します。" />
+		<entry source="Selection (base preset, body, slots, customization values)"
+		       text="選択(基準プリセット・体・スロット・カスタマイズ値)" />
+		<entry source="Set the source and target skeletons to see them overlaid here."
+		       text="ソースとターゲットのスケルトンを設定するとここに重ねて表示されます。" />
+		<entry source="Shared notifies" text="共有通知" />
+		<entry source="Skeleton" text="スケルトン" />
+		<entry source="Skeletons" text="スケルトン" />
+		<entry source="Skin UV of the layer centre" text="レイヤー中心の肌UV" />
+		<entry source="Skin UV size one layer covers" text="レイヤーが覆う肌UVのサイズ" />
+		<entry source="Skin layers" text="スキンレイヤー" />
+		<entry source="Sliders, colours and choices of the schema are in the Preview tab (the body updates when you release a slider)."
+		       text="スキーマのスライダー・色・選択はプレビュータブにあります(スライダーを離すと体が更新されます)。" />
+		<entry source="Slot visibility" text="スロットの表示" />
+		<entry source="Slot {slot}: {requestedItem} -> {fallbackItem} ({reason})"
+		       text="スロット {slot}: {requestedItem} -> {fallbackItem}({reason})" />
+		<entry source="Slots" text="スロット" />
+		<entry source="Sockets" text="ソケット" />
+		<entry source="Solve the end onto the source end position (feet that plant without sliding)"
+		       text="末端をソースの末端位置へ解きます(滑らずに接地する足)" />
+		<entry source="Source bones" text="ソースボーン" />
+		<entry source="Start (s)" text="開始(秒)" />
+		<entry source="Start an empty profile at this resource id (an existing file is opened instead)"
+		       text="このリソース id で空のプロファイルを開始します(既存のファイルがあればそれを開きます)" />
+		<entry source="Stop" text="停止" />
+		<entry source="Stop picking" text="選択をやめる" />
+		<entry source="Stores the Preview tab's picture in the user data slot of the preset of this name (save the preset first)"
+		       text="プレビュータブの画像をこの名前のプリセットのユーザーデータ枠に保存します(先にプリセットを保存してください)" />
+		<entry source="Target bones" text="ターゲットボーン" />
+		<entry source="Tears and saliva" text="涙・唾液" />
+		<entry source="Test tags:" text="タグのテスト:" />
+		<entry source="The preview body has no body profile. Pick a preset with bodyProfile."
+		       text="プレビューのボディにボディプロファイルがありません。bodyProfile のあるプリセットを選んでください。" />
+		<entry source="Translation" text="移動" />
+		<entry source="Turn a target bone in its parent space (degrees) so the target reference matches the source reference, e.g. lower the arms of a T-pose source onto an A-pose target"
+		       text="ターゲットの基準ポーズがソースと合うよう、ターゲットのボーンを親空間で回します(度) — 例: T ポーズのソースを A ポーズのターゲットに合わせて腕を下げる" />
+		<entry source="Undo" text="元に戻す" />
+		<entry source="Undo appearance" text="外見を元に戻す" />
+		<entry source="Undo body edit" text="ボディ編集を元に戻す" />
+		<entry source="Undo pose" text="ポーズを元に戻す" />
+		<entry source="Unsupported" text="非対応" />
+		<entry source="Up" text="上" />
+		<entry source="Viewport gizmo editing needs the preview scene (EditorMultiWorld)."
+		       text="ビューポートギズモ編集にはプレビューシーン(EditorMultiWorld)が必要です。" />
+		<entry source="Warp end (s)" text="ワープ終了(秒)" />
+		<entry source="Wearing {wearing, select, none {no slot items} other {the selection}} on base preset ''{basePresetID}'' (assembled {appearance} times)"
+		       text="基準プリセット ''{basePresetID}'' に {wearing, select, none {スロットアイテムなし} other {選択中のもの}} を装着(組み立て {appearance} 回)" />
+		<entry source="Why does it look like this? (rules)" text="なぜこう見えるか(ルール)" />
+		<entry source="Wrinkle intensity" text="しわの強さ" />
+		<entry source="Wrinkles" text="しわ" />
+		<entry source="Yaw (deg)" text="ヨー(度)" />
+		<entry source="mapped" text="マップ済み" />
+		<entry source="no mapping" text="マッピングなし" />
+		<entry source="unsupported" text="非対応" />
+		<entry source="{boneCount, plural, one {# bone} other {# bones}}, {overridesCount} overridden{dirty}"
+		       text="ボーン {boneCount} 個、上書き {overridesCount} 個{dirty}" />
+		<entry source="{name}: cut {cutTriangleCount}/{triangleCount} ({cutRatio}%), {movedVertexCount} verts moved, max push {maxDelta}"
+		       text="{name}: カット {cutTriangleCount}/{triangleCount}({cutRatio}%)、頂点 {movedVertexCount} 個移動、最大押し出し {maxDelta}" />
+		<entry source="{name}: source {sourceLength} m, target {targetLength} m (x{ratio})"
+		       text="{name}: ソース {sourceLength} m、ターゲット {targetLength} m(x{ratio})" />
+		<entry source="{role, select, anchor {anchor} required {required} other {optional}}  clip {clip}  {stage} {clipSeconds} s{clipLength, select, unknown {  (clip length unknown - pick a prefab)} other {}}"
+		       text="{role, select, anchor {アンカー} required {必須} other {任意}}  クリップ {clip}  {stage} {clipSeconds} 秒{clipLength, select, unknown {  (クリップの長さ不明 - プレハブを選んでください)} other {}}" />
+		<entry source="{slotsCount, plural, one {# slot} other {# slots}}, {setsCount, plural, one {# set} other {# sets}}, {presetsCount, plural, one {# preset} other {# presets}}"
+		       text="スロット {slotsCount} 個、セット {setsCount} 個、プリセット {presetsCount} 個" />
+	</entries>
+</TranslationMemory>

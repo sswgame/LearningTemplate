@@ -25,6 +25,7 @@
 #include "Engine/Content/ContentHash.h"
 #include "Engine/Content/Pack/PackManager.h"
 #include "Engine/Content/Pack/PackReader.h"
+#include "Engine/Graphics/Material/MaterialTagIndex.h"
 #include "Engine/Serialization/Inherit/ResourceComposition.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
@@ -76,6 +77,59 @@ namespace sw
                     {
                         SW_LOG_ERROR_ID( "ModSession.IndexRedirectsAsset", "Mod pack '%#': index maps '%#' to an already known GUID - a mod replaces an existing asset only by a declared <Override>",
                                          packPath, entry._path );
+                        return false;
+                    }
+                }
+                return true;
+            }
+
+            /**
+             * @brief 모드 팩의 머티리얼 태그 색인(`materialindex.xml`)이 이 팩이 담은 머티리얼만 적는지 봅니다 — 줄은 모드 자기 머티리얼이거나 밝힌 덮어쓰기(`<Override>`)여야 한다.
+             * @details 색인은 도메인 색인 뒤 층이라 같은 참조의 기본 줄을 이긴다(`MaterialTagIndex::loadMounted`). 검사 없이 받으면 밝히지 않은 기본 머티리얼의 태그를 바꿀 수 있다.
+             *          GUID 참조는 이 팩의 에셋 색인에 든 것(자기 에셋)이나, 이미 풀리는 GUID 가 가리키는 밝힌 덮어쓰기여야 하고, 경로 참조는 팩에 든 자기 파일 · 밝힌 덮어쓰기여야 한다.
+             */
+            static bool isModMaterialIndexOwnContent( const PackReader& reader, string_view packPath, string_view contentPrefix, const unordered_set<string>& uniqueEntryPath,
+                                                      const unordered_set<string>& uniqueOverride )
+            {
+                vector<uint8> bytes;
+                if ( reader.readFile( MaterialTagIndex::kFileName, bytes ) == false )
+                {
+                    SW_LOG_ERROR_ID( "ModSession.MaterialIndexUnreadable", "Mod pack '%#': '%#' could not be read", packPath, MaterialTagIndex::kFileName );
+                    return false;
+                }
+                const expected<MaterialTagIndex> index = MaterialTagIndex::parseText( string_view( reinterpret_cast<const utf8*>( bytes.data() ), bytes.size() ), packPath );
+                if ( index.has_value() == false )
+                {
+                    SW_LOG_ERROR_ID( "ModSession.MaterialIndexMalformed", "Mod pack '%#': '%#' is malformed - %#", packPath, MaterialTagIndex::kFileName, index.error().message() );
+                    return false;
+                }
+                // 이 팩의 자기 에셋 GUID(참조 글) — 에셋 색인은 위 `isModIndexOwnContent` 가 따로 본다.
+                unordered_set<string> uniqueOwnReference;
+                vector<uint8>         identityBytes;
+                if ( reader.hasFile( AssetPackIndex::kFileName ) && reader.readFile( AssetPackIndex::kFileName, identityBytes ) )
+                {
+                    const expected<AssetPackIndex> identity =
+                        AssetPackIndex::parseText( string_view( reinterpret_cast<const utf8*>( identityBytes.data() ), identityBytes.size() ), packPath );
+                    for ( size_t entryIndex = 0; identity.has_value() && entryIndex < identity->_listEntry.size(); ++entryIndex )
+                        uniqueOwnReference.insert( AssetRegistry::makeReferenceText( identity->_listEntry[entryIndex]._guid ) );
+                }
+                for ( const MaterialTagEntry& entry : index->_listEntry )
+                {
+                    const optional<AssetGUID> guid = AssetRegistry::parseReferenceText( entry._reference );
+                    bool                      bOwned{ false };
+                    if ( guid.has_value() )
+                    {
+                        const optional<string> basePath = AssetRegistry::resolve( *guid );
+                        bOwned                          = uniqueOwnReference.contains( entry._reference ) || ( basePath.has_value() && uniqueOverride.contains( *basePath ) );
+                    }
+                    else
+                    {
+                        bOwned = uniqueEntryPath.contains( entry._reference ) && ( StringUtil::startsWith( entry._reference, contentPrefix ) || uniqueOverride.contains( entry._reference ) );
+                    }
+                    if ( bOwned == false )
+                    {
+                        SW_LOG_ERROR_ID( "ModSession.MaterialIndexOutsideMod", "Mod pack '%#': material index line '%#' is neither a material of this mod nor a declared <Override>", packPath,
+                                         entry._reference );
                         return false;
                     }
                 }
@@ -531,6 +585,12 @@ namespace sw
             if ( entryPath == AssetPackIndex::kFileName )
             {
                 if ( ModSessionInternal::isModIndexOwnContent( reader, packPath.str(), contentPrefix, uniqueEntryPath ) == false )
+                    return false;
+                continue;
+            }
+            if ( entryPath == MaterialTagIndex::kFileName )
+            {
+                if ( ModSessionInternal::isModMaterialIndexOwnContent( reader, packPath.str(), contentPrefix, uniqueEntryPath, uniqueOverride ) == false )
                     return false;
                 continue;
             }

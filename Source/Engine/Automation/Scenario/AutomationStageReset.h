@@ -6,6 +6,7 @@
  *          (혼자 돌면 통과하는 시나리오가 체인에서 졌다). 언리얼 PIE 가 플레이마다 새 GameInstance 를 만드는 것과 같은 자리를 모듈 상태까지 넓힌다.
  */
 #pragma once
+#include "Core/Foundation/DevSourcePath.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Registry/RegistrationList.h"
@@ -49,7 +50,9 @@ namespace sw
 #if !defined( SW_SHIPPING )
 
     /** @brief 단계 되돌리기를 등록합니다(.cpp 의 파일 범위, `namespace sw` 안). @p id 는 정적 이름을 만드는 식별자입니다. */
-    #define SW_AUTOMATION_STAGE_RESET( id, pName, pFunction ) SW_STATIC_REGISTRATION( automationStageReset, ::sw::AutomationStageResetRegistration, ::sw::AutomationStageResetRegistrar, id, pName, pFunction )
+    #define SW_AUTOMATION_STAGE_RESET( id, pName, pFunction )          \
+        SW_DEV_REGISTRATION_PATH_CHECK( "SW_AUTOMATION_STAGE_RESET" ); \
+        SW_STATIC_REGISTRATION( automationStageReset, ::sw::AutomationStageResetRegistration, ::sw::AutomationStageResetRegistrar, id, pName, pFunction )
 
 #else
 

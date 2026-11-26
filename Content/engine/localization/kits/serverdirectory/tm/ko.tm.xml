@@ -1,0 +1,12 @@
+<?asset guid="fa6e0d5b68c34511bc02a9eaca021294"?>
+<TranslationMemory culture="ko">
+	<entries>
+		<entry source="Could not load the server list (error {error})"
+		       text="서버 목록을 불러오지 못했습니다(오류 {error})" />
+		<entry source="Loading servers..." text="서버 목록을 불러오는 중..." />
+		<entry source="No server is available right now" text="지금 들어갈 수 있는 서버가 없습니다" />
+		<entry source="Pick a server" text="서버를 고르세요" />
+		<entry source="Press Refresh to list servers" text="새로 고침을 누르면 서버 목록을 보입니다" />
+		<entry source="{region}  {fill}%  {state}" text="{region}  {fill}%  {state}" />
+	</entries>
+</TranslationMemory>

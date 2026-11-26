@@ -1,0 +1,136 @@
+<?asset guid="35229bdc0ca743ea991af9caefc1a311"?>
+<TranslationMemory culture="ja">
+	<entries>
+		<entry source="(none)" text="(なし)" />
+		<entry source="Abilities" text="アビリティ" />
+		<entry source="Ability sets" text="アビリティセット" />
+		<entry source="Active" text="有効" />
+		<entry source="Active Effects" text="有効なエフェクト" />
+		<entry source="Activity" text="行動" />
+		<entry source="Add ability" text="アビリティを追加" />
+		<entry source="Add effect" text="エフェクトを追加" />
+		<entry source="Add node" text="ノードを追加" />
+		<entry source="Add set" text="セットを追加" />
+		<entry source="An entry other entries use is not removed. Change those references first."
+		       text="他の項目が使う項目は削除しません。先にその参照を変えてください。" />
+		<entry source="Attributes" text="アトリビュート" />
+		<entry source="Auto layout" text="自動レイアウト" />
+		<entry source="Base" text="基本値" />
+		<entry source="Clear target" text="ターゲットを解除" />
+		<entry source="Click a node to edit it" text="ノードをクリックして編集" />
+		<entry source="Connect" text="接続" />
+		<entry source="Cooldown" text="クールダウン" />
+		<entry source="Count" text="数" />
+		<entry source="Cue presentations" text="キュー演出" />
+		<entry source="Current" text="現在値" />
+		<entry source="Curve of every spline in the scene - drag the control point handles of the selected one (Shapes)"
+		       text="シーンの各スプラインの曲線 - 選択中のスプラインは制御点のハンドルをドラッグ（Shapes）" />
+		<entry source="Default: {hasDefault, select, yes {{value}} other {(none)}}"
+		       text="デフォルト: {hasDefault, select, yes {{value}} other {(なし)}}" />
+		<entry source="Delete" text="削除" />
+		<entry source="Delete node" text="ノードを削除" />
+		<entry source="Down" text="下へ" />
+		<entry source="Drop this placement override and use the preset again."
+		       text="この配置の上書きを削除してプリセットを再び使います。" />
+		<entry source="Duplicate" text="複製" />
+		<entry source="Effects" text="エフェクト" />
+		<entry source="Enter an ability catalog file (game/&lt;game>/data/abilities.xml) to edit it."
+		       text="編集するアビリティカタログファイル(game/&lt;ゲーム>/data/abilities.xml)を入力してください。" />
+		<entry source="Event" text="イベント" />
+		<entry source="File" text="ファイル" />
+		<entry source="Filter by id" text="id で絞り込み" />
+		<entry source="Follow game clock" text="ゲーム時計に合わせる" />
+		<entry source="From" text="送信元" />
+		<entry source="Game time" text="ゲーム時刻" />
+		<entry source="Go" text="移動" />
+		<entry source="Granted Abilities" text="付与されたアビリティ" />
+		<entry source="Infinite" text="無限" />
+		<entry source="Inherited from the base entry. Picking a value writes it on this entry."
+		       text="親項目から継承した値です。選ぶとこの項目に書き込みます。" />
+		<entry source="Invert" text="反転" />
+		<entry source="Live: {liveRunnerName}" text="実行中: {liveRunnerName}" />
+		<entry source="NPCs" text="NPC" />
+		<entry source="Name" text="名前" />
+		<entry source="No AbilitySystemComponent in the active scene"
+		       text="アクティブなシーンに AbilitySystemComponent がありません" />
+		<entry source="No effect applied, rejected or removed yet."
+		       text="適用・拒否・削除されたエフェクトはまだありません。" />
+		<entry source="No entry uses this one." text="この項目を使う項目はありません。" />
+		<entry source="No plan for today" text="今日の予定はありません" />
+		<entry source="No schedule system is running. Start play with NPCs that have schedules."
+		       text="スケジュールシステムが動いていません。スケジュールを持つ NPC でプレイを始めてください。" />
+		<entry source="Open a behavior tree file (*.bt.xml) with Open..."
+		       text="Open... でビヘイビアツリーファイル(*.bt.xml)を開きます" />
+		<entry source="Override zone parameter" text="ゾーンパラメーターを上書き" />
+		<entry source="Owned Tags" text="所有タグ" />
+		<entry source="Pick a zone profile (*.zone.xml) to see its modules."
+		       text="モジュールを見るにはゾーンプロファイル(*.zone.xml)を選んでください。" />
+		<entry source="Pick an ability system..." text="アビリティシステムを選択..." />
+		<entry source="Pick an entry on the left to see what it uses and what uses it."
+		       text="左で項目を選ぶと、その項目が使うものと使われている場所が見えます。" />
+		<entry source="Place" text="場所" />
+		<entry source="Problems" text="問題" />
+		<entry source="Raw timeline" text="生のタイムライン" />
+		<entry source="Recent effects" text="最近のエフェクト" />
+		<entry source="Redo" text="やり直し" />
+		<entry source="Remaining" text="残り" />
+		<entry source="Remove" text="削除" />
+		<entry source="Remove broken wires" text="切れた配線を削除" />
+		<entry source="Revert" text="元に戻す" />
+		<entry source="Revert zone module" text="ゾーンモジュールを元に戻す" />
+		<entry source="Revert zone parameter" text="ゾーンパラメーターを元に戻す" />
+		<entry source="Runtime ability state exists only during play. Press Play to inspect it."
+		       text="実行中のアビリティ状態はプレイ中にのみ存在します。プレイを押して確認してください。" />
+		<entry source="Save" text="保存" />
+		<entry source="Schedule system" text="スケジュールシステム" />
+		<entry source="Select a node to edit it. Right-click the canvas to add one."
+		       text="ノードを選ぶと編集します。キャンバスを右クリックして追加します。" />
+		<entry source="Select an NPC on the left" text="左で NPC を選択してください" />
+		<entry source="Select an object that has a Gimmick Circuit component"
+		       text="ギミック回路コンポーネントを持つオブジェクトを選びます" />
+		<entry source="Select an object with an AbilitySystemComponent, or pick one above."
+		       text="AbilitySystemComponent を持つオブジェクトを選択するか、上で選んでください。" />
+		<entry source="Source" text="出典" />
+		<entry source="Splines" text="スプライン" />
+		<entry source="Stacks" text="スタック" />
+		<entry source="Tag" text="タグ" />
+		<entry source="Target object" text="対象オブジェクト" />
+		<entry source="Task" text="タスク" />
+		<entry source="The catalog file the game reads. Edits keep its comments and layout."
+		       text="ゲームが読むカタログファイルです。編集してもコメントと配置は残ります。" />
+		<entry source="The node editor could not be created" text="ノードエディタを作成できませんでした" />
+		<entry source="The overrides do not apply to this profile - see the log for the module name."
+		       text="上書きがこのプロファイルに合いません - モジュール名はログを見てください。" />
+		<entry source="The runtime loader could not read the saved file. See the log for the reason."
+		       text="ランタイムローダーが保存したファイルを読み込めませんでした。理由はログを確認してください。" />
+		<entry source="The runtime loader reads the saved file."
+		       text="ランタイムローダーが保存したファイルを読み込みます。" />
+		<entry source="This file could not be opened: {statusText}"
+		       text="このファイルを開けません: {statusText}" />
+		<entry source="Time" text="時刻" />
+		<entry source="To" text="宛先" />
+		<entry source="Travel" text="移動" />
+		<entry source="Undo" text="元に戻す" />
+		<entry source="Up" text="上" />
+		<entry source="Use selected object" text="選択中のオブジェクトを使う" />
+		<entry source="Use the preset's value for this parameter again."
+		       text="このパラメーターにプリセットの値を再び使います。" />
+		<entry source="Used by" text="使われている場所" />
+		<entry source="Uses" text="使うもの" />
+		<entry source="Uses no other entry." text="他の項目を使いません。" />
+		<entry source="When" text="条件" />
+		<entry source="Why this activity now" text="今この行動をする理由" />
+		<entry source="Wires" text="ワイヤー" />
+		<entry source="Zone modules" text="ゾーンモジュール" />
+		<entry source="added here" text="ここで追加" />
+		<entry source="changed here" text="ここで変更" />
+		<entry source="inherited" text="継承" />
+		<entry source="removed here" text="ここで削除" />
+		<entry source="replaced here" text="ここで置換" />
+		<entry source="{issueCount, plural, one {# problem} other {# problems}}" text="問題 {issueCount} 個" />
+		<entry source="{name} - {nodesCount, plural, one {# node} other {# nodes}}, {wiresCount, plural, one {# wire} other {# wires}}, {issueCount, plural, one {# problem} other {# problems}}"
+		       text="{name} - ノード {nodesCount} 個、ワイヤー {wiresCount} 本、問題 {issueCount} 個" />
+		<entry source="{nodeCount, plural, one {# node} other {# nodes}} | {issueCount, plural, one {# problem} other {# problems}}"
+		       text="ノード {nodeCount} 個 | 問題 {issueCount} 個" />
+	</entries>
+</TranslationMemory>

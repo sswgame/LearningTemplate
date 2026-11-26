@@ -32,6 +32,8 @@
 #include "Core/Time/ExponentialBackoff.h"
 #include "Core/Time/TimePoint.h"
 
+#include "Engine/Reflection/ReflectionEnumMacros.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -108,6 +110,8 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 온라인 연결 상태입니다. 진단 글의 이름은 `getEnumName` 입니다. */
+    ENUM()
     enum class OnlineClientState : uint8
     {
         Disconnected = 0,

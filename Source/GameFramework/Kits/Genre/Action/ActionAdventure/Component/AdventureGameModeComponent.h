@@ -139,7 +139,7 @@ namespace sw
         PROPERTY( RuntimeState )
         float2                         _playerPosition;
         SW_CODEC_STATE float2          _commandMove;       ///< 마지막 입력 명령의 이동 축 — 클라이언트가 프레임마다 덮는 입력이라 싣지 않는다
-        SW_CODEC_STATE FacingDirection _facing;            ///< 리플렉션 열거가 아니다 — 손 본문이 싣는다
+        SW_CODEC_STATE FacingDirection _facing;            ///< 손 본문(`serializeGameState`)이 싣는다
         SW_CODEC_STATE hashed_string   _currentRegion;     ///< 지금 서 있는 지역(비면 다음 틱이 진입을 처리한다)
         SW_CODEC_STATE hashed_string   _pendingEncounter;  ///< 지금 지역에 들어서며 기다리게 된 전투(열리면 비운다)
         SW_CODEC_STATE hashed_string   _encounterRegion;   ///< 전투가 열린 지역(탐험 중이면 비었다)

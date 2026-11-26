@@ -10,6 +10,8 @@
 #include "Engine/Asset/AssetDatabase.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetRegistry.h"
+#include "Engine/Content/Pack/PackManager.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialPermutation.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
@@ -176,6 +178,22 @@ namespace sw
             if ( domainIndex.has_value() == false )
                 return unexpected( domainIndex.error() );
             Internal::mergeEntries( std::move( domainIndex->_listEntry ), index, mapIndex );
+        }
+        // 패치 · 모드 팩(도메인 없음)이 팩 루트에 실은 색인을 도메인 층 뒤에 마운트 차례(낮은 우선순위부터)로 쌓는다 — 에셋 색인(`AssetManager::installAssetRegistry`)과 같은 층 규칙이다.
+        // 소스 실행에서도 붙인 모드 팩은 읽는다(`PackManager::hasPatchFile` 이 낱개 파일보다 먼저 보는 것과 같다). 엔진 없이 도는 도구는 팩이 없다.
+        const PackManager* const pPacks = engine::findSubsystem<PackManager>();
+        if ( pPacks == nullptr || pPacks->hasPatchPacks() == false )
+            return index;
+        vector<string> listPatchText;
+        vector<string> listPatchSource;
+        if ( pPacks->collectPatchPackTexts( kFileName, listPatchText, listPatchSource ) == false )
+            return unexpected( Error{ ErrorKind::ExternalFailure, "a patch or mod pack has an unreadable material index", kFileName } );
+        for ( size_t patchIndex = 0; patchIndex < listPatchText.size(); ++patchIndex )
+        {
+            expected<MaterialTagIndex> patchTagIndex = parseText( listPatchText[patchIndex], listPatchSource[patchIndex] );
+            if ( patchTagIndex.has_value() == false )
+                return unexpected( patchTagIndex.error() );
+            Internal::mergeEntries( std::move( patchTagIndex->_listEntry ), index, mapIndex );
         }
         return index;
     }

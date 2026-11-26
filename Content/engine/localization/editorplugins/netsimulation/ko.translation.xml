@@ -1,0 +1,17 @@
+<?asset guid="33e55bc917d14df3ab86d8bee5abe848"?>
+<TranslationTable culture="ko">
+	<entries>
+		<entry key="EdPlugin.NoInProcessGameIsRegisteredNetSimGameRegistryOnly"
+		       text="한 프로세스 게임이 등록되지 않았습니다(NetSimGameRegistry) — 키트 세션(INetSimSession)이 있는 게임만 여기서 돕니다."
+		       sourceHash="89f0528658a0433b" />
+		<entry key="EdPlugin.StartInProcess" text="한 프로세스로 시작" sourceHash="a2fef448b6708fdf" />
+		<entry key="EdPlugin.Stop" text="정지" sourceHash="d9ad53251f2330a5" />
+		<entry key="EdPluginField.Clients" text="클라이언트" sourceHash="8faea6e4533e9757" />
+		<entry key="EdPluginFormat.Client" text="{focused}클라이언트 {worldIndex}" sourceHash="9c2c41007f64608b" />
+		<entry key="EdPluginFormat.Server" text="{focused}서버" sourceHash="2ab8e57482d849f1" />
+		<entry key="EdPluginFormat.TickInputFocusWorld"
+		       text="틱 {tick}  입력 초점: 월드 {inputFocus}"
+		       sourceHash="73e089f72ca0df8f" />
+		<entry key="EdPluginWidget.Game" text="게임" sourceHash="b568a67e05a19907" />
+	</entries>
+</TranslationTable>

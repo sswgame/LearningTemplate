@@ -1,0 +1,35 @@
+<?asset guid="525798706ead4e9a81e13a46cf74d24c"?>
+<TranslationTable culture="ja">
+	<entries>
+		<entry key="Chat.InvalidMessage"
+		       text="メッセージが空か正しくありません"
+		       sourceHash="90852f96d275f811" />
+		<entry key="Chat.SignIn"
+		       text="チャットするにはサインインしてください"
+		       sourceHash="3e1a44cdd263dd1e" />
+		<entry key="Chat.TooFast" text="速すぎます。少し待ってください" sourceHash="51ec7c4fa8414af5" />
+		<entry key="Chat.Unavailable" text="現在チャットは利用できません" sourceHash="97824550bff00311" />
+		<entry key="Chat.UpdateGame"
+		       text="チャットするにはゲームを更新してください"
+		       sourceHash="42ac26bc346890e2" />
+		<entry key="Enum.ChatResult.Muted"
+		       text="チャットが禁止されています(残り{seconds}秒)"
+		       sourceHash="d44ad231e1dc9e57" />
+		<entry key="Enum.ChatResult.NotFound" text="メッセージが見つかりません" sourceHash="9e5e30bbb5ad2ca9" />
+		<entry key="Enum.ChatResult.NotJoinable"
+		       text="このチャンネルには参加できません"
+		       sourceHash="46a0dd5bcc062ecf" />
+		<entry key="Enum.ChatResult.NotMember"
+		       text="このチャンネルに参加していません"
+		       sourceHash="3e5bfdfd4245bf3b" />
+		<entry key="Enum.ChatResult.RateLimited"
+		       text="速すぎます。{milliseconds}ms待ってください"
+		       sourceHash="e5b6fe8229c21b06" />
+		<entry key="Enum.ChatResult.Rejected"
+		       text="メッセージは単語フィルターでブロックされました"
+		       sourceHash="9f4be67ffd43a11b" />
+		<entry key="Enum.ChatResult.Repeated" text="同じ発言は繰り返せません" sourceHash="3aed68501070baae" />
+		<entry key="Enum.ChatResult.TargetOffline" text="相手はオフラインです" sourceHash="4e2a36c23fcdbdc0" />
+		<entry key="Enum.ChatResult.TooManyChannels" text="チャンネルが多すぎます" sourceHash="b67867eff6d1139c" />
+	</entries>
+</TranslationTable>

@@ -15,6 +15,8 @@ if(skip_game_framework_dev)
 endif()
 
 sw_glob_source_tree(list_game_framework_dev_source RECURSE "*.cpp" "*.h")
+# GameFramework 와 같은 폴더 나눔이다 — 클라이언트 몫(Client/)은 전용 서버가, 서버 몫(Server/)은 클라이언트가 짓지 않는다.
+sw_remove_other_target_sources(list_game_framework_dev_source)
 sw_add_module_library(GameFrameworkDev
 	KIND gameframework
 	DEV_TYPE SHARED

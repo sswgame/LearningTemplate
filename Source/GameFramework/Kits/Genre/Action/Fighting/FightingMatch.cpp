@@ -7,6 +7,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Serialization/BitStream.h"
 
+#include "Engine/Reflection/EnumName.h"
 #include "Engine/Reflection/ReflectionValidation.h"
 #include "Engine/Serialization/Fixed/FixedLayout.h"
 #include "Engine/Serialization/Format/Archive.h"
@@ -1157,7 +1158,7 @@ namespace sw
         const FixedReadResult result = FixedLayout::read( buffer.data(), static_cast<int32>( buffer.size() ), *this );
         if ( result != FixedReadResult::Ok )
         {
-            SW_LOG_WARNING_ID( "FightingMatch.FightingRollbackStateRejected", "Fighting rollback state was rejected (%#) - the match keeps its current state", FixedLayout::toString( result ) );
+            SW_LOG_WARNING_ID( "FightingMatch.FightingRollbackStateRejected", "Fighting rollback state was rejected (%#) - the match keeps its current state", getEnumName( result ) );
             return false;
         }
         completeLoad();

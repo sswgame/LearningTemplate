@@ -1,0 +1,58 @@
+<?asset guid="ffad311f32fc449eb3b75c3b8c4691f6"?>
+<TranslationMemory culture="ko">
+	<entries>
+		<entry source="Account" text="계정" />
+		<entry source="Account id (hex)" text="계정 id(16진수)" />
+		<entry source="Acting role" text="맡은 역할" />
+		<entry source="Amount" text="양" />
+		<entry source="Apply sanction" text="제재 적용" />
+		<entry source="Asset id" text="에셋 id" />
+		<entry source="Audit log" text="감사 기록" />
+		<entry source="Closed reports" text="닫은 신고" />
+		<entry source="Disconnect" text="연결 끊기" />
+		<entry source="Dismiss" text="닫기" />
+		<entry source="Edit" text="편집" />
+		<entry source="End maintenance" text="점검 끝내기" />
+		<entry source="Event JSON" text="이벤트 JSON" />
+		<entry source="Event id" text="이벤트 id" />
+		<entry source="GM connection: {stateText}" text="GM 연결: {stateText}" />
+		<entry source="GM password" text="GM 비밀번호" />
+		<entry source="Grant" text="지급" />
+		<entry source="Grant / Revoke" text="지급 / 회수" />
+		<entry source="Lift sanction" text="제재 풀기" />
+		<entry source="List audit" text="감사 기록 보기" />
+		<entry source="List live events" text="라이브 이벤트 보기" />
+		<entry source="Live events" text="라이브 이벤트" />
+		<entry source="Look up an account to see its balances and sanctions"
+		       text="계정을 찾으면 잔액과 제재가 보입니다" />
+		<entry source="Lookup" text="찾기" />
+		<entry source="Maintenance / Notice" text="점검 / 공지" />
+		<entry source="Maintenance seconds (0 = until cleared)" text="점검 초(0 = 풀 때까지)" />
+		<entry source="Memo (ticket)" text="메모(티켓)" />
+		<entry source="Message key" text="메시지 키" />
+		<entry source="No login handler is bound: GM commands are refused as not logged in"
+		       text="로그인 처리기가 없습니다: GM 명령은 로그인하지 않은 것으로 거절됩니다" />
+		<entry source="Notice id" text="공지 id" />
+		<entry source="Notice seconds (0 = until removed)" text="공지 초(0 = 지울 때까지)" />
+		<entry source="Notice text" text="공지 글" />
+		<entry source="Open reports" text="열린 신고" />
+		<entry source="Post notice" text="공지 올리기" />
+		<entry source="Priority" text="우선순위" />
+		<entry source="Provider: {providerName}" text="제공자: {providerName}" />
+		<entry source="Put live event" text="라이브 이벤트 넣기" />
+		<entry source="Reason code" text="사유 코드" />
+		<entry source="Refund revoke (may leave a debt)" text="환불 회수(빚이 남을 수 있다)" />
+		<entry source="Remove live event" text="라이브 이벤트 지우기" />
+		<entry source="Remove notice" text="공지 지우기" />
+		<entry source="Reports" text="신고" />
+		<entry source="Resolve" text="처리" />
+		<entry source="Revoke" text="회수" />
+		<entry source="Sanction" text="제재" />
+		<entry source="Scope (all or server kind)" text="범위(all 또는 서버 종류)" />
+		<entry source="Seconds" text="초" />
+		<entry source="Start maintenance" text="점검 시작" />
+		<entry source="Subject prefix" text="주체 접두어" />
+		<entry source="{displayName}  (id {accountID})  {presence, select, online {online} other {offline}}"
+		       text="{displayName}  (id {accountID})  {presence, select, online {접속 중} other {접속 안 함}}" />
+	</entries>
+</TranslationMemory>

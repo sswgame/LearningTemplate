@@ -42,28 +42,36 @@ namespace sw
         [[nodiscard]] static bool isDecodable( string_view path ) { return findFileFormat( path ) != AudioFileFormat::Other; }
     };
 
+    /** @brief 소리 그래프 에셋 종류의 정의입니다. `AudioGraphDef::kAssetType` 이 이 값을 가리킨다(오디오 헤더 없이 소리 참조가 읽는다). */
+    struct AudioGraphAssetKind
+    {
+        /** @brief 소리 그래프 파일의 접미사입니다. */
+        static constexpr string_view kExtension        = ".audiograph.xml";
+        static constexpr AssetSuffix kArrAssetSuffix[] = {
+            { kExtension, AssetSuffixRole::Plain },
+        };
+        /** @brief 소리 파일과 같이 전용 서버 패키지가 빼는 묶음 `Audio` 다(서버는 그래프를 읽지 않는다). */
+        static constexpr AssetTypeDef kAssetType{ "AudioGraph", kArrAssetSuffix, static_cast<uint32>( SW_COUNT_OF( kArrAssetSuffix ) ), {}, 0, "Audio" };
+    };
+
     /**
      * @struct AudioPlayableAsset
      * @brief 재생 입구(`GameSound::play`)가 받는 것을 가리키는 참조의 대상입니다 — 소리 파일이나 소리 그래프.
-     * @details 표에 올리지 않고(접미사의 주인은 `AudioClipData` · `AudioGraphDef` 다) 타입 있는 참조의 검사에만 쓴다. 언리얼 `USoundBase` 칸이 파동과 큐를 함께 받는 자리다(기억에 의존).
+     * @details 표에 올리지 않고 타입 있는 참조의 검사에만 쓰는 합 종류다(`AssetTypeDef::makeUnion`). 접미사는 구성 종류의 것이라 다시 적지 않는다.
      */
     struct AudioPlayableAsset
     {
-        static constexpr AssetSuffix kArrAssetSuffix[] = {
-            {           ".ogg", AssetSuffixRole::Plain},
-            {           ".wav", AssetSuffixRole::Plain},
-            {           ".mp3", AssetSuffixRole::Plain},
-            {          ".flac", AssetSuffixRole::Plain},
-            {".audiograph.xml", AssetSuffixRole::Plain},
-        };
-        static constexpr AssetTypeDef kAssetType{ "AudioPlayable", kArrAssetSuffix, static_cast<uint32>( SW_COUNT_OF( kArrAssetSuffix ) ), {}, 0, {} };
+        static constexpr const AssetTypeDef* kArrMemberType[] = { &AudioClipAssetKind::kAssetType, &AudioGraphAssetKind::kAssetType };
+        static constexpr AssetTypeDef        kAssetType       = AssetTypeDef::makeUnion( "AudioPlayable", kArrMemberType );
     };
 
     /** @brief 적응형 음악 파일(`*.music.xml`)을 가리키는 참조(`AssetRef<AudioMusicAsset>`)의 대상입니다 — `GameSound::playAdaptiveMusic` 이 받는다. 같은 까닭으로 검사에만 쓴다. */
     struct AudioMusicAsset
     {
+        /** @brief 적응형 음악 파일의 접미사입니다. 데이터 파일 종류의 경로 규칙(`AudioMusic` 등록 줄)도 이 값을 쓴다. */
+        static constexpr string_view kExtension        = ".music.xml";
         static constexpr AssetSuffix kArrAssetSuffix[] = {
-            { ".music.xml", AssetSuffixRole::Plain },
+            { kExtension, AssetSuffixRole::Plain },
         };
         static constexpr AssetTypeDef kAssetType{ "AudioMusic", kArrAssetSuffix, static_cast<uint32>( SW_COUNT_OF( kArrAssetSuffix ) ), {}, 0, {} };
     };

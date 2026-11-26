@@ -37,6 +37,7 @@
 #include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialTagIndex.h"
+#include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
 #include "Engine/Graphics/Shader/ShaderSourceAssetKind.h"
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Serialization/Format/JSONSerializer.h"
@@ -412,6 +413,59 @@ namespace sw
                 return bValid;
             }
 
+            /** @brief 리치 그래프(`PackReachGraph`)의 입력입니다. 그래프가 참조로 들므로 그래프보다 오래 산다. */
+            struct PackReachInputs
+            {
+                AssetReferenceFields         _properties;
+                PackReachFiles               _files;
+                PackDiskReachSource          _source;
+                vector<PackDomainCandidates> _listCandidates;
+            };
+
+            /**
+             * @brief 굽는 도메인 @p listDomain 의 원본 목록과 참조 칸 표로 리치 그래프의 입력을 채웁니다. 표를 읽지 못하거나 목록을 내지 못하면 false 입니다.
+             * @details 팩 고르기(`selectFiles`)와 셰이더 굽기 앞의 리치(`PackCooker::collectReachedAssets`)가 같은 입력을 본다. 쿠킹 세션 안이면 부르는 쪽이 작업 범위를 연다.
+             */
+            [[nodiscard]] static bool loadReachInputs( const PackConfig& config, const PackCookParams& params, const vector<string>& listDomain, PackReachInputs& outInputs )
+            {
+                // 이 표가 바뀌면 고르는 파일도 바뀌므로 입력이다.
+                if ( outInputs._properties.load( params._projectRoot ) == false )
+                {
+                    SW_LOG_ERROR_ID( "PackCooker.ReferenceFieldsUnreadable", "Pack cook: the asset reference fields under %# could not be read - references cannot be followed", params._projectRoot.str() );
+                    return false;
+                }
+                fixed_string<constant::buffer::kMax64> gamePrefix;
+                formatstring( gamePrefix.data(), gamePrefix.capacity(), "%#/", constant::path::kGamePack );
+                for ( const string& domain : listDomain )
+                {
+                    const AbsolutePath   domainDir = params._resourceRoot.join( domain );
+                    vector<AbsolutePath> listFile;
+                    if ( CookJob::collectFiles( domainDir, "", listFile ) == false )
+                        return false;
+                    PackDomainCandidates& candidates = outInputs._listCandidates.emplace_back();
+                    candidates._domain               = domain;
+                    for ( const AbsolutePath& absPath : listFile )
+                    {
+                        string relativePath;
+                        if ( makeListedRelativePath( domainDir.str(), absPath.str(), relativePath ) == false )
+                            return false;
+                        string assetID = makeAssetID( domain, relativePath );
+                        outInputs._files._setExisting.insert( assetID );
+                        candidates._listExisting.push_back( assetID );
+                        if ( isPackableSource( relativePath, config, params ) == false )
+                            continue;
+                        outInputs._files._setPackable.insert( assetID );
+                        outInputs._source._mapAbsolutePath.try_emplace( assetID, absPath );
+                        candidates._listFile.push_back( PackCandidateFile{ std::move( assetID ), absPath } );
+                    }
+                    if ( StringUtil::startsWith( domain, gamePrefix ) )
+                        outInputs._files._listGameDomain.push_back( FileUtil::normalizePath( domain ).str() );
+                }
+                AssetCookRoot::appendRoots( outInputs._files._listCodeRoot );
+                outInputs._files._automation = params._automationContent;
+                return true;
+            }
+
             /**
              * @brief 굽는 모든 도메인을 한 번에 보고 담을 파일을 고릅니다(`PackReachResult`). 빠진 참조가 있으면 오류를 남기고 false 입니다.
              * @details 작업 범위 하나(`PackReach`) 안에서 읽는다 — 쿠킹 세션은 작업 밖 읽기를 막는다. 그 범위의 입력은 기록하지 않는다: 고른 결과는 팩마다 설정 해시로 들어가고
@@ -423,57 +477,23 @@ namespace sw
                 reachDesc._cookerName = "PackReach";
                 const CookJob reachJob( reachDesc );
 
-                // 작업 범위 안에서 읽는다 — 쿠킹 세션은 작업 밖 읽기를 막는다. 이 표가 바뀌면 고르는 파일도 바뀌므로 입력이다.
-                AssetReferenceFields properties;
-                if ( properties.load( params._projectRoot ) == false )
-                {
-                    SW_LOG_ERROR_ID( "PackCooker.ReferenceFieldsUnreadable", "Pack cook: the asset reference fields under %# could not be read - references cannot be followed", params._projectRoot.str() );
+                PackReachInputs inputs;
+                if ( loadReachInputs( config, params, listDomain, inputs ) == false )
                     return false;
-                }
-
-                PackReachFiles                         files;
-                PackDiskReachSource                    source;
-                vector<PackDomainCandidates>           listCandidates;
-                fixed_string<constant::buffer::kMax64> gamePrefix;
-                formatstring( gamePrefix.data(), gamePrefix.capacity(), "%#/", constant::path::kGamePack );
-                for ( const string& domain : listDomain )
-                {
-                    const AbsolutePath   domainDir = params._resourceRoot.join( domain );
-                    vector<AbsolutePath> listFile;
-                    if ( CookJob::collectFiles( domainDir, "", listFile ) == false )
-                        return false;
-                    PackDomainCandidates& candidates = listCandidates.emplace_back();
-                    candidates._domain               = domain;
-                    for ( const AbsolutePath& absPath : listFile )
-                    {
-                        string relativePath;
-                        if ( makeListedRelativePath( domainDir.str(), absPath.str(), relativePath ) == false )
-                            return false;
-                        string assetID = makeAssetID( domain, relativePath );
-                        files._setExisting.insert( assetID );
-                        candidates._listExisting.push_back( assetID );
-                        if ( isPackableSource( relativePath, config, params ) == false )
-                            continue;
-                        files._setPackable.insert( assetID );
-                        source._mapAbsolutePath.try_emplace( assetID, absPath );
-                        candidates._listFile.push_back( PackCandidateFile{ std::move( assetID ), absPath } );
-                    }
-                    if ( StringUtil::startsWith( domain, gamePrefix ) )
-                        files._listGameDomain.push_back( FileUtil::normalizePath( domain ).str() );
-                }
-
-                AssetCookRoot::appendRoots( files._listCodeRoot );
-                files._automation = params._automationContent;
                 // 그래프 하나를 전체 고르기 · 기동 필수 · 씬마다의 고르기가 함께 걷는다 — 글마다 한 번 읽고 푼다.
-                PackReachGraph  graph( properties, config._cookRules, files, source );
+                PackReachGraph  graph( inputs._properties, config._cookRules, inputs._files, inputs._source );
                 PackReachResult reach;
                 const bool      bReached = PackReachResult::collect( graph, {}, reach );
-                logSelection( listCandidates, reach );
+                logSelection( inputs._listCandidates, reach );
                 if ( bReached == false )
                 {
                     SW_LOG_ERROR_ID( "PackCooker.PackReachFailed", "Pack cook: following references from the cook roots failed (reasons above) - no pack is written" );
                     return false;
                 }
+                const PackDiskReachSource&             source         = inputs._source;
+                const vector<PackDomainCandidates>&    listCandidates = inputs._listCandidates;
+                fixed_string<constant::buffer::kMax64> gamePrefix;
+                formatstring( gamePrefix.data(), gamePrefix.capacity(), "%#/", constant::path::kGamePack );
                 vector<PackDomainSources> listSources;
                 for ( const PackDomainCandidates& candidates : listCandidates )
                 {
@@ -1471,17 +1491,7 @@ namespace sw
     bool PackCooker::isRequestedByReachedOrigin( const unordered_map<string, vector<vector<string>>>& mapRequested, const unordered_set<string>& setIncluded, const string& assetID )
     {
         const auto requestIt = mapRequested.find( assetID );
-        if ( requestIt == mapRequested.end() )
-            return false;
-        for ( const vector<string>& listOriginAsset : requestIt->second )
-        {
-            bool bAllReached = true;
-            for ( const string& originAsset : listOriginAsset )
-                bAllReached = bAllReached && setIncluded.contains( originAsset );
-            if ( bAllReached )
-                return true;
-        }
-        return false;
+        return requestIt != mapRequested.end() && ShaderCookRequest::isAnyOriginReached( requestIt->second, setIncluded );
     }
 
     string PackCooker::makeRecordID( string_view target, string_view cookedDir, string_view packName )
@@ -1589,6 +1599,47 @@ namespace sw
                 return false;
             }
         }
+        return true;
+    }
+
+    bool PackCooker::collectReachedAssets( const PackConfig& engineConfig, const PackCookParams& params, unordered_set<string>& outSetReached )
+    {
+        outSetReached.clear();
+        if ( params._projectRoot.empty() || params._resourceRoot.empty() || params._shaderFolder.empty() )
+        {
+            SW_LOG_ERROR_ID( "PackCooker.PackReachNeedsContent", "Pack reach needs the project root, the content root and a shader folder" );
+            return false;
+        }
+        vector<string> listDomain;
+        if ( PackCookerInternal::collectDomains( params, listDomain ) == false )
+            return false;
+        if ( listDomain.empty() )
+        {
+            SW_LOG_ERROR_ID( "PackCooker.PackCookFoundNo", "Pack cook found no domain folder under %#", params._resourceRoot.str() );
+            return false;
+        }
+        // `cookAllPacks` 와 같은 설정 사본(엔진 규칙 + 굽는 게임들의 규칙)이다 — 고르는 것이 갈리면 굽지 않은 변형을 팩이 찾는다.
+        PackConfig  config = engineConfig;
+        CookJobDesc desc;
+        desc._cookerName = "PackGameRules";
+        {
+            const CookJob gameRulesJob{ desc };
+            if ( PackCookerInternal::mergeGameCookRules( params, listDomain, config._cookRules ) == false )
+                return false;
+        }
+        desc._cookerName = "PackReach";
+        const CookJob                       reachJob{ desc };
+        PackCookerInternal::PackReachInputs inputs;
+        if ( PackCookerInternal::loadReachInputs( config, params, listDomain, inputs ) == false )
+            return false;
+        PackReachGraph  graph( inputs._properties, config._cookRules, inputs._files, inputs._source );
+        PackReachResult reach;
+        if ( PackReachResult::collect( graph, {}, reach ) == false )
+        {
+            SW_LOG_ERROR_ID( "PackCooker.PackReachFailed", "Pack cook: following references from the cook roots failed (reasons above) - no pack is written" );
+            return false;
+        }
+        outSetReached = std::move( reach._setIncluded );
         return true;
     }
 

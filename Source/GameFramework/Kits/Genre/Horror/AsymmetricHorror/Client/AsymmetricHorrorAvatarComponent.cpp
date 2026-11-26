@@ -1,13 +1,20 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Genre/Horror/AsymmetricHorror/Client/AsymmetricHorrorAvatarComponent.h"
-
+#include "Core/Foundation/Types.h"
 #include "Core/Log/Logger.h"
+#include "Core/Memory/Memory.h"
+#include "Core/String/Name/hashed_string.h"
 
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Input/Map/CommonInputActions.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/Prefab/PrefabAsset.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
+#include "GameFramework/Client/View/GameModeViewComponent.h"
+#include "GameFramework/Client/View/PrefabViewBatch.h"
+#include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Horror/AsymmetricHorror/Client/AsymmetricHorrorHUDViewModel.h"
 #include "GameFramework/Kits/Genre/Horror/AsymmetricHorror/Component/AsymmetricHorrorGameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Presentation/IHUDViewModelBinder.h"
@@ -15,6 +22,51 @@
 
 namespace sw
 {
+    class AsymmetricHorrorGameModeComponent;
+    class AsymmetricHorrorHUDViewModel;
+    class GameObjectManager;
+
+    /**
+     * @class AsymmetricHorrorAvatarComponent
+     * @brief 입력 맵 액션을 프레임마다 디렉터 명령으로 넘기고 판을 그리며 HUD 를 채웁니다.
+     */
+    REFLECT( Category = "AsymmetricHorror", DisplayName = "Asymmetric Horror Avatar",
+             Tooltip = "Client side of an asymmetric horror match: sends commands to the Asymmetric Horror Game Mode on the same object, draws the game and fills the HUD" )
+    class AsymmetricHorrorAvatarComponent : public GameModeViewComponent
+    {
+    public:
+        REFLECT_BODY();
+
+        static constexpr TickGroup kTickGroup = TickGroup::PostUpdate;
+
+        AsymmetricHorrorAvatarComponent();
+        virtual ~AsymmetricHorrorAvatarComponent() override;
+
+        /** @brief 세운 표식을 지웁니다. */
+        void onEndPlay() override;
+
+    private:
+        /** @brief 틱 뒤 게임 스레드: 입력을 명령으로 넘기고 판을 그리며 HUD 를 채웁니다. */
+        void updateAvatar( GameObjectManager& manager, AsymmetricHorrorGameModeComponent& director );
+        /** @brief 입력 맵을 읽어 디렉터 명령으로 넘깁니다. */
+        void submitInput( const GameModeInput& input, AsymmetricHorrorGameModeComponent& director ) const;
+        /** @brief 판을 표식으로 그립니다. */
+        void drawGame( GameObjectManager& manager, const AsymmetricHorrorGameModeComponent& director );
+        /** @brief HUD 값을 채웁니다. */
+        static void fillHUD( AsymmetricHorrorHUDViewModel& outViewModel, const AsymmetricHorrorGameModeComponent& director );
+
+    private:
+        PROPERTY( Category = "Input", DisplayName = "Move Action", Tooltip = "InputMap 2D action that walks a survivor (required)" )
+        hashed_string _moveAction;
+        PROPERTY( Required, Category = "Input", DisplayName = "Use Action", Tooltip = "InputMap action: press to repair, open, rescue, heal or answer a skill check, hold to struggle (required)" )
+        hashed_string _useAction;
+        PROPERTY( Required, Category = "Look", DisplayName = "Marker Prefab", Tooltip = "Prefab with one mesh, spawned for everything the view shows" )
+        AssetRef<PrefabAsset> _markerPrefab;
+
+        SW_TRANSIENT PrefabViewBatch _markers;
+        SW_TRANSIENT unique_ptr<AsymmetricHorrorHUDViewModel> _hudViewModel; ///< HUD 가 보는 값(이 컴포넌트가 소유하고 HUD 는 빌려 쓴다 — 먼저 지워지면 HUD 가 스스로 뗀다)
+    };
+
     namespace
     {
         /** @brief 표식의 색 · 크기(m)입니다. */
@@ -164,3 +216,5 @@ namespace sw
         outViewModel.setLoseShown( result == AsymmetricHorrorResult::Lose );
     }
 } // namespace sw
+
+#include "AsymmetricHorrorAvatarComponent.cpp.gen.inl"

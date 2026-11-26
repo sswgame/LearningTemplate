@@ -4,7 +4,15 @@
 
 #include "Core/String/StringUtil.h"
 
+#include "Engine/Localization/LocalizationManager.h"
+
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
+
+namespace sw
+{
+    // Chat 키트의 글(엔진 현지화 폴더의 `kits/chat/`) — 이 모듈이 올라온 동안 조회 사슬에 든다(언리얼 플러그인 현지화 타깃)
+    SW_LOCALIZATION_PROJECT( ChatKit, "engine/localization/kits/chat/chat.locproject.xml" );
+} // namespace sw
 
 namespace sw
 {

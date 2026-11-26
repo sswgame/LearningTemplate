@@ -1,0 +1,86 @@
+<?asset guid="9de4b424bef5449785295ab613059e5e"?>
+<TranslationTable culture="ja">
+	<entries>
+		<entry key="EdMeshModifiers.AddItem" text="項目を追加" sourceHash="1373a4ab54d88333" />
+		<entry key="EdMeshModifiers.AddModifier" text="モディファイアを追加" sourceHash="f4d95a66cf236fed" />
+		<entry key="EdMeshModifiers.Axis" text="軸" sourceHash="b035a78b241ed7d4" />
+		<entry key="EdMeshModifiers.Bake" text="ベイク" sourceHash="c152d2a7a89be800" />
+		<entry key="EdMeshModifiers.CPUOnly" text="(CPU のみ)" sourceHash="0c5c8598488eecee" />
+		<entry key="EdMeshModifiers.Center" text="中心" sourceHash="b38d497d992ab4a4" />
+		<entry key="EdMeshModifiers.ControlPoints" text="制御点" sourceHash="7551ef17ae7e064d" />
+		<entry key="EdMeshModifiers.CurveEditHint"
+		       text="クリックしてカーブを編集"
+		       sourceHash="d2457db110d81830" />
+		<entry key="EdMeshModifiers.DuplicateRow" text="行を複製" sourceHash="1eb11810b6d41e8e" />
+		<entry key="EdMeshModifiers.EnterNestedStack"
+		       text="このグループのネストされたスタックを編集"
+		       sourceHash="a8e48d4c6a6a8255" />
+		<entry key="EdMeshModifiers.ExportWarp"
+		       text="ワールドワープとして書き出す"
+		       sourceHash="0cc4a3640140e0f5" />
+		<entry key="EdMeshModifiers.FitBounds" text="境界に合わせる" sourceHash="402ad59bb6ed0112" />
+		<entry key="EdMeshModifiers.GPUPreviewBlockedBy" text="CPU のみ:" sourceHash="cc44e27c6bf4732d" />
+		<entry key="EdMeshModifiers.GPUPreviewBlockedByStack"
+		       text="CPU のみ (法線の再計算)"
+		       sourceHash="e6d737e3073915e4" />
+		<entry key="EdMeshModifiers.HintPickTarget"
+		       text="メッシュコンポーネントが .mesh アセットを使うオブジェクトを選択し、「選択を使用」を押してください。"
+		       sourceHash="150c002cb25c2c9e" />
+		<entry key="EdMeshModifiers.HintSelectModifier"
+		       text="スタックからモディファイアを選択してください。"
+		       sourceHash="c17f55d8a9720295" />
+		<entry key="EdMeshModifiers.HintTargetGone"
+		       text="対象のオブジェクトはもう存在しません。"
+		       sourceHash="1bc0e1e113faeb86" />
+		<entry key="EdMeshModifiers.Mirror" text="ミラー" sourceHash="1e5ff0f50c741122" />
+		<entry key="EdMeshModifiers.MoveRowDown" text="行を下へ移動" sourceHash="e614e211c8b34f94" />
+		<entry key="EdMeshModifiers.MoveRowUp" text="行を上へ移動" sourceHash="8ae65593ed9e4275" />
+		<entry key="EdMeshModifiers.Name" text="名前" sourceHash="ef49aec68fd1dc66" />
+		<entry key="EdMeshModifiers.NestedDepth" text="深さ" sourceHash="3231d0dc6fe30d4a" />
+		<entry key="EdMeshModifiers.NestedEmpty"
+		       text="空です。モディファイアを追加してグループにします。"
+		       sourceHash="7af7ec639534480a" />
+		<entry key="EdMeshModifiers.NestedStack" text="ネストされたスタック" sourceHash="0d6be80e0ced25ae" />
+		<entry key="EdMeshModifiers.NestedUp" text="上へ" sourceHash="09313a07b5c3ab60" />
+		<entry key="EdMeshModifiers.NoTarget" text="対象なし" sourceHash="88b4f03b7af48b9f" />
+		<entry key="EdMeshModifiers.PlayPreviewTime" text="再生" sourceHash="cd105819b5a10243" />
+		<entry key="EdMeshModifiers.PointIndex" text="点" sourceHash="8a439296ced9ed11" />
+		<entry key="EdMeshModifiers.PointPosition" text="位置" sourceHash="c1611c0558728a2a" />
+		<entry key="EdMeshModifiers.PreviewTime" text="プレビュー時間" sourceHash="c6552dd0fb586094" />
+		<entry key="EdMeshModifiers.RecomputeNormals" text="法線の再計算" sourceHash="2a5bbf4552aa7855" />
+		<entry key="EdMeshModifiers.Redo" text="やり直し" sourceHash="7417792bbe720149" />
+		<entry key="EdMeshModifiers.ReferenceNoMatch"
+		       text="次のコンポーネントを持つオブジェクトがありません:"
+		       sourceHash="4e824d53a2525bd0" />
+		<entry key="EdMeshModifiers.ReferenceNone" text="(なし)" sourceHash="cc766cf900364200" />
+		<entry key="EdMeshModifiers.ReloadStack" text="スタックを再読み込み" sourceHash="372f2d0fa36ebb0c" />
+		<entry key="EdMeshModifiers.RemoveRow" text="行を削除" sourceHash="77318393dfdb0775" />
+		<entry key="EdMeshModifiers.ResetLattice" text="ラティスをリセット" sourceHash="11fff1797b257282" />
+		<entry key="EdMeshModifiers.ResetParams" text="パラメーターをリセット" sourceHash="aca3bdbe9d0ddaf4" />
+		<entry key="EdMeshModifiers.Rotation" text="回転" sourceHash="cde2e53f46beac7f" />
+		<entry key="EdMeshModifiers.SaveStack" text="スタックを保存" sourceHash="03376e0fb812a6d0" />
+		<entry key="EdMeshModifiers.ShadedPreview"
+		       text="シェーディングプレビュー"
+		       sourceHash="3a001a59df5db872" />
+		<entry key="EdMeshModifiers.ShadedPreviewTooltip"
+		       text="スタックの結果で対象メッシュをシェーディングします。有効なモディファイアがすべて対応していればコンピュートシェーダーで実行し、そうでなければ CPU の結果を頂点としてアップロードします。オフにすると元のメッシュとワイヤープレビューのままです。"
+		       sourceHash="7d5df56f33074e8f" />
+		<entry key="EdMeshModifiers.SpaceReference" text="参照オブジェクト" sourceHash="f99ff83cb627c00d" />
+		<entry key="EdMeshModifiers.Undo" text="元に戻す" sourceHash="8f4be9f086eb530f" />
+		<entry key="EdMeshModifiers.UseSelection" text="選択を使用" sourceHash="18163441a7dc78f2" />
+		<entry key="EdMeshModifiers.UseSelectionForParam" text="選択を使用" sourceHash="18163441a7dc78f2" />
+		<entry key="EdMeshModifiers.WarpExportPath" text="ワープファイル (.mfwarp)" sourceHash="ab63f8ba7f42ead5" />
+		<entry key="EdMeshModifiers.WorldSpace" text="ワールド空間" sourceHash="704e1344b9026739" />
+		<entry key="EdPluginTip.SaveStackBeforePickingMesh"
+		       text="ほかのメッシュを選ぶ前にモディファイアスタックを保存するか再読み込みしてください"
+		       sourceHash="39a5368a2d1e5dd2" />
+		<entry key="EdPluginVisualizer.MeshModifiersLabel" text="モディファイア" sourceHash="87ca97e3a5f400d9" />
+		<entry key="EdPluginVisualizer.MeshModifiersStageLabel" text="ステージ" sourceHash="ae5da213b7f896ed" />
+		<entry key="EdPluginVisualizer.MeshModifiersStageTip"
+		       text="選択したモディファイアまでを適用した結果を別色の線で重ねて描きます(変形の影響プレビュー)"
+		       sourceHash="498bc780b7a638e7" />
+		<entry key="EdPluginVisualizer.MeshModifiersTip"
+		       text="メッシュモディファイアスタックの変形プレビュー線、ギズモと範囲表示のドラッグ編集、ラティス制御点の選択とドラッグ"
+		       sourceHash="cf2a12185b5ea27c" />
+	</entries>
+</TranslationTable>

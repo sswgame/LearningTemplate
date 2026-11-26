@@ -1,0 +1,135 @@
+<?asset guid="9cc4f4c578a74bce87dbfa3e4960af16"?>
+<TranslationMemory culture="ko">
+	<entries>
+		<entry source="(none)" text="(없음)" />
+		<entry source="Abilities" text="어빌리티" />
+		<entry source="Ability sets" text="어빌리티 세트" />
+		<entry source="Active" text="실행 중" />
+		<entry source="Active Effects" text="걸린 이펙트" />
+		<entry source="Activity" text="행동" />
+		<entry source="Add ability" text="어빌리티 더하기" />
+		<entry source="Add effect" text="이펙트 더하기" />
+		<entry source="Add node" text="노드 추가" />
+		<entry source="Add set" text="세트 더하기" />
+		<entry source="An entry other entries use is not removed. Change those references first."
+		       text="다른 항목이 쓰는 항목은 지우지 않습니다. 그 참조를 먼저 바꾸세요." />
+		<entry source="Attributes" text="어트리뷰트" />
+		<entry source="Auto layout" text="자동 배치" />
+		<entry source="Base" text="기본값" />
+		<entry source="Clear target" text="대상 지우기" />
+		<entry source="Click a node to edit it" text="노드를 누르면 편집합니다" />
+		<entry source="Connect" text="연결" />
+		<entry source="Cooldown" text="쿨다운" />
+		<entry source="Count" text="개수" />
+		<entry source="Cue presentations" text="큐 연출" />
+		<entry source="Current" text="현재값" />
+		<entry source="Curve of every spline in the scene - drag the control point handles of the selected one (Shapes)"
+		       text="씬의 스플라인마다 곡선 - 고른 스플라인은 조절점 손잡이를 끈다(Shapes)" />
+		<entry source="Default: {hasDefault, select, yes {{value}} other {(none)}}"
+		       text="기본값: {hasDefault, select, yes {{value}} other {(없음)}}" />
+		<entry source="Delete" text="삭제" />
+		<entry source="Delete node" text="노드 삭제" />
+		<entry source="Down" text="아래로" />
+		<entry source="Drop this placement override and use the preset again."
+		       text="이 배치 덮어쓰기를 지우고 프리셋을 다시 씁니다." />
+		<entry source="Duplicate" text="복제" />
+		<entry source="Effects" text="이펙트" />
+		<entry source="Enter an ability catalog file (game/&lt;game>/data/abilities.xml) to edit it."
+		       text="편집할 어빌리티 카탈로그 파일(game/&lt;게임>/data/abilities.xml)을 적으세요." />
+		<entry source="Event" text="사건" />
+		<entry source="File" text="파일" />
+		<entry source="Filter by id" text="id 로 거르기" />
+		<entry source="Follow game clock" text="게임 시계 따라가기" />
+		<entry source="From" text="보내는 곳" />
+		<entry source="Game time" text="게임 시각" />
+		<entry source="Go" text="가기" />
+		<entry source="Granted Abilities" text="부여된 어빌리티" />
+		<entry source="Infinite" text="무한" />
+		<entry source="Inherited from the base entry. Picking a value writes it on this entry."
+		       text="부모 항목에서 물려받은 값입니다. 고르면 이 항목에 적습니다." />
+		<entry source="Invert" text="반전" />
+		<entry source="Live: {liveRunnerName}" text="실행 중: {liveRunnerName}" />
+		<entry source="NPCs" text="NPC 목록" />
+		<entry source="Name" text="이름" />
+		<entry source="No AbilitySystemComponent in the active scene"
+		       text="활성 씬에 AbilitySystemComponent 가 없습니다" />
+		<entry source="No effect applied, rejected or removed yet."
+		       text="아직 적용 · 거부 · 제거된 이펙트가 없습니다." />
+		<entry source="No entry uses this one." text="이 항목을 쓰는 곳이 없습니다." />
+		<entry source="No plan for today" text="오늘 계획이 없습니다" />
+		<entry source="No schedule system is running. Start play with NPCs that have schedules."
+		       text="실행 중인 일정 시스템이 없습니다. 일정을 가진 NPC 가 있는 상태로 플레이를 시작하세요." />
+		<entry source="Open a behavior tree file (*.bt.xml) with Open..."
+		       text="Open... 으로 행동 트리 파일(*.bt.xml)을 엽니다" />
+		<entry source="Override zone parameter" text="지역 매개변수 덮어쓰기" />
+		<entry source="Owned Tags" text="소유 태그" />
+		<entry source="Pick a zone profile (*.zone.xml) to see its modules."
+		       text="모듈을 보려면 지역 프로필(*.zone.xml)을 고르세요." />
+		<entry source="Pick an ability system..." text="어빌리티 시스템 고르기..." />
+		<entry source="Pick an entry on the left to see what it uses and what uses it."
+		       text="왼쪽에서 항목을 고르면 그 항목이 쓰는 것과 그것을 쓰는 곳을 봅니다." />
+		<entry source="Place" text="장소" />
+		<entry source="Problems" text="문제" />
+		<entry source="Raw timeline" text="타임라인 원문" />
+		<entry source="Recent effects" text="최근 이펙트" />
+		<entry source="Redo" text="다시 실행" />
+		<entry source="Remaining" text="남은 시간" />
+		<entry source="Remove" text="지우기" />
+		<entry source="Remove broken wires" text="끊어진 선 지우기" />
+		<entry source="Revert" text="되돌리기" />
+		<entry source="Revert zone module" text="지역 모듈 되돌리기" />
+		<entry source="Revert zone parameter" text="지역 매개변수 되돌리기" />
+		<entry source="Runtime ability state exists only during play. Press Play to inspect it."
+		       text="어빌리티 런타임 상태는 플레이 중에만 있습니다. 플레이를 눌러 확인하세요." />
+		<entry source="Save" text="저장" />
+		<entry source="Schedule system" text="일정 시스템" />
+		<entry source="Select a node to edit it. Right-click the canvas to add one."
+		       text="노드를 고르면 편집합니다. 캔버스를 오른쪽 클릭해 더합니다." />
+		<entry source="Select an NPC on the left" text="왼쪽에서 NPC 를 고르세요" />
+		<entry source="Select an object that has a Gimmick Circuit component"
+		       text="기믹 회로 컴포넌트가 있는 오브젝트를 고릅니다" />
+		<entry source="Select an object with an AbilitySystemComponent, or pick one above."
+		       text="AbilitySystemComponent 가 있는 오브젝트를 선택하거나 위에서 고르세요." />
+		<entry source="Source" text="출처" />
+		<entry source="Splines" text="스플라인" />
+		<entry source="Stacks" text="스택" />
+		<entry source="Tag" text="태그" />
+		<entry source="Target object" text="대상 오브젝트" />
+		<entry source="Task" text="작업" />
+		<entry source="The catalog file the game reads. Edits keep its comments and layout."
+		       text="게임이 읽는 카탈로그 파일입니다. 편집해도 주석과 줄 배치가 남습니다." />
+		<entry source="The node editor could not be created" text="노드 편집기를 만들지 못했습니다" />
+		<entry source="The overrides do not apply to this profile - see the log for the module name."
+		       text="덮어쓰기가 이 프로필에 맞지 않습니다 - 모듈 이름은 로그를 보세요." />
+		<entry source="The runtime loader could not read the saved file. See the log for the reason."
+		       text="런타임 로더가 저장한 파일을 읽지 못했습니다. 이유는 로그를 보세요." />
+		<entry source="The runtime loader reads the saved file."
+		       text="런타임 로더가 저장한 파일을 읽습니다." />
+		<entry source="This file could not be opened: {statusText}" text="이 파일을 열 수 없습니다: {statusText}" />
+		<entry source="Time" text="시각" />
+		<entry source="To" text="받는 곳" />
+		<entry source="Travel" text="이동" />
+		<entry source="Undo" text="실행 취소" />
+		<entry source="Up" text="위" />
+		<entry source="Use selected object" text="고른 오브젝트 쓰기" />
+		<entry source="Use the preset's value for this parameter again."
+		       text="이 매개변수에 프리셋 값을 다시 씁니다." />
+		<entry source="Used by" text="쓰는 곳" />
+		<entry source="Uses" text="쓰는 것" />
+		<entry source="Uses no other entry." text="다른 항목을 쓰지 않습니다." />
+		<entry source="When" text="조건" />
+		<entry source="Why this activity now" text="지금 왜 이 행동인가" />
+		<entry source="Wires" text="선" />
+		<entry source="Zone modules" text="지역 모듈" />
+		<entry source="added here" text="여기서 더함" />
+		<entry source="changed here" text="여기서 바꿈" />
+		<entry source="inherited" text="물려받음" />
+		<entry source="removed here" text="여기서 뺌" />
+		<entry source="replaced here" text="여기서 갈아끼움" />
+		<entry source="{issueCount, plural, one {# problem} other {# problems}}" text="문제 {issueCount}개" />
+		<entry source="{name} - {nodesCount, plural, one {# node} other {# nodes}}, {wiresCount, plural, one {# wire} other {# wires}}, {issueCount, plural, one {# problem} other {# problems}}"
+		       text="{name} - 노드 {nodesCount}개, 선 {wiresCount}개, 문제 {issueCount}개" />
+		<entry source="{nodeCount, plural, one {# node} other {# nodes}} | {issueCount, plural, one {# problem} other {# problems}}"
+		       text="노드 {nodeCount}개 | 문제 {issueCount}개" />
+	</entries>
+</TranslationMemory>

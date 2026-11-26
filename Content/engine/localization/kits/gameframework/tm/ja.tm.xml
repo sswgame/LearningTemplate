@@ -1,0 +1,62 @@
+<?asset guid="4e81e8ddd1ad4891912bc40864042aa4"?>
+<TranslationMemory culture="ja">
+	<entries>
+		<entry source="A purchase is still in progress." text="購入処理中です。" />
+		<entry source="Bought." text="購入しました。" />
+		<entry source="Buy" text="購入" />
+		<entry source="Buy {item} for {price} {currency}?" text="{item}を{price} {currency}で購入しますか?" />
+		<entry source="Cancel" text="キャンセル" />
+		<entry source="Canter" text="キャンター" />
+		<entry source="Choose where to put it." text="置く場所を選んでください。" />
+		<entry source="Confirm Purchase" text="購入の確認" />
+		<entry source="Could not reach the store. The wallet shows what the server holds."
+		       text="ストアに接続できませんでした。ウォレットにはサーバーの値が表示されます。" />
+		<entry source="Done." text="完了しました。" />
+		<entry source="Drop how many?" text="いくつ捨てますか?" />
+		<entry source="Gallop" text="ギャロップ" />
+		<entry source="Game saved" text="ゲームを保存しました" />
+		<entry source="Load Failed" text="ロード失敗" />
+		<entry source="Loading Failed" text="読み込み失敗" />
+		<entry source="Name" text="名前" />
+		<entry source="Not enough money." text="お金が足りません。" />
+		<entry source="Pause" text="一時停止" />
+		<entry source="Play" text="再生" />
+		<entry source="Purchasing..." text="購入中..." />
+		<entry source="Reload" text="再読み込み" />
+		<entry source="Remove" text="削除" />
+		<entry source="Save" text="保存" />
+		<entry source="Save Failed" text="セーブ失敗" />
+		<entry source="Sold out." text="売り切れです。" />
+		<entry source="Split how many?" text="いくつ分けますか?" />
+		<entry source="Standing" text="停止" />
+		<entry source="That amount is not possible." text="その数量は指定できません。" />
+		<entry source="That slot cannot take it." text="そのスロットには入れられません。" />
+		<entry source="The game could not be saved. Try again, or keep playing without saving."
+		       text="ゲームをセーブできませんでした。もう一度試すか、セーブせずに続けてください。" />
+		<entry source="The purchase reply did not match; your wallet was refreshed."
+		       text="購入の応答が一致しなかったため、ウォレットを更新しました。" />
+		<entry source="The saved game could not be loaded. Try again, or stay here."
+		       text="セーブデータを読み込めませんでした。もう一度試すか、このまま続けてください。" />
+		<entry source="The scene could not be opened. Try again, or stay here."
+		       text="シーンを開けませんでした。もう一度試すか、このまま続けてください。" />
+		<entry source="The slot is empty." text="空きスロットです。" />
+		<entry source="This cannot be bought now." text="現在は購入できません。" />
+		<entry source="This cannot be used." text="使用できません。" />
+		<entry source="Trot" text="トロット" />
+		<entry source="Try Again" text="もう一度試す" />
+		<entry source="Walk" text="常歩" />
+		<entry source="You cannot buy this any more." text="これ以上購入できません。" />
+		<entry source="You cannot equip this there." text="そこには装備できません。" />
+		<entry source="Your bag is full." text="バッグがいっぱいです。" />
+		<entry source="draining" text="退出中" />
+		<entry source="maintenance" text="メンテナンス中" />
+		<entry source="open" text="受付中" />
+		<entry source="starting" text="起動中" />
+		<entry source="{amount} {currency}" text="{amount} {currency}" />
+		<entry source="{item}  {price} {currency}" text="{item}  {price} {currency}" />
+		<entry source="{item} x{count}" text="{item} x{count}" />
+		<entry source="{offer}  ({stock})" text="{offer}  ({stock})" />
+		<entry source="{slot}: {item}" text="{slot}: {item}" />
+		<entry source="{stat} {value}" text="{stat} {value}" />
+	</entries>
+</TranslationMemory>

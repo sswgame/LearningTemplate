@@ -1,12 +1,16 @@
 #include "pch.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/Container/string.h"
+#include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/StringUtil.h"
 #include "Core/Time/WallClock.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/AccountPresence.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/IBalanceChangedListener.h"
-#include "GameFramework/Kits/Feature/Online/Trade/Server/TradeKitConfig.h"
 #include "GameFramework/Kits/Feature/Online/Trade/Server/TradeServer.h"
 #include "GameFramework/Kits/Feature/Online/Trade/Server/TradeService.h"
 #include "GameFramework/Kits/Feature/Online/Trade/Server/TradeStateMachine.h"
@@ -23,6 +27,28 @@
 
 namespace sw
 {
+    /** @brief 거래 키트의 서버 설정입니다. */
+    REFLECT()
+    struct TradeKitConfig
+    {
+        REFLECT_BODY();
+        /** @brief 거래할 수 있는 자산 id 접두어입니다(예: `cur.gold`, `item.`). 하나는 있어야 합니다. */
+        PROPERTY( Required )
+        vector<string> _listTradablePrefix{};
+        /** @brief 한쪽이 내놓을 수 있는 자산 줄 수입니다. */
+        PROPERTY( Required, Min = 1 )
+        int32 _maxLegsPerSide{ 0 };
+        /** @brief 닫힌 거래 레코드의 TTL 입니다. TTL 쓸기가 닫은 뒤 이 기간이 지난 거래를 지웁니다(분쟁 조회 기간). */
+        PROPERTY( Required )
+        ServiceTTLConfig _closedSessionTTL{};
+        /** @brief 신청이 답을 기다리는 시간(ms)입니다. 지나면 거래가 닫힌다. */
+        PROPERTY( Required, Min = 1000, Max = 600000 )
+        int64 _inviteTimeoutMs{ 0 };
+        /** @brief 수락한 거래가 움직임 없이 열려 있을 수 있는 시간(ms)입니다. 지나면 거래가 닫힌다. */
+        PROPERTY( Required, Min = 1000, Max = 3600000 )
+        int64 _idleTimeoutMs{ 0 };
+    };
+
     namespace
     {
         /** @brief 설정의 접두어로 거래 가능 여부를 답하는 거래 정책입니다. 게임이 더 세밀한 규칙을 원하면 자기 정책으로 조립합니다. */
@@ -128,3 +154,5 @@ namespace sw
 {
     SW_REGISTER_ONLINE_SERVER_KIT( TradeOnlineServerKit, OnlineServerKitName::kTrade );
 } // namespace sw
+
+#include "TradeOnlineServerKit.cpp.gen.inl"

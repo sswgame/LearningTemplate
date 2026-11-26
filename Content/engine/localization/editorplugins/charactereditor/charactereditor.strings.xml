@@ -1,0 +1,919 @@
+<?asset guid="a671e4cbe1df466a836aebbb0ce2888f"?>
+<SourceStringTable culture="en">
+	<entries>
+		<entry key="EdPlugin.ASceneSCharacterAppearanceComponentNamesThis"
+		       source="A scene's Character Appearance component names this id.">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.ActionTagTest" source="Test tags:">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.AddBoneTurn" source="Add bone turn">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.AddChain" source="Add chain">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.AddNotifyAtT" source="Add notify at t">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/PairedAnimationPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.AddPair" source="Add pair">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.AddSkinLayer" source="Add layer">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.AddSlot" source="Add slot">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.Appearance" source="Appearance">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.BodyChannelMapped" source="mapped">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.BodyChannelMissing" source="no mapping">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.BodyChannelUnsupported" source="unsupported">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.BodyChannels" source="Body channels">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.BodyChannelsEmpty" source="No body channels. Sliders, body profiles and equipment set them.">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.BodyDataRedo" source="Redo body edit">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.BodyDataSave" source="Save body data">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.BodyDataUndo" source="Undo body edit">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.BodyDataUnsaved" source="Body data has unsaved edits">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.BodyDynamics" source="Body dynamics preview">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.BodyDynamicsNoProfile"
+		       source="The preview body has no body profile. Pick a preset with bodyProfile.">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.BodySlotVisibility" source="Slot visibility">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.BodyTab" source="Body">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.ChannelMap" source="Map">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.ChannelUnsupported" source="Unsupported">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.Check" source="Check">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/PairedAnimationPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.ClearSmears" source="Clear smears">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.ColumnAlias" source="Alias">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.ColumnDyeChannels" source="Dye channels">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.ColumnDyeable" source="Dyeable">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.ColumnGroups" source="Groups">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.ColumnSection" source="Section">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.CustomizationValues" source="Customization values">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.CustomizeReleaseASliderToRefit" source="Customize (release a slider to refit)">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.DataPresetSceneUse" source="Data preset (scene use)">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.DyeSections" source="Dye sections">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.DyeSectionsEmpty" source="No mesh sections. List sections with aliases in the item visual.">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.ExportDataPreset" source="Export data preset">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.EyeLight" source="Light at the eye">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.FitCheckViewOnly" source="Fit check (view only)">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.FluidAddPoint" source="Add point">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.FluidPaths" source="Fluid paths">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.FluidRemovePoint" source="Remove point">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.FluidWetness" source="Tears and saliva">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.FootLift" source="Foot lift (m)">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.HighlightDrive" source="Highlight drive">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.HighlightNone" source="(none)">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.IKGoal" source="IK goal">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.JiggleDisplacement" source="Jiggle (m)">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.JiggleGroups" source="Jiggle">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.LayerMirror" source="Mirror">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.LayerOffset" source="Offset">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.LayerOffsetTooltip" source="Skin UV of the layer centre">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.LayerOpacity" source="Opacity">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.LayerOpacityTooltip" source="How strongly the layer covers the skin">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.LayerRotation" source="Rotation">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.LayerRotationTooltip" source="Rotation of the layer in degrees">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.LayerScale" source="Scale">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.LayerScaleTooltip" source="Skin UV size one layer covers">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.Load" source="Load">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.LoadASkeletonToSeeItsBonesThe"
+		       source="Load a skeleton to see its bones. The skeleton is read-only; edits go to the reference pose file.">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.LoadAppearanceDataToSeeWhichRulesHid"
+		       source="Load appearance data to see which rules hid or changed what.">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.LoadData" source="Load data">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.LoadPose" source="Load pose">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.LoadPresets" source="Load presets">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.LoadSkeleton" source="Load skeleton">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.LoadTheAppearanceDataAppearanceTabToDress"
+		       source="Load the appearance data (Appearance tab) to dress the preview body.">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.LoadTheItemsFileAndTheAppearanceFolder"
+		       source="Load the items file and the appearance folder to pick items and see rule explanations.">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.MapSameNames" source="Map same names">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.Mirror" source="Mirror">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.MirrorBone" source="Mirror bone">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.MoveDown" source="Down">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.MoveUp" source="Up">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.New" source="New">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.NoCustomizationSchemaForThisSelectionLoadThe"
+		       source="No customization schema for this selection (load the appearance data and pick a base preset with a schema).">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.NoFitResultYetThePreviewSceneSolves"
+		       source="No fit result yet. The preview scene solves the fit when a slider is released.">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.NoPenetration" source="No penetration.">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.NoRuleFired" source="No rule fired.">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.OpenAPairedanimXmlToScrubItsRoles"
+		       source="Open a .pairedanim.xml to scrub its roles on one clock, move alignment offsets and edit shared notifies.">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/PairedAnimationPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.OpenARetargetXmlOrTypeANew"
+		       source="Open a .retarget.xml, or type a new path and press New, to pair the chains of two skeletons and check how they bind.">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.PickABasePresetToSeeWhichRules"
+		       source="Pick a base preset to see which rules hid or changed what.">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.PickActiveHint" source="Click the body in the viewport (Esc cancels)">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.PickCancel" source="Stop picking">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.PickPlaceLayer" source="Place in Preview">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.PickSection" source="Pick section in Preview">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.PresetsUserData" source="Presets (user data)">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.Preview" source="Preview">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.PreviewConstraintRig" source="Preview constraint rig">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.PreviewHit" source="Hit">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.PupilSize" source="Pupil size">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.Redo" source="Redo">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/PairedAnimationPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.RedoAppearance" source="Redo appearance">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.RedoPose" source="Redo pose">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.ReloadFromDiskDiscardEdits" source="Reload from disk (discard edits)">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.RemoveSkinLayer" source="Remove">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.Rename" source="Rename">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.ResetBone" source="Reset bone">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.Roles" source="Roles">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/PairedAnimationPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.SaveAsPreset" source="Save as preset">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.SavePose" source="Save pose">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.SaveThumbnail" source="Save thumbnail">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.SelectABoneToEditItsReferencePose" source="Select a bone to edit its reference pose.">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.SelectionBasePresetBodySlotsCustomizationValues"
+		       source="Selection (base preset, body, slots, customization values)">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.SetTheSourceAndTargetSkeletonsToSee"
+		       source="Set the source and target skeletons to see them overlaid here.">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.SharedNotifies" source="Shared notifies">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/PairedAnimationPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.Skeleton" source="Skeleton">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.SkinLayers" source="Skin layers">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.SkinLayersEmpty" source="No skin layers. Add makeup or a tattoo from the list above.">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.SlidersColoursAndChoicesOfTheSchemaAre"
+		       source="Sliders, colours and choices of the schema are in the Preview tab (the body updates when you release a slider).">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.Slots" source="Slots">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.SmearDilution" source="Makeup smear">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.Sockets" source="Sockets">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.Undo" source="Undo">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/PairedAnimationPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.UndoAppearance" source="Undo appearance">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.UndoPose" source="Undo pose">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.ViewportGizmoEditingNeedsThePreviewSceneEditorMultiWorld"
+		       source="Viewport gizmo editing needs the preview scene (EditorMultiWorld).">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.WhyDoesItLookLikeThisRules" source="Why does it look like this? (rules)">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.WrinkleIntensity" source="Wrinkle intensity">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.Wrinkles" source="Wrinkles">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginField.Anchor" source="Anchor">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginField.BasePreset" source="Base preset">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginField.BodyShape" source="Body shape">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginField.BodyType" source="Body type">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginField.BoneRotation" source="Bone rotation">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginField.BoneScale" source="Bone scale">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginField.BoneTranslation" source="Bone translation">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginField.DurationS" source="Duration (s)">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/PairedAnimationPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginField.EnterExitBlendS" source="Enter / exit blend (s)">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/PairedAnimationPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginField.Face" source="Face">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginField.HeightRatio0Pelvis" source="Height ratio (0 = pelvis)">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginField.OffsetM" source="Offset (m)">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/PairedAnimationPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginField.Parent" source="Parent">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginField.PreviewMesh" source="Preview mesh">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginField.Rotation" source="Rotation">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginField.Scale" source="Scale">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginField.SourceBones" source="Source bones">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginField.StartS" source="Start (s)">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/PairedAnimationPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginField.TargetBones" source="Target bones">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginField.Translation" source="Translation">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginField.WarpEndS" source="Warp end (s)">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/PairedAnimationPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginField.YawDeg" source="Yaw (deg)">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/PairedAnimationPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginFormat.BindsOfTargetBones"
+		       source="Binds: {mappedTargetBoneCount} of {targetBoneCount} target bones follow the source, height ratio {heightRatio}">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginFormat.BonesOverridden"
+		       source="{boneCount, plural, one {# bone} other {# bones}}, {overridesCount} overridden{dirty}">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginFormat.Clamped" source="Clamped to range: {clamped}">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginFormat.ClipS"
+		       source="{role, select, anchor {anchor} required {required} other {optional}}  clip {clip}  {stage} {clipSeconds} s{clipLength, select, unknown {  (clip length unknown - pick a prefab)} other {}}">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/PairedAnimationPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginFormat.CutVertsMovedMax"
+		       source="{name}: cut {cutTriangleCount}/{triangleCount} ({cutRatio}%), {movedVertexCount} verts moved, max push {maxDelta}">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginFormat.Dropped" source="Dropped: {dropped}">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginFormat.NoAnimationClipsIn" source="No animation clips in ''{clipFolder}''">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginFormat.PenetrationPointsDepth"
+		       source="Penetration {partA} / {partB}: {vertexCount} points, depth {maxDepth}">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginFormat.Slot" source="Slot {slot}: {requestedItem} -> {fallbackItem} ({reason})">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginFormat.SlotsSetsPresets"
+		       source="{slotsCount, plural, one {# slot} other {# slots}}, {setsCount, plural, one {# set} other {# sets}}, {presetsCount, plural, one {# preset} other {# presets}}">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginFormat.SourceMTargetM"
+		       source="{name}: source {sourceLength} m, target {targetLength} m (x{ratio})">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginFormat.WearingOnBasePreset"
+		       source="Wearing {wearing, select, none {no slot items} other {the selection}} on base preset ''{basePresetID}'' (assembled {appearance} times)">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginTip.AnchorRelativeRootPositionAndYawAt"
+		       source="Anchor-relative root position and yaw at alignment time; select the role object in the viewport to move it with the gizmo">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/PairedAnimationPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginTip.HowRootAndPelvisMovementIsCarried"
+		       source="How root and pelvis movement is carried over (scaled by the pelvis height ratio, copied, or kept in place)">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginTip.ReadTheEditedContentWithTheRuntime"
+		       source="Read the edited content with the runtime loader to check every rule">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/PairedAnimationPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginTip.SolveTheEndOntoTheSourceEnd"
+		       source="Solve the end onto the source end position (feet that plant without sliding)">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginTip.StartAnEmptyProfileAtThisResource"
+		       source="Start an empty profile at this resource id (an existing file is opened instead)">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginTip.StoresThePreviewTabSPictureIn"
+		       source="Stores the Preview tab's picture in the user data slot of the preset of this name (save the preset first)">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginTip.TurnATargetBoneInItsParent"
+		       source="Turn a target bone in its parent space (degrees) so the target reference matches the source reference, e.g. lower the arms of a T-pose source onto an A-pose target">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginWidget.BasePreset" source="Base preset">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginWidget.BoneMap" source="Bone map">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginWidget.Chains" source="Chains">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginWidget.Check" source="Check">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginWidget.EquipmentSet" source="Equip set">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginWidget.Kind" source="Kind">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginWidget.Loop" source="Loop">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginWidget.Options" source="Options">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginWidget.Play" source="Play">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginWidget.Preview" source="Preview">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginWidget.RetargetPose" source="Retarget pose">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginWidget.RootAndPelvis" source="Root and pelvis">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginWidget.Skeletons" source="Skeletons">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginWidget.Stop" source="Stop">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorCharacterEditor.AddSocketButton" source="Add">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorCharacterEditor.NewSocketHint" source="New socket name">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorCharacterEditor.SocketNoSelection" source="Select a socket in the list to edit it.">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+	</entries>
+</SourceStringTable>

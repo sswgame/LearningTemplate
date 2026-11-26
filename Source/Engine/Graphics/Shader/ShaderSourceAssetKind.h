@@ -15,8 +15,10 @@ namespace sw
      */
     struct ShaderSourceAsset
     {
+        /** @brief 원본 파일의 접미사입니다(에디터 슬롯의 거르개도 이 글을 쓴다). */
+        static constexpr const utf8* kFileSuffix       = ".hlsl";
         static constexpr AssetSuffix kArrAssetSuffix[] = {
-            { ".hlsl", AssetSuffixRole::Plain },
+            { kFileSuffix, AssetSuffixRole::Plain },
         };
         static constexpr AssetTypeDef kAssetType{ "ShaderSource", kArrAssetSuffix, static_cast<uint32>( SW_COUNT_OF( kArrAssetSuffix ) ), {}, 0, {} };
 
@@ -31,8 +33,9 @@ namespace sw
      */
     struct ShaderIncludeAsset
     {
+        static constexpr const utf8* kFileSuffix       = ".hlsli";
         static constexpr AssetSuffix kArrAssetSuffix[] = {
-            { ".hlsli", AssetSuffixRole::Plain },
+            { kFileSuffix, AssetSuffixRole::Plain },
         };
         static constexpr AssetTypeDef kAssetType{ "ShaderInclude", kArrAssetSuffix, static_cast<uint32>( SW_COUNT_OF( kArrAssetSuffix ) ), {}, 0, {} };
     };

@@ -8,6 +8,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Foundation/DevSourcePath.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Registry/RegistrationList.h"
@@ -239,6 +240,7 @@ namespace sw
  * @param pWatchGroup 함께 보일 감시 값 묶음 이름(없으면 nullptr)
  */
     #define SW_DEBUG_HUD_CATEGORY( varName, pName, pTitle, order, flags, pFunc, pDrawFunc, pWatchGroup )                                                                 \
+        SW_DEV_REGISTRATION_PATH_CHECK( "SW_DEBUG_HUD_CATEGORY" );                                                                                                       \
         static const ::sw::DebugHUDSectionRegistration sw_debugHUDSection_##varName{ pName, pTitle, pFunc, order, static_cast<uint8>( flags ), pDrawFunc, pWatchGroup }; \
         static ::sw::DebugHUDSectionRegistrar          sw_debugHUDSectionRegistrar_##varName                                                                             \
         {                                                                                                                                                                \

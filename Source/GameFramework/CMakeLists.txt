@@ -19,11 +19,7 @@ list(FILTER list_game_framework_source EXCLUDE REGEX "Plugin/")
 list(FILTER list_game_framework_source EXCLUDE REGEX "/Developer/")
 # 클라이언트 전용 소스(Client/ — HUD · 마커 · 로딩 화면)는 전용 서버가 짓지 않는다(cmake/Modules/Build/ExcludedSources.cmake).
 # 서버 전용 소스(Server/ — 온라인 서버 조립, 서비스 호스트 · 메모리 저장소 · 캐시 · 버스 구현)는 클라이언트 구성이 짓지 않는다.
-if(SW_TARGET_TYPE STREQUAL "Server")
-	sw_remove_excluded_sources(list_game_framework_source ${SW_CLIENT_ONLY_SOURCE_PATTERNS})
-elseif(SW_TARGET_TYPE STREQUAL "Client")
-	sw_remove_excluded_sources(list_game_framework_source ${SW_SERVER_ONLY_SOURCE_PATTERNS})
-endif()
+sw_remove_other_target_sources(list_game_framework_source)
 
 # 리플렉션 대상 헤더는 소스와 **같은 목록**에서 고른다. 주의: 폴더를 이름으로 적어 모으면 최상위 폴더를 하나 더 만들 때 그 안의 REFLECT() 타입이
 # 조용히 등록되지 않는다 — 컴파일은 되고 역직렬화만 실패하므로 찾기 어렵다. (자동 훑기를 쓰지 않는 이유: 폴더 재귀가 Kits/ 까지 내려간다.)

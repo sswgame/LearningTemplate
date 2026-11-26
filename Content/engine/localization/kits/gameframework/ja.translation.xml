@@ -1,0 +1,84 @@
+<?asset guid="6127f52c84d94d848229ce0d8e7c2bc4"?>
+<TranslationTable culture="ja">
+	<entries>
+		<entry key="EdPlugin.Name" text="名前" sourceHash="ef49aec68fd1dc66" />
+		<entry key="EdPlugin.Reload" text="再読み込み" sourceHash="d5b6130b4937488c" />
+		<entry key="EdPlugin.Remove" text="削除" sourceHash="ea4f08110bb8f15d" />
+		<entry key="EdPlugin.Save" text="保存" sourceHash="33f85f24c0f5f008" />
+		<entry key="Enum.InventoryCommandResult.EmptySlot" text="空きスロットです。" sourceHash="b56cc9d513099dfd" />
+		<entry key="Enum.InventoryCommandResult.InvalidCount"
+		       text="その数量は指定できません。"
+		       sourceHash="e710ff918fd580da" />
+		<entry key="Enum.InventoryCommandResult.InvalidSlot"
+		       text="そのスロットには入れられません。"
+		       sourceHash="af46c51eb2b0ce83" />
+		<entry key="Enum.InventoryCommandResult.NoRoom"
+		       text="バッグがいっぱいです。"
+		       sourceHash="3034de0a57eb2551" />
+		<entry key="Enum.InventoryCommandResult.NotUsable" text="使用できません。" sourceHash="fee7c8ce0b060e74" />
+		<entry key="Enum.InventoryCommandResult.Ok" text="完了しました。" sourceHash="7301570d0bb8fc6d" />
+		<entry key="Enum.InventoryCommandResult.Refused"
+		       text="そこには装備できません。"
+		       sourceHash="e65da3e12aa85757" />
+		<entry key="Enum.MountGait.Canter" text="キャンター" sourceHash="8ddeb8be59f30f00" />
+		<entry key="Enum.MountGait.Gallop" text="ギャロップ" sourceHash="5080657618a7ac4a" />
+		<entry key="Enum.MountGait.Idle" text="停止" sourceHash="989261d5eefc4735" />
+		<entry key="Enum.MountGait.Trot" text="トロット" sourceHash="85c8a4fb52a15fd0" />
+		<entry key="Enum.MountGait.Walk" text="常歩" sourceHash="8904bd022d8e7e10" />
+		<entry key="Enum.ServerState.Draining" text="退出中" sourceHash="445341bdde0ebac7" />
+		<entry key="Enum.ServerState.Maintenance" text="メンテナンス中" sourceHash="9e7f28b2e900e4a0" />
+		<entry key="Enum.ServerState.Open" text="受付中" sourceHash="f84f97b4633670e9" />
+		<entry key="Enum.ServerState.Starting" text="起動中" sourceHash="44c11cb1fc7fca39" />
+		<entry key="Enum.ShopPurchaseStatus.Busy" text="購入処理中です。" sourceHash="839e3be6e938c8ed" />
+		<entry key="Enum.ShopPurchaseStatus.LimitReached"
+		       text="これ以上購入できません。"
+		       sourceHash="90b45ac5c64d58fe" />
+		<entry key="Enum.ShopPurchaseStatus.NoRoom" text="バッグがいっぱいです。" sourceHash="3034de0a57eb2551" />
+		<entry key="Enum.ShopPurchaseStatus.NotEnoughMoney"
+		       text="お金が足りません。"
+		       sourceHash="7d5f2b96ea36e02c" />
+		<entry key="Enum.ShopPurchaseStatus.OutOfStock" text="売り切れです。" sourceHash="53429c9af9f7338b" />
+		<entry key="Enum.ShopPurchaseStatus.Rejected"
+		       text="現在は購入できません。"
+		       sourceHash="cc4a444b068922aa" />
+		<entry key="Enum.ShopPurchaseStatus.ServerError"
+		       text="ストアに接続できませんでした。ウォレットにはサーバーの値が表示されます。"
+		       sourceHash="7894b59a4b718b86" />
+		<entry key="Enum.ShopPurchaseStatus.Succeeded" text="購入しました。" sourceHash="7eba7cbbd2693250" />
+		<entry key="Enum.ShopPurchaseStatus.Unverified"
+		       text="購入の応答が一致しなかったため、ウォレットを更新しました。"
+		       sourceHash="ccfce3ecd112ddfe" />
+		<entry key="Inventory.DropTitle" text="いくつ捨てますか?" sourceHash="5851b629b00886c2" />
+		<entry key="Inventory.EquipLine" text="{slot}: {item}" sourceHash="49a515e2a7dc7316" />
+		<entry key="Inventory.ItemCount" text="{item} x{count}" sourceHash="35b4cb38ae71afeb" />
+		<entry key="Inventory.Picked" text="置く場所を選んでください。" sourceHash="76033ca89d70f4b0" />
+		<entry key="Inventory.SplitTitle" text="いくつ分けますか?" sourceHash="009e2ff8de6bc491" />
+		<entry key="Inventory.StatLine" text="{stat} {value}" sourceHash="ed0016c573032a8a" />
+		<entry key="Notification.GameSaved" text="ゲームを保存しました" sourceHash="820b2b70b4c9f0c4" />
+		<entry key="ReplayBar.Pause" text="一時停止" sourceHash="061cc20e3432dead" />
+		<entry key="ReplayBar.Play" text="再生" sourceHash="cd105819b5a10243" />
+		<entry key="SaveGame.LoadFailedMessage"
+		       text="セーブデータを読み込めませんでした。もう一度試すか、このまま続けてください。"
+		       sourceHash="1fb3e376c989cf8a" />
+		<entry key="SaveGame.LoadFailedTitle" text="ロード失敗" sourceHash="6b42d98464d12106" />
+		<entry key="SaveGame.SaveFailedMessage"
+		       text="ゲームをセーブできませんでした。もう一度試すか、セーブせずに続けてください。"
+		       sourceHash="f0f3bf3daa3561bd" />
+		<entry key="SaveGame.SaveFailedTitle" text="セーブ失敗" sourceHash="9d65377afdfb1d2d" />
+		<entry key="SceneLoad.FailedMessage"
+		       text="シーンを開けませんでした。もう一度試すか、このまま続けてください。"
+		       sourceHash="2422111a96377ee9" />
+		<entry key="SceneLoad.FailedTitle" text="読み込み失敗" sourceHash="3b0d43abf06f4ac4" />
+		<entry key="SceneLoad.Retry" text="もう一度試す" sourceHash="8cdcbe65c5e46f7a" />
+		<entry key="Shop.BalanceLine" text="{amount} {currency}" sourceHash="cc7c013f5ab43d0a" />
+		<entry key="Shop.ConfirmAccept" text="購入" sourceHash="166a4319b11387ab" />
+		<entry key="Shop.ConfirmCancel" text="キャンセル" sourceHash="2ceb11be2290bb1b" />
+		<entry key="Shop.ConfirmMessage"
+		       text="{item}を{price} {currency}で購入しますか?"
+		       sourceHash="ea9754ab6e1a7ebc" />
+		<entry key="Shop.ConfirmTitle" text="購入の確認" sourceHash="e3d3f829c35e7d0a" />
+		<entry key="Shop.OfferRow" text="{item}  {price} {currency}" sourceHash="fb8403757162871e" />
+		<entry key="Shop.OfferRowStock" text="{offer}  ({stock})" sourceHash="97981f7eb4dc983a" />
+		<entry key="Shop.Purchasing" text="購入中..." sourceHash="4c1549e91d83c479" />
+	</entries>
+</TranslationTable>

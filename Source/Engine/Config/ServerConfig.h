@@ -112,6 +112,12 @@ namespace sw
         /** @brief 스트림 포트 앞의 L4 · TLS 종단 프록시 IPv4 주소 목록입니다. 적으면 이 주소에서 온 연결만 받고 PROXY protocol v2 머리로 실제 주소를 얻습니다. 비면 클라이언트가 바로 붙습니다. */
         PROPERTY()
         vector<string> _listGameStreamTrustedProxy{};
+        /**
+         * @brief 온라인 서비스(로그인 · 키트)를 띄웁니다. 켜면 옆 온라인 설정(`<이름>.online.json`)과 그것을 세우는 서버 서비스(GameFramework)가 이 서버에 있어야 하고, 없으면 기동을 멈춥니다.
+         * @details 끈 서버에 옆 온라인 설정이 있어도 기동을 멈춘다. 파일이 있고 없음으로 켜고 끄면 이름 하나 틀린 설정이 온라인 없이 조용히 뜬다.
+         */
+        PROPERTY()
+        bool _bOnlineServices{ false };
         /** @brief 서비스(TCP — 로그인 · 채팅 · 거래) 포트입니다. 0 이면 서비스 서버를 열지 않습니다. */
         PROPERTY( Min = 0, Max = 65535 )
         int32 _servicePort{ 7780 };

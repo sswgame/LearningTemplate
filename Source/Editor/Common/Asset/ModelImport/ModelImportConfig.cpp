@@ -16,6 +16,7 @@
 #include "Engine/Animation/Codec/AnimationCodec.h"
 #include "Engine/Asset/AssetDatabase.h"
 #include "Engine/Destruction/Fracture/FractureSettings.h"
+#include "Engine/Reflection/EnumName.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 #include "Engine/Serialization/JSON/JSONFields.h"
 
@@ -65,9 +66,10 @@ namespace sw::editor
         if ( _bFracture == SW_FALSE )
             return {};
         string text = "fracture=";
-        text += FractureSettings::getPatternName( _fracture._pattern );
+        // 원본 해시에 섞는 이름은 열거자 이름이다(임포트 규칙 JSON 의 철자와 같다). 열거자 이름을 바꾸면 파쇄 모델을 모두 다시 임포트한다.
+        text += getEnumName( _fracture._pattern );
         text += ";volume=";
-        text += FractureSettings::getVolumeName( _fracture._volume );
+        text += getEnumName( _fracture._volume );
         StringBuilder<constant::buffer::kMax256> textPart2;
         textPart2.appendFormat( ";pieces=%#;seed=%#;hull=%#;levels=", _fracture._pieceCount, _fracture._seed, _fracture._maxHullPoint );
         text += textPart2.c_str();

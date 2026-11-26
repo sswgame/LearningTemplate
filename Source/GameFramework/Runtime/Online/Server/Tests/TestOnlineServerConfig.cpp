@@ -226,8 +226,9 @@ SW_TEST_CASE( OnlineServerConfigTest, RepositoryOnlineConfigsResolve )
         SW_REQUIRE_TRUE_MSG( manager.loadConfigFromJSON<sw::OnlineServerConfig>( onlineText, filePath.c_str() ), filePath.c_str() );
         // 비밀값은 환경 변수로만 온다 — 값이 아니라 설정의 짝이 맞는지 보는 테스트라 빈칸을 가짜 값으로 채운다.
         const sw::ServerConfig& serverConfig = *manager.getConfig<sw::ServerConfig>();
-        sw::vector<sw::string>  listSecretName;
-        const auto              addSecret = [&listSecretName]( const sw::string& name )
+        SW_EXPECT_TRUE_MSG( serverConfig._bOnlineServices, filePath.c_str() ); // 짝이 있는 서버 설정은 온라인을 켠다(끄면 서버가 기동을 멈춘다)
+        sw::vector<sw::string> listSecretName;
+        const auto             addSecret = [&listSecretName]( const sw::string& name )
         {
             if ( name.empty() == false && sw::Process::hasEnvironment( name ) == false && sw::Process::trySetEnvironment( name, "test-secret" ) )
                 listSecretName.push_back( name );

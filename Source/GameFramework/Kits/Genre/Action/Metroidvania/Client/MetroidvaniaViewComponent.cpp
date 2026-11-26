@@ -1,15 +1,22 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Genre/Action/Metroidvania/Client/MetroidvaniaViewComponent.h"
-
+#include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Log/Logger.h"
+#include "Core/Math/Math.h"
+#include "Core/Memory/Memory.h"
+#include "Core/String/Name/hashed_string.h"
 
+#include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Foundation/WorldOrigin.h"
 #include "Engine/Input/Map/CommonInputActions.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Visual/Component/MeshComponent.h"
 
+#include "GameFramework/Client/View/GameModeViewComponent.h"
+#include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Action/Metroidvania/Client/MetroidvaniaHUDViewModel.h"
 #include "GameFramework/Kits/Genre/Action/Metroidvania/Component/MetroidvaniaGameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Presentation/IHUDViewModelBinder.h"
@@ -17,6 +24,68 @@
 
 namespace sw
 {
+    class GameObjectManager;
+    class MetroidvaniaGameModeComponent;
+    class MetroidvaniaHUDViewModel;
+
+    /**
+     * @class MetroidvaniaViewComponent
+     * @brief `Move` 축과 액션을 디렉터에 넘기고 몸 · 적 · 줍는 것 · 시체 · HUD 를 맞춥니다.
+     */
+    REFLECT( Category = "Metroidvania", DisplayName = "Metroidvania View",
+             Tooltip = "Client side of a metroidvania game: sends input commands to the Metroidvania Game Mode on the same object and shows the player, enemies, pickups, the corpse and the HUD" )
+    class MetroidvaniaViewComponent : public GameModeViewComponent
+    {
+    public:
+        REFLECT_BODY();
+
+        static constexpr TickGroup kTickGroup = TickGroup::PostUpdate;
+
+        MetroidvaniaViewComponent();
+        virtual ~MetroidvaniaViewComponent() override;
+
+    private:
+        /** @brief 틱 뒤 게임 스레드: 입력을 명령으로 넘기고 모습 · HUD 를 맞춥니다. */
+        void updateView( GameObjectManager& manager, MetroidvaniaGameModeComponent& director );
+        void submitInput( const GameModeInput& input, MetroidvaniaGameModeComponent& director ) const;
+        void updateScene( GameObjectManager& manager, const MetroidvaniaGameModeComponent& director ) const;
+        /** @brief 오브젝트 하나를 보이거나 숨기고, 보이면 평면 자리 @p position 을 가운데로 @p size 로 둡니다. */
+        static void placeBody( GameObjectManager& manager, GameObjectHandle body, bool bShown, const float2& position, const float3& size );
+        void        updateHUD( const MetroidvaniaGameModeComponent& director );
+
+    private:
+        PROPERTY( Category = "Input", DisplayName = "Move Action", Tooltip = "InputMap 2D action that runs and climbs (required)" )
+        hashed_string _moveAction;
+        PROPERTY( Required, Category = "Input", DisplayName = "Jump Action", Tooltip = "InputMap action of the jump, higher while held (required)" )
+        hashed_string _jumpAction;
+        PROPERTY( Required, Category = "Input", DisplayName = "Dash Action", Tooltip = "InputMap action of the dash (required)" )
+        hashed_string _dashAction;
+        PROPERTY( Required, Category = "Input", DisplayName = "Attack Action", Tooltip = "InputMap action of the attack (required)" )
+        hashed_string _attackAction;
+        PROPERTY( Required, Category = "Input", DisplayName = "Guard Action", Tooltip = "InputMap action that parries when pressed and guards while held (required)" )
+        hashed_string _guardAction;
+        PROPERTY( Required, Category = "Input", DisplayName = "Use Action", Tooltip = "InputMap action that uses a site (required)" )
+        hashed_string _useAction;
+        PROPERTY( Required, Category = "Input", DisplayName = "Flask Action", Tooltip = "InputMap action that drinks a flask (required)" )
+        hashed_string _flaskAction;
+        PROPERTY( Category = "Scene", DisplayName = "Player Body", Tooltip = "Object shown as the player" )
+        GameObjectHandle _playerBody;
+        PROPERTY( Category = "Scene", DisplayName = "Corpse Body", Tooltip = "Object shown where the dropped currency lies" )
+        GameObjectHandle _corpseBody;
+        PROPERTY( Category = "Scene", DisplayName = "Enemy Bodies", Tooltip = "Objects shown as the enemies, in enemy order" )
+        vector<GameObjectHandle> _listEnemyBody;
+        PROPERTY( Category = "Scene", DisplayName = "Pickup Bodies", Tooltip = "Objects shown as the pickups, in pickup order" )
+        vector<GameObjectHandle> _listPickupBody;
+        PROPERTY( Category = "Look", DisplayName = "Enemy Size", Units = m )
+        float3 _enemySize;
+        PROPERTY( Category = "Look", DisplayName = "Startup Scale", Tooltip = "Enemy height multiplier while it winds up an attack (the parry cue)", Min = 0.1 )
+        float32 _startupScale;
+        PROPERTY( Category = "Look", DisplayName = "Marker Size", Tooltip = "Size of pickups and of the corpse", Units = m )
+        float3 _markerSize;
+
+        SW_TRANSIENT unique_ptr<MetroidvaniaHUDViewModel> _hudViewModel; ///< HUD 가 보는 값(이 컴포넌트가 소유하고 HUD 는 빌려 쓴다 — 먼저 지워지면 HUD 가 스스로 뗀다)
+    };
+
     namespace
     {
         /** @brief 액션 누름을 입력 깃발로 바꿉니다. */
@@ -120,3 +189,5 @@ namespace sw
         _hudViewModel->setResult( director.getExplorePhase() == MetroidvaniaPhase::Dead, director.getExplorePhase() == MetroidvaniaPhase::Won );
     }
 } // namespace sw
+
+#include "MetroidvaniaViewComponent.cpp.gen.inl"

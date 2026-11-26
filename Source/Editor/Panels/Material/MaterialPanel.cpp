@@ -22,6 +22,7 @@
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Graphics/Material/Material.h"
+#include "Engine/Graphics/Shader/ShaderSourceAssetKind.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Localization/LocText.h"
 
@@ -386,7 +387,7 @@ namespace sw::editor
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMaterial", "NameTip" ) );
         string shaderPath = _model.getShaderPath();
         ImGui::BeginGroup(); // 슬롯은 항목 여럿이라 툴팁을 그룹 전체에 붙인다
-        if ( EditorWidgets::drawAssetSlot( SW_LOCKEY( "EdWidget", "Shader" ), shaderPath, ".hlsl" ) )
+        if ( EditorWidgets::drawAssetSlot( SW_LOCKEY( "EdWidget", "Shader" ), shaderPath, ShaderSourceAsset::kFileSuffix ) )
         {
             _model.setShaderPath( shaderPath );
         }

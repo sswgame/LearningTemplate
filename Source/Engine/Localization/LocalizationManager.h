@@ -17,6 +17,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Registry/RegistrationList.h"
 #include "Core/String/Name/hashed_string.h"
 #include "Core/Subsystem/Subsystem.h"
 #include "Core/Subsystem/SubsystemSlot.h"
@@ -40,8 +41,28 @@ namespace sw
     {
         Engine = 0,
         Game,
-        Editor ///< 에디터 UI 문구입니다. 에디터 모듈이 로드하고 언로드하며 배포본에는 없습니다.
+        Editor, ///< 에디터 UI 문구입니다. 에디터 모듈이 로드하고 언로드하며 배포본에는 없습니다.
+        Module  ///< 키트 모듈이 올린 프로젝트입니다(`SW_LOCALIZATION_PROJECT`). 모듈이 내려가면 `syncModuleProjects` 가 뗀다
     };
+
+    /**
+     * @struct LocalizationModuleProject
+     * @brief 키트 모듈 하나가 실행 중에 올리는 현지화 프로젝트입니다(`SW_LOCALIZATION_PROJECT`). 그 모듈이 올라온 동안만 글이 조회 사슬에 든다.
+     * @details 언리얼 플러그인의 현지화 타깃(`.uplugin` 의 LocalizationTargets — 플러그인이 켜지면 그 표를 붙인다)과 같은 자리다. 배포본은 매니페스트 없이 켜진 키트만
+     *          링크하므로 등록 줄이 곧 "그 키트가 있다" 이다. 등록자는 정적 초기화에서 목록에 올리기만 하고, 관리자가 단계 경계(`ModuleLoadStage` · 엔진 기본 에셋)에서 올린다.
+     */
+    struct SW_API LocalizationModuleProject
+    {
+        const utf8* _pProjectPath; ///< 프로젝트 리소스 id(`engine/localization/kits/chat/chat.locproject.xml`)
+
+        [[nodiscard]] static bool add( const LocalizationModuleProject* pProject );
+        static void               remove( const LocalizationModuleProject* pProject );
+        /** @brief 올라온 프로젝트 경로입니다(올린 순서, 사본). */
+        static vector<string> collectProjectPaths();
+    };
+
+    /** @brief 키트 모듈이 두는 현지화 프로젝트 정적 등록자입니다(모듈이 내려가면 뺀다). */
+    SW_DEFINE_STATIC_REGISTRAR( LocalizationModuleProjectRegistrar, const LocalizationModuleProject*, &LocalizationModuleProject::add, &LocalizationModuleProject::remove );
 
     /** @brief 문화권 하나의 번역 상태 개수입니다(로드한 프로젝트 전체). */
     struct LocalizationCultureStatistics
@@ -118,6 +139,12 @@ namespace sw
         [[nodiscard]] bool mountProject( const AssetID& assetID, LocalizationScope scope );
         /** @brief 그 범위의 프로젝트를 내립니다. */
         void unmountProjects( LocalizationScope scope );
+        /**
+         * @brief 키트 모듈이 등록한 프로젝트(`LocalizationModuleProject`)와 `Module` 범위의 탑재를 맞춥니다 — 새 등록은 올리고, 사라진 등록(내려간 모듈)은 뗀다.
+         * @details 모듈 적재 단계(`ModuleLoadStage`)와 엔진 프로젝트 탑재(`EngineDefaultAssetsSubsystem`) 뒤에 부른다. 두 순서 어느 쪽이 먼저여도 같은 결과다.
+         * @return 올리지 못한 등록이 있으면 false 입니다(그 프로젝트의 읽기가 이유를 남겼다 — 키트 글이 빠진 채로 돌지 않게 기동을 멈춘다).
+         */
+        [[nodiscard]] bool syncModuleProjects();
         /** @brief 로드한 프로젝트 이름입니다(로드한 순서). */
         vector<string> getMountedProjectNames() const;
         /**
@@ -320,3 +347,11 @@ namespace sw
         SW_SUBSYSTEM_SLOT( LocalizationManager, Required );
     };
 } // namespace sw
+
+/**
+ * @brief 키트 모듈의 현지화 프로젝트를 등록합니다(그 모듈의 .cpp, 파일 범위). @p id 는 정적 이름 조각이고 @p ProjectPathLiteral 은 프로젝트 리소스 id 입니다.
+ * @code
+ *     SW_LOCALIZATION_PROJECT( Chat, "engine/localization/kits/chat/chat.locproject.xml" );
+ * @endcode
+ */
+#define SW_LOCALIZATION_PROJECT( id, ProjectPathLiteral ) SW_STATIC_REGISTRATION( localizationProject, ::sw::LocalizationModuleProject, ::sw::LocalizationModuleProjectRegistrar, id, ProjectPathLiteral )

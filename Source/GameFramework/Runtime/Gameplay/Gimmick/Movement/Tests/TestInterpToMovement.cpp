@@ -3,14 +3,49 @@
 #include "Core/Foundation/Constants.h"
 #include "Core/TestFramework/TestFramework.h"
 
+#include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Scene/Scene.h"
 
 #include "GameFramework/Runtime/Character/Control/ControlSystem.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/Movement/InterpToMovementComponent.h"
-#include "GameFramework/Runtime/Gameplay/Gimmick/Movement/Tests/TickOrderTestComponents.h"
+
+namespace sw
+{
+    /**
+     * @brief 넷 키트처럼 자기 주 틱에서 씬에 서버 틱을 알리는 컴포넌트입니다. 알리는 차이가 프레임마다 1 씩 늘어 한 프레임 늦게 읽으면 값이 어긋난다.
+     * @details 시작할 때 자기 주 틱을 서버 틱 알림 틱으로 건다(`ControlSystem::setServerTickSource`) — 바닥 서브틱이 그 뒤에 돈다.
+     */
+    REFLECT( HideInMenu )
+    struct ServerTickSourceTestComponent : public Component
+    {
+        REFLECT_BODY();
+
+        uint32 _lastServerTick = 0; ///< 이번 프레임에 알린 서버 틱
+        int64  _offset         = 100;
+
+        void onBeginPlay() override
+        {
+            Component::onBeginPlay();
+            ControlSystem::getOrCreate( *getOwner()->getMutableManager() ).setServerTickSource( getTickHandle() );
+        }
+
+        void onTick( TickContext& context ) override
+        {
+            Component::onTick( context );
+            ControlSystem* pControl = ControlSystem::find( *getOwner()->getManager() ); // 틱 본문은 읽기 매니저 — 서버 틱 발행은 ControlSystem 의 몫이다
+            if ( pControl == nullptr )
+                return;
+            ++_offset;
+            const int64 serverTick = static_cast<int64>( pControl->getTick() ) + _offset;
+            pControl->publishServerTick( serverTick );
+            _lastServerTick = static_cast<uint32>( serverTick );
+        }
+    };
+} // namespace sw
 
 // InterpToMovementTest — 틱 함수 바닥의 자리 계산(왕복 · 고리)과, 바닥이 서버 틱을 알리는 틱 뒤에 돌아 같은 프레임에 알린 틱의 자리에 서는지 본다(서브틱 선행 조건, 씬 순회 없음).
 
@@ -142,3 +177,5 @@ SW_TEST_CASE( InterpToMovementTest, PathStaysAtItsAbsolutePlaceAfterOriginShift 
     pPath->applyTick( kTick );
     SW_EXPECT_NEAR( absoluteX - 100.0f, pRoot->getWorldPosition()._x, 1.0e-3f );
 }
+
+#include "TestInterpToMovement.cpp.gen.inl"

@@ -1,18 +1,45 @@
 #include "pch.h"
 
-#include "GameFramework/Runtime/Foundation/Condition/ObjectActions.h"
+#include "Core/Container/string.h"
+#include "Core/Foundation/Types.h"
+#include "Core/String/Name/hashed_string.h"
 
 #include "Engine/Asset/AssetManager.h"
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Behavior/ActionRegistry.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Object/Prefab/PrefabCache.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
+#include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Foundation/Condition/GameConditions.h"
 
 namespace sw
 {
+    /** @brief `object.replace` · `object.spawn` 의 칸입니다. */
+    REFLECT()
+    struct ObjectPrefabParams
+    {
+        REFLECT_BODY();
+
+        /** @brief 스폰할 프리팹입니다 — 저장 꼴은 GUID 참조(`AssetRefBase`). 글 칸이었을 때는 같은 이름의 참조 칸(`prefab`)과 GUID 이전 도구가 가르지 못했다. */
+        PROPERTY( Required, Tooltip = "Prefab spawned at the target's position (*.prefab.xml)" )
+        AssetRef<PrefabAsset> _prefab{};
+    };
+
+    /** @brief `object.teleport` 의 칸입니다. */
+    REFLECT()
+    struct ObjectTeleportParams
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required, Tooltip = "Object name whose position the target moves to (checkpoint, portal exit, key home)" )
+        hashed_string _to{};
+    };
+
     namespace
     {
         struct ObjectActionsInternal
@@ -101,3 +128,5 @@ namespace sw
     SW_GAME_ACTION( ObjectSpawn, "object.spawn", ObjectPrefabParams, &ObjectActionsInternal::runSpawn );
     SW_GAME_ACTION( ObjectTeleport, "object.teleport", ObjectTeleportParams, &ObjectActionsInternal::runTeleport );
 } // namespace sw
+
+#include "ObjectActions.cpp.gen.inl"

@@ -341,6 +341,7 @@ function(sw_add_game_framework_kit KIT_NAME)
 	# 그 폴더 자체가 모듈인 키트의 소스는 빼지 않는다.
 	sw_escape_regex(kit_directory_regex "${CMAKE_CURRENT_SOURCE_DIR}")
 	list(FILTER list_kit_source EXCLUDE REGEX "^${kit_directory_regex}/(Client|Server)/")
+	sw_remove_other_target_sources(list_kit_source) # 더 깊은 `Client/` · `Server/`(예: `Dev/Client/`)는 대상 종류가 거른다
 	sw_add_module_library(${KIT_NAME}
 		KIND kit
 		DEV_TYPE SHARED
@@ -424,11 +425,7 @@ function(sw_add_game_module MODULE_NAME)
 	list(FILTER list_game_source EXCLUDE REGEX "/Editor/")
 	# 게임의 클라이언트 전용 소스(Client/ — 그리는 벤치 · UI 시연)는 전용 서버가 짓지 않는다(cmake/Modules/Build/ExcludedSources.cmake).
 	# 게임의 서버 전용 소스(Server/)는 클라이언트 구성이 짓지 않는다.
-	if(SW_TARGET_TYPE STREQUAL "Server")
-		sw_remove_excluded_sources(list_game_source ${SW_CLIENT_ONLY_SOURCE_PATTERNS})
-	elseif(SW_TARGET_TYPE STREQUAL "Client")
-		sw_remove_excluded_sources(list_game_source ${SW_SERVER_ONLY_SOURCE_PATTERNS})
-	endif()
+	sw_remove_other_target_sources(list_game_source)
 	sw_open_dev_headers(game ${list_game_source}) # 디버그 그리기는 게임의 개발 전용 소스(Dev/)만 본다
 	sw_add_module_library(${target_name}
 		KIND game

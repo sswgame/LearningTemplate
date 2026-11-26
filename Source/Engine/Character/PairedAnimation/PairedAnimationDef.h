@@ -7,8 +7,8 @@
  *          @code
  *          <PairedAnimation duration="1.6">
  *            <Role name="Archer" anchor="true" required="true" clip="Bow_Shoot_Archer" enterBlend="0.15" exitState="Idle" exitBlend="0.2"/>
- *            <Role name="Bow" required="true" clip="Bow_Shoot_Bow" align="none" enterBlend="0" exitState="Bow_Idle" exitBlend="0.1"/>
- *            <Role name="Victim" required="true" clip="Grab_Victim" align="warp" offset="0 0 1" yaw="180" warpEnd="0.3" maxAlignDistance="1.5"
+ *            <Role name="Bow" required="true" clip="Bow_Shoot_Bow" align="None" enterBlend="0" exitState="Bow_Idle" exitBlend="0.1"/>
+ *            <Role name="Victim" required="true" clip="Grab_Victim" align="Warp" offset="0 0 1" yaw="180" warpEnd="0.3" maxAlignDistance="1.5"
  *                  enterBlend="0.1" exitState="Idle" exitBlend="0.2"/>
  *            <Notify name="ReleaseArrow" time="0.9" role="Bow"/>
  *            <Select role="Victim" minAngle="-45" maxAngle="45" maxDistance="2"/>
@@ -40,8 +40,9 @@ namespace sw
 
     /**
      * @enum PairedAnimationAlign
-     * @brief 역할 루트를 앵커 기준 자리에 맞추는 방법입니다.
+     * @brief 역할 루트를 앵커 기준 자리에 맞추는 방법입니다. 파일의 `align` 은 열거자 이름이다.
      */
+    ENUM()
     enum class PairedAnimationAlign : uint8
     {
         None = 0, ///< 맞추지 않는다(앵커, 소켓에 붙은 프롭).
@@ -116,7 +117,7 @@ namespace sw
 
     /**
      * @brief `<Role>` 의 칸입니다. 각(`Radians`)은 파일에서 도 단위이고 읽는 입구가 라디안으로 담는다.
-     * @details 정렬(`align` — none · snap · warp)에 따라 받는 칸이 다르다: snap · warp 는 `offset` · `maxAlignDistance` 가 필수, warp 는 `warpEnd` 도 필수,
+     * @details 정렬(`align` — None · Snap · Warp)에 따라 받는 칸이 다르다: snap · warp 는 `offset` · `maxAlignDistance` 가 필수, warp 는 `warpEnd` 도 필수,
      *          그 밖에는 셋을 적으면 오류다. 그 "적었는지"는 `PairedAnimationDef::readRole` 이 본다.
      */
     REFLECT()

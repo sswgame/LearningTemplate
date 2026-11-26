@@ -13,6 +13,7 @@
 	<Launch variable="gv_firstScene" value="game/playground/maps/toonshowcase.scene.xml"/>
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<Screenshot file="materialswitch_on.ppm"/>
+	<DevCommand line="matfind keyword MATERIAL_SURFACE_MODEL_TOON game/playground/materials/toonshowcase_toon.material"/> <!-- 태그 색인(MaterialTagIndex) — 읽지 않은 머티리얼도 드는 질의에 툰 구가 든다 -->
 	<DevCommand line="matswitch game/playground/materials/toonshowcase_toon.material Outline 0"/>
 	<AdvanceSimulation frames="1"/> <!-- 다음 단계를 다음 프레임에(프레임 경계 — 그리지 않는 프레임 없음) -->
 	<Expect watch="Assets.Pending" equals="0"/>

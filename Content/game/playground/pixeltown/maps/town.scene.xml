@@ -115,7 +115,7 @@
 					                 _sortingLayer="Default"
 					                 _orderInLayer="0" />
 					<SpriteAnimatorComponent _localID="6519445003455735703"
-					                         _currentAnimation="idle_down"
+					                         _currentAnimation="idle_Down"
 					                         _bRepeat="true" />
 					<DialogueRunnerComponent _localID="1294512687050719775" _graphPath="guid:ef7f110232363806a3a073c9d3e3e86f" _bPostSubtitles="true">
 						<_listSpeakerSlot>

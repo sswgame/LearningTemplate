@@ -163,5 +163,12 @@ namespace sw
          * @return 팩 하나라도 실패하면(이유는 오류로 남긴다) false 입니다. 굽을 도메인이 하나도 없어도 false 입니다.
          */
         [[nodiscard]] static bool cookAllPacks( const PackConfig& config, const PackCookParams& params, const CookStore& store, uint32& outPackCount );
+        /**
+         * @brief `cookAllPacks` 가 같은 @p config · @p params 로 담을 원본의 리소스 id(정규화)를 @p outSetReached 에 채웁니다. 빠진 참조 · 도메인 없음은 오류를 남기고 false 입니다.
+         * @details 셰이더 굽기가 출처가 닿지 않은 변형을 굽지 않도록 쿠킹 세션 앞에서 부른다(`ShaderCookRequest::isAnyOriginReached` — 팩의 `isStrippedShaderVariant` 와 같은 판정).
+         *          고르기와 같은 입력 · 같은 그래프 걷기라 팩 단계가 다시 걸어도 같은 집합이다. 언리얼 쿠커가 쿠킹할 패키지를 먼저 모으고 그 머티리얼의 셰이더 맵만 컴파일하는 자리다.
+         *          `_packOutputDir` · `_cookedDir` · `_mapRequestedShaderBinary` 는 보지 않는다.
+         */
+        [[nodiscard]] static bool collectReachedAssets( const PackConfig& config, const PackCookParams& params, unordered_set<string>& outSetReached );
     };
 } // namespace sw

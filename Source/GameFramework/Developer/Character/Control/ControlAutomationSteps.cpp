@@ -7,8 +7,10 @@
 
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/Radians.h"
+#include "Core/Math/VectorMath.h"
 #include "Core/String/Name/hashed_string.h"
 #include "Core/String/StringUtil.h"
 
@@ -17,8 +19,9 @@
 #include "Engine/Automation/Scenario/IAutomationStepContext.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Runtime/Character/Control/ControlAutomationParams.h"
+#include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Character/Control/Controller/ControllerComponent.h"
 #include "GameFramework/Runtime/Character/Control/Controller/IntentPlayback.h"
 #include "GameFramework/Runtime/Character/Control/Controller/IntentTrackControllerComponent.h"
@@ -27,6 +30,36 @@
 
 namespace sw
 {
+    /** @brief `Intent` 의 인자입니다. `yaw` · `pitch` 는 적지 않으면 폰의 지금 값을 그대로 둡니다(적었는지가 뜻이라 손으로 읽습니다). */
+    REFLECT()
+    struct ControlIntentStepParams
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        string _pawn{};
+        PROPERTY()
+        float2 _move{};
+        PROPERTY()
+        float32 _up{ 0.0f };
+        PROPERTY()
+        string _buttons{}; ///< 버튼 이름을 쉼표로 잇는다
+        PROPERTY( Min = 1 )
+        uint32 _frames{ 1 };
+    };
+
+    /** @brief `Possess` 의 인자입니다. `pawn` 을 적지 않으면 놓습니다. */
+    REFLECT()
+    struct ControlPossessStepParams
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        string _controller{};
+        PROPERTY()
+        string _pawn{};
+    };
+
     namespace
     {
         struct ControlAutomationStepsInternal
@@ -176,3 +209,5 @@ namespace sw
     SW_AUTOMATION_STEP( controlIntent, "Intent", &ControlAutomationStepsInternal::runIntentStep, &ControlAutomationStepsInternal::validateIntentStep, AutomationStepOptions{}.withBeforeInput() );
     SW_AUTOMATION_STEP( controlPossess, "Possess", &ControlAutomationStepsInternal::runPossessStep, &AutomationStep::validateProperties<ControlPossessStepParams>, AutomationStepOptions{}.withBeforeInput() );
 } // namespace sw
+
+#include "ControlAutomationSteps.cpp.gen.inl"

@@ -1,12 +1,21 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Genre/RPG/MonsterCollector/Client/MonsterCollectorAvatarComponent.h"
+#include "Core/Foundation/Types.h"
+#include "Core/Math/Math.h"
+#include "Core/Memory/Memory.h"
+#include "Core/String/Name/hashed_string.h"
 
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Input/Map/CommonInputActions.h"
 #include "Engine/Input/Map/GameInputView.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/Prefab/PrefabAsset.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
+#include "GameFramework/Client/View/GameModeViewComponent.h"
+#include "GameFramework/Client/View/PrefabViewBatch.h"
+#include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/RPG/MonsterCollector/Client/MonsterCollectorHUDViewModel.h"
 #include "GameFramework/Kits/Genre/RPG/MonsterCollector/Component/MonsterCollectorGameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Presentation/IHUDViewModelBinder.h"
@@ -14,6 +23,69 @@
 
 namespace sw
 {
+    class GameInputView;
+    class GameObjectManager;
+    class MonsterCollectorGameModeComponent;
+    class MonsterCollectorHUDViewModel;
+
+    /**
+     * @class MonsterCollectorAvatarComponent
+     * @brief 걷는 동안은 `Move` · 쉬기, 전투 중에는 기술 고르기 · 기술 · 볼 · 교체 · 도망을 디렉터 명령으로 넘기고 판을 그립니다.
+     */
+    REFLECT( Category = "MonsterCollector", DisplayName = "Monster Collector Avatar",
+             Tooltip = "Client side of a MonsterCollector outing: sends commands to the Monster Collector Game Mode on the same object, draws the glade and the foe and fills the HUD" )
+    class MonsterCollectorAvatarComponent : public GameModeViewComponent
+    {
+    public:
+        REFLECT_BODY();
+
+        static constexpr TickGroup kTickGroup = TickGroup::PostUpdate;
+
+        MonsterCollectorAvatarComponent();
+        virtual ~MonsterCollectorAvatarComponent() override;
+
+        void onBeginPlay() override;
+        /** @brief 세운 모습을 지웁니다. */
+        void onEndPlay() override;
+
+    private:
+        /** @brief 틱 뒤 게임 스레드: 입력을 명령으로 넘기고 HUD · 그리기를 합니다. */
+        void updateAvatar( GameObjectManager& manager, MonsterCollectorGameModeComponent& director );
+        void submitInput( const GameModeInput& input, MonsterCollectorGameModeComponent& director );
+        void submitExploreInput( MonsterCollectorGameModeComponent& director, const GameInputView& input );
+        void submitBattleInput( MonsterCollectorGameModeComponent& director, const GameInputView& input );
+        /** @brief 고른 기술을 나선 개체의 빈 슬롯이 아닌 것으로 맞추고, `Move` 축을 한 번 기울였으면 다음 기술로 옮깁니다. */
+        void updateMoveSlot( const MonsterCollectorGameModeComponent& director, float32 axis );
+        void updateHUD( const MonsterCollectorGameModeComponent& director );
+        /** @brief 쉼터 · 플레이어 · 상대를 그립니다. */
+        void draw( const MonsterCollectorGameModeComponent& director, GameObjectManager& manager );
+
+    private:
+        PROPERTY( Category = "Input", DisplayName = "Move Action", Tooltip = "InputMap 2D action that walks the player and cycles the battle move (required)" )
+        hashed_string _moveAction;
+        PROPERTY( Required, Category = "Input", DisplayName = "Attack Action", Tooltip = "InputMap action that uses the chosen move (required)" )
+        hashed_string _attackAction;
+        PROPERTY( Required, Category = "Input", DisplayName = "Ball Action", Tooltip = "InputMap action that throws a ball (required)" )
+        hashed_string _ballAction;
+        PROPERTY( Required, Category = "Input", DisplayName = "Switch Action", Tooltip = "InputMap action that brings in the next usable monster (required)" )
+        hashed_string _switchAction;
+        PROPERTY( Required, Category = "Input", DisplayName = "Run Action", Tooltip = "InputMap action that runs from the battle (required)" )
+        hashed_string _runAction;
+        PROPERTY( Required, Category = "Input", DisplayName = "Rest Action", Tooltip = "InputMap action that rests at the camp (required)" )
+        hashed_string _restAction;
+
+        PROPERTY( Required, Category = "View", DisplayName = "Body Prefab", Tooltip = "Prefab with one mesh, feet at its origin and one metre tall, spawned for every body the view shows" )
+        AssetRef<PrefabAsset> _bodyPrefab;
+        PROPERTY( Required, Category = "View", DisplayName = "Marker Prefab", Tooltip = "One-metre cube prefab, spawned for every marker the view shows" )
+        AssetRef<PrefabAsset> _markerPrefab;
+
+        SW_TRANSIENT PrefabViewBatch _bodies;
+        SW_TRANSIENT PrefabViewBatch _markers;
+        SW_TRANSIENT unique_ptr<MonsterCollectorHUDViewModel> _hudViewModel; ///< HUD 가 보는 값(이 컴포넌트가 소유하고 HUD 는 빌려 쓴다)
+        SW_TRANSIENT int32                                    _moveSlot;     ///< 고른 기술 슬롯
+        SW_TRANSIENT int32                                    _lastStep;     ///< 지난 프레임의 축 방향(-1 · 0 · 1) — 놓아야 다음 기술을 고른다
+    };
+
     namespace
     {
         /** @brief 모습의 색 · 크기(m)와 입력 문턱입니다. */
@@ -187,3 +259,5 @@ namespace sw
         (void)_bodies.show( manager, _bodyPrefab, player + Internal::kFoeOffset, Internal::kMonsterScale, 0.0f, Internal::kFoeColor );
     }
 } // namespace sw
+
+#include "MonsterCollectorAvatarComponent.cpp.gen.inl"

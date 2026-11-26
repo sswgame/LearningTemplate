@@ -15,6 +15,7 @@
 #include "Engine/Content/Pack/Tests/PackTestUtil.h"
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
 #include "Engine/Foundation/EngineSubsystems.h"
+#include "Engine/Graphics/Material/MaterialTagIndex.h"
 #include "Engine/Serialization/Inherit/ResourceComposition.h"
 
 #include "GameFramework/Kits/Feature/Content/ModSupport/ModAllowList.h"
@@ -345,6 +346,45 @@ SW_TEST_CASE( ModSessionTest, ModIndexCannotRedirectAKnownGUID )
         SW_EXPECT_FALSE( session.apply( getContentPreparationTokenForTest(), request, Internal::makeSettings() ) );
     }
     (void)AssetRegistry::install( previous );
+}
+
+/**
+ * @brief [ModSessionTest] 모드 머티리얼은 모드 팩의 `materialindex.xml` 로 실려, 적용하는 동안 태그 질의(`MaterialTagIndex::loadMounted`)에 든다. 풀면 빠진다
+ * @details 음성 대조: 빌더가 색인을 싣지 않거나 `loadMounted` 가 패치 팩 층을 쌓지 않으면 첫 개수 단언이 진다. 세션이 색인 항목을 밝히지 않은 항목으로 거절하면 적용이 진다.
+ */
+SW_TEST_CASE( ModSessionTest, ModMaterialsJoinTheTagIndexWhileApplied )
+{
+    using Internal = TestModSessionInternal;
+    test::ScopedScratchDomain domain;
+    SW_REQUIRE_TRUE( Internal::writeText( domain.makeDiskPath( "data/welcome.xml" ), "base" ) );
+    const AbsolutePath      root    = test::makeScratchPath( "ModMaterialIndexRoot" );
+    const ModSessionRequest request = Internal::makeRequest( root, { "lantern" } );
+    const AbsolutePath      source  = request._installFolder.join( "lantern" ).join( ModPackBuilder::kSourceFolderName );
+    SW_REQUIRE_TRUE( Internal::writeSourceMod( request._installFolder, "lantern" ) );
+    SW_REQUIRE_TRUE( Internal::writeText( source.join( "mods/lantern/materials/glow.material" ), R"(<?asset guid="0000000000000000000000000000c0ff"?>
+<MaterialDef formatVersion="0" name="Glow" shaderPath="engine/shaders/pbr_lit.hlsl" surfaceModel="Lit" alphaMode="Opaque">
+	<_permutations quality="High" shaderLOD="300" usage="StaticMesh">
+		<_staticSwitches>
+			<item name="Glow" keyword="MATERIAL_GLOW" bEnabled="1" bShaderFeature="1"/>
+		</_staticSwitches>
+	</_permutations>
+</MaterialDef>
+)" ) );
+    const string reference = AssetRegistry::makeReferenceText( *AssetGUID::tryParse( "0000000000000000000000000000c0ff" ) );
+
+    AssetManager& assets = engine::getSubsystem<AssetManager>();
+    {
+        ModSession session( assets );
+        SW_REQUIRE_TRUE( session.apply( getContentPreparationTokenForTest(), request, Internal::makeSettings() ) );
+        const expected<MaterialTagIndex> index = MaterialTagIndex::loadMounted( {} ); // 도메인 없이 — 모드 팩 층만
+        SW_REQUIRE_TRUE( index.has_value() );
+        const vector<string> listGlow = index->findByKeyword( "MATERIAL_GLOW" );
+        SW_REQUIRE_EQUAL( size_t{ 1 }, listGlow.size() );
+        SW_EXPECT_TRUE( listGlow[0] == reference );
+    }
+    const expected<MaterialTagIndex> released = MaterialTagIndex::loadMounted( {} );
+    SW_REQUIRE_TRUE( released.has_value() );
+    SW_EXPECT_TRUE( released->findByKeyword( "MATERIAL_GLOW" ).empty() );
 }
 
 // 모드 팩도 배포 팩과 같은 저장 방식 규칙(PackEntryStorageRule)을 쓴다 — 범위로 읽는 텍스처(.dds)는 Stored, 글은 블록 압축이다.

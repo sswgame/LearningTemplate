@@ -110,6 +110,17 @@ function(sw_remove_excluded_sources LIST_VAR)
 	set(${LIST_VAR} "${list_kept}" PARENT_SCOPE)
 endfunction()
 
+# 목록 변수 LIST_VAR 에서 이 대상 종류가 짓지 않는 쪽의 소스를 뺀다 — 전용 서버(Server)는 `Client/`, 클라이언트(Client)는 `Server/`.
+# 소스를 트리째 모으는 타깃(GameFramework · GameFrameworkDev · 키트 · 게임 · DevTools)이 모두 이 함수를 지난다 — 타깃마다 같은 갈래를 다시 적으면 새 타깃이 빠뜨린다.
+function(sw_remove_other_target_sources LIST_VAR)
+	if(SW_TARGET_TYPE STREQUAL "Server")
+		sw_remove_excluded_sources(${LIST_VAR} ${SW_CLIENT_ONLY_SOURCE_PATTERNS})
+	elseif(SW_TARGET_TYPE STREQUAL "Client")
+		sw_remove_excluded_sources(${LIST_VAR} ${SW_SERVER_ONLY_SOURCE_PATTERNS})
+	endif()
+	set(${LIST_VAR} "${${LIST_VAR}}" PARENT_SCOPE)
+endfunction()
+
 # 목록 LIST_VAR 에서 접두(ARGN, 예: `OnlineLoadBot/`)로 시작하는 헤더를 `#include "…"` 하는 소스를 빼고, 뺀 것을 "짓지 않는 소스" 로 적는다.
 # 파일 이름 정규식을 손으로 적는 대신 소스가 스스로 말하는 의존(include)을 읽는다 — 도구 타깃이 없는 구성에서 그 도구를 쓰는 테스트가 빠진다.
 # 한 단계만 본다(그 헤더를 간접으로 끄는 파일은 보지 않는다).

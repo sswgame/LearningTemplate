@@ -1,0 +1,40 @@
+<?asset guid="638d2c320c05457d81117c83adbd3496"?>
+<SourceStringTable culture="en">
+	<entries>
+		<entry key="EdPlugin.OpenACamerasXmlPresetFileToSee"
+		       source="Open a .cameras.xml preset file to see its cameras here. Edit presets in the Catalog Editor.">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CameraPresets/CameraPresetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.OrthographicPresetThePreviewDrawsItInPerspective"
+		       source="Orthographic preset - the preview draws it in perspective.">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CameraPresets/CameraPresetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginField.TargetYaw" source="Target yaw">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CameraPresets/CameraPresetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginFormat.OffsetDistancePitchYaw"
+		       source="offset {offsetX}, {offsetY}, {offsetZ}  distance {distance}  pitch {pitch}  yaw {yaw}  fov {computeFieldOfViewY}">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CameraPresets/CameraPresetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginTip.DirectionTheTargetFacesFollowFirstPersonAnd"
+		       source="Direction the target faces - Follow, FirstPerson and ThirdPerson presets turn with it">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CameraPresets/CameraPresetPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginTip.ReadThePresetFileAgainAfterSaving"
+		       source="Read the preset file again (after saving it in the Catalog Editor)">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CameraPresets/CameraPresetPanel.cpp</item>
+			</origins>
+		</entry>
+	</entries>
+</SourceStringTable>

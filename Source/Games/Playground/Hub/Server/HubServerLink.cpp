@@ -116,7 +116,8 @@ namespace sw
         if ( _pPeers == nullptr )
             return;
         _beforeWithdraw.reset();
-        saveAll(); // 저장소가 먼저 내려갔으면 `flushProfiles` 가 이미 맡겼다 — 바뀐 것이 없어 다시 맡기지 않는다
+        // 모듈 리로드는 저장소보다 링크를 먼저 내린다. 합쳐 둔 쓰기까지 저장소에 닿게 기다린다. 저장소가 먼저 내려갔으면(서버 종료) 이미 맡겨 바뀐 것이 없다.
+        flushProfiles();
         vector<int32> listConnection;
         for ( const auto& entry : _mapAgent )
         {

@@ -15,6 +15,7 @@
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Content/ContentHash.h"
 #include "Engine/Foundation/EngineSubsystems.h"
+#include "Engine/Reflection/EnumName.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
 namespace sw
@@ -229,7 +230,7 @@ namespace sw
         text.append( "\noutput " ).append( CookRecordInternal::toHex( _outputHash ) );
         for ( const CookInput& input : _listInput )
         {
-            text.append( "\n" ).append( CookInput::getKindName( input._kind ) ).append( " " ).append( CookRecordInternal::toHex( input._contentHash ) ).append( " " );
+            text.append( "\n" ).append( getEnumName( input._kind ) ).append( " " ).append( CookRecordInternal::toHex( input._contentHash ) ).append( " " );
             if ( input._kind == CookInputKind::Listing )
                 text.append( input._extension ).append( " " );
             text.append( input._source );
@@ -271,27 +272,28 @@ namespace sw
             const string_view line = StringUtil::trim( listLine[lineIndex] );
             if ( line.empty() )
                 continue;
-            const size_t      firstSpace   = line.find( ' ' );
-            const string_view field        = line.substr( 0, firstSpace );
-            const string_view rest         = firstSpace == string_view::npos ? string_view{} : line.substr( firstSpace + 1 );
-            bool              bParsed      = false;
-            const bool        bHashed      = rest.size() > 17 && rest[16] == ' '; // 16 자리 해시, 빈칸, 나머지
-            const string_view afterHash    = bHashed ? rest.substr( 17 ) : string_view{};
-            const size_t      extensionEnd = afterHash.find( ' ' ); // 목록: 확장자, 빈칸, 폴더 id
-            const bool        bHasFolder   = extensionEnd != string_view::npos && extensionEnd + 1 < afterHash.size();
+            const size_t                  firstSpace   = line.find( ' ' );
+            const string_view             field        = line.substr( 0, firstSpace );
+            const string_view             rest         = firstSpace == string_view::npos ? string_view{} : line.substr( firstSpace + 1 );
+            bool                          bParsed      = false;
+            const bool                    bHashed      = rest.size() > 17 && rest[16] == ' '; // 16 자리 해시, 빈칸, 나머지
+            const string_view             afterHash    = bHashed ? rest.substr( 17 ) : string_view{};
+            const size_t                  extensionEnd = afterHash.find( ' ' ); // 목록: 확장자, 빈칸, 폴더 id
+            const bool                    bHasFolder   = extensionEnd != string_view::npos && extensionEnd + 1 < afterHash.size();
+            const optional<CookInputKind> kind         = tryParseEnum<CookInputKind>( field ); // 입력 줄의 머리는 종류의 열거자 이름이다(옛 소문자 철자는 모르는 줄 — 다시 굽는다)
             if ( field == "key" )
                 bParsed = bHasKey = CookRecordInternal::parseHex( rest, outRecord._key );
             else if ( field == "output" )
                 bParsed = bHasOutput = CookRecordInternal::parseHex( rest, outRecord._outputHash );
-            else if ( ( field == CookInput::getKindName( CookInputKind::Resource ) || field == CookInput::getKindName( CookInputKind::DiskFile ) ) && bHashed )
+            else if ( kind.has_value() && *kind != CookInputKind::Listing && bHashed )
             {
                 CookInput input;
-                input._kind   = field == CookInput::getKindName( CookInputKind::DiskFile ) ? CookInputKind::DiskFile : CookInputKind::Resource;
+                input._kind   = *kind;
                 input._source = string( afterHash );
                 bParsed       = CookRecordInternal::parseHex( rest.substr( 0, 16 ), input._contentHash );
                 outRecord._listInput.push_back( std::move( input ) );
             }
-            else if ( field == CookInput::getKindName( CookInputKind::Listing ) && bHasFolder )
+            else if ( kind == CookInputKind::Listing && bHasFolder )
             {
                 CookInput input;
                 input._kind      = CookInputKind::Listing;

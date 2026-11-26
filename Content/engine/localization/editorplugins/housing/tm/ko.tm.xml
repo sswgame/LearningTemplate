@@ -1,0 +1,8 @@
+<?asset guid="fa3d734f38d34d959edcce74033c6bb2"?>
+<TranslationMemory culture="ko">
+	<entries>
+		<entry source="Bounds and cells of every housing plot in the scene, with its id and size"
+		       text="씬의 하우징 부지마다 경계와 칸, id 와 크기" />
+		<entry source="Plots" text="부지" />
+	</entries>
+</TranslationMemory>

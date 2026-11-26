@@ -18,11 +18,7 @@ sw_filter_platform_sources(DEVTOOLS_SOURCES) # OS 파일 감시기(`FileWatch/Wi
 # 자동화 시나리오 실행기(`Client/Automation` — 언리얼 Automation 컨트롤러 · Gauntlet 이 Developer 모듈인 자리)도 여기다. 창 · RHI · 렌더러 사진을 모는 클라이언트 구동기라 서버는 짓지 않고,
 # 엔진 창구 `IAutomationRuntime` 에 모듈 서브시스템으로 스스로 선다(`SW_MODULE_SUBSYSTEM` — 호스트 라이브러리 등록이 "Engine" 이름으로 걷는다).
 # 설정 리로드 · 콘솔의 입력 · 시작 명령은 서버에도 선다.
-if(SW_TARGET_TYPE STREQUAL "Server")
-	sw_remove_excluded_sources(DEVTOOLS_SOURCES ${SW_CLIENT_ONLY_SOURCE_PATTERNS})
-elseif(SW_TARGET_TYPE STREQUAL "Client")
-	sw_remove_excluded_sources(DEVTOOLS_SOURCES ${SW_SERVER_ONLY_SOURCE_PATTERNS}) # 서버 전용 부분(Server/)은 클라이언트 구성이 짓지 않는다
-endif()
+sw_remove_other_target_sources(DEVTOOLS_SOURCES) # 서버 전용 부분(Server/)은 클라이언트 구성이 짓지 않는다
 
 # 정적 모듈 구성(웹 · Android 개발 — `SW_STATIC_MODULES`)은 정적 라이브러리로 한 실행 파일에 들고, 핫 리로드(`ModuleReload/` — 모듈 DLL 을 갈아 끼운다)를 짓지 않는다.
 # 그 창구(`IHostDevLayer` 의 리로드 함수)는 그 구성에서 리로드가 없다고 답한다(`Host/HostDevLayer.cpp`). 자동화 실행기 · 콘솔 · 설정 리로드는 남는다.
