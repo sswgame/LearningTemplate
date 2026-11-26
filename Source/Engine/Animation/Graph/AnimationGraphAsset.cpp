@@ -10,9 +10,9 @@
 #include "Engine/Animation/Skeletal/AnimationPoseNode.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Foundation/EngineSubsystems.h"
+#include "Engine/Serialization/Compose/AssetComposer.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
 #include "Engine/Serialization/Inherit/DataInheritanceSchemaRegistry.h"
-#include "Engine/Serialization/Inherit/ResourceComposer.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
@@ -128,7 +128,7 @@ namespace sw
         string text;
         if ( AssetIO::readTextAsset( assetID, text ) == false )
             return false;
-        return parseText( text, path, ResourceContext::forSchema( &AnimationGraphAssetInternal::makeInheritanceSchema ).withAsset( assetID ) );
+        return parseText( text, path, AssetComposeContext::forSchema( &AnimationGraphAssetInternal::makeInheritanceSchema ).withAsset( assetID ) );
     }
 
     bool AnimationGraphAsset::loadFromDiskFile( const DiskPath& diskPath )
@@ -141,7 +141,7 @@ namespace sw
         string text;
         if ( AssetIO::readTextFile( diskPath, text ) == false )
             return false;
-        return parseText( text, diskPath.str(), ResourceContext::forSchema( &AnimationGraphAssetInternal::makeInheritanceSchema ) );
+        return parseText( text, diskPath.str(), AssetComposeContext::forSchema( &AnimationGraphAssetInternal::makeInheritanceSchema ) );
     }
 
     bool AnimationGraphAsset::saveToFile( const AbsolutePath& absPath ) const
@@ -150,33 +150,33 @@ namespace sw
             return false;
         const string fullText = toXML();
         if ( _baseID.empty() )
-            return ResourceComposer::saveText( absPath, ResourceSaveText::makeComplete( fullText ) );
+            return AssetComposer::saveText( absPath, AssetSaveText::makeComplete( fullText ) );
         AnimationGraphAsset parent;
         if ( parent.loadFromAsset( AssetID{ _baseID } ) == false )
         {
             DataInheritance::reportBaseNotFound( _baseID, absPath.str() );
             return false;
         }
-        return ResourceComposer::saveDelta( absPath, fullText, parent.toXML(), AnimationGraphAssetInternal::makeInheritanceSchema(), _baseID, [&absPath]( const string& deltaText )
+        return AssetComposer::saveDelta( absPath, fullText, parent.toXML(), AnimationGraphAssetInternal::makeInheritanceSchema(), _baseID, [&absPath]( const string& deltaText )
         {
             AnimationGraphAsset reread;
-            return reread.parseText( deltaText, absPath.str(), ResourceContext::forSchema( &AnimationGraphAssetInternal::makeInheritanceSchema ) ) ? reread.toXML() : string{};
+            return reread.parseText( deltaText, absPath.str(), AssetComposeContext::forSchema( &AnimationGraphAssetInternal::makeInheritanceSchema ) ) ? reread.toXML() : string{};
         } );
     }
 
     bool AnimationGraphAsset::loadFromXMLText( string_view xmlView )
     {
         clear();
-        return parseText( xmlView, "<animation graph text>", ResourceContext::forSchema( &AnimationGraphAssetInternal::makeInheritanceSchema ) );
+        return parseText( xmlView, "<animation graph text>", AssetComposeContext::forSchema( &AnimationGraphAssetInternal::makeInheritanceSchema ) );
     }
 
-    bool AnimationGraphAsset::parseText( string_view text, string_view sourceLabel, const ResourceContext& context )
+    bool AnimationGraphAsset::parseText( string_view text, string_view sourceLabel, const AssetComposeContext& context )
     {
         clear();
         _baseID = DataInheritance::findBasePath( text );
         string flatText;
         bool   bComposed = false; // 펼치지 않으면 flatText 는 빈 채로 남는다
-        if ( ResourceComposer::compose( text, sourceLabel, context, flatText, bComposed ) == false )
+        if ( AssetComposer::compose( text, sourceLabel, context, flatText, bComposed ) == false )
         {
             clear();
             return false;

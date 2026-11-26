@@ -6,7 +6,7 @@
 
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetRegistry.h"
-#include "Engine/Serialization/Inherit/ResourceComposer.h"
+#include "Engine/Serialization/Compose/AssetComposer.h"
 #include "Engine/Serialization/Serializer/ReloadResult.h"
 
 namespace sw
@@ -25,7 +25,7 @@ namespace sw
 
     UITextAssetCache::~UITextAssetCache() = default;
 
-    string UITextAssetCache::makeKey( const string& path, const ResourceTagSet& tagOverride )
+    string UITextAssetCache::makeKey( const string& path, const AssetTagSet& tagOverride )
     {
         string key = path;
         for ( const string& tag : tagOverride.getTags() )
@@ -36,14 +36,14 @@ namespace sw
         return key;
     }
 
-    expected<shared_ptr<const void>> UITextAssetCache::parseText( string_view text, string_view path, const ResourceTagSet& tagOverride )
+    expected<shared_ptr<const void>> UITextAssetCache::parseText( string_view text, string_view path, const AssetTagSet& tagOverride )
     {
         _parseCount.add();
         // 리소스 id 로 읽는다 — 조건(`_when`) · 덮어쓰기 층 · 다시 읽기 기록이 이 경로를 쓴다. 변형은 바꿔 끼운 태그로 합치고 기록하지 않는다.
-        return _pParse( text, path, ResourceContext::forDocument().withAsset( AssetID{ path } ).withTagOverride( tagOverride ) );
+        return _pParse( text, path, AssetComposeContext::forDocument().withAsset( AssetID{ path } ).withTagOverride( tagOverride ) );
     }
 
-    expected<shared_ptr<const void>> UITextAssetCache::acquireAsset( string_view path, const ResourceTagSet& tagOverride )
+    expected<shared_ptr<const void>> UITextAssetCache::acquireAsset( string_view path, const AssetTagSet& tagOverride )
     {
         const string normalized = AssetRegistry::toCacheKey( path );
         const string key        = makeKey( normalized, tagOverride );
@@ -118,7 +118,7 @@ namespace sw
             return ReloadResult::Failed;
         }
         // 그 경로의 엔진 판과 변형을 모두 다시 읽는다(글은 하나다). 들고 있지 않으면 엔진 판을 읽어 둔다 — 예전 규칙 그대로다.
-        vector<ResourceTagSet> listTagOverride;
+        vector<AssetTagSet> listTagOverride;
         for ( const auto& [entryKey, entry] : _mapKeyToEntry )
         {
             if ( entry._path == key )
@@ -127,7 +127,7 @@ namespace sw
         if ( listTagOverride.empty() )
             listTagOverride.emplace_back();
         bool bReplaced = false;
-        for ( const ResourceTagSet& tagOverride : listTagOverride )
+        for ( const AssetTagSet& tagOverride : listTagOverride )
         {
             const expected<shared_ptr<const void>> asset = parseText( text, relativePath, tagOverride );
             if ( asset.has_value() == false )

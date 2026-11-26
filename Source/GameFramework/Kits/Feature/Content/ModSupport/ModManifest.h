@@ -13,7 +13,7 @@
  *          </Mod>
  *
  *          `<Override>` 는 기본 리소스를 통째로 바꾸고(팩 우선순위 — 두 모드가 같은 파일을 덮으면 충돌이다), `<Layer>` 는 기본 리소스 위에 차이를 얹는다
- *          (엔진 덮어쓰기 층 `ResourceLayers` — 층 파일 `mods/<id>/layer/<경로>` 가 원본을 부모로 삼아 항목을 더하고 고친다). DLC · 확장처럼 표에 항목을 더하는 모드는
+ *          (엔진 덮어쓰기 층 `AssetLayers` — 층 파일 `mods/<id>/layer/<경로>` 가 원본을 부모로 삼아 항목을 더하고 고친다). DLC · 확장처럼 표에 항목을 더하는 모드는
  *          층을 쓴다 — 여럿이 같은 표에 얹어도 서로를 지우지 않는다. 언리얼 Game Feature 플러그인이 데이터 레지스트리에 행을 더하는 자리다(기억에 의존).
  */
 #pragma once
@@ -149,7 +149,7 @@ namespace sw
         static bool isValidID( string_view id );
         /** @brief 모드 @p id 가 새로 더하는 리소스의 경로 접두(`mods/<id>/`)입니다. */
         static string makeContentPrefix( string_view id );
-        /** @brief 모드 @p id 의 덮어쓰기 층 뿌리(`mods/<id>/layer` — 끝 `/` 없음, `ResourceLayers` 의 뿌리 꼴)입니다. */
+        /** @brief 모드 @p id 의 덮어쓰기 층 뿌리(`mods/<id>/layer` — 끝 `/` 없음, `AssetLayers` 의 뿌리 꼴)입니다. */
         static string makeLayerRoot( string_view id );
 
         /**

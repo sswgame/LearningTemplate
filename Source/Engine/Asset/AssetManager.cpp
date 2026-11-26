@@ -28,7 +28,7 @@
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Reflection/TypeInfo.h"
-#include "Engine/Serialization/Inherit/ResourceComposition.h"
+#include "Engine/Serialization/Compose/AssetComposition.h"
 
 namespace sw
 {
@@ -47,10 +47,10 @@ namespace sw
             return pKindName != nullptr ? string_view{ pKindName } : string_view{};
         }
 
-        /** @brief 읽기가 싣는 설정 사본(데이터 상속 깊이 상한 — `ResourceComposition::setInheritanceMaxDepth`)을 뜹니다. 게임 스레드(기동 · 다시 읽기 알림)만 부른다. */
+        /** @brief 읽기가 싣는 설정 사본(데이터 상속 깊이 상한 — `AssetComposition::setInheritanceMaxDepth`)을 뜹니다. 게임 스레드(기동 · 다시 읽기 알림)만 부른다. */
         void publishLoadPolicy()
         {
-            engine::getSubsystem<ResourceComposition>().setInheritanceMaxDepth( engine::getSubsystem<EngineConfig>()._dataInheritanceMaxDepth );
+            engine::getSubsystem<AssetComposition>().setInheritanceMaxDepth( engine::getSubsystem<EngineConfig>()._dataInheritanceMaxDepth );
         }
     } // namespace
 } // namespace sw
@@ -222,7 +222,7 @@ namespace sw
     uint32 AssetManager::reloadComposedDependents()
     {
         vector<string> listAssetID;
-        engine::getSubsystem<ResourceComposition>().takePendingReload( listAssetID );
+        engine::getSubsystem<AssetComposition>().takePendingReload( listAssetID );
         if ( listAssetID.empty() )
             return 0;
         const vector<AssetCacheBase*> listCache     = getAllAssetCache();

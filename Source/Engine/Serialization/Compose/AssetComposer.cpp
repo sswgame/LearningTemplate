@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Serialization/Inherit/ResourceComposer.h"
+#include "Engine/Serialization/Compose/AssetComposer.h"
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/File/FileUtil.h"
@@ -15,10 +15,10 @@
 #include "Engine/Reflection/ReflectedValue.h"
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Reflection/TypeRegistry.h"
+#include "Engine/Serialization/Compose/AssetComposition.h"
+#include "Engine/Serialization/Compose/AssetTags.h"
 #include "Engine/Serialization/Inherit/DataCatalogInheritance.h"
 #include "Engine/Serialization/Inherit/DataInheritanceSchemaRegistry.h"
-#include "Engine/Serialization/Inherit/ResourceComposition.h"
-#include "Engine/Serialization/Inherit/ResourceTags.h"
 #include "Engine/Serialization/XML/XMLBinary.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
@@ -28,11 +28,11 @@ namespace sw
     namespace
     {
         /** @brief 층 파일의 암묵적 부모(@p baseID)는 지금까지 합친 글로 답하고, 나머지 부모(다른 파일의 카탈로그 항목)는 리소스로 읽습니다. */
-        class ResourceLayerBaseSource final : public DataInheritanceSource
+        class AssetLayerBaseSource final : public DataInheritanceSource
         {
         public:
-            ResourceLayerBaseSource( string_view baseID, string_view baseText )
-                : DataInheritanceSource{ engine::getSubsystem<ResourceComposition>().findInheritanceMaxDepth() }
+            AssetLayerBaseSource( string_view baseID, string_view baseText )
+                : DataInheritanceSource{ engine::getSubsystem<AssetComposition>().findInheritanceMaxDepth() }
                 , _baseID{ baseID }
                 , _baseText{ baseText }
             {
@@ -54,7 +54,7 @@ namespace sw
         };
 
         /** @brief 조건 단계입니다. 원소마다 자기 `_when` 을 풀어 속성을 바꾸거나 원소를 빼고, 자식은 위에서 아래로 같은 일을 합니다. */
-        struct ResourceConditionStageInternal
+        struct AssetConditionStageInternal
         {
             /** @brief 원소 하나의 조건을 푼 결과입니다. */
             struct Decision
@@ -88,7 +88,7 @@ namespace sw
             }
 
             /** @brief @p element 의 조건 원소를 차례로 풉니다. 틀린 조건 원소는 오류를 남기고 false 입니다. */
-            [[nodiscard]] static bool decide( const XMLNode& element, string_view id, ResourceTagTiming resolvedTiming, const ResourceTagSet& tags, Decision& outDecision, bool& inoutbChanged,
+            [[nodiscard]] static bool decide( const XMLNode& element, string_view id, AssetTagTiming resolvedTiming, const AssetTagSet& tags, Decision& outDecision, bool& inoutbChanged,
                                               vector<string>& inoutListLoadTag )
             {
                 bool bKeepRest = false; // 이 원소에서 남긴 조건 뒤의 조건은 차례를 지키려 함께 남긴다
@@ -98,7 +98,7 @@ namespace sw
                     {
                         if ( child.isElement() )
                         {
-                            SW_LOG_ERROR_ID( "ResourceCondition.WhenHasChildren", "'%#': <%#> in <%#> has a child <%#> - a condition sets attributes of the element it is in; put it inside the element it changes",
+                            SW_LOG_ERROR_ID( "AssetCondition.WhenHasChildren", "'%#': <%#> in <%#> has a child <%#> - a condition sets attributes of the element it is in; put it inside the element it changes",
                                              id, DataInheritance::kWhenElement, element.getName(), child.getName() );
                             return false;
                         }
@@ -106,14 +106,14 @@ namespace sw
                     const utf8* pTest = when.findAttribute( DataInheritance::kIfAttribute );
                     if ( pTest == nullptr )
                     {
-                        SW_LOG_ERROR_ID( "ResourceCondition.NoTest", "'%#': <%#> in <%#> has no %#", id, DataInheritance::kWhenElement, element.getName(), DataInheritance::kIfAttribute );
+                        SW_LOG_ERROR_ID( "AssetCondition.NoTest", "'%#': <%#> in <%#> has no %#", id, DataInheritance::kWhenElement, element.getName(), DataInheritance::kIfAttribute );
                         return false;
                     }
                     const string_view op      = when.getAttributeText( DataInheritance::kOpAttribute );
                     const bool        bRemove = op == DataInheritance::kOpRemove;
                     if ( op.empty() == false && bRemove == false )
                     {
-                        SW_LOG_ERROR_ID( "ResourceCondition.UnknownOp", "'%#': <%#> in <%#> has %#='%#' - only %# is allowed", id, DataInheritance::kWhenElement, element.getName(),
+                        SW_LOG_ERROR_ID( "AssetCondition.UnknownOp", "'%#': <%#> in <%#> has %#='%#' - only %# is allowed", id, DataInheritance::kWhenElement, element.getName(),
                                          DataInheritance::kOpAttribute, op, DataInheritance::kOpRemove );
                         return false;
                     }
@@ -125,17 +125,17 @@ namespace sw
                     }
                     if ( bSetsValue == false && bRemove == false )
                     {
-                        SW_LOG_ERROR_ID( "ResourceCondition.DoesNothing", "'%#': <%#> in <%#> neither sets a value nor removes the element", id, DataInheritance::kWhenElement, element.getName() );
+                        SW_LOG_ERROR_ID( "AssetCondition.DoesNothing", "'%#': <%#> in <%#> neither sets a value nor removes the element", id, DataInheritance::kWhenElement, element.getName() );
                         return false;
                     }
-                    ResourceTagTest test;
-                    if ( ResourceTags::compileTest( pTest, id, test ) == false )
+                    AssetTagTest test;
+                    if ( AssetTags::compileTest( pTest, id, test ) == false )
                         return false;
                     for ( const string& tag : test._listLoadTag )
                     {
                         VectorUtil::addUnique( inoutListLoadTag, tag );
                     }
-                    const bool bKeep = resolvedTiming == ResourceTagTiming::Cook && ( bKeepRest || test._timing == ResourceTagTiming::Load );
+                    const bool bKeep = resolvedTiming == AssetTagTiming::Cook && ( bKeepRest || test._timing == AssetTagTiming::Load );
                     if ( bKeep )
                     {
                         bKeepRest = true;
@@ -158,7 +158,7 @@ namespace sw
             }
 
             /** @brief @p src 의 속성 · 글 · 남긴 조건 · 자식(푼 것)을 @p out 에 씁니다. 자식이 빠지면 쓰지 않습니다. */
-            [[nodiscard]] static bool writeResolved( const XMLNode& src, const Decision& decision, const XMLNode& out, string_view id, ResourceTagTiming resolvedTiming, const ResourceTagSet& tags,
+            [[nodiscard]] static bool writeResolved( const XMLNode& src, const Decision& decision, const XMLNode& out, string_view id, AssetTagTiming resolvedTiming, const AssetTagSet& tags,
                                                      bool& inoutbChanged, vector<string>& inoutListLoadTag )
             {
                 for ( XMLAttribute attribute = src.getFirstAttribute(); attribute; attribute = attribute.getNext() )
@@ -191,8 +191,8 @@ namespace sw
             }
         };
 
-        /** @brief 저장할 글에 원본의 조건을 되돌리는 일입니다(`ResourceComposer::restoreConditions`). */
-        struct ResourceConditionRestoreInternal
+        /** @brief 저장할 글에 원본의 조건을 되돌리는 일입니다(`AssetComposer::restoreConditions`). */
+        struct AssetConditionRestoreInternal
         {
             /** @brief 원소에 적힌 조건 하나입니다. */
             struct When
@@ -212,18 +212,18 @@ namespace sw
             [[nodiscard]] static bool isConditionName( string_view name ) { return name == DataInheritance::kIfAttribute || name == DataInheritance::kOpAttribute; }
 
             /** @brief @p element 의 조건을 지금 태그로 풀어 적힌 차례로 모읍니다. 틀린 조건은 오류를 남기고 false 입니다. */
-            [[nodiscard]] static bool readWhenElements( const XMLNode& element, string_view id, const ResourceTagSet& tags, vector<When>& outListWhen )
+            [[nodiscard]] static bool readWhenElements( const XMLNode& element, string_view id, const AssetTagSet& tags, vector<When>& outListWhen )
             {
                 for ( XMLNode node = element.findChild( DataInheritance::kWhenElement ); node.isValid(); node = node.findNextSibling( DataInheritance::kWhenElement ) )
                 {
                     const utf8* pTest = node.findAttribute( DataInheritance::kIfAttribute );
                     if ( pTest == nullptr )
                     {
-                        SW_LOG_ERROR_ID( "ResourceCondition.NoTest", "'%#': <%#> in <%#> has no %#", id, DataInheritance::kWhenElement, element.getName(), DataInheritance::kIfAttribute );
+                        SW_LOG_ERROR_ID( "AssetCondition.NoTest", "'%#': <%#> in <%#> has no %#", id, DataInheritance::kWhenElement, element.getName(), DataInheritance::kIfAttribute );
                         return false;
                     }
-                    ResourceTagTest test;
-                    if ( ResourceTags::compileTest( pTest, id, test ) == false )
+                    AssetTagTest test;
+                    if ( AssetTags::compileTest( pTest, id, test ) == false )
                         return false;
                     When& when    = outListWhen.emplace_back();
                     when._node    = node;
@@ -332,7 +332,7 @@ namespace sw
                     // 조건이 엉뚱한 원소에 붙으면 데이터가 조용히 틀어진다 — 짐작하지 않고 저장을 거절한다.
                     if ( bTied == SW_TRUE && hasConditions( source._node ) )
                     {
-                        SW_LOG_ERROR_ID( "ResourceCondition.SaveAmbiguousElement", "'%#': <%#> holds a condition and matches several saved elements equally - not saved. Edit the conditions in the file", id, name );
+                        SW_LOG_ERROR_ID( "AssetCondition.SaveAmbiguousElement", "'%#': <%#> holds a condition and matches several saved elements equally - not saved. Edit the conditions in the file", id, name );
                         return false;
                     }
                     if ( bestIndex >= 0 )
@@ -395,7 +395,7 @@ namespace sw
             }
 
             /** @brief 원본 @p source 의 조건을 사본 @p target 에 되돌려 @p out 에 씁니다. @p complete 는 사본의 칸을 빼지 않은 짝입니다(없으면 무효 노드). */
-            [[nodiscard]] static bool writeRestored( const XMLNode& source, const XMLNode& target, const XMLNode& complete, const XMLNode& out, string_view id, const ResourceTagSet& tags, bool bDelta )
+            [[nodiscard]] static bool writeRestored( const XMLNode& source, const XMLNode& target, const XMLNode& complete, const XMLNode& out, string_view id, const AssetTagSet& tags, bool bDelta )
             {
                 vector<When> listWhen;
                 if ( readWhenElements( source, id, tags, listWhen ) == false )
@@ -490,7 +490,7 @@ namespace sw
             }
         };
 
-        struct ResourceComposerInternal
+        struct AssetComposerInternal
         {
             /** @brief 쿠킹본만 읽는 구성에서 `_base` 가 남아 있으면 오류를 남기고 false 입니다 — 런타임은 펼친 결과만 읽는다(`PackCooker`). */
             [[nodiscard]] static bool canFlattenAtRuntime( string_view id )
@@ -502,17 +502,17 @@ namespace sw
             }
 
             /** @brief 읽는 쪽이 아는 규칙으로 펼칩니다. */
-            [[nodiscard]] static bool flattenFromResources( string_view text, string_view id, const DataInheritanceSchema& schema, string& outText )
+            [[nodiscard]] static bool flattenFromAssets( string_view text, string_view id, const DataInheritanceSchema& schema, string& outText )
             {
                 if ( canFlattenAtRuntime( id ) == false )
                     return false;
-                DataInheritanceResourceSource source;
+                DataInheritanceAssetSource source;
                 return DataInheritance::flatten( text, id, schema, source, outText );
             }
 
             /**
              * @brief 루트 이름으로 규칙을 찾아 펼칩니다. 문서 표 → 합치기 함수 → 손 형식 차례입니다. 모두 없으면 오류입니다.
-             * @details 리플렉션 형식의 규칙은 문서 표에만 있다 — 쿠커는 대상마다 지어진 형식이 다르고(서버는 Renderer 를 짓지 않는다) 게임 모듈을 올리기 전에 돈다. 표가 코드와 같은지는 `ResourceComposerTest` 가 본다.
+             * @details 리플렉션 형식의 규칙은 문서 표에만 있다 — 쿠커는 대상마다 지어진 형식이 다르고(서버는 Renderer 를 짓지 않는다) 게임 모듈을 올리기 전에 돈다. 표가 코드와 같은지는 `AssetComposerTest` 가 본다.
              */
             [[nodiscard]] static bool flattenByRootName( string_view text, string_view id, DataInheritanceSource& source, string& outText, bool& outbComposed )
             {
@@ -539,30 +539,30 @@ namespace sw
             }
 
             /** @brief 부모 단계입니다. */
-            [[nodiscard]] static bool composeParents( string_view text, string_view id, const ResourceContext& context, string& outText, bool& outbComposed )
+            [[nodiscard]] static bool composeParents( string_view text, string_view id, const AssetComposeContext& context, string& outText, bool& outbComposed )
             {
                 switch ( context._parentRule )
                 {
-                    case ResourceContext::ParentRule::CatalogTable:
+                    case AssetComposeContext::ParentRule::CatalogTable:
                     {
                         // 쿠킹본만 읽는 구성은 펼친 결과만 있으므로 보지 않는다(남은 `_base` 는 읽기의 모르는 칸 오류다).
                         if ( text.find( DataInheritance::kBaseAttribute ) == string_view::npos || AssetIO::usesSource() == false )
                             return true;
-                        DataInheritanceResourceSource source;
+                        DataInheritanceAssetSource source;
                         return DataCatalogInheritance::flattenIfListed( text, id, source, outbComposed, outText );
                     }
-                    case ResourceContext::ParentRule::KnownSchema:
+                    case AssetComposeContext::ParentRule::KnownSchema:
                         if ( DataInheritance::findBasePath( text ).empty() )
                             return true;
                         outbComposed = true;
-                        return flattenFromResources( text, id, context._pfnMakeSchema(), outText );
-                    case ResourceContext::ParentRule::KnownType:
+                        return flattenFromAssets( text, id, context._pfnMakeSchema(), outText );
+                    case AssetComposeContext::ParentRule::KnownType:
                     {
                         if ( DataInheritance::findBasePath( text ).empty() )
                             return true;
                         outbComposed = true;
                         // 쿠커와 같은 규칙을 쓴다 — 리플렉션 형식의 규칙은 문서 표에만 있다(쿠커는 리플렉션을 보지 않는다). 표에 없으면 개발 실행도 쿠킹처럼 멈춰야 쿠킹에서야 드러나지 않는다.
-                        // 표가 리플렉션과 같은지는 `ResourceComposerTest.DocumentTableMatchesReflection` 이 본다.
+                        // 표가 리플렉션과 같은지는 `AssetComposerTest.DocumentTableMatchesReflection` 이 본다.
                         const utf8*           pRootName = context._pTypeInfo->_name.c_str();
                         DataInheritanceSchema schema{ pRootName };
                         bool                  bListed = false;
@@ -574,19 +574,19 @@ namespace sw
                                              DataCatalogInheritance::kTableAssetID );
                             return false;
                         }
-                        return flattenFromResources( text, id, schema, outText );
+                        return flattenFromAssets( text, id, schema, outText );
                     }
-                    case ResourceContext::ParentRule::KnownMerge:
+                    case AssetComposeContext::ParentRule::KnownMerge:
                     {
                         if ( DataInheritance::findBasePath( text ).empty() )
                             return true;
                         outbComposed = true;
                         if ( canFlattenAtRuntime( id ) == false )
                             return false;
-                        DataInheritanceResourceSource source;
+                        DataInheritanceAssetSource source;
                         return context._pfnMerge( text, id, source, outText );
                     }
-                    case ResourceContext::ParentRule::RootName:
+                    case AssetComposeContext::ParentRule::RootName:
                         if ( DataCatalogInheritance::flattenIfListed( text, id, *context._pSource, outbComposed, outText ) == false )
                             return false;
                         if ( outbComposed || DataInheritance::findBasePath( text ).empty() )
@@ -599,24 +599,24 @@ namespace sw
             /**
              * @brief 층 파일 하나(@p layerText, 부모를 적었다)를 @p source 의 암묵적 부모 위에 얹습니다. 규칙은 읽는 쪽의 형식에서 옵니다.
              * @details 리플렉션 형식은 리플렉션에서 규칙을 만든다(코드가 곁에 있으니 표를 읽지 않는다). 표와 리플렉션이 같은지는
-             *          `ResourceComposerTest.DocumentTableMatchesReflection` 이 본다. 카탈로그 표 문맥(`forDocument`)은 표를 읽는다 — 표는 엔진 팩에 담겨 배포 런타임의 층(DLC · 모드)도 읽는다.
+             *          `AssetComposerTest.DocumentTableMatchesReflection` 이 본다. 카탈로그 표 문맥(`forDocument`)은 표를 읽는다 — 표는 엔진 팩에 담겨 배포 런타임의 층(DLC · 모드)도 읽는다.
              */
-            [[nodiscard]] static bool flattenLayer( string_view layerText, string_view layerID, const ResourceContext& context, DataInheritanceSource& source, string& outText )
+            [[nodiscard]] static bool flattenLayer( string_view layerText, string_view layerID, const AssetComposeContext& context, DataInheritanceSource& source, string& outText )
             {
                 switch ( context._parentRule )
                 {
-                    case ResourceContext::ParentRule::KnownSchema:
+                    case AssetComposeContext::ParentRule::KnownSchema:
                         return DataInheritance::flatten( layerText, layerID, context._pfnMakeSchema(), source, outText );
-                    case ResourceContext::ParentRule::KnownType:
+                    case AssetComposeContext::ParentRule::KnownType:
                         return DataInheritance::flatten( layerText, layerID, DataInheritanceSchema::makeFromType( *context._pTypeInfo ), source, outText );
-                    case ResourceContext::ParentRule::KnownMerge:
+                    case AssetComposeContext::ParentRule::KnownMerge:
                         return context._pfnMerge( layerText, layerID, source, outText );
-                    case ResourceContext::ParentRule::CatalogTable:
+                    case AssetComposeContext::ParentRule::CatalogTable:
                     {
                         XMLDocument doc;
                         if ( doc.parse( layerText, layerID ) == false || doc.getRoot().isValid() == false )
                         {
-                            SW_LOG_ERROR_ID( "ResourceLayer.NotXML", "Resource layer '%#' could not be parsed: %#", layerID, doc.getLastError() );
+                            SW_LOG_ERROR_ID( "AssetLayer.NotXML", "Asset layer '%#' could not be parsed: %#", layerID, doc.getLastError() );
                             return false;
                         }
                         const string_view     rootName = doc.getRoot().getName();
@@ -630,25 +630,25 @@ namespace sw
                             return false;
                         if ( bListed )
                             return DataInheritance::flatten( layerText, layerID, schema, source, outText );
-                        SW_LOG_ERROR_ID( "ResourceLayer.NoRule", "Resource layer '%#': <%#> has no merge rule - add it to %# or read it through its own reader", layerID, rootName,
+                        SW_LOG_ERROR_ID( "AssetLayer.NoRule", "Asset layer '%#': <%#> has no merge rule - add it to %# or read it through its own reader", layerID, rootName,
                                          DataCatalogInheritance::kTableAssetID );
                         return false;
                     }
-                    case ResourceContext::ParentRule::RootName:
+                    case AssetComposeContext::ParentRule::RootName:
                         break;
                 }
-                SW_LOG_ERROR_ID( "ResourceLayer.CookContext", "Resource layer '%#' reached the pack cook - layers are composed at load", layerID );
+                SW_LOG_ERROR_ID( "AssetLayer.CookContext", "Asset layer '%#' reached the pack cook - layers are composed at load", layerID );
                 return false;
             }
 
             /** @brief 리소스 id 로 읽는 문맥에 얹을 층 파일이 하나라도 있으면 true 입니다. */
-            [[nodiscard]] static bool hasLayer( const ResourceContext& context )
+            [[nodiscard]] static bool hasLayer( const AssetComposeContext& context )
             {
                 if ( context._assetID.isEmpty() )
                     return false;
-                for ( const string& root : engine::getSubsystem<ResourceComposition>().getLayers() )
+                for ( const string& root : engine::getSubsystem<AssetComposition>().getLayers() )
                 {
-                    if ( AssetIO::hasAsset( AssetID{ ResourceLayers::makeLayerAssetID( root, context._assetID.view() ) } ) )
+                    if ( AssetIO::hasAsset( AssetID{ AssetLayers::makeLayerAssetID( root, context._assetID.view() ) } ) )
                         return true;
                 }
                 return false;
@@ -658,26 +658,26 @@ namespace sw
              * @brief 덮어쓰기 층 단계입니다. 층마다 `<뿌리>/<id>` 가 있으면 그 파일의 조건을 풀고 지금까지 합친 글을 암묵적 부모로 얹습니다.
              * @return 층 파일이 부모(`_base`)를 적었거나 · 합치지 못하면 오류를 남기고 false 입니다.
              */
-            [[nodiscard]] static bool composeLayers( const ResourceContext& context, const ResourceTagSet& tags, string& inoutText, bool& outbLayered, vector<string>& inoutListLoadTag )
+            [[nodiscard]] static bool composeLayers( const AssetComposeContext& context, const AssetTagSet& tags, string& inoutText, bool& outbLayered, vector<string>& inoutListLoadTag )
             {
                 const string_view assetID = context._assetID.view();
-                for ( const string& root : engine::getSubsystem<ResourceComposition>().getLayers() )
+                for ( const string& root : engine::getSubsystem<AssetComposition>().getLayers() )
                 {
-                    const AssetID layerID{ ResourceLayers::makeLayerAssetID( root, assetID ) };
+                    const AssetID layerID{ AssetLayers::makeLayerAssetID( root, assetID ) };
                     if ( AssetIO::hasAsset( layerID ) == false )
                         continue;
                     string layerText;
                     if ( XMLReadUtil::readText( layerID, layerText ) == false )
                     {
-                        SW_LOG_ERROR_ID( "ResourceLayer.NotRead", "Resource layer '%#' could not be read", layerID.view() );
+                        SW_LOG_ERROR_ID( "AssetLayer.NotRead", "Asset layer '%#' could not be read", layerID.view() );
                         return false;
                     }
                     // 층의 조건은 층의 차이에 얹는다 — 거짓이면 그 차이를 얹지 않는다.
                     string resolvedText;
                     bool   bResolved = false;
-                    if ( ResourceComposer::resolveConditions( layerText, layerID.view(), ResourceTagTiming::Load, tags, resolvedText, bResolved, inoutListLoadTag ) == false )
+                    if ( AssetComposer::resolveConditions( layerText, layerID.view(), AssetTagTiming::Load, tags, resolvedText, bResolved, inoutListLoadTag ) == false )
                         return false;
-                    if ( ResourceComposer::mergeLayer( bResolved ? string_view( resolvedText ) : string_view( layerText ), layerID.view(), context, assetID, inoutText ) == false )
+                    if ( AssetComposer::mergeLayer( bResolved ? string_view( resolvedText ) : string_view( layerText ), layerID.view(), context, assetID, inoutText ) == false )
                         return false;
                     outbLayered = true;
                 }
@@ -689,63 +689,63 @@ namespace sw
 
 namespace sw
 {
-    ResourceContext ResourceContext::withAsset( const AssetID& assetID ) const
+    AssetComposeContext AssetComposeContext::withAsset( const AssetID& assetID ) const
     {
         SW_ASSERT( _parentRule != ParentRule::RootName && "the pack cook reads files, not resources - layers are composed at load" );
-        ResourceContext context = *this;
-        context._assetID        = assetID;
+        AssetComposeContext context = *this;
+        context._assetID            = assetID;
         return context;
     }
 
-    ResourceContext ResourceContext::withTagOverride( const ResourceTagSet& overrideTags ) const
+    AssetComposeContext AssetComposeContext::withTagOverride( const AssetTagSet& overrideTags ) const
     {
         SW_ASSERT( _parentRule != ParentRule::RootName && "the pack cook resolves cook axes only - a preview context never reaches it" );
-        ResourceContext context = *this;
-        context._pTagOverride   = overrideTags.getTags().empty() ? nullptr : &overrideTags;
+        AssetComposeContext context = *this;
+        context._pTagOverride       = overrideTags.getTags().empty() ? nullptr : &overrideTags;
         return context;
     }
 
-    ResourceContext ResourceContext::forDocument()
+    AssetComposeContext AssetComposeContext::forDocument()
     {
-        return ResourceContext{ ParentRule::CatalogTable, nullptr, nullptr, nullptr, nullptr, AssetID{}, nullptr };
+        return AssetComposeContext{ ParentRule::CatalogTable, nullptr, nullptr, nullptr, nullptr, AssetID{}, nullptr };
     }
 
-    ResourceContext ResourceContext::forSchema( DataInheritance::MakeSchemaFunction pfnMakeSchema )
+    AssetComposeContext AssetComposeContext::forSchema( DataInheritance::MakeSchemaFunction pfnMakeSchema )
     {
-        return ResourceContext{ ParentRule::KnownSchema, pfnMakeSchema, nullptr, nullptr, nullptr, AssetID{}, nullptr };
+        return AssetComposeContext{ ParentRule::KnownSchema, pfnMakeSchema, nullptr, nullptr, nullptr, AssetID{}, nullptr };
     }
 
-    ResourceContext ResourceContext::forType( const TypeInfo& typeInfo )
+    AssetComposeContext AssetComposeContext::forType( const TypeInfo& typeInfo )
     {
-        return ResourceContext{ ParentRule::KnownType, nullptr, &typeInfo, nullptr, nullptr, AssetID{}, nullptr };
+        return AssetComposeContext{ ParentRule::KnownType, nullptr, &typeInfo, nullptr, nullptr, AssetID{}, nullptr };
     }
 
-    ResourceContext ResourceContext::forMerge( DataInheritance::MergeFunction pfnMerge )
+    AssetComposeContext AssetComposeContext::forMerge( DataInheritance::MergeFunction pfnMerge )
     {
-        return ResourceContext{ ParentRule::KnownMerge, nullptr, nullptr, pfnMerge, nullptr, AssetID{}, nullptr };
+        return AssetComposeContext{ ParentRule::KnownMerge, nullptr, nullptr, pfnMerge, nullptr, AssetID{}, nullptr };
     }
 
-    ResourceContext ResourceContext::forPackCook( DataInheritanceSource& source )
+    AssetComposeContext AssetComposeContext::forPackCook( DataInheritanceSource& source )
     {
-        return ResourceContext{ ParentRule::RootName, nullptr, nullptr, nullptr, &source, AssetID{}, nullptr };
+        return AssetComposeContext{ ParentRule::RootName, nullptr, nullptr, nullptr, &source, AssetID{}, nullptr };
     }
 
-    bool ResourceComposer::compose( string_view text, string_view id, const ResourceContext& context, string& outText, bool& outbComposed )
+    bool AssetComposer::compose( string_view text, string_view id, const AssetComposeContext& context, string& outText, bool& outbComposed )
     {
         outbComposed = false;
         if ( XMLBinary::isBinary( text ) )
         {
             // 이진 쿠킹본이다 — 부모 · 조건은 쿠커가 이미 풀었다. 얹을 층이 있을 때만 글로 되살려 같은 길을 지난다.
-            if ( ResourceComposerInternal::hasLayer( context ) == false )
+            if ( AssetComposerInternal::hasLayer( context ) == false )
             {
                 if ( context._assetID.isEmpty() == false && context._pTagOverride == nullptr )
-                    engine::getSubsystem<ResourceComposition>().record( context._assetID.view(), {}, false, text );
+                    engine::getSubsystem<AssetComposition>().record( context._assetID.view(), {}, false, text );
                 return true;
             }
             string decodedText;
             if ( XMLBinary::decodeText( text, decodedText ) == false )
             {
-                SW_LOG_ERROR_ID( "ResourceLayer.CookedBroken", "'%#': the cooked document is broken - its layers cannot be laid over it", id );
+                SW_LOG_ERROR_ID( "AssetLayer.CookedBroken", "'%#': the cooked document is broken - its layers cannot be laid over it", id );
                 return false;
             }
             if ( compose( decodedText, id, context, outText, outbComposed ) == false )
@@ -758,18 +758,18 @@ namespace sw
         // 1. 부모
         string parentText;
         bool   bParents = false;
-        if ( ResourceComposerInternal::composeParents( text, id, context, parentText, bParents ) == false )
+        if ( AssetComposerInternal::composeParents( text, id, context, parentText, bParents ) == false )
             return false;
         string current = bParents ? std::move( parentText ) : string{};
         bool   bText   = bParents; // `current` 가 글을 들었는가(아니면 원문 `text` 그대로다)
 
         // 2. 조건 — 팩 쿠킹은 쿠킹 축만 풀고, 읽기는 모두 푼다(쿠킹 축 값은 런타임도 같다).
-        const bool           bCook = context._parentRule == ResourceContext::ParentRule::RootName;
-        const ResourceTagSet tags  = context._pTagOverride != nullptr ? engine::getSubsystem<ResourceTags>().captureWith( *context._pTagOverride ) : engine::getSubsystem<ResourceTags>().capture();
-        vector<string>       listLoadTag;
-        string               conditionText;
-        bool                 bConditions = false;
-        if ( resolveConditions( bText ? string_view( current ) : text, id, bCook ? ResourceTagTiming::Cook : ResourceTagTiming::Load, tags, conditionText, bConditions, listLoadTag ) == false )
+        const bool        bCook = context._parentRule == AssetComposeContext::ParentRule::RootName;
+        const AssetTagSet tags  = context._pTagOverride != nullptr ? engine::getSubsystem<AssetTags>().captureWith( *context._pTagOverride ) : engine::getSubsystem<AssetTags>().capture();
+        vector<string>    listLoadTag;
+        string            conditionText;
+        bool              bConditions = false;
+        if ( resolveConditions( bText ? string_view( current ) : text, id, bCook ? AssetTagTiming::Cook : AssetTagTiming::Load, tags, conditionText, bConditions, listLoadTag ) == false )
             return false;
         if ( bConditions )
         {
@@ -783,15 +783,15 @@ namespace sw
         {
             if ( bText == false )
                 current = string{ text };
-            if ( ResourceComposerInternal::composeLayers( context, tags, current, bLayered, listLoadTag ) == false )
+            if ( AssetComposerInternal::composeLayers( context, tags, current, bLayered, listLoadTag ) == false )
                 return false;
             bText = bText || bLayered;
             // 바꿔 끼운 태그로 합친 것은 합성 기록에 적지 않는다 — 기록 · 접속 대조는 엔진 태그로 읽은 결과다(같은 id 의 엔진 합성을 덮지 않게).
             // 다시 읽기 의존은 따로 적는다 — 변형만 읽은 리소스도 엔진 태그가 바뀌면 다시 읽힌다(언리얼 에디터 미리보기 플랫폼 · Godot 기능 태그 덮기와 같은 몫).
             if ( context._pTagOverride == nullptr )
-                engine::getSubsystem<ResourceComposition>().record( context._assetID.view(), listLoadTag, bLayered, bText ? string_view( current ) : text );
+                engine::getSubsystem<AssetComposition>().record( context._assetID.view(), listLoadTag, bLayered, bText ? string_view( current ) : text );
             else
-                engine::getSubsystem<ResourceComposition>().recordVariant( context._assetID.view(), listLoadTag );
+                engine::getSubsystem<AssetComposition>().recordVariant( context._assetID.view(), listLoadTag );
         }
         if ( bText )
         {
@@ -801,36 +801,36 @@ namespace sw
         return true;
     }
 
-    bool ResourceComposer::mergeLayer( string_view layerText, string_view layerID, const ResourceContext& context, string_view assetID, string& inoutText )
+    bool AssetComposer::mergeLayer( string_view layerText, string_view layerID, const AssetComposeContext& context, string_view assetID, string& inoutText )
     {
         XMLDocument layerDoc;
         if ( layerDoc.parse( layerText, layerID ) == false || layerDoc.getRoot().isValid() == false )
         {
-            SW_LOG_ERROR_ID( "ResourceLayer.NotXML2", "Resource layer '%#' could not be parsed: %#", layerID, layerDoc.getLastError() );
+            SW_LOG_ERROR_ID( "AssetLayer.NotXML2", "Asset layer '%#' could not be parsed: %#", layerID, layerDoc.getLastError() );
             return false;
         }
         const XMLNode root = layerDoc.getRoot();
         if ( root.hasAttribute( DataInheritance::kBaseAttribute ) )
         {
-            SW_LOG_ERROR_ID( "ResourceLayer.HasBase", "Resource layer '%#' writes %# - a layer's base is the resource it lies over ('%#')", layerID, DataInheritance::kBaseAttribute, assetID );
+            SW_LOG_ERROR_ID( "AssetLayer.HasBase", "Asset layer '%#' writes %# - a layer's base is the resource it lies over ('%#')", layerID, DataInheritance::kBaseAttribute, assetID );
             return false;
         }
         root.setAttribute( DataInheritance::kBaseAttribute, assetID );
-        ResourceLayerBaseSource source{ assetID, inoutText };
-        string                  mergedText;
-        if ( ResourceComposerInternal::flattenLayer( layerDoc.saveToString(), layerID, context, source, mergedText ) == false )
+        AssetLayerBaseSource source{ assetID, inoutText };
+        string               mergedText;
+        if ( AssetComposerInternal::flattenLayer( layerDoc.saveToString(), layerID, context, source, mergedText ) == false )
         {
-            SW_LOG_ERROR_ID( "ResourceLayer.NotMerged", "Resource layer '%#' could not be laid over '%#' - the resource is not loaded", layerID, assetID );
+            SW_LOG_ERROR_ID( "AssetLayer.NotMerged", "Asset layer '%#' could not be laid over '%#' - the resource is not loaded", layerID, assetID );
             return false;
         }
         inoutText = std::move( mergedText );
         return true;
     }
 
-    bool ResourceComposer::resolveConditions( string_view text, string_view id, ResourceTagTiming resolvedTiming, const ResourceTagSet& tags, string& outText, bool& outbChanged,
-                                              vector<string>& inoutListLoadTag )
+    bool AssetComposer::resolveConditions( string_view text, string_view id, AssetTagTiming resolvedTiming, const AssetTagSet& tags, string& outText, bool& outbChanged,
+                                           vector<string>& inoutListLoadTag )
     {
-        using Internal = ResourceConditionStageInternal;
+        using Internal = AssetConditionStageInternal;
         outbChanged    = false;
         // 조건을 적지 않은 파일(거의 전부)은 글 검색 한 번으로 끝난다 — 런타임 읽기마다 지나는 자리다.
         if ( text.find( DataInheritance::kWhenElement ) == string_view::npos || DataInheritance::isLikelyXMLText( text ) == false )
@@ -838,7 +838,7 @@ namespace sw
         XMLDocument doc;
         if ( doc.parse( text, id ) == false )
         {
-            SW_LOG_ERROR_ID( "ResourceCondition.NotXML", "'%#' could not be parsed: %#", id, doc.getLastError() );
+            SW_LOG_ERROR_ID( "AssetCondition.NotXML", "'%#' could not be parsed: %#", id, doc.getLastError() );
             return false;
         }
         const XMLNode root = doc.getRoot();
@@ -850,7 +850,7 @@ namespace sw
             return false;
         if ( rootDecision._bRemoved == SW_TRUE )
         {
-            SW_LOG_ERROR_ID( "ResourceCondition.RootRemoved", "'%#': a condition removes the root <%#> - a resource cannot remove itself", id, root.getName() );
+            SW_LOG_ERROR_ID( "AssetCondition.RootRemoved", "'%#': a condition removes the root <%#> - a resource cannot remove itself", id, root.getName() );
             return false;
         }
         XMLDocument outDoc;
@@ -863,9 +863,9 @@ namespace sw
         return true;
     }
 
-    bool ResourceComposer::restoreConditions( const ResourceSaveText& text, string_view sourceText, string_view id, const ResourceTagSet& tags, string& outText )
+    bool AssetComposer::restoreConditions( const AssetSaveText& text, string_view sourceText, string_view id, const AssetTagSet& tags, string& outText )
     {
-        using Internal              = ResourceConditionRestoreInternal;
+        using Internal              = AssetConditionRestoreInternal;
         const string_view savedText = text.getText();
         outText                     = string{ savedText };
         if ( sourceText.find( DataInheritance::kWhenElement ) == string_view::npos || DataInheritance::isLikelyXMLText( sourceText ) == false )
@@ -876,13 +876,13 @@ namespace sw
         XMLDocument savedDoc;
         if ( savedDoc.parse( savedText, id ) == false || savedDoc.getRoot().isValid() == false || string_view( savedDoc.getRoot().getName() ) != string_view( sourceDoc.getRoot().getName() ) )
         {
-            SW_LOG_ERROR_ID( "ResourceCondition.SaveShapeChanged", "'%#' holds resource conditions but the text to save has another root - not saved, the conditions would be lost", id );
+            SW_LOG_ERROR_ID( "AssetCondition.SaveShapeChanged", "'%#' holds resource conditions but the text to save has another root - not saved, the conditions would be lost", id );
             return false;
         }
         XMLDocument completeDoc;
         if ( completeDoc.parse( text.getCompleteText(), id ) == false || string_view( completeDoc.getRoot().getName() ) != string_view( savedDoc.getRoot().getName() ) )
         {
-            SW_LOG_ERROR_ID( "ResourceCondition.CompleteTextMismatch", "'%#': the complete text given with the text to save has another root - not saved", id );
+            SW_LOG_ERROR_ID( "AssetCondition.CompleteTextMismatch", "'%#': the complete text given with the text to save has another root - not saved", id );
             return false;
         }
         XMLDocument   outDoc;
@@ -894,16 +894,16 @@ namespace sw
         return true;
     }
 
-    bool ResourceComposer::saveText( const AbsolutePath& absPath, const ResourceSaveText& text, const ResourceTagSet* pTagOverride )
+    bool AssetComposer::saveText( const AbsolutePath& absPath, const AssetSaveText& text, const AssetTagSet* pTagOverride )
     {
         // 덮어쓰기 층을 얹어 읽은 사본을 원본 자리에 쓰면 층 값이 원본에 박힌다 - 고칠 자리는 층 파일이다.
-        if ( engine::getSubsystem<ResourceComposition>().getLayers().empty() == false )
+        if ( engine::getSubsystem<AssetComposition>().getLayers().empty() == false )
         {
             const AssetPaths* pPaths = engine::findSubsystem<AssetPaths>();
             const string      id     = pPaths != nullptr ? pPaths->toAssetID( absPath ) : string{};
-            if ( id.empty() == false && engine::getSubsystem<ResourceComposition>().isLayered( id ) )
+            if ( id.empty() == false && engine::getSubsystem<AssetComposition>().isLayered( id ) )
             {
-                SW_LOG_ERROR_ID( "ResourceLayer.SaveWouldBake", "'%#' was read with a resource layer over it - not saved, the layer's values would be written into the original (edit the layer file instead)", id );
+                SW_LOG_ERROR_ID( "AssetLayer.SaveWouldBake", "'%#' was read with a resource layer over it - not saved, the layer's values would be written into the original (edit the layer file instead)", id );
                 return false;
             }
         }
@@ -921,45 +921,45 @@ namespace sw
             case OptionalFileRead::Failed:
             {
                 // 있는 파일을 읽지 못했다(잠김 · 디스크). 없는 파일처럼 쓰면 그 파일의 조건과 정체성(GUID)이 사라진다.
-                SW_LOG_ERROR_ID( "ResourceSave.SourceNotRead", "'%#' could not be read - not saved, its conditions and asset guid would be lost", string{ absPath.str() }.c_str() );
+                SW_LOG_ERROR_ID( "AssetSave.SourceNotRead", "'%#' could not be read - not saved, its conditions and asset guid would be lost", string{ absPath.str() }.c_str() );
                 return false;
             }
         }
-        string               restoredText;
-        const ResourceTags&  engineTags = engine::getSubsystem<ResourceTags>();
-        const ResourceTagSet tags       = pTagOverride != nullptr ? engineTags.captureWith( *pTagOverride ) : engineTags.capture();
+        string            restoredText;
+        const AssetTags&  engineTags = engine::getSubsystem<AssetTags>();
+        const AssetTagSet tags       = pTagOverride != nullptr ? engineTags.captureWith( *pTagOverride ) : engineTags.capture();
         if ( restoreConditions( text, sourceText, absPath.str(), tags, restoredText ) == false )
             return false;
         // 정체성 머리(`<?asset guid?>`)는 문서 밖의 처리 지시라 다시 쓴 글에 없다 — 있던 파일의 것을 옮겨 쓴다(고쳐 저장해도 GUID 는 그대로).
         return FileUtil::writeTextFile( absPath, AssetGUIDHeader::carryOver( sourceText, restoredText ) );
     }
 
-    expected<void> ResourceComposer::validateDeltaReadsBack( const string& deltaText, const string_view fullText, const string_view baseID, const ResourceRereadFunction& reread )
+    expected<void> AssetComposer::validateDeltaReadsBack( const string& deltaText, const string_view fullText, const string_view baseID, const AssetRereadFunction& reread )
     {
         if ( reread.isBound() == false || string_view{ reread( deltaText ) } == fullText )
             return {};
         return unexpected( Error{ ErrorKind::Unsupported, "the difference from base does not read back the same (a value the base writes cannot be reset to the default by a variant)", baseID } );
     }
 
-    expected<void> ResourceComposer::makeCheckedDelta( const string_view fullText, const string_view parentFullText, const DataInheritanceSchema& schema, const string_view baseID, const ResourceRereadFunction& reread,
-                                                       string& outDeltaText )
+    expected<void> AssetComposer::makeCheckedDelta( const string_view fullText, const string_view parentFullText, const DataInheritanceSchema& schema, const string_view baseID, const AssetRereadFunction& reread,
+                                                    string& outDeltaText )
     {
         if ( DataInheritance::makeDelta( fullText, parentFullText, schema, baseID, outDeltaText ) )
             return validateDeltaReadsBack( outDeltaText, fullText, baseID, reread );
         return unexpected( Error{ ErrorKind::InvalidArgument, "the difference from base could not be made (see the log)", baseID } );
     }
 
-    bool ResourceComposer::saveDelta( const AbsolutePath& absPath, const string_view fullText, const string_view parentFullText, const DataInheritanceSchema& schema, const string_view baseID, const ResourceRereadFunction& reread )
+    bool AssetComposer::saveDelta( const AbsolutePath& absPath, const string_view fullText, const string_view parentFullText, const DataInheritanceSchema& schema, const string_view baseID, const AssetRereadFunction& reread )
     {
         string deltaText;
         if ( const expected<void> delta = makeCheckedDelta( fullText, parentFullText, schema, baseID, reread, deltaText ); delta.has_value() == false )
         {
-            SW_LOG_ERROR_ID( "ResourceSave.DeltaNotSaved", "'%#': %# '%#' - not saved", string{ absPath.str() }.c_str(), delta.error().message(), delta.error().detail() );
+            SW_LOG_ERROR_ID( "AssetSave.DeltaNotSaved", "'%#': %# '%#' - not saved", string{ absPath.str() }.c_str(), delta.error().message(), delta.error().detail() );
             return false;
         }
-        if ( saveText( absPath, ResourceSaveText::makeWithComplete( deltaText, fullText ) ) ) // 차이는 부모와 같은 칸을 뺐다 — 펼친 글이 빼지 않은 짝이다
+        if ( saveText( absPath, AssetSaveText::makeWithComplete( deltaText, fullText ) ) ) // 차이는 부모와 같은 칸을 뺐다 — 펼친 글이 빼지 않은 짝이다
             return true;
-        SW_LOG_ERROR_ID( "ResourceSave.WriteFailed", "'%#' could not be written", string{ absPath.str() }.c_str() );
+        SW_LOG_ERROR_ID( "AssetSave.WriteFailed", "'%#' could not be written", string{ absPath.str() }.c_str() );
         return false;
     }
 } // namespace sw

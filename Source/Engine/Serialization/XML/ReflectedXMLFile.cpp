@@ -5,8 +5,8 @@
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Foundation/EngineSubsystems.h"
+#include "Engine/Serialization/Compose/AssetComposer.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
-#include "Engine/Serialization/Inherit/ResourceComposer.h"
 #include "Engine/Serialization/Serializer/PropertyConstraints.h"
 #include "Engine/Serialization/Serializer/XMLSerializer.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
@@ -51,7 +51,7 @@ namespace sw
         // 부모를 가리키면 한 벌로 펼친 뒤 읽는다 — 읽기 규칙(모르는 이름 · 범위)은 펼친 결과에 그대로 걸린다.
         string flatText;
         bool   bComposed = false;
-        if ( ResourceComposer::compose( text, sourceName, ResourceContext::forType( *pTypeInfo ).withAsset( assetID ), flatText, bComposed ) == false )
+        if ( AssetComposer::compose( text, sourceName, AssetComposeContext::forType( *pTypeInfo ).withAsset( assetID ), flatText, bComposed ) == false )
             return false;
         vector<SchemaOrphanValue> listOrphan;
         const string_view         readText = bComposed ? string_view( flatText ) : string_view( text );
@@ -90,6 +90,6 @@ namespace sw
             return false;
         }
 
-        return ResourceComposer::saveDelta( absPath, XMLSerializer::serialize( pDesc, *pTypeInfo ), XMLSerializer::serialize( pParent, *pTypeInfo ), DataInheritanceSchema::makeFromType( *pTypeInfo ), baseID );
+        return AssetComposer::saveDelta( absPath, XMLSerializer::serialize( pDesc, *pTypeInfo ), XMLSerializer::serialize( pParent, *pTypeInfo ), DataInheritanceSchema::makeFromType( *pTypeInfo ), baseID );
     }
 } // namespace sw

@@ -11,8 +11,8 @@
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Foundation/EngineSubsystems.h"
+#include "Engine/Serialization/Compose/AssetComposer.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
-#include "Engine/Serialization/Inherit/ResourceComposer.h"
 #include "Engine/Serialization/Serializer/XMLSerializer.h"
 #include "Engine/Serialization/XML/ReflectedXMLFile.h"
 
@@ -110,21 +110,21 @@ namespace sw
             SW_LOG_ERROR_ID( "AudioGraphDef.AudioGraphNotFound", "Audio graph not found: %#", assetPath );
             return false;
         }
-        return loadComposed( text, assetPath, ResourceContext::forType( *StaticType() ).withAsset( assetID ) );
+        return loadComposed( text, assetPath, AssetComposeContext::forType( *StaticType() ).withAsset( assetID ) );
     }
 
     bool AudioGraphDef::loadFromXMLText( string_view xmlText, string_view sourceName )
     {
-        return loadComposed( xmlText, sourceName, ResourceContext::forType( *StaticType() ) );
+        return loadComposed( xmlText, sourceName, AssetComposeContext::forType( *StaticType() ) );
     }
 
-    bool AudioGraphDef::loadComposed( string_view xmlText, string_view sourceName, const ResourceContext& context )
+    bool AudioGraphDef::loadComposed( string_view xmlText, string_view sourceName, const AssetComposeContext& context )
     {
         *this = AudioGraphDef{};
         // 변형(`_base`)은 부모를 펼친 뒤 읽는다 — 노드 · 노드 값은 이름이 열쇠다(규칙은 문서 표 `<Document>`).
         string flatText;
         bool   bComposed = false;
-        if ( ResourceComposer::compose( xmlText, sourceName, context, flatText, bComposed ) == false )
+        if ( AssetComposer::compose( xmlText, sourceName, context, flatText, bComposed ) == false )
             return false;
         if ( XMLSerializer::deserialize( this, *StaticType(), bComposed ? string_view{ flatText } : xmlText ) == false )
         {
@@ -191,7 +191,7 @@ namespace sw
         if ( _baseID.empty() == false )
             return ReflectedXMLFile::saveDescAsChild( absPath, *this, AssetID{ _baseID } ); // 부모와 다른 칸만 쓴다. 부모를 읽지 못하면 쓰지 않는다
         const string completeText = XMLSerializer::serialize( this, *StaticType(), SerializeContext::deriveFromDefault( SerializePurpose::Authoring ).setWriteEmptyValues( true ) );
-        if ( ResourceComposer::saveText( absPath, ResourceSaveText::makeWithComplete( saveToXMLText(), completeText ) ) == false ) // 빈 칸(SkipIfEmpty)을 뺐을 수 있다
+        if ( AssetComposer::saveText( absPath, AssetSaveText::makeWithComplete( saveToXMLText(), completeText ) ) == false ) // 빈 칸(SkipIfEmpty)을 뺐을 수 있다
         {
             SW_LOG_ERROR_ID( "AudioGraphDef.AudioGraphCouldNot2", "%#: audio graph could not be written to '%#'", absPath.str(), absPath.str() );
             return false;

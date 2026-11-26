@@ -608,7 +608,7 @@ namespace sw
     bool JSONSerializer::loadFromAsset( const AssetID& assetID, void* pInstance, const TypeInfo& typeInfo, const SerializeContext& context )
     {
         JSONDocument doc;
-        if ( doc.loadResource( assetID ) == false )
+        if ( doc.loadAsset( assetID ) == false )
             return false;
         const bool bRead = readObject( doc.getRoot(), pInstance, typeInfo, nullptr, nullptr, context ) == FieldReadResult::Read;
         return JSONSerializerInternal::reportMissingRequired( doc.getRoot(), typeInfo ) && bRead;

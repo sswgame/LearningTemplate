@@ -63,8 +63,8 @@ namespace sw
         [[nodiscard]] static bool makeFileDelta( string_view fullText, string_view parentFullText, const DataInheritanceSchema& schema, string_view baseID, string& outText );
 
         /**
-         * @brief 표의 `<Document root>` 에서 문서 형식 @p rootName 의 규칙을 찾습니다. 게임 · 키트 형식은 쿠킹이 코드를 보지 못해 여기 적습니다(`ResourceComposer`).
-         * @param outbListed 표에 있으면 true 입니다. `<Field>` 들이 @p outSchema 가 됩니다(리플렉션 형식의 표 줄은 `ResourceComposerTest.DocumentTableMatchesReflection` 이 코드와 대조합니다).
+         * @brief 표의 `<Document root>` 에서 문서 형식 @p rootName 의 규칙을 찾습니다. 게임 · 키트 형식은 쿠킹이 코드를 보지 못해 여기 적습니다(`AssetComposer`).
+         * @param outbListed 표에 있으면 true 입니다. `<Field>` 들이 @p outSchema 가 됩니다(리플렉션 형식의 표 줄은 `AssetComposerTest.DocumentTableMatchesReflection` 이 코드와 대조합니다).
          * @return 표가 깨졌으면 오류를 남기고 false 입니다.
          */
         [[nodiscard]] static bool parseDocumentRule( string_view tableText, string_view rootName, DataInheritanceSchema& outSchema, bool& outbListed );

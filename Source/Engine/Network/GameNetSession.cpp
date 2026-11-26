@@ -32,7 +32,7 @@
 #include "Engine/Observability/MetricRegistry.h"
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Scene/SceneObjectHash.h"
-#include "Engine/Serialization/Inherit/ResourceComposition.h"
+#include "Engine/Serialization/Compose/AssetComposition.h"
 
 #include <algorithm>
 
@@ -169,7 +169,7 @@ namespace sw
      * @brief 합성 대조가 어긋난 뒤 끊기 전에 기다리는 시간(초)입니다.
      * @details 복제되는 태그(서버가 켠 데이터 레이어)는 양쪽이 다른 프레임에 바뀌어 잠깐 어긋나는 것이 정상이다. 회선이 나쁜 게임은 늘린다.
      */
-    SW_GLOBAL_VARIABLE( float32, gv_netResourceDigestGraceSeconds, 5.0f, "합성 해시가 어긋난 클라이언트를 끊기 전에 기다리는 시간(초)" );
+    SW_GLOBAL_VARIABLE( float32, gv_netAssetDigestGraceSeconds, 5.0f, "합성 해시가 어긋난 클라이언트를 끊기 전에 기다리는 시간(초)" );
     /**
      * @brief `-gv_netConnectAddress=<주소:포트>`: 게임 인스턴스가 그 서버에 클라이언트로 붙습니다(비면 끄기). 포트를 빼면 7777 입니다.
      * @details 배포 클라이언트도 이것으로 서버에 붙으므로 Shipping 에도 등록한다(언리얼 실행 인자 URL 의 자리).
@@ -197,7 +197,7 @@ namespace sw
 
 namespace sw
 {
-    GameNetSession::GameNetSession( const ResourceComposition& composition )
+    GameNetSession::GameNetSession( const AssetComposition& composition )
         : _listShard{}
         , _transportDecorator{}
         , _launchOverride{}
@@ -654,7 +654,7 @@ namespace sw
         recordServerLoss();
         logEvents( EventPhase::Running );
         recordMetrics();
-        updateResourceDigest();
+        updateAssetDigest();
     }
 
     void GameNetSession::recordServerLoss()
@@ -850,7 +850,7 @@ namespace sw
     {
         using Table = GameNetSessionMessage::Table;
         if ( _role == GameNetRole::Server )
-            return Table::makeMask<GameNetSessionMessage::ResourceDigest>();
+            return Table::makeMask<GameNetSessionMessage::AssetDigest>();
         return Table::makeMask<GameNetSessionMessage::ServerTick, GameNetSessionMessage::ShutdownNotice>();
     }
 
@@ -858,7 +858,7 @@ namespace sw
     {
         using Table = GameNetSessionMessage::Table;
         if ( _role == GameNetRole::Server )
-            return Table::makeDirectionMask<GameNetSessionMessage::ResourceDigest>();
+            return Table::makeDirectionMask<GameNetSessionMessage::AssetDigest>();
         return Table::makeDirectionMask<GameNetSessionMessage::ServerTick, GameNetSessionMessage::ShutdownNotice>();
     }
 
@@ -874,7 +874,7 @@ namespace sw
             return;
         _owner._digestServerConnection = connectionID;
         _owner._digestSentRevision     = 0;
-        _owner.sendResourceDigest( connectionID );
+        _owner.sendAssetDigest( connectionID );
     }
 
     void GameNetSession::EngineMessageHandler::onConnectionClosed( int32 connectionID, NetDisconnectReason reason )
@@ -886,61 +886,61 @@ namespace sw
             _owner._digestComparer.removePeer( connectionID );
     }
 
-    void GameNetSession::updateResourceDigest()
+    void GameNetSession::updateAssetDigest()
     {
         if ( _role == GameNetRole::Client )
         {
             if ( _digestServerConnection >= 0 )
-                sendResourceDigest( _digestServerConnection );
+                sendAssetDigest( _digestServerConnection );
             return;
         }
-        vector<ResourceDigestMismatch> listMismatch;
-        const float32                  graceSeconds     = gv_netResourceDigestGraceSeconds;
-        const int64                    graceNanoseconds = MonotonicClock::secondsToNanoseconds( static_cast<float64>( graceSeconds ) );
+        vector<AssetDigestMismatch> listMismatch;
+        const float32               graceSeconds     = gv_netAssetDigestGraceSeconds;
+        const int64                 graceNanoseconds = MonotonicClock::secondsToNanoseconds( static_cast<float64>( graceSeconds ) );
         _digestComparer.update( MonotonicClock::nowNanoseconds(), graceNanoseconds, listMismatch );
-        for ( const ResourceDigestMismatch& mismatch : listMismatch )
+        for ( const AssetDigestMismatch& mismatch : listMismatch )
         {
             // 게임플레이 값이 클라이언트마다 다르면 판정이 어긋난다 — 받지 않는다(`docs/agents/DataInheritance.md` 조건 절의 네트워크).
-            SW_LOG_ERROR_ID( "Net.ResourceDigestMismatch", "Net session client %# composed '%#' differently from the server (load-axis conditions or resource layers differ) - disconnecting it",
+            SW_LOG_ERROR_ID( "Net.AssetDigestMismatch", "Net session client %# composed '%#' differently from the server (load-axis conditions or resource layers differ) - disconnecting it",
                              mismatch._peer, mismatch._assetID );
             _peers.disconnect( mismatch._peer, NetLinger::none() );
             _digestComparer.removePeer( mismatch._peer );
         }
     }
 
-    void GameNetSession::sendResourceDigest( int32 connectionID )
+    void GameNetSession::sendAssetDigest( int32 connectionID )
     {
-        vector<ResourceDigestEntry> listEntry;
-        engine::getSubsystem<ResourceComposition>().collectTagDependentChanges( _digestSentRevision, listEntry );
+        vector<AssetDigestEntry> listEntry;
+        engine::getSubsystem<AssetComposition>().collectTagDependentChanges( _digestSentRevision, listEntry );
         if ( listEntry.empty() )
             return;
         int32 sentCount = 0;
-        for ( const ResourceDigestEntry& entry : listEntry )
+        for ( const AssetDigestEntry& entry : listEntry )
         {
             if ( static_cast<int32>( entry._assetID.size() ) > GameNetSessionMessage::kMaxDigestIDBytes )
             {
                 SW_LOG_ERROR_ID( "GameNetSession.DigestIDTooLong", "Resource id '%#' is longer than %# bytes - its composition is not compared with the server", entry._assetID, GameNetSessionMessage::kMaxDigestIDBytes );
                 continue;
             }
-            GameResourceDigestBody body;
+            GameAssetDigestBody body;
             body._assetID = entry._assetID;
             body._hash    = entry._hash;
-            if ( _tickWriter.writeMessage<GameNetSessionMessage::Table, GameNetSessionMessage::ResourceDigest>( body ) &&
+            if ( _tickWriter.writeMessage<GameNetSessionMessage::Table, GameNetSessionMessage::AssetDigest>( body ) &&
                  _tickWriter.sendMessage( _peers, connectionID ) )
                 ++sentCount;
         }
         SW_LOG_INFO_ID( "GameNetSession.DigestSent", "Net session sent %# resource composition digest(s) to the server", sentCount );
     }
 
-    NetHandleResult GameNetSession::receive( GameNetSessionMessage::ResourceDigest, const NetMessageContext& context, const GameResourceDigestBody& body )
+    NetHandleResult GameNetSession::receive( GameNetSessionMessage::AssetDigest, const NetMessageContext& context, const GameAssetDigestBody& body )
     {
-        static_assert( GameNetSessionLimit::kMaxDigestPerPoll == ResourceDigestComparer::kMaxLinesPerPeer, "a client may send every line it has right after it connects" );
-        ResourceDigestEntry entry;
+        static_assert( GameNetSessionLimit::kMaxDigestPerPoll == AssetDigestComparer::kMaxLinesPerPeer, "a client may send every line it has right after it connects" );
+        AssetDigestEntry entry;
         entry._assetID = body._assetID;
         entry._hash    = body._hash;
         if ( _digestComparer.addPeerLine( context._connectionID, entry, MonotonicClock::nowNanoseconds() ) == false )
         {
-            SW_LOG_ERROR_ID( "Net.ResourceDigestFlood", "Net session client %# sent more than %# resource composition lines - disconnecting it", context._connectionID, ResourceDigestComparer::kMaxLinesPerPeer );
+            SW_LOG_ERROR_ID( "Net.AssetDigestFlood", "Net session client %# sent more than %# resource composition lines - disconnecting it", context._connectionID, AssetDigestComparer::kMaxLinesPerPeer );
             _peers.disconnect( context._connectionID, NetLinger::none() );
             _digestComparer.removePeer( context._connectionID );
         }
@@ -1164,6 +1164,6 @@ namespace sw
     {
         // 합성 기록은 코어 범위(리소스 루트)에 있다 — 서비스 표가 서기 전이라 범위 사슬에서 찾는다.
         (void)build;
-        (void)scope.emplaceSubsystem<GameNetSession>( getSubsystemFrom<const ResourceComposition>( scope.getScope() ) );
+        (void)scope.emplaceSubsystem<GameNetSession>( getSubsystemFrom<const AssetComposition>( scope.getScope() ) );
     } );
 } // namespace sw

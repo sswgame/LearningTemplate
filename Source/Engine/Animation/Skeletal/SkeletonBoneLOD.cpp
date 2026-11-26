@@ -13,9 +13,9 @@
 #include "Engine/Asset/Cook/AssetCompanion.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
+#include "Engine/Serialization/Compose/AssetComposer.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
 #include "Engine/Serialization/Inherit/DataInheritanceSchemaRegistry.h"
-#include "Engine/Serialization/Inherit/ResourceComposer.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
@@ -52,7 +52,7 @@ namespace sw
 {
     bool SkeletonBoneLOD::loadFromXMLText( string_view xml, string_view sourceLabel )
     {
-        DataInheritanceResourceSource source;
+        DataInheritanceAssetSource source;
         return loadFromXMLText( xml, sourceLabel, source );
     }
 
@@ -104,7 +104,7 @@ namespace sw
         _listCoreBone.clear();
         string flatText;
         bool   bComposed = false;
-        if ( ResourceComposer::compose( text, path, ResourceContext::forSchema( &SkeletonBoneLOD::makeInheritanceSchema ).withAsset( assetID ), flatText, bComposed ) == false )
+        if ( AssetComposer::compose( text, path, AssetComposeContext::forSchema( &SkeletonBoneLOD::makeInheritanceSchema ).withAsset( assetID ), flatText, bComposed ) == false )
             return false;
         return parseFlat( bComposed ? string_view{ flatText } : string_view{ text }, path );
     }

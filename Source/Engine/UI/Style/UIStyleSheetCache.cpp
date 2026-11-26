@@ -12,7 +12,7 @@ namespace sw
 {
     namespace
     {
-        expected<shared_ptr<const void>> parseSheet( string_view text, string_view path, const ResourceContext& context )
+        expected<shared_ptr<const void>> parseSheet( string_view text, string_view path, const AssetComposeContext& context )
         {
             shared_ptr<UIStyleSheetAsset> sheet = make_shared<UIStyleSheetAsset>();
             if ( expected<void> parsed = UIStyleSheetAsset::parse( text, path, context, *sheet ); parsed.has_value() == false )
@@ -52,10 +52,10 @@ namespace sw
 
     expected<shared_ptr<const UIStyleSheetAsset>> UIStyleSheetCache::acquire( string_view path )
     {
-        return acquire( path, ResourceTagSet{} );
+        return acquire( path, AssetTagSet{} );
     }
 
-    expected<shared_ptr<const UIStyleSheetAsset>> UIStyleSheetCache::acquire( string_view path, const ResourceTagSet& tagOverride )
+    expected<shared_ptr<const UIStyleSheetAsset>> UIStyleSheetCache::acquire( string_view path, const AssetTagSet& tagOverride )
     {
         return _cache.acquireAsset( path, tagOverride ).transform( []( const shared_ptr<const void>& pAsset )
         { return std::static_pointer_cast<const UIStyleSheetAsset>( pAsset ); } );

@@ -133,7 +133,7 @@ namespace sw
         }
 
         /**
-         * @brief 쓰기가 생략을 허락한 빈 칸(`PROPERTY( SkipIfEmpty )`)도 씁니다 — 저장 입구에 넘기는 빼지 않은 짝(`ResourceSaveText`)을 만들 때만 켠다.
+         * @brief 쓰기가 생략을 허락한 빈 칸(`PROPERTY( SkipIfEmpty )`)도 씁니다 — 저장 입구에 넘기는 빼지 않은 짝(`AssetSaveText`)을 만들 때만 켠다.
          * @details 빈 칸을 빼면 "그대로" 와 "비움" 을 글만으로 가릴 수 없다(조건이 정한 칸을 비운 편집이 조건에 들지 않는다).
          */
         SerializeContext& setWriteEmptyValues( bool bWrite )

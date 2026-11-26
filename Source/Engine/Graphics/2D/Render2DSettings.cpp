@@ -43,7 +43,7 @@ namespace sw
         }
         // 리소스 id 로 합친다 — 조건 · 덮어쓰기 층 · 접속 대조를 받는다(글 입구 `loadFromXMLText` 는 id 가 없다).
         XMLDocument doc;
-        if ( doc.parseResourceText( text, assetID ) == false )
+        if ( doc.parseAssetText( text, assetID ) == false )
         {
             SW_LOG_ERROR_ID( "Render2DSettings.ParseFailed", "%#", doc.getLastError() );
             return false;

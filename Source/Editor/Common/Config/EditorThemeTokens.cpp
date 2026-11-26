@@ -16,7 +16,7 @@
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Foundation/EngineDefines.h"
 #include "Engine/Reflection/TypeInfo.h"
-#include "Engine/Serialization/Inherit/ResourceComposition.h"
+#include "Engine/Serialization/Compose/AssetComposition.h"
 
 #include <algorithm>
 
@@ -51,8 +51,8 @@ namespace sw::editor
             /** @brief 벌 하나를 `_base` 사슬 끝까지 읽어 합칩니다(자식의 키가 이긴다). 없는 부모 · 순환 · 깊이 초과 · 틀린 파일이면 그 파일이 대상인 오류입니다. */
             [[nodiscard]] static expected<EditorThemeDef> readThemeChain( const DiskPath& absolutePath )
             {
-                // 깊이 상한은 데이터 상속과 같은 사본이다(`ResourceComposition::findInheritanceMaxDepth`) — 없으면 대신 설정을 읽지 않고 진다.
-                const optional<uint32> maxDepth = editor::getSubsystem<ResourceComposition>().findInheritanceMaxDepth();
+                // 깊이 상한은 데이터 상속과 같은 사본이다(`AssetComposition::findInheritanceMaxDepth`) — 없으면 대신 설정을 읽지 않고 진다.
+                const optional<uint32> maxDepth = editor::getSubsystem<AssetComposition>().findInheritanceMaxDepth();
                 if ( maxDepth.has_value() == false )
                     return unexpected( Error{ ErrorKind::Unsupported, "the inheritance depth limit is not set yet", absolutePath.str() } );
                 vector<DiskPath>       listPath;

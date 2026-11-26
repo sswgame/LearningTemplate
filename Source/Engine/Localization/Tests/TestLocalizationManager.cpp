@@ -16,7 +16,7 @@
 #include "Engine/Localization/Tests/LocalizationTestUtil.h"
 #include "Engine/Localization/TextFormatter.h"
 #include "Engine/Reflection/Tests/ReflectionTestTypes.h"
-#include "Engine/Serialization/Inherit/ResourceTags.h"
+#include "Engine/Serialization/Compose/AssetTags.h"
 
 using sw::test::LocalizationTestUtil;
 using sw::test::ScopedScratchDomain;
@@ -549,12 +549,12 @@ SW_TEST_CASE( LocalizedMessageTest, PlayerTextStaysText )
 /** @brief [LocalizationManagerTest] 엔진의 관리자가 아닌 것(UI 미리보기 · 도구 · 테스트)이 언어를 바꿔도 엔진의 리소스 조건(`locale` 축)은 그대로다 */
 SW_TEST_CASE( LocalizationManagerTest, SeparateManagerLeavesTheEngineLocaleTag )
 {
-    const vector<string> listTag = engine::getSubsystem<ResourceTags>().capture().getTags();
+    const vector<string> listTag = engine::getSubsystem<AssetTags>().capture().getTags();
     LocalizationManager  separate;
     separate.setString( "ja_jp", hashed_string( "Probe" ), "probe" );
     SW_REQUIRE_TRUE( separate.setCurrentLanguage( "ja_jp" ) );
     SW_EXPECT_EQUAL( string( "ja_jp" ), separate.getCurrentLanguage() );
-    SW_EXPECT_TRUE( listTag == engine::getSubsystem<ResourceTags>().capture().getTags() );
+    SW_EXPECT_TRUE( listTag == engine::getSubsystem<AssetTags>().capture().getTags() );
 }
 
 /** @brief [LocalizationManagerEngineTest] 엔진의 리소스 조건은 늘 엔진의 지금 언어다 — 프로젝트를 올리며 정해진 처음 언어도 바꾼 언어도 되돌린 언어도 */
@@ -564,7 +564,7 @@ SW_TEST_CASE_F( LocalizationManagerEngineTest, LocaleTagFollowsTheEngineLanguage
     {
         string tag = "locale.";
         tag.append( language );
-        return engine::getSubsystem<ResourceTags>().capture().contains( tag );
+        return engine::getSubsystem<AssetTags>().capture().contains( tag );
     };
     SW_REQUIRE_FALSE( _previousLanguage.empty() );
     SW_EXPECT_TRUE( hasLocaleTag( _previousLanguage ) );

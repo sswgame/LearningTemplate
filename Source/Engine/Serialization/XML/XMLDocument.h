@@ -20,7 +20,7 @@ namespace sw
 {
     class XMLDocument; // Windows SDK msxml.h 의 전역 XMLDocument 대신 이것을 friend 로 찾게 먼저 선언한다
 
-    struct ResourceContext;
+    struct AssetComposeContext;
 
     /**
      * @class XMLAttribute
@@ -390,30 +390,30 @@ namespace sw
          */
         [[nodiscard]] bool parseKeepingComments( string_view xmlText, string_view sourceName = {} );
         /**
-         * @brief 데이터 문서로 파싱합니다. 합칠 것이 있으면 합친 결과를 파싱합니다(`ResourceComposer`). `loadResource` 와 같은 읽기의 글 판입니다.
+         * @brief 데이터 문서로 파싱합니다. 합칠 것이 있으면 합친 결과를 파싱합니다(`AssetComposer`). `loadAsset` 와 같은 읽기의 글 판입니다.
          * @return 펼치지 못하면 false 입니다. 부모 없이 자식 칸만으로 읽지 않습니다.
          */
         [[nodiscard]] bool parseData( string_view xmlText, string_view sourceName = {} );
         /** @brief 부르는 쪽이 이미 읽은 리소스 @p assetID 의 글을 `parseData` 처럼 읽되 덮어쓰기 층 · 다시 읽기 기록 · 접속 대조를 받습니다(글이 먼저 필요한 형식 — 부모 id 를 드는 저장). */
-        [[nodiscard]] bool parseResourceText( string_view xmlText, const AssetID& assetID );
+        [[nodiscard]] bool parseAssetText( string_view xmlText, const AssetID& assetID );
         /**
-         * @brief `loadResource` 와 같되 합치기 규칙을 읽는 쪽이 고릅니다(@p context — 카탈로그 표에 없는 손 형식 · 리플렉션 형식의 부모와 층).
+         * @brief `loadAsset` 와 같되 합치기 규칙을 읽는 쪽이 고릅니다(@p context — 카탈로그 표에 없는 손 형식 · 리플렉션 형식의 부모와 층).
          * @param pOutBaseID 펼치기 전 원문의 `_base` 입니다(저장이 부모와의 차이로 쓰려고 든다. 펼친 글에는 없다).
          */
-        [[nodiscard]] bool loadResourceAs( const AssetID& assetID, const ResourceContext& context, string* pOutAbsPath = nullptr, string* pOutBaseID = nullptr );
+        [[nodiscard]] bool loadAssetAs( const AssetID& assetID, const AssetComposeContext& context, string* pOutAbsPath = nullptr, string* pOutBaseID = nullptr );
 
         /** @brief 디스크의 절대 경로를 그대로 읽고 파싱합니다. 팩을 보지 않습니다(도구 · 설정 · Saved 파일용). */
         [[nodiscard]] bool loadFromFile( const DiskPath& absPath );
         /** @brief `loadFromFile` 의 데이터 문서 판입니다(`parseData`). 리소스 id 가 아니라 디스크 경로로 고른 데이터 파일을 리소스 읽기와 같은 길로 읽습니다. */
         [[nodiscard]] bool loadDataFile( const AbsolutePath& absPath );
-        /** @brief `loadDataFile` 과 같되 합치기 규칙을 읽는 쪽이 고릅니다(`loadResourceAs` 의 디스크 판). @p pOutBaseID 는 펼치기 전 원문의 `_base` 입니다. */
-        [[nodiscard]] bool loadDataFileAs( const AbsolutePath& absPath, const ResourceContext& context, string* pOutBaseID );
+        /** @brief `loadDataFile` 과 같되 합치기 규칙을 읽는 쪽이 고릅니다(`loadAssetAs` 의 디스크 판). @p pOutBaseID 는 펼치기 전 원문의 `_base` 입니다. */
+        [[nodiscard]] bool loadDataFileAs( const AbsolutePath& absPath, const AssetComposeContext& context, string* pOutBaseID );
 
         /**
          * @brief 리소스 id · OS 절대 경로 · 작업 경로를 `AssetIO::readTextAsset` 로 읽고 `parseData` 합니다(낱개 파일 · 팩).
          * @details 디스크를 먼저 보는 별도 입구를 두지 않는다 — 낱개 파일 허용 정책은 `AssetIO` 한 곳이 본다.
          */
-        [[nodiscard]] bool loadResource( const AssetID& assetID, string* pOutAbsPath = nullptr );
+        [[nodiscard]] bool loadAsset( const AssetID& assetID, string* pOutAbsPath = nullptr );
 
         /**
          * @brief 마지막 parse 나 load 가 실패한 이유입니다. 성공했으면 빈 문자열입니다.
@@ -421,7 +421,7 @@ namespace sw
          *          부르는 쪽(씬, 프리팹)은 이것으로 구문 오류와 없는 파일을 구분한다.
          */
         const string& getLastError() const { return _lastError; }
-        /** @brief 마지막 `loadResource` 가 실패한 이유가 "파일이 없다" 인가(구문 오류 · 읽기 실패가 아니라). 글(`getLastError`)을 뒤지지 않고 가르는 길이다. */
+        /** @brief 마지막 `loadAsset` 가 실패한 이유가 "파일이 없다" 인가(구문 오류 · 읽기 실패가 아니라). 글(`getLastError`)을 뒤지지 않고 가르는 길이다. */
         bool isLastErrorNotFound() const { return _bLastErrorNotFound; }
         /** @brief 원문 @p text 의 바이트 위치 @p offset 이 몇 번째 줄(1 부터)인지 셉니다. 위치를 모르면(`XMLNode::getSourceOffset` 이 없음) 0 — 오류 글의 "줄 모름" 이다. */
         static uint32 computeLineNumber( string_view text, const optional<size_t>& offset );
@@ -441,8 +441,8 @@ namespace sw
         /** @brief 현재 문서를 XML 문자열로 직렬화합니다. */
         string saveToString() const;
         /**
-         * @brief 칸을 빼지 않은(쓰는 쪽이 모든 칸을 지은) 문서를 절대 경로에 씁니다 — 저장 입구(`ResourceComposer::saveText`)에 이 문서 그대로를 빼지 않은 짝으로 넘긴다.
-         * @details 기본값 · 부모와 같은 칸을 뺀 문서(차이 · 기본값 생략)는 이 함수를 쓰지 않고 빼지 않은 짝과 함께 `ResourceComposer::saveText( ResourceSaveText::makeWithComplete )` 로 쓴다 —
+         * @brief 칸을 빼지 않은(쓰는 쪽이 모든 칸을 지은) 문서를 절대 경로에 씁니다 — 저장 입구(`AssetComposer::saveText`)에 이 문서 그대로를 빼지 않은 짝으로 넘긴다.
+         * @details 기본값 · 부모와 같은 칸을 뺀 문서(차이 · 기본값 생략)는 이 함수를 쓰지 않고 빼지 않은 짝과 함께 `AssetComposer::saveText( AssetSaveText::makeWithComplete )` 로 쓴다 —
          *          이름이 갈라 섞어 쓸 수 없다(빠진 칸을 "그대로" 로 읽어 조건이 정한 칸의 되돌림을 잃는다).
          */
         [[nodiscard]] bool saveCompleteToFile( const AbsolutePath& absPath ) const;
@@ -453,8 +453,8 @@ namespace sw
         /** @brief XML 엔티티 문자열(&amp;, &lt;, &gt;, &quot;, &apos;)을 원래 문자로 복원합니다. 쓰는 쪽(이스케이프)은 `XMLWriter::appendEscaped` 하나다. */
         static string unescapeString( string_view text );
 
-        /** @brief @p context 로 합친 글을 파싱합니다(`parseData` · `loadResource` 의 본문). 문맥을 고르는 읽는 쪽(UI 문서 · 스타일 시트 캐시 — 리소스 id 와 미리보기 변형의 태그)이 직접 부릅니다. */
-        [[nodiscard]] bool parseComposed( string_view xmlText, string_view sourceName, const ResourceContext& context );
+        /** @brief @p context 로 합친 글을 파싱합니다(`parseData` · `loadAsset` 의 본문). 문맥을 고르는 읽는 쪽(UI 문서 · 스타일 시트 캐시 — 리소스 id 와 미리보기 변형의 태그)이 직접 부릅니다. */
+        [[nodiscard]] bool parseComposed( string_view xmlText, string_view sourceName, const AssetComposeContext& context );
 
     private:
         /** @brief 이진 쿠킹본을 그대로 듭니다(글자 해석 없음). 깨졌으면 까닭을 남기고 false 입니다. */

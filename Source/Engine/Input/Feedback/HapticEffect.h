@@ -19,7 +19,7 @@
 
 namespace sw
 {
-    struct ResourceContext;
+    struct AssetComposeContext;
 } // namespace sw
 
 namespace sw
@@ -87,7 +87,7 @@ namespace sw
 
     private:
         /** @brief 합성 문맥을 받는 읽기의 본문입니다(`AudioMusicDef::loadComposed` 와 같은 모양). */
-        [[nodiscard]] bool loadComposed( string_view xmlText, string_view sourceName, const ResourceContext& context );
+        [[nodiscard]] bool loadComposed( string_view xmlText, string_view sourceName, const AssetComposeContext& context );
     };
 
     /** @brief 이 종류의 공유 캐시입니다 — 인스턴스화는 `HapticEffect.cpp` 의 정의 줄이 한다. */

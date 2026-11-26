@@ -6,7 +6,7 @@
  *          `getAssetPaths()` 의 참조를 받는다. 언리얼의 `UAssetManager` 검색 경로 · `IPlatformFile` 마운트가 객체 상태인 것과 같은 자리다.
  *          크래시 핸들러 뒤에 선다 — 루트를 찾지 못했을 때의 진단이 로거에 남고, 그 사이에 죽어도 콜 스택이 남는다. 게임 선택(Dev `-game=`)은 모듈 카탈로그 · 게임 프리셋을 읽기 전이어야 한다. 크래시 보고 프로세스는 리소스 루트를
  *          쓰지 않으므로 아무것도 하지 않는다(못 찾아도 서야 한다).
- *          리소스 조건 태그(`ResourceTags`)와 합성 기록 · 덮어쓰기 층(`ResourceComposition`)도 든다 — 리소스를 읽는 길의 상태라 경로와 같은 주인이고, 엔진 기동(`Engine::initialize`)이
+ *          리소스 조건 태그(`AssetTags`)와 합성 기록 · 덮어쓰기 층(`AssetComposition`)도 든다 — 리소스를 읽는 길의 상태라 경로와 같은 주인이고, 엔진 기동(`Engine::initialize`)이
  *          서비스 표가 서기 전에 쿠킹 축(`platform` · `target`)을 넣어야 해 코어 범위에 있다(언리얼 Device Profile 이 엔진 초기화 앞에 서는 것과 같은 자리).
  */
 #pragma once
@@ -14,8 +14,8 @@
 #include "Core/Subsystem/Subsystem.h"
 
 #include "Engine/Content/AssetPaths.h"
-#include "Engine/Serialization/Inherit/ResourceComposition.h"
-#include "Engine/Serialization/Inherit/ResourceTags.h"
+#include "Engine/Serialization/Compose/AssetComposition.h"
+#include "Engine/Serialization/Compose/AssetTags.h"
 
 namespace sw
 {
@@ -45,15 +45,15 @@ namespace sw
         AssetPaths&       getAssetPaths() { return _assetPaths; }
         const AssetPaths& getAssetPaths() const { return _assetPaths; }
         /** @brief 이 서브시스템이 소유한 리소스 조건 태그입니다(서비스 표가 서기 전의 기동 코드가 받는다). */
-        ResourceTags& getResourceTags() { return _resourceTags; }
+        AssetTags& getAssetTags() { return _assetTags; }
         /** @brief 이 서브시스템이 소유한 합성 기록 · 덮어쓰기 층입니다. */
-        ResourceComposition& getResourceComposition() { return _resourceComposition; }
+        AssetComposition& getAssetComposition() { return _assetComposition; }
 
     private:
         const CommandLineSubsystem& _commandLine;
         CrashHandlerSubsystem&      _crashHandler;
-        AssetPaths                  _assetPaths;          ///< 경로 상태 전부 — 이 프로세스의 엔진에서 하나다
-        ResourceComposition         _resourceComposition; ///< 합성 기록 · 층 목록(`_resourceTags` 가 바뀐 태그를 알린다 — 먼저 선다)
-        ResourceTags                _resourceTags;        ///< 리소스 조건 태그
+        AssetPaths                  _assetPaths;       ///< 경로 상태 전부 — 이 프로세스의 엔진에서 하나다
+        AssetComposition            _assetComposition; ///< 합성 기록 · 층 목록(`_assetTags` 가 바뀐 태그를 알린다 — 먼저 선다)
+        AssetTags                   _assetTags;        ///< 리소스 조건 태그
     };
 } // namespace sw

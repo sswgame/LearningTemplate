@@ -144,7 +144,7 @@ namespace sw
         }
 
         string     absPath;
-        const bool bLoaded = _defaultsDoc.loadResource( AssetID{ _customDefaultsPath }, &absPath );
+        const bool bLoaded = _defaultsDoc.loadAsset( AssetID{ _customDefaultsPath }, &absPath );
         if ( bLoaded )
             _bDefaultsLoaded.store( true, std::memory_order_release );
         else

@@ -9,9 +9,9 @@
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
 #include "Engine/Foundation/EngineSubsystems.h"
-#include "Engine/Serialization/Inherit/ResourceComposer.h"
-#include "Engine/Serialization/Inherit/ResourceComposition.h"
-#include "Engine/Serialization/Inherit/ResourceTags.h"
+#include "Engine/Serialization/Compose/AssetComposer.h"
+#include "Engine/Serialization/Compose/AssetComposition.h"
+#include "Engine/Serialization/Compose/AssetTags.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 using namespace sw;
@@ -21,9 +21,9 @@ namespace
 {
     struct XSaveConditionTestUtil
     {
-        static ResourceTagSet makeLow()
+        static AssetTagSet makeLow()
         {
-            ResourceTagSet tags;
+            AssetTagSet tags;
             tags.add( "quality.low" );
             return tags;
         }
@@ -31,7 +31,7 @@ namespace
         static string restore( string_view savedText, string_view sourceText )
         {
             string outText;
-            SW_EXPECT_TRUE( ResourceComposer::restoreConditions( ResourceSaveText::makeComplete( savedText ), sourceText, "test", makeLow(), outText ) );
+            SW_EXPECT_TRUE( AssetComposer::restoreConditions( AssetSaveText::makeComplete( savedText ), sourceText, "test", makeLow(), outText ) );
             return outText;
         }
 
@@ -43,7 +43,7 @@ namespace
             string         outText;
             bool           bChanged = false;
             vector<string> listLoadTag;
-            SW_EXPECT_TRUE( ResourceComposer::resolveConditions( text, "test", ResourceTagTiming::Load, makeLow(), outText, bChanged, listLoadTag ) );
+            SW_EXPECT_TRUE( AssetComposer::resolveConditions( text, "test", AssetTagTiming::Load, makeLow(), outText, bChanged, listLoadTag ) );
             return bChanged ? outText : string( text );
         }
     };
@@ -54,33 +54,33 @@ namespace
     {
     public:
         XSaveTagScope()
-            : _previous{ engine::getSubsystem<ResourceTags>().exchange( Util::makeLow() ) }
+            : _previous{ engine::getSubsystem<AssetTags>().exchange( Util::makeLow() ) }
         {
         }
         ~XSaveTagScope()
         {
-            (void)engine::getSubsystem<ResourceTags>().exchange( _previous );
+            (void)engine::getSubsystem<AssetTags>().exchange( _previous );
             vector<string> listPending;
-            engine::getSubsystem<ResourceComposition>().takePendingReload( listPending );
+            engine::getSubsystem<AssetComposition>().takePendingReload( listPending );
         }
         XSaveTagScope( const XSaveTagScope& )            = delete;
         XSaveTagScope& operator=( const XSaveTagScope& ) = delete;
 
     private:
-        ResourceTagSet _previous;
+        AssetTagSet _previous;
     };
 } // namespace
 
-/** @brief [ResourceSaveConditionTest] 원본에 조건이 없으면 저장할 글 그대로다 */
-SW_TEST_CASE( ResourceSaveConditionTest, TextWithoutConditionsIsLeftAlone )
+/** @brief [AssetSaveConditionTest] 원본에 조건이 없으면 저장할 글 그대로다 */
+SW_TEST_CASE( AssetSaveConditionTest, TextWithoutConditionsIsLeftAlone )
 {
     constexpr const utf8* kSaved = R"(<Doc a="2" />)";
     SW_EXPECT_EQUAL( string( kSaved ), Util::restore( kSaved, R"(<Doc a="1" />)" ) );
     SW_EXPECT_EQUAL( string( kSaved ), Util::restore( kSaved, R"(<Doc note="_when in a value" a="1" />)" ) );
 }
 
-/** @brief [ResourceSaveConditionTest] 참인 조건이 정한 칸을 그대로 두면 원본의 값이 돌아오고 조건이 남는다 — 지금 태그로 푼 값이 파일에 박히지 않는다 */
-SW_TEST_CASE( ResourceSaveConditionTest, UnchangedWinningValueRestoresTheBase )
+/** @brief [AssetSaveConditionTest] 참인 조건이 정한 칸을 그대로 두면 원본의 값이 돌아오고 조건이 남는다 — 지금 태그로 푼 값이 파일에 박히지 않는다 */
+SW_TEST_CASE( AssetSaveConditionTest, UnchangedWinningValueRestoresTheBase )
 {
     XMLDocument doc;
     SW_REQUIRE_TRUE( doc.parse( Util::restore( R"(<Doc a="2" />)", R"(<Doc a="1"><_when _if="quality.low" a="2" /></Doc>)" ) ) );
@@ -90,8 +90,8 @@ SW_TEST_CASE( ResourceSaveConditionTest, UnchangedWinningValueRestoresTheBase )
     SW_EXPECT_EQUAL( string( "2" ), Util::readAttribute( when, "a" ) );
 }
 
-/** @brief [ResourceSaveConditionTest] 참인 조건이 정한 칸의 편집은 그 조건의 값이다 — 같은 태그로 다시 읽으면 편집한 값이고, 다른 태그의 값은 그대로다 */
-SW_TEST_CASE( ResourceSaveConditionTest, EditOfAWinningValueGoesToTheCondition )
+/** @brief [AssetSaveConditionTest] 참인 조건이 정한 칸의 편집은 그 조건의 값이다 — 같은 태그로 다시 읽으면 편집한 값이고, 다른 태그의 값은 그대로다 */
+SW_TEST_CASE( AssetSaveConditionTest, EditOfAWinningValueGoesToTheCondition )
 {
     const string restored = Util::restore( R"(<Doc a="9" />)", R"(<Doc a="1"><_when _if="quality.low" a="2" /></Doc>)" );
     XMLDocument  doc;
@@ -103,8 +103,8 @@ SW_TEST_CASE( ResourceSaveConditionTest, EditOfAWinningValueGoesToTheCondition )
     SW_EXPECT_EQUAL( string( "9" ), Util::readAttribute( resolved.getRoot(), "a" ) );
 }
 
-/** @brief [ResourceSaveConditionTest] 거짓인 조건은 남고, 그 칸의 편집은 조건 밖 값이다. 조건과 상관없는 칸도 저장할 글이 맞다 */
-SW_TEST_CASE( ResourceSaveConditionTest, FalseConditionsStayAndBaseEditsApply )
+/** @brief [AssetSaveConditionTest] 거짓인 조건은 남고, 그 칸의 편집은 조건 밖 값이다. 조건과 상관없는 칸도 저장할 글이 맞다 */
+SW_TEST_CASE( AssetSaveConditionTest, FalseConditionsStayAndBaseEditsApply )
 {
     XMLDocument doc;
     SW_REQUIRE_TRUE( doc.parse( Util::restore( R"(<Doc a="7" b="8" />)", R"(<Doc a="1" b="2"><_when _if="quality.high" a="5" /></Doc>)" ) ) );
@@ -113,8 +113,8 @@ SW_TEST_CASE( ResourceSaveConditionTest, FalseConditionsStayAndBaseEditsApply )
     SW_EXPECT_EQUAL( string( "5" ), Util::readAttribute( doc.getRoot().findChild( DataInheritance::kWhenElement ), "a" ) );
 }
 
-/** @brief [ResourceSaveConditionTest] 원소 짝은 값으로 찾는다 — 사본의 차례가 바뀌고 다른 원소가 더해져도 조건은 제 원소에 남는다 */
-SW_TEST_CASE( ResourceSaveConditionTest, ConditionsFollowTheirElements )
+/** @brief [AssetSaveConditionTest] 원소 짝은 값으로 찾는다 — 사본의 차례가 바뀌고 다른 원소가 더해져도 조건은 제 원소에 남는다 */
+SW_TEST_CASE( AssetSaveConditionTest, ConditionsFollowTheirElements )
 {
     constexpr const utf8* kSource = R"(<Doc><Item name="x" v="1"><_when _if="quality.high" v="5" /></Item><Item name="y" v="2" /></Doc>)";
     constexpr const utf8* kSaved  = R"(<Doc><Item name="new" v="0" /><Item name="y" v="3" /><Item name="x" v="4" /></Doc>)";
@@ -130,8 +130,8 @@ SW_TEST_CASE( ResourceSaveConditionTest, ConditionsFollowTheirElements )
     SW_EXPECT_EQUAL( 3u, itemCount );
 }
 
-/** @brief [ResourceSaveConditionTest] 참인 조건이 뺀 원소는 사본에 없어도 돌아온다 */
-SW_TEST_CASE( ResourceSaveConditionTest, RemovedElementsComeBack )
+/** @brief [AssetSaveConditionTest] 참인 조건이 뺀 원소는 사본에 없어도 돌아온다 */
+SW_TEST_CASE( AssetSaveConditionTest, RemovedElementsComeBack )
 {
     const string restored = Util::restore( R"(<Doc><Item name="y" /></Doc>)", R"(<Doc><Item name="x"><_when _if="quality.low" _op="Remove" /></Item><Item name="y" /></Doc>)" );
     XMLDocument  doc;
@@ -143,8 +143,8 @@ SW_TEST_CASE( ResourceSaveConditionTest, RemovedElementsComeBack )
     SW_EXPECT_TRUE( Util::resolveLow( restored ).find( "\"x\"" ) == string::npos );
 }
 
-/** @brief [ResourceSaveConditionTest] 사본에서 지운 목록 원소의 조건은 함께 사라진다. 차이 저장은 부모와 같아 빠진 원소일 수 있어 남긴다 */
-SW_TEST_CASE( ResourceSaveConditionTest, UnpairedElementsDependOnTheShape )
+/** @brief [AssetSaveConditionTest] 사본에서 지운 목록 원소의 조건은 함께 사라진다. 차이 저장은 부모와 같아 빠진 원소일 수 있어 남긴다 */
+SW_TEST_CASE( AssetSaveConditionTest, UnpairedElementsDependOnTheShape )
 {
     constexpr const utf8* kSource = R"(<Doc><Item name="x"><_when _if="quality.high" v="1" /></Item><Item name="y" /></Doc>)";
     SW_EXPECT_TRUE( Util::restore( R"(<Doc><Item name="y" /></Doc>)", kSource ).find( "\"x\"" ) == string::npos );
@@ -154,56 +154,56 @@ SW_TEST_CASE( ResourceSaveConditionTest, UnpairedElementsDependOnTheShape )
     SW_EXPECT_TRUE( Util::restore( R"(<Doc />)", R"(<Doc><_occlusion><_when _if="quality.high" v="1" /></_occlusion></Doc>)" ).find( "_occlusion" ) != string::npos );
 }
 
-/** @brief [ResourceSaveConditionTest] 조건 든 원소가 사본의 두 원소와 똑같이 닮으면 짐작하지 않고 저장을 거절한다 — 조건이 엉뚱한 원소에 붙으면 데이터가 조용히 틀어진다. */
-SW_TEST_CASE( ResourceSaveConditionTest, AmbiguousElementIsNotSaved )
+/** @brief [AssetSaveConditionTest] 조건 든 원소가 사본의 두 원소와 똑같이 닮으면 짐작하지 않고 저장을 거절한다 — 조건이 엉뚱한 원소에 붙으면 데이터가 조용히 틀어진다. */
+SW_TEST_CASE( AssetSaveConditionTest, AmbiguousElementIsNotSaved )
 {
-    SW_EXPECT_LOG( "ResourceCondition.SaveAmbiguousElement" );
+    SW_EXPECT_LOG( "AssetCondition.SaveAmbiguousElement" );
     constexpr const utf8* kSource = R"(<Doc><item a="1"><_when _if="quality.low" a="2" /></item></Doc>)";
     constexpr const utf8* kSaved  = R"(<Doc><item a="1" b="x" /><item a="1" b="y" /></Doc>)";
     string                outText;
-    SW_EXPECT_FALSE( ResourceComposer::restoreConditions( ResourceSaveText::makeComplete( kSaved ), kSource, "test", XSaveConditionTestUtil::makeLow(), outText ) );
+    SW_EXPECT_FALSE( AssetComposer::restoreConditions( AssetSaveText::makeComplete( kSaved ), kSource, "test", XSaveConditionTestUtil::makeLow(), outText ) );
 }
 
-/** @brief [ResourceSaveConditionTest] 원본의 조건이 틀리거나 사본의 루트가 다르면 쓰지 않는다 — 조건을 잃는 저장보다 실패가 낫다 */
-SW_TEST_CASE( ResourceSaveConditionTest, BrokenConditionsAndOtherRootsAreNotSaved )
+/** @brief [AssetSaveConditionTest] 원본의 조건이 틀리거나 사본의 루트가 다르면 쓰지 않는다 — 조건을 잃는 저장보다 실패가 낫다 */
+SW_TEST_CASE( AssetSaveConditionTest, BrokenConditionsAndOtherRootsAreNotSaved )
 {
     string outText;
-    SW_EXPECT_LOG( "ResourceCondition.SaveShapeChanged" );
-    SW_EXPECT_FALSE( ResourceComposer::restoreConditions( ResourceSaveText::makeComplete( "<Other />" ), R"(<Doc><_when _if="quality.low" a="1" /></Doc>)", "test", Util::makeLow(), outText ) );
-    SW_EXPECT_LOG( "ResourceCondition.NoTest" );
-    SW_EXPECT_FALSE( ResourceComposer::restoreConditions( ResourceSaveText::makeComplete( "<Doc />" ), R"(<Doc><_when a="1" /></Doc>)", "test", Util::makeLow(), outText ) );
+    SW_EXPECT_LOG( "AssetCondition.SaveShapeChanged" );
+    SW_EXPECT_FALSE( AssetComposer::restoreConditions( AssetSaveText::makeComplete( "<Other />" ), R"(<Doc><_when _if="quality.low" a="1" /></Doc>)", "test", Util::makeLow(), outText ) );
+    SW_EXPECT_LOG( "AssetCondition.NoTest" );
+    SW_EXPECT_FALSE( AssetComposer::restoreConditions( AssetSaveText::makeComplete( "<Doc />" ), R"(<Doc><_when a="1" /></Doc>)", "test", Util::makeLow(), outText ) );
 }
 
-/** @brief [ResourceSaveConditionTest] 덮어쓰기 층을 얹어 읽은 리소스는 원본 자리에 쓰지 않는다 — 층 값이 원본에 박힌다 */
-SW_TEST_CASE( ResourceSaveConditionTest, LayeredResourceIsNotSavedOverTheOriginal )
+/** @brief [AssetSaveConditionTest] 덮어쓰기 층을 얹어 읽은 리소스는 원본 자리에 쓰지 않는다 — 층 값이 원본에 박힌다 */
+SW_TEST_CASE( AssetSaveConditionTest, LayeredResourceIsNotSavedOverTheOriginal )
 {
     const ScopedScratchDomain domain;
     const XSaveTagScope       scope;
-    const vector<string>      listPreviousLayer = engine::getSubsystem<ResourceComposition>().getLayers();
+    const vector<string>      listPreviousLayer = engine::getSubsystem<AssetComposition>().getLayers();
     (void)domain.makeDiskFolder( "layers/night/testproject" ).str();
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "layers/night/testproject/doc.xml" ), R"(<Doc a="layer" />)" ) );
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "doc.xml" ), R"(<Doc a="base" />)" ) );
-    SW_REQUIRE_TRUE( engine::getSubsystem<ResourceComposition>().setLayers( { ScopedScratchDomain::makeID( "layers/night" ).str() } ) );
+    SW_REQUIRE_TRUE( engine::getSubsystem<AssetComposition>().setLayers( { ScopedScratchDomain::makeID( "layers/night" ).str() } ) );
 
     const AssetID id = ScopedScratchDomain::makeID( "doc.xml" );
     string        flatText;
     bool          bComposed = false;
-    SW_REQUIRE_TRUE( ResourceComposer::compose( R"(<Doc a="base" />)", id.view(), ResourceContext::forSchema( []()
+    SW_REQUIRE_TRUE( AssetComposer::compose( R"(<Doc a="base" />)", id.view(), AssetComposeContext::forSchema( []()
     { return DataInheritanceSchema{ "Doc" }; } ).withAsset( id ),
-                                                flatText, bComposed ) );
-    SW_EXPECT_LOG( "ResourceLayer.SaveWouldBake" );
-    SW_EXPECT_FALSE( ResourceComposer::saveText( domain.makeDiskPath( "doc.xml" ), ResourceSaveText::makeComplete( flatText ) ) );
+                                             flatText, bComposed ) );
+    SW_EXPECT_LOG( "AssetLayer.SaveWouldBake" );
+    SW_EXPECT_FALSE( AssetComposer::saveText( domain.makeDiskPath( "doc.xml" ), AssetSaveText::makeComplete( flatText ) ) );
     string onDisk;
     SW_REQUIRE_TRUE( FileUtil::readTextFile( domain.makeDiskPath( "doc.xml" ), onDisk ) );
     SW_EXPECT_TRUE( onDisk.find( "base" ) != string::npos );
 
-    SW_REQUIRE_TRUE( engine::getSubsystem<ResourceComposition>().setLayers( listPreviousLayer ) );
+    SW_REQUIRE_TRUE( engine::getSubsystem<AssetComposition>().setLayers( listPreviousLayer ) );
 }
 
 /**
- * @brief [ResourceSaveDeltaTest] `_base` 저장 한 벌이 폴더를 만들어 차이만 쓰고, 다시 읽어 다르면 쓰지 않고 있던 파일을 지키는지 검증
+ * @brief [AssetSaveDeltaTest] `_base` 저장 한 벌이 폴더를 만들어 차이만 쓰고, 다시 읽어 다르면 쓰지 않고 있던 파일을 지키는지 검증
  */
-SW_TEST_CASE( ResourceSaveDeltaTest, WritesTheDeltaOnlyWhenItReadsBack )
+SW_TEST_CASE( AssetSaveDeltaTest, WritesTheDeltaOnlyWhenItReadsBack )
 {
     const ScopedScratchDomain   domain;
     const AbsolutePath          path = domain.makeDiskPath( "new/folder/child.xml" );
@@ -211,15 +211,15 @@ SW_TEST_CASE( ResourceSaveDeltaTest, WritesTheDeltaOnlyWhenItReadsBack )
     constexpr string_view       kParent = R"(<Doc a="1" b="2" />)";
     constexpr string_view       kFull   = R"(<Doc a="1" b="3" />)";
 
-    SW_REQUIRE_TRUE( ResourceComposer::saveDelta( path, kFull, kParent, schema, "parent.xml", [kFull]( const string& )
+    SW_REQUIRE_TRUE( AssetComposer::saveDelta( path, kFull, kParent, schema, "parent.xml", [kFull]( const string& )
     { return string{ kFull }; } ) );
     string written;
     SW_REQUIRE_TRUE( FileUtil::readTextFile( path, written ) );
     SW_EXPECT_TRUE( written.find( "_base" ) != string::npos );
     SW_EXPECT_TRUE( written.find( "a=" ) == string::npos ); // 부모와 같은 칸은 적지 않는다
 
-    SW_EXPECT_LOG( "ResourceSave.DeltaNotSaved" );
-    SW_EXPECT_FALSE( ResourceComposer::saveDelta( path, R"(<Doc a="1" />)", kParent, schema, "parent.xml", []( const string& )
+    SW_EXPECT_LOG( "AssetSave.DeltaNotSaved" );
+    SW_EXPECT_FALSE( AssetComposer::saveDelta( path, R"(<Doc a="1" />)", kParent, schema, "parent.xml", []( const string& )
     { return string{ "different" }; } ) );
     string kept;
     SW_REQUIRE_TRUE( FileUtil::readTextFile( path, kept ) );
@@ -227,39 +227,39 @@ SW_TEST_CASE( ResourceSaveDeltaTest, WritesTheDeltaOnlyWhenItReadsBack )
 }
 
 /**
- * @brief [ResourceSaveConditionTest] 참인 조건이 정한 칸을 기본값으로 되돌린 편집도 그 조건의 값이다 — 저장할 글이 칸을 뺐으면 빼지 않은 짝의 값을 읽는다
+ * @brief [AssetSaveConditionTest] 참인 조건이 정한 칸을 기본값으로 되돌린 편집도 그 조건의 값이다 — 저장할 글이 칸을 뺐으면 빼지 않은 짝의 값을 읽는다
  * @details 예전에는 칸이 빠진 글만 받아 "그대로" 와 가릴 수 없어 조건 값(2)이 남았다. 변이: 빼지 않은 짝을 보지 않으면 조건 값 단언이 진다.
  */
-SW_TEST_CASE( ResourceSaveConditionTest, ResetToDefaultGoesToTheCondition )
+SW_TEST_CASE( AssetSaveConditionTest, ResetToDefaultGoesToTheCondition )
 {
     string outText;
-    SW_REQUIRE_TRUE( ResourceComposer::restoreConditions( ResourceSaveText::makeWithComplete( R"(<Doc />)", R"(<Doc a="0" />)" ), R"(<Doc a="1"><_when _if="quality.low" a="2" /></Doc>)", "test",
-                                                          XSaveConditionTestUtil::makeLow(), outText ) );
+    SW_REQUIRE_TRUE( AssetComposer::restoreConditions( AssetSaveText::makeWithComplete( R"(<Doc />)", R"(<Doc a="0" />)" ), R"(<Doc a="1"><_when _if="quality.low" a="2" /></Doc>)", "test",
+                                                       XSaveConditionTestUtil::makeLow(), outText ) );
     XMLDocument doc;
     SW_REQUIRE_TRUE( doc.parse( outText ) );
     SW_EXPECT_EQUAL( string( "1" ), XSaveConditionTestUtil::readAttribute( doc.getRoot(), "a" ) ); // 조건 밖 값은 그대로
     SW_EXPECT_EQUAL( string( "0" ), XSaveConditionTestUtil::readAttribute( doc.getRoot().findChild( DataInheritance::kWhenElement ), "a" ) );
 
     // 칸을 뺀 글이 정말 "그대로" 였으면(빼지 않은 짝도 조건 값) 조건 값이 남는다.
-    SW_REQUIRE_TRUE( ResourceComposer::restoreConditions( ResourceSaveText::makeWithComplete( R"(<Doc />)", R"(<Doc a="2" />)" ), R"(<Doc a="1"><_when _if="quality.low" a="2" /></Doc>)", "test",
-                                                          XSaveConditionTestUtil::makeLow(), outText ) );
+    SW_REQUIRE_TRUE( AssetComposer::restoreConditions( AssetSaveText::makeWithComplete( R"(<Doc />)", R"(<Doc a="2" />)" ), R"(<Doc a="1"><_when _if="quality.low" a="2" /></Doc>)", "test",
+                                                       XSaveConditionTestUtil::makeLow(), outText ) );
     SW_REQUIRE_TRUE( doc.parse( outText ) );
     SW_EXPECT_EQUAL( string( "2" ), XSaveConditionTestUtil::readAttribute( doc.getRoot().findChild( DataInheritance::kWhenElement ), "a" ) );
 }
 
 /**
- * @brief [ResourceSaveConditionTest] 바꿔 끼운 태그로만 합친 변형도 그 태그가 바뀌면 다시 읽을 목록에 오르고, 합성 기록(접속 대조)에는 들지 않는다
+ * @brief [AssetSaveConditionTest] 바꿔 끼운 태그로만 합친 변형도 그 태그가 바뀌면 다시 읽을 목록에 오르고, 합성 기록(접속 대조)에는 들지 않는다
  * @details 예전에는 변형을 아무 데도 적지 않아 변형만 읽은 리소스(미리보기만 연 화면)가 엔진 태그가 바뀌어도 다시 읽히지 않았다. 변이: `recordVariant` 를 비우면 첫 단언이 진다.
  */
-SW_TEST_CASE( ResourceSaveConditionTest, TagOverrideVariantIsReloadedWhenItsTagChanges )
+SW_TEST_CASE( AssetSaveConditionTest, TagOverrideVariantIsReloadedWhenItsTagChanges )
 {
-    ResourceComposition composition;
+    AssetComposition composition;
     composition.recordVariant( "ui/menu.ui.xml", vector<string>{ "screen.phone" } );
     composition.notifyTagsChanged( vector<string>{ "screen.phone" } );
     vector<string> listReload;
     composition.takePendingReload( listReload );
     SW_EXPECT_EQUAL( size_t( 1 ), listReload.size() );
-    vector<ResourceDigestEntry> listDigest;
+    vector<AssetDigestEntry> listDigest;
     composition.collectDigest( listDigest );
     SW_EXPECT_TRUE( listDigest.empty() );
 }

@@ -77,7 +77,7 @@
 #include "Engine/Network/NetMessageBody.h"
 #include "Engine/Object/GameObject/Subsystem/SceneNetLink.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Serialization/Inherit/ResourceComposition.h"
+#include "Engine/Serialization/Compose/AssetComposition.h"
 
 /** @brief 클라이언트가 서버에 붙었을 때 남기는 줄의 로그 id 입니다. 에디터 멀티플레이 세션이 자식 클라이언트의 이 줄로 접속을 안다(`EditorNetPlaySession`). */
 #define SW_LOG_ID_NET_SESSION_CONNECTED "Net.SessionConnected"
@@ -168,7 +168,7 @@ namespace sw
     struct GameNetSessionLimit
     {
         static constexpr int32  kMaxDigestIDBytes = 512;  ///< `GameNetSessionMessage::kMaxDigestIDBytes`
-        static constexpr uint32 kMaxDigestPerPoll = 4096; ///< 한 연결이 `poll` 한 번에 보내는 합성 줄 상한 — 접속하자마자 모두 보내므로 연결의 총 상한(`ResourceDigestComparer::kMaxLinesPerPeer`)과 같다
+        static constexpr uint32 kMaxDigestPerPoll = 4096; ///< 한 연결이 `poll` 한 번에 보내는 합성 줄 상한 — 접속하자마자 모두 보내므로 연결의 총 상한(`AssetDigestComparer::kMaxLinesPerPeer`)과 같다
     };
 
     /** @brief 서버 틱(서버 → 모두) 본문입니다 — 방금 끝낸 서버 틱 번호. */
@@ -180,9 +180,9 @@ namespace sw
         uint64 _tick{ 0 };
     };
 
-    /** @brief 합성 해시 한 줄(클라이언트 → 서버) 본문입니다 — 리소스 id 와 합성 결과 해시(`ResourceComposition::hashText`). */
+    /** @brief 합성 해시 한 줄(클라이언트 → 서버) 본문입니다 — 리소스 id 와 합성 결과 해시(`AssetComposition::hashText`). */
     REFLECT()
-    struct GameResourceDigestBody
+    struct GameAssetDigestBody
     {
         REFLECT_BODY();
         PROPERTY( MaxCount = GameNetSessionLimit::kMaxDigestIDBytes )
@@ -207,22 +207,22 @@ namespace sw
         using ServerTick     = NetMessageBodyDef<0x00, NetMessageDirection::ToClient, NetChannelKind::UnreliableSequenced, GameServerTickBody>; ///< 서버 → 모두. 방금 끝낸 서버 틱 번호
         using ShutdownNotice = NetMessageBodyDef<0x01, NetMessageDirection::ToClient, NetChannelKind::ReliableOrdered, GameShutdownNotice>;     ///< 서버 → 모두. 서버가 내려가기 시작한다 — 사유 + 기다려 주는 시간(초)
         /**
-         * @brief 클라이언트 → 서버(신뢰 순서). 로드 축 조건 · 덮어쓰기 층에 기댄 합성 한 줄씩 — 리소스 id(blob) + 합성 결과 해시(varuint, `ResourceComposition::hashText`). 접속하자마자 모두 보내고, 붙은 뒤 새로 읽거나 바뀐 합성을 그때마다 보낸다.
-         * @details 서버가 같은 리소스를 다르게 합성했고 유예(`gv_netResourceDigestGraceSeconds`)가 지나도 다르면(품질 축이 시뮬레이션 값을 건드렸다 · 다른 모드 층) 그 연결을 끊는다. 일관성 검사이지 부정행위 방지가 아니다(클라이언트가 거짓을 보낼 수 있다).
+         * @brief 클라이언트 → 서버(신뢰 순서). 로드 축 조건 · 덮어쓰기 층에 기댄 합성 한 줄씩 — 리소스 id(blob) + 합성 결과 해시(varuint, `AssetComposition::hashText`). 접속하자마자 모두 보내고, 붙은 뒤 새로 읽거나 바뀐 합성을 그때마다 보낸다.
+         * @details 서버가 같은 리소스를 다르게 합성했고 유예(`gv_netAssetDigestGraceSeconds`)가 지나도 다르면(품질 축이 시뮬레이션 값을 건드렸다 · 다른 모드 층) 그 연결을 끊는다. 일관성 검사이지 부정행위 방지가 아니다(클라이언트가 거짓을 보낼 수 있다).
          */
-        using ResourceDigest                     = NetLimitedMessageDef<NetMessageBodyDef<0x02, NetMessageDirection::ToServer, NetChannelKind::ReliableOrdered, GameResourceDigestBody>, GameNetSessionLimit::kMaxDigestPerPoll>;
-        static constexpr int32 kMaxDigestIDBytes = GameNetSessionLimit::kMaxDigestIDBytes; ///< `kResourceDigest` 의 리소스 id 길이 상한(넘는 id 는 보내지 않고 오류를 남긴다)
+        using AssetDigest                        = NetLimitedMessageDef<NetMessageBodyDef<0x02, NetMessageDirection::ToServer, NetChannelKind::ReliableOrdered, GameAssetDigestBody>, GameNetSessionLimit::kMaxDigestPerPoll>;
+        static constexpr int32 kMaxDigestIDBytes = GameNetSessionLimit::kMaxDigestIDBytes; ///< `kAssetDigest` 의 리소스 id 길이 상한(넘는 id 는 보내지 않고 오류를 남긴다)
         /**
          * @brief `net.traffic` 부하 메시지입니다. 처리기가 없어 받는 쪽 라우터가 버린다.
          * @details 재전송 수치를 보려고 신뢰 메시지를 흘리는 용도다 — 키트가 없는 게임(Playground)의 세션은 연결 유지 패킷만 오가서 다시 보낼 것이 없다.
          *          0x0F 는 라우터의 판 알림 종류다(`NetMessageRange::kRouterWireVersionKind`) — 예전에 여기 있어 받는 라우터가 부하 메시지를 판 알림으로 읽었다(표가 이제 컴파일 오류로 막는다).
          */
         using Traffic = NetMessageDef<0x0E, NetMessageDirection::Both, NetChannelKind::ReliableOrdered>;
-        using Table   = NetMessageTable<NetMessageRange::kEngine, ServerTick, ShutdownNotice, ResourceDigest, Traffic>;
+        using Table   = NetMessageTable<NetMessageRange::kEngine, ServerTick, ShutdownNotice, AssetDigest, Traffic>;
 
         static constexpr uint8 kServerTick     = Table::getKindOf<ServerTick>();
         static constexpr uint8 kShutdownNotice = Table::getKindOf<ShutdownNotice>();
-        static constexpr uint8 kResourceDigest = Table::getKindOf<ResourceDigest>();
+        static constexpr uint8 kAssetDigest    = Table::getKindOf<AssetDigest>();
         static constexpr uint8 kTraffic        = Table::getKindOf<Traffic>();
     };
 } // namespace sw
@@ -296,7 +296,7 @@ namespace sw
         static constexpr uint16 kDefaultPort = 7777;
 
         /** @brief @p composition 은 이 엔진의 합성 기록이다(코어 범위 — 이 세션보다 오래 산다). 서버가 받은 합성 줄을 맞댄다. */
-        explicit GameNetSession( const ResourceComposition& composition );
+        explicit GameNetSession( const AssetComposition& composition );
         ~GameNetSession() override;
 
         GameNetSession( const GameNetSession& )            = delete;
@@ -484,7 +484,7 @@ namespace sw
             uint32                  getMaxPerPoll( uint8 kind ) const override { return GameNetSessionMessage::Table::getMaxPerPollOf( kind ); }
             /** @brief 표(`GameNetSessionMessage::Table`)가 종류를 세션의 `receive` 오버로드로 나눈다. */
             NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body ) override;
-            /** @brief 클라이언트가 서버에 붙었다 — 합성 해시를 보낸다(`sendResourceDigest`). */
+            /** @brief 클라이언트가 서버에 붙었다 — 합성 해시를 보낸다(`sendAssetDigest`). */
             void onConnectionOpened( int32 connectionID ) override;
             /** @brief 연결이 닫혔다 — 합성 대조의 그 연결 상태를 버린다. */
             void onConnectionClosed( int32 connectionID, NetDisconnectReason reason ) override;
@@ -516,12 +516,12 @@ namespace sw
         // 엔진 영역 메시지(`EngineMessageHandler::handleNetMessage` 가 표로 나눈다). 부하 메시지(`Traffic`)는 받는 처리기가 없다
         NetHandleResult receive( GameNetSessionMessage::ServerTick, const NetMessageContext& context, const GameServerTickBody& body );
         NetHandleResult receive( GameNetSessionMessage::ShutdownNotice, const NetMessageContext& context, const GameShutdownNotice& body );
-        NetHandleResult receive( GameNetSessionMessage::ResourceDigest, const NetMessageContext& context, const GameResourceDigestBody& body );
+        NetHandleResult receive( GameNetSessionMessage::AssetDigest, const NetMessageContext& context, const GameAssetDigestBody& body );
         NetHandleResult receive( GameNetSessionMessage::Traffic, const NetMessageContext& context, BitReader& body );
-        /** @brief 지난번 뒤에 바뀐 로드 축 조건 · 층 합성(`ResourceComposition::collectTagDependentChanges`)을 한 줄씩 서버에 보냅니다(클라이언트). 접속 때는 번호를 0 으로 돌려 모두 보낸다. */
-        void sendResourceDigest( int32 connectionID );
+        /** @brief 지난번 뒤에 바뀐 로드 축 조건 · 층 합성(`AssetComposition::collectTagDependentChanges`)을 한 줄씩 서버에 보냅니다(클라이언트). 접속 때는 번호를 0 으로 돌려 모두 보낸다. */
+        void sendAssetDigest( int32 connectionID );
         /** @brief 합성 대조의 프레임 일입니다 — 클라이언트는 바뀐 줄을 보내고, 서버는 유예가 지나도 어긋난 연결을 끊는다. */
-        void updateResourceDigest();
+        void updateAssetDigest();
 
         /** @brief UDP 소켓을 엽니다. 실패하면 로그를 남기고 nullptr 입니다. */
         static unique_ptr<INetTransport> createUDPTransport( const GameNetSessionParams& params, uint16 transportPort );
@@ -574,7 +574,7 @@ namespace sw
         uint8                             _bTicketBound;            ///< 티켓에 묶인 세션이다 — 서버는 모든 연결에 티켓을 요구하고, 클라이언트는 티켓을 내민다(티켓이 지워진 뒤에는 새 티켓 없이 다시 붙지 않는다)
         uint8                             _bConnectFailureReported; ///< 클라이언트 — 연결 실패를 한 번 알렸다(다시 시도하는 시간 초과는 처음만 알린다)
         MetricRegistry*                   _pMetricRegistry;         ///< 서버 — 운영 지표(`bindMetricRegistry`, 전용 서버가 소유). nullptr 이면 세지 않는다
-        ResourceDigestComparer            _digestComparer;          ///< 서버 — 클라이언트마다 받은 합성 줄과 자기 합성을 맞댄다
+        AssetDigestComparer               _digestComparer;          ///< 서버 — 클라이언트마다 받은 합성 줄과 자기 합성을 맞댄다
         uint64                            _digestSentRevision;      ///< 클라이언트 — 합성 줄을 어디까지 보냈는가
         int32                             _digestServerConnection;  ///< 클라이언트 — 합성 줄을 보낼 연결. 음수면 붙어 있지 않다
         GameShutdownNotice                _shutdownNotice;          ///< 클라이언트 — 받은 서버 종료 통지(`_bShutdownNoticeKnown` 일 때만 뜻이 있다)

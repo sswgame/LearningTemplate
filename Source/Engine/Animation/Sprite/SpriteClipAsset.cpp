@@ -10,7 +10,7 @@
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
-#include "Engine/Serialization/Inherit/ResourceComposer.h"
+#include "Engine/Serialization/Compose/AssetComposer.h"
 #include "Engine/Serialization/Serializer/XMLSerializer.h"
 
 namespace sw
@@ -46,7 +46,7 @@ namespace sw
             SW_LOG_WARNING_ID( "SpriteClip.CouldNotReadSprite", "Could not read sprite clip '%#'", path );
             return false;
         }
-        return loadComposed( text, path, ResourceContext::forType( *StaticType() ).withAsset( assetID ) );
+        return loadComposed( text, path, AssetComposeContext::forType( *StaticType() ).withAsset( assetID ) );
     }
 
     bool SpriteClipAsset::loadFromDiskFile( const DiskPath& diskPath )
@@ -66,10 +66,10 @@ namespace sw
 
     bool SpriteClipAsset::loadFromXMLText( const string& text, string_view sourceLabel )
     {
-        return loadComposed( text, sourceLabel, ResourceContext::forType( *StaticType() ) );
+        return loadComposed( text, sourceLabel, AssetComposeContext::forType( *StaticType() ) );
     }
 
-    bool SpriteClipAsset::loadComposed( string_view text, string_view sourceLabel, const ResourceContext& context )
+    bool SpriteClipAsset::loadComposed( string_view text, string_view sourceLabel, const AssetComposeContext& context )
     {
         // 키는 대소문자까지 맞아야 하고, 모르는 속성 · 자식 · 읽지 못한 값은 오류다(`readComposedXMLDocument` 가 로그로 알린다).
         if ( ConfigManager::readComposedXMLDocument( this, *StaticType(), text, sourceLabel, context ) && resolveLoadedValues( sourceLabel ) )
@@ -82,13 +82,13 @@ namespace sw
     {
         if ( absPath.str().empty() )
             return false;
-        return ResourceComposer::saveText( absPath, ResourceSaveText::makeComplete( toXML() ) ); // 칸을 빼지 않고 쓴다
+        return AssetComposer::saveText( absPath, AssetSaveText::makeComplete( toXML() ) ); // 칸을 빼지 않고 쓴다
     }
 
     bool SpriteClipAsset::loadFromXMLText( string_view xml )
     {
         clear();
-        return loadComposed( xml, "<sprite clip text>", ResourceContext::forType( *StaticType() ) );
+        return loadComposed( xml, "<sprite clip text>", AssetComposeContext::forType( *StaticType() ) );
     }
 
     SpriteClipAsset::SpriteClipAsset() = default;

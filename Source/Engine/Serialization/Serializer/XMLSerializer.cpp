@@ -11,8 +11,8 @@
 #include "Engine/Reflection/ReflectVisit.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/TypeRegistry.h"
+#include "Engine/Serialization/Compose/AssetComposer.h"
 #include "Engine/Serialization/Format/SchemaMigrate.h"
-#include "Engine/Serialization/Inherit/ResourceComposer.h"
 #include "Engine/Serialization/Serializer/ContainerVisitor.h"
 #include "Engine/Serialization/Serializer/PropertyConstraints.h"
 #include "Engine/Serialization/Serializer/PropertyReadRollback.h"
@@ -1091,7 +1091,7 @@ namespace sw
         SerializeContext completeContext = context;
         completeContext.setWriteEmptyValues( true );
         const string completeText = serialize( pInstance, typeInfo, completeContext );
-        return ResourceComposer::saveText( absPath, ResourceSaveText::makeWithComplete( text, completeText ) );
+        return AssetComposer::saveText( absPath, AssetSaveText::makeWithComplete( text, completeText ) );
     }
 
     bool XMLSerializer::loadFromAsset( const AssetID& assetID, void* pInstance, const TypeInfo& typeInfo, const SerializeContext& context )
@@ -1100,10 +1100,10 @@ namespace sw
         // 낱개 파일 허용 정책은 `AssetIO` 한 곳이 본다(OS 절대 경로 · 작업 경로도 거기서 읽는다) — 실패 뒤 디스크를 다시 읽지 않는다.
         if ( AssetIO::readTextAsset( assetID, text ) == false )
             return false;
-        // 부모를 가리키면 한 벌로 펼친 뒤 읽는다(`ResourceComposer`).
+        // 부모를 가리키면 한 벌로 펼친 뒤 읽는다(`AssetComposer`).
         string flatText;
         bool   bComposed = false;
-        if ( ResourceComposer::compose( text, assetID.view(), ResourceContext::forType( typeInfo ).withAsset( assetID ), flatText, bComposed ) == false )
+        if ( AssetComposer::compose( text, assetID.view(), AssetComposeContext::forType( typeInfo ).withAsset( assetID ), flatText, bComposed ) == false )
             return false;
         return deserialize( pInstance, typeInfo, bComposed ? flatText : text, context );
     }

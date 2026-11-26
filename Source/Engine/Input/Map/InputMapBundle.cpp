@@ -61,7 +61,7 @@ namespace sw
         outListAsset.clear();
         XMLDocument doc;
         string      absPath;
-        if ( doc.loadResource( settingsAssetID, &absPath ) == false )
+        if ( doc.loadAsset( settingsAssetID, &absPath ) == false )
         {
             SW_LOG_ERROR_ID( "InputMapBundle.SettingsUnreadable", "Input map bundle: could not read %#", settingsAssetID.c_str() );
             return false;

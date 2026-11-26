@@ -68,14 +68,14 @@ namespace sw
         DataPath _uiPauseMenu; ///< 일시정지 메뉴 문서입니다. 없으면 엔진 기본(`EngineDefaultAssets::_uiPauseMenu`)이고, `_bUIPauseMenu` 가 켜졌을 때만 씁니다
 
         /**
-         * @brief 이 게임의 덮어쓰기 층 뿌리(리소스 id 폴더, 아래 층이 먼저)입니다(`ResourceLayers`). 리소스 `X` 를 읽을 때 `<뿌리>/X` 가 있으면 원본 위에 얹는다.
+         * @brief 이 게임의 덮어쓰기 층 뿌리(리소스 id 폴더, 아래 층이 먼저)입니다(`AssetLayers`). 리소스 `X` 를 읽을 때 `<뿌리>/X` 가 있으면 원본 위에 얹는다.
          * @details 공용 도메인(`common` · `engine`)의 리소스를 게임마다 다르게 쓰면서 파일을 베끼지 않는 자리다(언리얼 팩 우선순위 · Composite Data Table). 비면 층이 없다.
          */
         PROPERTY()
-        vector<string> _listResourceLayer{};
+        vector<string> _listAssetLayer{};
 
         PROPERTY()
-        DataPath _resourceRemap; ///< 조건에 따라 다른 파일을 읽는 경로 교체 표(`ResourceRemap`)입니다. 없으면 바꾸지 않습니다
+        DataPath _assetRemap; ///< 조건에 따라 다른 파일을 읽는 경로 교체 표(`AssetRemap`)입니다. 없으면 바꾸지 않습니다
 
         /** @brief 화면이 없을 때 Esc · 패드 Start(`UI.Pause`)로 일시정지 메뉴를 연다. 게임 흐름(타이틀 · 경영 화면)이 Esc 를 따로 쓰면 끈다. */
         PROPERTY()

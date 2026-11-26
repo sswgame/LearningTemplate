@@ -10,7 +10,7 @@
 
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Content/AssetIO.h"
-#include "Engine/Serialization/Inherit/ResourceComposer.h"
+#include "Engine/Serialization/Compose/AssetComposer.h"
 #include "Engine/Serialization/Serializer/XMLSerializer.h"
 
 #include <algorithm>
@@ -126,7 +126,7 @@ namespace sw
             SW_LOG_WARNING_ID( "SequenceAsset.CouldNotReadSequence", "Could not read sequence '%#'", path );
             return false;
         }
-        return readText( text, path, ResourceContext::forType( *StaticType() ).withAsset( assetID ) );
+        return readText( text, path, AssetComposeContext::forType( *StaticType() ).withAsset( assetID ) );
     }
 
     bool SequenceAsset::loadFromDiskFile( const DiskPath& diskPath )
@@ -141,22 +141,22 @@ namespace sw
             SW_LOG_WARNING_ID( "SequenceAsset.CouldNotReadSequence2", "Could not read sequence file '%#'", diskPath.str() );
             return false;
         }
-        return readText( text, diskPath.str(), ResourceContext::forType( *StaticType() ) );
+        return readText( text, diskPath.str(), AssetComposeContext::forType( *StaticType() ) );
     }
 
     bool SequenceAsset::saveToFile( const AbsolutePath& absPath ) const
     {
         if ( absPath.str().empty() )
             return false;
-        return ResourceComposer::saveText( absPath, ResourceSaveText::makeComplete( toXML() ) ); // 칸을 빼지 않고 쓴다
+        return AssetComposer::saveText( absPath, AssetSaveText::makeComplete( toXML() ) ); // 칸을 빼지 않고 쓴다
     }
 
     bool SequenceAsset::loadFromXMLText( string_view xmlView )
     {
-        return readText( xmlView, "<sequence text>", ResourceContext::forType( *StaticType() ) );
+        return readText( xmlView, "<sequence text>", AssetComposeContext::forType( *StaticType() ) );
     }
 
-    bool SequenceAsset::readText( string_view xml, string_view sourceLabel, const ResourceContext& context )
+    bool SequenceAsset::readText( string_view xml, string_view sourceLabel, const AssetComposeContext& context )
     {
         // 반쯤 찬 에셋을 남기지 않는다. 실패는 "아무것도 읽지 않았다" 여야 한다.
         *this = SequenceAsset{};

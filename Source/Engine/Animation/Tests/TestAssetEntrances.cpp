@@ -20,9 +20,9 @@
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Physics/Asset/PhysicsAsset.h"
 #include "Engine/Scene/SceneDocument.h"
+#include "Engine/Serialization/Compose/AssetComposition.h"
+#include "Engine/Serialization/Compose/AssetTags.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
-#include "Engine/Serialization/Inherit/ResourceComposition.h"
-#include "Engine/Serialization/Inherit/ResourceTags.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/TileMap/TileMapXML.h"
 #include "Engine/Visual/MeshLODSettings.h"
@@ -37,29 +37,29 @@ namespace
     {
     public:
         XEntranceScope()
-            : _previous{ engine::getSubsystem<ResourceTags>().exchange( makeTags() ) }
-            , _listPreviousLayer{ engine::getSubsystem<ResourceComposition>().getLayers() }
+            : _previous{ engine::getSubsystem<AssetTags>().exchange( makeTags() ) }
+            , _listPreviousLayer{ engine::getSubsystem<AssetComposition>().getLayers() }
         {
         }
         ~XEntranceScope()
         {
-            (void)engine::getSubsystem<ResourceTags>().exchange( _previous );
-            (void)engine::getSubsystem<ResourceComposition>().setLayers( _listPreviousLayer );
+            (void)engine::getSubsystem<AssetTags>().exchange( _previous );
+            (void)engine::getSubsystem<AssetComposition>().setLayers( _listPreviousLayer );
             vector<string> listPending;
-            engine::getSubsystem<ResourceComposition>().takePendingReload( listPending ); // 케이스가 만든 다시 읽기 목록을 다음 케이스에 남기지 않는다
+            engine::getSubsystem<AssetComposition>().takePendingReload( listPending ); // 케이스가 만든 다시 읽기 목록을 다음 케이스에 남기지 않는다
         }
         XEntranceScope( const XEntranceScope& )            = delete;
         XEntranceScope& operator=( const XEntranceScope& ) = delete;
 
     private:
-        static ResourceTagSet makeTags()
+        static AssetTagSet makeTags()
         {
-            ResourceTagSet tags;
+            AssetTagSet tags;
             tags.add( "region.kr" );
             return tags;
         }
 
-        ResourceTagSet _previous;
+        AssetTagSet    _previous;
         vector<string> _listPreviousLayer;
     };
 
@@ -70,9 +70,9 @@ namespace
 
         static bool isRecorded( const AssetID& id )
         {
-            vector<ResourceDigestEntry> listEntry;
-            engine::getSubsystem<ResourceComposition>().collectDigest( listEntry );
-            return VectorUtil::containsIf( listEntry, [&id]( const ResourceDigestEntry& entry )
+            vector<AssetDigestEntry> listEntry;
+            engine::getSubsystem<AssetComposition>().collectDigest( listEntry );
+            return VectorUtil::containsIf( listEntry, [&id]( const AssetDigestEntry& entry )
             { return entry._assetID == id.str(); } );
         }
 
@@ -98,8 +98,8 @@ namespace
     using Util = XEntranceTestUtil;
 } // namespace
 
-/** @brief [ResourceEntranceTest] 손 형식 · 리플렉션 형식 · 합치기 함수 없는 일반 형식이 리소스 id 로 읽으면 로드 축 조건에 기댄 합성이 기록된다(접속 대조 · 다시 읽기의 입력) */
-SW_TEST_CASE( ResourceEntranceTest, ReadingByIDRecordsTheComposition )
+/** @brief [AssetEntranceTest] 손 형식 · 리플렉션 형식 · 합치기 함수 없는 일반 형식이 리소스 id 로 읽으면 로드 축 조건에 기댄 합성이 기록된다(접속 대조 · 다시 읽기의 입력) */
+SW_TEST_CASE( AssetEntranceTest, ReadingByIDRecordsTheComposition )
 {
     const ScopedScratchDomain domain;
     const XEntranceScope      scope;
@@ -139,10 +139,10 @@ SW_TEST_CASE( ResourceEntranceTest, ReadingByIDRecordsTheComposition )
 }
 
 /**
- * @brief [ResourceEntranceTest] 설정 문서 길(`ConfigManager::readComposedXMLDocument`)과 루트 찾기 길(`XMLReadUtil::parseResourceRoot`)로 읽는 형식도 id 로 읽으면 기록된다
+ * @brief [AssetEntranceTest] 설정 문서 길(`ConfigManager::readComposedXMLDocument`)과 루트 찾기 길(`XMLReadUtil::parseAssetRoot`)로 읽는 형식도 id 로 읽으면 기록된다
  * @details 예전에는 이 형식들의 `loadFromAsset` 이 글을 읽은 뒤 id 없이 글 입구로 넘겨 층 · 다시 읽기 · 접속 대조를 조용히 받지 못했다(린트 `hand-written-patterns` 의 assetEntrance 가 그 모양을 막는다).
  */
-SW_TEST_CASE( ResourceEntranceTest, SettingsAndRootFormatsRecordTheComposition )
+SW_TEST_CASE( AssetEntranceTest, SettingsAndRootFormatsRecordTheComposition )
 {
     const ScopedScratchDomain domain;
     const XEntranceScope      scope;
@@ -174,10 +174,10 @@ SW_TEST_CASE( ResourceEntranceTest, SettingsAndRootFormatsRecordTheComposition )
 }
 
 /**
- * @brief [ResourceEntranceTest] 이름이 `loadFromAsset` 이 아닌 입구(타일맵 `load`)도 id 로 읽으면 기록된다
+ * @brief [AssetEntranceTest] 이름이 `loadFromAsset` 이 아닌 입구(타일맵 `load`)도 id 로 읽으면 기록된다
  * @details 예전에는 타일맵이 글을 읽은 뒤 글 입구(`loadFromXML`)로 넘겨 층 · 다시 읽기 · 접속 대조를 조용히 받지 못했다. 린트 assetEntrance 가 이제 `load…` 이름을 모두 본다.
  */
-SW_TEST_CASE( ResourceEntranceTest, TileMapLoadRecordsTheComposition )
+SW_TEST_CASE( AssetEntranceTest, TileMapLoadRecordsTheComposition )
 {
     const ScopedScratchDomain                domain;
     const XEntranceScope                     scope;
@@ -191,8 +191,8 @@ SW_TEST_CASE( ResourceEntranceTest, TileMapLoadRecordsTheComposition )
     SW_EXPECT_TRUE( Util::isRecorded( tileMapID ) );
 }
 
-/** @brief [ResourceEntranceTest] 글 입구는 id 가 없어 기록을 남기지 않는다 — 같은 글을 id 로 읽은 것과 갈린다 */
-SW_TEST_CASE( ResourceEntranceTest, ReadingTextRecordsNothing )
+/** @brief [AssetEntranceTest] 글 입구는 id 가 없어 기록을 남기지 않는다 — 같은 글을 id 로 읽은 것과 갈린다 */
+SW_TEST_CASE( AssetEntranceTest, ReadingTextRecordsNothing )
 {
     const XEntranceScope                     scope;
     PhysicsAsset                             physics;
@@ -202,8 +202,8 @@ SW_TEST_CASE( ResourceEntranceTest, ReadingTextRecordsNothing )
     SW_EXPECT_FALSE( Util::isRecorded( AssetID{ "testproject/text-only.physics.xml" } ) );
 }
 
-/** @brief [ResourceEntranceTest] 손 형식의 층은 그 형식의 규칙으로 얹는다 — 머티리얼은 범용 문서 입구로 읽어 층이 규칙을 못 찾고(`ResourceLayer.NoRule`) 멈췄다 */
-SW_TEST_CASE( ResourceEntranceTest, LayerOverHandFormatUsesItsRule )
+/** @brief [AssetEntranceTest] 손 형식의 층은 그 형식의 규칙으로 얹는다 — 머티리얼은 범용 문서 입구로 읽어 층이 규칙을 못 찾고(`AssetLayer.NoRule`) 멈췄다 */
+SW_TEST_CASE( AssetEntranceTest, LayerOverHandFormatUsesItsRule )
 {
     const ScopedScratchDomain domain;
     const XEntranceScope      scope;
@@ -213,7 +213,7 @@ SW_TEST_CASE( ResourceEntranceTest, LayerOverHandFormatUsesItsRule )
     Util::write( domain, "layers/night/testproject/b.material", R"(<MaterialDef name="FromLayer" />)" );
     Util::write( domain, "b.retarget.xml", R"(<RetargetProfile><root source="root" target="root" /><pelvis source="pelvis" target="hips" /><chains><item name="LeftArm"><source><item>a</item></source><target><item>b</item></target></item></chains></RetargetProfile>)" );
     Util::write( domain, "layers/night/testproject/b.retarget.xml", R"(<RetargetProfile><pelvis target="hips_layer" /></RetargetProfile>)" );
-    SW_REQUIRE_TRUE( engine::getSubsystem<ResourceComposition>().setLayers( { ScopedScratchDomain::makeID( "layers/night" ).str() } ) );
+    SW_REQUIRE_TRUE( engine::getSubsystem<AssetComposition>().setLayers( { ScopedScratchDomain::makeID( "layers/night" ).str() } ) );
 
     const shared_ptr<Material> material = Material::create();
     SW_REQUIRE_TRUE( material->loadFromAsset( ScopedScratchDomain::makeID( "b.material" ) ) );
@@ -225,8 +225,8 @@ SW_TEST_CASE( ResourceEntranceTest, LayerOverHandFormatUsesItsRule )
     SW_EXPECT_TRUE( Util::isRecorded( ScopedScratchDomain::makeID( "b.retarget.xml" ) ) );
 }
 
-/** @brief [ResourceEntranceTest] 씬 상속을 리소스 id 로 읽어도 저장이 쓰는 부모 id 는 남는다(펼친 글에는 `_base` 가 없다) */
-SW_TEST_CASE( ResourceEntranceTest, SceneKeepsItsBaseIDThroughTheRule )
+/** @brief [AssetEntranceTest] 씬 상속을 리소스 id 로 읽어도 저장이 쓰는 부모 id 는 남는다(펼친 글에는 `_base` 가 없다) */
+SW_TEST_CASE( AssetEntranceTest, SceneKeepsItsBaseIDThroughTheRule )
 {
     const ScopedScratchDomain domain;
     const XEntranceScope      scope;
@@ -242,12 +242,12 @@ SW_TEST_CASE( ResourceEntranceTest, SceneKeepsItsBaseIDThroughTheRule )
     SW_EXPECT_EQUAL( baseID, scene._baseScenePath );
 }
 
-/** @brief [ResourceEntranceTest] 진짜 형식의 저장 입구를 지난다 — 조건을 푼 사본을 저장해도 파일에 조건이 남고, 다시 읽으면 같은 값이다 */
-SW_TEST_CASE( ResourceEntranceTest, FormatSaveKeepsConditionsInTheFile )
+/** @brief [AssetEntranceTest] 진짜 형식의 저장 입구를 지난다 — 조건을 푼 사본을 저장해도 파일에 조건이 남고, 다시 읽으면 같은 값이다 */
+SW_TEST_CASE( AssetEntranceTest, FormatSaveKeepsConditionsInTheFile )
 {
     const ScopedScratchDomain domain;
     const XEntranceScope      scope;
-    SW_REQUIRE_TRUE( engine::getSubsystem<ResourceTags>().setAxisValue( "quality", "low" ) );
+    SW_REQUIRE_TRUE( engine::getSubsystem<AssetTags>().setAxisValue( "quality", "low" ) );
     const AbsolutePath path = domain.makeDiskPath( "a.retarget.xml" );
     const string       text = R"(<RetargetProfile height_ratio="2"><_when _if="region.us" height_ratio="3" /><root source="root" target="root" /><pelvis source="pelvis" target="hips" />)"
                               R"(<chains><item name="LeftArm"><source><item>a</item></source><target><item>b</item></target></item></chains></RetargetProfile>)";

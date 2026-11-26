@@ -5,7 +5,7 @@
  *          - 칸(속성)은 자식이 적은 것만 덮고, 스키마가 구조체 칸이라고 한 자식 원소는 안으로 들어가 합치고, 그 밖의 자식 원소는 자식이 적으면 같은 이름의 형제까지 통째로 바뀝니다.
  *          - 열쇠가 있는 목록(`PROPERTY( InheritKey )`)은 원소의 이름으로 합칩니다. 적으면 합치거나 더하고, `_op="Replace"` 는 바꾸고, `_op="Remove"` 는 지우며, `_before` · `_after` 는 자리를 옮깁니다.
  *          - 순환 · 없는 부모 · 없는 열쇠의 삭제와 교체 · 깊이 초과는 오류입니다. 깊이 상한은 부모를 읽는 곳(`DataInheritanceSource`)이 사본으로 든다 — 펼치기는 설정을 직접 읽지 않는다.
- *          - 읽는 쪽과 쿠커는 `ResourceComposer::compose` 한 길로 이 펼치기에 닿습니다. 이 파일은 합치기 규칙만 가집니다.
+ *          - 읽는 쪽과 쿠커는 `AssetComposer::compose` 한 길로 이 펼치기에 닿습니다. 이 파일은 합치기 규칙만 가집니다.
  *          - 쿠킹이 펼칩니다(`PackCooker`). 런타임은 펼친 결과만 읽고 에디터 · 개발 실행은 원본을 읽어 합칩니다. 합칠 때 읽는 부모는 `AssetIO` 를 거쳐 쿠킹 작업의 입력이 되므로 부모가 바뀌면 자식의 쿠킹 키도 바뀝니다.
  *
  *          언리얼 델타 직렬화(아키타입과 다른 칸만 쓴다) · 유니티 Prefab Variant(`m_Modifications`) · Godot 씬 상속(부모 씬 + 바뀐 값)과 같은 일입니다. 다른 점은 목록을 인덱스가 아니라 이름으로 짚는 것입니다 —
@@ -26,7 +26,7 @@ namespace sw
 
     /**
      * @class DataInheritanceSource
-     * @brief 부모의 글을 리소스 id 로 읽는 곳입니다. 에디터 · 개발 실행은 리소스(`DataInheritanceResourceSource`), 팩 쿠커는 콘텐츠 트리(`DataInheritanceDiskSource`), 테스트는 표를 넘깁니다.
+     * @brief 부모의 글을 리소스 id 로 읽는 곳입니다. 에디터 · 개발 실행은 리소스(`DataInheritanceAssetSource`), 팩 쿠커는 콘텐츠 트리(`DataInheritanceDiskSource`), 테스트는 표를 넘깁니다.
      */
     class SW_API DataInheritanceSource
     {
@@ -42,7 +42,7 @@ namespace sw
         /**
          * @brief 바탕 형식이라 직접 만들지 않습니다. 깊이 상한(@p maxDepth)은 만드는 쪽이 사본으로 넘긴다.
          * @details 설정(`EngineConfig::_dataInheritanceMaxDepth`)은 다시 읽기가 제자리에서 덮고 그 울타리는 렌더 스레드만 기다린다 — 로드 워커가 설정을 직접 읽으면 덮기와 겹친다.
-         *          그래서 값은 게임 스레드가 뜬 사본(`ResourceComposition::findInheritanceMaxDepth`)을 읽기마다 싣는다(언리얼이 로드 요청에 정책 값을 싣는 것과 같다).
+         *          그래서 값은 게임 스레드가 뜬 사본(`AssetComposition::findInheritanceMaxDepth`)을 읽기마다 싣는다(언리얼이 로드 요청에 정책 값을 싣는 것과 같다).
          */
         explicit DataInheritanceSource( optional<uint32> maxDepth )
             : _maxDepth{ maxDepth }
@@ -56,11 +56,11 @@ namespace sw
     };
 
     /** @brief 부모를 리소스로 읽습니다(`AssetIO::readTextAsset`). 쿠킹 작업 안이면 그 작업의 입력이 됩니다. */
-    class SW_API DataInheritanceResourceSource final : public DataInheritanceSource
+    class SW_API DataInheritanceAssetSource final : public DataInheritanceSource
     {
     public:
-        /** @brief 깊이 상한은 만들 때 엔진의 사본(`ResourceComposition::findInheritanceMaxDepth`)을 뜬다 — 읽기 한 번이 한 값을 쓴다. */
-        DataInheritanceResourceSource();
+        /** @brief 깊이 상한은 만들 때 엔진의 사본(`AssetComposition::findInheritanceMaxDepth`)을 뜬다 — 읽기 한 번이 한 값을 쓴다. */
+        DataInheritanceAssetSource();
         [[nodiscard]] bool readText( string_view assetID, string& outText ) override;
     };
 
@@ -172,10 +172,10 @@ namespace sw
         static constexpr const utf8* kOpReplace       = "Replace";
         /**
          * @brief 조건 원소(`<_when _if="…" 칸="값"/>`)입니다. 칸이 아니라 그 원소에 얹는 조건부 차이라 합치기가 다르게 다룬다 —
-         *        부모와 자식의 조건을 차례로 쌓고(자식이 적어도 부모의 조건이 사라지지 않는다), 열쇠 목록의 원소로 세지 않는다. 푸는 일은 `ResourceComposer` 의 조건 단계다.
+         *        부모와 자식의 조건을 차례로 쌓고(자식이 적어도 부모의 조건이 사라지지 않는다), 열쇠 목록의 원소로 세지 않는다. 푸는 일은 `AssetComposer` 의 조건 단계다.
          */
         static constexpr const utf8* kWhenElement = "_when";
-        static constexpr const utf8* kIfAttribute = "_if"; ///< 조건 원소: 리소스 조건식(`ResourceTags::compileTest`)
+        static constexpr const utf8* kIfAttribute = "_if"; ///< 조건 원소: 리소스 조건식(`AssetTags::compileTest`)
 
         /** @brief 조건 원소(`_when`)인지 봅니다. 칸 · 목록 원소가 아니라 쌓이는 조건부 차이입니다. */
         [[nodiscard]] static bool isWhenElement( const XMLNode& node );
@@ -232,7 +232,7 @@ namespace sw
         static void reportCycle( string_view baseID, string_view sourceName );
         /** @brief 사슬이 상한(@p maxDepth)을 넘을 때 남기는 오류입니다. */
         static void reportTooDeep( string_view baseID, string_view sourceName, uint32 maxDepth );
-        /** @brief 읽기에 깊이 상한이 실려 오지 않았을 때 남기는 오류입니다 — 대신 설정을 읽지 않는다(엔진의 사본이 아직 없다: `ResourceComposition::setInheritanceMaxDepth` 전). */
+        /** @brief 읽기에 깊이 상한이 실려 오지 않았을 때 남기는 오류입니다 — 대신 설정을 읽지 않는다(엔진의 사본이 아직 없다: `AssetComposition::setInheritanceMaxDepth` 전). */
         static void reportNoDepthLimit( string_view sourceName );
         /** @brief 부모를 읽지 못할 때 남기는 오류입니다. */
         static void reportBaseNotFound( string_view baseID, string_view sourceName );

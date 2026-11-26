@@ -49,7 +49,7 @@
 
 namespace sw
 {
-    struct ResourceContext;
+    struct AssetComposeContext;
 
     /** @brief 그래프 노드의 종류입니다. 종류마다 받는 값은 `AudioGraphRegistry` 의 종류 표가 정합니다. */
     ENUM()
@@ -151,7 +151,7 @@ namespace sw
 
     private:
         /** @brief 합성 문맥을 받는 읽기의 본문입니다. `loadFromAsset` 은 리소스 id 를 실은 문맥(`withAsset`)을, 글 입구는 id 없는 문맥을 넘깁니다(덮어쓰기 층 · 다시 읽기 기록 · 접속 대조는 id 로 읽을 때만 받는다). */
-        [[nodiscard]] bool loadComposed( string_view xmlText, string_view sourceName, const ResourceContext& context );
+        [[nodiscard]] bool loadComposed( string_view xmlText, string_view sourceName, const AssetComposeContext& context );
 
     public:
         /** @brief 파일 안에서만 정해지는 규칙을 검사합니다. 어긋나면 오류를 남기고 false 입니다. */

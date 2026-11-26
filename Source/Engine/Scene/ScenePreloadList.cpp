@@ -87,7 +87,7 @@ namespace sw
         const string_view listAssetID = assetID.view();
         outListPath.clear();
         JSONDocument document;
-        if ( document.loadResource( assetID ) == false )
+        if ( document.loadAsset( assetID ) == false )
         {
             SW_LOG_ERROR_ID( "ScenePreloadList.ScenePreloadListCould", "Scene preload list '%#' could not be read: %#", listAssetID, document.getLastError().c_str() );
             return false;

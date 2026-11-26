@@ -60,7 +60,7 @@ namespace sw
      *            `input.toggleMode`(param 은 액션, 값은 `hold`/`toggle`), `input.keyBinding`(키 바인딩 설정의 기본 대상)
      *          - `localization.language`(빈 값은 게임 기본 언어 그대로)
      *          - `display.windowMode`(`windowed`/`borderless`), `display.resolution`(`<너비>x<높이>`), `display.vsync`
-     *          - `resource.tag`(param 은 리소스 태그 축 — `graphics.quality` 가 `quality` 축을 켠다. 리소스의 `<_when _if="quality.low">` 가 읽는다)
+     *          - `asset.tag`(param 은 리소스 태그 축 — `graphics.quality` 가 `quality` 축을 켠다. 리소스의 `<_when _if="quality.low">` 가 읽는다)
      *          선택지 공급자: `localization.languages`(읽은 언어 목록), `display.resolutions`(기본 모니터가 내는 해상도 — 못 읽으면 스키마의 고정 선택지).
      *          기능 폴더의 묶음(`UserSettingsHandlerSetRegistrar` — 오디오의 `audio.busVolume` · `audio.mute` · `audio.speakerMode`)을 이 뒤에 함께 올린다.
      */

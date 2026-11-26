@@ -10,7 +10,7 @@
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Module/ModuleSharedAssetCache.h"
 #include "Engine/Reflection/EnumName.h"
-#include "Engine/Serialization/Inherit/ResourceComposer.h"
+#include "Engine/Serialization/Compose/AssetComposer.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
 
@@ -389,18 +389,18 @@ namespace sw
         // 리소스 id 로 읽는다 - 조건 · 덮어쓰기 층 · 다시 읽기 기록이 이 합성 한 길을 지난다.
         string flatText;
         bool   bComposed = false;
-        if ( ResourceComposer::compose( text, assetID.view(), ResourceContext::forSchema( &BehaviorTreeSchema::make ).withAsset( assetID ), flatText, bComposed ) == false )
+        if ( AssetComposer::compose( text, assetID.view(), AssetComposeContext::forSchema( &BehaviorTreeSchema::make ).withAsset( assetID ), flatText, bComposed ) == false )
         {
             _tree = BehaviorTree{};
             return false;
         }
-        DataInheritanceResourceSource source;
+        DataInheritanceAssetSource source;
         return readFlatText( bComposed ? string_view( flatText ) : string_view( text ), assetID.view(), source );
     }
 
     bool BehaviorTreeAsset::loadFromXMLText( string_view xmlText, string_view sourceName )
     {
-        DataInheritanceResourceSource source;
+        DataInheritanceAssetSource source;
         return loadFromXMLText( xmlText, sourceName, source );
     }
 

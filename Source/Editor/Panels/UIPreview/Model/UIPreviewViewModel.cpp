@@ -23,7 +23,7 @@
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Reflection/TypeRegistry.h"
-#include "Engine/Serialization/Inherit/ResourceComposer.h"
+#include "Engine/Serialization/Compose/AssetComposer.h"
 #include "Engine/UI/Animation/UIAnimationPlayer.h"
 #include "Engine/UI/Document/UIDocument.h"
 #include "Engine/UI/Document/UIDocumentCache.h"
@@ -395,8 +395,8 @@ namespace sw::editor
         const UIScreen*     pScreen    = pOffscreen != nullptr ? pOffscreen->findScreen( _screen ) : nullptr;
         if ( pScreen == nullptr || pDocuments == nullptr )
             return false;
-        const expected<string> text         = UIPreviewLogic::makeDocumentText( *pDocuments, *pScreen, _openedDocument, ResourceFieldWrite::OmitDefaults );
-        const expected<string> completeText = UIPreviewLogic::makeDocumentText( *pDocuments, *pScreen, _openedDocument, ResourceFieldWrite::WriteAll );
+        const expected<string> text         = UIPreviewLogic::makeDocumentText( *pDocuments, *pScreen, _openedDocument, AssetFieldWrite::OmitDefaults );
+        const expected<string> completeText = UIPreviewLogic::makeDocumentText( *pDocuments, *pScreen, _openedDocument, AssetFieldWrite::WriteAll );
         if ( text.has_value() == false || completeText.has_value() == false )
         {
             SW_LOG_ERROR_ID( "UIPreviewViewModel.UIPreviewCannotSaved", "UI Preview: '%#' cannot be saved - %#: %#", _openedDocument.c_str(), ( text.has_value() ? completeText : text ).error().message(),
@@ -406,7 +406,7 @@ namespace sw::editor
         const optional<DiskPath> path = editor::getSubsystem<AssetPaths>().toDiskPath( _openedDocument );
         // 미리보기 사본은 기기 견본의 태그로 합친 변형이다 — 그 태그로 원본의 조건(`_when`)을 되돌려 쓴다(FileUtil 로 바로 쓰면 푼 변형이 파일에 박힌다).
         const AssetWriteResult saved = path.has_value() ? writer.save( *path, [&]( const AbsolutePath& writable )
-        { return ResourceComposer::saveText( writable, ResourceSaveText::makeWithComplete( *text, *completeText ), &pScreen->getResourceTagOverride() ); } )
+        { return AssetComposer::saveText( writable, AssetSaveText::makeWithComplete( *text, *completeText ), &pScreen->getAssetTagOverride() ); } )
                                                         : AssetWriteResult::Failed;
         if ( saved == AssetWriteResult::Refused )
             return false; // 문이 이미 알렸다

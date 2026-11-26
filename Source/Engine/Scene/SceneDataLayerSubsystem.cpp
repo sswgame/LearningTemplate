@@ -10,7 +10,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Subsystem/SceneSubsystemRegistry.h"
 #include "Engine/Scene/Scene.h"
-#include "Engine/Serialization/Inherit/ResourceTags.h"
+#include "Engine/Serialization/Compose/AssetTags.h"
 #include "Engine/Serialization/Serializer/Archive.h"
 
 namespace sw
@@ -74,8 +74,8 @@ namespace sw
         ++_activeSerial;
         vector<string> listActive;
         collectActiveLayers( listActive );
-        // 새 몫을 건 뒤 앞 몫이 풀린다 — 그대로 켜진 레이어의 태그는 꺼졌다 켜지지 않는다. '.' 이 든 레이어 이름은 태그가 될 수 없다(`ResourceTags` 가 오류로 남긴다).
-        _layerTags = engine::getSubsystem<ResourceTags>().addAxisValues( "layer", listActive );
+        // 새 몫을 건 뒤 앞 몫이 풀린다 — 그대로 켜진 레이어의 태그는 꺼졌다 켜지지 않는다. '.' 이 든 레이어 이름은 태그가 될 수 없다(`AssetTags` 가 오류로 남긴다).
+        _layerTags = engine::getSubsystem<AssetTags>().addAxisValues( "layer", listActive );
     }
 
     void SceneDataLayerSubsystem::update( float32 deltaTime )

@@ -110,7 +110,7 @@ namespace sw
         }
         // 리소스 id 로 합친다 — 조건 · 덮어쓰기 층 · 다시 읽기 기록 · 접속 대조를 받는다(글 입구 `parseXMLText` 는 id 가 없다).
         XMLDocument doc;
-        if ( doc.parseResourceText( text, assetID ) == false )
+        if ( doc.parseAssetText( text, assetID ) == false )
         {
             SW_LOG_ERROR_ID( "ModSupportSettings.NotXML", "Mod support settings '%#' could not be parsed: %#", assetID.view(), doc.getLastError() );
             return false;

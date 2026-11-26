@@ -19,7 +19,7 @@
 #include "Engine/Localization/PseudoLocalizer.h"
 #include "Engine/Localization/StringTable.h"
 #include "Engine/Localization/TextFormatter.h"
-#include "Engine/Serialization/Inherit/ResourceTags.h"
+#include "Engine/Serialization/Compose/AssetTags.h"
 
 namespace sw
 {
@@ -1272,10 +1272,10 @@ namespace sw
         if ( _bEngineInstance == SW_FALSE )
             return; // 엔진의 관리자가 아니다 — 리소스 조건은 엔진의 언어를 따른다
         // 리소스 조건의 `locale` 축 — 언어별 값 · 경로 교체(`<_when _if="locale.ko">` · `<Remap when>`)가 읽는다. 식의 이름 글자에 '-' 가 없어 `en-US` 는 `locale.en_US` 다.
-        // 언어 코드에는 '.' 이 없어(`normalizeLanguageCode`) 축 값으로 늘 받힌다 — 받히지 않으면 `ResourceTags` 가 오류를 남긴다. 언어가 없으면 축도 없다.
+        // 언어 코드에는 '.' 이 없어(`normalizeLanguageCode`) 축 값으로 늘 받힌다 — 받히지 않으면 `AssetTags` 가 오류를 남긴다. 언어가 없으면 축도 없다.
         string localeValue = getCurrentLanguage();
         std::replace( localeValue.begin(), localeValue.end(), '-', '_' );
-        (void)engine::getSubsystem<ResourceTags>().setAxisValue( "locale", localeValue );
+        (void)engine::getSubsystem<AssetTags>().setAxisValue( "locale", localeValue );
     }
 
     void LocalizationManager::notifyLanguageChanged( string_view oldLanguage, string_view newLanguage )

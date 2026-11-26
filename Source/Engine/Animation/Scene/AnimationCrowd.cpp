@@ -88,7 +88,7 @@ namespace sw
         }
         XMLDocument document;
         XMLNode     root;
-        return loadFromRoot( XMLReadUtil::parseResourceRoot( document, text, assetID, "AnimationCrowdSettings", root ), root, path );
+        return loadFromRoot( XMLReadUtil::parseAssetRoot( document, text, assetID, "AnimationCrowdSettings", root ), root, path );
     }
 
     bool AnimationCrowdSettings::parseRoot( const XMLNode& root, string_view sourceLabel )

@@ -11,7 +11,7 @@
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Serialization/Inherit/ResourceTags.h"
+#include "Engine/Serialization/Compose/AssetTags.h"
 #include "Engine/UI/WidgetTree/WidgetTypes.h"
 
 namespace sw
@@ -65,7 +65,7 @@ namespace sw
          * @brief 뷰포트 @p viewport 의 화면 태그(`screen.compact|regular` · `orientation.portrait|landscape`)입니다. 크기가 0 이면(최소화) 없습니다 — 등급을 바꾸지 않는다.
          * @details 규칙의 한 곳이다 — 게임 UI(`UISystem::syncScreenTags` 가 엔진 태그로 올린다)와 에디터 UI 미리보기(`UIOffscreenScreens::setView` 가 그 화면의 문맥에만 바꿔 끼운다)가 같은 답을 낸다.
          */
-        [[nodiscard]] optional<ResourceTagSet> makeScreenTags( const UIViewport& viewport ) const;
+        [[nodiscard]] optional<AssetTagSet> makeScreenTags( const UIViewport& viewport ) const;
         /** @brief 리소스 경로의 XML 을 읽습니다. 실패하면(파일이 없거나 모르는 키) 오류를 남기고 false 를 반환하며, 읽은 값은 남습니다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         /** @brief 규칙만 적용한 배율입니다(사용자 배율과 창 배율을 적용하기 전이며, 최소와 최대로 제한합니다). */

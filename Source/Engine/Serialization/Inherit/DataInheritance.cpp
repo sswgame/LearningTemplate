@@ -16,9 +16,9 @@
 #include "Engine/Content/AssetRegistry.h"
 #include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Reflection/ReflectionContainers.h"
+#include "Engine/Serialization/Compose/AssetComposition.h"
 #include "Engine/Serialization/Inherit/DataCatalogInheritance.h"
 #include "Engine/Serialization/Inherit/DataInheritanceSchemaRegistry.h"
-#include "Engine/Serialization/Inherit/ResourceComposition.h"
 #include "Engine/Serialization/Serializer/ValueSerializer.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
@@ -708,12 +708,12 @@ namespace sw
 
 namespace sw
 {
-    DataInheritanceResourceSource::DataInheritanceResourceSource()
-        : DataInheritanceSource{ engine::getSubsystem<ResourceComposition>().findInheritanceMaxDepth() }
+    DataInheritanceAssetSource::DataInheritanceAssetSource()
+        : DataInheritanceSource{ engine::getSubsystem<AssetComposition>().findInheritanceMaxDepth() }
     {
     }
 
-    bool DataInheritanceResourceSource::readText( string_view assetID, string& outText )
+    bool DataInheritanceAssetSource::readText( string_view assetID, string& outText )
     {
         return XMLReadUtil::readText( AssetID{ assetID }, outText );
     }

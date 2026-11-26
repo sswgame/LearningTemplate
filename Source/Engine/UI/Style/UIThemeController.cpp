@@ -51,7 +51,7 @@ namespace sw
     {
         /** @brief 시트를 캐시에서 읽습니다(변형 @p tagOverride — 빈 집합이면 엔진 판. 읽지 못한 것은 오류를 남기고 제외합니다). */
         template <typename TPath>
-        void appendStyleSheets( UIStyleSheetCache& styleSheetCache, const vector<TPath>& listPath, const ResourceTagSet& tagOverride, vector<shared_ptr<const UIStyleSheetAsset>>& inoutListSheet )
+        void appendStyleSheets( UIStyleSheetCache& styleSheetCache, const vector<TPath>& listPath, const AssetTagSet& tagOverride, vector<shared_ptr<const UIStyleSheetAsset>>& inoutListSheet )
         {
             for ( const TPath& path : listPath )
             {
@@ -166,8 +166,8 @@ namespace sw
         vector<shared_ptr<const UIStyleSheetAsset>> listSheet;
         const UIThemeDef*                           pTheme = findTheme( themeName );
         if ( pTheme != nullptr )
-            appendStyleSheets( styleSheetCache, pTheme->_listStyleSheet, screen._resourceTagOverride, listSheet );
-        appendStyleSheets( styleSheetCache, screen._listStyleSheet, screen._resourceTagOverride, listSheet );
+            appendStyleSheets( styleSheetCache, pTheme->_listStyleSheet, screen._assetTagOverride, listSheet );
+        appendStyleSheets( styleSheetCache, screen._listStyleSheet, screen._assetTagOverride, listSheet );
         if ( screen._styleSet == nullptr )
             screen._styleSet = make_unique<UIStyleSet>();
         screen._styleSet->setSheets( std::move( listSheet ) );

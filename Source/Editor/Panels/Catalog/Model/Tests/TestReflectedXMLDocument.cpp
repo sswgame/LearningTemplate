@@ -47,9 +47,9 @@ namespace
         /** @brief 물려받은 문서의 글을 런타임과 같은 길(펼치기)로 다시 읽습니다. */
         static VFXEffectDef readInherited( const ReflectedXMLDocument& document )
         {
-            DataInheritanceResourceSource source;
-            string                        flatText;
-            VFXEffectDef                  effect;
+            DataInheritanceAssetSource source;
+            string                     flatText;
+            VFXEffectDef               effect;
             SW_EXPECT_TRUE( DataInheritance::flatten( document.getText(), "test", DataInheritanceSchema::makeFromType( *VFXEffectDef::StaticType() ), source, flatText ) );
             SW_EXPECT_TRUE( XMLSerializer::deserialize( &effect, *VFXEffectDef::StaticType(), flatText ) );
             return effect;

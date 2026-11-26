@@ -7,7 +7,7 @@
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Foundation/EngineSubsystems.h"
-#include "Engine/Serialization/Inherit/ResourceComposer.h"
+#include "Engine/Serialization/Compose/AssetComposer.h"
 #include "Engine/UI/Style/UIStyleSheet.h"
 #include "Engine/UI/Style/UIWidgetSkin.h"
 #include "Engine/UI/Widgets/ButtonWidget.h"
@@ -52,7 +52,7 @@ namespace
         static expected<UIWidgetSkin> build( const string& text )
         {
             UIStyleSheetAsset sheet;
-            if ( expected<void> parsed = UIStyleSheetAsset::parse( text, "skin.uistyle.xml", ResourceContext::forDocument(), sheet ); parsed.has_value() == false )
+            if ( expected<void> parsed = UIStyleSheetAsset::parse( text, "skin.uistyle.xml", AssetComposeContext::forDocument(), sheet ); parsed.has_value() == false )
                 return sw::unexpected( parsed.error() );
             return UIWidgetSkin::build( sheet );
         }

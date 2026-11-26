@@ -22,7 +22,7 @@
 #include "Engine/Input/IInputCaptureQuery.h"
 #include "Engine/Presentation/IEngineUIDriver.h"
 #include "Engine/Presentation/IUILayerVisibility.h"
-#include "Engine/Serialization/Inherit/ResourceTags.h"
+#include "Engine/Serialization/Compose/AssetTags.h"
 #include "Engine/UI/Document/UIBindingDef.h"
 #include "Engine/UI/Input/UIActionGlyphSource.h"
 #include "Engine/UI/Input/UIInputRouter.h"
@@ -209,7 +209,7 @@ namespace sw
             UIScreenDef          desc{};
             vector<UIBindingDef> listBinding{};
             vector<string>       listStyleSheet{};
-            unique_ptr<Widget>   root = instantiateDocument( documentPath, ResourceTagSet{}, desc, listBinding, listStyleSheet );
+            unique_ptr<Widget>   root = instantiateDocument( documentPath, AssetTagSet{}, desc, listBinding, listStyleSheet );
             if ( root == nullptr )
                 return kInvalidUIScreenHandle;
             unique_ptr<ScreenType> screen = sw::make_unique<ScreenType>( desc, std::move( root ) );
@@ -253,14 +253,14 @@ namespace sw
         unique_ptr<UIScreen> createDocumentScreen( string_view documentPath );
         /** @brief 화면 @p screen 의 트리를 그 문서로 새로 생성합니다(포커스와 스크롤을 이름으로 이어 갑니다). 실패하면 기존 트리를 두고 false 를 반환합니다. 스택 밖 화면도 같은 길이다. */
         bool rebuildScreenFromDocument( UIScreen& screen );
-        /** @brief 화면 @p screen 의 문서가 조각 연쇄로 @p usedPath 를 쓰는지(자기 자신 포함) 반환합니다. 조각은 그 화면의 변형(`UIScreen::getResourceTagOverride`)에서 찾습니다. */
+        /** @brief 화면 @p screen 의 문서가 조각 연쇄로 @p usedPath 를 쓰는지(자기 자신 포함) 반환합니다. 조각은 그 화면의 변형(`UIScreen::getAssetTagOverride`)에서 찾습니다. */
         bool isDocumentUsing( const UIScreen& screen, string_view usedPath );
         /**
-         * @brief 화면 @p screen 의 문서 변형 태그(엔진 태그에서 바꿔 끼울 축 — `ResourceContext::withTagOverride`)를 @p tagOverride 로 바꿉니다. 바뀌었으면 문서로 다시 짓고 true 입니다.
+         * @brief 화면 @p screen 의 문서 변형 태그(엔진 태그에서 바꿔 끼울 축 — `AssetComposeContext::withTagOverride`)를 @p tagOverride 로 바꿉니다. 바뀌었으면 문서로 다시 짓고 true 입니다.
          * @details 에디터 UI 미리보기가 기기 견본의 `screen` · `orientation` 을 그 화면에만 건다(`UIOffscreenScreens::setView`) — 엔진 태그와 게임 UI 는 그대로다.
          *          스타일 세트는 지금 테마로 다시 짓는다(다른 테마를 쓰는 화면은 부르는 쪽이 되돌린다).
          */
-        bool setResourceTagOverride( UIScreen& screen, const ResourceTagSet& tagOverride );
+        bool setAssetTagOverride( UIScreen& screen, const AssetTagSet& tagOverride );
 
         // --- 핫 리로드 ---------------------------------------------------------------
         // 문서(`.ui.xml`)와 스타일 시트의 파일 변화는 에디터의 파일 감시가 캐시 다시 읽기로 이어 준다(`EditorAssetType` 표의 `kAnyCacheHoldingPath`).
@@ -401,7 +401,7 @@ namespace sw
         /** @brief 모듈 내림 알림(`TypeRegistry::subscribeModuleUnloading`)입니다 — `closeScreensOfModule` 을 부릅니다. */
         void onModuleUnloadingNotification( string_view moduleName ) { (void)closeScreensOfModule( moduleName ); }
         /** @param tagOverride 문서 · 조각을 찾을 변형의 태그입니다(빈 집합이면 엔진 판). */
-        unique_ptr<Widget> instantiateDocument( string_view documentPath, const ResourceTagSet& tagOverride, UIScreenDef& outDesc, vector<UIBindingDef>& outListBinding,
+        unique_ptr<Widget> instantiateDocument( string_view documentPath, const AssetTagSet& tagOverride, UIScreenDef& outDesc, vector<UIBindingDef>& outListBinding,
                                                 vector<string>& outListStyleSheet );
         /** @brief 문서로 생성한 화면에 문서 경로, 바인딩, 스타일 시트를 기록하고 올립니다. */
         UIScreenHandle pushDocumentScreen( unique_ptr<UIScreen> screen, string_view documentPath, vector<UIBindingDef> listBinding, vector<string> listStyleSheet );
@@ -542,7 +542,7 @@ namespace sw
         unique_ptr<TextLayoutEngine> _textLayout;
         UIScaleSettings              _scaleSettings;
         UIViewport                   _viewport;
-        ResourceTagSet               _screenTags; ///< 마지막으로 올린 화면 태그(`syncScreenTags`). 아직 없으면 빈 집합
+        AssetTagSet                  _screenTags; ///< 마지막으로 올린 화면 태그(`syncScreenTags`). 아직 없으면 빈 집합
         UICanvasPaintState           _paintState; ///< 그리기 목록, 재사용 판정 상태, 레이어 숨김 요청 수입니다.
         UIScreenHandle               _activeScreen;
         vector<UIScreenHandle>       _listTickScratch;     ///< `tickScreens` 가 도는 번호입니다(프레임마다 다시 씁니다).

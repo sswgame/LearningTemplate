@@ -14,7 +14,7 @@
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Serialization/Inherit/ResourceFieldWrite.h"
+#include "Engine/Serialization/Compose/AssetFieldWrite.h"
 
 namespace sw
 {
@@ -289,7 +289,7 @@ namespace sw
         [[nodiscard]] SW_API bool loadFromDiskFile( const DiskPath& diskPath );
         /** @brief XML 본문에서 타일맵을 읽습니다(리소스가 아닌 글 — 덮어쓰기 층 · 다시 읽기 기록을 받지 않는다). */
         [[nodiscard]] SW_API bool loadFromXML( string_view xml );
-        /** @brief 읽어 둔 문서(`load` 는 리소스 id 를 싣고 `parseResourceText` 로 읽는다)에서 타일맵을 읽습니다. */
+        /** @brief 읽어 둔 문서(`load` 는 리소스 id 를 싣고 `parseAssetText` 로 읽는다)에서 타일맵을 읽습니다. */
         [[nodiscard]] SW_API bool loadFromDocument( const XMLDocument& doc );
         /** @brief Resource 상대 또는 절대 경로로 타일맵 XML을 씁니다. */
         [[nodiscard]] SW_API bool save( const AbsolutePath& absPath ) const;
@@ -301,7 +301,7 @@ namespace sw
          */
         SW_API string toXML() const;
         /** @brief `toXML` 과 같고, @p fieldWrite 가 `WriteAll` 면 기본값과 같은 타일 칸(깃발 · 아틀라스)도 씁니다 — 저장 입구에 넘기는 빼지 않은 짝입니다. */
-        SW_API string toXML( ResourceFieldWrite fieldWrite ) const;
+        SW_API string toXML( AssetFieldWrite fieldWrite ) const;
     };
 
 } // namespace sw

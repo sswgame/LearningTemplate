@@ -87,7 +87,7 @@
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
-#include "Engine/Serialization/Inherit/ResourceTags.h"
+#include "Engine/Serialization/Compose/AssetTags.h"
 #include "Engine/Telemetry/TelemetrySubsystem.h"
 #include "Engine/Text/FontSubsystem.h"
 #include "Engine/UserSettings/HardwareDetectionResult.h"
@@ -163,12 +163,12 @@ namespace sw
         _coreScope.emplaceSubsystem<StaticStorageSubsystem>();
         _pMemoryBudget = &_coreScope.emplaceSubsystem<MemoryBudgetSubsystem>( crashHandler );
         // 서브시스템 안의 객체도 서브시스템 칸이다 — 그 타입으로 건다(새 범위라 겹치지 않는다).
-        (void)_coreScope.exposeMember( commandLine, commandLine.getCommandLine() );         // 명령줄 — 주인은 명령줄 서브시스템이다(초기화 중 조회는 그 의존을 선언해야 한다)
-        (void)_coreScope.exposeMember( commandLine, commandLine.getGlobalVariables() );     // 전역 변수 표 — 같은 주인
-        (void)_coreScope.exposeMember( contentRoot, contentRoot.getAssetPaths() );          // 리소스 경로 상태 — 주인은 리소스 루트 서브시스템 하나다
-        (void)_coreScope.exposeMember( contentRoot, contentRoot.getResourceTags() );        // 리소스 조건 태그 — 같은 주인
-        (void)_coreScope.exposeMember( contentRoot, contentRoot.getResourceComposition() ); // 합성 기록 · 덮어쓰기 층 — 같은 주인
-        (void)_coreScope.exposeMember( crashHandler, crashHandler.getHandler() );           // 크래시 처리기 — 주인은 크래시 서브시스템 하나다
+        (void)_coreScope.exposeMember( commandLine, commandLine.getCommandLine() );      // 명령줄 — 주인은 명령줄 서브시스템이다(초기화 중 조회는 그 의존을 선언해야 한다)
+        (void)_coreScope.exposeMember( commandLine, commandLine.getGlobalVariables() );  // 전역 변수 표 — 같은 주인
+        (void)_coreScope.exposeMember( contentRoot, contentRoot.getAssetPaths() );       // 리소스 경로 상태 — 주인은 리소스 루트 서브시스템 하나다
+        (void)_coreScope.exposeMember( contentRoot, contentRoot.getAssetTags() );        // 리소스 조건 태그 — 같은 주인
+        (void)_coreScope.exposeMember( contentRoot, contentRoot.getAssetComposition() ); // 합성 기록 · 덮어쓰기 층 — 같은 주인
+        (void)_coreScope.exposeMember( crashHandler, crashHandler.getHandler() );        // 크래시 처리기 — 주인은 크래시 서브시스템 하나다
         if ( _coreScope.getCollection().initializeAll( SubsystemHostMask::All ) == false )
         {
             // 정렬 오류(선언 오타 · 순환)는 로거가 서기 전일 수 있다 — 낮은 층 보고는 stderr 에 동기로 쓰고 로거가 있으면 로그에도 남긴다.
@@ -198,13 +198,13 @@ namespace sw
         // 서버 패키지에 없는 에셋 종류(텍스처 · 셰이더 바이너리 · 오디오 — 쿠킹 표의 target_excluded_asset_kinds)는 서버가 읽지 않는다.
         // 서브시스템 칸 표가 서기 전이라 경로 상태의 주인(코어 범위의 리소스 루트)에게 직접 건넨다.
         contentRoot.getAssetPaths().setHostTarget( bDedicatedServer ? "Server" : "Client" );
-        // 리소스 조건의 쿠킹 축(`ResourceTags`) — 쿠커와 런타임이 같은 자리에서 같은 값을 넣는다. 그래서 쿠킹본에 남은 쿠킹 축 조건도 런타임이 쿠커와 같은 답을 낸다.
+        // 리소스 조건의 쿠킹 축(`AssetTags`) — 쿠커와 런타임이 같은 자리에서 같은 값을 넣는다. 그래서 쿠킹본에 남은 쿠킹 축 조건도 런타임이 쿠커와 같은 답을 낸다.
         // 서브시스템 칸 표가 서기 전이라 태그의 주인(코어 범위의 리소스 루트)에게 직접 건넨다.
-        ResourceTags& resourceTags    = contentRoot.getResourceTags();
-        const bool    bPlatformTagged = resourceTags.setAxisValue( "platform", StringUtil::toLower( build::kPlatformName ) );
-        const bool    bTargetTagged   = resourceTags.setAxisValue( "target", bDedicatedServer ? "server" : "client" );
+        AssetTags& assetTags       = contentRoot.getAssetTags();
+        const bool bPlatformTagged = assetTags.setAxisValue( "platform", StringUtil::toLower( build::kPlatformName ) );
+        const bool bTargetTagged   = assetTags.setAxisValue( "target", bDedicatedServer ? "server" : "client" );
         if ( bPlatformTagged == false || bTargetTagged == false )
-            return false; // 플랫폼 이름이 축의 값 목록에 없다(`ResourceTagsInternal::kArrPlatformValue` 에 한 줄 — 오류는 위에서 남겼다)
+            return false; // 플랫폼 이름이 축의 값 목록에 없다(`AssetTagsInternal::kArrPlatformValue` 에 한 줄 — 오류는 위에서 남겼다)
         // 외부 프로파일러(공용 범위의 `ProfilerBackend`)의 스레드 이름 — 공용 범위가 서기 전에 둔다.
         ThreadName::setCurrentThreadName( "GameThread" );
 

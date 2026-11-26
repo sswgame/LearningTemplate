@@ -12,9 +12,9 @@
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Foundation/EngineSubsystems.h"
+#include "Engine/Serialization/Compose/AssetComposer.h"
+#include "Engine/Serialization/Compose/AssetComposition.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
-#include "Engine/Serialization/Inherit/ResourceComposer.h"
-#include "Engine/Serialization/Inherit/ResourceComposition.h"
 #include "Engine/Serialization/Serializer/XMLSerializer.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
@@ -56,7 +56,7 @@ namespace sw
             {
             public:
                 explicit EventSource( const XMLNode& eventList )
-                    : DataInheritanceSource{ engine::getSubsystem<ResourceComposition>().findInheritanceMaxDepth() }
+                    : DataInheritanceSource{ engine::getSubsystem<AssetComposition>().findInheritanceMaxDepth() }
                     , _eventList{ eventList }
                 {
                 }
@@ -213,21 +213,21 @@ namespace sw
             SW_LOG_ERROR_ID( "AudioEventLibrary.AudioEventLibraryNot", "Audio event library not found: %#", assetPath );
             return false;
         }
-        return loadComposed( text, assetPath, ResourceContext::forType( *StaticType() ).withAsset( assetID ) );
+        return loadComposed( text, assetPath, AssetComposeContext::forType( *StaticType() ).withAsset( assetID ) );
     }
 
     bool AudioEventLibrary::loadFromXMLText( string_view xmlText, string_view sourceName )
     {
-        return loadComposed( xmlText, sourceName, ResourceContext::forType( *StaticType() ) );
+        return loadComposed( xmlText, sourceName, AssetComposeContext::forType( *StaticType() ) );
     }
 
-    bool AudioEventLibrary::loadComposed( string_view xmlText, string_view sourceName, const ResourceContext& context )
+    bool AudioEventLibrary::loadComposed( string_view xmlText, string_view sourceName, const AssetComposeContext& context )
     {
         *this = AudioEventLibrary{};
         // 파일 상속을 먼저 합친다 — 프리셋의 부모는 합친 결과에서 찾는다(자식 파일이 부모 파일의 이벤트를 고치고 부모로 삼는다).
         string fileText;
         bool   bComposed = false; // 펼치지 않으면 fileText 는 빈 채로 남는다
-        if ( ResourceComposer::compose( xmlText, sourceName, context, fileText, bComposed ) == false )
+        if ( AssetComposer::compose( xmlText, sourceName, context, fileText, bComposed ) == false )
             return false;
         const string_view mergedFile = fileText.empty() ? xmlText : string_view( fileText );
         string            presetText;
@@ -390,12 +390,12 @@ namespace sw
                     DataInheritance::reportBaseNotFound( baseID, absPath.str() );
                     return false;
                 }
-                return ResourceComposer::saveDelta( absPath, saveText, parent.saveToXMLText(), DataInheritanceSchema::makeFromType( *StaticType() ), baseID );
+                return AssetComposer::saveDelta( absPath, saveText, parent.saveToXMLText(), DataInheritanceSchema::makeFromType( *StaticType() ), baseID );
             }
         }
         // 프리셋 차이는 프리셋과 같은 칸을 뺐다 — 빈 칸까지 모두 쓴 펼친 글이 짝이다.
         const string completeText = XMLSerializer::serialize( this, *StaticType(), SerializeContext::deriveFromDefault( SerializePurpose::Authoring ).setWriteEmptyValues( true ) );
-        if ( ResourceComposer::saveText( absPath, ResourceSaveText::makeWithComplete( saveText, completeText ) ) == false )
+        if ( AssetComposer::saveText( absPath, AssetSaveText::makeWithComplete( saveText, completeText ) ) == false )
         {
             SW_LOG_ERROR_ID( "AudioEventLibrary.AudioEventLibraryCould2", "%#: audio event library could not be written to '%#'", absPath.str(), absPath.str() );
             return false;

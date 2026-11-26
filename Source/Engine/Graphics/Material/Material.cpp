@@ -30,8 +30,8 @@
 #include "Engine/Graphics/Texture/TextureCache.h"
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Reflection/TypeRegistry.h"
+#include "Engine/Serialization/Compose/AssetComposer.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
-#include "Engine/Serialization/Inherit/ResourceComposer.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
 
@@ -1108,7 +1108,7 @@ namespace sw
         string text;
         if ( AssetIO::readTextAsset( assetID, text ) == false )
             return false;
-        return loadComposed( text, assetID.view(), ResourceContext::forSchema( &MaterialXML::makeInheritanceSchema ).withAsset( assetID ) );
+        return loadComposed( text, assetID.view(), AssetComposeContext::forSchema( &MaterialXML::makeInheritanceSchema ).withAsset( assetID ) );
     }
 
     bool Material::loadFromDiskFile( const AbsolutePath& diskPath )
@@ -1127,7 +1127,7 @@ namespace sw
         XMLDocument fullDoc;
         if ( doc.parse( saveToString() ) == false || fullDoc.parse( saveFullToString() ) == false )
             return false;
-        return ResourceComposer::saveText( absPath, ResourceSaveText::makeWithComplete( doc.saveToString(), fullDoc.saveToString() ) );
+        return AssetComposer::saveText( absPath, AssetSaveText::makeWithComplete( doc.saveToString(), fullDoc.saveToString() ) );
     }
 
     string Material::saveToString() const
@@ -1232,16 +1232,16 @@ namespace sw
 
     bool Material::loadFromXML( string_view xmlText )
     {
-        return loadComposed( xmlText, "<material>", ResourceContext::forSchema( &MaterialXML::makeInheritanceSchema ) );
+        return loadComposed( xmlText, "<material>", AssetComposeContext::forSchema( &MaterialXML::makeInheritanceSchema ) );
     }
 
-    bool Material::loadComposed( string_view xmlText, string_view sourceLabel, const ResourceContext& context )
+    bool Material::loadComposed( string_view xmlText, string_view sourceLabel, const AssetComposeContext& context )
     {
         // 부모를 가리키면(`_base="..."`) 부모 칸 위에 자식이 적은 칸만 덮은 한 벌로 펼친 뒤 읽는다 — 손 머티리얼이 견본 칸을 베끼지 않게.
         const string parentPath = DataInheritance::findBasePath( xmlText ); // 저장이 부모와의 차이로 쓴다
         string       flatText;
         bool         bComposed = false;
-        if ( ResourceComposer::compose( xmlText, sourceLabel, context, flatText, bComposed ) == false )
+        if ( AssetComposer::compose( xmlText, sourceLabel, context, flatText, bComposed ) == false )
             return false;
         XMLDocument doc;
         if ( doc.parse( bComposed ? string_view( flatText ) : xmlText ) == false )

@@ -542,7 +542,7 @@ namespace sw
                     continue;
                 // 파일 칸은 참조 글이다(GUID · 경로) — 풀리지 않으면 읽지 못한 것과 같은 오류다.
                 const expected<AssetReferenceTarget> target = AssetRegistry::readReferenceText( targetFile );
-                if ( target.has_value() == false || targetDoc.loadResource( AssetID{ target->_path } ) == false || targetDoc.getRoot().isValid() == false )
+                if ( target.has_value() == false || targetDoc.loadAsset( AssetID{ target->_path } ) == false || targetDoc.getRoot().isValid() == false )
                 {
                     SW_LOG_ERROR_ID( "XMLCatalog.ReferenceFileUnreadable", "%#: %#=\"%#\" could not be read - <%#> references cannot be checked and the catalog does not load", sourceName,
                                      rule._fileAttribute.c_str(), targetFile, rule._target.c_str() );

@@ -40,12 +40,12 @@
 #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
 #include "Engine/Graphics/Shader/ShaderSourceAssetKind.h"
 #include "Engine/Reflection/TypeInfo.h"
+#include "Engine/Serialization/Compose/AssetComposer.h"
+#include "Engine/Serialization/Compose/AssetComposition.h"
+#include "Engine/Serialization/Compose/AssetTags.h"
 #include "Engine/Serialization/Inherit/AssetRedirect.h"
 #include "Engine/Serialization/Inherit/DataCatalogReferences.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
-#include "Engine/Serialization/Inherit/ResourceComposer.h"
-#include "Engine/Serialization/Inherit/ResourceComposition.h"
-#include "Engine/Serialization/Inherit/ResourceTags.h"
 #include "Engine/Serialization/Serializer/JSONSerializer.h"
 #include "Engine/Serialization/XML/XMLBinary.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
@@ -127,7 +127,7 @@ namespace sw
                 PackStagedSelection           _staged;
                 vector<PackSceneReach>        _listSceneReach;    ///< 씬 청크로 미룬 씬마다의 닿음(`PackSplitConfig::_listScenePattern` 이 비면 빈 목록)
                 PackSceneChunkPlan            _scenePlan;         ///< 기동 필수가 아닌 에셋의 청크
-                vector<vector<string>>        _listGameLayerRoot; ///< 굽는 게임마다의 덮어쓰기 층 뿌리(`PackEngineSettings::_listResourceLayer` — 정규화, 아래 층이 먼저)
+                vector<vector<string>>        _listGameLayerRoot; ///< 굽는 게임마다의 덮어쓰기 층 뿌리(`PackEngineSettings::_listAssetLayer` — 정규화, 아래 층이 먼저)
                 unordered_map<string, string> _mapStemChunk;      ///< `<폴더 id>/<줄기>` → 청크 — 스테이징 산출물(씬 쿠킹본 · 프리로드 목록)이 원본의 청크를 따른다
             };
 
@@ -205,7 +205,7 @@ namespace sw
                 string         resolvedText;
                 bool           bResolved = false;
                 vector<string> listLoadTag;
-                if ( ResourceComposer::resolveConditions( inoutText, id, ResourceTagTiming::Cook, engine::getSubsystem<ResourceTags>().capture(), resolvedText, bResolved, listLoadTag ) == false )
+                if ( AssetComposer::resolveConditions( inoutText, id, AssetTagTiming::Cook, engine::getSubsystem<AssetTags>().capture(), resolvedText, bResolved, listLoadTag ) == false )
                     return false;
                 if ( bResolved )
                     inoutText = std::move( resolvedText );
@@ -228,7 +228,7 @@ namespace sw
                         return false;
                     }
                     vector<string>& listRoot = outSelection._listGameLayerRoot.emplace_back();
-                    for ( const string& root : settings._listResourceLayer )
+                    for ( const string& root : settings._listAssetLayer )
                         listRoot.push_back( FileUtil::normalizePath( root ).str() );
                 }
                 return true;
@@ -236,14 +236,14 @@ namespace sw
 
             /**
              * @brief 층이 얹히는 카탈로그를 게임마다 층까지 합쳐 참조 규칙을 봅니다 — 층의 행은 원본의 행을 가리킬 수 있어 층 파일 하나만 보면 답할 수 없다. 깨진 참조가 있으면 false 입니다.
-             * @details 합치기는 런타임의 층 단계와 같은 함수(`ResourceComposer::mergeLayer`)다. 원본이 굽는 도메인에 없는 층은 경고만 한다(일부 도메인만 굽는 실행).
+             * @details 합치기는 런타임의 층 단계와 같은 함수(`AssetComposer::mergeLayer`)다. 원본이 굽는 도메인에 없는 층은 경고만 한다(일부 도메인만 굽는 실행).
              */
             [[nodiscard]] static bool validateLayeredCatalogs( const PackCookParams& params, const PackDiskReachSource& files, const PackSelection& selection )
             {
                 DataCatalogReferenceRules references;
                 if ( references.loadFromAsset() == false )
                     return false;
-                DataInheritanceDiskSource source{ params._resourceRoot, engine::getSubsystem<ResourceComposition>().findInheritanceMaxDepth() };
+                DataInheritanceDiskSource source{ params._resourceRoot, engine::getSubsystem<AssetComposition>().findInheritanceMaxDepth() };
                 bool                      bValid = true;
                 for ( const vector<string>& listRoot : selection._listGameLayerRoot )
                 {
@@ -275,14 +275,14 @@ namespace sw
                             continue;
                         string flatText;
                         bool   bComposed = false;
-                        bool   bMerged   = ResourceComposer::compose( mergedText, target, ResourceContext::forPackCook( source ), flatText, bComposed );
+                        bool   bMerged   = AssetComposer::compose( mergedText, target, AssetComposeContext::forPackCook( source ), flatText, bComposed );
                         if ( bComposed )
                             mergedText = std::move( flatText );
                         for ( const string& layerID : mapTargetLayer[target] )
                         {
                             string layerText;
                             bMerged = bMerged && files.readText( layerID, layerText ) && resolveCookConditions( layerText, layerID ) &&
-                                      ResourceComposer::mergeLayer( layerText, layerID, ResourceContext::forDocument(), target, mergedText );
+                                      AssetComposer::mergeLayer( layerText, layerID, AssetComposeContext::forDocument(), target, mergedText );
                         }
                         XMLDocument doc;
                         if ( bMerged && doc.parse( mergedText, target ) && references.validateDocument( doc.getRoot(), target ) )
@@ -341,7 +341,7 @@ namespace sw
                 if ( references.getFieldRows().empty() )
                     return true;
                 DataCatalogKeyCheck       check( references );
-                DataInheritanceDiskSource source{ params._resourceRoot, engine::getSubsystem<ResourceComposition>().findInheritanceMaxDepth() };
+                DataInheritanceDiskSource source{ params._resourceRoot, engine::getSubsystem<AssetComposition>().findInheritanceMaxDepth() };
                 bool                      bRead = true;
                 for ( const PackDomainCandidates& candidates : listCandidates )
                 {
@@ -356,7 +356,7 @@ namespace sw
                         string flatText;
                         bool   bComposed = false;
                         if ( AssetCookPath::isCookableSource( file._assetID ) == false && isLayerFile( selection, file._assetID ) == false &&
-                             ResourceComposer::compose( text, file._absolutePath.str(), ResourceContext::forPackCook( source ), flatText, bComposed ) == false )
+                             AssetComposer::compose( text, file._absolutePath.str(), AssetComposeContext::forPackCook( source ), flatText, bComposed ) == false )
                         {
                             SW_LOG_ERROR_ID( "PackCooker.CatalogKeyFlattenFailed", "Pack cook: could not flatten '%#' to check catalog keys", file._absolutePath.str() );
                             bRead = false;
@@ -401,7 +401,7 @@ namespace sw
                         bool           bResolved = false;
                         vector<string> listLoadTag;
                         const bool     bRead = AssetIO::readTextFile( file._absolutePath, text ) &&
-                                           ResourceComposer::resolveConditions( text, file._assetID, ResourceTagTiming::Load, engine::getSubsystem<ResourceTags>().capture(), resolvedText, bResolved, listLoadTag );
+                                           AssetComposer::resolveConditions( text, file._assetID, AssetTagTiming::Load, engine::getSubsystem<AssetTags>().capture(), resolvedText, bResolved, listLoadTag );
                         if ( bRead && listLoadTag.empty() )
                             continue;
                         if ( bRead )
@@ -810,10 +810,10 @@ namespace sw
                     bytes.assign( layerText.begin(), layerText.end() );
                     return true;
                 }
-                DataInheritanceDiskSource source{ contentRoot, engine::getSubsystem<ResourceComposition>().findInheritanceMaxDepth() };
+                DataInheritanceDiskSource source{ contentRoot, engine::getSubsystem<AssetComposition>().findInheritanceMaxDepth() };
                 string                    flatText;
                 bool                      bComposed = false;
-                if ( ResourceComposer::compose( text, absPath.str(), ResourceContext::forPackCook( source ), flatText, bComposed ) == false )
+                if ( AssetComposer::compose( text, absPath.str(), AssetComposeContext::forPackCook( source ), flatText, bComposed ) == false )
                 {
                     SW_LOG_ERROR_ID( "PackCooker.PackCookCouldNotFlatten", "Pack cook: could not flatten '%#'", absPath.str() );
                     return false;

@@ -7,8 +7,8 @@
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
 #include "Engine/Foundation/EngineSubsystems.h"
-#include "Engine/Serialization/Inherit/ResourceComposer.h"
-#include "Engine/Serialization/Inherit/ResourceComposition.h"
+#include "Engine/Serialization/Compose/AssetComposer.h"
+#include "Engine/Serialization/Compose/AssetComposition.h"
 #include "Engine/Serialization/XML/XMLBinary.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
@@ -24,15 +24,15 @@ namespace
     {
     public:
         explicit XMLBinaryTestLayers( const string& root )
-            : _listPrevious{ engine::getSubsystem<ResourceComposition>().getLayers() }
+            : _listPrevious{ engine::getSubsystem<AssetComposition>().getLayers() }
         {
-            (void)engine::getSubsystem<ResourceComposition>().setLayers( { root } );
+            (void)engine::getSubsystem<AssetComposition>().setLayers( { root } );
         }
         ~XMLBinaryTestLayers()
         {
-            (void)engine::getSubsystem<ResourceComposition>().setLayers( _listPrevious );
+            (void)engine::getSubsystem<AssetComposition>().setLayers( _listPrevious );
             vector<string> listPending;
-            engine::getSubsystem<ResourceComposition>().takePendingReload( listPending );
+            engine::getSubsystem<AssetComposition>().takePendingReload( listPending );
         }
         XMLBinaryTestLayers( const XMLBinaryTestLayers& )            = delete;
         XMLBinaryTestLayers& operator=( const XMLBinaryTestLayers& ) = delete;
@@ -103,7 +103,7 @@ SW_TEST_CASE( XMLBinaryTest, CookedDocumentReadsLikeTheText )
     // 합치기는 쿠킹본을 글로 되돌리지 않는다(층이 없을 때).
     string composedText;
     bool   bComposed = true;
-    SW_EXPECT_TRUE( ResourceComposer::compose( viewBytes( bytes ), "cooked", ResourceContext::forDocument(), composedText, bComposed ) );
+    SW_EXPECT_TRUE( AssetComposer::compose( viewBytes( bytes ), "cooked", AssetComposeContext::forDocument(), composedText, bComposed ) );
     SW_EXPECT_FALSE( bComposed );
 }
 
@@ -131,7 +131,7 @@ SW_TEST_CASE( XMLBinaryTest, LayersAddRowsToACookedCatalog )
     const auto            expectRows = [&id]()
     {
         XMLDocument document;
-        SW_REQUIRE_TRUE( document.loadResource( id ) );
+        SW_REQUIRE_TRUE( document.loadAsset( id ) );
         uint32 rowCount = 0;
         for ( XMLNode item = document.getRoot( "ItemCatalog" ).findChild( "Item" ); item.isValid(); item = item.findNextSibling( "Item" ) )
         {

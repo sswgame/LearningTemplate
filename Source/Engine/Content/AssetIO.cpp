@@ -15,7 +15,7 @@
 #include "Engine/Content/CookJob.h"
 #include "Engine/Content/Pack/PackManager.h"
 #include "Engine/Foundation/EngineSubsystems.h"
-#include "Engine/Serialization/Inherit/ResourceRemap.h"
+#include "Engine/Serialization/Compose/AssetRemap.h"
 
 namespace sw
 {
@@ -65,13 +65,13 @@ namespace sw
          *          바이너리가 다른 파일을 읽게 됩니다.
          */
         /**
-         * @brief 경로 교체 표(`ResourceRemap`)가 지금 태그로 고른 id 입니다. 바꾸지 않으면 @p relativePath 그대로입니다. @p storage 는 바꾼 id 를 든다.
+         * @brief 경로 교체 표(`AssetRemap`)가 지금 태그로 고른 id 입니다. 바꾸지 않으면 @p relativePath 그대로입니다. @p storage 는 바꾼 id 를 든다.
          * @details 쿠킹 작업 안에서는 바꾸지 않는다 — 교체는 읽을 때 정하고, 쿠커가 기계의 언어로 다른 파일을 읽으면 쿠킹본이 기계마다 달라진다.
          */
         string_view remapForRead( string_view relativePath, string& storage )
         {
             string remapped;
-            if ( CookJob::findCurrent() == nullptr && ResourceRemap::resolve( relativePath, remapped ) )
+            if ( CookJob::findCurrent() == nullptr && AssetRemap::resolve( relativePath, remapped ) )
             {
                 storage = std::move( remapped );
                 return storage;

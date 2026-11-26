@@ -96,7 +96,7 @@ namespace sw::editor
 
     private:
         AbilityCatalogEditModel                 _model;
-        DataInheritanceResourceSource           _inheritanceSource; ///< 항목 `_base` 의 부모를 읽는 곳(같은 파일 · 상속 규칙 표)
+        DataInheritanceAssetSource              _inheritanceSource; ///< 항목 `_base` 의 부모를 읽는 곳(같은 파일 · 상속 규칙 표)
         fixed_string<constant::buffer::kMax256> _pathInput;         ///< 경로 칸의 글이다. 확정하면 문서 열기(포커스)로 넘긴다 — 연 문서 경로는 문서 기반이 든다
         fixed_string<constant::buffer::kMax64>  _filter;
         string                                  _status;

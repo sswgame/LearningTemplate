@@ -10,7 +10,7 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Content/AssetIO.h"
-#include "Engine/Serialization/Inherit/ResourceComposer.h"
+#include "Engine/Serialization/Compose/AssetComposer.h"
 #include "Engine/Serialization/XML/XMLBinary.h"
 
 #include <pugixml.hpp>
@@ -1110,10 +1110,10 @@ namespace sw
 
     bool XMLDocument::loadDataFile( const AbsolutePath& absPath )
     {
-        return loadDataFileAs( absPath, ResourceContext::forDocument(), nullptr );
+        return loadDataFileAs( absPath, AssetComposeContext::forDocument(), nullptr );
     }
 
-    bool XMLDocument::loadDataFileAs( const AbsolutePath& absPath, const ResourceContext& context, string* pOutBaseID )
+    bool XMLDocument::loadDataFileAs( const AbsolutePath& absPath, const AssetComposeContext& context, string* pOutBaseID )
     {
         string text;
         if ( AssetIO::readTextFile( absPath, text ) == false )
@@ -1128,12 +1128,12 @@ namespace sw
         return parseComposed( text, absPath.str(), context );
     }
 
-    bool XMLDocument::loadResource( const AssetID& assetID, string* pOutAbsPath )
+    bool XMLDocument::loadAsset( const AssetID& assetID, string* pOutAbsPath )
     {
-        return loadResourceAs( assetID, ResourceContext::forDocument(), pOutAbsPath, nullptr );
+        return loadAssetAs( assetID, AssetComposeContext::forDocument(), pOutAbsPath, nullptr );
     }
 
-    bool XMLDocument::loadResourceAs( const AssetID& assetID, const ResourceContext& context, string* pOutAbsPath, string* pOutBaseID )
+    bool XMLDocument::loadAssetAs( const AssetID& assetID, const AssetComposeContext& context, string* pOutAbsPath, string* pOutBaseID )
     {
         const string_view relativePath = assetID.view();
         if ( relativePath.empty() )
@@ -1156,25 +1156,25 @@ namespace sw
             *pOutAbsPath = absPath;
         if ( pOutBaseID != nullptr )
             *pOutBaseID = DataInheritance::findBasePath( text );
-        // 리소스 id 로 읽었으니 덮어쓰기 층과 다시 읽기 기록이 이 id 를 쓴다(`ResourceContext::withAsset`).
+        // 리소스 id 로 읽었으니 덮어쓰기 층과 다시 읽기 기록이 이 id 를 쓴다(`AssetComposeContext::withAsset`).
         return parseComposed( text, absPath, context.withAsset( assetID ) );
     }
 
-    bool XMLDocument::parseResourceText( string_view xmlText, const AssetID& assetID )
+    bool XMLDocument::parseAssetText( string_view xmlText, const AssetID& assetID )
     {
-        return parseComposed( xmlText, assetID.view(), ResourceContext::forDocument().withAsset( assetID ) );
+        return parseComposed( xmlText, assetID.view(), AssetComposeContext::forDocument().withAsset( assetID ) );
     }
 
     bool XMLDocument::parseData( string_view xmlText, string_view sourceName )
     {
-        return parseComposed( xmlText, sourceName, ResourceContext::forDocument() );
+        return parseComposed( xmlText, sourceName, AssetComposeContext::forDocument() );
     }
 
-    bool XMLDocument::parseComposed( string_view xmlText, string_view sourceName, const ResourceContext& context )
+    bool XMLDocument::parseComposed( string_view xmlText, string_view sourceName, const AssetComposeContext& context )
     {
         string flatText;
         bool   bComposed = false;
-        if ( ResourceComposer::compose( xmlText, sourceName, context, flatText, bComposed ) == false )
+        if ( AssetComposer::compose( xmlText, sourceName, context, flatText, bComposed ) == false )
         {
             clear();
             StringBuilder<constant::buffer::kMax256> error;
@@ -1265,7 +1265,7 @@ namespace sw
             SW_LOG_ERROR_ID( "Xml.EmptyDocument", "XML document is empty - %# was not written", absPath.c_str() );
             return false;
         }
-        return ResourceComposer::saveText( absPath, ResourceSaveText::makeComplete( text ) );
+        return AssetComposer::saveText( absPath, AssetSaveText::makeComplete( text ) );
     }
 
     string XMLDocument::unescapeString( string_view text )
