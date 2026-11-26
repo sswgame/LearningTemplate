@@ -68,6 +68,7 @@
     "paintMap": "SkirmishMap::_tileMapPath — 절벽은 타일맵의 데이터 레이어다(2026-11-25)",
     "spawnBase": "SkirmishMap::_listPlacement(2026-11-25)",
     "UTF8Util": "StringUtil — UTF-8 판정 · 물러나기(getUTF8SequenceLength · isUTF8Continuation · backOffToUTF8CharacterStart)는 UTF 변환과 한 형식(2026-11-26 Core/String 합치기)",
+    "UUID": "GUID — 128 비트 고유 값은 낱말 하나(sw::GUID, 언리얼 FGuid). 글 표기는 소문자 16진 32 자(하이픈 없음), 난수만 쓰던 곳은 SecureRandom 을 바로 부른다(2026-11-27)",
     "JSONStringUtil": "StringUtil::escapeJSON · appendJSONEscaped — 글 이스케이프는 StringUtil(Godot String::json_escape, 2026-11-26)",
     "EngineChildProcess": "ProcessCommand::forEngineChild — 엔진 자식 명령은 ProcessCommand 의 만드는 함수(at · fromSearchPath 곁, 2026-11-26 Core/Process 합치기)",
     "GameTimer": "지움 — 경과는 Stopwatch(getElapsedSeconds · lapSeconds), 프레임 시간은 FrameClock(2026-11-26)",

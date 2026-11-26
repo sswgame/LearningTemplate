@@ -31,10 +31,10 @@ namespace sw
             /** @brief CodeView 7(RSDS) 레코드 — 링커가 PE 디버그 디렉터리에 적는다(`/DEBUG`). */
             struct CodeViewRecord
             {
-                DWORD _signature; ///< 'RSDS'
-                GUID  _guid;
-                DWORD _age;
-                utf8  _arrPDBPath[1];
+                DWORD  _signature; ///< 'RSDS'
+                ::GUID _guid;
+                DWORD  _age;
+                utf8   _arrPDBPath[1];
             };
 
             static constexpr DWORD kRsdsSignature = FourCCUtil::make( "RSDS" );

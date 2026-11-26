@@ -5,9 +5,8 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/Hash/HashUtil.h"
-#include "Core/Memory/Memory.h"
+#include "Core/Math/SecureRandom.h"
 #include "Core/String/StringUtil.h"
-#include "Core/UUID/UUID.h"
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -53,9 +52,7 @@ namespace sw
             /** @brief 운영체제 난수 64 비트(0 이 아닌 값)입니다. */
             static uint64 makeRandomID()
             {
-                const UUID uuid = UUID::generate();
-                uint64     id   = 0;
-                Memory::copy( &id, uuid._arrBytes, sizeof( id ) );
+                const uint64 id = SecureRandom::nextUint64();
                 return id != 0 ? id : 1;
             }
         };

@@ -92,7 +92,7 @@ Never loop `releaseRHI` / `clearRHI` / `initRHI` from outside: `IRHIDevice` broa
 
 ### Function names
 
-Use a banned verb only when it is the domain's own term (`UUID::generate`, `SurfaceBVH::build`).
+Use a banned verb only when it is the domain's own term (`SurfaceBVH::build`).
 
 #### One verb per concept
 

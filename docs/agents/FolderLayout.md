@@ -29,7 +29,7 @@
 | `Memory` · `Algorithm`(2) | 할당기 · 메모리 태그 · 블록, 컨테이너에 묶이지 않은 알고리즘 |
 | `Container`(3) | 컨테이너 · 핸들 표 · 슬롯 · 링 · 큐 · 그래프 자료 구조 |
 | `String` · `Encoding` · `Serialization`(4) | 로그 없는 글자 도구, 바이트 ↔ 글자 인코딩, 바이트 · 비트 직렬화 |
-| `Delegate` · `Path` · `UUID` · `Subsystem` · `Spatial`(4) | 이름 그대로 |
+| `Delegate` · `Path` · `GUID` · `Subsystem` · `Spatial`(4) | 이름 그대로 |
 | `Log`(5) | 로그 매크로 · 창구 · 백엔드 포트(구현 `Log/Backend` · 출력 장치 `Log/Output` 은 맨 위) |
 | `Name` · `Registry`(6) | intern 이름(`hashed_string` · `TagID`), `RegistrationList` · `NameRegistry` |
 | `CommandLine` · `Compression` · `Process` · `Time`(6), `GlobalVariable` · `Task`(7), `File` · `Network`(8), `Module`(9), `Diagnostics` · `Event` · `Testing`(10) | 이름 그대로 |

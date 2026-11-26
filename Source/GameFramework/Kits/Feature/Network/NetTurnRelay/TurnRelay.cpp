@@ -8,12 +8,11 @@
 #include "Core/Hash/HashUtil.h"
 #include "Core/Hash/SecureUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Math/SecureRandom.h"
 #include "Core/Network/Connection/NetEndpoint.h"
 #include "Core/Network/NetConnectionState.h"
 #include "Core/Serialization/BitStream.h"
-#include "Core/Serialization/ByteStream.h"
 #include "Core/Time/MonotonicClock.h"
-#include "Core/UUID/UUID.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/ConfigRangeUtil.h"
 
@@ -23,14 +22,12 @@ namespace sw
     {
         struct TurnRelayInternal
         {
-            /** @brief 자리 토큰 키입니다. @p tokenSeed 가 0 이면 운영체제 난수(`UUID::generate` 의 16 바이트), 아니면 시드에서 만든다(테스트 — 키를 맞힐 수 있다). */
+            /** @brief 자리 토큰 키입니다. @p tokenSeed 가 0 이면 운영체제 난수 128 비트, 아니면 시드에서 만든다(테스트 — 키를 맞힐 수 있다). */
             static SipHashKey makeTokenKey( uint64 tokenSeed )
             {
                 if ( tokenSeed != 0 )
                     return SipHashKey{ HashUtil::mix64( tokenSeed ), HashUtil::mix64( ~tokenSeed ) };
-                const UUID uuid = UUID::generate();
-                ByteReader reader( uuid._arrBytes, sizeof( uuid._arrBytes ) );
-                return SipHashKey{ reader.readUint64(), reader.readUint64() }; // 중괄호 초기화는 왼쪽부터 평가한다
+                return SipHashKey{ SecureRandom::nextUint64(), SecureRandom::nextUint64() };
             }
 
             /** @brief @p token 과 주체 @p principalID 가 모두 맞는 차지된 자리를 반환합니다. 토큰이 0 이거나 맞는 자리가 없으면 비어 있습니다. */

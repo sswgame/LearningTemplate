@@ -101,8 +101,6 @@
     "Source/Core/Time/FixedStepTimer.h": {"float": 1},
     "Source/Core/Time/MonotonicClock.cpp": {"minus-one": 1, "integer": 2},
     "Source/Core/Time/WallClock.cpp": {"integer": 1},
-    "Source/Core/UUID/UUID.cpp": {"integer": 9, "hex": 4},
-    "Source/Core/UUID/UUID.h": {"integer": 2},
     "Source/DevTools/Automation/Watches/EnvironmentWatches.cpp": {"minus-one": 1, "float": 1},
     "Source/DevTools/Automation/Watches/MaterialWatches.cpp": {"minus-one": 1},
     "Source/DevTools/Automation/Watches/ObjectWatches.cpp": {"integer": 1},

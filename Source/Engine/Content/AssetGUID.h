@@ -15,23 +15,24 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Foundation/Types.h"
+#include "Core/GUID/GUID.h"
 
 namespace sw
 {
     /**
      * @class AssetGUID
-     * @brief 에셋 하나의 정체성입니다. 파일 머리말 참고.
+     * @brief 에셋 하나의 정체성입니다. 값은 `GUID`(128 비트) 하나이고, 이 형식은 빈 값 금지와 이름 기반 정체성만 더한다. 파일 머리말 참고.
      */
     class SW_API AssetGUID
     {
     public:
         /** @brief 글 표기의 길이(소문자 16진 32 자)입니다. */
-        static constexpr size_t kTextLength = 32;
+        static constexpr size_t kTextLength = GUID::kTextLength;
 
-        /** @brief 새 정체성을 만듭니다(운영체제 난수 128 비트). 손으로 만든 에셋의 정체성을 만드는 길은 이것 하나다. */
-        [[nodiscard]] static AssetGUID create();
+        /** @brief 새 정체성을 만듭니다(`GUID::create` — 운영체제 난수 128 비트). 손으로 만든 에셋의 정체성을 만드는 길은 이것 하나다. */
+        [[nodiscard]] static AssetGUID create() { return AssetGUID{ GUID::create() }; }
         /**
-         * @brief 이름 @p name 에서 결정적으로 만든 정체성입니다(UUID v5 처럼 이름 기반 — 같은 이름은 늘 같은 GUID). 대소문자는 가리지 않는다(리소스 id 색인과 같다).
+         * @brief 이름 @p name 에서 결정적으로 만든 정체성입니다(UUID v5 처럼 이름 기반 — 같은 이름은 늘 같은 GUID). 대소문자는 가리지 않는다(에셋 id 색인과 같다).
          * @details 내용 주소 파일(`textures_raw/_shared/` — 경로가 곧 내용이라 두 사람이 따로 임포트해도 같은 파일이다)만 쓴다. 손으로 만든 에셋은 `create` 다(이름을 바꿔도 정체성이 그대로여야 한다).
          */
         [[nodiscard]] static AssetGUID fromName( string_view name );
@@ -41,31 +42,30 @@ namespace sw
          *          그 뒤로는 표의 줄이 정체성이다(유니티 `.meta` 의 하위 에셋 표 — 이름에서 만든 fileID 를 표에 적는다). 파이썬 도구(`asset_guid.py` 의 `make_output_guid`)가 같은 규칙이다.
          */
         [[nodiscard]] static AssetGUID fromName( const AssetGUID& nameSpace, string_view name );
-        /** @brief 글 표기 @p text 를 읽습니다. 소문자 16진 32 자가 아니거나 모두 0 이면 없음입니다(대소문자 · 하이픈을 고쳐 읽지 않는다). */
+        /** @brief 글 표기 @p text 를 읽습니다(`GUID::tryParse`). 소문자 16진 32 자가 아니거나 모두 0 이면 없음입니다(대소문자 · 하이픈을 고쳐 읽지 않는다). */
         [[nodiscard]] static optional<AssetGUID> tryParse( string_view text );
 
         /** @brief 글 표기(소문자 16진 32 자)입니다. */
-        [[nodiscard]] string toString() const;
-        /** @brief 해시 키(`DefaultHash`)입니다. 무작위 값이라 두 반쪽을 섞기만 한다. */
-        [[nodiscard]] uint64 computeHash() const { return _high ^ _low; }
+        [[nodiscard]] string toString() const { return _guid.toString(); }
+        /** @brief 해시 키(`DefaultHash`)입니다. */
+        [[nodiscard]] uint64 computeHash() const { return _guid.computeHash(); }
 
-        [[nodiscard]] bool operator==( const AssetGUID& other ) const { return _high == other._high && _low == other._low; }
-        [[nodiscard]] bool operator!=( const AssetGUID& other ) const { return ( *this == other ) == false; }
-        /** @brief 정렬 순서(앞 64 비트 먼저)입니다 — 색인을 늘 같은 순서로 쓴다. */
-        [[nodiscard]] bool operator<( const AssetGUID& other ) const { return _high != other._high ? _high < other._high : _low < other._low; }
+        [[nodiscard]] bool operator==( const AssetGUID& other ) const { return _guid == other._guid; }
+        [[nodiscard]] bool operator!=( const AssetGUID& other ) const { return _guid != other._guid; }
+        /** @brief 정렬 순서(`GUID` 의 순서)입니다 — 색인을 늘 같은 순서로 쓴다. */
+        [[nodiscard]] bool operator<( const AssetGUID& other ) const { return _guid < other._guid; }
 
     private:
-        AssetGUID( uint64 high, uint64 low )
-            : _high{ high }
-            , _low{ low }
+        /** @brief @p guid 는 모두 0 이 아니다(부르는 쪽이 지킨다). */
+        explicit AssetGUID( const GUID& guid )
+            : _guid{ guid }
         {
         }
         /** @brief 이름 해시 두 개(섞기 전)로 만든 정체성입니다 — 모두 0(글 표기가 받지 않는다)은 정해진 값으로 비켜 결정성을 지킨다. */
         static AssetGUID fromNameHash( uint64 highHash, uint64 lowHash );
 
     private:
-        uint64 _high;
-        uint64 _low;
+        GUID _guid;
     };
 
     /** @brief 우리 형식 XML 글에서 GUID 머리를 찾은 결과입니다. */

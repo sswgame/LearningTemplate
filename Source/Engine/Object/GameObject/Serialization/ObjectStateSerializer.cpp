@@ -4,9 +4,8 @@
 
 #include "Core/Hash/HashUtil.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/Memory/Memory.h"
+#include "Core/Math/SecureRandom.h"
 #include "Core/Serialization/ByteStream.h"
-#include "Core/UUID/UUID.h"
 
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Foundation/EngineSubsystems.h"
@@ -259,12 +258,10 @@ namespace sw
                 return pComp->getTypeInfo();
             }
 
-            /** @brief 프로세스 토큰을 새로 정합니다(`UUID` 의 무작위 바이트 8 개). 0 은 "토큰 없음"과 구분되지 않아 피합니다. */
+            /** @brief 프로세스 토큰을 새로 정합니다(운영체제 난수 64 비트). 0 은 "토큰 없음"과 구분되지 않아 피합니다. */
             static uint64 makeProcessToken()
             {
-                const UUID uuid  = UUID::generate();
-                uint64     token = 0;
-                Memory::copy( &token, uuid._arrBytes, sizeof( token ) );
+                const uint64 token = SecureRandom::nextUint64();
                 return ( token != 0 ) ? token : 1;
             }
 
