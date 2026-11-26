@@ -23,6 +23,7 @@ namespace sw
         , _listTargetPath{ listTargetFile }
         , _listTargetFile{}
         , _listHeader{}
+        , _listTargetIncludeSite{}
         , _pLastFile{ nullptr }
         , _lastTargetIndex{ kNoTarget }
         , _pendingMarker{}
@@ -57,6 +58,7 @@ namespace sw
         if ( _bHasError == SW_TRUE )
             return false;
 
+        collectTargetIncludeSites();
         clang_visitChildren( clang_getTranslationUnitCursor( _translationUnit ), visitCursor, this );
         static_cast<void>( takePendingMarker( clang_getNullCursor() ) ); // 번역 단위 끝에 남은 표식은 짝이 없다
         for ( uint32 index = 0; index < _listTargetFile.size(); ++index )
@@ -160,6 +162,52 @@ namespace sw
         return targetIndex;
     }
 
+    void AstVisitor::collectTargetIncludeSite( CXFile includedFile, CXSourceLocation* pInclusionStack, const uint32 stackLength, CXClientData clientData )
+    {
+        AstVisitor* self    = static_cast<AstVisitor*>( clientData );
+        bool        bTarget = false;
+        for ( const CXFile targetFile : self->_listTargetFile )
+        {
+            if ( clang_File_isEqual( includedFile, targetFile ) != 0 )
+                bTarget = true;
+        }
+        if ( bTarget == false )
+            return;
+        // 사슬의 고리마다 그 `#include` 줄이 있는 파일 · 자리다 — 바로 위 include 만 보면 감싼 이름공간이 한 단계 위 파일에 있을 때 놓친다.
+        for ( uint32 index = 0; index < stackLength; ++index )
+        {
+            CXFile file   = nullptr;
+            uint32 offset = 0;
+            clang_getExpansionLocation( pInclusionStack[index], &file, nullptr, nullptr, &offset );
+            if ( file != nullptr )
+                self->_listTargetIncludeSite.push_back( IncludeSite{ file, offset } );
+        }
+    }
+
+    void AstVisitor::collectTargetIncludeSites()
+    {
+        _listTargetIncludeSite.clear();
+        clang_getInclusions( _translationUnit, &collectTargetIncludeSite, this );
+    }
+
+    bool AstVisitor::containsTargetIncludeSite( const CXCursor cursor ) const
+    {
+        const CXSourceRange extent    = clang_getCursorExtent( cursor );
+        CXFile              startFile = nullptr;
+        uint32              begin     = 0;
+        uint32              end       = 0;
+        clang_getExpansionLocation( clang_getRangeStart( extent ), &startFile, nullptr, nullptr, &begin );
+        clang_getExpansionLocation( clang_getRangeEnd( extent ), nullptr, nullptr, nullptr, &end );
+        if ( startFile == nullptr )
+            return false;
+        for ( const IncludeSite& site : _listTargetIncludeSite )
+        {
+            if ( clang_File_isEqual( site._file, startFile ) != 0 && begin <= site._offset && site._offset <= end )
+                return true;
+        }
+        return false;
+    }
+
     CXChildVisitResult AstVisitor::visitCursor( CXCursor cursor, CXCursor parent, CXClientData clientData )
     {
         AstVisitor*        self = static_cast<AstVisitor*>( clientData );
@@ -171,9 +219,10 @@ namespace sw
         if ( kind == CXCursor_Namespace )
         {
             self->reportUnpairedMarker( marker, cursor );
-            // 대상 밖 파일에서 연 이름공간(표준 헤더의 `std`, include 한 엔진 헤더마다의 `sw`)은 내려가지 않는다. 대상의 선언은 대상 파일에서 연
-            // 이름공간 안에만 있다(입력은 이름공간 밖에서 include 된다). 내려가면 그 안의 선언마다 위치를 물어 버리는 일이 순회의 대부분이다.
-            return self->findTargetIndex( cursor ) == kNoTarget ? CXChildVisit_Continue : CXChildVisit_Recurse;
+            // 대상 밖 파일에서 연 이름공간(표준 헤더의 `std`, include 한 엔진 헤더마다의 `sw`)은 내려가지 않는다. 내려가면 그 안의 선언마다 위치를 물어
+            // 버리는 일이 순회의 대부분이다. 다만 그 이름공간 안에서 대상을 include 했으면 대상의 선언이 그 자식이라 내려간다(`containsTargetIncludeSite`).
+            const bool bSkip = self->findTargetIndex( cursor ) == kNoTarget && self->containsTargetIncludeSite( cursor ) == false;
+            return bSkip ? CXChildVisit_Continue : CXChildVisit_Recurse;
         }
 
         // include 된 외부 · 시스템 헤더의 선언은 바로 건너뛴다(AST 순회 비용을 크게 줄인다)
