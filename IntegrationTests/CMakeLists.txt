@@ -1,7 +1,7 @@
 # ==============================================================================
 # @file IntegrationTests/CMakeLists.txt
 # @brief CTest 항목 등록 · 실행 파일을 띄워 보는 항목의 드라이버 · 픽스처. 단위 테스트 코드는 여기 없다 — 기능 폴더 옆 `Tests/`(`SW_TEST_CASE`)에 있고 `App --test` 한 번이 모두 돈다.
-#        시나리오는 `Content/**/automation/*.scenario.xml` 이고 `IntegrationTests/Scenario/` 가 하나씩 올린다. 형식과 쓰는 법은 IntegrationTests/README.md.
+#        시나리오는 `Content/**/automation/*.scenario.xml` 이고 `IntegrationTests/Scenario/` 가 하나씩 올린다. 쓰는 법은 IntegrationTests/README.md(단위 테스트) · IntegrationTests/Scenario/README.md(시나리오).
 #        이름: 모듈 옆 `Tests/`(단위)와 갈라 프로세스를 띄워 보는 테스트 자리다(LLVM `test/` 대 `unittests/`, 언리얼 Gauntlet 자리).
 # ==============================================================================
 

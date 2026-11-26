@@ -1,6 +1,6 @@
 # FolderLayout
 
-> 결론: 이름 낱말(Util · Registry · Component)이나 처음 쓰는 쪽이 아니라 **하는 일**로 자리를 정한다. 두 자리가 다 맞으면 낮은 층에 둔다. 층 규칙은 빌드가 막고([CppStyle](CppStyle.md) "Includes and layers"), 표에 없는 폴더는 configure 가 멈추므로 새 폴더는 층을 정하고 들어온다(층 표 `Config/Rules/Layers/*.toml`). 옮기기는 `py -3 -m Scripts move-source --base . <옛>=<새>`(`git mv` 금지).
+이름 낱말(Util · Registry · Component)이나 처음 쓰는 쪽이 아니라 **하는 일**로 자리를 정한다. 두 자리가 다 맞으면 낮은 층에 둔다. 층 규칙은 빌드가 막고([CppStyle](CppStyle.md) "Includes and layers"), 표에 없는 폴더는 configure 가 멈추므로 새 폴더는 층을 정하고 들어온다(층 표 `Config/Rules/Layers/*.toml`). 옮기기는 `py -3 -m Scripts move-source --base . <옛>=<새>`(`git mv` 는 훅이 막는다 — `.claude/hooks/ToolPolicyRules.json`).
 
 ## 1 타깃
 

@@ -1,6 +1,6 @@
 # Rendering
 
-> 결론: 렌더 파이프라인 · 패스 XML, 머티리얼 · 머티리얼 그래프, 셰이더 · RHI 를 고칠 때의 규칙. 파이프라인 XML 에 적힌 값이 곧 실행되는 값이다 — 실행이 받아 줄 수 없는 조합은 읽기 오류다(`RenderPipelineAsset::validate` · `findInvalidReason` — 로드 강제). 표(`RenderPassKindInfo`)는 XML 이 없는 내부 슬롯, XML 이 비운 기본값, 머티리얼에게 내주는 범위만 정한다. 새 린트 대신 형식 · 로드 오류로 막는다. 셰이더 이름은 [NamingCpp](NamingCpp.md) HLSL, 플랫폼 차이는 [Platform](Platform.md).
+렌더 파이프라인 · 패스 XML, 머티리얼 · 머티리얼 그래프, 셰이더 · RHI 를 고칠 때의 규칙. 파이프라인 XML 에 적힌 값이 곧 실행되는 값이다 — 실행이 받아 줄 수 없는 조합은 읽기 오류다(`RenderPipelineAsset::validate` · `findInvalidReason` — 로드 강제). 표(`RenderPassKindInfo`)는 XML 이 없는 내부 슬롯, XML 이 비운 기본값, 머티리얼에게 내주는 범위만 정한다. 셰이더 이름은 [NamingCpp](NamingCpp.md) HLSL, 플랫폼 차이는 [Platform](Platform.md).
 
 ## 파이프라인 XML
 
@@ -68,7 +68,7 @@
 
 ## 머티리얼 그래프
 
-새 노드는 `MaterialGraphNodes.cpp` 에 `SW_MATERIAL_GRAPH_NODE` 한 줄(컴파일러 · 메뉴 · 검사는 고치지 않는다). 그래프는 `.hlsl` 과 `.gen.material` 을 생성하고 그 뒤는 손으로 쓴 머티리얼과 같다. 그래프 코드는 DevTools 의 `Material/`(배포에 없음), 편집기는 에디터 `Panels/MaterialGraph/`.
+그래프는 `.hlsl` 과 `.gen.material` 을 생성하고 그 뒤는 손으로 쓴 머티리얼과 같다. 그래프 코드는 DevTools 의 `Material/`(배포에 없음), 편집기는 에디터 `Panels/MaterialGraph/`.
 
 ### 생성물
 
