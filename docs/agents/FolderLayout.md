@@ -59,6 +59,7 @@ CMake(`cmake/` — 폴더 하나에 파일 종류 하나): `Modules/<Build·Envi
 | --- | --- |
 | `Util` · `Utility` · `Helpers` · `Misc` 폴더 금지, `Common` 도 새로 만들지 않는다(`Editor/Common` 만). 린트 `folder-layout` 강제(예외 `Config/Rules/Lint/FolderLayout.json`) | 잡동사니 폴더는 하는 일로 찾을 수 없다 |
 | `<기능>/Component` 에는 `*Component` 만(린트 `folder-layout` 강제) | 씬 서브시스템 · 질의는 `<기능>/Scene` |
+| 파일 이름 = 주 형식: `X.h` 는 형식 · 이름공간 `X` 를 선언하고(인터페이스는 `IX.h`), 짝 헤더 없는 `X.cpp` 는 `X` 를 정의하거나 `X` 의 앞머리 · 꼬리 형식 멤버를 정의하거나 진입점이다. `*Fwd.h` · `*Macros.h` · `pch.h` · 생성 파일 · 개발 등록 파일(`<X>Watches` …)은 빼고, 일부러 모은 헤더는 `_multiTypeHeaders` 에 까닭과 함께. 끝 낱말 `Types` · `Support` · `Defines` · `Helpers` · `Misc` 인 파일 이름 금지(`_bannedFileStems`, 온라인 키트 `<Kit>Types.h` 만). 린트 `folder-layout` 강제, 지금 위반은 기준선 `FolderLayoutBaseline.json`, 새 헤더는 도구 정책 훅도 막는다 | 파일 이름으로 형식을 찾는다(언리얼 · 유니티도 형식 하나에 파일 하나) |
 | 키트 폴더는 평평하게: 장르 키트는 카탈로그 · 규칙 파일(엔진 시계 · 렌더를 모른다)을 키트 바로 아래, 하위 폴더는 `Component/`(디렉터 · 컴포넌트) · `Client/`(뷰 · 입력 · HUD — 따로 짓는 `GF_Client_<X>`, 디렉터의 명령 · 읽기 API 만 쓴다) · `Editor/` · `Tests/` 와 하위 게임만. 뼈대는 `new-kit`. 온라인 키트는 `Runtime/` · `Server/` 바로 아래(뼈대 `new-online-kit`) | 키트는 파일 10 ~ 20 개 |
 | 개발 기능은 `Source/DevTools/`. `Dev/` 폴더는 `Config/Rules/Layers/DevFolders.json` 에 까닭과 함께 적은 자리만(configure 강제) | DevTools 는 GF · 게임 · ModuleManager · App 을 못 본다 — 엔진이 확장점을 내고 DevTools 가 붙는다 |
 | 개발 전용 소스(`GameFramework/Developer` · 키트 `Dev/`)는 등록하는 것으로 이름 짓는다: 개발 명령 `<X>DevCommands`, 자동화 감시 값 `<X>Watches`, HUD 섹션 `<X>DebugSections`, 시나리오 단계 `<X>AutomationSteps`, 캡처 · 끝내기 차단 `<X>CaptureBlock` · `<X>FinishBlock` | 파일 이름으로 그 기능의 명령 · 감시를 찾는다 |
