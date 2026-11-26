@@ -45,7 +45,12 @@ namespace sw
          * @details TU 하나가 엔진 공통 헤더 전체를 들고 메모리 대역을 나눠 쓴다 — 16 개를 함께 돌리면 한 파싱이 1.0 초에서 2.1 초로 늘었다(`ReflectionPipeline::parsePending` 주석의 실측).
          *          예전에는 하드웨어 스레드 수만큼 띄웠다(상한 없음). 값은 측정 후보다(S8) — 최대 RSS · 전체 시간을 재 고친다.
          */
-        uint32                  _maxParallelParses;
+        uint32 _maxParallelParses;
+        /**
+         * @brief 모듈 PCH(`pch.h`)를 굽는 번역 단위 수의 하한입니다(`tuning.min_translation_units_for_pch`, 필수 · 2 이상).
+         * @details 번역 단위가 적으면 굽기 · 저장 · 읽기 비용이 아낀 파싱보다 크다 — 헤더 묶음 하나와 .cpp 하나인 키트는 PCH 로 3.5~4.2 초가 들었다(통합 측정, 대부분 pch).
+         */
+        uint32                  _minTranslationUnitsForPch;
         uint8                   _bLoaded  : 1;
         [[maybe_unused]] uint8  _reserved : 7;
         [[maybe_unused]] uint16 _padding;

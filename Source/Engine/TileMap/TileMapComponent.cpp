@@ -15,12 +15,9 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Physics/IPhysicsScene.h"
-#include "Engine/Physics/Scene/PhysicsNameValidation.h"
 #include "Engine/Physics/Scene/ScenePhysics.h"
-#include "Engine/Reflection/ReflectionValidation.h"
 #include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/TileMap/TileMapXML.h"
-#include "Engine/Visual/2D/SortingLayerNameValidation.h"
 #include "Engine/Visual/2D/SpriteInstanceBatch.h"
 #include "Engine/Visual/2D/SpriteRenderUtil.h"
 
@@ -734,15 +731,5 @@ namespace sw
 
 namespace sw
 {
-    void TileMapComponent::validateColliderMaterial( ValidationContext& context ) const
-    {
-        PhysicsNameValidation::validateMaterial( context, "_colliderMaterial", _colliderMaterial );
-    }
-
-    void TileMapComponent::validateSortingLayer( ValidationContext& context ) const
-    {
-        SortingLayerNameValidation::validate( context, "_sortingLayer", _sortingLayer );
-    }
-
     SW_COMPONENT_STATE_CODEC( TileMapComponent )
 } // namespace sw

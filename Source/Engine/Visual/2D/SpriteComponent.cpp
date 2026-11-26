@@ -14,8 +14,6 @@
 #include "Engine/Graphics/Mesh/MeshUtil.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Reflection/ReflectionValidation.h"
-#include "Engine/Visual/2D/SortingLayerNameValidation.h"
 #include "Engine/Visual/2D/SpriteRenderUtil.h"
 
 namespace sw
@@ -330,14 +328,5 @@ namespace sw
         outCenter                   = world.getTranslation();
         outRadius                   = halfDiagonal * MathUtil::max( scale._x, scale._y );
         return true;
-    }
-
-} // namespace sw
-
-namespace sw
-{
-    void SpriteComponent::validateSortingLayer( ValidationContext& context ) const
-    {
-        SortingLayerNameValidation::validate( context, "_sortingLayer", _sortingLayer );
     }
 } // namespace sw

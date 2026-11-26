@@ -63,7 +63,8 @@
         ]
     },
     "tuning": {
-        "max_parallel_parses": 8
+        "max_parallel_parses": 8,
+        "min_translation_units_for_pch": 4
     },
     "target_options": {
         "/GR-": [

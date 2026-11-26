@@ -136,6 +136,13 @@ namespace sw
                              type._validate, type._fullyQualifiedName, type._validate );
             bValid = false;
         }
+        if ( type._readValidate.empty() == false && DeclarationValidatorInternal::isValidatorDeclared( listMethodSignature, type._readValidate ) == false )
+        {
+            SW_LOG_ERROR_ID( "AstVisitor.ERRORREFLECTReadValidateNeeds",
+                             "ERROR: REFLECT( ReadValidate = %# ) on '%#' needs a method of the same type: void %#( ValidationContext& context ) [const].", type._readValidate,
+                             type._fullyQualifiedName, type._readValidate );
+            bValid = false;
+        }
         for ( ParsedPropertyInfo& prop : type._listProperty )
         {
             if ( prop._validate.empty() == false && DeclarationValidatorInternal::isValidatorDeclared( listMethodSignature, prop._validate ) == false )

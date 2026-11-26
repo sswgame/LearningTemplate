@@ -9,10 +9,8 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/Tick/FixedStepContext.h"
 #include "Engine/Physics/IPhysicsScene.h"
-#include "Engine/Physics/Scene/PhysicsNameValidation.h"
 #include "Engine/Physics/Scene/PhysicsPoseStore.h"
 #include "Engine/Physics/Scene/ScenePhysics.h"
-#include "Engine/Reflection/ReflectionValidation.h"
 
 namespace sw
 {
@@ -323,13 +321,5 @@ namespace sw
         _verticalSpeed = 0.0f;
         _airVelocity   = 0.0f;
         _bGrounded     = false;
-    }
-} // namespace sw
-
-namespace sw
-{
-    void CharacterController2DComponent::validateLayer( ValidationContext& context ) const
-    {
-        PhysicsNameValidation::validateLayer( context, "_layer", _layer );
     }
 } // namespace sw

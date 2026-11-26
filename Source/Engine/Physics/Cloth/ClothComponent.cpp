@@ -9,9 +9,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/Tick/FixedStepContext.h"
 #include "Engine/Physics/IPhysicsScene.h"
-#include "Engine/Physics/Scene/PhysicsNameValidation.h"
 #include "Engine/Physics/Scene/ScenePhysics.h"
-#include "Engine/Reflection/ReflectionValidation.h"
 #include "Engine/Visual/Component/MeshComponent.h"
 
 namespace sw
@@ -83,7 +81,7 @@ namespace sw
     {
         const uint32 count = lodGrade == 0 || _listLODIterationCount.empty() ? _iterationCount
                                                                              : _listLODIterationCount[MathUtil::min( static_cast<size_t>( lodGrade ) - 1u, _listLODIterationCount.size() - 1u )];
-        return MathUtil::clamp( count, 1u, 32u ); // 범위 밖은 `validateLOD` 가 알린다 — 솔버는 0 반복을 받지 않는다
+        return MathUtil::clamp( count, kMinIterationCount, kMaxIterationCount );
     }
 
     const SkeletalMeshComponent* ClothComponent::findSkeletalMesh() const
@@ -131,17 +129,6 @@ namespace sw
             return;
         pScene->setSoftBodyIterationCount( _softBody, count );
         _appliedIterationCount = count;
-    }
-
-    void ClothComponent::validateLOD( ValidationContext& context ) const
-    {
-        for ( const uint32 count : _listLODIterationCount )
-        {
-            if ( count >= 1u && count <= 32u )
-                continue;
-            context.addError( string( "_listLODIterationCount has a value outside 1..32 - solver iterations must be 1 to 32" ) );
-            return;
-        }
     }
 
     void ClothComponent::setPinMode( ClothPinMode pinMode )
@@ -531,10 +518,5 @@ namespace sw
         _appliedIterationCount = 0;
         _bLODSuspended         = SW_FALSE;
         _listVertex.clear();
-    }
-
-    void ClothComponent::validateLayer( ValidationContext& context ) const
-    {
-        PhysicsNameValidation::validateLayer( context, "_layer", _layer );
     }
 } // namespace sw

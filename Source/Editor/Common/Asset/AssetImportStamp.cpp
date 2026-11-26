@@ -22,6 +22,7 @@
 #include "Editor/Common/Asset/ImportedAssetStore.h"
 #include "Editor/Common/Workspace/EditorSubsystems.h"
 
+#include "Engine/Asset/AssetDatabase.h"
 #include "Engine/Asset/Cook/CookRecord.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Content/ContentHash.h"
@@ -678,6 +679,69 @@ namespace sw::editor
             }
 
             /**
+             * @brief 원본 하나의 `.meta` 산출물 표(`AssetMeta::_listOutput`)를 그 결과 파일(`collectImportedFiles`)에 맞춥니다. 맞지 않으면 ImportStale 은 고쳐 쓰고 CheckOnly 는 문제로 낸다.
+             * @details 유니티가 임포트마다 `.meta` 의 하위 에셋 표를 고쳐 쓰는 자리다. 줄 이름은 정체성 규칙의 산출물 이름(`AssetIdentityRules::collectImportedSources` 가 이 원본으로 푸는 것)이고,
+             *          있던 이름은 그 GUID 를 그대로, 새 이름은 원본 GUID 와 이름에서 만든다(`AssetGUID::fromName`) — 다시 임포트해도 · 다른 PC 에서 처음 임포트해도 같은 GUID 다.
+             *          결과에서 사라진 이름의 줄은 지운다. 곁에 `.meta` 가 없는 원본은 정체성이 없다(`asset-ids` 가 알린다) — 표를 만들지 않는다.
+             * @return 문제 한 줄(없으면 빈 글)입니다.
+             */
+            static string syncOutputTable( const string& rootDir, const SourceFile& file, const IRawAssetImporter& importer, AssetImportMode mode )
+            {
+                const AbsolutePath metaPath = AssetMeta::makePath( file._sourcePath );
+                string             metaText;
+                if ( FileUtil::readOptionalTextFile( metaPath, metaText ) != OptionalFileRead::Read )
+                    return {};
+                AssetMeta                                meta;
+                const optional<AssetGUID>                sourceGUID = meta.parseXML( metaText, AssetMeta::makePath( file._assetPath ) );
+                StringBuilder<constant::buffer::kMax512> problemBuilder;
+                if ( sourceGUID.has_value() == false )
+                {
+                    problemBuilder.appendFormat( "%#: 원본 .meta 를 읽지 못해 산출물 표를 맞추지 못했습니다", file._assetPath );
+                    return string( problemBuilder.view() );
+                }
+                const AssetIdentityRules& rules    = AssetIdentityRules::getProjectRules();
+                const string              sourceID = StringUtil::toLower( FileUtil::normalizeSeparators( file._assetPath ) );
+                vector<AbsolutePath>      listImported;
+                importer.collectImportedFiles( file._importedPath, listImported );
+                vector<string>              listName;
+                vector<AssetImportedSource> listSource;
+                for ( const AbsolutePath& importedPath : listImported )
+                {
+                    if ( StringUtil::startsWith( importedPath.str(), rootDir ) == false || importedPath.str().size() <= rootDir.size() + 1 )
+                        continue;
+                    listSource.clear();
+                    rules.collectImportedSources( FileUtil::normalizeSeparators( importedPath.str().substr( rootDir.size() + 1 ) ), listSource );
+                    for ( const AssetImportedSource& source : listSource )
+                    {
+                        if ( source._sourceID != sourceID )
+                            continue;
+                        listName.push_back( source._outputName );
+                        break;
+                    }
+                }
+                VectorUtil::sortUnique( listName );
+                vector<AssetImportOutput> listOutput;
+                listOutput.reserve( listName.size() );
+                for ( const string& name : listName )
+                {
+                    const optional<AssetGUID> kept = meta.findOutputGUID( name );
+                    listOutput.push_back( AssetImportOutput{ name, ( kept.has_value() ? *kept : AssetGUID::fromName( *sourceGUID, name ) ).toString() } );
+                }
+                if ( listOutput == meta._listOutput )
+                    return {};
+                if ( mode == AssetImportMode::CheckOnly )
+                {
+                    problemBuilder.appendFormat( "%#: 원본 .meta 의 산출물 표가 결과와 다릅니다(%# 줄, 결과 %# 개) - 다시 임포트합니다", file._assetPath, meta._listOutput.size(), listOutput.size() );
+                    return string( problemBuilder.view() );
+                }
+                meta._listOutput = std::move( listOutput );
+                if ( FileUtil::writeTextFile( metaPath, meta.toXML() ) )
+                    return {};
+                problemBuilder.appendFormat( "%#: 원본 .meta 에 산출물 표를 쓰지 못했습니다", file._assetPath );
+                return string( problemBuilder.view() );
+            }
+
+            /**
              * @brief 원본 폴더 하나의 결과를 요약에 합치고, ImportStale 이면 사라진 원본의 결과를 지우고 스탬프를 다시 씁니다(직렬, 파일 순서).
              * @details 스탬프는 쓰기 직전에 다시 읽어 이번에 본 줄만 바꾼다 — 그 사이 다른 실행(에디터 핫 리로드와 `App --import-*`)이 적은 줄을 지우지 않는다. 지워져도 다음 임포트가 DDC 에서 되살리므로
              *          파일 잠금은 두지 않는다.
@@ -704,7 +768,12 @@ namespace sw::editor
                     if ( fileResult._problem.empty() == false )
                         inoutSummary._listProblem.push_back( fileResult._problem );
                     if ( fileResult._bStamped )
+                    {
                         mapCurrent[listFile[fileIndex]._relativePath] = fileResult._current;
+                        const string tableProblem                     = syncOutputTable( rootDir, listFile[fileIndex], importer, mode ); // 결과가 맞는 원본 — 방금 임포트했거나 그대로다
+                        if ( tableProblem.empty() == false )
+                            inoutSummary._listProblem.push_back( tableProblem );
+                    }
                     if ( fileResult._bImported )
                         ++inoutSummary._importedCount;
                 }

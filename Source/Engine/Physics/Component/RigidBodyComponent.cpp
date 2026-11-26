@@ -12,10 +12,8 @@
 #include "Engine/Object/GameObject/Tick/FixedStepContext.h"
 #include "Engine/Physics/IPhysicsScene.h"
 #include "Engine/Physics/PhysicsSettings.h"
-#include "Engine/Physics/Scene/PhysicsNameValidation.h"
 #include "Engine/Physics/Scene/PhysicsPoseStore.h"
 #include "Engine/Physics/Scene/ScenePhysics.h"
-#include "Engine/Reflection/ReflectionValidation.h"
 #include "Engine/Serialization/Format/FormatDef.h"
 
 namespace sw
@@ -648,15 +646,5 @@ namespace sw
 
 namespace sw
 {
-    void RigidBodyComponent::validateLayer( ValidationContext& context ) const
-    {
-        PhysicsNameValidation::validateLayer( context, "_layer", _layer );
-    }
-
-    void RigidBodyComponent::validateMaterial( ValidationContext& context ) const
-    {
-        PhysicsNameValidation::validateMaterial( context, "_material", _material );
-    }
-
     SW_COMPONENT_STATE_CODEC( RigidBodyComponent )
 } // namespace sw

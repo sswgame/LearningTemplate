@@ -4,8 +4,9 @@
  * @details 정체성은 무작위 GUID(`AssetGUID`)다 — 경로 id 는 옮기면 바뀌어 리다이렉트 표가 영구히 자란다. 우리 형식 글(XML)은 파일 머리(`AssetGUIDHeader`)에, 원본(png · ogg · glb …)은
  *          곁의 `<파일>.meta` 에 든다(유니티 `.meta`, Godot 4.4 의 `.uid` 곁 파일과 같은 자리). 도구가 만들고 짝을 지킨다 — 사람은 서술을 만지지 않는다
  *          (`py -3 -m Scripts asset-ids --fix` · 에디터 옮기기 · 복제 · 가져오기 · 내용 바꾸기).
- *          임포트 산출물(커밋하지 않는 캐시 — `models/x.mesh`)의 정체성은 원본 GUID 와 산출물 이름에서 나온다(`AssetGUID::fromName( 원본, 이름 )`). 색인은 산출물마다 줄을 적어
- *          참조가 산출물도 GUID 하나로 가리킨다(원본을 옮겨도 그대로다).
+ *          임포트 산출물(커밋하지 않는 캐시 — `models/x.mesh`)의 정체성은 원본 `.meta` 의 산출물 표(`AssetMeta::_listOutput` — 이름 → GUID)에 있다. 유니티 `.meta` 의 하위 에셋 표
+ *          (`internalIDToNameTable`) 자리다. 임포터가 표를 결과에 맞추고(새 이름은 `AssetGUID::fromName( 원본, 이름 )`, 있던 이름은 그 GUID 그대로), 색인은 표의 줄을 산출물마다 적어
+ *          참조가 산출물도 GUID 하나로 가리킨다(원본을 옮겨도 · 다시 임포트해도 그대로다). 표에 없는 산출물은 정체성이 없다(이름으로 짐작하지 않는다).
  *          색인을 짓다 만난 결함(겹친 GUID · 짝 없는 `.meta` · `.meta` 없는 원본 · 머리 없는 글)은 모두 문제 목록으로 낸다 — 고르거나 새 GUID 로 메우지 않는다(폴백 없음).
  *          개발 실행은 이 색인을 런타임 색인(`AssetRegistry`)의 층으로 건다(`AssetManager`), 배포 구성은 팩마다 든 `assetindex.xml` 을 건다.
  */
@@ -198,6 +199,23 @@ namespace sw
     };
 
     /**
+     * @struct AssetImportOutput
+     * @brief 원본 `.meta` 의 산출물 표 한 줄입니다 — 원본 안의 산출물 이름(`AssetImportedSource::_outputName` — `.mesh` · `/materials/mi_eyes.material`)과 그 GUID.
+     */
+    REFLECT()
+    struct SW_API AssetImportOutput
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required, InheritKey )
+        string _name;
+        PROPERTY( Required )
+        string _guid; ///< `AssetGUID` 글 표기
+
+        [[nodiscard]] bool operator==( const AssetImportOutput& other ) const { return _name == other._name && _guid == other._guid; }
+    };
+
+    /**
      * @struct AssetMeta
      * @brief 원본 곁의 서술 `<파일>.meta` 한 장입니다 — `<AssetMeta _guid="…" _source="…"/>`. 읽고 쓰는 곳은 이 구조체 하나입니다.
      * @details `_source` 는 원본의 자리(`AssetSourceAddress`)다 — 곁의 파일 이름이거나, 원본을 저장소 밖에 두면 그 내용 주소다.
@@ -217,20 +235,27 @@ namespace sw
         string _source; ///< 원본의 자리(`AssetSourceAddress` 글 표기)
         PROPERTY( SkipIfEmpty )
         vector<AssetImportOverride> _listImportOverride; ///< 이 에셋만의 임포트 예외(비면 쓰지 않는다)
+        PROPERTY( SkipIfEmpty )
+        vector<AssetImportOutput> _listOutput; ///< 임포트 산출물 표(이름 순 — 임포터가 결과에 맞춘다). 임포트하지 않는 원본은 비어 있다
 
         /** @brief XML 글로 씁니다. */
         string toXML() const;
         /** @brief @p text 를 엄격하게 읽고 GUID 를 돌려줍니다. 읽지 못하거나 GUID · 원본 자리가 글 표기가 아니면 @p sourceLabel 과 이유를 오류로 남기고 없음입니다. */
         [[nodiscard]] optional<AssetGUID> parseXML( string_view text, string_view sourceLabel );
-        /** @brief 원본을 @p sourcePath 로 옮긴 서술로 고칩니다 — 이름만 바꾸고 GUID · 내용 주소 · 임포트 예외는 그대로입니다(읽은 서술에만 부른다). */
+        /** @brief 산출물 표에서 이름 @p outputName(대소문자 무시)의 GUID 입니다. 줄이 없거나 GUID 가 글 표기가 아니면 없음입니다. */
+        [[nodiscard]] optional<AssetGUID> findOutputGUID( string_view outputName ) const;
+        /** @brief 원본을 @p sourcePath 로 옮긴 서술로 고칩니다 — 이름만 바꾸고 GUID · 내용 주소 · 임포트 예외 · 산출물 표는 그대로입니다(읽은 서술에만 부른다). */
         void renameSource( string_view sourcePath );
         /** @brief 원본 리소스 id @p sourcePath 의 서술 id(`<id>.meta`)입니다 — 색인 키 · 오류 표시용 글. 디스크 자리는 `AbsolutePath` 판입니다. */
         static string makePath( string_view sourcePath );
         /** @brief 원본 디스크 경로 @p sourcePath 의 서술 디스크 경로(`<경로>.meta`)입니다 — 글로 잇고 다시 올리지 않는다(`AbsolutePath::appendSuffix`). */
         [[nodiscard]] static AbsolutePath makePath( const AbsolutePath& sourcePath ) { return sourcePath.appendSuffix( kExtension ); }
         [[nodiscard]] static DiskPath     makePath( const DiskPath& sourcePath ) { return sourcePath.appendSuffix( kExtension ); }
-        /** @brief 곁의 원본 @p sourcePath 에 @p guid 를 주는 서술 글입니다. 임포트 예외 @p listOverride 를 함께 든다(복사는 예외를 지킨다 — 옮기기는 `renameSource`). */
-        static string makeText( string_view sourcePath, const AssetGUID& guid, const vector<AssetImportOverride>& listOverride = {} );
+        /**
+         * @brief 곁의 원본 @p sourcePath 에 @p guid 를 주는 서술 글입니다. 임포트 예외 @p listOverride 와 산출물 표 @p listOutput 을 함께 든다.
+         * @details 복사는 예외를 지키고 표는 비운다 — 복사본의 산출물은 새 원본 GUID 로 다시 임포트한다(같은 GUID 두 벌이 되지 않게). 옮기기는 `renameSource` 다.
+         */
+        static string makeText( string_view sourcePath, const AssetGUID& guid, const vector<AssetImportOverride>& listOverride = {}, const vector<AssetImportOutput>& listOutput = {} );
         /** @brief 디스크의 원본 @p sourcePath 곁에 @p guid · @p listOverride 의 서술을 씁니다 — 새 서술을 쓰는 곳은 이 함수 하나다. 지면 오류를 남기고 false 입니다. */
         [[nodiscard]] static bool saveBeside( const AbsolutePath& sourcePath, const AssetGUID& guid, const vector<AssetImportOverride>& listOverride = {} );
     };
@@ -243,6 +268,7 @@ namespace sw
         InvalidHeader,   ///< 머리를 읽지 못했다 · 자리가 틀렸다
         MissingMeta,     ///< 원본 곁에 `.meta` 가 없다
         OrphanMeta,      ///< `.meta` 곁에 원본이 없고 저장소 주소도 아니다(원본만 옮기거나 지웠다)
+        UnlistedOutput,  ///< 산출물 자리의 파일인데 원본 `.meta` 의 산출물 표에 그 이름이 없다(다시 임포트한다)
         InvalidMeta,     ///< `.meta` 를 읽지 못했다 · 원본 이름이 맞지 않는다 · 곁에 원본이 있는데 저장소 주소를 적었다
         InvalidRedirect, ///< 리다이렉트 표(`redirects.xml`)의 정체성 대체 줄이 틀렸다
         Unreadable,      ///< 파일을 읽지 못했다

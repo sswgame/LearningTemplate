@@ -38,14 +38,6 @@ namespace sw
                 return text.size() == HexDigitUtil::kMaxDigitCount && HexDigitUtil::tryParseFixed( text, outValue );
             }
 
-            /** @brief 버킷의 폴더 이름입니다. */
-            static string_view getBucketName( DerivedDataBucket bucket )
-            {
-                static constexpr string_view kArrBucketName[] = { "Cook", "Import", "Shader" };
-                static_assert( SW_COUNT_OF( kArrBucketName ) == static_cast<size_t>( DerivedDataBucket::Count ), "every DDC bucket needs a folder name" );
-                return kArrBucketName[static_cast<size_t>( bucket )];
-            }
-
             /** @brief 정리 규칙이 있는 층의 루트(버킷 폴더의 부모)에서 버킷이 아닌 폴더를 지웁니다 — 버킷이 없던 때의 항목 폴더(`<키 앞 두 글자>`)는 아무도 열지 않는다. */
             static uint32 removeForeignFolders( const DerivedDataLayer& layer )
             {
@@ -58,7 +50,7 @@ namespace sw
                     const string name    = FileUtil::getFileNamePart( entry._path );
                     bool         bBucket = false;
                     for ( uint32 index = 0; index < static_cast<uint32>( DerivedDataBucket::Count ); ++index )
-                        bBucket = bBucket || name == getBucketName( static_cast<DerivedDataBucket>( index ) );
+                        bBucket = bBucket || name == getEnumName( static_cast<DerivedDataBucket>( index ) );
                     if ( entry._bDirectory && bBucket == false )
                         listForeign.push_back( entry.makePath() );
                     return true;
@@ -365,7 +357,7 @@ namespace sw
 
     expected<DerivedDataCache> DerivedDataCache::open( DerivedDataBucket bucket )
     {
-        const string_view bucketName = CookRecordInternal::getBucketName( bucket );
+        const string_view bucketName = getEnumName( bucket ); // 폴더 이름은 열거자 이름이다
         AbsolutePath      overrideRoot;
         if ( engine::areEngineSubsystemsBound() && engine::getSubsystem<CommandLineManager>().getArgument( CommandLineArgument::DDC_DIR, overrideRoot ) )
             return DerivedDataCache{ vector<DerivedDataLayer>{ DerivedDataLayer{ overrideRoot.join( bucketName ), DerivedDataAccess::ReadWrite } } };

@@ -58,6 +58,7 @@ namespace sw
 namespace sw
 {
     /** @enum DerivedDataBucket @brief DDC 를 여는 칸입니다(언리얼 `FCacheBucket`) — 칸마다 폴더와 크기 상한이 따로라 한 종류가 다른 종류의 자리를 밀어내지 않는다. 폴더 이름은 열거자 이름이다. */
+    ENUM()
     enum class DerivedDataBucket : uint8
     {
         Cook,   ///< 쿠킹 출력(`CookStore`)

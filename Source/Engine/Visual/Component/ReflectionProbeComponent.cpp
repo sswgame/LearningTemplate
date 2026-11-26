@@ -10,7 +10,6 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
-#include "Engine/Reflection/ReflectionValidation.h"
 
 namespace sw
 {
@@ -129,14 +128,5 @@ namespace sw
         }
         if ( matchesCapturePosition( _probeData ) == false )
             SW_LOG_ERROR_ID( "ReflectionProbe.ReflectionProbeDataCaptured", "Reflection probe data '%#' was captured at another position - bake the probe again", _probeDataPath.c_str() );
-    }
-
-    void ReflectionProbeComponent::validateProbeData( ValidationContext& context ) const
-    {
-        const bool bNoExtent = _extent._x <= 0.0f || _extent._y <= 0.0f || _extent._z <= 0.0f;
-        if ( bNoExtent )
-            context.addError( "Extent is 0 on some axis - no surface is inside the probe box" );
-        if ( _probeDataPath.empty() )
-            context.addWarning( "Reflection probe is not baked - it gives no reflection" );
     }
 } // namespace sw

@@ -5,6 +5,7 @@
 
   에셋   시나리오 글(주석 밖)이 적은 Content 경로 · GUID 에서 시작해, 그 파일들이 적은 것을 끝까지 따라간다(씬 → 프리팹 → 머티리얼 → 셰이더 → `#include`).
          임포트 산출물(`models/` · `textures/` …)은 커밋하지 않으므로 같은 자리의 원본(`models_raw/` …)으로 푼다(`Config/Dev/AssetIdentity.json`).
+         산출물 GUID 는 원본 `.meta` 의 산출물 표 줄이라 임포트하지 않은 작업 트리에서도 원본으로 이어진다.
          엔진이 코드로 고르는 기본 에셋(패스 셰이더)과 이름으로 고르는 카탈로그 항목은 보지 못한다 — 모든 시나리오에 닿는 것이라 gpu-release 의 몫이다.
   소스   바뀐 .cpp 가 정의한 감시 값 · 단계 · 로그 id 를 시나리오가 `watch=` · `<단계` · `<ExpectLog id=` 로 쓰면 닿는다.
   상한   파일 하나가 닿는 시나리오가 `_changedReachPerFile` 을 넘으면(공통 셰이더 · `Assets.Pending`) 고르게 뽑은 그 수만, 모두 합쳐 `_changedReachTotal` 까지만 고른다
@@ -21,7 +22,7 @@ from typing import Callable, Iterable, Mapping, Sequence
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 
-from lint.asset_identity import META_EXTENSION, ImportedFolder, iterate_imported_sources, make_output_guid  # noqa: E402
+from lint.asset_identity import META_EXTENSION, ImportedFolder, parse_meta  # noqa: E402
 
 SCENARIO_SUFFIX = ".scenario.xml"
 #: 다른 파일을 적는 글 에셋. 나머지(그림 · 소리 · 모델)는 잎이다.
@@ -29,7 +30,7 @@ TEXT_SUFFIXES = (".xml", ".material", ".json", ".hlsl", ".hlsli", ".pipeline")
 COMMENT = re.compile(r"<!--.*?-->|/\*.*?\*/", re.S)
 PATH_TOKEN = re.compile(r"[A-Za-z0-9_\-]+(?:/[A-Za-z0-9_.\-]+)+")
 GUID_TOKEN = re.compile(r"\b[0-9a-f]{32}\b")
-OWN_GUID = re.compile(r'<\?asset guid="([0-9a-f]{32})"\?>|_guid="([0-9a-f]{32})"')
+OWN_GUID = re.compile(r'<\?asset guid="([0-9a-f]{32})"\?>')
 INCLUDE = re.compile(r'^\s*#\s*include\s+"([^"]+)"', re.M)
 WATCH_DEFINITION = re.compile(r'\bSW_AUTOMATION_(?:\w+_)?WATCH\(\s*\w+,\s*"([^"]+)"')
 STEP_DEFINITION = re.compile(r'\bSW_AUTOMATION_STEP\(\s*\w+,\s*"([^"]+)"')
@@ -89,17 +90,13 @@ def collect_references(path: str, text: str, set_content: frozenset[str] | set[s
     return set_reference
 
 
-def map_output_sources(list_output: Iterable[str], map_guid: Mapping[str, str], list_imported: Sequence[ImportedFolder]) -> dict[str, str]:
-    """임포트 산출물(디스크의 리소스 id)의 GUID → 그 원본. 산출물 GUID 는 원본 GUID 와 산출물 이름의 해시라 거꾸로 풀 수 없어 있는 산출물로 만든다."""
-    # shortcut: 임포트하지 않은 작업 트리(산출물 없음)에서는 산출물 GUID 로 적은 참조가 이어지지 않는다 — 원본 이름표(.meta)에 산출물 목록이 생기면 그것으로 바꾼다
-    map_source_guid = {path.lower(): guid for guid, path in map_guid.items()}
-    map_output: dict[str, str] = {}
-    for output in list_output:
-        for source, output_name in iterate_imported_sources(output, tuple(list_imported)):
-            if source in map_source_guid:
-                map_output[make_output_guid(map_source_guid[source], output_name)] = source
-                break
-    return map_output
+def map_meta_identities(meta_path: str, text: str) -> dict[str, str]:
+    """원본 `.meta` 하나가 든 GUID → 그 원본(Content 기준). 원본 GUID 와 산출물 표의 줄 — 산출물은 커밋하지 않으므로 원본으로 잇는다. 읽지 못하면 빈 표다(`asset-ids` 가 알린다)."""
+    meta = parse_meta(text)
+    if meta is None:
+        return {}
+    source = find_asset_of(meta_path)
+    return {guid: source for guid in (meta[0], *(output_guid for _, output_guid in meta[3]))}
 
 
 def find_asset_of(content_path: str) -> str:
@@ -187,15 +184,11 @@ def read_reach(project_root: Path, list_changed: Sequence[str], list_content: Se
     map_text = {path: read(path) for path in list_id if path.endswith(TEXT_SUFFIXES)}
     map_guid: dict[str, str] = {}
     for path in list_id:
-        is_meta = path.endswith(META_EXTENSION)
-        if not is_meta and path not in map_text:
-            continue
-        match = OWN_GUID.search((read(path) if is_meta else map_text[path])[:400])
-        if match is not None:
-            map_guid[match.group(1) or match.group(2)] = find_asset_of(path)
+        if path.endswith(META_EXTENSION):
+            map_guid.update(map_meta_identities(path, read(path)))
+        elif path in map_text and (match := OWN_GUID.search(map_text[path][:400])) is not None:
+            map_guid[match.group(1)] = path
     list_imported = load_rules(project_root).list_imported
-    list_output = [path.relative_to(content_root).as_posix() for folder in {imported.folder for imported in list_imported} for path in content_root.glob(f"**/{folder}/**/*") if path.is_file()]
-    map_guid.update(map_output_sources(list_output, map_guid, list_imported))
     map_reference = {path: collect_references(path, text, set_content, map_guid, list_imported) for path, text in map_text.items()}
     list_changed_content = [path[len("Content/"):] for path in list_changed if path.startswith("Content/")]
     map_source = {path: (project_root / path).read_text(encoding="utf-8", errors="replace")

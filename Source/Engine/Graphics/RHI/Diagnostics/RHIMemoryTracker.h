@@ -16,6 +16,7 @@
 
 #include "Engine/Graphics/RHI/RHIEnums.h"
 #include "Engine/Graphics/RHI/RHIHandles.h"
+#include "Engine/Reflection/ReflectionEnumMacros.h"
 
 namespace sw
 {
@@ -23,8 +24,9 @@ namespace sw
 
     /**
      * @brief GPU 메모리 추적기의 항목입니다. 자원이 무엇에 쓰이는지로 나눕니다.
-     * @details 새 항목을 추가하면 `RHIMemoryTracker::getKindName` 의 이름 테이블에도 한 줄을 추가한다(항목 수는 static_assert 가 검사한다).
+     * @details 보고 · 에디터 패널의 이름은 열거자 이름이다(`getEnumName`).
      */
+    ENUM()
     enum class RHIMemoryKind : uint8
     {
         Texture,       ///< 샘플링 전용 텍스처(에셋, 폰트, 에디터 아이콘)
@@ -47,6 +49,7 @@ namespace sw
      * @details DX12 와 Vulkan 은 드라이버가 답하는 실제 할당 크기(정렬과 패딩 포함)를 기록한다. DX11 과 GL 은 그것을 물을 API 가 없어
      *          서술(크기, 포맷, 밉, 면)로 계산한 논리 크기를 기록한다. 드라이버의 정렬, 압축, 메타데이터만큼 실제보다 작다.
      */
+    ENUM()
     enum class RHIMemorySizeBasis : uint8
     {
         Allocation, ///< 드라이버가 답한 할당 크기
@@ -54,6 +57,7 @@ namespace sw
     };
 
     /** @brief 추적기 키의 공간입니다. 버퍼 핸들과 텍스처 핸들은 서로 다른 테이블이라 같은 정수가 둘 다에 있을 수 있습니다. */
+    ENUM()
     enum class RHIMemoryKeySpace : uint8
     {
         Buffer,       ///< `RHIBufferHandle`
@@ -179,10 +183,6 @@ namespace sw
     class SW_API RHIMemoryTracker
     {
     public:
-        /** @brief 항목의 표시 이름을 반환합니다. 보고와 에디터 패널이 같은 이름을 씁니다. */
-        static const utf8* getKindName( RHIMemoryKind kind );
-        /** @brief 크기 기준의 표시 이름을 반환합니다. */
-        static const utf8* getSizeBasisName( RHIMemorySizeBasis basis );
         /**
          * @brief 텍스처 서술이 어느 항목에 속하는지 정합니다. 네 백엔드가 이 판정 하나를 씁니다.
          * @details 트랜지언트 풀이 만든 것(`_bIsTransient`)이 먼저이고, 렌더 타깃, 깊이, UAV 면 RenderTarget, 나머지는 Texture 다.

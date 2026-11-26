@@ -345,8 +345,10 @@ namespace sw
          *          같은 FQN 을 다시 등록하면 새 이미지의 주소로 덮어쓴다.
          */
         void* ( *_addComponent )( void* pOwner ); // 불투명하다 — 리플렉션(1 층)은 Object 층(5 층)의 형식을 모른다. 부르는 쪽(Object 층)이 형을 되돌린다
-        /** @brief `REFLECT( Validate = fn )` 의 타입 검증 함수입니다. 없으면 nullptr 입니다. 모듈 코드를 가리키므로 `clearContent` 가 비웁니다. */
+        /** @brief `REFLECT( Validate = fn )` 의 타입 검증 함수(에디터 데이터 검증)입니다. 배포 · 없으면 nullptr 입니다. 모듈 코드를 가리키므로 `clearContent` 가 비웁니다. */
         ReflectValidateFunction _pValidate;
+        /** @brief `REFLECT( ReadValidate = fn )` 의 읽기 검사 함수입니다(배포에서도 돈다). 없으면 nullptr 입니다. 모듈 코드를 가리키므로 `clearContent` 가 비웁니다. */
+        ReflectValidateFunction _pReadValidate;
         /**
          * @brief 고정 배치형(B) 코덱 테이블입니다(`Engine/Serialization/Fixed/FixedLayout.h`). 코드젠이 모든 `REFLECT` 타입에 채우고, 적격이 아니면
          *        이유만 든 테이블입니다. 코드젠을 거치지 않은 타입(내장 스칼라)은 nullptr 입니다. 모듈 코드를 가리키므로 `clearContent` 가 비웁니다.
@@ -394,6 +396,7 @@ namespace sw
         static constexpr uint8 kDerivedHasValidator        = 1u << 2;
         static constexpr uint8 kDerivedFlagsBuilt          = 1u << 3; ///< 판정을 구했다. 상속 목록을 비우면 함께 내려간다
         static constexpr uint8 kDerivedHasRequiredProperty = 1u << 4;
+        static constexpr uint8 kDerivedHasReadValidator    = 1u << 5;
 
         /** @brief 비어 있는 TypeInfo 를 만듭니다. */
         TypeInfo() noexcept;
@@ -440,6 +443,8 @@ namespace sw
         bool hasSaveGameProperty() const;
         /** @brief 검증 함수 유무입니다(`ReflectionValidation::hasValidator` 가 읽는다). */
         bool hasValidator() const;
+        /** @brief 읽기 검사 함수(`REFLECT( ReadValidate )`, 값으로 든 구조체 포함) 유무입니다(`ReflectionValidation::hasReadValidator` 가 읽는다). */
+        bool hasReadValidator() const;
         /** @brief 상속한 기반까지 포함해 필수 칸(`PROPERTY( Required )`)이 하나라도 있으면 true 입니다. 시작 때의 필수 칸 검사(`ObjectValidation::reportEmptyRequired`)가 칸을 훑기 전에 본다. */
         bool hasRequiredProperty() const;
         /**

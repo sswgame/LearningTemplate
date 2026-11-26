@@ -3,10 +3,14 @@
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/AssertDialogSlot.h"
+#include "Core/Foundation/PlatformOSHeaders.h"
 #include "Core/Foundation/Types.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
+#include "Core/String/StringBuilder.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Subsystem/Subsystem.h"
 #include "Core/Subsystem/SubsystemScope.h"
 
@@ -15,7 +19,6 @@
 #include "DevTools/Client/Automation/Scenario/AutomationUserDataRoot.h"
 #include "DevTools/Client/Capture/StartupCaptureSubsystem.h"
 #include "DevTools/Client/DebugHUD/DebugHUD.h"
-#include "DevTools/Client/Diagnostics/AssertDialog.h"
 #include "DevTools/Client/Shader/LiveShaderSubsystem.h"
 #include "DevTools/Client/Shader/ShaderRecompiler.h"
 #include "DevTools/Console/DevConsoleController.h"
@@ -23,6 +26,7 @@
 #include "DevTools/Diagnostics/CrashInjection.h"
 #include "DevTools/Host/Client/EditorGameModuleManager.h"
 
+#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Engine.h"
 #include "Engine/Foundation/EngineSubsystemHost.h"
 #include "Engine/Foundation/EngineSubsystems.h"
@@ -209,6 +213,90 @@ namespace sw
     namespace
     {
         /**
+         * @brief 단언 대화상자의 구현과 감시 값입니다(대화형 에디터 실행의 단언 대화상자, Windows 검사 구성. 언리얼의 ensure 대화상자에 해당한다).
+         * @details 단언 한 번에 저장하지 않은 편집을 잃지 않게 사람이 지켜보는 실행에서만 건다. 자동 실행(-unattended, 시나리오, 프로파일, 에디터 자체 테스트)과 테스트는 기존처럼 멈춘다.
+         */
+        struct AssertDialogInternal
+        {
+#if defined( SW_DO_CHECKS ) && defined( SW_PLATFORM_WINDOWS )
+            /** @brief 이 전역 변수가 0 이 아니거나 비어 있지 않으면 자동 실행입니다(프로파일, 에디터 자체 테스트). 이름으로 읽으며, 개발 도구는 모듈을 모릅니다. */
+            static constexpr const utf8* kArrAutomationVariable[] = { "gv_profileFrames", "gv_profileSeconds", "gv_editorSelfTest" };
+
+            /** @brief 사람이 지켜보지 않는 실행이면 true 를 반환합니다(-unattended, 시나리오, 프로파일, 자체 테스트). */
+            static bool isAutomatedRun( const CommandLineManager& commandLine )
+            {
+                if ( commandLine.isAutomatedRun() )
+                    return true;
+                for ( const utf8* pName : kArrAutomationVariable )
+                {
+                    const GlobalVariableInfo* pVariable = engine::getSubsystem<GlobalVariableManager>().findVariable( pName );
+                    if ( pVariable == nullptr )
+                        continue;
+                    const bool bSet = pVariable->isTextType() ? pVariable->getValueAsString().empty() == false
+                                                              : pVariable->getValueAsFloat() != 0.0f;
+                    if ( bSet )
+                        return true;
+                }
+                return false;
+            }
+
+            /** @brief 단언을 사용자에게 묻습니다. 디버거가 붙어 있으면 묻지 않고 멈춥니다. 개발자가 그 위치를 직접 보려는 것이기 때문입니다. */
+            static internal::AssertAction showAssertDialog( const utf8* pExpression, const utf8* pMessage, const utf8* pFile, int32 line )
+            {
+                if ( IsDebuggerPresent() != FALSE )
+                    return internal::AssertAction::Break;
+                StringBuilder<constant::buffer::kMax8192> text;
+                text.appendFormat( "Assertion failed: %#\n%#\n\n%#(%#)\n\n"
+                                   "Continue  - ignore this time\nTry Again - break into the debugger (or write a crash report)\nCancel    - ignore this assert for the rest of the run",
+                                   pExpression, pMessage != nullptr ? pMessage : "", pFile, line );
+                const wstring wideText = StringUtil::utf8ToUTF16( text.c_str() );
+                const int32   result   = MessageBoxW( nullptr, wideText.c_str(), L"SW Engine - Assertion", MB_CANCELTRYCONTINUE | MB_ICONERROR | MB_TOPMOST | MB_SETFOREGROUND );
+                switch ( result )
+                {
+                    case IDCONTINUE:
+                        return internal::AssertAction::IgnoreOnce;
+                    case IDCANCEL:
+                        return internal::AssertAction::IgnoreAlways;
+                    default:
+                        return internal::AssertAction::Break;
+                }
+            }
+#endif
+
+            /** @brief 감시 값 `App.AssertDialogInstalled` 입니다. 대화상자가 설치돼 있으면 1 입니다. */
+            [[nodiscard]] static bool readAssertDialogInstalled( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+#if defined( SW_DO_CHECKS )
+                outValue = internal::hasAssertDialog() ? 1.0 : 0.0;
+#else
+                outValue = 0.0;
+#endif
+                return true;
+            }
+        };
+
+#if defined( SW_DO_CHECKS ) && defined( SW_PLATFORM_WINDOWS )
+        /** @brief 건 대화상자의 등록입니다. 프로세스 끝까지 쥔다(대화형 실행 한 번에 한 번 건다). 상수 초기화된다. */
+        internal::AssertDialogSubscription s_assertDialogRegistration{};
+#endif
+
+        /** @brief 사람이 지켜보는 실행이면 단언 대화상자를 겁니다. Windows 검사 구성이 아니면 아무것도 하지 않습니다. 개발 도구의 클라이언트 부분이 에디터 실행의 첫 프레임 끝에 한 번 부릅니다(`onFrameEnd`). */
+        void installAssertDialogForInteractiveRun( [[maybe_unused]] const CommandLineManager& commandLine )
+        {
+#if defined( SW_DO_CHECKS ) && defined( SW_PLATFORM_WINDOWS )
+            // 다시 불려도(호스트 모듈을 다시 세움) 이미 건 주인이면 다시 걸지 않는다 — 대화상자 칸은 하나라 둘째 등록은 단언이다.
+            if ( s_assertDialogRegistration.isActive() == false && AssertDialogInternal::isAutomatedRun( commandLine ) == false )
+                s_assertDialogRegistration = internal::bindAssertDialog( &AssertDialogInternal::showAssertDialog );
+#endif
+        }
+    } // namespace
+
+    SW_AUTOMATION_WATCH( appAssertDialogInstalled, "App.AssertDialogInstalled", "1 when the interactive assert dialog is installed (editor runs a person watches; never in automated runs)",
+                         &AssertDialogInternal::readAssertDialogInstalled );
+
+    namespace
+    {
+        /**
          * @class CrashInjectionSubsystem
          * @brief `-gv_crashTest=N` 이면 기동 때 일부러 죽습니다(`CrashInjectionKind`). 렌더러(RHI) 뒤에 서므로 백엔드 이름이 크래시 문맥에 들어간 뒤다.
          * @details 런타임 `RHISubsystem` 이 이 변수를 읽지 않도록 개발 도구 클라이언트가 붙인다.
@@ -316,7 +404,7 @@ namespace sw
                     const CommandLineManager& commandLine = engine::getSubsystem<CommandLineManager>();
                     bool                      bEditor     = false;
                     if ( commandLine.getArgument( CommandLineArgument::ENABLE_EDITOR, bEditor ) && bEditor )
-                        AssertDialog::installForInteractiveRun( commandLine );
+                        installAssertDialogForInteractiveRun( commandLine );
                 }
                 // 셰이더 재컴파일 · 강제 리로드 단축키(`ReloadShaders`)는 재컴파일기가 선 실행만(`gv_liveShaderRecompile`). 단축키의 뜻은 재컴파일기를 가진 이쪽이 읽는다(디버그 키 맵은 입력 사실만 낸다).
                 LiveShaderSubsystem* const pLiveShader = engine::findSubsystem<LiveShaderSubsystem>();

@@ -1,12 +1,14 @@
 /**
  * @file ReflectionValidation.h
- * @brief `PROPERTY( Validate = fn )` · `REFLECT( Validate = fn )` 검증 함수를 돌려 결과를 모읍니다(로드 · 저장 · 인스펙터 편집, 나중에 맵 검사 패널).
+ * @brief 검증 함수(`PROPERTY( Validate = fn )` · `REFLECT( Validate = fn )` · `REFLECT( ReadValidate = fn )`)를 돌려 결과를 모읍니다.
  * @details 검증 함수의 모양은 `void fn( ValidationContext& context ) const`(const 가 아니어도 된다)이고, 파서가 같은 타입에서 찾아 모양을 봅니다.
  *          함수는 문제를 `context.addError` · `addWarning` 으로 적기만 합니다 — 값을 고치거나 로드를 멈추지 않습니다.
+ *          `Validate` 는 프로퍼티든 타입이든 에디터 데이터 검증이다(로드 · 저장 · 인스펙터 · 맵 검사). 배포에는 등록되지 않는다(생성 코드의 `SW_DEV_ONLY_FUNCTION`,
+ *          언리얼 `UObject::IsDataValid` 가 `WITH_EDITOR` 인 것과 같다). `ReadValidate` 는 배포에서도 도는 읽기 검사다 — 고정 배치형 읽기 끝과 세이브 읽기가
+ *          오류면 거절한다(언리얼 `NetSerialize` 의 `bOutSuccess` 자리). 읽기 거절은 `validateRead` 로 읽기 검사만 돌려 두 구성이 같은 답을 낸다.
+ *          결과 표(`Dev/ValidationIssueLog.h`)와 고침도 개발 전용이다.
  */
 #pragma once
-#include "Core/Concurrency/atomic.h"
-#include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/String/Name/hashed_string.h"
@@ -68,9 +70,9 @@ namespace sw
         void addError( string_view message );
         /** @brief 경고를 적습니다. */
         void addWarning( string_view message );
-        /** @brief 안전한 고침이 있는 문제를 적습니다. @p fix 의 프로퍼티가 비면 지금 범위의 프로퍼티입니다. */
+        /** @brief 안전한 고침이 있는 문제를 적습니다. @p fix 의 프로퍼티가 비면 지금 범위의 프로퍼티입니다. 개발 전용(`Dev/ValidationIssueLog.cpp`)이라 배포 코드는 부르지 못한다. */
         void addErrorWithFix( string_view message, const ValidationPropertyEdit& fix );
-        /** @brief 안전한 고침이 있는 경고를 적습니다. */
+        /** @brief 안전한 고침이 있는 경고를 적습니다. 개발 전용이다. */
         void addWarningWithFix( string_view message, const ValidationPropertyEdit& fix );
 
         /** @brief 적힌 결과입니다. */
@@ -104,9 +106,16 @@ namespace sw
     {
         /**
          * @brief 인스턴스를 검증합니다 — 프로퍼티 검증(상속분 포함), 값으로 든 반사 구조체 · 그 시퀀스의 원소까지 내려가고, 타입 검증은 기반부터.
+         * @details 에디터 데이터 검증이다(로드 · 저장 · 인스펙터 · 맵 검사). 배포에는 `Validate` 가 등록되지 않아 읽기 검사만 남으므로, 읽은 값을 거절하는 자리는 `validateRead` 를 쓴다.
          * @return 이번에 적힌 결과 수
          */
         static uint32 validateObject( const TypeInfo& type, const void* pInstance, ValidationContext& context );
+        /**
+         * @brief 읽기 검사(`REFLECT( ReadValidate )`)만 돌립니다 — 값으로 든 구조체 · 그 시퀀스 원소까지 내려가고 기반부터. 배포와 개발 구성이 같은 답을 낸다.
+         * @details 세이브 · 네트워크에서 읽은 값을 거절할지 정하는 자리가 쓴다(`FightingMatch::serializeState`, 고정 배치형 읽기 끝은 코덱이 같은 함수를 부른다).
+         * @return 이번에 적힌 결과 수
+         */
+        static uint32 validateRead( const TypeInfo& type, const void* pInstance, ValidationContext& context );
         /**
          * @brief 이 타입(기반 · 값으로 든 구조체 포함)에 검증 함수가 하나라도 있으면 true 입니다. 없으면 `validateObject` 를 부를 까닭이 없다.
          * @details 답은 `TypeInfo` 의 판정 비트다 — 등록 · 해제가 바뀐 타입과 자손만 다시 구한다(`TypeRegistry::relinkAffectedLocked` → `TypeInfo::computeDerivedFlags`).
@@ -114,43 +123,9 @@ namespace sw
         static bool hasValidator( const TypeInfo& type );
         /** @brief 위 판정을 지금 구합니다(캐시하지 않는다). 칸 타입을 재귀로 따라가므로 칸 타입의 상속 목록이 지어져 있어야 한다. 칸 타입은 @p resolver 로 찾는다(레지스트리 잠금 안에서도 부른다). */
         static bool computeHasValidator( const TypeInfo& type, const TypeResolver& resolver );
-    };
-} // namespace sw
-
-namespace sw
-{
-    /**
-     * @brief 검증 결과를 출처(오브젝트)마다 모아 두는 표입니다. 같은 출처를 다시 검증하면 그 출처의 결과를 바꿉니다.
-     * @details 값 형식이다 — 월드(씬)가 하나씩 든다(`SceneValidationIssues`, `Engine/Object/GameObject/Serialization/ObjectValidation.h`). 월드가 둘이면
-     *          (에디터 미리보기 창 · 씬 둘) 결과가 한 표에 섞이지 않는다(언리얼 Map Check 의 월드별 메시지 로그와 같다). 맵 검사 패널은 활성 씬의 표를 읽는다.
-     *          출처의 결과는 출처와 함께 사라집니다 — `GameObject` 소멸자가 자기 매니저의 표에서 자기 ID 를 지운다. 여러 스레드(로드 워커)에서 쓸 수 있습니다.
-     */
-    class SW_API ValidationIssueLog
-    {
-    public:
-        ValidationIssueLog()                                       = default;
-        ValidationIssueLog( const ValidationIssueLog& )            = delete;
-        ValidationIssueLog& operator=( const ValidationIssueLog& ) = delete;
-
-        /** @brief @p sourceID 의 결과를 @p listIssue 로 바꿉니다(비었으면 그 출처를 지운다). */
-        void replaceIssues( uint64 sourceID, const vector<ValidationIssue>& listIssue );
-        /** @brief 출처 하나의 결과를 지웁니다(오브젝트가 사라졌다). 표가 비었으면 잠금 하나로 끝납니다. */
-        void removeSource( uint64 sourceID );
-        /** @brief 모든 결과를 출처 순서 없이 모읍니다. */
-        void collectIssues( vector<ValidationIssue>& outListIssue ) const;
-        /** @brief 모든 결과의 수입니다. */
-        uint32 getIssueCount() const;
-        /** @brief 모두 지웁니다. */
-        void clear();
-        /**
-         * @brief 결과가 바뀔 때마다 하나씩 오르는 번호입니다. 맵 검사 패널 · 상태줄은 번호가 같으면 목록을 다시 모으지 않는다.
-         * @details 같은 결과로 바꾸거나 없는 출처를 지우면 오르지 않는다(인스펙터 편집이 프레임마다 다시 검증한다).
-         */
-        uint32 getRevision() const { return _revision.load( std::memory_order_acquire ); }
-
-    private:
-        mutable mutex                      _mutex;
-        vector<ValidationIssue> _listIssue SW_GUARDED_BY( _mutex );
-        atomic<uint32>                     _revision{ 0 };
+        /** @brief 읽기 검사(값으로 든 구조체 포함)가 하나라도 있으면 true 입니다(`TypeInfo` 의 판정 비트). */
+        static bool hasReadValidator( const TypeInfo& type );
+        /** @brief 위 판정을 지금 구합니다(캐시하지 않는다, `computeHasValidator` 와 같은 조건). */
+        static bool computeHasReadValidator( const TypeInfo& type, const TypeResolver& resolver );
     };
 } // namespace sw

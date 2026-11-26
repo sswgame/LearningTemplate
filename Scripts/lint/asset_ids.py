@@ -17,7 +17,7 @@ from common.command import Command, ScriptContext
 from common.exit_code import ExitCode
 from lint.asset_identity import (
     CONTENT_FOLDER, FOUND, GUID_LENGTH, INVALID, MISSING, add_identity_redirect, check_staged_asset_identity, collect_issues, create_guid,
-    find_output_guid, fix_worktree, is_guid, iterate_imported_sources, list_worktree_ids, load_rules, make_meta_text, make_output_guid, parse_meta,
+    fix_worktree, is_guid, iterate_imported_sources, list_worktree_ids, load_rules, make_meta_text, make_output_guid, make_output_id, parse_meta,
     read_header, read_worktree_texts, redirect_identity, write_header,
 )
 from lint.lint_rule import LintRule
@@ -55,30 +55,45 @@ class AssetIdsRule(LintRule):
         assert read_header(f'<?asset guid="{sample}"?>\n<!-- <?asset guid?> -->\n<Root/>') == (FOUND, sample)
         assert read_header('<?xml version="1.0"\n<Root/>')[0] == INVALID
         assert not is_guid(sample.upper()) and not is_guid("0" * GUID_LENGTH) and not is_guid(sample[:-1])
-        assert parse_meta(make_meta_text("a/b/hit.ogg", sample)) == (sample, "hit.ogg", ())
+        assert parse_meta(make_meta_text("a/b/hit.ogg", sample)) == (sample, "hit.ogg", (), ())
         overrides = (("animationCodec", "raw"), ("generateMips", "false"))
-        assert parse_meta(make_meta_text("a/horse.glb", sample, overrides)) == (sample, "horse.glb", overrides)
+        assert parse_meta(make_meta_text("a/horse.glb", sample, overrides)) == (sample, "horse.glb", overrides, ())
+        outputs = ((".mesh", other), ("/materials/mi_eyes.material", sample))
+        with_outputs = make_meta_text("a/horse.glb", sample, overrides, outputs=outputs)
+        assert with_outputs.endswith(f'\t<_listOutput>\n\t\t<AssetImportOutput _name=".mesh" _guid="{other}" />\n'
+                                     f'\t\t<AssetImportOutput _name="/materials/mi_eyes.material" _guid="{sample}" />\n\t</_listOutput>\n</AssetMeta>'), with_outputs   # C++ `AssetMeta::toXML` 의 꼴
+        assert parse_meta(with_outputs) == (sample, "horse.glb", overrides, outputs)
+        assert parse_meta(make_meta_text("a/horse.glb", sample, outputs=outputs)) == (sample, "horse.glb", (), outputs)
+        assert parse_meta(with_outputs.replace(f'_guid="{other}" />', '_guid="nope" />')) is None
+        assert parse_meta(make_meta_text("a/horse.glb", sample, outputs=((".mesh", other), (".MESH", sample)))) is None   # 겹친 이름
+        swapped = f'<AssetMeta _guid="{sample}" _source="horse.glb">\n\t<_listOutput>\n\t\t<AssetImportOutput _name=".mesh" _guid="{other}" />\n\t</_listOutput>\n\t<_listImportOverride />\n</AssetMeta>'
+        assert parse_meta(swapped) is None   # 칸 순서도 리플렉션 직렬화와 같아야 한다
         assert parse_meta(make_meta_text("a/horse.glb", sample, overrides).replace('_value="raw"', '_value="raw" _note="x"')) is None
         assert parse_meta(f'<AssetMeta _guid="{sample}" _source="hit.ogg"><Other /></AssetMeta>') is None
         assert parse_meta(f'<AssetMeta _guid="{sample}" _source="hit.ogg" _extra="1" />') is None
         stored_source = f"store:{'0a' * 32}/horse.glb"   # 저장소 밖 원본 — C++ AssetMetaTest.StoredSourceAddressIsOneOfTwoForms 와 같은 사례
         stored = make_meta_text("a/horse.glb", sample, overrides, stored_source)
-        assert parse_meta(stored) == (sample, stored_source, overrides)
-        assert parse_meta(make_meta_text("b/pony.glb", sample, overrides, stored_source)) == (sample, f"store:{'0a' * 32}/pony.glb", overrides)
+        assert parse_meta(stored) == (sample, stored_source, overrides, ())
+        assert parse_meta(make_meta_text("b/pony.glb", sample, overrides, stored_source)) == (sample, f"store:{'0a' * 32}/pony.glb", overrides, ())
         for wrong in (f"store:{'0A' * 32}/horse.glb", "store:0a/horse.glb", f"store:{'0a' * 32}/", f"store:{'0a' * 32}/a/horse.glb", "a/horse.glb", "..", "C:horse.glb", ""):
             assert parse_meta(f'<AssetMeta _guid="{sample}" _source="{wrong}" />') is None, wrong
 
         rules = load_rules(self.root)
         assert make_output_guid("0123456789abcdef0011223344556677", ".MESH") == "28016f06802dfbf1a257d90c3347b2fb"   # C++ AssetGUIDTest.OutputIdentityComesFromSourceAndOutputName 과 같은 글
         assert next(iterate_imported_sources("common/models/a/b/c.mesh", rules.list_imported)) == ("common/models_raw/a/b/c.glb", ".mesh")
-        map_source = {"common/models_raw/a.glb": sample}
-        assert find_output_guid("common/models/a/b/c.mesh", map_source, rules.list_imported) == make_output_guid(sample, "/b/c.mesh")
-        assert find_output_guid("common/models/a.mesh", map_source, rules.list_imported) == make_output_guid(sample, ".mesh")
-        assert find_output_guid("common/models/_shared/x.material", map_source, rules.list_imported) is None
-        assert find_output_guid("common/prefabs/a.prefab.xml", map_source, rules.list_imported) is None
-        assert find_output_guid("common/models/a.facial.xml", map_source, rules.list_imported) is None   # glb 는 표정 표를 내지 않는다 — C++ `AssetReferenceFieldsTest.ImportedOutputsResolveFromTheirSource` 와 같은 사례
-        assert find_output_guid("common/models/a/a.facial.xml", {"common/models_raw/a.vrm": sample}, rules.list_imported) == make_output_guid(sample, "/a.facial.xml")
-        assert find_output_guid("common/models/a/clips", map_source, rules.list_imported) == make_output_guid(sample, "/clips")
+        assert make_output_id("common/models_raw/a.glb", "/b/c.mesh", rules.list_imported) == "common/models/a/b/c.mesh"
+        assert make_output_id("common/models_raw/A.glb", ".mesh", rules.list_imported) == "common/models/a.mesh"
+        assert make_output_id("common/models_raw/a.glb", ".facial.xml", rules.list_imported) is None   # glb 는 표정 표를 내지 않는다 — C++ `AssetReferenceFieldsTest.ImportedOutputsResolveFromTheirSource` 와 같은 사례
+        assert make_output_id("common/models_raw/a.vrm", "/a.facial.xml", rules.list_imported) == "common/models/a/a.facial.xml"
+        assert make_output_id("common/sounds/a.ogg", ".mesh", rules.list_imported) is None
+        third = create_guid()
+        model_meta = make_meta_text("common/models_raw/a.glb", sample, outputs=((".mesh", other), ("/materials/mi_eyes.material", third)))
+        list_issue, map_guid = collect_issues({"common/models_raw/a.glb": "", "common/models_raw/a.glb.meta": model_meta}, rules)
+        assert not list_issue and map_guid == {sample: "common/models_raw/a.glb", other: "common/models/a.mesh", third: "common/models/a/materials/mi_eyes.material"}, (list_issue, map_guid)
+        list_issue, _ = collect_issues({"common/models_raw/a.glb": "", "common/models_raw/a.glb.meta": make_meta_text("common/models_raw/a.glb", sample, outputs=((".mesh", sample),))}, rules)
+        assert [issue.kind for issue in list_issue] == ["duplicate"], list_issue   # 표의 줄도 정체성이다 — 원본 GUID 와 겹치면 결함
+        list_issue, _ = collect_issues({"a/w.ogg": "", "a/w.ogg.meta": make_meta_text("a/w.ogg", sample, outputs=((".mesh", other),))}, rules)
+        assert [issue.kind for issue in list_issue] == ["invalid-meta"], list_issue   # 임포트하지 않는 자리의 원본에 산출물 표
         table = add_identity_redirect('<?asset guid="x"?>\n<Redirects>\n</Redirects>\n', sample, other)
         assert table == f'<?asset guid="x"?>\n<Redirects>\n\t<IdentityRedirect from="{sample}" to="{other}" />\n</Redirects>\n', table
         assert add_identity_redirect(table, sample, "0" * 31 + "1").count("IdentityRedirect") == 1   # 같은 옛 GUID 의 줄은 바꾼다

@@ -499,7 +499,7 @@
     "Source/Engine/Observability/MetricRegistry.cpp": {"float": 12},
     "Source/Engine/Physics/Asset/PhysicsRagdoll.cpp": {"minus-one": 2},
     "Source/Engine/Physics/Box2D/Box2DPhysicsScene.cpp": {"float": 2},
-    "Source/Engine/Physics/Cloth/ClothComponent.cpp": {"minus-one": 1, "integer": 3},
+    "Source/Engine/Physics/Cloth/ClothComponent.cpp": {"minus-one": 1, "integer": 1},
     "Source/Engine/Physics/Collision/PhysicsQuery.h": {"integer": 1},
     "Source/Engine/Physics/Collision/SweepHit.cpp": {"float": 2},
     "Source/Engine/Physics/Jolt/JoltJobSystem.cpp": {"minus-one": 1},

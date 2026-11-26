@@ -26,6 +26,7 @@
 #include "Engine/Localization/TextFormatter.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Profiling/ProfilerBackend.h"
+#include "Engine/Reflection/EnumName.h"
 
 #include <imgui.h>
 
@@ -877,7 +878,7 @@ namespace sw::editor
 
         fixed_string<constant::buffer::kMax32> arrBytesBuf;
         ProfilerPanelInternal::formatBytes( summary._trackedBytes, arrBytesBuf );
-        ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "Size", TextArgumentList().addText( "backendName", _gpuMemoryState._backendName.c_str() ).addText( "sizeBasis", RHIMemoryTracker::getSizeBasisName( summary._sizeBasis ) ) ).c_str() );
+        ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "Size", TextArgumentList().addText( "backendName", _gpuMemoryState._backendName.c_str() ).addText( "sizeBasis", getEnumName( summary._sizeBasis ) ) ).c_str() );
         ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "TrackedOfUnknownSize", TextArgumentList().addText( "bytesBuf", arrBytesBuf.c_str() ).addInteger( "unknownSizeCount", static_cast<int64>( summary._unknownSizeCount ) ) ).c_str() );
 
         if ( ImGui::CollapsingHeader( SW_LOCKEY( "EdSection", "TrackedMemoryByKind" ), ImGuiTreeNodeFlags_DefaultOpen ) )
@@ -899,7 +900,7 @@ namespace sw::editor
                     ProfilerPanelInternal::formatBytes( stats._liveBytes, arrBytesBuf );
                     ImGui::TableNextRow();
                     ImGui::TableNextColumn();
-                    ImGui::TextUnformatted( RHIMemoryTracker::getKindName( kind ) );
+                    ImGui::TextUnformatted( getEnumName( kind ) );
                     ImGui::TableNextColumn();
                     ImGui::TextUnformatted( arrBytesBuf.c_str() );
                     ImGui::TableNextColumn();

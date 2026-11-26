@@ -21,6 +21,7 @@
 #include "Engine/Graphics/RHI/RHISurfaceTransform.h"
 #include "Engine/Graphics/RHI/RHIWaitIdleReason.h"
 #include "Engine/Graphics/RHI/Transfer/RHITransferSerials.h"
+#include "Engine/Reflection/ReflectionEnumMacros.h"
 
 namespace sw
 {
@@ -58,6 +59,7 @@ namespace sw
     };
 
     /** @brief bindless 인덱스가 속한 공간입니다. DX12 는 둘이 힙 하나를 나눠 쓰고, 나머지 백엔드는 공간마다 번호가 따로입니다. */
+    ENUM()
     enum class RHIBindlessIndexSpace : uint8
     {
         Texture = 0, ///< `registerBindlessTexture` 가 준 텍스처 SRV 인덱스

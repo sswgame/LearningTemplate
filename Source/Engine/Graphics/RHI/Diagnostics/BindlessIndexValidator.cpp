@@ -9,6 +9,7 @@
 
 #include "Engine/Graphics/Debug/RenderDiagnostics.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
+#include "Engine/Reflection/EnumName.h"
 
 namespace sw
 {
@@ -30,11 +31,6 @@ namespace sw
 
         struct BindlessIndexValidatorInternal
         {
-            static const utf8* getSpaceName( RHIBindlessIndexSpace space )
-            {
-                return ( space == RHIBindlessIndexSpace::Texture ) ? "texture" : "buffer";
-            }
-
             static BindlessSiteKey makeSiteKey( const hashed_string& passName, const hashed_string& fieldName, uint32 element )
             {
                 return BindlessSiteKey{ passName.getIndex(), fieldName.getIndex(), element };
@@ -119,7 +115,7 @@ namespace sw
         const utf8* pPassName  = passName.empty() ? "<no pass>" : passName.c_str();
         const utf8* pFieldName = fieldName.empty() ? "<unnamed>" : fieldName.c_str();
         SW_LOG_ERROR_ID( "RHI.BindlessIndexDead", "[BindlessIndex] pass '%#' field '%#'[%#] = %# is not a live %# slot — the shader would read a freed or never-written descriptor",
-                         pPassName, pFieldName, element, index.getValue(), BindlessIndexValidatorInternal::getSpaceName( space ) );
+                         pPassName, pFieldName, element, index.getValue(), getEnumName( space ) );
         return true;
     }
 

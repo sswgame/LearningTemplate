@@ -270,9 +270,9 @@ namespace sw
                                    type._fullyQualifiedName );
                 baseCast = string( text.view() );
             }
-            // 검증 함수는 타입 서술자와 같은 것이다(`REFLECT( Validate = fn )` 이 없으면 nullptr).
+            // 읽기 검사는 타입 서술자와 같은 함수다(`REFLECT( ReadValidate = fn )` 이 없으면 nullptr). 에디터 검증(`Validate`)은 읽기 끝에 돌지 않는다.
             emit.linef( "static ::sw::FixedCodec s_fixedCodec( %#, %#, %#, %#, %#, %# );", tableArgs.first, CodeEmit::quoted( plan._canonical ), tableArgs.second, baseCast,
-                        type._validate.empty() ? "nullptr" : "kValidate", pReplicated );
+                        type._readValidate.empty() ? "nullptr" : "kReadValidate", pReplicated );
         }
     }
 

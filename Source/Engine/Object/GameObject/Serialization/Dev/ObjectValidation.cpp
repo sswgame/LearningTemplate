@@ -1,3 +1,7 @@
+/**
+ * @file ObjectValidation.cpp
+ * @brief 오브젝트 검증(`ObjectValidation`)의 구현과 월드의 결과 표(`SceneValidationIssues`)입니다. `Dev/` 라 배포 구성은 짓지 않는다(입구는 헤더의 인라인 함수).
+ */
 #include "pch.h"
 
 #include "Engine/Object/GameObject/Serialization/ObjectValidation.h"
@@ -8,6 +12,7 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Serialization/Dev/SceneValidationIssues.h"
 #include "Engine/Object/GameObject/Subsystem/SceneSubsystemRegistry.h"
 #include "Engine/Reflection/ReflectionValidation.h"
 #include "Engine/Reflection/TypeInfo.h"
@@ -48,7 +53,7 @@ namespace sw
         };
     } // namespace
 
-    uint32 ObjectValidation::validateGameObject( const GameObject& object, ValidationContext& context )
+    uint32 ObjectValidation::validateGameObjectInternal( const GameObject& object, ValidationContext& context )
     {
         context.setSource( object.getObjectID(), object.getName().view() );
         uint32 issueCount = 0;
@@ -69,10 +74,10 @@ namespace sw
         return issueCount;
     }
 
-    uint32 ObjectValidation::reportGameObject( const GameObject& object, const bool bLog )
+    uint32 ObjectValidation::reportGameObjectInternal( const GameObject& object, const bool bLog )
     {
         ValidationContext        context;
-        const uint32             issueCount = validateGameObject( object, context );
+        const uint32             issueCount = validateGameObjectInternal( object, context );
         GameObjectManager* const pManager   = object.getMutableManager();
         // 결과는 오브젝트가 사는 월드의 표다. 매니저 밖에서 만든 오브젝트는 둘 월드가 없어 결과 수만 돌려준다(로그는 아래가 남긴다).
         if ( pManager != nullptr )
@@ -89,7 +94,7 @@ namespace sw
         return issueCount;
     }
 
-    uint32 ObjectValidation::reportEmptyRequired( const Component& component )
+    uint32 ObjectValidation::reportEmptyRequiredInternal( const Component& component )
     {
         const TypeInfo* pType = component.getTypeInfo();
         if ( pType == nullptr )
@@ -100,6 +105,14 @@ namespace sw
             SW_LOG_ERROR_ID( "ObjectValidation.RequiredEmptyAtBeginPlay", "%# on '%#' begins play with its required property %# empty - fill it where the component is added", pType->_name.c_str(),
                              pOwner != nullptr ? pOwner->getName().c_str() : "", prop._name.c_str() );
         } );
+    }
+
+    void ObjectValidation::removeGameObjectIssuesInternal( GameObjectManager* const pManager, const uint64 objectID )
+    {
+        // 표는 자기 월드의 것이다 — 매니저가 소멸하는 중이어도 서비스는 오브젝트보다 늦게 내려가므로(저장소를 먼저 비운다) 아직 있다.
+        SceneValidationIssues* const pIssues = pManager != nullptr ? pManager->getSceneScope().find<SceneValidationIssues>() : nullptr;
+        if ( pIssues != nullptr )
+            pIssues->getLog().removeSource( objectID );
     }
 
     SW_SCENE_SUBSYSTEM( SceneValidationIssues, DestroyPost, makeSceneFrameAccess( SceneDataKindSet{}, SceneDataKindSet{}, SceneDataKindSet{ SceneDataKind::Structure } ) )

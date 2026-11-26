@@ -11,10 +11,8 @@
 #include "Engine/Physics/Collision/PhysicsShape.h"
 #include "Engine/Physics/IPhysicsScene.h"
 #include "Engine/Physics/PhysicsDesc.h"
-#include "Engine/Physics/Scene/PhysicsNameValidation.h"
 #include "Engine/Physics/Scene/ScenePhysics.h"
 #include "Engine/Profiling/FrameProfiler.h"
-#include "Engine/Reflection/ReflectionValidation.h"
 
 namespace sw
 {
@@ -246,18 +244,5 @@ namespace sw
         }
         _listBuiltGeneration.assign( _listBuiltGeneration.size(), 0u );
         _listTriangleCount.assign( _listTriangleCount.size(), 0u );
-    }
-} // namespace sw
-
-namespace sw
-{
-    void TerrainColliderComponent::validateLayer( ValidationContext& context ) const
-    {
-        PhysicsNameValidation::validateLayer( context, "_layer", _layer );
-    }
-
-    void TerrainColliderComponent::validateMaterial( ValidationContext& context ) const
-    {
-        PhysicsNameValidation::validateMaterial( context, "_material", _material );
     }
 } // namespace sw

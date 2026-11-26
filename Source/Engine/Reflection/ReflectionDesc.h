@@ -266,7 +266,8 @@ namespace sw
         size_t                   _size;
         DestroyFunction          _pDestroyInstance{ nullptr };
         AddComponentFunction     _pAddComponent{ nullptr };
-        ReflectValidateFunction  _pValidate{ nullptr };
+        ReflectValidateFunction  _pValidate{ nullptr };     ///< `REFLECT( Validate )` — 에디터 데이터 검증. 생성 코드가 `SW_DEV_ONLY_FUNCTION` 으로 넣어 배포는 nullptr
+        ReflectValidateFunction  _pReadValidate{ nullptr }; ///< `REFLECT( ReadValidate )` — 배포에서도 도는 읽기 검사(고정 배치형 · 세이브 읽기가 오류면 거절)
         const FixedCodec*        _pFixedCodec{ nullptr };
         const PropertyDesc*      _pProperty{ nullptr };
         const FunctionDesc*      _pMethod{ nullptr };
@@ -320,6 +321,12 @@ namespace sw
         {
             TypeDesc copy   = *this;
             copy._pValidate = pValidate;
+            return copy;
+        }
+        constexpr TypeDesc withReadValidate( const ReflectValidateFunction pReadValidate ) const
+        {
+            TypeDesc copy       = *this;
+            copy._pReadValidate = pReadValidate;
             return copy;
         }
         constexpr TypeDesc withFixedCodec( const FixedCodec* pFixedCodec ) const

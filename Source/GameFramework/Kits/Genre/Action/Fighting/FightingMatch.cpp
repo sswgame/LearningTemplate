@@ -1178,7 +1178,7 @@ namespace sw
             return;
         // 롤백 읽기와 같은 검증(이 타입과 값으로 든 고리 버퍼 · 라운드 시리즈의 `Validate`)을 돌린다.
         ValidationContext context;
-        (void)ReflectionValidation::validateObject( *StaticType(), this, context ); // 결과는 context 의 오류로 본다
+        (void)ReflectionValidation::validateRead( *StaticType(), this, context ); // 결과는 context 의 오류로 본다 — 읽기 검사만이라 배포와 개발 구성이 같은 답을 낸다
         if ( io.check( context.hasError() == false ) )
         {
             completeLoad();

@@ -6,6 +6,7 @@
 #include "Editor/Common/Commands/Scene/EditorMapCheck.h"
 
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Serialization/Dev/SceneValidationIssues.h"
 #include "Engine/Object/GameObject/Serialization/ObjectValidation.h"
 
 using namespace sw;

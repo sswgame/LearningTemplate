@@ -49,6 +49,8 @@ namespace sw
                 out.append( "  [static]" );
             if ( type._validate.empty() == false )
                 out.appendFormat( "  Validate=%#", type._validate );
+            if ( type._readValidate.empty() == false )
+                out.appendFormat( "  ReadValidate=%#", type._readValidate );
             out.append( "\n" );
             for ( const ParsedPropertyInfo& prop : type._listProperty )
             {

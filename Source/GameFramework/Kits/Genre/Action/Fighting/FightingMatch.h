@@ -266,7 +266,7 @@ namespace sw
      *          버전 머리가 붙은 자기 기술형(`BinarySerializer`)이다. 롤백 바이트를 세이브에 싣지 않으므로 빌드가 바뀌어도 세이브는 마이그레이션 경로로 읽힌다.
      *          설정, 이벤트, 판정 임시 버퍼는 상태가 아니라서 싣지 않는다.
      */
-    REFLECT( Validate = validateState )
+    REFLECT( ReadValidate = validateState )
     class SW_KIT_API FightingMatch
     {
     public:
@@ -294,7 +294,7 @@ namespace sw
         SW_DECLARE_STATE_IO();
         void pollEvents( vector<FightingEvent>& outListEvent );
         /**
-         * @brief 읽은 상태가 이 대전의 캐릭터 정의와 맞는지 봅니다(`REFLECT( Validate )`, 롤백과 세이브가 함께 씁니다).
+         * @brief 읽은 상태가 이 대전의 캐릭터 정의와 맞는지 봅니다(`REFLECT( ReadValidate )`, 롤백과 세이브가 함께 씁니다).
          * @details 같은 캐릭터인지, 체력이 0 부터 정의의 최대 안인지, 화면 쪽이 ±1 인지, 기술 · 자세 인덱스가 정의 안인지, 재생 중인 타임라인의 프레임이 그 기술 안인지,
          *          잡힌 쪽의 상대가 잡은 상태인지, 참가자가 둘인지 봅니다.
          */

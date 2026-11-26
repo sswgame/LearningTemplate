@@ -456,12 +456,12 @@ namespace sw
                 return nullptr;
             }
 
-            /** @brief 같은 헤더의 중첩 타입을 부모 코덱 안에 펼칠 수 있는지 봅니다. 기반과 검증 함수가 없고 코덱 필드가 모두 공개여야 합니다. */
+            /** @brief 같은 헤더의 중첩 타입을 부모 코덱 안에 펼칠 수 있는지 봅니다. 기반과 읽기 검사가 없고 코덱 필드가 모두 공개여야 합니다. */
             static bool canInline( const FixedCodecEmitState& state, const ParsedTypeInfo* pNested )
             {
                 if ( pNested == nullptr )
                     return false;
-                const bool bHasExtraLogic = pNested->_baseCount != 0 || pNested->_validate.empty() == false;
+                const bool bHasExtraLogic = pNested->_baseCount != 0 || pNested->_readValidate.empty() == false;
                 if ( bHasExtraLogic )
                     return false;
                 if ( std::find( state._listInlineFqn.begin(), state._listInlineFqn.end(), pNested->_fullyQualifiedName ) != state._listInlineFqn.end() )

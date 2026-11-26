@@ -177,7 +177,9 @@ namespace sw
         if ( typeEditor._tooltip.empty() == false )
             out.appendFormat( "- 설명: %#\n", ReflectionDocWriterInternal::escapeCell( typeEditor._tooltip ) );
         if ( type._pValidate != nullptr )
-            out.append( "- 타입 검증 함수가 있다\n" );
+            out.append( "- 타입 검증 함수가 있다(에디터 데이터 검증)\n" );
+        if ( type._pReadValidate != nullptr )
+            out.append( "- 읽기 검사 함수가 있다(배포에서도 읽은 값을 거절한다)\n" );
 
         if ( type._listProperty.empty() == false )
         {
