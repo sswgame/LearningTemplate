@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Container/map.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/DevSourcePath.h"
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -255,6 +256,7 @@ namespace sw
      * @endcode
      */
     #define SW_AUTOMATION_STEP( id, pKind, pRun, pValidate, options )                                                                                     \
+        SW_DEV_REGISTRATION_PATH_CHECK( "SW_AUTOMATION_STEP" );                                                                                           \
         static const ::sw::AutomationStepRegistration sw_automationStep_##id = ::sw::AutomationStepRegistration::make( pKind, pRun, pValidate, options ); \
         static const ::sw::AutomationStepRegistrar    sw_automationStepRegistrar_##id                                                                     \
         {                                                                                                                                                 \
@@ -262,22 +264,32 @@ namespace sw
         }
 
     /** @brief 시작 차단 조건을 등록합니다(.cpp 의 파일 범위, `namespace sw` 안). 진행 중(`AutomationReadiness::waiting`)인 동안 시나리오가 시작하지 않고 화면 캡처도 미뤄집니다. */
-    #define SW_AUTOMATION_START_BLOCKER( id, pName, pReadiness ) SW_STATIC_REGISTRATION( automationStartBlocker, ::sw::AutomationBlocker, ::sw::AutomationBlockerRegistrar, id, pName, pReadiness, ::sw::AutomationBlockScope::Start )
+    #define SW_AUTOMATION_START_BLOCKER( id, pName, pReadiness )         \
+        SW_DEV_REGISTRATION_PATH_CHECK( "SW_AUTOMATION_START_BLOCKER" ); \
+        SW_STATIC_REGISTRATION( automationStartBlocker, ::sw::AutomationBlocker, ::sw::AutomationBlockerRegistrar, id, pName, pReadiness, ::sw::AutomationBlockScope::Start )
 
     /** @brief 시계 잡기 조건을 등록합니다(.cpp 의 파일 범위, `namespace sw` 안). 진행 중인 동안 시나리오가 시작하지 않고 도는 시나리오의 시계가 멈춥니다(`AutomationBlockScope::Clock`). */
-    #define SW_AUTOMATION_CLOCK_HOLDER( id, pName, pReadiness ) SW_STATIC_REGISTRATION( automationClockHolder, ::sw::AutomationBlocker, ::sw::AutomationBlockerRegistrar, id, pName, pReadiness, ::sw::AutomationBlockScope::Clock )
+    #define SW_AUTOMATION_CLOCK_HOLDER( id, pName, pReadiness )         \
+        SW_DEV_REGISTRATION_PATH_CHECK( "SW_AUTOMATION_CLOCK_HOLDER" ); \
+        SW_STATIC_REGISTRATION( automationClockHolder, ::sw::AutomationBlocker, ::sw::AutomationBlockerRegistrar, id, pName, pReadiness, ::sw::AutomationBlockScope::Clock )
 
     /** @brief 시나리오 끝(`<Pass/>`)만 미루는 조건을 등록합니다(.cpp 의 파일 범위, `namespace sw` 안). 단계 사이에는 돌게 두고 끝나기 전에만 기다릴 뒤의 일이 씁니다(`AutomationBlockScope::Finish`). */
-    #define SW_AUTOMATION_FINISH_BLOCKER( id, pName, pReadiness ) SW_STATIC_REGISTRATION( automationFinishBlocker, ::sw::AutomationBlocker, ::sw::AutomationBlockerRegistrar, id, pName, pReadiness, ::sw::AutomationBlockScope::Finish )
+    #define SW_AUTOMATION_FINISH_BLOCKER( id, pName, pReadiness )         \
+        SW_DEV_REGISTRATION_PATH_CHECK( "SW_AUTOMATION_FINISH_BLOCKER" ); \
+        SW_STATIC_REGISTRATION( automationFinishBlocker, ::sw::AutomationBlocker, ::sw::AutomationBlockerRegistrar, id, pName, pReadiness, ::sw::AutomationBlockScope::Finish )
 
     /** @brief 화면 캡처만 미루는 조건을 등록합니다(.cpp 의 파일 범위, `namespace sw` 안). 그림을 덮지만 입력은 막지 않는 것(화면 페이드)이 씁니다(`AutomationBlockScope::Capture`). */
-    #define SW_AUTOMATION_CAPTURE_BLOCKER( id, pName, pReadiness ) SW_STATIC_REGISTRATION( automationCaptureBlocker, ::sw::AutomationBlocker, ::sw::AutomationBlockerRegistrar, id, pName, pReadiness, ::sw::AutomationBlockScope::Capture )
+    #define SW_AUTOMATION_CAPTURE_BLOCKER( id, pName, pReadiness )         \
+        SW_DEV_REGISTRATION_PATH_CHECK( "SW_AUTOMATION_CAPTURE_BLOCKER" ); \
+        SW_STATIC_REGISTRATION( automationCaptureBlocker, ::sw::AutomationBlocker, ::sw::AutomationBlockerRegistrar, id, pName, pReadiness, ::sw::AutomationBlockScope::Capture )
 
     /**
      * @brief 사진 앞 렌더 정착 조건을 등록합니다(.cpp 의 파일 범위, `namespace sw` 안). 그 상태(TAA 기록 · 노출 적응)를 만든 기능이 제 폴더에서 등록한다(`AutomationBlockScope::RenderStable`).
      * @param pConfigure 문턱(`ScenarioRun.json` 의 `_mapConditionThreshold.<pName>`)을 받는 함수(`AutomationConditionConfigureFunction`) — 칸이 없으면 시나리오가 읽기 오류로 시작하지 않는다
      */
-    #define SW_AUTOMATION_STABILITY_CONDITION( id, pName, pReadiness, pConfigure ) SW_STATIC_REGISTRATION( automationStabilityCondition, ::sw::AutomationBlocker, ::sw::AutomationBlockerRegistrar, id, pName, pReadiness, ::sw::AutomationBlockScope::RenderStable, pConfigure )
+    #define SW_AUTOMATION_STABILITY_CONDITION( id, pName, pReadiness, pConfigure ) \
+        SW_DEV_REGISTRATION_PATH_CHECK( "SW_AUTOMATION_STABILITY_CONDITION" );     \
+        SW_STATIC_REGISTRATION( automationStabilityCondition, ::sw::AutomationBlocker, ::sw::AutomationBlockerRegistrar, id, pName, pReadiness, ::sw::AutomationBlockScope::RenderStable, pConfigure )
 
 #else
 

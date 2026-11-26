@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/DevSourcePath.h"
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -209,13 +210,17 @@ namespace sw
      * @brief 감시 값을 등록합니다(.cpp 의 파일 범위, `namespace sw` 안). @p id 는 정적 이름을 만드는 식별자, @p pName 은 시나리오가 쓰는 이름입니다.
      * @details 개발 전용 소스(DevFolders.json 의 `Dev/` · DevTools · GameFrameworkDev)에 둔다. 배포 구성에서 이 매크로는 컴파일 오류다(배포가 짓는 TU 에 감시 값 본문을 둘 수 없다).
      */
-    #define SW_AUTOMATION_WATCH( id, pName, pTooltip, pFunction ) SW_STATIC_REGISTRATION( automationWatch, ::sw::AutomationWatchRegistration, ::sw::AutomationWatchRegistrar, id, pName, pTooltip, pFunction, nullptr, false, false, false, nullptr )
+    #define SW_AUTOMATION_WATCH( id, pName, pTooltip, pFunction ) \
+        SW_DEV_REGISTRATION_PATH_CHECK( "SW_AUTOMATION_WATCH" );  \
+        SW_STATIC_REGISTRATION( automationWatch, ::sw::AutomationWatchRegistration, ::sw::AutomationWatchRegistrar, id, pName, pTooltip, pFunction, nullptr, false, false, false, nullptr )
 
     /**
      * @brief 씬 전체를 도는 감시 값을 등록합니다. @p pSceneFunction 은 `bool( SceneIterationKey, const GameObjectManager*, float64& )` 입니다 — 레지스트리가 순회 열쇠를 넘긴다.
      * @details 찾을 컴포넌트가 등록 목록(`ComponentRegistry`)에 있으면 열쇠 없는 `SW_AUTOMATION_WATCH` 로 그 목록을 돈다. 이것은 등록 목록이 없는 타입을 고르는 틀(`AutomationComponentWatch`)의 자리다.
      */
-    #define SW_AUTOMATION_SCENE_WATCH( id, pName, pTooltip, pSceneFunction ) SW_STATIC_REGISTRATION( automationWatch, ::sw::AutomationWatchRegistration, ::sw::AutomationWatchRegistrar, id, pName, pTooltip, nullptr, nullptr, false, false, false, pSceneFunction )
+    #define SW_AUTOMATION_SCENE_WATCH( id, pName, pTooltip, pSceneFunction ) \
+        SW_DEV_REGISTRATION_PATH_CHECK( "SW_AUTOMATION_SCENE_WATCH" );       \
+        SW_STATIC_REGISTRATION( automationWatch, ::sw::AutomationWatchRegistration, ::sw::AutomationWatchRegistrar, id, pName, pTooltip, nullptr, nullptr, false, false, false, pSceneFunction )
 
     /**
      * @brief 바깥 일(자식 프로세스 · 컴파일러 · OS 파일 감시 · 워커 비동기 로드 · GPU 회수)을 따라 바뀌는 감시 값을 등록합니다. 인자는 `SW_AUTOMATION_WATCH` 와 같습니다.
@@ -224,13 +229,17 @@ namespace sw
      *          @p pActivity(`AutomationWatchActivityFunction`)는 필수 인자다 — 활동 수가 정지 시한(`_stallWallSeconds`) 동안 그대로면 대기는 시한을 기다리지 않고 `WaitStalled` 로 진다
      *          (Gauntlet 하트비트 · 프로세스 층의 `kProcessStallSeconds` 와 같은 생각). 낼 진척이 없는 일(사건 하나 — OS 파일 감시 알림)만 nullptr 을 주고 그 자리에 까닭을 적는다.
      */
-    #define SW_AUTOMATION_WALL_WATCH( id, pName, pTooltip, pFunction, pActivity ) SW_STATIC_REGISTRATION( automationWatch, ::sw::AutomationWatchRegistration, ::sw::AutomationWatchRegistrar, id, pName, pTooltip, pFunction, nullptr, false, false, true, nullptr, pActivity )
+    #define SW_AUTOMATION_WALL_WATCH( id, pName, pTooltip, pFunction, pActivity ) \
+        SW_DEV_REGISTRATION_PATH_CHECK( "SW_AUTOMATION_WALL_WATCH" );             \
+        SW_STATIC_REGISTRATION( automationWatch, ::sw::AutomationWatchRegistration, ::sw::AutomationWatchRegistrar, id, pName, pTooltip, pFunction, nullptr, false, false, true, nullptr, pActivity )
 
     /**
      * @brief 질의 감시 값을 등록합니다(.cpp 의 파일 범위, `namespace sw` 안). 단계의 `target`(오브젝트 이름 · NPC id) · `key`(블랙보드 키 · 장소 id)를 받고 수나 글을 냅니다.
      * @details 시나리오: `<Expect watch="AI.State" target="AutoFarmer" is="Harvest"/>`, `<WaitUntil watch="Object.DistanceTo" target="Farmer" key="Bin" atMost="1"/>`.
      */
-    #define SW_AUTOMATION_QUERY_WATCH( id, pName, pTooltip, pQueryFunction, bNeedsTarget, bNeedsKey ) SW_STATIC_REGISTRATION( automationWatch, ::sw::AutomationWatchRegistration, ::sw::AutomationWatchRegistrar, id, pName, pTooltip, nullptr, pQueryFunction, bNeedsTarget, bNeedsKey, false, nullptr )
+    #define SW_AUTOMATION_QUERY_WATCH( id, pName, pTooltip, pQueryFunction, bNeedsTarget, bNeedsKey ) \
+        SW_DEV_REGISTRATION_PATH_CHECK( "SW_AUTOMATION_QUERY_WATCH" );                                \
+        SW_STATIC_REGISTRATION( automationWatch, ::sw::AutomationWatchRegistration, ::sw::AutomationWatchRegistrar, id, pName, pTooltip, nullptr, pQueryFunction, bNeedsTarget, bNeedsKey, false, nullptr )
 
 #else
 
