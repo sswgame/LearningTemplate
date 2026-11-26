@@ -4,10 +4,10 @@
 #include "Core/Memory/Memory.h"
 #include "Core/TestFramework/TestFramework.h"
 
-#include "GameFramework/Runtime/Online/Schedule/Server/ServiceScheduler.h"
-#include "GameFramework/Runtime/Online/Schedule/Server/ServiceTTLMonitor.h"
+#include "GameFramework/Runtime/Online/Scheduler/Server/ServiceScheduler.h"
+#include "GameFramework/Runtime/Online/Scheduler/Server/ServiceTTLMonitor.h"
 #include "GameFramework/Runtime/Online/Store/Server/MemoryServiceStore.h"
-#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordTable.h"
+#include "GameFramework/Runtime/Online/Store/Server/ServiceRecordCodec.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceTTLRule.h"
 #include "GameFramework/Runtime/Online/Store/Server/Tests/ServiceStoreEntryTestUtil.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"

@@ -11,9 +11,9 @@
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Character/Combat/Damage/DamageMath.h"
+#include "GameFramework/Runtime/Foundation/Event/GameEvents.h"
 #include "GameFramework/Runtime/Foundation/GameData/DepletingValue.h"
-#include "GameFramework/Runtime/Foundation/Service/GameEvents.h"
-#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
+#include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
 
 namespace sw
 {

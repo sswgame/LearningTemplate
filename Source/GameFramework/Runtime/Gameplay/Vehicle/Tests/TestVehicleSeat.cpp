@@ -13,7 +13,7 @@
 #include "GameFramework/Runtime/Character/Control/Controller/IntentTrackControllerComponent.h"
 #include "GameFramework/Runtime/Character/Control/Controller/RemoteControllerComponent.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
-#include "GameFramework/Runtime/Foundation/Service/Tests/SceneNetLinkTestBinding.h"
+#include "GameFramework/Runtime/Foundation/Subsystem/Tests/SceneNetLinkTestBinding.h"
 #include "GameFramework/Runtime/Gameplay/Vehicle/DismountOnDeathComponent.h"
 #include "GameFramework/Runtime/Gameplay/Vehicle/MountInteractionComponent.h"
 #include "GameFramework/Runtime/Gameplay/Vehicle/MountMovementComponent.h"

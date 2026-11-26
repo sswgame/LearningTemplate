@@ -13,7 +13,7 @@
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Serialization/Fixed/ReplicatedLayout.h"
 
-#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
+#include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
 
 namespace sw
 {

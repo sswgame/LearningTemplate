@@ -19,7 +19,7 @@
 #include "GameFramework/Kits/Genre/Strategy/TacticsSRPG/Client/SRPGCursorComponent.h"
 #include "GameFramework/Kits/Genre/Strategy/TacticsSRPG/Component/SRPGGameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Debug/GameplayDebugTarget.h"
-#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
+#include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
 
 namespace sw
 {

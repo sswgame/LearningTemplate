@@ -14,7 +14,7 @@
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Fixed/ReplicatedLayout.h"
 
-#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
+#include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
 
 #include "ModuleAPI/Service/IServerKitLocator.h"

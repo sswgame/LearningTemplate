@@ -33,9 +33,9 @@
 #include "GameFramework/Kits/Feature/Online/Account/Server/PasswordHashQueue.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/PlatformLoginProvider.h"
 #include "GameFramework/Runtime/Online/Cache/Server/CacheStore.h"
-#include "GameFramework/Runtime/Online/Guard/Server/TokenBucketMap.h"
 #include "GameFramework/Runtime/Online/Identity/Server/AccountDirectory.h"
-#include "GameFramework/Runtime/Online/Schedule/Server/ServicePeriodicJob.h"
+#include "GameFramework/Runtime/Online/RateLimit/Server/TokenBucketMap.h"
+#include "GameFramework/Runtime/Online/Scheduler/Server/ServicePeriodicJob.h"
 #include "GameFramework/Runtime/Online/Service/PendingRequestTable.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStoreTracker.h"
 

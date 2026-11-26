@@ -22,7 +22,7 @@
 #include "GameFramework/Kits/Genre/Strategy/TacticsSRPG/SRPGBattlefield.h"
 #include "GameFramework/Kits/Genre/Strategy/TacticsSRPG/SRPGCatalog.h"
 #include "GameFramework/Kits/Genre/Strategy/TacticsSRPG/SRPGCommanderAI.h"
-#include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
+#include "GameFramework/Runtime/Foundation/GameData/BoundAssetRef.h"
 #include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
 #include "GameFramework/Runtime/Gameplay/Progression/GrowthLog.h"
 

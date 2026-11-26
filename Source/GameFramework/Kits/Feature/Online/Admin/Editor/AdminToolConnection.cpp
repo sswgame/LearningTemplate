@@ -7,7 +7,7 @@
 
 #include "Engine/Reflection/EnumName.h"
 
-#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
+#include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
 #include "GameFramework/Runtime/Online/Security/NetSecurity.h"
 
 namespace sw::editor

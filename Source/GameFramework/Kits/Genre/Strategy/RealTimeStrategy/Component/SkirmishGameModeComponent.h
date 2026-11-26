@@ -25,8 +25,8 @@
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/SkirmishMatch.h"
 #include "GameFramework/Runtime/Character/AI/BehaviorTreeAsset.h"
 #include "GameFramework/Runtime/Character/AI/IBehaviorTreeDebugSource.h"
-#include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
-#include "GameFramework/Runtime/Foundation/GameMode/GameSpeedControl.h"
+#include "GameFramework/Runtime/Foundation/Flow/GameSpeedControl.h"
+#include "GameFramework/Runtime/Foundation/GameData/BoundAssetRef.h"
 
 namespace sw
 {

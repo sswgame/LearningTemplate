@@ -24,7 +24,7 @@
 #include "Engine/Localization/TextFormatter.h"
 #include "Engine/Reflection/EnumName.h"
 
-#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
+#include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
 
 #include <imgui.h>
 #include <imgui-node-editor/imgui_node_editor.h>

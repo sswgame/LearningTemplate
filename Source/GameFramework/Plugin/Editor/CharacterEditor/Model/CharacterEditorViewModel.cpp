@@ -24,7 +24,7 @@
 #include "GameFramework/Plugin/Editor/CharacterEditor/Model/CharacterEditorLocalStore.h"
 #include "GameFramework/Plugin/Editor/CharacterEditor/Model/CharacterEditorPackData.h"
 #include "GameFramework/Runtime/Foundation/GameData/GamePackDataUtil.h"
-#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
+#include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceSelection.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterAppearance.h"
 

@@ -14,7 +14,7 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/UI/Screen/UIOwnedScreen.h"
 
-#include "GameFramework/Runtime/Foundation/GameMode/BoundAssetRef.h"
+#include "GameFramework/Runtime/Foundation/GameData/BoundAssetRef.h"
 #include "GameFramework/Runtime/Foundation/GameMode/GameModeComponent.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ShopPurchase.h"

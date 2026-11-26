@@ -21,7 +21,7 @@
 #include "Engine/UI/Widgets/TextWidget.h"
 
 #include "GameFramework/Client/Shop/ShopScreen.h"
-#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
+#include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
 
 #include <algorithm>
 

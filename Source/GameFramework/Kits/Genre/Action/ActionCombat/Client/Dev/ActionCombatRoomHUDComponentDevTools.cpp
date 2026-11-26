@@ -20,9 +20,9 @@
 #include "GameFramework/Kits/Genre/Action/ActionCombat/Client/ActionCombatRoomHUDComponent.h"
 #include "GameFramework/Kits/Genre/Action/ActionCombat/Client/ActionCombatRoomHUDViewModel.h"
 #include "GameFramework/Runtime/Character/Combat/Damage/DamageEvents.h"
+#include "GameFramework/Runtime/Foundation/Event/GameEvents.h"
 #include "GameFramework/Runtime/Foundation/Presentation/IHUDViewModelBinder.h"
-#include "GameFramework/Runtime/Foundation/Service/GameEvents.h"
-#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
+#include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
 
 namespace sw
 {

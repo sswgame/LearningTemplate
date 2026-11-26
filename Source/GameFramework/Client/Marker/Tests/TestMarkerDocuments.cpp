@@ -17,7 +17,7 @@
 
 #include "GameFramework/Client/Marker/DamageNumberComponent.h"
 #include "GameFramework/Client/Marker/ObjectiveMarkerComponent.h"
-#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
+#include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
 
 namespace sw
 {

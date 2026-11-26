@@ -3,7 +3,7 @@
 #include "GameFramework/Runtime/Foundation/Minigame/MinigamePreloadTriggerComponent.h"
 
 #include "GameFramework/Runtime/Foundation/Minigame/MinigameFlow.h"
-#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
+#include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
 
 namespace sw
 {

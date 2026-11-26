@@ -43,7 +43,7 @@
 #include "GameFramework/Kits/Feature/Online/Chat/Server/ChatKitConfig.h"
 #include "GameFramework/Kits/Feature/Online/Chat/Server/ChatModeration.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/AccountPresenceTracker.h"
-#include "GameFramework/Runtime/Online/Guard/Server/TokenBucketMap.h"
+#include "GameFramework/Runtime/Online/RateLimit/Server/TokenBucketMap.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStore.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceStoreTracker.h"
 #include "GameFramework/Runtime/Online/Store/Server/ServiceTTLRule.h"

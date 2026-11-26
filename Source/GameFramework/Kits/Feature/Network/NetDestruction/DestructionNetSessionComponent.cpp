@@ -20,7 +20,7 @@
 #include "Engine/Object/GameObject/Tick/TickContext.h"
 #include "Engine/Scene/SceneObjectHash.h"
 
-#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
+#include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/Combat/ExplosiveBarrelComponent.h"
 
 #include <algorithm>

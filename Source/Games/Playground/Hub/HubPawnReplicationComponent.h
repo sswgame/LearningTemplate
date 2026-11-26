@@ -35,7 +35,7 @@
 #include "GameFramework/Kits/Feature/Network/NetClientServer/ReplicationClient.h"
 #include "GameFramework/Kits/Feature/Network/NetClientServer/ReplicationServer.h"
 #include "GameFramework/Runtime/Character/Control/Intent/ControlIntent.h"
-#include "GameFramework/Runtime/Character/Control/Pawn/CharacterMovementComponent.h"
+#include "GameFramework/Runtime/Character/Movement/CharacterMovementComponent.h"
 #include "GameFramework/Runtime/Gameplay/Vehicle/MountMovementComponent.h"
 
 #include "Games/Playground/Hub/HubNetSession.h"

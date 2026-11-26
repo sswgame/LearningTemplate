@@ -9,7 +9,7 @@
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Visual/Component/DirectionalLightComponent.h"
 
-#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
+#include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
 #include "GameFramework/Runtime/World/Environment/WeatherSceneWriter.h"
 #include "GameFramework/Runtime/World/Environment/WeatherSystem.h"
 

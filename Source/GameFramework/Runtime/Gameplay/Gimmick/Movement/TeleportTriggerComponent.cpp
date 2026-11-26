@@ -12,8 +12,8 @@
 #include "Engine/Object/GameObject/Tick/TickContext.h"
 #include "Engine/Physics/Scene/ScenePhysics.h"
 
-#include "GameFramework/Runtime/Character/Control/Pawn/CharacterMovementComponent.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
+#include "GameFramework/Runtime/Character/Movement/CharacterMovementComponent.h"
 
 namespace sw
 {

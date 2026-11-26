@@ -14,7 +14,7 @@
 #include "GameFramework/Runtime/Foundation/Save/Local/LocalDeviceKeyProvider.h"
 #include "GameFramework/Runtime/Foundation/Save/Local/LocalStoreChannel.h"
 #include "GameFramework/Runtime/Foundation/Save/Local/LocalStoreFactory.h"
-#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
+#include "GameFramework/Runtime/Foundation/Subsystem/GameSubsystems.h"
 
 namespace sw
 {

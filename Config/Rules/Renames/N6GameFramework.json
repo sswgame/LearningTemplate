@@ -271,13 +271,6 @@
     "why": "로컬 저장 백엔드는 Backend 하나로(인터페이스의 구현), 설정에서 앞면을 만드는 공장은 Factory"
   },
   {
-    "old": "LocalStoreBackend",
-    "new": "LocalStoreFactory",
-    "why": "로컬 저장 백엔드는 Backend 하나로(인터페이스의 구현), 설정에서 앞면을 만드는 공장은 Factory",
-    "ban": false,
-    "allowExisting": true
-  },
-  {
     "old": "LocalSlotStorage",
     "new": "LocalStoreBackend",
     "why": "로컬 저장 백엔드는 Backend 하나로(인터페이스의 구현), 설정에서 앞면을 만드는 공장은 Factory",
@@ -572,5 +565,35 @@
     "old": "s_sqliteLocalStoreBackendRegistration",
     "new": "s_sqliteLocalStoreFactoryRegistration",
     "why": "로컬 저장 백엔드는 Backend 하나로(인터페이스의 구현), 설정에서 앞면을 만드는 공장은 Factory"
+  },
+  {
+    "old": "AccountTicketConnectInternal",
+    "new": "AccountTicketConnectorInternal",
+    "why": "AccountTicketConnector 를 담은 파일 줄기를 형식 이름에 맞춘다"
+  },
+  {
+    "old": "AccountTicketConnectCommandDevInternal",
+    "new": "AccountTicketConnectorCommandDevInternal",
+    "why": "AccountTicketConnector 를 담은 파일 줄기를 형식 이름에 맞춘다"
+  },
+  {
+    "old": "AccountTicketConnectLoopbackTest",
+    "new": "AccountTicketConnectorLoopbackTest",
+    "why": "AccountTicketConnector 를 담은 파일 줄기를 형식 이름에 맞춘다"
+  },
+  {
+    "old": "AccountTicketConnectTest",
+    "new": "AccountTicketConnectorTest",
+    "why": "AccountTicketConnector 를 담은 파일 줄기를 형식 이름에 맞춘다"
+  },
+  {
+    "old": "AccountTicketConnect",
+    "new": "AccountTicketConnector",
+    "why": "AccountTicketConnector 를 담은 파일 줄기를 형식 이름에 맞춘다"
+  },
+  {
+    "old": "ServiceRecordTableTest",
+    "new": "ServiceRecordCodecTest",
+    "why": "파일 ServiceRecordTable.h 는 ServiceRecordCodec 만 담는다(표 형식은 ServiceStore.h)"
   }
 ]

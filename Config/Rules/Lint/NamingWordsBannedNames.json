@@ -2710,6 +2710,12 @@
     "getEphemeralRouter": "getCacheRouter — 휘발 키-값(TTL · 임대)은 Cache 하나로(키트 CacheStore · 폴더 Online/Cache 와 같게)(2026-11-27)",
     "getEphemeralStore": "getCacheStore — 휘발 키-값(TTL · 임대)은 Cache 하나로(키트 CacheStore · 폴더 Online/Cache 와 같게)(2026-11-27)",
     "pSevering": "pDismemberment — 사지 절단의 업계 용어는 Dismemberment(2026-11-27)",
-    "s_sqliteLocalStoreBackendRegistration": "s_sqliteLocalStoreFactoryRegistration — 로컬 저장 백엔드는 Backend 하나로(인터페이스의 구현), 설정에서 앞면을 만드는 공장은 Factory(2026-11-27)"
+    "s_sqliteLocalStoreBackendRegistration": "s_sqliteLocalStoreFactoryRegistration — 로컬 저장 백엔드는 Backend 하나로(인터페이스의 구현), 설정에서 앞면을 만드는 공장은 Factory(2026-11-27)",
+    "AccountTicketConnectInternal": "AccountTicketConnectorInternal — AccountTicketConnector 를 담은 파일 줄기를 형식 이름에 맞춘다(2026-11-27)",
+    "AccountTicketConnectCommandDevInternal": "AccountTicketConnectorCommandDevInternal — AccountTicketConnector 를 담은 파일 줄기를 형식 이름에 맞춘다(2026-11-27)",
+    "AccountTicketConnectLoopbackTest": "AccountTicketConnectorLoopbackTest — AccountTicketConnector 를 담은 파일 줄기를 형식 이름에 맞춘다(2026-11-27)",
+    "AccountTicketConnectTest": "AccountTicketConnectorTest — AccountTicketConnector 를 담은 파일 줄기를 형식 이름에 맞춘다(2026-11-27)",
+    "AccountTicketConnect": "AccountTicketConnector — AccountTicketConnector 를 담은 파일 줄기를 형식 이름에 맞춘다(2026-11-27)",
+    "ServiceRecordTableTest": "ServiceRecordCodecTest — 파일 ServiceRecordTable.h 는 ServiceRecordCodec 만 담는다(표 형식은 ServiceStore.h)(2026-11-27)"
   }
 }
