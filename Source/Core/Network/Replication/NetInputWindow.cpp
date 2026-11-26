@@ -105,7 +105,7 @@ namespace sw
     {
         const NetInputEntry* pEntry = _listEntry.find( tick );
         if ( pEntry == nullptr ) // [_oldestTick, _latestTick] 는 이어 넣었고 고리 크기를 넘지 않는다 — 늘 들어 있다
-            ::sw::internal::reportMissingRequiredService( SW_FUNCTION_SIGNATURE );
+            ::sw::internal::reportMissingRequiredSubsystem( SW_FUNCTION_SIGNATURE );
         return *pEntry;
     }
 

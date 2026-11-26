@@ -164,9 +164,9 @@ namespace sw
         SW_LOG_INFO_ID( "WesternGameMode.Opened", "[Western] the western is open - walk with WASD, E to mount or dismount, hold Shift to gallop, F to whistle, G to act" );
     }
 
-    void WesternGameModeComponent::updateGame( float32 deltaTime )
+    void WesternGameModeComponent::updateGame( GameSeconds frameTime )
     {
-        _outlaw.update( deltaTime );
+        _outlaw.update( frameTime );
         reportEvents();
         const PawnComponent* pPlayerPawn = findPlayerPawn();
         GameObjectManager*   pManager    = getObjectManager();

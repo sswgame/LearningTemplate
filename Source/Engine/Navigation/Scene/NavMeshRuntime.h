@@ -15,11 +15,11 @@
 #include "Core/Math/Math.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 #include "Core/Task/TaskManager.h"
 #include "Core/Task/TaskTypes.h"
 
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Navigation/INavMesh.h"
 #include "Engine/Navigation/NavClusterGraph.h"
 #include "Engine/Navigation/NavMeshAsset.h"

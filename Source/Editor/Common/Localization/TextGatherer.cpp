@@ -10,7 +10,7 @@
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
 
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 
 #include "Engine/Localization/LocalizationDocuments.h"
 #include "Engine/Localization/TextFormatter.h"

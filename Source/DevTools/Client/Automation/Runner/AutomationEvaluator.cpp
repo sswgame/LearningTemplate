@@ -30,7 +30,7 @@
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Content/AssetWriteAccess.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Input/IInputDevice.h"
 #include "Engine/Input/InputManager.h"
@@ -674,7 +674,7 @@ namespace sw
                 text.appendFormat( "differs from its golden: %#", line );
                 addFailure( step, text.view(), AutomationFailureKind::GoldenMismatch );
                 // 그림이 어긋난 자리에서 GPU 정점을 CPU 정점과 견준다(결과는 로그) — 깨진 정점은 그 메시가 사라질 때까지만 남는다.
-                if ( RenderDebugRegistry* const pRenderDebug = engine::areEngineServicesBound() ? engine::findSubsystem<RenderDebugRegistry>() : nullptr )
+                if ( RenderDebugRegistry* const pRenderDebug = engine::areEngineSubsystemsBound() ? engine::findSubsystem<RenderDebugRegistry>() : nullptr )
                     pRenderDebug->requestMeshVertexCheck();
                 return;
             }
@@ -734,7 +734,7 @@ namespace sw
     optional<string> AutomationEvaluator::applyLogCheck( AutomationResult result )
     {
         AutomationLogCheckResult evaluation = _logCapture.evaluateLines( *_pLogPolicy );
-        if ( engine::areEngineServicesBound() )
+        if ( engine::areEngineSubsystemsBound() )
         {
             for ( const string& key : engine::getSubsystem<LocalizationManager>().getMissingKeys() )
             {

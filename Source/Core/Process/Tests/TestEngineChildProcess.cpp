@@ -4,7 +4,7 @@
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Path/AbsolutePath.h"
-#include "Core/Process/EngineChildProcess.h"
+#include "Core/Process/Process.h"
 #include "Core/Testing/TestFramework.h"
 
 namespace
@@ -29,16 +29,16 @@ SW_TEST_CASE( EngineChildProcessTest, AutomatedRunPassesUnattendedToChildren )
 
     sw::CommandLineManager humanRun;
     parseCommandLine( humanRun, nullptr );
-    const sw::ProcessCommand humanChild = sw::EngineChildProcess::makeCommand( humanRun, executable, { "-gv_firstScene=a.scene.xml" } );
+    const sw::ProcessCommand humanChild = sw::ProcessCommand::forEngineChild( humanRun, executable, { "-gv_firstScene=a.scene.xml" } );
     SW_EXPECT_EQUAL( size_t{ 1 }, humanChild._listArgument.size() );
 
     sw::CommandLineManager scenarioRun;
     parseCommandLine( scenarioRun, "-scenario=engine/automation/editor/idle.scenario.xml" );
-    const sw::ProcessCommand child = sw::EngineChildProcess::makeCommand( scenarioRun, executable, { "-gv_firstScene=a.scene.xml" } );
+    const sw::ProcessCommand child = sw::ProcessCommand::forEngineChild( scenarioRun, executable, { "-gv_firstScene=a.scene.xml" } );
     SW_REQUIRE_EQUAL( size_t{ 2 }, child._listArgument.size() );
     SW_EXPECT_EQUAL( sw::string( "-unattended" ), child._listArgument[1] );
 
-    const sw::ProcessCommand already = sw::EngineChildProcess::makeCommand( scenarioRun, executable, { "-unattended" } );
+    const sw::ProcessCommand already = sw::ProcessCommand::forEngineChild( scenarioRun, executable, { "-unattended" } );
     SW_EXPECT_EQUAL( size_t{ 1 }, already._listArgument.size() );
 }
 
@@ -49,6 +49,6 @@ SW_TEST_CASE( EngineChildProcessTest, EmptyExecutableMakesEmptyCommand )
 {
     sw::CommandLineManager humanRun;
     parseCommandLine( humanRun, nullptr );
-    const sw::ProcessCommand command = sw::EngineChildProcess::makeCommand( humanRun, sw::AbsolutePath{}, { "-x" } );
+    const sw::ProcessCommand command = sw::ProcessCommand::forEngineChild( humanRun, sw::AbsolutePath{}, { "-x" } );
     SW_EXPECT_TRUE( command._listArgument.empty() );
 }

@@ -5,7 +5,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Task/TaskManager.h"
 
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Navigation/Component/NavMeshObstacleComponent.h"
 #include "Engine/Navigation/INavMesh.h"
 #include "Engine/Navigation/NavMeshGeometry.h"
@@ -302,7 +302,7 @@ namespace sw
                 NavTileBakeJob* pRaw            = pJob.get();
                 pRuntime->_listJob.push_back( std::move( pJob ) );
                 // 워커가 없으면(테스트 · 도구) 지금 베이크한다 — 끼우기는 그래도 다음 갱신이다.
-                if ( engine::areEngineServicesBound() )
+                if ( engine::areEngineSubsystemsBound() )
                 {
                     TaskManager& taskManager = engine::getSubsystem<TaskManager>();
                     pRaw->_task              = taskManager.emplaceTask( "NavTileBake", SW_DELEGATE_METHOD( TaskDelegate, &NavTileBakeJob::run, pRaw ) );

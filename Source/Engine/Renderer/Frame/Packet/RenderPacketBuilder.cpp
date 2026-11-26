@@ -3,7 +3,7 @@
 #include "Engine/Renderer/Frame/Packet/RenderPacketBuilder.h"
 
 #include "Engine/Asset/AssetManager.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
@@ -75,7 +75,7 @@ namespace sw
         // 렌더 설정 스위치는 여기서 한 번 뜬다(게임 스레드) — 이 패킷을 짓는 쪽(그림자 텍셀 스냅)과 렌더 스레드가 같은 값을 본다.
         packet._settings = RenderFrameSettings::capture();
         // 패킷 밖 소비자(텍스처 로드 워커 · 업로드 펌프)의 사본도 같은 자리에서 다시 뜬다.
-        if ( engine::areEngineServicesBound() )
+        if ( engine::areEngineSubsystemsBound() )
             engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>().refreshQualitySettings();
         return packet;
     }
@@ -120,8 +120,8 @@ namespace sw
         _scene.resolveMarkerInstanceSlots( packet, pUISystem, pActiveScene );
     }
 
-    void RenderPacketBuilder::populateCanvas( RenderFramePacket& packet, bool bSceneMain, UISystem* pUISystem, FontService* pFontService, const RHI* pRHI )
+    void RenderPacketBuilder::populateCanvas( RenderFramePacket& packet, bool bSceneMain, UISystem* pUISystem, FontSubsystem* pFontSubsystem, const RHI* pRHI )
     {
-        _canvas.populate( packet, bSceneMain, pUISystem, pFontService, pRHI );
+        _canvas.populate( packet, bSceneMain, pUISystem, pFontSubsystem, pRHI );
     }
 } // namespace sw

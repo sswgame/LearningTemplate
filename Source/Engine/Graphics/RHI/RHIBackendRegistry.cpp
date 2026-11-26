@@ -8,8 +8,8 @@
 #include "Core/Path/AbsolutePath.h"
 #include "Core/Registry/RegistrationChain.h"
 
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/RHI/RHIBackendInfo.h"
@@ -230,5 +230,5 @@ namespace sw
 
 namespace sw
 {
-    SW_ENGINE_SERVICE_SUBSYSTEM( RHIBackendRegistry, HostOnly, Process, Services, (), SW_ENGINE_DEFAULT_FACTORY( RHIBackendRegistry ) );
+    SW_ENGINE_SUBSYSTEM_WITH_SLOT( RHIBackendRegistry, HostOnly, Process, Shared, (), SW_ENGINE_DEFAULT_FACTORY( RHIBackendRegistry ) );
 } // namespace sw

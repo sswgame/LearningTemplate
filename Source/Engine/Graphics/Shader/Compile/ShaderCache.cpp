@@ -19,8 +19,8 @@
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Content/AssetIO.h"
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/Debug/RenderDiagnostics.h"
 #include "Engine/Graphics/Shader/Compile/ShaderBytecodeProvider.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
@@ -186,7 +186,7 @@ namespace sw
         waitForLoadsInFlight();
         writeRequestLog();
         clearCache();
-        // 리플렉션 매니페스트도 셰이더 층이 종료될 때 같이 비운다(백엔드 교체로 다시 서면 새 백엔드의 매니페스트를 읽는다). 소멸자에서도 불리므로 서비스 칸을 거치지 않는다.
+        // 리플렉션 매니페스트도 셰이더 층이 종료될 때 같이 비운다(백엔드 교체로 다시 서면 새 백엔드의 매니페스트를 읽는다). 소멸자에서도 불리므로 서브시스템 칸을 거치지 않는다.
         _reflectionManifests.clear();
         _pProvider.reset(); // 진행 중인 로드를 모두 기다린 뒤다
     }
@@ -439,5 +439,5 @@ namespace sw
 
 namespace sw
 {
-    SW_ENGINE_SERVICE_SUBSYSTEM( ShaderCache, GameVisible, Process, Startup, (), SW_ENGINE_DEFAULT_FACTORY( ShaderCache ) );
+    SW_ENGINE_SUBSYSTEM_WITH_SLOT( ShaderCache, GameVisible, Process, Startup, (), SW_ENGINE_DEFAULT_FACTORY( ShaderCache ) );
 } // namespace sw

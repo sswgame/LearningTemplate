@@ -9,7 +9,7 @@
 #include "Engine/Animation/Graph/AnimationGraphParams.h"
 #include "Engine/Animation/Skeletal/AnimationPoseNode.h"
 #include "Engine/Content/AssetIO.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
 #include "Engine/Serialization/Inherit/DataInheritanceSchemaRegistry.h"
 #include "Engine/Serialization/Inherit/ResourceComposer.h"

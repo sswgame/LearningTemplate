@@ -10,8 +10,8 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Foundation/SceneIterationKey.h"
 #include "Engine/Foundation/StateHashBuilder.h"
 #include "Engine/Object/Component/Component.h"
@@ -312,7 +312,7 @@ namespace sw
 
     void StateHashHistory::recordActiveScene( uint64 tick )
     {
-        if ( isRecording() == false || engine::areEngineServicesBound() == false )
+        if ( isRecording() == false || engine::areEngineSubsystemsBound() == false )
             return;
         StateHashSample latest;
         if ( tryGetLatest( latest ) && latest._tick == tick )
@@ -643,5 +643,5 @@ namespace sw
 namespace sw
 {
     // 게임 모듈에도 보인다 — 키트가 이름 붙은 해시 줄을 단다(`DestructionNetSessionComponent` 의 `destruction` 줄, 언리얼 게임 코드도 네트워크 예측 · 리플레이 디버그 해시를 직접 남긴다).
-    SW_ENGINE_SERVICE_SUBSYSTEM( StateHashHistory, GameVisible, GameInstance, Services, (), SW_ENGINE_DEFAULT_FACTORY( StateHashHistory ) );
+    SW_ENGINE_SUBSYSTEM_WITH_SLOT( StateHashHistory, GameVisible, GameInstance, Shared, (), SW_ENGINE_DEFAULT_FACTORY( StateHashHistory ) );
 } // namespace sw

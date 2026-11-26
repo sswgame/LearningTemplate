@@ -2,7 +2,7 @@
 #include "pch.h"
 
 #include "Core/File/FileUtil.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "DevTools/AssetReload/ReloadSource.h"
@@ -15,7 +15,7 @@
 #include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Asset/Cache/WeakInternCache.h"
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/TileMap/TileSetAsset.h"

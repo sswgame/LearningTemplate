@@ -3,9 +3,15 @@
 #include "Core/Network/Replication/NetClock.h"
 #include "Core/Testing/TestFramework.h"
 
+#include <type_traits>
+
 // 서버 시계 — 서버는 흐른 시간이 시각이고 클라이언트는 받은 틱을 하한으로 흐르되 정한 만큼까지만 앞선다. 화면 시계 — 지연 규칙(최소값 · 표본 간격 × 2), 받은 표본을 지나치지 않음, 되돌아가지 않음, 비우기.
 
 using namespace sw;
+
+// 결함 2846c7ad · 2a060a6f · 7b501ac7(서버 틱 대신 프레임 시간 float 를 흘렸다): 월드의 서버 시계는 씬의 게임 시간으로만 흐르고, 틱 번호(정수 · float64)와 길이가 형식으로 갈린다.
+static_assert( std::is_invocable_v<decltype( &NetClock::advance ), NetClock&, GameSeconds>, "the world clock advances by game time" );
+static_assert( std::is_invocable_v<decltype( &NetClock::advance ), NetClock&, float32> == false && std::is_invocable_v<decltype( &NetClock::advance ), NetClock&, RealSeconds> == false, "a bare float or wall clock time does not advance it" );
 
 namespace
 {
@@ -33,7 +39,7 @@ SW_TEST_CASE( NetClockTest, ReceivedTickFollowsTheCurrentLatency )
     {
         ++serverTick;
         clock.observe( serverTick );
-        clock.advance( kClockFrame );
+        clock.advance( GameSeconds{ kClockFrame } );
     }
     SW_EXPECT_NEAR( static_cast<float64>( serverTick ) + 1.0, clock.getReceivedTick(), 1.0e-6 );
     constexpr uint32 kDelayTicks = 12;
@@ -42,7 +48,7 @@ SW_TEST_CASE( NetClockTest, ReceivedTickFollowsTheCurrentLatency )
         ++serverTick;
         if ( frame >= kDelayTicks )
             clock.observe( serverTick - kDelayTicks );
-        clock.advance( kClockFrame );
+        clock.advance( GameSeconds{ kClockFrame } );
     }
     SW_EXPECT_NEAR( static_cast<float64>( serverTick - kDelayTicks ) + 1.0, clock.getReceivedTick(), 1.0e-6 );
     SW_EXPECT_TRUE( clock.getServerTick() > clock.getReceivedTick() + 10.0 ); // 되돌아가지 않는 추정은 앞선 채다
@@ -57,13 +63,13 @@ SW_TEST_CASE( NetClockTest, AuthorityCountsElapsedTimeOnOneSequence )
     SW_EXPECT_EQUAL( 0u, clock.getWholeTick() );
     for ( int32 frame = 0; frame < 30; ++frame )
     {
-        clock.advance( 1.0f / 30.0f );
+        clock.advance( GameSeconds{ 1.0f / 30.0f } );
     }
     SW_EXPECT_EQUAL( 60u, clock.getWholeTick() );
     SW_EXPECT_EQUAL( 30u, clock.getWholeTick( NetClock::computeStride( 1.0f / 30.0f ).value_or( 1u ) ) );
     clock.observe( 5000 ); // 서버의 시각은 메시지가 정하지 않는다
     SW_EXPECT_EQUAL( 60u, clock.getWholeTick() );
-    clock.advance( 10.0f );
+    clock.advance( GameSeconds{ 10.0f } );
     SW_EXPECT_EQUAL( 60u + NetClock::kMaxTicksPerAdvance, clock.getWholeTick() );
 }
 
@@ -82,11 +88,11 @@ SW_TEST_CASE( NetClockTest, ReplicaFollowsTheNewestReceivedTick )
 {
     NetClock clock;
     clock.reset( NetClockSide::Replica );
-    clock.advance( 1.0f ); // 서버 틱을 받기 전 — 서 있다
+    clock.advance( GameSeconds{ 1.0f } ); // 서버 틱을 받기 전 — 서 있다
     SW_EXPECT_FALSE( clock.hasServerTick() );
     clock.observe( 100 );
     SW_EXPECT_NEAR( 100.0, clock.getServerTick(), 1.0e-6 );
-    clock.advance( kClockFrame );
+    clock.advance( GameSeconds{ kClockFrame } );
     SW_EXPECT_NEAR( 101.0, clock.getServerTick(), 1.0e-3 );
     clock.observe( 90 );
     SW_EXPECT_NEAR( 101.0, clock.getServerTick(), 1.0e-3 );
@@ -94,7 +100,7 @@ SW_TEST_CASE( NetClockTest, ReplicaFollowsTheNewestReceivedTick )
     SW_EXPECT_NEAR( 110.0, clock.getServerTick(), 1.0e-6 );
     for ( int32 frame = 0; frame < 120; ++frame )
     {
-        clock.advance( kClockFrame );
+        clock.advance( GameSeconds{ kClockFrame } );
     }
     SW_EXPECT_NEAR( 110.0 + static_cast<float64>( NetClock::kMaxLeadSeconds / NetClock::kTickSeconds ), clock.getServerTick(), 1.0e-3 );
     clock.reset( NetClockSide::Replica );
@@ -117,12 +123,12 @@ SW_TEST_CASE( NetClockTest, RenderTickDrawsTwoSampleIntervalsBehindAndNeverGoesB
     render.observeSample( 100 );
     render.follow( clock );
     SW_EXPECT_NEAR( 88.0, render.getRenderTick(), 1.0e-3 );
-    clock.advance( kClockFrame );
+    clock.advance( GameSeconds{ kClockFrame } );
     render.follow( clock );
     SW_EXPECT_NEAR( 89.0, render.getRenderTick(), 1.0e-3 );
 
     render.setSampleInterval( 0.5f ); // 지연 1 초(60 틱) — 목표가 뒤로 가도 화면 틱은 서서 기다린다
-    clock.advance( kClockFrame );
+    clock.advance( GameSeconds{ kClockFrame } );
     render.follow( clock );
     SW_EXPECT_NEAR( 89.0, render.getRenderTick(), 1.0e-3 );
     render.setSampleInterval( 0.0f ); // 지연 0.1 초(6 틱) — 앞으로는 바로 간다
@@ -152,7 +158,7 @@ SW_TEST_CASE( NetClockTest, FeaturesOfOneWorldShareTheClock )
     {
         clock.observe( tick * 2u );
         movement.observeSample( tick );
-        clock.advance( kClockFrame * 2.0f );
+        clock.advance( GameSeconds{ kClockFrame * 2.0f } );
         movement.follow( clock );
         chunks.follow( clock );
     }
@@ -170,10 +176,10 @@ SW_TEST_CASE( NetClockTest, RenderTickAdvancesAfterDaysOfTicks )
     constexpr uint32 kDaysOfTicks = 60u * 3600u * 24u * 3u; // 사흘
     clock.observe( kDaysOfTicks );
     render.observeSample( kDaysOfTicks / 2u );
-    clock.advance( kClockFrame );
+    clock.advance( GameSeconds{ kClockFrame } );
     render.follow( clock );
     const float64 before = render.getRenderTick();
-    clock.advance( kClockFrame ); // 새 틱 없이 한 프레임 — 30 Hz 틱의 절반만큼 나아간다
+    clock.advance( GameSeconds{ kClockFrame } ); // 새 틱 없이 한 프레임 — 30 Hz 틱의 절반만큼 나아간다
     render.follow( clock );
     SW_EXPECT_NEAR( 0.5, render.getRenderTick() - before, 1.0e-3 );
 }

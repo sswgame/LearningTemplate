@@ -13,8 +13,8 @@
 #pragma once
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Subsystem/Subsystem.h"
+#include "Core/Subsystem/SubsystemSlot.h"
 
 namespace sw
 {
@@ -57,6 +57,6 @@ namespace sw
     private:
         DeterministicRunPolicy _policy;
 
-        SW_SERVICE_SLOT( DeterministicRun, Required );
+        SW_SUBSYSTEM_SLOT( DeterministicRun, Required );
     };
 } // namespace sw

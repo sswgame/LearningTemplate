@@ -6,7 +6,7 @@
 #include "Engine/Serialization/JSON/JSONWriter.h"
 
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Security/JSONWebToken.h"
-#include "GameFramework/Runtime/Foundation/Service/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 
 // JSONWebTokenTest — 신뢰 경계: 서명 · 클레임(iss · aud · exp) 확인을 통과해야 본문을 읽는다. 바꾼 본문 · 다른 키 · 지난 토큰 · 알고리즘 none 을 거절하는지 본다(nogpu).
 

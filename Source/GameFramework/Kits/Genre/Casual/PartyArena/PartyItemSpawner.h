@@ -12,8 +12,9 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 #include "Core/Time/Countdown.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Content/AssetTypeRegistry.h"
@@ -122,7 +123,7 @@ namespace sw
         [[nodiscard]] bool initialize( const PartyItemSpawnSettings& settings, uint32 seed );
         void               addItem( const PartyItemDef& def ) { (void)_catalog.add( def ); }
 
-        void update( float32 deltaTime );
+        void update( GameSeconds frameTime );
         /** @brief @p position 에서 @p radius 안의 가장 가까운 아이템을 줍습니다. 없으면 false 를 반환합니다. */
         [[nodiscard]] bool tryPickUp( const float3& position, float32 radius, PartyItemInstance& outItem );
         void               pollEvents( vector<PartyItemEvent>& outListEvent );

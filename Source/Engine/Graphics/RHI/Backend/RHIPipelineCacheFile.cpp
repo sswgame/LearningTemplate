@@ -10,7 +10,7 @@
 #include "Core/Task/TaskManager.h"
 #include "Core/Time/MonotonicClock.h"
 
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 
 namespace sw
 {
@@ -46,7 +46,7 @@ namespace sw
 
     bool RHIPipelineCacheFile::isIntervalPassed() const
     {
-        return isOpen() && engine::areEngineServicesBound() && MonotonicClock::nowNanoseconds() - _lastSaveNanoseconds >= _saveIntervalNanoseconds;
+        return isOpen() && engine::areEngineSubsystemsBound() && MonotonicClock::nowNanoseconds() - _lastSaveNanoseconds >= _saveIntervalNanoseconds;
     }
 
     void RHIPipelineCacheFile::saveIfDue( uint64 cacheBytes )
@@ -71,7 +71,7 @@ namespace sw
     {
         if ( isOpen() == false )
             return;
-        if ( engine::areEngineServicesBound() )
+        if ( engine::areEngineSubsystemsBound() )
             engine::getSubsystem<TaskManager>().waitStage( _saveStage, "RHIPipelineCacheFile::saveAndClose" );
         write();
         _serialize = RHIPipelineCacheSerializeDelegate{};

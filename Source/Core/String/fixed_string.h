@@ -11,7 +11,6 @@
 #include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringUtil.h"
-#include "Core/String/UTF8Util.h"
 
 namespace sw
 {
@@ -385,7 +384,7 @@ namespace sw
                 return cut;
             if constexpr ( sizeof( T ) == 1 )
             {
-                cut = static_cast<uint32>( UTF8Util::backOffToCharacterStart( pSource, cut ) );
+                cut = static_cast<uint32>( StringUtil::backOffToUTF8CharacterStart( pSource, cut ) );
             }
             else if constexpr ( sizeof( T ) == 2 )
             {

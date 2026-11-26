@@ -14,7 +14,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Module/ModuleLibraryUtil.h"
 #include "Core/Path/AbsolutePath.h"
-#include "Core/Process/ProcessEnvironment.h"
+#include "Core/Process/Process.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Profiling/ProfilerBackend.h"

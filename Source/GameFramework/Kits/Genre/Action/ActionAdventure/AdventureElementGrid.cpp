@@ -236,9 +236,9 @@ namespace sw
         _grid.step();
     }
 
-    int32 AdventureElementGrid::update( float32 deltaTime )
+    int32 AdventureElementGrid::update( GameSeconds frameTime )
     {
-        return _grid.update( deltaTime );
+        return _grid.update( frameTime );
     }
 
     void AdventureElementGrid::pollEvents( vector<AdventureElementEvent>& outListEvent )

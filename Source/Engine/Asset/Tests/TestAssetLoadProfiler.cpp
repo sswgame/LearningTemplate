@@ -5,7 +5,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Asset/AssetLoadProfiler.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 
 // 에셋 로드 기록의 켜짐 — 로드 워커가 읽는 것은 게임 스레드가 뜬 사본이다(nogpu).
 

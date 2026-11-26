@@ -3,7 +3,7 @@
 #include "Engine/Renderer/Capture/CaptureReadiness.h"
 
 #include "Engine/Asset/AssetManager.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
 #include "Engine/Graphics/View/SimulationOnlyFrameQueue.h"
 #include "Engine/Navigation/Scene/SceneNavigation.h"
@@ -24,7 +24,7 @@ namespace sw
             count += static_cast<uint32>( pManager->getPrimitiveRegistry().countAssetWaiters() );
             count += pManager->getSubsystem<SceneNavigation>().getWaitingMeshCount();
         }
-        if ( engine::areEngineServicesBound() )
+        if ( engine::areEngineSubsystemsBound() )
             count += engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>().countLoadsInFlight();
         return count;
     }

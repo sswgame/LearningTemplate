@@ -8,8 +8,8 @@
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Automation/Scenario/AutomationCaptureUtil.h"
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemHost.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/Debug/RenderTargetRegistry.h"
 #include "Engine/Graphics/View/ScreenshotRequestQueue.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"

@@ -47,13 +47,13 @@ namespace
         {
             ControlIntent intent;
             intent._move = float2{ x, y };
-            _mover.update( 0.0f, intent, kInteractButton );
+            _mover.update( GameSeconds{ 0.0f }, intent, kInteractButton );
         }
 
         void finishStep()
         {
             ControlIntent intent;
-            _mover.update( kStepSeconds * 2.0f, intent, kInteractButton );
+            _mover.update( GameSeconds{ kStepSeconds * 2.0f }, intent, kInteractButton );
         }
 
         void walkRight()
@@ -149,14 +149,14 @@ SW_TEST_CASE( OverworldTileMoverTest, InteractWinsOverMoveAndIsConsumedOnce )
     intent._move = float2{ 1.0f, 0.0f };
     intent.setButton( OverworldFixture::kInteractButton, true );
     intent.addTrigger( OverworldFixture::kInteractButton, 0.0f, 0.0f, ControlViewTick::makePresent() );
-    rig._mover.update( 0.0f, intent, OverworldFixture::kInteractButton );
+    rig._mover.update( GameSeconds{ 0.0f }, intent, OverworldFixture::kInteractButton );
     SW_EXPECT_EQUAL( 2, rig._mover.getTileX() );
     SW_EXPECT_TRUE( rig._mover.getLocomotion().getState() == LocomotionState::Interact );
     SW_EXPECT_TRUE( rig._mover.consumeInteractRequest() );
     SW_EXPECT_FALSE( rig._mover.consumeInteractRequest() );
 
     rig.finishStep();
-    rig._mover.update( 0.0f, intent, nullopt ); // 버튼이 없는 폰은 상호작용하지 않고 걷는다
+    rig._mover.update( GameSeconds{ 0.0f }, intent, nullopt ); // 버튼이 없는 폰은 상호작용하지 않고 걷는다
     SW_EXPECT_EQUAL( 3, rig._mover.getTileX() );
     SW_EXPECT_FALSE( rig._mover.consumeInteractRequest() );
 }

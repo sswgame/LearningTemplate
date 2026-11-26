@@ -9,7 +9,7 @@
 #include "Engine/Asset/AssetLoadProfiler.h"
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Content/AssetIO.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Object/Component/ComponentStableKey.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -1121,7 +1121,7 @@ namespace sw
         _bValid      = state.has_value() ? SW_TRUE : SW_FALSE;
 
         PrefabCache* pPrefabs = pNestedPrefabs;
-        if ( pPrefabs == nullptr && engine::areEngineServicesBound() )
+        if ( pPrefabs == nullptr && engine::areEngineSubsystemsBound() )
             pPrefabs = &engine::getSubsystem<AssetManager>().getAssetCache<PrefabCache>();
         PrefabAssetInternal::captureNestedParts( *pGameObject, pPrefabs, _listNestedInstance );
     }

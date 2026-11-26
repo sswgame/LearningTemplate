@@ -3,7 +3,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/File/UserDataPath.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Process/ProcessEnvironment.h"
+#include "Core/Process/Process.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/Testing/TestFramework.h"
 

@@ -10,7 +10,7 @@
 #include "Engine/Asset/Image/DDSLoader.h"
 #include "Engine/Asset/Image/TextureMipLayout.h"
 #include "Engine/Content/AssetIO.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/RHI/RHIFormatInfo.h"
@@ -28,7 +28,7 @@ namespace sw
             /** @brief 텍스처 캐시가 장치에 맞춰 고른 형식 변형 접미사입니다. 엔진 서비스가 없는 도구 · 테스트는 빈 글(원본 그대로)입니다. */
             static string findFormatVariantSuffix()
             {
-                if ( engine::areEngineServicesBound() == false )
+                if ( engine::areEngineSubsystemsBound() == false )
                     return {};
                 const AssetManager* const pAssets = engine::findSubsystem<AssetManager>();
                 return pAssets != nullptr ? pAssets->getAssetCache<TextureCache>().getFormatVariantSuffix() : string{};

@@ -8,8 +8,8 @@
 #include "Editor/Common/Config/EditorDefaultAssets.h"
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/Localization/EditorDataText.h"
-#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorStateStore.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 #include "Editor/Panels/ContentBrowser/Model/ContentBrowserViewModel.h"
 
 #include "Engine/Content/AssetID.h"

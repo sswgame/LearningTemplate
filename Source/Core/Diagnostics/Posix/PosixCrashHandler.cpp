@@ -5,7 +5,7 @@
 #include "Core/Diagnostics/CrashHandler.h"
 #include "Core/Diagnostics/CrashHandlerProcessHook.h"
 #include "Core/Log/Logger.h"
-#include "Core/Process/ThreadCrashStack.h"
+#include "Core/Process/Process.h"
 
 #include <csignal>
 #include <ctime>

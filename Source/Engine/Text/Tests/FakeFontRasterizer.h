@@ -1,6 +1,6 @@
 /**
  * @file FakeFontRasterizer.h
- * @brief 글자 테스트가 쓰는 결정적인 가짜 래스터라이저와 그것을 든 FontService 도우미입니다(케이스 아님 — 텍스트 · 캔버스 · UI 테스트가 함께 쓴다).
+ * @brief 글자 테스트가 쓰는 결정적인 가짜 래스터라이저와 그것을 든 FontSubsystem 도우미입니다(케이스 아님 — 텍스트 · 캔버스 · UI 테스트가 함께 쓴다).
  * @details 면은 `loadFace` 의 debugName(= 글꼴 경로)으로 미리 적은 설정을 찾습니다. 글리프 번호 = 코드 포인트(가진 범위 안일 때), 전진 0.5 em
  *          (공백 0.25 em), 상승 0.8 · 하강 -0.2(설정으로 바꾼다), 커닝은 적은 쌍만, SDF 는 4×4 의 128 입니다. 래스터화 횟수를 셉니다.
  *          실제 글꼴 파일 · FreeType 을 읽지 않아 기계마다 같다. 배포 구성은 `Tests/` 를 짓지 않으므로 이 하네스도 여기 둔다.
@@ -12,7 +12,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Text/FontCatalog.h"
-#include "Engine/Text/FontService.h"
+#include "Engine/Text/FontSubsystem.h"
 #include "Engine/Text/GlyphCache.h"
 #include "Engine/Text/IFontRasterizer.h"
 #include "Engine/Text/ITextShaper.h"
@@ -199,25 +199,25 @@ namespace sw::test
 namespace sw::test
 {
     /**
-     * @brief 가짜 래스터라이저를 든 FontService 을 세우는 도우미입니다. 카탈로그 면 경로마다 메모리 글꼴 한 바이트를 등록해 "파일" 이 읽히게 합니다.
-     * @details 래스터라이저는 FontService 이 소유하므로, 설정을 고칠 포인터(`_pRasterizer`)를 따로 듭니다. 엔진의 `Fonts` 서브시스템은 건드리지 않는다(별도 인스턴스).
+     * @brief 가짜 래스터라이저를 든 FontSubsystem 을 세우는 도우미입니다. 카탈로그 면 경로마다 메모리 글꼴 한 바이트를 등록해 "파일" 이 읽히게 합니다.
+     * @details 래스터라이저는 FontSubsystem 이 소유하므로, 설정을 고칠 포인터(`_pRasterizer`)를 따로 듭니다. 엔진의 `Fonts` 서브시스템은 건드리지 않는다(별도 인스턴스).
      */
-    struct FakeFontServiceFixture
+    struct FakeFontSubsystemFixture
     {
-        FakeFontRasterizer*     _pRasterizer; ///< FontService 이 소유한 가짜(설정을 고칠 때)
-        unique_ptr<FontService> _fontService; ///< 테스트 대상
+        FakeFontRasterizer*       _pRasterizer; ///< FontSubsystem 이 소유한 가짜(설정을 고칠 때)
+        unique_ptr<FontSubsystem> _fontService; ///< 테스트 대상
 
         /**
          * @param pLocalization 대체 목록을 묻는 곳. 기본은 없음(카탈로그 기본 연쇄만) — 엔진 범위의 것을 쓰면 그 문화권의 대체 가족(테스트 카탈로그에 없다)이
          *        경고를 내어 케이스가 실행 기계의 언어에 기댄다. 문화권을 보는 테스트만 자기 매니저를 넘긴다.
          */
-        explicit FakeFontServiceFixture( const LocalizationManager* pLocalization = nullptr )
+        explicit FakeFontSubsystemFixture( const LocalizationManager* pLocalization = nullptr )
             : _pRasterizer{ nullptr }
             , _fontService{}
         {
             unique_ptr<FakeFontRasterizer> rasterizer = make_unique<FakeFontRasterizer>();
             _pRasterizer                              = rasterizer.get();
-            _fontService                              = make_unique<FontService>( std::move( rasterizer ), pLocalization );
+            _fontService                              = make_unique<FontSubsystem>( std::move( rasterizer ), pLocalization );
         }
 
         /** @brief 카탈로그의 모든 저장소 면 경로를 메모리 글꼴로 등록하고 시작합니다. */

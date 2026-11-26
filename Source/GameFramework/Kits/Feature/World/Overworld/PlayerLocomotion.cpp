@@ -21,11 +21,11 @@ namespace sw
         _stateTimer.clear();
     }
 
-    void PlayerLocomotion::update( float32 deltaTime )
+    void PlayerLocomotion::update( GameSeconds frameTime )
     {
         if ( _stateTimer.isActive() == false )
             return;
-        if ( _stateTimer.update( deltaTime ) == false )
+        if ( _stateTimer.update( frameTime ) == false )
             return;
 
         if ( _state == LocomotionState::Walk || _state == LocomotionState::Interact )

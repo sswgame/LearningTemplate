@@ -240,11 +240,11 @@ namespace sw
         }
     }
 
-    void RestaurantSimulation::update( float32 deltaMinutes )
+    void RestaurantSimulation::update( GameSeconds frameTime, float32 minutesPerSecond )
     {
         if ( _pCatalog == nullptr )
             return;
-        const int32 stepCount = _stepTimer.consume( deltaMinutes );
+        const int32 stepCount = _stepTimer.consumeScaled( frameTime, minutesPerSecond );
         for ( int32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
         {
             stepFixed();

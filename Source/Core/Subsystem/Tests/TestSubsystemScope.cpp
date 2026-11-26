@@ -19,7 +19,7 @@ namespace
 
     /**
      * @brief 서브시스템 자체를 드러내는 조회 대상 인터페이스입니다(`expose` · `publish`).
-     * @details 서브시스템 인터페이스라 `Subsystem` 을 기반으로 둔다(`IEditorPanelService` 와 같은 모양) — 구현이 `Subsystem` 과 함께 다중 상속하지 않는다.
+     * @details 서브시스템 인터페이스라 `Subsystem` 을 기반으로 둔다(`IEditorPanelSubsystem` 와 같은 모양) — 구현이 `Subsystem` 과 함께 다중 상속하지 않는다.
      */
     class IScopeProbeSubsystem : public Subsystem
     {
@@ -199,7 +199,7 @@ SW_TEST_CASE( SubsystemScopeTest, UndeclaredMemberLookupDuringInitializeFailsSta
     ScopeCatalogOwnerSubsystem& owner = scope.emplaceSubsystem<ScopeCatalogOwnerSubsystem>();
     SW_REQUIRE_TRUE( scope.exposeMember( owner, owner.getCatalog() ) );
     SW_EXPECT_FALSE( scope.exposeMember( owner, owner.getCatalog() ) );                         // 같은 타입을 두 번 걸지 않는다
-    SW_EXPECT_TRUE( scope.findOwnerInScope( getSubsystemTypeHash<ScopeCatalog>() ) == &owner ); // 서비스 칸이 바인딩 때 묻는 주인
+    SW_EXPECT_TRUE( scope.findOwnerInScope( getSubsystemTypeHash<ScopeCatalog>() ) == &owner ); // 서브시스템 칸이 바인딩 때 묻는 주인
     (void)scope.emplaceSubsystem<ScopeLookupSubsystem<0, ScopeCatalog>>( scope, "ZLookup", vector<const utf8*>{}, &bShutDown );
     SW_EXPECT_FALSE( scope.getCollection().initializeAll( SubsystemHostMask::All ) );
     const string& error = scope.getCollection().getError();
@@ -258,7 +258,7 @@ SW_TEST_CASE( SubsystemScopeTest, FindsOwnedAndBorrowedByType )
     ScopeCatalog catalog{ 3 };
     SW_EXPECT_TRUE( scope.bind( &catalog ) );
     SW_EXPECT_TRUE( scope.find<ScopeCatalog>() == &catalog );
-    SW_EXPECT_TRUE( locateSubsystem<const ScopeCatalog>( &scope ) == &catalog ); // const 로 찾아도 같은 칸이다
+    SW_EXPECT_TRUE( findSubsystemFrom<const ScopeCatalog>( &scope ) == &catalog ); // const 로 찾아도 같은 칸이다
 
     ScopeCatalog other{ 4 };
     SW_EXPECT_FALSE( scope.bind( &other ) ); // 같은 타입이 걸려 있으면 거절 — 나중 것이 앞 것을 소리 없이 덮지 않는다
@@ -276,9 +276,9 @@ SW_TEST_CASE( SubsystemScopeTest, ConstBindingIsFoundOnlyAsConst )
     const ScopeCatalog catalog{ 3 };
     SW_EXPECT_TRUE( scope.bind( &catalog ) );
     SW_EXPECT_TRUE( scope.find<const ScopeCatalog>() == &catalog );
-    SW_EXPECT_TRUE( locateSubsystem<const ScopeCatalog>( &scope ) == &catalog );
+    SW_EXPECT_TRUE( findSubsystemFrom<const ScopeCatalog>( &scope ) == &catalog );
     SW_EXPECT_TRUE( scope.find<ScopeCatalog>() == nullptr );
-    SW_EXPECT_TRUE( locateSubsystem<ScopeCatalog>( &scope ) == nullptr );
+    SW_EXPECT_TRUE( findSubsystemFrom<ScopeCatalog>( &scope ) == nullptr );
 
     ScopeCatalog mutableCatalog{ 4 };
     SW_EXPECT_FALSE( scope.bind( &mutableCatalog ) );
@@ -287,8 +287,8 @@ SW_TEST_CASE( SubsystemScopeTest, ConstBindingIsFoundOnlyAsConst )
 
     // 상위의 일반 칸은 비-const 조회에 그대로 보이고, 가까운 const 칸이 const 조회에서 이긴다.
     SW_EXPECT_TRUE( parent.bind( &mutableCatalog ) );
-    SW_EXPECT_TRUE( locateSubsystem<ScopeCatalog>( &scope ) == &mutableCatalog );
-    SW_EXPECT_TRUE( locateSubsystem<const ScopeCatalog>( &scope ) == &catalog );
+    SW_EXPECT_TRUE( findSubsystemFrom<ScopeCatalog>( &scope ) == &mutableCatalog );
+    SW_EXPECT_TRUE( findSubsystemFrom<const ScopeCatalog>( &scope ) == &catalog );
 
     scope.unbind<const ScopeCatalog>();
     SW_EXPECT_TRUE( scope.find<const ScopeCatalog>() == nullptr );
@@ -304,12 +304,12 @@ SW_TEST_CASE( SubsystemScopeTest, LookupFallsBackToTheParentScope )
     ScopeCatalog   parentCatalog{ 1 };
     ScopeCatalog   childCatalog{ 2 };
     SW_EXPECT_TRUE( parent.bind( &parentCatalog ) );
-    SW_EXPECT_TRUE( child.find<ScopeCatalog>() == nullptr );                     // find 는 이 범위만 본다
-    SW_EXPECT_TRUE( locateSubsystem<ScopeCatalog>( &child ) == &parentCatalog ); // locate 는 상위로 올라간다
+    SW_EXPECT_TRUE( child.find<ScopeCatalog>() == nullptr );                       // find 는 이 범위만 본다
+    SW_EXPECT_TRUE( findSubsystemFrom<ScopeCatalog>( &child ) == &parentCatalog ); // findSubsystemFrom 은 상위로 올라간다
     SW_EXPECT_TRUE( child.bind( &childCatalog ) );
-    SW_EXPECT_TRUE( locateSubsystem<ScopeCatalog>( &child ) == &childCatalog );   // 가까운 범위가 이긴다
-    SW_EXPECT_TRUE( locateSubsystem<ScopeCatalog>( &parent ) == &parentCatalog ); // 상위는 하위를 보지 않는다
-    SW_EXPECT_TRUE( locateSubsystem<ScopeCatalog>( nullptr ) == nullptr );
+    SW_EXPECT_TRUE( findSubsystemFrom<ScopeCatalog>( &child ) == &childCatalog );   // 가까운 범위가 이긴다
+    SW_EXPECT_TRUE( findSubsystemFrom<ScopeCatalog>( &parent ) == &parentCatalog ); // 상위는 하위를 보지 않는다
+    SW_EXPECT_TRUE( findSubsystemFrom<ScopeCatalog>( nullptr ) == nullptr );
 }
 
 /**
@@ -351,7 +351,7 @@ SW_TEST_CASE( SubsystemScopeTest, MountedChildPublishesIntoTheParent )
     }
     ScopeCatalog catalog{ 5 };
     SW_EXPECT_TRUE( parent.bind( &catalog ) );
-    SW_EXPECT_TRUE( locateSubsystem<ScopeCatalog>( parent.findChildScope( "ModuleA" ) ) == &catalog );
+    SW_EXPECT_TRUE( findSubsystemFrom<ScopeCatalog>( parent.findChildScope( "ModuleA" ) ) == &catalog );
 
     parent.unmountChildScope( "ModuleA" );
     SW_EXPECT_TRUE( bDestroyed );

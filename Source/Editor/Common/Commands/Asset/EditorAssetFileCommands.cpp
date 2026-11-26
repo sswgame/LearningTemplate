@@ -21,10 +21,10 @@
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorNotificationManager.h"
-#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorStateStore.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
-#include "Editor/Common/Workspace/IEditorPanelService.h"
+#include "Editor/Common/Workspace/IEditorPanelSubsystem.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 
 #include "Engine/Asset/AssetDatabase.h"
@@ -625,9 +625,9 @@ namespace sw::editor
 
     void EditorAssetFileCommands::collectOpenDocuments( vector<EditorOpenDocument>& outList )
     {
-        const IEditorPanelService* const pPanelService = editor::findSubsystem<IEditorPanelService>(); // 셸 없는 테스트 호스트에는 패널이 없다
-        if ( pPanelService != nullptr )
-            pPanelService->collectOpenDocuments( outList );
+        const IEditorPanelSubsystem* const pPanelSubsystem = editor::findSubsystem<IEditorPanelSubsystem>(); // 셸 없는 테스트 호스트에는 패널이 없다
+        if ( pPanelSubsystem != nullptr )
+            pPanelSubsystem->collectOpenDocuments( outList );
         const Scene* const pScene = editor::getActiveScene();
         if ( pScene == nullptr || pScene->getSourcePath().empty() )
             return;

@@ -1,7 +1,7 @@
 #include "pch.h"
 
-#include "Core/Name/hashed_string.h"
 #include "Core/Serialization/LittleEndianUtil.h"
+#include "Core/String/Name/hashed_string.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/Testing/TestFramework.h"
 

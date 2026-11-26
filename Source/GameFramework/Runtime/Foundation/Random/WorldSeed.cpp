@@ -6,7 +6,7 @@
 #include "Core/UUID/UUID.h"
 
 #include "Engine/Object/Component/Component.h"
-#include "Engine/Object/GameObject/Service/SceneNetLink.h"
+#include "Engine/Object/GameObject/Subsystem/SceneNetLink.h"
 
 namespace sw
 {

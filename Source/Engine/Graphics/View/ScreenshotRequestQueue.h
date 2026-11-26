@@ -14,8 +14,8 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Path/AbsolutePath.h"
-#include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Subsystem/Subsystem.h"
+#include "Core/Subsystem/SubsystemSlot.h"
 
 #include "Engine/Graphics/RHI/RHIEnums.h"
 #include "Engine/Graphics/RHI/RHIHandles.h"
@@ -136,6 +136,6 @@ namespace sw
         atomic<uint32>                                      _completedSerial{ 0 };
         atomic<uint32>                                      _completedPacketSerial{ 0 };
 
-        SW_SERVICE_SLOT( ScreenshotRequestQueue, Optional );
+        SW_SUBSYSTEM_SLOT( ScreenshotRequestQueue, Optional );
     };
 } // namespace sw

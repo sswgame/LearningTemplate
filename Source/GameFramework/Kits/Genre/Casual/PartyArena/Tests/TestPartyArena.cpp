@@ -505,7 +505,7 @@ SW_TEST_CASE_F( PartyArenaRulesTest, RoundEndsAtLimitsAndTimeOnlyRunsWhileInProg
     TrampolineArena waiting;
     SW_REQUIRE_TRUE( waiting.initialize( _settings, 2, 0.0f, 0, 5u ) );
     waiting.step();
-    SW_EXPECT_EQUAL( 1, waiting.update( kPartyStep ) );
+    SW_EXPECT_EQUAL( 1, waiting.update( GameSeconds{ kPartyStep } ) );
     SW_EXPECT_NEAR( 0.0f, waiting.getTime(), 0.0f );
     SW_EXPECT_NEAR( 0.0f, waiting.findPlayer( 0 )->_position._y, 0.0f );
 }
@@ -723,19 +723,19 @@ SW_TEST_CASE( PartyArenaTest, SpawnerPlacesCapsAndExpires )
     spawner.addItem( PartyArenaTestUtil::makeItem( "a", 1.0f ) );
     twin.addItem( PartyArenaTestUtil::makeItem( "a", 1.0f ) );
 
-    spawner.update( 0.5f );
-    spawner.update( 0.0f ); // 시간이 흐르지 않는다
-    spawner.update( -1.0f );
+    spawner.update( GameSeconds{ 0.5f } );
+    spawner.update( GameSeconds{ 0.0f } ); // 시간이 흐르지 않는다
+    spawner.update( GameSeconds{ -1.0f } );
     SW_EXPECT_TRUE( spawner.getInstances().empty() );
     SW_EXPECT_NEAR( 0.5f, spawner.getSpawnTimer(), kPartyTolerance );
-    spawner.update( 0.5f );
+    spawner.update( GameSeconds{ 0.5f } );
     SW_REQUIRE_EQUAL( size_t( 1 ), spawner.getInstances().size() );
     const PartyItemInstance& first = spawner.getInstances()[0];
     SW_EXPECT_EQUAL( 1, first._serial );
     SW_EXPECT_NEAR( 1.5f, first._position._y, kPartyTolerance );
     SW_EXPECT_TRUE( first._position._x * first._position._x + first._position._z * first._position._z <= 25.0f + kPartyTolerance );
 
-    twin.update( 1.0f );
+    twin.update( GameSeconds{ 1.0f } );
     SW_REQUIRE_EQUAL( size_t( 1 ), twin.getInstances().size() );
     SW_EXPECT_NEAR( first._position._x, twin.getInstances()[0]._position._x, kPartyTolerance );
     SW_EXPECT_NEAR( first._position._z, twin.getInstances()[0]._position._z, kPartyTolerance );
@@ -743,7 +743,7 @@ SW_TEST_CASE( PartyArenaTest, SpawnerPlacesCapsAndExpires )
     size_t most = 0;
     for ( int32 index = 0; index < 20; ++index )
     {
-        spawner.update( 0.5f );
+        spawner.update( GameSeconds{ 0.5f } );
         most = spawner.getInstances().size() > most ? spawner.getInstances().size() : most;
     }
     SW_EXPECT_EQUAL( size_t( 2 ), most );
@@ -763,14 +763,14 @@ SW_TEST_CASE( PartyArenaTest, SpawnerRespectsWeightsAndEmptyCatalog )
     settings._maxActive             = 20;
     PartyItemSpawner empty;
     SW_REQUIRE_TRUE( empty.initialize( settings, 7u ) );
-    empty.update( 5.0f );
+    empty.update( GameSeconds{ 5.0f } );
     SW_EXPECT_TRUE( empty.getInstances().empty() );
     SW_EXPECT_NEAR( 1.0f, empty.getSpawnTimer(), kPartyTolerance );
 
     PartyItemSpawner weightless;
     SW_REQUIRE_TRUE( weightless.initialize( settings, 7u ) );
     weightless.addItem( PartyArenaTestUtil::makeItem( "none", 0.0f ) );
-    weightless.update( 1.0f );
+    weightless.update( GameSeconds{ 1.0f } );
     SW_EXPECT_TRUE( weightless.getInstances().empty() );
 
     PartyItemSpawner weighted;
@@ -779,7 +779,7 @@ SW_TEST_CASE( PartyArenaTest, SpawnerRespectsWeightsAndEmptyCatalog )
     weighted.addItem( PartyArenaTestUtil::makeItem( "some", 1.0f ) );
     for ( int32 index = 0; index < 10; ++index )
     {
-        weighted.update( 1.0f );
+        weighted.update( GameSeconds{ 1.0f } );
     }
     SW_EXPECT_EQUAL( size_t( 10 ), weighted.getInstances().size() );
     for ( const PartyItemInstance& instance : weighted.getInstances() )
@@ -796,8 +796,8 @@ SW_TEST_CASE( PartyArenaTest, SpawnerPicksUpTheNearest )
     PartyItemSpawner spawner;
     SW_REQUIRE_TRUE( spawner.initialize( PartyArenaTestUtil::makeSettings(), 7u ) );
     spawner.addItem( PartyArenaTestUtil::makeItem( "a", 1.0f ) );
-    spawner.update( 1.0f );
-    spawner.update( 1.0f );
+    spawner.update( GameSeconds{ 1.0f } );
+    spawner.update( GameSeconds{ 1.0f } );
     SW_REQUIRE_EQUAL( size_t( 2 ), spawner.getInstances().size() );
     const float3 second = spawner.getInstances()[1]._position;
 
@@ -825,7 +825,7 @@ SW_TEST_CASE( PartyArenaTest, SpawnerStateRoundTrips )
     PartyItemSpawner source;
     SW_REQUIRE_TRUE( source.initialize( settings, 7u ) );
     source.addItem( PartyArenaTestUtil::makeItem( "a", 1.0f ) );
-    source.update( 1.25f );
+    source.update( GameSeconds{ 1.25f } );
     Archive written;
     source.writeState( written );
 
@@ -836,8 +836,8 @@ SW_TEST_CASE( PartyArenaTest, SpawnerStateRoundTrips )
     SW_REQUIRE_TRUE( restored.readState( reading ) );
     SW_EXPECT_NEAR( source.getSpawnTimer(), restored.getSpawnTimer(), 0.0f );
 
-    source.update( 1.0f );
-    restored.update( 1.0f );
+    source.update( GameSeconds{ 1.0f } );
+    restored.update( GameSeconds{ 1.0f } );
     SW_REQUIRE_EQUAL( size_t( 2 ), source.getInstances().size() );
     SW_REQUIRE_EQUAL( size_t( 2 ), restored.getInstances().size() );
     SW_EXPECT_EQUAL( 2, restored.getInstances()[1]._serial );

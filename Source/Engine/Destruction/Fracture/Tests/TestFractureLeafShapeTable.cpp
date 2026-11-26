@@ -8,7 +8,7 @@
 #include "Engine/Destruction/Fracture/FractureLeafShapeTable.h"
 #include "Engine/Destruction/Fracture/FractureSettings.h"
 #include "Engine/Destruction/Fracture/PolygonFracture.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Physics/IPhysicsScene.h"
 #include "Engine/Physics/PhysicsSystem.h"

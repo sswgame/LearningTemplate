@@ -13,11 +13,10 @@
 #include "Core/Log/Logger.h"
 #include "Core/Log/ParsedLogLine.h"
 #include "Core/Math/SecureRandom.h"
-#include "Core/Name/hashed_string.h"
 #include "Core/Network/Transport/IStreamTransport.h"
 #include "Core/Network/Transport/UDPNetTransport.h"
-#include "Core/Process/EngineChildProcess.h"
 #include "Core/Process/Process.h"
+#include "Core/String/Name/hashed_string.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 #include "Core/String/fixed_string.h"
@@ -26,8 +25,8 @@
 
 #include "DevTools/Profiling/ProfilerTraceExport.h"
 
-#include "Editor/Common/Task/EditorBackgroundTask.h"
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Job/EditorBackgroundJob.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Network/GameNetSession.h"
@@ -143,7 +142,7 @@ namespace sw::editor
      * @brief 끝난 자식의 읽기 스레드를 합류하고 트레이스를 합치는 에디터 백그라운드 잡입니다(`EditorNetPlaySession::advanceStop` 이 낸다).
      * @details 자식이 모두 끝난 뒤에만 낸다 - 합류는 파이프가 닫힌 읽기 스레드를 기다릴 뿐이라 워커를 오래 잡지 않는다. 합치기는 트레이스 파일 읽기 · JSON 합치기 · 쓰기(IO + CPU)다.
      */
-    class EditorNetPlayStopJob final : public EditorBackgroundTask<EditorNetPlayStopInput, EditorNetPlayStopResult>
+    class EditorNetPlayStopJob final : public EditorBackgroundJob<EditorNetPlayStopInput, EditorNetPlayStopResult>
     {
     public:
         /** @brief 잡을 냅니다(UI 스레드). */
@@ -393,8 +392,8 @@ namespace sw::editor
             traceArgument.appendFormat( "-gv_traceSaveOnExit=%#", tracePath.str() );
             listArgument.push_back( string( traceArgument.view() ) );
         }
-        // 자동화 실행의 자식도 자동화 실행이다(EngineChildProcess) — 빠지면 약한 GPU 의 클라이언트가 품질 low 를 골라 서버와 합성이 갈려 접속이 끊겼다(editor.netresourcedigest, Linux).
-        const ProcessCommand command     = EngineChildProcess::makeCommand( editor::getSubsystem<CommandLineManager>(), executablePath, std::move( listArgument ) );
+        // 자동화 실행의 자식도 자동화 실행이다(ProcessCommand::forEngineChild) — 빠지면 약한 GPU 의 클라이언트가 품질 low 를 골라 서버와 합성이 갈려 접속이 끊겼다(editor.netresourcedigest, Linux).
+        const ProcessCommand command     = ProcessCommand::forEngineChild( editor::getSubsystem<CommandLineManager>(), executablePath, std::move( listArgument ) );
         string               commandText = command.toCommandLine(); // 로그용 — 디버그 채널 토큰은 남기지 않는다(`GlobalSecret`)
         if ( _debugChannelToken.empty() == false )
             commandText = StringUtil::replace( commandText, _debugChannelToken, GlobalSecret::kMask );
@@ -790,7 +789,7 @@ namespace sw::editor
             case StopPhase::Merging:
             {
                 EditorNetPlayStopResult result;
-                if ( _pStopJob->take( result ) == EditorTaskPoll::Ready )
+                if ( _pStopJob->take( result ) == EditorJobPoll::Ready )
                     finishStop( result._mergedTracePath );
                 return;
             }
@@ -815,7 +814,7 @@ namespace sw::editor
         {
             // 합치기 잡의 완료를 기다린다(돕는다) — 결과를 주기적으로 묻고 잠들지 않는다.
             EditorNetPlayStopResult result;
-            if ( _pStopJob->waitAndTake( result ) == EditorTaskPoll::Ready )
+            if ( _pStopJob->waitAndTake( result ) == EditorJobPoll::Ready )
                 finishStop( result._mergedTracePath );
         }
     }

@@ -125,12 +125,12 @@ SW_TEST_CASE( DataRaceDetectorTest, SecondReportFunctionBindAsserts )
     {
         const sw::RaceDetectContext::ReportFunctionSuspension hostSuspension = sw::RaceDetectContext::suspendReportFunction();
         SW_EXPECT_TRUE( sw::RaceDetectContext::getReportFunction() == nullptr );
-        sw::RaceDetectContext::ReportFunctionRegistration registration = sw::RaceDetectContext::bindReportFunction( &ignoreDataRaceReportForTest );
+        sw::RaceDetectContext::ReportFunctionSubscription registration = sw::RaceDetectContext::bindReportFunction( &ignoreDataRaceReportForTest );
         SW_EXPECT_TRUE( registration.isActive() );
         {
             sw::test::ScopedAssertCapture capture;
             SW_EXPECT_LOG( SW_ASSERT_LOG_ID ); // 이중 등록 단언은 이 테스트가 보려는 대상이다
-            const sw::RaceDetectContext::ReportFunctionRegistration second = sw::RaceDetectContext::bindReportFunction( &ignoreDataRaceReportForTestOther );
+            const sw::RaceDetectContext::ReportFunctionSubscription second = sw::RaceDetectContext::bindReportFunction( &ignoreDataRaceReportForTestOther );
             SW_EXPECT_FALSE( second.isActive() );
             if ( sw::test::ScopedAssertCapture::kAssertsAreActive )
                 SW_EXPECT_EQUAL( 1u, capture.getCount() );

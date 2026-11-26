@@ -1,7 +1,7 @@
 /**
  * @file ModuleManager/Host/ServerDebugControl.h
  * @brief 전용 서버의 개발 조종 — 개발 콘솔(표준 입력의 개발 명령 · gv_*), 디버그 채널(루프백 · 토큰, 개발 명령 원격 실행 S3), 일시정지 · 한 걸음(`pause` · `resume` · `step [N]`), 틱 상한 종료.
- * @details `ServerApp` 이 호스트 서비스 `DevConsole` · `DebugChannel` 로 세우고 내리는 협력 객체다(관리 채널 `ServerAdminChannel` 과 같은 자리 — 언리얼 전용 서버의
+ * @details `ServerApp` 이 호스트 서브시스템 `DevConsole` · `DebugChannel` 로 세우고 내리는 협력 객체다(관리 채널 `ServerAdminChannel` 과 같은 자리 — 언리얼 전용 서버의
  *          `-pause` · 원격 콘솔과 같은 쓰임). 지금 틱 번호는 세울 때 받은 델리게이트로 묻는다 — 서버 루프를 모른다.
  *          호스트 개발 계층(`HostDevLayer.h`)과 같은 모양이다: 창구와 만드는 함수는 배포도 보는 여기에, 구현(`DevTools/Host/ServerDebugControl.cpp` — 개발 콘솔을 쓴다)은 DevTools.dll 에만 있다.
  *          `ServerApp` 은 `if constexpr ( build::kShipping == false )` 한 곳에서 만들고, 배포에서는 버려지는 갈래라 정의가 없어도 링크된다(명령을 받지 않고 틱을 붙잡지 않는다).
@@ -30,7 +30,7 @@ namespace sw
 
         /** @brief 표준 입력 `help` 에 덧붙일 글입니다(루프 명령 · 개발 명령). */
         virtual const utf8* getHelpSuffix() const = 0;
-        /** @brief 개발 콘솔을 세웁니다(호스트 서비스 `DevConsole`). `-gv_serverStartPaused` 면 첫 틱 전에 멈춥니다. */
+        /** @brief 개발 콘솔을 세웁니다(호스트 서브시스템 `DevConsole`). `-gv_serverStartPaused` 면 첫 틱 전에 멈춥니다. */
         virtual void startConsole() = 0;
         /** @brief 개발 콘솔을 지웁니다. 채널을 먼저 닫는다(채널이 콘솔을 부른다). */
         virtual void stopConsole() = 0;

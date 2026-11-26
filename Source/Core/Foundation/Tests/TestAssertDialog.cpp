@@ -40,7 +40,7 @@ namespace
     /** @brief 테스트가 건 대화상자를 끝에 뗀다 — `--test` 실행은 대화상자가 없으므로(App 은 대화형 에디터 실행에서만 건다) 떼면 처음 상태다. */
     struct ScopedAssertDialogForTest
     {
-        internal::AssertDialogRegistration _registration; ///< 범위가 끝나면 대화상자를 뗀다
+        internal::AssertDialogSubscription _registration; ///< 범위가 끝나면 대화상자를 뗀다
 
         explicit ScopedAssertDialogForTest( internal::AssertDialogFunc pfnDialog )
             : _registration{ internal::bindAssertDialog( pfnDialog ) }
@@ -142,7 +142,7 @@ SW_TEST_CASE( AssertDialogTest, SecondDialogBindAssertsAndKeepsTheFirst )
         {
             test::ScopedAssertCapture capture;
             SW_EXPECT_LOG( SW_ASSERT_LOG_ID ); // 이중 등록 단언은 이 테스트가 보려는 대상이다
-            const internal::AssertDialogRegistration second = internal::bindAssertDialog( &AssertDialogTestInternal::answerBreak );
+            const internal::AssertDialogSubscription second = internal::bindAssertDialog( &AssertDialogTestInternal::answerBreak );
             SW_EXPECT_FALSE( second.isActive() );
             SW_EXPECT_EQUAL( 1u, capture.getCount() );
         }

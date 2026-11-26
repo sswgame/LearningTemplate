@@ -12,9 +12,9 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
-#include "Core/Name/NameHashIndex.h"
-#include "Core/Name/hashed_string.h"
 #include "Core/Registry/RegistrationList.h"
+#include "Core/String/Name/NameHashIndex.h"
+#include "Core/String/Name/hashed_string.h"
 #include "Core/Subsystem/Subsystem.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"

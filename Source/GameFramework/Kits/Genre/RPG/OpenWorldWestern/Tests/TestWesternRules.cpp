@@ -292,7 +292,7 @@ SW_TEST_CASE_F( WesternLawTest, CrimeNumbersAndUnwitnessedCrimes )
     SW_EXPECT_EQUAL( uint32( 2 ), commit( "theft", { makeWitness( 9, true ) } ) ); // 보안관이어도 못 보면 없는 일이다
     SW_EXPECT_EQUAL( 1, popCount( sw::WesternLawEvent::Kind::Unwitnessed ) );
 
-    _law.update( 100.0f );
+    _law.update( sw::GameSeconds{ 100.0f } );
     SW_EXPECT_EQUAL( 0, _law.getBounty( _region ) );
     SW_EXPECT_EQUAL( 0, _law.getWantedLevel( _region ) );
 }
@@ -306,13 +306,13 @@ SW_TEST_CASE_F( WesternLawTest, CitizensReportOnceAfterReportTime )
     SW_EXPECT_EQUAL( uint32( 1 ), incident );
     SW_EXPECT_EQUAL( 2, _law.countPendingReports() );
 
-    _law.update( 0.0f );
-    _law.update( -5.0f );
-    _law.update( 9.0f );
+    _law.update( sw::GameSeconds{ 0.0f } );
+    _law.update( sw::GameSeconds{ -5.0f } );
+    _law.update( sw::GameSeconds{ 9.0f } );
     SW_EXPECT_EQUAL( 0, _law.getBounty( _region ) );
     SW_EXPECT_EQUAL( 2, _law.countPendingReports() );
 
-    _law.update( 1.0f ); // 정확히 다 된 걸음
+    _law.update( sw::GameSeconds{ 1.0f } ); // 정확히 다 된 걸음
     SW_EXPECT_EQUAL( 5, _law.getBounty( _region ) );
     SW_EXPECT_EQUAL( 1, _law.getWantedLevel( _region ) );
     SW_EXPECT_EQUAL( 0, _law.countPendingReports() );
@@ -331,7 +331,7 @@ SW_TEST_CASE_F( WesternLawTest, LawmanReportsImmediatelyAndClearsCitizens )
     SW_EXPECT_EQUAL( 0, _law.countPendingReports() );
     SW_EXPECT_FALSE( _law.isDisguised() ); // 새로 신고된 모습이다
 
-    _law.update( 100.0f );
+    _law.update( sw::GameSeconds{ 100.0f } );
     SW_EXPECT_EQUAL( 51, _law.getBounty( _region ) );
 }
 
@@ -347,7 +347,7 @@ SW_TEST_CASE_F( WesternLawTest, MaskedBountyAndWantedlessCrime )
     other.initialize( _catalog );
     (void)other.commitCrime( "littering", _region, sw::float3{}, { makeWitness( 2, false ) }, _sight, false );
     SW_EXPECT_EQUAL( 1, other.countPendingReports() );
-    other.update( 0.01f );
+    other.update( sw::GameSeconds{ 0.01f } );
     SW_EXPECT_EQUAL( 1, other.getBounty( _region ) );
     SW_EXPECT_EQUAL( 0, other.getWantedLevel( _region ) );
 }
@@ -364,12 +364,12 @@ SW_TEST_CASE_F( WesternLawTest, SilencingWitnesses )
     SW_EXPECT_TRUE( _law.silenceWitness( 2 ) );
     SW_EXPECT_EQUAL( 1, popCount( sw::WesternLawEvent::Kind::ReportPrevented ) );
     SW_EXPECT_FALSE( _law.silenceWitness( 2 ) );
-    _law.update( 100.0f );
+    _law.update( sw::GameSeconds{ 100.0f } );
     SW_EXPECT_EQUAL( 0, _law.getBounty( _region ) );
 
     commit( "theft", { makeWitness( 3, false ), makeWitness( 4, false ) } );
     SW_EXPECT_TRUE( _law.silenceWitness( 3 ) );
-    _law.update( 10.0f );
+    _law.update( sw::GameSeconds{ 10.0f } );
     SW_EXPECT_EQUAL( 5, _law.getBounty( _region ) );
     SW_EXPECT_FALSE( _law.silenceWitness( 4 ) ); // 이미 신고했다
     SW_EXPECT_EQUAL( 5, _law.getBounty( _region ) );
@@ -408,19 +408,19 @@ SW_TEST_CASE_F( WesternLawTest, WantedCoolsWhileUnseen )
     SW_REQUIRE_EQUAL( 1, _law.getWantedLevel( _region ) );
 
     _law.setSeenByLaw( _region, true );
-    _law.update( 500.0f );
+    _law.update( sw::GameSeconds{ 500.0f } );
     SW_EXPECT_EQUAL( 1, _law.getWantedLevel( _region ) );
 
     _law.setSeenByLaw( _region, false );
-    _law.update( 59.0f );
+    _law.update( sw::GameSeconds{ 59.0f } );
     SW_EXPECT_EQUAL( 1, _law.getWantedLevel( _region ) );
     _law.setSeenByLaw( _region, true ); // 다시 보이면 처음부터 센다
     _law.setSeenByLaw( _region, false );
-    _law.update( 59.0f );
+    _law.update( sw::GameSeconds{ 59.0f } );
     SW_EXPECT_EQUAL( 1, _law.getWantedLevel( _region ) );
 
     _law.setDisguised( true );
-    _law.update( 1.0f ); // 59 + 2 ≥ 60
+    _law.update( sw::GameSeconds{ 1.0f } ); // 59 + 2 ≥ 60
     SW_EXPECT_EQUAL( 0, _law.getWantedLevel( _region ) );
     SW_EXPECT_TRUE( _law.findPursuit( _region ) == nullptr );
 
@@ -434,7 +434,7 @@ SW_TEST_CASE_F( WesternLawTest, WantedCoolsWhileUnseen )
     fresh.pollEvents( listPolled );
     listPolled.clear();
 
-    fresh.update( 120.0f );
+    fresh.update( sw::GameSeconds{ 120.0f } );
     SW_EXPECT_EQUAL( 1, fresh.getWantedLevel( _region ) );
     SW_EXPECT_EQUAL( sw::hashed_string( "Search" ), fresh.findPursuit( _region )->_name );
     fresh.pollEvents( listPolled );
@@ -460,7 +460,7 @@ SW_TEST_CASE_F( WesternLawTest, PayingBounty )
 
     commit( "theft", { makeWitness( 1, true ) } );
     SW_EXPECT_EQUAL( sw::WesternPayResult::ActivelyWanted, _law.payBounty( _region, wallet ) );
-    _law.update( 60.0f );
+    _law.update( sw::GameSeconds{ 60.0f } );
     SW_REQUIRE_EQUAL( 0, _law.getWantedLevel( _region ) );
 
     wallet.add( "Dollar", 4 );
@@ -486,7 +486,7 @@ SW_TEST_CASE_F( WesternLawTest, UnknownRegionDoesNotPoisonState )
 {
     _law.setSeenByLaw( "nowhere", true );
     commit( "theft", { makeWitness( 1, false ) } );
-    _law.update( 4.0f );
+    _law.update( sw::GameSeconds{ 4.0f } );
 
     sw::Archive written;
     _law.writeState( written );
@@ -496,9 +496,9 @@ SW_TEST_CASE_F( WesternLawTest, UnknownRegionDoesNotPoisonState )
     SW_REQUIRE_TRUE( restored.readState( reading ) );
 
     SW_EXPECT_EQUAL( 1, restored.countPendingReports() );
-    restored.update( 5.0f );
+    restored.update( sw::GameSeconds{ 5.0f } );
     SW_EXPECT_EQUAL( 0, restored.getBounty( _region ) );
-    restored.update( 1.0f ); // 남은 시간을 이었다
+    restored.update( sw::GameSeconds{ 1.0f } ); // 남은 시간을 이었다
     SW_EXPECT_EQUAL( 5, restored.getBounty( _region ) );
 }
 
@@ -612,21 +612,21 @@ SW_TEST_CASE_F( WesternHorseTest, BondLevelsUnlockAbilities )
  */
 SW_TEST_CASE_F( WesternHorseTest, BondSourcesFollowTheirRules )
 {
-    _horse.update( 5.0f, 0.0f );
+    _horse.update( sw::GameSeconds{ 5.0f }, 0.0f );
     SW_EXPECT_NEAR( 0.0f, _horse.getBondExperience(), kWesternTolerance );
     _horse.setRidden( true );
-    _horse.update( 5.0f, 0.0f );
+    _horse.update( sw::GameSeconds{ 5.0f }, 0.0f );
     SW_EXPECT_NEAR( 0.5f, _horse.getBondExperience(), kWesternTolerance );
-    _horse.update( 0.0f, 1.0f ); // 게임 시간만 흐르면 탄 경험치는 없다
+    _horse.update( sw::GameSeconds{ 0.0f }, 1.0f ); // 게임 시간만 흐르면 탄 경험치는 없다
     SW_EXPECT_NEAR( 0.5f, _horse.getBondExperience(), kWesternTolerance );
     _horse.setRidden( false );
 
     SW_EXPECT_TRUE( _horse.brush() );
     SW_EXPECT_NEAR( 15.5f, _horse.getBondExperience(), kWesternTolerance );
     SW_EXPECT_FALSE( _horse.brush() );
-    _horse.update( 0.0f, 5.0f );
+    _horse.update( sw::GameSeconds{ 0.0f }, 5.0f );
     SW_EXPECT_FALSE( _horse.brush() );
-    _horse.update( 0.0f, 1.0f );
+    _horse.update( sw::GameSeconds{ 0.0f }, 1.0f );
     SW_EXPECT_TRUE( _horse.brush() );
     SW_EXPECT_NEAR( 30.5f, _horse.getBondExperience(), kWesternTolerance );
 
@@ -647,9 +647,9 @@ SW_TEST_CASE_F( WesternHorseTest, BondSourcesFollowTheirRules )
  */
 SW_TEST_CASE_F( WesternHorseTest, CoresDrainFeedAndScaleRegen )
 {
-    _horse.update( 0.0f, 20.0f );
+    _horse.update( sw::GameSeconds{ 0.0f }, 20.0f );
     SW_EXPECT_NEAR( 60.0f, _horse.getHealthCore(), kWesternTolerance );
-    _horse.update( 0.0f, -5.0f );
+    _horse.update( sw::GameSeconds{ 0.0f }, -5.0f );
     SW_EXPECT_NEAR( 60.0f, _horse.getHealthCore(), kWesternTolerance );
 
     _horse.takeDamage( 30.0f );
@@ -660,7 +660,7 @@ SW_TEST_CASE_F( WesternHorseTest, CoresDrainFeedAndScaleRegen )
     SW_EXPECT_TRUE( _horse.feed( "hay" ) );
     SW_EXPECT_NEAR( 100.0f, _horse.getHealthCore(), kWesternTolerance );
 
-    _horse.update( 0.0f, 1000.0f );
+    _horse.update( sw::GameSeconds{ 0.0f }, 1000.0f );
     SW_EXPECT_NEAR( 0.0f, _horse.getHealthCore(), kWesternTolerance );
 
     SW_EXPECT_NEAR( 0.2f, _horse.computeRegenScale( 0.0f ), kWesternTolerance );
@@ -677,24 +677,24 @@ SW_TEST_CASE_F( WesternHorseTest, GallopDrainsAndExhausts )
 {
     SW_EXPECT_TRUE( _horse.gallop( 1.0f ) );
     SW_EXPECT_NEAR( 88.0f, _horse.getStamina().getValue(), kWesternTolerance );
-    _horse.update( 0.0f, 1.0f );
+    _horse.update( sw::GameSeconds{ 0.0f }, 1.0f );
     SW_EXPECT_NEAR( 92.0f, _horse.getStaminaCore(), kWesternTolerance ); // 2 + 6
-    _horse.update( 0.0f, 1.0f );
+    _horse.update( sw::GameSeconds{ 0.0f }, 1.0f );
     SW_EXPECT_NEAR( 90.0f, _horse.getStaminaCore(), kWesternTolerance ); // 2
 
     SW_EXPECT_FALSE( _horse.gallop( 10.0f ) );
     SW_EXPECT_TRUE( _horse.getStamina().isExhausted() );
     SW_EXPECT_EQUAL( 1, popCount( _horse, sw::WesternHorseEvent::Kind::Exhausted ) );
-    _horse.update( 0.0f, 1.0f );
+    _horse.update( sw::GameSeconds{ 0.0f }, 1.0f );
     SW_EXPECT_NEAR( 82.0f, _horse.getStaminaCore(), kWesternTolerance ); // 바닥에 닿은 걸음까지는 달렸다
 
     SW_EXPECT_FALSE( _horse.gallop( 1.0f ) );
     SW_EXPECT_EQUAL( 0, popCount( _horse, sw::WesternHorseEvent::Kind::Exhausted ) );
-    _horse.update( 0.0f, 1.0f );
+    _horse.update( sw::GameSeconds{ 0.0f }, 1.0f );
     SW_EXPECT_NEAR( 80.0f, _horse.getStaminaCore(), kWesternTolerance ); // 달리지 못한 걸음
     SW_EXPECT_TRUE( _horse.getStamina().isExhausted() );
 
-    _horse.update( 10.0f, 0.0f );
+    _horse.update( sw::GameSeconds{ 10.0f }, 0.0f );
     SW_EXPECT_FALSE( _horse.getStamina().isExhausted() );
     SW_EXPECT_TRUE( _horse.gallop( 0.1f ) );
 }
@@ -710,7 +710,7 @@ SW_TEST_CASE_F( WesternHorseTest, FearBuildsAndThrowsRider )
 
     SW_EXPECT_EQUAL( sw::WesternHorseReaction::Calm, _horse.frighten( 1.0f ) ); // 용기 0.5
     SW_EXPECT_NEAR( 0.5f, _horse.getFear(), kWesternTolerance );
-    _horse.update( 1.0f, 0.0f );
+    _horse.update( sw::GameSeconds{ 1.0f }, 0.0f );
     SW_EXPECT_NEAR( 0.25f, _horse.getFear(), kWesternTolerance );
     _horse.calm();
     SW_EXPECT_NEAR( 0.0f, _horse.getFear(), kWesternTolerance );
@@ -830,17 +830,17 @@ SW_TEST_CASE_F( WesternHorseTest, ReadStateRefusesAbilitiesNotUnlocked )
  */
 SW_TEST_CASE_F( WesternSurvivalTest, TemperatureDrainsTheRightCore )
 {
-    _survival.update( 0.0f, 2.0f, 5.0f ); // 편한 범위의 아래 경계
+    _survival.update( sw::GameSeconds{ 0.0f }, 2.0f, 5.0f ); // 편한 범위의 아래 경계
     SW_EXPECT_NEAR( 97.0f, _survival.getCore( sw::WesternCore::Health ), kWesternTolerance );
     SW_EXPECT_NEAR( 97.0f, _survival.getCore( sw::WesternCore::Stamina ), kWesternTolerance );
-    _survival.update( 0.0f, 2.0f, 30.0f ); // 위 경계
+    _survival.update( sw::GameSeconds{ 0.0f }, 2.0f, 30.0f ); // 위 경계
     SW_EXPECT_NEAR( 94.0f, _survival.getCore( sw::WesternCore::Stamina ), kWesternTolerance );
     SW_EXPECT_NEAR( 94.0f, _survival.getCore( sw::WesternCore::DeadEye ), kWesternTolerance );
 
-    _survival.update( 0.0f, 2.0f, 0.0f ); // 5 도 춥다 — 체력만 5 더
+    _survival.update( sw::GameSeconds{ 0.0f }, 2.0f, 0.0f ); // 5 도 춥다 — 체력만 5 더
     SW_EXPECT_NEAR( 86.0f, _survival.getCore( sw::WesternCore::Health ), kWesternTolerance );
     SW_EXPECT_NEAR( 91.0f, _survival.getCore( sw::WesternCore::Stamina ), kWesternTolerance );
-    _survival.update( 0.0f, 2.0f, 40.0f ); // 10 도 덥다 — 스태미나만 10 더
+    _survival.update( sw::GameSeconds{ 0.0f }, 2.0f, 40.0f ); // 10 도 덥다 — 스태미나만 10 더
     SW_EXPECT_NEAR( 83.0f, _survival.getCore( sw::WesternCore::Health ), kWesternTolerance );
     SW_EXPECT_NEAR( 78.0f, _survival.getCore( sw::WesternCore::Stamina ), kWesternTolerance );
 
@@ -849,12 +849,12 @@ SW_TEST_CASE_F( WesternSurvivalTest, TemperatureDrainsTheRightCore )
     SW_REQUIRE_TRUE( _survival.setClothing( { "coat" } ) );
     SW_EXPECT_NEAR( 15.0f, _survival.computeWarmth(), kWesternTolerance );
     SW_EXPECT_NEAR( 5.0f, _survival.computeFeltTemperature( -10.0f ), kWesternTolerance );
-    _survival.update( 0.0f, 2.0f, -10.0f ); // 옷 덕분에 춥지 않다
+    _survival.update( sw::GameSeconds{ 0.0f }, 2.0f, -10.0f ); // 옷 덕분에 춥지 않다
     SW_EXPECT_NEAR( 80.0f, _survival.getCore( sw::WesternCore::Health ), kWesternTolerance );
 
-    _survival.update( 0.0f, -2.0f, -10.0f );
+    _survival.update( sw::GameSeconds{ 0.0f }, -2.0f, -10.0f );
     SW_EXPECT_NEAR( 80.0f, _survival.getCore( sw::WesternCore::Health ), kWesternTolerance );
-    _survival.update( 0.0f, 9999.0f, -10.0f );
+    _survival.update( sw::GameSeconds{ 0.0f }, 9999.0f, -10.0f );
     SW_EXPECT_NEAR( 0.0f, _survival.getCore( sw::WesternCore::Health ), kWesternTolerance );
 }
 
@@ -882,7 +882,7 @@ SW_TEST_CASE_F( WesternSurvivalTest, EatingAndRegenScale )
     _survival.setCore( sw::WesternCore::Stamina, 0.0f );
     SW_EXPECT_NEAR( 0.2f, _survival.computeRegenScale( sw::WesternCore::Stamina ), kWesternTolerance );
     (void)_survival.getGauge( sw::WesternCore::Stamina ).reduce( 50.0f );
-    _survival.update( 2.0f, 0.0f, 20.0f ); // 지연 1 초 뒤 1 초 × 15 × 0.2
+    _survival.update( sw::GameSeconds{ 2.0f }, 0.0f, 20.0f ); // 지연 1 초 뒤 1 초 × 15 × 0.2
     SW_EXPECT_NEAR( 53.0f, _survival.getGauge( sw::WesternCore::Stamina ).getValue(), kWesternTolerance );
 }
 
@@ -907,11 +907,11 @@ SW_TEST_CASE_F( WesternSurvivalTest, DeadEyeLifecycle )
     SW_EXPECT_TRUE( _survival.markTarget( 2 ) );
     SW_EXPECT_FALSE( _survival.markTarget( 3 ) );
 
-    _survival.update( 1.0f, 0.0f, 20.0f );
+    _survival.update( sw::GameSeconds{ 1.0f }, 0.0f, 20.0f );
     SW_EXPECT_NEAR( 80.0f, _survival.getGauge( sw::WesternCore::DeadEye ).getValue(), kWesternTolerance );
     SW_EXPECT_TRUE( _survival.isDeadEyeActive() );
 
-    _survival.update( 10.0f, 0.0f, 20.0f );
+    _survival.update( sw::GameSeconds{ 10.0f }, 0.0f, 20.0f );
     SW_EXPECT_FALSE( _survival.isDeadEyeActive() );
     SW_EXPECT_TRUE( _survival.getMarks().empty() );
     SW_EXPECT_NEAR( 1.0f, _survival.getTimeScale(), kWesternTolerance );
@@ -1144,6 +1144,6 @@ SW_TEST_CASE_F( WesternHorseTest, RecoveryRatesComeFromTheBreed )
     SW_REQUIRE_TRUE( slow.initialize( &_catalog, "slowmend", 7 ) );
     SW_EXPECT_FALSE( slow.gallop( 10.0f ) );
     SW_EXPECT_TRUE( slow.getStamina().isExhausted() );
-    slow.update( 10.0f, 0.0f );
+    slow.update( sw::GameSeconds{ 10.0f }, 0.0f );
     SW_EXPECT_TRUE( slow.getStamina().isExhausted() ); // 보통 품종(steady)은 같은 10 초에 풀린다(GallopDrainsAndExhausts)
 }

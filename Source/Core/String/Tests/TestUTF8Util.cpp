@@ -1,8 +1,7 @@
-// UTF8Util · StringUtil 의 UTF-8 — 검증기 · 디코더 · UCS-2 변환의 판정 일치, 연속 바이트, 경계로 물러나기, 한 글자 디코드, UCS-2 대체, UTF-16 단위 왕복(JNI 글 — 서로게이트 쌍 · 짝 없는 서로게이트).
+// StringUtil · StringUtil 의 UTF-8 — 검증기 · 디코더 · UCS-2 변환의 판정 일치, 연속 바이트, 경계로 물러나기, 한 글자 디코드, UCS-2 대체, UTF-16 단위 왕복(JNI 글 — 서로게이트 쌍 · 짝 없는 서로게이트).
 #include "pch.h"
 
 #include "Core/String/StringUtil.h"
-#include "Core/String/UTF8Util.h"
 #include "Core/Testing/TestFramework.h"
 
 using namespace sw;
@@ -119,11 +118,11 @@ SW_TEST_CASE( UTF8UtilTest, ValidatorAndDecoderAgreeOnEverySmallInputAndBoundary
  */
 SW_TEST_CASE( UTF8UtilTest, ContinuationIsOnlyTheTenBitPattern )
 {
-    SW_EXPECT_TRUE( UTF8Util::isContinuation( static_cast<utf8>( 0x80 ) ) );
-    SW_EXPECT_TRUE( UTF8Util::isContinuation( static_cast<utf8>( 0xBF ) ) );
-    SW_EXPECT_FALSE( UTF8Util::isContinuation( 'a' ) );
-    SW_EXPECT_FALSE( UTF8Util::isContinuation( static_cast<utf8>( 0xC3 ) ) );
-    SW_EXPECT_FALSE( UTF8Util::isContinuation( static_cast<utf8>( 0xF0 ) ) );
+    SW_EXPECT_TRUE( StringUtil::isUTF8Continuation( static_cast<utf8>( 0x80 ) ) );
+    SW_EXPECT_TRUE( StringUtil::isUTF8Continuation( static_cast<utf8>( 0xBF ) ) );
+    SW_EXPECT_FALSE( StringUtil::isUTF8Continuation( 'a' ) );
+    SW_EXPECT_FALSE( StringUtil::isUTF8Continuation( static_cast<utf8>( 0xC3 ) ) );
+    SW_EXPECT_FALSE( StringUtil::isUTF8Continuation( static_cast<utf8>( 0xF0 ) ) );
 }
 
 /**

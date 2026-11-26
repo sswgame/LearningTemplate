@@ -15,6 +15,7 @@
 #pragma once
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/GameObject/Tick/ISceneFrameSystem.h"
@@ -33,7 +34,7 @@ namespace sw
     {
     public:
         /** @brief @p self 의 매니저와 그 틱 뒤 큐로 컨텍스트를 세웁니다. @p self 는 매니저에 붙은 오브젝트여야 합니다. */
-        TickContext( GameObject& self, float32 deltaTime );
+        TickContext( GameObject& self, GameSeconds deltaTime );
         /** @brief 주기가 있는 틱의 차례 @p turn 으로 세웁니다(디스패치가 부른다). */
         TickContext( GameObject& self, const TickTurn& turn );
 

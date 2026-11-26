@@ -3,7 +3,7 @@
 #include "Editor/Panels/AudioEvents/Model/AudioEventEditModel.h"
 
 #include "Editor/Common/Asset/AssetWriter.h"
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 #include "Editor/Common/Workspace/Undo/DocumentEditRecorder.h"
 #include "Editor/Panels/AudioEvents/Model/AudioEventBrowserUtil.h"
 

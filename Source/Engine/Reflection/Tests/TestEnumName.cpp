@@ -3,7 +3,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Content/Pack/PackTypes.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Reflection/TypeRegistry.h"
 

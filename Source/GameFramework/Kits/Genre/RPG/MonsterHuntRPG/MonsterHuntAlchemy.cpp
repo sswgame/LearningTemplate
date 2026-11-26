@@ -153,15 +153,16 @@ namespace sw
         return false;
     }
 
-    void MonsterHuntAlchemy::update( float32 deltaTime )
+    void MonsterHuntAlchemy::update( GameSeconds frameTime )
     {
+        const float32 deltaTime = frameTime.count();
         if ( deltaTime <= 0.0f || _pCatalog == nullptr )
             return;
         _floatingToxicity = MathUtil::max( 0.0f, _floatingToxicity - _pCatalog->getAlchemy()._toxicityDecay * deltaTime );
         for ( size_t index = _listEffect.size(); index > 0; --index )
         {
             MonsterHuntActiveEffect& effect = _listEffect[index - 1];
-            effect._remaining.update( deltaTime );
+            effect._remaining.update( frameTime );
             if ( effect._remaining.isActive() == false )
                 _listEffect.erase( _listEffect.begin() + static_cast<ptrdiff_t>( index - 1 ) );
         }

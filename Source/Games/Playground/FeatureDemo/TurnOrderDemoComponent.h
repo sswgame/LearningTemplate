@@ -7,6 +7,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -45,7 +46,7 @@ namespace sw
     protected:
         void               serializeGameState( StateIO& io ) override;
         [[nodiscard]] bool startGame() override;
-        void               updateGame( float32 deltaTime ) override;
+        void               updateGame( GameSeconds frameTime ) override;
 
     private:
         /** @brief 상태 칸(라운드 · 앞으로의 차례)을 순서에서 옮깁니다. */

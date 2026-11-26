@@ -15,8 +15,8 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Path/AbsolutePath.h"
-#include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Subsystem/Subsystem.h"
+#include "Core/Subsystem/SubsystemSlot.h"
 #include "Core/Time/BusyClock.h"
 
 #include "Engine/Asset/AssetHandle.h"
@@ -182,7 +182,7 @@ namespace sw
         [[nodiscard]] BusyClock&       getCompileBusyClock() { return _compileBusy; }
         [[nodiscard]] const BusyClock& getCompileBusyClock() const { return _compileBusy; }
 
-        /** @brief 읽은 리플렉션 매니페스트입니다. `ShaderReflectionLibrary` 의 조회 · 비우기가 서비스 칸으로 찾아 씁니다. */
+        /** @brief 읽은 리플렉션 매니페스트입니다. `ShaderReflectionLibrary` 의 조회 · 비우기가 서브시스템 칸으로 찾아 씁니다. */
         ShaderReflectionManifestCache& getReflectionManifests() { return _reflectionManifests; }
 
     private:
@@ -228,6 +228,6 @@ namespace sw
         unique_ptr<LoadThread>                                           _pLoadThread;                 ///< `runOnLoadThread` 의 스레드 — 처음 쓸 때 띄우고 `shutdown` 이 합류한다
         uint8                                                            _bLiveDebugCodegen;           ///< `isLiveDebugCodegen` — 기동에서만 쓴다(그때는 로드가 없다)
 
-        SW_SERVICE_SLOT( ShaderCache, Required );
+        SW_SUBSYSTEM_SLOT( ShaderCache, Required );
     };
 } // namespace sw

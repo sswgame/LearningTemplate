@@ -29,7 +29,7 @@ namespace sw
         if ( bNoOccupantsToMove )
             return;
         // 겹친 것이 자기 틱에서 쓴 위치 위에 더한다. 틱 뒤의 게임 스레드에서 처리한다. 같은 틱에서 쓰면 그쪽의 쓰기와 순서가 정해지지 않기 때문이다.
-        _pendingSeconds += context.getDeltaTime();
+        _pendingSeconds += context.getDeltaTime().count();
         context.deferPostTickOnComponent( *this, []( ConveyorComponent& conveyor, GameObjectManager& manager )
         {
             const float3 offset                       = conveyor._velocity * conveyor._pendingSeconds;

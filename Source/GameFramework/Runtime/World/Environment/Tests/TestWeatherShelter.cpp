@@ -1,7 +1,7 @@
 // WeatherShelterTest — 실내 차폐: 지붕 바디 아래는 막히고 트인 자리는 열리며, 처마 끝은 그 사이 값이다. 디바이스 없음(nogpu).
 #include "pch.h"
 
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Object/GameObject/GameObject.h"

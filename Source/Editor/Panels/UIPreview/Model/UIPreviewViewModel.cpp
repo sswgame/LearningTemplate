@@ -8,7 +8,7 @@
 
 #include "Editor/Common/Asset/AssetWriter.h"
 #include "Editor/Common/Config/EditorToolDefaults.h"
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/Undo/UndoStep.h"
 

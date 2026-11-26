@@ -2,8 +2,8 @@
 
 #include "Core/Testing/TestFramework.h"
 
-#include "Engine/UI/Accessibility/UIAccessibilityService.h"
 #include "Engine/UI/Accessibility/UIAccessibilitySnapshot.h"
+#include "Engine/UI/Accessibility/UIAccessibilitySubsystem.h"
 #include "Engine/UI/Layout/CanvasPanel.h"
 #include "Engine/UI/Screen/UIScreen.h"
 #include "Engine/UI/Widgets/SliderWidget.h"
@@ -81,13 +81,13 @@ SW_TEST_CASE( UIAccessibilityTest, InteractiveScreensStopAtTheModal )
     listScreen.push_back( makeAccessibilityScreen( UILayer::Menu, false ) );
     listScreen.push_back( makeAccessibilityScreen( UILayer::Overlay, false ) );
     vector<UIScreen*> listInteractive;
-    UIAccessibilityService::collectInteractiveScreens( listScreen, listInteractive );
+    UIAccessibilitySubsystem::collectInteractiveScreens( listScreen, listInteractive );
     SW_REQUIRE_EQUAL( size_t{ 3 }, listInteractive.size() );
     SW_EXPECT_TRUE( listInteractive[0] == listScreen[2].get() ); // 위에서 아래로
     SW_EXPECT_TRUE( listInteractive[2] == listScreen[0].get() );
 
     listScreen.insert( listScreen.begin() + 2, makeAccessibilityScreen( UILayer::Menu, true ) );
-    UIAccessibilityService::collectInteractiveScreens( listScreen, listInteractive );
+    UIAccessibilitySubsystem::collectInteractiveScreens( listScreen, listInteractive );
     SW_REQUIRE_EQUAL( size_t{ 2 }, listInteractive.size() );
     SW_EXPECT_TRUE( listInteractive[0] == listScreen[3].get() );
     SW_EXPECT_TRUE( listInteractive[1] == listScreen[2].get() ); // 모달에서 멈춘다

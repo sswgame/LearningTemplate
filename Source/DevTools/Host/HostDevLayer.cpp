@@ -10,13 +10,13 @@
 #include "Core/Time/MonotonicClock.h"
 
 #include "DevTools/FileWatch/FileWatchService.h"
-#include "DevTools/Host/EditorModuleHeadlessTasks.h"
+#include "DevTools/Host/EditorModuleCommandlets.h"
 #include "DevTools/Host/HostClientDevTasks.h"
 #include "DevTools/Host/HostDevTools.h"
 
 #include "Engine/Automation/AutomationRuntime.h"
 #include "Engine/Engine.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Input/DebugKeyActions.h"
 #include "Engine/Input/InputManager.h"
 
@@ -33,12 +33,12 @@ namespace sw
     namespace
     {
         /** @brief 개발 콘솔(게임 창 콘솔과 표준 입력 채널)입니다. 명령이 게임이 올린 개발 명령 · 변수를 부른다 — 게임 뒤에 서고 게임보다 먼저 내려간다. */
-        class DevConsoleHostService final : public Subsystem
+        class DevConsoleHostSubsystem final : public Subsystem
         {
         public:
             static constexpr const utf8* kSubsystemName = "DevConsole";
 
-            DevConsoleHostService( HostDevTools& devTools, const utf8* pGameServiceName, bool bEnableEditor )
+            DevConsoleHostSubsystem( HostDevTools& devTools, const utf8* pGameServiceName, bool bEnableEditor )
                 : _devTools{ devTools }
                 , _arrDependency{ pGameServiceName }
                 , _bEnableEditor{ bEnableEditor ? SW_TRUE : SW_FALSE }
@@ -109,11 +109,11 @@ namespace sw
             void                updateModuleReload() override { _moduleReload.update(); }
 #endif
 
-            bool runEditorModuleHeadlessTasks( const CommandLineManager& commandLine ) override { return EditorModuleHeadlessTask::runRequested( commandLine ); }
+            bool runEditorModuleCommandlets( const CommandLineManager& commandLine ) override { return EditorModuleCommandlet::runRequested( commandLine ); }
             void attachFrameHooks( Engine& engine ) override { _devTools.attachFrameHooks( engine ); }
             void addConsoleHostService( HostLaunch& launch, const utf8* pGameServiceName, bool bEnableEditor ) override
             {
-                launch.addHostService<DevConsoleHostService>( _devTools, pGameServiceName, bEnableEditor );
+                launch.addHostSubsystem<DevConsoleHostSubsystem>( _devTools, pGameServiceName, bEnableEditor );
             }
             void detach() override
             {
@@ -138,7 +138,7 @@ namespace sw
             bool                                 isAutomationBusy() const override { return _pAutomation != nullptr && _pAutomation->isBusy(); }
             unique_ptr<IAutomationShutdownWatch> watchAutomationShutdown() override { return _pAutomation != nullptr ? _pAutomation->watchShutdown() : nullptr; }
 
-            HostTaskResult runAfterHostServices( const CommandLineManager& commandLine ) override
+            HostTaskResult runAfterHostSubsystems( const CommandLineManager& commandLine ) override
             {
                 return HostClientDevTasks::runPortraitBake( *_pEngine, commandLine ); // 지금은 초상화 굽기 하나다
             }

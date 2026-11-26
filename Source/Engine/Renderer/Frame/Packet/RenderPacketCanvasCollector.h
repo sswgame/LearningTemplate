@@ -11,7 +11,7 @@ namespace sw
 {
     struct RenderFramePacket;
 
-    class FontService;
+    class FontSubsystem;
     class RHI;
     class UISystem;
 
@@ -32,6 +32,6 @@ namespace sw
          * @brief 화면 2D(런타임 UI 의 캔버스, 월드 UI 캔버스, 등록된 겹치기), 글리프 아틀라스 구간, 색각 보정을 싣습니다.
          * @param bSceneMain 씬 뷰가 주 출력인 프레임이면 화면 UI 를 싣지 않습니다. UI 는 게임 화면(게임 뷰, 백버퍼)에만 있습니다.
          */
-        void populate( RenderFramePacket& packet, bool bSceneMain, UISystem* pUISystem, FontService* pFontService, const RHI* pRHI );
+        void populate( RenderFramePacket& packet, bool bSceneMain, UISystem* pUISystem, FontSubsystem* pFontSubsystem, const RHI* pRHI );
     };
 } // namespace sw

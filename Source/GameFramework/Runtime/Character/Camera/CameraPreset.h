@@ -16,7 +16,7 @@
 #include "Core/Math/Math.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/Radians.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Content/AssetTypeRegistry.h"

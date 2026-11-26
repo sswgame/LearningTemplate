@@ -238,15 +238,15 @@ SW_TEST_CASE( RespawnFlowTest, PoliciesAreTriedInOrderAfterTheDelay )
     context._pHealth      = &health;
     context._team         = 1;
 
-    SW_EXPECT_FALSE( flow.update( 5.0f, context ).has_value() ); // 살아 있으면 쉰다
+    SW_EXPECT_FALSE( flow.update( sw::GameSeconds{ 5.0f }, context ).has_value() ); // 살아 있으면 쉰다
     SW_REQUIRE_TRUE( flow.notifyDied( sw::float3{ 10.0f, 0.0f, 0.0f }, 0.0f ) );
     SW_EXPECT_FALSE( flow.notifyDied( sw::float3{}, 0.0f ) ); // 이미 죽었다
-    SW_EXPECT_FALSE( flow.update( 0.5f, context ).has_value() );
+    SW_EXPECT_FALSE( flow.update( sw::GameSeconds{ 0.5f }, context ).has_value() );
     SW_EXPECT_TRUE( flow.getPhase() == sw::RespawnPhase::Waiting );
     SW_EXPECT_NEAR( 0.5f, flow.getDelayRemaining(), kRespawnTolerance );
 
     // 체크포인트가 없어 다음 정책 — 내 팀 · 모든 팀 지점 가운데 가장 가까운 것(남의 팀 지점은 더 가까워도 고르지 않는다)
-    const sw::optional<sw::RespawnSpawn> first = flow.update( 0.5f, context );
+    const sw::optional<sw::RespawnSpawn> first = flow.update( sw::GameSeconds{ 0.5f }, context );
     SW_REQUIRE_TRUE( first.has_value() );
     SW_EXPECT_TRUE( first->_policy == sw::RespawnPolicyKind::NearestSpawnPoint );
     SW_EXPECT_EQUAL( sw::hashed_string( "near" ), first->_pointID );
@@ -257,7 +257,7 @@ SW_TEST_CASE( RespawnFlowTest, PoliciesAreTriedInOrderAfterTheDelay )
     (void)checkpoints.activate( RespawnFlowTestUtil::makeDef( "cp1", 0, false ), sw::float3{ 3.0f, 1.0f, 0.0f }, 1.0f );
     health.kill();
     SW_REQUIRE_TRUE( flow.notifyDied( sw::float3{ 20.0f, 0.0f, 0.0f }, 0.0f ) );
-    const sw::optional<sw::RespawnSpawn> second = flow.update( 1.0f, context );
+    const sw::optional<sw::RespawnSpawn> second = flow.update( sw::GameSeconds{ 1.0f }, context );
     SW_REQUIRE_TRUE( second.has_value() );
     SW_EXPECT_TRUE( second->_policy == sw::RespawnPolicyKind::LastCheckpoint );
     SW_EXPECT_EQUAL( sw::hashed_string( "cp1" ), second->_pointID );
@@ -291,7 +291,7 @@ SW_TEST_CASE( RespawnFlowTest, InPlaceUsesTheNearestSafeLocation )
 
     // 땅 위에서 죽었다 — 그 자리 그대로
     SW_REQUIRE_TRUE( flow.notifyDied( sw::float3{ 5.0f, 1.0f, 0.0f }, 0.75f ) );
-    const sw::optional<sw::RespawnSpawn> onGround = flow.update( 0.016f, context );
+    const sw::optional<sw::RespawnSpawn> onGround = flow.update( sw::GameSeconds{ 0.016f }, context );
     SW_REQUIRE_TRUE( onGround.has_value() );
     SW_EXPECT_TRUE( onGround->_policy == sw::RespawnPolicyKind::InPlace );
     SW_EXPECT_TRUE( onGround->_pointID.empty() );
@@ -301,7 +301,7 @@ SW_TEST_CASE( RespawnFlowTest, InPlaceUsesTheNearestSafeLocation )
 
     // 낭떠러지(구덩이 x 10..14) 바닥에 떨어져 죽었다 — 가까운 땅 가장자리(x 11 → 10)
     SW_REQUIRE_TRUE( flow.notifyDied( sw::float3{ 11.0f, -1.0f, 0.0f }, 0.0f ) );
-    const sw::optional<sw::RespawnSpawn> fromPit = flow.update( 0.016f, context );
+    const sw::optional<sw::RespawnSpawn> fromPit = flow.update( sw::GameSeconds{ 0.016f }, context );
     SW_REQUIRE_TRUE( fromPit.has_value() );
     SW_EXPECT_TRUE( fromPit->_policy == sw::RespawnPolicyKind::InPlace );
     SW_EXPECT_NEAR( 10.0f, fromPit->_position._x, kRespawnTolerance );
@@ -310,7 +310,7 @@ SW_TEST_CASE( RespawnFlowTest, InPlaceUsesTheNearestSafeLocation )
 
     // 횟수가 끝났다 — 땅 위여도 팀 거점
     SW_REQUIRE_TRUE( flow.notifyDied( sw::float3{ 20.0f, 1.0f, 0.0f }, 0.0f ) );
-    const sw::optional<sw::RespawnSpawn> exhausted = flow.update( 0.016f, context );
+    const sw::optional<sw::RespawnSpawn> exhausted = flow.update( sw::GameSeconds{ 0.016f }, context );
     SW_REQUIRE_TRUE( exhausted.has_value() );
     SW_EXPECT_TRUE( exhausted->_policy == sw::RespawnPolicyKind::TeamBase );
     SW_EXPECT_EQUAL( sw::hashed_string( "base" ), exhausted->_pointID );
@@ -319,13 +319,13 @@ SW_TEST_CASE( RespawnFlowTest, InPlaceUsesTheNearestSafeLocation )
     sw::RespawnFlow fresh;
     SW_REQUIRE_TRUE( fresh.initialize( rules ) );
     SW_REQUIRE_TRUE( fresh.notifyDied( sw::float3{ 12.0f, -20.0f, 0.0f }, 0.0f ) );
-    const sw::optional<sw::RespawnSpawn> tooDeep = fresh.update( 0.016f, context );
+    const sw::optional<sw::RespawnSpawn> tooDeep = fresh.update( sw::GameSeconds{ 0.016f }, context );
     SW_REQUIRE_TRUE( tooDeep.has_value() );
     SW_EXPECT_TRUE( tooDeep->_policy == sw::RespawnPolicyKind::TeamBase );
     sw::RespawnContext noWorld = context;
     noWorld._pWorld            = nullptr;
     SW_REQUIRE_TRUE( fresh.notifyDied( sw::float3{ 5.0f, 1.0f, 0.0f }, 0.0f ) );
-    const sw::optional<sw::RespawnSpawn> blind = fresh.update( 0.016f, noWorld );
+    const sw::optional<sw::RespawnSpawn> blind = fresh.update( sw::GameSeconds{ 0.016f }, noWorld );
     SW_REQUIRE_TRUE( blind.has_value() );
     SW_EXPECT_TRUE( blind->_policy == sw::RespawnPolicyKind::TeamBase );
 }
@@ -349,18 +349,18 @@ SW_TEST_CASE( RespawnFlowTest, WaitsForALocationAndForItToBeReady )
     context._team         = 0;
 
     SW_REQUIRE_TRUE( flow.notifyDied( sw::float3{}, 0.0f ) );
-    SW_EXPECT_FALSE( flow.update( 0.1f, context ).has_value() );
-    SW_EXPECT_FALSE( flow.update( 0.1f, context ).has_value() );
+    SW_EXPECT_FALSE( flow.update( sw::GameSeconds{ 0.1f }, context ).has_value() );
+    SW_EXPECT_FALSE( flow.update( sw::GameSeconds{ 0.1f }, context ).has_value() );
     SW_EXPECT_TRUE( flow.getPhase() == sw::RespawnPhase::Search );
 
     listPoint.push_back( sw::RespawnSpawnPoint{
         sw::hashed_string( "home" ), sw::float3{ 2.0f, 1.0f, 0.0f },
         0.0f, 0
     } );
-    SW_EXPECT_FALSE( flow.update( 0.1f, context ).has_value() ); // 자리는 골랐지만 셀이 오르지 않았다
+    SW_EXPECT_FALSE( flow.update( sw::GameSeconds{ 0.1f }, context ).has_value() ); // 자리는 골랐지만 셀이 오르지 않았다
     SW_EXPECT_TRUE( flow.isDead() );
     world._bReady                                = SW_TRUE;
-    const sw::optional<sw::RespawnSpawn> spawned = flow.update( 0.1f, context );
+    const sw::optional<sw::RespawnSpawn> spawned = flow.update( sw::GameSeconds{ 0.1f }, context );
     SW_REQUIRE_TRUE( spawned.has_value() );
     SW_EXPECT_EQUAL( sw::hashed_string( "home" ), spawned->_pointID );
 }
@@ -394,13 +394,13 @@ SW_TEST_CASE( RespawnFlowTest, SpawnRestoresHealthGrantsInvulnerabilityAndPenali
 
     health.kill();
     SW_REQUIRE_TRUE( flow.notifyDied( sw::float3{}, 0.0f ) );
-    const sw::optional<sw::RespawnSpawn> spawned = flow.update( 0.016f, context );
+    const sw::optional<sw::RespawnSpawn> spawned = flow.update( sw::GameSeconds{ 0.016f }, context );
     SW_REQUIRE_TRUE( spawned.has_value() );
     SW_EXPECT_TRUE( health.isAlive() );
     SW_EXPECT_NEAR( health.getSettings()._maxHealth, health.getHealth(), kRespawnTolerance );
     SW_EXPECT_TRUE( health.isInvulnerable() );
     SW_EXPECT_TRUE( health.applyDamage( 10.0f )._bIgnored == SW_TRUE );
-    health.update( 2.1f );
+    health.update( sw::GameSeconds{ 2.1f } );
     SW_EXPECT_FALSE( health.isInvulnerable() );
     SW_EXPECT_EQUAL( int64( 15 ), spawned->_currencyPenalty ); // 100 × 0.1 + 5
     SW_EXPECT_EQUAL( int64( 85 ), wallet.getBalance( kGold ) );
@@ -411,7 +411,7 @@ SW_TEST_CASE( RespawnFlowTest, SpawnRestoresHealthGrantsInvulnerabilityAndPenali
     wallet.setBalance( kGold, 3 );
     health.kill();
     SW_REQUIRE_TRUE( flow.notifyDied( sw::float3{}, 0.0f ) );
-    const sw::optional<sw::RespawnSpawn> poor = flow.update( 0.016f, context );
+    const sw::optional<sw::RespawnSpawn> poor = flow.update( sw::GameSeconds{ 0.016f }, context );
     SW_REQUIRE_TRUE( poor.has_value() );
     SW_EXPECT_EQUAL( int64( 3 ), poor->_currencyPenalty );
     SW_EXPECT_EQUAL( int64( 0 ), wallet.getBalance( kGold ) );
@@ -443,14 +443,14 @@ SW_TEST_CASE( RespawnFlowTest, CostIsChargedOnlyWhenAffordable )
     context._pWallet      = &wallet;
 
     SW_REQUIRE_TRUE( flow.notifyDied( sw::float3{ 5.0f, 1.0f, 0.0f }, 0.0f ) );
-    const sw::optional<sw::RespawnSpawn> paid = flow.update( 0.016f, context );
+    const sw::optional<sw::RespawnSpawn> paid = flow.update( sw::GameSeconds{ 0.016f }, context );
     SW_REQUIRE_TRUE( paid.has_value() );
     SW_EXPECT_TRUE( paid->_policy == sw::RespawnPolicyKind::InPlace );
     SW_EXPECT_EQUAL( int64( 50 ), paid->_costCharged );
     SW_EXPECT_EQUAL( int64( 20 ), wallet.getBalance( kGold ) );
 
     SW_REQUIRE_TRUE( flow.notifyDied( sw::float3{ 5.0f, 1.0f, 0.0f }, 0.0f ) );
-    const sw::optional<sw::RespawnSpawn> broke = flow.update( 0.016f, context );
+    const sw::optional<sw::RespawnSpawn> broke = flow.update( sw::GameSeconds{ 0.016f }, context );
     SW_REQUIRE_TRUE( broke.has_value() );
     SW_EXPECT_TRUE( broke->_policy == sw::RespawnPolicyKind::NearestSpawnPoint );
     SW_EXPECT_EQUAL( int64( 20 ), wallet.getBalance( kGold ) );
@@ -480,16 +480,16 @@ SW_TEST_CASE( RespawnFlowTest, PlayerChoiceTimesOutToTheNextPolicy )
     context._pSpawnPoints = &listPoint;
 
     SW_REQUIRE_TRUE( flow.notifyDied( sw::float3{ 5.0f, 1.0f, 0.0f }, 0.0f ) );
-    SW_EXPECT_FALSE( flow.update( 0.016f, context ).has_value() );
+    SW_EXPECT_FALSE( flow.update( sw::GameSeconds{ 0.016f }, context ).has_value() );
     SW_EXPECT_TRUE( flow.getPhase() == sw::RespawnPhase::Selection );
     sw::vector<sw::hashed_string> listChoice;
     flow.collectChoices( context, listChoice );
     SW_REQUIRE_EQUAL( size_t( 1 ), listChoice.size() );
     SW_EXPECT_EQUAL( sw::hashed_string( "town" ), listChoice[0] );
 
-    SW_EXPECT_FALSE( flow.update( 4.0f, context ).has_value() );
+    SW_EXPECT_FALSE( flow.update( sw::GameSeconds{ 4.0f }, context ).has_value() );
     SW_EXPECT_NEAR( 1.0f, flow.getChoiceRemaining(), 1.0e-3f );
-    const sw::optional<sw::RespawnSpawn> timedOut = flow.update( 1.0f, context );
+    const sw::optional<sw::RespawnSpawn> timedOut = flow.update( sw::GameSeconds{ 1.0f }, context );
     SW_REQUIRE_TRUE( timedOut.has_value() );
     SW_EXPECT_TRUE( timedOut->_policy == sw::RespawnPolicyKind::NearestSpawnPoint );
     SW_EXPECT_EQUAL( 0, flow.getPolicyUses( sw::RespawnPolicyKind::InPlace ) );
@@ -526,15 +526,15 @@ SW_TEST_CASE( RespawnFlowTest, DownedAllyReviveDoesNotStartTheFlow )
     notifyOnDeath();
     SW_EXPECT_FALSE( flow.isDead() );
     SW_REQUIRE_TRUE( health.startRevive( 7 ) );
-    health.update( 1.1f );
+    health.update( sw::GameSeconds{ 1.1f } );
     SW_EXPECT_TRUE( health.isAlive() );
     notifyOnDeath();
     SW_EXPECT_FALSE( flow.isDead() );
 
-    health.update( settings._invulnerableAfterRevive + 0.1f ); // 부활 직후 무적이 풀린 뒤에 맞는다
+    health.update( sw::GameSeconds{ settings._invulnerableAfterRevive + 0.1f } ); // 부활 직후 무적이 풀린 뒤에 맞는다
     (void)health.applyDamage( 1000.0f );
     SW_REQUIRE_TRUE( health.isDowned() );
-    health.update( 1000.0f ); // 출혈사
+    health.update( sw::GameSeconds{ 1000.0f } ); // 출혈사
     SW_REQUIRE_TRUE( health.isDead() );
     notifyOnDeath();
     SW_EXPECT_TRUE( flow.isDead() );
@@ -557,9 +557,9 @@ SW_TEST_CASE( RespawnFlowTest, StateRoundTripContinuesTheFlow )
     sw::RespawnContext context;
     context._pSpawnPoints = &listPoint;
     SW_REQUIRE_TRUE( original.notifyDied( sw::float3{}, 0.0f ) );
-    SW_REQUIRE_TRUE( original.update( 3.0f, context ).has_value() );
+    SW_REQUIRE_TRUE( original.update( sw::GameSeconds{ 3.0f }, context ).has_value() );
     SW_REQUIRE_TRUE( original.notifyDied( sw::float3{ 4.0f, 0.0f, 0.0f }, 0.0f ) );
-    SW_EXPECT_FALSE( original.update( 1.0f, context ).has_value() );
+    SW_EXPECT_FALSE( original.update( sw::GameSeconds{ 1.0f }, context ).has_value() );
 
     sw::Archive written;
     original.writeState( written );
@@ -572,8 +572,8 @@ SW_TEST_CASE( RespawnFlowTest, StateRoundTripContinuesTheFlow )
     SW_EXPECT_NEAR( 2.0f, restored.getDelayRemaining(), kRespawnTolerance );
     SW_EXPECT_NEAR( 4.0f, restored.getDeathPosition()._x, kRespawnTolerance );
     SW_EXPECT_EQUAL( 1, restored.getPolicyUses( sw::RespawnPolicyKind::NearestSpawnPoint ) );
-    SW_EXPECT_FALSE( restored.update( 1.0f, context ).has_value() );
-    SW_EXPECT_TRUE( restored.update( 1.0f, context ).has_value() );
+    SW_EXPECT_FALSE( restored.update( sw::GameSeconds{ 1.0f }, context ).has_value() );
+    SW_EXPECT_TRUE( restored.update( sw::GameSeconds{ 1.0f }, context ).has_value() );
 
     sw::RespawnRules longer = rules;
     longer._listPolicy.push_back( RespawnFlowTestUtil::makePolicy( sw::RespawnPolicyKind::TeamBase ) );

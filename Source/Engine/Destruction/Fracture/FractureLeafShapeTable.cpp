@@ -9,7 +9,7 @@
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Destruction/Fracture/FractureAsset.h"
-#include "Engine/Object/GameObject/Service/SceneServiceRegistry.h"
+#include "Engine/Object/GameObject/Subsystem/SceneSubsystemRegistry.h"
 #include "Engine/Physics/Collision/PhysicsShape.h"
 #include "Engine/Physics/IPhysicsScene.h"
 
@@ -165,7 +165,7 @@ namespace sw
 
 namespace sw
 {
-    SW_SCENE_SERVICE( FractureLeafShapeTable, FlushEnd, SceneFrameAccess{} )
+    SW_SCENE_SUBSYSTEM( FractureLeafShapeTable, FlushEnd, SceneFrameAccess{} )
 
     FractureLeafShapeTable::FractureLeafShapeTable( GameObjectManager& manager )
         : _table{}

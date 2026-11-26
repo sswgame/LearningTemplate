@@ -7,7 +7,7 @@
 #include "Engine/Network/GameNetSession.h"
 
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/SkirmishMatch.h"
-#include "GameFramework/Runtime/Foundation/Service/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 
 namespace sw
 {
@@ -153,7 +153,7 @@ namespace sw
                     _arrAppliedCount[player] += match.getWorld().applyCommand( player, command ) > 0 ? 1 : 0;
                 }
             }
-            match.update( step, 1.0f );
+            match.update( StepSeconds{ step }, 1.0f ); // 락스텝 한 걸음
             if ( tick % kChecksumInterval == 0 )
                 _session.reportChecksum( tick, match.computeChecksum() );
             ++advancedCount;

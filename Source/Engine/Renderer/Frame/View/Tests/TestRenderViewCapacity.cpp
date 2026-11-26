@@ -3,7 +3,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Config/EngineConfig.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Renderer/Frame/View/RenderViewCollector.h"
 
 // 추가 뷰 자리 수(RN-16) — 설정 파일(EngineConfig `_render._maxExtraViewCount`)이 정본이고, 구조 상한(`kExtraRenderViewCapacity`)을 넘거나 0 이면 쓰지 않는다.

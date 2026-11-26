@@ -8,7 +8,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Config/RHIBackendType.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 
 enum class TestGlobalVariableMode : uint8
 {

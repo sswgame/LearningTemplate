@@ -2,10 +2,10 @@
 // 일꾼 넷이 함께 두드리는 유일한 단위 테스트다(설정 기본값은 일꾼 하나라 다른 테스트는 워커를 띄우지 않는다). 디바이스 없음(nogpu).
 #include "pch.h"
 
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 #include "Core/Testing/TestFramework.h"
 
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Physics/Collision/PhysicsShape.h"
 #include "Engine/Physics/IPhysicsScene.h"
 #include "Engine/Physics/PhysicsSettings.h"

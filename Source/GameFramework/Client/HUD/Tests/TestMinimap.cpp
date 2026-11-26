@@ -15,7 +15,7 @@
 #include "GameFramework/Client/HUD/MinimapMarkerComponent.h"
 #include "GameFramework/Runtime/Character/Control/ControlEvents.h"
 #include "GameFramework/Runtime/Foundation/Service/GameEventUtil.h"
-#include "GameFramework/Runtime/Foundation/Service/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 
 using namespace sw;
 

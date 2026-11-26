@@ -37,10 +37,10 @@ namespace
     }
 
     /** @brief 모든 코드 포인트를 가진 가족 하나의 글꼴 시스템을 시작합니다. */
-    [[nodiscard]] bool initializeAllCoverage( sw::test::FakeFontServiceFixture& fixture )
+    [[nodiscard]] bool initializeAllCoverage( sw::test::FakeFontSubsystemFixture& fixture )
     {
-        sw::FontCatalogDef catalog = sw::test::FakeFontServiceFixture::makeCatalog( "All" );
-        sw::test::FakeFontServiceFixture::addFamily( catalog, "All", "test/fonts/all.ttf" );
+        sw::FontCatalogDef catalog = sw::test::FakeFontSubsystemFixture::makeCatalog( "All" );
+        sw::test::FakeFontSubsystemFixture::addFamily( catalog, "All", "test/fonts/all.ttf" );
         return fixture.initialize( catalog );
     }
 
@@ -119,7 +119,7 @@ SW_TEST_CASE( TextBidiTest, RightToLeftOverrideReversesPseudoText )
 /** @brief [TextBidiTest] RTL 문단의 괄호는 배치에서 거울 글리프로 그린다 — "(שלום)" 의 눈에 보이는 첫 글리프는 논리 끝 ')' 를 거울한 '(' 이다 */
 SW_TEST_CASE( TextBidiTest, MirroredBracketsInRtlLayout )
 {
-    sw::test::FakeFontServiceFixture fixture;
+    sw::test::FakeFontSubsystemFixture fixture;
     SW_REQUIRE_TRUE( initializeAllCoverage( fixture ) );
     sw::TextLayoutEngine layout{ *fixture._fontService };
     sw::TextLayoutResult result{};
@@ -139,7 +139,7 @@ SW_TEST_CASE( TextBidiTest, MirroredBracketsInRtlLayout )
  */
 SW_TEST_CASE( TextBidiTest, LineBreakThenReorder )
 {
-    sw::test::FakeFontServiceFixture fixture;
+    sw::test::FakeFontSubsystemFixture fixture;
     SW_REQUIRE_TRUE( initializeAllCoverage( fixture ) );
     sw::TextLayoutEngine layout{ *fixture._fontService };
     sw::TextLayoutResult result{};

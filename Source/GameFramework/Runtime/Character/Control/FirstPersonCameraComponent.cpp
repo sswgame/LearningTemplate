@@ -72,7 +72,7 @@ namespace sw
             const ControlIntent& intent = pPawn->getIntent();
             _look.setAngles( intent._controlYaw, intent._controlPitch );
         }
-        _pendingDeltaTime += MathUtil::max( 0.0f, context.getDeltaTime() );
+        _pendingDeltaTime += MathUtil::max( 0.0f, context.getDeltaTime().count() );
         applyToCamera();
     }
 

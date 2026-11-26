@@ -10,6 +10,7 @@
 #pragma once
 #include "Core/Foundation/Types.h"
 #include "Core/Time/Countdown.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Serializer/CatalogKey.h"
@@ -62,7 +63,7 @@ namespace sw
     protected:
         [[nodiscard]] bool startGame() override;
         void               onGameStarted() override;
-        void               updateMatch( float32 deltaTime ) override;
+        void               updateMatch( GameSeconds frameTime ) override;
 
     private:
         /** @brief 카탈로그의 덱 · 상대로 @p outBattle 을 엽니다. 없는 덱 · 상대이거나 덱이 비면 오류를 남기고 false 입니다. */

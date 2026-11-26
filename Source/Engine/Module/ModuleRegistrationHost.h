@@ -5,7 +5,7 @@
  *          `ScopeOwned` 정적 맵 둘이 들었다(소유자 없는 엔진 수명 값 → 서비스 범위의 서브시스템이 소유). 모듈을 올리는 길(`engine::registerModuleTypes`)이 그 모듈의 등록자 사슬을 넘기면 고른 범위
  *          (프로세스 · 엔진)에 모듈 이름의 자식 범위를 매달아 서브시스템을 세우고, 내리는 길(`engine::unregisterModuleTypes`)이 그 자식 범위째 걷는다.
  *          Shipping 은 모듈을 내리지 않는다 — 자식 범위는 그것을 매단 범위가 사라질 때 함께 사라진다(`SubsystemScope::destroyAll` 이 자식을 먼저 지운다).
- *          조회 창구(`ISubsystemLocator`)는 매단 자식이 공개한 칸만 본다 — 모듈에 넘기는 서비스 범위가 이것을 부모로 두어(`GameModuleManager::fillModuleServiceScope`)
+ *          조회 창구(`ISubsystemLocator`)는 매단 자식이 공개한 칸만 본다 — 모듈에 넘기는 서비스 범위가 이것을 부모로 두어(`GameModuleManager::fillModuleSubsystemScope`)
  *          게임 모듈이 호스트 전용 서비스는 못 보고 모듈이 공개한 구현(암호 제공자 …)만 찾게 한다. 에디터 모듈의 창구(`getHostModuleLocator`)는 거기에 더해
  *          호스트 모듈에 보인다고 스스로 선언한 서브시스템(`SubsystemModuleVisibility::HostModules` — 개발 도구의 HUD · 리로드 집계 …)을 엔진 범위부터 상위로 찾는다.
  */
@@ -66,7 +66,7 @@ namespace sw
         void                shutdownSubsystem() override {}
         const utf8*         getSubsystemName() const override { return kSubsystemName; }
 
-        /** @brief 매단 자식이 공개한 칸만 보는 조회 창구입니다(게임 모듈 범위의 부모 — `GameModuleManager::fillModuleServiceScope`). 수명은 이 서브시스템과 같다. */
+        /** @brief 매단 자식이 공개한 칸만 보는 조회 창구입니다(게임 모듈 범위의 부모 — `GameModuleManager::fillModuleSubsystemScope`). 수명은 이 서브시스템과 같다. */
         const ISubsystemLocator& getMountedLocator() const { return _mountedLocator; }
         /**
          * @brief 매단 자식이 공개한 칸에 더해, 호스트 모듈에 보인다고 선언한 서브시스템(`SubsystemModuleVisibility::HostModules`)을 보는 조회 창구입니다(에디터 모듈 범위의 부모).

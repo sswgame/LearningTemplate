@@ -6,7 +6,7 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/PackedTypes.h"
 #include "Core/Math/VectorMath.h"
-#include "Core/Name/TagID.h"
+#include "Core/String/Name/TagID.h"
 #include "Core/String/formatString.h"
 
 #include "Engine/Foundation/ComponentHandle.h"

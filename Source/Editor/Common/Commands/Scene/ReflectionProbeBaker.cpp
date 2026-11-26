@@ -6,7 +6,7 @@
 #include "Core/Math/Half.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Config/EngineConfig.h"

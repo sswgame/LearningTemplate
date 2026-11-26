@@ -6,8 +6,8 @@
 #include "Core/Container/vector.h"
 #include "Core/Log/ScopedDeferredLog.h"
 
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Reflection/ReflectValueBinding.h"
 #include "Engine/Reflection/ReflectVisit.h"
 #include "Engine/Reflection/TypeRegistry.h"
@@ -328,5 +328,5 @@ namespace sw
 
 namespace sw
 {
-    SW_ENGINE_SERVICE_SUBSYSTEM( ComponentDefaults, GameVisible, Process, Services, (), SW_ENGINE_DEFAULT_FACTORY( ComponentDefaults ) );
+    SW_ENGINE_SUBSYSTEM_WITH_SLOT( ComponentDefaults, GameVisible, Process, Shared, (), SW_ENGINE_DEFAULT_FACTORY( ComponentDefaults ) );
 } // namespace sw

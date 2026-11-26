@@ -165,7 +165,7 @@ namespace sw
             if ( _world.consumeDirtyFlag( entry.second->_avatarID ) )
                 sendProgress( *entry.second );
         }
-        if ( _autosaveTimer.updateRepeat( deltaSeconds, _world.getRules()._autosaveSeconds, true ) )
+        if ( _autosaveTimer.updateRepeat( GameSeconds{ deltaSeconds }, _world.getRules()._autosaveSeconds, true ) )
             saveAll();
         publishEntities();
         _replicator.update( deltaSeconds );

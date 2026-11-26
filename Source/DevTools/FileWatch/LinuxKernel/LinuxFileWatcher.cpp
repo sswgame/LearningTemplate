@@ -12,7 +12,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Process/ThreadCrashStack.h"
+#include "Core/Process/Process.h"
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
 

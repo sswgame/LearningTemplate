@@ -24,9 +24,9 @@ namespace sw
         }
     }
 
-    bool FogOfWar::updateRepaintTimer( float32 deltaTime, float32 interval )
+    bool FogOfWar::updateRepaintTimer( GameSeconds frameTime, float32 interval )
     {
-        _repaintTimer.update( deltaTime );
+        _repaintTimer.update( frameTime );
         if ( _repaintTimer.isActive() )
             return false;
         _repaintTimer.start( interval );

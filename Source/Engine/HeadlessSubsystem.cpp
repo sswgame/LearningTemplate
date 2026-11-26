@@ -4,19 +4,19 @@
 
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/Log/Logger.h"
-#include "Core/Process/StandardOutput.h"
+#include "Core/Process/Process.h"
 #include "Core/Subsystem/SubsystemCollection.h"
 
 #include "Engine/Asset/EngineDefaultAssetsSubsystem.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/Commandlet.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
-#include "Engine/Foundation/HeadlessTask.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/2D/Render2DSettingsSubsystem.h"
 #include "Engine/Graphics/RHI/RHIInitResult.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 #include "Engine/Module/ModuleLoadStageSubsystem.h"
 #include "Engine/Scene/SceneManager.h"
-#include "Engine/Text/FontService.h"
+#include "Engine/Text/FontSubsystem.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 #include "Engine/Window/SplashSubsystem.h"
 
@@ -36,7 +36,7 @@ namespace sw
             static bool isHelpRequested( const CommandLineManager& commandLine ) { return isFlagGiven( commandLine, CommandLineArgument::HELP ); }
 
             /** @brief `-help` — 받는 인자 목록을 표준 출력에 찍고 끝낸다(창 · 렌더러를 세우지 않는다). */
-            static bool runHelpTask( HeadlessTaskContext& context )
+            static bool runHelpTask( CommandletContext& context )
             {
                 // 로거를 거치지 않는다 — 도움말은 로그 줄(시각 · 범주 머리)이 아니라 그대로 읽을 글이고, 로그 수준을 낮춘 실행에서도 나와야 한다.
                 if ( StandardOutput::write( context._commandLine.makeUsageText() ) == false )
@@ -49,15 +49,15 @@ namespace sw
         };
     } // namespace
 
-    // 배포에도 있는 헤드리스 작업. 쿠킹 · 테스트 · 문서 · 에디터 모듈 작업 같은 개발 작업은 DevTools 가 자기 자리에서 올린다(`DevTools/Cook/CookTasks.cpp` · `DevTools/Diagnostics/DevHeadlessTasks.cpp` ·
-    // `DevTools/Host/EditorModuleHeadlessTasks.cpp`).
+    // 배포에도 있는 헤드리스 작업. 쿠킹 · 테스트 · 문서 · 에디터 모듈 작업 같은 개발 작업은 DevTools 가 자기 자리에서 올린다(`DevTools/Cook/CookCommandlets.cpp` · `DevTools/Diagnostics/DevCommandlets.cpp` ·
+    // `DevTools/Host/EditorModuleCommandlets.cpp`).
     using HeadlessInternal = HeadlessSubsystemInternal;
-    SW_HEADLESS_TASK( help, "Help", HeadlessTaskPriority::kHelp, Any, &HeadlessInternal::isHelpRequested, &HeadlessInternal::runHelpTask );
+    SW_COMMANDLET( help, "Help", CommandletPriority::kHelp, Any, &HeadlessInternal::isHelpRequested, &HeadlessInternal::runHelpTask );
 } // namespace sw
 
 namespace sw
 {
-    HeadlessSubsystem::HeadlessSubsystem( bool bDedicatedServer, HeadlessTaskState& outState )
+    HeadlessSubsystem::HeadlessSubsystem( bool bDedicatedServer, CommandletState& outState )
         : _state{ outState }
         , _bDedicatedServer{ bDedicatedServer }
     {
@@ -65,12 +65,12 @@ namespace sw
 
     SubsystemInitResult HeadlessSubsystem::initializeSubsystem()
     {
-        // 작업(테스트 · 쿠킹 · 도구)의 조회는 이 서브시스템의 의존이 아니다 — 초기화 조회 검사에서 뺀다(`SubsystemCollection::HostedTaskScope`).
-        const SubsystemCollection::HostedTaskScope hostedTask;
-        // 작업 하나가 돌았거나 거절됐으면 이 단계에 기대는 단계(창 · RHI · 렌더러)를 건너뛴다. 고르는 규칙은 `HeadlessTaskRegistration::selectAndRun`.
-        HeadlessTaskContext      context{ engine::getSubsystem<CommandLineManager>(), _state, _bDedicatedServer == SW_TRUE };
-        const HeadlessTaskResult result = HeadlessTaskRegistration::runRequested( context );
-        return result == HeadlessTaskResult::NotRequested ? SubsystemInitResult::Succeeded : SubsystemInitResult::SkipDependents;
+        // 작업(테스트 · 쿠킹 · 도구)의 조회는 이 서브시스템의 의존이 아니다 — 초기화 조회 검사에서 뺀다(`SubsystemCollection::HostedCommandletScope`).
+        const SubsystemCollection::HostedCommandletScope hostedTask;
+        // 작업 하나가 돌았거나 거절됐으면 이 단계에 기대는 단계(창 · RHI · 렌더러)를 건너뛴다. 고르는 규칙은 `CommandletRegistration::selectAndRun`.
+        CommandletContext      context{ engine::getSubsystem<CommandLineManager>(), _state, _bDedicatedServer == SW_TRUE };
+        const CommandletResult result = CommandletRegistration::runRequested( context );
+        return result == CommandletResult::NotRequested ? SubsystemInitResult::Succeeded : SubsystemInitResult::SkipDependents;
     }
 
     span<const utf8* const> HeadlessSubsystem::getSubsystemDependencies() const
@@ -84,7 +84,7 @@ namespace sw
     span<const utf8* const> HeadlessSubsystem::getSubsystemDependents() const
     {
         // 스플래시도 막는다 — 창을 띄우지 않는 작업(단위 테스트 · 쿠킹 · 백엔드마다 시나리오를 자식으로 돌리는 조정 프로세스)에 스플래시가 서면 작업 내내 갱신되지 않은 채 떠 있었다.
-        static constexpr const utf8* kArrDependent[] = { FontService::kSubsystemName, kRHISubsystemName, UserSettingsManager::kSubsystemName, SplashSubsystem::kSubsystemName };
+        static constexpr const utf8* kArrDependent[] = { FontSubsystem::kSubsystemName, kRHISubsystemName, UserSettingsManager::kSubsystemName, SplashSubsystem::kSubsystemName };
         return kArrDependent;
     }
 } // namespace sw

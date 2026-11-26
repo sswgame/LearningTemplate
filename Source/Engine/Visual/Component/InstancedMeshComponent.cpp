@@ -9,7 +9,7 @@
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Content/AssetIO.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
@@ -144,7 +144,7 @@ namespace sw
             _pPrimitiveRegistry->removeInstanceBatches( vector_reference<PrimitiveBatch* const>( arrBatch, 1 ) );
         }
         _pBatch.reset();
-        if ( _acquiredMaterialPath.empty() == false && engine::areEngineServicesBound() )
+        if ( _acquiredMaterialPath.empty() == false && engine::areEngineSubsystemsBound() )
             engine::getSubsystem<AssetManager>().getAssetCache<MaterialCache>().release( _acquiredMaterialPath.view() );
         _acquiredMaterialPath = hashed_string{};
         _pMaterial            = nullptr;
@@ -153,7 +153,7 @@ namespace sw
     void InstancedMeshComponent::rebuildBatch()
     {
         releaseBatch();
-        if ( _pPrimitiveRegistry == nullptr || _listInstance.empty() || engine::areEngineServicesBound() == false )
+        if ( _pPrimitiveRegistry == nullptr || _listInstance.empty() || engine::areEngineSubsystemsBound() == false )
             return;
         // 메시는 워커가 읽는다 — 다 올 때까지 배치 없이 두고 씬 프레임의 도착 단계가 다시 짓는다(언리얼 ISM 도 메시가 스트리밍되기 전에는 그리지 않는다).
         shared_ptr<Mesh>  mesh;

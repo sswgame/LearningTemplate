@@ -7,7 +7,7 @@
 
 #include "DevTools/Client/Automation/Tests/ScenarioFileCheck.h"
 
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 
 #include "Engine/Config/GameSelection.h"
 

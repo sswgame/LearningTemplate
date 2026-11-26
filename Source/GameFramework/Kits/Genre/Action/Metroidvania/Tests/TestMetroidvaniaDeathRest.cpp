@@ -437,7 +437,7 @@ SW_TEST_CASE( MetroidvaniaDuelistTest, ParryWindowBoundaries )
 
     SW_EXPECT_TRUE( duelist.receiveAttack( 10.0f, 0.0f )._result == sw::MetroidvaniaDefenseResult::Hit );
     duelist.pressParry();
-    duelist.update( 0.25f );
+    duelist.update( sw::GameSeconds{ 0.25f } );
     sw::MetroidvaniaDefenseOutcome result = duelist.receiveAttack( 10.0f, 5.0f );
     SW_EXPECT_TRUE( result._result == sw::MetroidvaniaDefenseResult::Parried );
     SW_EXPECT_EQUAL( sw::hashed_string( "Perfect" ), result._parryGrade );
@@ -448,10 +448,10 @@ SW_TEST_CASE( MetroidvaniaDuelistTest, ParryWindowBoundaries )
     SW_EXPECT_TRUE( duelist.receiveAttack( 10.0f, 0.0f )._result == sw::MetroidvaniaDefenseResult::Hit ); // 한 번만 쓴다
 
     duelist.pressParry();
-    duelist.update( 0.5f ); // 창 0.25 초를 넘겼다
+    duelist.update( sw::GameSeconds{ 0.5f } ); // 창 0.25 초를 넘겼다
     SW_EXPECT_TRUE( duelist.receiveAttack( 10.0f, 0.0f )._result == sw::MetroidvaniaDefenseResult::Hit );
 
-    duelist.update( 0.25f );
+    duelist.update( sw::GameSeconds{ 0.25f } );
     duelist.pressParry();
     duelist.setGuarding( true );
     SW_EXPECT_TRUE( duelist.receiveAttack( 10.0f, 0.0f )._result == sw::MetroidvaniaDefenseResult::Parried ); // 패리가 막기보다 먼저다
@@ -568,7 +568,7 @@ SW_TEST_CASE( MetroidvaniaDuelistTest, RiposteAndStaggerMultiplyOnce )
 
     attacker.pressParry();
     SW_REQUIRE_TRUE( attacker.receiveAttack( 1.0f, 0.0f )._result == sw::MetroidvaniaDefenseResult::Parried );
-    attacker.update( 1.0f );
+    attacker.update( sw::GameSeconds{ 1.0f } );
     SW_EXPECT_FALSE( attacker.isRiposteReady() );
     SW_EXPECT_NEAR( 10.0f, attacker.computeAttackDamage( 10.0f, target ), kDuelTolerance );
 
@@ -581,7 +581,7 @@ SW_TEST_CASE( MetroidvaniaDuelistTest, RiposteAndStaggerMultiplyOnce )
     SW_REQUIRE_TRUE( attacker.receiveAttack( 1.0f, 0.0f )._result == sw::MetroidvaniaDefenseResult::Parried );
     SW_EXPECT_NEAR( 30.0f, attacker.computeAttackDamage( 10.0f, target ), kDuelTolerance ); // 둘 다여도 3 배 한 번
 
-    target.update( 1.0f );
+    target.update( sw::GameSeconds{ 1.0f } );
     SW_EXPECT_FALSE( target.getHealthMachine().isPoiseBroken() );
     SW_EXPECT_NEAR( 10.0f, attacker.computeAttackDamage( 10.0f, target ), kDuelTolerance );
 }
@@ -595,7 +595,7 @@ SW_TEST_CASE( MetroidvaniaDuelistTest, StateRoundTripAndRejection )
     SW_REQUIRE_TRUE( catalog.loadFromXMLText( kDuelXML, "MetroidvaniaDuelistTest" ) );
     sw::MetroidvaniaDuelist original;
     SW_REQUIRE_TRUE( original.initialize( catalog ) );
-    original.update( 1.0f );
+    original.update( sw::GameSeconds{ 1.0f } );
     SW_REQUIRE_TRUE( original.tryAttack() );
     (void)original.receiveAttack( 10.0f, 5.0f );
     original.setGuarding( true );
@@ -667,7 +667,7 @@ SW_TEST_CASE( MetroidvaniaDuelistTest, DuelistDeterminism )
             const sw::MetroidvaniaDuelist target;
             (void)duelist.computeAttackDamage( 10.0f, target );
         }
-        duelist.update( 1.0f / 32.0f );
+        duelist.update( sw::GameSeconds{ 1.0f / 32.0f } );
     };
     SW_EXPECT_TRUE( sw::StateBytesTestUtil::isDeterministic<sw::MetroidvaniaDuelist>( setup, step, 160 ) );
 }

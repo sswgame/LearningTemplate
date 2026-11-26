@@ -2,7 +2,7 @@
 
 #include "Engine/Reflection/EnumName.h"
 
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
 namespace sw
@@ -15,7 +15,7 @@ namespace sw
 
     const utf8* findEnumName( const hashed_string& enumTypeFqn, int64 value )
     {
-        if ( engine::areEngineServicesBound() == false )
+        if ( engine::areEngineSubsystemsBound() == false )
             return nullptr;
         const EnumInfo* pInfo = engine::getSubsystem<TypeRegistry>().findEnumByTypeFqn( enumTypeFqn );
         return pInfo != nullptr ? pInfo->valueToCString( value ) : nullptr;
@@ -23,7 +23,7 @@ namespace sw
 
     const EnumInfo* EnumNameCache::find( const hashed_string& enumTypeFqn ) const
     {
-        if ( engine::areEngineServicesBound() == false )
+        if ( engine::areEngineSubsystemsBound() == false )
             return nullptr;
         // 세대는 찾기 **전에** 읽는다. 찾는 사이 등록이나 해제가 끼면 옛 세대가 남아 다음 호출이 다시 찾는다.
         const uint32    generation = TypeRegistry::getGeneration();

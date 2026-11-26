@@ -9,7 +9,7 @@ namespace sw
         struct OnlineClientRegistryInternal
         {
             /** @brief 등록 목록입니다(함수 정적 — 정적 초기화 순서와 상관없이 처음 쓸 때 선다). */
-            static SW_DEFINE_SERVICE_FACTORY_LIST( getList, "Online client" )
+            static SW_DEFINE_FACTORY_REGISTRATION_LIST( getList, "Online client" )
         };
     } // namespace
 } // namespace sw
@@ -20,7 +20,7 @@ namespace sw
     {
         if ( pFactory == nullptr || pFactory->_pCreate == nullptr )
             return false;
-        return ServiceFactoryNode::addTo( OnlineClientRegistryInternal::getList(), pFactory );
+        return FactoryRegistration::addTo( OnlineClientRegistryInternal::getList(), pFactory );
     }
 
     void OnlineClientRegistry::unregisterFactory( OnlineClientFactory* pFactory )
@@ -30,6 +30,6 @@ namespace sw
 
     void OnlineClientRegistry::collectFactories( vector<OnlineClientFactory*>& outListFactory )
     {
-        ServiceFactoryNode::collectAs( OnlineClientRegistryInternal::getList(), outListFactory );
+        FactoryRegistration::collectAs( OnlineClientRegistryInternal::getList(), outListFactory );
     }
 } // namespace sw

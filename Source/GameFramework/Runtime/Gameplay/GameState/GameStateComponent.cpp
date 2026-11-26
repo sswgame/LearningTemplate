@@ -19,7 +19,7 @@
 
 #include "GameFramework/Runtime/Foundation/GameData/ConfigRangeUtil.h"
 #include "GameFramework/Runtime/Foundation/Save/StatefulComponentRegistrar.h"
-#include "GameFramework/Runtime/Foundation/Service/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 #include "GameFramework/Runtime/Gameplay/GameState/StateSectionTableUtil.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Wallet.h"
@@ -211,10 +211,10 @@ namespace sw
         _listClockEvent.clear();
         if ( _restore.isOpen() == false )
             return;
-        _clock.update( context.getDeltaTime() );
+        _clock.update( context.getDeltaTime().count() );
         _clock.pollEvents( _listClockEvent ); // 날이 넘어가면 평판 컴포넌트가 이 알림을 읽고 평판을 식힌다(`ReputationComponent::onTick`)
         if ( _bWeather == SW_TRUE && _clock.isPaused() == false )
-            (void)_weather.update( context.getDeltaTime() * _clock.getTimeScale() * 86400.0f / _clock.getSettings()._secondsPerDay, _clock.getSeasonName() );
+            (void)_weather.update( context.getDeltaTime().count() * _clock.getTimeScale() * 86400.0f / _clock.getSettings()._secondsPerDay, _clock.getSeasonName() );
         if ( _weatherCatalog.get() != _pWeatherCatalog.get() )
             context.deferPostTickOnComponent( *this, []( GameStateComponent& state )
             { state.rebindWeatherCatalog(); } );

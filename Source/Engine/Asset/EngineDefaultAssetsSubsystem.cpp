@@ -7,8 +7,8 @@
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Foundation/EngineDefines.h"
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Reflection/ReflectionSubsystem.h"
 
@@ -69,6 +69,6 @@ namespace sw
         (void)scope.exposeMember( defaultAssets, defaultAssets.getDefaultAssets() ); // 새 범위 — 겹치지 않는다
     } );
 
-    // 위 공장이 건 엔진 기본 에셋 경로 표의 서비스 칸(읽기 전용). 게임 프레임워크도 엔진 데이터(포토 모드 입력 맵 등)의 경로를 여기서 읽는다.
-    SW_ENGINE_SERVICE( EngineDefaultAssets, GameVisible );
+    // 위 공장이 건 엔진 기본 에셋 경로 표의 서브시스템 칸(읽기 전용). 게임 프레임워크도 엔진 데이터(포토 모드 입력 맵 등)의 경로를 여기서 읽는다.
+    SW_ENGINE_SUBSYSTEM_SLOT( EngineDefaultAssets, GameVisible );
 } // namespace sw

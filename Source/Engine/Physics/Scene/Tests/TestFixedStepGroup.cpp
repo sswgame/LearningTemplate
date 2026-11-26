@@ -39,9 +39,9 @@ namespace
         /** @brief 0 스텝 프레임을 한 번 돌아 누적기를 설정에 맞추고 기록을 비운 뒤, 고정 스텝 길이를 돌려줍니다. */
         float32 configure()
         {
-            getPhysics().step( 0.0f );
+            getPhysics().step( GameSeconds{ 0.0f } );
             _listLog.clear();
-            return getPhysics().getStepTimer().getStep();
+            return getPhysics().getStepTimer().getStep().count();
         }
 
         /** @brief @p group 기록 수입니다(@p pComponent 가 있으면 그 구성원만). */
@@ -66,7 +66,7 @@ SW_TEST_CASE( FixedStepGroupTest, GroupsRunInOrderOncePerStep )
     FixedStepRig  rig;
     const float32 step = rig.configure();
     SW_REQUIRE_TRUE( step > 0.0f );
-    rig.getPhysics().step( step * 2.5f );
+    rig.getPhysics().step( GameSeconds{ step * 2.5f } );
 
     // 기록은 (그룹, 바디, 캐릭터) 쌍으로 온다 — 그룹마다 두 구성원이 단계 차례로 한 번씩.
     SW_REQUIRE_TRUE( rig._listLog.size() >= 4 && rig._listLog.size() % 2 == 0 );
@@ -102,7 +102,7 @@ SW_TEST_CASE( FixedStepGroupTest, ZeroStepFrameRunsOnlyFrameGroups )
 {
     FixedStepRig  rig;
     const float32 step = rig.configure();
-    rig.getPhysics().step( step * 0.25f );
+    rig.getPhysics().step( GameSeconds{ step * 0.25f } );
     SW_EXPECT_EQUAL( 2u, rig.count( FixedStepGroup::FrameBegin ) );
     SW_EXPECT_EQUAL( 0u, rig.count( FixedStepGroup::PreStep ) );
     SW_EXPECT_EQUAL( 0u, rig.count( FixedStepGroup::PostStep ) );
@@ -120,7 +120,7 @@ SW_TEST_CASE( FixedStepGroupTest, ToggleDuringRunAppliesFromNextGroup )
     const float32 step         = rig.configure();
     rig._pBody->_pToggleTarget = rig._pLate;
     rig._pBody->_toggleFrame   = rig._pBody->_frameIndex; // 다음 물리 프레임
-    rig.getPhysics().step( step * 3.5f );
+    rig.getPhysics().step( GameSeconds{ step * 3.5f } );
     const uint32 stepCount = rig.count( FixedStepGroup::PreStep, rig._pBody );
     SW_REQUIRE_TRUE( stepCount >= 3 );
 
@@ -136,7 +136,7 @@ SW_TEST_CASE( FixedStepGroupTest, ToggleDuringRunAppliesFromNextGroup )
     SW_EXPECT_TRUE( list.setEnabled( *rig._pLate, true ) );
     rig._pBody->_pToggleTarget = nullptr;
     rig._listLog.clear();
-    rig.getPhysics().step( step * 0.25f );
+    rig.getPhysics().step( GameSeconds{ step * 0.25f } );
     SW_EXPECT_EQUAL( 1u, rig.count( FixedStepGroup::FrameBegin, rig._pLate ) );
 }
 
@@ -150,7 +150,7 @@ SW_TEST_CASE( FixedStepGroupTest, MembershipFollowsRegistration )
     SW_EXPECT_EQUAL( 2u, list.getMemberCount() );
     rig._pLate->getOwner()->setActive( false );
     (void)rig.configure();
-    rig.getPhysics().step( 0.0f );
+    rig.getPhysics().step( GameSeconds{ 0.0f } );
     SW_EXPECT_EQUAL( 1u, rig.count( FixedStepGroup::FrameBegin, rig._pLate ) );
 
     rig._manager.destroyGameObject( rig._pBody->getOwner() );

@@ -13,7 +13,7 @@
 
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Content/AssetPaths.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 
 #include "sw/config/ConfigConstants.h"
 

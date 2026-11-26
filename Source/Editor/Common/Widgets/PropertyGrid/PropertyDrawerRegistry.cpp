@@ -8,7 +8,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/PackedTypes.h"
-#include "Core/Name/TagID.h"
+#include "Core/String/Name/TagID.h"
 
 #include "Editor/Common/Commands/Asset/EditorAssetIndexEntry.h"
 #include "Editor/Common/Commands/EditorCommandIDs.h"

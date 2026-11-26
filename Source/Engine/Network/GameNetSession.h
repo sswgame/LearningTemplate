@@ -62,14 +62,14 @@
 #include "Core/Network/NetTypes.h"
 #include "Core/Network/Transport/NetEmulation.h"
 #include "Core/Network/Transport/PlatformSocketUtil.h"
-#include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Subsystem/Subsystem.h"
+#include "Core/Subsystem/SubsystemSlot.h"
 #include "Core/Task/TaskFuture.h"
 
 #include "Engine/EngineFrameHooks.h"
 #include "Engine/Network/GameConnectSecurity.h"
 #include "Engine/Network/NetMessageBody.h"
-#include "Engine/Object/GameObject/Service/SceneNetLink.h"
+#include "Engine/Object/GameObject/Subsystem/SceneNetLink.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Inherit/ResourceComposition.h"
 
@@ -579,6 +579,6 @@ namespace sw
         uint64                            _clientHostFrameNumber;   ///< 클라이언트 호스트 — 프레임 앞 훅이 센 프레임 수(리슨 호스트의 `[frame=N]`)
         uint8                             _bFrameClockShown;        ///< 클라이언트 호스트 — 로그 꼬리표를 붙여 두었다(서버가 아니게 되면 뗀다)
 
-        SW_SERVICE_SLOT( GameNetSession, Required );
+        SW_SUBSYSTEM_SLOT( GameNetSession, Required );
     };
 } // namespace sw

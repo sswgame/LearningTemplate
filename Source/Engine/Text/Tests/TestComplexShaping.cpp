@@ -5,7 +5,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Testing/TestFramework.h"
 
-#include "Engine/Text/FontService.h"
+#include "Engine/Text/FontSubsystem.h"
 #include "Engine/Text/IFontRasterizer.h"
 #include "Engine/Text/ITextShaper.h"
 #include "Engine/Text/Tests/FakeFontRasterizer.h"
@@ -122,15 +122,15 @@ SW_TEST_CASE( ComplexShapingTest, AlefJoinsFromBehChainAndBreaksTheChainAfterIts
 
 /**
  * @brief [ComplexShapingTest] 배치는 연결형 모양을 눈에 보이는 순서로 놓는다 — RTL 문단 "بب" 는 왼쪽부터 어말(전진 6) · 어두(전진 5)이고 둘째 글리프는 x = 6 이다(기본 빌드는 독립형 둘, x = 7)
- * @details 크기 10. 가짜가 아닌 FreeType 래스터라이저의 `FontService` 로 돌려 래스터라이저가 고른 셰이퍼가 `TextLayoutEngine` 까지 이어지는지 본다.
+ * @details 크기 10. 가짜가 아닌 FreeType 래스터라이저의 `FontSubsystem` 로 돌려 래스터라이저가 고른 셰이퍼가 `TextLayoutEngine` 까지 이어지는지 본다.
  */
 SW_TEST_CASE( ComplexShapingTest, LayoutPlacesShapedFormsInVisualOrder )
 {
     using Util = ComplexShapingTestUtil;
-    sw::FontService fontService( sw::IFontRasterizer::createDefault() );
+    sw::FontSubsystem fontService( sw::IFontRasterizer::createDefault() );
     fontService.registerMemoryFontFile( Util::kFontVirtualPath, Util::makeFontBytes() );
-    sw::FontCatalogDef catalog = sw::test::FakeFontServiceFixture::makeCatalog( "Shaping" );
-    sw::test::FakeFontServiceFixture::addFamily( catalog, "Shaping", Util::kFontVirtualPath );
+    sw::FontCatalogDef catalog = sw::test::FakeFontSubsystemFixture::makeCatalog( "Shaping" );
+    sw::test::FakeFontSubsystemFixture::addFamily( catalog, "Shaping", Util::kFontVirtualPath );
     SW_REQUIRE_TRUE( fontService.initializeFromCatalog( catalog ) );
 
     sw::TextLayoutEngine layout{ fontService };

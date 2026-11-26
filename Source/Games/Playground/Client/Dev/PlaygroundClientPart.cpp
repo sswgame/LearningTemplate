@@ -7,7 +7,7 @@
 #include "Engine/Renderer/Extension/RenderExtensionRegistry.h"
 
 #include "GameFramework/Runtime/Foundation/Flow/IGameClientPart.h"
-#include "GameFramework/Runtime/Foundation/Service/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 
 #include "Games/Playground/Client/Dev/PlaygroundRenderDemo.h"
 #include "Games/Playground/Client/Dev/StressTestScene.h"

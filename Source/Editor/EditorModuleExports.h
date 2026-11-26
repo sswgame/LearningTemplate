@@ -9,7 +9,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Editor/Common/Backend/FileDialog.h"
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 
 #include "ModuleAPI/ABI/EditorAPI.h"
 #include "ModuleAPI/ABI/ModuleABI.h"
@@ -67,9 +67,9 @@ namespace sw
         pOutAPI->bindService = []( const sw::ISubsystemLocator* pService )                                                                                                                                                     \
         {                                                                                                                                                                                                                      \
             if ( pService != nullptr )                                                                                                                                                                                         \
-                sw::editor::bindEditorService( *pService );                                                                                                                                                                    \
+                sw::editor::bindEditorSubsystems( *pService );                                                                                                                                                                 \
             else                                                                                                                                                                                                               \
-                sw::editor::unbindEditorService();                                                                                                                                                                             \
+                sw::editor::unbindEditorSubsystems();                                                                                                                                                                          \
         };                                                                                                                                                                                                                     \
         pOutAPI->isPlaying = []( sw::EditorHandle editorHandle ) -> bool                                                                                                                                                       \
         { return sw::EditorModuleForwardUtil::callOr<EditorClass, bool>( editorHandle, false, &EditorClass::isPlaying ); };                                                                                                    \

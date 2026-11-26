@@ -3,7 +3,7 @@
 #include "Editor/Panels/Inspector/Model/InspectorViewModel.h"
 
 #include "Core/Algorithm/VectorUtil.h"
-#include "Core/Name/TagID.h"
+#include "Core/String/Name/TagID.h"
 #include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Commands/Diagnostics/EditorGlobalVariableCommands.h"
@@ -17,7 +17,7 @@
 #include "Editor/Common/Widgets/PropertyGrid/Model/InspectorObjectEdit.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
@@ -495,14 +495,14 @@ namespace sw::editor
     void InspectorViewModel::gatherPresets( const EditorCommandTarget& target, vector<InspectorPresetRow>& outListPreset )
     {
         outListPreset.clear();
-        vector<DiskPath>     listNewPresetFile;
-        const EditorTaskPoll presetPoll = _presetJob.take( listNewPresetFile );
-        if ( presetPoll == EditorTaskPoll::Ready )
+        vector<DiskPath>    listNewPresetFile;
+        const EditorJobPoll presetPoll = _presetJob.take( listNewPresetFile );
+        if ( presetPoll == EditorJobPoll::Ready )
         {
             _listPresetFile = std::move( listNewPresetFile );
             _bPresetDirty   = SW_FALSE;
         }
-        else if ( _bPresetDirty == SW_TRUE && presetPoll == EditorTaskPoll::Idle )
+        else if ( _bPresetDirty == SW_TRUE && presetPoll == EditorJobPoll::Idle )
         {
             _presetJob.request( EditorGlobalVariableCommands::getComponentPresetFolderPath(), ".preset.xml", false );
         }

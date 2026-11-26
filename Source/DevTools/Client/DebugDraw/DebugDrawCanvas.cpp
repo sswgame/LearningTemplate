@@ -5,12 +5,12 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
 #include "Engine/Graphics/Canvas/CanvasOverlay.h"
 #include "Engine/Graphics/Canvas/CanvasPainter.h"
 #include "Engine/Graphics/DebugDraw/DebugDrawQueue.h"
-#include "Engine/Text/FontService.h"
+#include "Engine/Text/FontSubsystem.h"
 
 namespace sw
 {
@@ -62,7 +62,7 @@ namespace sw
                     return;
                 // 펼친 선분 버퍼는 이 부름의 지역 값이다 — 개발 겹치기 한 장이라 프레임마다 잡아도 되고, 정적 재사용 버퍼(감춘 싱글턴)를 두지 않는다.
                 vector<DebugLine> listLine;
-                const uint32      paintedCount = DebugDrawCanvasUtil::paint( engine::getSubsystem<DebugDrawQueue>(), *context._pViewProj, context._targetSize, context._pFontService,
+                const uint32      paintedCount = DebugDrawCanvasUtil::paint( engine::getSubsystem<DebugDrawQueue>(), *context._pViewProj, context._targetSize, context._pFontSubsystem,
                                                                              context._glyphFrameIndex, listLine, target.acquire() );
                 if ( paintedCount > 0 )
                     target.markContentChanged();
@@ -108,7 +108,7 @@ namespace sw
         return true;
     }
 
-    uint32 DebugDrawCanvasUtil::paint( const DebugDrawQueue& queue, const float4x4& viewProj, const float2& targetSize, FontService* pFontService, uint64 frameIndex,
+    uint32 DebugDrawCanvasUtil::paint( const DebugDrawQueue& queue, const float4x4& viewProj, const float2& targetSize, FontSubsystem* pFontSubsystem, uint64 frameIndex,
                                        vector<DebugLine>& inoutScratchLine, CanvasDrawList& outCanvas )
     {
         // 재사용 버퍼는 부르는 쪽이 든다 — 예전에는 소유자 없는 엔진 수명 값(`ScopeOwned`)이었다.
@@ -125,7 +125,7 @@ namespace sw
             DebugDrawCanvasInternal::fillSegment( painter, screenFrom, screenTo, line._color );
             ++paintedCount;
         }
-        if ( pFontService == nullptr || pFontService->isInitialized() == false )
+        if ( pFontSubsystem == nullptr || pFontSubsystem->isInitialized() == false )
             return paintedCount;
         for ( const DebugText& text : queue.getVisibleTexts() )
         {
@@ -136,9 +136,9 @@ namespace sw
             CanvasGlyphStyle style{};
             style._fontSize = kTextFontSize;
             style._color    = DebugDrawCanvasInternal::kTextShadow;
-            CanvasPainter::drawLine( painter, *pFontService, text._text, float2{ screen._x + 1.0f, screen._y + 1.0f }, style, frameIndex );
+            CanvasPainter::drawLine( painter, *pFontSubsystem, text._text, float2{ screen._x + 1.0f, screen._y + 1.0f }, style, frameIndex );
             style._color = text._color;
-            CanvasPainter::drawLine( painter, *pFontService, text._text, screen, style, frameIndex );
+            CanvasPainter::drawLine( painter, *pFontSubsystem, text._text, screen, style, frameIndex );
             ++paintedCount;
         }
         return paintedCount;

@@ -16,29 +16,25 @@ namespace sw
     class SW_API ScopedTimer final
     {
     public:
-        /** @brief 태그를 저장하고 지금을 시작으로 합니다. */
+        /** @brief 태그를 저장하고 지금부터 잽니다. */
         explicit ScopedTimer( const utf8* pTag ) noexcept
             : _pTag{ pTag }
-            , _startMicro{ MonotonicClock::nowMicroseconds() }
+            , _stopwatch{}
         {
         }
 
-        /** @brief 경과 시간을 밀리초 단위로 Info 로그에 남깁니다. */
+        /** @brief 경과 시간을 갱신하고 밀리초 단위로 Info 로그를 남깁니다. */
         ~ScopedTimer() noexcept
         {
             (void)_pTag;
-            SW_LOG_INFO_ID( "GameTimer.Ms", "'%#': %# ms", _pTag, getElapsedTimeInSeconds() * constant::time::kMillisecondsPerSecond );
+            SW_LOG_INFO_ID( "ScopedTimer.Ms", "'%#': %# ms", _pTag, getElapsedSeconds() * constant::time::kMillisecondsPerSecond );
         }
 
         /**
-         * @brief 생성 이후 경과한 시간(초)입니다. 몇 번을 불러도 같은 시작에서 잰다.
-         * @details 예전에는 게임 타이머(`GameTimer::updateTimer`)로 재 부를 때마다 기준점이 옮겨, 두 번째 호출 · 소멸자의 로그가 0 ms 였다. 단조 시계의 시작 시각 하나로 잰다.
+         * @brief 생성 이후 경과한 시간(초)입니다. 읽기만 한다 — 몇 번 불러도 스코프 시작부터의 시간이다.
+         * @details 예전에는 프레임 타이머의 델타를 읽어(부를 때마다 기준을 옮겼다) 두 번 부르면 두 번째가 0 이었다. 이제 기준을 옮길 수 없다(const).
          */
-        [[nodiscard]] float32 getElapsedTimeInSeconds() const noexcept
-        {
-            return static_cast<float32>( MonotonicClock::nowMicroseconds() - _startMicro ) / static_cast<float32>( constant::time::kMicrosecondsPerSecond );
-        }
-
+        float64 getElapsedSeconds() const noexcept { return _stopwatch.getElapsedSeconds(); }
         /** @brief 복사를 금지합니다. */
         ScopedTimer( const ScopedTimer& ) = delete;
         /** @brief 복사 대입을 금지합니다. */
@@ -46,6 +42,6 @@ namespace sw
 
     private:
         const utf8* _pTag;
-        int64       _startMicro;
+        Stopwatch   _stopwatch;
     };
 } // namespace sw

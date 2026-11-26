@@ -17,7 +17,7 @@
 #include "Engine/Automation/Scenario/IAutomationStepContext.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Config/GameTimeScale.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Input/InputGlyphStyle.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Reflection/ReflectionCast.h"

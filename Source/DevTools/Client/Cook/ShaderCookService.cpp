@@ -39,7 +39,7 @@ namespace sw
             }
         };
 
-        ShaderCookService                      s_shaderCookService;
-        const IShaderCookService::Registration s_shaderCookServiceRegistration{ s_shaderCookService };
+        ShaderCookService                   s_shaderCookService;
+        const IShaderCookService::Registrar s_shaderCookServiceRegistrar{ s_shaderCookService };
     } // namespace
 } // namespace sw

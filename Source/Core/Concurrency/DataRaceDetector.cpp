@@ -36,7 +36,7 @@ namespace sw
 
 namespace sw
 {
-    RaceDetectContext::ReportFunctionRegistration RaceDetectContext::bindReportFunction( DataRaceReportFunction pFunction )
+    RaceDetectContext::ReportFunctionSubscription RaceDetectContext::bindReportFunction( DataRaceReportFunction pFunction )
     {
         return s_reportFunctionSlot.bind( pFunction );
     }

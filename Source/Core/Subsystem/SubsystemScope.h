@@ -4,7 +4,7 @@
  * @details 언리얼의 서브시스템 범위(엔진 · 에디터 · 게임 인스턴스, `GetSubsystem<T>()`)와 같은 자리입니다. 범위 하나는
  *          - 소유하는 서브시스템(`addSubsystem`, `SubsystemCollection` 이 의존 순서로 세우고 내린다)과
  *          - 소유하지 않는 객체(`bind`, 게임 카탈로그 · 테스트의 스택 객체 — 건 쪽이 범위보다 오래 살아야 한다)를
- *          타입 해시로 찾게 합니다. 조회(`locateSubsystem`)는 그 범위에서 찾고 없으면 상위 범위로 올라갑니다.
+ *          타입 해시로 찾게 합니다. 조회(`findSubsystemFrom`)는 그 범위에서 찾고 없으면 상위 범위로 올라갑니다.
  *          범위는 그것을 든 객체(게임 인스턴스 · 에디터 컨텍스트)와 수명이 같아, 모듈 라이브러리가 내려갈 때 그 객체와 함께 사라진다 —
  *          "건 칸을 풀지 않고 내려간 이미지" 를 훑어 회수할 일이 없다.
  *          **매단 자식 범위**(`mountChildScope`): 범위가 이름 붙은 자식 범위를 소유하고, 자식이 **공개한**(`publish`) 칸은 이 범위의 조회에도 보인다.
@@ -61,7 +61,7 @@ namespace sw
         }
         /**
          * @brief 이 범위 자신의 칸 @p typeHash 를 가진, 이 범위의 컬렉션이 소유한 서브시스템입니다. 빌려 건 칸 · 없는 칸 · 매단 자식의 칸이면 nullptr 입니다.
-         * @details 엔진 서비스 칸(`ServiceSlot::_pOwner`)이 바인딩 때 한 번 묻는다 — 칸 길 조회도 범위 조회와 같은 초기화 의존 검사를 지나게 한다.
+         * @details 엔진 서브시스템 칸(`SubsystemSlot::_pOwner`)이 바인딩 때 한 번 묻는다 — 칸 길 조회도 범위 조회와 같은 초기화 의존 검사를 지나게 한다.
          */
         virtual const Subsystem* findOwnerInScope( uint64 typeHash ) const
         {
@@ -90,7 +90,7 @@ namespace sw
 
     /** @brief @p pScope 부터 상위로 올라가며 @p T 를 찾습니다. 어느 범위에도 없으면 nullptr 입니다. */
     template <typename T>
-    T* locateSubsystem( const ISubsystemLocator* pScope )
+    T* findSubsystemFrom( const ISubsystemLocator* pScope )
     {
         for ( ; pScope != nullptr; pScope = pScope->getParentScope() )
         {
@@ -103,11 +103,11 @@ namespace sw
 
     /** @brief 범위 @p scope 부터 찾은, 반드시 있어야 하는 @p T 입니다. 없으면 그 실행의 잘못이라 모든 구성에서 멈춥니다. */
     template <typename T>
-    T& requireSubsystem( const ISubsystemLocator& scope )
+    T& getSubsystemFrom( const ISubsystemLocator& scope )
     {
-        T* const pFound = locateSubsystem<T>( &scope );
+        T* const pFound = findSubsystemFrom<T>( &scope );
         if ( pFound == nullptr )
-            ::sw::internal::reportMissingRequiredService( SW_FUNCTION_SIGNATURE );
+            ::sw::internal::reportMissingRequiredSubsystem( SW_FUNCTION_SIGNATURE );
         return *pFound;
     }
 } // namespace sw
@@ -151,7 +151,7 @@ namespace sw
         }
 
         /**
-         * @brief 이미 걸린 객체 @p object 를 인터페이스 @p TInterface 로도 찾게 합니다(예: `EditorPanelService` 를 `IEditorPanelService` 로).
+         * @brief 이미 걸린 객체 @p object 를 인터페이스 @p TInterface 로도 찾게 합니다(예: `EditorPanelSubsystem` 를 `IEditorPanelSubsystem` 로).
          * @return 그 인터페이스가 이미 걸려 있으면 false 입니다.
          */
         template <class TInterface, class TObject>
@@ -164,7 +164,7 @@ namespace sw
 
         /**
          * @brief 이 범위가 소유한 서브시스템 @p owner 의 멤버 @p member 를 타입 @p TInterface 로 찾게 합니다 — 멤버 어댑터 · 서브시스템이 든 값 묶음(설정 · 타입 표)의 자리다.
-         * @details 칸의 주인은 @p owner 다 — 초기화 중 조회(범위 · 서비스 칸)가 의존 검사를 지나고(`SubsystemCollection::recordInitializeLookup`), 칸은 그 서브시스템과 함께 지워진다(`destroyAll`).
+         * @details 칸의 주인은 @p owner 다 — 초기화 중 조회(범위 · 서브시스템 칸)가 의존 검사를 지나고(`SubsystemCollection::recordInitializeLookup`), 칸은 그 서브시스템과 함께 지워진다(`destroyAll`).
          *          `bind` 로 걸면 주인이 비어(빌린 칸) 선언을 빠뜨린 조회가 검사를 빠져나간다 — 서브시스템의 멤버는 이것으로 건다. @p member 는 @p owner 와 수명이 같아야 한다.
          *          @p TInterface 가 const 면 `bind` 와 같이 `const T` 로 찾는 쪽만 찾는다. @p owner 가 이 범위에 소유한 서브시스템이 아니면 부른 쪽의 잘못이라 멈춘다.
          *          호스트 모듈(에디터)에 보이는지는 @p TInterface 가 선언한다(`kModuleVisibility` — `kModuleVisibilityOf`).
@@ -252,8 +252,8 @@ namespace sw
         }
 
         /**
-         * @brief 이 범위에 있어야 하는 @p T 입니다. 없으면 부른 쪽의 잘못이라 모든 구성에서 오류를 남기고 멈춥니다(`internal::reportMissingRequiredService`, 소유한 서브시스템을 초기화 뒤에 묻는 자리).
-         * @details 같은 목록의 서브시스템을 초기화 중에 찾으면(`find` · `get` · `locateSubsystem` 모두) 찾는 쪽이 그것을 의존으로 선언했어야 한다 — 아니면 그 초기화가 진다
+         * @brief 이 범위에 있어야 하는 @p T 입니다. 없으면 부른 쪽의 잘못이라 모든 구성에서 오류를 남기고 멈춥니다(`internal::reportMissingRequiredSubsystem`, 소유한 서브시스템을 초기화 뒤에 묻는 자리).
+         * @details 같은 목록의 서브시스템을 초기화 중에 찾으면(`find` · `get` · `findSubsystemFrom` 모두) 찾는 쪽이 그것을 의존으로 선언했어야 한다 — 아니면 그 초기화가 진다
          *          (`SubsystemCollection::recordInitializeLookup`).
          */
         template <class T>
@@ -261,7 +261,7 @@ namespace sw
         {
             T* pFound = find<T>();
             if ( pFound == nullptr )
-                ::sw::internal::reportMissingRequiredService( SW_FUNCTION_SIGNATURE );
+                ::sw::internal::reportMissingRequiredSubsystem( SW_FUNCTION_SIGNATURE );
             return *pFound;
         }
 
@@ -298,7 +298,7 @@ namespace sw
             void*                     _pObject;                                                  ///< 걸린 객체(그 타입으로 바꾼 주소)
             Subsystem*                _pOwner;                                                   ///< 이 칸을 가진, 이 범위의 컬렉션이 소유한 서브시스템(빌려 건 칸은 nullptr). 초기화 중 조회의 의존 검사가 쓴다
             bool                      _bPublished{ false };                                      ///< 매단 부모 범위의 조회에도 보이면 true(`publish`)
-            SubsystemModuleVisibility _moduleVisibility{ SubsystemModuleVisibility::ScopeOnly }; ///< 모듈 서비스 범위에도 보이는지(소유한 서브시스템의 `kModuleVisibility`)
+            SubsystemModuleVisibility _moduleVisibility{ SubsystemModuleVisibility::ScopeOnly }; ///< 모듈 서브시스템 범위에도 보이는지(소유한 서브시스템의 `kModuleVisibility`)
         };
 
         /** @brief 매단 자식 범위 하나입니다(이 범위가 소유한다). */

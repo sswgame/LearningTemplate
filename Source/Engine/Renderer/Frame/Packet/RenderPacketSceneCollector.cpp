@@ -8,7 +8,7 @@
 #include "Engine/Animation/Scene/AnimationSystem.h"
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Environment/SceneEnvironment.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/2D/Render2DSettings.h"
 #include "Engine/Graphics/Lighting/SceneVoxelScene.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
@@ -27,7 +27,7 @@
 #include "Engine/Renderer/Scene/GPUSceneBuilder.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/UI/UISystem.h"
-#include "Engine/UI/World/UIWidgetComponentService.h"
+#include "Engine/UI/World/UIWidgetComponentSubsystem.h"
 #include "Engine/Visual/Component/DirectionalLightComponent.h"
 #include "Engine/Visual/Component/LightComponent.h"
 #include "Engine/Visual/MeshLODSystem.h"
@@ -313,7 +313,7 @@ namespace sw
         if ( packet._canvas._listMarker.empty() || pUISystem == nullptr || pActiveScene == nullptr || _gpuSceneBuilder == nullptr )
             return;
         // 기록이 다른 관리자(미리보기 씬)의 것이면 프리미티브 번호가 이 스냅샷의 것이 아니다 — 월드 점을 쓴다.
-        if ( engine::getSubsystem<UIWidgetComponentService>().getMarkers().getGPUMarkerManager() != pActiveScene->getObjectManager() )
+        if ( engine::getSubsystem<UIWidgetComponentSubsystem>().getMarkers().getGPUMarkerManager() != pActiveScene->getObjectManager() )
             return;
         for ( CanvasMarkerRecord& record : packet._canvas._listMarker )
         {

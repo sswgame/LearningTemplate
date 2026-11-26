@@ -153,7 +153,7 @@ namespace
             const uint32 target = _world.getTick() + static_cast<uint32>( stepCount );
             for ( int32 guard = 0; guard < stepCount * 2 && _world.getTick() < target; ++guard )
             {
-                _world.update( kMechStep );
+                _world.update( GameSeconds{ kMechStep } );
             }
         }
 
@@ -724,7 +724,7 @@ SW_TEST_CASE_F( MechArenaRulesTest, NothingRunsBeforeStartAndUnknownPilotsAreIgn
     SW_REQUIRE_TRUE( open() );
     SW_REQUIRE_TRUE( addPilot( 0, float3{}, { hashed_string( "gunner" ) } ) == 0 );
     SW_REQUIRE_TRUE( addPilot( 1, float3{ 0.0f, 0.0f, 10.0f }, { hashed_string( "gunner" ) } ) == 1 );
-    _world.update( 1.0f );
+    _world.update( GameSeconds{ 1.0f } );
     SW_EXPECT_EQUAL( uint32( 0 ), _world.getTick() );
     kill( 0, 1 );
     SW_EXPECT_NEAR( 100.0f, pilot( 1 )._healthMachine.getHealth(), kMechTolerance );
@@ -838,7 +838,7 @@ SW_TEST_CASE_F( MechArenaRulesTest, StateRoundTripContinuesIdentically )
 
     for ( int32 frame = 0; frame < 30; ++frame )
     {
-        restored.update( kMechStep );
+        restored.update( GameSeconds{ kMechStep } );
     }
     step( 30 );
     SW_EXPECT_TRUE( writeBytes( restored ) == writeBytes( _world ) );
@@ -1116,7 +1116,7 @@ SW_TEST_CASE_F( MechArenaRulesTest, WorldDeterminism )
         input1._bHover     = static_cast<uint8>( stepIndex % 40 > 30 ? SW_TRUE : SW_FALSE );
         world.setInput( 0, input0 );
         world.setInput( 1, input1 );
-        world.update( kMechStep );
+        world.update( GameSeconds{ kMechStep } );
     };
     SW_EXPECT_TRUE( StateBytesTestUtil::isDeterministic<MechArenaWorld>( setup, step, 240 ) );
 }

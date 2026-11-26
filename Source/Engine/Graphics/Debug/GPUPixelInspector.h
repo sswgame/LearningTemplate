@@ -12,8 +12,8 @@
 #include "Core/Container/string.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Subsystem/Subsystem.h"
+#include "Core/Subsystem/SubsystemSlot.h"
 
 #include "Engine/Graphics/Debug/GPUMessage.h"
 
@@ -75,6 +75,6 @@ namespace sw
         string _visualizedAttachment SW_GUARDED_BY( _mutex );   ///< Present 원본을 바꾼 첨부 이름(비면 바꾸지 않음)
         atomic<uint8>                _bVisualizing{ SW_FALSE }; ///< `_visualizedAttachment` 가 비지 않았는지 — 렌더 스레드가 잠금 없이 먼저 본다
 
-        SW_SERVICE_SLOT( GPUPixelInspector, Optional );
+        SW_SUBSYSTEM_SLOT( GPUPixelInspector, Optional );
     };
 } // namespace sw

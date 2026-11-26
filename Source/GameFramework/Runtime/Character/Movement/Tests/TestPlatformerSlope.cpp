@@ -31,7 +31,7 @@ namespace
             sw::PlatformerMotor2D motor;
             motor.setSettings( settings );
             motor.setPosition( sw::float2{ x, 1.0f + settings._halfExtents._y } );
-            motor.update( map, sw::PlatformerInput{}, kStep );
+            motor.update( map, sw::PlatformerInput{}, sw::GameSeconds{ kStep } );
             return motor;
         }
 
@@ -41,7 +41,7 @@ namespace
             input._move = sw::float2{ moveX, 0.0f };
             for ( int32 tick = 0; tick < tickCount; ++tick )
             {
-                motor.update( map, input, kStep );
+                motor.update( map, input, sw::GameSeconds{ kStep } );
                 outAlwaysGrounded = outAlwaysGrounded && motor.isGrounded();
             }
         }

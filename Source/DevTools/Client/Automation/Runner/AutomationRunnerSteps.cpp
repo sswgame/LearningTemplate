@@ -26,7 +26,7 @@
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Console/DevCommandRegistry.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/RHI/RHIDescriptors.h"
 #include "Engine/Input/IInputDevice.h"
@@ -96,7 +96,7 @@ namespace sw
             /** @brief `name` 이 등록된 전역 변수인지 봅니다. 아니면 그 이름이 대상인 오류입니다(`Variable` · `ExpectVariable` 이 함께 씁니다). */
             static expected<GlobalVariableInfo*> findRegisteredVariable( const string& name )
             {
-                GlobalVariableInfo* pInfo = engine::areEngineServicesBound() ? engine::getSubsystem<GlobalVariableManager>().findVariable( name ) : nullptr;
+                GlobalVariableInfo* pInfo = engine::areEngineSubsystemsBound() ? engine::getSubsystem<GlobalVariableManager>().findVariable( name ) : nullptr;
                 if ( pInfo == nullptr )
                     return unexpected( Error{ ErrorKind::NotFound, "unknown global variable", name } );
                 return pInfo;

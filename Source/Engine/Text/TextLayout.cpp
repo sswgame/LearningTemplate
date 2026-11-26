@@ -446,7 +446,7 @@ namespace sw
             };
 
             /** @brief 줄임표 글리프를 찾습니다. 줄임표 문자(…)가 연쇄에 없으면 마침표 셋을 씁니다. */
-            static EllipsisGlyph findEllipsis( FontService& fontService, const FontFaceChain& chain, const TextLayoutStyle& style )
+            static EllipsisGlyph findEllipsis( FontSubsystem& fontService, const FontFaceChain& chain, const TextLayoutStyle& style )
             {
                 EllipsisGlyph ellipsis{};
                 ellipsis._face  = fontService.findFaceForCodepoint( chain, kEllipsisCodepoint, ellipsis._glyphIndex );
@@ -503,7 +503,7 @@ namespace sw
 
 namespace sw
 {
-    TextLayoutEngine::TextLayoutEngine( FontService& fontService )
+    TextLayoutEngine::TextLayoutEngine( FontSubsystem& fontService )
         : _fontService{ fontService }
         , _pShaper{ fontService.getRasterizer().createShaper() }
         , _listRunScratch{}

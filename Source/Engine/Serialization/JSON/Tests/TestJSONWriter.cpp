@@ -23,7 +23,7 @@ namespace
 } // namespace
 
 /**
- * @brief [JSONWriterTest] 따옴표 · 역슬래시 · 제어 문자는 이스케이프하고 UTF-8 은 그대로 두며, 규칙은 `JSONStringUtil` 하나다
+ * @brief [JSONWriterTest] 따옴표 · 역슬래시 · 제어 문자는 이스케이프하고 UTF-8 은 그대로 두며, 규칙은 `StringUtil::escapeJSON` 하나다
  */
 SW_TEST_CASE( JSONWriterTest, EscapesQuotesBackslashesAndControlCharacters )
 {

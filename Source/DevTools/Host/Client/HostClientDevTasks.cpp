@@ -8,7 +8,7 @@
 #include "DevTools/Host/Client/EditorGameModuleManager.h"
 
 #include "Engine/Engine.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Renderer/Capture/PortraitStudio.h"
 #include "Engine/Renderer/RenderThread.h"
 #include "Engine/Scene/SceneManager.h"
@@ -43,7 +43,7 @@ namespace sw
             SW_LOG_ERROR_ID( "HostDevLayer.PortraitBakeNeedsRender", "Portrait bake needs a render thread with a device (--render-portraits)" );
             return HostTaskResult::Failed;
         }
-        const bool bBaked = PortraitStudio::renderPrefabList( *pRenderThread, engine::getSubsystem<SceneManager>().getEngineServices(), portraitList, portraitDir,
+        const bool bBaked = PortraitStudio::renderPrefabList( *pRenderThread, engine::getSubsystem<SceneManager>().getSceneEngineSubsystems(), portraitList, portraitDir,
                                                               static_cast<uint32>( portraitSize > 0 ? portraitSize : kDefaultPortraitSize ) );
         return bBaked ? HostTaskResult::Finished : HostTaskResult::Failed;
     }

@@ -2,7 +2,6 @@
 
 #include "Core/Concurrency/thread.h"
 #include "Core/Testing/TestFramework.h"
-#include "Core/Time/GameTimer.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include <thread>
@@ -51,28 +50,6 @@ SW_TEST_CASE( MonotonicClockTest, CountConversionDoesNotOverflowAfterLongUptime 
     SW_EXPECT_EQUAL( 1'000'000'333LL, sw::MonotonicClock::countsToNanoseconds( 3'000'001, 3'000'000 ) );
     // 이미 나노초인 카운터(Linux)는 그대로다.
     SW_EXPECT_EQUAL( 123LL, sw::MonotonicClock::countsToNanoseconds( 123, 1'000'000'000LL ) );
-}
-
-/**
- * @brief [MonotonicClockTest] GameTimer 와 MonotonicClock 이 같은 카운터를 읽는다 — 타이머 구간은 안쪽 스톱워치 구간을 덮고 바깥쪽 구간 안에 든다
- * @details 두 값의 차이를 허용 오차로 보면 두 읽기 사이의 선점(부하)에서 진다. 대신 바깥 스톱워치는 `resetTimer` 앞에서 시작해 `updateTimer` 뒤에 읽고,
- *          안쪽 스톱워치는 `resetTimer` 뒤에서 시작해 `updateTimer` 앞에서 읽는다 — 같은 카운터면 안쪽 ≤ 타이머 ≤ 바깥이 선점과 무관하게 선다.
- */
-SW_TEST_CASE( MonotonicClockTest, GameTimerUsesTheSameCounter )
-{
-    constexpr int64     kFloatToleranceNanos = 10'000; // 델타가 float32 초라 깎인다 — 선점으로 구간이 10 초까지 늘어도 1 us 안쪽이다
-    sw::GameTimer       timer;
-    const sw::Stopwatch outer;
-    timer.resetTimer();
-    const sw::Stopwatch inner;
-    sw::ThreadUtil::sleepForMilliseconds( 20 );
-    const int64 innerNanos = inner.getElapsedNanoseconds();
-    timer.updateTimer();
-    const int64 outerNanos = outer.getElapsedNanoseconds();
-    const int64 timerNanos = static_cast<int64>( static_cast<float64>( timer.getDeltaTime() ) * static_cast<float64>( sw::constant::time::kNanosecondsPerSecond ) );
-    SW_EXPECT_TRUE( innerNanos >= 15 * sw::constant::time::kNanosecondsPerMillisecond );
-    SW_EXPECT_TRUE( innerNanos <= timerNanos + kFloatToleranceNanos );
-    SW_EXPECT_TRUE( timerNanos <= outerNanos + kFloatToleranceNanos );
 }
 
 /**

@@ -33,14 +33,14 @@ namespace
         /** @brief 한 프레임을 돈다 — 장치의 지난 프레임 상태를 넘기고(눌림 가장자리) 맵을 갱신한다. */
         void runFrame()
         {
-            _input.beginFrame( kFrameSeconds );
+            _input.beginFrame( RealSeconds{ kFrameSeconds } );
             _map.update( kFrameSeconds );
             _input.endFrame();
         }
         /** @brief 한 프레임 안에 키를 눌렀다 뗀다(긴 프레임의 짧은 누름). 수정 키는 @p bShift 대로 누른 채다. */
         void tapWithinFrame( Key key, bool bShift )
         {
-            _input.beginFrame( kFrameSeconds );
+            _input.beginFrame( RealSeconds{ kFrameSeconds } );
             _input.getKeyboard()->setKeyDown( Key::LeftShift, bShift );
             _input.getKeyboard()->setKeyDown( key, true );
             _input.getKeyboard()->setKeyDown( key, false );

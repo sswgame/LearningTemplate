@@ -25,8 +25,8 @@
 #include "Engine/Content/AssetScanCache.h"
 #include "Engine/Content/Pack/PackManager.h"
 #include "Engine/Content/Pack/PackPatchTrustSource.h"
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Serialization/Inherit/ResourceComposition.h"
 
@@ -358,7 +358,7 @@ namespace sw
         if ( pCache == nullptr || isBuiltInAssetCache( pCache ) == false )
             SW_LOG_ERROR_ID( "AssetManager.BuiltAssetCacheNot", "Built-in asset cache '%#' is not registered - its .cpp needs SW_BUILT_IN_ASSET_CACHE", assetKindName );
         if ( pCache == nullptr )
-            ::sw::internal::reportMissingRequiredService( SW_FUNCTION_SIGNATURE ); // 위 오류가 어느 종류인지 남겼다 — Release 에서도 멈춘다
+            ::sw::internal::reportMissingRequiredSubsystem( SW_FUNCTION_SIGNATURE ); // 위 오류가 어느 종류인지 남겼다 — Release 에서도 멈춘다
         return *pCache;
     }
 
@@ -383,7 +383,7 @@ namespace sw
         // 쿠킹(씬 · 팩)은 배포 구성에서도 소스를 읽는다 — 팩은 쿠킹의 산출물이라 자기 팩을 읽으면 순환이다.
         // 개발 구성도 `-cooked-content` 면 배포와 같은 길(쿠킹한 팩만)을 읽는다 — 배포 읽기 경로를 배포 빌드 없이 돌려 본다.
         ContentSource source = kBuildContentSource;
-        if ( engine::areEngineServicesBound() )
+        if ( engine::areEngineSubsystemsBound() )
         {
             const CommandLineManager& commandLine = engine::getSubsystem<CommandLineManager>();
             const auto                isGiven     = [&commandLine]( CommandLineArgument argument )
@@ -548,14 +548,14 @@ namespace sw
 
 namespace sw
 {
-    SW_ENGINE_SERVICE_SUBSYSTEM( AssetManager, GameVisible, Process, Startup, (), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
+    SW_ENGINE_SUBSYSTEM_WITH_SLOT( AssetManager, GameVisible, Process, Startup, (), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
     {
         (void)build;
         AssetManager& assetManager = scope.emplaceSubsystem<AssetManager>();
-        (void)scope.exposeMember( assetManager, assetManager.getPackManager() ); // 새 범위 — 겹치지 않는다. 리소스 입구(`AssetIO`)가 서비스 칸으로 찾는다
+        (void)scope.exposeMember( assetManager, assetManager.getPackManager() ); // 새 범위 — 겹치지 않는다. 리소스 입구(`AssetIO`)가 서브시스템 칸으로 찾는다
     } );
 
-    // 위 공장이 건 팩 매니저의 서비스 칸(아래 층 · 아무 스레드의 리소스 입구가 읽는다). 비어 있을 수 있다 — 엔진 없이 도는 도구 · 쿠커 · 테스트는 팩이 없고
+    // 위 공장이 건 팩 매니저의 서브시스템 칸(아래 층 · 아무 스레드의 리소스 입구가 읽는다). 비어 있을 수 있다 — 엔진 없이 도는 도구 · 쿠커 · 테스트는 팩이 없고
     // 빌드 기본 정책을 읽는다(언리얼 `FPakPlatformFile` 이 플랫폼 파일 계층에 걸리는 자리).
-    SW_ENGINE_SERVICE( PackManager, HostOnly );
+    SW_ENGINE_SUBSYSTEM_SLOT( PackManager, HostOnly );
 } // namespace sw

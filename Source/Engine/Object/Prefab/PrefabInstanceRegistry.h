@@ -1,6 +1,6 @@
 /**
  * @file PrefabInstanceRegistry.h
- * @brief 중첩 프리팹으로 스폰한 오브젝트가 어느 프리팹 인스턴스의 부품인지 기록하는 씬 서비스입니다.
+ * @brief 중첩 프리팹으로 스폰한 오브젝트가 어느 프리팹 인스턴스의 부품인지 기록하는 씬 서브시스템입니다.
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -10,7 +10,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
-#include "Engine/Object/GameObject/Service/ISceneService.h"
+#include "Engine/Object/GameObject/Subsystem/ISceneSubsystem.h"
 
 namespace sw
 {
@@ -44,11 +44,11 @@ namespace sw
      *          값으로 들고 있다가 다시 기록합니다 — 씬의 엔티티 프리팹 경로를 다루는 방식과 같습니다. 그래서 기록은 되돌리기 이력이 쥔 동안만 남습니다
      *          (언리얼 · 유니티가 프리팹 연결을 오브젝트에 두어 오브젝트 · 트랜잭션 수명을 따르는 것과 같다). 씬을 비울 때(`onSceneCleared`) 모두 버립니다.
      */
-    class SW_API PrefabInstanceRegistry final : public ISceneService
+    class SW_API PrefabInstanceRegistry final : public ISceneSubsystem
     {
     public:
-        /** @brief 씬 서비스 등록 줄입니다(`SW_SCENE_SERVICE` 가 정의한다). */
-        static const SceneServiceRegistration& getSceneServiceRegistration();
+        /** @brief 씬 서브시스템 등록 줄입니다(`SW_SCENE_SUBSYSTEM` 가 정의한다). */
+        static const SceneSubsystemRegistration& getSceneSubsystemRegistration();
         /** @brief 서브시스템 이름입니다(씬 범위의 의존 칸이 이 상수를 가리킨다). */
         static constexpr const utf8* kSubsystemName = "PrefabInstanceRegistry";
         const utf8*                  getSubsystemName() const override { return kSubsystemName; }

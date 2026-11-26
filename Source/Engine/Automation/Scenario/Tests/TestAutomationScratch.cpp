@@ -6,7 +6,7 @@
 
 #include "Engine/Automation/Scenario/AutomationScratch.h"
 #include "Engine/Content/AssetPaths.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 
 // AutomationScratchTest — 작업 도메인(`scratch/`)이 이 프로세스의 실행 뿌리 아래로 풀린다. 나란히 도는 실행(백엔드마다 하나)의 사본이 이 프로세스의 리소스 트리에 없는 근거다(nogpu).
 

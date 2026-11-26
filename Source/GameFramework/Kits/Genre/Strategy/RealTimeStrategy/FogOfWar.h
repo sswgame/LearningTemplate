@@ -8,6 +8,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/Time/Countdown.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Serialization/Format/StateIO.h"
 
@@ -42,7 +43,7 @@ namespace sw
         int32 getTeamCount() const { return static_cast<int32>( _listTeamCell.size() ); }
 
         /** @brief 시간을 흘리고, 다시 칠할 때가 되었으면 다음 간격 @p interval 을 걸고 true 를 돌려줍니다. */
-        [[nodiscard]] bool updateRepaintTimer( float32 deltaTime, float32 interval );
+        [[nodiscard]] bool updateRepaintTimer( GameSeconds frameTime, float32 interval );
         /** @brief 모든 팀의 `Visible` 셀을 `Explored` 로 내립니다. 이어서 `reveal` 로 지금 시야를 칠합니다. */
         void beginRepaint();
         /** @brief 팀 @p team 에게 @p center 셀 둘레 반경 @p sight(셀) 원을 `Visible` 로 칠합니다. 격자 밖은 자릅니다. */

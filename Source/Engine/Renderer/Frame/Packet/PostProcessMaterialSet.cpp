@@ -7,7 +7,7 @@
 #include "Core/Log/Logger.h"
 
 #include "Engine/Asset/AssetManager.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Graphics/Material/MaterialRenderProxy.h"
@@ -34,7 +34,7 @@ namespace sw
             if ( entry._path == path )
                 return &entry;
         }
-        if ( engine::areEngineServicesBound() == false )
+        if ( engine::areEngineSubsystemsBound() == false )
             return nullptr;
         MaterialCache& cache     = engine::getSubsystem<AssetManager>().getAssetCache<MaterialCache>();
         Material*      pMaterial = cache.acquire( path.view() );
@@ -90,7 +90,7 @@ namespace sw
         const uint64 frame = _frame;
         for ( Entry& entry : _listEntry )
         {
-            if ( entry._lastUsedFrame == frame || engine::areEngineServicesBound() == false )
+            if ( entry._lastUsedFrame == frame || engine::areEngineSubsystemsBound() == false )
                 continue;
             engine::getSubsystem<AssetManager>().getAssetCache<MaterialCache>().release( entry._path.view() );
             entry._pMaterial = nullptr;
@@ -102,7 +102,7 @@ namespace sw
 
     void PostProcessMaterialSet::releaseAll()
     {
-        if ( engine::areEngineServicesBound() )
+        if ( engine::areEngineSubsystemsBound() )
         {
             MaterialCache& cache = engine::getSubsystem<AssetManager>().getAssetCache<MaterialCache>();
             for ( const Entry& entry : _listEntry )

@@ -9,7 +9,7 @@
 #include "Engine/Content/ContentSource.h"
 #include "Engine/Content/Pack/PackManager.h"
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 
 using namespace sw;
 using sw::test::ScopedScratchDomain;

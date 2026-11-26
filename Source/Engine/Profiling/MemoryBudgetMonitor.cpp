@@ -13,7 +13,7 @@
 #include "Core/String/StringBuilder.h"
 
 #include "Engine/Config/ConfigManager.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Reflection/TypeInfo.h"
 
@@ -116,7 +116,7 @@ namespace sw
     void MemoryBudgetMonitor::addFrameProfilerCounters( const MemoryProfiler& profiler )
     {
         const ScopedMemoryTag memoryScope{ kMemoryTag };
-        if ( engine::areEngineServicesBound() == false )
+        if ( engine::areEngineSubsystemsBound() == false )
             return;
         FrameProfiler& frameProfiler = engine::getSubsystem<FrameProfiler>();
         if ( frameProfiler.isEnabled() == false )

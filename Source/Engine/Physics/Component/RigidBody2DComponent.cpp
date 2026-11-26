@@ -4,7 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Foundation/StateHashBuilder.h"
 #include "Engine/Object/Component/ComponentStateCodec.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -422,7 +422,7 @@ namespace sw
     void RigidBody2DComponent::onPrePhysicsStep( const FixedStepContext& context )
     {
         ScenePhysics&           physics        = context.getPhysics();
-        const float32           fixedDeltaTime = context.getFixedDeltaTime();
+        const float32           fixedDeltaTime = context.getFixedDeltaTime().count();
         const uint32            stepIndex      = context.getStepIndex();
         const uint32            stepCount      = context.getStepCount();
         IPhysicsBodyScene2D*    pScene         = physics.findScene2D();

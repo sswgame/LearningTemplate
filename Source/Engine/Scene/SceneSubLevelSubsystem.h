@@ -1,6 +1,6 @@
 /**
  * @file SceneSubLevelSubsystem.h
- * @brief 런타임에 다른 씬을 활성 씬에 더하고 빼는 씬 서비스입니다(언리얼 `ULevelStreamingDynamic::LoadLevelInstance` · 유니티 `SceneManager.LoadSceneAsync( Additive )` 자리).
+ * @brief 런타임에 다른 씬을 활성 씬에 더하고 빼는 씬 서브시스템입니다(언리얼 `ULevelStreamingDynamic::LoadLevelInstance` · 유니티 `SceneManager.LoadSceneAsync( Additive )` 자리).
  *
  * [모델 — 런타임 씬 인스턴스]
  * 하위 레벨은 씬 파일 안의 씬 인스턴스(`<entity scene=…>`)를 실행 중에 놓은 것이다. 월드는 하나(오브젝트 매니저 하나)이고, 더한 씬의 엔티티는 앵커 오브젝트 아래에 펼친다.
@@ -37,7 +37,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Task/TaskTypes.h"
 
-#include "Engine/Object/GameObject/Service/ISceneService.h"
+#include "Engine/Object/GameObject/Subsystem/ISceneSubsystem.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDocument.h"
 #include "Engine/Scene/SceneSubLevelTypes.h"
@@ -50,14 +50,14 @@ namespace sw
      * @class SceneSubLevelSubsystem
      * @brief 파일 머리말 참고.
      */
-    class SW_API SceneSubLevelSubsystem final : public ISceneService
+    class SW_API SceneSubLevelSubsystem final : public ISceneSubsystem
     {
     public:
         /** @brief 서브시스템 이름입니다(씬 범위의 의존 칸이 이 상수를 가리킨다). */
         static constexpr const utf8* kSubsystemName = "SceneSubLevels";
-        /** @brief 씬 서비스 등록 줄입니다(`SW_SCENE_SERVICE` 가 정의한다). */
-        static const SceneServiceRegistration& getSceneServiceRegistration();
-        const utf8*                            getSubsystemName() const override { return kSubsystemName; }
+        /** @brief 씬 서브시스템 등록 줄입니다(`SW_SCENE_SUBSYSTEM` 가 정의한다). */
+        static const SceneSubsystemRegistration& getSceneSubsystemRegistration();
+        const utf8*                              getSubsystemName() const override { return kSubsystemName; }
 
         /** @brief @p manager 의 하위 레벨 서비스를 만듭니다(서비스 레지스트리가 매니저마다 부른다). */
         explicit SceneSubLevelSubsystem( GameObjectManager& manager );

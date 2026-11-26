@@ -14,7 +14,7 @@
 
 #include "GameFramework/Runtime/Character/Control/Controller/PlayerControllerComponent.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
-#include "GameFramework/Runtime/Foundation/Service/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityCatalog.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilitySystemComponent.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityTask.h"
@@ -251,8 +251,9 @@ namespace sw
         _bEnding = SW_FALSE;
     }
 
-    void Ability::updateAbility( float32 deltaTime )
+    void Ability::updateAbility( GameSeconds frameTime )
     {
+        const float32 deltaTime = frameTime.count();
         if ( isActive() == false )
             return;
 
@@ -264,7 +265,7 @@ namespace sw
         {
             AbilityTask* pTask = _listTask[taskIndex].get();
             if ( pTask != nullptr && pTask->isFinished() == false )
-                pTask->onTick( deltaTime );
+                pTask->onTick( frameTime );
             if ( isActive() == false || serial != _activationSerial )
                 break;
         }

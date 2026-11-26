@@ -3,7 +3,7 @@
 #include "Engine/Renderer/Lighting/Light2DCookieAtlas.h"
 
 #include "Engine/Asset/AssetManager.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
@@ -20,7 +20,7 @@ namespace sw
 
             static TextureCache* findTextureCache()
             {
-                if ( engine::areEngineServicesBound() == false )
+                if ( engine::areEngineSubsystemsBound() == false )
                     return nullptr;
                 return &engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>();
             }

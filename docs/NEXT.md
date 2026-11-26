@@ -51,6 +51,7 @@
 
 ## 6. 설계 할 일
 
+- 서버 서비스(`IServerService` · `ServerServiceManager` · `ServerServiceRegistry` · `ServerServiceRegistrar`, 구현은 `OnlineServerService` 하나)를 모듈 서브시스템(호스트 `kServer`)으로 합친다 — 리로드는 매단 자식 범위가 걷고, 서버 루프 갱신 · 연결 수 · 드레인은 범위에서 찾는 인터페이스로(언리얼 `UEngineSubsystem` + `FTickableGameObject`). 모듈 리로드 순서를 함께 본다.
 
 ### 에디터 · 도구
 

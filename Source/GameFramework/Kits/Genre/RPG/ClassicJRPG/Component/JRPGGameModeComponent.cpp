@@ -672,8 +672,9 @@ namespace sw
             SW_LOG_INFO_ID( "JRPG.Defeat", "[JRPG] the party fell" );
     }
 
-    void JRPGGameModeComponent::updateMatch( float32 deltaTime )
+    void JRPGGameModeComponent::updateMatch( GameSeconds frameTime )
     {
+        const float32 deltaTime = frameTime.count();
         if ( isAutoPlayOn() )
             updateAutoPlay();
         if ( _phase == JRPGGamePhase::Battle )

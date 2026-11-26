@@ -44,7 +44,7 @@ namespace sw::internal
         };
     } // namespace
 
-    LowLevelReporterRegistration bindLowLevelReporter( LowLevelReporterFunc pfnReporter ) noexcept
+    LowLevelReporterSubscription bindLowLevelReporter( LowLevelReporterFunc pfnReporter ) noexcept
     {
         return s_lowLevelReporterSlot.bind( pfnReporter );
     }
@@ -174,11 +174,11 @@ namespace sw::internal
         return s_capturedAssertCount.load( std::memory_order_acquire );
     }
 
-    AssertDialogRegistration bindAssertDialog( AssertDialogFunc pfnDialog ) noexcept
+    AssertDialogSubscription bindAssertDialog( AssertDialogFunc pfnDialog ) noexcept
     {
         // 잠금 밖에서 건다 — 이중 등록 단언이 `shouldBreakOnAssert` 를 지나며 같은 잠금을 잡는다.
         AssertDialogState&       state        = s_dialogState;
-        AssertDialogRegistration registration = state._dialogSlot.bind( pfnDialog );
+        AssertDialogSubscription registration = state._dialogSlot.bind( pfnDialog );
         if ( registration.isActive() )
         {
             const std::lock_guard<std::mutex> lock{ state._mutex };
@@ -261,7 +261,7 @@ namespace sw::internal
 
 namespace sw::internal
 {
-    void reportMissingRequiredService( const utf8* pLookup ) noexcept
+    void reportMissingRequiredSubsystem( const utf8* pLookup ) noexcept
     {
         utf8 arrText[kLowLevelMessageCapacity];
         formatLowLevelMessage( arrText, kLowLevelMessageCapacity, "Required lookup is missing: %s", pLookup );

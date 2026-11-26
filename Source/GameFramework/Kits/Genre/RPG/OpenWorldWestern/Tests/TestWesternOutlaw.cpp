@@ -115,7 +115,7 @@ SW_TEST_CASE( WesternOutlawTest, WitnessedCrimeReportsAfterItsTime )
     SW_EXPECT_EQUAL( -20, rig._outlaw.getHonorValue() );
     SW_EXPECT_EQUAL( 1, rig._outlaw.countPendingReports() );
     SW_EXPECT_EQUAL( 0, rig._outlaw.getBounty() );
-    rig._outlaw.update( 1.1f );
+    rig._outlaw.update( GameSeconds{ 1.1f } );
     SW_EXPECT_EQUAL( 25, rig._outlaw.getBounty() );
     SW_EXPECT_EQUAL( 1, rig._outlaw.getWantedLevel() );
 
@@ -141,7 +141,7 @@ SW_TEST_CASE( WesternOutlawTest, UnseenCrimeCostsOnlyHonor )
 {
     OutlawRig rig;
     SW_REQUIRE_TRUE( rig.doDeed( WesternDeedKind::Crime, "theft" ) );
-    rig._outlaw.update( 5.0f );
+    rig._outlaw.update( GameSeconds{ 5.0f } );
     SW_EXPECT_EQUAL( -20, rig._outlaw.getHonorValue() );
     SW_EXPECT_EQUAL( 0, rig._outlaw.getBounty() );
     SW_EXPECT_FALSE( rig.doDeed( WesternDeedKind::Crime, "arson" ) );
@@ -153,13 +153,13 @@ SW_TEST_CASE( WesternOutlawTest, LawSightKeepsTheWantedLevel )
     OutlawRig                    rig;
     const vector<WesternWitness> listLaw{ OutlawRig::makeWitness( 2, true ) };
     SW_REQUIRE_TRUE( rig.doDeed( WesternDeedKind::Crime, "theft", listLaw ) );
-    rig._outlaw.update( 0.0f );
+    rig._outlaw.update( GameSeconds{ 0.0f } );
     SW_REQUIRE_EQUAL( 1, rig._outlaw.getWantedLevel() );
     rig._outlaw.updateSeenByLaw( float3{}, listLaw );
-    rig._outlaw.update( 5.0f );
+    rig._outlaw.update( GameSeconds{ 5.0f } );
     SW_EXPECT_EQUAL( 1, rig._outlaw.getWantedLevel() );
     rig._outlaw.updateSeenByLaw( float3{ 100.0f, 0.0f, 0.0f }, listLaw );
-    rig._outlaw.update( 2.5f );
+    rig._outlaw.update( GameSeconds{ 2.5f } );
     SW_EXPECT_EQUAL( 0, rig._outlaw.getWantedLevel() );
 }
 
@@ -190,9 +190,9 @@ SW_TEST_CASE( WesternOutlawTest, PayBountyNeedsCalmAndMoney )
 {
     OutlawRig rig;
     SW_REQUIRE_TRUE( rig.doDeed( WesternDeedKind::Crime, "theft", { OutlawRig::makeWitness( 2, true ) } ) );
-    rig._outlaw.update( 0.0f );
+    rig._outlaw.update( GameSeconds{ 0.0f } );
     SW_EXPECT_FALSE( rig.doDeed( WesternDeedKind::PayBounty ) ); // 쫓기는 중
-    rig._outlaw.update( 2.5f );
+    rig._outlaw.update( GameSeconds{ 2.5f } );
     SW_REQUIRE_EQUAL( 0, rig._outlaw.getWantedLevel() );
     SW_EXPECT_FALSE( rig.doDeed( WesternDeedKind::PayBounty ) ); // 돈이 없다
     rig._wallet.add( rig._catalog.getCurrency(), 40 );
@@ -206,11 +206,11 @@ SW_TEST_CASE( WesternOutlawTest, ClockDrainsCoresAndDecaysBounty )
 {
     OutlawRig rig;
     SW_REQUIRE_TRUE( rig.doDeed( WesternDeedKind::Crime, "theft", { OutlawRig::makeWitness( 2, true ) } ) );
-    rig._outlaw.update( 0.0f ); // 시계를 잡는다
+    rig._outlaw.update( GameSeconds{ 0.0f } ); // 시계를 잡는다
     SW_REQUIRE_EQUAL( 25, rig._outlaw.getBounty() );
     const float32 coreBefore = rig._outlaw.getSurvival().getCore( WesternCore::Health );
     rig._clock.advanceMinutes( 24.0f * 60.0f );
-    rig._outlaw.update( 0.0f );
+    rig._outlaw.update( GameSeconds{ 0.0f } );
     const float32 coreAfter = rig._outlaw.getSurvival().getCore( WesternCore::Health );
     SW_EXPECT_TRUE( coreAfter < coreBefore - 30.0f ); // 시간당 1.5
     SW_EXPECT_EQUAL( 20, rig._outlaw.getBounty() );
@@ -235,7 +235,7 @@ SW_TEST_CASE( WesternOutlawTest, HonorTierSetsDialogueFlags )
 {
     OutlawRig rig;
     SW_REQUIRE_TRUE( rig.doDeed( WesternDeedKind::HonorAction, "saint" ) );
-    rig._outlaw.update( 0.0f );
+    rig._outlaw.update( GameSeconds{ 0.0f } );
     SW_EXPECT_EQUAL( 1, rig._flags.getFlag( hashed_string( "honor_high" ) ) );
 }
 
@@ -272,7 +272,7 @@ SW_TEST_CASE( WesternOutlawTest, RebindingTheCatalogAppliesTheNewNumbers )
 {
     OutlawRig rig;
     SW_REQUIRE_TRUE( rig.doDeed( WesternDeedKind::Crime, "theft", { OutlawRig::makeWitness( 1, false ) } ) );
-    rig._outlaw.update( 1.1f );
+    rig._outlaw.update( GameSeconds{ 1.1f } );
     SW_REQUIRE_EQUAL( 25, rig._outlaw.getBounty() );
     Archive written;
     rig._outlaw.writeState( written );
@@ -287,7 +287,7 @@ SW_TEST_CASE( WesternOutlawTest, RebindingTheCatalogAppliesTheNewNumbers )
     SW_REQUIRE_TRUE( rig._outlaw.readState( reader ) );
     SW_EXPECT_EQUAL( 25, rig._outlaw.getBounty() );
     SW_REQUIRE_TRUE( rig.doDeed( WesternDeedKind::Crime, "theft", { OutlawRig::makeWitness( 3, false ) } ) );
-    rig._outlaw.update( 1.1f );
+    rig._outlaw.update( GameSeconds{ 1.1f } );
     SW_EXPECT_EQUAL( 65, rig._outlaw.getBounty() );
 }
 
@@ -335,7 +335,7 @@ SW_TEST_CASE( WesternOutlawTest, OutlawDeterminism )
             (void)rig.doDeed( WesternDeedKind::PayBounty );
         if ( stepIndex % 2 == 0 )
             rig._clock.advanceMinutes( 45.0f ); // 시계는 `update` 사이에 흐른다 — 저장이 그 사이에 걸려도 읽은 판이 같은 시간을 받는다
-        rig._outlaw.update( 0.5f );
+        rig._outlaw.update( GameSeconds{ 0.5f } );
     };
     SW_EXPECT_TRUE( sw::StateBytesTestUtil::isDeterministic<OutlawRig>( setup, step, 120 ) );
 }

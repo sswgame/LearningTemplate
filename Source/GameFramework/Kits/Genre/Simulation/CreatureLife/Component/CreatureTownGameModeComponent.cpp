@@ -115,8 +115,9 @@ namespace sw
         return result == CreatureInteractResult::Ok;
     }
 
-    void CreatureTownGameModeComponent::updateGame( float32 deltaTime )
+    void CreatureTownGameModeComponent::updateGame( GameSeconds frameTime )
     {
+        const float32 deltaTime = frameTime.count();
         (void)deltaTime;
         GameStateComponent* pState    = GameStateComponent::findOnOwner( *this );
         QuestLogComponent*  pQuestLog = findOnPlayerState<QuestLogComponent>();

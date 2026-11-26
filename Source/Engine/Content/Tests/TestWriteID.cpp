@@ -5,7 +5,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Content/AssetPaths.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 
 // 쓰기 입구(`AssetPaths::toDiskPath`)는 리소스 id 만 받는다 — 전역 id 는 그 도메인 루트 아래(없는 파일도), 상대 키는 읽기가 고른 있는 파일이다.
 

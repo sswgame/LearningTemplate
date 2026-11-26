@@ -25,7 +25,7 @@
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Telemetry/TelemetryEvent.h"
-#include "Engine/Telemetry/TelemetryService.h"
+#include "Engine/Telemetry/TelemetrySubsystem.h"
 #include "Engine/Visual/Component/MeshComponent.h"
 
 #include "GameFramework/Runtime/Character/Camera/CameraDirectorComponent.h"
@@ -38,7 +38,8 @@
 #include "GameFramework/Runtime/Foundation/Condition/GameConditions.h"
 #include "GameFramework/Runtime/Foundation/Presentation/GameSound.h"
 #include "GameFramework/Runtime/Foundation/Presentation/IHUDViewModelBinder.h"
-#include "GameFramework/Runtime/Foundation/Service/GameService.h"
+#include "GameFramework/Runtime/Foundation/Save/StatefulComponentRegistrar.h"
+#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceDatabase.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterAppearanceComponent.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
@@ -518,10 +519,11 @@ namespace sw
         GameObject*                     pOwner                = getOwner();
         FirstPersonCameraComponent*     pCamera               = pOwner != nullptr ? pOwner->getComponent<FirstPersonCameraComponent>() : nullptr;
         const ShooterGameModeComponent* pGameMode             = findGameMode<ShooterGameModeComponent>();
-        const bool                      bMissingCameraContext = pCamera == nullptr || pGameMode == nullptr || context.getDeltaTime() <= 0.0f;
+        const bool                      bMissingCameraContext = pCamera == nullptr || pGameMode == nullptr || context.getDeltaTime().count() <= 0.0f;
         if ( bMissingCameraContext )
             return;
-        const float32 step = MathUtil::min( context.getDeltaTime(), 0.1f );
+        const GameSeconds stepTime{ MathUtil::min( context.getDeltaTime().count(), 0.1f ) }; // 긴 프레임을 자른 게임 시간
+        const float32     step = stepTime.count();
 
         // 시점 카메라의 프리셋(1인칭, 3인칭, 궤도, CCTV)이 바뀌면 틱이 끝난 뒤 가시성을 맞춘다.
         const bool bFirstPerson = queryFirstPerson();
@@ -537,10 +539,10 @@ namespace sw
         ShooterBodyMovementComponent* pMovement  = findMovement();
         const bool                    bNetDriven = pMovement != nullptr && pMovement->isNetDriven(); // 무기 · 발동은 네트 걸음이 한다(`stepNetCommand`)
         if ( bNetDriven == false )
-            advanceWeapons( step );
-        _healthMachine.update( step );
+            advanceWeapons( stepTime );
+        _healthMachine.update( stepTime );
         _timeSinceShot += step;
-        (void)_hitMarkerTimer.update( step );
+        (void)_hitMarkerTimer.update( stepTime );
         if ( _healthMachine.isAlive() == false )
         {
             // 쓰러짐 클립이 도는 동안 멈춰 있다가 판을 처음부터 다시 시작한다.
@@ -566,11 +568,11 @@ namespace sw
         scheduleFlush();
     }
 
-    void ShooterPlayerComponent::advanceWeapons( float32 step )
+    void ShooterPlayerComponent::advanceWeapons( GameSeconds frameTime )
     {
         for ( WeaponState& weapon : _arrWeapon )
         {
-            weapon.update( step );
+            weapon.update( frameTime );
         }
     }
 
@@ -617,13 +619,14 @@ namespace sw
             _bMeleeActive = SW_FALSE;
     }
 
-    void ShooterPlayerComponent::stepNetCommand( GameObjectManager& manager, const ControlIntent& intent, float32 step, uint32 commandTick )
+    void ShooterPlayerComponent::stepNetCommand( GameObjectManager& manager, const ControlIntent& intent, StepSeconds commandStep, uint32 commandTick )
     {
+        const float32                   step      = commandStep.count();
         const GameObject*               pOwner    = getOwner();
         FirstPersonCameraComponent*     pCamera   = pOwner != nullptr ? getOwner()->getComponent<FirstPersonCameraComponent>() : nullptr;
         const PawnComponent*            pPawn     = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
         const ShooterGameModeComponent* pGameMode = findGameMode<ShooterGameModeComponent>();
-        advanceWeapons( step );
+        advanceWeapons( commandStep );
         const bool bIdle = pCamera == nullptr || pPawn == nullptr || pGameMode == nullptr || isAlive() == false || isServerDown();
         if ( bIdle )
             return;
@@ -653,7 +656,7 @@ namespace sw
         if ( pGameMode != nullptr )
         {
             SW_LOG_INFO_ID( "ShooterPlayer.YouOverrunWaveAfter", "[Shooter] you were overrun on wave %# after %# kills - starting over", pGameMode->getWave(), pGameMode->getKillCount() );
-            TelemetryService* pTelemetry = game::findSubsystem<TelemetryService>();
+            TelemetrySubsystem* pTelemetry = game::findSubsystem<TelemetrySubsystem>();
             if ( pTelemetry != nullptr )
             {
                 TelemetryEvent roundEnded( "progression.roundEnded" );

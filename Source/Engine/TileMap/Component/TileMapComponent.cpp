@@ -8,7 +8,7 @@
 
 #include "Engine/Asset/Cache/SharedAssetRef.h"
 #include "Engine/Config/EngineDefaultAssets.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Object/Component/ComponentStateCodec.h"
 #include "Engine/Object/Component/SceneComponent.h"
@@ -150,7 +150,7 @@ namespace sw
         }
         if ( _listChunkBatch.empty() )
             return;
-        _elapsedSeconds += context.getDeltaTime();
+        _elapsedSeconds += context.getDeltaTime().count();
         if ( bOwnerMoved )
         {
             for ( int32 chunkIndex = 0; chunkIndex < _chunkGrid.getChunkCount(); ++chunkIndex )

@@ -4,7 +4,7 @@
 #include "Core/Foundation/EnumUtil.h"
 #include "Core/Testing/TestFramework.h"
 
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Reflection/ReflectionDesc.h"
 #include "Engine/Reflection/ReflectionEnumNames.h"

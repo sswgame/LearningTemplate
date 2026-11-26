@@ -15,7 +15,7 @@
 #include "Editor/Common/Commands/EditorCommandIDs.h"
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 
 #include "Engine/Config/GameSelection.h"
 
@@ -113,7 +113,7 @@ namespace sw::editor
     void ModulesViewModel::pollReload()
     {
         ModuleCatalogSnapshot snapshot;
-        if ( _loadJob.take( snapshot ) == EditorTaskPoll::Ready )
+        if ( _loadJob.take( snapshot ) == EditorJobPoll::Ready )
             applySnapshot( std::move( snapshot ) );
     }
 

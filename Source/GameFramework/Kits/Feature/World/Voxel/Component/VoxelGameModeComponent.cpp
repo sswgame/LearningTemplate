@@ -17,7 +17,7 @@
 #include "GameFramework/Kits/Feature/World/Voxel/Rule/VoxelTerrain.h"
 #include "GameFramework/Runtime/Character/Control/ControlSystem.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
-#include "GameFramework/Runtime/Foundation/Service/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 
 namespace sw
 {
@@ -57,8 +57,9 @@ namespace sw
         SW_LOG_INFO_ID( "VoxelGameMode.WorldReadyWASDMove", "[Voxel] world is ready - WASD move, mouse look, Space jump, Shift sprint, LMB hold to break, RMB place, 1-9 or wheel hotbar, Esc mouse" );
     }
 
-    void VoxelGameModeComponent::updateGame( float32 deltaTime )
+    void VoxelGameModeComponent::updateGame( GameSeconds frameTime )
     {
+        const float32 deltaTime = frameTime.count();
         updateResidency();
         SW_PROFILE_COUNT( "GT.VoxelWorld.residentChunks", _world.getResidentChunkCount() ); // 감사 K-12 전후 비교
         SW_PROFILE_COUNT( "GT.VoxelWorld.storedChunks", _world.getStoredChunkCount() );

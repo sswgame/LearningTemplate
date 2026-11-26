@@ -22,8 +22,8 @@
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorPanelID.h"
 #include "Editor/Common/Workspace/EditorSelectionSync.h"
-#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorStateStore.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/HotReload/AssetHotReload.h"
 #include "Editor/Panels/ContentBrowser/Model/ContentBrowserFileDrop.h"
@@ -258,7 +258,7 @@ namespace sw::editor
         if ( _bFolderDirty )
             refreshCurrentFolder();
         vector<EditorFolderListingEntry> listNewEntry;
-        if ( _folderJob.take( listNewEntry ) == EditorTaskPoll::Ready )
+        if ( _folderJob.take( listNewEntry ) == EditorJobPoll::Ready )
             applyFolderListing( listNewEntry );
     }
 

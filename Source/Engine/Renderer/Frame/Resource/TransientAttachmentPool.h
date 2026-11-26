@@ -11,7 +11,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 
 #include "Engine/EngineMinimal.h"
 #include "Engine/Renderer/Pipeline/RenderGraphPassDesc.h"

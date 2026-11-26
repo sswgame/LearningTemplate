@@ -5,7 +5,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Editor/Common/GUI/Panel/EditorDocumentPanel.h"
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 #include "Editor/Common/Workspace/Undo/CommandStack.h"
 #include "Editor/Common/Workspace/Undo/DocumentEditRecorder.h"
 

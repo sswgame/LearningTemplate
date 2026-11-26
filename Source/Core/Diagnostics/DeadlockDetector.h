@@ -77,7 +77,7 @@ namespace sw
     private:
         atomic<bool>                                _bInitialized;
         mutex                                       _mutex;
-        mutex::LockObserverRegistration             _lockObserverRegistration; ///< `initialize` 가 건 잠금 관찰자 등록 — `shutdown` 이 푼다
+        mutex::LockObserverSubscription             _lockObserverRegistration; ///< `initialize` 가 건 잠금 관찰자 등록 — `shutdown` 이 푼다
         unordered_map<std::thread::id, ThreadState> _mapThreadState;
         unordered_map<void*, std::thread::id>       _mapLockOwner;
     };

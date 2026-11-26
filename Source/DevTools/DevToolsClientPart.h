@@ -42,10 +42,10 @@ namespace sw
         /** @brief 걸린 창구를 뗍니다(건 이미지가 내려갈 때). 걸려 있지 않으면 할 일이 없다. */
         static void detach( IDevToolsClientPart* pPart );
 
-        /** @struct Registration @brief 클라이언트 전용 소스가 정적 객체로 창구를 겁니다(이미지에 하나) — 공통 틀 `StaticRegistrar` 라 건 이미지가 내려가면 뗀다. */
-        struct Registration final : StaticRegistrar<IDevToolsClientPart*>
+        /** @struct Registrar @brief 클라이언트 전용 소스가 정적 객체로 창구를 겁니다(이미지에 하나) — 공통 틀 `StaticRegistrar` 라 건 이미지가 내려가면 뗀다. */
+        struct Registrar final : StaticRegistrar<IDevToolsClientPart*>
         {
-            explicit Registration( IDevToolsClientPart& part )
+            explicit Registrar( IDevToolsClientPart& part )
                 : StaticRegistrar{ &part, &IDevToolsClientPart::attach, &IDevToolsClientPart::detach }
             {
             }

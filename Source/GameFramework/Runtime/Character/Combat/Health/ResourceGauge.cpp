@@ -139,14 +139,15 @@ namespace sw
         return reduced;
     }
 
-    void ResourceGauge::update( float32 deltaTime )
+    void ResourceGauge::update( GameSeconds frameTime )
     {
+        const float32 deltaTime = frameTime.count();
         if ( deltaTime <= 0.0f )
             return;
         if ( _overheatPenalty.isActive() )
         {
             // 과열 벌칙 — 이 시간 동안은 식지도 않는다. 벌칙이 끝난 걸음의 남은 몫은 버린다.
-            _overheatPenalty.update( deltaTime );
+            _overheatPenalty.update( frameTime );
             return;
         }
         _timeSinceUse += deltaTime;

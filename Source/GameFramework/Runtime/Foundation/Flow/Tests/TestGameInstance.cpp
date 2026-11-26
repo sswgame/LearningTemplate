@@ -7,7 +7,7 @@
 
 #include "Engine/Config/GameTimeScale.h"
 #include "Engine/Config/ServerConfig.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Network/GameNetSession.h"
@@ -19,7 +19,7 @@
 #include "GameFramework/Runtime/Foundation/Save/GameLocalStore.h"
 #include "GameFramework/Runtime/Foundation/Save/GameSaveSlots.h"
 #include "GameFramework/Runtime/Foundation/Save/Local/MemoryLocalStore.h"
-#include "GameFramework/Runtime/Foundation/Service/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 
 namespace
 {
@@ -83,11 +83,11 @@ namespace
             switch ( _step )
             {
                 case LifecycleTestStep::Succeed:
-                    return bindScopedService( &_service );
+                    return bindScopedSubsystem( &_service );
                 case LifecycleTestStep::FailDerived:
                     return false;
                 case LifecycleTestStep::BindTwice:
-                    return bindScopedService( &_service ) && bindScopedService( &_otherService );
+                    return bindScopedSubsystem( &_service ) && bindScopedSubsystem( &_otherService );
                 case LifecycleTestStep::FailSettings:
                     return true; // 여기까지 오지 않는다
             }
@@ -227,7 +227,7 @@ SW_TEST_CASE( GameInstanceTest, FailureBeforeTheScopeTouchesNothing )
 }
 
 /** @brief [GameInstanceTest] 게임 범위에 같은 타입을 두 번 걸면 두 번째가 false 이고 그것이 초기화 실패가 된다(나중 것이 앞 것을 소리 없이 덮지 않는다) */
-SW_TEST_CASE( GameInstanceTest, ScopedServiceConflictFailsInitialize )
+SW_TEST_CASE( GameInstanceTest, ScopedSubsystemConflictFailsInitialize )
 {
     SW_EXPECT_LOG( "GameInstance.GameScopedServiceAlready" );
     SW_EXPECT_LOG( "GameInstance.GameInstanceRolledBack" );
@@ -303,7 +303,7 @@ SW_TEST_CASE( GameInstanceTest, NetSessionRefusesLocalRestoreAndClientSaves )
     SW_EXPECT_LOG( "GameSaveSlots.LoadInNetSession" );
     SW_EXPECT_LOG( "GameSaveSlots.SaveSlotCouldNot2" ); // 세션이 닫힌 뒤의 불러오기는 없는 칸까지 간다
     GameTimeScale timeScale;
-    timeScale.setUnscaledDeltaTime( 1.0f / 60.0f );
+    timeScale.setUnscaledDeltaTime( RealSeconds{ 1.0f / 60.0f } );
     GameNetSession server{ engine::getSubsystem<ResourceComposition>() };
     GameNetSession session{ engine::getSubsystem<ResourceComposition>() };
     ServerConfig   config;
@@ -353,7 +353,7 @@ SW_TEST_CASE( GameInstanceTest, UpdateOrder )
     vector<string>          order;
     RecordingDevPartFactory devFactory{ order };
     GameTimeScale           timeScale; // 프레임의 실제 경과는 엔진이 적는다 — 프레임 없이 부르는 테스트는 제 것을 적는다
-    timeScale.setUnscaledDeltaTime( 1.0f / 60.0f );
+    timeScale.setUnscaledDeltaTime( RealSeconds{ 1.0f / 60.0f } );
     SubsystemScope testScope;
     SW_REQUIRE_TRUE( testScope.bind<IGameDevPartFactory>( &devFactory ) );
     SW_REQUIRE_TRUE( testScope.bind( &timeScale ) );

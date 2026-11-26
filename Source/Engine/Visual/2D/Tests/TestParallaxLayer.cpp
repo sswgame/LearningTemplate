@@ -90,7 +90,7 @@ SW_TEST_CASE( ParallaxLayerTest, LayerFollowsTheGameCameraAndRestoresOnEndPlay )
 
     pLayer->onBeginPlay();
     {
-        sw::TickContext context{ *pLayer->getOwner(), 0.016f };
+        sw::TickContext context{ *pLayer->getOwner(), sw::GameSeconds{ 0.016f } };
         pLayer->onTick( context );
     }
     const sw::float3 moved = pRoot->getLocalPosition();
@@ -100,7 +100,7 @@ SW_TEST_CASE( ParallaxLayerTest, LayerFollowsTheGameCameraAndRestoresOnEndPlay )
 
     // 다음 틱은 저작 자리에서 다시 측정한다(누적되지 않는다).
     {
-        sw::TickContext context{ *pLayer->getOwner(), 0.016f };
+        sw::TickContext context{ *pLayer->getOwner(), sw::GameSeconds{ 0.016f } };
         pLayer->onTick( context );
     }
     SW_EXPECT_NEAR( moved._x, pRoot->getLocalPosition()._x, 1e-4f );

@@ -3,7 +3,7 @@
  * @brief 에디터를 켠 개발 실행(`-EnableEditor`)의 모듈 관리자입니다. 공통 `GameModuleManager`(게임 모듈 · 장치 교체 순서) 위에 호스트 모듈(에디터)의 인스턴스, 리로드,
  *        UI · 렌더 훅, 창 최소 크기, 장치 교체 뒤 재생성(`recreateHostModule`)을 구현합니다.
  * @details 개발 계층(`IHostDevLayer::makeEditorModuleManager`)이 만든다 — DevTools 에만 있어 배포 App 은 에디터 코드를 컴파일하지 않고 공통 `GameModuleManager` 를 그대로 쓴다
- *          (언리얼이 `UEditorEngine` 을 배포 타깃에 넣지 않는 자리). 인스턴스 없이 에디터 모듈만 올려 부르는 헤드리스 작업은 `EditorModuleHeadlessTasks` 다.
+ *          (언리얼이 `UEditorEngine` 을 배포 타깃에 넣지 않는 자리). 인스턴스 없이 에디터 모듈만 올려 부르는 헤드리스 작업은 `EditorModuleCommandlets` 다.
  * @note 의존은 이쪽에서 `GameModuleManager` 로 한 방향입니다. 개발 전용 함수(에디터 모듈 등록 — cpp 의 동적 모듈 구역)는 정적 모듈 구성이 짓지 않는다.
  */
 #pragma once
@@ -129,8 +129,8 @@ namespace sw
         /** @brief 이번 프레임의 게임 뷰와 씬 뷰 RT 핸들과 크기를 에디터에서 조회해 프레임 상태에 담습니다(보이지 않는 패널의 뷰는 비어 있습니다). */
         void sampleViewTargets();
 
-        /** @brief 호스트 서비스 범위를 다시 만들어 에디터 모듈에 넘깁니다. 개발 도구 서비스는 스스로 호스트 모듈에 보인다고 선언해 부모 창구로 찾힌다(`SubsystemModuleVisibility`). */
-        void rebindEditorService() { rebindModuleService( _editorAPI.bindService, _editorServices, false ); }
+        /** @brief 호스트 서브시스템 범위를 다시 만들어 에디터 모듈에 넘깁니다. 개발 도구 서비스는 스스로 호스트 모듈에 보인다고 선언해 부모 창구로 찾힌다(`SubsystemModuleVisibility`). */
+        void rebindEditorSubsystems() { rebindModuleSubsystems( _editorAPI.bindService, _editorServices, false ); }
         /**
          * @brief 에디터 인스턴스를 shutdown, destroy 하고 핸들을 비웁니다.
          * @param bReleaseAPITable true 면 API 테이블과 타입 등록까지 해제합니다(모듈 언로드 직전). RHI 핫스왑처럼 **같은 모듈로 다시
@@ -171,7 +171,7 @@ namespace sw
         EditorReloadClient            _editorReloadClient{ *this };
         EditorAPI                     _editorAPI;
         EditorHandle                  _editor;
-        unique_ptr<SubsystemScope>    _editorServices;      ///< 에디터 모듈에 넘긴 호스트 서비스 범위(`rebindModuleService` 가 새로 만든다)
+        unique_ptr<SubsystemScope>    _editorServices;      ///< 에디터 모듈에 넘긴 호스트 서비스 범위(`rebindModuleSubsystems` 가 새로 만든다)
         vector<EditorExtensionModule> _listEditorExtension; ///< 켜진 확장 모듈(로드 순서이며, `loadModuleLibraries` 가 모은다).
 
         uint8                  _bEditorModuleActive  : 1; ///< 매니페스트가 에디터 모듈을 켰는가(`loadModuleLibraries` 가 정한다).

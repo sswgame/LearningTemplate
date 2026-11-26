@@ -1,7 +1,7 @@
 // ProcessEnvironment — 환경 변수의 세 상태(없음 · 빈 값 · 값)를 가르고, 덮어쓰기 · 지우기 · UTF-8 값 왕복, 잘못된 이름 거절.
 #include "pch.h"
 
-#include "Core/Process/ProcessEnvironment.h"
+#include "Core/Process/Process.h"
 #include "Core/Testing/TestFramework.h"
 
 using namespace sw;

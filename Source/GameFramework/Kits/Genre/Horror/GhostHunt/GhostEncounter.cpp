@@ -173,8 +173,9 @@ namespace sw
         pushEvent( GhostEventKind::Escaped, pGhost->_id, pGhost->_hp );
     }
 
-    GhostSuctionResult GhostEncounter::updateSuction( const float3& pullDirection, float32 deltaTime )
+    GhostSuctionResult GhostEncounter::updateSuction( const float3& pullDirection, GameSeconds frameTime )
     {
+        const float32      deltaTime = frameTime.count();
         GhostSuctionResult result;
         GhostInstance*     pGhost     = findGhostMutable( _suctionTarget );
         const bool         bNoSuction = pGhost == nullptr || pGhost->_state != GhostState::Sucking || deltaTime <= 0.0f;
@@ -199,7 +200,7 @@ namespace sw
         }
         // 도망 방향 바꾸기는 흡입이 이 타이머를 가지고 있다(update 는 흡입 중인 유령을 건너뛴다).
         GhostInstance* pStill = findGhostMutable( ghostID );
-        pStill->_timer.update( deltaTime );
+        pStill->_timer.update( frameTime );
         if ( pStill->_timer.isActive() == false )
         {
             pStill->_timer.restart( pStill->_pDef->_fleeInterval );
@@ -234,15 +235,16 @@ namespace sw
         return listPower[static_cast<size_t>( MathUtil::clamp( _vacuumStage, 0, static_cast<int32>( listPower.size() ) - 1 ) )];
     }
 
-    void GhostEncounter::update( float32 deltaTime )
+    void GhostEncounter::update( GameSeconds frameTime )
     {
+        const float32 deltaTime = frameTime.count();
         if ( deltaTime <= 0.0f )
             return;
         for ( GhostInstance& ghost : _listGhost )
         {
             if ( ghost._state == GhostState::Caught || ghost._state == GhostState::Sucking )
                 continue;
-            ghost._timer.update( deltaTime );
+            ghost._timer.update( frameTime );
             if ( ghost._timer.isActive() )
                 continue;
             switch ( ghost._state )

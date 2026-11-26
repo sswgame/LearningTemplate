@@ -636,7 +636,7 @@ namespace sw
         /** @brief 불투명 인덱스 테이블과 투명 인덱스 테이블을 후보에서 다시 만듭니다. */
         void rebuildPartitionTables();
         /**
-         * @brief 씬 서비스가 낸 입자(`ISceneParticleSink`, VFX 는 `SceneVFXProvider`)로 방출기마다 그리기 하나(`GPUParticleBatch`)를 채우고 주 시점에서 먼 것부터 놓습니다.
+         * @brief 씬 서브시스템이 낸 입자(`ISceneParticleSink`, VFX 는 `SceneVFXProvider`)로 방출기마다 그리기 하나(`GPUParticleBatch`)를 채우고 주 시점에서 먼 것부터 놓습니다.
          * @details 정렬 규칙은 메시 투명 후보와 같다(`GPUTransparentSorter::makeTransparentSortKey` · `isDrawnBefore`, 깊이는 방출기 위치). 입자가 없는 방출기는 싣지 않는다.
          *          메시 투명 배치(발행된 꼬리)와 비교해 입자마다 주 투명 순서 안의 자리(`GPUSceneSnapshot::_listParticleSlot`)도 정한다. 메시 쪽이 끝난 **뒤** 부른다.
          */

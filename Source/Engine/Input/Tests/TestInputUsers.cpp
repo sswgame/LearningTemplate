@@ -62,14 +62,14 @@ SW_TEST_CASE( InputUsersTest, EachUserReadsOnlyTheirDevices )
     script.addEvent( 2, RawInputEvent::makeGamepadButtonDown( GamepadButton::A, 1 ) );
     Subscription attachment = input.attachVirtualInput( script, VirtualInputMode::Exclusive );
 
-    input.beginFrame( 0.016f );
+    input.beginFrame( RealSeconds{ 0.016f } );
     SW_EXPECT_TRUE( pFirst->isActionDown( jump ) );
     SW_EXPECT_FALSE( pSecond->isActionDown( jump ) );
     input.endFrame();
 
-    input.beginFrame( 0.016f );
+    input.beginFrame( RealSeconds{ 0.016f } );
     input.endFrame();
-    input.beginFrame( 0.016f );
+    input.beginFrame( RealSeconds{ 0.016f } );
     SW_EXPECT_FALSE( pFirst->isActionDown( jump ) );
     SW_EXPECT_TRUE( pSecond->isActionDown( jump ) ); // 바인딩의 패드 0 은 "내 패드" — 짝지은 1 번이다
     input.endFrame();

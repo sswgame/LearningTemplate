@@ -15,9 +15,9 @@ namespace
         static constexpr const utf8* kLatinPath = "test/fonts/latin.ttf";
         static constexpr const utf8* kTallPath  = "test/fonts/tall.ttf";
 
-        sw::test::FakeFontServiceFixture _fonts;
-        sw::TextLayoutEngine             _layout;
-        uint8                            _bInitialized : 1;
+        sw::test::FakeFontSubsystemFixture _fonts;
+        sw::TextLayoutEngine               _layout;
+        uint8                              _bInitialized : 1;
 
         TextLayoutTestFixture()
             : _fonts{}
@@ -28,9 +28,9 @@ namespace
             tall.addRange( 0xAC00u, 0xD7A3u );
             tall._ascender = 1.0f;
             _fonts._pRasterizer->setFaceConfig( kTallPath, tall );
-            sw::FontCatalogDef catalog = sw::test::FakeFontServiceFixture::makeCatalog( "Latin" );
-            sw::test::FakeFontServiceFixture::addFamily( catalog, "Latin", kLatinPath );
-            sw::test::FakeFontServiceFixture::addFamily( catalog, "Tall", kTallPath );
+            sw::FontCatalogDef catalog = sw::test::FakeFontSubsystemFixture::makeCatalog( "Latin" );
+            sw::test::FakeFontSubsystemFixture::addFamily( catalog, "Latin", kLatinPath );
+            sw::test::FakeFontSubsystemFixture::addFamily( catalog, "Tall", kTallPath );
             _bInitialized = _fonts.initialize( catalog );
         }
 

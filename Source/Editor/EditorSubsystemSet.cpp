@@ -15,7 +15,7 @@
 #include "Editor/Common/Config/EditorToolDefaults.h"
 #include "Editor/Common/Config/EditorToolDefaultsReload.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
-#include "Editor/Common/GUI/Panel/EditorPanelService.h"
+#include "Editor/Common/GUI/Panel/EditorPanelSubsystem.h"
 #include "Editor/Common/Input/EditorCommandGUI.h"
 #include "Editor/Common/Input/EditorInputActions.h"
 #include "Editor/Common/Input/EditorPopupManager.h"
@@ -29,8 +29,8 @@
 #include "Editor/Common/Workspace/EditorRenderViews.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorSelectionSync.h"
-#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorStateStore.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorUICommandQueue.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
@@ -55,10 +55,10 @@ namespace sw::editor
         // 하위 객체는 목록이 소유한다. 넣는 순서는 뜻이 없고, 초기화 순서는 각자 선언한 의존이 정하며 종료 · 소멸은 그 역순이다.
         // 애셋 · 설정 핫 리로드(개발 기능)는 에디터가 켜져 있을 때만 감시하고, 버전 관리는 git LFS 를 비동기로 묻는다(각 initializeSubsystem).
         context.emplaceSubsystem<EditorStateStore>(); // 한 파일 안의 상태(감시 값이 읽는 값 · 캐시)의 주인 — 컨텍스트와 함께 생기고 사라진다
-        EditorSelection&    selection    = context.emplaceSubsystem<EditorSelection>();
-        EditorPanelManager& panelManager = context.emplaceSubsystem<EditorPanelManager>();
-        EditorPanelService& panelService = context.emplaceSubsystem<EditorPanelService>( context, panelManager );
-        (void)scope.expose<IEditorPanelService>( panelService ); // 패널 매니저(GUI)를 모르는 레이어가 인터페이스로 찾는다 — 새 범위라 겹치지 않는다
+        EditorSelection&      selection    = context.emplaceSubsystem<EditorSelection>();
+        EditorPanelManager&   panelManager = context.emplaceSubsystem<EditorPanelManager>();
+        EditorPanelSubsystem& panelService = context.emplaceSubsystem<EditorPanelSubsystem>( context, panelManager );
+        (void)scope.expose<IEditorPanelSubsystem>( panelService ); // 패널 매니저(GUI)를 모르는 레이어가 인터페이스로 찾는다 — 새 범위라 겹치지 않는다
         context.emplaceSubsystem<EditorWorkspace>( &selection );
         context.emplaceSubsystem<EditorNotificationManager>();
         context.emplaceSubsystem<EditorCommandRegistry>();

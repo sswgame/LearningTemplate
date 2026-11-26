@@ -19,7 +19,7 @@
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Config/PlatformConfigOverride.h"
 #include "Engine/Content/AssetTypeRegistry.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
 #include "sw/config/CookContract.gen.h"

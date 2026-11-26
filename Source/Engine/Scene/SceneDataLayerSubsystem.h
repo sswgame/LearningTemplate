@@ -1,6 +1,6 @@
 /**
  * @file SceneDataLayerSubsystem.h
- * @brief 씬의 데이터 레이어를 켜고 끄는 씬 서비스입니다(언리얼 Data Layers 의 런타임 상태 · `UDataLayerManager` 자리). 계절 · 이벤트 · 야간 변형을 씬 복사 없이 만듭니다.
+ * @brief 씬의 데이터 레이어를 켜고 끄는 씬 서브시스템입니다(언리얼 Data Layers 의 런타임 상태 · `UDataLayerManager` 자리). 계절 · 이벤트 · 야간 변형을 씬 복사 없이 만듭니다.
  *
  * [모델]
  * 켜진 레이어는 이름 집합이다. 엔티티는 붙은 레이어가 **모두** 켜졌을 때 오른다. 언리얼은 기본이 "하나라도"(Or)이고 And 를 고를 수 있다(기억에 의존). 여기는 And 만 둔다 —
@@ -32,7 +32,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
-#include "Engine/Object/GameObject/Service/ISceneService.h"
+#include "Engine/Object/GameObject/Subsystem/ISceneSubsystem.h"
 #include "Engine/Scene/SceneDataLayerTypes.h"
 #include "Engine/Scene/SceneDocument.h"
 #include "Engine/Scene/SceneSettings.h"
@@ -46,14 +46,14 @@ namespace sw
      * @class SceneDataLayerSubsystem
      * @brief 파일 머리말 참고.
      */
-    class SW_API SceneDataLayerSubsystem final : public ISceneService
+    class SW_API SceneDataLayerSubsystem final : public ISceneSubsystem
     {
     public:
         /** @brief 서브시스템 이름입니다(씬 범위의 의존 칸이 이 상수를 가리킨다). */
         static constexpr const utf8* kSubsystemName = "SceneDataLayers";
-        /** @brief 씬 서비스 등록 줄입니다(`SW_SCENE_SERVICE` 가 정의한다). */
-        static const SceneServiceRegistration& getSceneServiceRegistration();
-        const utf8*                            getSubsystemName() const override { return kSubsystemName; }
+        /** @brief 씬 서브시스템 등록 줄입니다(`SW_SCENE_SUBSYSTEM` 가 정의한다). */
+        static const SceneSubsystemRegistration& getSceneSubsystemRegistration();
+        const utf8*                              getSubsystemName() const override { return kSubsystemName; }
 
         /** @brief 레이어 집합이 같은 엔티티 묶음입니다(값 형식은 `SceneDataLayerTypes.h` — 씬이 값으로 든다). */
         using Group = SceneDataLayerGroup;

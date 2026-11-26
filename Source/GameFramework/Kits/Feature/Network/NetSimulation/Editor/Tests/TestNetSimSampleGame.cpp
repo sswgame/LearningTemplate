@@ -7,7 +7,7 @@
 #include "Engine/Scene/SceneManager.h"
 
 #include "GameFramework/Kits/Feature/Network/NetSimulation/Editor/Sample/NetSimSampleGame.h"
-#include "GameFramework/Runtime/Foundation/Service/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 
 // NetSimSampleGameTest — 본보기 게임을 화면 없는 하니스(월드가 씬을 가진다)로 돌린다: 연결마다 아바타 하나, 초점 월드의 입력만 움직임, 아레나 벽, 클라이언트 수렴, 이탈의 뒷정리(에디터 케이스).
 
@@ -58,7 +58,7 @@ namespace
         }
         {
             SceneManager& sceneManager = game::getSubsystem<SceneManager>();
-            const bool    bStarted     = _harness.initialize( sceneManager.getEngineServices(), NetSimConfig{}, &_game );
+            const bool    bStarted     = _harness.initialize( sceneManager.getSceneEngineSubsystems(), NetSimConfig{}, &_game );
             SW_EXPECT_TRUE( bStarted );
             const expected<int32> firstClient  = _harness.addClient( NetSimLinkConditions{} );
             const expected<int32> secondClient = _harness.addClient( NetSimLinkConditions{} );

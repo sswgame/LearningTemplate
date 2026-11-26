@@ -55,14 +55,15 @@ namespace sw
         return true;
     }
 
-    void MetroidvaniaDuelist::update( float32 deltaTime )
+    void MetroidvaniaDuelist::update( GameSeconds frameTime )
     {
+        const float32 deltaTime = frameTime.count();
         if ( deltaTime <= 0.0f )
             return;
         _time += deltaTime;
-        _riposteWindow.update( deltaTime );
-        _healthMachine.update( deltaTime );
-        _stamina.update( deltaTime );
+        _riposteWindow.update( frameTime );
+        _healthMachine.update( frameTime );
+        _stamina.update( frameTime );
     }
 
     bool MetroidvaniaDuelist::tryAttack()

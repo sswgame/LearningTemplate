@@ -7,7 +7,7 @@
 
 #include "DevTools/Cook/CookReflectionFingerprint.h"
 
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Reflection/FunctionInfo.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/Tests/ScopedTestModule.h"

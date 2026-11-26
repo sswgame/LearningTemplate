@@ -22,7 +22,7 @@ namespace sw
             bool shouldBreakReplace() const override { return gv_saveRestoreBreakReplace; }
         };
 
-        SnapshotFaultLaunchHook                s_snapshotFaultLaunchHook;
-        const ISnapshotFaultHook::Registration s_snapshotFaultLaunchHookRegistration{ s_snapshotFaultLaunchHook };
+        SnapshotFaultLaunchHook             s_snapshotFaultLaunchHook;
+        const ISnapshotFaultHook::Registrar s_snapshotFaultLaunchHookRegistrar{ s_snapshotFaultLaunchHook };
     } // namespace
 } // namespace sw

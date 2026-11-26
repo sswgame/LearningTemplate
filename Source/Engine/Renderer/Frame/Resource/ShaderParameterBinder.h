@@ -9,7 +9,7 @@
 #include "Core/Container/array.h"
 #include "Core/Container/vector.h"
 #include "Core/Math/MatrixMath.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 
 #include "Engine/Foundation/RHIDescriptorIndex.h"
 #include "Engine/Graphics/RHI/RHIConstantBuffer.h"

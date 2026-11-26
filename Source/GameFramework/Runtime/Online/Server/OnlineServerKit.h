@@ -21,7 +21,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Registry/ServiceFactoryList.h"
+#include "Core/Registry/FactoryRegistrationList.h"
 #include "Core/Subsystem/SubsystemScope.h"
 #include "Core/Time/TimePoint.h"
 
@@ -411,7 +411,7 @@ namespace sw
 namespace sw
 {
     /** @brief 키트 조립 팩토리입니다. 등록기가 가진 정적 객체이며 이름은 노드에 있습니다(순서는 쓰지 않는다 — 이름 의존이 정한다). */
-    struct OnlineServerKitFactory : ServiceFactoryNode
+    struct OnlineServerKitFactory : FactoryRegistration
     {
         using CreateFunction = unique_ptr<IOnlineServerKit> ( * )();
 

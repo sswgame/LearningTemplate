@@ -423,9 +423,9 @@ SW_TEST_CASE( GimmickCircuitTest, UpdateConsumesFixedSteps )
     GimmickFixture rig;
     rig.build();
     const float32 stepTime = rig._circuit.getStepTime();
-    SW_EXPECT_EQUAL( 0, rig._circuit.update( stepTime * 0.5f ) );
-    SW_EXPECT_EQUAL( 1, rig._circuit.update( stepTime * 0.6f ) );
-    SW_EXPECT_EQUAL( 2, rig._circuit.update( stepTime * 2.0f ) );
+    SW_EXPECT_EQUAL( 0, rig._circuit.update( GameSeconds{ stepTime * 0.5f } ) );
+    SW_EXPECT_EQUAL( 1, rig._circuit.update( GameSeconds{ stepTime * 0.6f } ) );
+    SW_EXPECT_EQUAL( 2, rig._circuit.update( GameSeconds{ stepTime * 2.0f } ) );
     SW_EXPECT_EQUAL( 3u, rig._circuit.getStepIndex() );
 }
 
@@ -433,8 +433,8 @@ SW_TEST_CASE( GimmickCircuitTest, UnbuiltCircuitDoesNothing )
 {
     GimmickCircuit circuit;
     SW_EXPECT_FALSE( circuit.isBuilt() );
-    SW_EXPECT_EQUAL( 0, circuit.update( 10.0f ) );
-    SW_EXPECT_EQUAL( 0, circuit.consumeTime( 10.0f ) );
+    SW_EXPECT_EQUAL( 0, circuit.update( GameSeconds{ 10.0f } ) );
+    SW_EXPECT_EQUAL( 0, circuit.consumeTime( GameSeconds{ 10.0f } ) );
     circuit.resetToInitial();
     circuit.setSensorValue( 0, 1.0f );
     circuit.addSensorImpulse( 0, 1.0f );

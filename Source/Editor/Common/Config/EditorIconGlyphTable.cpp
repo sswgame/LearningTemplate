@@ -7,7 +7,7 @@
 #include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Config/EditorComponentIconTable.h"
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"

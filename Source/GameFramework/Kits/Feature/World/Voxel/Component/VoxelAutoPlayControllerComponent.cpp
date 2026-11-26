@@ -38,11 +38,11 @@ namespace sw
         const VoxelPlayerComponent*   pPlayer    = pOwner != nullptr ? pOwner->getComponent<VoxelPlayerComponent>() : nullptr;
         const VoxelGameModeComponent* pGameMode =
             pManager != nullptr && pPlayer != nullptr ? GameModeComponent::resolve<VoxelGameModeComponent>( *pManager, pPlayer->getGameMode() ) : nullptr;
-        const bool bPlaying = pGameMode != nullptr && pGameMode->isStarted() && context._deltaTime > 0.0f;
+        const bool bPlaying = pGameMode != nullptr && pGameMode->isStarted() && context._deltaTime.count() > 0.0f;
         blackboard.setBool( "Playing", bPlaying );
         if ( bPlaying == false )
             return; // 트리가 아무것도 바꾸지 않는다 — 시계도 서 있다
-        const float32 deltaTime     = MathUtil::min( context._deltaTime, 0.1f );
+        const float32 deltaTime     = MathUtil::min( context._deltaTime.count(), 0.1f );
         const float32 previousCycle = MathUtil::fmod( _timer, _cycleSeconds );
         _timer += deltaTime;
         const float32 cycle = MathUtil::fmod( _timer, _cycleSeconds );

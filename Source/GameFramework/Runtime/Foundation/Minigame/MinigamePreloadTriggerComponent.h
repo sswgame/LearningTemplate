@@ -3,7 +3,7 @@
  * @brief 활성자가 들어오면 미니게임의 맵이 쓸 파일을 미리 읽는 볼륨입니다 — 입구(`MinigameTriggerComponent`)보다 넓게 둘러 들어가기 전에 읽기를 앞당깁니다.
  */
 #pragma once
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 

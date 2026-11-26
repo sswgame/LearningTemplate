@@ -8,7 +8,7 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/RHI/RHIBackendInfo.h"
 #include "Engine/Serialization/JSON/JSONWriter.h"
 
@@ -67,7 +67,7 @@ namespace sw
 
     expected<GoldenWriteMode> AutomationGoldenUtil::readWriteMode()
     {
-        if ( engine::areEngineServicesBound() == false )
+        if ( engine::areEngineSubsystemsBound() == false )
             return GoldenWriteMode::Off;
         bool                      bUpdate        = false;
         bool                      bRecordMissing = false;

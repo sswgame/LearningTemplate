@@ -1,0 +1,231 @@
+/**
+ * @file EditorBackgroundJob.h
+ * @brief 워커가 만들고 게임 스레드가 가져가는 에디터 백그라운드 잡의 공통 뼈대입니다.
+ *
+ * @details 에디터의 파일 스캔과 로컬라이즈 로드 같은 잡은 모두 같은 규약을 쓴다. 게임 스레드가 `request()` 로 입력을
+ *          싣고 세대를 올리면, 워커가 그 세대의 결과를 만들어 싣고, 게임 스레드가 `take()` 로 가져간다. 락, 세대 확인,
+ *          플래그 전환을 잡마다 복사하면 한 곳만 틀려도 결과를 잃거나 오래된 세대의 결과가 섞이는 버그가 난다.
+ *          그래서 규약은 여기 한 곳에 두고, 각 잡은 입력 타입과 실제 작업 본문만 가진다.
+ *
+ * @note 이 헤더는 구체적인 잡이나 에디터 UI 에 의존하지 않는다. 그래서 단위 테스트가 ImGui 를 끌어오지 않고 규약만
+ *       따로 검증할 수 있다.
+ */
+#pragma once
+#include "Core/Concurrency/StopToken.h"
+#include "Core/Concurrency/atomic.h"
+#include "Core/Concurrency/mutex.h"
+#include "Core/Container/vector.h"
+#include "Core/Foundation/StdHeaders.h"
+#include "Core/Foundation/Types.h"
+#include "Core/Memory/Memory.h"
+#include "Core/Task/TaskTypes.h"
+
+namespace sw::editor
+{
+    /**
+     * @struct EditorBackgroundJobGroup
+     * @brief 에디터가 낸 백그라운드 잡의 스테이지와 협조 중단 신호입니다. 에디터 상태 저장소(`EditorStateStore`)에 하나 — 컨텍스트 종료가 이 스테이지만 기다린다.
+     */
+    struct EditorBackgroundJobGroup
+    {
+        TaskStageHandle _stage; ///< 낸 잡(게임 스레드에서 낸다 — `TaskManager::addToStage`)
+        StopSource      _stop;  ///< `requestEditorBackgroundStop` 이 올린다(내리지 않는다)
+    };
+
+    /**
+     * @brief 잡 본문을 TaskManager 워커에 제출합니다. TaskManager 가 없으면(테스트 · 초기화 전) 같은 스레드에서 바로 돌립니다.
+     * @details 작업 시스템은 부르는 스레드(에디터 서비스 범위를 등록한 스레드)에서 찾는다 — 워커 본문은 범위를 찾지 않는다(`findEditorScope`).
+     */
+    void submitEditorBackgroundJob( string_view name, const TaskArgsDelegate& delegate, const TaskArgs& args );
+    /** @brief 위와 같되 잡을 @p inoutJobStage 에도 넣습니다(잡 객체 하나의 스테이지 — `waitEditorBackgroundJob` 이 그 잡만 기다린다). 게임 스레드에서 부른다. */
+    void submitEditorBackgroundJob( string_view name, const TaskArgsDelegate& delegate, const TaskArgs& args, TaskStageHandle& inoutJobStage );
+    /**
+     * @brief 잡 객체 하나가 낸 잡이 모두 끝날 때까지 기다립니다(기다리는 동안 다른 태스크를 돕는다). 작업 시스템이 없으면(테스트 — 제출 자리에서 이미 돌았다) 바로 돌아갑니다.
+     * @details 결과를 주기적으로 묻고 잠드는 대기(`take` + 잠자기)를 대신한다 — 끝나는 순간 돌아온다.
+     */
+    void waitEditorBackgroundJob( const TaskStageHandle& jobStage, string_view owner );
+    /**
+     * @brief 에디터가 낸 모든 잡에게 "종료가 시작됐다"는 협조 신호를 올립니다. 잡 본문(긴 스캔 · 파싱)이 `readStopSignal` 로 받은 신호를 읽고 일찍 끝낸다.
+     * @details 종료 경로는 에디터 모듈을 내리기 **앞에서** 엔진 전체 태스크를 기다린다(`GameModuleManager::flushRenderWorkers`). 신호가 없으면 에디터 잡(자산 참조 색인 스캔 등)이
+     *          끝까지 돌아 다른 GPU · 빌드 작업과 겹칠 때 그 대기 시한을 넘겼다(`Task fencing timeout`). 에디터 컨텍스트가 없으면(테스트) 아무것도 하지 않는다.
+     */
+    void requestEditorBackgroundStop();
+    /** @brief 에디터 잡 하나가 제출 때 잡아 둔 중단 신호입니다(`beginRequest` 가 채운다). 에디터 컨텍스트가 없으면 nullptr — 멈출 일이 없다. */
+    [[nodiscard]] StopToken acquireEditorBackgroundStopSignal();
+    // 낸 잡은 에디터 범위의 태스크 단계(`EditorBackgroundJobGroup::_stage`, `getEditorState`)에 들고, `EditorContext::shutdown` 이 그것만 기다린다(엔진 전체 대기는 영구 태스크까지 기다린다).
+} // namespace sw::editor
+
+namespace sw::editor
+{
+    /** @brief 입력이 없는 잡을 위한 빈 입력입니다. */
+    struct EditorBackgroundNoInput
+    {
+    };
+
+    /** @brief `EditorBackgroundJob::take` 가 한 번에 돌려주는 잡 상태입니다. */
+    enum class EditorJobPoll : uint8
+    {
+        Idle,    ///< 요청이 없거나 결과를 이미 가져갔습니다.
+        Running, ///< 워커가 아직 실행 중입니다.
+        Ready,   ///< 결과를 꺼냈습니다.
+    };
+} // namespace sw::editor
+
+namespace sw::editor
+{
+    /**
+     * @class EditorBackgroundJob
+     * @brief 워커가 만들고 게임 스레드가 가져가는 잡의 공통 뼈대입니다. 락, 세대, 완료 플래그를 담당합니다.
+     * @details 상태를 `shared_ptr` 로 보관해 워커에 넘긴다. 잡 객체(패널 멤버)가 먼저 사라져도 워커는 유효한 메모리에 쓰고
+     *          끝난다. 세대 번호는 "요청이 갱신되었으니 오래된 워커의 결과는 버린다" 는 뜻이다.
+     * @tparam TInput  워커에 넘길 입력입니다. 없으면 EditorBackgroundNoInput 입니다.
+     * @tparam TResult 워커가 만들어 낼 결과입니다.
+     */
+    template <typename TInput, typename TResult>
+    class EditorBackgroundJob
+    {
+    public:
+        /** @brief 빈 잡을 만듭니다. */
+        EditorBackgroundJob()
+            : _pState{ sw::make_shared<State>() }
+        {
+        }
+
+        /**
+         * @brief 완료된 결과를 가져오고, 그 순간의 잡 상태를 돌려줍니다.
+         * @details 결과 유무와 대기 여부를 **같은 락 안에서 한 번에** 읽는다. 따로 읽으면(`take` 가 false 인 뒤 `isPending` 을 부르면)
+         *          그 사이 워커가 끝나 "대기 아님 · 결과는 아직 안 꺼냄" 이 보이고, 그 틈에 새 요청을 올리면 끝난 결과를 읽지도 못하고 버린다.
+         *          그래서 "비었으면 요청" 같은 판단은 이 반환값 하나로 한다.
+         *          `Ready` 이면 @p outResult 에 결과가 들어 있고 완료 플래그가 해제된다(같은 결과를 두 번 주지 않는다).
+         *          `Running` 이면 워커가 아직 실행 중이고, `Idle` 이면 요청이 없거나 결과를 이미 가져갔다. 이 둘이면 @p outResult 는 그대로다.
+         */
+        EditorJobPoll take( TResult& outResult )
+        {
+            if ( _pState == nullptr )
+                return EditorJobPoll::Idle;
+
+            ScopedLock<mutex> lock{ _pState->_mutex };
+            if ( _pState->_bReady == SW_FALSE )
+                return _pState->_bPending == SW_TRUE ? EditorJobPoll::Running : EditorJobPoll::Idle;
+
+            outResult          = std::move( _pState->_result );
+            _pState->_result   = TResult{};
+            _pState->_bReady   = SW_FALSE;
+            _pState->_bPending = SW_FALSE;
+            return EditorJobPoll::Ready;
+        }
+
+        /**
+         * @brief 낸 잡이 끝날 때까지 기다린 뒤 `take` 합니다. 종료 · 정지처럼 결과가 나야 다음으로 가는 자리가 씁니다 — 프레임 루프는 `take` 로 묻는다.
+         * @details 잡이 결과를 싣지 않고 끝났으면(중단 신호 · 낡은 세대) `Running` 이 그대로 돌아온다 — 다시 기다려도 바뀌지 않으므로 부르는 쪽은 그때 멈춘다.
+         */
+        EditorJobPoll waitAndTake( TResult& outResult )
+        {
+            waitEditorBackgroundJob( _jobStage, "EditorBackgroundJob::waitAndTake" );
+            return take( outResult );
+        }
+
+        /**
+         * @brief 워커가 아직 실행 중이면 true 입니다. 화면 표시용입니다.
+         * @details 이 값으로 요청 여부를 정하지 않는다 — 결과를 꺼내는 `take` 와 따로 읽으면 어긋난다. 판단에는 `take` 의 반환값을 쓴다.
+         */
+        bool isPending() const
+        {
+            if ( _pState == nullptr )
+                return false;
+
+            ScopedLock<mutex> lock{ _pState->_mutex };
+            return _pState->_bPending == SW_TRUE;
+        }
+
+    protected:
+        /** @brief 게임 스레드와 워커가 함께 보는 상태입니다. */
+        struct State
+        {
+            mutable mutex          _mutex{};
+            TInput _input          SW_GUARDED_BY( _mutex ){};
+            TResult _result        SW_GUARDED_BY( _mutex ){};
+            uint32 _generation     SW_GUARDED_BY( _mutex ){ 0 };
+            StopToken _stopToken   SW_GUARDED_BY( _mutex ){}; ///< 종료가 시작되면 올라가는 신호(`requestEditorBackgroundStop`). 묶이지 않았으면 멈출 일이 없다
+            uint8                  _bPending : 1 SW_GUARDED_BY( _mutex );
+            uint8                  _bReady   : 1 SW_GUARDED_BY( _mutex );
+            [[maybe_unused]] uint8 _reserved : 6;
+
+            State()
+                : _mutex{}
+                , _input{}
+                , _result{}
+                , _generation{ 0 }
+                , _bPending{ SW_FALSE }
+                , _bReady{ SW_FALSE }
+                , _reserved{ 0 }
+            {
+            }
+        };
+
+        /**
+         * @brief 입력을 싣고 세대를 올립니다.
+         * @return 워커에 넘길 세대 번호입니다.
+         */
+        uint32 beginRequest( TInput input )
+        {
+            StopToken         stopToken = acquireEditorBackgroundStopSignal();
+            ScopedLock<mutex> lock{ _pState->_mutex };
+            ++_pState->_generation;
+            _pState->_input     = std::move( input );
+            _pState->_result    = TResult{};
+            _pState->_stopToken = std::move( stopToken );
+            _pState->_bPending  = SW_TRUE;
+            _pState->_bReady    = SW_FALSE;
+            return _pState->_generation;
+        }
+
+        /** @brief 잡을 냅니다(게임 스레드). 이 객체의 스테이지에 넣어 `waitAndTake` 가 이 잡만 기다리게 한다. */
+        void submitJob( string_view name, const TaskArgsDelegate& delegate, const TaskArgs& args ) { submitEditorBackgroundJob( name, delegate, args, _jobStage ); }
+
+        /** @brief 워커에서 호출합니다. 세대가 아직 유효하면 입력을 복사하고, 오래된 세대면 false 를 반환합니다. */
+        [[nodiscard]] static bool readInput( const shared_ptr<State>& pState, uint32 generation, TInput& outInput )
+        {
+            if ( pState == nullptr )
+                return false;
+
+            ScopedLock<mutex> lock{ pState->_mutex };
+            if ( generation != pState->_generation )
+                return false;
+
+            outInput = pState->_input;
+            return true;
+        }
+
+        /** @brief 워커에서 호출합니다. 이 잡이 잡아 둔 중단 신호의 사본입니다(새 요청이 칸을 덮어써도 이 사본은 유효하다). 긴 일에 신호 포인터로 넘긴다. */
+        [[nodiscard]] static StopToken readStopSignal( const shared_ptr<State>& pState )
+        {
+            if ( pState == nullptr )
+                return {};
+            ScopedLock<mutex> lock{ pState->_mutex };
+            return pState->_stopToken;
+        }
+
+        /** @brief 워커에서 호출합니다. `readStopSignal` 로 받은 신호가 올라갔으면(nullptr 이면 올라갈 일이 없다) true — 잡은 결과를 싣지 않고 돌아간다. */
+        [[nodiscard]] static bool isStopRaised( const StopToken& stopToken ) { return stopToken.isStopRequested(); }
+
+        /** @brief 워커에서 호출합니다. 세대가 아직 유효하면 결과를 싣고 완료로 표시하며, 오래된 세대면 버립니다. */
+        static void publish( const shared_ptr<State>& pState, uint32 generation, TResult&& result )
+        {
+            if ( pState == nullptr )
+                return;
+
+            ScopedLock<mutex> lock{ pState->_mutex };
+            if ( generation != pState->_generation )
+                return;
+
+            pState->_result   = std::move( result );
+            pState->_bReady   = SW_TRUE;
+            pState->_bPending = SW_FALSE;
+        }
+
+    protected:
+        shared_ptr<State> _pState;
+        TaskStageHandle   _jobStage; ///< 이 객체가 낸 잡(게임 스레드가 `submitJob` 으로 넣는다). 오래 사는 주인이라 한 스테이지를 계속 쓴다
+    };
+} // namespace sw::editor

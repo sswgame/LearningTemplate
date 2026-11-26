@@ -15,7 +15,7 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/IdentityToken.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Graphics/Mesh/MeshBuildVertex.h"

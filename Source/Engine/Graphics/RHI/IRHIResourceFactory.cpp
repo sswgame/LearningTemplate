@@ -6,7 +6,7 @@
 #include "Core/Foundation/EnumUtil.h"
 #include "Core/Time/BusyClock.h"
 
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/RHI/Backend/RHIBufferSizeUtil.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIUploadLog.h"

@@ -80,16 +80,17 @@ namespace sw
         return true;
     }
 
-    void WesternHorse::update( float32 deltaTime, float32 gameHours )
+    void WesternHorse::update( GameSeconds frameTime, float32 gameHours )
     {
+        const float32 deltaTime = frameTime.count();
         if ( _pDef == nullptr )
             return;
         if ( deltaTime > 0.0f )
         {
             _health.setRegenScale( computeRegenScale( _healthCore ) );
             _stamina.setRegenScale( computeRegenScale( _staminaCore ) );
-            _health.update( deltaTime );
-            _stamina.update( deltaTime );
+            _health.update( frameTime );
+            _stamina.update( frameTime );
             _fear = MathUtil::max( 0.0f, _fear - _pDef->_fearDecayPerSecond * deltaTime );
             if ( _bRidden != SW_FALSE )
                 addBondExperience( _pCatalog->getBondExperience()._ridePerSecond * deltaTime );

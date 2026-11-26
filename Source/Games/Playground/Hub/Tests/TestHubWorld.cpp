@@ -6,10 +6,17 @@
 #include "Games/Playground/Hub/HubWorld.h"
 
 #include <limits>
+#include <type_traits>
 
 // 허브 규칙 — 서버가 판정하는 전투(사거리 · 재사용 대기 · 쓰러뜨림 · 다시 나기) · 채집 · 이동 상한 · 성장(단계표) · 파티(초대 · 수락 · 경험 나눔 · 떠남), 진행 바이트.
 
 using namespace sw;
+
+// 결함 41653ecd(이동 예산을 서버 프레임의 시간이 채워, 서버가 프레임을 놓치면 한도 속도로 걷는 정직한 걸음이 되돌려졌다): 예산은 그 걸음의 시간만 받는다 —
+// 프레임 시간(게임 시간) · 실제 시간을 넣는 꼴이 컴파일되지 않는다.
+static_assert( std::is_invocable_v<decltype( &HubWorld::moveAvatar ), HubWorld&, uint32, const AbsolutePosition&, StepSeconds, bool>, "a move spends its own step time" );
+static_assert( std::is_invocable_v<decltype( &HubWorld::moveAvatar ), HubWorld&, uint32, const AbsolutePosition&, GameSeconds, bool> == false, "a server frame time is not the step time" );
+static_assert( std::is_invocable_v<decltype( &HubWorld::moveAvatar ), HubWorld&, uint32, const AbsolutePosition&, RealSeconds, bool> == false, "a wall clock time is not the step time" );
 
 namespace
 {
@@ -106,11 +113,11 @@ SW_TEST_CASE( HubWorldTest, GatherAndMoveFollowTheServerLimits )
     SW_EXPECT_TRUE( world.moveAvatar( avatarID, AbsolutePosition{
                                                     float3{ 30.0f, 0.0f, 0.0f }
     },
-                                      0.0f, false ) == HubActionResult::StepTooLong );
+                                      StepSeconds{ 0.0f }, false ) == HubActionResult::StepTooLong );
     SW_EXPECT_TRUE( world.moveAvatar( avatarID, AbsolutePosition{
                                                     float3{ 8.0f, 0.0f, 6.0f }
     },
-                                      0.0f, false ) == HubActionResult::Ok );
+                                      StepSeconds{ 0.0f }, false ) == HubActionResult::Ok );
     SW_EXPECT_NEAR( 8.0, world.findAvatar( avatarID )->_profile._position._x, 1e-4 );
     SW_EXPECT_TRUE( world.gatherHerb( avatarID, kNearHerbID ) == HubActionResult::TargetGone );
     world.update( 5.1f );
@@ -131,11 +138,11 @@ SW_TEST_CASE( HubWorldTest, RidingHasItsOwnSpeedLimit )
     SW_EXPECT_TRUE( world.moveAvatar( riderID, AbsolutePosition{
                                                    float3{ 0.0f, 0.0f, 2.0f }
     },
-                                      0.0f, true ) == HubActionResult::Ok );
+                                      StepSeconds{ 0.0f }, true ) == HubActionResult::Ok );
     SW_EXPECT_TRUE( world.moveAvatar( walkerID, AbsolutePosition{
                                                     float3{ 0.0f, 0.0f, 2.0f }
     },
-                                      0.0f, false ) == HubActionResult::Ok );
+                                      StepSeconds{ 0.0f }, false ) == HubActionResult::Ok );
     constexpr float32 kStep   = 0.1f;
     int32             refused = 0;
     for ( int32 step = 1; step <= 20; ++step )
@@ -144,11 +151,11 @@ SW_TEST_CASE( HubWorldTest, RidingHasItsOwnSpeedLimit )
         SW_EXPECT_TRUE( world.moveAvatar( riderID, AbsolutePosition{
                                                        float3{ 0.0f, 0.0f, z }
         },
-                                          kStep, true ) == HubActionResult::Ok );
+                                          StepSeconds{ kStep }, true ) == HubActionResult::Ok );
         refused += world.moveAvatar( walkerID, AbsolutePosition{
                                                    float3{ 0.0f, 0.0f, z }
         },
-                                     kStep, false ) == HubActionResult::Ok
+                                     StepSeconds{ kStep }, false ) == HubActionResult::Ok
                      ? 0
                      : 1;
     }
@@ -158,7 +165,7 @@ SW_TEST_CASE( HubWorldTest, RidingHasItsOwnSpeedLimit )
     SW_EXPECT_TRUE( world.moveAvatar( riderID, AbsolutePosition{
                                                    float3{ 0.0f, std::numeric_limits<float32>::quiet_NaN(), 22.0f }
     },
-                                      0.0f, true ) == HubActionResult::StepTooLong );
+                                      StepSeconds{ 0.0f }, true ) == HubActionResult::StepTooLong );
 }
 
 /**
@@ -181,7 +188,7 @@ SW_TEST_CASE( HubWorldTest, MoveBudgetFollowsTheStepTimeNotTheServerFrames )
         SW_REQUIRE_TRUE( world.moveAvatar( avatarID, AbsolutePosition{
                                                          float3{ 0.0f, 0.0f, z }
         },
-                                           kStep, false ) == HubActionResult::Ok );
+                                           StepSeconds{ kStep }, false ) == HubActionResult::Ok );
     }
     int32 refused = 0;
     for ( int32 step = 0; step < 20; ++step )
@@ -190,7 +197,7 @@ SW_TEST_CASE( HubWorldTest, MoveBudgetFollowsTheStepTimeNotTheServerFrames )
         if ( world.moveAvatar( avatarID, AbsolutePosition{
                                              float3{ 0.0f, 0.0f, next }
         },
-                               kStep, false ) == HubActionResult::Ok )
+                               StepSeconds{ kStep }, false ) == HubActionResult::Ok )
             z = next;
         else
             ++refused;
@@ -215,7 +222,7 @@ SW_TEST_CASE( HubWorldTest, NewAvatarsTakeFreeStartPoints )
     SW_EXPECT_TRUE( world.moveAvatar( firstID, AbsolutePosition{
                                                    float3{ 0.0f, 0.0f, 0.5f }
     },
-                                      0.0f, false ) == HubActionResult::Ok );
+                                      StepSeconds{ 0.0f }, false ) == HubActionResult::Ok );
     SW_EXPECT_TRUE( world.chooseAvatarStart() == ( float3{ 0.0f, 0.0f, 0.0f } ) );
 
     world.removeAvatar( secondID );
@@ -292,20 +299,20 @@ SW_TEST_CASE( HubWorldTest, PartySharesExperience )
     SW_EXPECT_TRUE( world.moveAvatar( memberID, AbsolutePosition{
                                                     float3{ 0.0f, 0.0f, 12.0f }
     },
-                                      0.0f, false ) == HubActionResult::Ok );
+                                      StepSeconds{ 0.0f }, false ) == HubActionResult::Ok );
     SW_EXPECT_TRUE( world.moveAvatar( memberID, AbsolutePosition{
                                                     float3{ 0.0f, 0.0f, 24.0f }
     },
-                                      0.0f, false ) == HubActionResult::StepTooLong );
+                                      StepSeconds{ 0.0f }, false ) == HubActionResult::StepTooLong );
     constexpr float32 kStepSeconds = 12.0f / 6.0f; // 걷는 속도 6 m/s 로 12 m
     SW_EXPECT_TRUE( world.moveAvatar( memberID, AbsolutePosition{
                                                     float3{ 0.0f, 0.0f, 24.0f }
     },
-                                      kStepSeconds, false ) == HubActionResult::Ok );
+                                      StepSeconds{ kStepSeconds }, false ) == HubActionResult::Ok );
     SW_EXPECT_TRUE( world.moveAvatar( memberID, AbsolutePosition{
                                                     float3{ 0.0f, 0.0f, 36.0f }
     },
-                                      kStepSeconds, false ) == HubActionResult::Ok );
+                                      StepSeconds{ kStepSeconds }, false ) == HubActionResult::Ok );
     attackUntilDefeated( world, leaderID, kSideCreatureID );
     SW_EXPECT_EQUAL( 90, world.findAvatar( leaderID )->_profile._experience );
     SW_EXPECT_EQUAL( 30, world.findAvatar( memberID )->_profile._experience );

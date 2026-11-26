@@ -389,7 +389,7 @@ namespace sw
         AutomationReportWriter            _reportWriter; ///< 보고 경로 · JSON 보고 쓰기
         AutomationTimeline                _wallProfile;  ///< 벽시계가 프레임 종류(고정 대기 · 조건 대기 · 단계 …)별로 어디에 쓰였는지(보고의 `timeline`)
         AbsolutePath                      _outputDirectory;
-        FileUtil::WriteFilterRegistration _writeFilterRegistration; ///< 쥔 쓰기 입구 게이트(`AutomationScratchWorkspace::acquireWriteFilter` — `endRun` 이나 소멸자가 놓는다)
+        FileUtil::WriteFilterSubscription _writeFilterRegistration; ///< 쥔 쓰기 입구 게이트(`AutomationScratchWorkspace::acquireWriteFilter` — `endRun` 이나 소멸자가 놓는다)
         uint8                             _bStarted        : 1;
         uint8                             _bEnded          : 1;
         uint8                             _bHangWatchArmed : 1; ///< `armHangWatchdog` 를 불렀다(실제 프로세스를 끝낼 수 있는 감시라 세션만 켠다)

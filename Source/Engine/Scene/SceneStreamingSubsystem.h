@@ -1,6 +1,6 @@
 /**
  * @file SceneStreamingSubsystem.h
- * @brief 스트리밍하는 씬의 셀을 스트리밍 원점 둘레로 올리고 내리는 씬 서비스입니다(언리얼 World Partition 의 런타임 스트리밍 · `UWorldPartitionSubsystem` 자리).
+ * @brief 스트리밍하는 씬의 셀을 스트리밍 원점 둘레로 올리고 내리는 씬 서브시스템입니다(언리얼 World Partition 의 런타임 스트리밍 · `UWorldPartitionSubsystem` 자리).
  *
  * [데이터]
  * 쿠커가 스트리밍하는 씬(`SceneSettings::_bStreaming`)의 엔티티를 셀로 나눠 쿠킹본에 싣는다(`SceneDocument::_listStreamingCell`). 씬이 그 문서를 지을 때
@@ -76,7 +76,7 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Object/GameObject/Service/ISceneService.h"
+#include "Engine/Object/GameObject/Subsystem/ISceneSubsystem.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDocument.h"
@@ -107,14 +107,14 @@ namespace sw
      * @class SceneStreamingSubsystem
      * @brief 파일 머리말 참고.
      */
-    class SW_API SceneStreamingSubsystem final : public ISceneService
+    class SW_API SceneStreamingSubsystem final : public ISceneSubsystem
     {
     public:
         /** @brief 서브시스템 이름입니다(씬 범위의 의존 칸이 이 상수를 가리킨다). */
         static constexpr const utf8* kSubsystemName = "SceneStreaming";
-        /** @brief 씬 서비스 등록 줄입니다(`SW_SCENE_SERVICE` 가 정의한다). */
-        static const SceneServiceRegistration& getSceneServiceRegistration();
-        const utf8*                            getSubsystemName() const override { return kSubsystemName; }
+        /** @brief 씬 서브시스템 등록 줄입니다(`SW_SCENE_SUBSYSTEM` 가 정의한다). */
+        static const SceneSubsystemRegistration& getSceneSubsystemRegistration();
+        const utf8*                              getSubsystemName() const override { return kSubsystemName; }
 
         /** @brief @p manager 의 스트리밍 서비스를 만듭니다(서비스 레지스트리가 매니저마다 부른다). 셀을 받기 전에는 아무것도 하지 않습니다. */
         explicit SceneStreamingSubsystem( GameObjectManager& manager );

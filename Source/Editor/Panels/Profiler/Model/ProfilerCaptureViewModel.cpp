@@ -6,7 +6,7 @@
 #include "Core/File/ProcessRoots.h"
 #include "Core/Log/Logger.h"
 
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 #include "Editor/Common/Workspace/EditorUICommandQueue.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 

@@ -284,7 +284,7 @@ namespace sw
         _phaseTimer.start( _intermissionSeconds );
     }
 
-    void PartyGameModeComponent::updateMatch( float32 deltaTime )
+    void PartyGameModeComponent::updateMatch( GameSeconds frameTime )
     {
         switch ( _phase )
         {
@@ -294,7 +294,7 @@ namespace sw
                 {
                     _arena.setInput( player, _arena.computeBotInput( player ) );
                 }
-                (void)_arena.update( deltaTime ); // 걸음 수는 쓰지 않는다
+                (void)_arena.update( frameTime ); // 걸음 수는 쓰지 않는다
                 reportEvents();
                 if ( _arena.isRoundOver() )
                     settleRound();
@@ -302,7 +302,7 @@ namespace sw
             }
             case PartyGamePhase::Intermission:
             {
-                if ( _phaseTimer.update( deltaTime ) == false )
+                if ( _phaseTimer.update( frameTime ) == false )
                     return;
                 TrampolineArena arena;
                 if ( openRound( _series, arena ) == false ) // 첫 라운드를 같은 설정으로 열었으므로 라운드 데이터가 틀린 것이다 — 까닭은 무대가 남겼다

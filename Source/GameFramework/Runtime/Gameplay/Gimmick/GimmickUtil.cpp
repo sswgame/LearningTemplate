@@ -2,7 +2,7 @@
 
 #include "GameFramework/Runtime/Gameplay/Gimmick/GimmickUtil.h"
 
-#include "Core/Name/TagID.h"
+#include "Core/String/Name/TagID.h"
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -10,7 +10,7 @@
 
 #include "GameFramework/Runtime/Foundation/Presentation/IAbilityCueSink.h"
 #include "GameFramework/Runtime/Foundation/Service/GameEventUtil.h"
-#include "GameFramework/Runtime/Foundation/Service/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityCatalog.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/GimmickEvents.h"
 #include "GameFramework/Runtime/Gameplay/Interaction/InteractableComponent.h"

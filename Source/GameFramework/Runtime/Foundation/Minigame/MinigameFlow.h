@@ -31,7 +31,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Task/TaskFuture.h"
 
-#include "Engine/Object/GameObject/Service/SceneNetLink.h"
+#include "Engine/Object/GameObject/Subsystem/SceneNetLink.h"
 #include "Engine/Scene/SceneSubLevelTypes.h"
 
 #include "GameFramework/GameFrameworkExports.h"

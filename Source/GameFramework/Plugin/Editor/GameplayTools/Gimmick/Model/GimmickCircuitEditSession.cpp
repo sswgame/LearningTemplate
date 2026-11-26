@@ -5,14 +5,14 @@
 #include "Core/Foundation/Types.h"
 
 #include "Editor/Common/Workspace/EditorSelection.h"
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Reflection/TypeInfo.h"
 
 #include "GameFramework/Plugin/Editor/GameplayTools/Gimmick/Model/GimmickGraphEditModel.h"
-#include "GameFramework/Runtime/Foundation/Service/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/Circuit/GimmickCircuitComponent.h"
 
 // `GimmickGraphEditModel` 과 `GimmickCircuitComponent` 사이의 읽기 · 쓰기입니다. 컴포넌트의 저장 목록(비공개 PROPERTY)을 리플렉션으로 읽고 씁니다. 컴포넌트는 노드 · 대상 · 배선 목록을 getter 없이 비공개 PROPERTY 로만 둔다(인스펙터와 직렬화기가 리플렉션으로 만진다). 에디터도 같은 길을 쓴다 — 컴포넌트 헤더에 편집기 전용 getter 를 더하지 않는다. 쓴 뒤에는 컴포넌트의 `onPropertyChanged` 를 불러 회로를 다시 짓는다(인스펙터가 속성을 고친 것과 같은 알림).

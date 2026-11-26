@@ -15,7 +15,7 @@ namespace sw
         struct OnlinePushRelayInternal
         {
             /** @brief 등록 목록입니다(함수 정적 — 정적 초기화 순서와 상관없이 처음 쓸 때 선다). */
-            static SW_DEFINE_SERVICE_FACTORY_LIST( getList, "online push relay" )
+            static SW_DEFINE_FACTORY_REGISTRATION_LIST( getList, "online push relay" )
 
                 /** @brief 거절을 세고, (열거형, 열거자, 이유)마다 한 번 로그를 남깁니다. 세는 것과 "한 번만" 은 `LogOnce` 의 한 호출이다 — 부른 횟수가 곧 거절 수(`getRejectedCount`)다. */
                 static void recordRejected( const OnlinePushRelay& relay, const utf8* pReason )
@@ -34,7 +34,7 @@ namespace sw
 {
     OnlinePushRelayEntry::OnlinePushRelayEntry( const utf8* pName, uint16 kind, int64 pushValue, FqnFunction pGetPushEnumFqn, FqnFunction pGetBodyFqn,
                                                 ConvertFunction pConvert )
-        : ServiceFactoryNode{}
+        : FactoryRegistration{}
         , _pGetPushEnumFqn{ pGetPushEnumFqn }
         , _pGetBodyFqn{ pGetBodyFqn }
         , _pConvert{ pConvert }
@@ -62,7 +62,7 @@ namespace sw
 
     const OnlinePushRelayEntry* OnlinePushRelayRegistry::findEntry( const OnlinePushRelay& relay )
     {
-        for ( const ServiceFactoryNode* pNode : OnlinePushRelayInternal::getList().getItems() )
+        for ( const FactoryRegistration* pNode : OnlinePushRelayInternal::getList().getItems() )
         {
             const OnlinePushRelayEntry* pEntry = static_cast<const OnlinePushRelayEntry*>( pNode );
             if ( pEntry->matches( relay ) )
@@ -100,7 +100,7 @@ namespace sw
 
     void OnlinePushRelayRegistry::registerEntry( OnlinePushRelayEntry* pEntry )
     {
-        if ( ServiceFactoryNode::addTo( OnlinePushRelayInternal::getList(), pEntry ) )
+        if ( FactoryRegistration::addTo( OnlinePushRelayInternal::getList(), pEntry ) )
             return;
         // 오르지 못한 항목의 알림은 다른 서버에서 받지 못한다. 고칠 곳은 항목 선언이므로 모든 구성에서 멈춘다. 모듈 로드(정적 초기화) 중이라도 `reportFatalError` 은 표준 오류에 먼저 쓴다.
         const utf8* pName = pEntry->_pName != nullptr ? pEntry->_pName : "(no name)";

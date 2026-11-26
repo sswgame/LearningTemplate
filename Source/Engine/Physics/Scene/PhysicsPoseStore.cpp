@@ -32,5 +32,5 @@ namespace sw
 namespace sw
 {
     // 강체 칸 저장소 — 트랜스폼 칸 저장소와 같은 서비스 범위라 엔진 범위의 어느 컴포넌트보다 나중에 내려간다.
-    SW_ENGINE_SERVICE_SUBSYSTEM( PhysicsPoseStore, HostOnly, Process, Services, (), SW_ENGINE_DEFAULT_FACTORY( PhysicsPoseStore ) );
+    SW_ENGINE_SUBSYSTEM_WITH_SLOT( PhysicsPoseStore, HostOnly, Process, Shared, (), SW_ENGINE_DEFAULT_FACTORY( PhysicsPoseStore ) );
 } // namespace sw

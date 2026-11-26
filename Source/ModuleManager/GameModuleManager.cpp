@@ -8,7 +8,7 @@
 #include "Core/Subsystem/SubsystemScope.h"
 #include "Core/Task/TaskManager.h"
 
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/RHI/RHIWaitIdleReason.h"
@@ -85,7 +85,7 @@ namespace sw
         _pRenderDriver      = pRenderDriver;
 
         // 프레임 경로가 매 프레임 전역 조회를 하지 않도록 여기서 한 번 읽는다. 서비스 테이블이 비어 있으면 그 일을 건너뛴다.
-        const bool bServicesBound = engine::areEngineServicesBound();
+        const bool bServicesBound = engine::areEngineSubsystemsBound();
         _pSceneManager            = bServicesBound ? engine::findSubsystem<SceneManager>() : nullptr;
         _pUIDriver                = bServicesBound ? engine::findSubsystem<IEngineUIDriver>() : nullptr;
 
@@ -107,7 +107,7 @@ namespace sw
         suspendModules( ModuleScope::Both, true, FlushReason::Shutdown );
         // 정적 링크(배포)는 모듈을 내리는 쪽(핫 리로드 매니저)이 없다 — 등록한 쪽(`bindGameAPI`)이 뗀다. 떼지 않으면 게임 모듈이 건 캐시 · 서브시스템
         // (`ElementRuleCatalog` · `InteractionCatalog` 캐시)이 에셋 매니저 종료까지 남아 "still registered" 경고가 났다.
-        if ( _pLiveReloadManager == nullptr && engine::areEngineServicesBound() )
+        if ( _pLiveReloadManager == nullptr && engine::areEngineSubsystemsBound() )
             engine::unregisterModuleTypes( sw::config::kTargetGameModule );
 
         // 콜백은 이 객체의 메서드를 가리킨다. 실행 파일은 호스트를 먼저 지우고 나중에 리로드 매니저를 정리하므로, 이 객체가 건 것(모듈마다의 칸 ·
@@ -205,7 +205,7 @@ namespace sw
 
     void GameModuleManager::onAfterGameplayDLLReload( ModuleLibraryHandle /*library*/ )
     {
-        if ( engine::areEngineServicesBound() == false )
+        if ( engine::areEngineSubsystemsBound() == false )
             return;
         vector<Scene*> listScene;
         engine::getSubsystem<SceneManager>().collectAllScenes( listScene );
@@ -293,7 +293,7 @@ namespace sw
         // 컴포넌트·델리게이트를 불러 모듈 라이브러리에 들어가고, 델리게이트는 어디서나 만들어져 어디로나 넘어간다. 낸 쪽 · 델리게이트 주소로 가르면 옛 라이브러리에
         // 들어가는 태스크를 놓쳐 언로드 뒤 해제된 코드를 실행한다. 그래서 영구 태스크는 두지 않는 것이 계약이다(엔진 소스에는 없다). 있으면 대기의
         // 주기 진단이 도는 태스크 이름과 함께 드러낸다.
-        if ( engine::areEngineServicesBound() )
+        if ( engine::areEngineSubsystemsBound() )
         {
             engine::getSubsystem<TaskManager>().waitAll( "GameModuleManager::flushRenderWorkers" );
         }
@@ -326,7 +326,7 @@ namespace sw
         if ( exportGameAPITable( library ) == false )
             return false;
 
-        rebindGameService();
+        rebindGameSubsystems();
 
         if ( engine::registerModuleTypes( sw::config::kTargetGameModule ) == false )
             return false;
@@ -358,7 +358,7 @@ namespace sw
             suspendHostModule( bReleaseAPITable );
             // 세션을 잇지 않는 내리기(종료)는 월드가 플레이 중으로 남지 않게 한다. 호스트 모듈 없이 다시 돌면 beginFrame 이 다시 켠다.
             // 잇는 내리기(PIE 중 리로드)는 월드를 그대로 둔다 — 끄면 endPlay 가 돌아 게임 상태가 바뀐다(언리얼 Live Coding 이 PIE 를 잇는 것과 같다).
-            if ( bKeepWorldPlaying == false && engine::areEngineServicesBound() && engine::getSubsystem<SceneManager>().isWorldPlaying() )
+            if ( bKeepWorldPlaying == false && engine::areEngineSubsystemsBound() && engine::getSubsystem<SceneManager>().isWorldPlaying() )
                 engine::getSubsystem<SceneManager>().setWorldPlaying( false );
         }
         if ( bSuspendGame )
@@ -421,7 +421,7 @@ namespace sw
         // 복원할 것이 없으면(상태 직렬화가 없는 게임, 스냅샷이 비었다) 막을 이유도 없다.
         if ( _gameAPI.deserializeState == nullptr || _listGameSavedState.empty() )
         {
-            if ( engine::areEngineServicesBound() )
+            if ( engine::areEngineSubsystemsBound() )
                 engine::getSubsystem<SceneManager>().setSaveBlockReason( {} );
             return;
         }
@@ -430,7 +430,7 @@ namespace sw
         {
             SW_LOG_INFO_ID( "GameModuleManager.SceneObjectStateRestored", "Scene object state restored from %# bytes.", _listGameSavedState.size() );
             _listGameSavedState.clear();
-            if ( engine::areEngineServicesBound() )
+            if ( engine::areEngineSubsystemsBound() )
                 engine::getSubsystem<SceneManager>().setSaveBlockReason( {} );
         }
         else
@@ -466,7 +466,7 @@ namespace sw
             return _game != nullptr;
         }
 
-        rebindGameService();
+        rebindGameSubsystems();
         if ( createGameInstance() == false )
             return false;
 
@@ -478,9 +478,9 @@ namespace sw
     // 인스턴스 생성과 파괴. 리로드 경로와 RHI 핫스왑 경로가 같은 코드를 쓴다.
     // ======================================================================
 
-    void GameModuleManager::fillModuleServiceScope( SubsystemScope& outScope, bool bGameModule ) const
+    void GameModuleManager::fillModuleSubsystemScope( SubsystemScope& outScope, bool bGameModule ) const
     {
-        engine::bindModuleServices( outScope, bGameModule );
+        engine::bindModuleSubsystems( outScope, bGameModule );
         // 모듈이 공개한 서브시스템(`SW_MODULE_SUBSYSTEM` — GameFramework 의 암호 제공자 …)은 목록의 행이 아니다. 모듈 범위의 부모를 그 창구로 두어 타입으로 찾게 한다 —
         // 호스트 범위 자체를 부모로 두면 게임 모듈이 호스트 전용 서비스까지 본다. 에디터 모듈의 창구는 호스트 모듈에 보인다고 스스로 선언한 서브시스템
         // (`SubsystemModuleVisibility::HostModules` — 설정 테이블, 개발 도구의 HUD · 리로드 집계 …)도 본다 — 손 목록이 없다.
@@ -507,14 +507,14 @@ namespace sw
         }
     }
 
-    void GameModuleManager::rebindModuleService( void ( *bindService )( const ISubsystemLocator* pService ), unique_ptr<SubsystemScope>& inoutServices, bool bGameModule ) const
+    void GameModuleManager::rebindModuleSubsystems( void ( *bindService )( const ISubsystemLocator* pService ), unique_ptr<SubsystemScope>& inoutServices, bool bGameModule ) const
     {
         if ( bindService == nullptr )
             return;
 
         // 새 범위를 채워 넘긴 뒤에 앞 범위를 놓는다 — 모듈이 앞 범위를 들고 있는 동안 사라지지 않게.
         unique_ptr<SubsystemScope> services = make_unique<SubsystemScope>();
-        fillModuleServiceScope( *services, bGameModule );
+        fillModuleSubsystemScope( *services, bGameModule );
         bindService( services.get() );
         inoutServices = std::move( services );
     }
@@ -524,7 +524,7 @@ namespace sw
         ModuleInstanceUtil::destroyInstance( _gameAPI, _game, bReleaseAPITable, sw::config::kTargetGameModule );
         // 게임 컴포넌트를 모든 씬에서 제거했다. 복원할 때까지(`restoreGameState`) 씬을 저장하면 그것들이 빠진 채 저장된다. 리로드가 실패하거나
         // 중단되면 복원하는 쪽이 오지 않으므로 여기서 막는다. 리로드 매니저가 없으면(배포) 다시 올 리로드도 없다.
-        const bool bBlockSave = bReleaseAPITable && _pLiveReloadManager != nullptr && engine::areEngineServicesBound();
+        const bool bBlockSave = bReleaseAPITable && _pLiveReloadManager != nullptr && engine::areEngineSubsystemsBound();
         if ( bBlockSave )
             engine::getSubsystem<SceneManager>().setSaveBlockReason( "the game module's components were removed for a reload and have not been restored yet" );
     }

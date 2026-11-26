@@ -20,9 +20,9 @@ namespace sw
         if ( _bRunning == SW_TRUE )
             return true;
         _bRunning = SW_TRUE; // 실패해도 `stopAll` 이 시작한 것까지 멈춘다
-        vector<ServerServiceFactory*> listFactory;
+        vector<ServerServiceRegistration*> listFactory;
         ServerServiceRegistry::collectFactories( listFactory );
-        for ( const ServerServiceFactory* pFactory : listFactory )
+        for ( const ServerServiceRegistration* pFactory : listFactory )
         {
             RunningService running;
             running._name    = pFactory->_pName;

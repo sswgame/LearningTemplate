@@ -75,7 +75,7 @@ namespace
             for ( int32 index = 0; index < shots; ++index )
             {
                 (void)weapon.pullTrigger( aim, true, shot );
-                weapon.update( 1.0f );
+                weapon.update( sw::GameSeconds{ 1.0f } );
             }
         }
 

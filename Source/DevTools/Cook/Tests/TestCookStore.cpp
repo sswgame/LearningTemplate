@@ -9,7 +9,7 @@
 #include "Engine/Asset/Cook/Tests/DerivedDataCacheTestAccess.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/CookJob.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Serialization/Inherit/ResourceTags.h"
 
 // CookStoreTest — 쿠킹 출력 하나를 기록(.cookrec)과 DDC 로 만드는 저장소: 입력이 그대로면 굽지 않고 다시 쓰고, 입력 · 쿠커 버전이 바뀌면 다시 굽고,

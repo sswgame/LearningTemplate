@@ -7,7 +7,7 @@
     #include "Core/Container/vector.h"
     #include "Core/Foundation/X11Headers.h"
     #include "Core/String/StringUtil.h"
-    #include "Core/Time/GameTimer.h"
+    #include "Core/Time/MonotonicClock.h"
 
     #include "Editor/Common/Backend/ImGuiKeyForward.h"
     #include "Editor/Common/Backend/Platform/ImGuiTextInputBridge.h"
@@ -65,8 +65,7 @@ namespace sw::editor
             _pDisplay   = pDisplay;
             _mainWindow = window;
             _wmDelete   = XInternAtom( pDisplay, "WM_DELETE_WINDOW", 0 );
-            _timer.resetTimer();
-            _timer.startTimer();
+            _timer.restart();
             ImGui::GetIO().BackendPlatformUserData = this; // 활성 백엔드의 주인은 ImGui 컨텍스트다(thunk 가 거기서 찾는다) - 프로세스 정적 포인터를 두지 않는다
 
             ImGuiIO& io            = ImGui::GetIO();
@@ -146,8 +145,7 @@ namespace sw::editor
             if ( _monitorGeneration != _pWindow->getMonitorGeneration() && updateMonitors() == false )
                 SW_LOG_WARNING_ID( "ImGuiX11.NoMonitorAfterChange", "The X11 window reports no monitor after a display change" );
 
-            _timer.updateTimer();
-            io.DeltaTime = _timer.getDeltaTime();
+            io.DeltaTime = static_cast<float32>( _timer.lapSeconds() );
             if ( io.DeltaTime <= 0.0f )
                 io.DeltaTime = 0.00001f;
 
@@ -765,7 +763,7 @@ namespace sw::editor
         Display*             _pDisplay;
         Window               _mainWindow;
         Atom                 _wmDelete;
-        GameTimer            _timer;
+        Stopwatch            _timer;
         string               _clipboardText;                     ///< `Platform_GetClipboardTextFn` 이 돌려주는 글(다음 호출까지 살아 있어야 한다)
         ImGuiTextInputBridge _textInput;                         ///< 창의 입력기와 ImGui 를 잇는다
         int2                 _lastPointer;                       ///< 마지막으로 ImGui 에 알린 실제 포인터 위치

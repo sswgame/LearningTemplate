@@ -4,7 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Foundation/StateHashBuilder.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/Tick/FixedStepContext.h"
@@ -222,7 +222,7 @@ namespace sw
     void CharacterController2DComponent::onPrePhysicsStep( const FixedStepContext& context )
     {
         ScenePhysics&    physics        = context.getPhysics();
-        const float32    fixedDeltaTime = context.getFixedDeltaTime();
+        const float32    fixedDeltaTime = context.getFixedDeltaTime().count();
         IPhysicsScene2D* pScene         = physics.findScene2D();
         if ( pScene == nullptr || _character.isValid() == false )
             return;

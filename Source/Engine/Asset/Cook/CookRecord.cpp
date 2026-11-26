@@ -8,13 +8,13 @@
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
 #include "Core/Foundation/Constants.h"
-#include "Core/Process/ProcessEnvironment.h"
+#include "Core/Process/Process.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Content/ContentHash.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
 namespace sw
@@ -352,7 +352,7 @@ namespace sw
     {
         const string_view bucketName = CookRecordInternal::getBucketName( bucket );
         AbsolutePath      overrideRoot;
-        if ( engine::areEngineServicesBound() && engine::getSubsystem<CommandLineManager>().getArgument( CommandLineArgument::DDC_DIR, overrideRoot ) )
+        if ( engine::areEngineSubsystemsBound() && engine::getSubsystem<CommandLineManager>().getArgument( CommandLineArgument::DDC_DIR, overrideRoot ) )
             return DerivedDataCache{ vector<DerivedDataLayer>{ DerivedDataLayer{ overrideRoot.join( bucketName ), DerivedDataAccess::ReadWrite } } };
         const expected<DerivedDataConfig> config = ConfigManager::readConfig( DerivedDataConfig::kConfigFile );
         if ( config.has_value() == false )

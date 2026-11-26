@@ -9,7 +9,7 @@
 #include "Engine/Automation/AutomationRuntime.h"
 #include "Engine/EngineFrameHookList.h"
 #include "Engine/Foundation/DeterministicRun.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Input/InputManager.h"
 
 namespace sw

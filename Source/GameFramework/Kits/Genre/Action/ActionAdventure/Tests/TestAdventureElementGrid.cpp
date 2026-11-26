@@ -329,12 +329,12 @@ SW_TEST_CASE( AdventureElementGridTest, UpdateConsumesFixedSteps )
 {
     sw::AdventureElementGrid grid;
     SW_REQUIRE_TRUE( grid.initialize( 1, 1, sw::AdventureElementSettings{} ) ); // 스텝 0.25 초
-    SW_EXPECT_EQUAL( 1, grid.update( 0.25f ) );
-    SW_EXPECT_EQUAL( 0, grid.update( 0.125f ) );
-    SW_EXPECT_EQUAL( 1, grid.update( 0.125f ) );
-    SW_EXPECT_EQUAL( 0, grid.update( 0.0f ) );
-    SW_EXPECT_EQUAL( 0, grid.update( -5.0f ) );
-    SW_EXPECT_EQUAL( 4, grid.update( 100.0f ) );
+    SW_EXPECT_EQUAL( 1, grid.update( sw::GameSeconds{ 0.25f } ) );
+    SW_EXPECT_EQUAL( 0, grid.update( sw::GameSeconds{ 0.125f } ) );
+    SW_EXPECT_EQUAL( 1, grid.update( sw::GameSeconds{ 0.125f } ) );
+    SW_EXPECT_EQUAL( 0, grid.update( sw::GameSeconds{ 0.0f } ) );
+    SW_EXPECT_EQUAL( 0, grid.update( sw::GameSeconds{ -5.0f } ) );
+    SW_EXPECT_EQUAL( 4, grid.update( sw::GameSeconds{ 100.0f } ) );
     SW_EXPECT_EQUAL( 6u, grid.getStepCount() );
 }
 
@@ -427,7 +427,7 @@ SW_TEST_CASE( AdventureElementGridTest, ElementGridDeterminism )
             (void)grid.applyIce( cell );
         if ( stepIndex % 13 == 7 )
             (void)grid.applyElectric( cell );
-        (void)grid.update( 1.0f / 30.0f );
+        (void)grid.update( sw::GameSeconds{ 1.0f / 30.0f } );
     };
     SW_EXPECT_TRUE( sw::StateBytesTestUtil::isDeterministic<sw::AdventureElementGrid>( setup, step, 240 ) );
 }

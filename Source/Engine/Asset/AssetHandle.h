@@ -212,7 +212,7 @@ namespace sw
         AssetLoadState getState() const
         {
             if ( _pOperation == nullptr )
-                ::sw::internal::reportMissingRequiredService( SW_FUNCTION_SIGNATURE );
+                ::sw::internal::reportMissingRequiredSubsystem( SW_FUNCTION_SIGNATURE );
             return _pOperation->getState();
         }
         /** @brief 쓸 수 있으면 true 입니다(요청이 없으면 false). */
@@ -228,14 +228,14 @@ namespace sw
         const string& getError() const
         {
             if ( _pOperation == nullptr )
-                ::sw::internal::reportMissingRequiredService( SW_FUNCTION_SIGNATURE );
+                ::sw::internal::reportMissingRequiredSubsystem( SW_FUNCTION_SIGNATURE );
             return _pOperation->getError();
         }
         /** @brief 요청 경로입니다. 요청이 있어야 합니다. */
         const string& getPath() const
         {
             if ( _pOperation == nullptr )
-                ::sw::internal::reportMissingRequiredService( SW_FUNCTION_SIGNATURE );
+                ::sw::internal::reportMissingRequiredSubsystem( SW_FUNCTION_SIGNATURE );
             return _pOperation->getPath();
         }
 
@@ -246,7 +246,7 @@ namespace sw
         [[nodiscard]] shared_ptr<AssetType> wait() const
         {
             if ( _pOperation == nullptr )
-                ::sw::internal::reportMissingRequiredService( SW_FUNCTION_SIGNATURE );
+                ::sw::internal::reportMissingRequiredSubsystem( SW_FUNCTION_SIGNATURE );
             _pOperation->wait();
             return get();
         }

@@ -12,6 +12,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -81,7 +82,7 @@ namespace sw
         /** @brief 유닛 데이터를 읽고 판을 엽니다. 사람(파랑) 대 컴퓨터이며, 자동 플레이면 컴퓨터 대 컴퓨터입니다. */
         [[nodiscard]] bool startGame() override;
         void               onStateRestored( bool bRestored ) override;
-        void               updateGame( float32 deltaTime ) override;
+        void               updateGame( GameSeconds frameTime ) override;
 
         /**
          * @brief 새 판에서 사람이 맡을 플레이어 깃발(`SkirmishMatch::kHumanPlayer0` …)입니다. 여기서는 0 번, 자동 플레이면 없음(0)입니다.
@@ -89,7 +90,7 @@ namespace sw
          */
         [[nodiscard]] virtual optional<uint8> openPlayers( bool bAutoPlay );
         /** @brief 한 프레임만큼 판을 진행합니다. 여기서는 일시정지가 아니면 배속대로 한 번이고, 2 인 대전 파생은 모인 락스텝 틱만큼이다. */
-        virtual void   stepMatch( float32 deltaTime );
+        virtual void   stepMatch( GameSeconds frameTime );
         SkirmishMatch& getMutableMatch() { return _match; }
         /** @brief 씬이 적은 지도입니다(플레이어 수 — 판을 열기 전에도 읽는다). */
         const SkirmishMap& getMap() const { return _map; }

@@ -5,7 +5,7 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Localization/TextFormatter.h"
 
@@ -139,7 +139,7 @@ namespace sw
 
     const utf8* LocalizedText::find( string_view fullKey, const utf8* pSourceText )
     {
-        if ( engine::areEngineServicesBound() == false )
+        if ( engine::areEngineSubsystemsBound() == false )
             return pSourceText;
         const LocalizationManager& localization = engine::getSubsystem<LocalizationManager>();
         const utf8*                pFound       = localization.findStringByText( fullKey );
@@ -152,7 +152,7 @@ namespace sw
     string LocalizedText::format( string_view fullKey, const utf8* pSourceText, const TextArgumentList& arguments )
     {
         const utf8* pPattern = find( fullKey, pSourceText );
-        if ( engine::areEngineServicesBound() == false )
+        if ( engine::areEngineSubsystemsBound() == false )
         {
             string text;
             (void)TextFormatter::format( pPattern != nullptr ? string_view( pPattern ) : string_view{}, arguments, CultureInfo{}, text );
@@ -172,7 +172,7 @@ namespace sw
 
     string LocalizedText::resolveNow( string_view text )
     {
-        return resolve( engine::areEngineServicesBound() ? &engine::getSubsystem<LocalizationManager>() : nullptr, text );
+        return resolve( engine::areEngineSubsystemsBound() ? &engine::getSubsystem<LocalizationManager>() : nullptr, text );
     }
 
     LocalizedMessage::LocalizedMessage( string_view fullKey )

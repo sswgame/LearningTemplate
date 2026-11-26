@@ -239,7 +239,7 @@ SW_TEST_CASE( AdventureDungeonTest, SwitchesStayOn )
     SW_EXPECT_TRUE( state.isDeviceActive( kForest, kEye ) );
     SW_EXPECT_TRUE( flags.hasFlag( kFlagEye ) );
     SW_EXPECT_TRUE( state.hitSwitch( kForest, kEye, flags ) ); // 켜진 채 다시 쳐도 알림은 하나다
-    state.update( 1000.0f, flags );
+    state.update( sw::GameSeconds{ 1000.0f }, flags );
     SW_EXPECT_TRUE( state.isDeviceActive( kForest, kEye ) );
 
     SW_EXPECT_FALSE( state.hitSwitch( kForest, kPlate, flags ) );
@@ -266,15 +266,15 @@ SW_TEST_CASE( AdventureDungeonTest, TimedSwitchExpiresAndRestarts )
     sw::GameFlags flags;
 
     SW_REQUIRE_TRUE( state.hitSwitch( kForest, kClock, flags ) );
-    state.update( 1.0f, flags );
+    state.update( sw::GameSeconds{ 1.0f }, flags );
     SW_EXPECT_TRUE( state.isDeviceActive( kForest, kClock ) );
     SW_REQUIRE_TRUE( state.hitSwitch( kForest, kClock, flags ) ); // 다시 2 초
-    state.update( 0.0f, flags );
-    state.update( -5.0f, flags );
-    state.update( 1.5f, flags );
+    state.update( sw::GameSeconds{ 0.0f }, flags );
+    state.update( sw::GameSeconds{ -5.0f }, flags );
+    state.update( sw::GameSeconds{ 1.5f }, flags );
     SW_EXPECT_TRUE( state.isDeviceActive( kForest, kClock ) );
     SW_EXPECT_TRUE( flags.hasFlag( kFlagClock ) );
-    state.update( 0.5f, flags );
+    state.update( sw::GameSeconds{ 0.5f }, flags );
     SW_EXPECT_FALSE( state.isDeviceActive( kForest, kClock ) );
     SW_EXPECT_FALSE( flags.hasFlag( kFlagClock ) );
 
@@ -331,27 +331,27 @@ SW_TEST_CASE( AdventureDungeonTest, TorchGroupsNeedAllTorchesInTime )
     SW_EXPECT_TRUE( state.lightTorch( kForest, kTorches, flags ) );
     SW_EXPECT_EQUAL( 1, state.getLitTorchCount( kForest, kTorches ) );
     SW_EXPECT_FALSE( state.isDeviceActive( kForest, kTorches ) );
-    state.update( 2.0f, flags );
+    state.update( sw::GameSeconds{ 2.0f }, flags );
     SW_EXPECT_EQUAL( 1, state.getLitTorchCount( kForest, kTorches ) );
-    state.update( 1.0f, flags ); // 3 초가 다 됐다
+    state.update( sw::GameSeconds{ 1.0f }, flags ); // 3 초가 다 됐다
     SW_EXPECT_EQUAL( 0, state.getLitTorchCount( kForest, kTorches ) );
     sw::vector<sw::AdventureDungeonEvent> listEvent;
     state.pollEvents( listEvent );
     SW_EXPECT_EQUAL( 1, sw::VectorUtil::countBy<&sw::AdventureDungeonEvent::_type>( listEvent, sw::AdventureDungeonEventKind::TorchesFailed ) );
 
     SW_EXPECT_TRUE( state.lightTorch( kForest, kTorches, flags ) );
-    state.update( 2.0f, flags ); // 첫 불에서 시간이 다시 시작한다
+    state.update( sw::GameSeconds{ 2.0f }, flags ); // 첫 불에서 시간이 다시 시작한다
     SW_EXPECT_TRUE( state.lightTorch( kForest, kTorches, flags ) );
     SW_EXPECT_TRUE( state.isDeviceActive( kForest, kTorches ) );
     SW_EXPECT_TRUE( flags.hasFlag( kFlagTorches ) );
     SW_EXPECT_FALSE( state.lightTorch( kForest, kTorches, flags ) );
-    state.update( 100.0f, flags );
+    state.update( sw::GameSeconds{ 100.0f }, flags );
     SW_EXPECT_TRUE( state.isDeviceActive( kForest, kTorches ) );
     SW_EXPECT_EQUAL( 2, state.getLitTorchCount( kForest, kTorches ) );
 
     // 시간이 없는 그룹은 기다려도 꺼지지 않는다.
     SW_EXPECT_TRUE( state.lightTorch( kForest, kSlowTorches, flags ) );
-    state.update( 1000.0f, flags );
+    state.update( sw::GameSeconds{ 1000.0f }, flags );
     SW_EXPECT_EQUAL( 1, state.getLitTorchCount( kForest, kSlowTorches ) );
     SW_EXPECT_EQUAL( 0, state.getLitTorchCount( kNowhere, kTorches ) );
 }
@@ -369,7 +369,7 @@ SW_TEST_CASE( AdventureDungeonTest, UninitializedStateIsSafe )
     SW_EXPECT_FALSE( state.openTreasure( kForest, kKeysChest, flags, reward ) );
     SW_EXPECT_FALSE( state.hitSwitch( kForest, kEye, flags ) );
     SW_EXPECT_TRUE( state.findProgress( kForest ) == nullptr );
-    state.update( 1.0f, flags );
+    state.update( sw::GameSeconds{ 1.0f }, flags );
 
     sw::Archive written;
     state.writeState( written );
@@ -402,7 +402,7 @@ SW_TEST_CASE( AdventureDungeonTest, StateRoundTripResumes )
     SW_REQUIRE_TRUE( original.addSmallKey( kCave, 3 ) );
     SW_REQUIRE_TRUE( original.hitSwitch( kForest, kClock, flags ) );
     SW_REQUIRE_TRUE( original.lightTorch( kForest, kTorches, flags ) );
-    original.update( 1.0f, flags );
+    original.update( sw::GameSeconds{ 1.0f }, flags );
 
     sw::Archive written;
     original.writeState( written );
@@ -421,10 +421,10 @@ SW_TEST_CASE( AdventureDungeonTest, StateRoundTripResumes )
     SW_EXPECT_TRUE( listEvent.empty() );
 
     sw::GameFlags restoredFlags = flags;
-    restored.update( 1.0f, restoredFlags ); // 원본에서 1 초 지났으니 2 초 시간제가 여기서 끝난다
+    restored.update( sw::GameSeconds{ 1.0f }, restoredFlags ); // 원본에서 1 초 지났으니 2 초 시간제가 여기서 끝난다
     SW_EXPECT_FALSE( restored.isDeviceActive( kForest, kClock ) );
     SW_EXPECT_FALSE( restoredFlags.hasFlag( kFlagClock ) );
-    restored.update( 1.0f, restoredFlags ); // 3 초 횃불도 끝난다
+    restored.update( sw::GameSeconds{ 1.0f }, restoredFlags ); // 3 초 횃불도 끝난다
     SW_EXPECT_EQUAL( 0, restored.getLitTorchCount( kForest, kTorches ) );
 }
 

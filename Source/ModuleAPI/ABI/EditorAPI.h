@@ -76,7 +76,7 @@ namespace sw
     X( void, getSceneViewport, ( EditorHandle editor, ViewportTarget * pOutTarget ) )                                                                                                           \
     /** 이번 프레임 씬 뷰 카메라(에디터 카메라, CameraComponent*)를 반환합니다. */                                                                                                              \
     X( void*, getSceneViewCamera, ( EditorHandle editor ) )                                                                                                                                     \
-    /** 호스트 서비스 범위를 에디터 모듈에 주입하거나 nullptr 로 해제합니다. */                                                                                                                 \
+    /** 호스트 서브시스템 범위를 에디터 모듈에 주입하거나 nullptr 로 해제합니다. */                                                                                                             \
     X( void, bindService, ( const ISubsystemLocator* pService ) )                                                                                                                               \
     /** 에디터 시뮬레이션(PIE)이 실행 중인지 반환합니다. */                                                                                                                                     \
     X( bool, isPlaying, ( EditorHandle editor ) )                                                                                                                                               \

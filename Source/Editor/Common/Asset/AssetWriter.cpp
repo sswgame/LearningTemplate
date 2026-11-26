@@ -7,7 +7,7 @@
 #include "Core/Log/Logger.h"
 
 #include "Editor/Common/Workspace/EditorNotificationManager.h"
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 
 #include "Engine/Content/AssetWriteAccess.h"
 #include "Engine/Content/ContentHash.h"

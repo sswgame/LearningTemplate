@@ -9,12 +9,12 @@
 #include "Core/String/formatString.h"
 
 #include "Editor/Common/Commands/Asset/EditorAssetCommands.h"
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 
 #include "Engine/Audio/AudioEngine.h"
 #include "Engine/Audio/AudioEvent.h"
-#include "Engine/Audio/AudioService.h"
 #include "Engine/Audio/AudioSpatial.h"
+#include "Engine/Audio/AudioSubsystem.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Reflection/EnumName.h"
 
@@ -185,19 +185,19 @@ namespace sw::editor
         return true;
     }
 
-    AudioService* AudioEventBrowserUtil::findAudioService()
+    AudioSubsystem* AudioEventBrowserUtil::findAudioSubsystem()
     {
-        return editor::findSubsystem<AudioService>();
+        return editor::findSubsystem<AudioSubsystem>();
     }
 
-    AudioService& AudioEventBrowserUtil::getAudioService()
+    AudioSubsystem& AudioEventBrowserUtil::getAudioSubsystem()
     {
-        return editor::getSubsystem<AudioService>();
+        return editor::getSubsystem<AudioSubsystem>();
     }
 
     bool AudioEventBrowserUtil::readStats( AudioEngineStats& outStats )
     {
-        AudioService* const pAudio = findAudioService();
+        AudioSubsystem* const pAudio = findAudioSubsystem();
         if ( pAudio == nullptr || pAudio->isInitialized() == false )
             return false;
         outStats = pAudio->getEngine().getStats();
@@ -206,7 +206,7 @@ namespace sw::editor
 
     bool AudioEventBrowserUtil::collectEventNamesIfChanged( const void*& inoutEngineKey, uint32& inoutGeneration, vector<hashed_string>& outListName )
     {
-        AudioEngine& engine   = getAudioService().getEngine();
+        AudioEngine& engine   = getAudioSubsystem().getEngine();
         const bool   bChanged = inoutEngineKey != &engine || inoutGeneration != engine.getEventLibraryGeneration();
         if ( bChanged == false )
             return false;
@@ -218,17 +218,17 @@ namespace sw::editor
 
     void AudioEventBrowserUtil::collectInstanceStatuses( vector<AudioInstanceStatus>& outListStatus )
     {
-        getAudioService().getEngine().getInstanceStatuses( outListStatus );
+        getAudioSubsystem().getEngine().getInstanceStatuses( outListStatus );
     }
 
     bool AudioEventBrowserUtil::findEventDesc( const hashed_string& eventName, AudioEventDef& outEventDesc, hashed_string& outLibrary, AudioAttenuationDef& outAttenuation )
     {
-        return getAudioService().getEngine().findEventDesc( eventName, outEventDesc, outLibrary, &outAttenuation );
+        return getAudioSubsystem().getEngine().findEventDesc( eventName, outEventDesc, outLibrary, &outAttenuation );
     }
 
     void AudioEventBrowserUtil::postEvent( const hashed_string& eventName )
     {
-        (void)getAudioService().getEngine().postEvent( eventName, 0 ); // 재생 id 는 쓰지 않는다 — 끝나면 저절로 멈춘다
+        (void)getAudioSubsystem().getEngine().postEvent( eventName, 0 ); // 재생 id 는 쓰지 않는다 — 끝나면 저절로 멈춘다
     }
 
     bool AudioEventBrowserUtil::openDataFile( string_view path )

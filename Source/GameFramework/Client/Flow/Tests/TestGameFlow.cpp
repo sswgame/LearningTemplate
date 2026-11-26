@@ -9,7 +9,7 @@
 #define SW_TEST_INTERNAL // 임시 리소스 도메인 픽스처(`ScopedScratchDomain`)와 엔진 서비스를 직접 쓴다
 #include "Engine/Config/GameTimeScale.h"
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/UI/Screen/UIGlobalCommandRegistry.h"
 
@@ -21,7 +21,7 @@
 #include "GameFramework/Runtime/Foundation/Save/SaveLock.h"
 #include "GameFramework/Runtime/Foundation/Service/GameEventUtil.h"
 #include "GameFramework/Runtime/Foundation/Service/GameEvents.h"
-#include "GameFramework/Runtime/Foundation/Service/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 
 using namespace sw;
 
@@ -119,7 +119,7 @@ SW_TEST_CASE( GameFlowTest, SavingIsBlockedOnTheTitleScene )
     SW_REQUIRE_TRUE( sceneManager.saveActiveSceneCopy( domain.makeDiskPath( "map.scene.xml" ) ) );
 
     GameTimeScale timeScale; // 프레임의 실제 경과는 엔진이 적는다 — 프레임 없이 부르는 테스트는 제 것을 적는다
-    timeScale.setUnscaledDeltaTime( 1.0f / 60.0f );
+    timeScale.setUnscaledDeltaTime( RealSeconds{ 1.0f / 60.0f } );
     SubsystemScope              scope;
     const game::ScopedGameScope scopedGame{ scope };
     SW_REQUIRE_TRUE( scope.bind( &sceneManager ) );

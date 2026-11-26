@@ -4,7 +4,7 @@
 
 #if defined( SW_PLATFORM_LINUX )
     #include "Core/Container/string.h"
-    #include "Core/Time/GameTimer.h"
+    #include "Core/Time/MonotonicClock.h"
 
     #include "Editor/Common/Backend/ImGuiKeyForward.h"
     #include "Editor/Common/Backend/Platform/ImGuiTextInputBridge.h"
@@ -116,8 +116,7 @@ namespace sw::editor
                 return false;
             }
             _pWindow = pWindow;
-            _timer.resetTimer();
-            _timer.startTimer();
+            _timer.restart();
             ImGui::GetIO().BackendPlatformUserData = this; // 활성 백엔드의 주인은 ImGui 컨텍스트다(콜백이 거기서 찾는다) - 프로세스 정적 포인터를 두지 않는다
 
             ImGuiIO& io            = ImGui::GetIO();
@@ -158,8 +157,7 @@ namespace sw::editor
             io.DisplaySize = ImVec2( static_cast<float32>( _pWindow->getWidth() ), static_cast<float32>( _pWindow->getHeight() ) );
             updateMonitor();
 
-            _timer.updateTimer();
-            io.DeltaTime = _timer.getDeltaTime();
+            io.DeltaTime = static_cast<float32>( _timer.lapSeconds() );
             if ( io.DeltaTime <= 0.0f )
                 io.DeltaTime = 0.00001f;
 
@@ -317,7 +315,7 @@ namespace sw::editor
 
     private:
         GenericWindow*       _pWindow;
-        GameTimer            _timer;
+        Stopwatch            _timer;
         string               _clipboardText; ///< `Platform_GetClipboardTextFn` 이 돌려주는 글(다음 호출까지 살아 있어야 한다)
         ImGuiTextInputBridge _textInput;     ///< 창의 입력기와 ImGui 를 잇는다
         CursorShape          _lastCursor;

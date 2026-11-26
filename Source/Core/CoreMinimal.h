@@ -22,9 +22,10 @@
 #include "Core/Log/Logger.h"
 #include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
 #include "Core/String/string_splitter.h"
+#include "Core/Time/TimeSeconds.h" // 시계별 시간 길이 — 프레임 시간을 받는 거의 모든 헤더가 쓴다

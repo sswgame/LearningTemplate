@@ -3,7 +3,7 @@
 #include "Editor/Common/Workspace/EditorSelectionSync.h"
 
 #include "Editor/Common/Workspace/EditorSelection.h"
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"

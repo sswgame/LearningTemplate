@@ -135,12 +135,12 @@ namespace sw
         shutdown();
     }
 
-    bool PortraitStudio::initialize( RenderThread& renderThread, const SceneEngineServices& services )
+    bool PortraitStudio::initialize( RenderThread& renderThread, const SceneEngineSubsystems& services )
     {
         shutdown();
         if ( services._pAssetManager == nullptr || services._pDefaultAssets == nullptr )
         {
-            SW_LOG_ERROR_ID( "PortraitStudio.PortraitSceneServicesNo", "Portrait: the scene services have no asset manager or default assets" );
+            SW_LOG_ERROR_ID( "PortraitStudio.PortraitSceneSubsystemsNo", "Portrait: the scene subsystems have no asset manager or default assets" );
             return false;
         }
         _services = services;
@@ -151,7 +151,7 @@ namespace sw
     void PortraitStudio::shutdown()
     {
         _capture.shutdown();
-        _services = SceneEngineServices{};
+        _services = SceneEngineSubsystems{};
     }
 
     bool PortraitStudio::renderPrefab( const PortraitRequest& request, PortraitCapture& outCapture )
@@ -243,7 +243,7 @@ namespace sw
         return true;
     }
 
-    bool PortraitStudio::renderPrefabList( RenderThread& renderThread, const SceneEngineServices& services, string_view prefabList, const AbsolutePath& outputDirectory, uint32 size )
+    bool PortraitStudio::renderPrefabList( RenderThread& renderThread, const SceneEngineSubsystems& services, string_view prefabList, const AbsolutePath& outputDirectory, uint32 size )
     {
         if ( prefabList.empty() )
             return false;

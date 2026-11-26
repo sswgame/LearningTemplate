@@ -11,7 +11,7 @@
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Input/EditorCommandGUI.h"
 #include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 
 /**
  * @brief [EditorUIFrameOrderTest] 등록부를 다시 만든 뒤 프레임 앞 준비 한 번이면 같은 프레임의 메뉴가 켜짐 값을 읽는다(다음 프레임을 기다리지 않는다)

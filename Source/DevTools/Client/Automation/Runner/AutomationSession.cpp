@@ -32,7 +32,7 @@
 #include "Engine/Config/GameSelection.h"
 #include "Engine/Engine.h"
 #include "Engine/Foundation/DeterministicRun.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/View/ScreenshotRequestQueue.h"
 #include "Engine/HeadlessSubsystem.h"
@@ -248,7 +248,7 @@ namespace sw
         _reproduceInput._backendName      = AutomationRunner::findBackendName();
         _reproduceInput._scenarioArgument = string( scenarioArgument );
         _reproduceInput._bKeepGoing       = bKeepGoing;
-        if ( engine::areEngineServicesBound() )
+        if ( engine::areEngineSubsystemsBound() )
         {
             const CommandLineManager& commandLine = engine::getSubsystem<CommandLineManager>();
             (void)commandLine.getArgument( CommandLineArgument::ENABLE_EDITOR, _reproduceInput._bEditor ); // 적지 않았으면 false 그대로
@@ -696,7 +696,7 @@ namespace sw
         _frameSubscription.reset();
     }
 
-    void AutomationSession::Runtime::runPerBackend( string_view backends, CommandLineManager& commandLine, HeadlessTaskState& inoutState )
+    void AutomationSession::Runtime::runPerBackend( string_view backends, CommandLineManager& commandLine, CommandletState& inoutState )
     {
         // 창 · RHI 를 세우기 전에 가로챈다 — 이 프로세스는 기다리기만 한다.
         inoutState.enterHeadless();

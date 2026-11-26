@@ -83,7 +83,7 @@ namespace
         void dieAt( const sw::float3& position )
         {
             (void)_flow.notifyDied( position, 0.0f );
-            (void)_flow.update( 0.016f, _target._context );
+            (void)_flow.update( sw::GameSeconds{ 0.016f }, _target._context );
         }
     };
 } // namespace
@@ -103,7 +103,7 @@ SW_TEST_CASE( RespawnServerAuthorityTest, InPlaceIsDecidedFromServerState )
     server._target.requestRespawn( sw::RespawnPolicyKind::InPlace, 0 );
     SW_EXPECT_TRUE( server._target._lastResult == sw::RespawnRequestResult::Accepted );
     SW_EXPECT_EQUAL( 1, server._notifiedCount );
-    const sw::optional<sw::RespawnSpawn> spawned = server._flow.update( 0.016f, server._target._context );
+    const sw::optional<sw::RespawnSpawn> spawned = server._flow.update( sw::GameSeconds{ 0.016f }, server._target._context );
     SW_REQUIRE_TRUE( spawned.has_value() );
     SW_EXPECT_TRUE( spawned->_policy == sw::RespawnPolicyKind::InPlace );
     SW_EXPECT_NEAR( 10.0f, spawned->_position._x, kAuthorityTolerance ); // 서버 세계의 땅 끝 — 클라이언트가 자리를 보낼 칸은 없다
@@ -189,7 +189,7 @@ SW_TEST_CASE( RespawnServerAuthorityTest, PointChoiceAcceptsOnlyServerKnownPoint
     // 받은 뒤에는 고르기 단계가 아니다 — 두 번째 요청이 고른 자리를 바꾸지 못한다.
     server._target.requestRespawn( sw::RespawnPolicyKind::PlayerChoice, sw::hashed_string( "shrine" ).getHash() );
     SW_EXPECT_TRUE( server._target._lastResult == sw::RespawnRequestResult::NotInSelection );
-    const sw::optional<sw::RespawnSpawn> spawned = server._flow.update( 0.016f, server._target._context );
+    const sw::optional<sw::RespawnSpawn> spawned = server._flow.update( sw::GameSeconds{ 0.016f }, server._target._context );
     SW_REQUIRE_TRUE( spawned.has_value() );
     SW_EXPECT_EQUAL( sw::hashed_string( "redBase" ), spawned->_pointID );
     SW_EXPECT_NEAR( 50.0f, spawned->_position._x, kAuthorityTolerance );

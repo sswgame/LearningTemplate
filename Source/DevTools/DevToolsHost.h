@@ -47,7 +47,7 @@ namespace sw
         const utf8*         getSubsystemName() const override { return kSubsystemName; }
 
         /**
-         * @brief 게임 창 개발 콘솔과 표준 입력 명령 채널을 세웁니다(App 이 호스트 서비스 `DevConsole` 자리에서 부른다). @p bEnableEditor 면 입력은 받지 않고 시작 명령만 돌린다.
+         * @brief 게임 창 개발 콘솔과 표준 입력 명령 채널을 세웁니다(App 이 호스트 서브시스템 `DevConsole` 자리에서 부른다). @p bEnableEditor 면 입력은 받지 않고 시작 명령만 돌린다.
          * @details 이후 프레임마다 관찰자 훅이 돌린다 — 프레임 앞에 시작 명령, 씬 틱 뒤에 콘솔 키, 프레임 끝에 표준 입력(종료 낱말이면 종료 코드 0).
          */
         void startConsole( bool bEnableEditor );

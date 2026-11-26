@@ -8,7 +8,7 @@
 #include "Engine/Animation/Notify/AnimationNotifyTable.h"
 #include "Engine/Character/Socket/SocketSet.h"
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 
 using namespace sw;
 

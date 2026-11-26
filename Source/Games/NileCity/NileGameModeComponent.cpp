@@ -52,8 +52,9 @@ namespace sw
                                                             "P auto plan, Space pause, - = speed, F1 status" );
     }
 
-    void NileGameModeComponent::updateGame( float32 deltaTime )
+    void NileGameModeComponent::updateGame( GameSeconds frameTime )
     {
+        const float32 deltaTime = frameTime.count();
         if ( deltaTime > 0.0f )
         {
             if ( isAutoPlanOn() && _planner.advance( getMutableCity(), _wallet, findCatalog()->getRoadCost() ) > 0 )
@@ -61,7 +62,7 @@ namespace sw
             if ( getSpeed().isPaused() == false )
             {
                 // 시계는 도시가 진행한 시간으로 민다 — 따로 곱하면 프레임 상한에 잘린 도시와 어긋난다(감사 K-6). 배속은 디렉터가 쥔다(시계 배율은 1).
-                _clock.update( getMutableCity().update( deltaTime, getSpeed().getTimeScale() ) );
+                _clock.update( getMutableCity().update( frameTime, getSpeed().getTimeScale() ) );
                 settleMonths();
             }
         }

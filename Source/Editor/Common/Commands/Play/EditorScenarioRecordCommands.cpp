@@ -17,8 +17,8 @@
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorFrameStep.h"
-#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorStateStore.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 
 #include "Engine/Automation/Scenario/AutomationScenario.h"
 #include "Engine/Config/GameTimeScale.h"
@@ -120,7 +120,7 @@ namespace sw::editor
             {
                 if ( getState()._recorder.isRecording() == false )
                     return;
-                getState()._recorder.update( editor::getSubsystem<InputManager>(), editor::getSubsystem<GameTimeScale>().getUnscaledDeltaTime() );
+                getState()._recorder.update( editor::getSubsystem<InputManager>(), editor::getSubsystem<GameTimeScale>().getUnscaledDeltaTime().count() );
             }
         };
     } // namespace

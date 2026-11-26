@@ -16,6 +16,7 @@
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Time/TimeSeconds.h"
 
 namespace sw
 {
@@ -45,7 +46,7 @@ namespace sw
         /** @brief 시각을 처음으로 되돌립니다(새 월드 · 새 연결). */
         void reset( NetClockSide side );
         /** @brief 시간을 흘립니다. 프레임에 한 번입니다. */
-        void advance( float32 deltaTime );
+        void advance( GameSeconds frameTime );
         /** @brief 클라이언트 — 서버 틱이 든 메시지를 받았습니다. 추정보다 앞이면 추정을 끌어올립니다. 서버의 시계에는 아무 일도 하지 않습니다. */
         void observe( uint32 serverTick );
 

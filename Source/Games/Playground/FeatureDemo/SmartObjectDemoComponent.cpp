@@ -16,7 +16,7 @@
 #include "Engine/Serialization/Format/FormatDef.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
-#include "GameFramework/Runtime/Foundation/Service/GameService.h"
+#include "GameFramework/Runtime/Foundation/Service/GameSubsystems.h"
 
 #include "Games/Playground/FeatureDemo/FeatureDemoCommandUtil.h"
 
@@ -162,8 +162,9 @@ namespace sw
         inoutClaim = 0;
     }
 
-    void SmartObjectDemoComponent::updateGame( float32 deltaTime )
+    void SmartObjectDemoComponent::updateGame( GameSeconds frameTime )
     {
+        const float32 deltaTime = frameTime.count();
         (void)deltaTime; // 시각은 명령으로만 흐른다
     }
 

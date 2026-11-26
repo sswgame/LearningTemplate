@@ -28,7 +28,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Hash/HashUtil.h"
-#include "Core/Registry/ServiceFactoryList.h"
+#include "Core/Registry/FactoryRegistrationList.h"
 #include "Core/Serialization/BitStream.h"
 
 #include "Engine/Serialization/Fixed/FixedLayout.h"
@@ -200,7 +200,7 @@ namespace sw
      * @details 모듈이 로드될 때 등록되고 언로드될 때 제거돼야 빌드의 키트 목록과 같아집니다. 함수 안의 정적 객체로 두면 처음 부를 때에야 등록돼 클라이언트와 서버가 어긋납니다.
      *          메시지 스키마 해시는 타입 등록이 끝난 뒤(`OnlineProtocolRegistry::computeSchemaHash`)에 계산합니다. 정적 초기화 순서는 타입 등록보다 앞설 수 있기 때문입니다.
      */
-    class SW_GF_API OnlineProtocolEntry final : private ServiceFactoryNode
+    class SW_GF_API OnlineProtocolEntry final : private FactoryRegistration
     {
     public:
         /**

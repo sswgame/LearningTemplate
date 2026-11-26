@@ -23,6 +23,7 @@
 #include "Core/Network/NetTypes.h"
 #include "Core/Network/Replication/NetClock.h"
 #include "Core/Serialization/BitStream.h"
+#include "Core/Time/TimeSeconds.h"
 
 namespace sw
 {
@@ -439,7 +440,7 @@ namespace sw
          * @brief 이쪽 월드의 서버 시계를 프레임에 한 번 흘립니다(`SceneNetLink::update`). 서버면 `kClockSendTicks` 마다 연결된 모두에게 알립니다.
          * @details 시계는 월드 세대와 수명이 같다 — 새 월드 · 새 연결이면 처음부터다.
          */
-        void advanceWorldClock( INetPeers& peers, float32 deltaTime );
+        void advanceWorldClock( INetPeers& peers, GameSeconds frameTime );
         /** @brief 이쪽 월드의 서버 시계입니다. 서버 틱을 실은 메시지를 받은 키트는 `observe` 로 알린다. */
         NetClock&       getWorldClock() { return _worldClock; }
         const NetClock& getWorldClock() const { return _worldClock; }

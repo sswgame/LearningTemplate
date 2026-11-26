@@ -308,12 +308,12 @@ SW_TEST_CASE( VirtualInputAttachmentTest, LowerSourceResumes )
     upper.addEvent( 0, RawInputEvent::makeKeyDown( Key::C ) );
     {
         const Subscription lowerAttachment = input.attachVirtualInput( lower );
-        input.beginFrame( 0.016f );
+        input.beginFrame( RealSeconds{ 0.016f } );
         input.endFrame();
         Subscription upperAttachment = input.attachVirtualInput( upper, VirtualInputMode::Mixed );
         SW_EXPECT_TRUE( input.getVirtualInput() == &upper );
         SW_EXPECT_TRUE( input.isOSInputSuppressed() ); // 아래의 배타는 위의 혼합이 풀지 않는다
-        input.beginFrame( 0.016f );
+        input.beginFrame( RealSeconds{ 0.016f } );
         SW_EXPECT_TRUE( input.getKeyboard()->isKeyDown( Key::C ) );
         SW_EXPECT_FALSE( input.getKeyboard()->isKeyDown( Key::A ) );
         input.endFrame();
@@ -321,7 +321,7 @@ SW_TEST_CASE( VirtualInputAttachmentTest, LowerSourceResumes )
         upperAttachment.reset();
         SW_EXPECT_TRUE( input.getVirtualInput() == &lower );
         SW_EXPECT_EQUAL( 2u, input.getVirtualFrameIndex( lower ) );
-        input.beginFrame( 0.016f );
+        input.beginFrame( RealSeconds{ 0.016f } );
         SW_EXPECT_TRUE( input.getKeyboard()->isKeyDown( Key::B ) );
         SW_EXPECT_FALSE( input.getKeyboard()->isKeyDown( Key::C ) ); // 떨어진 원천의 누름은 남지 않는다
         input.endFrame();
@@ -382,7 +382,7 @@ SW_TEST_CASE( VirtualInputAttachmentTest, SeekKeepsOtherSource )
     replay.stopRecording();
     VirtualInputScript script;
     const Subscription attachment = input.attachVirtualInput( script );
-    input.beginFrame( 0.016f );
+    input.beginFrame( RealSeconds{ 0.016f } );
     input.endFrame();
 
     replay.seekTo( input, 2 );

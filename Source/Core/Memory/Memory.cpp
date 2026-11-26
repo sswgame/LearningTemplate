@@ -239,7 +239,7 @@ namespace sw
         return MemoryBackend::isInCRTHeap();
     }
 
-    Memory::AllocationObserverRegistration Memory::registerAllocationObserver( const MemoryAllocationObserver* pObserver )
+    Memory::AllocationObserverSubscription Memory::registerAllocationObserver( const MemoryAllocationObserver* pObserver )
     {
 #if defined( SW_SHIPPING )
         (void)pObserver;
@@ -319,7 +319,7 @@ namespace sw
     {
     }
 
-    Memory::AllocationTrackerRegistration Memory::registerAllocationTracker( AllocationTracker* pTracker )
+    Memory::AllocationTrackerSubscription Memory::registerAllocationTracker( AllocationTracker* pTracker )
     {
         return s_allocationTrackerSlot.tryBind( pTracker );
     }

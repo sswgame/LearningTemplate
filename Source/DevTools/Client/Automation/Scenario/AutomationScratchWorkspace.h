@@ -18,7 +18,7 @@
 
 namespace sw
 {
-    // 개발 도구 클라이언트가 기동 범위에 세운다(`DevToolsClient::addStartupSubsystems`) — 엔진 서비스 칸(SW_SERVICE_SLOT)은 Engine 이미지의 정적 멤버라 DevTools 가 정의할 수 없다.
+    // 개발 도구 클라이언트가 기동 범위에 세운다(`DevToolsClient::addStartupSubsystems`) — 엔진 서브시스템 칸(SW_SUBSYSTEM_SLOT)은 Engine 이미지의 정적 멤버라 DevTools 가 정의할 수 없다.
     /**
      * @struct AutomationScratchCounter
      * @brief 사본 폴더를 끝까지 만든 횟수입니다(`AutomationScratchWorkspace::getPrepareCount` — 세대 번호). 엔진 범위 서비스라 엔진 범위와 함께 생기고 사라진다.
@@ -64,7 +64,7 @@ namespace sw
          * @details 게이트가 서 있는 동안 리소스 루트(`Content/`) 아래로 가는 모든 파일 쓰기(저장 · Quick Open 으로 연 원본 포함)는 오류와 함께 거절된다.
          *          프로젝트 루트의 추적 폴더 `docs/` · `Config/` 도 같은 문이 막는다(`Config/Editor/` 만 허용 목록 — 에디터 설정 저장 길). 사본(작업 도메인)은 리소스 루트 밖이라 열려 있다.
          */
-        [[nodiscard]] static FileUtil::WriteFilterRegistration acquireWriteFilter();
+        [[nodiscard]] static FileUtil::WriteFilterSubscription acquireWriteFilter();
         /** @brief 글 @p text 안의 GUID 글 표기(앞뒤가 글자 · 숫자가 아닌 소문자 16진 32 자) 가운데 @p mapGUID 에 있는 것을 바꿉니다. */
         static string rebaseIdentities( string_view text, const unordered_map<AssetGUID, AssetGUID>& mapGUID );
     };

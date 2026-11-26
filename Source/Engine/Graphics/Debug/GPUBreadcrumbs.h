@@ -23,8 +23,8 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/String/fixed_string.h"
-#include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Subsystem/Subsystem.h"
+#include "Core/Subsystem/SubsystemSlot.h"
 
 namespace sw
 {
@@ -176,6 +176,6 @@ namespace sw
         atomic<uint32>                            _bLostReported{ 0 };
         atomic<uint32>                            _bEnabled{ 0 };
 
-        SW_SERVICE_SLOT( GPUBreadcrumbLog, Optional );
+        SW_SUBSYSTEM_SLOT( GPUBreadcrumbLog, Optional );
     };
 } // namespace sw

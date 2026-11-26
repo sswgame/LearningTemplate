@@ -8,8 +8,8 @@
 
 #include "Engine/Asset/Cache/SharedAssetCacheDefinition.h"
 #include "Engine/Character/CharacterDataReader.h"
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw
@@ -275,7 +275,7 @@ namespace sw
 
     AnimationNotifyHandlerRegistry::~AnimationNotifyHandlerRegistry() = default;
 
-    SW_ENGINE_SERVICE_SUBSYSTEM( AnimationNotifyHandlerRegistry, GameVisible, Process, Services, (), SW_ENGINE_DEFAULT_FACTORY( AnimationNotifyHandlerRegistry ) );
+    SW_ENGINE_SUBSYSTEM_WITH_SLOT( AnimationNotifyHandlerRegistry, GameVisible, Process, Shared, (), SW_ENGINE_DEFAULT_FACTORY( AnimationNotifyHandlerRegistry ) );
 
     bool AnimationNotifyHandlerRegistry::registerHandler( const hashed_string& name, unique_ptr<IAnimationNotifyHandler> handler )
     {

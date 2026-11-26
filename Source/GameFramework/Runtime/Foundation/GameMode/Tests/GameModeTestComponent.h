@@ -8,6 +8,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Time/TimeSeconds.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/FormatDef.h"
@@ -100,6 +101,6 @@ namespace sw
             _pView  = pView;
         }
         void onStateRestored( bool bRestored ) override { ++( bRestored ? _restoredCount : _refusedCount ); }
-        void updateGame( float32 deltaTime ) override { (void)deltaTime; }
+        void updateGame( GameSeconds frameTime ) override { (void)frameTime; }
     };
 } // namespace sw

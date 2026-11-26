@@ -19,7 +19,7 @@
 #include "Core/Module/ModuleLibraryUtil.h"
 
 #include "Engine/Audio/AudioEngine.h"
-#include "Engine/Audio/AudioService.h"
+#include "Engine/Audio/AudioSubsystem.h"
 #include "Engine/Audio/IAudioOutputDevice.h"
 
 namespace sw
@@ -34,7 +34,7 @@ namespace sw
     {
     public:
         /** @brief 장치를 잡지 않은 채로 만듭니다. */
-        explicit AlsaAudioBackend( AudioService& service );
+        explicit AlsaAudioBackend( AudioSubsystem& service );
         /** @brief 장치를 닫고 엔진을 내립니다. */
         ~AlsaAudioBackend() override;
 
@@ -54,7 +54,7 @@ namespace sw
         void runStream( StopToken stopToken );
 
     private:
-        AudioService&                    _service; ///< 이 장치가 당기는 서비스(엔진 · 유실 알림) — 서비스가 장치를 들고 먼저 내린다
+        AudioSubsystem&                  _service; ///< 이 장치가 당기는 서비스(엔진 · 유실 알림) — 서비스가 장치를 들고 먼저 내린다
         unique_ptr<AlsaAudioBackendImpl> _impl;    /**< 리눅스 전용 상태입니다. */
     };
 
@@ -167,7 +167,7 @@ namespace sw
         }
     };
 
-    AlsaAudioBackend::AlsaAudioBackend( AudioService& service )
+    AlsaAudioBackend::AlsaAudioBackend( AudioSubsystem& service )
         : _service{ service }
         , _impl{ make_unique<AlsaAudioBackendImpl>() }
     {
@@ -175,7 +175,7 @@ namespace sw
 
     AlsaAudioBackend::~AlsaAudioBackend()
     {
-        // 서비스가 소멸자에서 출력 · 장치를 먼저 내린다(`AudioService::~AudioService`) — 여기서는 남은 것을 놓기만 한다.
+        // 서비스가 소멸자에서 출력 · 장치를 먼저 내린다(`AudioSubsystem::~AudioSubsystem`) — 여기서는 남은 것을 놓기만 한다.
     }
 
     bool AlsaAudioBackend::openDevice( AudioOutputDevice& outDevice )
@@ -314,5 +314,5 @@ namespace sw
         return _impl->_underrunCount.load( std::memory_order_relaxed );
     }
 
-    SW_REGISTER_AUDIO_BACKEND( AlsaAudioBackend ); // 리눅스 클라이언트의 장치 백엔드(`AudioService::create` 가 등록표에서 고른다)
+    SW_REGISTER_AUDIO_BACKEND( AlsaAudioBackend ); // 리눅스 클라이언트의 장치 백엔드(`AudioSubsystem::create` 가 등록표에서 고른다)
 } // namespace sw

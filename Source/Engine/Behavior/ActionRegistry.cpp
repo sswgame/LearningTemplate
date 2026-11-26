@@ -7,13 +7,13 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/StringUtil.h"
-#include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Subsystem/Subsystem.h"
+#include "Core/Subsystem/SubsystemSlot.h"
 
 #include "Engine/Console/DebugHUDRegistry.h"
 #include "Engine/Console/DevCommandRegistry.h"
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Reflection/EnumName.h"
 
 namespace sw
@@ -248,7 +248,7 @@ namespace sw
     private:
         ActionTraceInternal::TraceState _state;
 
-        SW_SERVICE_SLOT( ActionTraceState, Required );
+        SW_SUBSYSTEM_SLOT( ActionTraceState, Required );
     };
 
     ActionTraceInternal::TraceState& ActionTraceInternal::getState()
@@ -310,5 +310,5 @@ namespace sw
 
 namespace sw
 {
-    SW_ENGINE_SERVICE_SUBSYSTEM( ActionTraceState, HostOnly, GameInstance, Services, (), SW_ENGINE_DEFAULT_FACTORY( ActionTraceState ) );
+    SW_ENGINE_SUBSYSTEM_WITH_SLOT( ActionTraceState, HostOnly, GameInstance, Shared, (), SW_ENGINE_DEFAULT_FACTORY( ActionTraceState ) );
 } // namespace sw

@@ -17,7 +17,7 @@
 #include "DevTools/Profiling/Memory/MemorySnapshot.h"
 #include "DevTools/Profiling/Memory/MemorySnapshotExport.h"
 
-#include "Editor/Common/Task/EditorBackgroundTask.h"
+#include "Editor/Common/Job/EditorBackgroundJob.h"
 
 namespace sw::editor
 {
@@ -91,7 +91,7 @@ namespace sw::editor
     };
 
     /** @class MemoryExportJob @brief CSV 를 워커에서 씁니다(큰 표의 글 짓기 · 쓰기가 UI 를 막지 않게). 에디터 백그라운드 잡이라 시나리오의 정지 대기가 끝을 기다린다. */
-    class MemoryExportJob final : public EditorBackgroundTask<MemoryExportRequest, MemoryPanelExportResult>
+    class MemoryExportJob final : public EditorBackgroundJob<MemoryExportRequest, MemoryPanelExportResult>
     {
     public:
         /** @brief @p request 를 쓰게 냅니다. */

@@ -9,7 +9,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/Task/TaskManager.h"
-#include "Core/Time/GameTimer.h"
+#include "Core/Time/MonotonicClock.h"
 
 #include "Programs/ReflectionParser/AstVisitor.h"
 #include "Programs/ReflectionParser/CodeEmit.h"
@@ -449,19 +449,15 @@ namespace sw
 
         // clang 오류는 여기서 알리지 않는다 — 헤더마다 다시 파싱할 때 그 헤더의 오류로 나온다.
         ParserContext context( _pSession->_config );
-        GameTimer     phaseTimer;
-        phaseTimer.resetTimer();
-        phaseTimer.startTimer();
-        const bool bParsed = context.parse( batchPath, _listIncludePath, listUnsaved, false );
-        phaseTimer.updateTimer();
-        addPhaseTime( ParsePhase::Parse, phaseTimer.getDeltaTime() );
+        Stopwatch     phaseTimer;
+        const bool    bParsed = context.parse( batchPath, _listIncludePath, listUnsaved, false );
+        addPhaseTime( ParsePhase::Parse, static_cast<float32>( phaseTimer.lapSeconds() ) );
         if ( bParsed == false )
             return false;
 
         AstVisitor visitor( context.getTranslationUnit(), *_pSession, listTargetFile );
         visitor.visit();
-        phaseTimer.updateTimer();
-        addPhaseTime( ParsePhase::Visit, phaseTimer.getDeltaTime() );
+        addPhaseTime( ParsePhase::Visit, static_cast<float32>( phaseTimer.lapSeconds() ) );
         const vector<ParsedHeader>& listHeader = visitor.getParsedHeaders();
         // 묶음의 의존은 묶음 전체로 적는다. `#pragma once` 로 두 번째 include 는 새 파일 항목이 생기지 않아, 헤더별로 가르면 먼저 include 한
         // 헤더에만 붙는다 — 그러면 그 헤더만 다시 파싱되고 나머지는 옛 것을 든다.
@@ -479,8 +475,7 @@ namespace sw
             if ( writeOutputs( inputFile, listPending[index]._paths, listHeader[index], listPending[index]._inputWriteTime, listDependency ) == false )
                 ++outErrorCount;
         }
-        phaseTimer.updateTimer();
-        addPhaseTime( ParsePhase::Emit, phaseTimer.getDeltaTime() );
+        addPhaseTime( ParsePhase::Emit, static_cast<float32>( phaseTimer.lapSeconds() ) );
         return true;
     }
 
@@ -493,12 +488,9 @@ namespace sw
         const vector<ParserUnsavedFile> listUnsaved{
             ParserUnsavedFile{ &pending._pInputFile->str(), &pending._content }
         };
-        GameTimer phaseTimer;
-        phaseTimer.resetTimer();
-        phaseTimer.startTimer();
+        Stopwatch  phaseTimer;
         const bool bParsed = context.parse( inputFile.str(), _listIncludePath, listUnsaved );
-        phaseTimer.updateTimer();
-        addPhaseTime( ParsePhase::Parse, phaseTimer.getDeltaTime() );
+        addPhaseTime( ParsePhase::Parse, static_cast<float32>( phaseTimer.lapSeconds() ) );
         if ( bParsed == false )
         {
             SW_LOG_ERROR_ID( "ReflectionPipeline.ParseFailed", "Parse failed: %#", inputFile.str() );
@@ -507,8 +499,7 @@ namespace sw
 
         AstVisitor visitor( context.getTranslationUnit(), *_pSession );
         const bool bVisited = visitor.visit() && visitor.hasError() == false;
-        phaseTimer.updateTimer();
-        addPhaseTime( ParsePhase::Visit, phaseTimer.getDeltaTime() );
+        addPhaseTime( ParsePhase::Visit, static_cast<float32>( phaseTimer.lapSeconds() ) );
         if ( bVisited == false )
         {
             SW_LOG_ERROR_ID( "ReflectionPipeline.ASTAnalysisFailed", "AST analysis failed: %#", inputFile.str() );
@@ -517,8 +508,7 @@ namespace sw
 
         const bool bWritten = writeOutputs( inputFile, pending._paths, visitor.getParsedHeaders().front(), pending._inputWriteTime,
                                             ReflectionPipelineInternal::collectDependencies( context.getTranslationUnit(), _pOptions->_outputDir, _runStartTime ) );
-        phaseTimer.updateTimer();
-        addPhaseTime( ParsePhase::Emit, phaseTimer.getDeltaTime() );
+        addPhaseTime( ParsePhase::Emit, static_cast<float32>( phaseTimer.lapSeconds() ) );
         return bWritten;
     }
 

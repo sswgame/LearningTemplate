@@ -3,8 +3,8 @@
 #include "Engine/Module/ModuleLoadStageSubsystem.h"
 
 #include "Engine/Config/ConfigManager.h"
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
+#include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Module/HostInterfaces.h"
 #include "Engine/Reflection/ReflectionSubsystem.h"
 #include "Engine/Reflection/TypeRegistry.h"
@@ -19,7 +19,7 @@ namespace sw
 
     SubsystemInitResult ModuleLoadStageSubsystem::initializeSubsystem()
     {
-        IModuleLoader* pHost = locateSubsystem<IModuleLoader>( _pScope );
+        IModuleLoader* pHost = findSubsystemFrom<IModuleLoader>( _pScope );
         if ( pHost != nullptr && pHost->loadTypeProviders() == false )
         {
             SW_LOG_ERROR_ID( "ModuleLoadStage.HostCouldNotLoad", "The host could not load its type-providing modules - scenes are not read" );

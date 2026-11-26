@@ -3,7 +3,7 @@
 #include "Engine/Scene/SceneObjectReference.h"
 
 #include "Core/File/FileUtil.h"
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 
 #include "Engine/Content/AssetRegistry.h"
 #include "Engine/Object/Component/Component.h"

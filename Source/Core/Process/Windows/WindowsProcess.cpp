@@ -1,10 +1,12 @@
 #include "pch.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/Container/vector.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Process/Process.h"
-#include "Core/Process/ProcessEnvironment.h"
+#include "Core/Process/ShutdownSignal.h"
+#include "Core/Process/StandardInputReader.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 #include "Core/String/fixed_string.h"
@@ -14,6 +16,7 @@
     #include "Core/Foundation/PlatformOSHeaders.h"
 
     #include <DbgHelp.h>
+    #include <cstdlib>
     #include <shellapi.h>
     #include <shlobj.h>
 
@@ -638,6 +641,342 @@ namespace sw
         const bool bAlive = WaitForSingleObject( hProcess, 0 ) == WAIT_TIMEOUT;
         CloseHandle( hProcess );
         return bAlive;
+    }
+} // namespace sw
+
+// ------------------------------------------------------------------------------
+// ProcessEnvironment
+// ------------------------------------------------------------------------------
+
+namespace sw
+{
+    namespace
+    {
+        struct WindowsProcessEnvironmentInternal
+        {
+            /** @brief 읽는 동안 다른 스레드가 값을 바꿔 길이가 달라지면 다시 읽는 횟수의 상한입니다. */
+            static constexpr uint32 kMaxReadAttempts = 4;
+
+            static bool isValidName( string_view name ) { return name.empty() == false && name.find( '=' ) == string_view::npos; }
+        };
+    } // namespace
+
+    bool ProcessEnvironment::tryRead( string_view name, string& outValue )
+    {
+        using Internal = WindowsProcessEnvironmentInternal;
+        outValue.clear();
+        if ( Internal::isValidName( name ) == false )
+            return false;
+        const wstring wideName = StringUtil::utf8ToUTF16( string{ name }.c_str() );
+        for ( uint32 attempt = 0; attempt < Internal::kMaxReadAttempts; ++attempt )
+        {
+            // 값이 빈 변수도 0 을 돌려준다 — 오류 코드를 먼저 지워 "없음"(ERROR_ENVVAR_NOT_FOUND)과 가른다.
+            SetLastError( ERROR_SUCCESS );
+            const DWORD required = GetEnvironmentVariableW( wideName.c_str(), nullptr, 0 );
+            if ( required == 0 )
+                return GetLastError() != ERROR_ENVVAR_NOT_FOUND; // 빈 값이면 true
+            vector<utf16> listBuffer( static_cast<size_t>( required ), L'\0' );
+            // 빈 값이면 길이는 1(끝의 널)이고 읽은 글자 수는 0 이다 — 0 은 "그 사이 지워짐"(ERROR_ENVVAR_NOT_FOUND)일 때만 실패다.
+            SetLastError( ERROR_SUCCESS );
+            const DWORD written = GetEnvironmentVariableW( wideName.c_str(), listBuffer.data(), required );
+            if ( written == 0 && GetLastError() == ERROR_ENVVAR_NOT_FOUND )
+                return false;
+            if ( written >= required )
+                continue;                                            // 그 사이 길어졌다 — 다시 길이를 잰다
+            outValue = StringUtil::utf16ToUTF8( listBuffer.data() ); // 끝의 널은 API 가 적었다
+            return true;
+        }
+        return false;
+    }
+
+    bool ProcessEnvironment::trySet( string_view name, string_view value )
+    {
+        if ( WindowsProcessEnvironmentInternal::isValidName( name ) == false )
+            return false;
+        const wstring wideName  = StringUtil::utf8ToUTF16( string{ name }.c_str() );
+        const wstring wideValue = StringUtil::utf8ToUTF16( string{ value }.c_str() );
+        // OS 환경과 CRT 복사본을 함께 바꾼다 — CRT 의 `getenv` 를 읽는 서드파티 코드(Tracy 클라이언트)는 복사본을 본다.
+        // `_wputenv_s` 는 빈 값을 "지우기"로 읽어 옛 값이 복사본에 남지 않게 한다. 마지막에 OS 환경을 최종 값(빈 값 포함)으로 맞춘다.
+        const bool bCRTSet = _wputenv_s( wideName.c_str(), wideValue.c_str() ) == 0;
+        const bool bOSSet  = SetEnvironmentVariableW( wideName.c_str(), wideValue.c_str() ) != FALSE;
+        return bCRTSet && bOSSet;
+    }
+
+    bool ProcessEnvironment::tryUnset( string_view name )
+    {
+        if ( WindowsProcessEnvironmentInternal::isValidName( name ) == false )
+            return false;
+        const wstring wideName = StringUtil::utf8ToUTF16( string{ name }.c_str() );
+        // 없던 변수를 지울 때 `SetEnvironmentVariableW` 는 ERROR_ENVVAR_NOT_FOUND 로 실패한다 — 지워진 상태가 목적이므로 성공으로 본다.
+        const bool bOSCleared = SetEnvironmentVariableW( wideName.c_str(), nullptr ) != FALSE || GetLastError() == ERROR_ENVVAR_NOT_FOUND;
+        return bOSCleared && _wputenv_s( wideName.c_str(), L"" ) == 0;
+    }
+} // namespace sw
+
+// ------------------------------------------------------------------------------
+// ThreadCrashStack
+// ------------------------------------------------------------------------------
+
+namespace sw
+{
+    namespace
+    {
+        struct WindowsThreadCrashStackInternal
+        {
+            /**
+             * @brief 넘친 뒤 핸들러가 쓸 스택 영역입니다(`SetThreadStackGuarantee`).
+             * @details 스택 오버플로는 스택이 바닥난 채로 필터에 들어옵니다. 영역이 없으면 필터의 첫 호출에서 다시 넘쳐 **아무것도 남지 않습니다**
+             *          (실측: 덤프 0 바이트). 미니덤프 · 심볼 변환 · 8 KB 문자열 버퍼가 차례로 들어가는 크기입니다 — 실측으로 64 KB 에서 덤프가 온전합니다.
+             */
+            static constexpr ULONG kStackGuaranteeBytes = 64 * 1024;
+        };
+    } // namespace
+} // namespace sw
+
+namespace sw
+{
+    void ThreadCrashStack::initializeCurrentThread()
+    {
+        ULONG guaranteeBytes = WindowsThreadCrashStackInternal::kStackGuaranteeBytes;
+        SetThreadStackGuarantee( &guaranteeBytes );
+    }
+
+    void ThreadCrashStack::releaseCurrentThread()
+    {
+    }
+} // namespace sw
+
+// ------------------------------------------------------------------------------
+// StandardInputReader
+// ------------------------------------------------------------------------------
+
+namespace sw
+{
+    namespace
+    {
+        struct WindowsStandardInputReaderInternal
+        {
+            /** @brief 표준 입력 핸들이 무엇인가 — 기다리는 방법이 종류마다 다르다. */
+            enum class InputKind : uint8
+            {
+                None,    ///< 핸들이 없다(서비스) — 바로 EOF
+                Console, ///< 콘솔 — 키 입력을 기다렸다 읽는다
+                Pipe,    ///< 파이프 — 쌓인 바이트를 들여다보고 읽는다(읽기가 막히면 멈춤 요청을 못 본다)
+                File,    ///< 파일 · NUL — 끝까지 읽는다
+            };
+
+            static InputKind classify( HANDLE hInput )
+            {
+                if ( hInput == nullptr || hInput == INVALID_HANDLE_VALUE )
+                    return InputKind::None;
+                const DWORD fileType = GetFileType( hInput );
+                DWORD       mode     = 0;
+                if ( fileType == FILE_TYPE_CHAR && GetConsoleMode( hInput, &mode ) != FALSE )
+                    return InputKind::Console;
+                if ( fileType == FILE_TYPE_PIPE )
+                    return InputKind::Pipe;
+                return InputKind::File;
+            }
+        };
+    } // namespace
+
+    bool StandardInputReader::readLinePlatform( const StopToken& stopToken, string& outLine )
+    {
+        const HANDLE                                        hInput = GetStdHandle( STD_INPUT_HANDLE );
+        const WindowsStandardInputReaderInternal::InputKind kind   = WindowsStandardInputReaderInternal::classify( hInput );
+        for ( ;; )
+        {
+            if ( takeLine( outLine ) )
+                return true;
+            if ( stopToken.isStopRequested() )
+                return false;
+            switch ( kind )
+            {
+                case WindowsStandardInputReaderInternal::InputKind::None:
+                {
+                    _endOfInput.store( 1 );
+                    return false;
+                }
+                case WindowsStandardInputReaderInternal::InputKind::Console:
+                {
+                    // 입력 레코드가 오면 신호가 선다. 키 누름이 아닌 레코드(포커스 · 마우스 · 창 크기)는 버리고, 키가 있을 때만 줄 읽기로 간다 —
+                    // ReadConsoleW 는 Enter 까지 막히므로, 키를 친 뒤의 멈춤은 그 줄이 끝날 때까지 늦어진다(서버 종료는 정상 종료 요청이 먼저 온다).
+                    if ( WaitForSingleObject( hInput, 100 ) != WAIT_OBJECT_0 )
+                        continue;
+                    INPUT_RECORD record{};
+                    DWORD        peeked = 0;
+                    if ( PeekConsoleInputW( hInput, &record, 1, &peeked ) == FALSE || peeked == 0 )
+                        continue;
+                    if ( record.EventType != KEY_EVENT || record.Event.KeyEvent.bKeyDown == FALSE )
+                    {
+                        (void)ReadConsoleInputW( hInput, &record, 1, &peeked );
+                        continue;
+                    }
+                    utf16 arrBuffer[256];
+                    DWORD readCount = 0;
+                    if ( ReadConsoleW( hInput, arrBuffer, SW_COUNT_OF( arrBuffer ) - 1, &readCount, nullptr ) == FALSE )
+                    {
+                        _endOfInput.store( 1 );
+                        return false;
+                    }
+                    arrBuffer[readCount] = L'\0';
+                    _partialLine += StringUtil::utf16ToUTF8( arrBuffer );
+                    break;
+                }
+                case WindowsStandardInputReaderInternal::InputKind::Pipe:
+                {
+                    DWORD available = 0;
+                    if ( PeekNamedPipe( hInput, nullptr, 0, nullptr, &available, nullptr ) == FALSE )
+                    {
+                        _endOfInput.store( 1 ); // 쓰는 쪽이 닫았다(ERROR_BROKEN_PIPE)
+                        return false;
+                    }
+                    if ( available == 0 )
+                    {
+                        Sleep( 50 );
+                        continue;
+                    }
+                    utf8  arrBuffer[512];
+                    DWORD readCount = 0;
+                    if ( ReadFile( hInput, arrBuffer, available < sizeof( arrBuffer ) ? available : static_cast<DWORD>( sizeof( arrBuffer ) ), &readCount, nullptr ) == FALSE ||
+                         readCount == 0 )
+                    {
+                        _endOfInput.store( 1 );
+                        return false;
+                    }
+                    _partialLine.append( arrBuffer, readCount );
+                    break;
+                }
+                case WindowsStandardInputReaderInternal::InputKind::File:
+                {
+                    utf8  arrBuffer[512];
+                    DWORD readCount = 0;
+                    if ( ReadFile( hInput, arrBuffer, sizeof( arrBuffer ), &readCount, nullptr ) == FALSE || readCount == 0 )
+                    {
+                        // 끝에 줄바꿈 없는 마지막 줄도 명령이다.
+                        if ( _partialLine.empty() == false )
+                            _partialLine += '\n';
+                        if ( takeLine( outLine ) )
+                            return true;
+                        _endOfInput.store( 1 );
+                        return false;
+                    }
+                    _partialLine.append( arrBuffer, readCount );
+                    break;
+                }
+            }
+        }
+    }
+} // namespace sw
+
+// ------------------------------------------------------------------------------
+// ShutdownSignal
+// ------------------------------------------------------------------------------
+
+namespace sw
+{
+    namespace
+    {
+        struct WindowsShutdownSignalInternal
+        {
+            /** @brief 창 닫기에 OS 가 주는 시간(약 5 초)보다 짧게 기다린다 — 넘기면 OS 가 정리 도중에 프로세스를 끝낸다. */
+            static constexpr DWORD kCloseWaitMilliseconds = 4500;
+
+            static inline atomic<bool>   s_bInstalled{ false };
+            static inline atomic<uint32> s_serviceMode{ 0 };
+            static inline atomic<uint32> s_interruptCount{ 0 };
+
+            /** @brief 종료 완료 사건 — 첫 호출이 만든다. 함수 안 정적 변수라 여러 스레드가 동시에 처음 불러도 한 번만 만든다(실패하면 nullptr). */
+            static HANDLE completeEvent()
+            {
+                static const HANDLE s_hComplete = CreateEventW( nullptr, TRUE, FALSE, nullptr );
+                return s_hComplete;
+            }
+
+            static void waitForShutdownComplete()
+            {
+                const HANDLE hComplete = completeEvent();
+                if ( hComplete != nullptr )
+                    (void)WaitForSingleObject( hComplete, kCloseWaitMilliseconds );
+            }
+
+            /** @brief 콘솔 제어 처리기 — OS 가 새 스레드에서 부른다. TRUE 를 돌려주면 다음 처리기(기본 = 즉시 종료)로 넘기지 않는다. */
+            static BOOL WINAPI onConsoleControl( DWORD controlType )
+            {
+                const bool                 bInterrupt = controlType == CTRL_C_EVENT || controlType == CTRL_BREAK_EVENT;
+                const uint32               earlier    = bInterrupt ? s_interruptCount.fetch_add( 1, std::memory_order_relaxed ) : 0u;
+                const ShutdownSignalAction action =
+                    ShutdownSignal::decideConsoleControl( static_cast<uint32>( controlType ), earlier, s_serviceMode.load( std::memory_order_relaxed ) != 0 );
+                if ( action._bPassToDefault || action._cause == ShutdownCause::None )
+                    return FALSE;
+                ShutdownSignal::request( action._cause );
+                if ( action._bWaitForCompletion )
+                    waitForShutdownComplete();
+                return TRUE;
+            }
+        };
+    } // namespace
+
+    bool ShutdownSignal::install()
+    {
+        // 교환으로 "내가 설치할 차례" 를 한 스레드만 얻는다 — 두 스레드가 동시에 부르면 같은 처리기가 두 번 걸려 첫 Ctrl+C 가 둘째 호출로 세어진다.
+        if ( WindowsShutdownSignalInternal::s_bInstalled.exchange( true, std::memory_order_acq_rel ) )
+            return true;
+        const bool bInstalled = SetConsoleCtrlHandler( &WindowsShutdownSignalInternal::onConsoleControl, TRUE ) != FALSE;
+        if ( bInstalled == false )
+            WindowsShutdownSignalInternal::s_bInstalled.store( false, std::memory_order_release );
+        return bInstalled && WindowsShutdownSignalInternal::completeEvent() != nullptr;
+    }
+
+    void ShutdownSignal::uninstall()
+    {
+        if ( WindowsShutdownSignalInternal::s_bInstalled.exchange( false, std::memory_order_acq_rel ) )
+            (void)SetConsoleCtrlHandler( &WindowsShutdownSignalInternal::onConsoleControl, FALSE );
+        // 사건 핸들은 프로세스 끝까지 둔다 — 처리기 스레드가 아직 기다리고 있을 수 있다.
+    }
+
+    void ShutdownSignal::notifyShutdownComplete()
+    {
+        const HANDLE hComplete = WindowsShutdownSignalInternal::completeEvent();
+        if ( hComplete != nullptr )
+            (void)SetEvent( hComplete );
+    }
+
+    void ShutdownSignal::setServiceMode( bool bServiceMode )
+    {
+        WindowsShutdownSignalInternal::s_serviceMode.store( bServiceMode ? 1u : 0u, std::memory_order_relaxed );
+    }
+
+    ShutdownSignalAction ShutdownSignal::decideConsoleControl( uint32 controlType, uint32 earlierInterruptCount, bool bServiceMode )
+    {
+        switch ( controlType )
+        {
+            case CTRL_C_EVENT:
+            case CTRL_BREAK_EVENT:
+            {
+                if ( earlierInterruptCount >= 1 )
+                    return ShutdownSignalAction{ ShutdownCause::None, true, false };
+                return ShutdownSignalAction{ ShutdownCause::Interrupt, false, false };
+            }
+            case CTRL_CLOSE_EVENT:
+            {
+                return ShutdownSignalAction{ ShutdownCause::ConsoleClose, false, true };
+            }
+            case CTRL_LOGOFF_EVENT:
+            {
+                if ( bServiceMode )
+                    return ShutdownSignalAction{ ShutdownCause::None, true, false }; // 서비스는 사용자가 로그오프해도 돈다
+                return ShutdownSignalAction{ ShutdownCause::SystemShutdown, false, true };
+            }
+            case CTRL_SHUTDOWN_EVENT:
+            {
+                return ShutdownSignalAction{ ShutdownCause::SystemShutdown, false, true };
+            }
+            default:
+            {
+                return ShutdownSignalAction{ ShutdownCause::None, true, false };
+            }
+        }
     }
 } // namespace sw
 

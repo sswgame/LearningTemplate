@@ -1,7 +1,7 @@
 /**
  * @file CrashReportUploader.h
  * @brief 크래시 보고 묶음 하나를 바깥으로 보내는 창구 — 인터페이스, 보내지 않는 기본값, HTTP 창구로 multipart 업로드를 만드는 구현입니다.
- * @details 업로더는 동의를 모릅니다 — 동의(`telemetry.crashReports`)는 `CrashReportService` 가 지키고, 업로더는 보내기로 정해진(Queued) 묶음에만 불립니다.
+ * @details 업로더는 동의를 모릅니다 — 동의(`telemetry.crashReports`)는 `CrashReportSubsystem` 가 지키고, 업로더는 보내기로 정해진(Queued) 묶음에만 불립니다.
  */
 #pragma once
 #include "Core/Container/string.h"

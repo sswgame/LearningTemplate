@@ -39,7 +39,7 @@
 #include "Core/Network/Transport/NetEmulation.h"
 #include "Core/Network/Transport/NetTransport.h"
 
-#include "Engine/Object/GameObject/Service/SceneEngineServices.h"
+#include "Engine/Object/GameObject/Subsystem/SceneEngineSubsystems.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -276,7 +276,7 @@ namespace sw
          * @brief @p pBorrowedScene 이 비면 월드가 @p services 로 씬을 만들어 가진다. 있으면 @p pSceneSource 에서 빌린 씬이고 `stop` 이 돌려준다.
          * @details 호스트는 만든 쪽(하니스)이 `_host.initialize` 로 세운다 — 실패를 생성자가 돌려줄 수 없기 때문이다.
          */
-        NetSimWorld( const SceneEngineServices& services, NetSimRole role, int32 worldIndex, INetTransport* pTransport, INetSimSceneSource* pSceneSource, Scene* pBorrowedScene );
+        NetSimWorld( const SceneEngineSubsystems& services, NetSimRole role, int32 worldIndex, INetTransport* pTransport, INetSimSceneSource* pSceneSource, Scene* pBorrowedScene );
         ~NetSimWorld();
 
         NetSimWorld( const NetSimWorld& )            = delete;
@@ -360,7 +360,7 @@ namespace sw
 
         /** @brief 망을 만들고 서버 월드를 만듭니다. `INetSimGame::createSession` 호출, 플레이 시작, listen 까지 처리합니다. @p pGame 은 하니스보다 오래 살아야 합니다.
          *        @p services 는 월드마다의 씬을 지을 엔진 서비스 묶음입니다(물리 · 오디오 · 에셋). 전역 표를 다시 찾지 않습니다. */
-        [[nodiscard]] bool initialize( const SceneEngineServices& services, const NetSimConfig& settings, INetSimGame* pGame );
+        [[nodiscard]] bool initialize( const SceneEngineSubsystems& services, const NetSimConfig& settings, INetSimGame* pGame );
         /** @brief 클라이언트와 서버 월드를 모두 종료합니다. 소멸자도 이 함수를 부릅니다. */
         void shutdown();
 
@@ -425,7 +425,7 @@ namespace sw
 
     private:
         NetSimConfig                    _settings;
-        SceneEngineServices             _services; ///< `initialize` 가 받은 묶음(빌림). 월드의 씬을 이것으로 짓는다
+        SceneEngineSubsystems           _services; ///< `initialize` 가 받은 묶음(빌림). 월드의 씬을 이것으로 짓는다
         unique_ptr<LoopbackNetwork>     _pNetwork;
         vector<unique_ptr<Link>>        _listLink;
         unique_ptr<NetSimWorld>         _pServer;

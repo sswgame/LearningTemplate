@@ -6,8 +6,8 @@
 #include "Core/Subsystem/SubsystemScope.h"
 
 #include "Engine/Config/EngineConfig.h"
-#include "Engine/Foundation/EngineServices.h"
-#include "Engine/Object/GameObject/Service/SceneEngineServices.h"
+#include "Engine/Foundation/EngineSubsystems.h"
+#include "Engine/Object/GameObject/Subsystem/SceneEngineSubsystems.h"
 
 namespace sw::test
 {
@@ -23,10 +23,10 @@ namespace sw::test
             SW_REQUIRE_TRUE( _scope.bind( &_config ) );
         }
 
-        SceneEngineServices makeServices() const
+        SceneEngineSubsystems makeServices() const
         {
-            SceneEngineServices services = SceneEngineServices::makeFromBoundEngine();
-            services._pEngineSubsystems  = &_scope;
+            SceneEngineSubsystems services = SceneEngineSubsystems::makeFromBoundEngine();
+            services._pEngineSubsystems    = &_scope;
             return services;
         }
     };

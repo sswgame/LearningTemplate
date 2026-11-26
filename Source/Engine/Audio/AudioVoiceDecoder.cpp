@@ -30,7 +30,7 @@ namespace sw
             }
         };
 
-        AudioVoiceDecoder                 s_audioVoiceDecoder;
-        const IVoiceDecoder::Registration s_audioVoiceDecoderRegistration{ s_audioVoiceDecoder };
+        AudioVoiceDecoder              s_audioVoiceDecoder;
+        const IVoiceDecoder::Registrar s_audioVoiceDecoderRegistrar{ s_audioVoiceDecoder };
     } // namespace
 } // namespace sw

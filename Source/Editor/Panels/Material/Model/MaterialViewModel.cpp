@@ -7,7 +7,7 @@
 
 #include "Editor/Common/Asset/AssetWriter.h"
 #include "Editor/Common/Commands/Scene/EditorViewportPreview.h"
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorSubsystems.h"
 #include "Editor/Common/Workspace/Undo/DocumentEditRecorder.h"
 
 #include "Engine/Content/AssetPaths.h"

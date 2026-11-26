@@ -1,7 +1,7 @@
 // HitDecalTest — 맞음 데칼의 자리: 때린 방향 뒤의 정적 면이 먼저이고, 없으면 발밑 면이며, 움직이는 것 위에는 세우지 않는다. 데칼 상자의 위 축은 면의 법선이다. 디바이스 없음(nogpu).
 #include "pch.h"
 
-#include "Core/Name/hashed_string.h"
+#include "Core/String/Name/hashed_string.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Character/Hit/CharacterHit.h"
