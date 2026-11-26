@@ -15,15 +15,6 @@
 
 namespace sw
 {
-    uint64 GPUMaterialRegistry::computePermutationHashFor( const Material* pMaterial, const MaterialInstance* pInstance, bool bAppearanceDither )
-    {
-        if ( pMaterial == nullptr )
-            return 0;
-        // 인스턴스가 있으면 그 해시를 쓴다. 키워드 오버라이드가 퍼뮤테이션을 바꾸고, 그 해시는 부모의 것을 이미 포함한다.
-        const uint64 defineHash = ( pInstance != nullptr ) ? pInstance->getPermutationHash() : pMaterial->getPermutationHash();
-        return combinePermutationHash( pMaterial->getShaderPathHash(), defineHash, bAppearanceDither );
-    }
-
     namespace
     {
         /** @brief (셰이더 경로 해시, define 해시)의 퍼뮤테이션 해시입니다. 머티리얼에서 묻는 길과 미리 만들기 값의 길이 같은 식을 쓴다. */
@@ -35,6 +26,15 @@ namespace sw
             return hash;
         }
     } // namespace
+
+    uint64 GPUMaterialRegistry::computePermutationHashFor( const Material* pMaterial, const MaterialInstance* pInstance, bool bAppearanceDither )
+    {
+        if ( pMaterial == nullptr )
+            return 0;
+        // 인스턴스가 있으면 그 해시를 쓴다. 키워드 오버라이드가 퍼뮤테이션을 바꾸고, 그 해시는 부모의 것을 이미 포함한다.
+        const uint64 defineHash = ( pInstance != nullptr ) ? pInstance->getPermutationHash() : pMaterial->getPermutationHash();
+        return combinePermutationHash( pMaterial->getShaderPathHash(), defineHash, bAppearanceDither );
+    }
 
     GPUShaderPermutation GPUMaterialRegistry::makeShaderPermutation( const MaterialPSOWarmEntry& entry, bool bAppearanceDither )
     {
