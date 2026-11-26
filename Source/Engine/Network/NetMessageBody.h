@@ -60,7 +60,7 @@ namespace sw
 
     /**
      * @brief 본문이 스키마 결합형 @p TBody 인 메시지 서술자입니다. 번호 · 방향 · 채널은 `NetMessageDef` 와 같다.
-     * @tparam TBody `REFLECT` 구조체. 레이아웃 스키마이 없으면 첫 사용(처리기 등록 때 판 계산)에서 이유를 남기고 멈춘다(`LayoutSerializer::findSchema`)
+     * @tparam TBody `REFLECT` 구조체. 레이아웃 스키마가 없으면 첫 사용(처리기 등록 때 판 계산)에서 이유를 남기고 멈춘다(`LayoutSerializer::findSchema`)
      */
     template <uint8 Offset, NetMessageDirection Direction, NetChannelKind Channel, typename TBody>
     struct NetMessageBodyDef

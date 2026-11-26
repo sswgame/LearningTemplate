@@ -76,7 +76,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 최상위 타입 하나의 스키마을 만드는 동안의 상태입니다. */
+    /** @brief 최상위 타입 하나의 스키마를 만드는 동안의 상태입니다. */
     struct LayoutSchemaEmitState
     {
         const ParsedHeader*             _pHeader;

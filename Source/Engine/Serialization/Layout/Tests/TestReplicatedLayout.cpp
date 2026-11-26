@@ -35,7 +35,7 @@ namespace
  */
 SW_TEST_CASE( ReplicatedLayoutTest, OnlyReplicatedPropertiesAreWritten )
 {
-    SW_EXPECT_FALSE( LayoutSerializer::findSchema<ReplicatedLayoutSample>().has_value() ); // 전체 스키마은 길이 없는 vector 때문에 적격이 아니다
+    SW_EXPECT_FALSE( LayoutSerializer::findSchema<ReplicatedLayoutSample>().has_value() ); // 전체 스키마는 길이 없는 vector 때문에 적격이 아니다
     const expected<const LayoutSchema*> schema = ReplicatedLayout::findSchema<ReplicatedLayoutSample>();
     SW_REQUIRE_TRUE( schema.has_value() );
     SW_EXPECT_EQUAL( ( *schema )->_fieldCount, 4u );

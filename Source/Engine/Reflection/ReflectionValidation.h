@@ -112,7 +112,7 @@ namespace sw
         static uint32 validateObject( const TypeInfo& type, const void* pInstance, ValidationContext& context );
         /**
          * @brief 읽기 검사(`REFLECT( ReadValidate )`)만 돌립니다 — 값으로 든 구조체 · 그 시퀀스 원소까지 내려가고 기반부터. 배포와 개발 구성이 같은 답을 낸다.
-         * @details 세이브 · 네트워크에서 읽은 값을 거절할지 정하는 자리가 쓴다(`FightingMatch::serializeState`, 스키마 결합형 읽기 끝은 스키마이 같은 함수를 부른다).
+         * @details 세이브 · 네트워크에서 읽은 값을 거절할지 정하는 자리가 쓴다(`FightingMatch::serializeState`, 스키마 결합형 읽기 끝은 스키마가 같은 함수를 부른다).
          * @return 이번에 적힌 결과 수
          */
         static uint32 validateRead( const TypeInfo& type, const void* pInstance, ValidationContext& context );

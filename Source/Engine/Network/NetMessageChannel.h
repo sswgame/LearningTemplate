@@ -40,7 +40,7 @@ namespace sw
         NetMessageChannel();
 
         /**
-         * @brief 종류 @p kind 에 타입 @p T 를 등록합니다. 레이아웃 스키마이 없거나(이유를 로그에), 이미 봉인했거나, 같은 종류가 이미 있으면 오류 로그와 false 입니다.
+         * @brief 종류 @p kind 에 타입 @p T 를 등록합니다. 레이아웃 스키마가 없거나(이유를 로그에), 이미 봉인했거나, 같은 종류가 이미 있으면 오류 로그와 false 입니다.
          */
         template <typename T>
         [[nodiscard]] bool registerMessage( uint8 kind )

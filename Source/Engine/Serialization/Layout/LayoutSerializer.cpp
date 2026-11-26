@@ -37,7 +37,7 @@ namespace sw
             }
 
             /**
-             * @brief 의존 스키마이 모두 적격인지 따라 내려가 봅니다. 아니면 그 이유(대상은 `필드 (타입): 깊은 쪽 까닭` 경로)입니다.
+             * @brief 의존 스키마가 모두 적격인지 따라 내려가 봅니다. 아니면 그 이유(대상은 `필드 (타입): 깊은 쪽 까닭` 경로)입니다.
              * @param listVisited 지금 확인 중인 스키마들입니다. 서로를 담는 타입이 다시 나오면 이미 확인 중이므로 통과합니다.
              */
             static expected<void> areDependenciesValid( const LayoutSchema& schema, vector<const LayoutSchema*>& listVisited )
@@ -408,7 +408,7 @@ namespace sw
 
             static bool isFloatBounded( const LayoutFieldDesc& desc ) noexcept { return desc._min.isPresent() || desc._max.isPresent(); }
 
-            /** @brief 의존 스키마입니다. 진입점이 `findSchema` 으로 확인했으므로 늘 있다 — 없으면(확인한 뒤 모듈이 내려감) 대신 쓸 스키마 없이 멈춘다. */
+            /** @brief 의존 스키마입니다. 진입점이 `findSchema` 로 확인했으므로 늘 있다 — 없으면(확인한 뒤 모듈이 내려감) 대신 쓸 스키마 없이 멈춘다. */
             static const LayoutSchema& requireDependency( const LayoutSchema& schema, const uint32 dependencyIndex )
             {
                 if ( dependencyIndex == LayoutFieldDesc::kSelfDependency )
@@ -729,7 +729,7 @@ namespace sw
             }
 
             // ------------------------------------------------------------------------------
-            // 3) 비교 — 스키마과 같은 필드 집합을 선언 순서로. 실수는 비트 패턴이다.
+            // 3) 비교 — 스키마와 같은 필드 집합을 선언 순서로. 실수는 비트 패턴이다.
             // ------------------------------------------------------------------------------
             static bool equalsObject( const LayoutSchema& schema, const void* pA, const void* pB )
             {

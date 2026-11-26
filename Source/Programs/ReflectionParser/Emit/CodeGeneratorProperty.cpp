@@ -183,7 +183,7 @@ namespace sw
         }
 
         StringBuilder<constant::buffer::kMax128> maxCount;
-        maxCount.appendFormat( "%#u", prop._bHasMaxCount != SW_FALSE ? prop._maxCount : 0u ); // 상한은 스키마이 지키는 값 그대로다(상수 이름으로 적었으면 `PropertyResolver` 가 푼 값)
+        maxCount.appendFormat( "%#u", prop._bHasMaxCount != SW_FALSE ? prop._maxCount : 0u ); // 상한은 스키마가 지키는 값 그대로다(상수 이름으로 적었으면 `PropertyResolver` 가 푼 값)
         StringBuilder<constant::buffer::kMax64> textCount;
         textCount.appendFormat( "%#u", static_cast<uint32>( output._listText.size() ) );
         // 단위는 상수 문맥에서 철자를 열거로 바꾼다 — 표에서 빠진 철자는 컴파일 오류다(검증은 `applyDisplayMeta` 가 먼저 했다).

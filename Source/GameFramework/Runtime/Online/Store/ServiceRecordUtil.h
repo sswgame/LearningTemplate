@@ -14,7 +14,7 @@
  *          읽지 못한 아는 필드(모르는 열거자)와 다른 버전은 없는 것으로 봅니다. 영속 레코드는 옛 빌드가 모르는 필드를 버리고 다시 쓰면 새 빌드의 값이 지워지므로
  *          레코드가 모르는 칸을 든다: 영속 레코드 타입은 `ServiceRecordUnknownFields _unknownProperties{};`(PROPERTY 가 아닌 칸)를 가져야 하고(`readDurable` 의 static_assert),
  *          `readDurable` 이 같은 버전의 모르는 칸을 거기 담고 `encode` 가 그대로 다시 싣는다. 레코드를 복사해 고쳐 쓰는 서비스 코드는 손대지 않아도 칸이 따라간다.
- *          A 는 `MaxCount` 를 보지 않으므로 쓰기와 두 읽기는 레이아웃 스키마이 있는 타입이면 언제나 선언된 범위(`Min`, `Max`, `MaxCount`)도 확인합니다.
+ *          A 는 `MaxCount` 를 보지 않으므로 쓰기와 두 읽기는 레이아웃 스키마가 있는 타입이면 언제나 선언된 범위(`Min`, `Max`, `MaxCount`)도 확인합니다.
  *          코덱이 없는 타입(지역 목록 같은 문자열 목록)은 서비스가 쓰기 때와 같은 규칙으로 확인합니다.
  */
 #pragma once
@@ -202,7 +202,7 @@ namespace sw
             return isWithinDeclaredRange( outRecord );
         }
 
-        /** @brief 레이아웃 스키마이 있는 타입이면 선언된 범위(`Min`, `Max`, `MaxCount`) 안인가입니다. 코덱이 없는 타입은 서비스가 확인하므로 true 입니다. */
+        /** @brief 레이아웃 스키마가 있는 타입이면 선언된 범위(`Min`, `Max`, `MaxCount`) 안인가입니다. 코덱이 없는 타입은 서비스가 확인하므로 true 입니다. */
         template <typename T>
         [[nodiscard]] static bool isWithinDeclaredRange( const T& record )
         {

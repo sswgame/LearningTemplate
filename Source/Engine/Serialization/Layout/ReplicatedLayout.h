@@ -27,7 +27,7 @@ namespace sw
     {
         /**
          * @brief @p type 의 복제 스키마(그 타입이 선언한 `Replicated` 칸만 든 스키마)입니다.
-         * @return `Replicated` 칸이 없거나(NotFound), 기반 타입에 `Replicated` 칸이 있거나, 칸이 의존하는 스키마이 적격이 아니면 그 이유입니다.
+         * @return `Replicated` 칸이 없거나(NotFound), 기반 타입에 `Replicated` 칸이 있거나, 칸이 의존하는 스키마가 적격이 아니면 그 이유입니다.
          */
         [[nodiscard]] static expected<const LayoutSchema*> findSchema( const TypeInfo& type );
 

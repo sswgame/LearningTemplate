@@ -15,8 +15,8 @@
 #include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Scene/SceneManager.h"
-#include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/FormatUpgrade.h"
+#include "Engine/Serialization/Serializer/Archive.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/StatBlock.h"
 #include "GameFramework/Runtime/Foundation/Save/StatefulComponentRegistrar.h"

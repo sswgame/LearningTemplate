@@ -168,7 +168,7 @@ namespace sw
                     state.reportError( prop, message.view() );
                     return false;
                 }
-                // 자기 타입에는 없습니다. 같은 헤더의 바깥 타입이 펼치며 풀 수 있고, 그 타입 혼자서는 스키마이 없습니다.
+                // 자기 타입에는 없습니다. 같은 헤더의 바깥 타입이 펼치며 풀 수 있고, 그 타입 혼자서는 스키마가 없습니다.
                 if ( state._unresolvedName.empty() )
                 {
                     state._unresolvedName   = name;

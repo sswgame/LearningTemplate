@@ -66,7 +66,7 @@ namespace sw
     /**
      * @brief 이벤트 정의 하나입니다. 운영이 쓰며 영속합니다.
      * @details 저장소 레코드(라이브 운영 서비스의 이벤트 표 `liveops_event`)는 자기 기술형이라 이 `PROPERTY` 목록이 레코드 형식입니다. 와이어에는 싣지 않습니다.
-     *          지역 목록(`vector<string>`)이 있어 레이아웃 스키마은 없습니다.
+     *          지역 목록(`vector<string>`)이 있어 레이아웃 스키마는 없습니다.
      */
     REFLECT()
     struct SW_KIT_API LiveEventDef

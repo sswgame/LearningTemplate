@@ -2,9 +2,9 @@
  * @file LayoutSerializer.h
  * @brief 스키마 결합형 직렬화입니다. 같은 빌드끼리만 읽는 바이트를 코드 생성기가 타입마다 만든 서술자 표(`LayoutFieldDesc`)로 쓰고, 읽고, 비교합니다.
  * @details
- *          사용자는 스키마를 선언하지 않습니다. 생성기가 `REFLECT()` 타입마다 스키마을 만들어 `TypeInfo::_pLayoutSchema` 에 등록합니다.
+ *          사용자는 스키마를 선언하지 않습니다. 생성기가 `REFLECT()` 타입마다 스키마를 만들어 `TypeInfo::_pLayoutSchema` 에 등록합니다.
  *          필드 타입이 인코딩 표 밖이면(포인터, `MaxCount` 없는 가변 길이, 핸들 등) 스키마 대신 그 이유를 등록합니다.
- *          스키마이 필요한 등록 API 는 기동 때 `findSchema` 으로 확인하고, 없으면 이유와 함께 멈춥니다.
+ *          스키마가 필요한 등록 API 는 기동 때 `findSchema` 로 확인하고, 없으면 이유와 함께 멈춥니다.
  *
  *          스트림은 `[스키마 해시 64 비트][최상위 타입의 필드들]` 입니다. 필드는 선언 순서대로 쓰고 태그와 크기를 붙이지 않습니다.
  *          해시는 생성기가 만든 정규 문자열(필드 이름, 순서, 타입, 범위 키, 열거자)과 `kVersion` 에서 나옵니다.
@@ -15,7 +15,7 @@
  *          읽기는 원자적입니다. 대상을 복사한 임시 객체에 읽고, 끝까지 성공했을 때만 옮깁니다. 실패하면 대상은 그대로입니다.
  *          스키마에 없는 필드(Transient, 포인터)는 복사본에서 이어집니다.
  *
- *          스키마이 없는 타입을 `write` · `read` · `equals` · `getSchemaHash` 에 넘기면 이유를 로그에 남기고 프로세스를 멈춥니다(모든 구성).
+ *          스키마가 없는 타입을 `write` · `read` · `equals` · `getSchemaHash` 에 넘기면 이유를 로그에 남기고 프로세스를 멈춥니다(모든 구성).
  *          값 하나(0 해시, 빈 결과)를 대신 돌려주면 핸드셰이크 해시에 그 값이 섞이므로 대체 값을 두지 않습니다.
  */
 #pragma once
@@ -33,7 +33,7 @@
 namespace sw
 {
     class DynamicBitset;
-    struct LayoutFieldDesc; // 스키마은 서술자 표를 포인터로만 든다 — 표를 짓는 생성 코드는 ReflectGenerated.h 로 LayoutFieldDesc.h 를 읽는다
+    struct LayoutFieldDesc; // 스키마는 서술자 표를 포인터로만 든다 — 표를 짓는 생성 코드는 ReflectGenerated.h 로 LayoutFieldDesc.h 를 읽는다
     class NetMessageChannel;
     struct ReplicatedLayout;
 
@@ -53,7 +53,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 스키마이 의존하는 다른 타입의 스키마을 확인한 결과입니다. */
+    /** @brief 스키마가 의존하는 다른 타입의 스키마를 확인한 결과입니다. */
     enum class LayoutSchemaDependencyState : uint8
     {
         Unknown, ///< 아직 확인하지 않았습니다
@@ -76,7 +76,7 @@ namespace sw
         /** @brief 파생 객체 주소에서 기반 클래스 부분의 주소를 얻습니다. 생성 코드의 캡처 없는 람다입니다(기반이 오프셋 0 이 아닐 수 있다). */
         using BaseCastFunction = const void* (*)( const void* pObject );
 
-        /** @brief 이 스키마이 실행 시간에 찾아 부르는 다른 타입의 스키마입니다(기반 클래스, 펼치지 못한 중첩 타입). */
+        /** @brief 이 스키마가 실행 시간에 찾아 부르는 다른 타입의 스키마입니다(기반 클래스, 펼치지 못한 중첩 타입). */
         struct SW_API Dependency
         {
             const utf8*     _pFieldName; ///< 오류 메시지에 씁니다. 기반 클래스면 "(base)" 입니다
@@ -90,11 +90,11 @@ namespace sw
         const utf8*             _pCanonical;        ///< 이 타입 몫의 정규 문자열입니다(`LayoutSchemas.gen.txt` 와 같은 글)
         const utf8*             _pIneligibleReason; ///< 적격이 아니면 이유이고, 적격이면 nullptr 입니다
         const Dependency*       _pDependency;
-        BaseCastFunction        _pBaseCast;     ///< 기반 클래스가 있으면 있습니다. 그 스키마은 의존 0 번입니다
+        BaseCastFunction        _pBaseCast;     ///< 기반 클래스가 있으면 있습니다. 그 스키마는 의존 0 번입니다
         ReflectValidateFunction _pReadValidate; ///< `REFLECT( ReadValidate = fn )` 입니다. 읽기 끝에 부릅니다(에디터 검증 `Validate` 는 부르지 않는다)
         uint32                  _fieldCount;
         uint32                  _dependencyCount;
-        /** @brief 의존 스키마을 확인한 결과입니다. 첫 사용이 채우고, 그 뒤로는 원자 읽기 한 번입니다. */
+        /** @brief 의존 스키마를 확인한 결과입니다. 첫 사용이 채우고, 그 뒤로는 원자 읽기 한 번입니다. */
         mutable atomic<LayoutSchemaDependencyState> _dependencyState;
         /** @brief 스키마 해시입니다. 0 이면 아직 셈하지 않았습니다(같은 표에서 늘 같은 값이라 경쟁해 셈해도 같다). */
         mutable atomic<uint64> _schemaHash;
@@ -351,8 +351,8 @@ namespace sw
     /**
      * @brief 스키마 결합형 직렬화의 진입점입니다. 롤백, 넷 채널, 온라인 메서드 같은 등록 API 가 이것을 부릅니다.
      * @details 타입은 컴파일러 시그니처의 FQN(`typeFqn<T>`)과 함수 지역 캐시로 한 번 찾습니다.
-     *          스키마이 없거나 적격이 아니면 이유를 로그에 남기고 프로세스를 멈춥니다. 조용히 다른 형식이나 대체 값으로 바꾸지 않습니다.
-     *          등록 API 는 기동 때 `findSchema` 으로 미리 확인해 그 자리에서 이유를 보여 줍니다.
+     *          스키마가 없거나 적격이 아니면 이유를 로그에 남기고 프로세스를 멈춥니다. 조용히 다른 형식이나 대체 값으로 바꾸지 않습니다.
+     *          등록 API 는 기동 때 `findSchema` 로 미리 확인해 그 자리에서 이유를 보여 줍니다.
      */
     class SW_API LayoutSerializer
     {
@@ -390,7 +390,7 @@ namespace sw
             return result;
         }
 
-        /** @brief 스키마과 같은 필드 집합을 선언 순서로 비교합니다. 실수는 비트 패턴으로 봅니다(`LayoutFieldCodec::isBitEqual`). */
+        /** @brief 스키마와 같은 필드 집합을 선언 순서로 비교합니다. 실수는 비트 패턴으로 봅니다(`LayoutFieldCodec::isBitEqual`). */
         template <typename T>
         [[nodiscard]] static bool equals( const T& a, const T& b )
         {
@@ -404,7 +404,7 @@ namespace sw
             return getSchemaHash( requireSchema<T>() );
         }
 
-        /** @brief 스키마을 찾습니다. 없거나 의존 타입이 적격이 아니면 그 필드와 이유입니다(등록 API 의 기동 확인). */
+        /** @brief 스키마를 찾습니다. 없거나 의존 타입이 적격이 아니면 그 필드와 이유입니다(등록 API 의 기동 확인). */
         template <typename T>
         [[nodiscard]] static expected<const LayoutSchema*> findSchema()
         {
@@ -416,7 +416,7 @@ namespace sw
         }
 
         [[nodiscard]] static expected<const LayoutSchema*> findSchema( const TypeInfo& type );
-        /** @brief 스키마이 적격이고 의존 스키마이 모두 적격인지 확인합니다(첫 확인 뒤로는 원자 읽기 한 번). `findSchema` 과 복제 스키마(`ReplicatedLayout`)가 씁니다. */
+        /** @brief 스키마가 적격이고 의존 스키마가 모두 적격인지 확인합니다(첫 확인 뒤로는 원자 읽기 한 번). `findSchema` 과 복제 스키마(`ReplicatedLayout`)가 씁니다. */
         [[nodiscard]] static expected<void> validateSchema( const LayoutSchema& schema );
 
         // ------------------------------------------------------------------------------
@@ -437,7 +437,7 @@ namespace sw
             return **schema;
         }
 
-        /** @brief 스키마이 없다는 오류를 남기고 프로세스를 멈춥니다. 모든 구성에서 돌아오지 않습니다. */
+        /** @brief 스키마가 없다는 오류를 남기고 프로세스를 멈춥니다. 모든 구성에서 돌아오지 않습니다. */
         [[noreturn]] static void  stopForMissingSchema( const hashed_string& fqn, string_view reason, string_view detail = {} );
         [[nodiscard]] static bool writeWithSchema( const LayoutSchema& schema, const void* pObject, BitWriter& writer );
         /** @brief 머리의 스키마 해시가 다르면 (@p typeFqn, 그 해시)의 마이그레이션(`SW_LAYOUT_SCHEMA_MIGRATION`)으로 읽고, 없으면 `SchemaMismatch` 입니다. */

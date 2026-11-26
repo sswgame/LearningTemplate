@@ -243,7 +243,7 @@ namespace sw
         vector<string>  listEmittedEnum;
 
         // 복제 스키마 — `Replicated` 칸만 든 두 번째 표다. 기반 · 검증은 없다(기반의 복제 칸은 `ReplicatedLayout` 이 거절한다, 검증은 타입 전체의 것이다).
-        // 스키마이 생성자 인자로 이것을 가리키므로 먼저 낸다(둘 다 상수 초기화된다 — 의존 표가 있는 타입만 그 표가 첫 호출에 지어진다).
+        // 스키마가 생성자 인자로 이것을 가리키므로 먼저 낸다(둘 다 상수 초기화된다 — 의존 표가 있는 타입만 그 표가 첫 호출에 지어진다).
         const utf8* pReplicated = "nullptr";
         if ( plan._replicatedCanonical.empty() == false )
         {

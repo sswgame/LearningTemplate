@@ -118,7 +118,7 @@ namespace sw
         float32                       _maxRange;
         /**
          * @brief 문자열 · 컨테이너 최대 길이입니다(`PROPERTY( MaxCount = 32 )`, `MaxCount = kMaxSlotCount`). 적지 않았으면 0 입니다.
-         * @details 레이아웃 스키마이 쓰기와 읽기에서 지키는 상한과 같은 값입니다. 상수 이름으로 적으면 생성기가 그 상수의 값을 넣으므로
+         * @details 레이아웃 스키마가 쓰기와 읽기에서 지키는 상한과 같은 값입니다. 상수 이름으로 적으면 생성기가 그 상수의 값을 넣으므로
          *          상한을 C++ 상수와 애노테이션 두 곳에 숫자로 적지 않습니다.
          */
         uint32 _maxCount;

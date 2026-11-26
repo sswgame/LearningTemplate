@@ -29,14 +29,14 @@ namespace sw
      * @struct LayoutTypeAnalyzer
      * @brief 레이아웃 스키마용으로 필드 타입을 인코딩 종류(`LayoutValueKind`)에 맞춰 분류합니다.
      * @details 선언(clang 타입)에서 읽습니다. 다른 헤더의 열거형 · 구조체도 이 번역 단위 안에 선언이 있으므로 같은 길로 읽습니다.
-     *          표 밖의 타입은 오류가 아닙니다. 그 타입의 스키마이 없을 뿐이고, 스키마이 필요한 등록 API 가 이유와 함께 멈춥니다.
+     *          표 밖의 타입은 오류가 아닙니다. 그 타입의 스키마가 없을 뿐이고, 스키마가 필요한 등록 API 가 이유와 함께 멈춥니다.
      */
     struct LayoutTypeAnalyzer
     {
         static shared_ptr<ParsedLayoutType> makeIneligibleLayoutType( shared_ptr<ParsedLayoutType> type, string_view reason );
 
         /**
-         * @brief 레이아웃 스키마이 쓰는 선언 사실(줄 · 공개 여부 · 인코딩 분류)을 채웁니다.
+         * @brief 레이아웃 스키마가 쓰는 선언 사실(줄 · 공개 여부 · 인코딩 분류)을 채웁니다.
          * @details 비트필드는 1 비트 플래그만 받으므로(위에서 막았습니다) 정수 · bool 비트필드는 bool 로 씁니다.
          */
         static void fillLayoutSchemaFacts( CXCursor cursor, CXType fieldType, ParsedPropertyInfo& prop, const ParserSession& session );
@@ -619,7 +619,7 @@ namespace sw
             _bHasError = SW_TRUE;
             return;
         }
-        // 값이 객체 밖에 있어 레이아웃 스키마이 필드처럼 읽고 쓸 수 없습니다.
+        // 값이 객체 밖에 있어 레이아웃 스키마가 필드처럼 읽고 쓸 수 없습니다.
         prop._layoutType = LayoutTypeAnalyzer::makeIneligibleLayoutType( make_shared<ParsedLayoutType>(), "accessor property (the value lives outside the object)" );
         _pType->_listProperty.push_back( std::move( prop ) );
     }

@@ -206,7 +206,7 @@ namespace sw
         using GetBitFunction = bool ( * )( const void* pOwner );
         using SetBitFunction = void ( * )( void* pOwner, bool bValue );
 
-        /** @brief 자기 타입의 스키마을 가리키는 `_dependencyIndex` 입니다(`vector<Self>`). */
+        /** @brief 자기 타입의 스키마를 가리키는 `_dependencyIndex` 입니다(`vector<Self>`). */
         static constexpr uint32 kSelfDependency = 0xFFFFFFFFu;
 
         size_t                   _offset{ 0 };

@@ -38,7 +38,7 @@ namespace sw
         Solid   = BitUtil::bit( 2 ),
     };
 
-    /** @brief 펼쳐지는 중첩 타입입니다. 범위가 바깥 타입의 필드(`_limit`)라 혼자서는 스키마이 없고 `LayoutSample` 안에서만 풀린다. */
+    /** @brief 펼쳐지는 중첩 타입입니다. 범위가 바깥 타입의 필드(`_limit`)라 혼자서는 스키마가 없고 `LayoutSample` 안에서만 풀린다. */
     REFLECT()
     struct LayoutSamplePoint
     {
@@ -51,7 +51,7 @@ namespace sw
         float32 _weight = 0.0f;
     };
 
-    /** @brief 검증 함수가 있어 펼치지 않는 타입입니다 — 부모 표는 이 스키마을 의존으로 부른다. 체력 13 은 검증 실패다. */
+    /** @brief 검증 함수가 있어 펼치지 않는 타입입니다 — 부모 표는 이 스키마를 의존으로 부른다. 체력 13 은 검증 실패다. */
     REFLECT( ReadValidate = validateHealth )
     struct LayoutSampleStat
     {
@@ -67,7 +67,7 @@ namespace sw
         }
     };
 
-    /** @brief 기반 클래스입니다. 파생 스키마이 먼저 쓴다. */
+    /** @brief 기반 클래스입니다. 파생 스키마가 먼저 쓴다. */
     REFLECT()
     struct LayoutSampleBase
     {
@@ -152,7 +152,7 @@ namespace sw
 {
     /**
      * @brief 복제 스키마 샘플입니다(`ReplicatedLayoutTest`). `Replicated` 칸(범위 정수 · 양자화 실수 · bool · 범위 벡터)과 복제하지 않는 칸이 섞였다.
-     * @details 길이 없는 vector 칸이 있어 타입 전체 스키마은 적격이 아니다 — 복제 스키마는 그래도 생긴다(그 칸은 `Replicated` 가 아니다).
+     * @details 길이 없는 vector 칸이 있어 타입 전체 스키마는 적격이 아니다 — 복제 스키마는 그래도 생긴다(그 칸은 `Replicated` 가 아니다).
      */
     REFLECT()
     struct ReplicatedLayoutSample
@@ -175,7 +175,7 @@ namespace sw
         float3 _position{ 0.0f, 0.0f, 0.0f };
 
         PROPERTY()
-        vector<int32> _listCache; ///< 길이가 없어 전체 스키마은 적격이 아니다
+        vector<int32> _listCache; ///< 길이가 없어 전체 스키마는 적격이 아니다
     };
 } // namespace sw
 

@@ -95,7 +95,7 @@ namespace sw
     /** @brief 레이아웃 스키마에서 값 하나를 어떤 꼴로 인코딩하는지 나타냅니다. */
     enum class LayoutValueKind : uint8
     {
-        Ineligible, ///< 인코딩 표 밖입니다. 그 필드를 가진 타입은 스키마이 없습니다(`ParsedLayoutType::_reason`)
+        Ineligible, ///< 인코딩 표 밖입니다. 그 필드를 가진 타입은 스키마가 없습니다(`ParsedLayoutType::_reason`)
         Bool,
         Integer,
         Float32,
@@ -254,7 +254,7 @@ namespace sw
         uint8 _bMultiline              : 1;
         uint8 _bHasStep                : 1;
         uint8 _bHasMaxCount            : 1;
-        /** @brief 공개 멤버입니다. 다른 타입의 스키마이 이 필드를 직접 읽고 쓸 수 있는지(중첩 타입 펼치기) 정합니다. */
+        /** @brief 공개 멤버입니다. 다른 타입의 스키마가 이 필드를 직접 읽고 쓸 수 있는지(중첩 타입 펼치기) 정합니다. */
         uint8 _bPublic : 1;
         /** @brief 플레이 중에만 의미가 있는 상태입니다(PROPERTY(RuntimeState)). 저작 저장(`SerializePurpose::Authoring`)이 쓰지 않습니다. */
         uint8 _bRuntimeState : 1;
