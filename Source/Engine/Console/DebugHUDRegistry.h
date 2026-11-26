@@ -20,7 +20,7 @@
 
 namespace sw
 {
-    class DebugDrawQueue;
+    class IDebugDrawQueue;
     class Scene;
 
     /** @brief HUD 줄 값의 색 갈래입니다. 상태만 색을 갖는다 — 보통 값은 중립이고 실패 · 경고만 경고색이다(앱 화면 규칙: 강조색은 데이터 · 상태에만). */
@@ -102,9 +102,9 @@ namespace sw
     /** @brief 섹션이 월드에 그릴 때 받는 것입니다. */
     struct DebugHUDSectionDraw
     {
-        Scene&          _scene; ///< 활성 씬(오브젝트 매니저가 있다)
-        DebugDrawQueue& _queue;
-        const bool      _bShown; ///< 섹션이 켜져 있다. `kDrawsWhileHidden` 이 아닌 섹션은 늘 true 다.
+        Scene&           _scene; ///< 활성 씬(오브젝트 매니저가 있다)
+        IDebugDrawQueue& _queue;
+        const bool       _bShown; ///< 섹션이 켜져 있다. `kDrawsWhileHidden` 이 아닌 섹션은 늘 true 다.
     };
 
     /** @brief 섹션이 도형을 그리는 본문입니다(씬 틱 뒤 프레임마다, 게임 스레드). 씬 뷰와 `-gv_debugDrawGameView` 의 게임 화면에 보입니다. */

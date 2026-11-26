@@ -24,7 +24,10 @@
 #include "Core/Subsystem/Subsystem.h"
 #include "Core/Subsystem/SubsystemSlot.h"
 
+#include "DevTools/DevToolsAPI.h"
+
 #include "Engine/Foundation/WorldOrigin.h"
+#include "Engine/Graphics/Debug/IVisualLogger.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/FormatDef.h"
 
@@ -64,7 +67,7 @@ namespace sw
      * @class VisualLogger
      * @brief 엔진 서브시스템 하나가 프레임별 기록을 쥡니다. 파일 머리말 참고.
      */
-    class SW_API VisualLogger : public Subsystem
+    class SW_DEVTOOLS_API VisualLogger : public Subsystem
     {
     public:
         static constexpr const utf8* kSubsystemName = "VisualLogger";
@@ -125,6 +128,47 @@ namespace sw
         /** @brief 파일의 기록으로 바꿉니다(프레임 번호도 파일의 마지막 프레임 + 1 로 맞춘다). 읽지 못하면 오류를 남기고 false 이며 지금 기록은 그대로입니다. */
         [[nodiscard]] bool loadFromFile( const AbsolutePath& diskPath );
 
+        /** @brief 엔진 쓰기 창구(`IVisualLogger` — 게임 코드가 적는다)로 이 기록을 봅니다. 등록이 이것을 그 칸에 건다. */
+        IVisualLogger& getEngineView() { return _engineView; }
+
+    private:
+        /** @brief 엔진 창구 구현입니다 — 이 기록으로 넘겨 주기만 한다(다중 상속 대신 멤버로 건다). */
+        class EngineView final : public IVisualLogger
+        {
+        public:
+            explicit EngineView( VisualLogger& owner )
+                : _owner{ owner }
+            {
+            }
+
+        protected:
+            bool isEnabledInternal() const override { return _owner.isEnabled(); }
+            void logTextInternal( uint64 objectID, const hashed_string& category, const AbsolutePosition& position, string_view text, const float4& color ) override
+            {
+                _owner.logText( objectID, category, position, text, color );
+            }
+            void logLineInternal( uint64 objectID, const hashed_string& category, const AbsolutePosition& from, const AbsolutePosition& to, const float4& color, string_view note ) override
+            {
+                _owner.logLine( objectID, category, from, to, color, note );
+            }
+            void logSphereInternal( uint64 objectID, const hashed_string& category, const AbsolutePosition& center, float32 radius, const float4& color, string_view note ) override
+            {
+                _owner.logSphere( objectID, category, center, radius, color, note );
+            }
+            void logBoxInternal( uint64 objectID, const hashed_string& category, const AbsolutePosition& center, const float3& halfExtent, const float4& color, string_view note ) override
+            {
+                _owner.logBox( objectID, category, center, halfExtent, color, note );
+            }
+            void logArrowInternal( uint64 objectID, const hashed_string& category, const AbsolutePosition& from, const AbsolutePosition& to, const float4& color, string_view note ) override
+            {
+                _owner.logArrow( objectID, category, from, to, color, note );
+            }
+            void endFrameInternal() override { _owner.endFrame(); }
+
+        private:
+            VisualLogger& _owner;
+        };
+
     private:
         /** @brief 기록 하나를 지금 프레임 번호로 넣습니다(켜져 있을 때만). */
         void append( VisualLogEntry entry );
@@ -136,6 +180,7 @@ namespace sw
         deque<VisualLogEntry> _listEntry SW_GUARDED_BY( _mutex );
         uint64 _frame                    SW_GUARDED_BY( _mutex );
         uint32 _capacity                 SW_GUARDED_BY( _mutex );
+        EngineView                       _engineView{ *this };
 
         SW_SUBSYSTEM_SLOT( VisualLogger, Required );
     };

@@ -14,6 +14,10 @@
 #include "Core/Subsystem/Subsystem.h"
 #include "Core/Subsystem/SubsystemSlot.h"
 
+#include "DevTools/DevToolsAPI.h"
+
+#include "Engine/Graphics/DebugDraw/IDebugDrawQueue.h"
+
 namespace sw
 {
     struct AbsolutePosition;
@@ -72,7 +76,7 @@ namespace sw
      *            큐가 그 자리에서 옮긴다(절대 자리는 `float3` 로 바뀌지 않으므로 원점을 빼는 것을 잊을 수 없다). 남은 도형은 원점이 옮겨질 때 함께 옮긴다(`shiftOrigin`).
      *          - 2D 는 Z 가 같은 평면의 도형입니다. 반 크기 중 0 인 축이 있는 상자는 사각형 하나(선 넷)로 펼칩니다.
      */
-    class SW_API DebugDrawQueue : public Subsystem
+    class SW_DEVTOOLS_API DebugDrawQueue : public Subsystem
     {
     public:
         /** @brief 서브시스템 이름입니다. 초기화하거나 종료할 것이 없고, 수명만 컬렉션이 정합니다. 서비스 범위는 엔진 범위보다 먼저 생성되고 나중에 사라집니다. */
@@ -154,6 +158,46 @@ namespace sw
          * @details 에디터 씬 뷰(`debug_draw` 시각화)와 게임 뷰 겹치기(`DebugDrawCanvasUtil`)가 이 한 규칙으로 그린다. @p outListLine 을 비우지 않고 뒤에 붙인다.
          */
         void appendVisibleSegments( bool bFlat2D, vector<DebugLine>& outListLine ) const;
+        /** @brief 엔진 창구(`IDebugDrawQueue` — 엔진 루프 · 원점 이동 · HUD 범주 · 물리 · 내비 선이 넣는다)로 이 큐를 봅니다. 등록이 이것을 그 칸에 건다. */
+        IDebugDrawQueue& getEngineView() { return _engineView; }
+
+    private:
+        /** @brief 엔진 창구 구현입니다 — 이 큐로 넘겨 주기만 한다(다중 상속 대신 멤버로 건다, `GameAutoplaySubsystem` 과 같은 꼴). */
+        class EngineView final : public IDebugDrawQueue
+        {
+        public:
+            explicit EngineView( DebugDrawQueue& owner )
+                : _owner{ owner }
+            {
+            }
+
+        protected:
+            void drawLineInternal( const float3& from, const float3& to, const float4& color, float32 durationSeconds, const hashed_string& category ) override
+            {
+                _owner.drawLine( from, to, color, durationSeconds, category );
+            }
+            void drawSphereInternal( const float3& center, float32 radius, const float4& color, float32 durationSeconds, const hashed_string& category ) override
+            {
+                _owner.drawSphere( center, radius, color, durationSeconds, category );
+            }
+            void drawBoxInternal( const float3& center, const float3& halfExtent, const float4& color, float32 durationSeconds, const hashed_string& category ) override
+            {
+                _owner.drawBox( center, halfExtent, color, durationSeconds, category );
+            }
+            void drawArrowInternal( const float3& from, const float3& to, const float4& color, float32 durationSeconds, const hashed_string& category ) override
+            {
+                _owner.drawArrow( from, to, color, durationSeconds, category );
+            }
+            void drawTextInternal( const float3& position, string_view text, const float4& color, float32 durationSeconds, const hashed_string& category ) override
+            {
+                _owner.drawText( position, text, color, durationSeconds, category );
+            }
+            void endFrameInternal( float32 deltaSeconds ) override { _owner.endFrame( deltaSeconds ); }
+            void shiftOriginInternal( const float3& delta ) override { _owner.shiftOrigin( delta ); }
+
+        private:
+            DebugDrawQueue& _owner;
+        };
 
     private:
         /** @brief 빈 카테고리를 기본 이름으로 바꾸고 목록에 등록합니다. 잠근 채 부릅니다. */
@@ -172,6 +216,7 @@ namespace sw
         vector<DebugSphere>                                     _listVisibleSphere;
         vector<DebugText>                                       _listVisibleText;
         unordered_map<hashed_string, uint8> _mapCategoryEnabled SW_GUARDED_BY( _mutex ); ///< 본 카테고리 → 켜짐(1) 또는 꺼짐(0)
+        EngineView                                              _engineView{ *this };
 
         SW_SUBSYSTEM_SLOT( DebugDrawQueue, Required );
     };

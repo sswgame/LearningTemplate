@@ -3,6 +3,7 @@
 #include "Editor/Panels/Animation/Model/AnimationRewindViewModel.h"
 
 #include "DevTools/Client/Animation/AnimationRewind.h"
+#include "DevTools/DebugDraw/DebugDrawQueue.h"
 
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorSubsystems.h"
@@ -14,7 +15,6 @@
 #include "Engine/Animation/Scene/AnimationSystem.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Foundation/WorldOrigin.h"
-#include "Engine/Graphics/DebugDraw/DebugDrawQueue.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Scene/Scene.h"

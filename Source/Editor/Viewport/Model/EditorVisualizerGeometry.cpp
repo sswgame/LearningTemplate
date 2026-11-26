@@ -6,7 +6,8 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 
-#include "Engine/Graphics/DebugDraw/DebugDrawQueue.h"
+#include "DevTools/DebugDraw/DebugDrawQueue.h"
+
 #include "Engine/Physics/Component/BoxCollider2DComponent.h"
 
 namespace sw::editor

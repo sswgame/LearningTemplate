@@ -4,9 +4,10 @@
  */
 #include "pch.h"
 
+#include "DevTools/DebugDraw/DebugDrawQueue.h"
+
 #include "Engine/Console/DebugHUDRegistry.h"
 #include "Engine/Foundation/WorldOrigin.h"
-#include "Engine/Graphics/DebugDraw/DebugDrawQueue.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -74,10 +75,10 @@ namespace sw
                         const float32            maxX     = minX + cellSize;
                         const float32            maxZ     = minZ + cellSize;
                         // 바닥(높이 0)에 셀 테두리를 그린다. 이웃 셀과 겹치는 변은 두 번 그려지지만 색이 같은 경우가 많고 디버그 선이라 둔다.
-                        draw._queue.drawLine( worldOrigin, AbsolutePosition{ float3( minX, 0.0f, minZ ) }, AbsolutePosition{ float3( maxX, 0.0f, minZ ) }, color, 0.0f, category );
-                        draw._queue.drawLine( worldOrigin, AbsolutePosition{ float3( maxX, 0.0f, minZ ) }, AbsolutePosition{ float3( maxX, 0.0f, maxZ ) }, color, 0.0f, category );
-                        draw._queue.drawLine( worldOrigin, AbsolutePosition{ float3( maxX, 0.0f, maxZ ) }, AbsolutePosition{ float3( minX, 0.0f, maxZ ) }, color, 0.0f, category );
-                        draw._queue.drawLine( worldOrigin, AbsolutePosition{ float3( minX, 0.0f, maxZ ) }, AbsolutePosition{ float3( minX, 0.0f, minZ ) }, color, 0.0f, category );
+                        draw._queue.drawLine( worldOrigin.toLocal( AbsolutePosition{ float3( minX, 0.0f, minZ ) } ), worldOrigin.toLocal( AbsolutePosition{ float3( maxX, 0.0f, minZ ) } ), color, 0.0f, category );
+                        draw._queue.drawLine( worldOrigin.toLocal( AbsolutePosition{ float3( maxX, 0.0f, minZ ) } ), worldOrigin.toLocal( AbsolutePosition{ float3( maxX, 0.0f, maxZ ) } ), color, 0.0f, category );
+                        draw._queue.drawLine( worldOrigin.toLocal( AbsolutePosition{ float3( maxX, 0.0f, maxZ ) } ), worldOrigin.toLocal( AbsolutePosition{ float3( minX, 0.0f, maxZ ) } ), color, 0.0f, category );
+                        draw._queue.drawLine( worldOrigin.toLocal( AbsolutePosition{ float3( minX, 0.0f, maxZ ) } ), worldOrigin.toLocal( AbsolutePosition{ float3( minX, 0.0f, minZ ) } ), color, 0.0f, category );
                     }
                 }
             }

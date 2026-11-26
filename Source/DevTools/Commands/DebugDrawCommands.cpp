@@ -5,10 +5,11 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
+#include "DevTools/DebugDraw/DebugDrawQueue.h"
+#include "DevTools/DebugDraw/VisualLogger.h"
+
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Foundation/EngineSubsystems.h"
-#include "Engine/Graphics/Debug/VisualLogger.h"
-#include "Engine/Graphics/DebugDraw/DebugDrawQueue.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Scene/SceneManager.h"
 

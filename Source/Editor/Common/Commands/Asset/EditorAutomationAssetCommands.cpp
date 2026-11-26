@@ -17,6 +17,8 @@
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
 
+#include "DevTools/DebugDraw/DebugDrawQueue.h"
+
 #include "Editor/Common/Asset/AssetWriter.h"
 #include "Editor/Common/Commands/Asset/EditorAssetCommands.h"
 #include "Editor/Common/Commands/Asset/EditorAssetFileCommands.h"
@@ -42,7 +44,6 @@
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Content/AssetGUID.h"
 #include "Engine/Content/AssetPaths.h"
-#include "Engine/Graphics/DebugDraw/DebugDrawQueue.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"

@@ -12,6 +12,7 @@
 #include "Core/String/StringBuilder.h"
 
 #include "DevTools/Client/Automation/Runner/AutomationRunTitle.h"
+#include "DevTools/DebugDraw/DebugDrawQueue.h"
 
 #include "Engine/Audio/AudioEngine.h"
 #include "Engine/Audio/AudioSubsystem.h"
@@ -20,7 +21,6 @@
 #include "Engine/Console/DebugHUDSectionFormat.h"
 #include "Engine/Console/DebugOverlayState.h"
 #include "Engine/Foundation/EngineSubsystems.h"
-#include "Engine/Graphics/DebugDraw/DebugDrawQueue.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHI.h"

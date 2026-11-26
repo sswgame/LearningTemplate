@@ -5,8 +5,9 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/TestFramework/TestFramework.h"
 
+#include "DevTools/DebugDraw/DebugDrawQueue.h"
+
 #include "Engine/Foundation/WorldOrigin.h"
-#include "Engine/Graphics/DebugDraw/DebugDrawQueue.h"
 
 using namespace sw;
 

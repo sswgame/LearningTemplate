@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Graphics/Debug/VisualLogger.h"
+#include "DevTools/DebugDraw/VisualLogger.h"
 
 #include "Core/Foundation/Constants.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
@@ -8,9 +8,10 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
+#include "DevTools/DebugDraw/DebugDrawQueue.h"
+
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Foundation/EngineSubsystems.h"
-#include "Engine/Graphics/DebugDraw/DebugDrawQueue.h"
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
@@ -391,5 +392,13 @@ namespace sw
 
 namespace sw
 {
-    SW_ENGINE_SUBSYSTEM_WITH_SLOT( VisualLogger, GameVisible, GameInstance, Shared, (), SW_ENGINE_DEFAULT_FACTORY( VisualLogger ) );
+    // 기록은 개발 도구가 들고, 엔진 쓰기 창구 칸(`IVisualLogger` — 정의는 Engine.cpp)에 엔진이 보는 면을 건다. 배포 구성은 이 줄이 없어 칸이 빈다.
+    SW_ENGINE_SUBSYSTEM_WITH_SLOT( VisualLogger, GameVisible, GameInstance, Shared, (), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
+    {
+        (void)build;
+        VisualLogger& logger   = scope.emplaceSubsystem<VisualLogger>();
+        const bool    bExposed = scope.exposeMember<IVisualLogger>( logger, logger.getEngineView() );
+        SW_ASSERT( bExposed );
+        (void)bExposed;
+    } );
 } // namespace sw

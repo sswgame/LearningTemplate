@@ -4,9 +4,9 @@
 #include "Core/TestFramework/TestFramework.h"
 
 #include "DevTools/Client/DebugDraw/DebugDrawCanvas.h"
+#include "DevTools/DebugDraw/DebugDrawQueue.h"
 
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
-#include "Engine/Graphics/DebugDraw/DebugDrawQueue.h"
 
 using namespace sw;
 

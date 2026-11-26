@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Graphics/DebugDraw/DebugDrawQueue.h"
+#include "DevTools/DebugDraw/DebugDrawQueue.h"
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
@@ -396,5 +396,13 @@ namespace sw
 
 namespace sw
 {
-    SW_ENGINE_SUBSYSTEM_WITH_SLOT( DebugDrawQueue, GameVisible, GameInstance, Shared, (), SW_ENGINE_DEFAULT_FACTORY( DebugDrawQueue ) );
+    // 큐는 개발 도구가 들고, 엔진 창구 칸(`IDebugDrawQueue` — 정의는 Engine.cpp)에 엔진이 보는 면을 건다. 배포 구성은 이 줄이 없어 칸이 빈다.
+    SW_ENGINE_SUBSYSTEM_WITH_SLOT( DebugDrawQueue, GameVisible, GameInstance, Shared, (), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
+    {
+        (void)build;
+        DebugDrawQueue& queue    = scope.emplaceSubsystem<DebugDrawQueue>();
+        const bool      bExposed = scope.exposeMember<IDebugDrawQueue>( queue, queue.getEngineView() );
+        SW_ASSERT( bExposed );
+        (void)bExposed;
+    } );
 } // namespace sw

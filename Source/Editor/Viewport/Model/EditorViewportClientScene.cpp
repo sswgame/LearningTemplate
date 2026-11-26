@@ -2,6 +2,8 @@
 
 #include "Editor/Viewport/Model/EditorViewportClientScene.h"
 
+#include "DevTools/DebugDraw/DebugDrawQueue.h"
+
 #include "Editor/Common/Workspace/EditorCamera.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorPanelID.h"
@@ -14,7 +16,6 @@
 #include "Editor/Viewport/Model/EditorGizmoEdit.h"
 #include "Editor/Viewport/Model/EditorVisualizerGeometry.h"
 
-#include "Engine/Graphics/DebugDraw/DebugDrawQueue.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"

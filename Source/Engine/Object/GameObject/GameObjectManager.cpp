@@ -14,7 +14,7 @@
 #include "Engine/Foundation/EngineParallel.h"
 #include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Foundation/WorldOrigin.h"
-#include "Engine/Graphics/DebugDraw/DebugDrawQueue.h"
+#include "Engine/Graphics/DebugDraw/IDebugDrawQueue.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/SceneMoveDispatch.h"
 #include "Engine/Object/Component/SceneTransformHierarchy.h"
@@ -693,7 +693,7 @@ namespace sw
     void GameObjectManager::notifyWorldOriginShifted( const float3& delta )
     {
         // 남은 디버그 도형은 옛 원점 기준 자리다 — 세계와 함께 옮긴다.
-        if ( DebugDrawQueue* const pDebugDraw = engine::findSubsystem<DebugDrawQueue>(); pDebugDraw != nullptr )
+        if ( IDebugDrawQueue* const pDebugDraw = engine::findSubsystem<IDebugDrawQueue>(); pDebugDraw != nullptr )
             pDebugDraw->shiftOrigin( delta );
         for ( SceneSubsystemEntry& entry : _pState->_listSceneSubsystem )
         {

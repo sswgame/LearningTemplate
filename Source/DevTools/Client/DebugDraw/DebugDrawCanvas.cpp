@@ -5,11 +5,12 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 
+#include "DevTools/DebugDraw/DebugDrawQueue.h"
+
 #include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
 #include "Engine/Graphics/Canvas/CanvasOverlay.h"
 #include "Engine/Graphics/Canvas/CanvasPainter.h"
-#include "Engine/Graphics/DebugDraw/DebugDrawQueue.h"
 #include "Engine/Text/FontSubsystem.h"
 
 namespace sw

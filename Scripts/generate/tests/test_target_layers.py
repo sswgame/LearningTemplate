@@ -18,7 +18,7 @@ from common.paths import get_project_root  # noqa: E402
 from generate.generator_output import GeneratorError  # noqa: E402
 from generate.target_layers import HEADER_TOKEN, RULE_FILE, collect_dev_open_headers, collect_guards, write_guard_stubs  # noqa: E402
 
-DEBUG_DRAW_HEADER = "Engine/Graphics/DebugDraw/DebugDrawQueue.h"
+DEBUG_DRAW_HEADER = "Engine/Graphics/DebugDraw/IDebugDrawQueue.h"
 
 
 class TargetLayersDebugDrawTest(unittest.TestCase):
