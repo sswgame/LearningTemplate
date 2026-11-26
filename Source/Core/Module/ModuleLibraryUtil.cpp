@@ -340,10 +340,10 @@ namespace sw
         return pinnedCount;
     }
 
-#if SW_WITH_DYNAMIC_MODULES
+    // 배포 실행 파일도 제 빌드 ID 를 읽는다(`ModuleBuildID`) — 동적 모듈 블록 밖에 둔다.
     const void* ModuleLibraryUtil::findImageNtHeaders( const void* pBase )
     {
-    #if defined( SW_PLATFORM_WINDOWS )
+#if defined( SW_PLATFORM_WINDOWS )
         if ( pBase == nullptr )
             return nullptr;
         const uint8*            pBytes = static_cast<const uint8*>( pBase );
@@ -352,14 +352,15 @@ namespace sw
             return nullptr;
         const IMAGE_NT_HEADERS* pNt = reinterpret_cast<const IMAGE_NT_HEADERS*>( pBytes + pDos->e_lfanew );
         return ( pNt->Signature == IMAGE_NT_SIGNATURE ) ? pNt : nullptr;
-    #elif defined( SW_PLATFORM_POSIX )
+#elif defined( SW_PLATFORM_POSIX )
         (void)pBase;
         return nullptr;
-    #else
-        #error "Unsupported platform"
-    #endif
+#else
+    #error "Unsupported platform"
+#endif
     }
 
+#if SW_WITH_DYNAMIC_MODULES
     bool ModuleLibraryUtil::unloadModuleLibrary( string_view moduleName, void* pHandle )
     {
         if ( pHandle == nullptr )
