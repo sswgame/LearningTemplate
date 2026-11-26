@@ -239,6 +239,12 @@ namespace sw
         PROPERTY( Name = "assetRoots" )
         vector<DataPath>              _listAssetRoot; ///< 글을 모을 리소스 폴더(폴더는 정체성이 없어 경로 글이다)
         vector<LocalizationAssetRule> _listAssetRule;
+        /**
+         * @brief 이 프로젝트가 키를 빌려 쓰는 다른 프로젝트입니다(키트 프로젝트 → 엔진 프로젝트). 수집이 그 원문 표를 참조로만 본다 — 키를 옮겨 오지 않는다.
+         * @details 언리얼 현지화 타깃의 Dependencies(플러그인 타깃이 Engine 타깃에 기대어 같은 글을 다시 모으지 않는다)와 같은 자리다. 실행 중에는 올린 프로젝트를 모두 찾으므로 쓰지 않는다.
+         */
+        PROPERTY( Name = "dependencies" )
+        vector<DataPath> _listDependency;
         /** @brief 이 에셋 종류입니다(등록은 `LocalizationDocuments.cpp` 의 `SW_ASSET_TYPE`). */
         static constexpr AssetTypeDef kAssetType{ "LocalizationProject", kArrAssetSuffix, static_cast<uint32>( SW_COUNT_OF( kArrAssetSuffix ) ), {}, 0, {} };
 
