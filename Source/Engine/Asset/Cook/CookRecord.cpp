@@ -223,9 +223,17 @@ namespace sw
         return record;
     }
 
+    string CookRecord::makeHeader()
+    {
+        string header( kHeaderTag );
+        header.push_back( ' ' );
+        header.append( sw::to_string( kCookFormatVersion ) );
+        return header;
+    }
+
     bool CookRecord::write( const AbsolutePath& absPath ) const
     {
-        string text( kHeader );
+        string text = makeHeader();
         text.append( "\nkey " ).append( CookRecordInternal::toHex( _key ) );
         text.append( "\noutput " ).append( CookRecordInternal::toHex( _outputHash ) );
         for ( const CookInput& input : _listInput )
@@ -260,9 +268,14 @@ namespace sw
             listLine.push_back( textView.substr( lineStart, lineLen ) );
             lineStart += lineLen + 1;
         }
-        if ( listLine.empty() || StringUtil::trim( listLine[0] ) != kHeader )
+        const string      currentHeader = makeHeader();
+        const string_view header        = listLine.empty() ? string_view{} : StringUtil::trim( listLine[0] );
+        if ( header != currentHeader )
         {
-            SW_LOG_WARNING_ID( "Cook.RecordInvalid", "Cook record '%#' is not '%#' - the job is cooked again", absPath.str(), kHeader );
+            // 다른 판의 기록은 깨진 것이 아니다 — 판을 올리면 모든 기록이 한 번 이 길로 와 조용히 다시 굽는다(경고면 그 실행의 시나리오가 진다).
+            const bool bOtherVersion = header.size() > kHeaderTag.size() && StringUtil::startsWith( header, kHeaderTag ) && header[kHeaderTag.size()] == ' ';
+            if ( bOtherVersion == false )
+                SW_LOG_WARNING_ID( "Cook.RecordInvalid", "Cook record '%#' is not '%#' - the job is cooked again", absPath.str(), currentHeader );
             return false;
         }
         bool bHasKey    = false;

@@ -25,8 +25,11 @@ namespace sw
      */
     struct SW_API CookRecord
     {
-        /** @brief 기록 파일 머리 줄입니다. 형식을 바꾸면 버전을 올린다 — 옛 기록은 다시 베이크하는 이유가 된다. */
-        static constexpr string_view kHeader{ "SWCOOKREC 4" }; // 4: 내용 해시가 원시 바이트(CR 을 건너뛰지 않는다) - 옛 기록은 거절되어 한 번 다시 굽는다
+        /** @brief 기록 파일 머리 줄의 앞말입니다. 머리 줄은 `SWCOOKREC <kCookFormatVersion>` 이다(`makeHeader`). */
+        static constexpr string_view kHeaderTag{ "SWCOOKREC" };
+
+        /** @brief 지금 판의 머리 줄입니다. */
+        static string makeHeader();
 
         uint64            _key{ 0 };
         uint64            _outputHash{ 0 };

@@ -34,6 +34,13 @@ namespace sw
 
 namespace sw
 {
+    /**
+     * @brief 쿠킹 기록 · 작업 키의 형식 판입니다. 기록 줄 모양이나 키 기준 글을 바꾸면 이 값 하나를 올린다(언리얼 DDC 의 형식 버전 GUID 자리).
+     * @details 작업 키 기준 글(`CookJob::makeKeyDescription`)과 기록 머리 줄(`CookRecord`)에 함께 든다. 판이 다른 기록 · DDC 항목은 경고 없이 미스가 되어 다시 굽는다.
+     *          판이 같은데 읽지 못하는 기록만 깨진 것으로 경고한다. 4: 내용 해시가 원시 바이트(CR 을 건너뛰지 않는다). 5: 입력 종류 줄 머리가 열거자 이름(Resource · DiskFile · Listing).
+     */
+    inline constexpr uint32 kCookFormatVersion = 5;
+
     /** @brief 입력의 종류입니다. 작업 키 · 쿠킹 기록에는 열거자 이름(`getEnumName`)을 적는다. */
     ENUM()
     enum class CookInputKind : uint8
