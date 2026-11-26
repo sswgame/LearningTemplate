@@ -79,7 +79,7 @@ C++ 를 쓸 때의 규칙. 린트 · 컴파일이 강제하는 줄은 "강제" �
 
 먼저 주인 타입을 찾는다. 첫 "예" 에서 멈춘다.
 
-1. **주인 우선 — one type owns it?** A function over one type's data or invariants is its member (`static` / `private` as needed); static-only types or `vector<T>` functions beside a data type belong to it (린트 `cpp-style` 규칙 4 강제); a `.cpp` state struct mutated by static functions becomes a class (린트 `cpp-style` 규칙 10 강제).
+1. **주인 우선 — one type owns it?** A function over one type's data or invariants is its member (`static` / `private` as needed); static-only types or `vector<T>` functions beside a data type belong to it (린트 `cpp-style` 규칙 4 강제); a `.cpp` state struct mutated by static functions becomes a class (린트 `cpp-style` 규칙 10 강제). 주인이 열거형이면 멤버를 둘 수 없으니 그 옆 자유 함수(`getKeyName` · `findKeyByName`, Godot `keycode_get_string`)로 두고 `XxxUtil` 을 만들지 않는다.
 2. **No owner, several TUs** → a `XxxUtil` static struct in a header (never `Internal`).
 3. **No owner, one `.cpp`** → that file's anonymous namespace.
 
