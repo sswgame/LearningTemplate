@@ -144,16 +144,6 @@ namespace sw
         add( ValidationSeverity::Warning, message, ValidationPropertyEdit{} );
     }
 
-    void ValidationContext::addErrorWithFix( const string_view message, const ValidationPropertyEdit& fix )
-    {
-        add( ValidationSeverity::Error, message, fix );
-    }
-
-    void ValidationContext::addWarningWithFix( const string_view message, const ValidationPropertyEdit& fix )
-    {
-        add( ValidationSeverity::Warning, message, fix );
-    }
-
     bool ValidationContext::hasError() const noexcept
     {
         return VectorUtil::containsBy<&ValidationIssue::_severity>( _listIssue, ValidationSeverity::Error );
@@ -204,57 +194,5 @@ namespace sw
     bool ReflectionValidation::computeHasValidator( const TypeInfo& type, const TypeResolver& resolver )
     {
         return ReflectionValidationInternal::computeHasValidator( type, resolver, 0 );
-    }
-
-    void ValidationIssueLog::replaceIssues( const uint64 sourceID, const vector<ValidationIssue>& listIssue )
-    {
-        ScopedLock<mutex> lock{ _mutex };
-        if ( _listIssue.empty() && listIssue.empty() )
-            return;
-        // 제자리에서 지운다. 씬 언로드는 오브젝트마다 여기를 지나므로 새 목록을 만들지 않는다.
-        const size_t sizeBefore = _listIssue.size();
-        size_t       keptCount  = 0;
-        for ( size_t issueIndex = 0; issueIndex < sizeBefore; ++issueIndex )
-        {
-            if ( _listIssue[issueIndex]._sourceID == sourceID )
-                continue;
-            if ( keptCount != issueIndex )
-                _listIssue[keptCount] = std::move( _listIssue[issueIndex] );
-            ++keptCount;
-        }
-        _listIssue.resize( keptCount );
-        const bool bRemovedAny = keptCount != sizeBefore;
-        for ( const ValidationIssue& issue : listIssue )
-        {
-            _listIssue.push_back( issue );
-            _listIssue.back()._sourceID = sourceID;
-        }
-        if ( bRemovedAny || listIssue.empty() == false )
-            _revision.fetch_add( 1, std::memory_order_acq_rel );
-    }
-
-    void ValidationIssueLog::removeSource( const uint64 sourceID )
-    {
-        replaceIssues( sourceID, {} );
-    }
-
-    void ValidationIssueLog::collectIssues( vector<ValidationIssue>& outListIssue ) const
-    {
-        ScopedLock<mutex> lock{ _mutex };
-        outListIssue = _listIssue;
-    }
-
-    uint32 ValidationIssueLog::getIssueCount() const
-    {
-        ScopedLock<mutex> lock{ _mutex };
-        return static_cast<uint32>( _listIssue.size() );
-    }
-
-    void ValidationIssueLog::clear()
-    {
-        ScopedLock<mutex> lock{ _mutex };
-        if ( _listIssue.empty() == false )
-            _revision.fetch_add( 1, std::memory_order_acq_rel );
-        _listIssue.clear();
     }
 } // namespace sw

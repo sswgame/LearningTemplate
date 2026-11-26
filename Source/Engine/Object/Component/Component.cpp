@@ -290,8 +290,7 @@ namespace sw
         if ( _bHasBegunPlay == SW_TRUE || isPendingDestroy() )
             return;
         _bHasBegunPlay = SW_TRUE;
-        if constexpr ( build::kShipping == false )
-            (void)ObjectValidation::reportEmptyRequired( *this ); // 코드로 붙인 컴포넌트는 로드의 필수 칸 검사를 지나지 않는다
+        (void)ObjectValidation::reportEmptyRequired( *this ); // 코드로 붙인 컴포넌트는 로드의 필수 칸 검사를 지나지 않는다(배포는 빈 함수)
         onBeginPlay();
     }
 
