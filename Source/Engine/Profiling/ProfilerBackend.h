@@ -62,7 +62,7 @@ namespace sw
          */
         static void setActiveBackend( IProfilerBackend* pBackend );
 #if SW_PROFILER_BACKEND_COMPILED
-        /** @brief 출력을 켤 때(`startBackend`) `TaskManager::bindProfileHook` 에 꽂는 훅입니다(테스트가 같은 것을 꽂는다). 태스크 · 스테이지 이름이 구간 이름이 됩니다. */
+        /** @brief 출력을 켤 때(`startBackend`) `TaskProfileHook::bind` 에 꽂는 훅입니다(테스트가 같은 것을 꽂는다). 태스크 · 스테이지 이름이 구간 이름이 됩니다. */
         static const TaskProfileHook* getTaskProfileHook();
 #endif
 

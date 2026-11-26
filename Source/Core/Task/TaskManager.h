@@ -4,6 +4,7 @@
  * @details 방향성 비순환 그래프(DAG) 형태의 의존성을 가진 작업 실행을 지원합니다.
  */
 #pragma once
+#include "Core/Concurrency/DevCounter.h"
 #include "Core/Concurrency/Futex.h"
 #include "Core/Concurrency/Queue/ConcurrentQueue.h"
 #include "Core/Concurrency/Queue/OverflowConcurrentQueue.h"
@@ -339,7 +340,7 @@ namespace sw
 
         /**
          * @brief 지난 호출 이후 쌓인 대기 계기를 돌려주고 0 으로 되돌립니다. 읽는 쪽은 하나입니다(엔진 프레임 끝 — `Task.*` 카운터).
-         * @details 칸마다 exchange 라 그 사이에 더해진 몫은 다음 호출로 넘어간다(버리지 않는다).
+         * @details 칸마다 exchange 라 그 사이에 더해진 몫은 다음 호출로 넘어간다(버리지 않는다). 배포는 세지 않아 늘 0 이다.
          */
         [[nodiscard]] WaitStats takeWaitStats();
 
@@ -518,14 +519,6 @@ namespace sw
          *          두 스레드가 마지막 슬롯을 나눠 써 스크래치 벡터가 겹치고(힙 손상) 깨우기 하나가 엉뚱한 스레드로 갑니다.
          */
         void releaseCurrentThreadHelperSlot();
-#if !defined( SW_SHIPPING )
-        /**
-         * @brief 태스크 실행 · 스테이지 대기 구간을 내보낼 곳을 꽂습니다. 돌려준 구독이 풀리면 뗍니다. 프로세스의 모든 매니저가 함께 씁니다.
-         * @details 뒤에 건 훅이 앞의 것을 갈아 끼우고, 앞 구독이 늦게 풀려도 새 훅을 지우지 않습니다(`AtomicSlot`). @p pHook 은 프로세스 끝까지 살아 있어야 합니다
-         *          (실행 중인 태스크가 읽고 있을 수 있다). 꽂혀 있지 않으면 태스크마다 원자 읽기 하나가 비용의 전부입니다.
-         */
-        [[nodiscard]] static Subscription bindProfileHook( const TaskProfileHook* pHook );
-#endif
         /** @brief 워커가 아니면서 태스크를 실행할 수 있는 스레드의 상한입니다(메인 · 렌더 · 로더 · 업로드 · 에디터 등). */
         static constexpr uint32 kMaxHelperThreadCount = 8;
 
@@ -715,10 +708,11 @@ namespace sw
 
         alignas( 64 ) atomic<uint32> _activeTaskCount; ///< 지금 실행 중이거나 대기 중인 활성 태스크의 총 수
         /// 대기 계기(`WaitStats`)의 칸 — 잠드는 길(futex 앞)과 합류 대기 끝에서만 relaxed 로 더한다. 태스크마다 쓰는 `_activeTaskCount` 와 같은 줄에 두어 새로 오가는 캐시 줄을 만들지 않는다.
-        atomic<uint64> _joinWaitCount{ 0 };
-        atomic<uint64> _joinWaitNanos{ 0 };
-        atomic<uint64> _joinParkCount{ 0 };
-        atomic<uint64> _idleParkCount{ 0 };
+        /// 배포는 세지 않는다(`DevCounter` 가 빈 형식이다). 읽는 쪽은 프로파일 카운터뿐이다.
+        DevCounter _joinWaitCount;
+        DevCounter _joinWaitNanos;
+        DevCounter _joinParkCount;
+        DevCounter _idleParkCount;
         /**
          * @brief `clear()` 가 활성 수를 0 으로 놓을 때마다 올리는 세대입니다. 노드는 만들 때의 값을 적어 둡니다(`TaskNode::_clearEpoch`).
          * @details 그 전에 만든 노드가 나중에 버려져도 이미 0 으로 놓은 수를 한 번 더 내리지 않게 가립니다(내리면 0xFFFFFFFF 로 돌아 `waitAll` 이 멈춘다).

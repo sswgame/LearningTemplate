@@ -185,20 +185,6 @@ namespace sw
 
 namespace sw
 {
-#if !defined( SW_SHIPPING )
-    /** @brief 태스크 · 스테이지 디버그 이름의 최대 길이입니다(Shipping 에는 이름이 없습니다). */
-    constexpr uint32 kTaskDebugNameCapacity = 31;
-
-    /** @brief @p name 을 @p arrName 에 담습니다(용량을 넘으면 잘라 담고, 늘 널로 끝낸다). */
-    inline void copyTaskDebugName( utf8 ( &arrName )[kTaskDebugNameCapacity + 1], string_view name )
-    {
-        const uint32 length = static_cast<uint32>( name.size() < kTaskDebugNameCapacity ? name.size() : kTaskDebugNameCapacity );
-        if ( length > 0 )
-            Memory::copy( arrName, name.data(), length );
-        arrName[length] = 0;
-    }
-#endif
-
     /**
      * @brief 스테이지입니다. 태스크 그룹의 완료를 기다리는 단위로, 매니저의 풀에서 오고 침입형 참조 계수로 수명을 관리합니다.
      * @details 스테이지는 남은 수만 셉니다. 태스크를 붙들지 않습니다. 태스크의 수명은 핸들과 큐가 잡은 참조가 정하고,
@@ -215,12 +201,29 @@ namespace sw
         atomic<int32> _refCount{ 0 };
         TaskNodePool* _pPool{ nullptr };
 #if !defined( SW_SHIPPING )
-        utf8 _arrName[kTaskDebugNameCapacity + 1]{}; ///< 디버그 · 프로파일 이름(`createStage( name )`). 비어 있으면 대기 구간을 내지 않는다
+        utf8 _arrName[TaskProfileHook::kNameCapacity + 1]{}; ///< 디버그 · 프로파일 이름(`createStage( name )`). 비어 있으면 대기 구간을 내지 않는다
 #endif
 
         void retain() { _refCount.fetch_add( 1, std::memory_order_relaxed ); }
         /** @brief 마지막 참조가 놓이면 풀로 돌아갑니다. */
         void release();
+
+        /** @brief 디버그 · 프로파일 이름을 정합니다(용량을 넘으면 잘라 담습니다). 풀에서 다시 쓰는 노드라 빈 이름도 덮어쓴다. 배포는 이름 칸이 없다. */
+        void setName( [[maybe_unused]] string_view name )
+        {
+#if !defined( SW_SHIPPING )
+            TaskProfileHook::copyName( _arrName, name );
+#endif
+        }
+        /** @brief 디버그 · 프로파일 이름입니다. 없으면(배포 포함) 빈 글입니다. */
+        const utf8* getName() const
+        {
+#if !defined( SW_SHIPPING )
+            return _arrName;
+#else
+            return "";
+#endif
+        }
     };
 } // namespace sw
 
@@ -338,7 +341,7 @@ namespace sw
     struct TaskNode
     {
 #if !defined( SW_SHIPPING )
-        utf8 _arrName[kTaskDebugNameCapacity + 1]{};
+        utf8 _arrName[TaskProfileHook::kNameCapacity + 1]{};
 #endif
         InlineSuccessorList _successors;
         /**
@@ -411,11 +414,20 @@ namespace sw
         /** @brief 선행 하나가 채워졌음을 알립니다. 마지막이었으면 소유 매니저가 큐에 넣습니다. */
         void resolveOneDependency();
 
-        /** @brief 디버깅 · 프로파일링용 이름을 정합니다(용량을 넘으면 잘라 담습니다). */
+        /** @brief 디버깅 · 프로파일링용 이름을 정합니다(용량을 넘으면 잘라 담습니다). 배포는 이름 칸이 없다. */
         void setName( [[maybe_unused]] string_view name )
         {
 #if !defined( SW_SHIPPING )
-            copyTaskDebugName( _arrName, name );
+            TaskProfileHook::copyName( _arrName, name );
+#endif
+        }
+        /** @brief 디버깅 · 프로파일링용 이름입니다. 없으면(배포 포함) 빈 글입니다. */
+        const utf8* getName() const
+        {
+#if !defined( SW_SHIPPING )
+            return _arrName;
+#else
+            return "";
 #endif
         }
     };

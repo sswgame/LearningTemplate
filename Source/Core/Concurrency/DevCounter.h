@@ -47,6 +47,15 @@ namespace sw
             return 0;
 #endif
         }
+        /** @brief 센 수를 꺼내고 0 으로 되돌립니다(한 번의 exchange 라 그 사이에 더한 몫을 잃지 않는다). 프레임마다 꺼내 프로파일 카운터로 넘기는 칸이 쓴다. 배포는 0 입니다. */
+        uint64 take()
+        {
+#if !defined( SW_SHIPPING )
+            return _value.exchange( 0, std::memory_order_relaxed );
+#else
+            return 0;
+#endif
+        }
         /** @brief 0 으로 되돌립니다(판 · 세션 단위로 세는 칸). */
         void reset()
         {
