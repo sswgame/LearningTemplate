@@ -393,8 +393,7 @@ namespace sw
         {
             // 소스를 읽는 구성은 소스(XML/JSON)만 본다. 소스가 없을 때 옆에 남은 쿠킹본(.bin)을 대신 읽으면 옮기거나 지운 프리팹이
             // 낡은 내용으로 살아나 실패가 가려진다(언리얼 · 유니티의 에디터도 쿠킹 데이터를 보지 않는다).
-            const bool bJSON         = FileUtil::hasExtension( resolvedPath, ".json" );
-            const bool bSourceLoaded = bJSON ? asset->loadFromJSONFile( AssetID{ resolvedPath } ) : asset->loadFromXMLFile( AssetID{ resolvedPath } );
+            const bool bSourceLoaded = asset->loadFromSourceFile( AssetID{ resolvedPath } );
             if ( bSourceLoaded == false )
             {
                 SW_LOG_ERROR_ID( "PrefabAsset.PrefabSourceCouldNot", "Prefab source could not be loaded: %#", resolvedPath );
@@ -897,7 +896,7 @@ namespace sw
         if ( bCached && AssetIO::usesSource() )
         {
             const shared_ptr<PrefabAsset> probe   = sw::make_shared<PrefabAsset>();
-            const bool                    bLoaded = FileUtil::hasExtension( assetRelativePath, ".json" ) ? probe->loadFromJSONFile( assetID ) : probe->loadFromXMLFile( assetID );
+            const bool                    bLoaded = probe->loadFromSourceFile( assetID );
             if ( bLoaded == false )
             {
                 SW_LOG_ERROR_ID( "PrefabCache.HotReloadFailed", "Hot-Reload failed for Prefab %# - keeping the previous version", cacheKey.c_str() );

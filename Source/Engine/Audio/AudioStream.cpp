@@ -2,10 +2,10 @@
 
 #include "Engine/Audio/AudioStream.h"
 
-#include "Core/File/FileUtil.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Audio/AudioChannelLayout.h"
+#include "Engine/Audio/AudioClip.h"
 #include "Engine/Audio/AudioPCM.h"
 #include "Engine/Audio/AudioVorbisDecoder.h"
 
@@ -194,7 +194,8 @@ namespace sw
     {
         shared_ptr<AudioStreamSource> pSource = make_shared<AudioStreamSource>();
 
-        if ( FileUtil::hasExtension( path, ".ogg" ) )
+        const AudioFileFormat fileFormat = AudioClipData::findFileFormat( path ); // 코덱은 접미사 칸이 정한다
+        if ( fileFormat == AudioFileFormat::Vorbis )
         {
             AudioStreamInfo                 info;
             unique_ptr<IAudioStreamDecoder> pProbe = AudioVorbisDecoder::openStream( inoutBytes.data(), inoutBytes.size(), info );
@@ -212,7 +213,7 @@ namespace sw
                     return nullptr;
             }
         }
-        else if ( FileUtil::hasExtension( path, ".wav" ) )
+        else if ( fileFormat == AudioFileFormat::WAV )
         {
             AudioPCM format;
             size_t   dataOffset{ 0 };

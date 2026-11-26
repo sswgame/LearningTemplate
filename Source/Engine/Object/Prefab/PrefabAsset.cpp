@@ -557,17 +557,29 @@ namespace sw
         return readJSONSource( doc, bRead, absPath );
     }
 
+    optional<PrefabFileFormat> PrefabAsset::findFileFormat( string_view path )
+    {
+        const AssetSuffix* pSuffix = kAssetType.findSuffix( path );
+        return pSuffix != nullptr ? optional<PrefabFileFormat>{ pSuffix->getFormat<PrefabFileFormat>() } : nullopt;
+    }
+
+    bool PrefabAsset::loadFromSourceFile( const AssetID& assetID )
+    {
+        return findFileFormat( assetID.view() ) == PrefabFileFormat::JSON ? loadFromJSONFile( assetID ) : loadFromXMLFile( assetID );
+    }
+
     bool PrefabAsset::loadFromDiskFile( const AbsolutePath& diskPath )
     {
-        // 형식은 확장자 하나로 정한다 — `saveToFile` · 쿠커와 같은 규칙.
+        // 형식은 접미사 칸 하나로 정한다 — `saveToFile` · 쿠커와 같은 규칙.
         // 디스크 파일은 부르는 쪽이 이름(`loadFromDiskFile`)으로 고른 것이다 — 리소스 id 읽기가 실패한 뒤 넘어오는 길이 아니다.
-        if ( StringUtil::endsWith( diskPath.str(), ".prefab.json", true ) )
+        const optional<PrefabFileFormat> format = findFileFormat( diskPath.str() );
+        if ( format == PrefabFileFormat::JSON )
         {
             JSONDocument doc;
             const bool   bRead = doc.loadFromFile( diskPath );
             return readJSONSource( doc, bRead, string( diskPath.str() ) );
         }
-        if ( StringUtil::endsWith( diskPath.str(), ".prefab.xml", true ) )
+        if ( format == PrefabFileFormat::XML )
         {
             AssetLoadScope loadScope( "Prefab", diskPath.str() );
             XMLDocument    doc;
@@ -733,7 +745,7 @@ namespace sw
 
         // 부모는 캐시를 거치지 않고 바로 읽는다 — 자산이 합친 값을 들고 있으므로 부모를 들고 있을 일이 없고, 쿠킹 작업의 입력도 이 읽기로 남는다.
         PrefabAsset base;
-        const bool  bLoaded = FileUtil::hasExtension( baseID, ".json" ) ? base.loadFromJSONFile( AssetID{ baseID } ) : base.loadFromXMLFile( AssetID{ baseID } );
+        const bool  bLoaded = base.loadFromSourceFile( AssetID{ baseID } );
         if ( bLoaded == false )
         {
             DataInheritance::reportBaseNotFound( basePath, sourceName );
@@ -773,7 +785,7 @@ namespace sw
     {
         outOverrideXML.clear();
         PrefabAsset base;
-        const bool  bLoaded = FileUtil::hasExtension( _basePath, ".json" ) ? base.loadFromJSONFile( AssetID{ _basePath } ) : base.loadFromXMLFile( AssetID{ _basePath } );
+        const bool  bLoaded = base.loadFromSourceFile( AssetID{ _basePath } );
         if ( bLoaded == false )
         {
             DataInheritance::reportBaseNotFound( _basePath, _name );
@@ -1070,9 +1082,10 @@ namespace sw
     {
         // 형식은 경로가 정한다 — 쿠커(`PrefabCooker::cookAll`)와 로더(`loadPrefab`)가 읽는 규칙과 같다. 늘 XML 로 쓰면 `.prefab.json` 에 XML 이
         // 들어가 그 프리팹이 다시는 읽히지 않는다. 프리팹이 아닌 경로(씬 · 머티리얼)는 덮지 않는다.
-        if ( StringUtil::endsWith( absPath.str(), ".prefab.json", true ) )
+        const optional<PrefabFileFormat> format = findFileFormat( absPath.str() );
+        if ( format == PrefabFileFormat::JSON )
             return saveToJSONFile( absPath );
-        if ( StringUtil::endsWith( absPath.str(), ".prefab.xml", true ) )
+        if ( format == PrefabFileFormat::XML )
             return saveToXMLFile( absPath );
         SW_LOG_ERROR_ID( "PrefabAsset.NotPrefabSourcePath", "'%#' is not a prefab source path (.prefab.xml / .prefab.json) - nothing was written", absPath.str() );
         return false;

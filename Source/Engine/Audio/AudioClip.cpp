@@ -363,7 +363,7 @@ namespace sw
             }
         }
         // 공통 디코더가 못 읽는 WAV(ADPCM 등)와 다른 형식(MP3 등)은 백엔드의 대체 디코더에 넘긴다. OGG 는 넘기지 않는다(Media Foundation 은 Vorbis 를 모른다).
-        const bool bUseFallbackDecoder = bDecoded == false && _pFallbackDecoder != nullptr && FileUtil::hasExtension( pathView, ".ogg" ) == false;
+        const bool bUseFallbackDecoder = bDecoded == false && _pFallbackDecoder != nullptr && AudioClipData::findFileFormat( pathView ) != AudioFileFormat::Vorbis;
         if ( bUseFallbackDecoder )
             bDecoded = _pFallbackDecoder( assetID, pcm );
         if ( bDecoded == false )

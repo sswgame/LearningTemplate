@@ -94,6 +94,10 @@ namespace sw
         [[nodiscard]] bool loadFromXMLFile( const AssetID& assetID );
         /** @brief JSON 에서 프리팹을 로드합니다(GameObject 상태 JSON 에 중첩 인스턴스 배열 `_listPrefabInstance` 를 더한 것이며, `saveToJSONFile` 이 쓰는 형태 하나만 받습니다). */
         [[nodiscard]] bool loadFromJSONFile( const AssetID& assetID );
+        /** @brief 저작 원본을 접미사의 형식(`PrefabAssetKind::kArrAssetSuffix`)으로 골라 읽습니다. `.prefab.json` 은 JSON, 그 밖(GUID 참조 포함)은 XML 입니다. */
+        [[nodiscard]] bool loadFromSourceFile( const AssetID& assetID );
+        /** @brief @p path 의 파일 형식입니다(접미사 칸). 프리팹 접미사가 아니면 비어 있습니다. */
+        [[nodiscard]] static optional<PrefabFileFormat> findFileFormat( string_view path );
         /**
          * @brief 디스크 파일에서 프리팹 원본을 로드합니다(형식은 확장자 `.prefab.xml` · `.prefab.json`). 리소스 id 로 풀지 않고 팩을 보지 않습니다.
          * @details 소스 트리를 디스크로 훑은 쿠커 · 테스트용입니다 — 리소스 루트 안 절대 경로를 `loadFromXMLFile` 에 넣으면 팩 전용 구성이 거절합니다.

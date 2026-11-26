@@ -262,3 +262,16 @@ SW_TEST_CASE( PrefabVariantTest, NestedInstancesAreInherited )
     SW_EXPECT_TRUE( savedText.find( "Inherited" ) == string::npos );
     SW_EXPECT_TRUE( savedText.find( "Own" ) != string::npos );
 }
+
+/**
+ * @brief [PrefabVariantTest] 프리팹 파일 형식은 종류의 접미사 칸이 정한다 — 가장 긴 접미사가 이기고, 프리팹 접미사가 아니면 형식이 없다
+ * @details 음성 대조: 접미사 찾기가 가장 긴 것을 고르지 않으면 `.prefab.json` 이 `.prefab`(쿠킹본)으로 읽혀 JSON 기대가 진다.
+ */
+SW_TEST_CASE( PrefabVariantTest, FileFormatComesFromTheSuffixRow )
+{
+    SW_EXPECT_TRUE( PrefabAsset::findFileFormat( "game/prefabs/crate.prefab.json" ) == PrefabFileFormat::JSON );
+    SW_EXPECT_TRUE( PrefabAsset::findFileFormat( "game/prefabs/crate.PREFAB.XML" ) == PrefabFileFormat::XML );
+    SW_EXPECT_TRUE( PrefabAsset::findFileFormat( "game/prefabs/crate.prefab.bin" ) == PrefabFileFormat::Cooked );
+    SW_EXPECT_TRUE( PrefabAsset::findFileFormat( "game/prefabs/crate.prefab" ) == PrefabFileFormat::Cooked );
+    SW_EXPECT_FALSE( PrefabAsset::findFileFormat( "game/scenes/hub.scene.xml" ).has_value() );
+}
