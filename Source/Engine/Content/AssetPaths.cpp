@@ -291,15 +291,17 @@ namespace sw
             /** @brief 소문자 id 의 첫 성분이 붙인 도메인이면 그 폴더와 나머지 키입니다. */
             [[nodiscard]] static optional<DomainLocation> findMountedDiskDomain( State& state, string_view lowerRel )
             {
+                // 도메인 이름만인 id(`testproject`)는 그 폴더 자신이다 — 리소스 트리의 도메인(`engine` · `game/<팩>`)이 빈 키로 뿌리를 가리키는 것과 같다.
                 const size_t firstSlash = lowerRel.find( '/' );
-                if ( firstSlash == string_view::npos || firstSlash == 0 )
+                if ( firstSlash == 0 || lowerRel.empty() )
                     return nullopt;
                 const string_view domain = lowerRel.substr( 0, firstSlash );
+                const string      key    = firstSlash == string_view::npos ? string{} : string( lowerRel.substr( firstSlash + 1 ) );
                 ScopedLock<mutex> lock{ state._diskDomainMutex };
                 for ( const MountedDiskDomain& mounted : state._listDiskDomain )
                 {
                     if ( mounted._domain == domain )
-                        return DomainLocation{ mounted._folder, string( lowerRel.substr( firstSlash + 1 ) ) };
+                        return DomainLocation{ mounted._folder, key };
                 }
                 return nullopt;
             }

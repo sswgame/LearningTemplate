@@ -69,16 +69,19 @@ namespace sw
 
             /**
              * @brief 소스 콘텐츠의 도메인 @p domain 아래(하위 폴더까지) 든 머티리얼을 모두 읽어 줄을 만듭니다(팩 쿠킹이 쓰는 줄과 같은 `makeEntry`).
-             * @details 도메인 폴더는 `AssetPaths::toDiskPath` 로 푼다(붙인 디스크 도메인도 같은 길). 리소스 폴더 나열(`AssetIO::collectAssets`)은 바로 아래만 보므로 쓰지 않는다 —
+             * @details 도메인 폴더는 읽기 쪽 폴더 해석(`AssetPaths::collectLooseFolders` — 리소스 트리 · 붙인 디스크 도메인을 모두 안다)으로 푼다. 쓸 자리를 정하는 `toDiskPath` 는
+             *          없는 자리를 오류로 남기므로 쓰지 않는다. 리소스 폴더 나열(`AssetIO::collectAssets`)은 바로 아래만 보므로 쓰지 않는다 —
              *          머티리얼은 `materials/` · `models/<모델>/materials/` 처럼 도메인 뿌리 밑에 있어 그 나열로는 늘 비었다. 정체성은 파일이 든 것(`AssetIdentityRules::readIdentity`)이다.
              */
             [[nodiscard]] static expected<vector<MaterialTagEntry>> buildDomainFromSource( const string& domain )
             {
-                const optional<DiskPath> domainFolder = engine::getSubsystem<AssetPaths>().toDiskPath( domain );
-                if ( domainFolder.has_value() == false || FileUtil::isDirectory( *domainFolder ) == false )
+                vector<DiskPath> listDomainFolder;
+                engine::getSubsystem<AssetPaths>().collectLooseFolders( domain, listDomainFolder ); // 도메인 id 는 폴더가 하나다(없으면 빈 목록)
+                if ( listDomainFolder.empty() )
                     return vector<MaterialTagEntry>{};
+                const DiskPath   domainFolder = listDomainFolder.front();
                 vector<DiskPath> listMaterialFile;
-                if ( FileUtil::collectFiles( *domainFolder, Material::kExtension, listMaterialFile, true ) == false )
+                if ( FileUtil::collectFiles( domainFolder, Material::kExtension, listMaterialFile, true ) == false )
                     return unexpected( Error{ ErrorKind::ExternalFailure, "the materials of a domain could not be listed", domain } );
                 VectorUtil::sort( listMaterialFile, []( const DiskPath& left, const DiskPath& right )
                 { return left.str() < right.str(); } );
@@ -87,7 +90,10 @@ namespace sw
                 listEntry.reserve( listMaterialFile.size() );
                 for ( const DiskPath& materialFile : listMaterialFile )
                 {
-                    const AssetID    materialID{ FileUtil::joinPath( domain, FileUtil::normalizeSeparators( string_view( materialFile.str() ).substr( domainFolder->str().size() + 1 ) ) ) };
+                    string relative;
+                    if ( FileUtil::makeRelativePath( domainFolder.str(), materialFile.str(), relative ) == false )
+                        return unexpected( Error{ ErrorKind::ExternalFailure, "a listed material is not under its domain folder", materialFile.str() } );
+                    const AssetID    materialID{ FileUtil::joinPath( domain, FileUtil::normalizeSeparators( relative ) ) };
                     expected<string> reference = rules.makeIdentityReference( materialID.view(), rules.readIdentity( materialFile, materialID.view() ) );
                     if ( reference.has_value() == false )
                         return unexpected( reference.error() );

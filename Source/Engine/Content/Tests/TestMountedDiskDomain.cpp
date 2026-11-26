@@ -173,3 +173,20 @@ SW_TEST_CASE( MountedDiskDomainTest, UnmountedDomainNoLongerResolves )
     SW_EXPECT_LOG( "AssetPaths.DomainNotMounted" );
     SW_EXPECT_FALSE( paths.unmountDiskDomain( "unmounttest" ) );
 }
+
+/**
+ * @brief [MountedDiskDomainTest] 도메인 이름만인 id 는 붙인 폴더 자신으로 풀린다 — 리소스 트리의 도메인(`engine` · `game/<팩>`)이 뿌리를 가리키는 것과 같다
+ * @details 도메인 전체를 훑는 읽기(머티리얼 태그 색인의 소스 갈래)가 도메인 뿌리를 `collectLooseFolders` 로 푼다. 음성 대조: 붙인 도메인을 `<도메인>/…` 꼴로만 받으면
+ *          폴더 목록이 비어 첫 단언이 지고, 쓰기 자리(`toDiskPath`)는 상대 키로 보아 `AssetPaths.WriteRelativeKeyMissing` 오류를 남긴다(MaterialTagIndexTest.SourceIndexWalksTheWholeDomain 이 그렇게 졌다).
+ */
+SW_TEST_CASE( MountedDiskDomainTest, BareDomainIDResolvesToTheMountedFolder )
+{
+    const ScopedScratchDomain domain;
+    vector<DiskPath>          listFolder;
+    engine::getSubsystem<AssetPaths>().collectLooseFolders( ScopedScratchDomain::kDomain, listFolder );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, listFolder.size() );
+    SW_EXPECT_TRUE( listFolder[0].str() == domain.getFolder().str() );
+    const optional<DiskPath> writePath = engine::getSubsystem<AssetPaths>().toDiskPath( ScopedScratchDomain::kDomain );
+    SW_REQUIRE_TRUE( writePath.has_value() );
+    SW_EXPECT_TRUE( writePath->str() == domain.getFolder().str() );
+}
