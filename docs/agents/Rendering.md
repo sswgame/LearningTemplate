@@ -13,7 +13,7 @@
 | `engine/renderstate/blendpresets.xml` | 블렌드 프리셋 — 줄을 더하면 코드 없이 새 프리셋 |
 | `*.material` (`MaterialDef`) | 렌더 상태 칸은 패스와 같은 형식(머티리얼 XML 은 앞 `_` 와 불리언 `b` 를 뗀 이름) |
 
-- 비슷한 파이프라인은 `_base` 로 부모를 가리키고 차이만 적는다([DataInheritance](DataInheritance.md)). 이름이 겹치는 첨부는 오류다.
+- 비슷한 파이프라인은 `_base` 로 부모를 가리키고 차이만 적는다([DataInheritance](DataInheritance.md)). 이름이 겹치는 첨부는 오류다. `_listPermutation` · `_listRenderPassRef` 는 글이 열쇠라 하나씩 더하고 `<item _op="Remove">` 로 지운다(한 퍼뮤테이션 이름은 한 번).
 - 패스 칸은 리플렉션 enum 이다 — 철자 오타는 읽기 오류. 메시 · 증폭 스테이지는 없다.
 
 ### 머티리얼 칸

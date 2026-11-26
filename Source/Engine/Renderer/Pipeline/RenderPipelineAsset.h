@@ -58,9 +58,9 @@ namespace sw
         /**
          * @brief 첨부 · 프레임 자원 · 프레임 패스를 가져올 RenderPass XML 경로입니다(선택, 예: engine/renderpass/defaultrenderpass.xml).
          * @details 읽을 때 적은 순서대로 그 파일의 첨부 · 자원 · 프레임 패스를 이 파이프라인 목록 앞에 합친다(`RenderPipelineAsset::mergeRenderPassRefs`) — 렌더러는 합친 목록만 본다.
-         *          읽지 못하면 로드 실패이고, 이름이 겹치면 검증 오류다.
+         *          읽지 못하면 로드 실패이고, 이름이 겹치면 검증 오류다. 열쇠는 원소의 글이다(`_base` 자식은 하나씩 더하고 `_op="Remove"` 로 지운다).
          */
-        PROPERTY( SkipIfEmpty )
+        PROPERTY( SkipIfEmpty, InheritKey )
         vector<DataPath> _listRenderPassRef;
 
         /**

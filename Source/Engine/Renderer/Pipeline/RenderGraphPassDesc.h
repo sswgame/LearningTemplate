@@ -603,8 +603,12 @@ namespace sw
         PROPERTY( SkipIfEmpty )
         string _domainEntryPoint;
 
-        /** @brief 셰이더 매크로(퍼뮤테이션)입니다. "NAME" 또는 "NAME=VALUE" 형태로 적습니다. */
-        PROPERTY( SkipIfEmpty )
+        /**
+         * @brief 셰이더 매크로(퍼뮤테이션)입니다. "NAME" 또는 "NAME=VALUE" 형태로 적습니다. 한 이름은 한 번만 적는다(검증).
+         * @details 열쇠는 원소의 글이다(`_base` 자식은 하나씩 더하고 `<item _op="Remove">NAME=VALUE</item>` 로 지운다 — DataInheritance 글 목록).
+         *          값만 바꾸려면 옛 글을 지우고 새 글을 더한다.
+         */
+        PROPERTY( SkipIfEmpty, InheritKey )
         vector<string> _listPermutation;
 
         /**

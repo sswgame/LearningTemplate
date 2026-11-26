@@ -659,7 +659,8 @@ namespace sw
             {
                 for ( const PropertyInfo& prop : typeInfo.getPropertiesWithBase() )
                 {
-                    if ( prop._metadata->_bInheritKey == SW_TRUE )
+                    // 글 목록 칸의 InheritKey 는 그 목록 안의 열쇠다(원소의 열쇠 칸이 아니다)
+                    if ( prop._metadata->_bInheritKey == SW_TRUE && prop._bIsContainer != SW_TRUE )
                         return &prop;
                 }
                 return nullptr;
@@ -682,6 +683,12 @@ namespace sw
                         pFieldType = SerializerUtil::findNestedObjectType( prop._typeName, prop.findValueBinding(), context );
                     else if ( bSequence )
                         pFieldType = SerializerUtil::findNestedObjectType( prop._elementTypeName, prop.findElementBinding(), context );
+                    // 글 목록(글 · 경로 원소)에 InheritKey 를 달면 원소의 글이 열쇠다 — 손 형식의 `kTextKey` 목록과 같은 규칙
+                    if ( bSequence && pFieldType == nullptr && prop._metadata->_bInheritKey == SW_TRUE )
+                    {
+                        out._listField.push_back( DataInheritanceSchema::makeKeyedList( prop._name.c_str(), DataInheritanceSchema::kTextKey ) );
+                        continue;
+                    }
                     if ( pFieldType == nullptr || VectorUtil::contains( inoutStack, pFieldType ) )
                         continue;
                     const PropertyInfo* pKey = bContainer ? findKeyProperty( *pFieldType ) : nullptr;

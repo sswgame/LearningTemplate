@@ -2,6 +2,7 @@
 #include "pch.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/Container/unordered_map.h"
 #include "Core/File/FileUtil.h"
 #include "Core/TestFramework/TestFramework.h"
 
@@ -29,7 +30,8 @@ namespace
 
         /** @brief 메시 패스 하나를 든 파이프라인 XML 입니다. @p pipelineExtra 는 루트 안에 그대로 넣습니다. */
         static string makeXML( string_view passAttributes, string_view rootAttributes = "", string_view pipelineExtra = "",
-                               string_view attachments = "<RenderPassAttachment _name=\"SceneDepth\" _format=\"D24_UNORM_S8_UINT\" _clearDepth=\"1\" _loadOp=\"Clear\"/>" )
+                               string_view attachments  = "<RenderPassAttachment _name=\"SceneDepth\" _format=\"D24_UNORM_S8_UINT\" _clearDepth=\"1\" _loadOp=\"Clear\"/>",
+                               string_view permutations = "" )
         {
             string xml = "<RenderPipelineDesc _name=\"Test\" ";
             xml.append( rootAttributes );
@@ -37,7 +39,9 @@ namespace
             xml.append( attachments );
             xml += "</_listAttachment><_listPass><RenderGraphPassDesc _name=\"Pass\" ";
             xml.append( passAttributes );
-            xml += "><_listInput/><_listOutput><item>SceneColor</item></_listOutput><_listPermutation/></RenderGraphPassDesc></_listPass>";
+            xml += "><_listInput/><_listOutput><item>SceneColor</item></_listOutput><_listPermutation>";
+            xml.append( permutations );
+            xml += "</_listPermutation></RenderGraphPassDesc></_listPass>";
             xml.append( pipelineExtra );
             xml += "</RenderPipelineDesc>";
             return xml;
@@ -332,6 +336,90 @@ SW_TEST_CASE( RenderPipelineAssetTest, ChildPipelineMergesItsBase )
     SW_REQUIRE_TRUE( pPresent != nullptr );
     SW_EXPECT_TRUE( pPresent->_listPermutation.empty() );
     SW_EXPECT_EQUAL( string( "engine/shaders/post_chain.hlsl" ), pPresent->_shaderPath.path() ); // 적지 않은 칸은 부모 것
+}
+
+namespace
+{
+    /** @brief 글 id 로 부모 글을 주는 원본입니다(팩 쿠킹 문맥의 합치기를 콘텐츠 없이 본다). */
+    class PipelineInheritanceTestSource final : public DataInheritanceSource
+    {
+    public:
+        PipelineInheritanceTestSource()
+            : DataInheritanceSource{ 8u } // 설정(`EngineConfig.json`)과 같은 깊이 상한
+        {
+        }
+
+        void add( const utf8* pID, const utf8* pText ) { _mapText[pID] = pText; }
+
+        [[nodiscard]] bool readText( string_view assetID, string& outText ) override
+        {
+            const auto it = _mapText.find( string{ assetID } );
+            if ( it == _mapText.end() )
+                return false;
+            outText = it->second;
+            return true;
+        }
+
+    private:
+        unordered_map<string, string> _mapText;
+    };
+} // namespace
+
+/**
+ * @brief [RenderPipelineAssetTest] 퍼뮤테이션 · 렌더 패스 참조는 글이 열쇠인 목록이다 — 자식은 하나씩 더하고 지우며, 부모의 나머지 원소를 물려받는다
+ * @details 규칙 표(쿠킹)와 리플렉션(개발 실행)이 같은 규칙을 낸다. 열쇠가 없으면 자식이 적은 목록이 부모 목록을 통째로 바꿔 `B=1` · `b.xml` 이 사라진다.
+ */
+SW_TEST_CASE( RenderPipelineAssetTest, TextListsMergeItemByItem )
+{
+    const DataInheritanceSchema  schema = DataInheritanceSchema::makeFromType( *RenderPipelineDesc::StaticType() );
+    const DataInheritanceSchema* pPass  = schema.findField( "_listPass" );
+    SW_REQUIRE_TRUE( pPass != nullptr );
+    const DataInheritanceSchema* pPermutation = pPass->findField( "_listPermutation" );
+    SW_REQUIRE_TRUE( pPermutation != nullptr );
+    SW_EXPECT_EQUAL( string( DataInheritanceSchema::kTextKey ), pPermutation->_keyAttribute );
+    SW_EXPECT_EQUAL( string( "_name" ), pPass->_keyAttribute ); // 글 목록의 열쇠가 패스의 열쇠를 가리지 않는다
+    const DataInheritanceSchema* pRef = schema.findField( "_listRenderPassRef" );
+    SW_REQUIRE_TRUE( pRef != nullptr );
+    SW_EXPECT_EQUAL( string( DataInheritanceSchema::kTextKey ), pRef->_keyAttribute );
+
+    PipelineInheritanceTestSource source;
+    source.add( "parent.xml", "<RenderPipelineDesc _name=\"P\"><_listPass><RenderGraphPassDesc _name=\"Pass\"><_listPermutation><item>A=1</item><item>B=1</item></_listPermutation>"
+                              "</RenderGraphPassDesc></_listPass><_listRenderPassRef><item>a.xml</item><item>b.xml</item></_listRenderPassRef></RenderPipelineDesc>" );
+    const string child = "<RenderPipelineDesc _base=\"parent.xml\" _name=\"C\"><_listPass><RenderGraphPassDesc _name=\"Pass\"><_listPermutation><item _op=\"Remove\">A=1</item><item>C=1</item>"
+                         "</_listPermutation></RenderGraphPassDesc></_listPass><_listRenderPassRef><item _op=\"Remove\">a.xml</item></_listRenderPassRef></RenderPipelineDesc>";
+    string       flatText;
+    bool         bComposed = false;
+    SW_REQUIRE_TRUE( ResourceComposer::compose( child, "child.xml", ResourceContext::forPackCook( source ), flatText, bComposed ) );
+    SW_EXPECT_TRUE( bComposed );
+    SW_EXPECT_TRUE( flatText.find( "A=1" ) == string::npos );
+    SW_EXPECT_TRUE( flatText.find( "B=1" ) != string::npos );
+    SW_EXPECT_TRUE( flatText.find( "C=1" ) != string::npos );
+    SW_EXPECT_TRUE( flatText.find( "a.xml" ) == string::npos );
+    SW_EXPECT_TRUE( flatText.find( "b.xml" ) != string::npos );
+
+    // 엔진 자식 파이프라인: 2D 는 프레임 패스 묶음만 가져오고 Present 의 후처리 define 셋을 지운다
+    RenderPipelineAsset forward2D;
+    SW_REQUIRE_TRUE( forward2D.loadFromXMLFile( AssetID{ "engine/pipeline/forward2dpipeline.xml" } ) );
+    SW_EXPECT_EQUAL( size_t( 1 ), forward2D.getDesc()._listRenderPassRef.size() );
+    const RenderGraphPassDesc* pPresent = VectorUtil::findIf( forward2D.getGraphPass(), []( const RenderGraphPassDesc& pass )
+    { return pass._name == "Present"; } );
+    SW_REQUIRE_TRUE( pPresent != nullptr );
+    SW_EXPECT_TRUE( pPresent->_listPermutation.empty() );
+}
+
+/** @brief [RenderPipelineAssetTest] 퍼뮤테이션 한 이름을 두 번(두 값으로) 적으면 로드 오류다 — 글 목록 합치기에서 옛 값을 지우지 않고 새 값을 더한 자식이 이 모양이다 */
+SW_TEST_CASE( RenderPipelineAssetTest, PermutationNameIsDefinedOnce )
+{
+    StringBuilder<constant::buffer::kMax256> passAttributes;
+    passAttributes.appendFormat( "_type=\"ForwardOpaque\" _depthAttachment=\"SceneDepth\" %#", RenderPipelineTestUtil::kOpaqueState );
+    const string_view   depth = "<RenderPassAttachment _name=\"SceneDepth\" _format=\"D24_UNORM_S8_UINT\" _clearDepth=\"1\" _loadOp=\"Clear\"/>";
+    RenderPipelineAsset asset;
+    SW_EXPECT_TRUE( RenderPipelineTestUtil::load( asset, RenderPipelineTestUtil::makeXML( passAttributes.view(), "", "", depth, "<item>X=1</item><item>Y</item>" ) ) );
+
+    SW_EXPECT_LOG( "RenderPipelineAsset.PassPermutationDefinedTwice" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.PipelineValidationFoundIssues" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.PipelineIssueNotLoaded" );
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, RenderPipelineTestUtil::makeXML( passAttributes.view(), "", "", depth, "<item>X=1</item><item>X=2</item>" ) ) );
 }
 
 /** @brief [RenderPipelineAssetTest] 쿠킹이 펼친 글은 원본을 합쳐 읽은 것과 같은 값이고, 부모를 가리키지 않는다(팩 쿠커의 펼치기와 같은 함수) */
