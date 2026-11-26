@@ -1,6 +1,6 @@
 /**
  * @file GeneratedFiles.h
- * @brief 입력 헤더 하나가 만드는 산출물(.gen.cpp · .gen.h · 스탬프)의 경로 · 쓰기 · 증분 판정입니다.
+ * @brief 입력 하나가 만드는 산출물(.gen.cpp · .gen.h · .gen.meta.cpp 또는 .cpp.gen.inl · 스탬프)의 경로 · 쓰기 · 증분 판정입니다.
  * @details "내용이 같으면 쓰지 않기"(.gen.cpp · .gen.h · FlagOps 우산)와 스탬프 읽기 · 쓰기(증분 판정 · 이름 충돌 검사 · 대상 목록)가
  *          여기 한 벌입니다. 입력 하나에 대해 알아야 할 사실(원본 경로 · 타입 · Flags 여부)은 스탬프에 적고, 생성 글을 다시 읽어 추측하지 않습니다.
  */
@@ -32,6 +32,9 @@ namespace sw
          *          안 바뀐 Engine 재실행이 Debug 에서 2.2 초). 스탬프 이름은 CMake 의 `ReflectBuiltins.gen.cpp.stamp` 와 같은 규칙입니다.
          */
         AbsolutePath _stampPath;
+
+        /** @brief 출력 디렉터리 + 입력의 파일 이름으로 산출물 경로를 만듭니다. `.cpp` 입력은 inl 하나(`isInline`)입니다. */
+        static GeneratedPaths make( const AbsolutePath& outputDir, const AbsolutePath& inputFile );
 
         /** @brief .cpp 입력이면 true 입니다. 산출물은 `_cppPath`(그 .cpp 가 include 하는 inl) 하나뿐이다. */
         bool isInline() const { return _headerPath.empty(); }
@@ -68,6 +71,17 @@ namespace sw
         uint64                  _inputWriteTime{ 0 };
         uint64                  _argsHash{ 0 }; ///< 산출물을 정한 명령줄의 해시. 다르면 최신이 아니다(UBT 가 UHT 매니페스트 변경으로 무효화하는 자리)
         bool                    _bHasBitFlagEnum{ false };
+
+        /**
+         * @brief 스탬프를 씁니다(위 줄 꼴).
+         * @details `_inputWriteTime` 은 파싱하려고 읽기 전에 측정한 입력의 쓰기 시각입니다. 다음 실행은 이 값이 지금 시각과 같을 때만 최신으로
+         *          봅니다(`IncrementalCheck::isUpToDate`). 스탬프 파일의 시각(= 다 쓴 때)이 입력보다 새로운지만 보면 파싱하는 동안 저장한
+         *          편집이 "스탬프보다 오래됐다" 며 다음 실행에서도 무시된다 — 그 헤더를 다시 저장할 때까지.
+         */
+        [[nodiscard]] bool write( const AbsolutePath& stampPath ) const;
+
+        /** @brief 스탬프를 읽습니다. 없거나 시각 · 명령줄 해시가 없는 꼴(옛 판)이면 false 입니다(그 입력은 아직 생성되지 않았다 — 다시 만든다). */
+        [[nodiscard]] static bool read( const AbsolutePath& stampPath, GeneratedStamp& outStamp );
     };
 } // namespace sw
 
@@ -75,25 +89,11 @@ namespace sw
 {
     struct GeneratedFileUtil
     {
-        /** @brief 출력 디렉터리 + 입력의 파일 이름으로 산출물 경로를 만듭니다. `.cpp` 입력은 inl 하나(`GeneratedPaths::isInline`)입니다. */
-        static GeneratedPaths makePaths( const AbsolutePath& outputDir, const AbsolutePath& inputFile );
-
         /**
          * @brief 내용이 다를 때만 씁니다. 디렉터리가 없으면 만듭니다.
          * @details 같은 내용을 다시 쓰면 시각만 바뀌어, 그 파일을 include 하는 번역 단위가 모두 다시 컴파일됩니다.
          */
         [[nodiscard]] static bool writeIfChanged( const AbsolutePath& path, const string_view content );
-
-        /**
-         * @brief 스탬프를 씁니다(`GeneratedStamp` 의 줄 꼴).
-         * @details `_inputWriteTime` 은 파싱하려고 읽기 전에 측정한 입력의 쓰기 시각입니다. 다음 실행은 이 값이 지금 시각과 같을 때만 최신으로
-         *          봅니다(`IncrementalCheck::isUpToDate`). 스탬프 파일의 시각(= 다 쓴 때)이 입력보다 새로운지만 보면 파싱하는 동안 저장한
-         *          편집이 "스탬프보다 오래됐다" 며 다음 실행에서도 무시된다 — 그 헤더를 다시 저장할 때까지.
-         */
-        [[nodiscard]] static bool writeStamp( const AbsolutePath& stampPath, const GeneratedStamp& stamp );
-
-        /** @brief 스탬프를 읽습니다. 없거나 시각 · 명령줄 해시가 없는 꼴(옛 판)이면 false 입니다(그 입력은 아직 생성되지 않았다 — 다시 만든다). */
-        [[nodiscard]] static bool readStamp( const AbsolutePath& stampPath, GeneratedStamp& outStamp );
 
         /**
          * @brief 이번 실행의 시작을 출력 폴더의 표식 파일(`ReflectionParser.run`)에 적고 그 쓰기 시각을 돌려줍니다.

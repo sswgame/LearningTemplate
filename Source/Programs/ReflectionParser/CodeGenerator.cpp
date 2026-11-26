@@ -327,6 +327,76 @@ namespace sw
                     append( row.view() );
                 }
             }
+
+            /** @brief 프로퍼티의 선언 타입 식(`decltype( Self::m )`, 접근자면 반환 참조의 대상)입니다. `Self` 는 서술자 함수의 그 타입이다. */
+            static string makePropertyDeclType( const ParsedPropertyInfo& prop )
+            {
+                // 접근자 프로퍼티(값이 객체 밖)는 필드가 없다. 선언 타입은 메서드가 돌려주는 참조의 대상이다.
+                StringBuilder<constant::buffer::kMax256> b;
+                if ( prop._bIsAccessor == SW_TRUE )
+                    b.appendFormat( "std::remove_reference_t<decltype( std::declval<Self&>().%#() )>", prop._memberName );
+                else
+                    b.appendFormat( "decltype( Self::%# )", prop._memberName );
+                return string( b.view() );
+            }
+
+            /**
+             * @brief 등록기 특수화(`Registrar<열쇠>`)의 열쇠입니다. 보통 FQN 이고, 숨은 중첩 형식이면 `RegistrarKey_<ID>` 를 @p outKeyDeclaration 의 전방 선언과 함께 돌려줍니다.
+             * @details 이름공간 범위의 특수화 머리 · 등록 변수는 바깥 형식의 friend 가 아니라 private 이름을 쓰면 C++17 에서 접근 오류다. 열쇠 구조체로 특수화하면 숨은 이름은
+             *          `Registrar` 본문 안(바깥 형식의 `REFLECT_BODY()` 가 주는 template friend)에서만 쓰인다.
+             */
+            static string makeRegistrarKey( const bool bHidden, const string& registrarName, const string& fqn, string& outKeyDeclaration )
+            {
+                outKeyDeclaration.clear();
+                if ( bHidden == false )
+                    return fqn;
+                StringBuilder<constant::buffer::kMax512> builder;
+                builder.appendFormat( "\t// %# 는 숨은 중첩 형식이다 — 특수화 열쇠로 이름을 대신한다(본문은 바깥 형식의 REFLECT_BODY friend 안이다)\n\tstruct ", fqn );
+                const uint32 keyStart = builder.size();
+                builder.appendFormat( "RegistrarKey_%#", registrarName );
+                const uint32 keyLength = builder.size() - keyStart;
+                builder.append( ";\n" );
+                // 열쇠 이름은 선언 글 안의 한 토막이다 — 버퍼가 다 자란 뒤에 잘라 낸다.
+                outKeyDeclaration = string( builder.view() );
+                return string( builder.view().substr( keyStart, keyLength ) );
+            }
+
+            /** @brief 이름 또는 FQN으로 enumerator 를 찾습니다. */
+            static const ParsedEnumeratorInfo* findEnumerator( const ParsedEnumInfo& enumInfo, string_view spec )
+            {
+                if ( spec.empty() )
+                    return nullptr;
+                const string_view leaf = ParserUtil::scopeLeaf( spec );
+                for ( const ParsedEnumeratorInfo& en : enumInfo._listEnumerator )
+                {
+                    if ( en._name == spec || en._name == leaf )
+                        return &en;
+                }
+                return nullptr;
+            }
+
+            /** @brief 에디터 메타데이터 줄 표와 정적 등록(@p pKind 는 `Type` · `Enum`)을 출력합니다. 줄이 없으면 아무것도 쓰지 않고 false 입니다. */
+            static bool emitEditorRowTable( CodeEmit& emit, const string& fqn, const utf8* pKind, const vector<string>& listRow )
+            {
+                if ( listRow.empty() )
+                    return false;
+                const string id = CodeGenerator::sanitizeIdentifier( fqn );
+                emit.linef( "// ── %#", fqn );
+                emit.linef( "static constexpr ::sw::EditorMetadataRow kRows_%#[] =", id );
+                emit.line( "{" );
+                emit.push();
+                for ( const string& row : listRow )
+                {
+                    emit.line( row );
+                }
+                emit.pop();
+                emit.line( "};" );
+                emit.linef( "static const ::sw::%#EditorMetadataSource    s_%#_editorMetadata{ %#, kRows_%#, %#u };", pKind, id, CodeEmit::quoted( fqn ), id,
+                            static_cast<uint32>( listRow.size() ) );
+                emit.linef( "static const ::sw::%#EditorMetadataRegistrar s_%#_editorMetadataRegistrar{ &s_%#_editorMetadata };", pKind, id, id );
+                emit.blank();
+                return true;
+            }
         };
 
         /**
@@ -574,7 +644,7 @@ namespace sw
             b.appendFormat( "sw::%#Wrapper<NestC%#_%#>", containerType, propIndex, depth );
             return string( b.view() );
         };
-        emit.linef( "using NestC%#_0 = %#;", propIndex, makePropertyDeclType( prop ) );
+        emit.linef( "using NestC%#_0 = %#;", propIndex, CodeGeneratorInternal::makePropertyDeclType( prop ) );
         const string  wrapperType = makeWrapperType( prop._containerType, 0 );
         vector<Level> listLevel;
         if ( prop._containerTree != nullptr && prop._containerTree->_bIsContainer != SW_FALSE )
@@ -633,17 +703,6 @@ namespace sw
         return string( address.view() );
     }
 
-    string CodeGenerator::makePropertyDeclType( const ParsedPropertyInfo& prop )
-    {
-        // 접근자 프로퍼티(값이 객체 밖)는 필드가 없다. 선언 타입은 메서드가 돌려주는 참조의 대상이다.
-        StringBuilder<constant::buffer::kMax256> b;
-        if ( prop._bIsAccessor == SW_TRUE )
-            b.appendFormat( "std::remove_reference_t<decltype( std::declval<Self&>().%#() )>", prop._memberName );
-        else
-            b.appendFormat( "decltype( Self::%# )", prop._memberName );
-        return string( b.view() );
-    }
-
     string CodeGenerator::emitPropertyBinding( CodeEmit& emit, const ParsedPropertyInfo& prop, const uint32 propIndex ) const
     {
         const CodeEmitByteScope byteScope{ _emitBytes, emit.buffer(), CodeEmitSection::PropertyBinding };
@@ -673,7 +732,7 @@ namespace sw
             StringBuilder<constant::buffer::kMax512> b;
             if ( prop._bRepNotifyTakesOldValue == SW_TRUE )
                 b.appendFormat( "[]( void* pInstance, const void* pOldValue ) { static_cast<Self*>( pInstance )->%#( *static_cast<const %#*>( pOldValue ) ); }", prop._repNotify,
-                                makePropertyDeclType( prop ) );
+                                CodeGeneratorInternal::makePropertyDeclType( prop ) );
             else
                 b.appendFormat( "[]( void* pInstance, const void* ) { static_cast<Self*>( pInstance )->%#(); }", prop._repNotify );
             repNotify = string( b.view() );
@@ -687,7 +746,7 @@ namespace sw
         if ( prop._bIsBitField == SW_TRUE )
         {
             StringBuilder<constant::buffer::kMax256> b;
-            b.appendFormat( "[]( void* pInstance ) { static_cast<Self*>( pInstance )->%# = static_cast<%#>( 1 ); }", prop._memberName, makePropertyDeclType( prop ) );
+            b.appendFormat( "[]( void* pInstance ) { static_cast<Self*>( pInstance )->%# = static_cast<%#>( 1 ); }", prop._memberName, CodeGeneratorInternal::makePropertyDeclType( prop ) );
             setBit = string( b.view() );
         }
 
@@ -718,7 +777,7 @@ namespace sw
         for ( const ParsedPropertyInfo& prop : typeInfo._listProperty )
         {
             declTypes.append( declTypes.size() > 0 ? ", " : "" );
-            declTypes.append( makePropertyDeclType( prop ) );
+            declTypes.append( CodeGeneratorInternal::makePropertyDeclType( prop ) );
         }
         emit.linef( "static_assert( arePropertyValuesAllowed<%#>() );", declTypes.view() );
 
@@ -913,7 +972,7 @@ namespace sw
         const CodeEmitByteScope byteScope{ _emitBytes, outBuffer, CodeEmitSection::TypeRegistrar };
         const string            registrarName = sanitizeIdentifier( typeInfo._fullyQualifiedName );
         string                  keyDeclaration;
-        const string            registrarKey = makeRegistrarKey( typeInfo._bHidden == SW_TRUE, registrarName, typeInfo._fullyQualifiedName, keyDeclaration );
+        const string            registrarKey = CodeGeneratorInternal::makeRegistrarKey( typeInfo._bHidden == SW_TRUE, registrarName, typeInfo._fullyQualifiedName, keyDeclaration );
         outBuffer.append( keyDeclaration );
         appendTemplate( outBuffer, EmitTemplate::TypeRegistrarBegin, {
                                                                          {templatekey::kFqn, typeInfo._fullyQualifiedName},
@@ -1070,8 +1129,8 @@ namespace sw
         const CodeEmitByteScope byteScope{ _emitBytes, outBuffer, CodeEmitSection::EnumRegistrar };
         const string            registrarName = sanitizeIdentifier( enumInfo._fullyQualifiedName );
 
-        const ParsedEnumeratorInfo* invalidEn = findEnumerator( enumInfo, enumInfo._invalidEnumerator );
-        const ParsedEnumeratorInfo* countEn   = findEnumerator( enumInfo, enumInfo._countEnumerator );
+        const ParsedEnumeratorInfo* invalidEn = CodeGeneratorInternal::findEnumerator( enumInfo, enumInfo._invalidEnumerator );
+        const ParsedEnumeratorInfo* countEn   = CodeGeneratorInternal::findEnumerator( enumInfo, enumInfo._countEnumerator );
 
         // 열거형마다 맵 초기화를 펼치지 않고 항목 표(이름 · 값 배열) 하나만 낸다. 이름 표 · 값 표 · 인덱스 목록은 런타임이 이 표에서 짓는다(`EnumInfo::createFromDesc`).
         // 값은 숫자로 박지 않고 컴파일러가 계산하게 한다. libclang 의 값은 부호 있는 64 비트라 `uint8` 의 0x80 이 -128 로 적혔고,
@@ -1109,7 +1168,7 @@ namespace sw
                 {
                     for ( const auto& [oldName, targetName] : *pListRedirect )
                     {
-                        const ParsedEnumeratorInfo* pTarget = findEnumerator( enumInfo, targetName );
+                        const ParsedEnumeratorInfo* pTarget = CodeGeneratorInternal::findEnumerator( enumInfo, targetName );
                         tableEmit.linef( "{ %#, static_cast<int64>( E::%# ) },", CodeEmit::quoted( oldName ), pTarget->_name );
                     }
                 }
@@ -1126,7 +1185,7 @@ namespace sw
 
         // 열거형의 커스텀 메타는 에디터 메타데이터다 — 개발 전용 단위가 낸다(`makeEditorMetadataText`).
         string       keyDeclaration;
-        const string registrarKey = makeRegistrarKey( enumInfo._bHidden == SW_TRUE, registrarName, enumInfo._fullyQualifiedName, keyDeclaration );
+        const string registrarKey = CodeGeneratorInternal::makeRegistrarKey( enumInfo._bHidden == SW_TRUE, registrarName, enumInfo._fullyQualifiedName, keyDeclaration );
         outBuffer.append( keyDeclaration );
         appendTemplate( outBuffer, EmitTemplate::EnumRegistrar, {
                                                                     {           templatekey::kID,                                                                     registrarName},
@@ -1142,35 +1201,6 @@ namespace sw
                                                                     {      templatekey::kAliases,                                                                    aliases.view()},
                                                                     {       templatekey::kTables,                                                                tableBuffer.view()},
         } );
-    }
-
-    string CodeGenerator::makeRegistrarKey( const bool bHidden, const string& registrarName, const string& fqn, string& outKeyDeclaration )
-    {
-        outKeyDeclaration.clear();
-        if ( bHidden == false )
-            return fqn;
-        StringBuilder<constant::buffer::kMax512> builder;
-        builder.appendFormat( "\t// %# 는 숨은 중첩 형식이다 — 특수화 열쇠로 이름을 대신한다(본문은 바깥 형식의 REFLECT_BODY friend 안이다)\n\tstruct ", fqn );
-        const uint32 keyStart = builder.size();
-        builder.appendFormat( "RegistrarKey_%#", registrarName );
-        const uint32 keyLength = builder.size() - keyStart;
-        builder.append( ";\n" );
-        // 열쇠 이름은 선언 글 안의 한 토막이다 — 버퍼가 다 자란 뒤에 잘라 낸다.
-        outKeyDeclaration = string( builder.view() );
-        return string( builder.view().substr( keyStart, keyLength ) );
-    }
-
-    const ParsedEnumeratorInfo* CodeGenerator::findEnumerator( const ParsedEnumInfo& enumInfo, string_view spec )
-    {
-        if ( spec.empty() )
-            return nullptr;
-        const string_view leaf = ParserUtil::scopeLeaf( spec );
-        for ( const ParsedEnumeratorInfo& en : enumInfo._listEnumerator )
-        {
-            if ( en._name == spec || en._name == leaf )
-                return &en;
-        }
-        return nullptr;
     }
 
     string CodeGenerator::makeEditorMetadataText() const
@@ -1192,7 +1222,7 @@ namespace sw
         {
             vector<string> listRow;
             collectTypeEditorRows( typeInfo, listRow );
-            bAny = emitEditorRowTable( emit, typeInfo._fullyQualifiedName, "Type", listRow ) || bAny;
+            bAny = CodeGeneratorInternal::emitEditorRowTable( emit, typeInfo._fullyQualifiedName, "Type", listRow ) || bAny;
         }
         for ( const ParsedEnumInfo& enumInfo : _header._listEnum )
         {
@@ -1205,7 +1235,7 @@ namespace sw
                 AnnotationOutput output = AnnotationOutput::collectEditor( enumerator );
                 CodeGeneratorInternal::appendEditorRows( listRow, "Enumerator", CodeEmit::quoted( enumerator._name ), output );
             }
-            bAny = emitEditorRowTable( emit, enumInfo._fullyQualifiedName, "Enum", listRow ) || bAny;
+            bAny = CodeGeneratorInternal::emitEditorRowTable( emit, enumInfo._fullyQualifiedName, "Enum", listRow ) || bAny;
         }
         if ( bAny == false )
             emit.linef( "// No editor metadata in %#", _sourceFilePath );
@@ -1250,28 +1280,6 @@ namespace sw
         }
     }
 
-    bool CodeGenerator::emitEditorRowTable( CodeEmit& emit, const string& fqn, const utf8* pKind, const vector<string>& listRow )
-    {
-        if ( listRow.empty() )
-            return false;
-        const string id = sanitizeIdentifier( fqn );
-        emit.linef( "// ── %#", fqn );
-        emit.linef( "static constexpr ::sw::EditorMetadataRow kRows_%#[] =", id );
-        emit.line( "{" );
-        emit.push();
-        for ( const string& row : listRow )
-        {
-            emit.line( row );
-        }
-        emit.pop();
-        emit.line( "};" );
-        emit.linef( "static const ::sw::%#EditorMetadataSource    s_%#_editorMetadata{ %#, kRows_%#, %#u };", pKind, id, CodeEmit::quoted( fqn ), id,
-                    static_cast<uint32>( listRow.size() ) );
-        emit.linef( "static const ::sw::%#EditorMetadataRegistrar s_%#_editorMetadataRegistrar{ &s_%#_editorMetadata };", pKind, id, id );
-        emit.blank();
-        return true;
-    }
-
     bool CodeGenerator::makeHeaderText( string& outText ) const
     {
         CodeEmitBuffer buffer;
@@ -1286,12 +1294,12 @@ namespace sw
             if ( enumInfo._bIsBitFlag == SW_TRUE )
                 bNeedFlags = true;
             // 없는 센티널은 생성 오류다 — 경고로 두면 Invalid · Count 가 없는 열거형으로 조용히 등록된다(W-R3 d).
-            if ( enumInfo._invalidEnumerator.empty() == false && findEnumerator( enumInfo, enumInfo._invalidEnumerator ) == nullptr )
+            if ( enumInfo._invalidEnumerator.empty() == false && CodeGeneratorInternal::findEnumerator( enumInfo, enumInfo._invalidEnumerator ) == nullptr )
             {
                 SW_LOG_ERROR_ID( "CodeGenerator.ENUMInvalidNotFound", "ENUM(Invalid=%#) not found on %#", enumInfo._invalidEnumerator, enumInfo._fullyQualifiedName );
                 return false;
             }
-            if ( enumInfo._countEnumerator.empty() == false && findEnumerator( enumInfo, enumInfo._countEnumerator ) == nullptr )
+            if ( enumInfo._countEnumerator.empty() == false && CodeGeneratorInternal::findEnumerator( enumInfo, enumInfo._countEnumerator ) == nullptr )
             {
                 SW_LOG_ERROR_ID( "CodeGenerator.ENUMCountNotFound", "ENUM(Count=%#) not found on %#", enumInfo._countEnumerator, enumInfo._fullyQualifiedName );
                 return false;

@@ -49,7 +49,7 @@ namespace sw
             const AbsolutePath* _pInputFile;
             string              _content;
             GeneratedPaths      _paths;
-            uint64              _inputWriteTime; /**< 내용을 읽기 전에 측정한 입력의 쓰기 시각 — 스탬프에 적는다(`GeneratedFileUtil::writeStamp`) */
+            uint64              _inputWriteTime; /**< 내용을 읽기 전에 측정한 입력의 쓰기 시각 — 스탬프에 적는다(`GeneratedStamp::write`) */
         };
 
         /** @brief 파싱할 입력들을 처리합니다 — 둘 이상이면 한 번역 단위로 묶고, 그것이 안 되면 하나씩. 실패한 수를 돌려줍니다. */

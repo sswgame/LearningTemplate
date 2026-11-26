@@ -514,7 +514,7 @@ namespace sw
                 continue;
             listVisitedInput.push_back( inputFile );
 
-            GeneratedPaths paths = GeneratedFileUtil::makePaths( _pOptions->_outputDir, inputFile );
+            GeneratedPaths paths = GeneratedPaths::make( _pOptions->_outputDir, inputFile );
             // `--dump` 는 무엇을 뽑았는지 보려는 실행이라 최신이어도 다시 파싱한다.
             if ( _pOptions->_bDump == false && _incrementalCheck.isUpToDate( inputFile, paths ) )
             {
@@ -523,7 +523,7 @@ namespace sw
                 continue;
             }
 
-            // 시각을 읽기 전에 측정한다. 읽은 뒤에 저장한 편집은 이 값과 달라 다음 실행이 다시 파싱한다(`writeStamp` 설명).
+            // 시각을 읽기 전에 측정한다. 읽은 뒤에 저장한 편집은 이 값과 달라 다음 실행이 다시 파싱한다(`GeneratedStamp::write` 설명).
             const uint64 inputWriteTime = GeneratedFileUtil::getWriteTime( inputFile );
             string       content;
             if ( FileUtil::readTextFile( inputFile, content ) == false )
@@ -762,14 +762,14 @@ namespace sw
         }
 
         // 다른 헤더가 이미 이 이름으로 썼는가. 생성 파일 이름은 소스의 파일 이름만 으로 짓는다
-        // (`ParserUtil::makeGeneratedPath`). 그래서 한 모듈 안에 같은 이름의 헤더가 둘 있으면 나중에 도는 쪽이 앞의 것을
+        // (`GeneratedPaths::make`). 그래서 한 모듈 안에 같은 이름의 헤더가 둘 있으면 나중에 도는 쪽이 앞의 것을
         // 덮고, 앞 헤더의 타입들은 아무 말 없이 등록되지 않는다. 증상은 한참 뒤 "씬이 그 컴포넌트를 못 찾는다" 로
         // 나타나서 원인을 여기서 찾기 어렵다. 머리에 적어 둔 소스 경로로 그 상황을 잡는다.
         //
         // 헤더를 옮긴 경우(옛 경로가 더는 없다)는 정상이므로 조용히 덮어쓴다. 그러지 않으면 파일을 옮길 때마다 빌드가 막힌다.
         // 앞 주인은 그 산출물의 스탬프가 안다(스탬프가 없으면 자리 표시자 - 주인이 없다).
         GeneratedStamp existingStamp;
-        if ( GeneratedFileUtil::readStamp( paths._stampPath, existingStamp ) )
+        if ( GeneratedStamp::read( paths._stampPath, existingStamp ) )
         {
             // 대소문자만 바뀐 폴더 이름(`GUI` → `GUI`)은 같은 파일이다 — Windows 에서는 옛 철자로도 exists 가 참이다.
             const AbsolutePath& recordedSource = existingStamp._sourcePath;
@@ -841,7 +841,7 @@ namespace sw
         const bool bWritten = GeneratedFileUtil::writeIfChanged( paths._cppPath, sourceText ) &&
                               ( paths.isInline() || ( GeneratedFileUtil::writeIfChanged( paths._headerPath, headerText ) &&
                                                       GeneratedFileUtil::writeIfChanged( paths._editorMetadataPath, generator.makeEditorMetadataText() ) ) ) &&
-                              GeneratedFileUtil::writeStamp( paths._stampPath, stamp );
+                              stamp.write( paths._stampPath );
         if ( bWritten == false )
             SW_LOG_ERROR_ID( "ReflectionPipeline.CodeGenerationFailed", "Code generation failed: %#", inputFile.str() );
         return bWritten;
@@ -861,7 +861,7 @@ namespace sw
         vector<string> listDependency;
         for ( const AbsolutePath& inputFile : _pOptions->_listInputFile )
         {
-            const GeneratedPaths paths = GeneratedFileUtil::makePaths( _pOptions->_outputDir, inputFile );
+            const GeneratedPaths paths = GeneratedPaths::make( _pOptions->_outputDir, inputFile );
             listTarget.push_back( paths._cppPath.str() );
             if ( paths.isInline() == false )
             {
@@ -869,7 +869,7 @@ namespace sw
                 listTarget.push_back( paths._editorMetadataPath.str() );
             }
             GeneratedStamp stamp;
-            if ( GeneratedFileUtil::readStamp( paths._stampPath, stamp ) == false )
+            if ( GeneratedStamp::read( paths._stampPath, stamp ) == false )
                 continue; // 스탬프가 없으면(이번 실행에 실패한 입력) 더할 의존이 없다 - 실패는 이미 오류로 셌다
             for ( const StampDependency& dependency : stamp._listDependency )
             {
@@ -910,10 +910,10 @@ namespace sw
         StringBuilder<constant::buffer::kMax8192> text;
         for ( const AbsolutePath& inputFile : _pOptions->_listInputFile )
         {
-            const AbsolutePath stampPath = GeneratedFileUtil::makePaths( _pOptions->_outputDir, inputFile )._stampPath;
+            const AbsolutePath stampPath = GeneratedPaths::make( _pOptions->_outputDir, inputFile )._stampPath;
             GeneratedStamp     stamp;
             // 입력마다 스탬프가 있다(애노테이션이 없는 헤더도 빈 산출물과 스탬프를 쓴다). 없으면 목록이 조용히 빠지므로 실패로 알린다.
-            if ( GeneratedFileUtil::readStamp( stampPath, stamp ) == false )
+            if ( GeneratedStamp::read( stampPath, stamp ) == false )
             {
                 SW_LOG_ERROR_ID( "ReflectionPipeline.FixedSchemaListNot", "Fixed schema list is not written - '%#' has no stamp (it failed above)", stampPath.str() );
                 return false;
@@ -934,7 +934,7 @@ namespace sw
         for ( const AbsolutePath& inputFile : _pOptions->_listInputFile )
         {
             GeneratedStamp stamp;
-            if ( GeneratedFileUtil::readStamp( GeneratedFileUtil::makePaths( _pOptions->_outputDir, inputFile )._stampPath, stamp ) == false )
+            if ( GeneratedStamp::read( GeneratedPaths::make( _pOptions->_outputDir, inputFile )._stampPath, stamp ) == false )
             {
                 // 목록에서 조용히 빠지면 콘텐츠 검사가 그 타입을 "엔진 것" 으로 본다 - 쓰지 않는다.
                 bComplete = false;
@@ -971,7 +971,7 @@ namespace sw
         {
             GeneratedStamp stamp;
             // 빠진 입력의 칸을 "경로가 아니다" 로 보면 끊어진 경로를 못 잡는다 - 쓰지 않는다.
-            if ( GeneratedFileUtil::readStamp( GeneratedFileUtil::makePaths( _pOptions->_outputDir, inputFile )._stampPath, stamp ) == false )
+            if ( GeneratedStamp::read( GeneratedPaths::make( _pOptions->_outputDir, inputFile )._stampPath, stamp ) == false )
             {
                 SW_LOG_ERROR_ID( "ReflectionPipeline.AssetFieldListNot", "%# is not written - some inputs have no stamp (they failed above)", sw::config::kFileAssetReferenceFieldsList );
                 return false;
@@ -1038,9 +1038,9 @@ namespace sw
         bool bAnyFlags = false;
         for ( const AbsolutePath& inputFile : _pOptions->_listInputFile )
         {
-            const GeneratedPaths paths = GeneratedFileUtil::makePaths( _pOptions->_outputDir, inputFile );
+            const GeneratedPaths paths = GeneratedPaths::make( _pOptions->_outputDir, inputFile );
             GeneratedStamp       stamp;
-            if ( GeneratedFileUtil::readStamp( paths._stampPath, stamp ) == false || stamp._bHasBitFlagEnum == false )
+            if ( GeneratedStamp::read( paths._stampPath, stamp ) == false || stamp._bHasBitFlagEnum == false )
                 continue;
 
             bAnyFlags = true;

@@ -69,8 +69,6 @@ namespace sw
         void emitTypeRegistrar( CodeEmitBuffer& outBuffer, const ParsedTypeInfo& typeInfo, size_t typeIndex ) const;
         /** @brief 프로퍼티 서술자 표(`kProperties`)와 그 곁 표들 · 값 타입 검사를 출력합니다. */
         void emitPropertyTable( CodeEmit& emit, const ParsedTypeInfo& typeInfo ) const;
-        /** @brief 프로퍼티의 선언 타입 식(`decltype( Self::m )`, 접근자면 반환 참조의 대상)입니다. `Self` 는 서술자 함수의 그 타입이다. */
-        static string makePropertyDeclType( const ParsedPropertyInfo& prop );
         /** @brief 프로퍼티 메타데이터 표(`kMeta<색인>`)를 출력하고 그 주소 식을 돌려줍니다. 적은 것이 없으면 표 없이 `nullptr` 입니다. 필드 이름 꼴 범위는 @p typeInfo 의 필드를 읽는 함수가 됩니다. */
         string emitPropertyMetadata( CodeEmit& emit, const ParsedTypeInfo& typeInfo, const ParsedPropertyInfo& prop, uint32 propIndex ) const;
         /** @brief 컨테이너 모양 표(`kContainer<색인>`, 중첩 단계는 `kNested<색인>_<단계>`)를 출력하고 그 주소 식을 돌려줍니다. 컨테이너가 아니면 `nullptr` 입니다. */
@@ -79,8 +77,6 @@ namespace sw
         string emitPropertyBinding( CodeEmit& emit, const ParsedPropertyInfo& prop, uint32 propIndex ) const;
         /** @brief 타입 하나의 에디터 메타데이터 줄(`EditorMetadataRow`)들을 모읍니다. 적은 것이 없으면 비어 있습니다. */
         void collectTypeEditorRows( const ParsedTypeInfo& typeInfo, vector<string>& outListRow ) const;
-        /** @brief 에디터 메타데이터 줄 표와 정적 등록(@p pKind 는 `Type` · `Enum`)을 출력합니다. 줄이 없으면 아무것도 쓰지 않고 false 입니다. */
-        static bool emitEditorRowTable( CodeEmit& emit, const string& fqn, const utf8* pKind, const vector<string>& listRow );
         /** @brief 이벤트(멀티캐스트 델리게이트 PROPERTY) 목록을 출력합니다. */
         void emitEventList( CodeEmit& emit, const ParsedTypeInfo& typeInfo ) const;
         /** @brief 메서드 목록을 출력합니다. */
@@ -98,14 +94,6 @@ namespace sw
         // ------------------------------------------------------------------------------
         // 3) maps — enumerator·식별자 표기
         // ------------------------------------------------------------------------------
-        /**
-         * @brief 등록기 특수화(`Registrar<열쇠>`)의 열쇠입니다. 보통 FQN 이고, 숨은 중첩 형식이면 `RegistrarKey_<ID>` 를 @p outKeyDeclaration 의 전방 선언과 함께 돌려줍니다.
-         * @details 이름공간 범위의 특수화 머리 · 등록 변수는 바깥 형식의 friend 가 아니라 private 이름을 쓰면 C++17 에서 접근 오류다. 열쇠 구조체로 특수화하면 숨은 이름은
-         *          `Registrar` 본문 안(바깥 형식의 `REFLECT_BODY()` 가 주는 template friend)에서만 쓰인다.
-         */
-        static string makeRegistrarKey( bool bHidden, const string& registrarName, const string& fqn, string& outKeyDeclaration );
-        /** @brief 이름 또는 FQN으로 enumerator 를 찾습니다. */
-        static const ParsedEnumeratorInfo* findEnumerator( const ParsedEnumInfo& enumInfo, string_view spec );
 
         /** @brief 로드된 EmitTemplateStore 골격을 렌더해 버퍼에 붙입니다. */
         void appendTemplate( CodeEmitBuffer& outBuffer, EmitTemplate kind, const EmitTemplateStore::TemplateVars vars ) const;
