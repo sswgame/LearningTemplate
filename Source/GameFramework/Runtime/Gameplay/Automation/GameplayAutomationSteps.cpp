@@ -11,6 +11,7 @@
 
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Types.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Automation/Scenario/AutomationScenario.h"
@@ -20,15 +21,55 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.inl"
 #include "Engine/Reflection/EnumName.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
+#include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
-#include "GameFramework/Runtime/Gameplay/Automation/GameplayAutomationParams.h"
 #include "GameFramework/Runtime/Gameplay/GameState/GameStateComponent.h"
 #include "GameFramework/Runtime/Gameplay/Vehicle/VehicleSeatComponent.h"
 #include "GameFramework/Runtime/World/Environment/WorldClock.h"
 
 namespace sw
 {
+    /** @brief `AdvanceGameTime` 칸의 "적지 않음" 입니다 — `Min` 은 적힌 값만 보므로 음수 초기값이 곧 적지 않음입니다. */
+    inline constexpr float32 kAdvanceGameTimeUnset = -1.0f;
+
+    /** @brief `AdvanceGameTime` 의 인자입니다. 셋 중 정확히 하나를 적습니다. */
+    REFLECT()
+    struct AdvanceGameTimeParams
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Min = 0 )
+        float32 _minutes{ kAdvanceGameTimeUnset };
+        PROPERTY( Min = 0 )
+        float32 _hours{ kAdvanceGameTimeUnset };
+        PROPERTY( Min = 0, Max = 24 )
+        float32 _toHour{ kAdvanceGameTimeUnset };
+    };
+
+    /** @brief `Mount` 의 인자입니다. */
+    REFLECT()
+    struct MountStepParams
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        string _rider{};
+        PROPERTY( Required )
+        string _vehicle{};
+    };
+
+    /** @brief `Dismount` 의 인자입니다. */
+    REFLECT()
+    struct DismountStepParams
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        string _rider{};
+    };
+
     namespace
     {
         struct GameplayAutomationStepsInternal
@@ -149,3 +190,5 @@ namespace sw
     SW_AUTOMATION_STEP( controlMount, "Mount", &GameplayAutomationStepsInternal::runMountStep, &AutomationStep::validateProperties<MountStepParams>, AutomationStepOptions{} );
     SW_AUTOMATION_STEP( controlDismount, "Dismount", &GameplayAutomationStepsInternal::runDismountStep, &AutomationStep::validateProperties<DismountStepParams>, AutomationStepOptions{} );
 } // namespace sw
+
+#include "GameplayAutomationSteps.cpp.gen.inl"
