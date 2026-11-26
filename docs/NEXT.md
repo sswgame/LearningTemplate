@@ -29,12 +29,11 @@
 | w-pimpl · LT-wt/pimpl | P1 · P3 · P4(bf52a2d679 · 32ac84a437 · ac9a1f1bf7 끝), 렌더 R4 나머지(쿠킹 컴파일 스트리핑 · 패치 팩 색인 합치기 · 색인 첫 사용처) |
 | w-devtools-merge · LT-wt/devtoolsmerge | T1(605e855120 · 1eeddfc3ae 끝), PE 헤더 · 단일 헤더 43 개 · VulkanRHISamplerPreset(…7049625e66 · 68412caa1e~2a4f7ba666 끝), 남은 단일 헤더 7 개 |
 | w-server-subsystem · LT-wt/serversub | 6 절 서버 서비스를 모듈 서브시스템으로 |
-| w-shaderreload · LT-wt/shaderreload | 셰이더 리로드 · shortcut · 노이즈 대조 · 매니페스트 · 층 표 테스트(ece90ecaea 끝), 쿠킹 표 테스트 · target_layers 음성 사례 |
+| w-shaderreload · LT-wt/shaderreload | 셰이더 리로드 · shortcut · 노이즈 · 구성 표 테스트(ece90ecaea · 4686edfe1e 끝), 소문자 데이터 철자 열거 7 건, configure_files 생성기 음성 사례 |
 | w-engine-owner · LT-wt/engineowner | 끝남(3c5d1c924a 까지) — 다음 묶음에 합친다 |
 
 ### 아직 아무도 맡지 않은 몫 [코드]
 
-- 소문자 데이터 철자 열거 7 건(PairedAnimationAlign · FracturePattern · FractureVolume · SubLevelState · FacingDirection · AppearancePartKind · CookInputKind): 데이터를 열거자 철자로 다시 쓰면 이름 switch 를 걷을 수 있다.
 - 보류(조사 먼저): ReflectionValidation → TypeInfo, PROPERTY 검증기를 개발 전용으로 빼도 배포 안전이 지켜지는가.
 - AssertDialog 합치기 — 사용자에게 물을 것.
 
