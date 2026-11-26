@@ -10,6 +10,8 @@ CMake 빌드 규칙 함수 검사 — 구성 없이 `cmake -P` 로 함수만 부
 - `sw_collect_unused_kits`(같은 파일): 게임이 공유 키트 `GF_<X>` 만 의존해도 짝(`GF_Client_<X>` · `GF_Server_<X>`)은 쓰는 키트다 — 정적 구성(Shipping)이 짝을 빼던 회귀.
 - `sw_read_module_enum_names`(같은 파일): 매니페스트 낱말을 `ModuleCatalog.h` 의 열거자 이름에서 읽는다. 열거자 뒤의 리플렉션 메타 `ENUMERATOR( ... )` · 값 · 줄 주석을
   건너뛰고, 실제 헤더에서 CMake 가 쓰는 낱말(Editor · Kit · RHI · Android · Dev · Client …)이 나온다 — 메타를 붙이자 이름을 하나도 못 읽어 모든 구성이 선 회귀.
+- 쿠킹 표(`Config/Engine/CookContract.json` rhi_backends → `Scripts/generate/cook_contract.py` 가 쓴 CookContract.cmake → cmake/Modules/Build/RHIBackends.cmake):
+  configure 와 같은 생성기로 표를 쓰고 include 하면 백엔드마다 모듈 · 소스 폴더 · 명령줄 이름이 서고 기본 백엔드가 표에 있다. 명령줄 이름(dx12)은 구성을 세운다.
 
 실행: SW_CMAKE_COMMAND=<cmake 실행 파일> python -X utf8 Scripts/setup/tests/test_cmake_build_rules.py (CTest `Scripts.CmakeBuildRules` 가 환경 변수를 준다).
 """
@@ -25,6 +27,9 @@ import unittest
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(PROJECT_ROOT / "Scripts"))
+
+from generate.cook_contract import generate_cook_contract  # noqa: E402
 CMAKE_ENVIRONMENT = "SW_CMAKE_COMMAND"  # IntegrationTests/CMakeLists.txt 가 스크립트 테스트 모두에 ${CMAKE_COMMAND} 를 준다
 CMAKE = ""
 
@@ -314,6 +319,45 @@ class ModuleEnumNamesTest(unittest.TestCase):
         self.assertLessEqual({"Windows", "Linux", "Android", "Web"}, set(names["SW_MODULE_PLATFORMS"]))
         self.assertEqual(names["SW_MODULE_CONFIGURATIONS"], ["Dev", "Shipping"])
         self.assertEqual(names["SW_MODULE_TARGETS"], ["Client", "Server"])
+
+
+def rhi_backend_table(check_name: str | None = None) -> dict[str, str]:
+    """configure 와 같은 생성기로 CookContract.cmake 를 쓰고 RHIBackends.cmake 와 함께 include 한 백엔드 칸. `check_name` 이 있으면 `sw_check_rhi_backend_name` 에 넘긴다."""
+    with tempfile.TemporaryDirectory() as folder:
+        cmake_path = Path(folder) / "CookContract.cmake"
+        generate_cook_contract(Path(folder) / "CookContract.gen.h", cmake_path)
+        lines = [
+            "cmake_minimum_required(VERSION 3.24)",
+            f'include("{cmake_path.as_posix()}")',
+            f'include("{(PROJECT_ROOT / "cmake/Modules/Build/RHIBackends.cmake").as_posix()}")',
+            'message(NOTICE "names=[${SW_RHI_BACKEND_NAMES}]")',
+            "foreach(name IN LISTS SW_RHI_BACKEND_NAMES)",
+            '\tmessage(NOTICE "${name}=[${SW_RHI_BACKEND_${name}_MODULE}|${SW_RHI_BACKEND_${name}_SOURCE_FOLDER}|${SW_RHI_BACKEND_${name}_COMMAND_LINE_NAME}]")',
+            "endforeach()",
+        ]
+        if check_name is not None:
+            lines.append(f"sw_check_rhi_backend_name({check_name})")
+        return run_cmake_script("\n".join(lines) + "\n")
+
+
+class CookContractTableTest(unittest.TestCase):
+    def test_every_backend_has_module_source_folder_and_command_name(self) -> None:
+        table = rhi_backend_table()
+        names = table["names"].split(";")
+        default = json.loads((PROJECT_ROOT / "Config/Engine/CookContract.json").read_text(encoding="utf-8"))["default_rhi_backend"]
+        self.assertIn(default, names)
+        for name in names:
+            with self.subTest(backend=name):
+                module, source_folder, command_name = table[name].split("|")
+                self.assertTrue(module.startswith("RHI_"), module)
+                self.assertTrue(command_name and command_name.islower(), command_name)
+                self.assertTrue((PROJECT_ROOT / "Source/Engine/Graphics/RHI" / source_folder).is_dir(), source_folder)
+
+    def test_table_name_passes_and_command_line_name_stops_configure(self) -> None:
+        rhi_backend_table("DirectX12")
+        with self.assertRaises(AssertionError) as context:
+            rhi_backend_table("dx12")
+        self.assertIn("unknown backend 'dx12'", str(context.exception))
 
 
 if __name__ == "__main__":
