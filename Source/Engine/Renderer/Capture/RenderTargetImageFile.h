@@ -11,7 +11,7 @@
 #include "Core/Math/Half.h"
 #include "Core/Path/AbsolutePath.h"
 
-#include "Engine/Graphics/RHI/RHIDescriptors.h"
+#include "Engine/Graphics/RHI/RHITextureDesc.h"
 
 namespace sw
 {

@@ -15,6 +15,7 @@
 #include "Engine/Content/Pack/Tests/PackTestUtil.h"
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
 #include "Engine/Foundation/EngineSubsystems.h"
+#include "Engine/Graphics/Material/MaterialDef.h"
 #include "Engine/Graphics/Material/MaterialTagIndex.h"
 #include "Engine/Serialization/Inherit/ResourceComposition.h"
 

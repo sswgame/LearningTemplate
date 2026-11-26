@@ -16,7 +16,7 @@
 #include "Engine/Asset/Cache/AssetCacheBase.h"
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
-#include "Engine/Graphics/RHI/RHIDescriptors.h"
+#include "Engine/Graphics/RHI/RHITextureDesc.h"
 
 using namespace sw;
 

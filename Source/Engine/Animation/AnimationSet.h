@@ -6,7 +6,7 @@
  *          상용 엔진 비교(기억에 의존): 언리얼은 Animation Sequence 를 스켈레톤 에셋이 나눠 쓰게 하고 Animation Blueprint 가 슬롯 이름으로 고른다. 유니티는 Avatar 로 근육 공간을 나누고
  *          AnimatorOverrideController 가 "기반 + 바꾼 클립" 이다. 여기는 뼈 이름 일치로 나누고(Avatar 의 근육 공간 없음), 셋의 `_base` 가 오버라이드 컨트롤러 자리다 —
  *          그래프는 클립 이름(슬롯)만 적고 애니메이터의 셋이 내용을 정한다. 바탕은 공통 상속(`DataInheritance`, 이름이 열쇠)이고 쿠킹이 펼친다.
- *          `set` 은 부모가 아니라 줄 하나를 다른 셋에서 빌리는 믹스인이다(`_listRenderPassRef` 와 같은 까닭으로 합치지 않는다 — 여러 파일을 섞는다).
+ *          `set` 은 부모가 아니라 줄 하나를 다른 셋에서 빌리는 믹스인이다(`_listRenderFeatureRef` 와 같은 까닭으로 합치지 않는다 — 여러 파일을 섞는다).
  */
 #pragma once
 #include "Core/Container/string.h"

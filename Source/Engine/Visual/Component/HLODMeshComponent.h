@@ -47,7 +47,7 @@ namespace sw
          * @details 거울 스케일(행렬식이 음수)은 감김을 뒤집는다. 탄젠트는 채우지 않는다 — 합친 메시를 세울 때 다시 구한다(`Mesh::setGeometry`).
          * @return 구간 이름이 메시에 없거나 CPU 정점이 없으면 false 이고 더하지 않습니다.
          */
-        [[nodiscard]] static bool appendPart( const HLODMeshPart& part, const Mesh& mesh, vector<RHIVertex>& inoutListVertex, vector<uint32>& inoutListIndex );
+        [[nodiscard]] static bool appendPart( const HLODMeshPart& part, const Mesh& mesh, vector<MeshVertex>& inoutListVertex, vector<uint32>& inoutListIndex );
 
     protected:
         [[nodiscard]] MeshArrival acquireMesh( shared_ptr<Mesh>& outMesh ) override;

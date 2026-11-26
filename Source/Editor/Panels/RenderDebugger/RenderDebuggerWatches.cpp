@@ -11,7 +11,7 @@
 #include "Editor/SelfTest/EditorWatchSupport.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
-#include "Engine/Renderer/Frame/View/RenderStability.h"
+#include "Engine/Renderer/Frame/View/RenderPresentCounter.h"
 
 namespace sw::editor
 {
@@ -130,7 +130,7 @@ namespace sw::editor
                               &readRenderDebuggerGraphPasses, &readRenderDebuggerActivity );
     SW_AUTOMATION_WALL_WATCH( editorRenderDebuggerGraphNodes, "Editor.RenderDebuggerGraphNodes", "Pass nodes the Render Debugger graph canvas drew last frame (must equal the passes)",
                               &readRenderDebuggerGraphNodes, &readRenderDebuggerActivity );
-    SW_AUTOMATION_WALL_WATCH( editorRenderDebuggerBuffers, "Editor.RenderDebuggerBuffers", "Frame graph buffers (FrameBufferTable) the Render Debugger panel lists",
+    SW_AUTOMATION_WALL_WATCH( editorRenderDebuggerBuffers, "Editor.RenderDebuggerBuffers", "Frame graph buffers (RenderGraphImportedResourceTable) the Render Debugger panel lists",
                               &readRenderDebuggerBuffers, &readRenderDebuggerActivity );
     SW_AUTOMATION_WALL_WATCH( editorRenderDebuggerBufferRows, "Editor.RenderDebuggerBufferRows", "Rows of the buffer the Render Debugger panel read back (0 before the read arrives)",
                               &readRenderDebuggerBufferRows, &readRenderDebuggerActivity );

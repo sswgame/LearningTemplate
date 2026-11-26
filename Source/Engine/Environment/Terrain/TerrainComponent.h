@@ -13,6 +13,7 @@
 #include "Core/String/Name/hashed_string.h"
 
 #include "Engine/Asset/AssetRef.h"
+#include "Engine/Environment/EnvironmentMaterial.h"
 #include "Engine/Environment/EnvironmentUtil.h"
 #include "Engine/Environment/Terrain/TerrainHeightfield.h"
 #include "Engine/Environment/Terrain/TerrainLayerRule.h"

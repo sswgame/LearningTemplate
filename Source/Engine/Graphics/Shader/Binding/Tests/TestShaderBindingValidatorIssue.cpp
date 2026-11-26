@@ -2,7 +2,8 @@
 
 #include "Core/TestFramework/TestFramework.h"
 
-#include "Engine/Graphics/RHI/RHIDescriptors.h"
+#include "Engine/Graphics/RHI/RHIEnums.h"
+#include "Engine/Graphics/RHI/RHIHandles.h"
 #include "Engine/Graphics/RHI/RHIMeshVertexLayout.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingValidatorIssue.h"

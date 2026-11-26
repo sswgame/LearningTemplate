@@ -9,7 +9,7 @@
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Graphics/Material/Material.h"
-#include "Engine/Graphics/Material/MaterialTypes.h"
+#include "Engine/Graphics/Material/MaterialDef.h"
 
 using namespace sw;
 

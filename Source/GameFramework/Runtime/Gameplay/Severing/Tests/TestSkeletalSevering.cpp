@@ -52,11 +52,11 @@ namespace
         static shared_ptr<Mesh> makeBodyMesh()
         {
             const AppearanceGeometry strip = makeStrip();
-            vector<RHIVertex>        listVertex;
+            vector<MeshVertex>       listVertex;
             vector<MeshSkinVertex>   listSkin;
             for ( const uint32 index : strip._listIndex )
             {
-                RHIVertex vertex{};
+                MeshVertex vertex{};
                 vertex._arrPosition[0] = strip._listPosition[index]._x;
                 vertex._arrPosition[1] = strip._listPosition[index]._y;
                 vertex._arrNormal[2]   = -1.0f;

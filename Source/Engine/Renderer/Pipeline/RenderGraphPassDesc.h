@@ -9,8 +9,8 @@
 
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Foundation/Foundation.h"
-#include "Engine/Graphics/Material/MaterialTypes.h"
-#include "Engine/Graphics/RHI/RHIDescriptors.h"
+#include "Engine/Graphics/Material/MaterialPermutation.h"
+#include "Engine/Graphics/RHI/RHIRenderPassInfo.h"
 #include "Engine/Graphics/RenderState/RenderState.h"
 #include "Engine/Graphics/View/PostProcessValues.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -92,12 +92,12 @@ namespace sw
         /**
          * @brief 높이 · 거리 지수 안개입니다(fog.hlsl). 장면 깊이로 시선 위 광학 두께를 구해 선언한 컬러 출력 위에 블렌드(프리멀티플라이: 안개색 × 불투명도 + 장면 × (1 - 불투명도))합니다 —
          *        그래서 입력은 장면 깊이뿐이고 출력은 앞 패스가 칠한 색 첨부입니다(복사 첨부를 따로 두지 않는다). 불투명 · 하늘 · 반투명 뒤, 후처리 앞에 둡니다.
-         *        씬에 안개(`FogComponent` · 물속)가 없거나 후처리를 끈 뷰 · 표면 값 보기에서는 그리지 않습니다(전용 실행: `FramePassExecutor::executeFogPass`).
+         *        씬에 안개(`FogComponent` · 물속)가 없거나 후처리를 끈 뷰 · 표면 값 보기에서는 그리지 않습니다(전용 실행: `FrameRecorder::executeFogPass`).
          *        볼륨 안개를 켠 씬은 볼륨(froxel, `RenderPassKind::VolumetricFog` 컴퓨트)의 산란과 투과율을 같은 블렌드로 더합니다.
          */
         Fog,
         /**
-         * @brief 장면 색 사본입니다. 원본 색(`SourceColor`)을 선언한 컬러 출력(`SceneColorCopy` 역할)으로 그대로 복사합니다 — 셰이더 · PSO 가 없습니다(`FramePassExecutor::executeSceneColorCopyPass`).
+         * @brief 장면 색 사본입니다. 원본 색(`SourceColor`)을 선언한 컬러 출력(`SceneColorCopy` 역할)으로 그대로 복사합니다 — 셰이더 · PSO 가 없습니다(`FrameRecorder::executeSceneColorCopyPass`).
          *        반투명 패스는 장면 색에 섞으며 쓰므로 그 색을 읽을 수 없다. 반투명 패스가 이 출력을 같은 역할의 입력으로 선언하면 물의 굴절이 읽습니다(`g_SceneColorCopyIndex`).
          *        하늘 뒤 · 반투명 앞에 둡니다(언리얼의 Scene Color 사본 · 유니티 URP 의 Opaque Texture 와 같은 자리).
          */
@@ -122,7 +122,7 @@ namespace sw
         /**
          * @brief 화면 공간 반사입니다(screen_space_reflection.hlsl). G버퍼 노멀로 반사한 광선을 장면 깊이에 대고 나아가 맞은 자리의 장면 색 사본(`SceneColorCopy`)을 읽어
          *        선언한 컬러 출력(장면 색) 위에 프리멀티플라이 블렌드합니다 — 안개와 같은 모양이라 출력이 장면 색 그대로이고 반투명이 그 위에 그린다. 디퍼드에서 하늘 · 사본 뒤, 반투명 앞에 둡니다.
-         *        뷰의 후처리 값 `_screenSpaceReflectionIntensity` 가 0 이거나 후처리를 끈 뷰 · 표면 값 보기에서는 그리지 않습니다(전용 실행: `FramePassExecutor::executeScreenSpaceReflectionPass`).
+         *        뷰의 후처리 값 `_screenSpaceReflectionIntensity` 가 0 이거나 후처리를 끈 뷰 · 표면 값 보기에서는 그리지 않습니다(전용 실행: `FrameRecorder::executeScreenSpaceReflectionPass`).
          *        끄는 길이 "원본을 가리킴"(`kBypassesToSource`)이 아닌 까닭: 그 길은 출력을 그 패스만 써야 하는데(로드 검증 3-6), 반투명이 같은 장면 색에 그려야 한다.
          */
         ScreenSpaceReflection,
@@ -150,7 +150,7 @@ namespace sw
          * @brief 후처리 머티리얼입니다(언리얼 Post Process Material · 유니티 Full Screen Pass). 뷰의 블렌더블(`PostProcessValues::_listBlendable`) 가운데 이 패스의 자리(`_blendableLocation`)의 것을
          *        목록 차례로 원본 위에 그린다. 머티리얼마다 풀스크린 삼각형 하나, 머티리얼 셰이더(PostProcess 영역, post_process_material.hlsli)와 원소 버퍼 하나(`FramePostProcessMaterials`).
          *        톤맵 앞 · 뒤 자리는 원본(SourceColor)을 출력에 복사한 뒤 무게만큼 프리멀티플라이 블렌드하고, 그릴 머티리얼이 없는 뷰는 출력이 원본을 가리킨다(`kBypassesToSource`).
-         *        톤맵 대신 자리는 HDR 원본을 읽어 톤맵 출력(다른 패스와 함께 쓰는 출력) 위에 무게만큼 덮는다 — 복사도 고르기도 없다(전용 실행 `FramePassExecutor::executePostProcessMaterialPass`).
+         *        톤맵 대신 자리는 HDR 원본을 읽어 톤맵 출력(다른 패스와 함께 쓰는 출력) 위에 무게만큼 덮는다 — 복사도 고르기도 없다(전용 실행 `FrameRecorder::executePostProcessMaterialPass`).
          */
         PostProcessMaterial,
         /**
@@ -172,7 +172,7 @@ namespace sw
         MotionBlurNeighborMax,
         /**
          * @brief 2 단계 가림의 뒤 단계입니다 — 깊이 프리패스가 그린 이번 프레임 깊이로 HZB 를 다시 짓고, 앞 단계(프레임 패스 GPUCull)에서 가려져 빠진 차례만 다시 컬링해
-         *        이제 보이는 것을 주 시점 간접 인자에 더합니다(gpu_cull.hlsl 머리말 · `FrameGraphExecutor::recordLateOcclusion`). 셰이더 칸은 비워 둔다(엔진 PSO — HZB 짓기 · 컬링).
+         *        이제 보이는 것을 주 시점 간접 인자에 더합니다(gpu_cull.hlsl 머리말 · `FramePassRecorder::recordLateOcclusion`). 셰이더 칸은 비워 둔다(엔진 PSO — HZB 짓기 · 컬링).
          *        XML 에는 자리만 적는다 — 쓰는 자원(장면 깊이 · 깊이 사본 · HZB · 컬링 인자 · 가시 목록 · LOD 상태 · 차례 표시)은 종류가 선언한다(`ViewGraphResource`).
          *        깊이 프리패스 뒤 · 깊이를 다시 쓰는 베이스 패스(G버퍼 · 포워드 불투명) 앞에 둔다. 주 시점에서 앞 단계가 차례를 적은 프레임에만 돈다(언리얼 `FDeferredShadingSceneRenderer` 의
          *        프리패스 뒤 HZB · 가림 재판정 자리).
@@ -231,7 +231,7 @@ namespace sw
         UpscaleRcas,
         /**
          * @brief HZB 짓기 컴퓨트(hzb_build.hlsl)입니다. 뷰의 깊이 히스토리(지난 프레임 장면 깊이)를 최소 · 최대 깊이 밉 사슬(`HZBLayout`)로 줄여 구조 버퍼에 씁니다(밉마다 디스패치 하나).
-         *        컬링(gpu_cull.hlsl)이 경계 상자를 그 프레임의 뷰-투영으로 옮겨 사각형에 맞는 밉의 최대 깊이보다 멀면 가려졌다고 본다(`FrameGraphExecutor::recordFrameHZBs`).
+         *        컬링(gpu_cull.hlsl)이 경계 상자를 그 프레임의 뷰-투영으로 옮겨 사각형에 맞는 밉의 최대 깊이보다 멀면 가려졌다고 본다(`FramePassRecorder::recordFrameHZBs`).
          *        같은 셰이더 · PSO 를 깊이 프리패스 뒤(2 단계 가림)와 화면 공간 반사 앞(hi-z trace)이 이번 프레임 깊이로 다시 쓴다 — 프레임 패스는 이 자리 하나만 선언한다.
          */
         HZBBuild,
@@ -241,7 +241,7 @@ namespace sw
          */
         VolumetricFog,
         /**
-         * @brief 실시간 프로브의 점유 복셀 칠하기 컴퓨트(scene_voxelize.hlsl)입니다. 장면(`SceneVoxelScene`)이 바뀐 프레임에 바뀐 구간의 칸을 지우고, 닿는 메시의 GPU 원본 정점을
+         * @brief 실시간 프로브의 점유 복셀 칠하기 컴퓨트(scene_voxelize.hlsl)입니다. 장면(`SceneVoxelizeInput`)이 바뀐 프레임에 바뀐 구간의 칸을 지우고, 닿는 메시의 GPU 원본 정점을
          *        삼각형마다 3 축 투영으로 칠한다(`RealtimeProbeUpdater::dispatchVoxelClear` · `dispatchVoxelPaint`). 프로브 갱신(`ProbeUpdate`)이 이어서 읽는다.
          */
         SceneVoxelize,
@@ -257,17 +257,17 @@ namespace sw
         CanvasMarker,
         /**
          * @brief 그림자 캐시 복원 풀스크린(shadow_cache_restore.hlsl)입니다. 점광 · 스폿 타일 칸을 뷰포트로 잡고 캐시 층(정적 메시의 깊이, `ShadowCache`)의 텍셀을
-         *        픽셀 깊이(SV_Depth)로 그림자 아틀라스에 옮긴다 — 그 위에 움직이는 메시만 그린다(`FramePassExecutor::drawLocalShadowTiles`). 컬러 출력이 없고 픽셀 스테이지가 있다(`kWritesPixelDepth`).
+         *        픽셀 깊이(SV_Depth)로 그림자 아틀라스에 옮긴다 — 그 위에 움직이는 메시만 그린다(`FrameRecorder::drawLocalShadowTiles`). 컬러 출력이 없고 픽셀 스테이지가 있다(`kWritesPixelDepth`).
          */
         ShadowCacheRestore,
         /**
          * @brief 패스 출력의 NaN · Inf 감시 컴퓨트(gpu_nan_check.hlsl)입니다. 부동소수 컬러 출력 텍스처를 텍셀마다 훑어 NaN · Inf 가 든 텍셀 수를 슬롯별 카운터에 더합니다(`GPUNanCheck`, 언리얼 r.CheckNaN 선).
-         *        `-gv_nanCheck=1` 일 때만 PSO 가 만들어지고, 그래프가 끝난 뒤 주 시점의 패스 출력마다 한 번 돈다(`FramePassExecutor::scanPassOutputsForNan`). 네이티브 bindless(DX12 · Vulkan)만 쓴다.
+         *        `-gv_nanCheck=1` 일 때만 PSO 가 만들어지고, 그래프가 끝난 뒤 주 시점의 패스 출력마다 한 번 돈다(`FrameRecorder::scanPassOutputsForNan`). 네이티브 bindless(DX12 · Vulkan)만 쓴다.
          */
         NanCheck,
         /**
          * @brief 간접 인자의 인스턴스 개수를 GPU 에서 되돌리는 컴퓨트(gpu_cull.hlsl 의 `SW_CULL_RESET_ARGS`)입니다. 컬링 슬롯마다 컬링 앞에서 배치마다 스레드 하나가
-         *        개수를 0 으로 쓴다 — CPU 가 프레임마다 인자 전체를 다시 올리던 일을 대신한다(`FrameGraphExecutor::dispatchCullView`).
+         *        개수를 0 으로 쓴다 — CPU 가 프레임마다 인자 전체를 다시 올리던 일을 대신한다(`FramePassRecorder::dispatchCullView`).
          *        컬링과 같은 조건(간접 인자 능력)이고 GPUCull 패스 안의 첫 디스패치라 따로 선언하지 않는다.
          */
         IndirectArgsReset,
@@ -285,7 +285,7 @@ namespace sw
         /**
          * @brief 디퍼드 조명 타일 분류 컴퓨트입니다(deferred_tile_classify.hlsl — 언리얼 Substrate 타일 분류 · 유니티 HDRP 디퍼드 타일). 조명 패스가 렌더 패스를 열기 전에
          *        8² 픽셀 타일마다 G버퍼의 셰이딩 모델 번호를 모아 종류(deferred_tile_class.hlsli)를 고르고 종류마다 타일 목록과 간접 인자를 쓴다 — 조명은 종류마다 그 종류의 엽만
-         *        컴파일한 변형으로 타일 사각형을 간접 그리기 한다(`FramePassExecutor::executeTiledLighting`). 컴퓨트가 G버퍼를 샘플해야 해 네이티브 bindless 에서만 돈다.
+         *        컴파일한 변형으로 타일 사각형을 간접 그리기 한다(`FrameRecorder::executeTiledLighting`). 컴퓨트가 G버퍼를 샘플해야 해 네이티브 bindless 에서만 돈다.
          */
         DeferredTileClassify,
         /**
@@ -393,7 +393,7 @@ namespace sw
     }
 
     /**
-     * @brief 프레임 그래프(`_listFramePass`)의 `_type` 으로 쓸 수 있는 값인지 확인합니다. 프레임에 한 번 모든 뷰의 몫을 기록하는 패스입니다(`FrameGraphExecutor`).
+     * @brief 프레임 그래프(`_listFramePass`)의 `_type` 으로 쓸 수 있는 값인지 확인합니다. 프레임에 한 번 모든 뷰의 몫을 기록하는 패스입니다(`FramePassRecorder`).
      * @details 이 목록이 곧 "그래프 앞에 C++ 가 박아 두던 일" 의 전부다. 파이프라인이 선언하지 않은 종류는 PSO 도 없고 돌지 않는다(`FramePSOManager::createPassPSOs`).
      *          InstanceSort · InstanceSortMultiPass · IndirectArgsReset 는 GPUCull 패스 안의 다른 디스패치라 따로 선언하지 않는다. 입자 정렬 · 메시 쓰기는 시뮬레이션과 읽는 상태가 달라
      *          (렌더 입력 · 인자를 UAV 로 쓰고 셰이더 읽기로 읽는다) 따로 선언한다 — 패스 몸통은 전이하지 않고 그래프가 패스 사이에 낸다(렌더 그래프 접근 핸들 ②).
@@ -747,7 +747,7 @@ namespace sw
 
         /**
          * @brief 첫 컬러 출력의 지난 프레임 기록을 걸 엔진 역할 칸입니다(`RenderPassInputRole` 이름. TAA · 볼륨 구름은 `GBufferAlbedo`). 비면 종류 표의 기본값(`RenderPassKindInfo::_defaultHistoryRole`)이다.
-         * @details 실행의 공통 단계가 건다(`FramePassExecutor::bindOutputHistory`). 기록을 버리는 프레임은 그 칸에 이번 원본(SourceColor 입력)을 걸고, 원본 입력이 없으면 걸지 않는다.
+         * @details 실행의 공통 단계가 건다(`FrameRecorder::bindOutputHistory`). 기록을 버리는 프레임은 그 칸에 이번 원본(SourceColor 입력)을 걸고, 원본 입력이 없으면 걸지 않는다.
          *          첫 출력이 기록 첨부(`_bHistory`)여야 하고 역할 바인딩으로 그리는 그래픽스 패스만 적는다(검증). 이름 바인딩 패스는 `g_<출력>HistoryIndex` 로 받는다.
          */
         PROPERTY( SkipIfEmpty )
@@ -757,7 +757,7 @@ namespace sw
         uint8 _resolvedHistoryRole{ 0 };
 
         /**
-         * @brief 이 패스가 시간 누적의 기준이다. 첫 출력의 기록이 이어지는 동안 뷰-투영에 서브픽셀 지터를 싣는다(`FramePassExecutor::applyViewProjection`).
+         * @brief 이 패스가 시간 누적의 기준이다. 첫 출력의 기록이 이어지는 동안 뷰-투영에 서브픽셀 지터를 싣는다(`FrameRecorder::applyViewProjection`).
          * @details 첫 출력이 기록 첨부여야 하고 파이프라인에 하나만 둔다. TAA 는 적어야 한다(검증). 패스 종류를 보지 않으므로 새 시간 누적 패스(Fullscreen)도 이 칸만 적으면 지터를 받는다.
          */
         PROPERTY()

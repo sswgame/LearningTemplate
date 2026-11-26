@@ -14,16 +14,17 @@
 #include "Engine/Foundation/EngineSubsystems.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
-#include "Engine/Graphics/RHI/RHIDescriptors.h"
+#include "Engine/Graphics/RHI/RHITextureDesc.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Renderer/Extension/FrameExtensionHost.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Renderer/Frame/Packet/RenderFrameSettings.h"
 #include "Engine/Renderer/Frame/PostProcess/FrameAutoExposure.h"
 #include "Engine/Renderer/Frame/PostProcess/FrameUpscale.h"
+#include "Engine/Renderer/Frame/RenderPassNames.h"
 #include "Engine/Renderer/Frame/View/FrameViewTarget.h"
 #include "Engine/Renderer/Frame/View/HZBPyramid.h"
-#include "Engine/Renderer/Frame/View/RenderStability.h"
+#include "Engine/Renderer/Frame/View/RenderConvergence.h"
 #include "Engine/Renderer/Graph/RenderGraphMemoryPlan.h"
 #include "Engine/Renderer/Pipeline/RenderPassInputSignature.h"
 #include "Engine/Renderer/Pipeline/RenderPassKindInfo.h"
@@ -626,7 +627,7 @@ namespace sw
             Internal::markReads( listAttachment, pass, false, listNeeded );
             Internal::addWrites( pass, _listScratchWrittenAttachment );
         }
-        // 첨부는 도는 패스가 쓸 때만 있다 — 패스의 종류 · 실행 방식을 가리지 않는다. 아무 패스도 쓰지 않은 첨부는 읽는 쪽이 걸지 않는다(`FramePassExecutor::registerPassTexture`).
+        // 첨부는 도는 패스가 쓸 때만 있다 — 패스의 종류 · 실행 방식을 가리지 않는다. 아무 패스도 쓰지 않은 첨부는 읽는 쪽이 걸지 않는다(`FrameRecorder::registerPassTexture`).
         // 빠진 패스의 출력은 이어서 오래(`TransientAttachmentPool::kIdleFramesBeforeRelease`) 빠져 있으면 놓는다. 놓은 GPU 자원은 백엔드 해제 큐가 앞 프레임들이 끝난 뒤에 지운다.
         const bool bAllocated = makeAttachments( view, aliasPlan );
         const bool bReleased  = ageAttachments( pool );
@@ -645,10 +646,10 @@ namespace sw
         bool       bAccumulationReset = false;
         for ( const FrameAttachmentHistory& attachmentHistory : view._listAttachmentHistory )
         {
-            bAccumulationReset = bAccumulationReset || RenderStabilityUtil::isAccumulationReset( bHistoryReset, attachmentHistory._history.isWritten(), attachmentHistory._history.isReset() );
+            bAccumulationReset = bAccumulationReset || RenderConvergenceUtil::isAccumulationReset( bHistoryReset, attachmentHistory._history.isWritten(), attachmentHistory._history.isReset() );
         }
-        view._stillFrameCount       = RenderStabilityUtil::advanceStillFrames( view._stillFrameCount, bAccumulationReset, bCameraStill, bObjectMotion );
-        view._cameraStillFrameCount = RenderStabilityUtil::advanceStillFrames( view._cameraStillFrameCount, bAccumulationReset, bCameraStill, false );
+        view._stillFrameCount       = RenderConvergenceUtil::advanceStillFrames( view._stillFrameCount, bAccumulationReset, bCameraStill, bObjectMotion );
+        view._cameraStillFrameCount = RenderConvergenceUtil::advanceStillFrames( view._cameraStillFrameCount, bAccumulationReset, bCameraStill, false );
         // 화면에 나가는 첨부 표시(`_bPresented`)가 가리키는 곳을 따라가므로 가리키는 곳이 바뀌어도 렌더러가 목록을 다시 싣는다. 놓은 타깃도 목록에서 뺀다(죽은 핸들을 남기지 않는다).
         PassSelectionResult result{};
         result._bTargetsRebound = bForwardSet ? SW_TRUE : SW_FALSE;

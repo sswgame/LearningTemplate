@@ -10,7 +10,7 @@
 
 namespace sw::editor
 {
-    void BodyPickSurface::build( vector_reference<const RHIVertex> listVertex, vector_reference<const MeshMorphTarget> listMorphTarget, vector_reference<const float32> listMorphWeight,
+    void BodyPickSurface::build( vector_reference<const MeshVertex> listVertex, vector_reference<const MeshMorphTarget> listMorphTarget, vector_reference<const float32> listMorphWeight,
                                  vector_reference<const MeshSkinVertex> listSkin, const vector<float4x4>& listPalette, const float4x4& world, BodyPickSurface& outSurface )
     {
         const bool bSkinned    = listSkin.size() == listVertex.size() && listPalette.empty() == false;
@@ -35,7 +35,7 @@ namespace sw::editor
         }
         for ( size_t index = 0; index < listVertex.size(); ++index )
         {
-            RHIVertex    vertex    = listVertex[index];
+            MeshVertex   vertex    = listVertex[index];
             const float3 rest      = outSurface._listPosition[index];
             vertex._arrPosition[0] = rest._x;
             vertex._arrPosition[1] = rest._y;
@@ -63,10 +63,10 @@ namespace sw::editor
         bool bHit = false;
         for ( uint32 surfaceIndex = 0; surfaceIndex < static_cast<uint32>( listSurface.size() ); ++surfaceIndex )
         {
-            const BodyPickSurface&                  surface      = listSurface[surfaceIndex];
-            const vector<float3>&                   listPosition = surface._listPosition;
-            const vector_reference<const RHIVertex> listVertex   = surface._listVertex;
-            const vector_reference<const uint32>    listIndex    = surface._listIndex;
+            const BodyPickSurface&                   surface      = listSurface[surfaceIndex];
+            const vector<float3>&                    listPosition = surface._listPosition;
+            const vector_reference<const MeshVertex> listVertex   = surface._listVertex;
+            const vector_reference<const uint32>     listIndex    = surface._listIndex;
             for ( uint32 triangle = 0; triangle * 3u + 2u < static_cast<uint32>( listIndex.size() ); ++triangle )
             {
                 const uint32 a = listIndex[triangle * 3u];

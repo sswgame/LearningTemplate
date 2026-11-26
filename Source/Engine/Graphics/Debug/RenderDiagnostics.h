@@ -28,7 +28,7 @@ namespace sw
     {
         None, ///< 그리드 없이 목록 전체를 돈다(비교 기준)
         CPU,  ///< `LightGrid::populate` 가 만들어 동적 버퍼로 올린다
-        GPU,  ///< 컴퓨트 light_grid.hlsl 이 기본 힙 버퍼에 만든다(`FramePassExecutor::dispatchLightGrid`)
+        GPU,  ///< 컴퓨트 light_grid.hlsl 이 기본 힙 버퍼에 만든다(`FramePassRecorder::dispatchLightGrid`)
     };
 
     /**

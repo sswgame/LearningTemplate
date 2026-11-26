@@ -57,7 +57,7 @@ namespace sw::editor
              */
             static void expandToTriangleList( MeshAssetData& inoutData )
             {
-                vector<RHIVertex>      listVertex;
+                vector<MeshVertex>     listVertex;
                 vector<MeshSkinVertex> listSkin;
                 listVertex.reserve( inoutData._listIndex.size() );
                 for ( const uint32 index : inoutData._listIndex )
@@ -72,12 +72,12 @@ namespace sw::editor
             }
 
             /** @brief 원본 정점 @p listSource 에 스택 결과 @p mesh 의 위치 · 법선 · UV · 색을 덮은 정점을 만듭니다(베이크와 CPU 미리보기가 같이 쓴다). */
-            static vector<RHIVertex> makeVertices( const vector<RHIVertex>& listSource, const MeshModifierMesh& mesh )
+            static vector<MeshVertex> makeVertices( const vector<MeshVertex>& listSource, const MeshModifierMesh& mesh )
             {
-                vector<RHIVertex> listVertex = listSource;
+                vector<MeshVertex> listVertex = listSource;
                 for ( size_t index = 0; index < listVertex.size(); ++index )
                 {
-                    RHIVertex&    vertex   = listVertex[index];
+                    MeshVertex&   vertex   = listVertex[index];
                     const float3& position = mesh._listPosition[index];
                     const float3& normal   = mesh._listNormal[index];
                     const float2& uv       = mesh._listUV[index];
@@ -115,9 +115,9 @@ namespace sw::editor
         }
 
         /** @brief 원본 정점에 스택 결과의 색만 덮은 정점입니다(GPU 가 위치 · 법선을 바꾸므로 나머지는 원본 그대로). */
-        vector<RHIVertex> makeColoredVertices( const vector<RHIVertex>& listSource, const MeshModifierMesh& mesh )
+        vector<MeshVertex> makeColoredVertices( const vector<MeshVertex>& listSource, const MeshModifierMesh& mesh )
         {
-            vector<RHIVertex> listVertex = listSource;
+            vector<MeshVertex> listVertex = listSource;
             for ( size_t index = 0; index < listVertex.size() && index < mesh._listColor.size(); ++index )
             {
                 const float4& color            = mesh._listColor[index];
@@ -385,7 +385,7 @@ namespace sw::editor
         _target   = target;
 
         _listSourcePosition.reserve( _sourceData._listVertex.size() );
-        for ( const RHIVertex& vertex : _sourceData._listVertex )
+        for ( const MeshVertex& vertex : _sourceData._listVertex )
         {
             _listSourcePosition.push_back( float3{ vertex._arrPosition } );
         }
@@ -908,7 +908,7 @@ namespace sw::editor
         outMesh._listWeight.clear();
         for ( size_t index = 0; index < count; ++index )
         {
-            const RHIVertex& vertex      = _sourceData._listVertex[index];
+            const MeshVertex& vertex     = _sourceData._listVertex[index];
             outMesh._listPosition[index] = float3{ vertex._arrPosition };
             outMesh._listNormal[index]   = float3{ vertex._arrNormal };
             outMesh._listUV[index]       = float2{ vertex._arrUV[0], vertex._arrUV[1] };

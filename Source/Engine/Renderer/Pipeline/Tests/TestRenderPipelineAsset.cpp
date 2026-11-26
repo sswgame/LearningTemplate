@@ -13,8 +13,8 @@
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Foundation/EngineSubsystems.h"
-#include "Engine/Graphics/RHI/RHIDescriptors.h"
 #include "Engine/Graphics/RHI/RHIPipelineStateDesc.h"
+#include "Engine/Graphics/RHI/RHIRenderPassInfo.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Renderer/Frame/Resource/FramePSOManager.h"
 #include "Engine/Renderer/Pipeline/RenderPassInputSignature.h"
@@ -174,7 +174,7 @@ SW_TEST_CASE( RenderPipelineAssetTest, RenderPassAttachmentsAreMerged )
     StringBuilder<constant::buffer::kMax256> passAttributes;
     passAttributes.appendFormat( "_type=\"ForwardOpaque\" _depthAttachment=\"SceneDepth\" %#", RenderPipelineTestUtil::kOpaqueState );
     const string        xml = RenderPipelineTestUtil::makeXML( passAttributes.view(), "",
-                                                               "<_listRenderPassRef><item>engine/renderpass/defaultrenderpass.xml</item></_listRenderPassRef>", "" );
+                                                               "<_listRenderFeatureRef><item>engine/renderfeature/defaultrenderfeature.xml</item></_listRenderFeatureRef>", "" );
     RenderPipelineAsset asset;
     SW_REQUIRE_TRUE( RenderPipelineTestUtil::load( asset, xml ) );
     const vector<RenderPassAttachment>& listAttachment = asset.getDesc()._listAttachment;
@@ -197,9 +197,9 @@ SW_TEST_CASE( RenderPipelineAssetTest, BadRenderPassRefFails )
     passAttributesBuilder.appendFormat( "_type=\"ForwardOpaque\" _depthAttachment=\"SceneDepth\" %#", RenderPipelineTestUtil::kOpaqueState );
     const string_view   passAttributes = passAttributesBuilder.view();
     RenderPipelineAsset missing;
-    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( missing, RenderPipelineTestUtil::makeXML( passAttributes, "", "<_listRenderPassRef><item>engine/renderpass/nothing.xml</item></_listRenderPassRef>" ) ) );
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( missing, RenderPipelineTestUtil::makeXML( passAttributes, "", "<_listRenderFeatureRef><item>engine/renderfeature/nothing.xml</item></_listRenderFeatureRef>" ) ) );
     RenderPipelineAsset duplicated; // 기본 첨부에 SceneDepth 가 있고 렌더 패스에도 있다
-    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( duplicated, RenderPipelineTestUtil::makeXML( passAttributes, "", "<_listRenderPassRef><item>engine/renderpass/defaultrenderpass.xml</item></_listRenderPassRef>" ) ) );
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( duplicated, RenderPipelineTestUtil::makeXML( passAttributes, "", "<_listRenderFeatureRef><item>engine/renderfeature/defaultrenderfeature.xml</item></_listRenderFeatureRef>" ) ) );
 }
 
 /** @brief [RenderPipelineAssetTest] 대소문자만 다른 첨부 이름은 겹침이다 — 실행 때 첨부를 대소문자를 무시하는 이름으로 찾는다 */
@@ -447,15 +447,15 @@ SW_TEST_CASE( RenderPipelineAssetTest, TextListsMergeItemByItem )
     SW_REQUIRE_TRUE( pPermutation != nullptr );
     SW_EXPECT_EQUAL( string( DataInheritanceSchema::kTextKey ), pPermutation->_keyAttribute );
     SW_EXPECT_EQUAL( string( "_name" ), pPass->_keyAttribute ); // 글 목록의 열쇠가 패스의 열쇠를 가리지 않는다
-    const DataInheritanceSchema* pRef = schema.findField( "_listRenderPassRef" );
+    const DataInheritanceSchema* pRef = schema.findField( "_listRenderFeatureRef" );
     SW_REQUIRE_TRUE( pRef != nullptr );
     SW_EXPECT_EQUAL( string( DataInheritanceSchema::kTextKey ), pRef->_keyAttribute );
 
     PipelineInheritanceTestSource source;
     source.add( "parent.xml", "<RenderPipelineDesc _name=\"P\"><_listPass><RenderGraphPassDesc _name=\"Pass\"><_listPermutation><item>A=1</item><item>B=1</item></_listPermutation>"
-                              "</RenderGraphPassDesc></_listPass><_listRenderPassRef><item>a.xml</item><item>b.xml</item></_listRenderPassRef></RenderPipelineDesc>" );
+                              "</RenderGraphPassDesc></_listPass><_listRenderFeatureRef><item>a.xml</item><item>b.xml</item></_listRenderFeatureRef></RenderPipelineDesc>" );
     const string child = "<RenderPipelineDesc _base=\"parent.xml\" _name=\"C\"><_listPass><RenderGraphPassDesc _name=\"Pass\"><_listPermutation><item _op=\"Remove\">A=1</item><item>C=1</item>"
-                         "</_listPermutation></RenderGraphPassDesc></_listPass><_listRenderPassRef><item _op=\"Remove\">a.xml</item></_listRenderPassRef></RenderPipelineDesc>";
+                         "</_listPermutation></RenderGraphPassDesc></_listPass><_listRenderFeatureRef><item _op=\"Remove\">a.xml</item></_listRenderFeatureRef></RenderPipelineDesc>";
     string       flatText;
     bool         bComposed = false;
     SW_REQUIRE_TRUE( ResourceComposer::compose( child, "child.xml", ResourceContext::forPackCook( source ), flatText, bComposed ) );
@@ -469,7 +469,7 @@ SW_TEST_CASE( RenderPipelineAssetTest, TextListsMergeItemByItem )
     // 엔진 자식 파이프라인: 2D 는 프레임 패스 묶음만 가져오고 Present 의 후처리 define 셋을 지운다
     RenderPipelineAsset forward2D;
     SW_REQUIRE_TRUE( forward2D.loadFromXMLFile( AssetID{ "engine/pipeline/forward2dpipeline.xml" } ) );
-    SW_EXPECT_EQUAL( size_t( 1 ), forward2D.getDesc()._listRenderPassRef.size() );
+    SW_EXPECT_EQUAL( size_t( 1 ), forward2D.getDesc()._listRenderFeatureRef.size() );
     const RenderGraphPassDesc* pPresent = VectorUtil::findIf( forward2D.getGraphPass(), []( const RenderGraphPassDesc& pass )
     { return pass._name == "Present"; } );
     SW_REQUIRE_TRUE( pPresent != nullptr );
@@ -1318,7 +1318,7 @@ SW_TEST_CASE( RenderPipelineAssetTest, VolumetricCloudsFeedTheSkyPass )
 
 /**
  * @brief [RenderPipelineAssetTest] 2 단계 가림의 뒤 단계(`LateOcclusion`)는 엔진 디퍼드 · 포워드 프리패스에서 깊이 프리패스 뒤 · 베이스 패스 앞의 뷰 패스이고 XML 은 자리만 적는다
- * @details 쓰는 자원(장면 깊이 · 깊이 사본 · HZB · 컬링 버퍼)은 종류가 선언한다(`FramePassExecutor::appendEngineResourceAccesses`) — XML 입력 · 출력 · 셰이더가 비어 있어야 한다.
+ * @details 쓰는 자원(장면 깊이 · 깊이 사본 · HZB · 컬링 버퍼)은 종류가 선언한다(`FrameRecorder::appendEngineResourceAccesses`) — XML 입력 · 출력 · 셰이더가 비어 있어야 한다.
  *          결함이면 뒤 단계가 깊이 프리패스 몸통 안에 숨어 선언 없이 컬링 버퍼를 옮기던 모양으로 돌아가거나, 베이스 패스 뒤에 와 더한 인스턴스가 그 프레임에 빠진다.
  *          변이: XML 에서 패스를 지우면 찾기 단언이, 베이스 패스 뒤로 옮기면 차례 단언이 진다.
  */
@@ -1525,7 +1525,7 @@ SW_TEST_CASE( RenderPipelineAssetTest, FramePassRejectsTwoAccessesOfOneName )
     SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, RenderPipelineTestUtil::makeXML( viewList.view() ) ) );
 }
 
-/** @brief [RenderPipelineAssetTest] 엔진 파이프라인은 모두 프레임 패스 한 벌(framecomputerenderpass.xml)을 합쳐 컬링 · 그리드 · 스킨을 선언한다 */
+/** @brief [RenderPipelineAssetTest] 엔진 파이프라인은 모두 프레임 패스 한 벌(framecomputerenderfeature.xml)을 합쳐 컬링 · 그리드 · 스킨을 선언한다 */
 SW_TEST_CASE( RenderPipelineAssetTest, ShippedPipelinesDeclareFramePasses )
 {
     for ( const utf8* pPath : { "engine/pipeline/forwardpipeline.xml", "engine/pipeline/forwardpipelinestaged.xml", "engine/pipeline/forwardprepasspipeline.xml", "engine/pipeline/forwardtoonpipeline.xml",

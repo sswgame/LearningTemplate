@@ -14,7 +14,7 @@
 
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 
-#include "Engine/Graphics/Material/MaterialTypes.h"
+#include "Engine/Graphics/Material/MaterialDef.h"
 
 namespace sw
 {

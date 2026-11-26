@@ -16,16 +16,16 @@ namespace sw
     void MeshVertexAnimationBaker::skinVertices( const Mesh& skinMesh, const vector<float4x4>& listPalette, vector<float3>& outListPosition,
                                                  vector<float3>& outListNormal )
     {
-        const vector<RHIVertex>&      listVertex = skinMesh.getCPUView().getVertices();
+        const vector<MeshVertex>&     listVertex = skinMesh.getCPUView().getVertices();
         const vector<MeshSkinVertex>& listSkin   = skinMesh.getSkinVertices();
         outListPosition.resize( listVertex.size() );
         outListNormal.resize( listVertex.size() );
         const uint32 boneCount = static_cast<uint32>( listPalette.size() );
         for ( size_t vertexIndex = 0; vertexIndex < listVertex.size(); ++vertexIndex )
         {
-            const RHIVertex& vertex = listVertex[vertexIndex];
-            const float3     position{ vertex._arrPosition[0], vertex._arrPosition[1], vertex._arrPosition[2] };
-            const float3     normal{ vertex._arrNormal[0], vertex._arrNormal[1], vertex._arrNormal[2] };
+            const MeshVertex& vertex = listVertex[vertexIndex];
+            const float3      position{ vertex._arrPosition[0], vertex._arrPosition[1], vertex._arrPosition[2] };
+            const float3      normal{ vertex._arrNormal[0], vertex._arrNormal[1], vertex._arrNormal[2] };
             if ( vertexIndex >= listSkin.size() || boneCount == 0 )
             {
                 outListPosition[vertexIndex] = position;

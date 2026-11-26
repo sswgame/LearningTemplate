@@ -33,7 +33,7 @@ namespace sw
             }
 
             /**
-             * @brief 파일에 실린 정점 하나의 바이트 수입니다(위치 3 · 노멀 3 · UV 2 · 색 4 의 float32). `sizeof( RHIVertex )` 가 아니다.
+             * @brief 파일에 실린 정점 하나의 바이트 수입니다(위치 3 · 노멀 3 · UV 2 · 색 4 의 float32). `sizeof( MeshVertex )` 가 아니다.
              * @details 탄젠트는 싣지 않는다 — 조각 메시는 `Mesh::setVertices` 가 위치 · 노멀 · UV 로 구한다(`FractureRenderUnits`).
              */
             static constexpr uint64 kStoredVertexBytes = 12 * sizeof( float32 );
@@ -82,7 +82,7 @@ namespace sw
             /** @brief 정점 · 삼각형 슬롯 · 껍질 점을 읽습니다. */
             [[nodiscard]] static bool readMesh( ByteReader& reader, uint32 vertexCount, uint32 hullCount, FractureAsset& inoutAsset )
             {
-                const bool bVertices = reader.readList( inoutAsset._listVertex, vertexCount, kStoredVertexBytes, [&]( RHIVertex& vertex )
+                const bool bVertices = reader.readList( inoutAsset._listVertex, vertexCount, kStoredVertexBytes, [&]( MeshVertex& vertex )
                 {
                     for ( float32& value : vertex._arrPosition )
                     {
@@ -112,11 +112,11 @@ namespace sw
 
 namespace sw
 {
-    vector_reference<const RHIVertex> FractureAsset::getPieceVertices( uint32 piece ) const
+    vector_reference<const MeshVertex> FractureAsset::getPieceVertices( uint32 piece ) const
     {
         if ( piece >= _listPiece.size() )
             return {};
-        return vector_reference<const RHIVertex>{ _listVertex.data() + _listPiece[piece]._firstVertex, _listPiece[piece]._vertexCount };
+        return vector_reference<const MeshVertex>{ _listVertex.data() + _listPiece[piece]._firstVertex, _listPiece[piece]._vertexCount };
     }
 
     vector_reference<const float3> FractureAsset::getPieceHull( uint32 piece ) const
@@ -222,7 +222,7 @@ namespace sw
             writer.writeUint32( piece._firstHullPoint );
             writer.writeUint32( piece._hullPointCount );
         }
-        for ( const RHIVertex& vertex : _listVertex )
+        for ( const MeshVertex& vertex : _listVertex )
         {
             for ( const float32 value : vertex._arrPosition )
             {

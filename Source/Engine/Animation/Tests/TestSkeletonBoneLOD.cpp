@@ -76,7 +76,7 @@ namespace
         /** @brief LOD 0 은 spine · head · hand · finger 를, LOD 1 은 손가락 없이 spine · head · hand 만 가중치로 쓰는 스킨드 메시입니다. */
         static shared_ptr<Mesh> makeMesh()
         {
-            vector<RHIVertex> listVertex( 6u );
+            vector<MeshVertex> listVertex( 6u );
             for ( size_t index = 0; index < listVertex.size(); ++index )
             {
                 listVertex[index]._arrPosition[0] = static_cast<float>( index % 3u );

@@ -116,7 +116,7 @@ namespace sw::editor
              */
             static bool collectPosedPositions( const MeshComponent& component, const Mesh& mesh, float64 vertexAnimationClock, vector<float3>& outListPosition )
             {
-                const vector<RHIVertex>& listRest = mesh.getCPUView().getVertices();
+                const vector<MeshVertex>& listRest = mesh.getCPUView().getVertices();
                 outListPosition.resize( listRest.size() );
                 const MeshVertexAnimation* pAnimation = mesh.findVertexAnimation();
                 if ( pAnimation != nullptr && pAnimation->isEmpty() == false )
@@ -144,7 +144,7 @@ namespace sw::editor
                     }
                     return true;
                 }
-                vector<RHIVertex>              listPosed       = listRest;
+                vector<MeshVertex>             listPosed       = listRest;
                 const vector<float32>&         listWeight      = pUnit->getMorphWeights();
                 const vector<MeshMorphTarget>& listMorphTarget = mesh.getMorphTargets();
                 const size_t                   morphCount      = MathUtil::min( listWeight.size(), listMorphTarget.size() );

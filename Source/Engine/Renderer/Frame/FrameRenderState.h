@@ -1,6 +1,6 @@
 /**
  * @file FrameRenderState.h
- * @brief 한 프레임을 셋업하는 쪽(`FrameRenderer`)과 기록하는 쪽(`FramePassExecutor`)이 함께 보는 프레임 데이터입니다 — GPUScene, 그래프, 뷰, 라이트 · 그림자 · 하늘, 패스 상수 링, 정점 변형, 캔버스 · 입자.
+ * @brief 한 프레임을 셋업하는 쪽(`FrameRenderer`)과 기록하는 쪽(`FrameRecorder`)이 함께 보는 프레임 데이터입니다 — GPUScene, 그래프, 뷰, 라이트 · 그림자 · 하늘, 패스 상수 링, 정점 변형, 캔버스 · 입자.
  * @details 셋업(기록 전)이 채우고 기록은 읽는다. 기록 중에 바뀌는 것은 뷰의 시간 기록(`_prevViewProj`)과 링의 커서뿐이고, 둘 다 패스 하나가 자기 뷰 · 슬롯만 만진다.
  *          소유는 렌더러가 하고 패스 실행은 참조로 받는다. 언리얼 `FSceneRenderer` 가 `FViewInfo` 목록과 장면 데이터를 들고, 패스(RDG 람다)가 그것을 잡아 읽는 나눔과 같다.
  */
@@ -101,7 +101,7 @@ namespace sw
         GPUScene               _gpuScene{};
         /** @brief 파이프라인 XML 의 `_listPass` 로 만든 뷰 그래프입니다. 뷰마다 다시 돈다. 렌더러가 다시 만들고(`selectPipeline`) 패스 실행이 콜백을 묶고 돌립니다. */
         RenderGraph _graph{};
-        /** @brief 파이프라인 XML 의 `_listFramePass` 로 만든 프레임 그래프입니다. 프레임에 한 번, 뷰 그래프보다 먼저 돈다(`FramePassExecutor::recordFrameGraph`). */
+        /** @brief 파이프라인 XML 의 `_listFramePass` 로 만든 프레임 그래프입니다. 프레임에 한 번, 뷰 그래프보다 먼저 돈다(`FrameRecorder::recordFrameGraph`). */
         RenderGraph _frameGraph{};
         /** @brief 렌더링 런타임 디버그 우편함(프레임 디버거 · 통계 · 그래프 사본 · 버퍼 보기)입니다. 주 렌더러만 호스트가 건다 — 화면 밖 렌더러는 nullptr 이라 기록하지 않는다. */
         RenderDebugRegistry* _pRenderDebug{ nullptr };
@@ -109,7 +109,7 @@ namespace sw
         const GPUPixelInspector* _pPixelInspector{ nullptr };
         /**
          * @brief 뷰 그래프의 트랜지언트 앨리어싱 계획입니다(레벨 수명이 겹치지 않고 서술이 같은 첨부가 텍스처 하나를 나눈다 — `RenderGraphAliasPlan::make`).
-         * @details 콜백을 묶을 때(`FramePassExecutor::bindPassCallbacks`) 세우고 세대를 올린다. 뷰 풀은 세대가 다르면 다시 만든다(`FrameViewResources::updateViewTransients`).
+         * @details 콜백을 묶을 때(`FrameRecorder::bindPassCallbacks`) 세우고 세대를 올린다. 뷰 풀은 세대가 다르면 다시 만든다(`FrameViewResources::updateViewTransients`).
          *          파이프라인을 다시 읽으면 비우고 세대를 올린다 — 새 파이프라인의 첫 프레임은 앨리어싱 없이 만든다.
          */
         RenderGraphAliasPlan _transientAliasPlan{};
@@ -161,7 +161,7 @@ namespace sw
         ShadowCache _shadowCache{};
         /// @brief 이번 프레임 실시간 프로브 갱신 요청입니다(패킷 경로도 여기에 받는다). 기록은 읽기만 합니다.
         vector<RealtimeProbeRequest> _listFrameRealtimeProbe{};
-        RealtimeProbeUpdater         _probeUpdater{}; ///< 실시간 프로브 갱신의 버퍼와 컴퓨트 기록(`FrameRenderer::prepareRealtimeProbes` · `FramePassExecutor::dispatchRealtimeProbes`)
+        RealtimeProbeUpdater         _probeUpdater{}; ///< 실시간 프로브 갱신의 버퍼와 컴퓨트 기록(`FrameRenderer::prepareRealtimeProbes` · `FrameRecorder::dispatchRealtimeProbes`)
         /// @brief 이번 프레임 렌즈 플레어를 단 빛들입니다(패킷 경로가 받는다). 기록은 읽기만 합니다.
         vector<LensFlareRequest> _listFrameLensFlare{};
         /** @brief 이번 프레임의 데칼입니다(패킷 `_listDecal` — 그리는 차례). 셋업(`FrameRenderer::prepareFrameDecals`)이 텍스처를 풀어 `_listFrameDecalDraw` 를 만든다. */
@@ -185,7 +185,7 @@ namespace sw
         static_assert( sizeof( GPUDecal ) == kGPUDecalShaderBytes, "GPUDecal must match decal.hlsl DecalData" );
         /**
          * @brief 이번 프레임에 그릴 데칼 하나입니다. 값은 데칼 구조 버퍼(`_decalBuffer`)의 같은 번호 원소이고, Decal 패스가 텍스처가 같은 이웃끼리 인스턴스 그리기 하나로 그린다
-         *        (`FramePassExecutor::executeDecalPass` — 네이티브 bindless 는 모두 하나).
+         *        (`FrameRecorder::executeDecalPass` — 네이티브 bindless 는 모두 하나).
          * @details `_arrTextureSRV` 는 에뮬 백엔드가 머티리얼 텍스처 칸에 거는 SRV 이고, 네이티브 bindless 는 검사에만 쓴다.
          */
         struct FrameDecalDraw
@@ -199,11 +199,11 @@ namespace sw
         vector<FrameDecalDraw> _listFrameDecalDraw{};
         vector<GPUDecal>       _listDecalUploadScratch{}; ///< 데칼 원소를 이어 올리는 자리(`FrameRenderer::prepareFrameDecals`) — 프레임마다 다시 잡지 않는다
         RHIStructuredBuffer    _decalBuffer{};            ///< 이번 프레임 데칼 원소(decal.hlsl `g_SwDecals`) — 셋업이 기록 전에 한 번 올리고 Decal 패스가 읽는다(객체 빈도 데이터를 패스 상수에서 뺐다)
-        LensFlareSpriteBuffer  _lensFlare{};              ///< 주 시점 렌즈 플레어 스프라이트의 버퍼(`FrameRenderer` 가 기록 전에 채우고 `FramePassExecutor::executeLensFlarePass` 가 그린다)
+        LensFlareSpriteBuffer  _lensFlare{};              ///< 주 시점 렌즈 플레어 스프라이트의 버퍼(`FrameRenderer` 가 기록 전에 채우고 `FrameRecorder::executeLensFlarePass` 가 그린다)
         SkyGradient            _frameSkySource{};         ///< 이번 프레임 하늘의 원본 값입니다(실시간 프로브 갱신이 하늘 SH 를 투영한다). `_bHasFrameSky` 가 0 이면 기본값
         hashed_string          _skyHdriPath{};            ///< 지금 쥔 HDRI 하늘 텍스처의 경로입니다(`FrameRenderer::applyFrameSky`). 비었으면 쥔 것이 없다
         TextureHandle          _skyHdriLoad{};            ///< HDRI 하늘 텍스처의 로드 핸들입니다(참조를 쥔다). 스카이 패스가 준비된 것만 읽는다
-        SurfaceDeformBinding   _surfaceDeform{};          ///< 이번 프레임의 표면 변형 층(패킷에서 — 핸들이 참조를 쥔다). 준비된 텍스처는 모든 패스가 건다(`FramePassExecutor::registerSurfaceDeformLayer`), 창은 프레임 시드(`FrameRenderer::updatePassConstants`)
+        SurfaceDeformBinding   _surfaceDeform{};          ///< 이번 프레임의 표면 변형 층(패킷에서 — 핸들이 참조를 쥔다). 준비된 텍스처는 모든 패스가 건다(`FrameRecorder::registerSurfaceDeformLayer`), 창은 프레임 시드(`FrameRenderer::updatePassConstants`)
         FrameRainOcclusion     _rainOcclusion{};          ///< 비 가림 맵(깊이 · 컬링 입력 · 강수 사본) — 씬이 켜지 않으면 비어 있다
         MaterialGlobals        _materialGlobals{};        ///< 이번 프레임의 전역 머티리얼 값(패킷에서) — 프레임 시드가 PassCB `g_MaterialGlobal*` 에 쓴다(`FrameRenderer::updatePassConstants`)
         /** @brief 2D 빛 쿠키 아틀라스입니다(칸 나누기 · 쿠키 텍스처 수명 · 아틀라스 렌더 타깃). */
@@ -229,7 +229,7 @@ namespace sw
          */
         GPUFrameClock _gpuFrameClock{};
         /**
-         * @brief 셰이더 메시지 링(`-gv_gpuMessages`)입니다. 컴퓨트 프리패스(`FramePrepass` — 컬링 · 모프 · 마커)와 그래프의 그래픽스 패스(`FramePassExecutor::bindForDraw`)가 함께 u4 로 쓴다.
+         * @brief 셰이더 메시지 링(`-gv_gpuMessages`)입니다. 컴퓨트 프리패스(`FramePrepass` — 컬링 · 모프 · 마커)와 그래프의 그래픽스 패스(`FrameRecorder::bindForDraw`)가 함께 u4 로 쓴다.
          * @details 프리패스가 프레임 앞에서 선택을 올리고(`updateControl`) 앞 프레임들의 기록을 로그로 내며(`poll`), 프리패스 끝에서 되읽기를 요청한다 — 그래픽스 패스의 기록은 다음 프레임의 사본에 실린다(누적 카운터라 잃지 않는다).
          *          꺼져 있으면 비어 있다.
          */

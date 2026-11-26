@@ -46,7 +46,7 @@ C++ 를 쓸 때의 규칙. 린트 · 컴파일이 강제하는 줄은 "강제" �
 | --- | --- |
 | One `.cpp` | That file's `XxxInternal` struct as `static constexpr` (or the function) |
 | One module | The owning type (`MeshAssetFormat::kExtension`) or the module namespace in its types header. No per-folder `*Constants.h` |
-| A contract between modules or backends | `sw::constant::<category>` in its layer's file (`Constants.h`, `EngineDefines.h`, `RHIDescriptors.h`, `ReflectionConstants.h`); shader ↔ C++ in `binding_slots.hlsli`. A per-side copy is the bug |
+| A contract between modules or backends | `sw::constant::<category>` in its layer's file (`Constants.h`, `EngineDefines.h`, `RHIConstants.h`, `ReflectionConstants.h`); shader ↔ C++ in `binding_slots.hlsli`. A per-side copy is the bug |
 
 - One home: math constants `MathUtil`; gravity `PhysicsSystem::getConfiguredGravity`; hashes `HashUtil`; FourCC `FourCCUtil::make`; units `constant::time::` · `constant::memory::` (never `1e9`, `1024 * 1024`); buffer sizes `constant::buffer::kMax*`, `constant::file::kMaxPathSize`.
 - **Sentinels:** "none" follows [Errors](#errors); a stored or wire "none" is `constant::invalid_index::*` or a domain name from it; "unlimited / default" is a named constant plus a predicate on the owning type. Naming a sentinel never changes saved or replicated bytes.

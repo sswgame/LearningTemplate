@@ -161,7 +161,7 @@ namespace sw
                 _meshVertexCheck.service( cmd, device, scene, registry );
                 _rhiContractCheck.service( cmd, device, registry );
             }
-            void recordAfterFrameGraph( IRHICommandList& cmd, IRHIDevice* pDevice, const FrameBufferTable& table, const RenderGraphExecutionContext& context, RenderPSOCache& psoCache,
+            void recordAfterFrameGraph( IRHICommandList& cmd, IRHIDevice* pDevice, const RenderGraphImportedResourceTable& table, const RenderGraphExecutionContext& context, RenderPSOCache& psoCache,
                                         RenderDebugRegistry& registry ) override
             {
                 _bufferInspector.service( cmd, pDevice, table, context, psoCache, registry );
@@ -174,7 +174,7 @@ namespace sw
             {
                 if ( pipeline.isValid() == false )
                 {
-                    SW_LOG_ERROR_ONCE_ID( "FramePassExecutor.GvNanCheckButNaN", "The NaN check is on but its PSO is missing (shader not cooked?) - no output is scanned" );
+                    SW_LOG_ERROR_ONCE_ID( "FrameRecorder.GvNanCheckButNaN", "The NaN check is on but its PSO is missing (shader not cooked?) - no output is scanned" );
                     return;
                 }
                 if ( _nanCheckCommandList == nullptr )

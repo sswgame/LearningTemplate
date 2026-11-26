@@ -11,7 +11,7 @@
 #include "Engine/Character/Hit/RagdollComponent.h"
 #include "Engine/Character/Socket/SocketBindingComponent.h"
 #include "Engine/Character/Socket/SocketSetComponent.h"
-#include "Engine/Graphics/Mesh/MeshUtil.h"
+#include "Engine/Graphics/Mesh/PrimitiveMeshBuilder.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManagerResolve.inl"
 #include "Engine/Physics/Component/RigidBodyComponent.h"
@@ -93,7 +93,7 @@ namespace sw
         pFloorBody->setBodyType( PhysicsBodyType::Static );
         pFloorBody->setLayer( hashed_string( "Static" ) );
         pFloorBody->setMaterial( hashed_string( "Stone" ) );
-        pFloorMesh->setMesh( MeshUtil::createPlane( 16 ) );
+        pFloorMesh->setMesh( PrimitiveMeshBuilder::createPlane( 16 ) );
         pFloorMesh->setLocalScale( float3{ 12.0f, 1.0f, 12.0f } );
         outListObject.push_back( pFloor->getHandle() );
 

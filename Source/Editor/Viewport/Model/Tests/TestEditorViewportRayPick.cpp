@@ -10,9 +10,9 @@
 #include "Editor/Viewport/Model/EditorViewportRayPick.h"
 
 #include "Engine/Graphics/Mesh/Mesh.h"
-#include "Engine/Graphics/Mesh/MeshUtil.h"
 #include "Engine/Graphics/Mesh/MeshVertex.h"
 #include "Engine/Graphics/Mesh/MeshVertexAnimation.h"
+#include "Engine/Graphics/Mesh/PrimitiveMeshBuilder.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -31,7 +31,7 @@ namespace
             sw::MeshComponent* pMesh = pObject->addComponent<sw::MeshComponent>();
             if ( pMesh == nullptr )
                 return nullptr;
-            pMesh->setMesh( sw::MeshUtil::acquirePrimitive( pMeshID ) );
+            pMesh->setMesh( sw::PrimitiveMeshBuilder::acquirePrimitive( pMeshID ) );
             pMesh->setWorldPosition( position );
             pMesh->setLocalScale( scale );
             return pObject;
@@ -128,12 +128,12 @@ SW_TEST_CASE( EditorViewportRayPickTest, VertexAnimatedMeshPicksDrawnPose )
 {
     using Internal = EditorViewportRayPickTestInternal;
 
-    sw::shared_ptr<sw::Mesh> mesh = sw::MeshUtil::createPrimitive( "Cube" );
+    sw::shared_ptr<sw::Mesh> mesh = sw::PrimitiveMeshBuilder::createPrimitive( "Cube" );
     SW_REQUIRE_NOT_NULL( mesh.get() );
     const uint32           vertexCount = mesh->getVertexCount();
     sw::vector<sw::float3> listPosition;
     sw::vector<sw::float3> listNormal;
-    for ( const sw::RHIVertex& vertex : mesh->getCPUView().getVertices() )
+    for ( const sw::MeshVertex& vertex : mesh->getCPUView().getVertices() )
     {
         listPosition.push_back( sw::float3{ vertex._arrPosition[0] + 5.0f, vertex._arrPosition[1], vertex._arrPosition[2] } );
         listNormal.push_back( sw::float3{ vertex._arrNormal[0], vertex._arrNormal[1], vertex._arrNormal[2] } );

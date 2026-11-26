@@ -5,7 +5,7 @@
  *          모으면 따로 바뀌어야 할 값이 한 값에 묶인다(형식 A 의 버전을 올리면 형식 B 도 올라간다).
  *          위층의 분류는 그 층의 한 파일에 같은 `sw::constant::<분류>` 로 둔다:
  *          - 엔진 기본값(`window` · `physics` · `locale`)과 팩 · 폴더 이름(`path`): `Engine/Foundation/EngineDefines.h`
- *          - 렌더 백엔드 계약(`render` — RHI 형식 값이 필요하다): `Engine/Graphics/RHI/RHIDescriptors.h`
+ *          - 렌더 백엔드 계약(`render` — RHI 형식 값이 필요하다): `Engine/Graphics/RHI/RHIConstants.h`
  *          - 리플렉션 이름 조각(`reflection`): `Engine/Reflection/ReflectionConstants.h`
  *          언리얼의 `MAX_*` · `FPlatformTime` 단위, Godot `core/math/math_defs.h` · `core/typedefs.h` 의 상수와 같은 자리다.
  */

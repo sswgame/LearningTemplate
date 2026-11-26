@@ -8,7 +8,8 @@
 
 #include "Engine/Graphics/Mesh/MeshVertex.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIDrawDiagnostics.h"
-#include "Engine/Graphics/RHI/RHIDescriptors.h"
+#include "Engine/Graphics/RHI/RHIEnums.h"
+#include "Engine/Graphics/RHI/RHIHandles.h"
 #include "Engine/Graphics/RHI/RHIMeshVertexLayout.h"
 
 namespace sw
@@ -21,8 +22,8 @@ namespace sw
      */
     struct RHIVertexLayout
     {
-        uint32              _slotMask{ 0 };
-        RHIMeshVertexFormat _format{ RHIMeshVertexFormat::Packed };
+        uint32           _slotMask{ 0 };
+        MeshVertexFormat _format{ MeshVertexFormat::Packed };
     };
 
     /** @brief 버퍼 하나를 건 칸입니다 — 버퍼 · 원소 크기(정점 하나, 인덱스는 2 또는 4) · 시작 바이트. 버퍼 0 은 비어 있다는 뜻입니다. */

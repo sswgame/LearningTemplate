@@ -20,7 +20,7 @@ namespace sw
     struct MeshMorphTarget;
     struct MeshSection;
     struct MeshSkinVertex;
-    struct RHIVertex;
+    struct MeshVertex;
 } // namespace sw
 
 namespace sw::editor
@@ -32,7 +32,7 @@ namespace sw::editor
     struct BodyPickSurface
     {
         vector<float3>                      _listPosition{}; ///< 정점마다 지금 포즈의 월드 자리(`_listVertex` 와 같은 순서)
-        vector_reference<const RHIVertex>   _listVertex{};   ///< 메시 정점(UV 를 읽는다)
+        vector_reference<const MeshVertex>  _listVertex{};   ///< 메시 정점(UV 를 읽는다)
         vector_reference<const uint32>      _listIndex{};
         vector_reference<const MeshSection> _listSection{};
         uint8                               _bSkin{ SW_FALSE }; ///< 피부(몸) 표면이다 — 문신 · 피부 층의 UV 가 이 표면의 것이다
@@ -45,7 +45,7 @@ namespace sw::editor
          * @param listPalette 유닛의 스킨 팔레트입니다(`SkeletalMeshComponent::getSkinPalette` — 역 바인드 × 모델 공간).
          * @param world 오브젝트의 월드 행렬입니다(스킨 결과는 유닛 모델 공간이다).
          */
-        static void build( vector_reference<const RHIVertex> listVertex, vector_reference<const MeshMorphTarget> listMorphTarget, vector_reference<const float32> listMorphWeight,
+        static void build( vector_reference<const MeshVertex> listVertex, vector_reference<const MeshMorphTarget> listMorphTarget, vector_reference<const float32> listMorphWeight,
                            vector_reference<const MeshSkinVertex> listSkin, const vector<float4x4>& listPalette, const float4x4& world, BodyPickSurface& outSurface );
     };
 

@@ -1,7 +1,7 @@
 /**
  * @file MeshVertex.h
- * @brief CPU 쪽 메시 정점(`RHIVertex` — 임포트 · 지형 · 파괴 · 천 · 물이 짓는 기하)입니다. RHI 형식을 모르는 값 헤더라 게임이 보는 메시 · 파괴 · 물 헤더가 RHI 헤더 없이 쓴다.
- * @details GPU 정점 배치(속성 스트림 · 형식)는 `RHIDescriptors.h` 다(언리얼 `FStaticMeshBuildVertex` 와 정점 버퍼 선언이 나뉜 자리). 이름의 RHI 머리는 옛 자리의 흔적이다 — 개명은 이름 전수 집계 때.
+ * @brief CPU 쪽 메시 정점(`MeshVertex` — 임포트 · 지형 · 파괴 · 천 · 물이 짓는 기하)입니다. RHI 형식을 모르는 값 헤더라 게임이 보는 메시 · 파괴 · 물 헤더가 RHI 헤더 없이 쓴다.
+ * @details GPU 정점 배치(속성 스트림 · 형식)는 `RHIMeshVertexLayout.h` 다(언리얼 `FStaticMeshBuildVertex` 와 정점 버퍼 선언이 나뉜 자리).
  */
 #pragma once
 #include "Core/Foundation/Types.h"
@@ -9,12 +9,12 @@
 namespace sw
 {
     /**
-     * @struct RHIVertex
+     * @struct MeshVertex
      * @brief CPU 쪽 메시 정점 하나입니다(임포트 · 지형 · 파괴 · 천 등 기하 처리가 쓰는 형식). 위치, 노멀, UV, 색, 탄젠트를 가집니다.
-     * @details GPU 에는 이 모양 그대로 올리지 않는다 — 올릴 때 위치 스트림과 속성 스트림으로 나누고 메시의 정점 형식(`RHIMeshVertexFormat`)으로
+     * @details GPU 에는 이 모양 그대로 올리지 않는다 — 올릴 때 위치 스트림과 속성 스트림으로 나누고 메시의 정점 형식(`MeshVertexFormat`)으로
      *          바꾼다(`RHIMeshVertexStreams`). 언리얼의 빌드 정점(`FStaticMeshBuildVertex`)과 GPU 정점 버퍼의 관계와 같다.
      */
-    struct RHIVertex
+    struct MeshVertex
     {
         /** @brief 이음매 변 묶음의 비트 수와 모두 켠 값입니다(`getSeamEdgeMask`). */
         static constexpr uint32 kSeamEdgeGroupCount = 6;
@@ -31,7 +31,7 @@ namespace sw
             return handedness < 0.0f ? -magnitude : magnitude;
         }
         /** @brief 두 정점을 잇는 변이 이음매면 true 입니다 — 둘 다 이음매 정점이고 같은 변 묶음에 든다. 두 끝이 이음매여도 이음매가 아닌 안쪽 변(큐브 면의 대각선)은 false 다. */
-        [[nodiscard]] static bool isSeamEdge( const RHIVertex& lhs, const RHIVertex& rhs ) { return ( lhs.getSeamEdgeMask() & rhs.getSeamEdgeMask() ) != 0u; }
+        [[nodiscard]] static bool isSeamEdge( const MeshVertex& lhs, const MeshVertex& rhs ) { return ( lhs.getSeamEdgeMask() & rhs.getSeamEdgeMask() ) != 0u; }
 
         float32 _arrPosition[3]; ///< 정점 위치 (X, Y, Z)
         /**
@@ -70,9 +70,9 @@ namespace sw
     /**
      * @brief GPU 메시 정점의 속성 스트림 형식입니다. 메시마다 고르고(`Mesh::setVertexFormat`), PSO 가 같은 형식으로 레이아웃을 짓는다(`RHIPipelineStateDesc::_meshVertexFormat`).
      * @details 위치 스트림(슬롯 0, float3)은 두 형식이 같다. 언리얼이 메시 종류마다 vertex factory 로 정점 선언을 고르는 자리다.
-     *          메시가 고르는 값이라 RHI 헤더가 아니라 여기 둔다 — 게임이 보는 `Mesh.h` 가 RHI 헤더 없이 쓴다(배치 표는 `RHIDescriptors.h`).
+     *          메시가 고르는 값이라 RHI 헤더가 아니라 여기 둔다 — 게임이 보는 `Mesh.h` 가 RHI 헤더 없이 쓴다(배치 표는 `RHIMeshVertexLayout.h`).
      */
-    enum class RHIMeshVertexFormat : uint8
+    enum class MeshVertexFormat : uint8
     {
         Packed,        ///< 노멀 · 탄젠트 snorm8x4, UV float2, 색 float4(32 B). 노멀 · 탄젠트가 단위 벡터인 일반 메시
         HighPrecision, ///< 노멀 float3, UV float2, 색 float4, 탄젠트 float4(52 B). 색 · 탄젠트 칸에 단위 벡터가 아닌 데이터를 싣는 메시(지형 형태 변환) — 언리얼의 고정밀 탄젠트 옵션 자리

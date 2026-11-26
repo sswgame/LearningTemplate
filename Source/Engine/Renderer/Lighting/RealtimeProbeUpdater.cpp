@@ -163,7 +163,7 @@ namespace sw
             layout._listVoxelWordOffset.push_back( layout._totalVoxelWords );
             layout._listHistoryOffset.push_back( history.getOffset( requestIndex ) );
             layout._listFirstThread.push_back( layout._totalProbes );
-            const SceneVoxelScene& scene = *request._pVoxelScene;
+            const SceneVoxelizeInput& scene = *request._pVoxelScene;
             layout._totalVoxelWords += scene._grid.getWordCount();
             // 발광 칸(순위)은 그 볼륨의 점유 단어 바로 뒤에 붙인다(같은 버퍼 t2). 발광하는 메시가 없으면 셰이더가 읽지 않는다.
             const bool bHasEmission = scene._listEmissionPalette.empty() == false;
@@ -178,7 +178,7 @@ namespace sw
         // 정적 사본은 읽는 자리들 뒤에 놓는다 — 움직이는 층이 생겨도 다른 볼륨이 읽는 자리는 그대로다.
         for ( size_t requestIndex = 0; requestIndex < listRequest.size(); ++requestIndex )
         {
-            const SceneVoxelScene& scene = *listRequest[requestIndex]._pVoxelScene;
+            const SceneVoxelizeInput& scene = *listRequest[requestIndex]._pVoxelScene;
             if ( scene._bMovingLayer == SW_FALSE )
                 continue;
             layout._listStaticWordOffset[requestIndex] = layout._totalVoxelWords;
@@ -418,7 +418,7 @@ namespace sw
             const bool    bSamePlace = index < _listPainted.size() && _listPainted[index]._volumeID == current._volumeID && _listPainted[index]._wordOffset == current._wordOffset &&
                                     _listPainted[index]._emissionOffset == current._emissionOffset && _listPainted[index]._staticWordOffset == current._staticWordOffset &&
                                     _listPainted[index]._staticEmissionOffset == current._staticEmissionOffset;
-            const SceneVoxelScene* const pPainted = bSamePlace ? _listPainted[index]._pScene.get() : nullptr;
+            const SceneVoxelizeInput* const pPainted = bSamePlace ? _listPainted[index]._pScene.get() : nullptr;
             if ( pPainted != current._pScene.get() )
                 listTarget.push_back( SceneVoxelPaintTarget{ current._pScene.get(), pPainted, current._wordOffset, current._emissionOffset, current._staticWordOffset, current._staticEmissionOffset } );
             listPainted.push_back( std::move( current ) );
@@ -486,7 +486,7 @@ namespace sw
             _listPositionScratch.assign( static_cast<size_t>( mesh.getVertexCount() ) * Internal::kFloatsPerPosition, 0.0f );
             if ( mesh.isDynamic() )
             {
-                const vector<RHIVertex>& listVertex = mesh.getCPUView().getVertices();
+                const vector<MeshVertex>& listVertex = mesh.getCPUView().getVertices();
                 for ( size_t vertexIndex = 0; vertexIndex < listVertex.size(); ++vertexIndex )
                 {
                     for ( uint32 component = 0; component < Internal::kFloatsPerPosition; ++component )
@@ -557,7 +557,7 @@ namespace sw
         // 라이트는 라이트 버퍼가 없는 프레임에 자리표를 건다(라이트 수 0 이면 셰이더가 읽지 않는다 - DX12 는 빈 디스크립터를 읽으면 폴트).
         const RHIBufferSRVIndex lights = lightBuffer.isBindable() ? lightBuffer.getBuffer()._srv : placeholderSRV;
 
-        // 두 쓰기 버퍼의 UAV 전이와 조명 패스(그래프, t13) 앞 셰이더 읽기는 프레임 그래프가 낸다(`ProbeIrradiance` · `ProbeHistory` — `FrameGraphExecutor::beginFrame` 이 등록한다).
+        // 두 쓰기 버퍼의 UAV 전이와 조명 패스(그래프, t13) 앞 셰이더 읽기는 프레임 그래프가 낸다(`ProbeIrradiance` · `ProbeHistory` — `FramePassRecorder::beginFrame` 이 등록한다).
         ComputeShaderParameters<ProbeUpdateShader> parameters;
         parameters.set( ProbeUpdateShader::Lights, lights );
         parameters.set( ProbeUpdateShader::Params, _paramBuffer._srv );

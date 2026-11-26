@@ -175,9 +175,9 @@ namespace sw
         };
     } // namespace
 
-    SceneVoxelScene SceneVoxelizer::makeScene( const PrimitiveRegistry& primitives, Material* pSceneDefault, const AABB& bounds, float32 cellSize )
+    SceneVoxelizeInput SceneVoxelizer::makeScene( const PrimitiveRegistry& primitives, Material* pSceneDefault, const AABB& bounds, float32 cellSize )
     {
-        SceneVoxelScene scene;
+        SceneVoxelizeInput scene;
         scene._grid = SceneVoxelGrid::make( bounds, cellSize );
         if ( scene._grid.isEmpty() )
             return scene;
@@ -193,7 +193,7 @@ namespace sw
         return scene;
     }
 
-    bool SceneVoxelizer::updateScene( SceneVoxelScene& inoutScene, const PrimitiveRegistry& primitives, Material* pSceneDefault, const vector<uint32>& listChangedSlot )
+    bool SceneVoxelizer::updateScene( SceneVoxelizeInput& inoutScene, const PrimitiveRegistry& primitives, Material* pSceneDefault, const vector<uint32>& listChangedSlot )
     {
         if ( inoutScene._grid.isEmpty() )
             return false;
@@ -251,7 +251,7 @@ namespace sw
         return bStaticChanged || bMovingChanged;
     }
 
-    void SceneVoxelizer::collectDirtyRanges( const SceneVoxelScene& painted, const SceneVoxelScene& scene, vector<SceneVoxelGrid::CellRange>& outListRange )
+    void SceneVoxelizer::collectDirtyRanges( const SceneVoxelizeInput& painted, const SceneVoxelizeInput& scene, vector<SceneVoxelGrid::CellRange>& outListRange )
     {
         outListRange.clear();
         if ( scene._grid.isEmpty() )
@@ -284,7 +284,7 @@ namespace sw
             SceneVoxelizerInternal::setFullRange( scene._grid, outListRange );
     }
 
-    void SceneVoxelizer::appendMovingRanges( const SceneVoxelScene& painted, const SceneVoxelScene& scene, vector<SceneVoxelGrid::CellRange>& inoutListRange )
+    void SceneVoxelizer::appendMovingRanges( const SceneVoxelizeInput& painted, const SceneVoxelizeInput& scene, vector<SceneVoxelGrid::CellRange>& inoutListRange )
     {
         if ( scene._grid.isEmpty() )
             return;
@@ -363,8 +363,8 @@ namespace sw
         }
         for ( const SceneVoxelPaintTarget& target : listTarget )
         {
-            const SceneVoxelScene& scene   = *target._pScene;
-            const bool             bLayers = target._staticWordOffset != kNoStaticCopy;
+            const SceneVoxelizeInput& scene   = *target._pScene;
+            const bool                bLayers = target._staticWordOffset != kNoStaticCopy;
             SW_ASSERT( bLayers || scene._listMovingSource.empty() ); // 움직이는 층이 있는 장면은 정적 사본 자리를 받는다(`RealtimeProbeUpdater::planLayout`)
             if ( target._pPainted != nullptr )
                 collectDirtyRanges( *target._pPainted, scene, listRange );

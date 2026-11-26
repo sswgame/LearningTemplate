@@ -8,7 +8,7 @@
     #include "Core/Container/vector.h"
     #include "Core/Log/Logger.h"
 
-    #include "Engine/Graphics/RHI/RHIDescriptors.h"
+    #include "Engine/Graphics/RHI/RHISwapChainDesc.h"
 
     // EGL 헤더가 X11 타입을 끌어오지 않게 한다(네이티브 타입은 void* 가 된다).
     #define EGL_NO_X11 1

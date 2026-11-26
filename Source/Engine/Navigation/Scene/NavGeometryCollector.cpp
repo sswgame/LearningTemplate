@@ -10,7 +10,7 @@
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Graphics/Mesh/MeshCache.h"
-#include "Engine/Graphics/Mesh/MeshUtil.h"
+#include "Engine/Graphics/Mesh/PrimitiveMeshBuilder.h"
 #include "Engine/Navigation/Component/NavMeshAgentComponent.h"
 #include "Engine/Navigation/Component/NavMeshLinkComponent.h"
 #include "Engine/Navigation/Component/NavMeshModifierComponent.h"
@@ -252,7 +252,7 @@ namespace sw
                                 ++pendingMeshCount;
                             return; // 읽는 중이면 다음 모으기에, 읽지 못했으면(로드 실패) 그리지 않는 메시라 넣지 않는다
                         }
-                        mesh = bMeshAsset ? MeshCache::acquire( meshID, MeshCPUAccess::Keep ) : MeshUtil::acquirePrimitive( meshID );
+                        mesh = bMeshAsset ? MeshCache::acquire( meshID, MeshCPUAccess::Keep ) : PrimitiveMeshBuilder::acquirePrimitive( meshID );
                     }
                     if ( mesh == nullptr || mesh->getIndexCount() < 3 )
                         return;
@@ -277,7 +277,7 @@ namespace sw
                     }
                     vector<float3> listPosition;
                     listPosition.reserve( mesh->getVertexCount() );
-                    for ( const RHIVertex& vertex : mesh->getCPUView().getVertices() )
+                    for ( const MeshVertex& vertex : mesh->getCPUView().getVertices() )
                     {
                         listPosition.push_back( float3{ vertex._arrPosition[0], vertex._arrPosition[1], vertex._arrPosition[2] } );
                     }

@@ -13,6 +13,7 @@
 #include "Engine/Graphics/RHI/RHIBackendRegistry.h"
 #include "Engine/Graphics/RHI/RHIFormatInfo.h"
 #include "Engine/Graphics/RHI/RHIPipelineStateDesc.h"
+#include "Engine/Graphics/RHI/RHITextureDesc.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 #include "Engine/Window/IRenderSurface.h"
 
@@ -93,7 +94,7 @@ namespace sw
         , _arrRTVFormat{}
         , _depthStencilFormat{ RHIFormat::D24_UNORM_S8_UINT }
         , _renderState{}
-        , _meshVertexFormat{ RHIMeshVertexFormat::Packed }
+        , _meshVertexFormat{ MeshVertexFormat::Packed }
     {
         // 렌더 상태의 기본값은 패스의 일반적인 값이다. 코드가 짓는 PSO(풀스크린 · UI)는 컬링도 깊이도 없이 시작한다.
         _renderState._cullMode         = CullMode::None;

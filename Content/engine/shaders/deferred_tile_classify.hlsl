@@ -8,7 +8,7 @@
  *
  * 네이티브 bindless(DX12 · Vulkan) 전용이다 — 에뮬 백엔드(DX11 · GL · WebGPU)의 컴퓨트는 샘플 텍스처를 읽지 못해 C++ 이 PSO 를 만들지 않고(kRequiresNativeBindless)
  * 조명은 풀스크린 한 장(모든 엽)으로 그린다. 쿠킹이 모든 대상으로 컴파일해도 서도록 에뮬 몸통은 비워 둔다.
- * C++: FramePassExecutor::executeTiledLighting — 조명 패스의 렌더 패스를 열기 전.
+ * C++: FrameRecorder::executeTiledLighting — 조명 패스의 렌더 패스를 열기 전.
  */
 #include "binding.hlsli"
 #include "deferred_tile_class.hlsli"

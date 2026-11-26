@@ -131,8 +131,8 @@ SW_TEST_CASE( BodyDataEditTest, FluidPathAxisAndAliasEdits )
  */
 SW_TEST_CASE( BodyDataEditTest, SurfacePickFindsNearestSectionAndUV )
 {
-    vector<RHIVertex> listVertex( 8 );
-    const float32     arrCorner[4][2] = {
+    vector<MeshVertex> listVertex( 8 );
+    const float32      arrCorner[4][2] = {
         {0.0f, 0.0f},
         {1.0f, 0.0f},
         {1.0f, 1.0f},
@@ -142,7 +142,7 @@ SW_TEST_CASE( BodyDataEditTest, SurfacePickFindsNearestSectionAndUV )
     {
         for ( uint32 corner = 0; corner < 4; ++corner )
         {
-            RHIVertex& vertex      = listVertex[layer * 4 + corner];
+            MeshVertex& vertex     = listVertex[layer * 4 + corner];
             vertex._arrPosition[0] = arrCorner[corner][0];
             vertex._arrPosition[1] = arrCorner[corner][1];
             vertex._arrPosition[2] = static_cast<float32>( layer );
@@ -178,8 +178,8 @@ SW_TEST_CASE( BodyDataEditTest, SurfacePickFindsNearestSectionAndUV )
  */
 SW_TEST_CASE( BodyDataEditTest, SurfacePickFollowsPoseAndParts )
 {
-    vector<RHIVertex> listVertex( 4 );
-    const float32     arrCorner[4][2] = {
+    vector<MeshVertex> listVertex( 4 );
+    const float32      arrCorner[4][2] = {
         {0.0f, 0.0f},
         {1.0f, 0.0f},
         {1.0f, 1.0f},
@@ -221,8 +221,8 @@ SW_TEST_CASE( BodyDataEditTest, SurfacePickFollowsPoseAndParts )
  */
 SW_TEST_CASE( BodyDataEditTest, SurfacePickAppliesMorphWeights )
 {
-    vector<RHIVertex> listVertex( 4 );
-    const float32     arrCorner[4][2] = {
+    vector<MeshVertex> listVertex( 4 );
+    const float32      arrCorner[4][2] = {
         {0.0f, 0.0f},
         {1.0f, 0.0f},
         {1.0f, 1.0f},

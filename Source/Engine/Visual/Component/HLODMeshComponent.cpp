@@ -7,7 +7,7 @@
 #include "Core/Math/MatrixMath.h"
 
 #include "Engine/Graphics/Mesh/Mesh.h"
-#include "Engine/Graphics/Mesh/MeshUtil.h"
+#include "Engine/Graphics/Mesh/PrimitiveMeshBuilder.h"
 
 namespace sw
 {
@@ -20,14 +20,14 @@ namespace sw
 
     HLODMeshComponent::~HLODMeshComponent() = default;
 
-    bool HLODMeshComponent::appendPart( const HLODMeshPart& part, const Mesh& mesh, vector<RHIVertex>& inoutListVertex, vector<uint32>& inoutListIndex )
+    bool HLODMeshComponent::appendPart( const HLODMeshPart& part, const Mesh& mesh, vector<MeshVertex>& inoutListVertex, vector<uint32>& inoutListIndex )
     {
-        const MeshCPUView        view            = mesh.getCPUView();
-        const vector<RHIVertex>& listVertex      = view.getVertices();
-        const vector<RHIVertex>& listLODVertex   = view.getLODVertices();
-        const uint32             baseIndexCount  = mesh.getIndexCount();
-        const uint32             baseVertexCount = static_cast<uint32>( listVertex.size() );
-        const MeshLOD*           pLOD            = mesh.getLODs().empty() ? nullptr : &mesh.getLODs().back();
+        const MeshCPUView         view            = mesh.getCPUView();
+        const vector<MeshVertex>& listVertex      = view.getVertices();
+        const vector<MeshVertex>& listLODVertex   = view.getLODVertices();
+        const uint32              baseIndexCount  = mesh.getIndexCount();
+        const uint32              baseVertexCount = static_cast<uint32>( listVertex.size() );
+        const MeshLOD*            pLOD            = mesh.getLODs().empty() ? nullptr : &mesh.getLODs().back();
 
         // 그릴 인덱스 흐름(LOD 0 뒤에 낮은 단계)에서 읽을 구간이다.
         uint32 firstIndex = pLOD != nullptr ? pLOD->_firstIndex : 0;
@@ -64,7 +64,7 @@ namespace sw
             uint32&      remapped    = listRemap[sourceIndex];
             if ( remapped == constant::invalid_index::kUint32 )
             {
-                RHIVertex    vertex    = sourceIndex < baseVertexCount ? listVertex[sourceIndex] : listLODVertex[sourceIndex - baseVertexCount];
+                MeshVertex   vertex    = sourceIndex < baseVertexCount ? listVertex[sourceIndex] : listLODVertex[sourceIndex - baseVertexCount];
                 const float3 position  = float3::transform( float3{ vertex._arrPosition[0], vertex._arrPosition[1], vertex._arrPosition[2] }, matrix );
                 const float3 normal    = float3::transformVector( float3{ vertex._arrNormal[0], vertex._arrNormal[1], vertex._arrNormal[2] }, normalMatrix ).normalize();
                 vertex._arrPosition[0] = position._x;
@@ -113,15 +113,15 @@ namespace sw
         if ( isMeshPending() )
             return MeshArrival::Loading;
 
-        vector<RHIVertex> listVertex;
-        vector<uint32>    listIndex;
-        uint32            mergedCount = 0;
+        vector<MeshVertex> listVertex;
+        vector<uint32>     listIndex;
+        uint32             mergedCount = 0;
         for ( size_t partIndex = 0; partIndex < _listPart.size(); ++partIndex )
         {
             const HLODMeshPart& part   = _listPart[partIndex];
             const MeshHandle&   load   = _listPartLoad[partIndex];
             const bool          bAsset = MeshAssetFormat::isMeshAssetPath( part._meshID.path() );
-            shared_ptr<Mesh>    mesh   = bAsset ? ( load.isValid() ? load.get() : nullptr ) : MeshUtil::acquirePrimitive( part._meshID.path() );
+            shared_ptr<Mesh>    mesh   = bAsset ? ( load.isValid() ? load.get() : nullptr ) : PrimitiveMeshBuilder::acquirePrimitive( part._meshID.path() );
             if ( mesh != nullptr && appendPart( part, *mesh, listVertex, listIndex ) )
                 ++mergedCount;
             else

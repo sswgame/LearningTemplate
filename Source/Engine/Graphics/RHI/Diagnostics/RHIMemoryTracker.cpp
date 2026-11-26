@@ -6,8 +6,8 @@
 #include "Core/Log/Logger.h"
 #include "Core/Log/ScopedDeferredLog.h"
 
-#include "Engine/Graphics/RHI/RHIDescriptors.h"
 #include "Engine/Graphics/RHI/RHIFormatInfo.h"
+#include "Engine/Graphics/RHI/RHITextureDesc.h"
 #include "Engine/Reflection/EnumName.h"
 
 namespace sw

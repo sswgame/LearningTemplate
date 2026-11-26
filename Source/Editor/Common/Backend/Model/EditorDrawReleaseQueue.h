@@ -8,6 +8,7 @@
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Graphics/RHI/Backend/RHIRetireList.h"
+#include "Engine/Graphics/RHI/RHIDeviceCallbacks.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 
 namespace sw

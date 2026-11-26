@@ -337,7 +337,7 @@ namespace sw
         void recordTimelineFrame( size_t stepIndexBefore );
         /**
          * @brief `<AdvanceSimulation>` 진행 구간(@p frameCount 프레임)이 시작하는 프레임에 한 번 부릅니다 — 그 단계의 실행부는 여기 한 곳이다.
-         * @details 엔진의 그리지 않는 진행 줄(`SimulationOnlyFrameQueue`)에 그 프레임 수를 고정 프레임 시간으로 맡긴다 — 시뮬레이션 결과는 같고 렌더만 건너뛴다.
+         * @details 엔진의 그리지 않는 진행 줄(`SimulationOnlyFrameCounter`)에 그 프레임 수를 고정 프레임 시간으로 맡긴다 — 시뮬레이션 결과는 같고 렌더만 건너뛴다.
          *          마지막 `AutomationGoldenPolicy::_advanceDrawnFrames` 프레임은 맡기지 않고 그린다(구간이 그보다 짧으면 모두 그린다). `render="true"` 진행은 구간이 없어 여기 오지 않는다.
          *          맡기지 못하면(줄이 거절) 시나리오 실패다. 실행기는 그대로 그 프레임 수를 흘린다.
          */

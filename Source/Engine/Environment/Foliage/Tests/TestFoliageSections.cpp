@@ -19,7 +19,7 @@ namespace
         static shared_ptr<Mesh> makeMesh( const vector<string>& listName )
         {
             const uint32        quadCount = static_cast<uint32>( listName.empty() ? 1u : listName.size() );
-            vector<RHIVertex>   listVertex( quadCount * 4u );
+            vector<MeshVertex>  listVertex( quadCount * 4u );
             vector<uint32>      listIndex;
             vector<MeshSection> listSection;
             for ( uint32 quad = 0; quad < quadCount; ++quad )
@@ -27,7 +27,7 @@ namespace
                 const uint32 first = quad * 4u;
                 for ( uint32 corner = 0; corner < 4u; ++corner )
                 {
-                    RHIVertex& vertex      = listVertex[first + corner];
+                    MeshVertex& vertex     = listVertex[first + corner];
                     vertex._arrPosition[0] = static_cast<float>( corner % 2u );
                     vertex._arrPosition[1] = static_cast<float>( corner / 2u );
                     vertex._arrPosition[2] = static_cast<float>( quad );

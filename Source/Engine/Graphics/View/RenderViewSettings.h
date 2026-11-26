@@ -51,7 +51,7 @@ namespace sw
          * @details 자리마다의 PostProcessMaterial 패스가 자기 자리의 것을 그리고, 그 자리에 하나도 없으면 패스가 빠진다(`shouldDrawPostProcessMaterial`).
          */
         vector<PostProcessMaterialDraw> _listPostProcessMaterial;
-        /// @brief 이 뷰를 그리는 카메라의 피사계 심도 렌즈 값(초점 거리 · 조리개 · 센서 높이)입니다. 피사계 심도 패스가 `g_CameraLens` 로 읽습니다(`FramePassExecutor::applyViewPassConstants`).
+        /// @brief 이 뷰를 그리는 카메라의 피사계 심도 렌즈 값(초점 거리 · 조리개 · 센서 높이)입니다. 피사계 심도 패스가 `g_CameraLens` 로 읽습니다(`FrameRecorder::applyViewPassConstants`).
         CameraDepthOfFieldValues _depthOfField{};
         /**
          * @brief 원근 투영의 세로 배율 `1 / tan( fovY / 2 )` 입니다. 직교 카메라는 0 이며 피사계 심도가 없습니다.

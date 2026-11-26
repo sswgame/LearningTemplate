@@ -81,7 +81,7 @@ namespace sw
          * @details 셋업 단계에서(기록 전) 뷰마다 한 번 부른다. 빠질 수 있는 것은 출력을 혼자 쓰는 일반 풀스크린 패스뿐이고, 파이프라인에 읽는 패스가 하나도 없는 출력의 패스는 그대로 돈다.
          * @param viewProj 이번 프레임 이 뷰의 뷰-투영입니다(지난번 것 `_prevViewProj` 와 같고 물체도 서 있으면 모션 블러는 꺼진 것이다). `_bHistoryReset` 을 정한 뒤 부른다.
          *          패스마다 이번 뷰에 할 일이 있는지는 판정 하나(`isPassEnabledInView` — 꺼진 효과 · 그릴 것 없는 덧그리기)가 정하고, 할 일이 없는 패스와 읽는 쪽이 모두 빠진 패스는
-         *          `FrameViewTarget::_listPassDisabled` 에 적는다. 실행 입구(`FramePassExecutor::executePass`)가 그 목록 하나만 보고 기록하지 않는다.
+         *          `FrameViewTarget::_listPassDisabled` 에 적는다. 실행 입구(`FrameRecorder::executePass`)가 그 목록 하나만 보고 기록하지 않는다.
          *          비활성인 덧그리는 패스는 출력이 그대로라 입력을 필요로 하지 않으므로, 그것만 읽는 사본(장면 색 · 깊이)이 빠진다.
          * @param sceneState 이번 프레임의 씬 상태입니다(`ViewPassSceneState`).
          * @param aliasPlan 새로 만드는 첨부가 나눠 쓸 앨리어싱 계획입니다(풀의 세대와 같은 것).

@@ -28,7 +28,7 @@
 #include "Core/Subsystem/Subsystem.h"
 #include "Core/Subsystem/SubsystemSlot.h"
 
-#include "Engine/Graphics/RHI/RHIDescriptors.h"
+#include "Engine/Graphics/RHI/RHITextureDesc.h"
 
 namespace sw
 {

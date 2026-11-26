@@ -22,7 +22,7 @@ namespace
     shared_ptr<Mesh> makeTriangle()
     {
         const shared_ptr<Mesh> mesh = Mesh::create( MeshCPUAccess::Keep );
-        const bool             bSet = mesh->setGeometry( vector<RHIVertex>( 3 ), vector<uint32>{ 0, 1, 2 } ); // 값 셋 · 인덱스 셋 — 늘 맞다
+        const bool             bSet = mesh->setGeometry( vector<MeshVertex>( 3 ), vector<uint32>{ 0, 1, 2 } ); // 값 셋 · 인덱스 셋 — 늘 맞다
         SW_ASSERT( bSet );
         (void)bSet;
         return mesh;
@@ -41,7 +41,7 @@ SW_TEST_CASE( GPUMeshVertexPoolFenceTest, RetiredSpanWaitsForTheGPUFence )
     const shared_ptr<Mesh> meshA = makeTriangle();
     const shared_ptr<Mesh> meshB = makeTriangle();
 
-    GPUMeshVertexPool pool{ RHIMeshVertexFormat::Packed };
+    GPUMeshVertexPool pool{ MeshVertexFormat::Packed };
     SW_REQUIRE_TRUE( pool.update( &device, vector<Mesh*>{ meshA.get() }, kMaxPoolVertices ) );
     SW_REQUIRE_EQUAL( 0u, pool.getPlacementOf( meshA.get() )._baseVertex );
     SW_REQUIRE_TRUE( pool.update( &device, vector<Mesh*>{ meshB.get() }, kMaxPoolVertices ) ); // A 가 나간다 — 구간 0 은 이 펜스 값을 기다린다

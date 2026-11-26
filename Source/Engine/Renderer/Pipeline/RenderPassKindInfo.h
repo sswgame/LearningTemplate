@@ -3,7 +3,7 @@
  * @brief 패스 종류(`RenderPassKind`) 하나에 대한 사실을 한 항목에 모은 테이블입니다.
  * @details 기본 셰이더, PSO 상태, 패스 define, 그리는 대상(씬 메시, 풀스크린, 컴퓨트), 입력 계약이 여기 있습니다.
  *          엔진 PSO 등록(`FrameRenderer::ensurePassResources`), 셰이더 쿠킹 요청(`ShaderCookDriver`), 패스 실행
- *          (`FramePassExecutor::executePass`), 파이프라인 검증(`RenderPipelineAsset::validate`)이 모두 이 테이블을 enum 으로 읽습니다.
+ *          (`FrameRecorder::executePass`), 파이프라인 검증(`RenderPipelineAsset::validate`)이 모두 이 테이블을 enum 으로 읽습니다.
  *          패스 종류를 하나 추가하려면 enum 에 한 줄을 더하고 이 테이블에 case 를 하나 추가합니다(전용 실행 코드가 필요한 패스만 executePass 에 case 를 추가합니다).
  */
 #pragma once
@@ -15,7 +15,7 @@
 
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Foundation/Foundation.h"
-#include "Engine/Graphics/Material/MaterialTypes.h"
+#include "Engine/Graphics/Material/MaterialPermutation.h"
 #include "Engine/Graphics/RenderState/RenderState.h"
 #include "Engine/Renderer/Pipeline/RenderGraphPassDesc.h"
 #include "Engine/Renderer/Pipeline/RenderPassInputSignature.h"
@@ -104,7 +104,7 @@ namespace sw
     inline constexpr const utf8* kAppearanceDitherDefine = "SW_APPEARANCE_DITHER";
 
     // 머티리얼이 내는 기능 define(`kMaterialForwardOnlyDefine` · `kMaterialDistortionDefine` · `kMaterialOutlineDefine` · `kMaterialVertexDeformDefine` · `kMaterialDisplacementDefine` ·
-    // `kMaterialDomainPostProcessDefine`)은 MaterialTypes.h 에 있다 — 머티리얼 읽기가 조합을 검사한다(`MaterialPermutation::validateFeatures`).
+    // `kMaterialDomainPostProcessDefine`)은 MaterialPermutation.h 에 있다 — 머티리얼 읽기가 조합을 검사한다(`MaterialPermutation::validateFeatures`).
 
     /** @brief 그림자를 드리우지 않는 머티리얼의 define 입니다. 그림자 패스 셰이더가 정점을 클립 공간 밖으로 모아 그리지 않습니다. */
     inline constexpr const utf8* kMaterialShadowCastOffDefine = "MATERIAL_SHADOW_CAST_OFF";

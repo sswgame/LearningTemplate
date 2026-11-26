@@ -230,7 +230,7 @@ namespace sw
         shared_ptr<const CanvasDrawList> _pMainOutput{};
         /**
          * @brief 개발 겹치기 목록(디버그 HUD — `UIScreen::isDevOverlay`)입니다. 없으면 nullptr 입니다(`getDevOverlay` 는 빈 목록).
-         * @details 주 출력 목록과 달리 사진 캡처가 읽는 지점 뒤, 화면에 내보내기 직전의 대상(백버퍼)에 그린다(`FramePassExecutor::drawDevOverlay`) — 그래서 스크린샷 ·
+         * @details 주 출력 목록과 달리 사진 캡처가 읽는 지점 뒤, 화면에 내보내기 직전의 대상(백버퍼)에 그린다(`FrameRecorder::drawDevOverlay`) — 그래서 스크린샷 ·
          *          `<ExpectImage>` 골든에 들지 않는다. 주 출력이 호스트 렌더 타깃(에디터 게임 뷰)이면 그 타깃에 그리지 않고 자기 렌더 텍스처 대상(`kDevOverlayTargetPath`)으로 싣는다 —
          *          에디터가 게임 뷰 위에 겹치고 에디터 UI 캡처는 그 텍스처를 빼고 다시 그린다.
          */

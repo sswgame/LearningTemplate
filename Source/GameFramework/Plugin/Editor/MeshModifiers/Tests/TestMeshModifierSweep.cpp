@@ -194,7 +194,7 @@ namespace
         MeshAssetData data;
         for ( int32 corner = 0; corner < 3; ++corner )
         {
-            RHIVertex vertex{};
+            MeshVertex vertex{};
             vertex._arrPosition[0] = corner == 1 ? 1.0f : 0.0f;
             vertex._arrPosition[1] = corner == 2 ? 1.0f : 0.0f;
             vertex._arrPosition[2] = 0.0f;

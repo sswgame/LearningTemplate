@@ -44,7 +44,7 @@ namespace sw
         vector<uint32> _listEmissionWordOffset;    ///< 볼륨마다 발광 칸(순위) 단어의 첫 단어 — 점유 단어 바로 뒤. 발광하는 메시가 없으면 `SceneVoxelizer::kNoEmission`
         vector<uint32> _listStaticWordOffset;      ///< 볼륨마다 정적 사본의 점유 첫 단어(읽는 자리들 뒤). 움직이는 층이 없는 장면이면 `SceneVoxelizer::kNoStaticCopy`
         vector<uint32> _listStaticEmissionOffset;  ///< 볼륨마다 정적 사본의 발광 첫 단어. 발광하는 메시가 없거나 정적 사본이 없으면 `SceneVoxelizer::kNoEmission`
-        vector<uint32> _listPaletteRow;            ///< 볼륨마다 발광 목록(`SceneVoxelScene::_listEmissionPalette`)의 첫 입력 행 — 볼륨 행들 뒤
+        vector<uint32> _listPaletteRow;            ///< 볼륨마다 발광 목록(`SceneVoxelizeInput::_listEmissionPalette`)의 첫 입력 행 — 볼륨 행들 뒤
         vector<uint32> _listHistoryOffset;         ///< 볼륨마다 기록 버퍼 안의 첫 float4(`RealtimeProbeHistoryAllocator` 가 볼륨 정체로 매긴 구간 — 이어지지 않을 수 있다)
         vector<uint32> _listFirstThread;           ///< 볼륨마다 첫 스레드 번호(= 앞 볼륨들의 프로브 수의 합)
         uint32         _totalVoxelWords{ 0 };      ///< 점유 단어와 발광 단어의 합(정적 사본 포함)
@@ -171,7 +171,7 @@ namespace sw
          * @brief 기록 전에 부릅니다 - 버퍼를 갖추고 이번 프레임의 입력을 올립니다. 요청이 없거나 프로브 버퍼를 쓸 수 없으면 `isActive` 가 false 입니다.
          * @details 못 켜는 이유(컴퓨트 PSO 없음 · 프로브 버퍼 UAV 없음 · 버퍼 할당 실패)는 한 번만 오류로 남긴다 - 실시간 볼륨은 그동안 검게 남는다(베이크로 대신하지 않는다).
          * @param bCreateMissingMeshes 업로드 큐가 넘기기 전에 메시를 만들지 않는 구성이면 true 입니다 — 칠할 메시의 GPU 버퍼가 없으면 여기서 만든다(만드는 쪽은 하나다, `GPUUploadQueue::shouldCreateMeshes`)
-         * @param stableError 정착으로 보는 오차(`RenderStabilitySample::readMaxGIError` — 정착 조건과 같은 문턱). 정착을 보는 시나리오가 없으면 0 이다
+         * @param stableError 정착으로 보는 오차(`RenderConvergenceSample::readMaxGIError` — 정착 조건과 같은 문턱). 정착을 보는 시나리오가 없으면 0 이다
          */
         void prepare( IRHIDevice* pDevice, const vector<RealtimeProbeRequest>& listRequest, const GPULightBuffer& lightBuffer, const SkyGradient& sky, bool bHasSky, bool bPipelineReady,
                       bool bCreateMissingMeshes, float32 stableError );
@@ -214,12 +214,12 @@ namespace sw
         /** @brief 복셀 버퍼의 볼륨 자리 하나와 거기 칠한 장면입니다(포인터 비교가 믿을 수 있도록 장면을 붙들고 있는다). */
         struct PaintedVolume
         {
-            uint64                            _volumeID{ 0 };
-            uint32                            _wordOffset{ 0 };
-            uint32                            _emissionOffset{ 0 };
-            uint32                            _staticWordOffset{ 0 };
-            uint32                            _staticEmissionOffset{ 0 };
-            shared_ptr<const SceneVoxelScene> _pScene{};
+            uint64                               _volumeID{ 0 };
+            uint32                               _wordOffset{ 0 };
+            uint32                               _emissionOffset{ 0 };
+            uint32                               _staticWordOffset{ 0 };
+            uint32                               _staticEmissionOffset{ 0 };
+            shared_ptr<const SceneVoxelizeInput> _pScene{};
         };
         /** @brief 위치 흐름의 GPU 복사 하나입니다(렌더 프록시 정점 버퍼의 앞 구간 → 위치 버퍼). 기록할 때까지 메시를 쥔다. */
         struct PendingPositionCopy

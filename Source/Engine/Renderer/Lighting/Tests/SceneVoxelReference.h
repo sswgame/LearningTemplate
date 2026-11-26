@@ -103,7 +103,7 @@ namespace sw::test
             vector<uint32> listIndex;
             for ( const SceneVoxelPaintPlan::MeshSpan& span : plan._listMesh )
             {
-                for ( const RHIVertex& vertex : span._mesh->getCPUView().getVertices() )
+                for ( const MeshVertex& vertex : span._mesh->getCPUView().getVertices() )
                 {
                     listPosition.push_back( float3{ vertex._arrPosition[0], vertex._arrPosition[1], vertex._arrPosition[2] } );
                 }

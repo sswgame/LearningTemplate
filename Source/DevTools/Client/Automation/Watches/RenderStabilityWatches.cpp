@@ -1,9 +1,9 @@
 /**
  * @file RenderStabilityWatches.cpp
  * @brief 렌더 정착의 진단 감시 값 `Render.StillFrames` · `Render.ExposureErrorEv` · `Render.PresentedFrames` · `Render.ExposureAdaptation` · `Render.GIError` 입니다.
- * @details 주 렌더러가 올린 값(`RenderStabilitySample::publish`)을 그대로 낸다. 사진 앞 정착은 감시 값이 아니라 사진 단계가 기다리는 정착 조건이다(`RenderStability.cpp` 의
+ * @details 주 렌더러가 올린 값(`RenderConvergenceSample::publish`)을 그대로 낸다. 사진 앞 정착은 감시 값이 아니라 사진 단계가 기다리는 정착 조건이다(`RenderConvergence.cpp` 의
  *          `RenderTemporalAccumulation` · `RenderAutoExposure` · `RenderRealtimeGI` — 예전 합성 0/1 감시 값은 "해당 없음" 과 "아직" 을 같은 0 으로 냈다).
- *          값의 주인(`RenderStability`) 곁에서 등록한다 — 전용 서버는 `Renderer/` 를 짓지 않아 이 감시 값도 없다.
+ *          값의 주인(`RenderConvergence`) 곁에서 등록한다 — 전용 서버는 `Renderer/` 를 짓지 않아 이 감시 값도 없다.
  */
 #include "pch.h"
 
@@ -11,7 +11,8 @@
 
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
-#include "Engine/Renderer/Frame/View/RenderStability.h"
+#include "Engine/Renderer/Frame/View/RenderConvergence.h"
+#include "Engine/Renderer/Frame/View/RenderPresentCounter.h"
 
 namespace sw
 {
@@ -21,7 +22,7 @@ namespace sw
         [[nodiscard]] bool readStillFrames( const GameObjectManager* pManager, float64& outValue )
         {
             (void)pManager;
-            outValue = static_cast<float64>( RenderStabilitySample::readPublished()._stillFrameCount );
+            outValue = static_cast<float64>( RenderConvergenceSample::readPublished()._stillFrameCount );
             return true;
         }
 
@@ -29,7 +30,7 @@ namespace sw
         [[nodiscard]] bool readExposureErrorEv( const GameObjectManager* pManager, float64& outValue )
         {
             (void)pManager;
-            outValue = static_cast<float64>( RenderStabilitySample::readPublished()._exposureErrorEv );
+            outValue = static_cast<float64>( RenderConvergenceSample::readPublished()._exposureErrorEv );
             return true;
         }
 
@@ -51,7 +52,7 @@ namespace sw
         [[nodiscard]] bool readExposureAdaptation( const GameObjectManager* pManager, float64& outValue )
         {
             (void)pManager;
-            outValue = static_cast<float64>( RenderStabilitySample::readPublished()._exposureAdaptationEv );
+            outValue = static_cast<float64>( RenderConvergenceSample::readPublished()._exposureAdaptationEv );
             return true;
         }
 
@@ -59,8 +60,8 @@ namespace sw
         [[nodiscard]] bool readGIError( const GameObjectManager* pManager, float64& outValue )
         {
             (void)pManager;
-            const RenderStabilitySample sample = RenderStabilitySample::readPublished();
-            outValue                           = static_cast<float64>( sample._giError );
+            const RenderConvergenceSample sample = RenderConvergenceSample::readPublished();
+            outValue                             = static_cast<float64>( sample._giError );
             return sample._bRealtimeGI != SW_FALSE;
         }
     } // namespace
@@ -77,7 +78,7 @@ namespace sw
     SW_AUTOMATION_WATCH( renderGIError, "Render.GIError", "Share of the old realtime probe GI history that is still mixed in (1 = just restarted, no value without a realtime volume)", &readGIError );
 } // namespace sw
 
-// Engine/Renderer/Frame/View/RenderStability.cpp 에서 옮긴 사진 앞 렌더 정착 조건(배포 엔진에 컴파일되지 않게).
+// Engine/Renderer/Frame/View/RenderConvergence.cpp 에서 옮긴 사진 앞 렌더 정착 조건(배포 엔진에 컴파일되지 않게).
 namespace sw
 {
     namespace
@@ -85,31 +86,31 @@ namespace sw
         /** @brief 문턱이 없을 때의 진행 중입니다 — 기본값으로 지나가지 않고 정지 시한에 이 까닭으로 진다. */
         constexpr const utf8* kNoThresholdWhat = "no threshold - Config/Dev/ScenarioRun.json _mapConditionThreshold was not loaded";
 
-        /** @brief 조건 `RenderTemporalAccumulation` 입니다(`RenderStabilitySample::evaluateTemporalAccumulation`). */
+        /** @brief 조건 `RenderTemporalAccumulation` 입니다(`RenderConvergenceSample::evaluateTemporalAccumulation`). */
         AutomationReadiness readTemporalAccumulation()
         {
-            const optional<uint32> minStillFrames = RenderStabilitySample::getMinStillFramesThreshold();
+            const optional<uint32> minStillFrames = RenderConvergenceSample::getMinStillFramesThreshold();
             if ( minStillFrames.has_value() == false )
                 return AutomationReadiness::waiting( 0, kNoThresholdWhat );
-            return RenderStabilitySample::readPublished().evaluateTemporalAccumulation( *minStillFrames );
+            return RenderConvergenceSample::readPublished().evaluateTemporalAccumulation( *minStillFrames );
         }
 
-        /** @brief 조건 `RenderAutoExposure` 입니다(`RenderStabilitySample::evaluateAutoExposure`). */
+        /** @brief 조건 `RenderAutoExposure` 입니다(`RenderConvergenceSample::evaluateAutoExposure`). */
         AutomationReadiness readAutoExposure()
         {
-            const optional<float32> maxErrorEv = RenderStabilitySample::getMaxExposureErrorThreshold();
+            const optional<float32> maxErrorEv = RenderConvergenceSample::getMaxExposureErrorThreshold();
             if ( maxErrorEv.has_value() == false )
                 return AutomationReadiness::waiting( 0, kNoThresholdWhat );
-            return RenderStabilitySample::readPublished().evaluateAutoExposure( *maxErrorEv );
+            return RenderConvergenceSample::readPublished().evaluateAutoExposure( *maxErrorEv );
         }
 
-        /** @brief 조건 `RenderRealtimeGI` 입니다(`RenderStabilitySample::evaluateRealtimeGI`). */
+        /** @brief 조건 `RenderRealtimeGI` 입니다(`RenderConvergenceSample::evaluateRealtimeGI`). */
         AutomationReadiness readRealtimeGI()
         {
-            const float32 maxError = RenderStabilitySample::readMaxGIError();
+            const float32 maxError = RenderConvergenceSample::readMaxGIError();
             if ( maxError <= 0.0f )
                 return AutomationReadiness::waiting( 0, kNoThresholdWhat );
-            return RenderStabilitySample::readPublished().evaluateRealtimeGI( maxError );
+            return RenderConvergenceSample::readPublished().evaluateRealtimeGI( maxError );
         }
 
         /** @brief `RenderTemporalAccumulation` 의 문턱 — 가만히 있던 프레임 수(1 이상 정수, TAA 기록 섞는 비율의 역수 몇 배). */
@@ -118,7 +119,7 @@ namespace sw
             const uint32 minStillFrames = threshold >= 1.0 && threshold <= static_cast<float64>( MathUtil::kMaxInt32 ) ? static_cast<uint32>( threshold ) : 0u;
             if ( minStillFrames == 0 || static_cast<float64>( minStillFrames ) != threshold )
                 return unexpected( Error{ ErrorKind::InvalidArgument, "the threshold is a frame count (a whole number, 1 or more)", "RenderTemporalAccumulation" } );
-            RenderStabilitySample::setMinStillFramesThreshold( minStillFrames );
+            RenderConvergenceSample::setMinStillFramesThreshold( minStillFrames );
             return {};
         }
 
@@ -127,7 +128,7 @@ namespace sw
         {
             if ( threshold < 0.0 )
                 return unexpected( Error{ ErrorKind::InvalidArgument, "the threshold is an exposure error (0 or more, EV)", "RenderAutoExposure" } );
-            RenderStabilitySample::setMaxExposureErrorThreshold( static_cast<float32>( threshold ) );
+            RenderConvergenceSample::setMaxExposureErrorThreshold( static_cast<float32>( threshold ) );
             return {};
         }
 
@@ -136,7 +137,7 @@ namespace sw
         {
             if ( threshold <= 0.0 || threshold >= 1.0 )
                 return unexpected( Error{ ErrorKind::InvalidArgument, "the threshold is the share of the old history left (between 0 and 1)", "RenderRealtimeGI" } );
-            RenderStabilitySample::setMaxGIErrorThreshold( static_cast<float32>( threshold ) );
+            RenderConvergenceSample::setMaxGIErrorThreshold( static_cast<float32>( threshold ) );
             return {};
         }
     } // namespace

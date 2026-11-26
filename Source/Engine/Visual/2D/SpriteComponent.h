@@ -137,7 +137,7 @@ namespace sw
         float4 getDisplayedUVRect() const;
 
     protected:
-        /** @brief 양면 스프라이트 사각형입니다(`MeshUtil::createSpriteQuad`. 어느 쪽에서 봐도 텍스처가 뒤집히지 않습니다). */
+        /** @brief 양면 스프라이트 사각형입니다(`PrimitiveMeshBuilder::createSpriteQuad`. 어느 쪽에서 봐도 텍스처가 뒤집히지 않습니다). */
         string_view getDefaultMeshID() const override { return "Sprite"; }
         /** @brief 스프라이트 머티리얼(투명, `sprite_2d.hlsl`)입니다. */
         hashed_string getDefaultMaterialPath() const override;

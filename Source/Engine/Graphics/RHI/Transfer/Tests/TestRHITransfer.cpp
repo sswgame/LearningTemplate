@@ -9,8 +9,10 @@
 #include "Core/TestFramework/TestFramework.h"
 
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
-#include "Engine/Graphics/RHI/RHIDescriptors.h"
+#include "Engine/Graphics/RHI/RHIBufferDesc.h"
 #include "Engine/Graphics/RHI/RHIPipelineStateDesc.h"
+#include "Engine/Graphics/RHI/RHITextureDesc.h"
+#include "Engine/Graphics/RHI/RHITransferTicket.h"
 #include "Engine/Graphics/RHI/Transfer/RHITransferSerials.h"
 #include "Engine/Graphics/RHI/Transfer/RHITransferUtil.h"
 

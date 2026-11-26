@@ -128,9 +128,9 @@ SW_TEST_CASE( MeshAssetFormatBytesTest, SeamMarkRoundTrips )
     SW_EXPECT_TRUE( read._listVertex[2].isOnSeam() ); // 이음매 변(0-2 · 4-2)의 다른 끝 — 갈리지 않았어도 이음매다
     SW_EXPECT_FALSE( read._listVertex[1].isOnSeam() );
     SW_EXPECT_FALSE( read._listVertex[3].isOnSeam() );
-    SW_EXPECT_TRUE( RHIVertex::isSeamEdge( read._listVertex[0], read._listVertex[2] ) );
-    SW_EXPECT_TRUE( RHIVertex::isSeamEdge( read._listVertex[4], read._listVertex[2] ) );
-    SW_EXPECT_FALSE( RHIVertex::isSeamEdge( read._listVertex[0], read._listVertex[1] ) );
+    SW_EXPECT_TRUE( MeshVertex::isSeamEdge( read._listVertex[0], read._listVertex[2] ) );
+    SW_EXPECT_TRUE( MeshVertex::isSeamEdge( read._listVertex[4], read._listVertex[2] ) );
+    SW_EXPECT_FALSE( MeshVertex::isSeamEdge( read._listVertex[0], read._listVertex[1] ) );
 }
 
 /** @brief [MeshAssetFormatBytesTest] 모든 덩어리가 왕복한다 — 읽기를 공통 도구로 옮겨도 형식은 그대로다 */

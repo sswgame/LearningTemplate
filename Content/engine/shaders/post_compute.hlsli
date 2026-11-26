@@ -1,7 +1,7 @@
 /**
  * @file post_compute.hlsli
  * @brief 일반 풀스크린 패스의 컴퓨트 구현(`_implementation="Compute"`, define `SW_PASS_COMPUTE`)이 함께 쓰는 루트 상수와 읽기 함수입니다.
- * @details C++: FramePassExecutor::executeComputeImplementation — 같은 순서의 16 dword 이하 루트 상수다(스칼라만 — cbuffer 의 16 바이트 경계 채우기가 C++ 배치와 어긋나지 않게).
+ * @details C++: FrameRecorder::executeComputeImplementation — 같은 순서의 16 dword 이하 루트 상수다(스칼라만 — cbuffer 의 16 바이트 경계 채우기가 C++ 배치와 어긋나지 않게).
  *          원본 · 깊이는 bindless SRV 번호로 읽고 출력은 RW 번호로 쓴다. 네이티브 bindless(DX12 · Vulkan)에서만 돈다 — 에뮬 백엔드는 픽셀 구현이다.
  *          컴퓨트 PSO 에는 PassCB 가 묶이지 않으므로 효과의 값(블룸 문턱 · 렌즈 · 역뷰-투영 4 열)도 여기로 온다.
  *          include 앞에 `SW_RW_SLOT0_GL_FORMAT` 을 적는다(GL 이 묶은 포맷과 선언이 같아야 한다 — 쿠킹이 GL 로도 컴파일한다).

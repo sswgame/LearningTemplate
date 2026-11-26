@@ -39,7 +39,7 @@ namespace sw
         };
 
         /** @brief 정점 @p vertexCount 개(@p format)의 두 사본을 견줍니다. 같으면 nullopt 입니다. */
-        static optional<Difference> findDifference( RHIMeshVertexFormat format, uint32 vertexCount, const uint8* pExpected, const uint8* pActual );
+        static optional<Difference> findDifference( MeshVertexFormat format, uint32 vertexCount, const uint8* pExpected, const uint8* pActual );
 
         /** @brief 도착한 사본을 견주어 로그로 남기고, 요청이 있으면 지금 장면의 메시를 되읽는 복사를 @p cmd 에 넣습니다. 프레임 업로드 단계 바로 뒤(렌더 패스 밖)에 부른다. */
         void service( IRHICommandList& cmd, IRHIDevice& device, const GPUScene& scene, RenderDebugRegistry& registry );
@@ -50,13 +50,13 @@ namespace sw
         /** @brief 되읽는 메시 하나입니다. 되읽는 버퍼에는 [프록시 사본][그리는 버퍼의 사본] 이 잇달아 든다. */
         struct CheckedMesh
         {
-            string              _name;
-            RHIMeshVertexFormat _format{ RHIMeshVertexFormat::Packed };
-            uint32              _vertexCount{ 0 };
-            uint32              _expectedOffset{ 0 }; ///< `_listExpected` 안 시작 — 되읽는 버퍼의 시작은 그 두 배다
-            uint32              _byteCount{ 0 };      ///< 사본 하나의 바이트
-            uint32              _batchIndex{ 0 };     ///< 이 메시의 배치 번호(복사를 기록하는 프레임 안에서만 쓴다)
-            RHIBufferHandle     _proxyBuffer{ 0 };    ///< 렌더 프록시의 정점 버퍼(놓였으면 장치가 모르는 핸들이다)
+            string           _name;
+            MeshVertexFormat _format{ MeshVertexFormat::Packed };
+            uint32           _vertexCount{ 0 };
+            uint32           _expectedOffset{ 0 }; ///< `_listExpected` 안 시작 — 되읽는 버퍼의 시작은 그 두 배다
+            uint32           _byteCount{ 0 };      ///< 사본 하나의 바이트
+            uint32           _batchIndex{ 0 };     ///< 이 메시의 배치 번호(복사를 기록하는 프레임 안에서만 쓴다)
+            RHIBufferHandle  _proxyBuffer{ 0 };    ///< 렌더 프록시의 정점 버퍼(놓였으면 장치가 모르는 핸들이다)
         };
 
         /** @brief 지금 장면에서 견줄 메시와 기대값(CPU 정점의 GPU 모양)을 모읍니다. */

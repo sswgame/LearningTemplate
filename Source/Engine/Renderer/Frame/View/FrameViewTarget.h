@@ -13,6 +13,7 @@
 #include "Engine/Graphics/RHI/RHIGeometryBuffer.h"
 #include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
 #include "Engine/Graphics/RHI/RHITextureSlot.h"
+#include "Engine/Graphics/RHI/RHITransferTicket.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
 #include "Engine/Renderer/Frame/Resource/TransientAttachmentPool.h"
 #include "Engine/Renderer/Frame/View/FrameViewHistory.h"
@@ -44,13 +45,13 @@ namespace sw
         hashed_string    _attachment; ///< 기록 첨부 이름
         hashed_string    _resource;   ///< 그래프 자원 이름(`RenderGraphPassDesc::ResolvedAttachment::_historyResource` — `<첨부>History`)
         FrameViewHistory _history{ FrameViewHistoryLayout::Copy, FrameViewHistoryIdleRule::Discard };
-        uint32           _sampleIndex{ 0 }; ///< 시간 표본 번호. 쌓인 프레임마다 하나 늘고 기록을 버린 프레임에 0 부터 센다(`g_TemporalSample`, `FramePassExecutor::bindOutputHistory`)
+        uint32           _sampleIndex{ 0 }; ///< 시간 표본 번호. 쌓인 프레임마다 하나 늘고 기록을 버린 프레임에 0 부터 센다(`g_TemporalSample`, `FrameRecorder::bindOutputHistory`)
     };
 
     /**
      * @brief 뷰 하나가 프레임을 넘어 유지하는 상태입니다. 트랜지언트 풀, 추가 뷰의 컬링 입력, TAA 히스토리, 직렬 커맨드 리스트, 출력 텍스처가 들어 있습니다.
      * @details 주 시점은 뷰 목록의 0 번이고(`FrameRenderState::getMainView`), 추가 뷰는 카메라 id(`_viewID`)로 찾는다. 패스 코드는 지금 그리는 뷰
-     *          (`FramePassExecutor::_pActiveView`)의 것만 본다. 뷰가 바뀌면 트랜지언트 이름(SceneColor 등)이 다른 텍스처를 가리키기 때문이다.
+     *          (`FrameRecorder::_pActiveView`)의 것만 본다. 뷰가 바뀌면 트랜지언트 이름(SceneColor 등)이 다른 텍스처를 가리키기 때문이다.
      */
     struct FrameViewTarget
     {
@@ -132,7 +133,7 @@ namespace sw
         uint32     _lightGridIndex{ constant::invalid_index::kUint32 }; ///< 이번 프레임 이 뷰의 라이트 그리드 번호(`GPULightBuffer::getGridBase`). 없으면 셰이더는 목록 전체를 돈다
         /// @brief 지난번 이 뷰를 그린 뷰-투영입니다(모션 블러의 `g_PrevViewProj`). 지터 없는 것이다. 기록을 버리는 프레임(`_bHistoryReset`)은 이번 것으로 둔다(속도 0).
         float4x4 _prevViewProj{};
-        /// @brief TAA 서브픽셀 지터 순서입니다. 지터 패스(`_bTemporalJitter`)가 도는 프레임(그 출력의 기록을 쓰는 프레임)만 한 칸 넘기고 래스터 뷰-투영에 싣는다(`FramePassExecutor::applyViewProjection`).
+        /// @brief TAA 서브픽셀 지터 순서입니다. 지터 패스(`_bTemporalJitter`)가 도는 프레임(그 출력의 기록을 쓰는 프레임)만 한 칸 넘기고 래스터 뷰-투영에 싣는다(`FrameRecorder::applyViewProjection`).
         /// 순번은 뷰 대상과 함께 처음부터 시작한다. 시나리오는 시작 프레임에 뷰 대상을 새로 만든다(`FrameRenderer::discardViewTargets`).
         TemporalJitterSequence _temporalJitter{};
         /**
@@ -143,8 +144,8 @@ namespace sw
         /// @brief 이번 프레임의 측정 상수(최소 EV, 최대 EV, 밝아질 때 · 어두워질 때 목표로 다가가는 비율)입니다. 셋업(`prepareAutoExposure`)이 정하고 톤맵 패스는 읽기만 합니다.
         float4  _autoExposureParams{};
         float32 _autoExposureClock{ 0.0f };    ///< 지난번 이 뷰의 노출을 측정한 게임 시각(초, `GPUScene::getVertexAnimationTime`)
-        float32 _exposureErrorEv{ 0.0f };      ///< 노출 적응의 남은 오차 상한(EV, `RenderStabilityUtil::advanceExposureError`) — 사진 앞 정착 조건(`RenderAutoExposure`)
-        uint32  _stillFrameCount{ 0 };         ///< TAA 기록을 버리지 않고 카메라 · 물체가 서 있던 이어진 프레임 수(`RenderStabilityUtil::advanceStillFrames`)
+        float32 _exposureErrorEv{ 0.0f };      ///< 노출 적응의 남은 오차 상한(EV, `RenderConvergenceUtil::advanceExposureError`) — 사진 앞 정착 조건(`RenderAutoExposure`)
+        uint32  _stillFrameCount{ 0 };         ///< TAA 기록을 버리지 않고 카메라 · 물체가 서 있던 이어진 프레임 수(`RenderConvergenceUtil::advanceStillFrames`)
         uint32  _cameraStillFrameCount{ 0 };   ///< TAA 기록을 버리지 않고 카메라만 서 있던 이어진 프레임 수 — 물체 움직임은 보지 않는다(끝없이 움직이는 캐릭터 장면의 정착)
         float32 _exposureAdaptationEv{ 0.0f }; ///< 되읽은 지금 EV 와 목표 EV 의 차(절댓값) — 감시 값 `Render.ExposureAdaptation`(`FrameAutoExposure::readBackAdaptation`)
         /// 자동 노출 기록(지금 EV · 목표 EV)을 되읽는 중인 티켓입니다. 무효면 읽는 중이 아니다. 렌더 스레드가 프레임을 넘어 쥐므로 `PendingReadback`(쥔 동안 대기 전송 단언)이 아니라
@@ -161,7 +162,7 @@ namespace sw
         /// @brief 톤맵 앞 · 뒤 자리의 이어 읽기 사본입니다(그 자리에 머티리얼이 둘 이상일 때만 있다 — `FramePostProcessMaterials::prepareView`). 풀과 수명이 같다.
         RHITextureSlot _postProcessChainBeforeTonemap;
         RHITextureSlot _postProcessChainAfterTonemap;
-        /// @brief 파이프라인 패스(`RenderPipelineAsset::getGraphPass` 순서)마다 이번 프레임 이 뷰에서 비활성이면 1(꺼진 효과 · 그릴 것 없는 덧그리기 · 읽는 쪽이 없는 패스) — 뷰 패스 고르기(`applyViewPassSelection`)의 결과 하나다. 실행 입구(`FramePassExecutor::executePass`)가 그대로 따른다.
+        /// @brief 파이프라인 패스(`RenderPipelineAsset::getGraphPass` 순서)마다 이번 프레임 이 뷰에서 비활성이면 1(꺼진 효과 · 그릴 것 없는 덧그리기 · 읽는 쪽이 없는 패스) — 뷰 패스 고르기(`applyViewPassSelection`)의 결과 하나다. 실행 입구(`FrameRecorder::executePass`)가 그대로 따른다.
         vector<uint8> _listPassDisabled;
         /**
          * @brief FSR 1 의 중간 RT(EASU 출력 = Present 뷰포트 크기, RGBA8)입니다. 이 뷰가 FSR 로 키울 때만 있다(`prepareUpscale`).

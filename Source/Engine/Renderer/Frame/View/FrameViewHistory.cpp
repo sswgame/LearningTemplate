@@ -3,7 +3,7 @@
 #include "Engine/Renderer/Frame/View/FrameViewHistory.h"
 
 #include "Engine/Graphics/RHI/IRHIDevice.h"
-#include "Engine/Graphics/RHI/RHIDescriptors.h"
+#include "Engine/Graphics/RHI/RHITextureDesc.h"
 
 namespace sw
 {

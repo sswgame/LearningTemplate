@@ -1,0 +1,94 @@
+#include "pch.h"
+
+#include "Engine/Graphics/RHI/Transfer/GPUUploadQueue.h"
+
+#include "Core/Task/TaskManager.h"
+
+#include "Engine/Foundation/EngineSubsystems.h"
+#include "Engine/Graphics/Mesh/Mesh.h"
+#include "Engine/Graphics/Mesh/MeshRenderData.h"
+#include "Engine/Graphics/RHI/IRHIDevice.h"
+#include "Engine/Profiling/FrameProfiler.h"
+
+namespace sw
+{
+    void GPUUploadQueue::bindDevice( IRHIDevice* pDevice, TaskManager* pTaskManager )
+    {
+        // 쌓여 있던 요청은 옛 디바이스의 것이므로 버린다. 필요한 메시는 다음 프레임 GT 가 다시 요청한다.
+        _listPendingMesh.clear();
+        _uniquePendingMesh.clear();
+
+        _pDevice      = pDevice;
+        _pTaskManager = pTaskManager;
+        _bParallel    = SW_FALSE;
+        if ( pDevice == nullptr || pTaskManager == nullptr )
+            return;
+
+        // 워커에서 만들어도 되는지는 백엔드가 말한다. OpenGL 은 컨텍스트가 스레드에 묶여 안 된다.
+        _bParallel = ( pDevice->getCapabilities()._bThreadSafeResourceCreation != SW_FALSE ) ? SW_TRUE : SW_FALSE;
+        SW_LOG_INFO_ID( "GPUUploadQueue.GPUUploadQueueBackend", "GPU upload queue: %# (backend %#)",
+                        _bParallel == SW_TRUE ? "parallel on workers" : "off - the render thread creates them in that frame (this backend cannot create on workers)",
+                        pDevice->getBackendName() );
+    }
+
+    bool GPUUploadQueue::shouldCreateMeshes() const
+    {
+        return _bParallel == SW_TRUE && _pDevice != nullptr;
+    }
+
+    void GPUUploadQueue::requestMesh( const shared_ptr<Mesh>& mesh )
+    {
+        // 워커 생성을 못 하는 백엔드(OpenGL)에서는 받지 않는다. 렌더 스레드가 그 프레임의 업로드(`GPUScene` 의 `initRHI`)에서 만든다.
+        // 주의: 게임 스레드가 대신 만들면 렌더 스레드가 컨텍스트를 오래 점유한 동안(셰이더 실시간 컴파일) 컨텍스트 대기가 시간을 넘겨 메시를 못 만든다.
+        if ( _bParallel == SW_FALSE )
+            return;
+        // 이미 이 디바이스에 업로드되어 있으면 할 일이 없다. 상주 판단은 Mesh 가 세대로 한다.
+        const bool bNothingToUpload = mesh == nullptr || _pDevice == nullptr || mesh->getRenderData().isRHIValid();
+        if ( bNothingToUpload )
+            return;
+        if ( mesh->getVertexCount() == 0 )
+            return;
+
+        // 같은 프레임에 같은 메시가 여러 배치로 들어온다(메시 하나를 여러 오브젝트가 쓴다). 중복은 여기서 거른다.
+        // 안 거르면 워커 둘이 같은 메시를 동시에 만들어 한쪽 버퍼가 누수된다.
+        if ( _uniquePendingMesh.insert( mesh.get() ).second )
+            _listPendingMesh.push_back( mesh );
+    }
+
+    uint32 GPUUploadQueue::flush()
+    {
+        _uniquePendingMesh.clear();
+        if ( _listPendingMesh.empty() || _pDevice == nullptr )
+        {
+            _listPendingMesh.clear();
+            return 0;
+        }
+
+        SW_PROFILE_SCOPE( "GT.GPUUpload.flush" );
+
+        const uint32 count = static_cast<uint32>( _listPendingMesh.size() );
+        SW_PROFILE_COUNT( "GT.GPUUpload.meshCount", count );
+
+        IRHIDevice*                     pDevice     = _pDevice;
+        const vector<shared_ptr<Mesh>>& listMesh    = _listPendingMesh;
+        auto                            uploadBlock = [pDevice, &listMesh]( uint32 start, uint32 end )
+        {
+            for ( uint32 index = start; index < end; ++index )
+            {
+                const shared_ptr<Mesh>& mesh = listMesh[index];
+                if ( mesh != nullptr )
+                    (void)mesh->getRenderData().initRHI( pDevice ); // 실패는 메시가 자기 코드에서 로그로 남긴다(RHIRenderResource::initRHI 와 같다)
+            }
+        };
+
+        // 워커가 나눠 만들고 부른 스레드도 함께 만든다(포크-조인 `runParallel` — 스테이지를 따로 만들고 기다리지 않는다, 언리얼 ParallelFor 와 같다).
+        // 기다리는 것이 목적이 아니라 RT 가 만들지 않는 것이 목적이다. 워커에서 만들 수 없는 백엔드는 여기서 직렬로 만든다.
+        if ( _bParallel == SW_TRUE && _pTaskManager != nullptr )
+            _pTaskManager->runParallel( count, 2, SW_DELEGATE_LAMBDA( ParallelBlockDelegate, uploadBlock ) );
+        else
+            uploadBlock( 0, count );
+
+        _listPendingMesh.clear();
+        return count;
+    }
+} // namespace sw

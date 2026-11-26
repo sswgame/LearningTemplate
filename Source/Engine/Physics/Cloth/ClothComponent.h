@@ -16,7 +16,7 @@
 
 namespace sw
 {
-    struct RHIVertex;
+    struct MeshVertex;
 
     class SkeletalMeshComponent;
     class ValidationContext;
@@ -84,7 +84,7 @@ namespace sw
          * @details 앞면은 격자 삼각형의 감김(윗줄이 위인 정면에서 +Z), 뒷면은 감김과 노멀을 뒤집는다 — 이 엔진의 앞면 규약(바깥을 향한 감김)이다.
          * @return 정점 수가 열 × 행이 아니면 false 이고 @p outListVertex 는 비어 있습니다.
          */
-        [[nodiscard]] bool makeRenderVertices( const vector<float3>& listWorldVertex, const float4x4& worldToLocal, vector<RHIVertex>& outListVertex ) const;
+        [[nodiscard]] bool makeRenderVertices( const vector<float3>& listWorldVertex, const float4x4& worldToLocal, vector<MeshVertex>& outListVertex ) const;
 
         /** @brief LOD 를 정합니다(`_maxLOD` · `_listLODIterationCount`, 클래스 설명의 LOD). 다음 물리 프레임부터 따릅니다. */
         void setLOD( int32 maxLOD, const vector<uint32>& listLODIterationCount );

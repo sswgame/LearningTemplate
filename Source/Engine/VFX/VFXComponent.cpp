@@ -11,12 +11,13 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Asset/Cache/SharedAssetRef.h"
+#include "Engine/Environment/EnvironmentMaterial.h"
 #include "Engine/Environment/EnvironmentUtil.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Graphics/Mesh/MeshCache.h"
-#include "Engine/Graphics/Mesh/MeshUtil.h"
+#include "Engine/Graphics/Mesh/PrimitiveMeshBuilder.h"
 #include "Engine/Graphics/Shader/Binding/GPULight.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -529,7 +530,7 @@ namespace sw
             if ( def._renderMode != VFXRenderMode::Mesh )
                 continue;
             const MeshHandle& load = _listMeshLoad[emitterIndex];
-            shared_ptr<Mesh>  mesh = load.isValid() ? load.get() : MeshUtil::acquirePrimitive( def._mesh._meshID );
+            shared_ptr<Mesh>  mesh = load.isValid() ? load.get() : PrimitiveMeshBuilder::acquirePrimitive( def._mesh._meshID );
             if ( mesh == nullptr )
             {
                 // 대신 그릴 메시를 고르지 않는다 — 이 방출기는 그리지 않고(시뮬레이션은 돈다) 원인을 남긴다.

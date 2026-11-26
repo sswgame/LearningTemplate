@@ -24,10 +24,10 @@ namespace
     };
 
     /** @brief 정점 여섯(삼각형 둘)에서 사각형 경계를 읽습니다. 순서는 (왼아래, 오른위, 오른아래), (왼아래, 왼위, 오른위) 입니다. */
-    QuadBounds readQuad( const sw::vector<sw::RHIVertex>& listVertex, size_t quadIndex )
+    QuadBounds readQuad( const sw::vector<sw::MeshVertex>& listVertex, size_t quadIndex )
     {
-        const sw::RHIVertex& bottomLeft = listVertex[quadIndex * 6 + 0];
-        const sw::RHIVertex& topRight   = listVertex[quadIndex * 6 + 1];
+        const sw::MeshVertex& bottomLeft = listVertex[quadIndex * 6 + 0];
+        const sw::MeshVertex& topRight   = listVertex[quadIndex * 6 + 1];
         return QuadBounds{ bottomLeft._arrPosition[0], bottomLeft._arrPosition[1], topRight._arrPosition[0], topRight._arrPosition[1],
                            bottomLeft._arrUV[0], topRight._arrUV[1], topRight._arrUV[0], bottomLeft._arrUV[1] };
     }
@@ -48,7 +48,7 @@ SW_TEST_CASE( SpriteMeshBuilderTest, SlicedCornersKeepTheirSizeAndTheCenterStret
     sw::SlicedSpriteDef desc{};
     desc._size   = sw::float2{ 4.0f, 2.0f };
     desc._border = sw::float4{ 0.25f, 0.25f, 0.25f, 0.25f };
-    sw::vector<sw::RHIVertex> listVertex;
+    sw::vector<sw::MeshVertex> listVertex;
     sw::SlicedSpriteDef::makeSlicedVertices( desc, listVertex );
     SW_REQUIRE_EQUAL( 9u * 6u * 2u, static_cast<uint32>( listVertex.size() ) );
 
@@ -72,7 +72,7 @@ SW_TEST_CASE( SpriteMeshBuilderTest, SlicedCornersKeepTheirSizeAndTheCenterStret
 
     // 앞면은 -Z, 뒷면은 X 거울 · +Z 이고 같은 UV 다(뒤에서 봐도 뒤집히지 않는다).
     SW_EXPECT_TRUE( isNear( -1.0f, listVertex[0]._arrNormal[2] ) );
-    const sw::RHIVertex& backFirst = listVertex[9 * 6];
+    const sw::MeshVertex& backFirst = listVertex[9 * 6];
     SW_EXPECT_TRUE( isNear( 1.0f, backFirst._arrNormal[2] ) );
     SW_EXPECT_TRUE( isNear( -listVertex[0]._arrPosition[0], backFirst._arrPosition[0] ) );
     SW_EXPECT_TRUE( isNear( listVertex[0]._arrUV[0], backFirst._arrUV[0] ) );
@@ -88,7 +88,7 @@ SW_TEST_CASE( SpriteMeshBuilderTest, TiledRepeatsTheMiddleAndCropsTheLastTile )
     sw::SlicedSpriteDef tiled{};
     tiled._size   = sw::float2{ 2.5f, 1.0f };
     tiled._bTiled = SW_TRUE;
-    sw::vector<sw::RHIVertex> listVertex;
+    sw::vector<sw::MeshVertex> listVertex;
     sw::SlicedSpriteDef::makeSlicedVertices( tiled, listVertex );
     SW_REQUIRE_EQUAL( 3u * 6u * 2u, static_cast<uint32>( listVertex.size() ) );
     const QuadBounds first = readQuad( listVertex, 0 );

@@ -1,7 +1,8 @@
 /**
  * @file RHIHandles.h
- * @brief RHI 자원 핸들(버퍼, 텍스처, 힙, PSO), bindless 디스크립터 인덱스, 해제 · 네이티브 문맥 콜백 별칭입니다.
- * @details 핸들 값 형식과 별칭만 담는다. 핸들을 들고 다니기만 하는 헤더(머티리얼, 캔버스)가 서술체 전체(`RHIDescriptors.h`)를 끌지 않게 따로 둔다.
+ * @brief RHI 자원 핸들(버퍼, 텍스처, 힙, PSO)과 bindless 디스크립터 인덱스입니다.
+ * @details 핸들 값 형식만 담는다. 핸들을 들고 다니기만 하는 헤더(머티리얼, 캔버스)가 서술체(`RHITextureDesc.h` 등)를 끌지 않게 따로 둔다.
+ *          장치 콜백 별칭은 `RHIDeviceCallbacks.h`, 버퍼 구간은 `RHIBufferSlice.h` 에 있다.
  */
 #pragma once
 #include "Core/Foundation/Types.h"
@@ -71,62 +72,9 @@ namespace sw
      */
     inline constexpr RHITextureHandle kRHIBackBufferTexture{ ~uint64{ 0 } };
 
-    /**
-     * @brief 상수 버퍼 페이지(`IRHIResourceFactory::createConstantBufferPage`) 안의 한 구간입니다(감사 R-4).
-     * @details 오프셋은 256 B(`constant::render::kConstantBufferAlignment`)의 배수이고 크기는 그 구간의 바이트다 — 만드는 쪽은 `ConstantBufferPagePool` 하나다.
-     *          비행 중 프레임 복제는 페이지가 갖는다(백엔드가 프레임 칸마다 같은 오프셋을 쓴다). 언리얼 `FRHIBufferRange` · 유니티 SRP Batcher 의 오프셋 자리다.
-     */
-    struct RHIBufferSlice
-    {
-        RHIBufferHandle _buffer{ 0 };
-        uint32          _offset{ 0 };
-        uint32          _size{ 0 };
-    };
-
     /** @brief 텍스처를 겹쳐 놓는 힙의 64비트 핸들입니다(`IRHIResourceFactory::createTransientHeap`). 0 은 없음이다. */
     using RHITransientHeapHandle = RHIHandle<RHITransientHeapHandleTag>;
 
-    /** @brief 텍스처를 힙에 놓을 때의 크기 · 정렬입니다(`IRHIResourceFactory::getTextureAllocationInfo`). 능력이 없으면 둘 다 0 이다. */
-    struct RHITextureAllocationInfo
-    {
-        uint64 _sizeBytes{ 0 };
-        uint64 _alignment{ 0 };
-    };
-
-    template <typename T>
-    class Delegate;
-
-    /** @brief GPU 가 다 쓴 뒤에 부르는 자원 해제 콜백입니다(`RHIReleaseQueue`, `IRHIDevice::enqueueGPURelease`). */
-    using RHIResourceReleaseDelegate = Delegate<void()>;
-    /**
-     * @enum RHIFrameCompletion
-     * @brief GPU 완료 통지의 결과입니다(`IRHIDevice::notifyFrameCompletion`).
-     * @details 해제(놓기)와 통지를 한 콜백이 겸하면 기다리지 못한 비우기(종료 · 잃은 장치 · 시간 초과)가 끝나지 않은 일을 끝났다고 알린다 — 그래서 통지는 결과를 받는다.
-     */
-    enum class RHIFrameCompletion : uint8
-    {
-        Completed, ///< GPU 가 그 프레임을 끝냈다 — 되읽기 · 구간 재사용을 해도 된다
-        Abandoned, ///< 끝났는지 모른 채 큐를 비웠다(잃은 장치 · 시간 초과 · 종료) — 결과를 믿지 않는다
-    };
-    /** @brief GPU 가 그 프레임을 끝냈는지(또는 포기했는지) 알리는 콜백입니다(`IRHIDevice::notifyFrameCompletion`). */
-    using RHIFrameCompletionDelegate = Delegate<void( RHIFrameCompletion )>;
-    /** @brief 네이티브 컨텍스트를 그것을 지키는 잠금 안에서 받는 콜백입니다(`IRHIDevice::withNativeContext`). 인자는 콜백 안에서만 씁니다. */
-    using RHINativeContextVisitor = Delegate<void( void* pContext )>;
-
     /** @brief 파이프라인 상태 객체(PSO)의 64비트 핸들입니다. */
     using RHIPipelineStateHandle = RHIHandle<RHIPipelineStateHandleTag>;
-
-    /**
-     * @struct RHIThreadGroupSize
-     * @brief 축마다의 스레드 수입니다. 셰이더 리플렉션이 채우고 컴퓨트 PSO 가 들고 있다 — C++ 에 같은 수를 다시 적지 않는다(유니티 `GetKernelThreadGroupSizes`).
-     */
-    struct RHIThreadGroupSize
-    {
-        uint32 _x{ 0 };
-        uint32 _y{ 0 };
-        uint32 _z{ 0 };
-
-        /** @brief 컴퓨트 셰이더의 크기면 true 입니다(다른 스테이지는 0). */
-        bool isValid() const { return _x > 0 && _y > 0 && _z > 0; }
-    };
 } // namespace sw

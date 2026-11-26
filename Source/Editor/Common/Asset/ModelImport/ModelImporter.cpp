@@ -953,7 +953,7 @@ namespace sw::editor
             body->setSkin( std::move( bodyData._listSkinVertex ), std::move( bodyData._skinBinding ) );
         body->setMorphTargets( std::move( bodyData._listMorphTarget ) );
         shared_ptr<Mesh> garment = Mesh::create( MeshCPUAccess::Keep );
-        if ( garment->setGeometryWithTangents( vector<RHIVertex>( inoutMesh._listVertex ), vector<uint32>( inoutMesh._listIndex ) ) == false )
+        if ( garment->setGeometryWithTangents( vector<MeshVertex>( inoutMesh._listVertex ), vector<uint32>( inoutMesh._listIndex ) ) == false )
             return false; // 메시가 까닭을 남겼다(임포트가 만든 번호라 생기지 않아야 한다)
         if ( inoutMesh._listSkinVertex.empty() == false )
             garment->setSkin( inoutMesh._listSkinVertex, body->getSkinBinding() );

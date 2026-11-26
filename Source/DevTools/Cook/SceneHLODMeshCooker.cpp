@@ -11,7 +11,7 @@
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Graphics/Mesh/MeshCache.h"
-#include "Engine/Graphics/Mesh/MeshUtil.h"
+#include "Engine/Graphics/Mesh/PrimitiveMeshBuilder.h"
 #include "Engine/Object/Component/ComponentStableKey.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Scene/Scene.h"
@@ -49,7 +49,7 @@ namespace sw
                 for ( const HLODMeshPart& part : component.getParts() )
                 {
                     const string&          meshID = part._meshID.path();
-                    const shared_ptr<Mesh> mesh   = MeshAssetFormat::isMeshAssetPath( meshID ) ? MeshCache::acquire( meshID, MeshCPUAccess::Keep ) : MeshUtil::acquirePrimitive( meshID );
+                    const shared_ptr<Mesh> mesh   = MeshAssetFormat::isMeshAssetPath( meshID ) ? MeshCache::acquire( meshID, MeshCPUAccess::Keep ) : PrimitiveMeshBuilder::acquirePrimitive( meshID );
                     if ( mesh == nullptr || HLODMeshComponent::appendPart( part, *mesh, inoutData._listVertex, inoutData._listIndex ) == false )
                     {
                         SW_LOG_ERROR_ID( "SceneHLODMeshCooker.PartNotMerged", "Scene HLOD mesh cook: '%#' - part '%#' (section '%#') could not be merged", scenePath, meshID, part._sectionName.c_str() );

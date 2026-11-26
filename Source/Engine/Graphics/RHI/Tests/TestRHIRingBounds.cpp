@@ -1,21 +1,21 @@
-// 프레임 링(`FrameResourceRing` · `RHITimestampRing`) 범위 검사 — 링 칸 수를 넘는 칸 번호가 개발 구성에서 단언으로 잡히고, 경계 안은 잡히지 않는지(음성 대조).
+// 프레임 링(`FrameSlotFenceRing` · `RHITimestampRing`) 범위 검사 — 링 칸 수를 넘는 칸 번호가 개발 구성에서 단언으로 잡히고, 경계 안은 잡히지 않는지(음성 대조).
 #include "pch.h"
 
 #include "Core/TestFramework/ScopedAssertCapture.h"
 #include "Core/TestFramework/TestFramework.h"
 
-#include "Engine/Graphics/RHI/Backend/FrameResourceRing.h"
+#include "Engine/Graphics/RHI/Backend/FrameSlotFenceRing.h"
 #include "Engine/Graphics/RHI/Backend/RHITimestampRing.h"
 
 using namespace sw;
 
 /**
- * @brief [RHIRingBoundsTest] FrameResourceRing — 칸 밖 펜스 읽기 · 쓰기는 단언하고(배포는 가드가 0 · 무시) 링을 바꾸지 않는다
+ * @brief [RHIRingBoundsTest] FrameSlotFenceRing — 칸 밖 펜스 읽기 · 쓰기는 단언하고(배포는 가드가 0 · 무시) 링을 바꾸지 않는다
  */
-SW_TEST_CASE( RHIRingBoundsTest, FrameResourceRingSlotIsChecked )
+SW_TEST_CASE( RHIRingBoundsTest, FrameSlotFenceRingSlotIsChecked )
 {
-    FrameResourceRing ring;
-    constexpr uint32  kLastSlot = constant::render::kMaxFrameCountInFlight - 1;
+    FrameSlotFenceRing ring;
+    constexpr uint32   kLastSlot = constant::render::kMaxFrameCountInFlight - 1;
     {
         const test::ScopedAssertCapture assertCapture;
         ring.setFenceValue( kLastSlot, 5 );

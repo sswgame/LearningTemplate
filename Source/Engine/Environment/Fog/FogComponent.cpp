@@ -50,7 +50,7 @@ namespace sw
     {
         outSettings = FogSettings{};
         // 물속은 컴포넌트의 값을 덮는다: 높이와 무관한 균일 안개이고(감쇠 0) 라이트 산란 · 볼륨은 없다. 시작 거리 0, 불투명도 상한 1 이다.
-        WaterUnderwaterFog underwater;
+        UnderwaterFogValues underwater;
         if ( WaterBodyComponent::findUnderwaterFog( manager, viewPosition, underwater ) )
         {
             outSettings._color         = float3{ underwater._color._x, underwater._color._y, underwater._color._z };

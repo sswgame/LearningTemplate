@@ -121,8 +121,8 @@ namespace sw
             /** @brief 청크 하나의 메시 결과 칸입니다(`ChunkVertexJob` 이 청크마다 하나 쓴다). */
             struct ChunkMeshBuild
             {
-                vector<RHIVertex> _listVertex; ///< 합친 정점(삼각형 목록으로 만든 뒤 합친다)
-                vector<uint32>    _listIndex;  ///< 합친 정점 안의 인덱스
+                vector<MeshVertex> _listVertex; ///< 합친 정점(삼각형 목록으로 만든 뒤 합친다)
+                vector<uint32>     _listIndex;  ///< 합친 정점 안의 인덱스
             };
 
             struct ChunkVertexJob
@@ -138,7 +138,7 @@ namespace sw
                     const ChunkMeshRequest& request = _pRequest[index];
                     const uint32            chunkX  = request._chunkIndex % _pLayout->_chunkCountX;
                     const uint32            chunkZ  = request._chunkIndex / _pLayout->_chunkCountX;
-                    vector<RHIVertex>       listTriangleVertex;
+                    vector<MeshVertex>      listTriangleVertex;
                     TerrainMeshBuilder::makeChunkVertices( *_pHeightfield, *_pLayout, chunkX, chunkZ, request._lod, request._arrNeighborLOD, listTriangleVertex );
                     // 지오모프 정점은 색 · 탄젠트 칸에 섞기 값을 담는다 - 탄젠트를 구하면 지운다.
                     if ( _geomorphLODDistance > 0.0f )
@@ -892,7 +892,7 @@ namespace sw
                 neighborLOD = 0;
             }
             shared_ptr<Mesh> placeholder = Mesh::create( MeshCPUAccess::Keep );
-            placeholder->setVertexFormat( RHIMeshVertexFormat::HighPrecision ); // 청크 메시와 같은 형식(아래 setMesh)
+            placeholder->setVertexFormat( MeshVertexFormat::HighPrecision ); // 청크 메시와 같은 형식(아래 setMesh)
             chunk._batch = sw::make_unique<MeshInstanceBatch>( std::move( placeholder ), _material.getMaterial(), _material.getInstance(), 1u, MeshInstanceWriter::CPU );
             chunk._batch->setOwnerComponent( this );
             chunk._batch->setWorld( 0, float4x4::makeTranslation( _layout.computeChunkTranslation( _heightfield, chunkX, chunkZ ) ) );
@@ -970,7 +970,7 @@ namespace sw
             chunk._bMeshStale     = false;
             shared_ptr<Mesh> mesh = Mesh::create( MeshCPUAccess::Keep );
             // 지오모프는 색 · 탄젠트 칸에 단위 벡터가 아닌 값(델타 · 청크 경계 · 지면 높이)을 싣는다 — 노멀 · 탄젠트를 줄이는 기본 형식에 넣지 않는다(언리얼 랜드스케이프 전용 vertex factory 자리).
-            mesh->setVertexFormat( RHIMeshVertexFormat::HighPrecision );
+            mesh->setVertexFormat( MeshVertexFormat::HighPrecision );
             // 탄젠트(또는 지오모프 값)와 인덱스는 워커가 채웠다 — 번호는 합친 정점 안이다.
             (void)mesh->setGeometryWithTangents( std::move( listBuild[index]._listVertex ), std::move( listBuild[index]._listIndex ) );
             // 가장 오래 쓰지 않은 칸을 버리고 앞에 넣는다.

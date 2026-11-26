@@ -49,7 +49,7 @@ namespace sw
         , _generation{ 1u }
     {
         _listEntry.reserve( desc._listParameter.size() );
-        for ( const MaterialCollectionParameterDef& parameter : desc._listParameter )
+        for ( const MaterialParameterCollectionEntryDef& parameter : desc._listParameter )
         {
             _listEntry.push_back( Entry{ hashed_string( string_view( parameter._name ) ), parameter._value, parameter._global } );
         }
@@ -59,7 +59,7 @@ namespace sw
     {
         _listEntry.clear();
         _listEntry.reserve( desc._listParameter.size() );
-        for ( const MaterialCollectionParameterDef& parameter : desc._listParameter )
+        for ( const MaterialParameterCollectionEntryDef& parameter : desc._listParameter )
         {
             _listEntry.push_back( Entry{ hashed_string( string_view( parameter._name ) ), parameter._value, parameter._global } );
         }

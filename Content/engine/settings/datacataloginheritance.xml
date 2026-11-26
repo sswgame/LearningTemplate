@@ -65,7 +65,7 @@
 			<Field name="_listPermutation" key="#text"/>
 			<Field name="_listValue" key="_name"/>
 		</Field>
-		<Field name="_listRenderPassRef" key="#text"/>
+		<Field name="_listRenderFeatureRef" key="#text"/>
 	</Document>
 	<Document root="SpriteLibrary">
 		<Field name="_listCategory" key="_name">

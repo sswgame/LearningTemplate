@@ -11,7 +11,7 @@
 #include "Editor/SelfTest/EditorWatchSupport.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
-#include "Engine/Renderer/Frame/View/RenderStability.h"
+#include "Engine/Renderer/Frame/View/RenderPresentCounter.h"
 
 namespace sw::editor
 {

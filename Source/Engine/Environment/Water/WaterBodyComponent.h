@@ -13,6 +13,7 @@
 #include "Core/String/Name/hashed_string.h"
 
 #include "Engine/Asset/AssetRef.h"
+#include "Engine/Environment/EnvironmentMaterial.h"
 #include "Engine/Environment/EnvironmentUtil.h"
 #include "Engine/Environment/Water/WaterWaveMath.h"
 #include "Engine/Object/Component/SceneComponent.h"
@@ -21,7 +22,7 @@
 namespace sw
 {
     class Material;
-    struct RHIVertex;
+    struct MeshVertex;
 
     class GameObjectManager;
     class MeshInstanceBatch;
@@ -40,7 +41,7 @@ namespace sw
 namespace sw
 {
     /** @brief 물속 안개 값입니다(`WaterBodyComponent::findUnderwaterFog`). 안개 패스는 이 값을 읽습니다. */
-    struct WaterUnderwaterFog
+    struct UnderwaterFogValues
     {
         float4  _color{ 0.05f, 0.2f, 0.25f, 1.0f };
         float32 _density{ 0.15f };
@@ -133,7 +134,7 @@ namespace sw
          * @brief @p manager 의 물 가운데 @p viewPosition 을 물속에 둔 첫 물의 안개를 구합니다. 물속 안개를 켠 물만 봅니다. 없으면 false 를 반환합니다.
          * @details `FogComponent::findFog` 가 이 값을 읽어 안개 패스(`RenderPassKind::Fog`)의 값을 덮는다 — 균일 안개, 볼륨 없음.
          */
-        [[nodiscard]] static bool findUnderwaterFog( const GameObjectManager& manager, const float3& viewPosition, WaterUnderwaterFog& outFog );
+        [[nodiscard]] static bool findUnderwaterFog( const GameObjectManager& manager, const float3& viewPosition, UnderwaterFogValues& outFog );
         /** @brief @p manager 의 물 가운데 월드 (x, z) 를 덮는 첫 물입니다. 빌린 포인터입니다. */
         static WaterBodyComponent* findWaterAt( const GameObjectManager& manager, float32 worldX, float32 worldZ );
 
@@ -172,9 +173,9 @@ namespace sw
         /** @brief (x, z) 의 파도 없는 기준면 높이입니다. 덮지 않으면 false 입니다. */
         [[nodiscard]] bool findBaseHeight( float32 worldX, float32 worldZ, float32& outBaseHeight ) const;
         /** @brief 호수 격자 정점을 만듭니다(깊이는 @p pTerrain 에서). */
-        void makeLakeVertices( const TerrainHeightfield* pTerrain, vector<RHIVertex>& outListVertex, float32& outBoundsRadius ) const;
+        void makeLakeVertices( const TerrainHeightfield* pTerrain, vector<MeshVertex>& outListVertex, float32& outBoundsRadius ) const;
         /** @brief 강 띠 정점을 만듭니다. */
-        void makeRiverVertices( const TerrainHeightfield* pTerrain, vector<RHIVertex>& outListVertex, float32& outBoundsRadius ) const;
+        void makeRiverVertices( const TerrainHeightfield* pTerrain, vector<MeshVertex>& outListVertex, float32& outBoundsRadius ) const;
         /** @brief 머티리얼 인스턴스에 파도, 색, 시간을 싣습니다. */
         void writeMaterialValues();
         /** @brief 지금 진폭 배율의 파도를 더한 수면 바운드 반지름입니다(파도가 메시를 위아래와 옆으로 민다). */

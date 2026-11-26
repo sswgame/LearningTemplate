@@ -16,7 +16,7 @@ namespace sw
     class VoxelWorld;
 
     /**
-     * @brief 메시 정점 하나입니다. 엔진 정점(`RHIVertex`)과 속성 네 개가 같아서 게임이 그대로 옮겨 담을 수 있습니다.
+     * @brief 메시 정점 하나입니다. 엔진 정점(`MeshVertex`)과 속성 네 개가 같아서 게임이 그대로 옮겨 담을 수 있습니다.
      * @details `_uv` 는 아틀라스 좌표가 아니라 `타일 칸(열, 행) × VoxelMesher::kTileUVStride + 면 안 블록 좌표` 다. 셰이더(voxel_blocks.hlsl)가 풀어 타일을 블록마다 되풀이한다.
      */
     struct VoxelMeshVertex

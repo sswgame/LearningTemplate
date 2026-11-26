@@ -11,7 +11,8 @@
 #include "Engine/Foundation/EnginePlatformHeaders.h"
 #include "Engine/Graphics/RHI/DX/DXGIFormat.h"
 #include "Engine/Graphics/RHI/DX/RHIDxResultCheck.h"
-#include "Engine/Graphics/RHI/RHIDescriptors.h"
+#include "Engine/Graphics/RHI/RHIConstants.h"
+#include "Engine/Graphics/RHI/RHISwapChainDesc.h"
 #include "Engine/Reflection/EnumName.h"
 
 #if defined( SW_PLATFORM_WINDOWS )

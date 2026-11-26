@@ -61,7 +61,7 @@ SW_TEST_CASE( MeshCPUAccessTest, ReleasesAfterUploadAndKeepRequestRestores )
     const shared_ptr<Mesh> mesh = MeshCache::acquire( path, MeshCPUAccess::ReleaseAfterUpload );
     SW_REQUIRE_NOT_NULL( mesh.get() );
     SW_EXPECT_TRUE( mesh->getCPUAccess() == MeshCPUAccess::ReleaseAfterUpload );
-    SW_EXPECT_EQUAL( uint64{ 6u * sizeof( RHIVertex ) }, mesh->getCPUVertexBytes() );
+    SW_EXPECT_EQUAL( uint64{ 6u * sizeof( MeshVertex ) }, mesh->getCPUVertexBytes() );
     const float3 boundsMax = mesh->getLocalBoundsMax();
     SW_REQUIRE_TRUE( mesh->getRenderData().initRHI( &device ) );
     SW_EXPECT_EQUAL( uint64{ 0 }, mesh->getCPUVertexBytes() );
@@ -81,7 +81,7 @@ SW_TEST_CASE( MeshCPUAccessTest, ReleasesAfterUploadAndKeepRequestRestores )
     SW_REQUIRE_TRUE( mesh->getRenderData().initRHI( &device ) );
     SW_EXPECT_TRUE( MeshCache::acquire( path, MeshCPUAccess::ReleaseAfterUpload ) == mesh );
     SW_EXPECT_TRUE( mesh->getCPUAccess() == MeshCPUAccess::Keep );
-    SW_EXPECT_EQUAL( uint64{ 6u * sizeof( RHIVertex ) }, mesh->getCPUVertexBytes() );
+    SW_EXPECT_EQUAL( uint64{ 6u * sizeof( MeshVertex ) }, mesh->getCPUVertexBytes() );
     mesh->getRenderData().releaseRHI( &device );
 }
 
@@ -104,7 +104,7 @@ SW_TEST_CASE( MeshCPUAccessTest, DeviceSwapReadsTheFileAgain )
     SW_EXPECT_FALSE( renderData.isRHIValid() );
 
     renderData.prepareRHI();
-    SW_EXPECT_EQUAL( uint64{ 6u * sizeof( RHIVertex ) }, mesh->getCPUVertexBytes() );
+    SW_EXPECT_EQUAL( uint64{ 6u * sizeof( MeshVertex ) }, mesh->getCPUVertexBytes() );
     SW_REQUIRE_TRUE( renderData.initRHI( &device ) );
     SW_EXPECT_EQUAL( uint64{ 0 }, mesh->getCPUVertexBytes() );
     SW_EXPECT_TRUE( mesh->getCPUAccess() == MeshCPUAccess::ReleaseAfterUpload );

@@ -8,8 +8,10 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
-#include "Engine/Graphics/RHI/RHIDescriptors.h"
+#include "Engine/Graphics/RHI/RHIRenderPassInfo.h"
 #include "Engine/Graphics/RHI/RHIScissorRect.h"
+#include "Engine/Graphics/RHI/RHITransition.h"
+#include "Engine/Graphics/RHI/RHIViewport.h"
 
 namespace sw
 {
@@ -361,7 +363,7 @@ namespace sw
          *          옮길 수 있다(https://learn.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12graphicscommandlist-resourcebarrier ·
          *          https://docs.vulkan.org/refpages/latest/refpages/source/vkCmdPipelineBarrier.html). DX11 · GL · WebGPU 는 텍스처마다 단일 함수의 일을 한다.
          *          렌더 타깃 상태의 `kRHIBackBufferTexture` 는 스왑체인이고 핸들 0 은 오류로 알리고 그 원소만 버린다. 같은 텍스처가 둘 들면 안 된다. 앨리어싱 시작(`beginTextureAlias`)은 이 묶음 앞에 따로 낸다.
-         *          그래프 레벨 프롤로그(`FramePassExecutor::onGraphLevelPrologue`)가 레벨마다 한 번 부른다(언리얼 RDG 가 패스 앞 전이를 한 배치로 내는 자리).
+         *          그래프 레벨 프롤로그(`FrameRecorder::onGraphLevelPrologue`)가 레벨마다 한 번 부른다(언리얼 RDG 가 패스 앞 전이를 한 배치로 내는 자리).
          */
         virtual void transitionTextures( const RHITextureTransition* pTransition, uint32 count ) = 0;
 

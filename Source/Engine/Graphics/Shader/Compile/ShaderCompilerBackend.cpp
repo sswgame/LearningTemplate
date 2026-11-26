@@ -14,7 +14,7 @@
 
 #include "Engine/Content/ContentHash.h"
 #include "Engine/Foundation/EnginePlatformHeaders.h"
-#include "Engine/Graphics/RHI/RHIDescriptors.h"
+#include "Engine/Graphics/RHI/RHIConstants.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Graphics/Shader/Compile/SPIRVOpenGLPatch.h"
 #include "Engine/Graphics/Shader/Compile/WebGPUShaderContainer.h"

@@ -39,7 +39,7 @@ namespace sw
                     return false;
                 outListPosition.clear();
                 outListPosition.reserve( data._listVertex.size() );
-                for ( const RHIVertex& vertex : data._listVertex )
+                for ( const MeshVertex& vertex : data._listVertex )
                 {
                     outListPosition.push_back( float3{ vertex._arrPosition[0], vertex._arrPosition[1], vertex._arrPosition[2] } );
                 }

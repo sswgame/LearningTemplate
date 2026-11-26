@@ -7,7 +7,7 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingLayout.h"
 #include "Engine/Renderer/Frame/Resource/RenderPSOCache.h"
-#include "Engine/Renderer/Graph/FrameBufferTable.h"
+#include "Engine/Renderer/Graph/RenderGraphImportedResourceTable.h"
 
 namespace sw
 {
@@ -19,7 +19,7 @@ namespace sw
             static constexpr uint32 kLoggingFrames = 4;
 
             /** @brief 표의 버퍼 하나를 목록 항목으로 만듭니다. 그 버퍼를 건 컴퓨트 셰이더를 봤고 원소 크기가 같으면 멤버를 싣는다. */
-            static RenderBufferEntry makeEntry( const FrameBufferTable::Entry& entry, const IRHIDevice& device, RenderPSOCache& psoCache )
+            static RenderBufferEntry makeEntry( const RenderGraphImportedResourceTable::Entry& entry, const IRHIDevice& device, RenderPSOCache& psoCache )
             {
                 RenderBufferEntry result{ entry._name.c_str(), entry._slot, entry._elementSize, entry._elementCount, {} };
                 for ( const bool bUAV : { false, true } )
@@ -41,7 +41,7 @@ namespace sw
         };
     } // namespace
 
-    void RenderBufferInspector::service( IRHICommandList& cmd, IRHIDevice* pDevice, const FrameBufferTable& table, const RenderGraphExecutionContext& context, RenderPSOCache& psoCache,
+    void RenderBufferInspector::service( IRHICommandList& cmd, IRHIDevice* pDevice, const RenderGraphImportedResourceTable& table, const RenderGraphExecutionContext& context, RenderPSOCache& psoCache,
                                          RenderDebugRegistry& registry )
     {
         using Internal = RenderBufferInspectorInternal;
@@ -57,7 +57,7 @@ namespace sw
         {
             // 목록은 요청한 프레임에 곧바로, 원소 배치는 기록을 켠 뒤의 디스패치를 보고 다시 공개한다.
             vector<RenderBufferEntry> listEntry;
-            for ( const FrameBufferTable::Entry& entry : table.getEntries() )
+            for ( const RenderGraphImportedResourceTable::Entry& entry : table.getEntries() )
             {
                 if ( entry._viewable == RenderGraphViewableKind::Buffer )
                     listEntry.push_back( Internal::makeEntry( entry, *pDevice, psoCache ) );
@@ -92,7 +92,7 @@ namespace sw
             serial
         };
         const hashed_string key = hashed_string::findInterned( name );
-        for ( const FrameBufferTable::Entry& entry : table.getEntries() )
+        for ( const RenderGraphImportedResourceTable::Entry& entry : table.getEntries() )
         {
             const bool bTarget = entry._name == key && entry._slot == slot && entry._viewable == RenderGraphViewableKind::Buffer;
             if ( bTarget == false )

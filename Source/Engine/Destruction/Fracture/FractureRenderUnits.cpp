@@ -146,7 +146,7 @@ namespace sw
 
     shared_ptr<Mesh> FractureRenderUnits::createSkinnedMesh( const FractureAsset& asset, FractureSurfaceSlot slot )
     {
-        vector<RHIVertex>      listVertex;
+        vector<MeshVertex>     listVertex;
         vector<MeshSkinVertex> listSkin;
         for ( uint32 piece = 0; piece < asset.getPieceCount(); ++piece )
         {
@@ -181,7 +181,7 @@ namespace sw
 
     shared_ptr<Mesh> FractureRenderUnits::createBakedMesh( const FractureAsset& asset, FractureSurfaceSlot slot, vector_reference<const BoneTransform> listPose )
     {
-        vector<RHIVertex> listVertex;
+        vector<MeshVertex> listVertex;
         for ( uint32 piece = 0; piece < asset.getPieceCount() && piece < listPose.size(); ++piece )
         {
             const BoneTransform& pose = listPose[piece];
@@ -195,7 +195,7 @@ namespace sw
                     continue;
                 for ( uint32 corner = 0; corner < 3; ++corner )
                 {
-                    RHIVertex    baked = asset._listVertex[range._firstVertex + vertex + corner];
+                    MeshVertex   baked = asset._listVertex[range._firstVertex + vertex + corner];
                     const float3 local{ baked._arrPosition[0] - centroid._x, baked._arrPosition[1] - centroid._y, baked._arrPosition[2] - centroid._z };
                     const float3 position = float3::transform( float3::multiply( local, pose._scale ), pose._rotation ) +
                                             pose._translation;

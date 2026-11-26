@@ -30,7 +30,7 @@
  * 그리지 않는다 — 큰 물체는 굵은 밉에서 판정한다(언리얼 HZB 가림과 같다). 모서리 하나라도 카메라 뒤 · 가까운 평면 앞이면, 사각형이 화면 밖이면 판정하지 않는다(보인다).
  * 상자 → 사각형 · 밉 고르기는 C++ HZBScreenRect::projectBox · HZBLayout::selectMip 과 같은 식이다(단위 테스트 HZBPyramidTest).
  *
- * 2 단계 가림(g_CullPhase.x, C++ FrameGraphExecutor::recordLateOcclusion — Adria · VQEngine · Niagara 의 two-phase occlusion):
+ * 2 단계 가림(g_CullPhase.x, C++ FramePassRecorder::recordLateOcclusion — Adria · VQEngine · Niagara 의 two-phase occlusion):
  *   1 앞 단계 — 프레임 그래프에서 지난 프레임 HZB 로 판정하고, 가려져 빠진 불투명(sortMode 0) 차례를 u3 에 적는다(나머지 차례는 0).
  *   2 뒤 단계 — 깊이 프리패스 뒤 그 깊이로 다시 지은 HZB 로 적힌 차례만 다시 판정해 이제 보이는 것을 같은 간접 인자에 더한다(개수를 되돌리지 않는다 — 앞 단계 개수 위에 센다).
  *   투명 정렬 배치(sortMode 1 · 2)는 앞 단계 판정만 본다 — 뒤 단계가 더하면 정렬(instance_sort.hlsl)이 끝난 목록 뒤에 붙어 블렌드 순서가 틀린다.

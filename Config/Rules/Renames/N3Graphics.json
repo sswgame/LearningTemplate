@@ -1,0 +1,153 @@
+[
+  {
+    "old": "FrameBufferTable",
+    "new": "RenderGraphImportedResourceTable",
+    "why": "그래프 밖 자원(가져온 자원)의 이름 → RHI 핸들 표다. FrameBuffer 는 렌더 타깃 묶음 뜻(언리얼 RDG RegisterExternal*, 유니티 RenderGraph Import*)"
+  },
+  {
+    "old": "FrameBufferTableTest",
+    "new": "RenderGraphImportedResourceTableTest",
+    "why": "형식 개명을 따른다"
+  },
+  {
+    "old": "_frameBufferTable",
+    "new": "_importedResourceTable",
+    "why": "RenderGraphImportedResourceTable 개명을 따른다"
+  },
+  {
+    "old": "FramePassExecutor",
+    "new": "FrameRecorder",
+    "why": "한 프레임의 그래프 짓기 · 기록 · 제출이다(언리얼 FSceneRenderer::Render 자리). 패스 하나의 실행기가 아니다"
+  },
+  {
+    "old": "FramePassExecutorInternal",
+    "new": "FrameRecorderInternal",
+    "why": "FrameRecorder 개명을 따른다"
+  },
+  {
+    "old": "FrameGraphExecutor",
+    "new": "FramePassRecorder",
+    "why": "프레임 패스 종류마다의 기록이다(그래프를 돌리지 않는다)"
+  },
+  {
+    "old": "getFrameGraphExecutor",
+    "new": "getFramePassRecorder",
+    "why": "FramePassRecorder 개명을 따른다"
+  },
+  {
+    "old": "_frameGraphExecutor",
+    "new": "_framePassRecorder",
+    "why": "FramePassRecorder 개명을 따른다"
+  },
+  {
+    "old": "RenderPassDesc",
+    "new": "RenderFeatureDesc",
+    "why": "여러 파이프라인이 함께 쓰는 첨부 · 프레임 자원 · 프레임 패스 묶음이다(유니티 URP ScriptableRendererFeature). RenderPass 는 RHI 렌더 패스 뜻"
+  },
+  {
+    "old": "RenderPassAsset",
+    "new": "RenderFeatureAsset",
+    "why": "RenderFeatureDesc 개명을 따른다"
+  },
+  {
+    "old": "_listRenderPassRef",
+    "new": "_listRenderFeatureRef",
+    "why": "RenderFeatureDesc 개명을 따른다"
+  },
+  {
+    "old": "RenderPassSpec",
+    "new": "VulkanRenderPassKey",
+    "why": "VkRenderPass 캐시 키다. Spec 은 GAS 뜻(Def 에서 펼친 실행 값)만 쓴다"
+  },
+  {
+    "old": "SimulationOnlyFrameQueue",
+    "new": "SimulationOnlyFrameCounter",
+    "why": "큐가 아니라 남은 프레임 수 · 번호로 그릴지 정한다"
+  },
+  {
+    "old": "SimulationOnlyFrameQueueTest",
+    "new": "SimulationOnlyFrameCounterTest",
+    "why": "형식 개명을 따른다"
+  },
+  {
+    "old": "FrameResourceRing",
+    "new": "FrameSlotFenceRing",
+    "why": "자원을 갖지 않고 프레임 슬롯마다의 펜스 값만 든다"
+  },
+  {
+    "old": "FrameResourceRingSlotIsChecked",
+    "new": "FrameSlotFenceRingSlotIsChecked",
+    "why": "형식 개명을 따른다"
+  },
+  {
+    "old": "MaterialCollectionParameterDef",
+    "new": "MaterialParameterCollectionEntryDef",
+    "why": "MaterialParameterCollectionDef 의 한 칸이다(낱말 순서만 뒤집은 쌍이었다. 언리얼 UMaterialParameterCollection)"
+  },
+  {
+    "old": "SceneVoxelScene",
+    "new": "SceneVoxelizeInput",
+    "why": "복셀화 입력(격자 + 칠할 메시)이다. 엔진의 Scene 과 다른 뜻"
+  },
+  {
+    "old": "SurfaceFootstepKindNote",
+    "new": "SurfaceFootstepKindStats",
+    "why": "종류별 센 수 · 마지막 반응이라 통계다(note 는 금지 동사)"
+  },
+  {
+    "old": "WaterUnderwaterFog",
+    "new": "UnderwaterFogValues",
+    "why": "Water 가 겹쳤다. 이웃 PostProcessValues 와 끝말을 맞춘다"
+  },
+  {
+    "old": "RenderStabilitySample",
+    "new": "RenderConvergenceSample",
+    "why": "TAA · 노출 · GI 의 수렴(convergence) 값이다"
+  },
+  {
+    "old": "RenderStabilityUtil",
+    "new": "RenderConvergenceUtil",
+    "why": "RenderConvergenceSample 개명을 따른다"
+  },
+  {
+    "old": "RenderStabilityStatusHolder",
+    "new": "RenderConvergenceStatusHolder",
+    "why": "RenderConvergenceSample 개명을 따른다"
+  },
+  {
+    "old": "RenderStabilityTest",
+    "new": "RenderConvergenceTest",
+    "why": "RenderConvergenceSample 개명을 따른다"
+  },
+  {
+    "old": "MeshUtil",
+    "new": "PrimitiveMeshBuilder",
+    "why": "내장 도형 생성기다(Godot PrimitiveMesh). Util 은 내용을 말하지 않는다"
+  },
+  {
+    "old": "MeshUtilInternal",
+    "new": "PrimitiveMeshBuilderInternal",
+    "why": "PrimitiveMeshBuilder 개명을 따른다"
+  },
+  {
+    "old": "getMainStabilitySample",
+    "new": "getMainConvergenceSample",
+    "why": "RenderConvergenceSample 개명을 따른다"
+  },
+  {
+    "old": "RHIVertex",
+    "new": "MeshVertex",
+    "why": "CPU 쪽 메시 정점이다(언리얼 FStaticMeshBuildVertex). RHI 헤더를 모르는 값 형식이라 게임 헤더가 쓴다(cae8f4c335 가 RHI 밖으로 옮겼다)",
+    "allowExisting": true
+  },
+  {
+    "old": "RHIMeshVertexFormat",
+    "new": "MeshVertexFormat",
+    "why": "메시가 고르는 정점 속성 스트림 형식이다. RHI 헤더가 아닌 MeshVertex.h 에 있다"
+  },
+  {
+    "old": "makeRHIVertex",
+    "new": "makeMeshVertex",
+    "why": "MeshVertex 개명을 따른다"
+  }
+]

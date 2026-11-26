@@ -2,7 +2,7 @@
  * @file post_grade.hlsli
  * @brief 뷰의 후처리 값(PostProcessValues)을 톤맵 앞뒤에서 적용합니다 — 원본을 읽는 자리에서 렌즈(왜곡 · 색수차 · 선명화), 톤맵 앞 노출 · 컬러 그레이딩,
  *        뒤에 LUT · 필름 그레인 · 채도 · 대비 · 비네트 · 레터박스.
- * @details 값은 PassCB 의 g_CameraGrade · g_CameraFrame 이고 엔진이 뷰마다 채운다(FramePassExecutor::applyViewPassConstants).
+ * @details 값은 PassCB 의 g_CameraGrade · g_CameraFrame 이고 엔진이 뷰마다 채운다(FrameRecorder::applyViewPassConstants).
  *          중립 값(노출 배율 1, 채도 1, 대비 1, 비네트 0, 레터박스 0)이면 두 함수가 색을 바꾸지 않는다 — 카메라 값을 쓰지 않는 게임의 화면이 그대로다.
  *          톤맵을 하는 두 셰이더(tonemap.hlsl, post_chain.hlsl 의 SW_POST_TONEMAP)가 같은 함수를 부른다.
  */

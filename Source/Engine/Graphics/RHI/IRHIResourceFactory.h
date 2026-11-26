@@ -6,7 +6,12 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
-#include "Engine/Graphics/RHI/RHIDescriptors.h"
+#include "Engine/Graphics/RHI/RHIBufferDesc.h"
+#include "Engine/Graphics/RHI/RHIBufferSlice.h"
+#include "Engine/Graphics/RHI/RHITextureAllocationInfo.h"
+#include "Engine/Graphics/RHI/RHITextureDesc.h"
+#include "Engine/Graphics/RHI/RHIThreadGroupSize.h"
+#include "Engine/Graphics/RHI/RHITransferTicket.h"
 
 namespace sw
 {
