@@ -14,27 +14,24 @@
 
 ### 통합 중(main, push 전)
 
-- 합친 것: .cpp 리플렉션 · 헤더만 읽던 도구, Core 정리(C1 · normalize 제자리 판 삭제), 렌더 데이터 R1~R4, E1 · E2a · E2b · P2, E3 · E5 · H1~H4 · D1a · D1b, G2 · E4, ReflectionParser 정리 · 최적화 2 개.
-- 남은 검증: 단위 테스트 두 실패(렌더 XML 도우미 · 현지화 테스트 표) 수정 확인 → preflight(렌더 골든 네 백엔드) → push. ReflectionParser 최적화는 재서 정했다(이름공간 건너뛰기 되돌림, 스탬프 한 번 읽기는 정리로 남김).
-- 그림 확인: 카메라 흔들림 · 메시 모디파이어 노이즈(Core 결정성 TU 로 합침), RigIK 정반대 방향(-q), TAA · 구름 기록 칸, 파이프라인 선택 경로.
-- 판단 남음: TAA 출력의 앨리어싱 제외를 지울지(`-gv_transientAliasing=0` 비교), `--gather-text --check` 가 지면 수집기를 다시 돌려 커밋.
+- 합친 것: .cpp 리플렉션 · 모듈 PCH(1535cc90ef) · 헤더만 읽던 도구, Core 정리, 렌더 데이터 R1~R4 · R4 나머지(쿠킹 단계 스트리핑 · 머티리얼 색인 층 · `matfind`), E1~E5 · H1~H4 · D1a · D1b · G2 · P1~P4, Enum 메타 · 키트 현지화 프로젝트, GameFramework 개발 코드 분리 · 배포 매크로 오류, DevTools 합치기 · 키트 Editor 글 표, 서버 서비스 모듈 서브시스템 · `_bOnlineServices`, 셰이더 리로드 · 데이터 철자 열거 6 건, ReflectionParser 정리.
+- 남은 검증: Release · Server · Shipping 빌드와 단위 · 파서 · Scripts 테스트 → `App --gather-text` 로 키트 · 엔진 표를 맞춰 커밋 → 쿠킹 한 번(쿠킹 키 철자가 바뀌어 전부 다시 굽는다) → preflight(렌더 골든 네 백엔드) → push.
+- 잴 것: 모듈 PCH 앞 · 뒤 parse + pch 합(앞 측정 합 235.3 초). 잡음(±10 %) 안이면 1535cc90ef 를 되돌린다.
+- 그림 확인: 카메라 흔들림 · 메시 모디파이어 노이즈, RigIK 정반대 방향(-q), TAA · 구름 기록 칸, 파이프라인 선택 경로, 픽셀 마을 스프라이트 이름(`walk_Down`).
+- 판단 남음: TAA 출력의 앨리어싱 제외를 지울지(`-gv_transientAliasing=0` 비교).
 
 ### 맡긴 갈래(작업 중)
 
 | 갈래 · 워크트리 | 몫 |
 | --- | --- |
-| w-cpp-reflect · LT-wt/cppreflect | 파서 정의 · include 를 타깃 속성에서(671f8c8988 · fd2dac7d65 끝), 컴파일 옵션 · 옵션 표 엄격화 · 구성 경로 ctest(9d9872a619 · 4de5136b58 · 1f9504d287 끝), Core (c) 열거 이름 · (a) 23 건(9d545b213c · 8214df6dac · 7b6953c4d2 끝 — 바꿈 2 · 이미 됨 8 · 데이터 철자라 둠 13), 파싱 단계 앞부분 재사용 |
-| w-enum-meta · LT-wt/enummeta | 끝(…adc3996114) — 다음 묶음에 합친다. 합친 뒤 `App --gather-text` 로 키트 표 · 엔진 표를 수집기 출력으로 맞춘다 |
-| w-gf-dev · LT-wt/gfdev | 배포 매크로 오류 · 확장자 글 · 내비 베이크(1994afb762 · 300285e7e5 · d46c67287a 끝), 에디터 `.hlsl` · `.hlsli` 글 셋, 개발 구성에서도 등록 자리 막기 |
-| w-pimpl · LT-wt/pimpl | P1 · P3 · P4 · R4 나머지(…946d192d97 끝 — 첫 사용처는 개발 명령 `matfind`), 다른 쿠커 색인의 모드 · 패치 층 합치기 |
-| w-devtools-merge · LT-wt/devtoolsmerge | T1(605e855120 · 1eeddfc3ae 끝), PE 헤더 · 단일 헤더 50 개 · VulkanRHISamplerPreset(…c9ccdeab7c 끝), GameFramework 글 · music 접미사 · 에디터 확장 글 모듈별 표(21dc1dbcde · 74d7c4c669 · 128a09c0fe 끝), 키트 Editor 글을 배포 밖 표로 |
-| w-server-subsystem · LT-wt/serversub | 서버 서비스 모듈 서브시스템(1469af8976 끝 — 합치면 6 절 줄 삭제), 서비스 없음 기동 오류, 모듈 수명 정적 등록 목록 |
-| w-shaderreload · LT-wt/shaderreload | 셰이더 리로드 · shortcut · 노이즈 · 구성 표 테스트(ece90ecaea · 4686edfe1e 끝), 소문자 데이터 철자 열거 7 건, configure_files 생성기 음성 사례 |
-| w-engine-owner · LT-wt/engineowner | 끝남(3c5d1c924a 까지) — 다음 묶음에 합친다 |
+| w-shaderreload · LT-wt/shaderreload | 손으로 쓴 열거 이름 함수(`getKindName` 류 · 열거형 위 문자열 switch)를 `ENUM()` · `getEnumName` 으로 |
+| w-pimpl · LT-wt/pimpl | 8 절 임포트 산출물 이름을 원본 .meta 에 적기(코드 몫 — 다시 임포트는 통합) |
+| w-cpp-reflect · LT-wt/cppreflect | ReflectionValidation 조사: PROPERTY 검증기를 개발 전용으로 빼도 배포 안전이 지켜지는가(보고서만) |
+
+나머지 갈래(enum-meta · gf-dev · devtools-merge · server-subsystem · engine-owner · core-lift · render-data)는 main 에 합쳤다. push 뒤 워크트리를 지운다.
 
 ### 아직 아무도 맡지 않은 몫 [코드]
 
-- 보류(조사 먼저): ReflectionValidation → TypeInfo, PROPERTY 검증기를 개발 전용으로 빼도 배포 안전이 지켜지는가.
 - AssertDialog 합치기 — 사용자에게 물을 것.
 
 ## 1. 다음 순서
@@ -75,7 +72,6 @@
 
 ## 6. 설계 할 일
 
-- 서버 서비스(`IServerService` · `ServerServiceManager` · `ServerServiceRegistry` · `ServerServiceRegistrar`, 구현은 `OnlineServerService` 하나)를 모듈 서브시스템(호스트 `kServer`)으로 합친다 — 리로드는 매단 자식 범위가 걷고, 서버 루프 갱신 · 연결 수 · 드레인은 범위에서 찾는 인터페이스로(언리얼 `UEngineSubsystem` + `FTickableGameObject`). 모듈 리로드 순서를 함께 본다.
 
 ### 에디터 · 도구
 
